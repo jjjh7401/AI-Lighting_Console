@@ -1,0 +1,4 @@
+{"timestamp":"2026-07-15T02:24:33Z","event_key":"tool_failure:Bash:UnknownFailure","summary":"Exit code 1","source":"tool:Bash"}
+{"timestamp":"2026-07-15T02:29:54Z","event_key":"tool_failure:Bash:UnknownFailure","summary":"Exit code 1\ntotal 0\ndrwxr-xr-x@  3 studiox  staff   96 Jul 15 11:16 .\ndrwxr-xr-x@ 17 studiox  staff  544 Jul 15 11:24 ..\ndrwxr-xr-x@  9 studiox  staff  288 Jul 15 11:18 db\n---\nls: /Users/studiox/Docum…","source":"tool:Bash"}
+{"timestamp":"2026-07-15T02:29:54Z","event_key":"tool_failure:Read:UnknownFailure","summary":"File does not exist. Note: your current working directory is /Users/studiox/Documents/Claude/Code/AI-Lighting_Console.","source":"tool:Read"}
+{"timestamp":"2026-07-15T05:24:15Z","event_key":"tool_failure:Bash:UnknownFailure","summary":"Exit code 1\n.\n..\n.claude\n.claudeignore\n.git_hooks\n.github\n.gitignore\n.moai\nCLAUDE.md\nDESIGN.md\n(eval):1: no matches found: .env*","source":"tool:Bash"}
