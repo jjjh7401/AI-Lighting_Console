@@ -23,6 +23,15 @@
 - 플랫폼 배지 Windows 전용, "Windows-first" 2회 명시, macOS 언급 없음. 표준 설치 경로도 `run_server.bat`(Windows 배치 파일).
 - → **격차 후보 (축 ④ 신뢰성 / 배포·접근성)**: 배포 채널 폐쇄성 + 단일 플랫폼 의존. M4 격차 분석에 편입 예정.
 
+### 1.2 문서 기반 격차 후보 선등록 (실사용 검증 전 — M3 실행으로 확정/기각)
+
+| 후보 | 축 | 근거 (공개 문서 관찰) | 상태 |
+|---|---|---|---|
+| GC-1 배포 채널 폐쇄성 + Windows 전용 | ④ 신뢰성 | 베타 신청제, 소스 미공개, "Windows-first" 2회 명시 | 관찰 확정 |
+| GC-2 한국어 UX 부재 | ① 한국어 UX | 웹사이트·README·데모 전부 영어, 다국어 언급 없음 — 지시문도 영어 전제 | 실사용 검증 대기 (한국어 입력 반응 관찰) |
+| GC-3 라이브 운영 비권장 | ② 안전장치 / ④ 신뢰성 | README: "programming and pre-production, not live show operation", "guardrails, not guarantees" | 관찰 확정 (개발자 자기 선언) |
+| GC-4 베타 성숙도 | ④ 신뢰성 | 릴리스 0건, "power tool, not a polished product" | 실사용 검증 대기 |
+
 ## 2. 시나리오 세트 (M2 — REQ-EVAL-005, 011)
 
 Phase 1 대표 프로그래밍 작업 10종에서 도출. 지시문은 영어(boardop 영어 전용), 기대 결과는 한국어.
