@@ -51,8 +51,10 @@ class TestShippedConfig:
         assert config.anthropic.model == "claude-opus-4-8"
 
     def test_gemini_model_is_pinned_in_config(self):
+        # Pin decided at the M3 check-in (2026-07-16): latest stable GA model,
+        # web-verified against ai.google.dev/gemini-api/docs/models.
         config = load_provider_config(DEFAULT_CONFIG_PATH)
-        assert config.gemini.model == "gemini-2.5-pro"
+        assert config.gemini.model == "gemini-3.5-flash"
 
     def test_exactly_one_active_provider(self):
         config = load_provider_config(DEFAULT_CONFIG_PATH)

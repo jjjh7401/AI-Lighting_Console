@@ -51,7 +51,7 @@ model pins live in [`config/provider.toml`](config/provider.toml):
 active = "anthropic"        # or "gemini" — switching is this one value, no code change
 ```
 
-- Anthropic is pinned to `claude-opus-4-8`; the Gemini pin (`gemini-2.5-pro`)
+- Anthropic is pinned to `claude-opus-4-8`; the Gemini pin (`gemini-3.5-flash`)
   is config-changeable.
 - **API keys are environment variables only** — never put credentials in the
   config file (the loader rejects them): `ANTHROPIC_API_KEY` for Anthropic,
