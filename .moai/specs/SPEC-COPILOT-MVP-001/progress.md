@@ -295,6 +295,62 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 - **다중 클라이언트 동시 접속은 설계상 단일 운영자 가정**: 승인 채널은 마지막 bind된 연결로 라우팅 — 다중 운영자 시나리오는 Phase 1 범위 밖 (미테스트)
 - **왕복 측정치는 M6 판정용 수집 전 단계**: recorder가 레코드를 메모리에 축적 + judged 피드만 배선 — 코퍼스 실행·중앙값/p95 산출·기록은 M6
 
+### M7 — Lua plugin deployment gate (2026-07-17, manager-develop cycle_type=tdd)
+
+**Scope**: REQ-MVP-019, 027(deploy-scan half), 028(레지스트리 인구) · AC-MVP-010 ①②③ + AC-MVP-018 deploy-scan 절반 + 레지스트리→호출 E2E · plan.md §C row M7 (deploy_plugin pcall 컴파일 하네스 + 리뷰 게이트, M3 도구 스텁 위에 구현, 승인 UI(M5) 연동)
+
+**AC matrix (M7 subset)**
+
+| AC | Status | Verification command | Actual output (tail) |
+|---|---|---|---|
+| AC-MVP-010 ① 컴파일 실패 → 배포 차단 (+자가 수정 회귀, GWT 5) | PASS | `uv run pytest server/tests/test_deploy_pipeline.py::TestCompileGate server/tests/test_runner_deploy_correction.py::TestDeployRetryCap -v` (컴파일 실패 시 리뷰/배포 0건 + 교정 deploy 시도가 동일 ≤3 재시도 상한에 계수 — 4 model calls, no 5th) | `4 passed` — `test_compile_failure_blocks_the_deploy PASSED`, `test_compile_failures_hit_the_same_three_retry_cap PASSED` (log: `.moai/state/verify/m7/ac-010-1.log`) |
+| AC-MVP-010 ② 리뷰 미승인 → 배포 보류 | PASS | `uv run pytest server/tests/test_deploy_pipeline.py::TestReviewGate ... -v` (기본 포트 deny-all — 리뷰 채널 미배선이면 어떤 경로로도 배포 불가; 거부 시 void + 감사; 한국어 "거부됨" 보고) | `5 passed` — `test_default_review_port_denies_everything PASSED`, `test_review_rejection_voids_the_deploy PASSED` (log: `ac-010-2.log`) |
+| AC-MVP-010 ③ `Cmd("Delete ...")` 스캔 결과 리뷰어 표시 | PASS | `uv run pytest server/tests/test_deploy_scan.py::TestBlacklistedFindings server/tests/test_web_review.py::TestReviewEvents ... ::TestAppReviewFlow -v` (스캔 결과가 ReviewRequest → review_request WS 이벤트(라인·매칭 엔트리·best-effort caveat) → 실 WS 왕복에서 리뷰어 화면 payload로 도달) | `11 passed` — `test_review_request_event_carries_everything_the_reviewer_needs PASSED`, `test_full_review_round_trip_over_websocket PASSED` (log: `ac-010-3.log`) |
+| AC-MVP-018 deploy-scan 절반 (① 스캔 표시 + "파괴적" 플래그 등록) | PASS | `uv run pytest server/tests/test_deploy_gate_e2e.py server/tests/test_deploy_pipeline.py::TestApprovedDeploy -v` (승인 시 `Plugin <name>` 파괴 플래그 등록; 송신 실패/미확인에도 플래그 유지 — 안전 방향) | `7 passed` — `test_destructive_plugin_registers_with_the_flag PASSED` (log: `ac-018.log`) |
+| AC-MVP-018 레지스트리→호출 E2E (M4 게이트 즉시 발효) | PASS | same (`test_deploy_gate_e2e.py`) — 배포(승인) → `Plugin "Cleaner"` 호출 → 매회 승인 요구(1차 거부: wire 0건 / 2차 승인: 실행, 승인 요청 2회); 리뷰 거부 플러그인은 미등록 → expand-or-hold 보류 | `test_every_invocation_of_a_deployed_destructive_plugin_needs_approval PASSED` |
+| AC-MVP-018 ②③ 호출-시점 게이트 (M4 회귀 — DO NOT REGRESS) | PASS (unmodified) | `uv run pytest server/tests/test_safety_gate.py -v -k plugin` + corpus/e2e-audit 스위트 | `2 passed` + `84 passed` (log: `m4-invocation-regression.log`) — M4 테스트 무수정 green |
+
+**TDD evidence (RED → GREEN → REFACTOR, 3 cycles)**
+
+- Cycle 1 RED: deploy 코어 테스트 → `ModuleNotFoundError: No module named 'server.deploy'` (log: `.moai/state/verify/m7/red-cycle1.log`) → GREEN: compile/scan/review/pipeline; `45 passed` (log: `green-cycle1.log`)
+- Cycle 2 RED: transport/E2E/responder → `ImportError: build_deploy_request` (log: `red-cycle2.log`) → GREEN: 프로토콜 빌더 + ConsoleLink.deploy_plugin + gate deploy surface + responder deploy verb; `80 passed` incl. M2 회귀 (log: `green-cycle2.log`)
+- Cycle 3 RED: web/runner/tools → `ImportError: review_request_event` + serve/bootstrap 배선 테스트 2 failed (log: `red-cycle3.log`) → GREEN: messages/session/app/serve/bootstrap + UI (vitest 4 RED → 13 passed); `651 passed` (logs: `green-cycle3a.log`, `green-cycle3b.log`)
+- REFACTOR: ruff --fix + format 적용; full suite 재green `651 passed` (log: `final-suite.log`)
+
+**Quality gates**
+
+- Tests: `uv run pytest` → exit 0, **`651 passed`** (560 M1~M5 baseline 유지 + 91 new) (log: `.moai/state/verify/m7/final-suite.log`)
+- Coverage (M7 new/modified, ≥85% each): deploy/{review 100%, pipeline 99%, compile 87%, scan 86%}, orchestrator/{tools,runner} 100%, web/{messages,serve} 100%, web/session 99%, web/app 96%, web/approval_bridge 97%, safety/{bootstrap 100%, gate 99%, console 97%}, bridge/protocol 98% (log: `cov.log`)
+- Lint: `uv run ruff check .` → `All checks passed!` · `uv run ruff format --check .` → `94 files already formatted`
+- UI: `npm test` → vitest **13 passed** (9 baseline + 4 review) (log: `ui-vitest.log`) · `npm run build` → `✓ built in 227ms` (log: `ui-build.log`) · `npx tsc --noEmit` → exit 0
+- Dependency (REQ-MVP-043 discipline): `lupa==2.8` **dev → runtime 승격** (uv.lock 재잠금; cross-platform wheels 존재 — M2 검증 패턴 승계, ratification 항목)
+
+**Design decisions (check-in ratification 대상)**
+
+1. **lupa 런타임 승격**: pcall 컴파일 하네스가 프로덕션 코드(`server/deploy/compile.py`)에서 embedded Lua 5.4를 사용 — load-only(청크 미실행, text-only 모드로 바이너리 청크 거부), check당 fresh runtime. M2 check-in에서 수용된 lupa 패턴의 연장
+2. **Deploy verb 설계 (ASSUMPTION-6, onPC 미검증)**: `deploy <id> <enc-name> <enc-source>` — name·source 모두 percent-encode(따옴표/공백 무관 와이어 안전), 콘솔측 재컴파일(방어 심층) 후 `DataPool/Plugins` Acquire/Append + content setter 4종 probe(pcall-guard). responder 1.1.0(+xml), PROTOCOL.md §2/§4.5/§6 개정 — 와이어 프로토콜 v1 유지(additive)
+3. **리뷰 = 별도 요청 타입, M5 채널 재사용**: ApprovalChannel을 payload-generic화(+`request_review` alias) — 두 번째 인스턴스(`id_prefix="review"`)가 ReviewRequest 운반, quadruple-deny(미연결/notify 실패/타임아웃 600s/연결 해제) 그대로 상속. WS 프로토콜 v1 additive: `review_decision`/`review_request`/`review_resolved`
+4. **레지스트리 등록 시점 = 리뷰 승인 직후(송신 전)**: REQ-MVP-027 "승인 시 등록" 충실 + 송신 실패/미확인에도 플래그 미회수(unconfirmed 송신은 콘솔에 존재할 수 있음 — 플래그 상실은 M4 호출 게이트 무장해제라 안전 비대칭상 금지)
+5. **감사 이벤트 확장(보수적)**: `deploy_requested`/`deploy_blocked`/`deploy_review_approved`/`deploy_review_rejected`/`deployed` + 게이트 송신은 `executed` kind="deploy"(1:1 대조 합류) — 4종 완전성 대조(AC-MVP-006) 무영향(스위트 green)
+6. **runner 재시도 계정 확장**: `deploy_plugin` 교정 시도가 run_commands와 동일 ≤3 상한 공유(1-line 변경, M3 178 테스트 무수정 green). 리뷰 거부는 인간 결정 → 재시도 미계수(M4 승인 거부 규칙 대칭)
+7. **게이트 deploy surface (gate.py additive method)**: 정책(컴파일+스캔+리뷰)은 `server/deploy/pipeline.py`, 송신-시점 재확인(잠금/건강)+감사는 게이트 소유 `deploy_plugin_source` — 잠금 중 배포는 wire 0건 차단. 스캔/리뷰 통과 후 잠금 차단이면 리뷰 1회 낭비 가능(단일 enforcement 지점 유지 위한 수용)
+8. **소스 크기 상한 16KB(설정 가능)**: percent-encode 팽창 후 UDP/MA3 명령 라인 한계는 미검증 가정 — ASSUMPTION-6에 기재, M6 캘리브레이션
+9. **스캔 finding 3종**: `blacklisted`(파괴 플래그 구동) / `invoking`(간접 호출 — 리뷰어 경고만, 호출-시점 게이트가 실행 커버) / `unparseable`(경고). 동적 조립(`..`/format/변수)은 `dynamic_calls`로 표면화 — REQ-MVP-027 best-effort 프레이밍 유지(스캔 FP 수용, FN은 인간 리뷰가 권위 통제)
+10. **M2 잠복 버그 수정 (범위 내 cascade)**: responder `json_string`의 Lua `%c` 클래스가 로케일 의존으로 0x80–0x9F 바이트를 이스케이프 → 비ASCII 응답(한국어 오브젝트명 등) UTF-8 훼손. 바이트 명시 클래스 `[\0-\31"\\\127]`로 교정(M7 유니코드 배포명 테스트가 발견·핀 고정)
+
+**Deliverables**: `server/deploy/{__init__,compile,scan,review,pipeline}.py`, `server/bridge/protocol.py`(+build_deploy_request), `server/safety/{console,gate,bootstrap}.py`(deploy transport/surface/공유 배선), `console/lua/{copilot_responder.lua(1.1.0),copilot_responder.xml,PROTOCOL.md}`, `server/orchestrator/{tools,runner}.py`(도구 배선+재시도 계정), `server/web/{approval_bridge,messages,session,app,serve}.py` + `PROTOCOL.md`, `ui/src/{protocol.ts,protocol.test.ts,useCopilotSocket.ts,App.tsx,styles.css,components/ReviewCard.tsx}`, tests 7종(`test_deploy_{compile,scan,pipeline,transport,gate_e2e}`, `test_responder_deploy`, `test_runner_deploy_correction`, `test_web_review` + `test_tools`/`test_safety_bootstrap`/`test_web_serve` 확장), `pyproject.toml`+`uv.lock`(lupa 승격), `README.md`(M7 섹션)
+
+**Commits**: `3d23d4e` M7 deploy core (pcall harness + scan + review + pipeline) · `6aa5455` M7 deploy transport (responder verb + gate surface + E2E) · `c445383` M7 tool wiring + review WS flow + React review card · (본 evidence 커밋) — push: N/A (no origin remote)
+
+**Gaps (M7)**
+
+- **onPC 2.4.2 라이브 배포 미실행**: deploy verb의 플러그인-오브젝트 생성 API(ASSUMPTION-6 — Acquire/Append, content setter, 와이어 길이 한계)는 mocked pool 기준 검증 — 실콘솔에서 무해 플러그인으로 우선 검증 필요 (M2/M4 ASSUMPTION 규율과 동일 관리; PROTOCOL.md §6 mitigation 기재)
+- **스캔 회피 한계(설계상 잔여 위험)**: 동적 Lua 문자열 조립은 정적 스캔으로 탐지 불가 — `dynamic_calls` 경고로 표면화되나 검증은 불가, REQ-MVP-027 규정대로 인간 리뷰가 권위 통제(스캔은 보조 신호). FP(주석 내 Cmd 등도 스캔)는 수용
+- **리뷰 카드 브라우저 렌더링 미검증**: vitest(순수 함수)+tsc+vite build까지 — 실브라우저 조작 검증은 M6 범위(M5 gap 승계)
+- **배포 턴 왕복 측정 마킹 미배선**: deploy 송신은 `_MeasuredExecutionPort`를 타지 않아 judged 코퍼스에서 제외됨 — M6 코퍼스(대표 작업 10종 중 "Lua 플러그인 배포") 측정 시 deploy 결과 수신 마킹 배선 필요(리뷰 대기 공제는 recorder 연결로 준비됨)
+- **번호 호출 미커버(안전 방향)**: 레지스트리는 이름 기준(`Plugin <name>`) — `Plugin 5`(풀 번호) 호출은 미등록 참조로 expand-or-hold 보류(과보류 수용)
+- **잠금 중 배포 시 리뷰 낭비 가능**: 게이트 단일 enforcement 유지의 트레이드오프 (decision 7)
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_

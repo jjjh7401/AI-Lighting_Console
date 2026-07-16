@@ -136,3 +136,34 @@ cards (command + risk reasons + warnings), the live-lock toggle, console
 status banners, and proposal cards; raw LLM SDK errors never reach the chat
 surface (Korean messages only — details go to the audit/diagnostic log,
 REQ-MVP-044).
+
+## Lua plugin deployment gate (M7)
+
+`deploy_plugin` is live: a model-generated Lua plugin deploys ONLY when **both**
+the pcall compile check **and** the human review gate pass (REQ-MVP-019 —
+deny-by-default; without a connected review UI nothing ever deploys).
+
+Pipeline ([`server/deploy/`](server/deploy/)):
+
+1. **Compile harness** — the source is compiled (never executed) in an embedded
+   Lua 5.4 runtime (`lupa`, now a runtime dependency). A compile failure goes
+   back to the model as a structured error and counts toward the same ≤3
+   self-correction retry cap as command failures.
+2. **Destructive scan** — every `Cmd()` string literal is classified against
+   the same closed-set SSOT the gate uses (`server/safety/blacklist.yaml`,
+   abbreviation-aware). The scan is **best-effort reviewer assistance**:
+   dynamically assembled strings (`Cmd("Delete " .. x)`, `string.format`, …)
+   are surfaced as unverifiable-call warnings, and the **human review stays
+   the authoritative control** (REQ-MVP-027).
+3. **Human review** — the UI shows a review card: plugin name, compile
+   verdict, scan findings (blacklisted lines highlighted), dynamic-assembly
+   notes, bounded source preview, approve/reject. Disconnect/timeout = deny.
+4. **Gate-owned deploy send** — the deployment rides the safety gate
+   (audited 1:1, blocked under live lock / console-offline) to the responder's
+   new `deploy` verb (`console/lua/PROTOCOL.md` §2, responder 1.1.0 — the
+   console re-compiles the source before touching the plugin pool;
+   plugin-object creation is ASSUMPTION-6, onPC-unverified).
+5. **Flag registration** — on approval the plugin is registered in the M4
+   flag registry; a destructive-scanned plugin then requires human approval
+   on **every** invocation (REQ-MVP-028 — the M4 invocation gate enforces it
+   with no extra wiring).
