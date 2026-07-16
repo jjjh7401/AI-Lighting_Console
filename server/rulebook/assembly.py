@@ -49,9 +49,7 @@ def rulebook_dir(version: str = RULEBOOK_VERSION) -> Path:
 
 def rulebook_asset_files(version: str = RULEBOOK_VERSION) -> list[Path]:
     """Static asset files in the deterministic (sorted-filename) assembly order."""
-    files = sorted(
-        path for path in rulebook_dir(version).iterdir() if path.suffix == ".md"
-    )
+    files = sorted(path for path in rulebook_dir(version).iterdir() if path.suffix == ".md")
     if not files:
         raise RulebookError(f"rulebook asset directory for {version!r} contains no .md files")
     return files
@@ -63,9 +61,7 @@ def rulebook_asset_files(version: str = RULEBOOK_VERSION) -> list[Path]:
 #   (REQ-MVP-008); a second assembly path would silently fork the cached prefix
 def assemble_prefix(version: str = RULEBOOK_VERSION) -> str:
     """Assemble the fixed prefix from static assets — deterministic, byte-stable."""
-    parts = [
-        path.read_text(encoding="utf-8").strip() for path in rulebook_asset_files(version)
-    ]
+    parts = [path.read_text(encoding="utf-8").strip() for path in rulebook_asset_files(version)]
     return "\n\n".join(parts) + "\n"
 
 

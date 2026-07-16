@@ -5,6 +5,8 @@ description = "grandMA3 AI copilot server (SPEC-COPILOT-MVP-001) - OSC bridge, t
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "anthropic>=0.116.0",
+    "google-genai>=2.12.0",
     "python-osc>=1.9.3,<2",
 ]
 

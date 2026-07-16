@@ -1,0 +1,33 @@
+# LLM provider configuration (SPEC-COPILOT-MVP-001, REQ-MVP-006/039/040/041).
+#
+# - Exactly ONE active provider at runtime; switch by editing `active` below —
+#   no code change required (AC-MVP-026).
+# - Model pins: Anthropic is pinned to claude-opus-4-8 (REQ-MVP-006).
+#   The Gemini pin is the latest documented STABLE (non-preview) GA model at
+#   M3 implementation time; it is config-changeable without code change.
+# - SECURITY: this file must NEVER contain credentials. API keys are injected
+#   via environment variables only: ANTHROPIC_API_KEY, GEMINI_API_KEY (or
+#   GOOGLE_API_KEY). The loader rejects credential-like keys.
+
+[provider]
+active = "anthropic"
+
+[provider.anthropic]
+model = "claude-opus-4-8"
+prompt_caching = true
+max_tokens = 16000
+# Fixed, recorded inference settings (grammar error-rate measurement requires
+# a pinned production inference configuration — acceptance.md measurement §5).
+thinking = "adaptive"
+effort = "high"
+
+[provider.gemini]
+model = "gemini-2.5-pro"
+context_caching = true
+cache_ttl_seconds = 3600
+
+# REQ-MVP-040(ii) persistent-miss fallback detection (AD2-m1 defaults N=20/M=2).
+[fallback]
+window_turns = 20
+consecutive_windows = 2
+threshold_seconds = 10.0

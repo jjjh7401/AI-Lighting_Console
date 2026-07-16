@@ -1,0 +1,245 @@
+"""Google Gemini provider adapter (REQ-MVP-038/039/041 — config-pinned model).
+
+Wire contract (google-genai SDK):
+
+* The fixed rulebook prefix goes through **explicit context caching** when the
+  configuration enables it AND the model accepts the cache (minimum cacheable
+  token thresholds are model-dependent — research.md section F "verify at
+  implementation"). Cache creation is attempted ONCE; on failure the adapter
+  records the trade-off and falls back to the uncached ``system_instruction``
+  path (REQ-MVP-041 explicit trade-off).
+* Neutral tool definitions become ``FunctionDeclaration`` entries; neutral JSON
+  schema types are uppercased to the Gemini ``Type`` enum values.
+* Gemini function calls may carry no id — the adapter assigns synthetic,
+  turn-stable ids (``<name>-<index>``).
+* Every SDK exception is normalized to :class:`ProviderError` (REQ-MVP-044
+  forward design).
+
+Live-console-style unknowns (rest verified with a real API key at M6): the
+``role="tool"`` function-response convention and per-model cache thresholds
+are recorded as gaps in progress.md.
+"""
+
+from __future__ import annotations
+
+import logging
+from collections.abc import Sequence
+from typing import Any
+
+from server.llm.config import GeminiSettings
+from server.llm.errors import ProviderError, normalize_gemini_error
+from server.llm.types import (
+    ConversationItem,
+    ModelTurn,
+    ToolCall,
+    ToolDefinition,
+    ToolResultsMessage,
+    Usage,
+    UserMessage,
+)
+
+PROVIDER_NAME = "gemini"
+
+logger = logging.getLogger(__name__)
+
+
+def _to_gemini_schema(schema: dict) -> dict:
+    """Convert neutral JSON schema to Gemini schema (uppercased type values)."""
+    converted: dict = {}
+    for key, value in schema.items():
+        if key == "type" and isinstance(value, str):
+            converted[key] = value.upper()
+        elif key == "properties" and isinstance(value, dict):
+            converted[key] = {name: _to_gemini_schema(sub) for name, sub in value.items()}
+        elif key == "items" and isinstance(value, dict):
+            converted[key] = _to_gemini_schema(value)
+        else:
+            converted[key] = value
+    return converted
+
+
+class GeminiAdapter:
+    """LLMProvider implementation backed by the official ``google-genai`` SDK."""
+
+    def __init__(self, settings: GeminiSettings, *, client: Any | None = None) -> None:
+        self._settings = settings
+        self._client = client  # injected in tests; lazily constructed in production
+        self._cache_name: str | None = None
+        self._cache_attempted = False
+        self.cache_status = "uninitialized"
+
+    @property
+    def name(self) -> str:
+        return PROVIDER_NAME
+
+    @property
+    def model_id(self) -> str:
+        return self._settings.model
+
+    @property
+    def supports_prompt_caching(self) -> bool:
+        return self._settings.context_caching
+
+    def _ensure_client(self) -> Any:
+        if self._client is None:
+            from google import genai
+
+            # Credentials resolve from the environment (GEMINI_API_KEY /
+            # GOOGLE_API_KEY) — never from the provider config file.
+            self._client = genai.Client()
+        return self._client
+
+    # -- context caching (REQ-MVP-041, capability-gated) -----------------------
+
+    def _ensure_cache(self, client: Any, system_prefix: str) -> str | None:
+        if not self._settings.context_caching:
+            self.cache_status = "disabled"
+            return None
+        if self._cache_attempted:
+            return self._cache_name
+        self._cache_attempted = True
+        try:
+            from google.genai import types as gtypes
+
+            cache = client.caches.create(
+                model=self._settings.model,
+                config=gtypes.CreateCachedContentConfig(
+                    system_instruction=system_prefix,
+                    ttl=f"{self._settings.cache_ttl_seconds}s",
+                ),
+            )
+            self._cache_name = cache.name
+            self.cache_status = "cached"
+        except Exception as exc:  # capability gate: fall back, record trade-off
+            self._cache_name = None
+            self.cache_status = f"uncached: {exc}"
+            logger.warning(
+                "gemini context cache unavailable — running the UNCACHED path "
+                "(higher cost/latency accepted per REQ-MVP-041): %s",
+                exc,
+            )
+        return self._cache_name
+
+    # -- request construction --------------------------------------------------
+
+    def _tool_config(self, tools: Sequence[ToolDefinition]) -> Any:
+        from google.genai import types as gtypes
+
+        declarations = [
+            gtypes.FunctionDeclaration(
+                name=tool.name,
+                description=tool.description,
+                parameters=_to_gemini_schema(tool.parameters),
+            )
+            for tool in tools
+        ]
+        return gtypes.Tool(function_declarations=declarations)
+
+    def _to_contents(self, conversation: Sequence[ConversationItem]) -> list[Any]:
+        from google.genai import types as gtypes
+
+        contents: list[Any] = []
+        for item in conversation:
+            if isinstance(item, UserMessage):
+                contents.append(
+                    gtypes.Content(role="user", parts=[gtypes.Part.from_text(text=item.text)])
+                )
+            elif isinstance(item, ModelTurn):
+                if item.provider == PROVIDER_NAME and item.provider_payload is not None:
+                    contents.append(item.provider_payload)  # verbatim echo
+                    continue
+                parts: list[Any] = []
+                if item.text:
+                    parts.append(gtypes.Part.from_text(text=item.text))
+                for call in item.tool_calls:
+                    parts.append(
+                        gtypes.Part.from_function_call(name=call.name, args=call.arguments)
+                    )
+                contents.append(gtypes.Content(role="model", parts=parts))
+            elif isinstance(item, ToolResultsMessage):
+                parts = [
+                    gtypes.Part.from_function_response(
+                        name=result.name,
+                        response={"result": result.content, "is_error": result.is_error},
+                    )
+                    for result in item.results
+                ]
+                contents.append(gtypes.Content(role="tool", parts=parts))
+            else:  # pragma: no cover - defensive
+                raise TypeError(f"unsupported conversation item: {type(item).__name__}")
+        return contents
+
+    # -- response parsing --------------------------------------------------------
+
+    def _parse_response(self, response: Any) -> ModelTurn:
+        candidates = getattr(response, "candidates", None)
+        if not candidates:
+            raise ProviderError(
+                kind="malformed_response",
+                provider=PROVIDER_NAME,
+                retryable=False,
+                raw_detail=f"response without candidates: {response!r}",
+            )
+        content = candidates[0].content
+        parts = getattr(content, "parts", None) or []
+        texts: list[str] = []
+        tool_calls: list[ToolCall] = []
+        for index, part in enumerate(parts):
+            text = getattr(part, "text", None)
+            if text:
+                texts.append(text)
+            function_call = getattr(part, "function_call", None)
+            if function_call is not None:
+                call_id = getattr(function_call, "id", None) or f"{function_call.name}-{index}"
+                tool_calls.append(
+                    ToolCall(
+                        id=call_id,
+                        name=function_call.name,
+                        arguments=dict(function_call.args or {}),
+                    )
+                )
+        usage_metadata = getattr(response, "usage_metadata", None)
+        return ModelTurn(
+            text="\n".join(texts),
+            tool_calls=tuple(tool_calls),
+            stop_reason="tool_use" if tool_calls else "end",
+            usage=Usage(
+                input_tokens=getattr(usage_metadata, "prompt_token_count", 0) or 0,
+                output_tokens=getattr(usage_metadata, "candidates_token_count", 0) or 0,
+                cache_read_tokens=getattr(usage_metadata, "cached_content_token_count", 0) or 0,
+            ),
+            provider=PROVIDER_NAME,
+            provider_payload=content,
+        )
+
+    # -- LLMProvider interface ---------------------------------------------------
+
+    def complete(
+        self,
+        *,
+        system_prefix: str,
+        conversation: Sequence[ConversationItem],
+        tools: Sequence[ToolDefinition] = (),
+    ) -> ModelTurn:
+        from google.genai import types as gtypes
+
+        client = self._ensure_client()
+        cache_name = self._ensure_cache(client, system_prefix)
+        config_kwargs: dict[str, Any] = {}
+        if tools:
+            config_kwargs["tools"] = [self._tool_config(tools)]
+        if cache_name:
+            config_kwargs["cached_content"] = cache_name
+        else:
+            config_kwargs["system_instruction"] = system_prefix
+        try:
+            response = client.models.generate_content(
+                model=self._settings.model,
+                contents=self._to_contents(conversation),
+                config=gtypes.GenerateContentConfig(**config_kwargs),
+            )
+        except ProviderError:
+            raise
+        except Exception as exc:
+            raise normalize_gemini_error(exc) from exc
+        return self._parse_response(response)
