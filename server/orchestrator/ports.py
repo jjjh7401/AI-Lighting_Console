@@ -15,6 +15,7 @@ bridge calls from tool code.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -25,6 +26,33 @@ class ExecutionResult:
 
     ok: bool
     detail: str = ""
+
+
+class GateCommandDecision(Protocol):
+    """Per-command screening verdict (shape of the M4 gate's decision rows)."""
+
+    command: str
+    status: str
+    reasons: tuple[str, ...]
+
+
+class GateScreenDecision(Protocol):
+    """Bundle screening outcome (shape of the M4 gate's ScreenDecision)."""
+
+    cleared: bool
+    status: str
+    commands: tuple[GateCommandDecision, ...]
+    notice: str
+
+
+# @MX:NOTE: [AUTO] bundle-level gate hook (REQ-MVP-011/015) — run_commands screens
+#   the WHOLE bundle here before any per-command port execution starts
+class BundleGate(Protocol):
+    """Bundle-level safety screening — implemented by the M4 safety gate."""
+
+    def screen(self, commands: Sequence[str]) -> GateScreenDecision:
+        """Screen one command bundle; a non-cleared decision means zero sends."""
+        ...
 
 
 # @MX:NOTE: [AUTO] chokepoint port (REQ-MVP-029 forward design) — the M4 safety gate

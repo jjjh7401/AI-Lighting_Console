@@ -109,9 +109,7 @@ def _evaluate(
             return _hold(f"unverifiable body line in {reference!r}: {grammar.reason}")
         finding = classify_command(grammar.parsed, ruleset)
         if finding.category == "blacklisted":
-            return _hold(
-                f"body of {reference!r} contains blacklisted command {line!r}", risky=True
-            )
+            return _hold(f"body of {reference!r} contains blacklisted command {line!r}", risky=True)
         if finding.category == "invoking":
             nested = _evaluate(
                 finding.reference,

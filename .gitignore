@@ -111,6 +111,11 @@ logs/*
 *.bak
 *.backup
 
+# Safety-gate audit log runtime data (JSONL, daily rotation — plan.md A-4).
+# The SSOT config server/safety/blacklist.yaml IS tracked; only runtime
+# audit data is ignored.
+server/audit_logs/
+
 # ===========================================
 # Backups
 # ===========================================

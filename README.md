@@ -65,3 +65,31 @@ observe a warm cache read):
 ```bash
 uv run python -m server.tools.provider_smoke
 ```
+
+## Safety gate (M4)
+
+Every command bound for the console passes the 3-stage safety gate in
+[`server/safety/`](server/safety/) — the SINGLE chokepoint (an architecture
+test enforces that no other production module can reach the OSC send surface):
+
+1. **Grammar validator** — structural parse; rejected lines feed the
+   self-correction loop.
+2. **Risk classification** — the closed blacklist + indirect-invocation
+   expand-or-hold (recursion cap 3, cycle detection) + destructive-plugin
+   flags + unspecified-target detection.
+3. **Human approval** — risky commands are HELD until an explicit approval;
+   one rejection voids the whole bundle (all-or-nothing). Without an approval
+   channel the default is deny-all.
+
+The closed sets (blacklist 6 entries, invoking verbs 10 + 2 bare forms) live
+in ONE version-controlled file: [`server/safety/blacklist.yaml`](server/safety/blacklist.yaml).
+Changing a set requires a file revision with a version bump — tests iterate
+the file's content, so revisions auto-extend the FN corpora.
+
+Also part of the gate: **live lock** (read-only proposal cards, lock wins over
+pending approvals), **showfile backups** (session start + periodic 10 min +
+immediately before approved risky commands; backup failure blocks execution),
+**failure modes** (console-offline / responder-degraded / per-command
+"execution unconfirmed" with no auto-resend), and the **audit log**
+(append-only JSONL under `server/audit_logs/`, daily rotation, 90-day
+retention — every console send reconciles 1:1 with an audit record).

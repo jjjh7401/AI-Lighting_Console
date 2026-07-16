@@ -27,7 +27,9 @@ EXPECTED_BLACKLIST = {
     "Shutdown",
     "Format",
 }
-EXPECTED_INVOKING_VERBS = ("Go", "Go+", "Go-", "Goto", "On", "Off", "Toggle", "Temp", "Flash", "Call")
+EXPECTED_INVOKING_VERBS = (
+    "Go", "Go+", "Go-", "Goto", "On", "Off", "Toggle", "Temp", "Flash", "Call"
+)  # fmt: skip
 EXPECTED_BARE_FORMS = ("Macro <n>", "Plugin <n>")
 
 
@@ -74,7 +76,8 @@ class TestRulesetValidation:
     def test_missing_version_raises(self, tmp_path):
         path = self._write(
             tmp_path,
-            "blacklist: ['Delete']\ninvoking_verbs:\n  verbs: ['Go']\n  bare_object_forms: ['Macro <n>']\n",
+            "blacklist: ['Delete']\ninvoking_verbs:\n  verbs: ['Go']\n"
+            "  bare_object_forms: ['Macro <n>']\n",
         )
         with pytest.raises(RulesetError, match="version"):
             load_ruleset(path)

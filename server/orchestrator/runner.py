@@ -142,7 +142,11 @@ class Orchestrator:
                     for outcome in execution.command_outcomes:
                         if outcome.status == "executed_ok":
                             executed_ok.add(outcome.command)
-                    if any(o.status == "failed" for o in execution.command_outcomes):
+                    # "failed" = console error; "blocked" = gate block (M4 —
+                    # e.g. grammar, REQ-MVP-012): both feed the correction
+                    # loop and count toward the retry cap. Human rejections
+                    # and lock proposals are NOT technical failures.
+                    if any(o.status in ("failed", "blocked") for o in execution.command_outcomes):
                         last_run_failed = True
             conversation.append(ToolResultsMessage(results=tuple(results)))
             if last_run_failed and retries_used >= self._max_retries:

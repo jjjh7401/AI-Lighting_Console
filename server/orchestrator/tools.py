@@ -14,7 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from server.llm.types import ToolCall, ToolDefinition, ToolResult
-from server.orchestrator.ports import CommandExecutionPort, StateQueryPort
+from server.orchestrator.ports import BundleGate, CommandExecutionPort, StateQueryPort
 
 TOOL_NAMES = ("run_commands", "query_state", "deploy_plugin", "get_rig_context")
 
@@ -37,10 +37,15 @@ class ExecutionContext:
 
 @dataclass(frozen=True)
 class CommandOutcome:
-    """Per-command execution status within one run_commands bundle."""
+    """Per-command execution status within one run_commands bundle.
+
+    Execution statuses: "executed_ok" | "failed" | "not_executed" |
+    "skipped_already_executed". Gate screening statuses (M4, when a bundle
+    gate is wired): "blocked" | "rejected" | "proposal" | "held".
+    """
 
     command: str
-    status: str  # "executed_ok" | "failed" | "not_executed" | "skipped_already_executed"
+    status: str
     detail: str = ""
 
 
@@ -91,8 +96,16 @@ def build_toolset(
     execution_port: CommandExecutionPort,
     state_port: StateQueryPort,
     rig_paths: dict[str, str] | None = None,
+    bundle_gate: BundleGate | None = None,
 ) -> ToolRegistry:
-    """Build the 4-tool registry wired to the given ports (REQ-MVP-005)."""
+    """Build the 4-tool registry wired to the given ports (REQ-MVP-005).
+
+    When ``bundle_gate`` is provided (M4 production wiring), every
+    run_commands bundle is screened as a WHOLE before any per-command
+    execution starts (REQ-MVP-011 pipeline + REQ-MVP-015 all-or-nothing);
+    a non-cleared decision returns the block/hold reasons as an error tool
+    result, feeding the self-correction loop (REQ-MVP-012).
+    """
     rig_paths = dict(rig_paths or DEFAULT_RIG_CONTEXT_PATHS)
 
     # -- run_commands (REQ-MVP-001 upstream, REQ-MVP-009/033 semantics) --------
@@ -105,6 +118,38 @@ def build_toolset(
             or not all(isinstance(c, str) and c.strip() for c in commands)
         ):
             return _error_result(call, "'commands' must be a non-empty list of command lines")
+        if bundle_gate is not None:
+            decision = bundle_gate.screen(commands)
+            if not decision.cleared:
+                gate_outcomes = tuple(
+                    CommandOutcome(command=d.command, status=d.status, detail="; ".join(d.reasons))
+                    for d in decision.commands
+                )
+                content = json.dumps(
+                    {
+                        "all_ok": False,
+                        "gate_status": decision.status,
+                        "notice": decision.notice,
+                        "commands": [
+                            {
+                                "command": d.command,
+                                "status": d.status,
+                                "reasons": list(d.reasons),
+                            }
+                            for d in decision.commands
+                        ],
+                    },
+                    ensure_ascii=False,
+                )
+                return ToolExecution(
+                    result=ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=content,
+                        is_error=True,
+                    ),
+                    command_outcomes=gate_outcomes,
+                )
         outcomes: list[CommandOutcome] = []
         failed = False
         for command in commands:

@@ -103,9 +103,7 @@ def _bare_form_reference(parsed: ParsedCommand, ruleset: SafetyRuleset) -> str |
     return None
 
 
-def _extract_reference(
-    parsed: ParsedCommand, reference_types: tuple[str, ...]
-) -> str | None:
+def _extract_reference(parsed: ParsedCommand, reference_types: tuple[str, ...]) -> str | None:
     args = parsed.args
     for i, a in enumerate(args):
         if a.quoted:
