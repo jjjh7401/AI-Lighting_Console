@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-EVAL-001
 title: "Phase 0: boardop 실사용 평가 및 격차 분석"
-version: "0.3.1"
+version: "0.3.2"
 status: completed
 created: 2026-07-15
 updated: 2026-07-16
@@ -21,6 +21,7 @@ related_specs: [SPEC-COPILOT-MVP-001]
 
 | 버전 | 날짜 | 작성자 | 변경 내용 |
 |---|---|---|---|
+| 0.3.2 | 2026-07-16 | manager-spec | plan-audit AD3-m1 라이더 흡수 (문서 명확화 amendment — 재개방 아님): acceptance.md GWT 5의 Then 전칭("이후 작성되는 모든 평가 근거 행")을 **폴백 평가 하에서 작성되는 행**으로 스코핑 — REQ-EVAL-015의 While 범위와 정합시키고, 라이브 접근이 이후 확보된 경우의 행에서 엣지 케이스 2의 "실행 불가" 기록과 3분류 택소노미가 충돌하던 코너를 해소. 요구 본문(REQ)·AC 판정 기준 변경 없음(택소노미 코너 명확화)이므로 status: completed를 유지한다 — delta re-audit는 이 판단 근거를 본 행으로 평가 가능. 영향: acceptance.md GWT 5 (REQ 본문 무변경) |
 | 0.3.1 | 2026-07-16 | manager-spec | plan-audit amendment-delta iteration 1 (FAIL 0.87) 지적 반영 — F1: REQ-EVAL-014 트리거를 이진 판정형(문서화된 접근 시도 이력 + 오케스트레이터 AskUserQuestion 사용자 확인 기록)으로 재작성, §A에 플랫폼 비호환 문서 증거 기반 + ground truth 접근 시도 이력 기재. F2: AC-EVAL-006에 [문서 폴백 시] 경로 신설(파괴적 시나리오 유지 + REQ-EVAL-015 태그 + 문서 증거 기반 안전장치 평가 + 실행·일회용 쇼파일 절 명시적 N/A), DoD 이중 경로를 001/002/006으로 확장. F3: AC-EVAL-002 폴백 행 단위 출처 인용·탐색 범위 기록 의무 + REQ-EVAL-015 3분류(실행 확인 / 관찰 기반(실행 미확인) / 관찰 불가) 정비 + REQ-EVAL-004 폴백 상응 기록 항목 정의. F4: AC-EVAL-005 체크리스트 ④(스크린샷·프레임 코드 전사 0건) 추가, 품질 게이트 미러 갱신. F6: REQ-EVAL-001에 폴백 시 실측 불가 항목 "관찰 불가 — 라이브 실행 미확보" 표기 절 추가. 영향 REQ: 001, 014, 015 |
 | 0.1.0 | 2026-07-15 | manager-spec | 최초 작성 (draft) |
 | 0.3.0 | 2026-07-16 | manager-spec | boardop 베타 코드 미공개(접근 채널 폐쇄) + macOS 미지원 확인에 따른 amendment — 실사용 라이브 세션이 확보 불가할 때 문서/영상 관찰 기반 평가로 대체 가능하도록 REQ-EVAL-002/003 및 AC-EVAL-001/002 조정. REQ-EVAL-010 코드 미포함 원칙은 스크린샷 내 코드 전사에도 명시적으로 적용. 신설: REQ-EVAL-014(폴백 트리거)/REQ-EVAL-015(근거 구분 표기). 영향 REQ: 002, 003, 010, 014, 015 |
