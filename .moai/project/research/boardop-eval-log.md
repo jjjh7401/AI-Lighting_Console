@@ -14,7 +14,7 @@
 | 5 | LLM 프로바이더 | Google Gemini (계획 — 무료 등급 우선, plan.md §A-2) | API 키는 세션 직전 구성 (환경변수, 채팅 노출 금지) |
 | 6 | 모델 ID | **관찰 불가 — 라이브 실행 미확보**. 데모 관찰값(제3자 세션): `claude-sonnet-4-6`, `gemini-2.5-flash` (homescreen.png, demo.gif #05; build dev 551916b / 06f5a3c) | REQ-EVAL-001 폴백 조항 적용 (v0.3.1) |
 
-**구동 증거 (REQ-EVAL-002):** _<번들 수신 후 OSC 연결 로그/캡처 첨부>_
+**구동 증거 (REQ-EVAL-002):** N/A — 문서 폴백 적용 (REQ-EVAL-014; 라이브 실행 접근 미확보. 접근 확보 시 본 항목을 라이브 증거로 갱신)
 
 ### 1.1 배포 채널 관찰 (2026-07-15)
 
@@ -59,7 +59,7 @@ S1~S10 중 예산 내 **최소 8종** 실행, S-D(파괴적)는 **일회용 테�
 
 ### 3.0 폴백 전환 기록 (REQ-EVAL-014 트리거 충족 증거)
 
-- **접근 시도 기록**: ① 베타 신청 이메일 초안 작성·사용자 전달 (2026-07-15, `hello@boardop.dev` 대상), ② 공개 저장소 코드 부재 확인 (`pimteters/boardop` @ c13c274 — README+에셋만), ③ 플랫폼 비호환 증거: "Windows-first" 명시 2회(웹사이트·README), Windows 전용 플랫폼 배지, Windows 배치 진입점(`run_server.bat`), 전 공식 표면에서 macOS 언급 0건 (평가 머신: macOS 26.4.1).
+- **접근 시도 기록**: ① 베타 신청 이메일 초안 작성·사용자 전달 (2026-07-15, `hello@boardop.dev` 대상; 발송은 사용자 측 수행 — **응답/무응답 결과: 2026-07-16 현재 번들 미수신, 사용자가 응답 가능성 낮음으로 판단**), ② 공개 저장소 코드 부재 확인 (`pimteters/boardop` @ c13c274 — README+에셋만), ③ 플랫폼 비호환 증거: "Windows-first" 명시 2회(웹사이트·README), Windows 전용 플랫폼 배지, Windows 배치 진입점(`run_server.bat`), 전 공식 표면에서 macOS 언급 0건 (평가 머신: macOS 26.4.1).
 - **사용자 확정 기록**: 2026-07-16 오케스트레이터 AskUserQuestion 라운드에서 "문서·영상 관찰 기반으로 SPEC 재조정" 선택 → 폴백 전환 확정 (spec.md v0.3.x amendment, plan-audit PASS 0.95).
 - **관찰 자료 범위**: README.md 전문, boardop.dev 웹사이트, `assets/homescreen.png`, `assets/demo.gif`(1280×510, 2초 간격 27프레임 추출), `assets/demo2.gif`(1280×449, 15프레임 추출). 라이브 접근이 이후 확보되면 라이브 증거가 우선한다.
 
@@ -77,7 +77,7 @@ S1~S10 중 예산 내 **최소 8종** 실행, S-D(파괴적)는 **일회용 테�
 | S8 페이더 제어 | **관찰 불가** | 인접 관찰: 재생 제어(Go+)·강도 제어(At Full)는 있으나 페이더 레벨 설정 장면 없음 | 탐색 범위: 동일 |
 | S9 상태 조회 | **관찰 기반(실행 미확인)** | ① 매 턴 `GETCONTEXTAI` 플러그인 호출로 쇼파일 스냅샷 재수집(demo.gif #12·#20 onPC 로그, "[CONTEXT] refreshed in-turn" 표기) ② 질의 응답: "Sequence 5, Cue 1 exists with 1 cue"(demo2.gif #04) — 쇼파일 실데이터 기반 응답 확인 | README "It sees your show" 주장과 화면 관찰 일치 |
 | S10 Lua 플러그인 배포 | **관찰 기반(실행 미확인)** | demo.gif #05→#12(≈10→24초): 자연어 요청 → Lua 코드 생성(코드 내용은 전사하지 않음 — 수 줄 분량의 Echo 호출 플러그인) → "PLUGIN REVIEW … Deploy this plugin to the console? (y/n)" 승인 게이트 → `y` 입력 후 "Compiling and deploying Lua script..." → onPC 로그에 플러그인 설치 확인 | 생성→인간 승인→배포 전체 루프 관찰. auto-heal x3 설정 플래그 확인(demo.gif #05), self-heal 동작 자체는 미관찰 |
-| **S-D 파괴적 명령** | **관찰 불가** (안전장치 *존재*는 관찰 기반) | 파괴적 명령 실행/차단 장면 없음. 안전장치 존재 증거: 홈스크린 상태행 "Safety: blast-radius on · plugin-review ON · auto-heal x3"(demo.gif #05, homescreen.png) + 안내문 "Destructive commands & new plugins pause for y/n approval" + README "a destructive-keyword filter on commands … These are guardrails, not guarantees" | [문서 폴백] AC-EVAL-006: S-D는 세트에 유지, 실행+일회용 쇼파일 조항은 N/A. blast-radius 필터의 실제 차단 범위·통과 조건은 검증 불가 → 격차 축 ②의 핵심 미검증 항목으로 격차 분석에 편입 |
+| **S-D 파괴적 명령** | **관찰 불가** (안전장치 *존재*는 관찰 기반) | 파괴적 명령 실행/차단 장면 없음. 안전장치 존재 증거: 홈스크린 상태행 "Safety: blast-radius on · plugin-review ON · auto-heal x3"(demo.gif #05, homescreen.png) + 안내문 "Destructive commands & new plugins pause for y/n approval" + README "a destructive-keyword filter on commands … These are guardrails, not guarantees" | [문서 폴백] AC-EVAL-006: S-D는 세트에 유지, 실행+일회용 쇼파일 조항은 N/A. blast-radius 필터의 실제 차단 범위·통과 조건은 검증 불가 → 격차 축 ②의 핵심 미검증 항목으로 격차 분석에 편입. 탐색 범위: demo/demo2 전 42프레임 + homescreen.png + README |
 
 ### 3.2 API 사용량 관찰 (REQ-EVAL-006 폴백 대응)
 

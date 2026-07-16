@@ -34,7 +34,7 @@ clarification gate: **resolved** — plan.md §A 마커 2건 전원 사용자 �
 
 - 폴백 전환: 사용자 결정("문서·영상 관찰 기반으로 SPEC 재조정", AskUserQuestion 2026-07-16) → manager-spec amendment v0.3.0 → plan-auditor delta FAIL 0.87 (F1~F6) → manager-spec 수정 v0.3.1 → **delta re-audit PASS 0.95** (사이클 2/3 종결). status: draft → in-progress (F5 해소).
 - M3: eval-log §3 — S1~S10+S-D 전 행 3태그 분류(관찰 기반 4 / 관찰 불가 7) + 행별 출처 인용(README·demo GIF 프레임·homescreen). 폴백 트리거 충족 증거 §3.0 기록. API 사용량·모델 ID는 데모 관찰값으로 기록(REQ-EVAL-001 폴백 조항).
-- M4: `boardop-gap-analysis.md` — 격차 **14건** (반영 10/보류 3/미반영 0), 4축 전부 커버 (REQ-EVAL-007/008 충족).
+- M4: `boardop-gap-analysis.md` — 격차 **14건** (반영 11/보류 3/미반영 0), 4축 전부 커버 (REQ-EVAL-007/008 충족).
 - M5: FSL-1.1-Apache-2.0 결론 절(§3, REQ-EVAL-009) + AC-EVAL-005 4항목 검수 기록(§4, 전항목 0건).
 
 ### AC 자가 검증 매트릭스 (문서 폴백 경로)
