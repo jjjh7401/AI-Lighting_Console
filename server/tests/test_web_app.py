@@ -178,9 +178,13 @@ class TestRuntimeLoops:
             heartbeat_interval_seconds=0.02,
         )
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
-            first = ws.receive_json()
-            assert first["type"] == "status"
-            event = _receive_until(ws, "status")
+            # The loop starts at app startup: the offline transition may land
+            # BEFORE the connect (then the initial snapshot already shows it)
+            # or after (then a status push arrives) — accept either.
+            event = ws.receive_json()
+            assert event["type"] == "status"
+            while event["type"] != "status" or event["health"] != "console_offline":
+                event = _receive_until(ws, "status")
             assert event["health"] == "console_offline"
             assert event["executions_blocked"] is True
 
