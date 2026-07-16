@@ -22,6 +22,7 @@ from typing import Protocol
 from server.bridge.osc import FeedbackMessage
 from server.bridge.protocol import (
     ProtocolError,
+    build_deploy_request,
     build_exec_request,
     build_ping,
     build_state_query,
@@ -38,6 +39,9 @@ class LinkTimeouts:
     exec_confirm_seconds: float = 5.0
     ping_seconds: float = 2.0
     state_query_seconds: float = 5.0
+    # Deployment compiles + creates a plugin object console-side (M7) —
+    # a longer bound than a plain command execution.
+    deploy_confirm_seconds: float = 10.0
 
 
 @dataclass(frozen=True)
@@ -60,6 +64,10 @@ class ConsolePort(Protocol):
     def ping(self) -> bool: ...
 
     def query_state(self, path: str) -> dict: ...
+
+    def deploy_plugin(self, name: str, lua_source: str) -> ExecOutcome:
+        """Deploy one reviewed Lua plugin (M7); ok / failed / unconfirmed."""
+        ...
 
 
 class _Waiter:
@@ -168,6 +176,32 @@ class ConsoleLink:
         if self._monitor is not None:
             self._monitor.note_ping_success()
         return True
+
+    def deploy_plugin(self, name: str, lua_source: str) -> ExecOutcome:
+        """Deploy one plugin via the responder deploy verb (M7, REQ-MVP-019).
+
+        Sends ONCE and never retries: like exec, a deploy timeout is
+        UNCONFIRMED (send loss and reply loss are indistinguishable —
+        REQ-MVP-032 discipline applies to deployments too).
+        """
+        request_id = self._new_id()
+        try:
+            wire = build_deploy_request(request_id, name, lua_source)
+        except ProtocolError as error:
+            return ExecOutcome(status="failed", detail=f"cannot build deploy request: {error}")
+        payload = self._round_trip(wire, request_id, self._timeouts.deploy_confirm_seconds)
+        if payload is None:
+            return ExecOutcome(
+                status="unconfirmed",
+                detail=(
+                    "no deploy confirmation within "
+                    f"{self._timeouts.deploy_confirm_seconds}s (send loss and feedback "
+                    "loss are indistinguishable)"
+                ),
+            )
+        ok = bool(payload.get("ok"))
+        detail = str(payload.get("error") or payload.get("result") or "deployed")
+        return ExecOutcome(status="ok" if ok else "failed", detail=detail)
 
     def query_state(self, path: str) -> dict:
         """Object-tree snapshot query (REQ-MVP-003); raises on failure/timeout."""

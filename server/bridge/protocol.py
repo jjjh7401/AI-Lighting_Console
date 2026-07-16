@@ -128,3 +128,22 @@ def build_exec_request(request_id: str, command: str) -> str:
     _validate_request_id(request_id)
     _validate_rest(command, field="command")
     return build_plugin_call(f"exec {request_id} {command}")
+
+
+def build_deploy_request(request_id: str, name: str, lua_source: str) -> str:
+    """Plugin deployment request (M7, REQ-MVP-019; PROTOCOL.md §2 ``deploy``).
+
+    Name and source are percent-encoded (RFC 3986 style, nothing spared) so
+    the request tokens are pure ASCII with no spaces and no double quotes —
+    they survive MA3's quoted plugin-argument form regardless of the Lua
+    source content. The responder percent-decodes, re-compiles in the console
+    runtime, and creates/updates the plugin object (ASSUMPTION-6).
+    """
+    _validate_request_id(request_id)
+    if not name:
+        raise ProtocolError("plugin name must be non-empty")
+    if not lua_source:
+        raise ProtocolError("lua source must be non-empty")
+    encoded_name = urllib.parse.quote(name, safe="")
+    encoded_source = urllib.parse.quote(lua_source, safe="")
+    return build_plugin_call(f"deploy {request_id} {encoded_name} {encoded_source}")

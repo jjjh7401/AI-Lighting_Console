@@ -1,6 +1,7 @@
--- CopilotResponder — grandMA3 console-side Lua 5.4 responder plugin (M2).
+-- CopilotResponder — grandMA3 console-side Lua 5.4 responder plugin (M2/M7).
 -- SPEC-COPILOT-MVP-001: REQ-MVP-003 (object-tree state snapshot) +
--- REQ-MVP-004 (execution result retrieval). Target: grandMA3 onPC 2.4.2.
+-- REQ-MVP-004 (execution result retrieval) + REQ-MVP-019 (plugin deployment).
+-- Target: grandMA3 onPC 2.4.2.
 --
 -- @MX:NOTE: [AUTO] wire protocol v1 — requests arrive as the plugin argument
 --   ("<verb> <id> [rest]"); replies are percent-encoded JSON sent as one OSC
@@ -12,6 +13,8 @@
 --   Plugin "CopilotResponder" "ping <id>"
 --   Plugin "CopilotResponder" "state <id> <object-path>"   e.g. DataPool/Sequences
 --   Plugin "CopilotResponder" "exec <id> <ma3-command>"    e.g. exec 7 List
+--   Plugin "CopilotResponder" "deploy <id> <enc-name> <enc-source>"  (M7 —
+--     both tokens percent-encoded; reviewed source only, see PROTOCOL.md §2)
 -- Fallback when plugin arguments are unavailable: set the user variable
 --   COPILOT_REQ to the request string, then call the plugin without arguments.
 --
@@ -32,7 +35,7 @@ local CONFIG = {
 
 local M = {
     NAME = "CopilotResponder",
-    VERSION = "1.0.0",
+    VERSION = "1.1.0", -- 1.1.0: additive deploy verb (M7); wire protocol stays v1
     PROTO = 1,
     CONFIG = CONFIG,
 }
@@ -70,7 +73,11 @@ local function json_escape_char(c)
 end
 
 local function json_string(s)
-    return '"' .. s:gsub('[%c"\\]', json_escape_char) .. '"'
+    -- Byte-explicit escape class: JSON requires escaping only bytes < 0x20,
+    -- the quote, and the backslash (DEL kept escaped for safety). The former
+    -- '%c' class was locale-dependent and matched C1-range bytes (0x80-0x9F),
+    -- corrupting UTF-8 continuation bytes in non-ASCII replies (M7 fix).
+    return '"' .. s:gsub('[\0-\31"\\\127]', json_escape_char) .. '"'
 end
 
 function M.json_encode(value)
@@ -121,6 +128,12 @@ end
 
 function M.encode_payload(payload)
     return M.percent_encode(M.json_encode(payload))
+end
+
+function M.percent_decode(s)
+    return (s:gsub("%%(%x%x)", function(hex)
+        return string.char(tonumber(hex, 16))
+    end))
 end
 
 -- -- request parsing --------------------------------------------------------
@@ -334,6 +347,121 @@ function M.build_exec_result(id, command)
     return { v = M.PROTO, kind = "result", id = id, ok = false, result = raw, error = raw }
 end
 
+-- -- plugin deployment (M7 — REQ-MVP-019, ASSUMPTION-6) -----------------------
+
+-- @MX:WARN: [AUTO] unverified MA3 API surface — plugin-object creation and
+--   Lua-component source assignment are 2.4.2 assumptions (PROTOCOL.md §6
+--   ASSUMPTION-6); every accessor form is pcall-guarded and probed in order
+-- @MX:REASON: no live console was available at M7 implementation time; the
+--   deploy verb is exercised only against the mocked pool surface — verify
+--   on-site with a harmless plugin before relying on deployment
+
+function M.plugin_pool()
+    local ok, pool = pcall(function()
+        return M.find_child(DataPool(), "Plugins")
+    end)
+    if ok and pool then
+        return pool
+    end
+    return nil, "plugin pool not found (DataPool/Plugins)"
+end
+
+local function acquire_child(handle)
+    for _, method_name in ipairs({ "Acquire", "Append" }) do
+        local ok, child = pcall(function()
+            return handle[method_name](handle)
+        end)
+        if ok and child then
+            return child
+        end
+    end
+    return nil
+end
+
+function M.find_or_create_plugin(name)
+    local pool, err = M.plugin_pool()
+    if not pool then
+        return nil, false, err
+    end
+    local existing = M.find_child(pool, name)
+    if existing then
+        return existing, false
+    end
+    local created = acquire_child(pool)
+    if not created then
+        return nil, false, "cannot create plugin object (Acquire/Append probes failed)"
+    end
+    local named = pcall(function()
+        created.name = name
+    end)
+    if not named or M.safe_name(created) ~= name then
+        pcall(function()
+            created:Set("name", name)
+        end)
+    end
+    return created, true
+end
+
+function M.set_plugin_source(plugin, source)
+    local component
+    local children = M.safe_children(plugin)
+    if #children > 0 then
+        component = children[1]
+    else
+        component = acquire_child(plugin)
+    end
+    if not component then
+        return false, "cannot create plugin component (Acquire/Append probes failed)"
+    end
+    local setters = {
+        function()
+            component.content = source
+        end,
+        function()
+            component.Content = source
+        end,
+        function()
+            component:Set("content", source)
+        end,
+        function()
+            component:SetContent(source)
+        end,
+    }
+    for _, setter in ipairs(setters) do
+        if pcall(setter) then
+            local readable, value = pcall(function()
+                return component.content or component.Content
+            end)
+            if not readable or value == nil or value == source then
+                return true
+            end
+        end
+    end
+    return false, "cannot set plugin source (content setter probes failed)"
+end
+
+function M.build_deploy_result(id, name, source)
+    local function fail(message)
+        return { v = M.PROTO, kind = "deploy", id = id, ok = false, name = name, error = message }
+    end
+    -- Defense in depth behind the server-side pcall harness: re-compile in
+    -- the REAL console runtime BEFORE touching the plugin pool. The chunk is
+    -- loaded text-only and never called here.
+    local chunk, err = load(source, "=" .. name, "t")
+    if not chunk then
+        return fail("lua compile failed: " .. tostring(err))
+    end
+    local plugin, created, perr = M.find_or_create_plugin(name)
+    if not plugin then
+        return fail(perr)
+    end
+    local ok, serr = M.set_plugin_source(plugin, source)
+    if not ok then
+        return fail(serr)
+    end
+    return { v = M.PROTO, kind = "deploy", id = id, ok = true, name = name, created = created }
+end
+
 -- -- OSC reply transport ------------------------------------------------------
 
 function M.pack_message(address, encoded)
@@ -408,6 +536,24 @@ function M.handle_request(request)
             }
         else
             payload = M.build_exec_result(parsed.id, parsed.rest)
+        end
+        M.send_reply(CONFIG.feedback_address, payload)
+    elseif parsed.kind == "deploy" then
+        local enc_name, enc_source = parsed.rest:match("^(%S+)%s+(%S+)$")
+        if not enc_name then
+            payload = {
+                v = M.PROTO,
+                kind = "deploy",
+                id = parsed.id,
+                ok = false,
+                error = "malformed deploy request (expected: deploy <id> <enc-name> <enc-source>)",
+            }
+        else
+            payload = M.build_deploy_result(
+                parsed.id,
+                M.percent_decode(enc_name),
+                M.percent_decode(enc_source)
+            )
         end
         M.send_reply(CONFIG.feedback_address, payload)
     else

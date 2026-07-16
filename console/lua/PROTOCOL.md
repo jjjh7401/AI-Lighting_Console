@@ -7,6 +7,12 @@ M2 deliverable; consumed by the M3 tool-runner and the M4 safety gate.
 Versioning: every reply payload carries `"v": 1`. Any breaking change bumps the
 version in BOTH implementations and revises this document.
 
+> Revision note (M7, responder 1.1.0): ADDITIVE `deploy` verb (§2) + `deploy`
+> reply kind (§4.5) + ASSUMPTION-6 (§6). Wire protocol version stays 1.
+> Also fixed in 1.1.0: the reply JSON encoder's escape class is now
+> byte-explicit (`[\0-\31"\\\127]`) — the former Lua `%c` class was
+> locale-dependent and corrupted UTF-8 bytes 0x80–0x9F in non-ASCII replies.
+
 ## 1. Addresses (plan.md §A-5 — `/copilot/*` namespace)
 
 | Address | Direction | Carries |
@@ -34,6 +40,17 @@ Plugin "CopilotResponder" "<verb> <request-id> [rest]"
 | `ping` | `ping <id>` | `/copilot/feedback`, kind=`pong` |
 | `state` | `state <id> <object-path>` | `/copilot/state`, kind=`state` |
 | `exec` | `exec <id> <ma3-command>` | `/copilot/feedback`, kind=`result` |
+| `deploy` | `deploy <id> <enc-name> <enc-source>` (M7) | `/copilot/feedback`, kind=`deploy` |
+
+- `deploy` (M7, REQ-MVP-019): `<enc-name>` and `<enc-source>` are BOTH
+  percent-encoded (same RFC 3986 style as replies, §3) so the request tokens
+  are pure ASCII with no spaces/quotes regardless of the Lua source content.
+  The responder percent-decodes, **re-compiles the source in the console
+  runtime** (`load(source, name, "t")` — text-only, never executed at deploy
+  time; defense in depth behind the server-side pcall harness), then finds or
+  creates the plugin object in `DataPool/Plugins` and sets its Lua component
+  source (ASSUMPTION-6). The server sends ONLY review-approved source through
+  this verb (`server/deploy/pipeline.py`, REQ-MVP-019).
 
 - `<request-id>`: token matching `[A-Za-z0-9._-]+`; echoed back verbatim so the
   server can correlate replies (UDP gives no ordering/delivery guarantee).
@@ -113,6 +130,19 @@ handling is server-side M4 scope).
 {"v":1, "kind":"error", "id":"<id-or-->", "ok":false, "error":"<message>"}
 ```
 
+### 4.5 `deploy` (deployment result — on `/copilot/feedback`, M7 REQ-MVP-019)
+
+```json
+{"v":1, "kind":"deploy", "id":"<id>", "ok":true,  "name":"Cleaner", "created":true}
+{"v":1, "kind":"deploy", "id":"<id>", "ok":false, "name":"Cleaner", "error":"lua compile failed: ..."}
+```
+
+- `created` is `true` for a newly created plugin object, `false` when an
+  existing plugin of the same name was updated in place.
+- Failure modes: console-side compile failure, missing plugin pool, or an
+  accessor probe failure (ASSUMPTION-6) — all reported in `error`, never
+  retried by the responder.
+
 ## 5. Console-side reply transport (`CONFIG.send_variant`)
 
 | Variant | Mechanism |
@@ -148,3 +178,14 @@ Recorded per Section E honesty rules; the round-trip tool
   `/copilot/copilot/*` (detect with the round-trip tool's `--diagnose` mode),
   strip the leading `/copilot` from `CONFIG.state_address` /
   `CONFIG.feedback_address`.
+- **ASSUMPTION-6 (plugin-object API, M7)**: the plugin pool is reachable as
+  `DataPool/Plugins`; `pool:Acquire()` (fallback `Append()`) creates a plugin
+  object; the plugin's name is settable via `.name` (fallback
+  `:Set("name", ...)`); a Lua component is the plugin's first child or
+  created via `plugin:Acquire()`/`Append()`; the component's source is
+  settable via `.content` / `.Content` / `:Set("content", ...)` /
+  `:SetContent(...)` (probed in that order, pcall-guarded). Also assumes the
+  MA3 OSC input accepts command lines long enough to carry a percent-encoded
+  plugin source (server-side cap: 16 KB source before encoding — calibrate at
+  M6). Mitigation: every probe failure is reported verbatim in the `deploy`
+  reply's `error`; verify on-site with a harmless one-line plugin first.

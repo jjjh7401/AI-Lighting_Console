@@ -424,6 +424,47 @@ class SafetyGate:
             notice=f"{phase} — no console sends; proposal card only",
         )
 
+    # -- plugin deployment (M7 — REQ-MVP-019/029) ---------------------------------
+
+    def deploy_plugin_source(self, name: str, lua_source: str) -> ExecutionResult:
+        """Send one REVIEWED plugin deployment to the console (M7).
+
+        This is the gate-owned deploy surface — the only production route for
+        deployment sends (REQ-MVP-029). Policy (compile + scan + human review)
+        lives in :class:`server.deploy.pipeline.DeployPipeline`, which calls
+        this ONLY after review approval; this method re-checks the runtime
+        safety state at send time (lock/health — same discipline as
+        :meth:`_execute_cleared`) and audits the send 1:1 (kind="deploy").
+        """
+        if self.lock.is_active:
+            self._audit.log_blocked(f"deploy:{name}", reason="live lock active (read-only)")
+            return ExecutionResult(ok=False, detail="blocked: live lock active (read-only)")
+        if self.monitor.executions_blocked:
+            reason = f"health: {self.monitor.state}"
+            self._audit.log_blocked(f"deploy:{name}", reason=reason)
+            return ExecutionResult(ok=False, detail=f"blocked: {reason}")
+        outcome = self._console.deploy_plugin(name, lua_source)
+        self._audit.log_executed(
+            name,
+            kind="deploy",
+            ok=outcome.status == "ok",
+            detail=outcome.detail,
+            outcome=outcome.status,
+            source_bytes=len(lua_source.encode("utf-8")),
+        )
+        if outcome.status == "ok":
+            return ExecutionResult(ok=True, detail=outcome.detail)
+        if outcome.status == "unconfirmed":
+            return ExecutionResult(
+                ok=False,
+                detail=(
+                    "execution unconfirmed — the deployment may or may not have "
+                    f"reached the console; it will NOT be auto-resent (REQ-MVP-032): "
+                    f"{outcome.detail}"
+                ),
+            )
+        return ExecutionResult(ok=False, detail=outcome.detail)
+
     # -- execution (clearance consumption) ----------------------------------------
 
     def _execute_cleared(self, command: str) -> ExecutionResult:
