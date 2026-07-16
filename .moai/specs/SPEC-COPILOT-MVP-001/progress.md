@@ -161,6 +161,75 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 - **룰북 문법 커버리지는 plan-phase 리서치 한도** — 품질(오류율 <5%)은 M6 측정에서 판정 (M3는 구조+바이트 안정성만 보증)
 - **AC-MVP-028 ③** (측정 코퍼스 한국어 지시문 변형에 현장 용어 ≥3종) — M6 코퍼스 작성 범위
 
+### M4 — Safety gate + audit (2026-07-16, manager-develop cycle_type=tdd)
+
+**Scope**: REQ-MVP-011~018, 026~029, 030~034, 035~036 · AC-MVP-004/006/007a/007b/008/009/015/017/019①②/020/021/022/023/024 + AC-MVP-018 invocation-gate half · plan.md §C row M4 (① 문법 밸리데이터 ② 위험 분류 ③ 인간 승인 + 우회 봉쇄 + 원자성 + 장애 모드 + 라이브 잠금 + 백업 + 감사 로그) · §A-4 (감사 로그) · §A-6 (밸리데이터 깊이 확정)
+
+**AC matrix (M4 subset)**
+
+| AC | Status | Verification command | Actual output (tail) |
+|---|---|---|---|
+| AC-MVP-004 블랙리스트 FN 코퍼스 (SSOT 전수 × ≥3 변형 = 18+, 미탐 0) | PASS | `uv run pytest server/tests/test_safety_corpus.py -q` (corpus reads `server/safety/blacklist.yaml` dynamically — 6 entries × 3 variants direct/bundle/indirect + port-level defense = 18+6 cases; deny-all port, `console.executed == []` asserted per case) | `82 passed in 0.11s`; `test_no_send_without_approval[0..2-Delete/…/Format] PASSED` |
+| AC-MVP-006 감사 4종 이벤트 완전성 (누락 0) | PASS | `uv run pytest server/tests/test_safety_e2e_audit.py -v` (fake-console loopback E2E: executed/approved/rejected/blocked reconciled vs scenario expectations, zero misses per type) | `test_every_send_reconciles_with_a_gate_passage_record PASSED` |
+| AC-MVP-007a 잠금 중 송신 0 + 제안 카드 | PASS | `uv run pytest server/tests/test_safety_gate.py -v -k lock` | `test_lock_active_produces_proposal_only PASSED` |
+| AC-MVP-007b 잠금 해제 후 경로 복원 | PASS | same | `test_unlock_restores_the_normal_path PASSED` |
+| AC-MVP-008 백업 3규칙 + 비위험 미개입 | PASS | `uv run pytest server/tests/test_safety_backup.py server/tests/test_safety_gate.py -v -k backup` (①세션시작 ②주기(fake clock, 600s 기본) ③위험 직전 — backup→execute 순서 assert ④비위험 경로 backup 0회) | `test_pre_risky_backup_runs_before_execution PASSED`, `test_safe_bundle_needs_no_approval_and_no_backup PASSED` |
+| AC-MVP-009 번들 all-or-nothing | PASS | `uv run pytest server/tests/test_safety_gate.py -v -k rejection` (1건 거부 → 전체 미실행, OSC 0건, 안전 명령 clearance도 미발급) | `test_rejection_is_all_or_nothing PASSED` |
+| AC-MVP-015 ① 게이트 3단계 순서 | PASS | `uv run pytest server/tests/test_safety_gate.py -v -k order or stages` (stage_observer records) | `test_stages_run_grammar_then_classify_then_approval PASSED` — `["grammar","classify","approval"]` |
+| AC-MVP-015 ② 파싱 불가 차단 + 자가 수정 회신 | PASS | `uv run pytest server/tests/test_safety_gate.py -v -k grammar or correction` (runner E2E: blocked reason이 ToolResultsMessage로 회신, 교정 턴 성공, retries_used=1) | `test_grammar_block_reason_feeds_the_self_correction_loop PASSED` |
+| AC-MVP-017 invoking 전수 FN 코퍼스 (10동사+2베어 × 4시나리오 = 48, 송신 0) | PASS | `uv run pytest server/tests/test_safety_corpus.py -q` (SSOT 파일 순회 × {risky-body, unverifiable, depth-4, cycle}; 전 케이스 `console.executed == []` + 승인 보류 도달 assert; 클린 바디 전개-통과 카운터 케이스 포함) | `82 passed` (48 invoking cases 포함) |
+| AC-MVP-018 호출 게이트 절반 (②매회 승인 ③비파괴도 게이트 경유+감사) | PASS | `uv run pytest server/tests/test_safety_gate.py -v -k plugin` (destructive 플래그 2회 호출 → 승인 2회; 비파괴 등록 플러그인 → 무승인 통과 + executed 감사 기록) | `test_destructive_flagged_plugin_requires_approval_every_time PASSED` — deploy-scan 절반은 M7 |
+| AC-MVP-019 ① 임포트 경계 | PASS | `uv run pytest server/tests/test_architecture.py -v` (서버 전 트리 스캔: server.bridge/pythonosc 임포트는 server/safety+bridge+tests+명시 2개 운영 도구만; positive control 포함) | `test_only_the_safety_gate_reaches_the_osc_send_surface PASSED` |
+| AC-MVP-019 ② 송신↔감사 1:1 대조 | PASS | `uv run pytest server/tests/test_safety_e2e_audit.py -v` (real OscBridge UDP loopback + fake console: exec 수신 multiset == executed(command/backup) multiset; ping↔heartbeat; state↔state_query; 미승인 위험 명령 wire 0건) | `test_unapproved_risky_command_never_reaches_the_wire PASSED` |
+| AC-MVP-020 오프라인/저하/실행 미확인 | PASS | `uv run pytest server/tests/test_safety_gate.py server/tests/test_safety_lock_monitor.py -v -k offline or degraded or unconfirmed` (①오프라인 → 차단+상태 노출 ②저하 → 부수효과 미개시 ③미확인 → 보고+자동 재전송 0 — 재화면 시 승인 보류 전환) | `test_console_offline_blocks_new_executions PASSED`, `test_unconfirmed_result_is_reported_and_never_auto_resent PASSED` |
+| AC-MVP-021 번들 부분 실패 원자성 (게이트+러너) | PASS | `uv run pytest server/tests/test_safety_gate.py -v -k partial` (3건 중 2번째 실패 → 즉시 중단, 3번째 not_executed, 교정 턴에서 1번째 재전송 0 — 총 실행 시퀀스 assert) | `test_bundle_partial_failure_atomicity PASSED` — 승인 요청은 명령문+위험 사유 포함(UI 렌더는 M5) |
+| AC-MVP-022 백업 실패 fail-safe | PASS | `uv run pytest server/tests/test_safety_gate.py -v -k backup_failure` (백업 예외 → blocked_backup_failed, 송신 0, notice 통지, 감사 blocked) | `test_backup_failure_blocks_execution_and_notifies PASSED` |
+| AC-MVP-023 잠금-우선 | PASS | `uv run pytest server/tests/test_safety_gate.py -v -k lock_first` (승인 대기 중 잠금 활성 → 승인 True 반환에도 실행 불가 + 이후 port 호출도 거부; executor 재확인 별도 테스트) | `test_lock_first_wins_over_a_pending_approval PASSED` |
+| AC-MVP-024 대상 미특정 결정적 보류 (≥5 케이스) | PASS | `uv run pytest server/tests/test_safety_corpus.py -v -k unspecified` (게이트 직접 주입 6케이스: `Delete`/`Delete *`/`Delete Sequence Thru`/`Delete Thru 10`/`Remove All`/`Off Everything` → 전건 실행 0 + 승인 보류 + 경고가 ApprovalRequest.warnings에 표면화) | `test_held_with_unspecified_target_warning_and_zero_sends[...] PASSED` ×6 |
+
+**TDD evidence (RED → GREEN → REFACTOR, 4 cycles)**
+
+- Cycle 1 RED: ruleset/grammar tests → collection errors `No module named 'server.safety'` (log: `.moai/state/verify/m4/red-cycle1.log`) → GREEN: blacklist.yaml SSOT + ruleset loader + structural validator; `36 passed` (log: `green-cycle1.log`)
+- Cycle 2 RED: classify/expand tests → 2 collection errors (log: `red-cycle2.log`) → GREEN: syntax-based classification + expand-or-hold + plugin registry; `48 passed` (log: `green-cycle2.log`)
+- Cycle 3 RED: audit/backup/lock/monitor → 3 collection errors (log: `red-cycle3.log`) → GREEN: JSONL audit + 3-rule backup + lock + health monitor; `31 passed` (log: `green-cycle3.log`)
+- Cycle 4 RED: console/gate/corpus/e2e → 4 collection errors (log: `red-cycle4.log`) → GREEN: ConsoleLink + SafetyGate + orchestrator wiring; 1 test-expectation fix (heartbeat-after-success는 degraded가 옳은 분류); `138 passed` (log: `green-cycle4.log`)
+- REFACTOR: ruff --fix(미사용 import) + format 적용, E501 2건 수동 정리, `_query_state` 실패 시에도 감사 기록(1:1 대조 무결성); full suite `431 passed in 16.64s` (log: `final-suite.log`)
+
+**Quality gates**
+
+- Tests: `uv run pytest` → exit 0, `431 passed` (178 M1~M3 baseline 유지 + 253 new)
+- Coverage (NEW modules, ≥85% each): safety/{expand,lock,monitor,registry} 100%, gate 98%, console 98%, classify 98%, grammar 97%, audit 96%, approval 95%, backup 94%, ruleset 93%; orchestrator/{ports,tools,runner,fallback} 100% (wiring 포함) (log: `.moai/state/verify/m4/cov.log`)
+- Lint: `uv run ruff check .` → `All checks passed!` · `uv run ruff format --check .` → `62 files already formatted`
+- Dependency pin (REQ-MVP-043 discipline): `pyyaml==6.0.3` (uv.lock) — blacklist.yaml SSOT가 plan.md §C에서 YAML로 지정됨
+
+**Design decisions (check-in ratification 대상)**
+
+1. **밸리데이터 깊이 (plan §A-6 확정)**: **구조적 파서** — 단일행 토큰화 + 따옴표 균형 + 선두 verb-shape 검사 (키워드 화이트리스트도 완전 문법도 아님). 근거: ① stage ①의 역할은 파싱 불가 거부 + verb/args 토큰 공급이며 안전은 stage ② 분류가 담당 ② 완전 문법·키워드 화이트리스트는 정당한 MA3 명령 과차단으로 오류율 측정(M6)을 오염 ③ 과차단은 자가 수정 루프로 회수(FP 허용). 숫자 선행 선택 단축형(`1 Thru 10 At 50`)은 거부됨 — 모델이 키워드형으로 재생성
+2. **키워드 매칭 = 축약 인지(FP-safe 방향)**: MA3가 키워드 축약(`Del`→`Delete`)을 허용하므로 ci-정확 일치 OR ≥3자 접두(옵션은 1자부터, `/o`→`/overwrite`)로 매칭 — 축약으로 폐쇄 집합을 우회하는 FN 경로 차단. 과잉 매칭은 승인으로 해소
+3. **운영 도구 2종 게이트 예외 (아키텍처 테스트 파일-정확 화이트리스트)**: `server/tools/osc_smoke.py`, `responder_roundtrip.py` — 게이트 **아래** transport 계층을 진단하는 비프로덕션 운영 CLI(수동 실행 전용, 헤드리스 문맥에 승인 채널 부재). 신규 파일은 자동으로 검사 대상 (예외는 파일명 고정 + 존재 검증)
+4. **백업 명령 = `SaveShow` (onPC 미검증 가정)**: exec 경로로 송신, 결과 미확인 시 BackupError(fail-safe). M6 라이브 캘리브레이션 항목
+5. **감사 로그 경로 = `server/audit_logs/`** (plan §A-4 "server/ 하위" 위임 이행; gitignore 처리). 모든 콘솔 송신을 kind 구분(command/backup/heartbeat/state_query)으로 executed 이벤트에 기록 — 1:1 대조가 4종 이벤트 완전성보다 강한 불변식이 됨
+6. **타임아웃 기본값**: exec 확인 5.0s / ping 2.0s / state 조회 5.0s / 활동 윈도 15.0s — 전부 설정 가능(LinkTimeouts, HealthMonitor)
+7. **클리어런스 토큰 실행 모델**: screen()이 번들 클리어런스 발급, 실행 포트는 1회 소비 후 거부 — 포트를 직접 쥔 호출자도 심사 없이 송신 불가(우회 원천 봉쇄). 새 screen은 기존 클리어런스 무효화, 잠금/건강 상태는 송신 직전 재확인
+8. **승인 기본값 = deny-all + 동기 ApprovalPort**: 승인 채널 미배선 시 위험 명령 실행 불가(REQ-MVP-014). M5가 WebSocket 블로킹 포트로 구현
+9. **expand-or-hold 인식 타입 = {Macro, Plugin, Sequence}**: 인식 불가 참조(`Goto Cue 3` 등)는 전부 미검증 보류 — `Go Cue` 상용 패턴도 보류됨(과보류 인정, M5/M6에서 fetcher map 튜닝; 안전 기본값 유지). Body-path 템플릿(`DataPool/Macros/{ref}` 자식 name = 바디 라인)은 onPC 미검증 placeholder
+10. **미확인 명령 재전송 = 인간 승인 필요**: 실행 미확인 이력 명령은 재심사 시 자동 클리어 대신 승인 보류(REQ-MVP-032의 "자동 재전송 금지"를 게이트 수준 불변식으로)
+11. **러너 재시도 계정**: gate "blocked"(문법/건강/백업)는 교정 라운드로 계수(≤3 상한이 REQ-MVP-012 루프를 bound); 인간 "rejected"/잠금 "proposal"은 기술 실패가 아니므로 미계수
+12. **runner.py/tools.py/ports.py 최소 수정 (B10 정당화)**: BundleGate 프로토콜 추가(ports), run_commands 번들 사전 심사(tools), blocked 재시도 계수(runner) — M3 테스트 178건 전부 무수정 green 유지
+13. **초기 폐쇄 집합 내용을 테스트로 핀 고정**: SSOT 파일 개정 시 테스트도 갱신 필요(의도된 리뷰 마찰 — 무단 집합 변경 불가). FN 코퍼스 자체는 파일을 동적으로 읽어 개정 시 자동 확장
+
+**Deliverables**: `server/safety/{__init__,ruleset,grammar,classify,expand,registry,audit,backup,lock,monitor,console,approval,gate}.py` + `blacklist.yaml`(SSOT v1), `server/orchestrator/{ports,tools,runner}.py`(최소 wiring), tests 12종(`test_safety_{ruleset,grammar,classify,expand,audit,backup,lock_monitor,console,gate,corpus,e2e_audit}` + `test_architecture`), `pyproject.toml`+`uv.lock`(pyyaml), `.gitignore`(audit_logs), `README.md`(M4 섹션)
+
+**Commits**: `3b0ed8e` M4 safety ruleset SSOT + grammar validator · `4b6e876` M4 risk classification + expand-or-hold + plugin flag registry · `e0b4114` M4 audit log + backup policy + live lock + health monitor · `5e59c5c` M4 safety gate pipeline + chokepoint architecture tests + orchestrator wiring · (본 evidence 커밋) — push: N/A (no origin remote)
+
+**Gaps (M4)**
+
+- **onPC 2.4.2 라이브 미검증**: `SaveShow` 백업 명령의 실제 효과, 하트비트/핑의 실콘솔 의미론, body-path 템플릿(`DataPool/Macros/{ref}` 자식 name=바디 라인) — 전부 fake-console/mocked 검증; M6 라이브 캘리브레이션 필요 (M2 ASSUMPTION 규율과 동일 관리)
+- **UI 승인 표면은 M5**: ApprovalRequest가 명령문+위험 사유+경고를 운반(AC-MVP-021의 데이터 절반)하나 WebSocket 승인/거부 UI·잠금 토글·상태 표시는 M5 범위
+- **AC-MVP-018 deploy-scan 절반은 M7**: pcall 컴파일 + Cmd() 파괴 스캔 + 리뷰 게이트 + 레지스트리 등록이 M7; M4는 호출-시점 게이트(플래그 레지스트리 소비)만
+- **주기 백업 스케줄러 미배선**: BackupManager.tick()은 fake-clock 검증 완료; 실제 타이머 구동은 M5/M6 런타임(서버 수명주기) 소관
+- **AC-MVP-019 ② "모든 송신"의 해석**: 심사 중 바디 조회(state query)는 read-only이며 코퍼스 테스트는 in-memory fetcher로 문자 그대로 OSC 0건을 보장; 프로덕션 심사의 state 조회 송신도 감사 대상(kind=state_query)이나 "승인 전 실행성 송신 0건"이 안전 불변식의 본체
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
