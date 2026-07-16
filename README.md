@@ -93,3 +93,46 @@ immediately before approved risky commands; backup failure blocks execution),
 "execution unconfirmed" with no auto-resend), and the **audit log**
 (append-only JSONL under `server/audit_logs/`, daily rotation, 90-day
 retention — every console send reconciles 1:1 with an audit record).
+
+## Korean chat UI (M5)
+
+The chat surface is a FastAPI WebSocket server ([`server/web/`](server/web/))
+plus a React client ([`ui/`](ui/)). Wire contract:
+[`server/web/PROTOCOL.md`](server/web/PROTOCOL.md) (protocol v1). Everything
+console-bound still goes through the M4 gate — the web layer never touches the
+OSC surface (architecture-tested).
+
+### Run the server
+
+```bash
+uv sync
+export ANTHROPIC_API_KEY=...      # or GEMINI_API_KEY per config/provider.toml
+uv run python -m server.web       # ws://127.0.0.1:8765/ws (+ /healthz)
+```
+
+Useful flags: `--port`, `--console-host/--console-port` (onPC OSC input,
+default 127.0.0.1:8000), `--receive-port` (feedback listen, default 9000),
+`--no-session-backup` (skip the boot-time showfile backup attempt when no
+console is connected). `python -m server.web --help` lists everything.
+Without a running console the UI shows **콘솔 오프라인** and the gate blocks
+new executions (fail-safe) — the server itself boots fine.
+
+### Build / run the chat UI
+
+Requires Node.js 22+ and npm (versions pinned in `ui/package.json` +
+`ui/package-lock.json`):
+
+```bash
+cd ui
+npm install
+npm run build        # tsc + vite -> ui/dist (served by the server at /)
+npm test             # vitest — protocol/reducer unit tests
+npm run dev          # dev server on :5173, proxies /ws to :8765
+```
+
+After `npm run build`, open `http://127.0.0.1:8765/` — the server serves
+`ui/dist` automatically. The UI provides the Korean chat, approval/reject
+cards (command + risk reasons + warnings), the live-lock toggle, console
+status banners, and proposal cards; raw LLM SDK errors never reach the chat
+surface (Korean messages only — details go to the audit/diagnostic log,
+REQ-MVP-044).

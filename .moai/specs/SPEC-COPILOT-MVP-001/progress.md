@@ -230,6 +230,71 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 - **주기 백업 스케줄러 미배선**: BackupManager.tick()은 fake-clock 검증 완료; 실제 타이머 구동은 M5/M6 런타임(서버 수명주기) 소관
 - **AC-MVP-019 ② "모든 송신"의 해석**: 심사 중 바디 조회(state query)는 read-only이며 코퍼스 테스트는 in-memory fetcher로 문자 그대로 OSC 0건을 보장; 프로덕션 심사의 state 조회 송신도 감사 대상(kind=state_query)이나 "승인 전 실행성 송신 0건"이 안전 불변식의 본체
 
+### M5 — Korean chat UI: FastAPI + WebSocket server + React frontend (2026-07-17, manager-develop cycle_type=tdd)
+
+**Scope**: REQ-MVP-020~022, 044 · AC-MVP-016 ①②③ / AC-MVP-030 ①②③ (양 프로바이더) + REQ-MVP-030~036 UI halves · plan.md §C row M5 (FastAPI+WebSocket 서버, 한국어 채팅 화면, 승인/거부 UI, 라이브 잠금 토글, 결과 보고 — React, §A-1 확정) + AD4-m1 라이더 (왕복 측정 훅 + 폴백 감지 피드)
+
+**AC matrix (M5 subset)**
+
+| AC | Status | Verification command | Actual output (tail) |
+|---|---|---|---|
+| AC-MVP-016 ① 한국어 지시 WS 왕복 (실 WS + UDP 루프백 fake console + 실 게이트) | PASS | `uv run pytest server/tests/test_web_e2e.py -v` | `test_korean_instruction_round_trip PASSED` — wire에 `Store Group 3` 도달, 한국어 chat_response, judged 측정 레코드 1건 |
+| AC-MVP-016 ② 승인 대기 → WS에 명령+위험 사유+승인/거부, 결정→게이트 | PASS | same (approve: 실행 + rule ③ 백업 선행 wire 확인 / reject: OSC 0건 + 번들 무효) | `test_approve_executes_the_risky_bundle PASSED`, `test_reject_voids_the_bundle PASSED` — `exec_commands == ["SaveShow", "Delete Sequence 5"]` / `== []` |
+| AC-MVP-016 ③ 완료/실패 한국어 보고 | PASS | same (완료: `실행 완료` 라벨 / 실패: retries_exhausted + `실패` 요약) | `test_completion_report_is_korean PASSED`, `test_failure_report_is_korean_after_retries_exhausted PASSED` |
+| AC-MVP-030 ①②③ Anthropic 경로 (실 어댑터 + 실 SDK 예외 3종: rate_limit/auth/server) | PASS | `uv run pytest server/tests/test_web_session.py -v -k anthropic` | `test_anthropic_rate_limit/auth_failure/server_error PASSED` — ① 표면 전 이벤트에 raw 문자열 0건 ② 한국어 메시지 ③ audit `provider_error.raw_detail`에 원문 |
+| AC-MVP-030 ①②③ Gemini 경로 (실 어댑터 + APIError 429/401/503) | PASS | `uv run pytest server/tests/test_web_session.py -v -k gemini` | `test_gemini_rate_limit/auth_failure/server_error PASSED` — 동일 3분리 검증 |
+| REQ-MVP-030 UI half — 콘솔 오프라인 표시 + 신규 실행 차단 표기 | PASS | `test_web_session.py::TestFailureModeSurfaces` + `test_web_app.py::TestRuntimeLoops` (heartbeat 루프 status push) | `test_console_offline_blocks_and_reports_in_korean PASSED`, `test_heartbeat_loop_pushes_status_changes PASSED` — `executions_blocked: true` |
+| REQ-MVP-031 UI half — responder 저하 표시 | PASS | `test_responder_degraded_blocks_and_reports_in_korean` | PASSED — 요약에 "응답기 … 저하" |
+| REQ-MVP-032 UI half — 명령 단위 "실행 미확인" 보고 | PASS | `test_unconfirmed_execution_reports_and_never_claims_success` + `test_unconfirmed_execution_is_reported_as_unconfirmed_not_failed` | PASSED — status `unconfirmed`, 라벨 `실행 미확인 (자동 재전송 안 함)`, 요약에 "완료" 부재 |
+| REQ-MVP-033 UI half — 번들 부분 실행 보고 | PASS | `test_partial_execution_summary` (executed_ok+failed+not_executed 혼합) | PASSED — "일부 명령만 실행되었습니다 (부분 실행)" |
+| REQ-MVP-034 UI half — 백업 실패 통지 | PASS | `test_backup_failure_notifies_and_blocks` | PASSED — notice 이벤트 "백업" + 요약 "차단", OSC 0건 |
+| REQ-MVP-035 UI half — 잠금-우선 (비동기 브리지 생존) | PASS | `test_lock_first_wins_over_an_in_flight_approval` (세션) + `test_lock_first_beats_a_pending_approval_over_ws` (실 WS+wire) | PASSED ×2 — 승인 True에도 wire 0건, proposal 전환 |
+| REQ-MVP-036b UI half — 대상 미특정 경고 표시 | PASS | approval_request 이벤트 `items[].warnings` 운반 (`test_approval_request_event_carries_commands_reasons_warnings_actions`) + UI ApprovalCard 경고 렌더 | PASSED — 경고가 WS payload로 표면화, React 카드가 ⚠ 렌더 |
+| REQ-MVP-016 UI half — 잠금 토글 + 제안 카드 | PASS | `test_lock_yields_proposal_cards_and_zero_wire_sends` (실 WS) + `test_set_lock_emits_status_events` | PASSED — proposal 이벤트 + wire 0건 + status live_lock 토글 |
+
+**TDD evidence (RED → GREEN → REFACTOR, 3 cycles + serve)**
+
+- Cycle 1 RED: protocol/errors/measure 테스트 → 3 collection errors `No module named 'server.web'` (log: `.moai/state/verify/m5/red-cycle1.log`) → GREEN: messages/korean_errors/measure; `61 passed` (log: `green-cycle1.log`)
+- Cycle 2 RED: approval bridge/session → 2 collection errors (log: `red-cycle2.log`) → GREEN: ApprovalChannel + ChatSession; `34 passed` (log: `green-cycle2.log`)
+- Cycle 3 RED: bootstrap/app/E2E → 3 collection errors (log: `red-cycle3.log`) → GREEN 반복(부트스트랩 세션 백업 API 재구성, rule ③ 백업 wire 기대 정정, 초기 status 프레임 소비): `28 passed` (log: `green-cycle3.log`) · serve RED (log: `red-serve.log`) → GREEN `19 passed` (log: `green-serve.log`)
+- REFACTOR: ruff --fix + format (SIM117/SIM105/SIM103/E501/F841), heartbeat 루프 테스트 경합 수정(pre-connect 전이 수용 — 무한 receive 차단 제거); full suite `560 passed in 37.13s` (log: `final-suite.log`)
+
+**Quality gates**
+
+- Tests: `uv run pytest` → exit 0, **`560 passed`** (431 M1~M4 baseline 유지 + 129 new)
+- Coverage (NEW modules): safety/bootstrap 100%, web/{__init__,__main__,korean_errors,messages,serve} 100%, web/session 99%, web/{app,approval_bridge,measure} 97% — 전 모듈 ≥85% (log: `.moai/state/verify/m5/cov.log`)
+- Lint: `uv run ruff check .` → `All checks passed!` · `uv run ruff format --check .` → `81 files already formatted`
+- UI toolchain (node v22.22.3 / npm 10.9.8 PRESENT): `npm install` OK (lockfile 커밋), `npm test` → vitest **9 passed** (log: `.moai/state/verify/m5/ui-vitest.log`), `npm run build` (tsc+vite) → **`✓ built in 206ms`**, `dist/index.html + assets` 생성 (log: `ui-build.log`), `npx tsc --noEmit` → exit 0
+- CLI smoke: `uv run python -m server.web --help` → exit 0
+- Dependency pins (REQ-MVP-043): server `fastapi==0.139.1`, `uvicorn==0.51.0`, `websockets` (uv.lock) + dev `httpx`; UI `react 18.3.1`, `vite 5.4.11`, `typescript 5.6.3`, `vitest 2.1.8` (package.json 정확 핀 + package-lock.json)
+- Architecture boundary (AC-MVP-019 ①): `test_architecture.py` **무수정 통과** — server/web는 bridge/pythonosc import 0건; 프로덕션 조립은 게이트 소유 `server/safety/bootstrap.py`
+
+**Design decisions (check-in ratification 대상)**
+
+1. **`server/safety/bootstrap.py` 신설 (B10 범위 이탈 — 정당화)**: OscBridge+ConsoleLink+SafetyGate 프로덕션 조립은 아키텍처 테스트가 bridge 접근을 허용하는 유일한 프로덕션 패키지(server/safety) 안에만 둘 수 있음. web 계층에 두면 AC-MVP-019 위반, 테스트 예외 추가는 금지(스폰 프롬프트) → 게이트 소유 부트스트랩이 최소 권한 해법. 테스트 8건 + 100% 커버
+2. **"실행 미확인" 감지 = ExecutionResult.detail 접두 문자열 계약** (`execution unconfirmed`): 게이트 무수정 제약 하에서 M4가 구성하는 결정적 문자열을 UI 절반이 소비. 양쪽 테스트가 문자열을 핀 고정(변경 시 양쪽 실패)
+3. **폴백 감지 피드 단일화**: Orchestrator는 fallback_detector 없이 구성 — web 계층 RoundTripRecorder가 승인 대기 공제된 측정값(§1–3)으로 judged turn만 피드(§4: retry/오류/실행0건 턴 제외). 이중 계상 원천 차단 (AD4-m1)
+4. **왕복 종료 이벤트 = 마지막 콘솔 결과 수신 시각** (acceptance §2 충실): 말미 모델 텍스트 생성 시간 미포함. 콘솔 실행 0건 턴은 기록되나 judged 제외
+5. **승인 채널 fail-safe 4중 거부**: UI 미연결/notify 실패/타임아웃(기본 600s, 설정 가능)/연결 해제 전부 deny (REQ-MVP-014)
+6. **세션 동시성 = 연결당 1지시** (busy 이벤트): 승인 결정·잠금 토글은 지시 진행 중에도 수신 루프에서 처리(잠금-우선의 전송로)
+7. **런타임 루프 배선 (M4 gap 해소)**: FastAPI lifespan에서 주기 하트비트(상태 변화 시 status push) + BackupManager.tick() 폴링(실패는 audit `backup_tick_failed` 기록, 루프 생존)
+8. **세션 시작 백업은 부팅을 죽이지 않음**: BackupError → stack.session_backup_ok=False 기록 (REQ-MVP-034는 실행 차단이지 서버 차단 아님); 테스트용 ephemeral 포트에서는 `stack.attempt_session_backup()` 후행 호출
+9. **expand-or-hold 바디 페처 = 게이트 state port 경유** (audited): 바디 조회 state query도 1:1 감사 대조에 포함 (AC-MVP-019 ②)
+10. **UI 버전 정확 핀**: react 18.3.1 / vite 5.4.11 / typescript 5.6.3 / vitest 2.1.8 — 구현 시점 지식 기준 안정 버전, npm install로 존재 확인됨. UI 테스트는 순수 함수(protocol/reducer)만 vitest로 검증(jsdom 미도입 — 저비용 원칙)
+11. **정적 서빙**: `ui/dist` 존재 시 FastAPI가 `/`에 마운트(라우트 우선) — 단일 포트 배포
+
+**Deliverables**: `server/web/{__init__,messages,korean_errors,measure,approval_bridge,session,app,serve,__main__}.py` + `PROTOCOL.md`, `server/safety/bootstrap.py`, tests 8종(`test_web_{messages,errors,measure,approval_bridge,session,app,e2e,serve}` + `test_safety_bootstrap`), `ui/`(package.json+lockfile, vite/tsconfig, index.html, src/{protocol.ts,protocol.test.ts,useCopilotSocket.ts,App.tsx,main.tsx,styles.css,components/{ChatView,ApprovalCard,LockToggle,StatusBanner}.tsx}), `pyproject.toml`+`uv.lock`(fastapi/uvicorn/websockets/httpx), `README.md`(M5 섹션)
+
+**Commits**: `48b47c3` M5 WebSocket protocol v1 + Korean error catalog + round-trip measurement · `5424799` M5 async approval bridge + Korean chat session · `d8800b4` M5 FastAPI WebSocket server + gate-owned console bootstrap + E2E · `5a31493` M5 React chat UI (Vite) · `7cf6383` M5 heartbeat-loop test race fix · (본 evidence 커밋) — push: N/A (no origin remote)
+
+**Gaps (M5)**
+
+- **React 브라우저 렌더링 미검증**: `npm run build`(tsc+vite)와 vitest(순수 함수 9건)는 통과했으나 실제 브라우저에서의 컴포넌트 렌더/조작 검증은 미수행 — 브라우저 레벨 E2E는 M6 범위 (계획된 이연)
+- **live 키 오류 경로 미검증**: AC-MVP-030은 실 어댑터 + 실 SDK 예외 객체 주입으로 검증(mocked 클라이언트) — 실제 API의 rate limit/인증 실패 재현은 키 부재로 미수행
+- **onPC 2.4.2 라이브 미검증**: 전 E2E가 M2/M4 fake-console(UDP 루프백) 기준 — M6 라이브 캘리브레이션 항목 유지 (SaveShow 효과, 하트비트 의미론 등 M4 gap 승계)
+- **다중 클라이언트 동시 접속은 설계상 단일 운영자 가정**: 승인 채널은 마지막 bind된 연결로 라우팅 — 다중 운영자 시나리오는 Phase 1 범위 밖 (미테스트)
+- **왕복 측정치는 M6 판정용 수집 전 단계**: recorder가 레코드를 메모리에 축적 + judged 피드만 배선 — 코퍼스 실행·중앙값/p95 산출·기록은 M6
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
