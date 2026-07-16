@@ -39,3 +39,29 @@ full loop with:
 ```bash
 uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9000
 ```
+
+## LLM provider configuration (M3)
+
+The tool-runner server speaks to exactly ONE active LLM provider behind a
+provider-neutral abstraction (Anthropic Claude or Google Gemini). Selection and
+model pins live in [`config/provider.toml`](config/provider.toml):
+
+```toml
+[provider]
+active = "anthropic"        # or "gemini" — switching is this one value, no code change
+```
+
+- Anthropic is pinned to `claude-opus-4-8`; the Gemini pin (`gemini-2.5-pro`)
+  is config-changeable.
+- **API keys are environment variables only** — never put credentials in the
+  config file (the loader rejects them): `ANTHROPIC_API_KEY` for Anthropic,
+  `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) for Gemini.
+- The MA3 grammar rulebook (fixed system-prompt prefix, incl. the Korean
+  field-lighting term dictionary) lives in `server/rulebook/assets/v2.4.2/`.
+
+With a key present, verify the active provider with one live call (run twice to
+observe a warm cache read):
+
+```bash
+uv run python -m server.tools.provider_smoke
+```
