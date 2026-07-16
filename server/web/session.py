@@ -21,10 +21,11 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 
+from server.deploy.review import ReviewRequest
 from server.llm.types import LLMProvider
 from server.orchestrator.ports import ExecutionResult
 from server.orchestrator.runner import InstructionResult, Orchestrator
-from server.orchestrator.tools import CommandOutcome, build_toolset
+from server.orchestrator.tools import CommandOutcome, DeployPipelinePort, build_toolset
 from server.safety.approval import ApprovalRequest
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate, ScreenDecision
@@ -37,6 +38,7 @@ from server.web.messages import (
     error_event,
     notice_event,
     proposal_event,
+    review_request_event,
     status_event,
 )
 
@@ -162,32 +164,43 @@ class ChatSession:
         approval_channel: ApprovalChannel,
         recorder: RoundTripRecorder | None = None,
         rig_paths: dict[str, str] | None = None,
+        review_channel: ApprovalChannel | None = None,
+        deploy_pipeline: DeployPipelinePort | None = None,
     ) -> None:
         self._gate = gate
         self._audit = audit
         self._send = send_event
         self._channel = approval_channel
+        self._review_channel = review_channel
         self._recorder = recorder
         self._turn_decisions: list[ScreenDecision] = []
         approval_channel.bind(self._notify_approval)
+        if review_channel is not None:
+            review_channel.bind(self._notify_review)
         registry = build_toolset(
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
             bundle_gate=_ObservingBundleGate(gate, self._on_decision),
             rig_paths=rig_paths,
+            deploy_pipeline=deploy_pipeline,
         )
         self._orchestrator = Orchestrator(
             provider=provider, registry=registry, system_prefix=system_prefix
         )
 
     def close(self) -> None:
-        """Disconnect: unbind the approval channel (denies anything pending)."""
+        """Disconnect: unbind both channels (denies anything pending)."""
         self._channel.unbind()
+        if self._review_channel is not None:
+            self._review_channel.unbind()
 
     # -- event plumbing ----------------------------------------------------------
 
     def _notify_approval(self, request_id: str, request: ApprovalRequest) -> None:
         self._send(approval_request_event(request_id=request_id, request=request))
+
+    def _notify_review(self, request_id: str, request: ReviewRequest) -> None:
+        self._send(review_request_event(request_id=request_id, request=request))
 
     def _on_decision(self, decision: ScreenDecision) -> None:
         self._turn_decisions.append(decision)

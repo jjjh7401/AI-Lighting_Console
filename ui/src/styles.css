@@ -242,6 +242,93 @@ body {
   color: var(--muted);
 }
 
+/* M7 — deploy review card (REQ-MVP-019/027) */
+.review-card {
+  border: 1px solid var(--warn);
+  border-radius: 10px;
+  background: #1b2118;
+  padding: 12px 14px;
+  align-self: stretch;
+}
+
+.review-card.destructive {
+  border-color: var(--bad);
+  background: #241414;
+}
+
+.review-title {
+  color: var(--warn);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.review-meta {
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.review-destructive-banner {
+  color: var(--bad);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 6px 0;
+}
+
+.review-findings {
+  margin: 6px 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.review-findings .finding.blacklisted {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.review-findings .finding-line {
+  color: var(--muted);
+}
+
+.review-dynamic {
+  font-size: 13px;
+  color: var(--warn);
+  margin: 6px 0;
+}
+
+.review-source {
+  max-height: 200px;
+  overflow: auto;
+  background: #121212;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.review-caveat {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.review-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.review-actions button {
+  padding: 6px 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
 .composer {
   display: flex;
   gap: 8px;

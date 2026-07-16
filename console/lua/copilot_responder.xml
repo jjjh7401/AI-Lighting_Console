@@ -7,7 +7,7 @@
   differs, use README Option B (paste the Lua source into a new plugin).
 -->
 <GMA3 DataVersion="2.4.2.0">
-    <Plugin Name="CopilotResponder" Version="1.0.0">
+    <Plugin Name="CopilotResponder" Version="1.1.0">
         <ComponentLua Name="CopilotResponderMain" FileName="copilot_responder.lua" />
     </Plugin>
 </GMA3>

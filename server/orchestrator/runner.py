@@ -129,8 +129,10 @@ class Orchestrator:
             conversation.append(turn)
             results: list[ToolResult] = []
             for call in turn.tool_calls:
-                if call.name == "run_commands" and last_run_failed:
+                if call.name in ("run_commands", "deploy_plugin") and last_run_failed:
                     # A correction round after error feedback = one retry.
+                    # M7: a corrected deploy_plugin attempt counts the same —
+                    # compile failures share the <=3 cap (REQ-MVP-010).
                     retries_used += 1
                     last_run_failed = False
                 execution = self._registry.dispatch(

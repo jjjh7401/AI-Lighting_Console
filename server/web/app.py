@@ -26,6 +26,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
 from server.llm.types import LLMProvider
+from server.orchestrator.tools import DeployPipelinePort
 from server.safety.audit import AuditLog
 from server.safety.backup import BackupManager
 from server.safety.gate import SafetyGate
@@ -37,11 +38,13 @@ from server.web.messages import (
     busy_event,
     error_event,
     parse_client_message,
+    review_resolved_event,
 )
 from server.web.session import ChatSession
 
 _PROTOCOL_ERROR_MESSAGE = "잘못된 메시지 형식입니다. 프로토콜 v1 스키마를 확인해 주세요."
 _STALE_APPROVAL_MESSAGE = "만료되었거나 알 수 없는 승인 요청입니다."
+_STALE_REVIEW_MESSAGE = "만료되었거나 알 수 없는 리뷰 요청입니다."
 _BUSY_MESSAGE = "이전 지시를 처리 중입니다 — 완료된 뒤 다시 시도해 주세요."
 
 
@@ -54,6 +57,8 @@ class WebDeps:
     system_prefix: str
     audit: AuditLog
     approval_channel: ApprovalChannel
+    review_channel: ApprovalChannel | None = None
+    deploy_pipeline: DeployPipelinePort | None = None
     recorder: RoundTripRecorder | None = None
     rig_paths: dict[str, str] | None = None
     ui_dist: Path | None = None
@@ -139,6 +144,8 @@ def create_app(deps: WebDeps) -> FastAPI:
             approval_channel=deps.approval_channel,
             recorder=deps.recorder,
             rig_paths=deps.rig_paths,
+            review_channel=deps.review_channel,
+            deploy_pipeline=deps.deploy_pipeline,
         )
 
         def push_status() -> None:
@@ -181,6 +188,23 @@ def create_app(deps: WebDeps) -> FastAPI:
                         await _safe_send(
                             websocket,
                             error_event(message=_STALE_APPROVAL_MESSAGE, kind="protocol"),
+                        )
+                elif message_type == "review_decision":
+                    resolved = deps.review_channel is not None and deps.review_channel.resolve(
+                        message["request_id"], approved=message["approved"]
+                    )
+                    if resolved:
+                        await _safe_send(
+                            websocket,
+                            review_resolved_event(
+                                request_id=message["request_id"],
+                                approved=message["approved"],
+                            ),
+                        )
+                    else:
+                        await _safe_send(
+                            websocket,
+                            error_event(message=_STALE_REVIEW_MESSAGE, kind="protocol"),
                         )
                 elif message_type == "lock":
                     session.set_lock(message["active"])

@@ -78,3 +78,18 @@ class TestMain:
         with pytest.raises(SystemExit) as excinfo:
             runpy.run_module("server.web", run_name="__main__", alter_sys=False)
         assert excinfo.value.code == 0
+
+
+class TestM7ReviewWiring:
+    def test_wires_the_deploy_review_flow(self):
+        args = parse_args(["--receive-port", "0", "--no-session-backup"])
+        app, stack = build_runtime(args)
+        try:
+            deps = app.state.deps
+            assert deps.review_channel is not None
+            assert deps.review_channel is not deps.approval_channel
+            assert deps.deploy_pipeline is not None
+            # The pipeline registers into the SAME registry the gate consults.
+            assert deps.deploy_pipeline._registry is stack.registry
+        finally:
+            stack.stop()

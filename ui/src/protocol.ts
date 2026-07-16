@@ -17,6 +17,38 @@ export interface ApprovalItem {
   warnings: string[];
 }
 
+// -- M7 deploy review (REQ-MVP-019/027) ---------------------------------------
+
+export interface ScanFinding {
+  line: number;
+  command: string;
+  kind: string; // "blacklisted" | "invoking" | "unparseable"
+  matched_entry: string | null;
+  reasons: string[];
+}
+
+export interface DynamicCallView {
+  line: number;
+  snippet: string;
+}
+
+export interface ScanReportView {
+  destructive: boolean;
+  findings: ScanFinding[];
+  dynamic_calls: DynamicCallView[];
+  caveat: string;
+}
+
+export interface ReviewRequestView {
+  request_id: string;
+  plugin_name: string;
+  source_preview: string;
+  source_length: number;
+  source_truncated: boolean;
+  compile_ok: boolean;
+  scan: ScanReportView;
+}
+
 export type ServerEvent =
   | {
       v: 1;
@@ -34,6 +66,12 @@ export type ServerEvent =
       actions: string[];
     }
   | { v: 1; type: "approval_resolved"; request_id: string; approved: boolean }
+  | ({
+      v: 1;
+      type: "review_request";
+      actions: string[];
+    } & ReviewRequestView)
+  | { v: 1; type: "review_resolved"; request_id: string; approved: boolean }
   | {
       v: 1;
       type: "status";
@@ -50,6 +88,8 @@ const SERVER_EVENT_TYPES = new Set([
   "chat_response",
   "approval_request",
   "approval_resolved",
+  "review_request",
+  "review_resolved",
   "status",
   "proposal",
   "error",
@@ -82,6 +122,15 @@ export function buildApprovalDecision(requestId: string, approved: boolean): str
   return JSON.stringify({
     v: PROTOCOL_VERSION,
     type: "approval_decision",
+    request_id: requestId,
+    approved,
+  });
+}
+
+export function buildReviewDecision(requestId: string, approved: boolean): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "review_decision",
     request_id: requestId,
     approved,
   });
@@ -126,12 +175,14 @@ export interface UiState {
   entries: ChatEntry[];
   status: StatusState | null;
   pendingApprovals: PendingApproval[];
+  pendingReviews: ReviewRequestView[];
 }
 
 export const initialState: UiState = {
   entries: [],
   status: null,
   pendingApprovals: [],
+  pendingReviews: [],
 };
 
 /** Fold one server event into the UI state. */
@@ -163,6 +214,29 @@ export function reduceServerEvent(state: UiState, event: ServerEvent): UiState {
       return {
         ...state,
         pendingApprovals: state.pendingApprovals.filter(
+          (pending) => pending.request_id !== event.request_id,
+        ),
+      };
+    case "review_request":
+      return {
+        ...state,
+        pendingReviews: [
+          ...state.pendingReviews,
+          {
+            request_id: event.request_id,
+            plugin_name: event.plugin_name,
+            source_preview: event.source_preview,
+            source_length: event.source_length,
+            source_truncated: event.source_truncated,
+            compile_ok: event.compile_ok,
+            scan: event.scan,
+          },
+        ],
+      };
+    case "review_resolved":
+      return {
+        ...state,
+        pendingReviews: state.pendingReviews.filter(
           (pending) => pending.request_id !== event.request_id,
         ),
       };

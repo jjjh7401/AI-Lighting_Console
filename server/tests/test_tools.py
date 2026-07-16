@@ -176,9 +176,32 @@ class TestQueryState:
         assert execution.result.is_error is True
 
 
-class TestDeployPluginStub:
-    def test_registered_but_safely_stubbed_until_m7(self):
-        # plan.md M7: pcall harness + review gate land later, on this stub.
+class FakeDeployPipeline:
+    """Scripted M7 pipeline — records every deploy request."""
+
+    def __init__(self, outcome):
+        self.outcome = outcome
+        self.deploys: list[tuple[str, str]] = []
+
+    def deploy(self, name: str, lua_source: str):
+        self.deploys.append((name, lua_source))
+        return self.outcome
+
+
+def _deploy_registry(outcome, port=None, state_port=None):
+    pipeline = FakeDeployPipeline(outcome)
+    registry = build_toolset(
+        execution_port=port or ScriptedPort(),
+        state_port=state_port or FakeStatePort(dict(_RIG_TREE)),
+        deploy_pipeline=pipeline,
+    )
+    return registry, pipeline
+
+
+class TestDeployPluginTool:
+    def test_unwired_session_is_a_safe_structured_error(self):
+        # Without a wired pipeline (M7 dependency absent) the tool behaves
+        # like the former M3 stub: structured error, zero sends anywhere.
         port = ScriptedPort()
         state_port = FakeStatePort(dict(_RIG_TREE))
         registry = _registry(port=port, state_port=state_port)
@@ -186,9 +209,71 @@ class TestDeployPluginStub:
             _call("deploy_plugin", {"name": "cleaner", "lua_source": "return 1"})
         )
         assert execution.result.is_error is True
-        assert "M7" in execution.result.content
-        assert port.executed == []  # never sends anything anywhere
+        assert "not wired" in execution.result.content
+        assert port.executed == []
         assert state_port.queries == []
+
+    def test_invalid_arguments_never_reach_the_pipeline(self):
+        from server.deploy.pipeline import DeployOutcome
+
+        registry, pipeline = _deploy_registry(DeployOutcome(status="deployed"))
+        for arguments in (
+            {},
+            {"name": "x"},
+            {"lua_source": "return 1"},
+            {"name": 1, "lua_source": 2},
+        ):
+            execution = registry.dispatch(_call("deploy_plugin", arguments))
+            assert execution.result.is_error is True
+        assert pipeline.deploys == []
+
+    def test_deployed_outcome_maps_to_executed_ok(self):
+        from server.deploy.pipeline import DeployOutcome
+
+        registry, pipeline = _deploy_registry(
+            DeployOutcome(status="deployed", detail="deployed", destructive=True)
+        )
+        execution = registry.dispatch(
+            _call("deploy_plugin", {"name": "Cleaner", "lua_source": "return 1"})
+        )
+        assert execution.result.is_error is False
+        content = json.loads(execution.result.content)
+        assert content["deployed"] is True
+        assert content["destructive"] is True
+        (outcome,) = execution.command_outcomes
+        assert outcome.status == "executed_ok"
+        assert pipeline.deploys == [("Cleaner", "return 1")]
+
+    def test_compile_block_maps_to_blocked_and_feeds_correction(self):
+        from server.deploy.pipeline import DeployOutcome
+
+        registry, _ = _deploy_registry(
+            DeployOutcome(
+                status="blocked_compile",
+                detail="lua compile failed: unexpected symbol",
+                compile_error="unexpected symbol",
+            )
+        )
+        execution = registry.dispatch(
+            _call("deploy_plugin", {"name": "Cleaner", "lua_source": "broken("})
+        )
+        assert execution.result.is_error is True
+        assert "compile" in execution.result.content
+        (outcome,) = execution.command_outcomes
+        assert outcome.status == "blocked"  # counts toward the retry cap
+
+    def test_review_rejection_maps_to_rejected_not_blocked(self):
+        from server.deploy.pipeline import DeployOutcome
+
+        registry, _ = _deploy_registry(
+            DeployOutcome(status="review_rejected", detail="not approved")
+        )
+        execution = registry.dispatch(
+            _call("deploy_plugin", {"name": "Cleaner", "lua_source": "return 1"})
+        )
+        assert execution.result.is_error is True
+        (outcome,) = execution.command_outcomes
+        assert outcome.status == "rejected"  # human decision — not a retry
 
 
 class TestGetRigContext:

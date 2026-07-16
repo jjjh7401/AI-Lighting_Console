@@ -18,6 +18,7 @@ client (`ui/`), and the M6 measurement harness. Executable half:
 |---|---|---|
 | `chat` | `text: string` (non-empty) | One Korean instruction. The server processes ONE instruction at a time; a second `chat` while busy gets a `busy` event. |
 | `approval_decision` | `request_id: string`, `approved: bool` | The human decision for a pending `approval_request`. Unknown/expired ids get an `error` (kind `protocol`). |
+| `review_decision` | `request_id: string`, `approved: bool` | (M7, additive) The human decision for a pending `review_request` (deploy review). Unknown/expired ids get an `error` (kind `protocol`). |
 | `lock` | `active: bool` | Live-lock toggle (REQ-MVP-016). Effective immediately — including while an approval is pending (lock-first, REQ-MVP-035). |
 | `status_request` | — | Ask for a `status` event. |
 
@@ -32,6 +33,8 @@ Malformed frames (bad JSON, wrong `v`, unknown `type`, missing fields) yield an
 | `chat_response` | `status: "ok"\|"retries_exhausted"\|"loop_limit"`, `summary: string` (Korean, server-composed), `text: string` (model's final Korean text), `commands: CommandView[]` | One instruction's final report (REQ-MVP-022). |
 | `approval_request` | `request_id: string`, `items: [{command, risk_reasons[], warnings[]}]`, `actions: ["approve","reject"]` | A held risky bundle (REQ-MVP-021). `warnings` carries e.g. the unspecified-target warning (REQ-MVP-036b). |
 | `approval_resolved` | `request_id`, `approved: bool` | Decision echo — retire the approval card. |
+| `review_request` | `request_id: string`, `plugin_name: string`, `source_preview: string` (bounded, ≤4000 chars), `source_length: int`, `source_truncated: bool`, `compile_ok: bool`, `scan: ScanReport`, `actions: ["approve","reject"]` | (M7, REQ-MVP-019/027) A pending plugin-deploy review. `scan.destructive: bool`; `scan.findings: [{line, command, kind: "blacklisted"\|"invoking"\|"unparseable", matched_entry, reasons[]}]`; `scan.dynamic_calls: [{line, snippet}]` (Cmd() calls the static scan cannot verify); `scan.caveat` carries the best-effort framing — the human reviewer is the authoritative control. |
+| `review_resolved` | `request_id`, `approved: bool` | (M7) Review decision echo — retire the review card. On disconnect/timeout pending reviews are DENIED (same quadruple-deny as approvals). |
 | `proposal` | `commands: string[]`, `reasons: string[]` | Read-only proposal card produced under the live lock (REQ-MVP-016). |
 | `error` | `message: string` (Korean), `kind: string` | User-facing error. `kind` ∈ normalized provider kinds (`rate_limit`, `auth`, `invalid_request`, `connection`, `server`, `malformed_response`, `unknown`) + `unexpected` + `protocol`. |
 | `busy` | `message: string` | An instruction is already in flight. |

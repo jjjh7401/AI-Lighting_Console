@@ -27,6 +27,8 @@ from server.safety.backup import DEFAULT_INTERVAL_SECONDS, BackupError, BackupMa
 from server.safety.console import ConsoleLink, LinkTimeouts, StateBodyFetcher
 from server.safety.gate import SafetyGate
 from server.safety.monitor import HealthMonitor
+from server.safety.registry import PluginFlagRegistry
+from server.safety.ruleset import SafetyRuleset, load_ruleset
 
 
 @dataclass
@@ -39,6 +41,10 @@ class ConsoleStack:
     link: ConsoleLink
     backup: BackupManager
     receive_port: int
+    # M7 deploy seam: the pipeline registers plugin flags into the SAME
+    # registry the gate's invocation path consults, against the SAME ruleset.
+    registry: PluginFlagRegistry
+    ruleset: SafetyRuleset
     _stop: Callable[[], None]
     session_backup_ok: bool = False
     session_backup_detail: str = "session-start backup not attempted"
@@ -91,11 +97,15 @@ def build_console_stack(
     bridge.start()
     link.bind_send(bridge.send_command)
     audit = AuditLog(audit_dir)
+    registry = PluginFlagRegistry()
+    ruleset = load_ruleset()
     gate = SafetyGate(
         console=link,
         audit=audit,
+        ruleset=ruleset,
         approval_port=approval_port,
         monitor=monitor,
+        plugin_registry=registry,
         # Late-bound closure: body fetches ride the gate's AUDITED state port
         # (AC-MVP-019 ② — the fetch query lands in the send↔audit reconciliation).
         body_fetcher=StateBodyFetcher(query=lambda path: gate.state_port.query_state(path)),
@@ -117,6 +127,8 @@ def build_console_stack(
         link=link,
         backup=backup,
         receive_port=bridge.receive_port,
+        registry=registry,
+        ruleset=ruleset,
         _stop=stop,
     )
     if attempt_session_backup:

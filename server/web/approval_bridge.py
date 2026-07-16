@@ -16,6 +16,12 @@ gate re-checks the lock after approval returns.
 
 The optional recorder brackets the human wait (acceptance "왕복 시간 측정 방법"
 §3 — approval wait is subtracted from the round-trip measurement).
+
+M7: the channel is payload-agnostic (it never inspects the request), so the
+deploy REVIEW flow reuses it as a second instance carrying
+:class:`server.deploy.review.ReviewRequest` payloads (``id_prefix="review"``);
+``request_review`` aliases ``request_approval`` so the channel satisfies the
+ReviewPort protocol directly — same quadruple-deny fail-safe.
 """
 
 from __future__ import annotations
@@ -23,12 +29,16 @@ from __future__ import annotations
 import itertools
 import threading
 from collections.abc import Callable
-from typing import Protocol
+from typing import Generic, Protocol, TypeVar
 
 from server.safety.approval import ApprovalRequest
 
 # Default cap on how long one approval may stay pending (fail-safe deny after).
 DEFAULT_APPROVAL_TIMEOUT_SECONDS = 600.0
+
+# The payload type one channel instance carries (ApprovalRequest for the M4
+# approval flow; server.deploy.review.ReviewRequest for the M7 review flow).
+RequestT = TypeVar("RequestT")
 
 NotifyFn = Callable[[str, ApprovalRequest], None]
 
@@ -49,8 +59,8 @@ class _Pending:
         self.approved = False
 
 
-class ApprovalChannel:
-    """Blocking ApprovalPort implementation bridged to the WebSocket UI."""
+class ApprovalChannel(Generic[RequestT]):
+    """Blocking ApprovalPort/ReviewPort implementation bridged to the UI."""
 
     def __init__(
         self,
@@ -63,13 +73,13 @@ class ApprovalChannel:
         self._recorder = recorder
         self._id_prefix = id_prefix
         self._counter = itertools.count(1)
-        self._notify: NotifyFn | None = None
+        self._notify: Callable[[str, RequestT], None] | None = None
         self._pending: dict[str, _Pending] = {}
         self._lock = threading.Lock()
 
     # -- UI-side surface (event loop) -------------------------------------------
 
-    def bind(self, notify: NotifyFn) -> None:
+    def bind(self, notify: Callable[[str, RequestT], None]) -> None:
         """Attach the UI publisher (called on WebSocket connect)."""
         self._notify = notify
 
@@ -101,9 +111,13 @@ class ApprovalChannel:
         with self._lock:
             return tuple(self._pending)
 
-    # -- gate-side surface (ApprovalPort, worker thread) -------------------------
+    # -- gate-side surface (ApprovalPort / ReviewPort, worker thread) -------------
 
-    def request_approval(self, request: ApprovalRequest) -> bool:
+    def request_review(self, request: RequestT) -> bool:
+        """ReviewPort alias (M7): reviews ride the same channel semantics."""
+        return self.request_approval(request)
+
+    def request_approval(self, request: RequestT) -> bool:
         """Block until the human decides; deny on no-UI/notify-failure/timeout."""
         notify = self._notify
         if notify is None:

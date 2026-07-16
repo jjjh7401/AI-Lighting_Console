@@ -5,6 +5,7 @@ import {
   buildApprovalDecision,
   buildChat,
   buildLock,
+  buildReviewDecision,
   healthLabel,
   initialState,
   parseServerEvent,
@@ -114,5 +115,68 @@ describe("healthLabel", () => {
   it("maps known states to Korean and passes unknown through", () => {
     expect(healthLabel("console_offline")).toContain("콘솔 오프라인");
     expect(healthLabel("weird_state")).toBe("weird_state");
+  });
+});
+
+describe("M7 deploy review flow", () => {
+  const reviewRequest = {
+    type: "review_request",
+    request_id: "review-1",
+    plugin_name: "Cleaner",
+    source_preview: 'Cmd("Delete Sequence 5")',
+    source_length: 24,
+    source_truncated: false,
+    compile_ok: true,
+    scan: {
+      destructive: true,
+      findings: [
+        {
+          line: 1,
+          command: "Delete Sequence 5",
+          kind: "blacklisted",
+          matched_entry: "Delete",
+          reasons: ["blacklisted command (matches closed-set entry 'Delete')"],
+        },
+      ],
+      dynamic_calls: [],
+      caveat: "static Cmd() scan is a best-effort reviewer-assist signal",
+    },
+    actions: ["approve", "reject"],
+  };
+
+  it("parses a review_request event", () => {
+    const parsed = parseServerEvent(JSON.stringify({ v: 1, ...reviewRequest }));
+    expect(parsed?.type).toBe("review_request");
+  });
+
+  it("builds a review_decision frame", () => {
+    expect(JSON.parse(buildReviewDecision("review-1", false))).toEqual({
+      v: 1,
+      type: "review_decision",
+      request_id: "review-1",
+      approved: false,
+    });
+  });
+
+  it("tracks pending reviews across request and resolution", () => {
+    const withReview = reduceServerEvent(initialState, event(reviewRequest));
+    expect(withReview.pendingReviews).toHaveLength(1);
+    expect(withReview.pendingReviews[0].plugin_name).toBe("Cleaner");
+    expect(withReview.pendingReviews[0].scan.destructive).toBe(true);
+
+    const resolved = reduceServerEvent(
+      withReview,
+      event({ type: "review_resolved", request_id: "review-1", approved: true }),
+    );
+    expect(resolved.pendingReviews).toHaveLength(0);
+  });
+
+  it("keeps unrelated pending reviews on resolution", () => {
+    const withReview = reduceServerEvent(initialState, event(reviewRequest));
+    const stillPending = reduceServerEvent(
+      withReview,
+      event({ type: "review_resolved", request_id: "review-999", approved: true }),
+    );
+    expect(stillPending.pendingReviews).toHaveLength(1);
   });
 });

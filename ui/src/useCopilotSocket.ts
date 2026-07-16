@@ -6,6 +6,7 @@ import {
   buildApprovalDecision,
   buildChat,
   buildLock,
+  buildReviewDecision,
   initialState,
   parseServerEvent,
   reduceServerEvent,
@@ -30,6 +31,7 @@ export interface CopilotSocket {
   connected: boolean;
   sendChat: (text: string) => void;
   sendDecision: (requestId: string, approved: boolean) => void;
+  sendReviewDecision: (requestId: string, approved: boolean) => void;
   sendLock: (active: boolean) => void;
 }
 
@@ -84,7 +86,11 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     (requestId: string, approved: boolean) => send(buildApprovalDecision(requestId, approved)),
     [send],
   );
+  const sendReviewDecision = useCallback(
+    (requestId: string, approved: boolean) => send(buildReviewDecision(requestId, approved)),
+    [send],
+  );
   const sendLock = useCallback((active: boolean) => send(buildLock(active)), [send]);
 
-  return { state, connected, sendChat, sendDecision, sendLock };
+  return { state, connected, sendChat, sendDecision, sendReviewDecision, sendLock };
 }

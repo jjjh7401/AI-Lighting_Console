@@ -12,6 +12,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from server.deploy.compile import LuaCompileChecker
+from server.deploy.pipeline import DeployPipeline
 from server.llm.config import DEFAULT_CONFIG_PATH, load_provider_config
 from server.llm.factory import build_provider
 from server.orchestrator.fallback import FallbackDetector
@@ -81,6 +83,21 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         FallbackDetector(config.fallback, audit_sink=stack.audit, active_provider=provider.name)
     )
 
+    # M7 deploy review flow: a SECOND channel instance (distinct request type,
+    # same quadruple-deny semantics) + the deny-by-default deploy pipeline
+    # over the gate-owned deploy surface and the gate-shared flag registry.
+    review_channel = ApprovalChannel(
+        timeout_seconds=args.approval_timeout, recorder=recorder, id_prefix="review"
+    )
+    deploy_pipeline = DeployPipeline(
+        compile_checker=LuaCompileChecker(),
+        ruleset=stack.ruleset,
+        deploy_port=stack.gate,
+        registry=stack.registry,
+        audit=stack.audit,
+        review_port=review_channel,
+    )
+
     ui_dist = Path(args.ui_dist)
     deps = WebDeps(
         gate=stack.gate,
@@ -88,13 +105,17 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         system_prefix=system_prefix,
         audit=stack.audit,
         approval_channel=channel,
+        review_channel=review_channel,
+        deploy_pipeline=deploy_pipeline,
         recorder=recorder,
         ui_dist=ui_dist if ui_dist.is_dir() else None,
         backup_manager=stack.backup,
         heartbeat_interval_seconds=args.heartbeat_interval,
         backup_poll_seconds=args.backup_poll,
     )
-    return create_app(deps), stack
+    app = create_app(deps)
+    app.state.deps = deps  # composition introspection seam (tests/diagnostics)
+    return app, stack
 
 
 def main(argv: list[str] | None = None, *, run=None) -> int:

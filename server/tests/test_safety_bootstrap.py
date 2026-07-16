@@ -132,3 +132,19 @@ class TestConsoleStack:
         stack.stop()
         # After stop the receive port is closed; a second stop must be safe.
         stack.stop()
+
+
+class TestM7DeploySharing:
+    def test_registry_and_ruleset_are_exposed_and_shared_with_the_gate(
+        self, tmp_path, fake_console
+    ):
+        # M7 wiring seam: the deploy pipeline must populate the SAME registry
+        # the gate's invocation path consults (AC-MVP-018 handshake).
+        stack = _stack(tmp_path, fake_console)
+        try:
+            assert stack.registry is not None
+            assert stack.ruleset.blacklist  # the loaded SSOT closed set
+            assert stack.gate._plugin_registry is stack.registry
+            assert stack.gate._ruleset is stack.ruleset
+        finally:
+            stack.stop()

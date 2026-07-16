@@ -13,12 +13,14 @@ from __future__ import annotations
 
 import json
 
+from server.deploy.review import ReviewRequest
 from server.safety.approval import ApprovalRequest
 
 PROTOCOL_VERSION = 1
 
-# Closed set of client -> server message types.
-CLIENT_MESSAGE_TYPES = ("chat", "approval_decision", "lock", "status_request")
+# Closed set of client -> server message types. "review_decision" is the M7
+# additive extension (deploy review) — protocol version stays 1.
+CLIENT_MESSAGE_TYPES = ("chat", "approval_decision", "review_decision", "lock", "status_request")
 
 
 class ProtocolError(ValueError):
@@ -45,16 +47,16 @@ def parse_client_message(raw: str) -> dict:
             raise ProtocolError("chat.text must be a non-empty string")
         return {"v": PROTOCOL_VERSION, "type": "chat", "text": text}
 
-    if message_type == "approval_decision":
+    if message_type in ("approval_decision", "review_decision"):
         request_id = message.get("request_id")
         approved = message.get("approved")
         if not isinstance(request_id, str) or not request_id:
-            raise ProtocolError("approval_decision.request_id must be a non-empty string")
+            raise ProtocolError(f"{message_type}.request_id must be a non-empty string")
         if not isinstance(approved, bool):
-            raise ProtocolError("approval_decision.approved must be a boolean")
+            raise ProtocolError(f"{message_type}.approved must be a boolean")
         return {
             "v": PROTOCOL_VERSION,
-            "type": "approval_decision",
+            "type": message_type,
             "request_id": request_id,
             "approved": approved,
         }
@@ -100,6 +102,45 @@ def approval_request_event(*, request_id: str, request: ApprovalRequest) -> dict
 def approval_resolved_event(*, request_id: str, approved: bool) -> dict:
     """The decision echo so the UI can retire the approval card."""
     return _event("approval_resolved", request_id=request_id, approved=approved)
+
+
+def review_request_event(*, request_id: str, request: ReviewRequest) -> dict:
+    """One pending deploy review (M7, REQ-MVP-019/027): everything the
+    reviewer must see — name, bounded source preview, compile verdict, and
+    the destructive-scan report with its best-effort caveat."""
+    scan = request.scan
+    return _event(
+        "review_request",
+        request_id=request_id,
+        plugin_name=request.plugin_name,
+        source_preview=request.source_preview,
+        source_length=request.source_length,
+        source_truncated=request.source_truncated,
+        compile_ok=request.compile_ok,
+        scan={
+            "destructive": scan.destructive,
+            "findings": [
+                {
+                    "line": finding.line,
+                    "command": finding.command,
+                    "kind": finding.kind,
+                    "matched_entry": finding.matched_entry,
+                    "reasons": list(finding.reasons),
+                }
+                for finding in scan.findings
+            ],
+            "dynamic_calls": [
+                {"line": call.line, "snippet": call.snippet} for call in scan.dynamic_calls
+            ],
+            "caveat": scan.caveat,
+        },
+        actions=["approve", "reject"],
+    )
+
+
+def review_resolved_event(*, request_id: str, approved: bool) -> dict:
+    """The review decision echo so the UI can retire the review card."""
+    return _event("review_resolved", request_id=request_id, approved=approved)
 
 
 def status_event(*, health: str, live_lock: bool, executions_blocked: bool) -> dict:

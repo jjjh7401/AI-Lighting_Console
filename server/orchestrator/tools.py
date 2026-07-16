@@ -1,10 +1,10 @@
 """The four Phase 1 tools (REQ-MVP-005) built on the execution/state ports.
 
 Tools never touch the OSC bridge — they depend on :mod:`server.orchestrator.ports`
-only (REQ-MVP-029 forward design). ``deploy_plugin`` is registered but safely
-stubbed: its pcall compile harness + human review gate are Milestone M7 scope
-(plan.md section C), so until then it returns a structured "not yet available"
-error and never sends anything.
+only (REQ-MVP-029 forward design). ``deploy_plugin`` (M7) drives the deploy
+pipeline — pcall compile harness + destructive scan + human review gate
+(REQ-MVP-019); without a wired pipeline it stays a safe structured error and
+never sends anything.
 """
 
 from __future__ import annotations
@@ -12,9 +12,13 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Protocol
 
 from server.llm.types import ToolCall, ToolDefinition, ToolResult
 from server.orchestrator.ports import BundleGate, CommandExecutionPort, StateQueryPort
+
+if TYPE_CHECKING:  # policy types only — no runtime import cycle
+    from server.deploy.pipeline import DeployOutcome
 
 TOOL_NAMES = ("run_commands", "query_state", "deploy_plugin", "get_rig_context")
 
@@ -62,6 +66,25 @@ _Handler = Callable[[ToolCall, ExecutionContext], ToolExecution]
 _EMPTY_CONTEXT = ExecutionContext()
 
 
+class DeployPipelinePort(Protocol):
+    """The M7 deploy pipeline surface consumed by the deploy_plugin tool."""
+
+    def deploy(self, name: str, lua_source: str) -> DeployOutcome: ...
+
+
+# DeployOutcome.status -> per-command outcome status on the chat surface.
+# "blocked" statuses count toward the self-correction retry cap; a human
+# review rejection is NOT a technical failure (mirror of the M4 rule).
+_DEPLOY_OUTCOME_STATUS = {
+    "deployed": "executed_ok",
+    "blocked_input": "blocked",
+    "blocked_compile": "blocked",
+    "blocked": "blocked",
+    "review_rejected": "rejected",
+    "deploy_failed": "failed",
+}
+
+
 def _error_result(call: ToolCall, message: str) -> ToolExecution:
     return ToolExecution(
         result=ToolResult(
@@ -97,6 +120,7 @@ def build_toolset(
     state_port: StateQueryPort,
     rig_paths: dict[str, str] | None = None,
     bundle_gate: BundleGate | None = None,
+    deploy_pipeline: DeployPipelinePort | None = None,
 ) -> ToolRegistry:
     """Build the 4-tool registry wired to the given ports (REQ-MVP-005).
 
@@ -217,16 +241,48 @@ def build_toolset(
             )
         )
 
-    # -- deploy_plugin (REQ-MVP-019 — SAFE STUB until M7) -----------------------
+    # -- deploy_plugin (M7 — REQ-MVP-019 pipeline: compile + scan + review) ------
 
     def deploy_plugin(call: ToolCall, context: ExecutionContext) -> ToolExecution:
-        # M7 builds the pcall compile harness + human review gate on top of
-        # this stub. Until then deployment is unavailable BY DESIGN and the
-        # stub must never send anything toward the console.
-        return _error_result(
-            call,
-            "deploy_plugin is not yet available (Milestone M7): plugin deployment "
-            "requires the pcall compile check and the human review gate",
+        if deploy_pipeline is None:
+            # Unwired session: deployment stays unavailable BY DESIGN and
+            # never sends anything toward the console (deny-by-default).
+            return _error_result(
+                call,
+                "deploy_plugin is not wired in this session: plugin deployment "
+                "requires the pcall compile check and the human review gate",
+            )
+        name = call.arguments.get("name")
+        lua_source = call.arguments.get("lua_source")
+        if not isinstance(name, str) or not name.strip():
+            return _error_result(call, "'name' must be a non-empty plugin name string")
+        if not isinstance(lua_source, str) or not lua_source.strip():
+            return _error_result(call, "'lua_source' must be non-empty Lua 5.4 source code")
+        outcome = deploy_pipeline.deploy(name, lua_source)
+        status = _DEPLOY_OUTCOME_STATUS.get(outcome.status, "failed")
+        command_label = f'deploy_plugin "{name}"'
+        deployed = outcome.status == "deployed"
+        content: dict[str, object] = {
+            "deployed": deployed,
+            "plugin": name,
+            "status": outcome.status,
+            "destructive": outcome.destructive,
+            "detail": outcome.detail,
+        }
+        if not deployed:
+            content["error"] = outcome.detail
+        if outcome.compile_error:
+            content["compile_error"] = outcome.compile_error
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(content, ensure_ascii=False),
+                is_error=not deployed,
+            ),
+            command_outcomes=(
+                CommandOutcome(command=command_label, status=status, detail=outcome.detail),
+            ),
         )
 
     # -- get_rig_context (REQ-MVP-037 — showfile-based basic summary) -----------
@@ -293,9 +349,11 @@ def build_toolset(
         ToolDefinition(
             name="deploy_plugin",
             description=(
-                "Deploy a Lua plugin to the console. NOT YET AVAILABLE in this "
-                "milestone — calls return a structured error until the compile "
-                "check and human review gate land (M7)."
+                "Deploy a Lua 5.4 plugin to the console. The source is compile-"
+                "checked (a compile error comes back for correction), scanned "
+                "for destructive Cmd() content, and shown to a human reviewer "
+                "who must approve the deployment before anything reaches the "
+                "console. A rejection is a final human decision — do not retry."
             ),
             parameters={
                 "type": "object",
