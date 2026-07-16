@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  grandMA3 plugin wrapper for the CopilotResponder Lua component (M2,
+  SPEC-COPILOT-MVP-001). Place this file together with copilot_responder.lua
+  in the plugins library folder and import it in a Plugins pool window
+  (console/lua/README.md, Option A). If the import format of your 2.4.2 build
+  differs, use README Option B (paste the Lua source into a new plugin).
+-->
+<GMA3 DataVersion="2.4.2.0">
+    <Plugin Name="CopilotResponder" Version="1.0.0">
+        <ComponentLua Name="CopilotResponderMain" FileName="copilot_responder.lua" />
+    </Plugin>
+</GMA3>

@@ -25,6 +25,17 @@ Then send a harmless command line and listen for `/copilot/feedback`:
 uv run python -m server.tools.osc_smoke --host 127.0.0.1 --port 8000 --listen-port 9000 "List"
 ```
 
-Note: at milestone M1 there is no console-side Lua responder yet (M2), so no OSC
-feedback will arrive from a bare onPC — verify command arrival in the onPC command
-line history instead.
+Note: with a bare onPC (no console-side Lua responder installed) no OSC feedback
+will arrive — verify command arrival in the onPC command line history instead.
+
+## Console-side Lua responder (M2)
+
+The grandMA3-resident responder plugin lives in [`console/lua/`](console/lua/):
+state snapshots on `/copilot/state`, execution results on `/copilot/feedback`
+(wire format: [`console/lua/PROTOCOL.md`](console/lua/PROTOCOL.md)). Install and
+onPC 2.4.2 OSC setup: [`console/lua/README.md`](console/lua/README.md). Verify the
+full loop with:
+
+```bash
+uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9000
+```

@@ -16,6 +16,13 @@ Feedback-path honesty (REQ-MVP-002, forward: REQ-MVP-032):
     UDP is lossy. This bridge only DELIVERS feedback that actually arrives; it
     performs no timeout tracking and no "execution unconfirmed" classification —
     that is safety-gate scope (M4). Consumers attach via :class:`FeedbackConsumer`.
+
+Receive addresses (M2): the console-side Lua responder replies on TWO addresses
+    of the ``/copilot/*`` namespace (plan.md §A-5) — ``/copilot/feedback``
+    (execution results, REQ-MVP-004) and ``/copilot/state`` (object-tree
+    snapshots, REQ-MVP-003). Both are delivered through the same
+    :class:`FeedbackConsumer` attach point; consumers discriminate by
+    :attr:`FeedbackMessage.address`.
 """
 
 from __future__ import annotations
@@ -32,6 +39,7 @@ from pythonosc.udp_client import SimpleUDPClient
 # Own OSC namespace (2026-07-15 decision) — deliberately boardop-incompatible.
 CMD_ADDRESS = "/copilot/cmd"
 FEEDBACK_ADDRESS = "/copilot/feedback"
+STATE_ADDRESS = "/copilot/state"
 
 _SERVER_SHUTDOWN_TIMEOUT = 5.0
 
@@ -136,6 +144,7 @@ class OscBridge:
             return
         dispatcher = Dispatcher()
         dispatcher.map(FEEDBACK_ADDRESS, self._on_feedback)
+        dispatcher.map(STATE_ADDRESS, self._on_feedback)
         self._server = ThreadingOSCUDPServer(
             (self._config.receive_host, self._config.receive_port), dispatcher
         )
