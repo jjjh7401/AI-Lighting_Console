@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-MVP-001
 title: "Phase 1: 자체 MVP — OSC/Lua 브리지 + 한국어 채팅 UI + 안전 게이트"
 version: "0.3.0"
-status: draft
+status: in-progress
 created: 2026-07-15
 updated: 2026-07-16
 author: manager-spec
