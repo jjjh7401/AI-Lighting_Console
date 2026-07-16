@@ -680,6 +680,7 @@ dependencies = [
     { name = "anthropic" },
     { name = "fastapi" },
     { name = "google-genai" },
+    { name = "lupa" },
     { name = "python-osc" },
     { name = "pyyaml" },
     { name = "uvicorn" },
@@ -689,7 +690,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "httpx" },
-    { name = "lupa" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
@@ -700,6 +700,7 @@ requires-dist = [
     { name = "anthropic", specifier = ">=0.116.0" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "google-genai", specifier = ">=2.12.0" },
+    { name = "lupa", specifier = ">=2.8" },
     { name = "python-osc", specifier = ">=1.9.3,<2" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "uvicorn", specifier = ">=0.34" },
@@ -709,7 +710,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "httpx", specifier = ">=0.28" },
-    { name = "lupa", specifier = ">=2.8" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-cov", specifier = ">=6.0" },
     { name = "ruff", specifier = ">=0.9" },
