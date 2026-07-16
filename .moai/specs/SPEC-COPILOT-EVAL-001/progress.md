@@ -58,4 +58,11 @@ run_complete_at: 2026-07-16
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+sync_status: audit-ready
+sync_complete_at: 2026-07-16
+sync_commit_sha: pending-backfill-20260716
+
+- `CHANGELOG.md` `[Unreleased]` — SPEC-COPILOT-EVAL-001 항목 신설 (B12 자가검증: `grep -c 'SPEC-COPILOT-EVAL-001' CHANGELOG.md` = 1 사전 확인, AC 수 acceptance.md 7건과 CHANGELOG 서술 정합, 산출물 경로 `ls` 검증 완료).
+- `.moai/project/tech.md` §5 — 감사 트레일에 기록된 divergence(Anthropic 단일 프로바이더 서술 vs amended SPEC-COPILOT-MVP-001 REQ-MVP-038~041 듀얼 프로바이더 추상화) 해소.
+- `.moai/specs/SPEC-COPILOT-EVAL-001/spec.md` frontmatter: `status: in-progress` → `completed` (단일 sync 커밋, `updated:` 은 이미 2026-07-16). spec/plan/acceptance 본문은 미변경 (manager-docs 소유 경계 준수).
+- 단일 sync 커밋으로 3-phase close 완결 (별도 Mx 커밋 없음). SHA는 커밋 이후 후속 커밋에서 백필.

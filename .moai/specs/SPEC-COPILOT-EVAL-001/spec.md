@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-EVAL-001
 title: "Phase 0: boardop 실사용 평가 및 격차 분석"
 version: "0.3.1"
-status: in-progress
+status: completed
 created: 2026-07-15
 updated: 2026-07-16
 author: manager-spec
