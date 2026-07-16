@@ -1,0 +1,36 @@
+# Safety-gate closed sets — SINGLE SOURCE OF TRUTH (REQ-MVP-013 / REQ-MVP-026).
+#
+# Both sets below are CLOSED sets: they change ONLY via a revision of this file
+# with a version bump (open-ended lists are prohibited by spec). Tests iterate
+# this file's content directly, so a revision here auto-extends the FN corpora.
+#
+# - blacklist: commands that are NEVER executed without human approval
+#   (REQ-MVP-013/014 — no exception via any route).
+# - invoking_verbs: reference-invoking command forms subject to the
+#   expand-or-hold rule (REQ-MVP-026): target bodies are fetched and
+#   classified; unverifiable references are held for human approval.
+version: 1
+
+blacklist:
+  - "Delete"
+  - "Remove"
+  - "Off Everything"
+  - "Store /overwrite"
+  - "Shutdown"
+  - "Format"
+
+invoking_verbs:
+  verbs:
+    - "Go"
+    - "Go+"
+    - "Go-"
+    - "Goto"
+    - "On"
+    - "Off"
+    - "Toggle"
+    - "Temp"
+    - "Flash"
+    - "Call"
+  bare_object_forms:
+    - "Macro <n>"
+    - "Plugin <n>"
