@@ -30,9 +30,31 @@ clarification gate: **resolved** — plan.md §A 마커 2건 전원 사용자 �
 - M2 산출: `.moai/project/research/boardop-eval-log.md` — 환경 기록 표 + 시나리오 세트 11종 (S1~S10 + S-D 파괴적 1종, REQ-EVAL-005/011 충족; S-D는 일회용 쇼파일 전용 REQ-EVAL-012).
 - 격차 후보 1건 선등록: 배포 채널 폐쇄성 + Windows 단일 플랫폼 (축 ④).
 
+**2026-07-16 — 문서 폴백 전환 + M3~M5 완료 (run-phase 산출 완결)**
+
+- 폴백 전환: 사용자 결정("문서·영상 관찰 기반으로 SPEC 재조정", AskUserQuestion 2026-07-16) → manager-spec amendment v0.3.0 → plan-auditor delta FAIL 0.87 (F1~F6) → manager-spec 수정 v0.3.1 → **delta re-audit PASS 0.95** (사이클 2/3 종결). status: draft → in-progress (F5 해소).
+- M3: eval-log §3 — S1~S10+S-D 전 행 3태그 분류(관찰 기반 4 / 관찰 불가 7) + 행별 출처 인용(README·demo GIF 프레임·homescreen). 폴백 트리거 충족 증거 §3.0 기록. API 사용량·모델 ID는 데모 관찰값으로 기록(REQ-EVAL-001 폴백 조항).
+- M4: `boardop-gap-analysis.md` — 격차 **14건** (반영 10/보류 3/미반영 0), 4축 전부 커버 (REQ-EVAL-007/008 충족).
+- M5: FSL-1.1-Apache-2.0 결론 절(§3, REQ-EVAL-009) + AC-EVAL-005 4항목 검수 기록(§4, 전항목 0건).
+
+### AC 자가 검증 매트릭스 (문서 폴백 경로)
+
+| AC | 판정 | 증거 |
+|---|---|---|
+| AC-EVAL-001 | PASS [문서 폴백] | 환경 기록 6종 (모델 ID·토큰 실측 = "관찰 불가 — 라이브 실행 미확보" 표기) + 접근 시도 기록 §3.0 (eval-log) |
+| AC-EVAL-002 | PASS [문서 폴백] | 시나리오 행 11종(≥8) — 전 행 태그+출처 인용, 관찰 불가 행은 탐색 범위 기록 |
+| AC-EVAL-003 | PASS | gap-analysis 존재, 4축, 격차 14≥10, 반영 여부 전 항목 표기 |
+| AC-EVAL-004 | PASS | gap-analysis §3 독립 절 + 결론 문장(내부 평가 허용/경쟁 제품 코드 재사용 제약/아키텍처만 벤치마킹) |
+| AC-EVAL-005 | PASS | gap-analysis §4 — 4항목 이진 체크리스트 전항목 0건, 검수자 확인 |
+| AC-EVAL-006 | PASS [문서 폴백] | S-D 세트 유지 + REQ-015 태그 + 안전장치 문서 근거 평가, 실행+쇼파일 조항 N/A (eval-log §3.1) |
+| AC-EVAL-007 | 평가 안 함 | 선택 실행 미수행 (라이브 세션 부재) |
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+run_status: audit-ready
+run_complete_at: 2026-07-16
+
+문서 폴백 모드(REQ-EVAL-014) 하 run-phase 산출 완결. DoD 5항목 중 4항목 충족(마지막 1항목 — MVP 범위 확정 입력 제공 — 은 격차 목록+반영 여부로 충족, sync-phase에서 최종 확인). 잔여: 라이브 접근 확보 시 라이브 증거 우선 원칙에 따라 재평가 여지 존재(비차단).
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
