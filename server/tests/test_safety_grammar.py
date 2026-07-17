@@ -116,3 +116,43 @@ class TestRejectedCommands:
             result = validate(bad)
             assert not result.ok
             assert result.reason
+
+
+class TestMa2AssignmentRepairHint:
+    """M6b-1r2 — the misplaced-quote rejection is CORRECT (MA2 `/Cmd='...'`
+    assignment is invalid on MA3), but the bare reason gave the self-correction
+    loop no way to repair (r1: 11 loop_limit turns). A rewrite hint is appended
+    to the reason for MA2-assignment-shaped tokens. Rejection is UNCHANGED."""
+
+    def test_ma2_slash_cmd_assignment_still_rejected(self):
+        result = validate("Assign Macro 21.1 /Cmd='ClearAll'")
+        assert not result.ok  # rejection behavior UNCHANGED
+        assert "quote" in result.reason
+
+    def test_ma2_slash_cmd_assignment_carries_a_rewrite_hint(self):
+        result = validate("Assign Macro 21.1 /Cmd='ClearAll'")
+        assert "MA2" in result.reason
+        assert "Set" in result.reason and "Property" in result.reason
+
+    def test_double_quoted_option_assignment_hinted(self):
+        result = validate('Assign Macro 10.2 /Command="Group 3 At Full"')
+        assert not result.ok
+        assert "MA2" in result.reason
+
+    def test_bare_property_equals_assignment_hinted(self):
+        # X='...' shape without a leading slash (e.g. `Cmd='...'`).
+        result = validate("Store Macro 21.1 Cmd='ClearAll'")
+        assert not result.ok
+        assert "MA2" in result.reason
+
+    def test_plain_misplaced_quote_gets_no_ma2_hint(self):
+        # A misplaced quote that is NOT assignment-shaped stays hint-free —
+        # the hint must not fire on every misplaced-quote rejection.
+        result = validate("Store Cue5'name'")
+        assert not result.ok
+        assert "quote" in result.reason
+        assert "MA2" not in result.reason
+
+    def test_valid_set_property_form_is_accepted(self):
+        # The form the hint recommends must itself pass the validator.
+        assert validate("Set Macro 21.1 Property 'Command' 'ClearAll'").ok

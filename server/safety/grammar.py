@@ -20,6 +20,16 @@ from dataclasses import dataclass
 _VERB_SHAPE = re.compile(r"^[A-Za-z][A-Za-z0-9_+\-]*$")
 _QUOTES = ("'", '"')
 
+# grandMA2-style attached option-assignment (`/Cmd='...'`, `Command="..."`) —
+# invalid on grandMA3 v2.x, where a quote may not appear mid-token. Detected to
+# ATTACH A REWRITE HINT to the (unchanged) rejection so the self-correction loop
+# can repair instead of looping (M6b-1r2).
+_MA2_ASSIGNMENT = re.compile(r"/?[A-Za-z][\w]*=['\"]")
+_MA2_REWRITE_HINT = (
+    " — MA2-style attached assignment is invalid on MA3; rewrite as: "
+    "Set <object> Property 'Command' '<value>'"
+)
+
 
 @dataclass(frozen=True)
 class Token:
@@ -90,7 +100,12 @@ def validate(line: str) -> GrammarResult:
     try:
         tokens = _tokenize(line)
     except _TokenizeError as error:
-        return GrammarResult(ok=False, reason=str(error))
+        reason = str(error)
+        # Attach a rewrite hint for MA2-style option-assignment tokens; the
+        # rejection itself is unchanged (ok=False either way).
+        if "misplaced quote" in reason and _MA2_ASSIGNMENT.search(line):
+            reason += _MA2_REWRITE_HINT
+        return GrammarResult(ok=False, reason=reason)
     if not tokens:
         return GrammarResult(ok=False, reason="empty command line")
     head = tokens[0]
