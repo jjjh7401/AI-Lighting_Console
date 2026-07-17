@@ -351,6 +351,97 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 - **번호 호출 미커버(안전 방향)**: 레지스트리는 이름 기준(`Plugin <name>`) — `Plugin 5`(풀 번호) 호출은 미등록 참조로 expand-or-hold 보류(과보류 수용)
 - **잠금 중 배포 시 리뷰 낭비 가능**: 게이트 단일 enforcement 유지의 트레이드오프 (decision 7)
 
+### M6a — 통합 검증 (오프라인) (2026-07-17, manager-develop cycle_type=tdd)
+
+**Scope**: 사용자 승인 M6 분할(M6a 오프라인 / M6b 라이브 — 현재 Gemini 키만 보유, Anthropic 키·onPC 부재) 중 M6a. 측정 코퍼스(≥20종) + 측정 러너(mock 전용, 라이브 미실행) + AC-MVP-001~031 오프라인 증거 스윕 + AC-MVP-029②③ 자동화 절반 + M7 잔여 갭(배포 턴 측정 마킹) 해소. **라이브 LLM API 호출 0건 — 전 테스트가 프로바이더 키 제거 환경에서 통과.**
+
+**AC matrix (전 31건 분류: PASS = 오프라인 자동 테스트 검증 / DEFERRED-M6b = 라이브·onPC 의존)**
+
+| AC | Status | Verification command | Actual output (tail) |
+|---|---|---|---|
+| AC-MVP-001 대표 작업 10종 한국어 수행 | DEFERRED-M6b (onPC 내부 상태 확인) — 오프라인 절반 PASS: 10종 전 태스크 코퍼스 21시나리오가 mock 파이프라인 E2E(게이트+오케스트레이터) 전건 ok | `uv run pytest server/tests/test_measurement_runner.py -q` (turn_statuses == {ok: 21}, gate_anomalies == {}) | `11 passed` (log: `.moai/state/verify/m6a/ev-measurement.log`) |
+| AC-MVP-002 문법 오류율 < 5% (pooled) | DEFERRED-M6b (라이브 프로바이더별 판정) — 측정 기계 PASS: 분모=생성 라인 전수, 분자=최초 생성 거부(교정 성공 후에도 계수), ≥300 라인 반복 상향, 회차별+pooled 산출 | `uv run python -m server.measurement.runner --mode mock` | `pooled 0.0000 = 0/315 lines (threshold 5.00%, pass=True)`, `9 executed (configured 3, escalated=True)` (log: `ev-mock-run.log`) |
+| AC-MVP-003 왕복 중앙값 < 10초 | DEFERRED-M6b (라이브 판정) — 측정 기계 PASS: 승인 대기 공제(RoundTripRecorder 재사용), 재시도 턴 분리, 웜캐시(콜드스타트 제외·참고치 보고), median 판정 + p95 보고 | same | `median … / p95 … over 171 judged turns (median pass=True)`, `retry turns (segregated): 0`, `cold-start reference: 0.00086s` |
+| AC-MVP-004 블랙리스트 전수 + FN 코퍼스 ≥18 | PASS | `uv run pytest server/tests/test_safety_corpus.py -q` (SSOT 6종 × 3변형 = 18 파라미터 케이스 + 실행 포트 직접 거부) | `130 passed` — no_send_without_approval 18케이스 수집 확인 (log: `ev-ac004-017-024.log`) |
+| AC-MVP-005 재시도 ≤3 상한 | PASS | `uv run pytest server/tests/test_runner_self_correction.py -q` (항상 실패 명령 → 3회 후 실패 보고; deploy 교정도 동일 상한 — M7) | `107 passed` (클러스터, log: `ev-llm.log`) |
+| AC-MVP-006 감사 4종 이벤트 완전성 | PASS | `uv run pytest server/tests/test_safety_e2e_audit.py -q` (실행·승인·거부·차단 4종 E2E 대조, 누락 0건) | `15 passed` (log: `ev-ac006-019.log`) |
+| AC-MVP-007a 잠금 중 송신 0건 + 제안 카드 | PASS | `uv run pytest server/tests/test_safety_gate.py -q` | `86 passed` (클러스터, log: `ev-gate.log`) |
+| AC-MVP-007b 잠금 해제 후 정상 실행 복원 | PASS | same | same |
+| AC-MVP-008 백업 3규칙 + 비위험 미개입 | PASS | `uv run pytest server/tests/test_safety_backup.py server/tests/test_safety_gate.py -q` | same |
+| AC-MVP-009 번들 all-or-nothing | PASS | `uv run pytest server/tests/test_safety_gate.py -q` (1건 거부 → 전체 미실행 OSC 0건) | same |
+| AC-MVP-010 배포 게이트 ①②③ | PASS | `uv run pytest server/tests/test_deploy_compile.py test_deploy_scan.py test_deploy_pipeline.py test_deploy_gate_e2e.py test_web_review.py -q` (M7 검증 유지) | `85 passed` (log: `ev-ac010-018.log`) |
+| AC-MVP-011 OSC 루프백 송수신 | PASS | `uv run pytest server/tests/test_osc_bridge.py test_osc_bridge_state.py -q` (로컬 루프백 UDP `/copilot/cmd` 송신 + `/copilot/feedback` 수신) | `75 passed` (클러스터, log: `ev-ac011-012.log`) |
+| AC-MVP-012 responder 상태 조회·결과 회수 | DEFERRED-M6b (onPC 반자동) — 오프라인 절반 PASS: 프로토콜/Lua mock env 단위 검증 | `uv run pytest server/tests/test_lua_responder.py test_responder_protocol.py test_responder_roundtrip.py -q` | same (`75 passed` 클러스터) |
+| AC-MVP-013 도구 4종 + 단일 프로바이더·핀 | PASS | `uv run pytest server/tests/test_tools.py test_llm_config.py -q` (4종 등록 assert + active 정확히 1 + `claude-opus-4-8`/`gemini-3.5-flash` 핀) | `107 passed` (클러스터, log: `ev-llm.log`) |
+| AC-MVP-014 ① 프리픽스 바이트 안정성 | PASS | `uv run pytest server/tests/test_rulebook.py -q` (N≥5 조립 바이트 동일 + 가변 값 패턴 0건) | same |
+| AC-MVP-014 ② 캐시 읽기 토큰 > 0 | DEFERRED-M6b — 활성 구성(anthropic, prompt_caching=true)은 캐싱 지원이므로 **N/A 아님**, 라이브 API 필요. 오프라인 절반 PASS: cache_control 프리픽스 부착 + cache 토큰 중립 매핑(adapter 테스트) | `uv run pytest server/tests/test_anthropic_adapter.py -q` | same |
+| AC-MVP-015 게이트 순서 + 문법 차단 회신 | PASS | `uv run pytest server/tests/test_safety_gate.py test_safety_grammar.py -q` (문법→위험분류→승인 순서 관측 + 파싱 불가 차단 사유 자가 수정 회신) | `86 passed` (log: `ev-gate.log`) |
+| AC-MVP-016 한국어 채팅 UI E2E | PASS (mock 프로바이더 WS E2E) | `uv run pytest server/tests/test_web_e2e.py test_web_app.py test_web_approval_bridge.py -q` + `cd ui && npx vitest run` | `122 passed` (log: `ev-web.log`) + `Tests 13 passed` (log: `ev-vitest.log`) |
+| AC-MVP-017 invoking_verbs 전수 (10동사+베어 2형) | PASS | `uv run pytest server/tests/test_safety_corpus.py test_safety_expand.py -q` (12형 × 4시나리오(위험 본문/조회 불가/깊이 4/순환) = 48케이스, 승인 전 송신 0건 + 폐쇄 집합 전수 iterate assert) | `130 passed` — 48 파라미터 케이스 수집 확인 (log: `ev-ac004-017-024.log`) |
+| AC-MVP-018 배포 스캔 + 호출 게이트 | PASS | `uv run pytest server/tests/test_deploy_gate_e2e.py test_safety_gate.py -q` (파괴 플래그 등록→매회 승인, 비파괴도 게이트 경유 감사) | `85 passed` (log: `ev-ac010-018.log`) |
+| AC-MVP-019 단일 관문 불변식 ①② | PASS | `uv run pytest server/tests/test_architecture.py test_safety_e2e_audit.py test_safety_bootstrap.py -q` (① 임포트 경계 정적 스캔 — 신규 `server/measurement/` 포함 전 트리 위반 0건 ② 송신↔게이트 기록 1:1) | `15 passed` (log: `ev-ac006-019.log`) |
+| AC-MVP-020 콘솔 오프라인·저하·미확인 | PASS | `uv run pytest server/tests/test_safety_gate.py test_safety_lock_monitor.py -q` (3종 장애 시뮬레이션: 차단/degraded 미개시/미확인+재전송 0건) | `86 passed` (log: `ev-gate.log`) |
+| AC-MVP-021 번들 부분 실패 원자성 | PASS | same (k번째 실패 → 중단+잔여 미실행+기실행 재전송 0건+부분 보고) | same |
+| AC-MVP-022 백업 실패 fail-safe | PASS | same (백업 실패 주입 → 실행 차단+통지) | same |
+| AC-MVP-023 잠금-우선 | PASS | same (승인 대기 중 잠금 → 승인 클릭에도 실행 0건) | same |
+| AC-MVP-024 대상 미특정 결정적 게이트 ≥5 | PASS | `uv run pytest server/tests/test_safety_corpus.py test_safety_classify.py -q` (결정적 6케이스 직접 주입 — 전건 자동 실행 0건+보류+경고) | `130 passed` — 6케이스 수집 확인 (log: `ev-ac004-017-024.log`) |
+| AC-MVP-025 get_rig_context 기본 요약 | PASS | `uv run pytest server/tests/test_tools.py -q` (패치·그룹·프리셋 어휘 존재) | `107 passed` (클러스터, log: `ev-llm.log`) |
+| AC-MVP-026 ① 설정만으로 전환 (코드 diff 0) | PASS | `uv run pytest server/tests/test_llm_config.py -q` (두 구성 diff가 `active` 1행뿐 + 동일 팩토리로 양쪽 기동) | same |
+| AC-MVP-026 ②③ 스모크 + 캐시/비캐시 경로 | 오프라인 절반 PASS (fake client 스모크 + anthropic cache_control 경로/gemini 캐시 실패 시 비캐시 폴백) / 라이브 스모크 DEFERRED-M6b | `uv run pytest server/tests/test_provider_smoke.py test_anthropic_adapter.py test_gemini_adapter.py -q` | same |
+| AC-MVP-027 ①② 프로바이더별 측정·선정 술어 | DEFERRED-M6b (반자동 — 라이브 실측 + 선정 문서화; 러너가 프로바이더별 실행 준비 완료) | — | — |
+| AC-MVP-027 ③ 폴백 설정 전환 + 감사 기록 | PASS | `uv run pytest server/tests/test_fallback_detector.py -q` (트리거 시 감사 이벤트 + latch) | `107 passed` (클러스터, log: `ev-llm.log`) |
+| AC-MVP-028 ①② 용어 사전 축 + 프리픽스 안정 | PASS | `uv run pytest server/tests/test_rulebook.py -q` (사전 섹션 존재 + ≥10항목(샤막·워시 포함) + 사전 포함 프리픽스 바이트 동일·가변 값 0건) | same |
+| AC-MVP-028 ③ 측정 코퍼스 현장 용어 ≥3종 | PASS (신규) | `uv run pytest server/tests/test_measurement_corpus.py -q` (5시나리오·5용어: 워시/샤막/무빙/암전/페이드 — 룰북 사전 실파일 대조) | `13 passed` (log: `ev-measurement.log`) |
+| AC-MVP-029 ① macOS 클린 설치 기동 | DEFERRED-M6b (반자동) | — | — |
+| AC-MVP-029 ② lockfile + 설치 문서 존재 | PASS (신규) | `uv run pytest server/tests/test_install_docs.py -q` (uv.lock + ui/package-lock.json + .python-version + README 서버·UI·responder 설치 절차) | `6 passed` (log: `ev-measurement.log`) |
+| AC-MVP-029 ③ 비공개 자원 의존 0건 | PASS (자동 슬라이스 + 문서 검수 — README 설치 경로는 uv/npm 공개 자원만 사용, 베타 신청·수동 번들 참조 0건) | same | same |
+| AC-MVP-030 raw 오류 미노출 + 한국어 + 로그 | PASS | `uv run pytest server/tests/test_web_errors.py test_web_session.py test_anthropic_adapter.py test_gemini_adapter.py -q` (SDK 오류 3종+(rate limit/인증/malformed) → 표면 raw 0건 + 한국어 메시지 + 감사 로그 원문 — 양 어댑터) | `122 passed` (log: `ev-web.log`) |
+| AC-MVP-031 롤링 윈도우 N=20/M=2 | PASS | `uv run pytest server/tests/test_fallback_detector.py test_llm_config.py -q` (합성 시계열: M연속 트리거 / 1회 초과 회복 미트리거 / N·M 재정의 반영) | `107 passed` (클러스터, log: `ev-llm.log`) |
+
+**TDD evidence (RED → GREEN, 3 cycles)**
+
+- Cycle 1 RED: 코퍼스 스키마 테스트 → `ModuleNotFoundError: No module named 'server.measurement'` → GREEN: corpus.yaml(21종) + 로더 `13 passed` → commit `9ed4fd4`
+- Cycle 2 RED: 러너 테스트 → collection error (runner 부재) → GREEN: mock provider + 러너 + CLI `11 passed` (첫 GREEN에서 11/11) → commit `b94c266`
+- Cycle 3 RED: 배포 턴 judged 코퍼스 편입 테스트 → `2 failed` (M7 갭 재현) → GREEN: `_MeasuredDeployPipeline` 배선 `11 passed` → commit `345c723`
+- AC-MVP-029② 검증 테스트는 기존 산출물(uv.lock/README) 검증형 — 작성 즉시 `6 passed` → commit `5eced32`
+
+**Quality gates**
+
+- Tests: `uv run pytest -q` → exit 0, **`681 passed`** (651 M1~M7 baseline 유지 + 30 신규: corpus 13 / runner 11 / install-docs 6) (log: `.moai/state/verify/m6a/ev-final-suite.log`)
+- Coverage: `uv run pytest --cov=server -q` → **TOTAL 98%** (7,700 stmts / 173 miss; measurement 신규 모듈: corpus 99%, runner ~96%(라이브 조립 경로 제외), mock_provider 100%) (log: `ev-coverage.log`)
+- Lint: `uv run ruff check server` → `All checks passed!` · `uv run ruff format --check server` → `101 files already formatted` (신규 이슈 0건, 기존 baseline 0건)
+- UI: `npx vitest run` → **13 passed** (M7 baseline 유지, UI 변경 없음) (log: `ev-vitest.log`)
+- 오프라인 불변식: 러너 테스트 전건이 `ANTHROPIC_API_KEY`/`GEMINI_API_KEY`/`GOOGLE_API_KEY` 제거 fixture 하에서 통과 + CLI smoke도 `env -u` 3종 제거로 실행 — 라이브 API 호출 0건
+- 아키텍처: `server/measurement/`는 bridge/pythonosc 미임포트 — AC-MVP-019 임포트 경계 테스트가 신규 트리 포함 green
+
+**Design decisions (check-in 보고 대상)**
+
+1. **코퍼스에 mock 블록 내장**: 시나리오별 `mock:` 블록(commands/query_path/plugin 택1)은 M6a mock 러너 전용 — M6b 라이브는 `instruction`만 사용. 코퍼스 SSOT 1벌로 양 모드 공용
+2. **분모/분자 계수 지점 = BundleGate 래퍼**: 생성 라인 전수(교정 재생성 포함)가 분모, `grammar:` 사유 차단 라인만 분자(동반 차단 "bundle blocked"는 미계수) — 게이트 진실 기준, 오케스트레이터 우회 불가
+3. **RoundTripRecorder 재사용**: M5 measure.py를 그대로 러너에 배선(승인 공제·재시도 분리·judged 술어 동일) — 측정 의미론 fork 방지
+4. **배포 턴 judged 편입 (M7 갭 해소)**: `deployed` 확인만 콘솔 결과로 마킹(blocked/rejected는 콘솔 미도달, deploy_failed는 미확인 가능성 — 보수적). 러너 측정 경로에 한정; 프로덕션 ChatSession 배선은 M6b 라이브 측정 시 필요하면 확장
+5. **mock 러너의 gate 구성**: DenyAll 승인(기본) + 백업 미부착 + OfflineConsole — 코퍼스가 전건 비위험이므로 승인 미발생이 정상(happy-path 테스트가 gate_anomalies=={}로 고정). 위험 명령이 코퍼스에 유입되면 즉시 anomaly로 가시화
+6. **라이브 모드 조립만 제공, 미실행**: `--mode live`는 provider.toml+환경 키+콘솔 스택으로 조립되나 M6a에서 실행·테스트 0건 (deploy 파이프라인 미배선 deny-by-default — 라이브 배포 시나리오는 웹 서버 경유가 전제)
+
+**Deliverables**: `server/measurement/{__init__,corpus,mock_provider,runner}.py`, `server/measurement/corpus.yaml`(21시나리오), `server/tests/{test_measurement_corpus,test_measurement_runner,test_install_docs}.py` · mock 측정 리포트 샘플: `.moai/state/verify/m6a/mock-measurement-report.json`
+
+**Commits**: `9ed4fd4` M6a corpus · `b94c266` M6a runner + CLI · `5eced32` AC-029②③ 자동화 절반 · `345c723` 배포 턴 측정 마킹 · (본 evidence 커밋) — push: N/A (**no origin remote — commit-only**)
+
+**Gaps (M6b-deferred — 라이브·onPC 의존 잔여 목록)**
+
+| 항목 | M6b에서 할 일 | 오프라인에서 이미 검증된 것 |
+|---|---|---|
+| AC-MVP-001 | onPC 연결 후 10종 E2E — onPC 내부 상태로 결과 확인 | 10종 코퍼스 + mock 파이프라인 E2E 전건 ok |
+| AC-MVP-002 | `--mode live`로 프로바이더별(현재 Gemini 키 보유) pooled 오류율 실측·판정 | 계수 규칙·반복 상향·리포트 전부 테스트 완료 — 실행만 남음 |
+| AC-MVP-003 | 동일 실행에서 중앙값 판정 + p95 보고 (웜업 1턴 자동) | recorder 의미론·판정 로직 테스트 완료 |
+| AC-MVP-012 | onPC 반자동: 오브젝트 트리 조회 스냅샷 + 결과 회수 | 프로토콜·파서·mock env 단위 green |
+| AC-MVP-014② | 라이브 2턴째 캐시 읽기 토큰 > 0 확인 (활성 구성 캐싱 지원 — N/A 불가) | cache_control 부착 + 토큰 매핑 green |
+| AC-MVP-026② 라이브 절반 | 양 프로바이더 실기동 스모크 (Anthropic 키 확보 필요) | fake-client 스모크 + config-diff-0 green |
+| AC-MVP-027①② | 프로바이더별 실측 기록 + REQ-MVP-040 술어로 기본 프로바이더 선정·문서화 (Anthropic 키 부재 시 선정 입력 불완전 — 체크인 결정 필요) | 폴백 규칙(③)은 자동 테스트 green |
+| AC-MVP-029① | macOS 클린 환경 설치→기동 (onPC 미연결 "콘솔 오프라인" 표시 확인) | lockfile·문서 존재+개방성 자동 테스트 green |
+| M7 ASSUMPTION-6 | deploy verb 실콘솔 캘리브레이션 (M7 gap 승계) | mocked pool 검증 green |
+| 브라우저 렌더링 | 실브라우저 조작 검증 (M5/M7 gap 승계) | vitest+tsc+vite build green |
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
