@@ -584,6 +584,37 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 
 **잔여**: 이번 배치는 3건(HIGH 3)만 다룸 — 102-서브에이전트 리뷰의 잔여 지적은 후속 M6c-3/M6c-4 배치로 이연(범위 분리, scope discipline). `server/web/`, `server/llm/`, `server/orchestrator/runner.py`, `console/lua/`, `ui/`는 본 배치 범위 밖(타 배치 커버) — 미변경.
 
+### M6c-3 — LLM/orchestrator correctness fixes (pre-sync critical/high triage, batch 3 of 4) (2026-07-17, manager-develop cycle_type=tdd)
+
+**Scope**: 동일 102-서브에이전트 교차검증 리뷰가 M6b-1r2/M6c-1/M6c-2 반영 후 발견한 HIGH 3건 — LLM 어댑터/오케스트레이터 정확성 계열. Finding 1/2는 Gemini 어댑터 계층(응답 파싱·에러 분류), Finding 3는 오케스트레이터 재시도 회계.
+
+**AC matrix (M6c-3 subset)**
+
+| AC/REQ | Status | Verification command | Actual output (tail) |
+|---|---|---|---|
+| Finding 1 — 정상 STOP 무회귀 + 비정상 finish_reason 5종 에러화 | PASS | `uv run pytest -q server/tests/test_gemini_adapter.py -k TestFinishReasonInspection` | 7 passed |
+| Finding 2 — httpx 연결성 예외 분류 (builtin 무회귀 포함) | PASS | `uv run pytest -q server/tests/test_gemini_adapter.py -k TestConnectivityErrorClassification` | 4 passed |
+| AC-MVP-005 재시도 상한 ≤3 무회귀 (Finding 3) | PASS | `uv run pytest -q server/tests/test_runner_self_correction.py -k "TestRetryCap or TestWithinTurnRetryAccounting"` | 5 passed |
+
+**TDD evidence (RED → GREEN, 발견별)**
+
+- **Finding 1** (`server/llm/gemini_adapter.py:185` — `finish_reason` never inspected): `_parse_response`는 `Candidate.finish_reason`을 전혀 읽지 않아 SAFETY/RECITATION 차단이나 `MAX_TOKENS`로 잘린 function call이 빈 `parts` 리스트와 함께 조용히 "성공한 빈 턴"으로 파싱됨 — 모델이 응답을 거부/차단당한 실패가 은폐됨. 신규 `_OK_FINISH_REASONS = {"STOP", "FINISH_REASON_UNSPECIFIED"}`(미지정·attribute 부재는 구버전 mock 하위호환을 위해 통과) 도입, 그 외 명시적 finish_reason은 기존 `malformed_response` 에러 채널(빈 candidates 처리와 동일 kind)로 표면화. RED: `git stash push -- server/llm/gemini_adapter.py server/llm/errors.py server/orchestrator/runner.py` → 신규 `TestFinishReasonInspection` 파라미터화 5건(SAFETY/RECITATION/MAX_TOKENS/MALFORMED_FUNCTION_CALL/PROHIBITED_CONTENT) `AssertionError`(ProviderError 미발생 — pytest 출력 확인). GREEN: `4f78e1d`.
+- **Finding 2** (`server/llm/errors.py:79` — connectivity-error misclassification): `normalize_gemini_error`의 연결성 체크가 Python 빌트인 `ConnectionError`/`TimeoutError`만 검사하지만 `google-genai` SDK(httpx 기반)는 실제 네트워크 장애 시 `httpx.ConnectError`/`httpx.TimeoutException`을 발생시킴 — 이는 빌트인의 서브클래스가 아니므로(`isinstance` 확인: `uv run python3 -c "import httpx; print(httpx.ConnectError.__mro__)"` — Exception 직계, builtin 미상속) 실제 연결 장애가 `kind="unknown", retryable=False`로 오분류되어 재시도되지 않음. `connectivity_errors` 튜플에 `httpx.ConnectError`/`httpx.TimeoutException`을 빌트인과 **나란히**(대체 아님) 추가. RED: 동일 stash → 신규 `TestConnectivityErrorClassification` 4건 중 httpx 2건만 `AssertionError: assert 'unknown' == 'connection'`(빌트인 2건은 기존 코드에서도 이미 통과 — 회귀 없음 확인). GREEN: `4f78e1d`.
+- **Finding 3** (`server/orchestrator/runner.py:132` — retry accounting over-counts within-turn multi-tool-calls): 재시도 회계가 per-call dispatch 루프 **내부**에서 `last_run_failed` 플래그를 검사·증분했는데, 이 플래그는 같은 턴 안에서 **이전 호출의 실패로 인해 방금 True로 설정**될 수 있음 — 한 턴에 `run_commands`/`deploy_plugin` 호출이 2개 이상이고 첫 호출이 실패하면, 모델 피드백 왕복이 전혀 없었던 같은 턴의 두 번째 호출이 "교정 라운드"로 오카운트되어 AC-MVP-005의 ≤3 상한을 조기 소진할 위험. 수정: 재시도 증분 결정을 per-call 루프 **이전**, 턴 경계에서 **1회만** 수행 — `last_run_failed`는 오직 **이전 턴 종료 시점**의 값만 참조하고 이번 턴의 dispatch 루프 도중에는 절대 재평가하지 않음(`has_retryable_call` 사전 계산 + 루프 진입 전 단일 증분 + 즉시 리셋). RED: 동일 stash → 신규 `TestWithinTurnRetryAccounting.test_first_call_failure_does_not_charge_the_second_call_in_the_same_turn` `AssertionError: assert 1 == 0`(2-호출 턴에서 첫 호출만 실패했는데 재시도 1회로 오카운트 — pytest 출력 확인); 나머지 2건(2-성공-호출 0회, 교정 턴 2-호출 1회)은 기존 코드에서도 이미 통과(회귀 검증용). 기존 `TestRetryCap` 2건(정확히 3회 소진, 성공 시 카운트 정지)은 신규 회계 하에서도 byte-for-byte 동일 결과 확인. GREEN: `a8bc341`.
+
+**Quality gates**
+
+- `uv run pytest -q` → **734 passed** (720 baseline + 14 신규: Finding 1 파싱 7건, Finding 2 연결성 4건, Finding 3 재시도 회계 3건)
+- `uv run pytest --cov=server --cov-report=term-missing -q` → TOTAL **98%** (baseline 유지); 터치 파일별 — `server/llm/gemini_adapter.py` 91%(기존 미커버 라인만 잔존 — `_ensure_cache` 예외분기 96-100, `_to_contents` 방어분기 169-179, 재-raise 283; 신규 미커버 0건), `server/llm/errors.py` 98%(기존 미커버 라인 `28`만 잔존 — `ValueError` 방어분기, 신규 미커버 0건), `server/orchestrator/runner.py` 100%(신규 미커버 0건)
+- `uv run ruff check server` → clean
+
+**Commits** (no push — no origin remote)
+
+- `4f78e1d` fix(SPEC-COPILOT-MVP-001): M6c-3 Gemini finish_reason inspection + httpx connectivity misclassification (TDD)
+- `a8bc341` fix(SPEC-COPILOT-MVP-001): M6c-3 self-correction retry accounting over-counts within-turn multi-tool-calls (TDD)
+
+**잔여**: 이번 배치는 3건(HIGH 3)만 다룸 — 102-서브에이전트 리뷰의 잔여 지적은 후속 M6c-4 배치로 이연(범위 분리, scope discipline). `server/web/`, `server/safety/`, `server/deploy/`, `console/lua/`, `ui/`, `server/measurement/`는 본 배치 범위 밖(타 배치 커버) — 미변경.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
