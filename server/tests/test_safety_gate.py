@@ -259,6 +259,54 @@ class TestBackupRules:
         except BackupError:
             pass
 
+    def test_showfile_backup_action_blocked_by_live_lock_sends_zero_osc(self, tmp_path):
+        # M6c-2 Finding 3 / AC-MVP-007a: the backup path must honor the SAME
+        # zero-console-sends-while-locked guarantee every other send path
+        # enforces (previously it called the console directly, bypassing it).
+        lock = LiveLock()
+        lock.activate()
+        gate, console, audit = make_gate(tmp_path, lock=lock)
+        action = gate.make_showfile_backup_action()
+        try:
+            action()
+            raise AssertionError("expected the backup action to raise while locked")
+        except RuntimeError as error:
+            assert "lock" in str(error)
+        assert console.executed == []
+        assert len(_events(audit, "blocked")) == 1
+
+    def test_showfile_backup_action_blocked_by_console_offline_sends_zero_osc(self, tmp_path):
+        # M6c-2 Finding 3 / REQ-MVP-030: same guarantee while the console is
+        # offline/degraded.
+        monitor = HealthMonitor()
+        monitor.note_ping_timeout()
+        gate, console, audit = make_gate(tmp_path, monitor=monitor)
+        action = gate.make_showfile_backup_action()
+        try:
+            action()
+            raise AssertionError("expected the backup action to raise while offline")
+        except RuntimeError as error:
+            assert "health" in str(error)
+        assert console.executed == []
+        assert len(_events(audit, "blocked")) == 1
+
+    def test_lock_skipped_backup_is_a_backup_error_not_a_silent_success(self, tmp_path):
+        # REQ-MVP-034: a lock/health-skipped backup attempt must be treated
+        # the same as a genuine backup failure by any downstream logic that
+        # depends on "was a recent backup successful" (here: the periodic
+        # timer only advances on a call that completes without raising).
+        lock = LiveLock()
+        lock.activate()
+        gate, console, _ = make_gate(tmp_path, lock=lock)
+        backup = BackupManager(backup_action=gate.make_showfile_backup_action())
+        try:
+            backup.session_start()
+            raise AssertionError("expected BackupError")
+        except BackupError:
+            pass
+        assert console.executed == []
+        assert backup.history == []
+
 
 class TestLiveLock:
     def test_lock_active_produces_proposal_only(self, tmp_path):

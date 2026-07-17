@@ -201,9 +201,36 @@ class SafetyGate:
         return manager
 
     def make_showfile_backup_action(self) -> Callable[[], None]:
-        """A backup action sending ``SaveShow`` through the audited gate path."""
+        """A backup action sending ``SaveShow`` through the audited gate path.
+
+        M6c-2 Finding 3 (AC-MVP-007a / REQ-MVP-030~031): every OTHER
+        console-send path re-checks the live-lock and health-monitor state
+        immediately before sending (see :meth:`_execute_cleared` and
+        :meth:`deploy_plugin_source`). This backup path previously called
+        the console directly, so a periodic/session-start/pre-risky backup
+        could send ``SaveShow`` while the live lock was active — directly
+        violating AC-MVP-007a's "zero console sends during an active live
+        lock" guarantee — or while the console was offline/degraded.
+
+        A lock/health-blocked attempt now raises instead of sending, so
+        :class:`~server.safety.backup.BackupManager` converts it into a
+        :class:`~server.safety.backup.BackupError` — the SAME fail-safe
+        REQ-MVP-034 treats a genuine backup-action failure with. This is
+        intentional: a skipped backup must never be silently indistinguishable
+        from a successful one to anything downstream that depends on backup
+        state (e.g. the periodic timer, which only advances on a call that
+        completes without raising).
+        """
 
         def action() -> None:
+            if self.lock.is_active:
+                reason = "live lock active (read-only) — showfile backup skipped"
+                self._audit.log_blocked(BACKUP_COMMAND, reason=reason)
+                raise RuntimeError(f"showfile backup skipped: {reason}")
+            if self.monitor.executions_blocked:
+                reason = f"health: {self.monitor.state} — showfile backup skipped"
+                self._audit.log_blocked(BACKUP_COMMAND, reason=reason)
+                raise RuntimeError(f"showfile backup skipped: {reason}")
             outcome = self._console.execute(BACKUP_COMMAND)
             self._audit.log_executed(
                 BACKUP_COMMAND, kind="backup", ok=outcome.status == "ok", detail=outcome.detail
