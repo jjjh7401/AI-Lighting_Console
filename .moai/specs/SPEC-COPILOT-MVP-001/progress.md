@@ -615,6 +615,38 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 
 **잔여**: 이번 배치는 3건(HIGH 3)만 다룸 — 102-서브에이전트 리뷰의 잔여 지적은 후속 M6c-4 배치로 이연(범위 분리, scope discipline). `server/web/`, `server/safety/`, `server/deploy/`, `console/lua/`, `ui/`, `server/measurement/`는 본 배치 범위 밖(타 배치 커버) — 미변경.
 
+### M6c-4 — Lua responder + UI correctness fixes (pre-sync critical/high triage, batch 4 of 4 — LAST BATCH) (2026-07-17, manager-develop cycle_type=tdd)
+
+**Scope**: 동일 102-서브에이전트 교차검증 리뷰가 M6b-1r2/M6c-1/M6c-2/M6c-3 반영 후 발견한 HIGH 3건 — Lua 콘솔 응답기 정직성(honesty)/페이로드 예산 계열 2건 + UI 상태 정리 계열 1건. 4개 배치 중 마지막 배치.
+
+**AC matrix (M6c-4 subset)**
+
+| AC/REQ | Status | Verification command | Actual output (tail) |
+|---|---|---|---|
+| Finding 1 — deploy 쓰기 미확인 시 실패로 보고 (AC-MVP-010 pcall+review+scan gate 관련) | PASS | `uv run pytest -q server/tests/test_responder_deploy.py -k TestSetPluginSourceUnconfirmedWrite` | 1 passed |
+| Finding 2 — state 실패 분기 페이로드 크기 가드 (AC-MVP-012 관련) | PASS | `uv run pytest -q server/tests/test_lua_responder.py -k test_failure_branch_payload_size_guard_truncates_long_path` | 1 passed |
+| Finding 3 — disconnect 시 대기 카드 정리 | PASS | `cd ui && npx vitest run src/useCopilotSocket.test.ts` | 3 passed |
+
+**TDD evidence (RED → GREEN, 발견별)**
+
+- **Finding 1** (`console/lua/copilot_responder.lua:435` — `M.set_plugin_source` 쓰기 확인 로직 오류): setter 검증 루프가 `if not readable or value == nil or value == source then return true end`로, readback이 **실패하거나 nil이어도** 성공으로 간주 — 4종 accessor(`content`/`Content`/`Set`/`SetContent`) 전부가 실제로는 값을 저장하지 못했는데도 `ok=true`를 응답. `readable and value == source`로만 성공 판정하도록 수정, 실패 메시지를 `"cannot confirm plugin source write (readback did not match any setter form)"`로 명확화. RED: `git stash push -- console/lua/copilot_responder.lua` → 신규 `TestSetPluginSourceUnconfirmedWrite`(모든 accessor가 조용히 쓰기를 버리는 `__newindex`/`__index` 메타테이블 mock 컴포넌트) `assert True is False` 실패(실제 `ok=True` — pytest 출력 확인) 후 `git stash pop`으로 복원. GREEN: `04106d7`. 기존 4건의 정상-쓰기 happy-path 테스트(`TestDeployHappyPath`)는 무회귀로 그대로 통과.
+- **Finding 2** (`console/lua/copilot_responder.lua:283` — `build_snapshot()` 실패 분기 크기 가드 누락): 성공 분기만 `CONFIG.max_payload` UDP 예산 가드(`children` 배열 축소)를 가졌고, 실패 분기는 `path`(그리고 `error` 안에 재차 포함된 동일 경로)를 무제한으로 그대로 echo — 길거나 잘못된 object path 하나로 페이로드가 예산을 크게 초과할 수 있음. 신규 `safe_truncate()` 헬퍼(멀티바이트 UTF-8 시퀀스를 끊지 않도록 continuation byte에서 물러나는 안전 절단)로 `error`/`path` 문자열을 순차 절반씩 줄이는 while 루프를 실패 분기에 추가. RED: 동일 stash → 신규 `test_failure_branch_payload_size_guard_truncates_long_path`(5000자 미존재 세그먼트로 `max_payload=300` 설정) `AssertionError: assert 15206 <= 300` 실패(pytest 출력 확인) 후 stash pop으로 복원. GREEN: `04106d7`. 기존 `test_unknown_path_reports_error`/`test_missing_path_reports_error`(짧은 경로, 가드 미발동)는 무회귀로 그대로 통과.
+- **Finding 3** (`ui/src/useCopilotSocket.ts:56` — WebSocket `onclose`가 `pendingApprovals`/`pendingReviews`를 정리하지 않음): 서버가 세션 자신의 disconnect 시 모든 대기 요청을 fail-safe로 거부하는데도(M6c-1 수정), UI는 재연결 후에도 이미 서버가 처리한 승인/리뷰 카드를 계속 표시 — 오퍼레이터가 "아직 결정 대기 중"으로 오인할 위험. `protocol.ts`에 순수 함수 `clearPendingRequests(state)` 신설(기존 "pure functions only" 설계 원칙 준수 — 이 모듈의 헤더 주석과 일치), `useCopilotSocket.ts`의 `reducer`에 `"disconnected"` action 분기 추가, `socket.onclose`에서 `dispatch({ kind: "disconnected" })` 호출. 이 프로젝트에 DOM/jsdom 테스트 하네스가 없어(vitest 기본 `node` 환경 — `protocol.test.ts`와 동일한 pure-function 직접 테스트 패턴 채택), `reducer`를 export하여 신규 `ui/src/useCopilotSocket.test.ts`에서 직접 검증. RED: `git stash push -- ui/src/protocol.ts ui/src/useCopilotSocket.ts` → 신규 3건 `TypeError: reducer is not a function`(pytest 아님, vitest 출력 확인) 후 stash pop으로 복원. GREEN: `87d7636`. 기존 `protocol.test.ts` 13건은 무회귀로 그대로 통과. (부수 발견 — ApprovalCard/ReviewCard 승인/거부 버튼 클릭-후 미비활성화(MEDIUM)는 별도 파일 수정이 필요해 이번 배치 범위 밖으로 backlog 이연.)
+
+**Quality gates**
+
+- `uv run pytest -q` → **736 passed** (734 baseline + 2 신규: Finding 1 미확인-쓰기 1건, Finding 2 크기 가드 1건)
+- `uv run pytest --cov=server --cov-report=term-missing -q` → TOTAL **98%** (baseline 유지; Lua 파일은 Python coverage 측정 대상 아님 — 터치 Python 파일은 테스트 파일뿐, 신규 미커버 0건)
+- `uv run ruff check server` → clean
+- `cd ui && npx vitest run` → **16 passed** (13 baseline + 3 신규, `useCopilotSocket.test.ts`)
+
+**Commits** (no push — no origin remote)
+
+- `04106d7` fix(SPEC-COPILOT-MVP-001): M6c-4 Lua responder honesty + payload size guard (TDD)
+- `87d7636` fix(SPEC-COPILOT-MVP-001): M6c-4 clear stale approval/review cards on disconnect (TDD)
+
+**잔여**: 이번 배치로 M6c 4/4 배치 완료(102-서브에이전트 리뷰의 지적 사항 전부 반영). `server/web/`, `server/safety/`, `server/deploy/`, `server/llm/`, `server/orchestrator/`, `server/measurement/`는 본 배치 범위 밖(타 배치 커버) — 미변경. ApprovalCard/ReviewCard 버튼 debounce(MEDIUM, 부수 발견)는 backlog로 이연 — 별도 SPEC/배치에서 처리.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
