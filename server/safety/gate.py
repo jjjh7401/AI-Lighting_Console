@@ -15,10 +15,20 @@ a caller holding the port directly — no clearance, no send. Every console
 send is audited 1:1 (AC-MVP-019 ②).
 
 Safety asymmetry: when in doubt, HOLD. Approval defaults to deny-all.
+
+M6c-1 (cross-session isolation, Finding 2): ONE ``SafetyGate`` instance is
+shared by every concurrent ``ChatSession`` (``deps.gate`` in
+``server/web/app.py``). ``_clearances`` is therefore keyed per session (via
+the ambient session key ``ChatSession.run_instruction`` binds around each
+turn — see :mod:`server.safety.session_context`), so session B's
+``screen()`` call can never invalidate session A's already-cleared,
+not-yet-executed bundle. A lock guards the per-session Counter dict against
+concurrent mutation from different sessions' worker threads.
 """
 
 from __future__ import annotations
 
+import threading
 import time
 from collections import Counter
 from collections.abc import Callable, Sequence
@@ -41,6 +51,7 @@ from server.safety.lock import LiveLock, ProposalCard
 from server.safety.monitor import HealthMonitor
 from server.safety.registry import PluginFlagRegistry
 from server.safety.ruleset import SafetyRuleset, load_ruleset
+from server.safety.session_context import SessionKey, current_session_key
 
 # Showfile backup command (REQ-MVP-017). ASSUMPTION (onPC-unverified, M6 live
 # calibration): the MA3 ``SaveShow`` keyword saves the current showfile when
@@ -134,7 +145,10 @@ class SafetyGate:
         self._plugin_registry = plugin_registry
         self._reference_types = reference_types
         self._stage_observer = stage_observer
-        self._clearances: Counter[str] = Counter()
+        # Session-keyed (M6c-1 Finding 2) — one Counter per calling session,
+        # so concurrent ChatSessions never invalidate each other's clearances.
+        self._clearances: dict[SessionKey, Counter[str]] = {}
+        self._clearances_lock = threading.Lock()
         self._unconfirmed: set[str] = set()
         self._executor = _GateExecutor(self)
         self._state_port = _GateStatePort(self)
@@ -209,7 +223,11 @@ class SafetyGate:
     def screen(self, commands: Sequence[str]) -> ScreenDecision:
         """Screen one command bundle; issues clearances only on full clearance."""
         commands = list(commands)
-        self._clearances = Counter()  # a new bundle invalidates old clearances
+        session_key = current_session_key()
+        with self._clearances_lock:
+            # A new bundle invalidates THIS session's old clearances only —
+            # never another concurrently-screening session's (M6c-1 Finding 2).
+            self._clearances[session_key] = Counter()
 
         health = self._check_health(commands)
         if health is not None:
@@ -283,7 +301,8 @@ class SafetyGate:
                         notice=f"showfile backup failed — execution blocked (fail-safe): {error}",
                     )
 
-        self._clearances = Counter(commands)
+        with self._clearances_lock:
+            self._clearances[session_key] = Counter(commands)
         return ScreenDecision(
             cleared=True,
             status="cleared",
@@ -475,12 +494,15 @@ class SafetyGate:
             reason = f"health: {self.monitor.state}"
             self._audit.log_blocked(command, reason=reason)
             return ExecutionResult(ok=False, detail=f"blocked: {reason}")
-        if self._clearances[command] <= 0:
-            self._audit.log_blocked(command, reason="not cleared by the safety gate")
-            return ExecutionResult(
-                ok=False, detail="blocked: command was not cleared by the safety gate"
-            )
-        self._clearances[command] -= 1
+        session_key = current_session_key()
+        with self._clearances_lock:
+            clearances = self._clearances.setdefault(session_key, Counter())
+            if clearances[command] <= 0:
+                self._audit.log_blocked(command, reason="not cleared by the safety gate")
+                return ExecutionResult(
+                    ok=False, detail="blocked: command was not cleared by the safety gate"
+                )
+            clearances[command] -= 1
         outcome = self._console.execute(command)
         self._audit.log_executed(
             command,

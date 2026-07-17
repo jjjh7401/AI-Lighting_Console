@@ -10,6 +10,7 @@ approval must be impossible.
 from __future__ import annotations
 
 import json
+import threading
 
 from server.llm.types import ModelTurn, ToolCall, ToolResultsMessage, Usage
 from server.orchestrator.runner import Orchestrator
@@ -21,6 +22,7 @@ from server.safety.gate import BACKUP_COMMAND, SafetyGate
 from server.safety.lock import LiveLock
 from server.safety.monitor import HealthMonitor
 from server.safety.registry import PluginFlagRegistry
+from server.safety.session_context import bind_session_key, new_session_key, reset_session_key
 
 
 class FakeConsole:
@@ -396,6 +398,68 @@ class TestClearanceEnforcement:
         gate.screen(["List"])  # new bundle replaces the old clearances
         assert gate.execution_port.execute("Store Cue 5").ok is False
         assert console.executed == []
+
+
+class TestConcurrentSessionClearanceIsolation:
+    """M6c-1 Finding 2 — one SafetyGate instance is shared by every concurrent
+    ChatSession (``deps.gate`` in server/web/app.py), but ``_clearances`` was
+    a single instance-level Counter: session B's ``screen()`` call silently
+    invalidated session A's already-cleared, not-yet-executed bundle.
+    """
+
+    def test_a_sessions_screen_does_not_invalidate_anothers_clearance(self, tmp_path):
+        gate, console, _ = make_gate(tmp_path)
+        key_a = new_session_key()
+        key_b = new_session_key()
+
+        token = bind_session_key(key_a)
+        try:
+            gate.screen(["Store Cue 5"])  # session A clears its own bundle
+        finally:
+            reset_session_key(token)
+
+        token = bind_session_key(key_b)
+        try:
+            gate.screen(["List"])  # session B's OWN bundle — must not touch A's
+        finally:
+            reset_session_key(token)
+
+        token = bind_session_key(key_a)
+        try:
+            # A's clearance must survive B's unrelated screen() call.
+            assert gate.execution_port.execute("Store Cue 5").ok is True
+        finally:
+            reset_session_key(token)
+        assert console.executed == ["Store Cue 5"]
+
+    def test_concurrent_sessions_both_execute_their_own_cleared_bundle(self, tmp_path):
+        gate, console, _ = make_gate(tmp_path)
+        key_a = new_session_key()
+        key_b = new_session_key()
+        start = threading.Barrier(2)
+        screened = threading.Barrier(2)
+        results: dict[str, bool] = {}
+
+        def run_session(key, command, result_key):
+            token = bind_session_key(key)
+            try:
+                start.wait(timeout=5.0)  # both sessions screen at ~the same time
+                gate.screen([command])
+                screened.wait(timeout=5.0)  # both screened before either executes
+                results[result_key] = gate.execution_port.execute(command).ok
+            finally:
+                reset_session_key(token)
+
+        thread_a = threading.Thread(target=run_session, args=(key_a, "Store Cue 5", "a"))
+        thread_b = threading.Thread(target=run_session, args=(key_b, "List", "b"))
+        thread_a.start()
+        thread_b.start()
+        thread_a.join(timeout=5.0)
+        thread_b.join(timeout=5.0)
+
+        assert results.get("a") is True
+        assert results.get("b") is True
+        assert set(console.executed) == {"Store Cue 5", "List"}
 
 
 class TestPluginInvocationGate:
