@@ -60,6 +60,16 @@ class TestBlacklistedFindings:
             report = _scan(f'Cmd("{entry} 1")', ruleset)
             assert report.destructive is True, entry
 
+    def test_multiline_formatted_cmd_call_is_still_detected(self, ruleset):
+        # M6c-2 Finding 2: only space/tab were skipped between `Cmd(` and its
+        # argument, so a newline-formatted call evaded classification.
+        source = 'local function main()\n    Cmd(\n        "Delete Everything"\n    )\nend\n'
+        report = _scan(source, ruleset)
+        assert report.destructive is True
+        (finding,) = report.findings
+        assert finding.kind == "blacklisted"
+        assert finding.matched_entry == "Delete"
+
     def test_multiple_findings_report_each_line(self, ruleset):
         source = 'Cmd("Store Cue 1")\nCmd("Delete 1")\nCmd("Remove 2")\n'
         report = _scan(source, ruleset)
@@ -123,6 +133,15 @@ class TestDynamicAssembly:
     def test_string_format_call_is_dynamic(self, ruleset):
         report = _scan('Cmd(string.format("Delete %d", n))', ruleset)
         assert report.destructive is False
+        assert len(report.dynamic_calls) == 1
+
+    def test_multiline_concatenation_is_still_detected_as_dynamic(self, ruleset):
+        # M6c-2 Finding 2: the trailing-concatenation check only stripped
+        # space/tab, so a `..` split across a line break evaded the dynamic
+        # signal while the literal prefix is still classified (best-effort).
+        report = _scan('Cmd("Delete "\n    .. target)', ruleset)
+        assert report.destructive is True
+        assert report.findings[0].kind == "blacklisted"
         assert len(report.dynamic_calls) == 1
 
 

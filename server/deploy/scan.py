@@ -38,6 +38,13 @@ _CMD_HEAD = re.compile(r"(?<![A-Za-z0-9_])Cmd\s*(\(|\"|'|\[=*\[)")
 
 _ESCAPES = {"n": "\n", "t": "\t", "r": "\r", "a": "\a", "b": "\b", "f": "\f", "v": "\v"}
 
+# Lua's own whitespace set (space, tab, newline, CR, vertical tab, form feed).
+# M6c-2 Finding 2: the gap/tail checks below previously allowed only space/tab,
+# so a `Cmd(\n"Delete ..."\n)` (or a `..`-concatenation split across a line
+# break) evaded classification entirely. Both checks must accept the SAME
+# whitespace Lua itself accepts between/after the `Cmd(` argument.
+_LUA_WHITESPACE = " \t\n\r\v\f"
+
 
 @dataclass(frozen=True)
 class ScanFinding:
@@ -165,7 +172,7 @@ def scan_lua_source(source: str, ruleset: SafetyRuleset) -> ScanReport:
         after: int
         if opener == "(":
             i = head.end()
-            while i < len(source) and source[i] in " \t":
+            while i < len(source) and source[i] in _LUA_WHITESPACE:
                 i += 1
             ch = source[i : i + 1]
             if ch in ('"', "'"):
@@ -184,7 +191,7 @@ def scan_lua_source(source: str, ruleset: SafetyRuleset) -> ScanReport:
             continue
         # A concatenated tail (`.. expr`) means the FULL command is dynamic;
         # the literal prefix is still classified (best-effort hardening).
-        tail = source[after:].lstrip(" \t")
+        tail = source[after:].lstrip(_LUA_WHITESPACE)
         if tail.startswith(".."):
             dynamic.append(DynamicCall(line=line, snippet=_line_snippet(source, head.start())))
             literal = literal.strip()
