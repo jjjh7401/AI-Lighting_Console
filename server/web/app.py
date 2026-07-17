@@ -77,11 +77,15 @@ async def _safe_send(websocket: WebSocket, event: dict) -> None:
 async def _heartbeat_loop(deps: WebDeps, interval: float) -> None:
     last_state: str | None = None
     while True:
-        state = await asyncio.to_thread(deps.gate.heartbeat)
-        if state != last_state:
-            last_state = state
-            for notify in tuple(deps.status_listeners):
-                notify()
+        try:
+            state = await asyncio.to_thread(deps.gate.heartbeat)
+        except Exception as error:  # mirrors _backup_loop — the loop survives
+            deps.audit.record({"event": "heartbeat_tick_failed", "detail": str(error)})
+        else:
+            if state != last_state:
+                last_state = state
+                for notify in tuple(deps.status_listeners):
+                    notify()
         await asyncio.sleep(interval)
 
 

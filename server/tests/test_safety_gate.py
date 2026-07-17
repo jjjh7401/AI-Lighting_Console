@@ -33,6 +33,7 @@ class FakeConsole:
         self.fail_on: dict[str, str] = {}
         self.unconfirmed_on: set[str] = set()
         self.ping_ok = True
+        self.ping_error: Exception | None = None
         self.state_tree = state_tree or {}
 
     def execute(self, command: str) -> ExecOutcome:
@@ -44,6 +45,8 @@ class FakeConsole:
         return ExecOutcome(status="ok", detail="OK")
 
     def ping(self) -> bool:
+        if self.ping_error is not None:
+            raise self.ping_error
         return self.ping_ok
 
     def query_state(self, path: str) -> dict:

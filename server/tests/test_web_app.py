@@ -265,3 +265,22 @@ class TestRuntimeLoops:
             assert client.get("/healthz").status_code == 200  # app still alive
         failures = [e for e in deps.audit.iter_events() if e["event"] == "backup_tick_failed"]
         assert failures, "backup failures must be audited"
+
+    def test_heartbeat_loop_survives_heartbeat_failures(self, tmp_path):
+        # M6c-1 Finding 3 — unlike _backup_loop, _heartbeat_loop had no
+        # exception guard around gate.heartbeat(): an unhandled exception here
+        # silently kills console-offline detection instead of being audited
+        # and retried on the next tick.
+        console = FakeConsole()
+        console.ping_error = RuntimeError("responder unreachable")
+        deps, _console, _gate = _deps(
+            tmp_path,
+            ScriptedProvider([]),
+            console=console,
+            heartbeat_interval_seconds=0.02,
+        )
+        with TestClient(create_app(deps)) as client:
+            time.sleep(0.1)
+            assert client.get("/healthz").status_code == 200  # app still alive
+        failures = [e for e in deps.audit.iter_events() if e["event"] == "heartbeat_tick_failed"]
+        assert failures, "heartbeat failures must be audited"
