@@ -37,6 +37,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from server.llm.errors import ProviderError
+from server.llm.types import ConversationItem, LLMProvider, ModelTurn, ToolDefinition
 from server.measurement.corpus import DEFAULT_CORPUS_PATH, Scenario, load_corpus
 from server.measurement.mock_provider import (
     MockScenarioProvider,
@@ -67,6 +69,82 @@ class RunnerConfig:
     error_rate_threshold: float = DEFAULT_ERROR_RATE_THRESHOLD
     round_trip_threshold_seconds: float = DEFAULT_ROUND_TRIP_THRESHOLD_SECONDS
     warmup: bool = True
+
+
+class TelemetryBackoffProvider:
+    """LLMProvider wrapper: bounded backoff on retryable errors + telemetry.
+
+    Live measurement runs hit free-tier rate limits (429): a retryable
+    :class:`ProviderError` triggers exponential backoff (base * 2^attempt,
+    capped) up to ``max_attempts`` total attempts, counted per error kind.
+    Non-retryable errors (auth, invalid_request, ...) propagate immediately.
+    Every successful turn accumulates token usage — the cache-read totals are
+    the AC-MVP-014 ② live evidence surface, and the overall totals feed the
+    AC-MVP-027 cost input.
+    """
+
+    def __init__(
+        self,
+        inner: LLMProvider,
+        *,
+        max_attempts: int = 5,
+        base_delay_seconds: float = 10.0,
+        max_delay_seconds: float = 120.0,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        self._inner = inner
+        self._max_attempts = max_attempts
+        self._base_delay = base_delay_seconds
+        self._max_delay = max_delay_seconds
+        self._sleep = sleep
+        self.model_calls = 0
+        self.backoff_retries: Counter[str] = Counter()
+        self.usage_totals = {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "cache_read_tokens": 0,
+            "cache_write_tokens": 0,
+        }
+
+    @property
+    def name(self) -> str:
+        return self._inner.name
+
+    @property
+    def model_id(self) -> str:
+        return self._inner.model_id
+
+    @property
+    def supports_prompt_caching(self) -> bool:
+        return self._inner.supports_prompt_caching
+
+    def complete(
+        self,
+        *,
+        system_prefix: str,
+        conversation: Sequence[ConversationItem],
+        tools: Sequence[ToolDefinition] = (),
+    ) -> ModelTurn:
+        attempt = 0
+        while True:
+            try:
+                turn = self._inner.complete(
+                    system_prefix=system_prefix, conversation=conversation, tools=tools
+                )
+            except ProviderError as error:
+                if not error.retryable or attempt + 1 >= self._max_attempts:
+                    raise
+                self.backoff_retries[error.kind] += 1
+                self._sleep(min(self._base_delay * (2**attempt), self._max_delay))
+                attempt += 1
+                continue
+            self.model_calls += 1
+            usage = turn.usage
+            self.usage_totals["input_tokens"] += usage.input_tokens
+            self.usage_totals["output_tokens"] += usage.output_tokens
+            self.usage_totals["cache_read_tokens"] += usage.cache_read_tokens
+            self.usage_totals["cache_write_tokens"] += usage.cache_write_tokens
+            return turn
 
 
 class _CountingBundleGate:
@@ -143,6 +221,7 @@ class MeasurementSession:
     counter: _CountingBundleGate
     recorder: RoundTripRecorder
     cleanup: Callable[[], None] = field(default=lambda: None)
+    telemetry: TelemetryBackoffProvider | None = None
 
     def run_instruction(self, instruction: str) -> InstructionResult:
         """Drive one corpus instruction with round-trip bracketing."""
@@ -190,6 +269,64 @@ def build_offline_session(
         orchestrator=orchestrator,
         counter=counter,
         recorder=recorder,
+    )
+
+
+def build_live_llm_session(
+    *,
+    config_path: Path | str | None = None,
+    audit_dir: Path | str | None = None,
+    provider_override: LLMProvider | None = None,
+    backoff_max_attempts: int = 5,
+    backoff_base_delay_seconds: float = 10.0,
+    sleep: Callable[[float], None] = time.sleep,
+) -> MeasurementSession:
+    """Compose the M6b-1 pipeline: LIVE provider + OFFLINE (mock) console.
+
+    Grammar-error-rate live measurement without a console: the model is real
+    (config + API key env), the console side is the in-memory mock, so
+    round-trip figures from this mode are REFERENCE ONLY — never AC-MVP-003
+    evidence. ``provider_override`` injects a scripted provider for offline
+    tests of this composition.
+    """
+    from server.llm.config import DEFAULT_CONFIG_PATH, load_provider_config
+    from server.llm.factory import build_provider
+
+    provider_config = load_provider_config(config_path or DEFAULT_CONFIG_PATH)
+    inner = provider_override if provider_override is not None else build_provider(provider_config)
+    provider = TelemetryBackoffProvider(
+        inner,
+        max_attempts=backoff_max_attempts,
+        base_delay_seconds=backoff_base_delay_seconds,
+        sleep=sleep,
+    )
+    if audit_dir is None:
+        audit_dir = tempfile.mkdtemp(prefix="ma3-measure-audit-")
+    gate = SafetyGate(console=OfflineConsole(), audit=AuditLog(audit_dir), ruleset=load_ruleset())
+    counter = _CountingBundleGate(gate)
+    recorder = RoundTripRecorder()
+    registry = build_toolset(
+        execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
+        state_port=gate.state_port,
+        bundle_gate=counter,
+        deploy_pipeline=_MeasuredDeployPipeline(OfflineDeployPipeline(), recorder),
+    )
+    orchestrator = Orchestrator(
+        provider=provider, registry=registry, system_prefix=assemble_prefix()
+    )
+    active = provider_config.active
+    settings = provider_config.anthropic if active == "anthropic" else provider_config.gemini
+    return MeasurementSession(
+        mode="live-llm-mock-console",
+        provider_name=provider.name,
+        provider_model=provider.model_id,
+        supports_prompt_caching=provider.supports_prompt_caching,
+        # Acceptance §5: the pinned production inference settings are recorded.
+        inference_settings={k: getattr(settings, k) for k in settings.__dataclass_fields__},
+        orchestrator=orchestrator,
+        counter=counter,
+        recorder=recorder,
+        telemetry=provider,
     )
 
 
@@ -260,12 +397,25 @@ def run_measurement(
     config: RunnerConfig,
 ) -> dict:
     """Run the measurement procedure and build the machine-readable report."""
+    run_started = time.monotonic()
     statuses: Counter[str] = Counter()
+
+    def run_one(instruction: str) -> None:
+        # Live-run containment: one instruction's provider failure (backoff
+        # exhausted or non-retryable) is recorded by kind and the run goes on.
+        try:
+            result = session.run_instruction(instruction)
+        except ProviderError as error:
+            statuses[f"provider_error:{error.kind}"] += 1
+            return
+        statuses[result.status] += 1
+
     cold_start_reference: float | None = None
     if config.warmup:
         # Warm-up turn (§3 warm-cache condition): excluded from every corpus
         # statistic; its duration is reported as the cold-start reference.
-        session.run_instruction(scenarios[0].instruction)
+        run_one(scenarios[0].instruction)
+        statuses.clear()  # the warm-up turn is not a corpus turn
         warmup_record = session.recorder.records[-1]
         cold_start_reference = warmup_record.measured_seconds
     base_denominator = session.counter.denominator
@@ -278,8 +428,7 @@ def run_measurement(
         before_den = session.counter.denominator
         before_num = session.counter.numerator
         for scenario in scenarios:
-            result = session.run_instruction(scenario.instruction)
-            statuses[result.status] += 1
+            run_one(scenario.instruction)
         denominator = session.counter.denominator - before_den
         numerator = session.counter.numerator - before_num
         per_run.append(
@@ -320,8 +469,9 @@ def run_measurement(
         if status not in ("cleared", "blocked_grammar")
     }
 
-    return {
+    report: dict = {
         "generated_at": datetime.now(UTC).isoformat(),
+        "wall_clock_seconds": round(time.monotonic() - run_started, 3),
         "mode": session.mode,
         "provider": {
             "name": session.provider_name,
@@ -368,6 +518,13 @@ def run_measurement(
         "turn_statuses": dict(statuses),
         "gate_anomalies": anomalies,
     }
+    if session.telemetry is not None:
+        report["provider_telemetry"] = {
+            "model_calls": session.telemetry.model_calls,
+            "usage_totals": dict(session.telemetry.usage_totals),
+            "backoff_retries": dict(session.telemetry.backoff_retries),
+        }
+    return report
 
 
 def format_summary(report: dict) -> str:
@@ -393,26 +550,39 @@ def format_summary(report: dict) -> str:
     ]
     if report["gate_anomalies"]:
         lines.append(f"gate anomalies: {report['gate_anomalies']}")
+    telemetry = report.get("provider_telemetry")
+    if telemetry is not None:
+        lines.append(
+            f"provider telemetry: {telemetry['model_calls']} model calls"
+            f" | usage {telemetry['usage_totals']}"
+            f" | backoff retries {telemetry['backoff_retries']}"
+            f" | wall clock {report.get('wall_clock_seconds')}s"
+        )
     return "\n".join(lines)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="MA3 copilot measurement runner (M6)")
-    parser.add_argument("--mode", choices=("mock", "live"), default="mock")
+    parser.add_argument("--mode", choices=("mock", "live-llm", "live"), default="mock")
     parser.add_argument("--corpus", type=Path, default=DEFAULT_CORPUS_PATH)
     parser.add_argument("--output", type=Path, default=None, help="write the JSON report here")
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--min-command-lines", type=int, default=300)
     parser.add_argument("--max-repetitions", type=int, default=30)
+    parser.add_argument("--scenario-limit", type=int, default=None, help="first N scenarios only")
     parser.add_argument("--no-warmup", action="store_true")
     parser.add_argument("--audit-dir", type=Path, default=None)
-    parser.add_argument("--config", type=Path, default=None, help="provider TOML (live mode)")
+    parser.add_argument("--config", type=Path, default=None, help="provider TOML (live modes)")
+    parser.add_argument("--backoff-max-attempts", type=int, default=5)
+    parser.add_argument("--backoff-base-delay", type=float, default=10.0)
     parser.add_argument("--console-host", default="127.0.0.1")
     parser.add_argument("--console-port", type=int, default=8000)
     parser.add_argument("--receive-port", type=int, default=9000)
     args = parser.parse_args(argv)
 
     scenarios = load_corpus(args.corpus)
+    if args.scenario_limit is not None:
+        scenarios = scenarios[: args.scenario_limit]
     config = RunnerConfig(
         repetitions=args.repetitions,
         min_command_lines=args.min_command_lines,
@@ -421,6 +591,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     if args.mode == "mock":
         session = build_offline_session(scenarios, audit_dir=args.audit_dir)
+    elif args.mode == "live-llm":
+        session = build_live_llm_session(
+            config_path=args.config,
+            audit_dir=args.audit_dir,
+            backoff_max_attempts=args.backoff_max_attempts,
+            backoff_base_delay_seconds=args.backoff_base_delay,
+        )
     else:
         session = build_live_session(
             config_path=args.config,

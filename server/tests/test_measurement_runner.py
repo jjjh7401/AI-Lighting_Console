@@ -184,6 +184,176 @@ class TestReportSurface:
         assert "retry" in summary
 
 
+def _write_gemini_config(tmp_path):
+    """A measurement-scoped provider TOML: shipped config with active=gemini."""
+    from pathlib import Path
+
+    shipped = Path("config/provider.toml").read_text(encoding="utf-8")
+    flipped = shipped.replace('active = "anthropic"', 'active = "gemini"')
+    path = tmp_path / "provider-gemini.toml"
+    path.write_text(flipped, encoding="utf-8")
+    return path
+
+
+def _rate_limit_error():
+    from server.llm.errors import ProviderError
+
+    return ProviderError(
+        kind="rate_limit", provider="gemini", retryable=True, raw_detail="429 quota"
+    )
+
+
+class _FlakyProvider:
+    """Scripted inner provider: raises the given errors first, then succeeds."""
+
+    name = "gemini"
+    model_id = "gemini-3.5-flash"
+    supports_prompt_caching = True
+
+    def __init__(self, errors, turn):
+        self._errors = list(errors)
+        self._turn = turn
+        self.calls = 0
+
+    def complete(self, *, system_prefix, conversation, tools=()):
+        self.calls += 1
+        if self._errors:
+            raise self._errors.pop(0)
+        return self._turn
+
+
+def _final_turn(usage=None):
+    from server.llm.types import ModelTurn, Usage
+
+    return ModelTurn(
+        text="완료했습니다.",
+        tool_calls=(),
+        stop_reason="end",
+        usage=usage or Usage(),
+        provider="gemini",
+    )
+
+
+class TestBackoffProvider:
+    def test_rate_limit_retries_with_bounded_exponential_backoff(self):
+        from server.measurement.runner import TelemetryBackoffProvider
+
+        inner = _FlakyProvider([_rate_limit_error(), _rate_limit_error()], _final_turn())
+        delays: list[float] = []
+        provider = TelemetryBackoffProvider(
+            inner, max_attempts=5, base_delay_seconds=10.0, sleep=delays.append
+        )
+        turn = provider.complete(system_prefix="P", conversation=[], tools=())
+        assert turn.text == "완료했습니다."
+        assert delays == [10.0, 20.0]  # exponential, bounded
+        assert provider.backoff_retries == {"rate_limit": 2}
+
+    def test_exhaustion_reraises_after_max_attempts(self):
+        from server.llm.errors import ProviderError
+        from server.measurement.runner import TelemetryBackoffProvider
+
+        inner = _FlakyProvider([_rate_limit_error()] * 10, _final_turn())
+        delays: list[float] = []
+        provider = TelemetryBackoffProvider(
+            inner, max_attempts=3, base_delay_seconds=1.0, sleep=delays.append
+        )
+        with pytest.raises(ProviderError):
+            provider.complete(system_prefix="P", conversation=[], tools=())
+        assert inner.calls == 3  # bounded — never a 4th attempt
+        assert len(delays) == 2
+
+    def test_non_retryable_error_propagates_immediately(self):
+        from server.llm.errors import ProviderError
+        from server.measurement.runner import TelemetryBackoffProvider
+
+        auth = ProviderError(kind="auth", provider="gemini", retryable=False, raw_detail="401")
+        inner = _FlakyProvider([auth], _final_turn())
+        delays: list[float] = []
+        provider = TelemetryBackoffProvider(
+            inner, max_attempts=5, base_delay_seconds=1.0, sleep=delays.append
+        )
+        with pytest.raises(ProviderError):
+            provider.complete(system_prefix="P", conversation=[], tools=())
+        assert delays == []
+        assert inner.calls == 1
+
+    def test_usage_totals_accumulate_across_turns(self):
+        from server.llm.types import Usage
+        from server.measurement.runner import TelemetryBackoffProvider
+
+        inner = _FlakyProvider(
+            [], _final_turn(Usage(input_tokens=100, output_tokens=7, cache_read_tokens=90))
+        )
+        provider = TelemetryBackoffProvider(inner, sleep=lambda _: None)
+        provider.complete(system_prefix="P", conversation=[], tools=())
+        provider.complete(system_prefix="P", conversation=[], tools=())
+        assert provider.model_calls == 2
+        assert provider.usage_totals["input_tokens"] == 200
+        assert provider.usage_totals["cache_read_tokens"] == 180
+
+
+class TestLiveLlmSession:
+    def test_live_llm_session_uses_mock_console_and_records_settings(self, corpus, tmp_path):
+        # live-llm mode: REAL provider + OFFLINE console. Wired here with the
+        # deterministic mock provider injected, so the composition is testable
+        # without credentials; the actual Gemini run swaps only the provider.
+        from server.measurement.mock_provider import MockScenarioProvider
+        from server.measurement.runner import build_live_llm_session
+
+        session = build_live_llm_session(
+            config_path=_write_gemini_config(tmp_path),
+            audit_dir=tmp_path / "audit",
+            provider_override=MockScenarioProvider(corpus),
+        )
+        assert session.mode == "live-llm-mock-console"
+        # Acceptance §5: the pinned inference settings snapshot comes from the
+        # measurement config (active=gemini) — model pin included.
+        assert session.inference_settings["model"] == "gemini-3.5-flash"
+        report = run_measurement(corpus, session, _quick_config())
+        assert report["mode"] == "live-llm-mock-console"
+        assert report["grammar_error_rate"]["pooled_pass"] is True
+        # Telemetry rides the report: model calls + usage + backoff retries.
+        telemetry = report["provider_telemetry"]
+        assert telemetry["model_calls"] > 0
+        assert telemetry["backoff_retries"] == {}
+        assert "wall_clock_seconds" in report
+
+
+class TestProviderErrorContainment:
+    def test_provider_error_is_recorded_and_the_run_continues(self, corpus, tmp_path):
+        # A live run must survive one instruction's provider failure: the turn
+        # is recorded by error kind and the remaining corpus still runs.
+        from server.llm.errors import ProviderError
+        from server.measurement.mock_provider import MockScenarioProvider
+        from server.measurement.runner import build_live_llm_session
+
+        target = corpus[0].instruction
+
+        class OneAuthFailureProvider(MockScenarioProvider):
+            def complete(self, *, system_prefix, conversation, tools=()):
+                from server.llm.types import UserMessage
+
+                instruction = next(
+                    item.text for item in conversation if isinstance(item, UserMessage)
+                )
+                if instruction == target:
+                    raise ProviderError(
+                        kind="auth", provider="gemini", retryable=False, raw_detail="401"
+                    )
+                return super().complete(
+                    system_prefix=system_prefix, conversation=conversation, tools=tools
+                )
+
+        session = build_live_llm_session(
+            config_path=_write_gemini_config(tmp_path),
+            audit_dir=tmp_path / "audit",
+            provider_override=OneAuthFailureProvider(corpus),
+        )
+        report = run_measurement(corpus, session, _quick_config())
+        assert report["turn_statuses"]["provider_error:auth"] == 1
+        assert report["turn_statuses"]["ok"] == len(corpus) - 1
+
+
 class TestCli:
     def test_cli_mock_mode_writes_report_file(self, tmp_path, monkeypatch):
         from server.measurement.runner import main
@@ -208,3 +378,29 @@ class TestCli:
         payload = json.loads(out.read_text(encoding="utf-8"))
         assert payload["mode"] == "mock"
         assert payload["grammar_error_rate"]["pooled_pass"] is True
+
+    def test_cli_scenario_limit_bounds_the_smoke_run(self, tmp_path):
+        # The live smoke uses --scenario-limit for a minimal quota footprint.
+        from server.measurement.runner import main
+
+        out = tmp_path / "report.json"
+        exit_code = main(
+            [
+                "--mode",
+                "mock",
+                "--scenario-limit",
+                "2",
+                "--output",
+                str(out),
+                "--repetitions",
+                "1",
+                "--min-command-lines",
+                "1",
+                "--no-warmup",
+                "--audit-dir",
+                str(tmp_path / "audit"),
+            ]
+        )
+        assert exit_code == 0
+        payload = json.loads(out.read_text(encoding="utf-8"))
+        assert payload["corpus"]["scenarios"] == 2

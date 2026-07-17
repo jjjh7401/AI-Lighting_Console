@@ -1,0 +1,31 @@
+# Measurement-scoped provider config (M6b-1 — Gemini live grammar-error-rate run).
+#
+# Identical to the shipped `config/provider.toml` except `active = "gemini"`.
+# The shipped default provider selection is NOT decided here — that is the
+# AC-MVP-027 predicate decision (M6b-3). This file only scopes the measurement
+# run to the provider whose credential is available.
+#
+# SECURITY: NEVER put credentials here. API keys are injected via environment
+# variables only (GEMINI_API_KEY / GOOGLE_API_KEY); the loader rejects
+# credential-like keys.
+
+[provider]
+active = "gemini"
+
+[provider.anthropic]
+model = "claude-opus-4-8"
+prompt_caching = true
+max_tokens = 16000
+thinking = "adaptive"
+effort = "high"
+
+[provider.gemini]
+model = "gemini-3.5-flash"
+context_caching = true
+cache_ttl_seconds = 3600
+
+# REQ-MVP-040(ii) persistent-miss fallback detection (AD2-m1 defaults N=20/M=2).
+[fallback]
+window_turns = 20
+consecutive_windows = 2
+threshold_seconds = 10.0
