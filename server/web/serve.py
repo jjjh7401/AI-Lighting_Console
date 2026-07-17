@@ -10,13 +10,16 @@ WebSocket approval channel. Credentials stay in environment variables only.
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 from pathlib import Path
 
 from server.deploy.compile import LuaCompileChecker
 from server.deploy.pipeline import DeployPipeline
 from server.llm.config import DEFAULT_CONFIG_PATH, load_provider_config
 from server.llm.factory import build_provider
+from server.llm.types import LLMProvider
 from server.orchestrator.fallback import FallbackDetector
+from server.orchestrator.runner import SwitchableProvider
 from server.rulebook.assembly import assemble_prefix
 from server.safety.bootstrap import ConsoleStack, build_console_stack
 from server.web.app import WebDeps, create_app
@@ -77,10 +80,34 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         approval_port=channel,
         attempt_session_backup=not args.no_session_backup,
     )
+
+    # AC-MVP-027 part 3 (REQ-MVP-039/040 ii): only when a fallback target is
+    # configured do we build a SECOND adapter and wrap the active one in the
+    # runtime-swappable indirection — a persistent-miss decision then actually
+    # switches which adapter subsequent turns call, not merely a config value
+    # a human must apply by restarting the process. Absent a target (today's
+    # shipped default — the target is a still-pending M6b-3 human decision),
+    # wiring is byte-identical to before: one adapter, decision-only audit.
+    active_provider: LLMProvider = provider
+    on_fallback = None
+    if config.fallback.target_provider is not None:
+        target_adapter = build_provider(replace(config, active=config.fallback.target_provider))
+        switchable = SwitchableProvider(
+            {config.active: provider, config.fallback.target_provider: target_adapter},
+            active_name=config.active,
+        )
+        active_provider = switchable
+        on_fallback = switchable.switch_to
+
     # Judged turns feed the persistent-miss detector; decisions land in the
     # SAME durable audit log the gate writes (REQ-MVP-040 ii).
     recorder.attach_detector(
-        FallbackDetector(config.fallback, audit_sink=stack.audit, active_provider=provider.name)
+        FallbackDetector(
+            config.fallback,
+            audit_sink=stack.audit,
+            active_provider=provider.name,
+            on_fallback=on_fallback,
+        )
     )
 
     # M7 deploy review flow: a SECOND channel instance (distinct request type,
@@ -101,7 +128,7 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
     ui_dist = Path(args.ui_dist)
     deps = WebDeps(
         gate=stack.gate,
-        provider=provider,
+        provider=active_provider,
         system_prefix=system_prefix,
         audit=stack.audit,
         approval_channel=channel,

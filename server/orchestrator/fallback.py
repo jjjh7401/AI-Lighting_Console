@@ -7,14 +7,22 @@ median exceeds the threshold for M consecutive window evaluations, the detector
 emits a fallback decision.
 
 The decision is emitted through an injectable audit sink — the durable audit
-log is Milestone M4 scope. The actual provider switch remains a CONFIG change
-(REQ-MVP-039); this detector only decides and records.
+log is Milestone M4 scope. The provider switch itself is a CONFIG change
+(REQ-MVP-039, ``fallback.target_provider``): when a target is configured, the
+detector invokes an injectable ``on_fallback`` callback exactly once at the
+moment the decision fires (AC-MVP-027 part 3) — the callback is where the
+actual hand-off happens (see ``server.orchestrator.runner.SwitchableProvider``).
+When no target is configured, the detector decides and audit-logs only, same
+as before; the recorded event honestly distinguishes the two (or three, see
+``observe_turn``) states so the audit trail never silently claims a switch
+that did not happen.
 """
 
 from __future__ import annotations
 
 import statistics
 from collections import deque
+from collections.abc import Callable
 from typing import Protocol
 
 from server.llm.config import FallbackSettings
@@ -37,10 +45,12 @@ class FallbackDetector:
         *,
         audit_sink: AuditSink,
         active_provider: str,
+        on_fallback: Callable[[str], None] | None = None,
     ) -> None:
         self._settings = settings
         self._audit_sink = audit_sink
         self._active_provider = active_provider
+        self._on_fallback = on_fallback
         self._durations: deque[float] = deque(maxlen=settings.window_turns)
         self._consecutive = 0
         self.triggered = False
@@ -59,6 +69,37 @@ class FallbackDetector:
             self._consecutive = 0
         if self._consecutive >= self._settings.consecutive_windows:
             self.triggered = True
+            target = self._settings.target_provider
+            # Three honest states (AC-MVP-027 part 3) — never a silent no-op:
+            #   (a) switched     — a target is configured AND a callback is
+            #       wired; the hand-off actually happened, exactly once.
+            #   (b) decided-only — no target_provider is configured at all
+            #       (today's shipped default, pending the M6b-3 human check-in).
+            #   (c) decided-only (mismatch) — a target IS configured but no
+            #       on_fallback was wired at construction time; this is a
+            #       wiring gap, distinguished in the recorded action text.
+            if target is not None and self._on_fallback is not None:
+                self._on_fallback(target)
+                switched = True
+                action = (
+                    f"switched active provider to {target!r} via the configured "
+                    "on_fallback callback (REQ-MVP-039 fallback.target_provider)"
+                )
+            elif target is not None:
+                switched = False
+                action = (
+                    f"fallback.target_provider={target!r} is configured but no "
+                    "on_fallback callback was wired at construction — decision "
+                    "recorded only, no switch was performed"
+                )
+            else:
+                switched = False
+                action = (
+                    "no fallback.target_provider configured — decision recorded "
+                    "only; a human must select and configure "
+                    "config/provider.toml [fallback].target_provider (pending "
+                    "the M6b-3 check-in) before an automatic switch can occur"
+                )
             self._audit_sink.record(
                 {
                     "event": "provider_fallback_triggered",
@@ -67,10 +108,9 @@ class FallbackDetector:
                     "consecutive_windows": self._settings.consecutive_windows,
                     "threshold_seconds": self._settings.threshold_seconds,
                     "window_median_seconds": window_median,
-                    "action": (
-                        "switch to another eligible provider via config change "
-                        "(REQ-MVP-039); this event is the audit record of the decision"
-                    ),
+                    "target_provider": target,
+                    "switched": switched,
+                    "action": action,
                 }
             )
         return self.triggered

@@ -91,6 +91,68 @@ class TestNonTrigger:
         assert len(sink.events) == 1
 
 
+class TestOnFallbackSwitch:
+    """AC-MVP-027 part 3: the config-switch + audit-honesty half of REQ-MVP-040(ii)."""
+
+    def test_on_fallback_is_invoked_exactly_once_when_target_provider_is_set(self):
+        calls: list[str] = []
+        settings = FallbackSettings(
+            window_turns=2,
+            consecutive_windows=1,
+            threshold_seconds=1.0,
+            target_provider="gemini",
+        )
+        sink = RecordingSink()
+        detector = FallbackDetector(
+            settings, audit_sink=sink, active_provider="anthropic", on_fallback=calls.append
+        )
+        for _ in range(2):
+            detector.observe_turn(5.0)
+        assert calls == ["gemini"]  # invoked exactly once, with the target name
+        # Latched — further turns must not invoke on_fallback again.
+        detector.observe_turn(5.0)
+        assert calls == ["gemini"]
+
+    def test_audit_event_marks_switched_true_when_target_provider_configured(self):
+        settings = FallbackSettings(
+            window_turns=1,
+            consecutive_windows=1,
+            threshold_seconds=1.0,
+            target_provider="gemini",
+        )
+        sink = RecordingSink()
+        detector = FallbackDetector(
+            settings, audit_sink=sink, active_provider="anthropic", on_fallback=lambda name: None
+        )
+        detector.observe_turn(5.0)
+        event = sink.events[0]
+        assert event["switched"] is True
+        assert event["target_provider"] == "gemini"
+
+    def test_audit_event_marks_decision_only_when_no_target_provider_configured(self):
+        # Today's default shape: no on_fallback wired either (matches production
+        # wiring when config.fallback.target_provider is absent).
+        settings = FallbackSettings(window_turns=1, consecutive_windows=1, threshold_seconds=1.0)
+        sink = RecordingSink()
+        detector = FallbackDetector(settings, audit_sink=sink, active_provider="anthropic")
+        detector.observe_turn(5.0)
+        event = sink.events[0]
+        assert event["switched"] is False
+        assert event["target_provider"] is None
+        assert event["action"]  # non-empty — never a silent no-op
+
+    def test_no_switch_is_attempted_without_a_target_provider_even_with_a_callback(self):
+        calls: list[str] = []
+        settings = FallbackSettings(window_turns=1, consecutive_windows=1, threshold_seconds=1.0)
+        sink = RecordingSink()
+        detector = FallbackDetector(
+            settings, audit_sink=sink, active_provider="anthropic", on_fallback=calls.append
+        )
+        detector.observe_turn(5.0)
+        assert calls == []  # nothing to switch to
+        assert sink.events[0]["switched"] is False
+
+
 class TestConfigOverride:
     def test_n_and_m_overrides_are_respected(self):
         # AC-MVP-031 part 3: config-redefined N/M drive the detection.

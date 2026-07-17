@@ -80,6 +80,48 @@ class TestMain:
         assert excinfo.value.code == 0
 
 
+class TestFallbackTargetProviderWiring:
+    """AC-MVP-027 part 3: build_runtime wires the config-switch when a
+    fallback target is configured; unchanged (single adapter) when absent."""
+
+    def test_shipped_config_builds_a_single_bare_adapter(self):
+        # Today's shipped config/provider.toml has no target_provider — the
+        # wiring must stay byte-identical: deps.provider is the bare adapter,
+        # not the SwitchableProvider indirection.
+        from server.orchestrator.runner import SwitchableProvider
+
+        args = parse_args(["--receive-port", "0", "--no-session-backup"])
+        app, stack = build_runtime(args)
+        try:
+            assert not isinstance(app.state.deps.provider, SwitchableProvider)
+        finally:
+            stack.stop()
+
+    def test_target_provider_configured_wires_a_switchable_provider(self, tmp_path):
+        from server.orchestrator.runner import SwitchableProvider
+
+        config_path = tmp_path / "provider.toml"
+        config_path.write_text(
+            '[provider]\nactive = "anthropic"\n\n'
+            '[provider.anthropic]\nmodel = "claude-opus-4-8"\n\n'
+            '[provider.gemini]\nmodel = "gemini-3.5-flash"\n\n'
+            '[fallback]\ntarget_provider = "gemini"\n',
+            encoding="utf-8",
+        )
+        args = parse_args(
+            ["--receive-port", "0", "--no-session-backup", "--config", str(config_path)]
+        )
+        app, stack = build_runtime(args)
+        try:
+            provider = app.state.deps.provider
+            assert isinstance(provider, SwitchableProvider)
+            assert provider.name == "anthropic"
+            provider.switch_to("gemini")
+            assert provider.name == "gemini"
+        finally:
+            stack.stop()
+
+
 class TestM7ReviewWiring:
     def test_wires_the_deploy_review_flow(self):
         args = parse_args(["--receive-port", "0", "--no-session-backup"])

@@ -116,6 +116,41 @@ class TestConfigValidation:
             load_provider_config(path)
 
 
+class TestFallbackTargetProviderValidation:
+    """AC-MVP-027 part 3: fallback.target_provider (REQ-MVP-040 ii config-switch)."""
+
+    def test_absent_target_provider_defaults_to_none(self, tmp_path):
+        path = _write(tmp_path, _BASE_CONFIG)
+        config = load_provider_config(path)
+        assert config.fallback.target_provider is None
+
+    def test_valid_target_provider_is_loaded(self, tmp_path):
+        path = _write(tmp_path, _BASE_CONFIG + '\n[fallback]\ntarget_provider = "gemini"\n')
+        config = load_provider_config(path)
+        assert config.fallback.target_provider == "gemini"
+
+    def test_target_provider_equal_to_active_is_rejected(self, tmp_path):
+        path = _write(tmp_path, _BASE_CONFIG + '\n[fallback]\ntarget_provider = "anthropic"\n')
+        with pytest.raises(ConfigError, match="target_provider"):
+            load_provider_config(path)
+
+    def test_unsupported_target_provider_is_rejected(self, tmp_path):
+        path = _write(tmp_path, _BASE_CONFIG + '\n[fallback]\ntarget_provider = "openai"\n')
+        with pytest.raises(ConfigError, match="target_provider"):
+            load_provider_config(path)
+
+    def test_non_string_target_provider_is_rejected(self, tmp_path):
+        path = _write(tmp_path, _BASE_CONFIG + "\n[fallback]\ntarget_provider = 1\n")
+        with pytest.raises(ConfigError, match="target_provider"):
+            load_provider_config(path)
+
+    def test_shipped_config_ships_with_no_target_provider_decided(self):
+        # The reserved production decision (M6b-3 check-in) is NOT this
+        # implementer's to make — the shipped config must stay decision-only.
+        config = load_provider_config(DEFAULT_CONFIG_PATH)
+        assert config.fallback.target_provider is None
+
+
 class _NullClient:
     """Injected stand-in client — construction must not touch env keys/network."""
 

@@ -20,13 +20,15 @@ round-trip measurement rules.
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
 from server.llm.types import (
     ConversationItem,
     LLMProvider,
+    ModelTurn,
+    ToolDefinition,
     ToolResult,
     ToolResultsMessage,
     UserMessage,
@@ -72,6 +74,57 @@ class MetricsSink(Protocol):
     def record_turn(self, metrics: TurnMetrics) -> None:
         """Persist/forward one instruction's metrics."""
         ...
+
+
+class SwitchableProvider:
+    """Runtime-swappable :class:`LLMProvider` indirection (AC-MVP-027 part 3,
+    REQ-MVP-039/040 ii config-switch).
+
+    Wraps a small registry of already-built adapters keyed by provider name.
+    An :class:`Orchestrator` holds ``self._provider`` exactly as before — this
+    class simply satisfies the ``LLMProvider`` protocol via delegation, so
+    ``handle_instruction()`` requires no change to switch providers mid-run.
+    A :class:`~server.orchestrator.fallback.FallbackDetector`'s ``on_fallback``
+    callback is wired to :meth:`switch_to` so a persistent-miss decision
+    actually changes which adapter the NEXT judged turn calls, instead of
+    requiring a human to edit config and restart the process.
+    """
+
+    def __init__(self, registry: dict[str, LLMProvider], *, active_name: str) -> None:
+        if active_name not in registry:
+            raise KeyError(f"active provider {active_name!r} not present in registry")
+        self._registry = registry
+        self._active_name = active_name
+
+    @property
+    def name(self) -> str:
+        return self._registry[self._active_name].name
+
+    @property
+    def model_id(self) -> str:
+        return self._registry[self._active_name].model_id
+
+    @property
+    def supports_prompt_caching(self) -> bool:
+        return self._registry[self._active_name].supports_prompt_caching
+
+    def complete(
+        self,
+        *,
+        system_prefix: str,
+        conversation: Sequence[ConversationItem],
+        tools: Sequence[ToolDefinition] = (),
+    ) -> ModelTurn:
+        return self._registry[self._active_name].complete(
+            system_prefix=system_prefix, conversation=conversation, tools=tools
+        )
+
+    def switch_to(self, name: str) -> None:
+        """Swap the active adapter (invoked as a FallbackDetector on_fallback
+        callback); an unknown name is a no-op — the registry is the only
+        source of truth for what a valid switch target is."""
+        if name in self._registry:
+            self._active_name = name
 
 
 class Orchestrator:

@@ -60,6 +60,12 @@ class FallbackSettings:
     window_turns: int = 20  # N — rolling window of judged turns
     consecutive_windows: int = 2  # M — consecutive violating windows
     threshold_seconds: float = 10.0  # round-trip median threshold
+    # REQ-MVP-040(ii)/AC-MVP-027 part 3: the config-defined fallback hand-off
+    # target. None (the default) means "decide + audit-log only" — no human
+    # has selected a production fallback target yet (pending the M6b-3
+    # check-in). When set, it MUST be a supported provider different from
+    # ``provider.active`` (validated in load_provider_config below).
+    target_provider: str | None = None
 
 
 @dataclass(frozen=True)
@@ -136,6 +142,22 @@ def load_provider_config(path: Path | str = DEFAULT_CONFIG_PATH) -> ProviderConf
     if not isinstance(threshold, int | float) or isinstance(threshold, bool) or threshold <= 0:
         raise ConfigError(f"fallback.threshold_seconds must be positive, got {threshold!r}")
 
+    target_provider = fallback_table.get("target_provider")
+    if target_provider is not None:
+        if not isinstance(target_provider, str):
+            raise ConfigError(f"fallback.target_provider must be a string, got {target_provider!r}")
+        if target_provider not in SUPPORTED_PROVIDERS:
+            raise ConfigError(
+                f"fallback.target_provider must be one of {SUPPORTED_PROVIDERS}, "
+                f"got {target_provider!r}"
+            )
+        if target_provider == active:
+            raise ConfigError(
+                "fallback.target_provider must differ from provider.active "
+                f"(both would be {active!r}) — a fallback target must be a "
+                "real, different, supported provider"
+            )
+
     return ProviderConfig(
         active=active,
         anthropic=AnthropicSettings(
@@ -154,5 +176,6 @@ def load_provider_config(path: Path | str = DEFAULT_CONFIG_PATH) -> ProviderConf
             window_turns=_require_positive_int(fallback_table, "window_turns", 20),
             consecutive_windows=_require_positive_int(fallback_table, "consecutive_windows", 2),
             threshold_seconds=float(threshold),
+            target_provider=target_provider,
         ),
     )

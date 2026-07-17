@@ -32,3 +32,8 @@ cache_ttl_seconds = 3600
 window_turns = 20
 consecutive_windows = 2
 threshold_seconds = 10.0
+# target_provider = "gemini"
+# ^ Reserved for a HUMAN decision at the M6b-3 check-in (needs Anthropic-side
+#   error-rate measurement we do not have yet) — do NOT uncomment without that
+#   check-in. Left unset, a persistent-miss trigger is decided + audit-logged
+#   only; no provider switch is performed (AC-MVP-027 part 3).
