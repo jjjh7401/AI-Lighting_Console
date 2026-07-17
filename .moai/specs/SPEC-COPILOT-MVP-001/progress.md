@@ -517,6 +517,40 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 
 **잔여 (M6b 이후)**: M6b-2(onPC) 미착수 그대로; M6b-3 선정 — Gemini 이제 **적격**(0.40% < 5%), Anthropic 여전히 미측정(키 부재) → 선정 술어(REQ-MVP-040) 적용 시 Gemini가 유일 측정 후보로 적격 통과 상태, 최종 선정은 여전히 체크인 인간 결정 사항; `Fixture 'Wash'*` 롱테일 패턴은 추적 참고용으로 기록(재현 규모 작아 즉각 조치 불요).
 
+### M6c-1 — shared-instance concurrency safety fixes (pre-sync critical/high triage) (2026-07-17, manager-develop cycle_type=tdd)
+
+**Scope**: 독립 다중 에이전트 코드 리뷰(102개 서브 에이전트, 교차검증)가 M6b-1r2 반영 후 전체 코드베이스에 대해 발견한 CRITICAL 1건 + HIGH 2건 — 셋 모두 "production이 동시 접속 WebSocket `ChatSession`마다 정확히 하나의 공유 인스턴스(`ApprovalChannel`/`SafetyGate`)를 세션 격리 없이 배선한다"는 단일 아키텍처 패턴에 근원. REQ-MVP-014/016 안전-격리 보장은 불변, 교차-세션 누수만 제거.
+
+**AC matrix (M6c-1 subset)**
+
+| AC/REQ | Status | Verification command | Actual output (tail) |
+|---|---|---|---|
+| REQ-MVP-014 deny-on-my-own-disconnect fail-safe (Finding 1) | PASS | `uv run pytest -q server/tests/test_web_approval_bridge.py server/tests/test_web_app.py -k "SessionScoped or ConcurrentSessions"` | 4 passed |
+| Finding 1 — 교차-세션 pending 승인 비유출 (신규 불변) | PASS | 위와 동일 (`test_unbinding_one_session_does_not_deny_anothers_pending_request`, `test_disconnect_does_not_deny_another_sessions_pending_approval`) | 두 테스트 모두 PASS; git stash로 되돌린 pre-fix 코드에서 RED 확인 후 복원 |
+| REQ-MVP-011/029 게이트 단일 관문 불변 (Finding 2, 회귀 없음) | PASS | `uv run pytest -q server/tests/test_safety_gate.py` | 39 passed (37 baseline + 2 신규) |
+| Finding 2 — 교차-세션 clearance 비침해 (신규 불변) | PASS | `-k TestConcurrentSessionClearanceIsolation` | 2 passed (순차-컨텍스트 + `threading.Barrier` 동시성 테스트) |
+| Finding 3 — heartbeat 루프 예외 생존 (신규 불변, `_backup_loop`와 대칭) | PASS | `-k test_heartbeat_loop_survives_heartbeat_failures` | 1 passed; RED 확인(가드 없이 `asyncio.to_thread` 예외가 lifespan까지 전파되어 앱 크래시) 후 GREEN |
+
+**TDD evidence (RED → GREEN, 발견별)**
+
+- **Finding 1** (`server/web/approval_bridge.py:88` + `server/web/session.py:177-195` + M7 `review_channel` 동일 패턴): `ApprovalChannel.bind()`가 스칼라 `_notify` 단일 슬롯이고 `ChatSession.close()`→`unbind()`→`deny_all_pending()`이 공유 `_pending` dict 전체를 무조건 강제 거부 — B의 연결 종료가 A의 무관한 대기 승인을 조용히 자동 거부. 새 `server/safety/session_context.py`(contextvars 기반 세션 키 seam) 도입 — `ChatSession.run_instruction`이 턴 전체에 걸쳐 자신의 세션 키를 ambient 컨텍스트로 바인딩(동일 스레드 내 동기 호출 체인이므로 스레드 홉 없음). `bind`/`unbind`는 명시적 `session_key` 파라미터(기본값 `DEFAULT_SESSION_KEY` — 세션 미개입 직접 호출 하위호환), `request_approval`은 ambient 키로 notify + pending을 세션별로 스코프. RED: `channel.bind(notify, session_key=...)` → `TypeError: unexpected keyword argument 'session_key'`(로그: pytest 출력, 커밋 `32ff551` 이전 상태로 `git stash`하여 재확인). GREEN: `32ff551`.
+- **Finding 2** (`server/safety/gate.py:212,286` — `_clearances`): 인스턴스 레벨 단일 `Counter`가 모든 동시 `ChatSession`에 공유되어(같은 `deps.gate`) 세션 B의 `screen()` 호출이 세션 A의 이미 승인된 미실행 번들 clearance를 무단 무효화 가능. `_clearances`를 `dict[SessionKey, Counter[str]]`로 세션-키잉 + `threading.Lock`으로 mutate/read 시퀀스 가드(`screen()` 진입부 리셋, cleared 경로 write, `_execute_cleared()`의 read-decrement 전부 락 내부). 세션 자신의 screen→execute 흐름은 완전 동일 유지. RED: `test_a_sessions_screen_does_not_invalidate_anothers_clearance`, `test_concurrent_sessions_both_execute_their_own_cleared_bundle` 둘 다 pre-fix에서 `AssertionError: assert False is True`(세션 B의 screen이 A의 clearance를 무효화). GREEN: `238a6ce`.
+- **Finding 3** (`server/web/app.py:77` `_heartbeat_loop`): 형제 `_backup_loop`와 달리 `gate.heartbeat()` 호출에 예외 가드 부재 — 미처리 예외가 lifespan task까지 전파되어 콘솔-오프라인 감지가 조용히 죽음. `_backup_loop`와 정확히 동일한 try/except + `audit.record({"event": "heartbeat_tick_failed", ...})` 패턴 적용. RED: `FakeConsole.ping_error` 강제 → `asyncio.to_thread(deps.gate.heartbeat)`에서 `RuntimeError`가 lifespan까지 전파(pytest traceback 확인). GREEN: `d889fc3`.
+
+**Quality gates**
+
+- `uv run pytest -q` → **710 passed** (702 baseline + 8 신규: Finding 1 채널-단위 3 + WS-통합 2, Finding 2 순차/동시성 2, Finding 3 heartbeat 1)
+- `uv run pytest --cov=server --cov-report=term-missing -q` → TOTAL 98% (baseline 유지); 터치 파일별 — `server/safety/gate.py` 99%(신규 미커버 0건, 기존 갭 `532-534`만 잔존), `server/safety/session_context.py` 100%, `server/web/approval_bridge.py` 100%, `server/web/session.py` 99%(기존 갭 `136`만), `server/web/app.py` 98%(기존 갭 `88,95,156`만 — 전부 pre-existing, 본 변경으로 신규 미커버 라인 0건)
+- `uv run ruff check server` → clean (SIM117 nested-with 2건 발견 즉시 수정 후 재확인 clean)
+
+**Commits** (no push — no origin remote)
+
+- `32ff551` fix(SPEC-COPILOT-MVP-001): M6c-1 approval channel per-session isolation (Finding 1, TDD)
+- `238a6ce` fix(SPEC-COPILOT-MVP-001): M6c-1 safety gate clearance per-session isolation (Finding 2, TDD)
+- `d889fc3` fix(SPEC-COPILOT-MVP-001): M6c-1 heartbeat loop exception guard (Finding 3, TDD)
+
+**잔여**: 이번 배치는 3건(CRITICAL 1 + HIGH 2)만 다룸 — 102-서브에이전트 리뷰의 잔여 MEDIUM/LOW 지적은 후속 M6c-N 배치로 이연(범위 분리, scope discipline). `server/measurement/`, `server/llm/`, `server/orchestrator/runner.py`는 본 배치 범위 밖(타 배치 커버) — 미변경.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
