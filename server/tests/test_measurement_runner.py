@@ -112,11 +112,11 @@ class TestFirstGenerationErrorAccounting:
         )
         report = run_measurement(corpus, session, _quick_config())
         round_trip = report["round_trip"]
-        command_scenarios = sum(1 for s in corpus if s.mock.kind == "commands")
+        result_scenarios = sum(1 for s in corpus if s.mock.kind in ("commands", "plugin"))
         # The corrected scenario used one retry -> excluded from judgment.
         assert round_trip["retry_turns"]["count"] == 1
         assert len(round_trip["retry_turns"]["durations_seconds"]) == 1
-        assert round_trip["judged_turns"] == command_scenarios - 1
+        assert round_trip["judged_turns"] == result_scenarios - 1
 
 
 class TestRepetitionEscalation:
@@ -138,9 +138,11 @@ class TestRoundTripStats:
         session = build_offline_session(corpus, audit_dir=tmp_path)
         report = run_measurement(corpus, session, _quick_config(warmup=True))
         round_trip = report["round_trip"]
-        command_scenarios = sum(1 for s in corpus if s.mock.kind == "commands")
-        # Judged = zero-retry turns with >=1 console result (command scenarios).
-        assert round_trip["judged_turns"] == command_scenarios
+        result_scenarios = sum(1 for s in corpus if s.mock.kind in ("commands", "plugin"))
+        # Judged = zero-retry turns with >=1 console result: command scenarios
+        # AND deploy scenarios (the confirmed deploy IS the console feedback —
+        # closes the M7 gap "deploy turn measurement marking unwired").
+        assert round_trip["judged_turns"] == result_scenarios
         assert round_trip["median_seconds"] >= 0.0
         assert round_trip["p95_seconds"] >= round_trip["median_seconds"]
         assert round_trip["warm_cache"] is True
@@ -149,11 +151,15 @@ class TestRoundTripStats:
         assert round_trip["retry_turns"]["count"] == 0
         assert round_trip["median_pass"] is True
 
-    def test_query_and_plugin_turns_are_unjudged(self, corpus, tmp_path):
+    def test_query_turns_are_unjudged_but_plugin_turns_are_judged(self, corpus, tmp_path):
+        # AC-MVP-001's 10 task types include "Lua 플러그인 배포": a deployed
+        # plugin turn received its console confirmation, so it belongs to the
+        # judged round-trip corpus; a pure state query receives no execution
+        # result and stays unjudged.
         session = build_offline_session(corpus, audit_dir=tmp_path)
         report = run_measurement(corpus, session, _quick_config())
-        non_command = sum(1 for s in corpus if s.mock.kind != "commands")
-        assert report["round_trip"]["unjudged_turns"] == non_command
+        query_only = sum(1 for s in corpus if s.mock.kind == "query")
+        assert report["round_trip"]["unjudged_turns"] == query_only
 
 
 class TestReportSurface:

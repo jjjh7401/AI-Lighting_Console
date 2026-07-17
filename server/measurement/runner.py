@@ -109,6 +109,27 @@ class _MeasuredExecutionPort:
         return result
 
 
+class _MeasuredDeployPipeline:
+    """Marks a CONFIRMED deploy as a received console result (§2 end event).
+
+    Closes the M7 gap "deploy turn measurement marking unwired": the deploy
+    confirmation is the console feedback that ends a plugin-deploy turn, so
+    the turn joins the judged round-trip corpus. Only ``deployed`` marks —
+    blocked/rejected outcomes never reached the console, and a failed deploy
+    may be an unconfirmed send (conservative, mirrors the execution port).
+    """
+
+    def __init__(self, inner, recorder: RoundTripRecorder) -> None:
+        self._inner = inner
+        self._recorder = recorder
+
+    def deploy(self, name: str, lua_source: str):
+        outcome = self._inner.deploy(name, lua_source)
+        if outcome.status == "deployed":
+            self._recorder.note_console_result()
+        return outcome
+
+
 @dataclass
 class MeasurementSession:
     """One wired measurement pipeline (provider + gate + tools + counters)."""
@@ -152,7 +173,7 @@ def build_offline_session(
         execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
         state_port=gate.state_port,
         bundle_gate=counter,
-        deploy_pipeline=OfflineDeployPipeline(),
+        deploy_pipeline=_MeasuredDeployPipeline(OfflineDeployPipeline(), recorder),
     )
     provider = MockScenarioProvider(scenarios, first_attempt_overrides=first_attempt_overrides)
     orchestrator = Orchestrator(
