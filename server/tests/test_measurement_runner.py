@@ -133,6 +133,20 @@ class TestRepetitionEscalation:
         assert len(report["grammar_error_rate"]["per_run"]) == reps["executed"]
 
 
+class TestEscalationSafety:
+    def test_escalation_halts_when_rounds_generate_no_lines(self, corpus, tmp_path):
+        # Quota guard (first live smoke finding): when every round adds ZERO
+        # command lines (e.g. all turns fail), escalating repetitions can
+        # never reach the denominator floor — the loop must stop instead of
+        # burning max_repetitions rounds of live API calls.
+        query_only = tuple(s for s in corpus if s.mock.kind == "query")
+        session = build_offline_session(query_only, audit_dir=tmp_path)
+        config = RunnerConfig(repetitions=1, min_command_lines=10, warmup=False)
+        report = run_measurement(query_only, session, config)
+        assert report["repetitions"]["executed"] == 1  # no futile escalation
+        assert report["repetitions"]["denominator_satisfied"] is False
+
+
 class TestRoundTripStats:
     def test_judged_median_p95_and_warm_cache_exclusion(self, corpus, tmp_path):
         session = build_offline_session(corpus, audit_dir=tmp_path)

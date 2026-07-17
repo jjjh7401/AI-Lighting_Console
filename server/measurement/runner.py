@@ -445,9 +445,12 @@ def run_measurement(
     escalated = False
     # Acceptance §3: when the denominator falls short of the >=300-line floor,
     # repetitions are increased until it is satisfied (bounded by the config).
+    # Quota guard: a round that added ZERO lines means escalation can never
+    # converge (e.g. every turn fails) — stop instead of burning API calls.
     while (
         session.counter.denominator - base_denominator < config.min_command_lines
         and len(per_run) < config.max_repetitions
+        and per_run[-1]["denominator"] > 0
     ):
         escalated = True
         run_round()
