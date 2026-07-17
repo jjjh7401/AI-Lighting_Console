@@ -442,6 +442,46 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 | M7 ASSUMPTION-6 | deploy verb 실콘솔 캘리브레이션 (M7 gap 승계) | mocked pool 검증 green |
 | 브라우저 렌더링 | 실브라우저 조작 검증 (M5/M7 gap 승계) | vitest+tsc+vite build green |
 
+### M6b-1 — Gemini 문법 오류율 실측 (2026-07-17, manager-develop cycle_type=tdd)
+
+**Scope (사용자 승인)**: 라이브 LLM = **Gemini 전용** (`gemini-3.5-flash` 핀, GEMINI_API_KEY만 보유 — Anthropic 키·onPC 부재), 콘솔 측 = mock 유지. 따라서 본 실행의 왕복 수치는 **참고치 전용 — AC-MVP-003 증거 아님**. AC-MVP-002 최종 판정은 M6b-3에서 선정되는 기본 프로바이더 기준(acceptance §8)이며 본 결과는 그 **Gemini 측 입력**이다. 측정 전용 설정 `server/measurement/provider-gemini.toml` 사용 — 출하 기본값 `config/provider.toml`(active=anthropic)은 미변경 (기본 프로바이더 선정은 AC-MVP-027/M6b-3 결정).
+
+**실측 결과** (전문: `.moai/specs/SPEC-COPILOT-MVP-001/measurements/gemini-error-rate-2026-07-17.{json,md}`)
+
+| 항목 | 값 |
+|---|---|
+| **Pooled 오류율** | **0.0586 = 19/324 — 5% 임계 초과 (Gemini 측 FAIL)** |
+| 회차별 (6회) | 4.88% / 8.00% / 6.35% / 4.00% / 5.45% / 6.15% |
+| 분모/분자 | 324 라인 (≥300 충족, 3회→6회 자동 상향) / 최초 생성 문법 거부 19 |
+| 고정 추론 설정 (§5) | `gemini-3.5-flash`, context_caching=true, cache_ttl=3600s, 생성 파라미터 SDK 기본값 |
+| 웜캐시 (§3) | 워밍업 1턴 수행 — 콜드스타트 13.87s 참고치 분리 |
+| 재시도 분리 (§4) | 재시도 턴 9건 별도 집계 (judged 제외) |
+| 텔레메트리 | 786 model calls · input 3,286,290 / output 38,607 tok · **cache-read 2,288,046 tok (69.6%)** · 429 백오프 0건 · wall clock 2,152.6s |
+| 참고 왕복 (mock 콘솔) | median 11.49s / p95 33.56s / judged 106턴 — 판정 비대상 |
+| 오류 분해 | 분자 19건 전수가 `misplaced quote inside token` — 모델의 `/Cmd='...'` 옵션 대입 구문 vs 구조 밸리데이터 의도적 과차단(plan §A-6)의 상호작용; loop_limit 11턴 동일 패턴. 밸리데이터 구문 수용 여부는 체크인 결정 사항 |
+| 게이트 관측 | rejected 번들 16건 (위험 생성 → deny-all 승인 — 정상 게이트 동작, 감사 로그 기록) |
+
+**AC-MVP-014② (Gemini 구성) 라이브 증거**: 2턴째 이후 캐시 읽기 토큰 > 0 확인 — cache-read 총 2,288,046 tok. 단 활성 출하 구성은 anthropic이므로 **본 AC의 판정 대상 구성(캐싱 지원 = anthropic) 확인은 여전히 M6b 잔여** (Gemini 구성 측 증거는 확보됨).
+
+**라이브 경로 결함 2건 발견·수정 (TDD — 재현 테스트 선행)**
+
+1. **Gemini cached-path 400 (M3 잠복 프로덕션 결함)**: 컨텍스트 캐시 활성 시 어댑터가 generate 요청에 `tools`를 함께 전달 — 실API가 `CachedContent can not be used with GenerateContent request setting system_instruction, tools or tool_config` 400으로 전건 거부 (스모크 1차: 60/60턴 invalid_request, model calls 0). M3 fake는 이 경계 제약을 강제하지 않았음(경계 결함 교과서 사례). **수정**: 시스템 프리픽스 + 고정 툴셋을 CachedContent에 베이크, 캐시 요청은 cached_content만 운반; 캐시와 다른 툴셋 호출은 캐시 우회(무캐시 경로). 재현 테스트 3건이 양 경로 요청 형태를 핀 고정 — commit `3ea66f1`
+2. **반복 상향 폭주 (쿼터 가드)**: 전 턴 실패 시(라인 0 추가) ≥300 상향 루프가 max_repetitions(30)까지 공회전 — 라이브 API 호출 소진 위험. **수정**: 직전 회차 라인 추가 0이면 상향 중단 + `denominator_satisfied=false`로 정직 표기 — commit `d1e9bb9`
+
+**신규 인프라 (TDD)**: `--mode live-llm` (라이브 프로바이더 + mock 콘솔 조립 — 기존 `--mode live`는 실콘솔 스택이라 onPC 부재 시 오프라인 차단→재시도 루프로 쿼터 소진했을 구성), `TelemetryBackoffProvider` (retryable ProviderError 지수 백오프 base·2^n 상한 5회, kind별 계수, 토큰 사용량 누계), 지시 단위 provider_error 격리(1턴 실패가 런 전체를 죽이지 않음), `--scenario-limit` 스모크 플래그, 리포트 `wall_clock_seconds`+`provider_telemetry` — commit `a2e72ad`
+
+**Credential 규율**: 키는 각 Bash 호출 내 `source .env`로만 주입(로그·리포트·커밋·CLI 인자 무기록); 커밋 대상 전 파일 키 누출 가드(정확 키 + `AIza` 패턴 grep) **0건 확인**; `.env`는 gitignore 상태로 staged set 미출현; 감사 로그는 gitignored `.moai/state/verify/m6b1/`.
+
+**Quality gates**: `uv run pytest -q` → **692 passed** (M6a 681 + live-llm 7 + gemini 어댑터 재현 3 + 상향 가드 1) (log: `.moai/state/verify/m6b1/ev-final-suite-m6b1.log`) · `uv run ruff check server` → clean · 러너/어댑터 신규 테스트 전건 키 제거 환경 통과 (오프라인 불변식 유지)
+
+**Commits**: `a2e72ad` live-llm mode + backoff · `3ea66f1` Gemini cached-path 400 fix · `d1e9bb9` escalation quota guard · (본 evidence 커밋) — push: N/A (no origin remote)
+
+**M6b 잔여 (M6b-1 이후)**
+
+- **M6b-2 (onPC)**: AC-MVP-001/003/012 라이브 절반 + M7 ASSUMPTION-6 캘리브레이션 — onPC 확보 시
+- **M6b-3 (선정)**: AC-MVP-027①② — 기본 프로바이더 선정 술어 적용. **입력 현황**: Gemini pooled 5.86% (>5% — 현 측정으로는 부적격), Anthropic 미측정(키 부재). 선정 결정 + 밸리데이터 `/Cmd='...'` 구문 수용 여부(수용 시 Gemini 분자 19→0 가능성 — 게이트 동작 변경이라 스펙 검토 필요)는 **체크인 인간 결정 필요**
+- AC-MVP-029① macOS 클린 설치 (반자동)
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_

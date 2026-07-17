@@ -1,0 +1,124 @@
+{
+  "generated_at": "2026-07-17T02:53:10.796088+00:00",
+  "wall_clock_seconds": 2152.566,
+  "mode": "live-llm-mock-console",
+  "provider": {
+    "name": "gemini",
+    "model": "gemini-3.5-flash",
+    "supports_prompt_caching": true
+  },
+  "inference_settings": {
+    "model": "gemini-3.5-flash",
+    "context_caching": true,
+    "cache_ttl_seconds": 3600
+  },
+  "corpus": {
+    "scenarios": 21,
+    "task_types": {
+      "group_create": 3,
+      "preset_store": 2,
+      "cue_store": 2,
+      "sequence_assign": 2,
+      "page_setup": 2,
+      "macro_create": 2,
+      "effect_apply": 2,
+      "fader_control": 2,
+      "state_query": 2,
+      "plugin_deploy": 2
+    },
+    "field_term_scenarios": 5
+  },
+  "repetitions": {
+    "configured": 3,
+    "executed": 6,
+    "escalated": true,
+    "min_command_lines": 300,
+    "denominator_satisfied": true
+  },
+  "grammar_error_rate": {
+    "denominator_lines": 324,
+    "numerator_first_generation_rejections": 19,
+    "pooled_rate": 0.05864197530864197,
+    "per_run": [
+      {
+        "run": 1,
+        "denominator": 41,
+        "numerator": 2,
+        "rate": 0.04878048780487805
+      },
+      {
+        "run": 2,
+        "denominator": 50,
+        "numerator": 4,
+        "rate": 0.08
+      },
+      {
+        "run": 3,
+        "denominator": 63,
+        "numerator": 4,
+        "rate": 0.06349206349206349
+      },
+      {
+        "run": 4,
+        "denominator": 50,
+        "numerator": 2,
+        "rate": 0.04
+      },
+      {
+        "run": 5,
+        "denominator": 55,
+        "numerator": 3,
+        "rate": 0.05454545454545454
+      },
+      {
+        "run": 6,
+        "denominator": 65,
+        "numerator": 4,
+        "rate": 0.06153846153846154
+      }
+    ],
+    "threshold": 0.05,
+    "pooled_pass": false
+  },
+  "round_trip": {
+    "judged_turns": 106,
+    "median_seconds": 11.490605416496692,
+    "p95_seconds": 33.56456454200088,
+    "retry_turns": {
+      "count": 9,
+      "durations_seconds": [
+        13.830477957992116,
+        13.70325370800856,
+        30.085636750009144,
+        20.719557000003988,
+        14.644391084002564,
+        22.14571108300879,
+        17.097312792000594,
+        42.176187416000175,
+        21.846267000000807
+      ]
+    },
+    "unjudged_turns": 11,
+    "cold_start_reference_seconds": 13.86562095800764,
+    "warm_cache": true,
+    "threshold_seconds": 10.0,
+    "median_pass": false
+  },
+  "turn_statuses": {
+    "ok": 115,
+    "loop_limit": 11
+  },
+  "gate_anomalies": {
+    "rejected": 16
+  },
+  "provider_telemetry": {
+    "model_calls": 786,
+    "usage_totals": {
+      "input_tokens": 3286290,
+      "output_tokens": 38607,
+      "cache_read_tokens": 2288046,
+      "cache_write_tokens": 0
+    },
+    "backoff_retries": {}
+  }
+}
