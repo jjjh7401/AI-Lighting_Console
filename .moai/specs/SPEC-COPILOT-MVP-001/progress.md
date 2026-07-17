@@ -482,6 +482,41 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 - **M6b-3 (선정)**: AC-MVP-027①② — 기본 프로바이더 선정 술어 적용. **입력 현황**: Gemini pooled 5.86% (>5% — 현 측정으로는 부적격), Anthropic 미측정(키 부재). 선정 결정 + 밸리데이터 `/Cmd='...'` 구문 수용 여부(수용 시 Gemini 분자 19→0 가능성 — 게이트 동작 변경이라 스펙 검토 필요)는 **체크인 인간 결정 필요**
 - AC-MVP-029① macOS 클린 설치 (반자동)
 
+### M6b-1r2 — 룰북 보강 후 Gemini 재측정 (2026-07-17, manager-develop cycle_type=tdd)
+
+**Scope**: M6b-1 (`49f729f`) pooled 5.86% FAIL의 원인 조사 + 수정 + 재측정. 사용자 승인 범위: 룰북 보강 + 밸리데이터 재작성-힌트(거부 동작 불변) + 오늘 중 재측정(쿼터 가드). 콘솔은 여전히 mock — 왕복 수치 참고치 전용.
+
+**조사 결론 (두 read-only 에이전트 교차 검증 — 밸리데이터는 정당했음)**
+
+1. `X='...'`/`/opt="..."` 첨부형 대입 구문은 **grandMA2 문법이며 grandMA3 v2.x에서 무효**. 공식 매뉴얼(help.malighting.com v2.4) 근거: `keyword_set.html`(`Set [Obj] Property ["Name"] ["Value"]` — 분리 토큰), `keyword_equal.html`(`Set Macro 3.1 "Enabled" = "No"` — `=`이 별도 토큰), `ok_file.html`(`Export Preset 2.5 /File "Endor"` — 값 옵션은 공백 분리), `extended_command_line.html`(옵션은 bare flag) + MA 포럼 스레드 2건(MA2 스타일 `/cmd=`/`/Color=` 실MA3 실패 사례). **밸리데이터 거부 동작은 변경하지 않음.**
+2. 실제 원인은 룰북 교육 공백: (a) 매크로가 실행 대상으로만 교육되고 저작 레시피 부재 → 모델이 MA2 문법으로 공백 충전(16/19), (b) 네이밍 규칙+점 표기 풀 id 조합이 `Preset 4.'Blue'` 유도(3/19), (c) 차단 사유에 재작성 힌트 부재로 자가 수정 루프 소진(11회 loop_limit).
+
+**변경 사항**
+
+- ① 룰북 보강 (`server/rulebook/assets/v2.4.2/00_grammar.md`, commit `b43dafa`): "Authoring a macro" 레시피 — `Set Macro <pool>.<line> Property 'Command' '<text>'` + MA2 anti-example. 이름-참조 명확화 — 인용 이름은 별도 토큰, `pool.'Name'` 점-인용 조합 금지(`Preset 4.'Blue'` anti-example). AC-MVP-028 용어 사전(≥10항목, 샤막·워시) 무변경; 프리픽스 가변-값-없음 유지; `test_rulebook.py` 프리픽스 안정성 테스트 green(콘텐츠 변경은 세션당 캐시 재작성 1회 비용 — 스모크에서 실측 확인).
+- ② 밸리데이터 재작성 힌트 (`server/safety/grammar.py`, commit `0ee7992`): 거부 동작 **불변**; MA2 대입 형태 토큰의 "misplaced quote inside token" 거부에만 힌트 부가. 일반 misplaced quote는 힌트 없음. `grammar:` 접두사 유지 — 분자 계수 무영향.
+
+**재측정 결과 vs r1** (전문: `.moai/specs/SPEC-COPILOT-MVP-001/measurements/gemini-error-rate-2026-07-17-r2.{json,md}`)
+
+| 항목 | r1 | r2 (룰북 보강 후) |
+|---|---|---|
+| **Pooled 오류율** | 0.0586 = 19/324 — **FAIL** | **0.0040 = 1/248 — PASS** |
+| 회차별 | 4.88/8.00/6.35/4.00/5.45/6.15% | 0.00/0.00/0.00/2.50/0.00/0.00% |
+| 분모/분자 | 324 (충족) / 19 | 248 (**300 미달**) / **1** |
+| 턴 상태 | ok 115 / loop_limit 11 | ok 117 / loop_limit 9 |
+| 텔레메트리 | 786 calls / cache-read 2,288,046 | 749 calls / cache-read 2,512,146 |
+| 429 백오프 | 0 | 0 |
+
+분자 19→1 (94.7% 감소) — r1의 19건(MA2 대입 16 + 점-인용 3) 전건 제거. 잔여 1건은 무관한 신규 롱테일 패턴(`Fixture 'Wash'*` — 닫는 인용 직후 와일드카드 접미사, 본 amendment 범위 밖). 0.40%는 5% 임계 대비 12배 이상 여유.
+
+**분모 300 미달 — 정직한 기록 (판정 무영향)**: r1과 동일 반복 상한(`--max-repetitions 6`)에서 오류율 감소 자체가 분모를 줄이는 부작용(재시도 감소 → 회차당 평균 라인 54.0→40.3) → 248 라인로 종료(`denominator_satisfied: false`). 오늘 누적 사용량(중단된 시도 1회 + 스모크 2회 + 풀런 2회) 고려, 이미 결정적 마진(12배)에서 추가 반복(쿼터 소모) 대신 정직하게 미달 기록 — 경계 분해능 우려는 이 마진에서 실질적 의미 없음. 엄격한 300 하한 준수가 필요하면 별도 저비용 보충 실행(상한 10~12) 권고.
+
+**Quality gates**: `uv run pytest -q` → **702 passed** (692 M6b-1 baseline + 10 신규: 룰북 레시피 4 + 힌트 6) (log: `.moai/state/verify/m6b1r2/ev-r2-suite.log`) · `uv run ruff check server` → clean · **credential 규율**: 전 호출 `set -a; source .env; set +a`로만 주입, 커밋 대상 전 파일(JSON/MD/progress.md) exact-key + `AIza` 패턴 grep **0건**, `.env` staged set 미출현.
+
+**Commits**: `b43dafa` 룰북 보강 · `0ee7992` 밸리데이터 힌트 · (본 evidence 커밋) — push: N/A (no origin remote)
+
+**잔여 (M6b 이후)**: M6b-2(onPC) 미착수 그대로; M6b-3 선정 — Gemini 이제 **적격**(0.40% < 5%), Anthropic 여전히 미측정(키 부재) → 선정 술어(REQ-MVP-040) 적용 시 Gemini가 유일 측정 후보로 적격 통과 상태, 최종 선정은 여전히 체크인 인간 결정 사항; `Fixture 'Wash'*` 롱테일 패턴은 추적 참고용으로 기록(재현 규모 작아 즉각 조치 불요).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_

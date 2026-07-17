@@ -1,0 +1,116 @@
+{
+  "generated_at": "2026-07-17T07:28:20.290417+00:00",
+  "wall_clock_seconds": 1783.833,
+  "mode": "live-llm-mock-console",
+  "provider": {
+    "name": "gemini",
+    "model": "gemini-3.5-flash",
+    "supports_prompt_caching": true
+  },
+  "inference_settings": {
+    "model": "gemini-3.5-flash",
+    "context_caching": true,
+    "cache_ttl_seconds": 3600
+  },
+  "corpus": {
+    "scenarios": 21,
+    "task_types": {
+      "group_create": 3,
+      "preset_store": 2,
+      "cue_store": 2,
+      "sequence_assign": 2,
+      "page_setup": 2,
+      "macro_create": 2,
+      "effect_apply": 2,
+      "fader_control": 2,
+      "state_query": 2,
+      "plugin_deploy": 2
+    },
+    "field_term_scenarios": 5
+  },
+  "repetitions": {
+    "configured": 3,
+    "executed": 6,
+    "escalated": true,
+    "min_command_lines": 300,
+    "denominator_satisfied": false
+  },
+  "grammar_error_rate": {
+    "denominator_lines": 248,
+    "numerator_first_generation_rejections": 1,
+    "pooled_rate": 0.004032258064516129,
+    "per_run": [
+      {
+        "run": 1,
+        "denominator": 47,
+        "numerator": 0,
+        "rate": 0.0
+      },
+      {
+        "run": 2,
+        "denominator": 43,
+        "numerator": 0,
+        "rate": 0.0
+      },
+      {
+        "run": 3,
+        "denominator": 38,
+        "numerator": 0,
+        "rate": 0.0
+      },
+      {
+        "run": 4,
+        "denominator": 40,
+        "numerator": 1,
+        "rate": 0.025
+      },
+      {
+        "run": 5,
+        "denominator": 38,
+        "numerator": 0,
+        "rate": 0.0
+      },
+      {
+        "run": 6,
+        "denominator": 42,
+        "numerator": 0,
+        "rate": 0.0
+      }
+    ],
+    "threshold": 0.05,
+    "pooled_pass": true
+  },
+  "round_trip": {
+    "judged_turns": 110,
+    "median_seconds": 9.760210812506557,
+    "p95_seconds": 33.51167504199839,
+    "retry_turns": {
+      "count": 1,
+      "durations_seconds": [
+        16.35335387500527
+      ]
+    },
+    "unjudged_turns": 15,
+    "cold_start_reference_seconds": 11.769189250000636,
+    "warm_cache": true,
+    "threshold_seconds": 10.0,
+    "median_pass": true
+  },
+  "turn_statuses": {
+    "ok": 117,
+    "loop_limit": 9
+  },
+  "gate_anomalies": {
+    "rejected": 10
+  },
+  "provider_telemetry": {
+    "model_calls": 749,
+    "usage_totals": {
+      "input_tokens": 3355294,
+      "output_tokens": 35419,
+      "cache_read_tokens": 2512146,
+      "cache_write_tokens": 0
+    },
+    "backoff_retries": {}
+  }
+}
