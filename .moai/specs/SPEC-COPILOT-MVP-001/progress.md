@@ -551,6 +551,39 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 
 **잔여**: 이번 배치는 3건(CRITICAL 1 + HIGH 2)만 다룸 — 102-서브에이전트 리뷰의 잔여 MEDIUM/LOW 지적은 후속 M6c-N 배치로 이연(범위 분리, scope discipline). `server/measurement/`, `server/llm/`, `server/orchestrator/runner.py`는 본 배치 범위 밖(타 배치 커버) — 미변경.
 
+### M6c-2 — safety-gate bypass-path fixes (pre-sync critical/high triage, batch 2 of 4) (2026-07-17, manager-develop cycle_type=tdd)
+
+**Scope**: 동일 102-서브에이전트 교차검증 리뷰가 M6b-1r2/M6c-1 반영 후 발견한 HIGH 3건 — 안전 게이트 우회 경로(bypass-path) 계열. Finding 1/2는 "위험 분류/스캔이 명령 SYNTAX만 보고 CONTENT를 보지 않는" 동일 패턴, Finding 3는 "다른 모든 콘솔 송신 경로는 라이브 잠금+헬스 체크를 강제하지만 backup 경로만 예외"인 패턴.
+
+**AC matrix (M6c-2 subset)**
+
+| AC/REQ | Status | Verification command | Actual output (tail) |
+|---|---|---|---|
+| REQ-MVP-013 quoted `Property 'Command'/'Cmd'` 재귀 분류 (Finding 1) | PASS | `uv run pytest -q server/tests/test_safety_classify.py -k TestQuotedPropertyCommandContent` | 5 passed |
+| Finding 1 — AC-MVP-004 FN 코퍼스 회귀 없음 | PASS | `uv run pytest -q server/tests/test_safety_classify.py server/tests/test_safety_gate.py server/tests/test_deploy_scan.py` | 93 passed |
+| REQ-MVP-027 멀티라인 `Cmd()` 스캔 (Finding 2) | PASS | `uv run pytest -q server/tests/test_deploy_scan.py -k multiline` | 2 passed |
+| AC-MVP-007a 백업 경로 라이브 잠금 0건 송신 (Finding 3) | PASS | `uv run pytest -q server/tests/test_safety_gate.py -k "backup_action_blocked or lock_skipped_backup"` | 3 passed |
+
+**TDD evidence (RED → GREEN, 발견별)**
+
+- **Finding 1** (`server/safety/classify.py:55` — quoted-property content never risk-classified): M6b-1r2 룰북이 가르친 매크로 저작 레시피(`Set Macro <pool>.<line> Property 'Command'/'Cmd' '<text>'`)는 명령 LINE을 quoted property value로 저장하는데, `classify_command`는 outer assignment의 verb/unquoted args만 보고 quoted value 내용은 절대 검사하지 않았음 — `Set Macro 1.1 Property "Command" "Delete Everything"`이 승인 없이 "safe"로 통과. 신규 `_quoted_property_command_value()`(narrow shape-specific: `Property` 키워드 + quoted `Command`/`Cmd` 이름 + quoted value)로 감지 시 quoted value를 `classify_command`에 재귀 호출 — outer verb-agnostic(Set/Assign 무관). 기존 "quoted 토큰은 절대 키워드 매치 안 함"(오브젝트 이름 FP 방지) 규칙은 그대로 보존(`Label ... 'Delete old look'` 등 기존 테스트 무회귀). RED: `git stash push -- server/safety/classify.py` → `test_destructive_content_in_command_property_is_blacklisted` 등 3건 `AssertionError: assert 'safe' == 'blacklisted'`(pytest 출력 확인). GREEN: `313ad8f`.
+- **Finding 2** (`server/deploy/scan.py:167` — 멀티라인 `Cmd()` 스캔 회피): `Cmd(` → 인자 사이, 그리고 trailing `..` concatenation tail 체크 둘 다 space/tab만 skip — `Cmd(\n"Delete Everything"\n)` 같은 개행-포맷 호출이나 개행을 낀 concatenation이 분류/`dynamic_calls` 신호 모두 회피. `_LUA_WHITESPACE = " \t\n\r\v\f"`(Lua 자체 whitespace 집합)로 두 지점 모두 교체. RED: `git stash push -- server/deploy/scan.py` → 신규 2 테스트 `AssertionError`(멀티라인 호출이 `destructive=False`로 미탐지, concatenation이 `dynamic_calls=()`로 미탐지 — pytest 출력 확인). GREEN: `a2c953b`.
+- **Finding 3** (`server/safety/gate.py:189` — `SaveShow` backup이 라이브 잠금+헬스 체크 우회): `_execute_cleared`/`deploy_plugin_source`는 매 송신 직전 `lock.is_active`/`monitor.executions_blocked`를 재검사하지만 `make_showfile_backup_action()`의 `action()`은 `self._console.execute(BACKUP_COMMAND)`를 직접 호출 — 잠금 활성 중에도 backup이 콘솔로 송신 가능(AC-MVP-007a "0건" 직접 위반) 또는 오프라인 중에도 송신 가능. `action()` 진입부에 동일한 lock/health 체크 추가, 블록 시 raise(→ `BackupManager._backup()`가 이미 모든 예외를 `BackupError`로 변환하므로 REQ-MVP-034 fail-safe 실행-차단 로직과 자동 합류) — `_last_backup_at`도 예외 시 갱신 안 됨(기존 `_backup()` 구현)이라 스킵된 backup이 조용히 성공으로 취급되지 않음(REQ-MVP-034 downstream 검토 완료, 별도 상태 필드 불요). RED: `git stash push -- server/safety/gate.py` → 신규 3 테스트 `AssertionError`(action이 raise 안 하고 조용히 통과 — pytest 출력 확인). GREEN: `7fbfd91`.
+
+**Quality gates**
+
+- `uv run pytest -q` → **720 passed** (710 baseline + 10 신규: Finding 1 quoted-property 5건, Finding 2 멀티라인 2건, Finding 3 backup-bypass 3건)
+- `uv run pytest --cov=server --cov-report=term-missing -q` → TOTAL **98%** (baseline 유지); 터치 파일별 — `server/safety/classify.py` 96%(기존 미커버 라인만 잔존, 신규 미커버 0건), `server/deploy/scan.py` 87%(기존 미커버 라인만 잔존, 신규 미커버 0건), `server/safety/gate.py` 99%(신규 미커버 0건 — 잔존 3라인 `559-561`은 본 배치 범위 밖)
+- `uv run ruff check server` → clean
+
+**Commits** (no push — no origin remote)
+
+- `313ad8f` fix(SPEC-COPILOT-MVP-001): M6c-2 quoted Command-property content bypass (TDD)
+- `a2c953b` fix(SPEC-COPILOT-MVP-001): M6c-2 multi-line-formatted Cmd() scan evasion (TDD)
+- `7fbfd91` fix(SPEC-COPILOT-MVP-001): M6c-2 SaveShow backup live-lock/health bypass (TDD)
+
+**잔여**: 이번 배치는 3건(HIGH 3)만 다룸 — 102-서브에이전트 리뷰의 잔여 지적은 후속 M6c-3/M6c-4 배치로 이연(범위 분리, scope discipline). `server/web/`, `server/llm/`, `server/orchestrator/runner.py`, `console/lua/`, `ui/`는 본 배치 범위 밖(타 배치 커버) — 미변경.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
