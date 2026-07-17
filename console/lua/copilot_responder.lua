@@ -277,10 +277,41 @@ function M.build_pong(id)
     }
 end
 
+-- Backs off from a raw byte cut point so a truncation never splits a
+-- multi-byte UTF-8 sequence (a continuation byte lives in 0x80-0xBF).
+local function safe_truncate(s, max_len)
+    if max_len <= 0 then
+        return ""
+    end
+    if #s <= max_len then
+        return s
+    end
+    local cut = max_len
+    while cut > 0 and string.byte(s, cut) >= 0x80 and string.byte(s, cut) < 0xC0 do
+        cut = cut - 1
+    end
+    return s:sub(1, cut)
+end
+
 function M.build_snapshot(id, path)
     local handle, err = M.resolve_path(path)
     if not handle then
-        return { v = M.PROTO, kind = "state", id = id, path = path, ok = false, error = err }
+        local payload = { v = M.PROTO, kind = "state", id = id, path = path, ok = false, error = err }
+        -- Size guard (M6c-4 fix): the success branch below already bounds
+        -- its reply to CONFIG.max_payload by dropping children; this
+        -- failure branch used to echo the full, unbounded query path
+        -- (sometimes twice, via `err`) with no truncation at all. Apply the
+        -- same UDP-budget guard here by shrinking the echoed error/path
+        -- strings (PROTOCOL.md §4).
+        while #M.encode_payload(payload) > CONFIG.max_payload
+            and (#payload.error > 0 or #payload.path > 0) do
+            if #payload.error > 0 then
+                payload.error = safe_truncate(payload.error, math.floor(#payload.error / 2))
+            elseif #payload.path > 0 then
+                payload.path = safe_truncate(payload.path, math.floor(#payload.path / 2))
+            end
+        end
+        return payload
     end
     local children = M.safe_children(handle)
     local total = #children
@@ -432,12 +463,17 @@ function M.set_plugin_source(plugin, source)
             local readable, value = pcall(function()
                 return component.content or component.Content
             end)
-            if not readable or value == nil or value == source then
+            -- Only a CONFIRMED readback (matches what was written) counts as
+            -- success; an unreadable or nil/mismatched readback means this
+            -- accessor form did NOT actually persist the source (M6c-4 fix
+            -- — the prior logic wrongly treated an unconfirmed write, i.e.
+            -- readback returning nil, as success).
+            if readable and value == source then
                 return true
             end
         end
     end
-    return false, "cannot set plugin source (content setter probes failed)"
+    return false, "cannot confirm plugin source write (readback did not match any setter form)"
 end
 
 function M.build_deploy_result(id, name, source)

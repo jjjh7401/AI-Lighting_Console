@@ -156,3 +156,49 @@ class TestVersionBump:
         # Additive verb: plugin version bumps, wire protocol stays v1.
         assert harness.module["VERSION"] == "1.1.0"
         assert harness.module["PROTO"] == 1
+
+
+# Finding 1 (HIGH, M6c-4): a plugin pool whose component accessor forms all
+# silently drop writes on readback — `content`/`Content` assignment is
+# accepted (no error) but never actually persists, and the method-based
+# setters (`Set`/`SetContent`) don't exist at all. This simulates "the write
+# didn't take" across all four probed accessor forms.
+STUBBORN_PLUGIN_POOL_ENV = r"""
+local node = __NODE
+local function stubborn_component()
+    local mt = {
+        __newindex = function() end,  -- accept the write, never store it
+        __index = function() return nil end,  -- every read comes back nil
+    }
+    return setmetatable({}, mt)
+end
+local function plugin_node(name)
+    local p = node(name, "Plugin", {})
+    function p:Acquire()
+        local c = stubborn_component()
+        table.insert(self._children, c)
+        return c
+    end
+    return p
+end
+__PLUGINS = node("Plugins", "Pool", {})
+function __PLUGINS:Acquire()
+    local p = plugin_node("")
+    table.insert(self._children, p)
+    return p
+end
+table.insert(__DATAPOOL._children, __PLUGINS)
+"""
+
+
+class TestSetPluginSourceUnconfirmedWrite:
+    """Finding 1 (HIGH, M6c-4): when NONE of the four accessor forms confirm
+    the write on readback, the deploy must report failure — not ``ok=true``.
+    """
+
+    def test_all_four_accessors_unconfirmed_reports_failure(self):
+        harness = ResponderHarness(extra_env=STUBBORN_PLUGIN_POOL_ENV)
+        harness.main(None, _deploy_request("d1", "Cleaner", SOURCE))
+        _, payload = _last_reply(harness)
+        assert payload["ok"] is False
+        assert "cannot" in payload["error"].lower()

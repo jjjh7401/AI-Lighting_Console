@@ -156,6 +156,19 @@ class TestStateSnapshot:
         assert payload["truncated"] is True
         assert payload["node"]["childCount"] == 3
 
+    def test_failure_branch_payload_size_guard_truncates_long_path(self, harness):
+        # Finding 2 (HIGH, M6c-4): build_snapshot()'s FAILURE branch echoed
+        # the full, unbounded query path (twice — once directly, once inside
+        # `error`) with no size guard, unlike the success branch above. A
+        # long/malformed path must still respect CONFIG.max_payload.
+        harness.config["max_payload"] = 300
+        long_segment = "x" * 5000
+        harness.main(None, f"state 20 DataPool/{long_segment}")
+        sent = harness.sent()[0]
+        assert len(sent.payload) <= 300
+        payload = decode_payload(sent.payload)
+        assert payload["ok"] is False
+
 
 class TestExecResult:
     def test_success_result(self, harness):
