@@ -127,14 +127,25 @@ class Orchestrator:
             if not turn.tool_calls:
                 break  # final answer — instruction complete
             conversation.append(turn)
+            # A correction round is charged AT MOST ONCE per model turn, at
+            # the turn boundary: `last_run_failed` here reflects the PRIOR
+            # turn's outcome (error already fed back to the model), never a
+            # failure that happens later in the loop below. Deciding this
+            # BEFORE the dispatch loop (rather than per tool call) prevents a
+            # within-turn multi-tool-call bundle from being over-counted —
+            # e.g. call 1 failing must not charge call 2 in the SAME turn,
+            # since no error feedback occurred between them (M6c-3 Finding 3,
+            # REQ-MVP-009/010 accounting correctness).
+            has_retryable_call = any(
+                call.name in ("run_commands", "deploy_plugin") for call in turn.tool_calls
+            )
+            if last_run_failed and has_retryable_call:
+                # M7: a corrected deploy_plugin attempt counts the same —
+                # compile failures share the <=3 cap (REQ-MVP-010).
+                retries_used += 1
+            last_run_failed = False
             results: list[ToolResult] = []
             for call in turn.tool_calls:
-                if call.name in ("run_commands", "deploy_plugin") and last_run_failed:
-                    # A correction round after error feedback = one retry.
-                    # M7: a corrected deploy_plugin attempt counts the same —
-                    # compile failures share the <=3 cap (REQ-MVP-010).
-                    retries_used += 1
-                    last_run_failed = False
                 execution = self._registry.dispatch(
                     call, ExecutionContext(executed_ok=frozenset(executed_ok))
                 )

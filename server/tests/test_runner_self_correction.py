@@ -146,6 +146,63 @@ class TestRetryCap:
         assert result.retries_used == 1
 
 
+class TestWithinTurnRetryAccounting:
+    """M6c-3 Finding 3 (HIGH) — a retry is charged once per model-turn
+    boundary, never once per within-turn tool call. Distinguishes "turn N has
+    2 tool calls, both succeed" (0 retries, no error ever occurred) from
+    "turn N's tool call fails, error fed back, turn N+1 retries" (1 retry)."""
+
+    def _two_call_turn(self, first_commands: list[str], second_commands: list[str]) -> ModelTurn:
+        return ModelTurn(
+            text="",
+            tool_calls=(
+                ToolCall(id="c1", name="run_commands", arguments={"commands": first_commands}),
+                ToolCall(id="c2", name="run_commands", arguments={"commands": second_commands}),
+            ),
+            stop_reason="tool_use",
+            usage=Usage(),
+            provider="scripted",
+        )
+
+    def test_two_successful_calls_in_one_turn_do_not_increment_retries(self):
+        # A single model turn deciding to call the tool twice is normal
+        # multi-call behavior, not a retry — no error was ever fed back.
+        turn = self._two_call_turn(["Store Cue 1"], ["Store Cue 2"])
+        provider = ScriptedProvider([turn, _final()])
+        result = _orchestrator(provider).handle_instruction("두 개 실행해줘")
+        assert result.status == "ok"
+        assert result.retries_used == 0
+
+    def test_first_call_failure_does_not_charge_the_second_call_in_the_same_turn(self):
+        # Both calls come from ONE model completion (turn.tool_calls is a
+        # single tuple) — there is no error-feedback round-trip between c1
+        # and c2. The pre-fix accounting wrongly charged c2 because
+        # `last_run_failed` was mutated mid-loop by c1's own failure.
+        turn = self._two_call_turn(["Bad"], ["Good2"])
+        provider = ScriptedProvider([turn, _final()])
+        port = ScriptedPort(failures=frozenset({"Bad"}))
+        result = _orchestrator(provider, port).handle_instruction("두 개 실행해줘, 하나는 실패")
+        assert result.status == "ok"
+        assert result.retries_used == 0
+        assert port.executed == ["Bad", "Good2"]
+
+    def test_correction_turn_with_two_calls_after_a_genuine_failure_charges_one_retry(self):
+        # A genuinely NEW turn following error feedback (last_run_failed was
+        # True entering this turn) still charges exactly one retry even when
+        # the correction turn itself contains two tool calls.
+        provider = ScriptedProvider(
+            [
+                _run_turn(["Bad"], "c1"),
+                self._two_call_turn(["Good1"], ["Good2"]),
+                _final(),
+            ]
+        )
+        port = ScriptedPort(failures=frozenset({"Bad"}))
+        result = _orchestrator(provider, port).handle_instruction("실패 후 두 개로 교정")
+        assert result.status == "ok"
+        assert result.retries_used == 1
+
+
 class TestExecutedCommandProtection:
     """REQ-MVP-033 (M3 scope) — retries touch only unexecuted/corrected commands."""
 
