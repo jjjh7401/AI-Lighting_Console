@@ -645,7 +645,25 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 - `04106d7` fix(SPEC-COPILOT-MVP-001): M6c-4 Lua responder honesty + payload size guard (TDD)
 - `87d7636` fix(SPEC-COPILOT-MVP-001): M6c-4 clear stale approval/review cards on disconnect (TDD)
 
-**잔여**: 이번 배치로 M6c 4/4 배치 완료(102-서브에이전트 리뷰의 지적 사항 전부 반영). `server/web/`, `server/safety/`, `server/deploy/`, `server/llm/`, `server/orchestrator/`, `server/measurement/`는 본 배치 범위 밖(타 배치 커버) — 미변경. ApprovalCard/ReviewCard 버튼 debounce(MEDIUM, 부수 발견)는 backlog로 이연 — 별도 SPEC/배치에서 처리.
+**잔여**: 이번 배치로 M6c 4/4 배치 완료. `server/web/`, `server/safety/`, `server/deploy/`, `server/llm/`, `server/orchestrator/`, `server/measurement/`는 본 배치 범위 밖(타 배치 커버) — 미변경. ApprovalCard/ReviewCard 버튼 debounce(MEDIUM, 부수 발견)는 backlog로 이연 — 별도 SPEC/배치에서 처리.
+
+### M6c 종합 — 102-서브에이전트 병렬 리뷰 정리 (2026-07-17, orchestrator 검증)
+
+**출처**: M6b-1r2 반영 후 실행한 다이나믹 워크플로우(코드 11개 영역 병렬 리뷰 + AC 32개 추적성 감사, 3표 적대적 검증) — 확정 29건(치명 1·높음 11·보통 12·낮음 5) + AC 불일치 1건.
+
+**처리 현황**: 치명 1건 + 높음 11건 = 12건 전부 M6c-1~4 배치(TDD, 커밋 11개)로 수정 완료. 오케스트레이터가 각 배치 후 전체 `pytest`/`ruff`/`vitest` 독립 재검증 — 736 tests green(원본 702 대비 +34), ruff clean 유지.
+
+**부수 해결 확인 (오케스트레이터가 코드 재확인)**: 아래 2건은 별도 수정 없이 상위 배치의 수정으로 이미 해소됨 —
+- `server/safety/gate.py:212`(MEDIUM, `_clearances` wholesale-replace) — M6c-1의 세션별 dict+lock 전환으로 해소.
+- `ui/src/useCopilotSocket.ts:43`(MEDIUM, 재연결 시 미정리) — M6c-4의 `onclose→disconnected` 정리로 해소.
+
+**남은 backlog (15건 — 별도 SPEC/배치로 이연, 이번 M6c 범위 밖)**:
+- MEDIUM(10): `server/bridge/protocol.py:67,32`(퍼센트 인코딩 오탐/개행 스머글링), `server/orchestrator/fallback.py:48`(락 없는 경합), `server/llm/gemini_adapter.py:101`(캐시 attempted 경합), `server/safety/gate.py:138`(`_unconfirmed` 무한 성장), `server/orchestrator/tools.py:145`(이미 실행된 명령 오보고), `server/measurement/runner.py:453,403`(반복 0회 크래시/컨테인먼트 갭), `server/rulebook/assets/v2.4.2/00_grammar.md:81`(매크로 레시피 내부 인용 인자 미가이드), `ui/src/components/ApprovalCard.tsx:35`(버튼 디바운스 없음).
+- LOW(5): `server/bridge/osc.py:169`(수신 인증 없음), `server/web/approval_bridge.py:120`(비원자적 request_approval), `server/measurement/runner.py:417,247`(빈 코퍼스 크래시/temp 디렉터리 미정리), `server/measurement/corpus.py:144`(instruction 텍스트 유일성 미검증).
+
+**AC 불일치 (미해결, M6b-3 선정 전 확인 필요)**: AC-MVP-027③ — 폴백 "설정 전환" 절반이 미구현(감사 로그 기록만 실제 동작, `server/orchestrator/fallback.py`가 결정만 하고 config 전환 코드 경로 부재). AC-MVP-027 최종 판정 및 기본 프로바이더 선정 전에 M6b-3 체크인에서 다뤄야 함.
+
+**sync 진입 판단**: 안전·동시성 치명/높음 등급 결함은 모두 해소됨. 남은 15건 backlog는 severity가 보통 이하이며 핵심 안전 불변식(단일 관문·블랙리스트·라이브 잠금)에 영향 없음 — sync 진입에 구조적 장애 없음. M6b-2(onPC 실측)·M6b-3(프로바이더 선정)은 외부 자원(onPC·Anthropic 키) 준비 후 별도 진행.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
