@@ -28,6 +28,13 @@ When labeling or referring to objects by name, ALWAYS use single quotes:
 generated command line — the transport wraps command lines in double quotes and
 an embedded double quote breaks the command.
 
+A quoted name is ALWAYS a SEPARATE token, never fused into a dotted pool id.
+Reference a pooled object by its numeric dotted id (`Preset 4.1`, `Group 3`) OR
+by a standalone quoted name (`Preset 'Blue'`). NEVER compose a dotted id with a
+quoted name — `Preset 4.'Blue'` is invalid (a quote may not appear mid-token).
+When unsure of the concrete id behind a Korean field term, call `get_rig_context`
+to resolve the real object name first.
+
 ## Frequently used functions
 
 | Function | Purpose | Example |
@@ -63,6 +70,29 @@ an embedded double quote breaks the command.
 - Bind a sequence to an executor fader: `Assign Sequence 2 Page 1.201`
 - Fader/executor control: `Page 1.201 At 75` (executor level to 75 percent)
 - Apply an effect/preset to a selection: `Select Group 3` then `At Preset 4.1`
+
+## Authoring a macro (build its command lines)
+
+Creating a macro that STORES command lines is different from RUNNING one. A macro
+object holds numbered lines; each line's text is set with the `Set` function on
+the macro-line object, whose id is `<macroPool>.<line>`:
+
+1. Create the macro object: `Store Macro 21`
+2. Set each line's command text with `Set ... Property 'Command' '<command text>'`:
+   `Set Macro 21.1 Property 'Command' 'ClearAll'`
+   `Set Macro 21.2 Property 'Command' 'Group 3 At Full'`
+3. Optionally name it: `Label Macro 21 'Warmup'`
+
+The property that holds a macro line's command text is spelled `Command` on MA3
+v2.4.2 (some older material calls it `Cmd` — use `Command`). The value is a
+single-quoted string; the command text inside it must itself be a valid MA3
+command line.
+
+INVALID — do NOT emit these (they are grandMA2 syntax, rejected on MA3 v2.x):
+`Assign Macro 21.1 /Cmd='ClearAll'`, `Macro 21.1 /Command="..."`. The MA2-style
+attached `/cmd=`/`/command=` option-assignment does not exist on grandMA3 — the
+console parses it as a misplaced quote. Always use the `Set ... Property 'Command'`
+form above.
 
 ## Safety rules (hard)
 

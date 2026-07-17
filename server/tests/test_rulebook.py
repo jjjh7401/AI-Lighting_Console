@@ -59,6 +59,42 @@ class TestPrefixStability:
         assert names == sorted(names), "assembly order must be the sorted filename order"
 
 
+class TestMacroAuthoringRecipe:
+    """M6b-1r2 — the r1 5.86% FAIL root cause was a rulebook teaching gap:
+    macros were taught only as runnable, so the model filled the authoring
+    gap with grandMA2 `/Cmd='...'` assignment syntax (invalid on MA3 v2.x,
+    16/19 rejections). The prefix must teach the compliant MA3 form."""
+
+    def test_prefix_teaches_the_ma3_set_property_macro_recipe(self):
+        prefix = assemble_prefix()
+        # Canonical v2.4 form (keyword_set/keyword_equal), single-quoted per
+        # this deployment's transport rule (double quotes are forbidden).
+        assert "Set Macro" in prefix
+        assert "Property 'Command'" in prefix
+
+    def test_prefix_carries_the_ma2_assignment_anti_example(self):
+        prefix = assemble_prefix()
+        assert "MA2" in prefix
+        assert "/Cmd=" in prefix  # named explicitly as INVALID on MA3
+
+    def test_prefix_warns_against_dotted_quoted_name_composition(self):
+        # r1 numerator minority pattern (3/19): `Preset 4.'Blue'` mid-token
+        # quote — a pool id and a quoted name must never be dot-composed.
+        prefix = assemble_prefix()
+        assert "4.'Blue'" in prefix  # shown as the anti-example
+
+    def test_recipe_examples_pass_the_structural_validator(self):
+        # The recipe must only teach lines our own gate accepts.
+        from server.safety.grammar import validate
+
+        for line in (
+            "Store Macro 21",
+            "Store Macro 21.1",
+            "Set Macro 21.1 Property 'Command' 'ClearAll'",
+        ):
+            assert validate(line).ok, line
+
+
 class TestKoreanDictionaryAxis:
     """AC-MVP-028 parts 1-2 — dictionary axis present, >=10 entries, prefix-stable."""
 
