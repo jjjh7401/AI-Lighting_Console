@@ -42,6 +42,16 @@ PROVIDER_NAME = "gemini"
 
 logger = logging.getLogger(__name__)
 
+# Candidate.finish_reason values that mean the candidate's parts are a
+# genuine, complete answer. Anything else (SAFETY/RECITATION block,
+# MAX_TOKENS truncation, MALFORMED_FUNCTION_CALL, etc.) means the parts do
+# NOT represent what they appear to — an empty/partial `parts` list under one
+# of those reasons must surface as an error, never as a silently "successful"
+# empty turn (M6c-3 Finding 1). FINISH_REASON_UNSPECIFIED and a missing
+# attribute (older/mocked responses) are treated as "no signal" and pass
+# through unchanged for backward compatibility.
+_OK_FINISH_REASONS = frozenset({"STOP", "FINISH_REASON_UNSPECIFIED"})
+
 
 def _to_gemini_schema(schema: dict) -> dict:
     """Convert neutral JSON schema to Gemini schema (uppercased type values)."""
@@ -191,7 +201,19 @@ class GeminiAdapter:
                 retryable=False,
                 raw_detail=f"response without candidates: {response!r}",
             )
-        content = candidates[0].content
+        candidate = candidates[0]
+        finish_reason = getattr(candidate, "finish_reason", None)
+        if finish_reason is not None and finish_reason not in _OK_FINISH_REASONS:
+            raise ProviderError(
+                kind="malformed_response",
+                provider=PROVIDER_NAME,
+                retryable=False,
+                raw_detail=(
+                    f"candidate blocked/truncated: finish_reason={finish_reason!r} "
+                    f"(not a genuine empty success)"
+                ),
+            )
+        content = candidate.content
         parts = getattr(content, "parts", None) or []
         texts: list[str] = []
         tool_calls: list[ToolCall] = []

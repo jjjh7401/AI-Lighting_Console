@@ -60,6 +60,7 @@ def normalize_anthropic_error(exc: Exception) -> ProviderError:
 
 def normalize_gemini_error(exc: Exception) -> ProviderError:
     """Map a google-genai SDK exception onto the structured internal error."""
+    import httpx
     from google.genai import errors as genai_errors
 
     detail = repr(exc)
@@ -76,6 +77,17 @@ def normalize_gemini_error(exc: Exception) -> ProviderError:
         if code >= 500:
             return _error("server", True)
         return _error("invalid_request", False)
-    if isinstance(exc, ConnectionError | TimeoutError):
+    # google-genai is httpx-based: real network failures raise
+    # httpx.ConnectError / httpx.TimeoutException, which are NOT subclasses of
+    # the Python builtin ConnectionError/TimeoutError (checked alongside, not
+    # instead of, the builtins so pre-existing builtin-exception tests/mocks
+    # keep classifying correctly too).
+    connectivity_errors = (
+        ConnectionError,
+        TimeoutError,
+        httpx.ConnectError,
+        httpx.TimeoutException,
+    )
+    if isinstance(exc, connectivity_errors):
         return _error("connection", True)
     return _error("unknown", False)

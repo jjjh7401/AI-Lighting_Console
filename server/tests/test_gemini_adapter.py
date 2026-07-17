@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import httpx
 import pytest
 from google.genai import errors as genai_errors
 
@@ -59,6 +60,15 @@ def _function_call_response() -> SimpleNamespace:
     part = SimpleNamespace(text=None, function_call=call)
     content = SimpleNamespace(role="model", parts=[part])
     return SimpleNamespace(candidates=[SimpleNamespace(content=content)], usage_metadata=None)
+
+
+def _response_with_finish_reason(
+    finish_reason: str, *, text: str | None = "완료"
+) -> SimpleNamespace:
+    parts = [SimpleNamespace(text=text, function_call=None)] if text else []
+    content = SimpleNamespace(role="model", parts=parts)
+    candidate = SimpleNamespace(content=content, finish_reason=finish_reason)
+    return SimpleNamespace(candidates=[candidate], usage_metadata=None)
 
 
 class FakeModels:
@@ -249,6 +259,41 @@ class TestResponseParsing:
         assert excinfo.value.kind == "malformed_response"
 
 
+class TestFinishReasonInspection:
+    """M6c-3 Finding 1 (HIGH) — a blocked/truncated candidate must surface as
+    an error, never as a silently "successful" empty/partial turn."""
+
+    def test_normal_stop_finish_reason_parses_as_before(self):
+        # No-regression case: an explicit finish_reason="STOP" behaves exactly
+        # like the pre-existing (finish_reason-less) response fixtures.
+        _, turn = _complete(FakeClient(_response_with_finish_reason("STOP", text="완료")))
+        assert turn.text == "완료"
+        assert turn.tool_calls == ()
+        assert turn.stop_reason == "end"
+
+    def test_missing_finish_reason_attribute_is_backward_compatible(self):
+        # Older mocks / SDK responses without the attribute at all: getattr
+        # falls back to None and parsing proceeds unchanged.
+        _, turn = _complete(FakeClient(_text_response("완료")))
+        assert turn.text == "완료"
+
+    @pytest.mark.parametrize(
+        "finish_reason",
+        ["SAFETY", "RECITATION", "MAX_TOKENS", "MALFORMED_FUNCTION_CALL", "PROHIBITED_CONTENT"],
+    )
+    def test_non_stop_finish_reason_surfaces_as_provider_error(self, finish_reason):
+        # A safety/recitation block or a truncated function call has an EMPTY
+        # or partial `parts` list — without the finish_reason check this
+        # would silently parse as a successful empty turn.
+        with pytest.raises(ProviderError) as excinfo:
+            _complete(FakeClient(_response_with_finish_reason(finish_reason, text=None)))
+        error = excinfo.value
+        assert error.kind == "malformed_response"
+        assert error.provider == "gemini"
+        assert error.retryable is False
+        assert finish_reason in error.raw_detail
+
+
 class TestErrorNormalization:
     """REQ-MVP-044 seed — Gemini SDK errors become structured internal errors."""
 
@@ -271,6 +316,34 @@ class TestErrorNormalization:
         assert error.retryable is retryable
         assert error.provider == "gemini"
         assert error.raw_detail
+
+
+def _httpx_request() -> httpx.Request:
+    return httpx.Request("POST", "https://generativelanguage.googleapis.com")
+
+
+class TestConnectivityErrorClassification:
+    """M6c-3 Finding 2 (HIGH) — the google-genai SDK (httpx-based) raises
+    httpx.ConnectError/httpx.TimeoutException on real network failures; these
+    are NOT subclasses of the Python builtin ConnectionError/TimeoutError, so
+    they must be classified alongside (not instead of) the builtins."""
+
+    @pytest.mark.parametrize(
+        "exc",
+        [
+            ConnectionError("builtin connection error"),
+            TimeoutError("builtin timeout"),
+            httpx.ConnectError("connect failed", request=_httpx_request()),
+            httpx.TimeoutException("timed out", request=_httpx_request()),
+        ],
+    )
+    def test_connectivity_exceptions_classify_as_retryable_connection(self, exc):
+        with pytest.raises(ProviderError) as excinfo:
+            _complete(FakeClient(exc))
+        error = excinfo.value
+        assert error.kind == "connection"
+        assert error.retryable is True
+        assert error.provider == "gemini"
 
 
 class TestBootWithoutKeys:
