@@ -1,0 +1,189 @@
+# Measurement corpus — SPEC-COPILOT-MVP-001 M6 (acceptance "문법 오류율 측정 방법" §1).
+#
+# 21 standard Korean instruction scenarios = 10 representative task types
+# (AC-MVP-001) x >=2 variants each, including 5 field-terminology variants
+# (AC-MVP-028 ③ — terms cross-checked against the rulebook dictionary axis).
+#
+# The `mock` block scripts the deterministic offline action for M6a mock runs
+# ONLY; M6b live runs send `instruction` to the real model and ignore `mock`.
+# Baseline mock command lines are structurally valid MA3 v2.x command lines
+# that clear the safety gate without approval (non-risky verbs only).
+version: 1
+
+scenarios:
+  # -- group_create (그룹 생성) -------------------------------------------------
+  - id: group-create-1
+    task_type: group_create
+    instruction: "1번부터 12번 조명 묶어서 보컬 그룹으로 만들어줘"
+    mock:
+      commands:
+        - "Fixture 1 Thru 12"
+        - "Store Group 3"
+        - "Label Group 3 \"Vocal\""
+  - id: group-create-2
+    task_type: group_create
+    instruction: "워시 조명들만 골라서 그룹 8번으로 저장해줘"
+    field_terms: ["워시"]
+    mock:
+      commands:
+        - "Fixture 21 Thru 28"
+        - "Store Group 8"
+        - "Label Group 8 \"Wash\""
+  - id: group-create-3
+    task_type: group_create
+    instruction: "드럼 쪽 비추는 등들 그룹 하나로 묶어줘"
+    mock:
+      commands:
+        - "Fixture 31 Thru 36"
+        - "Store Group 11"
+        - "Label Group 11 \"Drums\""
+
+  # -- preset_store (프리셋 저장) ----------------------------------------------
+  - id: preset-store-1
+    task_type: preset_store
+    instruction: "지금 앞무대 밝기 상태를 프리셋 4.1로 저장해줘"
+    mock:
+      commands:
+        - "Fixture 1 Thru 8"
+        - "At 100"
+        - "Store Preset 4.1"
+        - "Label Preset 4.1 \"FrontWarm\""
+  - id: preset-store-2
+    task_type: preset_store
+    instruction: "샤막 파랗게 물들인 색을 프리셋 4.7로 저장해줘"
+    field_terms: ["샤막"]
+    mock:
+      commands:
+        - "Group 5"
+        - "At 40"
+        - "Store Preset 4.7"
+        - "Label Preset 4.7 \"CycBlue\""
+
+  # -- cue_store (큐 스토어) -----------------------------------------------------
+  - id: cue-store-1
+    task_type: cue_store
+    instruction: "지금 무대 상태 큐 12번으로 저장하고 오프닝이라고 이름 붙여줘"
+    mock:
+      commands:
+        - "Store Cue 12"
+        - "Label Cue 12 \"Opening\""
+  - id: cue-store-2
+    task_type: cue_store
+    instruction: "큐 5번에 페이드 3초 걸어서 저장해줘"
+    field_terms: ["페이드"]
+    mock:
+      commands:
+        - "Store Cue 5 Fade 3"
+
+  # -- sequence_assign (시퀀스→executor 할당) ------------------------------------
+  - id: sequence-assign-1
+    task_type: sequence_assign
+    instruction: "시퀀스 4번을 1페이지 201번 페이더에 걸어줘"
+    mock:
+      commands:
+        - "Assign Sequence 4 Page 1.201"
+  - id: sequence-assign-2
+    task_type: sequence_assign
+    instruction: "발라드 시퀀스 7번 2페이지 203번 실행기에 할당해줘"
+    mock:
+      commands:
+        - "Assign Sequence 7 Page 2.203"
+
+  # -- page_setup (페이지 셋업) --------------------------------------------------
+  - id: page-setup-1
+    task_type: page_setup
+    instruction: "3번 페이지 새로 만들어서 발라드라고 이름 붙여줘"
+    mock:
+      commands:
+        - "Store Page 3"
+        - "Label Page 3 \"Ballad\""
+  - id: page-setup-2
+    task_type: page_setup
+    instruction: "1번 페이지 구성을 4번 페이지로 복사해줘"
+    mock:
+      commands:
+        - "Copy Page 1 At Page 4"
+
+  # -- macro_create (매크로 생성) -------------------------------------------------
+  - id: macro-create-1
+    task_type: macro_create
+    instruction: "자주 쓰는 명령 모아서 매크로 21번으로 만들어줘"
+    mock:
+      commands:
+        - "Store Macro 21"
+        - "Label Macro 21 \"Warmup\""
+  - id: macro-create-2
+    task_type: macro_create
+    instruction: "객석 조명 켜는 매크로 하나 만들어줘"
+    mock:
+      commands:
+        - "Store Macro 22"
+        - "Label Macro 22 \"HouseFull\""
+
+  # -- effect_apply (이펙트 적용) -------------------------------------------------
+  - id: effect-apply-1
+    task_type: effect_apply
+    instruction: "9번 그룹에 무지개 이펙트 프리셋 걸어줘"
+    mock:
+      commands:
+        - "Group 9"
+        - "At Preset 21.4"
+  - id: effect-apply-2
+    task_type: effect_apply
+    instruction: "무빙 4번 그룹에 웨이브 이펙트 적용해줘"
+    field_terms: ["무빙"]
+    mock:
+      commands:
+        - "Group 4"
+        - "At Preset 21.2"
+
+  # -- fader_control (페이더 제어) ------------------------------------------------
+  - id: fader-control-1
+    task_type: fader_control
+    instruction: "1페이지 201번 페이더 75퍼센트로 올려줘"
+    mock:
+      commands:
+        - "Page 1.201 At 75"
+  - id: fader-control-2
+    task_type: fader_control
+    instruction: "2번 페이더 내려서 암전 상태로 만들어줘"
+    field_terms: ["암전"]
+    mock:
+      commands:
+        - "Page 1.202 At 0"
+
+  # -- state_query (상태 조회) ----------------------------------------------------
+  - id: state-query-1
+    task_type: state_query
+    instruction: "지금 시퀀스 뭐뭐 있는지 알려줘"
+    mock:
+      query_path: "DataPool/Sequences"
+  - id: state-query-2
+    task_type: state_query
+    instruction: "그룹 목록 좀 보여줘"
+    mock:
+      query_path: "DataPool/Groups"
+
+  # -- plugin_deploy (Lua 플러그인 배포) -------------------------------------------
+  - id: plugin-deploy-1
+    task_type: plugin_deploy
+    instruction: "빈 페이지 정리해 주는 플러그인 만들어서 배포해줘"
+    mock:
+      plugin:
+        name: "PageCleaner"
+        lua_source: |
+          local function tidy_pages()
+            return true
+          end
+          return tidy_pages()
+  - id: plugin-deploy-2
+    task_type: plugin_deploy
+    instruction: "큐 목록 뽑아주는 플러그인 하나 올려줘"
+    mock:
+      plugin:
+        name: "CueLister"
+        lua_source: |
+          local function list_cues()
+            return {}
+          end
+          return list_cues()
