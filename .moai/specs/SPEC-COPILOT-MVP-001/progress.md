@@ -665,6 +665,52 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 
 **sync 진입 판단**: 안전·동시성 치명/높음 등급 결함은 모두 해소됨. 남은 15건 backlog는 severity가 보통 이하이며 핵심 안전 불변식(단일 관문·블랙리스트·라이브 잠금)에 영향 없음 — sync 진입에 구조적 장애 없음. M6b-2(onPC 실측)·M6b-3(프로바이더 선정)은 외부 자원(onPC·Anthropic 키) 준비 후 별도 진행.
 
+### M6b-3-pre — 폴백 config-switch 메커니즘 구현 (AC-MVP-027③ 갭 해소) (2026-07-18, manager-develop cycle_type=tdd)
+
+**Scope**: M6c 종합에서 확인된 AC 불일치 — AC-MVP-027③("폴백 규칙의 config-switch + 감사 로그 기록 경로가 자동화 테스트로 확인됨", REQ-MVP-040 part ii)이 절반만 구현되어 있었음(`FallbackDetector`는 결정 + 감사 로그만 수행, 실제 프로바이더 전환 코드 경로 부재). 이번 배치는 **메커니즘만** 구현 — 운영 기본 폴백 대상 선정(`target_provider` 실값)은 여전히 M6b-3 체크인(Anthropic 측 오류율 실측 필요)의 인간 결정 사항으로 남겨둠. `config/provider.toml`은 값 미결정 상태(주석 처리) 그대로 출하.
+
+**AC matrix (M6b-3-pre subset)**
+
+| AC/REQ | Status | Verification command | Actual output |
+|---|---|---|---|
+| `fallback.target_provider` config 파싱 + 검증(동일값/미지원값/비문자열 거부) | PASS | `uv run pytest -q server/tests/test_llm_config.py -k TestFallbackTargetProviderValidation` | 6 passed |
+| `FallbackDetector.on_fallback` 콜백 — 트리거 시 정확히 1회 호출, 3-state 정직한 감사 이벤트(switched/decided-only×2) | PASS | `uv run pytest -q server/tests/test_fallback_detector.py -k TestOnFallbackSwitch` | 4 passed |
+| `SwitchableProvider` 런타임 전환 인다이렉션 + Orchestrator 크럭스(두 번째 judged turn이 실제로 새 프로바이더로 실행됨) | PASS | `uv run pytest -q server/tests/test_provider_fallback_switch.py` | 5 passed |
+| `server/web/serve.py` 배선 — target_provider 설정 시에만 SwitchableProvider 구성, 미설정 시 기존과 동일(단일 어댑터) | PASS | `uv run pytest -q server/tests/test_web_serve.py -k TestFallbackTargetProviderWiring` | 2 passed |
+| 무회귀 — 기존 736건 전부 그대로 통과 | PASS | `uv run pytest -q` | 753 passed (736 baseline + 17 신규) |
+
+**설계 요약 (TDD: RED 실패 확인 → GREEN 구현, 파일별)**
+
+- **`server/llm/config.py`**: `FallbackSettings`에 옵션 필드 `target_provider: str | None = None` 추가. `load_provider_config`가 `fallback.target_provider`를 파싱해 (a) 문자열 타입, (b) `SUPPORTED_PROVIDERS` 소속, (c) `provider.active`와 상이함을 검증 — 위반 시 `ConfigError`. 미설정 시 `None`(기존 동작 무변경, `test_shipped_config_ships_with_no_target_provider_decided`로 고정).
+- **`config/provider.toml`**: `[fallback]`에 `# target_provider = "gemini"` 주석 라인 + M6b-3 체크인 대기 사유 추가. 실값 미결정 — 이 SPEC 범위 밖의 인간 결정.
+- **`server/orchestrator/fallback.py`**: `FallbackDetector.__init__`에 `on_fallback: Callable[[str], None] | None = None` 추가. 트리거 순간(`triggered` True로 전환되는 그 시점) 정확히 1회, `target_provider`가 설정되어 있을 때만 호출. 감사 이벤트에 `target_provider`/`switched` 필드 신설 — 3-state 정직성: (a) switched=True(대상 설정 + 콜백 배선됨, 실제 전환 수행), (b) switched=False+target_provider=None(대상 미설정 — 오늘 기본값), (c) switched=False+target_provider 설정되었으나 콜백 미배선(배선 갭 — action 텍스트로 구분, 침묵 no-op 금지).
+- **`server/orchestrator/runner.py`**: 신규 `SwitchableProvider` 클래스 — `dict[str, LLMProvider]` 레지스트리 + `active_name`을 감싸 `LLMProvider` 프로토콜을 위임으로 만족(`name`/`model_id`/`supports_prompt_caching`/`complete()`), `switch_to(name)`으로 활성 어댑터 교체. `Orchestrator.__init__` 시그니처는 **무변경** — `self._provider`가 이 인다이렉션 객체를 담으면(주입 시점에 결정) `handle_instruction()` 코드 변경 없이 "이후 턴은 새 프로바이더로 실행"이 성립(설계 브리프의 "hold self._provider behind a small mutable indirection" 요구사항을 리팩터링 없이 충족).
+- **`server/web/serve.py`**: `build_runtime`에서 `config.fallback.target_provider`가 설정된 경우에만 `dataclasses.replace(config, active=target)`로 두 번째 어댑터를 빌드하고 `SwitchableProvider`로 감싸 `on_fallback=switchable.switch_to`를 `FallbackDetector`에 배선; `WebDeps.provider`도 이 인다이렉션으로 교체. 미설정 시(오늘 출하 기본값) 단일 어댑터 경로 그대로 — `test_shipped_config_builds_a_single_bare_adapter`로 무회귀 고정.
+- **RED 확인**: `on_fallback` 관련 4건은 `FallbackDetector.__init__() got an unexpected keyword argument 'on_fallback'`(TypeError)로 실패 확인 후 구현; `SwitchableProvider` 관련 5건은 `ImportError: cannot import name 'SwitchableProvider'`로 수집 단계 실패 확인 후 구현(pytest 출력 확인, 커밋 전 되돌리지 않고 직접 구현으로 전환 — 별도 stash 불필요, 신규 파일/신규 kwarg라 기존 코드에 영향 없음).
+
+**Quality gates**
+
+- `uv run pytest -q` → **753 passed** (736 baseline + 17 신규: config 검증 6 + on_fallback 콜백 4 + SwitchableProvider/크럭스 5 + serve.py 배선 2)
+- `uv run ruff check server config` → clean
+- `uv run ruff format --check server` → clean (신규/수정 3개 파일 최초 미정렬 확인 후 `ruff format` 적용, 이후 clean)
+
+**PASS/FAIL per constraint (브리프 대비)**
+
+| 제약 | 상태 | 비고 |
+|---|---|---|
+| config 검증(active 동일값/미지원값 거부) | PASS | `test_target_provider_equal_to_active_is_rejected`, `test_unsupported_target_provider_is_rejected` |
+| 전환 메커니즘(두 번째 judged turn이 실제로 새 프로바이더) | PASS | `test_target_provider_configured_switches_the_next_judged_turn` — `gemini.calls == 1`, `anthropic.calls == 1`(unchanged) |
+| 감사 정직성(3-state, 침묵 no-op 금지) | PASS | `TestOnFallbackSwitch` 4건 + fallback.py 3-branch action 텍스트 |
+| 무회귀(736건 그대로) | PASS | 753 = 736 + 17, 0 실패 |
+| 범위 규율(SPEC body 미수정, `config/provider.toml` 실값 미결정) | PASS | spec/plan/acceptance.md 미터치; `target_provider` 주석 처리 상태로 출하 |
+
+**Commits** (no push — no origin remote)
+
+- `690ba68` fix(SPEC-COPILOT-MVP-001): M6b-3-pre implement fallback provider config-switch (AC-MVP-027③) (TDD)
+- (본 evidence 커밋)
+
+**잔여**: `target_provider` 실값 선정은 여전히 M6b-3 인간 체크인 사항(Anthropic 측 오류율 실측 데이터 필요, Gemini는 현재 유일 측정-적격 후보이나 최종 선정 아님). AC-MVP-027③ 문구 자체("config-switch")가 이번 구현으로 충분히 커버되는지는 acceptance.md 소유자(관리자) 재확인 권장 — 이 배치는 문구 수정 권한 없음(progress.md만 소유).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
