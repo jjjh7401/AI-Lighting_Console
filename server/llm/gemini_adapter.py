@@ -66,6 +66,7 @@ class GeminiAdapter:
         self._client = client  # injected in tests; lazily constructed in production
         self._cache_name: str | None = None
         self._cache_attempted = False
+        self._cached_tools: tuple[ToolDefinition, ...] = ()
         self.cache_status = "uninitialized"
 
     @property
@@ -91,7 +92,9 @@ class GeminiAdapter:
 
     # -- context caching (REQ-MVP-041, capability-gated) -----------------------
 
-    def _ensure_cache(self, client: Any, system_prefix: str) -> str | None:
+    def _ensure_cache(
+        self, client: Any, system_prefix: str, tools: Sequence[ToolDefinition]
+    ) -> str | None:
         if not self._settings.context_caching:
             self.cache_status = "disabled"
             return None
@@ -101,14 +104,22 @@ class GeminiAdapter:
         try:
             from google.genai import types as gtypes
 
+            # API constraint (live-verified at M6b-1): a generate request that
+            # uses cached_content must NOT set system_instruction/tools — so
+            # BOTH are baked into the CachedContent (fixed prefix + fixed
+            # toolset, REQ-MVP-007 discipline).
+            cache_kwargs: dict[str, Any] = {
+                "system_instruction": system_prefix,
+                "ttl": f"{self._settings.cache_ttl_seconds}s",
+            }
+            if tools:
+                cache_kwargs["tools"] = [self._tool_config(tools)]
             cache = client.caches.create(
                 model=self._settings.model,
-                config=gtypes.CreateCachedContentConfig(
-                    system_instruction=system_prefix,
-                    ttl=f"{self._settings.cache_ttl_seconds}s",
-                ),
+                config=gtypes.CreateCachedContentConfig(**cache_kwargs),
             )
             self._cache_name = cache.name
+            self._cached_tools = tuple(tools)
             self.cache_status = "cached"
         except Exception as exc:  # capability gate: fall back, record trade-off
             self._cache_name = None
@@ -224,14 +235,22 @@ class GeminiAdapter:
         from google.genai import types as gtypes
 
         client = self._ensure_client()
-        cache_name = self._ensure_cache(client, system_prefix)
+        cache_name = self._ensure_cache(client, system_prefix, tools)
+        tools_tuple = tuple(tools)
+        # The cached path is valid ONLY when this call's toolset is the cached
+        # one (or empty — the cache's tools then apply). A different toolset
+        # takes the uncached path: with cached_content the request may not
+        # carry tools, so using the cache would silently swap the tools.
+        use_cache = cache_name is not None and (
+            not tools_tuple or tools_tuple == self._cached_tools
+        )
         config_kwargs: dict[str, Any] = {}
-        if tools:
-            config_kwargs["tools"] = [self._tool_config(tools)]
-        if cache_name:
+        if use_cache:
             config_kwargs["cached_content"] = cache_name
         else:
             config_kwargs["system_instruction"] = system_prefix
+            if tools_tuple:
+                config_kwargs["tools"] = [self._tool_config(tools)]
         try:
             response = client.models.generate_content(
                 model=self._settings.model,

@@ -109,8 +109,11 @@ class TestRequestConstruction:
         assert client.models.calls[0]["model"] == "gemini-2.5-pro"
 
     def test_tools_converted_to_function_declarations(self):
+        # Uncached path: the request itself carries the converted tools. On
+        # the cached path the SAME conversion lands in the CachedContent (see
+        # TestContextCaching — cached requests may not carry tools).
         client = FakeClient(_text_response())
-        _complete(client)
+        _complete(client, settings=_settings(context_caching=False))
         config = client.models.calls[0]["config"]
         declaration = config.tools[0].function_declarations[0]
         assert declaration.name == "query_state"
@@ -169,6 +172,49 @@ class TestContextCaching:
         assert client.caches.calls == []
         assert adapter.supports_prompt_caching is False
         assert client.models.calls[0]["config"].system_instruction == _PREFIX
+
+    def test_cached_requests_never_carry_tools_or_system_instruction(self):
+        # Live-API reproduction (M6b-1 smoke, 400 INVALID_ARGUMENT):
+        # "CachedContent can not be used with GenerateContent request setting
+        # system_instruction, tools or tool_config." — a cached request must
+        # carry cached_content ONLY; tools live inside the cache.
+        client = FakeClient(_text_response())
+        _complete(client)  # tools=(_TOOL,) with cache creation succeeding
+        config = client.models.calls[0]["config"]
+        assert config.cached_content == "cachedContents/rulebook-1"
+        assert config.tools is None
+        assert config.system_instruction is None
+
+    def test_cache_creation_bakes_the_tools_into_the_cached_content(self):
+        # The API's proposed fix: move system_instruction AND tools into the
+        # CachedContent — the fixed toolset is part of the fixed prefix.
+        client = FakeClient(_text_response())
+        _complete(client)
+        cache_config = client.caches.calls[0]["config"]
+        assert cache_config.system_instruction == _PREFIX
+        declaration = cache_config.tools[0].function_declarations[0]
+        assert declaration.name == "query_state"
+
+    def test_mismatched_tools_bypass_the_cache_for_that_call(self):
+        # A call whose toolset differs from the cached one cannot use the
+        # cache (its tools would be silently replaced by the cached tools) —
+        # it takes the uncached path with its own tools instead.
+        other_tool = ToolDefinition(
+            name="run_commands",
+            description="Run commands.",
+            parameters={"type": "object", "properties": {"commands": {"type": "array"}}},
+        )
+        client = FakeClient(_text_response(), _text_response())
+        adapter, _ = _complete(client)  # cache created with (_TOOL,)
+        adapter.complete(
+            system_prefix=_PREFIX,
+            conversation=[UserMessage(text="2")],
+            tools=(other_tool,),
+        )
+        second = client.models.calls[1]["config"]
+        assert second.cached_content is None
+        assert second.system_instruction == _PREFIX
+        assert second.tools[0].function_declarations[0].name == "run_commands"
 
 
 class TestResponseParsing:
