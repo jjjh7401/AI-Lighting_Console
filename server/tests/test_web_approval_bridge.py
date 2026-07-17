@@ -17,6 +17,7 @@ import threading
 import time
 
 from server.safety.approval import ApprovalItem, ApprovalRequest
+from server.safety.session_context import bind_session_key, new_session_key, reset_session_key
 from server.web.approval_bridge import ApprovalChannel
 
 
@@ -59,6 +60,24 @@ def _request_in_thread(channel, request=None):
 
     def run():
         result["approved"] = channel.request_approval(request or _request())
+
+    thread = threading.Thread(target=run)
+    thread.start()
+    return thread, result
+
+
+def _request_in_thread_for_session(channel, session_key, request=None):
+    """Like ``_request_in_thread`` but the request runs under ``session_key`` —
+    the ambient context ``ChatSession.run_instruction`` binds around one turn.
+    """
+    result: dict = {}
+
+    def run():
+        token = bind_session_key(session_key)
+        try:
+            result["approved"] = channel.request_approval(request or _request())
+        finally:
+            reset_session_key(token)
 
     thread = threading.Thread(target=run)
     thread.start()
@@ -176,3 +195,64 @@ class TestWaitMeasurement:
         channel = ApprovalChannel(recorder=recorder)
         channel.request_approval(_request())
         assert recorder.events == []
+
+
+class TestSessionScopedFailSafe:
+    """M6c-1 Finding 1 — the shared channel must isolate concurrent sessions.
+
+    Production wires exactly ONE ``ApprovalChannel`` across every WebSocket
+    ``ChatSession`` (``WebDeps.approval_channel``). Before this fix, ``bind``/
+    ``unbind`` mutated a single scalar ``_notify`` slot and ``unbind`` denied
+    the ENTIRE shared ``_pending`` dict — one session's disconnect silently
+    force-denied every OTHER session's still-legitimate pending approval.
+    """
+
+    def test_unbinding_one_session_does_not_deny_anothers_pending_request(self):
+        notify_a = NotifyRecorder()
+        notify_b = NotifyRecorder()
+        channel = ApprovalChannel(timeout_seconds=None)
+        key_a = new_session_key()
+        key_b = new_session_key()
+        channel.bind(notify_a, session_key=key_a)
+        channel.bind(notify_b, session_key=key_b)
+
+        thread_a, result_a = _request_in_thread_for_session(channel, key_a)
+        assert notify_a.notified.wait(2.0)
+
+        # Session B disconnects WHILE session A's approval is still pending.
+        channel.unbind(session_key=key_b)
+
+        # A's own pending request must be untouched by B's disconnect.
+        request_id, _request_obj = notify_a.calls[0]
+        assert channel.resolve(request_id, approved=True) is True
+        thread_a.join(timeout=2.0)
+        assert result_a["approved"] is True
+
+    def test_own_unbind_still_denies_own_pending_request(self):
+        # Fail-safe preserved (REQ-MVP-014): a session's OWN disconnect must
+        # still deny its OWN pending requests.
+        notify_a = NotifyRecorder()
+        channel = ApprovalChannel(timeout_seconds=None)
+        key_a = new_session_key()
+        channel.bind(notify_a, session_key=key_a)
+
+        thread_a, result_a = _request_in_thread_for_session(channel, key_a)
+        assert notify_a.notified.wait(2.0)
+
+        channel.unbind(session_key=key_a)
+
+        thread_a.join(timeout=2.0)
+        assert result_a["approved"] is False
+
+    def test_unscoped_callers_share_the_default_session_key(self):
+        # Backward compatibility: callers that never bind/request under an
+        # explicit session_key (direct gate/channel unit tests) behave exactly
+        # as the pre-M6c-1 single-shared-slot channel did.
+        notify = NotifyRecorder()
+        channel = ApprovalChannel(timeout_seconds=None)
+        channel.bind(notify)
+        thread, result = _request_in_thread(channel)
+        assert notify.notified.wait(2.0)
+        channel.unbind()
+        thread.join(timeout=2.0)
+        assert result["approved"] is False

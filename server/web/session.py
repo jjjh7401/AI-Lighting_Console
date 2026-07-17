@@ -29,6 +29,7 @@ from server.orchestrator.tools import CommandOutcome, DeployPipelinePort, build_
 from server.safety.approval import ApprovalRequest
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate, ScreenDecision
+from server.safety.session_context import bind_session_key, new_session_key, reset_session_key
 from server.web.approval_bridge import ApprovalChannel
 from server.web.korean_errors import classify_exception
 from server.web.measure import RoundTripRecorder
@@ -174,9 +175,13 @@ class ChatSession:
         self._review_channel = review_channel
         self._recorder = recorder
         self._turn_decisions: list[ScreenDecision] = []
-        approval_channel.bind(self._notify_approval)
+        # M6c-1 Finding 1/2: a unique identity for THIS connection, scoping the
+        # shared approval_channel/review_channel/gate's per-session state so a
+        # sibling ChatSession's disconnect or screening never leaks in.
+        self._session_key = new_session_key()
+        approval_channel.bind(self._notify_approval, session_key=self._session_key)
         if review_channel is not None:
-            review_channel.bind(self._notify_review)
+            review_channel.bind(self._notify_review, session_key=self._session_key)
         registry = build_toolset(
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
@@ -189,10 +194,11 @@ class ChatSession:
         )
 
     def close(self) -> None:
-        """Disconnect: unbind both channels (denies anything pending)."""
-        self._channel.unbind()
+        """Disconnect: unbind both channels for THIS session ONLY — denies
+        this session's own pending requests, never another session's."""
+        self._channel.unbind(session_key=self._session_key)
         if self._review_channel is not None:
-            self._review_channel.unbind()
+            self._review_channel.unbind(session_key=self._session_key)
 
     # -- event plumbing ----------------------------------------------------------
 
@@ -250,19 +256,28 @@ class ChatSession:
         self._turn_decisions = []
         if self._recorder is not None:
             self._recorder.turn_started()
+        # M6c-1 Finding 1/2: bind THIS session's identity for the whole turn so
+        # the shared gate/approval_channel can scope clearances and pending
+        # approvals to this connection (no thread hop happens below — the
+        # nested gate.screen()/request_approval() calls run synchronously on
+        # this same worker thread, see server.safety.session_context).
+        token = bind_session_key(self._session_key)
         try:
-            result = self._orchestrator.handle_instruction(text)
-        except Exception as exc:  # REQ-MVP-044: raw detail NEVER reaches the surface
-            return self._report_error(exc)
-        views = [outcome_view(outcome) for outcome in result.command_outcomes]
-        summary = self._compose_summary(result, views)
-        if self._recorder is not None:
-            self._recorder.turn_finished(retries_used=result.retries_used)
-        event = chat_response_event(
-            status=result.status, summary=summary, text=result.text, commands=views
-        )
-        self._send(event)
-        return event
+            try:
+                result = self._orchestrator.handle_instruction(text)
+            except Exception as exc:  # REQ-MVP-044: raw detail NEVER reaches the surface
+                return self._report_error(exc)
+            views = [outcome_view(outcome) for outcome in result.command_outcomes]
+            summary = self._compose_summary(result, views)
+            if self._recorder is not None:
+                self._recorder.turn_finished(retries_used=result.retries_used)
+            event = chat_response_event(
+                status=result.status, summary=summary, text=result.text, commands=views
+            )
+            self._send(event)
+            return event
+        finally:
+            reset_session_key(token)
 
     # -- internals ------------------------------------------------------------------
 

@@ -113,6 +113,63 @@ class TestWebSocketBasics:
             assert event["kind"] == "protocol"
 
 
+class TestConcurrentSessions:
+    """M6c-1 Finding 1 — two concurrent WebSocket ChatSessions over the ONE
+    shared approval_channel/gate that production wires (server/web/app.py).
+
+    Before the fix, ``ChatSession.close()`` -> ``ApprovalChannel.unbind()`` ->
+    ``deny_all_pending()`` force-denied EVERY pending approval regardless of
+    which session created it — session B disconnecting silently voided
+    session A's still-legitimate pending approval.
+    """
+
+    def test_disconnect_does_not_deny_another_sessions_pending_approval(self, tmp_path):
+        provider_a = ScriptedProvider(
+            [_run_turn(["Delete Sequence 5"], "callA"), _final("삭제했습니다")]
+        )
+        channel = ApprovalChannel(timeout_seconds=5.0)
+        deps, console, _gate = _deps(tmp_path, provider_a, channel=channel)
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws_a:
+            ws_a.receive_json()  # initial status
+            _send(ws_a, type="chat", text="시퀀스 5 지워줘")
+            approval_event = _receive_until(ws_a, "approval_request")
+            request_id = approval_event["request_id"]
+
+            # Session B connects, then disconnects WHILE A's approval is
+            # still pending — this must NOT touch A's pending request.
+            with client.websocket_connect("/ws") as ws_b:
+                ws_b.receive_json()  # initial status
+            # Give A's worker thread a beat to observe any (buggy) denial
+            # before asserting the pending entry survived intact.
+            time.sleep(0.2)
+            assert (
+                request_id in channel.pending_ids
+            ), "session B's disconnect denied session A's pending approval"
+
+            # A's own pending approval must still be resolvable to success.
+            _send(ws_a, type="approval_decision", request_id=request_id, approved=True)
+            resolved = _receive_until(ws_a, "approval_resolved")
+            assert resolved["approved"] is True
+            event = _receive_until(ws_a, "chat_response")
+            assert event["status"] == "ok"
+        assert console.executed == ["Delete Sequence 5"]
+
+    def test_own_disconnect_still_denies_own_pending_approval(self, tmp_path):
+        # Fail-safe preserved (REQ-MVP-014): a session's OWN disconnect must
+        # still deny its OWN pending approval — only cross-session leakage is
+        # fixed, not the disconnect-denies-mine safety behavior.
+        provider = ScriptedProvider([_run_turn(["Delete Sequence 6"], "call1")])
+        channel = ApprovalChannel(timeout_seconds=5.0)
+        deps, console, _gate = _deps(tmp_path, provider, channel=channel)
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            ws.receive_json()  # initial status
+            _send(ws, type="chat", text="시퀀스 6 지워줘")
+            _receive_until(ws, "approval_request")
+            # Exiting this `with` block disconnects (ws closes before client)
+            # WHILE approval is still pending.
+        assert console.executed == []  # denied — never reached the console
+
+
 class TestBusyGuard:
     def test_second_chat_while_busy_gets_a_busy_event(self, tmp_path):
         release = threading.Event()

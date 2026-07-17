@@ -10,7 +10,7 @@ event loop. This channel bridges the two without blocking the event loop:
   the waiting worker thread.
 
 Fail-safe (REQ-MVP-014 — no exception via ANY route): with no UI bound, on a
-notify failure, on timeout, and on disconnect (``unbind``/``deny_all_pending``)
+notify failure, on timeout, and on disconnect (``unbind``/``deny_pending_for``)
 the answer is ALWAYS deny. Lock-first (REQ-MVP-035) needs no help here — the
 gate re-checks the lock after approval returns.
 
@@ -22,6 +22,18 @@ deploy REVIEW flow reuses it as a second instance carrying
 :class:`server.deploy.review.ReviewRequest` payloads (``id_prefix="review"``);
 ``request_review`` aliases ``request_approval`` so the channel satisfies the
 ReviewPort protocol directly — same quadruple-deny fail-safe.
+
+M6c-1 (cross-session isolation, Finding 1): ONE channel instance is shared by
+every concurrent ``ChatSession`` (``WebDeps.approval_channel`` is composed
+once, before any WebSocket connects). ``bind``/``unbind`` therefore take an
+explicit ``session_key`` so one session's disconnect denies ONLY that
+session's own pending requests — never another session's still-legitimate
+one. ``request_approval`` runs on the calling session's own worker thread and
+reads the ambient session key ``ChatSession.run_instruction`` binds around
+each turn (see :mod:`server.safety.session_context`) to route the notify call
+and tag its pending entry. Callers outside any bound session (direct
+gate/channel unit tests) all share ``DEFAULT_SESSION_KEY`` — single-session
+semantics are unchanged.
 """
 
 from __future__ import annotations
@@ -32,6 +44,7 @@ from collections.abc import Callable
 from typing import Generic, Protocol, TypeVar
 
 from server.safety.approval import ApprovalRequest
+from server.safety.session_context import DEFAULT_SESSION_KEY, SessionKey, current_session_key
 
 # Default cap on how long one approval may stay pending (fail-safe deny after).
 DEFAULT_APPROVAL_TIMEOUT_SECONDS = 600.0
@@ -73,36 +86,56 @@ class ApprovalChannel(Generic[RequestT]):
         self._recorder = recorder
         self._id_prefix = id_prefix
         self._counter = itertools.count(1)
-        self._notify: Callable[[str, RequestT], None] | None = None
-        self._pending: dict[str, _Pending] = {}
+        self._notify: dict[SessionKey, Callable[[str, RequestT], None]] = {}
+        self._pending: dict[str, tuple[SessionKey, _Pending]] = {}
         self._lock = threading.Lock()
 
     # -- UI-side surface (event loop) -------------------------------------------
 
-    def bind(self, notify: Callable[[str, RequestT], None]) -> None:
-        """Attach the UI publisher (called on WebSocket connect)."""
-        self._notify = notify
+    def bind(
+        self,
+        notify: Callable[[str, RequestT], None],
+        *,
+        session_key: SessionKey = DEFAULT_SESSION_KEY,
+    ) -> None:
+        """Attach one session's UI publisher (called on WebSocket connect)."""
+        with self._lock:
+            self._notify[session_key] = notify
 
-    def unbind(self) -> None:
-        """Detach the UI (disconnect) — every pending request is denied."""
-        self._notify = None
-        self.deny_all_pending()
+    def unbind(self, *, session_key: SessionKey = DEFAULT_SESSION_KEY) -> None:
+        """Detach one session's UI (disconnect) — ONLY its own pending requests deny."""
+        with self._lock:
+            self._notify.pop(session_key, None)
+        self.deny_pending_for(session_key)
 
     def resolve(self, request_id: str, *, approved: bool) -> bool:
         """Deliver one human decision; False when the id is unknown/expired."""
         with self._lock:
-            pending = self._pending.get(request_id)
-        if pending is None:
+            entry = self._pending.get(request_id)
+        if entry is None:
             return False
+        _session_key, pending = entry
         pending.approved = approved
         pending.event.set()
         return True
 
+    def deny_pending_for(self, session_key: SessionKey) -> None:
+        """Fail-safe: release only ``session_key``'s waiting requests, denied.
+
+        Called by ``unbind`` on a session's own disconnect — never touches
+        another session's still-legitimate pending requests.
+        """
+        with self._lock:
+            matching = [p for key, p in self._pending.values() if key == session_key]
+        for entry in matching:
+            entry.approved = False
+            entry.event.set()
+
     def deny_all_pending(self) -> None:
-        """Fail-safe: release every waiting request with a denial."""
+        """Fail-safe: release EVERY waiting request across ALL sessions, denied."""
         with self._lock:
             pending = list(self._pending.values())
-        for entry in pending:
+        for _session_key, entry in pending:
             entry.approved = False
             entry.event.set()
 
@@ -119,13 +152,15 @@ class ApprovalChannel(Generic[RequestT]):
 
     def request_approval(self, request: RequestT) -> bool:
         """Block until the human decides; deny on no-UI/notify-failure/timeout."""
-        notify = self._notify
+        session_key = current_session_key()
+        with self._lock:
+            notify = self._notify.get(session_key)
         if notify is None:
-            return False  # no approval UI connected — nothing risky may run
+            return False  # no approval UI connected for THIS session — deny
         request_id = f"{self._id_prefix}-{next(self._counter)}"
         pending = _Pending()
         with self._lock:
-            self._pending[request_id] = pending
+            self._pending[request_id] = (session_key, pending)
         try:
             notify(request_id, request)
         except Exception:
