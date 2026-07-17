@@ -7,16 +7,24 @@ import {
   buildChat,
   buildLock,
   buildReviewDecision,
+  clearPendingRequests,
   initialState,
   parseServerEvent,
   reduceServerEvent,
   type UiState,
 } from "./protocol";
 
-type Action = { kind: "server"; raw: string } | { kind: "user"; text: string };
+export type Action =
+  | { kind: "server"; raw: string }
+  | { kind: "user"; text: string }
+  | { kind: "disconnected" };
 
-function reducer(state: UiState, action: Action): UiState {
+// Exported for direct unit testing (see useCopilotSocket.test.ts): the hook
+// itself needs a DOM/renderer this project's test setup doesn't provide, but
+// the state transition is a pure function like the rest of protocol.ts.
+export function reducer(state: UiState, action: Action): UiState {
   if (action.kind === "user") return addUserMessage(state, action.text);
+  if (action.kind === "disconnected") return clearPendingRequests(state);
   const event = parseServerEvent(action.raw);
   return event === null ? state : reduceServerEvent(state, event);
 }
@@ -55,6 +63,11 @@ export function useCopilotSocket(url?: string): CopilotSocket {
       socket.onmessage = (message) => dispatch({ kind: "server", raw: String(message.data) });
       socket.onclose = () => {
         setConnected(false);
+        // The server fail-safe-denies every pending approval/review for
+        // this session on disconnect (M6c-1) — clear the stale cards so a
+        // reconnect never leaves the operator staring at a decision the
+        // server already resolved (M6c-4 finding 3).
+        dispatch({ kind: "disconnected" });
         if (!disposed) {
           timer = window.setTimeout(connect, retryDelay);
           retryDelay = Math.min(retryDelay * 2, 10_000);

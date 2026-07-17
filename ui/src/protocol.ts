@@ -274,6 +274,18 @@ export function addUserMessage(state: UiState, text: string): UiState {
   return { ...state, entries: [...state.entries, { kind: "user", text }] };
 }
 
+/**
+ * Drop every pending approval/review card. The server fail-safe-denies all
+ * of a session's own outstanding requests on that session's disconnect —
+ * without this, a stale card sits in the UI forever after a reconnect,
+ * misleading the operator into thinking a decision is still awaited when
+ * the server already resolved it.
+ */
+export function clearPendingRequests(state: UiState): UiState {
+  if (state.pendingApprovals.length === 0 && state.pendingReviews.length === 0) return state;
+  return { ...state, pendingApprovals: [], pendingReviews: [] };
+}
+
 // -- Korean display labels ---------------------------------------------------------
 
 export const HEALTH_LABELS: Record<string, string> = {
