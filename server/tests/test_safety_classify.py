@@ -143,3 +143,45 @@ class TestInvokingDetection:
         assert _classify("Store Cue 5").category == "safe"
         assert _classify("List").category == "safe"
         assert _classify("Assign Sequence 1 At Executor 201").category == "safe"
+
+
+class TestQuotedPropertyCommandContent:
+    # M6c-2 Finding 1 (REQ-MVP-013): the M6b-1r2 macro-authoring recipe
+    # (`Set Macro <pool>.<line> Property 'Command' '<text>'`) persists a
+    # command LINE as a quoted property value. The outer assignment syntax
+    # (verb "Set", args Macro/1.1/Property/"Command") is not itself blacklist
+    # or invoking-verb shaped, so without recursion a destructive string
+    # smuggled this way would classify as "safe" with zero approval.
+    def test_destructive_content_in_command_property_is_blacklisted(self):
+        finding = _classify('Set Macro 1.1 Property "Command" "Delete Everything"')
+        assert finding.category == "blacklisted"
+        assert finding.risky is True
+        assert finding.matched_entry == "Delete"
+
+    def test_legacy_cmd_property_name_spelling_is_also_recursed(self):
+        # Older MA3 material calls the property `Cmd` instead of `Command`.
+        finding = _classify('Set Macro 1.1 Property "Cmd" "Delete Everything"')
+        assert finding.category == "blacklisted"
+        assert finding.risky is True
+
+    def test_assign_verb_legacy_form_adjacent_equivalent_is_also_recursed(self):
+        # Detection is verb-agnostic (shape-driven on Property/Command/value),
+        # so a different outer verb still catches the smuggled content.
+        finding = _classify('Assign Macro 1.1 Property "Command" "Delete Everything"')
+        assert finding.category == "blacklisted"
+        assert finding.risky is True
+
+    def test_benign_quoted_macro_command_stays_low_risk(self):
+        # Must NOT over-block every quoted property assignment.
+        finding = _classify('Set Macro 1.1 Property "Command" "Group \'Vocals\' At Full"')
+        assert finding.category == "safe"
+        assert finding.risky is False
+
+    def test_nested_quoted_name_reference_is_not_a_command_and_does_not_false_positive(self):
+        # A standalone quoted-name object reference (`Preset 'Blue'`-style,
+        # per the 00_grammar.md object-by-name rule) carries no `Property`
+        # keyword at all -> the detector must never engage on it.
+        finding = _classify("At Preset 4.1")
+        assert finding.category == "safe"
+        finding = _classify("Select Preset 'Blue'")
+        assert finding.category == "safe"

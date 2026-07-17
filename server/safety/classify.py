@@ -7,6 +7,17 @@ direction — MA3 accepts abbreviated keywords (``Del`` for ``Delete``), so an
 unquoted token matches a keyword when it equals it case-insensitively OR is a
 >=3-character prefix of it (options abbreviate from 1 character). Over-matching
 is resolved by human approval; under-matching would be a safety false negative.
+
+EXCEPTION (M6c-2 Finding 1, REQ-MVP-013): a macro line's command TEXT is itself
+persisted as a quoted PROPERTY VALUE (M6b-1r2 rulebook recipe — ``Set Macro
+<pool>.<line> Property 'Command'/'Cmd' '<command text>'``). The general
+"quoted tokens never match keywords" rule above protects quoted OBJECT NAMES
+from false-positive keyword matching; it must NOT also shield an executable
+command line merely because MA3's macro-authoring syntax happens to carry it
+inside a quoted property value. :func:`classify_command` therefore recurses
+the SAME classification into that quoted value when the narrow
+``Property 'Command'/'Cmd' '<value>'`` shape is detected — see
+:func:`_quoted_property_command_value`.
 """
 
 from __future__ import annotations
@@ -14,7 +25,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from server.safety.grammar import ParsedCommand, Token
+from server.safety.grammar import ParsedCommand, Token, validate
 from server.safety.ruleset import SafetyRuleset
 
 # Object types whose references the expand-or-hold path can resolve to bodies.
@@ -114,6 +125,36 @@ def _extract_reference(parsed: ParsedCommand, reference_types: tuple[str, ...]) 
     return None
 
 
+# The property name a macro-authoring assignment stores command text under
+# (M6b-1r2 rulebook recipe: `Command` on MA3 v2.4.2; `Cmd` on older material).
+_COMMAND_PROPERTY_NAMES = ("command", "cmd")
+
+
+# @MX:NOTE: [AUTO] narrow shape-specific detector for the M6c-2 Finding 1
+#   quoted-property-content bypass — matches ONLY `Property 'Command'/'Cmd'
+#   '<value>'`, so ordinary quoted object names/labels are never affected
+def _quoted_property_command_value(parsed: ParsedCommand) -> Token | None:
+    """Locate a ``Property 'Command'/'Cmd' '<value>'`` assignment's value token.
+
+    Returns the quoted value token when the exact shape is present, else None.
+    Deliberately narrow (verb-agnostic, but requires the literal ``Property``
+    keyword immediately followed by a quoted ``Command``/``Cmd`` name token)
+    so it cannot misfire on unrelated quoted content (e.g. object labels).
+    """
+    args = parsed.args
+    for i, token in enumerate(args):
+        if token.quoted or not _keyword_match(token.text, "Property"):
+            continue
+        if i + 2 >= len(args):
+            continue
+        name_token, value_token = args[i + 1], args[i + 2]
+        if not name_token.quoted or not value_token.quoted:
+            continue
+        if name_token.text.strip().lower() in _COMMAND_PROPERTY_NAMES:
+            return value_token
+    return None
+
+
 # @MX:ANCHOR: [AUTO] stage-② risk verdict — the gate pipeline, the expand-or-hold
 #   recursion, and every FN-corpus test route classification through this function
 # @MX:REASON: REQ-MVP-013/014 FN=0 rests on ONE matching semantics; a second
@@ -139,6 +180,36 @@ def classify_command(
             unspecified_target=unspecified,
             matched_entry=entry,
         )
+
+    # M6c-2 Finding 1 (REQ-MVP-013): a quoted `Property 'Command'/'Cmd'
+    # '<value>'` assignment can smuggle a destructive command line past the
+    # outer-syntax-only check above. Recurse the SAME classification into the
+    # quoted value so a destructive/invoking command persisted this way is
+    # treated exactly as if it had been sent bare (the outer assignment's own
+    # verb never needs to be blacklist/invoking-verb shaped for this to fire).
+    property_value = _quoted_property_command_value(parsed)
+    if property_value is not None:
+        nested_grammar = validate(property_value.text)
+        if nested_grammar.ok:
+            nested = classify_command(
+                nested_grammar.parsed, ruleset, reference_types=reference_types
+            )
+            if nested.category != "safe":
+                reasons = (
+                    "quoted property value is itself an executable command "
+                    f"({property_value.text!r})",
+                    *nested.reasons,
+                )
+                return RiskFinding(
+                    command=parsed.raw,
+                    category=nested.category,
+                    risky=nested.risky,
+                    reasons=reasons,
+                    unspecified_target=nested.unspecified_target,
+                    reference=nested.reference,
+                    matched_entry=nested.matched_entry,
+                )
+
     bare_reference = _bare_form_reference(parsed, ruleset)
     if bare_reference is not None:
         return RiskFinding(
