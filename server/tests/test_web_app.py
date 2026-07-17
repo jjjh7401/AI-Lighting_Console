@@ -142,9 +142,9 @@ class TestConcurrentSessions:
             # Give A's worker thread a beat to observe any (buggy) denial
             # before asserting the pending entry survived intact.
             time.sleep(0.2)
-            assert (
-                request_id in channel.pending_ids
-            ), "session B's disconnect denied session A's pending approval"
+            assert request_id in channel.pending_ids, (
+                "session B's disconnect denied session A's pending approval"
+            )
 
             # A's own pending approval must still be resolvable to success.
             _send(ws_a, type="approval_decision", request_id=request_id, approved=True)
