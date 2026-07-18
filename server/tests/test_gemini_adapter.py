@@ -9,6 +9,8 @@ uncached path and records the trade-off.
 
 from __future__ import annotations
 
+import threading
+import time
 from types import SimpleNamespace
 
 import httpx
@@ -225,6 +227,60 @@ class TestContextCaching:
         assert second.cached_content is None
         assert second.system_instruction == _PREFIX
         assert second.tools[0].function_declarations[0].name == "run_commands"
+
+
+class TestContextCachingConcurrencySafety:
+    """MEDIUM backlog item (M6c 종합, server/llm/gemini_adapter.py:101) —
+    _ensure_cache() did a lock-free check-then-set on self._cache_attempted.
+    Production concurrency: ONE GeminiAdapter instance is shared across every
+    ChatSession (server/web/serve.py build_runtime builds the provider once;
+    server/web/app.py injects the SAME deps.provider into every new
+    ChatSession), and ChatSession.run_instruction runs on a worker thread via
+    asyncio.to_thread (server/web/session.py docstring) — so two concurrent
+    WebSocket sessions' first turn can call complete() -> _ensure_cache() on
+    the SAME adapter instance from two OS threads at once."""
+
+    def test_ensure_cache_invoked_at_most_once_under_concurrent_calls(self):
+        class SlowCaches(FakeCaches):
+            def create(self, **kwargs):
+                # Widen the check-then-set race window so two concurrently
+                # invoked _ensure_cache() calls reliably interleave inside
+                # the critical section (mirrors the analogous fix/test in
+                # server/orchestrator/fallback.py + test_fallback_detector.py).
+                time.sleep(0.05)
+                return super().create(**kwargs)
+
+        client = FakeClient()
+        client.caches = SlowCaches()
+        adapter = GeminiAdapter(_settings(), client=client)
+
+        results: list[str | None] = []
+        errors: list[BaseException] = []
+
+        def worker():
+            try:
+                results.append(adapter._ensure_cache(client, _PREFIX, (_TOOL,)))
+            except BaseException as exc:  # pragma: no cover - diagnostic only
+                errors.append(exc)
+
+        threads = [threading.Thread(target=worker) for _ in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=5)
+
+        assert not errors, f"_ensure_cache raised under concurrency: {errors}"
+        assert all(not t.is_alive() for t in threads), "_ensure_cache call hung (deadlock)"
+        assert len(client.caches.calls) == 1, (
+            f"client.caches.create invoked {len(client.caches.calls)} times under "
+            f"concurrent _ensure_cache() calls, expected at most once (single-attempt "
+            f"semantics, module docstring 'Cache creation is attempted ONCE'): "
+            f"{client.caches.calls}"
+        )
+        # Both concurrent callers must observe the SAME final cache name —
+        # no caller races the create() call and none is left with a stale
+        # local value diverging from adapter._cache_name.
+        assert results == [adapter._cache_name, adapter._cache_name]
 
 
 class TestResponseParsing:

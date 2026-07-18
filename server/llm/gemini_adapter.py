@@ -23,6 +23,7 @@ are recorded as gaps in progress.md.
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Sequence
 from typing import Any
 
@@ -78,6 +79,24 @@ class GeminiAdapter:
         self._cache_attempted = False
         self._cached_tools: tuple[ToolDefinition, ...] = ()
         self.cache_status = "uninitialized"
+        # @MX:ANCHOR: [AUTO] serializes the whole check-then-set cache attempt
+        #   — production wiring shares ONE GeminiAdapter instance across every
+        #   ChatSession (server/web/serve.py build_runtime builds the provider
+        #   once; server/web/app.py injects the same deps.provider into every
+        #   session), and ChatSession.run_instruction runs on a worker thread
+        #   via asyncio.to_thread (server/web/session.py), so complete() ->
+        #   _ensure_cache() can genuinely be entered concurrently from two OS
+        #   threads on their first turn.
+        # @MX:REASON: [AUTO] without the lock, a second concurrent caller
+        #   could observe self._cache_attempted already True (set eagerly,
+        #   before the network call lands) and return a stale self._cache_name
+        #   (still None) instead of the real result — or, if scheduled
+        #   earlier, both callers could race client.caches.create() and create
+        #   duplicate cache entries. Guarding the full method body makes the
+        #   second caller WAIT for the first attempt's real result instead of
+        #   racing or returning early, matching the module docstring's
+        #   "attempted ONCE" single-attempt semantics.
+        self._lock = threading.Lock()
 
     @property
     def name(self) -> str:
@@ -108,38 +127,40 @@ class GeminiAdapter:
         if not self._settings.context_caching:
             self.cache_status = "disabled"
             return None
-        if self._cache_attempted:
-            return self._cache_name
-        self._cache_attempted = True
-        try:
-            from google.genai import types as gtypes
+        with self._lock:
+            if self._cache_attempted:
+                return self._cache_name
+            self._cache_attempted = True
+            try:
+                from google.genai import types as gtypes
 
-            # API constraint (live-verified at M6b-1): a generate request that
-            # uses cached_content must NOT set system_instruction/tools — so
-            # BOTH are baked into the CachedContent (fixed prefix + fixed
-            # toolset, REQ-MVP-007 discipline).
-            cache_kwargs: dict[str, Any] = {
-                "system_instruction": system_prefix,
-                "ttl": f"{self._settings.cache_ttl_seconds}s",
-            }
-            if tools:
-                cache_kwargs["tools"] = [self._tool_config(tools)]
-            cache = client.caches.create(
-                model=self._settings.model,
-                config=gtypes.CreateCachedContentConfig(**cache_kwargs),
-            )
-            self._cache_name = cache.name
-            self._cached_tools = tuple(tools)
-            self.cache_status = "cached"
-        except Exception as exc:  # capability gate: fall back, record trade-off
-            self._cache_name = None
-            self.cache_status = f"uncached: {exc}"
-            logger.warning(
-                "gemini context cache unavailable — running the UNCACHED path "
-                "(higher cost/latency accepted per REQ-MVP-041): %s",
-                exc,
-            )
-        return self._cache_name
+                # API constraint (live-verified at M6b-1): a generate request
+                # that uses cached_content must NOT set
+                # system_instruction/tools — so BOTH are baked into the
+                # CachedContent (fixed prefix + fixed toolset, REQ-MVP-007
+                # discipline).
+                cache_kwargs: dict[str, Any] = {
+                    "system_instruction": system_prefix,
+                    "ttl": f"{self._settings.cache_ttl_seconds}s",
+                }
+                if tools:
+                    cache_kwargs["tools"] = [self._tool_config(tools)]
+                cache = client.caches.create(
+                    model=self._settings.model,
+                    config=gtypes.CreateCachedContentConfig(**cache_kwargs),
+                )
+                self._cache_name = cache.name
+                self._cached_tools = tuple(tools)
+                self.cache_status = "cached"
+            except Exception as exc:  # capability gate: fall back, record trade-off
+                self._cache_name = None
+                self.cache_status = f"uncached: {exc}"
+                logger.warning(
+                    "gemini context cache unavailable — running the UNCACHED path "
+                    "(higher cost/latency accepted per REQ-MVP-041): %s",
+                    exc,
+                )
+            return self._cache_name
 
     # -- request construction --------------------------------------------------
 
