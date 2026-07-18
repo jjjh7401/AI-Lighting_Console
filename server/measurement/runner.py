@@ -69,6 +69,9 @@ class RunnerConfig:
     error_rate_threshold: float = DEFAULT_ERROR_RATE_THRESHOLD
     round_trip_threshold_seconds: float = DEFAULT_ROUND_TRIP_THRESHOLD_SECONDS
     warmup: bool = True
+    # @MX:NOTE: repetitions=0 previously reached the escalation while-loop
+    # with an empty per_run list and crashed on per_run[-1] (IndexError) — see
+    # run_measurement's fail-fast check, which rejects this at the door.
 
 
 class TelemetryBackoffProvider:
@@ -397,16 +400,25 @@ def run_measurement(
     config: RunnerConfig,
 ) -> dict:
     """Run the measurement procedure and build the machine-readable report."""
+    if config.repetitions < 1:
+        raise ValueError("run_measurement requires config.repetitions >= 1 (got 0)")
     run_started = time.monotonic()
     statuses: Counter[str] = Counter()
 
     def run_one(instruction: str) -> None:
         # Live-run containment: one instruction's provider failure (backoff
         # exhausted or non-retryable) is recorded by kind and the run goes on.
+        # Any OTHER exception (a bug, an unwrapped SDK error) is contained the
+        # same way — the containment guarantee is general, not ProviderError-
+        # specific — so a single bad turn never crashes the whole measurement
+        # run and discards every scenario already processed.
         try:
             result = session.run_instruction(instruction)
         except ProviderError as error:
             statuses[f"provider_error:{error.kind}"] += 1
+            return
+        except Exception as error:  # live-run containment — see module docstring
+            statuses[f"unexpected_error:{type(error).__name__}"] += 1
             return
         statuses[result.status] += 1
 

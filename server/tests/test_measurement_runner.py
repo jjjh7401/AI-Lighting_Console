@@ -368,6 +368,47 @@ class TestProviderErrorContainment:
         assert report["turn_statuses"]["ok"] == len(corpus) - 1
 
 
+class TestNonProviderErrorContainment:
+    def test_unexpected_exception_from_one_instruction_does_not_crash_the_run(
+        self, corpus, tmp_path, monkeypatch
+    ):
+        # Live-run containment (module docstring) promises the run continues
+        # past one instruction's failure — but the original code only caught
+        # ProviderError. Any OTHER exception (a bug, an unwrapped SDK error)
+        # must also be contained, not crash the whole run_measurement call.
+        session = build_offline_session(corpus, audit_dir=tmp_path)
+        target = corpus[0].instruction
+        original = session.orchestrator.handle_instruction
+
+        def flaky(instruction: str):
+            if instruction == target:
+                raise RuntimeError("boom - not a ProviderError")
+            return original(instruction)
+
+        monkeypatch.setattr(session.orchestrator, "handle_instruction", flaky)
+        report = run_measurement(corpus, session, _quick_config())
+        assert report["turn_statuses"]["unexpected_error:RuntimeError"] == 1
+        assert report["turn_statuses"]["ok"] == len(corpus) - 1
+
+
+class TestRepetitionsValidation:
+    def test_repetitions_zero_raises_a_clear_value_error(self, corpus, tmp_path):
+        # RunnerConfig.repetitions=0 previously crashed with IndexError deep
+        # in the escalation while-loop (per_run[-1] on an empty list). It must
+        # instead fail fast with a clear, actionable error before any round runs.
+        session = build_offline_session(corpus, audit_dir=tmp_path)
+        config = RunnerConfig(repetitions=0, warmup=False)
+        with pytest.raises(ValueError, match="repetitions"):
+            run_measurement(corpus, session, config)
+
+    def test_default_repetitions_is_unaffected_by_the_new_check(self, corpus, tmp_path):
+        # Regression guard: the repetitions=3 default must stay byte-identical.
+        session = build_offline_session(corpus, audit_dir=tmp_path)
+        report = run_measurement(corpus, session, _quick_config(repetitions=3))
+        assert report["repetitions"]["configured"] == 3
+        assert report["repetitions"]["executed"] >= 3
+
+
 class TestCli:
     def test_cli_mock_mode_writes_report_file(self, tmp_path, monkeypatch):
         from server.measurement.runner import main
