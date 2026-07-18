@@ -94,6 +94,20 @@ attached `/cmd=`/`/command=` option-assignment does not exist on grandMA3 — th
 console parses it as a misplaced quote. Always use the `Set ... Property 'Command'`
 form above.
 
+A macro line's `<command text>` must NOT itself contain a single-quoted name —
+grandMA3's quoting has no escape mechanism for a quote nested inside another
+quote. Naively substituting a name-labeling command into the recipe above
+(e.g. wanting the macro to run `Label Group 7 'Vocals'`) produces a broken,
+nested-quote command line:
+
+INVALID — do NOT emit this (nested quote breaks the outer property string):
+`Set Macro 21.3 Property 'Command' 'Label Group 7 'Vocals''`. Within a macro
+line's command text specifically, prefer a numeric/dotted pool-id reference
+instead of a quoted name — e.g. `Group 3` or `Preset 4.1` rather than
+`Group 'Vocals'` or `Preset 'Blue'`. Reserve quoted-name commands
+(`Label ... 'Name'`, `Store Preset 'Name'`) for direct (non-macro) execution,
+where no nesting occurs.
+
 ## Safety rules (hard)
 
 - Destructive functions (`Delete`, `Remove`, `Off Everything`, `Store /overwrite`,

@@ -94,6 +94,24 @@ class TestMacroAuthoringRecipe:
         ):
             assert validate(line).ok, line
 
+    def test_prefix_warns_against_nested_quotes_inside_a_macro_lines_command_text(self):
+        # M6c-8 backlog item 3 (00_grammar.md:81) — the macro-authoring recipe
+        # never addressed what happens when <command text> itself needs a
+        # single-quoted object name. Naively composing `Label Group 7
+        # 'Vocals'` into a macro line produces a nested-quote command with no
+        # escape mechanism (`Set Macro 21.3 Property 'Command' 'Label Group 7
+        # 'Vocals'''), which either breaks the outer property-value string
+        # early or is malformed. The prefix must warn against this and steer
+        # toward numeric/dotted pool-id references inside macro lines.
+        prefix = assemble_prefix()
+        assert "nested" in prefix.lower() and "quote" in prefix.lower()
+        # The anti-example shows the exact broken composition so the model
+        # recognizes the shape it must avoid.
+        assert "'Label Group 7 'Vocals''" in prefix
+        # Positive guidance: numeric/dotted pool-id reference preferred
+        # inside a macro line's command text specifically.
+        assert "Group 3" in prefix and "Preset 4.1" in prefix
+
 
 class TestKoreanDictionaryAxis:
     """AC-MVP-028 parts 1-2 — dictionary axis present, >=10 entries, prefix-stable."""
