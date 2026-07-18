@@ -801,6 +801,54 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 
 **잔여**: 이번 배치로 M6c-5 잔여 backlog 목록의 3개 파일 항목(`server/orchestrator/fallback.py:48`, `server/llm/gemini_adapter.py:101`, `server/orchestrator/tools.py:145`) 해소. 남은 backlog 6건은 이번 배치 범위 밖(별도 SPEC/배치로 이연): `server/measurement/runner.py:453,403`(반복 0회 크래시/컨테인먼트 갭), `server/measurement/runner.py:417,247`(빈 코퍼스 크래시/temp 디렉터리 미정리), `server/rulebook/assets/v2.4.2/00_grammar.md:81`(매크로 레시피 내부 인용 인자 미가이드), `ui/src/components/ApprovalCard.tsx:35`(버튼 디바운스 없음), `server/web/approval_bridge.py:120`(비원자적 request_approval), `server/measurement/corpus.py:144`(instruction 텍스트 유일성 미검증). AC-MVP-027③ `target_provider` 실값 선정은 여전히 M6b-3 인간 체크인 사항(별도, 이번 배치와 무관)으로 남음.
 
+### M6c-7 — backlog 정리 배치 3 (measurement runner 크래시 2건 + temp 디렉터리 미정리 + corpus instruction 유일성) (2026-07-18, manager-develop cycle_type=tdd)
+
+**Scope**: M6c-6 잔여 backlog 중 `server/measurement/` 하위 3개 파일 항목 — `server/measurement/runner.py:453,403`(MEDIUM, 반복 0회 크래시/컨테인먼트 갭), `server/measurement/runner.py:417,247`(LOW, 빈 코퍼스 크래시/temp 디렉터리 미정리), `server/measurement/corpus.py:144`(LOW, instruction 텍스트 유일성 미검증). 직전 배치(`67c9515`/`a56ea1f`/`82b83ab`, M6c-6)와 파일·관심사 모두 무관 — 완전 독립. `server/web/approval_bridge.py`, `ui/src/components/ApprovalCard.tsx`, `server/rulebook/assets/*`는 이번 배치 범위 밖(별도 SPEC/배치로 예약, 미터치).
+
+**Item/AC matrix**
+
+| Item | 근본 원인 | Verification command | Actual output |
+|---|---|---|---|
+| 1a — `repetitions=0` IndexError | `RunnerConfig.repetitions=0`이면 초기 for-루프가 0회 실행되어 `per_run`이 빈 리스트로 남고, 이어지는 escalation while-조건의 `per_run[-1]["denominator"]`가 빈 리스트를 인덱싱해 크래시 | `uv run pytest -q server/tests/test_measurement_runner.py -k TestRepetitionsValidation` | 2 passed |
+| 1b — `run_one` 컨테인먼트 갭 | `run_one()`이 `ProviderError`만 캐치 — 다른 예외(버그, SDK가 감싸지 않은 오류)는 `run_measurement()` 전체를 크래시시켜 이미 처리된 시나리오 결과까지 폐기 | `uv run pytest -q server/tests/test_measurement_runner.py -k TestNonProviderErrorContainment` | 1 passed |
+| 2a — 빈 코퍼스 IndexError | `run_measurement()`이 warm-up 단계에서 `scenarios[0]`을 무조건 인덱싱 — `scenarios`가 빈 시퀀스면 즉시 IndexError | `uv run pytest -q server/tests/test_measurement_runner.py -k TestEmptyCorpusValidation` | 1 passed |
+| 2b — audit_dir temp 디렉터리 미정리 | `build_offline_session()`/`build_live_llm_session()`이 `audit_dir` 미지정 시 `tempfile.mkdtemp()`로 자체 생성하지만 `MeasurementSession.cleanup`을 배선하지 않아(기본 no-op) 매 측정 세션마다 temp 디렉터리가 디스크에 누적 | `uv run pytest -q server/tests/test_measurement_runner.py -k TestAuditDirCleanup` | 3 passed |
+| 3 — corpus instruction 텍스트 유일성 미검증 | `load_corpus()`가 `scenario.id` 유일성만 검사 — 서로 다른 id에 동일한 instruction 텍스트가 복붙되면 측정 통계에서 해당 instruction의 분모/분자 기여가 조용히 이중 계산됨 | `uv run pytest -q server/tests/test_measurement_corpus.py -k "duplicate_instruction or whitespace_are_duplicates or no_duplicate_instruction_false_positive"` | 3 passed |
+
+**TDD evidence (RED → GREEN, 항목별)**
+
+- **Item 1** (`server/measurement/runner.py` `RunnerConfig`/`run_measurement`/`run_one`): 두 개의 연관된 결함. (a) `RunnerConfig.repetitions`는 기본값 3이지만 검증 없는 단순 `int` 필드 — `repetitions=0`을 넘기면 초기 `for _ in range(config.repetitions): run_round()`가 0회 실행되어 `per_run`이 비고, 뒤이은 escalation `while (... and per_run[-1]["denominator"] > 0):`가 빈 리스트를 인덱싱해 `IndexError`로 전체 런이 크래시 — 깨끗한 실패 대신. 시맨틱 선택: `repetitions=0`을 config 검증에서 명시적으로 거부(옵션 i) — `repetitions=3`(기본값) 동작을 byte-identical로 유지하면서 가장 단순. (b) `run_one()`이 `except ProviderError`만 캐치 — 모듈 독스트링이 약속하는 "one instruction's provider failure ... is recorded ... and the run goes on" 컨테인먼트 보장이 ProviderError 이외의 예외(버그, provider/mock이 ProviderError로 감싸지 않은 예상 밖 오류, JSON 파싱 오류 등)에는 적용되지 않아 `run_one`을 감싸는 어떤 예외든 `run_measurement` 전체를 그대로 크래시시키고, 그 시점까지 처리된 모든 시나리오 결과가 리포트 없이 폐기됨. `MeasurementSession.run_instruction`(line 226-235)은 이미 `except Exception`으로 잡아 `turn_finished(error=True)`를 기록한 뒤 재-raise하므로 레코더는 실패를 인지하지만, `run_measurement`의 `run_one` 쪽 컨테인먼트가 대칭적이지 않았음. RED: `git stash push -- server/measurement/runner.py` → 신규 `TestRepetitionsValidation` 2건 중 1건이 `IndexError: list index out of range`(pytest 출력 확인)로 실패, 신규 `TestNonProviderErrorContainment` 1건이 주입된 `RuntimeError`가 그대로 전파되어 실패(pytest 출력 확인) 후 `git stash pop`으로 복원. GREEN: `run_measurement()` 최상단에 `if config.repetitions < 1: raise ValueError(...)` 가드 추가(config 검증, `run_round()` 호출 전 즉시 실패) + `run_one()`에 `except Exception as error:` 분기를 `except ProviderError` 다음에 추가하여 `statuses[f"unexpected_error:{type(error).__name__}"] += 1` 로 기록 후 계속 진행(컨테인먼트 보장을 ProviderError 전용에서 일반화). `session.counter.decision_statuses`(anomalies 딕셔너리 구성원)와는 별개의 로컬 `statuses` Counter이므로 하위 리포트 구성에 충돌 없음(확인 완료).
+- **Item 2** (`server/measurement/runner.py` `run_measurement`/`build_offline_session`/`build_live_llm_session`): 두 개의 연관된 결함. (a) `run_measurement()`이 `config.warmup`이 참일 때 `run_one(scenarios[0].instruction)`을 무조건 호출 — `scenarios`가 빈 시퀀스면 즉시 `IndexError`. (b) `build_offline_session()`이 `audit_dir` 미지정 시 `tempfile.mkdtemp(prefix="ma3-measure-audit-")`로 자체 생성하지만 반환되는 `MeasurementSession`의 `cleanup`을 배선하지 않아(dataclass 기본값 `field(default=lambda: None)`인 no-op으로 그대로 남음) 매 오프라인/mock 측정 세션마다 temp 디렉터리가 디스크에 누적됨 — `build_live_session`(line 384 부근, 이번 배치 범위 밖)은 이미 `cleanup=stack.stop`을 정확히 배선하고 있어 대조됨. `build_live_llm_session()`(line 303-304 부근)도 동일한 `tempfile.mkdtemp(prefix="ma3-measure-audit-")` 패턴을 가진 동일 근본 원인 갭 — 같은 파일의 같은 형태 결함이라 함께 수정(범위 확장 아님). RED: 동일 stash → 신규 `TestEmptyCorpusValidation` 1건이 `IndexError: tuple index out of range`(pytest 출력 확인)로 실패, 신규 `TestAuditDirCleanup` 3건 중 2건(`build_offline_session`/`build_live_llm_session`의 미지정-audit_dir 케이스)이 `session.cleanup()` 후에도 temp 디렉터리가 `.exists()`인 채로 `AssertionError`(pytest 출력 확인)로 실패 후 stash pop으로 복원. GREEN: `run_measurement()` 최상단에 `if not scenarios: raise ValueError("run_measurement requires at least one scenario")` 가드 추가(Item 1a의 `repetitions` 가드와 동일 위치·동일 스타일). 신규 헬퍼 `_audit_dir_cleanup(directory)`(`shutil.rmtree(path, ignore_errors=True)`를 클로징하는 콜백 팩토리) 도입 — `build_offline_session`/`build_live_llm_session` 양쪽에 `owns_audit_dir = audit_dir is None` 플래그를 도입해 **호출자가 audit_dir를 직접 넘긴 경우 절대 삭제하지 않고**(caller-owned), 함수 자신이 `tempfile.mkdtemp()`로 생성한 경우에만 `cleanup=_audit_dir_cleanup(audit_dir)`를 배선. 기존 `test_offline_session_with_explicit_audit_dir_cleanup_does_not_delete_it` 회귀 가드로 caller-owned 경로 무회귀 확인.
+- **Item 3** (`server/measurement/corpus.py:133` `load_corpus`): `scenario.id` 유일성만 `seen: set[str]`로 검사하고 instruction 텍스트 유일성은 전혀 검사하지 않음 — 서로 다른 id에 동일한 instruction 문자열이 복붙되면(copy-paste 저작 실수) 측정 통계에서 해당 instruction의 분모/분자 기여가 저자에게 아무 신호 없이 조용히 이중 계산됨. RED: 신규 `test_duplicate_instruction_text_across_different_ids_is_rejected` + `test_instructions_differing_only_by_surrounding_whitespace_are_duplicates`가 `Failed: DID NOT RAISE CorpusError`(pytest 출력 확인)로 실패. GREEN: `seen_instructions: dict[str, str]`(정규화된 instruction 텍스트 → 최초 사용 scenario id)을 루프에 추가 — `normalized = " ".join(scenario.instruction.split())`로 선행/후행 공백 및 내부 연속 공백을 정규화한 뒤(EXACT-duplicate 검사, fuzzy 유사도 아님 — 요구사항대로 진짜 다른 텍스트는 아무리 비슷해도 별개로 취급) 이미 등장한 정규화 텍스트면 `CorpusError(f"duplicate instruction text across scenario ids {existing_id!r} and {scenario.id!r}: ...")`(기존 에러 메시지 스타일과 일치)로 raise. 회귀 가드 `test_default_corpus_has_no_duplicate_instruction_false_positive`로 실제 `DEFAULT_CORPUS_PATH`가 새 검사에서 false positive 없이 그대로 로드됨을 확인(기존 `corpus` 모듈-scope fixture가 매 테스트 파일 수집 시점에 이미 이를 암묵적으로 증명 — 명시적 회귀 테스트로 별도 고정).
+
+**Quality gates**
+
+- `uv run pytest -q` → **776 passed** (766 baseline + 10 신규: Item 1a 2건 + Item 1b 1건 + Item 2a 1건 + Item 2b 3건 + Item 3 3건)
+- `uv run ruff check server` → clean
+- `uv run ruff format --check server` → clean (103 files already formatted)
+
+**PASS/FAIL per constraint (브리프 대비)**
+
+| 제약 | 상태 | 비고 |
+|---|---|---|
+| Item 1a — `repetitions=0` 즉시 명확한 ValueError, 기본값(3) 무회귀 | PASS | `test_repetitions_zero_raises_a_clear_value_error`, `test_default_repetitions_is_unaffected_by_the_new_check` |
+| Item 1b — 비-ProviderError도 컨테인먼트, 나머지 코퍼스 계속 진행 | PASS | `test_unexpected_exception_from_one_instruction_does_not_crash_the_run` — `unexpected_error:RuntimeError`==1, `ok`==len(corpus)-1 |
+| Item 2a — 빈 코퍼스 즉시 명확한 ValueError(IndexError 아님) | PASS | `test_empty_corpus_raises_a_clear_value_error_not_index_error` |
+| Item 2b — 자체생성 audit_dir만 정리, caller-owned audit_dir는 보존 | PASS | `TestAuditDirCleanup` 3건(offline 자체생성/명시적-보존/live-llm 자체생성) |
+| Item 3 — EXACT 중복(정규화 공백 포함) 거부, 실제 corpus.yaml 무회귀 | PASS | `test_duplicate_instruction_text_across_different_ids_is_rejected`, `test_instructions_differing_only_by_surrounding_whitespace_are_duplicates`, `test_default_corpus_has_no_duplicate_instruction_false_positive` |
+| 무회귀(766건 그대로) | PASS | 776 = 766 + 10, 0 실패 |
+| 범위 규율(2파일 + 해당 테스트 파일만 터치, 나머지 backlog 미터치) | PASS | `git diff --stat 5359e79..HEAD`로 4개 파일만 변경 확인(`server/measurement/{corpus,runner}.py` + 2개 테스트 파일) |
+| 커밋 전략(origin 없음 — main 직접 커밋, push 없음, item별 분리 커밋) | PASS | 3개 fix 커밋(항목별 — runner.py가 item1/item2에 걸쳐 있어 hunk 단위로 분리 커밋) + 본 evidence 커밋, 전부 `main` 직접 |
+
+**Commits** (no push — no origin remote)
+
+- `d0ff6a0` fix(SPEC-COPILOT-MVP-001): M6c-7 fix runner.py repetitions=0 crash + non-ProviderError containment gap (TDD)
+- `4ffe10a` fix(SPEC-COPILOT-MVP-001): M6c-7 fix runner.py empty-corpus crash + audit-dir temp leak (TDD)
+- `4008967` fix(SPEC-COPILOT-MVP-001): M6c-7 add corpus.py instruction text uniqueness check (TDD)
+- (본 evidence 커밋)
+
+**잔여**: 이번 배치로 M6c-6 잔여 backlog 목록의 `server/measurement/` 3개 파일 항목(`server/measurement/runner.py:453,403`, `server/measurement/runner.py:417,247`, `server/measurement/corpus.py:144`) 해소. 남은 backlog 3건은 이번 배치 범위 밖(별도 SPEC/배치로 이연): `server/rulebook/assets/v2.4.2/00_grammar.md:81`(매크로 레시피 내부 인용 인자 미가이드, docs-only), `ui/src/components/ApprovalCard.tsx:35`(버튼 디바운스 없음), `server/web/approval_bridge.py:120`(비원자적 request_approval). AC-MVP-027③ `target_provider` 실값 선정은 여전히 M6b-3 인간 체크인 사항(별도, 이번 배치와 무관)으로 남음.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
