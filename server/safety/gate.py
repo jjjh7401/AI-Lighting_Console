@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import threading
 import time
-from collections import Counter
+from collections import Counter, OrderedDict
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
@@ -57,6 +57,11 @@ from server.safety.session_context import SessionKey, current_session_key
 # calibration): the MA3 ``SaveShow`` keyword saves the current showfile when
 # sent through the exec path. Recorded as a check-in ratification item.
 BACKUP_COMMAND = "SaveShow"
+
+# Bounded-LRU cap for self._unconfirmed (M6c backlog). Order-of-magnitude
+# default for a long-running operating session; no existing constant to
+# match since this is the first bound placed on that set.
+_MAX_UNCONFIRMED = 500
 
 
 @dataclass(frozen=True)
@@ -149,7 +154,17 @@ class SafetyGate:
         # so concurrent ChatSessions never invalidate each other's clearances.
         self._clearances: dict[SessionKey, Counter[str]] = {}
         self._clearances_lock = threading.Lock()
-        self._unconfirmed: set[str] = set()
+        # @MX:DEBT: [AUTO] bounded-LRU ordered set (OrderedDict[str, None]),
+        #   NOT an unbounded set — a command once unconfirmed always
+        #   re-requires human approval (REQ-MVP-032), but only within the
+        #   cap; entries evicted beyond it silently regain auto-resend
+        #   eligibility.
+        # @MX:CEILING: at most _MAX_UNCONFIRMED (500) distinct commands
+        #   retained; oldest is evicted first (insertion/re-add order).
+        # @MX:UPGRADE: if a real operational session is observed to exceed
+        #   _MAX_UNCONFIRMED distinct unconfirmed commands, revisit with
+        #   persistent/audited storage instead of an in-memory bounded set.
+        self._unconfirmed: OrderedDict[str, None] = OrderedDict()
         self._executor = _GateExecutor(self)
         self._state_port = _GateStatePort(self)
 
@@ -541,7 +556,7 @@ class SafetyGate:
         if outcome.status == "ok":
             return ExecutionResult(ok=True, detail=outcome.detail)
         if outcome.status == "unconfirmed":
-            self._unconfirmed.add(command)
+            self._remember_unconfirmed(command)
             return ExecutionResult(
                 ok=False,
                 detail=(
@@ -550,6 +565,17 @@ class SafetyGate:
                 ),
             )
         return ExecutionResult(ok=False, detail=outcome.detail)
+
+    def _remember_unconfirmed(self, command: str) -> None:
+        """Record ``command`` as unconfirmed, evicting the oldest entry
+        beyond the bounded-LRU cap (see ``@MX:DEBT`` on ``self._unconfirmed``).
+        """
+        if command in self._unconfirmed:
+            self._unconfirmed.move_to_end(command)
+        else:
+            self._unconfirmed[command] = None
+        if len(self._unconfirmed) > _MAX_UNCONFIRMED:
+            self._unconfirmed.popitem(last=False)
 
     def _query_state(self, path: str) -> dict:
         # Audited even on failure: a timed-out query still SENT one OSC

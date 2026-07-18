@@ -18,7 +18,7 @@ from server.orchestrator.tools import build_toolset
 from server.safety.audit import AuditLog
 from server.safety.backup import BackupError, BackupManager
 from server.safety.console import ExecOutcome
-from server.safety.gate import BACKUP_COMMAND, SafetyGate
+from server.safety.gate import _MAX_UNCONFIRMED, BACKUP_COMMAND, SafetyGate
 from server.safety.lock import LiveLock
 from server.safety.monitor import HealthMonitor
 from server.safety.registry import PluginFlagRegistry
@@ -425,6 +425,44 @@ class TestUnconfirmedExecution:
         (request,) = approval.requests
         assert any("unconfirmed" in r for r in request.items[0].risk_reasons)
         assert console.executed == ["Store Cue 9"]  # still exactly one send
+
+
+class TestUnconfirmedBoundedGrowth:
+    """M6c backlog: ``self._unconfirmed`` had no eviction path — unbounded
+    growth over a long-running session, distinct from the REQ-MVP-032 safety
+    property itself (which must hold for everything INSIDE the window).
+    """
+
+    def test_unconfirmed_set_never_exceeds_the_cap(self, tmp_path):
+        gate, console, _ = make_gate(tmp_path)
+        commands = [f"Store Cue {i}" for i in range(_MAX_UNCONFIRMED + 1)]
+        for command in commands:
+            console.unconfirmed_on.add(command)
+            assert gate.screen([command]).cleared
+            result = gate.execution_port.execute(command)
+            assert result.ok is False
+        assert len(gate._unconfirmed) == _MAX_UNCONFIRMED
+
+    def test_oldest_entry_is_evicted_newest_still_forces_a_hold(self, tmp_path):
+        # REQ-MVP-032 regression guard: nothing INSIDE the window loses
+        # protection; only the entry pushed out by the cap regains
+        # auto-resend eligibility — a documented, deliberate trade-off.
+        gate, console, _ = make_gate(tmp_path)
+        commands = [f"Store Cue {i}" for i in range(_MAX_UNCONFIRMED + 1)]
+        for command in commands:
+            console.unconfirmed_on.add(command)
+            gate.screen([command])
+            gate.execution_port.execute(command)
+
+        oldest, newest = commands[0], commands[-1]
+
+        # oldest was evicted by the cap -> re-screening clears with no hold
+        assert gate.screen([oldest]).cleared is True
+
+        # newest is still inside the window -> still forces a hold + denial
+        newest_decision = gate.screen([newest])
+        assert newest_decision.cleared is False
+        assert any("unconfirmed" in r for r in newest_decision.commands[0].reasons)
 
 
 class TestClearanceEnforcement:
