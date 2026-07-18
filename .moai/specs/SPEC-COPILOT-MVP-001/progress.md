@@ -849,6 +849,53 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 
 **잔여**: 이번 배치로 M6c-6 잔여 backlog 목록의 `server/measurement/` 3개 파일 항목(`server/measurement/runner.py:453,403`, `server/measurement/runner.py:417,247`, `server/measurement/corpus.py:144`) 해소. 남은 backlog 3건은 이번 배치 범위 밖(별도 SPEC/배치로 이연): `server/rulebook/assets/v2.4.2/00_grammar.md:81`(매크로 레시피 내부 인용 인자 미가이드, docs-only), `ui/src/components/ApprovalCard.tsx:35`(버튼 디바운스 없음), `server/web/approval_bridge.py:120`(비원자적 request_approval). AC-MVP-027③ `target_provider` 실값 선정은 여전히 M6b-3 인간 체크인 사항(별도, 이번 배치와 무관)으로 남음.
 
+### M6c-8 — backlog 정리 배치 4 (최종) (2026-07-18, manager-develop cycle_type=tdd)
+
+**Scope**: M6c 종합 backlog 15건 중 마지막 잔여 3건, 서로 완전히 독립적인 3개 도메인(Python / TypeScript-React / Markdown 문서) — `server/web/approval_bridge.py:120`(MEDIUM, 비원자적 request_approval — `resolve`/`deny_pending_for`/`deny_all_pending` 경합), `ui/src/components/ApprovalCard.tsx:35`(MEDIUM, 승인/거부 버튼 디바운스 없음), `server/rulebook/assets/v2.4.2/00_grammar.md:81`(LOW, 매크로 레시피 내부 인용 인자 미가이드, docs-only). 직전 배치(`d0ff6a0`/`4ffe10a`/`4008967`, M6c-7)와 파일·관심사 모두 무관 — 완전 독립.
+
+**Item matrix**
+
+| Item | Root cause confirmed | Verification command | Actual output |
+|---|---|---|---|
+| 1 — approval_bridge.py 비원자적 decision 경합 | `resolve()`/`deny_pending_for()`/`deny_all_pending()`가 각각 `self._lock` 하에서 pending entry를 조회만 하고, `pending.approved` 대입과 `pending.event.set()`은 락 해제 후 수행 — 논리적 경합이 아니라 진짜 data race. disconnect 트리거 `deny_pending_for`와 뒤늦은 `resolve(approved=True)`가 같은 request_id를 경합하면 마지막에 쓴 쪽이 이겨, 모듈 자체 fail-safe 불변식("on disconnect ... the answer is ALWAYS deny")을 위반할 수 있음 | `uv run pytest -q server/tests/test_web_approval_bridge.py -k TestAtomicDecisionRace` | 4 passed |
+| 2 — ApprovalCard.tsx 버튼 디바운스 없음 | 승인/거부 버튼의 `onClick`이 `onDecision`을 가드 없이 직접 호출 — 더블클릭/연속클릭이 동일 `approval.request_id`에 대해 결정을 두 번 이상 전송할 수 있음 | `cd ui && npx vitest run src/components/ApprovalCard.test.tsx` | 5 passed |
+| 3 — 00_grammar.md 매크로 레시피 인용 인자 가이드 갭 | "Authoring a macro" 레시피가 `<command text>` 자체가 단일 인용 이름을 필요로 하는 경우(예: `Label Group 7 'Vocals'`를 매크로 라인 안에 넣고 싶을 때)를 전혀 다루지 않음 — 이스케이프 메커니즘 없이 순진하게 대입하면 중첩 인용부호로 깨진 커맨드 라인이 됨 | `uv run pytest -q server/tests/test_rulebook.py -k test_prefix_warns_against_nested_quotes` | 1 passed |
+
+**TDD evidence (RED → GREEN, 항목별)**
+
+- **Item 1** (`server/web/approval_bridge.py` `ApprovalChannel.resolve`/`deny_pending_for`/`deny_all_pending`): 원 코드는 `entry = self._pending.get(request_id)`(락 보호)까지만 락 안에서 수행하고, 이어지는 `pending.approved = approved` 대입과 `pending.event.set()`은 락 밖에서 실행 — `deny_pending_for`(122-132행)와 `deny_all_pending`(134-140행)도 동일 패턴. `request_approval()`의 워커 스레드가 `pending.event.wait()`에서 깨어나자마자 `finally`에서 `self._pending.pop(request_id, None)`으로 엔트리를 제거하므로, "deny 먼저 완료 → resolve 늦게 호출"만으로는 엔트리가 이미 제거되어 RED가 위양성으로 통과하는 함정 발견(초기 시도에서 4건 중 1건만 재현 확인). `test_fallback_detector.py TestObserveTurnConcurrencySafety`의 기존 관례(임계구역 내부 호출을 monkeypatch로 지연시켜 두 스레드의 인터리빙을 결정론적으로 강제)를 차용 — `_Pending.__init__`을 monkeypatch해 새로 생성되는 모든 `_Pending.event.wait`가 signaled 후 50ms 슬립하도록 만들어, 워커 스레드가 깨어난 뒤 `_pending`에서 자신을 제거하기까지의 창을 결정론적으로 넓힘(포스트-훅 방식으로 이미 생성된 `pending.event`만 패치하면 워커가 이미 원본 `wait()` 안에서 블록 중일 수 있어 패치가 씹히는 경합이 발생 — 워커 스레드가 시작되기 전, `_Pending` 생성 시점에 패치해야 함을 실측으로 확인). RED: `test_deny_pending_for_wins_race_against_late_resolve`/`test_deny_all_pending_wins_race_against_late_resolve`/`test_second_resolve_call_for_the_same_id_is_a_noop` 3건이 5회 반복 실행 모두 동일하게 결정론적으로 실패(pytest 출력 확인) — deny가 이미 결정한 엔트리를 뒤늦은 `resolve(approved=True)`가 `True`로 뒤집음(`assert True is False`). GREEN: `e2acf54`. `_Pending`에 `decided: bool` 플래그 추가, 세 메서드 모두 "조회 → decided 확인 → 미결정이면 set" 전체를 하나의 `with self._lock:` 블록 안에서 원자적으로 수행하도록 재작성 — 락을 먼저 획득한 호출자가 영구적으로 결정하며, deny-wins는 별도 특수 케이스가 아니라 "deny 경로가 이미 결정한 엔트리는 이후 resolve에 절대 넘겨주지 않는다"는 구조의 자연스러운 결과. `resolve()`는 이미 decided인 엔트리에 대해 `False`를 반환(명시적 no-op 신호)하도록 변경.
+- **Item 2** (`ui/src/components/ApprovalCard.tsx`): 이 프로젝트는 DOM/jsdom 테스트 하네스가 없음(`useCopilotSocket.test.ts` 헤더 — "Pure functions only... unit-testable without a DOM"이 기존 확립된 컨벤션; `ui/package.json` devDependencies 실측 확인 결과 `@testing-library/react`/`jsdom` 모두 미설치, `node_modules`에도 부재 — 지시문의 "아마 설치되어 있을 것"이라는 가정을 실제로 검증 후 폐기). 순수 함수로 디바운스 로직을 분리하는 기존 컨벤션을 그대로 따름 — `createDecisionGuard(onDecision)`을 export하는 클로저 팩토리(제출 여부를 boolean으로 반환)를 신설하고, 컴포넌트는 `useRef`(재렌더 사이 동기 일관성이 `useState` 클로저 체크보다 더 안전 — 두 클릭이 재렌더 전에 도착해도 안전)로 카드 인스턴스당 하나의 가드를 보관, 제출 성공 시에만 `useState`로 버튼을 비활성화. `App.tsx`가 `key={approval.request_id}`로 카드를 렌더링함을 확인(한 카드 = 한 approval, 컴포넌트-로컬 상태로 충분). RED: 신규 `ApprovalCard.test.tsx` 5건이 `createDecisionGuard is not a function` TypeError로 전부 실패(vitest 출력 확인) — 함수가 아직 존재하지 않으므로. GREEN: `3e9a75d`. className/구조/한국어 버튼 텍스트 완전 보존.
+- **Item 3** (`server/rulebook/assets/v2.4.2/00_grammar.md`): "Authoring a macro" 섹션의 기존 "INVALID — do NOT emit these" 콜아웃 스타일을 그대로 모방한 두 번째 콜아웃 추가(기존 텍스트 재구조화/삭제 없음, 순수 추가) — 매크로 라인의 `<command text>`가 단일 인용 이름을 포함해서는 안 됨을 명시하고, `Set Macro 21.3 Property 'Command' 'Label Group 7 'Vocals''`(중첩 인용부호로 깨진 형태)를 안티 예시로 제시, 매크로 라인 내부에서는 숫자/점 표기 pool id(`Group 3`, `Preset 4.1`)를 우선 사용하도록 유도하고 인용 이름 커맨드는 매크로 밖 직접 실행용으로 예약. RED: `test_prefix_warns_against_nested_quotes_inside_a_macro_lines_command_text` 1건이 `AssertionError`(신규 문구 부재, pytest 출력 확인)로 실패. GREEN: `dfcbecb`. `assemble_prefix()`가 `.strip()` 후 파일 전체 내용을 그대로 이어붙이는 구조(REQ-MVP-008 — 타임스탬프/UUID/세션값 없음)이므로 신규 문구가 고정 prefix 안으로 그대로 편입됨을 확인.
+
+**Quality gates**
+
+- `uv run pytest -q` → **781 passed** (776 baseline + 5 신규: Item 1 원자성 경합 4건 + Item 3 rulebook 문구 1건)
+- `cd ui && npm run test` → **21 passed** (16 baseline + 5 신규: Item 2 `createDecisionGuard` 5건) — 지시문의 "13개 vitest 기준선"은 M6c-4 이후 `useCopilotSocket.test.ts` 3건이 추가되어 이미 16개로 갱신되어 있었음(실측 확인, 가정하지 않음)
+- `uv run ruff check server` → clean
+- `uv run ruff format --check server` → clean (103 files already formatted)
+- `npx tsc --noEmit`(ui) → clean
+
+**PASS/FAIL per constraint (브리프 대비)**
+
+| 제약 | 상태 | 비고 |
+|---|---|---|
+| Item 1 — deny가 경합에서 항상 승리(deny-wins), 정상 경로 무회귀 | PASS | `test_deny_pending_for_wins_race_against_late_resolve`, `test_deny_all_pending_wins_race_against_late_resolve`, `test_normal_resolve_without_race_still_approves`, `test_second_resolve_call_for_the_same_id_is_a_noop` |
+| Item 2 — 더블클릭이 `onDecision`을 정확히 1회만 호출, 제출 후 버튼 비활성화(가드 반환값으로 검증) | PASS | `createDecisionGuard` 5건 — 첫 호출만 제출, 이후 호출(같은 값/반대 값 모두) 전부 no-op |
+| Item 3 — 신규 가이드가 고정 prefix 안에 존재, 기존 매크로 레시피 테스트 무회귀 | PASS | `test_prefix_warns_against_nested_quotes_inside_a_macro_lines_command_text`; `TestMacroAuthoringRecipe` 기존 4건 그대로 통과 |
+| 무회귀(776 Python + 16 vitest 그대로) | PASS | 781 = 776 + 5, 21 = 16 + 5, 0 실패 |
+| 범위 규율(3파일 + 해당 테스트 파일만 터치) | PASS | `git diff --stat`로 6개 파일만 변경 확인(`server/web/approval_bridge.py`, `ui/src/components/ApprovalCard.tsx` + 4개 테스트 파일(1개 신규 `ApprovalCard.test.tsx`)); `.moai/harness/*`, `.moai/logs/*`, `.moai/reports/session-*.md` 등 런타임 관리 파일은 커밋에서 완전히 제외 |
+| 스타일 일치(기존 INVALID 콜아웃 스타일 모방, 기존 vitest/pytest 컨벤션, 영어 코드 주석) | PASS | 00_grammar.md 신규 콜아웃이 기존 콜아웃과 동일 톤; ApprovalCard.test.tsx가 useCopilotSocket.test.ts 헤더 컨벤션 명시적으로 인용 |
+| 커밋 전략(origin 없음 — main 직접 커밋, push 없음, item별 분리 커밋) | PASS | 3개 fix/docs 커밋(항목별) + 본 evidence 커밋, 전부 `main` 직접 |
+
+**Commits** (no push — no origin remote)
+
+- `e2acf54` fix(SPEC-COPILOT-MVP-001): M6c-8 make ApprovalChannel decision atomic decide-once (TDD)
+- `3e9a75d` fix(SPEC-COPILOT-MVP-001): M6c-8 debounce ApprovalCard approve/reject buttons (TDD)
+- `dfcbecb` docs(SPEC-COPILOT-MVP-001): M6c-8 warn against nested quotes inside a macro line's command text
+- (본 evidence 커밋)
+
+**잔여**: 이번 배치로 M6c 종합 backlog 목록의 마지막 3개 파일 항목(`server/web/approval_bridge.py:120`, `ui/src/components/ApprovalCard.tsx:35`, `server/rulebook/assets/v2.4.2/00_grammar.md:81`) 해소. M6c-5(3건) → M6c-6(3건) → M6c-7(3건) → M6c-8(본 배치, 3건) 4개 배치에 걸쳐 M6c 종합에서 식별된 파일-레벨 backlog 항목을 순차적으로 전부 처리 — **M6c 종합 backlog는 이제 CLOSED, 잔여 0건**. (M6c-5 evidence가 명시했듯 원문 "MEDIUM(10)/LOW(5)=15건" 집계는 일부 항목이 파일당 2개 라인 번호로 표기되어 있어 distinct-fix-item 카운트와 완전히 1:1 대응하지는 않았으나, 4개 배치가 처리한 파일-레벨 항목 집합은 M6c-5/6/7 각 잔여 섹션에서 순차적으로 나열된 목록 전체와 정확히 일치하며, 더 이상 남은 파일-레벨 backlog 항목이 없음.) AC-MVP-027③ `target_provider` 실값 선정은 이 backlog와 무관한 별도의 M6b-3 인간 체크인 사항(Anthropic 측 오류율 실측 데이터 필요)으로 계속 남아 있으며, 이는 backlog CLOSED 선언과 모순되지 않음(별개의 미결 인간 결정).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
