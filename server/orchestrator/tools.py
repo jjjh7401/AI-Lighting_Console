@@ -176,6 +176,15 @@ def build_toolset(
                 )
         outcomes: list[CommandOutcome] = []
         failed = False
+        # MEDIUM backlog item (M6c 종합, tools.py:145): ``context.executed_ok``
+        # is a frozenset seeded from a PRIOR tool call — it is never updated
+        # as commands succeed WITHIN this loop. A local, mutable copy (seeded
+        # from the same starting set) tracks successes as they happen in THIS
+        # call, so an in-bundle duplicate command (the same string appearing
+        # twice in one ``commands`` list) is correctly recognized as
+        # already-executed on its second occurrence instead of being
+        # re-executed and duplicating its console side effect.
+        already_executed = set(context.executed_ok)
         for command in commands:
             if failed:
                 # Stop-on-first-failure: remaining commands are never executed.
@@ -186,9 +195,10 @@ def build_toolset(
                         detail="not executed (stopped after an earlier failure)",
                     )
                 )
-            elif command in context.executed_ok:
-                # Never re-execute a command that already succeeded in this
-                # instruction — re-execution duplicates its console effect.
+            elif command in already_executed:
+                # Never re-execute a command that already succeeded — either
+                # in a prior tool call (context.executed_ok) or earlier in
+                # THIS bundle — re-execution duplicates its console effect.
                 outcomes.append(
                     CommandOutcome(
                         command=command,
@@ -199,6 +209,7 @@ def build_toolset(
             else:
                 result = execution_port.execute(command)
                 if result.ok:
+                    already_executed.add(command)
                     outcomes.append(
                         CommandOutcome(command=command, status="executed_ok", detail=result.detail)
                     )

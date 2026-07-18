@@ -135,6 +135,21 @@ class TestRunCommands:
         assert statuses["A"] == "skipped_already_executed"
         assert statuses["B"] == "executed_ok"
 
+    def test_in_bundle_duplicate_command_is_not_re_executed(self):
+        # MEDIUM backlog item (M6c 종합, server/orchestrator/tools.py:145) —
+        # ``context.executed_ok`` is the frozenset from a PRIOR tool call; it
+        # is never updated as commands succeed WITHIN this loop iteration.
+        # A command string repeated TWICE in the SAME ``commands`` list must
+        # still be recognized as already-executed on its second occurrence
+        # (REQ-MVP-033 dedup semantics — never duplicate a console side
+        # effect), not silently re-executed.
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        execution = registry.dispatch(_call("run_commands", {"commands": ["cmd1", "cmd1"]}))
+        assert port.executed == ["cmd1"]  # execute() called exactly once
+        statuses = [o.status for o in execution.command_outcomes]
+        assert statuses == ["executed_ok", "skipped_already_executed"]
+
     def test_feedback_content_carries_per_command_status(self):
         port = ScriptedPort(failures=frozenset({"B"}))
         registry = _registry(port=port)
