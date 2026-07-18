@@ -142,8 +142,22 @@ def load_corpus(path: Path | str = DEFAULT_CORPUS_PATH) -> tuple[Scenario, ...]:
     if not scenarios:
         raise CorpusError("corpus contains no scenarios")
     seen: set[str] = set()
+    # instruction text -> the first scenario id that used it (exact-duplicate
+    # check after whitespace normalization — NOT fuzzy similarity; a
+    # copy-paste mistake that repeats one instruction under a different id
+    # would silently double-count that instruction's contribution to the
+    # measurement statistics).
+    seen_instructions: dict[str, str] = {}
     for scenario in scenarios:
         if scenario.id in seen:
             raise CorpusError(f"duplicate scenario id: {scenario.id}")
         seen.add(scenario.id)
+        normalized = " ".join(scenario.instruction.split())
+        existing_id = seen_instructions.get(normalized)
+        if existing_id is not None:
+            raise CorpusError(
+                f"duplicate instruction text across scenario ids {existing_id!r} and "
+                f"{scenario.id!r}: {scenario.instruction!r}"
+            )
+        seen_instructions[normalized] = scenario.id
     return scenarios

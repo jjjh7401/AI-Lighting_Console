@@ -162,3 +162,55 @@ class TestLoaderValidation:
         )
         with pytest.raises(CorpusError):
             load_corpus(bad)
+
+    def test_duplicate_instruction_text_across_different_ids_is_rejected(self, tmp_path):
+        # A copy-paste authoring mistake: two distinct scenario ids sharing the
+        # exact same instruction text would silently double-count that
+        # instruction's contribution to the measurement statistics.
+        bad = tmp_path / "corpus.yaml"
+        bad.write_text(
+            "version: 1\n"
+            "scenarios:\n"
+            "  - id: a-1\n"
+            "    task_type: group_create\n"
+            '    instruction: "그룹 만들어줘"\n'
+            "    mock:\n"
+            '      commands: ["Store Group 1"]\n'
+            "  - id: a-2\n"
+            "    task_type: group_create\n"
+            '    instruction: "그룹 만들어줘"\n'
+            "    mock:\n"
+            '      commands: ["Store Group 2"]\n',
+            encoding="utf-8",
+        )
+        with pytest.raises(CorpusError):
+            load_corpus(bad)
+
+    def test_instructions_differing_only_by_surrounding_whitespace_are_duplicates(self, tmp_path):
+        # This is an EXACT-duplicate check, not fuzzy similarity — leading/
+        # trailing (or repeated internal) whitespace must not create a
+        # false-negative "these are distinct" reading.
+        bad = tmp_path / "corpus.yaml"
+        bad.write_text(
+            "version: 1\n"
+            "scenarios:\n"
+            "  - id: a-1\n"
+            "    task_type: group_create\n"
+            '    instruction: "그룹 만들어줘"\n'
+            "    mock:\n"
+            '      commands: ["Store Group 1"]\n'
+            "  - id: a-2\n"
+            "    task_type: group_create\n"
+            '    instruction: "  그룹   만들어줘  "\n'
+            "    mock:\n"
+            '      commands: ["Store Group 2"]\n',
+            encoding="utf-8",
+        )
+        with pytest.raises(CorpusError):
+            load_corpus(bad)
+
+    def test_default_corpus_has_no_duplicate_instruction_false_positive(self):
+        # Regression guard: the real DEFAULT_CORPUS_PATH must still load
+        # cleanly — no false positive on legitimately distinct scenarios.
+        scenarios = load_corpus()
+        assert len(scenarios) >= 20
