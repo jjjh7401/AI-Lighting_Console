@@ -711,6 +711,51 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 
 **잔여**: `target_provider` 실값 선정은 여전히 M6b-3 인간 체크인 사항(Anthropic 측 오류율 실측 데이터 필요, Gemini는 현재 유일 측정-적격 후보이나 최종 선정 아님). AC-MVP-027③ 문구 자체("config-switch")가 이번 구현으로 충분히 커버되는지는 acceptance.md 소유자(관리자) 재확인 권장 — 이 배치는 문구 수정 권한 없음(progress.md만 소유).
 
+### M6c-5 — backlog 정리 배치 1 (프로토콜 디코드 오탐 · OSC 발신지 인증 · unconfirmed 무한성장 방지) (2026-07-18, manager-develop cycle_type=tdd)
+
+**Scope**: M6c 종합에서 확인된 15건 backlog(MEDIUM 10 · LOW 5) 중, 서로 독립적이고 이번 세션에 개별 재정찰(reconnoiter)된 3건 — `server/bridge/protocol.py:67`(MEDIUM, 퍼센트 인코딩 오탐/개행 스머글링), `server/bridge/osc.py:169`(LOW, OSC 수신 인증 없음), `server/safety/gate.py:152`(MEDIUM, `_unconfirmed` 무한 성장). 직전 배치(`690ba68`/`3ee2d95`, M6b-3-pre 폴백 config-switch)와 파일·관심사 모두 무관 — 완전 독립.
+
+**AC matrix (M6c-5 subset)**
+
+| Item | Root cause | Verification command | Actual output |
+|---|---|---|---|
+| 1 — `decode_payload` 퍼센트 인코딩 오탐/개행 스머글링 | `%XX` 서브스트링이 텍스트 어디에나 있으면 무조건 percent-decode — raw JSON 문자열 값 내부의 리터럴 `%20`/`%0A`가 오염되거나 개행으로 스머글링됨 | `uv run pytest -q server/tests/test_responder_protocol.py -k "percent or genuinely_percent_encoded"` | 3 passed |
+| 2 — `_on_feedback` 발신지 인증 없음 | `dispatcher.map`에 발신지 검증 없이 등록 — 임의 호스트가 위조 feedback/state 메시지 주입 가능 | `uv run pytest -q server/tests/test_osc_bridge.py -k TestFeedbackOriginAuthentication` | 5 passed |
+| 3 — `_unconfirmed` 무한 성장 | ADD 경로만 있고 제거/eviction 경로 없음 — 장기 세션에서 무제한 누적(REQ-MVP-032 안전 속성 자체와는 별개의 메모리 성장 문제) | `uv run pytest -q server/tests/test_safety_gate.py -k TestUnconfirmedBoundedGrowth` | 2 passed |
+
+**TDD evidence (RED → GREEN, 항목별)**
+
+- **Item 1** (`server/bridge/protocol.py:57` `decode_payload`): 기존 로직은 `_PERCENT_TOKEN.search(text)`로 텍스트 어디에든 `%XX` 형태 서브스트링이 있으면 percent-decode를 시도 — 실제로 percent-encoded인지 여부와 무관. Raw(비-percent-encoded) JSON의 문자열 값에 우연히 `%20` 같은 리터럴이 있으면(`{"note":"discount %20 code"}`) `urllib.parse.unquote`가 잘못 적용되어 값이 조용히 손상됨. 최악의 경우 `%0A`/`%0D` 리터럴이 실제 개행/캐리지리턴 문자로 변환되는 "개행 스머글링"이 발생. RED: 신규 `test_raw_json_with_literal_percent_substring_is_not_percent_decoded` — 수정 전 `decode_payload`가 `"discount %20 code"`를 `"discount   code"`(공백 치환)로 조용히 손상시켜 assert 실패; `test_raw_json_with_literal_percent_newline_token_is_not_smuggled` — `%0A`가 실제 개행으로 unquote된 뒤 JSON 파서가 raw control character를 거부(`json.JSONDecodeError: Invalid control character`)해 `ProtocolError`로 크래시(두 실패 모두 pytest 출력으로 확인). GREEN: lenient-parse 순서를 뒤집어 **raw JSON을 먼저 시도**하고, raw 파싱이 실패할 때만 percent-decode-then-parse로 폴백하도록 재작성 — 이는 구성상 안전: 진짜 percent-encoded 페이로드는 모듈 docstring대로 comma/quote/space-free이므로 리터럴 `{`/`"`를 포함할 수 없어 raw JSON으로 절대 파싱되지 않고 항상 decode 분기로 폴백하며, raw JSON은 애초에 `unquote`를 거치지 않음. 이제 불필요해진 `_PERCENT_TOKEN` 정규식 삭제(grep으로 다른 참조 없음 확인). GREEN: `cbde699`. 기존 라운드트립/거부 테스트 17건 무회귀로 통과(신규 회귀 가드 `test_genuinely_percent_encoded_payload_still_roundtrips` 포함 총 20건).
+- **Item 2** (`server/bridge/osc.py:169` `_on_feedback` / `start()`): `dispatcher.map(FEEDBACK_ADDRESS, self._on_feedback)` / `dispatcher.map(STATE_ADDRESS, self._on_feedback)`가 발신지 검증 없이 등록되어, 이 UDP 포트에 도달 가능한 임의 호스트가 위조 feedback/state 메시지(가짜 실행 확인, 가짜 상태 스냅샷)를 주입해 안전 게이트의 결과-확인·상태-조회 경로가 이를 진짜 콘솔 응답으로 오인할 위험. `pythonosc`의 `Dispatcher.map(..., needs_reply_address=True)`(이번 세션에 설치된 패키지 대비 시그니처 확인 — `Handler.invoke`가 `callback(client_address, address, *args)`로 호출됨을 소스로 검증)를 두 `dispatcher.map` 호출에 적용하고, `_on_feedback` 시그니처를 `(self, client_address, address, *args)`로 변경 — `client_address[0]`이 `BridgeConfig.send_host`(명령을 보내는 그 콘솔이 곧 feedback을 기대하는 콘솔)와 다르면 drop(consumer에 전달 안 함)하고 신규 `self.rejected_origin_count`를 증가(이 모듈에 로깅 서브시스템 없음 — 관측 가능한 카운터로 충분). 코드 내 ASSUMPTION 주석(`server/safety/gate.py`의 `BACKUP_COMMAND` 스타일과 동일 패턴)으로 "실제 onPC 배포는 send_host와 다른 로컬 인터페이스에서 feedback을 보낼 수 있음 — M6b-2 라이브 검증 대기, 표면화되면 신뢰 오리진 allowlist로 확장 필요"를 명시. RED: 신규 `TestFeedbackOriginAuthentication` 5건 중 4건이 `bridge.rejected_origin_count` `AttributeError` 또는 `pytest.raises(queue.Empty)`의 `DID NOT RAISE`로 실패(pytest 출력 확인). GREEN: `a8f6321`. 기존 `TestFeedbackReceiving`/`TestStateReceiving`(loopback `127.0.0.1` 클라이언트, 기본 `send_host="127.0.0.1"`와 일치)은 무회귀로 통과 — 실 dispatcher 배선 경유 신규 회귀 테스트(`test_real_dispatcher_wiring_delivers_from_the_trusted_loopback_host`)도 포함.
+- **Item 3** (`server/safety/gate.py:152` `self._unconfirmed` / 433 조회 / 544 add): `set[str]`에 ADD 경로(`_execute_cleared`, unconfirmed 결과 시)만 있고 제거 경로가 전혀 없어, 장기 실행 세션에서 unconfirmed로 돌아온 모든 커맨드 문자열이 영구 보존 — REQ-MVP-032 안전 속성(한 번 unconfirmed된 정확한 커맨드 문자열은 항상 재승인 필요) 자체와는 별개의 메모리 성장 문제. `OrderedDict[str, None]` 기반 bounded-LRU 순서형 집합으로 교체(모듈 상수 `_MAX_UNCONFIRMED = 500`, 이 집합에 대한 첫 상한이라 기존 상수와 매칭할 필요 없음) — 신규 헬퍼 `_remember_unconfirmed()`: 기존 키면 `move_to_end`, 아니면 신규 삽입 후 상한 초과 시 `popitem(last=False)`로 가장 오래된 항목 제거. 이는 의도적이고 문서화된 트레이드오프(상한 밖으로 밀려난 항목은 auto-resend 자격을 다시 얻음) — 필드에 `@MX:DEBT` + `@MX:CEILING`(500개 상한) + `@MX:UPGRADE`(실제 운영 세션에서 초과 관측 시 영속/감사 저장소로 재검토) 마킹. RED: 신규 `TestUnconfirmedBoundedGrowth` 2건이 `_MAX_UNCONFIRMED` 모듈 상수 부재로 `ImportError`(collection 단계 실패, pytest 출력 확인) 후 구현. GREEN: `e8a4365`. 기존 `TestUnconfirmedExecution`(REQ-MVP-032 회귀 가드 — "Store Cue 9" 재승인 요구)은 무회귀로 통과.
+
+**Quality gates**
+
+- `uv run pytest -q` → **763 passed** (753 baseline + 10 신규: Item 1 프로토콜 코덱 3건 + Item 2 OSC 발신지 인증 5건 + Item 3 unconfirmed 상한 2건)
+- `uv run ruff check server` → clean
+- `uv run ruff format --check server` → clean (`server/bridge/protocol.py` 최초 미정렬 확인 후 `ruff format` 적용, 이후 clean)
+
+**PASS/FAIL per constraint (브리프 대비)**
+
+| 제약 | 상태 | 비고 |
+|---|---|---|
+| Item 1 — raw-JSON-first 파싱, percent-encoded 라운드트립 무회귀 | PASS | `test_raw_json_with_literal_percent_substring_is_not_percent_decoded`, `test_raw_json_with_literal_percent_newline_token_is_not_smuggled`, `test_genuinely_percent_encoded_payload_still_roundtrips` |
+| Item 2 — 신뢰 오리진(`send_host`) 이외 drop + 카운터 관측 | PASS | `test_feedback_from_an_untrusted_origin_is_dropped_and_counted`, `test_state_message_from_an_untrusted_origin_is_also_dropped`, `test_multiple_untrusted_messages_each_increment_the_counter` |
+| Item 3 — bounded-LRU, 상한 내부는 REQ-MVP-032 유지 | PASS | `test_unconfirmed_set_never_exceeds_the_cap`, `test_oldest_entry_is_evicted_newest_still_forces_a_hold` |
+| 무회귀(753건 그대로) | PASS | 763 = 753 + 10, 0 실패 |
+| 범위 규율(3파일 + 해당 테스트 파일만 터치, 나머지 12건 backlog 미터치) | PASS | `git diff --stat`로 6개 파일만 변경 확인(`server/bridge/{osc,protocol}.py`, `server/safety/gate.py` + 3개 테스트 파일) |
+| 스타일 일치(frozen dataclass 무변경, REQ/AC-id 참조, `@MX:` 태그 문법, 영어 코드 주석) | PASS | `@MX:DEBT`/`@MX:CEILING`/`@MX:UPGRADE` 3-라인 세트로 `_unconfirmed` 필드 마킹; ASSUMPTION 주석은 `BACKUP_COMMAND` 스타일 재사용 |
+| 커밋 전략(origin 없음 — main 직접 커밋, push 없음) | PASS | 3개 fix 커밋(파일별) + 본 evidence 커밋, 전부 `main` 직접 |
+
+**Commits** (no push — no origin remote)
+
+- `cbde699` fix(SPEC-COPILOT-MVP-001): M6c-5 fix percent-encoding false-positive / newline smuggling in decode_payload (TDD)
+- `a8f6321` fix(SPEC-COPILOT-MVP-001): M6c-5 add OSC feedback sender-origin authentication (TDD)
+- `e8a4365` fix(SPEC-COPILOT-MVP-001): M6c-5 bound _unconfirmed set growth with LRU eviction (TDD)
+- (본 evidence 커밋)
+
+**잔여**: 이번 배치로 M6c 종합 backlog 목록의 3개 파일 항목(`server/bridge/protocol.py:67,32`, `server/bridge/osc.py:169`, `server/safety/gate.py:138`) 해소. M6c 종합 원문의 MEDIUM(10)/LOW(5) 라인-레퍼런스 집계 방식(일부 항목이 파일당 2개 라인 번호로 표기됨)을 이번 배치가 재검증하지는 않았으므로, 정확한 잔여 건수 재계산은 다음 backlog 정리 배치의 몫으로 남김 — 아래는 M6c 종합 원문에서 이번 배치로 제거된 3개 항목을 뺀 나머지 목록 그대로: `server/orchestrator/fallback.py:48`(락 없는 경합), `server/llm/gemini_adapter.py:101`(캐시 attempted 경합), `server/orchestrator/tools.py:145`(이미 실행된 명령 오보고), `server/measurement/runner.py:453,403`(반복 0회 크래시/컨테인먼트 갭), `server/rulebook/assets/v2.4.2/00_grammar.md:81`(매크로 레시피 내부 인용 인자 미가이드), `ui/src/components/ApprovalCard.tsx:35`(버튼 디바운스 없음), `server/web/approval_bridge.py:120`(비원자적 request_approval), `server/measurement/runner.py:417,247`(빈 코퍼스 크래시/temp 디렉터리 미정리), `server/measurement/corpus.py:144`(instruction 텍스트 유일성 미검증) — 별도 배치/SPEC으로 이연. Item 2의 ASSUMPTION(send_host 신뢰 오리진 단일값)은 M6b-2 onPC 라이브 검증 대기 항목으로 남음.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
