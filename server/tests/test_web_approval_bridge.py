@@ -16,8 +16,14 @@ from __future__ import annotations
 import threading
 import time
 
+import server.web.approval_bridge as approval_bridge_module
 from server.safety.approval import ApprovalItem, ApprovalRequest
-from server.safety.session_context import bind_session_key, new_session_key, reset_session_key
+from server.safety.session_context import (
+    DEFAULT_SESSION_KEY,
+    bind_session_key,
+    new_session_key,
+    reset_session_key,
+)
 from server.web.approval_bridge import ApprovalChannel
 
 
@@ -254,5 +260,152 @@ class TestSessionScopedFailSafe:
         thread, result = _request_in_thread(channel)
         assert notify.notified.wait(2.0)
         channel.unbind()
+        thread.join(timeout=2.0)
+        assert result["approved"] is False
+
+
+class TestAtomicDecisionRace:
+    """M6c-8 backlog item 1 — non-atomic decision race (approval_bridge.py:120).
+
+    Before this fix, ``resolve``/``deny_pending_for``/``deny_all_pending`` each
+    looked the pending entry up under ``self._lock`` but mutated
+    ``pending.approved``/called ``pending.event.set()`` AFTER releasing the
+    lock — a genuine data race, not just a logical one. A disconnect-triggered
+    ``deny_pending_for``/``deny_all_pending`` racing a straggling
+    ``resolve(approved=True)`` for the SAME request_id could let the approve
+    win depending on which write landed last, violating the module's own
+    fail-safe invariant (module docstring): "on disconnect
+    (unbind/deny_pending_for) the answer is ALWAYS deny."
+    """
+
+    @staticmethod
+    def _widen_worker_pop_window(monkeypatch):
+        # Widen the window between the WORKER's own pending.event.wait()
+        # unblocking and its finally-block pop from self._pending, so a
+        # concurrently racing resolve() call reliably still finds the entry
+        # present in self._pending when it runs — without this, the worker's
+        # OWN thread pops the entry almost immediately after event.set(),
+        # which would make a late resolve() return False via the "unknown
+        # id" path in BOTH the buggy and the fixed code (a false-negative
+        # RED test that never actually exercises the atomic-decide-once
+        # fix). This mirrors the established project pattern
+        # (test_fallback_detector.py TestObserveTurnConcurrencySafety) of
+        # widening a call inside the critical section to reliably force two
+        # threads to interleave rather than relying on scheduler timing luck.
+        #
+        # Patched at _Pending construction time (BEFORE the worker thread is
+        # even started) rather than by reaching into an already-created
+        # pending.event afterward — patching post-hoc races the worker
+        # thread itself, which may already be blocked inside the REAL
+        # (unpatched) wait() call by the time the test thread gets around to
+        # patching it, silently defeating the widening on some runs.
+        real_init = approval_bridge_module._Pending.__init__
+
+        def patched_init(self):
+            real_init(self)
+            real_wait = self.event.wait
+
+            def slow_wait(timeout=None):
+                signaled = real_wait(timeout)
+                if signaled:
+                    time.sleep(0.05)
+                return signaled
+
+            self.event.wait = slow_wait
+
+        monkeypatch.setattr(approval_bridge_module._Pending, "__init__", patched_init)
+
+    def test_deny_pending_for_wins_race_against_late_resolve(self, monkeypatch):
+        self._widen_worker_pop_window(monkeypatch)
+        notify = NotifyRecorder()
+        channel = ApprovalChannel(timeout_seconds=None)
+        channel.bind(notify)
+        thread, result = _request_in_thread(channel)
+        assert notify.notified.wait(2.0)
+        request_id, _ = notify.calls[0]
+
+        deny_decided = threading.Event()
+        resolve_result: dict[str, bool] = {}
+
+        def deny_worker():
+            channel.deny_pending_for(DEFAULT_SESSION_KEY)
+            deny_decided.set()
+
+        def resolve_worker():
+            # Wait until the deny path has DEFINITELY decided this entry
+            # before attempting the late resolve — deterministic ordering,
+            # not timing luck.
+            assert deny_decided.wait(2.0)
+            resolve_result["value"] = channel.resolve(request_id, approved=True)
+
+        deny_thread = threading.Thread(target=deny_worker)
+        resolve_thread = threading.Thread(target=resolve_worker)
+        resolve_thread.start()
+        deny_thread.start()
+        deny_thread.join(timeout=2.0)
+        resolve_thread.join(timeout=2.0)
+        thread.join(timeout=2.0)
+
+        # The deny path already decided the entry — the late resolve() must
+        # be a documented no-op (return False), and the worker's outcome must
+        # remain deny (approved=False), never flipped by the straggling call.
+        assert resolve_result["value"] is False
+        assert result["approved"] is False
+
+    def test_deny_all_pending_wins_race_against_late_resolve(self, monkeypatch):
+        self._widen_worker_pop_window(monkeypatch)
+        notify = NotifyRecorder()
+        channel = ApprovalChannel(timeout_seconds=None)
+        channel.bind(notify)
+        thread, result = _request_in_thread(channel)
+        assert notify.notified.wait(2.0)
+        request_id, _ = notify.calls[0]
+
+        deny_decided = threading.Event()
+        resolve_result: dict[str, bool] = {}
+
+        def deny_worker():
+            channel.deny_all_pending()
+            deny_decided.set()
+
+        def resolve_worker():
+            assert deny_decided.wait(2.0)
+            resolve_result["value"] = channel.resolve(request_id, approved=True)
+
+        deny_thread = threading.Thread(target=deny_worker)
+        resolve_thread = threading.Thread(target=resolve_worker)
+        resolve_thread.start()
+        deny_thread.start()
+        deny_thread.join(timeout=2.0)
+        resolve_thread.join(timeout=2.0)
+        thread.join(timeout=2.0)
+
+        assert resolve_result["value"] is False
+        assert result["approved"] is False
+
+    def test_normal_resolve_without_race_still_approves(self):
+        # Regression: with no concurrent deny, resolve(approved=True) works
+        # exactly as before (single caller, no race).
+        notify = NotifyRecorder()
+        channel = ApprovalChannel(timeout_seconds=None)
+        channel.bind(notify)
+        thread, result = _request_in_thread(channel)
+        assert notify.notified.wait(2.0)
+        request_id, _ = notify.calls[0]
+        assert channel.resolve(request_id, approved=True) is True
+        thread.join(timeout=2.0)
+        assert result["approved"] is True
+
+    def test_second_resolve_call_for_the_same_id_is_a_noop(self):
+        # A double resolve() (e.g. a duplicate UI click reaching the server
+        # twice) must not be able to flip an already-decided entry either.
+        notify = NotifyRecorder()
+        channel = ApprovalChannel(timeout_seconds=None)
+        channel.bind(notify)
+        thread, result = _request_in_thread(channel)
+        assert notify.notified.wait(2.0)
+        request_id, _ = notify.calls[0]
+        assert channel.resolve(request_id, approved=False) is True
+        assert channel.resolve(request_id, approved=True) is False
         thread.join(timeout=2.0)
         assert result["approved"] is False

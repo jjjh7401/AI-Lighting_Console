@@ -65,11 +65,16 @@ class WaitRecorder(Protocol):
 
 
 class _Pending:
-    __slots__ = ("event", "approved")
+    __slots__ = ("event", "approved", "decided")
 
     def __init__(self) -> None:
         self.event = threading.Event()
         self.approved = False
+        # Set exactly once, atomically under the channel lock, by whichever
+        # of resolve()/deny_pending_for()/deny_all_pending() decides this
+        # entry first (M6c-8 backlog item 1 — see the atomic decide-once
+        # note on those methods below).
+        self.decided = False
 
 
 class ApprovalChannel(Generic[RequestT]):
@@ -109,35 +114,63 @@ class ApprovalChannel(Generic[RequestT]):
         self.deny_pending_for(session_key)
 
     def resolve(self, request_id: str, *, approved: bool) -> bool:
-        """Deliver one human decision; False when the id is unknown/expired."""
+        """Deliver one human decision.
+
+        Returns False when the id is unknown/expired, OR when the entry was
+        already decided by a prior ``resolve``/``deny_pending_for``/
+        ``deny_all_pending`` call (atomic decide-once — M6c-8 backlog item 1:
+        the lookup-then-mutate used to straddle the lock, so a straggling
+        ``resolve(approved=True)`` racing a disconnect-triggered
+        ``deny_pending_for`` could still flip an already-denied entry back to
+        approved depending on which unlocked write landed last. The
+        check-and-decide is now one atomic critical section, and whichever
+        caller wins the lock decides the entry permanently — deny-wins is a
+        consequence of ``deny_pending_for``/``deny_all_pending`` never
+        yielding the entry back to a later ``resolve``, never a special case).
+        """
         with self._lock:
             entry = self._pending.get(request_id)
-        if entry is None:
-            return False
-        _session_key, pending = entry
-        pending.approved = approved
-        pending.event.set()
+            if entry is None:
+                return False
+            _session_key, pending = entry
+            if pending.decided:
+                return False
+            pending.decided = True
+            pending.approved = approved
+            pending.event.set()
         return True
 
     def deny_pending_for(self, session_key: SessionKey) -> None:
         """Fail-safe: release only ``session_key``'s waiting requests, denied.
 
         Called by ``unbind`` on a session's own disconnect — never touches
-        another session's still-legitimate pending requests.
+        another session's still-legitimate pending requests. Atomic
+        decide-once (see ``resolve``): an entry already decided (e.g. by a
+        ``resolve`` that landed first) is left untouched.
         """
         with self._lock:
             matching = [p for key, p in self._pending.values() if key == session_key]
-        for entry in matching:
-            entry.approved = False
-            entry.event.set()
+            for entry in matching:
+                if entry.decided:
+                    continue
+                entry.decided = True
+                entry.approved = False
+                entry.event.set()
 
     def deny_all_pending(self) -> None:
-        """Fail-safe: release EVERY waiting request across ALL sessions, denied."""
+        """Fail-safe: release EVERY waiting request across ALL sessions, denied.
+
+        Atomic decide-once (see ``resolve``): an entry already decided is
+        left untouched.
+        """
         with self._lock:
             pending = list(self._pending.values())
-        for _session_key, entry in pending:
-            entry.approved = False
-            entry.event.set()
+            for _session_key, entry in pending:
+                if entry.decided:
+                    continue
+                entry.decided = True
+                entry.approved = False
+                entry.event.set()
 
     @property
     def pending_ids(self) -> tuple[str, ...]:
