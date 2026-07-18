@@ -28,7 +28,6 @@ PROTOCOL_VERSION = 1
 
 PLUGIN_NAME = "CopilotResponder"
 
-_PERCENT_TOKEN = re.compile(r"%[0-9A-Fa-f]{2}")
 _REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
@@ -58,18 +57,33 @@ def decode_payload(text: str) -> dict:
     """Decode one responder reply payload (percent-encoded JSON, v1).
 
     Lenient input forms: percent-encoded JSON (canonical) or raw JSON (a
-    future clean transport). Raises :class:`ProtocolError` on anything else
-    or when the decoded value is not a JSON object.
+    future clean transport). Tries RAW JSON first and only falls back to
+    percent-decode-then-parse on a raw-parse failure — this is safe by
+    construction: a genuine percent-encoded payload is comma/quote/space-free
+    (see module docstring), so it can never contain a literal `{`/`"` and
+    therefore never parses as raw JSON directly, reliably falling through to
+    the decode branch. Raw JSON, in turn, never touches ``unquote`` at all.
+    (Deciding the input form by "does a %XX-shaped substring appear
+    anywhere in the text" — the previous approach — is a false-positive trap:
+    raw JSON whose string VALUES happen to contain a literal ``%XX``
+    substring, e.g. ``{"note": "discount %20 code"}``, would be silently
+    corrupted by an unwarranted percent-decode, including turning a literal
+    ``%0A``/``%0D`` substring into a real newline/carriage-return
+    character — "newline smuggling" into anything downstream that treats
+    decoded values as single-line.)
+
+    Raises :class:`ProtocolError` on anything else or when the decoded value
+    is not a JSON object.
     """
     if not text:
         raise ProtocolError("empty payload")
-    candidate = text
-    if _PERCENT_TOKEN.search(text):
-        candidate = urllib.parse.unquote(text)
     try:
-        decoded = json.loads(candidate)
-    except json.JSONDecodeError as error:
-        raise ProtocolError(f"payload is not valid (percent-encoded) JSON: {error}") from error
+        decoded = json.loads(text)
+    except json.JSONDecodeError:
+        try:
+            decoded = json.loads(urllib.parse.unquote(text))
+        except json.JSONDecodeError as error:
+            raise ProtocolError(f"payload is not valid (percent-encoded) JSON: {error}") from error
     if not isinstance(decoded, dict):
         raise ProtocolError(f"payload must decode to a JSON object, got {type(decoded).__name__}")
     return decoded

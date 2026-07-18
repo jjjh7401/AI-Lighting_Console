@@ -7,6 +7,8 @@ survive MA3's packed OSC-send string form (comma/quote-free on the wire).
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from server.bridge.protocol import (
@@ -60,6 +62,33 @@ class TestPayloadCodec:
     def test_decode_rejects_empty_string(self):
         with pytest.raises(ProtocolError):
             decode_payload("")
+
+    def test_raw_json_with_literal_percent_substring_is_not_percent_decoded(self):
+        # M6c backlog: a percent-shaped substring ANYWHERE in a raw (not
+        # actually percent-encoded) payload used to trip the old
+        # "does %XX appear anywhere" sniff and get incorrectly
+        # urllib.parse.unquote'd — silently corrupting the value.
+        payload = {"note": "discount %20 code"}
+        text = json.dumps(payload)
+        assert decode_payload(text) == payload
+
+    def test_raw_json_with_literal_percent_newline_token_is_not_smuggled(self):
+        # Worst case of the same bug: a literal "%0A" substring inside an
+        # untouched raw-JSON string value must NOT become a real newline
+        # character ("newline smuggling").
+        payload = {"note": "escape %0A sequence"}
+        text = json.dumps(payload)
+        decoded = decode_payload(text)
+        assert decoded["note"] == "escape %0A sequence"
+        assert "\n" not in decoded["note"]
+        assert "\r" not in decoded["note"]
+
+    def test_genuinely_percent_encoded_payload_still_roundtrips(self):
+        # Regression guard: percent-encoded replies (the production wire
+        # form) must still decode correctly once raw-JSON-first parsing
+        # is the primary path.
+        payload = {"v": 1, "kind": "feedback", "note": "50% off, plus tax"}
+        assert decode_payload(encode_payload(payload)) == payload
 
 
 class TestRequestBuilders:
