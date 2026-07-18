@@ -409,6 +409,82 @@ class TestRepetitionsValidation:
         assert report["repetitions"]["executed"] >= 3
 
 
+class TestEmptyCorpusValidation:
+    def test_empty_corpus_raises_a_clear_value_error_not_index_error(self, tmp_path):
+        # An empty scenario list previously crashed with IndexError at the
+        # warm-up step (scenarios[0]). It must fail fast with a clear error.
+        session = build_offline_session((), audit_dir=tmp_path)
+        config = RunnerConfig(repetitions=1, min_command_lines=1, warmup=True)
+        with pytest.raises(ValueError, match="at least one scenario"):
+            run_measurement((), session, config)
+
+
+class TestAuditDirCleanup:
+    def test_offline_session_without_audit_dir_wires_cleanup_that_removes_the_tempdir(
+        self, corpus, monkeypatch
+    ):
+        # build_offline_session() creates its own tempdir when the caller does
+        # not pass audit_dir — that tempdir must be removable via cleanup().
+        import tempfile
+        from pathlib import Path
+
+        created: list[Path] = []
+        original_mkdtemp = tempfile.mkdtemp
+
+        def spy_mkdtemp(*args, **kwargs):
+            path = original_mkdtemp(*args, **kwargs)
+            created.append(Path(path))
+            return path
+
+        monkeypatch.setattr("server.measurement.runner.tempfile.mkdtemp", spy_mkdtemp)
+        session = build_offline_session(corpus)
+        assert len(created) == 1
+        audit_dir = created[0]
+        assert audit_dir.is_dir()
+        session.cleanup()
+        assert not audit_dir.exists()
+
+    def test_offline_session_with_explicit_audit_dir_cleanup_does_not_delete_it(
+        self, corpus, tmp_path
+    ):
+        # A caller-supplied audit_dir is caller-owned — cleanup() must never
+        # delete a directory it did not create itself.
+        audit_dir = tmp_path / "caller-audit"
+        session = build_offline_session(corpus, audit_dir=audit_dir)
+        assert audit_dir.is_dir()
+        session.cleanup()
+        assert audit_dir.exists()
+
+    def test_live_llm_session_without_audit_dir_wires_cleanup_that_removes_the_tempdir(
+        self, corpus, tmp_path, monkeypatch
+    ):
+        # build_live_llm_session() has the identical tempdir-creation gap.
+        import tempfile
+        from pathlib import Path
+
+        from server.measurement.mock_provider import MockScenarioProvider
+        from server.measurement.runner import build_live_llm_session
+
+        created: list[Path] = []
+        original_mkdtemp = tempfile.mkdtemp
+
+        def spy_mkdtemp(*args, **kwargs):
+            path = original_mkdtemp(*args, **kwargs)
+            created.append(Path(path))
+            return path
+
+        monkeypatch.setattr("server.measurement.runner.tempfile.mkdtemp", spy_mkdtemp)
+        session = build_live_llm_session(
+            config_path=_write_gemini_config(tmp_path),
+            provider_override=MockScenarioProvider(corpus),
+        )
+        assert len(created) == 1
+        audit_dir = created[0]
+        assert audit_dir.is_dir()
+        session.cleanup()
+        assert not audit_dir.exists()
+
+
 class TestCli:
     def test_cli_mock_mode_writes_report_file(self, tmp_path, monkeypatch):
         from server.measurement.runner import main

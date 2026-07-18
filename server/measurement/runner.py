@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import shutil
 import statistics
 import tempfile
 import time
@@ -238,6 +239,16 @@ class MeasurementSession:
         return result
 
 
+def _audit_dir_cleanup(directory: Path | str) -> Callable[[], None]:
+    """Build a cleanup callback that removes a SELF-CREATED audit tempdir.
+
+    Never wire this for a caller-supplied ``audit_dir`` — that directory is
+    caller-owned and must survive ``session.cleanup()``.
+    """
+    path = Path(directory)
+    return lambda: shutil.rmtree(path, ignore_errors=True)
+
+
 def build_offline_session(
     scenarios: Sequence[Scenario],
     *,
@@ -246,6 +257,9 @@ def build_offline_session(
     clock: Callable[[], float] = time.monotonic,
 ) -> MeasurementSession:
     """Compose the M6a mock pipeline: scripted provider + in-memory console."""
+    # Only a self-created tempdir is ours to delete — a caller-supplied
+    # audit_dir is caller-owned and must survive session.cleanup().
+    owns_audit_dir = audit_dir is None
     if audit_dir is None:
         audit_dir = tempfile.mkdtemp(prefix="ma3-measure-audit-")
     gate = SafetyGate(console=OfflineConsole(), audit=AuditLog(audit_dir), ruleset=load_ruleset())
@@ -272,6 +286,7 @@ def build_offline_session(
         orchestrator=orchestrator,
         counter=counter,
         recorder=recorder,
+        cleanup=_audit_dir_cleanup(audit_dir) if owns_audit_dir else (lambda: None),
     )
 
 
@@ -303,6 +318,9 @@ def build_live_llm_session(
         base_delay_seconds=backoff_base_delay_seconds,
         sleep=sleep,
     )
+    # Only a self-created tempdir is ours to delete — a caller-supplied
+    # audit_dir is caller-owned and must survive session.cleanup().
+    owns_audit_dir = audit_dir is None
     if audit_dir is None:
         audit_dir = tempfile.mkdtemp(prefix="ma3-measure-audit-")
     gate = SafetyGate(console=OfflineConsole(), audit=AuditLog(audit_dir), ruleset=load_ruleset())
@@ -329,6 +347,7 @@ def build_live_llm_session(
         orchestrator=orchestrator,
         counter=counter,
         recorder=recorder,
+        cleanup=_audit_dir_cleanup(audit_dir) if owns_audit_dir else (lambda: None),
         telemetry=provider,
     )
 
@@ -400,6 +419,8 @@ def run_measurement(
     config: RunnerConfig,
 ) -> dict:
     """Run the measurement procedure and build the machine-readable report."""
+    if not scenarios:
+        raise ValueError("run_measurement requires at least one scenario")
     if config.repetitions < 1:
         raise ValueError("run_measurement requires config.repetitions >= 1 (got 0)")
     run_started = time.monotonic()
