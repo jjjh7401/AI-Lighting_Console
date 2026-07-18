@@ -9,7 +9,11 @@ log lands in M4).
 
 from __future__ import annotations
 
+import threading
+import time
+
 from server.llm.config import FallbackSettings
+from server.orchestrator import fallback as fallback_module
 from server.orchestrator.fallback import FallbackDetector
 
 
@@ -151,6 +155,66 @@ class TestOnFallbackSwitch:
         detector.observe_turn(5.0)
         assert calls == []  # nothing to switch to
         assert sink.events[0]["switched"] is False
+
+
+class TestObserveTurnConcurrencySafety:
+    """MEDIUM backlog item (M6c 종합, server/orchestrator/fallback.py:48) —
+    observe_turn() did a lock-free check-then-set on self.triggered /
+    self._consecutive. Production concurrency: server.web.measure.RoundTripRecorder
+    holds ONE FallbackDetector shared across every ChatSession, and
+    ChatSession.run_instruction runs synchronously on a worker thread via
+    asyncio.to_thread (server/web/session.py docstring) — so two concurrent
+    WebSocket turns can genuinely call observe_turn() on the same detector
+    instance from two different OS threads at once."""
+
+    def test_on_fallback_invoked_exactly_once_under_concurrent_observe_turn(self, monkeypatch):
+        calls: list[str] = []
+        settings = FallbackSettings(
+            window_turns=1,
+            consecutive_windows=1,
+            threshold_seconds=1.0,
+            target_provider="gemini",
+        )
+        sink = RecordingSink()
+        detector = FallbackDetector(
+            settings, audit_sink=sink, active_provider="anthropic", on_fallback=calls.append
+        )
+
+        real_median = fallback_module.statistics.median
+
+        def slow_median(data):
+            # Widen the check-then-set race window so two concurrently
+            # invoked observe_turn() calls reliably interleave inside the
+            # critical section — without this, two threads racing on a
+            # microseconds-fast method rarely get scheduled inside the same
+            # critical section under the GIL. time.sleep() releases the GIL,
+            # giving the sibling thread its chance to run concurrently.
+            time.sleep(0.05)
+            return real_median(data)
+
+        monkeypatch.setattr(fallback_module.statistics, "median", slow_median)
+
+        results: list[bool] = []
+        errors: list[BaseException] = []
+
+        def worker():
+            try:
+                results.append(detector.observe_turn(5.0))
+            except BaseException as exc:  # pragma: no cover - diagnostic only
+                errors.append(exc)
+
+        threads = [threading.Thread(target=worker) for _ in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=5)
+
+        assert not errors, f"observe_turn raised under concurrency: {errors}"
+        assert all(not t.is_alive() for t in threads), "observe_turn call hung (deadlock)"
+        assert calls == ["gemini"], (
+            f"on_fallback invoked {len(calls)} times under concurrent observe_turn() "
+            f"calls, expected exactly once (exactly-once invariant, module docstring): {calls}"
+        )
 
 
 class TestConfigOverride:
