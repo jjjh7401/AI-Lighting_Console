@@ -19,6 +19,7 @@ from pythonosc.udp_client import SimpleUDPClient
 from server.bridge.osc import (
     CMD_ADDRESS,
     FEEDBACK_ADDRESS,
+    STATE_ADDRESS,
     BridgeConfig,
     FeedbackMessage,
     OscBridge,
@@ -141,6 +142,68 @@ class TestFeedbackReceiving:
         SimpleUDPClient("127.0.0.1", port).send_message(FEEDBACK_ADDRESS, "late")
         with pytest.raises(queue.Empty):
             consumer.get(timeout=SILENCE_TIMEOUT)
+
+
+class TestFeedbackOriginAuthentication:
+    """M6c backlog: ``_on_feedback`` had no sender-origin check — any host
+    that could reach the receive UDP port could inject spoofed
+    feedback/state messages (fake execution confirmations, fake state
+    snapshots). Trusted origin = ``BridgeConfig.send_host`` (the same
+    console we send commands TO is the console we expect feedback FROM).
+    """
+
+    def test_feedback_from_the_trusted_console_host_is_delivered(self) -> None:
+        consumer = QueueFeedbackConsumer()
+        bridge = OscBridge(BridgeConfig(send_host="127.0.0.1", receive_port=0), consumer=consumer)
+
+        bridge._on_feedback(("127.0.0.1", 54321), FEEDBACK_ADDRESS, "ok")
+
+        message = consumer.get(timeout=SILENCE_TIMEOUT)
+        assert message == FeedbackMessage(address=FEEDBACK_ADDRESS, args=("ok",))
+        assert bridge.rejected_origin_count == 0
+
+    def test_feedback_from_an_untrusted_origin_is_dropped_and_counted(self) -> None:
+        consumer = QueueFeedbackConsumer()
+        bridge = OscBridge(BridgeConfig(send_host="127.0.0.1", receive_port=0), consumer=consumer)
+
+        bridge._on_feedback(("10.0.0.99", 54321), FEEDBACK_ADDRESS, "spoofed")
+
+        with pytest.raises(queue.Empty):
+            consumer.get(timeout=SILENCE_TIMEOUT)
+        assert bridge.rejected_origin_count == 1
+
+    def test_state_message_from_an_untrusted_origin_is_also_dropped(self) -> None:
+        consumer = QueueFeedbackConsumer()
+        bridge = OscBridge(BridgeConfig(send_host="127.0.0.1", receive_port=0), consumer=consumer)
+
+        bridge._on_feedback(("10.0.0.99", 1), STATE_ADDRESS, "spoofed-state")
+
+        with pytest.raises(queue.Empty):
+            consumer.get(timeout=SILENCE_TIMEOUT)
+        assert bridge.rejected_origin_count == 1
+
+    def test_multiple_untrusted_messages_each_increment_the_counter(self) -> None:
+        consumer = QueueFeedbackConsumer()
+        bridge = OscBridge(BridgeConfig(send_host="127.0.0.1", receive_port=0), consumer=consumer)
+
+        bridge._on_feedback(("10.0.0.99", 1), FEEDBACK_ADDRESS, "a")
+        bridge._on_feedback(("10.0.0.98", 1), FEEDBACK_ADDRESS, "b")
+
+        assert bridge.rejected_origin_count == 2
+        with pytest.raises(queue.Empty):
+            consumer.get(timeout=SILENCE_TIMEOUT)
+
+    def test_real_dispatcher_wiring_delivers_from_the_trusted_loopback_host(self) -> None:
+        # End-to-end: confirms the dispatcher is actually wired with
+        # needs_reply_address=True (not just that a direct call works) —
+        # a real client on 127.0.0.1 matches the default send_host trust.
+        consumer = QueueFeedbackConsumer()
+        with OscBridge(BridgeConfig(receive_port=0), consumer=consumer) as bridge:
+            client = SimpleUDPClient("127.0.0.1", bridge.receive_port)
+            client.send_message(FEEDBACK_ADDRESS, "trusted")
+            message = consumer.get(timeout=RECEIVE_TIMEOUT)
+        assert message == FeedbackMessage(address=FEEDBACK_ADDRESS, args=("trusted",))
+        assert bridge.rejected_origin_count == 0
 
 
 class TestConfigAndLifecycle:

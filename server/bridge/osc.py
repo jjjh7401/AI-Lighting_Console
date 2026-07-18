@@ -108,6 +108,11 @@ class OscBridge:
         self._client = SimpleUDPClient(self._config.send_host, self._config.send_port)
         self._server: ThreadingOSCUDPServer | None = None
         self._server_thread: threading.Thread | None = None
+        # M6c backlog (sender-origin authentication): messages dropped
+        # because their UDP source address did not match the trusted
+        # console origin. Observable counter, not a full logging subsystem —
+        # this module has no audit-log wiring (see _on_feedback).
+        self.rejected_origin_count: int = 0
 
     @property
     def config(self) -> BridgeConfig:
@@ -143,8 +148,8 @@ class OscBridge:
         if self._server is not None:
             return
         dispatcher = Dispatcher()
-        dispatcher.map(FEEDBACK_ADDRESS, self._on_feedback)
-        dispatcher.map(STATE_ADDRESS, self._on_feedback)
+        dispatcher.map(FEEDBACK_ADDRESS, self._on_feedback, needs_reply_address=True)
+        dispatcher.map(STATE_ADDRESS, self._on_feedback, needs_reply_address=True)
         self._server = ThreadingOSCUDPServer(
             (self._config.receive_host, self._config.receive_port), dispatcher
         )
@@ -166,7 +171,25 @@ class OscBridge:
         self._server = None
         self._server_thread = None
 
-    def _on_feedback(self, address: str, *args) -> None:
+    def _on_feedback(self, client_address: tuple[str, int], address: str, *args) -> None:
+        # M6c backlog (sender-origin authentication): previously registered
+        # with no sender-address check — any host that could reach this UDP
+        # port could inject spoofed feedback/state messages (fake execution
+        # confirmations, fake state snapshots) that the safety gate's
+        # result-confirmation and state-query paths would treat as genuine
+        # console replies. Trust origin reuses BridgeConfig.send_host — the
+        # console we send commands TO is the same console we expect
+        # feedback FROM.
+        #
+        # ASSUMPTION (onPC-unverified, pending M6b-2 live calibration): a
+        # real onPC deployment could legitimately send feedback from a
+        # different local interface than send_host (e.g. multi-homed
+        # console host); if that surfaces in live testing, this check needs
+        # a configurable trusted-origin allowlist instead of the single
+        # send_host value.
+        if client_address[0] != self._config.send_host:
+            self.rejected_origin_count += 1
+            return
         self._consumer.deliver(FeedbackMessage(address=address, args=args))
 
     def __enter__(self) -> OscBridge:
