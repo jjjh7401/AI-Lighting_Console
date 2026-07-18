@@ -11,7 +11,15 @@
 #   GOOGLE_API_KEY). The loader rejects credential-like keys.
 
 [provider]
-active = "anthropic"
+# M6b-3 default-provider selection (2026-07-18 human check-in — REQ-MVP-040):
+#   Gemini selected. Rationale: Gemini is the ONLY measured candidate — pooled
+#   grammar error rate 0.40% (< 5% threshold, AC-MVP-002 PASS, M6b-1r2 after
+#   rulebook reinforcement). Anthropic was NOT measured (no ANTHROPIC_API_KEY
+#   available), so the AC-002-AND-AC-003 eligibility predicate could not be
+#   evaluated for it. AC-003 (round-trip median < 10s) with the full LLM path
+#   is NOT yet live-measured — a deferred onPC gap (the raw OSC transport IS
+#   live-verified, M6b-2 PASS). See progress.md §E.2 M6b-3.
+active = "gemini"
 
 [provider.anthropic]
 model = "claude-opus-4-8"
@@ -32,8 +40,9 @@ cache_ttl_seconds = 3600
 window_turns = 20
 consecutive_windows = 2
 threshold_seconds = 10.0
-# target_provider = "gemini"
-# ^ Reserved for a HUMAN decision at the M6b-3 check-in (needs Anthropic-side
-#   error-rate measurement we do not have yet) — do NOT uncomment without that
-#   check-in. Left unset, a persistent-miss trigger is decided + audit-logged
-#   only; no provider switch is performed (AC-MVP-027 part 3).
+# target_provider = "anthropic"
+# ^ With active=gemini (M6b-3), the only possible fallback target is Anthropic,
+#   which remains UNMEASURED (no ANTHROPIC_API_KEY). Left unset: a persistent-
+#   miss trigger is decided + audit-logged only; no provider switch is performed
+#   (AC-MVP-027 part 3). Do NOT uncomment until Anthropic-side error-rate +
+#   round-trip measurement exists and confirms it is a viable fallback.

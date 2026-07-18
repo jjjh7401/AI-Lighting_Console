@@ -896,6 +896,57 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 
 **잔여**: 이번 배치로 M6c 종합 backlog 목록의 마지막 3개 파일 항목(`server/web/approval_bridge.py:120`, `ui/src/components/ApprovalCard.tsx:35`, `server/rulebook/assets/v2.4.2/00_grammar.md:81`) 해소. M6c-5(3건) → M6c-6(3건) → M6c-7(3건) → M6c-8(본 배치, 3건) 4개 배치에 걸쳐 M6c 종합에서 식별된 파일-레벨 backlog 항목을 순차적으로 전부 처리 — **M6c 종합 backlog는 이제 CLOSED, 잔여 0건**. (M6c-5 evidence가 명시했듯 원문 "MEDIUM(10)/LOW(5)=15건" 집계는 일부 항목이 파일당 2개 라인 번호로 표기되어 있어 distinct-fix-item 카운트와 완전히 1:1 대응하지는 않았으나, 4개 배치가 처리한 파일-레벨 항목 집합은 M6c-5/6/7 각 잔여 섹션에서 순차적으로 나열된 목록 전체와 정확히 일치하며, 더 이상 남은 파일-레벨 backlog 항목이 없음.) AC-MVP-027③ `target_provider` 실값 선정은 이 backlog와 무관한 별도의 M6b-3 인간 체크인 사항(Anthropic 측 오류율 실측 데이터 필요)으로 계속 남아 있으며, 이는 backlog CLOSED 선언과 모순되지 않음(별개의 미결 인간 결정).
 
+### M6b-2 — onPC 라이브 왕복 검증 (실콘솔 grandMA3 2.4.2) (2026-07-18, orchestrator + computer-use)
+
+**Scope**: AC-MVP-001/003/012 라이브 절반 + M7 ASSUMPTION-6 캘리브레이션 — 실제 grandMA3 onPC 2.4.2(로컬 macOS, `app_gma3` PID 76685)를 대상으로 M1 OSC 브리지 + M2 Lua responder + M7 배포 verb의 **엔드투엔드 왕복**을 라이브 검증. 사용자 승인(라이브 콘솔 사용) + computer-use로 콘솔 OSC 설정을 오케스트레이터가 직접 조작.
+
+**AC matrix (M6b-2 라이브 절반)**
+
+| AC | Status | Verification command | Actual output |
+|---|---|---|---|
+| AC-MVP-012 ② 라이브 onPC 왕복 (ping/state/exec) | **PASS (live)** | `uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9005 --wait 8.0` (재현 ×4) | `result: PASS` — `[PASS] ping: ok` / `[PASS] state: ok node={'childCount':1,'class':'Sequences','name':'Sequences'} children=1` / `[PASS] exec: ok`. state가 실제 쇼파일 오브젝트 트리(`DataPool/Sequences`) 반환 |
+| AC-MVP-001 ① 라이브 송신 (`/copilot/cmd` UDP) | **PASS (live)** | 콘솔 Command Line History에 `OK:Plugin "CopilotResponder" "ping <id>"` 표출(EchoInput=Yes) — 서버→콘솔 OSC 명령이 실제 실행됨 | `OK:Plugin "CopilotResponder" "ping 200/300/…"` 확인 |
+| AC-MVP-001 ② 라이브 피드백 (`/copilot/feedback`) | **PASS (live)** | 원시 UDP 캡처 + responder_roundtrip 수신 | `FROM ('127.0.0.1',…) /copilot/feedback {"id":…,"kind":"pong",…}` — 콘솔→서버 응답 실수신 |
+| M7 ASSUMPTION-6 (deploy verb 플러그인-오브젝트 API) | **부분 (플러그인 실행·응답 경로 라이브 확인)** | 콘솔에서 `Plugin "CopilotResponder"` 실행 + `SendOSC` 발신 성공 | 플러그인 로드·실행·OSC 발신 전 경로 라이브 확인. deploy verb 자체의 실플러그인 생성은 미실행(무해 플러그인 배포 시나리오 별도) |
+
+**근본 원인 규명 (라이브에서만 드러난 항목 — 배포 가이드 반영 필요)**
+
+1. **콘솔 OSC 소켓 stale/leak**: OSC 행의 Port를 바꿔도 소켓이 재바인딩되지 않음. `EnableInput`/`EnableOutput`을 **모두 껐다 켜야** 올바른 포트로 재바인딩됨(`lsof -iUDP`로 `*:8000` 확인). 초기 전 실패의 실제 원인.
+2. **MA3가 발신 포트를 선점**: Send 행의 Port를 콘솔이 바인딩해버려 서버가 같은 포트를 못 잡음 → 응답이 콘솔 자신에게 루프백. 콘솔이 쥐지 않은 별도 응답 포트(9005)를 서버가 바인딩하면 해소.
+3. **플러그인 오브젝트 Name = 정확히 `CopilotResponder`** 필요(Label ≠ Name; `Set Plugin 1 Property "Name" "CopilotResponder"`).
+4. **ASSUMPTION-5 (발신 주소 prefix 프리펜드) 실측 확인**: 응답 주소가 상황에 따라 `/copilot/copilot/feedback`(이중) 또는 `/copilot/feedback`(단일)로 관측됨. 최종 통과 상태에선 `/copilot/feedback` 단일 = 서버 `FEEDBACK_ADDRESS` 일치. **--diagnose로 응답 주소를 반드시 사전 확인**할 것.
+
+**승리 설정 (재현용)**: Interface `en0 (192.168.0.57)`(로컬 라우트는 lo0), Row1(수신) Port 8000·Prefix `copilot`·Receive/ReceiveCommand/EchoInput=Yes, Row2(발신) Port 9005·Prefix `copilot`·Send/SendCommand=Yes·DestinationIP 127.0.0.1, 서버는 8000 송신 / 9005 수신. 상세: 메모리 `project_copilot_m6b2_live_verified.md`.
+
+**Quality gates**: 코드 **무변경**(기존 `server/tools/responder_roundtrip.py`만 사용) — 출하된 M1/M2/M7 코드가 실콘솔에서 그대로 통과. `git status --porcelain server/ ui/ console/` empty(라이브 검증 중 코드 수정 0건).
+
+**Gaps (M6b-2)**
+
+- **AC-MVP-003 (왕복 시간 중앙값 <10초)는 미측정**: 본 검증은 **raw OSC 전송 왕복**만 라이브 확인. 전체 LLM→게이트→콘솔 경로의 왕복 시간(AC-003)은 라이브 LLM 실행이 필요 — M6b-3 관련 별도 유예 항목.
+- **ASSUMPTION-5 정석 수정 미적용**: 이중 prefix 회피의 정석 해법은 플러그인 CONFIG 응답 주소를 bare(`/state`,`/feedback`)로 변경(콘솔이 prefix 프리펜드). 이는 pytest responder 테스트와 얽혀 있어 **별도 run-phase 수정으로 이연**(현재 콘솔은 단일 prefix 상태로 통과). `console/lua/README.md` 트러블슈팅 + PROTOCOL.md §6 ASSUMPTION-5에 라이브-확인 반영 필요.
+- deploy verb의 실플러그인 생성(무해 플러그인 배포) 라이브 미실행 — 플러그인 실행·발신 경로는 확인됨.
+
+**Commits**: (본 evidence 커밋) — push: N/A (no origin remote)
+
+### M6b-3 — 기본 LLM 프로바이더 확정 = Gemini (2026-07-18, 인간 체크인 + orchestrator)
+
+**Scope**: AC-MVP-027 ②(기본 프로바이더 선정 술어 적용) — 사용자 체크인 결정으로 **Gemini**를 출하 기본 프로바이더로 확정. `config/provider.toml` `active = "gemini"`.
+
+**선정 근거 (REQ-MVP-040 술어 대비)**
+
+- Gemini는 **유일한 측정 후보** — pooled 문법 오류율 **0.40%**(< 5% 임계, AC-MVP-002 PASS, M6b-1r2 룰북 보강 후).
+- Anthropic은 **미측정**(ANTHROPIC_API_KEY 부재) — AC-002 AND AC-003 적격 술어를 평가할 수 없었음. 사용자 결정: Gemini API로 진행.
+- AC-MVP-003(왕복 중앙값 <10초, 전체 LLM 경로)은 **라이브 미측정 유예 항목** — raw OSC 전송 왕복은 M6b-2에서 라이브 PASS로 리스크 일부 해소.
+- 폴백 `target_provider`는 미설정 유지 — active=gemini에서 유일 폴백 후보 Anthropic이 미측정이므로. 폴백 트리거는 결정+감사 로그만(전환 없음, AC-MVP-027③, 자동 테스트 검증됨).
+
+**변경**: `config/provider.toml` — `[provider] active = "anthropic" → "gemini"` + 선정 근거 주석 + fallback 주석 갱신(`target_provider = "gemini"` → `"anthropic"` 예약, 미설정 유지).
+
+**Quality gates**: `uv run pytest -q` → **781 passed**(회귀 0 — `test_exactly_one_active_provider`는 gemini 허용, 여타 테스트는 픽스처/임시파일 사용) · `cd ui && npm run test` → **21 passed** · `uv run ruff check server` → clean.
+
+**Gaps (M6b-3)**: AC-003 라이브 LLM 왕복 시간 측정은 유예(onPC + 라이브 LLM 런 필요). ASSUMPTION-5 bare-address 정석 수정도 별도 이연(M6b-2 Gaps 참조).
+
+**Commits**: (본 evidence 커밋) — push: N/A (no origin remote)
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
