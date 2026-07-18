@@ -756,6 +756,51 @@ clarification gate: **resolved** — plan.md §A 마커 6건 전원 사용자 �
 
 **잔여**: 이번 배치로 M6c 종합 backlog 목록의 3개 파일 항목(`server/bridge/protocol.py:67,32`, `server/bridge/osc.py:169`, `server/safety/gate.py:138`) 해소. M6c 종합 원문의 MEDIUM(10)/LOW(5) 라인-레퍼런스 집계 방식(일부 항목이 파일당 2개 라인 번호로 표기됨)을 이번 배치가 재검증하지는 않았으므로, 정확한 잔여 건수 재계산은 다음 backlog 정리 배치의 몫으로 남김 — 아래는 M6c 종합 원문에서 이번 배치로 제거된 3개 항목을 뺀 나머지 목록 그대로: `server/orchestrator/fallback.py:48`(락 없는 경합), `server/llm/gemini_adapter.py:101`(캐시 attempted 경합), `server/orchestrator/tools.py:145`(이미 실행된 명령 오보고), `server/measurement/runner.py:453,403`(반복 0회 크래시/컨테인먼트 갭), `server/rulebook/assets/v2.4.2/00_grammar.md:81`(매크로 레시피 내부 인용 인자 미가이드), `ui/src/components/ApprovalCard.tsx:35`(버튼 디바운스 없음), `server/web/approval_bridge.py:120`(비원자적 request_approval), `server/measurement/runner.py:417,247`(빈 코퍼스 크래시/temp 디렉터리 미정리), `server/measurement/corpus.py:144`(instruction 텍스트 유일성 미검증) — 별도 배치/SPEC으로 이연. Item 2의 ASSUMPTION(send_host 신뢰 오리진 단일값)은 M6b-2 onPC 라이브 검증 대기 항목으로 남음.
 
+### M6c-6 — backlog 정리 배치 2 (동시성 경합 3건 — 폴백 감지·Gemini 캐시·명령 중복실행) (2026-07-18, manager-develop cycle_type=tdd)
+
+**Scope**: M6c-5 잔여 backlog 중, 서로 완전히 독립적인 동시성/오보고 결함 3건 — `server/orchestrator/fallback.py:48`(MEDIUM, `FallbackDetector.observe_turn` 락 없는 경합), `server/llm/gemini_adapter.py:101`(MEDIUM, `GeminiAdapter._ensure_cache` 캐시 attempted 경합), `server/orchestrator/tools.py:145`(MEDIUM, `run_commands` 이미 실행된 명령 오보고). 직전 배치(`cbde699`/`a8f6321`/`e8a4365`, M6c-5)와 파일·관심사 모두 무관 — 완전 독립. 3건 모두 실제 재정찰(reconnoiter)로 프로덕션 동시성 모델(공유 `FallbackDetector`/`GeminiAdapter` 인스턴스 + `ChatSession.run_instruction`이 `asyncio.to_thread`로 워커 스레드에서 동기 실행되는 구조, `server/web/session.py` 독스트링·`server/web/serve.py build_runtime`·`server/web/app.py` 배선 확인)에서 경합이 이론적이 아니라 실제로 가능함을 확인 후 수정.
+
+**AC matrix (M6c-6 subset)**
+
+| Item | Root cause | Verification command | Actual output |
+|---|---|---|---|
+| 1 — `FallbackDetector.observe_turn` 락 없는 check-then-set | `self.triggered`/`self._consecutive`를 락 없이 확인-후-설정 — `RoundTripRecorder`가 앱당 단일 인스턴스로 공유되고 `ChatSession.run_instruction`이 워커 스레드에서 동작하므로 두 WebSocket 세션이 동시에 `observe_turn`을 호출하면 `on_fallback` 콜백이 "정확히 1회" 불변식(모듈 독스트링)을 위반하고 2회 호출될 수 있음 | `uv run pytest -q server/tests/test_fallback_detector.py -k TestObserveTurnConcurrencySafety` | 1 passed |
+| 2 — `GeminiAdapter._ensure_cache` 캐시 attempted 경합 | `self._cache_attempted`를 네트워크 호출 완료 전에 미리 True로 설정 — 프로바이더 어댑터 인스턴스가 모든 `ChatSession`에 공유되므로, 동시 호출된 두 번째 호출자가 `_cache_attempted=True`(이미 설정됨)를 보고 아직 채워지지 않은 `self._cache_name`(여전히 None)을 그대로 반환할 수 있음 — "ONCE" 단일 시도 불변식(모듈 독스트링) 위반 | `uv run pytest -q server/tests/test_gemini_adapter.py -k TestContextCachingConcurrencySafety` | 1 passed |
+| 3 — `run_commands` 이미 실행된 명령 오보고 | `context.executed_ok`는 이전 tool 호출에서 시딩된 정적 frozenset — 이번 호출의 루프 안에서 성공한 명령을 반영하지 않음 — 동일 명령 문자열이 하나의 `commands` 리스트에 두 번 등장하면 두 번째 등장이 "이미 실행됨"으로 인식되지 않고 재실행되어 콘솔 부수효과가 중복됨(REQ-MVP-033 dedup 의미 위반) | `uv run pytest -q server/tests/test_tools.py -k test_in_bundle_duplicate_command_is_not_re_executed` | 1 passed |
+
+**TDD evidence (RED → GREEN, 항목별)**
+
+- **Item 1** (`server/orchestrator/fallback.py:58` `observe_turn`): 프로덕션 배선 확인 — `server/web/serve.py build_runtime`가 `FallbackDetector`를 앱당 1회만 생성해 `RoundTripRecorder`에 부착하고, 이 recorder는 `WebDeps`를 통해 모든 `ChatSession`에 동일 인스턴스로 공유됨(`server/web/app.py`). `server/web/session.py` 독스트링: "`run_instruction` is synchronous and runs on a worker thread (`asyncio.to_thread` in the app layer)" — 즉 두 WebSocket 세션이 거의 동시에 명령을 보내면 두 워커 스레드가 동일한 `FallbackDetector` 인스턴스의 `observe_turn`을 진짜로 동시 호출할 수 있음(이론이 아니라 실제 동시성). RED: 신규 `TestObserveTurnConcurrencySafety.test_on_fallback_invoked_exactly_once_under_concurrent_observe_turn` — `statistics.median`을 patch해 50ms sleep을 주입, GIL을 해제시켜 두 스레드가 check-then-set 임계구역 안에서 확실히 인터리빙하도록 경합 윈도우를 넓힘(barrier 없이도 결정적으로 재현). 수정 전 `calls == ['gemini', 'gemini']`(2회 호출)로 assert 실패 확인(pytest 출력 확인). GREEN: `__init__`에 `threading.Lock()` 추가, `observe_turn` 메서드 전체(early-return부터 audit-sink record까지)를 `with self._lock:`로 감싸 — 두 번째 동시 호출자가 락을 획득할 시점엔 `self.triggered`가 이미 True이므로 즉시 조기 반환. `@MX:ANCHOR`+`@MX:REASON` 2줄로 락의 존재 이유(공유 인스턴스 + 워커 스레드 동시성)를 문서화.
+- **Item 2** (`server/llm/gemini_adapter.py:105` `_ensure_cache`): 프로덕션 배선 확인 — `provider`는 `build_runtime`에서 1회만 생성되어 `WebDeps.provider`로 모든 `ChatSession`에 공유됨(`server/web/app.py:144`). Item 1과 동일한 워커 스레드 동시성 모델이 적용됨. RED: 신규 `TestContextCachingConcurrencySafety.test_ensure_cache_invoked_at_most_once_under_concurrent_calls` — `FakeCaches.create`를 서브클래스해 50ms sleep 주입, 두 스레드로 `adapter._ensure_cache(...)`를 동시 호출. 실제 관측된 실패 모드는 중복 생성이 아니라 **더 정밀한 경합 변종** — `client.caches.calls`는 1회였지만(`self._cache_attempted`를 네트워크 호출 전에 미리 설정하는 코드 특성상), 두 번째 호출자가 아직 채워지지 않은 `self._cache_name`(None)을 그대로 반환 — `results == [None, 'cachedContents/rulebook-1']`로 assert 실패(pytest 출력 확인, "both callers must observe the SAME final cache name" 검증에서 포착). GREEN: `__init__`에 `threading.Lock()` 추가, `_ensure_cache`의 `if self._cache_attempted:` 이후 전체 본문을 `with self._lock:`로 감싸 — 두 번째 동시 호출자가 첫 시도의 실제 완료를 **대기**한 뒤 올바른 최종 결과를 받도록 변경(경합하거나 조기 반환하지 않음). `_ensure_client`는 lock 밖(캐시 시도 이전)에 위치해 무변경.
+- **Item 3** (`server/orchestrator/tools.py:137` `run_commands`): `context.executed_ok`는 `server/orchestrator/runner.py`가 이전 tool 호출 결과로 시딩하는 정적 frozenset(현재 호출의 루프 안에서는 갱신되지 않음). RED: 신규 `test_in_bundle_duplicate_command_is_not_re_executed` — `commands=["cmd1", "cmd1"]`로 `run_commands` 호출, 수정 전 `port.executed == ['cmd1', 'cmd1']`(2회 실행)로 assert 실패 확인(pytest 출력 확인). GREEN: 루프 진입 전 `already_executed = set(context.executed_ok)`로 로컬 가변 집합을 시딩하고, 명령이 성공할 때마다 `already_executed.add(command)`로 갱신 — 중복 검사를 `context.executed_ok`(정적) 대신 `already_executed`(이번 호출 내 갱신됨)로 변경. 이번 배치 내 중복은 이제 `skipped_already_executed`로 정확히 보고됨.
+
+**Quality gates**
+
+- `uv run pytest -q` → **766 passed** (763 baseline + 3 신규: Item 1 동시성 1건 + Item 2 동시성 1건 + Item 3 중복실행 1건)
+- `uv run ruff check server` → clean
+- `uv run ruff format --check server` → clean (신규/수정 6개 파일 모두 정렬 상태 확인)
+
+**PASS/FAIL per constraint (브리프 대비)**
+
+| 제약 | 상태 | 비고 |
+|---|---|---|
+| Item 1 — on_fallback 정확히 1회, 프로덕션 동시성 모델로 실제 경합 확인 후 수정 | PASS | `test_on_fallback_invoked_exactly_once_under_concurrent_observe_turn` — 50ms sleep 주입으로 결정적 재현, 락으로 해소 |
+| Item 2 — 캐시 생성 단일 시도, 두 번째 호출자는 대기(경합/조기반환 아님) | PASS | `test_ensure_cache_invoked_at_most_once_under_concurrent_calls` — 실제 실패 모드는 stale-None 조기반환이었고, 락으로 두 호출자 모두 동일한 최종 결과 관측 |
+| Item 3 — 번들 내 중복 명령은 재실행 없이 skipped_already_executed | PASS | `test_in_bundle_duplicate_command_is_not_re_executed` — `commands=["cmd1","cmd1"]`, `execute()` 정확히 1회 |
+| 무회귀(763건 그대로) | PASS | 766 = 763 + 3, 0 실패 |
+| 범위 규율(3파일 + 해당 테스트 파일만 터치, 나머지 backlog 미터치) | PASS | `git diff --stat ef0716c..HEAD`로 6개 파일만 변경 확인(`server/orchestrator/fallback.py`, `server/llm/gemini_adapter.py`, `server/orchestrator/tools.py` + 3개 테스트 파일) |
+| 스타일 일치(`@MX:ANCHOR`+`@MX:REASON` 2줄 세트, REQ/AC-id 참조, 영어 코드 주석) | PASS | fallback.py/gemini_adapter.py 각각 `@MX:ANCHOR`+`@MX:REASON` 2줄로 lock의 존재 이유 문서화; tools.py는 인라인 영어 주석으로 로컬 집합의 의미 설명 |
+| 커밋 전략(origin 없음 — main 직접 커밋, push 없음) | PASS | 3개 fix 커밋(파일별) + 본 evidence 커밋, 전부 `main` 직접 |
+
+**Commits** (no push — no origin remote)
+
+- `67c9515` fix(SPEC-COPILOT-MVP-001): M6c-6 guard FallbackDetector.observe_turn against concurrent double-invocation (TDD)
+- `a56ea1f` fix(SPEC-COPILOT-MVP-001): M6c-6 guard GeminiAdapter._ensure_cache against concurrent cache-attempted race (TDD)
+- `82b83ab` fix(SPEC-COPILOT-MVP-001): M6c-6 fix in-bundle duplicate command re-execution in run_commands (TDD)
+- (본 evidence 커밋)
+
+**잔여**: 이번 배치로 M6c-5 잔여 backlog 목록의 3개 파일 항목(`server/orchestrator/fallback.py:48`, `server/llm/gemini_adapter.py:101`, `server/orchestrator/tools.py:145`) 해소. 남은 backlog 6건은 이번 배치 범위 밖(별도 SPEC/배치로 이연): `server/measurement/runner.py:453,403`(반복 0회 크래시/컨테인먼트 갭), `server/measurement/runner.py:417,247`(빈 코퍼스 크래시/temp 디렉터리 미정리), `server/rulebook/assets/v2.4.2/00_grammar.md:81`(매크로 레시피 내부 인용 인자 미가이드), `ui/src/components/ApprovalCard.tsx:35`(버튼 디바운스 없음), `server/web/approval_bridge.py:120`(비원자적 request_approval), `server/measurement/corpus.py:144`(instruction 텍스트 유일성 미검증). AC-MVP-027③ `target_provider` 실값 선정은 여전히 M6b-3 인간 체크인 사항(별도, 이번 배치와 무관)으로 남음.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
