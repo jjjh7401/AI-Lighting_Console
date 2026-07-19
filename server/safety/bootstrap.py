@@ -81,10 +81,16 @@ def build_console_stack(
     timeouts: LinkTimeouts | None = None,
     backup_interval_seconds: float = DEFAULT_INTERVAL_SECONDS,
     attempt_session_backup: bool = True,
+    plugin_import_dir: Path | str | None = None,
 ) -> ConsoleStack:
-    """Compose bridge + link + gate; the caller owns ``stop()``."""
+    """Compose bridge + link + gate; the caller owns ``stop()``.
+
+    ``plugin_import_dir``: when set (co-located server + console), plugin
+    deployments use the working file+Import path via that onPC plugins-library
+    folder; when None, the OSC ``deploy`` verb is used (remote fallback).
+    """
     monitor = HealthMonitor()
-    link = ConsoleLink(timeouts=timeouts, monitor=monitor)
+    link = ConsoleLink(timeouts=timeouts, monitor=monitor, import_dir=plugin_import_dir)
     bridge = OscBridge(
         BridgeConfig(
             send_host=send_host,

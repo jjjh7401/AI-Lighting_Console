@@ -62,6 +62,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="skip the session-start showfile backup attempt",
     )
+    parser.add_argument(
+        "--plugin-import-dir",
+        default=str(
+            Path.home() / "MALightingTechnology" / "gma3_library" / "datapools" / "plugins"
+        ),
+        help=(
+            "onPC plugins-library folder for the file+Import deploy path "
+            "(co-located server + console). Pass an empty string to fall back "
+            "to the OSC deploy verb (remote console with no shared filesystem)."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -79,6 +90,7 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         receive_port=args.receive_port,
         approval_port=channel,
         attempt_session_backup=not args.no_session_backup,
+        plugin_import_dir=(args.plugin_import_dir or None),
     )
 
     # AC-MVP-027 part 3 (REQ-MVP-039/040 ii): only when a fallback target is

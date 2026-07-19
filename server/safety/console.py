@@ -17,6 +17,7 @@ import itertools
 import threading
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 from server.bridge.osc import FeedbackMessage
@@ -28,6 +29,7 @@ from server.bridge.protocol import (
     build_state_query,
     decode_payload,
 )
+from server.deploy.pack import build_plugin_xml, import_slug
 from server.safety.expand import BodyUnavailable
 from server.safety.monitor import HealthMonitor
 
@@ -88,11 +90,18 @@ class ConsoleLink:
         timeouts: LinkTimeouts | None = None,
         monitor: HealthMonitor | None = None,
         id_prefix: str = "gate",
+        import_dir: str | Path | None = None,
     ) -> None:
         self._send = send
         self._timeouts = timeouts or LinkTimeouts()
         self._monitor = monitor
         self._id_prefix = id_prefix
+        # When set (co-located server + console), deploy_plugin uses the working
+        # file+Import path (write a native Base64-embedded plugin XML to the
+        # onPC plugins library folder, then `Import Plugin`). When None, it falls
+        # back to the OSC `deploy` verb (kept for a remote console with no shared
+        # filesystem; that verb is size-capped and content-setter-fragile on 2.4.2).
+        self._import_dir = Path(import_dir).expanduser() if import_dir else None
         self._counter = itertools.count(1)
         self._pending: dict[str, _Waiter] = {}
         self._pending_lock = threading.Lock()
@@ -178,12 +187,84 @@ class ConsoleLink:
         return True
 
     def deploy_plugin(self, name: str, lua_source: str) -> ExecOutcome:
-        """Deploy one plugin via the responder deploy verb (M7, REQ-MVP-019).
+        """Deploy one reviewed plugin so it is RUNNABLE on the console (M7).
 
-        Sends ONCE and never retries: like exec, a deploy timeout is
-        UNCONFIRMED (send loss and reply loss are indistinguishable —
+        Uses file+Import when an ``import_dir`` is configured (co-located server
+        + console — the working path on onPC 2.4.2), otherwise the OSC ``deploy``
+        verb (remote fallback). Sends ONCE and never retries: like exec, a deploy
+        timeout is UNCONFIRMED (send loss and reply loss are indistinguishable —
         REQ-MVP-032 discipline applies to deployments too).
         """
+        if self._import_dir is not None:
+            return self._deploy_via_file_import(name, lua_source)
+        return self._deploy_via_osc_verb(name, lua_source)
+
+    def _deploy_via_file_import(self, name: str, lua_source: str) -> ExecOutcome:
+        """Write a native Base64-embedded plugin XML and ``Import Plugin`` it.
+
+        The OSC ``deploy`` verb's embedded-content write does not run on 2.4.2
+        (ASSUMPTION-6) and truncates past ~2 KB; the native inline-Base64 import
+        format has neither limit (verified live: 9-fixture patch plugin ran).
+        Idempotent: an existing plugin of the same Name is deleted first so a
+        re-deploy updates in place instead of creating a duplicate.
+        """
+        try:
+            xml = build_plugin_xml(name, lua_source)
+        except ValueError as error:
+            return ExecOutcome(status="failed", detail=str(error))
+        slug = import_slug(name)
+        target = self._import_dir / f"{slug}.xml"
+        try:
+            self._import_dir.mkdir(parents=True, exist_ok=True)
+            target.write_text(xml, encoding="utf-8")
+        except OSError as error:
+            return ExecOutcome(status="failed", detail=f"cannot write plugin file {target}: {error}")
+
+        # One pool read: find an existing same-Name slot (idempotent redeploy)
+        # AND the occupied slots (to pick a free one). A no-slot `Import Plugin`
+        # is unreliable on 2.4.2 — an explicit free slot is required.
+        existing_slot: int | None = None
+        occupied: set[int] = set()
+        try:
+            pool = self.query_state("DataPool/Plugins")
+            for child in pool.get("children", []):
+                if not isinstance(child, dict):
+                    continue
+                index = child.get("i")
+                if isinstance(index, int):
+                    occupied.add(index)
+                if child.get("name") == name:
+                    existing_slot = index
+        except StateQueryError:
+            pass  # non-fatal — proceed with slot 2 fallback below
+        if isinstance(existing_slot, int):
+            self.execute(f"Delete Plugin {existing_slot}")
+            occupied.discard(existing_slot)
+        slot = 1
+        while slot in occupied:
+            slot += 1
+
+        # Import into the chosen free slot; single-quoted stem (exec rejects ").
+        outcome = self.execute(f"Import Plugin {slot} '{slug}'")
+        if outcome.status != "ok":
+            return ExecOutcome(
+                status=outcome.status,
+                detail=f"Import Plugin {slot} '{slug}' failed: {outcome.detail}",
+            )
+        # Confirm the plugin object now exists in the pool under its Name.
+        try:
+            pool = self.query_state("DataPool/Plugins")
+        except StateQueryError as error:
+            return ExecOutcome(status="unconfirmed", detail=f"imported but pool unreadable: {error}")
+        names = [c.get("name") for c in pool.get("children", []) if isinstance(c, dict)]
+        if name in names:
+            return ExecOutcome(status="ok", detail=f"imported plugin {name!r} via file+Import")
+        return ExecOutcome(
+            status="failed", detail=f"import did not create plugin {name!r} (pool: {names})"
+        )
+
+    def _deploy_via_osc_verb(self, name: str, lua_source: str) -> ExecOutcome:
+        """Legacy OSC ``deploy`` verb (remote fallback; size-capped on 2.4.2)."""
         request_id = self._new_id()
         try:
             wire = build_deploy_request(request_id, name, lua_source)
