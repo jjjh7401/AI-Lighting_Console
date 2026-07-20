@@ -15,6 +15,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from server.deploy.compile import LuaCompileChecker
+from server.deploy.keystore import SessionKeyStore
 from server.deploy.pipeline import DeployPipeline
 from server.llm.config import DEFAULT_CONFIG_PATH, load_provider_config
 from server.llm.factory import build_provider
@@ -38,6 +39,8 @@ from server.web.launcher import (
     serve_local_url,
 )
 from server.web.measure import RoundTripRecorder
+from server.web.provision_api import ProvisionDeps
+from server.web.settings_api import SettingsDeps
 
 
 def default_ui_dist() -> Path:
@@ -176,6 +179,13 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
     )
 
     ui_dist = Path(args.ui_dist)
+    config_path = Path(args.config)
+    # M10 Part D: compose the M3/M4 deploy-shell REST routers into WebDeps — the
+    # M6 "serve.py composition" obligation (settings_api/provision_api docstrings)
+    # that was missed, so the packaged app 404'd its entire in-app config surface.
+    # settings_path defaults to None -> the OS-standard user config dir (writable
+    # under a frozen bundle); seed_path honours --config; the SessionKeyStore is
+    # the REQ-DEPLOY-006a in-memory fallback for a store-unavailable key write.
     deps = WebDeps(
         gate=stack.gate,
         provider=active_provider,
@@ -189,6 +199,8 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         backup_manager=stack.backup,
         heartbeat_interval_seconds=args.heartbeat_interval,
         backup_poll_seconds=args.backup_poll,
+        settings=SettingsDeps(seed_path=config_path, session=SessionKeyStore()),
+        provision=ProvisionDeps(seed_path=config_path),
     )
     app = create_app(deps)
     app.state.deps = deps  # composition introspection seam (tests/diagnostics)

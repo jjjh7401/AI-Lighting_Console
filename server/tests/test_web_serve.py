@@ -237,3 +237,65 @@ class TestM7ReviewWiring:
             assert deps.deploy_pipeline._registry is stack.registry
         finally:
             stack.stop()
+
+
+class TestM10DeployShellWiring:
+    """M10 Part D — the packaged deploy shell must actually MOUNT the M3/M4
+    settings/key + provisioning REST routers.
+
+    The routers (build_settings_router / build_provision_router) and their deps
+    classes exist since M3/M4, but the M6 obligation to compose them into the
+    production ``WebDeps`` (settings_api docstring: "serve.py composition at M6")
+    was missed — so ``build_runtime`` shipped an app that 404s on the whole
+    deploy-shell REST surface. This is a Case-5 missing-endpoint boundary defect
+    the M10 integration verification exists to catch (AC-DEPLOY-005/006/007).
+    """
+
+    def test_build_runtime_composes_settings_and_provision_deps(self):
+        args = parse_args(["--receive-port", "0", "--no-session-backup"])
+        app, stack = build_runtime(args)
+        try:
+            deps = app.state.deps
+            assert deps.settings is not None, "settings deps not composed (M3 router unmounted)"
+            assert deps.provision is not None, "provision deps not composed (M4 router unmounted)"
+        finally:
+            stack.stop()
+
+    def test_settings_and_provision_endpoints_are_served(self):
+        # The deploy-shell UX (in-app config + provisioning) is entirely these
+        # endpoints; if they 404, the packaged app is terminal-config-broken.
+        args = parse_args(["--receive-port", "0", "--no-session-backup"])
+        app, stack = build_runtime(args)
+        try:
+            with TestClient(app) as client:
+                settings = client.get("/api/settings")
+                assert settings.status_code == 200, "GET /api/settings must be mounted (M3)"
+                doc = settings.json()
+                # Keys are booleans only — a value would be a credential leak.
+                assert all(isinstance(v, bool) for v in doc["keys"].values())
+                assert "console_port" in doc["settings"]
+
+                provision = client.get("/api/provision/responder")
+                assert provision.status_code == 200, (
+                    "GET /api/provision/responder must be mounted (M4)"
+                )
+                assert "installed" in provision.json()
+        finally:
+            stack.stop()
+
+    def test_settings_write_targets_the_user_config_dir_not_the_bundle(self, tmp_path):
+        # POST with an explicit settings_path proves the write-side seam is
+        # wired; the packaged default (settings_path=None) resolves to the OS
+        # user config dir (verified end-to-end by verify_packaged_e2e.py step 5).
+        from fastapi import FastAPI
+
+        from server.web.settings_api import SettingsDeps, build_settings_router
+
+        settings_file = tmp_path / "settings.toml"
+        app = FastAPI()
+        app.include_router(build_settings_router(SettingsDeps(settings_path=settings_file)))
+        with TestClient(app) as client:
+            resp = client.post("/api/settings", json={"console_port": 8123})
+            assert resp.status_code == 200
+            assert settings_file.is_file()
+            assert "console_port = 8123" in settings_file.read_text()
