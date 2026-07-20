@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-DEPLOY-001
 title: "Phase 2: 배포 가능한 앱 형태 — PyInstaller 로컬 런처 → Tauri 데스크톱 앱 (macOS/Windows)"
 version: "0.2.0"
-status: draft
+status: in-progress
 created: 2026-07-20
 updated: 2026-07-20
 author: manager-spec
