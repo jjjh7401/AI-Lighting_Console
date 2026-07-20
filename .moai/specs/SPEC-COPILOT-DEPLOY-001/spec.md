@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-DEPLOY-001
 title: "Phase 2: 배포 가능한 앱 형태 — PyInstaller 로컬 런처 → Tauri 데스크톱 앱 (macOS/Windows)"
-version: "0.2.0"
+version: "0.2.1"
 status: in-progress
 created: 2026-07-20
 updated: 2026-07-20
@@ -23,6 +23,7 @@ depends_on: [SPEC-COPILOT-MVP-001]
 |---|---|---|---|
 | 0.1.0 | 2026-07-20 | manager-spec | 최초 작성 (draft). 기능이 검증된 MVP(SPEC-COPILOT-MVP-001)를 최종 사용자(조명 오퍼레이터)용 설치·배포 가능한 앱 형태로 전환하는 SPEC. 합의된 2단계(패키징 Stage 1 PyInstaller onefile 런처 → Stage 2 Tauri v2 데스크톱 앱, Electron은 대안 문서화) + 배포 셸이 만족해야 할 6대 크로스컷 요구(인앱 설정 UI + OS 자격 증명 저장, responder provisioning, health UI, 코드 서명·공증, 자동 업데이트, 오류 UX)를 GEARS 요구사항으로 정의. **핵심 HARD 제약**: onPC와 동일 머신 로컬 구동 — 순수 클라우드/SaaS 형태는 out of scope. 다음 세션 구현 대상. |
 | 0.2.0 | 2026-07-20 | manager-spec | Plan-audit fold-in (PASS-WITH-DEBT ~0.79). AC-014 ③ 구체화(SAFETY-1: OSC 송신 표면 allowlist + 스캔 메커니즘/패턴 + Python·Rust 전 언어 + fail-closed + wire-level 열거), REQ-006a([Unwanted] 자격 저장소 미가용/잠금/거부 시 평문 금지·세션 한정 폴백 — GEARS-1/TRACE-3)·REQ-027([Event-driven] updater 재시작 시 라이브 잠금/승인 대기/감사 로그 보존 — SAFETY-4) 신설, REQ-004 "(또는 동일 LAN)" 삭제·[Unwanted]/[Ubiquitous] 분리(TRACE-1/GEARS-3), REQ-015 검증 가능 서명 행위로 재작성·SmartScreen를 §C 제약으로 이동(GEARS-2/FEAS-7), REQ-011↔024 Import Plugin 정합(SAFETY-3). 사전 확정 결정 반영: AppName "GrandMA3 Copilot"/번들 식별자 com.grandma3copilot.app, macOS universal2(min 12)+Windows x86_64, onedir(FEAS-1/6/M13), 서명 파이프라인만 작성(인증서 부재 N/A), TOML config, keyring Python 직접 접근, 배너 온보딩, MVP 포트 재사용, 텔레메트리 0·크래시 env-scrub. §F 재작성: 6 resolved + 2 Stage-2-deferred(F5 보안 축 추가, F6). 다음 세션 구현 대상. |
+| 0.2.1 | 2026-07-20 | manager-spec | M6 착수 중 발견 사항 반영 (mid-run 기록, D-NEW-1). 빌드 호스트 CPython이 **arm64 전용**임이 확인되어 **universal2(arm64+x86_64) 및 Windows x86_64는 현재 빌드 호스트에서 환경-게이트 N/A**로 전환 — 서명 env-gate(§A.6 F7, AC-DEPLOY-009/010)와 **동일 규율**(research.md §C.6/§E-2). universal2는 universal2 CPython + `_pydantic_core`/`jiter` universal2 wheel이, Windows는 Windows 러너가 필요하며 현재 arm64 전용 호스트에 부재. **macOS arm64 아티팩트는 지금 빌드·검증**한다. 패키징 파이프라인은 **코드 변경 없이**(`PYI_TARGET_ARCH=universal2` env / Windows 러너) 두 대상을 활성화하므로, universal2/Windows는 **폐기가 아니라 적합한 빌드 환경으로 이연된 목표**다. 근본 결정(onedir·universal2·Windows 대상 자체)은 **불변** — §A 대상 아키텍처 서술 + acceptance.md DoD(Stage 1/2 빌드) + AC-DEPLOY-009 이중 게이트 명시만 수정. |
 
 ## A. 개요
 
@@ -52,7 +53,7 @@ depends_on: [SPEC-COPILOT-MVP-001]
 **Plan-audit fold-in (v0.2.0) 확정 결정 — Implementation Kickoff에서 해소됨:**
 
 - **앱 정체성**: AppName = **"GrandMA3 Copilot"**, reverse-DNS 번들 식별자 = **`com.grandma3copilot.app`**. 이 번들 식별자는 config 경로·Keychain 서비스명·Tauri identifier·코드 서명 identity의 앵커다. ⚠️ **"GrandMA3"는 MA Lighting의 상표**이므로, 공개 배포 전 중립적 리네이밍이 필요할 수 있다 — 번들 식별자는 코드 서명 앵커이므로 리네이밍은 조기 확정이 바람직하다.
-- **대상 아키텍처**: macOS **universal2**(arm64 + x86_64, 최소 macOS 12) **및** Windows **x86_64** — 두 플랫폼 모두 지금 빌드·검증한다 (조명 노트북 Intel 가능성 대비 universal2).
+- **대상 아키텍처**: macOS **arm64** 아티팩트는 이 빌드 호스트에서 **지금 빌드·검증**한다. **universal2**(arm64 + x86_64, 최소 macOS 12) **및** Windows **x86_64**는 현재 빌드 호스트에서 **환경-게이트 N/A**로 둔다 — 이 호스트의 CPython이 **arm64 전용**이라 PyInstaller가 universal2를 emit할 수 없고(universal2 CPython + `_pydantic_core`·`jiter`의 universal2 wheel 필요), Windows 러너도 부재하기 때문이다(research.md §C.6·§E-2). 서명 env-gate(§A.6 F7)와 **동일 규율**로, **패키징 파이프라인 코드는 작성**하되 universal2/Windows 출력은 적합한 빌드 환경 확보 전까지 환경-게이트로 둔다. 파이프라인은 **코드 변경 없이**(`PYI_TARGET_ARCH=universal2` env / Windows 러너) 두 대상을 활성화한다. **조명 노트북 Intel 대응은 폐기가 아니라 이연** — universal2 대상은 유지되며 universal2/Windows 빌드 환경으로 연기된 목표다.
 - **패키징 형태: onedir**(onefile 아님) — 두 플랫폼 모두. 근거: onefile `_MEI` dylib 추출이 macOS hardened runtime/library-validation과 충돌(공증 거부 대표 원인)하고, signed .app 내부 onefile sidecar 서명이 난해하다 (FEAS-1/FEAS-6/DECIDE-M13). macOS는 onedir 트리를 notarizable **.app/.dmg 컨테이너**에 담는다(bare Mach-O 아님).
 - **코드 서명**: 인증서 미보유 → 서명/공증 **파이프라인 코드는 작성**하되, AC-DEPLOY-009/010은 인증서 확보 전까지 **환경-게이트 N/A**로 둔다. 인증서 유형 결정 사실은 §C·plan.md §A.6에 기록(OV vs EV, 2023.6+ 코드서명 키의 FIPS-140 하드웨어토큰/클라우드 HSM 필수, macOS notarytool 크리덴셜, hardened runtime + entitlements + stapling — FEAS-3/FEAS-7/DECIDE-M7).
 - **설정 포맷: TOML**(기존 stdlib `tomllib` 로더 재사용, 의존성 0). UI↔백엔드 config 스키마 계약은 M1에서 확정.

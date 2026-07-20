@@ -39,7 +39,7 @@
 
 | AC ID | 기준 | 검증 방법 | 연계 REQ |
 |---|---|---|---|
-| AC-DEPLOY-009 | macOS Developer ID 서명 + notarization | **환경-게이트 반자동**(Developer ID 인증서 요구): 대상은 **notarizable universal2(arm64+x86_64) .app/.dmg 컨테이너**(bare Mach-O 아님 — onedir 트리를 담음, FEAS-6). 서명·공증된 아티팩트에 대해 `spctl --assess --type execute`(또는 `codesign --verify` + notarytool 이력)로 Gatekeeper 통과 확인 + **stapling 검증**(`stapler validate`). 서명 파이프라인은 hardened runtime + entitlements plist(`com.apple.security.cs.*`) 포함(FEAS-3). 인증서 부재 환경에서는 서명 파이프라인 구성 존재 + explicit N/A 기록 | REQ-DEPLOY-014 |
+| AC-DEPLOY-009 | macOS Developer ID 서명 + notarization | **환경-게이트 반자동**(Developer ID 인증서 요구): 대상은 **notarizable universal2(arm64+x86_64) .app/.dmg 컨테이너**(bare Mach-O 아님 — onedir 트리를 담음, FEAS-6). 서명·공증된 아티팩트에 대해 `spctl --assess --type execute`(또는 `codesign --verify` + notarytool 이력)로 Gatekeeper 통과 확인 + **stapling 검증**(`stapler validate`). 서명 파이프라인은 hardened runtime + entitlements plist(`com.apple.security.cs.*`) 포함(FEAS-3). 인증서 부재 환경에서는 서명 파이프라인 구성 존재 + explicit N/A 기록. ⚠️ **이중 환경-게이트**: 서명 인증서 부재(Developer ID)와 **별개로**, 대상 아키텍처 **universal2 자체**도 현재 arm64 전용 빌드 호스트에서는 환경-게이트다 — arm64 전용 CPython이라 universal2 미생성(universal2 CPython + `_pydantic_core`/`jiter` universal2 wheel 필요 — research.md §C.6). 즉 완전 검증에는 (a) 아키텍처 게이트(universal2 빌드 환경)와 (b) 인증서 게이트(Developer ID)가 **둘 다** 충족돼야 한다. arm64 서명 검증은 ad-hoc identity로 지금 dry-verify 가능(research.md §C.5) | REQ-DEPLOY-014 |
 | AC-DEPLOY-010 | Windows Authenticode 서명 | **환경-게이트 반자동**(Authenticode 인증서 요구): 서명된 인스톨러/실행 파일에 대해 `signtool verify /pa`로 서명 유효성 확인. 인증서 부재 환경에서는 서명 파이프라인 구성 존재 + explicit N/A 기록 | REQ-DEPLOY-015 |
 
 ### D.6 자동 업데이트 AC
@@ -147,7 +147,7 @@
 - [ ] 안전 불변식 회귀(AC-DEPLOY-014) — 패키징된 셸에서 단일 관문·블랙리스트 승인 불변식 유지 + OSC 송신 표면 allowlist/wire-level 열거(Python+Rust) CI green
 - [ ] API 키 평문 미유출(AC-DEPLOY-004) — 앱이 쓰는 모든 파일(크래시 덤프 포함)에 키 문자열 0건 자동 스캔 통과; 저장소 미가용 폴백(AC-DEPLOY-016) PASS
 - [ ] 앱 발행 Import Plugin 게이트 경유 + 감사 로그 1:1(AC-DEPLOY-017) PASS; updater 재시작 안전상태 보존(AC-DEPLOY-018) PASS(Stage-2)
-- [ ] Stage 1(PyInstaller **onedir**) + Stage 2(Tauri) 양 아티팩트가 macOS(universal2)·Windows(x86_64)에서 재현 가능 빌드 절차로 생성됨
+- [ ] Stage 1(PyInstaller **onedir**) + Stage 2(Tauri) 양 아티팩트가 재현 가능 빌드 절차로 생성됨 — **macOS arm64는 현재 호스트에서 지금 생성**; **universal2·Windows(x86_64)는 현재 빌드 호스트에서 환경-게이트 N/A**(arm64 전용 CPython → universal2 unreachable; Windows 러너 부재 — research.md §C.6/§E-2), AC-DEPLOY-009/010 서명 env-gate와 **동일 규율**으로 적합한 빌드 환경 확보 시 생성(파이프라인은 코드 변경 없이 `PYI_TARGET_ARCH=universal2`/Windows 러너로 활성화)
 - [ ] REQ → AC 추적성 매트릭스 기준 고아 REQ 0건 유지 (REQ-004a/006a/011a/027 포함)
 - [ ] plan.md §F 결정 원장 — **6 resolved + 2 Stage-2-deferred(F5·F6), Stage-1-open 결정 0건** (Stage-2 결정은 명시적 이연)
 - [ ] 기능 무변경 확인 — SPEC-COPILOT-MVP-001 백엔드 테스트 스위트 무변경 green 유지
