@@ -137,6 +137,49 @@ def user_config_dir(app_name: str = APP_NAME) -> Path:
     )
 
 
+def _resolve_data_dir(
+    app_name: str,
+    *,
+    platform: str,
+    os_name: str,
+    environ: Mapping[str, str],
+    home: Path,
+) -> Path:
+    """Resolve the OS-standard per-user DATA directory (pure, testable).
+
+    Runtime DATA (audit logs, state) is distinct from CONFIG: macOS keeps both
+    under Application Support, but POSIX and Windows split the two.
+
+    macOS   -> ~/Library/Application Support/<AppName>
+    Windows -> %LOCALAPPDATA%\\<AppName>   (fallback ~/AppData/Local/<AppName>)
+    POSIX   -> $XDG_DATA_HOME/<AppName>  (fallback ~/.local/share/<AppName>)
+    """
+    if platform == "darwin":
+        return home / "Library" / "Application Support" / app_name
+    if os_name == "nt":
+        local = environ.get("LOCALAPPDATA")
+        root = Path(local) if local else home / "AppData" / "Local"
+        return root / app_name
+    xdg = environ.get("XDG_DATA_HOME")
+    root = Path(xdg) if xdg else home / ".local" / "share"
+    return root / app_name
+
+
+# @MX:NOTE: [AUTO] per-user writable DATA-dir resolver — the write-side twin of
+#   user_config_dir(); a frozen bundle is read-only, so runtime data (audit
+#   logs) must land here, NOT under sys._MEIPASS. Reuses the config-dir idiom.
+# @MX:SPEC: SPEC-COPILOT-DEPLOY-001
+def user_data_dir(app_name: str = APP_NAME) -> Path:
+    """The OS-standard per-user data directory for this app (audit logs, state)."""
+    return _resolve_data_dir(
+        app_name,
+        platform=sys.platform,
+        os_name=os.name,
+        environ=os.environ,
+        home=Path.home(),
+    )
+
+
 def user_settings_path(app_name: str = APP_NAME) -> Path:
     """The user settings TOML path (``<config-dir>/settings.toml``)."""
     return user_config_dir(app_name) / _SETTINGS_FILE_NAME

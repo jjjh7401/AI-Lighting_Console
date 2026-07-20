@@ -17,11 +17,13 @@ Composition choices:
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 from server.bridge.osc import BridgeConfig, OscBridge
+from server.deploy.settings import user_data_dir
 from server.safety.audit import DEFAULT_AUDIT_DIR, AuditLog
 from server.safety.backup import DEFAULT_INTERVAL_SECONDS, BackupError, BackupManager
 from server.safety.console import ConsoleLink, LinkTimeouts, StateBodyFetcher
@@ -29,6 +31,26 @@ from server.safety.gate import SafetyGate
 from server.safety.monitor import HealthMonitor
 from server.safety.registry import PluginFlagRegistry
 from server.safety.ruleset import SafetyRuleset, load_ruleset
+
+
+# @MX:NOTE: [AUTO] frozen-aware audit-dir selection — DEFAULT_AUDIT_DIR resolves
+#   under sys._MEIPASS (READ-ONLY) in a packaged .app, so a gate-executed command
+#   cannot write its AC-MVP-006 audit entry there. Frozen -> user-writable data
+#   dir; dev checkout -> the MVP default byte-identically. Write semantics
+#   (AuditLog.record/_purge) are unchanged — only the directory differs.
+# @MX:SPEC: SPEC-COPILOT-DEPLOY-001
+def resolve_runtime_audit_dir(*, frozen: bool | None = None) -> Path:
+    """Where the running app writes audit logs (frozen-aware).
+
+    ``frozen`` defaults to ``sys.frozen`` (set by PyInstaller). A frozen bundle
+    routes ``audit_logs`` under the OS-standard user DATA dir (writable); a dev
+    checkout keeps :data:`server.safety.audit.DEFAULT_AUDIT_DIR` unchanged.
+    """
+    if frozen is None:
+        frozen = bool(getattr(sys, "frozen", False))
+    if frozen:
+        return user_data_dir() / "audit_logs"
+    return DEFAULT_AUDIT_DIR
 
 
 @dataclass
@@ -77,7 +99,7 @@ def build_console_stack(
     receive_host: str = "127.0.0.1",
     receive_port: int = 9000,
     approval_port=None,
-    audit_dir: Path | str = DEFAULT_AUDIT_DIR,
+    audit_dir: Path | str | None = None,
     timeouts: LinkTimeouts | None = None,
     backup_interval_seconds: float = DEFAULT_INTERVAL_SECONDS,
     attempt_session_backup: bool = True,
@@ -88,7 +110,14 @@ def build_console_stack(
     ``plugin_import_dir``: when set (co-located server + console), plugin
     deployments use the working file+Import path via that onPC plugins-library
     folder; when None, the OSC ``deploy`` verb is used (remote fallback).
+
+    ``audit_dir``: when ``None`` (the serve-path default), the writable audit
+    directory is resolved frozen-aware via :func:`resolve_runtime_audit_dir` —
+    the packaged ``.app`` writes under the user DATA dir, a dev checkout under
+    the MVP default. An explicit value (tests, measurement runner) is honoured.
     """
+    if audit_dir is None:
+        audit_dir = resolve_runtime_audit_dir()
     monitor = HealthMonitor()
     link = ConsoleLink(timeouts=timeouts, monitor=monitor, import_dir=plugin_import_dir)
     bridge = OscBridge(
