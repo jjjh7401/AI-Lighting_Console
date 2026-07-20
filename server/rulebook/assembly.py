@@ -19,11 +19,22 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from server.resources import resource_base
+
 # grandMA3 onPC version pinned by plan.md section A-2 (Phase 0 environment).
 RULEBOOK_VERSION = "2.4.2"
 
-_ASSETS_DIR = Path(__file__).parent / "assets"
 _KOREAN_TERMS_FILENAME = "20_korean_terms.md"
+
+
+def _assets_dir() -> Path:
+    """Resolve the rulebook asset root (dev root or frozen ``_MEIPASS``).
+
+    Routes through :func:`server.resources.resource_base` for frozen-bundle
+    consistency (research §A.4 — lower severity than serve/config since the
+    mirrored ``--add-data`` tree resolves via ``__file__`` too, but unified here).
+    """
+    return resource_base() / "server" / "rulebook" / "assets"
 
 
 class RulebookError(RuntimeError):
@@ -41,7 +52,7 @@ class KoreanTermEntry:
 
 def rulebook_dir(version: str = RULEBOOK_VERSION) -> Path:
     """Return the asset directory for one rulebook version."""
-    directory = _ASSETS_DIR / f"v{version}"
+    directory = _assets_dir() / f"v{version}"
     if not directory.is_dir():
         raise RulebookError(f"no rulebook assets for MA3 version {version!r}: {directory}")
     return directory

@@ -24,9 +24,10 @@ onedir ``_internal`` equivalent) so the resolver finds them in the frozen app.
 from __future__ import annotations
 
 import shutil
-import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+from server.resources import resource_base
 
 # The responder plugin asset filenames bundled in the deploy artifact
 # (REQ-DEPLOY-009). onPC needs the native import XML together with the Lua
@@ -49,15 +50,14 @@ class InstallResult:
 def bundled_responder_dir() -> Path:
     """Resolve the bundled responder-asset directory (dev + frozen).
 
-    Dev checkout resolves to ``<repo>/console/lua`` relative to this file; a frozen
-    PyInstaller bundle resolves to ``sys._MEIPASS/console/lua`` (onedir or onefile).
-    See the module docstring for the M6 ``--add-data`` obligation.
+    Dev checkout resolves to ``<repo>/console/lua``; a frozen PyInstaller bundle
+    resolves to ``sys._MEIPASS/console/lua`` (onedir or onefile). Routes through
+    the shared :func:`server.resources.resource_base` resolver (M6 generalisation
+    of this module's original ``sys._MEIPASS`` pattern) so every frozen-sensitive
+    path shares one resolver. See the module docstring for the ``--add-data``
+    obligation.
     """
-    meipass = getattr(sys, "_MEIPASS", None)
-    if meipass is not None:
-        return Path(meipass) / "console" / "lua"
-    # server/deploy/provisioning.py -> parents[2] is the repo root.
-    return Path(__file__).resolve().parents[2] / "console" / "lua"
+    return resource_base() / "console" / "lua"
 
 
 def install_responder(

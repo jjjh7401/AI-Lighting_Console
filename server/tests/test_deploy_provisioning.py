@@ -38,11 +38,14 @@ class TestBundledAssets:
 
     def test_frozen_bundle_dir_resolves_under_meipass(self, monkeypatch):
         # FEAS-1 heads-up: in a frozen PyInstaller bundle the assets resolve under
-        # sys._MEIPASS/console/lua (dev resolves under the repo). The resolver must
-        # honour a frozen _MEIPASS so the M6 --add-data bundling works.
-        import server.deploy.provisioning as module
+        # sys._MEIPASS/console/lua (dev resolves under the repo). The resolver was
+        # generalised at M6 into the shared server.resources.resource_base, which
+        # gates on sys.frozen (research §A.4) — so a bundle sets BOTH sys.frozen
+        # and sys._MEIPASS.
+        import sys
 
-        monkeypatch.setattr(module.sys, "_MEIPASS", "/frozen/app", raising=False)
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", "/frozen/app", raising=False)
         resolved = bundled_responder_dir()
         assert resolved == Path("/frozen/app") / "console" / "lua"
 

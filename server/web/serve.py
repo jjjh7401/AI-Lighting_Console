@@ -10,6 +10,7 @@ WebSocket approval channel. Credentials stay in environment variables only.
 from __future__ import annotations
 
 import argparse
+import sys
 from dataclasses import replace
 from pathlib import Path
 
@@ -20,13 +21,37 @@ from server.llm.factory import build_provider
 from server.llm.types import LLMProvider
 from server.orchestrator.fallback import FallbackDetector
 from server.orchestrator.runner import SwitchableProvider
+from server.resources import resource_base
 from server.rulebook.assembly import assemble_prefix
 from server.safety.bootstrap import ConsoleStack, build_console_stack
 from server.web.app import WebDeps, create_app
 from server.web.approval_bridge import ApprovalChannel
+from server.web.launcher import (
+    PortInUseError,
+    apply_keyring_backend_pin,
+    assert_keyring_backend,
+    install_signal_handlers,
+    make_shutdown_handler,
+    open_app_browser,
+    require_ports_available,
+    run_self_check,
+    serve_local_url,
+)
 from server.web.measure import RoundTripRecorder
 
-DEFAULT_UI_DIST = Path(__file__).resolve().parents[2] / "ui" / "dist"
+
+def default_ui_dist() -> Path:
+    """Resolve the built-UI directory (dev root or frozen ``_MEIPASS``).
+
+    Routes through :func:`server.resources.resource_base` so a frozen bundle finds
+    ``ui/dist`` under ``sys._MEIPASS`` (research §A.4, M6).
+    """
+    return resource_base() / "ui" / "dist"
+
+
+# Computed at import; inside a frozen bundle the module is imported with
+# sys.frozen set, so this constant already resolves under _MEIPASS.
+DEFAULT_UI_DIST = default_ui_dist()
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -61,6 +86,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--no-session-backup",
         action="store_true",
         help="skip the session-start showfile backup attempt",
+    )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="do not open the default browser at start (headless / CI runs)",
+    )
+    parser.add_argument(
+        "--self-check",
+        action="store_true",
+        help=(
+            "run the OS-keyring backend + roundtrip self-check and exit "
+            "(the mode the packaged binary runs to prove the frozen keychain)"
+        ),
     )
     parser.add_argument(
         "--plugin-import-dir",
@@ -157,16 +195,64 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
     return app, stack
 
 
-def main(argv: list[str] | None = None, *, run=None) -> int:
-    """CLI entry point; ``run`` is injectable (defaults to uvicorn.run)."""
-    args = parse_args(argv)
-    app, stack = build_runtime(args)
-    if run is None:  # pragma: no cover — exercised by real serving only
-        import uvicorn
+def main(argv: list[str] | None = None, *, run=None, keyring_module=None) -> int:
+    """CLI entry point; ``run`` and ``keyring_module`` are injectable (tests).
 
-        run = uvicorn.run
+    Process-start wiring (M6): keyring backend pin + fail-closed guard
+    (research §B.3), port-in-use fail-loud (no silent random-port fallback,
+    REQ-DEPLOY-026), browser open + graceful process-tree shutdown. ``--self-check``
+    runs the frozen keyring roundtrip (research §B.4) and exits.
+    """
+    args = parse_args(argv)
+
+    # --self-check: the keyring backend + roundtrip verification the PACKAGED
+    # binary runs (dist/<app>/<app> --self-check). Exits without serving.
+    if args.self_check:
+        apply_keyring_backend_pin()
+        return run_self_check(keyring_module=keyring_module)
+
+    real_serve = run is None
+    if real_serve:
+        # Pin the OS keyring backend BEFORE the first backend selection (§B.3).
+        apply_keyring_backend_pin()
+
+    # Fail-closed: refuse to boot on the wrong keyring backend (REQ-DEPLOY-006a).
+    # Enforced on the real-serve path (the packaged app) and whenever a test
+    # injects an explicit ``keyring_module``; an injected ``run`` without a
+    # keyring_module is a serve-wiring test and does not exercise the guard
+    # against (possibly mutated) global keyring state.
+    if real_serve or keyring_module is not None:
+        assert_keyring_backend(keyring_module=keyring_module)
+
+    if real_serve:
+        try:
+            require_ports_available(
+                [
+                    (args.host, args.port, "web UI"),
+                    ("127.0.0.1", args.receive_port, "OSC feedback listen"),
+                ]
+            )
+        except PortInUseError as error:  # pragma: no cover — needs an occupied port
+            print(error.guidance, file=sys.stderr)
+            return 2
+
+    app, stack = build_runtime(args)
     try:
-        run(app, host=args.host, port=args.port)
+        if real_serve:  # pragma: no cover — exercised by real serving only
+            import threading
+
+            import uvicorn
+
+            install_signal_handlers(make_shutdown_handler(stack))
+            url = serve_local_url(args.host, args.port)
+            threading.Timer(
+                1.0,
+                open_app_browser,
+                kwargs={"url": url, "enabled": not args.no_browser},
+            ).start()
+            uvicorn.run(app, host=args.host, port=args.port)
+        else:
+            run(app, host=args.host, port=args.port)
     finally:
         stack.stop()
     return 0

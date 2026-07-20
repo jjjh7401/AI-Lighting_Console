@@ -9,11 +9,44 @@ FastAPI app with uvicorn (injectable for tests; no real socket binding here).
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-from server.web.serve import build_runtime, main, parse_args
+from server.web.serve import (
+    build_runtime,
+    default_ui_dist,
+    main,
+    parse_args,
+)
+
+
+def _fake_keyring(module_name: str):
+    """A fake ``keyring`` module whose active backend reports ``module_name``."""
+    backend_cls = type("Keyring", (), {})
+    backend_cls.__module__ = module_name
+
+    class _FakeKeyring:
+        _store: dict = {}
+
+        @staticmethod
+        def get_keyring():
+            return backend_cls()
+
+        @classmethod
+        def set_password(cls, service, account, value):
+            cls._store[(service, account)] = value
+
+        @classmethod
+        def get_password(cls, service, account):
+            return cls._store.get((service, account))
+
+        @classmethod
+        def delete_password(cls, service, account):
+            cls._store.pop((service, account), None)
+
+    return _FakeKeyring
 
 
 class TestParseArgs:
@@ -41,6 +74,27 @@ class TestParseArgs:
         assert args.console_host == "10.0.0.5"
         assert args.receive_port == 0
         assert args.no_session_backup is True
+
+    def test_m6_launcher_flags_default_off(self):
+        args = parse_args([])
+        assert args.no_browser is False
+        assert args.self_check is False
+
+    def test_m6_launcher_flags_settable(self):
+        args = parse_args(["--no-browser", "--self-check"])
+        assert args.no_browser is True
+        assert args.self_check is True
+
+
+class TestUiDistResolution:
+    def test_dev_ui_dist_matches_the_repo_layout(self):
+        # Characterisation: dev-mode resolution is unchanged (repo-root/ui/dist).
+        assert default_ui_dist() == Path(__file__).resolve().parents[2] / "ui" / "dist"
+
+    def test_frozen_ui_dist_resolves_under_meipass(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        assert default_ui_dist() == Path(str(tmp_path)) / "ui" / "dist"
 
 
 class TestBuildRuntime:
@@ -78,6 +132,54 @@ class TestMain:
         with pytest.raises(SystemExit) as excinfo:
             runpy.run_module("server.web", run_name="__main__", alter_sys=False)
         assert excinfo.value.code == 0
+
+
+class TestSelfCheckMode:
+    """--self-check: the keyring backend + roundtrip mode the packaged binary runs."""
+
+    def test_self_check_passes_on_a_macos_backend(self):
+        code = main(["--self-check"], keyring_module=_fake_keyring("keyring.backends.macOS"))
+        assert code == 0
+
+    def test_self_check_fails_on_a_wrong_backend(self):
+        code = main(["--self-check"], keyring_module=_fake_keyring("keyring.backends.fail"))
+        assert code != 0
+
+    def test_self_check_does_not_serve(self):
+        # A self-check must not build the runtime / bind ports — passing a run
+        # that would explode proves the self-check returns before serving.
+        def explode(*_a, **_k):  # pragma: no cover — must never be called
+            raise AssertionError("self-check must not reach the serve path")
+
+        code = main(
+            ["--self-check"],
+            run=explode,
+            keyring_module=_fake_keyring("keyring.backends.macOS"),
+        )
+        assert code == 0
+
+
+class TestKeyringStartupGuard:
+    """Fail-closed keyring backend guard at process start (REQ-DEPLOY-006a)."""
+
+    def test_boot_refused_on_wrong_backend(self):
+        with pytest.raises(RuntimeError) as excinfo:
+            main(
+                ["--receive-port", "0", "--no-session-backup"],
+                run=lambda *a, **k: None,
+                keyring_module=_fake_keyring("keyrings.alt.file"),
+            )
+        assert "REQ-DEPLOY-006a" in str(excinfo.value)
+
+    def test_boot_proceeds_on_macos_backend(self):
+        calls: list[dict] = []
+        code = main(
+            ["--receive-port", "0", "--no-session-backup", "--port", "9019"],
+            run=lambda app, **kwargs: calls.append(kwargs),
+            keyring_module=_fake_keyring("keyring.backends.macOS"),
+        )
+        assert code == 0
+        assert calls and calls[0]["port"] == 9019
 
 
 class TestFallbackTargetProviderWiring:

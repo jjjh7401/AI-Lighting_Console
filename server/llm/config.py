@@ -16,10 +16,24 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+from server.resources import resource_base
+
 SUPPORTED_PROVIDERS = ("anthropic", "gemini")
 
-# Repo-shipped runtime config (project root /config/provider.toml).
-DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "provider.toml"
+
+def default_config_path() -> Path:
+    """Resolve the shipped provider config path (dev root or frozen ``_MEIPASS``).
+
+    Routes through :func:`server.resources.resource_base` so a frozen bundle finds
+    ``config/provider.toml`` under ``sys._MEIPASS`` (research §A.4, M6).
+    """
+    return resource_base() / "config" / "provider.toml"
+
+
+# Repo-shipped runtime config (dev: project root /config/provider.toml). Computed
+# at import; inside a frozen bundle the module is imported with sys.frozen set, so
+# this constant already resolves under _MEIPASS.
+DEFAULT_CONFIG_PATH = default_config_path()
 
 _CREDENTIAL_KEYS = frozenset(
     {"api_key", "apikey", "api-key", "token", "secret", "credential", "credentials", "password"}
