@@ -78,6 +78,10 @@ class SettingsDeps:
     providers: tuple[str, ...] = SUPPORTED_PROVIDERS
 
 
+# @MX:NOTE: [AUTO] keys are read transiently only to derive a boolean presence
+#   flag — the key VALUE is never returned to the caller (and thus never to the
+#   client). Preserving this "boolean, not value" contract is what keeps GET
+#   /api/settings free of a key leak (AC-DEPLOY-004).
 def _provider_key_status(deps: SettingsDeps) -> tuple[dict[str, bool], bool]:
     """Per-provider "is a key set?" booleans + overall keystore availability.
 
@@ -97,6 +101,15 @@ def _provider_key_status(deps: SettingsDeps) -> tuple[dict[str, bool], bool]:
     return keys, keystore_available
 
 
+# @MX:ANCHOR: [AUTO] the settings/key REST surface — the ONLY deploy-shell entry
+#   point that reads/writes config + credentials. High fan_in (create_app wiring,
+#   serve.py composition at M6, tests).
+# @MX:REASON: AC-DEPLOY-014 ③ / REQ-DEPLOY-023-024 top invariant — this surface
+#   MUST reach only the M1 settings + M2 keystore seams and NEVER the OSC-send
+#   path. A new endpoint here that imports a raw socket / OSC module / the safety
+#   gate would open an ungated console-command path (a safety regression); the
+#   source-scan guard in test_web_settings_api.py enforces the boundary.
+# @MX:SPEC: SPEC-COPILOT-DEPLOY-001
 def build_settings_router(deps: SettingsDeps) -> APIRouter:
     """Build the settings/key REST router around one composed dependency set."""
     router = APIRouter()
