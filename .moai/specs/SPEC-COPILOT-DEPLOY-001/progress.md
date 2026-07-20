@@ -81,7 +81,25 @@ plan-audit 판정 PASS-WITH-DEBT(~0.79, 확정 blocker 0)를 SSOT에 반영 — 
 
 **커밋**: `e70c365`(M3 구현 — 백엔드 라우터 + 프론트 순수함수/컴포넌트/App 배선, 9파일), `6ce9c7e`(M3 @MX 태그). `feat/app-deploy-file-import` 직접 커밋(원격 없음 — push/PR 없음).
 
-_<pending run-phase M4~M6>_
+### M4 — CopilotResponder provisioning (2026-07-20, cycle_type=tdd)
+
+신규 백엔드 모듈 `server/deploy/provisioning.py`(파일시스템 전용 provisioning) + `server/web/provision_api.py`(`ProvisionDeps` + `build_provision_router`) — `create_app`에 `WebDeps.provision` 옵션 필드로 배선(M3 settings 라우터 패턴 미러; 정적 마운트 앞 등록). provisioning 모듈: `bundled_responder_dir()`(dev = `<repo>/console/lua`, frozen = `sys._MEIPASS/console/lua` — **M6 번들 스펙 obligation: `--add-data 'console/lua:console/lua'`** 모듈 docstring에 기록), `install_responder(import_dir)`(`copilot_responder.xml`+`copilot_responder.lua` 복사, 디렉터리 생성, 멱등 재설치), `responder_status()`, `responder_guide(receive_port)`(onPC 로드 4단계 + OSC 출력 포트 설정 안내 — 한국어). 2개 엔드포인트: `GET /api/provision/responder`(설치 상태 + 가이드), `POST /api/provision/responder`(M1 `resolve_effective_settings`에서 `plugin_import_dir`+`receive_port` 해석 → 번들 복사 → 가이드 반환; 실패 시 인간 친화적 한국어 500). **OSC 송신 표면 0**(M1 settings seam + provisioning 모듈만 import; 소스 스캔 CI 가드 2건 — AC-014 ③/SAFETY-1). 프론트엔드(`ui/src`, no-DOM 순수함수 관례): `provision.ts`(parse/status/install-summary 순수함수) + `ResponderGuide.tsx`(설치 버튼 + 상태 + onPC 로드/OSC 출력 포트 안내 — `SettingsPanel`에 섹션으로 배선) + `styles.css`(`.responder-steps`). **AC-017 안전 회귀**: 신규 `test_responder_import_gate.py` — 실제 `ConsoleLink`(file+Import) + in-process recording console로 앱 발행 `Import Plugin`이 단일 게이트(`deploy_plugin_source`) 경유 + 감사 로그 1:1 + 라이브 잠금 시 wire 송신 0건 증명. `pipeline.py`/`pack.py`/안전 게이트/`console.py`는 PRESERVE(테스트만 추가).
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| AC-DEPLOY-006 (responder 플러그인 번들 포함 + 임포트 디렉터리 설치, 임시 디렉터리 대상) | PASS | `.venv/bin/python -m pytest server/tests/test_deploy_provisioning.py -q` | `18 passed` — 번들 dir에 `.xml`+`.lua` 존재 assert + temp import dir 복사(바이트 verbatim 일치) |
+| — frozen 번들 경로가 `sys._MEIPASS/console/lua`로 해석 (FEAS-1) | PASS | `test_frozen_bundle_dir_resolves_under_meipass` | `1 passed` — `_MEIPASS` monkeypatch → `/frozen/app/console/lua` |
+| AC-DEPLOY-007 (가이드 UI가 onPC 로드 + OSC 출력 포트 설정 안내 표시) | PASS | `test_guide_carries_the_receive_port_and_onpc_load_steps` + `cd ui && npm test`(provision.test.ts) | `1 passed`(백엔드 가이드 steps에 포트+OSC 포함) + `12 passed`(프론트 순수함수) |
+| — API가 설정된 receive_port를 가이드에 반영 | PASS | `.venv/bin/python -m pytest server/tests/test_web_provision_api.py -q` | `9 passed` — GET/POST 설치·상태·create_app 배선·설치실패 500 |
+| AC-DEPLOY-017 (앱 발행 Import Plugin 게이트 경유 + 감사 로그 1:1, SAFETY-3) | PASS | `.venv/bin/python -m pytest server/tests/test_responder_import_gate.py -q` | `3 passed` — ① Import Plugin 1건 wire 송신 + `kind="deploy"` 감사 1건(1:1) ② 라이브 잠금 시 wire 0건 + `blocked`(lock) ③ 미게이트 송신 0건 |
+
+**Regression**: 백엔드 full suite `.venv/bin/python -m pytest server/tests/ -q` → `904 passed`(baseline 882 + 신규 22, 회귀 0). 프론트 `cd ui && npm test` → `49 passed`(baseline 37 + 12). **Coverage**: `server.deploy.provisioning` 100% + `server.web.provision_api` 100%(신규 모듈 ≥85% 충족). **Lint/Build**: `ruff check server/` → 2 pre-existing baseline(safety/console.py:221,258 E501)만, NEW 0; `cd ui && npm run build`(tsc+vite) → clean(43 modules). **Boundary(E6')**: `grep AskUserQuestion|mcp__askuser` 신규 파일 → 0; **OSC 송신 표면 스캔** provisioning 모듈 2건 → 0 + `test_provisioning_module_has_no_console_send_path`/`test_provision_api_module_has_no_console_send_path` CI 가드. **dist**: `ui/dist` gitignored → 미커밋(M6 재빌드).
+
+**@MX tags added**: `server/web/provision_api.py` `build_provision_router` 위 `@MX:ANCHOR`(responder-provisioning REST 표면 = deploy-shell 유일 설치 진입점, `@MX:REASON` AC-014 ③ no-OSC-send 불변식 + `@MX:SPEC`) 1건.
+
+**커밋**: `feat(SPEC-COPILOT-DEPLOY-001): M4 …`(본 커밋 — provisioning 모듈 + provision API + 프론트 가이드 + AC-017 게이트 테스트, 12파일). `feat/app-deploy-file-import` 직접 커밋(원격 없음 — push/PR 없음).
+
+_<pending run-phase M5~M6>_
 
 ## §E.3 Run-phase Audit-Ready Signal
 

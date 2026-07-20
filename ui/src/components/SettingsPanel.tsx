@@ -14,6 +14,7 @@ import {
   type SettingsForm,
   type SettingsResponse,
 } from "../settings";
+import { ResponderGuide } from "./ResponderGuide";
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [loaded, setLoaded] = useState<SettingsResponse | null>(null);
@@ -242,6 +243,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <input type="text" value={`${loaded.settings.web_host}:${loaded.settings.web_port}`} readOnly />
               </label>
             </section>
+
+            <ResponderGuide />
 
             {errors.length > 0 && (
               <ul className="settings-errors">

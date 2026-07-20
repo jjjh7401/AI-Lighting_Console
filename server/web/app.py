@@ -40,6 +40,7 @@ from server.web.messages import (
     parse_client_message,
     review_resolved_event,
 )
+from server.web.provision_api import ProvisionDeps, build_provision_router
 from server.web.session import ChatSession
 from server.web.settings_api import SettingsDeps, build_settings_router
 
@@ -67,6 +68,7 @@ class WebDeps:
     heartbeat_interval_seconds: float | None = None
     backup_poll_seconds: float | None = None
     settings: SettingsDeps | None = None
+    provision: ProvisionDeps | None = None
     status_listeners: set = field(default_factory=set)
 
 
@@ -226,10 +228,14 @@ def create_app(deps: WebDeps) -> FastAPI:
                 with contextlib.suppress(Exception):
                     await asyncio.wait_for(asyncio.shield(current_task), timeout=10.0)
 
-    # In-app settings/key REST API (M3). Registered BEFORE the catch-all static
-    # mount at "/" so /api/* resolves to the router, not the SPA index.
+    # In-app settings/key REST API (M3) + responder provisioning API (M4).
+    # Registered BEFORE the catch-all static mount at "/" so /api/* resolves to
+    # the routers, not the SPA index.
     if deps.settings is not None:
         app.include_router(build_settings_router(deps.settings))
+
+    if deps.provision is not None:
+        app.include_router(build_provision_router(deps.provision))
 
     if deps.ui_dist is not None and Path(deps.ui_dist).is_dir():
         app.mount("/", StaticFiles(directory=str(deps.ui_dist), html=True), name="ui")
