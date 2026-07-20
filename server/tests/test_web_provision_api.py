@@ -11,8 +11,6 @@ create_app; the no-OSC-send guard mirrors the settings-API guard.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -135,27 +133,12 @@ class TestCreateAppWiring:
                 assert (import_dir / name).is_file()
 
 
-class TestNoOscSendSurface:
-    def test_provision_api_module_has_no_console_send_path(self):
-        # AC-DEPLOY-014 ③ / SAFETY-1 + E6': the provisioning API may only touch the
-        # M1 settings seam + the filesystem-only provisioning module — never an OSC
-        # send surface.
-        import server.web.provision_api as module
-
-        source = Path(module.__file__).read_text(encoding="utf-8")
-        forbidden = (
-            "socket.socket",
-            "UdpSocket",
-            "pythonosc",
-            "python_osc",
-            "SafetyGate",
-            "send_command",
-            "OscBridge",
-            "server.bridge",
-            "server.safety",
-        )
-        offenders = [token for token in forbidden if token in source]
-        assert offenders == [], f"provision API must not touch the OSC send surface: {offenders}"
+# AC-DEPLOY-014 ③ / SAFETY-1: the interim per-module OSC-send-surface guard (M4
+# ``test_provision_api_module_has_no_console_send_path``) is CONSOLIDATED into the
+# M10 AC-DEPLOY-014 ③ fail-closed allowlist scan —
+# ``server/tests/test_deploy_safety_invariants.py`` — which scans server/web/provision_api.py
+# (and every other server module) against one named send-surface allowlist. See
+# ``TestAcDeploy014OscSendSurfaceAllowlist`` there.
 
 
 # ---------------------------------------------------------------- minimal WebDeps doubles

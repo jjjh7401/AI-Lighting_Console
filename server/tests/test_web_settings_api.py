@@ -374,27 +374,9 @@ class TestCreateAppWiring:
 
 
 # ------------------------------------------------------------------ SAFETY: no OSC surface
-
-
-class TestNoOscSendSurface:
-    def test_settings_api_module_has_no_console_send_path(self):
-        # AC-DEPLOY-014 ③ / SAFETY-1 + E6': the settings/key path must not reach the
-        # OSC send surface. Static source scan for raw sockets / OSC modules / the
-        # gate send surface — the settings API may only touch the M1/M2 seams.
-        from pathlib import Path
-
-        import server.web.settings_api as module
-
-        source = Path(module.__file__).read_text(encoding="utf-8")
-        forbidden = (
-            "socket.socket",
-            "UdpSocket",
-            "pythonosc",
-            "python_osc",
-            "SafetyGate",
-            "send_to_console",
-            "OscTransport",
-            "server.safety",
-        )
-        offenders = [token for token in forbidden if token in source]
-        assert offenders == [], f"settings API reaches a console-send surface: {offenders}"
+#
+# The interim M3 per-module OSC-send-surface guard for the settings API is
+# CONSOLIDATED into the M10 AC-DEPLOY-014 ③ fail-closed allowlist scan
+# (``server/tests/test_deploy_safety_invariants.py`` ::
+# ``TestAcDeploy014OscSendSurfaceAllowlist``), which scans every server module —
+# including server/web/settings_api.py — against one named send-surface allowlist.

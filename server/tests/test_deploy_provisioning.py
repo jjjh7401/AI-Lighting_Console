@@ -134,28 +134,9 @@ class TestResponderGuide:
 
 
 # ------------------------------------------------------------------ SAFETY: no OSC surface
-
-
-class TestNoOscSendSurface:
-    def test_provisioning_module_has_no_console_send_path(self):
-        # AC-DEPLOY-014 ③ / SAFETY-1 + E6': provisioning is filesystem-only. A
-        # static source scan proves it never reaches a raw socket / OSC module /
-        # the safety gate. The ONLY console command provisioning MAY issue (Import
-        # Plugin, via the deploy pipeline) lives in server.safety and transits the
-        # single gate + audit (REQ-DEPLOY-011a) — it is NOT in this module.
-        import server.deploy.provisioning as module
-
-        source = Path(module.__file__).read_text(encoding="utf-8")
-        forbidden = (
-            "socket.socket",
-            "UdpSocket",
-            "pythonosc",
-            "python_osc",
-            "SafetyGate",
-            "send_command",
-            "OscBridge",
-            "server.bridge",
-            "server.safety",
-        )
-        offenders = [token for token in forbidden if token in source]
-        assert offenders == [], f"provisioning must not touch the OSC send surface: {offenders}"
+#
+# The interim M4 per-module OSC-send-surface guard for provisioning is
+# CONSOLIDATED into the M10 AC-DEPLOY-014 ③ fail-closed allowlist scan
+# (``server/tests/test_deploy_safety_invariants.py`` ::
+# ``TestAcDeploy014OscSendSurfaceAllowlist``), which scans every server module —
+# including server/deploy/provisioning.py — against one named send-surface allowlist.
