@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 
-from server.llm.types import ModelTurn, ToolCall, ToolResultsMessage, Usage
+from server.llm.types import ModelTurn, ToolCall, ToolResultsMessage, Usage, UserMessage
 from server.orchestrator.runner import Orchestrator
 from server.orchestrator.tools import build_toolset
 
@@ -275,6 +275,46 @@ class TestMeasurementSupport:
         assert metrics.model == "scripted-model"
         assert metrics.commands_generated == 2
         assert metrics.commands_failed == 1
+
+
+class TestSessionContextInjection:
+    """AC-DEPLOY-021 ③ + the new optional ``session_context`` param (#4). When a
+    session-context note is supplied, it is prepended as a synthetic UserMessage
+    BEFORE the user instruction; when absent, the conversation is byte-identical
+    to the pre-existing single-UserMessage shape."""
+
+    _NOTE = (
+        "Session context — last created look: Sequence 71, Executor 201. "
+        "To change it, regenerate the look on Sequence 71 / Executor 201 rather "
+        "than blind-editing a different target."
+    )
+
+    def test_session_context_is_prepended_as_a_user_message(self):
+        provider = ScriptedProvider([_final("ok")])
+        _orchestrator(provider).handle_instruction("더 느리게", session_context=self._NOTE)
+        conversation = provider.calls[0]
+        assert len(conversation) == 2
+        assert isinstance(conversation[0], UserMessage)
+        assert conversation[0].text == self._NOTE
+        # the regeneration steer (AC ③) is carried by the preamble
+        assert "regenerat" in conversation[0].text.lower()
+        assert isinstance(conversation[1], UserMessage)
+        assert conversation[1].text == "더 느리게"
+
+    def test_absent_session_context_keeps_a_single_user_message(self):
+        provider = ScriptedProvider([_final("ok")])
+        _orchestrator(provider).handle_instruction("hi")
+        conversation = provider.calls[0]
+        assert len(conversation) == 1
+        assert isinstance(conversation[0], UserMessage)
+        assert conversation[0].text == "hi"
+
+    def test_empty_session_context_string_adds_no_preamble(self):
+        provider = ScriptedProvider([_final("ok")])
+        _orchestrator(provider).handle_instruction("hi", session_context="")
+        conversation = provider.calls[0]
+        assert len(conversation) == 1
+        assert conversation[0].text == "hi"
 
 
 class TestLoopGuard:

@@ -23,6 +23,8 @@ from google.genai import errors as genai_errors
 from server.llm.anthropic_adapter import AnthropicAdapter
 from server.llm.config import AnthropicSettings, GeminiSettings
 from server.llm.gemini_adapter import GeminiAdapter
+from server.llm.types import UserMessage
+from server.orchestrator.last_created import LastCreated
 from server.orchestrator.tools import CommandOutcome
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate
@@ -466,6 +468,89 @@ class TestProviderErrorSurface:
         session.run_instruction("보컬 그룹 만들어줘")
         (record,) = recorder.records
         assert record.judged is False
+
+
+class TestLastCreatedSessionTracking:
+    """AC-DEPLOY-021 (#4) — the session captures the just-created sequence/
+    executor and injects it into the NEXT turn so a bare follow-up modification
+    targets the real look (Seq 71 / Exec 201), not an arbitrary Seq 1 / Exec 1,
+    and steers toward regeneration over a blind edit."""
+
+    def test_creating_a_look_captures_last_created_state(self, tmp_path):
+        # AC ①: after creating a look on Seq 71 / Exec 201, the last-created
+        # state is present in the session.
+        provider = ScriptedProvider(
+            [
+                _run_turn(["Store Sequence 71", "Assign Sequence 71 At Executor 201"], "c1"),
+                _final("보컬 룩을 만들었습니다"),
+            ]
+        )
+        session, console, _audit, _sent, _ = _session(tmp_path, provider)
+        assert session._last_created is None  # nothing created yet
+        session.run_instruction("보컬 룩 만들어줘")
+        assert console.executed == ["Store Sequence 71", "Assign Sequence 71 At Executor 201"]
+        assert session._last_created == LastCreated(sequence=71, executor=201)
+        # No preamble was injected on the very first (create) turn.
+        create_conversation = provider.calls[0]
+        assert len(create_conversation) == 1
+        assert create_conversation[0].text == "보컬 룩 만들어줘"
+
+    def test_followup_turn_injects_the_last_created_target_and_regeneration_steer(self, tmp_path):
+        # AC ②/③: a bare follow-up ("더 느리게") resolves to Seq 71 / Exec 201
+        # via the injected session-context preamble, and the preamble carries
+        # the regenerate-don't-blind-edit steer.
+        provider = ScriptedProvider(
+            [
+                _run_turn(["Store Sequence 71", "Assign Sequence 71 At Executor 201"], "c1"),
+                _final("보컬 룩을 만들었습니다"),
+                _final("더 느리게 재생성했습니다"),
+            ]
+        )
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        session.run_instruction("보컬 룩 만들어줘")
+        session.run_instruction("더 느리게")
+        followup_conversation = provider.calls[2]
+        assert len(followup_conversation) == 2
+        preamble = followup_conversation[0]
+        assert isinstance(preamble, UserMessage)
+        # AC ②: identity present — Seq 71 / Exec 201, NOT an arbitrary target.
+        assert "71" in preamble.text
+        assert "201" in preamble.text
+        # AC ③: regeneration is preferred over a blind edit.
+        assert "regenerat" in preamble.text.lower()
+        # the real instruction follows the injected note
+        assert followup_conversation[1].text == "더 느리게"
+
+    def test_last_created_snapshot_is_not_an_accumulating_history(self, tmp_path):
+        # A second creation replaces (not appends to) the snapshot — the single
+        # most-recent look only.
+        provider = ScriptedProvider(
+            [
+                _run_turn(["Store Sequence 71", "Assign Sequence 71 At Executor 201"], "c1"),
+                _final("첫 룩"),
+                _run_turn(["Store Sequence 72", "Assign Sequence 72 At Executor 202"], "c2"),
+                _final("둘째 룩"),
+            ]
+        )
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        session.run_instruction("첫 룩 만들어줘")
+        assert session._last_created == LastCreated(sequence=71, executor=201)
+        session.run_instruction("둘째 룩 만들어줘")
+        assert session._last_created == LastCreated(sequence=72, executor=202)
+
+    def test_non_creating_turn_preserves_the_prior_snapshot(self, tmp_path):
+        # A follow-up turn that creates nothing keeps pointing at the last look.
+        provider = ScriptedProvider(
+            [
+                _run_turn(["Store Sequence 71", "Assign Sequence 71 At Executor 201"], "c1"),
+                _final("룩 생성"),
+                _final("확인만 했습니다"),
+            ]
+        )
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        session.run_instruction("룩 만들어줘")
+        session.run_instruction("지금 상태 어때?")
+        assert session._last_created == LastCreated(sequence=71, executor=201)
 
 
 class TestStatusSnapshot:

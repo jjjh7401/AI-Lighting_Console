@@ -153,10 +153,23 @@ class Orchestrator:
 
     # @MX:NOTE: [AUTO] self-correction loop — retry accounting (<=3 per instruction,
     #   REQ-MVP-010) and the executed-command dedupe set both live ONLY here
-    def handle_instruction(self, instruction: str) -> InstructionResult:
-        """Drive one user instruction through the model↔tool loop."""
+    def handle_instruction(
+        self, instruction: str, session_context: str | None = None
+    ) -> InstructionResult:
+        """Drive one user instruction through the model↔tool loop.
+
+        ``session_context`` (REQ-DEPLOY-030, #4): when supplied, a synthetic
+        UserMessage carrying cross-turn state (the last-created look's target
+        identity + a regenerate-don't-blind-edit steer) is prepended BEFORE the
+        instruction, so a bare follow-up modification anchors to the real
+        target. Default ``None`` keeps the conversation byte-identical for every
+        existing caller.
+        """
         started = self._clock()
-        conversation: list[ConversationItem] = [UserMessage(text=instruction)]
+        conversation: list[ConversationItem] = []
+        if session_context:
+            conversation.append(UserMessage(text=session_context))
+        conversation.append(UserMessage(text=instruction))
         executed_ok: set[str] = set()
         all_outcomes: list[CommandOutcome] = []
         retries_used = 0

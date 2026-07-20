@@ -23,6 +23,7 @@ from collections.abc import Callable, Sequence
 
 from server.deploy.review import ReviewRequest
 from server.llm.types import LLMProvider
+from server.orchestrator.last_created import LastCreated, parse_last_created
 from server.orchestrator.ports import ExecutionResult
 from server.orchestrator.runner import InstructionResult, Orchestrator
 from server.orchestrator.tools import CommandOutcome, DeployPipelinePort, build_toolset
@@ -175,6 +176,10 @@ class ChatSession:
         self._review_channel = review_channel
         self._recorder = recorder
         self._turn_decisions: list[ScreenDecision] = []
+        # REQ-DEPLOY-030 (#4): the single most-recent created look, persisted
+        # ACROSS turns (unlike _turn_decisions, this is NOT reset per turn) so a
+        # bare follow-up modification can anchor to the real target.
+        self._last_created: LastCreated | None = None
         # M6c-1 Finding 1/2: a unique identity for THIS connection, scoping the
         # shared approval_channel/review_channel/gate's per-session state so a
         # sibling ChatSession's disconnect or screening never leaks in.
@@ -264,9 +269,12 @@ class ChatSession:
         token = bind_session_key(self._session_key)
         try:
             try:
-                result = self._orchestrator.handle_instruction(text)
+                result = self._orchestrator.handle_instruction(
+                    text, session_context=self._session_context_note()
+                )
             except Exception as exc:  # REQ-MVP-044: raw detail NEVER reaches the surface
                 return self._report_error(exc)
+            self._capture_last_created(result)
             views = [outcome_view(outcome) for outcome in result.command_outcomes]
             summary = self._compose_summary(result, views)
             if self._recorder is not None:
@@ -280,6 +288,43 @@ class ChatSession:
             reset_session_key(token)
 
     # -- internals ------------------------------------------------------------------
+
+    def _capture_last_created(self, result: InstructionResult) -> None:
+        """Snapshot the just-created look from this turn's SUCCESSFUL commands.
+
+        Snapshot-only: a new creation replaces the prior value; a turn that
+        creates nothing leaves the prior snapshot intact (so a later bare
+        modification still anchors to the last real look)."""
+        executed = [
+            outcome.command
+            for outcome in result.command_outcomes
+            if outcome.status == "executed_ok"
+        ]
+        captured = parse_last_created(executed)
+        if captured is not None:
+            self._last_created = captured
+
+    def _session_context_note(self) -> str | None:
+        """The cross-turn note injected before the next instruction (REQ-DEPLOY-030).
+
+        Carries the last-created look's identity AND a regenerate-don't-blind-
+        edit steer. Written as an instruction to the model (English, matching
+        the rulebook system-prefix convention) with the Korean operator phrase
+        as a grounded example. Returns ``None`` when no look has been created."""
+        last = self._last_created
+        if last is None or last.sequence is None:
+            return None
+        target = f"Sequence {last.sequence}"
+        if last.executor is not None:
+            target += f" / Executor {last.executor}"
+        return (
+            f"Session context — the last look you created is on {target}. "
+            f'When the user asks to modify that look (e.g. "더 느리게" / make it '
+            f"slower), apply the change to {target} — do NOT target an arbitrary "
+            f"Sequence or Executor (such as Sequence 1 / Executor 1). Prefer "
+            f"regenerating the look on {target} over blind-editing a different "
+            f"target."
+        )
 
     def _report_error(self, exc: Exception) -> dict:
         kind, message = classify_exception(exc)
