@@ -60,7 +60,28 @@ plan-audit 판정 PASS-WITH-DEBT(~0.79, 확정 blocker 0)를 SSOT에 반영 — 
 
 **FEAS-2 (M6 이연·재검증)**: `keyring`은 `importlib.metadata` entry-point로 OS 백엔드를 선택 → PyInstaller frozen 번들이 strip 시 null 백엔드 조용한 폴백. M2는 dev venv라 미영향이나, **M6 onedir 번들 스펙에 `--collect-all keyring` + `keyring.backends.macOS`/`keyring.backends.Windows` hidden-imports(+ Windows pywin32) 필수**, 그리고 **M2 keychain 왕복을 frozen onedir 스모크 빌드 안에서 재검증**(AC 증거는 M6). 모듈 docstring에 기록됨.
 
-_<pending run-phase M3~M6>_
+### M3 — 설정 UI(프론트엔드) + 백엔드 배선 (2026-07-20, cycle_type=tdd)
+
+신규 백엔드 라우터 `server/web/settings_api.py` (`SettingsDeps` + `build_settings_router`) — `create_app`에 `WebDeps.settings` 옵션 필드로 배선(정적 마운트 `/` 앞에 등록해 `/api/*` 미섀도). 4개 엔드포인트: `GET /api/settings`(M1 `resolve_effective_settings` 비민감 설정 + 프로바이더별 key-set 불리언 — **키 값 미반환**), `POST /api/settings`(M1 `save_user_settings` 검증·지속 — credential-like 키는 `_RECOGNISED_KEYS` 밖이라 미기록, 거부 정책 보존), `POST /api/keys`(M2 `set_api_key` write-only + `inject_key_for_provider` env 주입 REQ-007; `KeystoreUnavailableError`→명시 503 + 세션 폴백 제안 REQ-006a, 평문-디스크 폴백 0), `DELETE /api/keys/{provider}`(M2 `delete_api_key`). **OSC 송신 표면 0**(M1/M2 seam만 import; 소스 스캔 테스트로 강제 — AC-014 ③/SAFETY-1). 프론트엔드(`ui/src`, no-DOM 순수함수 테스트 관례): `settings.ts`(parse/build/validate/onboarding 순수함수) + `SettingsPanel.tsx`(마스킹 write-only 키 입력·OSC 포트·임포트 디렉터리·프로바이더 선택·저장소 미가용 시 세션 전용 재시도) + `OnboardingBanner.tsx`(비침습 배너, 강제 마법사 아님) + `App.tsx` 설정 토글 배선 + `styles.css`. `server/llm/config.py` env-only 주입·자격증명 거부, `/ws` 프로토콜, 안전 게이트는 PRESERVE.
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| AC-DEPLOY-003 (터미널 없이 키/포트/임포트 디렉터리 읽기·저장 → 재기동 후 비민감 설정 지속 + 키는 자격 증명 저장소에서 조회) | PASS | `.venv/bin/python -m pytest server/tests/test_web_settings_api.py -q --cov=server.web.settings_api` | `20 passed`; `server/web/settings_api.py 69 stmts, 100% cover` |
+| — POST 지속 → 새 resolve(=재기동)가 지속값 확인 | PASS | `test_persists_and_survives_reload` | `1 passed` (console_port 8200 / receive_port 9200 / plugin_import_dir 지속) |
+| — GET이 키 값 미반환(키 설정됨=true만) | PASS | `test_key_set_status_true_but_value_never_returned` | `1 passed` — 응답 텍스트에 fake 키 문자열 0건 (AC-DEPLOY-004 보호) |
+| — credential-like 키 POST body 미지속 (거부 정책 보존) | PASS | `test_credential_key_in_body_is_not_persisted` | `1 passed` — 설정 파일에 `api_key`/키값 0건 |
+| — 저장소 미가용 → 명시 503 + 세션 폴백 (REQ-006a) | PASS | `test_keystore_unavailable_returns_explicit_error_with_session_fallback` + `test_session_fallback_works_when_keystore_broken` | `2 passed` — 503 `keystore_unavailable`+`session_fallback`, 세션 경로 env 주입 성공, 디스크 기록 0 |
+| — 키→env 주입 (REQ-DEPLOY-007) | PASS | `test_store_in_keystore_and_inject_env` | `1 passed` — `GEMINI_API_KEY`+`GOOGLE_API_KEY` env 주입, 응답에 키 미노출 |
+| — create_app 배선(정적 마운트와 공존) | PASS | `test_settings_router_mounted_alongside_static_and_ws` | `1 passed` — `/api/settings` 200 + `/` 정적 200 + `/healthz` ok |
+| — 프론트 순수함수(parse/build/validate/onboarding) | PASS | `cd ui && npm test` | `16 passed` (settings.test.ts); 총 `37 passed` (baseline 21 + 16) |
+
+**Regression**: 백엔드 full suite `.venv/bin/python -m pytest server/tests/ -q` → `882 passed` (baseline 862 + 신규 20, 회귀 0). 프론트 `cd ui && npm test` → `37 passed` (baseline 21 + 16). **Lint/Build**: `ruff check server/` → 2 pre-existing baseline (safety/console.py:221,258 E501) only, NEW 0; 신규/수정 파일 `ruff format --check` clean; `cd ui && npm run build`(tsc typecheck + vite) → clean(41 modules). **Boundary(E6')**: `grep AskUserQuestion|mcp__askuser` 신규 백엔드 파일 → 0; **OSC 송신 표면 스캔** `settings_api.py`(`socket.socket`/`UdpSocket`/`pythonosc`/`SafetyGate`/`send_to_console`/`server.safety`) → 0 + `test_settings_api_module_has_no_console_send_path` CI 가드. **dist**: `ui/dist` gitignored → 미커밋(M6 재빌드).
+
+**@MX tags added**: `server/web/settings_api.py` `build_settings_router` 위 `@MX:ANCHOR`(설정/키 REST 표면 = deploy-shell 유일 config/credential 진입점, `@MX:REASON` AC-014 ③ no-OSC-send 불변식 + `@MX:SPEC`) 1건 + `_provider_key_status` 위 `@MX:NOTE`(키는 boolean 도출용 transient read, 값 미반환 — AC-004) 1건.
+
+**커밋**: `e70c365`(M3 구현 — 백엔드 라우터 + 프론트 순수함수/컴포넌트/App 배선, 9파일), `6ce9c7e`(M3 @MX 태그). `feat/app-deploy-file-import` 직접 커밋(원격 없음 — push/PR 없음).
+
+_<pending run-phase M4~M6>_
 
 ## §E.3 Run-phase Audit-Ready Signal
 
