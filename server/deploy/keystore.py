@@ -223,19 +223,28 @@ def inject_key_for_provider(
     *,
     environ: MutableMapping[str, str] | None = None,
     session: SessionKeyStore | None = None,
+    overwrite: bool = True,
 ) -> list[str]:
     """Inject ``provider``'s API key into ``environ`` (default ``os.environ``).
 
     Resolves the key (session first, then OS store) and writes it into every env
     var name for the provider. Env-only — never touches disk. Returns the list
     of env var names set (empty when no key is configured).
+
+    ``overwrite`` defaults to ``True`` (the ``POST /api/keys`` path — an explicit
+    user re-entry must take effect). Pass ``overwrite=False`` at start-up so an
+    env key the operator already exported is PRESERVED: when any of the
+    provider's env var names is already present the call is a no-op (returns
+    ``[]``) and the store is not read (REQ-DEPLOY-028 env precedence).
     """
     provider = _require_provider(provider)
     target = os.environ if environ is None else environ
+    names = list(_PROVIDER_ENV_VARS[provider])
+    if not overwrite and any(name in target for name in names):
+        return []
     key = get_api_key(provider, session=session)
     if key is None:
         return []
-    names = list(_PROVIDER_ENV_VARS[provider])
     for name in names:
         target[name] = key
     return names
@@ -247,19 +256,27 @@ def inject_active_provider_key(
     session: SessionKeyStore | None = None,
     user_path: object = None,
     seed_path: object = None,
+    overwrite: bool = True,
 ) -> list[str]:
     """Inject the key for the *active* provider (M1 settings integration seam).
 
     Reads the active provider from ``resolve_effective_settings`` (the M1
     precedence chain) and injects its key. This is the one call the provider
     client bootstrap makes at start-up.
+
+    ``overwrite`` is threaded to :func:`inject_key_for_provider`: the start-up
+    caller passes ``overwrite=False`` so an operator's already-set env key wins
+    (REQ-DEPLOY-028), while the default ``True`` keeps the explicit-re-entry path
+    unchanged.
     """
     # Lazy import — mirrors settings.py's own lazy import to avoid paying the
     # settings-resolution import cost when only the low-level API is used.
     from server.deploy.settings import resolve_effective_settings
 
     settings = resolve_effective_settings(user_path=user_path, seed_path=seed_path)
-    return inject_key_for_provider(settings.active_provider, environ=environ, session=session)
+    return inject_key_for_provider(
+        settings.active_provider, environ=environ, session=session, overwrite=overwrite
+    )
 
 
 def _is_credential_name(name: str) -> bool:

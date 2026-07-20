@@ -8,12 +8,17 @@ FastAPI app with uvicorn (injectable for tests; no real socket binding here).
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
+import keyring
 import pytest
 from fastapi.testclient import TestClient
+from keyring.backend import KeyringBackend
+from keyring.errors import KeyringError, PasswordDeleteError
 
+from server.deploy import keystore
 from server.web.serve import (
     build_runtime,
     default_ui_dist,
@@ -299,3 +304,173 @@ class TestM10DeployShellWiring:
             assert resp.status_code == 200
             assert settings_file.is_file()
             assert "console_port = 8123" in settings_file.read_text()
+
+
+# --- REQ-DEPLOY-028 / AC-DEPLOY-019 startup key-injection harness -------------
+# Obviously-fake key strings + a sentinel so any leak is grep-visible.
+_FAKE_ANTHROPIC_KEY = "sk-ant-FAKE-SERVE-STARTUP-000111222333"
+_PRESET_ENV_SENTINEL = "preset-operator-env-key-DO-NOT-OVERWRITE"
+
+
+class _MemoryKeyring(KeyringBackend):
+    """In-memory keyring backend — deterministic, never touches the OS store."""
+
+    priority = 1  # type: ignore[assignment]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._store: dict[tuple[str, str], str] = {}
+
+    def get_password(self, service: str, username: str) -> str | None:
+        return self._store.get((service, username))
+
+    def set_password(self, service: str, username: str, password: str) -> None:
+        self._store[(service, username)] = password
+
+    def delete_password(self, service: str, username: str) -> None:
+        try:
+            del self._store[(service, username)]
+        except KeyError as error:
+            raise PasswordDeleteError("not found") from error
+
+
+class _BrokenKeyring(KeyringBackend):
+    """Simulates the OS credential store being unavailable / locked / denied."""
+
+    priority = 1  # type: ignore[assignment]
+
+    def get_password(self, service: str, username: str) -> str | None:
+        raise KeyringError("credential store locked")
+
+    def set_password(self, service: str, username: str, password: str) -> None:
+        raise KeyringError("credential store access denied")
+
+    def delete_password(self, service: str, username: str) -> None:
+        raise KeyringError("credential store unavailable")
+
+
+@pytest.fixture(autouse=True)
+def _isolate_real_keyring():
+    """Autouse — pin an in-memory keyring for EVERY test in this module so none
+    ever touches the real OS Keychain.
+
+    build_runtime now reads the active provider's stored key at start-up
+    (REQ-DEPLOY-028); without this guard a build_runtime call for the shipped
+    config (active provider = gemini) would hit — and, on a machine with a stored
+    item, block on a GUI prompt for — the real Keychain. Tests that need the store
+    to be populated call ``keystore.set_api_key`` (writes into this backend);
+    tests that need a store failure override with the ``broken_keyring`` fixture.
+    """
+    original = keyring.get_keyring()
+    keyring.set_keyring(_MemoryKeyring())
+    try:
+        yield
+    finally:
+        keyring.set_keyring(original)
+        keystore.clear_session_keys()
+
+
+@pytest.fixture
+def broken_keyring():
+    original = keyring.get_keyring()
+    keyring.set_keyring(_BrokenKeyring())
+    try:
+        yield
+    finally:
+        keyring.set_keyring(original)
+        keystore.clear_session_keys()
+
+
+@pytest.fixture
+def preserve_environ():
+    """Snapshot os.environ and restore it fully — build_runtime injects real env
+    vars into the process environment, so every startup-injection test isolates
+    that side effect."""
+    snapshot = dict(os.environ)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(snapshot)
+
+
+def _write_provider_config(tmp_path: Path, *, active: str) -> Path:
+    config_path = tmp_path / "provider.toml"
+    config_path.write_text(
+        f'[provider]\nactive = "{active}"\n\n'
+        '[provider.anthropic]\nmodel = "claude-opus-4-8"\n\n'
+        '[provider.gemini]\nmodel = "gemini-3.5-flash"\n',
+        encoding="utf-8",
+    )
+    return config_path
+
+
+class TestStartupProviderKeyInjection:
+    """REQ-DEPLOY-028 / AC-DEPLOY-019 — build_runtime injects the active-provider
+    key from the OS credential store into the process env BEFORE the provider
+    client is constructed, preserving an operator's pre-set env key and never
+    aborting start-up when the store is unavailable.
+    """
+
+    def test_injects_active_provider_key_from_store_at_startup(
+        self, monkeypatch, preserve_environ, tmp_path
+    ):
+        # No user settings file → the seed's active provider wins deterministically.
+        monkeypatch.setattr(
+            "server.deploy.settings.user_settings_path",
+            lambda *a, **k: tmp_path / "absent.toml",
+        )
+        os.environ.pop("ANTHROPIC_API_KEY", None)
+        config_path = _write_provider_config(tmp_path, active="anthropic")
+        keystore.set_api_key("anthropic", _FAKE_ANTHROPIC_KEY)
+
+        args = parse_args(
+            ["--receive-port", "0", "--no-session-backup", "--config", str(config_path)]
+        )
+        app, stack = build_runtime(args)
+        try:
+            assert os.environ.get("ANTHROPIC_API_KEY") == _FAKE_ANTHROPIC_KEY
+        finally:
+            stack.stop()
+
+    def test_preset_env_key_is_preserved_not_overwritten(
+        self, monkeypatch, preserve_environ, tmp_path
+    ):
+        monkeypatch.setattr(
+            "server.deploy.settings.user_settings_path",
+            lambda *a, **k: tmp_path / "absent.toml",
+        )
+        os.environ["ANTHROPIC_API_KEY"] = _PRESET_ENV_SENTINEL
+        config_path = _write_provider_config(tmp_path, active="anthropic")
+        # A DIFFERENT key sits in the store; the pre-set env value must still win.
+        keystore.set_api_key("anthropic", _FAKE_ANTHROPIC_KEY)
+
+        args = parse_args(
+            ["--receive-port", "0", "--no-session-backup", "--config", str(config_path)]
+        )
+        app, stack = build_runtime(args)
+        try:
+            assert os.environ["ANTHROPIC_API_KEY"] == _PRESET_ENV_SENTINEL
+        finally:
+            stack.stop()
+
+    def test_unavailable_store_does_not_abort_startup(
+        self, broken_keyring, monkeypatch, preserve_environ, tmp_path
+    ):
+        monkeypatch.setattr(
+            "server.deploy.settings.user_settings_path",
+            lambda *a, **k: tmp_path / "absent.toml",
+        )
+        os.environ.pop("ANTHROPIC_API_KEY", None)
+        config_path = _write_provider_config(tmp_path, active="anthropic")
+
+        args = parse_args(
+            ["--receive-port", "0", "--no-session-backup", "--config", str(config_path)]
+        )
+        # A locked / denied store must NOT crash start-up (REQ-DEPLOY-006a).
+        app, stack = build_runtime(args)
+        try:
+            # Env stays unset for the provider — no plaintext, operator uses the UI.
+            assert "ANTHROPIC_API_KEY" not in os.environ
+        finally:
+            stack.stop()

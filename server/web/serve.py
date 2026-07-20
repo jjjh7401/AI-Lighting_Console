@@ -15,7 +15,11 @@ from dataclasses import replace
 from pathlib import Path
 
 from server.deploy.compile import LuaCompileChecker
-from server.deploy.keystore import SessionKeyStore
+from server.deploy.keystore import (
+    KeystoreUnavailableError,
+    SessionKeyStore,
+    inject_active_provider_key,
+)
 from server.deploy.pipeline import DeployPipeline
 from server.llm.config import DEFAULT_CONFIG_PATH, load_provider_config
 from server.llm.factory import build_provider
@@ -120,6 +124,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
     """Compose the FastAPI app + console stack from parsed arguments."""
     config = load_provider_config(args.config)
+    config_path = Path(args.config)
+
+    # @MX:NOTE: [AUTO] REQ-DEPLOY-028 startup active-provider key injection — the
+    #   packaged app has no terminal to export env vars, so the active provider's
+    #   stored key must cross into the process env BEFORE build_provider() builds
+    #   the client (which reads its key from env). overwrite=False so an operator's
+    #   already-set env key wins; a locked/denied store degrades to the REQ-DEPLOY-
+    #   006a settings-UI session path without aborting start-up (never writes disk).
+    try:
+        inject_active_provider_key(seed_path=config_path, overwrite=False)
+    except KeystoreUnavailableError as error:
+        print(
+            f"[startup] OS credential store unavailable ({error}); no API key "
+            "injected — enter one in the settings UI (session-only fallback).",
+            file=sys.stderr,
+        )
     provider = build_provider(config)
     system_prefix = assemble_prefix()
 
@@ -179,7 +199,6 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
     )
 
     ui_dist = Path(args.ui_dist)
-    config_path = Path(args.config)
     # M10 Part D: compose the M3/M4 deploy-shell REST routers into WebDeps — the
     # M6 "serve.py composition" obligation (settings_api/provision_api docstrings)
     # that was missed, so the packaged app 404'd its entire in-app config surface.
