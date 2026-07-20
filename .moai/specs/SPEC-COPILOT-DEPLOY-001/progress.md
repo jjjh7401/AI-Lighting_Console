@@ -173,7 +173,7 @@ Stage-1 마지막 마일스톤 — 패키징된 셸의 안전 불변식 보존 +
 
 `sync_status: stage-1-synced` (**Stage-1 문서 동기화 — 이것은 terminal close가 아니다**)
 `sync_complete_at: 2026-07-20`
-`sync_commit_sha: pending-backfill-stage1-sync`
+`sync_commit_sha: aca6b8c`
 
 CHANGELOG.md `[Unreleased]` 및 README.md가 Stage-1 배포 가능 arm64 macOS MVP(M1~M6 + M10)를 반영해 동기화되었다 — 인앱 설정+OS 자격 증명 저장, responder provisioning, health/오류 UX, PyInstaller onedir 패키징(빌드/실행 안내 포함), 안전 불변식 보존, 환경-게이트 N/A(universal2/Windows/실제 공증) 명시.
 
