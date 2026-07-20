@@ -2,6 +2,7 @@
 
 > v0.2.0 (draft) — 기능이 검증된 MVP(SPEC-COPILOT-MVP-001)에 배포 셸을 씌우는 SPEC의 AC. 배포 형태(Stage 1 PyInstaller onedir / Stage 2 Tauri), 인앱 설정 + OS 자격 증명 저장, responder provisioning, health UI, 코드 서명·공증, 자동 업데이트, 오류 UX, 안전 불변식 보존을 검증한다. (plan-audit fold-in: AC-014 ③ 구체화, AC-016~018 신설, AC-004/009/011/015 강화)
 > 검증 환경 주석: 서명·공증(AC-DEPLOY-009/010)은 코드 서명 인증서를 요구하므로 **환경-게이트 반자동**이다 — SPEC-COPILOT-MVP-001의 라이브 onPC gap 규율(인증서/콘솔 부재 시 explicit N/A, 확보 시 실행)을 동일 적용한다.
+> v0.3.0 라이브 E2E 하드닝 fold-in: §D.11에 결함 #2~#6에 대한 AC-DEPLOY-019~023 신설(provenance `copilot-live-demo-findings`). AC-019(#2 기동 시 키 주입)은 `build_runtime` 조립 수준 단위 테스트, AC-023(#6 OSC 수신 포트)은 라이브·하드웨어 부분을 deferred/manual N/A로 분리. 결함 #1은 commit `1d65375`에서 이미 수정(신규 AC 미앵커링).
 
 ## D. AC 매트릭스
 
@@ -73,6 +74,18 @@
 |---|---|---|---|
 | AC-DEPLOY-015 | graceful shutdown + 포트 사용 중 조용한 폴백 금지 | 자동/반자동: ① 앱 종료 → 백엔드(및 sidecar) 정상 종료 + 포트/OSC 리스너/타이머 정리. **검증은 부트로더 PID 하나가 아니라 process-TREE scan**(추출된 grandchild Python 프로세스까지 잔여 0건 — FEAS-5) + **crash/force-quit 종료 경로**(강제 종료 시에도 grandchild·포트 좀비 0건)까지 커버 ② **지정 OSC/웹 포트 선점 상태 재현 → 인간 친화적 오류 + 재설정 안내 표시 + 임의 포트 조용한 폴백 0건** 확인 | REQ-DEPLOY-025~026 |
 
+### D.11 라이브 E2E 하드닝 AC (v0.3.0 fold-in — 실제 하드웨어+LLM+번들 결합 결함 #2~#6)
+
+> provenance: `copilot-live-demo-findings`(2026-07-20 실제 onPC 2.4.2 + 실제 Gemini 라이브 데모). 결함 #1(`build_runtime` 라우터 미조립)은 commit `1d65375`에서 이미 수정되어 신규 AC를 앵커링하지 않는다. #2(AC-019)는 `build_runtime` 조립 수준의 단위 테스트로 검증 가능하며, #6(AC-023)은 라이브/하드웨어 부분을 deferred/manual 기준으로 분리한다.
+
+| AC ID | 기준 | 검증 방법 | 연계 REQ |
+|---|---|---|---|
+| AC-DEPLOY-019 | 기동 시 활성 프로바이더 키 주입 + 기설정 env 보존 + 저장소 미가용 시 세션 한정 폴백 (#2) | **자동(단위 — `build_runtime` 조립 수준)**: ① 활성 프로바이더가 시드된 키스토어 + **사전 설정 env 키 없음** 상태에서 `build_runtime`(프로바이더 클라이언트 생성 이전)이 그 프로바이더 키를 프로세스 env로 주입함을 assert ② **이미 설정된 env 키는 보존**(덮어쓰지 않음)됨을 assert ③ **저장소 미가용/잠금/거부** 시 REQ-DEPLOY-006a 세션 한정(in-memory) 폴백으로 동작하고 **평문 디스크 저장 0건**임을 assert(정상경로 스캔이 건드리지 않는 실패 분기 커버) ④ 회귀: 신규 인스턴스가 키 없이 기동해 "No API key"로 실패하지 않음(1d65375 이후 라우터 조립 전제) | REQ-DEPLOY-028 |
+| AC-DEPLOY-020 | rig-context/프롬프트가 실제 풀 번호+이름을 명시 → 존재하지 않는 오브젝트 미선택 (#3) | **자동**: 풀 번호가 비연속인 rig(예: Group이 1,2,7만 존재)에 대해 ① `get_rig_context`/프롬프트 산출물이 각 오브젝트의 **실제 풀 번호와 이름**을 노출(위치 인덱스 단독 노출 아님)함을 assert ② 그 컨텍스트 기반 대상 선택이 **존재하는 풀 번호로 해소**되고 존재하지 않는 번호(예: `Group 3`)를 생성하지 않음을 assert. **반자동(LLM)**: 모호 지시가 존재하는 대상으로 해소됨을 확인(명시적 `Fixture 11 Thru 19`는 회귀 통과) | REQ-DEPLOY-029 |
+| AC-DEPLOY-021 | 직전 생성 시퀀스/실행기 상태를 세션에 주입 → 후속 수정이 정확 대상 지향 + 재생성 선호 (#4) | **자동**: ① `Seq 71` / `Exec 201`에 룩을 생성한 뒤, 세션 컨텍스트에 **마지막 생성 대상 상태가 존재**함을 assert ② 후속 수정 지시("더 느리게")가 그 상태를 근거로 **`Seq 71`/`Exec 201`로 해소**(임의 `Seq 1`/`Exec 1` 아님)됨을 assert ③ 대상 상태가 존재할 때 **맹목적 수정보다 재생성 경로가 선택**됨을 assert | REQ-DEPLOY-030 |
+| AC-DEPLOY-022 | Gemini 캐시 만료 시 재생성·재시도 + "No API key" 인증 오류 분류 (#5) | **자동(오류 주입)**: ① `403 PERMISSION_DENIED "CachedContent not found"`(및 404) 주입 → 앱이 **캐시를 재생성하여 재시도**하고 호출을 종단 실패로 종료하지 않음을 assert ② `"No API key"`(`ValueError`) 주입 → 오류 분류가 `unexpected`가 아닌 **인증(auth) 오류**로 분류됨을 assert(캐시/키 케이스가 분류기에 존재) | REQ-DEPLOY-031 |
+| AC-DEPLOY-023 | OSC 수신 포트 `Address already in use` 시 동일 포트 재바인드·복구 + 조용한 드리프트 금지 (#6) | **자동(단위 — 포트 선점 시뮬레이션)**: ① 지정 수신 포트 선점(mock)으로 `Address already in use` 재현 → 앱이 **동일 지정 포트 재바인드**(소켓 재사용/재시도) 시도, **임의 포트 조용한 드리프트 0건**(REQ-DEPLOY-026 정합), 복구 불가 시 **인간 친화적 오류 + 재설정 안내 표시**를 assert(`server/bridge/osc.py` 수신 경로). **반자동/수동(라이브·하드웨어 — deferred N/A)**: 실제 onPC 비정상 종료 후 수신 포트 점유 상태에서 앱 재기동 복구는 **라이브 onPC 환경-게이트**(SPEC-COPILOT-MVP-001 라이브 gap 규율 동일 — 하드웨어 부재 시 explicit N/A, 확보 시 실행); 단위 커버리지가 불가한 왕복 복구는 수동 검증으로 분리 | REQ-DEPLOY-032 |
+
 ## Given-When-Then 시나리오
 
 ### 시나리오 1 — 최초 실행 셋업 (fresh install → 첫 지시 성공)
@@ -130,9 +143,12 @@
 | REQ-DEPLOY-008 | AC-DEPLOY-005 | REQ-DEPLOY-011a, 024 | AC-DEPLOY-017 |
 | REQ-DEPLOY-009~010 | AC-DEPLOY-006 | REQ-DEPLOY-025~026 | AC-DEPLOY-015 |
 | REQ-DEPLOY-011 | AC-DEPLOY-007 | REQ-DEPLOY-027 | AC-DEPLOY-018 |
-| REQ-DEPLOY-012~013 | AC-DEPLOY-008 | | |
+| REQ-DEPLOY-012~013 | AC-DEPLOY-008 | REQ-DEPLOY-028 | AC-DEPLOY-019 |
+| REQ-DEPLOY-029 | AC-DEPLOY-020 | REQ-DEPLOY-030 | AC-DEPLOY-021 |
+| REQ-DEPLOY-031 | AC-DEPLOY-022 | REQ-DEPLOY-032 | AC-DEPLOY-023 |
 
 > 신규 앵커 (v0.2.0 fold-in): REQ-004a(로컬 공존 [Ubiquitous] 분리)→AC-002, REQ-006a(자격 저장소 미가용 [Unwanted])→AC-016, REQ-011a(앱 발행 Import Plugin 게이트 경유)→AC-017, REQ-027(updater 재시작 안전상태 보존)→AC-018. 고아 REQ 0건 유지.
+> 신규 앵커 (v0.3.0 라이브 E2E 하드닝 fold-in): REQ-028(#2 기동 시 활성 프로바이더 키 주입 [Event-driven])→AC-019, REQ-029(#3 rig-context 실제 풀 번호 명시 [State-driven])→AC-020, REQ-030(#4 마지막 생성 연출 상태 세션 주입 [State-driven])→AC-021, REQ-031(#5 Gemini 캐시 만료 재생성 + 키 오류 분류 [Unwanted])→AC-022, REQ-032(#6 OSC 수신 포트 재바인드 복구 [Unwanted])→AC-023. **결함 #1은 commit `1d65375`에서 이미 수정되어 신규 REQ/AC 미앵커링(이력 전용).** 고아 REQ 0건 유지.
 
 ## 품질 게이트 (TRUST 5)
 
@@ -143,7 +159,8 @@
 
 ## Definition of Done
 
-- [ ] AC-DEPLOY-001 ~ AC-DEPLOY-018 전부 PASS (자동 테스트 증거 포함; AC-DEPLOY-009/010은 서명 인증서 확보 시 환경-게이트 검증, 부재 시 explicit N/A + 파이프라인 구성 존재)
+- [ ] AC-DEPLOY-001 ~ AC-DEPLOY-023 전부 PASS (자동 테스트 증거 포함; AC-DEPLOY-009/010은 서명 인증서 확보 시 환경-게이트 검증, 부재 시 explicit N/A + 파이프라인 구성 존재; AC-DEPLOY-023의 라이브·하드웨어 왕복 복구는 라이브 onPC 환경-게이트 N/A로 분리)
+- [ ] 라이브 E2E 하드닝(v0.3.0, 결함 #2~#6) — 기동 시 활성 프로바이더 키 주입(AC-019, **구현 최우선**), rig-context 실제 풀 번호 명시(AC-020), 마지막 생성 연출 상태 세션 주입(AC-021), Gemini 캐시 만료 재생성 + 키 오류 분류(AC-022), OSC 수신 포트 재바인드 복구 단위 검증(AC-023) 전부 PASS; 결함 #1은 commit `1d65375`에서 이미 수정(회귀 유지)
 - [ ] 안전 불변식 회귀(AC-DEPLOY-014) — 패키징된 셸에서 단일 관문·블랙리스트 승인 불변식 유지 + OSC 송신 표면 allowlist/wire-level 열거(Python+Rust) CI green
 - [ ] API 키 평문 미유출(AC-DEPLOY-004) — 앱이 쓰는 모든 파일(크래시 덤프 포함)에 키 문자열 0건 자동 스캔 통과; 저장소 미가용 폴백(AC-DEPLOY-016) PASS
 - [ ] 앱 발행 Import Plugin 게이트 경유 + 감사 로그 1:1(AC-DEPLOY-017) PASS; updater 재시작 안전상태 보존(AC-DEPLOY-018) PASS(Stage-2)

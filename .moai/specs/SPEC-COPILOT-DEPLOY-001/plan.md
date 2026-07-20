@@ -96,6 +96,22 @@
 
 > 순서 비고: Stage 1(M1~M6)이 완성되면 그 자체로 배포 가능한 MVP 형태다. Stage 2(M7~M9)는 M6의 PyInstaller 백엔드를 sidecar로 재사용하므로 M6 이후 착수한다. **M9(서명·공증)는 Stage 1·2 양 아티팩트 모두에 적용되는 HIGH-RISK 구간이며, "기계적 마무리 단계"가 아니다** — 서명/공증 제약(entitlements/hardened runtime/stapling, HSM 키 보관, notarytool 크리덴셜)이 M6 패키징 형태·M7 sidecar 구조로 역류하므로, notarytool 왕복 1회를 확인하는 **조기 스파이크(SPIKE)를 M6~M7과 병행**한다(FEAS-4).
 
+### 패키징 Stage 1 — 라이브 E2E 하드닝 (v0.3.0 fold-in, mid-run)
+
+> 실제 onPC 2.4.2 하드웨어 + 실제 Gemini 라이브 데모(2026-07-20)에서 **983-test 단위 스위트가 놓친 통합 결함 6건** 발견 — 하드웨어 + LLM + 패키지 번들 결합에서만 발현(단위 테스트 사각지대). provenance: 프로젝트 메모리 `copilot-live-demo-findings`. **기능 무변경 원칙(§B) 하의 셸/배선/프롬프트 정합 하드닝**이며 안전 게이트·룰북 규칙은 불변이다. 도메인 구분: #2·#6=deploy-shell, #3·#4·#5=LLM/orchestrator.
+>
+> **[이미 수정 — 기록 전용] 결함 #1**: 패키징된 앱의 `build_runtime`이 settings/provision 라우터를 조립하지 않아 `/api/*`가 미마운트(404/405)되던 결함 → **commit `1d65375`에서 수정 완료**. M14의 선행 전제(라우터 조립)이며, 신규 마일스톤을 앵커링하지 않는다.
+>
+> **마일스톤 순서 = 승인된 구현 진행 순서**: #2 최우선 → #4·#5 → #3·#6. 마일스톤 번호(M14~M18)는 이 진행 순서를 따르며, 기존 M1~M10 및 결정 ID(DECIDE-M13 등)와 충돌하지 않는다.
+
+| 마일스톤 | 내용 | 의존성 | 주요 REQ/AC |
+|---|---|---|---|
+| **M14 — 기동 시 활성 프로바이더 키 주입 (#2, deploy-shell, 최우선)** | 기존 `inject_active_provider_key`(`server/deploy/keystore.py:244`)를 **`build_runtime`(`server/web/serve.py:120`)의 프로바이더 클라이언트 생성 이전 시점**에 배선하여 startup 주입을 구현. **이미 설정된 env 키는 보존**(덮어쓰지 않음), 저장소 미가용/잠금/거부 시 REQ-DEPLOY-006a 세션 한정 폴백(평문 미저장). 기존 주입 경로는 `POST /api/keys` 단독(`server/web/settings_api.py:146`)이라 신규 인스턴스가 키 없이 기동 → "No API key" 실패하던 결함 해소. **회귀 테스트 홈: `server/tests/test_web_serve.py`** | M6(패키징 형태), 결함 #1(1d65375 라우터 조립 선행) | REQ-DEPLOY-028 / AC-DEPLOY-019 |
+| **M15 — 마지막 생성 연출 상태 세션 주입 (#4, LLM/orchestrator)** | 직전 생성 시퀀스/실행기 상태(예: `Seq 71`/`Exec 201`)를 세션 컨텍스트에 주입하여 후속 수정 지시가 정확 대상을 겨냥하도록 하고, **맹목적 수정보다 재생성(regeneration)을 선호**. 방금 만든 룩의 상태 미추적으로 후속 편집이 오대상(`Seq 1`/`Exec 1`)을 겨냥해 실패하던 결함 해소 | M14 | REQ-DEPLOY-030 / AC-DEPLOY-021 |
+| **M16 — Gemini 캐시 만료 복구 + 오류 분류 (#5, LLM/orchestrator)** | Gemini 컨텍스트 캐시(rig/rulebook `CachedContent`) 만료 시 `403 PERMISSION_DENIED`/404 감지 → **캐시 재생성 후 재시도**(종단 실패 금지). 추가로 `"No API key"`(`ValueError`)를 `unexpected`가 아닌 **인증(auth) 오류로 분류**(오류 분류기에 캐시/키 케이스 추가) | M15 | REQ-DEPLOY-031 / AC-DEPLOY-022 |
+| **M17 — rig-context 실제 풀 번호 명시 (#3, LLM/orchestrator)** | `get_rig_context`/프롬프트에 **실제 풀 번호(pool number)와 이름을 명시**하여 위치 인덱스와 실제 풀 번호의 혼동으로 존재하지 않는 오브젝트(예: `Group 3`) 선택 → "Illegal object" 실패를 제거. 명시적 대상(`Fixture 11 Thru 19`)은 회귀 통과 유지 | M16 | REQ-DEPLOY-029 / AC-DEPLOY-020 |
+| **M18 — OSC 수신 포트 재바인드 복구 (#6, deploy-shell)** | 수신 포트 바인드(`server/bridge/osc.py:153`, `ThreadingOSCUDPServer`)에 **동일 지정 포트 재바인드 전략**(소켓 재사용/재시도) 도입 — 앱 비정상 종료 후 포트 점유로 `Address already in use` 재기동 실패를 복구. **임의 포트 조용한 드리프트 금지(REQ-DEPLOY-026 정합)**, 복구 불가 시 인간 친화적 오류 + 재설정 안내. **라이브·하드웨어 왕복 복구는 라이브 onPC 환경-게이트(deferred/manual N/A)** — 단위(포트 선점 시뮬레이션)만 자동 검증 | M17 | REQ-DEPLOY-032 / AC-DEPLOY-023 |
+
 ## D. 리스크
 
 | 리스크 | 대응 |
@@ -110,6 +126,7 @@
 | PyInstaller onedir 네이티브 의존성(google-genai/anthropic/grpcio/keyring) 번들 실패·기동 지연 | onedir 확정(FEAS-1). **keyring 백엔드 발견은 entry-point 메타데이터 의존인데 PyInstaller가 strip → frozen에서 null 백엔드로 조용히 폴백(핀만으로 해결 안 됨)** → `--collect-all keyring` + keyring 백엔드 hidden-imports 명시(FEAS-2); 키 어댑터 AC를 플랫폼별 frozen onedir 스모크 빌드 안에서 검증 |
 | Tauri sidecar 프로세스 누수(종료 시 백엔드 좀비) | REQ-DEPLOY-025 + FEAS-5: **process-GROUP/tree 종료**(부트로더 PID만 kill 시 추출된 grandchild Python 좀비/포트 점유) + crash/force-quit 경로; AC-DEPLOY-015를 process-tree scan으로 강화 |
 | macOS Gatekeeper quarantine / Windows SmartScreen로 최초 실행 차단 | REQ-DEPLOY-014/015 서명·공증; AC-DEPLOY-009/010 환경-게이트 검증(spctl/signtool). SmartScreen 완화는 평판 누적 의존(OV는 즉시 미해소, EV만 즉시 신뢰 — FEAS-7) |
+| **단위 스위트 사각지대 — 하드웨어+LLM+번들 결합 통합 결함 (v0.3.0 라이브 E2E 발견)** | 983-test 단위 스위트가 결함 #1~#6(라우터 미조립·startup 키 미주입·LLM 대상 매핑·캐시 만료·OSC 포트)을 모두 통과시킴 — 이 결함들은 실제 onPC + 실제 Gemini + 패키지 번들 결합에서만 발현. **대응**: (a) #2는 `build_runtime` **조립(assembly) 지점 회귀 테스트**(`server/tests/test_web_serve.py`)로 단위 재현(라우터 마운트·startup 키 주입), (b) 오류 분류/캐시 복구(#5)·대상 상태 주입(#4)·rig-context(#3)는 오류 주입·컨텍스트 assert로 단위화, (c) #6·서명/공증은 라이브·하드웨어 환경-게이트로 분리. provenance: `copilot-live-demo-findings` |
 
 ## E. 자가 검증 계획
 

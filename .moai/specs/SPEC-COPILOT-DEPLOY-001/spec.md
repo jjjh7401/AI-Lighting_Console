@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-DEPLOY-001
 title: "Phase 2: 배포 가능한 앱 형태 — PyInstaller 로컬 런처 → Tauri 데스크톱 앱 (macOS/Windows)"
-version: "0.2.1"
+version: "0.3.0"
 status: in-progress
 created: 2026-07-20
 updated: 2026-07-20
@@ -24,6 +24,7 @@ depends_on: [SPEC-COPILOT-MVP-001]
 | 0.1.0 | 2026-07-20 | manager-spec | 최초 작성 (draft). 기능이 검증된 MVP(SPEC-COPILOT-MVP-001)를 최종 사용자(조명 오퍼레이터)용 설치·배포 가능한 앱 형태로 전환하는 SPEC. 합의된 2단계(패키징 Stage 1 PyInstaller onefile 런처 → Stage 2 Tauri v2 데스크톱 앱, Electron은 대안 문서화) + 배포 셸이 만족해야 할 6대 크로스컷 요구(인앱 설정 UI + OS 자격 증명 저장, responder provisioning, health UI, 코드 서명·공증, 자동 업데이트, 오류 UX)를 GEARS 요구사항으로 정의. **핵심 HARD 제약**: onPC와 동일 머신 로컬 구동 — 순수 클라우드/SaaS 형태는 out of scope. 다음 세션 구현 대상. |
 | 0.2.0 | 2026-07-20 | manager-spec | Plan-audit fold-in (PASS-WITH-DEBT ~0.79). AC-014 ③ 구체화(SAFETY-1: OSC 송신 표면 allowlist + 스캔 메커니즘/패턴 + Python·Rust 전 언어 + fail-closed + wire-level 열거), REQ-006a([Unwanted] 자격 저장소 미가용/잠금/거부 시 평문 금지·세션 한정 폴백 — GEARS-1/TRACE-3)·REQ-027([Event-driven] updater 재시작 시 라이브 잠금/승인 대기/감사 로그 보존 — SAFETY-4) 신설, REQ-004 "(또는 동일 LAN)" 삭제·[Unwanted]/[Ubiquitous] 분리(TRACE-1/GEARS-3), REQ-015 검증 가능 서명 행위로 재작성·SmartScreen를 §C 제약으로 이동(GEARS-2/FEAS-7), REQ-011↔024 Import Plugin 정합(SAFETY-3). 사전 확정 결정 반영: AppName "GrandMA3 Copilot"/번들 식별자 com.grandma3copilot.app, macOS universal2(min 12)+Windows x86_64, onedir(FEAS-1/6/M13), 서명 파이프라인만 작성(인증서 부재 N/A), TOML config, keyring Python 직접 접근, 배너 온보딩, MVP 포트 재사용, 텔레메트리 0·크래시 env-scrub. §F 재작성: 6 resolved + 2 Stage-2-deferred(F5 보안 축 추가, F6). 다음 세션 구현 대상. |
 | 0.2.1 | 2026-07-20 | manager-spec | M6 착수 중 발견 사항 반영 (mid-run 기록, D-NEW-1). 빌드 호스트 CPython이 **arm64 전용**임이 확인되어 **universal2(arm64+x86_64) 및 Windows x86_64는 현재 빌드 호스트에서 환경-게이트 N/A**로 전환 — 서명 env-gate(§A.6 F7, AC-DEPLOY-009/010)와 **동일 규율**(research.md §C.6/§E-2). universal2는 universal2 CPython + `_pydantic_core`/`jiter` universal2 wheel이, Windows는 Windows 러너가 필요하며 현재 arm64 전용 호스트에 부재. **macOS arm64 아티팩트는 지금 빌드·검증**한다. 패키징 파이프라인은 **코드 변경 없이**(`PYI_TARGET_ARCH=universal2` env / Windows 러너) 두 대상을 활성화하므로, universal2/Windows는 **폐기가 아니라 적합한 빌드 환경으로 이연된 목표**다. 근본 결정(onedir·universal2·Windows 대상 자체)은 **불변** — §A 대상 아키텍처 서술 + acceptance.md DoD(Stage 1/2 빌드) + AC-DEPLOY-009 이중 게이트 명시만 수정. |
+| 0.3.0 | 2026-07-20 | manager-spec | **라이브 E2E 하드닝 fold-in (mid-run, D-NEW-1 계열).** 실제 grandMA3 onPC 2.4.2 하드웨어 + 실제 Gemini 라이브 데모(2026-07-20)에서 **983-test 단위 스위트가 놓친 통합 결함 6건** 발견 — 이 결함들은 하드웨어 + LLM + 패키지 번들이 결합될 때만 발현하여 단위 테스트에 불가시했다. provenance: 프로젝트 메모리 `copilot-live-demo-findings`(라이브 데모 발견 6건 기록). **#1**(`build_runtime`이 settings/provision 라우터를 미조립 → `/api/*` 미마운트 404/405)은 이미 **commit `1d65375`에서 수정**되어 본 개정에서는 기록만 한다. **#2~#6은 신규 하드닝 스코프**로 GEARS 요구 5건(REQ-DEPLOY-028~032) + 수용 기준 5건(AC-DEPLOY-019~023) + Stage-1 Hardening 마일스톤(plan.md §C, M14~M18) 신설: **#2**(기동 시 활성 프로바이더 키 미주입 → 신규 인스턴스가 키 없이 기동해 "No API key" 실패, **구현 최우선**)→REQ-028/AC-019/M14, **#4**(직전 생성 연출 상태 미추적 → 후속 수정이 Seq 71/Exec 201 대신 오대상)→REQ-030/AC-021/M15, **#5**(Gemini CachedContent 만료 미복구 + "No API key" 오분류)→REQ-031/AC-022/M16, **#3**(LLM 그룹 매핑 부정확 → 존재하지 않는 Group 3 선택 "Illegal object")→REQ-029/AC-020/M17, **#6**(OSC 수신 포트 조율 취약 → 앱 사망 시 onPC가 포트 점유해 재기동 `Address already in use`)→REQ-032/AC-023/M18. 도메인 구분: #2·#6=deploy-shell, #3·#4·#5=LLM/orchestrator(모두 DEPLOY-001 Stage-1 하드닝 스코프). **status: in-progress 유지** — Stage-2(Tauri M7~M9)는 env-gate 이연 상태로 미변경. 0.2.0/0.2.1 mid-run fold-in 관례 계승. |
 
 ## A. 개요
 
@@ -123,6 +124,18 @@ depends_on: [SPEC-COPILOT-MVP-001]
 
 - **REQ-DEPLOY-025** [Event-driven] — **When** 사용자가 앱을 종료하면, the 앱 **shall** 로컬 백엔드 서버(및 Stage 2 sidecar 프로세스)를 정상 종료(graceful shutdown)하고 열린 포트·OSC 리스너·백그라운드 태스크(heartbeat/backup 타이머)를 정리한다.
 - **REQ-DEPLOY-026** [Event-driven] — **When** 지정된 OSC 또는 웹 포트가 이미 사용 중이면, the 앱 **shall** 인간 친화적 오류 + 포트 재설정 안내를 표시하고, 임의의 다른 포트로 **조용히 폴백하지 않는다** (사용자가 onPC OSC 출력을 특정 포트로 맞추므로 — OSC 포트 드리프트 방지).
+
+### B.11 라이브 E2E 하드닝 (v0.3.0 fold-in — 실제 하드웨어+LLM+패키지 번들 결합 결함)
+
+> 실제 onPC 2.4.2 + 실제 Gemini 라이브 데모(2026-07-20)에서 983-test 단위 스위트가 놓친 통합 결함 6건 발견(provenance: `copilot-live-demo-findings`). #1(`build_runtime` 라우터 미조립 → `/api/*` 미마운트)은 commit `1d65375`에서 **이미 수정**되어 아래에 기록만 한다. #2~#6은 신규 하드닝 요구다. 도메인 구분: #2·#6=deploy-shell, #3·#4·#5=LLM/orchestrator (모두 DEPLOY-001 Stage-1 하드닝 스코프). 기능 무변경 원칙(§A) 하에서 **셸/배선/프롬프트 정합 수준의 하드닝**이며 코파일럿 도구·안전 게이트·룰북 규칙은 불변이다.
+>
+> **[이미 수정 — 기록 전용] 결함 #1** — 패키징된 앱의 `build_runtime`이 settings/provision 라우터를 조립하지 않아 `/api/*`가 미마운트(404/405)되던 결함. **commit `1d65375`에서 수정 완료** — 본 개정은 신규 요구를 앵커링하지 않고 이력만 남긴다.
+
+- **REQ-DEPLOY-028** [Event-driven] *(#2 — deploy-shell, 구현 최우선)* — **When** 패키징된 앱이 기동하여 백엔드 런타임을 구성하면(LLM 프로바이더 클라이언트 생성 **이전**), the 앱 **shall** OS 자격 증명 저장소의 **활성 프로바이더 키를 백엔드 프로세스 env로 주입**한다 — 단, **이미 설정된 env 키는 보존**(덮어쓰지 않음)하고, 저장소 미가용·잠금·거부 상태에서는 REQ-DEPLOY-006a의 세션 한정(in-memory) 폴백을 따르며 평문 디스크 저장을 하지 않는다. (라이브 E2E 결함: 기존 키 주입 경로가 `POST /api/keys` 단독이라 **신규 인스턴스가 키 없이 기동 → "No API key" 실패**. REQ-DEPLOY-007의 "프로바이더 기동 시 조회·주입"을 **기동-시점(startup) 주입**으로 구체화·강화.)
+- **REQ-DEPLOY-029** [State-driven] *(#3 — LLM/orchestrator)* — **While** LLM이 rig-context(`get_rig_context` 출력)를 근거로 대상 오브젝트(그룹 등)를 선택하는 동안, the 앱 **shall** rig-context/프롬프트에 **실제 풀 번호(pool number)와 이름을 명시**하여, 위치 인덱스(positional index)와 실제 풀 번호의 혼동으로 **존재하지 않는 오브젝트를 선택("Illegal object")하지 않도록** 한다. (라이브 E2E 결함: 모호한 지시가 존재하지 않는 `Group 3`을 선택해 "Illegal object" 실패 — 명시적 대상 `Fixture 11 Thru 19`는 성공.)
+- **REQ-DEPLOY-030** [State-driven] *(#4 — LLM/orchestrator)* — **While** 직전에 생성된 연출(시퀀스/실행기)이 세션에 존재하는 동안, the 앱 **shall** 그 **마지막 생성 시퀀스/실행기 상태**(예: `Seq 71` / `Exec 201`)를 **세션 컨텍스트에 주입**하여, 후속 수정 지시("더 느리게")가 실제 대상이 아닌 임의 대상(`Seq 1..100` / `Exec 1`)을 겨냥하지 않도록 하고, **맹목적 수정(blind edit)보다 재생성(regeneration)을 선호**한다. (라이브 E2E 결함: 방금 만든 룩의 상태가 미추적되어 후속 편집이 오대상을 겨냥해 실패.)
+- **REQ-DEPLOY-031** [Unwanted] *(#5 — LLM/orchestrator)* — **When** Gemini 컨텍스트 캐시(rig/rulebook `CachedContent`) 만료로 `403 PERMISSION_DENIED "CachedContent not found"`(또는 404)가 감지되면, the 앱 **shall not** 재생성 없이 호출을 그대로 실패시킨다; 대신 **캐시를 재생성하여 재시도**하고, `"No API key"`(`ValueError`)를 `unexpected`가 아닌 **인증(auth) 오류로 분류**한다(오류 분류에 캐시/키 케이스 추가). (라이브 E2E 결함: 캐시 만료가 복구 불가 실패로 표면화 + 키 부재가 `unexpected`로 오분류.)
+- **REQ-DEPLOY-032** [Unwanted] *(#6 — deploy-shell)* — **When** 앱 비정상 종료 후 재기동 시 지정 OSC **수신 포트**(예: 9000/9005)가 여전히 점유되어 `Address already in use`가 감지되면, the 앱 **shall not** 조용히 실패하거나 임의 포트로 **조용히 드리프트한다**(REQ-DEPLOY-026 불변 — onPC가 특정 포트로 송신하므로); 대신 **동일 지정 포트에 대한 재바인드(rebind) 전략**(소켓 재사용/재시도 등)으로 복구를 시도하고, 복구 불가 시 인간 친화적 오류 + 포트 재설정 안내를 표시한다. (라이브 E2E 결함: 수신 포트 수동 동기화가 취약하고, 앱 사망 시 onPC가 포트를 점유한 채 재기동 실패.)
 
 ## C. 제약사항
 
