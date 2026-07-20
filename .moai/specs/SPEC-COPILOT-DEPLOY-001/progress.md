@@ -116,7 +116,25 @@ plan-audit 판정 PASS-WITH-DEBT(~0.79, 확정 blocker 0)를 SSOT에 반영 — 
 
 **커밋**: `feat(SPEC-COPILOT-DEPLOY-001): M5 …`(본 커밋 — 프론트 healthGuidance + StatusBanner 가이드 라인 + styles + DEPLOY-scoped health/error-UX 테스트, 5파일). `feat/app-deploy-file-import` 직접 커밋(원격 없음 — push/PR 없음).
 
-_<pending run-phase M6>_
+### M6 — PyInstaller onedir 런처 (2026-07-20, cycle_type=tdd)
+
+배포 셸 Stage-1 패키징 마일스톤. **Part 1(파이썬 코드, 커밋 `ab9e584`)**: 신규 `server/resources.py` `resource_base()` — frozen(`sys._MEIPASS`)/dev(프로젝트 루트) 단일 리졸버로 M4 provisioning의 `_MEIPASS` 패턴을 일반화, `serve.py`(ui/dist)·`config.py`(provider.toml)·`assembly.py`(rulebook assets)·`provisioning.py`(console/lua) 자산 경로 전부 경유(FEAS-1, research §A.4 — 구 `parents[2]` 두 사이트가 frozen 번들에서 깨지는 문제 해소). 신규 `server/web/launcher.py` — graceful **프로세스-트리** 종료(자식·손자 reap, AC-015 ①)·포트 점유 시 `PortInUseError` 명시 오류+재설정 안내(임의 포트 조용한 폴백 0, AC-015 ②)·`--self-check`(frozen keyring 왕복). `serve.py`에 `--self-check`/`--no-browser` + main 배선. keyring 시작 가드(research §B.3): `PYTHON_KEYRING_BACKEND` env 핀 + fail-closed 가드(백엔드 `__module__`가 `keyring.backends.macOS`가 아니면 기동 거부 — class `__name__`이 아니라 `__module__` 판별, 올바른 macOS 백엔드 class도 이름이 `Keyring`이므로; REQ-006a). **Part 2(패키징+빌드, 커밋 `3a183ea`)**: `packaging/GrandMA3-Copilot.spec`(research §D — `--collect-all keyring` + `keyring.backends.macOS/fail/null/chainer` hidden-imports + `--exclude-module keyrings.alt/cryptfile` + `--collect-submodules uvicorn` + `--collect-all google.genai/anthropic` + `ui/dist`·`console/lua`·`server/rulebook/assets`·`config/provider.toml` `--add-data`; 빌드 중 `server/safety/blacklist.yaml` 번들 누락(`RulesetError`) 발견 → `--add-data` 1줄 인라인 추가, Part 1 로직 미변경) + `entitlements.plist`(allow-jit/allow-unsigned-executable-memory/disable-library-validation) + `sign.sh`(inside-out, `--options runtime --timestamp`, `SIGN_IDENTITY=-` ad-hoc 기본, `notarytool`/`stapler`는 `DEVELOPER_ID` 존재 시에만 — 코드 변경 없이 전환) + `build.sh` + `README.md`. **arm64** 빌드; universal2·Windows x86_64·실제 Developer-ID 공증은 환경-게이트 N/A(spec.md v0.2.1 / AC-DEPLOY-009 이중 게이트).
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| AC-DEPLOY-001~003 (번들 부팅 → 로컬 백엔드 → UI 서빙) | PASS | frozen launch `"$BIN" --no-browser --port 8799` 후 `GET http://127.0.0.1:8799/` | `responded=True http_status=200`, 번들 `ui/dist/index.html` 서빙 (단일 onedir 프로세스) |
+| AC-DEPLOY-004/016 (frozen 번들 keyring 백엔드) | PASS (오케스트레이터 직접 재검증) | `"dist/GrandMA3 Copilot.app/Contents/MacOS/GrandMA3 Copilot" --self-check` (subprocess timeout 60) | `rc 0` — `self-check OK: macOS keyring backend + roundtrip verified` (FEAS-2 핵심: `--collect-all keyring` 성공, null/fail 폴백 0; 팝업 없이 통과) |
+| AC-DEPLOY-015 ① (graceful 프로세스-트리 종료) | PASS | launch → `os.killpg(pgid, SIGTERM)` → scan | `exited rc=0`, 잔여 app pid `[]`(프로세스-트리 스캔), web/recv 포트 해제 |
+| AC-DEPLOY-015 ② (포트 점유 → 조용한 폴백 금지) | PASS | 포트 8801 점유(listening) → launch `--port 8801` | `rc=2` 명시 오류(한국어 "이미 사용 중"+재설정 안내), 임의 포트 폴백 0, 잔여 pid `[]` |
+| AC-DEPLOY-009 (서명 파이프라인 + ad-hoc dry-verify) | PASS(ad-hoc) / N/A(실제 cert) | `codesign --verify --deep --strict "$APP"` + `codesign -d --entitlements -` (오케스트레이터 재검증) | verify-exit 0 "valid on disk", entitlements 3종 임베드, `flags=0x10002(adhoc,runtime)`, `get-task-allow` 0; `DEVELOPER_ID` unset → 공증 env-gate N/A |
+
+**Regression**: full suite `.venv/bin/python -m pytest server/tests/ -q` → `953 passed`(baseline 908 + 신규 45, 회귀 0; **오케스트레이터가 Part1·Part2 후 각각 직접 재실행 확인**). **Build**: PyInstaller 6.21.0, `.venv/bin/python -m PyInstaller --noconfirm --clean packaging/GrandMA3-Copilot.spec` → `Build complete!`, `dist/GrandMA3 Copilot.app`(arm64, `Contents/MacOS` 14.2MB exe). **Lint**: `ruff check` 변경/신규 파일 → `All checks passed!`. **dist/build**: 이미 gitignored(26-27줄) → 미커밋(`git ls-files`에 아티팩트 0).
+
+**@MX tags added**: `server/resources.py` `resource_base` 위 `@MX:ANCHOR`(frozen/dev 유일 리졸버, `@MX:REASON` FEAS-1 — 분기 리졸버가 frozen 해석을 조용히 포크하면 번들 경로 붕괴 재발 + `@MX:SPEC`) 1건.
+
+**커밋**: `ab9e584`(Part 1 — resource_base + launcher + keyring 가드 + 테스트, 10파일 1044+), `3a183ea`(Part 2 — `packaging/{*.spec,entry.py,entitlements.plist,sign.sh,build.sh,README.md}`, 6파일 464+). `feat/app-deploy-file-import` 직접 커밋(원격 없음 — push/PR 없음).
+
+**잔여 리스크(M10 이관)**: `server/safety/audit.py` `DEFAULT_AUDIT_DIR = parents[1]/audit_logs`가 서명된 `.app`에서 `_MEIPASS`(읽기 전용) 아래로 해석 → 패키지 앱에서 **실제 조명 명령 실행 시 감사 로그 기록 실패** 가능(부팅은 lazy라 통과; M6 AC는 명령 실행 미검사로 통과). M1/M3 설정-경로 성격 = Part 1 로직 변경이라 M6에서 미수정, **M10(실제 명령 E2E)에서 사용자 쓰기 경로로 검증·수정**. universal2/Windows/실제 공증은 환경-게이트 N/A(빌드 호스트 arm64 전용·인증서 부재).
 
 ## §E.3 Run-phase Audit-Ready Signal
 
