@@ -10,6 +10,7 @@ dependencies = [
     "google-genai>=2.12.0",
     # M7: embedded Lua 5.4 for the deploy_plugin pcall compile harness
     # (REQ-MVP-019) — promoted from the dev group (ratification item).
+    "keyring>=25,<26",
     "lupa>=2.8",
     "python-osc>=1.9.3,<2",
     "pyyaml>=6.0.3",

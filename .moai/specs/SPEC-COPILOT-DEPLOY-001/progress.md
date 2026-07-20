@@ -44,7 +44,23 @@ plan-audit 판정 PASS-WITH-DEBT(~0.79, 확정 blocker 0)를 SSOT에 반영 — 
 
 **@MX tags added**: `server/deploy/settings.py` `load_user_settings` 위 `@MX:ANCHOR` (자격증명 거부 경계, `@MX:REASON` + `@MX:SPEC` 포함) 1건; `resolve_effective_settings` 내 `@MX:NOTE` (precedence 순서 load-bearing) 1건.
 
-_<pending run-phase M2~M6>_
+### M2 — 보안 키 저장 어댑터 (2026-07-20, cycle_type=tdd)
+
+신규 모듈 `server/deploy/keystore.py` + `server/tests/test_deploy_keystore.py` (38 tests, 100% cover). OS 자격 증명 저장소(keyring, Python 직접) 저장/조회/삭제 어댑터를 단일 안정 서비스명(`SERVICE_NAME = "com.grandma3copilot.app"` — 번들 식별자, ACL/identity 앵커, churn 금지)으로 구현. 키 → 백엔드 프로세스 env 주입(`inject_key_for_provider`/`inject_active_provider_key` — M1 `resolve_effective_settings` active-provider seam 통합), gemini는 `GEMINI_API_KEY`+`GOOGLE_API_KEY` 별칭 동시 주입·anthropic은 `ANTHROPIC_API_KEY`. **저장소 미가용/잠금/거부 시 명시적 `KeystoreUnavailableError` + 세션 한정(in-memory `SessionKeyStore`) 폴백** — 평문 디스크 폴백 0(REQ-006a). **env-scrub 가드 `scrub_environ`**(DECIDE-M6): 크래시/진단 덤프에 env 직렬화 시 자격증명 유사 var 이름을 redact. `keyring>=25,<26` 추가·핀(F3 승인, macOS Keychain + Windows Credential Manager 단일 인터페이스, REQ-DEPLOY-021 재현 빌드 → uv.lock 락). 테스트는 실제 Keychain 미접촉(hand-rolled in-memory/broken 백엔드 + teardown 복원). `server/llm/config.py` env-only 주입 + 자격증명 거부는 PRESERVE.
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| AC-DEPLOY-004 (키는 자격 증명 저장소에만; 앱이 쓰는 모든 파일에 키 문자열 0건 + env-scrub + config 로더 credential 거부 유지) | PASS | `.venv/bin/python -m pytest server/tests/test_deploy_keystore.py::TestNoPlaintextLeak server/tests/test_deploy_keystore.py::TestEnvScrub server/tests/test_deploy_keystore.py::TestCredentialRejectionPreserved -q` | `13 passed` |
+| AC-DEPLOY-016 (저장소 미가용/잠금/거부 → 평문 0 + 세션 한정 입력 동작 + 명시적 오류) | PASS | `.venv/bin/python -m pytest server/tests/test_deploy_keystore.py::TestStoreUnavailable server/tests/test_deploy_keystore.py::TestNoPlaintextLeak::test_broken_store_session_fallback_leaves_no_disk_plaintext -q` | `9 passed` |
+| — 신규 모듈 커버리지 ≥85% | PASS | `pytest test_deploy_keystore.py --cov=server.deploy.keystore` | `88 stmts, 100% cover` |
+
+**Regression**: full suite `.venv/bin/python -m pytest server/tests/ -q` → `862 passed` (baseline 824 + 신규 38, 회귀 0). **Lint**: `ruff check server/` → 2 pre-existing baseline (safety/console.py:221,258 E501) only, NEW 0. **Format**: 신규 2파일 clean. **Boundary**: `grep AskUserQuestion|mcp__askuser` 신규 파일 → 0.
+
+**@MX tags added**: `server/deploy/keystore.py` `inject_key_for_provider` 위 `@MX:ANCHOR`(credential→process-env 경계) 1건 + `scrub_environ` 위 `@MX:ANCHOR`(env-scrub 경계, DECIDE-M6) 1건 (각 `@MX:REASON`+`@MX:SPEC` 포함); 모듈 docstring에 `@MX:NOTE`급 FEAS-2 M6 요건 기록.
+
+**FEAS-2 (M6 이연·재검증)**: `keyring`은 `importlib.metadata` entry-point로 OS 백엔드를 선택 → PyInstaller frozen 번들이 strip 시 null 백엔드 조용한 폴백. M2는 dev venv라 미영향이나, **M6 onedir 번들 스펙에 `--collect-all keyring` + `keyring.backends.macOS`/`keyring.backends.Windows` hidden-imports(+ Windows pywin32) 필수**, 그리고 **M2 keychain 왕복을 frozen onedir 스모크 빌드 안에서 재검증**(AC 증거는 M6). 모듈 docstring에 기록됨.
+
+_<pending run-phase M3~M6>_
 
 ## §E.3 Run-phase Audit-Ready Signal
 
