@@ -87,10 +87,10 @@ plan-audit 판정 PASS-WITH-DEBT(~0.79, 확정 blocker 0)를 SSOT에 반영 — 
 
 | AC | Status | Verification Command | Actual Output |
 |----|--------|----------------------|---------------|
-| AC-DEPLOY-006 (responder 플러그인 번들 포함 + 임포트 디렉터리 설치, 임시 디렉터리 대상) | PASS | `.venv/bin/python -m pytest server/tests/test_deploy_provisioning.py -q` | `18 passed` — 번들 dir에 `.xml`+`.lua` 존재 assert + temp import dir 복사(바이트 verbatim 일치) |
+| AC-DEPLOY-006 (responder 플러그인 번들 포함 + 임포트 디렉터리 설치, 임시 디렉터리 대상) | PASS | `.venv/bin/python -m pytest server/tests/test_deploy_provisioning.py -q` | `12 passed` — 번들 dir에 `.xml`+`.lua` 존재 assert + temp import dir 복사(바이트 verbatim 일치) |
 | — frozen 번들 경로가 `sys._MEIPASS/console/lua`로 해석 (FEAS-1) | PASS | `test_frozen_bundle_dir_resolves_under_meipass` | `1 passed` — `_MEIPASS` monkeypatch → `/frozen/app/console/lua` |
 | AC-DEPLOY-007 (가이드 UI가 onPC 로드 + OSC 출력 포트 설정 안내 표시) | PASS | `test_guide_carries_the_receive_port_and_onpc_load_steps` + `cd ui && npm test`(provision.test.ts) | `1 passed`(백엔드 가이드 steps에 포트+OSC 포함) + `12 passed`(프론트 순수함수) |
-| — API가 설정된 receive_port를 가이드에 반영 | PASS | `.venv/bin/python -m pytest server/tests/test_web_provision_api.py -q` | `9 passed` — GET/POST 설치·상태·create_app 배선·설치실패 500 |
+| — API가 설정된 receive_port를 가이드에 반영 | PASS | `.venv/bin/python -m pytest server/tests/test_web_provision_api.py -q` | `7 passed` — GET/POST 설치·상태·create_app 배선·설치실패 500 |
 | AC-DEPLOY-017 (앱 발행 Import Plugin 게이트 경유 + 감사 로그 1:1, SAFETY-3) | PASS | `.venv/bin/python -m pytest server/tests/test_responder_import_gate.py -q` | `3 passed` — ① Import Plugin 1건 wire 송신 + `kind="deploy"` 감사 1건(1:1) ② 라이브 잠금 시 wire 0건 + `blocked`(lock) ③ 미게이트 송신 0건 |
 
 **Regression**: 백엔드 full suite `.venv/bin/python -m pytest server/tests/ -q` → `904 passed`(baseline 882 + 신규 22, 회귀 0). 프론트 `cd ui && npm test` → `49 passed`(baseline 37 + 12). **Coverage**: `server.deploy.provisioning` 100% + `server.web.provision_api` 100%(신규 모듈 ≥85% 충족). **Lint/Build**: `ruff check server/` → 2 pre-existing baseline(safety/console.py:221,258 E501)만, NEW 0; `cd ui && npm run build`(tsc+vite) → clean(43 modules). **Boundary(E6')**: `grep AskUserQuestion|mcp__askuser` 신규 파일 → 0; **OSC 송신 표면 스캔** provisioning 모듈 2건 → 0 + `test_provisioning_module_has_no_console_send_path`/`test_provision_api_module_has_no_console_send_path` CI 가드. **dist**: `ui/dist` gitignored → 미커밋(M6 재빌드).
