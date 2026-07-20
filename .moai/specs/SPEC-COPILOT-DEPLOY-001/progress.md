@@ -171,7 +171,15 @@ Stage-1 마지막 마일스톤 — 패키징된 셸의 안전 불변식 보존 +
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+`sync_status: stage-1-synced` (**Stage-1 문서 동기화 — 이것은 terminal close가 아니다**)
+`sync_complete_at: 2026-07-20`
+`sync_commit_sha: pending-backfill-stage1-sync`
+
+CHANGELOG.md `[Unreleased]` 및 README.md가 Stage-1 배포 가능 arm64 macOS MVP(M1~M6 + M10)를 반영해 동기화되었다 — 인앱 설정+OS 자격 증명 저장, responder provisioning, health/오류 UX, PyInstaller onedir 패키징(빌드/실행 안내 포함), 안전 불변식 보존, 환경-게이트 N/A(universal2/Windows/실제 공증) 명시.
+
+**중요**: 본 sync는 Stage-1 문서 동기화이며 **terminal close가 아니다**. Stage-2(M7~M9: Tauri 데스크톱 셸, Python 백엔드 sidecar 번들, 자동 업데이트, updater 재시작 안전상태 보존)가 아직 구현되지 않았으므로, SPEC frontmatter `status`는 **`in-progress`로 유지**된다(`implemented`/`completed`로 전환하지 않음 — verification-claim-integrity 원칙상 미완 마일스톤에 대한 완료 주장을 방지). `updated: 2026-07-20`으로 갱신.
+
+terminal `completed` close(§E.4의 `in-progress → implemented → completed` merged 3-phase close)는 Stage-2(M7~M9) 구현 완료 후 별도 sync 세션에서 수행한다. 다음: Stage-2 kickoff(별도 SPEC 범위 확정) 또는 M7 착수.
 
 ## §F Phase 4 Mode Selection
 

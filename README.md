@@ -167,3 +167,51 @@ Pipeline ([`server/deploy/`](server/deploy/)):
    flag registry; a destructive-scanned plugin then requires human approval
    on **every** invocation (REQ-MVP-028 — the M4 invocation gate enforces it
    with no extra wiring).
+
+## Packaged app — build & run (SPEC-COPILOT-DEPLOY-001 Stage 1, M6)
+
+A self-contained PyInstaller **onedir** build lets an operator run the app
+without a terminal or a venv. Stage 1 targets **macOS arm64** on this build
+host; see the caveats below for the other targets. Full details:
+[`packaging/README.md`](packaging/README.md).
+
+### Build
+
+```bash
+# Prereqs (once): PyInstaller in the project venv.
+uv pip install --python .venv/bin/python pyinstaller
+
+# One-shot build + ad-hoc sign (builds ui/dist first if missing):
+./packaging/build.sh
+# -> dist/GrandMA3 Copilot.app   (+ dist/GrandMA3 Copilot/ onedir tree)
+```
+
+### Run
+
+```bash
+open "dist/GrandMA3 Copilot.app"                      # double-click equivalent
+# or, from the bundle's executable directly:
+"dist/GrandMA3 Copilot.app/Contents/MacOS/GrandMA3 Copilot" --no-browser
+"dist/GrandMA3 Copilot.app/Contents/MacOS/GrandMA3 Copilot" --self-check
+```
+
+`--no-browser` skips opening the default browser to the local UI URL;
+`--self-check` verifies the frozen bundle's OS-keyring backend + roundtrip
+without booting the server. Without a running onPC, the UI shows **콘솔
+오프라인** and the safety gate blocks new executions (fail-safe) — the app
+itself still boots and serves the settings UI.
+
+### Environment-gated boundaries (this host)
+
+- **universal2** (arm64+x86_64): this build host's CPython is arm64-only, so
+  the output is single-arch arm64. A universal2 build environment (universal2
+  CPython + universal2 `_pydantic_core`/`jiter` wheels) activates it via
+  `PYI_TARGET_ARCH=universal2` — no code/spec change.
+- **Windows x86_64**: built + signed on a Windows host; N/A here.
+- **Developer-ID signing / notarization**: no certificate on this host — the
+  signing pipeline runs ad-hoc (`sign.sh`); a real `SIGN_IDENTITY` +
+  `DEVELOPER_ID` env activates real signing/notarization with no code change.
+
+Stage 2 (Tauri v2 native shell + Python-backend sidecar + auto-update) is
+deferred to a separate kickoff — SPEC-COPILOT-DEPLOY-001 remains
+`status: in-progress` until Stage 2 lands.
