@@ -297,3 +297,16 @@ export const HEALTH_LABELS: Record<string, string> = {
 export function healthLabel(health: string): string {
   return HEALTH_LABELS[health] ?? health;
 }
+
+// Cause + action guidance for each degraded health state (REQ-DEPLOY-018/019).
+// Human-friendly Korean only — NEVER a stack trace or raw SDK original. The
+// healthy state (and any unknown state) yields null so no guidance line shows.
+export const HEALTH_GUIDANCE: Record<string, string> = {
+  console_offline: "onPC가 실행 중인지, OSC 입력이 켜져 있는지 확인해 주세요.",
+  responder_degraded:
+    "CopilotResponder를 onPC에서 로드하고, onPC OSC 출력을 앱의 피드백 수신 포트로 설정해 주세요.",
+};
+
+export function healthGuidance(health: string): string | null {
+  return HEALTH_GUIDANCE[health] ?? null;
+}

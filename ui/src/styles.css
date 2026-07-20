@@ -70,6 +70,12 @@ body {
   color: var(--warn);
 }
 
+.banner-guidance {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .main {
   flex: 1;
   overflow-y: auto;

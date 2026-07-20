@@ -1,5 +1,6 @@
-// Console health + execution-block indication (REQ-MVP-030/031 UI half).
-import { healthLabel, type StatusState } from "../protocol";
+// Console health + execution-block indication (REQ-MVP-030/031 UI half) plus the
+// degraded-state cause+action guidance (REQ-DEPLOY-012/013/018/019 UI half).
+import { healthGuidance, healthLabel, type StatusState } from "../protocol";
 
 export function StatusBanner({
   status,
@@ -16,6 +17,8 @@ export function StatusBanner({
   }
   const cls =
     status.health === "online" ? "banner-online" : "banner-offline";
+  // Cause+action guidance shows only for a degraded state (null when online).
+  const guidance = healthGuidance(status.health);
   return (
     <div className={`banner ${cls}`}>
       <span>{healthLabel(status.health)}</span>
@@ -23,6 +26,7 @@ export function StatusBanner({
         <span className="banner-block"> · 신규 명령 실행 차단됨</span>
       )}
       {status.live_lock && <span className="banner-lock"> · 라이브 잠금 활성 (read-only)</span>}
+      {guidance && <div className="banner-guidance">{guidance}</div>}
     </div>
   );
 }

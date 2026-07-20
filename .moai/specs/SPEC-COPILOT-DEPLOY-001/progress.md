@@ -99,7 +99,24 @@ plan-audit 판정 PASS-WITH-DEBT(~0.79, 확정 blocker 0)를 SSOT에 반영 — 
 
 **커밋**: `feat(SPEC-COPILOT-DEPLOY-001): M4 …`(본 커밋 — provisioning 모듈 + provision API + 프론트 가이드 + AC-017 게이트 테스트, 12파일). `feat/app-deploy-file-import` 직접 커밋(원격 없음 — push/PR 없음).
 
-_<pending run-phase M5~M6>_
+### M5 — health 상태 UI + 오류 UX (2026-07-20, cycle_type=tdd)
+
+배포 셸은 MVP HealthMonitor 상태·REQ-MVP-044 오류 스크럽을 **그대로** 표면화한다 — M5는 신규 백엔드 모듈 0(기존 seam PRESERVE), 신규 코드는 **프론트 degraded-state 원인+조치 가이드 레이어** + DEPLOY-scoped 테스트 증거로 한정. 프론트(`ui/src`, no-DOM 순수함수 관례): `protocol.ts`에 `HEALTH_GUIDANCE` 맵 + `healthGuidance(health)` 순수함수 신설 — `console_offline`→"onPC 실행/OSC 입력 확인"(REQ-018), `responder_degraded`→"CopilotResponder onPC 로드 + onPC OSC 출력을 피드백 수신 포트로 설정"(REQ-019, M4 ResponderGuide 개념 재사용, 배너 요약형); `online`·미지 상태→null. `StatusBanner.tsx`는 기존 `healthLabel`(3종 상태 이미 매핑) 유지 + degraded 시 `.banner-guidance` 라인 렌더(스택 트레이스·raw SDK 0). `styles.css` `.banner-guidance` 추가. 키 부재/무효(REQ-020)는 M3 OnboardingBanner(설정 유도) + 기존 `korean_errors`/`error_event` 스크럽으로 **이미 충족** — provider-client 사용 시 auth SDK 오류가 세션의 `_report_error`→`classify_exception`을 경유해 한국어 auth 메시지("API 키 설정을 확인해 주세요")만 표면화, raw 원문은 감사 로그 전용. 신규 `test_deploy_health_ux.py`(DEPLOY-scoped 증거 4 tests): AC-008 전이 사이클(online→console_offline→responder_degraded→회복 online, `session.status_snapshot()` 경유) + AC-012 ③ 키 auth 스크럽(secret-bearing raw_detail → error_event에 secret/Traceback/x-api-key 0건 + 감사 로그에만 raw). **OSC 송신 표면 0**(변경 파일 raw socket/OSC/127.0.0.1 리터럴 0 — grep 확인). `HealthMonitor`/`SafetyGate`/`session.py` `_report_error`/`korean_errors`/status-push 경로는 PRESERVE(테스트+가이드 레이어만 추가).
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| AC-DEPLOY-008 (health 3종 online/console_offline/responder_degraded 표면화 + 전이 즉시 반영) | PASS | `.venv/bin/python -m pytest server/tests/test_deploy_health_ux.py::TestHealthSurfacingTransitions -q` | `2 passed` — 전이 사이클 online→console_offline(executions_blocked True)→responder_degraded→회복 online(blocked False) 각 단계 `status_snapshot()["health"]` assert + snapshot이 status-push payload(v1 status event)임 확인 |
+| — 프론트 라벨 매핑 3종 (healthLabel) | PASS | `cd ui && npm test`(protocol.test.ts healthLabel) | `53 passed` — online/console_offline/responder_degraded 3종 한국어 + 미지 상태 passthrough |
+| AC-DEPLOY-012 ①② (console_offline 원인+조치 / responder 로딩·OSC 출력 안내 — 인간 친화 한국어, 스택 트레이스 0) | PASS | `cd ui && npm test`(protocol.test.ts healthGuidance) | `53 passed` — console_offline→onPC/OSC 안내, responder_degraded→CopilotResponder/OSC 안내, online/미지→null, 스택 마커(Traceback/Error/Exception/raise) 0건 |
+| AC-DEPLOY-012 ③ (키 부재/무효 → 설정 유도 한국어 + raw SDK 원문 미노출) | PASS | `.venv/bin/python -m pytest server/tests/test_deploy_health_ux.py::TestKeyErrorScrubRoutesToSettings -q` | `2 passed` — auth ProviderError(secret raw_detail) → error_event message=한국어 auth("API 키 설정 확인")·kind=auth, 표면에 secret/Traceback/x-api-key 0건, 감사 로그에만 raw; 카탈로그 auth 메시지 SDK 어휘 0 |
+
+**Regression**: 백엔드 full suite `.venv/bin/python -m pytest server/tests/ -q` → `908 passed`(baseline 904 + 신규 4, 회귀 0). 프론트 `cd ui && npm test` → `53 passed`(baseline 49 + 4). **Coverage**: M5 신규 백엔드 모듈 0(N/A) — 증거 대상 seam `server.safety.monitor` 94% / `server.web.korean_errors` 90%(둘 다 ≥85%). **Lint/Build**: `ruff check server/` → 2 pre-existing baseline(safety/console.py:221,258 E501)만, NEW 0; `cd ui && npm run build`(tsc+vite) → clean(43 modules). **Boundary(E6')**: `grep AskUserQuestion|mcp__askuser` 신규/변경 파일 → 0; **OSC 송신 표면 스캔** 변경 파일(protocol.ts·StatusBanner.tsx·test_deploy_health_ux.py) → 0(no new OSC-send surface — M5는 게이트 밖 UI/status/오류 메시지 전용). **dist**: `ui/dist` gitignored → 미커밋(M6 재빌드).
+
+**@MX tags**: 없음 — `healthGuidance` fan_in <3(StatusBanner 단일 소비), 위험 패턴/고복잡도 없음 → ANCHOR/WARN 기준 미충족(over-tag 회피).
+
+**커밋**: `feat(SPEC-COPILOT-DEPLOY-001): M5 …`(본 커밋 — 프론트 healthGuidance + StatusBanner 가이드 라인 + styles + DEPLOY-scoped health/error-UX 테스트, 5파일). `feat/app-deploy-file-import` 직접 커밋(원격 없음 — push/PR 없음).
+
+_<pending run-phase M6>_
 
 ## §E.3 Run-phase Audit-Ready Signal
 

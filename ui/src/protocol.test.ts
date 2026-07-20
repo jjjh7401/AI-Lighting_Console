@@ -6,6 +6,7 @@ import {
   buildChat,
   buildLock,
   buildReviewDecision,
+  healthGuidance,
   healthLabel,
   initialState,
   parseServerEvent,
@@ -112,9 +113,46 @@ describe("reduceServerEvent", () => {
 });
 
 describe("healthLabel", () => {
-  it("maps known states to Korean and passes unknown through", () => {
+  it("maps all three health states to Korean and passes unknown through", () => {
+    // AC-DEPLOY-008: online / console_offline / responder_degraded all surface.
+    expect(healthLabel("online")).toContain("온라인");
     expect(healthLabel("console_offline")).toContain("콘솔 오프라인");
+    expect(healthLabel("responder_degraded")).toContain("응답기");
     expect(healthLabel("weird_state")).toBe("weird_state");
+  });
+});
+
+describe("healthGuidance", () => {
+  // AC-DEPLOY-012 ①②: human-friendly cause+action guidance for the two degraded
+  // states — REQ-DEPLOY-018 (console_offline) and REQ-DEPLOY-019 (responder).
+  const STACK_MARKERS = ["Traceback", "Error", "Exception", "  at ", "raise "];
+
+  it("gives console_offline a cause+action instruction (REQ-DEPLOY-018)", () => {
+    const guidance = healthGuidance("console_offline");
+    expect(guidance).not.toBeNull();
+    expect(guidance).toContain("onPC");
+    expect(guidance).toContain("OSC");
+  });
+
+  it("gives responder_degraded a responder-load + OSC-output-port instruction (REQ-DEPLOY-019)", () => {
+    const guidance = healthGuidance("responder_degraded");
+    expect(guidance).not.toBeNull();
+    expect(guidance).toContain("CopilotResponder");
+    expect(guidance).toContain("OSC");
+  });
+
+  it("shows no guidance for the healthy or unknown states", () => {
+    expect(healthGuidance("online")).toBeNull();
+    expect(healthGuidance("weird_state")).toBeNull();
+  });
+
+  it("never leaks a stack trace or raw-SDK marker in any guidance string", () => {
+    for (const health of ["console_offline", "responder_degraded"]) {
+      const guidance = healthGuidance(health) ?? "";
+      for (const marker of STACK_MARKERS) {
+        expect(guidance).not.toContain(marker);
+      }
+    }
   });
 });
 
