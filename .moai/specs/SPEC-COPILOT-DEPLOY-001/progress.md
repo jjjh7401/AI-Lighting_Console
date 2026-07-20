@@ -136,9 +136,38 @@ plan-audit 판정 PASS-WITH-DEBT(~0.79, 확정 blocker 0)를 SSOT에 반영 — 
 
 **잔여 리스크(M10 이관)**: `server/safety/audit.py` `DEFAULT_AUDIT_DIR = parents[1]/audit_logs`가 서명된 `.app`에서 `_MEIPASS`(읽기 전용) 아래로 해석 → 패키지 앱에서 **실제 조명 명령 실행 시 감사 로그 기록 실패** 가능(부팅은 lazy라 통과; M6 AC는 명령 실행 미검사로 통과). M1/M3 설정-경로 성격 = Part 1 로직 변경이라 M6에서 미수정, **M10(실제 명령 E2E)에서 사용자 쓰기 경로로 검증·수정**. universal2/Windows/실제 공증은 환경-게이트 N/A(빌드 호스트 arm64 전용·인증서 부재).
 
+### M10 — 배포 통합 검증 (2026-07-20, cycle_type=tdd)
+
+Stage-1 마지막 마일스톤 — 패키징된 셸의 안전 불변식 보존 + local-only + 패키지 앱 E2E를 자동 검증. arm64 macOS 대상(universal2/Windows/실제 공증 = 환경-게이트 N/A). A→B/C→D 순차, 매 Part 후 오케스트레이터 직접 재검증.
+
+**Part A — 런타임 쓰기 경로 이관 (커밋 `43f5447`)**: 확인된 결함 — `audit.py DEFAULT_AUDIT_DIR = parents[1]/audit_logs`가 서명된 `.app`에서 `_MEIPASS`(읽기 전용) 아래로 해석 → `AuditLog.mkdir`/`record` 실패(재현 `PermissionError`). 전수 조사: audit_logs가 **유일한** 쓰기-번들 경로(backup은 OSC `SaveShow` 경유 로컬 쓰기 0, resources.py는 읽기 전용). 수정: `settings.py`에 `user_data_dir`/`resolve_runtime_audit_dir`(M1 `user_config_dir` 패턴 재사용) 추가 + `bootstrap.build_console_stack`가 frozen 시 사용자 데이터 폴더로 배선 — **`audit.py` 안전 코드 미변경(0회)**. 특성화 테스트: dev 경로 동일, frozen은 `_MEIPASS` 밖 사용자 폴더 + record 왕복 성공.
+
+**Part B/C — 안전 불변식 회귀 + local-only (커밋 `f4548aa`, 테스트 전용)**: AC-DEPLOY-014 ① 단일 관문(deploy-shell 8개 모듈 전부 `SafetyGate`만 경유) ② 블랙리스트 승인 회귀(Delete 승인 없이 미실행; 패키지 스택에선 백업 확인 실패 시 fail-safe block으로 더 보수적) ③ **OSC 송신 표면 allowlist + fail-closed**(허용 밖 모듈이 송신 경로 진입 시 테스트 붕괴 — 실제 rogue 모듈 실투입 → AssertionError → 제거로 라이브 증명). AC-DEPLOY-002 ① `127.0.0.1` bind ② localhost UDP ③ 원격 백엔드 0(LLM API 제외) ④ 오프라인 동작. 기존 3개 per-module 가드를 1개 allowlist 테스트로 통합. Rust/Tauri 소스 스캔·wire-level 열거 = Stage-2(M7~M9) N/A.
+
+**Part D — 패키지 `.app` HTTP E2E + P0 결함 수정 (커밋 `1d65375`)**: ⚠️ **E2E가 P0 통합 결함 포착** — `serve.build_runtime`가 `WebDeps`에 `settings=`/`provision=`을 조립하지 않아 **설정·키·provisioning REST 표면(`/api/settings`·`/api/keys`·`/api/provision/responder`)이 실제 서버에 미마운트**(패키지 앱에서 404/405). M3/M4 라우터는 존재·단위검증됐으나 M6 serve 조립 의무의 라우터-배선 절반이 누락(--add-data 절반만 반영). **단위 테스트 980개가 전부 놓친 통합 결함을 E2E가 잡음.** 수정: `build_runtime`에 `SettingsDeps`+`ProvisionDeps` 조립(`serve.py` +12줄, 로직 무변경, 기존 검증 라우터 재사용 = D-NEW-1 in-scope cascade) + 배선 회귀 테스트.
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| AC-DEPLOY-014 ①②③ (안전 불변식 회귀) | PASS | `pytest server/tests/test_deploy_safety_invariants.py -q`(오케스트레이터 재실행) | `11 passed`; fail-closed는 rogue 모듈 실투입→AssertionError→제거 후 통과로 라이브 증명 |
+| AC-DEPLOY-002 ①②③④ (local-only) | PASS | `pytest server/tests/test_deploy_local_only.py -q`(오케스트레이터 재실행) | `8 passed`; 127.0.0.1 bind·localhost UDP·원격 0·오프라인 동작 |
+| AC-DEPLOY-004/016 (frozen 감사 경로 = 사용자 폴더) | PASS (오케스트레이터 직접) | 프리즈 앱 부팅 후 `ls "~/Library/Application Support/GrandMA3 Copilot/audit_logs"` | `audit-20260720.jsonl` 실제 기록(번들 밖) |
+| AC-DEPLOY-001~003/005/006/007 (패키지 E2E: 기동→설정→provisioning→health) | PASS (오케스트레이터 직접 E2E) | `.venv/bin/python packaging/verify_packaged_e2e.py` | `RESULT: ALL PASS` — healthz 200·SPA 200·/api/settings 200(키값 미노출)·설정 사용자 폴더 기록·provisioning 설치·감사 사용자 경로 |
+| AC-DEPLOY-015 ① (깨끗한 종료) | PASS (오케스트레이터 직접) | E2E Step 8 SIGTERM | `rc=0`, 프로세스-트리 잔여 0, 포트 해제 |
+
+**Regression**: full suite `.venv/bin/python -m pytest server/tests/ -q` → `983 passed`(908→964(A)→980(B/C)→983(D), 회귀 0; 오케스트레이터가 각 Part 후 직접 재실행). **E2E**: `packaging/verify_packaged_e2e.py` → 8/8 PASS(오케스트레이터 직접 실행). **Build**: PyInstaller 6.21.0 재빌드 `dist/GrandMA3 Copilot.app`(arm64). **Lint**: `ruff check` clean.
+
+**@MX tags added**: (M10) 신규 프로덕션 표면 최소 — resource_base 앵커(M6)에 흡수, 신규 ANCHOR/WARN 기준 미충족(over-tag 회피).
+
+**커밋**: `43f5447`(A — 사용자 데이터 경로 해석기+배선, 3파일), `f4548aa`(B/C — 안전 불변식+local-only 회귀, 테스트 전용 5파일), `1d65375`(D — serve 라우터 배선 P0 수정 + 패키지 E2E 드라이버, 3파일). `feat/app-deploy-file-import` 직접 커밋(원격 없음 — push/PR 없음).
+
+**환경-게이트 N/A**: universal2·Windows x86_64 빌드(arm64 전용 CPython), 실제 Developer-ID 공증(인증서 부재), Rust/Tauri OSC 소스 스캔·wire-level 열거·onPC 라이브 명령 왕복(Stage-2 또는 onPC 필요).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+`run_status: audit-ready` (Stage-1)
+`run_complete_at: 2026-07-20`
+
+**Stage-1 run-phase 완료** — M1~M6(설정·키 저장·설정 UI·responder provisioning·health/오류 UX·PyInstaller onedir 패키징) + M10(배포 통합 검증) 전 마일스톤 green. 전체 `983 passed` + 패키지 `.app` E2E 8/8 PASS(모두 오케스트레이터 직접 재검증). 프리즈 앱이 사용자 데이터 폴더에 실제 감사로그 기록 확인. AC 매트릭스 자동 검증 항목 전부 PASS. HEAD `1d65375`, `feat/app-deploy-file-import`(로컬 전용). **환경-게이트 N/A**(sync 시 명시): universal2·Windows x86_64·실제 Developer-ID 공증. **Stage-2(M7~M9 Tauri 셸+sidecar+자동업데이트)는 별도 kickoff** — 본 close는 Stage-1 배포 가능 MVP 형태 마감. 다음: `/moai sync SPEC-COPILOT-DEPLOY-001`(Stage-1 close).
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
