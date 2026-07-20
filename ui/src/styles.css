@@ -359,3 +359,218 @@ body {
   opacity: 0.5;
   cursor: default;
 }
+
+/* M3 — settings + onboarding (REQ-DEPLOY-005) */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-open {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid #2b2f36;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.onboarding-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  font-size: 13px;
+  background: #2b2417;
+  border-bottom: 1px solid var(--warn);
+  color: var(--warn);
+}
+
+.onboarding-open {
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: none;
+  background: var(--warn);
+  color: #201a08;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 16px;
+  overflow-y: auto;
+  z-index: 20;
+}
+
+.settings-panel {
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg);
+  border: 1px solid #2b2f36;
+  border-radius: 12px;
+  padding: 16px 20px 20px;
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-head h2 {
+  font-size: 17px;
+  margin: 0;
+}
+
+.settings-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.settings-loading {
+  padding: 24px 0;
+  color: var(--muted);
+}
+
+.settings-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #2b2f36;
+}
+
+.settings-section h3 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.settings-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+.settings-key-row {
+  margin-bottom: 12px;
+}
+
+.settings-key-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.key-set {
+  color: var(--ok);
+  font-size: 12px;
+}
+
+.key-unset {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.settings-key-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-key-controls input {
+  flex: 1;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.settings-field.readonly {
+  opacity: 0.7;
+}
+
+.settings-panel input,
+.settings-panel select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #2b2f36;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.settings-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.settings-btn.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.settings-btn.danger {
+  background: var(--bad);
+  color: #2b0b08;
+}
+
+.settings-btn.session {
+  margin-top: 8px;
+  background: var(--warn);
+  color: #201a08;
+}
+
+.settings-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.settings-errors {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: var(--bad);
+  font-size: 13px;
+}
+
+.settings-warn {
+  color: var(--warn);
+  font-size: 12px;
+  margin: 8px 0 0;
+}
+
+.settings-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settings-notice {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+}

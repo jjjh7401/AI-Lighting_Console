@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { ApprovalCard } from "./components/ApprovalCard";
 import { ChatView } from "./components/ChatView";
 import { LockToggle } from "./components/LockToggle";
+import { OnboardingBanner } from "./components/OnboardingBanner";
 import { ReviewCard } from "./components/ReviewCard";
+import { SettingsPanel } from "./components/SettingsPanel";
 import { StatusBanner } from "./components/StatusBanner";
 import { useCopilotSocket } from "./useCopilotSocket";
 
@@ -13,7 +15,16 @@ export default function App() {
   const { state, connected, sendChat, sendDecision, sendReviewDecision, sendLock } =
     useCopilotSocket();
   const [draft, setDraft] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Bumped when the settings panel closes so the onboarding banner re-checks
+  // whether a key was just added (and hides itself if so).
+  const [settingsRefresh, setSettingsRefresh] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const closeSettings = () => {
+    setSettingsOpen(false);
+    setSettingsRefresh((count) => count + 1);
+  };
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -30,9 +41,23 @@ export default function App() {
     <div className="app">
       <header className="header">
         <h1>MA3 코파일럿</h1>
-        <LockToggle status={state.status} onToggle={sendLock} />
+        <div className="header-actions">
+          <LockToggle status={state.status} onToggle={sendLock} />
+          <button
+            className="settings-open"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="설정 열기"
+          >
+            ⚙ 설정
+          </button>
+        </div>
       </header>
       <StatusBanner status={state.status} connected={connected} />
+      <OnboardingBanner
+        onOpenSettings={() => setSettingsOpen(true)}
+        refreshSignal={settingsRefresh}
+      />
+      {settingsOpen && <SettingsPanel onClose={closeSettings} />}
       <main className="main">
         <ChatView entries={state.entries} />
         {state.pendingApprovals.map((approval) => (

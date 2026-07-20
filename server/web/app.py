@@ -41,6 +41,7 @@ from server.web.messages import (
     review_resolved_event,
 )
 from server.web.session import ChatSession
+from server.web.settings_api import SettingsDeps, build_settings_router
 
 _PROTOCOL_ERROR_MESSAGE = "잘못된 메시지 형식입니다. 프로토콜 v1 스키마를 확인해 주세요."
 _STALE_APPROVAL_MESSAGE = "만료되었거나 알 수 없는 승인 요청입니다."
@@ -65,6 +66,7 @@ class WebDeps:
     backup_manager: BackupManager | None = None
     heartbeat_interval_seconds: float | None = None
     backup_poll_seconds: float | None = None
+    settings: SettingsDeps | None = None
     status_listeners: set = field(default_factory=set)
 
 
@@ -223,6 +225,11 @@ def create_app(deps: WebDeps) -> FastAPI:
                 # The worker was denied by close(); give it a bounded finish.
                 with contextlib.suppress(Exception):
                     await asyncio.wait_for(asyncio.shield(current_task), timeout=10.0)
+
+    # In-app settings/key REST API (M3). Registered BEFORE the catch-all static
+    # mount at "/" so /api/* resolves to the router, not the SPA index.
+    if deps.settings is not None:
+        app.include_router(build_settings_router(deps.settings))
 
     if deps.ui_dist is not None and Path(deps.ui_dist).is_dir():
         app.mount("/", StaticFiles(directory=str(deps.ui_dist), html=True), name="ui")
