@@ -25,6 +25,12 @@ plan-audit 판정 PASS-WITH-DEBT(~0.79, 확정 blocker 0)를 SSOT에 반영 — 
 
 **미반영/이연 항목**: DECIDE-M4(릴리스 시퀀싱)·M5(버전 SoT)·M3(Windows 인스톨러 형식)·M8(아이콘)·M10(EULA)·GEARS-4/7(경미 복합 분리)·FEAS-10(REQ-021 "재현 가능" 문구)·SAFETY-5(라이브 포트 편집)는 Stage-2 kickoff 또는 run-phase 구현 재량으로 이연 — 확정 blocker 아님. F5/F6는 Stage-2-deferred로 명시(본 프롬프트 지시대로 full-spec 금지).
 
+### Stage-2 M7 kickoff plan-phase authoring (v0.4.0, 2026-07-21)
+
+`plan_status: audit-ready` (Stage-2 M7-first — 문서 전용 착수)
+
+Stage-2를 **M7-first**로 착수하기 위한 계획·수용 기준을 확정했다(문서 전용 — 구현 코드·`src-tauri/` 생성 없음, `status: in-progress` 유지). 사전 확정 kickoff 결정 4건 반영: F5(sidecar↔UI = WebSocket 유지 + Origin allowlist + per-launch 토큰 핸드셰이크, FEAS-9 CSWSH 차단)·F5'(키 커스터디 = Python keyring 직접 유지)·teardown Option C(Rust process-group kill + 백엔드 parent-liveness watchdog, FEAS-5)·SAFETY-2 이중 스캔(Rust deny-all 정적 + wire-level 싱크). 신규 REQ-DEPLOY-002a([Event-driven] 핸드셰이크) 1건. AC-DEPLOY-024~029 신설(env-gate 명시: NOW=macOS arm64 dev/ad-hoc; AC-027 Layer①=M7.4 scaffold 이후·Layer②=NOW; universal2·Windows·실제 notarization=N/A). **M8(자동 업데이트)·M9(코드 서명/공증)은 Stage-2-DEFERRED** — 별도 kickoff. §F 결정 원장: 8 resolved(F5·F5' 추가) + 1 deferred(F6). **plan-audit remediation D1–D10 반영**(FAIL~0.74→교정): D1 NEEDS-CLARIFICATION→DEFERRED-M8, D2/D3 AC-027 vacuous-scan 차단, D4 토큰 누출-저항+AC-029, D5 M8 중복행 삭제, D6 depends_on 정합, D7 watchdog EOF-primary, D8 HISTORY 정렬, D9 앵커 수정, D10 REQ-002a 트림. 다음: Implementation Kickoff Approval 후 M7 run-phase 착수(§C M7 구현 계획 M7.1~M7.4).
+
 ## §E.2 Run-phase Evidence
 
 ### M1 — 설정·config 저장 계층 (2026-07-20, cycle_type=tdd)

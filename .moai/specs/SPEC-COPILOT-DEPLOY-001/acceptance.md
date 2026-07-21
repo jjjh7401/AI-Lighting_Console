@@ -3,6 +3,7 @@
 > v0.2.0 (draft) — 기능이 검증된 MVP(SPEC-COPILOT-MVP-001)에 배포 셸을 씌우는 SPEC의 AC. 배포 형태(Stage 1 PyInstaller onedir / Stage 2 Tauri), 인앱 설정 + OS 자격 증명 저장, responder provisioning, health UI, 코드 서명·공증, 자동 업데이트, 오류 UX, 안전 불변식 보존을 검증한다. (plan-audit fold-in: AC-014 ③ 구체화, AC-016~018 신설, AC-004/009/011/015 강화)
 > 검증 환경 주석: 서명·공증(AC-DEPLOY-009/010)은 코드 서명 인증서를 요구하므로 **환경-게이트 반자동**이다 — SPEC-COPILOT-MVP-001의 라이브 onPC gap 규율(인증서/콘솔 부재 시 explicit N/A, 확보 시 실행)을 동일 적용한다.
 > v0.3.0 라이브 E2E 하드닝 fold-in: §D.11에 결함 #2~#6에 대한 AC-DEPLOY-019~023 신설(provenance `copilot-live-demo-findings`). AC-019(#2 기동 시 키 주입)은 `build_runtime` 조립 수준 단위 테스트, AC-023(#6 OSC 수신 포트)은 라이브·하드웨어 부분을 deferred/manual N/A로 분리. 결함 #1은 commit `1d65375`에서 이미 수정(신규 AC 미앵커링).
+> v0.4.0 Stage-2 M7 kickoff fold-in (+ plan-audit remediation D1–D10): §D.12에 M7(Tauri v2 셸 + Python sidecar) 수용 기준 **AC-DEPLOY-024~029** — Tauri 셸 기동(024), F5 sidecar↔UI Origin/token 핸드셰이크(025, REQ-002a/FEAS-9), 프로세스-트리 teardown 3경로 잔여 0(026, AC-015 ①② 확장, watchdog EOF-primary+bounded latency), SAFETY-2 교차언어 이중 스캔(027, AC-014 ③b/③c/③d 활성화 — Layer① `src-tauri/` 존재 게이트+`files_scanned>0`+필수 rogue 픽스처, Layer② 실제 설정 send_port+양성 관측), 키 커스터디 불변(028), **per-launch 토큰 비밀 유지(029 — D4c 신설)**. 각 AC는 env-gate를 명시(NOW=macOS arm64 dev/ad-hoc; AC-027 Layer①=M7.4 scaffold 이후, Layer②=NOW; universal2·Windows·실제 notarization=env-gate N/A). **M8/M9은 Stage-2-DEFERRED — 본 kickoff AC 미포함.** Stage-1 + 하드닝 AC(001~023)는 전부 불변 보존.
 
 ## D. AC 매트릭스
 
@@ -65,7 +66,7 @@
 
 | AC ID | 기준 | 검증 방법 | 연계 REQ |
 |---|---|---|---|
-| AC-DEPLOY-014 | 배포 셸이 안전 게이트 불변식을 보존 (우회 경로 신설 0) | **자동(CI 상시)**: 패키징된 셸을 감싼 구성에서 ① SPEC-COPILOT-MVP-001 단일 관문 아키텍처 테스트(AC-MVP-019) 유지 green ② 블랙리스트 명령 인간 승인 없이 미실행(AC-MVP-004) 회귀 green ③ **결정적 OSC 송신 표면 스캔(SAFETY-1/SAFETY-2, 구체화)**: (a) **정당한 OSC 송신 표면을 명명된 모듈/심볼 allowlist로 열거** — 오직 게이트의 send 함수만 합법적으로 송신하며, allowlist는 테스트 픽스처에 고정; (b) **스캔 메커니즘·패턴을 Python + Rust/Tauri 전 소스에 적용** — raw socket 생성(`socket.socket`/`std::net::UdpSocket` 등), 직접 OSC 모듈 import(`python-osc`/OSC 크레이트), `127.0.0.1`/콘솔 포트 리터럴 패턴을 grep/AST 스캔; (c) **패키지된 셸 E2E 중 콘솔 수신 포트에서 관측되는 "모든 OSC 송신"을 wire-level로 열거**하여 allowlist와 대조(Python import 검사에 불가시한 Rust/sidecar raw UDP까지 포착); (d) 설정 UI / provisioning / updater 경로에서 **미열거(allowlist 밖) 신규 모듈이 송신 표면에 진입하면 fail-closed** | REQ-DEPLOY-023~024 |
+| AC-DEPLOY-014 | 배포 셸이 안전 게이트 불변식을 보존 (우회 경로 신설 0) | **자동(CI 상시)**: 패키징된 셸을 감싼 구성에서 ① SPEC-COPILOT-MVP-001 단일 관문 아키텍처 테스트(AC-MVP-019) 유지 green ② 블랙리스트 명령 인간 승인 없이 미실행(AC-MVP-004) 회귀 green ③ **결정적 OSC 송신 표면 스캔(SAFETY-1/SAFETY-2, 구체화)**: (a) **정당한 OSC 송신 표면을 명명된 모듈/심볼 allowlist로 열거** — 오직 게이트의 send 함수만 합법적으로 송신하며, allowlist는 테스트 픽스처에 고정; (b) **스캔 메커니즘·패턴을 Python + Rust/Tauri 전 소스에 적용** — raw socket 생성(`socket.socket`/`std::net::UdpSocket` 등), 직접 OSC 모듈 import(`python-osc`/OSC 크레이트), `127.0.0.1`/콘솔 포트 리터럴 패턴을 grep/AST 스캔; (c) **패키지된 셸 E2E 중 콘솔 수신 포트에서 관측되는 "모든 OSC 송신"을 wire-level로 열거**하여 allowlist와 대조(Python import 검사에 불가시한 Rust/sidecar raw UDP까지 포착); (d) 설정 UI / provisioning / updater 경로에서 **미열거(allowlist 밖) 신규 모듈이 송신 표면에 진입하면 fail-closed**. **(M7 활성화)** ③의 (b) Rust/Tauri 소스 스캔 + (c) wire-level 열거 절은 Stage-1에서 N/A로 이연되었으나, **M7(Stage-2)에서 활성화**된다 — 구체적 이중 스캔(Rust deny-all 정적 + wire-level 싱크 fail-closed)은 **AC-DEPLOY-027**로 검증 | REQ-DEPLOY-023~024 |
 | AC-DEPLOY-018 | updater 재시작 시 안전상태 보존 (SAFETY-4, Stage-2 관련) | 자동/반자동: 자동 업데이트가 백엔드를 재시작하는 시나리오를 재현 → ① 재시작 후 **라이브 잠금(live-lock=ON)** 이 보존(또는 fail-safe로 재잠금)됨을 assert ② **대기 중 승인(pending-approval) 상태** 보존(또는 재잠금) 확인 ③ 재시작 경계를 가로질러 **감사 로그 연속성**(재시작 전후 로그 항목 단절/유실 0건) 확인 | REQ-DEPLOY-027 |
 
 ### D.10 앱 수명주기 AC
@@ -85,6 +86,19 @@
 | AC-DEPLOY-021 | 직전 생성 시퀀스/실행기 상태를 세션에 주입 → 후속 수정이 정확 대상 지향 + 재생성 선호 (#4) | **자동**: ① `Seq 71` / `Exec 201`에 룩을 생성한 뒤, 세션 컨텍스트에 **마지막 생성 대상 상태가 존재**함을 assert ② 후속 수정 지시("더 느리게")가 그 상태를 근거로 **`Seq 71`/`Exec 201`로 해소**(임의 `Seq 1`/`Exec 1` 아님)됨을 assert ③ 대상 상태가 존재할 때 **맹목적 수정보다 재생성 경로가 선택**됨을 assert | REQ-DEPLOY-030 |
 | AC-DEPLOY-022 | Gemini 캐시 만료 시 재생성·재시도 + "No API key" 인증 오류 분류 (#5) | **자동(오류 주입)**: ① `403 PERMISSION_DENIED "CachedContent not found"`(및 404) 주입 → 앱이 **캐시를 재생성하여 재시도**하고 호출을 종단 실패로 종료하지 않음을 assert ② `"No API key"`(`ValueError`) 주입 → 오류 분류가 `unexpected`가 아닌 **인증(auth) 오류**로 분류됨을 assert(캐시/키 케이스가 분류기에 존재) | REQ-DEPLOY-031 |
 | AC-DEPLOY-023 | OSC 수신 포트 `Address already in use` 시 동일 포트 재바인드·복구 + 조용한 드리프트 금지 (#6) | **자동(단위 — 포트 선점 시뮬레이션)**: ① 지정 수신 포트 선점(mock)으로 `Address already in use` 재현 → 앱이 **동일 지정 포트 재바인드**(소켓 재사용/재시도) 시도, **임의 포트 조용한 드리프트 0건**(REQ-DEPLOY-026 정합), 복구 불가 시 **인간 친화적 오류 + 재설정 안내 표시**를 assert(`server/bridge/osc.py` 수신 경로). **반자동/수동(라이브·하드웨어 — deferred N/A)**: 실제 onPC 비정상 종료 후 수신 포트 점유 상태에서 앱 재기동 복구는 **라이브 onPC 환경-게이트**(SPEC-COPILOT-MVP-001 라이브 gap 규율 동일 — 하드웨어 부재 시 explicit N/A, 확보 시 실행); 단위 커버리지가 불가한 왕복 복구는 수동 검증으로 분리 | REQ-DEPLOY-032 |
+
+### D.12 Stage-2 M7 AC (v0.4.0 fold-in — Tauri v2 셸 + Python sidecar)
+
+> 본 kickoff 착수 스코프 = **M7-first**. M8(자동 업데이트)·M9(코드 서명/공증)은 Stage-2-DEFERRED로 **AC 미포함**. 각 AC의 env-gate: buildable/verifiable **NOW = macOS arm64 + dev/ad-hoc 서명**; **universal2 / Windows / 실제 notarization = env-gate N/A**(AC-DEPLOY-009/010 규율 동일). Tauri v2 동작 근거는 검증된 공식 문서 인용(sidecar/IPC/process-model/capabilities/shell — plan.md § M7 구현 계획).
+
+| AC ID | 기준 | 검증 방법 | 연계 REQ |
+|---|---|---|---|
+| AC-DEPLOY-024 | Tauri v2 셸 기동 — sidecar spawn + 네이티브 창이 `ui/dist` 로드 + 트레이/연결 상태 표시 | **반자동(NOW: macOS arm64, dev/ad-hoc 서명)**: ① `tauri build`/`tauri dev` 실행 → PyInstaller onedir 백엔드가 **sidecar 프로세스로 spawn**됨 확인 ② 네이티브 창이 동일 `ui/dist/index.html`을 로드(M6 백엔드 재사용)하고 SPA HTTP 200 서빙 ③ 시스템 트레이 아이콘 + health 연결 상태 배지(online/console_offline/responder_degraded — M5 재사용) 표시. **자동**: Tauri capabilities가 sidecar-spawn 외 네트워크 플러그인 deny함을 정적 확인(AC-027 연계). **env-gate N/A**: universal2/Windows 셸 빌드·실제 notarization(AC-009/010 규율) = 적합 빌드 환경/인증서 확보 시 | REQ-DEPLOY-001, 002 |
+| AC-DEPLOY-025 | F5 sidecar↔UI 핸드셰이크 — disallowed Origin OR 누락/오류 토큰 연결 REJECT, valid Origin+토큰 ACCEPT (FEAS-9 CSWSH 차단) | **자동(단위 — NOW, 하드웨어/인증서 불요)**: `/ws` accept 경로(`server/web/app.py:139` 이전 게이트)에 ① allowlist 밖 `Origin` → 연결 거부(accept 전 close) assert ② 유효 Origin + **누락 토큰** → 거부 assert ③ 유효 Origin + **오류 토큰** → 거부(상수-시간 비교 `hmac.compare_digest`) assert ④ 유효 Origin + **정확 per-launch 토큰** → accept assert ⑤ 프로토콜 v1/`messages.py`/`PROTOCOL.md` 불변 회귀(핸드셰이크가 메시지 스키마 미변경). **반자동(E2E — macOS arm64 dev)**: Tauri 창(허용 오리진 + 주입 토큰) 접속 성공 + 임의 브라우저 탭(비허용 오리진/무토큰) 접속 실패 확인. **env-gate N/A 없음** — 순수 로컬 단위/E2E로 지금 완전 검증 | REQ-DEPLOY-002a |
+| AC-DEPLOY-026 | 프로세스-트리 teardown 잔여 0 (정상 종료 AND 백엔드 크래시 AND Tauri force-quit) + 웹/OSC 포트 해제 (Option C — AC-DEPLOY-015 ①② 확장) | **자동/반자동(macOS arm64 dev — NOW)**: ① **정상 종료** — Rust `RunEvent::Exit`가 process-group kill(Unix setsid/setpgid) → 프로세스-트리 스캔 잔여 pid 0 + 포트 해제 ② **백엔드 크래시** — sidecar 강제 kill 후 Rust 재수확 or launcher `terminate_process_tree`(`launcher.py:208`) 정리, 잔여 0 ③ **Tauri force-quit** — Unix force-quit 시 `RunEvent::Exit` 미발화 → 백엔드 parent-liveness **watchdog**가 self-reap: **PRIMARY = pipe/heartbeat EOF**(부모 사망 즉시 감지, 레이스 창 없음), **FALLBACK = `getppid()==1` 폴링(폴링 상한 ≤ 1s)**. **bounded max reap latency ≤ 1s** 이내에 grandchild(추출 Python) 잔여 pid 0 + 포트 해제됨을 assert(무한 레이스 창이 아니라 상한-결정적 스캔) ④ 재기동 `require_ports_available`(`launcher.py:162`) fail-closed(포트 점유 시 명시 오류 — AC-015 ②/REQ-026 정합). ⚠️ `CommandChild.kill()`은 부트로더 PID만 kill이므로 group kill 검증 필수. **env-gate N/A**: Windows Job Object(KILL_ON_JOB_CLOSE) 경로 = Windows 러너 확보 시(현 arm64 macOS 호스트 N/A) | REQ-DEPLOY-025 (+026 포트) |
+| AC-DEPLOY-027 | SAFETY-2 교차언어 이중 스캔 — Layer①(Rust deny-all 정적) + Layer②(wire-level 싱크). 각 레이어의 검증 시점(env-gate)을 분리 명시하고, 두 레이어 모두 **vacuous-pass를 차단** (AC-DEPLOY-014 ③b/③c/③d 활성화) | **Layer ① Rust deny-all 정적 스캔 — 검증 시점 = M7.4 `src-tauri/` scaffold 이후(빈/부재 크레이트 트리에서는 fail-closed; scaffold 이전에는 vacuous-pass라 검증 불가)**: ① **`src-tauri/` 존재를 게이트 — 부재/빈 트리는 PASS가 아니라 FAIL(blocked)** 로 처리(0-file→0-violation 취급 금지) ② 스캔이 실제로 파일을 읽었음을 **`files_scanned > 0`으로 assert**(0이면 fail-closed) ③ `src-tauri/**/*.rs`+`Cargo.toml`/`Cargo.lock`을 **DENY-ALL(빈 allowlist)** 로 스캔 — `UdpSocket`/`std::net::`/`.bind|.connect|.send_to`/OSC 크레이트(rosc·nannou_osc)/`127.0.0.1`·콘솔 포트 리터럴; 매니페스트 스캔은 raw-socket/OSC 네트워킹 크레이트(전이 Cargo.lock 포함) 거부 ④ **MANDATORY CI 픽스처(산문 아님)**: rogue 크레이트/소켓 코드를 **양성 대조(positive-control) 고정 픽스처로 상시** → 스캔이 **fail**함을 assert, clean 트리는 **pass**. **Layer ② wire-level 싱크(패키지 E2E — NOW 검증 가능, loopback·하드웨어/인증서 불요)**: ① 싱크를 **하드코딩 기본(8000)이 아니라 E2E 실행의 실제 설정 send_port**(effective settings에서 읽은 값 — REQ-DEPLOY-005 사용자 설정 가능)에 바인드 ② 콘솔 수신 포트의 모든 datagram 기록 → 게이트 감사 "executed" 로그(`server/tests/test_deploy_safety_invariants.py`)와 **1:1 대조** ③ **양성 관측(positive-observation) assert — 정당한 게이트 송신이 싱크에서 실제로 관측됨(≥1 datagram 캡처+대조)** 을 요구(빈 캡처로 "미열거 송신 0"이 vacuous-충족되는 것 차단) ④ 미감사/미열거 송신자에 **fail-closed** + **synthetic rogue 패킷 주입 → 싱크가 flag** 증명. **공통**: Tauri v2 capabilities 모든 네트워크 플러그인 deny + `tauri-plugin-shell` sidecar-spawn만으로 스코프 확인. 호스트: `packaging/verify_packaged_e2e.py` 확장. **env-gate 요약: Layer①=M7.4 scaffold 이후, Layer②=NOW(loopback)** | REQ-DEPLOY-023~024 |
+| AC-DEPLOY-028 | 키 커스터디 불변 — Python `keyring` 직접(Rust 비밀 미접촉) + 평문 디스크 0 보존 | **자동(단위 — NOW)**: ① **Rust/Tauri 소스에 자격 증명 저장소/키 접근 코드 0건** 정적 스캔 assert(Rust는 sidecar spawn/lifecycle만) ② Stage-1 키 경로(`inject_active_provider_key` `keystore.py:253`/`scrub_environ` `:298`) **무변경 회귀 green** ③ 앱이 쓰는 모든 파일에 키 문자열 0건(AC-004 스캔) + 저장소 미가용 시 세션 한정 폴백(AC-016) 유지. **전제/잔여(M9 이연)**: 서명된 sidecar의 OS keychain 도달성은 **M9(코드 서명) 검증 항목** — 서명된 sidecar가 keychain 불가하고 Tauri 호스트만 가능한 경우에 한해 키 커스터디 재검토(§A.2 F5' 잔여) | REQ-DEPLOY-006~007 (+006a) |
+| AC-DEPLOY-029 | per-launch 토큰 비밀 유지 — 토큰이 커밋 가능한·평문 파일에 기록되지 않음 (D4 — AC-004 키-스캔과 병렬) | **자동(단위 — NOW, 하드웨어/인증서 불요)**: ① launcher가 생성한 per-launch 토큰이 **앱이 쓰는 모든 파일(설정·로그·캐시·`ui/dist` serve 산출물·크래시 덤프)에 0건**임을 자동 스캔(AC-DEPLOY-004 키-스캔과 동형 — 토큰 문자열 grep 0) ② **Stage-2 경로**: 토큰이 **Tauri IPC로만 웹뷰에 전달**되고 디스크 파일/미인증 loopback 엔드포인트로 노출되지 않음을 assert(**`index.html` 메타 주입 부재** 확인 — D4a 폐기 옵션) ③ **Stage-1 브라우저 모드**: 토큰은 심층방어이며 실질 CSWSH 차단자는 Origin allowlist임을 문서-정합으로 확인(토큰이 유일 방어축이라 주장하지 않음 — D4b). **env-gate N/A 없음** — 순수 로컬 스캔 | REQ-DEPLOY-002a |
 
 ## Given-When-Then 시나리오
 
@@ -118,6 +132,11 @@
 - **When** 사용자가 파괴적 결과를 유발하는 지시(예: "시퀀스 다 지워줘" → `Delete` 계열 블랙리스트 명령 생성)를 입력하면
 - **Then** 배포 셸을 감쌌음에도 안전 게이트가 그대로 관문으로 작동하여 명령을 인간 승인 대기로 보류하고, 승인 전까지 OSC 송신이 0건이며, 설정 UI·responder provisioning·updater 어느 경로도 게이트를 우회해 콘솔로 명령을 보내지 않는다.
 
+### 시나리오 6 — Stage-2 Tauri 셸 기동 + F5 핸드셰이크 (M7)
+- **Given** macOS arm64에서 Tauri v2 데스크톱 앱(Stage-2, dev/ad-hoc 서명)이 설치되고 PyInstaller 백엔드를 sidecar로 번들한 상태에서
+- **When** 사용자가 앱을 실행하면 Tauri가 sidecar(백엔드)를 process-group 리더로 spawn하고, 네이티브 창이 launcher-주입 per-launch 토큰을 지닌 채 `127.0.0.1` WebSocket `/ws`로 접속하며, 이후 사용자가 앱을 정상 종료하거나 강제 종료(force-quit)하면
+- **Then** 네이티브 창이 동일 `ui/dist`를 로드하고 health 배지·트레이가 표시되며(AC-024); 허용 Origin+정확 토큰 연결만 accept되고 비허용 Origin이나 무효 토큰 연결은 거부되어 CSWSH가 차단되며(AC-025); 종료 시(정상/크래시/force-quit 3경로 모두) sidecar와 grandchild Python 프로세스-트리 잔여가 0이고 웹/OSC 포트가 해제되며(AC-026 — force-quit는 백엔드 watchdog self-reap); Rust/wire-level 교차언어 스캔이 셸의 콘솔 raw UDP 송신 표면 0을 fail-closed로 강제한다(AC-027). 키는 여전히 Python `keyring`으로만 커스터디되고 Rust는 비밀을 만지지 않는다(AC-028).
+
 ## 엣지 케이스
 
 - **OS 자격 증명 저장소 미가용/잠금/거부**: 명시적 오류 안내 + 세션-한정(in-memory) 키 입력 폴백(평문 디스크 저장 금지) — 조용한 평문 폴백 0건 (REQ-DEPLOY-006a / AC-DEPLOY-016으로 앵커링).
@@ -146,9 +165,13 @@
 | REQ-DEPLOY-012~013 | AC-DEPLOY-008 | REQ-DEPLOY-028 | AC-DEPLOY-019 |
 | REQ-DEPLOY-029 | AC-DEPLOY-020 | REQ-DEPLOY-030 | AC-DEPLOY-021 |
 | REQ-DEPLOY-031 | AC-DEPLOY-022 | REQ-DEPLOY-032 | AC-DEPLOY-023 |
+| REQ-DEPLOY-001~002 | AC-DEPLOY-024 | REQ-DEPLOY-002a | AC-DEPLOY-025 |
+| REQ-DEPLOY-025~026 | AC-DEPLOY-026 | REQ-DEPLOY-023~024 | AC-DEPLOY-027 |
+| REQ-DEPLOY-006~007 | AC-DEPLOY-028 | REQ-DEPLOY-002a | AC-DEPLOY-029 |
 
 > 신규 앵커 (v0.2.0 fold-in): REQ-004a(로컬 공존 [Ubiquitous] 분리)→AC-002, REQ-006a(자격 저장소 미가용 [Unwanted])→AC-016, REQ-011a(앱 발행 Import Plugin 게이트 경유)→AC-017, REQ-027(updater 재시작 안전상태 보존)→AC-018. 고아 REQ 0건 유지.
 > 신규 앵커 (v0.3.0 라이브 E2E 하드닝 fold-in): REQ-028(#2 기동 시 활성 프로바이더 키 주입 [Event-driven])→AC-019, REQ-029(#3 rig-context 실제 풀 번호 명시 [State-driven])→AC-020, REQ-030(#4 마지막 생성 연출 상태 세션 주입 [State-driven])→AC-021, REQ-031(#5 Gemini 캐시 만료 재생성 + 키 오류 분류 [Unwanted])→AC-022, REQ-032(#6 OSC 수신 포트 재바인드 복구 [Unwanted])→AC-023. **결함 #1은 commit `1d65375`에서 이미 수정되어 신규 REQ/AC 미앵커링(이력 전용).** 고아 REQ 0건 유지.
+> 신규 앵커 (v0.4.0 Stage-2 M7 kickoff fold-in + plan-audit remediation D1–D10): 신규 REQ-002a(sidecar↔UI Origin/token 핸드셰이크 [Event-driven] — FEAS-9)→**AC-025(핸드셰이크 reject/accept) + AC-029(토큰 비밀 유지 — D4c 신설)**; 기존 REQ 추가 AC 매핑 — REQ-001~002→AC-024(Tauri 셸 기동), REQ-025~026→AC-026(프로세스-트리 teardown Option C, AC-015 확장), REQ-023~024→AC-027(SAFETY-2 이중 스캔, AC-014 ③ 활성화), REQ-006~007→AC-028(키 커스터디 불변). REQ-002a는 유일한 신규 REQ이며 AC-025·AC-029로 앵커 — **고아 REQ 0건 유지**. M8/M9(REQ-016/017/027/014/015 등) 관련 AC(011/018/009/010)는 Stage-2-DEFERRED로 기존 상태 불변.
 
 ## 품질 게이트 (TRUST 5)
 
@@ -159,12 +182,13 @@
 
 ## Definition of Done
 
-- [ ] AC-DEPLOY-001 ~ AC-DEPLOY-023 전부 PASS (자동 테스트 증거 포함; AC-DEPLOY-009/010은 서명 인증서 확보 시 환경-게이트 검증, 부재 시 explicit N/A + 파이프라인 구성 존재; AC-DEPLOY-023의 라이브·하드웨어 왕복 복구는 라이브 onPC 환경-게이트 N/A로 분리)
+- [ ] AC-DEPLOY-001 ~ AC-DEPLOY-023 전부 PASS (자동 테스트 증거 포함; AC-DEPLOY-009/010은 서명 인증서 확보 시 환경-게이트 검증, 부재 시 explicit N/A + 파이프라인 구성 존재; AC-DEPLOY-023의 라이브·하드웨어 왕복 복구는 라이브 onPC 환경-게이트 N/A로 분리) — **Stage-1 + v0.3.0 하드닝: 완료·synced(불변)**
+- [ ] **Stage-2 M7(본 kickoff 착수 스코프) — AC-DEPLOY-024~029 전부 PASS** (Tauri 셸 기동 024 / F5 핸드셰이크 025 / 프로세스-트리 teardown 3경로 026 / SAFETY-2 이중 스캔 027 / 키 커스터디 불변 028 / per-launch 토큰 비밀 029; 각 env-gate 명시 — NOW=macOS arm64 dev/ad-hoc, universal2·Windows·실제 notarization=env-gate N/A). **AC-025·028·029는 순수 로컬 자동으로 지금 완전 검증 가능; AC-027 Layer②(wire-level)=NOW, Layer①(Rust 정적 스캔)=M7.4 `src-tauri/` scaffold 이후(부재 트리 fail-closed)**. ⏸️ M8/M9(자동 업데이트·서명/공증)은 Stage-2-DEFERRED — 별도 kickoff에서 AC 신설·검증 (terminal `completed` close는 M7~M9 전부 완료 후)
 - [ ] 라이브 E2E 하드닝(v0.3.0, 결함 #2~#6) — 기동 시 활성 프로바이더 키 주입(AC-019, **구현 최우선**), rig-context 실제 풀 번호 명시(AC-020), 마지막 생성 연출 상태 세션 주입(AC-021), Gemini 캐시 만료 재생성 + 키 오류 분류(AC-022), OSC 수신 포트 재바인드 복구 단위 검증(AC-023) 전부 PASS; 결함 #1은 commit `1d65375`에서 이미 수정(회귀 유지)
 - [ ] 안전 불변식 회귀(AC-DEPLOY-014) — 패키징된 셸에서 단일 관문·블랙리스트 승인 불변식 유지 + OSC 송신 표면 allowlist/wire-level 열거(Python+Rust) CI green
 - [ ] API 키 평문 미유출(AC-DEPLOY-004) — 앱이 쓰는 모든 파일(크래시 덤프 포함)에 키 문자열 0건 자동 스캔 통과; 저장소 미가용 폴백(AC-DEPLOY-016) PASS
 - [ ] 앱 발행 Import Plugin 게이트 경유 + 감사 로그 1:1(AC-DEPLOY-017) PASS; updater 재시작 안전상태 보존(AC-DEPLOY-018) PASS(Stage-2)
 - [ ] Stage 1(PyInstaller **onedir**) + Stage 2(Tauri) 양 아티팩트가 재현 가능 빌드 절차로 생성됨 — **macOS arm64는 현재 호스트에서 지금 생성**; **universal2·Windows(x86_64)는 현재 빌드 호스트에서 환경-게이트 N/A**(arm64 전용 CPython → universal2 unreachable; Windows 러너 부재 — research.md §C.6/§E-2), AC-DEPLOY-009/010 서명 env-gate와 **동일 규율**으로 적합한 빌드 환경 확보 시 생성(파이프라인은 코드 변경 없이 `PYI_TARGET_ARCH=universal2`/Windows 러너로 활성화)
-- [ ] REQ → AC 추적성 매트릭스 기준 고아 REQ 0건 유지 (REQ-004a/006a/011a/027 포함)
-- [ ] plan.md §F 결정 원장 — **6 resolved + 2 Stage-2-deferred(F5·F6), Stage-1-open 결정 0건** (Stage-2 결정은 명시적 이연)
+- [ ] REQ → AC 추적성 매트릭스 기준 고아 REQ 0건 유지 (REQ-004a/006a/011a/027/**002a** 포함)
+- [ ] plan.md §F 결정 원장 — **8 resolved(F1·F2·F3·F4·F5·F5'·F7·F8) + 1 Stage-2-deferred(F6), M7-착수-open 결정 0건** (F5·F5'는 v0.4.0 kickoff에서 RESOLVED; F6는 M8 별도 kickoff 이연)
 - [ ] 기능 무변경 확인 — SPEC-COPILOT-MVP-001 백엔드 테스트 스위트 무변경 green 유지
