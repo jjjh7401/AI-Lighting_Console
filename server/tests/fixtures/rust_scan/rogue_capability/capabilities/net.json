@@ -1,0 +1,10 @@
+{
+  "identifier": "net",
+  "description": "POSITIVE CONTROL — grants a network plugin surface; must FAIL.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "http:default",
+    "websocket:allow-connect"
+  ]
+}

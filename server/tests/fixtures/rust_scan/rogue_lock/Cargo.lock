@@ -1,0 +1,25 @@
+# POSITIVE CONTROL fixture — nannou_osc enters TRANSITIVELY via a helper crate.
+version = 3
+
+[[package]]
+name = "transitive-osc-shell"
+version = "0.0.0"
+dependencies = [
+ "some-innocent-helper",
+ "tauri",
+]
+
+[[package]]
+name = "some-innocent-helper"
+version = "0.1.0"
+dependencies = [
+ "nannou_osc",
+]
+
+[[package]]
+name = "nannou_osc"
+version = "0.19.0"
+
+[[package]]
+name = "tauri"
+version = "2.0.0"

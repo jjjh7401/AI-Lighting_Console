@@ -37,13 +37,21 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 
-# The dev-venv settings resolver is the SSOT for the OS-standard user paths the
-# packaged app writes to — importing it lets the E2E assert against the exact
-# same resolution the frozen app uses (no path duplication / drift).
+# Two sibling imports, both deliberately after the sys.path bootstrap:
+#   * wire_sink (same directory) — Layer ② of the SAFETY-2 cross-language dual
+#     scan (M7.3, AC-DEPLOY-027): the sink stands in for the console's OSC input
+#     port so every datagram the packaged app emits reconciles 1:1 with the gate
+#     audit log.
+#   * server.deploy.settings — the SSOT for the OS-standard user paths the
+#     packaged app writes to, so this E2E asserts against the exact same
+#     resolution the frozen app uses (no path duplication / drift).
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
+from wire_sink import WirePacketSink, reconcile  # noqa: E402
+
 from server.deploy.settings import (  # noqa: E402
     user_config_dir,
     user_data_dir,
@@ -124,6 +132,29 @@ def _pgid_processes(pgid: int) -> list[str]:
     return rows
 
 
+def _audit_executed_since(since_iso: str) -> list[dict]:
+    """Every gate ``executed`` audit event written by the app since ``since_iso``.
+
+    Filtering on the event's own UTC ``ts`` (not the file mtime) keeps entries
+    from earlier runs that share today's rotation file out of the capture.
+    """
+    audit_dir = user_data_dir() / "audit_logs"
+    events: list[dict] = []
+    if not audit_dir.is_dir():
+        return events
+    for path in sorted(audit_dir.glob("audit-*.jsonl")):
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line.strip():
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if event.get("event") == "executed" and str(event.get("ts", "")) >= since_iso:
+                events.append(event)
+    return events
+
+
 def _bundle_has_dir(name: str) -> list[str]:
     """Any directory named ``name`` anywhere inside the .app bundle (should be none)."""
     out = subprocess.run(
@@ -148,6 +179,15 @@ def run() -> int:
         recv_port = _free_port()
     base = f"http://127.0.0.1:{web_port}"
 
+    # AC-DEPLOY-027 Layer ②: bind the console-input sink BEFORE launch, on an
+    # OS-assigned port that is deliberately NOT the 8000 default (audit defect
+    # D3 — binding the default while the app sends elsewhere captures nothing).
+    sink = WirePacketSink(port=0)
+    while sink.port in (web_port, recv_port):
+        sink.stop()
+        sink = WirePacketSink(port=0)
+    console_port = sink.port
+
     steps = [Step(i, name) for i, name in [
         (1, "launch packaged binary on unused loopback ports"),
         (2, "GET /healthz until healthy"),
@@ -156,7 +196,8 @@ def run() -> int:
         (5, "POST /api/settings persists to user config dir (not bundle)"),
         (6, "POST/GET /api/provision/responder installs bundled plugin to temp dir"),
         (7, "running app audit dir resolves under user data dir (not bundle)"),
-        (8, "SIGTERM -> clean exit + 0 residual process-tree + ports freed"),
+        (8, "wire sink on the configured send_port reconciles 1:1 with the gate audit log"),
+        (9, "SIGTERM -> clean exit + 0 residual process-tree + ports freed"),
     ]]
     S = {s.n: s for s in steps}
 
@@ -167,6 +208,7 @@ def run() -> int:
         backup = settings_file.read_bytes()
 
     t0 = time.time()
+    run_started_iso = datetime.now(UTC).isoformat()
     provision_dir = Path(tempfile.mkdtemp(prefix="ma3copilot-e2e-provision-"))
     proc: subprocess.Popen | None = None
     pgid = None
@@ -178,15 +220,17 @@ def run() -> int:
         # ---- Step 1: launch (own process group -> whole-tree teardown) ----------
         proc = subprocess.Popen(
             [str(BINARY), "--no-browser", "--port", str(web_port),
-             "--receive-port", str(recv_port)],
+             "--receive-port", str(recv_port), "--console-port", str(console_port)],
             stdout=logf,
             stderr=subprocess.STDOUT,
             start_new_session=True,
         )
         pgid = os.getpgid(proc.pid)
         S[1].ok(
-            f"pid={proc.pid} pgid={pgid} web_port={web_port} receive_port={recv_port}",
-            f"argv=[{BINARY.name!r}, --no-browser, --port {web_port}, --receive-port {recv_port}]",
+            f"pid={proc.pid} pgid={pgid} web_port={web_port} receive_port={recv_port} "
+            f"console_port={console_port} (wire sink bound)",
+            f"argv=[{BINARY.name!r}, --no-browser, --port {web_port}, "
+            f"--receive-port {recv_port}, --console-port {console_port}]",
         )
 
         # ---- Step 2: poll /healthz ---------------------------------------------
@@ -349,7 +393,64 @@ def run() -> int:
                 f"audit_dir={audit_dir}",
             )
 
-        # ---- Step 8: CLEAN SIGTERM shutdown ------------------------------------
+        # ---- Step 8: wire-level packet sink (AC-DEPLOY-027 Layer ②) ------------
+        # The sink has been bound to console_port since before launch. Confirm
+        # the app's EFFECTIVE settings agree that this is the send port (never
+        # assert against the hardcoded 8000 default — audit defect D3), let the
+        # responder heartbeat produce real gate traffic, then reconcile every
+        # observed datagram 1:1 against the gate audit "executed" log.
+        if S[2].status == "PASS":
+            _http("POST", f"{base}/api/settings", {"console_port": console_port})
+            gstatus, graw = _http("GET", f"{base}/api/settings")
+            effective_port = (
+                json.loads(graw).get("settings", {}).get("console_port")
+                if gstatus == 200
+                else None
+            )
+            # Heartbeats are the app's own legitimate gate sends; wait for one
+            # window plus the ping timeout so the audit entry lands too.
+            time.sleep(8.0)
+            observed = sink.drain(settle=0.5)
+            time.sleep(3.0)
+            audited = _audit_executed_since(run_started_iso)
+            outcome = reconcile(observed, audited)
+
+            # Synthetic rogue injection: a datagram that never transited the
+            # gate (as a Rust sidecar's raw UDP would not) must be flagged.
+            rogue_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                rogue_sock.sendto(b"m73-synthetic-rogue", ("127.0.0.1", console_port))
+            finally:
+                rogue_sock.close()
+            rogue_seen = sink.drain(settle=0.5)
+            rogue_outcome = reconcile(rogue_seen, audited)
+            rogue_flagged = any(b"m73-synthetic-rogue" in d.raw for d in rogue_outcome.unaudited)
+
+            port_ok = effective_port == console_port and console_port != 8000
+            if port_ok and outcome.ok and rogue_flagged and not rogue_outcome.ok:
+                S[8].ok(
+                    f"sink bound to effective send_port {console_port} "
+                    f"(GET /api/settings console_port={effective_port}; NOT the 8000 default)",
+                    f"positive observation: {outcome.observed_count} datagram(s) captured, "
+                    f"{outcome.matched} reconciled 1:1 against {outcome.audited_count} "
+                    "gate 'executed' audit entries",
+                    f"verbs observed: {sorted({d.verb for d in observed})}",
+                    "0 observed-but-unaudited senders (no unenumerated OSC send surface)",
+                    "synthetic rogue datagram injected off-gate -> FLAGGED "
+                    f"({len(rogue_outcome.unaudited)} unaudited)",
+                )
+            else:
+                S[8].fail(
+                    f"port_ok={port_ok} (effective={effective_port}, sink={console_port})",
+                    f"reconcile ok={outcome.ok}: {outcome.detail}",
+                    f"observed={outcome.observed_count} audited={outcome.audited_count} "
+                    f"matched={outcome.matched}",
+                    f"rogue_flagged={rogue_flagged} rogue_reconcile_ok={rogue_outcome.ok}",
+                )
+        else:
+            S[8].fail("skipped: server never became healthy")
+
+        # ---- Step 9: CLEAN SIGTERM shutdown ------------------------------------
         if proc.poll() is None:
             proc.send_signal(signal.SIGTERM)
             try:
@@ -368,19 +469,19 @@ def run() -> int:
                 time.sleep(0.3)
             clean_exit = rc is not None and rc == 0
             if clean_exit and not residual and web_freed and recv_freed:
-                S[8].ok(
+                S[9].ok(
                     f"SIGTERM -> exit rc={rc} (clean)",
                     f"process-tree scan (pgid={pgid}) residual: 0",
                     f"web_port {web_port} freed: {web_freed}; "
                     f"receive_port {recv_port} freed: {recv_freed}",
                 )
             else:
-                S[8].fail(
+                S[9].fail(
                     f"rc={rc} clean={clean_exit} residual={residual} "
                     f"web_freed={web_freed} recv_freed={recv_freed}",
                 )
         else:
-            S[8].fail(f"process already dead before SIGTERM (rc={proc.returncode})")
+            S[9].fail(f"process already dead before SIGTERM (rc={proc.returncode})")
 
     finally:
         # Guaranteed teardown: never leave a stray server.
@@ -395,6 +496,8 @@ def run() -> int:
             with contextlib.suppress(Exception):
                 proc.wait(timeout=5)
         logf.close()
+        with contextlib.suppress(Exception):
+            sink.stop()
         # Restore the operator's real settings.toml.
         if backup is not None:
             settings_file.parent.mkdir(parents=True, exist_ok=True)

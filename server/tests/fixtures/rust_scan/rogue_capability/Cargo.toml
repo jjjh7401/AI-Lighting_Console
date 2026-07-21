@@ -1,0 +1,8 @@
+# POSITIVE CONTROL fixture — clean manifest; the grant lives in capabilities/.
+[package]
+name = "capability-leak-shell"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+tauri = "2"

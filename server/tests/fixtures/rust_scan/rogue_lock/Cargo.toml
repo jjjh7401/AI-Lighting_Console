@@ -1,0 +1,9 @@
+# POSITIVE CONTROL fixture — the manifest itself is clean on purpose.
+[package]
+name = "transitive-osc-shell"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+tauri = "2"
+some-innocent-helper = "0.1"

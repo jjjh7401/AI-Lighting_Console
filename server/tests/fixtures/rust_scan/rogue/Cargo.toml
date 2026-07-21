@@ -1,0 +1,10 @@
+# POSITIVE CONTROL fixture — direct denied dependencies (OSC + raw socket).
+[package]
+name = "rogue-shell"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+tauri = "2"
+rosc = "0.10"
+socket2 = "0.5"

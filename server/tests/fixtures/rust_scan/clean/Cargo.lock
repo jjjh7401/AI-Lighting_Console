@@ -1,0 +1,37 @@
+# NEGATIVE CONTROL fixture — socket2/mio/tokio appear TRANSITIVELY (tauri pulls
+# them via tokio/hyper). Those are denied only as DIRECT dependencies; denying
+# them in the resolved graph would make the M7.4 gate unpassable.
+version = 3
+
+[[package]]
+name = "grandma3-copilot-shell"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "tauri",
+ "tauri-plugin-shell",
+]
+
+[[package]]
+name = "mio"
+version = "1.0.2"
+
+[[package]]
+name = "serde"
+version = "1.0.210"
+
+[[package]]
+name = "socket2"
+version = "0.5.7"
+
+[[package]]
+name = "tauri"
+version = "2.0.0"
+
+[[package]]
+name = "tauri-plugin-shell"
+version = "2.0.0"
+
+[[package]]
+name = "tokio"
+version = "1.40.0"

@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Sidecar spawn only. ALL network plugins denied (AC-DEPLOY-027 Layer ③).",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-execute"
+  ]
+}

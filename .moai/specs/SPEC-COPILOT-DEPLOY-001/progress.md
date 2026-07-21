@@ -218,6 +218,44 @@ Stage-2 M7의 두 번째 하위 마일스톤 — teardown Option C(FEAS-5) 2-축
 
 **커밋**: M7.2 구현 커밋 1건(`feat/app-deploy-file-import` 직접 커밋 — 원격 없음, push/PR 없음). 변경 파일: `server/web/launcher.py`, `server/web/serve.py`, `server/tests/test_web_launcher.py`, `server/tests/watchdog_child.py`(신규 테스트 헬퍼).
 
+### M7.3 — SAFETY-2 교차언어 이중 스캔 (2026-07-21, cycle_type=tdd, Stage-2)
+
+Stage-2 M7의 세 번째 하위 마일스톤 — Python-전용 가드(`test_architecture.py` import 경계 + `test_deploy_safety_invariants.py` AST allowlist)가 볼 수 없는 **Rust/wire 사각지대**를 닫는다. `src-tauri/` 미생성, Rust 소스 0줄(픽스처 제외 — 스캐폴드는 M7.4).
+
+**신규 파일**: `packaging/rust_scan.py`(Layer ① deny-all 스캐너), `packaging/wire_sink.py`(Layer ② UDP 싱크 + 감사 대조), `server/tests/test_deploy_cross_language_scan.py`(24건), `server/tests/fixtures/rust_scan/{rogue,rogue_lock,rogue_capability,clean}/`(상시 CI 고정 픽스처). **배치 근거**: 두 모듈은 raw socket을 생성하므로 `server/` 아래 두면 기존 AST 송신-표면 allowlist와 충돌한다 → `packaging/`(배포 도구, 서버 프로덕션 코드 아님)에 둔다. 기존 두 가드는 **무변경**(약화 0, 병행 추가).
+
+**Layer ① — Rust deny-all 정적 스캔**: `**/*.rs` + `Cargo.toml` + `Cargo.lock` + `capabilities/*.json`를 **빈(deny-all) allowlist**로 스캔. 마커 `UdpSocket`/`std::net::`/`.bind|.connect|.send_to`/OSC 크레이트/`127.0.0.1`·콘솔 포트(8000·9000) 리터럴. 주석은 **문자열 리터럴 인식 스트리퍼**로 제거(산문 disclaimer 오탐 방지 — Python AST 스캔과 동일 관용) 하되 `"http://127.0.0.1:8000"` 같이 **문자열 안에 숨은 마커는 계속 flag**(순진한 `//` 스트리퍼는 fail-OPEN). 매니페스트는 **2단 denylist**: OSC/raw-UDP 크레이트는 **전이 `Cargo.lock` 포함 어디서든** 거부, `socket2`/`mio`/`reqwest` 등은 **직접 의존일 때만** 거부(tokio/hyper가 이들을 정당하게 전이로 끌어오므로 lock에서 거부하면 M7.4에 통과 불가능한 게이트가 된다).
+
+**Layer ② — wire-level 패킷 싱크**: 싱크를 **effective settings에서 해소한 실제 send_port**에 바인드(하드코딩 8000 아님 — 감사 결함 D3). 관측된 모든 datagram을 OSC 디코드 → responder verb/subject로 정규화 → 게이트 감사 `executed` 로그와 **1:1 다중집합 대조**. 방향은 의도적으로 비대칭: **관측O·감사X = 위반**(Rust sidecar raw UDP 우회가 정확히 이 형태), **감사O·관측X = 정상**(UDP 유실/전송 전 검증 실패는 우회가 아님).
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| AC-DEPLOY-027 Layer ① ④ (MANDATORY 픽스처 — rogue FAIL / clean PASS) | PASS | `.venv/bin/python packaging/rust_scan.py server/tests/fixtures/rust_scan/{rogue,rogue_lock,rogue_capability,clean}` | rogue `FAIL — 3 file(s) scanned (rust=1, manifest=2, capability=0), 12 violation(s)`(exit=1) / rogue_lock `FAIL — 1 violation`(전이 `nannou_osc`, exit=1) / rogue_capability `FAIL — 2 violation`(`http:default`+`websocket:allow-connect`, exit=1) / clean `PASS — 4 file(s) scanned (rust=1, manifest=2, capability=1), 0 violation(s)`(exit=0) |
+| AC-DEPLOY-027 Layer ① ①② (부재/빈 트리 = FAIL(blocked), `files_scanned > 0`) | PASS | `pytest server/tests/test_deploy_cross_language_scan.py -q` (`TestLayer1FailsClosedOnAnEmptyOrAbsentTree` 3건) | `23 passed, 1 skipped in 3.65s` — 부재 트리 `blocked=True, files_scanned=0, ok=False`; 빈 트리 동일; `target/`만 있는 트리도 blocked(빌드 산출물로 files_scanned 부풀리기 차단) |
+| AC-DEPLOY-027 Layer ① ③ (실제 `src-tauri/` deny-all 게이트) | **PENDING-M7.4** | `.venv/bin/python packaging/rust_scan.py` | `BLOCKED (…/src-tauri does not exist — a deny-all scan of an absent tree is a FAIL (blocked), not a pass)` exit=1. **미검증을 통과로 주장하지 않음.** 활성화 조건 아래 참조 |
+| AC-DEPLOY-027 Layer ② ① (싱크 = effective settings의 send_port, 8000 아님) | PASS | `pytest …::TestLayer2SinkBindsTheConfiguredPort` + 패키지 E2E Step 8 | 단위: `resolve_effective_settings(user_path=…)` → `console_port == sink.port != DEFAULT_CONSOLE_PORT`. 패키지: `sink bound to effective send_port 51703 (GET /api/settings console_port=51703; NOT the 8000 default)` |
+| AC-DEPLOY-027 Layer ② ②③ (1:1 대조 + **양성 관측 ≥1**) | PASS | `.venv/bin/python packaging/verify_packaged_e2e.py` (Step 8) | `positive observation: 4 datagram(s) captured, 4 reconciled 1:1 against 4 gate 'executed' audit entries` / `verbs observed: ['exec', 'ping']` / `0 observed-but-unaudited senders`. 단위: 빈 캡처 `reconcile((), [])` → `positive_observation=False, ok=False`(vacuous 충족 차단) |
+| AC-DEPLOY-027 Layer ② ④ (미감사 송신자 fail-closed + synthetic rogue flag) | PASS | 동일 실행 (`TestLayer2FailsClosedOnAnUnauditedSender` 2건 + E2E Step 8) | 단위: 게이트를 거치지 않은 `/copilot/cmd "Delete Sequence 5"` 주입 → `unaudited=1, ok=False`; 비-OSC 바이트열 → `verb="?"` → `ok=False`. 패키지: `synthetic rogue datagram injected off-gate -> FLAGGED (1 unaudited)` |
+| AC-DEPLOY-027 공통 (Tauri capabilities 네트워크 플러그인 deny) | **부분 PASS(메커니즘) / PENDING-M7.4(실파일)** | `pytest …::TestLayer1CapabilityScan` | 스캐너가 `capabilities/*.json`을 읽어 `http:`/`websocket:`/`upload:`/`geolocation:` 권한을 flag함을 픽스처로 증명(rogue_capability FAIL, clean sidecar-scoped PASS). **실 capability 파일 작성은 M7.4** — `src-tauri/` 부재로 지금 작성 불가 |
+| AC-DEPLOY-014 (안전 불변식 — 신규 OSC 송신 경로 0) | PASS | `pytest server/tests/test_architecture.py server/tests/test_deploy_safety_invariants.py -q` | `15 passed`(기존 가드 무변경·무약화). `ls -d src-tauri` → `No such file or directory`; `find . -name "*.rs"` → 픽스처 4건뿐 |
+| 패키지 E2E 전체 (회귀) | PASS | `.venv/bin/python packaging/verify_packaged_e2e.py` | `RESULT: ALL PASS` — Step 1~9 전부 PASS(신규 Step 8 삽입, 기존 SIGTERM 단계는 Step 9로 번호 이동). 실 frozen `.app`, loopback, onPC 불요 |
+
+**Regression**: full suite → `1086 passed, 1 skipped`(baseline 1063 + 신규 23 통과 + 1 PENDING-M7.4 skip, 회귀 **0**). UI `npx vitest run` → `57 passed`(무변경), `npm run build` → `✓ built in 330ms`. `ruff check server/ packaging/` → `Found 2 errors`(둘 다 기존 `server/safety/console.py:221/258` E501, **NEW 0**).
+
+**RED 증명(mutation)**: 구현을 4회 인위적으로 무력화해 가드가 실제로 무는지 확인 — ① 부재-트리 `blocked=False`로 변조 → 2건 FAIL ② 양성-관측 요구 제거 → 1건 FAIL ③ 소스 마커/전이 denylist/capability denylist 비우기 → 4건 FAIL ④ 미감사 datagram을 matched로 처리 → 2건 FAIL. 원복 후 전건 green.
+
+**@MX tags added**: `packaging/rust_scan.py` `scan_rust_source`·`scan_rust_tree`, `packaging/wire_sink.py` `reconcile`, `server/tests/test_deploy_cross_language_scan.py` `M74_PENDING_REASON` — 4건 모두 `@MX:ANCHOR` + `@MX:REASON` + `@MX:SPEC`.
+
+**M7.4 의무(명시 이월)**:
+1. **Layer ① 실트리 게이트 활성화** — `src-tauri/` 생성 즉시 `TestLayer1RealSrcTauriGate::test_real_tree_gate_state_is_accurate`(항상 실행, **자동 flip**)가 blocked-분기에서 deny-all 분기로 전환되고, `test_real_src_tauri_tree_passes_the_deny_all_scan`의 `skipif`가 자동 해제된다. **통과 조건**: `blocked=False` + `files_scanned>0` + `violations==()` + `capability_files_scanned>0`. 잊힘 방지를 위해 `PENDING-M7.4`를 grep 가능한 마커로 6곳에 고정.
+2. **Tauri v2 capability 파일 작성** — `src-tauri/capabilities/default.json`에 **모든 네트워크 플러그인 deny**(`http:`/`websocket:`/`upload:`/`geolocation:` 권한 0건) + `tauri-plugin-shell`을 **sidecar spawn만으로 스코프**. `server/tests/fixtures/rust_scan/clean/capabilities/default.json`이 형태 참조.
+3. **Rust 소스의 loopback/포트 리터럴 금지(설계 제약)** — deny-all은 `127.0.0.1`·8000·9000 리터럴도 위반으로 본다. Tauri 셸이 웹뷰에 웹 포트를 알려야 한다면 리터럴 하드코딩이 아니라 sidecar/IPC로 전달해야 한다(M7.1 토큰 주입 경로와 동일 축).
+4. **Layer ② 1:1 회계의 알려진 예외** — `ConsoleLink._deploy_via_file_import`는 게이트 감사 `kind="deploy"` **1건** 아래에서 콘솔 왕복을 **여러 번**(state 조회·`Delete Plugin`·`Import Plugin`) 수행하므로, deploy를 포함하는 캡처는 datagram 수 > 감사 수가 된다. 우회는 아니지만(명령 문자열이 고정 리터럴, lock/health 재검사 적용) **회계 갭은 실재**하므로 `wire_sink.py` docstring에 기록했고 M7.4/후속에서 별도 판단이 필요하다.
+
+**환경-게이트 N/A 없음(Layer ②)** — 순수 loopback으로 지금 완전 검증됨(실 frozen `.app` 위에서 실행). Layer ①의 실트리 절만 M7.4 게이트.
+
+**커밋**: M7.3 구현 커밋 1건(`feat/app-deploy-file-import` 직접 커밋 — 원격 없음, push/PR 없음).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 `run_status: audit-ready` (Stage-1)

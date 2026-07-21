@@ -1,0 +1,23 @@
+# POSITIVE CONTROL fixture — resolved graph carrying the denied OSC crate.
+version = 3
+
+[[package]]
+name = "rogue-shell"
+version = "0.0.0"
+dependencies = [
+ "rosc",
+ "socket2",
+ "tauri",
+]
+
+[[package]]
+name = "rosc"
+version = "0.10.1"
+
+[[package]]
+name = "socket2"
+version = "0.5.7"
+
+[[package]]
+name = "tauri"
+version = "2.0.0"
