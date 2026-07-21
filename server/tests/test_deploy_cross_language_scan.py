@@ -32,6 +32,21 @@ Layer ③ — Tauri v2 capabilities: ``src-tauri/capabilities/*.json`` does not
     exist yet either. The scanner already reads capability files (network-plugin
     permissions are violations), so the check activates with the scaffold; the
     concrete authoring obligation is recorded in progress.md §E.2 (M7.4).
+
+AC-DEPLOY-028 ① — Rust/Tauri credential-store scan (same scanner, SECOND
+    invariant). Key custody is deliberately Python-side: the backend sidecar
+    reaches the OS keychain through Python ``keyring``, and the Rust host does
+    sidecar spawn + lifecycle ONLY (plan.md §A.2, decision F5'). So credential
+    access appearing anywhere in ``src-tauri/`` — source marker, direct
+    dependency, or TRANSITIVE lock entry — is by definition an architecture
+    violation, not a judgement call.
+
+    The credential class is scanned by the SAME deny-all machinery as the
+    network class and reported SEPARATELY (``ScanResult.credential_violations``
+    vs ``.network_violations``, ``Violation.invariant``), so a finding always
+    says which invariant it broke. Clauses ② and ③ of AC-DEPLOY-028 (the
+    Stage-1 Python key path, and zero key strings in written files + the
+    session-only fallback) live in ``server/tests/test_deploy_keystore.py``.
 """
 
 from __future__ import annotations
@@ -233,6 +248,191 @@ class TestLayer1RealSrcTauriGate:
             "M7.4 obligation: src-tauri/capabilities/*.json must deny all network "
             "plugins and scope tauri-plugin-shell to sidecar spawn only"
         )
+
+
+# ------------------------------------------------- AC-DEPLOY-028 ① credential custody
+
+# One canonical sample per credential marker. This table is the NON-VACUITY
+# proof for AC-DEPLOY-028 ①: a marker set that matches nothing would let the
+# real tree pass for the wrong reason, so every marker must be shown to fire on
+# a realistic credential-access line before the real-tree PASS means anything.
+_CREDENTIAL_MARKER_SAMPLES: tuple[tuple[str, str], ...] = (
+    ("credential_keyring", "use keyring::Entry;\n"),
+    ("credential_keychain", "let store = open_keychain(service)?;\n"),
+    ("credential_security_framework_api", "unsafe { SecItemCopyMatching(q, r) };\n"),
+    ("credential_security_framework_api", "unsafe { SecKeychainFindGenericPassword() };\n"),
+    ("credential_security_framework_crate", "use security_framework::passwords::get;\n"),
+    ("credential_keytar", 'keytar::get_password("svc", "acct");\n'),
+    ("credential_wincred", "use wincred::Credential;\n"),
+    ("credential_windows_cred_api", "unsafe { CredReadW(target, 1, 0, &mut cred) };\n"),
+    ("credential_windows_cred_api", "unsafe { CredWriteW(&cred, 0) };\n"),
+    ("credential_secret_service", "use secret_service::SecretService;\n"),
+)
+
+
+class TestCredentialMarkerSetIsLive:
+    """Every credential marker must actually fire. A scan that passes because
+    its regexes match NOTHING is worse than no scan (AC-DEPLOY-028 ①)."""
+
+    @pytest.mark.parametrize(("marker", "sample"), _CREDENTIAL_MARKER_SAMPLES)
+    def test_marker_fires_on_a_canonical_sample(self, marker, sample):
+        from rust_scan import scan_rust_source
+
+        hits = {v.marker for v in scan_rust_source(sample, "src/probe.rs")}
+        assert marker in hits, f"{marker} matched nothing in {sample!r}"
+
+    def test_every_declared_source_marker_has_a_sample(self):
+        # Guards the reverse direction: a marker added to the scanner without a
+        # sample here would be untested and could silently be a no-op regex.
+        from rust_scan import CREDENTIAL_MARKERS, credential_source_marker_names
+
+        sampled = {marker for marker, _ in _CREDENTIAL_MARKER_SAMPLES}
+        assert set(credential_source_marker_names()) == sampled
+        assert sampled <= set(CREDENTIAL_MARKERS)
+
+
+class TestCredentialRogueFixtureIsFlagged:
+    """Positive control (MANDATORY CI fixture) — a Rust shell that reads the OS
+    credential store FAILS the scan even though its network surface is clean."""
+
+    def test_rogue_credential_source_is_flagged(self):
+        result = scan_rust_tree(FIXTURES / "rogue_credential")
+        assert result.blocked is False, result.blocked_reason
+        assert result.files_scanned > 0
+        assert result.ok is False, "a Rust keychain reader passed the scan"
+        markers = {v.marker for v in result.violations}
+        assert {"credential_keyring", "credential_security_framework_api"} <= markers
+        assert any(v.path.endswith("src/main.rs") for v in result.violations)
+
+    def test_rogue_credential_direct_dependency_is_flagged(self):
+        result = scan_rust_tree(FIXTURES / "rogue_credential")
+        offenders = {
+            v.detail for v in result.violations if v.marker == "denied_credential_crate_direct"
+        }
+        assert any("keyring" in d for d in offenders), offenders
+
+    def test_rogue_credential_transitive_lock_entry_is_flagged(self):
+        # A credential crate need never be a direct dep — security-framework is
+        # the macOS Security/Keychain binding and arrives through `keyring`.
+        result = scan_rust_tree(FIXTURES / "rogue_credential")
+        lock_hits = [
+            v for v in result.violations if v.marker == "denied_credential_crate_transitive"
+        ]
+        assert lock_hits, result.violations
+        assert any("security-framework" in v.detail for v in lock_hits)
+        assert all(v.path.endswith("Cargo.lock") for v in lock_hits)
+
+
+class TestCredentialAndNetworkClassesAreDistinguishable:
+    """A violation must say WHICH invariant it broke — a credential breach must
+    never be masked by, or mistaken for, a socket finding."""
+
+    def test_network_clean_credential_dirty_tree_reports_only_credential(self):
+        result = scan_rust_tree(FIXTURES / "rogue_credential")
+        assert result.network_violations == (), result.network_violations
+        assert result.credential_violations, result.violations
+        assert all(v.invariant == "credential" for v in result.credential_violations)
+
+    def test_credential_free_rogue_tree_reports_only_network(self):
+        result = scan_rust_tree(FIXTURES / "rogue")
+        assert result.credential_violations == (), result.credential_violations
+        assert result.network_violations, result.violations
+        assert all(v.invariant == "network" for v in result.network_violations)
+
+    def test_summary_breaks_the_two_classes_out(self):
+        summary = scan_rust_tree(FIXTURES / "rogue_credential").summary()
+        assert "credential=" in summary, summary
+        assert "network=" in summary, summary
+
+    def test_clean_summary_is_unchanged_by_the_credential_class(self):
+        # The PASS line is quoted verbatim as run-phase evidence; adding a
+        # second invariant must not reformat it.
+        summary = scan_rust_tree(FIXTURES / "clean").summary()
+        assert summary.startswith("PASS — ")
+        assert summary.endswith("0 violation(s)"), summary
+
+
+class TestCleanTreeHasNoCredentialViolations:
+    """Negative control — a legitimate Tauri shell spawns a sidecar and touches
+    no secret, so it must clear the credential invariant too."""
+
+    def test_clean_tree_is_credential_clean_and_not_vacuous(self):
+        result = scan_rust_tree(FIXTURES / "clean")
+        assert result.credential_violations == (), result.credential_violations
+        assert result.ok is True
+        assert result.rust_files_scanned > 0, "credential PASS on 0 rust files is vacuous"
+
+    def test_credential_prose_disclaimer_does_not_false_positive(self):
+        # clean/src/main.rs DISCLAIMS credential access in a comment, naming the
+        # markers. Comments are stripped before matching (string literals are
+        # NOT) — the same prose tolerance the network class already has.
+        source = (FIXTURES / "clean" / "src" / "main.rs").read_text(encoding="utf-8")
+        assert "keyring" in source, "fixture lost its credential disclaimer"
+        assert "SecItemCopyMatching" in source, "fixture lost its credential disclaimer"
+        assert scan_rust_tree(FIXTURES / "clean").ok is True
+
+    def test_credential_marker_inside_a_string_literal_is_still_flagged(self):
+        # Comment stripping stays string-aware for the credential class: the
+        # "//" inside a URL-shaped literal must not swallow the marker.
+        from rust_scan import scan_rust_source
+
+        hits = scan_rust_source('let svc = "keyring://com.example/anthropic";\n', "src/hidden.rs")
+        assert "credential_keyring" in {h.marker for h in hits}
+
+
+class TestRealSrcTauriCredentialGate:
+    """AC-DEPLOY-028 ① against the REAL tree. Exactly one branch applies, ALWAYS
+    — the same auto-flipping fail-closed convention Layer ① uses."""
+
+    def test_real_tree_credential_gate_state_is_accurate(self):
+        result = scan_rust_tree(SRC_TAURI_DIR)
+        if not SRC_TAURI_DIR.exists():
+            assert result.blocked is True, "absent src-tauri/ must block, not pass"
+            assert result.files_scanned == 0
+            assert result.ok is False
+        else:
+            assert result.blocked is False, result.blocked_reason
+            assert result.files_scanned > 0
+            assert result.credential_violations == (), result.credential_violations
+
+    @pytest.mark.skipif(not SRC_TAURI_DIR.exists(), reason=M74_PENDING_REASON)
+    def test_real_src_tauri_tree_holds_zero_credential_access(self):
+        # AC-DEPLOY-028 ①: Rust does sidecar spawn + lifecycle ONLY. Key custody
+        # is Python-side (server/deploy/keystore.py via `keyring`).
+        result = scan_rust_tree(SRC_TAURI_DIR)
+        assert result.credential_violations == (), result.credential_violations
+        assert result.rust_files_scanned > 0, "0 rust files scanned is a vacuous credential PASS"
+        assert result.manifest_files_scanned > 0, (
+            "Cargo.toml + Cargo.lock must be read — a credential crate can arrive "
+            "transitively without any source marker"
+        )
+
+    @pytest.mark.skipif(not SRC_TAURI_DIR.exists(), reason=M74_PENDING_REASON)
+    def test_real_tree_shape_with_an_injected_credential_read_is_flagged(self, tmp_path):
+        # NON-VACUITY against the REAL tree. The PASS above proves nothing unless
+        # the same scan, over the same files, FAILS the moment a credential
+        # access appears. Mirror only the scanned files, inject one line, rescan.
+        baseline = scan_rust_tree(SRC_TAURI_DIR)
+        mirror = tmp_path / "src-tauri"
+        for rel in baseline.scanned_paths:
+            dest = mirror / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text((SRC_TAURI_DIR / rel).read_text(encoding="utf-8"), encoding="utf-8")
+
+        before = scan_rust_tree(mirror)
+        assert before.ok is True, before.violations
+        assert before.files_scanned == baseline.files_scanned, "mirror is not the real tree shape"
+
+        main_rs = mirror / "src" / "main.rs"
+        main_rs.write_text(
+            main_rs.read_text(encoding="utf-8")
+            + '\nfn leak() { let _ = keyring::Entry::new("com.grandma3copilot.app", "gemini"); }\n',
+            encoding="utf-8",
+        )
+        after = scan_rust_tree(mirror)
+        assert after.ok is False, "an injected keyring read PASSED the real-tree scan shape"
+        assert {v.marker for v in after.credential_violations} == {"credential_keyring"}
+        assert after.network_violations == (), "a credential breach leaked into the network class"
 
 
 # ----------------------------------------------------------------- Layer ② wire sink

@@ -1,0 +1,27 @@
+# POSITIVE CONTROL fixture — `security-framework` (the Rust binding to the macOS
+# Security framework that houses the Keychain APIs) enters TRANSITIVELY via
+# `keyring`. A credential surface need never be a direct dependency to exist.
+version = 3
+
+[[package]]
+name = "credential-leak-shell"
+version = "0.0.0"
+dependencies = [
+ "keyring",
+ "tauri",
+]
+
+[[package]]
+name = "keyring"
+version = "3.6.1"
+dependencies = [
+ "security-framework",
+]
+
+[[package]]
+name = "security-framework"
+version = "2.11.1"
+
+[[package]]
+name = "tauri"
+version = "2.0.0"

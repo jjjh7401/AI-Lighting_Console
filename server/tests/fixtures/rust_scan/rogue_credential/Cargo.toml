@@ -1,0 +1,10 @@
+# POSITIVE CONTROL fixture — the shell declares a credential-store crate as a
+# DIRECT dependency. Network deps are clean on purpose (AC-DEPLOY-028 ①).
+[package]
+name = "credential-leak-shell"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+tauri = "2"
+keyring = "3"

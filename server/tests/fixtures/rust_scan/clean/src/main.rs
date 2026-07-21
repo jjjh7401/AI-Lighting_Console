@@ -2,9 +2,12 @@
 // PyInstaller backend as a sidecar, loads ui/dist in the native window, and
 // draws a tray icon. None of that needs a socket to the console: there is no
 // UdpSocket, no std net import and no raw send anywhere in this shell — the
-// gate owns every console byte. This comment deliberately NAMES the markers so
-// the deny-all scan's comment stripping is exercised (a prose disclaimer must
-// not false-positive, exactly as in the Python AST scan).
+// gate owns every console byte. It also never touches the OS credential store:
+// no keyring, no keychain, no SecItemCopyMatching call anywhere — key custody
+// is Python-side only (AC-DEPLOY-028 ①). This comment deliberately NAMES the
+// markers of BOTH invariants so the deny-all scan's comment stripping is
+// exercised (a prose disclaimer must not false-positive, exactly as in the
+// Python AST scan).
 
 use tauri::Manager;
 use tauri_plugin_shell::ShellExt;

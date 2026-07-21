@@ -5,6 +5,21 @@ strings in any file the app writes; env-scrub) and AC-DEPLOY-016 (credential
 store unavailable/locked/denied -> explicit error + session-only in-memory
 fallback, never a plaintext-disk fallback).
 
+Also carries clauses ② and ③ of AC-DEPLOY-028 (Stage-2 M7 key-custody
+invariant), which asserts the Stage-1 key path is unchanged by the Tauri shell:
+
+* ② the Stage-1 key path stays green and UNCHANGED — ``inject_active_provider_key``
+  (``server/deploy/keystore.py``) and ``scrub_environ`` (same module) are
+  exercised below; the Rust host adds no key path of its own.
+* ③ zero key strings in any file the app writes (the AC-DEPLOY-004 scan) AND
+  the session-only fallback when the store is unavailable (AC-DEPLOY-016) both
+  still hold.
+
+Clause ① of AC-DEPLOY-028 (ZERO credential-store access in Rust/Tauri source —
+the host does sidecar spawn + lifecycle only) is a cross-language static scan
+and lives in ``server/tests/test_deploy_cross_language_scan.py`` +
+``packaging/rust_scan.py``. Together the three clauses cover the invariant.
+
 Testing discipline: the real macOS Keychain is NEVER touched. Every test that
 exercises the keyring path installs a hand-rolled in-memory backend (or a
 deliberately-broken backend to simulate unavailable/locked/denied), and the
@@ -137,6 +152,13 @@ class TestPersistentRoundtrip:
 
 
 class TestEnvInjection:
+    """AC-DEPLOY-028 ② — the Stage-1 key-injection path, UNCHANGED by Stage-2.
+
+    The Tauri host never reads a key: it spawns the sidecar, and the sidecar
+    resolves the active provider's key from the OS store itself. These tests are
+    the regression evidence that the Stage-1 path still holds after M7.
+    """
+
     def test_env_vars_for_provider(self):
         assert keystore.env_vars_for_provider("anthropic") == ("ANTHROPIC_API_KEY",)
         assert keystore.env_vars_for_provider("gemini") == ("GEMINI_API_KEY", "GOOGLE_API_KEY")
@@ -164,6 +186,8 @@ class TestEnvInjection:
 
     def test_inject_active_provider_key_integrates_with_settings(self, memory_keyring, tmp_path):
         # M1 seam: the active provider comes from resolve_effective_settings.
+        # AC-DEPLOY-028 ② names this entry point (`inject_active_provider_key`)
+        # as the Stage-1 key path that must stay green and unchanged at M7.
         user_path = tmp_path / "settings.toml"
         save_user_settings(
             UserSettings(
@@ -187,7 +211,12 @@ class TestEnvInjection:
 
 
 class TestStoreUnavailable:
-    """AC-DEPLOY-016 — store unavailable/locked/denied handling."""
+    """AC-DEPLOY-016 (+ AC-DEPLOY-028 ③) — store unavailable/locked/denied.
+
+    The session-only fallback AC-DEPLOY-028 ③ requires to still hold is the
+    ``set_session_api_key`` path exercised here: when the OS store is
+    unavailable the key lives in memory for the session and NEVER on disk.
+    """
 
     def test_set_raises_explicit_error_no_plaintext_fallback(self, broken_keyring):
         with pytest.raises(keystore.KeystoreUnavailableError):
@@ -234,7 +263,8 @@ class TestStoreUnavailable:
 
 
 class TestNoPlaintextLeak:
-    """AC-DEPLOY-004 (2) + AC-DEPLOY-016 (1) — zero key strings on disk."""
+    """AC-DEPLOY-004 (2) + AC-DEPLOY-016 (1) + AC-DEPLOY-028 ③ — zero key
+    strings in any file the app writes (the scan AC-DEPLOY-028 ③ inherits)."""
 
     def test_no_key_string_in_any_written_file(self, memory_keyring, tmp_path):
         keystore.set_api_key("anthropic", _FAKE_ANTHROPIC_KEY)
@@ -295,7 +325,11 @@ class TestNoPlaintextLeak:
 
 
 class TestEnvScrub:
-    """AC-DEPLOY-004 (2) — env-scrub (DECIDE-M6)."""
+    """AC-DEPLOY-004 (2) + AC-DEPLOY-028 ② — env-scrub (DECIDE-M6).
+
+    ``scrub_environ`` is the second Stage-1 entry point AC-DEPLOY-028 ② names;
+    the Tauri host inherits and passes an environment, so this must stay green.
+    """
 
     def test_scrubs_provider_key_values(self):
         env = {

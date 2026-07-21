@@ -1,4 +1,19 @@
-"""Layer ① — Rust/Tauri **deny-all** static scan (M7.3, AC-DEPLOY-027 / SAFETY-2).
+"""Rust/Tauri **deny-all** static scan (M7.3, AC-DEPLOY-027 / SAFETY-2 Layer ①;
+M7.6, AC-DEPLOY-028 ① key custody).
+
+Two INVARIANTS are scanned by the same machinery and reported separately, so a
+finding always says which one it broke:
+
+``network`` (AC-DEPLOY-027 Layer ①)
+    The shell must own no console byte — see the raw-socket rationale below.
+
+``credential`` (AC-DEPLOY-028 ①)
+    Key custody is deliberately Python-side: the backend sidecar reaches the OS
+    keychain via Python ``keyring`` (``server/deploy/keystore.py``), and the
+    Rust host does sidecar spawn + lifecycle ONLY (plan.md §A.2, decision F5').
+    So credential-store access anywhere in the shell — source marker, direct
+    dependency, or TRANSITIVE lock entry — is by definition an architecture
+    violation, not a judgement call. The allowlist is EMPTY here too.
 
 The Stage-1 Python guards (``server/tests/test_architecture.py`` import boundary,
 ``server/tests/test_deploy_safety_invariants.py`` AST allowlist) are blind to a
@@ -68,6 +83,63 @@ _SOURCE_MARKERS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("loopback_literal", re.compile(r"\b127\.0\.0\.1\b")),
 )
 
+# @MX:ANCHOR: [AUTO] credential-store marker set — the ONLY static detector for
+#   Rust-side key access; the Python keystore guards cannot see this language
+# @MX:REASON: key custody is Python-side by architecture (plan.md §A.2 F5'), so
+#   loosening a marker here silently re-opens a path where the Rust host reads
+#   the OS keychain directly — the exact breach AC-DEPLOY-028 ① exists to block.
+#   Markers are DELIBERATELY narrow (credential-STORE APIs only): the shell
+#   legitimately mints and carries a per-launch handshake token, so generic
+#   words like "token"/"secret"/"credential" are NOT markers — they would
+#   false-positive on sidecar.rs and force the set to be weakened.
+# @MX:SPEC: SPEC-COPILOT-DEPLOY-001
+#   The store-name markers match as a SUBSTRING, not on a word boundary: a
+#   shell writes `fn open_keychain()` or `let keyring_entry = ...`, where `\b`
+#   never fires because `_` is a word character. These names are distinctive
+#   enough that any identifier containing them IS about the credential store.
+_CREDENTIAL_SOURCE_MARKERS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("credential_keyring", re.compile(r"keyring", re.IGNORECASE)),
+    ("credential_keychain", re.compile(r"keychain", re.IGNORECASE)),
+    # Security.framework symbols, incl. `SecItemCopyMatching` / `SecKeychainAdd…`.
+    ("credential_security_framework_api", re.compile(r"\bSec(?:Item|Keychain)\w*", re.IGNORECASE)),
+    ("credential_security_framework_crate", re.compile(r"security[_-]framework", re.IGNORECASE)),
+    ("credential_keytar", re.compile(r"keytar", re.IGNORECASE)),
+    ("credential_wincred", re.compile(r"wincred", re.IGNORECASE)),
+    # Win32 credential-manager entry points: `CredReadW` / `CredWriteW` / …
+    ("credential_windows_cred_api", re.compile(r"\bCred(?:Read|Write)\w*", re.IGNORECASE)),
+    ("credential_secret_service", re.compile(r"secret[_-]service", re.IGNORECASE)),
+)
+
+# Credential-store crates denied ANYWHERE, including as a TRANSITIVE Cargo.lock
+# entry. Nothing a sidecar-spawning shell legitimately needs pulls a credential
+# crate, so a transitive appearance is itself the finding — `security-framework`
+# is the Rust binding to the macOS Security framework that houses the Keychain
+# APIs, and it arrives through a TLS stack the shell already denies directly.
+_DENIED_CREDENTIAL_CRATES = frozenset(
+    {
+        "keyring",
+        "security-framework",
+        "security-framework-sys",
+        "keytar",
+        "wincred",
+        "windows-credentials",
+        "secret-service",
+        "keyutils",
+        "linux-keyutils",
+    }
+)
+
+# Marker names belonging to the ``credential`` invariant (source + manifest).
+CREDENTIAL_MARKERS = frozenset(
+    {marker for marker, _ in _CREDENTIAL_SOURCE_MARKERS}
+    | {"denied_credential_crate_direct", "denied_credential_crate_transitive"}
+)
+
+
+def credential_source_marker_names() -> tuple[str, ...]:
+    """Distinct source-marker names of the ``credential`` invariant."""
+    return tuple(dict.fromkeys(marker for marker, _ in _CREDENTIAL_SOURCE_MARKERS))
+
 # Crates denied ANYWHERE, including as a TRANSITIVE Cargo.lock entry: nothing in
 # a legitimate Tauri dependency graph pulls an OSC or raw-UDP crate, so a
 # transitive appearance is itself the finding.
@@ -118,6 +190,20 @@ _DENIED_CAPABILITY_PREFIXES = ("http:", "websocket:", "upload:", "geolocation:")
 _LOCK_NAME = re.compile(r'^\s*name\s*=\s*"([^"]+)"\s*$', re.MULTILINE)
 
 
+def _normalise_crate(name: str) -> str:
+    """Crate names compare hyphen-insensitively and case-insensitively."""
+    return name.replace("_", "-").lower()
+
+
+_NORMALISED_CREDENTIAL_CRATES = frozenset(_normalise_crate(c) for c in _DENIED_CREDENTIAL_CRATES)
+_NORMALISED_NETWORK_CRATES_TRANSITIVE = frozenset(
+    _normalise_crate(c) for c in _DENIED_CRATES_TRANSITIVE
+)
+_NORMALISED_NETWORK_CRATES_DIRECT = frozenset(
+    _normalise_crate(c) for c in (_DENIED_CRATES_TRANSITIVE | _DENIED_CRATES_DIRECT_ONLY)
+)
+
+
 @dataclass(frozen=True)
 class Violation:
     """One deny-all finding: what tripped, where, and the offending text."""
@@ -127,8 +213,13 @@ class Violation:
     line: int
     detail: str
 
+    @property
+    def invariant(self) -> str:
+        """Which invariant this finding broke: ``credential`` or ``network``."""
+        return "credential" if self.marker in CREDENTIAL_MARKERS else "network"
+
     def __str__(self) -> str:  # pragma: no cover - diagnostic sugar
-        return f"{self.path}:{self.line} [{self.marker}] {self.detail}"
+        return f"{self.path}:{self.line} [{self.invariant}/{self.marker}] {self.detail}"
 
 
 @dataclass(frozen=True)
@@ -153,15 +244,33 @@ class ScanResult:
     def ok(self) -> bool:
         return not self.blocked and not self.violations and self.files_scanned > 0
 
+    @property
+    def credential_violations(self) -> tuple[Violation, ...]:
+        """Findings that broke key custody (AC-DEPLOY-028 ①)."""
+        return tuple(v for v in self.violations if v.invariant == "credential")
+
+    @property
+    def network_violations(self) -> tuple[Violation, ...]:
+        """Findings that broke the console send-surface (AC-DEPLOY-027 Layer ①)."""
+        return tuple(v for v in self.violations if v.invariant == "network")
+
     def summary(self) -> str:
         if self.blocked:
             return f"BLOCKED ({self.blocked_reason})"
         verdict = "PASS" if self.ok else "FAIL"
-        return (
+        line = (
             f"{verdict} — {self.files_scanned} file(s) scanned "
             f"(rust={self.rust_files_scanned}, manifest={self.manifest_files_scanned}, "
             f"capability={self.capability_files_scanned}), "
             f"{len(self.violations)} violation(s)"
+        )
+        if not self.violations:
+            # The clean PASS line is quoted verbatim as run-phase evidence — a
+            # second invariant must not reformat it.
+            return line
+        return (
+            f"{line} [network={len(self.network_violations)}, "
+            f"credential={len(self.credential_violations)}]"
         )
 
 
@@ -213,11 +322,13 @@ def strip_rust_comments(source: str) -> str:
     return "".join(out)
 
 
-# @MX:ANCHOR: [AUTO] deny-all Rust marker scan — the ONLY cross-language OSC
-#   send-surface detector for the Stage-2 Tauri shell (AC-DEPLOY-027 Layer ①)
-# @MX:REASON: the Python AST/import guards cannot see Rust; loosening this
+# @MX:ANCHOR: [AUTO] deny-all Rust marker scan — the ONLY cross-language
+#   detector for BOTH the OSC send surface (AC-DEPLOY-027 Layer ①) and Rust-side
+#   credential-store access (AC-DEPLOY-028 ①) in the Stage-2 Tauri shell
+# @MX:REASON: the Python AST/import guards cannot see Rust; loosening either
 #   marker set or adding an allowlist entry silently re-opens the raw-UDP
-#   gate-bypass path the Stage-1 scans were built to close
+#   gate-bypass path the Stage-1 scans were built to close, or the Rust-reads-
+#   the-keychain path that breaks Python-side key custody
 # @MX:SPEC: SPEC-COPILOT-DEPLOY-001
 def scan_rust_source(
     source: str,
@@ -227,7 +338,7 @@ def scan_rust_source(
 ) -> list[Violation]:
     """Return every deny-all violation in one Rust source file."""
     stripped = strip_rust_comments(source)
-    markers = list(_SOURCE_MARKERS)
+    markers = list(_SOURCE_MARKERS) + list(_CREDENTIAL_SOURCE_MARKERS)
     for port in port_literals:
         markers.append(("console_port_literal", re.compile(rf"(?<![\w.]){port}(?![\w.])")))
 
@@ -251,14 +362,17 @@ def scan_rust_source(
 
 
 def scan_cargo_toml(text: str, rel_path: str) -> list[Violation]:
-    """Reject denied DIRECT dependencies (and an unparseable manifest)."""
+    """Reject denied DIRECT dependencies (and an unparseable manifest).
+
+    Credential-store crates are denied as a direct dependency too, and are
+    reported under their own marker so the finding names the broken invariant.
+    """
     try:
         manifest = tomllib.loads(text)
     except tomllib.TOMLDecodeError as error:
         # Fail-closed: a manifest we cannot read is a manifest we cannot clear.
         return [Violation(rel_path, "unparseable_manifest", 1, str(error))]
 
-    denied = _DENIED_CRATES_TRANSITIVE | _DENIED_CRATES_DIRECT_ONLY
     violations: list[Violation] = []
     tables: list[tuple[str, dict]] = []
     for table in _DEPENDENCY_TABLES:
@@ -277,7 +391,17 @@ def scan_cargo_toml(text: str, rel_path: str) -> list[Violation]:
 
     for table, section in tables:
         for crate in section:
-            if crate.replace("_", "-").lower() in {c.replace("_", "-") for c in denied}:
+            normalised = _normalise_crate(crate)
+            if normalised in _NORMALISED_CREDENTIAL_CRATES:
+                violations.append(
+                    Violation(
+                        rel_path,
+                        "denied_credential_crate_direct",
+                        1,
+                        f"[{table}] declares credential-store crate {crate!r}",
+                    )
+                )
+            elif normalised in _NORMALISED_NETWORK_CRATES_DIRECT:
                 violations.append(
                     Violation(
                         rel_path,
@@ -290,21 +414,25 @@ def scan_cargo_toml(text: str, rel_path: str) -> list[Violation]:
 
 
 def scan_cargo_lock(text: str, rel_path: str) -> list[Violation]:
-    """Reject denied crates anywhere in the resolved graph (transitive included)."""
+    """Reject denied crates anywhere in the resolved graph (transitive included).
+
+    Covers both invariants: OSC/raw-socket crates (network) and credential-store
+    crates (key custody), each under its own marker.
+    """
     violations: list[Violation] = []
-    normalised = {c.replace("_", "-") for c in _DENIED_CRATES_TRANSITIVE}
     for match in _LOCK_NAME.finditer(text):
         crate = match.group(1)
-        if crate.replace("_", "-").lower() in normalised:
-            line = text.count("\n", 0, match.start()) + 1
-            violations.append(
-                Violation(
-                    rel_path,
-                    "denied_crate_transitive",
-                    line,
-                    f"resolved graph contains denied crate {crate!r}",
-                )
-            )
+        normalised = _normalise_crate(crate)
+        if normalised in _NORMALISED_CREDENTIAL_CRATES:
+            marker = "denied_credential_crate_transitive"
+            detail = f"resolved graph contains credential-store crate {crate!r}"
+        elif normalised in _NORMALISED_NETWORK_CRATES_TRANSITIVE:
+            marker = "denied_crate_transitive"
+            detail = f"resolved graph contains denied crate {crate!r}"
+        else:
+            continue
+        line = text.count("\n", 0, match.start()) + 1
+        violations.append(Violation(rel_path, marker, line, detail))
     return violations
 
 
@@ -432,6 +560,7 @@ if __name__ == "__main__":  # pragma: no cover - operator entry point
     target = Path(sys.argv[1]) if len(sys.argv) > 1 else SRC_TAURI_DIR
     outcome = scan_rust_tree(target)
     print(f"deny-all Rust/Tauri scan: {outcome.root}")
+    print("invariants: network (AC-DEPLOY-027 Layer ①), credential (AC-DEPLOY-028 ①)")
     print(outcome.summary())
     for violation in outcome.violations:
         print(f"  {violation}")
