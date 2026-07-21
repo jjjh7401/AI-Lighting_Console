@@ -182,6 +182,36 @@ def probe_port_available(host: str, port: int) -> bool:
     return True
 
 
+def wait_until_serving(
+    host: str,
+    port: int,
+    *,
+    timeout: float = 30.0,
+    interval: float = 0.05,
+    probe: Callable[[str, int], bool] = probe_port_available,
+) -> bool:
+    """Block until ``host:port`` is bound by our own server; True when it is.
+
+    The inverse of :func:`probe_port_available`: once uvicorn is listening the
+    address can no longer be bound, so "unavailable" is the readiness signal.
+    Returns False on timeout — the caller announces best-effort rather than
+    hanging forever (M7.4a; the Stage-2 shell has no socket of its own to probe
+    with, so an unannounced backend is an app that never opens a window).
+    """
+    import time
+
+    if port == 0:
+        # "Let the OS choose" — the configured number is not the served one, so
+        # it can never report bound and the URL built from it is unreachable.
+        return False
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if not probe(host, port):
+            return True
+        time.sleep(interval)
+    return False
+
+
 def require_ports_available(specs: Iterable[tuple[str, int, str]]) -> None:
     """Raise :class:`PortInUseError` for the first occupied fixed port.
 
@@ -452,6 +482,58 @@ class ParentLivenessWatchdog:
             thread.join(self._poll_interval * 4 if timeout is None else timeout)
 
 
+def become_session_leader(
+    *,
+    environ: MutableMapping[str, str] | None = None,
+    setsid: Callable[[], object] | None = None,
+) -> bool:
+    """Detach into an own session/process group when a host spawned us (M7.4a).
+
+    ``terminate_process_tree`` and the Rust-side authoritative teardown both
+    reap a process GROUP: ``CommandChild::kill()`` alone would kill only the
+    sidecar pid and leave any grandchild squatting the ports (AC-DEPLOY-026 ①②).
+    Tauri's shell plugin exposes no ``pre_exec`` hook to make the child a group
+    leader from the parent side, so the sidecar does it to itself here.
+
+    Gated on the SAME host declaration as :func:`install_parent_watchdog`: a
+    Stage-1 terminal launch that detached would lose its controlling terminal and
+    stop responding to Ctrl-C. Returns True only when the detach actually
+    happened; an ``OSError`` (already a group leader — the goal is met anyway, or
+    no ``setsid`` on this platform) is swallowed.
+    """
+    source = os.environ if environ is None else environ
+    if PARENT_PIPE_FD_ENV not in source and PARENT_PID_ENV not in source:
+        return False
+    detach = setsid if setsid is not None else getattr(os, "setsid", None)
+    if detach is None:  # pragma: no cover - POSIX-only in practice
+        return False
+    try:
+        detach()
+    except OSError:
+        return False
+    return True
+
+
+def is_liveness_pipe(fd: int) -> bool:
+    """True when ``fd`` is a pipe/socket, i.e. usable as the liveness channel.
+
+    M7.4a. The Stage-2 host declares ``COPILOT_PARENT_PIPE_FD=0`` — the sidecar's
+    inherited stdin, whose write end the host holds for its own lifetime. That is
+    only a liveness signal when the fd really IS a pipe. A regular file or
+    ``/dev/null`` reads EOF *immediately*, which the watchdog would translate into
+    "the parent is gone" and reap a perfectly healthy backend one tick after
+    start-up. Validating the fd TYPE keeps that failure mode impossible; a
+    rejected fd simply degrades to the bounded ``getppid()`` fallback.
+    """
+    try:
+        mode = os.fstat(fd).st_mode
+    except OSError:
+        return False
+    import stat
+
+    return stat.S_ISFIFO(mode) or stat.S_ISSOCK(mode)
+
+
 def _parse_int(raw: str | None, *, minimum: int) -> int | None:
     """Parse a host-declared integer; None when absent, malformed or too small."""
     if not raw:
@@ -482,12 +564,30 @@ def install_parent_watchdog(
     # on the first poll.
     expected_ppid = _parse_int(source.get(PARENT_PID_ENV), minimum=1)
     if pipe_fd is None and expected_ppid is None:
-        return None
-    if expected_ppid is None:
-        # Keep a fallback for a pipe that goes bad mid-run — but only when this
-        # process actually has a real parent to miss.
-        current_ppid = os.getppid()
+        return None  # nothing well-formed was declared -> standalone launch
+
+    # M7.4a. Both declared values are cross-checked against reality before use,
+    # because BOTH have a first-tick false-positive shape:
+    #
+    # * an fd that is not actually a pipe (a regular file, /dev/null) reads EOF
+    #   immediately, which reads as "the host is gone";
+    # * a declared host pid that is not this process's DIRECT parent (an
+    #   intermediary bootloader or wrapper) makes ``ppid != expected`` true from
+    #   the start.
+    #
+    # Either one, taken on trust, reaps a perfectly healthy backend one tick
+    # after start-up. Each falls back to the other trigger instead.
+    if pipe_fd is not None and not is_liveness_pipe(pipe_fd):
+        pipe_fd = None
+    current_ppid = os.getppid()
+    if expected_ppid is None or expected_ppid != current_ppid:
+        # Expect the REAL parent. A ppid of 1 means this process is already
+        # orphaned at start-up — a legitimate standalone shape, not a signal —
+        # so it yields no pid expectation at all.
         expected_ppid = current_ppid if current_ppid != _INIT_PID else None
+
+    if pipe_fd is None and expected_ppid is None:
+        return None  # declaration present but nothing watchable remains
     watchdog = ParentLivenessWatchdog(pipe_fd=pipe_fd, expected_ppid=expected_ppid, **kwargs)
     watchdog.start()
     return watchdog

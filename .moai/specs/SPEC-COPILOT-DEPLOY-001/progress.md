@@ -256,6 +256,52 @@ Stage-2 M7의 세 번째 하위 마일스톤 — Python-전용 가드(`test_arch
 
 **커밋**: M7.3 구현 커밋 1건(`feat/app-deploy-file-import` 직접 커밋 — 원격 없음, push/PR 없음).
 
+### M7.4a — Tauri v2 셸 스캐폴드 + sidecar spawn (2026-07-21, cycle_type=tdd, Stage-2)
+
+Stage-2 M7의 네 번째 하위 마일스톤 전반부 — 본 저장소 **최초의 Rust 코드**. `src-tauri/` 스캐폴드 + M6 PyInstaller onedir 백엔드의 sidecar spawn + 네이티브 창(`ui/dist` 로드) + 트레이/health 배지 + deny-all capability. **M7.4b 이월**: Rust `RunEvent::Exit` authoritative group-kill(AC-026 ①②), 토큰 IPC 주입(AC-025 Stage-2 경로).
+
+**신규 파일**: `src-tauri/{Cargo.toml,Cargo.lock,build.rs,tauri.conf.json,.gitignore}`, `src-tauri/src/{main.rs,sidecar.rs,tray.rs,startup_error.rs}`, `src-tauri/capabilities/default.json`, `src-tauri/icons/*`, `packaging/stage_sidecar.py`, `package.json`(+lock), `server/tests/test_deploy_tauri_shell.py`(37건), `server/tests/test_web_host_channel.py`(11건), `server/web/host_channel.py`.
+
+**설계 — 백엔드 주소를 리터럴 없이 얻는 경로**: deny-all 스캔이 Rust에서 `127.0.0.1`·콘솔 포트 리터럴을 금지하므로(M7.3 이월 의무 #3) 셸은 백엔드 주소를 **컴파일 타임에 알 수 없다**. 백엔드가 **실제로 바인드된 뒤** stdout에 `@copilot:ready <url>` 한 줄을 출력하고(`server/web/host_channel.py`), Rust가 `CommandEvent::Stdout`에서 그 줄을 파싱해 창을 만든다. 동일 채널로 `@copilot:status <health>`(online/console_offline/responder_degraded — M5 게이트 진실)가 흘러 트레이 배지를 갱신한다. 셸의 인바운드 채널은 이 stdout **뿐**이며 소켓은 0개다.
+
+**🔴 부모 선언(silent-failure trap)**: sidecar spawn이 `COPILOT_PARENT_PIPE_FD=0`(PRIMARY — 호스트가 수명 내내 쥐고 있는 stdin 파이프의 EOF, 레이스 창 없음) + `COPILOT_PARENT_PID`(FALLBACK)를 넘기지 않으면 M7.2 워치독이 **아무 신호 없이 미무장**된다. 리뷰가 아니라 **구조적 가드 테스트**로 고정: 선언 상수가 spawn 함수 **본문 안**에서 참조되는지까지 검사하고, 기대값을 `server/web/launcher.py`에서 **import**하므로 Python 쪽 이름을 바꾸면 조용히 무장 해제되는 대신 테스트가 깨진다. 가드 자체도 합성 positive/negative control 4건으로 검증(가드가 실패할 수 없으면 가드가 아니다).
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| AC-DEPLOY-024 ① (sidecar spawn — **패키지 `.app`**) | PASS | `open "src-tauri/target/release/bundle/macos/GrandMA3 Copilot.app"` (더블클릭 등가, ppid=1/launchd) → 로그 `.moai/state/verify/m74a/09-double-click-launch.log` | `[shell] sidecar resolves to /…/GrandMA3 Copilot.app/Contents/MacOS/copilot-backend (exists: true)` / `[shell] backend sidecar spawned as pid 22408` / `ps`: `22408 22396 22408 …/Contents/MacOS/copilot-backend`(ppid=셸, **pgid=자기 pid → 세션 리더**) |
+| AC-DEPLOY-024 ② (네이티브 창이 `ui/dist` 로드, SPA 200) | PASS | 동일 실행 | `[backend] INFO: 127.0.0.1:64290 - "GET / HTTP/1.1" 304` / `"GET /assets/index-Dpxz527G.js" 304` / `"GET /assets/index-Assl78sO.css" 304` / `"WebSocket /ws" [accepted]` / `"GET /api/settings HTTP/1.1" 200 OK` — 창이 백엔드가 서빙한 **동일 `ui/dist`** 를 실제로 로드하고 `/ws` 핸드셰이크까지 통과 |
+| AC-DEPLOY-024 ③ (트레이 + health 연결 상태 배지) | PASS | `.venv/bin/python …/probe_bundle.py` → `.moai/state/verify/m74a/06-packaged-app-launch.log` | `windows: grandMA3, grandma3-copilot-shell,, GrandMA3 Copilot` / `menu bars: missing value, menu bar`(상태바 항목 존재). 배지 값은 M5 어휘 그대로(`tray.rs::health_label` — online/console_offline/responder_degraded) 이며 `@copilot:status` 라인으로 갱신 |
+| AC-DEPLOY-024 자동 (capabilities가 sidecar-spawn 외 네트워크 플러그인 deny) | PASS | `pytest server/tests/test_deploy_tauri_shell.py::TestCapabilityDeniesNetworkPlugins -q` | `3 passed` — `default.json` 권한은 `core:default` + **스코프된** `shell:allow-execute`(`allow:[{name:"binaries/copilot-backend", sidecar:true, args:false}]`) 뿐; `http:`/`websocket:`/`upload:`/`geolocation:` 0건, `shell:allow-open` 금지 |
+| **AC-DEPLOY-027 Layer ① ③ (실 `src-tauri/` deny-all — PENDING-M7.4 해제)** | **PASS** | `.venv/bin/python packaging/rust_scan.py` | `PASS — 8 file(s) scanned (rust=5, manifest=2, capability=1), 0 violation(s)` exit=0. **`files_scanned=8 > 0`, `capability_files_scanned=1 > 0`, 위반 0** |
+| AC-DEPLOY-027 Layer ① 자동 flip (skip 소멸) | PASS | `pytest server/tests/test_deploy_cross_language_scan.py -q` | `24 passed`(직전 `23 passed, 1 skipped` → **skip 0**). `test_real_tree_gate_state_is_accurate`가 blocked-분기에서 deny-all 분기로 자동 전환, `test_real_src_tauri_tree_passes_the_deny_all_scan`의 `skipif` 자동 해제 |
+| AC-DEPLOY-027 Layer ③ (capability 파일 실작성) | PASS | `pytest …::TestCapabilityDeniesNetworkPlugins` + `rust_scan.py` | 스캐너가 실제 `capabilities/default.json`을 읽고(`capability_files_scanned=1`) 위반 0. M7.3이 픽스처로만 증명하던 절이 실파일로 활성 |
+| 🔴 부모 선언 가드 (spawn이 워치독을 무장시킴) | PASS | `pytest …::TestSidecarParentDeclaration ::TestParentDeclarationGuardDetectsItsOwnFailure -q` | `8 passed`. 실제 spawn 환경 직접 관측: `env COPILOT_PARENT_PIPE_FD: ['COPILOT_PARENT_PIPE_FD=0']`, `env COPILOT_PARENT_PID: ['COPILOT_PARENT_PID=14431']`(패키지 `.app` 실행 중 `ps -Ewwo`) |
+| 부모 선언 **행동 증명**(패키지 아티팩트, force-quit) | PASS | `.venv/bin/python …/probe_forcequit.py` → `.moai/state/verify/m74a/07-packaged-forcequit.log` | 셸에 **SIGKILL**(=`RunEvent::Exit` 미발화 → Rust는 아무것도 못 함) → `backend pids after force-quit: [] (after 0.49s)` / `self-reaped: True` / `port 8765 still held: False`. **선언이 실제로 도달했을 때만 가능한 결과** |
+| Rust 소스에 loopback/포트 리터럴 0 | PASS | `pytest …::TestShellHasNoBackendAddressLiteral -q` | `2 passed` — `*.rs` 전수에 `127.0.0.1`/`localhost`/`8765`/`8000`/`9000` 0건. 창 URL은 `READY_PREFIX` 파싱으로만 획득 |
+| PENDING-WINDOWS (Windows origin 이연 유지) | PASS | `pytest …::TestWindowsOriginStaysDeferred -q` | `3 passed` — `TAURI_ORIGINS`에 `tauri.localhost` 없음, `server/web/handshake.py`에 grep 가능한 `PENDING-WINDOWS` 마커, `_LOOPBACK_HOSTS == {"127.0.0.1","localhost","::1"}`(**미확대**) |
+| **패키지 번들 payload 회귀 가드**(dev-works/packaged-fails) | PASS | `pytest …::TestBundledSidecarCarriesItsRuntime -q` + 실 번들 positive/negative control | `7 passed`. **negative control**: 실 번들의 `Contents/Frameworks`를 치우고 동일 테스트 → `FAILED … stage_sidecar: no PyInstaller runtime payload in the bundle: …/Contents/Frameworks/base_library.zip — the sidecar would exit immediately on first launch`. 원복 후 `7 passed` |
+| 오류 UX — spawn 실패가 panic이 아니라 안내 | PASS | `.venv/bin/python …/probe_broken.py` → `.moai/state/verify/m74a/08-error-ux.log` | 두 실패 형태 모두: `still alive after 20s = True` / `contains 'panicked': False` / `contains 'backtrace': False` / `contains 'What to try': True`. 로그: `[shell] GrandMA3 Copilot — backend did not start` + `1. Quit and relaunch… 2. …reinstall it. 3. Developer builds: run python packaging/stage_sidecar.py…` |
+| 오류 UX 구조 가드 (setup hook이 `?`로 전파하지 않음) | PASS | `pytest …::TestAFailedSpawnIsReportedNotPanicked -q` | `3 passed` — `main.rs`에 `spawn_backend(handle)?` 부재 + `if let Err` 존재, `startup_error.rs`에 원인+다음 단계, 두 실패 경로 모두 `startup_error::report` 도달 |
+
+**Regression**: `pytest server ui -q` → `1147 passed`(baseline `1086 passed, 1 skipped` → **skip 0**, 신규 61건, 회귀 **0**). `npx vitest run` → `57 passed`(무변경). `npm run build`(ui) → `✓ built in 334ms`. `ruff check server/ packaging/` → `Found 2 errors`(둘 다 기존 `server/safety/console.py:221/258` E501, **NEW 0**). `cargo build` → `Finished dev profile`(경고 0). `cargo clippy --all-targets` → 경고·오류 0. `npm run shell:build`(clean bundle) → exit 0 + `stage_sidecar: bundle OK`.
+
+**런타임에서 잡은 결함 3건(정적 검토로는 안 보였음)**:
+1. **ready 레이스** — `emit_ready`가 uvicorn 바인드 **전에** 출력되어 창이 connection-refused를 로드(관측됨). 셸은 소켓이 없어 재시도할 수 없으므로 준비 신호는 백엔드만 낼 수 있다 → `wait_until_serving`(포트가 실제로 점유될 때까지 대기) 후 announce. 3회 연속 재현으로 소멸 확인.
+2. **sidecar 이름 해상도** — `tauri-plugin-shell`의 `relative_command_path`는 주어진 경로를 **실행 파일 디렉터리에 그대로 join**하고 타깃 트리플을 붙이지 않는다(플러그인 소스 `process/mod.rs:120-134`). 설정값 `binaries/copilot-backend`를 그대로 넘기면 `target/debug/binaries/…`를 찾아 ENOENT. Rust는 **베어 파일명**을 써야 한다 → `SIDECAR_NAME="copilot-backend"` / `SIDECAR_SCOPE_NAME="binaries/copilot-backend"`로 분리하고 두 철자를 가드 테스트로 고정.
+3. **선언 pid 오신뢰** — 워치독이 선언된 부모 pid를 그대로 기대하면, 중간 프로세스가 끼는 순간 `ppid != expected`가 **첫 폴에서 참**이 되어 정상 백엔드를 수확한다. 선언은 무장 신호로만 쓰고 기대치는 **실제 부모**로 교차 검증. 같은 이유로 선언된 pipe fd가 실제 파이프인지 `is_liveness_pipe`로 검사(정규 파일/`/dev/null`은 즉시 EOF → 오수확).
+
+**패키지 payload 메커니즘(가정 아님, 관측)**: Tauri `externalBin`은 **실행 파일 1개만** 번들에 넣는다. PyInstaller **onedir** 백엔드는 런타임 트리 없이는 부팅 못 하므로 dev는 녹색인데 패키지는 첫 spawn에서 죽는다(Stage-1 P0와 동일 부류). PyInstaller의 macOS `.app` 규약은 실행 파일이 `Contents/MacOS`에 있으면 런타임을 `Contents/Frameworks`에서 **평평하게** 찾는 것이며(실 `dist/GrandMA3 Copilot.app` 레이아웃과 일치), 이는 부트로더 자신의 출력으로 확인했다 — payload를 치운 A/B 테스트에서 `Failed to load Python shared library '…/GrandMA3 Copilot.app/Contents/Frameworks/libpython3.11.dylib'`. 따라서 `packaging/stage_sidecar.py --bundle <app>`이 런타임 트리를 `Contents/Frameworks`로 평평하게 복사하고 `--verify-bundle`이 이를 검증하며, `npm run shell:build`가 두 단계를 자동 실행한다. **`find <app> -name _internal`이 비는 것이 정상 형태**다(중첩 `_internal/`이 아니라 평평한 배치). 회귀 가드는 빌드된 번들이 있으면 항상 검사하고 없으면 skip(`PENDING-BUNDLE`)한다.
+
+**@MX tags added**: `src-tauri/src/sidecar.rs::spawn_backend` — `@MX:ANCHOR` + `@MX:REASON` + `@MX:SPEC`(부모 선언 경계; 누락 시 무증상 실패).
+
+**M7.4b 이월(명시)**:
+1. **Rust authoritative group-kill** — `RunEvent::Exit`에서 `BackendProcess`(이미 managed state로 보관, `backend_pid()` 접근자 제공)를 프로세스 **그룹** kill. `CommandChild::kill()`은 sidecar pid만 죽인다. Windows Job Object(KILL_ON_JOB_CLOSE)는 러너 부재로 env-gate. → AC-026 ①②.
+2. **토큰 IPC 주입** — 현재 창은 `http://127.0.0.1:<port>`(Stage-1 브라우저 오리진, 토큰 optional)를 로드한다. `tauri://localhost` + init-script/IPC 토큰 주입으로 옮기면 token-REQUIRED 경로가 된다. → AC-025 Stage-2 절.
+3. **`.dmg` 타깃** — 현 `shell:build`는 `--bundles app`. payload 단계가 `.app` 생성 **후**에 돌아야 하므로 `.dmg`는 M9(서명·공증)에서 서명 파이프라인과 함께 다룬다.
+4. **창 이중 로드 관측** — 로그에 `GET /` 2회 + `/ws` 다수가 보인다(창은 1개, 라벨 중복 오류 없음). 기능상 무해(멱등 GET)하나 원인 미규명 → M7.4b에서 확인.
+
+**커밋**: M7.4a 구현 커밋 1건(`feat/app-deploy-file-import` 직접 커밋 — 원격 없음, push/PR 없음).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 `run_status: audit-ready` (Stage-1)

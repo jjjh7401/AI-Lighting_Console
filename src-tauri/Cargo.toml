@@ -1,0 +1,30 @@
+[package]
+name = "grandma3-copilot-shell"
+version = "0.4.0"
+description = "Stage-2 desktop shell for the GrandMA3 Copilot (SPEC-COPILOT-DEPLOY-001 M7)"
+authors = ["GrandMA3 Copilot"]
+license = ""
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+
+# DENY-ALL dependency discipline (AC-DEPLOY-027 Layer 1 — packaging/rust_scan.py):
+# the shell's whole job is to spawn the sidecar, show the page that sidecar
+# serves, and draw a tray icon. None of that needs a socket, so NO networking
+# crate is declared here — not reqwest, not hyper, not tungstenite, and above all
+# nothing that speaks OSC. The backend URL arrives on the sidecar's stdout; this
+# process never dials anything.
+
+[build-dependencies]
+tauri-build = { version = "2.6.3", features = [] }
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tauri = { version = "2.11.3", features = ["tray-icon", "image-png"] }
+tauri-plugin-shell = "2"
+# Native message dialog. A backend that fails to start is a FORESEEABLE startup
+# condition (stale bundle, quarantined binary, missing payload), so it must
+# surface as a human-readable cause + next step — never as a Rust panic and
+# backtrace (REQ-DEPLOY-018~020 error-UX discipline). No network surface.
+tauri-plugin-dialog = "2"

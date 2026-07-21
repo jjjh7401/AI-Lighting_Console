@@ -1,0 +1,19 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Sidecar spawn only. ALL network plugins are denied by omission (AC-DEPLOY-027 Layer 3): no http, no websocket, no upload, no geolocation. shell: is granted ONLY as a sidecar-scoped execute, so a compromised webview can start the backend the shell already starts and nothing else — no arbitrary command, no shell:allow-open.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "binaries/copilot-backend",
+          "sidecar": true,
+          "args": false
+        }
+      ]
+    }
+  ]
+}

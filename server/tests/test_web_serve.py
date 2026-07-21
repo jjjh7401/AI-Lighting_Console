@@ -474,3 +474,54 @@ class TestStartupProviderKeyInjection:
             assert "ANTHROPIC_API_KEY" not in os.environ
         finally:
             stack.stop()
+
+
+class TestHostChannelWiring:
+    """M7.4a (AC-DEPLOY-024 ②③): the Stage-2 host learns the served URL and the
+    gate-truth health from the sidecar's stdout — the only channel the Rust shell
+    has, since it owns no network surface (AC-DEPLOY-027 Layer ①)."""
+
+    def test_build_runtime_registers_a_host_status_listener(self):
+        args = parse_args(["--receive-port", "0", "--no-session-backup"])
+        app, stack = build_runtime(args)
+        try:
+            listeners = app.state.deps.status_listeners
+            assert listeners, (
+                "no status listener registered — the Tauri tray badge would never "
+                "leave its start-up state (AC-DEPLOY-024 ③)"
+            )
+        finally:
+            stack.stop()
+
+    def test_the_registered_listener_emits_the_gate_truth_health(self, capsys):
+        from server.web.host_channel import STATUS_PREFIX
+
+        args = parse_args(["--receive-port", "0", "--no-session-backup"])
+        app, stack = build_runtime(args)
+        try:
+            for notify in tuple(app.state.deps.status_listeners):
+                notify()
+            printed = capsys.readouterr().out
+            assert STATUS_PREFIX in printed, printed
+            emitted = printed.split(STATUS_PREFIX)[1].split("\n")[0]
+            assert emitted == stack.gate.status["health"], printed
+        finally:
+            stack.stop()
+
+    def test_main_prints_the_ready_url_for_the_host(self, capsys):
+        from server.web.host_channel import READY_PREFIX
+        from server.web.launcher import serve_local_url
+
+        served: list[str] = []
+
+        def fake_run(app, **kwargs):
+            served.append(serve_local_url(kwargs["host"], kwargs["port"]))
+
+        code = main(
+            ["--receive-port", "0", "--no-session-backup", "--no-browser"],
+            run=fake_run,
+            keyring_module=_fake_keyring("keyring.backends.macOS"),
+        )
+        assert code == 0
+        printed = capsys.readouterr().out
+        assert f"{READY_PREFIX}{served[0]}" in printed, printed

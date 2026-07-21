@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import threading
 from dataclasses import replace
 from pathlib import Path
 
@@ -33,11 +34,13 @@ from server.safety.bootstrap import ConsoleStack, build_console_stack
 from server.web.app import WebDeps, create_app
 from server.web.approval_bridge import ApprovalChannel
 from server.web.handshake import TAURI_ORIGINS, HandshakePolicy, browser_origins_for
+from server.web.host_channel import emit_ready, make_status_emitter
 from server.web.launcher import (
     LAUNCH_TOKEN_ENV,
     PortInUseError,
     apply_keyring_backend_pin,
     assert_keyring_backend,
+    become_session_leader,
     generate_launch_token,
     install_parent_watchdog,
     install_signal_handlers,
@@ -46,6 +49,7 @@ from server.web.launcher import (
     require_ports_available,
     run_self_check,
     serve_local_url,
+    wait_until_serving,
 )
 from server.web.measure import RoundTripRecorder
 from server.web.provision_api import ProvisionDeps
@@ -143,6 +147,18 @@ def build_handshake_policy(args: argparse.Namespace) -> HandshakePolicy:
         trusted_origins=TAURI_ORIGINS,
         browser_origins=browser_origins_for(args.host, args.port),
     )
+
+
+def _announce_when_serving(url: str, host: str, port: int) -> None:  # pragma: no cover
+    """Emit the host ready line once uvicorn is actually accepting on ``port``.
+
+    A timeout still announces: a slow bind is better answered with a window that
+    retries by reload than with an app that never opens one. ``--port 0`` is the
+    exception — the announced URL would be unreachable by construction.
+    """
+    if not wait_until_serving(host, port) and port == 0:
+        return
+    emit_ready(url)
 
 
 def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
@@ -247,6 +263,11 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         handshake=build_handshake_policy(args),
     )
     app = create_app(deps)
+    # M7.4a (AC-DEPLOY-024 ③): mirror every gate-truth health change onto the
+    # sidecar's stdout so the Stage-2 tray badge shows the SAME state the web UI
+    # does. stdout is the shell's only inbound channel — it owns no socket
+    # (AC-DEPLOY-027 Layer ①). A no-op wherever nothing reads the stream.
+    deps.status_listeners.add(make_status_emitter(lambda: stack.gate.status["health"]))
     app.state.deps = deps  # composition introspection seam (tests/diagnostics)
     return app, stack
 
@@ -269,6 +290,12 @@ def main(argv: list[str] | None = None, *, run=None, keyring_module=None) -> int
 
     real_serve = run is None
     if real_serve:
+        # M7.4a (AC-DEPLOY-026 ①②): when a Stage-2 host spawned us, lead our own
+        # session so a single killpg reaps this process AND every descendant —
+        # Tauri's shell plugin cannot make us a group leader from its side, and
+        # CommandChild::kill() would otherwise leave grandchildren on the ports.
+        # A no-op for a Stage-1 launch, which must keep its controlling terminal.
+        become_session_leader()
         # Pin the OS keyring backend BEFORE the first backend selection (§B.3).
         apply_keyring_backend_pin()
 
@@ -293,19 +320,29 @@ def main(argv: list[str] | None = None, *, run=None, keyring_module=None) -> int
             return 2
 
     app, stack = build_runtime(args)
+    url = serve_local_url(args.host, args.port)
     try:
         if real_serve:  # pragma: no cover — exercised by real serving only
-            import threading
-
             import uvicorn
 
+            # M7.4a (AC-DEPLOY-024 ②): hand the spawning Tauri host the served
+            # URL — the shell may not hold it as a Rust literal (the deny-all
+            # scan forbids loopback/port literals), so this line IS how the
+            # native window learns where to go. Announced only once the port is
+            # really bound: the shell has no socket to retry with, so a window
+            # opened one moment early shows connection-refused forever.
+            threading.Thread(
+                target=_announce_when_serving,
+                args=(url, args.host, args.port),
+                name="host-ready-announcer",
+                daemon=True,
+            ).start()
             install_signal_handlers(make_shutdown_handler(stack))
             # M7.2 (REQ-DEPLOY-025): when a Stage-2 host spawned us, self-reap
             # this process group if that host dies — a Unix force-quit never
             # fires Tauri's RunEvent::Exit. A no-op for a Stage-1 standalone
             # launch, which declares no host.
             install_parent_watchdog()
-            url = serve_local_url(args.host, args.port)
             threading.Timer(
                 1.0,
                 open_app_browser,
@@ -313,6 +350,7 @@ def main(argv: list[str] | None = None, *, run=None, keyring_module=None) -> int
             ).start()
             uvicorn.run(app, host=args.host, port=args.port)
         else:
+            emit_ready(url)
             run(app, host=args.host, port=args.port)
     finally:
         stack.stop()

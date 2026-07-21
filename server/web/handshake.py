@@ -41,14 +41,26 @@ TOKEN_SUBPROTOCOL_PREFIX = "copilot-token."
 # Stage-2 webview origin (Tauri v2) on macOS/Linux — the platforms the Stage-2
 # shell is built on first (DECIDE-M2 targets macOS universal2 + Windows x86_64).
 #
-# DEFERRED TO M7.4 — the Windows Tauri webview serves the app from the origin
+# PENDING-WINDOWS — the Windows Tauri webview serves the app from the origin
 # spelled "http://" + "tauri.localhost" (a reserved-TLD loopback name, RFC 6761).
-# It is NOT added here yet because the AC-DEPLOY-002 "no remote backend endpoint"
-# guard (server/tests/test_deploy_local_only.py) allowlists only the bare
-# loopback hosts, so the literal trips it. M7.4 — which is where the Windows
-# Tauri shell first exists and can be verified — MUST either extend that guard's
-# _LOOPBACK_HOSTS with the reserved-TLD name or scope the origin per-platform.
-# Without that, a Windows Tauri window's upgrade is rejected as origin_not_allowed.
+# It is NOT added here because (a) the AC-DEPLOY-002 "no remote backend endpoint"
+# guard (server/tests/test_deploy_local_only.py) allowlists only the bare loopback
+# hosts, so the literal trips it, and (b) M7 has no Windows runner — the host is
+# arm64 macOS (plan §F DECIDE-M2 builds Windows later), so an allowlist entry
+# added now would be UNVERIFIABLE, which is exactly how a security allowlist rots.
+#
+# M7.4a therefore leaves it deferred DELIBERATELY and marks the deferral with the
+# greppable token PENDING-WINDOWS (mirroring PENDING-M7.4 in
+# server/tests/test_deploy_cross_language_scan.py) so it cannot be silently
+# forgotten; server/tests/test_deploy_tauri_shell.py asserts BOTH that the marker
+# is here and that _LOOPBACK_HOSTS was not widened. Whoever first builds and RUNS
+# the Windows shell must either extend that guard's _LOOPBACK_HOSTS with the
+# reserved-TLD name or scope the origin per-platform — until then a Windows Tauri
+# window's upgrade is rejected as origin_not_allowed, which is the safe direction.
+#
+# Not a blocker for M7.4a: the macOS shell navigates the window to the served
+# http://127.0.0.1:<port> URL (learned from the sidecar's stdout), so its Origin
+# is a Stage-1 browser origin already in the allowlist.
 TAURI_ORIGINS: tuple[str, ...] = ("tauri://localhost",)
 
 # Reject codes (close reasons) — 1008 "policy violation" in every case; the

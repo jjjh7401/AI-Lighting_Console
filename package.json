@@ -1,0 +1,17 @@
+{
+  "name": "grandma3-copilot-shell",
+  "version": "0.4.0",
+  "private": true,
+  "description": "Stage-2 Tauri v2 desktop shell for the GrandMA3 Copilot (SPEC-COPILOT-DEPLOY-001 M7).",
+  "scripts": {
+    "test": "npm --prefix ui run test",
+    "tauri": "tauri",
+    "shell:stage": "python3 packaging/stage_sidecar.py",
+    "shell:dev": "python3 packaging/stage_sidecar.py && tauri dev",
+    "shell:build": "python3 packaging/stage_sidecar.py && tauri build --bundles app && python3 packaging/stage_sidecar.py --bundle \"src-tauri/target/release/bundle/macos/GrandMA3 Copilot.app\"",
+    "shell:verify": "python3 packaging/stage_sidecar.py --verify-bundle \"src-tauri/target/release/bundle/macos/GrandMA3 Copilot.app\""
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

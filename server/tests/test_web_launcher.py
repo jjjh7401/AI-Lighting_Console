@@ -543,6 +543,213 @@ class TestInstallParentWatchdog:
         assert launcher.install_parent_watchdog(environ={launcher.PARENT_PID_ENV: "0"}) is None
 
 
+class TestWaitUntilServing:
+    """M7.4a: the host must be told the URL only once the URL actually ANSWERS.
+
+    The Stage-2 shell cannot probe the port itself — the deny-all scan gives its
+    Rust no socket at all (AC-DEPLOY-027 Layer ①) — so "the server is up" is a
+    fact only the backend can report. Announcing it before uvicorn binds hands
+    the native window a connection-refused page (observed, not theorised)."""
+
+    def test_returns_true_once_the_port_is_bound(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as held:
+            held.bind(("127.0.0.1", 0))
+            held.listen(1)
+            port = held.getsockname()[1]
+            assert launcher.wait_until_serving("127.0.0.1", port, timeout=2.0) is True
+
+    def test_returns_false_when_nothing_ever_binds(self):
+        port = _free_port()
+        started = time.monotonic()
+        assert launcher.wait_until_serving("127.0.0.1", port, timeout=0.3) is False
+        assert time.monotonic() - started < 2.0, "the wait ignored its timeout"
+
+    def test_port_zero_is_refused_rather_than_polled_forever(self):
+        # ``--port 0`` means "let the OS choose", so the configured number is not
+        # the served one: probing it would never report bound, and announcing
+        # ``http://127.0.0.1:0`` would send the shell to an address that cannot
+        # exist. Observed while probing the frozen bundle, not theorised.
+        assert launcher.wait_until_serving("127.0.0.1", 0, timeout=5.0) is False
+
+    def test_polls_until_the_probe_reports_the_port_taken(self):
+        answers = [True, True, False]  # available, available, then bound
+        assert (
+            launcher.wait_until_serving(
+                "127.0.0.1", 1, timeout=2.0, interval=0.0, probe=lambda h, p: answers.pop(0)
+            )
+            is True
+        )
+        assert answers == []
+
+
+class TestSessionLeaderDetach:
+    """M7.4a: a sidecar must be its OWN session/process-group leader so the host
+    can reap the whole tree with one ``killpg`` (AC-DEPLOY-026 ①②).
+
+    ``tauri-plugin-shell`` exposes no ``pre_exec`` hook, so the detach is done by
+    the sidecar itself at start-up — gated on the same host declaration as the
+    watchdog, because detaching a Stage-1 terminal launch would sever it from its
+    controlling terminal and break Ctrl-C."""
+
+    def test_a_standalone_launch_never_detaches(self):
+        calls: list[int] = []
+        assert (
+            launcher.become_session_leader(environ={}, setsid=lambda: calls.append(1)) is False
+        )
+        assert calls == [], "a standalone launch detached from its terminal"
+
+    def test_a_declared_sidecar_detaches(self):
+        calls: list[int] = []
+        assert (
+            launcher.become_session_leader(
+                environ={launcher.PARENT_PIPE_FD_ENV: "0"}, setsid=lambda: calls.append(1)
+            )
+            is True
+        )
+        assert calls == [1]
+
+    def test_a_pid_declaration_also_detaches(self):
+        calls: list[int] = []
+        launcher.become_session_leader(
+            environ={launcher.PARENT_PID_ENV: "4242"}, setsid=lambda: calls.append(1)
+        )
+        assert calls == [1]
+
+    def test_already_a_group_leader_is_not_an_error(self):
+        def _angry() -> None:
+            raise PermissionError("already a process group leader")
+
+        # setsid() fails with EPERM when the caller is already a group leader —
+        # which means the goal is ALREADY met. Never fatal.
+        assert (
+            launcher.become_session_leader(
+                environ={launcher.PARENT_PID_ENV: "4242"}, setsid=_angry
+            )
+            is False
+        )
+
+    def test_detach_actually_creates_a_new_session_in_a_child(self):
+        # Process-level proof, not a mock: a forked child that detaches reports a
+        # process-group id equal to its own pid (i.e. it leads its own group).
+        repo_root = str(Path(__file__).resolve().parents[2])
+        code = (
+            "import os,sys;"
+            f"sys.path.insert(0, {repo_root!r});"
+            "from server.web.launcher import become_session_leader, PARENT_PID_ENV;"
+            "become_session_leader(environ={PARENT_PID_ENV: '1234'});"
+            "print(os.getpid() == os.getpgid(0))"
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", code], capture_output=True, text=True, check=True
+        )
+        assert result.stdout.strip() == "True", result
+
+
+class TestDeclaredParentPidIsCrossCheckedAgainstTheRealParent:
+    """M7.4a: the host declares its OWN pid, but it may not be this process's
+    DIRECT parent (a bootloader or wrapper can sit between). Trusting the
+    declared value blindly would make ``ppid != expected`` true on the very
+    first poll and reap a healthy backend at start-up. The declaration arms the
+    watchdog; the REAL parent is what it then expects."""
+
+    def test_a_declared_pid_that_is_not_the_real_parent_does_not_fire_at_once(self):
+        reaped: list[int] = []
+        watchdog = launcher.install_parent_watchdog(
+            # 4242 is nobody's parent here — an intermediary stand-in.
+            environ={launcher.PARENT_PID_ENV: "4242"},
+            reaper=reaped.append,
+        )
+        assert watchdog is not None, "a declared host must still arm the watchdog"
+        try:
+            assert watchdog.parent_gone() is False, (
+                "a mismatched declared pid reaped a healthy process on the first probe"
+            )
+            time.sleep(launcher.PARENT_POLL_INTERVAL_SECONDS * 2)
+            assert reaped == [], reaped
+        finally:
+            watchdog.stop()
+
+    def test_a_declared_pid_that_matches_the_real_parent_is_kept(self):
+        watchdog = launcher.install_parent_watchdog(
+            environ={launcher.PARENT_PID_ENV: str(os.getppid())}, reaper=lambda pid: None
+        )
+        assert watchdog is not None
+        try:
+            assert watchdog.parent_gone() is False
+        finally:
+            watchdog.stop()
+
+
+class TestDeclaredPipeFdMustActuallyBeAPipe:
+    """M7.4a: the host declares ``COPILOT_PARENT_PIPE_FD=0`` — its own end of the
+    sidecar's stdin pipe. If that fd is NOT a pipe (a bundle handed /dev/null, a
+    redirect from a regular file), it reads EOF immediately and the watchdog
+    would reap a perfectly healthy backend at start-up. Validate the fd TYPE."""
+
+    def test_a_regular_file_fd_is_not_accepted_as_the_liveness_pipe(self, tmp_path):
+        path = tmp_path / "not-a-pipe"
+        path.write_text("", encoding="utf-8")
+        fd = os.open(path, os.O_RDONLY)
+        reaped: list[int] = []
+        try:
+            assert launcher.is_liveness_pipe(fd) is False
+            # A host DID declare itself, so the watchdog still arms — but on the
+            # bounded ppid poll, never on the bogus fd.
+            watchdog = launcher.install_parent_watchdog(
+                environ={launcher.PARENT_PIPE_FD_ENV: str(fd)}, reaper=reaped.append
+            )
+            assert watchdog is not None
+            assert watchdog.parent_gone() is False, "the non-pipe fd read as a dead parent"
+            watchdog.stop()
+            assert reaped == []
+        finally:
+            os.close(fd)
+
+    def test_a_devnull_fd_is_not_accepted_as_the_liveness_pipe(self):
+        fd = os.open(os.devnull, os.O_RDONLY)
+        try:
+            assert launcher.is_liveness_pipe(fd) is False
+        finally:
+            os.close(fd)
+
+    def test_a_real_pipe_is_accepted(self):
+        read_fd, write_fd = os.pipe()
+        try:
+            assert launcher.is_liveness_pipe(read_fd) is True
+        finally:
+            os.close(write_fd)
+            os.close(read_fd)
+
+    def test_a_closed_fd_is_rejected_rather_than_raising(self):
+        read_fd, write_fd = os.pipe()
+        os.close(write_fd)
+        os.close(read_fd)
+        assert launcher.is_liveness_pipe(read_fd) is False
+
+    def test_a_non_pipe_fd_degrades_to_the_pid_poll_instead_of_reaping(self, tmp_path):
+        path = tmp_path / "not-a-pipe"
+        path.write_text("", encoding="utf-8")
+        fd = os.open(path, os.O_RDONLY)
+        reaped: list[int] = []
+        try:
+            watchdog = launcher.install_parent_watchdog(
+                environ={
+                    launcher.PARENT_PIPE_FD_ENV: str(fd),
+                    launcher.PARENT_PID_ENV: str(os.getppid()),
+                },
+                reaper=reaped.append,
+            )
+            assert watchdog is not None
+            # The whole point: a readable-at-EOF regular file must NOT read as
+            # "parent gone" while the real parent is alive.
+            assert watchdog.parent_gone() is False
+            time.sleep(launcher.PARENT_POLL_INTERVAL_SECONDS * 2)
+            watchdog.stop()
+            assert reaped == [], "a non-pipe fd triggered a spurious self-reap"
+        finally:
+            os.close(fd)
+
+
 # ------------------------------- sidecar self-reap, process level (AC-026 ③ / ④)
 
 _CHILD_SCRIPT = str(Path(__file__).resolve().parent / "watchdog_child.py")
