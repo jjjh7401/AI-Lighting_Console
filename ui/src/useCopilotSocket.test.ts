@@ -8,10 +8,16 @@
 // state transition `socket.onclose` dispatches via
 // `dispatch({ kind: "disconnected" })`; this exercises that transition
 // directly rather than instantiating a real WebSocket + React render.
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { initialState, type ReviewRequestView, type UiState } from "./protocol";
-import { reducer } from "./useCopilotSocket";
+import {
+  BASE_SUBPROTOCOL,
+  TOKEN_SUBPROTOCOL_PREFIX,
+  connectProtocols,
+  launchToken,
+  reducer,
+} from "./useCopilotSocket";
 
 const REVIEW: ReviewRequestView = {
   request_id: "review-1",
@@ -52,5 +58,40 @@ describe("reducer — disconnect clears stale pending cards", () => {
   it("is a no-op when nothing is pending", () => {
     const next = reducer(initialState, { kind: "disconnected" });
     expect(next).toEqual(initialState);
+  });
+});
+
+// M7.1 (REQ-DEPLOY-002a / AC-DEPLOY-025+029) — the token-consumption seam.
+// The token arrives from the injected runtime context (Stage-2: Tauri IPC
+// init-script, wired at M7.4); Stage-1 browser mode has no such context, so the
+// hook must connect exactly as before. Pure functions, same no-DOM bound as the
+// reducer tests above.
+type TokenGlobal = { __COPILOT_LAUNCH_TOKEN__?: string };
+
+afterEach(() => {
+  delete (globalThis as TokenGlobal).__COPILOT_LAUNCH_TOKEN__;
+});
+
+describe("launch-token seam", () => {
+  it("reads the token from the injected runtime context", () => {
+    (globalThis as TokenGlobal).__COPILOT_LAUNCH_TOKEN__ = "tok-123";
+    expect(launchToken()).toBe("tok-123");
+  });
+
+  it("returns undefined in Stage-1 browser mode (no injected context)", () => {
+    expect(launchToken()).toBeUndefined();
+  });
+
+  it("presents the token as a subprotocol alongside the base protocol", () => {
+    expect(connectProtocols("tok-123")).toEqual([
+      BASE_SUBPROTOCOL,
+      `${TOKEN_SUBPROTOCOL_PREFIX}tok-123`,
+    ]);
+  });
+
+  it("offers no subprotocols when no token is available", () => {
+    // Stage-1 regression guard: the browser path must stay a bare connect.
+    expect(connectProtocols(undefined)).toBeUndefined();
+    expect(connectProtocols("")).toBeUndefined();
   });
 });

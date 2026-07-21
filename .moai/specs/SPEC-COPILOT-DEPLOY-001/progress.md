@@ -168,6 +168,30 @@ Stage-1 마지막 마일스톤 — 패키징된 셸의 안전 불변식 보존 +
 
 **환경-게이트 N/A**: universal2·Windows x86_64 빌드(arm64 전용 CPython), 실제 Developer-ID 공증(인증서 부재), Rust/Tauri OSC 소스 스캔·wire-level 열거·onPC 라이브 명령 왕복(Stage-2 또는 onPC 필요).
 
+### M7.1 — sidecar↔UI 전송 핸드셰이크 (2026-07-21, cycle_type=tdd, Stage-2)
+
+Stage-2 M7의 첫 하위 마일스톤 — F5(REQ-DEPLOY-002a) 3-계층 중 **백엔드 게이트 + launcher 토큰 생성 + UI 소비 seam**만 착수. M7.2(teardown)·M7.3(SAFETY-2 이중 스캔)·M7.4(Tauri 스캐폴드)는 미착수이며 `src-tauri/`는 생성하지 않았다.
+
+**FEAS-9 해소**: 기존 `/ws`는 `accept()`를 origin/token/CORS 검사 **0**으로 수행 → 임의 로컬 프로세스·브라우저 탭이 라이브 콘솔 제어 채널에 접속 가능(CSWSH). 신규 `server/web/handshake.py`가 accept **이전**에 판정하고, 거부 시 accept 없이 close(1008) — 거부된 클라이언트는 ChatSession·게이트·콘솔에 도달하지 않는다.
+
+**오리진 2-클래스 설계(plan §M7.1 정합)**: ① **Stage-2(Tauri) 오리진** = 토큰 **필수**(IPC라는 누출-저항 채널로 전달 가능) — 누락/불일치 거부. ② **Stage-1(loopback 브라우저) 오리진** = 토큰 **심층방어만**(브라우저엔 IPC가 없고 디스크/loopback 전달은 위장-Origin 벡터를 못 막음) — 부재는 허용, **오배치 토큰은 여전히 거부**. 이 비대칭이 "Stage-1 브라우저 모드 무중단" HARD 제약과 AC-DEPLOY-025 ②를 동시에 만족시키는 유일한 해석이다. 토큰 비교는 전 경로 `hmac.compare_digest`(상수-시간).
+
+**토큰 전달**: `Sec-WebSocket-Protocol`(`copilot-token.<token>`) — 브라우저/웹뷰 `WebSocket` API가 설정할 수 있는 유일한 핸드셰이크 필드이며, 쿼리스트링과 달리 액세스 로그·Referer에 남지 않는다. 서버는 비밀이 아닌 `copilot.v1`을 선택해 에코(RFC 6455). 토큰은 env/메모리 전용 — `LAUNCH_TOKEN_ENV="COPILOT_LAUNCH_TOKEN"`은 이름에 `TOKEN`을 포함해 `keystore.scrub_environ`이 크래시 덤프에서 자동 리댁션(DECIDE-M6 벡터 계승). `index.html` 메타 주입은 **미도입**(D4a 폐기 준수).
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| AC-DEPLOY-025 ①~⑤ (핸드셰이크 accept/reject 매트릭스) | PASS | `PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring .venv/bin/python -m pytest server/tests/test_web_handshake.py -q` | `29 passed, 1 warning in 1.31s` — ① 비허용 Origin 거부 ② Stage-2 토큰 누락 거부 ③ 오배치 토큰 거부(compare_digest) ④ 정확 토큰 accept ⑤ 프로토콜 v1 불변(gated/ungated status 이벤트 동일) |
+| AC-DEPLOY-029 ①②③ (per-launch 토큰 비밀 유지) | PASS | 동일 실행 `TestLaunchTokenSecrecy` 5건 | 앱이 쓴 파일 전수 스캔 토큰 0건(거부+수락 왕복으로 감사파일 실제 생성 — 비-vacuous), `scrub_environ` 리댁션, `index.html` 메타 주입 부재, 매 launch 신규 43자 토큰 |
+| AC-DEPLOY-014 (안전 불변식 — 신규 OSC 송신 경로 0) | PASS | `pytest server/tests/test_architecture.py test_deploy_safety_invariants.py test_deploy_local_only.py -q` | `23 passed`; `grep -rnE "^\s*(from\|import)\s+(server\.bridge\|pythonosc)" server/web/` → 매치 0 |
+
+**Regression**: full suite `PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring .venv/bin/python -m pytest server/tests/ -q` → `1046 passed`(baseline 1017 + 신규 29, 회귀 **0**). UI `npm test` → `57 passed`(baseline 53 + 신규 4). `npm run build`(tsc+vite) → `✓ built in 313ms`. `ruff check server/` → `Found 2 errors`(둘 다 기존 baseline `server/safety/console.py:221/258` E501, **NEW 0**).
+
+**@MX tags added**: `server/web/handshake.py` `evaluate_handshake`에 `@MX:ANCHOR`(+`@MX:REASON`/`@MX:SPEC`) — `/ws` 인가 경계이자 라이브 콘솔 제어 채널의 유일한 관문. Stage-1 토큰-선택 분기가 의도된 load-bearing 설계임을 REASON에 명시(제거 시 브라우저 모드 붕괴).
+
+**M7.4 이연(명시)**: Windows Tauri 웹뷰 오리진(`tauri.localhost` 예약 TLD)은 AC-DEPLOY-002 `_LOOPBACK_HOSTS` 가드와 충돌하여 **allowlist에 미포함** — `handshake.py` 주석에 M7.4 필수 조치로 기록. 미조치 시 Windows Tauri 창이 `origin_not_allowed`로 거부된다. Stage-2 토큰의 Tauri IPC 주입(`__COPILOT_LAUNCH_TOKEN__` 설정)은 M7.4 스코프이며, 소비 측 seam은 본 마일스톤에서 완성.
+
+**커밋**: `7573e60`(plan-phase 산출물 v0.4.0 fold-in, 문서 전용), M7.1 구현 커밋(아래 §E.3). `feat/app-deploy-file-import` 직접 커밋(원격 없음 — push/PR 없음).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 `run_status: audit-ready` (Stage-1)

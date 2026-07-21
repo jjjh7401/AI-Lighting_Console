@@ -34,6 +34,35 @@ function defaultUrl(): string {
   return `${scheme}://${window.location.host}/ws`;
 }
 
+// M7.1 (REQ-DEPLOY-002a) — per-launch token consumption seam.
+//
+// The server authorizes every /ws upgrade on Origin + token BEFORE accept()
+// (server/web/handshake.py). The token rides Sec-WebSocket-Protocol because it
+// is the only handshake field the browser WebSocket API lets us set, and unlike
+// a query string it stays out of access logs and Referer headers.
+//
+// Delivery is mode-specific: Stage-2 (Tauri) injects the token into the webview
+// context over IPC — an in-process channel no other local process can read
+// (wired at M7.4). Stage-1 browser mode has no such channel, so `launchToken()`
+// returns undefined and the connect stays exactly as it was pre-M7.1; there the
+// server's Origin allowlist is the real CSWSH closer.
+export const BASE_SUBPROTOCOL = "copilot.v1";
+export const TOKEN_SUBPROTOCOL_PREFIX = "copilot-token.";
+
+type TokenContext = { __COPILOT_LAUNCH_TOKEN__?: string };
+
+export function launchToken(): string | undefined {
+  return (globalThis as TokenContext).__COPILOT_LAUNCH_TOKEN__ || undefined;
+}
+
+export function connectProtocols(token: string | undefined): string[] | undefined {
+  // The base protocol is offered alongside the token so the server has a
+  // non-secret value to echo back in the handshake response (RFC 6455 lets it
+  // select only an offered subprotocol).
+  if (!token) return undefined;
+  return [BASE_SUBPROTOCOL, `${TOKEN_SUBPROTOCOL_PREFIX}${token}`];
+}
+
 export interface CopilotSocket {
   state: UiState;
   connected: boolean;
@@ -54,7 +83,9 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     let timer: number | undefined;
 
     const connect = () => {
-      const socket = new WebSocket(url ?? defaultUrl());
+      const target = url ?? defaultUrl();
+      const protocols = connectProtocols(launchToken());
+      const socket = protocols ? new WebSocket(target, protocols) : new WebSocket(target);
       socketRef.current = socket;
       socket.onopen = () => {
         retryDelay = 500;

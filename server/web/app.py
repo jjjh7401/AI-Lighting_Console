@@ -31,6 +31,11 @@ from server.safety.audit import AuditLog
 from server.safety.backup import BackupManager
 from server.safety.gate import SafetyGate
 from server.web.approval_bridge import ApprovalChannel
+from server.web.handshake import (
+    CLOSE_POLICY_VIOLATION,
+    HandshakePolicy,
+    evaluate_handshake,
+)
 from server.web.measure import RoundTripRecorder
 from server.web.messages import (
     ProtocolError,
@@ -69,6 +74,9 @@ class WebDeps:
     backup_poll_seconds: float | None = None
     settings: SettingsDeps | None = None
     provision: ProvisionDeps | None = None
+    # M7.1 (REQ-DEPLOY-002a): the /ws Origin+token gate. ``None`` = no gate,
+    # which is the pre-M7.1 behaviour dev runs and unit tests compose.
+    handshake: HandshakePolicy | None = None
     status_listeners: set = field(default_factory=set)
 
 
@@ -136,7 +144,26 @@ def create_app(deps: WebDeps) -> FastAPI:
 
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket) -> None:
-        await websocket.accept()
+        # M7.1 (REQ-DEPLOY-002a / AC-DEPLOY-025 / FEAS-9): authorize the upgrade
+        # BEFORE accept(). A rejected client is closed without ever being
+        # accepted, so it reaches no session, no gate and no console. The reject
+        # reason stays server-side — the peer learns only that it was refused.
+        subprotocol: str | None = None
+        if deps.handshake is not None:
+            decision = evaluate_handshake(
+                deps.handshake,
+                origin=websocket.headers.get("origin"),
+                subprotocols=websocket.scope.get("subprotocols") or (),
+            )
+            if not decision.accepted:
+                deps.audit.record(
+                    {"event": "ws_handshake_rejected", "reason": decision.reason}
+                )
+                await websocket.close(code=CLOSE_POLICY_VIOLATION)
+                return
+            subprotocol = decision.subprotocol
+
+        await websocket.accept(subprotocol=subprotocol)
         loop = asyncio.get_running_loop()
 
         def send_event(event: dict) -> None:

@@ -24,12 +24,33 @@ from __future__ import annotations
 
 import contextlib
 import os
+import secrets
 import signal
 import socket
 import sys
 import webbrowser
 from collections.abc import Callable, Iterable, MutableMapping
 from typing import TextIO
+
+# ------------------------------------------------- per-launch token (M7.1, 002a)
+
+# The env var the token crosses a process boundary in — the Stage-2 Tauri host
+# generates it and hands it to the sidecar it spawns; the sidecar reads it here.
+# The name deliberately contains "TOKEN" so ``keystore.scrub_environ`` redacts it
+# from any crash dump / diagnostic that serialises the environment (AC-DEPLOY-029,
+# the same leak vector DECIDE-M6 closed for API keys).
+LAUNCH_TOKEN_ENV = "COPILOT_LAUNCH_TOKEN"
+# 32 bytes of entropy -> a 43-char urlsafe string. Unguessable within a launch.
+_LAUNCH_TOKEN_BYTES = 32
+
+
+def generate_launch_token() -> str:
+    """Mint a fresh unguessable per-launch handshake token (REQ-DEPLOY-002a).
+
+    Memory/env only — NEVER written to disk (AC-DEPLOY-029). A new value per
+    launch means a token captured from one run is useless against the next.
+    """
+    return secrets.token_urlsafe(_LAUNCH_TOKEN_BYTES)
 
 # ------------------------------------------------------------------ keyring (B.3)
 

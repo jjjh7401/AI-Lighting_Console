@@ -10,6 +10,7 @@ WebSocket approval channel. Credentials stay in environment variables only.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -31,10 +32,13 @@ from server.rulebook.assembly import assemble_prefix
 from server.safety.bootstrap import ConsoleStack, build_console_stack
 from server.web.app import WebDeps, create_app
 from server.web.approval_bridge import ApprovalChannel
+from server.web.handshake import TAURI_ORIGINS, HandshakePolicy, browser_origins_for
 from server.web.launcher import (
+    LAUNCH_TOKEN_ENV,
     PortInUseError,
     apply_keyring_backend_pin,
     assert_keyring_backend,
+    generate_launch_token,
     install_signal_handlers,
     make_shutdown_handler,
     open_app_browser,
@@ -119,6 +123,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     return parser.parse_args(argv)
+
+
+def build_handshake_policy(args: argparse.Namespace) -> HandshakePolicy:
+    """Compose the ``/ws`` Origin+token policy for this launch (REQ-DEPLOY-002a).
+
+    The token comes from the spawning host when there is one (the Stage-2 Tauri
+    shell mints it and passes it in the sidecar's environment, M7.4); a
+    standalone Stage-1 launch mints its own. It is never written to disk and
+    never re-exported into the parent environment (AC-DEPLOY-029).
+
+    Stage-1 browser origins are token-OPTIONAL by design: a browser has no
+    leak-resistant channel to receive the token, so there the Origin allowlist
+    is the real CSWSH closer and the token is defense-in-depth (plan §M7.1).
+    """
+    return HandshakePolicy(
+        token=os.environ.get(LAUNCH_TOKEN_ENV) or generate_launch_token(),
+        trusted_origins=TAURI_ORIGINS,
+        browser_origins=browser_origins_for(args.host, args.port),
+    )
 
 
 def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
@@ -220,6 +243,7 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         backup_poll_seconds=args.backup_poll,
         settings=SettingsDeps(seed_path=config_path, session=SessionKeyStore()),
         provision=ProvisionDeps(seed_path=config_path),
+        handshake=build_handshake_policy(args),
     )
     app = create_app(deps)
     app.state.deps = deps  # composition introspection seam (tests/diagnostics)
