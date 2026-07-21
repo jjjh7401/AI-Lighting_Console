@@ -27,8 +27,11 @@ Receive addresses (M2): the console-side Lua responder replies on TWO addresses
 
 from __future__ import annotations
 
+import errno
 import queue
 import threading
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -42,6 +45,51 @@ FEEDBACK_ADDRESS = "/copilot/feedback"
 STATE_ADDRESS = "/copilot/state"
 
 _SERVER_SHUTDOWN_TIMEOUT = 5.0
+
+# Receive-port rebind recovery (REQ-DEPLOY-032 / AC-DEPLOY-023): a bounded number
+# of SAME-port bind attempts with a brief backoff. Small defaults keep an
+# unrecoverable failure fast (attempts x delay) — the console sends to a fixed
+# port, so recovery is always same-port; drifting to another port is forbidden.
+_DEFAULT_BIND_ATTEMPTS = 3
+_DEFAULT_BIND_RETRY_DELAY = 0.05
+
+
+# @MX:NOTE: [AUTO] SO_REUSEADDR receive server — allow_reuse_address=True makes
+#   socketserver set SO_REUSEADDR before bind, so a receive port left held by an
+#   abnormally-exited prior instance can be reclaimed on restart (REQ-DEPLOY-032).
+#   Deliberately NOT SO_REUSEPORT: two live listeners on the port are never wanted.
+class _ReuseAddrOSCUDPServer(ThreadingOSCUDPServer):
+    """Feedback receive server that reuses the address (SO_REUSEADDR) on bind."""
+
+    allow_reuse_address = True
+
+
+class ReceivePortInUseError(RuntimeError):
+    """The OSC feedback receive port is still held after same-port rebind retries.
+
+    Carries human-readable reconfiguration ``guidance`` (mirroring
+    :class:`server.web.launcher.PortInUseError`) — the launcher surfaces this and
+    exits rather than silently drifting to a different port (REQ-DEPLOY-032 /
+    REQ-DEPLOY-026). Bridge-local (not the launcher's ``PortInUseError``) so the
+    leaf OSC module keeps no upward dependency on ``server.web``.
+    """
+
+    def __init__(self, host: str, port: int, label: str = "OSC feedback receive") -> None:
+        self.host = host
+        self.port = port
+        self.label = label
+        self.guidance = (
+            f"OSC 수신 포트 {port}({label}, {host})가 동일-포트 재바인드 재시도 후에도 "
+            f"여전히 사용 중입니다. 비정상 종료한 이전 인스턴스가 포트를 점유 중일 수 있습니다 — "
+            f"해당 프로세스를 종료하거나 설정(Settings)에서 수신 포트를 변경한 뒤 다시 시작하세요. "
+            f"(OSC receive port {port} for '{label}' is still in use after same-port "
+            f"rebind retries — free the process holding it or change the receive port "
+            f"in Settings, then restart. No automatic port fallback.)"
+        )
+        super().__init__(
+            f"OSC receive port {port} for {label!r} on {host} is still in use "
+            f"after same-port rebind retries"
+        )
 
 
 @dataclass(frozen=True)
@@ -102,12 +150,20 @@ class OscBridge:
         self,
         config: BridgeConfig | None = None,
         consumer: FeedbackConsumer | None = None,
+        *,
+        bind_attempts: int = _DEFAULT_BIND_ATTEMPTS,
+        bind_retry_delay: float = _DEFAULT_BIND_RETRY_DELAY,
+        sleeper: Callable[[float], object] = time.sleep,
     ) -> None:
         self._config = config or BridgeConfig()
         self._consumer: FeedbackConsumer = consumer or QueueFeedbackConsumer()
         self._client = SimpleUDPClient(self._config.send_host, self._config.send_port)
         self._server: ThreadingOSCUDPServer | None = None
         self._server_thread: threading.Thread | None = None
+        # Same-port rebind recovery knobs (injectable so tests stay fast).
+        self._bind_attempts = max(1, bind_attempts)
+        self._bind_retry_delay = bind_retry_delay
+        self._sleep = sleeper
         # M6c backlog (sender-origin authentication): messages dropped
         # because their UDP source address did not match the trusted
         # console origin. Observable counter, not a full logging subsystem —
@@ -144,21 +200,45 @@ class OscBridge:
     # -- receive path (REQ-MVP-002) ------------------------------------------
 
     def start(self) -> None:
-        """Start the background feedback receiver. No-op if already running."""
+        """Start the background feedback receiver. No-op if already running.
+
+        Binds the receive socket with SO_REUSEADDR and a bounded SAME-port retry
+        (REQ-DEPLOY-032): a port left held by an abnormally-exited prior instance
+        is reclaimed on restart. On exhausted retries a :class:`ReceivePortInUseError`
+        (human-friendly reconfiguration guidance) is raised instead of a raw
+        ``OSError`` crash — and the port is NEVER silently drifted (REQ-DEPLOY-026).
+        """
         if self._server is not None:
             return
         dispatcher = Dispatcher()
         dispatcher.map(FEEDBACK_ADDRESS, self._on_feedback, needs_reply_address=True)
         dispatcher.map(STATE_ADDRESS, self._on_feedback, needs_reply_address=True)
-        self._server = ThreadingOSCUDPServer(
-            (self._config.receive_host, self._config.receive_port), dispatcher
-        )
+        self._server = self._bind_receiver(dispatcher)
         self._server_thread = threading.Thread(
             target=self._server.serve_forever,
             name="osc-bridge-feedback-receiver",
             daemon=True,
         )
         self._server_thread.start()
+
+    # @MX:NOTE: [AUTO] same-port rebind carve-out (REQ-DEPLOY-032 / REQ-DEPLOY-026):
+    #   only EADDRINUSE is retried, and ALWAYS against the SAME configured
+    #   receive_port — the console sends to a fixed port, so drifting to any other
+    #   port is forbidden. A non-EADDRINUSE OSError surfaces unchanged.
+    def _bind_receiver(self, dispatcher: Dispatcher) -> _ReuseAddrOSCUDPServer:
+        host = self._config.receive_host
+        port = self._config.receive_port
+        last_error: OSError | None = None
+        for attempt in range(self._bind_attempts):
+            try:
+                return _ReuseAddrOSCUDPServer((host, port), dispatcher)
+            except OSError as error:
+                if error.errno != errno.EADDRINUSE:
+                    raise  # not a port-occupancy failure — surface as-is
+                last_error = error
+                if attempt + 1 < self._bind_attempts:
+                    self._sleep(self._bind_retry_delay)
+        raise ReceivePortInUseError(host, port) from last_error
 
     def stop(self) -> None:
         """Stop the feedback receiver and release the socket. No-op if stopped."""

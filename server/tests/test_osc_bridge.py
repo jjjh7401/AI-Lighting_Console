@@ -9,6 +9,7 @@ All waits are event/timeout-bounded (no sleeps); all ports are ephemeral (port 0
 """
 
 import queue
+import socket
 import threading
 
 import pytest
@@ -16,6 +17,7 @@ from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import ThreadingOSCUDPServer
 from pythonosc.udp_client import SimpleUDPClient
 
+from server.bridge import osc as osc_module
 from server.bridge.osc import (
     CMD_ADDRESS,
     FEEDBACK_ADDRESS,
@@ -24,6 +26,7 @@ from server.bridge.osc import (
     FeedbackMessage,
     OscBridge,
     QueueFeedbackConsumer,
+    ReceivePortInUseError,
 )
 
 RECEIVE_TIMEOUT = 5.0  # generous upper bound; loopback delivery is sub-millisecond
@@ -245,3 +248,80 @@ class TestConfigAndLifecycle:
         assert bridge.receive_port == first_port
         bridge.stop()
         bridge.stop()  # second stop is a no-op
+
+
+class TestReceivePortRebindRecovery:
+    """AC-DEPLOY-023 / REQ-DEPLOY-032 (#6) — an occupied receive port triggers a
+    SAME-port rebind attempt (SO_REUSEADDR + bounded retry), NEVER a silent drift
+    to an arbitrary port (REQ-DEPLOY-026), and on exhaustion raises a human-friendly
+    typed error (naming the port + the Settings reconfiguration knob) — NOT a raw
+    uncaught OSError crash.
+
+    Port-preemption simulation: a LIVE ``SOCK_DGRAM`` socket holds the designated
+    receive port. With ``SO_REUSEADDR`` (and deliberately NOT ``SO_REUSEPORT``) a
+    second live UDP bind on the same port still fails on typical OSes, so this
+    exercises the UNRECOVERABLE path. The successful-rebind-after-dead-prior-
+    instance case is live/timing-gated (deferred N/A — see AC-DEPLOY-023).
+    """
+
+    @staticmethod
+    def _occupy_udp_port() -> tuple[socket.socket, int]:
+        squatter = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        squatter.bind(("127.0.0.1", 0))
+        return squatter, squatter.getsockname()[1]
+
+    def test_reuse_address_is_enabled_on_the_receive_server(self) -> None:
+        # (a) reuse attempted: the receive server sets SO_REUSEADDR before bind, so a
+        # port left held by an abnormally-exited prior instance can be reclaimed.
+        assert osc_module._ReuseAddrOSCUDPServer.allow_reuse_address is True
+        with OscBridge(BridgeConfig(receive_port=0)) as bridge:
+            assert bridge._server.allow_reuse_address is True
+
+    def test_occupied_receive_port_retries_same_port_then_raises_guidance(self) -> None:
+        squatter, port = self._occupy_udp_port()
+        sleeps: list[float] = []
+        bridge = OscBridge(
+            BridgeConfig(receive_host="127.0.0.1", receive_port=port),
+            bind_attempts=3,
+            bind_retry_delay=0.01,
+            sleeper=sleeps.append,
+        )
+        try:
+            with pytest.raises(ReceivePortInUseError) as excinfo:
+                bridge.start()
+        finally:
+            squatter.close()
+
+        err = excinfo.value
+        # (b) bounded retry occurred: (attempts - 1) backoffs between the N bind tries.
+        assert len(sleeps) == 2
+        # (c) NO silent drift (REQ-DEPLOY-026): the bridge never bound a different
+        # port — nothing is running and the reported receive port is still designated.
+        assert bridge._server is None
+        assert bridge.receive_port == port
+        # (d) human-friendly typed error, NOT a raw OSError crash: names the port +
+        # the Settings reconfiguration knob; the raw OSError is chained as the cause.
+        assert isinstance(err, RuntimeError)
+        assert not isinstance(err, OSError)  # distinct from the raw EADDRINUSE crash
+        text = f"{err} {err.guidance}"
+        assert str(port) in text
+        assert "reconfigure" in err.guidance.lower() or "설정" in err.guidance
+        assert "Settings" in err.guidance or "설정" in err.guidance
+        assert isinstance(err.__cause__, OSError)
+
+    def test_clean_start_on_a_free_port_is_unaffected_and_stop_releases(self) -> None:
+        # Normal-lifecycle regression: the reuse + retry path must not disturb the
+        # happy path — a free port binds on the first try (no backoff) and stop()
+        # releases it so a fresh reuse-enabled bind on the same port succeeds.
+        sleeps: list[float] = []
+        bridge = OscBridge(BridgeConfig(receive_port=0), sleeper=sleeps.append)
+        bridge.start()
+        port = bridge.receive_port
+        assert port > 0
+        assert sleeps == []  # bound first try — no backoff on a free port
+        bridge.stop()
+
+        rebound = OscBridge(BridgeConfig(receive_host="127.0.0.1", receive_port=port))
+        rebound.start()
+        assert rebound.receive_port == port
+        rebound.stop()
