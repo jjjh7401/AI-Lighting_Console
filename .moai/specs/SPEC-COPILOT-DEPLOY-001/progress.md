@@ -326,6 +326,32 @@ M7.4a가 이월한 세 개의 교차언어 seam을 완성하고, 라이브 데�
 
 **커밋**: M7.4b 구현 커밋 1건(`feat/app-deploy-file-import` 직접 커밋 — 원격 없음, push/PR 없음).
 
+### M7.5 — deploy 경로 per-send 감사 granularity (2026-07-21, cycle_type=tdd, Stage-2)
+
+M7.3이 명시 이월한 **Layer ② 1:1 회계의 알려진 예외**(이월 의무 #4)를 닫는다. 사용자 결정 **Option A**: 모든 콘솔 송신이 각자 감사 엔트리를 갖는다 — "every console send is audited 1:1" 불변식을 wire 수준에서 문자 그대로 복원.
+
+**결함**: `ConsoleLink._deploy_via_file_import`는 콘솔 왕복 수 회(pool 조회·`Delete Plugin`·`Import Plugin`·확인 조회)를 게이트 감사 `kind="deploy"` **1건** 아래에서 수행 → deploy를 포함하는 wire 캡처는 datagram 수 > 감사 수가 되어 AC-027 Layer ② 대조가 정당한 deploy 트래픽을 "미감사 송신자"로 오탐.
+
+**설계**: 콘솔 링크는 감사를 직접 쓰지 않는다(AuditLog 단일 기록 지점 `audit.py` **무변경**, 게이트 소유 유지). 대신 `deploy_plugin`이 왕복마다 `DeploySend`(kind/command/ok/detail/outcome) 레코드를 `ExecOutcome.sends`(additive 기본값 `()` — 기존 fake·호출부 무변경)로 **반환**하고, 유일한 감사 기록자인 게이트(`deploy_plugin_source`)가 각 레코드를 개별 `executed` 엔트리(`kind="state_query"|"command"`, 상관 필드 `deploy_of=<name>`)로 fan-out한 뒤 부모 `kind="deploy"` 요약 엔트리(`deploy_sends=N`)를 기록한다. file+Import 경로의 부모 엔트리는 wire datagram과 대응하지 않지만 이는 reconciler가 허용하는 **감사O·관측X 방향**(우회 아님). OSC deploy verb 폴백은 1송신=부모 1엔트리로 기존 그대로(`sends=()`). 상관은 `deploy_of` 이름 필드 + JSONL 순서(sub들이 부모에 선행)로 충분 — 합성 deploy-id 생성기는 두지 않음(단순성 사다리).
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| (i) N 송신 → N 감사 엔트리 + 상관 | PASS | `pytest server/tests/test_responder_import_gate.py::TestPerSendDeployAuditGranularity server/tests/test_deploy_transport.py::TestFileImportPerSendRecords ::TestGatePerSendDeployAudit -v` | `8 passed` — fresh deploy `sends == [(state_query, DataPool/Plugins, ok), (command, Import Plugin 1 'CopilotResponder', ok), (state_query, …, ok)]`; redeploy는 `Delete Plugin 1` 포함 4건; 타임아웃 경로도 wire에 나간 2 datagram을 2 레코드로 기록(ok=False). 실제 JSONL(`.moai/state/verify/m75/10-audit-jsonl-sample.log`): sub 3건 각각 `"deploy_of": "CopilotResponder"` + 부모 `"kind": "deploy", "deploy_sends": 3` |
+| (ii) deploy를 가로지르는 wire 대조 1:1·오탐 0 | PASS | `pytest server/tests/test_deploy_cross_language_scan.py::TestLayer2DeploySpanningCapture -v` (실 `build_console_stack` + effective-settings 포트의 실 UDP 싱크) | `2 passed` — deploy 관통 캡처 `observed>=2`(state+exec), `unaudited=()`, `positive_observation=True`, `ok=True`(**RED에서 동일 테스트가 `observed=2, matched=0, unaudited=2`로 실패했음** — `01-red.log`); off-gate rogue datagram은 deploy 캡처 중에도 여전히 `unaudited=1, ok=False` fail-closed |
+| (iii) 단일 승인·게이트 clearance 무변경 | PASS | `pytest …::test_one_approval_still_covers_the_whole_deploy ::TestImportPluginTransitsTheGate ::TestGateDeploySurface -v` | `9 passed` — ScriptedReview **결정 1개**로 전체 deploy 성공(`deploy_review_approved` 정확 1건, 게이트 번들 `approved` 이벤트 0건 = per-send 승인 없음); live-lock/console-offline 차단·unconfirmed 마커·`kind="deploy"` 1건 회귀 테스트 전부 기존 그대로 green |
+
+**Regression**: full suite → **`1189 passed`**(baseline 1179 + 신규 10, 회귀 **0**, skip 0; keyring null-backend 격리). `vitest` → `57 passed`. `rust_scan.py` → `PASS — 8 file(s), 0 violation(s)`. `ruff check server/ packaging/` → `Found 2 errors`(둘 다 기존 E501, 리팩터로 `console.py:289/:326`으로 행번호만 이동 — 원문 그대로 보존, **NEW 0**). cargo 무접촉.
+
+**RED 증명**: 구현 전 신규 10건 중 9건 FAIL(`.moai/state/verify/m75/01-red.log`) — wire 테스트가 결함을 그대로 재현(`observed_count=3, audited_count=1, matched=0`). 나머지 1건(단일 승인)은 보존 불변식이므로 사전 green이 정상.
+
+**수정 파일**: `server/safety/console.py`(DeploySend + ExecOutcome.sends + `_deploy_via_file_import` 분해: `_run_file_import`/`_deploy_query_state`/`_deploy_execute`), `server/safety/gate.py`(`deploy_plugin_source` fan-out), `packaging/wire_sink.py`(회계 caveat → CLOSED 갱신), 테스트 3파일(+10건). `server/safety/audit.py` **무변경**(제약 준수), `server/web`→`server.bridge` import 0 유지(AC-MVP-019 스캔 green — full suite 포함).
+
+**@MX tags added**: `server/safety/console.py` `DeploySend` — `@MX:ANCHOR` + `@MX:REASON` + `@MX:SPEC`(per-send 레코드 계약: 레코드를 빠뜨린 왕복 = 오탐 "미감사 송신자").
+
+**Gap/이연**: 패키지 `.app` E2E는 기존 dist가 구버전 서버 payload라 재빌드 전에는 본 변경을 실행하지 않음 — 검증은 실 스택(실 ConsoleLink + 실 UDP wire) 단위로 완결(scope의 "packaged-E2E or unit coverage" 중 unit 선택). 다음 패키징 시 Step 8은 무변경 통과 예상(E2E는 deploy를 수행하지 않음), deploy-관통 E2E 스텝 추가는 선택 과제.
+
+**커밋**: M7.5 구현 커밋 1건(`feat/app-deploy-file-import` 직접 커밋 — 원격 없음, push/PR 없음).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 `run_status: audit-ready` (Stage-1)

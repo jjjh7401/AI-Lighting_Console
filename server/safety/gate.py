@@ -495,7 +495,11 @@ class SafetyGate:
         lives in :class:`server.deploy.pipeline.DeployPipeline`, which calls
         this ONLY after review approval; this method re-checks the runtime
         safety state at send time (lock/health — same discipline as
-        :meth:`_execute_cleared`) and audits the send 1:1 (kind="deploy").
+        :meth:`_execute_cleared`) and audits every wire send 1:1: each console
+        round-trip the file+Import path performs is fanned out into its OWN
+        ``executed`` entry (M7.5, correlated by ``deploy_of``), followed by the
+        parent ``kind="deploy"`` summary entry. Approval granularity is
+        UNCHANGED — the single review approval covers the whole deploy.
         """
         if self.lock.is_active:
             self._audit.log_blocked(f"deploy:{name}", reason="live lock active (read-only)")
@@ -505,6 +509,19 @@ class SafetyGate:
             self._audit.log_blocked(f"deploy:{name}", reason=reason)
             return ExecutionResult(ok=False, detail=f"blocked: {reason}")
         outcome = self._console.deploy_plugin(name, lua_source)
+        # M7.5 per-send audit granularity (AC-DEPLOY-027 Layer ②): the console
+        # link RETURNS one DeploySend per round-trip it made; the gate — the
+        # sole audit writer — lands each as its own executed entry so a wire
+        # capture spanning a deploy still reconciles 1:1.
+        for send in outcome.sends:
+            self._audit.log_executed(
+                send.command,
+                kind=send.kind,
+                ok=send.ok,
+                detail=send.detail,
+                outcome=send.outcome,
+                deploy_of=name,
+            )
         self._audit.log_executed(
             name,
             kind="deploy",
@@ -512,6 +529,7 @@ class SafetyGate:
             detail=outcome.detail,
             outcome=outcome.status,
             source_bytes=len(lua_source.encode("utf-8")),
+            deploy_sends=len(outcome.sends),
         )
         if outcome.status == "ok":
             return ExecutionResult(ok=True, detail=outcome.detail)

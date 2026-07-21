@@ -52,6 +52,7 @@ class RecordingConsole:
     def __init__(self, link: ConsoleLink) -> None:
         self._link = link
         self.exec_commands: list[str] = []
+        self.state_queries: list[str] = []
         self.raw_unwrapped: list[str] = []
         self._pool: list[str] = []
 
@@ -76,6 +77,7 @@ class RecordingConsole:
                 {"v": 1, "kind": "result", "id": rid, "ok": True, "result": "OK"},
             )
         else:  # state
+            self.state_queries.append(rest or "")
             children = [{"name": name, "i": i} for i, name in enumerate(self._pool, start=1)]
             self._reply(
                 STATE_ADDRESS,
@@ -173,3 +175,49 @@ class TestImportPluginTransitsTheGate:
         pipeline.deploy(_RESPONDER, SAFE_SOURCE)
 
         assert len(console.import_plugin_sends) == len(_deploy_events(audit))
+
+
+class TestPerSendDeployAuditGranularity:
+    """M7.5 (AC-DEPLOY-027 Layer ② 1:1) — EVERY console send inside the
+    file+Import deploy gets its own ``executed`` audit entry, correlated to
+    the parent deploy, while approval granularity stays exactly as before
+    (one human review approval covers the whole deploy)."""
+
+    def test_every_console_send_inside_a_deploy_is_audited(self, tmp_path):
+        pipeline, _gate, console, audit = _stack(tmp_path)
+        outcome = pipeline.deploy(_RESPONDER, SAFE_SOURCE)
+        assert outcome.status == "deployed"
+
+        wire_sends = len(console.exec_commands) + len(console.state_queries)
+        assert wire_sends >= 2, "the file+Import deploy must span multiple round-trips"
+
+        executed = [e for e in audit.iter_events() if e["event"] == "executed"]
+        subs = [e for e in executed if e.get("deploy_of") == _RESPONDER]
+        # N wire sends -> N per-send audit entries (1:1, restoring the literal
+        # "every console send is audited 1:1" invariant at wire level).
+        assert len(subs) == wire_sends
+        assert sorted(e["command"] for e in subs if e["kind"] == "command") == sorted(
+            console.exec_commands
+        )
+        assert sorted(e["command"] for e in subs if e["kind"] == "state_query") == sorted(
+            console.state_queries
+        )
+        # The parent deploy record remains exactly one and counts its sub-sends.
+        (parent,) = _deploy_events(audit)
+        assert parent["deploy_sends"] == wire_sends
+
+    def test_one_approval_still_covers_the_whole_deploy(self, tmp_path):
+        # M7.5 changes AUDIT granularity only. The deploy still requires the
+        # SAME single human review approval and the same gate clearance —
+        # per-send audit entries do NOT introduce per-send approvals.
+        pipeline, _gate, console, audit = _stack(tmp_path)  # ScriptedReview([True]): ONE decision
+        outcome = pipeline.deploy(_RESPONDER, SAFE_SOURCE)
+        assert outcome.status == "deployed"
+        assert len(console.exec_commands) + len(console.state_queries) >= 2
+
+        events = list(audit.iter_events())
+        # Exactly one review approval covered every round-trip (a second
+        # review request would have drained ScriptedReview and failed above).
+        assert len([e for e in events if e["event"] == "deploy_review_approved"]) == 1
+        # And the gate's bundle-approval channel was never consulted.
+        assert [e for e in events if e["event"] == "approved"] == []

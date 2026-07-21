@@ -16,7 +16,7 @@ from __future__ import annotations
 import itertools
 import threading
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Protocol
 
@@ -46,12 +46,40 @@ class LinkTimeouts:
     deploy_confirm_seconds: float = 10.0
 
 
+# @MX:ANCHOR: [AUTO] per-send deploy audit contract (M7.5) — every console
+#   round-trip made inside deploy_plugin's file+Import path MUST append one
+#   DeploySend record; the gate fans these out into individual audit entries
+# @MX:REASON: AC-DEPLOY-027 Layer ② reconciles the wire 1:1 against the audit
+#   log; a round-trip that skips its record becomes a false "unenumerated
+#   sender" flag (fan_in >= 3: gate audit fan-out, wire-sink reconcile tests,
+#   responder import-gate accounting tests)
+# @MX:SPEC: SPEC-COPILOT-DEPLOY-001
+@dataclass(frozen=True)
+class DeploySend:
+    """One console round-trip made INSIDE a deploy (per-send granularity).
+
+    The console link never writes audit entries itself — the AuditLog stays
+    gate-owned. It only RETURNS what it sent; ``SafetyGate.deploy_plugin_source``
+    turns each record into its own ``executed`` audit event.
+    """
+
+    kind: str  # audit kind taxonomy: "state_query" | "command"
+    command: str  # the state path or exec command line (the wire subject)
+    ok: bool
+    detail: str = ""
+    outcome: str = ""  # "ok" | "failed" | "unconfirmed" | "error"
+
+
 @dataclass(frozen=True)
 class ExecOutcome:
     """One command execution attempt: ok / failed / unconfirmed (REQ-MVP-032)."""
 
     status: str  # "ok" | "failed" | "unconfirmed"
     detail: str = ""
+    # Sub-sends performed inside a deploy (file+Import path). Empty for plain
+    # executions and for the single-send OSC deploy verb, whose one wire send
+    # is already represented 1:1 by the gate's parent kind="deploy" entry.
+    sends: tuple[DeploySend, ...] = ()
 
 
 class StateQueryError(Exception):
@@ -207,7 +235,47 @@ class ConsoleLink:
         format has neither limit (verified live: 9-fixture patch plugin ran).
         Idempotent: an existing plugin of the same Name is deleted first so a
         re-deploy updates in place instead of creating a duplicate.
+
+        Per-send granularity (M7.5, AC-DEPLOY-027 Layer ②): every console
+        round-trip made here is recorded as a :class:`DeploySend` on the
+        returned outcome, so the gate can audit each wire send individually.
         """
+        sends: list[DeploySend] = []
+        outcome = self._run_file_import(name, lua_source, sends)
+        return replace(outcome, sends=tuple(sends))
+
+    def _deploy_query_state(self, path: str, sends: list[DeploySend]) -> dict:
+        """One pool read inside a deploy — recorded even on failure/timeout
+        (a lost reply is not a lost send; the query still hit the wire)."""
+        try:
+            payload = self.query_state(path)
+        except StateQueryError as error:
+            sends.append(
+                DeploySend(
+                    kind="state_query", command=path, ok=False, detail=str(error), outcome="error"
+                )
+            )
+            raise
+        sends.append(DeploySend(kind="state_query", command=path, ok=True, outcome="ok"))
+        return payload
+
+    def _deploy_execute(self, command: str, sends: list[DeploySend]) -> ExecOutcome:
+        """One exec round-trip inside a deploy — recorded with its outcome."""
+        outcome = self.execute(command)
+        sends.append(
+            DeploySend(
+                kind="command",
+                command=command,
+                ok=outcome.status == "ok",
+                detail=outcome.detail,
+                outcome=outcome.status,
+            )
+        )
+        return outcome
+
+    def _run_file_import(
+        self, name: str, lua_source: str, sends: list[DeploySend]
+    ) -> ExecOutcome:
         try:
             xml = build_plugin_xml(name, lua_source)
         except ValueError as error:
@@ -226,7 +294,7 @@ class ConsoleLink:
         existing_slot: int | None = None
         occupied: set[int] = set()
         try:
-            pool = self.query_state("DataPool/Plugins")
+            pool = self._deploy_query_state("DataPool/Plugins", sends)
             for child in pool.get("children", []):
                 if not isinstance(child, dict):
                     continue
@@ -238,14 +306,14 @@ class ConsoleLink:
         except StateQueryError:
             pass  # non-fatal — proceed with slot 2 fallback below
         if isinstance(existing_slot, int):
-            self.execute(f"Delete Plugin {existing_slot}")
+            self._deploy_execute(f"Delete Plugin {existing_slot}", sends)
             occupied.discard(existing_slot)
         slot = 1
         while slot in occupied:
             slot += 1
 
         # Import into the chosen free slot; single-quoted stem (exec rejects ").
-        outcome = self.execute(f"Import Plugin {slot} '{slug}'")
+        outcome = self._deploy_execute(f"Import Plugin {slot} '{slug}'", sends)
         if outcome.status != "ok":
             return ExecOutcome(
                 status=outcome.status,
@@ -253,7 +321,7 @@ class ConsoleLink:
             )
         # Confirm the plugin object now exists in the pool under its Name.
         try:
-            pool = self.query_state("DataPool/Plugins")
+            pool = self._deploy_query_state("DataPool/Plugins", sends)
         except StateQueryError as error:
             return ExecOutcome(status="unconfirmed", detail=f"imported but pool unreadable: {error}")
         names = [c.get("name") for c in pool.get("children", []) if isinstance(c, dict)]

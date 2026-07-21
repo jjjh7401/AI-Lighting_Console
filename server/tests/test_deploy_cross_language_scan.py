@@ -295,6 +295,32 @@ def gated_stack(tmp_path, configured_send_port):
         stack.stop()
 
 
+@pytest.fixture()
+def deploying_stack(tmp_path, configured_send_port):
+    """The gated stack with the file+Import deploy path armed (M7.5)."""
+    from server.safety.bootstrap import build_console_stack
+    from server.safety.console import LinkTimeouts
+
+    stack = build_console_stack(
+        send_host="127.0.0.1",
+        send_port=configured_send_port,
+        receive_port=0,  # ephemeral — no console, no port conflict
+        audit_dir=tmp_path / "audit",
+        attempt_session_backup=False,
+        plugin_import_dir=tmp_path / "plugins",
+        timeouts=LinkTimeouts(
+            exec_confirm_seconds=0.05,
+            ping_seconds=0.05,
+            state_query_seconds=0.05,
+            deploy_confirm_seconds=0.05,
+        ),
+    )
+    try:
+        yield stack
+    finally:
+        stack.stop()
+
+
 class TestLayer2SinkBindsTheConfiguredPort:
     def test_sink_port_comes_from_effective_settings_not_the_default(
         self, sink, configured_send_port
@@ -352,6 +378,49 @@ class TestLayer2PositiveObservationAndReconciliation:
         assert result.unaudited == ()
         assert result.positive_observation is False
         assert result.ok is False, "an empty capture reported a pass"
+
+
+class TestLayer2DeploySpanningCapture:
+    """M7.5 — a capture that SPANS a file+Import deploy reconciles 1:1: every
+    deploy-internal round-trip (pool read, Import Plugin exec) has its own
+    audit entry, so legitimate deploy traffic is never flagged as an
+    unenumerated sender. Closes the M7.3 accounting caveat."""
+
+    def test_deploy_spanning_capture_reconciles_one_to_one(self, sink, deploying_stack):
+        result_exec = deploying_stack.gate.deploy_plugin_source("CopilotResponder", "return 1")
+        # The sink never replies, so the deploy ends unconfirmed — but its
+        # datagrams DID reach the wire and every one must be audited.
+        assert result_exec.ok is False
+
+        observed = sink.drain()
+        audited = [e for e in deploying_stack.audit.iter_events() if e["event"] == "executed"]
+        result = reconcile(observed, audited)
+
+        assert result.observed_count >= 2, "a file+Import deploy must span multiple datagrams"
+        assert {d.verb for d in observed} == {"state", "exec"}
+        assert result.unaudited == (), (
+            f"deploy-internal round-trips were flagged as unenumerated: {result.detail}"
+        )
+        assert result.positive_observation is True
+        assert result.ok is True, result.detail
+
+    def test_deploy_plus_rogue_datagram_still_fails_closed(self, sink, deploying_stack):
+        # Per-send granularity must not blunt the guard: an off-gate datagram
+        # arriving DURING a deploy-spanning capture is still flagged.
+        deploying_stack.gate.deploy_plugin_source("CopilotResponder", "return 1")
+        rogue = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            rogue.sendto(
+                _osc_message("/copilot/cmd", "Delete Sequence 5"), ("127.0.0.1", sink.port)
+            )
+        finally:
+            rogue.close()
+
+        observed = sink.drain()
+        audited = [e for e in deploying_stack.audit.iter_events() if e["event"] == "executed"]
+        result = reconcile(observed, audited)
+        assert len(result.unaudited) == 1, result
+        assert result.ok is False, "an off-gate sender must still fail closed across a deploy"
 
 
 class TestLayer2FailsClosedOnAnUnauditedSender:

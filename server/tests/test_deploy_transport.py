@@ -115,19 +115,22 @@ class TestConsoleLinkDeploy:
 
 
 class DeployableFakeConsole(FakeConsole):
-    """FakeConsole + the M7 deploy surface."""
+    """FakeConsole + the M7 deploy surface (+ M7.5 per-send records)."""
 
     def __init__(self, state_tree: dict | None = None):
         super().__init__(state_tree)
         self.deployed: list[tuple[str, str]] = []
         self.deploy_status = "ok"
         self.deploy_detail = "deployed"
+        self.deploy_sends: tuple = ()
 
     def deploy_plugin(self, name: str, lua_source: str):
         from server.safety.console import ExecOutcome
 
         self.deployed.append((name, lua_source))
-        return ExecOutcome(status=self.deploy_status, detail=self.deploy_detail)
+        return ExecOutcome(
+            status=self.deploy_status, detail=self.deploy_detail, sends=self.deploy_sends
+        )
 
 
 def _gate(tmp_path, **kwargs):
@@ -190,3 +193,106 @@ class TestGateDeploySurface:
         result = gate.deploy_plugin_source("Cleaner", "return 1")
         assert result.ok is False
         assert "no plugin pool" in result.detail
+
+
+# ---------------------------------------------------------------- M7.5 per-send granularity
+
+
+class TestFileImportPerSendRecords:
+    """M7.5 (AC-DEPLOY-027 Layer ②) — every console round-trip inside a
+    file+Import deploy is returned as its own ``DeploySend`` record, so the
+    gate can audit each wire send 1:1 instead of one blanket ``deploy`` event."""
+
+    def _import_link(self, tmp_path):
+        from .test_responder_import_gate import RecordingConsole
+
+        link = ConsoleLink(
+            timeouts=LinkTimeouts(exec_confirm_seconds=2.0, state_query_seconds=2.0),
+            import_dir=tmp_path / "plugins",
+        )
+        console = RecordingConsole(link)
+        link.bind_send(console.send)
+        return link, console
+
+    def test_fresh_deploy_returns_one_record_per_round_trip(self, tmp_path):
+        link, _console = self._import_link(tmp_path)
+        outcome = link.deploy_plugin("CopilotResponder", "return 1")
+        assert outcome.status == "ok"
+        assert [(s.kind, s.command, s.ok) for s in outcome.sends] == [
+            ("state_query", "DataPool/Plugins", True),
+            ("command", "Import Plugin 1 'CopilotResponder'", True),
+            ("state_query", "DataPool/Plugins", True),
+        ]
+
+    def test_redeploy_records_the_delete_round_trip_too(self, tmp_path):
+        link, _console = self._import_link(tmp_path)
+        assert link.deploy_plugin("CopilotResponder", "return 1").status == "ok"
+        outcome = link.deploy_plugin("CopilotResponder", "return 2")
+        assert outcome.status == "ok"
+        assert ("command", "Delete Plugin 1") in [(s.kind, s.command) for s in outcome.sends]
+        assert len(outcome.sends) == 4  # pool read + Delete + Import + confirm read
+
+    def test_timeout_path_still_records_the_sends_that_hit_the_wire(self, tmp_path):
+        # No replies at all: the pool read times out and the Import exec times
+        # out — but both SENT a datagram, so both MUST be recorded (a lost
+        # reply is not a lost send; AC-DEPLOY-027 reconciles the wire).
+        link = ConsoleLink(timeouts=_FAST, import_dir=tmp_path / "plugins")
+        sent: list[str] = []
+        link.bind_send(sent.append)
+        outcome = link.deploy_plugin("Cleaner", "return 1")
+        assert outcome.status == "unconfirmed"
+        assert len(sent) == 2  # state query + Import Plugin exec
+        assert [(s.kind, s.ok) for s in outcome.sends] == [
+            ("state_query", False),
+            ("command", False),
+        ]
+
+    def test_osc_verb_fallback_has_no_sub_sends(self):
+        # The remote deploy verb is ONE wire send, already represented 1:1 by
+        # the gate's parent kind="deploy" audit entry — no sub-records.
+        link = ConsoleLink(timeouts=_FAST)  # no import_dir -> OSC deploy verb
+        send, _ = _deploy_echo_send(link)
+        link.bind_send(send)
+        outcome = link.deploy_plugin("Cleaner", "return 1")
+        assert outcome.status == "ok"
+        assert outcome.sends == ()
+
+
+class TestGatePerSendDeployAudit:
+    """M7.5 — the gate fans deploy sub-sends out into individual ``executed``
+    audit entries correlated to the parent deploy (``deploy_of``)."""
+
+    def test_sub_sends_get_their_own_audit_entries_with_correlation(self, tmp_path):
+        from server.safety.console import DeploySend
+
+        console = DeployableFakeConsole()
+        console.deploy_sends = (
+            DeploySend(kind="state_query", command="DataPool/Plugins", ok=True, outcome="ok"),
+            DeploySend(
+                kind="command", command="Import Plugin 1 'Cleaner'", ok=True, outcome="ok"
+            ),
+        )
+        gate, _, audit = _gate(tmp_path, console=console)
+        assert gate.deploy_plugin_source("Cleaner", "return 1").ok is True
+
+        executed = _events(audit, "executed")
+        subs = [e for e in executed if e.get("deploy_of") == "Cleaner"]
+        assert [(e["kind"], e["command"], e["ok"]) for e in subs] == [
+            ("state_query", "DataPool/Plugins", True),
+            ("command", "Import Plugin 1 'Cleaner'", True),
+        ]
+        # The parent deploy entry survives (approval/summary record) and counts
+        # its sub-sends; sub-entries precede it in the durable log.
+        (parent,) = [e for e in executed if e["kind"] == "deploy"]
+        assert parent["command"] == "Cleaner"
+        assert parent["deploy_sends"] == 2
+        assert executed.index(parent) > max(executed.index(e) for e in subs)
+
+    def test_deploy_without_sub_sends_stays_single_entry(self, tmp_path):
+        # OSC-verb fallback / fakes: no sends -> exactly the old single entry.
+        gate, _, audit = _gate(tmp_path)
+        assert gate.deploy_plugin_source("Cleaner", "return 1").ok is True
+        executed = _events(audit, "executed")
+        assert len(executed) == 1
+        assert executed[0]["kind"] == "deploy"
+        assert executed[0]["deploy_sends"] == 0

@@ -24,12 +24,14 @@ Reconciliation direction (deliberately asymmetric):
   an ``executed`` event whose send failed validation before reaching the wire.
   Neither is a bypass.
 
-Known accounting caveat (recorded, not silently absorbed): the file+Import
+Deploy accounting (M7.5 — the former caveat is CLOSED): the file+Import
 plugin-deploy path (``ConsoleLink._deploy_via_file_import``) issues several
-console round-trips under ONE gate-audited ``kind="deploy"`` event, so a capture
-that spans a plugin deployment has more datagrams than audit entries. Callers
-that exercise deploys must account for it explicitly; the reconciliation here
-stays strict rather than papering over the gap.
+console round-trips, and since M7.5 EACH one gets its own gate audit
+``executed`` entry (``kind="state_query"``/``"command"``, correlated by
+``deploy_of``), so a capture spanning a deploy reconciles 1:1 with no special
+handling. The parent ``kind="deploy"`` summary entry maps to no datagram on
+the file+Import path — that is the tolerated audited-but-unobserved direction
+below, never a violation.
 
 Pure stdlib — runs inside the pytest suite and the packaged E2E host alike.
 """
