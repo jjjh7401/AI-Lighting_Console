@@ -50,12 +50,17 @@ class FakeStatePort:
         return self.tree[path]
 
 
-def _snapshot(path: str, names: list[str]) -> dict:
+def _snapshot(path: str, names: list[str], numbers: list[int] | None = None) -> dict:
+    # Each child carries its real pool number ``i`` (the responder's pool slot
+    # per copilot_responder.lua build_snapshot / server/safety/console.py, which
+    # treats ``i`` as the slot). ``numbers`` supplies NON-CONTIGUOUS pool numbers
+    # (AC-DEPLOY-020); it defaults to a contiguous 1..N.
+    nums = numbers if numbers is not None else list(range(1, len(names) + 1))
     return {
         "v": 1,
         "kind": "state",
         "path": path,
-        "children": [{"name": name} for name in names],
+        "children": [{"i": n, "name": name} for n, name in zip(nums, names, strict=True)],
     }
 
 
@@ -69,6 +74,21 @@ _RIG_TREE = {
     ),
     DEFAULT_RIG_CONTEXT_PATHS["presets"]: _snapshot(
         DEFAULT_RIG_CONTEXT_PATHS["presets"], ["Warm Wash", "Cool Cyc"]
+    ),
+}
+
+# Non-contiguous pool-number showfile (AC-DEPLOY-020) — groups live at pool
+# 1, 2, 7 (NOT 1, 2, 3). This is the exact shape that made the model map "the
+# 3rd item" onto a non-existent "Group 3" → "Illegal object" (live-demo #3).
+_GAPPED_RIG_TREE = {
+    DEFAULT_RIG_CONTEXT_PATHS["patch"]: _snapshot(
+        DEFAULT_RIG_CONTEXT_PATHS["patch"], ["Spot 1", "Wash 1", "Wash 2"], numbers=[1, 4, 5]
+    ),
+    DEFAULT_RIG_CONTEXT_PATHS["groups"]: _snapshot(
+        DEFAULT_RIG_CONTEXT_PATHS["groups"], ["Vocals", "Wash All", "Big Spot"], numbers=[1, 2, 7]
+    ),
+    DEFAULT_RIG_CONTEXT_PATHS["presets"]: _snapshot(
+        DEFAULT_RIG_CONTEXT_PATHS["presets"], ["Warm Wash", "Cool Cyc"], numbers=[3, 9]
     ),
 }
 
@@ -292,14 +312,67 @@ class TestDeployPluginTool:
 
 
 class TestGetRigContext:
-    def test_summarizes_patch_group_preset_vocabulary(self):
-        # AC-MVP-025: summary contains patch, group, and preset vocabulary.
+    def test_exposes_real_pool_number_and_name(self):
+        # AC-MVP-025 + AC-DEPLOY-020 ①: each object exposes its REAL pool
+        # number ("no") AND name — not a bare positional array of names.
         registry = _registry()
         execution = registry.dispatch(_call("get_rig_context"))
         summary = json.loads(execution.result.content)
-        assert summary["patch"] == ["Spot 1", "Wash 1", "Wash 2"]
-        assert summary["groups"] == ["Vocals", "Wash All"]
-        assert summary["presets"] == ["Warm Wash", "Cool Cyc"]
+        assert summary["patch"] == [
+            {"no": 1, "name": "Spot 1"},
+            {"no": 2, "name": "Wash 1"},
+            {"no": 3, "name": "Wash 2"},
+        ]
+        assert summary["groups"] == [
+            {"no": 1, "name": "Vocals"},
+            {"no": 2, "name": "Wash All"},
+        ]
+        assert summary["presets"] == [
+            {"no": 1, "name": "Warm Wash"},
+            {"no": 2, "name": "Cool Cyc"},
+        ]
+        assert execution.result.is_error is False
+
+    def test_non_contiguous_pool_numbers_are_exposed_not_positional(self):
+        # AC-DEPLOY-020 ①②: on a rig whose groups live at pool 1, 2, 7 the
+        # third group MUST surface as pool 7 (its REAL number, not positional
+        # index 3), and a non-existent number (3, absent from {1,2,7}) MUST
+        # NOT appear as an available object — so the model can no longer map
+        # "the 3rd item" onto a hallucinated "Group 3" ("Illegal object", #3).
+        registry = _registry(state_port=FakeStatePort(dict(_GAPPED_RIG_TREE)))
+        execution = registry.dispatch(_call("get_rig_context"))
+        summary = json.loads(execution.result.content)
+        assert summary["groups"] == [
+            {"no": 1, "name": "Vocals"},
+            {"no": 2, "name": "Wash All"},
+            {"no": 7, "name": "Big Spot"},
+        ]
+        group_numbers = {entry["no"] for entry in summary["groups"]}
+        assert group_numbers == {1, 2, 7}
+        assert 3 not in group_numbers  # the hallucinated "Group 3" is absent
+        assert execution.result.is_error is False
+
+    def test_child_missing_pool_number_degrades_to_name_only(self):
+        # A child lacking ``i`` degrades to a name-only entry rather than
+        # crashing or emitting a null pool number.
+        tree = {
+            DEFAULT_RIG_CONTEXT_PATHS["patch"]: {
+                "v": 1,
+                "kind": "state",
+                "path": DEFAULT_RIG_CONTEXT_PATHS["patch"],
+                "children": [{"name": "Nameless"}, {"i": 4, "name": "Spot 4"}],
+            },
+            DEFAULT_RIG_CONTEXT_PATHS["groups"]: _snapshot(
+                DEFAULT_RIG_CONTEXT_PATHS["groups"], ["Vocals"]
+            ),
+            DEFAULT_RIG_CONTEXT_PATHS["presets"]: _snapshot(
+                DEFAULT_RIG_CONTEXT_PATHS["presets"], ["Warm Wash"]
+            ),
+        }
+        registry = _registry(state_port=FakeStatePort(tree))
+        execution = registry.dispatch(_call("get_rig_context"))
+        summary = json.loads(execution.result.content)
+        assert summary["patch"] == [{"name": "Nameless"}, {"no": 4, "name": "Spot 4"}]
         assert execution.result.is_error is False
 
     def test_missing_section_is_reported_not_fatal(self):

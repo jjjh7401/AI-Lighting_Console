@@ -85,6 +85,26 @@ _DEPLOY_OUTCOME_STATUS = {
 }
 
 
+# @MX:NOTE: [AUTO] rig-context exposes the REAL pool number ('no'), not a bare
+# positional index — stops the model mapping "the Nth item" onto "object N" and
+# inventing a non-existent object on a non-contiguous rig (a hallucinated
+# "Group 3" when groups live at pool 1, 2, 7). Live-demo finding #3,
+# SPEC-COPILOT-DEPLOY-001 REQ-DEPLOY-029 / AC-DEPLOY-020.
+def _rig_object(child: dict) -> dict[str, object]:
+    """One rig-context object: its REAL pool number (``no``) + ``name``.
+
+    The responder emits each child as ``{"i": <pool-slot>, "name": ...}``
+    (``console/lua/copilot_responder.lua`` build_snapshot; ``i`` is the real
+    pool slot, treated as such in ``server/safety/console.py``). A child
+    missing ``i`` degrades to a name-only entry rather than crashing.
+    """
+    number = child.get("i")
+    name = child.get("name", "")
+    if number is None:
+        return {"name": name}
+    return {"no": number, "name": name}
+
+
 def _error_result(call: ToolCall, message: str) -> ToolExecution:
     return ToolExecution(
         result=ToolResult(
@@ -305,7 +325,7 @@ def build_toolset(
                 payload = state_port.query_state(path)
                 children = payload.get("children", [])
                 summary[section] = [
-                    child.get("name", "") for child in children if isinstance(child, dict)
+                    _rig_object(child) for child in children if isinstance(child, dict)
                 ]
             except Exception as exc:
                 summary[section] = {"error": f"unavailable ({path}): {exc}"}
@@ -381,7 +401,11 @@ def build_toolset(
                 "Summarize the loaded showfile's rig vocabulary: patched fixtures, "
                 "groups, and presets. Call this FIRST when the instruction uses "
                 "venue/field terms (e.g. Korean field vocabulary) that must be "
-                "resolved to actual showfile object names."
+                "resolved to actual showfile object names. Each object is returned "
+                'as {"no": <pool number>, "name": <name>}; ALWAYS reference an '
+                'object by its REAL pool number ("no"), NEVER by positional order '
+                "— pool numbers may be non-contiguous (e.g. 1, 2, 7), so the Nth "
+                "listed item is NOT necessarily object N."
             ),
             parameters={"type": "object", "properties": {}},
         ),
