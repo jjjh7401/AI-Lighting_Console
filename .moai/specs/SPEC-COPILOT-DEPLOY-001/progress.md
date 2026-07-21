@@ -185,7 +185,7 @@ terminal `completed` close(§E.4의 `in-progress → implemented → completed` 
 
 `sync_status: stage-1-hardening-synced` (**여전히 Stage-1 문서 동기화 — terminal close 아님**)
 `sync_complete_at: 2026-07-21`
-`sync_commit_sha: pending-backfill-v030-hardening-sync`
+`sync_commit_sha: dcdb6f5`
 
 v0.3.0 라이브 E2E 하드닝 배치(결함 #2~#6, REQ-DEPLOY-028~032/AC-DEPLOY-019~023, milestones M14~M18)를 CHANGELOG.md `[Unreleased]`에 기록했다. 7개 배치 커밋(`3baadf1` 계획 fold-in, `66d1419` M14, `fe1a9d8` keyring conftest, `392f4b9` M15, `063b7ff` M16, `6152f80` M17, `3258090` M18) 전부 `feat/app-deploy-file-import` 브랜치에 반영됨. 전체 스위트 `1017 passed`(983→1017, +34 net). README.md는 이 배치로 인한 빌드/실행 절차 변경이 없어 미수정(패키징된 `.app` 빌드·구동 안내는 그대로 유효; 하드닝은 서버 내부 로직 변경).
 
