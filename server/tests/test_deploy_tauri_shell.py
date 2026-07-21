@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -234,8 +235,7 @@ class TestSidecarParentDeclaration:
         consts = rust_string_consts(source)
         fd_value = consts.get("PARENT_PIPE_FD_VALUE")
         assert fd_value == "0", (
-            "the declared parent pipe fd must be 0 (the inherited stdin pipe); "
-            f"got {fd_value!r}"
+            f"the declared parent pipe fd must be 0 (the inherited stdin pipe); got {fd_value!r}"
         )
 
 
@@ -373,12 +373,81 @@ class TestCapabilityDeniesNetworkPlugins:
             assert name != "shell:allow-open", "shell:allow-open is not needed to spawn a sidecar"
             if name == "shell:allow-execute":
                 assert not isinstance(entry, str), (
-                    "shell:allow-execute must carry a scope; a bare grant allows "
-                    "executing anything"
+                    "shell:allow-execute must carry a scope; a bare grant allows executing anything"
                 )
                 scope = entry.get("allow", [])
                 assert scope, "shell:allow-execute granted with an empty allow scope"
                 assert all(item.get("sidecar") is True for item in scope), scope
+
+
+def _stage_sidecar():
+    sys.path.insert(0, str(PROJECT_ROOT / "packaging"))
+    import stage_sidecar
+
+    return stage_sidecar
+
+
+def _fake_pyinstaller_app(tmp_path: Path) -> Path:
+    """A miniature of PyInstaller's own ``.app`` payload — the code/data split.
+
+    ``Contents/Frameworks`` holds the Mach-O and symlinks OUT to the data;
+    ``Contents/Resources`` holds the data and symlinks BACK to the Mach-O. That
+    is verbatim the shape of ``dist/GrandMA3 Copilot.app``, and the reason that
+    bundle is signable while a flat onedir copy is not.
+    """
+    app = tmp_path / "pyinstaller.app"
+    frameworks = app / "Contents" / "Frameworks"
+    resources = app / "Contents" / "Resources"
+    frameworks.mkdir(parents=True)
+    resources.mkdir(parents=True)
+
+    # A REAL signed Mach-O, not a placeholder file: codesign rejects anything in
+    # Contents/Frameworks that is not code, so a stand-in would make the mirror
+    # untestable against an actual seal.
+    shutil.copy("/bin/echo", frameworks / "libpython3.11.dylib")
+    (resources / "libpython3.11.dylib").symlink_to("../Frameworks/libpython3.11.dylib")
+
+    (resources / "base_library.zip").write_text("zip")
+    (frameworks / "base_library.zip").symlink_to("../Resources/base_library.zip")
+
+    (resources / "config").mkdir()
+    (resources / "config" / "provider.toml").write_text("x")
+    (frameworks / "config").symlink_to("../Resources/config")
+    return app
+
+
+_INFO_PLIST = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleExecutable</key><string>shell</string>
+<key>CFBundleIdentifier</key><string>com.example.sealtest</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+</dict></plist>
+"""
+
+
+def _signable_app(tmp_path: Path, name: str = "Sealed.app") -> Path:
+    """A minimal but REAL ``.app`` — a shape ``codesign`` will actually accept.
+
+    ``codesign`` rejects a bare directory outright ("bundle format
+    unrecognized"), so a seal test needs an Info.plist naming a genuine Mach-O
+    main executable (``/bin/echo`` stands in) plus the sidecar executable and
+    the payload sentinel reached the way the real bundle reaches it: a
+    ``Frameworks`` symlink into ``Resources``.
+    """
+    stage_sidecar = _stage_sidecar()
+    app = tmp_path / name
+    contents = app / "Contents"
+    (contents / "MacOS").mkdir(parents=True)
+    (contents / "Frameworks").mkdir()
+    (contents / "Resources").mkdir()
+    (contents / "Info.plist").write_text(_INFO_PLIST)
+    # copy, not copy2: /bin/echo is SIP-flagged and copying its metadata fails.
+    shutil.copy("/bin/echo", contents / "MacOS" / "shell")
+    shutil.copy("/bin/echo", contents / "MacOS" / stage_sidecar.SIDECAR_BASE)
+    (contents / "Resources" / "base_library.zip").write_text("zip")
+    (contents / "Frameworks" / "base_library.zip").symlink_to("../Resources/base_library.zip")
+    return app
 
 
 class TestBundledSidecarCarriesItsRuntime:
@@ -395,10 +464,7 @@ class TestBundledSidecarCarriesItsRuntime:
 
     @staticmethod
     def _stage_sidecar():
-        sys.path.insert(0, str(PROJECT_ROOT / "packaging"))
-        import stage_sidecar
-
-        return stage_sidecar
+        return _stage_sidecar()
 
     def _fake_bundle(self, tmp_path, *, with_executable=True):
         stage_sidecar = self._stage_sidecar()
@@ -419,32 +485,90 @@ class TestBundledSidecarCarriesItsRuntime:
         app = self._fake_bundle(tmp_path, with_executable=False)
         assert stage_sidecar.verify_bundle(app) == 1
 
-    def test_payload_lands_flat_in_contents_frameworks(self, tmp_path, monkeypatch):
+    def test_payload_lands_where_the_bootloader_looks(self, tmp_path, monkeypatch):
         # PyInstaller resolves an executable in Contents/MacOS against
-        # ../Frameworks, and expects the tree FLAT there (not nested under
-        # _internal/). Verified against the real dist/*.app layout.
+        # ../Frameworks, so the payload must be reachable THERE — and not nested
+        # under an _internal/ directory, which is the layout the bootloader uses
+        # only outside a bundle. "Reachable" is the contract, not "a real file":
+        # PyInstaller's own .app reaches its DATA through Frameworks symlinks
+        # into Resources (see test_the_real_pyinstaller_app_uses_the_layout...).
         stage_sidecar = self._stage_sidecar()
-        staged = tmp_path / "binaries"
-        (staged / "_internal").mkdir(parents=True)
-        (staged / "_internal" / "base_library.zip").write_text("x")
-        monkeypatch.setattr(stage_sidecar, "SIDECAR_DIR", staged)
+        monkeypatch.setattr(stage_sidecar, "PYI_APP", _fake_pyinstaller_app(tmp_path))
 
         app = self._fake_bundle(tmp_path)
         stage_sidecar.bundle_payload(app)
         assert (app / "Contents" / "Frameworks" / "base_library.zip").is_file()
         assert not (app / "Contents" / "Frameworks" / "_internal").exists()
-        assert stage_sidecar.verify_bundle(app) == 0
+
+    def test_the_payload_mirrors_pyinstallers_code_data_split(self, tmp_path, monkeypatch):
+        # 🔴 The regression this pins. `Contents/Frameworks` is CODE-ONLY
+        # territory as far as codesign is concerned: a plain data directory
+        # there makes the whole bundle unsignable ("code object is not signed at
+        # all / In subcomponent: .../config/provider.toml"). PyInstaller's own
+        # .app therefore SPLITS its onedir tree — data into Contents/Resources,
+        # Mach-O into Contents/Frameworks — and cross-links the two so either
+        # path resolves. Copying the FLAT onedir tree into Frameworks (what this
+        # step used to do) silently destroys that split and costs the bundle its
+        # signature.
+        stage_sidecar = self._stage_sidecar()
+        monkeypatch.setattr(stage_sidecar, "PYI_APP", _fake_pyinstaller_app(tmp_path))
+
+        app = self._fake_bundle(tmp_path)
+        stage_sidecar.bundle_payload(app)
+        contents = app / "Contents"
+
+        # data: real in Resources, reached from Frameworks by symlink
+        assert (contents / "Resources" / "config" / "provider.toml").is_file()
+        assert (contents / "Frameworks" / "config").is_symlink()
+        assert (contents / "Frameworks" / "config" / "provider.toml").is_file()
+        # code: real in Frameworks, reached from Resources by symlink
+        assert (contents / "Frameworks" / "libpython3.11.dylib").is_file()
+        assert not (contents / "Frameworks" / "libpython3.11.dylib").is_symlink()
+        assert (contents / "Resources" / "libpython3.11.dylib").is_symlink()
+
+    def test_the_mirror_replaces_a_stale_flat_payload(self, tmp_path, monkeypatch):
+        # Upgrading a checkout that already carries the OLD flat payload: the
+        # stale real directory must be replaced by the symlink, not merged with
+        # it (a merge leaves the data in Frameworks and the bundle unsignable).
+        stage_sidecar = self._stage_sidecar()
+        monkeypatch.setattr(stage_sidecar, "PYI_APP", _fake_pyinstaller_app(tmp_path))
+
+        app = self._fake_bundle(tmp_path)
+        stale = app / "Contents" / "Frameworks" / "config"
+        stale.mkdir(parents=True)
+        (stale / "provider.toml").write_text("stale")
+
+        stage_sidecar.bundle_payload(app)
+        assert (app / "Contents" / "Frameworks" / "config").is_symlink()
+
+    def test_the_mirror_keeps_tauris_own_resources(self, tmp_path, monkeypatch):
+        # Contents/Resources is shared: Tauri puts the app icon there. The
+        # mirror must replace only what PyInstaller owns.
+        stage_sidecar = self._stage_sidecar()
+        monkeypatch.setattr(stage_sidecar, "PYI_APP", _fake_pyinstaller_app(tmp_path))
+
+        app = self._fake_bundle(tmp_path)
+        icon = app / "Contents" / "Resources" / "icon.icns"
+        icon.parent.mkdir(parents=True, exist_ok=True)
+        icon.write_text("icon")
+
+        stage_sidecar.bundle_payload(app)
+        assert icon.read_text() == "icon"
 
     def test_the_real_pyinstaller_app_uses_the_layout_this_relies_on(self):
         # Not an assumption: the M6 bundle itself puts the executable in
-        # Contents/MacOS and the runtime flat in Contents/Frameworks. If
+        # Contents/MacOS, its Mach-O in Contents/Frameworks and its DATA in
+        # Contents/Resources, cross-linked so either path resolves. If
         # PyInstaller ever changes that, this fails instead of shipping a
-        # silently-broken sidecar.
+        # silently-broken (or unsignable) sidecar.
         reference = PROJECT_ROOT / "dist" / "GrandMA3 Copilot.app" / "Contents"
         if not reference.is_dir():
             pytest.skip("dist/GrandMA3 Copilot.app not built in this checkout")
         assert (reference / "MacOS" / "GrandMA3 Copilot").is_file()
         assert (reference / "Frameworks" / "base_library.zip").is_file()
+        # the split itself: data is a symlink OUT of Frameworks, not a directory
+        assert (reference / "Frameworks" / "base_library.zip").is_symlink()
+        assert (reference / "Resources" / "base_library.zip").is_file()
 
     def test_a_built_bundle_in_this_checkout_carries_a_bootable_sidecar(self):
         # Auto-flipping REAL-artifact gate, same discipline as PENDING-M7.4: while
@@ -488,6 +612,84 @@ class TestBundledSidecarCarriesItsRuntime:
             "npm run shell:build must copy the runtime payload into the .app, or "
             "the shipped sidecar cannot boot"
         )
+
+
+class TestTheBundleIsSealedAfterThePayloadLands:
+    """🔴 ``tauri build`` ships an UNSEALED bundle, and the payload lands later.
+
+    No signing identity is configured (and none is wanted — this app is handed
+    to a handful of Macs, never distributed), so ``tauri build`` never runs
+    ``codesign`` at all: the shell executable carries only the linker's ad-hoc
+    signature, ``Contents/_CodeSignature`` does not exist, and
+    ``codesign --verify`` fails with *"code has no resources but signature
+    indicates they must be present"*. On top of that the payload copy happens
+    AFTER the bundle is produced, so any seal made earlier would be stale.
+
+    Sealing therefore belongs at the END of the bundle step — and the seal is
+    only possible at all once the payload respects PyInstaller's code/data split
+    (see :class:`TestBundledSidecarCarriesItsRuntime`). ``--verify-bundle``
+    checks the seal so the step cannot be dropped in silence: a payload that
+    landed is no longer proof that the app will run elsewhere.
+    """
+
+    @staticmethod
+    def _require_codesign():
+        if shutil.which("codesign") is None:
+            pytest.skip("codesign unavailable on this host")
+
+    def test_a_bundle_with_its_payload_but_no_seal_is_rejected(self, tmp_path):
+        # The exact shipped-and-broken shape this unit fixes: the payload check
+        # passes, and the app still cannot be trusted to launch elsewhere.
+        self._require_codesign()
+        stage_sidecar = _stage_sidecar()
+        app = _signable_app(tmp_path)
+        assert stage_sidecar.verify_bundle(app) == 1
+
+    def test_the_rejection_names_the_signature_not_the_payload(self, tmp_path, capsys):
+        self._require_codesign()
+        stage_sidecar = _stage_sidecar()
+        stage_sidecar.verify_bundle(_signable_app(tmp_path))
+        assert "signature" in capsys.readouterr().err
+
+    def test_sealing_makes_the_bundle_verify(self, tmp_path):
+        self._require_codesign()
+        stage_sidecar = _stage_sidecar()
+        app = _signable_app(tmp_path)
+        stage_sidecar.seal_bundle(app)
+        assert stage_sidecar.verify_bundle(app) == 0
+
+    def test_a_data_directory_in_frameworks_cannot_be_sealed(self, tmp_path):
+        # The root cause, pinned at minimal scale: `Contents/Frameworks` is
+        # code-only territory. One plain data directory there and codesign
+        # refuses the whole bundle — which is precisely what a flat copy of the
+        # PyInstaller onedir tree produces.
+        self._require_codesign()
+        stage_sidecar = _stage_sidecar()
+        app = _signable_app(tmp_path)
+        (app / "Contents" / "Frameworks" / "config").mkdir()
+        (app / "Contents" / "Frameworks" / "config" / "provider.toml").write_text("x")
+        with pytest.raises(SystemExit):
+            stage_sidecar.seal_bundle(app)
+
+    def test_the_seal_check_skips_where_codesign_does_not_exist(self, tmp_path, monkeypatch):
+        # A missing tool is not evidence of a broken seal. Skip, do not crash,
+        # and do not fail a bundle we simply could not inspect.
+        stage_sidecar = _stage_sidecar()
+        monkeypatch.setattr(stage_sidecar.shutil, "which", lambda _name: None)
+        assert stage_sidecar.verify_bundle(_signable_app(tmp_path)) == 0
+
+    def test_the_bundle_step_seals_before_it_verifies(self, tmp_path, monkeypatch):
+        # Ordering, end to end: one `--bundle` invocation lands the payload,
+        # seals, and only then verifies. Splitting the seal into a separate
+        # build step would re-create the very failure mode being fixed — a
+        # necessary step that a later packaging change can quietly drop.
+        self._require_codesign()
+        stage_sidecar = _stage_sidecar()
+        monkeypatch.setattr(stage_sidecar, "PYI_APP", _fake_pyinstaller_app(tmp_path))
+        app = _signable_app(tmp_path)
+
+        assert stage_sidecar.main(["--bundle", str(app)]) == 0
+        assert (app / "Contents" / "_CodeSignature").is_dir()
 
 
 class TestWindowsOriginStaysDeferred:

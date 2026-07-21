@@ -17,18 +17,27 @@ wherever the executable ends up, and the three hosts put it in three places:
 ``stage``          ``src-tauri/binaries/`` — the source Tauri bundles from.
 ``--dev-mirror``   ``src-tauri/target/<profile>/`` — where Cargo copies the
                    single external binary for ``tauri dev`` / a direct run.
-``--bundle``       ``<app>/Contents/Frameworks/`` — where the PyInstaller
-                   bootloader looks once its executable sits in
-                   ``Contents/MacOS/`` of a macOS ``.app``. This is the
-                   dev-works / packaged-fails gap: ``externalBin`` carries the
-                   named FILE into the bundle and nothing else, so without this
-                   step the shipped ``.app`` spawns a backend that dies
-                   instantly. ``--verify-bundle`` asserts the payload landed.
+``--bundle``       ``<app>/Contents/`` — where the PyInstaller bootloader looks
+                   once its executable sits in ``Contents/MacOS/`` of a macOS
+                   ``.app``. This is the dev-works / packaged-fails gap:
+                   ``externalBin`` carries the named FILE into the bundle and
+                   nothing else, so without this step the shipped ``.app`` spawns
+                   a backend that dies instantly. The step then SEALS the bundle
+                   (:func:`seal_bundle`), and ``--verify-bundle`` asserts both
+                   that the payload landed and that the seal holds.
 
 The ``Contents/MacOS`` -> ``Contents/Frameworks`` convention is PyInstaller's own
-macOS ``.app`` layout (see ``dist/GrandMA3 Copilot.app``: executable in
-``Contents/MacOS``, everything else flat in ``Contents/Frameworks``), and it is
-verified here rather than assumed.
+macOS ``.app`` layout, but that layout is a code/data **split**, not a flat tree:
+``Contents/Frameworks`` holds only Mach-O and symlinks OUT to the data, while
+``Contents/Resources`` holds the data and symlinks BACK to the Mach-O. The split
+is not cosmetic — ``codesign`` treats everything under ``Contents/Frameworks`` as
+nested CODE, so one plain data directory there makes the entire bundle
+unsignable ("code object is not signed at all / In subcomponent: ...").
+
+The payload is therefore mirrored from PyInstaller's own ``dist/<app>.app``
+rather than re-derived from the flat onedir tree: PyInstaller has already worked
+out which entries are code and which are data, and copying its answer is both
+simpler and less brittle than reproducing that rule here.
 """
 
 from __future__ import annotations
@@ -44,6 +53,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # The PyInstaller onedir output (packaging/GrandMA3-Copilot.spec APP_NAME).
 APP_NAME = "GrandMA3 Copilot"
 DIST_DIR = REPO_ROOT / "dist" / APP_NAME
+
+# The PyInstaller .app the same spec run emits (its BUNDLE step). Its Contents/
+# is the code/data split the Tauri bundle mirrors — see the module docstring.
+PYI_APP = REPO_ROOT / "dist" / f"{APP_NAME}.app"
 
 # tauri.conf.json -> bundle.externalBin
 SIDECAR_DIR = REPO_ROOT / "src-tauri" / "binaries"
@@ -121,15 +134,43 @@ def mirror_runtime(profile: str = "debug") -> Path:
 _PAYLOAD_SENTINEL = "base_library.zip"
 
 
+def _mirror(source: Path, destination: Path) -> None:
+    """Copy every entry of ``source`` over ``destination``, symlinks intact.
+
+    Entry by entry rather than a wholesale wipe, so the mirror only ever
+    replaces what PyInstaller owns: Tauri's own ``Resources/icon.icns`` survives,
+    while a stale FLAT payload left by an older build is REPLACED (a merge would
+    leave a data directory in ``Contents/Frameworks`` and cost the bundle its
+    signature).
+    """
+    destination.mkdir(parents=True, exist_ok=True)
+    for entry in sorted(source.iterdir()):
+        target = destination / entry.name
+        if target.is_symlink() or target.is_file():
+            target.unlink()
+        elif target.is_dir():
+            shutil.rmtree(target)
+        if entry.is_symlink():  # before is_dir(): that follows the link
+            target.symlink_to(entry.readlink())
+        elif entry.is_dir():
+            shutil.copytree(entry, target, symlinks=True)
+        else:
+            shutil.copy2(entry, target)
+
+
 def bundle_payload(app_bundle: Path) -> Path:
-    """Copy the onedir runtime tree into ``<app>/Contents/Frameworks``.
+    """Mirror PyInstaller's own ``.app`` payload into the Tauri bundle.
 
     Tauri's ``externalBin`` puts the sidecar EXECUTABLE in ``Contents/MacOS`` and
     carries nothing else. A PyInstaller onedir executable sitting there resolves
-    its runtime from ``../Frameworks`` (PyInstaller's own ``.app`` layout), so the
-    tree is copied flat into ``Contents/Frameworks`` — NOT as a nested
-    ``_internal`` directory, which is the layout the bootloader uses only when the
-    executable is not inside a bundle.
+    its runtime from ``../Frameworks``, so the payload must be reachable there —
+    but NOT as a flat copy of the onedir tree, and NOT as a nested ``_internal``
+    directory (the layout the bootloader uses only outside a bundle).
+
+    ``dist/<app>.app/Contents`` already holds exactly the right shape: the
+    code/data split described in the module docstring, which is what makes the
+    result signable. Both halves are mirrored — ``Frameworks`` first, so its
+    symlinks into ``Resources`` are resolved a moment later by the second pass.
     """
     contents = app_bundle / "Contents"
     executable = contents / "MacOS" / SIDECAR_BASE
@@ -138,17 +179,96 @@ def bundle_payload(app_bundle: Path) -> Path:
             f"the bundle carries no sidecar executable: {executable}\n"
             "check tauri.conf.json bundle.externalBin"
         )
-    source = SIDECAR_DIR / "_internal"
-    if not source.is_dir():
-        raise SystemExit(f"staged runtime tree not found: {source} (run the stage step first)")
-    frameworks = contents / "Frameworks"
-    frameworks.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(source, frameworks, symlinks=True, dirs_exist_ok=True)
-    return frameworks
+    source = PYI_APP / "Contents"
+    if not (source / "Frameworks").is_dir():
+        raise SystemExit(
+            f"PyInstaller .app payload not found: {source}\n"
+            "build it first: .venv/bin/pyinstaller packaging/GrandMA3-Copilot.spec"
+        )
+    for half in ("Frameworks", "Resources"):
+        _mirror(source / half, contents / half)
+    return contents / "Frameworks"
+
+
+def seal_bundle(app_bundle: Path) -> Path | None:
+    """Ad-hoc code-sign the ``.app`` — AFTER its payload has landed.
+
+    ``tauri build`` leaves the bundle UNSEALED: no signing identity is
+    configured (and none is wanted — this app is handed to a handful of Macs,
+    never distributed), so Tauri skips ``codesign`` entirely. The shell
+    executable carries only the linker's ad-hoc signature, ``_CodeSignature/``
+    does not exist, and ``codesign --verify`` fails with *"code has no resources
+    but signature indicates they must be present"*. Sealing here closes that,
+    and sealing HERE specifically — after :func:`bundle_payload` — is what keeps
+    the seal honest: anything copied in afterwards is outside it.
+
+    One ``codesign`` call on the bundle root, deliberately:
+
+    * NO ``--deep``. Apple deprecates it for signing, and here it actively
+      fails: it walks the payload and tries to sign data directories such as
+      ``click-8.4.2.dist-info`` as bundles ("bundle format unrecognized"). The
+      root call needs no help — it seals all 1600-odd payload files as
+      resources, and the two ``Contents/MacOS`` executables already carry valid
+      signatures of their own.
+    * NO ``--options runtime`` / entitlements, and so no reuse of
+      ``packaging/sign.sh``. Hardened runtime exists to satisfy notarization,
+      which is out of scope; turning it on would also put the second executable
+      (``copilot-backend``) under library validation WITHOUT the
+      disable-library-validation entitlement that only the bundle's
+      ``CFBundleExecutable`` receives. ``sign.sh`` additionally signs each
+      nested Mach-O by path, and for the ``CFBundleExecutable`` codesign
+      resolves that path back to the enclosing bundle — so its inside-out pass
+      aborts on this bundle.
+    """
+    if shutil.which("codesign") is None:
+        print("stage_sidecar: codesign unavailable — the bundle is left unsealed", file=sys.stderr)
+        return None
+    proc = subprocess.run(
+        ["codesign", "--force", "--sign", "-", str(app_bundle)],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        raise SystemExit(
+            f"codesign could not seal the bundle: {app_bundle}\n"
+            f"{(proc.stderr or proc.stdout).strip()}"
+        )
+    return app_bundle
+
+
+def _seal_problem(app_bundle: Path) -> str | None:
+    """Why the bundle's signature does not verify, or ``None`` when it does.
+
+    ``None`` is also the answer where ``codesign`` does not exist: a missing
+    tool is not evidence of a broken seal, so the check skips rather than
+    failing a bundle it could not inspect.
+    """
+    if shutil.which("codesign") is None:
+        print("stage_sidecar: codesign unavailable — seal check skipped", file=sys.stderr)
+        return None
+    proc = subprocess.run(
+        ["codesign", "--verify", "--strict", str(app_bundle)],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode == 0:
+        return None
+    detail = (proc.stderr or proc.stdout).strip().splitlines()
+    return (
+        "the bundle's code signature does not verify: "
+        f"{detail[0] if detail else f'codesign exited {proc.returncode}'} — "
+        "macOS cannot be trusted to launch it on another machine"
+    )
 
 
 def verify_bundle(app_bundle: Path) -> int:
-    """Fail loudly when the bundled sidecar could not possibly boot."""
+    """Fail loudly when the bundled sidecar could not boot — or is unsealed.
+
+    The payload check alone is not enough: a payload that landed AFTER the
+    bundle was sealed leaves the app looking complete while its signature is
+    broken. Both halves are checked here so neither step can be dropped in
+    silence.
+    """
     contents = app_bundle / "Contents"
     problems = []
     executable = contents / "MacOS" / SIDECAR_BASE
@@ -160,6 +280,9 @@ def verify_bundle(app_bundle: Path) -> int:
             f"no PyInstaller runtime payload in the bundle: {sentinel} — the "
             "sidecar would exit immediately on first launch"
         )
+    seal = _seal_problem(app_bundle)
+    if seal is not None:
+        problems.append(seal)
     for problem in problems:
         print(f"stage_sidecar: {problem}", file=sys.stderr)
     if problems:
@@ -198,10 +321,14 @@ def main(argv: list[str] | None = None) -> int:
         help="mirror _internal/ next to the sidecar cargo copied into target/<PROFILE>/",
     )
     parser.add_argument(
-        "--bundle", metavar="APP", help="copy the runtime payload into a built .app bundle"
+        "--bundle",
+        metavar="APP",
+        help="copy the runtime payload into a built .app bundle, then seal it",
     )
     parser.add_argument(
-        "--verify-bundle", metavar="APP", help="assert a built .app carries a bootable sidecar"
+        "--verify-bundle",
+        metavar="APP",
+        help="assert a built .app carries a bootable sidecar and a valid seal",
     )
     args = parser.parse_args(argv)
     if args.check:
@@ -209,9 +336,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.verify_bundle:
         return verify_bundle(Path(args.verify_bundle))
     if args.bundle:
+        # Payload -> seal -> verify, in ONE step. Splitting the seal into a
+        # separate build step would re-create the failure being fixed here: a
+        # necessary step, placed after the point that seals the bundle, which a
+        # later packaging change can quietly drop.
         app_bundle = Path(args.bundle)
         destination = bundle_payload(app_bundle)
         print(f"stage_sidecar: bundled the runtime payload into {destination}")
+        if seal_bundle(app_bundle) is not None:
+            print(f"stage_sidecar: sealed (ad-hoc) {app_bundle}")
         return verify_bundle(app_bundle)
     if args.dev_mirror:
         copied = mirror_runtime(args.dev_mirror)
