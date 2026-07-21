@@ -1,16 +1,16 @@
 ---
 id: SPEC-COPILOT-DEPLOY-001
-title: "Phase 2: 배포 가능한 앱 형태 — PyInstaller 로컬 런처 → Tauri 데스크톱 앱 (macOS/Windows)"
-version: "0.4.0"
+title: "Phase 2: 배포 가능한 앱 형태 — PyInstaller 로컬 런처 → Tauri 데스크톱 앱 (macOS; Windows 이연)"
+version: "0.5.0"
 status: in-progress
 created: 2026-07-20
-updated: 2026-07-21
+updated: 2026-07-22
 author: manager-spec
 priority: P1
 phase: "Phase 2 — 배포·제품화 (v1.0.0 target)"
 module: "packaging/, server/, ui/"
 lifecycle: spec-anchored
-tags: "packaging, pyinstaller, tauri, desktop-app, code-signing, notarization, auto-update, keychain, credential-storage, settings-ui, cross-platform, macos, windows, deployment"
+tags: "packaging, pyinstaller, tauri, desktop-app, ad-hoc-signing, dmg, hand-over-distribution, keychain, credential-storage, settings-ui, macos, arm64, deployment"
 tier: L
 depends_on: [SPEC-COPILOT-MVP-001]
 ---
@@ -26,6 +26,8 @@ depends_on: [SPEC-COPILOT-MVP-001]
 | 0.2.1 | 2026-07-20 | manager-spec | M6 착수 중 발견 사항 반영 (mid-run 기록, D-NEW-1). 빌드 호스트 CPython이 **arm64 전용**임이 확인되어 **universal2(arm64+x86_64) 및 Windows x86_64는 현재 빌드 호스트에서 환경-게이트 N/A**로 전환 — 서명 env-gate(§A.6 F7, AC-DEPLOY-009/010)와 **동일 규율**(research.md §C.6/§E-2). universal2는 universal2 CPython + `_pydantic_core`/`jiter` universal2 wheel이, Windows는 Windows 러너가 필요하며 현재 arm64 전용 호스트에 부재. **macOS arm64 아티팩트는 지금 빌드·검증**한다. 패키징 파이프라인은 **코드 변경 없이**(`PYI_TARGET_ARCH=universal2` env / Windows 러너) 두 대상을 활성화하므로, universal2/Windows는 **폐기가 아니라 적합한 빌드 환경으로 이연된 목표**다. 근본 결정(onedir·universal2·Windows 대상 자체)은 **불변** — §A 대상 아키텍처 서술 + acceptance.md DoD(Stage 1/2 빌드) + AC-DEPLOY-009 이중 게이트 명시만 수정. |
 | 0.3.0 | 2026-07-20 | manager-spec | **라이브 E2E 하드닝 fold-in (mid-run, D-NEW-1 계열).** 실제 grandMA3 onPC 2.4.2 하드웨어 + 실제 Gemini 라이브 데모(2026-07-20)에서 **983-test 단위 스위트가 놓친 통합 결함 6건** 발견 — 이 결함들은 하드웨어 + LLM + 패키지 번들이 결합될 때만 발현하여 단위 테스트에 불가시했다. provenance: 프로젝트 메모리 `copilot-live-demo-findings`(라이브 데모 발견 6건 기록). **#1**(`build_runtime`이 settings/provision 라우터를 미조립 → `/api/*` 미마운트 404/405)은 이미 **commit `1d65375`에서 수정**되어 본 개정에서는 기록만 한다. **#2~#6은 신규 하드닝 스코프**로 GEARS 요구 5건(REQ-DEPLOY-028~032) + 수용 기준 5건(AC-DEPLOY-019~023) + Stage-1 Hardening 마일스톤(plan.md §C, M14~M18) 신설: **#2**(기동 시 활성 프로바이더 키 미주입 → 신규 인스턴스가 키 없이 기동해 "No API key" 실패, **구현 최우선**)→REQ-028/AC-019/M14, **#4**(직전 생성 연출 상태 미추적 → 후속 수정이 Seq 71/Exec 201 대신 오대상)→REQ-030/AC-021/M15, **#5**(Gemini CachedContent 만료 미복구 + "No API key" 오분류)→REQ-031/AC-022/M16, **#3**(LLM 그룹 매핑 부정확 → 존재하지 않는 Group 3 선택 "Illegal object")→REQ-029/AC-020/M17, **#6**(OSC 수신 포트 조율 취약 → 앱 사망 시 onPC가 포트 점유해 재기동 `Address already in use`)→REQ-032/AC-023/M18. 도메인 구분: #2·#6=deploy-shell, #3·#4·#5=LLM/orchestrator(모두 DEPLOY-001 Stage-1 하드닝 스코프). **status: in-progress 유지** — Stage-2(Tauri M7~M9)는 env-gate 이연 상태로 미변경. 0.2.0/0.2.1 mid-run fold-in 관례 계승. |
 | 0.4.0 | 2026-07-21 | manager-spec | **Stage-2 M7 kickoff fold-in (plan-phase, 문서 전용).** Stage-2를 **M7-first**(Tauri v2 셸 + Python sidecar)로 착수하기 위한 계획을 확정한다 — **M8(자동 업데이트)·M9(코드 서명/공증)은 별도 kickoff로 Stage-2-DEFERRED 유지**(기존 이연 마커 불변). 사전 확정된 kickoff 결정 4건 반영: (F5) sidecar↔UI 전송 = **127.0.0.1 WebSocket 유지 + Origin allowlist + per-launch 토큰 핸드셰이크**(FEAS-9 CSWSH 차단), (F5') 키 커스터디 = **Python keyring 직접 유지**(Rust는 비밀 미접촉), teardown = **Option C(Rust process-group kill + 백엔드 parent-liveness watchdog)**, SAFETY-2 = **Rust deny-all 정적 스캔 + wire-level 싱크 이중 스캔**. 신규 **REQ-DEPLOY-002a**([Event-driven] sidecar↔UI WebSocket Origin/token 핸드셰이크 — REQ-002 하위 앵커, 004a/006a/011a 관례 계승) 1건 신설. plan.md: §A.4 F5·§A.2 F5' RESOLVED, §C M7 구현 계획 확장, §D 리스크 갱신(FEAS-5 teardown Option C·FEAS-9 핸드셰이크·SAFETY-2 M7 활성화·M9 서명-키체인 이연), §F 결정표(F5+F5' RESOLVED, F6만 Stage-2-deferred). acceptance.md: **AC-DEPLOY-024~028** 신설(Tauri 셸 기동·F5 핸드셰이크·프로세스-트리 teardown·SAFETY-2 이중 스캔·키 커스터디 불변) + AC-014 ③ Rust/wire-level 절 M7 활성화. **status: in-progress 유지**(M7 미구현 — 계획만; 코드/`src-tauri/` 생성 없음). 0.2.0/0.3.0 fold-in 관례 계승. **(plan-audit remediation D1–D10, 2026-07-21 — FAIL~0.74 교정: D1 NEEDS-CLARIFICATION→DEFERRED-M8 relabel, D2 AC-027① `files_scanned>0`+`src-tauri/` 부재 fail-closed+필수 rogue 픽스처+정직성 정정, D3 AC-027② 실제 설정 send_port 바인드+양성 관측 assert, D4 토큰 누출-저항 전달(Tauri IPC)+AC-DEPLOY-029 토큰 비밀 신설, D5 M8 중복 행 삭제, D6 MVP-001 depends_on `--ignore-deps` 정합, D7 teardown watchdog EOF-primary+bounded latency, D8 HISTORY 정렬, D9 M14/M18 앵커 드리프트 수정, D10 REQ-002a 행위 중심 트림)** |
+
+| 0.5.0 | 2026-07-22 | manager-spec | **배포 전제 축소 개정 (scope amendment, 문서 전용).** 사용자가 배포 전제를 변경했다 — "이 프로그램은 맥OS로 배포할 게 아니야. 소수의 인원이 맥이나 윈도우에 설치해서 사용하면 돼. 거창하게 mac OS 서명이나 공증 필요없어." / "우선 윈도우는 제외하고 맥에서 오류없이 작동하는 앱을 만들어줘." / 자동 업데이트 = **"빼기 · 수동 재배포"**. 이에 따라 close 조건이 실제 만들고 있는 것을 반영하도록 스코프를 축소 기록한다. **어떤 REQ/AC도 삭제하지 않고 제자리에 disposition 마커를 부착**한다(감사 추적 보존 — 기존 `[DEFERRED-M8: …]` 브래킷 토큰 관례 계승). ⛔ **DESCOPED**(의도적 폐기): macOS Developer ID 서명·공증·stapling(REQ-DEPLOY-014 / AC-DEPLOY-009), Windows Authenticode 서명(REQ-DEPLOY-015 / AC-DEPLOY-010), 자동 업데이트(REQ-DEPLOY-016/017/027 / AC-DEPLOY-011/018) — 이에 따라 plan.md §F **F6(업데이트 매니페스트·아티팩트 호스팅 + updater 서명 키 커스터디)는 MOOT**(M8 언블록 목적으로만 존재했음), §C **M8·M9는 DESCOPED**. ⏸️ **DEFERRED-WINDOWS**(폐기 아님 — "우선 윈도우는 제외하고"): Windows 전반(REQ-DEPLOY-021의 Windows 절, AC-DEPLOY-013의 Windows 절 + 기존 코드 내 `PENDING-WINDOWS` 이연 3건 — 웹뷰 오리진 allowlist·Job Object teardown·번들 타깃). **존치·강화**: REQ-DEPLOY-021의 재현 가능 빌드는 **macOS arm64 한정**으로 존속(universal2/Intel은 arm64 전용 호스트로 이연 유지), REQ-DEPLOY-022(비공개 자원 미의존)는 **불변이며 유료 Apple 멤버십조차 불요해져 더 강하게 충족**된다. **대체 전달 서사 신설**: **REQ-DEPLOY-014a**(ad-hoc 서명 `.app` → `.dmg` 소수 인원 직접 전달 + 한국어 설치 안내) + **AC-DEPLOY-030**. 마커 규약: `[SCOPE-2026-07-22: DESCOPED — …]` / `[SCOPE-2026-07-22: DEFERRED-WINDOWS — …]` (열거: `grep -rn "\[SCOPE-2026-07-22:" .moai/specs/SPEC-COPILOT-DEPLOY-001/`). **status: in-progress 유지** — 본 개정은 스코프만 변경하며 어떤 항목도 PASS/완료로 표시하지 않는다(증거는 progress.md 소관). |
 
 ## A. 개요
 
@@ -50,14 +52,24 @@ depends_on: [SPEC-COPILOT-MVP-001]
 - **로컬 공존 HARD 제약** (위) 는 두 Stage 모두에 적용된다.
 - **기능 무변경**: 코파일럿의 도구·LLM·안전 게이트·룰북은 SPEC-COPILOT-MVP-001에서 확정된 그대로다. 본 SPEC은 셸만 추가한다.
 - **안전 불변식 보존**: 배포 셸은 SPEC-COPILOT-MVP-001의 안전 게이트 불변식(REQ-MVP-029 단일 관문, 라이브 잠금, 승인 게이트, 감사 로그)을 우회·약화하지 않는다.
-- **대상 플랫폼: macOS + Windows** (Linux는 §D out of scope).
+- **대상 플랫폼: macOS**(Linux는 §D out of scope). ⏸️ `[SCOPE-2026-07-22: DEFERRED-WINDOWS — 원문 "대상 플랫폼: macOS + Windows". 사용자 지시 "우선 윈도우는 제외하고 맥에서 오류없이 작동하는 앱을 만들어줘"(2026-07-22)에 따라 Windows는 **이연**(폐기 아님). 재개 시 알려진 블로커 3건: (a) `server/web/handshake.py`가 Windows Tauri 웹뷰 오리진(`http://tauri.localhost`)을 의도적으로 미포함 → Windows 창의 `/ws` 업그레이드가 `origin_not_allowed`로 거부됨, (b) `src-tauri/src/sidecar.rs`의 `#[cfg(not(unix))]` 분기에 Job Object teardown 미배선, (c) `src-tauri/tauri.conf.json`의 `bundle.targets`가 `["app","dmg"]`로 `windows` 키 부재. 이 3건의 코드 내 `PENDING-WINDOWS` 마커는 **제거하지 않고 존치**한다]`
+
+### 배포 전제 축소 (v0.5.0, 2026-07-22) — 실제 전달 방식
+
+[HARD] 본 SPEC의 배포 대상은 **소수 인원에게 직접 전달되는 macOS 앱**이다. 정식 스토어/공개 배포 형태가 아니므로 Apple Developer ID 서명·공증, Windows Authenticode 서명, 자동 업데이트는 **모두 DESCOPED**(§D 제외 범위)이며, 대체 전달 서사는 다음과 같다 — **REQ-DEPLOY-014a**로 앵커한다.
+
+- **아티팩트**: ad-hoc 서명된 `GrandMA3 Copilot.app`을 `.dmg`(drag-to-Applications)로 감싸 전달한다. 빌드/실링 순서는 `packaging/README.md`에, 패키징 스크립트는 `packaging/make_dmg.sh`(`npm run shell:package`)에 있다.
+- **Gatekeeper**: ad-hoc 서명은 `codesign --verify --strict`는 통과하지만(`codesign -dv` → `flags=0x2(adhoc)`), `spctl --assess --type execute`는 **영구적으로 거부**된다 — 공증 없이는 Gatekeeper를 만족시킬 수 없다. 이는 결함이 아니라 ad-hoc 배포의 **알려진 귀결**이다.
+- **quarantine 경로 의존성**: `com.apple.quarantine` 확장 속성을 붙이는 전달 경로(브라우저 다운로드·메일·AirDrop)는 최초 실행이 차단되고, 붙이지 않는 경로(`scp`/`rsync`/`git`/USB-exFAT)는 그대로 실행된다. 차단 시 해제는 `xattr -dr com.apple.quarantine …` 또는 시스템 설정 → 개인정보 보호 및 보안 → "그래도 열기"다.
+- **최종 사용자 안내**: 위 절차를 담은 한국어 안내 문서 `INSTALL.ko.md`를 배포 산출물과 함께 제공한다.
+- **업데이트**: 자동 업데이트 없음 — 새 `.dmg`를 **수동 재배포**한다(사용자 결정 "빼기 · 수동 재배포").
 
 **Plan-audit fold-in (v0.2.0) 확정 결정 — Implementation Kickoff에서 해소됨:**
 
 - **앱 정체성**: AppName = **"GrandMA3 Copilot"**, reverse-DNS 번들 식별자 = **`com.grandma3copilot.app`**. 이 번들 식별자는 config 경로·Keychain 서비스명·Tauri identifier·코드 서명 identity의 앵커다. ⚠️ **"GrandMA3"는 MA Lighting의 상표**이므로, 공개 배포 전 중립적 리네이밍이 필요할 수 있다 — 번들 식별자는 코드 서명 앵커이므로 리네이밍은 조기 확정이 바람직하다.
-- **대상 아키텍처**: macOS **arm64** 아티팩트는 이 빌드 호스트에서 **지금 빌드·검증**한다. **universal2**(arm64 + x86_64, 최소 macOS 12) **및** Windows **x86_64**는 현재 빌드 호스트에서 **환경-게이트 N/A**로 둔다 — 이 호스트의 CPython이 **arm64 전용**이라 PyInstaller가 universal2를 emit할 수 없고(universal2 CPython + `_pydantic_core`·`jiter`의 universal2 wheel 필요), Windows 러너도 부재하기 때문이다(research.md §C.6·§E-2). 서명 env-gate(§A.6 F7)와 **동일 규율**로, **패키징 파이프라인 코드는 작성**하되 universal2/Windows 출력은 적합한 빌드 환경 확보 전까지 환경-게이트로 둔다. 파이프라인은 **코드 변경 없이**(`PYI_TARGET_ARCH=universal2` env / Windows 러너) 두 대상을 활성화한다. **조명 노트북 Intel 대응은 폐기가 아니라 이연** — universal2 대상은 유지되며 universal2/Windows 빌드 환경으로 연기된 목표다.
+- **대상 아키텍처**: macOS **arm64** 아티팩트는 이 빌드 호스트에서 **지금 빌드·검증**한다. **universal2**(arm64 + x86_64, 최소 macOS 12) **및** Windows **x86_64**는 현재 빌드 호스트에서 **환경-게이트 N/A**로 둔다 — 이 호스트의 CPython이 **arm64 전용**이라 PyInstaller가 universal2를 emit할 수 없고(universal2 CPython + `_pydantic_core`·`jiter`의 universal2 wheel 필요), Windows 러너도 부재하기 때문이다(research.md §C.6·§E-2). 서명 env-gate(§A.6 F7)와 **동일 규율**로, **패키징 파이프라인 코드는 작성**하되 universal2/Windows 출력은 적합한 빌드 환경 확보 전까지 환경-게이트로 둔다. 파이프라인은 **코드 변경 없이**(`PYI_TARGET_ARCH=universal2` env / Windows 러너) 두 대상을 활성화한다. **조명 노트북 Intel 대응은 폐기가 아니라 이연** — universal2 대상은 유지되며 universal2/Windows 빌드 환경으로 연기된 목표다. ⏸️ `[SCOPE-2026-07-22: DEFERRED-WINDOWS — 위 서술 중 **Windows x86_64 절**은 사용자 지시("우선 윈도우는 제외하고")로 환경-게이트에서 **명시적 이연**으로 전환. universal2/Intel도 arm64 전용 호스트 제약으로 이연 유지. **본 SPEC이 지금 close 조건으로 요구하는 대상은 macOS arm64 단일**이다(REQ-DEPLOY-021 축소 참조)]`
 - **패키징 형태: onedir**(onefile 아님) — 두 플랫폼 모두. 근거: onefile `_MEI` dylib 추출이 macOS hardened runtime/library-validation과 충돌(공증 거부 대표 원인)하고, signed .app 내부 onefile sidecar 서명이 난해하다 (FEAS-1/FEAS-6/DECIDE-M13). macOS는 onedir 트리를 notarizable **.app/.dmg 컨테이너**에 담는다(bare Mach-O 아님).
-- **코드 서명**: 인증서 미보유 → 서명/공증 **파이프라인 코드는 작성**하되, AC-DEPLOY-009/010은 인증서 확보 전까지 **환경-게이트 N/A**로 둔다. 인증서 유형 결정 사실은 §C·plan.md §A.6에 기록(OV vs EV, 2023.6+ 코드서명 키의 FIPS-140 하드웨어토큰/클라우드 HSM 필수, macOS notarytool 크리덴셜, hardened runtime + entitlements + stapling — FEAS-3/FEAS-7/DECIDE-M7).
+- ⛔ **코드 서명**: `[SCOPE-2026-07-22: DESCOPED — 원문 "인증서 미보유 → 서명/공증 파이프라인 코드는 작성하되, AC-DEPLOY-009/010은 인증서 확보 전까지 환경-게이트 N/A로 둔다. 인증서 유형 결정 사실은 §C·plan.md §A.6에 기록(OV vs EV, 2023.6+ 코드서명 키의 FIPS-140 하드웨어토큰/클라우드 HSM 필수, macOS notarytool 크리덴셜, hardened runtime + entitlements + stapling — FEAS-3/FEAS-7/DECIDE-M7)". 사용자 지시 "거창하게 mac OS 서명이나 공증 필요없어"(2026-07-22)로 Developer ID 서명·공증·Authenticode 서명은 **환경-게이트 N/A가 아니라 스코프 밖**으로 전환. 대체는 ad-hoc 서명 + `.dmg` 직접 전달(REQ-DEPLOY-014a). 이미 작성된 `packaging/sign.sh`의 env-gated 실 identity 경로는 **삭제하지 않고 존치**하되 close 조건이 아니다]`
 - **설정 포맷: TOML**(기존 stdlib `tomllib` 로더 재사용, 의존성 0). UI↔백엔드 config 스키마 계약은 M1에서 확정.
 - **키 저장: keyring 승인** — Stage 1은 **Python 백엔드가 keyring에 직접 접근**. Stage 1/2 공통 키 인터페이스는 Stage-2 kickoff로 **이연**.
 - **최초 실행 온보딩: 배너/배지 안내**(강제 마법사 아님).
@@ -95,16 +107,21 @@ depends_on: [SPEC-COPILOT-MVP-001]
 - **REQ-DEPLOY-012** [State-driven] — **While** 앱이 구동 중인 동안, the UI **shall** 기존 HealthMonitor 상태(`online` / `console_offline` / `responder_degraded`)를 사용자에게 표면화한다.
 - **REQ-DEPLOY-013** [Event-driven] — **When** health 상태가 전이되면, the UI **shall** 새 상태를 즉시 반영한다 (기존 heartbeat·status 푸시 경로 재사용).
 
-### B.5 코드 서명 + 공증 (notarization)
+### B.5 코드 서명 + 공증 (notarization) — ⛔ DESCOPED (2026-07-22)
 
-- **REQ-DEPLOY-014** [Ubiquitous] — The macOS 배포 산출물 **shall** Developer ID로 서명·공증(notarization)되어, Gatekeeper에 의해 "미확인 개발자" 사유로 실행이 차단되지 않는다.
-- **REQ-DEPLOY-015** [Ubiquitous] — The Windows 배포 산출물 **shall** 유효한 Authenticode 서명을 보유하며, 이는 `signtool verify /pa`로 검증 가능하다. (GEARS-2/FEAS-7: 초안의 "SmartScreen 경고 없이(또는 완화되어)"는 정의되지 않은 임계값이고 OV 서명으로는 달성 난망이므로 검증 가능한 서명 행위로 재작성. SmartScreen 결과 및 OV(평판 누적 전 미해소)-vs-EV(즉시 신뢰) 의존은 §C 제약/전제로 이동.)
+> ⛔ `[SCOPE-2026-07-22: DESCOPED — §B.5 전체. 사용자 지시 "거창하게 mac OS 서명이나 공증 필요없어"(2026-07-22). 배포 형태가 "소수 인원 직접 전달"로 확정되어 Gatekeeper/SmartScreen 통과가 close 조건이 아니다. 대체 요구 = **REQ-DEPLOY-014a**(ad-hoc 서명 + `.dmg` 전달 + 한국어 설치 안내). 아래 두 REQ는 **삭제하지 않고 원문 그대로 보존**하며, 재개 시 그대로 되살릴 수 있다]`
 
-### B.6 자동 업데이트
+- **REQ-DEPLOY-014** [Ubiquitous] ⛔ **DESCOPED** — The macOS 배포 산출물 **shall** Developer ID로 서명·공증(notarization)되어, Gatekeeper에 의해 "미확인 개발자" 사유로 실행이 차단되지 않는다.
+- **REQ-DEPLOY-014a** [Ubiquitous] *(v0.5.0 신설 — REQ-014 대체)* — The macOS 배포 산출물 **shall** ad-hoc 서명된 `.app`을 drag-to-Applications `.dmg` 컨테이너로 감싸 소수 사용자에게 직접 전달 가능한 형태로 제공되고, **shall** 그 `.dmg`와 함께 최초 실행 차단(quarantine) 해제 절차를 담은 한국어 최종 사용자 안내 문서를 제공한다. (전제로 기록: ad-hoc 서명은 `codesign --verify --strict`를 통과하나 `spctl --assess`는 공증 부재로 **영구 거부**되며, 이는 결함이 아니라 ad-hoc 배포의 알려진 귀결이다 — §A "배포 전제 축소". 004a/006a/011a/002a 하위 앵커 관례 계승.)
+- **REQ-DEPLOY-015** [Ubiquitous] ⛔ **DESCOPED** — The Windows 배포 산출물 **shall** 유효한 Authenticode 서명을 보유하며, 이는 `signtool verify /pa`로 검증 가능하다. (GEARS-2/FEAS-7: 초안의 "SmartScreen 경고 없이(또는 완화되어)"는 정의되지 않은 임계값이고 OV 서명으로는 달성 난망이므로 검증 가능한 서명 행위로 재작성. SmartScreen 결과 및 OV(평판 누적 전 미해소)-vs-EV(즉시 신뢰) 의존은 §C 제약/전제로 이동.) ⛔ `[SCOPE-2026-07-22: DESCOPED — 서명 자체가 스코프 밖. Windows 플랫폼은 별도로 ⏸️ DEFERRED-WINDOWS이지만, **Windows가 재개되더라도 Authenticode 서명은 descoped 상태로 남는다** — 사용자 결정은 플랫폼이 아니라 "서명·공증 불요"에 대한 것이다]`
 
-- **REQ-DEPLOY-016** [Capability gate] — **Where** 데스크톱 앱(Stage 2) 형태인 경우, the 앱 **shall** Tauri updater로 자동 업데이트(버전 확인 → 다운로드 → 사용자 승인 후 적용)를 제공한다. Stage 1(PyInstaller 런처)에서는 자동 업데이트를 **버전 확인 + 알림(수동 재설치 안내)** 로 한정한다 (명시적 트레이드오프).
-- **REQ-DEPLOY-017** [Event-driven] — **When** 업데이트 아티팩트가 다운로드되면, the 앱 **shall** 서명(무결성) 검증을 통과한 아티팩트만 적용한다. 검증 실패 시 적용을 차단하고 현재 버전을 유지한다. (Secured)
-- **REQ-DEPLOY-027** [Event-driven] *(Stage-2 관련)* — **When** 자동 업데이트가 백엔드를 재시작하면, the 앱 **shall** 라이브 잠금(live-lock=ON)과 대기 중 승인(pending-approval) 상태를 재시작 후에도 보존한다(또는 안전측으로 재잠금(fail-safe to locked))하고, 재시작 경계를 가로질러 **감사 로그 연속성**을 유지한다. (SAFETY-4: Stage-2 updater는 MVP persistent-server에 없던 백엔드 재시작 능력을 추가 — 재시작이 live-lock을 기본 unlocked로 초기화하면 활성 보호가 조용히 소실되므로 앵커링. REQ-DEPLOY-025의 정상 종료 정리와 별개로, updater 유발 재시작의 안전상태 지속성을 규정.)
+### B.6 자동 업데이트 — ⛔ DESCOPED (2026-07-22)
+
+> ⛔ `[SCOPE-2026-07-22: DESCOPED — §B.6 전체 + REQ-DEPLOY-027. 사용자가 자동 업데이트 선택지에서 **"빼기 · 수동 재배포"**(새 파일을 손으로 건네줌)를 선택(2026-07-22). 결과적으로 plan.md §F **F6**(업데이트 매니페스트·아티팩트 호스팅 + updater 서명 키 커스터디)는 **MOOT** — M8 언블록 목적으로만 존재했다. 아래 세 REQ는 **삭제하지 않고 원문 그대로 보존**한다]`
+
+- **REQ-DEPLOY-016** [Capability gate] ⛔ **DESCOPED** — **Where** 데스크톱 앱(Stage 2) 형태인 경우, the 앱 **shall** Tauri updater로 자동 업데이트(버전 확인 → 다운로드 → 사용자 승인 후 적용)를 제공한다. Stage 1(PyInstaller 런처)에서는 자동 업데이트를 **버전 확인 + 알림(수동 재설치 안내)** 로 한정한다 (명시적 트레이드오프).
+- **REQ-DEPLOY-017** [Event-driven] ⛔ **DESCOPED** — **When** 업데이트 아티팩트가 다운로드되면, the 앱 **shall** 서명(무결성) 검증을 통과한 아티팩트만 적용한다. 검증 실패 시 적용을 차단하고 현재 버전을 유지한다. (Secured)
+- **REQ-DEPLOY-027** [Event-driven] *(Stage-2 관련)* ⛔ **DESCOPED** — **When** 자동 업데이트가 백엔드를 재시작하면, the 앱 **shall** 라이브 잠금(live-lock=ON)과 대기 중 승인(pending-approval) 상태를 재시작 후에도 보존한다(또는 안전측으로 재잠금(fail-safe to locked))하고, 재시작 경계를 가로질러 **감사 로그 연속성**을 유지한다. (SAFETY-4: Stage-2 updater는 MVP persistent-server에 없던 백엔드 재시작 능력을 추가 — 재시작이 live-lock을 기본 unlocked로 초기화하면 활성 보호가 조용히 소실되므로 앵커링. REQ-DEPLOY-025의 정상 종료 정리와 별개로, updater 유발 재시작의 안전상태 지속성을 규정.) ⛔ `[SCOPE-2026-07-22: DESCOPED — updater가 없으므로 updater 유발 재시작 경로 자체가 존재하지 않는다. **주의**: 이는 라이브 잠금·승인 게이트·감사 로그 불변식 자체의 약화가 아니다 — 그 불변식은 REQ-DEPLOY-023/024로 계속 강제된다]`
 
 ### B.7 오류 UX (인간 친화적 안내)
 
@@ -114,8 +131,8 @@ depends_on: [SPEC-COPILOT-MVP-001]
 
 ### B.8 크로스플랫폼 + 재현 가능 빌드
 
-- **REQ-DEPLOY-021** [Ubiquitous] — The 빌드 파이프라인 **shall** macOS와 Windows 양 플랫폼용 배포 아티팩트를 재현 가능하게 생성한다 — 문서화된 빌드 절차 + 의존성 버전 핀(lockfile: `uv.lock` / `ui/package-lock.json` / Stage 2 Cargo/Tauri 락) 기준. (SPEC-COPILOT-MVP-001 REQ-MVP-043의 계승·확장)
-- **REQ-DEPLOY-022** [Unwanted] — The 배포 아티팩트·빌드 절차 **shall not** 비공개 자원(수동 배포 번들, 베타 신청 등)에 의존한다.
+- **REQ-DEPLOY-021** [Ubiquitous] — The 빌드 파이프라인 **shall** macOS와 Windows 양 플랫폼용 배포 아티팩트를 재현 가능하게 생성한다 — 문서화된 빌드 절차 + 의존성 버전 핀(lockfile: `uv.lock` / `ui/package-lock.json` / Stage 2 Cargo/Tauri 락) 기준. (SPEC-COPILOT-MVP-001 REQ-MVP-043의 계승·확장) ⏸️ `[SCOPE-2026-07-22: DEFERRED-WINDOWS — **재현 가능 빌드 요구 자체는 존속하되 대상이 macOS arm64로 축소**된다. Windows 절은 이연(폐기 아님 — 위 §A DEFERRED-WINDOWS 블로커 3건 참조), universal2/Intel 절도 arm64 전용 빌드 호스트 제약으로 이연 유지. 즉 close 조건으로 요구되는 재현 가능 대상 = **macOS arm64 단일**]`
+- **REQ-DEPLOY-022** [Unwanted] — The 배포 아티팩트·빌드 절차 **shall not** 비공개 자원(수동 배포 번들, 베타 신청 등)에 의존한다. *(v0.5.0: **불변이며 오히려 더 강하게 충족**된다 — 서명·공증 DESCOPED로 유료 Apple Developer 멤버십조차 전제되지 않는다.)*
 
 ### B.9 안전 불변식 보존 (배포 셸이 안전 게이트를 우회하지 않음)
 
@@ -141,14 +158,16 @@ depends_on: [SPEC-COPILOT-MVP-001]
 
 ## C. 제약사항
 
-- 대상 플랫폼은 macOS와 Windows다 (Linux는 §D out of scope). 콘솔측 Lua responder는 grandMA3 onPC가 지원하는 플랫폼 범위를 따른다.
+- 대상 플랫폼은 macOS다 (Linux는 §D out of scope). ⏸️ `[SCOPE-2026-07-22: DEFERRED-WINDOWS — 원문 "대상 플랫폼은 macOS와 Windows다"]` 콘솔측 Lua responder는 grandMA3 onPC가 지원하는 플랫폼 범위를 따른다.
 - 백엔드는 SPEC-COPILOT-MVP-001에서 확정된 Python 3.11+ 스택(`uv` 의존성 관리, `python-osc`, `anthropic`/`google-genai`)을 그대로 패키징한다 — 백엔드 재구현은 없다.
 - 프론트엔드는 기존 Vite + React + TypeScript(`ui/`) 빌드 산출물(`ui/dist`)을 재사용한다.
 - API 키·자격 증명은 커밋 가능한 파일에 평문으로 저장하지 않는다 (OS 자격 증명 저장소만 — REQ-DEPLOY-006). 크래시 덤프/예외 로거는 프로세스 env를 스크럽하여 env 주입 키의 디스크 평문화를 방지한다 (DECIDE-M6).
 - **패키징 형태는 두 플랫폼 모두 onedir로 확정**된다 (onefile 아님 — FEAS-1/FEAS-6/DECIDE-M13). macOS는 onedir 트리를 notarizable .app/.dmg 컨테이너에 담는다.
-- 코드 서명·공증에는 외부 자격(Apple Developer ID 인증서, Windows Authenticode 인증서)이 전제된다 — 인증서 조달·비용은 구현 세션 착수 전 확정 필요. **인증서 미보유이므로 서명 파이프라인 코드는 작성하되 AC-DEPLOY-009/010은 환경-게이트 N/A**로 둔다.
-- **Windows SmartScreen 전제/제약** (REQ-DEPLOY-015에서 이동 — GEARS-2/FEAS-7): SmartScreen "미확인 게시자" 완화는 서명 자체가 아니라 **평판 누적**에 의존한다 — **OV** 인증서는 초기에는 평판이 없어 경고가 즉시 해소되지 않고, 즉시 신뢰는 **EV** 인증서로만 얻는다. 따라서 REQ-DEPLOY-015는 SmartScreen 결과가 아니라 `signtool verify /pa` 검증 가능 서명을 성공 기준으로 삼는다.
-- **코드 서명 인증서 유형·키 보관 제약** (FEAS-3/FEAS-7/DECIDE-M7): 2023.6 이후 발급 코드 서명 키는 FIPS-140 하드웨어 토큰/클라우드 HSM에 보관해야 하며 파일 키 CI 서명은 불가하다. macOS 공증은 hardened runtime + entitlements plist(`com.apple.security.cs.*`) + stapling + notarytool 크리덴셜을 요구한다.
+- ⛔ `[SCOPE-2026-07-22: DESCOPED — 아래 **서명·공증 전제 3개 제약**은 REQ-DEPLOY-014/015 DESCOPED에 따라 close 조건에서 빠진다. 재개 대비 **원문 그대로 보존**한다]`
+  - 코드 서명·공증에는 외부 자격(Apple Developer ID 인증서, Windows Authenticode 인증서)이 전제된다 — 인증서 조달·비용은 구현 세션 착수 전 확정 필요. **인증서 미보유이므로 서명 파이프라인 코드는 작성하되 AC-DEPLOY-009/010은 환경-게이트 N/A**로 둔다.
+  - **Windows SmartScreen 전제/제약** (REQ-DEPLOY-015에서 이동 — GEARS-2/FEAS-7): SmartScreen "미확인 게시자" 완화는 서명 자체가 아니라 **평판 누적**에 의존한다 — **OV** 인증서는 초기에는 평판이 없어 경고가 즉시 해소되지 않고, 즉시 신뢰는 **EV** 인증서로만 얻는다. 따라서 REQ-DEPLOY-015는 SmartScreen 결과가 아니라 `signtool verify /pa` 검증 가능 서명을 성공 기준으로 삼는다.
+  - **코드 서명 인증서 유형·키 보관 제약** (FEAS-3/FEAS-7/DECIDE-M7): 2023.6 이후 발급 코드 서명 키는 FIPS-140 하드웨어 토큰/클라우드 HSM에 보관해야 하며 파일 키 CI 서명은 불가하다. macOS 공증은 hardened runtime + entitlements plist(`com.apple.security.cs.*`) + stapling + notarytool 크리덴셜을 요구한다.
+- **ad-hoc 배포 제약 (v0.5.0 신설 — REQ-DEPLOY-014a 전제)**: ad-hoc 서명 아티팩트는 `spctl --assess --type execute`를 **영구적으로 통과하지 못한다**(공증 부재). 따라서 quarantine 확장 속성을 붙이는 전달 경로(브라우저 다운로드·메일·AirDrop)에서는 최초 실행 시 사용자 측 해제 조작이 **반드시** 필요하며, 이 절차 안내는 산출물의 일부다(`INSTALL.ko.md`). quarantine을 붙이지 않는 경로(`scp`/`rsync`/`git`/USB-exFAT)는 해제 없이 실행된다.
 - 로컬 공존 HARD 제약(§A — 동일 머신 전용, "동일 LAN" 표현 삭제)은 두 Stage 모두에 불변으로 적용된다.
 
 ## D. 제외 범위 (Exclusions)
@@ -162,7 +181,7 @@ depends_on: [SPEC-COPILOT-MVP-001]
 - iOS/Android 네이티브 앱, 웹으로 호스팅되는 원격 접속 형태는 본 SPEC 범위가 아니다.
 
 ### Out of Scope — Linux 배포
-- Linux용 배포 아티팩트는 본 Phase에서 제외한다. 대상은 macOS + Windows다 (후속 Phase에서 검토 가능).
+- Linux용 배포 아티팩트는 본 Phase에서 제외한다. 대상은 macOS다 ⏸️ `[SCOPE-2026-07-22: DEFERRED-WINDOWS — 원문 "대상은 macOS + Windows다"]` (후속 Phase에서 검토 가능).
 
 ### Out of Scope — 코파일럿 기능 변경
 - 새 도구, LLM 프로바이더/모델 변경, 안전 게이트 규칙 변경, 룰북 지식 변경 등 코파일럿 **기능**의 어떤 변경도 본 SPEC 범위가 아니다. 본 SPEC은 SPEC-COPILOT-MVP-001의 기능을 **형태만** 바꾼다.
@@ -175,3 +194,12 @@ depends_on: [SPEC-COPILOT-MVP-001]
 
 ### Out of Scope — 팀/멀티유저·중앙 관리 배포
 - MDM/그룹 정책 기반 대규모 배포, 중앙 라이선스/키 관리, 다중 오퍼레이터 계정 관리는 본 Phase 초과다 (단일 콘솔 PC 로컬 설치가 대상).
+
+### Out of Scope — 코드 서명·공증 (v0.5.0 DESCOPED, 2026-07-22)
+- macOS Developer ID 서명 / notarization / stapling, Windows Authenticode 서명은 본 SPEC의 close 조건이 아니다 — 배포 형태가 "소수 인원 직접 전달"로 확정되어 Gatekeeper/SmartScreen 통과가 목표에서 제외됐다(사용자 지시 "거창하게 mac OS 서명이나 공증 필요없어", 2026-07-22). 해당 REQ/AC(REQ-DEPLOY-014/015, AC-DEPLOY-009/010)는 삭제하지 않고 ⛔ `[SCOPE-2026-07-22: DESCOPED — …]` 마커와 함께 제자리에 보존된다. 대체 요구는 REQ-DEPLOY-014a(ad-hoc 서명 `.app` → `.dmg` + 한국어 설치 안내)다. 이미 작성된 `packaging/sign.sh`의 env-gated 실 identity 경로는 존치하되 검증 대상이 아니다.
+
+### Out of Scope — 자동 업데이트 (v0.5.0 DESCOPED, 2026-07-22)
+- Tauri updater 기반 자동 업데이트(버전 확인 → 다운로드 → 서명 검증 → 적용), 업데이트 매니페스트·아티팩트 호스팅, updater 서명 키 커스터디는 모두 본 SPEC 범위 밖이다 — 사용자가 "빼기 · 수동 재배포"를 선택했다(2026-07-22). 새 버전은 새 `.dmg`를 손으로 전달한다. 해당 REQ/AC(REQ-DEPLOY-016/017/027, AC-DEPLOY-011/018)는 제자리에 보존되고, plan.md §F의 F6 결정은 **MOOT**가 된다(M8 언블록 목적으로만 존재).
+
+### Out of Scope — Windows 배포 (v0.5.0 DEFERRED, 2026-07-22 — 폐기 아님)
+- Windows 배포 아티팩트·Windows 빌드·Windows 런타임 경로는 본 개정 시점의 close 조건에서 제외된다 — 사용자 지시 "**우선** 윈도우는 제외하고 맥에서 오류없이 작동하는 앱을 만들어줘"(2026-07-22). 이는 **이연(deferred)** 이며 폐기가 아니다: Windows는 되돌아올 수 있다. 재개 시 알려진 블로커 3건 — (a) `server/web/handshake.py`가 Windows Tauri 웹뷰 오리진 `http://tauri.localhost`를 의도적으로 미포함(현재 Windows 창의 `/ws` 업그레이드는 `origin_not_allowed`로 거부됨), (b) `src-tauri/src/sidecar.rs`의 `#[cfg(not(unix))]` 분기에 Job Object teardown 미배선, (c) `src-tauri/tauri.conf.json`의 `bundle.targets`가 `["app","dmg"]`이고 `windows` 키 부재. 이 3건에 대한 코드 내 `PENDING-WINDOWS` 마커는 **존치**한다(제거 요청 아님). ⚠️ Windows가 재개되더라도 Authenticode 서명은 위 "코드 서명·공증" 항목대로 DESCOPED 상태로 남는다.

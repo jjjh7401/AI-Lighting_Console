@@ -168,6 +168,22 @@ Stage-1 마지막 마일스톤 — 패키징된 셸의 안전 불변식 보존 +
 
 **환경-게이트 N/A**: universal2·Windows x86_64 빌드(arm64 전용 CPython), 실제 Developer-ID 공증(인증서 부재), Rust/Tauri OSC 소스 스캔·wire-level 열거·onPC 라이브 명령 왕복(Stage-2 또는 onPC 필요).
 
+### M14~M18 — 라이브 E2E 하드닝 배치 (구현 2026-07-21, cycle_type=tdd) — ⚠️ 회고적 문서 backfill (2026-07-22)
+
+> ⚠️ **본 절은 회고적 backfill이며, 구현 당시의 실행 로그를 복원한 것이 아니다.** M14~M18(v0.3.0 라이브 E2E 하드닝, 결함 #2~#6, REQ-DEPLOY-028~032 / AC-DEPLOY-019~023)은 2026-07-21에 구현·커밋되고 §E.4에서 synced(`dcdb6f5`)되었으나 **§E.2에 증거 절이 없었다** — 기록은 §E.4 산문과 CHANGELOG.md뿐이었다. 아래 표는 2026-07-22 시점에 ① `grep -rn "AC-DEPLOY-0NN" server/ console/`로 **AC 앵커가 실재함을 확인**하고 ② 해당 테스트 파일을 **재실행해 현재 green임을 관측**한 결과다.
+>
+> **이 절이 주장하지 않는 것**: 구현 당시의 커버리지 수치, 당시의 회귀 delta, 당시의 @MX 태그 추가 내역, 마일스톤별 커밋 SHA. 그 값들은 관측되지 않았으므로 여기에 쓰지 않는다(당시 전체 스위트 `1017 passed`는 §E.4 v0.3.0 항목의 기록). 아래 테스트 수는 **2026-07-22 재실행 시점의 파일 전체 수**이며 M14~M18이 추가한 신규 건수가 아니다.
+
+| 마일스톤 / AC | Status | Verification Command (2026-07-22 재실행) | Actual Output |
+|----|--------|----------------------|---------------|
+| **M14** — 기동 시 활성 프로바이더 키 주입 (#2) / AC-DEPLOY-019 | PASS (앵커 실재 + 재실행 green) | `grep -n "AC-DEPLOY-019" server/tests/test_web_serve.py` → 앵커 2건(`:416` 하네스 주석, `:516` 테스트 docstring); `pytest server/tests/test_web_serve.py -q` | `32 passed` — `build_runtime`가 프로바이더 클라이언트 생성 이전에 활성 프로바이더 키를 env로 주입, 기설정 env 보존, 저장소 미가용 시 세션 폴백 |
+| **M15** — 마지막 생성 연출 상태 세션 주입 (#4) / AC-DEPLOY-021 | PASS (앵커 실재 + 재실행 green) | 앵커: `test_last_created.py:1`, `test_web_session.py:501`, `test_runner_self_correction.py:281`(③ 재생성 선호) + 구현 `server/orchestrator/last_created.py`; `pytest server/tests/test_last_created.py server/tests/test_web_session.py server/tests/test_runner_self_correction.py -q` | `10 passed` / `28 passed` / `16 passed` |
+| **M16** — Gemini 캐시 만료 복구 + 오류 분류 (#5) / AC-DEPLOY-022 | PASS (앵커 실재 + 재실행 green) | 앵커: `test_gemini_adapter.py:214`(① TTL 만료), `:229`(① 404 절), `:485`(② No-API-key→auth), `test_web_errors.py:76`, `test_web_session.py:462` + 구현 `server/llm/gemini_adapter.py`; `pytest server/tests/test_gemini_adapter.py server/tests/test_web_errors.py -q` | `41 passed` / `26 passed` |
+| **M17** — rig-context 실제 풀 번호 명시 (#3) / AC-DEPLOY-020 | PASS (앵커 실재 + 재실행 green) — ⚠️ **Python 절만**; Lua 소스단 근본 수정은 아래 **M17.1**에서 수행됨 | 앵커: `test_tools.py:57/:80/:316/:337`(비연속 풀 1,2,7 픽스처) + 구현 `server/orchestrator/tools.py`; `pytest server/tests/test_tools.py -q` | `23 passed` |
+| **M18** — OSC 수신 포트 재바인드 복구 (#6) / AC-DEPLOY-023 | PASS (앵커 실재 + 재실행 green) — ⚠️ **브리지 단위 절만**; §E.4 이연 #1(앱 셸 안내 표시)은 아래 **M18.1**에서 닫힘 | 앵커: `test_osc_bridge.py:254`(선점 포트 → 재바인드 시도) + `:264`(라이브 절 deferred N/A 명시) + 구현 `server/bridge/osc.py`; `pytest server/tests/test_osc_bridge.py -q` | `22 passed` |
+
+**backfill이 바꾸지 않는 것**: §E.4 v0.3.0 sync 항목의 **Deferred items 3건**(#6 앱 셸 안내 표시 / 라이브 onPC 재검증 #2~#6 / #3 심층 Lua 슬롯 정합성)은 그대로 유효하다. 그중 #1과 #3은 2026-07-22 배치(M18.1 / M17.1)에서 다뤄지며, **라이브 재검증(#2)은 여전히 미해소**다.
+
 ### M7.1 — sidecar↔UI 전송 핸드셰이크 (2026-07-21, cycle_type=tdd, Stage-2)
 
 Stage-2 M7의 첫 하위 마일스톤 — F5(REQ-DEPLOY-002a) 3-계층 중 **백엔드 게이트 + launcher 토큰 생성 + UI 소비 seam**만 착수. M7.2(teardown)·M7.3(SAFETY-2 이중 스캔)·M7.4(Tauri 스캐폴드)는 미착수이며 `src-tauri/`는 생성하지 않았다.
@@ -207,7 +223,9 @@ Stage-2 M7의 두 번째 하위 마일스톤 — teardown Option C(FEAS-5) 2-축
 | AC-DEPLOY-026 ③ (force-quit self-reap, 잔여 0 + 포트 해제) | PASS | `PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring .venv/bin/python -m pytest server/tests/test_web_launcher.py -q` | `43 passed in 7.4s` — `TestSidecarSelfReap` 2건이 실제 subprocess로 증명: ① pipe EOF(부모가 write end close) → sidecar+grandchild 잔여 0, web(TCP)/OSC(UDP) 포트 재바인드 가능 ② 파이프 없는 진짜 고아(부모 SIGKILL) → `getppid()` 폴백으로 동일 결과 |
 | AC-DEPLOY-026 ③ (bounded max reap latency ≤ 1s) | PASS | 동일 실행 `TestWatchdogBounds` / `TestWatchdogPipeEOF` / `TestWatchdogGetppidFallback` | `PARENT_POLL_INTERVAL_SECONDS(0.25) ≤ MAX_REAP_LATENCY_SECONDS(1.0) ≤ 1.0` assert + 양 트리거의 실측 elapsed ≤ 1.0s assert + `poll_interval=5.0`/`0` 생성자 `ValueError`. 프로세스 레벨은 `_REAP_DEADLINE_SECONDS = 1.0 + 4.0`(감지 상한 + OS teardown)로 상한-결정적 스캔 |
 | AC-DEPLOY-026 ④ (재기동 fail-closed) | PASS | 동일 실행 `TestSidecarSelfReap::test_pipe_eof_reaps_the_group_and_frees_the_ports` | sidecar 생존 중 `require_ports_available` → `PortInUseError` 발생(조용한 포트 드리프트 0), self-reap 후 동일 호출 통과 |
-| AC-DEPLOY-026 ① 정상 종료 / ② 백엔드 크래시 | **DEFERRED-M7.4** | — | Rust `RunEvent::Exit` + setsid/Job Object 부재. 본 마일스톤에서 **검증 불가 → 주장하지 않음** |
+| AC-DEPLOY-026 ① 정상 종료 / ② 백엔드 크래시 | **DEFERRED-M7.4** → ✅ **이후 M7.4b에서 PASS** (아래 상호참조) | — | Rust `RunEvent::Exit` + setsid/Job Object 부재. 본 마일스톤에서 **검증 불가 → 주장하지 않음** |
+
+> 📌 **이연 해소 상호참조 (2026-07-22 추가 — 위 행의 역사적 기록은 그대로 보존)**: 위 `DEFERRED-M7.4`는 **이미 닫혔다.** ① 정상 종료와 ② 백엔드 크래시는 **§E.2 M7.4b 절의 AC 표 첫 두 행에서 패키지 `.app` 증거와 함께 PASS**로 기록되어 있다(증거 파일 `.moai/state/verify/m74b/ac026-1-normal.txt` / `ac026-2-crash.txt`). Rust 구현은 `src-tauri/src/sidecar.rs`의 `reap_backend_group`(`:296`) + `libc::killpg` SIGTERM→SIGKILL(`:273`/`:284`) + `group_kill_target`(호스트 그룹 시그널 거부, `:222`)이며, `RunEvent::Exit` 배선은 `:440`이다. 소스 가드는 `server/tests/test_deploy_tauri_seams.py`(AC-DEPLOY-026 ①② 앵커 `:7`/`:66`/`:76`/`:103`/`:111`). Windows Job Object 절만 `PENDING-WINDOWS`로 잔존(`sidecar.rs:320`~`:325`). *"DEFERRED"를 grep한 독자가 미해소로 오독하지 않도록 추가한 전방 참조이며, 위 행의 원문은 수정하지 않았다.*
 | AC-DEPLOY-014 (안전 불변식 — 신규 OSC 송신 경로 0) | PASS | `pytest server/tests/test_architecture.py server/tests/test_deploy_safety_invariants.py -q` | `15 passed in 6.15s`; `grep -rnE "^\s*(from\|import) server\.bridge" server/web/` → 매치 0(watchdog은 프로세스-시그널 전용) |
 
 **Regression**: full suite → `1063 passed`(baseline 1046 + 신규 17, 회귀 **0**). UI `npm test` → `57 passed`(무변경), `npm run build` → `✓ built in 343ms`. `ruff check server/` → `Found 2 errors`(둘 다 기존 `server/safety/console.py:221/258` E501, **NEW 0**). 테스트 프로세스 누수 스캔(`ps | grep watchdog_child`) → 잔여 0.
@@ -352,12 +370,135 @@ M7.3이 명시 이월한 **Layer ② 1:1 회계의 알려진 예외**(이월 의
 
 **커밋**: M7.5 구현 커밋 1건(`feat/app-deploy-file-import` 직접 커밋 — 원격 없음, push/PR 없음).
 
+### v0.5.0 스코프 축소 배치 (2026-07-22, cycle_type=tdd) — 5개 구현 단위
+
+spec.md **v0.5.0**(2026-07-22 배포 전제 축소 — 서명·공증 DESCOPED / Windows DEFERRED / 자동 업데이트 DESCOPED / ad-hoc `.dmg` 직접 전달 신설) 직후 착수한 macOS 전용 하드닝 배치. plan.md v0.5.0은 본 배치에 **신규 마일스톤 번호를 신설하지 않았으므로**, 아래 5개 절은 각자가 확장·완결하는 기존 마일스톤의 하위 번호를 쓴다(M7.1~M7.5의 소수점 하위 마일스톤 관례 계승).
+
+| 절 | 구현 단위 | 확장·완결 대상 | 연계 AC |
+|---|---|---|---|
+| **M17.1** | rig 풀 슬롯 교차언어 계약 (Lua↔Python) | M17(#3) + §E.4 v0.3.0 이연 #3 | AC-DEPLOY-020 |
+| **M18.1** | OSC 수신 포트 3결함 (UDP preflight / 오류 표면화 / 셸 원인 전달) | M18(#6) + §E.4 v0.3.0 이연 #1 | AC-DEPLOY-023 (+ 026 오류 UX) |
+| **M10.1** | Tauri `.app` ad-hoc 서명 실링 | M10 (배포 통합 검증) | AC-DEPLOY-030 ① |
+| **M10.2** | `.dmg` 전달 아티팩트 + 한국어 설치 안내 | M10 | AC-DEPLOY-030 ②③④ |
+| **M7.6** | AC-DEPLOY-028 ① 증거 (Rust 자격 저장소 미접촉 정적 스캔) | M7 (Stage-2) — 실재하던 M7 close 갭 | AC-DEPLOY-028 ① |
+
+**테스트 수 궤적** (단위별 1회 full-suite, 명령 `PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring .venv/bin/python -m pytest server/tests/ -q`): baseline `1189` → M17.1 `1201`(+12) → M18.1 `1223`(+22) → M10.1 `1232`(+9) → M10.2 `1232`(문서·스크립트 전용, +0) → M7.6 `1256`(+24). **기존 테스트 삭제·약화 0건**(다섯 단위 전부).
+
+⚠️ **본 배치 전체 커밋 상태: 미커밋.** 다섯 절 모두 작업 트리에만 존재하며 **어떤 절도 커밋 SHA를 주장하지 않는다**. `feat/app-deploy-file-import` HEAD는 여전히 `9ae9c7d`다.
+
+#### M17.1 — rig 풀 슬롯 교차언어 계약 (2026-07-22, cycle_type=tdd)
+
+§E.4 v0.3.0 이연 #3(“`copilot_responder.lua:322`가 루프 위치를 `i`로 방출; 갭 있는 라이브 rig에서는 진짜 풀 슬롯이 다를 수 있음”)의 **소스단 근본 수정**. M17은 Python 절(`_rig_object`가 슬롯을 노출)만 고쳤고, 슬롯 값을 **생산하는** Lua 절은 그대로였다.
+
+**결함(교차언어 계약 위반)**: `console/lua/copilot_responder.lua` `build_snapshot`이 **루프 인덱스**를 `i`로 방출하는 한편 `server/orchestrator/tools.py:93` `_rig_object`는 `i`를 **실제 풀 슬롯**으로 문서화·소비했다. `M.safe_children`이 갭을 압축(`out[#out+1]`)하므로, 갭 있는 풀에서 LLM은 “그룹 1,2,3이 있다”고 통보받고 `Group 2 + 3`을 자신 있게 발행 → 콘솔 거부 → 자기수정 3회 소진 → **부분 실행**(`ChangeDestination Root` + `ClearAll`은 이미 나감). RED 재현 축약: `assert [1, 2, 3] == [1, 5, 7]`.
+
+**수정(양쪽 절)**: 슬롯이 확립 가능하면 **실제 슬롯**을 방출하고, 확립 불가하면 **`i`를 아예 생략**해 `_rig_object`가 이름-전용 항목으로 degrade하도록 했다 — *fail honest, never fail confident*. responder `VERSION` 1.1.0 → 1.2.0, `console/lua/PROTOCOL.md`에 **ASSUMPTION-7** 기록.
+
+**추적 중 발견된 두 번째(더 심각한) 결함**: `server/safety/console.py`가 동일한 `i`를 `Delete Plugin <slot>`의 **대상**으로 사용 → 갭 있는 풀에서 **무관한 플러그인을 삭제**할 수 있었다. 이제 목록 상 어느 플러그인이라도 슬롯 미보고 시 **fail closed**(`console.py:311`~`:324` — “cannot choose a free plugin slot”).
+
+**변경 파일**: `console/lua/{copilot_responder.lua,PROTOCOL.md,copilot_responder.xml}`, `server/orchestrator/tools.py`, `server/safety/console.py` + 테스트 4파일.
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| AC-DEPLOY-020 ①② (rig-context가 실제 풀 번호 노출 + 미존재 오브젝트 미선택) — **Python 소비 절** | PASS | `PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring .venv/bin/python -m pytest server/tests/test_tools.py -q` | `23 passed` — 비연속 풀(1,2,7) 픽스처(`test_tools.py:80`)에서 `_rig_object`가 실제 슬롯 노출(`:316`), 갭 있는 rig가 `Group 3`을 만들지 않음(`:337`) |
+| — **Lua 생산 절**(`build_snapshot`이 실제 슬롯 방출 / 미확립 시 `i` 생략) | PASS **(lupa 모의 콘솔 한정)** | `… -m pytest server/tests/test_lua_responder.py server/tests/test_responder_deploy.py -q` | `51 passed` — `test_gapped_pool_reports_real_slots_not_listing_positions`, `test_unestablished_slot_is_omitted_rather_than_faked`, `test_unknown_slot_reaches_the_llm_as_a_name_only_entry`, `test_self_reported_slot_wins_over_a_positional_ptr`, 밀집 풀 회귀 `test_dense_pool_still_reports_contiguous_slots` |
+| — `Delete Plugin <slot>` 오대상 삭제 fail-closed (2차 결함) | PASS | `… -m pytest server/tests/test_deploy_transport.py -q` | `20 passed` — 슬롯 미보고 플러그인이 목록에 있으면 free-slot 선택 자체를 거부(예외 메시지에 미보고 건수 포함) |
+| **실 grandMA3 onPC에서 슬롯이 실제로 확립되는가 (ASSUMPTION-7)** | 🔴 **PENDING LIVE VERIFICATION** | (미실행) | **주장하지 않음.** 위 세 행의 근거는 전부 `server/tests/lua_mock_env.py`의 **모의 콘솔**이다. 실 2.4.2에서 `Children()`/`Ptr(n)`이 사용 가능한 슬롯을 노출하는지는 **미검증**이며, 노출하지 않으면 responder는 (설계대로) 슬롯을 생략해 이름-전용으로 degrade한다 — 즉 라이브 실패 모드는 “틀린 슬롯”이 아니라 “슬롯 없음”이다. **필요한 온-하드웨어 검사**: onPC 2.4.2에서 **의도적으로 갭을 만든 풀**(예: Group 1, 5, 7만 존재)을 구성 → v1.2.0 responder 로드 → `get_rig_context` 1회 → 반환된 `groups` 항목의 `i` 값이 `[1, 5, 7]`인지(=슬롯 확립 성공) 또는 `i`가 **부재**한지(=degrade 경로) 확인. 두 결과 모두 계약 위반이 아니며, `[1, 2, 3]`이 나오면 수정 실패다 |
+
+**Lint**: `.venv/bin/python -m ruff check server/ packaging/` → `Found 2 errors` — 둘 다 기존 baseline `server/safety/console.py` E501, **NEW 0**(리팩터로 행번호가 `:289`/`:326` → `:289`/`:343`으로 이동).
+
+#### M18.1 — OSC 수신 포트 3결함 (2026-07-22, cycle_type=tdd)
+
+M18(#6)이 브리지 단위에서 멈춰 있던 지점 + §E.4 v0.3.0 이연 #1(“`server/web`이 `ReceivePortInUseError`를 catch+display하는 배선 부재 — AC-MVP-019 import 경계와 충돌해 이연”)을 함께 닫는다.
+
+**(a) TCP로 UDP를 재던 preflight**: `server/web/launcher.py` `probe_port_available`이 `SOCK_STREAM`(TCP)으로 바인드하는데 `serve.py`가 **UDP 수신 포트**를 그 함수에 넘기고 있었다 → 점유된 수신 포트가 preflight를 **통과**. 본 호스트에서 실측: 실 `_ReuseAddrOSCUDPServer`가 `127.0.0.1:63981`을 쥔 상태에서 **TCP 프로브는 FREE, UDP 프로브는 OCCUPIED(errno 48)**. 구현자가 함께 실측한 사실 — 정확히 같은 주소의 UDP 중복 바인드는 `SO_REUSEADDR`가 있어도 **실패**하지만, 와일드카드-vs-특정(0.0.0.0 vs 127.0.0.1) **불일치는 성공하며 거짓말을 한다**. 그래서 **UDP 프로브는 의도적으로 `SO_REUSEADDR`를 설정하지 않고**(TCP 프로브는 유지) 판정한다.
+
+**(b) 오류가 사용자에게 도달하지 않던 경로**: `ReceivePortInUseError`가 `build_runtime()`을 **미포착 상태로 탈출**했고, 그 이중언어 `.guidance`는 `str()`로 도달 불가였다. 이제 **합성 루트**(`server/safety/bootstrap.py:143`~`:149` — 유일하게 bridge·web 양층에 의존하는 지점)에서 catch 후 `PortInUseError`로 **재raise**하고, `serve.py`가 이를 처리해 `main()`이 **exit 2**를 반환한다. `server/web` → `server.bridge` **import 0건 불변**(AC-MVP-019) — 브리지-로컬 타입이 합성 루트에서 launcher 타입으로 번역되므로 경계가 약화되지 않는다.
+
+**(c) 셸이 모든 종료를 "runtime files missing"으로 오귀속**: `src-tauri/src/sidecar.rs`가 모든 `Terminated` 이벤트에 “runtime files are most likely missing or incomplete”를 **하드코딩**했다. 신설 `@copilot:error` 채널(`server/web/host_channel.py:45` `ERROR_PREFIX`)이 실제 원인을 실어 나르고, `sidecar.rs:495`가 이를 파싱한다 — 하드코딩 문구는 **폴백으로만** 잔존.
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| AC-DEPLOY-023 (수신 포트 선점 → 조용한 드리프트 0 + 인간 친화 안내) — **(a) UDP preflight** | PASS | `… -m pytest "server/tests/test_web_launcher.py::TestOscReceivePortIsProbedAsUdp" -q` | `7 passed` — `test_the_tcp_probe_is_blind_to_a_held_udp_receive_port`(결함 재현), `test_a_udp_probe_sees_the_held_receive_port`, `test_require_ports_available_rejects_an_occupied_receive_port`, `test_the_udp_probe_must_not_set_so_reuseaddr`(SO_REUSEADDR 미설정을 계약으로 고정), `test_port_zero_is_still_skipped_for_udp` |
+| — **(b) 오류 표면화** (§E.4 이연 #1 해소) | PASS **(단위)** | `… -m pytest server/tests/test_web_serve.py -q` | `32 passed` — `ReceivePortInUseError`(`test_web_serve.py:216`~`:218`)가 `PortInUseError`로 번역되어 web 층에 도달, `serve.py:433`/`:449`가 포착해 `return 2`. import 경계 확인: `grep -rn "server.bridge" server/web/*.py` → 실코드 매치 0(`__init__.py` 산문 주석 1건뿐) |
+| — **(c) 셸 원인 전달** (`@copilot:error`) | PASS | `… -m pytest server/tests/test_web_host_channel.py -q` + `.venv/bin/python packaging/rust_scan.py` + `cargo clippy --all-targets` | `15 passed`; `PASS — 8 file(s) scanned (rust=5, manifest=2, capability=1), 0 violation(s)`(exit 0); clippy `Finished dev profile`, 경고·오류 0 |
+| **실 하드웨어 end-to-end 사슬** (force-quit → onPC가 포트 점유 → 재기동 → 셸이 포트 메시지 표시) | 🔴 **PENDING LIVE VERIFICATION** | (미실행) | **주장하지 않음.** 위 세 절은 각각 단위로 증명되었으나 **하나의 연속 시퀀스로 실행된 적이 없다**. **필요한 온-하드웨어 검사**: onPC 2.4.2가 앱의 수신 포트(현 사용자 설정 9005)로 OSC 출력 중인 상태에서 → 패키지 `.app`을 force-quit(SIGKILL) → onPC가 해당 UDP 포트를 계속 점유하게 두고 → `.app` 재기동 → **Tauri 셸 다이얼로그가 “runtime files missing”이 아니라 포트 점유 원인·재설정 안내를 표시**하고 백엔드가 exit 2로 종료하는지 확인. 현재 증거는 (a)(b)(c) 각각의 단위 관측뿐이다 |
+
+**@MX tags**: `server/safety/bootstrap.py`에 `@MX:NOTE`(수신 포트 실패 번역 — 합성 루트가 브리지-로컬 타입을 launcher 타입으로 바꾸는 유일 지점) 1건.
+
+#### M10.1 — Tauri `.app` ad-hoc 서명 실링 (2026-07-22, cycle_type=tdd)
+
+AC-DEPLOY-030 ①(ad-hoc `.app` seal 무결)의 선행 조건. **BEFORE**: `codesign --verify --strict "src-tauri/target/release/bundle/macos/GrandMA3 Copilot.app"` → **exit 1**(“code has no resources but signature indicates they must be present”).
+
+**정확한 근본 원인(초기 진단은 불완전했다 — 기록상 정정)**: 오케스트레이터의 최초 가설은 “서명 후 payload를 복사해 seal이 깨졌다”였으나 **불완전**했다. 실제로는 **(1) `Contents/_CodeSignature`가 아예 존재하지 않았다 — 번들은 한 번도 실링된 적이 없었다**, 그리고 **(2) 평평한 onedir payload는 구조적으로 서명 불가**했다: `codesign`은 `Contents/Frameworks` 아래를 전부 **중첩 코드**로 취급하는데, M7.4a의 payload 단계가 그 자리에 순수 데이터 디렉터리(`ui/`, `config/`, `console/`, `*.dist-info/`)를 넣었기 때문이다.
+
+**수정**: PyInstaller 자신의 코드/데이터 분리 규약을 미러링 — Mach-O는 `Contents/Frameworks`, 데이터는 `Contents/Resources`, 상호 심링크. 이는 `dist/GrandMA3 Copilot.app`(M6 Stage-1 아티팩트)이 **이미 쓰고 있던 레이아웃**이다.
+
+**ad-hoc 재실링을 `packaging/stage_sidecar.py --bundle` 안에 넣은 이유**: `package.json`에 4번째 단계로 추가하면 **떨어뜨릴 수 있는 링크를 하나 더 만드는 셈**이라 지금 고치려는 위험(payload가 seal 뒤에 복사되는 순서 함정)을 그대로 재생산한다. 따라서 payload→seal→verify를 **하나의 원자적 단계**로 묶었다. `packaging/sign.sh`는 **의도적으로 재사용하지 않았다** — 이 번들에서 실패하며, 그 hardened-runtime/entitlements 경로는 **공증**을 위해 존재하는데 공증은 v0.5.0에서 DESCOPED다.
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| **AC-DEPLOY-030 ①** (ad-hoc `.app` seal 무결 + ad-hoc임을 확인) | PASS (오케스트레이터 직접 재검증, 2026-07-22) | `codesign --verify --strict "src-tauri/target/release/bundle/macos/GrandMA3 Copilot.app"; codesign -dv "$APP"` | `verify_exit=0`; `Identifier=com.grandma3copilot.app`, `CodeDirectory v=20400 size=23184 flags=0x2(adhoc) hashes=718+3 location=embedded`, `TeamIdentifier=not set` |
+| — 번들 payload/실링 회귀 가드 | PASS | `… -m pytest server/tests/test_deploy_tauri_shell.py server/tests/test_deploy_tauri_seams.py -q` | `76 passed` |
+| — 재빌드가 stale 번들 사본을 갱신 | **부분 PASS — 4/5** | `find . -name copilot_responder.lua -not -path "./console/lua/*"` 각각을 원본과 `cmp`(2026-07-22 재실행) | **MATCH 4건**: `dist/GrandMA3 Copilot/_internal/…`, `dist/GrandMA3 Copilot.app/Contents/Resources/…`, `src-tauri/binaries/_internal/…`, `src-tauri/target/release/bundle/macos/GrandMA3 Copilot.app/Contents/Resources/…`. ⚠️ **DIFFER 1건**: `src-tauri/target/debug/_internal/console/lua/copilot_responder.lua` — 여전히 `VERSION = "1.1.0"`(M17.1 이전). **release 번들·배포 아티팩트는 전부 v1.2.0이고 stale 사본은 debug 빌드 스테이징 트리 하나뿐**이지만, `cargo`/`tauri dev` 디버그 실행은 이 사본을 집어 M17.1 이전 슬롯 동작을 재현할 수 있다 — **미해소 열린 항목** |
+| **패키지 GUI 앱 실제 기동** | ⛔ **주장하지 않음 (미실행)** | — | 본 배치에서 실행한 것은 **실링된 번들의 `Contents/MacOS/copilot-backend --help` 뿐**이다. GUI 앱을 띄우지 않았으므로 창·트레이·라이브 동작에 대한 어떤 주장도 하지 않는다(M7.4a/M7.4b의 기존 라이브 증거는 **재실링 이전** 번들에 대한 것) |
+
+#### M10.2 — `.dmg` 전달 아티팩트 + 한국어 설치 안내 (2026-07-22)
+
+AC-DEPLOY-030 ②③④. 신규 `packaging/make_dmg.sh` + `npm run shell:package`(`package.json:13`)가 **이미 실링된 `.app`으로부터** `dist/GrandMA3-Copilot-0.4.0.dmg`(73M 번들 → 40M)를 만든다 — **`tauri build --bundles dmg` 경유는 의도적으로 배제**(M10.1이 고친 것과 동일한 순서 함정을 재현하므로).
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| **AC-DEPLOY-030 ②** (`.dmg` 생성 + 미실링 입력 거부) | PASS (오케스트레이터 직접, 2026-07-22 재확인) | `npm run shell:package`; `ls -lh dist/*.dmg` | `dist/GrandMA3-Copilot-0.4.0.dmg` 40M (2026-07-21 23:45 생성) |
+| **AC-DEPLOY-030 ③** (마운트→추출 후에도 seal 유지) | PASS (본 배치 오케스트레이터 검증 실행에 귀속) | 마운트 → `ditto` 추출 → `codesign --verify --strict`(추출 사본 대상) | 심링크 **27/27 보존**, 추출 사본 `codesign --verify --strict` **exit 0** |
+| **AC-DEPLOY-030 ④** (한국어 설치 안내 동봉 + quarantine 해제 2경로) | PASS | `grep -n "xattr -dr com.apple.quarantine\|그래도 열기" INSTALL.ko.md` | `INSTALL.ko.md`(56행) — `:34` `xattr -dr com.apple.quarantine "/Applications/GrandMA3 Copilot.app"`, `:42` 시스템 설정 → 개인정보 보호 및 보안 → **"그래도 열기"**. quarantine을 붙이는/붙이지 않는 전달 경로 구분, macOS 15+에서 우클릭→열기가 더 이상 통하지 않는다는 사실 포함 |
+| `spctl --assess --type execute` | **기대된 거부 — 결함 아님** | (본 배치 검증 실행) | **rejected, exit 3**. ad-hoc 서명 하에서 **영구적**이며 spec.md §A/§C·AC-DEPLOY-030의 “명시적 비-기준”대로 통과를 요구하지 않는다 |
+
+`packaging/README.md`에 전체 재빌드 순서와 **순서 함정 경고**(payload를 seal 뒤에 복사하지 말 것)를 기록했다.
+
+#### M7.6 — AC-DEPLOY-028 ① 증거 (2026-07-22, cycle_type=tdd)
+
+**실재하던 M7 close 갭을 닫는다.** 본 단위 이전에 `grep -rn AC-DEPLOY-028`은 `acceptance.md` 밖에서 **0건**을 반환했다 — 테스트도, 증거 행도 없었다. 그런데 `acceptance.md:107`은 이 AC를 M7 close 조건으로 요구했고 스스로 “순수 로컬 자동으로 지금 완전 검증 가능”이라 분류했으며, **M7은 이미 synced로 선언된 상태였다**(§E.4 Stage-2 M7 sync).
+
+**절 ①(Rust에 자격 저장소/키 접근 코드 0건)만이 진짜 미커버**였다 — `packaging/rust_scan.py`는 네트워크/OSC 마커만 갖고 있었다. 이제 **별도의 `credential` 불변식 클래스**를 추가했다: `keyring` / `keychain` / `Sec(Item|Keychain)\w*` / `security[_-]framework` / `keytar` / `wincred` / `Cred(Read|Write)\w*` / `secret[_-]service` + **전이 크레이트 거부**. `network` 클래스와 **분리 보고**된다.
+
+**일반 비밀 어휘(`token`/`secret`/`password`)는 의도적으로 제외**했다 — 포함 시 정당한 launch-token 코드에서 오탐 ~30건이 발생했고, 유일한 탈출구가 **마커 집합을 무디게 만드는 것**이었기 때문이다. 마커는 좁게(자격 **저장소 API**만) 유지하고, `keyring`/`keychain`은 `\b` 없이 부분일치로 둔다(`open_keychain()` / `keyring_entry` 같은 식별자를 놓치지 않기 위해 — `rust_scan.py:97`).
+
+절 ②③은 `server/tests/test_deploy_keystore.py`에서 **이미 green**이었고 **AC-DEPLOY-028 앵커만 부착**했다(로직·단언 무변경).
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| **AC-DEPLOY-028 ①** (Rust/Tauri 소스에 자격 저장소 접근 0건 — 실트리) | PASS (오케스트레이터 직접 재실행, 2026-07-22) | `.venv/bin/python packaging/rust_scan.py` | `invariants: network (AC-DEPLOY-027 Layer ①), credential (AC-DEPLOY-028 ①)` / `PASS — 8 file(s) scanned (rust=5, manifest=2, capability=1), 0 violation(s)` (exit 0) — 헤더가 **두 불변식을 모두 명명** |
+| — 비-vacuity 증명 ① (모든 마커가 발화 샘플 보유 + 역방향 가드) | PASS | `… -m pytest server/tests/test_deploy_cross_language_scan.py -q` | `50 passed` — `TestCredentialMarkerSetIsLive::test_marker_fires_on_a_canonical_sample`(파라미터화) + `test_every_declared_source_marker_has_a_sample`(샘플 없는 마커 = 실패) |
+| — 비-vacuity 증명 ② (커밋된 양성 대조 픽스처) | PASS | 동일 실행 — `TestCredentialRogueFixtureIsFlagged` 3건 | `server/tests/fixtures/rust_scan/rogue_credential/`(`Cargo.toml`/`Cargo.lock`/`src/main.rs`) → **credential 8건 / network 0건**. `TestCredentialAndNetworkClassesAreDistinguishable` 2건이 두 클래스의 분리 보고를 고정 |
+| — 비-vacuity 증명 ③ (실 8파일 형태 미러 + 주입 시 FAIL로 flip) | PASS | 동일 실행 — `TestRealSrcTauriCredentialGate` 3건 | `test_real_tree_credential_gate_state_is_accurate`(항상 실행), `test_real_src_tauri_tree_holds_zero_credential_access`, `test_real_tree_shape_with_an_injected_credential_read_is_flagged` — 실 8파일을 미러해 PASS 재현 후 `keyring::Entry::new(...)` **1행 주입 → FAIL로 전환**됨을 단언 |
+| **AC-DEPLOY-028 ②③** (Stage-1 키 경로 무변경 + 세션 폴백 + 평문 0) | PASS (앵커 부착만, 로직 무변경) | `… -m pytest server/tests/test_deploy_keystore.py -q` | `38 passed` — 앵커: `:155`(② `inject_active_provider_key`), `:214`/`:266`(③ 저장소 미가용 + 파일 전수 스캔), `:328`(② `scrub_environ`) |
+
+**@MX tags added**: `packaging/rust_scan.py` credential 마커 집합 위 `@MX:ANCHOR`(`:86`) — “이 프로젝트의 유일한 자격 저장소 정적 탐지기”이며 마커를 무디게 하면 조용히 vacuous해짐을 `@MX:REASON`에 명시.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 `run_status: audit-ready` (Stage-1)
 `run_complete_at: 2026-07-20`
 
 **Stage-1 run-phase 완료** — M1~M6(설정·키 저장·설정 UI·responder provisioning·health/오류 UX·PyInstaller onedir 패키징) + M10(배포 통합 검증) 전 마일스톤 green. 전체 `983 passed` + 패키지 `.app` E2E 8/8 PASS(모두 오케스트레이터 직접 재검증). 프리즈 앱이 사용자 데이터 폴더에 실제 감사로그 기록 확인. AC 매트릭스 자동 검증 항목 전부 PASS. HEAD `1d65375`, `feat/app-deploy-file-import`(로컬 전용). **환경-게이트 N/A**(sync 시 명시): universal2·Windows x86_64·실제 Developer-ID 공증. **Stage-2(M7~M9 Tauri 셸+sidecar+자동업데이트)는 별도 kickoff** — 본 close는 Stage-1 배포 가능 MVP 형태 마감. 다음: `/moai sync SPEC-COPILOT-DEPLOY-001`(Stage-1 close).
+
+### v0.5.0 스코프 축소 배치 run-phase 상태 (2026-07-22)
+
+`run_status: **NOT audit-ready**`
+`run_complete_at: —` (미도달)
+
+M17.1 / M18.1 / M10.1 / M10.2 / M7.6 다섯 단위가 작업 트리에 랜딩했고 **전체 스위트 `1256 passed`**(오케스트레이터 직접 재실행, 명령 `PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring .venv/bin/python -m pytest server/tests/ -q`, 로그 `.moai/state/verify/m19-progress/01-full-suite.log`, 실패 0·skip 0), `ruff check server/ packaging/` NEW 0, `packaging/rust_scan.py` PASS, `cargo clippy --all-targets` 경고 0, `.app` `codesign --verify --strict` exit 0이다. **그럼에도 본 배치는 audit-ready가 아니다** — 아래 3건 때문이다.
+
+**미해소 항목 (audit-ready를 막는 것)**:
+
+1. 🔴 **M17.1 라이브 미검증** — ASSUMPTION-7(실 grandMA3 `Children()`/`Ptr(n)`이 사용 가능한 슬롯을 노출하는가)이 **미검증**. 증거는 전부 `lua_mock_env.py` 모의 콘솔. 필요한 검사는 M17.1 절의 마지막 행에 명시.
+2. 🔴 **M18.1 라이브 미검증** — force-quit → 포트 점유 → 재기동 → 셸 안내 표시의 **연속 사슬이 하드웨어에서 한 번도 실행된 적 없음**. 필요한 검사는 M18.1 절의 마지막 행에 명시.
+3. 🟡 **알려진 flaky 테스트 (미해소 열린 항목)** — `server/tests/test_web_launcher.py::TestSidecarSelfReap::test_orphaned_sidecar_reaps_the_group_without_a_pipe`가 M10.1 작업 중 **full-suite 실행 1회에서 실패**했고, 재실행에서 통과했다. 2026-07-22 재확인: full suite `1256 passed`(해당 테스트 포함 green) + 격리 실행 **3/3 passed**(`1 passed in 0.34s / 0.43s / 0.42s`). **미화(cosmetic) 사안이 아니다** — 이 테스트는 sidecar self-reap 경로, 즉 **M18.1이 표면화하는 포트 점유 증상을 애초에 예방하는 메커니즘**을 검증한다. 간헐 실패의 근본 원인은 **미규명**이며(부하 하 타이밍 추정, 확인 안 됨) 본 배치에서 수정하지 않았다.
+
+4. 🟡 **stale debug 스테이징 사본 1건 (본 기록 단위에서 새로 발견)** — `src-tauri/target/debug/_internal/console/lua/copilot_responder.lua`가 여전히 `VERSION = "1.1.0"`이다(M10.1 절 참조). release 번들·`dist/` 배포 아티팩트 4건은 전부 v1.2.0으로 갱신되었으나, `cargo`/`tauri dev` **디버그 실행 경로는 M17.1 이전 responder를 로드**해 고친 슬롯 결함을 재현할 수 있다. 라이브 재검증(항목 1)을 디버그 빌드로 수행하면 **잘못된 결론에 도달한다** — 라이브 검증은 반드시 release 번들로 하거나, 디버그 스테이징을 먼저 재생성해야 한다.
+
+**커밋 상태**: 다섯 단위 전부 **미커밋**. 브랜치 `feat/app-deploy-file-import` HEAD = `9ae9c7d`(변동 없음). 원격 없음 — push/PR 없음.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
@@ -403,6 +544,28 @@ Stage-2 M7(Tauri v2 데스크톱 셸 — M7.1~M7.5, AC-DEPLOY-024~029)을 CHANGE
 **Frontmatter**: `updated: 2026-07-21`(변경 없음 — 이미 오늘 날짜) 유지; `status: in-progress` 유지(M8/M9 미구현 — verification-claim-integrity 원칙상 terminal completion 주장 금지).
 
 ## §F Phase 4 Mode Selection
+
+Decision (all run scopes to date): **sub-agent** (Mode 5) — sequential `manager-develop` per milestone. Mode 5 was re-selected unchanged at every scope below; no scope has met the Mode 4 (parallel) or Mode 6 (workflow) entry conditions.
+
+This section is a **per-run-scope log** — one entry per run scope entered. Entry 1 is the original Stage-1 record (preserved verbatim); entries 2 and 3 were backfilled on 2026-07-22 because the section had gone stale (it still read "Stage-1 only (M1~M6) / Rust·Tauri deferred to Stage-2" after the M7 run had already executed).
+
+### Entry 3 — v0.5.0 스코프 축소 배치 (2026-07-22, 현재)
+
+- **Run scope**: macOS 전용 하드닝 5개 단위 — M17.1(Lua↔Python rig 슬롯 계약) / M18.1(OSC 수신 포트 3결함) / M10.1(`.app` ad-hoc 실링) / M10.2(`.dmg` + 한국어 안내) / M7.6(AC-DEPLOY-028 ① 증거).
+- **Scope 전제**: spec.md **v0.5.0**(2026-07-22) — 서명·공증 ⛔DESCOPED, 자동 업데이트 ⛔DESCOPED, Windows ⏸️DEFERRED, ad-hoc `.dmg` 직접 전달 🆕신설. 따라서 **M8·M9은 계획·구현 대상이 아니며**, 남은 경로는 M7 이후 곧바로 M10이다.
+- **Input parameters**: tier L / 파일 언어 혼합 = Python + **Lua** + **Rust** + shell + 문서 / 도메인 3(백엔드 Python, 콘솔 Lua, 패키징·Rust 셸) / 단위 간 순차 의존(M10.2는 M10.1의 실링 산출물에 의존) / concurrency benefit LOW(coding-heavy).
+- **Mode evaluation**: 1 trivial = no(다중 파일·의미 변경) / 2 background = no(write-heavy) / 3 agent-team = no(RETIRED) / 4 parallel = no(coding-heavy + 단위 순차 의존) / 5 sub-agent = **YES** / 6 workflow = no(≥30파일 균일 기계 변환 아님).
+- **Decision**: **sub-agent** (Mode 5). 단위별 순차 `manager-develop`(cycle_type=tdd), 각 단위 후 오케스트레이터 직접 재검증(full suite 1회/단위). 본 progress.md 기록 단위 역시 동일 모드.
+- **커밋 전략**: 다섯 단위 **전부 미커밋**(작업 트리 전용). 원격 없음 — push/PR 없음.
+
+### Entry 2 — Stage-2 M7 (2026-07-21, backfill)
+
+- **Run scope**: M7.1(핸드셰이크) → M7.2(watchdog) → M7.3(교차언어 이중 스캔) → M7.4a(Tauri 스캐폴드) → M7.4b(group-kill + 토큰 IPC) → M7.5(per-send 감사). **M8·M9은 당시 Stage-2-DEFERRED**(이후 v0.5.0에서 DESCOPED로 전환).
+- **File language mix**: Python + TS/React + **Rust/Tauri**(본 저장소 최초 Rust — Entry 1의 "Rust/Tauri deferred to Stage-2"가 여기서 해소됨).
+- **Decision**: **sub-agent** (Mode 5) — 하위 마일스톤 단위 순차 `manager-develop`(cycle_type=tdd). 근거는 Entry 1과 동일(coding-heavy + 하위 마일스톤 순차 의존: M7.4b는 M7.4a 스캐폴드에, M7.5는 M7.3 reconciler에 의존).
+- **Progression**: 마일스톤별 보고 + 오케스트레이터 직접 재검증, blocker/결정 시에만 정지.
+
+### Entry 1 — Stage-1 (2026-07-20, 원본 기록 — 수정하지 않음)
 
 Run scope: Stage-1 only (M1~M6). Depends_on gate: SPEC-COPILOT-MVP-001 in-progress → `--ignore-deps` override (user-approved, logged `.moai/logs/depends-on-override.log`). Phase-1 plan-audit gate on v0.2.0: PASS-WITH-DEBT ~0.87 (≥0.85, Stage-1 proceed).
 
