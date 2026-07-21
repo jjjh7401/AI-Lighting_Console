@@ -225,6 +225,109 @@ class TestRequirePortsAvailable:
         launcher.require_ports_available([("127.0.0.1", 0, "OSC feedback listen")])
 
 
+# ------------------------------------------------- UDP receive-port preflight (026)
+
+
+@contextlib.contextmanager
+def _occupy_osc_receive_port():
+    """Hold a port exactly the way a real OSC receiver holds it.
+
+    Not a bare ``SOCK_DGRAM`` bind: the production receiver is
+    :class:`server.bridge.osc._ReuseAddrOSCUDPServer` and sets SO_REUSEADDR
+    before binding (the M18 same-port rebind strategy depends on it). A probe
+    that only survives a *plain* holder proves nothing about the real one.
+    """
+    from pythonosc.dispatcher import Dispatcher
+
+    from server.bridge.osc import _ReuseAddrOSCUDPServer
+
+    server = _ReuseAddrOSCUDPServer(("127.0.0.1", 0), Dispatcher())
+    try:
+        yield server.socket.getsockname()[1]
+    finally:
+        server.server_close()
+
+
+class TestOscReceivePortIsProbedAsUdp:
+    """The OSC receive port is UDP; a TCP probe sails straight past it."""
+
+    def test_the_tcp_probe_is_blind_to_a_held_udp_receive_port(self):
+        # Pins WHY the protocol parameter has to exist. TCP and UDP are separate
+        # port spaces, so the default probe binds the TCP port of the same
+        # number, succeeds, and reports the occupied receive port as free.
+        with _occupy_osc_receive_port() as port:
+            assert launcher.probe_port_available("127.0.0.1", port) is True
+
+    def test_a_udp_probe_sees_the_held_receive_port(self):
+        with _occupy_osc_receive_port() as port:
+            assert (
+                launcher.probe_port_available(
+                    "127.0.0.1", port, sock_type=socket.SOCK_DGRAM
+                )
+                is False
+            )
+
+    def test_a_free_udp_port_is_still_reported_available(self):
+        with _occupy_osc_receive_port() as port:
+            pass  # released on exit — the same number must now read free
+        assert (
+            launcher.probe_port_available("127.0.0.1", port, sock_type=socket.SOCK_DGRAM)
+            is True
+        )
+
+    def test_require_ports_available_rejects_an_occupied_receive_port(self):
+        with (
+            _occupy_osc_receive_port() as port,
+            pytest.raises(launcher.PortInUseError) as excinfo,
+        ):
+            launcher.require_ports_available(
+                [("127.0.0.1", port, "OSC feedback listen", socket.SOCK_DGRAM)]
+            )
+        err = excinfo.value
+        assert str(port) in f"{err} {err.guidance}"
+        assert "OSC feedback listen" in err.guidance
+
+    def test_a_three_tuple_spec_still_means_tcp(self):
+        # Backward compatibility: every pre-existing caller passes 3-tuples and
+        # must keep its TCP semantics unchanged.
+        sock, port = _occupy_port()
+        try:
+            with pytest.raises(launcher.PortInUseError):
+                launcher.require_ports_available([("127.0.0.1", port, "web UI")])
+        finally:
+            sock.close()
+
+    def test_port_zero_is_still_skipped_for_udp(self):
+        launcher.require_ports_available(
+            [("127.0.0.1", 0, "OSC feedback listen", socket.SOCK_DGRAM)]
+        )
+
+    def test_the_udp_probe_must_not_set_so_reuseaddr(self):
+        # MEASURED on darwin: SO_REUSEADDR lets a *specific*-address UDP bind
+        # succeed while a WILDCARD holder owns the port (and vice versa), so a
+        # SO_REUSEADDR probe reports a genuinely-held port as free. The TCP probe
+        # keeps the option (it needs it against TIME_WAIT); the UDP probe must
+        # not inherit it. Guards a copy-paste that would silently re-open the
+        # preflight hole while every other test here still passed.
+        from pythonosc.dispatcher import Dispatcher
+
+        from server.bridge.osc import _ReuseAddrOSCUDPServer
+
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
+        server = _ReuseAddrOSCUDPServer(("0.0.0.0", port), Dispatcher())
+        try:
+            assert (
+                launcher.probe_port_available(
+                    "127.0.0.1", port, sock_type=socket.SOCK_DGRAM
+                )
+                is False
+            ), "the UDP probe set SO_REUSEADDR — a wildcard holder reads as free"
+        finally:
+            server.server_close()
+
+
 # ------------------------------------------------------------------- browser open
 
 

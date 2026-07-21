@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import socket
 import sys
 import threading
 from collections.abc import MutableMapping
@@ -36,7 +37,7 @@ from server.safety.bootstrap import ConsoleStack, build_console_stack
 from server.web.app import WebDeps, create_app
 from server.web.approval_bridge import ApprovalChannel
 from server.web.handshake import TAURI_ORIGINS, HandshakePolicy, browser_origins_for
-from server.web.host_channel import emit_ready, make_status_emitter
+from server.web.host_channel import emit_ready, emit_startup_error, make_status_emitter
 from server.web.launcher import (
     LAUNCH_TOKEN_ENV,
     PortInUseError,
@@ -369,6 +370,20 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
     return app, stack
 
 
+# @MX:NOTE: [AUTO] the protocol is declared PER ROW — the web UI is TCP, the OSC
+#   feedback listener is UDP. They are separate port spaces, so an unqualified
+#   (TCP) probe of the receive port reports it free no matter which process holds
+#   it: the preflight would pass and the real bind would then fail. Extracted from
+#   main() because the real-serve path is untestable in-process.
+# @MX:SPEC: SPEC-COPILOT-DEPLOY-001 REQ-DEPLOY-026
+def startup_port_specs(args: argparse.Namespace) -> list[tuple[str, int, str, int]]:
+    """The fixed ports the real-serve path pre-checks, each with its protocol."""
+    return [
+        (args.host, args.port, "web UI", socket.SOCK_STREAM),
+        ("127.0.0.1", args.receive_port, "OSC feedback listen", socket.SOCK_DGRAM),
+    ]
+
+
 def main(argv: list[str] | None = None, *, run=None, keyring_module=None) -> int:
     """CLI entry point; ``run`` and ``keyring_module`` are injectable (tests).
 
@@ -414,17 +429,27 @@ def main(argv: list[str] | None = None, *, run=None, keyring_module=None) -> int
 
     if real_serve:
         try:
-            require_ports_available(
-                [
-                    (args.host, args.port, "web UI"),
-                    ("127.0.0.1", args.receive_port, "OSC feedback listen"),
-                ]
-            )
+            require_ports_available(startup_port_specs(args))
         except PortInUseError as error:  # pragma: no cover — needs an occupied port
             print(error.guidance, file=sys.stderr)
+            # stdout is the shell's ONLY inbound channel: without this line it
+            # sees a sidecar that died before reporting ready and falls back to
+            # its hardcoded "runtime files are missing" guess.
+            emit_startup_error(error.guidance)
             return 2
 
-    app, stack = build_runtime(args)
+    # The preflight above is a pre-check, not a guarantee: it cannot cover a
+    # --port 0 row, an injected-``run`` test path, or a port taken in the window
+    # between the probe and the real bind. build_console_stack() performs the
+    # ACTUAL receive-port bind (with its own same-port rebind retries), so this
+    # is the last place a port failure can still be turned into operator words
+    # instead of a traceback the Tauri shell then misdiagnoses.
+    try:
+        app, stack = build_runtime(args)
+    except PortInUseError as error:
+        print(error.guidance, file=sys.stderr)
+        emit_startup_error(error.guidance)
+        return 2
     url = serve_local_url(args.host, args.port)
     try:
         if real_serve:  # pragma: no cover — exercised by real serving only

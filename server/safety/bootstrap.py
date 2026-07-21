@@ -22,7 +22,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from server.bridge.osc import BridgeConfig, OscBridge
+from server.bridge.osc import BridgeConfig, OscBridge, ReceivePortInUseError
 from server.deploy.settings import user_data_dir
 from server.safety.audit import DEFAULT_AUDIT_DIR, AuditLog
 from server.safety.backup import DEFAULT_INTERVAL_SECONDS, BackupError, BackupManager
@@ -31,6 +31,7 @@ from server.safety.gate import SafetyGate
 from server.safety.monitor import HealthMonitor
 from server.safety.registry import PluginFlagRegistry
 from server.safety.ruleset import SafetyRuleset, load_ruleset
+from server.web.launcher import PortInUseError
 
 
 # @MX:NOTE: [AUTO] frozen-aware audit-dir selection — DEFAULT_AUDIT_DIR resolves
@@ -129,7 +130,22 @@ def build_console_stack(
         ),
         consumer=link,
     )
-    bridge.start()
+    # @MX:NOTE: [AUTO] receive-port failure translation (REQ-DEPLOY-026/032). The
+    #   bridge raises its own bridge-local ReceivePortInUseError so the leaf OSC
+    #   module keeps no upward dependency on server.web — but NOTHING in
+    #   server/web, ui/src or src-tauri ever referenced that type, so an exhausted
+    #   rebind escaped build_runtime() as a raw traceback on stderr and the shell
+    #   blamed "missing runtime files". This is the composition root: the one place
+    #   that already depends on BOTH layers, so it is where the bridge-local type
+    #   becomes the launcher type the web layer handles. The OSC-specific bilingual
+    #   guidance rides through unchanged — the generic sentence cannot name the
+    #   abnormally-exited prior instance that is the usual cause.
+    try:
+        bridge.start()
+    except ReceivePortInUseError as error:
+        raise PortInUseError(
+            error.host, error.port, error.label, guidance=error.guidance
+        ) from error
     link.bind_send(bridge.send_command)
     audit = AuditLog(audit_dir)
     registry = PluginFlagRegistry()

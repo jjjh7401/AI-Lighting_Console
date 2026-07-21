@@ -70,6 +70,10 @@ pub const PARENT_PIPE_FD_VALUE: &str = "0";
 /// Line prefixes of the sidecar stdout protocol (`server/web/host_channel.py`).
 pub const READY_PREFIX: &str = "@copilot:ready ";
 pub const STATUS_PREFIX: &str = "@copilot:status ";
+/// The backend's own explanation for a start-up that will never report ready.
+/// Without it this shell can only GUESS why the sidecar died, and a guess is a
+/// constant — see [`consume_host_lines`] and the `Terminated` branch.
+pub const ERROR_PREFIX: &str = "@copilot:error ";
 
 /// The window label the capability file scopes permissions to.
 pub const MAIN_WINDOW_LABEL: &str = "main";
@@ -120,6 +124,28 @@ fn backend_ever_ready(app: &AppHandle) -> bool {
     app.try_state::<BackendReady>()
         .map(|state| state.0.load(std::sync::atomic::Ordering::SeqCst))
         .unwrap_or(false)
+}
+
+/// The last start-up cause the backend reported on stdout, if any.
+///
+/// The cause arrives as a stdout line while the process is still alive; the
+/// `Terminated` event that raises the dialog carries only an exit payload. The
+/// two facts therefore have to be joined here, which is why the line is latched
+/// rather than handled where it is parsed.
+pub struct StartupErrorCause(pub Mutex<Option<String>>);
+
+fn remember_startup_error(app: &AppHandle, cause: &str) {
+    if let Some(state) = app.try_state::<StartupErrorCause>() {
+        if let Ok(mut slot) = state.0.lock() {
+            *slot = Some(cause.to_string());
+        }
+    }
+}
+
+fn reported_startup_error(app: &AppHandle) -> Option<String> {
+    let state = app.try_state::<StartupErrorCause>()?;
+    let slot = state.0.lock().ok()?;
+    slot.clone()
 }
 
 /// The live sidecar's pid — the observable evidence that the spawn happened.
@@ -359,6 +385,7 @@ pub fn spawn_backend(app: &AppHandle) -> Result<(), String> {
     app.manage(LaunchToken(token));
     app.manage(BackendGroup(Mutex::new(None)));
     app.manage(BackendReady(std::sync::atomic::AtomicBool::new(false)));
+    app.manage(StartupErrorCause(Mutex::new(None)));
 
     let command = app
         .shell()
@@ -422,17 +449,27 @@ pub fn spawn_backend(app: &AppHandle) -> Result<(), String> {
                         crate::tray::set_health(&handle, crate::tray::HEALTH_STOPPED);
                     } else {
                         // It never got as far as reporting a URL: a startup
-                        // failure the operator needs told about in words. The
-                        // commonest cause by far is an incomplete payload — the
-                        // executable exists, its runtime tree does not.
-                        crate::startup_error::report(
-                            &handle,
-                            &format!(
+                        // failure the operator needs told about in words.
+                        //
+                        // Prefer the cause the BACKEND reported over any guess
+                        // this shell could make. The guess used to be
+                        // unconditional, so a receive port still held by an
+                        // abnormally-exited prior instance — the commonest real
+                        // cause, and a recoverable one — was reported as a broken
+                        // installation, sending the operator to reinstall
+                        // something that was never damaged.
+                        let cause = match reported_startup_error(&handle) {
+                            Some(reported) => reported,
+                            // Nothing reported: the backend died before it could
+                            // say anything, and then an incomplete payload really
+                            // is the likeliest cause.
+                            None => format!(
                                 "The backend process exited during start-up before it \
                                  reported a ready address ({payload:?}). Its runtime \
                                  files are most likely missing or incomplete."
                             ),
-                        );
+                        };
+                        crate::startup_error::report(&handle, &cause);
                     }
                 }
                 _ => {}
@@ -455,6 +492,12 @@ fn consume_host_lines(app: &AppHandle, chunk: &str) {
             open_main_window(app, url.trim());
         } else if let Some(health) = line.strip_prefix(STATUS_PREFIX) {
             crate::tray::set_health(app, health.trim());
+        } else if let Some(cause) = line.strip_prefix(ERROR_PREFIX) {
+            // Latched, not reported here: the backend is still exiting, and the
+            // dialog belongs to the Terminated branch that decides whether this
+            // was a start-up failure at all.
+            eprintln!("[backend] start-up error reported: {}", cause.trim());
+            remember_startup_error(app, cause.trim());
         } else if !line.trim().is_empty() {
             println!("[backend] {line}");
         }

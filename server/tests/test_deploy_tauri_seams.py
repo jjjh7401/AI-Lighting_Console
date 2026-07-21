@@ -210,6 +210,72 @@ class TestStage2TokenDelivery:
         assert host_channel.READY_PREFIX in set(consts.values())
 
 
+class TestTheShellReportsTheReportedCause:
+    """A start-up that never served must be explained by the BACKEND, not guessed.
+
+    The Terminated branch hardcoded "Its runtime files are most likely missing
+    or incomplete" — flatly wrong for the commonest real cause, a receive port
+    still held by an abnormally-exited prior instance. The shell had no error
+    channel at all, so it could only guess, and it guessed the same thing every
+    time.
+    """
+
+    def test_the_shell_declares_the_same_error_prefix_the_backend_emits(self):
+        # Neither compiler checks this agreement; the guard test does.
+        consts = rust_string_consts(_sidecar_source())
+        assert host_channel.ERROR_PREFIX in set(consts.values()), (
+            "sidecar.rs declares no constant equal to host_channel.ERROR_PREFIX "
+            f"({host_channel.ERROR_PREFIX!r}) — the shell cannot recognise a "
+            "reported start-up cause"
+        )
+
+    def test_the_line_parser_consumes_the_error_prefix(self):
+        body = function_body(_sidecar_source(), "fn consume_host_lines")
+        assert body is not None, "no `fn consume_host_lines` — nothing parses stdout"
+        assert "ERROR_PREFIX" in body, (
+            "consume_host_lines parses only ready/status lines, so a reported "
+            "cause is swallowed as ordinary log output"
+        )
+
+    def test_the_reported_cause_is_latched_for_the_terminated_branch(self):
+        # The cause arrives on stdout BEFORE the process dies; the Terminated
+        # event carries only an exit payload. Without a latch the cause is gone
+        # by the time the dialog is raised.
+        source = _sidecar_source()
+        assert "remember_startup_error" in source or "StartupErrorCause" in source, (
+            "nothing retains the reported cause between the stdout line and the "
+            "Terminated event that renders it"
+        )
+
+    def test_the_terminated_branch_prefers_the_reported_cause(self):
+        # Bounded by the brace-matched function, NOT an arbitrary character
+        # window: a window drifts out of range the moment a comment is added
+        # above the code it was measured against.
+        body = function_body(_sidecar_source(), "fn spawn_backend")
+        assert body is not None, "no `fn spawn_backend`"
+        window = body[body.index("CommandEvent::Terminated") :]
+        assert "reported_startup_error" in window, (
+            "the Terminated branch still reports a hardcoded cause — a port "
+            "conflict is still misdiagnosed as missing runtime files"
+        )
+        # Ordering IS the contract: the reported cause is consulted FIRST and the
+        # hardcoded sentence is only what is reached when nothing was reported.
+        assert "missing or incomplete" in window
+        assert window.index("reported_startup_error") < window.index("missing or incomplete"), (
+            "the hardcoded sentence is chosen before the reported cause is "
+            "consulted — the backend's own explanation would be discarded"
+        )
+
+    def test_the_hardcoded_text_survives_only_as_a_fallback(self):
+        # Not deleted: when the backend died before it could say anything, an
+        # incomplete payload really is the likeliest cause.
+        source = _sidecar_source()
+        assert "missing or incomplete" in source, (
+            "the no-cause fallback text was deleted, leaving a silent dialog for "
+            "the genuinely-incomplete-payload case"
+        )
+
+
 class TestStage2OriginIsTrustedByDefault:
     def test_a_default_launch_trusts_the_stage2_origin(self, tmp_path):
         args = argparse.Namespace(host="127.0.0.1", port=8765)

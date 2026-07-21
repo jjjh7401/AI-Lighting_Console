@@ -156,11 +156,17 @@ class PortInUseError(RuntimeError):
     (REQ-DEPLOY-026 / AC-DEPLOY-015 ②).
     """
 
-    def __init__(self, host: str, port: int, label: str) -> None:
+    def __init__(
+        self, host: str, port: int, label: str, *, guidance: str | None = None
+    ) -> None:
         self.host = host
         self.port = port
         self.label = label
-        self.guidance = (
+        # ``guidance`` lets a lower layer that already produced BETTER, more
+        # specific operator text carry it through this type unchanged — the OSC
+        # bridge's post-rebind-retry failure names the abnormally-exited prior
+        # instance, which this generic sentence cannot (REQ-DEPLOY-032).
+        self.guidance = guidance or (
             f"포트 {port}({label}, {host})가 이미 사용 중입니다. "
             f"다른 프로세스를 종료하거나 설정(Settings)에서 포트를 변경한 뒤 다시 시작하세요. "
             f"(Port {port} for '{label}' is in use — free it or reconfigure the "
@@ -171,10 +177,35 @@ class PortInUseError(RuntimeError):
         )
 
 
-def probe_port_available(host: str, port: int) -> bool:
-    """Return True when ``host:port`` can be bound (i.e. is free) for TCP."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+# @MX:ANCHOR: [AUTO] protocol-aware port probe — TCP and UDP are SEPARATE port
+#   spaces, so the caller must name the one it means. The OSC receive port is UDP;
+#   probing it as TCP always reports "free" no matter who holds it.
+# @MX:REASON: the SO_REUSEADDR asymmetry below is load-bearing and measured, not
+#   stylistic. Setting it on the UDP probe re-opens the preflight hole silently —
+#   the probe keeps returning True for a genuinely-held port and every other test
+#   in the suite still passes. Do not "tidy" the two branches into one.
+# @MX:SPEC: SPEC-COPILOT-DEPLOY-001 REQ-DEPLOY-026
+def probe_port_available(
+    host: str, port: int, *, sock_type: int = socket.SOCK_STREAM
+) -> bool:
+    """Return True when ``host:port`` can be bound (i.e. is free) for ``sock_type``.
+
+    ``sock_type`` selects the protocol whose port space is probed:
+    ``SOCK_STREAM`` (TCP, the default — the web UI) or ``SOCK_DGRAM`` (UDP — the
+    OSC feedback receive port). The two spaces are independent, so the default
+    can never answer a question about the other one.
+
+    SO_REUSEADDR is set for TCP ONLY. Measured on darwin: with the option set, a
+    UDP bind to a SPECIFIC address succeeds while a WILDCARD holder owns the port
+    (and vice versa), so a SO_REUSEADDR probe reports a held receive port as free
+    — exactly the failure this probe exists to catch. A plain UDP bind reports
+    the port occupied in every holder/probe address combination.
+    """
+    with socket.socket(socket.AF_INET, sock_type) as sock:
+        if sock_type == socket.SOCK_STREAM:
+            # TCP only: without it a just-closed listener in TIME_WAIT would make
+            # a genuinely free port look occupied.
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             sock.bind((host, port))
         except OSError:
@@ -212,16 +243,26 @@ def wait_until_serving(
     return False
 
 
-def require_ports_available(specs: Iterable[tuple[str, int, str]]) -> None:
+def require_ports_available(
+    specs: Iterable[tuple[str, int, str] | tuple[str, int, str, int]],
+) -> None:
     """Raise :class:`PortInUseError` for the first occupied fixed port.
 
-    ``specs`` are ``(host, port, label)`` triples. Port ``0`` means "let the OS
-    assign a free port" and is skipped (nothing fixed to pre-check).
+    ``specs`` are ``(host, port, label)`` triples, optionally extended to
+    ``(host, port, label, sock_type)`` to name the protocol whose port space is
+    checked. A triple means TCP — the pre-existing meaning, so every legacy
+    caller is unchanged; a UDP row (the OSC receive port) MUST pass the fourth
+    element or it is silently probed in the wrong port space.
+
+    Port ``0`` means "let the OS assign a free port" and is skipped (nothing
+    fixed to pre-check).
     """
-    for host, port, label in specs:
+    for spec in specs:
+        host, port, label = spec[0], spec[1], spec[2]
+        sock_type = spec[3] if len(spec) == 4 else socket.SOCK_STREAM
         if port == 0:
             continue
-        if not probe_port_available(host, port):
+        if not probe_port_available(host, port, sock_type=sock_type):
             raise PortInUseError(host, port, label)
 
 

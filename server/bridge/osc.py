@@ -86,10 +86,11 @@ class ReceivePortInUseError(RuntimeError):
             f"rebind retries — free the process holding it or change the receive port "
             f"in Settings, then restart. No automatic port fallback.)"
         )
-        super().__init__(
-            f"OSC receive port {port} for {label!r} on {host} is still in use "
-            f"after same-port rebind retries"
-        )
+        # The GUIDANCE is the message. Handing super() a different, English-only
+        # sentence made the bilingual operator text unreachable in every surface
+        # that renders the exception (traceback, log line, str()) — the useful
+        # half existed but nothing could ever show it.
+        super().__init__(self.guidance)
 
 
 @dataclass(frozen=True)

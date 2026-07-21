@@ -62,6 +62,45 @@ class TestStatusLine:
         assert out.getvalue().count("\n") == 1, out.getvalue()
 
 
+class TestStartupErrorLine:
+    """The third fact the shell needs: WHY a start-up that never served died.
+
+    Without it the shell can only guess, and its guess was hardcoded to
+    "runtime files missing" — flatly wrong for a port conflict, which is the
+    commonest real cause (an abnormally-exited prior instance still holds the
+    receive port).
+    """
+
+    def test_the_error_line_carries_the_cause_on_one_prefixed_line(self):
+        out = io.StringIO()
+        host_channel.emit_startup_error("port 9000 is in use", out=out)
+        assert out.getvalue() == f"{host_channel.ERROR_PREFIX}port 9000 is in use\n"
+
+    def test_the_error_prefix_is_mutually_non_prefixing(self):
+        # The host parser needs no lookahead: no prefix may be a prefix of
+        # another, or one branch would shadow the next.
+        prefixes = [
+            host_channel.READY_PREFIX,
+            host_channel.STATUS_PREFIX,
+            host_channel.ERROR_PREFIX,
+        ]
+        assert len(set(prefixes)) == len(prefixes)
+        for one in prefixes:
+            for other in prefixes:
+                if one is not other:
+                    assert not one.startswith(other), (one, other)
+
+    def test_a_multiline_cause_cannot_forge_a_second_protocol_line(self):
+        out = io.StringIO()
+        host_channel.emit_startup_error(
+            "line one\n@copilot:ready http://evil", out=out
+        )
+        assert out.getvalue().count("\n") == 1, out.getvalue()
+
+    def test_emitting_without_a_stream_is_a_no_op(self):
+        host_channel.emit_startup_error("boom", out=None)
+
+
 class TestNoStreamIsSurvivable:
     def test_emitting_without_a_stream_is_a_no_op(self):
         # A windowed PyInstaller bundle can hand the process a None stdout;

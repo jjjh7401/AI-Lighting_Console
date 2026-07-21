@@ -8,7 +8,10 @@ FastAPI app with uvicorn (injectable for tests; no real socket binding here).
 
 from __future__ import annotations
 
+import contextlib
+import io
 import os
+import socket
 import sys
 from pathlib import Path
 
@@ -19,11 +22,13 @@ from keyring.backend import KeyringBackend
 from keyring.errors import KeyringError, PasswordDeleteError
 
 from server.deploy import keystore
+from server.web.launcher import PortInUseError
 from server.web.serve import (
     build_runtime,
     default_ui_dist,
     main,
     parse_args,
+    startup_port_specs,
 )
 
 
@@ -114,6 +119,108 @@ class TestBuildRuntime:
                 assert payload["ok"] is True
         finally:
             stack.stop()
+
+
+@contextlib.contextmanager
+def _occupy_osc_receive_port():
+    """Hold a receive port the way an abnormally-exited prior instance does."""
+    from pythonosc.dispatcher import Dispatcher
+
+    from server.bridge.osc import _ReuseAddrOSCUDPServer
+
+    server = _ReuseAddrOSCUDPServer(("127.0.0.1", 0), Dispatcher())
+    try:
+        yield server.socket.getsockname()[1]
+    finally:
+        server.server_close()
+
+
+class TestStartupPortSpecs:
+    """The preflight must name the protocol of each fixed port it checks."""
+
+    def test_the_web_ui_row_is_tcp_and_the_osc_row_is_udp(self):
+        args = parse_args(["--port", "9111", "--receive-port", "9222"])
+        by_label = {spec[2]: spec for spec in startup_port_specs(args)}
+
+        assert by_label["web UI"][1] == 9111
+        assert by_label["web UI"][3] == socket.SOCK_STREAM
+        # The OSC feedback listener is a UDP socket. Probing it in the TCP port
+        # space always reports "free", so an occupied receive port would sail
+        # through the preflight and fail at the real bind (REQ-DEPLOY-026).
+        assert by_label["OSC feedback listen"][1] == 9222
+        assert by_label["OSC feedback listen"][3] == socket.SOCK_DGRAM
+
+    def test_every_row_declares_a_protocol(self):
+        specs = startup_port_specs(parse_args([]))
+        assert specs, "the preflight checks nothing"
+        assert all(len(spec) == 4 for spec in specs), specs
+
+
+class TestReceivePortFailureReachesTheOperator:
+    """A receive port that is STILL held after the rebind retries must not
+    escape as a raw traceback — and must not lose its bilingual guidance."""
+
+    def test_build_runtime_raises_the_error_the_launcher_handles(self):
+        # server/web catches PortInUseError. The bridge raises its own
+        # bridge-local ReceivePortInUseError, which nothing in server/web,
+        # ui/src or src-tauri has ever referenced — so it escaped uncaught.
+        with _occupy_osc_receive_port() as port:
+            args = parse_args(
+                ["--receive-port", str(port), "--no-session-backup", "--port", "0"]
+            )
+            with pytest.raises(PortInUseError) as excinfo:
+                build_runtime(args)
+        err = excinfo.value
+        assert str(port) in f"{err} {err.guidance}"
+
+    def test_main_exits_two_with_operator_guidance_instead_of_a_traceback(self):
+        with _occupy_osc_receive_port() as port:
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                code = main(
+                    ["--receive-port", str(port), "--no-session-backup", "--port", "0"],
+                    run=lambda *a, **k: None,
+                )
+        assert code == 2
+        printed = stderr.getvalue()
+        # Bilingual: the operator may be reading either half.
+        assert "수신 포트" in printed or "receive port" in printed.lower(), printed
+        assert str(port) in printed, printed
+
+    def test_the_shell_is_told_the_cause_on_the_host_channel(self):
+        # The other half of the seam: stderr reaches a terminal the packaged app
+        # does not have. stdout is the shell's ONLY inbound channel, so without
+        # this line the shell falls back to its hardcoded "runtime files are
+        # missing" guess for what is really an occupied port.
+        from server.web.host_channel import ERROR_PREFIX
+
+        with _occupy_osc_receive_port() as port:
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(io.StringIO()):
+                code = main(
+                    ["--receive-port", str(port), "--no-session-backup", "--port", "0"],
+                    run=lambda *a, **k: None,
+                )
+        assert code == 2
+        printed = stdout.getvalue()
+        assert ERROR_PREFIX in printed, printed
+        reported = printed.split(ERROR_PREFIX)[1].split("\n")[0]
+        assert str(port) in reported, reported
+        # One line, so the guidance cannot forge a second protocol line.
+        assert printed.count(ERROR_PREFIX) == 1, printed
+
+    def test_the_bilingual_guidance_is_what_str_of_the_error_shows(self):
+        # The guidance was built but unreachable: __init__ handed super() a
+        # DIFFERENT, English-only sentence, so every surface that renders the
+        # exception (traceback, log line, str()) showed the useless half.
+        from server.bridge.osc import ReceivePortInUseError
+
+        err = ReceivePortInUseError("127.0.0.1", 9000)
+        assert str(err) == err.guidance, (
+            "str(error) is not the operator guidance — the bilingual text is "
+            "unreachable in every surface that renders the exception"
+        )
+        assert "설정" in str(err) or "Settings" in str(err)
 
 
 class TestMain:
