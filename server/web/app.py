@@ -137,6 +137,27 @@ def create_app(deps: WebDeps) -> FastAPI:
 
     app = FastAPI(title="MA3 Copilot", lifespan=lifespan)
 
+    # M7.4b (AC-DEPLOY-025 Stage-2): once the Stage-2 window loads the BUNDLED
+    # app (origin ``tauri://localhost``) instead of navigating to the backend,
+    # its ``/api/*`` reads are CROSS-origin to the backend. Without CORS the
+    # webview silently blocks every settings/provision fetch. The allowlist is
+    # EXACTLY the handshake's Stage-2 trusted origins — no wildcard, no new
+    # literal, no widening past what the ``/ws`` gate already trusts. Stage-1
+    # browser mode is same-origin (served BY the backend) and needs none, so an
+    # ungated launch (no handshake) adds no CORS surface at all. Credentials are
+    # NOT allowed: nothing here authenticates with cookies, and allow-credentials
+    # would only widen what a mistaken origin entry could reach.
+    if deps.handshake is not None and deps.handshake.trusted_origins:
+        from fastapi.middleware.cors import CORSMiddleware
+
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=list(deps.handshake.trusted_origins),
+            allow_credentials=False,
+            allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+            allow_headers=["content-type"],
+        )
+
     @app.get("/healthz")
     def healthz() -> dict:
         gate_status = deps.gate.status

@@ -32,6 +32,16 @@ fn main() {
             }
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running the GrandMA3 Copilot shell");
+        // `.build().run(closure)` rather than `.run(context)` so the app's exit
+        // is observable: on RunEvent::Exit the shell performs the AUTHORITATIVE
+        // process-group teardown of the backend (AC-DEPLOY-026 ①). The backend's
+        // own parent-liveness watchdog (M7.2) is the fallback for the one exit
+        // this never sees — a Unix force-quit, which fires no RunEvent at all.
+        .build(tauri::generate_context!())
+        .expect("error while building the GrandMA3 Copilot shell")
+        .run(|app_handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                sidecar::reap_backend_group(app_handle);
+            }
+        });
 }

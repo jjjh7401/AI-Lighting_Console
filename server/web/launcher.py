@@ -482,6 +482,26 @@ class ParentLivenessWatchdog:
             thread.join(self._poll_interval * 4 if timeout is None else timeout)
 
 
+def host_declared(*, environ: MutableMapping[str, str] | None = None) -> bool:
+    """True when a spawning host declared itself (Stage-2 sidecar), else False.
+
+    The SINGLE predicate three consumers share — watchdog arming
+    (:func:`install_parent_watchdog`), session detach
+    (:func:`become_session_leader`) and browser suppression
+    (``serve.browser_open_enabled``). One predicate means a host that declares
+    itself cannot be treated as Stage-2 by one consumer and Stage-1 by another:
+    a divergence there is exactly how the M7.4a run opened a second browser
+    window it never armed a watchdog for.
+
+    The declaration is the presence of EITHER ``COPILOT_PARENT_PIPE_FD`` (the
+    race-free primary trigger) or ``COPILOT_PARENT_PID`` (the fallback). Value
+    validity is the arming functions' concern; presence alone marks the launch
+    as host-spawned.
+    """
+    source = os.environ if environ is None else environ
+    return PARENT_PIPE_FD_ENV in source or PARENT_PID_ENV in source
+
+
 def become_session_leader(
     *,
     environ: MutableMapping[str, str] | None = None,
@@ -501,8 +521,7 @@ def become_session_leader(
     happened; an ``OSError`` (already a group leader — the goal is met anyway, or
     no ``setsid`` on this platform) is swallowed.
     """
-    source = os.environ if environ is None else environ
-    if PARENT_PIPE_FD_ENV not in source and PARENT_PID_ENV not in source:
+    if not host_declared(environ=environ):
         return False
     detach = setsid if setsid is not None else getattr(os, "setsid", None)
     if detach is None:  # pragma: no cover - POSIX-only in practice

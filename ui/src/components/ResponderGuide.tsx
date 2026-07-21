@@ -8,6 +8,7 @@
 // the backend. Only the file copy is off-gate (REQ-DEPLOY-024).
 import { useCallback, useEffect, useState } from "react";
 
+import { apiUrl } from "../launchContext";
 import {
   allInstalled,
   installSummary,
@@ -23,7 +24,7 @@ export function ResponderGuide() {
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/provision/responder");
+      const response = await fetch(apiUrl("/api/provision/responder"));
       const parsed = parseResponderStatus(await response.text());
       if (parsed !== null) setStatus(parsed);
     } catch {
@@ -39,7 +40,7 @@ export function ResponderGuide() {
     setBusy(true);
     setNotice(null);
     try {
-      const response = await fetch("/api/provision/responder", { method: "POST" });
+      const response = await fetch(apiUrl("/api/provision/responder"), { method: "POST" });
       if (response.ok) {
         // The POST body's ``installed`` is the list of files copied (distinct from
         // the GET status shape), so parse it with the dedicated list helper.

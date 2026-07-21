@@ -4,6 +4,7 @@
 // onboardingMessage(); this component only fetches state and renders.
 import { useEffect, useState } from "react";
 
+import { apiUrl } from "../launchContext";
 import { onboardingMessage, parseSettingsResponse } from "../settings";
 
 export function OnboardingBanner({
@@ -19,7 +20,7 @@ export function OnboardingBanner({
     let disposed = false;
     (async () => {
       try {
-        const response = await fetch("/api/settings");
+        const response = await fetch(apiUrl("/api/settings"));
         const parsed = parseSettingsResponse(await response.text());
         if (!disposed) setMessage(parsed === null ? null : onboardingMessage(parsed));
       } catch {

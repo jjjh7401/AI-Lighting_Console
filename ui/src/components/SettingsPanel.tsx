@@ -4,6 +4,7 @@
 // the pure, unit-tested settings.ts; this component owns fetch() + React state.
 import { useCallback, useEffect, useState } from "react";
 
+import { apiUrl } from "../launchContext";
 import {
   buildKeyPayload,
   buildSettingsPayload,
@@ -28,7 +29,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/settings");
+      const response = await fetch(apiUrl("/api/settings"));
       const parsed = parseSettingsResponse(await response.text());
       if (parsed !== null) {
         setLoaded(parsed);
@@ -54,7 +55,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setNotice(null);
     try {
-      const response = await fetch("/api/settings", {
+      const response = await fetch(apiUrl("/api/settings"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: buildSettingsPayload(form),
@@ -78,7 +79,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setNotice(null);
     try {
-      const response = await fetch("/api/keys", {
+      const response = await fetch(apiUrl("/api/keys"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: buildKeyPayload(provider, key, sessionOnly),
@@ -113,7 +114,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setNotice(null);
     try {
-      const response = await fetch(`/api/keys/${provider}`, { method: "DELETE" });
+      const response = await fetch(apiUrl(`/api/keys/${provider}`), { method: "DELETE" });
       if (response.ok) {
         setNotice(`${providerLabel(provider)} 키를 삭제했습니다.`);
         await load();

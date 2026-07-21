@@ -302,6 +302,30 @@ Stage-2 M7의 네 번째 하위 마일스톤 전반부 — 본 저장소 **최�
 
 **커밋**: M7.4a 구현 커밋 1건(`feat/app-deploy-file-import` 직접 커밋 — 원격 없음, push/PR 없음).
 
+### M7.4b — Rust group-kill + Stage-2 토큰 IPC + 설정 정합 (2026-07-21, cycle_type=tdd, Stage-2)
+
+M7.4a가 이월한 세 개의 교차언어 seam을 완성하고, 라이브 데모에서 잡힌 설정-vs-런타임 결함을 접었다. **신규 파일**: `server/tests/test_deploy_tauri_seams.py`(32건), `ui/src/launchContext.ts`. **수정**: `src-tauri/src/{sidecar.rs,main.rs}`, `src-tauri/Cargo.toml`(+lock: `libc` direct), `server/web/{app.py,launcher.py,serve.py}`, `ui/src/{useCopilotSocket.ts,components/*.tsx}`.
+
+**설계 — 왜 `WebviewUrl::App`인가(관측 기반)**: M7.4a는 창이 `External(백엔드 URL)`을 로드해 오리진이 Stage-1 loopback이었고, 그래서 token-REQUIRED 분기가 실제 제품에서 절대 실행되지 않았다. M7.4b는 창을 **번들 앱**(`tauri://` 스킴, Stage-2 오리진)에서 로드하도록 옮겨 token-REQUIRED 분기를 실제 경로로 만든다. 대신 창이 더 이상 백엔드가 서빙하지 않으므로 SPA의 `/ws`·`/api/*`가 **교차-오리진**이 된다 → (a) 백엔드 base URL을 init-script로 주입(`__COPILOT_BACKEND_URL__`, `ui/src/launchContext.ts`가 소비, 상대경로 fetch를 절대경로로), (b) 핸드셰이크의 Stage-2 오리진에만 CORS 허용(와일드카드·자격증명 없음). 토큰은 호스트가 mint(`/dev/urandom` 64-hex)해 sidecar env + init-script 두 in-process 채널로만 전달(디스크 0, stdout 0 — AC-029).
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| **AC-DEPLOY-026 ① (정상 종료 — 패키지 `.app`, group kill)** | PASS | 패키지 앱 실행 → `osascript -e 'tell application "GrandMA3 Copilot" to quit'`(메뉴/Cmd-Q 등가 → `RunEvent::Exit`) → `.moai/state/verify/m74b/ac026-1-normal.txt` | pre: `90362 90353 90362 …copilot-backend`(pgid=90362) + `8765 LISTEN` + `UDP 127.0.0.1:9005`. 종료 후: `[shell] reaping backend process group pgid 90362` → uvicorn `Shutting down`→`Finished server process` → **`RESIDUAL PIDS: 0`, `PORT 8765: FREE`, `OSC 9005: FREE`**. 로그가 `sidecar terminated`로 깨끗이 끝남 — **startup-error 다이얼로그 없음**(ready-flag 수정 확인) |
+| **AC-DEPLOY-026 ② (백엔드 크래시 — 패키지 `.app`)** | PASS | 패키지 앱 실행 → `kill -9 <backend pid>`(하드 크래시) → Rust `CommandEvent::Terminated` 관측 → `.moai/state/verify/m74b/ac026-2-crash.txt` | `kill -9 93125` → `[shell] reaping backend process group pgid 93125` → `[backend] sidecar terminated: TerminatedPayload { code: None, signal: Some(9) }`(SIGKILL 확인). 크래시 후: `RESIDUAL backend pids: 0`, `GROUP 93125: empty (0 members)`, `8765: FREE`, `9005: FREE`. 셸은 살아있고 트레이 배지 STOPPED(크래시-후-서빙 → 정상, 다이얼로그 아님) |
+| **AC-DEPLOY-025 Stage-2 경로 (라이브 패키지 백엔드 full matrix)** | PASS | `.venv/bin/python /tmp/ws_matrix.py <live token>` (백엔드 env에서 읽은 per-launch 토큰; `websockets` 실 클라이언트) → `.moai/state/verify/m74b/ac025-live-matrix.txt` | 5/5 `MATRIX PASS`: Stage-2 오리진(`tauri://localhost`)+**정확 토큰**→ACCEPT(첫 프레임 `{"type":"status","health":"online"}`); +누락 토큰→REJECT(HTTP 40x close); +오류 토큰→REJECT; disallowed 오리진(`evil.example`)→REJECT; Stage-1 브라우저 오리진+무토큰→ACCEPT(심층방어 분기 유지). 실 웹뷰가 `tauri://localhost`+토큰으로 접속함은 로그의 단일 `WebSocket /ws [accepted]` + `lsof`가 지목한 유일 클라이언트 `com.apple`(WebKit Networking, PID 90539)로 확인 |
+| **설정-vs-런타임 정합 (라이브 결함 접기 — 패키지 검증)** | PASS | 사용자 `settings.toml`(`receive_port=9005`) 존재 상태로 패키지 앱 실행 → `lsof -a -p <backend> -iUDP` + `curl /api/settings` → `.moai/state/verify/m74b/settings-bind-check.txt` | 파일 `receive_port = 9005` → 백엔드 실제 바인드 **`UDP 127.0.0.1:9005`**(기본 9000 아님) → `/api/settings` 보고값 **`receive_port=9005`** → **바인드와 API가 구성상 일치**. onPC 출력이 9005이므로 health **`online`** 도달(코디네이터 성공 기준 충족). 회귀 테스트: `test_deploy_tauri_seams.py::TestPersistedSettingsDriveTheBoundPorts`(5건) — `stack.receive_port`(=`getsockname()`)로 실제 바인드 assert, 명시 플래그 우선·무파일 기본값·API-일치 포함 |
+| **창 이중 로드 진단(M7.4a 잔여) — 근본원인 규명 + 수정** | PASS(수정됨) | 깨끗한 재launch → `.moai/state/verify/m74b/{live-run2.log,live2-clients.txt}` | **근본원인 2중**: (1) M7.4a는 앱 자신이 host-spawn에도 `open_app_browser`로 브라우저를 열었고, (2) 이전 실행이 남긴 stale Chrome 탭(고정 포트 8765 auto-reconnect). M7.4a 로그의 `GET / ×2 + /ws 다수`가 이 둘의 합. **수정 후 관측**: `GET /` **0회**(창이 `tauri://`에서 로드 → 백엔드 `GET /` 없음), `/ws` **정확히 1회**(웹뷰 단독), Chrome 연결 0. `serve.browser_open_enabled`가 host 선언 시 브라우저 억제(watchdog·detach와 동일 `launcher.host_declared` 술어 공유) |
+| AC-DEPLOY-025/026 순수-단위 매트릭스 + seam 가드 | PASS | `pytest server/tests/test_deploy_tauri_seams.py -q` | `32 passed` — group-kill 소스 가드(killpg/SIGTERM<SIGKILL/own_pgid refusal/Terminated reap), 토큰 주입(동일 env·init-script·`WebviewUrl::App`·stdout 비밀 0), CORS(Stage-2만·자격증명 0·ungated 0), 브라우저 억제 3-소비자 정합 |
+| Windows Job Object(KILL_ON_JOB_CLOSE) | N/A (env-gate) | — | Windows 러너 부재 → `reap_backend_group`의 `#[cfg(not(unix))]` 분기에 `PENDING-WINDOWS` 마커로 이연(핸드셰이크 origin 이연과 동형). 증거 위조 없음 |
+
+**전체 스위트**: `pytest server/tests -q` → **`1179 passed`**(baseline 1147 + 신규 32, 회귀 **0**, 미설명 skip **0**; keyring null-backend 격리로 실행). `vitest` → `57 passed`. `npm run build`(ui) → `✓ built`. `cargo build` + `cargo clippy --all-targets` → 경고·오류 0. `packaging/rust_scan.py` → `PASS — 8 file(s), 0 violation(s)`(리터럴 0 유지 — 창 URL은 여전히 `@copilot:ready` stdout로만 획득). `ruff check server/` → `Found 2 errors`(둘 다 기존 `console.py:221/258` E501, **NEW 0**). M7.4a 번들 회귀 가드 `npm run shell:verify` → `bundle OK`.
+
+**런타임에서 잡은 결함 1건(정적 검토로는 안 보였고, 첫 라이브 실행에서만 발현)**: 정상 종료 시 `RunEvent::Exit`가 백엔드를 SIGTERM→종료→`CommandEvent::Terminated` 발화. Terminated 분기는 "창이 없으면 startup 실패"라는 **live-window 검사**로 분기했는데, 종료 중엔 창이 이미 파괴되어 있어 **매 정상 종료마다 "backend did not start" 다이얼로그가 오발**됐다(첫 패키지 실행 로그에서 관측). 수정: "한 번이라도 ready URL을 냈는가"를 latch하는 `BackendReady`(AtomicBool)로 분기 — 서빙-후-종료(정상 종료·크래시)는 STOPPED 배지, ready 전 종료만 다이얼로그. 두 번째 패키지 실행에서 오발 소멸 확인.
+
+**@MX tags added**: `sidecar.rs` — `mint_launch_token`(토큰 주입 경계), `group_kill_target`(호스트 그룹 시그널 거부 — 앱 자살 방지), `open_main_window`(Stage-2 오리진 경계) 각각 `@MX:ANCHOR`+`@MX:REASON`+`@MX:SPEC`. `_LOOPBACK_HOSTS`·`PENDING-WINDOWS`·핸드셰이크 무변경(가드 무약화).
+
+**커밋**: M7.4b 구현 커밋 1건(`feat/app-deploy-file-import` 직접 커밋 — 원격 없음, push/PR 없음).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 `run_status: audit-ready` (Stage-1)

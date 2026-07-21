@@ -1,6 +1,7 @@
 // WebSocket hook — owns the connection, folds server events into UI state.
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
+import { backendBase } from "./launchContext";
 import {
   addUserMessage,
   buildApprovalDecision,
@@ -30,6 +31,12 @@ export function reducer(state: UiState, action: Action): UiState {
 }
 
 function defaultUrl(): string {
+  // Stage-2: the window is served from tauri://localhost, so window.location is
+  // the app origin, not the backend. Use the injected absolute backend base and
+  // turn its http(s) scheme into ws(s). Stage-1: no base injected → same-origin,
+  // exactly as before.
+  const base = backendBase();
+  if (base) return `${base.replace(/^http/, "ws")}/ws`;
   const scheme = window.location.protocol === "https:" ? "wss" : "ws";
   return `${scheme}://${window.location.host}/ws`;
 }

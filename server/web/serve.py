@@ -13,6 +13,7 @@ import argparse
 import os
 import sys
 import threading
+from collections.abc import MutableMapping
 from dataclasses import replace
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from server.deploy.keystore import (
     inject_active_provider_key,
 )
 from server.deploy.pipeline import DeployPipeline
+from server.deploy.settings import resolve_effective_settings
 from server.llm.config import DEFAULT_CONFIG_PATH, load_provider_config
 from server.llm.factory import build_provider
 from server.llm.types import LLMProvider
@@ -42,6 +44,7 @@ from server.web.launcher import (
     assert_keyring_backend,
     become_session_leader,
     generate_launch_token,
+    host_declared,
     install_parent_watchdog,
     install_signal_handlers,
     make_shutdown_handler,
@@ -130,6 +133,75 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+# The five settings-backed flags: (arg attribute, settings key). An unpassed flag
+# must fall through to the user file, not its argparse literal default (the M7.3
+# `console_port` gap, which bit `receive_port` in production — the packaged shell
+# spawns the sidecar with NO args, so every one of these was silently the default
+# no matter what the user saved).
+_SETTINGS_BACKED_FLAGS: tuple[tuple[str, str], ...] = (
+    ("host", "web_host"),
+    ("port", "web_port"),
+    ("console_host", "console_host"),
+    ("console_port", "console_port"),
+    ("receive_port", "receive_port"),
+)
+
+
+def _explicitly_passed(argv: list[str] | None) -> dict[str, object]:
+    """Return only the settings-backed flags the operator ACTUALLY passed.
+
+    argparse fills a default for every flag, so ``args.port`` alone cannot tell
+    "the user chose 8765" from "the user chose nothing and it defaulted". A shadow
+    parser with ``SUPPRESS`` defaults leaves absent flags off the namespace
+    entirely — so its ``vars()`` is exactly the set that was passed, correctly
+    handling ``--port 9010``, ``--port=9010`` and argparse abbreviations alike.
+    """
+    shadow = argparse.ArgumentParser(add_help=False, argument_default=argparse.SUPPRESS)
+    shadow.add_argument("--host")
+    shadow.add_argument("--port", type=int)
+    shadow.add_argument("--console-host")
+    shadow.add_argument("--console-port", type=int)
+    shadow.add_argument("--receive-port", type=int)
+    namespace, _ = shadow.parse_known_args(argv if argv is not None else sys.argv[1:])
+    return vars(namespace)
+
+
+def apply_effective_settings(
+    args: argparse.Namespace,
+    argv: list[str] | None,
+    *,
+    user_path: object | None = None,
+) -> None:
+    """Fill the five host/port args from persisted settings, in place.
+
+    Precedence (``resolve_effective_settings`` — the M1 seam the settings + the
+    provision APIs also read, so the runtime bind and the reported value AGREE BY
+    CONSTRUCTION): argparse/shipped defaults < user settings file < an EXPLICITLY
+    passed CLI flag. An unpassed flag falls through to the user file; a passed one
+    still wins (REQ-DEPLOY-026 operator port force).
+
+    Called only on the real-serve entry (the packaged shell path). Test callers
+    that build ``args`` directly are unaffected — this never runs for them, so
+    their explicit ports stay byte-identical.
+    """
+    passed = _explicitly_passed(argv)
+    overrides = {
+        settings_key: passed[arg_name]
+        for arg_name, settings_key in _SETTINGS_BACKED_FLAGS
+        if arg_name in passed
+    }
+    resolved = resolve_effective_settings(
+        seed_path=args.config,
+        user_path=user_path,
+        overrides=overrides,
+    )
+    args.host = resolved.web_host
+    args.port = resolved.web_port
+    args.console_host = resolved.console_host
+    args.console_port = resolved.console_port
+    args.receive_port = resolved.receive_port
+
+
 def build_handshake_policy(args: argparse.Namespace) -> HandshakePolicy:
     """Compose the ``/ws`` Origin+token policy for this launch (REQ-DEPLOY-002a).
 
@@ -147,6 +219,31 @@ def build_handshake_policy(args: argparse.Namespace) -> HandshakePolicy:
         trusted_origins=TAURI_ORIGINS,
         browser_origins=browser_origins_for(args.host, args.port),
     )
+
+
+def browser_open_enabled(
+    args: argparse.Namespace,
+    *,
+    environ: MutableMapping[str, str] | None = None,
+) -> bool:
+    """Whether the launcher should open the served URL in the default browser.
+
+    Two independent suppressors, either of which disables the open:
+
+    * ``--no-browser`` — the explicit operator/test opt-out (unchanged).
+    * a spawning **host declaration** — a Stage-2 sidecar's window is provided
+      by the Tauri shell, so opening the default browser too would put a SECOND,
+      fully-functional live-console UI outside the shell (the M7.4a residual: a
+      ``GET /`` ×2 with a stray Chrome ``/ws`` session the shell never closes and
+      no tray badge covers). The sidecar cannot be told ``--no-browser`` — the
+      capability scopes the spawn with ``"args": false`` — so the suppression is
+      inferred from the same declaration that arms the watchdog (:func:
+      `launcher.host_declared`), keeping the three host-spawn behaviours in lock
+      step.
+    """
+    if getattr(args, "no_browser", False):
+        return False
+    return not host_declared(environ=environ)
 
 
 def _announce_when_serving(url: str, host: str, port: int) -> None:  # pragma: no cover
@@ -290,6 +387,14 @@ def main(argv: list[str] | None = None, *, run=None, keyring_module=None) -> int
 
     real_serve = run is None
     if real_serve:
+        # M7.4b: resolve the host/port bind through the SAME settings seam the
+        # settings + provision APIs read, so a user's saved receive_port /
+        # console_port / web_host / web_port actually takes effect at the bind
+        # (the packaged shell passes no CLI args). Before this the bind used the
+        # argparse literal defaults while the API reported the file value — a
+        # UI-vs-runtime divergence that silently sent console feedback to a port
+        # nothing bound. An explicitly passed flag still wins.
+        apply_effective_settings(args, argv)
         # M7.4a (AC-DEPLOY-026 ①②): when a Stage-2 host spawned us, lead our own
         # session so a single killpg reaps this process AND every descendant —
         # Tauri's shell plugin cannot make us a group leader from its side, and
@@ -343,10 +448,13 @@ def main(argv: list[str] | None = None, *, run=None, keyring_module=None) -> int
             # fires Tauri's RunEvent::Exit. A no-op for a Stage-1 standalone
             # launch, which declares no host.
             install_parent_watchdog()
+            # M7.4b: a host-spawned sidecar opens NO browser — the shell already
+            # provides the window. Suppressing it here closes the M7.4a residual
+            # (a second live-console UI in the default browser).
             threading.Timer(
                 1.0,
                 open_app_browser,
-                kwargs={"url": url, "enabled": not args.no_browser},
+                kwargs={"url": url, "enabled": browser_open_enabled(args)},
             ).start()
             uvicorn.run(app, host=args.host, port=args.port)
         else:
