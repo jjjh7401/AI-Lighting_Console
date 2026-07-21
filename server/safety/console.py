@@ -293,6 +293,7 @@ class ConsoleLink:
         # is unreliable on 2.4.2 — an explicit free slot is required.
         existing_slot: int | None = None
         occupied: set[int] = set()
+        unnumbered = 0
         try:
             pool = self._deploy_query_state("DataPool/Plugins", sends)
             for child in pool.get("children", []):
@@ -301,10 +302,26 @@ class ConsoleLink:
                 index = child.get("i")
                 if isinstance(index, int):
                     occupied.add(index)
+                else:
+                    unnumbered += 1
                 if child.get("name") == name:
-                    existing_slot = index
+                    existing_slot = index if isinstance(index, int) else None
         except StateQueryError:
-            pass  # non-fatal — proceed with slot 2 fallback below
+            pass  # non-fatal — proceed with the slot-1 fallback below
+        # A listed plugin whose real slot the responder could NOT establish
+        # (it omits "i" rather than substituting a listing position —
+        # PROTOCOL.md §4.2) makes the arithmetic below a guess: that plugin may
+        # sit in exactly the slot picked as "free", and `Import Plugin <slot>`
+        # would overwrite it. Refuse rather than gamble with the user's pool.
+        if unnumbered:
+            return ExecOutcome(
+                status="failed",
+                detail=(
+                    f"cannot choose a free plugin slot: {unnumbered} plugin(s) in "
+                    "DataPool/Plugins reported no pool slot (the console exposes no "
+                    "usable child-index accessor), so importing could overwrite one"
+                ),
+            )
         if isinstance(existing_slot, int):
             self._deploy_execute(f"Delete Plugin {existing_slot}", sends)
             occupied.discard(existing_slot)

@@ -7,6 +7,16 @@ M2 deliverable; consumed by the M3 tool-runner and the M4 safety gate.
 Versioning: every reply payload carries `"v": 1`. Any breaking change bumps the
 version in BOTH implementations and revises this document.
 
+> Revision note (responder 1.2.0): the snapshot child `i` is now the **real
+> pool slot** and is **omitted** when that slot could not be established (§4.2,
+> ASSUMPTION-7); a numeric path segment addresses the pool slot accordingly
+> (§2). Wire protocol version stays 1: the change is parse-compatible in both
+> directions (`i` becomes optional — the server already degrades an `i`-less
+> child to a name-only rig-context entry, `server/orchestrator/tools.py`), and
+> no consumer ever wanted the previous value. What changed is the *meaning*:
+> `i` used to be the child's position in the (gap-compacted) listing, which on
+> a non-contiguous pool is not an addressable object number at all.
+>
 > Revision note (M7, responder 1.1.0): ADDITIVE `deploy` verb (§2) + `deploy`
 > reply kind (§4.5) + ASSUMPTION-6 (§6). Wire protocol version stays 1.
 > Also fixed in 1.1.0: the reply JSON encoder's escape class is now
@@ -67,7 +77,11 @@ Object paths resolve against root aliases (case-insensitive first segment):
 `DataPool` → `DataPool()` (current pool), `Root` → `Root()`, plus `ShowData` /
 `Patch` when those globals exist. Unknown first segments navigate from
 `Root()`. Segments match child names case-insensitively; an all-digit segment
-selects a child by 1-based index.
+selects a child by its **pool slot** — the same number a snapshot reports as
+`i` (§4.2) — so `DataPool/Groups/5` is Group 5, not the 5th listed group, and
+an empty slot resolves to `path segment not found` rather than a neighbour.
+Only when NO slot could be established for any child (ASSUMPTION-7 unmet) does
+a numeric segment fall back to its legacy 1-based positional meaning.
 
 ## 3. Reply encoding
 
@@ -103,6 +117,24 @@ Success (depth-1 snapshot of the resolved node):
  "truncated": false}
 ```
 
+- Each `children` entry is `{"i": <pool slot>, "name": ..., "class": ...}`,
+  and **`i` is present only when the responder positively established that
+  child's real pool slot**. A pool's `Children()` listing is gap-compacted, so
+  the listing position is NOT an address. Two sources are tried, in this
+  priority (ASSUMPTION-7): (1) the child's own index accessor, accepted only as
+  a coherent whole-listing set; (2) the listing position, accepted per child
+  only when `parent:Ptr(pos)` hands that same object back. When neither
+  answers, the entry carries **no `i` at all**:
+  ```json
+  {"name":"Drums", "class":"Group"}
+  ```
+  Consumers MUST treat a missing `i` as "number unknown" and resolve it before
+  addressing the object — never fill it in from the array position. That is
+  exactly the failure this shape prevents: a 1/5/7 Groups pool previously
+  reported `i` 1/2/3, so `Group 2 + 3` was issued against objects that do not
+  exist. Server-side handling: `server/orchestrator/tools.py` emits a
+  name-only rig-context entry (no `no`), and `server/safety/console.py`
+  refuses to compute a free plugin slot rather than risk overwriting one.
 - `children` is capped at `CONFIG.max_children` (default 24) and further
   reduced until the encoded payload fits `CONFIG.max_payload` (default 4000
   bytes — UDP budget). `truncated:true` signals a partial listing;
@@ -173,6 +205,26 @@ Recorded per Section E honesty rules; the round-trip tool
 - **ASSUMPTION-4 (handle accessors)**: object handles expose `name` (property
   or `Get("name")`), `GetClass()`, and `Children()` (or `Count()`/`Ptr(i)`).
   The accessors probe all forms defensively.
+- **ASSUMPTION-7 (child pool slot)**: at least ONE of these holds on 2.4.2 —
+  (a) a child reports its own 1-based pool slot through `child:Index()` /
+  `child.index` / `child.no` / `child:GetIndex()` / `child:Get("no")` (probed
+  in that order, pcall-guarded), or (b) `parent:Ptr(n)` is **slot-addressed**
+  (the object AT slot n, `nil` for a gap) rather than positional.
+  (a) takes priority and is accepted only as a coherent whole-listing set —
+  one value per child, each ≥ 1, strictly increasing — so a silent or 0-based
+  accessor is discarded entirely instead of contributing plausible wrong
+  numbers. (b) is used to confirm the listing position per child; it is
+  deliberately NOT allowed to veto (a), because a positional `Ptr()` would
+  otherwise overturn a correct self-reported slot.
+  Failure modes, in order of severity: if (a) is absent and (b) is positional,
+  the responder cannot tell a gapped pool from a dense one and re-emits
+  listing positions — **the original defect, undetectable from the console
+  side**; if (a) is absent and (b) is slot-addressed, children after the first
+  gap degrade to name-only (rig context loses their numbers, file+Import
+  deployment refuses to pick a slot). Verify on-site by snapshotting a
+  deliberately gapped pool (e.g. groups at 1, 5, 7) and reading the `i`
+  values: `1,5,7` = (a) works; `1` plus two number-less entries = (b) only;
+  `1,2,3` = **neither** — do not trust any reported pool number.
 - **ASSUMPTION-5 (outbound prefix)**: the console does NOT prepend the OSC
   config prefix to custom-sent reply addresses. If replies arrive at
   `/copilot/copilot/*` (detect with the round-trip tool's `--diagnose` mode),

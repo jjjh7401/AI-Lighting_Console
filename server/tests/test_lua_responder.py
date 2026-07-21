@@ -12,8 +12,14 @@ from __future__ import annotations
 import pytest
 
 from server.bridge.protocol import decode_payload
+from server.orchestrator.tools import _rig_object
 
-from .lua_mock_env import ResponderHarness
+from .lua_mock_env import (
+    GAPPED_GROUP_NAMES,
+    GAPPED_GROUP_SLOTS,
+    ResponderHarness,
+    gapped_groups_env,
+)
 
 STATE_ADDRESS = "/copilot/state"
 FEEDBACK_ADDRESS = "/copilot/feedback"
@@ -168,6 +174,106 @@ class TestStateSnapshot:
         assert len(sent.payload) <= 300
         payload = decode_payload(sent.payload)
         assert payload["ok"] is False
+
+
+class TestPoolSlotContract:
+    """The snapshot child ``i`` is the REAL pool slot — or it is absent.
+
+    Live-demo defect: on a gapped Groups pool the responder emitted the LOOP
+    POSITION as ``i``, so the model was told groups 1, 2, 3 exist, confidently
+    issued ``Group 2 + 3``, and the console rejected the object — after
+    ``ChangeDestination Root`` and ``ClearAll`` had already run. A position is
+    never an address: report the slot, or report no number at all.
+    """
+
+    def _children(self, harness, request="state 1 DataPool/Groups"):
+        harness.main(None, request)
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is True, payload
+        return payload["children"]
+
+    def test_gapped_pool_reports_real_slots_not_listing_positions(self):
+        harness = ResponderHarness(extra_env=gapped_groups_env(index_form="Index"))
+        children = self._children(harness)
+        assert [c["name"] for c in children] == list(GAPPED_GROUP_NAMES)
+        assert [c["i"] for c in children] == list(GAPPED_GROUP_SLOTS)
+
+    def test_index_property_accessor_form_is_probed_too(self):
+        harness = ResponderHarness(extra_env=gapped_groups_env(index_form="index"))
+        assert [c["i"] for c in self._children(harness)] == list(GAPPED_GROUP_SLOTS)
+
+    def test_unestablished_slot_is_omitted_rather_than_faked(self):
+        # No self-index accessor at all: only the child the parent hands back
+        # for the slot we guessed (slot 1) is confirmable. The rest carry NO
+        # number — silence beats a plausible-looking wrong one.
+        harness = ResponderHarness(extra_env=gapped_groups_env(index_form=None))
+        children = self._children(harness)
+        assert children[0]["i"] == 1
+        assert [c["name"] for c in children] == list(GAPPED_GROUP_NAMES)
+        assert "i" not in children[1]
+        assert "i" not in children[2]
+
+    def test_dense_pool_still_reports_contiguous_slots(self, harness):
+        # Regression guard: on a dense pool position == slot, and Ptr() confirms
+        # it, so the reported numbers must not become unknown.
+        children = self._children(harness, "state 2 DataPool/Sequences")
+        assert [c["i"] for c in children] == [1, 2, 3]
+
+    def test_unknown_slot_reaches_the_llm_as_a_name_only_entry(self):
+        # Cross-layer contract (the defect was the two layers disagreeing):
+        # the rig-context tool must NOT invent a "no" for an unnumbered child.
+        harness = ResponderHarness(extra_env=gapped_groups_env(index_form=None))
+        objects = [_rig_object(c) for c in self._children(harness)]
+        assert objects[0] == {"no": 1, "name": "Vocals"}
+        assert objects[1] == {"name": "Drums"}
+        assert objects[2] == {"name": "Keys"}
+
+    def test_self_reported_slot_wins_over_a_positional_ptr(self):
+        # If Ptr() is positional on 2.4.2 (unverified), it carries no slot
+        # information — it must NOT be allowed to veto the object's own answer
+        # and push the listing position back out as "confirmed".
+        harness = ResponderHarness(
+            extra_env=gapped_groups_env(index_form="Index", ptr_form="positional")
+        )
+        assert [c["i"] for c in self._children(harness)] == list(GAPPED_GROUP_SLOTS)
+
+    def test_skewed_index_accessor_is_discarded_whole(self):
+        # A 0-based accessor answers every child plausibly and every child
+        # wrongly. Its first answer (0) is not a legal slot, so the whole set
+        # is dropped rather than partially believed: slot 1 survives only
+        # because Ptr() independently confirms it.
+        harness = ResponderHarness(extra_env=gapped_groups_env(index_form="Index0"))
+        children = self._children(harness)
+        assert children[0]["i"] == 1
+        assert "i" not in children[1]
+        assert "i" not in children[2]
+
+    def test_known_blind_spot_no_accessor_plus_positional_ptr(self):
+        # CHARACTERIZATION, not an endorsement. With no self-index accessor AND
+        # a positional Ptr(), the console exposes NO slot information whatsoever
+        # and every position "confirms" — so the old, wrong numbers come back.
+        # Nothing in the responder can detect this from the inside; it is the
+        # one combination that must be ruled out on real onPC hardware
+        # (PROTOCOL.md ASSUMPTION-7). If this test ever starts failing, someone
+        # found a third source of truth — update the assumption.
+        harness = ResponderHarness(extra_env=gapped_groups_env(ptr_form="positional"))
+        assert [c["i"] for c in self._children(harness)] == [1, 2, 3]
+
+    def test_numeric_path_segment_addresses_the_pool_slot(self):
+        harness = ResponderHarness(extra_env=gapped_groups_env(index_form="Index"))
+        harness.main(None, "state 3 DataPool/Groups/5")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is True
+        assert payload["node"]["name"] == "Drums"
+
+    def test_numeric_path_segment_does_not_resolve_a_gap(self):
+        # Slot 2 is EMPTY. Resolving it to the 2nd listed object is the same
+        # lie in a different surface.
+        harness = ResponderHarness(extra_env=gapped_groups_env(index_form="Index"))
+        harness.main(None, "state 4 DataPool/Groups/2")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is False
+        assert "not found" in payload["error"]
 
 
 class TestExecResult:

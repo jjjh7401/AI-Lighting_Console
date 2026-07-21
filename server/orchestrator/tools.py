@@ -93,10 +93,16 @@ _DEPLOY_OUTCOME_STATUS = {
 def _rig_object(child: dict) -> dict[str, object]:
     """One rig-context object: its REAL pool number (``no``) + ``name``.
 
-    The responder emits each child as ``{"i": <pool-slot>, "name": ...}``
-    (``console/lua/copilot_responder.lua`` build_snapshot; ``i`` is the real
-    pool slot, treated as such in ``server/safety/console.py``). A child
-    missing ``i`` degrades to a name-only entry rather than crashing.
+    The responder emits ``{"i": <pool-slot>, "name": ..., "class": ...}`` but
+    ONLY when it positively established that slot; a child whose slot it could
+    not establish arrives WITHOUT ``i`` (``console/lua/copilot_responder.lua``
+    build_snapshot / safe_children, PROTOCOL.md §4.2 — the responder never
+    substitutes the listing position, and ``server/safety/console.py`` relies
+    on the same guarantee for its slot arithmetic).
+
+    That absence is meaningful, not a glitch: it degrades to a name-only entry
+    so the model has no number to address — it must resolve the real one (e.g.
+    via ``query_state``) instead of counting list positions.
     """
     number = child.get("i")
     name = child.get("name", "")
@@ -405,7 +411,9 @@ def build_toolset(
                 'as {"no": <pool number>, "name": <name>}; ALWAYS reference an '
                 'object by its REAL pool number ("no"), NEVER by positional order '
                 "— pool numbers may be non-contiguous (e.g. 1, 2, 7), so the Nth "
-                "listed item is NOT necessarily object N."
+                'listed item is NOT necessarily object N. An entry with a "name" '
+                'but NO "no" means its pool number is UNKNOWN: do not guess one — '
+                "resolve it with query_state before addressing that object."
             ),
             parameters={"type": "object", "properties": {}},
         ),

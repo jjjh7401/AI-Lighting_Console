@@ -35,7 +35,9 @@ local CONFIG = {
 
 local M = {
     NAME = "CopilotResponder",
-    VERSION = "1.1.0", -- 1.1.0: additive deploy verb (M7); wire protocol stays v1
+    -- 1.1.0: additive deploy verb (M7). 1.2.0: snapshot `i` is the REAL pool
+    -- slot and is omitted when unknown (was the loop position). Protocol v1.
+    VERSION = "1.2.0",
     PROTO = 1,
     CONFIG = CONFIG,
 }
@@ -182,10 +184,119 @@ function M.safe_class(handle)
     return "?"
 end
 
+-- -- pool-slot resolution (the listing position is NOT an address) -----------
+
+-- @MX:ANCHOR: [AUTO] pool-slot contract — a child's slot is reported ONLY when
+--   it was positively established; an unestablished slot is reported as
+--   *nothing*, never as the child's position in the listing.
+-- @MX:REASON: cross-layer contract boundary (fan_in >= 3: build_snapshot's
+--   wire `i`, server/orchestrator/tools.py `_rig_object` -> the LLM-facing pool
+--   number, server/safety/console.py free-slot + `Delete Plugin <slot>` math).
+--   Children() COMPACTS gaps away, so position N is object N only on a dense
+--   pool; emitting it as an address made the model issue `Group 2 + 3` on a
+--   pool holding 1/5/7 — the console rejected the object AFTER
+--   `ChangeDestination Root` and `ClearAll` had already executed.
+-- @MX:SPEC: SPEC-COPILOT-DEPLOY-001
+
+-- Two independent sources answer "which slot is this child in", in priority
+-- order:
+--   1. the child's OWN index accessor — authoritative, because the object
+--      knows where it lives. Accepted only as a COHERENT SET (see
+--      M.probe_slots), never per child.
+--   2. the listing position — only ever a GUESS, accepted per child solely
+--      when the parent hands this same object back for it (M.slot_confirms).
+-- Source 2 deliberately does NOT get to veto source 1: if Ptr() turned out to
+-- be positional rather than slot-addressed on 2.4.2, a veto would throw away
+-- a CORRECT self-reported slot and re-emit the listing position — the exact
+-- defect, wearing a confirmation badge.
+
+-- Self-index accessors, most authoritative first. Which (if any) exists on
+-- 2.4.2 is unverified — PROTOCOL.md §6 ASSUMPTION-7 — so every form is probed
+-- pcall-guarded and the whole set is sanity-gated before it is believed.
+local SLOT_PROBES = {
+    function(child) return child:Index() end,
+    function(child) return child.index end,
+    function(child) return child.no end,
+    function(child) return child:GetIndex() end,
+    function(child) return child:Get("no") end,
+}
+
+local function as_slot(value)
+    if type(value) == "string" then
+        value = tonumber(value)
+    end
+    if type(value) ~= "number" then
+        return nil
+    end
+    local slot = math.tointeger(value)
+    if slot and slot >= 1 then
+        return slot
+    end
+    return nil
+end
+
+-- Asks the PARENT for a candidate slot and checks that it hands this same
+-- object back — what turns a guessed position into an established slot. A gap
+-- (Ptr returns nil) or a different object both refute the guess.
+function M.slot_confirms(handle, slot, child)
+    local ok, other = pcall(function() return handle:Ptr(slot) end)
+    if not ok or other == nil then
+        return false -- no Ptr, or nothing lives there: nothing established
+    end
+    if other == child then
+        return true
+    end
+    -- Two handles may be distinct wrappers around one console object, so an
+    -- identity miss alone is not a contradiction; name+class equality is the
+    -- fallback (duplicate names inside one pool are the known blind spot).
+    return M.safe_name(other) == M.safe_name(child)
+        and M.safe_class(other) == M.safe_class(child)
+end
+
+-- Self-reported slots for a whole listing, or nil. Accepted only as a coherent
+-- SET: one value per child, each a positive integer, strictly increasing in
+-- listing order. A silent, 0-based, or unordered accessor fails that gate and
+-- is discarded WHOLE — a half-trusted numbering is exactly how a plausible
+-- wrong number gets out.
+function M.probe_slots(children)
+    local slots = {}
+    local previous = 0
+    for i = 1, #children do
+        local value
+        for _, probe in ipairs(SLOT_PROBES) do
+            local ok, raw = pcall(probe, children[i])
+            if ok then
+                value = as_slot(raw)
+                if value then
+                    break
+                end
+            end
+        end
+        if not value or value <= previous then
+            return nil
+        end
+        slots[i] = value
+        previous = value
+    end
+    return slots
+end
+
+-- Returns an array of { obj = <handle>, slot = <integer|nil> } in console
+-- listing order; `slot` is the real pool slot or nil when it could not be
+-- established. Callers MUST NOT substitute the array position for a nil slot.
 function M.safe_children(handle)
     local ok, children = pcall(function() return handle:Children() end)
     if ok and type(children) == "table" then
-        return children
+        local probed = M.probe_slots(children)
+        local out = {}
+        for i = 1, #children do
+            local slot = probed and probed[i] or nil
+            if not slot and M.slot_confirms(handle, i, children[i]) then
+                slot = i -- the pool really is dense this far: position IS slot
+            end
+            out[#out + 1] = { obj = children[i], slot = slot }
+        end
+        return out
     end
     local okc, count = pcall(function() return handle:Count() end)
     if okc and type(count) == "number" then
@@ -193,7 +304,9 @@ function M.safe_children(handle)
         for i = 1, count do
             local okp, child = pcall(function() return handle:Ptr(i) end)
             if okp and child then
-                out[#out + 1] = child
+                -- This branch ADDRESSES by index: we asked for slot i and the
+                -- console handed an object back, so i is that object's slot.
+                out[#out + 1] = { obj = child, slot = i }
             end
         end
         return out
@@ -215,12 +328,31 @@ local ROOT_ALIASES = {
 function M.find_child(handle, segment)
     local children = M.safe_children(handle)
     if segment:match("^%d+$") then
-        return children[tonumber(segment)]
+        -- A numeric segment addresses the POOL SLOT — the same number a
+        -- snapshot reports as `i` (PROTOCOL.md §2). It degrades to the legacy
+        -- positional meaning ONLY when no slot at all could be established;
+        -- mixing the two would make 'Groups/5' on a 1/5/7 pool silently
+        -- resolve to the 5th listed object (or, worse, a neighbour).
+        local wanted_slot = tonumber(segment)
+        local any_slot_known = false
+        for _, entry in ipairs(children) do
+            if entry.slot then
+                any_slot_known = true
+                if entry.slot == wanted_slot then
+                    return entry.obj
+                end
+            end
+        end
+        if any_slot_known then
+            return nil -- that slot is empty (a gap), not "the Nth object"
+        end
+        local entry = children[wanted_slot]
+        return entry and entry.obj or nil
     end
     local wanted = segment:lower()
-    for _, child in ipairs(children) do
-        if M.safe_name(child):lower() == wanted then
-            return child
+    for _, entry in ipairs(children) do
+        if M.safe_name(entry.obj):lower() == wanted then
+            return entry.obj
         end
     end
     return nil
@@ -318,8 +450,15 @@ function M.build_snapshot(id, path)
     local cap = math.min(total, CONFIG.max_children)
     local items = M.array({})
     for i = 1, cap do
-        local child = children[i]
-        items[#items + 1] = { i = i, name = M.safe_name(child), class = M.safe_class(child) }
+        local entry = children[i]
+        local item = { name = M.safe_name(entry.obj), class = M.safe_class(entry.obj) }
+        -- `i` carries the REAL pool slot and is OMITTED when that slot could
+        -- not be established (PROTOCOL.md §4.2) — a consumer must then resolve
+        -- the number before addressing the object, not count list positions.
+        if entry.slot then
+            item.i = entry.slot
+        end
+        items[#items + 1] = item
     end
     local payload = {
         v = M.PROTO,
@@ -437,7 +576,7 @@ function M.set_plugin_source(plugin, source)
     local component
     local children = M.safe_children(plugin)
     if #children > 0 then
-        component = children[1]
+        component = children[1].obj
     else
         component = acquire_child(plugin)
     end

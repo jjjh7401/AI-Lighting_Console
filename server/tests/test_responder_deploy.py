@@ -152,9 +152,12 @@ class TestDeployErrors:
 
 
 class TestVersionBump:
-    def test_responder_version_is_1_1_0_with_proto_1(self, harness):
-        # Additive verb: plugin version bumps, wire protocol stays v1.
-        assert harness.module["VERSION"] == "1.1.0"
+    def test_responder_version_is_1_2_0_with_proto_1(self, harness):
+        # The plugin version tracks console-side behaviour changes while the
+        # wire protocol stays v1: 1.1.0 added the deploy verb (additive),
+        # 1.2.0 made the snapshot `i` the real pool slot and made it optional
+        # (parse-compatible both ways — PROTOCOL.md revision notes).
+        assert harness.module["VERSION"] == "1.2.0"
         assert harness.module["PROTO"] == 1
 
 

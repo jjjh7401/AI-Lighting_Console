@@ -258,6 +258,66 @@ class TestFileImportPerSendRecords:
         assert outcome.sends == ()
 
 
+class TestFileImportSlotHonesty:
+    """The free-slot arithmetic depends on ``i`` being a REAL pool slot.
+
+    The responder omits ``i`` when it could not establish a child's slot
+    (PROTOCOL.md §4.2). Guessing anyway would mean ``Import Plugin <slot>``
+    into an occupied slot — the pool read exists precisely to prevent that.
+    """
+
+    def _link_with_pool(self, tmp_path, children: list[dict]):
+        link = ConsoleLink(timeouts=_FAST, import_dir=tmp_path / "plugins")
+        sent: list[str] = []
+
+        def send(wire: str) -> None:
+            sent.append(wire)
+            match = re.match(r'^Plugin "CopilotResponder" "(state|exec) (\S+)(?: (.*))?"$', wire)
+            assert match, wire
+            kind, rid, rest = match.groups()
+            if kind == "state":
+                payload = {
+                    "v": 1,
+                    "kind": "state",
+                    "id": rid,
+                    "ok": True,
+                    "path": rest,
+                    "children": children,
+                }
+                address = "/copilot/state"
+            else:
+                payload = {"v": 1, "kind": "result", "id": rid, "ok": True, "result": "OK"}
+                address = FEEDBACK_ADDRESS
+            link.deliver(FeedbackMessage(address=address, args=(encode_payload(payload),)))
+
+        link.bind_send(send)
+        return link, sent
+
+    def test_unnumbered_pool_entry_stops_the_import(self, tmp_path):
+        link, sent = self._link_with_pool(
+            tmp_path, [{"i": 1, "name": "Other"}, {"name": "SlotUnknown"}]
+        )
+        outcome = link.deploy_plugin("Cleaner", "return 1")
+        assert outcome.status == "failed"
+        assert "free plugin slot" in outcome.detail
+        assert "1 plugin(s)" in outcome.detail
+        # Nothing was imported or deleted: only the pool read hit the wire.
+        assert len(sent) == 1
+        assert [s.kind for s in outcome.sends] == ["state_query"]
+
+    def test_fully_numbered_gapped_pool_picks_a_genuinely_free_slot(self, tmp_path):
+        # Gapped pool (1, 5, 7): slot 2 is free and must be chosen. Under the
+        # old positional `i` the same pool reported 1, 2, 3 — so slot 4 looked
+        # free while the real slot 2 sat unused and slot 5 stayed hidden.
+        link, _sent = self._link_with_pool(
+            tmp_path,
+            [{"i": 1, "name": "A"}, {"i": 5, "name": "B"}, {"i": 7, "name": "C"}],
+        )
+        outcome = link.deploy_plugin("Cleaner", "return 1")
+        imports = [s.command for s in outcome.sends if s.kind == "command"]
+        assert imports == ["Import Plugin 2 'Cleaner'"]
+
+
 class TestGatePerSendDeployAudit:
     """M7.5 — the gate fans deploy sub-sends out into individual ``executed``
     audit entries correlated to the parent deploy (``deploy_of``)."""
