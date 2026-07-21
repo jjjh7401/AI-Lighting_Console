@@ -9,7 +9,8 @@
     "shell:stage": "python3 packaging/stage_sidecar.py",
     "shell:dev": "python3 packaging/stage_sidecar.py && tauri dev",
     "shell:build": "python3 packaging/stage_sidecar.py && tauri build --bundles app && python3 packaging/stage_sidecar.py --bundle \"src-tauri/target/release/bundle/macos/GrandMA3 Copilot.app\"",
-    "shell:verify": "python3 packaging/stage_sidecar.py --verify-bundle \"src-tauri/target/release/bundle/macos/GrandMA3 Copilot.app\""
+    "shell:verify": "python3 packaging/stage_sidecar.py --verify-bundle \"src-tauri/target/release/bundle/macos/GrandMA3 Copilot.app\"",
+    "shell:package": "bash packaging/make_dmg.sh"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2"

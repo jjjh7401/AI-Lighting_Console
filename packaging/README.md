@@ -12,6 +12,8 @@ Reproducible macOS build of the frozen local-launcher app (PyInstaller onedir �
 | `entitlements.plist` | Hardened-runtime entitlements applied to the `.app` root. |
 | `sign.sh` | Inside-out codesign pipeline (ad-hoc-capable; env-gated notarization). |
 | `build.sh` | Orchestration: UI build check → PyInstaller → sign. |
+| `stage_sidecar.py` | Stages the frozen backend as the Tauri sidecar; also mirrors the payload into the built `.app` and re-seals it (`--bundle`). |
+| `make_dmg.sh` | Packages the already-sealed Tauri shell `.app` into a drag-to-Applications `.dmg` for hand-over (`npm run shell:package`). |
 
 ## Build (arm64 host)
 
@@ -93,3 +95,53 @@ gated N/A** on a cert-less host (research §C.5) and activate with no code chang
 `server/safety/blacklist.yaml` are mirrored into the bundle so
 `server.resources.resource_base()` (`sys._MEIPASS`) and the `__file__`-relative
 safety-ruleset loader resolve them in the frozen app.
+
+## Full rebuild sequence (Stage 2, Tauri shell hand-over build)
+
+Run these three steps, in this order, whenever `console/lua/*` or any other
+`--add-data`-mirrored asset changes — `npm run shell:build` alone does **not**
+re-run PyInstaller, so it will happily re-seal a shell around a **stale**
+backend/Lua payload:
+
+```bash
+./packaging/build.sh        # PyInstaller — re-freezes server/ + mirrors console/lua etc.
+npm run shell:build         # stage sidecar -> tauri build --bundles app -> re-stage + re-seal
+npm run shell:verify        # standing gate: payload present + seal holds
+```
+
+`./packaging/build.sh` is what "picks up" console/lua/server changes; skipping
+it and running only `npm run shell:build` re-seals the *previous* frozen build.
+
+## Delivery artifact — hand-over `.dmg` (ad-hoc distribution, no Developer ID)
+
+```bash
+npm run shell:package
+# -> dist/GrandMA3-Copilot-<version>.dmg
+```
+
+`packaging/make_dmg.sh` wraps the already-built, already-sealed
+`src-tauri/target/release/bundle/macos/GrandMA3 Copilot.app` in a
+drag-to-`/Applications` `.dmg` via `hdiutil create -format UDZO`. It
+re-verifies `codesign --verify --strict` on its **input** before packaging and
+refuses to package an unsealed bundle.
+
+**dmg over zip, and why it is produced this way — the ordering trap.**
+`src-tauri/tauri.conf.json` declares `"targets": ["app","dmg"]`, so `tauri
+build` (with no `--bundles` override) *can* emit a `.dmg` directly. **Do not
+use that path**: `tauri build` runs BEFORE `stage_sidecar.py --bundle` mirrors
+the sidecar payload into `Contents/` and ad-hoc-seals the app, so a `.dmg`
+produced by `tauri build` itself contains the **unpatched, unsealed** bundle —
+the same payload-staleness/seal-order hazard `npm run shell:build` was written
+to avoid (hence `--bundles app`, never `--bundles dmg`, in that script). A
+future "optimization" back onto `tauri build --bundles dmg` would silently
+reintroduce this. `make_dmg.sh` is deliberately a **separate, later** step
+that only ever points at the post-seal `.app`, and it hard-fails if that `.app`
+does not verify.
+
+Mounting/compressing the sealed `.app` into a UDZO `.dmg` does not touch its
+file bytes or resource fork, so the ad-hoc seal survives unchanged (verified:
+mount → `ditto` the `.app` out → `codesign --verify --strict` still exits 0,
+27/27 symlinks intact). This is the same safety class as `ditto -c -k
+--sequesterRsrc --keepParent`, `tar`, or `rsync -a`; **`zip -r` is unsafe**
+(follows symlinks — bloats the bundle and invalidates the seal) and must not
+be used as a substitute.
