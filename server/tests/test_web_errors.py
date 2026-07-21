@@ -65,7 +65,24 @@ class TestClassifyException:
         assert _HANGUL.search(message)
 
     def test_non_provider_exception_maps_to_unexpected(self):
+        # A GENERIC (non-key) ValueError still buckets to 'unexpected' — the
+        # missing-key branch below must NOT over-broaden this path.
         kind, message = classify_exception(ValueError("boom secret detail"))
         assert kind == UNEXPECTED_KIND
         assert "boom secret detail" not in message
+        assert _HANGUL.search(message)
+
+    def test_missing_key_valueerror_classifies_as_auth(self):
+        # REQ-DEPLOY-031 / AC-DEPLOY-022 ②: a raw missing-credential ValueError
+        # that reaches the classifier directly (defense-in-depth beside the
+        # adapter normalization) classifies as 'auth', not 'unexpected'.
+        exc = ValueError(
+            "No API key was provided. Please pass a valid API key. "
+            "Learn how to create an API key at https://ai.google.dev/..."
+        )
+        kind, message = classify_exception(exc)
+        assert kind == "auth"
+        assert message == KOREAN_ERROR_MESSAGES["auth"]
+        # Raw detail (the URL, the English sentence) never rides the message.
+        assert "ai.google.dev" not in message
         assert _HANGUL.search(message)

@@ -28,9 +28,20 @@ KOREAN_ERROR_MESSAGES: dict[str, str] = {
 }
 
 
+# Case-insensitive markers that identify a missing/invalid-credential
+# ValueError (e.g. a provider client constructed without an API key).
+_MISSING_KEY_MARKERS = ("api key", "api_key", "credential")
+
+
 def korean_message_for(kind: str) -> str:
     """The Korean message for one error kind (unknown kinds fall back safely)."""
     return KOREAN_ERROR_MESSAGES.get(kind, KOREAN_ERROR_MESSAGES[UNEXPECTED_KIND])
+
+
+def _looks_like_missing_key(exc: ValueError) -> bool:
+    """True when a raw ValueError names a missing/invalid API key or credential."""
+    text = str(exc).lower()
+    return any(marker in text for marker in _MISSING_KEY_MARKERS)
 
 
 def classify_exception(exc: Exception) -> tuple[str, str]:
@@ -41,4 +52,12 @@ def classify_exception(exc: Exception) -> tuple[str, str]:
     """
     if isinstance(exc, ProviderError):
         return exc.kind, korean_message_for(exc.kind)
+    # Defense-in-depth (REQ-DEPLOY-031): the primary normalization of a
+    # missing-key "No API key" ValueError happens at the provider adapter
+    # (ProviderError(kind="auth") via the ProviderError branch above). This
+    # narrow branch catches a raw missing-credential ValueError that reaches the
+    # classifier directly — it is an auth failure, NOT an 'unexpected' internal
+    # error. Generic (non-key) ValueErrors still fall through to 'unexpected'.
+    if isinstance(exc, ValueError) and _looks_like_missing_key(exc):
+        return "auth", korean_message_for("auth")
     return UNEXPECTED_KIND, KOREAN_ERROR_MESSAGES[UNEXPECTED_KIND]

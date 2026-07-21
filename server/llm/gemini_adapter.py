@@ -53,6 +53,45 @@ logger = logging.getLogger(__name__)
 # through unchanged for backward compatibility.
 _OK_FINISH_REASONS = frozenset({"STOP", "FINISH_REASON_UNSPECIFIED"})
 
+# Substring that identifies a stale/expired CachedContent handle (REQ-MVP TTL
+# expiry, live-observed at DEPLOY-001 M16): the SDK raises APIError 403
+# PERMISSION_DENIED / 404 whose detail names the missing CachedContent. Keyed on
+# the marker (not the bare status code) so an ordinary 403 auth denial / 404
+# model-not-found does NOT trigger a needless cache regeneration.
+_CACHE_MISS_MARKER = "CachedContent not found"
+
+# Case-insensitive markers that identify a missing/invalid-credential
+# ValueError from ``genai.Client()`` construction (google-genai raises
+# ``ValueError("No API key was provided ...")`` when no key is in env).
+_MISSING_KEY_MARKERS = ("api key", "api_key", "credential")
+
+
+def _is_cache_miss(exc: Exception) -> bool:
+    """True when a generate() failure means the CachedContent handle is stale.
+
+    A 403/404 APIError whose detail names the missing CachedContent (TTL
+    expiry). Detection is marker-precise so a genuine 403 auth denial or a 404
+    model-not-found is NOT mistaken for a recoverable cache miss (REQ-DEPLOY-031).
+    """
+    from google.genai import errors as genai_errors
+
+    if not isinstance(exc, genai_errors.APIError):
+        return False
+    code = getattr(exc, "code", None) or 0
+    if code not in (403, 404):
+        return False
+    return _CACHE_MISS_MARKER in str(exc)
+
+
+def _is_missing_key_error(exc: ValueError) -> bool:
+    """True when a client-construction ValueError is credential-related.
+
+    Narrow: only a message naming an API key / credential counts, so an
+    unrelated construction ValueError re-raises unchanged (REQ-DEPLOY-031).
+    """
+    text = str(exc).lower()
+    return any(marker in text for marker in _MISSING_KEY_MARKERS)
+
 
 def _to_gemini_schema(schema: dict) -> dict:
     """Convert neutral JSON schema to Gemini schema (uppercased type values)."""
@@ -116,7 +155,23 @@ class GeminiAdapter:
 
             # Credentials resolve from the environment (GEMINI_API_KEY /
             # GOOGLE_API_KEY) — never from the provider config file.
-            self._client = genai.Client()
+            try:
+                self._client = genai.Client()
+            except ValueError as exc:
+                # @MX:NOTE: [AUTO] a client-construction ValueError from
+                #   google-genai means missing/invalid credentials ("No API key
+                #   was provided ...") — normalize to ProviderError(kind="auth")
+                #   so the session classifier routes it to the Korean auth
+                #   message instead of the 'unexpected' bucket (REQ-DEPLOY-031).
+                #   Non-credential ValueErrors re-raise unchanged (narrow scope).
+                if _is_missing_key_error(exc):
+                    raise ProviderError(
+                        kind="auth",
+                        provider=PROVIDER_NAME,
+                        retryable=False,
+                        raw_detail=repr(exc),
+                    ) from exc
+                raise
         return self._client
 
     # -- context caching (REQ-MVP-041, capability-gated) -----------------------
@@ -268,18 +323,13 @@ class GeminiAdapter:
 
     # -- LLMProvider interface ---------------------------------------------------
 
-    def complete(
+    def _build_generate_config(
         self,
-        *,
         system_prefix: str,
-        conversation: Sequence[ConversationItem],
-        tools: Sequence[ToolDefinition] = (),
-    ) -> ModelTurn:
-        from google.genai import types as gtypes
-
-        client = self._ensure_client()
-        cache_name = self._ensure_cache(client, system_prefix, tools)
-        tools_tuple = tuple(tools)
+        tools: Sequence[ToolDefinition],
+        tools_tuple: tuple[ToolDefinition, ...],
+        cache_name: str | None,
+    ) -> tuple[bool, dict[str, Any]]:
         # The cached path is valid ONLY when this call's toolset is the cached
         # one (or empty — the cache's tools then apply). A different toolset
         # takes the uncached path: with cached_content the request may not
@@ -294,14 +344,81 @@ class GeminiAdapter:
             config_kwargs["system_instruction"] = system_prefix
             if tools_tuple:
                 config_kwargs["tools"] = [self._tool_config(tools)]
+        return use_cache, config_kwargs
+
+    def _regenerate_cache(
+        self, client: Any, system_prefix: str, tools: Sequence[ToolDefinition]
+    ) -> str | None:
+        # @MX:NOTE: [AUTO] latch-reset carve-out — the "attempted ONCE" latch
+        #   (self._cache_attempted) is deliberately cleared here so a PROVEN-stale
+        #   cache handle can be rebuilt after a 403/404 CachedContent-not-found.
+        #   This is the ONE sanctioned reset; it runs under self._lock (matching
+        #   the initial attempt), then RELEASES the lock before calling
+        #   _ensure_cache — which re-acquires the same non-reentrant Lock — so
+        #   there is no deadlock and the single-attempt semantics hold per
+        #   regeneration. Returns the fresh cache name (or None if regeneration
+        #   itself failed, in which case the retry takes the uncached path).
+        with self._lock:
+            self._cache_attempted = False
+            self._cache_name = None
+        return self._ensure_cache(client, system_prefix, tools)
+
+    def _generate_with_cache_recovery(
+        self,
+        client: Any,
+        system_prefix: str,
+        tools: Sequence[ToolDefinition],
+        tools_tuple: tuple[ToolDefinition, ...],
+        contents: list[Any],
+        cache_name: str | None,
+    ) -> Any:
+        from google.genai import types as gtypes
+
+        use_cache, config_kwargs = self._build_generate_config(
+            system_prefix, tools, tools_tuple, cache_name
+        )
         try:
-            response = client.models.generate_content(
+            return client.models.generate_content(
                 model=self._settings.model,
-                contents=self._to_contents(conversation),
+                contents=contents,
                 config=gtypes.GenerateContentConfig(**config_kwargs),
             )
         except ProviderError:
             raise
         except Exception as exc:
-            raise normalize_gemini_error(exc) from exc
+            # A stale CachedContent (TTL expiry) surfaces here as a 403/404
+            # "CachedContent not found". Regenerate the cache and retry EXACTLY
+            # ONCE (REQ-DEPLOY-031 / AC-DEPLOY-022 ①). Any other failure — or a
+            # retry that also fails — normalizes; there is no infinite retry.
+            if not (use_cache and _is_cache_miss(exc)):
+                raise normalize_gemini_error(exc) from exc
+            fresh_cache = self._regenerate_cache(client, system_prefix, tools)
+            _, retry_kwargs = self._build_generate_config(
+                system_prefix, tools, tools_tuple, fresh_cache
+            )
+            try:
+                return client.models.generate_content(
+                    model=self._settings.model,
+                    contents=contents,
+                    config=gtypes.GenerateContentConfig(**retry_kwargs),
+                )
+            except ProviderError:
+                raise
+            except Exception as retry_exc:
+                raise normalize_gemini_error(retry_exc) from retry_exc
+
+    def complete(
+        self,
+        *,
+        system_prefix: str,
+        conversation: Sequence[ConversationItem],
+        tools: Sequence[ToolDefinition] = (),
+    ) -> ModelTurn:
+        client = self._ensure_client()
+        cache_name = self._ensure_cache(client, system_prefix, tools)
+        tools_tuple = tuple(tools)
+        contents = self._to_contents(conversation)
+        response = self._generate_with_cache_recovery(
+            client, system_prefix, tools, tools_tuple, contents, cache_name
+        )
         return self._parse_response(response)

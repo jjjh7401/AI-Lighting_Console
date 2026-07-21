@@ -458,6 +458,33 @@ class TestProviderErrorSurface:
         errors = [e for e in audit.iter_events() if e["event"] == "provider_error"]
         assert "super secret" in errors[0]["raw_detail"]
 
+    def test_gemini_missing_key_surfaces_korean_auth_not_unexpected(self, tmp_path, monkeypatch):
+        # AC-DEPLOY-022 ② e2e: a Gemini adapter constructed with no client and no
+        # env key surfaces the Korean AUTH message (not 'unexpected'); the raw
+        # "No API key ..." detail goes to the audit log ONLY, never the surface.
+        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+        adapter = GeminiAdapter(
+            GeminiSettings(model="gemini-2.5-pro", context_caching=False),
+            # no client injected → _ensure_client() builds a real genai.Client()
+            # which raises ValueError("No API key ...") without a key in env.
+        )
+        session, _console, audit, sent, _ = _session(tmp_path, adapter)
+        event = session.run_instruction("보컬 그룹 만들어줘")
+        # (1) NO raw SDK/key text anywhere on the chat surface.
+        surface = _surface_text(sent)
+        assert "No API key" not in surface
+        assert "ai.google.dev" not in surface
+        # (2) a Korean AUTH user message is shown — NOT the 'unexpected' bucket.
+        assert event["type"] == "error"
+        assert event["kind"] == "auth"
+        assert any("가" <= ch <= "힣" for ch in event["message"])
+        # (3) the raw detail IS in the diagnostic (audit) log.
+        errors = [e for e in audit.iter_events() if e["event"] == "provider_error"]
+        assert len(errors) == 1
+        assert errors[0]["kind"] == "auth"
+        assert "No API key" in errors[0]["raw_detail"]
+
     def test_error_turn_is_never_judged(self, tmp_path):
         recorder = RoundTripRecorder()
         adapter = AnthropicAdapter(

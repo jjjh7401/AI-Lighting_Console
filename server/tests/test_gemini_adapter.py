@@ -95,7 +95,10 @@ class FakeCaches:
         self.calls.append(kwargs)
         if self.error is not None:
             raise self.error
-        return SimpleNamespace(name="cachedContents/rulebook-1")
+        # Incrementing handle name so a regenerate-after-miss retry can be
+        # distinguished from the original cache (the 1st create is still
+        # rulebook-1, preserving every single-create assertion in this file).
+        return SimpleNamespace(name=f"cachedContents/rulebook-{len(self.calls)}")
 
 
 class FakeClient:
@@ -206,6 +209,73 @@ class TestContextCaching:
         assert cache_config.system_instruction == _PREFIX
         declaration = cache_config.tools[0].function_declarations[0]
         assert declaration.name == "query_state"
+
+    def test_cache_miss_regenerates_and_retries_once(self):
+        # REQ-DEPLOY-031 / AC-DEPLOY-022 ①: a TTL-expired CachedContent surfaces
+        # on generate as a 403 PERMISSION_DENIED "CachedContent not found". The
+        # adapter regenerates the cache and retries ONCE instead of failing the
+        # call terminally.
+        cache_miss = genai_errors.APIError(403, {"error": {"message": "CachedContent not found"}})
+        client = FakeClient(cache_miss, _text_response("복구됨"))
+        adapter, turn = _complete(client)
+        assert turn.text == "복구됨"  # retry succeeded — NOT a terminal failure
+        assert len(client.caches.calls) == 2  # cache regenerated after the miss
+        # First attempt used the stale handle; the retry used the FRESH one.
+        assert client.models.calls[0]["config"].cached_content == "cachedContents/rulebook-1"
+        assert client.models.calls[1]["config"].cached_content == "cachedContents/rulebook-2"
+        assert adapter.cache_status == "cached"
+
+    def test_cache_miss_404_variant_also_regenerates_and_retries(self):
+        # AC-DEPLOY-022 ① "(및 404)": a 404 CachedContent-not-found recovers too.
+        cache_miss = genai_errors.APIError(404, {"error": {"message": "CachedContent not found"}})
+        client = FakeClient(cache_miss, _text_response("복구됨"))
+        _, turn = _complete(client)
+        assert turn.text == "복구됨"
+        assert len(client.caches.calls) == 2
+        assert client.models.calls[1]["config"].cached_content == "cachedContents/rulebook-2"
+
+    def test_cache_miss_retry_that_also_fails_is_not_retried_again(self):
+        # Single-retry guard (no infinite recursion): if the regenerated-cache
+        # retry ALSO raises, the adapter normalizes and raises — it does NOT loop.
+        miss1 = genai_errors.APIError(403, {"error": {"message": "CachedContent not found"}})
+        miss2 = genai_errors.APIError(403, {"error": {"message": "CachedContent not found"}})
+        client = FakeClient(miss1, miss2)
+        with pytest.raises(ProviderError) as excinfo:
+            _complete(client)
+        assert excinfo.value.kind == "auth"  # 403 → auth via normalize_gemini_error
+        assert len(client.models.calls) == 2  # exactly one retry, then give up
+        assert len(client.caches.calls) == 2  # regenerated once
+
+    def test_non_cache_miss_403_is_not_treated_as_a_cache_miss(self):
+        # A 403 that is a genuine auth denial (NOT "CachedContent not found") must
+        # normalize straight to auth — never trigger a needless regenerate/retry.
+        denied = genai_errors.APIError(403, {"error": {"message": "denied"}})
+        client = FakeClient(denied)
+        with pytest.raises(ProviderError) as excinfo:
+            _complete(client)
+        assert excinfo.value.kind == "auth"
+        assert len(client.models.calls) == 1  # no retry
+        assert len(client.caches.calls) == 1  # no regeneration
+
+    def test_cache_miss_regeneration_failure_falls_back_to_uncached_retry(self):
+        # If regeneration itself fails, the retry takes the UNCACHED path
+        # (system_instruction + tools) rather than reusing a stale/none handle.
+        cache_miss = genai_errors.APIError(403, {"error": {"message": "CachedContent not found"}})
+
+        class OneGoodThenBrokenCaches(FakeCaches):
+            def create(self, **kwargs):
+                if len(self.calls) >= 1:  # 2nd create (regeneration) fails
+                    self.calls.append(kwargs)
+                    raise genai_errors.APIError(400, {"error": {"message": "too small"}})
+                return super().create(**kwargs)
+
+        client = FakeClient(cache_miss, _text_response("복구됨"))
+        client.caches = OneGoodThenBrokenCaches()
+        _, turn = _complete(client)
+        assert turn.text == "복구됨"
+        retry_config = client.models.calls[1]["config"]
+        assert retry_config.cached_content is None
+        assert retry_config.system_instruction == _PREFIX
 
     def test_mismatched_tools_bypass_the_cache_for_that_call(self):
         # A call whose toolset differs from the cached one cannot use the
@@ -409,3 +479,48 @@ class TestBootWithoutKeys:
         adapter = GeminiAdapter(_settings(), client=FakeClient(_text_response()))
         assert adapter.name == "gemini"
         assert adapter.model_id == "gemini-2.5-pro"
+
+
+class TestMissingKeyClassification:
+    """REQ-DEPLOY-031 / AC-DEPLOY-022 ②: a client-construction "No API key"
+    ValueError (raised by google-genai's ``genai.Client()`` when no
+    GEMINI_API_KEY/GOOGLE_API_KEY is in env) is normalized at the adapter to
+    ProviderError(kind="auth") — so the session classifier routes it to the
+    Korean auth message instead of the 'unexpected' internal-error bucket."""
+
+    def test_missing_key_raises_provider_auth_error(self, monkeypatch):
+        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+        # No client injected → _ensure_client() builds a real genai.Client(),
+        # which raises ValueError("No API key ...") with no key in env.
+        adapter = GeminiAdapter(_settings(context_caching=False))
+        with pytest.raises(ProviderError) as excinfo:
+            adapter.complete(
+                system_prefix=_PREFIX,
+                conversation=[UserMessage(text="hi")],
+                tools=(),
+            )
+        error = excinfo.value
+        assert error.kind == "auth"
+        assert error.provider == "gemini"
+        assert error.retryable is False
+        assert error.raw_detail  # repr(exc) preserved for the audit log only
+
+    def test_non_key_valueerror_from_client_construction_is_not_swallowed(self, monkeypatch):
+        # Narrowness guard: a client-construction ValueError that is NOT
+        # credential-related re-raises unchanged (never masqueraded as auth).
+        from google import genai as genai_mod
+
+        def _boom(*args, **kwargs):
+            raise ValueError("some unrelated config problem")
+
+        monkeypatch.setattr(genai_mod, "Client", _boom)
+        adapter = GeminiAdapter(_settings(context_caching=False))
+        with pytest.raises(ValueError) as excinfo:
+            adapter.complete(
+                system_prefix=_PREFIX,
+                conversation=[UserMessage(text="hi")],
+                tools=(),
+            )
+        assert "unrelated config problem" in str(excinfo.value)
+        assert not isinstance(excinfo.value, ProviderError)
