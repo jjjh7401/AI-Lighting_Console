@@ -17,6 +17,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - **패키지 `.app` end-to-end 검증**: `packaging/verify_packaged_e2e.py` 8/8 PASS(기동→설정→provisioning→health→종료); 983 pytest + 기존 vitest 전부 green.
   - **환경-게이트 N/A**(이 빌드 호스트 한정, 코드 변경 없이 적합한 환경에서 활성화 가능): universal2(arm64+x86_64) 빌드, Windows x86_64 빌드, 실제 Developer-ID 서명·공증.
   - **Stage-2 이연**: Tauri v2 데스크톱 셸, Python 백엔드 sidecar 번들, 자동 업데이트, updater 재시작 안전상태 보존(M7~M9)은 별도 kickoff로 이연 — 본 항목은 Stage-1 배포 가능 MVP 마감만 반영한다.
+  - **v0.3.0 라이브 E2E 하드닝(M14~M18, `status: in-progress` 유지)**: 2026-07-20 실제 grandMA3 onPC 2.4.2 + 실제 Gemini 라이브 데모에서 983-test 단위 스위트가 놓친 통합 결함 6건 중 5건(#2~#6)을 REQ-DEPLOY-028~032/AC-DEPLOY-019~023으로 fold-in 후 TDD 구현(결함 #1은 commit `1d65375`에서 이미 수정, 이력만 기록). 전체 스위트 `1017 passed`(983→1017, +34).
+    - **M14 / #2 — 기동 시 활성 프로바이더 키 주입** (`server/web/serve.py` `build_runtime` + `server/deploy/keystore.py`): `build_runtime`이 OS 자격 증명 저장소의 활성 프로바이더 키를 프로바이더 클라이언트 생성 전에 프로세스 env로 주입; 기설정 env 키는 보존(덮어쓰지 않음); 저장소 미가용 시 REQ-DEPLOY-006a 세션 한정 폴백으로 강등. 신규 인스턴스가 "No API key"로 기동 실패하는 회귀를 봉쇄.
+    - **M15 / #4 — 직전 생성 연출 상태 세션 추적**: 직전에 생성된 Seq/Exec를 세션에 캡처해 다음 턴에 주입 + "맹목적 수정보다 재생성" 유도 스티어를 추가, 후속 수정 지시가 엉뚱한 대상(예: `Seq 1`)이 아닌 방금 만든 대상으로 해소되도록 함.
+    - **M16 / #5 — Gemini 캐시 만료 복구 + 키 오류 분류**: `403/404 "CachedContent not found"` 주입 시 캐시 재생성 후 1회 재시도; 키 누락 `ValueError`를 `unexpected`가 아닌 인증(auth) 오류로 분류.
+    - **M17 / #3 — rig-context 실제 풀 번호 노출**: `get_rig_context`가 오브젝트마다 `{no, name}`을 방출해, 모델이 위치 인덱스가 아닌 실제(비연속 가능) 풀 번호를 참조하도록 함 — 존재하지 않는 오브젝트(예: `Group 3`) 생성 방지.
+    - **M18 / #6 — OSC 수신 포트 동일-포트 재바인드 복구**: `SO_REUSEADDR` + 유한 재시도(포트 드리프트 없음, REQ-026)로 재바인드; 복구 불가 시 재설정 안내가 담긴 타입드 `ReceivePortInUseError`를 발생 — 이전에는 원시 크래시.
+    - **테스트 인프라**: `server/tests/conftest.py`에 스위트 전역 in-memory keyring autouse fixture 추가 — M14가 실제 OS Keychain을 건드리지 않고 무인 `pytest` 실행을 복원.
+    - **이연 항목**(진행 중 감사 추적, progress.md §E.4에 기록): (a) `#6` 앱 셸 안내 표시 — 브리지는 타입드 예외를 던지지만, `server/web`이 이를 잡아 표시하는 배선은 단일 OSC 관문 보안 불변식(AC-MVP-019, `server/web`의 `server.bridge` import 금지)과 상충해 보안 allowlist 결정 대기로 이연; (b) 5개 결함 전체의 라이브 onPC 재검증 — 단위 테스트가 배선을 증명하나 실하드웨어+실 Gemini 동작은 환경-게이트; (c) `console/lua/copilot_responder.lua:322`의 더 깊은 슬롯 정합성 — 진짜 갭 있는 rig에서 Lua 소스단 수정은 라이브-콘솔-게이트.
 
 - **SPEC-COPILOT-EVAL-001** — Phase 0 boardop 실사용 평가 및 격차 분석 완료 (문서 폴백 모드, REQ-EVAL-014). onPC 구동 실행 파일 미확보(베타 신청 대기)로 인해 문서·데모 영상 관찰 기반 평가로 전환(사용자 승인, AskUserQuestion 2026-07-16)하여 run-phase를 완결했다.
   - `.moai/project/research/boardop-eval-log.md` — 환경 기록(6종 중 5종 실측 + 1종 관찰 불가 명시) + 대표 시나리오 11종(S1~S10 + 파괴적 시나리오 S-D) 3태그 분류(관찰 기반 4 / 관찰 불가 7) 및 행별 근거 출처 인용.

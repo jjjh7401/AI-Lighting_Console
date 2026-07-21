@@ -4,7 +4,7 @@ title: "Phase 2: 배포 가능한 앱 형태 — PyInstaller 로컬 런처 → T
 version: "0.3.0"
 status: in-progress
 created: 2026-07-20
-updated: 2026-07-20
+updated: 2026-07-21
 author: manager-spec
 priority: P1
 phase: "Phase 2 — 배포·제품화 (v1.0.0 target)"

@@ -181,6 +181,23 @@ CHANGELOG.md `[Unreleased]` 및 README.md가 Stage-1 배포 가능 arm64 macOS M
 
 terminal `completed` close(§E.4의 `in-progress → implemented → completed` merged 3-phase close)는 Stage-2(M7~M9) 구현 완료 후 별도 sync 세션에서 수행한다. 다음: Stage-2 kickoff(별도 SPEC 범위 확정) 또는 M7 착수.
 
+### v0.3.0 라이브 E2E 하드닝 sync (2026-07-21, `status: in-progress` 유지)
+
+`sync_status: stage-1-hardening-synced` (**여전히 Stage-1 문서 동기화 — terminal close 아님**)
+`sync_complete_at: 2026-07-21`
+`sync_commit_sha: pending-backfill-v030-hardening-sync`
+
+v0.3.0 라이브 E2E 하드닝 배치(결함 #2~#6, REQ-DEPLOY-028~032/AC-DEPLOY-019~023, milestones M14~M18)를 CHANGELOG.md `[Unreleased]`에 기록했다. 7개 배치 커밋(`3baadf1` 계획 fold-in, `66d1419` M14, `fe1a9d8` keyring conftest, `392f4b9` M15, `063b7ff` M16, `6152f80` M17, `3258090` M18) 전부 `feat/app-deploy-file-import` 브랜치에 반영됨. 전체 스위트 `1017 passed`(983→1017, +34 net). README.md는 이 배치로 인한 빌드/실행 절차 변경이 없어 미수정(패키징된 `.app` 빌드·구동 안내는 그대로 유효; 하드닝은 서버 내부 로직 변경).
+
+**B12 self-test 결과**: (1) pre-emission grep `grep -c 'SPEC-COPILOT-DEPLOY-001' CHANGELOG.md` → 기존 항목 존재 확인 후 동일 SPEC 항목에 하위 불릿으로 추가(신규 중복 최상위 항목 없음); (2) AC count — acceptance.md AC-DEPLOY-019~023 5건이 CHANGELOG 항목의 M14~M18 5개 하위 불릿과 1:1 대응; (3) file path verification — `server/web/serve.py`(M14 build_runtime)·`server/deploy/keystore.py`, `server/tests/conftest.py`, `console/lua/copilot_responder.lua` 경로 확인됨(commit diff 기준; 상세 M15/M16 파일은 plan.md 범위 참조).
+
+**Deferred items (honest audit trail, terminal close 시 재확인 필요)**:
+1. **#6 앱 셸 안내 표시** — `server/bridge`가 `ReceivePortInUseError`(재설정 안내 포함)를 raise하나, `server/web`이 이를 catch+display하는 배선은 단일 OSC 관문 보안 불변식(AC-MVP-019 — `server/web`이 `server.bridge`를 import하지 않음)과 충돌 — 보안 allowlist 결정이 필요해 이연. AC-023의 자동화된 브리지-단위 스코프는 충족되었으나, end-to-end 표시는 미구현.
+2. **라이브 onPC 재검증(#2~#6 전체)** — 단위 테스트는 배선/전달을 증명하나, 실하드웨어+실 Gemini 동작(TTL wire 메시지, 갭 있는 풀에서 라이브 재바인드, LLM이 스티어를 실제로 따르는지)은 하드웨어-env-gate(기존 DEPLOY-001 라이브 갭과 동일 규율).
+3. **#3 심층 Lua 슬롯 정합성** — `console/lua/copilot_responder.lua:322`가 루프 위치를 `i`로 방출; 실제로 갭이 있는 라이브 rig에서는 진짜 풀 슬롯이 다를 수 있음. rig-context 포맷팅 자체는 정확하나, Lua 소스단 근본 수정은 라이브-콘솔-게이트.
+
+**Frontmatter**: `updated: 2026-07-21`로 spec.md/plan.md/acceptance.md 프런트매터 갱신(본문 무변경); `status: in-progress` 유지(Stage-2 M7~M9 env-gate 이연 — 이 sync는 SPEC을 닫지 않음).
+
 ## §F Phase 4 Mode Selection
 
 Run scope: Stage-1 only (M1~M6). Depends_on gate: SPEC-COPILOT-MVP-001 in-progress → `--ignore-deps` override (user-approved, logged `.moai/logs/depends-on-override.log`). Phase-1 plan-audit gate on v0.2.0: PASS-WITH-DEBT ~0.87 (≥0.85, Stage-1 proceed).
