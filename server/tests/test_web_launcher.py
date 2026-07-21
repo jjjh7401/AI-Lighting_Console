@@ -12,11 +12,15 @@ inside the PACKAGED binary at M6/Part 2, not in dev-venv pytest).
 
 from __future__ import annotations
 
+import contextlib
+import json
 import os
+import signal
 import socket
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 import pytest
 
@@ -288,6 +292,25 @@ class TestShutdownHandler:
         assert stack.stopped == 1
         assert reaped == [4242]
 
+    def test_stack_stops_before_the_tree_is_reaped(self):
+        # M7.2 preservation guard: the console stack (OSC listeners / timers)
+        # must be stopped BEFORE the group teardown, and the exit last. The
+        # watchdog's self-reap relies on this ordering surviving unchanged.
+        order: list[str] = []
+
+        class _OrderedStack:
+            def stop(self):
+                order.append("stack.stop")
+
+        handler = launcher.make_shutdown_handler(
+            _OrderedStack(),
+            exit_fn=lambda code: order.append("exit"),
+            child_pids=(7,),
+            tree_terminator=lambda pid: order.append("reap"),
+        )
+        handler(15, None)
+        assert order == ["stack.stop", "reap", "exit"]
+
     def test_stack_stop_failure_still_reaps_children_and_exits(self):
         class _AngryStack:
             def stop(self):
@@ -362,3 +385,331 @@ def _pid_alive(pid: int) -> bool:
     except PermissionError:
         return True
     return True
+
+
+# ----------------------------------------- parent-liveness watchdog (M7.2 / 025)
+#
+# AC-DEPLOY-026 ③: on a Tauri force-quit the Rust ``RunEvent::Exit`` never fires,
+# so the sidecar must notice the dead parent itself and reap its own process
+# group. PRIMARY trigger = pipe EOF (no race window), FALLBACK = getppid()
+# polling, both inside a bounded max reap latency so the residual-0 scan is
+# deterministic. The Rust authoritative half (setsid/Job Object, RunEvent::Exit)
+# is M7.4 — AC-026 ① / ② are NOT provable here.
+
+
+class TestWatchdogBounds:
+    def test_poll_interval_is_bounded_by_the_max_reap_latency(self):
+        # No unbounded race window: the fallback poll never exceeds the latency
+        # ceiling the residual-0 scan is asserted against.
+        assert 0 < launcher.PARENT_POLL_INTERVAL_SECONDS <= launcher.MAX_REAP_LATENCY_SECONDS
+        assert launcher.MAX_REAP_LATENCY_SECONDS <= 1.0
+
+    def test_rejects_an_unbounded_poll_interval(self):
+        with pytest.raises(ValueError):
+            launcher.ParentLivenessWatchdog(expected_ppid=4242, poll_interval=5.0)
+
+    def test_rejects_a_nonpositive_poll_interval(self):
+        with pytest.raises(ValueError):
+            launcher.ParentLivenessWatchdog(expected_ppid=4242, poll_interval=0)
+
+    def test_requires_a_parent_signal(self):
+        # Neither a pipe nor an expected ppid = nothing to watch; refusing to
+        # construct keeps a standalone launch from ever self-reaping.
+        with pytest.raises(ValueError):
+            launcher.ParentLivenessWatchdog()
+
+
+class TestWatchdogPipeEOF:
+    def test_eof_triggers_self_reap_within_the_latency_bound(self):
+        read_fd, write_fd = os.pipe()
+        reaped: list[int] = []
+        watchdog = launcher.ParentLivenessWatchdog(
+            pipe_fd=read_fd, reaper=reaped.append, pid=4242
+        )
+        watchdog.start()
+        try:
+            time.sleep(0.05)
+            assert reaped == []  # parent still holds the write end
+            started = time.monotonic()
+            os.close(write_fd)  # the parent dies -> every write end closed
+            fired = watchdog.triggered.wait(launcher.MAX_REAP_LATENCY_SECONDS)
+            elapsed = time.monotonic() - started
+        finally:
+            watchdog.stop()
+            os.close(read_fd)
+        assert fired, "pipe EOF did not trigger the self-reap"
+        assert reaped == [4242]  # reaps its OWN pid -> its own group
+        assert elapsed <= launcher.MAX_REAP_LATENCY_SECONDS
+
+    def test_heartbeat_byte_does_not_trigger(self):
+        read_fd, write_fd = os.pipe()
+        reaped: list[int] = []
+        watchdog = launcher.ParentLivenessWatchdog(
+            pipe_fd=read_fd, reaper=reaped.append, pid=4242
+        )
+        watchdog.start()
+        try:
+            os.write(write_fd, b"\x01")  # a live parent's heartbeat
+            time.sleep(3 * launcher.PARENT_POLL_INTERVAL_SECONDS)
+            assert not watchdog.triggered.is_set()
+            assert reaped == []
+        finally:
+            watchdog.stop()
+            os.close(write_fd)
+            os.close(read_fd)
+
+
+class TestWatchdogGetppidFallback:
+    def test_orphan_triggers_self_reap_when_no_pipe_is_available(self):
+        reaped: list[int] = []
+        watchdog = launcher.ParentLivenessWatchdog(
+            expected_ppid=4242,
+            reaper=reaped.append,
+            getppid=lambda: 1,  # POSIX re-parents an orphan to init
+            pid=99,
+        )
+        started = time.monotonic()
+        watchdog.start()
+        try:
+            fired = watchdog.triggered.wait(launcher.MAX_REAP_LATENCY_SECONDS)
+            elapsed = time.monotonic() - started
+        finally:
+            watchdog.stop()
+        assert fired, "getppid()==1 did not trigger the fallback self-reap"
+        assert reaped == [99]
+        assert elapsed <= launcher.MAX_REAP_LATENCY_SECONDS
+
+    def test_live_parent_does_not_trigger(self):
+        reaped: list[int] = []
+        watchdog = launcher.ParentLivenessWatchdog(
+            expected_ppid=4242, reaper=reaped.append, getppid=lambda: 4242
+        )
+        watchdog.start()
+        try:
+            time.sleep(3 * launcher.PARENT_POLL_INTERVAL_SECONDS)
+            assert not watchdog.triggered.is_set()
+            assert reaped == []
+        finally:
+            watchdog.stop()
+
+    def test_pipe_failure_degrades_to_the_polling_fallback(self):
+        read_fd, write_fd = os.pipe()
+        os.close(read_fd)  # the inherited fd went bad
+        os.close(write_fd)
+        reaped: list[int] = []
+        watchdog = launcher.ParentLivenessWatchdog(
+            pipe_fd=read_fd, expected_ppid=4242, reaper=reaped.append, getppid=lambda: 1, pid=7
+        )
+        watchdog.start()
+        try:
+            assert watchdog.triggered.wait(launcher.MAX_REAP_LATENCY_SECONDS)
+        finally:
+            watchdog.stop()
+        assert reaped == [7]
+
+
+class TestInstallParentWatchdog:
+    def test_standalone_launch_is_never_armed(self):
+        # Stage-1 double-click / terminal launch: no host declared itself, and a
+        # GUI launch's parent may legitimately BE launchd (pid 1). Arming there
+        # would self-reap a healthy standalone server.
+        assert launcher.install_parent_watchdog(environ={}) is None
+
+    def test_arms_from_the_parent_pid_env(self):
+        watchdog = launcher.install_parent_watchdog(
+            environ={launcher.PARENT_PID_ENV: "4242"}, reaper=lambda pid: None
+        )
+        assert watchdog is not None
+        watchdog.stop()
+
+    def test_arms_from_the_parent_pipe_fd_env(self):
+        read_fd, write_fd = os.pipe()
+        try:
+            watchdog = launcher.install_parent_watchdog(
+                environ={launcher.PARENT_PIPE_FD_ENV: str(read_fd)}, reaper=lambda pid: None
+            )
+            assert watchdog is not None
+            watchdog.stop()
+        finally:
+            os.close(write_fd)
+            os.close(read_fd)
+
+    def test_ignores_a_malformed_fd(self):
+        assert launcher.install_parent_watchdog(environ={launcher.PARENT_PIPE_FD_ENV: "x"}) is None
+
+    def test_ignores_a_zero_parent_pid(self):
+        # pid 0 is not a real parent; an expectation built from it would fire on
+        # the very first poll and reap a healthy process.
+        assert launcher.install_parent_watchdog(environ={launcher.PARENT_PID_ENV: "0"}) is None
+
+
+# ------------------------------- sidecar self-reap, process level (AC-026 ③ / ④)
+
+_CHILD_SCRIPT = str(Path(__file__).resolve().parent / "watchdog_child.py")
+
+# Detection is bounded by MAX_REAP_LATENCY_SECONDS; the remainder is OS process
+# teardown. Held explicit so the residual-0 scan is a bounded assertion rather
+# than an open-ended race (plan §C M7.2).
+_REAP_DEADLINE_SECONDS = launcher.MAX_REAP_LATENCY_SECONDS + 4.0
+
+
+def _free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+def _udp_port_free(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        try:
+            sock.bind(("127.0.0.1", port))
+        except OSError:
+            return False
+    return True
+
+
+def _await_status(path: Path, timeout: float = 15.0) -> dict:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if path.exists():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:  # pragma: no cover — atomic rename race
+                pass
+        time.sleep(0.05)
+    raise AssertionError(f"sidecar never published {path}")
+
+
+def _await_gone(pid: int, timeout: float = 10.0) -> float:
+    started = time.monotonic()
+    deadline = started + timeout
+    while time.monotonic() < deadline and _pid_alive(pid):
+        time.sleep(0.02)
+    return time.monotonic() - started
+
+
+def _force_cleanup(*pids: int, pgids: tuple[int, ...] = ()) -> None:
+    """Last-resort teardown so a failed assertion never leaks a process.
+
+    ``pgids`` are captured at spawn time so a group can still be reaped after its
+    leader died. NEVER signals pytest's own process group — a helper that spawned
+    into this group is killed by pid only.
+    """
+    own_pgid = os.getpgid(0)
+    for pgid in pgids:
+        if pgid > 0 and pgid != own_pgid:
+            with contextlib.suppress(OSError):
+                os.killpg(pgid, signal.SIGKILL)
+    for pid in pids:
+        if pid <= 0:
+            continue
+        with contextlib.suppress(OSError):
+            pgid = os.getpgid(pid)
+            if pgid != own_pgid:
+                os.killpg(pgid, signal.SIGKILL)
+        with contextlib.suppress(OSError):
+            os.kill(pid, signal.SIGKILL)
+
+
+@pytest.mark.skipif(not hasattr(os, "killpg"), reason="POSIX process-group teardown only")
+class TestSidecarSelfReap:
+    def test_pipe_eof_reaps_the_group_and_frees_the_ports(self, tmp_path):
+        # AC-DEPLOY-026 ③ (PRIMARY trigger): the host holds the write end of the
+        # liveness pipe; its death is observable as EOF with no race window.
+        web_port, osc_port = _free_port(), _free_port()
+        status = tmp_path / "status.json"
+        read_fd, write_fd = os.pipe()
+        proc = subprocess.Popen(
+            [
+                sys.executable,
+                _CHILD_SCRIPT,
+                "--mode", "sidecar",
+                "--status", str(status),
+                "--web-port", str(web_port),
+                "--osc-port", str(osc_port),
+                "--pipe-fd", str(read_fd),
+            ],
+            pass_fds=(read_fd,),
+            start_new_session=True,  # the sidecar leads its own group
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        # Captured now so the group is still reapable after its leader dies.
+        sidecar_pgid = os.getpgid(proc.pid)
+        info = {}
+        try:
+            info = _await_status(status)
+            assert _pid_alive(info["grandchild"])
+            # AC-DEPLOY-026 ④: while the sidecar holds them, a restart is
+            # fail-closed — explicit error, never a silent port drift.
+            with pytest.raises(launcher.PortInUseError):
+                launcher.require_ports_available([("127.0.0.1", web_port, "web UI")])
+
+            os.close(write_fd)  # <- the "Tauri force-quit"
+            write_fd = -1
+            proc.wait(timeout=10)
+            elapsed = _await_gone(info["grandchild"])
+
+            assert elapsed <= _REAP_DEADLINE_SECONDS
+            assert not _pid_alive(info["grandchild"]), "grandchild survived the self-reap"
+            assert launcher.probe_port_available("127.0.0.1", web_port)
+            assert _udp_port_free(osc_port)
+            launcher.require_ports_available(
+                [
+                    ("127.0.0.1", web_port, "web UI"),
+                    ("127.0.0.1", osc_port, "OSC feedback listen"),
+                ]
+            )
+        finally:
+            if write_fd >= 0:
+                os.close(write_fd)
+            os.close(read_fd)
+            _force_cleanup(
+                proc.pid, info.get("grandchild", 0), pgids=(sidecar_pgid,)
+            )
+
+    def test_orphaned_sidecar_reaps_the_group_without_a_pipe(self, tmp_path):
+        # AC-DEPLOY-026 ③ (FALLBACK trigger): no pipe channel — the sidecar is
+        # orphaned to init when its parent is force-killed and must still reap.
+        web_port, osc_port = _free_port(), _free_port()
+        status = tmp_path / "status.json"
+        parent = subprocess.Popen(
+            [
+                sys.executable,
+                _CHILD_SCRIPT,
+                "--mode", "parent",
+                "--status", str(status),
+                "--web-port", str(web_port),
+                "--osc-port", str(osc_port),
+            ],
+            start_new_session=True,  # keep the helper out of pytest's own group
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        info = {}
+        try:
+            info = _await_status(status)
+            assert _pid_alive(info["pid"])
+            assert _pid_alive(info["grandchild"])
+
+            parent.kill()  # SIGKILL — no chance to clean up (force-quit)
+            parent.wait(timeout=10)
+
+            elapsed = _await_gone(info["pid"])
+            elapsed += _await_gone(info["grandchild"])
+            assert elapsed <= _REAP_DEADLINE_SECONDS
+            assert not _pid_alive(info["pid"]), "orphaned sidecar did not self-reap"
+            assert not _pid_alive(info["grandchild"]), "grandchild survived the self-reap"
+            assert launcher.probe_port_available("127.0.0.1", web_port)
+            assert _udp_port_free(osc_port)
+        finally:
+            # The parent records the sidecar pid at spawn, so cleanup works even
+            # when the sidecar never published its own status.
+            recorded = Path(str(status) + ".parent")
+            spawned = 0
+            if recorded.exists():
+                with contextlib.suppress(json.JSONDecodeError, OSError):
+                    spawned = json.loads(recorded.read_text(encoding="utf-8"))["sidecar"]
+            _force_cleanup(
+                parent.pid, info.get("pid", 0), info.get("grandchild", 0), spawned
+            )

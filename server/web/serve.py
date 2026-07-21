@@ -39,6 +39,7 @@ from server.web.launcher import (
     apply_keyring_backend_pin,
     assert_keyring_backend,
     generate_launch_token,
+    install_parent_watchdog,
     install_signal_handlers,
     make_shutdown_handler,
     open_app_browser,
@@ -299,6 +300,11 @@ def main(argv: list[str] | None = None, *, run=None, keyring_module=None) -> int
             import uvicorn
 
             install_signal_handlers(make_shutdown_handler(stack))
+            # M7.2 (REQ-DEPLOY-025): when a Stage-2 host spawned us, self-reap
+            # this process group if that host dies — a Unix force-quit never
+            # fires Tauri's RunEvent::Exit. A no-op for a Stage-1 standalone
+            # launch, which declares no host.
+            install_parent_watchdog()
             url = serve_local_url(args.host, args.port)
             threading.Timer(
                 1.0,

@@ -192,6 +192,32 @@ Stage-2 M7의 첫 하위 마일스톤 — F5(REQ-DEPLOY-002a) 3-계층 중 **백
 
 **커밋**: `7573e60`(plan-phase 산출물 v0.4.0 fold-in, 문서 전용), M7.1 구현 커밋(아래 §E.3). `feat/app-deploy-file-import` 직접 커밋(원격 없음 — push/PR 없음).
 
+### M7.2 — sidecar 수명주기 teardown / 백엔드 half (2026-07-21, cycle_type=tdd, Stage-2)
+
+Stage-2 M7의 두 번째 하위 마일스톤 — teardown Option C(FEAS-5) 2-축 중 **백엔드 parent-liveness watchdog(self-reap)만** 착수. `src-tauri/` 미생성, Rust 코드 0줄.
+
+**스코프 분할(명시)**: Option C의 **Rust authoritative half**(Unix `pre_exec` setsid/setpgid, Windows `KILL_ON_JOB_CLOSE` Job Object, `RunEvent::Exit` process-group kill)는 `src-tauri/` 스캐폴드 이전에는 존재할 수 없으므로 **M7.4로 이월**한다. 따라서 본 마일스톤이 검증하는 것은 **AC-DEPLOY-026 ③(Tauri force-quit → 백엔드 self-reap, 잔여 0)과 ④(재기동 `require_ports_available` fail-closed)** 뿐이며, **① 정상 종료·② 백엔드 크래시는 Rust half 부재로 DEFERRED-M7.4**다(미검증을 통과로 주장하지 않음).
+
+**구현**: `server/web/launcher.py`에 `ParentLivenessWatchdog` + `install_parent_watchdog` 신설. **PRIMARY = pipe EOF** — 호스트가 자기 수명 동안 write end를 쥐고 있으므로 어떤 죽음(정상 종료·크래시·force-quit)이든 마지막 write end가 닫혀 read end가 **즉시** readable-at-EOF가 된다(레이스 창 0, 폴링 없음). 비어있지 않은 read는 하트비트로 해석. **FALLBACK = `getppid()` 폴링** — 파이프 미상속/fd 불량 시 `PARENT_POLL_INTERVAL_SECONDS = 0.25`(≤ `MAX_REAP_LATENCY_SECONDS = 1.0`, 생성자에서 강제) 주기로 init(pid 1) 재부모화를 감지. 트리거 시 **기존 `terminate_process_tree`를 그대로 재사용**해 자기 그룹을 SIGTERM→SIGKILL로 수확하므로, 자신에게도 도달하는 SIGTERM이 기존 `make_shutdown_handler`를 태워 **콘솔 스택 stop → 트리 수확 → exit 순서가 불변**이다(트리거만 신설, 순서 무변경).
+
+**오탐 차단(설계상 중요)**: watchdog은 호스트가 스스로를 선언한 경우(`COPILOT_PARENT_PIPE_FD` / `COPILOT_PARENT_PID`)에만 무장한다. Stage-1 더블클릭 실행은 launchd(pid 1)가 부모일 수 있고 터미널 실행은 셸 종료로 고아가 될 수 있어, 무조건 무장하면 **정상 서버를 자살시킨다**. 미선언 launch는 `install_parent_watchdog` → `None`(완전 무영향).
+
+| AC | Status | Verification Command | Actual Output |
+|----|--------|----------------------|---------------|
+| AC-DEPLOY-026 ③ (force-quit self-reap, 잔여 0 + 포트 해제) | PASS | `PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring .venv/bin/python -m pytest server/tests/test_web_launcher.py -q` | `43 passed in 7.4s` — `TestSidecarSelfReap` 2건이 실제 subprocess로 증명: ① pipe EOF(부모가 write end close) → sidecar+grandchild 잔여 0, web(TCP)/OSC(UDP) 포트 재바인드 가능 ② 파이프 없는 진짜 고아(부모 SIGKILL) → `getppid()` 폴백으로 동일 결과 |
+| AC-DEPLOY-026 ③ (bounded max reap latency ≤ 1s) | PASS | 동일 실행 `TestWatchdogBounds` / `TestWatchdogPipeEOF` / `TestWatchdogGetppidFallback` | `PARENT_POLL_INTERVAL_SECONDS(0.25) ≤ MAX_REAP_LATENCY_SECONDS(1.0) ≤ 1.0` assert + 양 트리거의 실측 elapsed ≤ 1.0s assert + `poll_interval=5.0`/`0` 생성자 `ValueError`. 프로세스 레벨은 `_REAP_DEADLINE_SECONDS = 1.0 + 4.0`(감지 상한 + OS teardown)로 상한-결정적 스캔 |
+| AC-DEPLOY-026 ④ (재기동 fail-closed) | PASS | 동일 실행 `TestSidecarSelfReap::test_pipe_eof_reaps_the_group_and_frees_the_ports` | sidecar 생존 중 `require_ports_available` → `PortInUseError` 발생(조용한 포트 드리프트 0), self-reap 후 동일 호출 통과 |
+| AC-DEPLOY-026 ① 정상 종료 / ② 백엔드 크래시 | **DEFERRED-M7.4** | — | Rust `RunEvent::Exit` + setsid/Job Object 부재. 본 마일스톤에서 **검증 불가 → 주장하지 않음** |
+| AC-DEPLOY-014 (안전 불변식 — 신규 OSC 송신 경로 0) | PASS | `pytest server/tests/test_architecture.py server/tests/test_deploy_safety_invariants.py -q` | `15 passed in 6.15s`; `grep -rnE "^\s*(from\|import) server\.bridge" server/web/` → 매치 0(watchdog은 프로세스-시그널 전용) |
+
+**Regression**: full suite → `1063 passed`(baseline 1046 + 신규 17, 회귀 **0**). UI `npm test` → `57 passed`(무변경), `npm run build` → `✓ built in 343ms`. `ruff check server/` → `Found 2 errors`(둘 다 기존 `server/safety/console.py:221/258` E501, **NEW 0**). 테스트 프로세스 누수 스캔(`ps | grep watchdog_child`) → 잔여 0.
+
+**@MX tags added**: `server/web/launcher.py` `ParentLivenessWatchdog`에 `@MX:ANCHOR`(+`@MX:REASON`/`@MX:SPEC`) — 부모 신호 없이 이 프로세스 **그룹**을 무너뜨리는 유일한 경로. REASON에 양방향 위험(트리거 누락 → grandchild 포트 스쿼팅 / 오탐 무장 → 정상 서버 자살)을 명시.
+
+**환경-게이트 N/A**: Windows Job Object 경로는 Windows 러너 확보 시(현 arm64 macOS 호스트) — 위장 검증 없음.
+
+**커밋**: M7.2 구현 커밋 1건(`feat/app-deploy-file-import` 직접 커밋 — 원격 없음, push/PR 없음). 변경 파일: `server/web/launcher.py`, `server/web/serve.py`, `server/tests/test_web_launcher.py`, `server/tests/watchdog_child.py`(신규 테스트 헬퍼).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 `run_status: audit-ready` (Stage-1)

@@ -25,9 +25,11 @@ from __future__ import annotations
 import contextlib
 import os
 import secrets
+import select
 import signal
 import socket
 import sys
+import threading
 import webbrowser
 from collections.abc import Callable, Iterable, MutableMapping
 from typing import TextIO
@@ -308,3 +310,184 @@ def install_signal_handlers(
     """Register ``handler`` for SIGINT and SIGTERM (graceful shutdown on signal)."""
     register(signal.SIGINT, handler)
     register(signal.SIGTERM, handler)
+
+
+# --------------------------------------- parent-liveness watchdog (M7.2, 025/026)
+
+# The inherited read-end fd of the host's liveness pipe (PRIMARY trigger). The
+# Stage-2 Tauri host opens the pipe, keeps the write end for its own lifetime and
+# passes the read end down to the sidecar.
+PARENT_PIPE_FD_ENV = "COPILOT_PARENT_PIPE_FD"
+# The spawning host's own pid (FALLBACK trigger). Set by a host that cannot hand
+# down a pipe; it is ALSO what marks this process as a sidecar at all.
+PARENT_PID_ENV = "COPILOT_PARENT_PID"
+
+# Upper bound on how long a dead parent may go unnoticed (plan §C M7.2): the
+# residual-0 scan after a force-quit must be bounded-deterministic, not a race.
+MAX_REAP_LATENCY_SECONDS = 1.0
+# Fallback poll period. Constrained to <= MAX_REAP_LATENCY_SECONDS at construction.
+PARENT_POLL_INTERVAL_SECONDS = 0.25
+
+# POSIX re-parents an orphan to init; a ppid of 1 means the spawner is gone.
+_INIT_PID = 1
+_PIPE_READ_CHUNK = 4096
+
+
+class ParentLivenessWatchdog:
+    # @MX:ANCHOR: [AUTO] sidecar self-reap boundary — the only path that tears
+    #   this process GROUP down without a signal from the parent.
+    # @MX:REASON: A Unix force-quit of the Tauri host never fires
+    #   ``RunEvent::Exit``, so the Rust authoritative group-kill cannot run; if
+    #   this trigger is wrong the extracted-Python grandchildren survive and
+    #   squat the web / OSC ports, and the next launch fails
+    #   ``require_ports_available``. Inverse hazard: arming it on a standalone
+    #   launch (whose parent may legitimately be launchd, pid 1) would reap a
+    #   healthy server — hence the host-declaration gate in
+    #   :func:`install_parent_watchdog`.
+    # @MX:SPEC: SPEC-COPILOT-DEPLOY-001 REQ-DEPLOY-025 / AC-DEPLOY-026 ③
+    """Reap this process group once the spawning host dies (FEAS-5 Option C).
+
+    Two triggers, both bounded by :data:`MAX_REAP_LATENCY_SECONDS`:
+
+    * **PRIMARY — pipe EOF.** The host holds the write end of ``pipe_fd`` for its
+      own lifetime, so ANY death (normal exit, crash, force-quit) closes the last
+      write end and makes the read end readable-at-EOF *immediately* — no race
+      window and no polling. A non-empty read is a heartbeat: the host lives.
+    * **FALLBACK — ``getppid()`` polling.** Where no pipe was inherited, or the
+      inherited fd goes bad, a poll no wider than
+      :data:`PARENT_POLL_INTERVAL_SECONDS` detects the re-parent away from
+      ``expected_ppid`` (to init, pid 1).
+
+    On either trigger it calls ``reaper(pid)`` — by default
+    :func:`terminate_process_tree` against its OWN pid, i.e. SIGTERM-then-SIGKILL
+    over this process GROUP. The SIGTERM arrives at this process too, so the
+    installed :func:`make_shutdown_handler` still stops the console stack BEFORE
+    the group teardown completes: the graceful ordering is unchanged, only its
+    trigger is new.
+    """
+
+    def __init__(
+        self,
+        *,
+        pipe_fd: int | None = None,
+        expected_ppid: int | None = None,
+        poll_interval: float = PARENT_POLL_INTERVAL_SECONDS,
+        reaper: Callable[[int], object] = terminate_process_tree,
+        getppid: Callable[[], int] = os.getppid,
+        pid: int | None = None,
+    ) -> None:
+        if not 0 < poll_interval <= MAX_REAP_LATENCY_SECONDS:
+            raise ValueError(
+                f"poll_interval must be within (0, {MAX_REAP_LATENCY_SECONDS}] seconds "
+                "so the post-force-quit residual scan stays bounded"
+            )
+        if pipe_fd is None and expected_ppid is None:
+            raise ValueError(
+                "watchdog needs a parent pipe fd or an expected parent pid — "
+                "a launch with no declared host must never self-reap"
+            )
+        self._pipe_fd = pipe_fd
+        self._expected_ppid = expected_ppid
+        self._poll_interval = poll_interval
+        self._reaper = reaper
+        self._getppid = getppid
+        self._pid = os.getpid() if pid is None else pid
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+        self.triggered = threading.Event()
+
+    def parent_gone(self) -> bool:
+        """One non-blocking liveness probe; True once the host is gone."""
+        if self._pipe_fd is not None:
+            try:
+                ready, _, _ = select.select([self._pipe_fd], [], [], 0)
+            except (OSError, ValueError):  # inherited fd went bad -> fall back
+                self._pipe_fd = None
+            else:
+                if ready:
+                    try:
+                        chunk = os.read(self._pipe_fd, _PIPE_READ_CHUNK)
+                    except OSError:
+                        return True
+                    if not chunk:  # EOF — every write end closed
+                        return True
+        if self._expected_ppid is None:
+            return False
+        ppid = self._getppid()
+        return ppid == _INIT_PID or ppid != self._expected_ppid
+
+    def run(self) -> None:
+        """Watch until the host dies (then reap) or :meth:`stop` is called."""
+        while not self._stop.is_set():
+            if self.parent_gone():
+                self.triggered.set()
+                self._reaper(self._pid)
+                return
+            self._wait_tick()
+
+    def _wait_tick(self) -> None:
+        # Block on the pipe when there is one so EOF wakes us at once; otherwise
+        # sleep exactly one bounded poll period.
+        if self._pipe_fd is not None:
+            try:
+                select.select([self._pipe_fd], [], [], self._poll_interval)
+                return
+            except (OSError, ValueError):
+                self._pipe_fd = None
+        self._stop.wait(self._poll_interval)
+
+    def start(self) -> None:
+        """Run the watch loop on a daemon thread (never blocks shutdown)."""
+        thread = threading.Thread(
+            target=self.run, name="parent-liveness-watchdog", daemon=True
+        )
+        self._thread = thread
+        thread.start()
+
+    def stop(self, *, timeout: float | None = None) -> None:
+        """Stop watching; joins within roughly one poll period."""
+        self._stop.set()
+        thread = self._thread
+        if thread is not None:
+            thread.join(self._poll_interval * 4 if timeout is None else timeout)
+
+
+def _parse_int(raw: str | None, *, minimum: int) -> int | None:
+    """Parse a host-declared integer; None when absent, malformed or too small."""
+    if not raw:
+        return None
+    try:
+        value = int(raw)
+    except ValueError:
+        return None
+    return value if value >= minimum else None
+
+
+def install_parent_watchdog(
+    *,
+    environ: MutableMapping[str, str] | None = None,
+    **kwargs,
+) -> ParentLivenessWatchdog | None:
+    """Arm + start the watchdog when a host declared itself; else return None.
+
+    The declaration (``COPILOT_PARENT_PIPE_FD`` / ``COPILOT_PARENT_PID``) is what
+    distinguishes a Stage-2 sidecar from a Stage-1 standalone launch. A
+    double-clicked Stage-1 app is parented by launchd (pid 1) and a terminal
+    launch can be orphaned by a closing shell — arming there would reap a healthy
+    server, so an undeclared launch is left completely untouched.
+    """
+    source = os.environ if environ is None else environ
+    pipe_fd = _parse_int(source.get(PARENT_PIPE_FD_ENV), minimum=0)
+    # A pid of 0 is not a real parent — an expectation built from it would fire
+    # on the first poll.
+    expected_ppid = _parse_int(source.get(PARENT_PID_ENV), minimum=1)
+    if pipe_fd is None and expected_ppid is None:
+        return None
+    if expected_ppid is None:
+        # Keep a fallback for a pipe that goes bad mid-run — but only when this
+        # process actually has a real parent to miss.
+        current_ppid = os.getppid()
+        expected_ppid = current_ppid if current_ppid != _INIT_PID else None
+    watchdog = ParentLivenessWatchdog(pipe_fd=pipe_fd, expected_ppid=expected_ppid, **kwargs)
+    watchdog.start()
+    return watchdog
