@@ -388,6 +388,20 @@ v0.3.0 라이브 E2E 하드닝 배치(결함 #2~#6, REQ-DEPLOY-028~032/AC-DEPLOY
 
 **Frontmatter**: `updated: 2026-07-21`로 spec.md/plan.md/acceptance.md 프런트매터 갱신(본문 무변경); `status: in-progress` 유지(Stage-2 M7~M9 env-gate 이연 — 이 sync는 SPEC을 닫지 않음).
 
+### Stage-2 M7 sync (2026-07-21, `status: in-progress` 유지 — terminal close 아님)
+
+`sync_status: stage-2-m7-synced` (**Stage-2 M7 문서 동기화 — 여전히 terminal close 아님, M8/M9 Stage-2-DEFERRED**)
+`sync_complete_at: 2026-07-21`
+`sync_commit_sha: pending-backfill-stage2m7`
+
+Stage-2 M7(Tauri v2 데스크톱 셸 — M7.1~M7.5, AC-DEPLOY-024~029)을 CHANGELOG.md `[Unreleased]`에 기록하고 README.md에 신규 "Native desktop shell — build & run" 섹션을 추가했다. M7 배치 커밋 6건(`7573e60` v0.4.0 kickoff plan fold-in + plan-audit 개선, `713da64` M7.1 `/ws` 핸드셰이크, `3cc0658` M7.2 parent-liveness watchdog, `e2814fe` M7.3 SAFETY-2 이중 스캔, `77a7308` M7.4a Tauri 셸 스캐폴드+sidecar spawn, `756cab4` M7.4b Rust group-kill+Stage-2 토큰 IPC, `858b0fd` M7.5 per-send 감사 세분화) 전부 `feat/app-deploy-file-import` 브랜치에 반영됨(원격 없음 — push/PR 없음). 전체 스위트 `1189 passed` + vitest `57 passed` + `rust_scan.py` PASS(오케스트레이터 직접 검증). 라이브 검증: 패키지된 `.app`을 실제 grandMA3 onPC 2.4.2 대상으로 사용자가 직접 구동 — health `online`, 백엔드가 설정된 UDP 9005에 바인드, 콘솔 피드백 왕복 확인(발견된 통합 결함 전부 수정: sidecar 이름 해석 ENOENT, ready-line 레이스, declared-pid 신뢰, 설정-무시-부팅, 문서 중복 로드, 허위 종료 다이얼로그, sidecar 부재 패닉).
+
+**B12 self-test 결과**: (1) pre-emission grep `grep -c 'SPEC-COPILOT-DEPLOY-001' CHANGELOG.md` → 1(기존 항목 존재) — 동일 SPEC 항목에 신규 하위 불릿(`v0.4.0 Stage-2 M7`)으로 추가, 신규 최상위 항목 미생성; (2) AC count — acceptance.md `AC-DEPLOY-024~029` 6건이 CHANGELOG M7.1~M7.5 5개 하위 불릿(M7.4가 a/b로 분리되어 6건과 1:1 대응, M7.5는 027 Layer②로 재확인)과 대응; (3) file path verification — `server/web/app.py`, `server/web/launcher.py`, `server/web/messages.py`, `ui/src/useCopilotSocket.ts`, `server/tests/test_deploy_safety_invariants.py`, `packaging/verify_packaged_e2e.py`, `src-tauri/`(`Cargo.toml`, `tauri.conf.json`, `src/main.rs`, `src/sidecar.rs`, `src/tray.rs`, `capabilities/default.json`), `server/safety/console.py`, `server/safety/gate.py`, `packaging/wire_sink.py`, `packaging/stage_sidecar.py` 전부 `ls`로 실존 확인됨.
+
+**이연 항목(M8/M9 Stage-2-DEFERRED, terminal close 시 별도 kickoff)**: 자동 업데이트(M8, 매니페스트/아티팩트 호스팅 + updater 서명 키 — F6 미해소), 코드 서명/공증(M9, 서명된 sidecar의 keychain 도달성 재검토 포함). `sync_commit_sha`는 본 커밋 이후 별도 백필 커밋으로 채운다(자기참조 해시 불가 — SHA placeholder backfill exemption per spec-frontmatter-schema.md).
+
+**Frontmatter**: `updated: 2026-07-21`(변경 없음 — 이미 오늘 날짜) 유지; `status: in-progress` 유지(M8/M9 미구현 — verification-claim-integrity 원칙상 terminal completion 주장 금지).
+
 ## §F Phase 4 Mode Selection
 
 Run scope: Stage-1 only (M1~M6). Depends_on gate: SPEC-COPILOT-MVP-001 in-progress → `--ignore-deps` override (user-approved, logged `.moai/logs/depends-on-override.log`). Phase-1 plan-audit gate on v0.2.0: PASS-WITH-DEBT ~0.87 (≥0.85, Stage-1 proceed).

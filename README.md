@@ -215,3 +215,47 @@ itself still boots and serves the settings UI.
 Stage 2 (Tauri v2 native shell + Python-backend sidecar + auto-update) is
 deferred to a separate kickoff — SPEC-COPILOT-DEPLOY-001 remains
 `status: in-progress` until Stage 2 lands.
+
+## Native desktop shell — build & run (SPEC-COPILOT-DEPLOY-001 Stage 2, M7)
+
+A Tauri v2 native shell (`src-tauri/`) wraps the Stage-1 PyInstaller onedir
+backend as a **sidecar** — same `ui/dist` UI, a system tray + connection-status
+badge, and no separate terminal/venv required. M7 (shell scaffold + sidecar
+lifecycle + `/ws` handshake + cross-language safety scan) is done;
+auto-update (M8) and code signing/notarization (M9) remain Stage-2-deferred.
+
+### Build
+
+```bash
+# Prereqs (once): Tauri CLI (devDependency) + a Rust toolchain (cargo/rustc).
+npm install
+
+# One-shot: stage the PyInstaller sidecar, build the Tauri bundle, then
+# re-stage the sidecar binary into the built .app (macOS arm64, this host):
+npm run shell:build
+# -> src-tauri/target/release/bundle/macos/GrandMA3 Copilot.app
+```
+
+`npm run shell:stage` (staging only) and `npm run shell:dev` (dev-mode
+`tauri dev` against the staged sidecar) are also available; see
+`packaging/stage_sidecar.py` for the staging logic shared by both paths.
+
+### Run
+
+```bash
+open "src-tauri/target/release/bundle/macos/GrandMA3 Copilot.app"
+```
+
+The native window loads the same `ui/dist` as the Stage-1 browser mode; a
+per-launch token is injected via Tauri IPC (never written to disk) and the
+`/ws` handshake rejects any disallowed Origin or missing/incorrect token.
+Sidecar teardown is Rust-authoritative process-group kill on normal quit, with
+a backend parent-liveness watchdog as the self-reap fallback on force-quit.
+
+### Environment-gated boundaries (this host)
+
+- **Windows Job Object** (`KILL_ON_JOB_CLOSE`) teardown path: needs a Windows
+  build host; N/A here (Unix setsid/setpgid path is what's exercised).
+- **universal2 shell build** / **real notarization**: same caveats as the
+  Stage-1 packaged app above — no code change required once the build
+  environment / certificate is available.
