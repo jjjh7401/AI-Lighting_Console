@@ -180,31 +180,55 @@ class PortInUseError(RuntimeError):
 # @MX:ANCHOR: [AUTO] protocol-aware port probe — TCP and UDP are SEPARATE port
 #   spaces, so the caller must name the one it means. The OSC receive port is UDP;
 #   probing it as TCP always reports "free" no matter who holds it.
-# @MX:REASON: the SO_REUSEADDR asymmetry below is load-bearing and measured, not
-#   stylistic. Setting it on the UDP probe re-opens the preflight hole silently —
-#   the probe keeps returning True for a genuinely-held port and every other test
-#   in the suite still passes. Do not "tidy" the two branches into one.
+# @MX:REASON: ``reuse_addr`` selects WHICH QUESTION is being asked, and the two
+#   questions have different right answers against a wildcard holder. Default
+#   (True) = "can OUR binder bind here?" — the preflight, which must model the
+#   receiver's real options or it rejects a working configuration. False = "is
+#   ANYONE bound here?" — foreign-holder detection (``console_probe``), which
+#   must stay strict or a wildcard-bound console input reads as free. Flipping
+#   either call site silently inverts a live diagnosis; both are pinned by tests.
 # @MX:SPEC: SPEC-COPILOT-DEPLOY-001 REQ-DEPLOY-026
 def probe_port_available(
-    host: str, port: int, *, sock_type: int = socket.SOCK_STREAM
+    host: str,
+    port: int,
+    *,
+    sock_type: int = socket.SOCK_STREAM,
+    reuse_addr: bool = True,
 ) -> bool:
-    """Return True when ``host:port`` can be bound (i.e. is free) for ``sock_type``.
+    """Return True when ``host:port`` can be bound for ``sock_type``.
 
     ``sock_type`` selects the protocol whose port space is probed:
     ``SOCK_STREAM`` (TCP, the default — the web UI) or ``SOCK_DGRAM`` (UDP — the
     OSC feedback receive port). The two spaces are independent, so the default
     can never answer a question about the other one.
 
-    SO_REUSEADDR is set for TCP ONLY. Measured on darwin: with the option set, a
-    UDP bind to a SPECIFIC address succeeds while a WILDCARD holder owns the port
-    (and vice versa), so a SO_REUSEADDR probe reports a held receive port as free
-    — exactly the failure this probe exists to catch. A plain UDP bind reports
-    the port occupied in every holder/probe address combination.
+    ``reuse_addr`` selects the bind OPTIONS, and therefore what the answer means:
+
+    * **True (default) — model our own binder.** Both real binders set
+      SO_REUSEADDR: uvicorn for the web listener, and
+      :class:`server.bridge.osc._ReuseAddrOSCUDPServer` (``allow_reuse_address =
+      True``) for the OSC receiver. This is what :func:`require_ports_available`
+      needs: a preflight that binds MORE strictly than the server it guards
+      reports a working configuration as broken.
+    * **False — detect any holder at all.** The strictest bind, so it is the most
+      sensitive detector of a foreign listener. :mod:`server.web.console_probe`
+      needs this: it asks whether the CONSOLE's OSC input is live, and the
+      console binds the wildcard address.
+
+    Measured on darwin (holder / probe, both AF_INET UDP):
+
+    * wildcard holder + SPECIFIC probe -> EADDRINUSE without SO_REUSEADDR,
+      SUCCESS with it (whatever the holder set);
+    * SPECIFIC holder + SPECIFIC probe -> EADDRINUSE either way, because two
+      sockets cannot share one exact address:port without SO_REUSEPORT.
+
+    The second row is why the default is safe: a second copy of this app, which
+    binds the specific loopback receive address, is still caught.
     """
     with socket.socket(socket.AF_INET, sock_type) as sock:
-        if sock_type == socket.SOCK_STREAM:
-            # TCP only: without it a just-closed listener in TIME_WAIT would make
-            # a genuinely free port look occupied.
+        if reuse_addr:
+            # Also what keeps a just-closed TCP listener in TIME_WAIT from making
+            # a genuinely free web port look occupied.
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             sock.bind((host, port))
@@ -253,6 +277,12 @@ def require_ports_available(
     checked. A triple means TCP — the pre-existing meaning, so every legacy
     caller is unchanged; a UDP row (the OSC receive port) MUST pass the fourth
     element or it is silently probed in the wrong port space.
+
+    Every port here is one WE are about to bind, and every binder we have sets
+    SO_REUSEADDR — so the probe does too (:func:`probe_port_available`'s default).
+    That is what lets the app start while the console holds the same port number
+    on the wildcard address, which a grandMA3 OSC entry always does: one entry
+    has ONE port used for both directions.
 
     Port ``0`` means "let the OS assign a free port" and is skipped (nothing
     fixed to pre-check).

@@ -236,6 +236,9 @@ def _occupy_osc_receive_port():
     :class:`server.bridge.osc._ReuseAddrOSCUDPServer` and sets SO_REUSEADDR
     before binding (the M18 same-port rebind strategy depends on it). A probe
     that only survives a *plain* holder proves nothing about the real one.
+
+    Binds the SPECIFIC loopback address — this is the "a second copy of OUR OWN
+    app is already running" shape, which the preflight must keep catching.
     """
     from pythonosc.dispatcher import Dispatcher
 
@@ -248,6 +251,25 @@ def _occupy_osc_receive_port():
         server.server_close()
 
 
+@contextlib.contextmanager
+def _occupy_wildcard_udp_port():
+    """Hold a UDP port the way onPC holds one — bound to the WILDCARD address.
+
+    Measured against the live console (``lsof -nP -iUDP``): grandMA3 onPC's OSC
+    entries appear as ``UDP *:8000`` / ``UDP *:9000``, i.e. ``0.0.0.0``. A
+    grandMA3 OSC entry has ONE port used for BOTH directions, so the port the
+    console replies THROUGH is simultaneously an input the console holds — and
+    the app must still be able to listen on it.
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(("0.0.0.0", 0))
+    try:
+        yield sock.getsockname()[1]
+    finally:
+        sock.close()
+
+
 class TestOscReceivePortIsProbedAsUdp:
     """The OSC receive port is UDP; a TCP probe sails straight past it."""
 
@@ -258,7 +280,12 @@ class TestOscReceivePortIsProbedAsUdp:
         with _occupy_osc_receive_port() as port:
             assert launcher.probe_port_available("127.0.0.1", port) is True
 
-    def test_a_udp_probe_sees_the_held_receive_port(self):
+    def test_a_udp_probe_sees_a_duplicate_instance_holding_the_receive_port(self):
+        # The case the preflight exists for: a second copy of OUR OWN app already
+        # holds the SPECIFIC loopback receive address. Measured on darwin, that
+        # collision survives SO_REUSEADDR on both sides (two sockets cannot share
+        # one exact addr:port without SO_REUSEPORT), so modelling the receiver's
+        # real bind options does NOT weaken this detection.
         with _occupy_osc_receive_port() as port:
             assert (
                 launcher.probe_port_available(
@@ -302,30 +329,129 @@ class TestOscReceivePortIsProbedAsUdp:
             [("127.0.0.1", 0, "OSC feedback listen", socket.SOCK_DGRAM)]
         )
 
-    def test_the_udp_probe_must_not_set_so_reuseaddr(self):
-        # MEASURED on darwin: SO_REUSEADDR lets a *specific*-address UDP bind
-        # succeed while a WILDCARD holder owns the port (and vice versa), so a
-        # SO_REUSEADDR probe reports a genuinely-held port as free. The TCP probe
-        # keeps the option (it needs it against TIME_WAIT); the UDP probe must
-        # not inherit it. Guards a copy-paste that would silently re-open the
-        # preflight hole while every other test here still passed.
+
+# ------------------------------------------- preflight models the REAL bind (026)
+
+
+class TestThePreflightModelsTheReceiversActualBind:
+    """The probe must answer "can OUR receiver bind here?", not "is the address
+    pristine?".
+
+    A grandMA3 OSC entry has ONE port for BOTH directions, so the port the
+    console replies through is a port the console also holds — as a WILDCARD
+    bind (measured live: ``UDP *:9000``). The real receiver
+    (:class:`server.bridge.osc._ReuseAddrOSCUDPServer`, ``allow_reuse_address =
+    True``) coexists with that wildcard holder by binding the SPECIFIC loopback
+    address. A preflight that binds more strictly than the receiver it guards
+    rejects a configuration that demonstrably works, and the app never starts.
+    """
+
+    def test_a_wildcard_holder_does_not_block_the_receive_port_preflight(self):
+        # The exact live shape: onPC holds *:<port>, the app is configured to
+        # receive on the same number. The real receiver binds fine, so the
+        # preflight must report the port available.
+        with _occupy_wildcard_udp_port() as port:
+            assert (
+                launcher.probe_port_available(
+                    "127.0.0.1", port, sock_type=socket.SOCK_DGRAM
+                )
+                is True
+            )
+
+    def test_require_ports_available_admits_a_wildcard_held_receive_port(self):
+        with _occupy_wildcard_udp_port() as port:
+            launcher.require_ports_available(
+                [("127.0.0.1", port, "OSC feedback listen", socket.SOCK_DGRAM)]
+            )
+
+    def test_the_real_receiver_can_bind_everything_the_preflight_admits(self):
+        # The load-bearing equivalence, asserted against the PRODUCTION receiver
+        # rather than a re-statement of the option flags: whatever the preflight
+        # calls free, _ReuseAddrOSCUDPServer must actually be able to bind.
         from pythonosc.dispatcher import Dispatcher
 
         from server.bridge.osc import _ReuseAddrOSCUDPServer
 
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
-            probe.bind(("127.0.0.1", 0))
-            port = probe.getsockname()[1]
+        with _occupy_wildcard_udp_port() as port:
+            assert (
+                launcher.probe_port_available(
+                    "127.0.0.1", port, sock_type=socket.SOCK_DGRAM
+                )
+                is True
+            )
+            server = _ReuseAddrOSCUDPServer(("127.0.0.1", port), Dispatcher())
+            server.server_close()
+
+    def test_a_strict_probe_is_still_available_for_foreign_holder_detection(self):
+        # The opt-out exists because "can I bind here?" and "is anyone bound
+        # here?" are different questions. console_probe.py asks the second one
+        # and MUST keep the strict bind, or a wildcard-bound console input reads
+        # as free.
+        with _occupy_wildcard_udp_port() as port:
+            assert (
+                launcher.probe_port_available(
+                    "127.0.0.1", port, sock_type=socket.SOCK_DGRAM, reuse_addr=False
+                )
+                is False
+            )
+
+    def test_the_udp_preflight_must_set_so_reuseaddr(self):
+        # SUPERSEDES an earlier test that asserted the OPPOSITE. That test read
+        # the same darwin measurement (SO_REUSEADDR lets a specific-address UDP
+        # bind succeed past a WILDCARD holder) as evidence of a probe hole, and
+        # concluded the UDP probe must bind strictly. The conclusion was wrong:
+        # the thing the probe GUARDS — _ReuseAddrOSCUDPServer — sets the very
+        # option the probe was denied, so the strict probe was stricter than
+        # reality and rejected a configuration that works. It is what stopped the
+        # app from starting against a console holding *:9000.
+        #
+        # What is NOT lost: a duplicate instance of this app binds the SPECIFIC
+        # loopback address, and that collision is EADDRINUSE with SO_REUSEADDR on
+        # both sides (measured) — asserted by
+        # test_a_udp_probe_sees_a_duplicate_instance_holding_the_receive_port.
+        from pythonosc.dispatcher import Dispatcher
+
+        from server.bridge.osc import _ReuseAddrOSCUDPServer
+
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as scratch:
+            scratch.bind(("127.0.0.1", 0))
+            port = scratch.getsockname()[1]
         server = _ReuseAddrOSCUDPServer(("0.0.0.0", port), Dispatcher())
         try:
             assert (
                 launcher.probe_port_available(
                     "127.0.0.1", port, sock_type=socket.SOCK_DGRAM
                 )
-                is False
-            ), "the UDP probe set SO_REUSEADDR — a wildcard holder reads as free"
+                is True
+            ), "the UDP preflight dropped SO_REUSEADDR — it now blocks a working start"
         finally:
             server.server_close()
+
+    def test_the_startup_preflight_asks_the_probe_for_our_binders_options(self):
+        # Caller-boundary assertion: require_ports_available must not quietly
+        # opt into the strict bind for the UDP row, which would restore the
+        # startup false positive with every probe-level test still green.
+        seen: list[dict] = []
+
+        def _spy(host, port, **kwargs):
+            seen.append(kwargs)
+            return True
+
+        original = launcher.probe_port_available
+        launcher.probe_port_available = _spy
+        try:
+            launcher.require_ports_available(
+                [
+                    ("127.0.0.1", 8765, "web UI", socket.SOCK_STREAM),
+                    ("127.0.0.1", 9000, "OSC feedback listen", socket.SOCK_DGRAM),
+                ]
+            )
+        finally:
+            launcher.probe_port_available = original
+        assert seen == [
+            {"sock_type": socket.SOCK_STREAM},
+            {"sock_type": socket.SOCK_DGRAM},
+        ], "the preflight passed a reuse_addr override — it must take the default"
 
 
 # ------------------------------------------------------------------- browser open

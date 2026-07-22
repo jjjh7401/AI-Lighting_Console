@@ -50,6 +50,10 @@ PROJECT_ROOT = SERVER_DIR.parent
 _OSC_IMPORT_ROOTS = ("pythonosc", "server.bridge")
 # python-osc client constructors (the concrete "I will send UDP to a console" call).
 _UDP_CLIENT_NAMES = frozenset({"SimpleUDPClient", "udp_client"})
+# Socket methods that put BYTES ON THE WIRE. A raw socket that only binds is a
+# probe; a raw socket that transmits is a send surface, whatever it is called.
+# ``connect`` is included because it selects a peer for a later bare ``send``.
+_TRANSMIT_ATTRS = frozenset({"sendto", "sendall", "sendmsg", "send", "connect"})
 
 
 def _scan_send_surface_markers(source: str, filename: str) -> set[str]:
@@ -60,6 +64,11 @@ def _scan_send_surface_markers(source: str, filename: str) -> set[str]:
       * ``udp_client``  — instantiates a python-osc UDP client (SimpleUDPClient / udp_client).
       * ``raw_socket``  — creates a raw ``socket.socket(...)`` (any family — could be
                           a UDP OSC send OR a TCP port probe; the allowlist distinguishes).
+      * ``socket_transmit`` — calls a socket method that puts bytes on the wire
+                          (``sendto``/``sendall``/``sendmsg``/``send``/``connect``).
+                          This is what separates a bind-only probe from a send
+                          surface, and it is what the raw-socket exemption is
+                          conditioned on.
 
     AST-based: docstrings and comments that merely NAME these symbols do not match
     (they are not Import/Call nodes), so prose disclaimers never false-positive.
@@ -92,6 +101,8 @@ def _scan_send_surface_markers(source: str, filename: str) -> set[str]:
                     markers.add("raw_socket")
                 if func.attr in _UDP_CLIENT_NAMES:
                     markers.add("udp_client")
+                if func.attr in _TRANSMIT_ATTRS:
+                    markers.add("socket_transmit")
             elif isinstance(func, ast.Name) and func.id in _UDP_CLIENT_NAMES:
                 markers.add("udp_client")
     return markers
@@ -128,14 +139,22 @@ _NAMED_TOOL_EXEMPTIONS = frozenset(
 )
 
 # ③ raw-socket carve-out: modules permitted to create a raw socket for a
-# NON-OSC-send purpose. launcher.py opens a TCP (SOCK_STREAM) socket to *probe*
-# whether the web/OSC port is already in use (REQ-DEPLOY-026 fail-loud) and to
-# tear listeners down — it never sends an OSC command. This is a bind/probe, not
-# a send. The exemption is file-exact so a new module cannot smuggle a raw UDP
-# send through the same allowance.
+# NON-OSC-send purpose — they BIND, they never transmit.
+#
+#   * launcher.py — the port-in-use preflight (REQ-DEPLOY-026 fail-loud) and
+#     listener teardown.
+#   * reply_discovery.py — listens on a bounded candidate set to find where the
+#     console is actually replying (REQ-DEPLOY-018/026 follow-up). Its one ping
+#     is the GATE's own heartbeat, injected: this module opens no transmitting
+#     socket of its own.
+#
+# The exemption is file-exact AND conditioned on the absence of a
+# ``socket_transmit`` marker, so it cannot be used to smuggle a raw send — which
+# a bare file list could. Adding a path here does not buy the right to transmit.
 _RAW_SOCKET_EXEMPTIONS = frozenset(
     {
-        "server/web/launcher.py",  # TCP SOCK_STREAM port-in-use probe (not a UDP send)
+        "server/web/launcher.py",  # port-in-use probe + teardown (bind only)
+        "server/web/reply_discovery.py",  # reply-port listeners (bind only)
     }
 )
 
@@ -162,14 +181,23 @@ def _classify_offense(rel: str, markers: set[str]) -> str | None:
 
     * osc_import / udp_client → allowed ONLY on the OSC-send-surface allowlist.
     * raw_socket → allowed on the OSC-send-surface allowlist OR the raw-socket
-      (TCP-probe) exemption; anything else creating a raw socket is suspect.
+      (bind-only) exemption; anything else creating a raw socket is suspect.
+    * raw_socket + socket_transmit → an exempted module that TRANSMITS is a new
+      send surface regardless of its path, and fails closed. The exemption buys
+      the right to bind, never the right to send.
     """
     if ("osc_import" in markers or "udp_client" in markers) and not _on_osc_surface_allowlist(rel):
         return f"{rel} enters the OSC send surface {sorted(markers)} but is not on the allowlist"
-    if "raw_socket" in markers and not (
-        _on_osc_surface_allowlist(rel) or rel in _RAW_SOCKET_EXEMPTIONS
-    ):
-        return f"{rel} creates a raw socket but is on neither the OSC nor the TCP-probe allowlist"
+    if "raw_socket" in markers and not _on_osc_surface_allowlist(rel):
+        if rel not in _RAW_SOCKET_EXEMPTIONS:
+            return (
+                f"{rel} creates a raw socket but is on neither the OSC nor the bind-only allowlist"
+            )
+        if "socket_transmit" in markers:
+            return (
+                f"{rel} is exempted to BIND a raw socket but transmits on one "
+                f"{sorted(markers)} — that is a new OSC send surface"
+            )
     return None
 
 
@@ -343,6 +371,38 @@ class TestAcDeploy014OscSendSurfaceAllowlist:
         markers = _scan_send_surface_markers(source, "server/web/launcher.py")
         assert "raw_socket" in markers
         assert "osc_import" not in markers and "udp_client" not in markers
+
+    def test_every_bind_only_exemption_really_only_binds(self):
+        # The exemption's whole justification. reply_discovery.py binds UDP (not
+        # TCP like the launcher), so "it is a TCP probe" no longer carries the
+        # argument for the list as a whole — "it never transmits" does, and it is
+        # asserted here rather than asserted in prose.
+        for rel in sorted(_RAW_SOCKET_EXEMPTIONS):
+            markers = _scan_send_surface_markers(
+                (PROJECT_ROOT / rel).read_text(encoding="utf-8"), rel
+            )
+            assert "socket_transmit" not in markers, (
+                f"{rel} is exempted to BIND a raw socket but transmits on one"
+            )
+            assert "osc_import" not in markers and "udp_client" not in markers, rel
+
+    def test_the_bind_only_exemption_cannot_be_used_to_smuggle_a_send(self):
+        # Positive control for the strengthened rule: the SAME exempted path is
+        # rejected the moment it transmits. Without this, adding a file to
+        # _RAW_SOCKET_EXEMPTIONS would silently grant it a send surface.
+        exempted = sorted(_RAW_SOCKET_EXEMPTIONS)[0]
+        binding_only = "import socket\ndef probe():\n    socket.socket().bind(('h', 1))\n"
+        transmitting = (
+            "import socket\n"
+            "def leak():\n"
+            "    s = socket.socket()\n"
+            "    s.sendto(b'/copilot/cmd', ('127.0.0.1', 8000))\n"
+        )
+        assert (
+            _classify_offense(exempted, _scan_send_surface_markers(binding_only, exempted)) is None
+        )
+        offense = _classify_offense(exempted, _scan_send_surface_markers(transmitting, exempted))
+        assert offense is not None and "send surface" in offense
 
     def test_scan_fails_closed_on_a_synthetic_bypass_module(self):
         # Demonstrate fail-closed WITHOUT touching the real tree: a fabricated

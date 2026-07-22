@@ -49,6 +49,16 @@ export interface ReviewRequestView {
   scan: ScanReportView;
 }
 
+/**
+ * The console-OSC-input reachability verdict carried on `status`.
+ *
+ * Three values, not two: "undetermined" (a remote console whose port cannot be
+ * bound from here, or a server that did not probe) must stay distinguishable
+ * from "silent". Collapsing them would show a confident wrong cause again —
+ * the exact defect the verdict exists to remove.
+ */
+export type ConsoleInput = "listening" | "silent" | "undetermined";
+
 export type ServerEvent =
   | {
       v: 1;
@@ -78,6 +88,14 @@ export type ServerEvent =
       health: string;
       live_lock: boolean;
       executions_blocked: boolean;
+      // Additive (protocol stays v1) — the console-OSC-input bind verdict.
+      // Absent from a server that does not probe; treated as "undetermined".
+      console_input?: ConsoleInput;
+      // Additive — the reply-port MISMATCH pair, present together or not at all:
+      // a console reply was observed on `reply_port` while the app listens on
+      // `receive_port`. Reported, never applied (REQ-DEPLOY-026).
+      reply_port?: number | null;
+      receive_port?: number | null;
     }
   | { v: 1; type: "proposal"; commands: string[]; reasons: string[] }
   | { v: 1; type: "error"; message: string; kind: string }
@@ -164,6 +182,9 @@ export interface StatusState {
   health: string;
   live_lock: boolean;
   executions_blocked: boolean;
+  console_input?: ConsoleInput;
+  reply_port?: number | null;
+  receive_port?: number | null;
 }
 
 export interface PendingApproval {
@@ -247,6 +268,9 @@ export function reduceServerEvent(state: UiState, event: ServerEvent): UiState {
           health: event.health,
           live_lock: event.live_lock,
           executions_blocked: event.executions_blocked,
+          console_input: event.console_input,
+          reply_port: event.reply_port,
+          receive_port: event.receive_port,
         },
       };
     case "proposal":
@@ -307,6 +331,66 @@ export const HEALTH_GUIDANCE: Record<string, string> = {
     "CopilotResponder를 onPC에서 로드하고, onPC OSC 출력을 앱의 피드백 수신 포트로 설정해 주세요.",
 };
 
-export function healthGuidance(health: string): string | null {
+// console_offline is reached by TWO different situations: onPC is genuinely
+// down, and onPC is up with its OSC input live but the responder plugin — the
+// only thing that ever sends — has stopped. The backend's bind probe tells them
+// apart; without this refinement the second one is sent to inspect the two
+// subsystems that are already healthy while the real cause goes unnamed.
+// Claim discipline: the port sentence states what was actually observed (the
+// port is held), and the cause stays hedged — a held port proves something is
+// listening, not that it is onPC.
+export const CONSOLE_OFFLINE_RESPONDER_GUIDANCE =
+  "콘솔 OSC 입력 포트는 열려 있습니다 — CopilotResponder 플러그인이 실행 중이 아닐 수 있습니다. " +
+  "onPC의 Plugins 풀에서 CopilotResponder를 실행해 주세요.";
+
+// The third console_offline cause. A grandMA3 OSC entry has ONE port used for
+// BOTH directions, so the port the console replies THROUGH lives in the
+// console's OSC table while the port the app listens ON lives in the app's
+// settings — two numbers, two places, kept in sync by hand. When they drift the
+// link goes quiet with every subsystem healthy, and the responder message above
+// would be wrong in a NEW way: the plugin is running, it is just answering
+// somewhere nobody is listening.
+//
+// Both numbers are named and both fixes are offered, because the app must not
+// change its own effective port (REQ-DEPLOY-026) — the operator decides whether
+// the console moves or the app does.
+export function consoleOfflineReplyPortGuidance(replyPort: number, receivePort: number): string {
+  return (
+    `콘솔이 응답을 다른 포트로 보내고 있습니다 — 콘솔은 ${replyPort}번 포트로 회신하는데 ` +
+    `앱은 ${receivePort}번 포트에서 수신 대기 중입니다. ` +
+    `onPC의 OSC 설정에서 해당 항목 Port를 ${receivePort}(으)로 맞추거나, ` +
+    `앱 설정(Settings)의 수신 포트를 ${replyPort}(으)로 바꾼 뒤 다시 시작해 주세요.`
+  );
+}
+
+/**
+ * Cause+action guidance for a health state, refined by the backend's diagnosis.
+ *
+ * Ordered most-specific first. A reply-port mismatch implies the console's input
+ * IS listening, so both refinements apply at once — but only the mismatch names
+ * the real cause, and the responder message would misattribute it.
+ *
+ * Every argument is optional: absent / "undetermined" / "silent" / no observed
+ * reply port all keep the message that is correct in that case, so a server that
+ * does not diagnose behaves exactly as before.
+ */
+export function healthGuidance(
+  health: string,
+  consoleInput?: ConsoleInput,
+  replyPort?: number | null,
+  receivePort?: number | null,
+): string | null {
+  if (health === "console_offline") {
+    if (
+      typeof replyPort === "number" &&
+      typeof receivePort === "number" &&
+      replyPort !== receivePort
+    ) {
+      return consoleOfflineReplyPortGuidance(replyPort, receivePort);
+    }
+    if (consoleInput === "listening") {
+      return CONSOLE_OFFLINE_RESPONDER_GUIDANCE;
+    }
+  }
   return HEALTH_GUIDANCE[health] ?? null;
 }

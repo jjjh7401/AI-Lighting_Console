@@ -22,6 +22,14 @@ PROTOCOL_VERSION = 1
 # additive extension (deploy review) — protocol version stays 1.
 CLIENT_MESSAGE_TYPES = ("chat", "approval_decision", "review_decision", "lock", "status_request")
 
+# ``status.console_input`` — the console-OSC-input reachability verdict carried
+# alongside ``health`` so the UI can name the RIGHT cause for a console_offline
+# state. Three values, deliberately NOT two: collapsing "we could not tell" into
+# "nothing is listening" is how a confidently-wrong message gets shown again.
+CONSOLE_INPUT_LISTENING = "listening"  # the port is held — the console's OSC input is live
+CONSOLE_INPUT_SILENT = "silent"  # the port is free — nothing is listening there
+CONSOLE_INPUT_UNDETERMINED = "undetermined"  # not determined (remote console / not probed)
+
 
 class ProtocolError(ValueError):
     """A client message violated the protocol (rejected before any handling)."""
@@ -143,10 +151,39 @@ def review_resolved_event(*, request_id: str, approved: bool) -> dict:
     return _event("review_resolved", request_id=request_id, approved=approved)
 
 
-def status_event(*, health: str, live_lock: bool, executions_blocked: bool) -> dict:
-    """Gate-truth status surface (REQ-MVP-030/031 UI half + lock state)."""
+def status_event(
+    *,
+    health: str,
+    live_lock: bool,
+    executions_blocked: bool,
+    console_input: str = CONSOLE_INPUT_UNDETERMINED,
+    reply_port: int | None = None,
+    receive_port: int | None = None,
+) -> dict:
+    """Gate-truth status surface (REQ-MVP-030/031 UI half + lock state).
+
+    ``console_input``, ``reply_port`` and ``receive_port`` are ADDITIVE fields
+    (protocol version stays 1, same call as the M7 ``review_decision``
+    extension): purely informational diagnosis carriers with safe defaults, so a
+    client that ignores them behaves exactly as before and a server that never
+    diagnoses emits the pre-existing meaning. They NEVER alter ``health`` or
+    ``executions_blocked`` — the gate's verdict is untouched; only the cause the
+    UI names for it becomes accurate.
+
+    ``reply_port``/``receive_port`` are the reply-port MISMATCH pair, and they
+    appear together or not at all: a console reply was observed on
+    ``reply_port`` while the app listens on ``receive_port``. Reporting both
+    numbers, rather than silently switching to the observed one, is what keeps
+    REQ-DEPLOY-026 intact — the operator decides which of the two moves.
+    """
     return _event(
-        "status", health=health, live_lock=live_lock, executions_blocked=executions_blocked
+        "status",
+        health=health,
+        live_lock=live_lock,
+        executions_blocked=executions_blocked,
+        console_input=console_input,
+        reply_port=reply_port,
+        receive_port=receive_port,
     )
 
 

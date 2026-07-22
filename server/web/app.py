@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -77,6 +78,15 @@ class WebDeps:
     # M7.1 (REQ-DEPLOY-002a): the /ws Origin+token gate. ``None`` = no gate,
     # which is the pre-M7.1 behaviour dev runs and unit tests compose.
     handshake: HandshakePolicy | None = None
+    # REQ-DEPLOY-018 follow-up: bind-probe the console's OSC input port so a
+    # console_offline state can name the RIGHT cause. ``None`` = no probe, and
+    # the status surface reports ``undetermined`` (the pre-existing meaning).
+    console_input_probe: Callable[[], str] | None = None
+    # REQ-DEPLOY-018/026 follow-up: the third console_offline cause — the console
+    # replying to a port the app does not listen on. ``None`` = no diagnosis, and
+    # the status surface omits both port numbers (the pre-existing meaning).
+    # Non-blocking by contract: the status frame is built on the event loop.
+    reply_port_probe: Callable[[], object] | None = None
     status_listeners: set = field(default_factory=set)
 
 
@@ -202,6 +212,8 @@ def create_app(deps: WebDeps) -> FastAPI:
             rig_paths=deps.rig_paths,
             review_channel=deps.review_channel,
             deploy_pipeline=deps.deploy_pipeline,
+            console_input_probe=deps.console_input_probe,
+            reply_port_probe=deps.reply_port_probe,
         )
 
         def push_status() -> None:

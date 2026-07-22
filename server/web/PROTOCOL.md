@@ -29,7 +29,7 @@ Malformed frames (bad JSON, wrong `v`, unknown `type`, missing fields) yield an
 
 | type | fields | meaning |
 |---|---|---|
-| `status` | `health: "online"\|"console_offline"\|"responder_degraded"`, `live_lock: bool`, `executions_blocked: bool` | Gate-truth status (sent on connect, on change via the heartbeat loop, after lock toggles, and on `status_request`). |
+| `status` | `health: "online"\|"console_offline"\|"responder_degraded"`, `live_lock: bool`, `executions_blocked: bool`, `console_input: "listening"\|"silent"\|"undetermined"`, `reply_port: int\|null`, `receive_port: int\|null` | Gate-truth status (sent on connect, on change via the heartbeat loop, after lock toggles, and on `status_request`). `console_input` and the `reply_port`/`receive_port` pair are additive diagnosis fields — see below. |
 | `chat_response` | `status: "ok"\|"retries_exhausted"\|"loop_limit"`, `summary: string` (Korean, server-composed), `text: string` (model's final Korean text), `commands: CommandView[]` | One instruction's final report (REQ-MVP-022). |
 | `approval_request` | `request_id: string`, `items: [{command, risk_reasons[], warnings[]}]`, `actions: ["approve","reject"]` | A held risky bundle (REQ-MVP-021). `warnings` carries e.g. the unspecified-target warning (REQ-MVP-036b). |
 | `approval_resolved` | `request_id`, `approved: bool` | Decision echo — retire the approval card. |
@@ -39,6 +39,75 @@ Malformed frames (bad JSON, wrong `v`, unknown `type`, missing fields) yield an
 | `error` | `message: string` (Korean), `kind: string` | User-facing error. `kind` ∈ normalized provider kinds (`rate_limit`, `auth`, `invalid_request`, `connection`, `server`, `malformed_response`, `unknown`) + `unexpected` + `protocol`. |
 | `busy` | `message: string` | An instruction is already in flight. |
 | `notice` | `message: string` | Standalone Korean notice (e.g. showfile-backup failure, REQ-MVP-034). |
+
+### status.console_input (additive, protocol stays v1)
+
+`console_offline` is reached by two different situations that the health monitor
+cannot separate: onPC is genuinely down, and onPC is up with its OSC input live
+but the responder plugin — the only thing that ever sends — has stopped. Both
+produce zero inbound traffic. `console_input` carries the missing discriminator:
+a **bind attempt** (never a send) on the console's configured OSC input port.
+
+| value | meaning |
+|---|---|
+| `listening` | the port is held — something IS listening on the console's OSC input |
+| `silent` | the port is free — nothing is listening there |
+| `undetermined` | not determined: a non-loopback `console_host` (you cannot bind a remote machine's port), a state other than `console_offline` (nothing to disambiguate), no probe wired, or a probe failure |
+
+Rules:
+
+- **Diagnosis only.** `console_input` never changes `health`, never changes
+  `executions_blocked`, and never changes what the safety gate blocks. It exists
+  so the UI can name the right cause for a state the gate already decided.
+- **Three values, not two.** `undetermined` must stay distinguishable from
+  `silent`; collapsing them would show a confidently wrong cause for a remote
+  console. On `undetermined` the client falls back to the base guidance.
+- **Additive, `v` stays 1** (same call as the M7 `review_decision` extension):
+  the field is informational, defaults to `undetermined`, and a client that
+  ignores it behaves exactly as before. Only breaking changes bump `v`.
+- **A held port proves "something is listening", not "onPC is listening."** The
+  client's wording is hedged accordingly.
+
+### status.reply_port / status.receive_port (additive, protocol stays v1)
+
+A grandMA3 OSC entry has **one port used for both directions** (the console's
+In&Out → OSC table has a single `Port` column — there is no separate destination
+port). So the port the console replies THROUGH lives in the console's OSC table
+while the port the app listens ON lives in the app's settings: two numbers, two
+places, synchronised by hand, with nothing to signal a drift. A drift makes the
+link go quiet while every subsystem is healthy — a third, previously unnamed
+cause of `console_offline`.
+
+When the app has observed a console reply arriving on a port other than the one
+it listens on, it reports **both numbers**:
+
+| field | meaning |
+|---|---|
+| `reply_port` | the port a `/copilot/*` reply was actually observed on |
+| `receive_port` | the port the app is configured to listen on |
+
+Rules:
+
+- **Present together or not at all.** Both are `null` unless a mismatch was
+  actually observed. `reply_port == receive_port` is not a mismatch and is never
+  reported.
+- **Reported, never applied (REQ-DEPLOY-026).** The app does not switch to the
+  observed port. Silently adopting it would put the settings screen and the
+  runtime out of agreement with nothing on screen to say so, and would mask a
+  genuinely misconfigured console instead of correcting it. The client names both
+  numbers and both fixes; the operator chooses which side moves.
+- **Diagnosis only**, on the same terms as `console_input`: no effect on
+  `health`, on `executions_blocked`, or on what the gate blocks.
+- **Discovery is bounded and gated.** It runs only while `health` is
+  `console_offline` AND `console_input` is `listening`, at most once per cooldown
+  window, over a small explicit set of ports near `receive_port`. The console's
+  own input port is excluded — binding it would swallow the app's outbound
+  commands. The one ping it needs is the gate's existing heartbeat, so no new OSC
+  send surface is opened (AC-MVP-019 / AC-DEPLOY-027).
+- **Absence is not proof of correctness.** Discovery only learns where a reply
+  lands. If the responder is not running, or the console replies outside the
+  candidate set, nothing is observed and nothing is reported — the client then
+  falls back to the `console_input` guidance.
 
 ### CommandView
 

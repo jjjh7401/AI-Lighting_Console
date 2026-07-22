@@ -64,16 +64,16 @@ def _snapshot(path: str, names: list[str], numbers: list[int] | None = None) -> 
     }
 
 
-# Standard test showfile snapshot fixture (AC-MVP-025) — patch/group/preset vocab.
+# Standard test showfile snapshot fixture (AC-MVP-025) — fixture/group/preset-pool vocab.
 _RIG_TREE = {
-    DEFAULT_RIG_CONTEXT_PATHS["patch"]: _snapshot(
-        DEFAULT_RIG_CONTEXT_PATHS["patch"], ["Spot 1", "Wash 1", "Wash 2"]
+    DEFAULT_RIG_CONTEXT_PATHS["fixtures"]: _snapshot(
+        DEFAULT_RIG_CONTEXT_PATHS["fixtures"], ["Spot 1", "Wash 1", "Wash 2"]
     ),
     DEFAULT_RIG_CONTEXT_PATHS["groups"]: _snapshot(
         DEFAULT_RIG_CONTEXT_PATHS["groups"], ["Vocals", "Wash All"]
     ),
-    DEFAULT_RIG_CONTEXT_PATHS["presets"]: _snapshot(
-        DEFAULT_RIG_CONTEXT_PATHS["presets"], ["Warm Wash", "Cool Cyc"]
+    DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]: _snapshot(
+        DEFAULT_RIG_CONTEXT_PATHS["preset_pools"], ["Dimmer", "Color"]
     ),
 }
 
@@ -81,14 +81,14 @@ _RIG_TREE = {
 # 1, 2, 7 (NOT 1, 2, 3). This is the exact shape that made the model map "the
 # 3rd item" onto a non-existent "Group 3" → "Illegal object" (live-demo #3).
 _GAPPED_RIG_TREE = {
-    DEFAULT_RIG_CONTEXT_PATHS["patch"]: _snapshot(
-        DEFAULT_RIG_CONTEXT_PATHS["patch"], ["Spot 1", "Wash 1", "Wash 2"], numbers=[1, 4, 5]
+    DEFAULT_RIG_CONTEXT_PATHS["fixtures"]: _snapshot(
+        DEFAULT_RIG_CONTEXT_PATHS["fixtures"], ["Spot 1", "Wash 1", "Wash 2"], numbers=[1, 4, 5]
     ),
     DEFAULT_RIG_CONTEXT_PATHS["groups"]: _snapshot(
         DEFAULT_RIG_CONTEXT_PATHS["groups"], ["Vocals", "Wash All", "Big Spot"], numbers=[1, 2, 7]
     ),
-    DEFAULT_RIG_CONTEXT_PATHS["presets"]: _snapshot(
-        DEFAULT_RIG_CONTEXT_PATHS["presets"], ["Warm Wash", "Cool Cyc"], numbers=[3, 9]
+    DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]: _snapshot(
+        DEFAULT_RIG_CONTEXT_PATHS["preset_pools"], ["Dimmer", "Color"], numbers=[1, 4]
     ),
 }
 
@@ -311,6 +311,29 @@ class TestDeployPluginTool:
         assert outcome.status == "rejected"  # human decision — not a retry
 
 
+class TestRigContextPaths:
+    """The default paths MUST address objects that actually exist on 2.4.2."""
+
+    def test_defaults_match_the_live_console_object_tree(self):
+        # Live-verified against grandMA3 onPC 2.4.2 (state queries on the real
+        # console): "Patch/Fixtures" and "DataPool/Presets" DO NOT EXIST — both
+        # reply "path segment not found" — while "DataPool/Groups" resolves.
+        # The patched fixtures live under the STAGE ("Patch/Stages/1/Fixtures",
+        # 19 children) and the preset TYPES under "DataPool/PresetPools" (14
+        # children). Pinning the exact mapping so the two dead paths cannot be
+        # reintroduced: a wrong path only degrades to a soft per-section error
+        # that nobody reads, which is how it survived unnoticed.
+        assert DEFAULT_RIG_CONTEXT_PATHS == {
+            "fixtures": "Patch/Stages/1/Fixtures",
+            "groups": "DataPool/Groups",
+            "preset_pools": "DataPool/PresetPools",
+        }
+
+    def test_the_two_dead_paths_are_never_defaults_again(self):
+        dead = {"Patch/Fixtures", "DataPool/Presets", "Patch/Layers"}
+        assert dead.isdisjoint(set(DEFAULT_RIG_CONTEXT_PATHS.values()))
+
+
 class TestGetRigContext:
     def test_exposes_real_pool_number_and_name(self):
         # AC-MVP-025 + AC-DEPLOY-020 ①: each object exposes its REAL pool
@@ -318,7 +341,7 @@ class TestGetRigContext:
         registry = _registry()
         execution = registry.dispatch(_call("get_rig_context"))
         summary = json.loads(execution.result.content)
-        assert summary["patch"] == [
+        assert summary["fixtures"] == [
             {"no": 1, "name": "Spot 1"},
             {"no": 2, "name": "Wash 1"},
             {"no": 3, "name": "Wash 2"},
@@ -327,9 +350,9 @@ class TestGetRigContext:
             {"no": 1, "name": "Vocals"},
             {"no": 2, "name": "Wash All"},
         ]
-        assert summary["presets"] == [
-            {"no": 1, "name": "Warm Wash"},
-            {"no": 2, "name": "Cool Cyc"},
+        assert summary["preset_pools"] == [
+            {"no": 1, "name": "Dimmer"},
+            {"no": 2, "name": "Color"},
         ]
         assert execution.result.is_error is False
 
@@ -356,33 +379,112 @@ class TestGetRigContext:
         # A child lacking ``i`` degrades to a name-only entry rather than
         # crashing or emitting a null pool number.
         tree = {
-            DEFAULT_RIG_CONTEXT_PATHS["patch"]: {
+            DEFAULT_RIG_CONTEXT_PATHS["fixtures"]: {
                 "v": 1,
                 "kind": "state",
-                "path": DEFAULT_RIG_CONTEXT_PATHS["patch"],
+                "path": DEFAULT_RIG_CONTEXT_PATHS["fixtures"],
                 "children": [{"name": "Nameless"}, {"i": 4, "name": "Spot 4"}],
             },
             DEFAULT_RIG_CONTEXT_PATHS["groups"]: _snapshot(
                 DEFAULT_RIG_CONTEXT_PATHS["groups"], ["Vocals"]
             ),
-            DEFAULT_RIG_CONTEXT_PATHS["presets"]: _snapshot(
-                DEFAULT_RIG_CONTEXT_PATHS["presets"], ["Warm Wash"]
+            DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]: _snapshot(
+                DEFAULT_RIG_CONTEXT_PATHS["preset_pools"], ["Dimmer"]
             ),
         }
         registry = _registry(state_port=FakeStatePort(tree))
         execution = registry.dispatch(_call("get_rig_context"))
         summary = json.loads(execution.result.content)
-        assert summary["patch"] == [{"name": "Nameless"}, {"no": 4, "name": "Spot 4"}]
+        assert summary["fixtures"] == [{"name": "Nameless"}, {"no": 4, "name": "Spot 4"}]
         assert execution.result.is_error is False
 
     def test_missing_section_is_reported_not_fatal(self):
         tree = dict(_RIG_TREE)
-        del tree[DEFAULT_RIG_CONTEXT_PATHS["presets"]]
+        del tree[DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]]
         registry = _registry(state_port=FakeStatePort(tree))
         execution = registry.dispatch(_call("get_rig_context"))
         summary = json.loads(execution.result.content)
-        assert summary["patch"]  # healthy sections still present
-        assert "error" in summary["presets"]
+        assert summary["fixtures"]  # healthy sections still present
+        assert "error" in summary["preset_pools"]
+
+    def test_unresolved_path_is_distinguished_from_an_unreachable_console(self):
+        # THE defect class that hid the wrong default paths: a path that does
+        # not exist in this showfile (a CONFIGURATION bug) and a console that
+        # never answered (an OPERATIONAL condition) looked identical — one
+        # soft "unavailable" string. When a sibling section DID answer, the
+        # console is demonstrably reachable, so the failing path is wrong.
+        tree = dict(_RIG_TREE)
+        del tree[DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]]
+        registry = _registry(state_port=FakeStatePort(tree))
+        execution = registry.dispatch(_call("get_rig_context"))
+        summary = json.loads(execution.result.content)
+        failure = summary["preset_pools"]
+        assert failure["reason"] == "path_not_resolved"
+        assert failure["path"] == DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]
+        assert "error" in failure
+        # Partial vocabulary is still usable — not a failed tool call.
+        assert execution.result.is_error is False
+
+    def test_no_section_resolving_reports_an_unreachable_console_and_errors(self):
+        # Nothing answered: the paths CANNOT be blamed (the console may simply
+        # be down), and the call returned zero rig vocabulary — that is a
+        # failed tool call, not a quietly successful one.
+        registry = _registry(state_port=FakeStatePort({}))
+        execution = registry.dispatch(_call("get_rig_context"))
+        summary = json.loads(execution.result.content)
+        assert {section["reason"] for section in summary.values()} == {"console_unreachable"}
+        assert execution.result.is_error is True
+
+    def test_an_empty_section_still_proves_the_console_answered(self):
+        # "DataPool/PresetPools/N with 0 children" is a real, live shape: the
+        # pool exists but holds nothing. An empty child list is a RESOLVED
+        # path, so a sibling failure must still classify as path_not_resolved.
+        tree = dict(_RIG_TREE)
+        del tree[DEFAULT_RIG_CONTEXT_PATHS["groups"]]
+        tree[DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]] = _snapshot(
+            DEFAULT_RIG_CONTEXT_PATHS["preset_pools"], []
+        )
+        tree[DEFAULT_RIG_CONTEXT_PATHS["fixtures"]] = _snapshot(
+            DEFAULT_RIG_CONTEXT_PATHS["fixtures"], []
+        )
+        registry = _registry(state_port=FakeStatePort(tree))
+        execution = registry.dispatch(_call("get_rig_context"))
+        summary = json.loads(execution.result.content)
+        assert summary["preset_pools"] == []
+        assert summary["groups"]["reason"] == "path_not_resolved"
+        assert execution.result.is_error is False
+
+
+class TestRigContextDescription:
+    """The description is the model's ONLY contract for reading the summary."""
+
+    def _description(self) -> str:
+        (definition,) = [d for d in _registry().definitions() if d.name == "get_rig_context"]
+        return definition.description
+
+    def test_preset_pools_are_described_as_types_not_stored_presets(self):
+        # "DataPool/PresetPools" lists the preset TYPES (Dimmer, Position,
+        # Color, ...). The individual stored presets live INSIDE each pool and
+        # a depth-1 snapshot cannot reach them — the description must not let
+        # the model believe it is seeing presets it never received.
+        text = self._description()
+        assert "preset_pools" in text
+        assert "query_state" in text
+        lowered = text.lower()
+        assert "type" in lowered
+        assert "not the individual" in lowered or "not individual" in lowered
+
+    def test_fixture_numbers_are_not_promised_to_be_fixture_ids(self):
+        # A fixture entry's "no" is its slot in the stage patch list; whether
+        # that equals the fixture id (FID) is NOT established by this snapshot.
+        lowered = self._description().lower()
+        assert "fid" in lowered
+        assert "not guaranteed" in lowered
+
+    def test_failure_reasons_are_documented(self):
+        text = self._description()
+        assert "path_not_resolved" in text
+        assert "console_unreachable" in text
 
 
 _ORCHESTRATOR_DIR = Path(__file__).resolve().parents[1] / "orchestrator"

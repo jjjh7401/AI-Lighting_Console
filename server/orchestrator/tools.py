@@ -22,13 +22,57 @@ if TYPE_CHECKING:  # policy types only — no runtime import cycle
 
 TOOL_NAMES = ("run_commands", "query_state", "deploy_plugin", "get_rig_context")
 
-# Object-tree paths for the rig-context summary (REQ-MVP-037). Placeholder
-# defaults pending live-console calibration at M6 (same discipline as the M2
-# PROTOCOL.md assumptions); override via build_toolset(rig_paths=...).
+# Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
+# against grandMA3 onPC 2.4.2: the previous placeholders "Patch/Fixtures" and
+# "DataPool/Presets" DO NOT EXIST on 2.4.2 (both reply "path segment not
+# found"), so patch and preset vocabulary reached the model as an "unavailable"
+# section on EVERY call and only groups ever got through. Override via
+# build_toolset(rig_paths=...).
+#
+# What each path actually yields (read live, one tree level deep):
+#   fixtures     - the stage's patched fixtures. An entry's "no" is its slot in
+#                  that list; whether that slot equals the fixture id (FID) is
+#                  NOT established by this snapshot, so it is never presented
+#                  as an FID.
+#   groups       - the group pool; here "no" IS the pool number you address
+#                  (Group <no>).
+#   preset_pools - the preset TYPES (Dimmer, Position, Gobo, Color, ...), i.e.
+#                  ONE LEVEL ABOVE the individual stored presets. Those live
+#                  INSIDE each pool ("DataPool/PresetPools/<no>") and a depth-1
+#                  snapshot cannot reach them.
+#
+# ASSUMPTION (stage slot, live-observed on ONE showfile): fixtures are read
+# from stage slot 1. 2.4.2 creates "Stage 1" at slot 1 by default and the
+# calibration showfile matches, but a show whose stage sits at another slot
+# resolves nothing here. Stage auto-discovery is deliberately NOT implemented;
+# the failure is made legible instead — get_rig_context reports such a section
+# with reason "path_not_resolved" (a configuration defect) rather than the soft
+# "unavailable" string that let the two dead paths above survive unnoticed.
+# Point rig_paths= at the real stage to override.
 DEFAULT_RIG_CONTEXT_PATHS = {
-    "patch": "Patch/Fixtures",
+    "fixtures": "Patch/Stages/1/Fixtures",
     "groups": "DataPool/Groups",
-    "presets": "DataPool/Presets",
+    "preset_pools": "DataPool/PresetPools",
+}
+
+
+# Why a rig-context section is missing. The two causes are NOT interchangeable
+# and used to be indistinguishable — both surfaced as one soft "unavailable"
+# string, which is exactly how the two dead default paths above went unnoticed
+# for the whole of Stage 1:
+#   path_not_resolved   - a SIBLING section answered, so the console is
+#                         demonstrably reachable and THIS path is wrong for
+#                         this showfile: a configuration defect, fix the path.
+#   console_unreachable - nothing answered, so no path can be blamed: an
+#                         operational condition, retry when the console is up.
+_REASON_UNRESOLVED = "path_not_resolved"
+_REASON_UNREACHABLE = "console_unreachable"
+_FAILURE_MESSAGES = {
+    _REASON_UNRESOLVED: (
+        "this path does not exist in the loaded showfile — other sections "
+        "answered, so the console IS reachable"
+    ),
+    _REASON_UNREACHABLE: "no section answered — the console did not respond",
 }
 
 
@@ -91,7 +135,14 @@ _DEPLOY_OUTCOME_STATUS = {
 # "Group 3" when groups live at pool 1, 2, 7). Live-demo finding #3,
 # SPEC-COPILOT-DEPLOY-001 REQ-DEPLOY-029 / AC-DEPLOY-020.
 def _rig_object(child: dict) -> dict[str, object]:
-    """One rig-context object: its REAL pool number (``no``) + ``name``.
+    """One rig-context object: its REAL slot number (``no``) + ``name``.
+
+    For a pool (groups, preset pools) that slot IS the pool number the console
+    addresses (``Group <no>``); for a container that is not a pool (the stage's
+    fixture list) it is the position the responder established within that
+    container, which the tool description explicitly declines to present as a
+    fixture id. Either way it is a number the responder READ, never one this
+    code counted.
 
     The responder emits ``{"i": <pool-slot>, "name": ..., "class": ...}`` but
     ONLY when it positively established that slot; a child whose slot it could
@@ -326,20 +377,37 @@ def build_toolset(
 
     def get_rig_context(call: ToolCall, context: ExecutionContext) -> ToolExecution:
         summary: dict[str, object] = {}
+        failures: dict[str, tuple[str, str]] = {}
+        resolved = 0
         for section, path in rig_paths.items():
             try:
                 payload = state_port.query_state(path)
-                children = payload.get("children", [])
-                summary[section] = [
-                    _rig_object(child) for child in children if isinstance(child, dict)
-                ]
             except Exception as exc:
-                summary[section] = {"error": f"unavailable ({path}): {exc}"}
+                # Placeholder keeps the section's position; classified below,
+                # once every section's outcome is known.
+                summary[section] = None
+                failures[section] = (path, str(exc))
+                continue
+            # A resolved path proves the console ANSWERED — even with zero
+            # children (a real shape: an empty preset pool).
+            resolved += 1
+            children = payload.get("children", [])
+            summary[section] = [_rig_object(child) for child in children if isinstance(child, dict)]
+        reason = _REASON_UNRESOLVED if resolved else _REASON_UNREACHABLE
+        for section, (path, detail) in failures.items():
+            summary[section] = {
+                "reason": reason,
+                "path": path,
+                "error": f"{_FAILURE_MESSAGES[reason]}: {detail}",
+            }
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
                 name=call.name,
                 content=json.dumps(summary, ensure_ascii=False),
+                # Partial vocabulary is still usable; returning NOTHING is a
+                # failed call, not a quiet success.
+                is_error=bool(failures) and resolved == 0,
             )
         )
 
@@ -404,16 +472,30 @@ def build_toolset(
         ToolDefinition(
             name="get_rig_context",
             description=(
-                "Summarize the loaded showfile's rig vocabulary: patched fixtures, "
-                "groups, and presets. Call this FIRST when the instruction uses "
-                "venue/field terms (e.g. Korean field vocabulary) that must be "
-                "resolved to actual showfile object names. Each object is returned "
-                'as {"no": <pool number>, "name": <name>}; ALWAYS reference an '
-                'object by its REAL pool number ("no"), NEVER by positional order '
-                "— pool numbers may be non-contiguous (e.g. 1, 2, 7), so the Nth "
-                'listed item is NOT necessarily object N. An entry with a "name" '
-                'but NO "no" means its pool number is UNKNOWN: do not guess one — '
-                "resolve it with query_state before addressing that object."
+                "Summarize the loaded showfile's rig vocabulary. Call this FIRST "
+                "when the instruction uses venue/field terms (e.g. Korean field "
+                "vocabulary) that must be resolved to actual showfile object "
+                'names. Returns three sections: "fixtures" (the stage\'s patched '
+                'fixtures), "groups" (the group pool), and "preset_pools" (the '
+                "preset TYPES — Dimmer, Position, Gobo, Color, ... — NOT the "
+                "individual stored presets, which live INSIDE each pool: to list "
+                "those, call query_state on one pool, e.g. "
+                "'DataPool/PresetPools/4'). Each object is returned as "
+                '{"no": <number>, "name": <name>}; ALWAYS reference an object by '
+                'its REAL "no", NEVER by positional order — numbers may be '
+                "non-contiguous (e.g. 1, 2, 7), so the Nth listed item is NOT "
+                'necessarily object N. An entry with a "name" but NO "no" means '
+                "its number is UNKNOWN: do not guess one — resolve it with "
+                "query_state before addressing that object. For groups and preset "
+                'pools the "no" IS the pool number you address (e.g. Group 2). For '
+                'fixtures the "no" is the fixture\'s slot in the stage patch list '
+                "and is NOT guaranteed to be its fixture id (FID) — confirm the FID "
+                "with query_state before addressing a fixture by number. A section "
+                'may instead come back as {"reason": ...}: "path_not_resolved" '
+                "means that vocabulary does not exist in THIS showfile (other "
+                'sections answered), "console_unreachable" means nothing answered. '
+                "In both cases you did NOT receive that vocabulary — say so and "
+                "ask, never invent objects for it."
             ),
             parameters={"type": "object", "properties": {}},
         ),

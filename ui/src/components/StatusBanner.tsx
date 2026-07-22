@@ -18,7 +18,16 @@ export function StatusBanner({
   const cls =
     status.health === "online" ? "banner-online" : "banner-offline";
   // Cause+action guidance shows only for a degraded state (null when online).
-  const guidance = healthGuidance(status.health);
+  // The backend's diagnosis refines the console_offline case so the operator is
+  // sent to the ONE thing that is wrong: a stopped responder, or a console
+  // replying to a port the app does not listen on — instead of a healthy onPC
+  // being blamed for both.
+  const guidance = healthGuidance(
+    status.health,
+    status.console_input,
+    status.reply_port,
+    status.receive_port,
+  );
   return (
     <div className={`banner ${cls}`}>
       <span>{healthLabel(status.health)}</span>

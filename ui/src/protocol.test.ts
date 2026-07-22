@@ -156,6 +156,169 @@ describe("healthGuidance", () => {
   });
 });
 
+describe("healthGuidance with the console-input discriminator", () => {
+  // Live-observed defect: the responder plugin stopped while onPC stayed up with
+  // its OSC input live, and console_offline's guidance sent the operator to check
+  // the two subsystems that were already fine while never naming the responder.
+  // The backend now attaches a bind-probe verdict for the console's OSC input
+  // port; the guidance must consume it.
+  const STACK_MARKERS = ["Traceback", "Error", "Exception", "  at ", "raise "];
+  const CURRENT_OFFLINE = healthGuidance("console_offline");
+
+  it("names the responder when the console's OSC input port IS listening", () => {
+    const guidance = healthGuidance("console_offline", "listening");
+    expect(guidance).not.toBeNull();
+    expect(guidance).toContain("CopilotResponder");
+    // It must NOT be the old message: sending the operator to verify a healthy
+    // onPC is exactly the wrong-cause report being fixed.
+    expect(guidance).not.toBe(CURRENT_OFFLINE);
+    expect(guidance).not.toContain("실행 중인지");
+  });
+
+  it("keeps the current message when nothing is listening (it is correct there)", () => {
+    expect(healthGuidance("console_offline", "silent")).toBe(CURRENT_OFFLINE);
+  });
+
+  it("keeps the current message when the probe is undetermined (remote console)", () => {
+    expect(healthGuidance("console_offline", "undetermined")).toBe(CURRENT_OFFLINE);
+    expect(healthGuidance("console_offline", undefined)).toBe(CURRENT_OFFLINE);
+    expect(healthGuidance("console_offline")).toBe(CURRENT_OFFLINE);
+  });
+
+  it("ignores the discriminator for every other health state", () => {
+    expect(healthGuidance("online", "listening")).toBeNull();
+    expect(healthGuidance("weird_state", "listening")).toBeNull();
+    expect(healthGuidance("responder_degraded", "listening")).toBe(
+      healthGuidance("responder_degraded"),
+    );
+  });
+
+  it("never leaks a stack trace or raw-SDK marker in the new guidance", () => {
+    const guidance = healthGuidance("console_offline", "listening") ?? "";
+    for (const marker of STACK_MARKERS) {
+      expect(guidance).not.toContain(marker);
+    }
+  });
+
+  it("keeps the console_input verdict on the reduced status state", () => {
+    const next = reduceServerEvent(
+      initialState,
+      event({
+        type: "status",
+        health: "console_offline",
+        live_lock: false,
+        executions_blocked: true,
+        console_input: "listening",
+      }),
+    );
+    expect(next.status?.console_input).toBe("listening");
+  });
+
+  it("tolerates a status frame from a server that sends no verdict", () => {
+    const next = reduceServerEvent(
+      initialState,
+      event({
+        type: "status",
+        health: "console_offline",
+        live_lock: false,
+        executions_blocked: true,
+      }),
+    );
+    expect(next.status?.health).toBe("console_offline");
+    expect(healthGuidance("console_offline", next.status?.console_input)).toBe(CURRENT_OFFLINE);
+  });
+});
+
+describe("healthGuidance with the reply-port mismatch", () => {
+  // The third console_offline cause. A grandMA3 OSC entry has ONE port used for
+  // BOTH directions, so the port the console replies through and the port the
+  // app listens on are two hand-synchronised numbers. When they drift the link
+  // goes quiet with both subsystems healthy — the responder message would then
+  // be wrong in a new way (the plugin IS running; it is answering elsewhere).
+  const RESPONDER = healthGuidance("console_offline", "listening");
+
+  it("names BOTH ports so the operator can reconcile them", () => {
+    const guidance = healthGuidance("console_offline", "listening", 9005, 9000);
+    expect(guidance).not.toBeNull();
+    expect(guidance).toContain("9005");
+    expect(guidance).toContain("9000");
+    expect(guidance).not.toBe(RESPONDER);
+  });
+
+  it("offers both fixes and applies neither", () => {
+    // REQ-DEPLOY-026 — the app never changes its own effective port. The
+    // guidance must read as a choice for the operator, not as a report of a
+    // change the app already made.
+    const guidance = healthGuidance("console_offline", "listening", 9005, 9000) ?? "";
+    expect(guidance).toContain("onPC");
+    expect(guidance).toContain("설정");
+    for (const applied of ["변경했습니다", "자동으로", "적용했습니다", "전환했습니다"]) {
+      expect(guidance).not.toContain(applied);
+    }
+  });
+
+  it("takes priority over the responder message when both apply", () => {
+    // "input listening" is true in BOTH cases; the mismatch is the more specific
+    // finding, and it names a cause the responder message would misattribute.
+    expect(healthGuidance("console_offline", "listening", 9005, 9000)).not.toBe(RESPONDER);
+  });
+
+  it("falls back to the responder message when discovery found nothing", () => {
+    expect(healthGuidance("console_offline", "listening", null, 9000)).toBe(RESPONDER);
+    expect(healthGuidance("console_offline", "listening", undefined, undefined)).toBe(RESPONDER);
+  });
+
+  it("ignores a reported port that equals the configured one", () => {
+    // Not a mismatch; reporting it would be a contradiction on screen.
+    expect(healthGuidance("console_offline", "listening", 9000, 9000)).toBe(RESPONDER);
+  });
+
+  it("ignores the mismatch for every other health state", () => {
+    expect(healthGuidance("online", "listening", 9005, 9000)).toBeNull();
+    expect(healthGuidance("responder_degraded", "listening", 9005, 9000)).toBe(
+      healthGuidance("responder_degraded"),
+    );
+  });
+
+  it("keeps both port numbers on the reduced status state", () => {
+    const next = reduceServerEvent(
+      initialState,
+      event({
+        type: "status",
+        health: "console_offline",
+        live_lock: false,
+        executions_blocked: true,
+        console_input: "listening",
+        reply_port: 9005,
+        receive_port: 9000,
+      }),
+    );
+    expect(next.status?.reply_port).toBe(9005);
+    expect(next.status?.receive_port).toBe(9000);
+  });
+
+  it("tolerates a status frame from a server that does not diagnose", () => {
+    const next = reduceServerEvent(
+      initialState,
+      event({
+        type: "status",
+        health: "console_offline",
+        live_lock: false,
+        executions_blocked: true,
+        console_input: "listening",
+      }),
+    );
+    expect(
+      healthGuidance(
+        next.status!.health,
+        next.status?.console_input,
+        next.status?.reply_port,
+        next.status?.receive_port,
+      ),
+    ).toBe(RESPONDER);
+  });
+});
+
 describe("M7 deploy review flow", () => {
   const reviewRequest = {
     type: "review_request",

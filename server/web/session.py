@@ -30,11 +30,14 @@ from server.orchestrator.tools import CommandOutcome, DeployPipelinePort, build_
 from server.safety.approval import ApprovalRequest
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate, ScreenDecision
+from server.safety.monitor import HealthMonitor
 from server.safety.session_context import bind_session_key, new_session_key, reset_session_key
 from server.web.approval_bridge import ApprovalChannel
 from server.web.korean_errors import classify_exception
 from server.web.measure import RoundTripRecorder
 from server.web.messages import (
+    CONSOLE_INPUT_LISTENING,
+    CONSOLE_INPUT_UNDETERMINED,
     approval_request_event,
     chat_response_event,
     error_event,
@@ -43,6 +46,7 @@ from server.web.messages import (
     review_request_event,
     status_event,
 )
+from server.web.reply_discovery import ReplyPortMismatch
 
 # The gate's unconfirmed-execution marker (REQ-MVP-032). String contract pinned
 # by tests here AND by the gate's own tests — a wording change fails both.
@@ -168,8 +172,14 @@ class ChatSession:
         rig_paths: dict[str, str] | None = None,
         review_channel: ApprovalChannel | None = None,
         deploy_pipeline: DeployPipelinePort | None = None,
+        console_input_probe: Callable[[], str] | None = None,
+        reply_port_probe: Callable[[], ReplyPortMismatch | None] | None = None,
     ) -> None:
         self._gate = gate
+        # Injected so the status surface owns the I/O and the health state
+        # machine stays a pure, clock-driven object on the gate's hot path.
+        self._console_input_probe = console_input_probe
+        self._reply_port_probe = reply_port_probe
         self._audit = audit
         self._send = send_event
         self._channel = approval_channel
@@ -237,11 +247,63 @@ class ChatSession:
     def status_snapshot(self) -> dict:
         """Gate-truth status event (REQ-MVP-030/031 UI half)."""
         gate_status = self._gate.status
+        health = gate_status["health"]
+        console_input = self._console_input(health)
+        mismatch = self._reply_port(console_input)
         return status_event(
-            health=gate_status["health"],
+            health=health,
             live_lock=gate_status["live_lock"],
             executions_blocked=self._gate.monitor.executions_blocked,
+            console_input=console_input,
+            reply_port=mismatch.observed if mismatch is not None else None,
+            receive_port=mismatch.configured if mismatch is not None else None,
         )
+
+    def _console_input(self, health: str) -> str:
+        """Diagnose WHY the console is silent — never WHETHER it is (REQ-DEPLOY-018).
+
+        Only ``console_offline`` is ambiguous: the monitor reaches it both when
+        onPC is genuinely down and when onPC is up but the responder plugin —
+        the only thing that ever sends — has stopped. A bind probe on the
+        console's OSC input port separates the two, so the UI can name the real
+        cause instead of sending the operator to inspect two healthy subsystems.
+
+        Every other state is left unprobed: ``online`` and ``responder_degraded``
+        already imply console traffic was seen, so there is nothing to
+        disambiguate and no reason to pay for a socket on every heartbeat tick.
+        A probe failure degrades to ``undetermined`` — a diagnosis aid must never
+        be able to break the status surface it decorates.
+        """
+        if health != HealthMonitor.CONSOLE_OFFLINE or self._console_input_probe is None:
+            return CONSOLE_INPUT_UNDETERMINED
+        try:
+            return self._console_input_probe()
+        except Exception:
+            return CONSOLE_INPUT_UNDETERMINED
+
+    def _reply_port(self, console_input: str) -> ReplyPortMismatch | None:
+        """The third ``console_offline`` cause: the console replies elsewhere.
+
+        Gated on ``console_input == listening`` and nothing weaker. That verdict
+        already means "the console's OSC input is live but nothing is reaching
+        us", which is precisely the shape a reply-port drift makes — and it is
+        also the only shape where a reply could exist to be found. A silent
+        input means onPC itself is down, so there is nothing to discover; a
+        healthy link means the configured port already works and discovery must
+        not run at all.
+
+        The probe is non-blocking by contract (see
+        :class:`server.web.reply_discovery.ReplyPortDiagnostic`) because this
+        method runs on the asyncio event loop. A failure degrades to "no
+        mismatch": the operator then sees the responder message, which is still
+        the better of the two pre-existing answers.
+        """
+        if console_input != CONSOLE_INPUT_LISTENING or self._reply_port_probe is None:
+            return None
+        try:
+            return self._reply_port_probe()
+        except Exception:
+            return None
 
     def set_lock(self, active: bool) -> dict:
         """Toggle the live lock (REQ-MVP-016 UI half); emits a status event."""

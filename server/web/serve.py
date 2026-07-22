@@ -36,6 +36,7 @@ from server.rulebook.assembly import assemble_prefix
 from server.safety.bootstrap import ConsoleStack, build_console_stack
 from server.web.app import WebDeps, create_app
 from server.web.approval_bridge import ApprovalChannel
+from server.web.console_probe import make_console_input_probe
 from server.web.handshake import TAURI_ORIGINS, HandshakePolicy, browser_origins_for
 from server.web.host_channel import emit_ready, emit_startup_error, make_status_emitter
 from server.web.launcher import (
@@ -57,6 +58,7 @@ from server.web.launcher import (
 )
 from server.web.measure import RoundTripRecorder
 from server.web.provision_api import ProvisionDeps
+from server.web.reply_discovery import make_reply_port_diagnostic
 from server.web.settings_api import SettingsDeps
 
 
@@ -359,8 +361,34 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         settings=SettingsDeps(seed_path=config_path, session=SessionKeyStore()),
         provision=ProvisionDeps(seed_path=config_path),
         handshake=build_handshake_policy(args),
+        # The SAME endpoint the gate sends OSC to (``console_host``/
+        # ``console_port``) is the console's OSC INPUT port — so binding it is
+        # what tells a console_offline state apart from a stopped responder.
+        # Built from the resolved args, so an operator's saved console port is
+        # the one probed (the M7.3 settings-fallthrough discipline).
+        console_input_probe=make_console_input_probe(args.console_host, args.console_port),
     )
+    # REQ-DEPLOY-018/026 follow-up: a grandMA3 OSC entry has ONE port for BOTH
+    # directions, so the port the console replies THROUGH and the port the app
+    # listens ON are two hand-synchronised numbers with no feedback when they
+    # drift. This finds where a reply actually lands and REPORTS it — the ping is
+    # the gate's own heartbeat (no new send surface) and nothing is ever adopted
+    # automatically (REQ-DEPLOY-026: the app must not change its effective port
+    # behind the operator's back).
+    reply_diagnostic = make_reply_port_diagnostic(
+        send_ping=stack.gate.heartbeat,
+        receive_host="127.0.0.1",  # the address the receiver itself binds
+        receive_port=args.receive_port,
+        console_port=args.console_port,
+    )
+    deps.reply_port_probe = reply_diagnostic.verdict
     app = create_app(deps)
+    # A finished discovery changes no health state, and the heartbeat loop only
+    # pushes status on a CHANGE — without this fan-out the verdict would be
+    # computed correctly and never reach the operator.
+    reply_diagnostic.set_on_complete(
+        lambda: [notify() for notify in tuple(deps.status_listeners)]
+    )
     # M7.4a (AC-DEPLOY-024 ③): mirror every gate-truth health change onto the
     # sidecar's stdout so the Stage-2 tray badge shows the SAME state the web UI
     # does. stdout is the shell's only inbound channel — it owns no socket
