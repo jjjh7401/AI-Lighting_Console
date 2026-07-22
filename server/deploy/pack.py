@@ -1,11 +1,29 @@
 """Native grandMA3 plugin-XML packing for the file+Import deploy path (M7 fix).
 
-grandMA3 onPC 2.4.2 imports a plugin from a self-contained XML that embeds the
-Lua source as Base64 blocks (`<UserPlugin><ComponentLua><FileContent><Block
-Base64="…"/>…`). A `<ComponentLua FileName="…">` reference wrapper does NOT
-embed the source — the plugin imports with an empty component and runs nothing
-(verified live 2026-07-19). This module reproduces grandMA3's own export format
-so an imported plugin is runnable.
+This module emits the self-contained form grandMA3 itself exports: a
+`<UserPlugin>` carrying the Lua source as Base64 blocks
+(`<UserPlugin><ComponentLua><FileContent><Block Base64="…"/>…`). That form is
+live-proven for this path — every plugin the app has deployed and run went out
+this way (`deployed` events in ``server/audit_logs``).
+
+The form it replaced — a `<ComponentLua FileName="…">` pointing at a sibling
+.lua — imported with an empty component and ran nothing when tried in THIS
+path's `<UserPlugin>` shape (verified live 2026-07-19).
+
+Do NOT generalise that to "a FileName reference cannot work". The bundled
+responder wrapper (``console/lua/copilot_responder.xml``) is a
+`<GMA3 DataVersion="2.4.2.0"><Plugin>` with `FileName=`, and it demonstrably
+does deliver its source: on 2026-07-22 the showfile was found to contain the
+responder's site-edited body — an `osc_slot = 2` and a SITE comment that exist
+only in the INSTALLED .lua, never in the repo copy. The two wrappers differ in
+root element (`Plugin` vs `UserPlugin`), DataVersion and GUIDs as well as in how
+the source is carried; which of those differences is the operative one is
+UNVERIFIED, and neither observation has been reproduced. Also unverified:
+whether such a wrapper embeds at import time or keeps a link and embeds on save.
+
+The engineering conclusion is unchanged — this path uses the Base64 form because
+that is the one it has proven. The narrowing matters only so nobody "fixes" the
+responder wrapper on the strength of a claim that was never about it.
 
 Why this replaces the OSC ``deploy`` verb for the production path: the verb
 (``server.bridge.protocol.build_deploy_request``) embeds the source in ONE
