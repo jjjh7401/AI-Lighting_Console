@@ -38,8 +38,21 @@ TOOL_NAMES = ("run_commands", "query_state", "deploy_plugin", "get_rig_context")
 #                  (Group <no>).
 #   preset_pools - the preset TYPES (Dimmer, Position, Gobo, Color, ...), i.e.
 #                  ONE LEVEL ABOVE the individual stored presets. Those live
-#                  INSIDE each pool ("DataPool/PresetPools/<no>") and a depth-1
-#                  snapshot cannot reach them.
+#                  INSIDE each pool ("DataPool/PresetPools/<no>") — opened by
+#                  the drill-down below, because "a Color pool exists" and "a
+#                  colour is stored in it" are different answers and only the
+#                  second one tells you whether a recall will do anything.
+#   sequences    - the cue lists a look is stored into.
+#   pages        - executor pages; their CHILDREN are the executors, which are
+#                  the only surface that actually fires a stored look.
+#   macros /
+#   plugins      - what already automates this show.
+#   matricks /
+#   worlds       - selection shaping and filtering vocabulary.
+#
+# Every path here was read back from a live onPC 2.4.2 on 2026-07-22 before
+# being made a default. Guessed paths are how "Patch/Fixtures" and
+# "DataPool/Presets" shipped dead for the whole of Stage 1.
 #
 # ASSUMPTION (stage slot, live-observed on ONE showfile): fixtures are read
 # from stage slot 1. 2.4.2 creates "Stage 1" at slot 1 by default and the
@@ -50,10 +63,29 @@ TOOL_NAMES = ("run_commands", "query_state", "deploy_plugin", "get_rig_context")
 # "unavailable" string that let the two dead paths above survive unnoticed.
 # Point rig_paths= at the real stage to override.
 DEFAULT_RIG_CONTEXT_PATHS = {
+    "fixture_types": "Patch/FixtureTypes",
     "fixtures": "Patch/Stages/1/Fixtures",
     "groups": "DataPool/Groups",
+    "sequences": "DataPool/Sequences",
     "preset_pools": "DataPool/PresetPools",
+    "macros": "DataPool/Macros",
+    "plugins": "DataPool/Plugins",
+    "pages": "DataPool/Pages",
+    "matricks": "DataPool/MAtricks",
+    "worlds": "DataPool/Worlds",
 }
+
+# Sections whose children are CONTAINERS worth opening. A depth-1 snapshot of
+# these answers "does it exist"; the show-readiness question is "is anything IN
+# it", and that needs one query per child.
+DEFAULT_RIG_DRILLDOWN = ("preset_pools", "pages")
+
+# Ceiling on second-level queries per get_rig_context call. Each drill query is
+# a UDP round trip through the gate + audit, so an unbounded walk would make rig
+# context cost scale with the size of the showfile. When the ceiling stops the
+# walk the section says so ("drilldown_capped") rather than presenting a partial
+# walk as a complete one.
+RIG_DRILLDOWN_QUERY_CAP = 16
 
 
 # Why a rig-context section is missing. The two causes are NOT interchangeable
@@ -162,6 +194,68 @@ def _rig_object(child: dict) -> dict[str, object]:
     return {"no": number, "name": name}
 
 
+def _rig_section(objects: list[dict[str, object]], payload: dict) -> dict[str, object]:
+    """Wrap a resolved section with what the responder said about its OWN
+    completeness (PROTOCOL.md §4 ``truncated`` / ``node.childCount``).
+
+    A short list with no completeness signal is worse than no list at all: the
+    model would reason, confidently, over a rig it could not fully see. Absence
+    of a real ``childCount`` reads as an unknown total, never as "the count
+    equals what arrived".
+    """
+    node = payload.get("node")
+    child_count = node.get("childCount") if isinstance(node, dict) else None
+    return {
+        "objects": objects,
+        "truncated": bool(payload.get("truncated", False)),
+        "total": child_count if isinstance(child_count, int) else None,
+    }
+
+
+def _drill_into(
+    state_port: StateQueryPort,
+    objects: list[dict[str, object]],
+    base_path: str,
+    entry: dict[str, object],
+    budget: int,
+) -> int:
+    """Open each object in ``objects`` as a container, IN PLACE, spending at
+    most ``budget`` queries total (shared across every drilled section in one
+    get_rig_context call).
+
+    Distinguishes a verified-EMPTY container (``contents: []``) from one the
+    drill could not reach (``contents_unavailable: True``) — collapsing the two
+    would make a console that failed mid-walk look identical to a show with
+    nothing configured, which is exactly the ambiguity a readiness check exists
+    to remove.
+
+    When the budget runs out before every object is opened, the section is
+    marked ``drilldown_capped`` rather than silently presenting a partial walk
+    as a complete one — each query is a UDP round trip through the gate +
+    audit, so an unbounded walk would make rig-context cost scale with the
+    size of the showfile.
+    """
+    capped = False
+    for obj in objects:
+        number = obj.get("no")
+        if number is None:
+            continue  # no real address to drill into (degraded name-only entry)
+        if budget <= 0:
+            capped = True
+            break
+        budget -= 1
+        try:
+            child_payload = state_port.query_state(f"{base_path}/{number}")
+        except Exception:
+            obj["contents_unavailable"] = True
+            continue
+        children = child_payload.get("children", [])
+        obj["contents"] = [_rig_object(c) for c in children if isinstance(c, dict)]
+    if capped:
+        entry["drilldown_capped"] = True
+    return budget
+
+
 def _error_result(call: ToolCall, message: str) -> ToolExecution:
     return ToolExecution(
         result=ToolResult(
@@ -196,6 +290,7 @@ def build_toolset(
     execution_port: CommandExecutionPort,
     state_port: StateQueryPort,
     rig_paths: dict[str, str] | None = None,
+    rig_drilldown: tuple[str, ...] | None = None,
     bundle_gate: BundleGate | None = None,
     deploy_pipeline: DeployPipelinePort | None = None,
 ) -> ToolRegistry:
@@ -208,6 +303,7 @@ def build_toolset(
     result, feeding the self-correction loop (REQ-MVP-012).
     """
     rig_paths = dict(rig_paths or DEFAULT_RIG_CONTEXT_PATHS)
+    drilldown = frozenset(rig_drilldown if rig_drilldown is not None else DEFAULT_RIG_DRILLDOWN)
 
     # -- run_commands (REQ-MVP-001 upstream, REQ-MVP-009/033 semantics) --------
 
@@ -379,6 +475,7 @@ def build_toolset(
         summary: dict[str, object] = {}
         failures: dict[str, tuple[str, str]] = {}
         resolved = 0
+        budget = RIG_DRILLDOWN_QUERY_CAP
         for section, path in rig_paths.items():
             try:
                 payload = state_port.query_state(path)
@@ -392,7 +489,11 @@ def build_toolset(
             # children (a real shape: an empty preset pool).
             resolved += 1
             children = payload.get("children", [])
-            summary[section] = [_rig_object(child) for child in children if isinstance(child, dict)]
+            objects = [_rig_object(child) for child in children if isinstance(child, dict)]
+            entry = _rig_section(objects, payload)
+            if section in drilldown:
+                budget = _drill_into(state_port, objects, path, entry, budget)
+            summary[section] = entry
         reason = _REASON_UNRESOLVED if resolved else _REASON_UNREACHABLE
         for section, (path, detail) in failures.items():
             summary[section] = {
@@ -472,30 +573,59 @@ def build_toolset(
         ToolDefinition(
             name="get_rig_context",
             description=(
-                "Summarize the loaded showfile's rig vocabulary. Call this FIRST "
-                "when the instruction uses venue/field terms (e.g. Korean field "
-                "vocabulary) that must be resolved to actual showfile object "
-                'names. Returns three sections: "fixtures" (the stage\'s patched '
-                'fixtures), "groups" (the group pool), and "preset_pools" (the '
-                "preset TYPES — Dimmer, Position, Gobo, Color, ... — NOT the "
-                "individual stored presets, which live INSIDE each pool: to list "
-                "those, call query_state on one pool, e.g. "
-                "'DataPool/PresetPools/4'). Each object is returned as "
-                '{"no": <number>, "name": <name>}; ALWAYS reference an object by '
-                'its REAL "no", NEVER by positional order — numbers may be '
-                "non-contiguous (e.g. 1, 2, 7), so the Nth listed item is NOT "
-                'necessarily object N. An entry with a "name" but NO "no" means '
-                "its number is UNKNOWN: do not guess one — resolve it with "
-                "query_state before addressing that object. For groups and preset "
-                'pools the "no" IS the pool number you address (e.g. Group 2). For '
-                'fixtures the "no" is the fixture\'s slot in the stage patch list '
-                "and is NOT guaranteed to be its fixture id (FID) — confirm the FID "
-                "with query_state before addressing a fixture by number. A section "
-                'may instead come back as {"reason": ...}: "path_not_resolved" '
-                "means that vocabulary does not exist in THIS showfile (other "
-                'sections answered), "console_unreachable" means nothing answered. '
-                "In both cases you did NOT receive that vocabulary — say so and "
-                "ask, never invent objects for it."
+                "Build a picture of THIS showfile — call this FIRST, before "
+                "designing any look, and whenever the instruction uses venue/"
+                "field terms (e.g. Korean field vocabulary) that must resolve "
+                "to actual objects. One call covers everything a lighting "
+                'instruction is made of: "fixture_types" (patched fixture '
+                'types), "fixtures" (the stage\'s patched fixtures), "groups" '
+                '(the group pool — what to select), "sequences" (stored cue '
+                'lists — what a look is stored INTO), "preset_pools" (the '
+                "preset TYPES — Dimmer, Position, Gobo, Color, ... — with each "
+                'pool\'s STORED CONTENTS opened inline, see "contents" below), '
+                '"macros" and "plugins" (what already automates this show), '
+                '"pages" (executor pages — the ONLY surface that actually '
+                'FIRES a stored look: each page\'s "objects" already lists its '
+                'executors, e.g. Sequence 30 sitting on Executor 5), "matricks" '
+                'and "worlds" (selection-shaping vocabulary).\n'
+                "\n"
+                'Each section is {"objects": [...], "truncated": bool, "total": '
+                "<real count, or null if unknown>}. truncated=true means the "
+                "responder cut the list short — total names the REAL count, so "
+                "you know the objects you have are NOT everything; never treat "
+                "a truncated list as complete.\n"
+                "\n"
+                'Each object is {"no": <number>, "name": <name>}; ALWAYS '
+                'reference it by its REAL "no", NEVER by positional order — '
+                "numbers may be non-contiguous (e.g. 1, 2, 7), so the Nth "
+                'listed item is NOT necessarily object N. An entry with a '
+                '"name" but NO "no" means its number is UNKNOWN: do not guess '
+                "one — resolve it with query_state before addressing that "
+                'object. For groups, sequences, macros, plugins and pages the '
+                '"no" IS the address you use (e.g. Group 2, Sequence 5). For '
+                'fixtures the "no" is the fixture\'s slot in the stage patch '
+                "list and is NOT guaranteed to be its fixture id (FID) — "
+                "confirm the FID with query_state before addressing a fixture "
+                "by number.\n"
+                "\n"
+                'In "preset_pools" and "pages", each object additionally '
+                'carries "contents": the pool\'s stored presets, or the '
+                "page's executors, already fetched — an empty list means "
+                "VERIFIED empty (nothing stored yet), not unknown. "
+                '"contents_unavailable": true means that ONE object could not '
+                "be opened (console busy or the object vanished) — its "
+                "contents are genuinely unknown, distinct from a verified-"
+                'empty pool. A section may also carry "drilldown_capped": '
+                "true, meaning there were more objects than this call's "
+                "per-request query budget allowed opening — the rest still "
+                'have "no"/"name" but no "contents"; call query_state on '
+                "those specific paths if you need them.\n"
+                "\n"
+                'A section may instead come back as {"reason": ...}: '
+                '"path_not_resolved" means that vocabulary does not exist in '
+                'THIS showfile (other sections answered), "console_unreachable" '
+                "means nothing answered. In both cases you did NOT receive "
+                "that vocabulary — say so and ask, never invent objects for it."
             ),
             parameters={"type": "object", "properties": {}},
         ),

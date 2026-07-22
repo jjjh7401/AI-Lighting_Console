@@ -16,6 +16,7 @@ from server.llm.types import ToolCall
 from server.orchestrator.ports import ExecutionResult
 from server.orchestrator.tools import (
     DEFAULT_RIG_CONTEXT_PATHS,
+    RIG_DRILLDOWN_QUERY_CAP,
     TOOL_NAMES,
     ExecutionContext,
     build_toolset,
@@ -64,18 +65,31 @@ def _snapshot(path: str, names: list[str], numbers: list[int] | None = None) -> 
     }
 
 
-# Standard test showfile snapshot fixture (AC-MVP-025) — fixture/group/preset-pool vocab.
-_RIG_TREE = {
-    DEFAULT_RIG_CONTEXT_PATHS["fixtures"]: _snapshot(
-        DEFAULT_RIG_CONTEXT_PATHS["fixtures"], ["Spot 1", "Wash 1", "Wash 2"]
-    ),
-    DEFAULT_RIG_CONTEXT_PATHS["groups"]: _snapshot(
-        DEFAULT_RIG_CONTEXT_PATHS["groups"], ["Vocals", "Wash All"]
-    ),
-    DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]: _snapshot(
-        DEFAULT_RIG_CONTEXT_PATHS["preset_pools"], ["Dimmer", "Color"]
-    ),
+def _rig_summary(registry) -> dict:
+    """Dispatch get_rig_context and return the decoded summary."""
+    return json.loads(registry.dispatch(_call("get_rig_context")).result.content)
+
+
+# Standard test showfile snapshot fixture (AC-MVP-025). Named sections carry
+# realistic vocabulary; every OTHER default path resolves to an empty pool, so a
+# newly added default cannot silently arrive as "unavailable" in these tests.
+_RIG_NAMED_SECTIONS = {
+    "fixtures": ["Spot 1", "Wash 1", "Wash 2"],
+    "groups": ["Vocals", "Wash All"],
+    "preset_pools": ["Dimmer", "Color"],
 }
+_RIG_TREE = {
+    path: _snapshot(path, _RIG_NAMED_SECTIONS.get(section, []))
+    for section, path in DEFAULT_RIG_CONTEXT_PATHS.items()
+}
+# Preset pools are drilled into by default (DEFAULT_RIG_DRILLDOWN); a real
+# console answers each one, most of them empty. Without this, every fixture
+# using the default tree would see "contents_unavailable" rather than a
+# genuinely empty pool — a fixture bug, not the behaviour under test.
+for _n in range(1, len(_RIG_NAMED_SECTIONS["preset_pools"]) + 1):
+    _RIG_TREE[f"{DEFAULT_RIG_CONTEXT_PATHS['preset_pools']}/{_n}"] = _snapshot(
+        f"{DEFAULT_RIG_CONTEXT_PATHS['preset_pools']}/{_n}", []
+    )
 
 # Non-contiguous pool-number showfile (AC-DEPLOY-020) — groups live at pool
 # 1, 2, 7 (NOT 1, 2, 3). This is the exact shape that made the model map "the
@@ -316,17 +330,25 @@ class TestRigContextPaths:
 
     def test_defaults_match_the_live_console_object_tree(self):
         # Live-verified against grandMA3 onPC 2.4.2 (state queries on the real
-        # console): "Patch/Fixtures" and "DataPool/Presets" DO NOT EXIST — both
-        # reply "path segment not found" — while "DataPool/Groups" resolves.
-        # The patched fixtures live under the STAGE ("Patch/Stages/1/Fixtures",
-        # 19 children) and the preset TYPES under "DataPool/PresetPools" (14
-        # children). Pinning the exact mapping so the two dead paths cannot be
+        # console, 2026-07-22): "Patch/Fixtures" and "DataPool/Presets" DO NOT
+        # EXIST — both reply "path segment not found" — while every path below
+        # resolves. Pinning the exact mapping so a dead path cannot be
         # reintroduced: a wrong path only degrades to a soft per-section error
-        # that nobody reads, which is how it survived unnoticed.
+        # that nobody reads, which is how the original two survived unnoticed.
+        # Extended from the original 3-path fixtures/groups/preset_pools set to
+        # cover the objects a lighting instruction is actually made of —
+        # sequences, executors (pages), macros, plugins, matricks, worlds.
         assert DEFAULT_RIG_CONTEXT_PATHS == {
+            "fixture_types": "Patch/FixtureTypes",
             "fixtures": "Patch/Stages/1/Fixtures",
             "groups": "DataPool/Groups",
+            "sequences": "DataPool/Sequences",
             "preset_pools": "DataPool/PresetPools",
+            "macros": "DataPool/Macros",
+            "plugins": "DataPool/Plugins",
+            "pages": "DataPool/Pages",
+            "matricks": "DataPool/MAtricks",
+            "worlds": "DataPool/Worlds",
         }
 
     def test_the_two_dead_paths_are_never_defaults_again(self):
@@ -334,25 +356,150 @@ class TestRigContextPaths:
         assert dead.isdisjoint(set(DEFAULT_RIG_CONTEXT_PATHS.values()))
 
 
+class TestRigContextIsSelfSufficient:
+    """The app has to build its own picture of the show.
+
+    Before this, rig context read three hard-coded paths and the model was blind
+    to sequences, executors, macros, plugins and what was actually STORED in a
+    preset pool — the objects a lighting instruction is made of. A human had to
+    hand it the object-tree paths, which means the app could not answer
+    "무빙들 파랗게 해줘" on its own. Every path below was verified live against
+    onPC 2.4.2 on 2026-07-22 before being made a default.
+    """
+
+    def test_it_covers_the_objects_a_lighting_instruction_is_made_of(self):
+        covered = set(DEFAULT_RIG_CONTEXT_PATHS)
+        # Targets, the look itself, the trigger surface, and stored vocabulary.
+        assert {"fixtures", "groups"} <= covered  # what to select
+        assert {"sequences", "preset_pools"} <= covered  # what to store / recall
+        assert "pages" in covered  # executors — the only way to FIRE a look
+        assert {"macros", "plugins"} <= covered  # what already automates the show
+
+    def test_every_default_path_was_verified_live(self):
+        # Guessed paths are how "Patch/Fixtures" and "DataPool/Presets" shipped
+        # dead for all of Stage 1, silently reducing rig context to groups only.
+        assert DEFAULT_RIG_CONTEXT_PATHS["fixtures"] == "Patch/Stages/1/Fixtures"
+        assert DEFAULT_RIG_CONTEXT_PATHS["preset_pools"] == "DataPool/PresetPools"
+        assert DEFAULT_RIG_CONTEXT_PATHS["sequences"] == "DataPool/Sequences"
+        assert DEFAULT_RIG_CONTEXT_PATHS["pages"] == "DataPool/Pages"
+        for path in DEFAULT_RIG_CONTEXT_PATHS.values():
+            assert not path.startswith("Patch/Fixtures"), path
+            assert path != "DataPool/Presets", path
+
+
+class TestRigContextReportsItsOwnCompleteness:
+    """A capped list that looks complete is worse than no list.
+
+    The responder caps a snapshot at CONFIG.max_children and sets ``truncated``;
+    rig context used to read ``children`` and throw the rest away, so a rig with
+    more groups than the cap reached the model as a SHORT list with no signal —
+    and the model would then reason, confidently, over a show it could not see.
+    """
+
+    def test_a_capped_section_says_so_and_names_the_real_total(self):
+        tree = dict(_RIG_TREE)
+        capped = _snapshot(
+            DEFAULT_RIG_CONTEXT_PATHS["groups"], [f"G{n}" for n in range(1, 25)]
+        )
+        capped["truncated"] = True
+        capped["node"] = {"name": "Groups", "class": "Groups", "childCount": 37}
+        tree[DEFAULT_RIG_CONTEXT_PATHS["groups"]] = capped
+
+        summary = _rig_summary(_registry(state_port=FakeStatePort(tree)))
+        groups = summary["groups"]
+        assert groups["truncated"] is True
+        assert groups["total"] == 37
+        assert len(groups["objects"]) == 24
+
+    def test_a_complete_section_is_not_marked_truncated(self):
+        summary = _rig_summary(_registry())
+        assert summary["groups"]["truncated"] is False
+
+    def test_a_responder_that_reports_no_total_does_not_get_one_invented(self):
+        # Absence must read as unknown, never as "the count equals what I got".
+        summary = _rig_summary(_registry())
+        assert summary["groups"].get("total") is None
+
+
+class TestRigContextOpensContainers:
+    """Knowing a "Color" pool EXISTS says nothing about whether a colour is
+    stored in it — and an empty pool is exactly the state where a recall
+    silently produces nothing. Same for a page: its executors are the only
+    surface that actually fires a look."""
+
+    def test_preset_pool_contents_are_fetched(self):
+        tree = dict(_RIG_TREE)
+        tree["DataPool/PresetPools/1"] = _snapshot(
+            "DataPool/PresetPools/1", ["Full", "Half"]
+        )
+        tree["DataPool/PresetPools/2"] = _snapshot("DataPool/PresetPools/2", [])
+
+        summary = _rig_summary(_registry(state_port=FakeStatePort(tree)))
+        pools = {p["no"]: p for p in summary["preset_pools"]["objects"]}
+        assert pools[1]["contents"] == [{"no": 1, "name": "Full"}, {"no": 2, "name": "Half"}]
+
+    def test_an_empty_container_is_distinguishable_from_an_unread_one(self):
+        # The whole point: "verified empty" and "could not ask" must not look
+        # the same, or the model cannot tell a show that needs setting up from
+        # a console it failed to reach.
+        tree = dict(_RIG_TREE)
+        tree["DataPool/PresetPools/1"] = _snapshot("DataPool/PresetPools/1", [])
+        del tree["DataPool/PresetPools/2"]  # deliberately absent -> the drill query raises
+
+        summary = _rig_summary(_registry(state_port=FakeStatePort(tree)))
+        pools = {p["no"]: p for p in summary["preset_pools"]["objects"]}
+        assert pools[1]["contents"] == []
+        assert pools[1].get("contents_unavailable") is not True
+        assert pools[2].get("contents_unavailable") is True
+        assert "contents" not in pools[2]
+
+    def test_drilldown_is_bounded_and_says_when_it_stopped(self):
+        # Each drill query is a UDP round trip through the gate + audit, so an
+        # unbounded walk would make rig context cost scale with the showfile.
+        many = [f"P{n}" for n in range(1, 40)]
+        tree = dict(_RIG_TREE)
+        tree[DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]] = _snapshot(
+            DEFAULT_RIG_CONTEXT_PATHS["preset_pools"], many
+        )
+        for n in range(1, 40):
+            tree[f"DataPool/PresetPools/{n}"] = _snapshot(f"DataPool/PresetPools/{n}", [])
+
+        port = FakeStatePort(tree)
+        summary = _rig_summary(_registry(state_port=port))
+        drilled = sum(1 for q in port.queries if q.startswith("DataPool/PresetPools/"))
+        assert drilled <= RIG_DRILLDOWN_QUERY_CAP
+        assert summary["preset_pools"]["drilldown_capped"] is True
+
+    def test_an_uncapped_walk_is_not_flagged_as_capped(self):
+        tree = dict(_RIG_TREE)
+        for n in (1, 2):
+            tree[f"DataPool/PresetPools/{n}"] = _snapshot(f"DataPool/PresetPools/{n}", [])
+        summary = _rig_summary(_registry(state_port=FakeStatePort(tree)))
+        assert summary["preset_pools"].get("drilldown_capped") is not True
+
+
 class TestGetRigContext:
     def test_exposes_real_pool_number_and_name(self):
         # AC-MVP-025 + AC-DEPLOY-020 ①: each object exposes its REAL pool
         # number ("no") AND name — not a bare positional array of names.
+        # Every resolved section wraps its objects with the completeness
+        # signal (truncated/total) — see TestRigContextReportsItsOwnCompleteness
+        # for the shape's own contract; here only "objects" is asserted.
         registry = _registry()
         execution = registry.dispatch(_call("get_rig_context"))
         summary = json.loads(execution.result.content)
-        assert summary["fixtures"] == [
+        assert summary["fixtures"]["objects"] == [
             {"no": 1, "name": "Spot 1"},
             {"no": 2, "name": "Wash 1"},
             {"no": 3, "name": "Wash 2"},
         ]
-        assert summary["groups"] == [
+        assert summary["groups"]["objects"] == [
             {"no": 1, "name": "Vocals"},
             {"no": 2, "name": "Wash All"},
         ]
-        assert summary["preset_pools"] == [
-            {"no": 1, "name": "Dimmer"},
-            {"no": 2, "name": "Color"},
+        assert summary["preset_pools"]["objects"] == [
+            {"no": 1, "name": "Dimmer", "contents": []},
+            {"no": 2, "name": "Color", "contents": []},
         ]
         assert execution.result.is_error is False
 
@@ -365,12 +512,12 @@ class TestGetRigContext:
         registry = _registry(state_port=FakeStatePort(dict(_GAPPED_RIG_TREE)))
         execution = registry.dispatch(_call("get_rig_context"))
         summary = json.loads(execution.result.content)
-        assert summary["groups"] == [
+        assert summary["groups"]["objects"] == [
             {"no": 1, "name": "Vocals"},
             {"no": 2, "name": "Wash All"},
             {"no": 7, "name": "Big Spot"},
         ]
-        group_numbers = {entry["no"] for entry in summary["groups"]}
+        group_numbers = {entry["no"] for entry in summary["groups"]["objects"]}
         assert group_numbers == {1, 2, 7}
         assert 3 not in group_numbers  # the hallucinated "Group 3" is absent
         assert execution.result.is_error is False
@@ -378,24 +525,17 @@ class TestGetRigContext:
     def test_child_missing_pool_number_degrades_to_name_only(self):
         # A child lacking ``i`` degrades to a name-only entry rather than
         # crashing or emitting a null pool number.
-        tree = {
-            DEFAULT_RIG_CONTEXT_PATHS["fixtures"]: {
-                "v": 1,
-                "kind": "state",
-                "path": DEFAULT_RIG_CONTEXT_PATHS["fixtures"],
-                "children": [{"name": "Nameless"}, {"i": 4, "name": "Spot 4"}],
-            },
-            DEFAULT_RIG_CONTEXT_PATHS["groups"]: _snapshot(
-                DEFAULT_RIG_CONTEXT_PATHS["groups"], ["Vocals"]
-            ),
-            DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]: _snapshot(
-                DEFAULT_RIG_CONTEXT_PATHS["preset_pools"], ["Dimmer"]
-            ),
+        tree = dict(_RIG_TREE)
+        tree[DEFAULT_RIG_CONTEXT_PATHS["fixtures"]] = {
+            "v": 1,
+            "kind": "state",
+            "path": DEFAULT_RIG_CONTEXT_PATHS["fixtures"],
+            "children": [{"name": "Nameless"}, {"i": 4, "name": "Spot 4"}],
         }
         registry = _registry(state_port=FakeStatePort(tree))
         execution = registry.dispatch(_call("get_rig_context"))
         summary = json.loads(execution.result.content)
-        assert summary["fixtures"] == [{"name": "Nameless"}, {"no": 4, "name": "Spot 4"}]
+        assert summary["fixtures"]["objects"] == [{"name": "Nameless"}, {"no": 4, "name": "Spot 4"}]
         assert execution.result.is_error is False
 
     def test_missing_section_is_reported_not_fatal(self):
@@ -404,7 +544,7 @@ class TestGetRigContext:
         registry = _registry(state_port=FakeStatePort(tree))
         execution = registry.dispatch(_call("get_rig_context"))
         summary = json.loads(execution.result.content)
-        assert summary["fixtures"]  # healthy sections still present
+        assert summary["fixtures"]["objects"]  # healthy sections still present
         assert "error" in summary["preset_pools"]
 
     def test_unresolved_path_is_distinguished_from_an_unreachable_console(self):
@@ -450,7 +590,7 @@ class TestGetRigContext:
         registry = _registry(state_port=FakeStatePort(tree))
         execution = registry.dispatch(_call("get_rig_context"))
         summary = json.loads(execution.result.content)
-        assert summary["preset_pools"] == []
+        assert summary["preset_pools"]["objects"] == []
         assert summary["groups"]["reason"] == "path_not_resolved"
         assert execution.result.is_error is False
 
@@ -462,17 +602,18 @@ class TestRigContextDescription:
         (definition,) = [d for d in _registry().definitions() if d.name == "get_rig_context"]
         return definition.description
 
-    def test_preset_pools_are_described_as_types_not_stored_presets(self):
+    def test_preset_pools_are_described_as_types_with_contents_opened(self):
         # "DataPool/PresetPools" lists the preset TYPES (Dimmer, Position,
-        # Color, ...). The individual stored presets live INSIDE each pool and
-        # a depth-1 snapshot cannot reach them — the description must not let
-        # the model believe it is seeing presets it never received.
+        # Color, ...); a depth-1 snapshot alone cannot reach what is STORED
+        # inside each pool. Since the drilldown was added, get_rig_context
+        # opens each pool itself — the description must say the contents ARE
+        # included (as "contents"), not send the model to a manual query_state
+        # round trip it no longer needs for the common case.
         text = self._description()
         assert "preset_pools" in text
-        assert "query_state" in text
         lowered = text.lower()
         assert "type" in lowered
-        assert "not the individual" in lowered or "not individual" in lowered
+        assert "contents" in lowered
 
     def test_fixture_numbers_are_not_promised_to_be_fixture_ids(self):
         # A fixture entry's "no" is its slot in the stage patch list; whether
@@ -485,6 +626,29 @@ class TestRigContextDescription:
         text = self._description()
         assert "path_not_resolved" in text
         assert "console_unreachable" in text
+
+    def test_every_default_section_is_named(self):
+        # The model must know the whole surface it can see in one call, not
+        # just the three original sections — sequences and pages (executors)
+        # are how a look is actually stored and fired.
+        text = self._description()
+        for section in DEFAULT_RIG_CONTEXT_PATHS:
+            assert section in text, f"{section!r} missing from get_rig_context description"
+
+    def test_pages_are_described_as_the_executor_surface(self):
+        lowered = self._description().lower()
+        assert "executor" in lowered
+
+    def test_truncation_signal_is_documented(self):
+        # A short list with no completeness signal is worse than no list.
+        lowered = self._description().lower()
+        assert "truncated" in lowered
+        assert "total" in lowered
+
+    def test_drilldown_contents_are_documented(self):
+        lowered = self._description().lower()
+        assert "contents" in lowered
+        assert "contents_unavailable" in lowered
 
 
 _ORCHESTRATOR_DIR = Path(__file__).resolve().parents[1] / "orchestrator"
