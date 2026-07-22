@@ -59,6 +59,60 @@ export interface ReviewRequestView {
  */
 export type ConsoleInput = "listening" | "silent" | "undetermined";
 
+// -- show-control panel (SPEC-COPILOT-SHOWUI-001 M1) --------------------------
+//
+// An ADDITIVE v1 extension, same call as the M7 `review_decision` one: the
+// protocol version stays 1 and every type below is registered on BOTH
+// allowlists — here and in `server/web/messages.py`. A type present on only one
+// side goes silently missing on this side and loudly wrong on the server
+// (REQ-SHOWUI-014); the two unknown-type contracts are deliberately asymmetric
+// and neither may be "harmonised" into the other.
+
+/** The tile's type badge — LOOK / FX / SEQ (design.md §4). */
+export type PanelItemKind = "look" | "effect" | "sequence";
+
+/**
+ * The console object classes a tile may address.
+ *
+ * `fixture` is absent on purpose (REQ-SHOWUI-003): a fixture's `no` is its
+ * patch slot, not its fixture id, so it is not an address the console fires.
+ */
+export type PanelTargetKind = "executor" | "sequence";
+
+/** Chat-pinned (REQ-SHOWUI-004) vs rig-enumerated (REQ-SHOWUI-001). */
+export type PanelItemSource = "pin" | "auto";
+
+/**
+ * Why a catalog section is (in)complete. The two failure causes stay distinct
+ * (REQ-SHOWUI-002) — "the path does not exist in this showfile" and "the
+ * console did not answer" ask the operator for different actions.
+ */
+export type PanelSectionStatus = "ok" | "path_not_resolved" | "console_unreachable";
+
+export interface PanelItem {
+  /** `"<target_kind>:<no>"` — derived from the REAL object number. */
+  id: string;
+  kind: PanelItemKind;
+  target_kind: PanelTargetKind;
+  /** The console's real object number (pool numbers are non-contiguous). */
+  target: number;
+  name: string;
+  /** Appearance colour chip, or null when the object has none. */
+  appearance: string | null;
+  source: PanelItemSource;
+}
+
+export interface PanelSection {
+  name: string;
+  status: PanelSectionStatus;
+  /** The responder said its own listing was cut short. */
+  truncated?: boolean;
+  /** The query budget ran out before every container was opened. */
+  drilldown_capped?: boolean;
+  /** At least one container could not be opened — NOT the same as empty. */
+  contents_unavailable?: boolean;
+}
+
 export type ServerEvent =
   | {
       v: 1;
@@ -100,7 +154,26 @@ export type ServerEvent =
   | { v: 1; type: "proposal"; commands: string[]; reasons: string[] }
   | { v: 1; type: "error"; message: string; kind: string }
   | { v: 1; type: "busy"; message: string }
-  | { v: 1; type: "notice"; message: string };
+  | { v: 1; type: "notice"; message: string }
+  | { v: 1; type: "panel_catalog"; items: PanelItem[]; sections: PanelSection[] }
+  | {
+      v: 1;
+      type: "panel_item_state";
+      id: string;
+      target_kind: PanelTargetKind;
+      target: number;
+      running: boolean;
+      /** Current cue of a running sequence — a string ("1.5" is a cue). */
+      cue: string | null;
+    }
+  | {
+      v: 1;
+      type: "panel_busy";
+      id: string;
+      target_kind: PanelTargetKind;
+      target: number;
+      message: string;
+    };
 
 const SERVER_EVENT_TYPES = new Set([
   "chat_response",
@@ -113,6 +186,10 @@ const SERVER_EVENT_TYPES = new Set([
   "error",
   "busy",
   "notice",
+  // Panel (REQ-SHOWUI-014) — mirrored by PANEL_* in server/web/messages.py.
+  "panel_catalog",
+  "panel_item_state",
+  "panel_busy",
 ]);
 
 /** Parse one server frame; unknown/foreign frames return null (ignored). */
@@ -162,6 +239,58 @@ export function buildStatusRequest(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "status_request" });
 }
 
+/**
+ * The stable tile key: `"<target_kind>:<no>"`.
+ *
+ * Keyed on the console's REAL object number, never a list position
+ * (REQ-SHOWUI-003) — pool numbers are non-contiguous, so "the 3rd tile" and
+ * "object 3" are different objects. The `kind:no` shape also keeps Executor 41
+ * and Sequence 41 apart, which a bare number cannot.
+ */
+export function panelItemId(targetKind: PanelTargetKind, target: number): string {
+  return `${targetKind}:${target}`;
+}
+
+export function buildPanelExecute(targetKind: PanelTargetKind, target: number): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "panel_execute",
+    target_kind: targetKind,
+    target,
+  });
+}
+
+export function buildPanelStop(targetKind: PanelTargetKind, target: number): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "panel_stop",
+    target_kind: targetKind,
+    target,
+  });
+}
+
+/**
+ * Pin whatever the chat just created. Payload-free by design: the seed is the
+ * server's own `_last_created` cross-turn memory (REQ-SHOWUI-004), so there is
+ * no client-supplied target to get wrong.
+ */
+export function buildPanelPin(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "panel_pin" });
+}
+
+export function buildPanelUnpin(targetKind: PanelTargetKind, target: number): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "panel_unpin",
+    target_kind: targetKind,
+    target,
+  });
+}
+
+export function buildPanelCatalogRequest(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "panel_catalog_request" });
+}
+
 // -- UI state reducer ------------------------------------------------------------
 
 export type ChatEntry =
@@ -192,11 +321,36 @@ export interface PendingApproval {
   items: ApprovalItem[];
 }
 
+/** One tile's playback state. Volatile — see `clearOnDisconnect`. */
+export interface PanelItemState {
+  running: boolean;
+  cue: string | null;
+}
+
+export interface PanelState {
+  /**
+   * The tile list in WIRE order, which IS grid order (REQ-SHOWUI-017): nothing
+   * sorts it and new items append, so a tile never moves under the operator's
+   * finger mid-show.
+   */
+  items: PanelItem[];
+  sections: PanelSection[];
+  /** Per-tile playback state, keyed by `panelItemId`. */
+  running: Record<string, PanelItemState>;
+  /**
+   * The most recent busy refusal (REQ-SHOWUI-011). Held as state rather than
+   * shown as a toast — design.md §7 forbids toasts; the tile carries its own
+   * status persistently.
+   */
+  busy: { id: string; message: string } | null;
+}
+
 export interface UiState {
   entries: ChatEntry[];
   status: StatusState | null;
   pendingApprovals: PendingApproval[];
   pendingReviews: ReviewRequestView[];
+  panel: PanelState;
 }
 
 export const initialState: UiState = {
@@ -204,6 +358,7 @@ export const initialState: UiState = {
   status: null,
   pendingApprovals: [],
   pendingReviews: [],
+  panel: { items: [], sections: [], running: {}, busy: null },
 };
 
 /** Fold one server event into the UI state. */
@@ -290,6 +445,30 @@ export function reduceServerEvent(state: UiState, event: ServerEvent): UiState {
       return { ...state, entries: [...state.entries, { kind: "busy", message: event.message }] };
     case "notice":
       return { ...state, entries: [...state.entries, { kind: "notice", message: event.message }] };
+    case "panel_catalog":
+      // A refresh REPLACES the tile list; it does not merge. The server owns
+      // the catalog (single source of truth, REQ-SHOWUI-005) and merging here
+      // would keep tiles alive that the rig no longer has.
+      return {
+        ...state,
+        panel: { ...state.panel, items: event.items, sections: event.sections },
+      };
+    case "panel_item_state":
+      return {
+        ...state,
+        panel: {
+          ...state.panel,
+          running: {
+            ...state.panel.running,
+            [event.id]: { running: event.running, cue: event.cue },
+          },
+        },
+      };
+    case "panel_busy":
+      return {
+        ...state,
+        panel: { ...state.panel, busy: { id: event.id, message: event.message } },
+      };
   }
 }
 
@@ -308,6 +487,30 @@ export function addUserMessage(state: UiState, text: string): UiState {
 export function clearPendingRequests(state: UiState): UiState {
   if (state.pendingApprovals.length === 0 && state.pendingReviews.length === 0) return state;
   return { ...state, pendingApprovals: [], pendingReviews: [] };
+}
+
+/**
+ * The single disconnect action: drop every pending card AND erase the panel's
+ * running state.
+ *
+ * Running state is volatile derived state — the console keeps playing, but the
+ * app can no longer observe it, and "probably still running" is exactly the
+ * render that gets an operator to press Off on a tile that already stopped, or
+ * to leave one running that did not (REQ-SHOWUI-015/016). Fail closed: show
+ * nothing rather than a guess, and rebuild from a catalog + status resync on
+ * reconnect.
+ *
+ * The tile LIST survives — it is server state, not an observation of the
+ * console — so the panel still renders (inert) while offline.
+ *
+ * One function rather than two so a disconnect handler cannot clear half the
+ * volatile state and keep the other half on screen.
+ */
+export function clearOnDisconnect(state: UiState): UiState {
+  const next = clearPendingRequests(state);
+  const { running, busy } = next.panel;
+  if (Object.keys(running).length === 0 && busy === null) return next;
+  return { ...next, panel: { ...next.panel, running: {}, busy: null } };
 }
 
 // -- Korean display labels ---------------------------------------------------------

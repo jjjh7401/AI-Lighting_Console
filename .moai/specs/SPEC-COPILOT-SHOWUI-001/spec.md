@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-SHOWUI-001
 title: "연출 컨트롤 패널 — 채팅 옆 Show-Control Panel"
 version: "0.2.1"
-status: draft
+status: in-progress
 created: 2026-07-22
 updated: 2026-07-22
 author: manager-spec

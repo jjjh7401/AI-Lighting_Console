@@ -5,10 +5,17 @@ import {
   buildApprovalDecision,
   buildChat,
   buildLock,
+  buildPanelCatalogRequest,
+  buildPanelExecute,
+  buildPanelPin,
+  buildPanelStop,
+  buildPanelUnpin,
   buildReviewDecision,
+  clearOnDisconnect,
   healthGuidance,
   healthLabel,
   initialState,
+  panelItemId,
   parseServerEvent,
   reduceServerEvent,
   type ServerEvent,
@@ -379,5 +386,283 @@ describe("M7 deploy review flow", () => {
       event({ type: "review_resolved", request_id: "review-999", approved: true }),
     );
     expect(stillPending.pendingReviews).toHaveLength(1);
+  });
+});
+
+// -- SPEC-COPILOT-SHOWUI-001 M1 — show-control panel protocol contract ---------
+//
+// The panel types are an ADDITIVE v1 extension registered on BOTH allowlists
+// (REQ-SHOWUI-014). This side's unknown-type contract — silently drop — is
+// deliberately NOT the server's (which rejects loudly), and both halves are
+// pinned so a later milestone cannot "harmonise" them into one behaviour.
+
+const catalogEvent = {
+  type: "panel_catalog",
+  items: [
+    {
+      id: "executor:191",
+      kind: "sequence",
+      target_kind: "executor",
+      target: 191,
+      name: "Summer Rock",
+      appearance: "#ff3fa4",
+      source: "auto",
+    },
+    {
+      id: "sequence:7",
+      kind: "look",
+      target_kind: "sequence",
+      target: 7,
+      name: "Cyan Look",
+      appearance: null,
+      source: "pin",
+    },
+  ],
+  sections: [
+    {
+      name: "sequences",
+      status: "ok",
+      truncated: true,
+      drilldown_capped: false,
+      contents_unavailable: false,
+    },
+    {
+      name: "pages",
+      status: "path_not_resolved",
+      truncated: false,
+      drilldown_capped: false,
+      contents_unavailable: false,
+    },
+  ],
+};
+
+describe("panel protocol parity (AC-SHOWUI-001, client half)", () => {
+  it("parses every new panel event", () => {
+    expect(parseServerEvent(JSON.stringify({ v: 1, ...catalogEvent }))?.type).toBe("panel_catalog");
+    expect(
+      parseServerEvent(
+        JSON.stringify({
+          v: 1,
+          type: "panel_item_state",
+          id: "executor:191",
+          target_kind: "executor",
+          target: 191,
+          running: true,
+          cue: "3",
+        }),
+      )?.type,
+    ).toBe("panel_item_state");
+    expect(
+      parseServerEvent(
+        JSON.stringify({
+          v: 1,
+          type: "panel_busy",
+          id: "executor:191",
+          target_kind: "executor",
+          target: 191,
+          message: "실행 처리 중입니다",
+        }),
+      )?.type,
+    ).toBe("panel_busy");
+  });
+
+  it("still drops the wrong version and unknown types silently", () => {
+    // The asymmetric half of REQ-SHOWUI-014: this side returns null, it does
+    // NOT throw. Widening the allowlist must not turn it into a prefix match.
+    expect(parseServerEvent(JSON.stringify({ v: 2, ...catalogEvent }))).toBeNull();
+    expect(parseServerEvent(JSON.stringify({ v: 1, type: "panel_mystery" }))).toBeNull();
+    expect(parseServerEvent(JSON.stringify({ v: 1, type: "panel_catalog_extra" }))).toBeNull();
+  });
+
+  it("builds every new client frame at v1", () => {
+    expect(JSON.parse(buildPanelExecute("executor", 191))).toEqual({
+      v: 1,
+      type: "panel_execute",
+      target_kind: "executor",
+      target: 191,
+    });
+    expect(JSON.parse(buildPanelStop("sequence", 41))).toEqual({
+      v: 1,
+      type: "panel_stop",
+      target_kind: "sequence",
+      target: 41,
+    });
+    expect(JSON.parse(buildPanelUnpin("executor", 201))).toEqual({
+      v: 1,
+      type: "panel_unpin",
+      target_kind: "executor",
+      target: 201,
+    });
+    // REQ-SHOWUI-004: the pin seed is server-side `_last_created`, so the
+    // client sends no target it could get wrong.
+    expect(JSON.parse(buildPanelPin())).toEqual({ v: 1, type: "panel_pin" });
+    expect(JSON.parse(buildPanelCatalogRequest())).toEqual({
+      v: 1,
+      type: "panel_catalog_request",
+    });
+  });
+
+  it("keys tiles by the real object number, never by list position", () => {
+    // REQ-SHOWUI-003 — pool numbers are non-contiguous.
+    expect(panelItemId("executor", 191)).toBe("executor:191");
+    expect(panelItemId("sequence", 7)).toBe("sequence:7");
+  });
+});
+
+describe("panel reducer", () => {
+  it("starts with an empty panel", () => {
+    expect(initialState.panel.items).toEqual([]);
+    expect(initialState.panel.sections).toEqual([]);
+    expect(initialState.panel.running).toEqual({});
+    expect(initialState.panel.busy).toBeNull();
+  });
+
+  it("stores the catalog in wire order without sorting it", () => {
+    // REQ-SHOWUI-017: the grid never reflows during a show. Wire order IS
+    // grid order; a "helpful" sort would move a tile under the operator.
+    const next = reduceServerEvent(initialState, event(catalogEvent));
+    expect(next.panel.items.map((item) => item.id)).toEqual(["executor:191", "sequence:7"]);
+    expect(next.panel.items[0].name).toBe("Summer Rock");
+    expect(next.panel.items[1].appearance).toBeNull();
+  });
+
+  it("keeps the two catalog failure causes distinct (REQ-SHOWUI-002)", () => {
+    const next = reduceServerEvent(
+      initialState,
+      event({
+        ...catalogEvent,
+        sections: [
+          { name: "sequences", status: "console_unreachable" },
+          { name: "pages", status: "path_not_resolved" },
+        ],
+      }),
+    );
+    expect(next.panel.sections.map((section) => section.status)).toEqual([
+      "console_unreachable",
+      "path_not_resolved",
+    ]);
+  });
+
+  it("carries the completeness flags through to the UI (REQ-SHOWUI-001)", () => {
+    const next = reduceServerEvent(initialState, event(catalogEvent));
+    expect(next.panel.sections[0].truncated).toBe(true);
+    expect(next.panel.sections[0].drilldown_capped).toBe(false);
+    expect(next.panel.sections[0].contents_unavailable).toBe(false);
+  });
+
+  it("replaces the catalog on refresh rather than appending a duplicate", () => {
+    const first = reduceServerEvent(initialState, event(catalogEvent));
+    const second = reduceServerEvent(first, event(catalogEvent));
+    expect(second.panel.items).toHaveLength(2);
+  });
+
+  it("tracks per-tile running state keyed by the real object number", () => {
+    let state = reduceServerEvent(initialState, event(catalogEvent));
+    state = reduceServerEvent(
+      state,
+      event({
+        type: "panel_item_state",
+        id: "executor:191",
+        target_kind: "executor",
+        target: 191,
+        running: true,
+        cue: "3",
+      }),
+    );
+    expect(state.panel.running["executor:191"]).toEqual({ running: true, cue: "3" });
+    expect(state.panel.running["sequence:7"]).toBeUndefined();
+
+    state = reduceServerEvent(
+      state,
+      event({
+        type: "panel_item_state",
+        id: "executor:191",
+        target_kind: "executor",
+        target: 191,
+        running: false,
+        cue: null,
+      }),
+    );
+    expect(state.panel.running["executor:191"]).toEqual({ running: false, cue: null });
+  });
+
+  it("records a busy refusal against the tile that was pressed", () => {
+    // REQ-SHOWUI-011: a persistent per-tile state, never a toast (design.md §7).
+    const state = reduceServerEvent(
+      initialState,
+      event({
+        type: "panel_busy",
+        id: "executor:191",
+        target_kind: "executor",
+        target: 191,
+        message: "실행 처리 중입니다",
+      }),
+    );
+    expect(state.panel.busy).toEqual({ id: "executor:191", message: "실행 처리 중입니다" });
+  });
+
+  it("leaves the rest of the UI state untouched", () => {
+    const state = reduceServerEvent(initialState, event(catalogEvent));
+    expect(state.entries).toEqual([]);
+    expect(state.status).toBeNull();
+  });
+});
+
+describe("clearOnDisconnect (REQ-SHOWUI-015/016 — fail closed)", () => {
+  function connectedState() {
+    let state = reduceServerEvent(initialState, event(catalogEvent));
+    state = reduceServerEvent(
+      state,
+      event({
+        type: "panel_item_state",
+        id: "executor:191",
+        target_kind: "executor",
+        target: 191,
+        running: true,
+        cue: "3",
+      }),
+    );
+    state = reduceServerEvent(
+      state,
+      event({
+        type: "panel_busy",
+        id: "sequence:7",
+        target_kind: "sequence",
+        target: 7,
+        message: "실행 처리 중입니다",
+      }),
+    );
+    return reduceServerEvent(
+      state,
+      event({
+        type: "approval_request",
+        request_id: "req-1",
+        items: [{ command: "Go+ Executor 191", risk_reasons: [], warnings: [] }],
+        actions: ["approve", "reject"],
+      }),
+    );
+  }
+
+  it("erases running state — never renders 'probably still running'", () => {
+    const cleared = clearOnDisconnect(connectedState());
+    expect(cleared.panel.running).toEqual({});
+    expect(cleared.panel.busy).toBeNull();
+  });
+
+  it("keeps the catalog so the panel can re-render while offline", () => {
+    // Only running state is volatile derived state; the tile list is not.
+    const cleared = clearOnDisconnect(connectedState());
+    expect(cleared.panel.items).toHaveLength(2);
+    expect(cleared.panel.sections).toHaveLength(2);
+  });
+
+  it("also denies the pending approval cards it already cleared", () => {
+    const cleared = clearOnDisconnect(connectedState());
+    expect(cleared.pendingApprovals).toHaveLength(0);
+    expect(cleared.pendingReviews).toHaveLength(0);
+  });
+
+  it("is a no-op on an already-clean state", () => {
+    expect(clearOnDisconnect(initialState)).toBe(initialState);
   });
 });

@@ -21,9 +21,30 @@ client (`ui/`), and the M6 measurement harness. Executable half:
 | `review_decision` | `request_id: string`, `approved: bool` | (M7, additive) The human decision for a pending `review_request` (deploy review). Unknown/expired ids get an `error` (kind `protocol`). |
 | `lock` | `active: bool` | Live-lock toggle (REQ-MVP-016). Effective immediately — including while an approval is pending (lock-first, REQ-MVP-035). |
 | `status_request` | — | Ask for a `status` event. |
+| `panel_execute` | `target_kind: "executor"\|"sequence"`, `target: int ≥ 1` | (SHOWUI M1, additive) Fire one panel tile → `Go+ Executor N`, via `gate.screen()`. One panel execution at a time; a second while busy gets `panel_busy`. |
+| `panel_stop` | `target_kind`, `target` | (SHOWUI M1) Stop one panel tile → `Off Executor N`, via `gate.screen()`. EXEMPT from the one-at-a-time guard (REQ-SHOWUI-012) — stop is always single-press, zero-wait. |
+| `panel_pin` | — | (SHOWUI M1) Pin the chat's last-created look to the panel. Payload-free: the seed is the server's own `_last_created` memory (REQ-SHOWUI-004). |
+| `panel_unpin` | `target_kind`, `target` | (SHOWUI M1) Remove one pinned tile; the removal is persisted (REQ-SHOWUI-023). |
+| `panel_catalog_request` | — | (SHOWUI M1) Ask for a `panel_catalog` event (sent on connect and on manual refresh). |
 
 Malformed frames (bad JSON, wrong `v`, unknown `type`, missing fields) yield an
 `error` event with `kind: "protocol"` and are otherwise ignored.
+
+### Unknown types: the two sides behave DIFFERENTLY, on purpose
+
+This asymmetry is a contract, not an oversight, and neither half may be
+"harmonised" into the other (REQ-SHOWUI-014):
+
+| side | on an unregistered type | why |
+|---|---|---|
+| server (`parse_client_message`) | raises `ProtocolError` → `error` event, `kind: "protocol"` | Client input is untrusted. Anything the server cannot name, it refuses loudly — silence here would mean a frame reaching a handler that was never written for it. |
+| client (`parseServerEvent`) | returns `null`; the frame is dropped | A UI must survive a NEWER server. Dropping an event it does not understand keeps an old build usable instead of crashing the panel mid-show. |
+
+The cost of the client's silence is that a type registered on only one side
+disappears without a trace — which is why every addition must land on both
+allowlists (`CLIENT_MESSAGE_TYPES` / `PANEL_CLIENT_MESSAGE_TYPES` in
+`server/web/messages.py`, `SERVER_EVENT_TYPES` in `ui/src/protocol.ts`) in the
+same change. `AC-SHOWUI-001` is the parity test that holds this.
 
 ## Server → Client
 
@@ -39,6 +60,61 @@ Malformed frames (bad JSON, wrong `v`, unknown `type`, missing fields) yield an
 | `error` | `message: string` (Korean), `kind: string` | User-facing error. `kind` ∈ normalized provider kinds (`rate_limit`, `auth`, `invalid_request`, `connection`, `server`, `malformed_response`, `unknown`) + `unexpected` + `protocol`. |
 | `busy` | `message: string` | An instruction is already in flight. |
 | `notice` | `message: string` | Standalone Korean notice (e.g. showfile-backup failure, REQ-MVP-034). |
+| `panel_catalog` | `items: PanelItem[]`, `sections: PanelSection[]` | (SHOWUI M1) The panel's executable tile list + per-section completeness. A refresh REPLACES the list; it does not merge. |
+| `panel_item_state` | `id: string`, `target_kind`, `target: int`, `running: bool`, `cue: string\|null` | (SHOWUI M1) One tile's playback state. `cue` is the running sequence's current cue — a **string**, because MA3 cue numbers are not integers ("1.5"). |
+| `panel_busy` | `id: string`, `target_kind`, `target: int`, `message: string` | (SHOWUI M1) A panel execution was refused because one is in flight (REQ-SHOWUI-011). Names the tile it refused so the UI can unlock that tile — distinct from `busy`, which is the CHAT turn lock the panel deliberately does not share (REQ-SHOWUI-013). |
+
+### PanelItem (SHOWUI M1)
+
+```json
+{
+  "id": "executor:191",
+  "kind": "sequence",
+  "target_kind": "executor",
+  "target": 191,
+  "name": "Summer Rock",
+  "appearance": "#ff3fa4",
+  "source": "auto"
+}
+```
+
+| field | values | meaning |
+|---|---|---|
+| `id` | `"<target_kind>:<target>"` | Derived tile key. Always the console's REAL object number — **never a list position** (REQ-SHOWUI-003): pool numbers are non-contiguous, so "the 3rd tile" and "object 3" are different objects. The `kind:no` shape also keeps Executor 41 and Sequence 41 apart, which a bare number cannot. |
+| `kind` | `look` \| `effect` \| `sequence` | The tile's type badge — LOOK / FX / SEQ (design.md §4). |
+| `target_kind` | `executor` \| `sequence` | The console object class the command addresses. **`fixture` is absent on purpose**: a fixture's `no` is its patch slot, not its fixture id, so it is not an address the console fires (REQ-SHOWUI-003). |
+| `target` | int ≥ 1 | The real object number. Console pools are 1-based, so `0` and negatives are refused at parse time. |
+| `name` | string | The console name, verbatim. |
+| `appearance` | `"#rrggbb"` \| `null` | Appearance colour chip — the tile's identity, read before the text (design.md §4). |
+| `source` | `pin` \| `auto` | Chat-pinned (REQ-SHOWUI-004) or rig-enumerated (REQ-SHOWUI-001). |
+
+**Order is meaning.** `items` arrives in grid order and neither side sorts it:
+new tiles append, existing tiles never move (REQ-SHOWUI-005/017). A tile that
+shifts under the operator's finger mid-show is a misfire waiting to happen.
+
+### PanelSection (SHOWUI M1)
+
+Each catalog section reports its own completeness, so the UI never presents a
+partial rig as a whole one:
+
+| field | values | meaning |
+|---|---|---|
+| `name` | string | The rig-context section (`sequences`, `pages`, …). |
+| `status` | `ok` \| `path_not_resolved` \| `console_unreachable` | See below. |
+| `truncated` | bool | The responder said its own listing was cut short (PROTOCOL §4 `truncated`). |
+| `drilldown_capped` | bool | The per-call query budget ran out before every container was opened, so tiles are missing. |
+| `contents_unavailable` | bool | At least one container could **not be opened** — distinct from a verified-empty one. Collapsing the two makes a console that failed mid-walk look like a show with nothing configured. |
+
+The two failure statuses stay **distinct and are never merged** (REQ-SHOWUI-002),
+mirroring `server/orchestrator/tools.py`:
+
+| status | meaning | operator action |
+|---|---|---|
+| `path_not_resolved` | a sibling section answered, so the console IS reachable and THIS path is wrong for this showfile | a configuration defect — fix the path |
+| `console_unreachable` | nothing answered, so no path can be blamed | an operational condition — retry when the console is up |
+
+Merging them into one soft "unavailable" is exactly how two dead default rig
+paths survived a whole stage unnoticed.
 
 ### status.console_input (additive, protocol stays v1)
 
@@ -140,6 +216,13 @@ Rules:
   `type`, not by position.
 - On disconnect all pending approvals are DENIED (fail-safe, REQ-MVP-014).
   Approvals also deny after the server-side timeout (default 600 s).
+- On disconnect the client ERASES all panel running state (SHOWUI, REQ-SHOWUI-015/016).
+  The console keeps playing, but the app can no longer observe it, and
+  "probably still running" is the render that gets an operator to press Off on a
+  tile that already stopped. The tile LIST survives (it is server state, not an
+  observation); running state is rebuilt from a `panel_catalog_request` +
+  `status_request` resync on reconnect. Unconfirmed commands are never
+  auto-resent (REQ-MVP-032).
 
 ## Round-trip measurement hooks (M6)
 
