@@ -60,7 +60,7 @@ same change. `AC-SHOWUI-001` is the parity test that holds this.
 | `error` | `message: string` (Korean), `kind: string` | User-facing error. `kind` ∈ normalized provider kinds (`rate_limit`, `auth`, `invalid_request`, `connection`, `server`, `malformed_response`, `unknown`) + `unexpected` + `protocol`. |
 | `busy` | `message: string` | An instruction is already in flight. |
 | `notice` | `message: string` | Standalone Korean notice (e.g. showfile-backup failure, REQ-MVP-034). |
-| `panel_catalog` | `items: PanelItem[]`, `sections: PanelSection[]` | (SHOWUI M1) The panel's executable tile list + per-section completeness. A refresh REPLACES the list; it does not merge. |
+| `panel_catalog` | `items: PanelItem[]`, `sections: PanelSection[]` | (SHOWUI M1) The panel's executable tile list + per-section completeness. A refresh REPLACES the list; it does not merge. **v1 enumerates only `sequences`** — executor tiles are pin-only (the auto executor drill-down is deferred to SPEC-COPILOT-EXECREF-001; see § PanelSection). |
 | `panel_item_state` | `id: string`, `target_kind`, `target: int`, `running: bool`, `cue: string\|null` | (SHOWUI M1) One tile's playback state. `cue` is the running sequence's current cue — a **string**, because MA3 cue numbers are not integers ("1.5"). |
 | `panel_busy` | `id: string`, `target_kind`, `target: int`, `message: string` | (SHOWUI M1) A panel execution was refused because one is in flight (REQ-SHOWUI-011). Names the tile it refused so the UI can unlock that tile — distinct from `busy`, which is the CHAT turn lock the panel deliberately does not share (REQ-SHOWUI-013). |
 
@@ -134,7 +134,7 @@ partial rig as a whole one:
 
 | field | values | meaning |
 |---|---|---|
-| `name` | string | The rig-context section (`sequences`, `pages`, …). |
+| `name` | string | The rig-context section. **v1 emits exactly one: `sequences`.** The `pages` (executor drill-down) section is descoped from v1 — see the v1 scope note below. |
 | `status` | `ok` \| `path_not_resolved` \| `console_unreachable` | See below. |
 | `truncated` | bool | The responder said its own listing was cut short (PROTOCOL §4 `truncated`). |
 | `drilldown_capped` | bool | The per-call query budget ran out before every container was opened, so tiles are missing. |
@@ -150,6 +150,23 @@ mirroring `server/orchestrator/tools.py`:
 
 Merging them into one soft "unavailable" is exactly how two dead default rig
 paths survived a whole stage unnoticed.
+
+**v1 scope — executor tiles are pin-only (descoped to SPEC-COPILOT-EXECREF-001).**
+v1 auto-enumerates a single section, `sequences`. The `pages` (executor
+drill-down) section is **structurally absent** from the v1 catalog — not
+filtered, not disabled at runtime, simply not a catalog source — for the same
+reason `fixtures` is absent: its number is not the address the console fires. A
+page CHILD's drill-down index is NOT the console command-line number: live-proven
+against onPC 2.4.2, `console# = 100 + i` uniformly across all page-1 executors, so
+`Off Executor i` was refused with `Illegal object` while `Off Executor i+100`
+fired, and the i=101 tile silently COLLIDES (`Off Executor 101` succeeds but
+addresses a different executor). Executor tiles still reach the panel as **pins**,
+whose number is the chat's explicit `Assign … At Executor Y` — the real console
+number Y — so pinned executors address correctly. The `panel_item` wire schema is
+unchanged (an `executor` tile is still a valid shape, and EXECREF-001 re-adds the
+auto section with `console# = page*100 + i` addressing plus gate Executor-reference
+recognition), so `PROTOCOL_VERSION` stays **1**: only the SET of emitted tiles
+shrinks, never the tile shape.
 
 ### status.console_input (additive, protocol stays v1)
 

@@ -455,7 +455,7 @@ M1~M5 다섯 커밋(15:44~19:15)보다 앞선다 — 번들 안에 `server/web/p
 |---|---|---|---|
 | AC-SHOWUI-012 | **PASS** | `.venv/bin/python -m pytest server/tests/ -q` · `(cd ui && npx vitest run)` | `1592 passed in 84.15s` · `Tests 176 passed (176)` |
 | AC-SHOWUI-013 ① (시퀀스 타일) | **PASS** | 패널 `panel_execute sequence:41` → 감사 로그 | `Go+ Sequence 41 ok=True detail=OK`, `panel_item_state running=true`; **조작자 육안으로 조명 변화 확인** |
-| AC-SHOWUI-013 ① (실행기 타일) | **FAIL — 결함 확정** | 아래 §M6 결함 참조 | `Go+ Executor 11 ok=False detail='Illegal object'` |
+| AC-SHOWUI-013 ① (실행기 타일) | **DESCOPED-v1 → EXECREF-001** | 아래 §M6 결함(정정판) + §M6 결정(범위 축소) 참조 | v1은 드릴다운 실행기 타일을 **구조적으로 표시하지 않음**(카탈로그 소스에서 제거). 실행기 주소 결함(`console# = 100+i`) + 게이트 Executor 인식은 EXECREF-001로 이연. 시퀀스 타일 절반은 PASS(위 AC-013 ① 시퀀스 행) |
 | AC-SHOWUI-013 ② | **PASS** | `panel_stop sequence:41` | `Off Sequence 41 ok=True`, `running` true→false |
 | AC-SHOWUI-013 ③ | **PASS** | `chat` → `panel_pin` → execute → stop | `Store Sequence 90 Cue 1 'Blue Look' ok=True` → 핀 `sequence:90` 생성(그리드 0번) → `Go+/Off Sequence 90 ok=True` |
 | AC-SHOWUI-013 ④ | **PASS** | `lock active` → `panel_execute` → 감사 로그 창 census | 프레임 `proposal`(`["Go+ Sequence 41"]`) → `error(kind:panel, 라이브 잠금…)` → `panel_item_state running=false`, **승인 카드 없음**; 창 내 `kind==command` **0건**, `blocked` 1건(`reason='live lock active'`), 하트비트 4건 |
@@ -463,42 +463,107 @@ M1~M5 다섯 커밋(15:44~19:15)보다 앞선다 — 번들 안에 `server/web/p
 | AC-SHOWUI-013 ⑥ | **PASS** | 타일 running 상태에서 드라이버 프로세스 `kill -9`(비정상 종료) → 신규 소켓 | 수신 프레임 전량 = `status`,`status`,`panel_catalog`; **`panel_item_state` 0건**. 동시에 콘솔은 `Go+ Sequence 41 ok=True` 이후 Off 없이 **실제 재생 중** — 즉 "콘솔은 돌고 앱은 모른다"가 실기로 성립 |
 | AC-SHOWUI-013 ⑦ | **PASS** | 3타일 발화 → 추적 running마다 개별 `panel_stop` | 콘솔 커맨드 6건 = `Go+`3 + `Off`3, 광역 타깃(`Thru`/`*`/`Everything`) **0건**; **데스크에서 직접 띄운 재생은 All Off 후에도 생존**(조작자 확인) = 한계가 사양대로 동작 |
 | AC-SHOWUI-002/003 | **PASS(라이브)** | `panel_catalog_request` 실기 응답 | 섹션 2종 모두 `status:"ok"`; 시퀀스 비연속(1,2,11~16,30,41,50,62,71,80 — 3~10·17~29 부재)으로 인덱스 키잉 회귀 차단 실증; fixtures 섹션 구조적 부재 |
-| AC-SHOWUI-014 | **부분 — 미완** | 아래 §M6 미결 참조 | 서버 신호는 확인(`console_offline`에서 요청 이전에 `executions_blocked=true` 도착), **실행-차단 경로와 UI 렌더는 미검증** |
+| AC-SHOWUI-014 | **PASS (라이브·완결, resume 세션)** | 아래 §M6 AC-014 라이브 완결 참조 | reply-port 드리프트 9005→9006(앱측, 콘솔 무변경) 유발 → `console_offline`; 핀 `sequence:90` membership 통과 후 HEALTH에서 차단(감사 `blocked` "Go+ Sequence 90", 창 내 `kind=command` **0건**); UI 상단 오프라인 배너 + amber "⛔ 실행 차단됨" 패널 배너 + 드리프트 안내(양 포트 명시) + 타일 `is-blocked`·Go+/Off/ALL OFF 전부 `disabled`(JS assert); 양성대조: 9005 복귀 시 online |
 
-증적: `.moai/state/verify/showui-m6/` (`driver.py` 하니스, 세션별 `frames.jsonl`/`driver.log`,
+증적(원 세션): `.moai/state/verify/showui-m6/` (`driver.py` 하니스, 세션별 `frames.jsonl`/`driver.log`,
 `probe_executor_address.py`) + `server/audit_logs/audit-20260722.jsonl`.
-라이브 세션 콘솔 커맨드 총 **19건 — 성공 17 / 실패 2**, 실패 2건 모두 실행기 주소 문제.
+원 라이브 세션 콘솔 커맨드 총 **19건 — 성공 17 / 실패 2**, 실패 2건 모두 실행기 주소 문제.
+증적(resume 세션 — 실행기 주소 실측 + AC-014 완결): `.moai/state/verify/showui-m6-resume/`
+(`executor-offset.jsonl` 16행, `probe_executor_offset.py`, `live-ac014b/` frames.jsonl,
+`live-ac014/` backend 로그) + 동일 감사 로그.
 
-### M6 결함 — 실행기 타일 주소 (AC-SHOWUI-013 ① 미충족)
+### M6 결함 (정정판) — 실행기 타일 주소: 콘솔 실번호 = `100 + i`
 
-**증상.** 페이지 드릴다운이 나열한 실행기 8개 중 **7개가 발화 불가**다.
+**정정 배경 — 이전 표는 미검증 주장이었다.** 원래 라이브 세션(HEAD `09e2c4f`, 13:55)이
+실제로 발화한 실행기 커맨드는 `Go+ Executor 11` **단 1건**뿐이다(`audit-20260722.jsonl:298`,
+`ok=false 'Illegal object'`; 원 세션 census 19 kind=command, 성공 17 / 실패 2). 이전 표의
+"1·5·91·92·93·95 → Illegal, 101 → ok" 중 나머지 7행은 발화 없이 추정된 값이었고, 특히
+**"101 → ok" 행은 오독**이다 — `Off Executor 101`이 실제 ok인 것은 맞으나 그것이 i=101 타일의
+정상 발화를 뜻하지 않는다(아래 충돌 참조). 이전 표는 이로써 **폐기·대체(superseded)**한다.
+텍스트 추론만으로 결함을 단정한 그 표는 `verification-claim-integrity.md §1.1 surface 3`
+(도구 확인 없는 결함 주장 금지) 위반이었다.
 
-| 실행기 | `Go+ Executor N` |
-|---|---|
-| 1, 5, 11, 91, 92, 93, 95 | `Illegal object` (7건) |
-| 101 | `ok` (1건) |
+**정정 — resume 세션에서 16개 커맨드를 1:1 실측했다.** page 1의 자식 실행기 8개 각각에 대해
+`Off Executor i`(raw)와 `Off Executor i+100`(plus100) 두 형식을 모두 발화하고 감사에 기록했다.
 
-**오브젝트는 실재한다.** `DataPool/Pages/1/11` 질의는 `{"class":"Executor","name":"Sequence 41"}`
-를 반환한다. 즉 트리 인덱스와 커맨드라인 주소 공간이 일치하지 않는다.
+| 응답기 i | 배정 시퀀스 | `Off Executor i` (raw) | `Off Executor i+100` |
+|---|---|---|---|
+| 1 | Sequence 50 | `Illegal object` | `ok` |
+| 5 | Sequence 30 | `Illegal object` | `ok` |
+| 11 | Sequence 41 | `Illegal object` | `ok` |
+| 91 | Sequence 80 | `Illegal object` | `ok` |
+| 92 | Sequence 14 | `Illegal object` | `ok` |
+| 93 | Sequence 16 | `Illegal object` | `ok` |
+| 95 | Sequence 62 | `Illegal object` | `ok` |
+| 101 | Sequence 71 | **`ok`(충돌!)** | `ok` |
 
-**대안 문법도 실패한다.** `Go+ Executor 1.11` / `Go+ Executor 1.101` → `Cannot Create Object`.
-채팅 경로에서도 같은 뿌리가 드러났다: `Assign Sequence 90 At Page 1.2` → `Cannot Create Object`.
+**결론 — 콘솔 실번호 = `100 + i`, 균일.** 8개 실행기 전부에서 `Off Executor i+100`이 발화했고,
+`Off Executor i`(raw)는 i=101을 제외하고 전부 `Illegal object`였다. 즉 드릴다운 인덱스 i는
+커맨드라인 주소가 아니며, 실번호는 8개 전부에서 균일하게 `100 + i`다.
 
-**시퀀스 타일 14개는 정상이다** (`Go+/Off Sequence N` 전부 ok) — 피해 범위는 실행기 타일에 한정된다.
+**i=101 행은 무오류 오발(silent wrong-object) 위험 — 7건의 거절보다 나쁘다.**
+`Off Executor 101`도 `Off Executor 201`도 둘 다 `ok`를 반환한다. 101은 i=101(Sequence 71)의
+raw 주소인 동시에 i=1(Sequence 50)의 `+100` 주소이기 때문이다. 따라서 패널이 "Sequence 71"로
+라벨한 타일이 번호 101로 발화하면 **오류 없이 Sequence 50의 실행기를 켠다** — 잘못된 조명이,
+아무 경고 없이. 나머지 7개의 `Illegal object`는 최소한 소리를 내지만, i=101은 조용히 틀린다.
 
-**게이트는 이미 경고하고 있었다.** `Go+ Executor 11`의 승인 카드가 실린 이유는
-`["reference-invoking command", "unverifiable reference: no recognizable target object"]` 였고,
-시퀀스 타일은 승인 카드 자체가 뜨지 않았다. 안전 계층의 "확인 불가능한 참조" 판정은
-콘솔의 거절을 **예측적으로** 맞혔다.
+증적: `.moai/state/verify/showui-m6-resume/executor-offset.jsonl` (16행, i/name/addressed/form/
+status 1:1) + `server/audit_logs/audit-20260722.jsonl`의 마지막 16개 `Off Executor` 행(23:11·23:14
+창). 이로써 결함은 **도구 확인됨** — 텍스트 추론이 아니라 실발화 관측이며,
+`verification-claim-integrity.md §1.1 surface 3`(결함은 도구가 확인해야 성립)을 충족한다.
 
-**이것은 이월된 열린 질문 (a)의 답이다** — 드릴다운이 반환한 실행기 번호는
-`Go+ Executor N` 이 발화하는 번호와 **동일하지 않다**. ASSUMPTION-7은 이 쇼파일에서 반증됐다.
-`.moai/state/verify/probe_executor_numbers.py` 의 정적 판정("i가 101/191/201 같으면 가정 성립")은
-발화 없이는 도달할 수 없는 결론이었다 — 라이브 E2E가 존재하는 이유.
-결함 계열은 `copilot-fid-vs-slot-decision` (픽스처 `no` = 패치 슬롯 ≠ FID)과 동일하다.
+**게이트는 이미 예측적으로 경고했다.** `Go+ Executor 11`의 승인 카드 사유는
+`["reference-invoking command", "unverifiable reference: no recognizable target object"]`였고,
+시퀀스 타일은 승인 카드 자체가 뜨지 않았다. 안전 계층의 "확인 불가능한 참조" 판정이 콘솔 거절을
+예측적으로 맞혔다. 결함 계열은 `copilot-fid-vs-slot-decision`(픽스처 `no` = 패치 슬롯 ≠ FID)과
+동일한 "인덱스 ≠ 주소"다. ASSUMPTION-7(드릴다운 i = 커맨드 번호)은 이 쇼파일에서 최종 반증됐다.
 
-**미해결.** 올바른 주소 체계는 미확정. 조작자가 콘솔에서 실행기 11번과 101번의 실제 상태를
-확인하기로 함. 처리 방침(본 SPEC 내 수정 / v1 범위 축소 / 후속 SPEC)은 결정 대기.
+### M6 — AC-SHOWUI-014 라이브 완결 (PASS)
+
+원 세션에서 미완이던 AC-014를 resume 세션에서 **핀 경로 실행-차단 + UI 렌더까지 완결**했다.
+membership이 health보다 먼저 검사되므로(§M6 미결 원 항목 1의 함정), 오프라인에서 실행-차단 경로에
+도달하려면 살아있는 카탈로그 또는 핀이 선행되어야 한다 — AC-013 ③에서 만든 핀 `sequence:90`이
+재기동 후 복원되어 그 선행을 만족했다.
+
+- **유발**: reply-port 드리프트 9005→9006. **앱측 `receive_port`만 변경**, 콘솔 OSC 테이블은
+  무변경. 결과 `status health=console_offline, executions_blocked=true, console_input=listening,
+  reply_port=9005, receive_port=9006`(`live-ac014b/frames.jsonl` 1행, `live-ac014/backend*.log`).
+- **실행-차단 경로**: `panel_execute sequence:90` → membership 통과 → HEALTH에서 차단.
+  감사 로그에 `{"event":"blocked","command":"Go+ Sequence 90","reason":"console offline — new
+  executions are blocked (REQ-MVP-030)"}`, 차단 창 내 `kind=command` **0건**. 프레임:
+  `error(kind:panel, "콘솔 오프라인 상태입니다 — 패널 실행이 차단되었습니다.")` +
+  `panel_item_state running=false`(`live-ac014b/frames.jsonl` 3~4행).
+- **UI 렌더**: 상단 오프라인 배너 + amber "⛔ 실행 차단됨" 패널 배너 + 드리프트 안내
+  (reply 9005 / receive 9006 **양 포트 명시**) + 핀 타일 class `is-blocked` + Go+/Off/ALL OFF
+  버튼 전부 `disabled=true`(JS assert) + 타일 노트 "실행 차단됨".
+- **양성 대조**: `receive_port`를 9005로 되돌리자 health가 online으로 복귀 — 차단이 드리프트에
+  귀속됨을 증명(단순 무응답 아님).
+
+증적: `.moai/state/verify/showui-m6-resume/live-ac014b/`(frames.jsonl) +
+`.moai/state/verify/showui-m6-resume/live-ac014/`(backend 로그) + `audit-20260722.jsonl`.
+
+### M6 결정 — 실행기 타일 v1 범위 축소 (→ SPEC-COPILOT-EXECREF-001)
+
+**결정(사용자 승인).** v1에서 **드릴다운 실행기 타일을 숨긴다.** 주소 결함(`console# = 100+i`)의
+수정과 게이트 Executor 인식은 **후속 SPEC-COPILOT-EXECREF-001**로 이연한다.
+
+**구현 방식 — 구조적 부재(REQ-SHOWUI-003 선례).** 런타임 필터가 아니라 카탈로그 소스에서 제거:
+`server/web/panel.py`의 `PANEL_CATALOG_SECTIONS`에서 `pages`(drilldown=True, target_kind=executor)
+`SectionSpec`을 삭제하여 `sequences` 단일 소스만 남긴다 — fixtures가 애초에 소스가 아닌 것과 동일한
+"인덱스 ≠ 주소" 사유. 드릴다운 순회 기계(`build_catalog`의 drilldown 분기 + `drill_into`)는
+EXECREF-001이 재사용하도록 **보존**하고, `SectionSpec` 한 줄만 부재시킨다.
+
+**핀 실행기는 안전 — 손대지 않는다.** 핀의 실행기 번호는 채팅의 `Assign Sequence X At Executor Y`
+커맨드에서 온 **실 콘솔 번호 Y**(예: 201)이지 드릴다운 인덱스가 아니므로 올바르게 주소한다.
+따라서 `PANEL_TARGET_KINDS`의 `"executor"`, `pin_from_seed`, `_TARGET_WORD`, 실행기-핀 지원은
+전부 유지한다. 라이브에서 핀 실행기 201은 정상 발화했다(원 세션 `Off Executor 201 ok`).
+
+**채팅 rig-context 경로는 별개.** `server/orchestrator/tools.py`는 `PANEL_CATALOG_SECTIONS`를
+임포트하지 않는 별도 소비자이며, 그 실행기 처리는 EXECREF-001 범위 — 본 범위 축소와 무관.
+
+**@MX.** `panel.py` `PANEL_CATALOG_SECTIONS` 위 `@MX:ANCHOR`/`@MX:REASON`에 `console# = 100+i`
+근거와 i=101 충돌을 기록하고 `@MX:DEBT`/`@MX:CEILING`/`@MX:UPGRADE`(EXECREF-001이 `console#
+= page*100 + i`로 섹션 재추가)를 추가함.
 
 ### M6 문서 정정 — `PROTOCOL.md` 재접속 조항
 
@@ -520,25 +585,106 @@ M1~M5 다섯 커밋(15:44~19:15)보다 앞선다 — 번들 안에 `server/web/p
 `PROTOCOL.md` 의 패널 메시지 8종 기재는 M1/M3 시점에 이미 완료되어 있었고, 코드와 1:1로
 일치함을 재확인했다(client 5종 + server 3종, 양측 allowlist 대조).
 
-### M6 미결 항목
+### M6 잔여/해소 항목
 
-1. **AC-SHOWUI-014 (LIVE) 미완** — 서버 신호(`console_offline` 상태에서 요청 이전에
-   `executions_blocked=true` 도착)는 오프라인 사전검증에서 관측했으나, **핀을 통한
-   실행-차단 경로**(membership 통과 후 health 차단 메시지)와 **UI 차단 배너 렌더**는
-   미검증이다. reply-port 드리프트 유발이 세션 내 적용되지 않았다.
-   주의: `fire()` 는 membership을 health보다 **먼저** 검사하므로(`panel.py:643`),
-   카탈로그가 빈 오프라인 상태에서는 `unknown_target` 이 반환되어 health 차단 경로에
-   도달하지 못한다 — 이 검증에는 핀 또는 살아있는 카탈로그가 선행되어야 한다.
-2. **열린 라이브 질문 (b) 미답** — arm 타임아웃 4000ms와 RUN/OFF 15px 가독성의 실기 판단.
-   조작자가 앱 창을 보지 않은 채 세션이 종료되어 관측 자체가 없다.
-3. **실행기 주소 결함 처리 방침 미정** (위 §M6 결함).
-4. **`--no-session-backup` 사전검증 구간** — 오프라인 사전검증은 백업 없이 기동했다.
-   이후 라이브 본 세션은 백업 켠 정상 모드로 재기동했고 `SaveShow ok=True` 를 확인했다.
+1. **[해소] AC-SHOWUI-014 (LIVE)** — resume 세션에서 핀 `sequence:90` 경유 실행-차단 경로 +
+   UI 배너/버튼 렌더 + reply-port 드리프트 유발 + 양성대조까지 완결(위 §M6 AC-014 라이브 완결).
+   원 함정(카탈로그 빈 오프라인 → `fire()`가 membership을 health보다 먼저 검사(`panel.py:643`)해
+   `unknown_target` 반환)은 AC-013 ③에서 만든 핀이 재기동 후 복원되어 해소됨.
+2. **[해소] 실행기 주소 결함 처리 방침** — v1 범위 축소로 결정(위 §M6 결정). 주소 수정
+   (`console# = 100+i`) + 게이트 Executor 인식은 EXECREF-001로 이연.
+3. **[잔여] 열린 라이브 질문 (b) 미답** — arm 타임아웃 4000ms 체감, 레일 스윕의 모션 가독성,
+   두 amber 배너(상단 오프라인 + 패널 차단) 분리 인지가 어두운 FOH 물리 모니터에서 적절한지의
+   **주관적 육안 판단**. 조작자가 콘솔 앞에서 관측해야만 답할 수 있어 여전히 미측정(§E.3 Gaps).
+4. **[정보] `--no-session-backup` 사전검증 구간** — 오프라인 사전검증은 백업 없이 기동했다.
+   이후 라이브 본 세션은 백업 켠 정상 모드로 재기동했고 `SaveShow ok=True`를 확인했다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending — M6 미완. AC-SHOWUI-013 ①(실행기 타일) FAIL, AC-SHOWUI-014 부분 검증.
-run-phase audit-ready 선언은 위 §M6 미결 4건이 해소된 뒤에 이루어진다.>_
+M6 closure(실행기 타일 v1 범위 축소 + AC-014 라이브 완결) 기준 run-phase audit-ready 선언.
+5-section evidence format (`verification-claim-integrity.md §3`).
+
+### Claim (주장)
+
+1. v1 카탈로그는 `sequences` 단일 소스만 자동 열거한다 — 드릴다운 실행기 타일은 **구조적 부재**.
+2. 실행기 타일 결함은 **도구 확인됨**: 콘솔 실번호 = `100 + i`(page-1, 8/8 균일), i=101은
+   무오류 오발(silent wrong-object) 충돌.
+3. AC-SHOWUI-014(핀 경유 실행-차단 + UI 렌더 + 드리프트 유발 + 양성대조)는 라이브 완결 **PASS**.
+4. 전체 회귀 그린(환경 실패 1건 제외), UI 그린, 신규 lint 0.
+5. 핀 실행기 경로는 무변경·정상(범위 축소는 auto 드릴다운 소스에만 적용).
+
+### Evidence (증거)
+
+- pytest: `.venv/bin/python -m pytest server/tests/ -q` → `1 failed, 1591 passed in 83.58s`.
+  유일 실패 = `test_web_reply_discovery.py::TestDiscovery::test_every_candidate_socket_is_released`,
+  `OSError: [Errno 48] Address already in use` — onPC가 UDP 9005를 점유 중인 **환경 실패**(코드 회귀 아님).
+- vitest: `(cd ui && npx vitest run)` → `Test Files 9 passed (9)` / `Tests 176 passed (176)`. UI 무변경.
+- 카탈로그 소스: `grep -n "SectionSpec(name=" server/web/panel.py` → 1행(`sequences`)만.
+  `grep -n "pages\|drilldown" server/web/panel.py` → `pages` 매치 **0**, `drilldown`은 EXECREF-001용
+  휴면 순회 기계 3행(field 115 / branch 408 / capped 420)만 잔존.
+- 실행기 실측: `.moai/state/verify/showui-m6-resume/executor-offset.jsonl`(16행) +
+  `audit-20260722.jsonl` 마지막 16 `Off Executor` 행 → `Off Executor i+100` 8/8 ok,
+  `Off Executor i`(raw) i=101 제외 7/7 `Illegal object`, `Off Executor 101`·`Off Executor 201` 동시 ok(충돌).
+- AC-014: `live-ac014b/frames.jsonl`(status console_offline reply_port=9005 receive_port=9006 →
+  panel_execute sequence:90 → error(kind:panel) + panel_item_state running=false) +
+  `audit-20260722.jsonl` `{"event":"blocked","command":"Go+ Sequence 90","reason":"console offline — new executions are blocked (REQ-MVP-030)"}`.
+- lint: `ruff check` — 수정 3개 .py(panel.py / 2 test) 전부 clean; 잔존 3건 E501은 **미변경 파일**
+  (`server/safety/console.py:289,343`, `server/tests/test_web_provision_api.py:102`) 기존 baseline.
+
+### Baseline-attribution (baseline 귀속)
+
+- pytest baseline: 본 트리(HEAD `37adbff` + 본 변경) 이번 run 실측. 원 M6 표(위 AC-012 행) `1592 passed`와
+  총계 동일(1592=1591+1) — 본 변경은 test_web_panel.py 65→65, test_web_panel_execute.py 56→56로 순증감 0.
+  차이는 onPC의 9005 점유로 인한 환경 실패 1건뿐(코드 회귀 아님).
+- lint baseline: 3건 E501은 본 변경 이전부터 존재(내 diff 파일 목록에 없음 — `git status --porcelain`로 확인).
+- 실행기 결함 baseline: 원 세션은 `Go+ Executor 11` 1건만 발화(`audit …:298`); 이번 resume 세션이
+  16 커맨드를 새로 실측 — 캐리오버 없는 fresh 측정.
+
+### Gaps (미검증)
+
+- **열린 질문 (b) 주관적 육안 판단 미측정**: arm 타임아웃 4000ms 체감, 레일 스윕의 모션 인지,
+  두 amber 배너(상단 오프라인 + 패널 차단) 분리 인지가 어두운 FOH **물리 모니터**에서 적절한지 —
+  콘솔 앞 사람 없이는 측정 불가. 관측이 없으므로 declare하지 않는다.
+- **UI 커버리지는 열거 기반, 백분율 미측정**: `@vitest/coverage-v8` 미도입(의도적 zero-new-dependency).
+  176 vitest는 열거된 케이스 통과이지 라인 커버리지 수치가 아니다.
+- **`+100` 공식의 page-N 일반화 미검증**: 쇼파일에 page가 **1개뿐**이라 `console# = page*100 + i`의
+  page≥2 항은 관측되지 않음 — page-1(=100+i)만 실측. 일반화는 EXECREF-001의 몫.
+- **panel.py 드릴다운 분기는 기본 카탈로그로 미실행**: 휴면 코드로 보존(EXECREF-001용). 분류 로직만
+  monkeypatch 테스트(`TestRetainedDrilldownMachineryForExecref`)로 별도 커버.
+
+### Residual-risk (잔여 위험)
+
+- onPC의 9005 점유 해제 후 `test_every_candidate_socket_is_released` 재실행 시 pass 예상이나 본
+  세션에서 미확인(환경 의존, TOCTTOU 창).
+- 휴면 드릴다운 분기는 EXECREF-001 활성화 전까지 기본 경로 미실행 — 회귀 감지는 monkeypatch 테스트 +
+  구조 회귀 테스트(`test_no_catalog_section_drills_into_executors`)에 의존.
+- 패키지 번들(.app/Tauri)은 M1~M6 커밋보다 앞선 빌드라 본 변경 미반영 — 라이브는 전 구간 개발 모드.
+
+### Audit-ready signal
+
+```yaml
+run_complete_at: 2026-07-23T00:00:00Z
+run_commit_sha: <pending-backfill — a commit cannot name its own hash (spec-frontmatter-schema D3 exemption)>
+run_status: audit-ready
+m6_disposition: executor-tile DESCOPED-v1 → SPEC-COPILOT-EXECREF-001
+ac_summary:
+  AC-SHOWUI-013_sequence_half: PASS
+  AC-SHOWUI-013_executor_half: DESCOPED-v1
+  AC-SHOWUI-014: PASS
+  AC-SHOWUI-002_003_live: PASS
+ac_fail_count: 0
+regression_new_failures: 0
+environmental_failures: 1   # test_every_candidate_socket_is_released — onPC holds UDP 9005
+pytest: "1591 passed, 1 environmental-fail"
+vitest: "176 passed"
+new_warnings_or_lints_introduced: 0   # 3 pre-existing E501 live in untouched files
+cross_platform_build: N/A   # Python/TS project, no build-tag matrix
+l44_pre_commit_fetch: N/A   # no remote (local-only, main-direct)
+l44_post_push_fetch: N/A    # no remote
+total_run_phase_files_this_change: 5   # panel.py + test_web_panel.py + test_web_panel_execute.py + PROTOCOL.md + progress.md
+m1_to_mN_commit_strategy: per-milestone commits, main-direct (no PR), local-only
+preserve_list_post_run_count: intact   # tools.py / test_tools.py / pin_from_seed / _TARGET_WORD / PANEL_TARGET_KINDS untouched
+```
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
