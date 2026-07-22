@@ -664,7 +664,7 @@ M6 closure(실행기 타일 v1 범위 축소 + AC-014 라이브 완결) 기준 r
 
 ```yaml
 run_complete_at: 2026-07-23T00:00:00Z
-run_commit_sha: <pending-backfill — a commit cannot name its own hash (spec-frontmatter-schema D3 exemption)>
+run_commit_sha: 13a2f6b   # backfilled (spec-frontmatter-schema D3 exemption — a commit cannot name its own hash)
 run_status: audit-ready
 m6_disposition: executor-tile DESCOPED-v1 → SPEC-COPILOT-EXECREF-001
 ac_summary:
