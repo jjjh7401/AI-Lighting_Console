@@ -334,6 +334,112 @@ busy 조합을 덮고, `panelGate`는 5개 분기 전부 + 우선순위 역전(�
 - **M6 의무 — 실기 검증**: arm→fire 타임아웃 4초의 현장 적정성, 레일 스윕이 어두운 FOH에서
   실제로 읽히는지, 터치 타깃 44px가 장갑 낀 손에 충분한지는 실기에서만 확인된다.
 
+### M5 — Fail-closed 하드닝 (cycle_type=tdd, RED→GREEN→REFACTOR)
+
+기준선(변경 전, HEAD 857e9ed, **실측**): vitest **168 passed**, `tsc --noEmit` **exit 0**,
+`npm run build` **exit 0**, pytest **1591 passed + 1 failed**(환경 기존 — 아래 참조).
+결과(변경 후): vitest **176 passed**(+8), `tsc --noEmit` **exit 0**,
+`npm run build` **exit 0**, pytest **1591 passed + 1 failed**(**변동 없음** — M5는 서버 무변경).
+
+pytest의 1건 실패는 `test_web_reply_discovery.py::TestDiscovery::test_every_candidate_socket_is_released`
+로, 실행 중인 grandMA3 onPC가 UDP 9005(해당 테스트의 후보 포트 집합에 포함)를 점유해서 나는
+**환경 기존 실패**다. M5는 `server/` 를 한 줄도 건드리지 않았고 기준선과 동일하다.
+
+| AC | 대상 | 상태 | 검증 커맨드 | 실제 출력 |
+|---|---|---|---|---|
+| AC-SHOWUI-010 ① 단절 시 running 소거 | REQ-015 전반 | **PASS** (RED 관측 후) | `npx vitest run src/useCopilotSocket.test.ts` | **RED**(교체 전): `expected { 'executor:41': { …(2) } } to deeply equal {}` · `expected [ { running: true, cue: '3' } ] to deeply equal []` — 4건 실패. **GREEN**(교체 후): 15 passed |
+| AC-SHOWUI-010 ② 재접속 재동기화 | REQ-015 후반/016 | **PASS** (RED 관측 후) | 동일 | **RED**: `TypeError: resyncFrames is not a function` — 3건 실패. **GREEN**: `resyncFrames()` == `[panel_catalog_request, status_request]`, 둘 다 `v==1` |
+| AC-SHOWUI-010 ③ 자동 재전송 금지 | REQ-016 (REQ-MVP-032 계승) | **PASS** | 동일 | 재동기화 프레임 문자열에 `panel_execute`/`panel_stop`/`"type":"chat"` **0건**. 변이 3(재동기화에 `panel_stop` 밀어넣기) → **KILLED** |
+| §D 엣지 8 — 승인 대기 중 연결 종료 | AC-010 | **PASS** | 동일 | 승인 1건 + 리뷰 1건 + running 타일 1건 동시 보유 상태 → 단절 후 `pendingApprovals==[]` · `pendingReviews==[]` · `panel.running=={}` · `panel.busy==null` (4개 동시 assert) |
+| 그리드 안정성(단절 후 리플로 금지) | REQ-017 | **PASS** (M5 신규 가드) | 동일 | 단절 후에도 `panel.items == [TILE]` 보존. 변이 2(단절 시 items도 비우기) → **KILLED** |
+| 전체 회귀 | AC-SHOWUI-012 부분 | **PASS** | `npx vitest run` · `npx tsc --noEmit` · `npm run build` · `pytest server/tests/ -q` | `176 passed (9 files)` · `exit 0` · `exit 0` · `1591 passed, 1 failed`(기준선 동일) |
+| M4 가드 무손상 | REQ-018 | **PASS** | `git diff --stat -- ui/src/styles.test.ts ui/src/styles.css` | 출력 없음(무수정). `✓ src/styles.test.ts (11 tests)` |
+| AC-SHOWUI-013/014 (LIVE) | 실기 onPC | **DEFERRED-M6** | — | 라이브 체크리스트는 M6 소관 |
+
+**RED 관측 기록**(교체 자체가 무엇을 바꿨는지의 증거): 교체 전 `useCopilotSocket.ts:30`은
+`clearPendingRequests(state)`를 호출했고, running 타일을 보유한 상태로 `disconnected` 를
+디스패치하면 **타일이 여전히 RUN 으로 보고**됐다(`[ { running: true, cue: '3' } ]`).
+이것이 M4가 "REQ-SHOWUI-015의 UI 절반은 미배선"이라고 기록한 바로 그 상태다.
+`clearOnDisconnect` 로 한 줄 교체한 뒤 동일 테스트가 통과한다 —
+즉 이번 마일스톤에서 **fail-closed 약속이 처음으로 런타임에 발효**됐다.
+증적: `.moai/state/verify/showui-m5/4-RED.log`(exit 1, 7 failed) → `5-GREEN.log`(exit 0, 15 passed).
+
+**변이 주입(non-vacuity)**: 3종 → **3/3 KILLED**(생존 0).
+① 재동기화에서 `status_request` 누락(2 failed) · ② 단절 시 타일 목록까지 비우기(1 failed) ·
+③ 재동기화에 `panel_stop` 재전송 밀어넣기(3 failed). 상세: `6-mutation.log`.
+단절 관련 4개 assert는 RED 자체가 변이 등가(교체 전 코드 = 변이체)이므로 별도 주입을 생략했다.
+
+**계약 점검(E4)**: `grep -rn "localStorage" ui/src/` **0** · `window.confirm|window.alert` **0** ·
+`PROTOCOL_VERSION` 양측 **1** 동일 · `git diff HEAD -- ui/package.json` **빈 출력**(신규 의존성 0).
+
+**커버리지 — 열거 기반(측정 아님)**: `@vitest/coverage-v8` 미설치이며 설치는 신규 의존성
+추가(제약 위반)이므로 **백분율을 보고하지 않는다.** M5 신규 export는 `resyncFrames` 하나이며
+이를 실행하는 `it` 블록 **3건**(구성·재전송 금지·버전/타입)이다. 재배선된 `reducer`의
+`disconnected` 분기는 `it` 블록 **8건**(기존 3 + 신규 5)이 실행한다.
+`clearOnDisconnect` 자체의 순수 함수 테스트는 M1에서 `protocol.test.ts` 에 이미 존재하며,
+M5는 그것을 **호출부에서** 실행하는 경로를 덮었다.
+**미검증 잔여**: `socket.onopen` 핸들러 본체(실제 `socket.send` 호출)는 DOM/WebSocket 하니스가
+없어 실행되지 않는다 — `resyncFrames()` 의 결과만 검증되고, 그것을 소켓에 흘리는 3줄은
+M6 라이브 체크리스트 ⑥(WS 강제 종료/재접속)에서만 확인된다.
+
+**M4가 이미 끝내둔 것 — M5가 다시 주장하지 않는 항목**(감사 시 중복 계상 방지):
+
+- `health ≠ online` / `executions_blocked` 엣지 렌더는 **M4에서 완료**됐다
+  (`panelGate` 5분기 + 패널 배너 + 타일 양쪽 동사 비활성; AC-SHOWUI-015 vitest 절반 PASS,
+  `ShowPanel.test.tsx` 의 `panel-level gate` 8건). M5는 이 코드를 건드리지 않았다.
+- 모달-부재 보장도 **M4에서 검증**됐다(`grep` 0건). M5에서 재실행해 0건을 재확인했을 뿐,
+  새 작업이 아니다. **기계적 가드 테스트는 여전히 없다** — AC-SHOWUI-011 ①이 정한 검증 방법이
+  grep이기 때문이며, 새 가드 파일 신설은 M5 범위를 넘는다(아래 잔여 위험 참조).
+- 그리드 append-only·정렬 금지는 **M1/M4에서 완료**됐다
+  (`protocol.test.ts` "stores the catalog in wire order without sorting it" / "replaces the
+  catalog on refresh rather than appending a duplicate"). M5가 **새로 추가한 것은 단 하나** —
+  단절이 타일 목록을 지우지 않는다는 가드다(위 표). 동작 자체는 교체 전에도 옳았고,
+  이제 그 사실이 명시적으로 고정됐다.
+
+**REFACTOR 판단**: 별도 리팩터링을 수행하지 않았다. 변경은 호출 한 줄 교체 + 순수 함수 1개
+신설 + onopen 3줄이며, 추출하거나 중복을 제거할 구조가 생기지 않았다. `resyncFrames` 를
+`protocol.ts` 가 아니라 `useCopilotSocket.ts` 에 둔 것은 이 파일이 이미
+`connectProtocols`/`launchToken`/`reducer` 같은 "훅이 쓰는 순수 함수"를 테스트용으로 export 하는
+자리이기 때문이고, M5 범위가 이 파일로 한정되어 있기 때문이다.
+
+증적 로그: `.moai/state/verify/showui-m5/` (1 vitest 기준선 · 2 tsc 기준선 · 3 pytest 기준선 ·
+4 RED · 5 GREEN · 6 mutation · 7 vitest 전체 · 8 tsc · 9 build · 10 pytest).
+
+### M5에서 동결한 계약 (M6이 그 위에 쌓임)
+
+- **단절 = running 소거는 이제 런타임 동작이다**: `useCopilotSocket.ts` 의 `disconnected`
+  분기는 `clearOnDisconnect` 하나만 호출한다. `clearPendingRequests` 를 이 분기에서 다시
+  직접 호출하는 것은 **회귀**다(패널 절반만 소거됨). 소거 대상을 늘리거나 줄일 일이 생기면
+  `clearOnDisconnect` 안에서 처리한다 — 호출부를 갈라놓지 않는다.
+- **재동기화는 읽기 전용이다**: `resyncFrames()` 는 요청 프레임만 반환한다. 여기에 실행·정지
+  프레임을 추가하는 것은 REQ-SHOWUI-016(미확인 명령 자동 재전송 금지) 위반이며,
+  테스트가 그것을 막는다("no execute or stop rides along").
+- **onopen 은 매 연결마다 재동기화한다**: 최초 접속과 재접속을 구분하지 않는다. 구분을 도입하면
+  재접속 경로가 세션당 0회 실행되는 코드가 되어 아무도 검증하지 못한다.
+- **타일 목록은 서버 상태다**: 단절이 지우는 것은 관측(running·busy)뿐이고 목록은 남는다.
+  목록을 지우면 재접속 시 그리드가 조작자 손 밑에서 재배치된다(REQ-SHOWUI-017 위반).
+
+### M5 미결 항목 (M6 의무)
+
+- **AC-SHOWUI-013 (LIVE)** — 라이브 체크리스트 7항목(①타일 실행 육안 확인 ②Off 해제
+  ③채팅 연출 pin→발화→정지 ④LiveLock 제안 전용·송신 0건 ⑤앱 재시작 후 핀 복원
+  ⑥**WS 강제 종료/재접속 → running 소거 후 재동기화** ⑦All Off 개별 Off + 비추적 재생 유지).
+  ⑥은 M5가 배선한 경로의 유일한 실기 검증 지점이다.
+- **AC-SHOWUI-014 (LIVE)** — responder degraded/offline 상태에서 패널 차단 표시
+  (reply-port drift silent 서명 방어).
+- **AC-SHOWUI-012 (전체 회귀)** — M6에서 최종 재확인. 단, pytest 1건은 onPC를 닫고 돌려야
+  1592 green 이 된다(포트 점유 해제).
+- **`server/web/PROTOCOL.md` 마감** — M5는 와이어 형태를 바꾸지 않았으므로
+  `PROTOCOL_VERSION` 은 1 그대로다. 남은 문서 작업은 패널 메시지 5종(`panel_execute`/
+  `panel_stop`/`panel_pin`/`panel_unpin`/`panel_catalog_request`)과 서버 이벤트 4종
+  (`panel_catalog`/`panel_item_state`/`panel_busy`/`error(kind:"panel")`)의 기재,
+  그리고 **재접속 시 클라이언트가 `panel_catalog_request` + `status_request` 를 보낸다**는
+  이번 계약의 명문화다.
+- **열린 라이브 질문 2건(이월)** — (a) 페이지 드릴다운이 반환한 실행기 번호가
+  `Go+ Executor N` 이 실제로 발화하는 그 번호와 동일한지(AC-013 ①에서 확인),
+  (b) arm 타임아웃 4000ms와 패널 가독성(RUN/OFF 15px, 레일)이 어두운 실기 FOH 모니터에서
+  버티는지. 둘 다 실기에서만 답이 나온다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_

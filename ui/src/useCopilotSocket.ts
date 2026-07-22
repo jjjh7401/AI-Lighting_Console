@@ -10,7 +10,8 @@ import {
   buildPanelCatalogRequest,
   buildPanelPin,
   buildReviewDecision,
-  clearPendingRequests,
+  buildStatusRequest,
+  clearOnDisconnect,
   initialState,
   parseServerEvent,
   reduceServerEvent,
@@ -27,9 +28,31 @@ export type Action =
 // the state transition is a pure function like the rest of protocol.ts.
 export function reducer(state: UiState, action: Action): UiState {
   if (action.kind === "user") return addUserMessage(state, action.text);
-  if (action.kind === "disconnected") return clearPendingRequests(state);
+  if (action.kind === "disconnected") return clearOnDisconnect(state);
   const event = parseServerEvent(action.raw);
   return event === null ? state : reduceServerEvent(state, event);
+}
+
+/**
+ * What a freshly-opened socket asks the server for (REQ-SHOWUI-015/016).
+ *
+ * The disconnect above erased the panel's running state because the app stopped
+ * being able to observe the console. Coming back, it rebuilds that picture from
+ * the SERVER's answer and from nothing else — no cache, no client-side
+ * reconstruction, no assumption that what was playing still is.
+ *
+ * Both frames are read-side requests. Nothing here re-sends a command: a
+ * reconnect must never replay an execution nobody confirmed (REQ-MVP-032,
+ * inherited unchanged), so the recovery path is deliberately incapable of
+ * emitting one.
+ *
+ * The server also pushes a status snapshot on accept (server/web/app.py), which
+ * makes the status request belt-and-braces rather than the only source — the UI
+ * asks for what it needs instead of depending on a server behaviour it cannot
+ * verify from here.
+ */
+export function resyncFrames(): string[] {
+  return [buildPanelCatalogRequest(), buildStatusRequest()];
 }
 
 function defaultUrl(): string {
@@ -110,6 +133,10 @@ export function useCopilotSocket(url?: string): CopilotSocket {
       socket.onopen = () => {
         retryDelay = 500;
         setConnected(true);
+        // Resynchronise on EVERY open, not only on a reconnect: the first
+        // connect needs the same picture, and a path that runs once per session
+        // is a path whose reconnect behaviour nobody exercises.
+        for (const frame of resyncFrames()) socket.send(frame);
       };
       socket.onmessage = (message) => dispatch({ kind: "server", raw: String(message.data) });
       socket.onclose = () => {
