@@ -97,14 +97,18 @@ RIG_DRILLDOWN_QUERY_CAP = 16
 #                         this showfile: a configuration defect, fix the path.
 #   console_unreachable - nothing answered, so no path can be blamed: an
 #                         operational condition, retry when the console is up.
-_REASON_UNRESOLVED = "path_not_resolved"
-_REASON_UNREACHABLE = "console_unreachable"
+#
+# Public because the show-control panel builds its catalog from the SAME two
+# sections and must reach the same verdict (REQ-SHOWUI-002); two copies of this
+# split would be two chances to merge them back into one soft "unavailable".
+REASON_UNRESOLVED = "path_not_resolved"
+REASON_UNREACHABLE = "console_unreachable"
 _FAILURE_MESSAGES = {
-    _REASON_UNRESOLVED: (
+    REASON_UNRESOLVED: (
         "this path does not exist in the loaded showfile — other sections "
         "answered, so the console IS reachable"
     ),
-    _REASON_UNREACHABLE: "no section answered — the console did not respond",
+    REASON_UNREACHABLE: "no section answered — the console did not respond",
 }
 
 
@@ -161,12 +165,24 @@ _DEPLOY_OUTCOME_STATUS = {
 }
 
 
+# -- shared rig-shape helpers --------------------------------------------------
+#
+# ``rig_object`` / ``rig_section`` / ``drill_into`` are PURE (they touch only
+# their arguments and the injected state port) and are public because a second
+# reader of the same console shape now exists: the show-control panel's catalog
+# builder (``server/web/panel.py``, SPEC-COPILOT-SHOWUI-001 REQ-SHOWUI-001).
+# Sharing them rather than re-deriving the shape is what keeps ONE answer to the
+# questions this snapshot is ambiguous about — the real-`no`-not-position rule,
+# the truncation signal, and the unopened-vs-verified-empty distinction. Two
+# copies would be two chances to answer one of them differently.
+
+
 # @MX:NOTE: [AUTO] rig-context exposes the REAL pool number ('no'), not a bare
 # positional index — stops the model mapping "the Nth item" onto "object N" and
 # inventing a non-existent object on a non-contiguous rig (a hallucinated
 # "Group 3" when groups live at pool 1, 2, 7). Live-demo finding #3,
 # SPEC-COPILOT-DEPLOY-001 REQ-DEPLOY-029 / AC-DEPLOY-020.
-def _rig_object(child: dict) -> dict[str, object]:
+def rig_object(child: dict) -> dict[str, object]:
     """One rig-context object: its REAL slot number (``no``) + ``name``.
 
     For a pool (groups, preset pools) that slot IS the pool number the console
@@ -194,7 +210,7 @@ def _rig_object(child: dict) -> dict[str, object]:
     return {"no": number, "name": name}
 
 
-def _rig_section(objects: list[dict[str, object]], payload: dict) -> dict[str, object]:
+def rig_section(objects: list[dict[str, object]], payload: dict) -> dict[str, object]:
     """Wrap a resolved section with what the responder said about its OWN
     completeness (PROTOCOL.md §4 ``truncated`` / ``node.childCount``).
 
@@ -212,7 +228,7 @@ def _rig_section(objects: list[dict[str, object]], payload: dict) -> dict[str, o
     }
 
 
-def _drill_into(
+def drill_into(
     state_port: StateQueryPort,
     objects: list[dict[str, object]],
     base_path: str,
@@ -250,7 +266,7 @@ def _drill_into(
             obj["contents_unavailable"] = True
             continue
         children = child_payload.get("children", [])
-        obj["contents"] = [_rig_object(c) for c in children if isinstance(c, dict)]
+        obj["contents"] = [rig_object(c) for c in children if isinstance(c, dict)]
     if capped:
         entry["drilldown_capped"] = True
     return budget
@@ -489,12 +505,12 @@ def build_toolset(
             # children (a real shape: an empty preset pool).
             resolved += 1
             children = payload.get("children", [])
-            objects = [_rig_object(child) for child in children if isinstance(child, dict)]
-            entry = _rig_section(objects, payload)
+            objects = [rig_object(child) for child in children if isinstance(child, dict)]
+            entry = rig_section(objects, payload)
             if section in drilldown:
-                budget = _drill_into(state_port, objects, path, entry, budget)
+                budget = drill_into(state_port, objects, path, entry, budget)
             summary[section] = entry
-        reason = _REASON_UNRESOLVED if resolved else _REASON_UNREACHABLE
+        reason = REASON_UNRESOLVED if resolved else REASON_UNREACHABLE
         for section, (path, detail) in failures.items():
             summary[section] = {
                 "reason": reason,

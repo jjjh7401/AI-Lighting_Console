@@ -12,7 +12,7 @@ from __future__ import annotations
 import pytest
 
 from server.bridge.protocol import decode_payload
-from server.orchestrator.tools import _rig_object
+from server.orchestrator.tools import rig_object
 
 from .lua_mock_env import (
     GAPPED_GROUP_NAMES,
@@ -223,7 +223,7 @@ class TestPoolSlotContract:
         # Cross-layer contract (the defect was the two layers disagreeing):
         # the rig-context tool must NOT invent a "no" for an unnumbered child.
         harness = ResponderHarness(extra_env=gapped_groups_env(index_form=None))
-        objects = [_rig_object(c) for c in self._children(harness)]
+        objects = [rig_object(c) for c in self._children(harness)]
         assert objects[0] == {"no": 1, "name": "Vocals"}
         assert objects[1] == {"name": "Drums"}
         assert objects[2] == {"name": "Keys"}

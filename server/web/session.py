@@ -244,6 +244,19 @@ class ChatSession:
 
     # -- public surface ------------------------------------------------------------
 
+    # @MX:NOTE: [AUTO] the panel's pin seed (REQ-SHOWUI-004). Read-only exposure
+    #   of the EXISTING cross-turn memory — the panel gets no second source of
+    #   truth for "what did the chat just create", and cannot write to this one.
+    @property
+    def last_created(self) -> LastCreated | None:
+        """The look this session most recently created, or ``None``.
+
+        ``None`` is the seed-absent case the panel turns into an explicit error
+        rather than a silent no-op (``server.web.panel.PinSeedUnavailable``,
+        acceptance.md §D edge case 7).
+        """
+        return self._last_created
+
     def status_snapshot(self) -> dict:
         """Gate-truth status event (REQ-MVP-030/031 UI half)."""
         gate_status = self._gate.status
