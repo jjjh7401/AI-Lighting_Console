@@ -13,7 +13,14 @@ responder follows onPC's supported platform range per REQ-MVP-043).
 In grandMA3: `Menu → Settings → ... → OSC` (the OSC settings table):
 
 1. Add (or reuse) an OSC configuration row. Note its **row index** — the
-   responder's `CONFIG.osc_slot` (default `1`) must match it.
+   responder's `CONFIG.osc_slot` (default `1`) must match it. Set it in the
+   app's Settings ("OSC 응답 행") rather than by hand: the app renders that
+   value into the Lua as it installs, so a re-install keeps it. A hand-edit of
+   the installed file is reverted the next time you install.
+   The row's destination must actually reach the app — a row pointing at a
+   broadcast address (e.g. `192.168.0.255`) never arrives at `127.0.0.1`, and
+   the only symptom is a console that appears offline while its own command
+   history shows the requests arriving.
 2. **Destination IP**: the machine running the copilot server (`127.0.0.1`
    when server and onPC share the host).
 3. **Port (send)**: the server's listen port (default `9000` — the
@@ -52,7 +59,7 @@ The `CONFIG` table at the top of the Lua file may need on-site adjustment:
 
 | Key | Default | Meaning |
 |---|---|---|
-| `osc_slot` | `1` | OSC settings row used for replies |
+| `osc_slot` | `1` | OSC settings row used for replies — set via app Settings, rendered in at install (do not hand-edit) |
 | `state_address` | `/copilot/state` | snapshot reply address |
 | `feedback_address` | `/copilot/feedback` | result/pong reply address |
 | `max_children` | `24` | snapshot child cap |

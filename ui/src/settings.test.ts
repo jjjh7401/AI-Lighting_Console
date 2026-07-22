@@ -26,6 +26,7 @@ const EFFECTIVE: EffectiveSettings = {
   web_host: "127.0.0.1",
   web_port: 8765,
   plugin_import_dir: "/home/op/plugins",
+  osc_slot: 1,
 };
 
 const RESPONSE: SettingsResponse = {
@@ -41,6 +42,7 @@ function validForm(): SettingsForm {
     console_port: 8000,
     receive_port: 9000,
     plugin_import_dir: "/home/op/plugins",
+    osc_slot: 1,
   };
 }
 
@@ -70,6 +72,7 @@ describe("formFromSettings", () => {
       console_port: 8000,
       receive_port: 9000,
       plugin_import_dir: "/home/op/plugins",
+      osc_slot: 1,
     });
   });
 });
@@ -114,6 +117,7 @@ describe("buildSettingsPayload", () => {
       console_port: 8000,
       receive_port: 9000,
       plugin_import_dir: "/home/op/plugins",
+      osc_slot: 1,
     });
     // A key value must never ride the settings payload.
     expect("key" in body).toBe(false);
@@ -154,5 +158,37 @@ describe("onboardingMessage", () => {
       keys: { anthropic: false, gemini: true },
     };
     expect(onboardingMessage(ready)).toBeNull();
+  });
+});
+
+// The console's OSC reply row is per-site: on this rig row 1 targets the
+// broadcast address 192.168.0.255 and never reaches the app, so replies must
+// go out on row 2. It used to be a hand-edit of the installed Lua that every
+// re-provision silently reverted; surfacing it here is what lets the operator
+// set it once.
+describe("osc_slot", () => {
+  it("rides the settings payload so the backend can render it into the Lua", () => {
+    const body = JSON.parse(buildSettingsPayload({ ...validForm(), osc_slot: 2 }));
+    expect(body.osc_slot).toBe(2);
+  });
+
+  it("is carried from the effective settings into the editable form", () => {
+    expect(formFromSettings({ ...EFFECTIVE, osc_slot: 3 }).osc_slot).toBe(3);
+  });
+
+  it("rejects a value outside the OSC row range", () => {
+    expect(validateSettingsForm({ ...validForm(), osc_slot: 0 })).not.toEqual([]);
+    expect(validateSettingsForm({ ...validForm(), osc_slot: 99 })).not.toEqual([]);
+  });
+
+  it("rejects a port number pasted into the row field", () => {
+    // The neighbouring inputs are all ports, so this is the likely slip — and
+    // the only symptom would be a console that silently stops replying.
+    expect(validateSettingsForm({ ...validForm(), osc_slot: 9000 })).not.toEqual([]);
+  });
+
+  it("accepts the rows an operator actually uses", () => {
+    expect(validateSettingsForm({ ...validForm(), osc_slot: 1 })).toEqual([]);
+    expect(validateSettingsForm({ ...validForm(), osc_slot: 2 })).toEqual([]);
   });
 });

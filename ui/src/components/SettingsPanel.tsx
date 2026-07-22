@@ -232,6 +232,19 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 />
               </label>
               <label className="settings-field">
+                OSC 응답 행 (콘솔 OSC 설정)
+                <input
+                  type="number"
+                  value={form.osc_slot}
+                  onChange={(event) => patch({ osc_slot: Number(event.target.value) })}
+                />
+                <small>
+                  응답기가 회신할 콘솔 OSC 설정의 행 번호입니다. 포트가 아닙니다. 해당 행의
+                  목적지가 이 앱에 닿아야 합니다 — 브로드캐스트 주소로 향하는 행은 회신이
+                  도착하지 않습니다. 플러그인 설치 시 이 값이 적용됩니다.
+                </small>
+              </label>
+              <label className="settings-field">
                 플러그인 임포트 디렉터리
                 <input
                   type="text"

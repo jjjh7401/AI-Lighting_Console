@@ -19,7 +19,7 @@ from server.deploy.settings import UserSettings, save_user_settings
 from server.web.provision_api import ProvisionDeps, build_provision_router
 
 
-def _settings_file(tmp_path, *, import_dir, receive_port=9000):
+def _settings_file(tmp_path, *, import_dir, receive_port=9000, osc_slot=1):
     settings = UserSettings(
         active_provider="gemini",
         console_host="127.0.0.1",
@@ -28,14 +28,17 @@ def _settings_file(tmp_path, *, import_dir, receive_port=9000):
         web_host="127.0.0.1",
         web_port=8765,
         plugin_import_dir=str(import_dir),
+        osc_slot=osc_slot,
     )
     path = tmp_path / "settings.toml"
     save_user_settings(settings, path)
     return path
 
 
-def _client(tmp_path, *, import_dir, receive_port=9000):
-    settings_path = _settings_file(tmp_path, import_dir=import_dir, receive_port=receive_port)
+def _client(tmp_path, *, import_dir, receive_port=9000, osc_slot=1):
+    settings_path = _settings_file(
+        tmp_path, import_dir=import_dir, receive_port=receive_port, osc_slot=osc_slot
+    )
     deps = ProvisionDeps(settings_path=settings_path, seed_path=tmp_path / "no-seed.toml")
     app = FastAPI()
     app.include_router(build_provision_router(deps))
@@ -79,6 +82,20 @@ class TestProvisionInstall:
         # A subsequent status read now reports fully installed.
         status = client.get("/api/provision/responder").json()
         assert status["installed_all"] is True
+
+    def test_the_configured_osc_slot_reaches_the_installed_file(self, tmp_path):
+        # End-to-end through the router, not just install_responder: the value
+        # has to survive settings -> _resolve -> install_responder. A unit test
+        # on either end alone passes while the wiring between them is missing —
+        # the same shape as the unmounted-router defect the package E2E caught.
+        import_dir = tmp_path / "plugins"
+        client = _client(tmp_path, import_dir=import_dir, osc_slot=2)
+
+        assert client.post("/api/provision/responder").status_code == 200
+
+        lua = (import_dir / "copilot_responder.lua").read_text(encoding="utf-8")
+        slot_lines = [ln.strip() for ln in lua.splitlines() if ln.strip().startswith("osc_slot")]
+        assert slot_lines == ["osc_slot = 2, -- row index in the console's OSC settings used for replies"]
 
     def test_post_returns_the_guide(self, tmp_path):
         client = _client(tmp_path, import_dir=tmp_path / "plugins", receive_port=9007)

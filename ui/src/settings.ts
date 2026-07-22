@@ -21,6 +21,12 @@ export function providerLabel(provider: string): string {
 
 export const MIN_PORT = 1;
 export const MAX_PORT = 65535;
+// An OSC settings ROW index on the console, not a port. The bound's job is to
+// reject a port pasted into this field — every neighbouring input is a port,
+// and a wrong row's only symptom is a console that silently stops replying.
+// Mirrors _MIN_OSC_SLOT / _MAX_OSC_SLOT in server/deploy/settings.py.
+export const MIN_OSC_SLOT = 1;
+export const MAX_OSC_SLOT = 32;
 
 // -- server response shapes (mirror server/web/settings_api.py) ---------------
 
@@ -32,6 +38,7 @@ export interface EffectiveSettings {
   web_host: string;
   web_port: number;
   plugin_import_dir: string;
+  osc_slot: number;
 }
 
 export interface SettingsResponse {
@@ -72,6 +79,7 @@ export interface SettingsForm {
   console_port: number;
   receive_port: number;
   plugin_import_dir: string;
+  osc_slot: number;
 }
 
 export function formFromSettings(settings: EffectiveSettings): SettingsForm {
@@ -80,12 +88,20 @@ export function formFromSettings(settings: EffectiveSettings): SettingsForm {
     console_port: settings.console_port,
     receive_port: settings.receive_port,
     plugin_import_dir: settings.plugin_import_dir,
+    osc_slot: settings.osc_slot,
   };
 }
 
 function portError(label: string, value: number): string | null {
   if (!Number.isInteger(value) || value < MIN_PORT || value > MAX_PORT) {
     return `${label} 포트는 ${MIN_PORT}–${MAX_PORT} 범위의 정수여야 합니다.`;
+  }
+  return null;
+}
+
+function oscSlotError(value: number): string | null {
+  if (!Number.isInteger(value) || value < MIN_OSC_SLOT || value > MAX_OSC_SLOT) {
+    return `OSC 응답 행은 ${MIN_OSC_SLOT}–${MAX_OSC_SLOT} 범위의 정수여야 합니다 (포트 번호가 아닙니다).`;
   }
   return null;
 }
@@ -98,6 +114,8 @@ export function validateSettingsForm(form: SettingsForm): string[] {
   if (consolePortError) errors.push(consolePortError);
   const receivePortError = portError("피드백 수신", form.receive_port);
   if (receivePortError) errors.push(receivePortError);
+  const slotError = oscSlotError(form.osc_slot);
+  if (slotError) errors.push(slotError);
   if (form.plugin_import_dir.trim() === "") {
     errors.push("플러그인 임포트 디렉터리를 입력해 주세요.");
   }
@@ -117,6 +135,7 @@ export function buildSettingsPayload(form: SettingsForm): string {
     console_port: form.console_port,
     receive_port: form.receive_port,
     plugin_import_dir: form.plugin_import_dir,
+    osc_slot: form.osc_slot,
   });
 }
 

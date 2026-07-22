@@ -64,6 +64,9 @@ DEFAULT_ACTIVE_PROVIDER = "gemini"  # matches the shipped config/provider.toml s
 DEFAULT_PLUGIN_IMPORT_DIR = str(
     Path.home() / "MALightingTechnology" / "gma3_library" / "datapools" / "plugins"
 )
+# Must equal the literal in console/lua/copilot_responder.lua CONFIG, so that
+# installing without an explicit slot renders byte-identical bundled content.
+DEFAULT_OSC_SLOT = 1
 
 _PORT_KEYS = ("console_port", "receive_port", "web_port")
 _HOST_KEYS = ("console_host", "web_host")
@@ -73,10 +76,18 @@ _RECOGNISED_KEYS = (
     *_HOST_KEYS,
     *_PORT_KEYS,
     "plugin_import_dir",
+    "osc_slot",
 )
 
 _MIN_PORT = 1
 _MAX_PORT = 65535
+# An OSC settings ROW index on the console, not a port. The upper bound is a
+# generous cap on the console's OSC row count — its job is to reject a port
+# number pasted into this field (the adjacent settings are all ports), not to
+# mirror any documented MA3 limit. The console rejects a genuinely absent row
+# itself with "Illegal property".
+_MIN_OSC_SLOT = 1
+_MAX_OSC_SLOT = 32
 
 
 class SettingsError(ValueError):
@@ -99,6 +110,7 @@ class UserSettings:
     web_host: str
     web_port: int
     plugin_import_dir: str
+    osc_slot: int = DEFAULT_OSC_SLOT
 
 
 def _resolve_config_dir(
@@ -194,6 +206,20 @@ def _require_port(key: str, value: object) -> int:
     return value
 
 
+def _require_osc_slot(key: str, value: object) -> int:
+    # Deliberately NOT _require_port: this is a row index, and the port range
+    # would wave a mis-pasted 9000 straight through into the rendered Lua,
+    # where the only symptom is a console that silently never replies.
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise SettingsError(f"{key} must be an integer OSC row index, got {value!r}")
+    if not (_MIN_OSC_SLOT <= value <= _MAX_OSC_SLOT):
+        raise SettingsError(
+            f"{key} must be in [{_MIN_OSC_SLOT}, {_MAX_OSC_SLOT}] "
+            f"(an OSC settings row, not a port), got {value}"
+        )
+    return value
+
+
 def _require_host(key: str, value: object) -> str:
     if not isinstance(value, str) or not value.strip():
         raise SettingsError(f"{key} must be a non-empty host string, got {value!r}")
@@ -257,6 +283,8 @@ def load_user_settings(path: Path | str) -> dict[str, object]:
 def _validate_field(key: str, value: object) -> object:
     if key in _PORT_KEYS:
         return _require_port(key, value)
+    if key == "osc_slot":
+        return _require_osc_slot(key, value)
     if key in _HOST_KEYS:
         return _require_host(key, value)
     if key == "active_provider":
@@ -308,6 +336,7 @@ def resolve_effective_settings(
         "web_host": DEFAULT_WEB_HOST,
         "web_port": DEFAULT_WEB_PORT,
         "plugin_import_dir": DEFAULT_PLUGIN_IMPORT_DIR,
+        "osc_slot": DEFAULT_OSC_SLOT,
     }
 
     seed_active = _seed_active_provider(seed_path)
@@ -345,6 +374,7 @@ def _dump_settings_toml(settings: UserSettings) -> str:
             f'web_host = "{_toml_escape(settings.web_host)}"',
             f"web_port = {settings.web_port}",
             f'plugin_import_dir = "{_toml_escape(settings.plugin_import_dir)}"',
+            f"osc_slot = {settings.osc_slot}",
             "",
         )
     )

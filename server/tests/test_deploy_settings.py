@@ -20,6 +20,7 @@ from server.deploy.settings import (
     DEFAULT_ACTIVE_PROVIDER,
     DEFAULT_CONSOLE_HOST,
     DEFAULT_CONSOLE_PORT,
+    DEFAULT_OSC_SLOT,
     DEFAULT_PLUGIN_IMPORT_DIR,
     DEFAULT_RECEIVE_PORT,
     DEFAULT_WEB_HOST,
@@ -122,6 +123,76 @@ class TestBuiltinDefaults:
         assert settings.web_port == DEFAULT_WEB_PORT
         assert settings.plugin_import_dir == DEFAULT_PLUGIN_IMPORT_DIR
         assert settings.active_provider == "gemini"
+
+
+class TestOscSlotIsSiteConfig:
+    """The console's OSC reply row is per-site, and re-provisioning used to
+    revert it: install_responder copied the bundle default over the operator's
+    hand-edit with no backup (live 2026-07-22 — this console needs row 2,
+    because row 1 targets the broadcast address 192.168.0.255 and never
+    reaches the app on 127.0.0.1). Making it a setting is what lets the copy
+    stay idempotent WITHOUT destroying site config.
+    """
+
+    def test_default_matches_the_bundled_lua(self):
+        # The default must equal the literal shipped in console/lua, or a
+        # fresh install would silently change behaviour for existing sites.
+        assert DEFAULT_OSC_SLOT == 1
+
+    def test_resolve_with_nothing_yields_the_default(self, tmp_path):
+        settings = resolve_effective_settings(
+            user_path=tmp_path / "absent.toml", seed_path=tmp_path / "absent_seed.toml"
+        )
+        assert settings.osc_slot == DEFAULT_OSC_SLOT
+
+    def test_it_survives_a_save_load_roundtrip(self, tmp_path):
+        # The TOML writer enumerates every key explicitly, so a missing line
+        # drops the value silently on every save — the failure this pins.
+        path = tmp_path / "settings.toml"
+        settings = resolve_effective_settings(
+            user_path=tmp_path / "absent.toml",
+            seed_path=_seed(tmp_path),
+            overrides={"osc_slot": 2},
+        )
+        save_user_settings(settings, path)
+        assert load_user_settings(path)["osc_slot"] == 2
+
+    def test_an_override_wins_over_the_default(self, tmp_path):
+        settings = resolve_effective_settings(
+            user_path=tmp_path / "absent.toml",
+            seed_path=_seed(tmp_path),
+            overrides={"osc_slot": 4},
+        )
+        assert settings.osc_slot == 4
+
+    @pytest.mark.parametrize("bad", [0, -1, "2", 2.0, True, None])
+    def test_a_non_slot_value_is_rejected(self, tmp_path, bad):
+        # None is skipped by the override loop rather than raising, so it must
+        # leave the default standing instead of corrupting the value.
+        if bad is None:
+            settings = resolve_effective_settings(
+                user_path=tmp_path / "absent.toml",
+                seed_path=_seed(tmp_path),
+                overrides={"osc_slot": None},
+            )
+            assert settings.osc_slot == DEFAULT_OSC_SLOT
+            return
+        with pytest.raises(SettingsError):
+            resolve_effective_settings(
+                user_path=tmp_path / "absent.toml",
+                seed_path=_seed(tmp_path),
+                overrides={"osc_slot": bad},
+            )
+
+    def test_a_port_number_is_not_a_valid_slot(self, tmp_path):
+        # osc_slot is a row index in the console's OSC settings, NOT a port —
+        # reusing the port validator would wave 9000 through.
+        with pytest.raises(SettingsError):
+            resolve_effective_settings(
+                user_path=tmp_path / "absent.toml",
+                seed_path=_seed(tmp_path),
+                overrides={"osc_slot": 9000},
+            )
 
 
 class TestSaveLoadRoundtrip:

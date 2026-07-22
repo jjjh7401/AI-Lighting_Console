@@ -23,6 +23,7 @@ onedir ``_internal`` equivalent) so the resolver finds them in the frozen app.
 
 from __future__ import annotations
 
+import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -60,10 +61,42 @@ def bundled_responder_dir() -> Path:
     return resource_base() / "console" / "lua"
 
 
+# The single CONFIG assignment in the bundled Lua. Anchored to line start (in
+# MULTILINE) plus the trailing comma so it cannot match `CONFIG.osc_slot`, which
+# is READ three times in the send path — a broader pattern would corrupt them.
+_OSC_SLOT_ANCHOR = re.compile(r"^(?P<indent>[ \t]*)osc_slot = \d+,", re.MULTILINE)
+
+
+def _render_lua(source_text: str, osc_slot: int) -> str:
+    """Substitute the site's OSC reply row into the bundled responder source.
+
+    The console's OSC row is per-site (row 1 is a broadcast destination on at
+    least one live rig), so the operator used to hand-edit the installed file —
+    and a re-install silently copied the bundle default back over it, with no
+    backup and no signal beyond a console that stopped replying.
+
+    A miss is raised, never ignored: if the Lua is refactored so the anchor no
+    longer matches, installing the DEFAULT slot while the operator configured
+    another one reproduces exactly that silent failure. Failing the install is
+    the honest outcome.
+    """
+    rendered, count = _OSC_SLOT_ANCHOR.subn(
+        lambda m: f"{m.group('indent')}osc_slot = {osc_slot},", source_text
+    )
+    if count != 1:
+        raise ProvisioningError(
+            "responder Lua has no unique `osc_slot = <n>,` assignment to render "
+            f"(matched {count} times) — refusing to install a plugin whose reply "
+            "row may not be the configured one"
+        )
+    return rendered
+
+
 def install_responder(
     import_dir: Path | str,
     *,
     source_dir: Path | str | None = None,
+    osc_slot: int | None = None,
 ) -> InstallResult:
     """Copy the bundled responder assets into ``import_dir`` (filesystem only).
 
@@ -71,8 +104,15 @@ def install_responder(
     so a re-install is idempotent. ``source_dir`` defaults to the bundled asset
     directory; an explicit value lets callers install from a staged location.
 
-    Raises :class:`ProvisioningError` if a bundled asset is missing. NO OSC /
-    console-send happens here (AC-DEPLOY-014 ③).
+    ``osc_slot`` renders the site's OSC reply row into the Lua as it is copied,
+    which is what makes that idempotence safe: without it, re-provisioning
+    reverts the operator's hand-edited row. ``None`` copies verbatim, so callers
+    that do not care keep byte-identical behaviour. Only the Lua is rendered —
+    the XML carries no runtime config.
+
+    Raises :class:`ProvisioningError` if a bundled asset is missing, or if the
+    Lua cannot be rendered (see :func:`_render_lua`). NO OSC / console-send
+    happens here (AC-DEPLOY-014 ③) — substitution is still pure filesystem.
     """
     source = Path(source_dir) if source_dir is not None else bundled_responder_dir()
     dest = Path(import_dir).expanduser()
@@ -83,7 +123,11 @@ def install_responder(
         src = source / name
         if not src.is_file():
             raise ProvisioningError(f"bundled responder asset missing: {src}")
-        shutil.copyfile(src, dest / name)
+        if osc_slot is not None and name.endswith(".lua"):
+            rendered = _render_lua(src.read_text(encoding="utf-8"), osc_slot)
+            (dest / name).write_text(rendered, encoding="utf-8")
+        else:
+            shutil.copyfile(src, dest / name)
         installed.append(name)
     return InstallResult(installed=tuple(installed), import_dir=str(dest))
 

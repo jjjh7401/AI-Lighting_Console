@@ -71,15 +71,15 @@ def build_provision_router(deps: ProvisionDeps) -> APIRouter:
     """Build the responder-provisioning REST router around one dependency set."""
     router = APIRouter()
 
-    def _resolve() -> tuple[str, int]:
+    def _resolve() -> tuple[str, int, int]:
         settings = resolve_effective_settings(
             user_path=deps.settings_path, seed_path=deps.seed_path
         )
-        return settings.plugin_import_dir, settings.receive_port
+        return settings.plugin_import_dir, settings.receive_port, settings.osc_slot
 
     @router.get("/api/provision/responder")
     def get_status() -> dict:
-        import_dir, receive_port = _resolve()
+        import_dir, receive_port, _ = _resolve()
         installed = responder_status(import_dir)
         return {
             "import_dir": import_dir,
@@ -91,9 +91,11 @@ def build_provision_router(deps: ProvisionDeps) -> APIRouter:
 
     @router.post("/api/provision/responder")
     def install() -> dict:
-        import_dir, receive_port = _resolve()
+        import_dir, receive_port, osc_slot = _resolve()
         try:
-            result = install_responder(import_dir)
+            # Rendered, not copied verbatim: a plain copy reverts the site's
+            # OSC reply row on every re-install (live 2026-07-22).
+            result = install_responder(import_dir, osc_slot=osc_slot)
         except (ProvisioningError, OSError) as error:
             raise HTTPException(
                 status_code=500,

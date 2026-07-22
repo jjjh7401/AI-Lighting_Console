@@ -62,7 +62,9 @@ class TestInstallResponder:
         for name in RESPONDER_ASSETS:
             copied = import_dir / name
             assert copied.is_file()
-            # Bytes match the bundled source verbatim.
+            # Byte identity now holds only at the DEFAULT osc_slot: the Lua is
+            # rendered from settings (site config would otherwise be reverted
+            # on every re-provision), the XML is still copied verbatim.
             assert copied.read_bytes() == (bundled_responder_dir() / name).read_bytes()
 
     def test_install_creates_a_missing_import_dir(self, tmp_path):
@@ -74,11 +76,84 @@ class TestInstallResponder:
     def test_install_is_idempotent_reinstall_overwrites(self, tmp_path):
         import_dir = tmp_path / "plugins"
         install_responder(import_dir)
-        # Corrupt one file, then re-install — the bundled bytes are restored.
+        # Corrupt one file, then re-install — the rendered bytes are restored.
+        # At the default osc_slot the rendering is a no-op, so this is still
+        # the bundled content.
         (import_dir / "copilot_responder.lua").write_text("stale", encoding="utf-8")
         install_responder(import_dir)
         restored = (import_dir / "copilot_responder.lua").read_bytes()
         assert restored == (bundled_responder_dir() / "copilot_responder.lua").read_bytes()
+
+
+class TestOscSlotIsRenderedFromSettings:
+    """Live 2026-07-22: this console replies on OSC row 2 (row 1 targets the
+    broadcast address 192.168.0.255 and never reaches 127.0.0.1). The operator
+    hand-edited the installed Lua, and `POST /api/provision/responder` then
+    copied the bundle default back over it with no backup — killing the console
+    link, and set to do so again on every re-provision.
+
+    Rendering the slot from settings is what makes re-provisioning idempotent
+    *with respect to site config* rather than hostile to it.
+    """
+
+    def _slot_line(self, path: Path) -> str:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith("osc_slot"):
+                return line.strip()
+        raise AssertionError(f"no osc_slot line in {path}")
+
+    def test_the_configured_slot_lands_in_the_installed_lua(self, tmp_path):
+        import_dir = tmp_path / "plugins"
+        install_responder(import_dir, osc_slot=2)
+        assert self._slot_line(import_dir / "copilot_responder.lua").startswith(
+            "osc_slot = 2,"
+        )
+
+    def test_reinstall_does_not_revert_the_site_slot(self, tmp_path):
+        # The actual reported defect, as a regression test.
+        import_dir = tmp_path / "plugins"
+        install_responder(import_dir, osc_slot=2)
+        install_responder(import_dir, osc_slot=2)
+        assert self._slot_line(import_dir / "copilot_responder.lua").startswith(
+            "osc_slot = 2,"
+        )
+
+    def test_omitting_the_slot_keeps_the_bundled_default(self, tmp_path):
+        # Callers that do not care must get byte-identical behaviour.
+        import_dir = tmp_path / "plugins"
+        install_responder(import_dir)
+        lua = (import_dir / "copilot_responder.lua").read_bytes()
+        assert lua == (bundled_responder_dir() / "copilot_responder.lua").read_bytes()
+
+    def test_the_xml_is_never_rendered(self, tmp_path):
+        # Only the Lua carries CONFIG; the XML must stay a verbatim copy.
+        import_dir = tmp_path / "plugins"
+        install_responder(import_dir, osc_slot=7)
+        assert (import_dir / "copilot_responder.xml").read_bytes() == (
+            bundled_responder_dir() / "copilot_responder.xml"
+        ).read_bytes()
+
+    def test_the_rendered_lua_still_has_exactly_one_slot_assignment(self, tmp_path):
+        # A substitution that matched too broadly would corrupt the send path,
+        # where CONFIG.osc_slot is READ three times.
+        import_dir = tmp_path / "plugins"
+        install_responder(import_dir, osc_slot=3)
+        text = (import_dir / "copilot_responder.lua").read_text(encoding="utf-8")
+        assert len([ln for ln in text.splitlines() if ln.strip().startswith("osc_slot")]) == 1
+        assert text.count("CONFIG.osc_slot") == 4  # 3 senders + the log line
+
+    def test_a_source_without_the_anchor_line_fails_loudly(self, tmp_path):
+        # If the Lua is refactored so the anchor no longer matches, installing
+        # a WRONG slot silently is far worse than refusing: the operator would
+        # get a console that never replies and no signal as to why.
+        source = tmp_path / "src"
+        source.mkdir()
+        (source / "copilot_responder.xml").write_text("<xml/>", encoding="utf-8")
+        (source / "copilot_responder.lua").write_text(
+            "local CONFIG = {}\n", encoding="utf-8"
+        )
+        with pytest.raises(ProvisioningError):
+            install_responder(tmp_path / "plugins", osc_slot=2, source_dir=source)
 
     def test_install_from_an_explicit_source_dir(self, tmp_path):
         # source_dir override lets the module be tested in full isolation.
