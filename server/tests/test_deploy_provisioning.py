@@ -18,6 +18,7 @@ from server.deploy.provisioning import (
     ProvisioningError,
     bundled_responder_dir,
     install_responder,
+    read_installed_osc_slot,
     responder_guide,
     responder_status,
 )
@@ -141,6 +142,24 @@ class TestOscSlotIsRenderedFromSettings:
         text = (import_dir / "copilot_responder.lua").read_text(encoding="utf-8")
         assert len([ln for ln in text.splitlines() if ln.strip().startswith("osc_slot")]) == 1
         assert text.count("CONFIG.osc_slot") == 4  # 3 senders + the log line
+
+    def test_the_installed_slot_can_be_read_back(self, tmp_path):
+        # Reading the value back is what lets the caller notice that the file
+        # on disk disagrees with the configured value BEFORE overwriting it.
+        import_dir = tmp_path / "plugins"
+        install_responder(import_dir, osc_slot=2)
+        assert read_installed_osc_slot(import_dir) == 2
+
+    def test_reading_an_absent_install_yields_none(self, tmp_path):
+        assert read_installed_osc_slot(tmp_path / "nothing-here") is None
+
+    def test_reading_a_file_without_the_anchor_yields_none(self, tmp_path):
+        # "Unknown", not "default" — a caller must not be told the file says 1
+        # when it says nothing readable at all.
+        import_dir = tmp_path / "plugins"
+        import_dir.mkdir()
+        (import_dir / "copilot_responder.lua").write_text("-- nope\n", encoding="utf-8")
+        assert read_installed_osc_slot(import_dir) is None
 
     def test_a_source_without_the_anchor_line_fails_loudly(self, tmp_path):
         # If the Lua is refactored so the anchor no longer matches, installing

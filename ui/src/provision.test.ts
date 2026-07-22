@@ -10,6 +10,7 @@ import {
   allInstalled,
   installSummary,
   parseInstalledList,
+  oscSlotWarning,
   parseResponderStatus,
   type ResponderStatusResponse,
 } from "./provision";
@@ -106,5 +107,53 @@ describe("installSummary", () => {
 
   it("handles an empty install list without crashing", () => {
     expect(typeof installSummary([])).toBe("string");
+  });
+});
+
+// The rendered OSC reply row only helps if the setting is the right one. The
+// shipped default is row 1 while the live rig replies on row 2, so installing
+// before setting the row silently re-breaks the console link — the failure the
+// rendering was added to prevent. The guard has to be legible in the UI, not
+// only enforced by a 409 the operator sees as "설치 실패".
+describe("oscSlotWarning", () => {
+  it("is silent when the values agree", () => {
+    expect(
+      oscSlotWarning({ ...STATUS, configured_osc_slot: 2, installed_osc_slot: 2, osc_slot_mismatch: false }),
+    ).toBeNull();
+  });
+
+  it("is silent on a first install", () => {
+    expect(
+      oscSlotWarning({ ...STATUS, configured_osc_slot: 2, installed_osc_slot: null, osc_slot_mismatch: false }),
+    ).toBeNull();
+  });
+
+  it("names BOTH numbers so the operator can tell which way to resolve it", () => {
+    const warning = oscSlotWarning({
+      ...STATUS,
+      configured_osc_slot: 1,
+      installed_osc_slot: 2,
+      osc_slot_mismatch: true,
+    });
+    expect(warning).not.toBeNull();
+    expect(warning).toContain("1");
+    expect(warning).toContain("2");
+  });
+
+  it("says the value is unknown rather than inventing one", () => {
+    const warning = oscSlotWarning({
+      ...STATUS,
+      configured_osc_slot: 2,
+      installed_osc_slot: null,
+      osc_slot_mismatch: true,
+    });
+    expect(warning).not.toBeNull();
+    expect(warning).toContain("확인할 수 없");
+  });
+
+  it("is silent when the server did not report the fields at all", () => {
+    // An older backend must not make the UI shout about a mismatch it cannot
+    // know about.
+    expect(oscSlotWarning(STATUS)).toBeNull();
   });
 });

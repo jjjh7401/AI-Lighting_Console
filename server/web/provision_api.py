@@ -30,6 +30,7 @@ from server.deploy.provisioning import (
     RESPONDER_ASSETS,
     ProvisioningError,
     install_responder,
+    read_installed_osc_slot,
     responder_guide,
     responder_status,
 )
@@ -43,6 +44,18 @@ from server.deploy.settings import resolve_effective_settings
 _INSTALL_FAILED_MESSAGE = (
     "responder 플러그인 설치에 실패했습니다 — "
     "플러그인 임포트 디렉터리 경로와 쓰기 권한을 확인해 주세요."
+)
+
+# Rendering the OSC reply row from settings keeps a re-install from reverting
+# site config — but only when the setting is the right one. The shipped default
+# is row 1 while at least one live rig replies on row 2, so installing before
+# setting the row silently re-breaks the link: the console keeps logging the
+# request while the app reports it offline. Refuse instead, and name both
+# numbers so the operator can tell which way to resolve it.
+_OSC_SLOT_CONFLICT_MESSAGE = (
+    "설치를 중단했습니다 — 설정의 OSC 응답 행과 이미 설치된 파일의 값이 다릅니다. "
+    "설정 값으로 덮어쓰면 콘솔이 회신하지 않을 수 있습니다. "
+    "설정을 설치본에 맞추거나, 설정 값이 맞다면 덮어쓰기를 확인해 주세요."
 )
 
 
@@ -77,21 +90,55 @@ def build_provision_router(deps: ProvisionDeps) -> APIRouter:
         )
         return settings.plugin_import_dir, settings.receive_port, settings.osc_slot
 
+    def _slot_conflict(import_dir: str, configured: int) -> tuple[bool, int | None]:
+        """``(conflict?, installed slot)`` — the slot is None when unreadable.
+
+        Only an ESTABLISHED agreement clears the install: an unreadable slot on
+        an existing file is a conflict too, because that file is the one case
+        where the operator most needs to look before it is replaced.
+
+        Returned as a pair rather than "a slot, or False": ``bool`` is an ``int``
+        subclass, so a sentinel-in-the-value-space encoding invites exactly the
+        confusion ``_require_port`` already guards against in the settings layer.
+        """
+        if not (Path(import_dir).expanduser() / "copilot_responder.lua").is_file():
+            return False, None  # first install — nothing to disagree with
+        installed = read_installed_osc_slot(import_dir)
+        return installed != configured, installed
+
     @router.get("/api/provision/responder")
     def get_status() -> dict:
-        import_dir, receive_port, _ = _resolve()
+        import_dir, receive_port, osc_slot = _resolve()
         installed = responder_status(import_dir)
+        mismatch, installed_slot = _slot_conflict(import_dir, osc_slot)
         return {
             "import_dir": import_dir,
             "assets": list(RESPONDER_ASSETS),
             "installed": installed,
             "installed_all": all(installed.values()),
             "guide": responder_guide(receive_port),
+            "configured_osc_slot": osc_slot,
+            "installed_osc_slot": installed_slot,
+            "osc_slot_mismatch": mismatch,
         }
 
     @router.post("/api/provision/responder")
-    def install() -> dict:
+    def install(confirm_osc_slot: bool = False) -> dict:
         import_dir, receive_port, osc_slot = _resolve()
+
+        mismatch, installed_slot = _slot_conflict(import_dir, osc_slot)
+        if mismatch and not confirm_osc_slot:
+            # 409, not 400: the request is well-formed and the server state is
+            # the reason it cannot proceed. Nothing is written on this path.
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error": "osc_slot_mismatch",
+                    "message": _OSC_SLOT_CONFLICT_MESSAGE,
+                    "configured_osc_slot": osc_slot,
+                    "installed_osc_slot": installed_slot,
+                },
+            )
         try:
             # Rendered, not copied verbatim: a plain copy reverts the site's
             # OSC reply row on every re-install (live 2026-07-22).

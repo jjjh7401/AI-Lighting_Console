@@ -23,6 +23,11 @@ export interface ResponderStatusResponse {
   installed: Record<string, boolean>;
   installed_all: boolean;
   guide: ResponderGuide;
+  // Added with the install-time slot guard. Optional so a status from an older
+  // backend parses unchanged and simply produces no warning.
+  configured_osc_slot?: number;
+  installed_osc_slot?: number | null;
+  osc_slot_mismatch?: boolean;
 }
 
 function isGuide(value: unknown): value is ResponderGuide {
@@ -83,4 +88,25 @@ export function installSummary(installed: string[]): string {
     return "설치된 파일이 없습니다.";
   }
   return `responder 플러그인을 설치했습니다: ${installed.join(", ")}`;
+}
+
+/** Korean warning when the configured OSC reply row disagrees with the row in
+ *  the file already installed — ``null`` when installing is safe.
+ *
+ *  Both numbers are named because either one can be the wrong one: the operator
+ *  may have set the wrong row, or may have hand-edited the installed file and
+ *  never recorded it in settings. The UI cannot know which, so it must not pick.
+ *  An unreadable installed value is reported as unknown rather than as a number. */
+export function oscSlotWarning(status: ResponderStatusResponse): string | null {
+  if (status.osc_slot_mismatch !== true) return null;
+  const configured = status.configured_osc_slot;
+  if (typeof configured !== "number") return null;
+  const installed = status.installed_osc_slot;
+  const installedText =
+    typeof installed === "number" ? `${installed}행` : "확인할 수 없는 값";
+  return (
+    `설정의 OSC 응답 행은 ${configured}행인데, 이미 설치된 파일은 ${installedText}입니다. ` +
+    "설정 값으로 덮어쓰면 콘솔이 회신하지 않을 수 있습니다 — " +
+    "설정을 설치본에 맞추거나, 설정 값이 맞다면 덮어쓰기를 확인해 주세요."
+  );
 }

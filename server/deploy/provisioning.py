@@ -92,6 +92,31 @@ def _render_lua(source_text: str, osc_slot: int) -> str:
     return rendered
 
 
+def read_installed_osc_slot(import_dir: Path | str) -> int | None:
+    """The OSC reply row currently written in the INSTALLED responder Lua.
+
+    Returns ``None`` when nothing is installed, when the file cannot be read,
+    or when it carries no readable ``osc_slot = <n>,`` assignment. ``None``
+    means **unknown**, never "the default" — a caller that reported the default
+    for an unreadable file would tell the operator the install is in agreement
+    with their settings when nobody knows what the file says.
+
+    This exists so a caller can compare against the value it is ABOUT to write
+    and stop, rather than discover the disagreement afterwards by way of a
+    console that no longer replies.
+    """
+    lua = Path(import_dir).expanduser() / "copilot_responder.lua"
+    try:
+        text = lua.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    match = _OSC_SLOT_ANCHOR.search(text)
+    if match is None:
+        return None
+    digits = re.search(r"\d+", match.group(0))
+    return int(digits.group(0)) if digits else None
+
+
 def install_responder(
     import_dir: Path | str,
     *,

@@ -14,7 +14,11 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from server.deploy.provisioning import RESPONDER_ASSETS
+from server.deploy.provisioning import (
+    RESPONDER_ASSETS,
+    install_responder,
+    read_installed_osc_slot,
+)
 from server.deploy.settings import UserSettings, save_user_settings
 from server.web.provision_api import ProvisionDeps, build_provision_router
 
@@ -116,6 +120,97 @@ class TestProvisionInstall:
         assert detail["error"] == "install_failed"
         # No raw OS error string leaks as the message.
         assert "확인해 주세요" in detail["message"]
+
+
+class TestOscSlotMismatchGuard:
+    """Rendering the slot from settings only helps if the settings are right.
+
+    The live console replies on row 2, but the shipped default is 1 — so an
+    operator who installs before setting the row silently re-breaks the link,
+    which is the exact failure the rendering was added to prevent. A blind
+    overwrite is refused; the operator either fixes the setting or says
+    explicitly that the configured value should win.
+    """
+
+    def test_status_reports_both_values_and_the_mismatch(self, tmp_path):
+        import_dir = tmp_path / "plugins"
+        install_responder(import_dir, osc_slot=2)
+        client = _client(tmp_path, import_dir=import_dir, osc_slot=1)
+
+        body = client.get("/api/provision/responder").json()
+        assert body["configured_osc_slot"] == 1
+        assert body["installed_osc_slot"] == 2
+        assert body["osc_slot_mismatch"] is True
+
+    def test_matching_values_are_not_a_mismatch(self, tmp_path):
+        import_dir = tmp_path / "plugins"
+        install_responder(import_dir, osc_slot=2)
+        client = _client(tmp_path, import_dir=import_dir, osc_slot=2)
+
+        body = client.get("/api/provision/responder").json()
+        assert body["osc_slot_mismatch"] is False
+
+    def test_nothing_installed_is_not_a_mismatch(self, tmp_path):
+        # A first install has nothing to disagree with.
+        client = _client(tmp_path, import_dir=tmp_path / "plugins", osc_slot=2)
+        body = client.get("/api/provision/responder").json()
+        assert body["installed_osc_slot"] is None
+        assert body["osc_slot_mismatch"] is False
+
+    def test_install_is_refused_on_a_mismatch(self, tmp_path):
+        import_dir = tmp_path / "plugins"
+        install_responder(import_dir, osc_slot=2)
+        client = _client(tmp_path, import_dir=import_dir, osc_slot=1)
+
+        response = client.post("/api/provision/responder")
+        assert response.status_code == 409
+        detail = response.json()["detail"]
+        # Both numbers must be named, or the operator cannot tell which way to
+        # resolve it.
+        assert detail["configured_osc_slot"] == 1
+        assert detail["installed_osc_slot"] == 2
+
+    def test_a_refused_install_does_not_touch_the_file(self, tmp_path):
+        # A guard that reports the conflict and overwrites anyway is worthless.
+        import_dir = tmp_path / "plugins"
+        install_responder(import_dir, osc_slot=2)
+        before = (import_dir / "copilot_responder.lua").read_bytes()
+
+        client = _client(tmp_path, import_dir=import_dir, osc_slot=1)
+        assert client.post("/api/provision/responder").status_code == 409
+
+        assert (import_dir / "copilot_responder.lua").read_bytes() == before
+
+    def test_an_explicit_confirmation_lets_the_configured_value_win(self, tmp_path):
+        import_dir = tmp_path / "plugins"
+        install_responder(import_dir, osc_slot=2)
+        client = _client(tmp_path, import_dir=import_dir, osc_slot=1)
+
+        response = client.post("/api/provision/responder?confirm_osc_slot=true")
+        assert response.status_code == 200
+        assert read_installed_osc_slot(import_dir) == 1
+
+    def test_a_matching_install_needs_no_confirmation(self, tmp_path):
+        import_dir = tmp_path / "plugins"
+        install_responder(import_dir, osc_slot=2)
+        client = _client(tmp_path, import_dir=import_dir, osc_slot=2)
+        assert client.post("/api/provision/responder").status_code == 200
+
+    def test_the_first_install_needs_no_confirmation(self, tmp_path):
+        client = _client(tmp_path, import_dir=tmp_path / "plugins", osc_slot=2)
+        assert client.post("/api/provision/responder").status_code == 200
+
+    def test_an_unreadable_installed_slot_still_warns_before_overwriting(self, tmp_path):
+        # A hand-mangled or refactored file whose slot cannot be read is the
+        # case where an operator most needs to look before it is replaced.
+        import_dir = tmp_path / "plugins"
+        import_dir.mkdir()
+        (import_dir / "copilot_responder.lua").write_text("-- edited\n", encoding="utf-8")
+        client = _client(tmp_path, import_dir=import_dir, osc_slot=2)
+
+        response = client.post("/api/provision/responder")
+        assert response.status_code == 409
+        assert response.json()["detail"]["installed_osc_slot"] is None
 
 
 class TestCreateAppWiring:

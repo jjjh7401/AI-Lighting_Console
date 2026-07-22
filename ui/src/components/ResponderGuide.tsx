@@ -12,6 +12,7 @@ import { apiUrl } from "../launchContext";
 import {
   allInstalled,
   installSummary,
+  oscSlotWarning,
   parseInstalledList,
   parseResponderStatus,
   type ResponderStatusResponse,
@@ -36,11 +37,26 @@ export function ResponderGuide() {
     void load();
   }, [load]);
 
-  const install = async () => {
+  // `confirm` is passed ONLY by the explicit overwrite button. The plain
+  // install button never sends it, so a slot disagreement stops the first time
+  // regardless of what the UI believes the server state to be.
+  const install = async (confirm = false) => {
     setBusy(true);
     setNotice(null);
     try {
-      const response = await fetch(apiUrl("/api/provision/responder"), { method: "POST" });
+      const response = await fetch(
+        apiUrl(`/api/provision/responder${confirm ? "?confirm_osc_slot=true" : ""}`),
+        { method: "POST" },
+      );
+      if (response.status === 409) {
+        // The guard refused and wrote nothing. Re-read so the warning below
+        // reflects the server's view rather than this component's stale one.
+        await load();
+        setNotice(
+          "설치를 중단했습니다 — OSC 응답 행이 설치본과 다릅니다. 아래 경고를 확인해 주세요.",
+        );
+        return;
+      }
       if (response.ok) {
         // The POST body's ``installed`` is the list of files copied (distinct from
         // the GET status shape), so parse it with the dedicated list helper.
@@ -71,9 +87,21 @@ export function ResponderGuide() {
             임포트 디렉터리: <code>{status.import_dir}</code>
             {allInstalled(status) ? " — 설치됨" : " — 미설치"}
           </p>
-          <button className="settings-btn primary" disabled={busy} onClick={install}>
+          <button className="settings-btn primary" disabled={busy} onClick={() => void install()}>
             responder 설치
           </button>
+          {oscSlotWarning(status) !== null && (
+            <div className="settings-notice warning">
+              <p>{oscSlotWarning(status)}</p>
+              <button
+                className="settings-btn"
+                disabled={busy}
+                onClick={() => void install(true)}
+              >
+                설정 값으로 덮어쓰기
+              </button>
+            </div>
+          )}
           <ol className="responder-steps">
             {status.guide.steps.map((step) => (
               <li key={step}>{step}</li>
