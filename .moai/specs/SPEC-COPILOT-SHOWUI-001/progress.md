@@ -218,6 +218,122 @@ unpin membership), 이는 테스트 부족이지 구현 부족이 아니었으�
 구현했고(`server/safety/**` 무변경 — B-7), 테스트는 승인/거부 양쪽 경로를 모두 덮으므로 어느 쪽으로
 결정되든 구현은 유효하다. 선택지는 §E.2 M3 보고의 E7 항목 참조.
 
+### M3→M4 사이 사람 결정 (2건 확정, 2026-07-22)
+
+오케스트레이터가 인과 사슬을 소스에서 독립 확인한 뒤 사용자에게 제시하고 결정을 받았다.
+확인 경로: `blacklist.yaml:22-25`(Go/Go+/Go- = invoking_verbs) → `classify.py:33`
+(`RECOGNIZED_REFERENCE_TYPES = ("Macro","Plugin","Sequence")` — Executor 부재) →
+`expand.py:83`(참조 미인식 → `_hold`) → `gate.py:59`(`BACKUP_COMMAND = "SaveShow"`).
+
+**결정 ① — 승인 마찰: 게이트에 Executor 인식을 추가한다 (별도 SPEC).**
+`classify.py`의 인식 참조 타입에 `Executor`를 추가하고 실행기 본문(배정된 시퀀스) 조회 경로를
+만들어, 실행기 타일도 승인 없이 single-press로 발사되게 한다. `server/safety/**` 변경이므로
+**본 SPEC 범위 밖 — 후속 SPEC으로 분리**한다. 방향이 확정되었으므로 M4는 design.md §5를
+액면 그대로(일반 타일 = single-press) 구현해도 좋다. M4가 승인 상태를 렌더해야 하는 의무는
+REQ-SHOWUI-008 때문에 어차피 유지된다(진짜 파괴적 번들은 여전히 승인을 거친다).
+반려된 대안: (a) 승인-매-누름 수용 + design.md 수정 — 패널의 핵심 가치 상실,
+(b) 시퀀스 참조로 대체 발사 — 동치성 미검증 + 실행기 재명명에 취약.
+
+**결정 ② — All Off 구성: 클라이언트 N회 `panel_stop` 전송을 유지한다.**
+M1이 동결한 와이어 계약을 변경하지 않으며, AC-SHOWUI-011의 번들 구성 assert가 vitest에
+있는 배치와도 일치한다. 서버는 stop 레인 직렬화로 N회 순차 정지의 무간섭을 이미 보장한다(M3).
+반려된 대안: `panel_all_off` 서버 타입 신설 — 왕복 1회로 줄지만 M1 계약 변경 + 양측 테스트 재작성.
+
+### M4 — 연출 패널 UI (cycle_type=tdd, RED→GREEN→REFACTOR)
+
+기준선(변경 전, HEAD 0576553, **실측**): vitest **98 passed**, `tsc --noEmit` **exit 0**,
+pytest **1591 passed + 1 failed**(환경 기존 — M3 기록 참조).
+결과(변경 후): vitest **168 passed**(+70), `tsc --noEmit` **exit 0**,
+`npm run build` **exit 0**, pytest **1591 passed + 1 failed**(**변동 없음** — M4는 서버 무변경).
+
+> **인계 상태 고지**: M4 착수 시 작업 트리에 선행 세션(중단됨)이 남긴 미커밋 산출물이
+> 이미 존재했다(`ShowPanel.tsx`/`PanelTile.tsx`/테스트 3종 untracked + 4파일 수정).
+> 그 산출물의 RED 단계는 **관측 불가**하므로 신뢰하지 않고, (a) design.md 전 조항 대조 검토,
+> (b) 변이 주입 6종으로 비공허성 실측, (c) 신규 결함 2건은 RED→GREEN으로 직접 수정하는
+> 경로를 취했다. 아래 증거는 전부 이번 세션에서 실행한 커맨드의 출력이다.
+
+| AC | 대상 | 상태 | 검증 커맨드 | 실제 출력 |
+|---|---|---|---|---|
+| AC-SHOWUI-011 ① 모달 금지 | REQ-019 | **PASS** | `grep -rn "window.confirm\|window.alert" ui/src/ \| wc -l` | `0` |
+| AC-SHOWUI-011 ② 파괴적 발화 1회 press → 발행 0건 | REQ-024 | **PASS** | `npx vitest run src/components/ShowPanel.test.tsx` | `allOffPress(ARM_IDLE, …).frames == []` (running 3건 보유 상태에서도). 3연속 press 발행량 `[0, 3, 0]` |
+| AC-SHOWUI-011 ③ 정지 클래스 1회 press 처리 | REQ-012 | **PASS** | `npx vitest run src/components/PanelTile.test.tsx` | `tilePressFrame(item,"off")` = 프레임 정확히 1개; `pending`/`busy` 상태에서도 `offDisabled == false` |
+| AC-SHOWUI-011 ④ live-amber는 running 전용 | REQ-018 | **PASS** (결함 1건 수정 후) | `npx vitest run src/styles.test.ts` | 스타일시트 파싱 후 `--live` 사용 블록 = `{:root, .panel-tile.is-running, .panel-state-badge.is-run, .panel-tile-cue, .panel-rail-live, .panel-rail-sweep}` 뿐. 위반 목록 `[]` |
+| AC-SHOWUI-011 ⑤ `Go+`/`Off` 동사 렌더 | REQ-020 | **PASS** | `npx vitest run src/components/PanelTile.test.tsx` | `VERB_GO == "Go+"`, `VERB_OFF == "Off"`, 미디어 글리프 `[▶⏸⏹■]` 매치 0 |
+| AC-SHOWUI-011 ⑥ All Off 양성 구성 | REQ-025 | **PASS** | 동일 | running N=3 → 프레임 정확히 3개, 각 타일당 1개(`target` = `[1, 91, 41]`), 중복 0·누락 0. 핀+리그 중복 등재 타일은 1회만 |
+| AC-SHOWUI-011 ⑦ 광역 타깃 부재 | REQ-026 | **PASS** | 동일 | 번들 문자열에 `Thru`/`thru`/`*`/`Everything`/`everything` 0건. 프레임 키집합은 `{target, target_kind, type, v}` 고정 |
+| AC-SHOWUI-008 (vitest 절반) | REQ-009 — LiveLock | **PASS** (M3의 pytest 절반과 합쳐 완결) | `npx vitest run src/components/ShowPanel.test.tsx` | `panelGate({live_lock:true}, true).mode == "proposal"`; 타일은 `goDisabled==true`·`offDisabled==true`·`tileClass` 에 `is-proposal` |
+| AC-SHOWUI-015 (vitest 절반) | REQ-010 — 차단 상태 | **PASS** (M3의 pytest 절반과 합쳐 완결) | 동일 | `health != "online"` → `mode=="blocked"`, `executions_blocked` → `mode=="blocked"`; 두 경우 모두 패널 배너 + 타일 양쪽 동사 비활성. `status==null`·소켓 단절도 fail-closed 차단 |
+| 섹션 실패 구분 | REQ-002 | **PASS** | 동일 | `path_not_resolved` ≠ `console_unreachable` (문구 비동일 assert), `truncated`/`drilldown_capped`/`contents_unavailable` 3종 개별 표면화 |
+| AC-SHOWUI-013/014 (LIVE) | 실기 onPC | **DEFERRED-M6** | — | 라이브 체크리스트는 M6 소관 |
+
+**M4에서 발견·수정한 결함 2건** (선행 세션 산출물의 design.md 위반):
+
+1. **live-amber 누출** — `.panel-rail-arming`(All Off arm 진행 레일)이 `var(--live)`로 칠해져
+   있었고, `:root` 주석이 "running **또는 발화 컨트롤의 arm 진행**"으로 확장되어 위반을
+   정당화하고 있었다. design.md §3은 live-amber를 "유일한 RUNNING 색, 장식 사용 절대 금지"로
+   못박는다 — 모든 것을 정지시키려는 컨트롤에 "무언가 돌고 있다" 신호를 칠하는 셈이었다.
+   arm 레일을 Stop red(`--bad`)로 교정하고 주석을 무조건부 배타 선언으로 되돌렸다.
+2. **상태 배지 가독성** — `.panel-state-badge`(RUN/OFF)가 12px였다. REQ-SHOWUI-018은
+   "상태는 색상 단독 전달 금지(RUN/OFF 배지 병행, **최소 15px**)"를 한 문장에 묶는다.
+   색의 짝인 텍스트가 색보다 안 읽히면 이중화가 명목뿐이므로 15px로 올렸다.
+
+두 결함 모두 **RED→GREEN**으로 처리했다: 먼저 `ui/src/styles.test.ts`(신규)를 작성해
+실패를 관측하고(`[.panel-rail-arming]` 위반 목록 · `expected 12 to be >= 15`) 그 다음 수정했다.
+이 가드는 클래스명이 아니라 **스타일시트 텍스트 자체**를 `node:fs`로 읽어 검사하므로
+(신규 의존성 0), 앞으로 live-amber가 running 아닌 곳에 칠해지면 빌드가 깨진다.
+
+**구조 개선(REFACTOR)**: `allOffPress(arm, now, items, running) → {next, frames}` 를 신설했다.
+AC-SHOWUI-011이 요구하는 명제는 "1회 press = 발행 0건"이라는 **arm 게이트와 번들 구성의 합성**인데,
+기존에는 `pressArm`과 `allOffFrames`로 분리되어 있어 정확히 그 이음매(오배선 시 블랙아웃이
+한 번의 누름 앞에 놓이는 지점)만 무검증으로 남아 있었다. 합성 함수로 끌어올려 AC 명제를
+문자 그대로 assert하고, `AllOffControl`의 핸들러는 그 결과를 내보내기만 하는 투영으로 축소했다.
+
+**비공허성(non-vacuity) 검증**: 변이 주입 6종 → **6/6 KILLED**(생존 0).
+arm 항상 발화(7 failed) · All Off 중복제거 제거(1) · running 플래그 무시(5) ·
+정지 타일이 live-amber 착용(2) · Off를 pending에 종속(1) · live-amber를 차단 배너로 누출(2).
+상세: `.moai/state/verify/showui-m4/7-mutation.log`.
+
+**커버리지 — 열거 기반(측정 아님)**: `@vitest/coverage-v8` 미설치이며 설치는 신규 의존성
+추가(제약 위반)이므로 **백분율을 보고하지 않는다.** 대신 export별로 그것을 실행하는 `it` 블록
+수를 실측했다(M4 신규 테스트 70건 = PanelTile 18 + ShowPanel 33 + ChatView 8 + styles 11):
+`tileView` **13** · `tilePressFrame` **2** · `allOffPress` **7** · `allOffFrames` **6** ·
+`allOffTargets` **2** · `pressArm`/`isArmed` **5** · `panelGate` **8** · `sectionHints` **4** ·
+`pinnableIndex` **8** · 스타일시트 계약 **11**.
+상수(`VERB_GO`/`VERB_OFF`/`BADGE_RUN`/`BADGE_OFF`/`TYPE_BADGES`/`ALL_OFF_LABEL`/
+`ALL_OFF_SUBLABEL`/`ARM_TIMEOUT_MS`)는 값 자체가 계약이므로 직접 assert된다.
+분기 관점: `tileView`는 running × kind(look/그 외) × gate(ready/proposal/blocked) × pending ×
+busy 조합을 덮고, `panelGate`는 5개 분기 전부 + 우선순위 역전(잠금 ∧ 오프라인)을 덮는다.
+**미검증 잔여**: JSX 렌더 자체와 `useEffect` 타이머(press 래치 해제 `PRESS_LATCH_TIMEOUT_MS`,
+시각적 disarm)는 DOM 하니스가 없어 실행되지 않는다 — 아래 잔여 위험 참조.
+
+증적 로그: `.moai/state/verify/showui-m4/` (1 vitest 기준선 · 2 tsc · 3 RED styles ·
+4 GREEN styles · 5 RED allOffPress · 6 GREEN 전체 · 7 mutation · 8 pytest · 9 build).
+
+### M4에서 동결한 계약 (M5~M6이 그 위에 쌓임)
+
+- **live-amber 배타성은 이제 기계 검증된다**: `ui/src/styles.test.ts`의 `RUNNING_SELECTORS`
+  집합에 셀렉터를 추가하는 것은 포맷팅이 아니라 **디자인 결정**이다. 재생 중이 아닌 상태에
+  live-amber가 필요해 보이면 그것은 다른 색을 써야 한다는 신호다.
+- **발사 경로는 순수 함수가 결정한다**: 타일 press는 `tilePressFrame`, All Off는 `allOffPress`.
+  컴포넌트 핸들러는 결과를 전달만 한다. 새 발화 경로를 만들 때도 이 형태를 유지해야
+  AC 명제를 컴포넌트 렌더 없이 assert할 수 있다.
+- **정지 클래스 면제**: `offDisabled`는 `blocked`에만 종속되며 `pending`/`busy`에 **절대**
+  종속되지 않는다. 이 한 줄이 REQ-SHOWUI-012의 UI측 전부다.
+- **그리드는 와이어 순서**: `panel.items`를 그대로 `map`한다. 정렬·필터·재배치 도입 금지.
+- **레이아웃**: 860px 캡은 `.app`에서 `.chat-column`으로 이동했다. 패널을 접으면 M4 이전
+  레이아웃이 정확히 복원된다.
+
+### M4 미결 항목 (다음 마일스톤 의무)
+
+- **M5 의무 — 단절 시 running 소거 배선**: `useCopilotSocket.ts`의 단절 핸들러는 아직
+  `clearPendingRequests`를 호출한다. `clearOnDisconnect`(M1 제공, running·busy 소거 포함)로
+  교체하는 것이 M5 범위이며, 그 전까지 REQ-SHOWUI-015의 UI 절반은 **미배선**이다.
+  리듀서와 패널 렌더는 준비되어 있고, 남은 것은 호출 한 줄의 교체 + 회귀 테스트다.
+- **M5 의무 — 재접속 시 재동기화**: 재연결 후 카탈로그+status 재요청(REQ-SHOWUI-015 후반).
+  `sendPanelCatalogRequest`는 이미 노출되어 있으므로 호출 시점만 배선하면 된다.
+- **M6 의무 — 실기 검증**: arm→fire 타임아웃 4초의 현장 적정성, 레일 스윕이 어두운 FOH에서
+  실제로 읽히는지, 터치 타깃 44px가 장갑 낀 손에 충분한지는 실기에서만 확인된다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_

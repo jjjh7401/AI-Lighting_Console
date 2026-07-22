@@ -7,6 +7,8 @@ import {
   buildApprovalDecision,
   buildChat,
   buildLock,
+  buildPanelCatalogRequest,
+  buildPanelPin,
   buildReviewDecision,
   clearPendingRequests,
   initialState,
@@ -77,6 +79,17 @@ export interface CopilotSocket {
   sendDecision: (requestId: string, approved: boolean) => void;
   sendReviewDecision: (requestId: string, approved: boolean) => void;
   sendLock: (active: boolean) => void;
+  // -- show-control panel (SHOWUI M4) -----------------------------------------
+  //
+  // Tile presses and the All Off bundle arrive here as frames already built by
+  // protocol.ts builders (`tilePressFrame`, `allOffFrames`, `buildPanelUnpin`),
+  // because WHICH frames a press produces is the safety-critical decision and
+  // it belongs in a pure, tested function rather than in this hook. The two
+  // payload-free messages get named helpers since there is nothing to compose.
+  sendPanelFrame: (frame: string) => void;
+  sendPanelFrames: (frames: string[]) => void;
+  sendPanelPin: () => void;
+  sendPanelCatalogRequest: () => void;
 }
 
 export function useCopilotSocket(url?: string): CopilotSocket {
@@ -143,5 +156,26 @@ export function useCopilotSocket(url?: string): CopilotSocket {
   );
   const sendLock = useCallback((active: boolean) => send(buildLock(active)), [send]);
 
-  return { state, connected, sendChat, sendDecision, sendReviewDecision, sendLock };
+  const sendPanelFrame = useCallback((frame: string) => send(frame), [send]);
+  const sendPanelFrames = useCallback(
+    // Sequential, in bundle order. The server's stop lane serialises them
+    // anyway (M3), and preserving order keeps the audit log readable.
+    (frames: string[]) => frames.forEach(send),
+    [send],
+  );
+  const sendPanelPin = useCallback(() => send(buildPanelPin()), [send]);
+  const sendPanelCatalogRequest = useCallback(() => send(buildPanelCatalogRequest()), [send]);
+
+  return {
+    state,
+    connected,
+    sendChat,
+    sendDecision,
+    sendReviewDecision,
+    sendLock,
+    sendPanelFrame,
+    sendPanelFrames,
+    sendPanelPin,
+    sendPanelCatalogRequest,
+  };
 }
