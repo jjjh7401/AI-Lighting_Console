@@ -102,6 +102,122 @@
 4. **M1 이월(M3 필수)** — `/ws` 디스패치의 `else: # status_request` 폴백(app.py:279)에 panel 분기 추가.
 5. **M1 이월(M5 필수)** — `useCopilotSocket.ts` disconnect 핸들러를 `clearOnDisconnect`로 교체.
 
+### M2→M3 사이 라이브 확인 — ASSUMPTION-7 (페이지 자식 = 실행기 번호)
+
+M2 보고의 최상위 잔여 리스크(페이지 드릴다운의 자식 `i`가 실행기 번호인지 페이지 내 위치인지 미검증)를
+**실제 onPC 2.4.2에서 읽기 전용으로 확인**했다. 발사 0건 — 응답기의 `state` 조회 동사만 사용.
+
+- 프로브: `.moai/state/verify/probe_executor_numbers.py` · 로그: `.moai/state/verify/probe-executor-numbers.log`
+- 유효 설정(하드코딩 아님, settings.toml에서 read): `console_port=8000`, `receive_port=9005`
+- 결과: `DataPool/Pages` → Page 1 (`i=1`) → 자식 8개, `i` = **1, 5, 11, 91, 92, 93, 95, 101**
+
+**판정: 가정 성립.** 실행기가 8개인데 번호가 1..8이 아니라 비연속(2~4·6~10·12~90·94·96~100 결번)이므로
+위치 번호 가설은 **반증**되었다. 값의 모양(91/92/93/95/101)도 MA3 실행기 번호 체계와 일치한다.
+
+**남은 미검증**: 이 번호가 `Go+ Executor N`이 실제로 발사하는 대상과 동일하다는 최종 확인은
+**AC-SHOWUI-013 ① (M6 라이브)** 의 몫이다 — 위 결과는 위험 가설을 제거했을 뿐 발사 대상 동치를
+독립 증명하지 않는다. 이 구분을 M6까지 유지할 것.
+
+### M3 — 게이트 경유 실행 핸들러 (cycle_type=tdd, RED→GREEN→REFACTOR)
+
+기준선(변경 전, HEAD 5395a10, **실측**): pytest **1542 passed + 1 failed**, vitest **98 passed**,
+ruff `server/` **3 errors(E501, 기존)**, `test_architecture.py` **4 passed**.
+결과(변경 후): pytest **1591 passed + 1 failed**(+49), vitest **98 passed**(변동 없음),
+ruff **3 errors(동일 3건, 신규 0)**, architecture **4 passed**.
+
+> **기준선 정정**: 위임 프롬프트의 "1543 passed"와 달리 HEAD 5395a10에서 실측한 기준선은
+> **1542 passed + 1 failed**이다. 실패 1건 `test_web_reply_discovery.py::TestDiscovery::
+> test_every_candidate_socket_is_released`는 **환경 원인**으로, 코드 무변경 상태에서 단독
+> 재현된다: 실행 중인 grandMA3 onPC(`app_gma3`, PID 86875)가 UDP **9005**를 점유하고 있고
+> 그 포트가 이 테스트의 후보 집합에 들어 있다(`lsof -nP -iUDP | grep :90` 로 확인). M3와 무관하며
+> M3가 만든 실패가 아니다. 신규 실패 0건.
+
+| AC | 대상 | 상태 | 검증 커맨드 | 실제 출력 |
+|---|---|---|---|---|
+| AC-SHOWUI-005 (게이트 경유) | REQ-006 — 송신 1회당 감사 1건, clearance 없으면 송신 0건, 번들 = `Go+ Executor N` | **PASS** | `.venv/bin/python -m pytest server/tests/test_web_panel_execute.py -q` | `56 passed`. 1 press → `screened == [["Go+ Executor 191"]]` · `sent == ["Go+ Executor 191"]` · `audit_sends(...) == 1`; 승인 거부 시 `sent == []` |
+| AC-SHOWUI-005 (parse 거부) | REQ-022 — 기형 target | **PASS** | 동일 | 6종 기형(`0`/`-3`/`"191"`/`1.5`/`None`/`True`) 전부 `error(kind=protocol)`, `screened == []` |
+| AC-SHOWUI-005 (membership) | REQ-022 — 미지 target, **`gate.screen()` 미호출 assert** | **PASS** (M1/M2의 DEFERRED 해소) | 동일 | 미지 `executor:9999` → `error(kind=panel)` + **`harness.screened == []`**; 클래스 구분(`sequence:41` 존재 ≠ `executor:41`)도 거부; 런타임 직접 호출도 `screened=False`·`command=""` |
+| AC-SHOWUI-006 | REQ-007 — 단일 스크리닝 경로 | **PASS** | `pytest server/tests/test_architecture.py -q` + 경계 grep | `4 passed`; `grep "bridge.osc\|from server.bridge\|pythonosc" server/web/panel.py server/web/app.py` **0건(exit 1)**; 실행 코드의 `gate.screen(` 호출 **정확히 1곳**(panel.py:649), `execution_port` 호출 **정확히 1곳**(panel.py:657) |
+| AC-SHOWUI-007 | REQ-008 — 승인 왕복 + all-or-nothing | **PASS** | 동일 + `pytest server/tests/test_web_e2e.py -q` | 실 UDP 왕복에서 `Go+ Executor 201` 승인 카드 → 승인 시 `["SaveShow","Go+ Executor 201"]` 송신, 거부 시 `[]`; 연결 종료 시 대기 승인 fail-safe deny(`pending_ids == ()`) |
+| AC-SHOWUI-008 | REQ-009 — LiveLock | **PASS** (pytest 절반; vitest 절반은 M4) | 동일 | 잠금 중 execute/stop 모두 `proposal` 이벤트 + `sent == []` |
+| AC-SHOWUI-009 | REQ-011/012/013 — 연타·정지 면제·턴 락 독립 | **PASS** | 동일 | 진행 중 execute + 3연타 → 1건 실행 + `panel_busy` 3건(거부 타일 id 명시), busy 거부는 번들 미구성; 진행 중 execute 상태의 `panel_stop` → busy 없이 즉시 처리 + 동시 `gate.screen()` 발생 확인; 채팅 턴 진행 중 패널 실행 OK(`busy` 없음), 패널 실행 중 채팅 OK; **채팅 번들 clearance 무효화 없음**(세션 키 분리) |
+| AC-SHOWUI-015 (pytest 절반) | REQ-010 — 차단 상태 명시 회신 | **PASS** | 동일 | `console_offline`에서 `panel_execute` → `error(kind=panel)` + `panel_item_state(running=false)` + `sent == []`. 조용한 삼킴 0 |
+| AC-SHOWUI-011 (REQ-025/026 서버 절반) | All Off bounded 구성·광역 금지 | **PASS**(서버) / **DEFERRED-M4**(UI arm→fire·라벨) | 동일 | 추적 running N=3 → 정확히 N개 `Off Executor N`(중복 0·누락 0); 정지 lane 직렬화로 동시 송신 최대 **1**; 광역 타깃은 **구성 불가**(빌더가 닫힌 동사쌍 + 양의 정수만 허용, `Thru`/`*`/`Everything` 문자열 리터럴 0건) |
+| AC-SHOWUI-012 (부분) | 전체 회귀 | **PASS** | `pytest server/tests/ -q` + `(cd ui && npx vitest run)` | `1591 passed, 1 failed(환경 기존)` + `98 passed` |
+| AC-SHOWUI-013/014 (LIVE) | 실기 onPC | **DEFERRED-M6** | — | 라이브 체크리스트는 M6 소관 |
+
+엣지 케이스 (acceptance.md §D): 4(미확인 이력·자동 재전송 없음 — `unconfirmed` 결과가 성공으로
+렌더되지 않음) · 6(추적 running 0건 → 송신 0·오류 아님) · 8(승인 대기 중 연결 종료 → fail-safe
+deny + 패널 상태 소멸) · 10(기형·미지 target → error + 번들·screen 0건) 전부 커버.
+
+부가 검증: `server/web/panel.py` 커버리지 **100%**(292 stmts, 0 miss) ·
+`server/web/app.py` **99%**(208 stmts, 1 miss — `_backup_loop` 조기 반환, M3 무관 기존 라인) ·
+`ruff check server/` 신규 0건 · `PROTOCOL_VERSION` 양측 `1` 유지(M3는 **신규 와이어 타입 0** —
+M1이 동결한 5종만 배선).
+
+**비공허성(non-vacuity) 검증**: 12종 변이 주입 → **12/12 KILLED**(생존 0).
+1차 11종 중 4종이 생존했고(정지 lane 직렬화 / 세션 키 분리 / 실패 송신의 running 오보 /
+unpin membership), 이는 테스트 부족이지 구현 부족이 아니었으므로 **테스트 5종을 추가**해
+2차에서 전부 KILL했다. 상세: `.moai/state/verify/showui-m3/05-mutation.log`.
+
+증적 로그: `.moai/state/verify/showui-m3/` (00 기준선 · 01 pytest · 02 vitest · 03 ruff ·
+04 커버리지 · 05 mutation · 06 boundary).
+
+### M3에서 동결한 계약 (M4~M6이 그 위에 쌓임)
+
+- **단일 진입**: 패널의 콘솔 도달 경로는 `PanelRuntime.fire()` **하나뿐**이다. 그 안에서
+  membership → `playback_command()` → `gate.screen()` → `gate.execution_port` 순서가 한 함수에
+  붙어 있고, `screen`과 `execute` 사이에는 **한 문장도 없다**(clearance 리셋 창을 0에 가깝게 유지).
+  execute와 stop은 같은 메서드를 verb만 바꿔 호출한다 — 제2 경로가 없다.
+- **세션 키 분리**: 패널은 연결마다 **자기 세션 키**를 갖는다(채팅 세션 키와 다름). 게이트의
+  clearance가 세션-키드이므로 공유하면 채팅 번들 중간에 타일을 누른 순간 남은 명령이 좌초한다.
+  분리는 REQ-013의 실체이며, `test_a_panel_screen_does_not_invalidate_a_chat_bundles_clearance`가
+  이를 기계 검증한다(변이 M9로 비공허성 확인).
+- **2개 lane**: execute lane은 1-in-flight이며 **거부**(`panel_busy`), stop lane은 절대 거부하지
+  않되 **stop끼리는 직렬화**한다. 같은 세션 키 안에서 `screen()`이 매번 clearance를 리셋하므로,
+  동시 stop 2건은 서로의 clearance를 무효화해 All Off가 N개 중 1개만 끄는 결과를 낳는다.
+  직렬화는 그 구조적 방지책이다(변이 M5로 비공허성 확인).
+- **터미널 타일 이벤트 1건**: 모든 `panel_execute`/`panel_stop`은 `panel_item_state` 또는
+  `panel_busy` 중 정확히 하나를 낳는다(미지 target은 tile이 없으므로 `error`만). 비송신 시에는
+  한국어 `error(kind="panel")`가 동반된다 — 차단의 조용한 삼킴 금지(REQ-010).
+  `running`은 **패널이 관측한 것**만 담으며 콘솔 진실의 주장이 아니다.
+- **All Off = 클라이언트 조립**: 서버에 All Off 전용 메시지 타입은 **없다**. UI가 추적 중 running
+  타일마다 `panel_stop`을 1건씩 보내며, 서버는 그 N건을 stop lane에서 순차 처리한다. 광역 타깃은
+  빌더가 닫힌 동사쌍 + 양의 정수만 받으므로 **구성 자체가 불가능**하다(REQ-026).
+- **`WebDeps.panel`**: 프로세스 상태(핀 파일 + 마지막 rig 열거)이므로 앱당 1개를 모든 연결이 공유
+  한다. `None`이면 첫 패널 메시지에서 기본값을 지연 생성 — 패키지 실행은 serve.py 수정 없이 패널을
+  얻고, 타일을 누르지 않는 테스트는 사용자 핀 파일을 건드리지 않는다.
+
+### M3 미결 항목 (다음 마일스톤 의무)
+
+1. **M4 필수** — All Off의 bounded enumeration **조립**(추적 running 타일 → N개 `panel_stop`) +
+   arm→fire 2-step + "ALL OFF (패널)" 한계 라벨. AC-SHOWUI-011의 vitest 절반.
+2. **M4 필수** — `panel_busy` / `error(kind="panel")` / `proposal` 소비와 타일 잠금 해제 렌더.
+3. **M5 이월** — `useCopilotSocket.ts` disconnect 핸들러를 `clearOnDisconnect`로 교체(M1 이월).
+4. **M6** — `PROTOCOL.md` 최종화(M3가 §"Panel command outcomes"를 선반영했으므로 잔여는 M4~M5 결과 반영).
+
+### M3에서 발견한 사항 — 사람 결정 필요 (승인 게이트 빈도)
+
+`Go+ Executor N` / `Off Executor N`은 **현재 룰셋에서 매 누름마다 승인 카드를 띄운다.** 이는 M3가
+만든 동작이 아니라 기존 게이트 의미론이며, M3는 그것을 그대로 소비했다. 근거 체인(전부 코드 실측):
+
+1. `Go+`/`Off`는 `blacklist.yaml`의 `invoking_verbs`에 있다 → `classify.py:222` → `category="invoking"`.
+2. 참조 추출은 `RECOGNIZED_REFERENCE_TYPES = ("Macro","Plugin","Sequence")`만 인식한다
+   (`classify.py:33`, `_extract_reference` 117-125). **"Executor"는 없다** → `reference=None`.
+3. `expand.py:82-83` — `reference is None` → `_hold("unverifiable reference: no recognizable
+   target object")` → `gate.screen()`이 승인 보류.
+4. 결과적으로 승인 후 `_backup.before_risky_execution()`도 돈다 → 매 누름마다 `SaveShow` 1회
+   (e2e에서 `["SaveShow", "Go+ Executor 201"]`로 실측됨).
+
+즉 **타일 1회 누름 = 승인 카드 1장 + 쇼파일 저장 1회**다. `target_kind="sequence"` 타일
+(`Go+ Sequence 41`)은 참조가 해석되므로 본문 조회가 성공하고 깨끗하면 승인 없이 통과한다 —
+같은 패널 안에서 두 클래스의 마찰이 다르다.
+
+이는 design.md §5의 "일반 타일은 single-press"와 spec.md §A의 "쇼 진행 중 블랙아웃 순간에 승인
+카드가 뜨는 사고를 원천 배제" 취지와 **정면으로 충돌한다.** M3는 이를 임의 해석하지 않고 계약대로
+구현했고(`server/safety/**` 무변경 — B-7), 테스트는 승인/거부 양쪽 경로를 모두 덮으므로 어느 쪽으로
+결정되든 구현은 유효하다. 선택지는 §E.2 M3 보고의 E7 항목 참조.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_

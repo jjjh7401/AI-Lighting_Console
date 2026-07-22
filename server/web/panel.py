@@ -1,6 +1,6 @@
-"""Show-control panel server state (SHOWUI M2 — REQ-SHOWUI-001..005/022/023).
+"""Show-control panel server state (SHOWUI M2/M3 — REQ-SHOWUI-001..013/022..026).
 
-Three things live here, and deliberately nothing else:
+Four things live here, and deliberately nothing else:
 
 1. :func:`build_catalog` — the rig-enumerated tile list, read through the SAME
    gate-audited ``state_port`` seam ``get_rig_context`` uses, reusing that
@@ -10,12 +10,17 @@ Three things live here, and deliberately nothing else:
    file under the per-user data dir so they survive a restart.
 3. :class:`PanelStore` — the two halves composed, plus the membership predicate
    M3 checks a client-supplied target against before any bundle is built.
+4. :class:`PanelRuntime` (M3) — one connection's firing surface: membership →
+   bundle → ``gate.screen()`` → the gate's own execution port, and the tile
+   events that report what actually happened.
 
 Chokepoint discipline (REQ-SHOWUI-007, AC-SHOWUI-006): this module holds NO
-execution surface. It never imports the OSC send surface, and it never will —
-firing a tile is M3's job and goes through ``gate.screen()``, the one screening
-path. Reads ride the injected state port; writes go to a local file. Neither
-can reach the console except through the gate that owns the link.
+execution surface of its own. It never imports the OSC send surface, and it
+never will. The ONLY way a panel press reaches the console is
+``gate.screen()`` followed by ``gate.execution_port`` — the same single
+screening path the chat turn uses, entered from one method
+(:meth:`PanelRuntime.fire`) and nowhere else. Reads ride the injected state
+port; pins go to a local file. Neither can reach the console at all.
 """
 
 from __future__ import annotations
@@ -24,6 +29,7 @@ import contextlib
 import json
 import os
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -38,7 +44,19 @@ from server.orchestrator.tools import (
     rig_object,
     rig_section,
 )
-from server.web.messages import PANEL_TARGET_KINDS, panel_item, panel_section
+from server.safety.gate import SafetyGate
+from server.safety.session_context import SessionKey, bind_session_key, reset_session_key
+from server.web.messages import (
+    PANEL_TARGET_KINDS,
+    _is_object_number,
+    error_event,
+    panel_busy_event,
+    panel_catalog_event,
+    panel_item,
+    panel_item_state_event,
+    panel_section,
+    proposal_event,
+)
 
 PIN_FILE_NAME = "panel_pins.json"
 
@@ -480,3 +498,280 @@ class PanelStore:
     def unpin(self, target_kind: str, target: int) -> bool:
         """Remove one pinned tile; the removal is persisted (REQ-SHOWUI-023)."""
         return self.pins.remove(target_kind, target)
+
+
+# -- the firing half (SHOWUI M3 — REQ-SHOWUI-006..013/022/025/026) ----------------
+
+
+# The console's own playback verbs (rulebook 31_choreography_patterns.md
+# "Playback"). Console vocabulary, never a media-player metaphor
+# (REQ-SHOWUI-020), and a CLOSED pair: a panel press can express exactly two
+# intentions, so no third verb can appear in a bundle by accident.
+PANEL_GO_VERB = "Go+"
+PANEL_OFF_VERB = "Off"
+PANEL_VERBS = (PANEL_GO_VERB, PANEL_OFF_VERB)
+
+# The console keyword each addressable class is spoken with.
+_TARGET_WORD = {"executor": "Executor", "sequence": "Sequence"}
+
+# Korean, because every one of these is shown to the operator.
+PANEL_UNKNOWN_TARGET_MESSAGE = (
+    "패널에 없는 대상입니다 — 카탈로그를 새로고침한 뒤 다시 시도해 주세요."
+)
+PANEL_BUSY_MESSAGE = "패널 실행이 진행 중입니다 — 완료된 뒤 다시 시도해 주세요."
+PANEL_UNCONFIRMED_MESSAGE = (
+    "실행 미확인 — 콘솔에서 실제 상태를 확인해 주세요 (자동 재전송 안 함)."
+)
+PANEL_REFUSED_MESSAGE = "패널 명령이 실행되지 않았습니다."
+
+# One Korean line per gate bundle verdict. Mirrors the chat surface's
+# ``_DECISION_SUMMARY`` in wording and in principle: gate TRUTH is reported,
+# and a non-execution is never rendered as a success (REQ-SHOWUI-010).
+_PANEL_DECISION_MESSAGES = {
+    "blocked_console_offline": "콘솔 오프라인 상태입니다 — 패널 실행이 차단되었습니다.",
+    "blocked_responder_degraded": (
+        "콘솔 응답기가 저하 상태입니다 — 결과 확인이 불가능하여 패널 실행을 시작하지 않았습니다."
+    ),
+    "blocked_backup_failed": "쇼파일 백업 실패로 패널 실행이 차단되었습니다 (안전 장치).",
+    "blocked_grammar": "명령 문법 검증에 실패하여 패널 실행이 차단되었습니다.",
+    "locked": "라이브 잠금 활성 — 콘솔로 전송하지 않고 제안만 생성했습니다.",
+    "rejected": "승인이 거부되어 패널 명령이 실행되지 않았습니다.",
+}
+
+# ``ExecutionResult.detail`` markers the gate stamps on a non-send. Matched
+# rather than re-derived so a wording change fails here instead of quietly
+# turning an unconfirmed send into a reported success (mirrors
+# ``server.web.session.UNCONFIRMED_MARKER``).
+_UNCONFIRMED_MARKER = "execution unconfirmed"
+
+
+# @MX:ANCHOR: [AUTO] the ONLY place a panel command string is built. Consumed by
+# PanelRuntime.fire (execute + stop), and through it by every panel press —
+# including the All Off gesture, which is N ordinary stops and not a special path.
+# @MX:REASON: REQ-SHOWUI-026 — a wide target (`Thru`, `*`, `Everything`) trips the
+# risk classifier's open-ended-target hold, which would raise an approval card
+# mid-blackout. Forcing every command through one builder that accepts only a
+# closed verb pair and a single positive integer makes a wide target
+# UNCONSTRUCTIBLE rather than merely unwritten (REQ-SHOWUI-025 bounded
+# enumeration is then a property of the type, not of the caller's discipline).
+def playback_command(verb: str, target_kind: str, target: int) -> str:
+    """``"Go+ Executor 191"`` — one verb, one class, one object number.
+
+    Raises on anything else. The parser already validated a client-supplied
+    target (``server.web.messages``), so this second check exists for the
+    callers the parser never sees: it is what stops a future internal caller
+    from composing a range, a wildcard, or an unaddressable class.
+    """
+    if verb not in PANEL_VERBS:
+        raise ValueError(f"panel verb must be one of {PANEL_VERBS}, got {verb!r}")
+    word = _TARGET_WORD.get(target_kind)
+    if word is None:
+        raise ValueError(
+            f"panel target_kind must be one of {PANEL_TARGET_KINDS}, got {target_kind!r}"
+        )
+    if not _is_object_number(target):
+        raise ValueError(f"panel target must be a positive integer object number, got {target!r}")
+    return f"{verb} {word} {target}"
+
+
+@dataclass(frozen=True)
+class PanelOutcome:
+    """What one press actually did — the value the tests and the lanes read.
+
+    ``screened``/``sent`` are recorded separately on purpose: "the gate was
+    asked" and "the console was reached" are different claims, and the whole
+    milestone rests on never confusing them.
+    """
+
+    status: str  # unknown_target | executed | unconfirmed | failed | blocked | rejected | proposal
+    command: str = ""
+    screened: bool = False
+    sent: bool = False
+    detail: str = ""
+
+
+class PanelRuntime:
+    """One WebSocket connection's panel surface (M3).
+
+    Owns the panel's own session identity, which is deliberately NOT the chat
+    session's: the gate keys clearances per session, so sharing a key would let
+    a chat turn's screening invalidate a panel clearance and vice versa
+    (REQ-SHOWUI-013 — the two paths serialize independently).
+
+    Within the panel's OWN key the reset is kept, and that is the point: an
+    ``Off`` screened while an execute is still in flight invalidates the
+    execute's unconsumed clearance, so the execute is over-blocked rather than
+    firing after the operator already asked for stop (REQ-SHOWUI-012 —
+    stop-preempts-execute, failing safe by construction).
+    """
+
+    def __init__(
+        self,
+        *,
+        gate: SafetyGate,
+        store: PanelStore,
+        send_event: Callable[[dict], None],
+        session_key: SessionKey,
+    ) -> None:
+        self._gate = gate
+        self._store = store
+        self._send = send_event
+        self._session_key = session_key
+        # Derived, volatile, per-connection: what the panel has OBSERVED itself
+        # start. Never a claim about the console's own state — a playback
+        # started at the desk is invisible here, which is exactly the All Off
+        # limitation spec.md §A names (REQ-SHOWUI-025).
+        self._running: set[tuple[str, int]] = set()
+
+    def contains(self, target_kind: str, target: int) -> bool:
+        """Membership half of REQ-SHOWUI-022 — asked BEFORE a bundle exists."""
+        return self._store.contains(target_kind, target)
+
+    # @MX:ANCHOR: [AUTO] the panel's ONE route to the console. Both panel_execute
+    # and panel_stop enter here; there is no second entry, and the All Off gesture
+    # is N calls to this same method.
+    # @MX:REASON: REQ-SHOWUI-006/007 (gate.py:260-264) — exactly one screening path
+    # may exist. Every send below is preceded by gate.screen() in the same call,
+    # so a bypass would require editing this method rather than adding a caller.
+    def fire(self, verb: str, target_kind: str, target: int) -> PanelOutcome:
+        """Screen one panel command, then execute it. Synchronous (worker thread).
+
+        Order is load-bearing (REQ-SHOWUI-022): membership is checked FIRST, so
+        an unknown target produces an explicit error with no bundle built and
+        ``gate.screen()`` never called.
+        """
+        if not self._store.contains(target_kind, target):
+            self._send(error_event(message=PANEL_UNKNOWN_TARGET_MESSAGE, kind="panel"))
+            return PanelOutcome(status="unknown_target")
+        command = playback_command(verb, target_kind, target)
+        token = bind_session_key(self._session_key)
+        try:
+            decision = self._gate.screen([command])
+            if not decision.cleared:
+                return self._report_not_cleared(decision, command, target_kind, target)
+            # Adjacent to the screen call ON PURPOSE. The clearance Counter is
+            # session-keyed and every screen() RESETS it, so the window in which
+            # a concurrently-completing screen could invalidate this clearance is
+            # exactly the gap between these two statements — keep it at zero
+            # statements' worth of work.
+            result = self._gate.execution_port.execute(command)
+        finally:
+            reset_session_key(token)
+        return self._report_executed(result, verb, command, target_kind, target)
+
+    def send_catalog(self) -> dict:
+        """Re-read the rig and answer with the tile list (REQ-SHOWUI-002).
+
+        Synchronous: the read is a bounded set of console round trips through
+        the gate-audited state port, so callers run it off the event loop.
+        """
+        self._store.refresh_catalog()
+        return self._emit_catalog()
+
+    def pin(self, seed: LastCreated | None) -> dict | None:
+        """Pin the chat's last-created look (REQ-SHOWUI-004).
+
+        A missing seed is surfaced as an explicit Korean error rather than a
+        silent no-op: the operator pressed a button, and a button that does
+        nothing without saying why is worse than one that refuses
+        (acceptance.md §D edge case 7).
+        """
+        try:
+            self._store.pin_from_seed(seed)
+        except (PinSeedUnavailable, PinStoreError) as error:
+            self._send(error_event(message=str(error), kind="panel"))
+            return None
+        return self._emit_catalog()
+
+    def unpin(self, target_kind: str, target: int) -> dict | None:
+        """Remove one pinned tile (REQ-SHOWUI-023)."""
+        if not self._store.pins.contains(target_kind, target):
+            self._send(error_event(message=PANEL_UNKNOWN_TARGET_MESSAGE, kind="panel"))
+            return None
+        self._store.unpin(target_kind, target)
+        self._running.discard((target_kind, target))
+        return self._emit_catalog()
+
+    def busy(self, target_kind: str, target: int) -> None:
+        """Refuse one press because an execution is already in flight.
+
+        Names the refused tile: the UI latches a tile the moment it is pressed
+        (REQ-SHOWUI-011), so an anonymous refusal would leave it latched.
+        """
+        self._send(
+            panel_busy_event(
+                target_kind=target_kind, target=target, message=PANEL_BUSY_MESSAGE
+            )
+        )
+
+    # -- internals -------------------------------------------------------------
+
+    def _emit_catalog(self) -> dict:
+        event = panel_catalog_event(items=self._store.items(), sections=self._store.sections())
+        self._send(event)
+        return event
+
+    def _emit_state(self, target_kind: str, target: int) -> None:
+        """Report the tile's TRACKED state — never a guess about the console."""
+        self._send(
+            panel_item_state_event(
+                target_kind=target_kind,
+                target=target,
+                running=(target_kind, target) in self._running,
+            )
+        )
+
+    def _report_not_cleared(
+        self, decision, command: str, target_kind: str, target: int
+    ) -> PanelOutcome:
+        if decision.proposal is not None:
+            self._send(
+                proposal_event(
+                    commands=list(decision.proposal.commands),
+                    reasons=list(decision.proposal.reasons),
+                )
+            )
+        message = _PANEL_DECISION_MESSAGES.get(decision.status) or (
+            decision.notice or PANEL_REFUSED_MESSAGE
+        )
+        self._send(error_event(message=message, kind="panel"))
+        # The tile is released to the truth: nothing new is running.
+        self._emit_state(target_kind, target)
+        status = "proposal" if decision.status == "locked" else decision.status
+        return PanelOutcome(
+            status=status, command=command, screened=True, sent=False, detail=decision.notice
+        )
+
+    def _report_executed(
+        self, result, verb: str, command: str, target_kind: str, target: int
+    ) -> PanelOutcome:
+        key = (target_kind, target)
+        if result.ok:
+            if verb == PANEL_GO_VERB:
+                self._running.add(key)
+            else:
+                self._running.discard(key)
+            self._emit_state(target_kind, target)
+            return PanelOutcome(
+                status="executed", command=command, screened=True, sent=True, detail=result.detail
+            )
+        detail = result.detail or ""
+        if _UNCONFIRMED_MARKER in detail:
+            # The command may or may not have run. Leave the tracked state
+            # untouched and SAY so — REQ-MVP-032 forbids an automatic resend,
+            # and a confident render either way would be a lie.
+            self._send(error_event(message=PANEL_UNCONFIRMED_MESSAGE, kind="panel"))
+            self._emit_state(target_kind, target)
+            return PanelOutcome(
+                status="unconfirmed", command=command, screened=True, sent=True, detail=detail
+            )
+        self._send(error_event(message=PANEL_REFUSED_MESSAGE, kind="panel"))
+        self._emit_state(target_kind, target)
+        status = "blocked" if detail.startswith("blocked:") else "failed"
+        return PanelOutcome(
+            status=status,
+            command=command,
+            screened=True,
+            sent=not detail.startswith("blocked:"),
+            detail=detail,
+        )

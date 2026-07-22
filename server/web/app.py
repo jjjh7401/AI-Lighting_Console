@@ -31,6 +31,7 @@ from server.orchestrator.tools import DeployPipelinePort
 from server.safety.audit import AuditLog
 from server.safety.backup import BackupManager
 from server.safety.gate import SafetyGate
+from server.safety.session_context import new_session_key
 from server.web.approval_bridge import ApprovalChannel
 from server.web.handshake import (
     CLOSE_POLICY_VIOLATION,
@@ -40,11 +41,20 @@ from server.web.handshake import (
 from server.web.measure import RoundTripRecorder
 from server.web.messages import (
     ProtocolError,
+    approval_request_event,
     approval_resolved_event,
     busy_event,
     error_event,
     parse_client_message,
     review_resolved_event,
+)
+from server.web.panel import (
+    PANEL_GO_VERB,
+    PANEL_OFF_VERB,
+    PANEL_UNKNOWN_TARGET_MESSAGE,
+    PanelRuntime,
+    PanelStore,
+    PinStore,
 )
 from server.web.provision_api import ProvisionDeps, build_provision_router
 from server.web.session import ChatSession
@@ -54,6 +64,7 @@ _PROTOCOL_ERROR_MESSAGE = "잘못된 메시지 형식입니다. 프로토콜 v1 
 _STALE_APPROVAL_MESSAGE = "만료되었거나 알 수 없는 승인 요청입니다."
 _STALE_REVIEW_MESSAGE = "만료되었거나 알 수 없는 리뷰 요청입니다."
 _BUSY_MESSAGE = "이전 지시를 처리 중입니다 — 완료된 뒤 다시 시도해 주세요."
+_PANEL_TASK_ERROR_MESSAGE = "패널 요청을 처리하지 못했습니다."
 
 
 @dataclass
@@ -87,6 +98,12 @@ class WebDeps:
     # the status surface omits both port numbers (the pre-existing meaning).
     # Non-blocking by contract: the status frame is built on the event loop.
     reply_port_probe: Callable[[], object] | None = None
+    # SHOWUI M3: the show-control panel's server-side truth (pinned tiles + the
+    # last rig enumeration), shared by every connection because both halves are
+    # process state, not per-client state. ``None`` means "build the default on
+    # first use" — so a packaged run gets a panel without serve.py wiring, while
+    # a test that never presses a tile never touches the user's pin file.
+    panel: PanelStore | None = None
     status_listeners: set = field(default_factory=set)
 
 
@@ -146,6 +163,17 @@ def create_app(deps: WebDeps) -> FastAPI:
                     await task
 
     app = FastAPI(title="MA3 Copilot", lifespan=lifespan)
+
+    # SHOWUI M3 — the panel store is process state (a pin file + the last rig
+    # enumeration), so it is built ONCE and shared by every connection. Built
+    # lazily so a run that never opens the panel never reads the pin file.
+    _panel_store: PanelStore | None = deps.panel
+
+    def panel_store() -> PanelStore:
+        nonlocal _panel_store
+        if _panel_store is None:
+            _panel_store = PanelStore(state_port=deps.gate.state_port, pins=PinStore())
+        return _panel_store
 
     # M7.4b (AC-DEPLOY-025 Stage-2): once the Stage-2 window loads the BUNDLED
     # app (origin ``tauri://localhost``) instead of navigating to the backend,
@@ -220,6 +248,61 @@ def create_app(deps: WebDeps) -> FastAPI:
             send_event(session.status_snapshot())
 
         deps.status_listeners.add(push_status)
+
+        # -- show-control panel (SHOWUI M3) -----------------------------------
+        #
+        # The panel gets its OWN session identity. The gate keys clearances per
+        # session, so sharing the chat's key would let a chat turn's screening
+        # invalidate a panel clearance and vice versa — REQ-SHOWUI-013 requires
+        # the two paths to serialize independently, and this is what makes that
+        # true rather than merely intended.
+        panel_key = new_session_key()
+        panel = PanelRuntime(
+            gate=deps.gate,
+            store=panel_store(),
+            send_event=send_event,
+            session_key=panel_key,
+        )
+
+        def notify_panel_approval(request_id: str, request) -> None:
+            # A held panel bundle rides the EXISTING approval card (REQ-SHOWUI-008);
+            # the channel is payload-agnostic, so this is wiring, not a new flow.
+            send_event(approval_request_event(request_id=request_id, request=request))
+
+        deps.approval_channel.bind(notify_panel_approval, session_key=panel_key)
+
+        # Two independent lanes, not one lock. The execute lane is 1-in-flight
+        # and REFUSES a second press (panel_busy, REQ-SHOWUI-011). The stop lane
+        # never refuses (REQ-SHOWUI-012 — stop is single-press, zero-wait) but
+        # does serialize stops against each other: every screen() resets this
+        # session's clearance Counter, so two stops screened concurrently would
+        # leave the first uncleared and silently un-stopped — which would make
+        # an All Off of N tiles stop one tile (REQ-SHOWUI-025).
+        panel_stop_lane = asyncio.Lock()
+        panel_side_lane = asyncio.Lock()  # catalog / pin / unpin — store mutations
+        panel_execute_task: asyncio.Task | None = None
+        panel_tasks: set[asyncio.Task] = set()
+
+        async def panel_task(fn, *args, lane: asyncio.Lock | None = None) -> None:
+            if lane is not None:
+                await lane.acquire()
+            try:
+                await asyncio.to_thread(fn, *args)
+            except Exception as error:  # a panel failure must not kill the socket
+                deps.audit.record({"event": "panel_task_failed", "detail": str(error)})
+                await _safe_send(
+                    websocket, error_event(message=_PANEL_TASK_ERROR_MESSAGE, kind="panel")
+                )
+            finally:
+                if lane is not None:
+                    lane.release()
+
+        def spawn_panel(coro) -> asyncio.Task:
+            task = asyncio.create_task(coro)
+            panel_tasks.add(task)
+            task.add_done_callback(panel_tasks.discard)
+            return task
+
         current_task: asyncio.Task | None = None
         await websocket.send_json(session.status_snapshot())
         try:
@@ -276,13 +359,71 @@ def create_app(deps: WebDeps) -> FastAPI:
                         )
                 elif message_type == "lock":
                     session.set_lock(message["active"])
+                elif message_type in ("panel_execute", "panel_stop"):
+                    target_kind, target = message["target_kind"], message["target"]
+                    if not panel.contains(target_kind, target):
+                        # REQ-SHOWUI-022 membership half. Refused HERE, before a
+                        # bundle exists: an unknown target must never be able to
+                        # reach gate.screen() as a plausible-looking command.
+                        await _safe_send(
+                            websocket,
+                            error_event(message=PANEL_UNKNOWN_TARGET_MESSAGE, kind="panel"),
+                        )
+                    elif message_type == "panel_execute":
+                        if panel_execute_task is not None and not panel_execute_task.done():
+                            panel.busy(target_kind, target)
+                        else:
+                            panel_execute_task = spawn_panel(
+                                panel_task(panel.fire, PANEL_GO_VERB, target_kind, target)
+                            )
+                    else:
+                        # Busy-guard EXEMPT (REQ-SHOWUI-012): a stop is handled
+                        # while an execute is still inside screen(), and may call
+                        # gate.screen() concurrently with it. The exemption is a
+                        # scheduling property — the stop still goes through the
+                        # gate, exactly like every other panel command.
+                        spawn_panel(
+                            panel_task(
+                                panel.fire,
+                                PANEL_OFF_VERB,
+                                target_kind,
+                                target,
+                                lane=panel_stop_lane,
+                            )
+                        )
+                elif message_type == "panel_catalog_request":
+                    spawn_panel(panel_task(panel.send_catalog, lane=panel_side_lane))
+                elif message_type == "panel_pin":
+                    spawn_panel(
+                        panel_task(panel.pin, session.last_created, lane=panel_side_lane)
+                    )
+                elif message_type == "panel_unpin":
+                    spawn_panel(
+                        panel_task(
+                            panel.unpin,
+                            message["target_kind"],
+                            message["target"],
+                            lane=panel_side_lane,
+                        )
+                    )
                 else:  # status_request
                     await _safe_send(websocket, session.status_snapshot())
         except WebSocketDisconnect:
             pass
         finally:
             deps.status_listeners.discard(push_status)
+            # Unbind FIRST: a panel bundle parked on a pending approval is
+            # released denied (fail-safe, acceptance.md §D edge case 8), so the
+            # bounded wait below has something that can actually finish. The
+            # panel's running state dies with the connection — it is a derived
+            # observation, and "probably still running" is not a render
+            # (REQ-SHOWUI-015).
+            deps.approval_channel.unbind(session_key=panel_key)
             session.close()  # unbind the approval channel — pending waits deny
+            for task in tuple(panel_tasks):
+                if not task.done():
+                    with contextlib.suppress(Exception):
+                        await asyncio.wait_for(asyncio.shield(task), timeout=10.0)
             if current_task is not None and not current_task.done():
                 # The worker was denied by close(); give it a bounded finish.
                 with contextlib.suppress(Exception):

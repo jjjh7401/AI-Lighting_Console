@@ -21,8 +21,8 @@ client (`ui/`), and the M6 measurement harness. Executable half:
 | `review_decision` | `request_id: string`, `approved: bool` | (M7, additive) The human decision for a pending `review_request` (deploy review). Unknown/expired ids get an `error` (kind `protocol`). |
 | `lock` | `active: bool` | Live-lock toggle (REQ-MVP-016). Effective immediately — including while an approval is pending (lock-first, REQ-MVP-035). |
 | `status_request` | — | Ask for a `status` event. |
-| `panel_execute` | `target_kind: "executor"\|"sequence"`, `target: int ≥ 1` | (SHOWUI M1, additive) Fire one panel tile → `Go+ Executor N`, via `gate.screen()`. One panel execution at a time; a second while busy gets `panel_busy`. |
-| `panel_stop` | `target_kind`, `target` | (SHOWUI M1) Stop one panel tile → `Off Executor N`, via `gate.screen()`. EXEMPT from the one-at-a-time guard (REQ-SHOWUI-012) — stop is always single-press, zero-wait. |
+| `panel_execute` | `target_kind: "executor"\|"sequence"`, `target: int ≥ 1` | (SHOWUI M1, additive) Fire one panel tile → `Go+ Executor N` / `Go+ Sequence N`, via `gate.screen()`. One panel execution at a time; a second while busy gets `panel_busy`. |
+| `panel_stop` | `target_kind`, `target` | (SHOWUI M1) Stop one panel tile → `Off Executor N` / `Off Sequence N`, via `gate.screen()`. EXEMPT from the one-at-a-time guard (REQ-SHOWUI-012) — stop is always single-press, zero-wait. Stops are serialized against each OTHER, which is what makes an All Off of N tiles stop N tiles (see below). |
 | `panel_pin` | — | (SHOWUI M1) Pin the chat's last-created look to the panel. Payload-free: the seed is the server's own `_last_created` memory (REQ-SHOWUI-004). |
 | `panel_unpin` | `target_kind`, `target` | (SHOWUI M1) Remove one pinned tile; the removal is persisted (REQ-SHOWUI-023). |
 | `panel_catalog_request` | — | (SHOWUI M1) Ask for a `panel_catalog` event (sent on connect and on manual refresh). |
@@ -63,6 +63,41 @@ same change. `AC-SHOWUI-001` is the parity test that holds this.
 | `panel_catalog` | `items: PanelItem[]`, `sections: PanelSection[]` | (SHOWUI M1) The panel's executable tile list + per-section completeness. A refresh REPLACES the list; it does not merge. |
 | `panel_item_state` | `id: string`, `target_kind`, `target: int`, `running: bool`, `cue: string\|null` | (SHOWUI M1) One tile's playback state. `cue` is the running sequence's current cue — a **string**, because MA3 cue numbers are not integers ("1.5"). |
 | `panel_busy` | `id: string`, `target_kind`, `target: int`, `message: string` | (SHOWUI M1) A panel execution was refused because one is in flight (REQ-SHOWUI-011). Names the tile it refused so the UI can unlock that tile — distinct from `busy`, which is the CHAT turn lock the panel deliberately does not share (REQ-SHOWUI-013). |
+
+### Panel command outcomes (SHOWUI M3)
+
+Every `panel_execute` / `panel_stop` frame produces exactly ONE terminal tile
+event, so a UI that latches a tile on press always has something that unlatches
+it (REQ-SHOWUI-011). It is one of:
+
+| terminal event | when |
+|---|---|
+| `panel_item_state` | the command was screened — whether or not it reached the console. `running` carries the tile's TRACKED state, never a guess. |
+| `panel_busy` | refused because a panel execution is already in flight. No bundle was built and the gate was never asked. |
+| `error` (`kind: "panel"`) alone | the target is not a panel tile (membership, REQ-SHOWUI-022). No bundle, no `gate.screen()` call — and no tile state, because there is no tile. |
+
+When the command did not reach the console, the terminal event is accompanied
+by a Korean `error` with `kind: "panel"` naming the reason (blocked by health,
+rejected at approval, backup failed, unconfirmed, …). A refusal is **never**
+silent: REQ-SHOWUI-010 exists because a panel that swallows a block is a panel
+the operator keeps pressing.
+
+Under the live lock the panel additionally emits the existing `proposal` event
+before that `error` — the same read-only card the chat path produces
+(REQ-SHOWUI-009), with zero console sends.
+
+**Tracked-running is an observation, not console truth.** The server tracks only
+what the panel itself started, so a playback started at the desk is invisible to
+it — which is exactly the bounded limitation `spec.md §A` names for All Off. All
+Off is composed by the UI as one `panel_stop` per tracked-running tile
+(REQ-SHOWUI-025); there is no wide-target command anywhere in the panel path,
+because the panel's command builder accepts one verb and one positive integer and
+nothing else (REQ-SHOWUI-026).
+
+**Approval-held panel bundles** ride the EXISTING `approval_request` /
+`approval_decision` flow (REQ-SHOWUI-008). Note that under the current ruleset a
+`Go+ / Off Executor N` is an invoking command whose reference the gate cannot
+expand, so it is held for approval on every press — see progress.md §E.2 M3.
 
 ### PanelItem (SHOWUI M1)
 

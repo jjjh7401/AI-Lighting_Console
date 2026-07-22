@@ -10,6 +10,8 @@ M6 scope — this suite proves the WebSocket protocol surface end to end:
 - ② approval-pending → WS carries command + risk reason + approve/reject;
      the decision flows to the gate (approve executes; reject voids the bundle)
 - ③ completion/failure reported in Korean
+- ④ (SHOWUI M3) a panel tile press over the same real transport: WS panel frame
+     → membership → gate.screen() → the console WIRE, and back as a tile state
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ from server.web.app import WebDeps, create_app
 from server.web.approval_bridge import ApprovalChannel
 from server.web.measure import RoundTripRecorder
 from server.web.messages import PROTOCOL_VERSION
+from server.web.panel import PanelStore, PinStore
 
 from .test_runner_self_correction import (
     AlwaysFailingCommandProvider,
@@ -66,7 +69,7 @@ def stack(tmp_path, fake_console):
         console_stack.stop()
 
 
-def _client(stack_bundle, provider):
+def _client(stack_bundle, provider, *, panel=None):
     console_stack, channel, recorder = stack_bundle
     deps = WebDeps(
         gate=console_stack.gate,
@@ -75,6 +78,7 @@ def _client(stack_bundle, provider):
         audit=console_stack.audit,
         approval_channel=channel,
         recorder=recorder,
+        panel=panel,
     )
     return TestClient(create_app(deps))
 
@@ -209,6 +213,22 @@ class TestLiveLockOverWebSocket:
             assert all(c["status"] == "proposal" for c in event["commands"])
         assert fake_console.exec_commands == []
 
+    def test_panel_stop_is_also_demoted_to_a_proposal(self, stack, fake_console, tmp_path):
+        # REQ-SHOWUI-009 over the real transport: the lock owns the panel too.
+        # A stop is busy-guard exempt (REQ-SHOWUI-012), NOT gate exempt.
+        panel = _pinned_panel(tmp_path)
+        with (
+            _client(stack, ScriptedProvider([]), panel=panel) as client,
+            client.websocket_connect("/ws") as ws,
+        ):
+            assert ws.receive_json()["type"] == "status"
+            _send(ws, type="lock", active=True)
+            _receive_until(ws, "status")
+            _send(ws, type="panel_stop", target_kind="executor", target=201)
+            proposal = _receive_until(ws, "proposal")
+        assert proposal["commands"] == ["Off Executor 201"]
+        assert fake_console.exec_commands == []
+
     def test_lock_first_beats_a_pending_approval_over_ws(self, stack, fake_console):
         # REQ-MVP-035 through the full async path: lock arrives while the
         # approval is pending; the later approve must NOT execute.
@@ -229,3 +249,89 @@ class TestLiveLockOverWebSocket:
             event = _receive_until(ws, "chat_response")
         assert fake_console.exec_commands == []  # lock-first held on the wire
         assert any(c["status"] == "proposal" for c in event["commands"])
+
+
+def _pinned_panel(tmp_path) -> PanelStore:
+    """A panel whose only tile is a pinned one.
+
+    A pin is enough to make a tile a MEMBER (REQ-SHOWUI-022) without a rig read,
+    which keeps this suite's subject the transport rather than the catalog —
+    the catalog builder has its own suite (``test_web_panel.py``).
+    """
+    pins = PinStore(tmp_path / "panel_pins.json")
+    pins.add(
+        {
+            "kind": "sequence",
+            "target_kind": "executor",
+            "target": 201,
+            "name": "Summer Rock",
+            "appearance": None,
+        }
+    )
+    return PanelStore(state_port=None, pins=pins)
+
+
+class TestScenario4PanelOverTheRealWire:
+    """SHOWUI M3 — a tile press reaches the console through the gate, and only
+    through the gate (AC-SHOWUI-005/006/007 over the real UDP transport)."""
+
+    def test_a_tile_press_reaches_the_console_wire_after_approval(
+        self, stack, fake_console, tmp_path
+    ):
+        # ``Go+ Executor N`` is an invoking command whose reference the gate
+        # cannot expand (Executor is not a recognized reference type), so the
+        # real gate HOLDS it — the panel press surfaces on the existing
+        # approval card, and only the approved bundle reaches the wire.
+        panel = _pinned_panel(tmp_path)
+        with (
+            _client(stack, ScriptedProvider([]), panel=panel) as client,
+            client.websocket_connect("/ws") as ws,
+        ):
+            assert ws.receive_json()["type"] == "status"
+            _send(ws, type="panel_execute", target_kind="executor", target=201)
+            request = _receive_until(ws, "approval_request")
+            (item,) = request["items"]
+            assert item["command"] == "Go+ Executor 201"
+            _send(
+                ws,
+                type="approval_decision",
+                request_id=request["request_id"],
+                approved=True,
+            )
+            state = _receive_until(ws, "panel_item_state")
+        # Backup rule ③ (REQ-MVP-017) fires ahead of the approved bundle, on the
+        # same terms as the chat path — a held panel bundle IS a risky bundle.
+        assert fake_console.exec_commands == ["SaveShow", "Go+ Executor 201"]
+        assert state["id"] == "executor:201"
+        assert state["running"] is True
+
+    def test_a_rejected_tile_press_reaches_nothing(self, stack, fake_console, tmp_path):
+        panel = _pinned_panel(tmp_path)
+        with (
+            _client(stack, ScriptedProvider([]), panel=panel) as client,
+            client.websocket_connect("/ws") as ws,
+        ):
+            assert ws.receive_json()["type"] == "status"
+            _send(ws, type="panel_execute", target_kind="executor", target=201)
+            request = _receive_until(ws, "approval_request")
+            _send(
+                ws,
+                type="approval_decision",
+                request_id=request["request_id"],
+                approved=False,
+            )
+            _receive_until(ws, "error")
+        assert fake_console.exec_commands == []
+
+    def test_an_unknown_tile_never_reaches_the_wire(self, stack, fake_console, tmp_path):
+        # REQ-SHOWUI-022: refused at membership, so no bundle and no screening.
+        panel = _pinned_panel(tmp_path)
+        with (
+            _client(stack, ScriptedProvider([]), panel=panel) as client,
+            client.websocket_connect("/ws") as ws,
+        ):
+            assert ws.receive_json()["type"] == "status"
+            _send(ws, type="panel_execute", target_kind="executor", target=999)
+            event = _receive_until(ws, "error")
+        assert event["kind"] == "panel"
+        assert fake_console.exec_commands == []
