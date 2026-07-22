@@ -255,9 +255,15 @@ Rules:
   The console keeps playing, but the app can no longer observe it, and
   "probably still running" is the render that gets an operator to press Off on a
   tile that already stopped. The tile LIST survives (it is server state, not an
-  observation); running state is rebuilt from a `panel_catalog_request` +
-  `status_request` resync on reconnect. Unconfirmed commands are never
-  auto-resent (REQ-MVP-032).
+  observation) and is rebuilt, together with health, by the
+  `panel_catalog_request` + `status_request` resync the client sends on every
+  open. Running state is NOT rebuilt by that resync, and is not meant to be:
+  neither `panel_catalog` nor `status` carries a per-tile `running` field, and
+  the server's own tracked-running set lives on the per-connection panel runtime
+  and dies with the socket. A reconnected panel therefore shows every tile OFF
+  until the operator presses one — which is the honest render, because the app
+  has no way to learn what the console is playing. Unconfirmed commands are
+  never auto-resent (REQ-MVP-032).
 
 ## Round-trip measurement hooks (M6)
 

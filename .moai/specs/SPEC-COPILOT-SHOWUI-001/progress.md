@@ -440,9 +440,105 @@ M6 라이브 체크리스트 ⑥(WS 강제 종료/재접속)에서만 확인된�
   (b) arm 타임아웃 4000ms와 패널 가독성(RUN/OFF 15px, 레일)이 어두운 실기 FOH 모니터에서
   버티는지. 둘 다 실기에서만 답이 나온다.
 
+### M6 — 전체 그린 + 라이브 E2E + 문서 마감 (부분 완료, 라이브 세션 1회)
+
+기준선: HEAD `09e2c4f`. 실기 = grandMA3 onPC 2.4.2, 응답기 `copilot_responder.lua` **1.2.0**
+(HEAD는 1.3.0 — 기준선 유지를 위해 의도적으로 업그레이드하지 않음), `osc_slot=2`,
+`console_port=8000`, `receive_port=9005` — 전부 `settings.toml`에서 읽음(하드코딩 0).
+
+**패키지 번들은 사용하지 않았다.** `dist/GrandMA3 Copilot.app`과 Tauri 번들은 모두 13:56 빌드로
+M1~M5 다섯 커밋(15:44~19:15)보다 앞선다 — 번들 안에 `server/web/panel.py`가 부재하고
+번들 UI의 `ShowPanel` grep이 0건이다. 라이브는 전 구간 개발 모드(`python -m server.web`,
+`ui/dist` 19:16 빌드)로 수행했다.
+
+| AC | 상태 | 검증 커맨드 / 증거 | 실제 출력 |
+|---|---|---|---|
+| AC-SHOWUI-012 | **PASS** | `.venv/bin/python -m pytest server/tests/ -q` · `(cd ui && npx vitest run)` | `1592 passed in 84.15s` · `Tests 176 passed (176)` |
+| AC-SHOWUI-013 ① (시퀀스 타일) | **PASS** | 패널 `panel_execute sequence:41` → 감사 로그 | `Go+ Sequence 41 ok=True detail=OK`, `panel_item_state running=true`; **조작자 육안으로 조명 변화 확인** |
+| AC-SHOWUI-013 ① (실행기 타일) | **FAIL — 결함 확정** | 아래 §M6 결함 참조 | `Go+ Executor 11 ok=False detail='Illegal object'` |
+| AC-SHOWUI-013 ② | **PASS** | `panel_stop sequence:41` | `Off Sequence 41 ok=True`, `running` true→false |
+| AC-SHOWUI-013 ③ | **PASS** | `chat` → `panel_pin` → execute → stop | `Store Sequence 90 Cue 1 'Blue Look' ok=True` → 핀 `sequence:90` 생성(그리드 0번) → `Go+/Off Sequence 90 ok=True` |
+| AC-SHOWUI-013 ④ | **PASS** | `lock active` → `panel_execute` → 감사 로그 창 census | 프레임 `proposal`(`["Go+ Sequence 41"]`) → `error(kind:panel, 라이브 잠금…)` → `panel_item_state running=false`, **승인 카드 없음**; 창 내 `kind==command` **0건**, `blocked` 1건(`reason='live lock active'`), 하트비트 4건 |
+| AC-SHOWUI-013 ⑤ | **PASS** | 백엔드 완전 종료(포트 0건 확인) → 재기동 → `panel_catalog_request` | 핀 `sequence:90` 복원, 그리드 index **0** 유지; `panel_pins.json` 실재(`id`/`source` 미저장 = 파생 확인) |
+| AC-SHOWUI-013 ⑥ | **PASS** | 타일 running 상태에서 드라이버 프로세스 `kill -9`(비정상 종료) → 신규 소켓 | 수신 프레임 전량 = `status`,`status`,`panel_catalog`; **`panel_item_state` 0건**. 동시에 콘솔은 `Go+ Sequence 41 ok=True` 이후 Off 없이 **실제 재생 중** — 즉 "콘솔은 돌고 앱은 모른다"가 실기로 성립 |
+| AC-SHOWUI-013 ⑦ | **PASS** | 3타일 발화 → 추적 running마다 개별 `panel_stop` | 콘솔 커맨드 6건 = `Go+`3 + `Off`3, 광역 타깃(`Thru`/`*`/`Everything`) **0건**; **데스크에서 직접 띄운 재생은 All Off 후에도 생존**(조작자 확인) = 한계가 사양대로 동작 |
+| AC-SHOWUI-002/003 | **PASS(라이브)** | `panel_catalog_request` 실기 응답 | 섹션 2종 모두 `status:"ok"`; 시퀀스 비연속(1,2,11~16,30,41,50,62,71,80 — 3~10·17~29 부재)으로 인덱스 키잉 회귀 차단 실증; fixtures 섹션 구조적 부재 |
+| AC-SHOWUI-014 | **부분 — 미완** | 아래 §M6 미결 참조 | 서버 신호는 확인(`console_offline`에서 요청 이전에 `executions_blocked=true` 도착), **실행-차단 경로와 UI 렌더는 미검증** |
+
+증적: `.moai/state/verify/showui-m6/` (`driver.py` 하니스, 세션별 `frames.jsonl`/`driver.log`,
+`probe_executor_address.py`) + `server/audit_logs/audit-20260722.jsonl`.
+라이브 세션 콘솔 커맨드 총 **19건 — 성공 17 / 실패 2**, 실패 2건 모두 실행기 주소 문제.
+
+### M6 결함 — 실행기 타일 주소 (AC-SHOWUI-013 ① 미충족)
+
+**증상.** 페이지 드릴다운이 나열한 실행기 8개 중 **7개가 발화 불가**다.
+
+| 실행기 | `Go+ Executor N` |
+|---|---|
+| 1, 5, 11, 91, 92, 93, 95 | `Illegal object` (7건) |
+| 101 | `ok` (1건) |
+
+**오브젝트는 실재한다.** `DataPool/Pages/1/11` 질의는 `{"class":"Executor","name":"Sequence 41"}`
+를 반환한다. 즉 트리 인덱스와 커맨드라인 주소 공간이 일치하지 않는다.
+
+**대안 문법도 실패한다.** `Go+ Executor 1.11` / `Go+ Executor 1.101` → `Cannot Create Object`.
+채팅 경로에서도 같은 뿌리가 드러났다: `Assign Sequence 90 At Page 1.2` → `Cannot Create Object`.
+
+**시퀀스 타일 14개는 정상이다** (`Go+/Off Sequence N` 전부 ok) — 피해 범위는 실행기 타일에 한정된다.
+
+**게이트는 이미 경고하고 있었다.** `Go+ Executor 11`의 승인 카드가 실린 이유는
+`["reference-invoking command", "unverifiable reference: no recognizable target object"]` 였고,
+시퀀스 타일은 승인 카드 자체가 뜨지 않았다. 안전 계층의 "확인 불가능한 참조" 판정은
+콘솔의 거절을 **예측적으로** 맞혔다.
+
+**이것은 이월된 열린 질문 (a)의 답이다** — 드릴다운이 반환한 실행기 번호는
+`Go+ Executor N` 이 발화하는 번호와 **동일하지 않다**. ASSUMPTION-7은 이 쇼파일에서 반증됐다.
+`.moai/state/verify/probe_executor_numbers.py` 의 정적 판정("i가 101/191/201 같으면 가정 성립")은
+발화 없이는 도달할 수 없는 결론이었다 — 라이브 E2E가 존재하는 이유.
+결함 계열은 `copilot-fid-vs-slot-decision` (픽스처 `no` = 패치 슬롯 ≠ FID)과 동일하다.
+
+**미해결.** 올바른 주소 체계는 미확정. 조작자가 콘솔에서 실행기 11번과 101번의 실제 상태를
+확인하기로 함. 처리 방침(본 SPEC 내 수정 / v1 범위 축소 / 후속 SPEC)은 결정 대기.
+
+### M6 문서 정정 — `PROTOCOL.md` 재접속 조항
+
+정정 전(`PROTOCOL.md:258`): *"running state is rebuilt from a `panel_catalog_request` +
+`status_request` resync on reconnect."* — **사실이 아니다.**
+
+- **구조적 근거**: `panel_item` 의 와이어 키 7개(`id`/`kind`/`target_kind`/`target`/`name`/
+  `appearance`/`source`)에 `running` 이 없다(`messages.py:317-358`). `running` 은
+  `panel_item_state_event` 에만 존재하고(`messages.py:410-423`), 그것을 발화하는 `_emit_state` 는
+  execute/stop 경로에서만 호출된다(`panel.py:739,754,764,769`). `self._running` 은 연결마다
+  새로 비는 집합이다(`panel.py:624`).
+- **행동적 근거**: 재접속 소켓 수신 프레임 전량이 `status`,`status`,`panel_catalog` — 0건 재생.
+- **위험 방향**: 옛 문장을 믿은 클라이언트는 "콘솔은 재생 중인데 앱은 아무것도 안 돈다고 말하는"
+  상태를 재구축 실패가 아니라 정상으로 오해한다.
+
+정정 후 문장은 재구축 대상이 **타일 목록 + health** 이며 running 은 의도적으로 재구축되지
+않음을 명시한다. `PROTOCOL_VERSION` 은 1 유지(와이어 형태 무변경).
+
+`PROTOCOL.md` 의 패널 메시지 8종 기재는 M1/M3 시점에 이미 완료되어 있었고, 코드와 1:1로
+일치함을 재확인했다(client 5종 + server 3종, 양측 allowlist 대조).
+
+### M6 미결 항목
+
+1. **AC-SHOWUI-014 (LIVE) 미완** — 서버 신호(`console_offline` 상태에서 요청 이전에
+   `executions_blocked=true` 도착)는 오프라인 사전검증에서 관측했으나, **핀을 통한
+   실행-차단 경로**(membership 통과 후 health 차단 메시지)와 **UI 차단 배너 렌더**는
+   미검증이다. reply-port 드리프트 유발이 세션 내 적용되지 않았다.
+   주의: `fire()` 는 membership을 health보다 **먼저** 검사하므로(`panel.py:643`),
+   카탈로그가 빈 오프라인 상태에서는 `unknown_target` 이 반환되어 health 차단 경로에
+   도달하지 못한다 — 이 검증에는 핀 또는 살아있는 카탈로그가 선행되어야 한다.
+2. **열린 라이브 질문 (b) 미답** — arm 타임아웃 4000ms와 RUN/OFF 15px 가독성의 실기 판단.
+   조작자가 앱 창을 보지 않은 채 세션이 종료되어 관측 자체가 없다.
+3. **실행기 주소 결함 처리 방침 미정** (위 §M6 결함).
+4. **`--no-session-backup` 사전검증 구간** — 오프라인 사전검증은 백업 없이 기동했다.
+   이후 라이브 본 세션은 백업 켠 정상 모드로 재기동했고 `SaveShow ok=True` 를 확인했다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+_<pending — M6 미완. AC-SHOWUI-013 ①(실행기 타일) FAIL, AC-SHOWUI-014 부분 검증.
+run-phase audit-ready 선언은 위 §M6 미결 4건이 해소된 뒤에 이루어진다.>_
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
