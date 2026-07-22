@@ -225,6 +225,32 @@ Recorded per Section E honesty rules; the round-trip tool
   deliberately gapped pool (e.g. groups at 1, 5, 7) and reading the `i`
   values: `1,5,7` = (a) works; `1` plus two number-less entries = (b) only;
   `1,2,3` = **neither** — do not trust any reported pool number.
+- **DEFERRED (fixture id in the snapshot)** — NOT assumed, NOT implemented.
+  A child of `Patch/Stages/1/Fixtures` carries only its container slot (`i`),
+  never its fixture id (FID), so `Fixture <i>` selects the wrong rig whenever
+  slot ≠ FID — silently, because MA3 accepts the range and stores the look.
+  The prompt surface forbids that shortcut instead
+  (`server/rulebook/assets/v2.4.2/31_choreography_patterns.md`,
+  `20_korean_terms.md`, and the `get_rig_context` tool description). That is
+  containment, not a fix: the model still cannot build a NEW group from a
+  natural-language description without a `query_state` round-trip.
+  Emitting a real `fid` per fixture child is the fix. It is blocked on
+  verification, not on effort:
+  (i) no FID *read* accessor is established anywhere in this repo — `child.fid`
+  and `child:Get("fid")` are guesses, and the only `fid` evidence is the WRITE
+  side (`AddFixtures{ fid = ... }`, live-proven);
+  (ii) ASSUMPTION-7 probe (a) already reads `child.no` / `child:Get("no")`, so
+  if either returns an FID on a real 2.4.2 fixture the strictly-increasing gate
+  ACCEPTS it and emits it as `i` — the responder cannot tell the two apart;
+  (iii) the site calibration showfile has slot == FID by coincidence and so
+  CANNOT distinguish a correct FID probe from a slot probe. Verify only against
+  a showfile patched so slot ≠ FID (e.g. FIDs 101..109 in stage slots 1..9).
+  Budget is not the constraint: +432 B worst case at `max_children` = 24 against
+  a 4000 B `max_payload`. An optional `fid` key is additive and wire-compatible
+  (both readers use keyed `get`), but four exact-shape contract pins would need
+  a deliberate update rather than a silent repair — `test_tools.py`
+  TestGetRigContext (3) and `test_lua_responder.py`
+  `test_unknown_slot_reaches_the_llm_as_a_name_only_entry`.
 - **ASSUMPTION-5 (outbound prefix)**: the console does NOT prepend the OSC
   config prefix to custom-sent reply addresses. If replies arrive at
   `/copilot/copilot/*` (detect with the round-trip tool's `--diagnose` mode),

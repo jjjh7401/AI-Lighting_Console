@@ -113,6 +113,53 @@ class TestMacroAuthoringRecipe:
         assert "Group 3" in prefix and "Preset 4.1" in prefix
 
 
+class TestFixtureNumbersAreNotAddressableIds:
+    """A rig-context fixture number is a stage-patch SLOT; `Fixture <n>` on MA3
+    addresses FID <n>. The two are equal only by coincidence.
+
+    The tool description already refuses to promise FID-ness (pinned by
+    test_tools.py::TestRigContextDescription), but the rulebook told the model
+    to "select the patched fixtures by their real id range" in the same bullet
+    that told it to read those fixtures from `get_rig_context` — closing a
+    read->address loop the tool description explicitly forbids. Of the two
+    surfaces the rulebook is the one the model is reading while it designs a
+    look, so it wins; the failure is silent and wrong-target, because MA3
+    accepts `Fixture 1 Thru 9` happily and stores the look against whichever
+    fixtures own those FIDs.
+
+    Repairing DEFAULT_RIG_CONTEXT_PATHS is what armed this: while the fixtures
+    path was a dead placeholder the section never resolved, so the instruction
+    could not be acted on. The prompt surface must not re-arm it.
+    """
+
+    def test_prefix_never_calls_a_rig_context_number_a_real_id(self):
+        # The exact phrase that closed the read->address loop.
+        assert "real id range" not in assemble_prefix()
+
+    def test_prefix_states_a_fixture_number_is_a_slot_and_not_its_fid(self):
+        prefix = assemble_prefix()
+        # Both halves must be present: what the number IS, and what it is NOT.
+        assert "NOT its fixture id" in prefix
+        assert "slot" in prefix.lower()
+
+    def test_prefix_teaches_how_to_confirm_a_real_fid_before_addressing_by_number(self):
+        # The tool description tells the model to "confirm the FID with
+        # query_state"; a rulebook that forbids the shortcut without naming
+        # the confirmation step leaves the model with no way forward.
+        assert "query_state" in assemble_prefix()
+
+    def test_korean_dictionary_scopes_rig_context_ids_away_from_fixtures(self):
+        # The blanket claim was true for groups/preset pools and false for
+        # fixtures, making it a second, quieter source of the same defect.
+        prefix = assemble_prefix()
+        assert "the concrete object ids come from `get_rig_context`" not in prefix
+
+    def test_korean_moving_head_row_does_not_authorize_bare_fixture_ranges(self):
+        # The showfile-dependent 무빙 row resolves through `get_rig_context`,
+        # so authorizing a `Fixture` range there inherits the slot/FID defect.
+        assert "selected via `Group` or `Fixture` ranges" not in assemble_prefix()
+
+
 class TestKoreanDictionaryAxis:
     """AC-MVP-028 parts 1-2 — dictionary axis present, >=10 entries, prefix-stable."""
 

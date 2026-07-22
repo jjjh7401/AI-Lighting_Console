@@ -10,7 +10,7 @@ group/preset names via `get_rig_context` instead of assuming ids.
 |---|---|---|
 | 샤막 | Cyc/backdrop wash fixtures — `Group` named like 'Cyc'/'샤막' + related Color/Dimmer `Preset` | sharkstooth scrim wash; showfile |
 | 워시 | Wash-class fixtures — Wash FixtureType, `Group` named like 'Wash'/'워시', wash Color/Position `Preset` | showfile |
-| 무빙, 무빙라이트 | Moving-head fixtures (Spot/Wash/Beam FixtureTypes) selected via `Group` or `Fixture` ranges | showfile |
+| 무빙, 무빙라이트 | Moving-head fixtures (Spot/Wash/Beam FixtureTypes) — prefer a `Group`; a `Fixture` range only with confirmed FIDs | showfile |
 | 스팟 | Spot/Profile-class moving heads — Spot FixtureType, `Group` named like 'Spot' | showfile |
 | 빔 | Beam-class fixtures — Beam FixtureType, `Group` named like 'Beam' | showfile |
 | 핀조명, 폴로스팟 | Followspot/pinspot fixtures — dedicated `Group`, Dimmer/Position `Preset` | showfile |
@@ -31,4 +31,6 @@ group/preset names via `get_rig_context` instead of assuming ids.
 
 Rule: this dictionary is part of the FIXED prompt prefix — it never contains
 per-show or per-turn values. Showfile-dependent rows name a vocabulary CLASS;
-the concrete object ids come from `get_rig_context` at run time.
+the concrete group and preset ids come from `get_rig_context` at run time. A
+fixture's number there is its stage-patch slot, NOT its fixture id — confirm the
+FID with `query_state` before addressing a fixture by number.

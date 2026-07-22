@@ -177,9 +177,17 @@ When the instruction gives a MOOD or CONCEPT ("warm ballad", "energetic club", "
 First call `get_rig_context` to see the ACTUAL patched fixtures and the existing groups /
 presets, then design against those real objects:
 
-- Select real targets only: recall an existing group by its EXACT name
-  (`Group 'Copilot Movers'`) or select the patched fixtures by their real id range
-  (`Fixture 11 Thru 19`). NEVER invent a `Group 3` that `get_rig_context` did not list —
+- Select real targets only: recall an existing group by its EXACT listed name
+  (`Group 'Copilot Movers'`) or by its listed number (`Group 11`) — for groups and
+  preset pools that number IS the pool number you address.
+- A fixture's number in `get_rig_context` is its SLOT in the stage patch list,
+  NOT its fixture id, and `Fixture 11` addresses FID 11 — the two are equal only by
+  coincidence. NEVER paste a fixture's rig-context number into a `Fixture ... Thru ...`
+  range: MA3 accepts it silently and stores the look against whichever fixtures own
+  those FIDs. Prefer a group. To address fixtures directly, first confirm the real
+  FIDs — `query_state` on the stage patch entry (its `fid` property), or ask the
+  operator — and only then write the range.
+- NEVER invent a `Group 3` that `get_rig_context` did not list —
   a missing group selects nothing and the whole look stores empty.
 - Then map the mood to values you already know how to set (dimmer / color / movement /
   speed), `Store` cues, and `Assign ... At Executor`. Remember `ChangeDestination Root` first.
