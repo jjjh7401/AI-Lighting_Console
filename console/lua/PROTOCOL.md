@@ -7,6 +7,17 @@ M2 deliverable; consumed by the M3 tool-runner and the M4 safety gate.
 Versioning: every reply payload carries `"v": 1`. Any breaking change bumps the
 version in BOTH implementations and revises this document.
 
+> Revision note (responder 1.3.0): `send_reply` now tries **every** send
+> variant (configured first, then `packed`, `args`, `cmd_keyword`) instead of
+> the configured one followed immediately by `cmd_keyword`. Live 2026-07-22: on
+> a console whose `SendOSCMessage` takes `(slot, address, payload)`, the
+> `packed` default raised and `args` was never attempted, so the reply left via
+> `Cmd('SendOSC ...')` — which that console rejected with `Illegal property`.
+> `Cmd()` does not raise on a rejected command, so `pcall` reported success and
+> the reply silently died. `cmd_keyword` therefore stays LAST, precisely
+> because its failures are invisible to the responder. No wire change; protocol
+> version stays 1.
+>
 > Revision note (responder 1.2.0): the snapshot child `i` is now the **real
 > pool slot** and is **omitted** when that slot could not be established (§4.2,
 > ASSUMPTION-7); a numeric path segment addresses the pool slot accordingly

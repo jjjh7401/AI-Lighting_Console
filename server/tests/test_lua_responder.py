@@ -337,6 +337,30 @@ class TestDispatchAndFallbacks:
         payload = decode_payload(sent[0].payload)
         assert payload["kind"] == "pong"
 
+    def test_a_sendoscmessage_wanting_separate_args_is_actually_tried(self, harness):
+        # Live 2026-07-22. On a console whose SendOSCMessage takes
+        # (slot, address, payload), the configured "packed" variant raises —
+        # and the fallback jumped STRAIGHT to cmd_keyword, so "args" was never
+        # attempted. The reply then left via `Cmd('SendOSC ...')`, which that
+        # console rejected with "Illegal property"; Cmd() does not raise on a
+        # rejected command, so pcall reported success and the reply silently
+        # died. Every variant must be tried before giving up, and cmd_keyword
+        # must stay LAST precisely because its failures are invisible.
+        harness.lua.execute(
+            """
+            __SENT = {}
+            function SendOSCMessage(slot, a, b)
+                if b == nil then error("this console wants (slot, address, payload)") end
+                table.insert(__SENT, { slot = slot, a = a, b = b })
+            end
+            """
+        )
+        harness.main(None, "ping 5")
+        sent = harness.sent()
+        assert len(sent) == 1, "the args variant must be tried before falling back to Cmd"
+        assert harness.cmd_log() == [], "cmd_keyword must not be reached while a real send works"
+        assert decode_payload(sent[0].payload)["kind"] == "pong"
+
     def test_missing_sendoscmessage_falls_back_to_cmd_keyword(self, harness):
         harness.lua.execute("SendOSCMessage = nil")
         harness.main(None, "ping 2")

@@ -36,8 +36,10 @@ local CONFIG = {
 local M = {
     NAME = "CopilotResponder",
     -- 1.1.0: additive deploy verb (M7). 1.2.0: snapshot `i` is the REAL pool
-    -- slot and is omitted when unknown (was the loop position). Protocol v1.
-    VERSION = "1.2.0",
+    -- slot and is omitted when unknown (was the loop position). 1.3.0:
+    -- send_reply tries EVERY send variant, not just the configured one then
+    -- cmd_keyword. Protocol v1 throughout.
+    VERSION = "1.3.0",
     PROTO = 1,
     CONFIG = CONFIG,
 }
@@ -662,13 +664,22 @@ function M.send_reply(address, payload)
             Cmd(string.format('SendOSC %d "%s"', CONFIG.osc_slot, M.pack_message(address, encoded)))
         end,
     }
+    -- Try the configured variant first, then EVERY other variant. The old
+    -- code jumped straight to cmd_keyword, so "args" was never attempted --
+    -- if SendOSCMessage exists but wants (slot, address, payload), the reply
+    -- silently died. cmd_keyword stays LAST: Cmd() does not raise on a
+    -- rejected command, so pcall reports success even when the console
+    -- answered "Illegal property" and nothing left the box.
     local variant = CONFIG.send_variant
-    local sender = senders[variant] or senders.packed
-    if pcall(sender) then
-        return true
-    end
-    if variant ~= "cmd_keyword" and pcall(senders.cmd_keyword) then
-        return true
+    local tried = {}
+    for _, name in ipairs({ variant, "packed", "args", "cmd_keyword" }) do
+        local sender = senders[name]
+        if sender and not tried[name] then
+            tried[name] = true
+            if pcall(sender) then
+                return true
+            end
+        end
     end
     M.log("copilot_responder: OSC reply send failed (check CONFIG.osc_slot / send_variant)")
     return false
