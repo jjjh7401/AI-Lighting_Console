@@ -70,6 +70,20 @@ M2 착수 직전 재점검에서 ASSUMPTION-12(익스큐터→시퀀스 프로�
 
 **제약 준수 기록**: 코드 변경은 `console/lua/copilot_responder.lua`(응답기)와 `server/tests/test_lua_responder.py`(테스트)로 한정 — `server/safety/**`(M4 스코프) 미수정. 콘솔 잔여물: Macro 170~176·180~186(쇼파일 무해, §5.8과 동일하게 정리 대기).
 
+### M3 — 배포 체인 (재패키징 + Import + 라이브 재검증) — 진행 중, 라이브 재검증 단계에서 블로킹 (2026-07-23)
+
+| # | 작업 | 결과 |
+|---|---|---|
+| 1 | 사전 확인 | `console/lua/copilot_responder.lua`에 M2의 `node.sequenceNo` 존재 확인(git show 4428cd9 + grep); `osc_slot` 레포 기본값(1)과 콘솔에 실제 설치되어 돌아가던 파일의 값(1)이 일치 — 별도 수정 불필요로 판정(이전 세션 메모의 "osc_slot=2" 기록은 stale로 확인, 갱신 필요) |
+| 2 | 배포 방식 결정 | 실제 앱(server + 리뷰 게이트)을 통한 자동 배포는 GEMINI_API_KEY 미설정으로 이번 세션엔 불가 — 사용자가 console/lua/README.md Option A(수동 파일 복사 + `Import Plugin` 콘솔 명령)로 직접 수행하기로 결정 |
+| 3 | Import 수행 | 사용자가 `copilot_responder.lua`/`.xml`을 onPC 플러그인 폴더에 복사 후 `Import Plugin` 실행 — Plugins 풀 슬롯 1에 "Copilot Responder"로 등장 확인(스크린샷) |
+| 4 | 라이브 재검증 시도 | `.venv/bin/python -m server.tools.responder_roundtrip --port 8000 --listen-port 9005` → ping/state/exec 전부 5~6초 타임아웃. 콘솔 커맨드 히스토리에도 요청이 전혀 안 찍힘(사용자 확인) |
+| 5 | 1차 진단 | macOS 방화벽 비활성 확인(`socketfilterfw --getglobalstate` → disabled); `app_gma3` 프로세스 실행 중 + `lsof -iUDP:8000` 확인 결과 실제로 UDP 8000 리슨 중; In & Out → OSC 화면에서 행 1(Receive=Yes, prefix=copilot, port 8000)/행 2(Send=Yes, dest 127.0.0.1:9005) 방향별 설정도 정상으로 보임 |
+
+**블로커**: 콘솔이 실행 중이고 올바른 포트를 리슨 중인데도 들어오는 OSC 요청이 커맨드 히스토리에 나타나지 않음 — 원인이 grandMA3의 OSC→커맨드 매핑 설정(In & Out 화면 밖의 별도 설정일 가능성) 쪽으로 좁혀졌으나 미확정. 사용자 요청으로 이번 세션은 여기서 중단, 다음 세션에서 grandMA3 OSC 명령 매핑 설정을 추가 확인 후 재시도 예정. 코드 변경 없음(진단 전용 스크립트는 실행 후 삭제).
+
+**정정 — `osc_slot` 판단 보류 (재검토 필요)**: 위 #1에서 "osc_slot=1이 레포 기본값·설치본 일치라 수정 불필요"라고 판단했으나, 이전 세션 메모(`copilot-onpc-site-config.md`, 2026-07-22)는 "행 1(Destination IP가 브로드캐스트)은 Send=No라 응답 전송에 못 쓰고, 응답은 반드시 행 2(127.0.0.1 목적지)를 통해 나가야 하므로 `CONFIG.osc_slot`은 2여야 한다"고 명시적으로 기록해뒀었다. 오늘 화면 확인 결과 행 1=Receive만/행 2=Send만으로 방향이 분리되어 있어 이 이전 기록과 방향상 일치하지만, **오늘의 라이브 테스트는 osc_slot이 관여하는 응답(Send) 단계에 도달하기 전, 더 앞 단계(요청이 콘솔에 도달하는지 자체)에서 이미 실패**했기 때문에 osc_slot=1이 실제로 맞는지 틀린지는 검증되지 않았다. 다음 세션에서 수신 문제를 먼저 풀고, 그 다음 osc_slot이 실제 응답 경로(행 2)를 가리키는지 별도로 재확인할 것 — 지금 상태를 "확인됨"으로 취급하지 말 것.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
