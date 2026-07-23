@@ -154,9 +154,33 @@ M2 착수 직전 재점검에서 ASSUMPTION-12(익스큐터→시퀀스 프로�
 | AC-EXECBODY-014 | **ON-TRACK** | 전체 회귀 신규 실패 0건 재확인(위 #5) |
 | (acceptance.md §D "빈 시퀀스") | **DONE** | 검증된-빈-본문(조회 성공, 큐 0개)과 미검증(조회 실패)을 구분해 전자는 양성 통과 — `test_executor_assigned_to_empty_sequence_is_a_positive_pass`/`test_executor_assigned_to_empty_sequence_passes`로 회귀 방지 |
 
+### M6 — 전체 그린 + Lua resolve_path 갭 해소 + 배포 신뢰성 정리 (2026-07-24)
+
+M4/M5에서 투명하게 남겨뒀던 잔여 위험(콘솔 `resolve_path()`가 `"Executor <n>"` 주소를 못 읽는 문제)이 M6 착수 시점에 실제로 라이브 테스트를 막는 것을 확인 — 사용자 승인 하에 Lua 수정으로 해소했다.
+
+| # | 작업 | 결과 |
+|---|---|---|
+| 1 | 비-라이브 회귀 | `pytest -q` 1739 passed/2 skipped/3 failed(기존과 동일, 무관) · `npm run test`(ui) 98 passed · `test_architecture.py` 4 passed · OSC 경계 무변경 |
+| 2 | `resolve_path()` 확장 | `console/lua/copilot_responder.lua`에 `M.resolve_executor_address()` 신설 — 경로가 정확히 `"Executor <숫자>"`일 때만 M1이 이미 라이브 검증한 `ObjectList("Executor " .. no)[1]` API로 분기, 그 외 경로는 기존 트리 걷기 그대로. `TestExecutorAddressResolution` 6건(왕복 성공, M2 sequenceNo와의 종단 계약, ObjectList 부재/오류 3종, 비-Executor 경로 무변경) + 버전 1.3.0→1.4.0 |
+| 3 | 배포 시도 1 — 실패 | 사용자가 `Import Plugin "copilot_responder"`로 재-Import → 라이브 상태 조회는 여전히 옛 코드 기준 에러("path segment not found") · 콘솔에서 붙여준 플러그인 소스도 1.3.0으로 확인 — **재-Import가 기존 동일 이름 플러그인을 실제로 덮어쓰지 못함**이 실측됨 |
+| 4 | 배포 신뢰성 도구화 | `server/tools/responder_roundtrip.py`에 `--expect-version` 추가 — ping 단계에서 라이브 버전을 즉시 대조해 "배포가 실제로 반영됐는지"를 한 커맨드로 판정(신규 테스트 2건). `console/lua/README.md`에 §2.1(재-Import 신뢰성 이슈 + Option B 우회) 신설 + 기존 소켓-낡음 교훈(2026-07-18/07-23)도 같은 표에 통합 |
+| 5 | 배포 시도 2 — 성공 | 사용자가 Option B(플러그인 편집기에 소스 직접 붙여넣기)로 재배포 → 콘솔 편집기에서 `VERSION = "1.4.0"` 확인(스크린샷) |
+| 6 | 라이브 검증 | `responder_roundtrip.py --path "Executor 201" --expect-version "1.4.0" --skip-exec` | `[PASS] ping: live version=1.4.0` · `[PASS] state: node={class: Executor, sequenceNo: 71, childCount: 0} children=0` — M2(sequenceNo 노출)+M4(Python 2단계 위임)+M6(Lua 주소 해석) 전체 파이프라인이 실물 콘솔에서 종단 확인됨 |
+
+**커밋**: `6c08fd4`(resolve_path 확장), `4f5cd03`(배포 신뢰성 도구+문서)
+
+**M6 시점 AC 상태 갱신**:
+
+| AC | 상태 | 근거 |
+|---|---|---|
+| AC-EXECBODY-001 | **DONE(재확인)** | `ObjectList("Executor 201")[1]:GetClass()=="Executor"`가 이제 프로덕션 코드 경로(resolve_path)를 통해 라이브 재확인됨 |
+| AC-EXECBODY-003 | **DONE(재확인)** | 라이브 `state Executor 201` 응답이 `sequenceNo: 71` 노출 — M2 접근자 경로가 M6 Lua 주소 해석과 합성되어 종단 동작 |
+| REQ-EXECBODY-004 (익스큐터 진입점 배선) | **DONE** | Python `_fetch_executor_body`(M4) + Lua `resolve_executor_address`(M6)가 라이브로 합성 확인 |
+| AC-EXECBODY-010 (REQ-EXECBODY-013, LIVE 조건부) | **잔여** | 실행기 정체 해석 자체는 라이브 확인됨. 패널에서 실제 타일 1회 눌러 승인 카드 0장·`SaveShow` 0회·송신 기록이 정확히 `["Go+ Executor 201"]`임을 확인하는 최종 인수 단계가 아직 남음(서버/패널 기동 필요) |
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase — M4~M6 잔여>_
+_<pending run-phase — M6 라이브 타일-누름 인수(AC-EXECBODY-010) 잔여, 그 외 완료>_
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
