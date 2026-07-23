@@ -1,6 +1,6 @@
 # SPEC-COPILOT-EXECREF-001 — 구현 계획 (plan)
 
-status: draft (v0.2.0, 2026-07-23) · Tier L · 본 문서는 spec.md의 요구를 마일스톤으로 전개한다. 구현 코드 없음. M2는 2026-07-23 라이브 프로브 결과로 DESCOPED되었다 — 아래 M2 참조.
+status: completed (v0.2.0, 2026-07-23) · Tier L · 본 문서는 spec.md의 요구를 마일스톤으로 전개한다. 구현 코드 없음. M2는 2026-07-23 라이브 프로브 결과로 DESCOPED되었다 — 아래 M2 참조.
 
 ## §A. 접근 요약 (Context)
 

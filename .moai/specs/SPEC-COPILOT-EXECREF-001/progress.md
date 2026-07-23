@@ -81,4 +81,16 @@
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+- sync_complete_at: 2026-07-23T00:00:00Z
+- sync_commit_sha: `pending-backfill-execref-sync` (백필 예정 — spec-frontmatter-schema.md § SHA placeholder backfill exemption 준용, 후속 커밋 `chore(SPEC-COPILOT-EXECREF-001): sync backfill §E.4 sync_commit_sha`에서 실제 SHA로 교체)
+- sync_status: **PASS — 정직한 부분범위 프레이밍으로 완결**. CHANGELOG.md에 `[Unreleased] > Added` 신규 항목 추가(인식(S1) 완료 + 실제 사용자 경험 무변화 + S2 DESCOPED 사유 + 후속 SPEC `SPEC-COPILOT-EXECBODY-001` 권고를 명시적으로 서술 — 친화 프레이밍 금지). README.md는 사용자-가시적 앱 동작 무변화(패널 타일을 눌렀을 때의 관측 결과가 동일함)를 근거로 무변경 유지(기존 "안전 게이트(M4)" 섹션이 인식 가능 참조타입 목록을 리터럴로 나열하지 않아 갱신 대상 아님을 확인 — `grep -n "Macro\|Plugin\|Sequence" README.md` 무결과). spec.md/plan.md/acceptance.md 3개 아티팩트의 status를 `in-progress`(spec.md 프론트매터) 및 `draft`(plan.md/acceptance.md 프로즈 서술)에서 `completed`로 전환(본 단일 sync 커밋이 3-phase close를 담당 — 별도 Mx 커밋 없음), body 내용은 무변경. design.md/research.md는 SHOWUI-001 sync 선례와 동일하게 무변경(프론트매터/프로즈 status 전환 대상에서 제외).
+- b12_self_test_a: PASS — `grep -c "EXECREF-001" CHANGELOG.md`를 편집 전 재확인(0 반환, 오케스트레이터 사전 보고값과 일치, 중복 방지 확인)
+- b12_self_test_b: PASS — acceptance.md SSOT AC 행 수(`grep -cE '^\| \*\*AC-EXECREF-[0-9]+' acceptance.md` → 15개: AC-EXECREF-001~015)와 CHANGELOG 본문이 인용하는 테스트 수치(1723 passed, +132)가 progress.md §E.2/§E.3의 실측치와 일치함을 대조 확인. CHANGELOG 자체는 AC 개수를 명시적으로 나열하지 않음(SHOWUI-001 선례와 동일 — SPEC 요약형 CHANGELOG 관례이므로 AC 카운트 라인은 프로젝트 관례상 생략).
+- b12_self_test_c: PASS — CHANGELOG가 인용한 파일 경로(`server/safety/classify.py`, `server/tests/test_safety_corpus.py`, `console/lua/copilot_responder.lua`)를 `ls`로 존재 검증 완료.
+- changelog_entry_position: `[Unreleased] > Added`, 최상단(SPEC-COPILOT-DEPLOY-001 항목보다 앞) — 최신 sync 항목을 맨 위에 두는 기존 파일 관례(SHOWUI-001 삽입 위치와 동일 패턴) 준수.
+- frontmatter_status_transitions.spec_md: `in-progress → completed` (frontmatter `status:` 필드, `updated: 2026-07-23` 그대로 유지 — 동일 날짜 내 sync)
+- frontmatter_status_transitions.plan_md: `draft → completed` (본문 최상단 프로즈 `status:` 서술 라인, body 내용 무변경)
+- frontmatter_status_transitions.acceptance_md: `draft → completed` (본문 최상단 프로즈 `status:` 서술 라인, body 내용 무변경)
+- canary_compliance_check: N/A — 본 SPEC은 forward-looking canary policy를 정의하지 않음(단순 안전 게이트 인식 확장 SPEC).
+- sync_evidence: pytest 회귀 재확인 미실행(§E.2/§E.3에서 이미 1723 passed로 검증 완결, sync-phase는 문서 동기화만이 스코프 — 코드 변경 없음이므로 재실행 불필요). CHANGELOG/frontmatter/progress.md 변경 3건이 단일 sync 커밋으로 결합.
+- residual_risk: (a) S2(단일-press 복원)는 여전히 미구현 — 사용자가 CHANGELOG를 읽지 않고 "Executor 인식"만 보고 실제 UX가 바뀌었다고 오해할 위험은 CHANGELOG의 명시적 "동작은 변하지 않았다" 고지 문단으로 완화; (b) `sync_commit_sha` 플레이스홀더는 후속 백필 커밋이 누락되면 감사 추적에 공백을 남김 — §E.3의 동일 패턴(백필 완료 c27bd19)을 반복하므로 낮은 위험으로 평가.

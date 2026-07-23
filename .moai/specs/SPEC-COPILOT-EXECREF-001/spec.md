@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-EXECREF-001
 title: "안전 게이트의 Executor 참조 인식"
 version: "0.2.0"
-status: in-progress
+status: completed
 created: 2026-07-22
 updated: 2026-07-23
 author: manager-spec

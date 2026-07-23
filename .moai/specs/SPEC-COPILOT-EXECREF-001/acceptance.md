@@ -1,6 +1,6 @@
 # SPEC-COPILOT-EXECREF-001 — 수용 기준 (acceptance)
 
-status: draft (v0.2.0, 2026-07-23). 기계 검증 가능(pytest) 항목과 LIVE(실제 onPC) 항목을 구분한다. 본 SPEC은 **안전 경계를 완화**하므로, AC의 다수는 "완화되지 **않은** 것"을 증명하는 데 쓰인다. 2026-07-23 라이브 프로브 결과 S2는 DESCOPED되었다(plan.md M2) — AC-EXECREF-001/004/005/013이 이를 반영해 갱신되었다.
+status: completed (v0.2.0, 2026-07-23). 기계 검증 가능(pytest) 항목과 LIVE(실제 onPC) 항목을 구분한다. 본 SPEC은 **안전 경계를 완화**하므로, AC의 다수는 "완화되지 **않은** 것"을 증명하는 데 쓰인다. 2026-07-23 라이브 프로브 결과 S2는 DESCOPED되었다(plan.md M2) — AC-EXECREF-001/004/005/013이 이를 반영해 갱신되었다.
 
 ## §A. 완료 정의 (Definition of Done)
 
