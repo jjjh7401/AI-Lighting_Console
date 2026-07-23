@@ -169,18 +169,35 @@ M4/M5에서 투명하게 남겨뒀던 잔여 위험(콘솔 `resolve_path()`가 `
 
 **커밋**: `6c08fd4`(resolve_path 확장), `4f5cd03`(배포 신뢰성 도구+문서)
 
-**M6 시점 AC 상태 갱신**:
+### AC-EXECBODY-010 최종 라이브 인수 (2026-07-24)
+
+`execbody-server`(포트 8765, `--console-port 8000 --receive-port 9005`)를 기동해 패널을 열고, 채팅창에 "실행기 201번 실행해줘"를 입력해 `Go+ Executor <no>`의 실제 진입 경로 중 하나("패널 또는 채팅"; acceptance.md 시나리오 1)로 스크리닝을 제출했다.
+
+- **UI 관측**: 승인 카드(제안 카드) 0장. 어시스턴트 응답이 "실행기(Executor) 201번을 성공적으로 실행(Go+)했습니다"와 함께 커맨드 행 정확히 1개(`Go+ Executor 201`, 상태 `실행 완료`=executed_ok)만 렌더링됨.
+- **기계적 증거 (`server/audit_logs/audit-20260723.jsonl`, 해당 트랜잭션 verbatim)**:
+  ```
+  {"ts": "2026-07-23T23:36:03.892591+00:00", "event": "executed", "command": "Executor 201", "kind": "state_query", "ok": true, "detail": ""}
+  {"ts": "2026-07-23T23:36:03.959465+00:00", "event": "executed", "command": "DataPool/Sequences/71", "kind": "state_query", "ok": true, "detail": ""}
+  {"ts": "2026-07-23T23:36:04.025175+00:00", "event": "executed", "command": "Go+ Executor 201", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+  ```
+  이 3줄이 M1(정체 해석: `Executor 201` state_query)→M4(2단계 위임: `DataPool/Sequences/71` state_query로 할당 시퀀스 본문 검증)→게이트 통과(`Go+ Executor 201` 커맨드 전송, ok=true)의 종단 파이프라인이다. 이 트랜잭션 구간(23:36:03~23:36:04)에는 `rejected`/`held`/승인-요청 이벤트가 0건이고, `SaveShow` 이벤트도 0건(파일 내 SaveShow 항목 전부가 이 구간 이전 세션의 것)이다.
+- **판정**: 승인 요청 0건 + `SaveShow` 송신 0건 + 콘솔 송신 기록 정확히 `["Go+ Executor 201"]` — REQ-EXECBODY-013 / AC-EXECBODY-010 조건 전부 충족. M1=GO 확정.
+
+**M6 시점 AC 상태 갱신 (최종)**:
 
 | AC | 상태 | 근거 |
 |---|---|---|
 | AC-EXECBODY-001 | **DONE(재확인)** | `ObjectList("Executor 201")[1]:GetClass()=="Executor"`가 이제 프로덕션 코드 경로(resolve_path)를 통해 라이브 재확인됨 |
 | AC-EXECBODY-003 | **DONE(재확인)** | 라이브 `state Executor 201` 응답이 `sequenceNo: 71` 노출 — M2 접근자 경로가 M6 Lua 주소 해석과 합성되어 종단 동작 |
 | REQ-EXECBODY-004 (익스큐터 진입점 배선) | **DONE** | Python `_fetch_executor_body`(M4) + Lua `resolve_executor_address`(M6)가 라이브로 합성 확인 |
-| AC-EXECBODY-010 (REQ-EXECBODY-013, LIVE 조건부) | **잔여** | 실행기 정체 해석 자체는 라이브 확인됨. 패널에서 실제 타일 1회 눌러 승인 카드 0장·`SaveShow` 0회·송신 기록이 정확히 `["Go+ Executor 201"]`임을 확인하는 최종 인수 단계가 아직 남음(서버/패널 기동 필요) |
+| AC-EXECBODY-010 (REQ-EXECBODY-013, LIVE 조건부) | **DONE** | 위 최종 라이브 인수 섹션 — 패널/채팅 경유 `Go+ Executor 201` 단일-press 마찰 제거가 감사 로그로 종단 확인됨. M1=GO |
 
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase — M6 라이브 타일-누름 인수(AC-EXECBODY-010) 잔여, 그 외 완료>_
+run_status: audit-ready
+run_complete_at: 2026-07-24T08:40:00+09:00
+
+M1~M6 전 마일스톤 완료. M1=GO(정체 해석 확정), M2(sequenceNo 노출), M3(배포+osc_slot 고정), M4(Python 2단계 위임), M5(fail-closed 회귀 재확인+빈 시퀀스 정합성 수정), M6(Lua resolve_path 갭 해소+배포 신뢰성 도구화+AC-EXECBODY-010 최종 라이브 인수)까지 acceptance.md의 DoD 조건 2("M1이 GO로 귀결된 경우: M2~M6이 전부 완료되고, AC-EXECBODY-001~016 전부 PASS 또는 명시적으로 사유가 기록된 N/A")를 충족.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
