@@ -17,7 +17,7 @@ _<pending plan-audit>_
 
 사용자 지시(Implementation Kickoff Approval 시 명시)에 따른 감사-지정 인라인 수정 경로. review-2(`.moai/reports/plan-audit/SPEC-COPILOT-EXECBODY-001-review-2.md`, PASS 0.94)의 5건 전부 반영: D1 plan.md §F stale claim 정정, D2 acceptance.md DoD 3/4항 DESCOPE 분기 escape, D3 REQ-012 의도적 번들링 기록(비채택 결정), D4 REQ-015 구현-리터럴 §E 이관, D5 AC-014 전역-게이트 주석. 동일 커밋이 spec.md frontmatter `draft → in-progress` 전이를 수행(M1 시작, 소유권 매트릭스 준수).
 
-### M1 — 역주소 문제 조사, 콘솔-프리 (2026-07-23) — 결정 게이트: **VERIFY-PENDING**
+### M1 — 역주소 문제 조사, 콘솔-프리 (2026-07-23) — 결정 게이트: **GO** (같은 날 라이브 프로브로 해소)
 
 본 세션은 실물 콘솔 접근이 없다(위임 프롬프트 명시). plan.md M1의 회피-우선/검증-차선/DESCOPE-최후 순서에 따라 오프라인에서 답할 수 있는 조사를 전부 수행하고, 라이브 프로브를 요구하는 질문은 추측 없이 ready-to-run 프로브 아티팩트로 기록했다. 산출물: **design.md §5.4~§5.7**(M1 조사 기록 + 프로브 스니펫/계획 + 결정 게이트).
 
@@ -33,14 +33,18 @@ _<pending plan-audit>_
 
 | AC | 상태 | 근거 |
 |---|---|---|
-| AC-EXECBODY-001 | IN-PROGRESS | 오프라인 결론(저장소 내 부재 확정 + 미검증 후보 목록)은 design.md §5.4/§5.5에 명시적으로 기록 — "모호한 아마도" 대신 명시적 pending 상태. 존재/부재의 최종 결론은 라이브 프로브 P-A/P-C 대기 |
-| AC-EXECBODY-002 | PENDING (live) | §5.6 다중-페이지 검증 계획(페이지/샘플/PASS·FAIL 기준) 작성 완료. P-A/P-C 성공 시 moot |
-| AC-EXECBODY-003 | PENDING (live) | 접근자 프로브 P-B(Dump/Object/Get 4형) 작성 완료 |
-| AC-EXECBODY-015 | ON-TRACK | 결정 게이트가 각주 아닌 명시적 섹션(design.md §5.7 + 본 §E.2)으로 기록됨 |
-| AC-EXECBODY-016 | ON-TRACK | 오프셋 하드코딩 코드 경로 0건(코드 무변경 — M1은 조사 전용) |
-| AC-EXECBODY-004~014 | PENDING | M2+ 또는 라이브 검증 범위 — M1 게이트가 VERIFY-PENDING이므로 미착수 |
+| AC-EXECBODY-001 | **RESOLVED** | 후보 (a) 존재 확정(design.md §5.8) — `ObjectList("Executor <n>")[1]`이 핸들 반환, `GetClass()=="Executor"` |
+| AC-EXECBODY-002 | **MOOT** | §5.2 결정 기준 1행("(a) 확인 시 (b) 불필요")에 따라 §5.6 다중-페이지 검증 불필요해짐. 계획 문서는 보존 |
+| AC-EXECBODY-003 | **RESOLVED** | `:Index()` 접근자가 페이지-로컬 인덱스를 반환함을 실측 확인(design.md §5.8, 콘솔번호 201→인덱스 101, GUI 실측값과 일치) |
+| AC-EXECBODY-015 | **DONE** | 결정 게이트가 명시적 섹션(design.md §5.7/§5.8 + 본 §E.2)으로 기록됨, GO 판정까지 완결 |
+| AC-EXECBODY-016 | ON-TRACK | 오프셋 하드코딩 코드 경로 0건(코드 무변경 — M1은 조사 전용, M2에서 네이티브 API로 구현 예정) |
+| AC-EXECBODY-004~014 | PENDING | M2+ 구현 범위 — M1 게이트가 GO로 닫혔으므로 M2 착수 가능 |
 
-**제약 준수 기록**: 코드 무변경(`console/lua/**`·`server/**` 미수정 — M1은 조사 전용이므로 Python 테스트 기준선 측정 불요), EXECREF-001/SHOWUI-001 아티팩트 무변경, `.moai/state/**` 쓰기 0(프로브 아티팩트는 design.md §5.5/§5.6에 수록 — plan.md M1 "등가 경로" 조항), 라이브 콘솔 접근 0. 커밋: Part A `2ba9b2c`, M1 본 커밋(design.md + progress.md).
+### M1 — 라이브 프로브 실행 (2026-07-23, 같은 세션 재개 — 콘솔 접근 확보)
+
+사용자가 콘솔 앞에서 §5.5 스니펫을 수동으로 실행. Printf/Echo가 콘솔 GUI에 보이지 않아, 이 저장소가 이미 신뢰하는 관례(기존 배포 플러그인의 `Store Macro`+`Label Macro` 결과-라벨링 패턴)로 프로브를 재작성해 재실행 — 결과는 `.moai/state/verify/execbody_probe_v3.lua`, `execbody_probe_v4.lua`(둘 다 `luac -p` 문법 검증 + 로컬 목 실행으로 사전 검증)와 design.md §5.8에 기록. 판정: **후보 (a) 확인** — `ObjectList("Executor <console_no>")[1]:GetClass()=="Executor"`, `:Index()`가 §5.4-4a GUI 실측값(101)과 독립 재현. M1 게이트 **GO**로 닫힘.
+
+**제약 준수 기록**: 코드 변경 없음(`console/lua/**`·`server/**` 미수정 — M1은 조사 전용, 라이브 프로브는 임시 Macro/Plugin 풀 오브젝트만 생성). 프로브 산출물은 `.moai/state/verify/execbody_probe_v3.lua`/`v4.lua`에 저장. 콘솔에 남은 잔여물(빈 `UserPlugin 5`, 빈 `Macro 13`, 라벨 macro 150~154·160~166·169)은 쇼파일에 무해하며 정리 대기 중(design.md §5.8 말미 기록). 커밋: Part A `2ba9b2c`, M1 조사 커밋 + 본 라이브 프로브 커밋(design.md §5.7/§5.8 + progress.md 갱신).
 
 ## §E.3 Run-phase Audit-Ready Signal
 
