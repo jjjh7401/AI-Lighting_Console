@@ -54,27 +54,27 @@ related_specs: [SPEC-COPILOT-EXECREF-001, SPEC-COPILOT-SHOWUI-001]
 
 ### B.1 익스큐터 아이덴티티 노출 (Lua 응답기 측)
 
-- **REQ-EXECBODY-001** [Event-driven] — **When** `build_snapshot`(copilot_responder.lua)이 `class == "Executor"`인 노드를 조회하면, the 응답기 **shall** 범용 `handle:Children()` 열거 대신 익스큐터 전용 로직으로 그 익스큐터에 **할당된 시퀀스의 아이덴티티**(시퀀스 번호 또는 그에 준하는 안정적 식별자)를 스냅샷 페이로드에 노출한다.
-- **REQ-EXECBODY-002** [Unwanted] — 노출되는 익스큐터-시퀀스 아이덴티티 **shall not** 익스큐터의 표시 이름(`name`)을 파싱해 얻는 방식으로 도출되지 않는다. `name`은 할당된 시퀀스의 표시 이름이며, rename에 깨진다는 사실은 EXECREF-001 REQ-EXECREF-007이 이미 기각한 사유와 동일하다.
+- **REQ-EXECBODY-001** [Event-driven] — **When** 콘솔측 Lua 응답기가 클래스가 Executor인 노드를 조회하면, the 응답기 **shall** 범용 자식 열거 대신 익스큐터 전용 로직으로 그 익스큐터에 **할당된 시퀀스의 아이덴티티**(시퀀스 번호 또는 그에 준하는 안정적 식별자)를 스냅샷 페이로드에 노출한다(구체적 함수/파일 앵커는 §E 참조 구현 참고).
+- **REQ-EXECBODY-002** [Unwanted] — 익스큐터-시퀀스 아이덴티티 도출 로직 **shall not** 익스큐터의 표시 이름(`name`)을 파싱하는 방식을 사용한다. `name`은 할당된 시퀀스의 표시 이름이며, rename에 깨진다는 사실은 EXECREF-001 REQ-EXECREF-007이 이미 기각한 사유와 동일하다.
 - **REQ-EXECBODY-003** [Ubiquitous] — 스냅샷 페이로드 스키마 변경 **shall** 가산적(additive)이며 하위 호환을 유지한다 — 기존 `{name, class, i}` 형상을 읽는 소비자는 무변경으로 계속 동작한다. 스키마가 실제로 바뀌면 `console/lua/PROTOCOL.md`의 `PROTOCOL_VERSION` 범프 관례를 따른다.
 
 ### B.2 안전 게이트 본문 해석 (Python 측)
 
-- **REQ-EXECBODY-004** [Event-driven] — **When** `StateBodyFetcher`(또는 그 후속 메커니즘, console.py)가 `"Executor <no>"` 참조의 본문을 해석하면, the fetcher **shall** REQ-EXECBODY-001이 노출한 할당-시퀀스 아이덴티티를 해석 진입점으로 사용해, 이미 신뢰되는 시퀀스 본문 조회 경로(`Go+ Sequence N`이 오늘 쓰는 것과 동일)로 위임한다.
-- **REQ-EXECBODY-005** [Unwanted] — 본문 해석 **shall not** 신규 콘솔 경로, 신규 OSC 표면, `server/bridge/osc.py`의 직접 import를 도입한다. `server/safety/**`의 OSC import 경계 grep 결과는 무변경이어야 한다(EXECREF-001 REQ-EXECREF-005와 동일 계약).
-- **REQ-EXECBODY-006** [Event-driven] — **When** 할당-시퀀스 아이덴티티를 얻을 수 없으면(미할당 익스큐터, 프로퍼티 부재, 상태 질의 실패/타임아웃 포함), the 게이트 **shall** 해당 참조를 보류한다(`_hold`) — 오늘의 fail-closed 동작과 동일하다.
+- **REQ-EXECBODY-004** [Event-driven] — **When** 안전 게이트의 본문 해석 메커니즘이 `"Executor <no>"` 참조의 본문을 해석하면, the 메커니즘 **shall** REQ-EXECBODY-001이 노출한 할당-시퀀스 아이덴티티를 해석 진입점으로 사용해, 이미 신뢰되는 시퀀스 본문 조회 경로(오늘의 `Go+ Sequence N` 처리와 동일한 경로)로 위임한다(구체적 클래스/파일 앵커는 §E 참조 구현 참고).
+- **REQ-EXECBODY-005** [Unwanted] — 본문 해석 **shall not** 신규 콘솔 경로, 신규 OSC 표면, 또는 기존 OSC 브리지 모듈에 대한 직접 import를 도입한다. 세이프티 모듈의 OSC import 경계 grep 결과는 무변경이어야 한다(EXECREF-001 REQ-EXECREF-005와 동일 계약; 정확한 모듈 경로는 §E 참조 구현 참고).
+- **REQ-EXECBODY-006** [Event-driven] — **When** 할당-시퀀스 아이덴티티를 얻을 수 없으면(미할당 익스큐터, 프로퍼티 부재, 상태 질의 실패/타임아웃 포함), the 게이트 **shall** 해당 참조를 보류한다 — 오늘의 fail-closed 동작과 동일하다(보류 처리 함수 앵커는 §E 참조 구현 참고).
 
 ### B.3 역주소 문제 (완화의 경계 — 협상 불가)
 
-- **REQ-EXECBODY-007** [Unwanted] — 익스큐터 아이덴티티 해석 메커니즘 **shall not** 관측된 페이지 1의 +100 오프셋 관례(콘솔 발화 번호 = 페이지-로컬 자식 인덱스 + 100)를 일반 해석 규칙으로 하드코딩하지 않는다 — 최소 2개 이상의 서로 다른 페이지에서 라이브로 검증되기 전에는 사용하지 않는다.
+- **REQ-EXECBODY-007** [Unwanted] — 익스큐터 아이덴티티 해석 메커니즘 **shall not** 관측된 페이지 1의 +100 오프셋 관례(콘솔 발화 번호 = 페이지-로컬 자식 인덱스 + 100)를, 최소 2개 이상의 서로 다른 페이지에서 라이브로 검증되기 전에 일반 해석 규칙으로 하드코딩한다.
 - **REQ-EXECBODY-008** [Event-driven] — **When** 해석 메커니즘이 콘솔 발화 번호와 페이지-로컬 주소 사이의 수치적/위치적 관례에 의존하면, the 관례 **shall** 서로 다른 페이지 번호를 가진 최소 2개 페이지에서 라이브로 검증된 이후에만 게이트 로직에 반영된다. 검증이 수행되지 않으면 해당 메커니즘은 출하하지 않는다(plan.md M1이 이 검증을 첫 마일스톤으로 둔다 — 각주 아님).
-- **REQ-EXECBODY-009** [Ubiquitous] — **Where** grandMA3 Lua API가 콘솔 자신의 커맨드-라인 주소 해석에 접근하는 경로를 제공하면, 익스큐터 아이덴티티 해석 메커니즘 **shall** 그 경로를 우선 사용해 페이지-로컬 인덱스 역산 자체를 회피한다. 이는 REQ-EXECBODY-007/008의 검증 부담보다 우선하는 설계 목표다(§A "회피 우선, 검증 차선").
+- **REQ-EXECBODY-009** [Where] — **Where** grandMA3 Lua API가 콘솔 자신의 커맨드-라인 주소 해석에 접근하는 경로를 제공하면, 익스큐터 아이덴티티 해석 메커니즘 **shall** 그 경로를 우선 사용해 페이지-로컬 인덱스 역산 자체를 회피한다. 이는 REQ-EXECBODY-007/008의 검증 부담보다 우선하는 설계 목표다(§A "회피 우선, 검증 차선").
 - **REQ-EXECBODY-010** [Event-driven] — **When** REQ-EXECBODY-009의 회피 경로도 REQ-EXECBODY-008의 다중-페이지 검증도 확보되지 않으면, the SPEC 구현 범위 **shall** 본문 해석(M2 이후)을 DESCOPE하고 인식측 변경만(있다면) 출하한다 — EXECREF-001 M2 DESCOPE 선례와 동일한 정직한 부분-성공 프레이밍을 따른다.
 
 ### B.4 Fail-closed 보존 (완화의 경계)
 
 - **REQ-EXECBODY-011** [Ubiquitous] — 익스큐터 참조 **shall** 기존 expand-or-hold 기계의 모든 보류 사유를 참조-타입-무관하게 계속 상속한다: 재귀 상한, 순환 탐지, 블랙리스트 본문 보류, 본문 부재 보류, 파싱 불가 라인 보류(EXECREF-001 REQ-EXECREF-009와 동일 계약, 무변경 상속 확인이 회귀 테스트 대상).
-- **REQ-EXECBODY-012** [Ubiquitous] — 분류 의미론 **shall** 단일하게 유지된다(`classify_command`, classify.py:158-161 `@MX:ANCHOR`). 스크리닝 경로 **shall** 정확히 하나만 존재한다(`SafetyGate.screen`, gate.py:260-264 `@MX:ANCHOR`). 본 SPEC **shall not** 이 두 앵커에 익스큐터 전용 분기·제2 스크리닝을 도입한다.
+- **REQ-EXECBODY-012** [Ubiquitous] — 분류 의미론 **shall** 단일하게 유지된다(기존 `@MX:ANCHOR` — 앵커 위치는 §E 참조 구현 참고). 스크리닝 경로 **shall** 정확히 하나만 존재한다(기존 `@MX:ANCHOR` — 앵커 위치는 §E 참조 구현 참고). 본 SPEC **shall not** 이 두 앵커에 익스큐터 전용 분기·제2 스크리닝을 도입한다.
 
 ### B.5 관측 가능한 결과 — 실제 마찰 제거 (EXECREF-001이 달성하지 못한 목표)
 
@@ -88,12 +88,12 @@ related_specs: [SPEC-COPILOT-EXECREF-001, SPEC-COPILOT-SHOWUI-001]
 ### B.7 범위 경계의 명시적 선언
 
 - **REQ-EXECBODY-016** [Unwanted] — 본 SPEC **shall not** `SPEC-COPILOT-CUECMD-001`(큐 커맨드 프로퍼티 스크리닝)의 작업을 번들한다. 두 SPEC 모두 응답기 Lua 재배포를 필요로 하여 시퀀싱 가치가 있을 수 있다는 점은 EXECREF-001 research.md §5.3이 메모로 남겼으나, 실제 번들 여부는 두 SPEC을 함께 계획하는 별도 세션의 사용자 결정에 맡긴다 — 본 SPEC은 EXECBODY 단독으로 완결된다(이번 세션 사용자 결정).
-- **REQ-EXECBODY-017** [Unwanted] — 익스큐터 발화의 제2 구문 `Go+ Page <page>.<executor>`(룰북 `10_object_model.md:23-25`) **shall not** 본 SPEC에서 별도 해석 대상이 되지 않는다 — 계속 EXECREF-001 REQ-EXECREF-015의 fail-closed 경계(보류)를 상속한다.
+- **REQ-EXECBODY-017** [Unwanted] — 익스큐터 발화의 제2 구문 `Go+ Page <page>.<executor>`(룰북 `10_object_model.md:23-25`) **shall not** 본 SPEC에서 별도 해석 대상이 된다 — 계속 EXECREF-001 REQ-EXECREF-015의 fail-closed 경계(보류)를 상속한다.
 
 ## C. 환경 및 전제 (Environment / Assumptions)
 
 - **대상 환경**: grandMA3 onPC 2.4.2, 앱과 콘솔 동일 머신 로컬 공존. OSC는 `127.0.0.1` UDP. site config(`osc_slot`, `receive_port`, `reply_port`)는 항상 effective 값에서 읽는다 — 하드코딩 금지.
-- **기능 전제**: `SPEC-COPILOT-EXECREF-001`(completed, HEAD `226e8cb`가 그 sync 커밋)이 안전 게이트에 `Executor` 참조 타입 인식을 도입한 상태다. `SPEC-COPILOT-SHOWUI-001`(completed)이 연출 컨트롤 패널의 익스큐터 타일과 게이트 경유 실행 경로를 구현한 상태다. 두 SPEC 모두 `status: completed`이므로 `depends_on`으로 참조할 수 있으나, EXECREF-001·SHOWUI-001의 선례(엄격 충족 전제의 pre-flight 차단 회피)를 계승해 `related_specs`(비차단)로 참조한다 — 실질적으로는 둘 다 이미 completed이므로 `depends_on`이어도 통과하지만, 관례 일관성을 우선한다.
+- **기능 전제**: `SPEC-COPILOT-EXECREF-001`(completed, HEAD `226e8cb`가 그 sync 커밋)이 안전 게이트에 `Executor` 참조 타입 인식을 도입한 상태다. `SPEC-COPILOT-SHOWUI-001`은 연출 컨트롤 패널을 구현하는 관련 SPEC이다 — 이 워크트리의 트리에서 확인한 바로는 `status: in-progress`이며 git 히스토리가 M1(프로토콜 계약 동결)까지만 진행되어 있다(`git log --oneline -- .moai/specs/SPEC-COPILOT-SHOWUI-001/spec.md`로 확인, 이 세션 기준 — 다른 브랜치/세션에서 더 진행되어 있을 가능성은 배제하지 않되, 이 워크트리 기준으로는 독립 검증되지 않은 완료 상태를 단정하지 않는다). 본 SPEC은 SHOWUI-001의 완료 여부나 특정 마일스톤 상태에 의존하지 않는다 — 본 SPEC이 확장하는 것은 안전 게이트의 본문 해석 능력 자체이며, 이는 SHOWUI-001의 UI 진행 상태와 독립적으로 검증 가능하다. 따라서 `EXECREF-001`(completed 확인됨)은 `depends_on`으로도 참조 가능하나, `SHOWUI-001`은 완료 여부가 본 세션에서 확정되지 않았으므로 `related_specs`(비차단)로만 참조한다 — EXECREF-001·SHOWUI-001의 선례(엄격 충족 전제의 pre-flight 차단 회피)와도 일관된다.
 - **기술 스택**: 기존 스택 그대로. **신규 런타임 의존성 0.** Lua 응답기 측도 기존 grandMA3 Lua API 표면 안에서 해결한다(신규 외부 라이브러리 없음).
 - **콘솔측**: `console/lua/copilot_responder.lua` **변경 대상**(EXECREF-001과의 핵심 차이 — EXECREF-001은 이 파일을 무변경으로 유지했다). 와이어 프로토콜은 REQ-EXECBODY-003에 따라 가산적으로만 변경 가능; `PROTOCOL_VERSION` 범프 여부는 M2에서 결정한다.
 - **배포 루프 전제**: 본 SPEC의 M2 이후 마일스톤은 실물 콘솔 접근 및 `plugin_pack.py` 재배포 사이클을 요구한다. plan-phase는 이 접근을 가정하지 않는다 — M1(역주소 문제 해소)까지는 순수 조사/설계이며, M2부터 배포 루프가 시작된다.
@@ -139,6 +139,9 @@ related_specs: [SPEC-COPILOT-EXECREF-001, SPEC-COPILOT-SHOWUI-001]
 | 시퀀스 본문 조회(이미 신뢰되는 진입점) | `server/safety/console.py` `StateBodyFetcher.fetch_body`(414-432행), `DEFAULT_BODY_PATHS`(396-400행) |
 | 게이트-감사 상태 조회 seam | `_GateStatePort`(gate.py:114-121), 배선(`bootstrap.py:162`) |
 | 참조-타입-무관 보류 기계 | `_evaluate`(expand.py:72-125) |
+| 아이덴티티 조회 실패 시 보류 처리 (REQ-EXECBODY-006 근거) | `server/safety/expand.py` `_hold`(보류 처리 함수, `_evaluate`와 동일 파일) |
+| 단일 분류 의미론 앵커 (REQ-EXECBODY-012 근거) | `server/safety/classify.py` `classify_command`(158-161행) `@MX:ANCHOR` |
+| 단일 스크리닝 경로 앵커 (REQ-EXECBODY-012 근거) | `server/safety/gate.py` `SafetyGate.screen`(260-264행) `@MX:ANCHOR` |
 | 이름-파싱 기각의 선례(역주소 문제와 병렬 논증) | EXECREF-001 REQ-EXECREF-007 + design.md §5.6 |
 | 익스큐터 주소 규약 | 룰북 `server/rulebook/assets/v2.4.2/10_object_model.md:23-25` — `Page <page>.<executor>` |
 | 재생 동사 | 룰북 `31_choreography_patterns.md` "Playback"(`Go+ Executor N` / `Off Executor N`) |
