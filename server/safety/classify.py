@@ -30,7 +30,18 @@ from server.safety.ruleset import SafetyRuleset
 
 # Object types whose references the expand-or-hold path can resolve to bodies.
 # Invoking commands targeting anything else are UNVERIFIABLE -> held (FP-safe).
-RECOGNIZED_REFERENCE_TYPES = ("Macro", "Plugin", "Sequence")
+# @MX:NOTE: [AUTO] SPEC-COPILOT-EXECREF-001 M1 (v0.2.0) added "Executor" as a
+#   deliberate, intentional revision of this closed set -- weighted the same
+#   as a blacklist.yaml revision (a false-negative review backs the change,
+#   see design.md §4). Recognition alone (this milestone, S1) is a no-op wrt
+#   the gate's observable decision: "Executor" has no entry in console.py's
+#   DEFAULT_BODY_PATHS (S2, body-path interpretation, was DESCOPED after a
+#   2026-07-23 live probe returned decisively negative -- design.md §5), so
+#   `Go+ Executor N` still holds; only the hold-reason string changes. A
+#   follow-up SPEC (recommended: SPEC-COPILOT-EXECBODY-001, not yet created)
+#   would need a responder-side (console/lua/copilot_responder.lua) extension
+#   before S2 body interpretation could land.
+RECOGNIZED_REFERENCE_TYPES = ("Macro", "Plugin", "Sequence", "Executor")
 
 _NUMERIC_REF = re.compile(r"^\d+(\.\d+)*$")
 

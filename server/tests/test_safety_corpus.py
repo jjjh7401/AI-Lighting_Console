@@ -17,6 +17,7 @@ from __future__ import annotations
 import pytest
 
 from server.safety.audit import AuditLog
+from server.safety.classify import RECOGNIZED_REFERENCE_TYPES
 from server.safety.gate import SafetyGate
 from server.safety.ruleset import load_ruleset
 
@@ -83,13 +84,33 @@ class TestBlacklistFnCorpus:
 
 
 def _invoking_commands() -> list[str]:
-    """One gate-level command per SSOT invoking entry (verbs + bare forms)."""
-    commands = [f"{verb} Macro 9" for verb in RULESET.invoking_verbs]
+    """One gate-level command per SSOT invoking-verb entry, crossed with the
+    RECOGNIZED_REFERENCE_TYPES closed set (REQ-EXECREF-011) -- the reference-
+    type axis is dynamic (imported from classify.py), so a future revision of
+    that closed set auto-extends this corpus with zero edits here. The bare
+    object forms (Macro <n> / Plugin <n>) stay a separate, type-fixed axis:
+    they are matched by ``_bare_form_reference`` against ``bare_object_forms``
+    in blacklist.yaml, not against RECOGNIZED_REFERENCE_TYPES.
+    """
+    commands = [
+        f"{verb} {type_word} 9"
+        for verb in RULESET.invoking_verbs
+        for type_word in RECOGNIZED_REFERENCE_TYPES
+    ]
     for form in RULESET.bare_object_forms:
         commands.append(form.replace("<n>", "9"))
     return commands
 
 
+# Base scenario bodies, keyed by the legacy "Macro 9" / "Plugin 9" entry
+# points. ``_expand_scenario_bodies`` broadcasts each scenario's entry-point
+# content onto EVERY recognized reference type's "<Type> 9" key below, so a
+# verb-invoking command targeting any recognized type -- including one added
+# to classify.py after this corpus was written -- hits equivalent scenario
+# content. Deeper chain steps (Macro 10/11/12) are internal continuations
+# reached via nested "Go Macro N" body lines and are left untouched; they are
+# type-independent because expand.py recurses on whatever reference the body
+# line itself carries, not on the entry command's reference type.
 _SCENARIOS = {
     "risky-body": {"Macro 9": ("Delete Sequence 5",), "Plugin 9": ("Delete Sequence 5",)},
     "unverifiable-body": {},
@@ -108,25 +129,62 @@ _SCENARIOS = {
 }
 
 
+def _expand_scenario_bodies() -> dict[str, dict[str, tuple[str, ...]]]:
+    """Broadcast each scenario's "Macro 9" entry-point content across every
+    RECOGNIZED_REFERENCE_TYPES "<Type> 9" key, so the scenario's hold/risky
+    semantics apply no matter which recognized type an under-test command
+    targets. A scenario with NO entry-point key (e.g. "unverifiable-body")
+    stays untouched for every type -- broadcasting an empty-tuple placeholder
+    would silently turn "body unavailable" into "body present but empty",
+    which is NOT the same hold path.
+    """
+    expanded: dict[str, dict[str, tuple[str, ...]]] = {}
+    for scenario, bodies in _SCENARIOS.items():
+        if "Macro 9" not in bodies:
+            expanded[scenario] = dict(bodies)
+            continue
+        entry_content = bodies["Macro 9"]
+        broadcast = {f"{type_word} 9": entry_content for type_word in RECOGNIZED_REFERENCE_TYPES}
+        expanded[scenario] = {**bodies, **broadcast}
+    return expanded
+
+
+_EXPANDED_SCENARIOS = _expand_scenario_bodies()
+
+
 class TestInvokingVerbFnCorpus:
-    """AC-MVP-017: ALL invoking_verbs entries x 4 hold scenarios -> zero sends."""
+    """AC-MVP-017 / AC-EXECREF-006: ALL invoking_verbs entries x ALL recognized
+    reference types x 4 hold scenarios -> zero sends. The reference-type axis
+    dynamically tracks classify.RECOGNIZED_REFERENCE_TYPES (REQ-EXECREF-011)."""
 
     @pytest.mark.parametrize("command", _invoking_commands())
     @pytest.mark.parametrize("scenario", sorted(_SCENARIOS))
     def test_no_send_pre_approval_in_every_scenario(self, tmp_path, command, scenario):
         approval = ScriptedApproval(decisions=[False])
-        gate, console = _gate(tmp_path, _SCENARIOS[scenario], approval)
+        gate, console = _gate(tmp_path, _EXPANDED_SCENARIOS[scenario], approval)
         decision = gate.screen([command])
         assert decision.cleared is False, f"{command} [{scenario}] must hold"
         assert console.executed == [], f"{command} [{scenario}] sent pre-approval (FN!)"
         assert len(approval.requests) == 1, f"{command} [{scenario}] not held for approval"
 
     def test_corpus_iterates_the_full_closed_set(self):
-        # 10 verbs + 2 bare forms, read from the SSOT file.
-        assert len(_invoking_commands()) == len(RULESET.invoking_verbs) + len(
-            RULESET.bare_object_forms
+        # verbs x recognized reference types, plus bare forms -- both closed
+        # sets read from their respective SSOT sources.
+        assert len(_invoking_commands()) == (
+            len(RULESET.invoking_verbs) * len(RECOGNIZED_REFERENCE_TYPES)
+            + len(RULESET.bare_object_forms)
         )
         assert len(_invoking_commands()) >= 12
+
+    def test_reference_type_axis_matches_the_recognized_closed_set(self):
+        # AC-EXECREF-006 binary evidence: the corpus's reference-type axis IS
+        # classify.RECOGNIZED_REFERENCE_TYPES, not a hardcoded literal set --
+        # every recognized type appears in at least one generated command.
+        commands = _invoking_commands()
+        for type_word in RECOGNIZED_REFERENCE_TYPES:
+            assert any(f" {type_word} 9" in cmd for cmd in commands), (
+                f"{type_word} missing from the dynamically-generated corpus"
+            )
 
     def test_clean_expandable_body_is_not_held(self, tmp_path):
         # Counter-case: expansion CLEARS a verified-clean body (expand, not
