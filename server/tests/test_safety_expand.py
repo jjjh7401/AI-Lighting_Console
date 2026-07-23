@@ -8,6 +8,7 @@ Pure logic with an injectable body fetcher — fully deterministic (no OSC).
 
 from __future__ import annotations
 
+from server.safety.console import StateBodyFetcher
 from server.safety.expand import BodyUnavailable, evaluate_reference
 from server.safety.registry import PluginFlagRegistry
 from server.safety.ruleset import load_ruleset
@@ -139,3 +140,102 @@ class TestPluginRegistryIntegration:
         assert registry.lookup("plugin 7") is not None
         assert registry.lookup("PLUGIN 7").destructive is True
         assert registry.lookup("Plugin 8") is None
+
+
+def _state_fetcher(tree: dict[str, dict]) -> StateBodyFetcher:
+    """Real production fetcher (M2 wire shape), keyed by object-tree path --
+    NOT DictBodyFetcher. M5 (REQ-EXECBODY-011): every fail-closed reason
+    EXECREF-001 introduced holds identically when the top-level reference is
+    resolved via the M4 Executor->assigned-sequence delegation, not just via
+    a direct Macro/Plugin/Sequence lookup.
+    """
+
+    def query(path: str) -> dict:
+        if path not in tree:
+            raise KeyError(f"no reply for {path}")
+        return tree[path]
+
+    return StateBodyFetcher(query)
+
+
+def _cues(*names: str) -> dict:
+    return {"ok": True, "children": [{"name": name} for name in names]}
+
+
+_EXECUTOR_201_ASSIGNED_71 = {
+    "Executor 201": {"ok": True, "node": {"class": "Executor", "sequenceNo": 71}}
+}
+
+
+class TestExecutorMediatedFailClosed:
+    """M5: EXECREF-001's fail-closed reasons, exercised end-to-end through the
+    real StateBodyFetcher's Executor->Sequence delegation (not the abstract
+    DictBodyFetcher above) -- each held individually, never merged
+    (design.md §6.2 principle)."""
+
+    def test_executor_unverifiable_body_holds(self):
+        # Identity resolves, but the assigned sequence's own state query
+        # never comes back -- genuinely unverifiable.
+        fetcher = _state_fetcher(dict(_EXECUTOR_201_ASSIGNED_71))
+        outcome = _evaluate("Executor 201", fetcher)
+        assert outcome.hold is True
+        assert any("unverifiable" in r for r in outcome.reasons)
+
+    def test_executor_body_with_blacklisted_command_holds_as_risky(self):
+        fetcher = _state_fetcher(
+            {**_EXECUTOR_201_ASSIGNED_71, "DataPool/Sequences/71": _cues("Delete Sequence 5")}
+        )
+        outcome = _evaluate("Executor 201", fetcher)
+        assert outcome.hold is True
+        assert outcome.risky is True
+        assert any("blacklist" in r for r in outcome.reasons)
+
+    def test_executor_depth_exceeding_three_holds(self):
+        # AC-MVP-017 case 3, entered via the executor delegation: Executor
+        # 201 (depth 1) -> Macro 10 (2) -> Macro 11 (3) -> Macro 12 (4)
+        # exceeds the cap of 3.
+        fetcher = _state_fetcher(
+            {
+                **_EXECUTOR_201_ASSIGNED_71,
+                "DataPool/Sequences/71": _cues("Go Macro 10"),
+                "DataPool/Macros/10": _cues("Go Macro 11"),
+                "DataPool/Macros/11": _cues("Go Macro 12"),
+                "DataPool/Macros/12": _cues("Store Cue 1"),
+            }
+        )
+        outcome = _evaluate("Executor 201", fetcher)
+        assert outcome.hold is True
+        assert any("depth" in r for r in outcome.reasons)
+
+    def test_executor_reference_cycle_holds(self):
+        # AC-MVP-017 case 4: the assigned sequence's body loops back to the
+        # SAME executor reference by way of a nested macro.
+        fetcher = _state_fetcher(
+            {
+                **_EXECUTOR_201_ASSIGNED_71,
+                "DataPool/Sequences/71": _cues("Go Macro 10"),
+                "DataPool/Macros/10": _cues("Go Executor 201"),
+            }
+        )
+        outcome = _evaluate("Executor 201", fetcher)
+        assert outcome.hold is True
+        assert any("cycle" in r for r in outcome.reasons)
+
+    def test_executor_unparseable_body_line_holds(self):
+        fetcher = _state_fetcher(
+            {**_EXECUTOR_201_ASSIGNED_71, "DataPool/Sequences/71": _cues("'broken")}
+        )
+        outcome = _evaluate("Executor 201", fetcher)
+        assert outcome.hold is True
+
+    def test_executor_assigned_to_empty_sequence_passes(self):
+        # acceptance.md §D "빈 시퀀스": zero cues is a verified-empty body, a
+        # positive pass -- distinct from the unverifiable case above.
+        fetcher = _state_fetcher(
+            {
+                **_EXECUTOR_201_ASSIGNED_71,
+                "DataPool/Sequences/71": {"ok": True, "children": []},
+            }
+        )
+        outcome = _evaluate("Executor 201", fetcher)
+        assert outcome.hold is False

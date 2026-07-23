@@ -418,20 +418,7 @@ class StateBodyFetcher:
         template = self._templates.get(type_word)
         if template is None or not ref:
             raise BodyUnavailable(f"no body path mapping for {reference!r}")
-        try:
-            payload = self._query(template.format(ref=ref))
-        except Exception as error:
-            raise BodyUnavailable(f"state query failed for {reference!r}: {error}") from error
-        children = payload.get("children")
-        if not isinstance(children, list) or not children:
-            raise BodyUnavailable(f"empty or missing body for {reference!r}")
-        lines: list[str] = []
-        for child in children:
-            name = child.get("name") if isinstance(child, dict) else None
-            if not isinstance(name, str) or not name.strip():
-                raise BodyUnavailable(f"unreadable body line in {reference!r}")
-            lines.append(name)
-        return tuple(lines)
+        return self._fetch_body_at_path(reference, template.format(ref=ref), allow_empty=False)
 
     def _fetch_executor_body(self, reference: str) -> Sequence[str]:
         """Executor bodies aren't ``Children()`` (M1 finding, design.md §4) —
@@ -460,4 +447,38 @@ class StateBodyFetcher:
             raise BodyUnavailable(
                 f"{reference!r} has no assigned sequence (unassigned or identity unavailable)"
             )
-        return self.fetch_body(f"Sequence {sequence_no}")
+        sequence_reference = f"Sequence {sequence_no}"
+        sequence_template = self._templates.get("Sequence")
+        if sequence_template is None:
+            raise BodyUnavailable(f"no body path mapping for {sequence_reference!r}")
+        # acceptance.md §D "빈 시퀀스": an assigned sequence with zero cues is
+        # a VERIFIED-empty body (query succeeded), a positive pass — distinct
+        # from a body that could not be verified at all. No risky command can
+        # hide in zero lines. Direct Macro/Plugin/Sequence lookups above keep
+        # their existing empty==unavailable behavior unchanged (allow_empty
+        # scopes this relaxation to the executor-delegation path only).
+        return self._fetch_body_at_path(
+            sequence_reference, sequence_template.format(ref=sequence_no), allow_empty=True
+        )
+
+    def _fetch_body_at_path(
+        self, reference: str, path: str, *, allow_empty: bool
+    ) -> Sequence[str]:
+        try:
+            payload = self._query(path)
+        except Exception as error:
+            raise BodyUnavailable(f"state query failed for {reference!r}: {error}") from error
+        children = payload.get("children")
+        if not isinstance(children, list):
+            raise BodyUnavailable(f"empty or missing body for {reference!r}")
+        if not children:
+            if allow_empty:
+                return ()
+            raise BodyUnavailable(f"empty or missing body for {reference!r}")
+        lines: list[str] = []
+        for child in children:
+            name = child.get("name") if isinstance(child, dict) else None
+            if not isinstance(name, str) or not name.strip():
+                raise BodyUnavailable(f"unreadable body line in {reference!r}")
+            lines.append(name)
+        return tuple(lines)

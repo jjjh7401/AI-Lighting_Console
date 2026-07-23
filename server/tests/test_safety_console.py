@@ -257,3 +257,29 @@ class TestStateBodyFetcherExecutor:
         )
         with pytest.raises(BodyUnavailable):
             fetcher.fetch_body("Executor 201")
+
+    def test_executor_assigned_to_empty_sequence_is_a_positive_pass(self):
+        # M5 / acceptance.md §D "빈 시퀀스": a verified-empty body (query
+        # succeeded, 0 cues) is NOT the same failure as a body that could not
+        # be verified at all — no risky command can hide in zero lines, so
+        # this returns an empty body rather than holding.
+        fetcher = self._fetcher(
+            {
+                "Executor 201": {
+                    "ok": True,
+                    "node": {"class": "Executor", "sequenceNo": 71},
+                },
+                "DataPool/Sequences/71": {"ok": True, "children": []},
+            }
+        )
+        assert fetcher.fetch_body("Executor 201") == ()
+
+    def test_executor_assigned_sequence_query_failure_still_unavailable(self):
+        # Distinct from the empty-pass case above: the sequence's own state
+        # query never resolves at all (not in the tree) -> genuinely
+        # unverifiable, must still hold.
+        fetcher = self._fetcher(
+            {"Executor 201": {"ok": True, "node": {"class": "Executor", "sequenceNo": 71}}}
+        )
+        with pytest.raises(BodyUnavailable, match="Sequence 71"):
+            fetcher.fetch_body("Executor 201")

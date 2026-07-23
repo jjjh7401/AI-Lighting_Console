@@ -131,6 +131,29 @@ M2 착수 직전 재점검에서 ASSUMPTION-12(익스큐터→시퀀스 프로�
 | AC-EXECBODY-011 | **DONE** | `test_safety_gate.py` green(기존 안전 불변식 무변경) |
 | AC-EXECBODY-014 | **ON-TRACK** | 전체 회귀 신규 실패 0건(베이스라인 대조 완료, 위 #4) — 최종 판정은 M6 종결 시 |
 
+### M5 — Fail-closed 회귀 + 코퍼스 확장 (2026-07-24, TDD RED-GREEN)
+
+세션 재개 시 셸 작업 디렉터리가 워크트리가 아닌 메인 체크아웃으로 되돌아가 있어(턴 경계를 넘는 지속성이 보장되지 않음을 실측) 첫 검증 시도가 잘못된 트리에서 실행됨을 발견 — `git branch --show-current`/inode 대조로 즉시 확인 후 `cd`로 워크트리에 재진입해 전량 재실행했다. 다행히 M4 커밋(`efa18f6`)은 이미 올바른 브랜치에 안착해 있었음을 재확인(오염 없음). 이후 모든 검증은 워크트리 내에서 수행.
+
+| # | 작업 | 커맨드/방법 | 결과 |
+|---|---|---|---|
+| 1 | 축 재확인(코퍼스 재구조화 불필요) | `server/tests/test_safety_corpus.py` 리뷰 — `RECOGNIZED_REFERENCE_TYPES`(Executor 포함)를 동적으로 순회하며 모든 시나리오를 브로드캐스트하는 구조를 이미 갖추고 있음을 확인(`test_reference_type_axis_matches_the_recognized_closed_set`) | 무변경 확인 — plan.md의 "축 자체의 재구조화는 필요 없다"가 이미 사실임을 검증, 파일 미수정 |
+| 2 | RED | `server/tests/test_safety_expand.py`에 `TestExecutorMediatedFailClosed` 6건 신설(실제 `StateBodyFetcher` 경유 — 추상 `DictBodyFetcher`가 아님): unverifiable·blacklist·depth>3·cycle·unparseable·빈-시퀀스-통과. `server/tests/test_safety_console.py`에 빈-시퀀스 2건(양성 통과 vs 조회 자체 실패 구분) 추가 | `.venv/bin/python -m pytest server/tests/test_safety_console.py server/tests/test_safety_expand.py -v` → 빈-시퀀스 2건만 의도된 이유로 RED, 나머지 40건은 기존 M4 구현으로 이미 green(추가 구현 불필요함을 확인) |
+| 3 | GREEN | acceptance.md §D "빈 시퀀스" 엣지 케이스 구현: `StateBodyFetcher`의 본문 파싱을 `_fetch_body_at_path(..., allow_empty: bool)`로 추출 — 직접 `Macro`/`Plugin`/`Sequence` 조회는 `allow_empty=False`(기존 동작 그대로 보존), 익스큐터가 위임하는 시퀀스 조회만 `allow_empty=True`(조회 성공 + 큐 0개 = 검증된 빈 본문 = 양성 통과, 조회 자체 실패와는 구분) | `pytest server/tests/test_safety_console.py server/tests/test_safety_expand.py -q` → 42 passed |
+| 4 | 관련 스위트 재검증 | `pytest server/tests/test_safety_console.py server/tests/test_safety_expand.py server/tests/test_safety_corpus.py server/tests/test_safety_classify.py server/tests/test_safety_gate.py -q` | 340 passed |
+| 5 | 전체 회귀 | `pytest -q` | 1739 passed, 2 skipped, 3 failed(전부 M4 때와 동일한 기존 실패 — `test_lua_responder.py`/`test_web_provision_api.py`/`test_web_reply_discovery.py`, 신규 실패 0건, AC-EXECBODY-014) |
+| 6 | 경계 + 무변경 확인 | OSC import 경계 · 단일 분류 정의 · subagent 경계 · `expand.py` 순수 로직 무변경 | grep 결과 M4와 동일(무변경) · `git diff --stat server/safety/expand.py` → 빈 출력(무변경 확정, plan.md M5 파일 목록의 "`server/safety/expand.py`(무변경 확인)" 충족) |
+
+**제약 준수 기록**: 코드 변경은 `server/safety/console.py`(`_fetch_body_at_path` 추출 + `allow_empty` 매개변수 추가)와 `server/tests/test_safety_console.py` + `server/tests/test_safety_expand.py`(신규 테스트)로 한정 — `expand.py`/`gate.py`/`classify.py`/`test_safety_corpus.py` 전부 무변경. Macro/Plugin/직접-Sequence 참조의 기존 "빈 본문=미검증" 동작은 그대로 유지(scope discipline — 이번 SPEC이 명시한 익스큐터-위임 경로에만 완화 적용).
+
+**M5 시점 AC 상태 갱신**:
+
+| AC | 상태 | 근거 |
+|---|---|---|
+| AC-EXECBODY-011 | **DONE(강화)** | 기존 fail-closed 보류 사유 5종(미검증/재귀상한/순환/블랙리스트/파싱불가) 전부가 실제 `StateBodyFetcher`의 익스큐터-경유 위임 경로에서도 개별 검증됨(`TestExecutorMediatedFailClosed`) — 추상 코퍼스(`DictBodyFetcher`)뿐 아니라 프로덕션 페처로 재확인 |
+| AC-EXECBODY-014 | **ON-TRACK** | 전체 회귀 신규 실패 0건 재확인(위 #5) |
+| (acceptance.md §D "빈 시퀀스") | **DONE** | 검증된-빈-본문(조회 성공, 큐 0개)과 미검증(조회 실패)을 구분해 전자는 양성 통과 — `test_executor_assigned_to_empty_sequence_is_a_positive_pass`/`test_executor_assigned_to_empty_sequence_passes`로 회귀 방지 |
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase — M4~M6 잔여>_
