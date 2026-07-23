@@ -1,6 +1,6 @@
 # SPEC-COPILOT-EXECBODY-001 — 설계 근거 (design)
 
-status: draft (v0.1.0, 2026-07-23) · Tier L · 구현 코드 없음. §5(역주소 문제 해소)는 **열린 슬롯**이다 — M1 조사 결과가 나오기 전까지는 회피/검증/DESCOPE 중 어느 경로를 택할지 확정할 수 없다. EXECREF-001의 §5가 처음에는 열려 있다가 라이브 프로브 결과로 닫힌 것과 동일한 구조다.
+status: in-progress (v0.1.0, 2026-07-23) · Tier L · 구현 코드 없음. §5(역주소 문제 해소)는 **열린 슬롯**이다 — M1의 콘솔-프리(오프라인) 조사는 2026-07-23 완료되었고(§5.4), 그 결과 결정 게이트는 **VERIFY-PENDING**(라이브 프로브 대기, §5.7)이다. 슬롯은 다음 라이브 세션의 프로브(§5.5/§5.6)로 닫힌다. EXECREF-001의 §5가 처음에는 열려 있다가 라이브 프로브 결과로 닫힌 것과 동일한 구조다.
 
 ## §1. 설계 의도
 
@@ -53,9 +53,9 @@ EXECREF-001의 false-negative 검토(design.md §4)는 참조 인식 확장에 �
 
 위 4개 위험 중 1~3, 5는 EXECREF-001의 기존 기계가 그대로 방어한다. **오직 #4(역주소 오류)만이 이 SPEC이 스스로 도입하는 신규 공격면이다** — 잘못된 페이지-로컬 인덱스를 계산해 엉뚱한 오브젝트의 본문을 조회하면, 게이트는 "다른 익스큐터의 본문을 보고 이 익스큐터를 판단"하는 조용한 오분류를 일으킬 수 있다. 이것이 spec.md §A "역주소 문제"가 각주가 아니라 SPEC 전체의 설계 중심으로 다뤄지는 이유다.
 
-## §5. 역주소 문제 해소 — 열린 설계 슬롯 (M1 결과로 닫힘, 아직 미해소)
+## §5. 역주소 문제 해소 — 열린 설계 슬롯 (M1 오프라인 조사 완료 · 라이브 프로브 대기)
 
-**이 절은 아직 해소되지 않았다.** EXECREF-001 design.md §5가 처음 작성 시점(v0.1.0)에 열려 있다가 2026-07-23 라이브 프로브로 닫힌 것과 동일한 구조다. plan.md M1이 이 슬롯을 닫는 조사 마일스톤이다.
+**이 절은 아직 최종 해소되지 않았다.** M1의 콘솔-프리 부분은 2026-07-23 완료되었다(§5.4 오프라인 조사 기록). 오프라인 소스만으로는 후보 (a)를 확인도 반증도 할 수 없음이 확정되어, 결정 게이트는 §5.7의 **VERIFY-PENDING** 상태로 기록된다 — 다음 라이브 세션이 §5.5/§5.6의 ready-to-run 프로브를 실행해 이 슬롯을 GO 또는 DESCOPE로 닫는다. EXECREF-001 design.md §5가 처음 작성 시점(v0.1.0)에 열려 있다가 2026-07-23 라이브 프로브로 닫힌 것과 동일한 구조다.
 
 ### §5.1 세 가지 후보 경로
 
@@ -74,6 +74,101 @@ EXECREF-001의 false-negative 검토(design.md §4)는 참조 인식 확장에 �
 ### §5.3 왜 이 슬롯을 plan-phase에서 미리 추측하지 않는가
 
 EXECREF-001 design.md AP-7("프로브 없이 §5.3 후보 중 하나를 임의 채택")이 명시적으로 금지하는 반-패턴이다. 이 SPEC의 plan-phase 세션은 실물 콘솔 라이브 접근이 확보되지 않은 상태에서 작성되었으므로(연구 자료는 EXECREF-001의 기존 프로브 결과를 인용할 뿐, 본 SPEC 고유의 신규 라이브 조사를 수행하지 않았다), (a)/(b)의 실제 존재 여부를 이 문서가 단정하는 것은 근거 없는 추측이다. M1이 실제 조사를 수행한다.
+
+### §5.4 M1 오프라인 조사 기록 (2026-07-23, 콘솔-프리 — 실측)
+
+본 세션은 실물 콘솔 접근이 없으므로, 오프라인에서 답할 수 있는 것과 없는 것을 분리해 실측했다. 아래 4개 항목이 실제 실행된 조사와 그 관측 결과다.
+
+**(1) 저장소 전역 API 토큰 탐색 — 0건.**
+`grep -rn -i "ObjectList\|FromAddr\|AddrNative\|StrToHandle\|HandleToStr\|GetPath\|ToAddr" --include="*.md" --include="*.lua" --include="*.py" .` (`.moai/specs` 제외) → **매치 0건**. 이 저장소에는 grandMA3 Lua API 레퍼런스 문서 자체가 존재하지 않는다 — 후보 (a)의 존재/부재를 오프라인 소스로 답하는 것은 구조적으로 불가능하다.
+
+**(2) 응답기 API 표면 인벤토리 — 주소-해석 호출 0건.**
+`console/lua/copilot_responder.lua` 전체 리뷰. 응답기가 이미 사용하는(따라서 2.4.2에서 동작이 확인된) MA3 Lua 표면의 전량: 루트 진입점 `Root()` / `DataPool()` / `ShowData()` / `Patch()`(ROOT_ALIASES, :323-328), 탐색 `handle:Children()` / `handle:Count()` / `handle:Ptr(i)`(safe_children, :289-317), 아이덴티티 `handle.name` / `handle:Get("name")` / `handle:GetClass()` / `handle.class`(:161-187), 슬롯 프로브 `child:Index()` / `child.index` / `child.no` / `child:GetIndex()` / `child:Get("no")`(SLOT_PROBES, :218-224), 실행 `Cmd()`, 전송 `SendOSCMessage` / `Cmd("SendOSC ...")`, 기타 `GetVar(UserVars(), ...)` / `load` / `Printf`. **커맨드-라인 주소 문자열을 핸들로 해석하는 호출은 어디에도 없다.** 즉 기존 코드는 ASSUMPTION-10을 확인해 주지 못하며, 반증하지도 못한다(사용하지 않았을 뿐이다).
+
+**(3) 룰북 확인 — 커맨드라인 문법 문서이지 Lua API 문서가 아님.**
+`server/rulebook/assets/v2.4.2/`의 5개 파일(00_grammar / 10_object_model / 20_korean_terms / 30_plugin_patterns / 31_choreography_patterns)은 LLM용 **콘솔 커맨드라인 문법** 문서다. `10_object_model.md:23-25`는 `Page <page>.<executor>` 주소 규약(커맨드라인 측)만 기록하며 Lua 측 해석 API는 다루지 않는다.
+
+**(4) EXECREF-001 프로브 증거 재판독 — 기존 확인 + 신규 관측 2건.**
+`.moai/state/verify/showui-m6-resume/executor-offset.jsonl`(16행 = 8 익스큐터 × raw/plus100 2형) + `5-probe-body.log` 재판독. 기존 확인: 페이지 1의 8/8 샘플 전부 `console_no = local_index + 100` 성립. 이번 재판독에서 추출한 **신규 관측 2건**:
+
+- **(4a) 로컬 인덱스는 100을 초과한다.** 페이지 1에 로컬 인덱스 `101`이 실존한다(콘솔 발화 번호 201, `Off Executor 201` OK). 따라서 "콘솔번호 = 페이지×100 + 로컬인덱스" 류의 규약이라면 인덱스 도메인이 0~99가 아니므로 **페이지 교차 충돌이 구조적으로 가능하다** — 페이지 1 로컬 101(→201)과, 만약 동일 형태가 성립한다면 페이지 2 로컬 1(→201)이 같은 발화 번호를 갖는다. 오프셋 규약의 "형태"(상수 +100인지, 페이지-종속인지, 충돌을 어떻게 처리하는지)가 다중-페이지 프로브의 정확한 판별 대상이다(acceptance.md §D "페이지 미지정 익스큐터 번호 충돌" 엣지 케이스의 실측 근거).
+- **(4b) "OK"는 올바른 타깃팅의 증거가 아니다.** `{"i": 101, "addressed": 101, "form": "raw", "status": "ok"}` 행 — raw형 `Off Executor 101`이 성공한 것은 로컬 인덱스 주소가 동작해서가 아니라, **콘솔 번호 101이 로컬 인덱스 1의 익스큐터에 속하기 때문**이다(오발 히트). 번호 충돌 하에서는 잘못된 타깃으로 간 커맨드도 조용히 성공한다 — §4 위험 #4(조용한 오분류)의 구체적 실측 사례이며, §5.6의 발화-기반 판별 폴백이 "OK/Illegal object" 이분만으로는 불충분한 이유다.
+
+부가 관측: 증거 쇼파일에는 페이지가 1개뿐이었다(`DataPool/Pages` childCount: 1) — 다중-페이지 검증은 라이브 세션에서 페이지 ≥2 쇼파일 준비(GUI 사용자 작업)를 선행 조건으로 요구한다.
+
+### §5.5 ASSUMPTION-10/-12 후보 API — 미검증 가설 + ready-to-run 프로브 (P-A ~ P-D)
+
+**정직성 프레이밍(구속력 있음)**: 아래 후보 API 이름들은 일반 grandMA3 Lua API 지식에서 온 **가설**이다 — 이 저장소의 어떤 소스에도 등장하지 않으며(§5.4-1), 검증된 문서 인용도 아니다. onPC 2.4.2에서의 존재/부재/시그니처가 바로 프로브가 확정해야 할 대상이다. 프로브 확인 전에는 어떤 후보도 채택하지 않는다(AP-7).
+
+**전달 메커니즘(라이브 세션 결정 사항)**: 아래 스니펫은 읽기 전용(조회만)이지만, 콘솔에서 Lua를 실행하는 경로 자체는 둘 중 하나다 — (i) 콘솔 Lua 에디터에 수동 붙여넣기(배포 기계 불사용, 쇼파일 무변경에 가장 가까움), (ii) 임시 프로브 플러그인 배포(`plugin_pack.py` 경로 — 플러그인 풀에 1회 쓰기 발생, `Delete Plugin`으로 원복 가능). (ii)는 plan.md의 "쓰기 0" 문구를 초과하므로 라이브 세션에서 명시적 사용자 승인 후에만 사용한다. 스니펫 자체는 어느 경로로 실행해도 조회 외 부작용이 없다.
+
+```lua
+-- EXECBODY-001 M1 라이브 프로브 (조회 전용 — Cmd 발화 0, 오브젝트 쓰기 0)
+-- 실행: 콘솔 Lua 에디터 붙여넣기 권장. 각 행 결과를 그대로 기록할 것.
+local function try(label, fn)
+    local ok, value = pcall(fn)
+    Printf("EXECBODY-PROBE %s | ok=%s | type=%s | value=%s",
+        label, tostring(ok), type(value), tostring(value))
+    return ok, value
+end
+
+-- P-A (ASSUMPTION-10, 회피 후보 — 전역 주소 해석 함수의 존재/시그니처)
+-- 대상 번호 201 = 페이지 1 로컬 101의 실측 콘솔 번호 (§5.4-4a). 쇼파일이 다르면
+-- 라이브 세션에서 실존하는 콘솔 번호로 치환할 것.
+try("A1 ObjectList('Executor 201')", function() return ObjectList("Executor 201") end)
+try("A2 FromAddr('Executor 201')",   function() return FromAddr("Executor 201") end)
+try("A3 GetExecutor(201)",           function() return GetExecutor(201) end)
+try("A4 Obj('Executor 201')",        function() return Obj("Executor 201") end)
+
+-- P-B (ASSUMPTION-12 — 익스큐터 핸들 → 할당 시퀀스 접근자)
+-- 핸들 획득은 이미 검증된 경로(ASSUMPTION-8: 페이지-로컬 인덱스 탐색)만 사용.
+local exec  -- DataPool/Pages/1/<로컬인덱스> 를 응답기와 동일한 Children() 탐색으로 획득
+do
+    local ok, pages = pcall(function() return DataPool().Pages end)
+    -- 응답기 ROOT_ALIASES/safe_children과 동일한 방어적 탐색으로 페이지 1의
+    -- 첫 익스큐터 핸들을 얻는다 (여기서는 개요만 — 라이브 세션에서 responder의
+    -- M.resolve_path("DataPool/Pages/1/<i>") 재사용이 가장 확실).
+end
+try("B0 exec:Dump()",         function() return exec:Dump() end)          -- 프로퍼티 전수 나열
+try("B1 exec.Object",         function() return exec.Object end)
+try("B2 exec:Get('Object')",  function() return exec:Get("Object") end)
+try("B3 exec:Get('object')",  function() return exec:Get("object") end)
+try("B4 exec.object",         function() return exec.object end)
+
+-- P-C (역주소 문제의 순방향 해소 후보 — 핸들이 자기 콘솔-발화 주소를 보고하는가)
+try("C1 exec:Addr()",         function() return exec:Addr() end)
+try("C2 exec:AddrNative()",   function() return exec:AddrNative() end)
+try("C3 exec:ToAddr()",       function() return exec:ToAddr() end)
+try("C4 tostring(exec)",      function() return tostring(exec) end)
+```
+
+**판별 기준(각 프로브의 결정적 결과)**:
+
+- **P-A 확인** = 어느 한 형태가 핸들(또는 핸들 목록)을 반환하고, 그 핸들의 `GetClass()`가 `"Executor"`이며 GUI에서 확인되는 콘솔 번호 201의 익스큐터와 일치 → **후보 (a) 채택, §5.6 오프셋 검증 전체가 moot**(§5.2 결정 기준 1행). **P-A 반증** = 네 형태 전부 pcall 실패("attempt to call a nil value" 류) 또는 무의미 반환 → 후보 (a)는 이 후보군에 한해 기각(전역 함수가 더 존재할 가능성은 B0 Dump류 탐색으로 보강).
+- **P-B 확인** = 어느 접근자가 `GetClass() == "Sequence"`인 핸들(또는 시퀀스 번호)을 반환하고 GUI의 할당 표시와 일치 → **ASSUMPTION-12 확정 + 정확한 접근자명 기록**(M2의 익스큐터 분기가 사용할 API). 전부 실패 → B0 Dump 출력에서 후보 프로퍼티명을 발굴해 재시도; 그래도 없으면 아이덴티티 노출 자체가 불가 → DESCOPE로 기운다.
+- **P-C 확인** = 어느 형태가 콘솔-발화 번호를 담은 주소 문자열(예: `Page 1.201` 또는 `Executor 201` 형)을 반환 → **역주소 문제의 순방향 해소**: 응답기가 페이지를 전수 열거하며 익스큐터마다 "콘솔-발화 번호 + 할당 시퀀스 아이덴티티"를 함께 내보내면, 게이트는 발화 번호로 정방향 조회만 하면 되고 역산(콘솔번호→로컬인덱스)은 어느 층에도 존재하지 않게 된다. 반환값이 로컬 인덱스 형(예: `1.101`)이면 확인 실패로 기록.
+
+### §5.6 ASSUMPTION-11 다중-페이지 오프셋 검증 프로브 계획 (후보 (b) — P-A·P-C 모두 실패 시에만)
+
+**선행 조건(사이트 준비, GUI 사용자 작업)**: 페이지 ≥2, 각 페이지에 로컬 위치가 알려진 익스큐터 ≥2개를 가진 쇼파일. 가능하면 한 페이지에 로컬 인덱스 >100 익스큐터 1개 포함(§5.4-4a 충돌 도메인 검사용). 준비는 GUI 작업이며 프로브 자체는 조회 전용이다.
+
+1. **1단계(읽기 전용, 기존 기계 재사용)**: `probe_executor_body.py` 패턴으로 `DataPool/Pages` → 각 페이지 p의 자식 열거(로컬 인덱스 + 이름). 페이지별 로컬 인덱스 표를 확보한다.
+2. **2단계(P-C 성공 시 — 완전 읽기 전용 경로)**: 각 페이지의 각 샘플 익스큐터에서 P-C 주소 문자열을 읽어 `console_no = f(page, local_index)` 매핑을 페이지별로 기록. **PASS** = 동일한 매핑 형태가 서로 다른 ≥2 페이지 × 페이지당 ≥2 샘플에서 재현되고 f가 명시적으로 기록됨(상수 +100인지, `page*100 + local`인지, 그 외인지). **FAIL** = 어느 페이지든 형태 이탈.
+3. **3단계(폴백 — 읽기 전용 아님, 명시적 승인 필요)**: P-C도 없으면 남는 판별 수단은 SHOWUI-M6식 발화 검사(`Off Executor <n>`, 비활성 익스큐터 한정, "OK"/"Illegal object" 비교)뿐이다. 이는 발화 >0으로 plan.md M1의 "발화 0" 제약을 초과하므로 **라이브 세션에서 오케스트레이터/사용자의 명시적 편차 승인 후에만** 수행한다. 또한 §5.4-4b의 실측 교훈을 구속 조건으로 적용한다: 번호 충돌 하에서 "OK"는 올바른 타깃의 증거가 아니므로, 발화 검사는 (i) 프로브 쇼파일 안에서 충돌 불가능함이 1단계 표로 증명된 번호만 쓰거나 (ii) 각 발화를 관측 가능한 상태 변화와 짝지어야 한다.
+
+**ASSUMPTION-11 판정**: **VERIFIED** = 동일 매핑 형태가 서로 다른 ≥2 페이지에서 성립함이 기록되고, 페이지 교차 충돌 질문(어떤 발화 번호가 어느 페이지들에서 겹칠 수 있는가)에 답이 남음. **NOT VERIFIED** = 그 외 전부 → 후보 (b) 사용 불가 → (a)도 실패했다면 §5.1 (c) DESCOPE.
+
+### §5.7 M1 결정 게이트 — 상태: VERIFY-PENDING (라이브 프로브 대기)
+
+| 판정 후보 | 채택 여부 | 근거 |
+|---|---|---|
+| GO (M2 착수) | **아니오** | 회피 경로 미확인, 다중-페이지 검증 미수행 — 지금 착수하면 REQ-EXECBODY-007/008/009의 미검증-관례 금지를 위반한다. |
+| DESCOPE | **아니오** | DESCOPE 조건은 "(a)와 (b)가 **모두 막히면**"(§5.2)이다. 오프라인 소스는 후보 (a)를 반증하지 못한다 — 저장소에 Lua API 문서가 아예 없다는 사실(§5.4-1)은 "콘솔에 API가 없다"의 증거가 아니다(무관측 ≠ 부재). 단일 Lua 청크로 끝나는 §5.5 프로브를 실행하지 않은 채 DESCOPE하는 것은 정직한 이연이 아니라 조기 포기다. |
+| **VERIFY-PENDING** | **예 (본 세션 결정)** | 오프라인에서 답할 수 있는 것은 전부 답했고(§5.4), 남은 질문 전부가 라이브 프로브를 요구한다. ready-to-run 프로브(P-A~P-C 스니펫 + §5.6 계획)가 준비되었다. |
+
+**귀결**: M2 이후 마일스톤은 착수하지 않는다(plan.md §A.2 게이트). 다음 라이브 세션의 절차: (1) §5.5 스니펫 실행(전달 메커니즘 결정 포함) → (2) P-A/P-C 결과에 따라 §5.6 수행 여부 결정 → (3) 결과를 본 §5에 접어 넣고 게이트를 GO 또는 DESCOPE로 닫음 → (4) GO면 M2 착수.
+
+**프로브 산출물 위치에 관한 주기**: plan.md M1의 산출물 예시 경로(`.moai/state/verify/execbody-m1-probe.log`)는 라이브 프로브 로그용이다. 본 세션은 라이브 프로브를 수행하지 않았고 세션 제약상 `.moai/state/**` 신규 쓰기가 제외되어, ready-to-run 프로브 아티팩트는 본 문서(§5.5 스니펫 + §5.6 체크리스트)에 수록한다("또는 등가 경로" 조항 적용). 라이브 세션은 스니펫을 그대로 복사해 실행하고 로그를 위 경로에 남기면 된다.
 
 ## §6. 테스트 설계 방향
 
