@@ -1,6 +1,6 @@
 # SPEC-COPILOT-SHOWUI-001 — 수용 기준 (acceptance)
 
-status: draft (v0.2.1, 2026-07-22 — plan-audit iteration 1 fold-in F1/F2/F3/F6 + iteration 2 fix-forward R4 반영). 기계 검증 가능(pytest/vitest) 항목과 LIVE(실제 onPC) 항목을 구분한다.
+status: completed (v0.2.1, 2026-07-23 — plan-audit iteration 1 fold-in F1/F2/F3/F6 + iteration 2 fix-forward R4 반영, run-phase 전체 AC PASS/DESCOPED-v1 확정, sync 완료). 기계 검증 가능(pytest/vitest) 항목과 LIVE(실제 onPC) 항목을 구분한다.
 
 ## §A. 완료 정의 (Definition of Done)
 

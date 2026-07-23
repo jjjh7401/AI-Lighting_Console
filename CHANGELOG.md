@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **SPEC-COPILOT-SHOWUI-001** — 연출 컨트롤 패널(Show-Control Panel) 완료(`status: completed`). 채팅 옆 2컬럼 레이아웃에 실행기 윙의 연장을 목표로 한 타일 그리드를 구현 — M1~M6, 라이브 검증 1회(실제 grandMA3 onPC 2.4.2).
+  - **패널 UI**(`ui/src/`): 카탈로그 자동 나열(시퀀스) + 채팅 연출 pin 타일, 그리드 순서는 핀 우선·append-only(정렬 없음). Live rail — running일 때만 amber 강조, 정지 상태는 조용함. **파괴적 발화-클래스**(All Off)는 arm→fire 정확히 2회 상호작용, **정지 클래스**(개별 Off)는 1회 press. `window.confirm` 0건 — 승인 카드/배너 패턴만 사용.
+  - **프로토콜·서버**(`server/web/panel.py`, `server/web/messages.py`): 신규 WS 메시지 5종(`panel_execute`/`panel_stop`/`panel_pin`/`panel_unpin`/`panel_catalog_request`) + 이벤트 4종(`panel_catalog`/`panel_item_state`/`panel_busy`/`error(kind:"panel")`), 양측 allowlist 패리티(`PROTOCOL_VERSION` 1 유지). 실행은 전용 게이트 경유(`server/safety/` 단일 관문, OSC import 0건 — 아키텍처 테스트로 봉쇄), target은 parse-시점 정수 검증 + 카탈로그/핀 membership 검증(REQ-022) 후에만 번들 구성.
+  - **핀 영속화**: `<user_data_dir>/panel_pins.json`, temp+`os.replace` 원자적 쓰기, credential-like 키 거부, 손상/부재 시 fail-open 빈 패널로 기동(다음 쓰기에서 재생성).
+  - **fail-closed 재접속**: WS 단절 시 패널 running/busy 상태 소거(타일 목록은 서버 상태로 보존), 재접속 시 `panel_catalog_request`+`status_request` 재동기화 — running 자체는 의도적으로 재구축하지 않음(`PROTOCOL.md` 정정 반영).
+  - **AC-SHOWUI-014 라이브 완결**: reply-port 드리프트(9005→9006) 유발 → HEALTH에서 실행 차단(감사 로그 `blocked` 기록, `kind=command` 0건) → UI 상단 오프라인 배너 + amber "⛔ 실행 차단됨" 패널 배너 + 핀 타일 비활성화(Go+/Off/ALL OFF 전부 disabled) — 9005 복귀 시 online 양성 대조까지 확인.
+  - **실행기 타일 v1 범위 축소 → SPEC-COPILOT-EXECREF-001**: 드릴다운 실행기 타일(페이지 하위)을 카탈로그 소스에서 **구조적으로 제거**(fixtures 선례와 동일 패턴). 사유는 라이브 실측 — 콘솔 실번호가 `100 + i`(page-1, 8/8 실증)이고, i=101 타일이 무오류로 다른 오브젝트(Sequence 50)를 발화하는 silent wrong-object 충돌이 확인됨. 채팅 발화로 생성한 실행기 핀(정확한 콘솔 번호)은 영향 없음 — 정상 유지. 주소 수정(`console# = page*100 + i` 일반화) + 게이트 Executor 인식은 SPEC-COPILOT-EXECREF-001로 이연.
+  - **테스트**: pytest 1591 passed(+onPC UDP 9005 점유로 인한 환경 실패 1건, 코드 회귀 아님) + vitest 176 passed. `panel.py` 커버리지 100%. `ruff check` 신규 0건.
+  - amendment 이력: plan-audit iteration 1 FAIL 0.81 → v0.2.0 fold-in(F1~F6) → iteration 2 PASS 0.93 → v0.2.1 fix-forward(R1~R4) → sync-audit PASS 0.93(4-dim: Func 92/Sec 95/Craft 90/Consist 95).
+
 - **SPEC-COPILOT-DEPLOY-001** — Stage-1 배포 가능한 arm64 macOS MVP 완료 (M1~M6 + M10, `status: in-progress` 유지 — Stage-2 M7~M9는 별도 kickoff로 이연되었으므로 아직 `completed`로 전환하지 않음).
   - **인앱 설정 + OS 자격 증명 저장**: `server/deploy/settings.py`(비민감 설정 — OSC 포트·플러그인 임포트 디렉터리·활성 프로바이더 — OS별 표준 사용자 config 경로 저장, 자격증명 유사 키 거부) + `server/deploy/keystore.py`(macOS Keychain/Windows Credential Manager 어댑터, 저장소 미가용/잠금/거부 시 평문 디스크 폴백 0 + 세션 한정 in-memory 폴백, 크래시/진단 덤프 env-scrub) + `server/web/settings_api.py`(`/api/settings`, `/api/keys` — 키 값은 절대 응답에 미포함) + `ui/src/components/SettingsPanel.tsx`.
   - **CopilotResponder provisioning**: `server/deploy/provisioning.py` + `server/web/provision_api.py`(`/api/provision/responder`) — 번들된 Lua responder(`console/lua/`)를 임포트 디렉터리로 설치 + onPC 로드/OSC 출력 포트 안내 UI(`ResponderGuide.tsx`); 앱이 직접 발행하는 `Import Plugin` 실행은 SPEC-COPILOT-MVP-001의 단일 안전 관문을 경유하고 감사 로그에 1:1 기록됨을 회귀 테스트로 증명(AC-DEPLOY-017).

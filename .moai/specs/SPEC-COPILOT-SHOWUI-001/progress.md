@@ -688,7 +688,83 @@ preserve_list_post_run_count: intact   # tools.py / test_tools.py / pin_from_see
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+5-section evidence format (`verification-claim-integrity.md §3`).
+
+### Claim (주장)
+
+1. sync-auditor 독립 평가 **PASS 0.93**(harmonic mean, must-pass 4/4 PASS) — SHOWUI-001의
+   `in-progress → completed` 전환 근거가 성립한다.
+2. sync-auditor가 제기한 2건의 SHOULD 항목(D1/D2) 중 D2(acceptance.md descope 각주)는 본 sync 이전에
+   이미 해소(커밋 `14e2b14`); D1(SPEC-COPILOT-EXECREF-001 미materialize)은 후속 SPEC 자체의 존재
+   여부이므로 SHOWUI-001 범위에서 해소 불가 — 다음 SPEC(EXECREF-001) plan 단계로 이연.
+3. CHANGELOG.md `[Unreleased] → ### Added`에 SHOWUI-001 항목 신설, spec.md/plan.md/acceptance.md/
+   progress.md 4개 아티팩트 전부 `completed`(또는 그에 상응하는 prose status) 전환 완료.
+4. README.md는 milestone별 섹션 관례(M2~M7, Stage-1/2)를 따르며, 패널이 사용자 대면 신규 표면이므로
+   해당 관례에 맞춰 1개 섹션 추가.
+
+### Evidence (증거)
+
+- sync-audit 리포트: `.moai/state/verify/showui-m6-resume/sync-audit.md` — Overall Verdict **PASS**,
+  harmonic mean `4/(1/0.92+1/0.95+1/0.90+1/0.95)=0.930`, 4-dim 표(Functionality 92/Security 95/
+  Craft 90/Consistency 95), Merged AC Status Table 전 AC PASS/DESCOPED-v1(사용자 승인) 일치, Must-Pass
+  Gate Check 4/4 PASS.
+- D2 해소 커밋: `git show 14e2b14 --stat` → `.moai/specs/SPEC-COPILOT-SHOWUI-001/acceptance.md` 1개
+  파일, AC-SHOWUI-013 행에 descope 각주 삽입 확인(본 파일 §C 표 상단 재확인 가능).
+- pytest 재실측(본 sync 세션, 커밋 전): `.venv/bin/python -m pytest server/tests/ -q` →
+  `1 failed, 1591 passed in 85.05s`; 유일 실패 = `test_web_reply_discovery.py::TestDiscovery::
+  test_every_candidate_socket_is_released`(`OSError: [Errno 48] Address already in use`, onPC가
+  UDP 9005 점유 — §E.3에서 이미 선언된 동일 환경 실패, 신규 회귀 아님).
+- CHANGELOG: `grep -c "SHOWUI" CHANGELOG.md` → 신설 전 0(중복 방지 확인) → 신설 후 1개 항목 블록.
+- 아티팩트 상태 전환: `grep -n "^status:" spec.md` → `completed`; `grep -n "^status:" plan.md acceptance.md`
+  → prose descriptor `completed (v0.2.1, 2026-07-23 …)`.
+
+### Baseline-attribution (baseline 귀속)
+
+- sync-audit 판정은 본 sync 세션이 아니라 M6 close 직후 별도 sync-auditor 실행분(HEAD `df6bc16`,
+  M6 close `13a2f6b` + §E.3 SHA backfill `df6bc16`)의 결과를 인용 — 본 sync 세션은 그 판정을
+  재실행하지 않고 인용하되(§Evidence에 리포트 경로 명시), pytest만 본 세션에서 재실측하여
+  판정 시점 이후 코드 드리프트가 없음을 별도로 확인했다(1591 passed 동일, 환경 실패 동일 1건).
+- CHANGELOG 중복 검사(`grep -c`)는 본 sync 세션에서 편집 직전 실측한 baseline(0건)이다.
+
+### Gaps (미검증)
+
+- SPEC-COPILOT-EXECREF-001의 실제 SPEC 디렉터리 materialize는 본 sync의 범위 밖 — 자동 메모리에
+  "plan 완료·미커밋"으로 기록되어 있으나, 그 커밋 여부는 본 세션에서 직접 확인하지 않았다(다른 세션 소관).
+- README.md 신설 섹션은 sync-auditor가 직접 재평가하지 않은 항목(sync-audit 리포트는 M6 close
+  시점 코드만 평가) — 본 sync 작성자 자체 판단으로 milestone 섹션 관례를 따라 추가.
+- 열린 라이브 질문 (b)(주관적 FOH 가독성)는 §E.3에서 이미 미측정으로 선언되어 있으며 본 sync에서도
+  추가 관측 없음 — 후속 SPEC 또는 실사용 피드백으로 이연.
+
+### Residual-risk (잔여 위험)
+
+- onPC UDP 9005 점유 환경 실패는 CI/무인 환경에서 onPC를 열지 않는 한 계속 재현될 수 있음 — 코드
+  회귀가 아니므로 sync를 막지 않으나, 향후 pytest 실행자는 이 실패를 신규 회귀와 혼동하지 않아야 한다.
+- 원격 저장소 부재(local-only)로 이 sync 커밋은 push되지 않는다 — 다음 세션에서 원격이 추가되면
+  이 커밋 이력을 포함한 전체 브랜치를 검토 후 push할 것.
+
+### Audit-ready signal
+
+```yaml
+sync_complete_at: 2026-07-23T00:00:00Z
+sync_status: completed
+sync_auditor_verdict: PASS 0.93 (harmonic mean; must-pass 4/4 PASS)
+sync_auditor_report: .moai/state/verify/showui-m6-resume/sync-audit.md
+should_items:
+  D2_acceptance_descope_note: RESOLVED (commit 14e2b14, pre-sync)
+  D1_execref001_materialization: DEFERRED (next-SPEC scope, not resolvable within SHOWUI-001)
+changelog_entry_position: "[Unreleased] > ### Added, first entry"
+frontmatter_status_transitions:
+  spec.md: "in-progress -> completed"
+  plan.md: "draft (prose descriptor) -> completed (prose descriptor)"
+  acceptance.md: "draft (prose descriptor) -> completed (prose descriptor)"
+  progress.md: "run_status audit-ready -> sync_status completed (this block)"
+pytest_resync: "1591 passed, 1 environmental-fail (unchanged from §E.3)"
+vitest_resync: "not re-run this session (unchanged since §E.3, UI untouched by sync)"
+readme_updated: true
+b12_self_test_a_pre_emission_grep: "grep -c SHOWUI CHANGELOG.md -> 0 before emission (no duplicate)"
+b12_self_test_b_ac_count_match: "acceptance.md SSOT AC identifiers == 16 (AC-SHOWUI-001..003, 004a, 004b, 005..015 — grep -oE '\\*\\*AC-SHOWUI-[0-9]+[ab]?\\*\\*' | sort -u | wc -l); CHANGELOG entry references full milestone scope M1-M6, consistent"
+b12_self_test_c_file_path_verification: "all file paths cited in CHANGELOG entry verified via ls (server/web/panel.py, server/web/messages.py, ui/src/, .moai/state/verify/showui-m6-resume/sync-audit.md)"
+```
 
 ## §F Phase 4 Mode Selection
 

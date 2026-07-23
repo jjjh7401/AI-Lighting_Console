@@ -259,3 +259,27 @@ a backend parent-liveness watchdog as the self-reap fallback on force-quit.
 - **universal2 shell build** / **real notarization**: same caveats as the
   Stage-1 packaged app above — no code change required once the build
   environment / certificate is available.
+
+## Show-control panel (SPEC-COPILOT-SHOWUI-001)
+
+A second column next to the chat — a tile grid meant to feel like an
+extension of the console's executor wing rather than a web dashboard. Quiet
+when idle; only running tiles carry the live-amber highlight.
+
+- **Tiles**: auto-listed console sequences plus any executor/sequence pinned
+  from a chat-generated look (`server/web/panel.py`, `ui/src/components/`).
+  Grid order is pin-first, then auto-listed, append-only (no re-sorting).
+- **Safety**: every execute rides the same M4 gate as the chat (0 OSC access
+  from the web layer); destructive tiles (All Off) require arm-then-fire (2
+  presses), individual stop tiles fire on 1 press; target validation rejects
+  anything outside the catalog/pin membership before a command bundle is
+  built (REQ-SHOWUI-022).
+- **Fail-closed reconnect**: a dropped WebSocket clears running/busy state
+  immediately; the tile list itself persists (it's server state, not
+  connection state).
+- **v1 scope note**: drill-down executor tiles are intentionally absent —
+  live testing found the console's real executor number is `100 + <page
+  index>`, and one collision (`i=101`) silently fires the *wrong* object
+  with no error. That fix is deferred to a follow-up SPEC
+  (SPEC-COPILOT-EXECREF-001); executor **pins** created via chat (which
+  carry the real console number) are unaffected.

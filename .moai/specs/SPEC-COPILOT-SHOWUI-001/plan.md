@@ -1,6 +1,6 @@
 # SPEC-COPILOT-SHOWUI-001 — 구현 계획 (plan)
 
-status: draft (v0.2.1, 2026-07-22) · Tier L · 본 문서는 spec.md의 요구를 마일스톤으로 전개한다. 구현 코드 없음.
+status: completed (v0.2.1, 2026-07-23 — M1~M6 run-phase 완료 + sync 완료) · Tier L · 본 문서는 spec.md의 요구를 마일스톤으로 전개한다. 구현 코드 없음(작성 시점 기준 원문 보존).
 
 ## §A. 접근 요약 (Context)
 
