@@ -276,25 +276,28 @@ class TestExecutorRenameInvariance:
 
 
 class TestExecutorNoOpBeforeBodyPath:
-    """AC-EXECREF-008 / design.md §2.1: M1 (classify recognition) alone is a
-    no-op wrt the gate's observable decision -- 'Executor' is NOT added to
-    console.py's DEFAULT_BODY_PATHS in this milestone (M2 is DESCOPED), so
-    `Go+ Executor N` still holds with hold=True, risky=False; only the hold
-    REASON string changes (was: 'unverifiable reference: no recognizable
-    target object'; becomes: "no body path mapping for 'Executor N'")."""
+    """design.md §2.1 (EXECREF-001) + REQ-EXECBODY-004 (EXECBODY-001 M4): an
+    Executor reference always holds -- never risky -- regardless of whether
+    its identity resolves. Pre-M4 (EXECREF-001), 'Executor' had no body path
+    at all and short-circuited with 'no body path mapping' without ever
+    querying the console. As of M4, StateBodyFetcher DOES query the console
+    for the assigned-sequence identity (REQ-EXECBODY-003/004); when that
+    query itself cannot resolve an identity, the hold REASON now reads
+    'identity query failed for ...' instead -- the observable
+    hold=True/risky=False shape is unchanged (fail-closed, REQ-EXECBODY-006)."""
 
-    def test_executor_reference_with_no_body_path_still_holds_not_risky(self):
+    def test_executor_reference_with_unresolvable_identity_still_holds_not_risky(self):
         finding = _classify("Go+ Executor 201")
         assert finding.reference == "Executor 201"  # newly recognized (was None pre-M1)
 
-        def _unreachable_query(path: str) -> dict:  # pragma: no cover - must not fire
-            raise AssertionError("fetch_body must short-circuit before querying the console")
+        def _failing_query(path: str) -> dict:
+            raise RuntimeError("no console reply")
 
-        fetcher = StateBodyFetcher(query=_unreachable_query)
+        fetcher = StateBodyFetcher(query=_failing_query)
         outcome = evaluate_reference(finding.reference, ruleset=RULESET, fetcher=fetcher)
         assert outcome.hold is True
         assert outcome.risky is False
-        assert "no body path mapping for 'Executor 201'" in outcome.reasons[0]
+        assert "identity query failed for 'Executor 201'" in outcome.reasons[0]
 
     def test_none_reference_and_executor_reference_produce_the_same_hold_shape(self):
         # design.md §2.1: both the pre-M1 (`reference=None`) and post-M1

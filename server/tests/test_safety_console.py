@@ -172,7 +172,7 @@ class TestStateBodyFetcher:
     def test_unmapped_reference_type_is_unavailable(self):
         fetcher = self._fetcher({})
         with pytest.raises(BodyUnavailable, match="mapping"):
-            fetcher.fetch_body("Executor 201")
+            fetcher.fetch_body("Group 1")
 
     def test_query_failure_is_unavailable(self):
         fetcher = self._fetcher({})
@@ -183,3 +183,77 @@ class TestStateBodyFetcher:
         fetcher = self._fetcher({"DataPool/Macros/9": {"ok": True, "children": []}})
         with pytest.raises(BodyUnavailable, match="empty"):
             fetcher.fetch_body("Macro 9")
+
+
+class TestStateBodyFetcherExecutor:
+    """M4 (REQ-EXECBODY-004): Executor bodies aren't Children() — the fetcher
+    delegates via the M2-exposed assigned-sequence identity (``node.sequenceNo``,
+    PROTOCOL.md §4.2) to the already-trusted Sequence body path.
+    """
+
+    def _fetcher(self, tree: dict, calls: list | None = None):
+        def query(path: str) -> dict:
+            if calls is not None:
+                calls.append(path)
+            if path not in tree:
+                raise StateQueryError(f"no reply for {path}")
+            return tree[path]
+
+        return StateBodyFetcher(query)
+
+    def test_executor_body_delegates_to_assigned_sequence(self):
+        calls: list[str] = []
+        fetcher = self._fetcher(
+            {
+                "Executor 201": {
+                    "ok": True,
+                    "node": {"class": "Executor", "sequenceNo": 71},
+                },
+                "DataPool/Sequences/71": {"ok": True, "children": [{"name": "Store Cue 1"}]},
+            },
+            calls,
+        )
+        assert fetcher.fetch_body("Executor 201") == ("Store Cue 1",)
+        assert calls == ["Executor 201", "DataPool/Sequences/71"]
+
+    def test_executor_unassigned_is_unavailable(self):
+        # Node resolves, but nothing is assigned to it (no sequenceNo key —
+        # PROTOCOL.md §4.2: "absent entirely ... when unassigned").
+        fetcher = self._fetcher(
+            {"Executor 201": {"ok": True, "node": {"class": "Executor"}}}
+        )
+        with pytest.raises(BodyUnavailable, match="Executor 201"):
+            fetcher.fetch_body("Executor 201")
+
+    def test_executor_identity_query_timeout_is_unavailable(self):
+        # The identity query itself never replies (tree has no matching key ->
+        # the stub query raises StateQueryError, same shape as a live timeout).
+        fetcher = self._fetcher({})
+        with pytest.raises(BodyUnavailable, match="identity"):
+            fetcher.fetch_body("Executor 201")
+
+    def test_executor_identity_property_absent_is_unavailable(self):
+        # The reply arrived but carries no `node` at all (malformed/degenerate
+        # payload) — the sequenceNo property itself is unreadable.
+        fetcher = self._fetcher({"Executor 201": {"ok": True}})
+        with pytest.raises(BodyUnavailable):
+            fetcher.fetch_body("Executor 201")
+
+    def test_executor_sequence_body_itself_unavailable_propagates(self):
+        # Identity resolves fine, but the assigned sequence's own body query
+        # fails — the existing Sequence fetch path's error propagates unchanged
+        # (AC-EXECBODY-004: no regression to the Macro/Plugin/Sequence paths).
+        fetcher = self._fetcher(
+            {"Executor 201": {"ok": True, "node": {"class": "Executor", "sequenceNo": 99}}}
+        )
+        with pytest.raises(BodyUnavailable, match="Sequence 99"):
+            fetcher.fetch_body("Executor 201")
+
+    def test_executor_identity_derivation_never_reads_name(self):
+        # AC-EXECBODY-005: identity derivation must not parse the executor's
+        # display name — a name-bearing-but-sequenceNo-less reply still holds.
+        fetcher = self._fetcher(
+            {"Executor 201": {"ok": True, "node": {"class": "Executor", "name": "Exec 71"}}}
+        )
+        with pytest.raises(BodyUnavailable):
+            fetcher.fetch_body("Executor 201")

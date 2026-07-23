@@ -105,6 +105,32 @@ M2 착수 직전 재점검에서 ASSUMPTION-12(익스큐터→시퀀스 프로�
 
 **제약 준수 기록**: 코드 변경은 `console/lua/copilot_responder.lua`의 `CONFIG.osc_slot` 1줄로 한정 — 다른 로직 미변경. 진단용 임시 스크립트 없음(기존 `server/tools/osc_smoke.py`, `server/tools/responder_roundtrip.py` 재사용만).
 
+### M4 — 안전 게이트 본문 해석 배선, Python 측 (2026-07-24, TDD RED-GREEN)
+
+| # | 작업 | 커맨드/방법 | 결과 |
+|---|---|---|---|
+| 1 | RED | `server/tests/test_safety_console.py`에 `TestStateBodyFetcherExecutor` 6건 신설(성공 1 + 실패 3종 개별 + name-미참조 1 + 위임-전파 1). 기존 `test_unmapped_reference_type_is_unavailable`은 "Executor 201"이 더 이상 미매핑이 아니게 되어 "Group 1"로 갱신 | 신규 3건이 의도된 이유로 실패함을 확인(RED) |
+| 2 | GREEN | `server/safety/console.py` `StateBodyFetcher.fetch_body`에 `Executor` 2단계 위임 분기(`_fetch_executor_body`) 신설 — 1단계 아이덴티티 조회(참조 문자열 자체를 상태-질의 경로로 재사용, `node.sequenceNo` 판독), 2단계 그 번호를 `Sequence` 참조로 취급해 `fetch_body`를 재귀 호출(기존 Sequence 본문 경로 그대로 재사용, 신규 신뢰 경계 없음) | `.venv/bin/python -m pytest server/tests/test_safety_console.py -q` → 21 passed |
+| 3 | 회귀 발견 및 수정 | EXECREF-001 시절 테스트(`test_safety_classify.py::TestExecutorNoOpBeforeBodyPath`)가 "Executor는 아직 본문 경로가 없다"는 이제는 폐기된 전제를 검증 중이었음(내가 만든 유일한 실질 회귀) — M4 동작(아이덴티티 조회가 실제로 발화함)에 맞게 독스트링 + 어서션 갱신, hold=True/risky=False 관측 형태는 그대로 보존 | `.venv/bin/python -m pytest server/tests/test_safety_console.py server/tests/test_safety_classify.py server/tests/test_safety_expand.py server/tests/test_safety_corpus.py server/tests/test_safety_gate.py -q` → 332 passed |
+| 4 | 전체 회귀 + 베이스라인 대조 | `git stash`로 HEAD(d699b54) 기준선을 재현해 실패 3건(`test_lua_responder.py`/`test_web_provision_api.py`/`test_web_reply_discovery.py`)이 본 변경 이전부터 이미 실패하고 있었음을 확인한 뒤 stash pop, 전체 스위트 재실행 | `.venv/bin/python -m pytest -q` → 1731 passed, 2 skipped, 3 failed(전부 베이스라인과 동일 — 신규 실패 0건, AC-EXECBODY-014) |
+| 5 | 경계 확인 | OSC import 경계 · 단일 분류 정의 · subagent 경계 재검증 | `grep -rn "bridge.osc\|from server.bridge" server/safety/` → 무변경(2줄, bootstrap.py + console.py 기존 라인 그대로) · `grep -c "^def classify_command" server/safety/classify.py` → 1 · `grep -rn 'AskUserQuestion\|mcp__askuser' server/safety/` → 0건 |
+
+**설계 결정 + 잔여 위험(투명 기록)**: 1단계 아이덴티티 조회는 참조 문자열 자체(예: `"Executor 201"`)를 상태-질의 경로로 그대로 재사용한다 — design.md는 정확한 경로 형태를 명시하지 않았으므로 M4 구현 결정으로 확정했다. 그러나 `console/lua/copilot_responder.lua`의 `resolve_path()`를 재확인한 결과, 이 주소 형태(`ObjectList("Executor <no>")`류)를 아직 처리하지 않는다 — DataPool/Root/ShowData/Patch 트리를 `Children()`으로 걷는 경로만 지원하며, M1/M2가 채택한 네이티브 `ObjectList()` API로의 분기는 `resolve_path` 안에 배선되어 있지 않다. 따라서 이 조회 경로가 라이브에서 실제로 해석되는지는 **미검증**이며, `console.py`에 `@MX:NOTE`로 남겨 M5/M6 라이브 보정 대상으로 명시했다 — 기존 `DEFAULT_BODY_PATHS`의 "onPC-unverified, M6 live calibration" 전제와 동일한 성격이다. 이는 M4 스코프 자체가(이번 세션 위임 프롬프트) "콘솔 불필요"로 명시된 이유와 정확히 일치하며, M4 유닛 테스트는 가짜 조회 함수를 주입하므로 이 미검증 사실과 무관하게 green이다.
+
+**제약 준수 기록**: 코드 변경은 `server/safety/console.py`(Executor 분기 신설)와 `server/tests/test_safety_console.py` + `server/tests/test_safety_classify.py`(회귀 수정)로 한정 — Macro/Plugin/Sequence 기존 코드 경로 무변경, `name` 프로퍼티 미참조(AC-EXECBODY-005), `expand.py`/`gate.py`/`classify.py`의 스크리닝 로직 무변경.
+
+**M4 시점 AC 상태 갱신**:
+
+| AC | 상태 | 근거 |
+|---|---|---|
+| AC-EXECBODY-004 | **DONE** | 기존 Macro/Plugin/Sequence 소비자 회귀 없음(332 tests green) + Executor 가산 아이덴티티 조회 관측(`TestStateBodyFetcherExecutor`) |
+| AC-EXECBODY-005 | **DONE** | 코드 리뷰 — `_fetch_executor_body`가 `name` 미참조, `node.sequenceNo`만 사용(`test_executor_identity_derivation_never_reads_name`으로 회귀 방지) |
+| AC-EXECBODY-006 | **DONE** | `test_safety_console.py` green + OSC import 경계 grep 무변경 |
+| AC-EXECBODY-007 | **DONE** | 3종 실패 경로(미할당/타임아웃/프로퍼티 부재) 개별 테스트 — 병합 없음 |
+| AC-EXECBODY-009 | **DONE** | `classify_command` 정의 1개 유지, 전체 스위트에 포함된 `test_architecture.py` green |
+| AC-EXECBODY-011 | **DONE** | `test_safety_gate.py` green(기존 안전 불변식 무변경) |
+| AC-EXECBODY-014 | **ON-TRACK** | 전체 회귀 신규 실패 0건(베이스라인 대조 완료, 위 #4) — 최종 판정은 M6 종결 시 |
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase — M4~M6 잔여>_

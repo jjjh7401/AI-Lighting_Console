@@ -413,6 +413,8 @@ class StateBodyFetcher:
 
     def fetch_body(self, reference: str) -> Sequence[str]:
         type_word, _, ref = reference.partition(" ")
+        if type_word == "Executor" and ref:
+            return self._fetch_executor_body(reference)
         template = self._templates.get(type_word)
         if template is None or not ref:
             raise BodyUnavailable(f"no body path mapping for {reference!r}")
@@ -430,3 +432,32 @@ class StateBodyFetcher:
                 raise BodyUnavailable(f"unreadable body line in {reference!r}")
             lines.append(name)
         return tuple(lines)
+
+    def _fetch_executor_body(self, reference: str) -> Sequence[str]:
+        """Executor bodies aren't ``Children()`` (M1 finding, design.md §4) —
+        delegate via the M2-exposed assigned-sequence identity instead
+        (REQ-EXECBODY-004): query the executor's own identity, then treat the
+        assigned sequence number as a Sequence reference on the already-trusted
+        body path (no new trust boundary, no name parsing — AC-EXECBODY-005).
+
+        @MX:NOTE: [AUTO] the identity query below reuses the console-address
+        form of `reference` itself (e.g. "Executor 201") as the state path.
+        `console/lua/copilot_responder.lua` resolve_path() does not yet
+        special-case this address form (it only walks DataPool/Root/ShowData/
+        Patch via Children()) — live resolution is unverified pending M5/M6
+        calibration, the same onPC-unverified posture DEFAULT_BODY_PATHS
+        already carries above.
+        """
+        try:
+            identity = self._query(reference)
+        except Exception as error:
+            raise BodyUnavailable(
+                f"identity query failed for {reference!r}: {error}"
+            ) from error
+        node = identity.get("node") if isinstance(identity, dict) else None
+        sequence_no = node.get("sequenceNo") if isinstance(node, dict) else None
+        if not isinstance(sequence_no, int):
+            raise BodyUnavailable(
+                f"{reference!r} has no assigned sequence (unassigned or identity unavailable)"
+            )
+        return self.fetch_body(f"Sequence {sequence_no}")
