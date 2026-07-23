@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-EXECBODY-001
 title: "익스큐터 할당 시퀀스 아이덴티티 노출 — 안전 게이트 본문 해석 확장"
 version: "0.1.0"
-status: draft
+status: in-progress
 created: 2026-07-23
 updated: 2026-07-23
 author: manager-spec
@@ -74,7 +74,7 @@ related_specs: [SPEC-COPILOT-EXECREF-001, SPEC-COPILOT-SHOWUI-001]
 ### B.4 Fail-closed 보존 (완화의 경계)
 
 - **REQ-EXECBODY-011** [Ubiquitous] — 익스큐터 참조 **shall** 기존 expand-or-hold 기계의 모든 보류 사유를 참조-타입-무관하게 계속 상속한다: 재귀 상한, 순환 탐지, 블랙리스트 본문 보류, 본문 부재 보류, 파싱 불가 라인 보류(EXECREF-001 REQ-EXECREF-009와 동일 계약, 무변경 상속 확인이 회귀 테스트 대상).
-- **REQ-EXECBODY-012** [Ubiquitous] — 분류 의미론 **shall** 단일하게 유지된다(기존 `@MX:ANCHOR` — 앵커 위치는 §E 참조 구현 참고). 스크리닝 경로 **shall** 정확히 하나만 존재한다(기존 `@MX:ANCHOR` — 앵커 위치는 §E 참조 구현 참고). 본 SPEC **shall not** 이 두 앵커에 익스큐터 전용 분기·제2 스크리닝을 도입한다.
+- **REQ-EXECBODY-012** [Ubiquitous] — 분류 의미론 **shall** 단일하게 유지된다(기존 `@MX:ANCHOR` — 앵커 위치는 §E 참조 구현 참고). 스크리닝 경로 **shall** 정확히 하나만 존재한다(기존 `@MX:ANCHOR` — 앵커 위치는 §E 참조 구현 참고). 본 SPEC **shall not** 이 두 앵커에 익스큐터 전용 분기·제2 스크리닝을 도입한다. *(참고 — 의도적 번들링: 세 절은 "단일성 계약"이라는 하나의 관심사를 이루므로 한 REQ ID에 묶는다. 분리 시 REQ-013~017 연쇄 재번호 + 전 아티팩트 인용 갱신이 필요해 그 자체가 인용-오류 위험이며, 세 절의 검증은 AC-EXECBODY-009와 acceptance.md §E의 앵커-무변경 게이트가 기계적으로 분담한다. plan-audit review-2 D3 advisory에 대한 기록된 비채택 결정.)*
 
 ### B.5 관측 가능한 결과 — 실제 마찰 제거 (EXECREF-001이 달성하지 못한 목표)
 
@@ -83,7 +83,7 @@ related_specs: [SPEC-COPILOT-EXECREF-001, SPEC-COPILOT-SHOWUI-001]
 
 ### B.6 cue-CMD 갭 — 계승되되 확장되지 않음
 
-- **REQ-EXECBODY-015** [Unwanted] — 본 SPEC **shall not** 게이트가 큐의 CMD(Command) 프로퍼티를 스크리닝한다고 주장하거나 암시한다. 익스큐터의 본문이 시퀀스의 큐로 해석된 이후에도, 그 큐의 "본문 라인"은 여전히 **이름**이지 CMD가 아니다(EXECREF-001 §A "cue CMD 갭" 계승, `console.py:414-432`가 여전히 `payload["children"][*]["name"]`으로 라인을 구성한다면). 이 갭의 봉쇄는 별도 권고 SPEC `SPEC-COPILOT-CUECMD-001`(EXECREF-001 research.md §5.3, 미생성, 본 SPEC과 별도로 계획됨)의 범위다.
+- **REQ-EXECBODY-015** [Unwanted] — 본 SPEC **shall not** 게이트가 큐의 CMD(Command) 프로퍼티를 스크리닝한다고 주장하거나 암시한다. 익스큐터의 본문이 시퀀스의 큐로 해석된 이후에도, 그 큐의 "본문 라인"은 여전히 **이름**이지 CMD가 아니다(EXECREF-001 §A "cue CMD 갭" 계승 — 본문-라인 구성 방식의 구체 앵커는 §E 참조 구현 참고). 이 갭의 봉쇄는 별도 권고 SPEC `SPEC-COPILOT-CUECMD-001`(EXECREF-001 research.md §5.3, 미생성, 본 SPEC과 별도로 계획됨)의 범위다.
 
 ### B.7 범위 경계의 명시적 선언
 
@@ -137,6 +137,7 @@ related_specs: [SPEC-COPILOT-EXECREF-001, SPEC-COPILOT-SHOWUI-001]
 | 로컬-인덱스 vs 콘솔-발화 번호 이중 체계 | `.moai/state/verify/showui-m6-resume/executor-offset.jsonl`(페이지 1, 8/8행, `local-index + 100 = console-no` 균일) |
 | 익스큐터 페이지-로컬 경로 해석(확인됨, ASSUMPTION-8) | `.moai/state/verify/showui-m6-resume/5-probe-body.log` — `DataPool/Pages/<page>/<local-index>` → `ok:true, class:"Executor"` |
 | 시퀀스 본문 조회(이미 신뢰되는 진입점) | `server/safety/console.py` `StateBodyFetcher.fetch_body`(414-432행), `DEFAULT_BODY_PATHS`(396-400행) |
+| cue-CMD 갭의 본문-라인 구성 (REQ-EXECBODY-015 근거) | `server/safety/console.py` `StateBodyFetcher.fetch_body`(414-432행) — 본문 라인을 `payload["children"][*]["name"]`(큐 이름)으로 구성하며 CMD 프로퍼티가 아님 |
 | 게이트-감사 상태 조회 seam | `_GateStatePort`(gate.py:114-121), 배선(`bootstrap.py:162`) |
 | 참조-타입-무관 보류 기계 | `_evaluate`(expand.py:72-125) |
 | 아이덴티티 조회 실패 시 보류 처리 (REQ-EXECBODY-006 근거) | `server/safety/expand.py` `_hold`(보류 처리 함수, `_evaluate`와 동일 파일) |

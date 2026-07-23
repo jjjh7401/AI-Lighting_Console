@@ -150,7 +150,7 @@ EXECREF-001의 교훈(design.md AP-8)을 계승한다: **부분 성공을 성공
 
 전체 회귀 스위트 **shall** run-phase 킥오프 기준선 대비 신규 실패 0건을 유지한다.
 
-- 대상 요구사항: 전체 회귀 (협상 불가)
+- 대상 요구사항: (의도적 REQ 무연결 — 전역 회귀 게이트) 본 AC는 특정 REQ가 아니라 SPEC 전체에 걸리는 품질 게이트로서 REQ-ID를 의도적으로 인용하지 않는다(plan-audit review-2 D5 관찰에 대한 본문 내 명시적 답변). 협상 불가.
 - 검증 방법: `.venv/bin/python -m pytest -q`(run-phase 킥오프 기준선 대비)
 - 기대 결과: 신규 실패 0건
 
@@ -190,5 +190,5 @@ EXECREF-001의 교훈(design.md AP-8)을 계승한다: **부분 성공을 성공
 1. M1의 결정 게이트(회피/검증/DESCOPE)가 design.md §5와 progress.md §E.2에 명시적으로 기록되어 있다 — 결과가 부정적이어도 DoD를 충족한다(정직한 DESCOPE는 유효한 완료 상태).
 2. M1이 GO로 귀결된 경우: M2~M6이 전부 완료되고, AC-EXECBODY-001~016 전부 PASS 또는 명시적으로 사유가 기록된 N/A다.
 3. M1이 DESCOPE로 귀결된 경우: spec.md의 관련 REQ가 `[DEFERRED]`로 재표기되고(manager-spec 재위임 경유), AC-EXECBODY-010은 미달성으로 정직하게 기록되며, 나머지 AC(001~003, 013~016 등 M1 범위에 해당하는 것들)는 PASS다.
-4. fail-closed 및 역주소-안전 관련 AC(007, 008, 009, 011, 013, 016)는 M1의 결과와 무관하게 항상 전량 PASS — 이는 협상 대상이 아니다.
+4. fail-closed 및 역주소-안전 관련 AC(007, 008, 009, 011, 013, 016)는 항상 전량 PASS — 이는 협상 대상이 아니다. 단, DESCOPE 분기의 명시적 escape(항목 3과의 모순 제거): AC-007/008의 검증 대상 메커니즘(M4/M5의 익스큐터-경유 본문 해석)은 DESCOPE 시 출하되지 않으므로, 이 두 AC는 "기존 fail-closed 스위트 회귀 그린(기존 테스트 전량 PASS) + 사유가 기록된 명시적 N/A"로 대체 충족된다. M1-독립적인 AC-009/011/013/016은 어느 분기에서든 문자 그대로 전량 PASS여야 한다.
 5. `SPEC-COPILOT-CUECMD-001`이 본 SPEC의 커밋 범위에 등장하지 않는다(AC-EXECBODY-012).

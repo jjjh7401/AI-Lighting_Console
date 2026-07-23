@@ -109,7 +109,7 @@ EXECREF-001이 확립한 규율을 그대로 계승한다: **부분 성공을 �
 | CUECMD-001 번들 여부 | 번들하지 않는다 — 별도 계획 세션으로 이관(이번 세션 사용자 결정). | spec.md REQ-EXECBODY-016, §D |
 | 역주소 문제 처리 순서 | 회피(콘솔 네이티브 해석) 우선 → 검증된 관례 차선 → DESCOPE 최후. 각주가 아니라 M1을 첫 마일스톤이자 결정 게이트로 배치. | spec.md §A/B.3, plan.md M1, §A.3 |
 | ASSUMPTION 번호 | EXECREF-001 ASSUMPTION-8/9 다음 번호(10/11/12) 계승. 등재는 sync-phase 선택 항목(EXECREF-001 선례와 동일). | spec.md §C |
-| frontmatter 참조 | `related_specs`(비차단) — EXECREF-001·SHOWUI-001 모두 completed이나 관례 일관성을 위해 depends_on 대신 related_specs 유지. | spec.md frontmatter |
+| frontmatter 참조 | `related_specs`(비차단) — EXECREF-001은 completed 확인됨, SHOWUI-001은 이 워크트리 기준 `in-progress`(히스토리 M1까지)로 완료 미확정(spec.md §C 검증 서술과 일치). 어느 쪽이든 본 SPEC을 차단하지 않으므로 depends_on 대신 related_specs 유지. | spec.md frontmatter |
 | Tier 판단 | L — 콘솔측 Lua + 와이어 프로토콜 + Python 세이프티 게이트 + 배포 체인 + 안전-인접 설계 결정(역주소 문제)이 결합되어 EXECREF-001과 동일한 도메인에서 EXECREF-001보다 넓은 파일 표면(응답기 포함)을 다룬다. | spec.md frontmatter `tier: L` |
 
 ## §G. Phase 4 Mode Selection — 사전 평가 (오케스트레이터 확정용 권고)
