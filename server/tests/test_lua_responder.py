@@ -238,6 +238,85 @@ class TestExecutorSequenceIdentity:
         assert "sequenceNo" not in payload["node"]
 
 
+class TestExecutorAddressResolution:
+    """resolve_path resolves the "Executor <n>" console-address form via the
+    native ObjectList() API (M6, design.md §5.8, REQ-EXECBODY-004) instead of
+    failing "path segment not found" -- executors are paged, so DataPool's
+    tree-walk / pool-slot numbering does NOT correspond to the
+    console-displayed number (the reverse-address problem M1 investigated).
+    """
+
+    def test_executor_address_resolves_via_object_list(self):
+        harness = ResponderHarness(
+            extra_env=(
+                "local node = __NODE\n"
+                'local exec = node("Exec 201", "Executor")\n'
+                '__OBJECT_LIST = { ["Executor 201"] = { exec } }\n'
+                "function ObjectList(addr) return __OBJECT_LIST[addr] end\n"
+            )
+        )
+        harness.main(None, "state 40 Executor 201")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is True, payload
+        assert payload["node"]["class"] == "Executor"
+
+    def test_executor_address_exposes_assigned_sequence_end_to_end(self):
+        # Composes with M2 (§4.2 node.sequenceNo) — the exact wire shape
+        # server/safety/console.py's _fetch_executor_body (M4) consumes.
+        harness = ResponderHarness(
+            extra_env=(
+                "local node = __NODE\n"
+                'local exec = node("Exec 201", "Executor")\n'
+                'local seq = node("Sequence 71", "Sequence")\n'
+                "function seq:Index() return 71 end\n"
+                "exec.Object = seq\n"
+                '__OBJECT_LIST = { ["Executor 201"] = { exec } }\n'
+                "function ObjectList(addr) return __OBJECT_LIST[addr] end\n"
+            )
+        )
+        harness.main(None, "state 41 Executor 201")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is True, payload
+        assert payload["node"]["sequenceNo"] == 71
+
+    def test_object_list_returning_nothing_holds_as_unavailable(self):
+        harness = ResponderHarness(extra_env="function ObjectList(addr) return nil end\n")
+        harness.main(None, "state 42 Executor 999")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is False
+        assert "Executor 999" in payload["error"]
+
+    def test_object_list_wrong_class_holds_as_unavailable(self):
+        harness = ResponderHarness(
+            extra_env=(
+                "local node = __NODE\n"
+                'local wrong = node("Not An Exec", "Sequence")\n'
+                '__OBJECT_LIST = { ["Executor 5"] = { wrong } }\n'
+                "function ObjectList(addr) return __OBJECT_LIST[addr] end\n"
+            )
+        )
+        harness.main(None, "state 43 Executor 5")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is False
+        assert "Executor 5" in payload["error"]
+
+    def test_object_list_absent_entirely_holds_gracefully(self):
+        # ObjectList() doesn't exist in the default mock env at all -- pcall
+        # must catch the nil-call, not crash the responder.
+        harness = ResponderHarness()
+        harness.main(None, "state 44 Executor 7")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is False
+
+    def test_non_executor_paths_still_walk_the_tree(self):
+        # Regression: the DataPool tree-walk resolution path is unaffected.
+        harness = ResponderHarness()
+        harness.main(None, "state 45 DataPool/Sequences")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is True
+        assert payload["node"]["name"] == "Sequences"
+
+
 class TestPoolSlotContract:
     """The snapshot child ``i`` is the REAL pool slot — or it is absent.
 

@@ -38,8 +38,11 @@ local M = {
     -- 1.1.0: additive deploy verb (M7). 1.2.0: snapshot `i` is the REAL pool
     -- slot and is omitted when unknown (was the loop position). 1.3.0:
     -- send_reply tries EVERY send variant, not just the configured one then
-    -- cmd_keyword. Protocol v1 throughout.
-    VERSION = "1.3.0",
+    -- cmd_keyword. 1.4.0: resolve_path resolves "Executor <n>" via the
+    -- native ObjectList() API (SPEC-COPILOT-EXECBODY-001 M6) instead of
+    -- failing with "path segment not found" -- every other path is
+    -- unaffected. Protocol v1 throughout.
+    VERSION = "1.4.0",
     PROTO = 1,
     CONFIG = CONFIG,
 }
@@ -381,9 +384,42 @@ function M.find_child(handle, segment)
     return nil
 end
 
+-- Console-address form (M1/M4/M6, design.md §5.8): "Executor <n>" resolves
+-- directly via the native ObjectList() API instead of a DataPool tree walk.
+-- Executors are paged and DataPool/Executor's pool-slot numbering does NOT
+-- correspond to the console-displayed number (the reverse-address problem
+-- M1 investigated) -- ObjectList("Executor <console_no>")[1] is the API M1's
+-- live probe confirmed resolves the correct object (design.md §5.8/§5.9).
+-- This is the ONLY address form resolve_path special-cases; every other
+-- path still walks the DataPool/Root/ShowData/Patch tree below unchanged.
+local EXECUTOR_ADDRESS_PATTERN = "^Executor%s+(%d+)$"
+
+-- Returns (handle, err, matched). `matched` disambiguates "this path IS an
+-- Executor address" (in which case handle/err is authoritative -- caller
+-- must not fall through to the tree walk) from "not this address form".
+function M.resolve_executor_address(path)
+    local console_no = path:match(EXECUTOR_ADDRESS_PATTERN)
+    if not console_no then
+        return nil, nil, false
+    end
+    local ok, list = pcall(function() return ObjectList("Executor " .. console_no) end)
+    if not ok or type(list) ~= "table" or not list[1] then
+        return nil, string.format("ObjectList('Executor %s') unavailable", console_no), true
+    end
+    local handle = list[1]
+    if M.safe_class(handle) ~= "Executor" then
+        return nil, string.format("ObjectList('Executor %s') did not return an Executor", console_no), true
+    end
+    return handle, nil, true
+end
+
 function M.resolve_path(path)
     if type(path) ~= "string" or path == "" then
         return nil, "empty object path"
+    end
+    local executor_handle, executor_err, is_executor_address = M.resolve_executor_address(path)
+    if is_executor_address then
+        return executor_handle, executor_err
     end
     local segments = {}
     for segment in path:gmatch("[^/]+") do
