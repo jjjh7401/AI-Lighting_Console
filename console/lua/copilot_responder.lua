@@ -186,6 +186,27 @@ function M.safe_class(handle)
     return "?"
 end
 
+-- Executor-only: the object (sequence) assigned to this executor, or nil.
+-- Live-verified on 2.4.2 (SPEC-COPILOT-EXECBODY-001 design.md §5.9,
+-- ASSUMPTION-12): `.Object` and both `:Get()` casings return the same handle.
+-- Never derives identity from a display name (AC-EXECBODY-005) — the caller
+-- still confirms GetClass() and reads the number via its own accessor.
+function M.safe_object(handle)
+    local ok, value = pcall(function() return handle.Object end)
+    if ok and value then
+        return value
+    end
+    ok, value = pcall(function() return handle:Get("Object") end)
+    if ok and value then
+        return value
+    end
+    ok, value = pcall(function() return handle:Get("object") end)
+    if ok and value then
+        return value
+    end
+    return nil
+end
+
 -- -- pool-slot resolution (the listing position is NOT an address) -----------
 
 -- @MX:ANCHOR: [AUTO] pool-slot contract — a child's slot is reported ONLY when
@@ -476,6 +497,28 @@ function M.build_snapshot(id, path)
         children = items,
         truncated = cap < total,
     }
+    -- Executor-only branch (REQ-EXECBODY-003, additive — AC-EXECBODY-004):
+    -- expose the assigned sequence's pool number so a safety-gate caller can
+    -- delegate body lookup to the already-trusted sequence path instead of
+    -- Children() (which an executor never populates). Reuses SLOT_PROBES/
+    -- as_slot — the exact accessors design.md §5.9 confirmed live — never the
+    -- display name (AC-EXECBODY-005). Omitted whenever the identity cannot be
+    -- established, matching the existing child-slot omission convention.
+    if payload.node.class == "Executor" then
+        local assigned = M.safe_object(handle)
+        if assigned and M.safe_class(assigned) == "Sequence" then
+            for _, probe in ipairs(SLOT_PROBES) do
+                local ok, raw = pcall(probe, assigned)
+                if ok then
+                    local slot = as_slot(raw)
+                    if slot then
+                        payload.node.sequenceNo = slot
+                        break
+                    end
+                end
+            end
+        end
+    end
     -- Size guard: drop trailing children until the encoded payload fits the
     -- UDP budget (documented in PROTOCOL.md §4).
     while #M.encode_payload(payload) > CONFIG.max_payload and #items > 0 do

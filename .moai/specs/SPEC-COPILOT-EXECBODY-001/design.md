@@ -1,6 +1,6 @@
 # SPEC-COPILOT-EXECBODY-001 — 설계 근거 (design)
 
-status: in-progress (v0.1.0, 2026-07-23) · Tier L · 구현 코드 없음. §5(역주소 문제 해소)는 **열린 슬롯**이다 — M1의 콘솔-프리(오프라인) 조사는 2026-07-23 완료되었고(§5.4), 그 결과 결정 게이트는 **VERIFY-PENDING**(라이브 프로브 대기, §5.7)이다. 슬롯은 다음 라이브 세션의 프로브(§5.5/§5.6)로 닫힌다. EXECREF-001의 §5가 처음에는 열려 있다가 라이브 프로브 결과로 닫힌 것과 동일한 구조다.
+status: in-progress (v0.1.0, 2026-07-23) · Tier L · M2 구현 진행 중. §5(역주소 문제 해소)는 **닫혔다** — M1 라이브 프로브(§5.8)가 주소 해석(ASSUMPTION-10)을 GO로 확정했고, M2 착수 직전 추가 프로브(§5.9)가 익스큐터→시퀀스 아이덴티티 접근자(ASSUMPTION-12)를 VERIFIED로 닫았다. `console/lua/copilot_responder.lua`의 `Executor` 분기(`node.sequenceNo`)가 §5.9의 API로 구현되었다.
 
 ## §1. 설계 의도
 
@@ -199,6 +199,46 @@ try("C4 tostring(exec)",      function() return tostring(exec) end)
 **M2 채택 API**: `ObjectList("Executor " .. console_no)[1]`을 호출해 핸들을 얻고, `handle:GetClass() == "Executor"`로 아이덴티티를 확인한 뒤 `handle:Index()`로 페이지-로컬 인덱스를 얻는다. `Obj()`는 기존 전역과 충돌하므로 사용하지 않는다. `FromAddr()`은 이 입력 형식에 대해 무의미(nil)했으므로 채택하지 않는다.
 
 **콘솔 잔여 정리 항목**(다음 세션 또는 사용자가 직접): Plugins 풀 슬롯 5 `UserPlugin 5`(현재 프로브 스크립트 보관 중), Macros 풀 슬롯 13(빈 오브젝트, 본 세션 실수로 생성), 150~154·160~166·169(프로브 결과 라벨). 전부 쇼파일 무해 잔여물이며 삭제해도 M2 구현에 영향 없음.
+
+### §5.9 M2 사전 프로브 — P-B/ASSUMPTION-12 확정 (2026-07-23, 콘솔 라이브 — 실측)
+
+M2 착수 전 재점검에서, plan.md §B M1 세 번째 조사 항목("익스큐터→시퀀스 프로퍼티 접근성", ASSUMPTION-12)이 §5.8의 라이브 프로브 세션에서 실제로는 테스트되지 않았음을 발견했다 — §5.5 P-B 스니펫은 작성만 되고 실행되지 않은 채 M1 게이트가 GO로 닫혔다. ASSUMPTION-12 없이 M2 코드를 쓰는 것은 AP-7(라이브 조사 없는 후보 채택)과 동일한 위험이므로, M2 착수 직전에 2라운드 추가 라이브 프로브를 수행했다.
+
+**1차 프로브**(`execbody_probe_v5.lua`, Macro 170~176 — `ObjectList("Executor 201")[1]`에서 후보 접근자 5종 시도):
+
+| ID | 접근자 | ok | type | 값(sanitize) |
+|---|---|---|---|---|
+| 171 | `exec.Object` | true | userdata | `Sequence 71` |
+| 172 | `exec:Get("Object")` | true | userdata | `Sequence 71` |
+| 173 | `exec:Get("object")` | true | userdata | `Sequence 71` |
+| 174 | `exec.Assign` | true | nil | (프로퍼티 부재) |
+| 175 | `exec:Get("Assign")` | true | nil | (프로퍼티 부재) |
+
+세 형태(`.Object`/`:Get("Object")`/`:Get("object")`) 모두 동일한 핸들을 반환했다 — §5.8의 `.name` 관측("Sequence 71")과 독립적으로 수렴. `Assign` 계열은 존재하지 않는 프로퍼티(에러가 아니라 `nil`)로 확인되어 기각.
+
+**2차 프로브**(`execbody_probe_v6.lua`, Macro 180~186 — 1차가 반환한 `exec.Object` 핸들 자체를 검사):
+
+| ID | 접근자 | ok | type | 값 |
+|---|---|---|---|---|
+| 181 | `seq:GetClass()` | true | string | `Sequence` |
+| 182 | `seq:Index()` | true | number | **71** |
+| 183 | `seq:Get("No")` | true | number | **71** |
+| 184 | `seq:Get("no")` | true | number | **71** |
+| 185 | `seq.name` | true | string | `Sequence 71` |
+
+GUI 확인(시퀀스 풀 화면 캡처): 풀 슬롯 71에 실제 오브젝트(무명, 클래스 기본 표시 "Sequence") 존재 — `seq:Index()`가 돌려준 71과 정확히 일치.
+
+**판정**: ASSUMPTION-12 **VERIFIED**. `exec.Object`(또는 `:Get("Object")`/`:Get("object")`, 셋 다 동등)가 할당된 시퀀스 핸들을 반환하고, 그 핸들의 `GetClass()=="Sequence"` + `:Index()`(또는 `:Get("No")`/`:Get("no")`)가 실제 풀 번호를 이름-파싱 없이 반환한다. `seq.name`("Sequence 71")은 참고용으로만 관측되며 아이덴티티 도출에는 사용하지 않는다(AC-EXECBODY-005 — EXECREF-001 REQ-EXECREF-007과 동일한 취약성 부류: 표시 이름은 사용자가 바꾸면 깨진다).
+
+**M2 채택 API**:
+```lua
+local assigned = handle.Object  -- (또는 handle:Get("Object")/:Get("object"))
+if assigned and assigned:GetClass() == "Sequence" then
+    local seq_no = assigned:Index()  -- (또는 :Get("No")/:Get("no"))
+end
+```
+
+**구현**: `console/lua/copilot_responder.lua`에 `M.safe_object`(신규 헬퍼, `safe_name`/`safe_class`와 동일한 다중-폼 방어 패턴)를 추가하고, `build_snapshot`의 `Executor` 분기가 `node.sequenceNo`를 가산적으로 노출한다(PROTOCOL.md §4.2). 시퀀스 번호 추출은 ASSUMPTION-7의 `SLOT_PROBES`/`as_slot`을 그대로 재사용했다 — 별도 프로브 목록을 새로 만들지 않았다(단순성 원칙). PROTOCOL_VERSION은 범프하지 않는다(가산 필드, ASSUMPTION-6/§4.5와 동일 선례). 콘솔 잔여물: Macro 170~176·180~186(전부 쇼파일 무해, 정리는 §5.8과 동일하게 대기).
 
 ## §6. 테스트 설계 방향
 

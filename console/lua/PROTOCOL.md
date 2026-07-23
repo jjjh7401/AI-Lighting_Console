@@ -151,6 +151,21 @@ Success (depth-1 snapshot of the resolved node):
   bytes — UDP budget). `truncated:true` signals a partial listing;
   `node.childCount` always carries the real total. Deeper inspection =
   follow-up query on a child path.
+- **`node.sequenceNo`** (additive, `Executor` nodes only, SPEC-COPILOT-EXECBODY-001
+  M2/REQ-EXECBODY-003): the pool number of the sequence assigned to this
+  executor, e.g. `{"name":"Exec 201", "class":"Executor", "childCount":0,
+  "sequenceNo":71}`. `Executor.Children()` never populates (the executor's
+  assigned sequence is not a child), so this is the sole body-identity path
+  for executors. Present only when `handle.Object` (or `:Get("Object")` /
+  `:Get("object")`) resolves to a handle whose `GetClass()` is `"Sequence"`
+  AND that handle's own pool number was established via the SAME
+  self-index-accessor set used for child slots (ASSUMPTION-7/§6) — never by
+  parsing the executor's `name` (AC-EXECBODY-005: `name` is user-editable and
+  not guaranteed to encode the assignment, per ASSUMPTION-12/§6). Absent
+  entirely (no `sequenceNo` key) when unassigned, wrongly-classed, or the
+  number could not be established — consumers MUST treat absence as "unknown"
+  and never substitute a guess. Wire protocol version stays 1 (additive field
+  on an existing reply kind — same precedent as ASSUMPTION-6/§4.5).
 - Failure: `{"v":1,"kind":"state","id":"<id>","path":"...","ok":false,"error":"<message>"}`
 
 ### 4.3 `result` (execution result — on `/copilot/feedback`, REQ-MVP-004)
@@ -236,6 +251,19 @@ Recorded per Section E honesty rules; the round-trip tool
   deliberately gapped pool (e.g. groups at 1, 5, 7) and reading the `i`
   values: `1,5,7` = (a) works; `1` plus two number-less entries = (b) only;
   `1,2,3` = **neither** — do not trust any reported pool number.
+- **ASSUMPTION-12 (executor → assigned-sequence accessor, VERIFIED on 2.4.2,
+  SPEC-COPILOT-EXECBODY-001 M1/M2)**: an executor handle exposes its assigned
+  sequence via `.Object` (also reachable as `:Get("Object")` / `:Get("object")`,
+  all three confirmed equivalent live) — a real object handle (`userdata`),
+  NOT the executor's display name. On that handle, `GetClass()` returns the
+  string `"Sequence"` and the same self-index-accessor set as ASSUMPTION-7
+  (`:Index()` / `:Get("No")` / `:Get("no")`, all three confirmed) returns its
+  real pool number. `.Assign` / `:Get("Assign")` do NOT exist (both probed:
+  `nil`, no error). Live evidence: `.moai/state/verify/execbody_probe_v5.lua`
+  (round 1 — accessor existence) and `execbody_probe_v6.lua` (round 2 —
+  class + number confirmation), full record in design.md §5.9. Consumed by
+  `M.safe_object` + the `Executor` branch of `build_snapshot` (§4.2
+  `node.sequenceNo`).
 - **DEFERRED (fixture id in the snapshot)** — NOT assumed, NOT implemented.
   A child of `Patch/Stages/1/Fixtures` carries only its container slot (`i`),
   never its fixture id (FID), so `Fixture <i>` selects the wrong rig whenever

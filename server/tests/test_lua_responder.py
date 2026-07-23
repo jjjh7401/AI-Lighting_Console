@@ -176,6 +176,68 @@ class TestStateSnapshot:
         assert payload["ok"] is False
 
 
+class TestExecutorSequenceIdentity:
+    """The Executor-only additive field (M2, REQ-EXECBODY-003/AC-EXECBODY-004).
+
+    Live-verified (SPEC-COPILOT-EXECBODY-001 design.md §5.9): ``exec.Object``
+    returns a handle to the assigned sequence; ``GetClass()`` on that handle
+    is ``"Sequence"`` and ``:Index()`` is its real pool number. The field is
+    additive and omitted whenever the identity cannot be established —
+    AC-EXECBODY-005 forbids deriving it from the executor's display name.
+    """
+
+    def _exec_env(self, object_snippet: str = "") -> str:
+        return (
+            "local node = __NODE\n"
+            'local exec = node("Exec 1", "Executor")\n'
+            f"{object_snippet}\n"
+            '__DATAPOOL = node("Default", "DataPool", {\n'
+            '    node("Execs", "Pool", { exec }),\n'
+            "})\n"
+            "function DataPool() return __DATAPOOL end\n"
+        )
+
+    def test_assigned_sequence_number_is_exposed(self):
+        harness = ResponderHarness(
+            extra_env=self._exec_env(
+                'local seq = node("Sequence 71", "Sequence")\n'
+                "function seq:Index() return 71 end\n"
+                "exec.Object = seq\n"
+            )
+        )
+        harness.main(None, "state 30 DataPool/Execs/Exec 1")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is True, payload
+        assert payload["node"]["name"] == "Exec 1"
+        assert payload["node"]["class"] == "Executor"
+        assert payload["node"]["sequenceNo"] == 71
+
+    def test_unassigned_executor_omits_the_field(self):
+        harness = ResponderHarness(extra_env=self._exec_env())
+        harness.main(None, "state 31 DataPool/Execs/Exec 1")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is True, payload
+        assert "sequenceNo" not in payload["node"]
+
+    def test_object_of_the_wrong_class_omits_the_field(self):
+        harness = ResponderHarness(
+            extra_env=self._exec_env(
+                'local other = node("Weird", "Preset")\nexec.Object = other\n'
+            )
+        )
+        harness.main(None, "state 32 DataPool/Execs/Exec 1")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is True, payload
+        assert "sequenceNo" not in payload["node"]
+
+    def test_non_executor_node_never_carries_the_field(self):
+        harness = ResponderHarness()
+        harness.main(None, "state 33 DataPool/Sequences/Sequence 1")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is True, payload
+        assert "sequenceNo" not in payload["node"]
+
+
 class TestPoolSlotContract:
     """The snapshot child ``i`` is the REAL pool slot — or it is absent.
 

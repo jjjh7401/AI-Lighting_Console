@@ -46,6 +46,30 @@ _<pending plan-audit>_
 
 **제약 준수 기록**: 코드 변경 없음(`console/lua/**`·`server/**` 미수정 — M1은 조사 전용, 라이브 프로브는 임시 Macro/Plugin 풀 오브젝트만 생성). 프로브 산출물은 `.moai/state/verify/execbody_probe_v3.lua`/`v4.lua`에 저장. 콘솔에 남은 잔여물(빈 `UserPlugin 5`, 빈 `Macro 13`, 라벨 macro 150~154·160~166·169)은 쇼파일에 무해하며 정리 대기 중(design.md §5.8 말미 기록). 커밋: Part A `2ba9b2c`, M1 조사 커밋 + 본 라이브 프로브 커밋(design.md §5.7/§5.8 + progress.md 갱신).
 
+### M2 — Lua 응답기 확장, 익스큐터 전용 아이덴티티 노출 (2026-07-23)
+
+M2 착수 직전 재점검에서 ASSUMPTION-12(익스큐터→시퀀스 프로퍼티 접근성)가 M1 라이브 프로브 세션에서 실제로는 테스트되지 않았음을 발견(§5.5 P-B 스니펫 미실행 상태로 M1 게이트가 GO 처리됨). 사용자 확인 후 2라운드 추가 라이브 프로브를 실행해 닫았다(design.md §5.9 전문).
+
+| # | 작업 | 커맨드/방법 | 결과 |
+|---|---|---|---|
+| 1 | ASSUMPTION-12 1차 프로브(접근자 존재) | `execbody_probe_v5.lua` 콘솔 실행, Macro 170~176 | `exec.Object`/`:Get("Object")`/`:Get("object")` 3형태 모두 동일 핸들 반환(userdata, "Sequence 71") |
+| 2 | ASSUMPTION-12 2차 프로브(클래스+번호) | `execbody_probe_v6.lua` 콘솔 실행, Macro 180~186 | `GetClass()=="Sequence"`; `:Index()`/`:Get("No")`/`:Get("no")` 모두 **71** — GUI 시퀀스 풀 슬롯 71과 일치 |
+| 3 | RED — 실패 테스트 작성 | `server/tests/test_lua_responder.py::TestExecutorSequenceIdentity` 4건 신설 | 양성 케이스 `KeyError: 'sequenceNo'` 확인(구현 부재 검증) |
+| 4 | GREEN — 구현 | `console/lua/copilot_responder.lua`: `M.safe_object` 신규 헬퍼 + `build_snapshot`의 `Executor` 분기(`node.sequenceNo`, ASSUMPTION-7 `SLOT_PROBES`/`as_slot` 재사용) | `luac -p` 통과; `pytest server/tests/test_lua_responder.py` 47/47 green(신규 4건 포함, 회귀 0건) |
+| 5 | 문서 폴드인 | design.md §5.9 + 상단 status 갱신, PROTOCOL.md §4.2(`node.sequenceNo`) + §6(ASSUMPTION-12) | 완료 |
+
+**PROTOCOL_VERSION 결정**: 범프하지 않음 — 가산 필드(기존 `{name,class,i}` 소비자 무변경 확인, AC-EXECBODY-004), ASSUMPTION-6/§4.5와 동일 선례.
+
+**M2 시점 AC 상태 갱신**(전량 판정은 run-phase 종결 시 최종 매트릭스로 대체):
+
+| AC | 상태 | 근거 |
+|---|---|---|
+| AC-EXECBODY-003 | **DONE** | ASSUMPTION-12 라이브 확인(design.md §5.9, execbody_probe_v5/v6) |
+| AC-EXECBODY-004 | **DONE** | `node.sequenceNo` 가산 노출 + 기존 `{name,class,i}` 소비자 회귀 없음(47/47 green) |
+| AC-EXECBODY-005 | **DONE** | 구현 코드 리뷰 확인 — `M.safe_object`/`build_snapshot` Executor 분기 어디에도 `handle.name` 미참조(아이덴티티는 `GetClass()`+인덱스 접근자로만 도출) |
+
+**제약 준수 기록**: 코드 변경은 `console/lua/copilot_responder.lua`(응답기)와 `server/tests/test_lua_responder.py`(테스트)로 한정 — `server/safety/**`(M4 스코프) 미수정. 콘솔 잔여물: Macro 170~176·180~186(쇼파일 무해, §5.8과 동일하게 정리 대기).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
