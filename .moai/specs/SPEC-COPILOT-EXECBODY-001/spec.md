@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-EXECBODY-001
 title: "익스큐터 할당 시퀀스 아이덴티티 노출 — 안전 게이트 본문 해석 확장"
 version: "0.1.0"
-status: in-progress
+status: completed
 created: 2026-07-23
-updated: 2026-07-23
+updated: 2026-07-24
 author: manager-spec
 priority: P2
 phase: "Post-MVP 연출 UI 하드닝 (v1.1.0 target)"

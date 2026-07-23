@@ -201,4 +201,8 @@ M1~M6 전 마일스톤 완료. M1=GO(정체 해석 확정), M2(sequenceNo 노출
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+sync_status: audit-ready
+sync_complete_at: 2026-07-24T09:10:00+09:00
+sync_commit_sha: pending-backfill-execbody-sync
+
+CHANGELOG.md `[Unreleased]` §Added에 SPEC-COPILOT-EXECBODY-001 항목 신설(M1~M6 전체 요약, 16개 AC 전량 검증 명시). spec.md 프런트매터 `status: in-progress → completed`, `updated: 2026-07-23 → 2026-07-24`. design.md 본문 상태 표기 `status: in-progress → completed`. plan.md / acceptance.md / research.md는 sync 착수 시점에 `status: draft`였으므로(본 SPEC의 sync-phase 진입 조건 "currently reads status: in-progress"를 충족하지 않음) 변경하지 않았다 — spec.md·design.md만 in-progress → completed 전환 대상이었다. MX 태그: `console/lua/copilot_responder.lua` `resolve_executor_address`/`build_snapshot` Executor 분기, `server/safety/console.py` `_fetch_executor_body`는 fan_in < 3(각각 단일 호출부: `resolve_path`, `StateBodyFetcher.fetch_body`)이라 `@MX:ANCHOR` 신설 기준 미충족 — run-phase에서 이미 추가된 `@MX:NOTE` 설명(M1~M6 근거 인라인 주석)이 충분해 신규/수정 태그 없음.

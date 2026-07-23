@@ -1,6 +1,6 @@
 # SPEC-COPILOT-EXECBODY-001 — 설계 근거 (design)
 
-status: in-progress (v0.1.0, 2026-07-23) · Tier L · M2 구현 진행 중. §5(역주소 문제 해소)는 **닫혔다** — M1 라이브 프로브(§5.8)가 주소 해석(ASSUMPTION-10)을 GO로 확정했고, M2 착수 직전 추가 프로브(§5.9)가 익스큐터→시퀀스 아이덴티티 접근자(ASSUMPTION-12)를 VERIFIED로 닫았다. `console/lua/copilot_responder.lua`의 `Executor` 분기(`node.sequenceNo`)가 §5.9의 API로 구현되었다.
+status: completed (v0.1.0, 2026-07-24) · Tier L · M1~M6 전 마일스톤 완료, AC-EXECBODY-010 라이브 인수 완료. §5(역주소 문제 해소)는 **닫혔다** — M1 라이브 프로브(§5.8)가 주소 해석(ASSUMPTION-10)을 GO로 확정했고, M2 착수 직전 추가 프로브(§5.9)가 익스큐터→시퀀스 아이덴티티 접근자(ASSUMPTION-12)를 VERIFIED로 닫았다. `console/lua/copilot_responder.lua`의 `Executor` 분기(`node.sequenceNo`)가 §5.9의 API로 구현되었다.
 
 ## §1. 설계 의도
 
