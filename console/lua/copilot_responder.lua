@@ -24,7 +24,7 @@
 
 -- User-tunable configuration (see console/lua/README.md).
 local CONFIG = {
-    osc_slot = 1, -- row index in the console's OSC settings used for replies
+    osc_slot = 2, -- row index in the console's OSC settings used for replies (row 2 = Send=Yes; row 1 is Receive-only)
     state_address = "/copilot/state",
     feedback_address = "/copilot/feedback",
     max_children = 24, -- snapshot child cap (UDP payload budget)

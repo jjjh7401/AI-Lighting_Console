@@ -84,9 +84,30 @@ M2 착수 직전 재점검에서 ASSUMPTION-12(익스큐터→시퀀스 프로�
 
 **정정 — `osc_slot` 판단 보류 (재검토 필요)**: 위 #1에서 "osc_slot=1이 레포 기본값·설치본 일치라 수정 불필요"라고 판단했으나, 이전 세션 메모(`copilot-onpc-site-config.md`, 2026-07-22)는 "행 1(Destination IP가 브로드캐스트)은 Send=No라 응답 전송에 못 쓰고, 응답은 반드시 행 2(127.0.0.1 목적지)를 통해 나가야 하므로 `CONFIG.osc_slot`은 2여야 한다"고 명시적으로 기록해뒀었다. 오늘 화면 확인 결과 행 1=Receive만/행 2=Send만으로 방향이 분리되어 있어 이 이전 기록과 방향상 일치하지만, **오늘의 라이브 테스트는 osc_slot이 관여하는 응답(Send) 단계에 도달하기 전, 더 앞 단계(요청이 콘솔에 도달하는지 자체)에서 이미 실패**했기 때문에 osc_slot=1이 실제로 맞는지 틀린지는 검증되지 않았다. 다음 세션에서 수신 문제를 먼저 풀고, 그 다음 osc_slot이 실제 응답 경로(행 2)를 가리키는지 별도로 재확인할 것 — 지금 상태를 "확인됨"으로 취급하지 말 것.
 
+### M3 — 블로커 해소 + 라이브 재검증 PASS (2026-07-23, 세션 재개)
+
+| # | 작업 | 커맨드/방법 | 결과 |
+|---|---|---|---|
+| 1 | 수신 문제 원인 확인 | 콘솔 In & Out → OSC 화면 스크린샷 확인: 행 1(OSCData 1) `Receive=Yes / Receive Command=Yes / Echo Input=Yes` 전부 이미 켜져 있음 — 행별 세부 토글 문제는 아님으로 배제 | ReceiveCommand 누락 가설 기각 |
+| 2 | 소켓 재바인딩 시도 | 사용자가 콘솔에서 `Enable Input`/`Enable Output` 토글을 실제로 껐다 켜는 사이클 수행(꺼짐=회색 텍스트 → 켜짐=노란 텍스트, 스크린샷으로 상태 전환 확인) | 이전 세션 메모(`copilot-m6b2-live-verified.md`)의 "소켓 낡음 — Enable 사이클 필요" 노하우 재적용 |
+| 3 | 수신 재검증(M1 raw 도구) | `.venv/bin/python -m server.tools.osc_smoke --host 127.0.0.1 --port 8000 --listen-port 9005 --wait 5 "List"` | 콘솔 피드백 화면에 `OK:List` 확인(사용자 스크린샷) — **수신 문제 해소** |
+| 4 | 전체 왕복 1차 재시도(응답기 경유) | `.venv/bin/python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9005 --path "DataPool/Sequences" --exec-command "List" --wait 5` | ping/state/exec 전부 timeout — 수신은 되지만 응답(Send)이 안 돌아옴. 구조적으로 `CONFIG.osc_slot=1`(행 1=Send:No)로는 응답 전송 자체가 불가능함이 화면상 확정(행 2만 Send:Yes) |
+| 5 | `osc_slot` 수정 | 레포 소스(`console/lua/copilot_responder.lua:27`)와 콘솔에 설치된 파일(`~/MALightingTechnology/gma3_library/datapools/plugins/copilot_responder.lua:27`) 둘 다 `osc_slot = 1` → `osc_slot = 2`로 수정 | 이전 세션 메모(`copilot-onpc-site-config.md`, `copilot-m6b2-live-verified.md`)가 기록해둔 "osc_slot=2여야 한다"가 실측으로 확정됨 |
+| 6 | 재-Import + 재검증 | 사용자가 콘솔에서 `Import Plugin "copilot_responder"` 재실행(Plugins 풀 슬롯 1 갱신 확인) → 동일 `responder_roundtrip` 커맨드 재실행 | `[PASS] ping: ok` / `[PASS] state: ok node={'childCount': 15, 'class': 'Sequences', 'name': 'Sequences'} children=15` / `[PASS] exec: ok` / `result: PASS` |
+
+**M3 블로커 해소 확정**: 이전 세션에서 미해결로 남겼던 수신 불능 문제는 grandMA3 OSC 서브시스템의 "낡은 소켓" 특성(설정을 바꿔도 자동 재바인딩되지 않음 — Enable Input/Output을 껐다 켜야 함)이 원인이었다. 수신이 뚫린 뒤 곧바로 응답 실패가 드러났는데, 이는 `CONFIG.osc_slot`이 Send 불가능한 행(1)을 가리키고 있었기 때문이며, 2026-07-22 메모가 이미 정확히 지목했던 원인이었다. 두 문제 모두 해소되어 M3의 라이브 재검증(ping/state/exec)이 PASS로 마감됨. 코드 변경 범위: `console/lua/copilot_responder.lua` 1줄(osc_slot 값)만 — README.md의 "osc_slot은 앱 Settings에서 렌더링, 손수정은 재설치 시 되돌아감" 경고는 이번 수정이 앱 자동배포가 아닌 수동 Import 경로였으므로 해당 없음(다음에 앱을 통한 정식 배포가 있을 경우 앱 Settings 값도 2로 맞춰야 함 — 후속 확인 필요).
+
+**M3 시점 AC 상태 갱신**:
+
+| AC | 상태 | 근거 |
+|---|---|---|
+| AC-EXECBODY-012 (라이브 왕복, 있다면) | **DONE** | `responder_roundtrip` PASS(ping/state/exec), 위 §E.2 표 근거 |
+
+**제약 준수 기록**: 코드 변경은 `console/lua/copilot_responder.lua`의 `CONFIG.osc_slot` 1줄로 한정 — 다른 로직 미변경. 진단용 임시 스크립트 없음(기존 `server/tools/osc_smoke.py`, `server/tools/responder_roundtrip.py` 재사용만).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+_<pending run-phase — M4~M6 잔여>_
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
