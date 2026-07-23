@@ -120,6 +120,33 @@ def _run_step(
     return StepResult(name=name, ok=ok, detail=detail, payload=payload)
 
 
+def _check_expected_version(step: StepResult, expect_version: str | None) -> StepResult:
+    """Fail the ping step early when the LIVE responder version doesn't match.
+
+    Deployment-reliability tool (console/lua/README.md § Deployment
+    Reliability): re-importing an updated plugin over an existing same-named
+    one has been observed to NOT refresh its stored Lua source (2026-07-24).
+    ``--expect-version`` turns "did my deploy actually take effect?" into one
+    fast, definitive check instead of a live state-query round-trip.
+    """
+    if not step.ok or expect_version is None:
+        return step
+    live_version = (step.payload or {}).get("version")
+    if live_version == expect_version:
+        return step
+    return StepResult(
+        name=step.name,
+        ok=False,
+        detail=(
+            f"live responder version {live_version!r} != expected "
+            f"{expect_version!r} (the deploy did not take effect -- re-import "
+            "did not refresh the running plugin; see console/lua/README.md "
+            "§ Deployment Reliability)"
+        ),
+        payload=step.payload,
+    )
+
+
 def run_roundtrip(
     config: BridgeConfig,
     *,
@@ -127,24 +154,31 @@ def run_roundtrip(
     exec_command: str = DEFAULT_EXEC_COMMAND,
     wait: float = 5.0,
     skip_exec: bool = False,
+    expect_version: str | None = None,
 ) -> RoundtripReport:
     """Execute the ping -> state -> exec protocol steps; never raises on step failure.
 
     All steps run even after a failure (independent diagnostic evidence).
+    ``expect_version``, when given, fails the ping step if the LIVE
+    responder's reported version doesn't match -- see
+    :func:`_check_expected_version`.
     """
     run_id = uuid.uuid4().hex[:8]
     consumer = QueueFeedbackConsumer()
     steps: list[StepResult] = []
     with OscBridge(config, consumer=consumer) as bridge:
         steps.append(
-            _run_step(
-                bridge,
-                consumer,
-                name="ping",
-                command_line=build_ping(f"{run_id}-1"),
-                reply_kind="pong",
-                request_id=f"{run_id}-1",
-                wait=wait,
+            _check_expected_version(
+                _run_step(
+                    bridge,
+                    consumer,
+                    name="ping",
+                    command_line=build_ping(f"{run_id}-1"),
+                    reply_kind="pong",
+                    request_id=f"{run_id}-1",
+                    wait=wait,
+                ),
+                expect_version,
             )
         )
         steps.append(
@@ -222,6 +256,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--wait", type=float, default=5.0, help="per-step reply timeout in seconds")
     parser.add_argument("--skip-exec", action="store_true", help="skip the exec step")
     parser.add_argument(
+        "--expect-version",
+        default=None,
+        help=(
+            "fail the ping step if the LIVE responder's version doesn't match "
+            "(e.g. '1.4.0') -- a fast, definitive 'did my deploy take effect' "
+            "check; run this FIRST after every plugin re-import"
+        ),
+    )
+    parser.add_argument(
         "--diagnose",
         action="store_true",
         help="listen-only: print every OSC message on --listen-port for --wait seconds",
@@ -241,10 +284,16 @@ def main(argv: list[str] | None = None) -> int:
         exec_command=args.exec_command,
         wait=args.wait,
         skip_exec=args.skip_exec,
+        expect_version=args.expect_version,
     )
     for step in report.steps:
         marker = "PASS" if step.ok else "FAIL"
         print(f"  [{marker}] {step.name}: {step.detail}")
+        if step.payload is not None and step.name == "ping":
+            print(
+                f"         live version={step.payload.get('version')} "
+                f"plugin={step.payload.get('plugin')}"
+            )
         if step.payload is not None and step.name == "state" and step.ok:
             children = step.payload.get("children", [])
             print(f"         node={step.payload.get('node')} children={len(children)}")

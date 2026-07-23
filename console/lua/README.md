@@ -53,6 +53,38 @@ Two options — Option B always works and needs no import-format compatibility.
    and open the text editor.
 3. Paste the full contents of `copilot_responder.lua`. Save.
 
+### 2.1 Deployment reliability — updating an ALREADY-imported plugin
+
+Re-importing (Option A) over an EXISTING same-named plugin has been observed
+to NOT refresh its stored Lua source on 2.4.2 (2026-07-24 finding): the
+plugin pool slot silently kept running the OLD code even though the external
+`.lua` file on disk was correctly updated and the import reported success.
+This is a PLUGIN POOL caching issue, distinct from the stale-OSC-socket issue
+in the Troubleshooting table below.
+
+**Always verify a deploy actually took effect — do not assume Import
+succeeded.** Immediately after ANY re-import, run:
+
+```bash
+uv run python -m server.tools.responder_roundtrip \
+    --host 127.0.0.1 --port 8000 --listen-port 9005 \
+    --skip-exec --expect-version "<the version you just deployed>"
+```
+
+`[FAIL] ping: live responder version '...' != expected '...'` means the
+re-import did NOT take. Recovery, in order:
+
+1. **Delete the existing plugin slot, then re-import fresh** (Option A,
+   applied to an empty slot instead of an existing one).
+2. **Option B (paste-in) — guaranteed.** Open the existing plugin's Lua
+   component editor, select all, delete, and paste the full updated
+   `copilot_responder.lua` source. This directly overwrites the stored
+   source and has not been observed to fail.
+
+For any FUNCTIONAL Lua change (not just a `CONFIG` value tweak), consider
+skipping straight to Option B — it is the only path confirmed reliable for
+both kinds of change.
+
 ### Configuration (both options)
 
 The `CONFIG` table at the top of the Lua file may need on-site adjustment:
@@ -95,11 +127,17 @@ Expected output: `[PASS] ping`, `[PASS] state` (with a node/children summary),
   result-capture path (`exec` wrap). Pick another harmless command with
   `--exec-command` if desired; commands containing `"` are rejected.
 - `--skip-exec` runs only ping + state.
+- `--expect-version "X.Y.Z"` fails the `ping` step (with a clear detail
+  message) if the LIVE responder's reported version doesn't match — the
+  fast, definitive "did my deploy actually take effect" check (§2.1). Run
+  this FIRST after every plugin re-import, before any other live test.
 
 ## 5. Troubleshooting
 
 | Symptom | Likely cause / fix |
 |---|---|
+| Re-imported plugin still behaves like the old version | Import over an existing same-named plugin doesn't reliably refresh its stored source (§2.1, 2026-07-24 finding). Verify with `--expect-version` after every deploy; recover via delete+reimport or Option B paste-in. |
+| Requests stop arriving after an OSC config change (row destination, port, prefix) even though the settings screen looks correct | grandMA3's OSC subsystem does not auto-rebind on config change — a "stale socket". Toggle the row's `Enable Input` / `Enable Output` off then on again (a real rebind cycle, not just re-saving the same values), then retry. Recurring finding across multiple sessions (2026-07-18, 2026-07-23). |
 | `[FAIL] ping: timeout` and nothing in onPC | OSC input not enabled, wrong `--port`, or prefix ≠ `copilot`. Verify with the M1 tool: `uv run python -m server.tools.osc_smoke --port 8000 --listen-port 9000 "List"` and check the onPC command-line history. |
 | Command arrives in onPC history but no reply | Replies not reaching the server: wrong OSC row destination IP/send-port, wrong `CONFIG.osc_slot`, or the send API assumption (PROTOCOL.md §6 ASSUMPTION-2) — try `CONFIG.send_variant = "args"` then `"cmd_keyword"`. |
 | Replies arrive at `/copilot/copilot/...` | Console prepends the OSC prefix to outgoing addresses (ASSUMPTION-5). Detect with `uv run python -m server.tools.responder_roundtrip --listen-port 9000 --wait 10 --diagnose`, then strip the leading `/copilot` from `CONFIG.state_address` / `CONFIG.feedback_address`. |
