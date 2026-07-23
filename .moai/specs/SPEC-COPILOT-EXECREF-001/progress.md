@@ -82,7 +82,7 @@
 ## §E.4 Sync-phase Audit-Ready Signal
 
 - sync_complete_at: 2026-07-23T00:00:00Z
-- sync_commit_sha: `pending-backfill-execref-sync` (백필 예정 — spec-frontmatter-schema.md § SHA placeholder backfill exemption 준용, 후속 커밋 `chore(SPEC-COPILOT-EXECREF-001): sync backfill §E.4 sync_commit_sha`에서 실제 SHA로 교체)
+- sync_commit_sha: `6591efad68f25c3c1726ebe9fac69fc9dc5c4459` (백필 완료 — spec-frontmatter-schema.md § SHA placeholder backfill exemption 준용)
 - sync_status: **PASS — 정직한 부분범위 프레이밍으로 완결**. CHANGELOG.md에 `[Unreleased] > Added` 신규 항목 추가(인식(S1) 완료 + 실제 사용자 경험 무변화 + S2 DESCOPED 사유 + 후속 SPEC `SPEC-COPILOT-EXECBODY-001` 권고를 명시적으로 서술 — 친화 프레이밍 금지). README.md는 사용자-가시적 앱 동작 무변화(패널 타일을 눌렀을 때의 관측 결과가 동일함)를 근거로 무변경 유지(기존 "안전 게이트(M4)" 섹션이 인식 가능 참조타입 목록을 리터럴로 나열하지 않아 갱신 대상 아님을 확인 — `grep -n "Macro\|Plugin\|Sequence" README.md` 무결과). spec.md/plan.md/acceptance.md 3개 아티팩트의 status를 `in-progress`(spec.md 프론트매터) 및 `draft`(plan.md/acceptance.md 프로즈 서술)에서 `completed`로 전환(본 단일 sync 커밋이 3-phase close를 담당 — 별도 Mx 커밋 없음), body 내용은 무변경. design.md/research.md는 SHOWUI-001 sync 선례와 동일하게 무변경(프론트매터/프로즈 status 전환 대상에서 제외).
 - b12_self_test_a: PASS — `grep -c "EXECREF-001" CHANGELOG.md`를 편집 전 재확인(0 반환, 오케스트레이터 사전 보고값과 일치, 중복 방지 확인)
 - b12_self_test_b: PASS — acceptance.md SSOT AC 행 수(`grep -cE '^\| \*\*AC-EXECREF-[0-9]+' acceptance.md` → 15개: AC-EXECREF-001~015)와 CHANGELOG 본문이 인용하는 테스트 수치(1723 passed, +132)가 progress.md §E.2/§E.3의 실측치와 일치함을 대조 확인. CHANGELOG 자체는 AC 개수를 명시적으로 나열하지 않음(SHOWUI-001 선례와 동일 — SPEC 요약형 CHANGELOG 관례이므로 AC 카운트 라인은 프로젝트 관례상 생략).
