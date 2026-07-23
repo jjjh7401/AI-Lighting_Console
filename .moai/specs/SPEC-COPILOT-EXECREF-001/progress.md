@@ -53,7 +53,7 @@
 | AC-EXECREF-010 | REQ-014 — 회귀 (협상 불가) | **PASS** | `pytest server/tests/test_safety_classify.py server/tests/test_safety_expand.py server/tests/test_safety_corpus.py server/tests/test_safety_ruleset.py server/tests/test_safety_console.py -q` | `300 passed in 0.46s`(acceptance.md 지정 커맨드 그대로 실행, gate.py 미포함 5파일) |
 | AC-EXECREF-011 | REQ-015 — `Go+ Page N.M` 구문 범위 밖 fail-closed | **PASS** (regression, classify.py `_extract_reference`는 애초에 `Page N.M` 형태를 인식하지 않음 — 무변경 상속) | `test_safety_classify.py::TestInvokingDetection` 기존 케이스 | `reference=None` → 보류 유지 |
 | AC-EXECREF-012 | REQ-012 — cue-CMD 갭의 정직한 기록 | **DEFERRED — M1 범위 밖** | — | 오케스트레이터 위임 프롬프트가 `@MX:DEBT`(console.py) 태깅을 M1 대상에서 명시적으로 제외(Section D: "Do not add new @MX:ANCHOR tags — only consume the two existing ones"; console.py는 PRESERVE 대상 B10). 기존 `@MX:DEBT` 부재 확인(`grep -rn "@MX:DEBT" -A 2 server/safety/console.py` → no match) — sync-phase 또는 후속 SPEC 판단 필요 항목으로 이관 |
-| AC-EXECREF-013 (LIVE) | ASSUMPTION-8/9 + S1 no-op | **① DONE (2026-07-23, plan-phase 프로브)** / **② moot** / **③ 미수행(라이브 검증, run-phase 범위 밖)** | — | 프로브 결과는 plan-phase에 이미 기록됨(design.md §5.5). ③(패널 실기 확인)은 콘솔 온라인 상태에서의 라이브 검증이며 본 run-phase 델리게이션 범위 밖 — 다음 세션에서 수행 권고 |
+| AC-EXECREF-013 (LIVE) | ASSUMPTION-8/9 + S1 no-op | **① DONE (2026-07-23, plan-phase 프로브)** / **② moot** / **③ DONE (2026-07-23, run-phase 사후 라이브 재검증)** / **④ DONE(암묵 커버, 별도 테스트 불필요)** | `.moai/state/verify/showui-m6-resume/6-live-executor-noop.py` | 오케스트레이터가 M1 커밋(267257f/c27bd19) 이후 실제 onPC 대상으로 재검증 수행 — `server.safety.bootstrap.build_console_stack()`(`server/web`과 동일 합성 루트) 조립 후 `stack.gate.screen(["Go+ Executor 111"])` 1회 직접 호출(UI/패널 미경유). 결과: `cleared=False`, `approval_request present=True`(M1 이전과 동일 관측 — no-op 확인), 보류 사유 문자열만 `Executor` 인식 이전/이후로 확인 변경(`"unverifiable reference: no recognizable target object"` → `"unverifiable reference 'Executor 111': no body path mapping for 'Executor 111'"`). 콘솔 송신 0건, 조명 리그 무변경. 증거: `.moai/state/verify/showui-m6-resume/6-live-executor-noop.log`. ④는 동일 가드(본문 경로 매핑 부재)가 개별 할당 상태 확인보다 선행하므로 별도 라이브 테스트 없이 암묵 커버됨 |
 | AC-EXECREF-014 | REQ-014 — 전체 회귀 | **PASS** | `.venv/bin/python -m pytest -q` | `1723 passed, 2 skipped, 1 failed in 81.87s` — 유일 실패는 기준선과 동일한 환경적 실패(무관), 신규 실패 **0건** |
 | AC-EXECREF-015 | REQ-007 — 이름 파싱 금지(rename 내성) | **PASS** | `test_safety_classify.py::TestExecutorRenameInvariance` 4종 | `finding.reference == "Executor 202"`(rename 전/후 무관) + `hold`/`risky` rename 전후 byte-identical |
 
@@ -67,10 +67,10 @@
 
 - run_complete_at: 2026-07-23T00:00:00Z
 - run_commit_sha: `267257f5f3c7f02b392da030d44db3bf4f84f47e` (백필 완료 — spec-frontmatter-schema.md § SHA placeholder backfill exemption 준용)
-- run_status: **PASS** — M1(유일 run-phase 마일스톤, M2는 plan-phase에 DESCOPED) 전체 그린
-- ac_pass_count: 14 (AC-EXECREF-001~011, 014, 015)
+- run_status: **PASS — 전체 검증 완결** (M1, 유일 run-phase 마일스톤, M2는 plan-phase에 DESCOPED). plan-phase 프로브 + unit/integration pytest(1723 passed) + 전체 회귀(AC-EXECREF-014) + 실기 하드웨어(AC-EXECREF-013③④, 2026-07-23 사후 라이브 재검증, `.moai/state/verify/showui-m6-resume/6-live-executor-noop.log`) 전부 그린 — SPEC-COPILOT-EXECREF-001의 구현 가능 범위(M1)는 이제 plan-phase/unit/regression/hardware 4단 전부 검증 완료. M2는 계속 DESCOPED로 유지(재논의 없음).
+- ac_pass_count: 15 (AC-EXECREF-001~011, 013, 014, 015)
 - ac_fail_count: 0
-- ac_deferred_count: 2 (AC-EXECREF-012 cue-CMD DEBT 태깅 — M1 범위 밖 명시적 제외; AC-EXECREF-013③ 라이브 실기 확인 — run-phase 델리게이션 범위 밖)
+- ac_deferred_count: 1 (AC-EXECREF-012 cue-CMD DEBT 태깅 — M1 범위 밖 명시적 제외, sync-phase 또는 후속 SPEC 판단 필요 항목으로 이관 유지)
 - preserve_list_post_run_count: 0(위반 없음) — `server/safety/expand.py`/`gate.py`/`console.py`/`ruleset.py`/`blacklist.yaml`/`server/web/**`/`ui/src/**`/`console/lua/**` 전부 무변경 확인(git diff 스코프 = classify.py + 2개 테스트 파일뿐)
 - l44_pre_commit_fetch: N/A — 이 워크트리는 origin remote 미설정(로컬 커밋 전용)
 - l44_post_push_fetch: N/A — push 미수행(remote 없음)
