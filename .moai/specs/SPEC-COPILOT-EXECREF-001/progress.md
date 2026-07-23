@@ -66,7 +66,7 @@
 ## §E.3 Run-phase Audit-Ready Signal
 
 - run_complete_at: 2026-07-23T00:00:00Z
-- run_commit_sha: `pending-backfill-m1` (다음 커밋에서 백필 — 커밋이 자신의 SHA를 알 수 없는 자기참조 한계, spec-frontmatter-schema.md § SHA placeholder backfill exemption 준용)
+- run_commit_sha: `267257f5f3c7f02b392da030d44db3bf4f84f47e` (백필 완료 — spec-frontmatter-schema.md § SHA placeholder backfill exemption 준용)
 - run_status: **PASS** — M1(유일 run-phase 마일스톤, M2는 plan-phase에 DESCOPED) 전체 그린
 - ac_pass_count: 14 (AC-EXECREF-001~011, 014, 015)
 - ac_fail_count: 0
