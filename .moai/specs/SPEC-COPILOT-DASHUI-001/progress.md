@@ -81,9 +81,36 @@
 | AC-DASHUI-006 | PASS | `TestMacroGateRouting` — 양성 매크로 press가 `["Macro 3"]` 1:1 screened+sent+audit 확인, 미상 대상 사전 거부, 매크로 stop 프레임 미구성 확인(콘솔 미도달) |
 | AC-DASHUI-016 | PASS(M2 시점) | `test_architecture.py` 4/4 그린 + dash.py 자체 OSC 경계 테스트 신설 |
 
+### M3 — UI 레이아웃 분할 + 좌측 스켈레톤 (2026-07-24, TDD RED→GREEN)
+
+**범위**: plan.md §B M3 전부 — UI 레이아웃 전용(실 카탈로그 fetch/dispatch는 M5, 실 풀 렌더는 M4, 둘 다 범위 외). ① `App.tsx` 분할 레이아웃: hook-free `AppShell` 래퍼(신규 export) 신설 — `dashCollapsed`(session-volatile, D5 — 클라이언트 영속화 없음, 기본값 `true`)가 `DashBoard` 마운트 여부를 결정, 접힘 시 `AppShell`의 children이 곧 전체 출력(오늘의 단일 컬럼 트리와 동일, AC-DASHUI-009). `header-actions`에 `dash-toggle` 버튼 신설(항상 노출 — DashBoard 자체 접기 버튼과 별개로, 접힘 상태에서도 펼치기 트리거 보장). ② `.app` 860px 캡을 `.app-shell.dash-collapsed .app`로 스코프 이동(styles.css:41-44) — 무조건 캡 규칙은 제거, 분할 상태는 `.app-shell.dash-split .app`에서 720px 캡(가독폭 유지, design.md §6). ③ 신규 `ui/src/components/DashBoard.tsx` — 훅 없는 순수 프레젠테이션 컴포넌트(header + 접기 버튼 + placeholder body). M1 동결 `UiState.dash` 슬라이스를 read-only prop으로 미래-대비 배선(빈/기본 상태에서 크래시 없음 — `dash.sections.length === 0` → "로딩 중" placeholder).
+
+**결정 기록(문서화된 판단)**: 이 프로젝트는 DOM/jsdom 테스트 하네스가 없다(`protocol.ts`/`useCopilotSocket.test.ts`/`ApprovalCard.test.tsx` 헤더에 기존 명문화된 관례 — "Pure functions only... unit-testable without a DOM"). `App()` 자체는 훅(`useCopilotSocket`의 `useReducer`/`useState`/`useEffect`)을 호출하므로 렌더러 없이 직접 호출 불가. 이를 우회하기 위해 레이아웃 분기 로직을 훅-프리 `AppShell`로 추출(App.tsx에서 export) — 테스트가 이를 평범한 함수로 직접 호출해, `react-jsx` 런타임이 만든 React 엘리먼트 트리(`.type`/`.props` 객체)를 리액트 렌더러 없이 구조적으로 검사한다. `DashBoard`도 동일한 이유로 훅을 갖지 않도록 설계.
+
+**RED 증적**: `App.test.tsx`(신규)가 `./App`에서 `AppShell`을 import → 아직 미export라 모듈 로드 실패; `DashBoard.test.tsx`(신규)가 `./DashBoard` import → 파일 미존재로 로드 실패. GREEN 후 전량 통과.
+
+| 검증 항목 | 커맨드 | 결과 |
+|---|---|---|
+| AppShell 레이아웃 스위트(신규) | `(cd ui && npx vitest run src/App.test.tsx)` | `4 passed` |
+| DashBoard 스위트(신규) | `(cd ui && npx vitest run src/components/DashBoard.test.tsx)` | `6 passed` |
+| 전체 vitest | `(cd ui && npx vitest run)` | `Tests 125 passed (125)` (M2 기준선 115 → +10) |
+| TS 타입체크 | `(cd ui && npx tsc --noEmit)` | exit 0 |
+| 전체 pytest | `PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring .venv/bin/python -m pytest -q` | `3 failed, 1831 passed, 2 skipped` — 실패 3건은 M1/M2와 **동일한 기존 실패**(test_lua_responder/test_web_provision_api/test_web_reply_discovery, M3는 서버 미접촉) → **신규 실패 0건**, M2 기준선(1831 passed)과 pass count 동일(UI 전용 마일스톤 확인) |
+| `.app` 860px 캡 스코프 이동 확인 | `grep -n "max-width" ui/src/styles.css` | `.app-shell.dash-collapsed .app { max-width: 860px }` (스코프됨) / `.app-shell.dash-split .app { max-width: 720px }` — 무조건 캡 0건 |
+| 대시보드 폴링 부재(REQ-DASHUI-021) | `grep -rn "setInterval\|setTimeout" ui/src/components/DashBoard.tsx` | 0건 |
+| 확인 모달 부재 | `grep -rn "window.confirm" ui/src/` | 0건 |
+
+**M3 시점 AC 스냅샷** (전체 판정은 M6):
+
+| AC | M3 상태 | 비고 |
+|---|---|---|
+| AC-DASHUI-009 | PASS-WITH-DEBT | 구조 레벨 확인 완료: 접힘 시 DashBoard 노드 0개 + children(채팅 UI 서브트리) 무손상 통과(`AppShell` 테스트), App.tsx의 헤더/배너/main/composer 마크업 자체는 M2 기준 무변경(className·컴포넌트 참조 동일). **DEBT**: DOM 렌더링·실제 클릭/입력 시뮬레이션(ApprovalCard/ReviewCard/SettingsPanel 렌더 확인, composer 입력→전송 왕복)은 이 프로젝트의 DOM-free 테스트 하네스 제약으로 vitest 레벨에서 미실행 — acceptance.md AC-DASHUI-009 검증 레시피가 요구하는 완전한 동작 검증은 M6 라이브/수동 브라우저 점검으로 이연(§E.5 잔여 위험에 기록) |
+
+**M4/M5 인계 노트**: `DashBoard`는 `dash: DashState` prop을 받아 `sections.length === 0`일 때 "로딩 중" placeholder, 그 외엔 `dashboard-sections` 빈 컨테이너를 렌더한다 — M4는 이 컨테이너 내부에 `PoolSection`/`PoolTile`을 채우면 되고, 새 조건 분기나 prop 시그니처 변경이 필요 없다. `AppShell`은 `dashCollapsed`/`dash`/`onToggleDash`/`children` 4개 prop만 받으므로 M5가 `useCopilotSocket.ts`에 접속 시 `dash_catalog_request` dispatch를 배선해도 `AppShell`/`DashBoard` 자체는 무변경으로 남는다(단순히 `state.dash`가 실 데이터로 채워질 뿐).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase — M3-M6 잔여>_
+_<pending run-phase — M4-M6 잔여>_
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
