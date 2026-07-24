@@ -4,7 +4,7 @@ status: draft (v0.1.0, 2026-07-24) · Tier L · 기계 검증 가능(pytest/vite
 
 ## §A. 완료 정의 (Definition of Done)
 
-1. AC-DASHUI-001..013 + AC-DASHUI-016 전부 기계 검증 그린 (pytest 전체 + vitest 전체).
+1. AC-DASHUI-001..013 + AC-DASHUI-016/017 전부 기계 검증 그린 (pytest 전체 + vitest 전체).
 2. AC-DASHUI-014/015 라이브 체크리스트를 실제 onPC 2.4.2에서 수행·기록 (증적은 progress.md §E.2).
 3. `test_architecture.py` 그린 (신규 대시 모듈의 OSC 표면 미접촉).
 4. `server/web/PROTOCOL.md` 신규 타입/enum 반영 완료.
@@ -119,7 +119,7 @@ The UI **shall** 분할 레이아웃에서 채팅 기능 전부를 무손상 제
 풀 섹션 렌더 **shall** 넘버드 슬롯 셀(슬롯 번호 1급 요소)·점유/빈 구분·풀 타입 구분을 제공하고, live-amber 배타·15px 하한·콘솔 어휘 규칙을 유지한다.
 
 - 대상: REQ-DASHUI-003/016/017
-- 검증: vitest 컴포넌트 테스트 + 스타일 가드(SHOWUI M4 stylesheet-guard 패턴): live-amber가 running 외 사용 0건, 라벨 최소 15px, `grep -rn "window.confirm" ui/src/` 0건, 정렬/reflow 부재(입력 순서 == 렌더 순서, `no` 순 고정)
+- 검증: vitest 컴포넌트 테스트 + 스타일 가드(SHOWUI M4 stylesheet-guard 패턴 참고 재작성 — 857e9ed:ui/src/styles.test.ts, 비-조상 브랜치): live-amber가 running 외 사용 0건, 라벨 최소 15px, `grep -rn "window.confirm" ui/src/` 0건, 정렬/reflow 부재(입력 순서 == 렌더 순서, `no` 순 고정)
 
 ### AC-DASHUI-011 — 폴링 부재 (refresh-on-demand)
 
@@ -162,6 +162,13 @@ The 대시보드 **shall** 마지막 동기화 시각과 섹션별 실패/부분
 
 - 대상: REQ-DASHUI-019
 - 검증: `pytest server/tests/test_architecture.py -q` 그린 + `grep -rn "bridge.osc\|from server.bridge" server/web/panel.py server/web/dash*.py` 0건
+
+### AC-DASHUI-017 — WS 단절 소거 + 재접속 이중 카탈로그 재동기화
+
+**When** WebSocket이 닫히면, the UI **shall** 대시보드의 휘발 파생 상태(running 등)를 즉시 소거하거나 stale로 표기하며, **when** 재접속되면 패널 카탈로그와 대시 카탈로그 양쪽 + status 재동기화를 요청해 재구축한다.
+
+- 대상: REQ-DASHUI-015
+- 검증: vitest — `clearOnDisconnect` 확장이 dash 휘발 상태를 소거함을 assert; 재접속 핸들러가 `panel_catalog_request` + `dash_catalog_request` + status 재동기화 요청을 각각 dispatch함을 assert(시간 경과·무관 이벤트로는 dispatch 0회)
 
 ## §D. 엣지 케이스
 

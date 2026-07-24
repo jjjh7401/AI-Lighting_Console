@@ -14,7 +14,7 @@ status: draft (v0.1.0, 2026-07-24) · Tier L · 본 문서는 spec.md의 요구�
 ### M1 — 프로토콜·데이터 모델 계약 (가장 가역성-민감; 최우선 리뷰 대상)
 
 - 신규 client 메시지: `dash_catalog_request`(무페이로드). 신규 server 이벤트: `dash_catalog` — `sections: DashSection[]`, DashSection = `{name, status(ok|path_not_resolved|console_unreachable), truncated?, drilldown_capped?, contents_unavailable?, items}`, DashItem = `{no, name, appearance?|null, meta?}` — **발화 target_kind를 나르지 않는 정보 전용 형상**(REQ-DASHUI-007).
-- `PANEL_TARGET_KINDS`에 `macro` additive 추가(양측 allowlist 동시), `playback_command`에 매크로 실행 형태 추가 — 닫힌 집합 유지, 미검증 동사·광역 타깃은 여전히 구성 불가.
+- `PANEL_TARGET_KINDS`에 `macro` additive 추가(양측 allowlist 동시), `playback_command`에 매크로 실행 형태 추가 — 닫힌 집합 유지, 미검증 동사·광역 타깃은 여전히 구성 불가. 같은 변경에서 형제 닫힌 집합 `PANEL_ITEM_KINDS`(messages.py:52)/`PanelItemKind`(protocol.ts:73)도 additive `macro`로 확장한다(또는 sequence 배지를 피하는 등가 경로) — 미확장 시 M2의 SectionSpec 경로가 매크로 타일에 `_CATALOG_ITEM_KIND = "sequence"` 오배지를 찍는다(panel.py:84).
 - `UiState`에 `dash` 필드 신설 + `reduceServerEvent` case + `clearOnDisconnect` 확장(휘발 상태 소거 범위 정의). `PROTOCOL_VERSION = 1` 유지, 양측 allowlist + reducer/handler 동시 등록(미등록 타입의 측별 계약 — TS null-drop vs 서버 ProtocolError — 회귀 없이 보존).
 - 파일: `ui/src/protocol.ts`(+test), `server/web/messages.py`(+test), `server/web/panel.py`(빌더 닫힌 집합 확장만), `server/web/PROTOCOL.md`.
 
@@ -35,7 +35,7 @@ status: draft (v0.1.0, 2026-07-24) · Tier L · 본 문서는 spec.md의 요구�
 ### M4 — 풀 그리드 + 타일 (onPC 풀 윈도우 시각)
 
 - `PoolSection.tsx`/`PoolTile.tsx` 신규: 넘버드 슬롯 셀, 점유/빈 구분, 풀 타입 배지/색 구분, 픽스처 카운트 요약 카드, 섹션 헬스(실패 사유 구분) 렌더, 마지막 동기화 시각 + 수동 새로고침 버튼.
-- 토큰 확장은 additive(교체 금지), live-amber 배타·15px 하한·콘솔 어휘 준수(REQ-DASHUI-016/017/018). 스타일 가드 테스트(SHOWUI M4의 stylesheet-guard 패턴)로 배타 규칙 기계화.
+- 토큰 확장은 additive(교체 금지), live-amber 배타·15px 하한·콘솔 어휘 준수(REQ-DASHUI-016/017/018). 스타일 가드 테스트(SHOWUI M4의 stylesheet-guard 패턴 — 857e9ed:ui/src/styles.test.ts, 비-조상 브랜치 참고용이며 본 브랜치에는 신규 작성)로 배타 규칙 기계화.
 - 파일: `ui/src/components/PoolSection.tsx`(신규), `ui/src/components/PoolTile.tsx`(신규), `ui/src/components/DashBoard.tsx`, `ui/src/styles.css`, 관련 vitest.
 
 ### M5 — 발화 경로 통합 (게이트 + LiveLock)
@@ -64,7 +64,7 @@ status: draft (v0.1.0, 2026-07-24) · Tier L · 본 문서는 spec.md의 요구�
 
 ## §D. 테스트 스캐폴딩 계획 (기존 관례 준수)
 
-- **UI (vitest)**: DOM 없는 순수 함수 테스트(`protocol.test.ts` 패턴)로 신규 빌더/파서/reducer 커버. 컴포넌트 테스트로 접기/차단/새로고침/풀 렌더 커버. 스타일 가드 테스트(live-amber 배타·15px)는 SHOWUI M4의 stylesheet-guard 패턴 재사용.
+- **UI (vitest)**: DOM 없는 순수 함수 테스트(`protocol.test.ts` 패턴)로 신규 빌더/파서/reducer 커버. 컴포넌트 테스트로 접기/차단/새로고침/풀 렌더 커버. 스타일 가드 테스트(live-amber 배타·15px)는 SHOWUI M4의 stylesheet-guard 패턴을 참고해 재작성(857e9ed 비-조상 브랜치 — 본 브랜치에 신규 작성).
 - **서버 (pytest)**: 가짜 state port 픽스처로 대시 카탈로그 정확성(비연속 `no`, 실패 사유 2종, 플래그 3종, 드릴다운 예산), membership 거부(정보 전용 대상), 매크로 번들 구성·게이트 경유·보류 경로. `test_architecture.py` 그린 유지(신규 모듈의 OSC 표면 미접촉 기계 검증).
 - **run-phase 자기 검증 커맨드(예상)**: `.venv/bin/python -m pytest -q`, `(cd ui && npx vitest run)`, `grep -rn "bridge.osc\|from server.bridge" server/web/panel.py server/web/dash*.py`(0건), `grep -rn "window.confirm" ui/src/`(0건), `grep -rn "setInterval" ui/src/components/`(대시 폴링 부재 확인).
 

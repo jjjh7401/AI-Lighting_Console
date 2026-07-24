@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-DASHUI-001
 title: "콘솔 상태 대시보드 + 코파일럿 분할 UI"
-version: "0.1.0"
+version: "0.1.1"
 status: draft
 created: 2026-07-24
 updated: 2026-07-24
@@ -22,12 +22,13 @@ related_specs: [SPEC-COPILOT-SHOWUI-001, SPEC-COPILOT-EXECBODY-001, SPEC-COPILOT
 | 버전 | 날짜 | 작성자 | 변경 내용 |
 |---|---|---|---|
 | 0.1.0 | 2026-07-24 | manager-spec | 최초 작성 (draft, Tier L 5종 아티팩트). 사용자 요구 5건(채팅 우측 이동 / 좌측 콘솔 정보 버튼 영역 / onPC 풀 윈도우 미학 / 좌측 IA 디자이너 위임 / plan-first) 반영. 좌측 IA는 위임에 따라 design.md §2에서 확정. |
+| 0.1.1 | 2026-07-24 | manager-spec | Plan-audit review-1 fold-in (PASS-WITH-DEBT 0.89 — D1~D6 반영, D7 no-op). D1: REQ-DASHUI-015 전담 기계 AC 신설(acceptance.md AC-DASHUI-017 — `clearOnDisconnect` 소거 + 재접속 이중 카탈로그·status 재동기화; DoD 1 갱신). D2: 핀 UI 경계 확정 — §D "Out of Scope — 핀 UI" 신설(v1 좌측은 카탈로그 섹션만 렌더, `source:"pin"` 렌더·핀 CRUD UI는 후속 이연, 서버 `panel_pin`/`panel_unpin`·PinStore 무접촉). D3: stylesheet-guard 인용을 교차-브랜치 참조로 정정(857e9ed 비-조상 — 본 브랜치 신규 작성; plan.md M4/§D + acceptance.md AC-010). D4: plan.md M1에 형제 닫힌 집합 `PANEL_ITEM_KINDS`/`PanelItemKind` 배지 확장 명시(매크로 타일 `sequence` 오배지 방지). D5: §A anchor 553-556 → 553-566 정정. D6: design.md §6 — Zone/풀 단위 접힘도 D5 세션-휘발 규칙 동일 적용 명시. |
 
 ## A. 개요
 
 본 SPEC은 현재 채팅 단일 컬럼인 앱(`ui/src/App.tsx`)을 **분할(split-pane) 대시보드 UI**로 재구성한다: **우측 = 코파일럿 채팅**(기능 무손상), **좌측 = 콘솔 상태 정보 영역** — 패치 장비·그룹·시퀀스·프리셋·매크로·플러그인 등 조명 연출에 필요한 풀(pool)들을 grandMA3 onPC 풀 윈도우 미학의 **버튼/타일 그리드**로 표면화한다.
 
-구현 기반은 **본 브랜치에 이미 존재하는 SHOWUI-001 M1~M3 기반**(동결된 패널 프로토콜 계약 + 서버 카탈로그/핀 스토어 + `PanelRuntime` 게이트 실행 경로)이다. 좌측 대시보드는 이 기반을 **확장**하며, 신규 실행 경로를 만들지 않는다 — 모든 발화(press)는 기존과 동일하게 `gate.screen()` 유일 관문을 경유한다(panel.py:631-636 단일 진입, playback_command @MX:ANCHOR panel.py:553-556). EXECBODY-001의 완료로 **양성 본문 익스큐터의 single-press 게이트 통과**가 확보되어(REQ-EXECBODY-013 라이브 PASS), SHOWUI-001 v1에서 축소되었던 익스큐터 타일이 본 SPEC에서 해제된다.
+구현 기반은 **본 브랜치에 이미 존재하는 SHOWUI-001 M1~M3 기반**(동결된 패널 프로토콜 계약 + 서버 카탈로그/핀 스토어 + `PanelRuntime` 게이트 실행 경로)이다. 좌측 대시보드는 이 기반을 **확장**하며, 신규 실행 경로를 만들지 않는다 — 모든 발화(press)는 기존과 동일하게 `gate.screen()` 유일 관문을 경유한다(panel.py:631-636 단일 진입, playback_command @MX:ANCHOR panel.py:553-566). EXECBODY-001의 완료로 **양성 본문 익스큐터의 single-press 게이트 통과**가 확보되어(REQ-EXECBODY-013 라이브 PASS), SHOWUI-001 v1에서 축소되었던 익스큐터 타일이 본 SPEC에서 해제된다.
 
 ### 사전 확정 사실 (사용자 요구 — 재질의 금지)
 
@@ -119,6 +120,10 @@ LiveLock(잠금 중 제안 전용), deny-all 기본 승인 포트, fail-closed �
 ### Out of Scope — 패널 편집 / 큐 에디터
 
 - 핀 rename·reorder(SHOWUI DP1-③ 이연 유지), 큐리스트 타임라인 편집 UI.
+
+### Out of Scope — 핀 UI (서버측 핀 기능의 v1 비노출)
+
+- 본 브랜치 서버에 존재하는 핀 기능(`panel_pin`/`panel_unpin`, PinStore — messages.py:28-33, panel.py:61-71)의 UI 노출 전반 — v1 좌측 대시보드는 카탈로그 섹션만 렌더하며, `source: "pin"` 항목 렌더와 핀 생성/삭제 UI는 후속 SPEC으로 이연한다(기존 서버 엔드포인트는 무접촉·무변경 유지). 근거: v1 IA(design.md §2)의 목적은 풀 카탈로그 표면화이고, 핀 큐레이션 UX는 별도 설계 질문이다 — 침묵 탈락이 아닌 기록된 이연.
 
 ### Out of Scope — 타 브랜치 SHOWUI M4/M5 UI와의 병합 조정
 
