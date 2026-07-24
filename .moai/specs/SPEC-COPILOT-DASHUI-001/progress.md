@@ -108,9 +108,49 @@
 
 **M4/M5 인계 노트**: `DashBoard`는 `dash: DashState` prop을 받아 `sections.length === 0`일 때 "로딩 중" placeholder, 그 외엔 `dashboard-sections` 빈 컨테이너를 렌더한다 — M4는 이 컨테이너 내부에 `PoolSection`/`PoolTile`을 채우면 되고, 새 조건 분기나 prop 시그니처 변경이 필요 없다. `AppShell`은 `dashCollapsed`/`dash`/`onToggleDash`/`children` 4개 prop만 받으므로 M5가 `useCopilotSocket.ts`에 접속 시 `dash_catalog_request` dispatch를 배선해도 `AppShell`/`DashBoard` 자체는 무변경으로 남는다(단순히 `state.dash`가 실 데이터로 채워질 뿐).
 
+### M4 — 풀 그리드 + 타일 (onPC 풀 윈도우 시각) (2026-07-24, TDD RED→GREEN)
+
+**범위**: plan.md §B M4 전부. ① 신규 `ui/src/components/PoolTile.tsx`(넘버드 슬롯 셀, 점유 항목 1개 렌더 — 번호/이름/어피어런스 칩) + `ui/src/components/PoolSection.tsx`(섹션 헤더 + 헬스/플래그 배지 + 타일 그리드, wire order 고정). ② 픽스처 카운트 요약: design.md §2 헤더 스트립 ASCII 목업("리그 요약: 픽스처 N대 · 동기화 HH:MM:SS · [새로고침]")을 그대로 따라 별도 풀-섹션 카드가 아닌 헤더 스트립 한 줄로 접힘 — `dashboardSummaryText()`가 조립. ③ 섹션 헬스: `path_not_resolved` vs `console_unreachable` 텍스트 분리 + `truncated`/`drilldown_capped`/`contents_unavailable` 3종 플래그를 " · "로 결합해 정직 표기(`sectionHealthLabel()`, PoolSection.tsx). ④ 마지막 동기화 시각(`formatSyncTime()`) + 수동 새로고침 버튼 — `onRefresh?: () => void` optional prop으로 배선(미제공 시 `console.debug` 플레이스홀더, design.md §7 규칙7 — 죽은 버튼 금지). ⑤ 익스큐터 타일: `dashItemIsPressable("executors", item)`이 `meta.resolved === true`인 항목만 press-able로 라우팅 — 미해석 항목은 `pool-tile-info` + "정보만" 배지, 클릭 어포던스·버튼 0건(REQ-DASHUI-011/EXECBODY AC-016 계승). ⑥ 토큰: `--live-amber`(#ffb02e) additive 신설(REQ-DASHUI-016) — `.pool-tile-running`/`.pool-tile-running .pool-tile-verb` 외 참조 0건으로 배타 확보(REQ-DASHUI-017), 15px 하한은 1급 라벨 클래스(`.pool-tile-no`/`.pool-tile-name`/`.pool-tile-verb`/`.pool-section-label`/`.dashboard-summary`)에 적용. ⑦ 신규 `ui/src/styles.test.ts` — SHOWUI M4의 stylesheet-guard 패턴(857e9ed, 비-조상 브랜치 — 기법만 참고, cherry-pick 아님)을 본 브랜치에 순수 문자열/정규식 파서로 재작성(jsdom 미사용, 프로젝트 no-DOM-harness 관례 계승).
+
+**결정 기록(문서화된 판단 — plan.md §F 패턴 계승)**:
+
+- **D-M4-1 빈 슬롯 갭 렌더 범위 축소**: design.md §3 "빈 슬롯: 어두운 셀 + 번호만" 요구는 점유 최대 `no`까지의 갭 데이터가 필요하나, `build_dash_catalog`(server/web/dash.py)는 점유 오브젝트만 반환하고 갭/최대치 메타를 나르지 않는다. 클라이언트 측에서 갭을 추정하는 것은 REQ-DASHUI-011이 금지하는 "미검증 오프셋 추정"과 같은 계열의 위험(존재하지 않는 슬롯 번호를 UI가 만들어내는 것)이므로 채택하지 않음 — PoolTile은 점유 슬롯만 렌더한다. §E.5 잔여 위험에 기록.
+- **D-M4-2 픽스처 카드 → 헤더 스트립 한 줄로 배치**: Section A 프롬프트는 "compact card"라 표현했으나, design.md §2 확정 IA(사용자 위임 설계)의 ASCII 목업은 픽스처 카운트를 헤더 스트립 한 줄(동기화 시각·새로고침과 동렬)에 배치한다. 확정 설계 문서를 우선해 헤더 스트립 통합을 채택 — 별도 `pool-section-fixtures` 카드는 만들지 않음(REQ-DASHUI-009 요구인 "카운트만, 슬롯 나열 금지"는 두 배치 모두 충족하므로 배치만의 판단).
+- **D-M4-3 새로고침 콜백 optional-prop**: `onRefresh?: () => void` — 미제공 시 클릭이 `console.debug` 플레이스홀더를 호출(죽은 버튼 금지, design.md §7 규칙7). M5가 `useCopilotSocket.ts`에서 실 콜백을 주입하면 `DashBoard`/`App.tsx` 시그니처 변경 없이 즉시 배선됨(M3 인계 노트와 동일한 무변경-확장 패턴).
+- **D-M4-4 live-amber/RUN 배지 미배선**: `panel.running`(키: `panelItemId(target_kind, target)`)은 `DashBoard`가 받는 `dash: DashState` prop 밖에 있다 — dash 익스큐터 항목은 `{no, name, meta}`뿐, target_kind가 구조적으로 없다(REQ-DASHUI-007). 토큰·CSS 선택자(`--live-amber`, `.pool-tile-running`)는 배타 규칙과 함께 신설했으나 실제 RUN 표시는 M5가 `panel.running`을 익스큐터 dash 항목과 교차 참조하도록 배선해야 함. §E.5 잔여 위험에 기록.
+
+**RED 증적**: `PoolTile.test.tsx`/`PoolSection.test.tsx`(신규)가 각각 `./PoolTile`/`./PoolSection` import → 파일 미존재로 모듈 로드 실패; `DashBoard.test.tsx` 기존 6종 중 "switches to the sections placeholder region..." 케이스가 M4 확장 후 `dashboard-sections` 빈 placeholder 구조를 더 이상 반환하지 않아 실패(3-child aside 구조로 확장됨) → M4 범위에서 재작성; `styles.test.ts`(신규)가 `--live-amber` 미존재로 실패. GREEN 후 전량 통과.
+
+| 검증 항목 | 커맨드 | 결과 |
+|---|---|---|
+| PoolTile 스위트(신규) | `(cd ui && npx vitest run src/components/PoolTile.test.tsx)` | `8 passed` |
+| PoolSection 스위트(신규) | `(cd ui && npx vitest run src/components/PoolSection.test.tsx)` | `9 passed` |
+| DashBoard 스위트(M4 확장) | `(cd ui && npx vitest run src/components/DashBoard.test.tsx)` | `25 passed` (M3 6종 → M4 25종 — 레이아웃 확장으로 구조 케이스 일부 재작성 + 신규 헤더-스트립/섹션-라우팅 유틸리티 테스트 다수 추가) |
+| 스타일 가드 스위트(신규) | `(cd ui && npx vitest run src/styles.test.ts)` | `18 passed` |
+| 전체 vitest | `(cd ui && npx vitest run)` | `Tests 179 passed (179)` (M3 기준선 125 → +54: PoolTile 8 + PoolSection 9 + styles.test.ts 18 + DashBoard 순증 19) |
+| TS 타입체크 | `(cd ui && npx tsc --noEmit)` | exit 0 |
+| 전체 pytest | `.venv/bin/python -m pytest -q` | `3 failed, 1831 passed, 2 skipped` — 실패 3건은 M1~M3와 **동일한 기존 실패**(test_lua_responder/test_web_provision_api/test_web_reply_discovery, M4는 UI 전용·서버 미접촉) → **신규 실패 0건**, pass count M3 기준선(1831)과 동일(서버 미변경 확인) |
+| live-amber 배타 (styles.test.ts 기계 검증) | `grep -n "live-amber" ui/src/styles.css` | `:root` 정의 1건 + `.pool-tile-running`/`.pool-tile-running .pool-tile-verb` 2건 — 그 외 0건 |
+| 확인 모달 부재 | `grep -rn "window.confirm" ui/src/` | 0건(exit=1) |
+| 대시보드/풀 컴포넌트 폴링 부재(REQ-DASHUI-021) | `grep -rn "setInterval\|setTimeout" ui/src/components/DashBoard.tsx ui/src/components/PoolSection.tsx ui/src/components/PoolTile.tsx` | 0건(exit=1) |
+| OSC 경계(서버 미접촉 재확인) | `grep -rn "bridge.osc\|from server.bridge" server/web/panel.py server/web/dash*.py` | 0건(exit=1) — M2와 동일, M4는 서버 무변경 |
+
+**M4 시점 AC 스냅샷** (전체 판정은 M6):
+
+| AC | M4 상태 | 비고 |
+|---|---|---|
+| AC-DASHUI-004 | PASS(UI 절반 추가) | 헤더 스트립이 `meta.count`만 노출(`fixtureSummaryLabel`), 슬롯 번호·FID 표기 0건(PoolTile 미마운트) — 서버 절반은 M2 PASS 기완료 |
+| AC-DASHUI-010 | PASS | 넘버드 슬롯(1급 `no`) + 어피어런스 칩 + press-able/read-only 구조적 분리(`pressable` prop, read-only엔 버튼 0건) + wire-order 고정(`PoolSection.test.tsx` "no sort/reflow") + live-amber 배타(styles.test.ts) + 15px 하한(1급 라벨) 전부 기계 검증 |
+| AC-DASHUI-011 | PASS-WITH-DEBT | 폴링 부재는 PASS(grep 0건, 시간경과만으론 dispatch 없음 — DashBoard는 onRefresh를 클릭에서만 호출). **DEBT**: 실제 `dash_catalog_request` 전송은 onRefresh 콜백 내부(M5 소관)라 "요청 1회 dispatch"의 소켓 왕복 절반은 여전히 미검증 — M4는 콜백 호출 1회만 확인 |
+| AC-DASHUI-012 | PASS | 동기화 시각(`formatSyncTime`) + stale 접미사(`(오래됨)`) + `path_not_resolved`/`console_unreachable` 텍스트 구분 + 3종 플래그 결합 표기 전부 `DashBoard.test.tsx`/`PoolSection.test.tsx`로 확인 |
+| AC-DASHUI-013 | PASS(M4 시점) | 킥오프 기준선 대비 pytest 신규 실패 0건 + vitest 179/179 전부 그린 |
+| AC-DASHUI-017 | 부분 PASS(렌더 절반 추가) | `dash.stale`일 때 헤더 스트립에 "(오래됨)" 표기됨을 확인(렌더 절반). `clearOnDisconnect` 로직 자체와 재접속 이중 dispatch는 M1에서 이미 부분 PASS로 기록된 그대로 — M5에서 완결 |
+
+**M5 인계 노트**: (1) `DashBoard`에 `onRefresh?: () => void`를 실제 `dash_catalog_request` 디스패처로 주입하면 새로고침이 완결된다(시그니처 변경 없음). (2) 실행 상태(RUN/OFF, live-amber)는 `panel.running`을 익스큐터 dash 항목과 `panelItemId("executor", no)`로 교차 참조해야 하며, `PoolTile`에 `running?: boolean` prop을 추가하고 `.pool-tile-running` 클래스를 조건부로 붙이는 확장이 필요(현재 CSS 선택자·토큰은 이미 준비됨, TSX 배선만 M5 몫). (3) 시퀀스/익스큐터 실제 press 배선(`buildPanelExecute`/`buildPanelStop`)은 여전히 전량 M5 범위 — M4는 시각적 어포던스만 완성했다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase — M4-M6 잔여>_
+_<pending run-phase — M5-M6 잔여>_
 
 ## §E.4 Sync-phase Audit-Ready Signal
 

@@ -8,6 +8,13 @@
   --ok: #3fb950;
   --warn: #d29922;
   --bad: #f85149;
+  /* M4 — additive only, no existing token renamed/replaced (REQ-DASHUI-016).
+     Reserved EXCLUSIVELY for an actually-running-and-tracked pool tile
+     (REQ-DASHUI-017) — the ONLY selector allowed to reference it is
+     .pool-tile-running (and its nested .pool-tile-verb), verified
+     mechanically by styles.test.ts. Never reused for "occupied slot" or any
+     other non-running state. */
+  --live-amber: #ffb02e;
 }
 
 * {
@@ -661,4 +668,145 @@ body {
   background: var(--panel);
   color: var(--text);
   font-size: 13px;
+}
+
+/* M4 — header-strip fixture count + last-sync time + manual refresh
+   (SPEC-COPILOT-DASHUI-001, design.md §2 헤더 스트립). */
+.dashboard-syncline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid #2b2f36;
+  color: var(--muted);
+}
+
+.dashboard-summary {
+  font-size: 15px;
+}
+
+.dashboard-refresh {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid #2b2f36;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* M4 — onPC pool window sections (design.md §2/§3). */
+.pool-section {
+  margin-bottom: 16px;
+}
+
+.pool-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0 6px;
+  border-bottom: 1px solid #2b2f36;
+}
+
+.pool-section-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pool-section-health {
+  font-size: 12px;
+  color: var(--warn);
+}
+
+.pool-section-empty {
+  padding: 8px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.pool-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 6px;
+  padding-top: 8px;
+}
+
+/* M4 — one numbered onPC-style pool cell (design.md §3 "풀 셀(슬롯)"). */
+.pool-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #16181d;
+  border: 1px solid #2b2f36;
+  min-height: 48px;
+}
+
+.pool-tile-no {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.pool-tile-name {
+  font-size: 15px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.pool-tile-appearance {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  align-self: flex-end;
+}
+
+/* read-only cell: no verb, no press affordance (design.md §7 rule 7 — a
+   dead-looking button is worse than no button). */
+.pool-tile-info {
+  cursor: default;
+}
+
+.pool-tile-unresolved {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.pool-tile-press {
+  border-color: var(--accent);
+}
+
+.pool-tile-verb {
+  margin-top: 2px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: stretch;
+}
+
+/* live-amber is EXCLUSIVE to an actually-running-and-tracked tile
+   (REQ-DASHUI-017) — M5 wires the running boolean via
+   panel.running/panelItemId; this is the ONLY selector pair allowed to
+   reference --live-amber (mechanically verified by styles.test.ts). */
+.pool-tile-running {
+  border-color: var(--live-amber);
+}
+
+.pool-tile-running .pool-tile-verb {
+  background: var(--live-amber);
+  color: #201a08;
 }
