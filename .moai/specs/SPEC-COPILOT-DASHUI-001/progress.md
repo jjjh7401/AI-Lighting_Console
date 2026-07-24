@@ -47,9 +47,43 @@
 
 **M2 인계 노트**: `dash_catalog_request`가 이제 파싱되므로 `server/web/app.py` ws 디스패치의 최종 `else:  # status_request` 분기(app.py:409)로 흘러들어가 status 이벤트로 응답된다 — M1 파일 범위(app.py 제외) 밖이라 미수정. M2에서 dash 카탈로그 빌더 배선 시 이 else **앞에** 전용 분기를 추가할 것. 또한 macro가 `panel_stop` parse를 통과하므로(닫힌 집합 공유), M2 membership/M5 UI가 macro stop 경로를 차단해야 함(빌더는 이미 ValueError로 방어).
 
+### M2 — 서버 대시 카탈로그 빌더 (2026-07-24, TDD RED→GREEN)
+
+**범위**: plan.md §B M2 5항목 전부.
+
+① **신규 정보 섹션**: 신규 `server/web/dash.py`에 `build_dash_catalog()` 신설 — `gate.state_port` seam + `tools.py`의 `rig_object`/`rig_section`/`drill_into` 재사용(신규 구현 0). 6개 섹션(우선순위 순): `groups` / `preset_pools`(드릴다운) / `macros` / `plugins` / `fixtures`(카운트 요약) / `executors`(해석 투명성 리포트). **결정 기록(문서화된 판단)**: `dash_catalog`는 REQ-DASHUI-007이 명시한 읽기 전용 정보(그룹·프리셋·플러그인·픽스처 요약) + 매크로 참조 행 6종을 나른다 — 시퀀스/익스큐터의 발화 가능 절반은 `panel_catalog`(SHOWUI, 무변경)가 유일 출처로 남고, `dash_catalog`의 `executors` 섹션은 REQ-DASHUI-011 전용의 **해석 투명성 리포트**(어느 페이지-드릴다운 익스큐터 후보가 콘솔 자체 주소 형태로 확인되는지)만 나른다 — `panel_catalog`의 기존(SHOWUI M2/M3, 동결) 익스큐터 생성 로직은 무변경.
+② **섹션별 드릴다운 예산 분리**: 단일 `PANEL_DRILLDOWN_QUERY_CAP=16` 공유 대신 3개 독립 예산 신설 — `DASH_PRESET_POOL_QUERY_CAP=12`(tools.py가 명시한 ~8-10 프리셋 타입에 여유분), `DASH_EXECUTOR_PAGE_QUERY_CAP=8`(페이지 워크), `DASH_EXECUTOR_VERIFY_QUERY_CAP=16`(후보별 `Executor <n>` 검증 질의, 페이지 워크와 별도 질의군이므로 별도 예산). 소진 시 `drilldown_capped` 정직 표기(테스트로 확인).
+③ **매크로 발화 membership**: `panel.py` `PANEL_CATALOG_SECTIONS`에 `SectionSpec(name="macros", path="DataPool/Macros", target_kind="macro")` additive 추가(@MX:ANCHOR 확장, 재정의 아님 — "모든 target_kind는 콘솔이 실제 발화하는 것" 의미 유지·강화). `_tiles()`에 target_kind별 배지 매핑(`_ITEM_KIND_BY_TARGET_KIND`) 신설해 plan.md D4가 경고한 매크로 타일의 `kind="sequence"` 오배지를 봉쇄 — 매크로는 `kind="macro"`.
+④ **익스큐터 타일**: `server/web/dash.py`의 `_resolve_executor_no()`가 페이지-드릴다운 후보(풀 슬롯 no + name)를 콘솔 자체 `"Executor <n>"` 주소 질의(EXECBODY-001 `resolve_path`/`ObjectList` 경로가 소비하는 것과 동일 형태, `console.py::StateBodyFetcher._fetch_executor_body`가 이미 쓰는 형태)로 **검증**해 `meta={"resolved": true/false}`로 정직 보고. 자식 인덱스·오프셋 추정 0건(후보 번호 자체를 검증할 뿐, 새 번호를 유추하지 않음). **알려진 잔여 위험**(§E.5 참고): `panel_catalog`(발화 카탈로그) 자체는 M2에서 필터링하지 않음 — 미해석 익스큐터도 여전히 기존 SHOWUI 경로로 발화 가능한 상태이며, dash 리포트를 실제 press 가능 여부에 배선하는 것은 M5 UI 과업으로 이연(회귀 안전성 우선 — test_web_panel.py/test_web_panel_execute.py의 기존 무조건 발화 가정 픽스처를 깨지 않기 위한 documented judgment call).
+⑤ **app.py 디스패치 수정(M1 인계 갭 해소)**: `dash_catalog_request` 분기를 최종 `else: # status_request`(구 app.py:409) **앞에** 신설, `send_dash_catalog(deps.gate.state_port, send_event)`를 `panel_side_lane`(카탈로그/핀/언핀과 동일 락 — 다중 OSC 질의 스톰 방지)으로 직렬화.
+
+**RED 증적**: `server/tests/test_web_dash.py`(신규 33종) 작성 전 `build_dash_catalog`/`dash_catalog_snapshot`가 미존재 → collection ImportError. GREEN 후 전량 통과. `test_web_panel.py`/`test_web_panel_execute.py`의 매크로 섹션 추가로 인한 회귀 4건(정확히 예측됨 — 섹션 리스트 exact-match assert 3건 + `console_unreachable` 리스트 길이 1건)을 fixture(`DataPool/Macros` 추가) + assert 갱신으로 해소, 신규 매크로 커버리지 6종 추가.
+
+| 검증 항목 | 커맨드 | 결과 |
+|---|---|---|
+| 신규 대시 카탈로그 스위트 | `.venv/bin/python -m pytest -q server/tests/test_web_dash.py` | `33 passed` |
+| 회귀 스위트(패널+메시지+앱+아키텍처) | `.venv/bin/python -m pytest -q server/tests/test_web_panel.py server/tests/test_web_panel_execute.py server/tests/test_web_messages.py server/tests/test_web_app.py server/tests/test_architecture.py` | `335 passed` |
+| 전체 pytest | `PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring .venv/bin/python -m pytest -q` | `3 failed, 1831 passed, 2 skipped` — 실패 3건 전부 M1과 동일한 **기존 실패**(test_lua_responder/test_web_provision_api/test_web_reply_discovery — 소켓/lua-harness flakiness, M2 무관) → **신규 실패 0건**. M1 기준선(1793 passed) 대비 +38건(신규 커버리지) |
+| 전체 vitest | `(cd ui && npx vitest run)` | `Tests 115 passed (115)` — M1과 동일(서버 전용 마일스톤, 영향 없음 확인) |
+| ruff (터치 파일) | `ruff check` 6개 터치 파일 | clean |
+| ruff format | `ruff format --check` → 신규 편차 2건(내 Edit 툴 줄바꿈) `ruff format` 적용 후 clean; `panel.py`/`app.py`/`test_web_panel_execute.py`는 **기존 편차만**(baseline과 동일 — stash 비교로 확인, M2 신규 라인 위반 0건) |
+| OSC 경계 | `grep -rn "bridge.osc\|from server.bridge" server/web/panel.py server/web/dash*.py server/web/app.py` | 0건 |
+| target_kind 비부착 | `grep -n "target_kind" server/web/dash*.py` | 모듈 독스트링의 설명 문구 1건뿐(panel_catalog를 설명하는 산문) — 실제 구성 필드 0건, 구조 테스트(`test_no_dash_item_ever_carries_a_fire_address`)로 교차 확인 |
+
+**M2 시점 AC 스냅샷** (전체 판정은 M6):
+
+| AC | M2 상태 | 비고 |
+|---|---|---|
+| AC-DASHUI-002 | PASS | `test_web_dash.py` — 비연속 `no` 키잉, 실패 사유 2종 구분, 3종 플래그 전파, 드릴다운 예산 소진 표기 전부 확인 |
+| AC-DASHUI-003 | PASS | 구조 테스트로 dash_item의 target_kind/target/id 부재 확인(M1의 construction-time 거부 + M2의 통합 레벨 재확인) |
+| AC-DASHUI-004 | PASS | fixtures 섹션은 `meta.count`만 나르고 실제 슬롯 번호 0건 노출 |
+| AC-DASHUI-005 | PASS-WITH-DEBT | `panel_execute`/`panel_stop` → `gate.screen()` 경로 무변경 확인(회귀 그린) + 익스큐터 해석 리포트 신설. **DEBT**: `panel_catalog` 자체의 발화 가능 목록은 해석 여부로 필터링되지 않음(위 ④ 잔여 위험) — M5에서 UI가 dash의 해석 리포트를 press 가능 여부에 실제로 배선해야 REQ-DASHUI-011이 완전 충족됨 |
+| AC-DASHUI-006 | PASS | `TestMacroGateRouting` — 양성 매크로 press가 `["Macro 3"]` 1:1 screened+sent+audit 확인, 미상 대상 사전 거부, 매크로 stop 프레임 미구성 확인(콘솔 미도달) |
+| AC-DASHUI-016 | PASS(M2 시점) | `test_architecture.py` 4/4 그린 + dash.py 자체 OSC 경계 테스트 신설 |
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+_<pending run-phase — M3-M6 잔여>_
 
 ## §E.4 Sync-phase Audit-Ready Signal
 

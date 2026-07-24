@@ -83,6 +83,10 @@ RIG_TREE = {
     "DataPool/Pages/1": _snapshot(
         "DataPool/Pages/1", [(5, "Cyan Look"), (11, "Chase"), (191, "Summer Rock")]
     ),
+    # SPEC-COPILOT-DASHUI-001 M2 — macros joined the fireable closed set
+    # (REQ-DASHUI-012). Macro 3 is benign; Macro 9 mirrors acceptance.md
+    # scenario 3's blacklisted-body macro number for cross-test convention.
+    "DataPool/Macros": _snapshot("DataPool/Macros", [(3, "Blackout FX"), (9, "Danger Macro")]),
 }
 
 
@@ -512,6 +516,50 @@ class TestGateRouting:
         assert harness.sent == screened_commands
 
 
+# -- macro gate routing (SPEC-COPILOT-DASHUI-001 M2, AC-DASHUI-006) ---------------
+
+
+class TestMacroGateRouting:
+    """A macro press builds the rulebook-verified bare form and goes through
+    the SAME single screening path as every other panel command — no second
+    entry, no bypass (REQ-DASHUI-012/020)."""
+
+    def test_a_benign_macro_press_is_screened_and_sent(self, harness):
+        with harness.client as client, client.websocket_connect("/ws") as ws:
+            _drain(ws, "status")
+            _send(ws, type="panel_execute", target_kind="macro", target=3)
+            state = _drain(ws, "panel_item_state")
+        assert harness.screened == [["Macro 3"]]
+        assert harness.sent == ["Macro 3"]
+        assert harness.audit_sends("Macro 3") == 1
+        assert state["id"] == "macro:3"
+
+    def test_a_macro_target_not_in_the_catalog_is_refused_before_the_gate(self, harness):
+        with harness.client as client, client.websocket_connect("/ws") as ws:
+            _drain(ws, "status")
+            _send(ws, type="panel_execute", target_kind="macro", target=999)
+            event = _drain(ws, "error")
+        assert event["message"] == PANEL_UNKNOWN_TARGET_MESSAGE
+        assert harness.screened == []
+        assert harness.sent == []
+
+    def test_a_macro_stop_frame_never_reaches_the_console(self, harness):
+        # playback_command has no macro stop form (one-shot, plan.md §F D1);
+        # the parser still accepts a well-formed panel_stop frame (the closed
+        # target_kind set is shared), so the refusal comes from
+        # PanelRuntime.fire raising on the unconstructible command — the
+        # panel task boundary catches it and reports an error, never a
+        # silent reach to the console (REQ-SHOWUI-020's spirit: no bundle, no
+        # gate call, no send for a command that cannot exist).
+        with harness.client as client, client.websocket_connect("/ws") as ws:
+            _drain(ws, "status")
+            _send(ws, type="panel_stop", target_kind="macro", target=3)
+            error = _drain(ws, "error")
+        assert error["kind"] == "panel"
+        assert harness.screened == []
+        assert harness.sent == []
+
+
 # -- single screening path (AC-SHOWUI-006) ----------------------------------------
 
 
@@ -842,7 +890,7 @@ class TestCatalogAndPinRouting:
         assert "executor:191" in ids
         assert "sequence:41" in ids
         assert "sequence:3" not in ids, "keyed on the real no, never a list position"
-        assert [s["name"] for s in event["sections"]] == ["sequences", "pages"]
+        assert [s["name"] for s in event["sections"]] == ["sequences", "pages", "macros"]
 
     def test_a_pin_without_a_seed_is_an_explicit_error(self, harness):
         with harness.client as client, client.websocket_connect("/ws") as ws:

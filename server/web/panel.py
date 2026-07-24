@@ -129,6 +129,12 @@ PANEL_CATALOG_SECTIONS = (
     # a stored look — so this section's tiles come from the drill-down, not from
     # the pages themselves.
     SectionSpec(name="pages", path="DataPool/Pages", target_kind="executor", drilldown=True),
+    # SPEC-COPILOT-DASHUI-001 REQ-DASHUI-012/plan.md M2 — macro press joins the
+    # closed set of fireable classes (additive: PANEL_TARGET_KINDS was already
+    # widened at M1). Every macro the console has becomes a catalog tile the
+    # same way a sequence does — the ANCHOR's invariant ("every target_kind is
+    # something the console actually fires") is EXTENDED here, not weakened.
+    SectionSpec(name="macros", path="DataPool/Macros", target_kind="macro"),
 )
 
 
@@ -322,6 +328,16 @@ class PinStore:
             raise
 
 
+# The tile's type badge per target_kind (plan.md M2 D4 / REQ-DASHUI-012): a
+# macro is NOT a stored look, so it must not inherit _CATALOG_ITEM_KIND's
+# "sequence" default — the exact mis-badge risk plan.md D4 names ("M2의
+# SectionSpec 경로가 매크로 타일에 _CATALOG_ITEM_KIND = 'sequence' 오배지를
+# 찍는다"). Sequences and executors keep the existing "sequence" badge (an
+# executor is still an assigned-sequence display, per the module-level
+# rationale above).
+_ITEM_KIND_BY_TARGET_KIND = {"macro": "macro"}
+
+
 def _tiles(objects: list[dict], target_kind: str) -> list[dict]:
     """Turn resolved rig objects into tiles, skipping the unaddressable ones.
 
@@ -330,6 +346,7 @@ def _tiles(objects: list[dict], target_kind: str) -> list[dict]:
     is no tile. Inventing one from the list position is the exact defect
     REQ-SHOWUI-003 exists to prevent.
     """
+    kind = _ITEM_KIND_BY_TARGET_KIND.get(target_kind, _CATALOG_ITEM_KIND)
     tiles = []
     for obj in objects:
         number = obj.get("no")
@@ -337,7 +354,7 @@ def _tiles(objects: list[dict], target_kind: str) -> list[dict]:
             continue
         tiles.append(
             panel_item(
-                kind=_CATALOG_ITEM_KIND,
+                kind=kind,
                 target_kind=target_kind,
                 target=number,
                 name=str(obj.get("name", "")),

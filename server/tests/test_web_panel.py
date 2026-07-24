@@ -88,6 +88,10 @@ def _rig_tree() -> dict:
         "DataPool/Pages/1": _snapshot(
             "DataPool/Pages/1", [(191, "Summer Rock"), (201, "Cyan Look")]
         ),
+        # SPEC-COPILOT-DASHUI-001 M2 — macros joined the fireable closed set
+        # (REQ-DASHUI-012); non-contiguous numbers for the same reason as
+        # sequences above.
+        "DataPool/Macros": _snapshot("DataPool/Macros", [(3, "Blackout FX"), (9, "Danger Macro")]),
         # Present in the showfile, and deliberately NOT a catalog source: a
         # fixture's `no` is its patch slot, not an address the console fires.
         "Patch/Stages/1/Fixtures": _snapshot(
@@ -123,6 +127,22 @@ class TestCatalogKeying:
         catalog = build_catalog(FakeStatePort(_rig_tree()))
         executors = [i for i in _ids(catalog.items) if i.startswith("executor:")]
         assert executors == ["executor:191", "executor:201"]
+
+    def test_macro_tiles_come_from_the_macro_pool(self):
+        # SPEC-COPILOT-DASHUI-001 M2 (REQ-DASHUI-012) — macros joined the
+        # fireable closed set at the catalog-builder level.
+        catalog = build_catalog(FakeStatePort(_rig_tree()))
+        macros = [i for i in _ids(catalog.items) if i.startswith("macro:")]
+        assert macros == ["macro:3", "macro:9"]
+
+    def test_a_macro_tile_carries_the_macro_badge_not_sequence(self):
+        # plan.md M2 D4 — the mis-badge risk: a macro tile must not inherit
+        # _CATALOG_ITEM_KIND's "sequence" default.
+        catalog = build_catalog(FakeStatePort(_rig_tree()))
+        (macro_tile,) = [i for i in catalog.items if i["id"] == "macro:3"]
+        assert macro_tile["kind"] == "macro"
+        sequence_tile = next(i for i in catalog.items if i["id"] == "sequence:2")
+        assert sequence_tile["kind"] == "sequence"
 
     def test_every_tile_addresses_a_kind_the_console_actually_fires(self):
         catalog = build_catalog(FakeStatePort(_rig_tree()))
@@ -200,7 +220,7 @@ class TestCatalogCompleteness:
 
     def test_every_section_reports_a_status(self):
         catalog = build_catalog(FakeStatePort(_rig_tree()))
-        assert [s["status"] for s in catalog.sections] == ["ok", "ok"]
+        assert [s["status"] for s in catalog.sections] == ["ok", "ok", "ok"]
 
 
 class TestCatalogFailureReasons:
@@ -215,6 +235,7 @@ class TestCatalogFailureReasons:
     def test_nothing_answering_is_an_unreachable_console(self):
         catalog = build_catalog(DeadStatePort())
         assert [s["status"] for s in catalog.sections] == [
+            "console_unreachable",
             "console_unreachable",
             "console_unreachable",
         ]
@@ -530,7 +551,7 @@ class TestPanelStore:
     def test_sections_come_from_the_last_refresh(self, tmp_path):
         store = self._store(tmp_path)
         store.refresh_catalog()
-        assert [s["name"] for s in store.sections()] == ["sequences", "pages"]
+        assert [s["name"] for s in store.sections()] == ["sequences", "pages", "macros"]
 
     def test_unpin_goes_through_the_store(self, tmp_path):
         store = self._store(tmp_path)
@@ -553,6 +574,7 @@ class TestMembership:
         store.refresh_catalog()
         assert store.contains("sequence", 41) is True
         assert store.contains("executor", 191) is True
+        assert store.contains("macro", 3) is True
 
     def test_a_pinned_tile_is_a_member_without_any_catalog(self, tmp_path):
         store = self._store(tmp_path)

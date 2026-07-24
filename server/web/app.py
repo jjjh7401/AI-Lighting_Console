@@ -33,6 +33,7 @@ from server.safety.backup import BackupManager
 from server.safety.gate import SafetyGate
 from server.safety.session_context import new_session_key
 from server.web.approval_bridge import ApprovalChannel
+from server.web.dash import send_dash_catalog
 from server.web.handshake import (
     CLOSE_POLICY_VIOLATION,
     HandshakePolicy,
@@ -403,6 +404,20 @@ def create_app(deps: WebDeps) -> FastAPI:
                             panel.unpin,
                             message["target_kind"],
                             message["target"],
+                            lane=panel_side_lane,
+                        )
+                    )
+                elif message_type == "dash_catalog_request":
+                    # SPEC-COPILOT-DASHUI-001 M2 — shares panel_side_lane with
+                    # panel_catalog_request/pin/unpin: this is another
+                    # many-round-trip state_port read, and serializing it
+                    # against the existing catalog build avoids stacking
+                    # concurrent OSC query storms on the console.
+                    spawn_panel(
+                        panel_task(
+                            send_dash_catalog,
+                            deps.gate.state_port,
+                            send_event,
                             lane=panel_side_lane,
                         )
                     )
