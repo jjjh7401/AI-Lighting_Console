@@ -236,4 +236,4 @@ next: /moai sync SPEC-COPILOT-DASHUI-001
 
 sync_status: synced
 sync_complete_at: 2026-07-24
-sync_commit_sha: pending-backfill-dashui-sync
+sync_commit_sha: 15a36f7
