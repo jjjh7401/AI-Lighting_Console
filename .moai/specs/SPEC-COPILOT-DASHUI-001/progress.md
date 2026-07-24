@@ -183,9 +183,33 @@
 
 **M6 인계 노트**: 소프트웨어 스택(M1~M5) 전부 그린. 남은 것은 acceptance.md §C LIVE 체크리스트 8항목(①~⑧) 뿐 — 실제 grandMA3 onPC 2.4.2가 실행 중이고 앱이 접속 가능해야 시작 가능.
 
+### M6 — 라이브 체크리스트 (실제 onPC 2.4.2) (2026-07-24)
+
+**환경**: 이 워크트리의 `ui/`(M4/M5 코드)를 `npm run build`로 빌드 후, `~/Library/Application Support/GrandMA3 Copilot/settings.toml`에 저장된 기존 검증-완료 사이트 설정(console_host=127.0.0.1, console_port=8000, receive_port=9005, osc_slot=2)으로 `uv run python -m server.web --no-browser`를 기동 — 실제 onPC 2.4.2와 연결(`@copilot:status online`). 오케스트레이터가 브라우저 도구로 대시보드를 직접 조작.
+
+| AC-DASHUI-014 체크리스트 | 결과 | 증적 |
+|---|---|---|
+| ① 접속 → 실제 showfile 풀 실제 `no` 렌더 | PASS | 그룹(1/11/12), 프리셋(1~9,21~25 + "드릴다운 예산 소진" 배지), 매크로("경로 미해결 — 이 쇼파일에 없는 경로"), 플러그인 7종, 익스큐터 8종 — 전부 실제 콘솔 값(픽스처 19대) |
+| ② 시퀀스 타일 Go+/Off | **미달성** | 아래 D-M6-1 참조 |
+| ③ 익스큐터 타일(해석된 번호) Go+/Off | **미달성** | 아래 D-M6-1 참조 |
+| ④ 수동 새로고침 왕복 | PASS | 새로고침 클릭 → 동기화 시각 `11:34:12` → `11:38:43`로 실제 갱신(콘솔 재조회 확인) |
+| ⑤ 매크로 press(양성 1회 + 블랙리스트) | **미달성** | 아래 D-M6-1 참조 |
+| ⑥ LiveLock 토글 → 제안 전용·송신 0건 | **미달성** | 아래 D-M6-1 참조 |
+| ⑦ WS 강제 종료/재접속 → 재동기화 | PASS | 페이지 재접속(강제 reload) → 서버 로그에 새 `WebSocket /ws [accepted]` 확인 → 수동 새로고침 없이 동기화 시각이 `11:40:11`로 자동 갱신(재접속 시 `connectResyncFrames`의 dash_catalog_request 자동 dispatch 확인) |
+| ⑧ 접기/펼치기 중 채팅 정상 동작 | PASS | 대시보드 펼침 상태에서 "지금 그룹 목록 알려줘" 전송 → 실제 콘솔 그룹 데이터로 응답; 대시보드 접힘 상태에서 "지금 프리셋 목록도 알려줘" 전송 → 실제 콘솔 프리셋 데이터로 응답. 양쪽 다 채팅 파이프라인 무손상 |
+
+**D-M6-1 익스큐터 발화 항목(②③) + 매크로 press(⑤) + LiveLock 발화 검증(⑥) 정직 미달성 처리**: 실사용 쇼파일의 익스큐터 8종(no 1,5,11,91,92,93,95,101 — 전부 "Sequence N" 이름)이 전부 `dashItemIsPressable`상 미해석("정보만" 배지) 상태였고, 매크로 풀 자체가 이 쇼파일에 없음("경로 미해결"). 발화 가능한(press-able) 대상이 하나도 없어 ②③⑤⑥ 4개 항목 전부 실제 press 시도조차 할 수 없었음 — 콘솔로 나간 실행 커맨드는 0건. 사용자 확인 후, 별도 쇼파일 전환이나 콘솔 측 익스큐터/매크로 재구성 없이 **현재 상태를 정직하게 기록하고 마무리**하기로 결정(EXECBODY AP-8 원칙 — 부분 성공을 성공으로 위장하지 않는다). 이는 SPEC-COPILOT-SHOWUI-001의 executor-tile v1 범위축소(AC-013)와 동일한 처리 패턴. 소프트웨어 측 발화 배선 자체(M5, `sendPanelExecute`/`sendPanelStop`)는 이미 vitest로 기계 검증 완료 — 이번 미달성은 UI/서버 코드의 결함이 아니라 **테스트에 사용된 실제 쇼파일에 발화 가능한 타깃이 없었다는 환경적 제약**.
+
+**AC-DASHUI-014 최종 판정**: PASS-WITH-DEBT — ①④⑦⑧ 라이브 확인 완료, ②③⑤⑥은 위 사유로 미달성(§E.5 잔여 위험에 등재, 후속 세션에서 발화 가능한 쇼파일/익스큐터·매크로 구성 시 재검증 권장).
+
+**AC-DASHUI-015 (드릴다운 예산 정직성)**: PASS — 프리셋 풀 헤더에 "드릴다운 예산 소진" 배지가 실제로 렌더됨을 라이브로 확인(N/A 케이스 아님, 실제 발생).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending — M6 LIVE 잔여>_
+run_status: audit-ready (PASS-WITH-DEBT)
+run_complete_at: 2026-07-24
+verdict: M1~M6 전 마일스톤 완료. AC-DASHUI-001~013/016/017 기계 검증 PASS. AC-DASHUI-014 라이브 PASS-WITH-DEBT(①④⑦⑧ PASS, ②③⑤⑥ 쇼파일 제약으로 미달성 — D-M6-1). AC-DASHUI-015 PASS.
+next: /moai sync SPEC-COPILOT-DASHUI-001
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
