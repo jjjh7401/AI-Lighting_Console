@@ -14,7 +14,13 @@ import { PoolSection } from "./PoolSection";
 
 export interface DashBoardProps {
   dash: DashState;
-  onToggleCollapse: () => void;
+  /**
+   * Optional collapse affordance. The M6 console-primary inversion makes the
+   * info pane permanent — App no longer supplies this, so the ◂ 접기 button
+   * disappears from the live UI; the prop stays for callers/tests that still
+   * want a collapsible variant.
+   */
+  onToggleCollapse?: () => void;
   /**
    * Dispatches a manual `dash_catalog_request` (REQ-DASHUI-021 — refresh is
    * on-demand only, never timer-driven). Optional by design decision: M5
@@ -139,13 +145,15 @@ export function DashBoard({
     <aside className="dashboard" aria-label="리그 대시보드">
       <header className="dashboard-header">
         <span className="dashboard-title">리그 요약</span>
-        <button
-          className="dashboard-collapse"
-          onClick={onToggleCollapse}
-          aria-label="대시보드 접기"
-        >
-          ◂ 접기
-        </button>
+        {onToggleCollapse && (
+          <button
+            className="dashboard-collapse"
+            onClick={onToggleCollapse}
+            aria-label="대시보드 접기"
+          >
+            ◂ 접기
+          </button>
+        )}
       </header>
       <div className="dashboard-syncline">
         <span className="dashboard-summary">{dashboardSummaryText(dash, fixturesSection)}</span>

@@ -28,39 +28,66 @@ body {
   color: var(--text);
 }
 
-/* M3 — split-pane shell (SPEC-COPILOT-DASHUI-001, design.md §6). The 860px
-   read-width cap moves out of the base .app rule into the collapsed-state
-   selector below so the split state can size differently; collapsed keeps
-   the exact pre-M3 look (single centered column, same cap). */
+/* M6 console-primary inversion (SPEC-COPILOT-DASHUI-001, user direction):
+   a full-height column frame (global header/status on top) over a split row
+   where the console info pane takes ALL remaining width and chat is a fixed
+   right column. Collapsing chat leaves a thin re-open rail. */
+.app-frame {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-frame > .header {
+  border-bottom: 1px solid #2b2f36;
+}
+
 .app-shell {
   display: flex;
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
 }
 
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  margin: 0 auto;
+  height: 100%;
   min-width: 0;
 }
 
-.app-shell.dash-collapsed .app {
-  width: 100%;
-  max-width: 860px;
+.app-shell.chat-split .app {
+  width: 420px;
+  flex-shrink: 0;
+  border-left: 1px solid #2b2f36;
 }
 
-.app-shell.dash-split .app {
-  flex: 1;
-  max-width: 720px;
+.chat-rail {
+  width: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12px;
+  border-left: 1px solid #2b2f36;
+  background: var(--panel);
+}
+
+.chat-rail-open {
+  writing-mode: vertical-rl;
+  padding: 12px 6px;
+  border-radius: 8px;
+  border: 1px solid #2b2f36;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
 }
 
 .dashboard {
-  width: 280px;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #2b2f36;
   background: var(--panel);
   overflow-y: auto;
 }
@@ -100,7 +127,7 @@ body {
   font-size: 13px;
 }
 
-.dash-toggle {
+.chat-toggle {
   padding: 5px 12px;
   border-radius: 8px;
   border: 1px solid #2b2f36;

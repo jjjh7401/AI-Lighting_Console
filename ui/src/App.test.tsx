@@ -44,35 +44,17 @@ describe("targetKindForDashSection (M5)", () => {
   });
 });
 
-describe("AppShell — split-pane layout (M3)", () => {
-  it("collapsed: renders exactly the passed children, zero DashBoard nodes — matches today's single-column chat view (AC-DASHUI-009)", () => {
+describe("AppShell — console-primary split layout (M6 inversion)", () => {
+  it("chat open: mounts exactly one DashBoard node alongside the untouched chat children", () => {
     const element = AppShell({
-      dashCollapsed: true,
+      chatCollapsed: false,
       dash: initialState.dash,
-      onToggleDash: vi.fn(),
+      onToggleChat: vi.fn(),
       children: CHAT_SENTINEL,
     }) as ReactElement;
 
     expect(element.type).toBe("div");
-    expect(element.props.className).toBe("app-shell dash-collapsed");
-
-    const children = childArray(element);
-    const dashboardNodes = children.filter(
-      (child) => (child as ReactElement | null)?.type === DashBoard,
-    );
-    expect(dashboardNodes).toHaveLength(0);
-    expect(children).toContain(CHAT_SENTINEL);
-  });
-
-  it("split: mounts exactly one DashBoard node alongside the untouched chat children", () => {
-    const element = AppShell({
-      dashCollapsed: false,
-      dash: initialState.dash,
-      onToggleDash: vi.fn(),
-      children: CHAT_SENTINEL,
-    }) as ReactElement;
-
-    expect(element.props.className).toBe("app-shell dash-split");
+    expect(element.props.className).toBe("app-shell chat-split");
 
     const children = childArray(element);
     const dashboardNodes = children.filter(
@@ -83,19 +65,47 @@ describe("AppShell — split-pane layout (M3)", () => {
     expect(children).toContain(CHAT_SENTINEL);
   });
 
-  it("wires DashBoard's onToggleCollapse to the same onToggleDash callback the shell received", () => {
-    const onToggleDash = vi.fn();
+  it("chat collapsed: DashBoard STILL mounts (console pane is permanent) and a chat-rail re-open button replaces the chat children", () => {
+    const onToggleChat = vi.fn();
     const element = AppShell({
-      dashCollapsed: false,
+      chatCollapsed: true,
       dash: initialState.dash,
-      onToggleDash,
+      onToggleChat,
+      children: CHAT_SENTINEL,
+    }) as ReactElement;
+
+    expect(element.props.className).toBe("app-shell chat-collapsed");
+
+    const children = childArray(element);
+    const dashboardNodes = children.filter(
+      (child) => (child as ReactElement | null)?.type === DashBoard,
+    );
+    expect(dashboardNodes).toHaveLength(1);
+    expect(children).not.toContain(CHAT_SENTINEL);
+
+    const rail = children.find(
+      (child) => (child as ReactElement | null)?.props?.className === "chat-rail",
+    ) as ReactElement;
+    expect(rail).toBeDefined();
+    const railButton = (
+      Array.isArray(rail.props.children) ? rail.props.children[0] : rail.props.children
+    ) as ReactElement;
+    expect(railButton.props["aria-label"]).toBe("채팅 펼치기");
+    railButton.props.onClick();
+    expect(onToggleChat).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not offer a dashboard collapse affordance — DashBoard's onToggleCollapse slot stays undefined", () => {
+    const element = AppShell({
+      chatCollapsed: false,
+      dash: initialState.dash,
+      onToggleChat: vi.fn(),
       children: CHAT_SENTINEL,
     }) as ReactElement;
     const children = childArray(element) as ReactElement[];
     const dashboardNode = children.find((child) => child?.type === DashBoard) as ReactElement;
 
-    dashboardNode.props.onToggleCollapse();
-    expect(onToggleDash).toHaveBeenCalledTimes(1);
+    expect(dashboardNode.props.onToggleCollapse).toBeUndefined();
   });
 
   // M5 (design.md §4, REQ-DASHUI-017) — press/refresh/running wiring passthrough.
@@ -104,9 +114,9 @@ describe("AppShell — split-pane layout (M3)", () => {
     const isItemRunning = vi.fn();
     const onItemPress = vi.fn();
     const element = AppShell({
-      dashCollapsed: false,
+      chatCollapsed: false,
       dash: initialState.dash,
-      onToggleDash: vi.fn(),
+      onToggleChat: vi.fn(),
       onRefresh,
       isItemRunning,
       onItemPress,
@@ -122,9 +132,9 @@ describe("AppShell — split-pane layout (M3)", () => {
 
   it("omitting onRefresh/isItemRunning/onItemPress leaves DashBoard's slots undefined — no forced stub", () => {
     const element = AppShell({
-      dashCollapsed: false,
+      chatCollapsed: false,
       dash: initialState.dash,
-      onToggleDash: vi.fn(),
+      onToggleChat: vi.fn(),
       children: CHAT_SENTINEL,
     }) as ReactElement;
     const children = childArray(element) as ReactElement[];
@@ -135,21 +145,14 @@ describe("AppShell — split-pane layout (M3)", () => {
     expect(dashboardNode.props.onItemPress).toBeUndefined();
   });
 
-  it("never mutates or wraps the passed children — same value passes through unchanged in both layout states", () => {
-    const collapsed = AppShell({
-      dashCollapsed: true,
-      dash: initialState.dash,
-      onToggleDash: vi.fn(),
-      children: CHAT_SENTINEL,
-    }) as ReactElement;
+  it("never mutates or wraps the passed children — same value passes through unchanged when chat is open", () => {
     const split = AppShell({
-      dashCollapsed: false,
+      chatCollapsed: false,
       dash: initialState.dash,
-      onToggleDash: vi.fn(),
+      onToggleChat: vi.fn(),
       children: CHAT_SENTINEL,
     }) as ReactElement;
 
-    expect(childArray(collapsed)).toContain(CHAT_SENTINEL);
     expect(childArray(split)).toContain(CHAT_SENTINEL);
   });
 });
