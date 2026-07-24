@@ -725,28 +725,76 @@ body {
 }
 
 /* M4 — onPC pool window sections (design.md §2/§3). */
+/* M6-UX — onPC pool-window styling (user direction): each category reads as
+   its own MA-style pool window — a colored title chip, category-tinted
+   cells, and BIG legible tiles whose scale the operator adjusts per section
+   (−/+ header control → .pool-size-s/m/l on the grid). Accent hues follow
+   the onPC pool color language (groups blue, presets teal, macros red,
+   plugins magenta, executors yellow-brown) — none of them reuses
+   --live-amber, which stays exclusive to a RUNNING tile. */
 .pool-section {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  --pool-accent: #4a5160;
+}
+
+.pool-section-groups {
+  --pool-accent: #2f6db4;
+}
+
+.pool-section-preset_pools {
+  --pool-accent: #1d8a80;
+}
+
+.pool-section-macros {
+  --pool-accent: #b03535;
+}
+
+.pool-section-plugins {
+  --pool-accent: #a53a9b;
+}
+
+.pool-section-executors {
+  --pool-accent: #a08428;
 }
 
 .pool-section-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 0 6px;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 8px 8px 0 0;
+  background: var(--pool-accent);
   border-bottom: 1px solid #2b2f36;
 }
 
 .pool-section-label {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
 }
 
 .pool-section-health {
+  flex: 1;
   font-size: 12px;
-  color: var(--warn);
+  color: #ffe9c4;
+}
+
+.pool-size-control {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.pool-size-step {
+  width: 26px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .pool-section-empty {
@@ -757,22 +805,44 @@ body {
 
 .pool-section-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-  gap: 6px;
-  padding-top: 8px;
+  gap: 8px;
+  padding: 10px 0 0;
+}
+
+/* Per-section tile scale (M6-UX). The 15px primary-label floor holds at
+   every scale; larger scales raise it further. */
+.pool-size-s {
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+}
+
+.pool-size-m {
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+}
+
+.pool-size-l {
+  grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
 }
 
 /* M4 — one numbered onPC-style pool cell (design.md §3 "풀 셀(슬롯)"). */
 .pool-tile {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
-  padding: 6px 8px;
+  gap: 4px;
+  padding: 8px 10px;
   border-radius: 8px;
   background: #16181d;
-  border: 1px solid #2b2f36;
-  min-height: 48px;
+  border: 1px solid var(--pool-accent);
+  min-height: 64px;
+}
+
+.pool-size-s .pool-tile {
+  min-height: 56px;
+}
+
+.pool-size-l .pool-tile {
+  min-height: 88px;
 }
 
 .pool-tile-no {
@@ -781,13 +851,28 @@ body {
   color: var(--text);
 }
 
+.pool-size-l .pool-tile-no {
+  font-size: 17px;
+}
+
+/* The name is the tile's identity — wrap up to two lines instead of
+   truncating to a few characters (the pre-M6-UX single-line ellipsis made
+   every tile read "Copil…"/"Seque…"). */
 .pool-tile-name {
   font-size: 15px;
-  color: var(--muted);
-  white-space: nowrap;
+  line-height: 1.25;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-all;
   max-width: 100%;
+}
+
+.pool-size-l .pool-tile-name {
+  font-size: 16px;
+  -webkit-line-clamp: 3;
 }
 
 .pool-tile-appearance {
@@ -809,18 +894,19 @@ body {
 }
 
 .pool-tile-press {
-  border-color: var(--accent);
+  border-width: 2px;
+  background: #1a1e26;
 }
 
 .pool-tile-verb {
-  margin-top: 2px;
-  padding: 3px 10px;
+  margin-top: auto;
+  padding: 6px 10px;
   border-radius: 6px;
   border: none;
-  background: var(--accent);
+  background: var(--pool-accent);
   color: #fff;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   align-self: stretch;
 }

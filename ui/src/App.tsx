@@ -18,6 +18,7 @@ import { OnboardingBanner } from "./components/OnboardingBanner";
 import { ReviewCard } from "./components/ReviewCard";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { StatusBanner } from "./components/StatusBanner";
+import { type PoolTileSize } from "./components/PoolSection";
 import { panelItemId, type DashItem, type DashState, type PanelTargetKind } from "./protocol";
 import { useCopilotSocket } from "./useCopilotSocket";
 
@@ -68,6 +69,8 @@ export function AppShell({
   onRefresh,
   isItemRunning,
   onItemPress,
+  sectionSize,
+  onSectionSizeChange,
   children,
 }: {
   chatCollapsed: boolean;
@@ -79,6 +82,9 @@ export function AppShell({
   isItemRunning?: (sectionName: string, item: DashItem) => boolean;
   /** M5 — fires panel_execute/panel_stop; see DashBoard.tsx. */
   onItemPress?: (sectionName: string, item: DashItem) => void;
+  /** M6-UX — per-section tile scale; see DashBoard.tsx. */
+  sectionSize?: (sectionName: string) => PoolTileSize;
+  onSectionSizeChange?: (sectionName: string, next: PoolTileSize) => void;
   children: ReactNode;
 }) {
   return (
@@ -88,6 +94,8 @@ export function AppShell({
         onRefresh={onRefresh}
         isItemRunning={isItemRunning}
         onItemPress={onItemPress}
+        sectionSize={sectionSize}
+        onSectionSizeChange={onSectionSizeChange}
       />
       {chatCollapsed ? (
         <aside className="chat-rail">
@@ -123,6 +131,10 @@ export default function App() {
   // column starts OPEN alongside the always-visible console pane; the
   // operator may collapse it to give the console pane the full width.
   const [chatCollapsed, setChatCollapsed] = useState(false);
+  // M6-UX — per-section tile scale ("s" | "m" | "l"), default "m". Adjusted
+  // via each pool section's own −/+ header control; session-volatile like
+  // every other view preference.
+  const [sectionSizes, setSectionSizes] = useState<Record<string, PoolTileSize>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const closeSettings = () => {
@@ -201,6 +213,10 @@ export default function App() {
         onRefresh={sendDashRefresh}
         isItemRunning={isDashItemRunning}
         onItemPress={pressDashItem}
+        sectionSize={(sectionName) => sectionSizes[sectionName] ?? "m"}
+        onSectionSizeChange={(sectionName, next) =>
+          setSectionSizes((sizes) => ({ ...sizes, [sectionName]: next }))
+        }
       >
         <div className="app">
           <main className="main">

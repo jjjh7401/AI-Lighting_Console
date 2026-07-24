@@ -10,7 +10,7 @@
 // function in tests, returning an inspectable React element tree with no
 // renderer — see DashBoard.test.tsx and the sibling AppShell in App.tsx.
 import { type DashItem, type DashSection, type DashState } from "../protocol";
-import { PoolSection } from "./PoolSection";
+import { PoolSection, type PoolTileSize } from "./PoolSection";
 
 export interface DashBoardProps {
   dash: DashState;
@@ -34,6 +34,10 @@ export interface DashBoardProps {
   isItemRunning?: (sectionName: string, item: DashItem) => boolean;
   /** Fires panel_execute or panel_stop depending on current running state (M5). */
   onItemPress?: (sectionName: string, item: DashItem) => void;
+  /** Per-section tile scale (M6-UX). Defaults to "m" for unlisted sections. */
+  sectionSize?: (sectionName: string) => PoolTileSize;
+  /** When provided, each section header offers −/+ tile-size controls. */
+  onSectionSizeChange?: (sectionName: string, next: PoolTileSize) => void;
 }
 
 const SECTION_LABEL: Record<string, string> = {
@@ -124,6 +128,8 @@ export function DashBoard({
   onRefresh,
   isItemRunning,
   onItemPress,
+  sectionSize,
+  onSectionSizeChange,
 }: DashBoardProps) {
   const hasSections = dash.sections.length > 0;
   const fixturesSection = dash.sections.find((section) => section.name === "fixtures");
@@ -176,6 +182,12 @@ export function DashBoard({
                   isItemRunning ? (item) => isItemRunning(section.name, item) : undefined
                 }
                 onPress={onItemPress ? (item) => onItemPress(section.name, item) : undefined}
+                size={sectionSize?.(section.name)}
+                onSizeChange={
+                  onSectionSizeChange
+                    ? (next) => onSectionSizeChange(section.name, next)
+                    : undefined
+                }
               />
             ))}
           </div>

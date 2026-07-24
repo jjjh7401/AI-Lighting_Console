@@ -214,3 +214,89 @@ describe("PoolSection", () => {
     expect(headerChildren[1].props.className).toBe("pool-section-health");
   });
 });
+
+// M6-UX — onPC-style per-section tile-size control (user direction: bigger,
+// more legible tiles, adjustable per category).
+describe("PoolSection — tile-size control", () => {
+  function headerOf(element: ReactElement): ReactElement {
+    return childArray(element)[0] as ReactElement;
+  }
+  function sizeButtons(element: ReactElement): ReactElement[] {
+    const header = headerOf(element);
+    const controls = childArray(header).find(
+      (child) => (child as ReactElement)?.props?.className === "pool-size-control",
+    ) as ReactElement | undefined;
+    return controls ? (childArray(controls) as ReactElement[]) : [];
+  }
+
+  it("applies the size class to the tile grid (default m)", () => {
+    const element = PoolSection({
+      section: OK_SECTION,
+      label: "그룹",
+      isPressable: () => false,
+    }) as ReactElement;
+    const grid = childArray(element)[1] as ReactElement;
+    expect(grid.props.className).toBe("pool-section-grid pool-size-m");
+  });
+
+  it("applies an explicit size prop to the grid class", () => {
+    const element = PoolSection({
+      section: OK_SECTION,
+      label: "그룹",
+      isPressable: () => false,
+      size: "l",
+    }) as ReactElement;
+    const grid = childArray(element)[1] as ReactElement;
+    expect(grid.props.className).toBe("pool-section-grid pool-size-l");
+  });
+
+  it("renders −/+ size buttons ONLY when onSizeChange is provided, and they step the size", () => {
+    const without = PoolSection({
+      section: OK_SECTION,
+      label: "그룹",
+      isPressable: () => false,
+    }) as ReactElement;
+    expect(sizeButtons(without)).toHaveLength(0);
+
+    const onSizeChange = vi.fn();
+    const element = PoolSection({
+      section: OK_SECTION,
+      label: "그룹",
+      isPressable: () => false,
+      size: "m",
+      onSizeChange,
+    }) as ReactElement;
+    const [smaller, larger] = sizeButtons(element);
+    expect(smaller.props["aria-label"]).toBe("타일 작게");
+    expect(larger.props["aria-label"]).toBe("타일 크게");
+    smaller.props.onClick();
+    expect(onSizeChange).toHaveBeenLastCalledWith("s");
+    larger.props.onClick();
+    expect(onSizeChange).toHaveBeenLastCalledWith("l");
+  });
+
+  it("clamps stepping at both ends (s cannot shrink, l cannot grow)", () => {
+    const onSizeChange = vi.fn();
+    const atSmall = PoolSection({
+      section: OK_SECTION,
+      label: "그룹",
+      isPressable: () => false,
+      size: "s",
+      onSizeChange,
+    }) as ReactElement;
+    const [smaller] = sizeButtons(atSmall);
+    smaller.props.onClick();
+    expect(onSizeChange).toHaveBeenLastCalledWith("s");
+
+    const atLarge = PoolSection({
+      section: OK_SECTION,
+      label: "그룹",
+      isPressable: () => false,
+      size: "l",
+      onSizeChange,
+    }) as ReactElement;
+    const larger = sizeButtons(atLarge)[1];
+    larger.props.onClick();
+    expect(onSizeChange).toHaveBeenLastCalledWith("l");
+  });
+});

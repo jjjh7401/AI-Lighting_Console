@@ -40,6 +40,17 @@ export function sectionHealthLabel(section: DashSection): string | null {
   return flags.length > 0 ? flags.join(" · ") : null;
 }
 
+/** onPC-style tile scale for one section (M6-UX, user direction). */
+export type PoolTileSize = "s" | "m" | "l";
+
+const SIZE_ORDER: PoolTileSize[] = ["s", "m", "l"];
+
+/** One step smaller/larger, clamped at both ends. */
+export function stepPoolSize(size: PoolTileSize, direction: -1 | 1): PoolTileSize {
+  const index = SIZE_ORDER.indexOf(size) + direction;
+  return SIZE_ORDER[Math.min(SIZE_ORDER.length - 1, Math.max(0, index))];
+}
+
 export interface PoolSectionProps {
   section: DashSection;
   label: string;
@@ -55,6 +66,10 @@ export interface PoolSectionProps {
   /** Per-item running lookup (M5). Defaults to not-running when omitted. */
   isRunning?: (item: DashItem) => boolean;
   onPress?: (item: DashItem) => void;
+  /** This section's tile scale (M6-UX). Session-volatile, owned by App. */
+  size?: PoolTileSize;
+  /** When provided, the header renders −/+ controls that step the size. */
+  onSizeChange?: (next: PoolTileSize) => void;
 }
 
 export function PoolSection({
@@ -65,6 +80,8 @@ export function PoolSection({
   runningVerb,
   isRunning,
   onPress,
+  size = "m",
+  onSizeChange,
 }: PoolSectionProps) {
   const health = sectionHealthLabel(section);
   return (
@@ -72,11 +89,31 @@ export function PoolSection({
       <header className="pool-section-header">
         <span className="pool-section-label">{label}</span>
         {health ? <span className="pool-section-health">{health}</span> : null}
+        {onSizeChange ? (
+          <span className="pool-size-control">
+            <button
+              type="button"
+              className="pool-size-step"
+              aria-label="타일 작게"
+              onClick={() => onSizeChange(stepPoolSize(size, -1))}
+            >
+              −
+            </button>
+            <button
+              type="button"
+              className="pool-size-step"
+              aria-label="타일 크게"
+              onClick={() => onSizeChange(stepPoolSize(size, 1))}
+            >
+              +
+            </button>
+          </span>
+        ) : null}
       </header>
       {section.items.length === 0 ? (
         <div className="pool-section-empty">비어 있음</div>
       ) : (
-        <div className="pool-section-grid">
+        <div className={`pool-section-grid pool-size-${size}`}>
           {section.items.map((item) => {
             const pressable = isPressable(item);
             const running = pressable && (isRunning?.(item) ?? false);
