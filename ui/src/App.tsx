@@ -15,8 +15,20 @@ import { OnboardingBanner } from "./components/OnboardingBanner";
 import { ReviewCard } from "./components/ReviewCard";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { StatusBanner } from "./components/StatusBanner";
-import { type DashState } from "./protocol";
+import { panelItemId, type DashItem, type DashState, type PanelTargetKind } from "./protocol";
 import { useCopilotSocket } from "./useCopilotSocket";
+
+/**
+ * The dash section names that carry live-fire semantics (M5, design.md §4)
+ * mapped to the wire `target_kind` `panel_execute`/`panel_stop` expect. Every
+ * other dash section (groups/preset_pools/plugins/fixtures) is structurally
+ * read-only — `null` means "this section never presses".
+ */
+export function targetKindForDashSection(sectionName: string): PanelTargetKind | null {
+  if (sectionName === "executors") return "executor";
+  if (sectionName === "macros") return "macro";
+  return null;
+}
 
 /**
  * The split-pane shell — deliberately hook-free so App.test.tsx can call it
@@ -30,24 +42,50 @@ export function AppShell({
   dashCollapsed,
   dash,
   onToggleDash,
+  onRefresh,
+  isItemRunning,
+  onItemPress,
   children,
 }: {
   dashCollapsed: boolean;
   dash: DashState;
   onToggleDash: () => void;
+  /** M5 — manual [새로고침] dispatch; see DashBoard.tsx. */
+  onRefresh?: () => void;
+  /** M5 — per-item running lookup; see DashBoard.tsx. */
+  isItemRunning?: (sectionName: string, item: DashItem) => boolean;
+  /** M5 — fires panel_execute/panel_stop; see DashBoard.tsx. */
+  onItemPress?: (sectionName: string, item: DashItem) => void;
   children: ReactNode;
 }) {
   return (
     <div className={`app-shell ${dashCollapsed ? "dash-collapsed" : "dash-split"}`}>
-      {!dashCollapsed && <DashBoard dash={dash} onToggleCollapse={onToggleDash} />}
+      {!dashCollapsed && (
+        <DashBoard
+          dash={dash}
+          onToggleCollapse={onToggleDash}
+          onRefresh={onRefresh}
+          isItemRunning={isItemRunning}
+          onItemPress={onItemPress}
+        />
+      )}
       {children}
     </div>
   );
 }
 
 export default function App() {
-  const { state, connected, sendChat, sendDecision, sendReviewDecision, sendLock } =
-    useCopilotSocket();
+  const {
+    state,
+    connected,
+    sendChat,
+    sendDecision,
+    sendReviewDecision,
+    sendLock,
+    sendPanelExecute,
+    sendPanelStop,
+    sendDashRefresh,
+  } = useCopilotSocket();
   const [draft, setDraft] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   // Bumped when the settings panel closes so the onboarding banner re-checks
@@ -75,11 +113,35 @@ export default function App() {
     setDraft("");
   };
 
+  // M5 (design.md §4, REQ-DASHUI-017): the dash pool grid's fireable sections
+  // (executors/macros) reuse the SAME panel_execute/panel_stop → gate.screen()
+  // path the SHOWUI-inherited panel protocol already exposes — `state.panel`
+  // (running/busy) already tracks it, this just cross-references it by
+  // `panelItemId`. Non-fireable sections (groups/preset_pools/plugins) never
+  // reach these — DashBoard's own `dashItemIsPressable` keeps them read-only.
+  const isDashItemRunning = (sectionName: string, item: DashItem): boolean => {
+    const targetKind = targetKindForDashSection(sectionName);
+    if (targetKind === null) return false;
+    return state.panel.running[panelItemId(targetKind, item.no)]?.running ?? false;
+  };
+  const pressDashItem = (sectionName: string, item: DashItem) => {
+    const targetKind = targetKindForDashSection(sectionName);
+    if (targetKind === null) return;
+    if (isDashItemRunning(sectionName, item)) {
+      sendPanelStop(targetKind, item.no);
+    } else {
+      sendPanelExecute(targetKind, item.no);
+    }
+  };
+
   return (
     <AppShell
       dashCollapsed={dashCollapsed}
       dash={state.dash}
       onToggleDash={() => setDashCollapsed((collapsed) => !collapsed)}
+      onRefresh={sendDashRefresh}
+      isItemRunning={isDashItemRunning}
+      onItemPress={pressDashItem}
     >
       <div className="app">
         <header className="header">

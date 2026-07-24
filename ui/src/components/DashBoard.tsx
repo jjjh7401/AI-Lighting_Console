@@ -24,6 +24,10 @@ export interface DashBoardProps {
    * App.tsx starts supplying the real callback in M5.
    */
   onRefresh?: () => void;
+  /** Per-item running lookup (M5) — see `pressVerbForSection`/`runningVerbForSection`. */
+  isItemRunning?: (sectionName: string, item: DashItem) => boolean;
+  /** Fires panel_execute or panel_stop depending on current running state (M5). */
+  onItemPress?: (sectionName: string, item: DashItem) => void;
 }
 
 const SECTION_LABEL: Record<string, string> = {
@@ -42,6 +46,17 @@ function sectionLabel(name: string): string {
 function pressVerbForSection(name: string): string | undefined {
   if (name === "macros") return "Macro";
   if (name === "executors") return "Go+";
+  return undefined;
+}
+
+/**
+ * The verb shown while a tile is running (M5, design.md §4). Executors get
+ * an "Off" affordance; macros stay one-shot with no Off — pressing Run again
+ * simply re-fires the macro rather than toggling anything (§4 "Off 어포던스
+ * 없음").
+ */
+function runningVerbForSection(name: string): string | undefined {
+  if (name === "executors") return "Off";
   return undefined;
 }
 
@@ -97,7 +112,13 @@ export function dashboardSummaryText(dash: DashState, fixturesSection: DashSecti
   return `픽스처 ${fixtureSummaryLabel(fixturesSection)} · 동기화 ${formatSyncTime(dash.lastSyncAt)}${staleSuffix}`;
 }
 
-export function DashBoard({ dash, onToggleCollapse, onRefresh }: DashBoardProps) {
+export function DashBoard({
+  dash,
+  onToggleCollapse,
+  onRefresh,
+  isItemRunning,
+  onItemPress,
+}: DashBoardProps) {
   const hasSections = dash.sections.length > 0;
   const fixturesSection = dash.sections.find((section) => section.name === "fixtures");
   // Fixtures fold into the header-strip summary line (design.md §2 헤더
@@ -142,6 +163,11 @@ export function DashBoard({ dash, onToggleCollapse, onRefresh }: DashBoardProps)
                 label={sectionLabel(section.name)}
                 isPressable={(item) => dashItemIsPressable(section.name, item)}
                 verb={pressVerbForSection(section.name)}
+                runningVerb={runningVerbForSection(section.name)}
+                isRunning={
+                  isItemRunning ? (item) => isItemRunning(section.name, item) : undefined
+                }
+                onPress={onItemPress ? (item) => onItemPress(section.name, item) : undefined}
               />
             ))}
           </div>

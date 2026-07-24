@@ -289,4 +289,46 @@ describe("DashBoard", () => {
     }) as ReactElement;
     expect(element).toBeDefined();
   });
+
+  // M5 (design.md §4, REQ-DASHUI-017) — running-verb wiring + press dispatch.
+  describe("running/press wiring (M5)", () => {
+    it("gives executors a runningVerb ('Off') and macros none (one-shot, no Off affordance)", () => {
+      const element = DashBoard({ dash: POPULATED_DASH, onToggleCollapse: vi.fn() }) as ReactElement;
+      const [, , body] = childArray(element) as ReactElement[];
+      const [sectionsDiv] = childArray(body) as ReactElement[];
+      const [groupsEl, executorsEl] = childArray(sectionsDiv) as ReactElement[];
+      expect(groupsEl.props.runningVerb).toBeUndefined();
+      expect(executorsEl.props.runningVerb).toBe("Off");
+    });
+
+    it("threads section name + item through onItemPress/isItemRunning into PoolSection's per-item callbacks", () => {
+      const onItemPress = vi.fn();
+      const isItemRunning = vi.fn().mockReturnValue(true);
+      const element = DashBoard({
+        dash: POPULATED_DASH,
+        onToggleCollapse: vi.fn(),
+        onItemPress,
+        isItemRunning,
+      }) as ReactElement;
+      const [, , body] = childArray(element) as ReactElement[];
+      const [sectionsDiv] = childArray(body) as ReactElement[];
+      const [, executorsEl] = childArray(sectionsDiv) as ReactElement[];
+
+      const item = EXECUTORS_SECTION.items[0];
+      executorsEl.props.onPress(item);
+      expect(onItemPress).toHaveBeenCalledWith("executors", item);
+
+      expect(executorsEl.props.isRunning(item)).toBe(true);
+      expect(isItemRunning).toHaveBeenCalledWith("executors", item);
+    });
+
+    it("omitting onItemPress/isItemRunning leaves PoolSection's onPress/isRunning undefined — no forced stub", () => {
+      const element = DashBoard({ dash: POPULATED_DASH, onToggleCollapse: vi.fn() }) as ReactElement;
+      const [, , body] = childArray(element) as ReactElement[];
+      const [sectionsDiv] = childArray(body) as ReactElement[];
+      const [, executorsEl] = childArray(sectionsDiv) as ReactElement[];
+      expect(executorsEl.props.onPress).toBeUndefined();
+      expect(executorsEl.props.isRunning).toBeUndefined();
+    });
+  });
 });

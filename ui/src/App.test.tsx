@@ -14,7 +14,7 @@
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { AppShell } from "./App";
+import { AppShell, targetKindForDashSection } from "./App";
 import { DashBoard } from "./components/DashBoard";
 import { initialState } from "./protocol";
 
@@ -27,6 +27,22 @@ function childArray(element: ReactElement): unknown[] {
 // ChatView, ApprovalCard, ReviewCard, SettingsPanel, StatusBanner all live
 // inside it). AppShell must never inspect or rewrite it — only wrap it.
 const CHAT_SENTINEL = "chat-ui-sentinel";
+
+// M5 (design.md §4) — the section-name-to-target_kind map that keys
+// panel_execute/panel_stop dispatch and the panel.running lookup.
+describe("targetKindForDashSection (M5)", () => {
+  it("maps executors → 'executor' and macros → 'macro'", () => {
+    expect(targetKindForDashSection("executors")).toBe("executor");
+    expect(targetKindForDashSection("macros")).toBe("macro");
+  });
+
+  it("read-only dash sections (groups/preset_pools/plugins/fixtures) map to null — structurally never fire", () => {
+    expect(targetKindForDashSection("groups")).toBeNull();
+    expect(targetKindForDashSection("preset_pools")).toBeNull();
+    expect(targetKindForDashSection("plugins")).toBeNull();
+    expect(targetKindForDashSection("fixtures")).toBeNull();
+  });
+});
 
 describe("AppShell — split-pane layout (M3)", () => {
   it("collapsed: renders exactly the passed children, zero DashBoard nodes — matches today's single-column chat view (AC-DASHUI-009)", () => {
@@ -80,6 +96,43 @@ describe("AppShell — split-pane layout (M3)", () => {
 
     dashboardNode.props.onToggleCollapse();
     expect(onToggleDash).toHaveBeenCalledTimes(1);
+  });
+
+  // M5 (design.md §4, REQ-DASHUI-017) — press/refresh/running wiring passthrough.
+  it("threads onRefresh/isItemRunning/onItemPress through to DashBoard unchanged", () => {
+    const onRefresh = vi.fn();
+    const isItemRunning = vi.fn();
+    const onItemPress = vi.fn();
+    const element = AppShell({
+      dashCollapsed: false,
+      dash: initialState.dash,
+      onToggleDash: vi.fn(),
+      onRefresh,
+      isItemRunning,
+      onItemPress,
+      children: CHAT_SENTINEL,
+    }) as ReactElement;
+    const children = childArray(element) as ReactElement[];
+    const dashboardNode = children.find((child) => child?.type === DashBoard) as ReactElement;
+
+    expect(dashboardNode.props.onRefresh).toBe(onRefresh);
+    expect(dashboardNode.props.isItemRunning).toBe(isItemRunning);
+    expect(dashboardNode.props.onItemPress).toBe(onItemPress);
+  });
+
+  it("omitting onRefresh/isItemRunning/onItemPress leaves DashBoard's slots undefined — no forced stub", () => {
+    const element = AppShell({
+      dashCollapsed: false,
+      dash: initialState.dash,
+      onToggleDash: vi.fn(),
+      children: CHAT_SENTINEL,
+    }) as ReactElement;
+    const children = childArray(element) as ReactElement[];
+    const dashboardNode = children.find((child) => child?.type === DashBoard) as ReactElement;
+
+    expect(dashboardNode.props.onRefresh).toBeUndefined();
+    expect(dashboardNode.props.isItemRunning).toBeUndefined();
+    expect(dashboardNode.props.onItemPress).toBeUndefined();
   });
 
   it("never mutates or wraps the passed children — same value passes through unchanged in both layout states", () => {

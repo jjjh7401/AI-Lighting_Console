@@ -47,10 +47,25 @@ export interface PoolSectionProps {
   isPressable: (item: DashItem) => boolean;
   /** The console verb for press-able tiles in this section (e.g. "Go+", "Macro"). */
   verb?: string;
+  /**
+   * The verb shown while a tile is running (e.g. "Off" for executors).
+   * Omitted for one-shot sections (macros — no Off affordance, design.md §4).
+   */
+  runningVerb?: string;
+  /** Per-item running lookup (M5). Defaults to not-running when omitted. */
+  isRunning?: (item: DashItem) => boolean;
   onPress?: (item: DashItem) => void;
 }
 
-export function PoolSection({ section, label, isPressable, verb, onPress }: PoolSectionProps) {
+export function PoolSection({
+  section,
+  label,
+  isPressable,
+  verb,
+  runningVerb,
+  isRunning,
+  onPress,
+}: PoolSectionProps) {
   const health = sectionHealthLabel(section);
   return (
     <section className={`pool-section pool-section-${section.name}`} aria-label={label}>
@@ -62,15 +77,20 @@ export function PoolSection({ section, label, isPressable, verb, onPress }: Pool
         <div className="pool-section-empty">비어 있음</div>
       ) : (
         <div className="pool-section-grid">
-          {section.items.map((item) => (
-            <PoolTile
-              key={item.no}
-              item={item}
-              pressable={isPressable(item)}
-              verb={verb}
-              onPress={onPress}
-            />
-          ))}
+          {section.items.map((item) => {
+            const pressable = isPressable(item);
+            const running = pressable && (isRunning?.(item) ?? false);
+            return (
+              <PoolTile
+                key={item.no}
+                item={item}
+                pressable={pressable}
+                verb={running && runningVerb ? runningVerb : verb}
+                running={running}
+                onPress={onPress}
+              />
+            );
+          })}
         </div>
       )}
     </section>

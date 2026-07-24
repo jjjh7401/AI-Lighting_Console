@@ -6,12 +6,18 @@ import {
   addUserMessage,
   buildApprovalDecision,
   buildChat,
+  buildDashCatalogRequest,
   buildLock,
+  buildPanelCatalogRequest,
+  buildPanelExecute,
+  buildPanelStop,
   buildReviewDecision,
+  buildStatusRequest,
   clearPendingRequests,
   initialState,
   parseServerEvent,
   reduceServerEvent,
+  type PanelTargetKind,
   type UiState,
 } from "./protocol";
 
@@ -70,6 +76,18 @@ export function connectProtocols(token: string | undefined): string[] | undefine
   return [BASE_SUBPROTOCOL, `${TOKEN_SUBPROTOCOL_PREFIX}${token}`];
 }
 
+/**
+ * The frames sent on every successful (re)connect (AC-DASHUI-017,
+ * design.md §5 "접속(재접속 포함) 시 자동 1회") — panel catalog, dash
+ * catalog, and status, so a reconnect rebuilds both catalogs plus health
+ * from scratch rather than trusting the (now possibly stale) pre-disconnect
+ * state. A pure function so the dispatch set is unit-testable without a
+ * live WebSocket (this project's no-DOM-harness convention).
+ */
+export function connectResyncFrames(): string[] {
+  return [buildPanelCatalogRequest(), buildDashCatalogRequest(), buildStatusRequest()];
+}
+
 export interface CopilotSocket {
   state: UiState;
   connected: boolean;
@@ -77,6 +95,9 @@ export interface CopilotSocket {
   sendDecision: (requestId: string, approved: boolean) => void;
   sendReviewDecision: (requestId: string, approved: boolean) => void;
   sendLock: (active: boolean) => void;
+  sendPanelExecute: (targetKind: PanelTargetKind, target: number) => void;
+  sendPanelStop: (targetKind: PanelTargetKind, target: number) => void;
+  sendDashRefresh: () => void;
 }
 
 export function useCopilotSocket(url?: string): CopilotSocket {
@@ -97,6 +118,10 @@ export function useCopilotSocket(url?: string): CopilotSocket {
       socket.onopen = () => {
         retryDelay = 500;
         setConnected(true);
+        // AC-DASHUI-017: every (re)connect re-requests both catalogs + status
+        // rather than trusting pre-disconnect state, which `dispatch({ kind:
+        // "disconnected" })` has already marked stale/cleared on the prior close.
+        connectResyncFrames().forEach((frame) => socket.send(frame));
       };
       socket.onmessage = (message) => dispatch({ kind: "server", raw: String(message.data) });
       socket.onclose = () => {
@@ -142,6 +167,25 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     [send],
   );
   const sendLock = useCallback((active: boolean) => send(buildLock(active)), [send]);
+  const sendPanelExecute = useCallback(
+    (targetKind: PanelTargetKind, target: number) => send(buildPanelExecute(targetKind, target)),
+    [send],
+  );
+  const sendPanelStop = useCallback(
+    (targetKind: PanelTargetKind, target: number) => send(buildPanelStop(targetKind, target)),
+    [send],
+  );
+  const sendDashRefresh = useCallback(() => send(buildDashCatalogRequest()), [send]);
 
-  return { state, connected, sendChat, sendDecision, sendReviewDecision, sendLock };
+  return {
+    state,
+    connected,
+    sendChat,
+    sendDecision,
+    sendReviewDecision,
+    sendLock,
+    sendPanelExecute,
+    sendPanelStop,
+    sendDashRefresh,
+  };
 }

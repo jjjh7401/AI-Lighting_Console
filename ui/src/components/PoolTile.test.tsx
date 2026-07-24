@@ -121,4 +121,49 @@ describe("PoolTile", () => {
     const [, name] = childArray(element) as ReactElement[];
     expect(name.props.children).toBe("—");
   });
+
+  // M5 (REQ-DASHUI-017) — the live-amber running indicator.
+  describe("running (M5)", () => {
+    it("press-able + running carries the exclusive live-amber class", () => {
+      const element = PoolTile({
+        item: RESOLVED_EXECUTOR,
+        pressable: true,
+        verb: "Off",
+        running: true,
+      }) as ReactElement;
+      expect(element.props.className).toBe("pool-tile pool-tile-press pool-tile-running");
+    });
+
+    it("press-able + not running carries no running class", () => {
+      const element = PoolTile({
+        item: RESOLVED_EXECUTOR,
+        pressable: true,
+        verb: "Go+",
+        running: false,
+      }) as ReactElement;
+      expect(element.props.className).toBe("pool-tile pool-tile-press");
+    });
+
+    it("running is ignored on a read-only (non-pressable) tile — never fabricates a press-only class", () => {
+      const element = PoolTile({
+        item: OCCUPIED_ITEM,
+        pressable: false,
+        running: true,
+      }) as ReactElement;
+      expect(element.props.className).toBe("pool-tile pool-tile-info");
+    });
+
+    it("the verb button still renders whatever verb the caller passes (e.g. 'Off' while running)", () => {
+      const element = PoolTile({
+        item: RESOLVED_EXECUTOR,
+        pressable: true,
+        verb: "Off",
+        running: true,
+      }) as ReactElement;
+      const button = (childArray(element) as ReactElement[]).find(
+        (child) => child.type === "button",
+      ) as ReactElement;
+      expect(button.props.children).toBe("Off");
+    });
+  });
 });

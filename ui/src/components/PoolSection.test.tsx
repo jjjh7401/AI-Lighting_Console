@@ -129,6 +129,78 @@ describe("PoolSection", () => {
     expect(tiles.every((tile) => tile.props.onPress === onPress)).toBe(true);
   });
 
+  // M5 (design.md §4, REQ-DASHUI-017) — running-state verb switch (Go+/Off).
+  describe("running verb switch (M5)", () => {
+    const EXECUTORS: DashSection = {
+      name: "executors",
+      status: "ok",
+      items: [
+        { no: 101, name: "Running", meta: { resolved: true } },
+        { no: 102, name: "Idle", meta: { resolved: true } },
+      ],
+    };
+
+    it("running item gets the runningVerb + running=true; idle item keeps the default verb + running=false", () => {
+      const isRunning = (item: DashItem) => item.no === 101;
+      const element = PoolSection({
+        section: EXECUTORS,
+        label: "익스큐터",
+        isPressable: () => true,
+        verb: "Go+",
+        runningVerb: "Off",
+        isRunning,
+      }) as ReactElement;
+      const [, grid] = childArray(element) as ReactElement[];
+      const [runningTile, idleTile] = childArray(grid) as ReactElement[];
+      expect(runningTile.props.verb).toBe("Off");
+      expect(runningTile.props.running).toBe(true);
+      expect(idleTile.props.verb).toBe("Go+");
+      expect(idleTile.props.running).toBe(false);
+    });
+
+    it("omitting isRunning defaults every tile to not-running (backward compatible with M4 callers)", () => {
+      const element = PoolSection({
+        section: EXECUTORS,
+        label: "익스큐터",
+        isPressable: () => true,
+        verb: "Go+",
+      }) as ReactElement;
+      const [, grid] = childArray(element) as ReactElement[];
+      const tiles = childArray(grid) as ReactElement[];
+      expect(tiles.every((tile) => tile.props.running === false)).toBe(true);
+    });
+
+    it("a one-shot section with no runningVerb (macros) never switches its verb even when isRunning reports true", () => {
+      const macros: DashSection = {
+        name: "macros",
+        status: "ok",
+        items: [{ no: 7, name: "Blackout" }],
+      };
+      const element = PoolSection({
+        section: macros,
+        label: "매크로",
+        isPressable: () => true,
+        verb: "Macro",
+        isRunning: () => true,
+      }) as ReactElement;
+      const [, grid] = childArray(element) as ReactElement[];
+      const [tile] = childArray(grid) as ReactElement[];
+      expect(tile.props.verb).toBe("Macro");
+    });
+
+    it("running never applies to a non-pressable item, even if isRunning would report true", () => {
+      const element = PoolSection({
+        section: EXECUTORS,
+        label: "익스큐터",
+        isPressable: () => false,
+        isRunning: () => true,
+      }) as ReactElement;
+      const [, grid] = childArray(element) as ReactElement[];
+      const tiles = childArray(grid) as ReactElement[];
+      expect(tiles.every((tile) => tile.props.running === false)).toBe(true);
+    });
+  });
+
   it("shows the health badge text inside the header when the section is not fully healthy", () => {
     const capped: DashSection = { name: "preset_pools", status: "ok", items: [], drilldown_capped: true };
     const element = PoolSection({

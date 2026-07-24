@@ -15,10 +15,15 @@
 // on. `pressable` is the single switch: true renders a verb button with
 // press affordance; false renders a flat read-only cell with NO click
 // affordance (design.md §7 rule 7 — a dead-looking button is worse than no
-// button). live-amber/RUN styling is deliberately NOT wired here yet: dash
-// sections carry no running/tracked state (that lives in `panel.running`,
-// keyed by `panelItemId`, unreachable from a DashItem) — wiring it is an M5
-// concern (see progress.md §E.2 Gaps).
+// button).
+//
+// M5 (design.md §4/§8, REQ-DASHUI-017): `running` is likewise a CALLER
+// decision — this component has no `panel.running` access of its own (that
+// lookup is keyed by `panelItemId(target_kind, no)`, one layer up in
+// DashBoard). `running` only ever applies alongside `pressable` (a
+// read-only tile has no press-driven state to reflect) and toggles the
+// live-amber `.pool-tile-running` class exclusively — no other visual
+// channel changes.
 //
 // No internal hooks by design — this project has no DOM/jsdom test harness
 // (see protocol.ts's own header); PoolTile is called directly as a plain
@@ -29,16 +34,19 @@ export interface PoolTileProps {
   item: DashItem;
   /** Caller-computed: does THIS tile carry press affordance? */
   pressable: boolean;
-  /** The console verb shown on a press-able tile (e.g. "Go+", "Macro"). */
+  /** The console verb shown on a press-able tile (e.g. "Go+", "Off", "Macro"). */
   verb?: string;
-  /** M5 wires the actual gate.screen() dispatch; M4 renders the affordance only. */
+  /** Caller-computed playback state (M5) — ignored when `pressable` is false. */
+  running?: boolean;
+  /** Fires `gate.screen()` via panel_execute/panel_stop (M5 wires the caller). */
   onPress?: (item: DashItem) => void;
 }
 
-export function PoolTile({ item, pressable, verb, onPress }: PoolTileProps) {
+export function PoolTile({ item, pressable, verb, running, onPress }: PoolTileProps) {
   const unresolved = !pressable && item.meta?.resolved === false;
+  const runningClass = pressable && running ? " pool-tile-running" : "";
   return (
-    <div className={`pool-tile ${pressable ? "pool-tile-press" : "pool-tile-info"}`}>
+    <div className={`pool-tile ${pressable ? "pool-tile-press" : "pool-tile-info"}${runningClass}`}>
       <span className="pool-tile-no">{item.no}</span>
       <span className="pool-tile-name">{item.name || "—"}</span>
       {item.appearance ? (

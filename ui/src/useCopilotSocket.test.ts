@@ -15,6 +15,7 @@ import {
   BASE_SUBPROTOCOL,
   TOKEN_SUBPROTOCOL_PREFIX,
   connectProtocols,
+  connectResyncFrames,
   launchToken,
   reducer,
 } from "./useCopilotSocket";
@@ -93,5 +94,28 @@ describe("launch-token seam", () => {
     // Stage-1 regression guard: the browser path must stay a bare connect.
     expect(connectProtocols(undefined)).toBeUndefined();
     expect(connectProtocols("")).toBeUndefined();
+  });
+});
+
+// AC-DASHUI-017 — every (re)connect re-requests panel catalog + dash catalog
+// + status, so a reconnect rebuilds from scratch rather than trusting
+// pre-disconnect state. Pure function, same no-DOM bound as above; the live
+// `socket.onopen` handler calls this exact function (see useCopilotSocket.ts).
+describe("connectResyncFrames — reconnect resync dispatch (AC-DASHUI-017)", () => {
+  it("returns exactly three frames: panel_catalog_request, dash_catalog_request, status_request", () => {
+    const frames = connectResyncFrames().map((frame) => JSON.parse(frame).type);
+    expect(frames).toEqual(["panel_catalog_request", "dash_catalog_request", "status_request"]);
+  });
+
+  it("every frame is protocol v1 and payload-free besides v/type", () => {
+    for (const frame of connectResyncFrames()) {
+      const parsed = JSON.parse(frame);
+      expect(parsed.v).toBe(1);
+      expect(Object.keys(parsed).sort()).toEqual(["type", "v"]);
+    }
+  });
+
+  it("is deterministic and side-effect-free — calling it twice sends nothing on its own", () => {
+    expect(connectResyncFrames()).toEqual(connectResyncFrames());
   });
 });

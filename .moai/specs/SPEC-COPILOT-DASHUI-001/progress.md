@@ -148,9 +148,44 @@
 
 **M5 인계 노트**: (1) `DashBoard`에 `onRefresh?: () => void`를 실제 `dash_catalog_request` 디스패처로 주입하면 새로고침이 완결된다(시그니처 변경 없음). (2) 실행 상태(RUN/OFF, live-amber)는 `panel.running`을 익스큐터 dash 항목과 `panelItemId("executor", no)`로 교차 참조해야 하며, `PoolTile`에 `running?: boolean` prop을 추가하고 `.pool-tile-running` 클래스를 조건부로 붙이는 확장이 필요(현재 CSS 선택자·토큰은 이미 준비됨, TSX 배선만 M5 몫). (3) 시퀀스/익스큐터 실제 press 배선(`buildPanelExecute`/`buildPanelStop`)은 여전히 전량 M5 범위 — M4는 시각적 어포던스만 완성했다.
 
+### M5 — 발화 경로 통합 (게이트 + LiveLock) (2026-07-24, TDD RED→GREEN)
+
+**범위**: plan.md §B M5 전부. 서버 매크로 라우팅은 M2에서 이미 완료(`PANEL_TARGET_KINDS`/`playback_command`에 macro 기완료) — 본 마일스톤은 UI 배선만. ① 신규 `useCopilotSocket.ts` `sendPanelExecute`/`sendPanelStop`/`sendDashRefresh` — 기존 `buildPanelExecute`/`buildPanelStop`/`buildDashCatalogRequest` 재사용, 신규 프로토콜 빌더 0건. ② 순수 `connectResyncFrames()` — 모든 (재)접속(`socket.onopen`)에서 `panel_catalog_request`+`dash_catalog_request`+`status_request` 3종 동시 dispatch(AC-DASHUI-017). ③ `PoolTile`에 `running?: boolean` prop — press-able일 때만 `.pool-tile-running` 배타 클래스(M4 기존 CSS 선택자·styles.test.ts 가드 재사용, CSS 변경 0건). ④ `PoolSection`에 `runningVerb`/`isRunning` — 익스큐터는 running 시 verb를 Go+→Off로 전환, 매크로는 `runningVerb` 미지정으로 전환 없음(design.md §4 one-shot). ⑤ `DashBoard`에 `isItemRunning`/`onItemPress` — `runningVerbForSection`("executors"만 "Off") 신설. ⑥ `App.tsx` — `targetKindForDashSection`(executors→"executor", macros→"macro", 그 외 null)이 `panelItemId`로 `state.panel.running`을 교차 참조해 press 시 실행중이면 stop, 아니면 execute를 dispatch.
+
+**결정 기록**:
+- **D-M5-1 연타 가드 미신설**: design.md §4 "busy 1-in-flight"는 게이트(`gate.screen()`)가 이미 제공하는 서버측 안전망 — 클라이언트에 새 `createDecisionGuard` 류 장치를 추가하지 않음(과잉 설계 회피, ApprovalCard의 결정 가드는 승인/거부라는 1회성 결정 전용이라 반복 가능한 press와 성격이 다름). 중복 press는 서버 busy 거부로 자연 방어.
+- **D-M5-2 시퀀스 풀 미배선**: design.md §4 표는 Sequences 행을 포함하나, 서버 `build_dash_catalog`(server/web/dash.py `_DASH_SECTIONS`)가 실제로 내보내는 섹션은 groups/preset_pools/macros/plugins/fixtures/executors뿐 — sequences는 dash_catalog 밖(SHOWUI 브랜치의 별도 panel_catalog UI 소관, 본 브랜치 미이식). `dashItemIsPressable`(M4 기결정)과 완전히 합치 — 재질의 없이 계승.
+- **D-M5-3 `panel.busy` 타일별 표시 범위 축소**: design.md §4/§7은 "상태는 타일 위 지속 표기"를 명시하나, 이를 만족하려면 `PoolTile`에 busy 조회 배선이 추가로 필요하고 acceptance.md 어떤 AC도 이를 개별 검증 항목으로 열거하지 않음(§E.5 잔여 위험에 기록, M6 라이브 체크리스트 ⑤에서 승인 카드 경로로 간접 확인).
+
+**RED 증적**: `useCopilotSocket.test.ts`에 `connectResyncFrames` import 추가 → 함수 미존재로 타입 에러; `PoolTile.test.tsx`/`PoolSection.test.tsx`/`DashBoard.test.tsx`/`App.test.tsx`에 `running`/`runningVerb`/`isItemRunning`/`onItemPress`/`targetKindForDashSection` 참조 추가 → 각각 undefined prop/미export 함수로 실패. GREEN 후 전량 통과.
+
+| 검증 항목 | 커맨드 | 결과 |
+|---|---|---|
+| 전체 vitest | `(cd ui && npx vitest run)` | `Tests 197 passed (197)` (M4 기준선 179 → +18: connectResyncFrames 3 + PoolTile running 4 + PoolSection running 4 + DashBoard M5 3 + App M5 4) |
+| TS 타입체크 | `(cd ui && npx tsc --noEmit)` | exit 0 |
+| 전체 pytest | `.venv/bin/python -m pytest -q` | `3 failed, 1831 passed, 2 skipped` — M4와 완전 동일 기준선(서버 파일 무변경 확인) |
+| 아키텍처 경계 | `.venv/bin/python -m pytest server/tests/test_architecture.py -q` | `4 passed` |
+| OSC 경계(서버 미접촉 재확인) | `grep -rn "bridge.osc\|from server.bridge" server/web/panel.py server/web/dash*.py` | 0건(exit=1) — M2/M4와 동일, M5는 서버 무변경 |
+| 확인 모달 부재 | `grep -rn "window.confirm" ui/src/` | 0건(exit=1) |
+| 폴링 부재(REQ-DASHUI-021) | `grep -rn "setInterval\|setTimeout" ui/src/components/DashBoard.tsx ui/src/components/PoolSection.tsx ui/src/components/PoolTile.tsx` | 0건(exit=1) |
+
+**M5 시점 AC 스냅샷** (전체 판정은 M6):
+
+| AC | M5 상태 | 비고 |
+|---|---|---|
+| AC-DASHUI-010 | PASS(유지) | live-amber 배타는 여전히 `.pool-tile-running`/`.pool-tile-running .pool-tile-verb` 2건 한정(styles.test.ts 불변) |
+| AC-DASHUI-011 | PASS(완결) | `sendDashRefresh`가 `dash_catalog_request` 1회만 dispatch, 폴링 grep 0건 |
+| AC-DASHUI-013 | PASS(M5 시점) | vitest 197/197 전부 그린 + pytest 신규 실패 0건(M4 기준선과 동일) |
+| AC-DASHUI-016 | PASS | OSC 경계 grep 0건 + test_architecture.py 4/4 |
+| AC-DASHUI-017 | PASS(완결) | `connectResyncFrames`가 (재)접속마다 panel_catalog_request+dash_catalog_request+status_request 3종을 정확히 dispatch함을 vitest로 확인(M1의 `clearOnDisconnect` dash.stale 소거와 합쳐 완결) |
+
+**잔여 위험(§E.5)**: (1) `panel.busy` 타일별 표시는 D-M5-3에 따라 이번 마일스톤 범위 밖 — 승인 카드가 없는 busy 거부(승인 불필요한 단순 in-flight 거부)는 현재 UI에 아무 표시도 없음, 필요 시 후속 결정. (2) M6 라이브 체크리스트(AC-DASHUI-014/015)는 실제 onPC 2.4.2 콘솔 필요 — 소프트웨어 측 완결은 여기까지, 실기 확인은 사용자의 콘솔 접속 후 진행.
+
+**M6 인계 노트**: 소프트웨어 스택(M1~M5) 전부 그린. 남은 것은 acceptance.md §C LIVE 체크리스트 8항목(①~⑧) 뿐 — 실제 grandMA3 onPC 2.4.2가 실행 중이고 앱이 접속 가능해야 시작 가능.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase — M5-M6 잔여>_
+_<pending — M6 LIVE 잔여>_
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
