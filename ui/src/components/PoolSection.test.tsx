@@ -10,10 +10,15 @@ import { describe, expect, it, vi } from "vitest";
 
 import { type DashItem, type DashSection } from "../protocol";
 import {
-  clampPoolTileWidth,
-  POOL_TILE_DEFAULT_WIDTH,
-  POOL_TILE_MAX_WIDTH,
-  POOL_TILE_MIN_WIDTH,
+  clampPoolArea,
+  clampPoolTileSize,
+  POOL_AREA_DEFAULT,
+  POOL_AREA_MAX_WIDTH,
+  POOL_AREA_MIN_HEIGHT,
+  POOL_TILE_DEFAULT_SIZE,
+  POOL_TILE_MAX_SIZE,
+  POOL_TILE_MIN_SIZE,
+  POOL_TILE_SIZE_STEP,
   PoolSection,
   sectionHealthLabel,
 } from "./PoolSection";
@@ -222,69 +227,107 @@ describe("PoolSection", () => {
   });
 });
 
-// M6-UX v2 — onPC-style drag-resize (user direction: square/rect cells whose
-// scale the operator adjusts by DRAGGING the section boundary handle).
-describe("PoolSection — drag-resize tile width", () => {
+// M6-UX v3 — onPC pool-window model (user direction): SQUARE cells stepped
+// by −/+, and the WINDOW's on-screen area resized by dragging its corner.
+describe("PoolSection — square cells + window area", () => {
   function headerOf(element: ReactElement): ReactElement {
     return childArray(element)[0] as ReactElement;
   }
-  function resizeHandle(element: ReactElement): ReactElement | undefined {
-    return childArray(headerOf(element)).find(
-      (child) => (child as ReactElement)?.props?.className === "pool-resize-handle",
+  function sizeButtons(element: ReactElement): ReactElement[] {
+    const controls = childArray(headerOf(element)).find(
+      (child) => (child as ReactElement)?.props?.className === "pool-size-control",
+    ) as ReactElement | undefined;
+    return controls ? (childArray(controls) as ReactElement[]) : [];
+  }
+  function cornerHandle(element: ReactElement): ReactElement | undefined {
+    return childArray(element).find(
+      (child) => (child as ReactElement)?.props?.className === "pool-area-resize",
     ) as ReactElement | undefined;
   }
 
-  it("clampPoolTileWidth clamps into [min, max] and rounds", () => {
-    expect(clampPoolTileWidth(10)).toBe(POOL_TILE_MIN_WIDTH);
-    expect(clampPoolTileWidth(10_000)).toBe(POOL_TILE_MAX_WIDTH);
-    expect(clampPoolTileWidth(140.6)).toBe(141);
+  it("clamps cell size and window area into their legal ranges", () => {
+    expect(clampPoolTileSize(1)).toBe(POOL_TILE_MIN_SIZE);
+    expect(clampPoolTileSize(10_000)).toBe(POOL_TILE_MAX_SIZE);
+    expect(clampPoolArea({ width: 10_000, height: 1 })).toEqual({
+      width: POOL_AREA_MAX_WIDTH,
+      height: POOL_AREA_MIN_HEIGHT,
+    });
   });
 
-  it("drives the grid columns from the tileWidth prop (default when omitted)", () => {
-    const defaulted = PoolSection({
+  it("renders fixed SQUARE cell columns from tileSize and the window area from the area prop", () => {
+    const element = PoolSection({
+      section: OK_SECTION,
+      label: "그룹",
+      isPressable: () => false,
+      tileSize: 120,
+      area: { width: 600, height: 300 },
+    }) as ReactElement;
+    expect(element.props.style).toEqual({ width: "600px", height: "300px" });
+    const grid = childArray(element)[1] as ReactElement;
+    expect(grid.props.style.gridTemplateColumns).toBe("repeat(auto-fill, 120px)");
+  });
+
+  it("defaults tileSize/area when omitted", () => {
+    const element = PoolSection({
       section: OK_SECTION,
       label: "그룹",
       isPressable: () => false,
     }) as ReactElement;
-    const grid = childArray(defaulted)[1] as ReactElement;
-    expect(grid.props.className).toBe("pool-section-grid");
+    expect(element.props.style).toEqual({
+      width: `${POOL_AREA_DEFAULT.width}px`,
+      height: `${POOL_AREA_DEFAULT.height}px`,
+    });
+    const grid = childArray(element)[1] as ReactElement;
     expect(grid.props.style.gridTemplateColumns).toBe(
-      `repeat(auto-fill, minmax(${POOL_TILE_DEFAULT_WIDTH}px, 1fr))`,
-    );
-
-    const sized = PoolSection({
-      section: OK_SECTION,
-      label: "그룹",
-      isPressable: () => false,
-      tileWidth: 180,
-    }) as ReactElement;
-    const sizedGrid = childArray(sized)[1] as ReactElement;
-    expect(sizedGrid.props.style.gridTemplateColumns).toBe(
-      "repeat(auto-fill, minmax(180px, 1fr))",
+      `repeat(auto-fill, ${POOL_TILE_DEFAULT_SIZE}px)`,
     );
   });
 
-  it("renders the ↔ handle ONLY when onResizeStart is provided, and forwards mouse-down", () => {
+  it("−/+ step the cell size (clamped) ONLY when onTileSizeChange is provided", () => {
     const without = PoolSection({
       section: OK_SECTION,
       label: "그룹",
       isPressable: () => false,
     }) as ReactElement;
-    expect(resizeHandle(without)).toBeUndefined();
+    expect(sizeButtons(without)).toHaveLength(0);
 
-    const onResizeStart = vi.fn();
+    const onTileSizeChange = vi.fn();
     const element = PoolSection({
       section: OK_SECTION,
       label: "그룹",
       isPressable: () => false,
-      tileWidth: 140,
-      onResizeStart,
+      tileSize: POOL_TILE_MIN_SIZE,
+      onTileSizeChange,
     }) as ReactElement;
-    const handle = resizeHandle(element);
+    const [smaller, larger] = sizeButtons(element);
+    expect(smaller.props["aria-label"]).toBe("셀 작게");
+    smaller.props.onClick();
+    expect(onTileSizeChange).toHaveBeenLastCalledWith(POOL_TILE_MIN_SIZE); // clamped floor
+    larger.props.onClick();
+    expect(onTileSizeChange).toHaveBeenLastCalledWith(
+      POOL_TILE_MIN_SIZE + POOL_TILE_SIZE_STEP,
+    );
+  });
+
+  it("the corner handle forwards its mouse-down ONLY when onAreaResizeStart is provided", () => {
+    const without = PoolSection({
+      section: OK_SECTION,
+      label: "그룹",
+      isPressable: () => false,
+    }) as ReactElement;
+    expect(cornerHandle(without)).toBeUndefined();
+
+    const onAreaResizeStart = vi.fn();
+    const element = PoolSection({
+      section: OK_SECTION,
+      label: "그룹",
+      isPressable: () => false,
+      onAreaResizeStart,
+    }) as ReactElement;
+    const handle = cornerHandle(element);
     expect(handle).toBeDefined();
-    expect(handle!.props["aria-label"]).toBe("타일 크기 조절 — 좌우로 드래그");
-    expect(handle!.props["aria-valuenow"]).toBe(140);
-    handle!.props.onMouseDown({ clientX: 250 });
-    expect(onResizeStart).toHaveBeenCalledWith({ clientX: 250 });
+    expect(handle!.props["aria-label"]).toBe("영역 크기 조절 — 모서리를 드래그");
+    handle!.props.onMouseDown({ clientX: 700, clientY: 400 });
+    expect(onAreaResizeStart).toHaveBeenCalledWith({ clientX: 700, clientY: 400 });
   });
 });

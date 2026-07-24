@@ -122,9 +122,16 @@ body {
 }
 
 .dashboard-empty,
+/* M6-UX v3 — the sections flow as an onPC-style WINDOW mosaic: each pool
+   window carries its own dragged width/height (inline style), and the flex
+   wrap re-tiles the mosaic as windows grow and shrink. */
 .dashboard-sections {
   color: var(--muted);
   font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .chat-toggle {
@@ -732,9 +739,17 @@ body {
    the onPC pool color language (groups blue, presets teal, macros red,
    plugins magenta, executors yellow-brown) — none of them reuses
    --live-amber, which stays exclusive to a RUNNING tile. */
+/* One pool WINDOW: title bar + scrolling square-cell grid + corner resize
+   handle. Width/height come from the dragged area (inline style). */
 .pool-section {
-  margin-bottom: 20px;
   --pool-accent: #4a5160;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #2b2f36;
+  border-radius: 8px;
+  background: #101318;
+  overflow: hidden;
 }
 
 .pool-section-groups {
@@ -779,15 +794,15 @@ body {
   color: #ffe9c4;
 }
 
-/* Drag-resize handle (M6-UX v2 — user direction): grab the ↔ chip in the
-   section title bar and drag horizontally to resize that category's cells
-   continuously (grid columns re-flow live, MA-window style). */
-.pool-resize-handle {
+/* Cell-size −/+ steps in the title bar (M6-UX v3). */
+.pool-size-control {
   margin-left: auto;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
+  gap: 4px;
+}
+
+.pool-size-step {
+  width: 26px;
   height: 24px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.35);
@@ -795,29 +810,49 @@ body {
   color: #fff;
   font-size: 15px;
   line-height: 1;
-  cursor: ew-resize;
+  cursor: pointer;
+}
+
+/* onPC-style bottom-right corner handle: drag to resize this WINDOW's area
+   in both axes (the mosaic re-tiles live). */
+.pool-area-resize {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: nwse-resize;
   user-select: none;
 }
 
 .pool-section-empty {
-  padding: 8px 0;
+  padding: 8px 10px;
   color: var(--muted);
   font-size: 13px;
 }
 
-/* Column width comes from the section's dragged tile width (inline
-   grid-template-columns, PoolSection.tsx); the near-square cell shape is
-   fixed here via aspect-ratio. */
+/* Fixed-size SQUARE cell columns (inline grid-template-columns carries the
+   section's stepped cell size); the window scrolls when cells overflow the
+   dragged area. */
 .pool-section-grid {
   display: grid;
   gap: 6px;
-  padding: 8px 0 0;
+  padding: 8px;
+  flex: 1;
+  overflow: auto;
+  align-content: flex-start;
+  justify-content: flex-start;
 }
 
 /* M4 — one numbered onPC-style pool cell (design.md §3 "풀 셀(슬롯)").
-   M6-UX v2: a fixed-proportion rectangular block, like an onPC pool cell —
-   number top-left, name filling the middle, verb strip pinned to the
-   bottom edge. */
+   M6-UX v3: a SQUARE block — number top-left, name filling the middle,
+   verb strip pinned to the bottom edge. */
 .pool-tile {
   position: relative;
   display: flex;
@@ -828,7 +863,7 @@ body {
   border-radius: 6px;
   background: #16181d;
   border: 1px solid var(--pool-accent);
-  aspect-ratio: 1.5;
+  aspect-ratio: 1;
   overflow: hidden;
 }
 

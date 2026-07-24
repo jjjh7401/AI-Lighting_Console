@@ -10,7 +10,7 @@
 // function in tests, returning an inspectable React element tree with no
 // renderer — see DashBoard.test.tsx and the sibling AppShell in App.tsx.
 import { type DashItem, type DashSection, type DashState } from "../protocol";
-import { PoolSection } from "./PoolSection";
+import { PoolSection, type PoolArea } from "./PoolSection";
 
 /**
  * Site preference (user direction, 2026-07-24): the preset pool list is too
@@ -51,10 +51,17 @@ export interface DashBoardProps {
   isItemRunning?: (sectionName: string, item: DashItem) => boolean;
   /** Fires panel_execute or panel_stop depending on current running state (M5). */
   onItemPress?: (sectionName: string, item: DashItem) => void;
-  /** Per-section tile width in px (M6-UX). Defaults when omitted. */
-  sectionTileWidth?: (sectionName: string) => number | undefined;
-  /** When provided, each section header offers a drag-resize handle. */
-  onSectionResizeStart?: (sectionName: string, event: { clientX: number }) => void;
+  /** Per-section SQUARE cell size in px (M6-UX v3). Defaults when omitted. */
+  sectionTileSize?: (sectionName: string) => number | undefined;
+  /** When provided, each section header offers −/+ cell-size controls. */
+  onSectionTileSizeChange?: (sectionName: string, next: number) => void;
+  /** Per-section pool-window area (M6-UX v3). Defaults when omitted. */
+  sectionArea?: (sectionName: string) => PoolArea | undefined;
+  /** When provided, each pool window offers a corner area-drag handle. */
+  onSectionAreaResizeStart?: (
+    sectionName: string,
+    event: { clientX: number; clientY: number },
+  ) => void;
 }
 
 const SECTION_LABEL: Record<string, string> = {
@@ -145,8 +152,10 @@ export function DashBoard({
   onRefresh,
   isItemRunning,
   onItemPress,
-  sectionTileWidth,
-  onSectionResizeStart,
+  sectionTileSize,
+  onSectionTileSizeChange,
+  sectionArea,
+  onSectionAreaResizeStart,
 }: DashBoardProps) {
   const hasSections = dash.sections.length > 0;
   const fixturesSection = dash.sections.find((section) => section.name === "fixtures");
@@ -199,10 +208,16 @@ export function DashBoard({
                   isItemRunning ? (item) => isItemRunning(section.name, item) : undefined
                 }
                 onPress={onItemPress ? (item) => onItemPress(section.name, item) : undefined}
-                tileWidth={sectionTileWidth?.(section.name)}
-                onResizeStart={
-                  onSectionResizeStart
-                    ? (event) => onSectionResizeStart(section.name, event)
+                tileSize={sectionTileSize?.(section.name)}
+                onTileSizeChange={
+                  onSectionTileSizeChange
+                    ? (next) => onSectionTileSizeChange(section.name, next)
+                    : undefined
+                }
+                area={sectionArea?.(section.name)}
+                onAreaResizeStart={
+                  onSectionAreaResizeStart
+                    ? (event) => onSectionAreaResizeStart(section.name, event)
                     : undefined
                 }
               />

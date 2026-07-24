@@ -40,14 +40,38 @@ export function sectionHealthLabel(section: DashSection): string | null {
   return flags.length > 0 ? flags.join(" · ") : null;
 }
 
-/** onPC-style tile-width bounds (px) for the drag-resize control (M6-UX). */
-export const POOL_TILE_MIN_WIDTH = 84;
-export const POOL_TILE_MAX_WIDTH = 260;
-export const POOL_TILE_DEFAULT_WIDTH = 140;
+/** onPC-style SQUARE cell size bounds (px), stepped by the −/+ controls. */
+export const POOL_TILE_MIN_SIZE = 64;
+export const POOL_TILE_MAX_SIZE = 200;
+export const POOL_TILE_DEFAULT_SIZE = 104;
+export const POOL_TILE_SIZE_STEP = 16;
 
-/** Clamp one dragged tile width into the legal range. */
-export function clampPoolTileWidth(width: number): number {
-  return Math.min(POOL_TILE_MAX_WIDTH, Math.max(POOL_TILE_MIN_WIDTH, Math.round(width)));
+/** Clamp one cell size into the legal range. */
+export function clampPoolTileSize(size: number): number {
+  return Math.min(POOL_TILE_MAX_SIZE, Math.max(POOL_TILE_MIN_SIZE, Math.round(size)));
+}
+
+/** onPC-style pool-WINDOW area bounds (px) for the corner drag-resize. */
+export const POOL_AREA_MIN_WIDTH = 240;
+export const POOL_AREA_MAX_WIDTH = 1800;
+export const POOL_AREA_MIN_HEIGHT = 150;
+export const POOL_AREA_MAX_HEIGHT = 1000;
+export const POOL_AREA_DEFAULT: PoolArea = { width: 520, height: 260 };
+
+export interface PoolArea {
+  width: number;
+  height: number;
+}
+
+/** Clamp one dragged window area into the legal range. */
+export function clampPoolArea(area: PoolArea): PoolArea {
+  return {
+    width: Math.min(POOL_AREA_MAX_WIDTH, Math.max(POOL_AREA_MIN_WIDTH, Math.round(area.width))),
+    height: Math.min(
+      POOL_AREA_MAX_HEIGHT,
+      Math.max(POOL_AREA_MIN_HEIGHT, Math.round(area.height)),
+    ),
+  };
 }
 
 export interface PoolSectionProps {
@@ -65,15 +89,18 @@ export interface PoolSectionProps {
   /** Per-item running lookup (M5). Defaults to not-running when omitted. */
   isRunning?: (item: DashItem) => boolean;
   onPress?: (item: DashItem) => void;
-  /** This section's tile width in px (M6-UX). Session-volatile, owned by App. */
-  tileWidth?: number;
+  /** SQUARE cell edge in px (M6-UX v3). Session-volatile, owned by App. */
+  tileSize?: number;
+  /** When provided, the header renders −/+ controls stepping the cell size. */
+  onTileSizeChange?: (next: number) => void;
+  /** This pool WINDOW's on-screen area (M6-UX v3). Owned by App. */
+  area?: PoolArea;
   /**
-   * When provided, the header renders a drag handle whose pointer-down
-   * starts a mouse-drag resize (the drag session itself — document-level
-   * move/up listeners — lives in App; this hook-free component only
-   * surfaces the starting event).
+   * When provided, an onPC-style bottom-right corner handle starts a 2D
+   * area drag (the drag session itself — document-level move/up listeners —
+   * lives in App; this hook-free component only surfaces the start event).
    */
-  onResizeStart?: (event: { clientX: number }) => void;
+  onAreaResizeStart?: (event: { clientX: number; clientY: number }) => void;
 }
 
 export function PoolSection({
@@ -84,30 +111,41 @@ export function PoolSection({
   runningVerb,
   isRunning,
   onPress,
-  tileWidth = POOL_TILE_DEFAULT_WIDTH,
-  onResizeStart,
+  tileSize = POOL_TILE_DEFAULT_SIZE,
+  onTileSizeChange,
+  area = POOL_AREA_DEFAULT,
+  onAreaResizeStart,
 }: PoolSectionProps) {
   const health = sectionHealthLabel(section);
-  const width = clampPoolTileWidth(tileWidth);
+  const size = clampPoolTileSize(tileSize);
+  const { width, height } = clampPoolArea(area);
   return (
-    <section className={`pool-section pool-section-${section.name}`} aria-label={label}>
+    <section
+      className={`pool-section pool-section-${section.name}`}
+      aria-label={label}
+      style={{ width: `${width}px`, height: `${height}px` }}
+    >
       <header className="pool-section-header">
         <span className="pool-section-label">{label}</span>
         {health ? <span className="pool-section-health">{health}</span> : null}
-        {onResizeStart ? (
-          <span
-            className="pool-resize-handle"
-            role="slider"
-            aria-label="타일 크기 조절 — 좌우로 드래그"
-            aria-valuemin={POOL_TILE_MIN_WIDTH}
-            aria-valuemax={POOL_TILE_MAX_WIDTH}
-            aria-valuenow={width}
-            onMouseDown={(event: { clientX: number; preventDefault?: () => void }) => {
-              event.preventDefault?.();
-              onResizeStart(event);
-            }}
-          >
-            ↔
+        {onTileSizeChange ? (
+          <span className="pool-size-control">
+            <button
+              type="button"
+              className="pool-size-step"
+              aria-label="셀 작게"
+              onClick={() => onTileSizeChange(clampPoolTileSize(size - POOL_TILE_SIZE_STEP))}
+            >
+              −
+            </button>
+            <button
+              type="button"
+              className="pool-size-step"
+              aria-label="셀 크게"
+              onClick={() => onTileSizeChange(clampPoolTileSize(size + POOL_TILE_SIZE_STEP))}
+            >
+              +
+            </button>
           </span>
         ) : null}
       </header>
@@ -116,7 +154,7 @@ export function PoolSection({
       ) : (
         <div
           className="pool-section-grid"
-          style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${width}px, 1fr))` }}
+          style={{ gridTemplateColumns: `repeat(auto-fill, ${size}px)` }}
         >
           {section.items.map((item) => {
             const pressable = isPressable(item);
@@ -134,6 +172,22 @@ export function PoolSection({
           })}
         </div>
       )}
+      {onAreaResizeStart ? (
+        <span
+          className="pool-area-resize"
+          aria-label="영역 크기 조절 — 모서리를 드래그"
+          onMouseDown={(event: {
+            clientX: number;
+            clientY: number;
+            preventDefault?: () => void;
+          }) => {
+            event.preventDefault?.();
+            onAreaResizeStart(event);
+          }}
+        >
+          ◢
+        </span>
+      ) : null}
     </section>
   );
 }

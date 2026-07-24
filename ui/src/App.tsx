@@ -18,7 +18,11 @@ import { OnboardingBanner } from "./components/OnboardingBanner";
 import { ReviewCard } from "./components/ReviewCard";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { StatusBanner } from "./components/StatusBanner";
-import { clampPoolTileWidth, POOL_TILE_DEFAULT_WIDTH } from "./components/PoolSection";
+import {
+  clampPoolArea,
+  POOL_AREA_DEFAULT,
+  type PoolArea,
+} from "./components/PoolSection";
 import { panelItemId, type DashItem, type DashState, type PanelTargetKind } from "./protocol";
 import { useCopilotSocket } from "./useCopilotSocket";
 
@@ -69,8 +73,10 @@ export function AppShell({
   onRefresh,
   isItemRunning,
   onItemPress,
-  sectionTileWidth,
-  onSectionResizeStart,
+  sectionTileSize,
+  onSectionTileSizeChange,
+  sectionArea,
+  onSectionAreaResizeStart,
   children,
 }: {
   chatCollapsed: boolean;
@@ -82,9 +88,14 @@ export function AppShell({
   isItemRunning?: (sectionName: string, item: DashItem) => boolean;
   /** M5 — fires panel_execute/panel_stop; see DashBoard.tsx. */
   onItemPress?: (sectionName: string, item: DashItem) => void;
-  /** M6-UX — per-section tile width + drag-resize; see DashBoard.tsx. */
-  sectionTileWidth?: (sectionName: string) => number | undefined;
-  onSectionResizeStart?: (sectionName: string, event: { clientX: number }) => void;
+  /** M6-UX v3 — square cells (−/+) + pool-window area corner drag. */
+  sectionTileSize?: (sectionName: string) => number | undefined;
+  onSectionTileSizeChange?: (sectionName: string, next: number) => void;
+  sectionArea?: (sectionName: string) => PoolArea | undefined;
+  onSectionAreaResizeStart?: (
+    sectionName: string,
+    event: { clientX: number; clientY: number },
+  ) => void;
   children: ReactNode;
 }) {
   return (
@@ -94,8 +105,10 @@ export function AppShell({
         onRefresh={onRefresh}
         isItemRunning={isItemRunning}
         onItemPress={onItemPress}
-        sectionTileWidth={sectionTileWidth}
-        onSectionResizeStart={onSectionResizeStart}
+        sectionTileSize={sectionTileSize}
+        onSectionTileSizeChange={onSectionTileSizeChange}
+        sectionArea={sectionArea}
+        onSectionAreaResizeStart={onSectionAreaResizeStart}
       />
       {chatCollapsed ? (
         <aside className="chat-rail">
@@ -131,16 +144,24 @@ export default function App() {
   // column starts OPEN alongside the always-visible console pane; the
   // operator may collapse it to give the console pane the full width.
   const [chatCollapsed, setChatCollapsed] = useState(false);
-  // M6-UX — per-section tile width in px, adjusted by dragging each pool
-  // section's ↔ header handle; session-volatile like every other view
-  // preference. The drag session lives here (document-level move/up
-  // listeners) because the pool components are hook-free by design.
-  const [sectionTileWidths, setSectionTileWidths] = useState<Record<string, number>>({});
-  const startSectionResize = (sectionName: string, start: { clientX: number }) => {
-    const baseWidth = sectionTileWidths[sectionName] ?? POOL_TILE_DEFAULT_WIDTH;
+  // M6-UX v3 — per-section view preferences, session-volatile: the SQUARE
+  // cell size (stepped by each section's −/+ header buttons) and the pool
+  // WINDOW's on-screen area (dragged from its onPC-style bottom-right
+  // corner). The drag session lives here (document-level move/up listeners)
+  // because the pool components are hook-free by design.
+  const [sectionTileSizes, setSectionTileSizes] = useState<Record<string, number>>({});
+  const [sectionAreas, setSectionAreas] = useState<Record<string, PoolArea>>({});
+  const startSectionAreaResize = (
+    sectionName: string,
+    start: { clientX: number; clientY: number },
+  ) => {
+    const base = sectionAreas[sectionName] ?? POOL_AREA_DEFAULT;
     const onMove = (move: MouseEvent) => {
-      const next = clampPoolTileWidth(baseWidth + (move.clientX - start.clientX));
-      setSectionTileWidths((widths) => ({ ...widths, [sectionName]: next }));
+      const next = clampPoolArea({
+        width: base.width + (move.clientX - start.clientX),
+        height: base.height + (move.clientY - start.clientY),
+      });
+      setSectionAreas((areas) => ({ ...areas, [sectionName]: next }));
     };
     const onUp = () => {
       document.removeEventListener("mousemove", onMove);
@@ -227,8 +248,12 @@ export default function App() {
         onRefresh={sendDashRefresh}
         isItemRunning={isDashItemRunning}
         onItemPress={pressDashItem}
-        sectionTileWidth={(sectionName) => sectionTileWidths[sectionName]}
-        onSectionResizeStart={startSectionResize}
+        sectionTileSize={(sectionName) => sectionTileSizes[sectionName]}
+        onSectionTileSizeChange={(sectionName, next) =>
+          setSectionTileSizes((sizes) => ({ ...sizes, [sectionName]: next }))
+        }
+        sectionArea={(sectionName) => sectionAreas[sectionName]}
+        onSectionAreaResizeStart={startSectionAreaResize}
       >
         <div className="app">
           <main className="main">
