@@ -21,11 +21,12 @@ client (`ui/`), and the M6 measurement harness. Executable half:
 | `review_decision` | `request_id: string`, `approved: bool` | (M7, additive) The human decision for a pending `review_request` (deploy review). Unknown/expired ids get an `error` (kind `protocol`). |
 | `lock` | `active: bool` | Live-lock toggle (REQ-MVP-016). Effective immediately — including while an approval is pending (lock-first, REQ-MVP-035). |
 | `status_request` | — | Ask for a `status` event. |
-| `panel_execute` | `target_kind: "executor"\|"sequence"`, `target: int ≥ 1` | (SHOWUI M1, additive) Fire one panel tile → `Go+ Executor N` / `Go+ Sequence N`, via `gate.screen()`. One panel execution at a time; a second while busy gets `panel_busy`. |
-| `panel_stop` | `target_kind`, `target` | (SHOWUI M1) Stop one panel tile → `Off Executor N` / `Off Sequence N`, via `gate.screen()`. EXEMPT from the one-at-a-time guard (REQ-SHOWUI-012) — stop is always single-press, zero-wait. Stops are serialized against each OTHER, which is what makes an All Off of N tiles stop N tiles (see below). |
+| `panel_execute` | `target_kind: "executor"\|"sequence"\|"macro"`, `target: int ≥ 1` | (SHOWUI M1, additive) Fire one panel tile → `Go+ Executor N` / `Go+ Sequence N`, via `gate.screen()`. One panel execution at a time; a second while busy gets `panel_busy`. `macro` (DASHUI M1, additive) fires the rulebook-verified bare form `Macro N` (00_grammar.md:60) — no playback verb word precedes it. |
+| `panel_stop` | `target_kind`, `target` | (SHOWUI M1) Stop one panel tile → `Off Executor N` / `Off Sequence N`, via `gate.screen()`. EXEMPT from the one-at-a-time guard (REQ-SHOWUI-012) — stop is always single-press, zero-wait. Stops are serialized against each OTHER, which is what makes an All Off of N tiles stop N tiles (see below). A macro press is **one-shot** (DASHUI): no rulebook-verified stop form exists, so the panel's command builder refuses to construct a macro stop — the UI offers no Off affordance for a macro tile. |
 | `panel_pin` | — | (SHOWUI M1) Pin the chat's last-created look to the panel. Payload-free: the seed is the server's own `_last_created` memory (REQ-SHOWUI-004). |
 | `panel_unpin` | `target_kind`, `target` | (SHOWUI M1) Remove one pinned tile; the removal is persisted (REQ-SHOWUI-023). |
 | `panel_catalog_request` | — | (SHOWUI M1) Ask for a `panel_catalog` event (sent on connect and on manual refresh). |
+| `dash_catalog_request` | — | (DASHUI M1, additive) Ask for a `dash_catalog` event. Payload-free; sent on connect and on manual refresh only — never on a timer (REQ-DASHUI-021). |
 
 Malformed frames (bad JSON, wrong `v`, unknown `type`, missing fields) yield an
 `error` event with `kind: "protocol"` and are otherwise ignored.
@@ -63,6 +64,7 @@ same change. `AC-SHOWUI-001` is the parity test that holds this.
 | `panel_catalog` | `items: PanelItem[]`, `sections: PanelSection[]` | (SHOWUI M1) The panel's executable tile list + per-section completeness. A refresh REPLACES the list; it does not merge. |
 | `panel_item_state` | `id: string`, `target_kind`, `target: int`, `running: bool`, `cue: string\|null` | (SHOWUI M1) One tile's playback state. `cue` is the running sequence's current cue — a **string**, because MA3 cue numbers are not integers ("1.5"). |
 | `panel_busy` | `id: string`, `target_kind`, `target: int`, `message: string` | (SHOWUI M1) A panel execution was refused because one is in flight (REQ-SHOWUI-011). Names the tile it refused so the UI can unlock that tile — distinct from `busy`, which is the CHAT turn lock the panel deliberately does not share (REQ-SHOWUI-013). |
+| `dash_catalog` | `sections: DashSection[]` | (DASHUI M1) The console-info dashboard's read-only pool catalog. A refresh REPLACES the list; it does not merge (REQ-DASHUI-006). Info-only by shape — see DashSection / DashItem below. |
 
 ### Panel command outcomes (SHOWUI M3)
 
@@ -116,8 +118,8 @@ expand, so it is held for approval on every press — see progress.md §E.2 M3.
 | field | values | meaning |
 |---|---|---|
 | `id` | `"<target_kind>:<target>"` | Derived tile key. Always the console's REAL object number — **never a list position** (REQ-SHOWUI-003): pool numbers are non-contiguous, so "the 3rd tile" and "object 3" are different objects. The `kind:no` shape also keeps Executor 41 and Sequence 41 apart, which a bare number cannot. |
-| `kind` | `look` \| `effect` \| `sequence` | The tile's type badge — LOOK / FX / SEQ (design.md §4). |
-| `target_kind` | `executor` \| `sequence` | The console object class the command addresses. **`fixture` is absent on purpose**: a fixture's `no` is its patch slot, not its fixture id, so it is not an address the console fires (REQ-SHOWUI-003). |
+| `kind` | `look` \| `effect` \| `sequence` \| `macro` | The tile's type badge — LOOK / FX / SEQ (design.md §4) + MACRO (DASHUI M1, additive — widened together with `target_kind` so a macro tile is never stamped `sequence`). |
+| `target_kind` | `executor` \| `sequence` \| `macro` | The console object class the command addresses. **`fixture` is absent on purpose**: a fixture's `no` is its patch slot, not its fixture id, so it is not an address the console fires (REQ-SHOWUI-003). `macro` (DASHUI M1, additive): a macro's `no` IS the address the console runs — bare form `Macro N`, one-shot, no stop form. |
 | `target` | int ≥ 1 | The real object number. Console pools are 1-based, so `0` and negatives are refused at parse time. |
 | `name` | string | The console name, verbatim. |
 | `appearance` | `"#rrggbb"` \| `null` | Appearance colour chip — the tile's identity, read before the text (design.md §4). |
@@ -150,6 +152,45 @@ mirroring `server/orchestrator/tools.py`:
 
 Merging them into one soft "unavailable" is exactly how two dead default rig
 paths survived a whole stage unnoticed.
+
+### DashSection / DashItem (DASHUI M1)
+
+The console-info dashboard's read-only catalog, carried by `dash_catalog`.
+**INFO-ONLY by shape (REQ-DASHUI-007)**: a DashItem carries the console fact —
+`no` + `name` — and nothing a command could be built from. The PanelItem
+address triple (`id` / `target_kind` / `target`) does not exist on this shape,
+so a dashboard entry is structurally un-fireable, not merely unfired; the
+server's section builder additionally refuses any entry carrying one of those
+fields.
+
+DashSection (items ride INSIDE their section, unlike `panel_catalog`'s flat
+tile list):
+
+| field | values | meaning |
+|---|---|---|
+| `name` | string | The pool section (`groups`, `presets`, `macros`, …). |
+| `status` | `ok` \| `path_not_resolved` \| `console_unreachable` | Same vocabulary + same distinct-causes rule as PanelSection (REQ-DASHUI-004). |
+| `truncated` / `drilldown_capped` / `contents_unavailable` | bool | Same three completeness flags as PanelSection, carried through to the UI. |
+| `items` | DashItem[] | Wire order — nothing sorts it (REQ-DASHUI-003). An empty list is a valid empty pool, not an error. |
+
+DashItem:
+
+```json
+{"no": 3, "name": "Vocals", "appearance": "#00c8ff"}
+```
+
+| field | values | meaning |
+|---|---|---|
+| `no` | int ≥ 1 | The console's REAL object number (pools are non-contiguous — never a list position, REQ-DASHUI-005). |
+| `name` | string | The console name, verbatim. |
+| `appearance` | `"#rrggbb"` \| `null` | Appearance colour chip, or `null` when the object has none. |
+| `meta` | object (optional) | Extra facts — e.g. the fixture-count summary (REQ-DASHUI-009). Omitted when absent. |
+
+A `dash_catalog` refresh REPLACES the whole section list (the `panel_catalog`
+replace semantics, inherited). On disconnect the client keeps the sections but
+marks the catalog STALE — the freshness claim, not the data, is the volatile
+half (REQ-DASHUI-015) — and rebuilds via `dash_catalog_request` +
+`panel_catalog_request` + `status_request` on reconnect.
 
 ### status.console_input (additive, protocol stays v1)
 

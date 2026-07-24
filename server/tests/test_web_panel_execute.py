@@ -307,6 +307,36 @@ class TestPlaybackCommand:
                 playback_command(bad, "executor", 5)
 
 
+class TestMacroPlaybackCommand:
+    """SPEC-COPILOT-DASHUI-001 M1 — the rulebook-verified macro run form.
+
+    The macro extension lives INSIDE ``playback_command`` (the sole command
+    construction site, @MX:ANCHOR) — the closed verb set and the
+    single-positive-integer property are preserved (REQ-DASHUI-010/012).
+    """
+
+    def test_a_macro_press_is_the_bare_rulebook_form(self):
+        # rulebook 00_grammar.md:60 — ``Macro 3``. The run form has NO playback
+        # verb word in front of it; ``Go+ Macro 3`` is not a verified command.
+        assert playback_command("Go+", "macro", 3) == "Macro 3"
+
+    def test_a_macro_has_no_stop_form(self):
+        # One-shot by decision (plan.md §F D1 / M5): no rulebook-verified stop
+        # form exists, so ``Off`` on a macro is UNCONSTRUCTIBLE, not guessed.
+        with pytest.raises(ValueError):
+            playback_command("Off", "macro", 3)
+
+    def test_a_macro_target_is_still_a_single_object_number(self):
+        for bad in (0, -1, True, "3", "3 Thru 9", None):
+            with pytest.raises(ValueError):
+                playback_command("Go+", "macro", bad)
+
+    def test_no_third_verb_reaches_the_macro_form(self):
+        for bad in ("Delete", "Go", "Macro", ""):
+            with pytest.raises(ValueError):
+                playback_command(bad, "macro", 3)
+
+
 class TestWideTargetsAreUnconstructible:
     """REQ-SHOWUI-026 — no wide target may ever leave the panel."""
 

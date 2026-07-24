@@ -15,13 +15,19 @@ import pytest
 
 from server.safety.approval import ApprovalItem, ApprovalRequest
 from server.web.messages import (
+    DASH_CLIENT_MESSAGE_TYPES,
     PANEL_CLIENT_MESSAGE_TYPES,
+    PANEL_ITEM_KINDS,
+    PANEL_TARGET_KINDS,
     PROTOCOL_VERSION,
     ProtocolError,
     approval_request_event,
     approval_resolved_event,
     busy_event,
     chat_response_event,
+    dash_catalog_event,
+    dash_item,
+    dash_section,
     error_event,
     notice_event,
     panel_busy_event,
@@ -467,3 +473,211 @@ class TestPanelServerEvents:
         assert event["type"] == "panel_busy"
         assert event["id"] == "executor:191"
         assert event["message"] == "실행 처리 중입니다"
+
+
+# -- SPEC-COPILOT-DASHUI-001 M1 — console-info dashboard protocol contract -------
+#
+# Another ADDITIVE v1 extension on the panel family's terms: PROTOCOL_VERSION
+# stays 1, every new type lands on BOTH allowlists in the same change, and the
+# two sides' unknown-type contracts (server rejects loudly / client null-drops)
+# are preserved without regression (AC-DASHUI-001).
+
+
+class TestDashClientMessages:
+    """AC-DASHUI-001 (server half) — additive parse + preserved rejection."""
+
+    def test_the_dash_request_is_on_the_client_allowlist(self):
+        assert DASH_CLIENT_MESSAGE_TYPES == ("dash_catalog_request",)
+
+    def test_dash_catalog_request_parses_payload_free(self):
+        # REQ-DASHUI-006: sent on connect and on manual refresh; carries nothing
+        # the server would have to trust.
+        message = parse_client_message(_raw(type="dash_catalog_request"))
+        assert message == {"v": PROTOCOL_VERSION, "type": "dash_catalog_request"}
+
+    def test_a_dash_typo_is_still_an_unknown_type(self):
+        # Widening the allowlist must not turn it into a prefix match.
+        with pytest.raises(ProtocolError):
+            parse_client_message(_raw(type="dash_catalog_request_all"))
+
+    def test_the_server_event_type_is_not_a_client_message(self):
+        # dash_catalog flows server -> client only. A client sending it is
+        # refused loudly, exactly like any other unknown client type.
+        with pytest.raises(ProtocolError):
+            parse_client_message(_raw(type="dash_catalog"))
+
+    def test_the_dash_extension_does_not_bump_the_protocol_version(self):
+        assert PROTOCOL_VERSION == 1
+        with pytest.raises(ProtocolError):
+            parse_client_message(json.dumps({"v": 2, "type": "dash_catalog_request"}))
+
+
+class TestDashItemSchema:
+    """AC-DASHUI-003 (type-level half) — the info-only entry shape (REQ-DASHUI-007)."""
+
+    def test_a_dash_item_is_a_console_fact_not_a_fire_address(self):
+        item = dash_item(no=3, name="Vocals", appearance="#00c8ff")
+        assert item == {"no": 3, "name": "Vocals", "appearance": "#00c8ff"}
+        # Structural non-fireability: the address triple simply does not exist.
+        assert "target_kind" not in item
+        assert "target" not in item
+        assert "id" not in item
+
+    def test_appearance_defaults_to_null(self):
+        assert dash_item(no=1, name="x")["appearance"] is None
+
+    def test_meta_is_carried_only_when_given(self):
+        # e.g. the fixture-count summary (REQ-DASHUI-009) rides in ``meta``.
+        plain = dash_item(no=1, name="x")
+        assert "meta" not in plain
+        summary = dash_item(no=1, name="fixtures", meta={"count": 19, "truncated": False})
+        assert summary["meta"] == {"count": 19, "truncated": False}
+
+    @pytest.mark.parametrize(
+        "no",
+        ["3", 1.5, None, True, 0, -1],
+        ids=["string", "float", "null", "bool", "zero", "negative"],
+    )
+    def test_a_non_object_number_no_is_refused(self, no):
+        # Real ``no`` keying only (REQ-DASHUI-005) — never a list position.
+        with pytest.raises(ValueError):
+            dash_item(no=no, name="x")
+
+    def test_a_non_string_name_is_refused(self):
+        with pytest.raises(ValueError):
+            dash_item(no=1, name=None)
+
+    def test_a_non_dict_meta_is_refused(self):
+        with pytest.raises(ValueError):
+            dash_item(no=1, name="x", meta=[1, 2])
+
+
+class TestDashSectionSchema:
+    """REQ-DASHUI-004/007 — completeness carriers + structural non-fireability."""
+
+    def test_a_section_carries_its_items_inside_in_wire_order(self):
+        section = dash_section(
+            name="groups",
+            status="ok",
+            items=[dash_item(no=3, name="Vocals"), dash_item(no=11, name="Drums")],
+        )
+        assert section["name"] == "groups"
+        assert section["status"] == "ok"
+        assert [item["no"] for item in section["items"]] == [3, 11]
+
+    def test_completeness_flags_default_to_false(self):
+        section = dash_section(name="macros", status="ok", items=[])
+        assert section["truncated"] is False
+        assert section["drilldown_capped"] is False
+        assert section["contents_unavailable"] is False
+
+    def test_the_three_completeness_flags_carry_through(self):
+        section = dash_section(
+            name="presets",
+            status="ok",
+            items=[],
+            truncated=True,
+            drilldown_capped=True,
+            contents_unavailable=True,
+        )
+        assert section["truncated"] is True
+        assert section["drilldown_capped"] is True
+        assert section["contents_unavailable"] is True
+
+    def test_the_two_failure_causes_stay_distinct(self):
+        # REQ-DASHUI-004: "the path is wrong for this showfile" and "the console
+        # did not answer" demand different operator actions — never merged.
+        unresolved = dash_section(name="groups", status="path_not_resolved", items=[])
+        unreachable = dash_section(name="presets", status="console_unreachable", items=[])
+        assert {unresolved["status"], unreachable["status"]} == {
+            "path_not_resolved",
+            "console_unreachable",
+        }
+
+    @pytest.mark.parametrize("status", ["unavailable", "error", "", None, "OK"])
+    def test_an_unknown_section_status_is_refused(self, status):
+        with pytest.raises(ValueError):
+            dash_section(name="groups", status=status, items=[])
+
+    def test_an_empty_section_is_valid_not_an_error(self):
+        # acceptance.md §D edge 1: an empty pool renders as empty, not as failure.
+        assert dash_section(name="macros", status="ok", items=[])["items"] == []
+
+    def test_a_fire_shaped_item_cannot_ride_a_dash_section(self):
+        # REQ-DASHUI-007: info-only is enforced at construction, not by caller
+        # discipline — a panel tile (which carries a fire address) is refused.
+        fire_shaped = panel_item(
+            kind="sequence", target_kind="sequence", target=41, name="x", source="auto"
+        )
+        with pytest.raises(ValueError):
+            dash_section(name="groups", status="ok", items=[fire_shaped])
+
+    def test_a_non_dict_item_is_refused(self):
+        with pytest.raises(ValueError):
+            dash_section(name="groups", status="ok", items=["Group 3"])
+
+
+class TestDashCatalogEvent:
+    """AC-DASHUI-001 (server-event half) — builder + JSON-serializability."""
+
+    def _catalog(self) -> dict:
+        return dash_catalog_event(
+            sections=[
+                dash_section(
+                    name="groups",
+                    status="ok",
+                    items=[dash_item(no=3, name="Vocals", appearance="#00c8ff")],
+                ),
+                dash_section(name="presets", status="console_unreachable", items=[]),
+            ]
+        )
+
+    def test_event_shape_and_serializability(self):
+        event = self._catalog()
+        assert event["v"] == PROTOCOL_VERSION
+        assert event["type"] == "dash_catalog"
+        json.dumps(event, ensure_ascii=False)  # must be JSON-serializable
+
+    def test_sections_arrive_in_wire_order(self):
+        event = self._catalog()
+        assert [section["name"] for section in event["sections"]] == ["groups", "presets"]
+        assert event["sections"][0]["items"][0]["no"] == 3
+
+    def test_an_empty_catalog_is_valid(self):
+        assert dash_catalog_event(sections=[])["sections"] == []
+
+
+class TestMacroAdditiveExtension:
+    """REQ-DASHUI-010/012 — the macro enum widening (both closed sets, server side)."""
+
+    def test_macro_joins_both_closed_sets(self):
+        # plan.md M1: PANEL_TARGET_KINDS AND the sibling badge set — a macro
+        # tile stamped "sequence" would be the exact mis-badge D4 guards against.
+        assert "macro" in PANEL_TARGET_KINDS
+        assert "macro" in PANEL_ITEM_KINDS
+
+    @pytest.mark.parametrize("message_type", ["panel_execute", "panel_stop", "panel_unpin"])
+    def test_a_macro_target_parses(self, message_type):
+        message = parse_client_message(_raw(type=message_type, target_kind="macro", target=3))
+        assert message["target_kind"] == "macro"
+        assert message["target"] == 3
+
+    def test_a_macro_tile_constructs_with_the_macro_badge(self):
+        item = panel_item(
+            kind="macro", target_kind="macro", target=3, name="Blackout", source="auto"
+        )
+        assert item["id"] == "macro:3"
+        assert item["kind"] == "macro"
+
+    @pytest.mark.parametrize("target_kind", ["group", "preset", "plugin", "fixture", "fixtures"])
+    def test_info_pool_classes_are_still_not_addressable(self, target_kind):
+        # The widening admits exactly one new class. Groups, presets, plugins
+        # and fixtures remain info-only (REQ-DASHUI-007).
+        with pytest.raises(ProtocolError):
+            parse_client_message(_raw(type="panel_execute", target_kind=target_kind, target=3))
+
+    def test_a_macro_target_is_still_a_single_object_number(self):
+        with pytest.raises(ProtocolError):
+            parse_client_message(_raw(type="panel_execute", target_kind="macro", target=0))
+        with pytest.raises(ProtocolError):
+            parse_client_message(_raw(type="panel_execute", target_kind="macro", target="3"))

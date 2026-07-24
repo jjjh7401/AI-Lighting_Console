@@ -555,22 +555,35 @@ _UNCONFIRMED_MARKER = "execution unconfirmed"
 # UNCONSTRUCTIBLE rather than merely unwritten (REQ-SHOWUI-025 bounded
 # enumeration is then a property of the type, not of the caller's discipline).
 def playback_command(verb: str, target_kind: str, target: int) -> str:
-    """``"Go+ Executor 191"`` — one verb, one class, one object number.
+    """``"Go+ Executor 191"`` / ``"Macro 3"`` — one verb, one class, one number.
 
     Raises on anything else. The parser already validated a client-supplied
     target (``server.web.messages``), so this second check exists for the
     callers the parser never sees: it is what stops a future internal caller
     from composing a range, a wildcard, or an unaddressable class.
+
+    The macro form (SPEC-COPILOT-DASHUI-001 REQ-DASHUI-012) is the
+    rulebook-verified ``Macro <no>`` (00_grammar.md:60) — the run form carries
+    NO playback verb word. A macro press is one-shot by decision (plan.md §F
+    D1): no verified stop form exists, so ``Off`` on a macro is
+    UNCONSTRUCTIBLE here rather than guessed.
     """
     if verb not in PANEL_VERBS:
         raise ValueError(f"panel verb must be one of {PANEL_VERBS}, got {verb!r}")
+    if not _is_object_number(target):
+        raise ValueError(f"panel target must be a positive integer object number, got {target!r}")
+    if target_kind == "macro":
+        if verb != PANEL_GO_VERB:
+            raise ValueError(
+                "a macro press is one-shot — no rulebook-verified stop form exists "
+                "(the run form is 'Macro <no>', 00_grammar.md:60)"
+            )
+        return f"Macro {target}"
     word = _TARGET_WORD.get(target_kind)
     if word is None:
         raise ValueError(
             f"panel target_kind must be one of {PANEL_TARGET_KINDS}, got {target_kind!r}"
         )
-    if not _is_object_number(target):
-        raise ValueError(f"panel target must be a positive integer object number, got {target!r}")
     return f"{verb} {word} {target}"
 
 

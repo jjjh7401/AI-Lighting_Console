@@ -68,16 +68,22 @@ export type ConsoleInput = "listening" | "silent" | "undetermined";
 // (REQ-SHOWUI-014); the two unknown-type contracts are deliberately asymmetric
 // and neither may be "harmonised" into the other.
 
-/** The tile's type badge — LOOK / FX / SEQ (design.md §4). */
-export type PanelItemKind = "look" | "effect" | "sequence";
+/**
+ * The tile's type badge — LOOK / FX / SEQ (design.md §4), plus the additive
+ * MACRO badge (SPEC-COPILOT-DASHUI-001 REQ-DASHUI-012): both closed sets widen
+ * together so a macro tile is never stamped with the "sequence" badge.
+ */
+export type PanelItemKind = "look" | "effect" | "sequence" | "macro";
 
 /**
  * The console object classes a tile may address.
  *
  * `fixture` is absent on purpose (REQ-SHOWUI-003): a fixture's `no` is its
  * patch slot, not its fixture id, so it is not an address the console fires.
+ * `macro` is the SPEC-COPILOT-DASHUI-001 additive entry (REQ-DASHUI-012) —
+ * the rulebook-verified run form is `Macro <no>`, one-shot (no Off form).
  */
-export type PanelTargetKind = "executor" | "sequence";
+export type PanelTargetKind = "executor" | "sequence" | "macro";
 
 /** Chat-pinned (REQ-SHOWUI-004) vs rig-enumerated (REQ-SHOWUI-001). */
 export type PanelItemSource = "pin" | "auto";
@@ -111,6 +117,42 @@ export interface PanelSection {
   drilldown_capped?: boolean;
   /** At least one container could not be opened — NOT the same as empty. */
   contents_unavailable?: boolean;
+}
+
+// -- console-info dashboard (SPEC-COPILOT-DASHUI-001 M1) ----------------------
+//
+// INFO-ONLY shape (REQ-DASHUI-007): a dashboard entry is a read-only console
+// fact. The address triple a panel tile carries — a derived id, an object
+// class discriminator (`target_kind`), a fireable number — simply does not
+// exist on this shape, so nothing built from it can become a command. The
+// non-fireability is structural (a missing field), not a runtime check.
+
+/** One read-only pool entry: the console's REAL object number + name. */
+export interface DashItem {
+  /** The console's real object number (pools are non-contiguous). */
+  no: number;
+  name: string;
+  /** Appearance colour chip; null or absent when the object has none. */
+  appearance?: string | null;
+  /** Optional extra facts (e.g. the fixture-count summary, REQ-DASHUI-009). */
+  meta?: Record<string, unknown>;
+}
+
+/**
+ * One dashboard section: its own completeness plus its info-only entries.
+ *
+ * Status and flags reuse the panel-section vocabulary verbatim
+ * (REQ-DASHUI-004) — the two failure causes stay distinct, the three
+ * completeness flags carry through. Unlike `panel_catalog`'s flat tile list,
+ * `items` ride INSIDE their section: a self-contained pool view.
+ */
+export interface DashSection {
+  name: string;
+  status: PanelSectionStatus;
+  truncated?: boolean;
+  drilldown_capped?: boolean;
+  contents_unavailable?: boolean;
+  items: DashItem[];
 }
 
 export type ServerEvent =
@@ -173,7 +215,8 @@ export type ServerEvent =
       target_kind: PanelTargetKind;
       target: number;
       message: string;
-    };
+    }
+  | { v: 1; type: "dash_catalog"; sections: DashSection[] };
 
 const SERVER_EVENT_TYPES = new Set([
   "chat_response",
@@ -190,6 +233,8 @@ const SERVER_EVENT_TYPES = new Set([
   "panel_catalog",
   "panel_item_state",
   "panel_busy",
+  // Dashboard (REQ-DASHUI-006) — mirrored by DASH_* in server/web/messages.py.
+  "dash_catalog",
 ]);
 
 /** Parse one server frame; unknown/foreign frames return null (ignored). */
@@ -291,6 +336,14 @@ export function buildPanelCatalogRequest(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "panel_catalog_request" });
 }
 
+/**
+ * Ask for a `dash_catalog` event (REQ-DASHUI-006). Payload-free, and sent only
+ * on connect and on manual refresh — never on a timer (REQ-DASHUI-021).
+ */
+export function buildDashCatalogRequest(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "dash_catalog_request" });
+}
+
 // -- UI state reducer ------------------------------------------------------------
 
 export type ChatEntry =
@@ -345,12 +398,32 @@ export interface PanelState {
   busy: { id: string; message: string } | null;
 }
 
+/**
+ * The console-info dashboard's slice of the UI state (REQ-DASHUI-006/015/018).
+ *
+ * `sections` is server state (a `dash_catalog` REPLACES it, never merges) and
+ * survives a disconnect so the dashboard still renders, inert, while offline.
+ * `lastSyncAt` + `stale` are the freshness claim — the volatile half: once the
+ * socket closes the app can no longer say the catalog matches the console, so
+ * `clearOnDisconnect` withdraws the claim by marking it stale rather than
+ * rendering yesterday's rig as current.
+ */
+export interface DashState {
+  /** Section list in wire order (REQ-DASHUI-003 — nothing sorts it). */
+  sections: DashSection[];
+  /** Wall-clock ms of the last `dash_catalog` receipt, or null before one. */
+  lastSyncAt: number | null;
+  /** Set on disconnect: the catalog on screen may no longer match the console. */
+  stale: boolean;
+}
+
 export interface UiState {
   entries: ChatEntry[];
   status: StatusState | null;
   pendingApprovals: PendingApproval[];
   pendingReviews: ReviewRequestView[];
   panel: PanelState;
+  dash: DashState;
 }
 
 export const initialState: UiState = {
@@ -359,10 +432,20 @@ export const initialState: UiState = {
   pendingApprovals: [],
   pendingReviews: [],
   panel: { items: [], sections: [], running: {}, busy: null },
+  dash: { sections: [], lastSyncAt: null, stale: false },
 };
 
-/** Fold one server event into the UI state. */
-export function reduceServerEvent(state: UiState, event: ServerEvent): UiState {
+/**
+ * Fold one server event into the UI state.
+ *
+ * `nowMs` exists so the `dash_catalog` freshness stamp stays a pure input —
+ * tests pass an explicit clock; production callers take the default.
+ */
+export function reduceServerEvent(
+  state: UiState,
+  event: ServerEvent,
+  nowMs: number = Date.now(),
+): UiState {
   switch (event.type) {
     case "chat_response":
       return {
@@ -469,6 +552,14 @@ export function reduceServerEvent(state: UiState, event: ServerEvent): UiState {
         ...state,
         panel: { ...state.panel, busy: { id: event.id, message: event.message } },
       };
+    case "dash_catalog":
+      // A refresh REPLACES the section list (REQ-DASHUI-006) — merging would
+      // keep pools the showfile no longer has. A fresh catalog also renews the
+      // freshness claim: sync time stamped, any stale mark withdrawn.
+      return {
+        ...state,
+        dash: { sections: event.sections, lastSyncAt: nowMs, stale: false },
+      };
   }
 }
 
@@ -490,8 +581,8 @@ export function clearPendingRequests(state: UiState): UiState {
 }
 
 /**
- * The single disconnect action: drop every pending card AND erase the panel's
- * running state.
+ * The single disconnect action: drop every pending card, erase the panel's
+ * running state, AND withdraw the dashboard's freshness claim.
  *
  * Running state is volatile derived state — the console keeps playing, but the
  * app can no longer observe it, and "probably still running" is exactly the
@@ -501,16 +592,27 @@ export function clearPendingRequests(state: UiState): UiState {
  * reconnect.
  *
  * The tile LIST survives — it is server state, not an observation of the
- * console — so the panel still renders (inert) while offline.
+ * console — so the panel still renders (inert) while offline. The dashboard's
+ * sections survive on the same terms, but their freshness claim does not: a
+ * synced catalog is marked STALE (REQ-DASHUI-015), because an offline app
+ * cannot claim the pools on screen still match the console. The mark clears
+ * when the reconnect resync delivers a fresh `dash_catalog`.
  *
  * One function rather than two so a disconnect handler cannot clear half the
  * volatile state and keep the other half on screen.
  */
 export function clearOnDisconnect(state: UiState): UiState {
-  const next = clearPendingRequests(state);
+  let next = clearPendingRequests(state);
   const { running, busy } = next.panel;
-  if (Object.keys(running).length === 0 && busy === null) return next;
-  return { ...next, panel: { ...next.panel, running: {}, busy: null } };
+  if (Object.keys(running).length > 0 || busy !== null) {
+    next = { ...next, panel: { ...next.panel, running: {}, busy: null } };
+  }
+  // Only a catalog that was actually synced carries a freshness claim to
+  // withdraw; before the first `dash_catalog` there is nothing to mark.
+  if (next.dash.lastSyncAt !== null && !next.dash.stale) {
+    next = { ...next, dash: { ...next.dash, stale: true } };
+  }
+  return next;
 }
 
 // -- Korean display labels ---------------------------------------------------------

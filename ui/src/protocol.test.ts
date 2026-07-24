@@ -4,6 +4,7 @@ import {
   addUserMessage,
   buildApprovalDecision,
   buildChat,
+  buildDashCatalogRequest,
   buildLock,
   buildPanelCatalogRequest,
   buildPanelExecute,
@@ -17,6 +18,7 @@ import {
   initialState,
   panelItemId,
   parseServerEvent,
+  PROTOCOL_VERSION,
   reduceServerEvent,
   type ServerEvent,
 } from "./protocol";
@@ -663,6 +665,202 @@ describe("clearOnDisconnect (REQ-SHOWUI-015/016 — fail closed)", () => {
   });
 
   it("is a no-op on an already-clean state", () => {
+    expect(clearOnDisconnect(initialState)).toBe(initialState);
+  });
+});
+
+// -- SPEC-COPILOT-DASHUI-001 M1 — console-info dashboard protocol contract -----
+//
+// Another ADDITIVE v1 extension on the panel family's terms (AC-DASHUI-001):
+// PROTOCOL_VERSION stays 1, the new event type lands on BOTH allowlists in the
+// same change, and this side's unknown-type contract — silently drop — stays
+// deliberately different from the server's loud ProtocolError.
+
+const dashCatalogEvent = {
+  type: "dash_catalog",
+  sections: [
+    {
+      name: "groups",
+      status: "ok",
+      truncated: false,
+      drilldown_capped: false,
+      contents_unavailable: false,
+      items: [
+        { no: 3, name: "Vocals", appearance: "#00c8ff" },
+        { no: 11, name: "Drums", appearance: null },
+      ],
+    },
+    {
+      name: "presets",
+      status: "console_unreachable",
+      truncated: false,
+      drilldown_capped: true,
+      contents_unavailable: false,
+      items: [],
+    },
+  ],
+};
+
+describe("dash protocol parity (AC-DASHUI-001, client half)", () => {
+  it("keeps the protocol at v1", () => {
+    expect(PROTOCOL_VERSION).toBe(1);
+  });
+
+  it("parses a dash_catalog event", () => {
+    const parsed = parseServerEvent(JSON.stringify({ v: 1, ...dashCatalogEvent }));
+    expect(parsed?.type).toBe("dash_catalog");
+  });
+
+  it("still drops the wrong version and unknown types silently", () => {
+    // The asymmetric half of REQ-DASHUI-006's parity: this side returns null,
+    // it does NOT throw — and widening must not turn it into a prefix match.
+    expect(parseServerEvent(JSON.stringify({ v: 2, ...dashCatalogEvent }))).toBeNull();
+    expect(parseServerEvent(JSON.stringify({ v: 1, type: "dash_mystery" }))).toBeNull();
+    expect(parseServerEvent(JSON.stringify({ v: 1, type: "dash_catalog_extra" }))).toBeNull();
+  });
+
+  it("builds the dash_catalog_request frame at v1", () => {
+    // REQ-DASHUI-006: payload-free — sent on connect and on manual refresh.
+    expect(JSON.parse(buildDashCatalogRequest())).toEqual({
+      v: 1,
+      type: "dash_catalog_request",
+    });
+  });
+
+  it("builds a macro panel_execute frame (additive target class)", () => {
+    // REQ-DASHUI-010/012: the enum widening on this side; the type must both
+    // compile and serialize the new class unchanged.
+    expect(JSON.parse(buildPanelExecute("macro", 3))).toEqual({
+      v: 1,
+      type: "panel_execute",
+      target_kind: "macro",
+      target: 3,
+    });
+  });
+});
+
+describe("dash reducer (REQ-DASHUI-006 replace + freshness)", () => {
+  it("starts empty, never-synced, and not stale", () => {
+    expect(initialState.dash.sections).toEqual([]);
+    expect(initialState.dash.lastSyncAt).toBeNull();
+    expect(initialState.dash.stale).toBe(false);
+  });
+
+  it("stores sections in wire order and stamps the sync time", () => {
+    const next = reduceServerEvent(initialState, event(dashCatalogEvent), 1_753_300_000_000);
+    expect(next.dash.sections.map((section) => section.name)).toEqual(["groups", "presets"]);
+    expect(next.dash.sections[0].items.map((item) => item.no)).toEqual([3, 11]);
+    expect(next.dash.lastSyncAt).toBe(1_753_300_000_000);
+    expect(next.dash.stale).toBe(false);
+  });
+
+  it("REPLACES the catalog on refresh rather than merging", () => {
+    // REQ-DASHUI-006: merging would keep pools the showfile no longer has.
+    const first = reduceServerEvent(initialState, event(dashCatalogEvent), 1000);
+    const second = reduceServerEvent(
+      first,
+      event({
+        type: "dash_catalog",
+        sections: [{ name: "macros", status: "ok", items: [{ no: 9, name: "Blackout" }] }],
+      }),
+      2000,
+    );
+    expect(second.dash.sections).toHaveLength(1);
+    expect(second.dash.sections[0].name).toBe("macros");
+    expect(second.dash.lastSyncAt).toBe(2000);
+  });
+
+  it("keeps the two failure causes distinct (REQ-DASHUI-004)", () => {
+    const next = reduceServerEvent(
+      initialState,
+      event({
+        type: "dash_catalog",
+        sections: [
+          { name: "groups", status: "path_not_resolved", items: [] },
+          { name: "presets", status: "console_unreachable", items: [] },
+        ],
+      }),
+      1000,
+    );
+    expect(next.dash.sections.map((section) => section.status)).toEqual([
+      "path_not_resolved",
+      "console_unreachable",
+    ]);
+  });
+
+  it("carries info entries through without inventing a fire address", () => {
+    // AC-DASHUI-003 type half: the wire shape has no target_kind and the
+    // reducer must not add one.
+    const next = reduceServerEvent(initialState, event(dashCatalogEvent), 1000);
+    for (const section of next.dash.sections) {
+      for (const item of section.items) {
+        expect(Object.keys(item)).not.toContain("target_kind");
+        expect(Object.keys(item)).not.toContain("id");
+      }
+    }
+  });
+
+  it("leaves chat, status, and panel state untouched", () => {
+    const next = reduceServerEvent(initialState, event(dashCatalogEvent), 1000);
+    expect(next.entries).toEqual([]);
+    expect(next.status).toBeNull();
+    expect(next.panel).toBe(initialState.panel);
+  });
+});
+
+describe("clearOnDisconnect dash extension (AC-DASHUI-017, reducer half)", () => {
+  function syncedState() {
+    let state = reduceServerEvent(initialState, event(dashCatalogEvent), 1000);
+    state = reduceServerEvent(state, event(catalogEvent));
+    state = reduceServerEvent(
+      state,
+      event({
+        type: "panel_item_state",
+        id: "executor:191",
+        target_kind: "executor",
+        target: 191,
+        running: true,
+        cue: "3",
+      }),
+    );
+    return state;
+  }
+
+  it("marks a synced dash catalog stale instead of guessing freshness", () => {
+    // REQ-DASHUI-015: the catalog on screen may no longer match the console —
+    // say so, rather than rendering yesterday's rig as current.
+    const cleared = clearOnDisconnect(syncedState());
+    expect(cleared.dash.stale).toBe(true);
+  });
+
+  it("keeps the dash sections so the dashboard renders (inert) offline", () => {
+    const cleared = clearOnDisconnect(syncedState());
+    expect(cleared.dash.sections).toHaveLength(2);
+    expect(cleared.dash.lastSyncAt).toBe(1000);
+  });
+
+  it("still clears the panel volatile state alongside", () => {
+    // One function, all the volatile state — a disconnect handler must not be
+    // able to clear half of it and keep the other half on screen.
+    const cleared = clearOnDisconnect(syncedState());
+    expect(cleared.panel.running).toEqual({});
+    expect(cleared.panel.busy).toBeNull();
+  });
+
+  it("a fresh catalog after reconnect clears the stale mark", () => {
+    const cleared = clearOnDisconnect(syncedState());
+    const resynced = reduceServerEvent(cleared, event(dashCatalogEvent), 2000);
+    expect(resynced.dash.stale).toBe(false);
+    expect(resynced.dash.lastSyncAt).toBe(2000);
+  });
+
+  it("does not mark stale when the dash never synced", () => {
+    // Before the first catalog there is no freshness claim to withdraw.
+    const chatOnly = addUserMessage(initialState, "안녕");
+    expect(clearOnDisconnect(chatOnly).dash.stale).toBe(false);
+  });
+
+  it("remains a no-op on an already-clean state", () => {
     expect(clearOnDisconnect(initialState)).toBe(initialState);
   });
 });

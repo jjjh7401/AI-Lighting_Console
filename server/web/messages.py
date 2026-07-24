@@ -32,6 +32,12 @@ PANEL_CLIENT_MESSAGE_TYPES = (
     "panel_catalog_request",
 )
 
+# The console-info dashboard's client message (SPEC-COPILOT-DASHUI-001 M1).
+# Additive on the panel family's terms: v stays 1, registered on BOTH
+# allowlists in the same change (REQ-DASHUI-006 / AC-DASHUI-001). Payload-free
+# — sent on connect and on manual refresh, never on a timer (REQ-DASHUI-021).
+DASH_CLIENT_MESSAGE_TYPES = ("dash_catalog_request",)
+
 # Closed set of client -> server message types. "review_decision" is the M7
 # additive extension (deploy review) — protocol version stays 1.
 CLIENT_MESSAGE_TYPES = (
@@ -41,6 +47,7 @@ CLIENT_MESSAGE_TYPES = (
     "lock",
     "status_request",
     *PANEL_CLIENT_MESSAGE_TYPES,
+    *DASH_CLIENT_MESSAGE_TYPES,
 )
 
 # The panel messages that address ONE console object, and therefore carry the
@@ -48,17 +55,22 @@ CLIENT_MESSAGE_TYPES = (
 # can build a command bundle out of it.
 PANEL_TARGETED_MESSAGE_TYPES = ("panel_execute", "panel_stop", "panel_unpin")
 
-# The tile's type badge — design.md §4 (LOOK / FX / SEQ).
-PANEL_ITEM_KINDS = ("look", "effect", "sequence")
+# The tile's type badge — design.md §4 (LOOK / FX / SEQ), plus the additive
+# MACRO badge (SPEC-COPILOT-DASHUI-001 REQ-DASHUI-012): without it the catalog
+# route would stamp a macro tile with the "sequence" badge (panel.py
+# ``_CATALOG_ITEM_KIND``) — the exact mis-badge plan.md D4 guards against.
+PANEL_ITEM_KINDS = ("look", "effect", "sequence", "macro")
 
 # @MX:ANCHOR: [AUTO] the closed set of console object classes a panel tile may
 # address. Consumed by the client-message parser, the item constructor, and
 # (from M2) the catalog builder and the pin store.
 # @MX:REASON: REQ-SHOWUI-003 — a fixture's `no` is its patch SLOT, which is not
-# its fixture id; only sequences and executors are objects whose `no` is the
-# address the console fires. Admitting "fixtures" here would let the panel send
-# `Go+ Fixture <slot>` and hit the wrong thing on stage.
-PANEL_TARGET_KINDS = ("executor", "sequence")
+# its fixture id; only sequences, executors and macros are objects whose `no` is
+# the address the console fires ("macro" is the SPEC-COPILOT-DASHUI-001
+# REQ-DASHUI-012 additive entry: the rulebook-verified run form is
+# ``Macro <no>``, 00_grammar.md:60). Admitting "fixtures" here would let the
+# panel send `Go+ Fixture <slot>` and hit the wrong thing on stage.
+PANEL_TARGET_KINDS = ("executor", "sequence", "macro")
 
 # Where a tile came from: a chat-created look the user pinned (REQ-SHOWUI-004)
 # or an object enumerated from the rig (REQ-SHOWUI-001).
@@ -162,10 +174,11 @@ def parse_client_message(raw: str) -> dict:
             "target": target,
         }
 
-    if message_type in ("panel_pin", "panel_catalog_request"):
+    if message_type in ("panel_pin", "panel_catalog_request", "dash_catalog_request"):
         # Payload-free by design. The pin seed is the server's own
-        # ``_last_created`` cross-turn memory (REQ-SHOWUI-004), so there is no
-        # client-supplied target here to get wrong or to have to trust.
+        # ``_last_created`` cross-turn memory (REQ-SHOWUI-004), and the two
+        # catalog requests ask for the whole (replace-semantics) catalog — so
+        # there is no client-supplied target here to get wrong or to trust.
         return {"v": PROTOCOL_VERSION, "type": message_type}
 
     return {"v": PROTOCOL_VERSION, "type": "status_request"}
@@ -438,3 +451,106 @@ def panel_busy_event(*, target_kind: str, target: int, message: str) -> dict:
         target=target,
         message=message,
     )
+
+
+# -- console-info dashboard (SPEC-COPILOT-DASHUI-001 M1) ------------------------
+#
+# The dashboard's read-only pool catalog. INFO-ONLY BY SHAPE (REQ-DASHUI-007):
+# a dash entry carries the console fact (``no`` + ``name``) and nothing a
+# command could be built from — no ``target_kind``, no derived ``id``, no
+# command string. Non-fireability is a missing field, not a runtime check:
+# there is nothing here for a future caller to hand to ``gate.screen()``.
+
+# The wire fields that would make an entry addressable (the PanelItem address
+# triple). The section builder refuses to carry any of them, so a fire-shaped
+# record cannot ride the dashboard event even by accident.
+_DASH_FORBIDDEN_ITEM_KEYS = ("id", "target_kind", "target")
+
+
+def dash_item(
+    *,
+    no: int,
+    name: str,
+    appearance: str | None = None,
+    meta: dict | None = None,
+) -> dict:
+    """One read-only dashboard entry — a console fact, not a fire address.
+
+    | field         | meaning                                                  |
+    |---------------|----------------------------------------------------------|
+    | ``no``        | the console's REAL object number — pools are             |
+    |               | non-contiguous (REQ-DASHUI-005)                          |
+    | ``name``      | the console name, verbatim                               |
+    | ``appearance``| the appearance colour chip, or ``None``                  |
+    | ``meta``      | optional extra facts, e.g. the fixture-count summary     |
+    |               | (REQ-DASHUI-009) — omitted when absent                   |
+
+    Deliberately NOT a ``panel_item``: the address triple (``id`` /
+    ``target_kind`` / ``target``) does not exist here, so nothing downstream
+    can turn this record into a command bundle (REQ-DASHUI-007).
+    """
+    if not _is_object_number(no):
+        raise ValueError(f"dash item no must be a positive integer object number, got {no!r}")
+    if not isinstance(name, str):
+        raise ValueError(f"dash item name must be a string, got {name!r}")
+    item: dict = {"no": no, "name": name, "appearance": appearance}
+    if meta is not None:
+        if not isinstance(meta, dict):
+            raise ValueError(f"dash item meta must be a dict, got {meta!r}")
+        item["meta"] = dict(meta)
+    return item
+
+
+def dash_section(
+    *,
+    name: str,
+    status: str,
+    items: list[dict],
+    truncated: bool = False,
+    drilldown_capped: bool = False,
+    contents_unavailable: bool = False,
+) -> dict:
+    """One dashboard section: its own completeness plus its info-only entries.
+
+    ``status`` and the three completeness flags reuse the panel-section
+    vocabulary verbatim (REQ-DASHUI-004): the two failure causes stay distinct
+    and the flags carry all the way to the UI. Unlike ``panel_catalog``'s flat
+    tile list, ``items`` ride INSIDE their section — a dashboard section is a
+    self-contained pool view.
+
+    Any entry carrying a fire-address field is refused outright: the info-only
+    property (REQ-DASHUI-007) is enforced at construction, not left to caller
+    discipline.
+    """
+    if status not in PANEL_SECTION_STATUSES:
+        raise ValueError(
+            f"dash section status must be one of {PANEL_SECTION_STATUSES}, got {status!r}"
+        )
+    checked: list[dict] = []
+    for item in items:
+        if not isinstance(item, dict):
+            raise ValueError(f"dash section items must be dicts, got {item!r}")
+        forbidden = [key for key in _DASH_FORBIDDEN_ITEM_KEYS if key in item]
+        if forbidden:
+            raise ValueError(
+                f"dash section {name!r} refused a fire-shaped item (carries {forbidden})"
+            )
+        checked.append(item)
+    return {
+        "name": name,
+        "status": status,
+        "truncated": bool(truncated),
+        "drilldown_capped": bool(drilldown_capped),
+        "contents_unavailable": bool(contents_unavailable),
+        "items": checked,
+    }
+
+
+def dash_catalog_event(*, sections: list[dict]) -> dict:
+    """The console-info dashboard catalog (REQ-DASHUI-006).
+
+    A refresh REPLACES the whole list — the ``panel_catalog`` replace
+    semantics, inherited: merging would keep pools the showfile no longer has.
+    Section order is wire order; nothing sorts it (REQ-DASHUI-003).
+    """
+    return _event("dash_catalog", sections=list(sections))
