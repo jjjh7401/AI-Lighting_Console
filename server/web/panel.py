@@ -799,7 +799,12 @@ class PanelRuntime:
     ) -> PanelOutcome:
         key = (target_kind, target)
         if result.ok:
-            if verb == PANEL_GO_VERB:
+            # A macro is ONE-SHOT — no Off form exists (playback_command
+            # raises on it), so entering the running set would latch the tile
+            # lit-as-running forever with no affordance that could clear it
+            # (live defect, 2026-07-24). Only kinds with a stop affordance
+            # track running.
+            if verb == PANEL_GO_VERB and target_kind != "macro":
                 self._running.add(key)
             else:
                 self._running.discard(key)

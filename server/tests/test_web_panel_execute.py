@@ -534,6 +534,18 @@ class TestMacroGateRouting:
         assert harness.audit_sends("Macro 3") == 1
         assert state["id"] == "macro:3"
 
+    def test_a_macro_press_never_latches_the_running_state(self, harness):
+        # A macro is ONE-SHOT (no Off form exists — plan.md §F D1): were a
+        # successful press to enter the running set, the tile would stay
+        # lit-as-running forever, with no affordance that could ever clear it
+        # (the live defect this test reproduces: tiles 1/13/150 stuck amber
+        # after their first press, 2026-07-24).
+        with harness.client as client, client.websocket_connect("/ws") as ws:
+            _drain(ws, "status")
+            _send(ws, type="panel_execute", target_kind="macro", target=3)
+            state = _drain(ws, "panel_item_state")
+        assert state["running"] is False, "one-shot macros must not latch running"
+
     def test_a_macro_target_not_in_the_catalog_is_refused_before_the_gate(self, harness):
         with harness.client as client, client.websocket_connect("/ws") as ws:
             _drain(ws, "status")
