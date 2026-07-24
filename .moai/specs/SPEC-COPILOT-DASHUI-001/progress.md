@@ -234,4 +234,6 @@ next: /moai sync SPEC-COPILOT-DASHUI-001
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+sync_status: synced
+sync_complete_at: 2026-07-24
+sync_commit_sha: pending-backfill-dashui-sync

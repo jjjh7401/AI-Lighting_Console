@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-DASHUI-001
 title: "콘솔 상태 대시보드 + 코파일럿 분할 UI"
 version: "0.1.1"
-status: in-progress
+status: completed
 created: 2026-07-24
 updated: 2026-07-24
 author: manager-spec
