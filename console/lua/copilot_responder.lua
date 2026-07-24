@@ -28,7 +28,14 @@ local CONFIG = {
     state_address = "/copilot/state",
     feedback_address = "/copilot/feedback",
     max_children = 24, -- snapshot child cap (UDP payload budget)
-    max_payload = 4000, -- max encoded payload length in bytes
+    -- Live-measured 2026-07-24 (onPC 2.4.2): the cmd_keyword transport rides
+    -- the MA3 command line, which silently drops commands past ~2048 bytes —
+    -- Cmd() reports success, so an oversize reply just never leaves the box
+    -- (the DataPool/Macros snapshot with 27 long-named leftover probe macros
+    -- was the reproducer). 1900 keeps payload + 'SendOSC N "<addr>,s,…"'
+    -- wrapper under that limit with margin. Payload sweep: 2000 delivered,
+    -- 2100 dropped.
+    max_payload = 1900, -- max encoded payload length in bytes (MA3 CLI 2048 limit)
     send_variant = "packed", -- "packed" | "args" | "cmd_keyword" (see PROTOCOL.md §5)
     uservar_name = "COPILOT_REQ",
 }
@@ -41,8 +48,11 @@ local M = {
     -- cmd_keyword. 1.4.0: resolve_path resolves "Executor <n>" via the
     -- native ObjectList() API (SPEC-COPILOT-EXECBODY-001 M6) instead of
     -- failing with "path segment not found" -- every other path is
-    -- unaffected. Protocol v1 throughout.
-    VERSION = "1.4.0",
+    -- unaffected. 1.4.1: max_payload 4000 -> 1900 -- the cmd_keyword
+    -- transport dies silently past the MA3 ~2048-byte command-line limit
+    -- (live-measured; big snapshots like a 27-macro pool never replied).
+    -- Protocol v1 throughout.
+    VERSION = "1.4.1",
     PROTO = 1,
     CONFIG = CONFIG,
 }

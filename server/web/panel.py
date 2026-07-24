@@ -445,6 +445,12 @@ class PanelStore:
         # guessed one is not.
         self._catalog = PanelCatalog()
         self._enumerated = False
+        # SPEC-COPILOT-DASHUI-001 M6 — console-VERIFIED executor numbers from
+        # the dash catalog's resolution report. The SHOWUI page drill reports
+        # POOL SLOTS, which the console does not address (live-measured:
+        # page 1 slot 1 is "Executor 101"), so the dash tiles fire these
+        # verified numbers instead — membership must recognise them.
+        self._dash_executors: set[int] = set()
 
     @property
     def catalog(self) -> PanelCatalog:
@@ -481,12 +487,24 @@ class PanelStore:
         """True when this (class, number) pair is a tile the panel actually has."""
         if target_kind not in PANEL_TARGET_KINDS:
             return False
+        if target_kind == "executor" and target in self._dash_executors:
+            return True
         if self.pins.contains(target_kind, target):
             return True
         return any(
             item["target_kind"] == target_kind and item["target"] == target
             for item in self._catalog.items
         )
+
+    def register_dash_executors(self, console_nos: list[int]) -> None:
+        """REPLACE the dash-verified executor membership (never merge).
+
+        Called on every dash catalog build with that build's
+        ``resolved_executor_nos`` — the same replace-not-merge discipline the
+        catalog itself follows (REQ-DASHUI-006), so a number that stopped
+        confirming on refresh stops being fireable with it.
+        """
+        self._dash_executors = {no for no in console_nos if isinstance(no, int)}
 
     def pin_from_seed(self, seed: LastCreated | None) -> dict:
         """Pin the chat's last-created look (REQ-SHOWUI-004).
@@ -656,6 +674,10 @@ class PanelRuntime:
     def contains(self, target_kind: str, target: int) -> bool:
         """Membership half of REQ-SHOWUI-022 — asked BEFORE a bundle exists."""
         return self._store.contains(target_kind, target)
+
+    def register_dash_executors(self, console_nos: list[int]) -> None:
+        """Delegate the dash-verified executor membership to the store."""
+        self._store.register_dash_executors(console_nos)
 
     # @MX:ANCHOR: [AUTO] the panel's ONE route to the console. Both panel_execute
     # and panel_stop enter here; there is no second entry, and the All Off gesture

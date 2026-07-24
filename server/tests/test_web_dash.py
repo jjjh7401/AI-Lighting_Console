@@ -311,11 +311,11 @@ class TestFixturesSummary:
 
 
 class TestExecutorResolution:
-    def test_a_verified_candidate_is_reported_resolved(self):
+    def test_a_verified_candidate_is_reported_resolved_with_its_console_number(self):
         sections = build_dash_catalog(FakeStatePort(_rig_tree()))
         executors = _section(sections, "executors")
         resolved = next(i for i in executors["items"] if i["no"] == 101)
-        assert resolved["meta"] == {"resolved": True}
+        assert resolved["meta"] == {"resolved": True, "console_no": 101}
 
     def test_an_unqueryable_candidate_is_reported_unresolved(self):
         sections = build_dash_catalog(FakeStatePort(_rig_tree()))
@@ -332,17 +332,45 @@ class TestExecutorResolution:
         mismatched = next(i for i in executors["items"] if i["no"] == 103)
         assert mismatched["meta"] == {"resolved": False}
 
-    def test_no_child_index_or_offset_math_is_used(self):
-        # The FakeStatePort ONLY resolves the exact page-drilled candidate
-        # number ("Executor 101") — never a +100 offset or any other guess.
-        # If offset math were used, "Executor 201" would have been queried
-        # and this port would raise LookupError for it — never a silent
-        # wrong-answer. This test pins that no such query happens.
+    def test_the_page_form_console_number_is_verified_not_assumed(self):
+        # Live-measured on onPC 2.4.2 (2026-07-24, DASHUI M6 root-cause probe):
+        # the page drill reports POOL SLOTS (1, 5, 11, …) while the console's
+        # own address form is page_no*100 + slot ("Executor 101" for page 1
+        # slot 1) — the raw slot is NOT addressable ("ObjectList('Executor 1')
+        # unavailable"). The resolver therefore tries the raw slot first
+        # (backward compat) and then the page-form candidate, each VERIFIED by
+        # name before being believed — never emitted as a blind offset.
+        tree = _rig_tree()
+        tree["DataPool/Pages/1"] = _snapshot("DataPool/Pages/1", [(1, "Cyan Look")])
+        tree["Executor 101"] = _identity("Cyan Look")
+        sections = build_dash_catalog(FakeStatePort(tree))
+        executors = _section(sections, "executors")
+        item = next(i for i in executors["items"] if i["no"] == 1)
+        # Display keeps the pool slot (onPC pool-window parity); the FIRE
+        # target is the verified console number (AC-DASHUI-005).
+        assert item["meta"] == {"resolved": True, "console_no": 101}
+
+    def test_an_unconfirmed_page_form_candidate_stays_unresolved(self):
+        # Neither the raw slot nor the page-form candidate confirms → the
+        # item MUST stay unresolved (no guessing, EXECBODY AC-016).
+        tree = _rig_tree()
+        tree["DataPool/Pages/1"] = _snapshot("DataPool/Pages/1", [(7, "Ghost")])
+        # "Executor 7" and "Executor 107" both absent from the tree.
+        port = FakeStatePort(tree)
+        sections = build_dash_catalog(port)
+        executors = _section(sections, "executors")
+        item = next(i for i in executors["items"] if i["no"] == 7)
+        assert item["meta"] == {"resolved": False}
+        # Both address forms were PROBED (verification, not guessing) …
+        assert "Executor 7" in port.queries
+        assert "Executor 107" in port.queries
+
+    def test_a_raw_slot_confirmation_skips_the_page_form_probe(self):
+        # Slot 101 confirms on the raw form immediately — the page-form
+        # candidate ("Executor 201") must NOT be queried afterwards.
         port = FakeStatePort(_rig_tree())
         build_dash_catalog(port)
         assert "Executor 201" not in port.queries
-        assert "Executor 202" not in port.queries
-        assert "Executor 203" not in port.queries
 
     def test_panel_catalogs_own_executor_generation_is_unaffected(self):
         # This module's resolution report is read-only and additive; the
@@ -467,3 +495,39 @@ class TestDashCatalogRequestDispatch:
             _send(ws, type="dash_catalog_request")
             event = ws.receive_json()
         assert event["type"] != "status"
+
+
+# -- verified console numbers join the panel membership (AC-DASHUI-005) ----------
+
+
+class TestResolvedExecutorMembership:
+    def test_resolved_executor_nos_extracts_only_verified_console_numbers(self):
+        from server.web.dash import resolved_executor_nos
+
+        sections = build_dash_catalog(FakeStatePort(_rig_tree()))
+        # 101 confirms on the raw form; 102/103 stay unresolved.
+        assert resolved_executor_nos(sections) == [101]
+
+    def test_resolved_executor_nos_uses_the_page_form_when_that_confirmed(self):
+        from server.web.dash import resolved_executor_nos
+
+        tree = _rig_tree()
+        tree["DataPool/Pages/1"] = _snapshot("DataPool/Pages/1", [(1, "Cyan Look")])
+        tree["Executor 101"] = _identity("Cyan Look")
+        sections = build_dash_catalog(FakeStatePort(tree))
+        assert resolved_executor_nos(sections) == [101]
+
+    def test_registered_console_numbers_become_panel_members_and_are_replaced_not_merged(self):
+        from server.web.panel import PanelStore, PinStore
+
+        store = PanelStore(state_port=DeadStatePort(), pins=PinStore("/tmp/dash-membership-pins.json"))
+        assert store.contains("executor", 111) is False
+        store.register_dash_executors([111, 201])
+        assert store.contains("executor", 111) is True
+        assert store.contains("executor", 201) is True
+        # REPLACE semantics — a refresh must not leave stale members behind.
+        store.register_dash_executors([105])
+        assert store.contains("executor", 111) is False
+        assert store.contains("executor", 105) is True
+        # Only the executor class is widened — no cross-kind bleed.
+        assert store.contains("macro", 105) is False

@@ -126,31 +126,41 @@ def _count_only_items(entry: dict, objects: list[dict]) -> list[dict]:
     return [dash_item(no=1, name="", meta={"count": count})]
 
 
-def _resolve_executor_no(
+def _confirm_executor_no(
     state_port: StateQueryPort, candidate_no: int, expected_name: str
-) -> int | None:
-    """Verify a page-drilled executor candidate against the console's own
-    "Executor <n>" address form — the SAME form
-    ``server/safety/console.py::StateBodyFetcher._fetch_executor_body`` and
-    the EXECBODY-001 responder ``resolve_path``/``ObjectList`` path use.
-
-    The page drilldown's pool-slot number is NOT assumed to be the
-    console-displayed executor number (EXECBODY design.md §5.8's
-    "reverse-address problem" — ``DataPool/Executor``'s pool-slot numbering
-    does not correspond to the console-displayed one). This VERIFIES the
-    candidate already in hand instead of assuming it, and refuses to guess an
-    offset when it does not confirm (EXECBODY AC-016's inherited principle —
-    no child-index or offset guessing).
-    """
+) -> bool:
+    """One name-verified probe of the console's "Executor <n>" address form —
+    the SAME form ``server/safety/console.py::StateBodyFetcher.
+    _fetch_executor_body`` and the EXECBODY-001 responder
+    ``resolve_path``/``ObjectList`` path use."""
     try:
         identity = state_port.query_state(f"Executor {candidate_no}")
     except Exception:
-        return None
+        return False
     node = identity.get("node") if isinstance(identity, dict) else None
     resolved_name = node.get("name") if isinstance(node, dict) else None
-    if resolved_name != expected_name:
-        return None
-    return candidate_no
+    return resolved_name == expected_name
+
+
+def _executor_candidates(slot_no: int, page_no: int | None) -> list[int]:
+    """Console-number candidates for one page-drilled executor slot.
+
+    The page drilldown's pool-slot number is NOT assumed to be the
+    console-displayed executor number (EXECBODY design.md §5.8's
+    "reverse-address problem"). Live-measured on onPC 2.4.2 (2026-07-24,
+    DASHUI M6 root-cause probe): the console form is ``page_no*100 + slot``
+    ("Executor 101" is page 1 slot 1; the raw slot is not addressable). The
+    raw slot stays FIRST for backward compatibility with consoles that do
+    address it directly; every candidate is name-VERIFIED before being
+    believed and an unconfirmed candidate is never emitted (EXECBODY
+    AC-016's inherited principle — no child-index or offset guessing).
+    """
+    candidates = [slot_no]
+    if page_no is not None:
+        page_form = page_no * 100 + slot_no
+        if page_form != slot_no:
+            candidates.append(page_form)
+    return candidates
 
 
 def _build_executors_section(
@@ -186,24 +196,38 @@ def _build_executors_section(
     entry = rig_section(pages, pages_payload)
     drill_into(state_port, pages, pages_path, entry, page_query_cap)
 
-    candidates: list[tuple[int, str]] = []
+    candidates: list[tuple[int, int | None, str]] = []
     for page in pages:
+        page_no = page.get("no")
         for child in page.get("contents", []):
             no = child.get("no")
             if no is None:
                 continue
-            candidates.append((no, str(child.get("name", ""))))
+            candidates.append((no, page_no, str(child.get("name", ""))))
 
     verify_budget = verify_query_cap
     capped = bool(entry.get("drilldown_capped"))
     items: list[dict] = []
-    for no, name in candidates:
+    for no, page_no, name in candidates:
         if verify_budget <= 0:
             capped = True
             break
-        verify_budget -= 1
-        resolved_no = _resolve_executor_no(state_port, no, name)
-        items.append(dash_item(no=no, name=name, meta={"resolved": resolved_no is not None}))
+        resolved_no: int | None = None
+        for candidate_no in _executor_candidates(no, page_no):
+            if verify_budget <= 0:
+                capped = True
+                break
+            verify_budget -= 1
+            if _confirm_executor_no(state_port, candidate_no, name):
+                resolved_no = candidate_no
+                break
+        # The item's `no` stays the POOL SLOT (onPC pool-window parity); the
+        # verified console number rides `meta.console_no` and is the ONLY
+        # number a press may target (AC-DASHUI-005 — 해석된 콘솔 번호).
+        meta: dict[str, object] = {"resolved": resolved_no is not None}
+        if resolved_no is not None:
+            meta["console_no"] = resolved_no
+        items.append(dash_item(no=no, name=name, meta=meta))
 
     section = dash_section(
         name="executors",
@@ -280,6 +304,27 @@ def build_dash_catalog(
         sections[index] = dash_section(name=name, status=status, items=[])
 
     return [s for s in sections if s is not None]
+
+
+def resolved_executor_nos(sections: list[dict]) -> list[int]:
+    """The console-VERIFIED executor numbers of one dash catalog build.
+
+    These are the only numbers a dash executor press may target
+    (AC-DASHUI-005), and therefore the numbers the panel membership must
+    recognise — the SHOWUI catalog's own executor tiles carry the page
+    drill's POOL SLOTS, which the console does not address (live-measured:
+    page 1 slot 1 is "Executor 101").
+    """
+    numbers: list[int] = []
+    for section in sections:
+        if section.get("name") != "executors":
+            continue
+        for item in section.get("items", []):
+            meta = item.get("meta") or {}
+            console_no = meta.get("console_no")
+            if meta.get("resolved") is True and isinstance(console_no, int):
+                numbers.append(console_no)
+    return numbers
 
 
 def dash_catalog_snapshot(state_port: StateQueryPort, **kwargs: object) -> dict:

@@ -33,7 +33,7 @@ from server.safety.backup import BackupManager
 from server.safety.gate import SafetyGate
 from server.safety.session_context import new_session_key
 from server.web.approval_bridge import ApprovalChannel
-from server.web.dash import send_dash_catalog
+from server.web.dash import resolved_executor_nos, send_dash_catalog
 from server.web.handshake import (
     CLOSE_POLICY_VIOLATION,
     HandshakePolicy,
@@ -413,13 +413,20 @@ def create_app(deps: WebDeps) -> FastAPI:
                     # many-round-trip state_port read, and serializing it
                     # against the existing catalog build avoids stacking
                     # concurrent OSC query storms on the console.
-                    spawn_panel(
-                        panel_task(
-                            send_dash_catalog,
-                            deps.gate.state_port,
-                            send_event,
-                            lane=panel_side_lane,
+                    def _dash_catalog_and_membership() -> None:
+                        # M6 — the build's VERIFIED executor console numbers
+                        # become panel members (AC-DASHUI-005): the SHOWUI
+                        # catalog's own executor tiles carry pool slots the
+                        # console does not address, so without this the dash
+                        # tiles' only legitimate targets would be rejected
+                        # as "not on the panel".
+                        event = send_dash_catalog(deps.gate.state_port, send_event)
+                        panel.register_dash_executors(
+                            resolved_executor_nos(event["sections"])
                         )
+
+                    spawn_panel(
+                        panel_task(_dash_catalog_and_membership, lane=panel_side_lane)
                     )
                 else:  # status_request
                     await _safe_send(websocket, session.status_snapshot())

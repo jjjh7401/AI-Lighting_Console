@@ -34,6 +34,25 @@ export function targetKindForDashSection(sectionName: string): PanelTargetKind |
 }
 
 /**
+ * The number a press on this dash item may target, or null when it must not
+ * fire. Executors fire ONLY the server-verified console number
+ * (`meta.console_no`, AC-DASHUI-005) — the item's own `no` is the POOL SLOT
+ * (live-measured on onPC 2.4.2: page 1 slot 1 is console "Executor 101"), so
+ * targeting it would fire the wrong executor or nothing. An executor without
+ * a verified console number never fires (fail-closed, EXECBODY AC-016).
+ * Macros fire their own pool number unchanged.
+ */
+export function dashPressTargetNo(sectionName: string, item: DashItem): number | null {
+  const targetKind = targetKindForDashSection(sectionName);
+  if (targetKind === null) return null;
+  if (targetKind === "executor") {
+    const consoleNo = item.meta?.console_no;
+    return typeof consoleNo === "number" ? consoleNo : null;
+  }
+  return item.no;
+}
+
+/**
  * The split-pane shell — deliberately hook-free so App.test.tsx can call it
  * directly (this project has no DOM/jsdom test harness; see protocol.ts's
  * own header). The console info pane (`DashBoard`) ALWAYS mounts — it is the
@@ -131,15 +150,19 @@ export default function App() {
   const isDashItemRunning = (sectionName: string, item: DashItem): boolean => {
     const targetKind = targetKindForDashSection(sectionName);
     if (targetKind === null) return false;
-    return state.panel.running[panelItemId(targetKind, item.no)]?.running ?? false;
+    const targetNo = dashPressTargetNo(sectionName, item);
+    if (targetNo === null) return false;
+    return state.panel.running[panelItemId(targetKind, targetNo)]?.running ?? false;
   };
   const pressDashItem = (sectionName: string, item: DashItem) => {
     const targetKind = targetKindForDashSection(sectionName);
     if (targetKind === null) return;
+    const targetNo = dashPressTargetNo(sectionName, item);
+    if (targetNo === null) return; // unresolved executor: never fire (fail-closed)
     if (isDashItemRunning(sectionName, item)) {
-      sendPanelStop(targetKind, item.no);
+      sendPanelStop(targetKind, targetNo);
     } else {
-      sendPanelExecute(targetKind, item.no);
+      sendPanelExecute(targetKind, targetNo);
     }
   };
 

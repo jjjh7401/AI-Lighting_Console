@@ -200,15 +200,36 @@
 
 **D-M6-1 익스큐터 발화 항목(②③) + 매크로 press(⑤) + LiveLock 발화 검증(⑥) 정직 미달성 처리**: 실사용 쇼파일의 익스큐터 8종(no 1,5,11,91,92,93,95,101 — 전부 "Sequence N" 이름)이 전부 `dashItemIsPressable`상 미해석("정보만" 배지) 상태였고, 매크로 풀 자체가 이 쇼파일에 없음("경로 미해결"). 발화 가능한(press-able) 대상이 하나도 없어 ②③⑤⑥ 4개 항목 전부 실제 press 시도조차 할 수 없었음 — 콘솔로 나간 실행 커맨드는 0건. 사용자 확인 후, 별도 쇼파일 전환이나 콘솔 측 익스큐터/매크로 재구성 없이 **현재 상태를 정직하게 기록하고 마무리**하기로 결정(EXECBODY AP-8 원칙 — 부분 성공을 성공으로 위장하지 않는다). 이는 SPEC-COPILOT-SHOWUI-001의 executor-tile v1 범위축소(AC-013)와 동일한 처리 패턴. 소프트웨어 측 발화 배선 자체(M5, `sendPanelExecute`/`sendPanelStop`)는 이미 vitest로 기계 검증 완료 — 이번 미달성은 UI/서버 코드의 결함이 아니라 **테스트에 사용된 실제 쇼파일에 발화 가능한 타깃이 없었다는 환경적 제약**.
 
-**AC-DASHUI-014 최종 판정**: PASS-WITH-DEBT — ①④⑦⑧ 라이브 확인 완료, ②③⑤⑥은 위 사유로 미달성(§E.5 잔여 위험에 등재, 후속 세션에서 발화 가능한 쇼파일/익스큐터·매크로 구성 시 재검증 권장).
+**AC-DASHUI-014 1차 판정(같은 날 후속 세션에서 상향 — 아래 M6-RC 참조)**: PASS-WITH-DEBT — ①④⑦⑧ 라이브 확인 완료, ②③⑤⑥은 위 사유로 미달성.
 
 **AC-DASHUI-015 (드릴다운 예산 정직성)**: PASS — 프리셋 풀 헤더에 "드릴다운 예산 소진" 배지가 실제로 렌더됨을 라이브로 확인(N/A 케이스 아님, 실제 발생).
 
+### M6-RC — ②③⑤⑥ 근본 원인 규명 및 해결 (2026-07-24, 사용자 지시 "원인을 찾아서 해결")
+
+D-M6-1의 "환경적 제약" 판정을 사용자가 반려 → 실제 콘솔에 읽기 전용 프로브 16종 + 콘솔 내 진단 플러그인(CopilotDiag, UserVar 트레일)으로 근본 원인 2건을 실측 규명:
+
+**RC-1 익스큐터 전부 "정보만" — 슬롯≠콘솔번호 (서버 결함)**: 페이지 드릴은 풀 슬롯(1,5,11,…101)을 주는데 콘솔 주소 형식은 `페이지×100+슬롯`(슬롯1→`Executor 101`, 8/8 전 슬롯 이름 일치 실측; `Executor 1`은 "ObjectList unavailable"). 기존 `_resolve_executor_no`는 슬롯 그대로 검증해 전부 실패. **수정**: `_executor_candidates`가 [원시 슬롯, 페이지형] 순서로 후보를 만들고 각각 이름 검증(추측 금지 유지, EXECBODY AC-016), 확정 번호를 `meta.console_no`로 전달. UI(`dashPressTargetNo`)는 익스큐터 발화 target으로 `meta.console_no`만 사용(fail-closed) — AC-DASHUI-005 "해석된 콘솔 번호" 요구 완결. 멤버십: 대시 빌드마다 검증-완료 번호를 `PanelStore.register_dash_executors`로 교체 등록(SHOWUI 카탈로그의 슬롯 번호와 별개 표면).
+
+**RC-2 매크로 "경로 미해결" — 응답기 회신의 조용한 증발 (콘솔측 결함)**: `DataPool/Macros` 노드는 실존(자식 27개 — 과거 프로브 세션들이 남긴 매크로들). 실측: 응답기의 실동작 전송 변형은 cmd_keyword(`Cmd('SendOSC …')`)이고 MA3 커맨드라인은 **~2048바이트 초과 시 조용히 드롭**(페이로드 2000 배달/2100 드롭 스윕; Cmd()는 거부에도 에러를 안 냄 — send_reply 주석의 알려진 함정). 구 `max_payload=4000`이 이 한계를 초과하는 회신을 허용 → 27개 매크로 스냅샷만 증발, 타 섹션은 우연히 한계 미만. **수정**: responder 1.4.1 — `max_payload` 4000→1900, file+Import 재배포(`--expect-version 1.4.1` PASS), 소스 레벨 예산 회귀 테스트(`test_lua_responder_payload_budget.py`) 추가.
+
+**라이브 재검증(수정 후)**:
+
+| 항목 | 결과 | 기계 증적(audit-20260724.jsonl) |
+|---|---|---|
+| ② 시퀀스(익스큐터 경유) Go+/Off | PASS | `Go+ Executor 111` ok=True → 타일 RUN(live-amber, Off 어포던스) → `Off Executor 111` ok=True → OFF 복귀 |
+| ③ 익스큐터 해석된 번호 발화(오발 없음) | PASS | 슬롯 11 타일이 검증된 `Executor 111`만 발화(사전 검증 질의 `Executor 111`/`DataPool/Sequences/41` 기록 동반) |
+| ⑤ 매크로 press(양성 절반) | PASS | `Macro 1` ok=True(게이트 경유·감사 1:1). **잔여**: 블랙리스트 본문 매크로가 쇼파일에 없어 승인 카드 절반은 여전히 미검증(§E.5) |
+| ⑥ LiveLock 강등 | PASS | 잠금 중 press → `blocked 'Go+ Executor 111'` + 제안 카드("전송되지 않음") 렌더, 송신 0건 |
+
+**AC-DASHUI-014 최종 판정(상향)**: PASS — ①②③④⑥⑦⑧ 전 항목 라이브 확인. ⑤는 양성 절반 PASS, 블랙리스트 절반만 잔여(§E.5).
+
+**부수 개선(사용자 지시)**: 콘솔-우선 레이아웃 역전 — 콘솔 정보창이 상시·주 영역, 채팅은 우측 접이식 컬럼(커밋 2892b9b).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-run_status: audit-ready (PASS-WITH-DEBT)
+run_status: audit-ready
 run_complete_at: 2026-07-24
-verdict: M1~M6 전 마일스톤 완료. AC-DASHUI-001~013/016/017 기계 검증 PASS. AC-DASHUI-014 라이브 PASS-WITH-DEBT(①④⑦⑧ PASS, ②③⑤⑥ 쇼파일 제약으로 미달성 — D-M6-1). AC-DASHUI-015 PASS.
+verdict: M1~M6 전 마일스톤 완료 + M6-RC 근본원인 2건(슬롯≠콘솔번호, 응답기 2048B 회신 드롭) 실측 규명·수정·라이브 재검증. AC-DASHUI-001~013/015/016/017 PASS, AC-DASHUI-014 PASS(⑤ 블랙리스트 절반만 §E.5 잔여). vitest 201/201, pytest 신규 실패 0(기준선 실패만 잔존).
 next: /moai sync SPEC-COPILOT-DASHUI-001
 
 ## §E.4 Sync-phase Audit-Ready Signal

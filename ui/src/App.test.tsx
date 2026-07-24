@@ -14,7 +14,7 @@
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { AppShell, targetKindForDashSection } from "./App";
+import { AppShell, dashPressTargetNo, targetKindForDashSection } from "./App";
 import { DashBoard } from "./components/DashBoard";
 import { initialState } from "./protocol";
 
@@ -41,6 +41,30 @@ describe("targetKindForDashSection (M5)", () => {
     expect(targetKindForDashSection("preset_pools")).toBeNull();
     expect(targetKindForDashSection("plugins")).toBeNull();
     expect(targetKindForDashSection("fixtures")).toBeNull();
+  });
+});
+
+// AC-DASHUI-005 — the executor fire target is the server-VERIFIED console
+// number, never the pool slot (live-measured: page 1 slot 1 = "Executor 101").
+describe("dashPressTargetNo", () => {
+  it("executors fire meta.console_no, not the pool-slot no", () => {
+    const item = { no: 1, name: "Sequence 50", meta: { resolved: true, console_no: 101 } };
+    expect(dashPressTargetNo("executors", item)).toBe(101);
+  });
+
+  it("an executor without a verified console number never fires (fail-closed)", () => {
+    expect(dashPressTargetNo("executors", { no: 1, name: "Sequence 50" })).toBeNull();
+    expect(
+      dashPressTargetNo("executors", { no: 1, name: "Sequence 50", meta: { resolved: false } }),
+    ).toBeNull();
+  });
+
+  it("macros fire their own pool number unchanged", () => {
+    expect(dashPressTargetNo("macros", { no: 3, name: "Blackout FX" })).toBe(3);
+  });
+
+  it("read-only sections have no press target at all", () => {
+    expect(dashPressTargetNo("groups", { no: 1, name: "Vocals" })).toBeNull();
   });
 });
 
