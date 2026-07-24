@@ -40,15 +40,14 @@ export function sectionHealthLabel(section: DashSection): string | null {
   return flags.length > 0 ? flags.join(" · ") : null;
 }
 
-/** onPC-style tile scale for one section (M6-UX, user direction). */
-export type PoolTileSize = "s" | "m" | "l";
+/** onPC-style tile-width bounds (px) for the drag-resize control (M6-UX). */
+export const POOL_TILE_MIN_WIDTH = 84;
+export const POOL_TILE_MAX_WIDTH = 260;
+export const POOL_TILE_DEFAULT_WIDTH = 140;
 
-const SIZE_ORDER: PoolTileSize[] = ["s", "m", "l"];
-
-/** One step smaller/larger, clamped at both ends. */
-export function stepPoolSize(size: PoolTileSize, direction: -1 | 1): PoolTileSize {
-  const index = SIZE_ORDER.indexOf(size) + direction;
-  return SIZE_ORDER[Math.min(SIZE_ORDER.length - 1, Math.max(0, index))];
+/** Clamp one dragged tile width into the legal range. */
+export function clampPoolTileWidth(width: number): number {
+  return Math.min(POOL_TILE_MAX_WIDTH, Math.max(POOL_TILE_MIN_WIDTH, Math.round(width)));
 }
 
 export interface PoolSectionProps {
@@ -66,10 +65,15 @@ export interface PoolSectionProps {
   /** Per-item running lookup (M5). Defaults to not-running when omitted. */
   isRunning?: (item: DashItem) => boolean;
   onPress?: (item: DashItem) => void;
-  /** This section's tile scale (M6-UX). Session-volatile, owned by App. */
-  size?: PoolTileSize;
-  /** When provided, the header renders −/+ controls that step the size. */
-  onSizeChange?: (next: PoolTileSize) => void;
+  /** This section's tile width in px (M6-UX). Session-volatile, owned by App. */
+  tileWidth?: number;
+  /**
+   * When provided, the header renders a drag handle whose pointer-down
+   * starts a mouse-drag resize (the drag session itself — document-level
+   * move/up listeners — lives in App; this hook-free component only
+   * surfaces the starting event).
+   */
+  onResizeStart?: (event: { clientX: number }) => void;
 }
 
 export function PoolSection({
@@ -80,40 +84,40 @@ export function PoolSection({
   runningVerb,
   isRunning,
   onPress,
-  size = "m",
-  onSizeChange,
+  tileWidth = POOL_TILE_DEFAULT_WIDTH,
+  onResizeStart,
 }: PoolSectionProps) {
   const health = sectionHealthLabel(section);
+  const width = clampPoolTileWidth(tileWidth);
   return (
     <section className={`pool-section pool-section-${section.name}`} aria-label={label}>
       <header className="pool-section-header">
         <span className="pool-section-label">{label}</span>
         {health ? <span className="pool-section-health">{health}</span> : null}
-        {onSizeChange ? (
-          <span className="pool-size-control">
-            <button
-              type="button"
-              className="pool-size-step"
-              aria-label="타일 작게"
-              onClick={() => onSizeChange(stepPoolSize(size, -1))}
-            >
-              −
-            </button>
-            <button
-              type="button"
-              className="pool-size-step"
-              aria-label="타일 크게"
-              onClick={() => onSizeChange(stepPoolSize(size, 1))}
-            >
-              +
-            </button>
+        {onResizeStart ? (
+          <span
+            className="pool-resize-handle"
+            role="slider"
+            aria-label="타일 크기 조절 — 좌우로 드래그"
+            aria-valuemin={POOL_TILE_MIN_WIDTH}
+            aria-valuemax={POOL_TILE_MAX_WIDTH}
+            aria-valuenow={width}
+            onMouseDown={(event: { clientX: number; preventDefault?: () => void }) => {
+              event.preventDefault?.();
+              onResizeStart(event);
+            }}
+          >
+            ↔
           </span>
         ) : null}
       </header>
       {section.items.length === 0 ? (
         <div className="pool-section-empty">비어 있음</div>
       ) : (
-        <div className={`pool-section-grid pool-size-${size}`}>
+        <div
+          className="pool-section-grid"
+          style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${width}px, 1fr))` }}
+        >
           {section.items.map((item) => {
             const pressable = isPressable(item);
             const running = pressable && (isRunning?.(item) ?? false);

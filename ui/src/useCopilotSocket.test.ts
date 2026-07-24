@@ -16,6 +16,7 @@ import {
   TOKEN_SUBPROTOCOL_PREFIX,
   connectProtocols,
   connectResyncFrames,
+  dashResyncFrame,
   launchToken,
   reducer,
 } from "./useCopilotSocket";
@@ -117,5 +118,47 @@ describe("connectResyncFrames — reconnect resync dispatch (AC-DASHUI-017)", ()
 
   it("is deterministic and side-effect-free — calling it twice sends nothing on its own", () => {
     expect(connectResyncFrames()).toEqual(connectResyncFrames());
+  });
+});
+
+// M6-UX v2 — a chat-side mutation must resync the console pane without a
+// manual refresh (user finding: "Delete Group 20" executed but Group 20
+// stayed on the dashboard until 새로고침 was pressed).
+describe("dashResyncFrame", () => {
+  it("returns a dash_catalog_request for a chat_response carrying an executed command", () => {
+    const frame = dashResyncFrame(
+      JSON.stringify({
+        v: 1,
+        type: "chat_response",
+        status: "done",
+        summary: "",
+        text: "",
+        commands: [{ command: "Delete Group 20", status: "executed_ok", label: "", detail: "" }],
+      }),
+    );
+    expect(frame).toContain("dash_catalog_request");
+  });
+
+  it("returns null when nothing was actually executed (refresh-on-demand stays the rule)", () => {
+    const noCommands = JSON.stringify({
+      v: 1,
+      type: "chat_response",
+      status: "done",
+      summary: "",
+      text: "",
+      commands: [],
+    });
+    expect(dashResyncFrame(noCommands)).toBeNull();
+    const blockedOnly = JSON.stringify({
+      v: 1,
+      type: "chat_response",
+      status: "blocked",
+      summary: "",
+      text: "",
+      commands: [{ command: "Delete Group 20", status: "blocked", label: "", detail: "" }],
+    });
+    expect(dashResyncFrame(blockedOnly)).toBeNull();
+    expect(dashResyncFrame(JSON.stringify({ v: 1, type: "status" }))).toBeNull();
+    expect(dashResyncFrame("not json")).toBeNull();
   });
 });

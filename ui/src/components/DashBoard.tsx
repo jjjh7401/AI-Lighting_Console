@@ -10,7 +10,24 @@
 // function in tests, returning an inspectable React element tree with no
 // renderer — see DashBoard.test.tsx and the sibling AppShell in App.tsx.
 import { type DashItem, type DashSection, type DashState } from "../protocol";
-import { PoolSection, type PoolTileSize } from "./PoolSection";
+import { PoolSection } from "./PoolSection";
+
+/**
+ * Site preference (user direction, 2026-07-24): the preset pool list is too
+ * long to be useful on the dashboard — show ONLY pool 21 ("All 1"). Every
+ * other section renders unfiltered. Widen this set when more pools become
+ * operationally relevant.
+ */
+export const VISIBLE_PRESET_POOL_NOS: ReadonlySet<number> = new Set([21]);
+
+/** The section as the dashboard actually renders it (preset filter applied). */
+export function visibleSection(section: DashSection): DashSection {
+  if (section.name !== "preset_pools") return section;
+  return {
+    ...section,
+    items: section.items.filter((item) => VISIBLE_PRESET_POOL_NOS.has(item.no)),
+  };
+}
 
 export interface DashBoardProps {
   dash: DashState;
@@ -34,10 +51,10 @@ export interface DashBoardProps {
   isItemRunning?: (sectionName: string, item: DashItem) => boolean;
   /** Fires panel_execute or panel_stop depending on current running state (M5). */
   onItemPress?: (sectionName: string, item: DashItem) => void;
-  /** Per-section tile scale (M6-UX). Defaults to "m" for unlisted sections. */
-  sectionSize?: (sectionName: string) => PoolTileSize;
-  /** When provided, each section header offers −/+ tile-size controls. */
-  onSectionSizeChange?: (sectionName: string, next: PoolTileSize) => void;
+  /** Per-section tile width in px (M6-UX). Defaults when omitted. */
+  sectionTileWidth?: (sectionName: string) => number | undefined;
+  /** When provided, each section header offers a drag-resize handle. */
+  onSectionResizeStart?: (sectionName: string, event: { clientX: number }) => void;
 }
 
 const SECTION_LABEL: Record<string, string> = {
@@ -128,8 +145,8 @@ export function DashBoard({
   onRefresh,
   isItemRunning,
   onItemPress,
-  sectionSize,
-  onSectionSizeChange,
+  sectionTileWidth,
+  onSectionResizeStart,
 }: DashBoardProps) {
   const hasSections = dash.sections.length > 0;
   const fixturesSection = dash.sections.find((section) => section.name === "fixtures");
@@ -170,7 +187,7 @@ export function DashBoard({
       <div className="dashboard-body">
         {hasSections ? (
           <div className="dashboard-sections">
-            {poolSections.map((section) => (
+            {poolSections.map(visibleSection).map((section) => (
               <PoolSection
                 key={section.name}
                 section={section}
@@ -182,10 +199,10 @@ export function DashBoard({
                   isItemRunning ? (item) => isItemRunning(section.name, item) : undefined
                 }
                 onPress={onItemPress ? (item) => onItemPress(section.name, item) : undefined}
-                size={sectionSize?.(section.name)}
-                onSizeChange={
-                  onSectionSizeChange
-                    ? (next) => onSectionSizeChange(section.name, next)
+                tileWidth={sectionTileWidth?.(section.name)}
+                onResizeStart={
+                  onSectionResizeStart
+                    ? (event) => onSectionResizeStart(section.name, event)
                     : undefined
                 }
               />

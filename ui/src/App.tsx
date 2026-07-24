@@ -18,7 +18,7 @@ import { OnboardingBanner } from "./components/OnboardingBanner";
 import { ReviewCard } from "./components/ReviewCard";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { StatusBanner } from "./components/StatusBanner";
-import { type PoolTileSize } from "./components/PoolSection";
+import { clampPoolTileWidth, POOL_TILE_DEFAULT_WIDTH } from "./components/PoolSection";
 import { panelItemId, type DashItem, type DashState, type PanelTargetKind } from "./protocol";
 import { useCopilotSocket } from "./useCopilotSocket";
 
@@ -69,8 +69,8 @@ export function AppShell({
   onRefresh,
   isItemRunning,
   onItemPress,
-  sectionSize,
-  onSectionSizeChange,
+  sectionTileWidth,
+  onSectionResizeStart,
   children,
 }: {
   chatCollapsed: boolean;
@@ -82,9 +82,9 @@ export function AppShell({
   isItemRunning?: (sectionName: string, item: DashItem) => boolean;
   /** M5 — fires panel_execute/panel_stop; see DashBoard.tsx. */
   onItemPress?: (sectionName: string, item: DashItem) => void;
-  /** M6-UX — per-section tile scale; see DashBoard.tsx. */
-  sectionSize?: (sectionName: string) => PoolTileSize;
-  onSectionSizeChange?: (sectionName: string, next: PoolTileSize) => void;
+  /** M6-UX — per-section tile width + drag-resize; see DashBoard.tsx. */
+  sectionTileWidth?: (sectionName: string) => number | undefined;
+  onSectionResizeStart?: (sectionName: string, event: { clientX: number }) => void;
   children: ReactNode;
 }) {
   return (
@@ -94,8 +94,8 @@ export function AppShell({
         onRefresh={onRefresh}
         isItemRunning={isItemRunning}
         onItemPress={onItemPress}
-        sectionSize={sectionSize}
-        onSectionSizeChange={onSectionSizeChange}
+        sectionTileWidth={sectionTileWidth}
+        onSectionResizeStart={onSectionResizeStart}
       />
       {chatCollapsed ? (
         <aside className="chat-rail">
@@ -131,10 +131,24 @@ export default function App() {
   // column starts OPEN alongside the always-visible console pane; the
   // operator may collapse it to give the console pane the full width.
   const [chatCollapsed, setChatCollapsed] = useState(false);
-  // M6-UX — per-section tile scale ("s" | "m" | "l"), default "m". Adjusted
-  // via each pool section's own −/+ header control; session-volatile like
-  // every other view preference.
-  const [sectionSizes, setSectionSizes] = useState<Record<string, PoolTileSize>>({});
+  // M6-UX — per-section tile width in px, adjusted by dragging each pool
+  // section's ↔ header handle; session-volatile like every other view
+  // preference. The drag session lives here (document-level move/up
+  // listeners) because the pool components are hook-free by design.
+  const [sectionTileWidths, setSectionTileWidths] = useState<Record<string, number>>({});
+  const startSectionResize = (sectionName: string, start: { clientX: number }) => {
+    const baseWidth = sectionTileWidths[sectionName] ?? POOL_TILE_DEFAULT_WIDTH;
+    const onMove = (move: MouseEvent) => {
+      const next = clampPoolTileWidth(baseWidth + (move.clientX - start.clientX));
+      setSectionTileWidths((widths) => ({ ...widths, [sectionName]: next }));
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const closeSettings = () => {
@@ -213,10 +227,8 @@ export default function App() {
         onRefresh={sendDashRefresh}
         isItemRunning={isDashItemRunning}
         onItemPress={pressDashItem}
-        sectionSize={(sectionName) => sectionSizes[sectionName] ?? "m"}
-        onSectionSizeChange={(sectionName, next) =>
-          setSectionSizes((sizes) => ({ ...sizes, [sectionName]: next }))
-        }
+        sectionTileWidth={(sectionName) => sectionTileWidths[sectionName]}
+        onSectionResizeStart={startSectionResize}
       >
         <div className="app">
           <main className="main">

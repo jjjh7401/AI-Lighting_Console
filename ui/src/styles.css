@@ -779,14 +779,15 @@ body {
   color: #ffe9c4;
 }
 
-.pool-size-control {
+/* Drag-resize handle (M6-UX v2 — user direction): grab the ↔ chip in the
+   section title bar and drag horizontally to resize that category's cells
+   continuously (grid columns re-flow live, MA-window style). */
+.pool-resize-handle {
   margin-left: auto;
   display: flex;
-  gap: 4px;
-}
-
-.pool-size-step {
-  width: 26px;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
   height: 24px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.35);
@@ -794,7 +795,8 @@ body {
   color: #fff;
   font-size: 15px;
   line-height: 1;
-  cursor: pointer;
+  cursor: ew-resize;
+  user-select: none;
 }
 
 .pool-section-empty {
@@ -803,46 +805,31 @@ body {
   font-size: 13px;
 }
 
+/* Column width comes from the section's dragged tile width (inline
+   grid-template-columns, PoolSection.tsx); the near-square cell shape is
+   fixed here via aspect-ratio. */
 .pool-section-grid {
   display: grid;
-  gap: 8px;
-  padding: 10px 0 0;
+  gap: 6px;
+  padding: 8px 0 0;
 }
 
-/* Per-section tile scale (M6-UX). The 15px primary-label floor holds at
-   every scale; larger scales raise it further. */
-.pool-size-s {
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-}
-
-.pool-size-m {
-  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
-}
-
-.pool-size-l {
-  grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
-}
-
-/* M4 — one numbered onPC-style pool cell (design.md §3 "풀 셀(슬롯)"). */
+/* M4 — one numbered onPC-style pool cell (design.md §3 "풀 셀(슬롯)").
+   M6-UX v2: a fixed-proportion rectangular block, like an onPC pool cell —
+   number top-left, name filling the middle, verb strip pinned to the
+   bottom edge. */
 .pool-tile {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 6px;
   background: #16181d;
   border: 1px solid var(--pool-accent);
-  min-height: 64px;
-}
-
-.pool-size-s .pool-tile {
-  min-height: 56px;
-}
-
-.pool-size-l .pool-tile {
-  min-height: 88px;
+  aspect-ratio: 1.5;
+  overflow: hidden;
 }
 
 .pool-tile-no {
@@ -851,28 +838,19 @@ body {
   color: var(--text);
 }
 
-.pool-size-l .pool-tile-no {
-  font-size: 17px;
-}
-
-/* The name is the tile's identity — wrap up to two lines instead of
-   truncating to a few characters (the pre-M6-UX single-line ellipsis made
-   every tile read "Copil…"/"Seque…"). */
+/* The name is the tile's identity — wrap instead of truncating to a few
+   characters (the pre-M6-UX single-line ellipsis made every tile read
+   "Copil…"/"Seque…"). */
 .pool-tile-name {
   font-size: 15px;
   line-height: 1.25;
   color: var(--text);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-all;
   max-width: 100%;
-}
-
-.pool-size-l .pool-tile-name {
-  font-size: 16px;
-  -webkit-line-clamp: 3;
 }
 
 .pool-tile-appearance {

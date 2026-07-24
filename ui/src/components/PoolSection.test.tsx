@@ -9,7 +9,14 @@ import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { type DashItem, type DashSection } from "../protocol";
-import { PoolSection, sectionHealthLabel } from "./PoolSection";
+import {
+  clampPoolTileWidth,
+  POOL_TILE_DEFAULT_WIDTH,
+  POOL_TILE_MAX_WIDTH,
+  POOL_TILE_MIN_WIDTH,
+  PoolSection,
+  sectionHealthLabel,
+} from "./PoolSection";
 
 function childArray(element: ReactElement): unknown[] {
   const children = element.props.children;
@@ -215,88 +222,69 @@ describe("PoolSection", () => {
   });
 });
 
-// M6-UX — onPC-style per-section tile-size control (user direction: bigger,
-// more legible tiles, adjustable per category).
-describe("PoolSection — tile-size control", () => {
+// M6-UX v2 — onPC-style drag-resize (user direction: square/rect cells whose
+// scale the operator adjusts by DRAGGING the section boundary handle).
+describe("PoolSection — drag-resize tile width", () => {
   function headerOf(element: ReactElement): ReactElement {
     return childArray(element)[0] as ReactElement;
   }
-  function sizeButtons(element: ReactElement): ReactElement[] {
-    const header = headerOf(element);
-    const controls = childArray(header).find(
-      (child) => (child as ReactElement)?.props?.className === "pool-size-control",
+  function resizeHandle(element: ReactElement): ReactElement | undefined {
+    return childArray(headerOf(element)).find(
+      (child) => (child as ReactElement)?.props?.className === "pool-resize-handle",
     ) as ReactElement | undefined;
-    return controls ? (childArray(controls) as ReactElement[]) : [];
   }
 
-  it("applies the size class to the tile grid (default m)", () => {
-    const element = PoolSection({
+  it("clampPoolTileWidth clamps into [min, max] and rounds", () => {
+    expect(clampPoolTileWidth(10)).toBe(POOL_TILE_MIN_WIDTH);
+    expect(clampPoolTileWidth(10_000)).toBe(POOL_TILE_MAX_WIDTH);
+    expect(clampPoolTileWidth(140.6)).toBe(141);
+  });
+
+  it("drives the grid columns from the tileWidth prop (default when omitted)", () => {
+    const defaulted = PoolSection({
       section: OK_SECTION,
       label: "그룹",
       isPressable: () => false,
     }) as ReactElement;
-    const grid = childArray(element)[1] as ReactElement;
-    expect(grid.props.className).toBe("pool-section-grid pool-size-m");
-  });
+    const grid = childArray(defaulted)[1] as ReactElement;
+    expect(grid.props.className).toBe("pool-section-grid");
+    expect(grid.props.style.gridTemplateColumns).toBe(
+      `repeat(auto-fill, minmax(${POOL_TILE_DEFAULT_WIDTH}px, 1fr))`,
+    );
 
-  it("applies an explicit size prop to the grid class", () => {
-    const element = PoolSection({
+    const sized = PoolSection({
       section: OK_SECTION,
       label: "그룹",
       isPressable: () => false,
-      size: "l",
+      tileWidth: 180,
     }) as ReactElement;
-    const grid = childArray(element)[1] as ReactElement;
-    expect(grid.props.className).toBe("pool-section-grid pool-size-l");
+    const sizedGrid = childArray(sized)[1] as ReactElement;
+    expect(sizedGrid.props.style.gridTemplateColumns).toBe(
+      "repeat(auto-fill, minmax(180px, 1fr))",
+    );
   });
 
-  it("renders −/+ size buttons ONLY when onSizeChange is provided, and they step the size", () => {
+  it("renders the ↔ handle ONLY when onResizeStart is provided, and forwards mouse-down", () => {
     const without = PoolSection({
       section: OK_SECTION,
       label: "그룹",
       isPressable: () => false,
     }) as ReactElement;
-    expect(sizeButtons(without)).toHaveLength(0);
+    expect(resizeHandle(without)).toBeUndefined();
 
-    const onSizeChange = vi.fn();
+    const onResizeStart = vi.fn();
     const element = PoolSection({
       section: OK_SECTION,
       label: "그룹",
       isPressable: () => false,
-      size: "m",
-      onSizeChange,
+      tileWidth: 140,
+      onResizeStart,
     }) as ReactElement;
-    const [smaller, larger] = sizeButtons(element);
-    expect(smaller.props["aria-label"]).toBe("타일 작게");
-    expect(larger.props["aria-label"]).toBe("타일 크게");
-    smaller.props.onClick();
-    expect(onSizeChange).toHaveBeenLastCalledWith("s");
-    larger.props.onClick();
-    expect(onSizeChange).toHaveBeenLastCalledWith("l");
-  });
-
-  it("clamps stepping at both ends (s cannot shrink, l cannot grow)", () => {
-    const onSizeChange = vi.fn();
-    const atSmall = PoolSection({
-      section: OK_SECTION,
-      label: "그룹",
-      isPressable: () => false,
-      size: "s",
-      onSizeChange,
-    }) as ReactElement;
-    const [smaller] = sizeButtons(atSmall);
-    smaller.props.onClick();
-    expect(onSizeChange).toHaveBeenLastCalledWith("s");
-
-    const atLarge = PoolSection({
-      section: OK_SECTION,
-      label: "그룹",
-      isPressable: () => false,
-      size: "l",
-      onSizeChange,
-    }) as ReactElement;
-    const larger = sizeButtons(atLarge)[1];
-    larger.props.onClick();
-    expect(onSizeChange).toHaveBeenLastCalledWith("l");
+    const handle = resizeHandle(element);
+    expect(handle).toBeDefined();
+    expect(handle!.props["aria-label"]).toBe("타일 크기 조절 — 좌우로 드래그");
+    expect(handle!.props["aria-valuenow"]).toBe(140);
+    handle!.props.onMouseDown({ clientX: 250 });
+    expect(onResizeStart).toHaveBeenCalledWith({ clientX: 250 });
   });
 });

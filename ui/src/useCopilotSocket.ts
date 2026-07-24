@@ -88,6 +88,24 @@ export function connectResyncFrames(): string[] {
   return [buildPanelCatalogRequest(), buildDashCatalogRequest(), buildStatusRequest()];
 }
 
+/**
+ * The dash resync frame one incoming server event earns, or null.
+ *
+ * M6-UX v2 (user finding): a chat-side mutation ("Delete Group 20") left the
+ * console pane stale until a manual 새로고침. REQ-DASHUI-021 forbids
+ * TIMER-driven polling, not event-driven refresh — so a `chat_response`
+ * whose command list contains at least one actually-EXECUTED command
+ * (`executed_ok`) triggers exactly one `dash_catalog_request`. Blocked /
+ * proposal-only / command-less responses trigger nothing: nothing on the
+ * console changed.
+ */
+export function dashResyncFrame(raw: string): string | null {
+  const event = parseServerEvent(raw);
+  if (event === null || event.type !== "chat_response") return null;
+  const executed = event.commands.some((command) => command.status === "executed_ok");
+  return executed ? buildDashCatalogRequest() : null;
+}
+
 export interface CopilotSocket {
   state: UiState;
   connected: boolean;
@@ -123,7 +141,16 @@ export function useCopilotSocket(url?: string): CopilotSocket {
         // "disconnected" })` has already marked stale/cleared on the prior close.
         connectResyncFrames().forEach((frame) => socket.send(frame));
       };
-      socket.onmessage = (message) => dispatch({ kind: "server", raw: String(message.data) });
+      socket.onmessage = (message) => {
+        const raw = String(message.data);
+        dispatch({ kind: "server", raw });
+        // Event-driven console-pane resync after an executed chat command
+        // (see dashResyncFrame) — never timer-driven (REQ-DASHUI-021).
+        const resync = dashResyncFrame(raw);
+        if (resync !== null && socket.readyState === WebSocket.OPEN) {
+          socket.send(resync);
+        }
+      };
       socket.onclose = () => {
         setConnected(false);
         // The server fail-safe-denies every pending approval/review for
