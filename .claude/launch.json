@@ -1,0 +1,25 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ui-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "ui", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "copilot-server",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "server.web",
+        "--console-port",
+        "8000",
+        "--receive-port",
+        "9005",
+        "--no-browser"
+      ],
+      "port": 8765
+    }
+  ]
+}
