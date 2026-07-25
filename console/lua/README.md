@@ -91,11 +91,11 @@ The `CONFIG` table at the top of the Lua file may need on-site adjustment:
 
 | Key | Default | Meaning |
 |---|---|---|
-| `osc_slot` | `1` | OSC settings row used for replies — set via app Settings, rendered in at install (do not hand-edit) |
+| `osc_slot` | `2` | OSC settings row used for replies — must be a row with `Send=Yes` (a receive-only row silently swallows every reply). Set via app Settings, rendered in at install (do not hand-edit) |
 | `state_address` | `/copilot/state` | snapshot reply address |
 | `feedback_address` | `/copilot/feedback` | result/pong reply address |
-| `max_children` | `24` | snapshot child cap |
-| `max_payload` | `4000` | encoded payload byte budget |
+| `max_children` | `24` | snapshot child cap — no paging past it (PROTOCOL.md §4.2) |
+| `max_payload` | `1900` | encoded payload byte budget (MA3 command line drops past ~2048) |
 | `send_variant` | `packed` | OSC send mechanism (PROTOCOL.md §5) |
 
 ## 3. Smoke check inside the console (no server needed)
@@ -143,6 +143,47 @@ Expected output: `[PASS] ping`, `[PASS] state` (with a node/children summary),
 | Replies arrive at `/copilot/copilot/...` | Console prepends the OSC prefix to outgoing addresses (ASSUMPTION-5). Detect with `uv run python -m server.tools.responder_roundtrip --listen-port 9000 --wait 10 --diagnose`, then strip the leading `/copilot` from `CONFIG.state_address` / `CONFIG.feedback_address`. |
 | Plugin runs but reports `no request` | Plugin arguments not delivered (ASSUMPTION-1). Use the user-variable fallback: `SetUserVariable "COPILOT_REQ" "ping 1"` then `Plugin "CopilotResponder"`. |
 | `exec` reports failure for a command that clearly worked | `Cmd()` success-token mismatch (ASSUMPTION-3): note the raw `result` string in the reply and extend `SUCCESS_RESULTS` in the Lua file. |
+| A second responder-looking plugin sits in the pool and you fear double replies | It cannot reply. Requests name the plugin (`Plugin "CopilotResponder" "..."`), so a copy under any other name — `CopilotResponder#2`, the name an in-console duplicate gets — is never invoked (§6, 2026-07-25 finding). Confirm rather than assume: one `ping` returns exactly one `pong`. |
+| A `state` listing is short and `truncated:true`, and re-querying returns the same children | Expected — there is no paging. Enumerate slot by slot against `node.childCount` (PROTOCOL.md §4.2). |
 
 Record the outcome of this live round-trip (pass or deviations found) in the
 SPEC progress log — it is the semi-automatic half of AC-MVP-012.
+
+## 6. Plugin/macro pool hygiene
+
+Development leaves debris in the showfile: probe macros from a debugging
+session, diagnostic plugins, and duplicate copies of the responder itself. The
+showfile is not under version control, so nothing here is recoverable — read
+this section before deleting anything.
+
+**Verified deletion syntax** (2026-07-25, live 2.4.2):
+
+```
+Delete Macro <slot>
+Delete Plugin <slot>
+```
+
+Both act immediately with no confirmation dialog. `Delete Plugin` is the same
+call the deploy path already issues (`server/safety/console.py`).
+
+**Delete from the highest slot number downwards.** Whether MA3 renumbers a pool
+after a deletion is unverified; descending order is correct either way, while
+ascending order would shift a not-yet-deleted target into the slot just freed.
+
+**Never delete the responder's own slot.** It is the only channel the server
+has; removing it leaves recovery only through raw `bridge.send_command` OSC.
+Ping between plugin deletions and stop at the first missed `pong`.
+
+Two shapes of debris are easy to misread:
+
+- **A duplicate responder is inert, not dangerous.** An in-console copy is
+  named `CopilotResponder#2` and is therefore never invoked (§5). Treat it as
+  clutter, not as a live double-reply risk.
+- **Import can leave default-named plugins.** Slots named `UserPlugin <n>`
+  carrying an empty `ComponentLua 1` accumulate from interrupted imports. There
+  is no verb that reads a plugin's stored source back, and the `.show` file
+  does not expose it as plain text, so such a slot cannot be identified after
+  the fact — delete only if you can account for it.
+
+MA3 autosaves the showfile, but confirm a save before closing the console: an
+unsaved deletion is restored on the next load.
