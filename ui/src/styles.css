@@ -81,11 +81,25 @@ body {
 }
 
 /* SHOWUI-inherited show-control panel opened alongside chat (App.tsx
-   `panelOpen`): the rail widens to fit both the chat column (its normal
-   420px) and the panel's own fixed 360px (.show-panel below) side by side,
-   instead of squeezing either. */
+   `panelOpen`): the rail wants room for both the chat column (its normal
+   420px) and the panel's own 360px (.show-panel below) side by side — but
+   it must never take that room from the console dashboard, which is the
+   PRIMARY surface (M6 inversion). `width` alone is a floor as well as a
+   ceiling: at a 532px viewport a fixed 780px rail measured the dashboard
+   to 0px. `max-width` + `flex-shrink` lets the rail have its full width
+   when the window can afford it and give width back when it cannot. */
 .app-shell.chat-split .app.app-with-panel {
   width: 780px;
+  max-width: 60vw;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+/* Same reason, one level down: with the rail shrunk, the panel yields
+   before the chat column disappears entirely. */
+.app-with-panel .show-panel {
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .chat-rail {
