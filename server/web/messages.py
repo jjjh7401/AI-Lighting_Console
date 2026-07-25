@@ -213,6 +213,10 @@ def approval_request_event(*, request_id: str, request: ApprovalRequest) -> dict
     )
 
 
+def execution_preview_event(*, preview: dict) -> dict:
+    return _event("execution_preview", **preview)
+
+
 def approval_resolved_event(*, request_id: str, approved: bool) -> dict:
     """The decision echo so the UI can retire the approval card."""
     return _event("approval_resolved", request_id=request_id, approved=approved)

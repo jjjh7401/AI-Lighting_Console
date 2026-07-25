@@ -308,6 +308,142 @@ body {
   font-size: 12px;
 }
 
+.entry-preview {
+  align-self: stretch;
+  max-width: 100%;
+  padding: 0;
+}
+
+.execution-preview-card {
+  width: 100%;
+  border: 1px solid #2b2f36;
+  border-radius: 8px;
+  background: #171a20;
+  padding: 10px 12px;
+}
+
+.execution-preview-card.preview-risk-caution {
+  border-color: var(--warn);
+  background: #211d15;
+}
+
+.execution-preview-card.preview-risk-danger {
+  border-color: var(--bad);
+  background: #241719;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.preview-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.preview-risk {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #16181d;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.preview-risk-caution .preview-risk {
+  color: var(--warn);
+}
+
+.preview-risk-danger .preview-risk {
+  color: var(--bad);
+}
+
+.preview-summary {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.preview-command-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.preview-command-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #121419;
+}
+
+.preview-command-text {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.preview-command-label {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.preview-command-meta {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.preview-warning-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.preview-warning {
+  display: flex;
+  gap: 6px;
+  padding: 5px 7px;
+  border-radius: 6px;
+  background: #16181d;
+  font-size: 12px;
+}
+
+.preview-warning-label {
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.preview-warning-caution .preview-warning-label {
+  color: var(--warn);
+}
+
+.preview-warning-danger .preview-warning-label {
+  color: var(--bad);
+}
+
+.preview-warning-detail {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.preview-scope {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .summary {
   font-weight: 600;
   margin-bottom: 4px;

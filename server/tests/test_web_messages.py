@@ -29,6 +29,7 @@ from server.web.messages import (
     dash_item,
     dash_section,
     error_event,
+    execution_preview_event,
     notice_event,
     panel_busy_event,
     panel_catalog_event,
@@ -108,6 +109,15 @@ class TestServerEventBuilders:
         events = [
             chat_response_event(status="ok", summary="완료", text="했어요", commands=[]),
             approval_request_event(request_id="r1", request=_request()),
+            execution_preview_event(
+                preview={
+                    "preview_id": "preview-1",
+                    "summary": "실행 전 미리보기 — 1개 명령",
+                    "risk_level": "info",
+                    "commands": [],
+                    "warnings": [],
+                }
+            ),
             approval_resolved_event(request_id="r1", approved=True),
             status_event(health="online", live_lock=False, executions_blocked=False),
             proposal_event(commands=["Store Cue 1"], reasons=["live lock"]),
@@ -129,6 +139,36 @@ class TestServerEventBuilders:
         assert item["command"] == "Delete Sequence 5"
         assert item["risk_reasons"] == ["blacklist: Delete"]
         assert item["warnings"] == ["unspecified-target warning"]
+
+    def test_execution_preview_event_shape(self):
+        event = execution_preview_event(
+            preview={
+                "preview_id": "preview-7",
+                "summary": "실행 전 미리보기 — 1개 명령",
+                "risk_level": "caution",
+                "commands": [
+                    {
+                        "command": "Store /Overwrite Cue 4",
+                        "action": "store_overwrite",
+                        "target_kind": "cue",
+                        "target": "4",
+                        "label": "Cue 4 덮어쓰기",
+                    }
+                ],
+                "warnings": [
+                    {
+                        "severity": "caution",
+                        "label": "덮어쓰기",
+                        "detail": "기존 내용을 바꿀 수 있습니다.",
+                        "command": "Store /Overwrite Cue 4",
+                    }
+                ],
+            }
+        )
+        assert event["type"] == "execution_preview"
+        assert event["preview_id"] == "preview-7"
+        assert event["commands"][0]["target_kind"] == "cue"
+        assert event["warnings"][0]["severity"] == "caution"
 
     def test_chat_response_event_shape(self):
         event = chat_response_event(

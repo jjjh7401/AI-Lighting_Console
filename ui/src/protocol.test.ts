@@ -90,6 +90,42 @@ describe("reduceServerEvent", () => {
     expect(resolved.pendingApprovals).toHaveLength(0);
   });
 
+  it("appends execution previews to the transcript", () => {
+    const next = reduceServerEvent(
+      initialState,
+      event({
+        type: "execution_preview",
+        preview_id: "preview-1",
+        summary: "실행 전 미리보기 — 1개 명령",
+        risk_level: "caution",
+        commands: [
+          {
+            command: "Store /Overwrite Cue 4",
+            action: "store_overwrite",
+            target_kind: "cue",
+            target: "4",
+            label: "Cue 4 덮어쓰기",
+          },
+        ],
+        warnings: [
+          {
+            severity: "caution",
+            label: "덮어쓰기",
+            detail: "기존 cue를 바꿀 수 있습니다.",
+            command: "Store /Overwrite Cue 4",
+          },
+        ],
+      }),
+    );
+
+    expect(next.entries).toHaveLength(1);
+    expect(next.entries[0].kind).toBe("preview");
+    if (next.entries[0].kind === "preview") {
+      expect(next.entries[0].preview.preview_id).toBe("preview-1");
+      expect(next.entries[0].preview.warnings[0].label).toBe("덮어쓰기");
+    }
+  });
+
   it("stores the latest status", () => {
     const next = reduceServerEvent(
       initialState,

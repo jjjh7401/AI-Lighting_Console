@@ -1,6 +1,7 @@
 // Chat transcript: user lines, assistant reports (gate-truth command statuses),
 // proposal cards (REQ-MVP-016), Korean errors (REQ-MVP-044), busy/notice lines.
 import { type ChatEntry, type CommandView } from "../protocol";
+import { ExecutionPreviewCard } from "./ExecutionPreviewCard";
 
 function statusClass(status: string): string {
   switch (status) {
@@ -83,6 +84,12 @@ function Entry({ entry }: { entry: ChatEntry }) {
               {reason}
             </div>
           ))}
+        </div>
+      );
+    case "preview":
+      return (
+        <div className="entry entry-preview">
+          <ExecutionPreviewCard preview={entry.preview} />
         </div>
       );
     case "error":

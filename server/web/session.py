@@ -41,11 +41,13 @@ from server.web.messages import (
     approval_request_event,
     chat_response_event,
     error_event,
+    execution_preview_event,
     notice_event,
     proposal_event,
     review_request_event,
     status_event,
 )
+from server.web.preview import build_execution_preview
 from server.web.reply_discovery import ReplyPortMismatch
 
 # The gate's unconfirmed-execution marker (REQ-MVP-032). String contract pinned
@@ -146,11 +148,18 @@ class _MeasuredExecutionPort:
 class _ObservingBundleGate:
     """BundleGate wrapper surfacing every screening decision to the session."""
 
-    def __init__(self, gate: SafetyGate, on_decision: Callable[[ScreenDecision], None]) -> None:
+    def __init__(
+        self,
+        gate: SafetyGate,
+        on_preview: Callable[[Sequence[str]], None],
+        on_decision: Callable[[ScreenDecision], None],
+    ) -> None:
         self._gate = gate
+        self._on_preview = on_preview
         self._on_decision = on_decision
 
     def screen(self, commands: Sequence[str]) -> ScreenDecision:
+        self._on_preview(commands)
         decision = self._gate.screen(commands)
         self._on_decision(decision)
         return decision
@@ -186,6 +195,7 @@ class ChatSession:
         self._review_channel = review_channel
         self._recorder = recorder
         self._turn_decisions: list[ScreenDecision] = []
+        self._preview_counter = 0
         # REQ-DEPLOY-030 (#4): the single most-recent created look, persisted
         # ACROSS turns (unlike _turn_decisions, this is NOT reset per turn) so a
         # bare follow-up modification can anchor to the real target.
@@ -200,7 +210,7 @@ class ChatSession:
         registry = build_toolset(
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
-            bundle_gate=_ObservingBundleGate(gate, self._on_decision),
+            bundle_gate=_ObservingBundleGate(gate, self._on_preview, self._on_decision),
             rig_paths=rig_paths,
             deploy_pipeline=deploy_pipeline,
         )
@@ -222,6 +232,16 @@ class ChatSession:
 
     def _notify_review(self, request_id: str, request: ReviewRequest) -> None:
         self._send(review_request_event(request_id=request_id, request=request))
+
+    def _on_preview(self, commands: Sequence[str]) -> None:
+        if not commands:
+            return
+        self._preview_counter += 1
+        preview = build_execution_preview(
+            preview_id=f"preview-{self._preview_counter}",
+            commands=commands,
+        )
+        self._send(execution_preview_event(preview=preview))
 
     def _on_decision(self, decision: ScreenDecision) -> None:
         self._turn_decisions.append(decision)

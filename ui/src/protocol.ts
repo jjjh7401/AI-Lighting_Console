@@ -59,6 +59,52 @@ export interface ReviewRequestView {
  */
 export type ConsoleInput = "listening" | "silent" | "undetermined";
 
+export type PreviewRiskLevel = "info" | "caution" | "danger";
+export type PreviewWarningSeverity = "caution" | "danger";
+export type PreviewAction =
+  | "store_overwrite"
+  | "store"
+  | "delete"
+  | "blackout"
+  | "off"
+  | "run"
+  | "modify"
+  | "unknown";
+export type PreviewTargetKind =
+  | "group"
+  | "preset"
+  | "cue"
+  | "sequence"
+  | "executor"
+  | "macro"
+  | "plugin"
+  | "fixture"
+  | "showfile"
+  | "unknown";
+
+export interface ExecutionPreviewCommand {
+  command: string;
+  action: PreviewAction;
+  target_kind: PreviewTargetKind;
+  target: string | null;
+  label: string;
+}
+
+export interface ExecutionPreviewWarning {
+  severity: PreviewWarningSeverity;
+  label: string;
+  detail: string;
+  command: string;
+}
+
+export interface ExecutionPreview {
+  preview_id: string;
+  summary: string;
+  risk_level: PreviewRiskLevel;
+  commands: ExecutionPreviewCommand[];
+  warnings: ExecutionPreviewWarning[];
+}
+
 // -- show-control panel (SPEC-COPILOT-SHOWUI-001 M1) --------------------------
 //
 // An ADDITIVE v1 extension, same call as the M7 `review_decision` one: the
@@ -171,6 +217,10 @@ export type ServerEvent =
       items: ApprovalItem[];
       actions: string[];
     }
+  | ({
+      v: 1;
+      type: "execution_preview";
+    } & ExecutionPreview)
   | { v: 1; type: "approval_resolved"; request_id: string; approved: boolean }
   | ({
       v: 1;
@@ -221,6 +271,7 @@ export type ServerEvent =
 const SERVER_EVENT_TYPES = new Set([
   "chat_response",
   "approval_request",
+  "execution_preview",
   "approval_resolved",
   "review_request",
   "review_resolved",
@@ -356,6 +407,7 @@ export type ChatEntry =
       commands: CommandView[];
     }
   | { kind: "proposal"; commands: string[]; reasons: string[] }
+  | { kind: "preview"; preview: ExecutionPreview }
   | { kind: "error"; message: string; errorKind: string }
   | { kind: "notice"; message: string }
   | { kind: "busy"; message: string };
@@ -468,6 +520,11 @@ export function reduceServerEvent(
           ...state.pendingApprovals,
           { request_id: event.request_id, items: event.items },
         ],
+      };
+    case "execution_preview":
+      return {
+        ...state,
+        entries: [...state.entries, { kind: "preview", preview: event }],
       };
     case "approval_resolved":
       return {
