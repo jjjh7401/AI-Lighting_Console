@@ -17,6 +17,12 @@ related_specs: [SPEC-COPILOT-MVP-001, SPEC-COPILOT-DEPLOY-001]
 
 # SPEC-COPILOT-SHOWUI-001 — 연출 컨트롤 패널 (Show-Control Panel)
 
+> **⚠️ UI 표면 대체됨 (2026-07-25)** — 본 SPEC의 M4/M5 UI(`ShowPanel`/`PanelTile`, 커밋 857e9ed·09e2c4f)는 **현행 앱에 출하되지 않는다**. 같은 자리(채팅 옆 콘솔 제어면)를 SPEC-COPILOT-DASHUI-001이 신규 작성으로 대체했다(DASHUI spec.md §88·§128 — 두 UI의 reconciliation은 "브랜치 전략 결정"으로 명시적 이연되어 있었고, 그 결정이 DASHUI 단일 세대로 내려졌다).
+>
+> 본 SPEC의 `status: completed`는 **그 시점의 사실로 유효**하다 — 완료 판정 자체는 취소되지 않는다. 다만 아래 본문 중 **패널 UI·타일 그리드·v1 익스큐터 범위 축소** 서술은 현행 앱의 동작이 아니다(DASHUI-001이 익스큐터 타일 descope를 해제했다).
+>
+> **폐기되지 않은 부분**: M1~M3의 패널 프로토콜 계약과 `server/web/panel.py`(카탈로그/핀/membership/게이트 실행 경로)는 그대로 살아 있으며, DASHUI-001의 대시보드가 이 경로를 재사용해 발화한다.
+
 ## HISTORY
 
 | 버전 | 날짜 | 작성자 | 변경 내용 |

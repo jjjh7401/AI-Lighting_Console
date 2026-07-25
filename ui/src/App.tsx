@@ -17,7 +17,6 @@ import { LockToggle } from "./components/LockToggle";
 import { OnboardingBanner } from "./components/OnboardingBanner";
 import { ReviewCard } from "./components/ReviewCard";
 import { SettingsPanel } from "./components/SettingsPanel";
-import { ShowPanel } from "./components/ShowPanel";
 import { StatusBanner } from "./components/StatusBanner";
 import {
   clampPoolArea,
@@ -135,18 +134,9 @@ export default function App() {
     sendPanelExecute,
     sendPanelStop,
     sendDashRefresh,
-    sendPanelFrame,
-    sendPanelFrames,
-    sendPanelPin,
-    sendPanelCatalogRequest,
   } = useCopilotSocket();
   const [draft, setDraft] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // The panel is a side region, not an overlay (design.md §8) — the console
-  // wing sits beside the chat rather than covering it. Open by default: it is
-  // the surface an operator reaches for mid-show, and chat keeps the primary
-  // column either way.
-  const [panelOpen, setPanelOpen] = useState(true);
   // Bumped when the settings panel closes so the onboarding banner re-checks
   // whether a key was just added (and hides itself if so).
   const [settingsRefresh, setSettingsRefresh] = useState(0);
@@ -238,13 +228,6 @@ export default function App() {
           <LockToggle status={state.status} onToggle={sendLock} />
           <button
             className="settings-open"
-            onClick={() => setPanelOpen((open) => !open)}
-            aria-pressed={panelOpen}
-          >
-            {panelOpen ? "▸ 패널 접기" : "◂ 연출 패널"}
-          </button>
-          <button
-            className="settings-open"
             onClick={() => setSettingsOpen(true)}
             aria-label="설정 열기"
           >
@@ -272,58 +255,35 @@ export default function App() {
         sectionArea={(sectionName) => sectionAreas[sectionName]}
         onSectionAreaResizeStart={startSectionAreaResize}
       >
-        {/* The chat rail's own inner row: the chat column plus, when the
-            operator opens it, the SHOWUI-inherited show-control panel — a
-            distinct catalog (sequences, pin-fired) that DashBoard's own
-            dash catalog never carries. `.app-with-panel` widens the rail
-            (styles.css) so the panel does not squeeze the chat column. */}
-        <div className={`app${panelOpen ? " app-with-panel" : ""}`}>
-          <div className="workspace">
-            <div className="chat-column">
-              <main className="main">
-                <ChatView entries={state.entries} onPin={sendPanelPin} />
-                {state.pendingApprovals.map((approval) => (
-                  <ApprovalCard
-                    key={approval.request_id}
-                    approval={approval}
-                    onDecision={sendDecision}
-                  />
-                ))}
-                {state.pendingReviews.map((review) => (
-                  <ReviewCard
-                    key={review.request_id}
-                    review={review}
-                    onDecision={sendReviewDecision}
-                  />
-                ))}
-                <div ref={bottomRef} />
-              </main>
-              <footer className="composer">
-                <input
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && !event.nativeEvent.isComposing) submit();
-                  }}
-                  placeholder="한국어로 지시를 입력하세요…"
-                  disabled={!connected}
-                />
-                <button onClick={submit} disabled={!connected || !draft.trim()}>
-                  전송
-                </button>
-              </footer>
-            </div>
-            {panelOpen && (
-              <ShowPanel
-                panel={state.panel}
-                status={state.status}
-                connected={connected}
-                onSend={sendPanelFrame}
-                onSendMany={sendPanelFrames}
-                onRefresh={sendPanelCatalogRequest}
+        <div className="app">
+          <main className="main">
+            <ChatView entries={state.entries} />
+            {state.pendingApprovals.map((approval) => (
+              <ApprovalCard
+                key={approval.request_id}
+                approval={approval}
+                onDecision={sendDecision}
               />
-            )}
-          </div>
+            ))}
+            {state.pendingReviews.map((review) => (
+              <ReviewCard key={review.request_id} review={review} onDecision={sendReviewDecision} />
+            ))}
+            <div ref={bottomRef} />
+          </main>
+          <footer className="composer">
+            <input
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.nativeEvent.isComposing) submit();
+              }}
+              placeholder="한국어로 지시를 입력하세요…"
+              disabled={!connected}
+            />
+            <button onClick={submit} disabled={!connected || !draft.trim()}>
+              전송
+            </button>
+          </footer>
         </div>
       </AppShell>
     </div>

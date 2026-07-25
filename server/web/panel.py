@@ -117,33 +117,12 @@ class SectionSpec:
 
 # @MX:ANCHOR: [AUTO] the closed set of catalog sources. Consumed by the catalog
 # builder, by the membership predicate through it, and (from M3) by every bundle
-# the panel builds. In v1 this is a SINGLE source — `sequences` — by deliberate
-# descope (SHOWUI v1 → SPEC-COPILOT-EXECREF-001), NOT by accident.
-# @MX:REASON: REQ-SHOWUI-003 — two tile classes are ABSENT here STRUCTURALLY, not
-# filtered later, for the SAME root reason: their tree index is not the address the
-# console fires.
-#   (1) "fixtures": a fixture's `no` is its patch slot, not its fixture id, so a
-#       fixture tile would address the wrong thing on stage.
-#   (2) the executor page drill-down: a page CHILD's drill-down index is NOT the
-#       console command-line number. Live-proven against onPC 2.4.2 (progress.md
-#       §M6): `console# = 100 + i` UNIFORMLY across all 8 page-1 executors, so
-#       `Off Executor i` was refused 7/8 with `Illegal object` while
-#       `Off Executor i+100` fired. Worse, the i=101 tile SILENTLY COLLIDES —
-#       `Off Executor 101` returns ok but 101 is also the +100 address of i=1, so a
-#       tile labelled "Sequence 71" would fire Sequence 50's executor with NO error:
-#       a wrong-object hazard strictly worse than a refusal.
-# A section becomes a tile source only by being in this tuple, and every
-# `target_kind` here must be one the console actually fires (PANEL_TARGET_KINDS).
-# Executor tiles still reach the panel via PINS, whose number is the chat's explicit
-# `Assign … At Executor Y` (the real console number Y), NOT the drill-down index —
-# so pinned executors address correctly and are UNAFFECTED by this descope.
-# @MX:DEBT: v1 auto-enumerates sequence tiles only; the executor drill-down section
-# is intentionally deferred, not lost — the builder retains its drill-down machinery.
-# @MX:CEILING: valid while the only auto-enumerated tiles are sequences (executors
-# arrive solely via pins, which carry the real console number).
-# @MX:UPGRADE: SPEC-COPILOT-EXECREF-001 re-adds the executor SectionSpec with
-# `console# = page*100 + i` addressing AND gate Executor-reference recognition,
-# replacing this single-source tuple.
+# the panel builds.
+# @MX:REASON: REQ-SHOWUI-003 — "fixtures" is ABSENT here structurally, not
+# filtered later: a fixture's `no` is its patch slot, not its fixture id, so a
+# fixture tile would address the wrong thing on stage. A section can only become
+# a tile source by being added to this tuple, and every `target_kind` here must
+# be one the console actually fires (PANEL_TARGET_KINDS).
 PANEL_CATALOG_SECTIONS = (
     SectionSpec(name="sequences", path="DataPool/Sequences", target_kind="sequence"),
     # A page's CHILDREN are the executors — the only surface that actually fires
