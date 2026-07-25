@@ -1,4 +1,6 @@
 :root {
+  /* Dark only, never light and never auto (REQ-SHOWUI-020, design.md §7):
+     an FOH operator is dark-adapted and a light flash costs them the stage. */
   color-scheme: dark;
   --bg: #14161a;
   --panel: #1e2128;
@@ -15,6 +17,23 @@
      mechanically by styles.test.ts. Never reused for "occupied slot" or any
      other non-running state. */
   --live-amber: #ffb02e;
+
+  /* SHOWUI M4 — additions only; nothing above is redefined (design.md §3).
+     A second, same-value "running" token for the show-control panel's OWN
+     tile family (.panel-tile*) — deliberately kept distinct from
+     --live-amber (DASHUI's pool-tile family) rather than unified, so each
+     component family's exclusivity guard (styles.test.ts) stays scoped to
+     its own selectors. */
+
+  /* THE colour of RUNNING, and of nothing else (REQ-SHOWUI-018). Hotter than
+     --warn so the two never read as the same signal. Spending this on a
+     decoration, a warning, a busy state or an arm progress destroys the one
+     thing an operator scans a dark panel for. Every use of --live in this file
+     is a running state, and styles.test.ts fails the build if that stops being
+     true. */
+  --live: #ffb02e;
+  /* The panel well sits BELOW the chat surface — hardware, not a card. */
+  --panel-well: #101216;
 }
 
 * {
@@ -59,6 +78,14 @@ body {
   width: 420px;
   flex-shrink: 0;
   border-left: 1px solid #2b2f36;
+}
+
+/* SHOWUI-inherited show-control panel opened alongside chat (App.tsx
+   `panelOpen`): the rail widens to fit both the chat column (its normal
+   420px) and the panel's own fixed 360px (.show-panel below) side by side,
+   instead of squeezing either. */
+.app-shell.chat-split .app.app-with-panel {
+  width: 780px;
 }
 
 .chat-rail {
@@ -142,6 +169,27 @@ body {
   color: var(--text);
   font-size: 13px;
   cursor: pointer;
+}
+
+/* SHOWUI-inherited — the inner row hosting the chat column and, when open,
+   the show-control panel (App.tsx `workspace`/`chat-column`). Nested inside
+   `.app`/`.app-with-panel` above rather than at the page's top level, since
+   the console dashboard is now the primary surface (M6). */
+.workspace {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.chat-column {
+  /* The 860px reading-width cap + auto-centring only made sense when chat
+     was the page's sole top-level content (pre-M6). Nested in a fixed-width
+     rail it would just clip; a flexible column with a floor is what the rail
+     context needs instead. */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 280px;
 }
 
 .header {
@@ -935,4 +983,405 @@ body {
 .pool-tile-running .pool-tile-verb {
   background: var(--live-amber);
   color: #201a08;
+}
+
+/* ==========================================================================
+   Show-control panel (SPEC-COPILOT-SHOWUI-001 M4 — design.md §3/§4/§6/§8)
+
+   Read at arm's length, in the dark, by someone in a hurry. Stopped tiles are
+   nearly monochrome to protect dark adaptation; only what is LIVE glows.
+   ========================================================================== */
+
+.show-panel {
+  width: 360px;
+  flex: 0 0 360px;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-well);
+  border-left: 1px solid #2b2f36;
+  overflow: hidden;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid #2b2f36;
+}
+
+.panel-head h2 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.panel-refresh {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #2b2f36;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.panel-refresh:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Blocked / proposal banners. Neither uses --live: they are not running
+   states, and reusing the running colour here would train the operator to
+   ignore it (design.md §3/§5). Stop red stays reserved for Off / All Off. */
+.panel-block-banner {
+  padding: 8px 14px;
+  font-size: 15px;
+  color: var(--warn);
+  background: #241f14;
+  border-bottom: 1px solid var(--warn);
+}
+
+.panel-proposal-banner {
+  padding: 8px 14px;
+  font-size: 15px;
+  color: var(--accent);
+  background: #16203a;
+  border-bottom: 1px solid var(--accent);
+}
+
+.panel-sections {
+  padding: 8px 14px;
+  border-bottom: 1px solid #2b2f36;
+  font-size: 13px;
+}
+
+.panel-section-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.panel-section-name {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Both hint levels carry their own words — colour is never the only channel
+   (REQ-SHOWUI-018). */
+.panel-section-hint.level-error {
+  color: var(--warn);
+}
+
+.panel-section-hint.level-warn {
+  color: var(--muted);
+}
+
+.panel-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panel-empty {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* -- the tile ------------------------------------------------------------- */
+
+.panel-tile {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #2b2f36;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.panel-tile.is-running {
+  border-color: var(--live);
+}
+
+.panel-tile.is-blocked,
+.panel-tile.is-busy {
+  opacity: 0.72;
+}
+
+.panel-tile.is-proposal {
+  border-color: var(--accent);
+}
+
+/* Appearance chip: full-height left edge, emissive. The only saturated colour
+   allowed on a stopped panel, because here colour IS the information — it is
+   the stage colour the object actually makes (design.md §3/§4). */
+.panel-chip {
+  flex: 0 0 6px;
+  align-self: stretch;
+  border-radius: 3px;
+  background: #2b2f36;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.panel-tile-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-tile-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panel-tile-name {
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-type-badge {
+  flex: 0 0 auto;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  border: 1px solid #2b2f36;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.panel-tile-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+/* The text half of the state signal. RUN is the ONE place a badge wears
+   live-amber; OFF is deliberately quiet.
+
+   Held at the 15px panel floor rather than shrunk to badge size: colour never
+   carries state alone (REQ-SHOWUI-018), so this text has to survive the same
+   arm's-length dark-FOH read as the colour beside it. */
+.panel-state-badge {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.panel-state-badge.is-run {
+  color: #241a05;
+  background: var(--live);
+}
+
+.panel-state-badge.is-off {
+  color: var(--muted);
+  border: 1px solid #2b2f36;
+}
+
+.panel-tile-cue {
+  color: var(--live);
+}
+
+.panel-pin-mark {
+  font-size: 12px;
+  color: var(--accent);
+}
+
+/* Persistent, ON the tile — never a toast (design.md §7). */
+.panel-tile-note {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--warn);
+}
+
+.panel-tile-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Touch-friendly press targets: an operator wearing gloves needs a target that
+   forgives, and no control here is hover-only (design.md §7). */
+.panel-tile-actions button {
+  min-height: 44px;
+  min-width: 76px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.panel-go {
+  background: var(--ok);
+  color: #08210e;
+}
+
+/* Stop red — reserved for Off and All Off, never for error text inside the
+   panel (design.md §3). */
+.panel-off {
+  background: var(--bad);
+  color: #2b0b08;
+}
+
+.panel-unpin {
+  background: var(--panel-well);
+  color: var(--muted);
+  border: 1px solid #2b2f36 !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+  min-width: 0 !important;
+}
+
+.panel-tile-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* -- the rail: identity, state and safety on one element ------------------ */
+
+.panel-rail {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 4px;
+  background: #2b2f36;
+}
+
+.panel-rail-live {
+  background: var(--live);
+  box-shadow: 0 0 8px var(--live);
+}
+
+/* Running WITH motion in it (effect, sequence) sweeps; a static look holds
+   solid, which is what tells the two apart without reading a label. */
+.panel-rail-sweep {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 176, 46, 0.25) 0%,
+    var(--live) 45%,
+    rgba(255, 176, 46, 0.25) 100%
+  );
+  background-size: 220% 100%;
+  animation: panel-rail-sweep 1.8s linear infinite;
+}
+
+@keyframes panel-rail-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* The same rail doubles as the arm progress indicator — the visual channel of
+   arm→fire, in place of the confirmation modal design.md §7 forbids. Its
+   duration is set inline from ARM_TIMEOUT_MS so the bar and the state machine
+   cannot drift apart.
+
+   It draws in Stop red, NOT live-amber: this rail belongs to All Off, a
+   destructive fire control, and arming is not playing. Amber here would put the
+   "something is running" signal on the one control that stops everything
+   (design.md §3 — live-amber is running-only). */
+.panel-rail-arming {
+  background: var(--bad);
+  transform-origin: left center;
+  animation: panel-rail-arming linear forwards;
+}
+
+@keyframes panel-rail-arming {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* -- All Off: fixed corner, always visible (design.md §6) ------------------ */
+
+.panel-alloff {
+  position: relative;
+  padding: 10px 12px 14px;
+  border-top: 1px solid #2b2f36;
+  background: var(--panel-well);
+}
+
+.panel-alloff-button {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--bad);
+  background: #2a1210;
+  color: var(--bad);
+  cursor: pointer;
+}
+
+.panel-alloff.is-armed .panel-alloff-button {
+  background: var(--bad);
+  color: #2b0b08;
+}
+
+.panel-alloff-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.panel-alloff-label {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.panel-alloff-count {
+  font-size: 14px;
+}
+
+/* The bounded scope, stated before the press rather than discovered after it
+   (spec.md §A, design.md §6). */
+.panel-alloff-sub {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.panel-alloff.is-armed .panel-alloff-sub {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+/* -- chat-side pin affordance (REQ-SHOWUI-004) ---------------------------- */
+
+.entry-pin {
+  margin-top: 8px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid #2b2f36;
+  background: var(--panel-well);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
 }

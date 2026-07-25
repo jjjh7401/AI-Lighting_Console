@@ -10,10 +10,11 @@ import {
   buildLock,
   buildPanelCatalogRequest,
   buildPanelExecute,
+  buildPanelPin,
   buildPanelStop,
   buildReviewDecision,
   buildStatusRequest,
-  clearPendingRequests,
+  clearOnDisconnect,
   initialState,
   parseServerEvent,
   reduceServerEvent,
@@ -31,9 +32,31 @@ export type Action =
 // the state transition is a pure function like the rest of protocol.ts.
 export function reducer(state: UiState, action: Action): UiState {
   if (action.kind === "user") return addUserMessage(state, action.text);
-  if (action.kind === "disconnected") return clearPendingRequests(state);
+  if (action.kind === "disconnected") return clearOnDisconnect(state);
   const event = parseServerEvent(action.raw);
   return event === null ? state : reduceServerEvent(state, event);
+}
+
+/**
+ * What a freshly-opened socket asks the server for (REQ-SHOWUI-015/016).
+ *
+ * The disconnect above erased the panel's running state because the app stopped
+ * being able to observe the console. Coming back, it rebuilds that picture from
+ * the SERVER's answer and from nothing else — no cache, no client-side
+ * reconstruction, no assumption that what was playing still is.
+ *
+ * Both frames are read-side requests. Nothing here re-sends a command: a
+ * reconnect must never replay an execution nobody confirmed (REQ-MVP-032,
+ * inherited unchanged), so the recovery path is deliberately incapable of
+ * emitting one.
+ *
+ * The server also pushes a status snapshot on accept (server/web/app.py), which
+ * makes the status request belt-and-braces rather than the only source — the UI
+ * asks for what it needs instead of depending on a server behaviour it cannot
+ * verify from here.
+ */
+export function resyncFrames(): string[] {
+  return [buildPanelCatalogRequest(), buildStatusRequest()];
 }
 
 function defaultUrl(): string {
@@ -116,6 +139,17 @@ export interface CopilotSocket {
   sendPanelExecute: (targetKind: PanelTargetKind, target: number) => void;
   sendPanelStop: (targetKind: PanelTargetKind, target: number) => void;
   sendDashRefresh: () => void;
+  // -- show-control panel (SHOWUI M4) -----------------------------------------
+  //
+  // Tile presses and the All Off bundle arrive here as frames already built by
+  // protocol.ts builders (`tilePressFrame`, `allOffFrames`, `buildPanelUnpin`),
+  // because WHICH frames a press produces is the safety-critical decision and
+  // it belongs in a pure, tested function rather than in this hook. The two
+  // payload-free messages get named helpers since there is nothing to compose.
+  sendPanelFrame: (frame: string) => void;
+  sendPanelFrames: (frames: string[]) => void;
+  sendPanelPin: () => void;
+  sendPanelCatalogRequest: () => void;
 }
 
 export function useCopilotSocket(url?: string): CopilotSocket {
@@ -139,6 +173,9 @@ export function useCopilotSocket(url?: string): CopilotSocket {
         // AC-DASHUI-017: every (re)connect re-requests both catalogs + status
         // rather than trusting pre-disconnect state, which `dispatch({ kind:
         // "disconnected" })` has already marked stale/cleared on the prior close.
+        // (Resynchronise on EVERY open, not only on a reconnect — the first
+        // connect needs the same picture. This superset of the old panel-only
+        // `resyncFrames()` also covers the SHOWUI show-panel catalog.)
         connectResyncFrames().forEach((frame) => socket.send(frame));
       };
       socket.onmessage = (message) => {
@@ -204,6 +241,16 @@ export function useCopilotSocket(url?: string): CopilotSocket {
   );
   const sendDashRefresh = useCallback(() => send(buildDashCatalogRequest()), [send]);
 
+  const sendPanelFrame = useCallback((frame: string) => send(frame), [send]);
+  const sendPanelFrames = useCallback(
+    // Sequential, in bundle order. The server's stop lane serialises them
+    // anyway (M3), and preserving order keeps the audit log readable.
+    (frames: string[]) => frames.forEach(send),
+    [send],
+  );
+  const sendPanelPin = useCallback(() => send(buildPanelPin()), [send]);
+  const sendPanelCatalogRequest = useCallback(() => send(buildPanelCatalogRequest()), [send]);
+
   return {
     state,
     connected,
@@ -214,5 +261,9 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendPanelExecute,
     sendPanelStop,
     sendDashRefresh,
+    sendPanelFrame,
+    sendPanelFrames,
+    sendPanelPin,
+    sendPanelCatalogRequest,
   };
 }

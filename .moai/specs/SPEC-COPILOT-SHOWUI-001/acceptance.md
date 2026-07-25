@@ -1,6 +1,6 @@
 # SPEC-COPILOT-SHOWUI-001 — 수용 기준 (acceptance)
 
-status: draft (v0.2.1, 2026-07-22 — plan-audit iteration 1 fold-in F1/F2/F3/F6 + iteration 2 fix-forward R4 반영). 기계 검증 가능(pytest/vitest) 항목과 LIVE(실제 onPC) 항목을 구분한다.
+status: completed (v0.2.1, 2026-07-23 — plan-audit iteration 1 fold-in F1/F2/F3/F6 + iteration 2 fix-forward R4 반영, run-phase 전체 AC PASS/DESCOPED-v1 확정, sync 완료). 기계 검증 가능(pytest/vitest) 항목과 LIVE(실제 onPC) 항목을 구분한다.
 
 ## §A. 완료 정의 (Definition of Done)
 
@@ -66,7 +66,7 @@ interview Round 2 확정 기준: **라이브 E2E + 테스트 그린.**
 | **AC-SHOWUI-010** | REQ-015/016 — fail-closed 재접속 | vitest: `disconnected` 액션이 패널 running 상태 소거(protocol.ts:308-311 패턴 미러); 재접속 시 카탈로그+status 재요청 dispatch |
 | **AC-SHOWUI-011** | REQ-017/018/019/020/024/025/026 — 디자인 준수 | vitest 컴포넌트/순수 테스트: `grep -rn "window.confirm" ui/src/` 0건; **파괴적 발화-클래스**(All Off·블랙아웃급 룩)는 arm→fire 정확히 2회 상호작용 전까지 커맨드 발행 0건(All Off 1회 press 후 발행 0건 assert); **정지 클래스**(타일별 Off)는 정확히 1회 press로 처리; running일 때만 live-amber 토큰 적용; 동사 `Go+`/`Off` 렌더; **All Off 양성 구성 assert(REQ-025)**: 추적 running executor N개일 때 번들 == 각 executor당 정확히 `Off Executor N` 1개(총 N개 커맨드, 중복·누락 0); **음성 assert(REQ-026)**: 번들에 `Thru`/`*`/`Everything` 부재 |
 | **AC-SHOWUI-012** | 전체 회귀 | `pytest` 전체 + `npm test`(vitest) 전체 그린 |
-| **AC-SHOWUI-013** (LIVE) | 실제 onPC end-to-end | 라이브 체크리스트: ① 자동 나열 시퀀스 타일 → 콘솔에서 실행 육안 확인(`Go+ Executor N`), ② Off로 해제, ③ 채팅 연출 pin → 발화 → 정지, ④ LiveLock 토글 → 제안 전용·송신 0건, ⑤ 앱 재시작 → 핀 복원, ⑥ WS 강제 종료/재접속 → running 소거 후 재동기화, ⑦ All Off → 추적 중 executor만 개별 Off(콘솔측 비추적 재생은 유지됨을 확인 — 한계 검증) |
+| **AC-SHOWUI-013** (LIVE) | 실제 onPC end-to-end | 라이브 체크리스트: ① 자동 나열 시퀀스 타일 → 콘솔에서 실행 육안 확인(`Go+ Executor N`) — **시퀀스 타일 절반은 PASS; 드릴다운 실행기 타일 절반은 v1 의도적 범위 제외(DESCOPED-v1 → SPEC-COPILOT-EXECREF-001)**: v1은 드릴다운 실행기 타일을 카탈로그 소스에서 제거해 구조적으로 표시하지 않음. 사유 — 콘솔 실번호 = `100 + i`(8/8 라이브 실증), i=101 타일이 오류 없이 잘못된 오브젝트를 발화(silent wrong-object 충돌). 실행기 PIN 경로(정확한 번호)는 유지. 증적: `.moai/state/verify/showui-m6-resume/executor-offset.jsonl` + progress.md §M6, ② Off로 해제, ③ 채팅 연출 pin → 발화 → 정지, ④ LiveLock 토글 → 제안 전용·송신 0건, ⑤ 앱 재시작 → 핀 복원, ⑥ WS 강제 종료/재접속 → running 소거 후 재동기화, ⑦ All Off → 추적 중 executor만 개별 Off(콘솔측 비추적 재생은 유지됨을 확인 — 한계 검증) |
 | **AC-SHOWUI-014** (LIVE) | REQ-010 — health/포트 드리프트 표면화(라이브 검증) | 라이브: responder degraded/offline 상태에서 패널이 차단 상태 표시(알려진 reply-port drift silent 서명 방어 — research.md Risk 6) |
 | **AC-SHOWUI-015** | REQ-010 — 차단 상태 기계 검증 | vitest: `status.health ≠ online` 또는 `executions_blocked` 상태 → 패널 레벨 차단 배너 + 타일 비활성 렌더 assert; pytest: 차단 상태에서의 `panel_execute` → 차단 결과가 명시적으로 회신됨(조용히 삼켜지지 않음) assert |
 

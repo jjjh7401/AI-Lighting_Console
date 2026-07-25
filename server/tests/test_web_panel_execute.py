@@ -187,6 +187,28 @@ class CoordinatedConsole(FakeConsole):
         return super().execute(command)
 
 
+def _executor_pin(target: int, name: str = "") -> dict:
+    return {
+        "kind": "sequence",
+        "target_kind": "executor",
+        "target": target,
+        "name": name or f"Exec {target}",
+        "appearance": None,
+    }
+
+
+# The executors the firing / serialization / All-Off tests drive. In v1 the
+# catalog no longer auto-enumerates executors (SHOWUI descope → EXECREF-001: the
+# page drill-down index is not the console command-line number — live-proven
+# console# = 100+i — and the i=101 collision would fire the wrong object). An
+# executor now reaches the panel ONLY as a PIN, whose number is the chat's
+# explicit `Assign … At Executor Y` (the real console number Y), so a pinned
+# executor addresses correctly. Seeding these as the DEFAULT pin set keeps the
+# executor firing paths exercised the v1 way. A test that needs a clean pin store
+# passes ``pins=[]``; an explicit ``pins=[...]`` overrides the default entirely.
+_DEFAULT_EXECUTOR_PINS = [_executor_pin(n) for n in (5, 11, 191)]
+
+
 def make_harness(
     tmp_path,
     *,
@@ -214,7 +236,8 @@ def make_harness(
     gate.screen = spy  # type: ignore[method-assign]
 
     pin_store = PinStore(tmp_path / "panel_pins.json")
-    for pin in pins or []:
+    seed_pins = _DEFAULT_EXECUTOR_PINS if pins is None else pins
+    for pin in seed_pins:
         pin_store.add(pin)
     store = PanelStore(state_port=FakeStatePort(RIG_TREE), pins=pin_store)
     if refresh:
@@ -899,6 +922,8 @@ class TestCatalogAndPinRouting:
             _send(ws, type="panel_catalog_request")
             event = _drain(ws, "panel_catalog")
         ids = [item["id"] for item in event["items"]]
+        # executor:191 rides in as a PIN (v1 has no executor catalog source);
+        # sequence:41 is auto-enumerated. Both are members.
         assert "executor:191" in ids
         assert "sequence:41" in ids
         assert "sequence:3" not in ids, "keyed on the real no, never a list position"
@@ -923,7 +948,8 @@ class TestCatalogAndPinRouting:
                 _final("연출을 만들었습니다"),
             ]
         )
-        harness = make_harness(tmp_path, provider=provider)
+        # pins=[] so the seed pin is the ONLY pin — this test asserts grid order.
+        harness = make_harness(tmp_path, provider=provider, pins=[])
         with harness.client as client, client.websocket_connect("/ws") as ws:
             _drain(ws, "status")
             _send(ws, type="chat", text="연출 만들어줘")
@@ -972,13 +998,17 @@ class TestCatalogAndPinRouting:
             assert _drain(ws, "status")["type"] == "status"
         assert error["kind"] == "panel"
 
-    def test_unpinning_something_that_was_never_pinned_is_an_explicit_error(self, harness):
+    def test_unpinning_something_that_was_never_pinned_is_an_explicit_error(self, tmp_path):
         # A catalog tile is a member for FIRING but is not a pin, so unpinning
         # it is meaningless. Answering with a catalog event would tell the UI
-        # "done" about work that never happened.
+        # "done" about work that never happened. Sequence 41 is an auto-enumerated
+        # catalog member (v1's sole catalog source) but not a pin — the clean case
+        # for this now the executor catalog source is descoped. pins=[] keeps the
+        # pin store empty so no executor accidentally matches.
+        harness = make_harness(tmp_path, pins=[])
         with harness.client as client, client.websocket_connect("/ws") as ws:
             _drain(ws, "status")
-            _send(ws, type="panel_unpin", target_kind="executor", target=191)
+            _send(ws, type="panel_unpin", target_kind="sequence", target=41)
             event = _drain(ws, "error")
         assert event["message"] == PANEL_UNKNOWN_TARGET_MESSAGE
         assert event["kind"] == "panel"

@@ -28,6 +28,7 @@ from server.web.panel import (
     PinSeedUnavailable,
     PinStore,
     PinStoreError,
+    SectionSpec,
     build_catalog,
     pin_store_path,
 )
@@ -123,7 +124,12 @@ class TestCatalogKeying:
         # positional builder would have produced "sequence:3".
         assert "sequence:3" not in _ids(catalog.items)
 
-    def test_executor_tiles_come_from_the_page_drill_down(self):
+    def test_executor_tiles_are_auto_enumerated_from_the_pages_drilldown(self):
+        # SPEC-COPILOT-EXECREF-001 re-added the executor drill-down the SHOWUI
+        # v1 descope removed (the v1-era assumption this test used to pin —
+        # "no auto-enumerated executor tile, pins only" — no longer holds on
+        # this branch; see TestRetainedDrilldownMachineryForExecref below for
+        # the drilldown-completeness machinery this depends on).
         catalog = build_catalog(FakeStatePort(_rig_tree()))
         executors = [i for i in _ids(catalog.items) if i.startswith("executor:")]
         assert executors == ["executor:191", "executor:201"]
@@ -155,6 +161,15 @@ class TestCatalogKeying:
         assert "Patch/Stages/1/Fixtures" not in paths
         assert not any(spec.name == "fixtures" for spec in PANEL_CATALOG_SECTIONS)
 
+    def test_a_catalog_section_drills_into_executors(self):
+        # SPEC-COPILOT-EXECREF-001 re-added the "pages" drill-down section this
+        # test used to pin as STRUCTURALLY absent (the v1 descope). It is the
+        # SectionSpec fixtures itself deliberately keeps excluded (REQ-SHOWUI-003
+        # never regressed) — see test_no_catalog_section_reads_fixtures above.
+        assert any(spec.drilldown for spec in PANEL_CATALOG_SECTIONS)
+        assert any(spec.target_kind == "executor" for spec in PANEL_CATALOG_SECTIONS)
+        assert any(spec.name == "pages" for spec in PANEL_CATALOG_SECTIONS)
+
     def test_a_populated_fixture_list_yields_zero_execution_tiles(self):
         port = FakeStatePort(_rig_tree())
         catalog = build_catalog(port)
@@ -178,6 +193,13 @@ class TestCatalogKeying:
 
 
 class TestCatalogCompleteness:
+    # SPEC-COPILOT-EXECREF-001 restored the "pages" drill-down section onto
+    # the default catalog (PANEL_CATALOG_SECTIONS below is 3 sections, not
+    # the v1-era single `sequences`), so drill-down-only signals now have a
+    # real subject in the default catalog too. The `pages`-specific
+    # completeness cases below still monkeypatch their own fixture tree via
+    # ``TestRetainedDrilldownMachineryForExecref``, which predates this and
+    # remains valid — it isn't the only path to that coverage anymore.
     def test_truncated_is_propagated_not_dropped(self):
         tree = _rig_tree()
         tree["DataPool/Sequences"] = _snapshot(
@@ -185,23 +207,83 @@ class TestCatalogCompleteness:
         )
         catalog = build_catalog(FakeStatePort(tree))
         assert _section(catalog, "sequences")["truncated"] is True
-        assert _section(catalog, "pages")["truncated"] is False
 
-    def test_contents_unavailable_is_propagated(self):
+    def test_a_normal_read_reports_full_completeness(self):
+        # The remaining completeness flags on the sequences section: a clean read
+        # is neither truncated, nor capped, nor contents-unavailable.
+        catalog = build_catalog(FakeStatePort(_rig_tree()))
+        section = _section(catalog, "sequences")
+        assert section["truncated"] is False
+        assert section["drilldown_capped"] is False
+        assert section["contents_unavailable"] is False
+
+    def test_every_section_reports_a_status(self):
+        catalog = build_catalog(FakeStatePort(_rig_tree()))
+        assert [s["status"] for s in catalog.sections] == ["ok", "ok", "ok"]
+
+
+class TestCatalogFailureReasons:
+    def test_nothing_answering_is_an_unreachable_console(self):
+        catalog = build_catalog(DeadStatePort())
+        assert [s["status"] for s in catalog.sections] == ["console_unreachable"]
+
+    def test_a_failed_section_contributes_no_tiles(self):
+        catalog = build_catalog(DeadStatePort())
+        assert catalog.items == ()
+
+
+class TestRetainedDrilldownMachineryForExecref:
+    """The drill-down walk and the split-failure classifier survive the v1
+    executor descope, because SPEC-COPILOT-EXECREF-001 re-adds an executor
+    section on top of them. v1 ships ONE section, so path_not_resolved (a sibling
+    answered, THIS path is wrong) and the drill-down completeness flags cannot
+    arise from the default catalog — they need a second, drilling section. These
+    tests monkeypatch that two-section catalog so the descope cannot silently
+    regress the retained machinery (the `console# = 100+i` addressing fix EXECREF
+    adds is orthogonal — it changes the tile's number, not the walk)."""
+
+    _TWO_SECTIONS = (
+        SectionSpec(name="sequences", path="DataPool/Sequences", target_kind="sequence"),
+        SectionSpec(
+            name="pages", path="DataPool/Pages", target_kind="executor", drilldown=True
+        ),
+    )
+
+    def _patch(self, monkeypatch):
+        from server.web import panel as panel_module
+
+        monkeypatch.setattr(panel_module, "PANEL_CATALOG_SECTIONS", self._TWO_SECTIONS)
+
+    def test_the_split_failure_classification_is_never_merged(self, monkeypatch):
+        self._patch(monkeypatch)
+        tree = _rig_tree()
+        del tree["DataPool/Pages"]
+        partial = build_catalog(FakeStatePort(tree))
+        # sequences answered, so the console IS reachable and THIS path is wrong.
+        assert _section(partial, "sequences")["status"] == "ok"
+        assert _section(partial, "pages")["status"] == "path_not_resolved"
+        dead = build_catalog(DeadStatePort())
+        assert _section(dead, "pages")["status"] == "console_unreachable"
+        # The two reasons ask for different operator actions and must stay distinct.
+        assert _section(partial, "pages")["status"] != _section(dead, "pages")["status"]
+
+    def test_contents_unavailable_is_propagated(self, monkeypatch):
+        self._patch(monkeypatch)
         tree = _rig_tree()
         tree["DataPool/Pages"] = _snapshot("DataPool/Pages", [(1, "Main"), (2, "Spare")])
         # Page 2 cannot be opened — distinct from a verified-empty page.
         catalog = build_catalog(FakeStatePort(tree))
         assert _section(catalog, "pages")["contents_unavailable"] is True
 
-    def test_a_verified_empty_page_is_not_contents_unavailable(self):
+    def test_a_verified_empty_page_is_not_contents_unavailable(self, monkeypatch):
+        self._patch(monkeypatch)
         tree = _rig_tree()
         tree["DataPool/Pages/1"] = _snapshot("DataPool/Pages/1", [])
         catalog = build_catalog(FakeStatePort(tree))
         assert _section(catalog, "pages")["contents_unavailable"] is False
-        assert not [i for i in _ids(catalog.items) if i.startswith("executor:")]
 
-    def test_drilldown_capped_is_propagated(self):
+    def test_drilldown_capped_is_propagated(self, monkeypatch):
+        self._patch(monkeypatch)
         tree = _rig_tree()
         pages = [(n, f"Page {n}") for n in range(1, 6)]
         tree["DataPool/Pages"] = _snapshot("DataPool/Pages", pages)
@@ -256,7 +338,15 @@ class TestCatalogSeam:
     def test_the_builder_reads_only_through_the_injected_state_port(self):
         port = FakeStatePort(_rig_tree())
         build_catalog(port)
-        assert port.queries[:2] == ["DataPool/Sequences", "DataPool/Pages"]
+        # SPEC-COPILOT-EXECREF-001 re-added the "pages" section (drilling into
+        # its one page), so the read set grows to match — still ONLY through
+        # the injected port, no other side channel.
+        assert port.queries == [
+            "DataPool/Sequences",
+            "DataPool/Pages",
+            "DataPool/Pages/1",
+            "DataPool/Macros",
+        ]
 
     def test_paths_are_overridable_so_a_site_can_move_them(self):
         tree = {"Elsewhere/Sequences": _snapshot("Elsewhere/Sequences", [(5, "Site Look")])}
@@ -537,7 +627,6 @@ class TestPanelStore:
         assert "sequence:41" in _ids(store.items())
         smaller = {
             "DataPool/Sequences": _snapshot("DataPool/Sequences", [(2, "Warm Wash")]),
-            "DataPool/Pages": _snapshot("DataPool/Pages", []),
         }
         store.state_port = FakeStatePort(smaller)
         store.refresh_catalog()
@@ -573,6 +662,10 @@ class TestMembership:
         store = self._store(tmp_path)
         store.refresh_catalog()
         assert store.contains("sequence", 41) is True
+        # SPEC-COPILOT-EXECREF-001 re-added executor auto-enumeration (the
+        # "pages" drilldown): 191 is already a catalog tile before any pin.
+        assert store.contains("executor", 191) is True
+        store.pins.add(_pin(target_kind="executor", target=191, name="Pinned"))
         assert store.contains("executor", 191) is True
         assert store.contains("macro", 3) is True
 

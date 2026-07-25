@@ -61,7 +61,7 @@ same change. `AC-SHOWUI-001` is the parity test that holds this.
 | `error` | `message: string` (Korean), `kind: string` | User-facing error. `kind` ∈ normalized provider kinds (`rate_limit`, `auth`, `invalid_request`, `connection`, `server`, `malformed_response`, `unknown`) + `unexpected` + `protocol`. |
 | `busy` | `message: string` | An instruction is already in flight. |
 | `notice` | `message: string` | Standalone Korean notice (e.g. showfile-backup failure, REQ-MVP-034). |
-| `panel_catalog` | `items: PanelItem[]`, `sections: PanelSection[]` | (SHOWUI M1) The panel's executable tile list + per-section completeness. A refresh REPLACES the list; it does not merge. |
+| `panel_catalog` | `items: PanelItem[]`, `sections: PanelSection[]` | (SHOWUI M1) The panel's executable tile list + per-section completeness. A refresh REPLACES the list; it does not merge. **v1 enumerates only `sequences`** — executor tiles are pin-only (the auto executor drill-down is deferred to SPEC-COPILOT-EXECREF-001; see § PanelSection). |
 | `panel_item_state` | `id: string`, `target_kind`, `target: int`, `running: bool`, `cue: string\|null` | (SHOWUI M1) One tile's playback state. `cue` is the running sequence's current cue — a **string**, because MA3 cue numbers are not integers ("1.5"). |
 | `panel_busy` | `id: string`, `target_kind`, `target: int`, `message: string` | (SHOWUI M1) A panel execution was refused because one is in flight (REQ-SHOWUI-011). Names the tile it refused so the UI can unlock that tile — distinct from `busy`, which is the CHAT turn lock the panel deliberately does not share (REQ-SHOWUI-013). |
 | `dash_catalog` | `sections: DashSection[]` | (DASHUI M1) The console-info dashboard's read-only pool catalog. A refresh REPLACES the list; it does not merge (REQ-DASHUI-006). Info-only by shape — see DashSection / DashItem below. |
@@ -136,7 +136,7 @@ partial rig as a whole one:
 
 | field | values | meaning |
 |---|---|---|
-| `name` | string | The rig-context section (`sequences`, `pages`, …). |
+| `name` | string | The rig-context section. **v1 emits exactly one: `sequences`.** The `pages` (executor drill-down) section is descoped from v1 — see the v1 scope note below. |
 | `status` | `ok` \| `path_not_resolved` \| `console_unreachable` | See below. |
 | `truncated` | bool | The responder said its own listing was cut short (PROTOCOL §4 `truncated`). |
 | `drilldown_capped` | bool | The per-call query budget ran out before every container was opened, so tiles are missing. |
@@ -296,9 +296,15 @@ Rules:
   The console keeps playing, but the app can no longer observe it, and
   "probably still running" is the render that gets an operator to press Off on a
   tile that already stopped. The tile LIST survives (it is server state, not an
-  observation); running state is rebuilt from a `panel_catalog_request` +
-  `status_request` resync on reconnect. Unconfirmed commands are never
-  auto-resent (REQ-MVP-032).
+  observation) and is rebuilt, together with health, by the
+  `panel_catalog_request` + `status_request` resync the client sends on every
+  open. Running state is NOT rebuilt by that resync, and is not meant to be:
+  neither `panel_catalog` nor `status` carries a per-tile `running` field, and
+  the server's own tracked-running set lives on the per-connection panel runtime
+  and dies with the socket. A reconnected panel therefore shows every tile OFF
+  until the operator presses one — which is the honest render, because the app
+  has no way to learn what the console is playing. Unconfirmed commands are
+  never auto-resent (REQ-MVP-032).
 
 ## Round-trip measurement hooks (M6)
 
