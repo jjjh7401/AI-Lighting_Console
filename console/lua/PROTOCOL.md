@@ -147,10 +147,20 @@ Success (depth-1 snapshot of the resolved node):
   name-only rig-context entry (no `no`), and `server/safety/console.py`
   refuses to compute a free plugin slot rather than risk overwriting one.
 - `children` is capped at `CONFIG.max_children` (default 24) and further
-  reduced until the encoded payload fits `CONFIG.max_payload` (default 4000
-  bytes — UDP budget). `truncated:true` signals a partial listing;
-  `node.childCount` always carries the real total. Deeper inspection =
+  reduced until the encoded payload fits `CONFIG.max_payload` (default 1900
+  bytes — MA3 command-line budget, §5). `truncated:true` signals a partial
+  listing; `node.childCount` always carries the real total. Deeper inspection =
   follow-up query on a child path.
+- **There is no paging.** The request carries no offset and the reply carries
+  no cursor, so a `truncated:true` listing cannot be continued — re-querying
+  the same path returns the same first N children forever. To enumerate a pool
+  larger than the cap, query each slot as its own path
+  (`<pool>/<n>`, e.g. `DataPool/Macros/150`) and stop once `node.childCount`
+  from the pool query has been accounted for. A slot query answers whether or
+  not the slot is occupied, so the scan needs no prior knowledge of which
+  numbers exist. Measured live 2026-07-25 on a 27-macro pool that reported
+  only 17 children: batches of 10 slot queries with a ~2.5 s collection window
+  recovered 27/27 without dropping a request on the MA3 command queue.
 - **`node.sequenceNo`** (additive, `Executor` nodes only, SPEC-COPILOT-EXECBODY-001
   M2/REQ-EXECBODY-003): the pool number of the sequence assigned to this
   executor, e.g. `{"name":"Exec 201", "class":"Executor", "childCount":0,
