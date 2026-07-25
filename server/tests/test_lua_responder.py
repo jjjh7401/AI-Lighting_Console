@@ -507,7 +507,12 @@ class TestDispatchAndFallbacks:
         harness.main(None, "ping 2")
         cmd_lines = harness.cmd_log()
         assert len(cmd_lines) == 1
-        assert cmd_lines[0].startswith('SendOSC 1 "/copilot/feedback,s,')
+        # Read the slot from the LOADED CONFIG rather than repeating a literal:
+        # osc_slot moved 1 -> 2 (row 1 is receive-only; replies need a Send=Yes
+        # row) and this assertion kept expecting 1, failing for a shipped value
+        # that was correct. A literal here only ever rots.
+        expected = f'SendOSC {int(harness.config["osc_slot"])} "{FEEDBACK_ADDRESS},s,'
+        assert cmd_lines[0].startswith(expected)
         assert cmd_lines[0].endswith('"')
 
 
