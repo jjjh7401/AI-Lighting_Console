@@ -99,7 +99,11 @@ class TestProvisionInstall:
 
         lua = (import_dir / "copilot_responder.lua").read_text(encoding="utf-8")
         slot_lines = [ln.strip() for ln in lua.splitlines() if ln.strip().startswith("osc_slot")]
-        assert slot_lines == ["osc_slot = 2, -- row index in the console's OSC settings used for replies"]
+        # Assert the VALUE reached the file, not the comment prose beside it:
+        # pinning the whole line made an explanatory edit to the Lua comment
+        # fail a test about settings wiring.
+        assert len(slot_lines) == 1, slot_lines
+        assert slot_lines[0].startswith("osc_slot = 2,"), slot_lines[0]
 
     def test_post_returns_the_guide(self, tmp_path):
         client = _client(tmp_path, import_dir=tmp_path / "plugins", receive_port=9007)

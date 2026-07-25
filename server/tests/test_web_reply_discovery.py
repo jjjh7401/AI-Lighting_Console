@@ -51,6 +51,28 @@ def _send_to(port: int, payload: bytes = b"/copilot/feedback\x00\x00\x00,s\x00\x
         sock.close()
 
 
+def _bindable_candidate(preferred: int) -> int:
+    """A candidate port nothing else on this host currently holds.
+
+    The probe can only observe a port it can bind, so a hardcoded candidate
+    fails — or passes vacuously, which is worse — whenever something else holds
+    it. Not hypothetical: a running copilot-server binds its receive port, and
+    the candidate window covers 8995-9005. Measured 2026-07-25, two stray dev
+    servers held 9001 and 9005 and this file reported a defect that was not
+    there. Falls back through the rest of the candidate set, then skips.
+    """
+    for port in (preferred, *candidate_ports(receive_port=CONFIGURED, console_port=CONSOLE)):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            sock.bind(("127.0.0.1", port))
+        except OSError:
+            continue
+        finally:
+            sock.close()
+        return port
+    pytest.skip("every reply-discovery candidate port is held by another process")
+
+
 class TestCandidateSet:
     def test_the_candidate_set_is_small_bounded_and_nearest_first(self):
         candidates = candidate_ports(receive_port=CONFIGURED, console_port=CONSOLE)
@@ -93,8 +115,10 @@ class TestCandidateSet:
 
 class TestDiscovery:
     def test_a_pong_on_a_neighbour_port_is_found_and_reported(self):
+        neighbour = _bindable_candidate(9003)
+
         def _ping() -> None:
-            _send_to(9003)
+            _send_to(neighbour)
 
         result = discover_reply_port(
             send_ping=_ping,
@@ -103,8 +127,8 @@ class TestDiscovery:
             console_port=CONSOLE,
             timeout=1.0,
         )
-        assert result.observed_port == 9003
-        assert result.mismatch == ReplyPortMismatch(configured=CONFIGURED, observed=9003)
+        assert result.observed_port == neighbour
+        assert result.mismatch == ReplyPortMismatch(configured=CONFIGURED, observed=neighbour)
 
     def test_silence_reports_nothing_rather_than_guessing(self):
         result = discover_reply_port(
@@ -121,8 +145,10 @@ class TestDiscovery:
         # Something else on the machine sending to a neighbour port must not be
         # reported as "the console replies here" — that would be a confidently
         # wrong instruction to change a working setting.
+        neighbour = _bindable_candidate(9002)
+
         def _ping() -> None:
-            _send_to(9002, payload=b"\x00\x01\x02\x03not-osc")
+            _send_to(neighbour, payload=b"\x00\x01\x02\x03not-osc")
 
         result = discover_reply_port(
             send_ping=_ping,
@@ -134,8 +160,10 @@ class TestDiscovery:
         assert result.observed_port is None
 
     def test_the_state_address_counts_as_a_responder_reply(self):
+        neighbour = _bindable_candidate(9001)
+
         def _ping() -> None:
-            _send_to(9001, payload=b"/copilot/state\x00\x00,s\x00\x00")
+            _send_to(neighbour, payload=b"/copilot/state\x00\x00,s\x00\x00")
 
         result = discover_reply_port(
             send_ping=_ping,
@@ -144,7 +172,7 @@ class TestDiscovery:
             console_port=CONSOLE,
             timeout=1.0,
         )
-        assert result.observed_port == 9001
+        assert result.observed_port == neighbour
 
     def test_every_candidate_socket_is_released(self):
         def _ping() -> None:
