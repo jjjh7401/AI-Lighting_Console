@@ -507,7 +507,7 @@ m1_commit_sha: c1c1382
 m1_complete_at: 2026-07-26
 m2_commit_sha: 9b76fce
 m2_complete_at: 2026-07-26
-m3_commit_sha: pending-backfill-m3   # 본 커밋 직후 backfill
+m3_commit_sha: 121e52b
 m3_complete_at: 2026-07-26
 ac_pass_count: 7                 # 001, 015(M1) + 002, 003, 004(M2) + 005, 006(M3)
 ac_fail_count: 0
