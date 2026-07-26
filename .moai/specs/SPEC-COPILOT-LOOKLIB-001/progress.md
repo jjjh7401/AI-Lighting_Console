@@ -607,11 +607,117 @@ M0 ASSUMPTION-14 GO 형상(룩당 1회 캡처 + 풀 타입별 Store)이 기본�
 
 **범위 준수**: 신규 3파일 + `server/web/session.py` 배선 1건 + 본 `progress.md`. `git status --short`가 이 4건만 보고한다. spec.md/plan.md/acceptance.md/design.md/research.md 무수정, PRESERVE 전량 무수정(`git diff --stat server/safety/ server/rulebook/assets/ ui/ console/` 빈 출력), M1~M3 공개 계약 무수정(소비만). frontmatter 전이 없음 — `status: in-progress`는 M1이 이미 수행했다.
 
+### M5 — 자연어 매칭 표면 + 툴 등록 + 룰북 안내 축 (AC-LOOKLIB-010 / 011 / 012 / 017)
+
+**산출물**: `server/looks/matching.py`(신규 1) + `server/tests/test_looks_matching.py`(신규 1, 87 테스트) + `server/orchestrator/tools.py`(툴 등록) + `server/tests/test_tools.py`(레지스트리 테스트 갱신 1 + 신설 1) + `server/rulebook/assets/v2.4.2/31_choreography_patterns.md`(안내 축 +14행, 삭제 0행).
+
+**기준선은 이월하지 않고 직접 실측했다.** 착수 직전 HEAD `64cff8c`에서 `1 failed, 2123 passed`. 종료 시 `1 failed, 2211 passed` = **+88**(신규 87 + `test_tools.py` 신설 1). 유일한 실패는 착수 전에도 실패하던 `test_web_reply_discovery.py::TestDiscovery::test_every_candidate_socket_is_released`이며 **신규 실패 0건**이다.
+
+**RED 증거**: 테스트를 먼저 작성해 두 표면에서 각각 다른 이유로 실패시켰다 — `test_looks_matching.py`는 수집 실패(`ModuleNotFoundError: No module named 'server.looks.matching'`), `test_tools.py::TestRegistry::test_the_registered_tools_are_exactly_the_declared_set`는 `assert 4 == 5`. 후자와 같은 파일의 나머지 56건은 그대로 통과했다(기존 트리에 대한 회귀 가드이므로 정직한 RED — 전량 실패가 아니다).
+
+**M2가 남긴 함정의 해소 — 장르 축의 한/영 불일치.** 라이브러리 `genre`는 영어 슬러그(`worship`/`rock`/`ballad`/`edm`)인데 spec.md §A가 사용자에게 제시하는 이름은 워십/록/발라드/EDM이고, **자산 어디에도 둘을 잇는 것이 없다**(M2 §E.2 기록). 다리를 **`matching.py`의 `GENRE_ALIASES` 표**에 놓았다 — 자산이 아니라 여기인 이유 세 가지: (a) 이것은 **표현 어휘**이고 REQ-LOOKLIB-018이 한국어를 1급으로 두라고 요구하는 곳은 표면이지 데이터가 아니다, (b) 로더 스키마는 **닫혀 있어** 별칭 필드 추가는 `schema_version` 변경이며 그 파장이 P1-1/P1-2 소비 계약까지 간다, (c) 영어 슬러그는 `look_id`와 짝을 이루는 기계 축이라는 M2의 판단이 여전히 옳다. **고정 테스트 3중**: ① spec.md §A의 네 이름(워십/록/발라드/EDM)이 각각 파라미터 케이스로 해석되는가, ② 라이브러리에 존재하는 **모든** 장르가 어떤 별칭에서든 도달 가능한가(5번째 장르가 별칭 없이 추가되면 여기서 깨진다), ③ 죽은 별칭(라이브러리에 없는 장르를 가리키는 별칭)이 없는가.
+
+**매칭 축 (결정 E — 하이브리드의 툴 절반)**. 무드 키워드 · 별칭(표시명 포함) · 장르 · 다이내믹스 4축. 장르와 다이내믹스는 **필터**, 무드/별칭은 **점수**이며, 점수는 히트한 **서로 다른 라이브러리 용어의 개수**다. 반환은 `selected`(유일 최고점 1개, 없으면 `None`) + `matches`(순위 목록) + `fallback_reason` 3종:
+
+| 상황 | `fallback_reason` | 근거 |
+|---|---|---|
+| 빈 질의 | `empty_query` | 물어본 것이 없다 |
+| 아무것도 안 걸림 | `no_match` | 물었고, 어떤 룩도 답하지 않았다 |
+| 여럿이 동점인데 좁힐 축이 없음 | `low_confidence` | 리졸버가 `ambiguous`를 다루는 방식과 같다 — **보고하되 고르지 않는다** |
+| 장르/섹션 중 하나라도 지정됨 | `None`(폴백 아님) | 사용자가 이미 대역을 지정했다. AC-010의 "기대 장르·다이내믹스 **대역**의 룩" |
+
+**근사 금지의 기계화**: 미스일 때 `matches`는 **빈 목록**이다. "가장 비슷한 룩"을 담는 뮤테이션(#15)은 5건의 테스트가 죽인다.
+
+**토큰 경계 + 한국어 조사 (M1 교훈의 질의 축 판)**. 힌트 매칭은 부분열이 아니라 토큰이다 — 실제 위험 3종이 리포지토리 안에 있다: 영어 `drop` ⊂ **`backdrop`**(역할 힌트 어휘다), `밤` ⊂ `밤하늘`, `빔` ⊂ `빔프로젝터`, 그리고 `록` ⊂ `블록`/`기록`/`목록`. 다만 한국어는 교착어라 사용자는 `코러스`가 아니라 **`코러스로`**라고 쓴다(AC-LOOKLIB-014의 라이브 문구가 정확히 그 형태다). 따라서 용어 뒤에 **닫힌 조사 집합** 1개까지만 허용하고 그 뒤에 다시 경계를 요구한다 — 열린 "뒤 음절 몇 개 허용"은 모자 쓴 부분열이며, 그 뮤테이션(#06)은 `드랍곡`/`드랍파티`/`코러스단`에서 죽는다.
+
+**본 마일스톤이 발견한 진짜 결함 1건 (비공허성 대조군이 잡았다)**: 두 장르 질의 테스트에 붙인 **비공허성 대조군**(`resolve_genre("워십이나") == "worship"`)이 실패했다 — 닫힌 조사 집합에 **연결 조사 `이나`/`나`가 빠져 있었다.** `워십이나 발라드 느낌`은 실사용에 자연스러운 문장인데 워십이 통째로 무시되고 발라드만 걸렸다. 조사 2종을 추가해 닫았다(`와`/`과`/`랑`과 같은 연결 계열이므로 집합의 성격은 그대로다). **대조군이 없었다면 본 테스트는 통과했을 것이다** — `resolve_genre("워십이나 발라드")`가 `None`을 반환한 이유가 "모호해서"가 아니라 "한쪽을 못 읽어서"였고, 두 원인이 같은 값을 낸다.
+
+**룰북 안내 축 — 넣기로 한 결정과 그 근거.** §A.5가 유일하게 허용한 자산 변경이며, 넣지 않을 수도 있었다. 넣은 이유는 **두 표면이 서로 모순되기 때문**이다: 툴 설명은 "선별된 룩이 있다"고 말하는데 룰북 무드 절(`31:173-206`)은 "이 4행 표로 값을 직접 골라라"고 지시한다. research.md §2 함의 2가 이미 룩 라이브러리를 그 표의 **정밀화**로 규정했으므로, 모순이 사는 자리에 포인터를 한 줄 놓는 것이 옳다. 그러지 않으면 모델은 룰북을 읽으며 설계하다 툴을 부르지 않는다.
+
+- **위치**: 무드 절 **바로 앞**(`:172` 뒤). 절 자체(`:173-206`)는 **바이트 무변경**이며 `git diff`가 **삽입 14행 / 삭제 0행**임이 증거다(REQ-LOOKLIB-017의 폴백 경로 보존). 순서도 의미가 있다 — 안내 축이 자기가 양보하는 표보다 먼저 와야 읽는 순서가 성립하고, 이를 테스트가 인덱스 비교로 고정한다(진짜 **이동** 뮤테이션 #23이 그 테스트 1건만 죽인다).
+- **캐시 비용 실측**: 프리픽스 24,128 → **25,005 바이트(+877, +3.6%)**. REQ-LOOKLIB-022가 요구하는 것은 "바뀌지 않는 것"이 아니라 **배포 시점 1회의 정적 텍스트 변경으로 수렴**하는 것이며, 축에는 per-turn/per-show 값이 하나도 없다(룩 데이터 본문도 없다 — AC-012가 32개 `look_id`·32개 표시명·스키마 키 4종의 부재를 전수 assert한다). **+877 바이트는 매 턴 지불되는 실제 비용이고, 표면화한 뒤 수용한 것이다.**
+- **AC-MVP-014 구현 테스트는 수정이 필요하지 않았다 (그리고 약화시키지 않았다)**: `test_rulebook.py::TestPrefixStability`는 골든 파일과 비교하는 것이 아니라 **조립본끼리** 비교한다(5회 조립 바이트 동일 + 재조립 동일). 따라서 자산 내용 변경에 대해 불변이며 그대로 통과한다. 대신 **탐지력을 더했다** — AC-012용 신규 테스트가 프리픽스 안의 룩 데이터 부재를 새로 감시하고, 기존 `test_prefix_contains_no_variable_value_patterns`(날짜/UUID/`session`)도 그대로 통과한다.
+
+**M4가 M5 소관으로 넘긴 항목은 이미 닫힌 채로 도착했다**: `run_commands` dedupe 개정은 **M4 후속**(`4dd48e8`+`f5dabdb`)이 이미 수행했다. M5는 그 결정을 다시 내리지 않았고, `test_tools.py` 57건이 **무수정 통과**함으로 회귀 없음만 확인했다.
+
+**뮤테이션 검증 (24건 / 최종 생존 0건)**. 커밋할 소스 그대로에 대해 측정했고, 드라이버가 매 적용·복원 전후로 `__pycache__`를 삭제하고 `PYTHONDONTWRITEBYTECODE=1`로 실행한다(M3가 발견한 stale-`.pyc` 함정).
+
+| # | 뮤테이션 | 죽인 테스트(대표) |
+|---|---|---|
+| 01 | 한국어 장르 매핑 제거 | 장르 파라미터 3건 + 한/영 도달 + 장르 질의 (8건) |
+| 02 / 03 | 동점인데도 최고점 채택 / 저신뢰 분기 도달 불가 | `test_a_mood_word_spread_across_genres_is_low_confidence` 외 |
+| 04 | 부분열 매칭으로 재구현 | `블록`/`기록`/`목록` 3건 + `backdrop` + `밤하늘` + `빔프로젝터` (9건) |
+| 05 / 06 | 조사 허용 제거 / 조사를 임의 2음절로 확대 | 조사 파라미터 6건 / 비-조사 파라미터 3건 |
+| 07 | NFC 정규화 제거 | `test_a_decomposed_hangul_query_matches_the_same_look` |
+| 08 / 09 | 장르 필터 무시 / **다이내믹스 필터 무시** | 4건 / `test_the_band_excludes_a_look_the_keyword_axis_would_have_scored` |
+| 10 / 11 | 별칭 축 제거 / 무드 축 제거 | 1건 / 7건 |
+| 12 | 점수를 전부 1로 평탄화 | 8건 |
+| 13 | 빈 질의를 `no_match`로 보고 | `test_an_empty_query_is_its_own_reason` 3건 + 툴 층 1건 |
+| 14 | 잘린 목록을 잘렸다고 말하지 않음 | `test_a_long_result_is_truncated_and_says_it_was` |
+| 15 | 미스에 라이브러리 전체를 근사로 제시 | 7건(`test_no_nearest_neighbour_is_offered_on_a_miss` 포함) |
+| 16 | 대소문자 구분 도입 | `EDM`/`WORSHIP`/`Rock` 파라미터 등 6건 |
+| 17 | **두 장르 질의를 먼저 본 장르로 확정** | `test_two_genres_named_at_once_constrain_nothing` |
+| 18~21 | 폴백을 툴 에러로 / 핸들러 미등록 / `TOOL_NAMES`에서 제거 / 비-문자열 인자 허용 | 각 1~6건 |
+| 22~24 | 안내 축 통째 제거 / **표 아래로 이동** / 축이 툴 이름을 말하지 않음 | 2건 / **순서 테스트 1건만** / 2건 |
+
+- **1회차 생존 4건이 있었고 전부 닫았다. 그중 2건은 진짜 테스트 공백이었다.**
+  - **#09(다이내믹스 필터)** — 기존 테스트는 `EDM 드랍`으로 대역을 확인했는데, 그 질의에서는 **무드 축과 대역이 우연히 같은 3개를 고른다.** 즉 필터를 통째로 지워도 통과한다 — 그 테스트가 증명하던 것은 필터가 아니라 무드 축이었다. 필터가 **답을 바꾸는** 케이스(`차오르는`이 dyn 3 룩 2개를 무드로 잡는데 `인트로`가 대역 1-2로 잘라낸다)를 대조군과 함께 신설해 닫았다.
+  - **#17(두 장르)** — "두 장르는 제약이 아니다"는 코드 주석이 명시한 동작인데 고정하는 테스트가 없었다. M3의 교훈("문서화된 동작에 테스트가 없으면 그것은 결정이 아니라 우연이다")의 재발이며, 그 테스트를 쓰는 과정에서 위의 `이나` 결함이 나왔다.
+- **나머지 2건은 뮤테이션 설계 불량이었다(하니스 결함으로 계수)**: #22·#23 1차본은 `find_looks`를 **4번** 언급하는 블록에서 **한 줄씩만** 고쳐 놓고 "축을 없앴다"고 이름 붙였다 — 프리픽스에는 여전히 `find_looks`가 남아 통과하는 것이 정상이었다. 축 전체 삭제(#22)·**진짜 이동**(#23)·전 occurrence 치환(#24)으로 재작성했다. 특히 #23은 **텍스트가 그대로 남는** 이동이므로 존재 테스트는 살고 **순서 테스트만** 죽어야 하며, 실제로 `total failing: 1`로 그렇게 죽는 것을 확인했다(의도한 이유로 죽었는지의 확인).
+- **약한 kill 신호 제거**: 루프로 여러 케이스를 도는 단언 4개(영어 대소문자 · 장르 부분열 · 조사 · 비-문자열 인자 · 빈 질의)를 **파라미터화**했다. 루프는 **첫 실패 항목까지만** 증명하므로, 조사 4종을 도는 루프가 죽어도 실제로 증명된 것은 `으로` 하나였다.
+
+**AC 판정 (M5 = {010, 011, 012, 017})**
+
+| AC | 판정 | 검증 커맨드 | 실제 출력 |
+|---|---|---|---|
+| **AC-LOOKLIB-010** (자연어 매칭) | **PASS** | `pytest server/tests/test_looks_matching.py -q` | `87 passed`. AC 본문의 세 예시 구문이 각각 개별 테스트다 — `웅장한 금색 코러스`(+ 라이브 문구 `…코러스로 가자`) → `worship-golden-chorus` 단독 선택, `잔잔한 발라드 인트로` → ballad ∩ dyn{1,2}, `EDM 드랍` → edm ∩ dyn{4,5} 3건. 라이브러리 밖 무드는 `matches == []` + `no_match` |
+| **AC-LOOKLIB-011** (폴백 경로 보존) | **PASS** | 동일 + `git diff --stat server/rulebook/` | 폴백 분기 4종(`no_match`/`low_confidence`/`empty_query`/폴백 아님)이 개별 테스트. 무드 절 헤딩 + 표 4행을 **verbatim** 대조해 무변경 확인, diff는 **삽입 14 / 삭제 0**. 기존 스위트 신규 실패 0건 |
+| **AC-LOOKLIB-012** (고정 프리픽스 규율) | **PASS** | 동일 + `pytest server/tests/test_rulebook.py -q` | 프리픽스 안에 `look_id` 32개 · 표시명 32개 · 스키마 키 4종(`look_id`/`mood_keywords`/`schema_version`/`dynamics:`) **전부 0건**(비공허성: 프리픽스 비어있지 않음 + `find_looks` 존재를 함께 단언). `test_rulebook.py` **무수정 통과**(byte-stability 5회 조립 동일) |
+| **AC-LOOKLIB-017** (단일 진실원 + 제공자 중립) | **PASS** | 동일 + `grep -rniE "anthropic\|gemini" server/looks/` | 정적: grep exit 1(0건) + **비공허성 대조군**(같은 스캔을 `server/llm/factory.py`에 걸면 반드시 걸린다) + `matching.py`의 import가 `server.llm`·`server.orchestrator` 어느 쪽으로도 가지 않음을 AST로 확인. 동적: 같은 (질의, 라이브러리) 쌍이 항상 같은 `to_dict()`를 내는 순수성, 반환 `look_id` ⊆ 라이브러리, **라이브러리를 줄이면 그 룩이 사라짐**(제2 진실원 부재의 능동 증명) |
+
+**자기 검증 (verbatim)**
+
+| 항목 | 커맨드 | 결과 |
+|---|---|---|
+| 신규 테스트 | `.venv/bin/python -m pytest server/tests/test_looks_matching.py -q` | exit 0 · `87 passed` |
+| M1~M4 + 아키텍처 | `... test_looks_{schema,library,resolver,instantiate,boundary}.py test_architecture.py -q` | exit 0 · `266 passed` |
+| 툴 레지스트리 | `.venv/bin/python -m pytest server/tests/test_tools.py -q` | exit 0 · `57 passed` |
+| 전체 회귀 | `.venv/bin/python -m pytest -q` | exit 1 · `1 failed, 2211 passed` |
+| 기준선(M5 착수 직전, HEAD 64cff8c) | 동일 | exit 1 · `1 failed, 2123 passed` |
+| PRESERVE diff | `git diff --stat server/safety/ server/bridge/ ui/ console/` | 빈 출력 |
+| 룰북 diff | `git diff --stat server/rulebook/` | `1 file changed, 14 insertions(+)` — 삭제 0 |
+| OSC/bridge import | `grep -rn "bridge.osc\|from server.bridge" server/looks/` | 0건 (exit 1) |
+| 제공자 이름 | `grep -rniE "anthropic\|gemini" server/looks/` | 0건 (exit 1) |
+| AskUserQuestion | `grep -rn "AskUserQuestion\|mcp__askuser" server/looks/` | 0건 (exit 1) |
+| 린트 | `.venv/bin/python -m ruff check <신규 2 + 수정 2>` | exit 0 · `All checks passed!` |
+| 포맷(저작 파일) | `.venv/bin/python -m ruff format --check server/looks/matching.py server/tests/test_looks_matching.py` | exit 0 · `2 files already formatted` |
+| 커버리지 | `pytest ... --cov=server.looks.matching` | **100%** (96 stmts / 0 miss) |
+| 프리픽스 크기 | `len(assemble_prefix().encode())` | 24,128 → **25,005**(+877) |
+
+- **`ruff format --check`는 `tools.py`·`test_tools.py`에서 여전히 실패하지만 본 마일스톤 소관이 아니다**: `git stash`로 본 마일스톤 변경을 걷어내고 HEAD 상태에서 재측정해 **착수 전에 이미 비-clean**임을 확인했고, `--diff`가 가리키는 4개 지점(`tools.py`의 `get_rig_context` 설명 문자열, `test_tools.py`의 헬퍼 2곳)은 **전부 본 마일스톤이 쓰지 않은 줄**이다. 무관한 재포맷을 피하려 손대지 않았다.
+
+**@MX 태그 배치**
+
+| 태그 | 위치 | 비고 |
+|---|---|---|
+| `@MX:WARN` + `@MX:REASON` | `matching.py` 모듈 독스트링 | 근사 금지의 **유혹 3종을 명시**(신뢰 기준 낮추기 · 용어를 부분열로 넓히기 · "그래도 가장 가까운 룩" 반환) — 셋 다 정직한 미스를 자신 있는 오답으로 바꾼다 |
+| `@MX:ANCHOR` | 신설 0건 | fan_in 미충족 — §D 규율 유지 |
+
+**미검증 잔여 / 라이브 이월 (M7)**
+
+1. **REQ-017의 "폴백으로 강등"은 코드가 강제하지 않는다.** 본 마일스톤이 만든 것은 **폴백 신호**이고, 그 신호를 받아 룰북 무드 절로 내려가는 주체는 **모델**이다(툴 설명 + 안내 축이 그렇게 지시한다). 신호가 나가는 것은 유닛으로 고정했으나, 모델이 실제로 그 지시를 따르는지는 **관측하지 않았다** — M7 종단의 필수 관측 항목이다.
+2. **조사 집합은 유닛 검증뿐이다.** 26종 열거는 실제 운영자 어투에 대해 측정된 적이 없다. `이나` 누락이 테스트 한 줄로 드러난 것처럼, 실사용 문장에서 더 나올 수 있다. 실패 방향은 안전하다(미스 → 폴백).
+3. **`잔잔한`은 worship 전용 무드 키워드다.** AC-010의 예시 `잔잔한 발라드 인트로`에서 `잔잔한`은 **어느 발라드 룩에도 걸리지 않고**, 장르+섹션 축만으로 대역이 정해진다. AC는 충족되지만 이는 **자산 저작의 관측**이지 매칭 결함이 아니다 — 무드 키워드는 M2 소관이며 본 마일스톤은 자산을 수정하지 않았다.
+4. **+877 바이트의 실제 캐시 효과는 관측하지 않았다.** 1회 무효화라는 성질은 구조적으로 성립하지만(정적 텍스트), 프로바이더 캐시 히트율의 실제 변화는 측정되지 않았다.
+5. **`find_looks`는 콘솔을 만지지 않으므로 라이브 검증 대상이 아니다** — 다만 M7 종단에서 매칭→매핑→인스턴스화가 한 지시 턴 안에서 이어지는지는 관측 대상이다.
+
+**범위 준수**: 신규 2파일 + 기존 3파일 수정(`tools.py` 툴 등록 · `test_tools.py` 레지스트리 단언 · `31_choreography_patterns.md` 안내 축) + 본 `progress.md`. spec.md/plan.md/acceptance.md/design.md/research.md 무수정, `server/safety/**`·`server/bridge/**`·`console/**`·`ui/**` 무수정, M1~M4 공개 계약 무수정(소비만 — `matching.py`는 `schema`만 import하고 `instantiate`/`resolver`는 건드리지 않는다). `looks`는 `test_architecture.py`의 `_ALLOWED_PREFIXES` 밖에 그대로 있다. frontmatter 전이 없음 — `status: in-progress`는 M1이 이미 수행했다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
-run_status: in-progress          # M1·M2·M3·M4 완료 · M5~M7 미착수
-milestones_complete: [M0, M1, M2, M3, M4]
+run_status: in-progress          # M1·M2·M3·M4·M5 완료 · M6~M7 미착수
+milestones_complete: [M0, M1, M2, M3, M4, M5]
 m1_commit_sha: c1c1382
 m1_complete_at: 2026-07-26
 m2_commit_sha: 9b76fce
@@ -620,24 +726,36 @@ m3_commit_sha: 121e52b
 m3_complete_at: 2026-07-26
 m4_commit_sha: f398d6b
 m4_complete_at: 2026-07-26
-ac_pass_count: 11                # 001, 015(M1) + 002, 003, 004(M2) + 005, 006(M3) + 007, 008, 016, 018(M4)
+m5_commit_sha: pending-backfill  # 후속 커밋에서 채운다 (커밋은 자기 해시를 담을 수 없다)
+m5_complete_at: 2026-07-26
+ac_pass_count: 15                # 001, 015(M1) + 002, 003, 004(M2) + 005, 006(M3)
+                                 # + 007, 008, 016, 018(M4) + 010, 011, 012, 017(M5)
 ac_fail_count: 0
-ac_pending_count: 8              # 009~014, 017, 019 — M5 이후 범위
+ac_pending_count: 4              # 009, 013, 019(M6) · 014(M7 LIVE)
 preserve_list_post_run_count: 0  # PRESERVE 목록 위반 0건
-new_warnings_or_lints_introduced: 0   # ruff check/format: 신규 파일 clean
-                                      # (리포지토리 사전 baseline 3 E501 + 25 format은 무관·무수정)
-baseline_full_suite: "1 failed, 2004 passed"   # M4 착수 직전 직접 실측 (HEAD c29e543)
-post_m4_full_suite: "1 failed, 2111 passed"    # +107 = 신규 M4 테스트 전량
+new_warnings_or_lints_introduced: 0   # ruff check: 신규·수정 4파일 전부 clean
+                                      # ruff format: 저작 2파일 clean. tools.py/test_tools.py의
+                                      # 4개 실패 지점은 git stash로 HEAD 상태에서 재측정해
+                                      # 착수 전부터 비-clean임을 확인 — 무관·무수정
+baseline_full_suite: "1 failed, 2123 passed"   # M5 착수 직전 직접 실측 (HEAD 64cff8c)
+post_m5_full_suite: "1 failed, 2211 passed"    # +88 = 신규 87 + test_tools.py 신설 1
 new_failures: 0                  # 동일한 사전 실패 1건(test_every_candidate_socket_is_released), 신규 0건
 coverage_server_looks: "98%"     # instantiate 100 / resolver 100 / roles 100 / schema 98 / loader 93
 coverage_instantiate: "100%"     # 184 stmts / 0 miss
+coverage_matching: "100%"        # 96 stmts / 0 miss
 cross_platform_build: n/a        # 순수 파이썬 · 컴파일 산출물 없음
-total_run_phase_files: 16        # M1 5 + M2 5 + M3 2 + M4 4 (신규 3 + 배선 1)
+total_run_phase_files: 21        # M1 5 + M2 5 + M3 2 + M4 4 + M5 5 (신규 2 + 수정 3)
 library_look_count: 32           # 워십 8 · 록 8 · 발라드 7 · EDM 9
 library_movement_spec_count: 0   # v0.3.1 F3
-mutation_kill_rate: "53/53"      # M1·M2 17 + M3 10 + M4 26 · 최종 생존 0건
-                                 # M4 1회차 생존 3건 → 2건은 진짜 테스트 공백(AP-16 번들층·선택 순서)으로
-                                 # 테스트 신설, 1건은 뮤테이션 설계 불량으로 재작성 후 KILL
+tool_count: 5                    # M5가 find_looks를 추가 — 닫힌 집합은 TOOL_NAMES 길이로 assert
+matching_fallback_reasons: 3     # no_match · low_confidence · empty_query (병합 금지)
+genre_alias_bridge: matching.py  # 워십/록/발라드/EDM → 영어 슬러그. 자산이 아니라 표면에 둔다
+rulebook_prefix_bytes: "24128 -> 25005"  # +877 (+3.6%) · 안내 축 1회 정적 변경 (REQ-022)
+rulebook_asset_diff: "14 insertions, 0 deletions"   # 무드 절(31:173-206)은 바이트 무변경
+mutation_kill_rate: "77/77"      # M1·M2 17 + M3 10 + M4 26 + M5 24 · 최종 생존 0건
+                                 # M5 1회차 생존 4건 → 2건은 진짜 테스트 공백(다이내믹스 필터가
+                                 # 답을 바꾸는 케이스 부재 · 두 장르 질의 미고정), 2건은 뮤테이션
+                                 # 설계 불량(안내 축을 한 줄만 고쳐 놓고 '제거'라 이름 붙임)
 resolver_unmapped_reasons: 5     # no_match · ambiguous · unaddressable(신설) · 두 unavailable 사유
 skip_reasons: 4                  # conflict · no_free_slot + M4 신설 pool_unresolved · pool_unaddressable
 capture_shape_default: shared_capture   # M0 ASSUMPTION-14 GO · FALLBACK도 같은 데이터에서 생성 가능

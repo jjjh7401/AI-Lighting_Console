@@ -170,6 +170,20 @@ end
 return main
 ```
 
+### Look library — check it before designing a mood from scratch
+
+A curated look library is available through `find_looks`. It holds designed genre
+templates (worship / rock / ballad / EDM), each with a section-dynamics level (1 static
+to 5 climax), a list of POSITION ROLES, and concrete colour / intensity values.
+
+- When the instruction names a mood, a genre or a song section, call `find_looks` with
+  the operator's own wording (Korean is first-class) BEFORE picking values yourself.
+- It returns library looks only, and never invents one. When it answers with a fallback
+  signal, nothing matched well enough — then design the mood yourself from the table
+  below, and say that no stored look fit.
+- A look carries no group, preset slot or fixture id. Binding one to THIS rig still goes
+  through `get_rig_context`, and storing it still goes through `run_commands`.
+
 ### Concept / mood instructions — resolve the rig FIRST
 
 When the instruction gives a MOOD or CONCEPT ("warm ballad", "energetic club", "eerie",

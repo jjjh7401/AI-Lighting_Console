@@ -16,12 +16,25 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from server.llm.types import ToolCall, ToolDefinition, ToolResult
+from server.looks.loader import LookSchemaError, load_library_from_dir
+from server.looks.matching import match_looks
+from server.looks.schema import LookLibrary
 from server.orchestrator.ports import BundleGate, CommandExecutionPort, StateQueryPort
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
     from server.deploy.pipeline import DeployOutcome
 
-TOOL_NAMES = ("run_commands", "query_state", "deploy_plugin", "get_rig_context")
+# The dependency runs ONE way: this module reads the look layer, the look layer
+# never reads this one. M3 kept the two rig-context failure reasons unenumerated
+# in the resolver for exactly this reason — the reverse edge would close a cycle
+# (tools -> matching -> resolver -> tools).
+TOOL_NAMES = (
+    "run_commands",
+    "query_state",
+    "deploy_plugin",
+    "get_rig_context",
+    "find_looks",
+)
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
 # against grandMA3 onPC 2.4.2: the previous placeholders "Patch/Fixtures" and
@@ -365,17 +378,23 @@ def build_toolset(
     rig_drilldown: tuple[str, ...] | None = None,
     bundle_gate: BundleGate | None = None,
     deploy_pipeline: DeployPipelinePort | None = None,
+    look_library: LookLibrary | None = None,
 ) -> ToolRegistry:
-    """Build the 4-tool registry wired to the given ports (REQ-MVP-005).
+    """Build the tool registry wired to the given ports (REQ-MVP-005).
 
     When ``bundle_gate`` is provided (M4 production wiring), every
     run_commands bundle is screened as a WHOLE before any per-command
     execution starts (REQ-MVP-011 pipeline + REQ-MVP-015 all-or-nothing);
     a non-cleared decision returns the block/hold reasons as an error tool
     result, feeding the self-correction loop (REQ-MVP-012).
+
+    ``look_library`` is optional: production wiring passes nothing and the
+    built-in library is read from disk on the first ``find_looks`` call, so a
+    toolset that never looks up a look pays no file read.
     """
     rig_paths = dict(rig_paths or DEFAULT_RIG_CONTEXT_PATHS)
     drilldown = frozenset(rig_drilldown if rig_drilldown is not None else DEFAULT_RIG_DRILLDOWN)
+    looks = look_library
 
     # -- run_commands (REQ-MVP-001 upstream, REQ-MVP-009/033 semantics) --------
 
@@ -587,6 +606,32 @@ def build_toolset(
             )
         )
 
+    # -- find_looks (REQ-LOOKLIB-015/016/017 — lookup only, sends nothing) -----
+
+    def find_looks(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        nonlocal looks
+        query = call.arguments.get("query")
+        if not isinstance(query, str):
+            return _error_result(call, "'query' must be a string — the operator's own words")
+        if looks is None:
+            try:
+                looks = load_library_from_dir()
+            except LookSchemaError as error:
+                # A broken library is a structured failure, never a silent
+                # empty result that would read as "no look matches".
+                return _error_result(call, f"look library unavailable: {error}")
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(match_looks(query, looks).to_dict(), ensure_ascii=False),
+                # A miss is an ANSWER (REQ-LOOKLIB-017), not a tool failure:
+                # an is_error payload feeds the self-correction loop and would
+                # invite a retry that can only miss again.
+                is_error=False,
+            )
+        )
+
     definitions = (
         ToolDefinition(
             name="run_commands",
@@ -704,11 +749,56 @@ def build_toolset(
             ),
             parameters={"type": "object", "properties": {}},
         ),
+        ToolDefinition(
+            name="find_looks",
+            description=(
+                "Look up designed LOOKS in the built-in library when the "
+                "instruction names a mood, a genre or a song section rather "
+                "than explicit colours and values (e.g. 'a grand golden "
+                "chorus', 'a calm ballad intro', 'the EDM drop'). Pass the "
+                "operator's own words; Korean is first-class, and the genre "
+                "may be written either way (워십 / worship, 록 / rock, 발라드 "
+                "/ ballad, EDM).\n"
+                "\n"
+                "This tool READS ONLY — it never sends anything to the "
+                'console. Each match is {"look_id", "display_name", "genre", '
+                '"dynamics" (1 static .. 5 climax), "roles" (position roles, '
+                'NOT rig objects), "attributes" (concrete values), "score" and '
+                '"matched" (the library words your query hit)}. The list is '
+                'ranked; "total" and "truncated" say whether it was cut '
+                "short.\n"
+                "\n"
+                'When "fallback" is true NOTHING matched well enough — '
+                '"no_match" (nothing answered), "low_confidence" (several '
+                'looks tied and nothing narrows them) or "empty_query". In '
+                "that case do NOT pick from the list: fall back to designing "
+                "the mood yourself from the rulebook's mood table. The library "
+                "never invents a look, and neither should you.\n"
+                "\n"
+                "A look carries NO group number, preset slot or fixture id. To "
+                "put one on THIS rig, resolve its roles against "
+                "get_rig_context and store it with run_commands."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": (
+                            "The mood / genre / section wording to match, in "
+                            "the operator's own language."
+                        ),
+                    }
+                },
+                "required": ["query"],
+            },
+        ),
     )
     handlers: dict[str, _Handler] = {
         "run_commands": run_commands,
         "query_state": query_state,
         "deploy_plugin": deploy_plugin,
         "get_rig_context": get_rig_context,
+        "find_looks": find_looks,
     }
     return ToolRegistry(definitions, handlers)
