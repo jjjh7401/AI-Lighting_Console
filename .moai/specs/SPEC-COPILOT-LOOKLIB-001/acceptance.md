@@ -1,7 +1,9 @@
 # SPEC-COPILOT-LOOKLIB-001 — 인수 기준 (acceptance)
 
-status: draft (v0.3.1, 2026-07-26) · Tier L · 본 문서는 spec.md의 요구를 관측 가능한 검증 기준으로 전개한다.
+status: draft (v0.3.2, 2026-07-26) · Tier L · 본 문서는 spec.md의 요구를 관측 가능한 검증 기준으로 전개한다.
 
+> **v0.3.2 — run-phase(M0~M3 출하 후) 표적 정정 2건.** AC 집합·번호(001~020)·마일스톤 배정·결정 집합(A~K 11건)·마커 0건은 **전부 무변경**이다. (a) **AC-LOOKLIB-008 ③의 검증 수단 교체** — 주장("룩 모듈은 실행 경로를 호출·import하지 않는다")은 그대로 두고, 수단을 raw grep에서 **AST 식별자 스캔(독스트링·주석 제외)**으로 바꿨다. 이유: 기존 grep은 현재 트리에서 이미 1건을 반환하는데, 그 1건이 `server/looks/__init__.py:6`의 **경계를 문서화한 독스트링**이다 — 즉 AC가 지키려는 불변식을 설명한 산문이 AC를 떨어뜨렸다. 실질(REQ-010)은 지켜지고 있었고 어긋난 것은 수단이므로, 독스트링을 완화하는 대신 스캔을 정밀화했다. M3가 `test_looks_resolver.py:509-529`에 이미 구현한 동형 AST 스캔을 재사용한다. **이는 최종 감사가 AC-LOOKLIB-020에서 지적한 결함과 같은 부류다** — 그쪽은 프리셋 내용 판독 수단으로 `query_state`를 명시했으나 그 방법이 구조적으로 불가능했다(progress.md M0 발견 G3). 두 경우 모두 **주장은 옳고 검증 수단이 그 주장을 검사할 수 없는** 형태였다. (b) **미매핑 사유 `unaddressable` 등재** — M3 리졸버가 신설한 다섯 번째 사유를 AC-005 · §C.0 · AC-018 (b) · §F DoD 7에 명시해 M4·M6가 **모르고 상속하지 않고 알고 상속**하게 했다. AC-018의 주입 시나리오는 5개 → **6개**가 된다(유일한 수치 변경).
+>
 > **v0.3.1 — 감사 PASS(0.92) 이후 정리 개정.** AC 집합·번호·마일스톤 배정은 **무변경**이다. (a) **F1 sweep** — §B 시나리오 1의 Given이 매핑 가능한 그룹 이름의 예로 `'FOH Wash'/'워시'`를 들고 있었다. `워시`는 픽스처 타입 클래스라 **어떤 역할의 힌트도 아니며**(AC-015 ④가 0건을 assert), 매핑 예시가 될 수 없다. 6종 표의 실제 힌트 문자열로 교체. (b) **F3** — **AC-003에 구간 6 신설**: v1 라이브러리의 무브먼트(페이저) 지정 0건 + 스키마 필드 존재·왕복 가능성을 assert한다. 근거는 REQ-013의 보고 요소 (a)~(d)가 "선언된 무브먼트 축이 v1에서 인스턴스화되지 않았다"를 담지 않아, 구간 2가 허용하는 라이브러리 무브먼트가 **조용히 버려진 채 성공으로 보고**될 수 있었다는 것 — 보고 요소를 늘리는 대신 원천에서 폐쇄했다. §C.0 REQ-003 행 비고·§F DoD 6c/9도 함께 갱신. 구간 2는 **삭제하지 않는다**(무브먼트가 후속 SPEC에서 켜질 때 `Pan`/`Tilt`의 거처를 고정하는 규칙으로 존치).
 >
 > **v0.3.0 — 재감사(FAIL 0.80) 반영 최종 개정.** (a) **§C.0 역추적표의 AC-010↔AC-012 전치 정정** — 표는 REQ-015/018→AC-012, REQ-022→AC-010이라 적었으나 AC 본문은 정반대다(AC-010 = 자연어 매칭 → REQ-015/018, AC-012 = 고정 프리픽스 규율 → REQ-022). 재발 방지용으로 도입한 표 자체가 같은 종류의 오류를 담고 있었다. (b) **담당 M 열을 plan.md §B와 재정합** — M4/M5/M6/M7의 AC 배정이 세 곳에서 어긋나 있었다. (c) **조건부 AC 3건(002/003/015)을 완전 평가 가능하게 전환** — 다이내믹스 척도·역할 어휘·프리셋 풀 범위가 확정되어 "제안 기본값을 채택할 경우"라는 유보가 사라졌다. (d) **AC-018에 스킵 카운트 단위 assert 추가**(프리셋 단위, 룩 아님). (e) **AC-020의 ASSUMPTION-14 판정을 3분기(GO/FALLBACK/HALT)로 명세** + 풀 타입 런타임 해석 실현성 항목 추가. (f) §F DoD를 마커 0건 상태로 갱신.
@@ -71,7 +73,7 @@ v0.1.0은 **REQ-006 / 013 / 014 / 016 / 021이 어떤 AC에도 연결되지 않�
 | **REQ-LOOKLIB-006** | **AC-015** | M1 | v0.1.0 미커버 — 감사 D4. v0.3.0에서 6종 명시 + 힌트 보유 assert 추가 |
 | REQ-LOOKLIB-007 | AC-005 | M3 | |
 | REQ-LOOKLIB-008 | AC-006 | M3 | |
-| REQ-LOOKLIB-009 | AC-005 | M3 | 모호 매핑(`ambiguous`) 분기 포함 (v0.3.0) |
+| REQ-LOOKLIB-009 | AC-005 | M3 | 모호 매핑(`ambiguous`) 분기 포함 (v0.3.0). **미매핑 사유 3종 — `no_match` / `ambiguous` / `unaddressable`**(v0.3.2 — 세 번째 신설, M3 산출물) |
 | REQ-LOOKLIB-010 | AC-008, AC-014 | M4, M7 | |
 | REQ-LOOKLIB-011 | AC-007, AC-014 | M4, M7 | |
 | REQ-LOOKLIB-012 | AC-007 | M4 | 대소문자 무관 assert(D14) |
@@ -141,7 +143,8 @@ v0.1.0은 **REQ-006 / 013 / 014 / 016 / 021이 어떤 AC에도 연결되지 않�
 
 - 대상 요구사항: REQ-LOOKLIB-007 / REQ-LOOKLIB-009
 - 검증 방법: `pytest server/tests/test_looks_resolver.py -q` — 한/영 관례 매핑, 미매핑, 신호 전파 3계열 개별 테스트
-- 기대 결과: 전량 PASS — 미매핑 케이스에서 커맨드 대상이 생성되지 않음
+- **미매핑 사유는 `no_match` / `ambiguous` / `unaddressable` 3종을 개별 구분한다 (v0.3.2 신설 — 세 번째가 신규)**: 응답기가 슬롯을 확립하지 못해 `no` 키가 없는 그룹(`server/orchestrator/tools.py:185-211`)이 어떤 역할에 **정확히** 매칭될 때, 그 역할은 `no_match`가 아니라 **`unaddressable`**로 보고된다. 두 사유를 합치면 "이 리그엔 백라이트가 없다"가 되어 리그가 실제로 말한 "있는데 번호를 못 붙였다"를 지우며, 조치 방법이 서로 다르다(후자는 그 그룹에 슬롯을 주면 끝난다). 섹션 자체가 오지 않은 경우의 `path_not_resolved` / `console_unreachable`도 **역할 단위로** 실린다. 우선순위: 한 역할에 모호 주장과 미번호 정확 매칭이 동시에 걸리면 **미번호 쪽을 보고**하되 모호성은 `ambiguous_groups`에 남긴다 — 운영자가 조치 가능한 쪽이기 때문이다. 상세 근거는 plan.md §F 결정 기록의 "미매핑 사유 `unaddressable`" 행 + design.md §4 위험 #14.
+- 기대 결과: 전량 PASS — 미매핑 케이스에서 커맨드 대상이 생성되지 않음. **3종 사유가 각각 개별 테스트로 고정**(design.md §6.2 병합 금지)
 
 ### AC-LOOKLIB-006 — 슬롯≠FID + 그룹 발명 금지
 
@@ -169,9 +172,13 @@ the 리졸버·번들 빌더 **shall not** fixtures 번호 기반 `Fixture ... T
 - **검증 범위의 정직한 분해 (감사 D10)**: v0.1.0의 검증 방법 3종은 "**bridge를 import하지 않는다**"만 증명하고 "**`run_commands` 경유로만 실행이 흐른다**"는 주장은 증명하지 않았다 — 둘은 다른 명제다(모듈이 bridge를 직접 import하지 않으면서도 게이트 밖의 다른 실행 헬퍼를 호출할 수 있다). 아래 ①~④로 분해한다.
   - ① **bridge 경계** (기존, 유효): `pytest server/tests/test_architecture.py -q`. 이 테스트는 `SERVER_DIR.rglob("*.py")`로 서버 트리 전수를 훑고 허용 프리픽스(`server/bridge/`, `server/safety/`, `server/tests/`)만 면제하므로(`server/tests/test_architecture.py:51-54`), **신규 `server/looks/`는 자동으로 검사 대상에 포함**된다 — 테스트 수정 없이 경계가 확장된다.
   - ② **import 경로 직접 grep** (기존, 유효): `grep -rn "bridge.osc\|from server.bridge" server/looks/` → 0건.
-  - ③ **실행 호출 경로 assert** (**신설** — ①②가 덮지 못한 부분): `server/looks/`의 어느 모듈도 `SafetyGate.screen` / `ExecutionPort` / 콘솔 링크를 직접 호출하지 않음을 정적으로 assert한다 — `grep -rnE "gate\.screen|execution_port|ConsoleLink" server/looks/` → 0건. 룩 계층은 **번들 문자열을 반환할 뿐 스스로 실행하지 않는다**는 것이 REQ-010의 실질 내용이다.
+  - ③ **실행 호출 경로 정적 assert** (**신설** — ①②가 덮지 못한 부분. **v0.3.2에서 검증 수단 정정 — 주장은 무변경, 수단만 교체**): `server/looks/` 아래 모든 모듈을 `ast.parse`로 훑어 **실행 위치의 식별자만** 수집하고(`ast.Attribute.attr` · `ast.Name.id` · `ast.Import`/`ast.ImportFrom`의 모듈명·별칭명), 그 집합이 실행 경로 심볼과 **교집합 0**임을 assert한다. 검증 방법: `pytest server/tests/test_looks_boundary.py -q`(신규 — 파일명·배치는 M4 재량, 기존 `test_architecture.py` 확장도 허용).
+    - **금지 식별자**: `SafetyGate`(`server/safety/gate.py:124`) · `screen`(`server/safety/gate.py:265`) · `execution_port`(`server/safety/gate.py:174`) · `CommandExecutionPort`(`server/orchestrator/tools.py:306`) · `ExecutionPort` · `ConsoleLink`(`server/safety/console.py:111`). **금지 모듈 경로 프리픽스**: `server.safety.gate` · `server.safety.console` · `server.orchestrator.ports` · `server.bridge`. 룩 계층은 **번들 문자열을 반환할 뿐 스스로 실행하지 않는다**는 것이 REQ-010의 실질 내용이며, 이 스캔은 그 명제(**호출도 import도 없음**)를 직접 검사한다.
+    - **왜 raw grep을 버렸는가 (v0.3.2 정정)**: v0.2.0~v0.3.1의 수단은 `grep -rnE "gate\.screen|execution_port|ConsoleLink" server/looks/` → 0건이었다. 이 grep은 **현재 트리에서 이미 1건을 반환한다** — `server/looks/__init__.py:6`의 패키지 독스트링이 지켜야 할 경계를 설명하며 `run_commands -> gate.screen()`을 문장 안에서 언급하기 때문이다. 즉 **AC가 지키려는 바로 그 불변식을 문서화한 산문이 AC를 떨어뜨린다.** `resolver.py`는 0건이고 어느 룩 모듈도 그 API를 **호출하지 않으므로** REQ-010의 실질은 지켜지고 있다 — 어긋난 것은 검증 수단이다. **정정 방향은 독스트링 완화가 아니라 스캔 정밀화다**: 그 독스트링은 경계를 문서화하는 하중 부재이고, 텍스트 스캔을 통과시키려 그것을 지우는 것은 방향이 거꾸로다(같은 이유로 §7 AP-19).
+    - **선례 재사용 (새 기법을 만들지 않는다)**: M3가 이미 동형의 AST 스캔을 구현했다 — `server/tests/test_looks_resolver.py:509-529` `_code_string_constants()`가 `ast.walk`로 문자열 상수를 모으되 `Module`/`ClassDef`/`FunctionDef`/`AsyncFunctionDef`의 첫 `Expr`(=독스트링)을 `id()`로 제외한다. ③은 그 helper와 같은 원리(**독스트링·주석은 스캔 대상 노드 종류에 구조적으로 등장하지 않는다**)를 식별자 축으로 옮긴 것이다. 주석은 `ast`가 애초에 노드로 만들지 않고, 독스트링은 `ast.Constant`이지 `Attribute`/`Name`/import 이름이 아니다 — 여기서는 제외 로직조차 필요 없다.
+    - **비공허성 + 뮤테이션 (AP-13 계열 위양성 방지)**: 스캔이 실행 코드에 실제로 도달했음을 함께 assert한다(예: `resolver.py`의 실행 식별자 수 > 20 — v0.3.2 실측 65). 그리고 스캔은 **떨어질 수 있어야** 한다: `gate.screen(cmds)` 호출 1줄과 `from server.safety.console import ConsoleLink` 1줄을 각각 주입한 사본에서 offender가 잡히는 것이 확인되어 있다(v0.3.2 정정 시 실측 — 완화한 단언은 뮤테이션으로 검증한다).
   - ④ **safety 무변경**: `git diff --stat server/safety/` → 빈 출력.
-- 기대 결과: ① 그린 + ②③ grep 각 0건 + ④ 빈 출력
+- 기대 결과: ① 그린 + ② grep 0건 + ③ offender 0건(비공허성 assert 동반) + ④ 빈 출력
 
 ### AC-LOOKLIB-009 — LiveLock 제안 강등
 
@@ -264,16 +271,18 @@ the 룩 계층 **shall** 생성형 Lua 배포를 위한 제2 표면을 갖지 �
 
 ### AC-LOOKLIB-018 — 요약 보고 형상 (REQ-013 유닛 레벨, 신설: 감사 D12)
 
-**When** 인스턴스화가 완료되면, the 요약 보고 **shall** (a) 생성 프리셋의 풀·슬롯·이름, (b) 미매핑 역할 목록(사유 구분: 후보 없음 / `ambiguous`), (c) **건너뛴 프리셋 저장의 개수와 각각의 풀·슬롯·사유**, (d) `drilldown_capped` 표시를 구조화된 형태로 담는다.
+**When** 인스턴스화가 완료되면, the 요약 보고 **shall** (a) 생성 프리셋의 풀·슬롯·이름, (b) 미매핑 역할 목록(사유 구분: `no_match`(후보 없음) / `ambiguous` / **`unaddressable`**(v0.3.2)), (c) **건너뛴 프리셋 저장의 개수와 각각의 풀·슬롯·사유**, (d) `drilldown_capped` 표시를 구조화된 형태로 담는다.
 
 - 대상 요구사항: `REQ-LOOKLIB-013`
 - **왜 유닛 레벨이 필요한가**: v0.1.0에서 REQ-013은 AC-014(LIVE)의 축약 표기 안에만 존재했다. 즉 **실물 콘솔 세션 없이는 이 요구를 검증할 방법이 없었다** — 라이브 접근이 확보되지 않으면 보고 형상이 미검증인 채로 남는다. 이 AC가 그 의존을 끊는다.
-- 검증 방법: `pytest server/tests/test_looks_instantiate.py -q` — fake rig + 인위적 충돌 슬롯 + 미매핑 역할 + 모호 매핑 + `drilldown_capped` 신호를 주입한 5개 시나리오에서 보고 dict의 (a)~(d) 필드를 개별 assert(design.md §6.2 병합 금지).
+- 검증 방법: `pytest server/tests/test_looks_instantiate.py -q` — fake rig + 인위적 충돌 슬롯 + 미매핑 역할 + 모호 매핑 + **미번호 그룹(`unaddressable`, v0.3.2 신설)** + `drilldown_capped` 신호를 주입한 **6개** 시나리오에서 보고 dict의 (a)~(d) 필드를 개별 assert(design.md §6.2 병합 금지).
   - **(a) 풀 단위 검증 (v0.3.0)**: 룩 1개 인스턴스화의 생성 프리셋이 **in-scope 풀 타입 수만큼**임을 assert — 기본 2개(Dimmer·Color), M0 GO 시 최대 4개. 각 항목이 풀 타입 · 슬롯 번호 · 라벨을 모두 갖는다. 풀 번호가 **테스트 픽스처의 preset_pools 데이터에서 유래**하고 코드에 리터럴로 박혀 있지 않음도 확인(결정 I 4항).
   - **(c) 스킵 카운트의 단위 assert (v0.3.0 — 결정 I 5항)**: **N은 건너뛴 프리셋 저장의 수이지 룩의 수가 아니다.** 결정적 시나리오: 한 룩의 **Color 슬롯은 비어 있고 Dimmer 슬롯만 점유된** fake rig를 주입 → 기대값은 `생성 1건(Color) + 건너뜀 1건(Dimmer)`이다. **룩 단위로 세는 구현은 여기서 실패한다** — 그런 구현은 "1개 건너뜀 + 생성 0건"(룩 전체 포기) 또는 "0개 건너뜀"(부분 성공을 전체 성공으로 위장)을 내놓기 때문이다. 이것이 REQ-013의 "부분 성공을 전체 성공으로 위장하지 않는다"의 기계적 형태다.
   - **(c) 사유 구분 assert (v0.3.0)**: 각 건너뜀 항목이 `conflict`(같은 룩 이름의 프리셋 존재 또는 슬롯 점유) 또는 `no_free_slot`(상한 내 빈 슬롯 미관측)의 사유를 갖고, N이 둘의 합과 일치. 사유를 잃은 합계만 있는 보고는 실패.
   - **(b) 모호 미매핑 assert (v0.3.0)**: 둘 이상 역할 힌트에 걸리는 그룹 이름을 주입하면 해당 역할이 `ambiguous` 사유로 미매핑 목록에 오르고, 그 역할 대상 커맨드가 0건.
-- 기대 결과: 5시나리오 × (a)~(d) 필드 전량 PASS (스킵 단위 결정 시나리오 포함)
+  - **(b) 미번호 미매핑 assert (v0.3.2 신설 — `unaddressable`)**: 어떤 역할에 **정확히 매칭되지만 `no` 키가 없는** 그룹(응답기가 슬롯을 확립하지 못한 경우 — `server/orchestrator/tools.py:185-211`)만 후보로 남는 fake rig를 주입하면, 그 역할이 **`unaddressable` 사유로** 미매핑 목록에 오르고(`no_match`가 **아니다**), 그 역할 대상 커맨드가 0건이다. **`no_match`로 접는 구현은 이 시나리오에서 실패한다** — 두 사유는 리그의 서로 다른 상태를 가리키고 조치 방법이 다르기 때문이다.
+    - **M4의 정의된 동작 (대체 금지)**: 어떤 역할의 유일한 후보가 `unaddressable`이면 M4는 그 역할을 **미매핑으로 취급해 커맨드를 만들지 않는다.** 다른 그룹으로의 대체·근사·번호 추정은 금지다(REQ-008 그룹 발명 금지 · AP-2). 이는 리졸버 계약의 귀결이기도 하다: **매핑됐다고 보고된 역할은 전부 주소를 가진다**(`GroupCandidate.number`가 옵셔널이 아님) — 따라서 M4에는 **리그가 주지 않은 주소를 발화할 수 있는 형상 자체가 없다**.
+- 기대 결과: 6시나리오 × (a)~(d) 필드 전량 PASS (스킵 단위 결정 시나리오 + `unaddressable` 시나리오 포함)
 
 ### AC-LOOKLIB-019 — 기존 안전 불변식 전체 상속 (REQ-021, 신설: 감사 D4)
 
@@ -340,6 +349,6 @@ the 룩 계층 **shall** 생성형 Lua 배포를 위한 제2 표면을 갖지 �
 6b. **역할 어휘 모듈이 6종 폐쇄 집합을 노출하고 6종 전부가 한/영 별칭 + 매핑 힌트 문자열을 갖는다**(AC-015 ①②). 힌트에 픽스처 타입 클래스 어휘(`워시`/`스팟`/`빔`)가 0건이다(AC-015 ④).
 6c. **라이브러리의 모든 attribute 이름이 in-scope 풀 패밀리로 귀속 가능**하고(AC-003 구간 4), 속성 페이로드가 **패밀리 단위로 분할 추출 가능**하다(AC-003 구간 5). `Pan`/`Tilt`는 무브먼트 안에서만 등장하며 어떤 풀에도 귀속되지 않는다(구간 2).
 6d. **v1 라이브러리에 무브먼트(페이저) 지정이 0건**이고, 그럼에도 **스키마 필드는 존재하며 왕복 가능**하다(AC-003 구간 6 (i)(ii) — v0.3.1 F3). 구간 2와 합쳐 v1 라이브러리의 `Pan`/`Tilt` 등장이 0이 되지만, 필드가 삭제된 것이 아니라 **v1이 쓰지 않는 것**임이 (ii)로 기계 구분되어 있다(빔 DESCOPE와 동형).
-7. 미매핑(후보 없음 / `ambiguous`)·충돌(`conflict` / `no_free_slot`)·폴백의 실패 방향이 전부 축소/보류임이 **각각 개별 테스트로** 고정되어 있다(추측 보완 경로 0). **"N개 건너뜀"의 N이 건너뛴 프리셋 저장 수와 일치**함이 부분 충돌 시나리오로 고정되어 있다(AC-018 (c) — 룩 단위로 세는 구현은 이 시나리오에서 실패한다).
+7. 미매핑(`no_match`(후보 없음) / `ambiguous` / **`unaddressable`**)·충돌(`conflict` / `no_free_slot`)·폴백의 실패 방향이 전부 축소/보류임이 **각각 개별 테스트로** 고정되어 있다(추측 보완 경로 0). **미매핑 사유 3종이 병합되지 않고 각각 살아 있다**(v0.3.2 — `unaddressable`을 `no_match`로 접는 구현은 AC-018 (b) 미번호 시나리오에서 실패한다). **"N개 건너뜀"의 N이 건너뛴 프리셋 저장 수와 일치**함이 부분 충돌 시나리오로 고정되어 있다(AC-018 (c) — 룩 단위로 세는 구현은 이 시나리오에서 실패한다).
 8. **PRESERVE 무변경 확인**: `server/safety/**`, `server/web/preview.py`, `server/rulebook/assets/v2.4.2/20_korean_terms.md`의 diff가 빈 출력이다.
 9. P1-1/P1-2 기능이 본 SPEC의 커밋 범위에 등장하지 않으며, **장르 묶음 런타임 실행·데모 시퀀스·익스큐터 바인딩·스트로브 값**도 등장하지 않는다(§D 범위 경계). **Position / All / Gobo / Control / Shapers / Video 풀 대상 `Store Preset` 발화도 0건**이고, **무브먼트(페이저) 필드를 프리셋으로 인스턴스화하는 경로도 0건**이며, **v1 라이브러리에 담긴 무브먼트 지정도 0건**이다(§D 신설 2절 + v0.3.1 F3 — 발화 경로와 수록 자체를 둘 다 막아, 선언된 축이 조용히 버려지는 상태가 성립하지 않는다).
