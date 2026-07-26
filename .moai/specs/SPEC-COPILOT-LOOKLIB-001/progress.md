@@ -645,7 +645,7 @@ push_performed: false            # 지시에 따라 푸시하지 않음
 
 # --- M4 후속: dedupe 예외 (M4가 발견하고 M4 파일 범위 밖에서 고친 결함) ---
 m4_followup_scope: "run_commands dedupe 예외 — 프로그래머 상태 커맨드"
-m4_followup_commit_sha: pending-backfill-m4-followup
+m4_followup_commit_sha: 4dd48e8
 m4_followup_complete_at: 2026-07-26
 m4_followup_files: 4             # tools.py(수정) + session.py(거부 해제) + 테스트 2
 m4_followup_baseline: "1 failed, 2111 passed"   # 착수 직전 직접 실측 (HEAD f0f6e76)
