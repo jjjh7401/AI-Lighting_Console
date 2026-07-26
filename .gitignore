@@ -237,3 +237,5 @@ dist-ssr/
 .vercel/
 .netlify/
 .firebase/
+# runtime state must never be committed under a SPEC dir
+.moai/specs/*/.moai/
