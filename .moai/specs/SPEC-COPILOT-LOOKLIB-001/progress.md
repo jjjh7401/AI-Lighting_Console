@@ -618,7 +618,7 @@ m2_commit_sha: 9b76fce
 m2_complete_at: 2026-07-26
 m3_commit_sha: 121e52b
 m3_complete_at: 2026-07-26
-m4_commit_sha: pending-backfill
+m4_commit_sha: f398d6b
 m4_complete_at: 2026-07-26
 ac_pass_count: 11                # 001, 015(M1) + 002, 003, 004(M2) + 005, 006(M3) + 007, 008, 016, 018(M4)
 ac_fail_count: 0
