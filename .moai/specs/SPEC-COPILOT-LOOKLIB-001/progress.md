@@ -654,7 +654,7 @@ m4_followup_mutation: "10/10"    # 생존 0건 · 대소문자 · 선두토큰 �
                                  # Fixture · Thru · +/- · Clear 제거 · ClearAll 제거 · prefix match
                                  # + 귀속 프로브 2건(Fixture 단독 · Clear.* 탐욕화)
 m4_followup_exempt_set: "ClearAll · Clear · Fixture/Group 맨 선택형"   # 열거형 · 선두 토큰 고정
-m4_followup_clear_commit_sha: pending-backfill-clear
+m4_followup_clear_commit_sha: f5dabdb
 fallback_shape_executable: true  # 거부 해제 · 21줄 번들 정확 왕복 (4 격리 사이클 보존)
 ```
 
