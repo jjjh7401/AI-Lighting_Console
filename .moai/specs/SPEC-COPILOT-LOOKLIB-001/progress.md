@@ -716,8 +716,8 @@ M0 ASSUMPTION-14 GO 형상(룩당 1회 캡처 + 풀 타입별 Store)이 기본�
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
-run_status: in-progress          # M1·M2·M3·M4·M5 완료 · M6~M7 미착수
-milestones_complete: [M0, M1, M2, M3, M4, M5]
+run_status: in-progress          # M1~M6 완료 · M7(LIVE) 미착수
+milestones_complete: [M0, M1, M2, M3, M4, M5, M6]
 m1_commit_sha: c1c1382
 m1_complete_at: 2026-07-26
 m2_commit_sha: 9b76fce
@@ -728,10 +728,13 @@ m4_commit_sha: f398d6b
 m4_complete_at: 2026-07-26
 m5_commit_sha: 00dfa91
 m5_complete_at: 2026-07-26
-ac_pass_count: 15                # 001, 015(M1) + 002, 003, 004(M2) + 005, 006(M3)
+m6_commit_sha: pending-backfill-m6
+m6_complete_at: 2026-07-26
+ac_pass_count: 18                # 001, 015(M1) + 002, 003, 004(M2) + 005, 006(M3)
                                  # + 007, 008, 016, 018(M4) + 010, 011, 012, 017(M5)
+                                 # + 009, 013, 019(M6)
 ac_fail_count: 0
-ac_pending_count: 4              # 009, 013, 019(M6) · 014(M7 LIVE)
+ac_pending_count: 1              # 014(M7 LIVE)
 preserve_list_post_run_count: 0  # PRESERVE 목록 위반 0건
 new_warnings_or_lints_introduced: 0   # ruff check: 신규·수정 4파일 전부 clean
                                       # ruff format: 저작 2파일 clean. tools.py/test_tools.py의
@@ -760,6 +763,73 @@ resolver_unmapped_reasons: 5     # no_match · ambiguous · unaddressable(신설
 skip_reasons: 4                  # conflict · no_free_slot + M4 신설 pool_unresolved · pool_unaddressable
 capture_shape_default: shared_capture   # M0 ASSUMPTION-14 GO · FALLBACK도 같은 데이터에서 생성 가능
 push_performed: false            # 지시에 따라 푸시하지 않음
+
+# --- M6: 회귀 + 경계 전체 그린 (AC-009 · AC-013 · AC-019) ---
+# 측정 조건 주석: 모든 수치에 onPC 상태를 붙인다. 이 SPEC 내내 "사전 실패 1건"으로
+# 이월돼 온 test_every_candidate_socket_is_released가 환경 의존이었기 때문이다.
+m6_onpc_state: "RUNNING (app_gma3 pid 38963 · UDP *:8000 + *:9005) — 기준선·최종 측정 양쪽 동일"
+m6_baseline_pytest: "1 failed, 2211 passed"    # M6 착수 직전 직접 실측 (HEAD a2c2381, onPC RUNNING)
+m6_post_pytest: "2218 passed"                  # 최종 (onPC RUNNING) — 본 SPEC 최초의 전량 그린
+m6_new_failures: 0
+m6_delta_accounting: "2211 pass + 회복 1 + 신규 6 = 2218 · 잔여 실패 0"
+m6_baseline_vitest: "223 passed (13 files)"    # M1 이후 첫 실행 — 기준선 자체가 그린
+m6_post_vitest: "223 passed (13 files)"        # 무변경 (UI 미수정)
+m6_files: 2                      # 테스트만: test_web_reply_discovery.py · test_looks_instantiate.py
+m6_production_code_changes: 0    # 프로덕션 코드 무수정 — 뮤테이션은 전부 즉시 복원 확인
+
+# AC-009 LiveLock 강등: 상속 주장을 테스트로 전환 (신규 6건)
+m6_ac009_tests: 6                # TestLookBundleUnderLiveLock (test_looks_instantiate.py)
+m6_ac009_mutation: "4/5 kill · 1 생존→테스트 수정 후 kill"
+                                 # L1(게이트 lock 검사 무력화) · L2(프리뷰를 screen 뒤로) ·
+                                 # L3(제안 카드 첫 줄만) · L4(프리뷰 제거)
+m6_ac009_finding_defense_in_depth: true
+  # L1(gate.screen의 lock 검사 무력화)에도 console.executed == [] 가 유지됐다. 원인은
+  # 실행기의 送信 직전 lock 재확인(gate.py lock-FIRST)이라는 두 번째 독립 방어선이다.
+  # 즉 "송신 0건"은 단일 지점 고장에 대해 견디며, 그 사실 자체가 L1 생존으로 실측됐다.
+m6_ac009_finding_order_assertion_was_wrong: true
+  # REQ-021 "스크리닝 전 프리뷰 발화"를 처음에 "preview 이벤트가 proposal 이벤트보다
+  # 앞선다"로 적었고, 이는 같은 것이 아니다 — 두 콜백 모두 screen() 반환 뒤에 고정 순서로
+  # 발화하므로, 프리뷰를 게이트 뒤로 옮기는 뮤테이션(L2)에서 그대로 통과했다(실측 생존).
+  # gate.screen 진입 시점의 이벤트 목록을 관측하는 방식으로 교체한 뒤 L2가 kill됐다.
+  # 본 SPEC에서 같은 결함류(검증 수단이 자기 주장을 검사하지 못함) 4번째 사례.
+
+# AC-013 전체 회귀 + 사전 실패 규명 (환경 의존이었다)
+m6_discovery_test_root_cause: "환경 의존 — 결함 아님"
+  # reply_discovery._bind_candidate는 SO_REUSEADDR를 세우고(실 수신기 모사), onPC는
+  # *:9005를 와일드카드로 점유한다. 그래서 9005는 listened에 들어가지만, 테스트의
+  # 평범한(SO_REUSEADDR 없는) 재바인드는 누수와 똑같은 Errno 48을 낸다.
+  # 결정적 근거: 9005는 discovery 실행 "전"에 이미 평범 바인드 불가였고 실행 후에도
+  # 동일했다 — 상태 무변화이므로 discovery가 원인일 수 없다.
+m6_discovery_fix: "실행 전 평범-바인드 가능 포트만 사후 검사 대상으로 삼음 + 비공허성 assert"
+m6_discovery_mutation: "6/7 kill · 1 생존(설계상 관측 불가)"
+  # kill: 전체 누수 · 마지막 포트(8995)만 누수 · checked=[] 강제 · 제외 되돌림(사전 형상) ·
+  #       _plain_bindable에 SO_REUSEADDR 부여 / skip 분기 발화 확인
+  # 생존: 외부 점유 중인 9005만 누수시킨 경우 — 아래 잔여 참조
+m6_discovery_residual_gap: "외부 프로세스가 점유한 포트의 누수는 관측 불가(9005). 단 수정 전
+  테스트도 그 포트에서는 누수/비누수를 구분하지 못한 채 항상 실패했으므로 판별력 손실은 0이며,
+  onPC 부재 시 9005는 free_before에 들어가 검사 대상이 된다."
+
+# 경계·PRESERVE 재확인 (M4 소유 판정의 회귀 재확인)
+m6_boundary_grep_ac008_2: 0      # grep -rn "bridge.osc|from server.bridge" server/looks/ → 0건
+                                 # (pythonosc까지 넓혀도 0건)
+m6_ast_scan_ac008_3: "offender 0 · test_looks_boundary.py + test_architecture.py 17 passed"
+m6_preserve_diff: "server/safety/ · server/bridge/ · console/ · ui/ · server/web/preview.py 전부 빈 출력"
+m6_unmapped_reasons_regression: "42 passed"   # no_match · ambiguous · unaddressable 병합 없음
+m6_ac019_command: "test_safety_gate.py + test_web_panel_execute.py → 95 passed"
+m6_ac019_preview: "test_web_preview.py → 5 passed"
+
+# AC-012 회귀 재확인 (소유는 M5)
+m6_prefix_bytes_recheck: 25005   # M5 기록치와 일치 — 안내 축 이후 추가 변동 0
+m6_prefix_tests: "test_rulebook.py 20 passed + test_looks_matching.py 프리픽스 8 passed"
+                                 # M5 지적 유지: TestPrefixStability는 조립본끼리 비교하므로
+                                 # 자산 드리프트를 못 잡는다 — 내용 부재 테스트가 그 몫을 맡는다
+
+# 린트 귀속 (지시서 전제를 실측으로 정정)
+m6_ruff_check: "내 2파일 clean · 저장소 전체 3건(E501) — HEAD와 동일, 신규 0"
+m6_ruff_format_correction: "저장소 전체 `ruff format --check`는 25개 파일이 red다(4개 지점이
+  아니다). HEAD a2c2381에서 stash 후 재측정해 파일 목록이 바이트 동일함을 확인했고, 내가 만든
+  신규 offender는 0이다. M5 §E.3의 '2파일 4지점'은 저장소 전체가 아니라 M5가 만진 파일로
+  한정된 수치였다. tools.py·test_tools.py는 그 25개 안에 포함된다."
 
 # --- M4 후속: dedupe 예외 (M4가 발견하고 M4 파일 범위 밖에서 고친 결함) ---
 m4_followup_scope: "run_commands dedupe 예외 — 프로그래머 상태 커맨드"

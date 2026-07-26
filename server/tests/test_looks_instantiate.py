@@ -39,6 +39,7 @@ from server.orchestrator.tools import (
     rig_object,
     rig_section,
 )
+from server.safety.lock import LiveLock
 
 # -- rig assembly -------------------------------------------------------------
 #
@@ -929,6 +930,114 @@ class TestSessionWiring:
         result = session.run_look_bundle(_plan(look, _groups((11, "Back")), pools))
         assert result["report"]["skipped_count"] == 1
         assert result["report"]["complete"] is False
+
+
+class TestLookBundleUnderLiveLock:
+    """AC-LOOKLIB-009 / REQ-LOOKLIB-020 — the look path demotes like every other.
+
+    The claim under test is an inheritance: ``run_look_bundle`` reaches the
+    console through ``run_commands``, so it "should" pick up the lock for free.
+    That is an argument, not an observation, and M4 wired the caller without
+    ever firing a locked bundle through it.
+
+    Placed beside TestSessionWiring rather than in ``test_safety_gate.py``
+    because the plan builders above are what make a bundle LOOK-originated, and
+    importing them into the gate suite would close an import cycle
+    (test_looks_instantiate -> test_web_session -> test_safety_gate). The
+    PATTERN is that file's TestLiveLock: activate, then assert zero console
+    sends and a proposal card.
+    """
+
+    @staticmethod
+    def _locked_session(tmp_path):
+        from .test_runner_self_correction import ScriptedProvider
+        from .test_web_session import _session
+
+        lock = LiveLock()
+        lock.activate()
+        session, console, audit, sent, _channel = _session(
+            tmp_path, ScriptedProvider([]), lock=lock
+        )
+        return session, console, audit, sent, lock
+
+    @staticmethod
+    def _bundle():
+        return _plan(_look(attributes=(("Dimmer", 50),)), _groups((11, "Back")), _pools())
+
+    def test_a_locked_look_bundle_sends_nothing(self, tmp_path):
+        session, console, _audit, _sent, _lock = self._locked_session(tmp_path)
+        plan = self._bundle()
+        # Non-empty first: a zero-send verdict on an empty bundle proves nothing.
+        assert plan.commands
+        result = session.run_look_bundle(plan)
+        assert console.executed == []
+        assert result["executed"] is False
+
+    def test_the_lock_proposes_the_whole_bundle_rather_than_a_prefix(self, tmp_path):
+        session, _console, _audit, sent, _lock = self._locked_session(tmp_path)
+        plan = self._bundle()
+        session.run_look_bundle(plan)
+        proposals = [event for event in sent if event.get("type") == "proposal"]
+        assert len(proposals) == 1
+        assert proposals[0]["commands"] == list(plan.commands)
+
+    def test_the_execution_preview_fires_before_the_screening(self, tmp_path):
+        # REQ-LOOKLIB-021 names this invariant explicitly, and it is about the
+        # GATE CALL, not the card: the preview must already be out when
+        # gate.screen() is entered. Asserting "preview event precedes proposal
+        # event" instead LOOKS equivalent and is not — both callbacks fire after
+        # the screen returns, in their own fixed order, so that phrasing stays
+        # green with the preview moved behind the gate (measured: it survived
+        # exactly that mutation). So observe the gate itself.
+        session, _console, _audit, sent, _lock = self._locked_session(tmp_path)
+        gate = session._gate
+        surface_at_screen_time: list[list[str]] = []
+        real_screen = gate.screen
+
+        def _spy(commands):
+            surface_at_screen_time.append([event.get("type") for event in sent])
+            return real_screen(commands)
+
+        gate.screen = _spy
+        session.run_look_bundle(self._bundle())
+        assert surface_at_screen_time, "gate.screen never ran for a look bundle"
+        assert "execution_preview" in surface_at_screen_time[0]
+
+    def test_the_proposal_card_follows_the_preview_on_the_surface(self, tmp_path):
+        # Weaker than the above and kept for what it does pin: the operator sees
+        # the bundle before they see the verdict on it.
+        session, _console, _audit, sent, _lock = self._locked_session(tmp_path)
+        session.run_look_bundle(self._bundle())
+        types = [event.get("type") for event in sent]
+        assert "execution_preview" in types
+        assert "proposal" in types
+        assert types.index("execution_preview") < types.index("proposal")
+
+    def test_unlocking_restores_the_console_path_for_the_same_bundle(self, tmp_path):
+        # Control: proves the zero above is caused by the LOCK and not by a plan
+        # that was never going to send anything.
+        session, console, _audit, _sent, lock = self._locked_session(tmp_path)
+        plan = self._bundle()
+        session.run_look_bundle(plan)
+        assert console.executed == []
+        lock.deactivate()
+        assert session.run_look_bundle(plan)["executed"] is True
+        assert console.executed == list(plan.commands)
+
+    def test_the_per_family_shape_is_demoted_whole(self, tmp_path):
+        # The FALLBACK capture shape is the long multi-cycle bundle. The lock has
+        # to swallow every cycle, not just the one that reaches the gate first.
+        session, console, _audit, sent, _lock = self._locked_session(tmp_path)
+        plan = _plan(
+            _look(attributes=FOUR_FAMILY_ATTRIBUTES),
+            _groups((11, "Back")),
+            _pools(),
+            shape=CAPTURE_PER_FAMILY,
+        )
+        session.run_look_bundle(plan)
+        assert console.executed == []
+        proposals = [event for event in sent if event.get("type") == "proposal"]
+        assert proposals[0]["commands"] == list(plan.commands)
 
 
 class TestComposition:

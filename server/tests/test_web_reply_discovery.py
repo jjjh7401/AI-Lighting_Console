@@ -51,6 +51,25 @@ def _send_to(port: int, payload: bytes = b"/copilot/feedback\x00\x00\x00,s\x00\x
         sock.close()
 
 
+def _plain_bindable(port: int) -> bool:
+    """True when a PLAIN socket can take this port right now.
+
+    Plain — no ``SO_REUSEADDR`` — on purpose, and the difference is the whole
+    point. ``reply_discovery._bind_candidate`` DOES set it, which is what lets
+    discovery listen on a port an external process holds by wildcard. So
+    "discovery could bind it" and "nothing else holds it" are different
+    questions, and only the plain bind answers the second one.
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.bind(("127.0.0.1", port))
+    except OSError:
+        return False
+    finally:
+        sock.close()
+    return True
+
+
 def _bindable_candidate(preferred: int) -> int:
     """A candidate port nothing else on this host currently holds.
 
@@ -62,14 +81,8 @@ def _bindable_candidate(preferred: int) -> int:
     there. Falls back through the rest of the candidate set, then skips.
     """
     for port in (preferred, *candidate_ports(receive_port=CONFIGURED, console_port=CONSOLE)):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            sock.bind(("127.0.0.1", port))
-        except OSError:
-            continue
-        finally:
-            sock.close()
-        return port
+        if _plain_bindable(port):
+            return port
     pytest.skip("every reply-discovery candidate port is held by another process")
 
 
@@ -175,6 +188,23 @@ class TestDiscovery:
         assert result.observed_port == neighbour
 
     def test_every_candidate_socket_is_released(self):
+        # Which ports were free BEFORE discovery ran. Without this the assertion
+        # below cannot test what it claims: discovery binds with SO_REUSEADDR, so
+        # ``listened`` includes ports an EXTERNAL process holds by wildcard, and a
+        # plain post-bind on one of those raises the same Errno 48 a leaked
+        # listener would. Measured 2026-07-26 with grandMA3 onPC running: it holds
+        # ``*:9005`` — inside this 8995-9005 window — and 9005 was plain-unbindable
+        # both before and after the run, i.e. unchanged, i.e. not leaked. Same
+        # hazard the 2026-07-25 stray-dev-server incident recorded on
+        # ``_bindable_candidate``; this test had never been given the defence.
+        free_before = tuple(
+            port
+            for port in candidate_ports(receive_port=CONFIGURED, console_port=CONSOLE)
+            if _plain_bindable(port)
+        )
+        if not free_before:
+            pytest.skip("every reply-discovery candidate port is held by another process")
+
         def _ping() -> None:
             _send_to(9001)
 
@@ -186,8 +216,15 @@ class TestDiscovery:
             timeout=1.0,
         )
         # A leaked listener would squat a port the operator may later configure,
-        # turning a diagnosis into the very failure it diagnoses.
-        for port in result.listened:
+        # turning a diagnosis into the very failure it diagnoses. Only ports this
+        # host was NOT already holding can carry that verdict — an externally-held
+        # port is a hole in the observation, never evidence of a leak.
+        checked = [port for port in result.listened if port in free_before]
+        assert checked, (
+            "no candidate was both free beforehand and listened on — the release "
+            "assertion below would pass without observing anything"
+        )
+        for port in checked:
             probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             try:
                 probe.bind(("127.0.0.1", port))
