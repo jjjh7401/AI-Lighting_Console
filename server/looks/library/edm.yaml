@@ -1,0 +1,156 @@
+# Built-in look library — EDM (REQ-LOOKLIB-002).
+#
+# See worship.yaml for the shared authoring rules (full RGB always, roles never
+# numbers, no movement, percent values).
+#
+# WHAT AN EDM SET NEEDS: a build and a drop, and the drop has to feel like a
+# different room than the build did. Nine looks, weighted toward the top of the
+# scale — three at dynamics 4-5, because a set plays several drops and they
+# should not all be the same colour.
+#
+# THE BUILD NARROWS, THE DROP OPENS. Optics carry the tension here: the riser
+# closes the iris toward a pin while intensity climbs, and the drop throws it
+# fully open on the beat. That contrast is the mechanism; the colour change
+# alone does not land it.
+#
+# STROBE-FAMILY EFFECTS ARE OUT OF SCOPE (spec.md §D) — the preview classifier
+# rates them dangerous, so the drops here are built from intensity, saturation
+# and beam width instead. That is a real constraint on this genre and it is
+# worth knowing it was a decision rather than an omission.
+#
+# 프론트 appears in only one look. The audience faces a booth, not a portrait;
+# lighting the operator flat is neither wanted nor flattering. The exception is
+# the breakdown, where the crowd should be able to see who is up there.
+schema_version: 1
+
+looks:
+  # --- dynamics 1-2: the bed ------------------------------------------------
+  - look_id: "edm-ambient-hold"
+    display_name: "앰비언트 홀드"
+    genre: "edm"
+    dynamics: 1
+    roles: ["배경"]
+    aliases: ["앰비언트 홀드", "ambient hold", "대기"]
+    mood_keywords: ["어두운", "차가운", "대기", "정적", "ambient", "hold"]
+    attributes:
+      Dimmer: 20
+      ColorRGB_R: 0
+      ColorRGB_G: 55
+      ColorRGB_B: 70
+
+  - look_id: "edm-intro-bed"
+    display_name: "인트로 베드"
+    genre: "edm"
+    dynamics: 2
+    roles: ["배경", "탑"]
+    aliases: ["인트로 베드", "intro bed", "보라 인트로"]
+    mood_keywords: ["보랏빛", "낮은", "인트로", "잠잠한", "violet", "intro"]
+    attributes:
+      Dimmer: 45
+      ColorRGB_R: 55
+      ColorRGB_G: 12
+      ColorRGB_B: 100
+
+  - look_id: "edm-groove-cyan"
+    display_name: "그루브 시안"
+    genre: "edm"
+    dynamics: 2
+    roles: ["사이드", "백라이트"]
+    aliases: ["그루브 시안", "groove cyan", "청록 그루브"]
+    mood_keywords: ["시원한", "청록", "그루브", "일렁이는", "cyan", "groove"]
+    attributes:
+      Dimmer: 55
+      ColorRGB_R: 0
+      ColorRGB_G: 92
+      ColorRGB_B: 100
+
+  - look_id: "edm-breakdown-deep"
+    display_name: "브레이크다운"
+    genre: "edm"
+    dynamics: 2
+    # The one look with 프론트 — see the header note.
+    roles: ["배경", "프론트"]
+    aliases: ["브레이크다운", "breakdown", "깊은 파랑"]
+    mood_keywords: ["깊은", "푸른", "숨고르는", "브레이크다운", "deep", "breakdown"]
+    attributes:
+      Dimmer: 42
+      ColorRGB_R: 12
+      ColorRGB_G: 25
+      ColorRGB_B: 85
+
+  # --- dynamics 3: the build ------------------------------------------------
+  - look_id: "edm-build-magenta"
+    display_name: "빌드 마젠타"
+    genre: "edm"
+    dynamics: 3
+    roles: ["백라이트", "사이드", "탑"]
+    aliases: ["빌드 마젠타", "build magenta", "고조"]
+    mood_keywords: ["고조되는", "마젠타", "긴장되는", "빌드업", "building", "tense"]
+    attributes:
+      Dimmer: 72
+      ColorRGB_R: 100
+      ColorRGB_G: 0
+      ColorRGB_B: 85
+      Zoom: 35
+
+  - look_id: "edm-riser-white"
+    display_name: "라이저 화이트"
+    genre: "edm"
+    dynamics: 3
+    # Iris closing toward a pin while intensity climbs — the tension mechanism.
+    roles: ["백라이트", "탑", "배경"]
+    aliases: ["라이저", "riser white", "직전"]
+    mood_keywords: ["조여드는", "새하얀", "직전", "라이저", "riser", "tightening"]
+    attributes:
+      Dimmer: 78
+      ColorRGB_R: 100
+      ColorRGB_G: 100
+      ColorRGB_B: 100
+      Iris: 38
+      Zoom: 20
+
+  # --- dynamics 4-5: the drops ---------------------------------------------
+  - look_id: "edm-drop-acid"
+    display_name: "드랍 애시드"
+    genre: "edm"
+    dynamics: 4
+    roles: ["백라이트", "사이드", "탑", "배경"]
+    aliases: ["드랍 애시드", "drop acid", "형광 드랍"]
+    mood_keywords: ["형광", "쏘는", "노랑초록", "드랍", "acid", "drop"]
+    attributes:
+      Dimmer: 90
+      ColorRGB_R: 72
+      ColorRGB_G: 100
+      ColorRGB_B: 0
+      Zoom: 18
+
+  - look_id: "edm-drop-crimson"
+    display_name: "드랍 크림슨"
+    genre: "edm"
+    dynamics: 5
+    roles: ["백라이트", "프론트", "사이드", "탑", "배경", "스페셜"]
+    aliases: ["드랍 크림슨", "drop crimson", "붉은 드랍"]
+    mood_keywords: ["새빨간", "압도적인", "드랍", "절정", "crimson", "drop"]
+    attributes:
+      Dimmer: 100
+      ColorRGB_R: 100
+      ColorRGB_G: 0
+      ColorRGB_B: 15
+      Zoom: 10
+
+  - look_id: "edm-drop-beams"
+    display_name: "드랍 빔"
+    genre: "edm"
+    dynamics: 5
+    # The tightest look in the library. Iris fully open, beams at their
+    # narrowest: hard shafts rather than a wash.
+    roles: ["백라이트", "사이드", "탑"]
+    aliases: ["드랍 빔", "drop beams", "빔 드랍"]
+    mood_keywords: ["날카로운", "차가운", "쏟아지는", "드랍", "빔", "beams", "hard"]
+    attributes:
+      Dimmer: 100
+      ColorRGB_R: 70
+      ColorRGB_G: 88
+      ColorRGB_B: 100
+      Iris: 100
+      Zoom: 5

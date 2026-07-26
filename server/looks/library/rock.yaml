@@ -1,0 +1,141 @@
+# Built-in look library — rock (REQ-LOOKLIB-002).
+#
+# See worship.yaml for the shared authoring rules (full RGB always, roles never
+# numbers, no movement, percent values).
+#
+# WHAT A ROCK SET NEEDS: a verse state that is dark and side-lit, a chorus that
+# is a wall of light, and a last one that goes further than the chorus did.
+#
+# THE VERSE LOOKS DELIBERATELY OMIT 프론트. Leaving faces dark and lighting from
+# the sides and behind is what makes a rock verse read as a rock verse — the
+# band is shape and edge, not portrait. 프론트 arrives with the chorus, and the
+# contrast is the whole effect. This is a design choice, not an oversight.
+#
+# Saturation is the other axis. Verses sit on one strong hue; the chorus goes to
+# full red; the last look goes to white. That deep-colour-to-white arc is the
+# rulebook mood table's "dramatic / build" row, spread across the dynamics scale.
+schema_version: 1
+
+looks:
+  # --- dynamics 1: between songs -------------------------------------------
+  - look_id: "rock-empty-stage"
+    display_name: "빈 무대"
+    genre: "rock"
+    dynamics: 1
+    # Backdrop only, low and dirty. Enough to see the stage exists.
+    roles: ["배경"]
+    aliases: ["빈 무대", "empty stage", "암전 직전"]
+    mood_keywords: ["어두운", "붉은", "정적", "무대 전환", "dark", "moody"]
+    attributes:
+      Dimmer: 25
+      ColorRGB_R: 60
+      ColorRGB_G: 8
+      ColorRGB_B: 30
+
+  # --- dynamics 2: the verse -----------------------------------------------
+  - look_id: "rock-verse-side"
+    display_name: "벌스 사이드"
+    genre: "rock"
+    dynamics: 2
+    # No 프론트 on purpose — see the header note.
+    roles: ["사이드", "백라이트"]
+    aliases: ["벌스 사이드", "verse side", "차가운 벌스"]
+    mood_keywords: ["차가운", "날카로운", "벌스", "강철", "cold", "edgy"]
+    attributes:
+      Dimmer: 48
+      ColorRGB_R: 20
+      ColorRGB_G: 45
+      ColorRGB_B: 95
+
+  - look_id: "rock-verse-amber-grit"
+    display_name: "거친 앰버 벌스"
+    genre: "rock"
+    dynamics: 2
+    # The warm counterpart to the cold verse, for a set that needs both.
+    roles: ["사이드", "탑"]
+    aliases: ["거친 앰버", "amber grit", "따뜻한 벌스"]
+    mood_keywords: ["거친", "따뜻한", "탁한", "벌스", "gritty", "warm"]
+    attributes:
+      Dimmer: 52
+      ColorRGB_R: 100
+      ColorRGB_G: 45
+      ColorRGB_B: 8
+
+  # --- dynamics 3: the pre-chorus lift --------------------------------------
+  - look_id: "rock-prechorus-build"
+    display_name: "프리코러스 빌드"
+    genre: "rock"
+    dynamics: 3
+    roles: ["백라이트", "사이드", "탑"]
+    aliases: ["프리코러스", "prechorus build", "빌드"]
+    mood_keywords: ["고조되는", "달아오르는", "마젠타", "프리코러스", "building", "hot"]
+    attributes:
+      Dimmer: 72
+      ColorRGB_R: 95
+      ColorRGB_G: 15
+      ColorRGB_B: 70
+
+  - look_id: "rock-riff-green"
+    display_name: "리프 그린"
+    genre: "rock"
+    dynamics: 3
+    # Tight beams for an instrumental break — the narrowest of the rock set
+    # short of the final look.
+    roles: ["백라이트", "사이드"]
+    aliases: ["리프 그린", "riff green", "기타 솔로"]
+    mood_keywords: ["날선", "형광", "초록", "리프", "솔로", "acid", "sharp"]
+    attributes:
+      Dimmer: 70
+      ColorRGB_R: 25
+      ColorRGB_G: 100
+      ColorRGB_B: 30
+      Zoom: 15
+
+  # --- dynamics 4-5: chorus and the blowout --------------------------------
+  - look_id: "rock-chorus-hit"
+    display_name: "코러스 히트"
+    genre: "rock"
+    dynamics: 4
+    # 프론트 arrives. Saturated red, four roles, punch.
+    roles: ["백라이트", "프론트", "사이드", "탑"]
+    aliases: ["코러스 히트", "chorus hit", "빨강 코러스"]
+    mood_keywords: ["강렬한", "빨간", "터지는", "코러스", "intense", "red"]
+    attributes:
+      Dimmer: 92
+      ColorRGB_R: 100
+      ColorRGB_G: 12
+      ColorRGB_B: 12
+      Zoom: 25
+
+  - look_id: "rock-chorus-white-slam"
+    display_name: "화이트 슬램"
+    genre: "rock"
+    dynamics: 4
+    # Every role, raw white. The alternative chorus for a song that has already
+    # spent its colour.
+    roles: ["백라이트", "프론트", "사이드", "탑", "배경", "스페셜"]
+    aliases: ["화이트 슬램", "white slam", "백색 코러스"]
+    mood_keywords: ["눈부신", "새하얀", "때리는", "코러스", "blinding", "white"]
+    attributes:
+      Dimmer: 95
+      ColorRGB_R: 100
+      ColorRGB_G: 100
+      ColorRGB_B: 100
+      Iris: 100
+      Zoom: 20
+
+  - look_id: "rock-final-blowout"
+    display_name: "마지막 폭발"
+    genre: "rock"
+    dynamics: 5
+    # Goes past the chorus: full intensity, cool-white edge, tightest beams.
+    roles: ["백라이트", "프론트", "사이드", "탑", "배경", "스페셜"]
+    aliases: ["마지막 폭발", "final blowout", "엔딩"]
+    mood_keywords: ["폭발적인", "최고조", "엔딩", "격렬한", "explosive", "finale"]
+    attributes:
+      Dimmer: 100
+      ColorRGB_R: 88
+      ColorRGB_G: 96
+      ColorRGB_B: 100
+      Iris: 100
+      Zoom: 10

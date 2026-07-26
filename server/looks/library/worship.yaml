@@ -1,0 +1,157 @@
+# Built-in look library — worship (REQ-LOOKLIB-002).
+#
+# Static, repo-shipped, comment-bearing rule data, following the pattern of
+# server/safety/blacklist.yaml. Loaded by server/looks/loader.py.
+#
+# WHAT A WORSHIP SET NEEDS, in the order a service actually moves: a quiet room
+# to pray in, a readable stage for the word, a warm intimate verse, a build,
+# a full-band chorus, and one moment where everything opens. The eight looks
+# below cover that arc from dynamics 1 to 5.
+#
+# COLOUR IS ALWAYS FULLY SPECIFIED. Every look names ColorRGB_R, _G and _B.
+# Storing a preset after setting only one channel captures the whole colour
+# family, so a look naming only red arrives on the console as WHITE. Naming one
+# channel is not "less colour" — it is a different colour than intended.
+#
+# NO STAGE POSITION IS EVER A NUMBER. Positions are the six closed roles
+# (백라이트 / 프론트 / 사이드 / 탑 / 배경 / 스페셜); the rig binding happens at
+# instantiation time (REQ-LOOKLIB-004).
+#
+# NO MOVEMENT. The v1 bundle does not emit the movement field, so a look
+# declaring it would have its declared axis dropped while the run still reports
+# success (design.md AP-18). The schema field stays defined for successor SPECs.
+#
+# Values are percent. Zoom low = tight beam, high = wide wash; Iris low = closed,
+# high = open. The M0 probe confirmed the console ACCEPTS 'Zoom' and 'Iris'; it
+# did not measure which end of each range is which, so both are used sparingly
+# and only where a wrong direction would be a cosmetic miss.
+#
+# These values refine the rulebook mood table (31_choreography_patterns.md) —
+# they do not contradict it. Two refinements are deliberate: (a) the table's
+# amber recipe says "G low", which yields near-red; real amber wants G in the
+# 60-75 band, so that is what is used here; (b) the table has no dynamics axis,
+# so its single "warm / ballad / intimate 40-70%" row is stretched across
+# levels here — a worship chorus IS brighter than a worship verse.
+schema_version: 1
+
+looks:
+  # --- dynamics 1: the room before anything starts -------------------------
+  - look_id: "worship-prayer-wash"
+    display_name: "기도 웨시"
+    genre: "worship"
+    dynamics: 1
+    # Backdrop and top only. Nothing on faces: people are praying, not watching.
+    roles: ["배경", "탑"]
+    aliases: ["기도", "prayer wash", "prayer"]
+    mood_keywords: ["고요한", "경건한", "어두운", "기도", "묵상", "quiet", "reverent"]
+    attributes:
+      Dimmer: 22
+      ColorRGB_R: 18
+      ColorRGB_G: 20
+      ColorRGB_B: 60
+      Zoom: 72
+
+  - look_id: "worship-scripture-key"
+    display_name: "말씀 조명"
+    genre: "worship"
+    dynamics: 1
+    # Front plus a key: the reader must be legible while the room stays still.
+    roles: ["프론트", "스페셜"]
+    aliases: ["말씀", "성경봉독", "scripture"]
+    mood_keywords: ["차분한", "또렷한", "말씀", "낭독", "clear", "still"]
+    attributes:
+      Dimmer: 45
+      ColorRGB_R: 100
+      ColorRGB_G: 88
+      ColorRGB_B: 70
+      Iris: 58
+
+  # --- dynamics 2: the intimate verse --------------------------------------
+  - look_id: "worship-quiet-amber"
+    display_name: "잔잔한 앰버"
+    genre: "worship"
+    dynamics: 2
+    roles: ["프론트", "배경"]
+    aliases: ["잔잔한 앰버", "quiet amber", "따뜻한 벌스"]
+    mood_keywords: ["따뜻한", "포근한", "잔잔한", "인트로", "벌스", "warm", "intimate"]
+    attributes:
+      Dimmer: 55
+      ColorRGB_R: 100
+      ColorRGB_G: 66
+      ColorRGB_B: 22
+
+  - look_id: "worship-blue-verse"
+    display_name: "푸른 벌스"
+    genre: "worship"
+    dynamics: 2
+    # Backlight-led: the team reads as silhouette, which keeps a still verse still.
+    roles: ["백라이트", "배경"]
+    aliases: ["푸른 벌스", "blue verse", "새벽"]
+    mood_keywords: ["서늘한", "고요한", "새벽", "푸른", "벌스", "cool", "calm"]
+    attributes:
+      Dimmer: 50
+      ColorRGB_R: 25
+      ColorRGB_G: 55
+      ColorRGB_B: 100
+
+  # --- dynamics 3: the build ------------------------------------------------
+  - look_id: "worship-rising-warmth"
+    display_name: "차오르는 온기"
+    genre: "worship"
+    dynamics: 3
+    # Sides enter here — the first time the stage gains width.
+    roles: ["프론트", "백라이트", "사이드"]
+    aliases: ["차오르는 온기", "rising warmth", "빌드업"]
+    mood_keywords: ["차오르는", "따뜻한", "고조되는", "빌드업", "building", "warm"]
+    attributes:
+      Dimmer: 70
+      ColorRGB_R: 100
+      ColorRGB_G: 72
+      ColorRGB_B: 38
+
+  - look_id: "worship-open-sky"
+    display_name: "열린 하늘"
+    genre: "worship"
+    dynamics: 3
+    roles: ["배경", "탑", "백라이트"]
+    aliases: ["열린 하늘", "open sky", "하늘"]
+    mood_keywords: ["시원한", "탁 트인", "밝은", "하늘", "소망", "open", "bright"]
+    attributes:
+      Dimmer: 72
+      ColorRGB_R: 55
+      ColorRGB_G: 85
+      ColorRGB_B: 100
+      Zoom: 80
+
+  # --- dynamics 4-5: chorus and the moment everything opens ----------------
+  - look_id: "worship-golden-chorus"
+    display_name: "금빛 코러스"
+    genre: "worship"
+    dynamics: 4
+    # Five roles. The key stays out so the chorus reads as the whole band,
+    # not as one person.
+    roles: ["백라이트", "프론트", "사이드", "탑", "배경"]
+    aliases: ["금빛 코러스", "golden chorus", "웅장한 금색"]
+    mood_keywords: ["웅장한", "금색", "벅찬", "코러스", "찬양", "golden", "majestic"]
+    attributes:
+      Dimmer: 88
+      ColorRGB_R: 100
+      ColorRGB_G: 78
+      ColorRGB_B: 30
+      Zoom: 45
+
+  - look_id: "worship-glory-climax"
+    display_name: "영광의 클라이맥스"
+    genre: "worship"
+    dynamics: 5
+    # Everything, warm-biased white rather than raw white: worship peaks warm.
+    roles: ["백라이트", "프론트", "사이드", "탑", "배경", "스페셜"]
+    aliases: ["영광", "glory", "클라이맥스", "최고조"]
+    mood_keywords: ["압도적인", "영광스러운", "환한", "클라이맥스", "절정", "glory", "climax"]
+    attributes:
+      Dimmer: 100
+      ColorRGB_R: 100
+      ColorRGB_G: 94
+      ColorRGB_B: 82
+      Iris: 100
+      Zoom: 32

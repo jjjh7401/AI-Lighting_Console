@@ -394,26 +394,52 @@ REQ-LOOKLIB-013의 보고 요소(생성 프리셋의 풀/슬롯/이름, 미매�
 
 **M2로 이월되는 항목 1건 (신규 발견 아님, 경계 확인)**: AC-LOOKLIB-003 구간 6-i("라이브러리 무브먼트 0건")는 라이브러리가 없으므로 M2 소관이다. M1은 그 짝인 6-ii(**스키마 필드 존재 + 왕복 가능**)를 `TestMovementFieldIsDefinedButUnusedInV1`로 이미 고정했다 — 6-i만 있으면 "필드가 삭제된 것"과 구분되지 않는다는 AC의 지적을 M1에서 미리 봉쇄한 것이다.
 
+### M2 — 내장 4장르 라이브러리 저작 (AC-LOOKLIB-002 / 003 / 004)
+
+**산출물**: `server/looks/library/{worship,rock,ballad,edm}.yaml`(신규 4) + `server/tests/test_looks_library.py`(신규 1, 29 테스트).
+
+**저작 내용**: 32룩 — 워십 8 · 록 8 · 발라드 7 · EDM 9. 사용 attribute는 실측 6종(`Dimmer` / `ColorRGB_R` / `_G` / `_B` / `Zoom` / `Iris`)뿐이며, 밴드 2(`Pan`/`Tilt`)와 M0 기각 문자열(`Focus`/`Frost`/`Prism1`/`Shutter`)은 **주석 포함 전 자산에서 0건**이다. 무브먼트 지정 **0건**(v0.3.1 F3).
+
+**전수 census 테스트의 뮤테이션 검증 (17건 / 생존 0건)**: 테스트를 콘텐츠보다 먼저 작성해 RED(23 error — 자산 디렉터리 부재)를 관측한 뒤 저작했고, 저작 직후 census가 **실제 결함 2건을 잡았다** — ① 네 자산 전부의 top-level `version:` 키(`blacklist.yaml` 패턴을 그대로 옮겨온 것 · 로더의 닫힌 스키마가 거부), ② `edm.yaml` 주석의 `SHUTTER` 문자열(**본 에이전트가 쓴 주석**을 자체 스캔이 적발). 이후 17종 뮤테이션(per-show 값 2종 · 정적 `Pan` · 기각 빔 문자열 · 5번째 장르 · 무브먼트 2종 · 부분 컬러 · 다이내믹스 저역/고역 상실 · 룩 수 하한/상한 · 장르 파일 삭제 · 폐쇄집합 밖 역할 · 범위 이탈 · 중복 id · 한국어 표시명 제거)을 주입해 **전량 KILL, 생존 0건**을 확인했다.
+
+**AC 판정**
+
+| AC | 판정 | 검증 커맨드 | 실제 출력 |
+|---|---|---|---|
+| **AC-LOOKLIB-002** (커버리지) | **PASS** | `pytest server/tests/test_looks_library.py -q` | `29 passed`. 4장르 · 8/8/7/9룩(전부 6~10) · 장르별 `{1,2}`·`{4,5}` 각 ≥1 · 전 레벨 정수 1~5 |
+| **AC-LOOKLIB-003** (attribute 어휘) | **PASS** | 동일 | 구간 1·2·3·4·5·6 개별 테스트 전량 PASS. 구간 6은 두 assert 분리 — (i) 무브먼트 0건, (ii) 무브먼트 담은 룩의 스키마 왕복 성립. `Zoom` 무브먼트 격리 뮤테이션으로 (i)이 **단독 발화**함을 확인(토큰 스캔과 무관하게) |
+| **AC-LOOKLIB-004** (per-show 값 부재) | **PASS** | 동일 + `grep -rniE "Pan\|Tilt\|Focus\|Frost\|Prism\|Shutter" server/looks/library/` | grep exit=1(매치 0). 구조(스키마에 바인딩 필드 부재) + 파싱된 문자열 필드 + 원문(주석 포함) 3중 스캔 위반 0건 |
+
+**미검증 잔여 (§E.2 기록 대상)**: `Zoom`/`Iris`의 **값 방향은 실측되지 않았다.** M0는 두 문자열의 *수용 여부*만 측정했고 어느 끝이 좁고/열린 상태인지는 측정하지 않았다. 본 마일스톤은 `Zoom` 저=협·고=광, `Iris` 저=폐·고=개를 **가정**했으며 그 가정을 자산 헤더 주석에 명시했다. 방향이 반대라면 해당 룩은 의도보다 넓거나 좁게 렌더링된다(안전 영향 없음, 미관 문제). M7 종단 검증에서 관측 가능하다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
-run_status: in-progress          # M1 완료 · M2~M7 미착수
-milestones_complete: [M0, M1]
-m1_commit_sha: pending-backfill  # 커밋은 자기 해시를 담을 수 없다
+run_status: in-progress          # M1·M2 완료 · M3~M7 미착수
+milestones_complete: [M0, M1, M2]
+m1_commit_sha: c1c1382
 m1_complete_at: 2026-07-26
-ac_pass_count: 2                 # AC-LOOKLIB-001, AC-LOOKLIB-015 (M1 배정 전량)
+m2_commit_sha: pending-backfill  # 커밋은 자기 해시를 담을 수 없다
+m2_complete_at: 2026-07-26
+ac_pass_count: 5                 # 001, 015(M1) + 002, 003, 004(M2)
 ac_fail_count: 0
-ac_pending_count: 17             # 002~014, 016~019 — M2 이후 범위
+ac_pending_count: 14             # 005~014, 016~019 — M3 이후 범위
 preserve_list_post_run_count: 0  # PRESERVE 목록 위반 0건
-new_warnings_or_lints_introduced: 0
-baseline_full_suite: "1 failed, 1849 passed"
-post_m1_full_suite: "1 failed, 1909 passed"
-new_failures: 0                  # 동일한 사전 실패 1건, 신규 0건
-coverage_server_looks: "95%"     # 임계 85% 충족
+new_warnings_or_lints_introduced: 0   # ruff check/format: 신규 파일 clean
+                                      # (리포지토리 사전 baseline 3 E501 + 25 format은 무관·무수정)
+baseline_full_suite: "1 failed, 1912 passed"   # M2 착수 직전 실측 (HEAD c1c1382)
+post_m2_full_suite: "1 failed, 1941 passed"    # +29 = 신규 census 전량
+new_failures: 0                  # 동일한 사전 실패 1건(test_every_candidate_socket_is_released), 신규 0건
+coverage_server_looks: "96%"     # 임계 85% 충족 (loader 93 / roles 100 / schema 98)
 cross_platform_build: n/a        # 순수 파이썬 · 컴파일 산출물 없음
-total_run_phase_files: 5         # 신규 5(모듈 4 + 테스트 1); 문서 2는 별도
+total_run_phase_files: 10        # M1 5 + M2 5(자산 4 + 테스트 1)
+library_look_count: 32           # 워십 8 · 록 8 · 발라드 7 · EDM 9
+library_movement_spec_count: 0   # v0.3.1 F3
+mutation_kill_rate: "17/17"      # 생존 0건
 push_performed: false            # 지시에 따라 푸시하지 않음
 ```
+
+> **baseline 주의**: M1이 기록한 `post_m1_full_suite: "1 failed, 1909 passed"`와 본 마일스톤이 동일 HEAD(`c1c1382`)에서 실측한 `1 failed, 1912 passed`가 3건 어긋난다. 원인은 규명하지 못했다(작업 트리의 추적 대상 변경은 `.moai/` 문서뿐이다). 본 §E.3의 델타 판정은 **본 마일스톤이 직접 실측한 1912**에 귀속시켰다 — 이월된 숫자를 baseline으로 쓰는 것은 측정이 아니라 인용이기 때문이다.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 

@@ -1,0 +1,125 @@
+# Built-in look library — ballad (REQ-LOOKLIB-002).
+#
+# See worship.yaml for the shared authoring rules (full RGB always, roles never
+# numbers, no movement, percent values).
+#
+# WHAT A BALLAD NEEDS: restraint. This genre is the one most easily ruined by
+# giving it everything, so it is deliberately the smallest set here (seven
+# looks) and the one with the lowest values.
+#
+# A BALLAD'S 5 IS NOT A ROCK 5. The peak look below sits at Dimmer 92 with a
+# soft warm white and wide, open optics — it lifts, it does not slam. Compare
+# rock-final-blowout: Dimmer 100, tightest beams. Both are dynamics 5; the scale
+# is the position in the song's arc, not an absolute brightness. Rendering a
+# ballad climax as a rock climax is the single most common way to break one.
+#
+# Role counts stay low through the first half. The opening look is a single key
+# and nothing else — the whole rig off but one light is a legitimate state, and
+# it is the strongest one a ballad has.
+schema_version: 1
+
+looks:
+  # --- dynamics 1: one voice ------------------------------------------------
+  - look_id: "ballad-single-key"
+    display_name: "단독 키"
+    genre: "ballad"
+    dynamics: 1
+    # One role. Tight, warm, low. Everything else is dark.
+    roles: ["스페셜"]
+    aliases: ["단독 키", "single key", "솔로 조명"]
+    mood_keywords: ["고독한", "따뜻한", "단독", "아카펠라", "인트로", "solo", "intimate"]
+    attributes:
+      Dimmer: 40
+      ColorRGB_R: 100
+      ColorRGB_G: 82
+      ColorRGB_B: 60
+      Iris: 32
+      Zoom: 12
+
+  - look_id: "ballad-moonlight"
+    display_name: "달빛"
+    genre: "ballad"
+    dynamics: 1
+    roles: ["배경", "백라이트"]
+    aliases: ["달빛", "moonlight", "푸른 밤"]
+    mood_keywords: ["쓸쓸한", "푸른", "밤", "달빛", "차분한", "moonlit", "night"]
+    attributes:
+      Dimmer: 30
+      ColorRGB_R: 35
+      ColorRGB_G: 55
+      ColorRGB_B: 92
+
+  # --- dynamics 2: the verse -----------------------------------------------
+  - look_id: "ballad-intro-warm"
+    display_name: "인트로 온기"
+    genre: "ballad"
+    dynamics: 2
+    roles: ["프론트", "스페셜"]
+    aliases: ["인트로 온기", "intro warm", "부드러운 시작"]
+    mood_keywords: ["부드러운", "따뜻한", "인트로", "포근한", "soft", "warm"]
+    attributes:
+      Dimmer: 50
+      ColorRGB_R: 100
+      ColorRGB_G: 75
+      ColorRGB_B: 52
+
+  - look_id: "ballad-verse-lavender"
+    display_name: "라벤더 벌스"
+    genre: "ballad"
+    dynamics: 2
+    # Violet reads as melancholy without going as cold as blue.
+    roles: ["배경", "사이드"]
+    aliases: ["라벤더 벌스", "lavender verse", "보랏빛"]
+    mood_keywords: ["몽환적인", "보랏빛", "아련한", "벌스", "dreamy", "wistful"]
+    attributes:
+      Dimmer: 45
+      ColorRGB_R: 62
+      ColorRGB_G: 40
+      ColorRGB_B: 95
+
+  # --- dynamics 3: the second verse lifts ----------------------------------
+  - look_id: "ballad-second-verse-rise"
+    display_name: "세컨 벌스 상승"
+    genre: "ballad"
+    dynamics: 3
+    # Warm drifting toward pink — the colour moves before the intensity does.
+    roles: ["프론트", "백라이트", "배경"]
+    aliases: ["세컨 벌스", "second verse rise", "상승"]
+    mood_keywords: ["차오르는", "분홍빛", "감정적인", "세컨벌스", "rising", "tender"]
+    attributes:
+      Dimmer: 65
+      ColorRGB_R: 100
+      ColorRGB_G: 58
+      ColorRGB_B: 62
+
+  # --- dynamics 4-5: chorus and the last chorus ----------------------------
+  - look_id: "ballad-chorus-swell"
+    display_name: "코러스 스웰"
+    genre: "ballad"
+    dynamics: 4
+    # Wide optics, pale gold. Broad and soft, not punchy.
+    roles: ["프론트", "백라이트", "사이드", "배경"]
+    aliases: ["코러스 스웰", "chorus swell", "벅찬 코러스"]
+    mood_keywords: ["벅찬", "넓은", "황금빛", "코러스", "swelling", "warm"]
+    attributes:
+      Dimmer: 82
+      ColorRGB_R: 100
+      ColorRGB_G: 85
+      ColorRGB_B: 62
+      Zoom: 62
+
+  - look_id: "ballad-last-chorus-open"
+    display_name: "마지막 코러스"
+    genre: "ballad"
+    dynamics: 5
+    # Every role, but still soft-edged: widest optics of the whole library.
+    roles: ["백라이트", "프론트", "사이드", "탑", "배경", "스페셜"]
+    aliases: ["마지막 코러스", "last chorus", "엔딩"]
+    mood_keywords: ["절정", "환한", "따뜻한", "마지막", "엔딩", "climax", "open"]
+    attributes:
+      Dimmer: 92
+      ColorRGB_R: 100
+      ColorRGB_G: 92
+      ColorRGB_B: 80
+      Iris: 100
+      Zoom: 78
