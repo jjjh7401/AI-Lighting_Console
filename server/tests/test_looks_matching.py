@@ -551,6 +551,94 @@ class TestMoodProcedureRoutesThroughTheLibrary:
         assert rule in self._source()
 
 
+# The four load-bearing sentences of the store step, each held on ONE source
+# line so the assertion is a whole clause rather than a phrase. The M7 lesson
+# (and M5's before it): a bare phrase passes on the strength of an unrelated
+# sentence elsewhere in the file.
+#
+# STORE_ROUTE was added AFTER a surviving mutation. Swapping this sentence's
+# verb — "stored by `run_commands`" — reinstates the exact pre-M7 defect, and
+# the first draft of this class stayed green through it: `instantiate_look`
+# still appeared in PRESETS_ONLY two lines down, so every token-presence and
+# ordering assertion passed while the instruction itself said the opposite.
+# The routing verb has to be asserted where it is spoken.
+STORE_ROUTE = "A look from `find_looks` is stored by `instantiate_look`"
+HAND_WRITE_REFUSAL = (
+    "Call it instead of hand-writing that bundle — hand-written commands cannot bind a role."
+)
+PRESETS_ONLY = (
+    "`instantiate_look` creates presets only — no cue, no sequence, no executor assignment."
+)
+FALLBACK_ROUTE = (
+    "When you designed the mood yourself there is no stored look: use `run_commands` instead."
+)
+
+
+class TestTheStoreStepReachesTheInstantiationTool:
+    """M7 wiring — step 3 must name the tool that actually binds a look.
+
+    Before this, step 3 said "store it: `run_commands`", and there was nothing
+    else it could have said: no tool in ``TOOL_NAMES`` opened the resolver or
+    the bundle builder, so the whole M3/M4 chain was unreachable from a model
+    turn. With one registered, a step 3 that still points only at
+    ``run_commands`` steers the model into hand-writing the bundle — the one
+    shape that CANNOT bind a role, because role resolution lives behind the
+    tool.
+
+    Like the class above, none of these can observe whether a model actually
+    calls the tool. That is only measurable live.
+    """
+
+    @staticmethod
+    def _source() -> str:
+        return (rulebook_dir() / "31_choreography_patterns.md").read_text(encoding="utf-8")
+
+    def test_the_procedure_names_the_instantiation_tool(self):
+        assert "instantiate_look" in self._source()
+
+    def test_the_tool_is_reachable_from_the_assembled_prefix(self):
+        # The rulebook file is only half the surface; the prefix is what the
+        # model reads.
+        assert "instantiate_look" in assemble_prefix()
+
+    def test_the_store_step_comes_after_both_lookup_steps(self):
+        # Order is the thing M7 fixed and the thing a future edit can undo:
+        # binding cannot precede the look or the rig.
+        source = self._source()
+        assert source.index("find_looks") < source.index("instantiate_look")
+        assert source.index("get_rig_context") < source.index("instantiate_look")
+
+    def test_the_step_routes_a_library_look_to_the_tool_by_name(self):
+        # The instruction itself, not the token: "instantiate_look appears
+        # somewhere below find_looks" is true of a step that tells the model to
+        # store the look with run_commands (measured — that mutation survived
+        # the first draft of this class).
+        assert STORE_ROUTE in self._source()
+
+    def test_a_library_look_is_not_hand_written_as_a_bundle(self):
+        assert HAND_WRITE_REFUSAL in self._source()
+
+    def test_the_step_says_what_the_tool_does_not_create(self):
+        # The M7 live turn ended in a sequence + executor assignment. A model
+        # that believes instantiate_look did that stops one step early and
+        # leaves the operator nothing to fire.
+        assert PRESETS_ONLY in self._source()
+
+    def test_the_from_scratch_path_still_reaches_run_commands(self):
+        # Constraint: routing a LIBRARY look through the tool must not strand
+        # the fallback design, which has no stored look to instantiate.
+        assert FALLBACK_ROUTE in self._source()
+
+    def test_the_four_sentences_are_independent(self):
+        # Non-vacuity for the four above: no one of them can be satisfied by
+        # another's text, so each must fail on its own terms.
+        sentences = (STORE_ROUTE, HAND_WRITE_REFUSAL, PRESETS_ONLY, FALLBACK_ROUTE)
+        for sentence in sentences:
+            others = [s for s in sentences if s != sentence]
+            assert all(sentence not in other for other in others)
+            assert self._source().count(sentence) == 1
+
+
 # --------------------------------------------------------------------------
 # Report shape (what the tool serialises)
 # --------------------------------------------------------------------------

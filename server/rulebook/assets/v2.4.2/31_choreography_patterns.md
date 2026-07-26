@@ -212,8 +212,21 @@ real objects:
 - A role this rig cannot address is DROPPED, not approximated: name the roles you could
   not bind rather than aiming one at a group that does not play that part.
 
-**Step 3 — store it: `run_commands`.**
+**Step 3 — put it on the rig.**
 
+A look from `find_looks` is stored by `instantiate_look`: pass the id of the match you
+chose, and it binds that look's POSITION ROLES to the groups you just read, stores one
+preset per pool with a `Label`, and runs the whole bundle through the same screened
+execution path.
+Call it instead of hand-writing that bundle — hand-written commands cannot bind a role.
+It reports the roles it could not bind and the preset stores it skipped; pass those on
+rather than presenting a partial run as a whole one.
+
+`instantiate_look` creates presets only — no cue, no sequence, no executor assignment.
+Build whatever the operator has to FIRE afterwards with `run_commands`, recalling the
+presets it reports.
+
+When you designed the mood yourself there is no stored look: use `run_commands` instead.
 Set the values on the bound targets, `Store` cues, and `Assign ... At Executor`.
 Remember `ChangeDestination Root` first.
 

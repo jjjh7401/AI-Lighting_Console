@@ -836,6 +836,88 @@ m7_residual_unverified:
   - "프리셋 생성 명령 문법(Store Preset ...)은 본 룰북에서 라이브 검증된 적이 없다.
      검증 없이 추가하면 파일 자신의 계약('validated live on onPC 2.4.2')을 깬다 — 미추가."
 
+# --- M7 배선 수정: 인스턴스화 경로를 모델이 도달 가능하게 (2026-07-27) ---
+# M7 1차 진단("모델이 find_looks를 무시했다")은 지시자 스스로 철회했고, 위 반박 3건이
+# 그대로 선다. 남은 진짜 결함은 하나뿐이었다 — 배선.
+m7wire_gap: "run_look_bundle(server/web/session.py:289)은 프로덕션 호출자 0. TOOL_NAMES에
+  build_instantiation/resolve_roles로 가는 문이 없어, 라이브러리를 제대로 조회한 모델도
+  그 답으로 할 수 있는 일이 run_commands 수기 작성뿐이었다. M4 테스트가 이를 못 본 이유는
+  테스트가 run_look_bundle을 직접 호출했기 때문 — 저장소가 이미 갖고 있던 교훈
+  (e2e-catches-integration-wiring-defects)의 재발."
+m7wire_tool: "instantiate_look — TOOL_NAMES 5→6. 인자: look_id(필수, find_looks가 돌려준
+  값 그대로) + capture_shape(선택, shared_capture 기본 · per_family_capture 폴백).
+  체인: 라이브러리 조회 → 리그 2개 섹션 직접 판독 → resolve_roles + resolve_pools →
+  build_instantiation → run_commands(로컬 클로저) → gate.screen()."
+
+# 설계 결정 3건 (지시서가 열어 둔 것)
+m7wire_decision_id: "look_id를 핸들로. find_looks 매치의 유일한 안정 기계 키이며, 표시명은
+  한국어·에셋에서 편집 가능·중복 가능. 없는 id는 is_error=True(재시도로 회복 가능한 실수)이며
+  find_looks를 가리킨다 — find_looks 미스가 is_error=False인 것과 반대 방향이고, 이유도 반대다."
+m7wire_decision_rig: "리그는 툴이 직접 읽는다(모델 인자로 받지 않는다). 모델이 리그 섹션을
+  되받아 적으면 이름을 바꿔 쓰거나 truncated/contents_unavailable 신호를 떨어뜨리거나 콘솔이
+  준 적 없는 번호를 실을 수 있다 — AP-16이 막는 바로 그 형상. 실패 모드 고정: 섹션이 도착하지
+  않으면 is_error=True + rig_unavailable{reason}로 끝내고 '이 리그엔 백라이트가 없다'는
+  미매핑 판정을 내지 않는다(관측 안 한 리그에 대한 주장이 되므로). 사유 분류는
+  collect_rig_sections를 get_rig_context와 공유 — 두 벌이면 soft 'unavailable'로 되접힐 기회가
+  두 번 생긴다."
+m7wire_decision_shape: "shared_capture 기본(ASSUMPTION-14 GO). FALLBACK은 제거하지 않고
+  선택 파라미터로 노출 — 도달 불가능한 폴백은 본 마일스톤이 고치고 있는 결함의 한 층 아래
+  같은 결함이다. 잘못된 값은 조용히 기본값으로 교정하지 않고 거부한다."
+m7wire_forced_drill: "룩 경로는 preset_pools 드릴을 rig_drilldown 설정과 무관하게 수행한다.
+  점유를 안 열면 어느 슬롯도 비었다고 주장할 수 없어 모든 저장이 no_free_slot으로 건너뛰어진다 —
+  안전하지만 무용. get_rig_context의 드릴 설정은 건드리지 않는다."
+
+m7wire_files: 5                  # tools.py · 31_choreography_patterns.md ·
+                                 # test_looks_tool.py(신규) · test_looks_matching.py · test_tools.py
+m7wire_preserve_diff: "git diff --stat server/safety/ server/bridge/ console/ ui/ → 빈 출력"
+m7wire_boundary_grep: "grep -rn 'bridge.osc|from server.bridge' server/looks/ → 0건"
+m7wire_onpc_state: "RUNNING (app_gma3 pid 38963 · UDP *:8000 + *:9005) — 기준선·최종 양쪽 동일"
+m7wire_baseline_pytest: "2226 passed, 0 failed"  # 착수 HEAD cef1fad에서 **직접** 실측
+                                 # (git stash로 트리를 HEAD로 되돌려 측정 후 복원, 5파일 SHA256
+                                 # 동일 확인). 지시서가 인용한 2226과 일치하나 본 수치는 이월이
+                                 # 아니라 본 마일스톤의 관측이다.
+m7wire_post_pytest: "2291 passed, 0 failed"
+m7wire_delta_accounting: "2226 + 57(test_looks_tool.py 신규) + 8(룰북 절 신규) = 2291 · 신규 실패 0"
+m7wire_vitest: "223 passed (13 files) — 무변경 (UI 미수정)"
+m7wire_prefix_bytes: "25499 -> 26282"          # +783 (+3.07%) · 정적 텍스트 1회 변경 (REQ-022)
+m7wire_prefix_content_absence: "look_id 0/32 · 표시명 0/32 · 스키마 키 0/4 · 날짜/session 0건
+  (기존 TestFixedPrefixDiscipline 전량 그린). 룰북 문안이 'look_id'를 literal로 쓸 수 없어
+  '그 매치의 id'로 표현했다 — 파라미터명은 툴 스키마가 정본."
+m7wire_ruff: "저장소 전체 3건(E501: safety/console.py x2 · test_web_dash.py) — HEAD를 git stash로
+  재측정해 동일함을 확인, 신규 0. 내가 만든 2건(test_looks_tool.py:156 · test_looks_matching.py:621)은
+  즉시 수정."
+m7wire_ruff_format: "신규 파일 test_looks_tool.py는 clean. tools.py/test_tools.py/
+  test_looks_matching.py는 HEAD 판본을 직접 검사해 착수 전부터 red임을 확인(각 70/104/46 diff줄) —
+  내 hunk는 0건이 되도록 손으로 맞췄고, 무관한 재포맷은 하지 않았다."
+m7wire_mutation: "15/15 kill · 전부 의도한 테스트가 실패한 것으로 확인 (1차 1건 생존 → 테스트 보강 후 kill)"
+  # 코드 11: 제2 실행 표면 · rig-unavailable 통과 · capture_shape 조용한 교정 ·
+  #          드릴 설정 위임 · unknown id 비오류화 · 빈 번들 오류화 · executed 상수화 ·
+  #          report 누락 · command_outcomes 누락 · 두 사유 병합 · 역할을 pools로 해소
+  # 룰북 4: 수기금지 문장 삭제 · 프리셋전용 문장 삭제 · 폴백 경로 삭제 · step3 라우팅 동사 되돌리기
+m7wire_mutation_survivor: true
+  # M15(step3의 "stored by `instantiate_look`" → "stored by `run_commands`")가 1차에서 생존했다.
+  # 원인: 내 테스트 4개가 전부 토큰 존재/순서만 봤는데 `instantiate_look`은 두 줄 아래
+  # PRESETS_ONLY 문장에도 있다. 즉 M7 이전 결함(라이브러리 룩을 run_commands로 저장하라는 지시)을
+  # 그대로 복원해도 전량 그린이었다 — 본 SPEC에서 여섯 번째로 만난 "주장을 검사하지 못하는
+  # 검증 수단". 라우팅 문장 자체(STORE_ROUTE)를 단언으로 추가해 kill 확인.
+m7wire_ac_reverified: "AC-010(툴 등록) · AC-011(번들 규율) · AC-013(보고 4요소) · AC-019(단일
+  스크리닝 경로)를 새 진입점에서 재검증. AC 번호·개수는 무변경 — 신규 AC 없음."
+m7wire_run_look_bundle_kept: true
+  # M4의 세션 레벨 API는 그대로 둔다(PRESERVE: M1~M5 공개 계약). 결과적으로 run_commands의
+  # 호출자는 둘이 되었고, 둘 다 같은 초크포인트를 지난다. 프로덕션 호출자는 여전히 0이므로
+  # "미배선"이라는 사실 자체는 해소되지 않았다 — 아래 잔여 참조.
+m7wire_residual_unverified:
+  - "모델이 실제로 instantiate_look을 부르는지는 오프라인에서 검증 불가. 룰북·툴 설명은 구조를
+     고칠 뿐 호출을 보장하지 않는다 — 라이브 M7 재측정이 유일한 판정."
+  - "`Store Preset <pool>.<slot>` / `Label Preset ...` 문법은 여전히 라이브 검증된 적이 없다.
+     M4가 만든 문자열을 이번에 처음으로 모델 경로에 태웠을 뿐, 콘솔이 받아들이는지는 미확인."
+  - "additive 선택형 `Group 11 + 12`(M4 주석의 미검증 항목)도 이번 배선으로 발화 가능해졌으나
+     라이브 확인은 아직 없다."
+  - "run_look_bundle은 여전히 프로덕션 호출자 0이다. 삭제는 PRESERVE 위반이라 하지 않았고,
+     패널 SPEC이 쓸지 폐기할지는 이 SPEC의 결정 범위 밖."
+  - "capture_shape를 모델이 임의로 per_family_capture로 고를 위험은 설명문으로만 막혀 있다.
+     기계적 제약은 없다."
+
 # --- M6: 회귀 + 경계 전체 그린 (AC-009 · AC-013 · AC-019) ---
 # 측정 조건 주석: 모든 수치에 onPC 상태를 붙인다. 이 SPEC 내내 "사전 실패 1건"으로
 # 이월돼 온 test_every_candidate_socket_is_released가 환경 의존이었기 때문이다.

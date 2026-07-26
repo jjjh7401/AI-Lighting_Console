@@ -11,13 +11,22 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from server.llm.types import ToolCall, ToolDefinition, ToolResult
+from server.looks.instantiate import (
+    CAPTURE_PER_FAMILY,
+    CAPTURE_SHAPES,
+    CAPTURE_SHARED,
+    LookInstantiationError,
+    build_instantiation,
+    resolve_pools,
+)
 from server.looks.loader import LookSchemaError, load_library_from_dir
 from server.looks.matching import match_looks
+from server.looks.resolver import resolve_roles
 from server.looks.schema import LookLibrary
 from server.orchestrator.ports import BundleGate, CommandExecutionPort, StateQueryPort
 
@@ -34,6 +43,7 @@ TOOL_NAMES = (
     "deploy_plugin",
     "get_rig_context",
     "find_looks",
+    "instantiate_look",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -100,6 +110,18 @@ DEFAULT_RIG_DRILLDOWN = ("preset_pools", "pages")
 # walk the section says so ("drilldown_capped") rather than presenting a partial
 # walk as a complete one.
 RIG_DRILLDOWN_QUERY_CAP = 16
+
+# The two sections a look must be bound against: the groups its position roles
+# resolve to, and the preset pools its values are stored into. Named rather
+# than derived, so a rig_paths override that drops either one fails loudly
+# instead of binding a look against half a rig.
+LOOK_RIG_SECTIONS = ("groups", "preset_pools")
+
+# The preset-pool drill is not optional on the look path. Occupancy is what
+# makes "is this slot free" answerable at all; without it every store is
+# skipped as unobserved — safe, and useless. get_rig_context's own drilldown
+# configuration is left untouched.
+_LOOK_DRILLDOWN = frozenset({"preset_pools"})
 
 
 # Why a rig-context section is missing. The two causes are NOT interchangeable
@@ -341,6 +363,59 @@ def drill_into(
     return budget
 
 
+def collect_rig_sections(
+    state_port: StateQueryPort,
+    paths: Mapping[str, str],
+    drilldown: frozenset[str],
+    budget: int,
+) -> tuple[dict[str, object], int, int]:
+    """Read each named section, drilling the ones in ``drilldown``.
+
+    Returns ``(summary, resolved, failed)``. A failed section is replaced by the
+    ``{"reason": ...}`` shape, classified by the SAME rule for every caller: a
+    sibling section answering means this path is wrong for this showfile
+    (``path_not_resolved``), nothing answering means no path can be blamed
+    (``console_unreachable``).
+
+    Shared rather than re-derived because a second caller of the same shape now
+    exists (``instantiate_look``), and two copies of that classification would
+    be two chances to collapse it back into one soft "unavailable" — the exact
+    regression the two dead default paths hid behind for the whole of Stage 1.
+    The sample size differs (ten sections vs two) and the rule does not: with
+    one sibling answering, "the console is up and this path is wrong" is the
+    same inference it is with nine.
+    """
+    summary: dict[str, object] = {}
+    failures: dict[str, tuple[str, str]] = {}
+    resolved = 0
+    for section, path in paths.items():
+        try:
+            payload = state_port.query_state(path)
+        except Exception as exc:
+            # Placeholder keeps the section's position; classified below, once
+            # every section's outcome is known.
+            summary[section] = None
+            failures[section] = (path, str(exc))
+            continue
+        # A resolved path proves the console ANSWERED — even with zero children
+        # (a real shape: an empty preset pool).
+        resolved += 1
+        children = payload.get("children", [])
+        objects = [rig_object(child) for child in children if isinstance(child, dict)]
+        entry = rig_section(objects, payload)
+        if section in drilldown:
+            budget = drill_into(state_port, objects, path, entry, budget)
+        summary[section] = entry
+    reason = REASON_UNRESOLVED if resolved else REASON_UNREACHABLE
+    for section, (path, detail) in failures.items():
+        summary[section] = {
+            "reason": reason,
+            "path": path,
+            "error": f"{_FAILURE_MESSAGES[reason]}: {detail}",
+        }
+    return summary, resolved, len(failures)
+
+
 def _error_result(call: ToolCall, message: str) -> ToolExecution:
     return ToolExecution(
         result=ToolResult(
@@ -566,35 +641,9 @@ def build_toolset(
     # -- get_rig_context (REQ-MVP-037 — showfile-based basic summary) -----------
 
     def get_rig_context(call: ToolCall, context: ExecutionContext) -> ToolExecution:
-        summary: dict[str, object] = {}
-        failures: dict[str, tuple[str, str]] = {}
-        resolved = 0
-        budget = RIG_DRILLDOWN_QUERY_CAP
-        for section, path in rig_paths.items():
-            try:
-                payload = state_port.query_state(path)
-            except Exception as exc:
-                # Placeholder keeps the section's position; classified below,
-                # once every section's outcome is known.
-                summary[section] = None
-                failures[section] = (path, str(exc))
-                continue
-            # A resolved path proves the console ANSWERED — even with zero
-            # children (a real shape: an empty preset pool).
-            resolved += 1
-            children = payload.get("children", [])
-            objects = [rig_object(child) for child in children if isinstance(child, dict)]
-            entry = rig_section(objects, payload)
-            if section in drilldown:
-                budget = drill_into(state_port, objects, path, entry, budget)
-            summary[section] = entry
-        reason = REASON_UNRESOLVED if resolved else REASON_UNREACHABLE
-        for section, (path, detail) in failures.items():
-            summary[section] = {
-                "reason": reason,
-                "path": path,
-                "error": f"{_FAILURE_MESSAGES[reason]}: {detail}",
-            }
+        summary, resolved, failed = collect_rig_sections(
+            state_port, rig_paths, drilldown, RIG_DRILLDOWN_QUERY_CAP
+        )
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
@@ -602,7 +651,7 @@ def build_toolset(
                 content=json.dumps(summary, ensure_ascii=False),
                 # Partial vocabulary is still usable; returning NOTHING is a
                 # failed call, not a quiet success.
-                is_error=bool(failures) and resolved == 0,
+                is_error=bool(failed) and resolved == 0,
             )
         )
 
@@ -630,6 +679,130 @@ def build_toolset(
                 # invite a retry that can only miss again.
                 is_error=False,
             )
+        )
+
+    # -- instantiate_look (REQ-LOOKLIB-010/013/019 — the look layer's ONE route) -
+    #
+    # @MX:ANCHOR: [AUTO] the only model-reachable entry to the instantiation
+    #   chain (find_looks -> role resolution -> bundle -> gate.screen()).
+    # @MX:REASON: REQ-LOOKLIB-010/019. This handler is a CALLER of run_commands,
+    #   never a second execution surface: it re-enters the local run_commands
+    #   closure above, so the bundle inherits that path's gate screening,
+    #   execution preview, dedupe and audit log without any of them being
+    #   duplicated for looks. Reaching execution_port directly from here would
+    #   be the second path the SPEC forbids, and it would be invisible to the
+    #   gate. The M4 layer was correct and had NO caller for exactly one
+    #   milestone; that is what this tool repairs, so do not un-register it
+    #   without giving the chain another model-reachable door.
+
+    def instantiate_look(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        nonlocal looks
+        look_id = call.arguments.get("look_id")
+        if not isinstance(look_id, str) or not look_id.strip():
+            return _error_result(
+                call, "'look_id' must be the look_id string returned by find_looks"
+            )
+        shape = call.arguments.get("capture_shape", CAPTURE_SHARED)
+        if shape not in CAPTURE_SHAPES:
+            # Never silently corrected to the default: a shape the model chose
+            # deliberately and got wrong is worth one visible failure.
+            return _error_result(
+                call, f"'capture_shape' must be one of {list(CAPTURE_SHAPES)}, not {shape!r}"
+            )
+        if looks is None:
+            try:
+                looks = load_library_from_dir()
+            except LookSchemaError as error:
+                return _error_result(call, f"look library unavailable: {error}")
+        try:
+            look = looks.by_id(look_id.strip())
+        except KeyError:
+            # An id this library does not hold is a correctable mistake, so it
+            # IS an error result — unlike a find_looks miss, a retry with the
+            # right id succeeds.
+            return _error_result(
+                call,
+                f"unknown look_id {look_id!r} — call find_looks and pass back the "
+                f"look_id from one of its matches",
+            )
+        missing = [section for section in LOOK_RIG_SECTIONS if section not in rig_paths]
+        if missing:
+            return _error_result(
+                call,
+                f"rig context has no path configured for {missing} — a look cannot be "
+                f"bound to this rig without them",
+            )
+        # The rig is READ here, never accepted as an argument: a model retyping
+        # a rig section can paraphrase a name, drop the truncation signal or
+        # supply a number the console never gave. Every number this bundle puts
+        # on the command line has to come from the console itself (AP-16).
+        sections, _resolved, _failed = collect_rig_sections(
+            state_port,
+            {section: rig_paths[section] for section in LOOK_RIG_SECTIONS},
+            drilldown | _LOOK_DRILLDOWN,
+            RIG_DRILLDOWN_QUERY_CAP,
+        )
+        unavailable = {
+            name: entry
+            for name, entry in sections.items()
+            if isinstance(entry, dict) and "reason" in entry
+        }
+        if unavailable:
+            # A section that never arrived is NOT a rig that answered "no such
+            # group". Reporting the roles as unmapped here would state a fact
+            # about a rig nobody observed.
+            content = json.dumps(
+                {
+                    "error": (
+                        "the rig sections a look is bound against did not arrive: "
+                        + "; ".join(f"{n}: {e['reason']}" for n, e in unavailable.items())
+                    ),
+                    "rig_unavailable": unavailable,
+                },
+                ensure_ascii=False,
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id, name=call.name, content=content, is_error=True
+                )
+            )
+        try:
+            plan = build_instantiation(
+                look,
+                resolution=resolve_roles(sections["groups"]),  # type: ignore[arg-type]
+                pools=resolve_pools(sections["preset_pools"]),  # type: ignore[arg-type]
+                shape=shape,
+            )
+        except LookInstantiationError as error:
+            return _error_result(call, f"look {look.look_id!r} cannot be instantiated: {error}")
+        report = plan.to_dict()
+        if not plan.commands:
+            # The rig addressed none of this look's roles. An empty bundle is
+            # the honest output, and it is an ANSWER rather than a failure: a
+            # retry cannot bind a role this rig does not have.
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps({"executed": False, "report": report}, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+        execution = run_commands(
+            ToolCall(id=call.id, name="run_commands", arguments={"commands": list(plan.commands)}),
+            context,
+        )
+        payload = json.loads(execution.result.content)
+        payload["executed"] = not execution.result.is_error
+        payload["report"] = report
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=execution.result.is_error,
+            ),
+            command_outcomes=execution.command_outcomes,
         )
 
     definitions = (
@@ -801,6 +974,80 @@ def build_toolset(
                 "required": ["query"],
             },
         ),
+        ToolDefinition(
+            name="instantiate_look",
+            description=(
+                "Put a look FROM find_looks onto THIS rig. Pass the look_id of "
+                "the match you chose; do NOT hand-write the bundle with "
+                "run_commands, because this tool is the only thing that binds "
+                "a look's position roles to the rig's real groups.\n"
+                "\n"
+                "It reads the rig itself — the current groups and preset pools "
+                "— so you do not pass any rig data in, and you must not retype "
+                "anything from get_rig_context: every group and pool number it "
+                "puts on the command line comes from the console on THIS call. "
+                "It then stores ONE preset per in-scope pool (Dimmer, Color, "
+                "and Beam / Focus when the look has those values), labels each "
+                "one with the look's name, and runs the whole bundle through "
+                "the SAME execution path as run_commands — so the live lock, "
+                "the safety screening and the approval gate all apply "
+                "unchanged.\n"
+                "\n"
+                "It creates PRESETS ONLY. It does not create a cue, a sequence "
+                "or an executor assignment, so nothing is left running on "
+                "stage. If the operator needs something they can fire, build "
+                "that afterwards with run_commands, recalling the presets this "
+                "tool reports.\n"
+                "\n"
+                'The result carries "executed", a per-command "commands" list '
+                'exactly like run_commands, and a "report":\n'
+                '- "created": every preset stored, with its pool, slot and '
+                "label.\n"
+                '- "unmapped": each position role the rig could NOT address, '
+                'with a reason — "no_match" (no group named anything like it), '
+                '"ambiguous" (a group name claimed by two roles) or '
+                '"unaddressable" (a group matched but carries no number). An '
+                "unmapped role emits NO command and gets NO substitute: report "
+                "it to the operator, never aim it at another group.\n"
+                '- "skipped": each preset store that did NOT happen, with its '
+                'reason — "conflict" (that pool already holds a preset with '
+                'this name), "no_free_slot" (occupancy was not observed, so no '
+                'slot can be claimed free), "pool_unresolved" (this rig has no '
+                'pool of that type) or "pool_unaddressable" (it has one with '
+                "no number). Nothing is ever overwritten and nothing is "
+                "re-slotted; the unit is one preset store, so a look can be "
+                "partly created and partly skipped.\n"
+                '- "complete": false whenever anything was unmapped or '
+                "skipped. Say so — never report a partial run as a whole one.\n"
+                "\n"
+                "An empty bundle (nothing executed, no created presets) means "
+                "the rig addressed none of this look's roles. That is an "
+                "answer, not a transient failure: do not retry it, report the "
+                "unmapped roles instead."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "look_id": {
+                        "type": "string",
+                        "description": "The look_id of a find_looks match, copied verbatim.",
+                    },
+                    "capture_shape": {
+                        "type": "string",
+                        "enum": list(CAPTURE_SHAPES),
+                        "description": (
+                            "Optional. Leave unset — the default stores every "
+                            "family from one capture. Use "
+                            f"'{CAPTURE_PER_FAMILY}' only if a previous run "
+                            "visibly over-captured (e.g. a Dimmer preset that "
+                            "also holds the colour); it isolates one capture "
+                            "cycle per family at the cost of a longer bundle."
+                        ),
+                    },
+                },
+                "required": ["look_id"],
+            },
+        ),
     )
     handlers: dict[str, _Handler] = {
         "run_commands": run_commands,
@@ -808,5 +1055,6 @@ def build_toolset(
         "deploy_plugin": deploy_plugin,
         "get_rig_context": get_rig_context,
         "find_looks": find_looks,
+        "instantiate_look": instantiate_look,
     }
     return ToolRegistry(definitions, handlers)
