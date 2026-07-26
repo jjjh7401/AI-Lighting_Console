@@ -726,7 +726,7 @@ m3_commit_sha: 121e52b
 m3_complete_at: 2026-07-26
 m4_commit_sha: f398d6b
 m4_complete_at: 2026-07-26
-m5_commit_sha: pending-backfill  # 후속 커밋에서 채운다 (커밋은 자기 해시를 담을 수 없다)
+m5_commit_sha: 00dfa91
 m5_complete_at: 2026-07-26
 ac_pass_count: 15                # 001, 015(M1) + 002, 003, 004(M2) + 005, 006(M3)
                                  # + 007, 008, 016, 018(M4) + 010, 011, 012, 017(M5)
