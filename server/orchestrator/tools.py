@@ -752,13 +752,21 @@ def build_toolset(
         ToolDefinition(
             name="find_looks",
             description=(
-                "Look up designed LOOKS in the built-in library when the "
-                "instruction names a mood, a genre or a song section rather "
-                "than explicit colours and values (e.g. 'a grand golden "
-                "chorus', 'a calm ballad intro', 'the EDM drop'). Pass the "
-                "operator's own words; Korean is first-class, and the genre "
-                "may be written either way (워십 / worship, 록 / rock, 발라드 "
-                "/ ballad, EDM).\n"
+                "Ask the built-in look library BEFORE inventing any colour or "
+                "intensity — call this the moment an instruction names a mood, "
+                "a genre or a song section rather than explicit values (e.g. "
+                "'a grand golden chorus', 'a calm ballad intro', 'the EDM "
+                "drop'). A stored look is a DESIGNED answer; the values you "
+                "would otherwise pick are a guess at the same question, so "
+                "designing a mood from scratch without asking here first is "
+                "the one thing this tool exists to prevent.\n"
+                "\n"
+                "This is the VALUES half of a mood instruction and "
+                "get_rig_context is the OBJECTS half — they do not compete, "
+                "and a mood instruction needs BOTH: ask here for the look, "
+                "then bind it to the real rig. Pass the operator's own words; "
+                "Korean is first-class, and the genre may be written either "
+                "way (워십 / worship, 록 / rock, 발라드 / ballad, EDM).\n"
                 "\n"
                 "This tool READS ONLY — it never sends anything to the "
                 'console. Each match is {"look_id", "display_name", "genre", '

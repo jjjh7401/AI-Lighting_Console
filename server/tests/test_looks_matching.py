@@ -325,8 +325,14 @@ class TestFallbackSignal:
 
     def test_the_rulebook_mood_fallback_section_is_unchanged(self):
         # AC-LOOKLIB-011: the path a fallback degrades TO must be preserved.
+        #
+        # M7 renamed this heading — "resolve the rig FIRST" was the exact
+        # phrase that out-competed the library note, so the word FIRST now
+        # points at the library. What this test guards is unchanged: the
+        # section a fallback degrades TO still exists, and the four table
+        # rows below (the destination itself) are asserted byte-for-byte.
         source = (rulebook_dir() / "31_choreography_patterns.md").read_text(encoding="utf-8")
-        assert "### Concept / mood instructions — resolve the rig FIRST" in source
+        assert "### Concept / mood instructions — ask the look library FIRST" in source
         for row in (
             "| warm / ballad / intimate | 40–70% | amber (R high, G low, B ~0) "
             "| none, or slow Tilt sway, Speed 10–20 |",
@@ -456,6 +462,93 @@ class TestFixedPrefixDiscipline:
         prefix = assemble_prefix()
         assert not re.search(r"\d{4}-\d{2}-\d{2}", prefix)
         assert "session" not in prefix.lower()
+
+
+# --------------------------------------------------------------------------
+# M7 steering fix — the mood procedure ROUTES through the library
+#
+# What M7 measured live: the turn produced a designed look and an executor
+# assignment, and created no preset and bound no role. What the rulebook
+# looked like at that moment: TWO sections triggered on the same input — a
+# look-library note that ADVISED calling find_looks, and, immediately below
+# it, a self-contained "resolve the rig FIRST" recipe that INSTRUCTED and
+# terminated in exactly the observed behaviour. A model entering the second
+# had no reason to leave it: the recipe never mentions the library.
+#
+# These tests pin the STRUCTURE that removes the competition. None of them
+# can observe whether a model actually calls the tool — that is only
+# measurable live, and is stated as an explicit gap rather than dressed up
+# as coverage here.
+# --------------------------------------------------------------------------
+
+
+class TestMoodProcedureRoutesThroughTheLibrary:
+    @staticmethod
+    def _source() -> str:
+        return (rulebook_dir() / "31_choreography_patterns.md").read_text(encoding="utf-8")
+
+    def test_the_mood_procedure_reaches_the_library_before_the_rig(self):
+        # The defect was ORDER, not absence: both tools were named, but the
+        # rig step owned the word FIRST and the whole recipe. If a future
+        # edit puts get_rig_context back in front, the library becomes an
+        # optional aside again and this fails.
+        source = self._source()
+        assert "find_looks" in source, "non-vacuity: the tool must be named"
+        assert "get_rig_context" in source, "non-vacuity: the rig step must survive"
+        assert source.index("find_looks") < source.index("get_rig_context")
+
+    def test_no_section_boundary_separates_the_library_step_from_the_mood_table(self):
+        # The anti-competition pin. A `###` heading between the library step
+        # and the table it falls back to is exactly the shape M7 measured:
+        # two sections triggering on one input, the later one self-contained.
+        # One procedure cannot compete with itself.
+        source = self._source()
+        start = source.index("find_looks")
+        table = source.index("Rough mood → design starting points")
+        assert start < table, "non-vacuity: the library step must precede the table"
+        assert "\n### " not in source[start:table]
+
+    def test_the_fallback_still_routes_to_the_mood_table(self):
+        # Constraint: reaching the library must not become "the library
+        # always answers". The fallback signal keeps its own exit.
+        source = self._source()
+        assert "fallback" in source.lower()
+        assert "Rough mood → design starting points" in source
+        fallback = source.lower().index("fallback")
+        assert fallback < source.index("Rough mood → design starting points")
+
+    def test_the_library_still_refuses_to_invent_a_look(self):
+        # Matched on the LIBRARY's own refusal, not on any "never invent"
+        # anywhere in the file: the first draft of this test asserted the
+        # bare phrase and SURVIVED a mutation that deleted the library
+        # sentence outright — it was passing on the strength of the
+        # unrelated `NEVER invent a Group 3` rule two paragraphs down.
+        # The two refusals are independent and must fail independently.
+        assert "returns library looks only, and never invents one" in self._source()
+
+    def test_the_two_refusals_are_independent(self):
+        # Non-vacuity for the pair above: each must be present on its own
+        # terms, so neither test can be satisfied by the other's string.
+        source = self._source()
+        library_refusal = "returns library looks only, and never invents one"
+        group_refusal = "NEVER invent a `Group 3`"
+        assert library_refusal in source
+        assert group_refusal in source
+        assert library_refusal not in group_refusal
+        assert group_refusal not in library_refusal
+
+    @pytest.mark.parametrize(
+        "rule",
+        [
+            "ChangeDestination Root",  # the programming-destination reminder
+            "NOT its fixture id",  # the slot != FID warning (live-earned)
+            "NEVER invent a `Group 3`",  # the missing-group rule (live-earned)
+        ],
+    )
+    def test_the_live_earned_rules_survive_the_restructure(self, rule):
+        # These three were paid for on a live console. A restructure that
+        # loses one trades a measured defence for a tidier document.
+        assert rule in self._source()
 
 
 # --------------------------------------------------------------------------

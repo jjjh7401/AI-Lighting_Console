@@ -170,26 +170,32 @@ end
 return main
 ```
 
-### Look library — check it before designing a mood from scratch
+### Concept / mood instructions — ask the look library FIRST, then resolve the rig
+
+When the instruction gives a MOOD, a CONCEPT, a GENRE or a SONG SECTION ("warm ballad",
+"energetic club", "eerie", "sunrise build") instead of explicit fixtures / colors / ids,
+run these three steps IN ORDER. Do not open by picking values, and do not guess object ids.
+
+**Step 1 — ask the library: `find_looks`.**
 
 A curated look library is available through `find_looks`. It holds designed genre
 templates (worship / rock / ballad / EDM), each with a section-dynamics level (1 static
-to 5 climax), a list of POSITION ROLES, and concrete colour / intensity values.
+to 5 climax), a list of POSITION ROLES, and concrete colour / intensity values. Call it
+with the operator's own wording (Korean is first-class) BEFORE picking any value
+yourself: a stored look is a designed answer, and the values you would otherwise invent
+are a guess at the same question.
 
-- When the instruction names a mood, a genre or a song section, call `find_looks` with
-  the operator's own wording (Korean is first-class) BEFORE picking values yourself.
-- It returns library looks only, and never invents one. When it answers with a fallback
-  signal, nothing matched well enough — then design the mood yourself from the table
-  below, and say that no stored look fit.
-- A look carries no group, preset slot or fixture id. Binding one to THIS rig still goes
-  through `get_rig_context`, and storing it still goes through `run_commands`.
+It returns library looks only, and never invents one. When it answers with a fallback
+signal, nothing matched well enough — then, and only then, design the mood yourself from
+the table below, and say that no stored look fit.
 
-### Concept / mood instructions — resolve the rig FIRST
+**Step 2 — resolve the rig: `get_rig_context`.**
 
-When the instruction gives a MOOD or CONCEPT ("warm ballad", "energetic club", "eerie",
-"sunrise build") instead of explicit fixtures / colors / ids, DO NOT guess object ids.
-First call `get_rig_context` to see the ACTUAL patched fixtures and the existing groups /
-presets, then design against those real objects:
+A look carries no group, preset slot or fixture id, so it cannot be stored until it is
+bound to THIS rig; a from-scratch design needs the same call so that it invents no object
+ids either. Call `get_rig_context` to see the ACTUAL patched fixtures and the existing
+groups / presets, then bind the look's POSITION ROLES — or your own design — to those
+real objects:
 
 - Select real targets only: recall an existing group by its EXACT listed name
   (`Group 'Copilot Movers'`) or by its listed number (`Group 11`) — for groups and
@@ -203,10 +209,16 @@ presets, then design against those real objects:
   operator — and only then write the range.
 - NEVER invent a `Group 3` that `get_rig_context` did not list —
   a missing group selects nothing and the whole look stores empty.
-- Then map the mood to values you already know how to set (dimmer / color / movement /
-  speed), `Store` cues, and `Assign ... At Executor`. Remember `ChangeDestination Root` first.
+- A role this rig cannot address is DROPPED, not approximated: name the roles you could
+  not bind rather than aiming one at a group that does not play that part.
 
-Rough mood → design starting points (pick concrete numbers, then adjust):
+**Step 3 — store it: `run_commands`.**
+
+Set the values on the bound targets, `Store` cues, and `Assign ... At Executor`.
+Remember `ChangeDestination Root` first.
+
+Rough mood → design starting points — the STEP 1 FALLBACK path, used when `find_looks`
+answered with a fallback signal (pick concrete numbers, then adjust):
 
 | mood | dimmer | color (ColorRGB) | movement |
 |---|---|---|---|

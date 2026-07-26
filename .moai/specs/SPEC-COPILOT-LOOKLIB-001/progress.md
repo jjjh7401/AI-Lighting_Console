@@ -764,6 +764,78 @@ skip_reasons: 4                  # conflict · no_free_slot + M4 신설 pool_unr
 capture_shape_default: shared_capture   # M0 ASSUMPTION-14 GO · FALLBACK도 같은 데이터에서 생성 가능
 push_performed: false            # 지시에 따라 푸시하지 않음
 
+# --- M7 구동 수정: 무드 절이 라이브러리를 경유하도록 라우팅 (2026-07-27) ---
+# 계기는 M7 라이브 1회차다. 실제 onPC 2.4.2 + 실제 Gemini 턴, 지시
+# "웅장한 금색 코러스로 가자". 파이프라인(리그 조회·번들·프리뷰·게이트·감사로그)은
+# 전부 작동했으나 관측된 결과는 아래와 같았다.
+m7_live_observed: "find_looks 감사로그 0건 · 역할 매핑 없음 · 프리셋 0건(Dimmer/Color 풀 childCount=0)"
+m7_live_executed_bundle: "ChangeDestination Root · ClearAll · Group 13 · Dimmer 88 ·
+  ColorRGB_R 100/G 78/B 30 · Zoom 45 · Store Sequence 22 Cue 1 'Golden Chorus' ·
+  Assign Sequence 22 At Page 1.102 (audit-20260726.jsonl 14:50:06~14:50:14)"
+
+# 진단: 같은 입력에 두 절이 경쟁했고 뒤엣것이 이겼다.
+m7_diagnosis: "31_choreography_patterns.md에서 룩 라이브러리 절(173-185)은 find_looks를
+  '권유'했고, 바로 아래 무드 절(187-207)은 '지시'하면서 그 자체로 완결된 레시피였다
+  ('First call get_rig_context ... Then map the mood to values ... Store ... Assign').
+  뒤엣것이 더 구체적·더 명령형이며 관측된 행동으로 정확히 종결된다. 그 절에 들어간
+  모델에게는 라이브러리로 나갈 이유가 없다 — 레시피가 라이브러리를 언급하지 않는다."
+m7_fix: "두 절을 하나의 3단계 절차로 병합. FIRST의 지시 대상을 리그에서 라이브러리로 옮김:
+  Step 1 find_looks -> Step 2 get_rig_context(역할 바인딩) -> Step 3 run_commands.
+  폴백 신호는 여전히 무드 표로 내려간다(약화 금지). 라이브 근거로 얻은 3규칙
+  (slot!=FID · Group 3 발명 금지 · ChangeDestination Root)은 실질 보존."
+m7_tool_description: "find_looks 설명을 get_rig_context의 직설성에 맞춰 재작성 —
+  조건 서술('~할 때 조회한다')에서 명령형('값을 발명하기 전에 먼저 물어라')으로.
+  두 툴이 같은 'FIRST' 자리를 다투지 않도록 역할을 명시 분리했다:
+  find_looks = 무드 지시의 VALUES 절반, get_rig_context = OBJECTS 절반, 둘 다 필요."
+m7_files: 3                      # 31_choreography_patterns.md · tools.py · test_looks_matching.py
+m7_onpc_state: "RUNNING (app_gma3 pid 38963 · UDP *:8000 + *:9005) — 기준선·최종 측정 양쪽 동일"
+m7_baseline_pytest: "2218 passed, 0 failed"    # 착수 직전 직접 실측 (HEAD 7645dcf, onPC RUNNING)
+m7_post_pytest: "2226 passed, 0 failed"        # +8 = 신규 테스트 전량 · 신규 실패 0건
+m7_new_failures: 0
+m7_prefix_bytes: "25005 -> 25499"              # +494 (+2.0%) · 정적 텍스트 1회 변경 (REQ-022)
+m7_prefix_byte_stable: true                    # 5회 조립 동일
+m7_prefix_content_absence: "look_id 0/32 · 표시명 0/32 · 스키마 키 0/4 (비공허성 동반 단언)"
+m7_ruff: "내 3파일 clean · 저장소 전체 3건(E501: safety/console.py x2, test_web_dash.py) — HEAD와 동일, 신규 0"
+m7_ruff_format: "tools.py는 HEAD에서 이미 red임을 HEAD 판본 직접 검사로 확인.
+  format --diff에 내 라인 hunk 0건 — 신규 offender 0. 무관한 재포맷을 피해 손대지 않았다."
+m7_mutation: "6/6 kill (1차 생존 1건 -> 테스트 수정 후 kill)"
+  # kill: 절 재분리 · 단계 역순 · 폴백 출구 삭제 · 라이브러리 거부 삭제 · slot!=FID 삭제 ·
+  #       Group 3 규칙 삭제. 1차 생존: '라이브러리는 룩을 발명하지 않는다' 테스트가
+  #       bare "never invent"를 봐서 두 문단 아래 무관한 `NEVER invent a Group 3`의
+  #       힘으로 통과했다 — 자기 주장을 검사하지 못하는 검증 수단(본 SPEC 5번째 사례).
+  #       라이브러리 문장 전체로 좁히고 두 거부의 독립성을 양방향 뮤테이션으로 확인했다.
+
+# 지시서 진단에 대한 반박 3건 — 전부 기계 근거 있음
+m7_rebuttal_1_audit_log_cannot_see_find_looks: true
+  # "find_looks 감사로그 0건"은 판별력이 없다. AuditLog의 이벤트 어휘에는 툴 호출
+  # 이벤트 자체가 없다(server/safety/audit.py: executed/approved/rejected/blocked +
+  # deploy_* · provider_* · ws_* · *_tick_failed). find_looks는 설계상 콘솔을 만지지
+  # 않으므로 호출 여부와 무관하게 0건이다. 반대로 get_rig_context는 query_state로
+  # 콘솔을 치므로 executed 행으로 보인다(14:46:40 버스트) — "리그는 부르고 룩은 안
+  # 불렀다"는 관측은 한쪽만 볼 수 있는 로그에서 나온 계측 아티팩트다.
+m7_rebuttal_2_values_came_from_the_library: true
+  # 실행된 5개 값은 worship-golden-chorus의 속성과 전부 일치한다. 실측:
+  # match_looks("웅장한 금색 코러스로 가자") -> {'Dimmer':88,'ColorRGB_R':100,
+  # 'ColorRGB_G':78,'ColorRGB_B':30,'Zoom':45}. 콘솔 실행분과 5/5 동일.
+  # 결정적 보강: 'Zoom'은 룰북 프리픽스에 아예 없다(값 설정 절은 Dimmer/ColorRGB/
+  # Pan/Tilt만 다루고 무드 표는 dimmer/color/movement만 준다). 저장소 전체에서 이
+  # 다섯 값을 함께 갖는 곳은 server/looks/library/worship.yaml 뿐이다.
+  # => 라이브러리는 "도달되지 않은" 것이 아니라 도달되었을 가능성이 매우 높다.
+  #    (증명은 아님 — 툴 호출 로그가 없으므로 가설이다. 아래 잔여 참조.)
+m7_rebuttal_3_presets_are_unwired_not_unsteered: true
+  # "역할 매핑 없음 · 프리셋 0건"은 스티어링 결함이 아니다. run_look_bundle(
+  # server/web/session.py:289)은 프로덕션 호출자가 0이다 — 정의부와 테스트뿐.
+  # LookInstantiation/resolve_roles로 가는 경로를 여는 툴이 TOOL_NAMES에 없고,
+  # 어떤 라우트·웹소켓 핸들러도 그것을 부르지 않는다. 즉 M3/M4의 resolver +
+  # instantiate 층은 완성되었으나 미배선이다. 룰북 텍스트로는 노출되지 않은 함수를
+  # 모델이 부르게 만들 수 없다 — 본 수정으로 프리셋이 생기지는 않는다.
+m7_residual_unverified:
+  - "본 수정이 모델의 호출 행동을 바꾸는지는 오프라인에서 검증 불가 — 라이브 재측정이 유일한 판정."
+  - "'find_looks가 호출되었다'는 가설이다. 값 일치 5/5 + Zoom 부재가 근거이나 툴 호출
+     로그가 없어 확정 불가. 판정 수단을 원하면 툴 호출 감사 이벤트 추가가 선행돼야 한다."
+  - "프리셋 생성 명령 문법(Store Preset ...)은 본 룰북에서 라이브 검증된 적이 없다.
+     검증 없이 추가하면 파일 자신의 계약('validated live on onPC 2.4.2')을 깬다 — 미추가."
+
 # --- M6: 회귀 + 경계 전체 그린 (AC-009 · AC-013 · AC-019) ---
 # 측정 조건 주석: 모든 수치에 onPC 상태를 붙인다. 이 SPEC 내내 "사전 실패 1건"으로
 # 이월돼 온 test_every_candidate_socket_is_released가 환경 의존이었기 때문이다.
