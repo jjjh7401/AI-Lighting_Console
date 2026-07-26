@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-LOOKLIB-001
 title: "연출 어휘 계층 — 룩 라이브러리 (Look Library)"
 version: "0.3.1"
-status: draft
+status: in-progress
 created: 2026-07-26
 updated: 2026-07-26
 author: manager-spec

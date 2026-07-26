@@ -325,9 +325,95 @@ REQ-LOOKLIB-013의 보고 요소(생성 프리셋의 풀/슬롯/이름, 미매�
 
 **제약 준수 기록**: 코드 변경 **0건**(M0는 측정 세션 — plan.md §B M0). 워킹 트리 수정은 본 `progress.md` 1파일로 한정 — `spec.md` / `plan.md` / `acceptance.md` / `design.md` / `research.md` 무수정(manager-spec 소유), `server/**` · `console/lua/**` · `ui/src/**` 무수정. 콘솔 잔여물 0건(프로브 프리셋 6개 전량 삭제·재조회 확인). frontmatter `draft → in-progress` 전이는 **수행하지 않았다** — 그 전이는 M1 첫 커밋의 소관이다(spec-frontmatter-schema.md 소유권 매트릭스).
 
+### M1 — 룩 스키마 + 역할 어휘 + 로더 (2026-07-26, cycle_type=tdd) — **완료**
+
+**RED → GREEN 증거.** 테스트 63건을 먼저 작성했고, 모듈 부재로 수집 단계에서 실패함을 확인했다(`ModuleNotFoundError: No module named 'server.looks'`). 이후 3개 모듈을 구현해 전량 GREEN.
+
+**산출 파일 (신규 4건)**
+
+| 파일 | 내용 |
+|---|---|
+| `server/looks/__init__.py` | 패키지 선언 — 콘솔 무접촉 계약 명시 |
+| `server/looks/schema.py` | 룩 스키마 + REQ-003 3구간 어휘 + 풀 패밀리 귀속 + 패밀리 분할(`payload_for_family`) + 왕복(`look_to_dict`) |
+| `server/looks/roles.py` | 결정 J 6종 폐쇄 집합(한/영 별칭 + 힌트) + 매칭 규율(`match_role_by_name`) |
+| `server/looks/loader.py` | 스키마 검증 + 명시적 에러(REQ-005) + YAML 디렉터리 병합 로더 |
+
+**M0 판정의 하류 반영 (재도출하지 않고 그대로 소비)**
+
+- `PROBE_GATED_ATTRIBUTES = ("Zoom", "Iris")` — 측정 1 GO의 허용 목록 `{Zoom, Iris}`를 그대로.
+- 패밀리 라우팅 `Zoom → Focus`, `Iris → Beam` (`10_object_model.md:38-40`), `IN_SCOPE_POOL_FAMILIES = (Dimmer, Color, Beam, Focus)` — 측정 1 GO에 따른 4종.
+- 결정 J 힌트 집합 **무변경** 진입(측정 3: 모호 0 · 오탐 0). `Back` → 백라이트, `Front` → 프론트, `All` → 미매핑을 테스트로 고정.
+
+**뮤테이션 검증 (완화된 단언 금지 규율).** 63건이 1회차에 전량 통과했으므로 매처를 3종의 약한 구현으로 치환해 어떤 테스트가 실제로 죽는지 측정했다.
+
+| 뮤테이션 | 죽는 테스트 | 판정 |
+|---|---|---|
+| 부분열 매칭(경계 없음) | `백색` · `Keys` · `Slash Bar` · `Backdrop` | 경계 규율은 실효 |
+| 파이썬 `\b` 경계 | `FrontBack Truss` · **밑줄 구분자**(`BL_Truss`) | 명시적 워드 클래스는 실효 |
+| strict 패스만(camel 패스 삭제) | `FrontBack Truss` | camel 패스는 실효 |
+
+- 뮤테이션이 드러낸 공백 1건을 테스트로 보강: `BL_Truss` / `Back_Wash` — 파이썬 `\b`는 `_`를 워드 문자로 취급해 조용히 놓친다.
+- **판정 정정 1건**: `All` 케이스는 부분열 매처로도 미매핑이 되므로 **토큰 경계 규율을 판별하지 못한다.** §E.2 측정 3이 근거로 든 `All`/`BL` 충돌은 실재하지 않는다(어느 힌트도 `all`의 부분열이 아니다). 측정 3의 **관측(`All` 0건 매칭)은 사실이고 판정도 유효**하며, 정정 대상은 그 관측에 붙은 **설명**이다. 실제 판별 케이스는 `백색`·`Keys`·`Slash Bar`·`Backdrop`이며 테스트 주석에 그대로 기록했다.
+
+**AC 판정 (M1 = {001, 015})**
+
+| AC | 상태 | 검증 커맨드 | 실제 출력 |
+|---|---|---|---|
+| **AC-LOOKLIB-001** (스키마 로딩 + 검증) | **PASS** | `pytest server/tests/test_looks_schema.py -q` | `63 passed` — 정상 로드 + 위반 18건 **개별** 거부(다이내믹스 0/6/실수/bool · 집합 밖 역할 · 미지 attribute · Shutter · Frost · 풀 귀속 불가 · 중복 id · 미지 키 · 필수 필드 누락 · 빈 역할/속성 · schema_version · 비-매핑 · 무브먼트 미지 attribute) |
+| **AC-LOOKLIB-015** (역할 어휘 폐쇄 집합) | **PASS** | 동일 | ① 6종 정확 일치 ② 6종 전부 별칭≥1 + 힌트≥1 ④ 타입 클래스 어휘 0건 ⑤ 모호 매칭 `ambiguous` + 약어 정확 토큰. ③(라이브러리 전수)은 **M2 소관** — M1은 로더의 집합 밖 역할 거부로 대응 |
+| AC-015 PRESERVE assert | **PASS** | `git diff --stat server/rulebook/assets/` | 빈 출력 |
+
+**자기 검증 (verbatim)**
+
+| 항목 | 커맨드 | 결과 |
+|---|---|---|
+| 신규 테스트 | `.venv/bin/python -m pytest server/tests/test_looks_schema.py -q` | exit 0 · `63 passed` |
+| 아키텍처 경계 | `.venv/bin/python -m pytest server/tests/test_architecture.py -q` | exit 0 · `4 passed` |
+| 전체 회귀 | `.venv/bin/python -m pytest -q` | exit 1 · `1 failed, 1909 passed` |
+| 기준선(M1 착수 전) | 동일 | exit 1 · `1 failed, 1849 passed` |
+| OSC/bridge import | `grep -rn "bridge.osc\|from server.bridge" server/looks/` | 0건 (exit 1) |
+| AskUserQuestion | `grep -rn "AskUserQuestion\|mcp__askuser" server/looks/` | 0건 (exit 1) |
+| `/Overwrite` (대소문자 무관) | `grep -rniE "/overwrite" server/looks/` | 0건 (exit 1) |
+| PRESERVE diff | `git diff --stat server/safety/ server/rulebook/assets/ console/lua/ ui/src/` | 빈 출력 |
+| 린트 | `.venv/bin/python -m ruff check server/looks/ server/tests/test_looks_schema.py` | exit 0 · `All checks passed!` |
+| 포맷 | `.venv/bin/python -m ruff format --check <동일>` | exit 0 · `5 files already formatted` |
+| 커버리지 | `pytest ... --cov=server.looks` | **95%** (loader 92 · roles 100 · schema 98 · 임계 85 충족) |
+
+- **신규 실패 0건**: 전체 회귀의 유일한 실패 `test_web_reply_discovery.py::TestDiscovery::test_every_candidate_socket_is_released`는 **M1 착수 전 기준선에서 이미 실패하던 항목**이며 동일 테스트다. 통과 수는 1849 → 1909로 정확히 **+60**(신규 테스트 수와 일치, 이후 3건 추가로 63건).
+- **`_ALLOWED_PREFIXES` 미변경 (판단 근거)**: `test_architecture.py:53`의 `_ALLOWED_PREFIXES`는 OSC 표면 import를 **면제**받는 목록이다. 여기에 `server/looks/`를 추가하면 REQ-LOOKLIB-019가 요구하는 경계 검사에서 **제외**되어 정확히 반대 효과가 난다. 추가하지 않았고, 테스트는 그대로 통과한다(면제 없이 통과 = 경계가 실제로 지켜짐).
+
+**@MX 태그 배치 (plan.md §D 대비)**
+
+| 태그 | 위치 | 비고 |
+|---|---|---|
+| `@MX:NOTE` | `server/looks/schema.py` 모듈 독스트링 | P1-1/P1-2 공통 기반 + per-show 값 금지 불변식(닫힌 필드 집합 + 미지 키 거부가 그 기제임을 명시) — §D 예상대로 |
+| `@MX:WARN` + `@MX:REASON` | `server/looks/roles.py` `match_role_by_name` | 이름 관례 휴리스틱 지점. 미매핑 축소가 정상 동작임 + 힌트 확장 시 그룹 발명 금지 경계 — §D 예상대로 |
+| `@MX:ANCHOR` | **신설 0건** | §D의 "fan_in 조건 충족 전까지 NOTE로 시작" 준수 |
+
+**범위 준수**: `server/looks/**`(신규 4) + `server/tests/test_looks_schema.py`(신규 1) + `spec.md` frontmatter `status` 1행 + 본 `progress.md`. plan.md §A.5 PRESERVE 전량 무변경. `20_korean_terms.md` 무변경(REQ-006은 스타일 준수만 요구). 라이브러리 저작 **미착수**(M2 소관) — 자산 디렉터리 `server/looks/library/`는 생성하지 않았고, 로더는 부재 시 명시적 에러를 낸다.
+
+**M2로 이월되는 항목 1건 (신규 발견 아님, 경계 확인)**: AC-LOOKLIB-003 구간 6-i("라이브러리 무브먼트 0건")는 라이브러리가 없으므로 M2 소관이다. M1은 그 짝인 6-ii(**스키마 필드 존재 + 왕복 가능**)를 `TestMovementFieldIsDefinedButUnusedInV1`로 이미 고정했다 — 6-i만 있으면 "필드가 삭제된 것"과 구분되지 않는다는 AC의 지적을 M1에서 미리 봉쇄한 것이다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+```yaml
+run_status: in-progress          # M1 완료 · M2~M7 미착수
+milestones_complete: [M0, M1]
+m1_commit_sha: pending-backfill  # 커밋은 자기 해시를 담을 수 없다
+m1_complete_at: 2026-07-26
+ac_pass_count: 2                 # AC-LOOKLIB-001, AC-LOOKLIB-015 (M1 배정 전량)
+ac_fail_count: 0
+ac_pending_count: 17             # 002~014, 016~019 — M2 이후 범위
+preserve_list_post_run_count: 0  # PRESERVE 목록 위반 0건
+new_warnings_or_lints_introduced: 0
+baseline_full_suite: "1 failed, 1849 passed"
+post_m1_full_suite: "1 failed, 1909 passed"
+new_failures: 0                  # 동일한 사전 실패 1건, 신규 0건
+coverage_server_looks: "95%"     # 임계 85% 충족
+cross_platform_build: n/a        # 순수 파이썬 · 컴파일 산출물 없음
+total_run_phase_files: 5         # 신규 5(모듈 4 + 테스트 1); 문서 2는 별도
+push_performed: false            # 지시에 따라 푸시하지 않음
+```
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
