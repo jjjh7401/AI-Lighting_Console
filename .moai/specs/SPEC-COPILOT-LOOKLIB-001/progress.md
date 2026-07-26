@@ -412,32 +412,125 @@ REQ-LOOKLIB-013의 보고 요소(생성 프리셋의 풀/슬롯/이름, 미매�
 
 **미검증 잔여 (§E.2 기록 대상)**: `Zoom`/`Iris`의 **값 방향은 실측되지 않았다.** M0는 두 문자열의 *수용 여부*만 측정했고 어느 끝이 좁고/열린 상태인지는 측정하지 않았다. 본 마일스톤은 `Zoom` 저=협·고=광, `Iris` 저=폐·고=개를 **가정**했으며 그 가정을 자산 헤더 주석에 명시했다. 방향이 반대라면 해당 룩은 의도보다 넓거나 좁게 렌더링된다(안전 영향 없음, 미관 문제). M7 종단 검증에서 관측 가능하다.
 
+### M3 — 역할→리그 매핑 리졸버 (AC-LOOKLIB-005 / 006)
+
+**산출물**: `server/looks/resolver.py`(신규 1) + `server/tests/test_looks_resolver.py`(신규 1, 63 테스트). 콘솔 무접촉 — 전 픽스처가 인메모리이며, 입력 리그는 생산자 자신의 헬퍼(`rig_object`/`rig_section`)로 조립한다(손으로 만든 dict는 콘솔 형상이 바뀌어도 계속 통과하므로 경계 테스트가 되지 못한다).
+
+**RED → GREEN 증거.** 테스트 60건을 먼저 작성해 수집 단계 실패를 관측했다(`ModuleNotFoundError: No module named 'server.looks.resolver'`). 구현 후 1건이 실패했는데 **결함은 구현이 아니라 테스트의 전제**였다 — 비공허성 단언이 `NO_MATCH`(값이 `roles.py`에 사는 상수)를 resolver.py 소스에서 찾고 있었다. 스캔이 실제로 읽는 것을 단언하도록 정정했다(리졸버가 소비하는 섹션 키 전량: `reason`/`objects`/`truncated`/`no`/`name`).
+
+**공개 계약**
+
+| 이름 | 형상 |
+|---|---|
+| `resolve_roles(groups_section) -> RoleResolution` | 입력은 groups 섹션 1개 — 해결된 형상(`{"objects": [...], "truncated": ...}`) 또는 실패 형상(`{"reason": ..., ...}`) |
+| `GroupCandidate(number: int, name: str)` | 리그가 등재했고 **주소를 가진** 그룹. `number`는 옵셔널이 아니다 — M4가 `Group None`을 만들 수 있는 경로 자체를 없앤다 |
+| `UnmappedRole(role, reason, groups)` | 미매핑 역할 + 사유 + 그 사유를 만든 리그 그룹 이름 |
+| `AmbiguousGroup(name, roles)` | 둘 이상 역할이 주장한 이름 — 어느 쪽에도 배정되지 않음 |
+| `RoleResolution` | `mapped` / `unmapped` / `ambiguous_groups` / `unaddressable_groups` / `unmatched_groups` / `truncated` / `unavailable_reason` + 조회기 `groups_for` · `unmapped_for` · `reason_for` |
+
+- **불변식**: `set(mapped) | {u.role} == ROLE_NAMES`이며 교집합은 공집합 — 6종 전부가 매핑이거나 명시적 미매핑이다(기계 assert).
+- **미매핑 사유 5종**: `no_match` · `ambiguous` · `unaddressable`(신설, 아래) · 그리고 섹션이 오지 않은 경우 `path_not_resolved` / `console_unreachable`가 **역할 단위로도** 그대로 실린다. "어느 그룹도 매칭되지 않았다"는 보지도 못한 리그에 대한 주장이므로 쓰지 않는다.
+- **두 실패 사유는 열거하지 않고 verbatim 통과시킨다.** 리졸버는 `REASON_UNRESOLVED`/`REASON_UNREACHABLE`를 import하지도 상수로 갖지도 않는다 — 섹션이 말한 문자열을 그대로 싣는다. 병합이 **구조적으로 불가능**해지고(합칠 대상이 코드에 없다), M5가 `tools.py`에 룩 툴을 등록할 때 생길 순환 import도 함께 없어진다(`tools.py` → `looks.matching` → `looks.resolver` → `tools.py`). 테스트 쪽은 `tools.py`에서 두 상수를 import해 SSOT에 묶여 있다.
+
+**SPEC 열거를 넘어선 결정 1건 — `unaddressable` 사유 신설.** 응답기가 슬롯을 확립하지 못한 그룹(`no` 키 부재)이 어떤 역할에 **정확히** 매칭될 때, 그 역할을 `no_match`로 보고하면 "이 리그엔 백라이트가 없다"가 되어 리그가 실제로 말한 "있는데 번호를 못 붙였다"를 지운다. 두 상태는 고치는 방법이 다르므로(후자는 그 그룹에 슬롯을 주면 끝난다) 사유를 갈랐다. REQ-LOOKLIB-009는 `ambiguous`의 구분만 요구하고 사유 집합을 닫지 않았으므로 위반이 아니라 정보 추가이며, REQ-LOOKLIB-008의 "번호를 발명하지 않는다"를 형상 수준에서 강제하는 장치이기도 하다(`GroupCandidate.number`가 옵셔널이 아니게 된 근거). **M4가 이 사유를 소비해야 한다** — 매핑됐다고 보고된 역할은 전부 주소를 가진다는 것이 리졸버의 계약이다.
+
+**우선순위 결정 1건**: 한 역할에 모호 주장과 미번호 정확 매칭이 동시에 걸리면 **미번호 쪽을 보고**한다 — 운영자가 조치 가능한 쪽(슬롯 부여)이기 때문이다. 모호성은 `ambiguous_groups`에 그대로 남는다.
+
+**M0 실측을 통째로 회귀 테스트로 고정** (`TestM0LiveShowfile`, 6건). `Copilot Grp`(1)·`Back`(11)·`Front`(12)·`All`(13) → 백라이트=`Back`, 프론트=`Front`, 나머지 4역할 `no_match`, 모호 **0건**, `Copilot Grp`/`All`은 `unmatched_groups`. 프로젝트가 가진 유일한 실물 리그 데이터 포인트다.
+
+- **§E.2 측정 3의 설명 정정 1건 (M1이 시작한 정정의 이행)**: `All`이 아무 역할도 건드리지 않은 것은 **토큰 경계 규율을 입증하지 않는다** — 어떤 힌트도 `all`의 부분열이 아니므로 순진한 부분열 매처도 같은 결과를 낸다. 관측은 사실이고 판정도 유효하며, 정정 대상은 그 관측에 붙어 있던 설명이다. 경계 규율을 실제로 판별하는 이름은 `백색`·`Backdrop`·`FrontBack Truss`·`BL_Truss`이며 `TestConsumesTheM1MatchingContract`가 그 역할을 맡는다. 테스트 주석에 이 정정을 명시했다(같은 오해가 다시 쓰이지 않도록).
+
+**뮤테이션 검증 (10건 / 생존 0건)**. 커밋할 소스 그대로에 대해 측정했다.
+
+| # | 뮤테이션 | 죽인 테스트(대표) |
+|---|---|---|
+| 1 | 두 실패 사유를 `unavailable` 하나로 병합 | `TestTheTwoUnavailableReasonsStaySplit` 2건 + 사유별 verbatim 4건 |
+| 2 | 모호 이름을 첫 주장 역할에 배정 | `TestAmbiguous` 4건 + 우선순위 1건 |
+| 3 | 미매핑 역할에 그룹을 발명 | 15건 (`TestNeverInventsAGroup` 5 파라미터 포함) |
+| 4 | `no` 부재 허용 제거(`entry["no"]`) | `TestUnaddressableGroup` 5건 + 회계/불발명 4건 |
+| 5 | 미번호 그룹에 번호를 붙임 | `TestUnaddressableGroup` 5건 + 불발명 1건 |
+| 6 | `truncated` 전파 제거 | `test_the_truncation_signal_is_propagated` (+ 비공허성 스캔이 부수적으로 동반 사망) |
+| 7 | 매칭을 부분열 스캔으로 재구현 | `백색` · `Backdrop` · 관례 없는 리그 |
+| 8 | 미매칭 그룹 이름을 삼킴 | `test_copilot_grp_and_all_match_nothing` 외 1 |
+| 9 | 우선순위 뒤집기(ambiguous 먼저) | `test_an_unnumbered_exact_match_outranks_an_ambiguous_claim` |
+| 10 | 비-매핑 엔트리 가드 제거 | `TestMalformedEntry` 2건 |
+
+- **1회차에 생존 1건(#9)이 있었고 테스트를 보강해 닫았다.** 우선순위는 코드 주석이 명시한 동작인데 그것을 고정하는 테스트가 없었다 — 문서화된 동작에 테스트가 없으면 그것은 결정이 아니라 우연이다.
+- **하니스 결함 1건을 발견해 고쳤다 (측정 신뢰도 문제)**: #9는 **순수 블록 교환이라 파일 크기가 원본과 같다.** CPython의 pyc 무효화는 (mtime 초, 크기) 쌍이므로, 같은 초 안에 원본을 복원하면 뮤턴트의 `.pyc`가 그대로 재사용된다. 실제로 이 오염 때문에 새 테스트가 **원본 코드에서도 실패**하는 것처럼 보였다. 하니스에 `__pycache__` 삭제 + `PYTHONDONTWRITEBYTECODE=1`을 넣고 전량 재측정했으며, 위 표는 재측정 결과다. 이 함정은 뮤테이션이 파일 크기를 바꾸지 않을 때만 발동하므로 M1·M2 결과는 영향받지 않는다(전부 크기 변경 뮤테이션).
+
+**AC 판정 (M3 = {005, 006})**
+
+| AC | 판정 | 검증 커맨드 | 실제 출력 |
+|---|---|---|---|
+| **AC-LOOKLIB-005** (역할 매핑 리졸버) | **PASS** | `pytest server/tests/test_looks_resolver.py -q` | `63 passed`. 한/영 관례 매핑 · 미매핑 · 신호 전파 3계열이 개별 테스트로 존재하며, 실패 모드 8종(미매칭/모호/truncated/path_not_resolved/console_unreachable/미번호/빈 섹션/비-매핑 엔트리)이 **병합 없이** 각각 고정됨(design.md §6.2) |
+| **AC-LOOKLIB-006** (슬롯≠FID + 그룹 발명 금지) | **PASS** | 동일 + `grep -rn "fixtures" server/looks/resolver.py` | ① 정적: 리졸버 소스의 **비-독스트링 문자열 상수 전량**을 AST로 뽑아 `fixture`/`thru`/`attribute`/`pan`/`tilt`/`group ` 토큰 0건 확인(비공허성 동반 단언). fixtures 섹션 소비 경로 부재. ② 산출물: 7종 리그에 대해 모든 후보 `(number, name)`이 입력 리그 등재분에 속함을 파라미터 assert |
+
+- **정적 스캔을 주제 어휘가 아니라 금지 API에 건다**: 리졸버 독스트링은 "왜 fixtures를 읽지 않는가"를 설명해야 하므로 원문 grep은 자기 산문에 걸린다(M2가 자기 주석의 `SHUTTER`에 걸린 것과 같은 함정). AST로 독스트링을 제외하고 **코드 문자열 상수만** 스캔해 이 문제를 없앴다.
+
+**자기 검증 (verbatim)**
+
+| 항목 | 커맨드 | 결과 |
+|---|---|---|
+| 신규 테스트 | `.venv/bin/python -m pytest server/tests/test_looks_resolver.py -q` | exit 0 · `63 passed` |
+| M1·M2·아키텍처 | `... test_looks_schema.py test_looks_library.py test_architecture.py -q` | exit 0 · `96 passed` |
+| 전체 회귀 | `.venv/bin/python -m pytest -q` | exit 1 · `1 failed, 2004 passed` |
+| 기준선(M3 착수 직전, HEAD 344485e) | 동일 | exit 1 · `1 failed, 1941 passed` |
+| OSC/bridge import | `grep -rn "bridge.osc\|from server.bridge" server/looks/` | 0건 (exit 1) |
+| AskUserQuestion | `grep -rn "AskUserQuestion\|mcp__askuser" server/looks/` | 0건 (exit 1) |
+| PRESERVE diff | `git diff --stat server/safety/ server/rulebook/assets/ ui/ console/` | 빈 출력 |
+| 린트 | `.venv/bin/python -m ruff check server/looks/ server/tests/test_looks_resolver.py` | exit 0 · `All checks passed!` |
+| 포맷 | `.venv/bin/python -m ruff format --check <동일>` | exit 0 · `6 files already formatted` |
+| 커버리지 | `pytest ... --cov=server.looks.resolver` | **100%** (87 stmts / 0 miss) |
+| 패키지 커버리지 | `pytest <looks 3종> --cov=server.looks` | **97%** (resolver 100 · roles 100 · schema 98 · loader 93) |
+
+- **신규 실패 0건**: 유일한 실패 `test_web_reply_discovery.py::TestDiscovery::test_every_candidate_socket_is_released`는 착수 전 기준선에서 이미 실패하던 동일 테스트다. 통과 수 1941 → 2004 = **+63**(신규 테스트 수와 정확히 일치).
+- **§E.3 baseline 불일치 해소 기록**: M1(1909) ↔ M2(1912)의 3건 차이는 규명되지 않은 채 남아 있었다. M3는 착수 직전 HEAD `344485e`에서 **직접** 1941을 실측했고 종료 시 2004를 실측했다 — 두 수 모두 본 마일스톤이 관측한 것이며 이월 인용이 아니다. M1/M2 사이의 3건 차이는 여전히 규명되지 않았다(본 마일스톤은 그 원인을 조사하지 않았다).
+
+**@MX 태그 배치**
+
+| 태그 | 위치 | 비고 |
+|---|---|---|
+| `@MX:NOTE` | `resolver.py` 모듈 독스트링 | 역할 계층이 **그룹**으로만 해석되고 fixtures를 읽지 않는 이유(슬롯≠FID, `tools.py:33-36`) |
+| `@MX:WARN` + `@MX:REASON` | `resolve_roles` | plan.md §D가 예상한 휴리스틱 위험 지대의 **구체적 발현 지점** — 후보 목록이 만들어지는 유일한 자리. M1이 `match_role_by_name`에 건 WARN(힌트 확장 시 발명 금지)과 내용이 다르다: 이쪽은 **후보 합성** 금지(모호 첫 히트 채택 · 미매핑 역할 대체 · 미번호 그룹에 위치 번호 부여) |
+| `@MX:ANCHOR` | 신설 0건 | fan_in 미충족 — §D 규율 유지 |
+
+**M6로 이월되는 발견 1건 (본 마일스톤 소관 아님, 보고만 한다)**: AC-LOOKLIB-008 ③이 명시한 `grep -rnE "gate\.screen|execution_port|ConsoleLink" server/looks/` → 0건은 **현재 이미 성립하지 않는다.** `server/looks/__init__.py:6`(M1 산출물)의 독스트링이 실행 경로를 설명하며 `gate.screen()`을 문장 안에서 언급하기 때문이다. `resolver.py`는 0건이며 어느 룩 모듈도 그 API를 **호출**하지 않으므로 REQ-LOOKLIB-010의 실질은 지켜지고 있다 — 어긋난 것은 AC가 적은 검증 수단이다. 정정 방향은 둘(독스트링 표현 변경 / 주석·독스트링 제외 스캔으로 전환)이며 **어느 쪽도 M3가 단독으로 정하지 않는다**: `__init__.py`는 M1 소유이고 AC-008은 M6 소관이다. 위 정적 스캔이 AST 방식을 택한 것은 이 문제의 리졸버 판(版)을 미리 막은 것이다.
+
+**범위 준수**: 신규 2파일(`server/looks/resolver.py` · `server/tests/test_looks_resolver.py`) + 본 `progress.md`. `git status --short server/`가 이 2건만 보고한다. spec.md/plan.md/acceptance.md/design.md/research.md 무수정, PRESERVE 전량 무수정, M1·M2 산출물 무수정(`roles.py`의 매칭 계약은 소비만 했고 재구현하지 않았다). frontmatter 전이 없음 — `status: in-progress`는 M1이 이미 수행했다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
-run_status: in-progress          # M1·M2 완료 · M3~M7 미착수
-milestones_complete: [M0, M1, M2]
+run_status: in-progress          # M1·M2·M3 완료 · M4~M7 미착수
+milestones_complete: [M0, M1, M2, M3]
 m1_commit_sha: c1c1382
 m1_complete_at: 2026-07-26
-m2_commit_sha: 9b76fce           # 본 커밋 직후 backfill
+m2_commit_sha: 9b76fce
 m2_complete_at: 2026-07-26
-ac_pass_count: 5                 # 001, 015(M1) + 002, 003, 004(M2)
+m3_commit_sha: pending-backfill-m3   # 본 커밋 직후 backfill
+m3_complete_at: 2026-07-26
+ac_pass_count: 7                 # 001, 015(M1) + 002, 003, 004(M2) + 005, 006(M3)
 ac_fail_count: 0
-ac_pending_count: 14             # 005~014, 016~019 — M3 이후 범위
+ac_pending_count: 12             # 007~014, 016~019 — M4 이후 범위
 preserve_list_post_run_count: 0  # PRESERVE 목록 위반 0건
 new_warnings_or_lints_introduced: 0   # ruff check/format: 신규 파일 clean
                                       # (리포지토리 사전 baseline 3 E501 + 25 format은 무관·무수정)
-baseline_full_suite: "1 failed, 1912 passed"   # M2 착수 직전 실측 (HEAD c1c1382)
-post_m2_full_suite: "1 failed, 1941 passed"    # +29 = 신규 census 전량
+baseline_full_suite: "1 failed, 1941 passed"   # M3 착수 직전 실측 (HEAD 344485e)
+post_m3_full_suite: "1 failed, 2004 passed"    # +63 = 신규 리졸버 테스트 전량
 new_failures: 0                  # 동일한 사전 실패 1건(test_every_candidate_socket_is_released), 신규 0건
-coverage_server_looks: "96%"     # 임계 85% 충족 (loader 93 / roles 100 / schema 98)
+coverage_server_looks: "97%"     # 임계 85% 충족 (resolver 100 / roles 100 / schema 98 / loader 93)
+coverage_resolver: "100%"        # 87 stmts / 0 miss
 cross_platform_build: n/a        # 순수 파이썬 · 컴파일 산출물 없음
-total_run_phase_files: 10        # M1 5 + M2 5(자산 4 + 테스트 1)
+total_run_phase_files: 12        # M1 5 + M2 5 + M3 2
 library_look_count: 32           # 워십 8 · 록 8 · 발라드 7 · EDM 9
 library_movement_spec_count: 0   # v0.3.1 F3
-mutation_kill_rate: "17/17"      # 생존 0건
+mutation_kill_rate: "27/27"      # M1·M2 17 + M3 10 · 생존 0건
+                                 # M3 1회차 생존 1건(우선순위)은 테스트 보강으로 닫힘
+resolver_unmapped_reasons: 5     # no_match · ambiguous · unaddressable(신설) · 두 unavailable 사유
 push_performed: false            # 지시에 따라 푸시하지 않음
 ```
+
+> **M1/M2 baseline 불일치 (미해소로 유지)**: M1의 `1909`와 M2가 같은 HEAD에서 실측한 `1912`의 3건 차이는 여전히 규명되지 않았다. M3는 이 숫자를 이월하지 않고 착수 직전(`344485e`)에 **직접** `1941`을 실측했으므로 위 델타 판정은 본 마일스톤이 관측한 두 수에만 귀속된다.
 
 > **baseline 주의**: M1이 기록한 `post_m1_full_suite: "1 failed, 1909 passed"`와 본 마일스톤이 동일 HEAD(`c1c1382`)에서 실측한 `1 failed, 1912 passed`가 3건 어긋난다. 원인은 규명하지 못했다(작업 트리의 추적 대상 변경은 `.moai/` 문서뿐이다). 본 §E.3의 델타 판정은 **본 마일스톤이 직접 실측한 1912**에 귀속시켰다 — 이월된 숫자를 baseline으로 쓰는 것은 측정이 아니라 인용이기 때문이다.
 
