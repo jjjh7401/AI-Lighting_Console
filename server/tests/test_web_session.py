@@ -111,6 +111,9 @@ class TestHappyPath:
         assert event["status"] == "ok"
         assert event["text"] == "보컬 그룹을 만들었습니다"
         assert console.executed == ["Store Group 3"]
+        preview_events = [e for e in sent if e["type"] == "execution_preview"]
+        assert len(preview_events) == 1
+        assert preview_events[0]["commands"][0]["command"] == "Store Group 3"
         (command,) = event["commands"]
         assert command["status"] == "executed_ok"
         assert "실행 완료" in command["label"]
@@ -171,6 +174,10 @@ class TestApprovalFlow:
             resolver.cancel()
 
         request_events = [e for e in sent if e["type"] == "approval_request"]
+        preview_events = [e for e in sent if e["type"] == "execution_preview"]
+        assert len(preview_events) == 1
+        assert sent.index(preview_events[0]) < sent.index(request_events[0])
+        assert preview_events[0]["risk_level"] == "danger"
         assert len(request_events) == 1
         (item,) = request_events[0]["items"]
         assert item["command"] == "Delete Sequence 5"
