@@ -856,25 +856,24 @@ class TestSessionWiring:
         # The preview the gate path wraps fired for the look bundle too.
         assert any(event.get("type") == "execution_preview" for event in sent)
 
-    def test_the_executor_drops_the_trailing_clearall_as_an_in_bundle_duplicate(self, tmp_path):
-        # FINDING, and outside this milestone's scope to fix: run_commands
-        # deduplicates identical command strings within one bundle
-        # (tools.py:376-391). That is right for a `Store` — re-running it
-        # duplicates a console object — and wrong for a `ClearAll`, whose
-        # second occurrence exists to run at a different MOMENT rather than to
-        # repeat an effect. The bundle TEXT carries the discipline
-        # REQ-LOOKLIB-011 requires; the wire silently drops its last line.
+    def test_the_trailing_clearall_reaches_the_console(self, tmp_path):
+        # WAS a finding, now fixed at its source: run_commands deduplicated
+        # identical strings within one bundle, which is right for a `Store` —
+        # re-running it duplicates a console object — and wrong for a
+        # `ClearAll`, whose second occurrence exists to run at a different
+        # MOMENT rather than to repeat an effect. Programmer-state commands are
+        # exempt from that dedupe (tools._is_programmer_state), so the wire now
+        # carries the whole discipline REQ-LOOKLIB-011 puts in the bundle text.
         session, console, _audit, _sent, _channel = self._session(tmp_path)
         plan = _plan(_look(attributes=(("Dimmer", 50),)), _groups((11, "Back")), _pools())
         session.run_look_bundle(plan)
         assert plan.commands[-1] == "ClearAll"
-        assert console.executed == list(plan.commands[:-1])
+        assert console.executed == list(plan.commands)
 
-    def test_the_next_bundle_still_starts_clean_despite_that_drop(self, tmp_path):
-        # What bounds the finding above: run_look_bundle dispatches with no
-        # ExecutionContext, so every bundle gets a fresh dedupe set and the
-        # LEADING ClearAll of the next one is new and does run. The loss is the
-        # belt, not the braces — but it IS a loss.
+    def test_the_next_bundle_still_starts_clean(self, tmp_path):
+        # Belt as well as braces: the previous bundle closed with its own
+        # ClearAll, and this one opens with a leading one that also runs —
+        # neither is suppressed by the other.
         session, console, _audit, _sent, _channel = self._session(tmp_path)
         plan = _plan(_look(attributes=(("Dimmer", 50),)), _groups((11, "Back")), _pools())
         session.run_look_bundle(plan)
@@ -882,29 +881,31 @@ class TestSessionWiring:
         session.run_look_bundle(plan)
         assert console.executed[1] == "ClearAll"
 
-    def test_the_per_family_shape_is_refused_rather_than_silently_flattened(self, tmp_path):
-        # Same dedupe, far worse consequence: cycles 2..N would lose BOTH their
-        # ClearAll and their Group re-selection, so each would store the
-        # previous cycle's programmer — exactly the cross-family over-capture
-        # this shape exists to rule out.
+    def test_the_per_family_shape_runs_with_its_cycles_intact(self, tmp_path):
+        # The FALLBACK branch is executable again (M0 ASSUMPTION-14). It was
+        # refused while the dedupe flattened it: cycles 2..N lost BOTH their
+        # ClearAll and their Group re-selection, so each stored the previous
+        # cycle's programmer — the cross-family over-capture this shape exists
+        # to rule out. Every line now reaches the console in order.
         session, console, _audit, _sent, _channel = self._session(tmp_path)
         look = _look(attributes=FOUR_FAMILY_ATTRIBUTES)
         plan = _plan(look, _groups((11, "Back")), _pools(), shape=CAPTURE_PER_FAMILY)
         result = session.run_look_bundle(plan)
-        assert result["executed"] is False
-        assert "refused" in result
-        assert console.executed == []
+        assert result["executed"] is True
+        assert "refused" not in result
+        assert console.executed == list(plan.commands)
 
-    def test_the_dedupe_would_actually_flatten_the_per_family_cycles(self):
-        # Control for the refusal above: prove the collapse is real, not a
-        # precaution against something that could not happen.
+    def test_every_per_family_store_keeps_its_own_capture_cycle(self, tmp_path):
+        # What the round-trip above is FOR: four stores means four isolated
+        # captures, each preceded by its own clear and re-selection, plus the
+        # closing clear. A flattened bundle would show one of each.
+        session, console, _audit, _sent, _channel = self._session(tmp_path)
         look = _look(attributes=FOUR_FAMILY_ATTRIBUTES)
         plan = _plan(look, _groups((11, "Back")), _pools(), shape=CAPTURE_PER_FAMILY)
-        seen: set[str] = set()
-        survives = [c for c in plan.commands if not (c in seen or seen.add(c))]
-        assert survives.count("ClearAll") == 1
-        assert survives.count("Group 11") == 1
-        assert len(_stores(survives)) == 4  # four stores, one capture — flattened
+        session.run_look_bundle(plan)
+        assert len(_stores(console.executed)) == 4
+        assert console.executed.count("ClearAll") == 5
+        assert console.executed.count("Group 11") == 4
 
     def test_the_look_bundle_is_screened_as_one_bundle_not_command_by_command(self, tmp_path):
         session, _console, _audit, sent, _channel = self._session(tmp_path)

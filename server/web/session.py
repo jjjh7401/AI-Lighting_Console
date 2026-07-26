@@ -23,7 +23,7 @@ from collections.abc import Callable, Sequence
 
 from server.deploy.review import ReviewRequest
 from server.llm.types import LLMProvider, ToolCall
-from server.looks.instantiate import CAPTURE_SHARED, LookInstantiation
+from server.looks.instantiate import LookInstantiation
 from server.orchestrator.last_created import LastCreated, parse_last_created
 from server.orchestrator.ports import ExecutionResult
 from server.orchestrator.runner import InstructionResult, Orchestrator
@@ -292,28 +292,17 @@ class ChatSession:
         An empty bundle sends nothing — that is the shape a look takes when the
         rig addressed none of its roles, and the report says why.
 
-        The per-family capture shape is REFUSED here rather than run. It is
-        built from repeated ``ClearAll`` / ``Group`` lines, and run_commands
-        deduplicates identical strings within one bundle (tools.py:376-391) —
-        right for a ``Store``, wrong for a ``ClearAll`` whose whole purpose is
-        to run at a second MOMENT. Cycles 2..N would lose both their clear and
-        their re-selection and store the previous cycle's programmer, which is
-        the silent over-capture that shape exists to prevent. Refusing loudly
-        beats writing wrong presets; lifting the refusal needs the dedupe rule
-        changed, which is outside the look layer.
+        BOTH capture shapes run. The per-family shape used to be refused here:
+        it is built from repeated ``ClearAll`` / ``Group`` lines, and
+        run_commands deduplicated every repeat, so cycles 2..N would have lost
+        their clear and their re-selection and stored the previous cycle's
+        programmer. That defect is fixed at its source — programmer-state
+        commands are now exempt from the dedupe
+        (``server.orchestrator.tools._is_programmer_state``) — so the isolated
+        cycles reach the console intact and the refusal has nothing left to
+        protect.
         """
         report = plan.to_dict()
-        if plan.capture_shape != CAPTURE_SHARED:
-            return {
-                "executed": False,
-                "report": report,
-                "commands": [],
-                "refused": (
-                    f"capture shape {plan.capture_shape!r} cannot be executed: "
-                    "run_commands drops the repeated ClearAll/Group lines its "
-                    "isolated cycles are built from"
-                ),
-            }
         if not plan.commands:
             return {"executed": False, "report": report, "commands": []}
         execution = self._registry.dispatch(

@@ -10,6 +10,7 @@ never sends anything.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
@@ -144,6 +145,46 @@ class ToolExecution:
 _Handler = Callable[[ToolCall, ExecutionContext], ToolExecution]
 
 _EMPTY_CONTEXT = ExecutionContext()
+
+
+# -- the dedupe exemption (M4 follow-up) ---------------------------------------
+#
+# Dedupe exists to prevent a duplicated DURABLE side effect. A command that
+# establishes programmer state has no durable artifact to duplicate — it is
+# idempotent in effect but POSITION-DEPENDENT in meaning. `ClearAll` appearing
+# twice is not the same instruction twice; it is one instruction that must run
+# at two different moments.
+#
+# The set is enumerated, not inferred, and deliberately small: the whole-
+# programmer clear, and the BARE selection form of the two object types that
+# select fixtures into the programmer. It is anchored on the command's LEADING
+# token, because that is the discriminator between a bare selection and a
+# command that creates or destroys something: `Store Group 7`, `Label Group 7
+# 'Vocals'`, `Delete Group 3` and `Store Fixture 5` all carry a selection
+# operand, and all leave an artifact behind (00_grammar.md "Frequently used
+# functions"). A selection carrying a value is out too — `Group 3 Full` and
+# `Fixture 1 Thru 10 At 80` set rather than merely select.
+#
+# The operand grammar (`3`, `11 + 12`, `1 Thru 10`, `11 Thru`, `11 Thru 19 - 15`)
+# is 00_grammar.md:17-22, where `Thru` / `+` / `-` are general object-reference
+# operators — `Cue 3 Thru 7` is the rulebook's own non-Fixture example — so the
+# two types share one operand pattern rather than being spelled out twice.
+# Matching is case-insensitive because the console is (audit finding D14).
+#
+# A wide selection is still the GATE's business, not this predicate's: an
+# open-ended `Thru` is screened upstream (server/safety/classify.py) before any
+# of this runs, so exempting one from dedupe never widens what may execute.
+_SELECTION_OPERAND = r"\d+(?:\s*[-+]\s*\d+|\s+Thru(?:\s+\d+)?)*"
+_PROGRAMMER_STATE_COMMANDS = (
+    re.compile(r"ClearAll", re.IGNORECASE),  # clear the whole programmer
+    re.compile(rf"(?:Fixture|Group)\s+{_SELECTION_OPERAND}", re.IGNORECASE),  # bare selection
+)
+
+
+def _is_programmer_state(command: str) -> bool:
+    """True for a command that establishes programmer state (exempt from dedupe)."""
+    text = command.strip()
+    return any(pattern.fullmatch(text) is not None for pattern in _PROGRAMMER_STATE_COMMANDS)
 
 
 class DeployPipelinePort(Protocol):
@@ -384,10 +425,13 @@ def build_toolset(
                         detail="not executed (stopped after an earlier failure)",
                     )
                 )
-            elif command in already_executed:
+            elif command in already_executed and not _is_programmer_state(command):
                 # Never re-execute a command that already succeeded — either
                 # in a prior tool call (context.executed_ok) or earlier in
                 # THIS bundle — re-execution duplicates its console effect.
+                # Programmer-state commands are exempt: they duplicate no
+                # artifact, and their repeats are MOMENTS, not repetitions
+                # (_is_programmer_state above).
                 outcomes.append(
                     CommandOutcome(
                         command=command,

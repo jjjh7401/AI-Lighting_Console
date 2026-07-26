@@ -206,6 +206,130 @@ class TestRunCommands:
         assert port.executed == []
 
 
+class TestProgrammerStateIsExemptFromDedupe:
+    """The dedupe above guards DURABLE artifacts, and only those (M4 follow-up).
+
+    A command that establishes programmer state leaves no artifact behind to
+    duplicate, so suppressing its second occurrence removes an instruction
+    rather than a repeat. The look bundles this fix exists for are built from
+    ``ClearAll``-delimited capture cycles: without the exemption a bundle loses
+    its trailing clear, and a per-family bundle loses every cycle boundary
+    after the first and stores the previous cycle's programmer.
+    """
+
+    def test_clearall_runs_at_every_moment_it_appears(self):
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        commands = ["ClearAll", "Store Preset 4.1", "ClearAll"]
+        execution = registry.dispatch(_call("run_commands", {"commands": commands}))
+        assert port.executed == commands
+        assert [o.status for o in execution.command_outcomes] == ["executed_ok"] * 3
+
+    def test_a_bare_group_selection_is_re_selected_for_each_cycle(self):
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        commands = ["Group 11", "Store Preset 4.1", "ClearAll", "Group 11", "Store Preset 5.1"]
+        registry.dispatch(_call("run_commands", {"commands": commands}))
+        assert port.executed == commands
+
+    def test_a_bare_fixture_selection_is_re_selected_for_each_cycle(self):
+        # `Fixture` selects into the programmer exactly as `Group` does, so it
+        # carries the same position-dependent meaning and the same exemption.
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        commands = ["Fixture 101", "Store Preset 4.1", "ClearAll", "Fixture 101"]
+        registry.dispatch(_call("run_commands", {"commands": commands}))
+        assert port.executed == commands
+
+    def test_the_whole_bare_selection_operand_grammar_is_exempt(self):
+        # 00_grammar.md:17-22 — `Thru` (incl. the open range), `+` and `-` are
+        # general object-reference operators, so both types get all of them.
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        for command in (
+            "Group 11 + 12",  # what the look layer emits for a two-group role
+            "Fixture 11 + 12 + 13",
+            "Fixture 101 Thru 110",
+            "Fixture 11 Thru",  # open range
+            "Fixture 11 Thru 19 - 15",
+            "Group 1 Thru 5",
+        ):
+            port.executed.clear()
+            registry.dispatch(_call("run_commands", {"commands": [command, command]}))
+            assert port.executed == [command, command], command
+
+    def test_a_prior_calls_clearall_does_not_suppress_this_ones(self):
+        # The exemption covers the cross-call set as well as the in-bundle one:
+        # a bundle that opens with a clear must clear, whatever the last one did.
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        context = ExecutionContext(executed_ok=frozenset({"ClearAll", "Group 11"}))
+        registry.dispatch(
+            _call("run_commands", {"commands": ["ClearAll", "Group 11", "Store Preset 4.1"]}),
+            context,
+        )
+        assert port.executed == ["ClearAll", "Group 11", "Store Preset 4.1"]
+
+    def test_a_repeated_store_is_still_deduped(self):
+        # The rule the exemption must NOT widen into: a second `Store Preset`
+        # writes a second console object (REQ-MVP-033).
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        execution = registry.dispatch(
+            _call("run_commands", {"commands": ["Store Preset 4.1", "Store Preset 4.1"]})
+        )
+        assert port.executed == ["Store Preset 4.1"]
+        assert [o.status for o in execution.command_outcomes] == [
+            "executed_ok",
+            "skipped_already_executed",
+        ]
+
+    def test_the_leading_verb_is_the_discriminator_not_the_object_type(self):
+        # `Store` / `Label` / `Delete` all take a selection operand and all
+        # leave a durable artifact; only the BARE form is programmer state.
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        for command in (
+            "Store Group 7",
+            "Label Group 7 'Vocals'",
+            "Delete Group 3",
+            "Store Fixture 5",
+            "Label Fixture 5 'Spot'",
+            "Delete Fixture 101 Thru 110",
+        ):
+            port.executed.clear()
+            registry.dispatch(_call("run_commands", {"commands": [command, command]}))
+            assert port.executed == [command], command
+
+    def test_a_selection_carrying_a_value_is_still_deduped(self):
+        # These select AND set — outside the enumerated exemption, which is
+        # deliberately the bare selection form only.
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        for command in ("Group 3 Full", "Fixture 1 Thru 10 At 80"):
+            port.executed.clear()
+            registry.dispatch(_call("run_commands", {"commands": [command, command]}))
+            assert port.executed == [command], command
+
+    def test_the_match_is_case_insensitive_like_the_console(self):
+        # D14: this project has already shipped one case-sensitive assert that
+        # the console's own case-insensitivity walked straight past.
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        for command in (
+            "clearall",
+            "CLEARALL",
+            "ClearAll",
+            "group 11",
+            "GROUP 11",
+            "fixture 101",
+            "FIXTURE 101 THRU 110",
+        ):
+            port.executed.clear()
+            registry.dispatch(_call("run_commands", {"commands": [command, command]}))
+            assert port.executed == [command, command], command
+
+
 class TestQueryState:
     def test_returns_decoded_snapshot_payload(self):
         state_port = FakeStatePort(dict(_RIG_TREE))
