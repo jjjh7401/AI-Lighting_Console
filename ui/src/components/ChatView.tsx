@@ -18,11 +18,35 @@ function statusClass(status: string): string {
   }
 }
 
-function CommandRow({ command }: { command: CommandView }) {
+export function commandDetailText(command: CommandView): string | null {
+  const detail = command.detail.trim();
+  return detail ? detail : null;
+}
+
+function copyCommand(command: string) {
+  if (typeof navigator === "undefined" || navigator.clipboard === undefined) return;
+  void navigator.clipboard.writeText(command);
+}
+
+export function CommandRow({ command }: { command: CommandView }) {
+  const detail = commandDetailText(command);
   return (
     <div className={`command-row ${statusClass(command.status)}`}>
-      <code>{command.command}</code>
-      <span className="command-label">{command.label}</span>
+      <div className="command-main">
+        <code className="command-text">{command.command}</code>
+        {detail && <span className="command-detail">{detail}</span>}
+      </div>
+      <div className="command-meta">
+        <span className="command-label">{command.label || command.status}</span>
+        <button
+          type="button"
+          className="command-copy"
+          onClick={() => copyCommand(command.command)}
+          aria-label="명령 복사"
+        >
+          복사
+        </button>
+      </div>
     </div>
   );
 }

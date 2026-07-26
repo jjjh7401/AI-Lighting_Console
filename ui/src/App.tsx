@@ -23,7 +23,13 @@ import {
   POOL_AREA_DEFAULT,
   type PoolArea,
 } from "./components/PoolSection";
-import { panelItemId, type DashItem, type DashState, type PanelTargetKind } from "./protocol";
+import {
+  panelItemId,
+  type DashItem,
+  type DashState,
+  type PanelTargetKind,
+  type StatusState,
+} from "./protocol";
 import { useCopilotSocket } from "./useCopilotSocket";
 
 /**
@@ -55,6 +61,69 @@ export function dashPressTargetNo(sectionName: string, item: DashItem): number |
     return typeof consoleNo === "number" ? consoleNo : null;
   }
   return item.no;
+}
+
+export interface ComposerViewState {
+  inputDisabled: boolean;
+  submitDisabled: boolean;
+  placeholder: string;
+  buttonLabel: string;
+  helperText: string | null;
+  canSubmit: boolean;
+}
+
+export function composerViewState({
+  connected,
+  status,
+  draft,
+}: {
+  connected: boolean;
+  status: StatusState | null;
+  draft: string;
+}): ComposerViewState {
+  if (!connected) {
+    return {
+      inputDisabled: true,
+      submitDisabled: true,
+      placeholder: "서버 재연결 중입니다…",
+      buttonLabel: "대기",
+      helperText: "서버 연결이 끊겨 명령을 보낼 수 없습니다.",
+      canSubmit: false,
+    };
+  }
+  if (status === null) {
+    return {
+      inputDisabled: true,
+      submitDisabled: true,
+      placeholder: "상태 확인 중입니다…",
+      buttonLabel: "대기",
+      helperText: "서버 상태 확인 후 명령 입력이 열립니다.",
+      canSubmit: false,
+    };
+  }
+  if (status.executions_blocked) {
+    return {
+      inputDisabled: true,
+      submitDisabled: true,
+      placeholder: "콘솔 연결 후 명령을 입력하세요…",
+      buttonLabel: "차단됨",
+      helperText: "콘솔 연결이 필요합니다. 설정에서 onPC OSC와 responder를 확인하세요.",
+      canSubmit: false,
+    };
+  }
+  const hasDraft = draft.trim().length > 0;
+  return {
+    inputDisabled: false,
+    submitDisabled: !hasDraft,
+    placeholder: status.live_lock
+      ? "라이브 잠금 중입니다 — 제안만 생성됩니다…"
+      : "한국어로 지시를 입력하세요…",
+    buttonLabel: "전송",
+    helperText: status.live_lock
+      ? "라이브 잠금 중입니다. 입력은 콘솔로 전송되지 않고 제안 카드로만 표시됩니다."
+      : null,
+    canSubmit: hasDraft,
+  };
 }
 
 /**
@@ -176,14 +245,15 @@ export default function App() {
     setSettingsOpen(false);
     setSettingsRefresh((count) => count + 1);
   };
+  const composer = composerViewState({ connected, status: state.status, draft });
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state.entries.length, state.pendingApprovals.length, state.pendingReviews.length]);
 
   const submit = () => {
+    if (!composer.canSubmit) return;
     const text = draft.trim();
-    if (!text) return;
     sendChat(text);
     setDraft("");
   };
@@ -271,17 +341,18 @@ export default function App() {
             <div ref={bottomRef} />
           </main>
           <footer className="composer">
+            {composer.helperText && <div className="composer-status">{composer.helperText}</div>}
             <input
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.nativeEvent.isComposing) submit();
               }}
-              placeholder="한국어로 지시를 입력하세요…"
-              disabled={!connected}
+              placeholder={composer.placeholder}
+              disabled={composer.inputDisabled}
             />
-            <button onClick={submit} disabled={!connected || !draft.trim()}>
-              전송
+            <button onClick={submit} disabled={composer.submitDisabled}>
+              {composer.buttonLabel}
             </button>
           </footer>
         </div>

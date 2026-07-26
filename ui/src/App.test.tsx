@@ -14,7 +14,12 @@
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { AppShell, dashPressTargetNo, targetKindForDashSection } from "./App";
+import {
+  AppShell,
+  composerViewState,
+  dashPressTargetNo,
+  targetKindForDashSection,
+} from "./App";
 import { DashBoard } from "./components/DashBoard";
 import { initialState } from "./protocol";
 
@@ -65,6 +70,71 @@ describe("dashPressTargetNo", () => {
 
   it("read-only sections have no press target at all", () => {
     expect(dashPressTargetNo("groups", { no: 1, name: "Vocals" })).toBeNull();
+  });
+});
+
+describe("composerViewState", () => {
+  it("keeps the composer closed while the server is disconnected", () => {
+    const state = composerViewState({ connected: false, status: null, draft: "Group 1" });
+
+    expect(state.inputDisabled).toBe(true);
+    expect(state.submitDisabled).toBe(true);
+    expect(state.canSubmit).toBe(false);
+    expect(state.placeholder).toContain("서버");
+  });
+
+  it("keeps the composer closed until a gate status arrives", () => {
+    const state = composerViewState({ connected: true, status: null, draft: "Group 1" });
+
+    expect(state.inputDisabled).toBe(true);
+    expect(state.submitDisabled).toBe(true);
+    expect(state.canSubmit).toBe(false);
+    expect(state.helperText).toContain("상태 확인");
+  });
+
+  it("blocks new chat input when the gate reports executions_blocked", () => {
+    const state = composerViewState({
+      connected: true,
+      status: { health: "console_offline", live_lock: false, executions_blocked: true },
+      draft: "보컬 그룹 만들어줘",
+    });
+
+    expect(state.inputDisabled).toBe(true);
+    expect(state.submitDisabled).toBe(true);
+    expect(state.buttonLabel).toBe("차단됨");
+    expect(state.helperText).toContain("콘솔 연결");
+  });
+
+  it("allows text entry but not empty submission when the gate is healthy", () => {
+    const empty = composerViewState({
+      connected: true,
+      status: { health: "online", live_lock: false, executions_blocked: false },
+      draft: "   ",
+    });
+    const ready = composerViewState({
+      connected: true,
+      status: { health: "online", live_lock: false, executions_blocked: false },
+      draft: "보컬 그룹 만들어줘",
+    });
+
+    expect(empty.inputDisabled).toBe(false);
+    expect(empty.submitDisabled).toBe(true);
+    expect(empty.canSubmit).toBe(false);
+    expect(ready.submitDisabled).toBe(false);
+    expect(ready.canSubmit).toBe(true);
+  });
+
+  it("keeps live-lock proposal mode available instead of treating it as offline", () => {
+    const state = composerViewState({
+      connected: true,
+      status: { health: "online", live_lock: true, executions_blocked: false },
+      draft: "코러스 웅장하게",
+    });
+
+    expect(state.inputDisabled).toBe(false);
+    expect(state.canSubmit).toBe(true);
+    expect(state.placeholder).toContain("제안");
+    expect(state.helperText).toContain("제안 카드");
   });
 });
 

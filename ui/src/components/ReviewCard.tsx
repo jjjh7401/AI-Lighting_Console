@@ -2,7 +2,10 @@
 // destructive-scan report (blacklisted lines highlighted), dynamic-assembly
 // notes, bounded source preview, and approve/reject. The static scan is a
 // best-effort assist signal — the human reviewer is the authoritative control.
+import { useRef, useState } from "react";
+
 import { type ReviewRequestView } from "../protocol";
+import { createDecisionGuard } from "./ApprovalCard";
 
 const KIND_LABELS: Record<string, string> = {
   blacklisted: "블랙리스트 명령",
@@ -18,6 +21,17 @@ export function ReviewCard({
   onDecision: (requestId: string, approved: boolean) => void;
 }) {
   const { scan } = review;
+  const [decided, setDecided] = useState(false);
+  const guardRef = useRef<((requestId: string, approved: boolean) => boolean) | null>(null);
+  if (guardRef.current === null) {
+    guardRef.current = createDecisionGuard(onDecision);
+  }
+
+  const decide = (approved: boolean) => {
+    const submitted = guardRef.current!(review.request_id, approved);
+    if (submitted) setDecided(true);
+  };
+
   return (
     <div className={`review-card${scan.destructive ? " destructive" : ""}`}>
       <div className="review-title">
@@ -70,10 +84,10 @@ export function ReviewCard({
         탐지되지 않을 수 있으며, 최종 판단 권한은 리뷰어에게 있습니다.
       </div>
       <div className="review-actions">
-        <button className="approve" onClick={() => onDecision(review.request_id, true)}>
+        <button className="approve" onClick={() => decide(true)} disabled={decided}>
           배포 승인
         </button>
-        <button className="reject" onClick={() => onDecision(review.request_id, false)}>
+        <button className="reject" onClick={() => decide(false)} disabled={decided}>
           거부
         </button>
       </div>
