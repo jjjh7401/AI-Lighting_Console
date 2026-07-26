@@ -649,12 +649,20 @@ m4_followup_commit_sha: 4dd48e8
 m4_followup_complete_at: 2026-07-26
 m4_followup_files: 4             # tools.py(수정) + session.py(거부 해제) + 테스트 2
 m4_followup_baseline: "1 failed, 2111 passed"   # 착수 직전 직접 실측 (HEAD f0f6e76)
-m4_followup_post_suite: "1 failed, 2120 passed" # +9 = 신규 테스트 전량 · 신규 실패 0건
-m4_followup_mutation: "7/7"      # 생존 0건 · 대소문자 · 선두토큰 · 전량면제 · 전량비면제 · Fixture · Thru · +/-
+m4_followup_post_suite: "1 failed, 2123 passed" # +12 = 신규 테스트 전량 · 신규 실패 0건
+m4_followup_mutation: "10/10"    # 생존 0건 · 대소문자 · 선두토큰 · 전량면제 · 전량비면제 ·
+                                 # Fixture · Thru · +/- · Clear 제거 · ClearAll 제거 · prefix match
+                                 # + 귀속 프로브 2건(Fixture 단독 · Clear.* 탐욕화)
+m4_followup_exempt_set: "ClearAll · Clear · Fixture/Group 맨 선택형"   # 열거형 · 선두 토큰 고정
+m4_followup_clear_commit_sha: pending-backfill-clear
 fallback_shape_executable: true  # 거부 해제 · 21줄 번들 정확 왕복 (4 격리 사이클 보존)
 ```
 
-> **M4 후속 — 위 블로커성 발견 해소 (2026-07-26)**: `run_commands`의 dedupe가 **프로그래머 상태 커맨드**를 면제하도록 좁혀졌다(`server/orchestrator/tools.py` `_is_programmer_state`). 원칙: dedupe는 **영속 산출물**의 중복을 막는 장치이고, 프로그래머 상태를 세우는 커맨드는 중복시킬 산출물이 없다 — 효과는 멱등이지만 **의미는 위치 의존적**이다. `ClearAll`이 두 번 나온 것은 같은 명령 두 번이 아니라, 서로 다른 두 순간에 실행되어야 하는 하나의 명령이다. 면제 집합은 열거형이며 커맨드의 **선두 토큰**에 고정된다(`ClearAll`, 그리고 `Fixture`/`Group`의 **맨 선택형**만 — `Store Group 7` · `Label Group 7 '...'` · `Delete Group 3` · `Group 3 Full` · `Fixture 1 Thru 10 At 80`은 전부 dedupe 유지). 피연산자 문법(`+` · `-` · `Thru` · 열린 범위)은 `00_grammar.md:17-22`에서 객체 참조 일반 규칙으로 확인했다(룰북 자신의 비-Fixture 예시 `Cue 3 Thru 7`). 대소문자 무시 — 콘솔이 그렇다(D14). 넓은 선택의 차단은 여전히 **게이트** 소관이며(`server/safety/classify.py`가 상류에서 선별), 본 예외는 실행 가능 범위를 넓히지 않는다.
+> **M4 후속 — 위 블로커성 발견 해소 (2026-07-26)**: `run_commands`의 dedupe가 **프로그래머 상태 커맨드**를 면제하도록 좁혀졌다(`server/orchestrator/tools.py` `_is_programmer_state`). 원칙: dedupe는 **영속 산출물**의 중복을 막는 장치이고, 프로그래머 상태를 세우는 커맨드는 중복시킬 산출물이 없다 — 효과는 멱등이지만 **의미는 위치 의존적**이다. `ClearAll`이 두 번 나온 것은 같은 명령 두 번이 아니라, 서로 다른 두 순간에 실행되어야 하는 하나의 명령이다. 면제 집합은 열거형이며 커맨드의 **선두 토큰**에 고정된다 — **프로그래머 클리어 2종**(`ClearAll`, `Clear`; `00_grammar.md:57-58`)과 `Fixture`/`Group`의 **맨 선택형**만. `Store Group 7` · `Label Group 7 '...'` · `Delete Group 3` · `Store Fixture 5` · `Group 3 Full` · `Fixture 1 Thru 10 At 80`은 전부 dedupe 유지된다. 피연산자 문법(`+` · `-` · `Thru` · 열린 범위)은 `00_grammar.md:17-22`에서 객체 참조 일반 규칙으로 확인했다(룰북 자신의 비-Fixture 예시 `Cue 3 Thru 7`). 대소문자 무시 — 콘솔이 그렇다(D14). 넓은 선택의 차단은 여전히 **게이트** 소관이며(`server/safety/classify.py`가 상류에서 선별), 본 예외는 실행 가능 범위를 넓히지 않는다.
+>
+> **`Clear`/`ClearAll` 독립 매칭 (기계 확인)**: 두 클리어는 **별개 패턴**이며 `fullmatch`로 독립 판정된다. 형제 패턴이 남의 문자열을 삼켜서 통과하는 가짜 초록을 배제하기 위해 양방향을 뮤테이션으로 확인했다 — `Clear` 패턴 제거 시 `Clear` 테스트가 `'clear'`에서 실패(→ `ClearAll` 패턴은 `Clear`를 잡지 않는다), `ClearAll` 패턴 제거 시 `ClearAll` 테스트 4건 + 룩 층 3건이 실패(→ `Clear` 패턴은 `ClearAll`을 잡지 않는다). 독립성 테스트 자체의 비-공허성도 확인했다: `Clear` 패턴을 `Clear.*`로 탐욕화하면 `{'ClearAll': ['Clear.*', 'ClearAll']}`로 그 테스트가 실패한다.
+>
+> **`Select ...` 접두형은 면제하지 않는다 — 취향이 아니라 실측 근거**: `31_choreography_patterns.md:30-31`이 `Select Fixture ...`와 `SelFix ...` **둘 다 2.4.2 라이브에서 "Illegal object"를 반환**했음을 기록하고 맨 `Fixture ...` / `Group ...` 형태를 쓰라고 지시한다(실측 대상은 Fixture 계열이고, `Group`은 같은 줄의 맨-형태 지시가 커버한다). 즉 `Select` 접두형은 "면제하지 않기로 한 무해한 대안"이 아니라 **본 프로젝트가 발화 자체를 금지당한 형태**이며, 이를 dedupe에서 면제하면 항상 실패할 수밖에 없는 커맨드를 미리 승인하는 셈이 된다. (부차 근거: 선두 동사 하나를 예외로 들이면 "선두 동사 = 무언가를 만들거나 지운다"는 판별식의 단순성이 무너져 멤버십을 외워야 하는 목록으로 퇴화한다.) 이 근거를 여기 기록하는 이유는 다음 사람이 이것을 스타일 선호로 재론하지 않게 하기 위함이다.
 >
 > **거부 해제**: 결함이 사라졌으므로 `run_look_bundle`의 per-family 거부는 지킬 것이 없어졌다. 해제 전 프로브로 21줄 FALLBACK 번들이 `console.executed == plan.commands`로 **정확히** 왕복함을 확인했고(4개 격리 사이클 · `ClearAll` 5회 · `Group 11` 4회 전부 보존, `is_error: False`), 그 뒤에 해제했다. M4가 defect를 고정하던 테스트 2건(`..._drops_the_trailing_clearall_...`, `..._per_family_shape_is_refused_...`)과 그 control 1건은 고쳐진 동작을 고정하도록 재작성했다. `test_tools.py`의 기존 dedupe 고정 테스트 2건(`test_already_executed_commands_are_skipped`, `test_in_bundle_duplicate_command_is_not_re_executed`)은 **무수정 통과** — 둘 다 일반 문자열(`"A"`, `"cmd1"`)을 쓰므로 면제 술어에 걸리지 않는다.
 >

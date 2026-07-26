@@ -155,15 +155,19 @@ _EMPTY_CONTEXT = ExecutionContext()
 # twice is not the same instruction twice; it is one instruction that must run
 # at two different moments.
 #
-# The set is enumerated, not inferred, and deliberately small: the whole-
-# programmer clear, and the BARE selection form of the two object types that
-# select fixtures into the programmer. It is anchored on the command's LEADING
-# token, because that is the discriminator between a bare selection and a
-# command that creates or destroys something: `Store Group 7`, `Label Group 7
-# 'Vocals'`, `Delete Group 3` and `Store Fixture 5` all carry a selection
-# operand, and all leave an artifact behind (00_grammar.md "Frequently used
-# functions"). A selection carrying a value is out too — `Group 3 Full` and
+# The set is enumerated, not inferred, and deliberately small: the two
+# programmer clears (00_grammar.md:57-58), and the BARE selection form of the
+# two object types that select fixtures into the programmer. It is anchored on
+# the command's LEADING token, because that is the discriminator between a bare
+# selection and a command that creates or destroys something: `Store Group 7`,
+# `Label Group 7 'Vocals'`, `Delete Group 3` and `Store Fixture 5` all carry a
+# selection operand, and all leave an artifact behind (00_grammar.md "Frequently
+# used functions"). A selection carrying a value is out too — `Group 3 Full` and
 # `Fixture 1 Thru 10 At 80` set rather than merely select.
+#
+# `Clear` and `ClearAll` are SEPARATE patterns, matched independently under
+# fullmatch, so neither can be caught by the other's pattern and no test for one
+# can pass on the strength of the other.
 #
 # The operand grammar (`3`, `11 + 12`, `1 Thru 10`, `11 Thru`, `11 Thru 19 - 15`)
 # is 00_grammar.md:17-22, where `Thru` / `+` / `-` are general object-reference
@@ -171,11 +175,22 @@ _EMPTY_CONTEXT = ExecutionContext()
 # two types share one operand pattern rather than being spelled out twice.
 # Matching is case-insensitive because the console is (audit finding D14).
 #
+# NOT exempt, and not a style call: the `Select ...` prefix form. It is a
+# command this project is forbidden to EMIT at all — `Select Fixture ...` and
+# `SelFix ...` both returned "Illegal object" on live 2.4.2 and the rulebook
+# directs the bare `Fixture ...` / `Group ...` forms instead
+# (31_choreography_patterns.md:30-31; the measurement is on the Fixture forms,
+# the bare-form directive covers Group). Exempting it from dedupe would
+# pre-approve a command that can only ever fail. Secondary reason: admitting one
+# benign leading verb costs the discriminator its "a leading verb means it
+# creates or destroys something" simplicity.
+#
 # A wide selection is still the GATE's business, not this predicate's: an
 # open-ended `Thru` is screened upstream (server/safety/classify.py) before any
 # of this runs, so exempting one from dedupe never widens what may execute.
 _SELECTION_OPERAND = r"\d+(?:\s*[-+]\s*\d+|\s+Thru(?:\s+\d+)?)*"
 _PROGRAMMER_STATE_COMMANDS = (
+    re.compile(r"Clear", re.IGNORECASE),  # step clear (selection -> values)
     re.compile(r"ClearAll", re.IGNORECASE),  # clear the whole programmer
     re.compile(rf"(?:Fixture|Group)\s+{_SELECTION_OPERAND}", re.IGNORECASE),  # bare selection
 )

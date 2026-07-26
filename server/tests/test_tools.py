@@ -225,6 +225,38 @@ class TestProgrammerStateIsExemptFromDedupe:
         assert port.executed == commands
         assert [o.status for o in execution.command_outcomes] == ["executed_ok"] * 3
 
+    def test_bare_clear_runs_at_every_moment_it_appears(self):
+        # `Clear` is the step clear one rung below `ClearAll` (00_grammar.md:57)
+        # and has the identical property: nothing durable to duplicate.
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        commands = ["Clear", "Store Preset 4.1", "Clear"]
+        execution = registry.dispatch(_call("run_commands", {"commands": commands}))
+        assert port.executed == commands
+        assert [o.status for o in execution.command_outcomes] == ["executed_ok"] * 3
+
+    def test_a_prior_calls_clear_does_not_suppress_this_ones(self):
+        port = ScriptedPort()
+        registry = _registry(port=port)
+        context = ExecutionContext(executed_ok=frozenset({"Clear"}))
+        registry.dispatch(
+            _call("run_commands", {"commands": ["Clear", "Store Preset 4.1"]}), context
+        )
+        assert port.executed == ["Clear", "Store Preset 4.1"]
+
+    def test_clear_and_clearall_are_matched_independently(self):
+        # A test that passes because a SIBLING pattern caught the string is a
+        # false green. Assert each clear is matched by exactly ONE pattern, and
+        # that it is its own — so neither `Clear`'s nor `ClearAll`'s cases can
+        # be carried by the other's pattern.
+        from server.orchestrator.tools import _PROGRAMMER_STATE_COMMANDS
+
+        matched = {
+            text: [p.pattern for p in _PROGRAMMER_STATE_COMMANDS if p.fullmatch(text)]
+            for text in ("Clear", "ClearAll")
+        }
+        assert matched == {"Clear": ["Clear"], "ClearAll": ["ClearAll"]}
+
     def test_a_bare_group_selection_is_re_selected_for_each_cycle(self):
         port = ScriptedPort()
         registry = _registry(port=port)
@@ -320,6 +352,9 @@ class TestProgrammerStateIsExemptFromDedupe:
             "clearall",
             "CLEARALL",
             "ClearAll",
+            "clear",
+            "CLEAR",
+            "Clear",
             "group 11",
             "GROUP 11",
             "fixture 101",
