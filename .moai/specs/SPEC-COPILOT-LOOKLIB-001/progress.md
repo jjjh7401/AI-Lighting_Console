@@ -419,7 +419,7 @@ run_status: in-progress          # M1·M2 완료 · M3~M7 미착수
 milestones_complete: [M0, M1, M2]
 m1_commit_sha: c1c1382
 m1_complete_at: 2026-07-26
-m2_commit_sha: pending-backfill  # 커밋은 자기 해시를 담을 수 없다
+m2_commit_sha: 9b76fce           # 본 커밋 직후 backfill
 m2_complete_at: 2026-07-26
 ac_pass_count: 5                 # 001, 015(M1) + 002, 003, 004(M2)
 ac_fail_count: 0
