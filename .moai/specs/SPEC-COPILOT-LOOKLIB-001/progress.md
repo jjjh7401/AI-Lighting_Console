@@ -498,37 +498,155 @@ REQ-LOOKLIB-013의 보고 요소(생성 프리셋의 풀/슬롯/이름, 미매�
 
 **범위 준수**: 신규 2파일(`server/looks/resolver.py` · `server/tests/test_looks_resolver.py`) + 본 `progress.md`. `git status --short server/`가 이 2건만 보고한다. spec.md/plan.md/acceptance.md/design.md/research.md 무수정, PRESERVE 전량 무수정, M1·M2 산출물 무수정(`roles.py`의 매칭 계약은 소비만 했고 재구현하지 않았다). frontmatter 전이 없음 — `status: in-progress`는 M1이 이미 수행했다.
 
+### M4 — 인스턴스화 번들 빌더 + 게이트 배선 (AC-LOOKLIB-007 / 008 / 016 / 018)
+
+**산출물**: `server/looks/instantiate.py`(신규 1) + `server/tests/test_looks_instantiate.py`(신규 1, 98 테스트) + `server/tests/test_looks_boundary.py`(신규 1, 9 테스트) + `server/web/session.py`(배선 1). 콘솔 무접촉 — 리그 형상은 M3와 같이 **생산자 자신의 헬퍼**(`rig_object`/`rig_section`/`drill_into`)로 조립하며, 풀 드릴다운은 실제 `drill_into`에 페이크 state port를 물려 만든다(손으로 쓴 `contents` dict는 `drilldown_capped`·`contents_unavailable` 분기를 재현하지 못한다).
+
+**RED 증거**: 두 테스트 파일을 먼저 작성해 수집 실패를 관측했다 — `ModuleNotFoundError: No module named 'server.looks.instantiate'`. 경계 테스트는 단독 실행 시 8 passed / 1 failed였는데, 그 1건이 `instantiate.py` 부재를 짚는 비공허성 단언이고 나머지 8건은 기존 트리에 대한 회귀 가드다(정직한 RED — 전량 실패가 아니다).
+
+**기준선은 이월하지 않고 직접 실측했다.** 착수 직전 HEAD `c29e543`에서 `1 failed, 2004 passed`. **프롬프트가 지정한 HEAD `ad131b1`은 브랜치에 없다** — 같은 부모(`4cba792`)·같은 subject·**트리 동일**(`git rev-parse ad131b1^{tree} == c29e543^{tree}`)한 고아 커밋이다. 즉 측정 대상 트리는 지시된 트리와 바이트 동일하다.
+
+**번들 형상 (worked example — `ballad-single-key` "단독 키", 6역할 리그)**
+
+```
+ChangeDestination Root
+ClearAll
+Group 16
+Attribute 'Dimmer' At 40 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 82 ; Attribute 'ColorRGB_B' At 60 ; Attribute 'Iris' At 32 ; Attribute 'Zoom' At 12
+Store Preset 1.1
+Label Preset 1.1 '단독 키'
+Store Preset 4.1
+Label Preset 4.1 '단독 키'
+Store Preset 5.1
+Label Preset 5.1 '단독 키'
+Store Preset 6.1
+Label Preset 6.1 '단독 키'
+ClearAll
+```
+
+M0 ASSUMPTION-14 GO 형상(룩당 1회 캡처 + 풀 타입별 Store)이 기본값이고, FALLBACK(패밀리별 격리 캡처)은 **같은 룩 데이터에서 생성 가능**하다(`shape=` 키워드 1개 — 재작성 아님). 두 형상이 같은 `created`/`skipped`를 내는 것을 기계 assert한다(REQ-001 패밀리 분할 가능성의 증거).
+
+**REQ-011 문언과 GO 형상의 충돌 — 재해석하지 않고 기록한다.** "각 `Store` 후 `ClearAll`"을 GO 형상에서 문자 그대로 지키면 첫 Store 뒤 프로그래머가 비어 2번째 이후 Store가 **빈 프리셋을 만든다**(M0 측정 4의 폐기된 대조군이 "빈 프로그래머에서도 MA3가 프리셋을 만든다"를 이미 증명했다 — 조용한 오작동). 따라서 GO 형상은 `ClearAll`을 **캡처 사이클 경계**(캡처 전 + 사이클 마지막 Store 후)에 둔다. **문언을 문자 그대로 만족시키는 것은 FALLBACK 형상뿐이며**, 이는 SPEC이 예상하지 않은 대칭이다.
+
+**신규 발견 1건 (M4 범위 밖 · 결정 필요) — `run_commands`의 중복 제거가 번들 규율을 침식한다.** `server/orchestrator/tools.py:376-391`은 한 번들 안의 **동일 문자열 커맨드를 재실행하지 않는다**(`skipped_already_executed`). `Store`에는 옳고 `ClearAll`에는 그르다 — 두 번째 `ClearAll`은 효과를 반복하려는 것이 아니라 **다른 시점에** 실행되려는 것이기 때문이다. 실측 결과:
+
+- **GO 형상**: 말미 `ClearAll` 1건이 와이어에서 사라진다(`console.executed == commands[:-1]`, 기계 고정됨). `run_look_bundle`이 `ExecutionContext` 없이 dispatch하므로 다음 번들의 선두 `ClearAll`은 새 dedupe 집합에서 살아남아 실행된다 — 손실은 이중 안전장치 쪽이지만 **손실이다**.
+- **FALLBACK 형상**: 사이클 2..N이 `ClearAll`과 `Group` 재선택을 **둘 다** 잃어 이전 사이클의 프로그래머를 그대로 저장한다 — 이 형상이 막으려던 교차 패밀리 과캡처가 정확히 발생한다. **즉 M0가 살려 둔 FALLBACK 분기는 현재 실행 경로로는 발화할 수 없다.**
+- **채택한 정의된 동작**: `run_look_bundle`은 `CAPTURE_SHARED`가 아닌 형상을 **거부**한다(`refused` 사유 반환, 콘솔 송신 0건). 조용히 잘못된 프리셋을 쓰는 것보다 크게 거부하는 쪽이다. 해제하려면 dedupe 규칙을 바꿔야 하고 그것은 룩 계층 밖(`tools.py` = M5 소관)이다.
+
+**M0가 M4 후속으로 넘긴 공백 2건 — 정의된 동작을 넣고 사유 코드를 신설했다.**
+
+| 공백 (M0) | M4의 정의된 동작 | 신설 사유 코드 |
+|---|---|---|
+| 풀 타입을 해석할 수 없는 상태를 표현할 사유 코드가 없다 (측정 2 신규 발견) | 풀 이름 → 패밀리는 **전체 이름 일치**(대소문자 무관)로만 해석. 개명·부재 시 그 풀의 Store만 건너뛰고 이웃 풀은 그대로 진행 | **`pool_unresolved`** |
+| (동상) 이름은 맞는데 응답기가 번호를 못 붙인 풀 | `no_match`/`unaddressable` 분화와 같은 근거로 **분리**. 사실이 다르고 조치가 다르다(슬롯 부여로 해소) | **`pool_unaddressable`** |
+| `drilldown_capped`를 관측하지 못했고 산술은 빠듯하다 (G4) | 캡은 **살아 있는 가능성**으로 다룬다: 열리지 않은 풀은 `occupied=None`(관측 안 됨) → **비었다고 가정하지 않고** `no_free_slot`으로 건너뛰며, `drilldown_capped`는 보고 (d)로 전파. 캡 이전에 열린 풀은 정상 생성된다 | (기존 `no_free_slot` 재사용 — 요구 문언이 "빈 슬롯 **미관측**"이므로 관측 불가 케이스를 이미 포함한다) |
+
+- `no_free_slot`은 "모든 슬롯이 점유됨"과 "점유를 관측하지 못함"을 **모두** 덮지만 `detail`로 구분한다. 슬롯 탐색 자체는 **쿼리를 1건도 쓰지 않는다**(이미 `get_rig_context`가 캡 16 안에서 지불한 드릴다운을 소비할 뿐) — 기계 assert됨.
+- **관측 불가의 세 경로를 하나로 다룬다**: 열리지 않은 풀 / 드릴 실패(`contents_unavailable`) / **슬롯 번호 없는 프리셋이 하나라도 있는 풀**. 세 번째는 "무언가가 점유했는데 어느 슬롯인지 모른다"이므로 어떤 슬롯도 비었다고 주장할 수 없다.
+
+**AC-008 ③ 수단 정정을 커밋된 테스트로 착지시켰다** (`server/tests/test_looks_boundary.py`). `ast.parse`로 실행 위치 식별자(`Attribute.attr` / `Name.id` / import 모듈·별칭명)만 모아 금지 심볼 6종·금지 모듈 프리픽스 4종과 **교집합 0**을 assert한다. 비공허성 2중(모듈당 식별자 수 > 20 + 알려진 심볼 존재), 뮤테이션 2종(호출 1줄·import 1줄 주입)으로 **떨어질 수 있음**을 확인했다. `server/looks/__init__.py:6`의 경계 독스트링은 **보존**되며 스캔을 통과함을 별도 테스트가 고정한다(AP-19).
+
+**같은 부류의 결함을 하나 더 만나 같은 방향으로 고쳤다.** §E 자기 검증의 `grep -rniE "/overwrite" server/looks/` → 0건은 **본 마일스톤에서 1건을 반환한다** — `instantiate.py`의 `@MX:REASON` 주석이 "슬롯이 점유됐을 때 `/Overwrite`로 손이 가는 것"을 금지 이유로 적기 때문이다. AC-008 ③과 정확히 같은 형태(금지 대상을 설명한 산문이 금지 대상으로 계수됨)이므로 **주석을 지우지 않고 스캔을 정밀화**했다: M3의 `_code_string_constants`(독스트링 제외 문자열 상수)를 재사용해 **발화 가능한 문자열 상수**에만 `/overwrite`(대소문자 무관) 부재를 assert하고, 대·소문자 양쪽 주입으로 뮤테이션 확인했다. 주석은 AST 노드가 아니므로 구조적으로 제외된다.
+
+**뮤테이션 검증 (26건 / 최종 생존 0건 · 하니스 결함 0건)**. 커밋할 소스 그대로에 대해 측정했다.
+
+| # | 뮤테이션 | 죽인 테스트(대표) |
+|---|---|---|
+| 01 | 말미 `ClearAll` 제거 | `test_the_bundle_ends_with_clearall` 외 5 |
+| 02 | 선두 `ClearAll` 제거 | `test_every_capture_cycle_opens_with_clearall` 외 5 |
+| 03 | 모든 Store에 소문자 `/overwrite` 부착 | 규율 7건 (대소문자 무관 assert 포함) |
+| 04 | `Label` 라인 제거 | `test_every_store_is_immediately_followed_by_its_own_label` |
+| 05 / 05b / 05c | 관측 불가 점유를 빈 풀로 취급(드릴 실패 / 미개방 / 번호 없는 프리셋) | `TestPoolIndex` 각 1~4건 |
+| 06 | **룩 단위 스킵**(첫 스킵에서 룩 전체 포기) | `test_a_partial_conflict_creates_one_and_skips_one` 외 7 |
+| 07 / 07b | 라벨 충돌 무시 / 대소문자 고정 비교 | `TestConflict` 7건 / 1건 |
+| 08 | **룰북 풀 번호 하드코딩**(`{Dimmer:1, Color:4, ...}`) | `test_the_stored_pool_number_comes_from_the_rig_not_from_a_literal` |
+| 09 | 미매핑 역할에 다른 그룹 대입 | `TestUnmappedRoles` 4건 |
+| 10 | `pool_unaddressable`를 `pool_unresolved`로 병합 | `TestPoolIndex` 3건 |
+| 11 | 풀 이름 부분열 매칭 | `test_a_pool_name_that_merely_contains_a_family_word_does_not_resolve` |
+| 12 | 패밀리별 사이클이 전체 페이로드 발화 | `test_a_per_family_cycle_carries_only_that_family_values` |
+| 13 | `drilldown_capped` 전파 제거 | `test_the_cap_signal_is_carried_onto_the_report` |
+| 14 | 패밀리별 사이클마다 목적지 재발화 | `test_the_per_family_shape_satisfies_clearall_after_every_store_literally` |
+| 15 | 매핑 0건인데도 번들 발화 | 6건 |
+| 16 | 따옴표 담긴 표시명 허용 | `test_a_label_that_would_break_the_quoting_is_rejected_not_escaped` |
+| 17 | 정수값을 float로 발화 | 2건 |
+| 18 | 선택 순서를 역할 순으로 | `test_multiple_roles_contribute_their_groups_in_ascending_number_order` 외 1 |
+| 19 | 최고 점유 슬롯 +1로 배정(빈 틈 무시) | `test_a_gap_below_the_occupied_slots_is_used` |
+| 20 | 값이 없는 패밀리까지 스킵으로 보고 | 15건 |
+| 21 / 22 | 발화 가능 문자열 상수에 `/Overwrite` / `/overwrite` 삽입 | `test_no_look_module_carries_overwrite_in_an_emittable_string` |
+| 23 / 24 | 비-매핑 풀 엔트리 / 프리셋 엔트리 가드 제거 | `TestPoolIndex` 각 1건 |
+| B1 / B2 | 룩 모듈에 `gate.screen()` 호출 / 금지 import 주입 | `test_no_look_module_names_an_execution_path_symbol` |
+
+- **1회차에 생존 3건**이 있었고 전부 닫았다. **그중 2건은 진짜 테스트 공백이었다** — #08(풀 번호 하드코딩)은 `resolve_pools` 층만 검증하고 **번들 층의 AP-16을 고정하지 않았다**(AC-018 (a)가 명시적으로 요구하는 항목이다), #18(선택 순서)은 픽스처가 역할 순서와 오름차순이 **일치하는** 리그를 써서 판별력이 없었다. 나머지 #06은 뮤테이션 자체가 죽은 변수만 추가한 설계 불량이라 재작성했다(하니스 결함으로 계수, 이후 KILL).
+- **하니스 신뢰도**: M3가 발견한 stale-`.pyc` 함정을 구조적으로 제거했다 — 드라이버가 매 뮤테이션 전후로 `__pycache__`를 삭제하고 `PYTHONDONTWRITEBYTECODE=1`로 실행한다. 실측 확인: 해당 환경에서 실행 후 `server/` 아래 `__pycache__` 디렉터리 **0개**(대조군 일반 실행은 9개). 동일 크기 뮤테이션(`slot = 1` → `slot = 2`, 17911 바이트 불변)도 재측정했다 — 본 세션에서는 mtime 초가 넘어가 무-purge 조건에서도 KILL되어 **함정 자체는 재현되지 않았다**(따라서 이 실행은 함정의 존부에 대한 증거가 아니다). 방어는 재현 여부와 무관하게 전 뮤테이션에 적용되었다.
+
+**AC 판정 (M4 = {007, 008, 016, 018})**
+
+| AC | 판정 | 검증 커맨드 | 실제 출력 |
+|---|---|---|---|
+| **AC-LOOKLIB-007** (번들 규율) | **PASS** | `pytest server/tests/test_looks_instantiate.py -q` | `98 passed`. 5 불변식 전량 + 대소문자 무관 케이스: 목적지 선두 1회 · 캡처 사이클 `ClearAll` 개시 · 말미 `ClearAll` · Store 직후 Label · `re.IGNORECASE` `/overwrite` 부재(매처 자체를 대조군으로 검증) · 미등재 그룹 0건 · `Fixture`/`Thru` 0건. 추가 assert(점유 슬롯 재슬롯 아닌 건너뜀): 점유 1·2·3 대상 `Store` 번들 0건 |
+| **AC-LOOKLIB-008** (단일 실행 경로) | **PASS** | ① `pytest server/tests/test_architecture.py -q` ② `grep -rn "bridge.osc\|from server.bridge" server/looks/` ③ `pytest server/tests/test_looks_boundary.py -q` ④ `git diff --stat server/safety/` | ① `15 passed` ② exit 1(0건) ③ `9 passed` — AST 식별자 스캔 offender 0건 + 비공허성 2중 + 뮤테이션 2종 확인 ④ 빈 출력. `looks`가 `_ALLOWED_PREFIXES`/`_NAMED_TOOL_EXEMPTIONS` 어디에도 없음을 별도 테스트가 고정 |
+| **AC-LOOKLIB-016** (생성형 Lua 우회 부재) | **PASS** | `grep -rnE "build_plugin_xml\|deploy/pack\|lupa\|pcall\|deploy_pipeline\|deploy_plugin" server/looks/` + `git diff --stat server/deploy/` | grep exit 1(0건) · deploy diff 빈 출력. 공허한 참이 아니다 — 스캔이 실제 코드에 도달함을 경계 테스트의 비공허성 단언이 함께 고정한다 |
+| **AC-LOOKLIB-018** (요약 보고 형상) | **PASS** | `pytest server/tests/test_looks_instantiate.py -q` | 주입 시나리오 **6개 이상** 각각 개별 assert: (a) 풀·슬롯·라벨 + **풀 번호가 픽스처 유래**(31/32/33/34 리그) · (b) `no_match`/`ambiguous`/`unaddressable` **병합 없이** 한 보고 안에 공존 · (c) 부분 충돌 = 생성 1 + 건너뜀 1, N = 프리셋 저장 수 · (d) `drilldown_capped` |
+
+**@MX 태그 배치**
+
+| 태그 | 위치 | 비고 |
+|---|---|---|
+| `@MX:NOTE` | `instantiate.py` 모듈 독스트링 | 목적지/`ClearAll` 규율이 **기계화**임 — 트래킹 오염과 빈-프로그래머 Store가 **둘 다 조용한** 오작동이라는 근거 포함 |
+| `@MX:WARN` + `@MX:REASON` | 번들 문자열을 만드는 지점 | 커맨드 라인에 오르는 **모든 숫자**가 리그 유래여야 함. 유혹 4종 명시(미매핑 역할 대체 · 미개방 풀을 빈 것으로 가정 · 룰북 산문의 `Preset 4.x` 하드코딩 · 점유 시 `/Overwrite`) |
+| `@MX:NOTE` | `session.py` `run_look_bundle` | 이것이 **호출자**이지 제2 실행 경로가 아님 |
+| `@MX:ANCHOR` | 신설 0건 | fan_in 미충족 — §D 규율 유지 |
+
+**미검증 잔여 / 라이브 이월 (M7)**
+
+1. **다중 그룹 선택 문법 `Group 11 + 12`는 문법서 유래이지 실측이 아니다.** `00_grammar.md`의 "Additive selection uses `+`"는 객체 참조 일반 규칙으로 적혀 있으나 룰북이 라이브 검증한 사례는 `Fixture 11 + 12 + 13`이고 `Group`은 단일형 `Group 11`뿐이다. 단일 역할 룩은 검증된 형태만 발화한다. M7 필수 관측 항목.
+2. **`run_commands` dedupe 상호작용**(위 신규 발견) — GO 형상의 말미 `ClearAll` 실종을 실물에서 확인하고, FALLBACK 형상의 실행 가능성 복구 여부를 결정해야 한다.
+3. **프리셋 내용 검증 불가**(M0 교차 발견) — 응답기가 프리셋 속성 값을 노출하지 않으므로 "룩이 실제로 무엇을 저장했는가"는 유닛/페이크 층에서만 assert 가능하다. M4의 어떤 테스트도 라이브 층으로 승격될 수 없다.
+4. **풀 contents의 truncation 신호 부재** — `drill_into`는 자식 목록의 `truncated`를 보존하지 않으므로(`child_payload.get("children", [])`), 프리셋이 매우 많은 풀에서 잘린 목록을 완전한 것으로 읽어 점유 슬롯을 비었다고 판단할 경로가 남아 있다. 본 마일스톤은 이를 **제거하지 못했고** 가정하지도 않았다 — 관측되지 않은 위험으로 기록한다.
+
+**범위 준수**: 신규 3파일 + `server/web/session.py` 배선 1건 + 본 `progress.md`. `git status --short`가 이 4건만 보고한다. spec.md/plan.md/acceptance.md/design.md/research.md 무수정, PRESERVE 전량 무수정(`git diff --stat server/safety/ server/rulebook/assets/ ui/ console/` 빈 출력), M1~M3 공개 계약 무수정(소비만). frontmatter 전이 없음 — `status: in-progress`는 M1이 이미 수행했다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
-run_status: in-progress          # M1·M2·M3 완료 · M4~M7 미착수
-milestones_complete: [M0, M1, M2, M3]
+run_status: in-progress          # M1·M2·M3·M4 완료 · M5~M7 미착수
+milestones_complete: [M0, M1, M2, M3, M4]
 m1_commit_sha: c1c1382
 m1_complete_at: 2026-07-26
 m2_commit_sha: 9b76fce
 m2_complete_at: 2026-07-26
 m3_commit_sha: 121e52b
 m3_complete_at: 2026-07-26
-ac_pass_count: 7                 # 001, 015(M1) + 002, 003, 004(M2) + 005, 006(M3)
+m4_commit_sha: pending-backfill
+m4_complete_at: 2026-07-26
+ac_pass_count: 11                # 001, 015(M1) + 002, 003, 004(M2) + 005, 006(M3) + 007, 008, 016, 018(M4)
 ac_fail_count: 0
-ac_pending_count: 12             # 007~014, 016~019 — M4 이후 범위
+ac_pending_count: 8              # 009~014, 017, 019 — M5 이후 범위
 preserve_list_post_run_count: 0  # PRESERVE 목록 위반 0건
 new_warnings_or_lints_introduced: 0   # ruff check/format: 신규 파일 clean
                                       # (리포지토리 사전 baseline 3 E501 + 25 format은 무관·무수정)
-baseline_full_suite: "1 failed, 1941 passed"   # M3 착수 직전 실측 (HEAD 344485e)
-post_m3_full_suite: "1 failed, 2004 passed"    # +63 = 신규 리졸버 테스트 전량
+baseline_full_suite: "1 failed, 2004 passed"   # M4 착수 직전 직접 실측 (HEAD c29e543)
+post_m4_full_suite: "1 failed, 2111 passed"    # +107 = 신규 M4 테스트 전량
 new_failures: 0                  # 동일한 사전 실패 1건(test_every_candidate_socket_is_released), 신규 0건
-coverage_server_looks: "97%"     # 임계 85% 충족 (resolver 100 / roles 100 / schema 98 / loader 93)
-coverage_resolver: "100%"        # 87 stmts / 0 miss
+coverage_server_looks: "98%"     # instantiate 100 / resolver 100 / roles 100 / schema 98 / loader 93
+coverage_instantiate: "100%"     # 184 stmts / 0 miss
 cross_platform_build: n/a        # 순수 파이썬 · 컴파일 산출물 없음
-total_run_phase_files: 12        # M1 5 + M2 5 + M3 2
+total_run_phase_files: 16        # M1 5 + M2 5 + M3 2 + M4 4 (신규 3 + 배선 1)
 library_look_count: 32           # 워십 8 · 록 8 · 발라드 7 · EDM 9
 library_movement_spec_count: 0   # v0.3.1 F3
-mutation_kill_rate: "27/27"      # M1·M2 17 + M3 10 · 생존 0건
-                                 # M3 1회차 생존 1건(우선순위)은 테스트 보강으로 닫힘
+mutation_kill_rate: "53/53"      # M1·M2 17 + M3 10 + M4 26 · 최종 생존 0건
+                                 # M4 1회차 생존 3건 → 2건은 진짜 테스트 공백(AP-16 번들층·선택 순서)으로
+                                 # 테스트 신설, 1건은 뮤테이션 설계 불량으로 재작성 후 KILL
 resolver_unmapped_reasons: 5     # no_match · ambiguous · unaddressable(신설) · 두 unavailable 사유
+skip_reasons: 4                  # conflict · no_free_slot + M4 신설 pool_unresolved · pool_unaddressable
+capture_shape_default: shared_capture   # M0 ASSUMPTION-14 GO · FALLBACK도 같은 데이터에서 생성 가능
 push_performed: false            # 지시에 따라 푸시하지 않음
 ```
+
+> **M4 블로커성 발견 (오케스트레이터 결정 필요, 본 마일스톤 범위 밖)**: `run_commands`의 번들 내 중복-커맨드 제거(`server/orchestrator/tools.py:376-391`)가 `ClearAll` 규율을 침식한다. GO 형상은 말미 `ClearAll` 1건을 잃고(다음 번들의 선두 `ClearAll`이 덮는다), **FALLBACK 형상은 격리가 완전히 붕괴한다** — 따라서 `run_look_bundle`은 FALLBACK 형상을 실행하지 않고 거부한다. M0가 ASSUMPTION-14의 안전망으로 살려 둔 분기가 **현재 실행 경로로는 발화 불가**라는 뜻이므로, dedupe 규칙 개정(=`tools.py`, M5 소관) 여부는 M4가 단독으로 정하지 않는다.
+
+> **M1/M2 baseline 불일치**: M3가 규명 실패로 남긴 3건 차이는 M4에서도 조사하지 않았다. 본 §E.3의 델타는 M4가 착수 직전 `c29e543`에서 **직접 실측한 2004**와 종료 시 **직접 실측한 2111**에만 귀속된다 — 이월 인용 0건.
 
 > **M1/M2 baseline 불일치 (미해소로 유지)**: M1의 `1909`와 M2가 같은 HEAD에서 실측한 `1912`의 3건 차이는 여전히 규명되지 않았다. M3는 이 숫자를 이월하지 않고 착수 직전(`344485e`)에 **직접** `1941`을 실측했으므로 위 델타 판정은 본 마일스톤이 관측한 두 수에만 귀속된다.
 

@@ -22,7 +22,8 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 
 from server.deploy.review import ReviewRequest
-from server.llm.types import LLMProvider
+from server.llm.types import LLMProvider, ToolCall
+from server.looks.instantiate import CAPTURE_SHARED, LookInstantiation
 from server.orchestrator.last_created import LastCreated, parse_last_created
 from server.orchestrator.ports import ExecutionResult
 from server.orchestrator.runner import InstructionResult, Orchestrator
@@ -214,6 +215,9 @@ class ChatSession:
             rig_paths=rig_paths,
             deploy_pipeline=deploy_pipeline,
         )
+        # Held so a look bundle re-enters the SAME run_commands tool the model
+        # uses, rather than growing a second way to reach the console.
+        self._registry = registry
         self._orchestrator = Orchestrator(
             provider=provider, registry=registry, system_prefix=system_prefix
         )
@@ -276,6 +280,54 @@ class ChatSession:
         acceptance.md §D edge case 7).
         """
         return self._last_created
+
+    # @MX:NOTE: [AUTO] the look layer's only route to a console (REQ-LOOKLIB-010
+    #   / 019). This is a CALLER of the single execution path, not a second one:
+    #   the bundle re-enters the same run_commands tool a model-issued call
+    #   uses, so it inherits the execution preview, gate.screen() and the audit
+    #   log without any of them being duplicated for looks.
+    def run_look_bundle(self, plan: LookInstantiation) -> dict:
+        """Screen and run one look instantiation bundle; return it with its report.
+
+        An empty bundle sends nothing — that is the shape a look takes when the
+        rig addressed none of its roles, and the report says why.
+
+        The per-family capture shape is REFUSED here rather than run. It is
+        built from repeated ``ClearAll`` / ``Group`` lines, and run_commands
+        deduplicates identical strings within one bundle (tools.py:376-391) —
+        right for a ``Store``, wrong for a ``ClearAll`` whose whole purpose is
+        to run at a second MOMENT. Cycles 2..N would lose both their clear and
+        their re-selection and store the previous cycle's programmer, which is
+        the silent over-capture that shape exists to prevent. Refusing loudly
+        beats writing wrong presets; lifting the refusal needs the dedupe rule
+        changed, which is outside the look layer.
+        """
+        report = plan.to_dict()
+        if plan.capture_shape != CAPTURE_SHARED:
+            return {
+                "executed": False,
+                "report": report,
+                "commands": [],
+                "refused": (
+                    f"capture shape {plan.capture_shape!r} cannot be executed: "
+                    "run_commands drops the repeated ClearAll/Group lines its "
+                    "isolated cycles are built from"
+                ),
+            }
+        if not plan.commands:
+            return {"executed": False, "report": report, "commands": []}
+        execution = self._registry.dispatch(
+            ToolCall(
+                id=f"look-{plan.look_id}",
+                name="run_commands",
+                arguments={"commands": list(plan.commands)},
+            )
+        )
+        return {
+            "executed": not execution.result.is_error,
+            "report": report,
+            "commands": [outcome_view(o) for o in execution.command_outcomes],
+        }
 
     def status_snapshot(self) -> dict:
         """Gate-truth status event (REQ-MVP-030/031 UI half)."""
