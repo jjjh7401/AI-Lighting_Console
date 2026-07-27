@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-LOOKLIB-001
 title: "연출 어휘 계층 — 룩 라이브러리 (Look Library)"
 version: "0.3.2"
-status: in-progress
+status: completed
 created: 2026-07-26
-updated: 2026-07-26
+updated: 2026-07-27
 author: manager-spec
 priority: P1
 phase: "Phase 2 연출 계층 (v1.2.0 target)"

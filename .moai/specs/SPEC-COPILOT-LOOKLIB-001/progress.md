@@ -1136,7 +1136,7 @@ m7wire_residual_unverified:
 m7live_verdict: PASS
 m7live_complete_at: 2026-07-27
 m7live_code_changes: 0           # 측정 세션 — HEAD da54e60에서 코드 무변경으로 수행
-m7live_record_commit_sha: pending-backfill-m7live   # 본 기록 커밋 후 실제 SHA로 backfill
+m7live_record_commit_sha: f76d60b
 m7live_env: "실물 grandMA3 onPC 2.4.2 (app_gma3 pid 38963 · UDP *:8000 + *:9005) ·
   copilot 127.0.0.1:8765 (COPILOT_LAUNCH_TOKEN=m7probe) · 실제 Gemini 턴 · /ws 채팅 지시 1회"
 m7live_instruction: "웅장한 금색 코러스로 가자"
@@ -1337,4 +1337,29 @@ fallback_shape_executable: true  # 거부 해제 · 21줄 번들 정확 왕복 (
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+```yaml
+sync_status: complete
+sync_complete_at: 2026-07-27
+sync_commit_sha: pending-backfill-sync   # 본 기록 커밋 후 실제 SHA로 backfill (자기참조 해저드 — v0.3.1 F4/M7live와 동일 패턴)
+b12_self_test_a: |
+  grep -c 'SPEC-COPILOT-LOOKLIB-001' CHANGELOG.md → 0 (사전 확인, 본 커밋 이전) — 중복 없음 확인 후 항목 추가
+b12_self_test_b: |
+  grep -cE '^### AC-LOOKLIB-' acceptance.md → 20. CHANGELOG 항목은 acceptance.md SSOT의 20건
+  (19 PASS + AC-020 조건부)을 그대로 인용 — progress.md ac_pass_count(19)/ac_conditional_pass_count(1)와 일치
+b12_self_test_c: |
+  ls server/looks/{schema,roles,loader,resolver,instantiate,matching}.py server/looks/library/*.yaml
+  전부 존재 확인 후 CHANGELOG에 인용
+changelog_entry_position: "Unreleased > Added, 최상단(DASHUI-001 항목 위) — 본 SPEC이 최신 completed 전이"
+frontmatter_status_transitions:
+  spec_md: "in-progress -> completed (updated: 2026-07-26 -> 2026-07-27)"
+  plan_md: "draft -> completed (본문 status 라인, 진짜 YAML frontmatter 없음 — SHOWUI-001/EXECBODY-001 선례와 동형 처리)"
+  acceptance_md: "draft -> completed (본문 status 라인, 동일 처리)"
+  design_md: "무변경 — design.md/research.md는 본 SPEC의 body-status 라인 갱신 대상에서 제외(선례 미확인, 과잉 수정 회피)"
+canary_compliance_check:
+  mx_tags_reviewed: true   # server/looks/instantiate.py의 @MX:WARN/@MX:REASON 확인 — 유효, 수정 불요
+  stale_comment_found: "server/looks/instantiate.py:301-303 부근 — '...and awaits the M7 live session' 주석이
+    M7 라이브(2026-07-27, PASS)로 이미 낡음. 코드 수정 금지 제약에 따라 정정하지 않고 후속 항목으로만 기록"
+  live_session_accounting_carried_forward: "plan.md §B는 '2회'로 남아 있음(manager-spec 소유, 본 sync가
+    건드리지 않음) — 실제 3회 이탈은 §E.3 live_session_accounting에 이미 기록됨. sync 산출물 어디에서도
+    2회로 재진술하지 않았음(CHANGELOG 미언급, 본 절 위에서 3회로 명시)"
+```
