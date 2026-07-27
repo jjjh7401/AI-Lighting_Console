@@ -713,11 +713,216 @@ M0 ASSUMPTION-14 GO 형상(룩당 1회 캡처 + 풀 타입별 Store)이 기본�
 
 **범위 준수**: 신규 2파일 + 기존 3파일 수정(`tools.py` 툴 등록 · `test_tools.py` 레지스트리 단언 · `31_choreography_patterns.md` 안내 축) + 본 `progress.md`. spec.md/plan.md/acceptance.md/design.md/research.md 무수정, `server/safety/**`·`server/bridge/**`·`console/**`·`ui/**` 무수정, M1~M4 공개 계약 무수정(소비만 — `matching.py`는 `schema`만 import하고 `instantiate`/`resolver`는 건드리지 않는다). `looks`는 `test_architecture.py`의 `_ALLOWED_PREFIXES` 밖에 그대로 있다. frontmatter 전이 없음 — `status: in-progress`는 M1이 이미 수행했다.
 
+### M7 — 종단 라이브 검증 (2026-07-27, 실물 grandMA3 onPC 2.4.2) — **AC-LOOKLIB-014 PASS**
+
+> **본 절은 acceptance.md §E "라이브 세션 산출물 2회분"이 요구하는 M7 명시적 섹션이다.** M0 절(위)이 1회차, 본 절이 2회차다. 형식은 AC-EXECBODY-010의 조건부 인수 패턴을 계승한다 — 명시된 분기 중 하나의 판정 + 그 분기의 실측 근거 + 관측하지 **않은** 것의 열거.
+>
+> **본 절의 라이브 세션은 M7의 2번째다.** 1회차(2026-07-26)는 배선 결함을 드러냈고 그 결함이 `da54e60`으로 닫힌 뒤 본 세션이 수행됐다. 라이브 세션 회계의 실제 소비는 3회이며 그 이탈은 §E.3 `live_session_accounting`에 기록한다.
+
+#### 세션 조건 + 측정 채널 (판정 해석의 전제)
+
+| 항목 | 값 |
+|---|---|
+| 콘솔 | 실물 grandMA3 onPC 2.4.2 (`app_gma3` pid 38963 · UDP `*:8000` + `*:9005`) |
+| 서버 | copilot 서버 127.0.0.1:8765 · `COPILOT_LAUNCH_TOKEN=m7probe` |
+| LLM | 실제 Gemini 턴 (스텁·페이크 아님) |
+| 입력 | `/ws` 프로토콜 경유 채팅 지시 **1회** |
+| 코드 | HEAD `da54e60` — 본 세션은 **코드 변경 0건**인 측정 세션이다 |
+| 감사 채널 | `server/audit_logs/audit-20260726.jsonl` (파일명은 서버 세션 시작일 기준. 실행 구간은 `2026-07-26T20:04:39.091676+00:00` ~ `20:04:48.491397+00:00` UTC = KST 2026-07-27 05:04) |
+| 상태 판독 채널 | OSC 응답기. **서버 정지 후** 판독해 9005 점유를 비웠다 |
+
+**증거 등급 표기 규율 (M0 절 계승 — 상향하지 않는다).** 아래 기록은 세 등급으로 나뉜다: **(기계)** 본 기록 작성 시점에 저장소 파일로 재확인 가능한 것, **(기계·교차)** 라이브 관측이되 저장소 아티팩트 2종 이상으로 교차 확인되는 것, **(세션)** 라이브 세션에서만 관측되고 재확인 수단이 없는 것.
+
+#### 콘솔 기준선 — 지시 직전, in-scope 4개 풀 전부 비어 있음 **(세션)**
+
+```
+pool 1 Dimmer  count=0 []
+pool 4 Color   count=0 []
+pool 5 Beam    count=0 []
+pool 6 Focus   count=0 []
+```
+
+#### 지시 1회 → 체인 종단 완결
+
+지시: `"웅장한 금색 코러스로 가자"`
+
+| 단계 | 관측 | 등급 |
+|---|---|---|
+| 매칭 | `find_looks` → `금빛 코러스`(`worship-golden-chorus`, worship, **dynamics 4**) | (세션) |
+| 인스턴스화 | `instantiate_look` 호출 | (세션) |
+| 역할 바인딩 | 백라이트 → `Group 11` · 프론트 → `Group 12` | **(기계·교차)** |
+| 번들 | 11줄 GO 형상(`shared_capture`) | **(기계)** |
+| 실행 프리뷰 | `risk=info` 발화 | (세션) |
+| 게이트 | `gate.screen()` 경유 실행 | **(기계)** |
+
+- **역할 바인딩이 (기계·교차)인 이유**: 감사 로그가 `Group 11 + 12`를 verbatim 남겼고, 위 M0 측정 3이 같은 쇼파일에서 `Back`(11)→백라이트 · `Front`(12)→프론트를 이미 기록했다. 두 독립 기록이 같은 번호쌍을 가리킨다.
+- **dynamics는 4다**(`server/looks/library/worship.yaml:130`) **(기계)**. 세션 보고에 5로 적힌 값이 있었으나 자산이 정본이다. 대역 판정에 영향 없음 — `웅장한`은 무드 키워드로 걸리고 질의에 섹션어가 없어 다이내믹스 필터가 대역을 좁히지 않는다.
+
+#### 실행 번들 verbatim — 감사 로그 원문 **(기계)**
+
+`audit-20260726.jsonl`에서 직접 판독. 11줄 전량 `detail: "OK"` · `outcome: "ok"`:
+
+```
+20:04:39.091676  executed  ChangeDestination Root
+20:04:39.158422  executed  ClearAll
+20:04:39.225015  executed  Group 11 + 12
+20:04:39.291394  executed  Attribute 'Dimmer' At 88 ; Attribute 'ColorRGB_R' At 100 ;
+                           Attribute 'ColorRGB_G' At 78 ; Attribute 'ColorRGB_B' At 30 ;
+                           Attribute 'Zoom' At 45
+20:04:39.358974  executed  Store Preset 1.1
+20:04:39.425105  executed  Label Preset 1.1 '금빛 코러스'
+20:04:39.491430  executed  Store Preset 4.1
+20:04:39.591346  executed  Label Preset 4.1 '금빛 코러스'
+20:04:39.657973  executed  Store Preset 6.1
+20:04:39.724872  executed  Label Preset 6.1 '금빛 코러스'
+20:04:39.791596  executed  ClearAll
+```
+
+**감사 1:1 확인 (기계)**: 위 5개 속성값은 `worship-golden-chorus`의 `attributes` 5개와 **5/5 동일**하다(`worship.yaml:137-141`). 저장 대상 풀 3종(1 Dimmer · 4 Color · 6 Focus)은 그 룩이 건드리는 패밀리와 정확히 일치한다.
+
+#### 승인 게이트 1건 + 사전 백업 **(기계)**
+
+```json
+{"ts":"2026-07-26T20:04:47.839691+00:00","event":"approved",
+ "commands":["ChangeDestination Root","ClearAll","Group 11 + 12",
+             "At Preset 1.1","At Preset 4.1","At Preset 6.1",
+             "Store Sequence 17 Cue 1 'Golden Chorus'","ClearAll",
+             "Assign Sequence 17 At Page 1.102","Go+ Page 1.102"],
+ "held":["Go+ Page 1.102"]}
+{"ts":"2026-07-26T20:04:47.891451+00:00","event":"executed",
+ "command":"SaveShow","kind":"backup","ok":true,"detail":"OK"}
+```
+
+- 보류된 유일한 커맨드는 참조 발화형 `Go+ Page 1.102` 1건이며 운영자 승인 후 실행됐다.
+- **`SaveShow`는 모델이 발화한 것이 아니다 — 게이트의 사전 백업이다 (기계, 지시서 전제 정정).** 감사 행의 `kind`가 `"backup"`이고(`server/safety/gate.py:59` `BACKUP_COMMAND`), 호출 지점은 `gate.py:329` `self._backup.before_risky_execution()` — 주석 그대로 **"Backup rule ③ (REQ-MVP-017): only the RISKY path backs up"**이다. 타임스탬프 순서도 이를 확정한다: `log_approved`(47.839691) → lock-FIRST 재확인 → `SaveShow`(47.891451, +52ms) → 번들. 즉 이것은 모델의 부수 효과가 아니라 **AC-LOOKLIB-019가 상속을 요구한 "위험 커맨드 사전 백업 fail-closed" 불변식이 룩 경로에서 실제로 발화한 관측**이다. 운영자가 알아야 할 부수 효과로 적되, 귀속은 게이트다.
+
+#### dedupe 1건 — 면제 규율이 프로덕션에서 하중을 받았다 **(기계)**
+
+세션은 `skipped_already_executed` 1건(`ChangeDestination Root`)을 관측했다. 이 상태값은 감사 로그의 이벤트가 아니라 툴 반환·`/ws` 프로토콜의 per-command status다(`server/web/session.py:63`, `server/orchestrator/tools.py:547`) — 따라서 감사 로그에는 **부재로** 나타나며, 실제로 그렇다:
+
+- 승인 이벤트는 **10개** 커맨드를 열거한다.
+- `SaveShow` 이후 실행된 행은 **9개**다.
+- 빠진 정확히 1개가 `ChangeDestination Root`다 — 1번 번들에서 이미 실행됐으므로 중복 제거됐다.
+
+**M4 후속 면제 규율의 프로덕션 검증**: 같은 두 번들에서 `ClearAll`은 **4회 전부 실행**됐다(1번 번들 2회 + 2번 번들 2회, 누락 0). 면제가 없었다면 2번째 이후가 전부 드롭돼 캡처가 오염됐다. `4dd48e8`의 면제 집합(`ClearAll`·`Clear`·맨 `Fixture`/`Group` 선택형)이 **유닛이 아니라 실물 왕복에서** 하중을 받은 최초 기록이다.
+
+#### 콘솔 사후 상태 — OSC 판독 **(세션)**
+
+```
+pool 1 Dimmer  count=1 [(1, '금빛 코러스')]
+pool 4 Color   count=1 [(1, '금빛 코러스')]
+pool 5 Beam    count=0 []
+pool 6 Focus   count=1 [(1, '금빛 코러스')]
+```
+
+**Beam이 빈 것은 갭이 아니라 정확한 동작이다 (기계)**: `금빛 코러스`는 `Zoom`(Focus 패밀리)을 갖고 `Iris`(Beam 패밀리)를 갖지 않는다(`worship.yaml:136-141`). M1의 패밀리 라우팅(`Zoom → Focus`, `Iris → Beam`)에 따라 Beam 대상 `Store`는 **애초에 만들어지지 않았다**. 같은 라이브러리의 `worship-glory-climax`는 `Iris: 100`을 가지므로(`worship.yaml:156`) 4풀 경로는 자산 안에 존재하되 이번 룩이 타지 않았을 뿐이다.
+
+#### 본 세션이 확정한 것 — 5건, 각각 증거 등급 명시
+
+**1. AC-LOOKLIB-014 PASS.** 종단 완결 + 감사 1:1 + 프리셋의 실물 콘솔 확인. AC 본문이 "종단 성공" 판정에 요구한 **매핑 ≥1 역할**은 2건으로 충족(plan.md §A.3). — **(기계 + 세션)**
+
+**2. ASSUMPTION-14의 증거 등급이 추론 → 관측으로 상향된다. 단 상향의 범위를 정확히 적는다.**
+
+- M0 측정 4의 판정은 **GO였으나 근거는 구조적 추론 + 시각 관측**이었고, 직접 판독 시도 2건은 실패했다(위 M0 절 G3). 그 절이 스스로 "FALLBACK 분기는 M4가 번들을 실제로 발화해 경험적으로 확인할 때까지 살아 있다"고 적었다.
+- 본 세션은 `CAPTURE_SHARED` 형상 — **캡처 1회 + 풀별 `Store` 3회** — 를 실물에 발화했고, Dimmer·Color·Focus가 **각각 자기 풀에만** 안착했다. 교차 풀 오염 0건.
+- **상향되는 것**: "풀별 라우팅이 실제로 작동한다"는 **동작**이 관측됐다. 과캡처가 있었다면 in-scope 4풀 중 손대지 않은 Beam에 무언가가 생기거나 풀별 카운트가 어긋났을 것이나, 그런 일은 없었다.
+- **상향되지 **않는** 것 (교차 발견의 구조적 제약은 그대로다)**: 프리셋의 **내용**은 여전히 판독되지 않았다. 응답기는 `DataPool/PresetPools/<pool>/<slot>`에서 존재와 이름만 돌려주고 속성 값을 어떤 형태로도 노출하지 않는다(위 M0 교차 발견). 따라서 "1.1이 딤머 값만 담았다"는 여전히 미관측이며, 관측된 것은 **"각 풀에 정확히 1개씩, 의도한 3개 풀에만 생겼다"**이다. 이 구분을 지우면 M0가 스스로 금지한 등급 상향이 된다. — **(세션, 부정 관측 포함)**
+
+**3. 문법 2종이 최초로 라이브 검증됐다. — (기계)**
+
+| 형태 | 이전 상태 | 본 세션 |
+|---|---|---|
+| `Group 11 + 12` (additive 선택형) | `instantiate.py:301-303` 주석이 "문법서 유래이며 M7 라이브 세션을 기다린다"고 명시 | **`OK` × 2회**(양 번들) |
+| `Store Preset <pool>.<slot>` / `Label Preset ...` | §E.3 `m7wire_residual_unverified` 2번이 "콘솔이 받아들이는지 미확인"으로 열어 둠 | **`OK` × 6회**(Store 3 + Label 3) |
+
+`Label`은 한국어 표시명 `'금빛 코러스'`를 인용부호 안에 담아 3회 전부 수용됐다 — 비-ASCII 라벨 왕복도 함께 확인된 셈이다.
+
+**4. M4 후속 dedupe 면제가 프로덕션에서 하중을 받았다** — 위 dedupe 절. — **(기계)**
+
+**5. 정직한 축소가 유지됐다.** 쇼파일이 표현하는 그룹은 4종(`Copilot Grp`·`Back`·`Front`·`All`, M0 측정 3)이고, 후보 없는 역할은 **근사되지 않고 미매핑으로 보고**됐다. 대체·번호 추정 0건(REQ-LOOKLIB-009 · AP-2). — **(기계·교차)**
+
+> **미매핑 개수는 계층에 따라 다르며 둘 다 참이다 (기계).** 리졸버는 6종 폐쇄 어휘 전체를 판정하므로 **2 매핑 / 4 미매핑**이다(`resolver.py:121` — `resolve_roles`는 `ROLES` 전체를 돈다). 반면 인스턴스화 보고는 **그 룩이 선언한 역할만** 돈다(`instantiate.py:432` `for role in look.roles`) — `금빛 코러스`는 5종을 선언하므로(`worship.yaml:133`) 보고의 미매핑은 **3건**(사이드·탑·배경)이고 `스페셜`은 애초에 등장하지 않는다. 세션 보고의 "6 중 4"는 리졸버 층의 수치다.
+
+#### 관측되었으나 인수 결과가 **아닌** 것 — 창발 행동 **(기계)**
+
+모델은 인스턴스화 이후 SPEC이 요구하지 않은 일을 **스스로** 이어서 했다:
+
+```
+20:04:47.958131  ClearAll
+20:04:48.024793  Group 11 + 12
+20:04:48.091246  At Preset 1.1
+20:04:48.157601  At Preset 4.1
+20:04:48.224974  At Preset 6.1
+20:04:48.291635  Store Sequence 17 Cue 1 'Golden Chorus'
+20:04:48.358135  ClearAll
+20:04:48.424881  Assign Sequence 17 At Page 1.102
+20:04:48.491397  Go+ Page 1.102
+```
+
+저장한 프리셋을 되불러(`At Preset ...`) 시퀀스로 굳히고 페이지에 배정한 뒤 발화했다. **이것은 툴 위에서 일어난 모델의 창발 행동이지 본 SPEC의 요구가 아니다.** 인수 결과로 계수하지 않으며, AC 어느 항목의 근거로도 쓰지 않는다. 기록하는 이유는 두 가지다 — (a) 게이트가 이 구간의 유일한 참조 발화형을 정확히 보류했다는 것이 안전 불변식의 관측이고, (b) 아래 쇼파일 잔여물의 출처가 여기이기 때문이다.
+
+#### 쇼파일 잔여물 (의도적 존치 — 정리 debris 아님)
+
+| 대상 | 출처 |
+|---|---|
+| 프리셋 `1.1` · `4.1` · `6.1` (전부 `금빛 코러스`) | 인스턴스화 — **인수 대상** |
+| `Sequence 17` (`Cue 1 'Golden Chorus'`) | 창발 행동 |
+| 익스큐터 배정 `Page 1.102` | 창발 행동 |
+
+M0가 프로브 프리셋 6개를 전량 삭제한 것과 달리 본 세션은 **남긴다** — M0 잔여물은 측정 부산물이었으나 이번 3개 프리셋은 AC-014가 요구한 산출물 자체이고, 그 존재가 인수 근거다. 3건 전부 **사전에 비어 있던 슬롯**에 저장됐다(위 기준선 `count=0` × 4) — 덮어쓴 것 0건.
+
+#### 미검증 항목 (Gaps) — 관측하지 **않은** 것
+
+| # | 미검증 내용 | 어긋나는 기대 | 영향 |
+|---|---|---|---|
+| **H1** | **GUI 스크린샷 아티팩트 미산출.** 프리셋 확인은 OSC 응답기 판독으로 대체됐다 | AC-014 검증 방법: "프리셋 풀 **GUI 스크린샷**" · acceptance.md §E "M7 — 종단 감사 로그 verbatim + **GUI 스크린샷**" | 판정에는 영향 없음으로 본다 — 감사 로그 verbatim(주 매체)은 산출됐고, OSC 판독은 같은 콘솔 상태의 **구조화 기계 판독**이며 4개 풀 전량(Beam 음성 케이스 포함)을 덮는다. 다만 **명세된 매체가 아니다** — M0의 G2와 같은 등급의 매체 갭이며, 감사관이 "GUI"를 문자 그대로 읽으면 조건부 PASS로 강등될 여지가 있다 |
+| **H2** | **프리셋 내용 판독** — 여전히 불가 | AC-020이 명세했던 `query_state` 판독 | **구조적 불가**(M0 교차 발견). 위 확정 2번의 상향 범위 제한이 이 갭의 직접 귀결이다 |
+| **H3** | **`per_family_capture`(FALLBACK) 형상은 실물에서 발화되지 않았다** | — (AC 요구 아님) | GO 형상만 라이브 검증됐다. FALLBACK은 M4 후속에서 21줄 왕복을 유닛으로 확인했을 뿐 콘솔 수용은 미확인 |
+| **H4** | **역할 힌트의 넓은 표본** | M0 잔여 위험 4번: "6종 힌트가 실제 현장 쇼파일에서 얼마나 걸리는지는 M7 종단 세션에서야 더 넓은 표본을 얻는다" | **얻지 못했다.** 본 세션은 M0와 **동일한 쇼파일**을 썼으므로 표본이 넓어지지 않았다. 2/6은 재확인이지 새 데이터가 아니다 |
+| **H5** | **`drilldown_capped` 미발생** | M0 G4가 M4에 넘긴 확인 항목 | 룩 경로는 `rig_drilldown` 설정과 무관하게 `preset_pools`를 강제 드릴한다(`m7wire_forced_drill`). 이번 세션에서 캡 신호는 보고되지 않았으나 **페이지 수는 여전히 측정되지 않았다** — M0 G4의 산술적 우려는 닫히지 않았다 |
+| **H6** | **반복 지시(더블 인스턴스화)** | acceptance.md §D 엣지 케이스 | 지시는 1회뿐이다. `conflict` 사유의 건너뜀 경로는 유닛에만 고정돼 있고 실물 관측이 없다. 다음 세션이 같은 룩을 다시 지시하면 프리셋 3건이 이미 있으므로 이 경로가 자연히 관측된다 |
+
+#### 잔여 위험 (관측된 것에도 불구하고 남는 것)
+
+1. **단일 쇼파일 · 단일 룩 · 단일 지시.** 32룩 중 1개, 4장르 중 1개, 6역할 중 2개만 실물을 통과했다. 나머지의 문법·라우팅은 이 1건과 같은 코드 경로를 쓴다는 **구조적** 근거로만 뒷받침된다.
+2. **`capture_shape`의 기계적 제약 부재** — 모델이 임의로 `per_family_capture`를 고르는 것은 여전히 설명문으로만 막혀 있다(§E.3 `m7wire_residual_unverified` 5번). 본 세션에서는 기본값이 쓰였다.
+3. **`run_look_bundle`은 여전히 프로덕션 호출자 0** — `instantiate_look`이 실경로가 되었으므로 M4의 세션 레벨 API는 미배선인 채 남는다. 삭제는 PRESERVE 위반이라 하지 않았고, 처분은 패널 SPEC 소관이다.
+4. **창발 행동은 통제되지 않는다.** 모델이 프리셋 저장 뒤 시퀀스·익스큐터까지 나아간 것은 이번에 무해했으나(게이트가 참조 발화형을 보류), 그 나아감 자체를 막는 기제는 없다. 본 SPEC의 범위 밖이며 스티어링 축의 후속 관심사다.
+
+#### M0 판정과의 대조 (plan.md §B M7 요구: "어긋나면 그 불일치를 기록한다")
+
+| M0 판정 | M7 관측 | 대조 |
+|---|---|---|
+| 측정 3 — 매칭 역할 **2/6** (`Back` 11 · `Front` 12) | 동일 — 백라이트→11 · 프론트→12 | **일치.** 같은 쇼파일이므로 재현이지 독립 확인은 아니다 |
+| 측정 2 — in-scope 4풀 전부 `childCount=0` · 풀 번호 1/4/5/6 | 기준선 동일 · 저장 대상이 1·4·6으로 런타임 해석됨 | **일치.** 결정 I의 "풀 번호 하드코딩 금지"가 실경로에서 성립 |
+| 측정 4 — ASSUMPTION-14 **GO(추론)** | 풀별 라우팅 동작 관측 · 교차 오염 0 | **일치 + 등급 상향**(범위 제한은 확정 2번) |
+| 측정 1 — `{Zoom, Iris}` 허용 · 4풀 in-scope | `Zoom` 발화 `OK` · `Iris`는 이 룩에 없어 미발화 | **일치.** `Iris` 라이브 수용은 M0에서 이미 확인됨 |
+
+**불일치 0건.**
+
+#### AC-LOOKLIB-014 판정
+
+| AC | 판정 | 검증 커맨드 / 채널 | 실제 출력 |
+|---|---|---|---|
+| **AC-LOOKLIB-014** (LIVE, 2건 중 2번째) | **PASS** | 실물 onPC 라이브 세션 1회 + `server/audit_logs/audit-20260726.jsonl` verbatim 판독 + OSC 프리셋 풀 판독 | 종단 완결(매칭→매핑→번들→프리뷰→게이트→실행) · 감사 11줄 전량 `OK` · 프리셋 3건 실물 확인(1.1 · 4.1 · 6.1 = `금빛 코러스`) · 매핑 역할 2건(≥1 요구 충족) · 미매핑 역할은 근사 없이 보고 |
+
+**조건부 표기**: 위 H1(GUI 스크린샷 매체 미산출)을 근거로 감사관이 조건부로 강등할 수 있다. 본 절은 **PASS로 기록하되 그 여지를 숨기지 않는다** — M0의 AC-020이 "PASS — 조건부(증거 매체 2종 미산출)"였던 것과 달리 M7은 **주 매체(감사 로그 verbatim)를 산출했고 보조 매체만 대체**했다는 점에서 등급이 다르다.
+
+#### 마일스톤 상태
+
+| 마일스톤 | 상태 | 비고 |
+|---|---|---|
+| M0~M6 | 완료 | 위 각 절 |
+| **M7** — 종단 라이브 검증 | **완료** | 라이브 2회차에서 PASS. 코드 변경 0건(측정 세션) |
+| run-phase | **전량 완료** | M0~M7 8개 전부. 남은 것은 sync-phase |
+
+**제약 준수 기록**: 본 세션은 **코드 변경 0건**이다. 워킹 트리 수정은 본 `progress.md` 1파일로 한정 — `spec.md` / `plan.md` / `acceptance.md` / `design.md` / `research.md` 무수정(manager-spec 소유), `server/**` · `console/**` · `ui/**` 무수정. PRESERVE diff 재확인: `git diff --stat server/safety/ server/bridge/ console/ ui/ server/web/preview.py server/rulebook/assets/v2.4.2/20_korean_terms.md` → **빈 출력**. frontmatter 전이 없음 — `in-progress → implemented/completed`는 sync-phase(manager-docs) 소관이다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
-run_status: in-progress          # M1~M6 완료 · M7(LIVE) 미착수
-milestones_complete: [M0, M1, M2, M3, M4, M5, M6]
+run_status: complete             # M0~M7 전량 완료 · AC 20건 판정 종료 · 남은 것은 sync-phase
+milestones_complete: [M0, M1, M2, M3, M4, M5, M6, M7]
 m1_commit_sha: c1c1382
 m1_complete_at: 2026-07-26
 m2_commit_sha: 9b76fce
@@ -730,11 +935,19 @@ m5_commit_sha: 00dfa91
 m5_complete_at: 2026-07-26
 m6_commit_sha: 1ec6bea
 m6_complete_at: 2026-07-26
-ac_pass_count: 18                # 001, 015(M1) + 002, 003, 004(M2) + 005, 006(M3)
+ac_total: 20                     # acceptance.md의 `^### AC-LOOKLIB-` 헤딩 수로 직접 확인 (001~020)
+ac_pass_count: 19                # 001, 015(M1) + 002, 003, 004(M2) + 005, 006(M3)
                                  # + 007, 008, 016, 018(M4) + 010, 011, 012, 017(M5)
-                                 # + 009, 013, 019(M6)
+                                 # + 009, 013, 019(M6) + **014(M7 LIVE, 신규)**
+ac_conditional_pass_count: 1     # 020(M0 LIVE) — "PASS — 조건부(증거 매체 2종 미산출)"
 ac_fail_count: 0
-ac_pending_count: 1              # 014(M7 LIVE)
+ac_pending_count: 0
+ac_count_reconciliation: |
+  이전 판(M6 시점)의 18 + pending 1 = 19로 **AC-020이 어느 칸에도 없었다.**
+  acceptance.md를 세어 20건임을 확인한 뒤(위 ac_total) 020을 조건부 칸으로 분리해
+  19 + 1 + 0 + 0 = 20으로 맞췄다. 즉 이번 갱신의 실제 변화는 두 가지다 —
+  014가 pending에서 PASS로 이동했고, 누락돼 있던 020이 장부에 올라왔다.
+  020의 판정 자체는 M0 절이 기록한 그대로이며 **상향하지 않았다**.
 preserve_list_post_run_count: 0  # PRESERVE 목록 위반 0건
 new_warnings_or_lints_introduced: 0   # ruff check: 신규·수정 4파일 전부 clean
                                       # ruff format: 저작 2파일 clean. tools.py/test_tools.py의
@@ -917,6 +1130,110 @@ m7wire_residual_unverified:
      패널 SPEC이 쓸지 폐기할지는 이 SPEC의 결정 범위 밖."
   - "capture_shape를 모델이 임의로 per_family_capture로 고를 위험은 설명문으로만 막혀 있다.
      기계적 제약은 없다."
+
+# --- M7 종단 라이브 검증 2회차: AC-LOOKLIB-014 PASS (2026-07-27) ---
+# 전문은 §E.2 "M7 — 종단 라이브 검증" 절. 아래는 감사용 신호만.
+m7live_verdict: PASS
+m7live_complete_at: 2026-07-27
+m7live_code_changes: 0           # 측정 세션 — HEAD da54e60에서 코드 무변경으로 수행
+m7live_record_commit_sha: pending-backfill-m7live   # 본 기록 커밋 후 실제 SHA로 backfill
+m7live_env: "실물 grandMA3 onPC 2.4.2 (app_gma3 pid 38963 · UDP *:8000 + *:9005) ·
+  copilot 127.0.0.1:8765 (COPILOT_LAUNCH_TOKEN=m7probe) · 실제 Gemini 턴 · /ws 채팅 지시 1회"
+m7live_instruction: "웅장한 금색 코러스로 가자"
+m7live_matched_look: "worship-golden-chorus / 금빛 코러스 (worship · dynamics 4)"
+  # 세션 보고는 dynamics 5로 적었으나 자산이 정본이다 — worship.yaml:130 은 4.
+  # 대역 판정 무영향(질의에 섹션어 없음 → 다이내믹스 필터가 좁히지 않는다).
+m7live_audit_file: "server/audit_logs/audit-20260726.jsonl"
+  # 파일명은 서버 세션 시작일. 실행 구간 2026-07-26T20:04:39.091676Z~20:04:48.491397Z (KST 07-27 05:04)
+m7live_bundle_rows: 11           # ChangeDestination Root · ClearAll · Group 11 + 12 ·
+                                 # 5속성 1줄 · (Store+Label) x 3풀 · ClearAll — 전량 detail "OK"
+m7live_attr_match: "5/5"         # 실행된 5개 값 == worship.yaml:137-141 의 attributes
+m7live_roles_bound: 2            # 백라이트→Group 11 · 프론트→Group 12
+m7live_roles_unmapped_resolver: 4    # 6종 폐쇄 어휘 기준 (resolver.py:121 은 ROLES 전체를 돈다)
+m7live_roles_unmapped_report: 3      # 이 룩이 선언한 5역할 기준 (instantiate.py:432 for role in look.roles)
+                                     # 사이드·탑·배경. 스페셜은 이 룩에 없어 보고에 등장하지 않는다.
+                                     # 세션 보고의 "6 중 4"는 리졸버 층 수치 — 둘 다 참, 계층이 다르다.
+m7live_presets_created: 3        # 1.1 Dimmer · 4.1 Color · 6.1 Focus — 전부 라벨 '금빛 코러스'
+m7live_pool5_beam_empty_is_correct: true
+  # 금빛 코러스는 Zoom(Focus)만 갖고 Iris(Beam)를 갖지 않는다(worship.yaml:136-141).
+  # M1 패밀리 라우팅에 따라 Beam 대상 Store가 애초에 만들어지지 않았다 — 갭 아님.
+m7live_held_commands: 1          # Go+ Page 1.102 (참조 발화형) → 운영자 승인 후 실행
+m7live_saveshow_is_gate_backup: true
+  # 지시서 전제 정정. 감사 행의 kind는 "backup"이고(gate.py:59 BACKUP_COMMAND),
+  # 호출 지점은 gate.py:329 before_risky_execution() — "Backup rule ③ (REQ-MVP-017):
+  # only the RISKY path backs up". 타임스탬프도 확정: approved(47.839691) →
+  # lock-FIRST → SaveShow(47.891451) → 번들. 모델의 부수 효과가 아니라
+  # AC-019가 상속을 요구한 "위험 커맨드 사전 백업 fail-closed"의 라이브 발화다.
+m7live_dedupe_skipped: 1         # ChangeDestination Root
+  # skipped_already_executed는 감사 이벤트가 아니라 툴 반환 status다(session.py:63).
+  # 감사 로그에는 부재로 나타나며 실제로 그렇다 — 승인 이벤트 10개 vs 실행 9행,
+  # 빠진 정확히 1개가 ChangeDestination Root.
+m7live_clearall_preserved: 4     # 양 번들 합계 4회 전부 실행 · 드롭 0
+  # M4 후속(4dd48e8) 면제 집합이 유닛이 아니라 실물 왕복에서 하중을 받은 최초 기록.
+  # 면제가 없었다면 2번째 이후가 드롭돼 캡처가 오염된다.
+m7live_grammar_first_validated:
+  - "Group 11 + 12 (additive 선택형) — instantiate.py:301-303 이 'M7 라이브를 기다린다'로
+     남겨 둔 항목. OK x 2회."
+  - "Store Preset <pool>.<slot> / Label Preset ... — m7wire_residual_unverified 2번이
+     '콘솔 수용 미확인'으로 열어 둔 항목. OK x 6회(Store 3 + Label 3).
+     비-ASCII 라벨 '금빛 코러스' 왕복도 함께 수용됨."
+m7live_assumption14_upgrade: "추론 → 관측. 단 범위 제한 명시."
+  # 상향되는 것: CAPTURE_SHARED(캡처 1회 + 풀별 Store 3회)에서 Dimmer/Color/Focus가
+  #   각각 자기 풀에만 안착 — 풀별 라우팅 '동작'이 관측됐다. 교차 오염 0.
+  # 상향되지 않는 것: 프리셋 '내용'은 여전히 미판독이다. 응답기가 속성 값을 노출하지
+  #   않는 구조적 제약(M0 교차 발견)은 그대로다. "1.1이 딤머 값만 담았다"는 미관측이며
+  #   관측된 것은 "의도한 3개 풀에 각각 1개씩 생겼다"이다. 이 구분을 지우면
+  #   M0가 스스로 금지한 등급 상향이 된다.
+m7live_m0_contradictions: 0      # plan.md §B M7 "M0 판정과 어긋나면 기록" → 어긋남 없음
+                                 # 측정 1·2·3·4 전부 일치. 단 측정 3은 같은 쇼파일이므로
+                                 # 재현이지 독립 확인이 아니다(H4).
+m7live_showfile_residue: "프리셋 1.1/4.1/6.1 · Sequence 17 · 익스큐터 Page 1.102 — 의도적 존치"
+  # M0는 프로브 잔여물을 전량 삭제했으나 이번 프리셋 3건은 AC-014가 요구한 산출물 자체다.
+  # 3건 전부 사전 빈 슬롯 대상 — 덮어쓴 것 0건(기준선 4풀 count=0).
+m7live_emergent_behavior: true
+  # 모델이 스스로 At Preset x3 → Store Sequence 17 Cue 1 'Golden Chorus' →
+  # Assign Page 1.102 → Go+ 까지 나아갔다. 툴 위의 창발 행동이며 SPEC 요구가 아니다.
+  # 인수 결과로 계수하지 않고 AC 근거로도 쓰지 않는다. 기록 이유는 (a) 게이트가 이 구간의
+  # 유일한 참조 발화형을 정확히 보류했고 (b) 위 잔여물 2건의 출처이기 때문.
+m7live_gaps:
+  - "H1 GUI 스크린샷 미산출 — OSC 응답기 판독으로 대체. 명세된 매체가 아니다(AC-014 검증
+     방법 · acceptance.md §E). 주 매체인 감사 로그 verbatim은 산출됐으므로 M0의 G2보다
+     등급이 낮으나, 'GUI'를 문자 그대로 읽으면 조건부 PASS로 강등될 여지가 있다."
+  - "H2 프리셋 내용 판독은 여전히 구조적 불가 — 위 assumption14 상향 범위 제한의 근거."
+  - "H3 per_family_capture(FALLBACK) 형상은 실물에서 발화되지 않았다 — 유닛 왕복만."
+  - "H4 역할 힌트의 넓은 표본을 얻지 못했다. M0와 **동일한 쇼파일**을 썼으므로 2/6은
+     재확인이지 새 데이터가 아니다 — M0 잔여 위험 4번은 열린 채로 남는다."
+  - "H5 drilldown_capped 미발생. 룩 경로는 preset_pools를 강제 드릴하나 페이지 수는
+     여전히 미측정 — M0 G4의 산술적 우려는 닫히지 않았다."
+  - "H6 반복 지시(더블 인스턴스화) 미관측. conflict 건너뜀 경로는 유닛 고정뿐이다."
+m7live_residual_risk:
+  - "단일 쇼파일 · 32룩 중 1 · 4장르 중 1 · 6역할 중 2만 실물을 통과했다. 나머지는
+     같은 코드 경로를 쓴다는 구조적 근거로만 뒷받침된다."
+  - "capture_shape의 기계적 제약은 여전히 부재(설명문 방어만)."
+  - "run_look_bundle은 여전히 프로덕션 호출자 0 — 처분은 패널 SPEC 소관."
+  - "창발 행동 자체를 막는 기제는 없다. 이번엔 무해했고 게이트가 보류했으나 본 SPEC 범위 밖."
+
+# --- 라이브 세션 회계: 계획 2회 vs 실제 3회 ---
+live_session_planned: 2          # plan.md §B "라이브 세션 회계" 표 — M0 프로브 + M7 종단
+live_session_actual: 3
+live_session_accounting: |
+  실제 소비는 3회다. plan.md §B 표를 조용히 2회로 다시 적지 않는다.
+    1회 — M0 프로브 (2026-07-26). 판정 4건. 계획대로.
+    2회 — M7 종단 1회차 (2026-07-26). **실패**. 파이프라인은 돌았으나 프리셋 0건.
+    3회 — M7 종단 2회차 (2026-07-27). PASS.
+  이탈 원인은 2회차가 드러낸 **배선 결함**이다: instantiate/resolver 층이 완성돼
+  있었으나 TOOL_NAMES에 그리로 가는 문이 없어(run_look_bundle 프로덕션 호출자 0)
+  라이브러리를 제대로 조회한 모델조차 run_commands 수기 작성밖에 할 수 없었다.
+  M4 테스트가 이를 못 본 이유는 테스트가 run_look_bundle을 직접 호출했기 때문 —
+  저장소가 이미 갖고 있던 교훈(e2e-catches-integration-wiring-defects)의 재발이다.
+  수정 2건(cef1fad 스티어링 · da54e60 배선) 뒤 3회차가 성립했다.
+  즉 계획의 "2회"는 **성공 경로의 하한**이었고 통합 결함 1회분을 예산에 넣지 않았다.
+  M7 1회차의 오진("모델이 find_looks를 무시했다")은 지시자가 철회했으며 그 반박 3건은
+  위 m7_rebuttal_1~3에 이미 기록돼 있다 — 여기서 되풀이하지 않는다.
+  **1회차를 "모델이 라이브러리를 무시했다"로 읽으면 안 된다**: 감사 로그에는 툴 호출
+  이벤트 자체가 없어 find_looks 호출 여부를 볼 수 없고(m7_rebuttal_1), 실행된 5개 값은
+  라이브러리 자산과 5/5 일치했다(m7_rebuttal_2). 1회차가 드러낸 것은 스티어링이 아니라
+  배선이다(m7_rebuttal_3).
 
 # --- M6: 회귀 + 경계 전체 그린 (AC-009 · AC-013 · AC-019) ---
 # 측정 조건 주석: 모든 수치에 onPC 상태를 붙인다. 이 SPEC 내내 "사전 실패 1건"으로
