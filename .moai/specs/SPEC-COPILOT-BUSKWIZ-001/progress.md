@@ -175,36 +175,147 @@ progression_mode: "마일스톤별 체크포인트 (semi-autonomous)"
 
 **사용자 확정 3건 (run-phase 착수 게이트에서 수집 — 재질의 금지)**: ⑤ 착수 경로 **A**(M0 라이브 선행, 예외 진행 없음 — 익스큐터 DESCOPE 선확정을 하지 않는다), ⑥ 브랜치 `feature/SPEC-COPILOT-BUSKWIZ-001`(PR 수동), ⑦ 진행 모드 **마일스톤별 체크포인트**(각 M 완료 시 보고 후 진행).
 
-### M0 — 라이브 프로브 (실물 onPC) — **미실행 · 콘솔 미도달로 대기**
+### M0 — 라이브 프로브 (실물 onPC 2.4.2, 2026-07-27) — **완료 · 판정 4건 확정**
 
-**상태: BLOCKED (착수 불가, 실패 아님).** 착수 직후 콘솔 도달성을 실측했고 응답이 없다.
+#### 세션 조건
+
+| | |
+|---|---|
+| 콘솔 | grandMA3 onPC 2.4.2, macOS (`app_gma3` PID 38963, `HOSTTYPE=onPC`) |
+| 응답기 | `CopilotResponder` **v1.4.1** (ping 응답의 `version` 필드 실측) |
+| OSC | **send 8000 / receive 9005** |
+| 왕복 사전 확인 | `responder_roundtrip --listen-port 9005 --wait 5` → ping·state·exec **3/3 PASS** |
+| 쇼파일 규모 | Pages 1 · Page 1 익스큐터 9 · Groups 4 · Sequences 17 · Color 풀 프리셋 1(`금빛 코러스` — LOOKLIB M7 잔여물) |
+| 채널 | `responder_roundtrip`/`server.bridge.osc` **직결** — `gate.screen()` 미경유(LOOKLIB G2와 동일 등급의 매체 갭, 아래 Gaps) |
+
+**착수 시 오진 1건 — 기록해 둔다.** 첫 프로브가 실패하자(`--listen-port` 기본값 **9000**) "인바운드 끊김"으로 단정하고 사용자에게 OSC 행 설정 점검을 요청했다. **틀렸다.** 인바운드는 처음부터 정상이었고 **응답 수신 포트만 어긋나 있었다** — LOOKLIB M0가 `send 8000 / receive 9005`로 이미 기록해 둔 값을 착수 전에 읽지 않은 것이 원인이다. 곁가지로 `~/MALightingTechnology/gma3_library/inout/osc/t OSC 1 Property Port 8000.xml`(`Port="9001" Receive="No" ReceiveCommand="No"`)을 근거로 삼았으나 그 파일은 **export 스냅샷이지 라이브 상태가 아니었다**. 교훈 두 가지: (i) **선행 SPEC의 세션 조건표를 착수 전에 읽는다**, (ii) 사용자의 GUI 관측("히스토리에 안 찍힘") 위에 결론을 쌓기 전에 **기계 증거를 먼저 소진한다**.
+
+#### 판정 요약
+
+| # | 전제 | 판정 | 근거 |
+|---|---|---|---|
+| 1 | **ASSUMPTION-16** 페이지·익스큐터 저작 문법 | **DESCOPE** | v1 미사용 확정(게이트가 2번으로 이미 닫힘). 문법의 존부 자체는 **비파괴 범위에서 판정 불가** — 아래 측정 1 |
+| 2 | **ASSUMPTION-17** 빈 익스큐터 열거·판별 | **DESCOPE** | 미점유 인덱스가 **해석되지 않는다** — "비어 있음"과 "존재하지 않음"이 구별 불가. 아래 측정 2 |
+| 3 | **ASSUMPTION-19** 팔레트를 익스큐터에 얹는 문법 | **DESCOPE** | 문법 **파싱 증거는 얻었으나 효과 미검증**, 그리고 그 검증에 필요한 "빈 익스큐터 식별"이 2번에서 닫혔다. 아래 측정 3 |
+| 4 | **ASSUMPTION-18** 상한 규모 번들의 1왕복 | **GO** | 87/87 확인 · 총 5.77s · 66.3 ms/줄 · 사후 열화 없음. 아래 측정 4 |
+
+**게이트 귀결**: REQ-BUSKWIZ-016은 `16 ∧ 17 ∧ 19`이고 **2번 하나만으로 이미 거짓**이다. → **M5는 ② DESCOPE 분기로 확정**, v1은 익스큐터·페이지 대상 커맨드를 **0건** 발화한다(`AC-BUSKWIZ-012` ②, `AC-BUSKWIZ-013` 스캔이 기계 고정). **DESCOPE는 실패가 아니라 정의된 결과다.** 4번 GO로 **M2의 기술적 차단이 해제**되었다.
+
+#### 측정 1 — ASSUMPTION-16 (페이지·익스큐터 저작 문법)
+
+비파괴 원칙으로 **존재하지 않는 대상**에 쏴서 파싱 여부만 가르려 했다. 결과는 **판정 불가**다 — 응답 문자열이 "문법 없음"과 "대상 없음"을 구분하지 못한다.
+
+| 커맨드 | 콘솔 응답 |
+|---|---|
+| `Zzzblah Foo 1` *(대조: 순수 쓰레기)* | `Illegal object` |
+| `Label Page 99 'probe'` | `Illegal object` |
+| `Label Executor 9999 'probe'` | `Illegal object` |
+| `Copy Page 99 At Page 98` | `Illegal source list` |
+| `Delete Page 99` | `Illegal object` |
+
+`Copy Page`가 **다른 문자열**(`Illegal source list`)을 낸 것은 그 동사가 파싱되어 소스 목록 평가까지 갔다는 뜻이다. 반면 `Label Page`/`Label Executor`는 대조군과 같은 `Illegal object`라 **두 해석이 모두 가능**하다. 결정적 테스트는 실제 페이지 생성(쇼파일 쓰기)을 요구하는데, **그 쓰기는 v1 판정을 바꾸지 못한다**(게이트가 이미 닫혔다). 따라서 쓰지 않았다 — 판정은 **DESCOPE(v1 미사용)**, 문법 존부는 Gaps에 남긴다.
+
+#### 측정 2 — ASSUMPTION-17 (빈 익스큐터 판별) — **결정적**
+
+`DataPool/Pages` → 페이지 1개. `DataPool/Pages/1` → 익스큐터 **9개**, `truncated: false`, `childCount 9 = len(children) 9`(**열거는 완전**):
 
 ```
-$ uv run python -m server.tools.responder_roundtrip --skip-exec --wait 4
-round-trip against osc.udp://127.0.0.1:8000 (replies on 9000)
-  [FAIL] ping: timeout after 4.0s waiting for kind=pong id=b3531925-1
-  [FAIL] state: timeout after 4.0s waiting for kind=state id=b3531925-2
-result: FAIL
+페이지-로컬 인덱스: 1 · 2 · 5 · 11 · 91 · 92 · 93 · 95 · 101
+이름:  Sequence 50 · Sequence 17 · Sequence 30 · Sequence 41 ·
+       Sequence 80 · Sequence 14 · Sequence 16 · Sequence 62 · Ballad Yellow Red
 ```
 
-`ping`이 죽었으므로 원인은 (a) onPC 미실행, (b) OSC 행 미설정·미활성, (c) `CopilotResponder` 플러그인 미임포트 중 하나이며 **본 측정만으로는 셋을 구분할 수 없다**(`console/lua/README.md` §1~§2). 구분은 콘솔 준비 후 재프로브가 답한다.
+`SPEC-COPILOT-EXECBODY-001/spec.md:43`이 기록한 표본(`1,5,11,91,92,93,95,101`)과 일치하고 `2`가 하나 늘었다. **미점유 인덱스 질의 결과**:
 
-**경로 A 규율에 따라 M1을 착수하지 않는다** — 예외 진행(익스큐터 축 DESCOPE 선확정, plan.md §C.7)은 사용자가 경로 A를 택하며 명시적으로 배제했다. 따라서 본 SPEC의 run-phase는 **M0 세션이 열릴 때까지 여기서 정지**한다.
+```
+DataPool/Pages/1/3   -> {"ok": false, "error": "path segment not found: '3' (in DataPool/Pages/1/3)"}
+DataPool/Pages/1/4   -> path segment not found
+DataPool/Pages/1/102 -> path segment not found
+DataPool/Pages/1/201 -> path segment not found
+```
 
-#### 측정 프로토콜 (세션이 열리는 즉시 이 순서로 집행)
+콘솔 번호 주소형(`copilot_responder.lua:405` 특례):
 
-선행 확인: `uv run python -m server.tools.responder_roundtrip --wait 5` → 3스텝 전부 PASS. 실패 시 `--diagnose`로 수신 주소를 관측한다(콘솔이 OSC 프리픽스를 덧붙여 `/copilot/copilot/state`가 되는 사례가 문서화되어 있다).
+| 질의 | 결과 |
+|---|---|
+| `Executor 101` | **해석됨** — `{class: Executor, name: "Sequence 50", sequenceNo: 50, childCount: 0}` |
+| `Executor 201` | **해석됨** — `{class: Executor, name: "Ballad Yellow Red", sequenceNo: 20}` |
+| `Executor 103` | `ObjectList('Executor 103') unavailable` |
+| `Executor 1` | `ObjectList('Executor 1') unavailable` — **raw 슬롯은 주소지정 불가** |
 
-| # | 대상 | 무엇을 발화·질의하는가 | 판정 | 기록할 것 |
-|---|---|---|---|---|
-| 1 | **ASSUMPTION-16** | 페이지·익스큐터 **저작** 문법의 실제 수용 형태를 찾는다. `corpus.yaml`의 mock 문자열을 확인하는 것이 아니다 — 그 파일은 스스로 mock 전용임을 자인하고(`server/measurement/corpus.yaml:7-10`) 그 안의 큰따옴표 형태는 발화 시 깨진다(`00_grammar.md:26-29`) | GO / DESCOPE | 시도한 문자열 전량 + 콘솔 응답 verbatim(수용/거부 모두) |
-| 2 | **ASSUMPTION-17** | **미할당(빈) 익스큐터**를 열거·판별할 수 있는가. 현재 드릴다운은 존재하는 자식만 열거한다(`server/web/dash.py:200-206`) | GO / DESCOPE | GO면 **그 경로의 식별자와 반환 형상**(AC-BUSKWIZ-012 ①이 요구) |
-| 3 | **ASSUMPTION-19** | **프리셋을 익스큐터에 직접 얹는** 커맨드를 찾는다. 기본 기대값은 **부정** — 룰북이 아는 프리셋 동사 4개가 전부 프로그래머 쪽이다(`00_grammar.md:59`, `:67`, `:68`, `:72`) | GO / DESCOPE | 찾지 못하면 **그 사실 자체가 산출물**이다. **우회 금지** — 시퀀스를 만들어 얹는 측정은 하지 않는다(§D 위반) |
-| 4 | **ASSUMPTION-18** | v1 형상 **상한 87줄**(edm · 4풀) 단일 번들이 한 왕복에 절단·타임아웃 없이 가는가. 40여 줄 통과는 GO 근거가 아니다 | GO / 사용자 결정 항목 | **실제로 보낸 줄 수** + 중도 실패 시 끊긴 지점과 프로그래머 잔여 상태 |
-| 5 | 정리 | 프로브가 쇼파일에 남긴 것과 그 무해성 | — | 잔여물 목록 |
-| 6 | Gaps | 측정하지 못한 것 | — | 명시적 목록 |
+**판정 DESCOPE.** 미점유 슬롯은 어느 주소형으로도 해석되지 않으므로 **"비어 있는 익스큐터"를 식별하는 질의 경로가 존재하지 않는다** — `server/web/dash.py:200-206`(존재하는 자식만 열거)·`:210-231`("없음"과 "미확인" 미구분)의 라이브 확증이다. 열거의 **빈틈**(3·4·6~10…)에서 추론하는 우회는 두 이유로 막힌다: (i) 유효 인덱스 공간의 상한을 알려주는 질의가 없어 "빈 슬롯"과 "범위 밖"을 여전히 못 가르고, (ii) `page×100+slot` 관례를 일반 규칙으로 쓰는 것을 REQ-BUSKWIZ-017이 금지한다.
 
-게이트 귀결: **1 ∧ 2 ∧ 3** 중 하나라도 DESCOPE면 REQ-BUSKWIZ-016은 발동하지 않고 M5는 ② 분기로 확정된다(익스큐터·페이지 커맨드 0건). **4**는 M2를 기술적으로 막으며, 부정 시 번들 분할은 SPEC이 정하지 않고 사용자 결정 항목으로 여기 기록한다.
+**부수 관측 — `page×100+slot`이 페이지 1에서 재확인되었다**: 로컬 `1`→콘솔 `101`, 로컬 `101`→콘솔 `201`. 그러나 **이 쇼파일에는 페이지가 1개뿐**이라 `REQ-EXECBODY-007`/`-008`이 요구하는 "2개 이상 서로 다른 페이지" 조건은 **여전히 미충족**이다. 하드코딩 금지는 그대로 유지된다.
+
+#### 측정 3 — ASSUMPTION-19 (팔레트를 익스큐터에 얹는 문법)
+
+동일 조건(존재하지 않는 익스큐터 `9999`)에서 **라이브 검증된 문법**과 **후보 문법**을 대조했다:
+
+| 커맨드 | 콘솔 응답 |
+|---|---|
+| `Zzzblah Foo 1` *(대조)* | `Illegal object` |
+| `Assign Sequence 50 At Executor 9999` *(라이브 검증된 문법)* | `Cannot Create Object` |
+| `Assign Preset 4.1 At Executor 9999` *(후보)* | **`Cannot Create Object`** |
+| `Assign Preset 4.1 Executor 9999` *(At 없는 변형)* | `Cannot Create Object` |
+| `Assign Preset 4.1 At Page 99.99` *(dotted 변형)* | **`OK`** |
+| `At Preset 4.1` *(프로그래머 리콜, 검증된 형태)* | `OK` |
+
+**후보 문법이 대조군과 다르고 라이브 검증 문법과 같은 응답을 냈다** — 즉 `Assign Preset <p>.<s> At Executor <n>`은 **파싱된다.** plan-phase의 기본 기대값(부정)은 이 지점에서 **빗나갔다.**
+
+**그럼에도 판정은 DESCOPE다.** 이유 둘:
+
+1. **파싱은 효과가 아니다.** `Assign Preset 4.1 At Page 99.99`가 **`OK`를 반환하고도 아무것도 만들지 않았다**(사후 확인: Pages 여전히 1개). PROTOCOL.md `:16-17`과 LOOKLIB이 기록한 그 함정 — `Cmd()`는 거부된 커맨드에도 성공을 보고한다. **따라서 `OK`도 `Cannot Create Object`도 "프리셋이 실제로 익스큐터에 얹힌다"의 증거가 아니다.**
+2. **긍정 검증 경로가 닫혀 있다.** 효과를 확인하려면 **실재하는 빈 익스큐터**에 얹어 보고 재조회해야 하는데, 측정 2가 "빈 익스큐터를 식별할 수 없다"를 확정했다. 즉 ASSUMPTION-19는 **ASSUMPTION-17에 종속되어** 닫힌다.
+
+**우회 금지 준수**: 시퀀스를 만들어 얹는 측정은 하지 않았다(§D 시퀀스·큐 생성 제외 — 그 측정 자체가 범위 밖 기능의 근거가 된다).
+
+#### 측정 4 — ASSUMPTION-18 (상한 규모 번들의 1왕복) — **GO**
+
+**측정 대상의 정정**: 착수 전 이 항목을 "패킷 절단" 위험으로 읽었으나, `CommandExecutionPort.execute`는 **커맨드 1개씩** 실행하고 확인까지 블록한다(`server/orchestrator/ports.py:60-64`). 즉 87줄 번들은 하나의 거대 패킷이 아니라 **87회 순차 왕복**이며, 실제 위험은 **누적 지연과 확인 실패**다. 그렇게 측정했다.
+
+| 측정 | 결과 |
+|---|---|
+| 커맨드당 왕복(지속 브리지, 10회) | **66.7 ms** (median) |
+| 커맨드당 왕복(호출마다 소켓 재생성) | 566.7 ms — **하네스 아티팩트**, 실제 경로 아님 |
+| **87줄 순차 실행** | **확인 87/87 · 총 5.77s · 평균 66.3 ms/줄 · 첫 실패 없음** |
+| 직후 10회 재측정 | 66.5 ms — **누적 열화 없음** |
+
+절단·타임아웃·확인 누락 **0건**. 상한 규모에서 여유가 크다(5.8초). **부정 분기(번들 분할 정책 = 사용자 결정 항목)는 발동하지 않는다.**
+
+**중도 실패의 사후 상태**는 관측하지 못했다 — 87줄이 전부 성공해 중단 지점이 생기지 않았다. 의도적으로 실패를 주입해 재현하는 것은 쇼파일 쓰기를 요구하므로 하지 않았다(Gaps).
+
+#### 정리 기록 — 쇼파일 잔여물 **0건**
+
+프로브 전후 `childCount` 대조:
+
+| 경로 | 프로브 전 | 프로브 후 |
+|---|---|---|
+| `DataPool/Pages` | 1 | **1** |
+| `DataPool/Pages/1` (익스큐터) | 9 | **9** |
+| `DataPool/PresetPools/4` (Color) | 1 | **1** |
+| `DataPool/Sequences` | 17 | **17** |
+| `DataPool/Groups` | — | 4 |
+
+**생성·삭제·변경 0건.** 모든 쓰기 후보 커맨드는 존재하지 않는 대상을 겨냥해 발화했고, `OK`를 반환한 두 건(`Assign Preset 4.1 At Page 99.99`, `At Preset 4.1`)도 사후 확인에서 아무 오브젝트도 만들지 않았다. 프로그래머 상태는 `ClearAll`로 두 차례(중간·종료) 비웠다. **LOOKLIB M0가 의도적 잔여물을 남긴 것과 달리 본 세션은 잔여물이 없다** — 비파괴 프로브만으로 판정이 성립했기 때문이다.
+
+#### 미검증 항목 (Gaps)
+
+| # | 무엇 | 왜 측정하지 않았나 |
+|---|---|---|
+| **G1** | **페이지·익스큐터 저작 문법의 존부**(ASSUMPTION-16의 실체) | 결정적 테스트가 쇼파일 쓰기를 요구하고, **그 결과가 v1 판정을 바꾸지 못한다**(게이트가 측정 2로 이미 닫힘). 후속 SPEC이 익스큐터 축을 열 때 최우선 측정 항목이다 |
+| **G2** | **`Assign Preset ... At Executor <n>`의 실제 효과** | 긍정 검증에 "실재하는 빈 익스큐터"가 필요한데 측정 2가 그 식별 불가를 확정했다. **파싱된다는 사실만 기록**하고 효과는 열어 둔다 |
+| **G3** | **중도 실패의 사후 프로그래머 상태** | 87/87 성공으로 중단 지점이 생기지 않았다. 인위적 실패 주입은 쓰기를 요구한다 |
+| **G4** | **게이트 경유 감사 로그** | 프로브가 `server.bridge.osc` **직결 채널**을 썼다(`gate.screen()` 미경유) — LOOKLIB G2와 동일 등급의 매체 갭. 판정은 콘솔 응답 원문으로 성립하나 감사 로그 항목은 생성되지 않았다. **M7 종단이 이 매체를 산출한다** |
+| **G5** | **`page×100+slot`의 2페이지 이상 검증** | 이 쇼파일에 페이지가 1개뿐이다. `REQ-EXECBODY-007`/`-008` 조건 미충족 상태가 유지되며 REQ-BUSKWIZ-017의 하드코딩 금지는 그대로다 |
+
+#### 잔여 위험
+
+- **G2가 후속 SPEC의 출발점을 바꾼다.** plan-phase는 ASSUMPTION-19의 기본 기대값을 "부정"으로 적었으나 실측은 **파싱됨**이었다. 익스큐터 축을 다시 여는 SPEC은 "문법이 없다"가 아니라 **"문법은 있으나 효과와 대상 식별이 미검증"**에서 출발해야 한다. 이 정정을 여기 남긴다.
+- **`OK`의 무의미성이 재확인되었다.** 본 세션에서 실제로 `OK`를 반환하고도 아무 일도 하지 않은 커맨드가 있었다. run-phase의 어떤 테스트도 `result == "OK"`를 효과의 증거로 써서는 안 된다 — 효과는 **재조회로만** 확인한다(`AC-BUSKWIZ-017` ③④가 이미 그 형태다).
+
+#### AC 판정
+
+**AC-BUSKWIZ-016 (LIVE — 2건 중 1번째) = PASS.** 측정 항목 1~4 판정 확정 · 5 정리 기록(잔여물 0건) · 6 Gaps 5건 명시. 라이브 세션 1/2 소진.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
