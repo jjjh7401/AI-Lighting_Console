@@ -15,7 +15,7 @@
 
 세 건 모두 **결정을 요청받은 시점에 근거가 함께 제시된** 것이며, plan-phase가 임의로 재해석하지 않는다.
 
-1. **① 음원 자동 분석은 본 SPEC의 범위가 아니다 — 섹션 목록은 사용자가 준다.** 근거는 세 축이 **동시에 0건**이라는 실측이다. (ⓐ) 오디오 의존성 0건 — `pyproject.toml:8-18`의 런타임 의존은 `anthropic`/`fastapi`/`google-genai`/`keyring`/`lupa`/`python-osc`/`pyyaml`/`uvicorn`/`websockets`이고 `uv.lock`의 **58패키지**(`^name = ` 계수) 전량이 무매치다 — `librosa`·`essentia`·`numpy`·`scipy`·`madmom`·`aubio`·`soundfile`·`torchaudio` 전부 없다. (ⓑ) 업로드 경로 0건 — 웹소켓 수신은 `server/web/app.py:311`의 `receive_text()` 텍스트 전용이고, 라우트 데코레이터는 **정확히 2개**(`@app.get("/healthz")` `:200` · `@app.websocket("/ws")` `:205`)이며, `UploadFile`·`File(`·`multipart`가 **`server/` 전체에서 0건**이고 `ui/src/**`에 `input[type=file]`이 0건이다. (ⓒ) Tauri capability가 업로드를 **명시적으로 거부**한다 — `src-tauri/capabilities/default.json:4`의 description이 "ALL network plugins are denied by omission … no http, no websocket, no upload"라고 적었고 그 문언을 테스트가 강제한다(`server/tests/test_deploy_tauri_shell.py:347-351`). 자동 분석을 함께 열면 신규 의존성 + 업로드 경로 + 진행률 프로토콜(현재 0건) 세 축이 한꺼번에 열린다. **별도 SPEC.**
+1. **① 음원 자동 분석은 본 SPEC의 범위가 아니다 — 섹션 목록은 사용자가 준다.** 근거는 세 축이 **동시에 0건**이라는 실측이다. (ⓐ) 오디오 의존성 0건 — `pyproject.toml:8-18`의 런타임 의존은 `anthropic`/`fastapi`/`google-genai`/`keyring`/`lupa`/`python-osc`/`pyyaml`/`uvicorn`/`websockets`이고 `uv.lock`의 **58패키지**(`^name = ` 계수) 전량이 무매치다 — `librosa`·`essentia`·`numpy`·`scipy`·`madmom`·`aubio`·`soundfile`·`torchaudio` 전부 없다. (ⓑ) 업로드 경로 0건 — 웹소켓 수신은 `server/web/app.py:311`의 `receive_text()` 텍스트 전용이고, **`server/web/app.py` 한정으로** 라우트 데코레이터는 **정확히 2개**(`@app.get("/healthz")` `:200` · `@app.websocket("/ws")` `:205`)이며 **저장소 전체로는 8개**다(그 2개 + `server/web/settings_api.py` 4개 `:117`·`:130`·`:146`·`:177` + `server/web/provision_api.py` 2개 `:109`·`:125`) — **8개 어느 것도 파일을 받지 않는다.** `UploadFile`·`File(`·`multipart`가 **`server/` 전체에서 0건**이고 `ui/src/**`에 `input[type=file]`이 0건이다. (ⓒ) Tauri capability가 업로드를 **명시적으로 거부**한다 — `src-tauri/capabilities/default.json:4`의 description이 "ALL network plugins are denied by omission … no http, no websocket, no upload"라고 적었고 그 문언을 테스트가 강제한다(`server/tests/test_deploy_tauri_shell.py:347-351`). 자동 분석을 함께 열면 신규 의존성 + 업로드 경로 + 진행률 프로토콜(현재 0건) 세 축이 한꺼번에 열린다. **별도 SPEC.**
 2. **② 타임코드는 M0 라이브 프로브의 GO/DESCOPE 게이트다.** 근거: 타임코드 문법·객체가 **저장소 전체에서 0건**이다(룰북 5파일 · `server/**` · `console/lua/**` · `.moai/**` 전량 무매치). 유일한 등장은 외부 참고 링크 텍스트뿐이다(`docs/proposals/2026-07-26-lighting-direction-feature-proposal.md:125`, `:127`). 선행 SPEC이 같은 사실을 이미 기록하고 인계했다(`SPEC-COPILOT-BUSKWIZ-001/spec.md:146`, `SPEC-COPILOT-BUSKWIZ-001/research.md:385`). **DESCOPE는 실패가 아니라 정의된 결과다** — BUSKWIZ M0가 익스큐터 축 3건을 전부 DESCOPE로 닫고도 출하한 선례가 있다(`SPEC-COPILOT-BUSKWIZ-001/progress.md:197-202`).
 3. **③ 큐 이름은 ASCII로 고정하고 한국어는 표현 계층에서 매핑한다.** 이것은 취향이 아니라 **안전 게이트의 구조적 귀결**이다. 큐 이름은 재조회 시 **커맨드로 파싱되는 본문 라인**이 된다 — `server/safety/console.py:478-484`의 `_fetch_body_at_path`가 자식의 `name`을 그대로 `lines`에 쌓고, `server/safety/expand.py:106-112`가 라인마다 `validate`를 걸어 실패하면 **보류**하며, `server/safety/grammar.py:20`의 선두 토큰 규칙은 `^[A-Za-z][A-Za-z0-9_+\-]*$` **ASCII 전용**이다. ASCII 큐 이름의 종단 통과는 라이브 관측이 있다 — 큐 `'Blue Look'`을 담은 `Sequence 90`에 대해 `Go+`·`Off` 둘 다 `ok=True`였다(`SPEC-COPILOT-SHOWUI-001/progress.md:460`). **한국어 큐 이름의 종단 효과는 미관측**이며, 미관측을 근거로 열지 않는다. 표현 계층 매핑은 BUSKWIZ가 이미 세운 형상을 그대로 쓴다(`server/looks/report.py:63` `_REASON_LABELS`, `:74` `_VERDICT_LABELS`, `:278` `to_korean`).
 
@@ -51,7 +51,7 @@
 | `Delete Cue <n>` | **T5** | 저장소 0건. `Delete`는 블랙리스트(`server/safety/blacklist.yaml:15`) |
 | 타임코드 일체 | **T5** | 사용자 확정 ② |
 | 별도 Marker/Mark 오브젝트 | **T5** | 룰북 · 코드 · 응답기 전량 0건. `Marker` 매치는 전부 파이썬 내부 상수(`server/web/session.py:56` 등)로 MA3 오브젝트가 아니다 |
-| 첫 store 시 시퀀스 자동 생성 | **T2 + T1 정황** | `31_choreography_patterns.md:54`. T1 4건이 전부 **신규 번호**(62 · 90 · 22 · 17)에서 성공했다 |
+| 첫 store 시 시퀀스 자동 생성 | **T2 + T1 정황** | `31_choreography_patterns.md:54`. T1 **5건**이 전부 **신규 번호**(62 · 30 · 90 · 22 · 17)에서 성공했다 |
 
 **전수 계수로 확정한 것 — 라이브 감사 로그의 `Cue` 커맨드는 전 파일 통틀어 정확히 5건이고 전부 `Cue 1`이다.** `server/audit_logs/*.jsonl` 전량에서 커맨드 문자열에 `Cue <숫자>`를 담은 실행 기록을 뽑으면 `Store Sequence 17 Cue 1 'Golden Chorus'` · `Store Sequence 22 Cue 1 'Golden Chorus'` · `Store Sequence 30 Cue 1 'Ballad Warmth' CueFade 4` · `Store Sequence 62 Cue 1 'Cyan Look'` · `Store Sequence 90 Cue 1 'Blue Look'` 다섯 줄이 전부다(각 1회). 즉 위 표의 T1 5건은 **큐 축에 존재하는 라이브 증거의 전량**이며, `Cue 2` 이상은 표본이 없어서가 아니라 **한 번도 실행된 적이 없어서** T2다. ASSUMPTION-21의 블로킹 성격은 이 계수 위에 선다.
 
@@ -62,7 +62,7 @@
 
 #### 조사 결과 요지 ② — 결정적 부정 실측: 초안을 앱이 스스로 검증할 수 없다
 
-`DataPool/Sequences/<n>/<m>` 재조회는 `name`/`class`/`i`(+ 중첩 `Part` 자식)만 반환하고 **커맨드 · CueFade · TrigType 등 프로퍼티는 어떤 형태로도 반환하지 않는다** — 라이브 실측이며 원 출처는 `.moai/state/verify/showui-m6-resume/5-probe-body.log`다(`SPEC-COPILOT-EXECREF-001/design.md:167`). 조회 경로 자체는 존재하고 라이브 실행 기록이 있다(`server/safety/console.py:399` `DEFAULT_BODY_PATHS["Sequence"] = "DataPool/Sequences/{ref}"`, 실행 기록 `SPEC-COPILOT-EXECBODY-001/progress.md:180`). 응답기는 `Cue`를 특별 취급하지 않는다 — `console/lua/copilot_responder.lua` 전체에 `Cue` 문자열이 **0건**이다. `resolve_path`의 주소형 특례는 `Executor <n>` **하나뿐**이며 주석이 스스로 "the ONLY address form"이라고 못박았다(`server/safety/console.py:397-404`, 패턴 `:405`).
+`DataPool/Sequences/<n>/<m>` 재조회는 `name`/`class`/`i`(+ 중첩 `Part` 자식)만 반환하고 **커맨드 · CueFade · TrigType 등 프로퍼티는 어떤 형태로도 반환하지 않는다** — 라이브 실측이며 원 출처는 `.moai/state/verify/showui-m6-resume/5-probe-body.log`다(`SPEC-COPILOT-EXECREF-001/design.md:167`). 조회 경로 자체는 존재하고 라이브 실행 기록이 있다(`server/safety/console.py:399` `DEFAULT_BODY_PATHS["Sequence"] = "DataPool/Sequences/{ref}"`, 실행 기록 `SPEC-COPILOT-EXECBODY-001/progress.md:180`). 응답기는 `Cue`를 특별 취급하지 않는다 — `console/lua/copilot_responder.lua` 전체에 `Cue` 문자열이 **0건**이다. `resolve_path`의 주소형 특례는 `Executor <n>` **하나뿐**이며 주석이 스스로 "the ONLY address form"이라고 못박았다 — 그 주석과 패턴은 **응답기 Lua에 있다**: `console/lua/copilot_responder.lua:397-404`(해당 문장은 `:403` "This is the ONLY address form resolve_path special-cases")와 `:405`(`local EXECUTOR_ADDRESS_PATTERN = "^Executor%s+(%d+)$"`). **`server/safety/console.py:397-404`가 아니다** — 그 파일은 총 484행이고 `:403-405`는 `StateBodyFetcher` 클래스 선언부이며 `resolve_path`를 담지 않는다(v0.1.1 앵커 정정). 두 파일 다 PRESERVE이므로 게이트 판정은 바뀌지 않지만, REQ-SONGCUE-017의 한계 명시는 **Lua 응답기**를 근거로 서고 PRESERVE 경계도 `console/lua/**` 쪽이다.
 
 **따라서 REQ-SONGCUE-017은 "검증한다"가 아니라 "존재와 이름까지만 검증하고 나머지는 관측하지 않았다고 적는다"로 쓰였다.** 응답기 확장은 `console/lua/**`가 PRESERVE이므로 §D가 범위 밖으로 닫았다.
 
@@ -80,7 +80,7 @@
 | 6 | 다이내믹스 축 `1..5` | `server/looks/schema.py:35-36` `DYNAMICS_MIN`/`DYNAMICS_MAX` | REQ-SONGCUE-005 |
 | 7 | 룩 후보 전순서 | `server/looks/busking.py:81` `looks_for_genre` | REQ-SONGCUE-005 |
 | 8 | 단일 실행 경로 | `server/orchestrator/tools.py:483` `run_commands` → `:492` `bundle_gate.screen()`. 실행 루프는 `:524`(`failed = False`) ~ `:569`(`failed = True`)이며 stop-on-first-failure 분기가 `:535-543`, dedupe 건너뛰기 분기가 `:544-557` | REQ-SONGCUE-018. 신규 툴은 **호출자**이며 `@MX:ANCHOR` 선례가 2개 있다(`:693` instantiate_look · `:817` prepare_busking — 둘 다 주석이 "a CALLER of run_commands, never a second execution surface"라고 스스로 적었다) |
-| 9 | 상한 규모 왕복 실측 | 87줄 번들 **87/87 · 총 5.77s · 66.3ms/줄 · 누적 열화 없음**(`SPEC-COPILOT-BUSKWIZ-001/progress.md:281-284`) | ASSUMPTION-24의 계산 기준선 |
+| 9 | 상한 규모 왕복 실측 | 87줄 번들 **87/87 · 총 5.77s · 66.3ms/줄**(`SPEC-COPILOT-BUSKWIZ-001/progress.md:280`) · **누적 열화 없음**(같은 표 `:281` — 직후 10회 재측정 66.5 ms) | ASSUMPTION-24의 계산 기준선 |
 
 #### 조사 결과 요지 ④ — 설계에 직접 영향을 주는 부수 실측 4건
 
@@ -149,18 +149,51 @@ LOOKLIB의 plan-phase 문서는 "구속력 있는 기록은 `progress.md` §F이
 
 **plan-audit 실행**(Tier L PASS 기준 0.85. 감사 보고서는 `.moai/reports/plan-audit/` 아래 **파일로 영속화**한다 — 대화 안에만 존재한 감사는 처리 누락을 사후 검증할 방법이 없다는 것이 LOOKLIB이 남긴 교훈이다) → **M0 라이브 세션 접근 가능성 확인** → **Implementation Kickoff Approval**(plan→run HUMAN GATE) → run(M0 프로브부터). **M0 이전에 M3 저작을 착수하지 않는다** — ASSUMPTION-21이 블로킹이다.
 
+### v0.1.1 — plan-audit 1회차 수령과 처리 (2026-07-28)
+
+**판정: FAIL 0.63 / Tier L 기준 0.85.** 지적 18건(**P0 2 · P1 6 · P2 10**, 감사 보고 표 기준) + P3 11건. 가중 점수 내역 — 인용 정확도 0.92(20%) · **교차 정합 0.35(30%)** · 요구·AC 정합 0.62(15%) · AC 기계 검증성 0.65(15%) · 증거 등급 규율 0.60(10%) · 범위 경계 0.90(5%) · 미결 은닉 0.85(5%). **점수를 끌어내린 것은 인용이 아니라 교차 정합이다** — 6종이 각자 정확한 사실을 적고 서로 다른 것을 말했다. 이 구분을 기록하지 않으면 재작성이 엉뚱한 축(인용 재검증)에 예산을 쓴다.
+
+#### P0 2건과 그 처리
+
+| # | 감사 원문 지적 | confidence | 확정과 처리 |
+|---|---|---|---|
+| **P0-1** | "결정 등록부가 plan.md·design.md에서 서로 다른 문자를 쓴다 — design.md의 '문자와 순서가 같다'는 거짓"(design.md §5.0) | 0.97 | 어긋난 문자 **5개**(D·E·F·G·J). 오케스트레이터가 **plan.md §A.4a / §F.1을 정본**으로 확정했다 — A 음원 분석 · B 타임코드 · C 큐 이름 · **D 라이브 세션 수** · **E 산출물 형상** · F 큐 번호 원장 · G dedupe · H 값 라인 충돌 · I 보고 계층 · J 섹션 어휘. **본 문서의 처리**: §E.1 `decisions_closed`를 **3 → 10**으로 정정했다(사용자 확정 3 + 엔지니어링 판단 7). 착수 시점의 3은 "사용자가 답한 것"만 세어 등록부 10건과 어긋나 있었다 |
+| **P0-2** | "ASSUMPTION-23을 plan.md만 '블로킹'으로 규정 — 나머지 5종은 '동작 축소', 부정 시 절차도 없다"(plan.md) | 0.95 | **블로킹은 ASSUMPTION-21 하나**로 확정. ASSUMPTION-23이 부정이면 빈 시퀀스 번호를 확정할 수 없으므로 **거부로 답한다**(REQ-SONGCUE-009 · AC-SONGCUE-008 구간 ②)이며 **M3 저작을 막지 않는다.** **본 문서의 처리**: 정정 없음 — 착수 시점부터 ASSUMPTION 표의 ASSUMPTION-23 행("REQ-SONGCUE-009가 거부로 답한다")과 §E.1 `blocking_for_run`("ASSUMPTION-21이 M3를 기술적으로 막는다")이 정본과 일치했음을 재확인만 했다 |
+
+**P0-1의 파생 지적**(P1, "등록부 밖 결정 신설")은 research.md §9.4가 정본과 **다른 뜻의 제3의 D·E**(큐 이름 발화 형태 / 섹션 점프 배제)를 신설한 건이며, research.md가 두 항목을 결정 문자 없이 정본 근거(REQ-SONGCUE-008 · spec.md §D `Out of Scope — 재생 · 섹션 점프`)로 재서술해 닫았다. 본 문서는 착수 시점부터 결정 문자를 쓰지 않았으므로 해당 없음이다.
+
+#### 본 문서에 대한 지적 5건과 처리 (P2 3 · P3 2)
+
+| 등급 | 지적 | 실측 확정값 | 처리 |
+|---|---|---|---|
+| **P2** | §E.1 `decisions_closed: 3`이 결정 등록부 10건 체제와 어긋난다 | 등록부 A~J = **10건**(사용자 확정 3 · 엔지니어링 판단 7) | `decisions_closed: 10`으로 정정. `decisions_open: 0`의 주석에서 "BUSKWIZ 결정 E/F/H를 계승만 한다"는 **사실 주장을 제거**했다 — D·E·F·I·J는 본 SPEC이 새로 닫은 것이라 계승만이라는 서술이 거짓이었다 |
+| **P2** | T1 센서스가 "4건(62 · 90 · 22 · 17)"이라 시퀀스 **30이 누락**되어 같은 문서의 "전수 5건"과 모순 | **T1 5건**, 시퀀스 **{17, 22, 30, 62, 90}** | 등급 표의 "첫 store 시 시퀀스 자동 생성" 행을 **T1 5건 · 62 · 30 · 90 · 22 · 17**로 정정. 같은 절의 "전수 계수" 문단은 처음부터 5건·5줄을 적었으므로 무변경 |
+| **P2** | `resolve_path` 주소형 특례 주석의 앵커를 `server/safety/console.py:397-404`(패턴 `:405`)로 적었다 | 실제는 **`console/lua/copilot_responder.lua:397-404`**(해당 문장은 **`:403`** "This is the ONLY address form resolve_path special-cases")와 **`:405`**(`local EXECUTOR_ADDRESS_PATTERN = "^Executor%s+(%d+)$"`). `server/safety/console.py`는 총 **484행**이고 `:403-405`는 `StateBodyFetcher` 클래스 선언부라 `resolve_path`를 담지 않는다 | 두 파일을 직접 열어 확인하고 정정. **REQ-SONGCUE-017 한계 명시의 핵심 근거가 Python 안전 계층이 아니라 Lua 응답기임이 드러났고, 따라서 그 근거가 서는 PRESERVE 경계도 `console/lua/**` 쪽이다**(둘 다 PRESERVE라 게이트 판정 자체는 불변) |
+| **P3** | BUSKWIZ 87줄 상한 실측의 출처를 `SPEC-COPILOT-BUSKWIZ-001/progress.md:281-284`로 적었다 | 87/87 · 5.77s · 66.3 ms/줄은 **`:280`**이고, `:281`은 별개 행(직후 10회 재측정 66.5 ms = 누적 열화 없음) | 원문을 직접 열어 확인하고 두 사실을 각자의 줄에 분리해 인용 |
+| **P3** | "라우트 데코레이터는 **정확히 2개**"가 저장소 전체 계수처럼 읽힌다 | `server/web/app.py` 한정 **2개**, 저장소 전체는 **8개**(app.py 2 + `server/web/settings_api.py` 4 + `server/web/provision_api.py` 2) | 범위를 명시하고 8개 전량이 파일을 받지 않는다는 사실을 함께 적었다 — 사전 확정 ①의 논거는 "라우트가 적다"가 아니라 "**어느 라우트도 업로드를 받지 않는다**"이므로 8개로 세어도 결론은 불변이다 |
+
+또한 §E.1의 `abbreviated_tokens_ssot_pair` 게이트가 "이동 중 — 착수 계수 23, 재계수 8"로 열려 있었다. **오케스트레이터가 정본 2종에서 8건을 전수 교체 완료**했으므로 **0**으로 갱신했다(같은 회차에 `BUSKWIZ AC-SONGCUE-nnn` 오귀속 2건도 `AC-BUSKWIZ-nnn`으로 교정되었다). 이 게이트가 열린 채로 감사에 들어간 것이 P2 중 하나를 만들었다 — **"이동 중"은 게이트 값이 아니다.**
+
+#### 감사가 전수 검증해 **정확하다고 확인한 것**
+
+FAIL 판정이 "전부 틀렸다"로 오독되면 재작성이 이미 맞은 것까지 흔든다. 감사가 명시적으로 통과 처리한 항목을 함께 남긴다 — **인용 347쌍 중 어긋남 5건**(98.6% clean, 인용 대상 파일 **51/51 실재**) · 마일스톤 AC 배정 **1:1** · REQ **21** / AC **18** / ASSUMPTION **5** · clarification 마커 **0건** · 범위 재개방 **0건** · 자기오염 **0건** · 형제 줄앵커 **0건** · 계수 산술(5S+2 — 32·42·52 / 44·58·72) **전수 정확**. 즉 무너진 축은 **교차 정합 하나**이고 나머지 여섯 축은 서 있었다.
+
+#### 감사 보고서가 또 파일로 남지 않았다 — 연속 3번째
+
+v0.1.0의 "#### next"가 `.moai/reports/plan-audit/` 아래 **파일 영속화**를 명시적으로 요구했는데 이번 회차도 지켜지지 않았다 — 그 디렉터리에는 `.gitkeep`뿐이다. LOOKLIB·BUSKWIZ도 같은 상태다. 따라서 본 절의 지적 내역·점수·처리 기록이 **이 회차의 유일한 영속 사본**이며, `known_gaps`에 같은 사실을 게이트로도 남겼다. 규칙을 세 번 연속 못 지켰다면 그것은 실수가 아니라 **절차가 실행 지점을 갖지 못한 것**이다.
+
 ## §E.1 Plan-phase Audit-Ready Signal
 
 ```yaml
 plan_status: audit-ready
 plan_complete_at: 2026-07-28
 spec_version: "0.1.0"
-audit_rounds: 0            # 본 SPEC의 plan-audit 보고서는 .moai/reports/plan-audit/ 아래 0건
+audit_rounds: 1            # plan-audit 1회차 수령 — FAIL 0.63 / 기준 0.85, P0 2 · P1 6 · P2 10 · P3 11. 지적·점수·처리 내역은 Plan-phase log의 v0.1.1 절
 artifacts: [spec.md, plan.md, acceptance.md, design.md, research.md, progress.md]
 requirements: 21           # REQ-SONGCUE-001~021 — spec.md 정의 행 21 = 고유 토큰 21
 acceptance_criteria: 18    # AC-SONGCUE-001~018 — acceptance.md 절 제목 18 = 고유 토큰 18
-decisions_closed: 3        # 사용자 확정 3건 (spec.md 사전 확정 사실 1/2/3)
-decisions_open: 0          # 본 SPEC이 새로 여는 엔지니어링 결정 0 — BUSKWIZ 결정 E/F/H를 계승만 한다
+decisions_closed: 10       # 결정 등록부 A~J 전량 (plan.md §A.4a/§F.1이 정본) — 사용자 확정 3(A·B·C) + 엔지니어링 판단 7(D~J)
+decisions_open: 0          # 등록부 A~J에 열린 슬롯 0. 형제 문서는 이 등록부를 소비만 하며 새 결정 문자를 만들지 않는다
 clarification_markers: 0
 assumptions_open: 5        # ASSUMPTION-20/21/22/23/24 — 전부 M0 라이브 실측 대상
 live_sessions_planned: 2   # M0 프로브(AC-SONGCUE-017) + M7 종단(AC-SONGCUE-018)
@@ -175,16 +208,18 @@ machine_gates:
   ssot_line_anchors_in_progress_md: 0     # 정본 2종은 토큰으로만 참조. 본문의 spec.md:N 형태는 전부 타 SPEC(BUSKWIZ · LOOKLIB)의 것이며 허용 대상이다
   sibling_line_anchors_in_progress_md: 0  # 본 SPEC의 plan.md · design.md · research.md 줄 앵커 0
   abbreviated_tokens_progress_md: 0       # 정규식 (?<![A-Z-])(AC|REQ)-[0-9]{3}
-  abbreviated_tokens_ssot_pair: "이동 중 — 착수 계수 23, 재계수 8(오케스트레이터가 동일 세션에서 완전 토큰 교체 진행). 최종 계수는 plan-audit 소관"
+  abbreviated_tokens_ssot_pair: 0         # plan-audit 후 정본 2종에서 전수 교체 완료 (착수 계수 23 → 재계수 8 → 8건 전량 완전 토큰). 같은 회차에 BUSKWIZ 오귀속 2건도 AC-BUSKWIZ-nnn으로 교정
   live_cue_commands_in_audit_logs: 5      # 전부 Cue 1. Cue 2 이상 라이브 실행 0건 = ASSUMPTION-21의 계수 근거
   code_anchor_drift_measured: 5           # 심볼 앵커 4 + dedupe 블록 경계 1. '앵커 실측 정정 4건' 절, 전량 실측 좌표로 대체
+  self_anchor_corrections_v0_1_1: 2       # 본 문서가 스스로 틀렸던 앵커 — resolve_path 특례(console.py -> copilot_responder.lua) · BUSKWIZ 87줄 실측(:281-284 -> :280). 둘 다 원본 파일을 열어 재확인
+  audit_citation_pairs_verified: "347 — 어긋남 5건(98.6% clean), 인용 대상 파일 51/51 실재 (plan-audit 1회차 전수 검증)"
 known_gaps:
-  - "정본 2종의 축약 토큰이 본 문서 작성 중 교체되고 있어 최종 계수를 본 문서가 확정하지 않았다. SSOT는 본 문서의 소유가 아니다."
-  - "형제 3종(plan.md · design.md · research.md)의 기계 게이트는 본 문서 작성 시점에 동시 작성 중이라 미측정. plan-audit이 6종 전량에 대해 잰다."
+  - "정정본 6종의 기계 게이트 재측정은 plan-audit 2회차 소관이다. v0.1.1이 닫은 것은 1회차 지적이며, 정정이 새 불일치를 만들지 않았다는 증명은 재감사가 낸다."
   - "타임코드 · TrigType · Cue 2 이상은 전부 라이브 실행 기록 0건 — plan-phase가 닫을 수 없고 M0가 닫는다."
   - "브리핑 앵커 5건이 실측과 어긋났다(정정 완료). 같은 부류가 형제 문서에 남아 있는지는 plan-audit이 6종 전량 앵커 검증으로 확인해야 한다."
-blocking_for_run: "ASSUMPTION-21이 M3를 기술적으로 막는다 — 같은 시퀀스에 Cue 2 이상을 추가할 수 없으면 곡 1개 = 시퀀스 1개, 섹션 1개 = 큐 1개라는 산출물 정의(REQ-SONGCUE-007)가 성립하지 않으므로 DESCOPE가 아니라 저작 차단이다. M0 판정 전에 M3에 착수하지 않는다. ASSUMPTION-20/22는 M4의 정책 게이트일 뿐이며(GO/DESCOPE 양 분기가 AC-SONGCUE-012에 이미 정의됨), M1·M2는 M0와 독립이라 선행 가능하다."
-next: "plan-audit 실행 (Tier L 기준 0.85, 보고서를 .moai/reports/plan-audit/ 아래 파일로 영속화) → M0 라이브 세션 접근성 확인 → Implementation Kickoff Approval (plan→run HUMAN GATE) → run(M0 프로브부터)"
+  - "plan-audit 보고서가 .moai/reports/plan-audit/ 아래 파일로 영속화되지 않았다 — 그 디렉터리에는 .gitkeep뿐이다. LOOKLIB·BUSKWIZ도 동일 상태이며 본 SPEC은 연속 3번째다. 이 회차의 유일한 영속 사본은 Plan-phase log의 v0.1.1 절이다."
+blocking_for_run: "ASSUMPTION-21이 M3를 기술적으로 막는다 — 같은 시퀀스에 Cue 2 이상을 추가할 수 없으면 곡 1개 = 시퀀스 1개, 섹션 1개 = 큐 1개라는 산출물 정의(REQ-SONGCUE-007)가 성립하지 않으므로 DESCOPE가 아니라 저작 차단이다. M0 판정 전에 M3에 착수하지 않는다. 블로킹은 이 1건뿐이다 — ASSUMPTION-23이 부정이면 빈 시퀀스 번호를 확정할 수 없으므로 거부로 답하며(REQ-SONGCUE-009 · AC-SONGCUE-008 구간 2) M3 저작을 막지 않는다. ASSUMPTION-20/22는 M4의 정책 게이트일 뿐이며(두 축 각각의 GO/부정 분기가 AC-SONGCUE-012에 이미 정의됨), M1·M2는 M0와 독립이라 선행 가능하다."
+next: "정정본 재감사 (plan-audit 2회차, Tier L 기준 0.85 — 이번에는 보고서를 .moai/reports/plan-audit/ 아래 파일로 영속화한다) → M0 라이브 세션 접근성 확인 → Implementation Kickoff Approval (plan→run HUMAN GATE) → run(M0 프로브부터)"
 ```
 
 ## §E.2 Run-phase Evidence

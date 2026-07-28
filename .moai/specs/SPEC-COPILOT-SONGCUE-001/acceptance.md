@@ -46,7 +46,8 @@ Then 콘솔 송신 **0건**이고 반환은 제안이며 `is_error=False`다.
 **시나리오 6 — 타임코드 DESCOPE**
 Given M0가 ASSUMPTION-20을 부정 판정한 상태,
 When 큐리스트를 생성하면,
-Then 번들에 타임코드 대상 커맨드가 **0건**이고 DESCOPE 사유가 progress.md M0 절에 기록되어 있다.
+Then 번들에 타임코드 대상 커맨드가 **0건**이고, `progress.md` M0 절에 `DESCOPE: ASSUMPTION-20 <사유>`
+형태의 **`DESCOPE:` 접두 행이 1건 이상** 존재한다(행 존재 판정이며 산문 해석이 아니다).
 
 ---
 
@@ -68,14 +69,14 @@ Then 번들에 타임코드 대상 커맨드가 **0건**이고 DESCOPE 사유가
 | REQ-SONGCUE-010 | AC-SONGCUE-009 | M3 | 파괴적 커맨드 0건 |
 | REQ-SONGCUE-011 | AC-SONGCUE-010 | M3 | 무손실 + dedupe 무개정 |
 | REQ-SONGCUE-012 | AC-SONGCUE-011 | M3 | 값 라인 충돌 가드 |
-| REQ-SONGCUE-013 | AC-SONGCUE-012 | M4 | 타임코드 GO/DESCOPE 양 분기 |
-| REQ-SONGCUE-014 | AC-SONGCUE-012 | M4 | 동일 AC 구간 ③ (TrigType) |
+| REQ-SONGCUE-013 | AC-SONGCUE-012 | M4 | 타임코드 축 — 동일 AC 구간 ①②(GO / 부정) |
+| REQ-SONGCUE-014 | AC-SONGCUE-012 | M4 | 자동 진행 축(`TrigType`) — 동일 AC 구간 ③④(GO / 부정) |
 | REQ-SONGCUE-015 | AC-SONGCUE-009 | M3 | 동일 AC 구간 ② (`/trig=` 금지) |
 | REQ-SONGCUE-016 | AC-SONGCUE-013 | M4 | 섹션 축 2단 보고 |
 | REQ-SONGCUE-017 | AC-SONGCUE-014 | M4 | 재조회 + 한계 명시 |
 | REQ-SONGCUE-018 | AC-SONGCUE-015 | M5 | 단일 실행 경로 AST 스캔 |
 | REQ-SONGCUE-019 | AC-SONGCUE-015 | M5 | 동일 AC 구간 ② (등록 3곳) |
-| REQ-SONGCUE-020 | AC-SONGCUE-010 | M6 | 정적 진입 금지 — 동일 AC 구간 ③④ |
+| REQ-SONGCUE-020 | AC-SONGCUE-010 | M3 | 정적 진입 금지 — 동일 AC 구간 ③④. **M6는 회귀 재확인** |
 | REQ-SONGCUE-021 | AC-SONGCUE-016 | M6 | PRESERVE 무변경 — `matching.py`·`instantiate.py` diff 빈 출력 |
 
 **마일스톤별 AC 집합 (SSOT)** — 중복·누락 0:
@@ -159,7 +160,11 @@ Then 번들에 타임코드 대상 커맨드가 **0건**이고 DESCOPE 사유가
 - 검증 방법: `pytest server/tests/test_songcue_bundle.py -q`
 - 기대 결과: 생성 커맨드에서 추출한 `(시퀀스 번호, 큐 번호)` 집합이 시퀀스 1종 × 큐 `1..N`이다.
 - 검증 구간: ① 시퀀스 번호가 정확히 1종. ② 큐 번호가 `1`부터 `N`까지 **빠짐없이 한 번씩**
-  (중복·건너뜀 0건) — 하드 결함 1(번호 비전진)의 기계 판정. ③ 섹션 6개·10개 두 크기에서 모두 성립.
+  (중복·건너뜀 0건) — 하드 결함 1(번호 비전진)의 기계 판정. **(값 라인 충돌이 없는 픽스처 기준.
+  충돌 픽스처는 AC-SONGCUE-011이 소유하며 생성 번호가 섹션 인덱스의 부분집합이다.)** 결정 F가
+  **건너뜀에도 번호를 당기지 않는다**고 확정했으므로 두 픽스처를 하나로 합치지 않는다 — 이 구간을
+  통과시키려고 번호를 당기는 '수리'는 AC-SONGCUE-011의 보고를 거짓으로 만든다.
+  ③ 섹션 6개·10개 두 크기에서 모두 성립.
 
 ### AC-SONGCUE-007 — 큐 이름은 ASCII, 한국어는 표현 계층
 
@@ -190,7 +195,7 @@ Then 번들에 타임코드 대상 커맨드가 **0건**이고 DESCOPE 사유가
 - 검증 방법: 생성 커맨드 전수 스캔 + `pytest server/tests/test_songcue_bundle.py -q`
 - 기대 결과: 각 패턴 **0건**.
 - 검증 구간: ① **소스 grep이 아니라 생성된 커맨드 튜플 전수**에 스캔을 걸고 그 목록이 비어 있지
-  않음을 함께 assert한다(BUSKWIZ AC-013의 감사 D3 교훈 계승). ② 스캐너가 금지 형태를 실제로
+  않음을 함께 assert한다(AC-BUSKWIZ-013의 감사 D3 교훈 계승). ② 스캐너가 금지 형태를 실제로
   잡는지 **심어서** 확인한다(`Store Cue 5 /overwrite`, `Cue 1 /trig=Time`).
 
 ### AC-SONGCUE-010 — 무손실 + dedupe 무개정 + 정적 진입 금지
@@ -217,20 +222,42 @@ Then 번들에 타임코드 대상 커맨드가 **0건**이고 DESCOPE 사유가
   상대가 담긴다. ③ **거부(예외)가 아니라 건너뛰기**임을 확인 — 번들은 여전히 실행 가능하고 앞
   섹션은 온전하다. ④ 서로 다른 값이면 발동하지 않는다(비공허성).
 
-### AC-SONGCUE-012 — 타임코드 · 자동 진행 GO/DESCOPE 양 분기
+### AC-SONGCUE-012 — 타임코드 축 · 자동 진행 축의 **독립** GO/부정 판정
 
-**Where** ASSUMPTION-20 · ASSUMPTION-22가 M0에서 긍정 실측된 경우, the 시스템 **shall** 해당 커맨드를
-발화한다. 그렇지 않으면 0건 발화하고 사유를 기록한다.
+**Where** ASSUMPTION-20(타임코드)이 M0에서 긍정 실측된 경우, the 시스템 **shall** 타임코드 커맨드를
+M0가 실측한 형식으로만 발화한다. **Where** ASSUMPTION-22(`TrigType`/`TrigTime`)가 M0에서 긍정 실측된
+경우, the 시스템 **shall** 자동 진행 커맨드를 M0가 실측한 토큰으로만 발화한다. 어느 축이든 부정이면
+the 시스템 **shall not** **그 축의** 커맨드를 발화하며, 사유를 기록한다.
 
-- 대상 요구사항: REQ-SONGCUE-013 / REQ-SONGCUE-014
-- 검증 방법: `pytest server/tests/test_songcue_timing.py -q` — M0 판정에 따라 아래 둘 중 **정확히 하나**.
-- 기대 결과:
-  - ① **GO 분기**: 발화 형식이 **M0가 실측한 것 하나뿐**이고 트리거 토큰도 M0가 실측한 것만
-    쓴다(룰북 주석의 토큰 메뉴를 실측 없이 발화하지 않는다). 시간값은 섹션 입력에서 계산된 것만 쓴다.
-  - ② **DESCOPE 분기**: 생성 번들에 타임코드 대상 커맨드와 `Set Cue … Property 'TrigType'` 계열이
-    **0건**이고, DESCOPE 사유가 progress.md M0 절에 기록되어 있다.
-- 비고: 실행되지 않은 분기는 `skip` 사유를 명시한 채 **남긴다 — 삭제하지 않는다**. 후속 SPEC이
-  게이트를 다시 열 때 출발점이 된다(BUSKWIZ AC-SONGCUE-012 비고의 계승).
+- 대상 요구사항: REQ-SONGCUE-013(**축 1** — 구간 ①②) / REQ-SONGCUE-014(**축 2** — 구간 ③④)
+- 검증 방법: `pytest server/tests/test_songcue_timing.py -q` — **두 축을 각각 독립으로 판정한다.**
+  ASSUMPTION-20의 판정이 ①·② 중 하나를, ASSUMPTION-22의 판정이 ③·④ 중 하나를 고르며 **네 조합
+  전부에서 판정이 정의된다** — GO·GO → ①③ / GO·부정 → ①④ / 부정·GO → ②③ / 부정·부정 → ②④.
+  **두 축을 하나의 논리곱으로 접지 않고 "둘 중 정확히 하나"로도 세지 않는다**: 결정 B가 두 판정을
+  **독립**으로 확정했고, 등급이 서로 달라(ASSUMPTION-20은 **T5**로 부정 기대 · ASSUMPTION-22는
+  **T2**) **혼합 결과가 가장 개연성이 높다.** 논리곱으로 접으면 혼합에서 어느 분기도 참이 아니게 되어
+  M4가 판정 불가로 멈춘다.
+- 기대 결과: 두 축이 **각각** GO 또는 부정으로 판정되고, 부정으로 판정된 축의 커맨드가 0건이다.
+  **한 축의 부정이 다른 축의 GO를 취소하지 않는다.**
+- 검증 구간 (축별 독립 — 축 1은 ①②, 축 2는 ③④):
+  - **축 1 — 타임코드 (ASSUMPTION-20 / REQ-SONGCUE-013)**
+    - ① **GO**: 타임코드 발화 형식이 **M0가 실측한 것 하나뿐**이고(실측되지 않은 오브젝트명·문법의
+      발화 0건), 시간값은 섹션 입력에서 **계산된 것만** 쓴다.
+    - ② **부정**: 생성 번들에 타임코드 대상 커맨드가 **0건**이고, `progress.md` M0 절에
+      `DESCOPE: ASSUMPTION-20 <사유>` 형태의 **`DESCOPE:` 접두 행이 1건 이상** 존재한다
+      (행 존재 판정이며 산문 해석이 아니다).
+  - **축 2 — 자동 진행 (ASSUMPTION-22 / REQ-SONGCUE-014)**
+    - ③ **GO**: `Set Cue <m> Sequence <n> Property 'TrigType' <token>` / `'TrigTime' <t>` 발화가
+      **M0가 실측한 토큰만** 쓴다. `'Follow'`와 `'Time'`은 M0가 **각각 따로 재고 구분 기록한** 결과를
+      각각 따르며(AC-SONGCUE-017 측정 항목 4), 룰북 주석의 토큰 메뉴(`Go / Time / Follow / Sound /
+      BPM` — `server/rulebook/assets/v2.4.2/31_choreography_patterns.md:111`의 줄 끝 주석)를
+      **실측 없이 발화하지 않는다**. 트리거 토큰은 대문자로 시작한다(같은 파일 `:115`).
+    - ④ **부정**: 생성 번들에 `Set Cue … Property 'TrigType'`·`'TrigTime'` 계열이 **0건**이고,
+      `progress.md` M0 절에 `DESCOPE: ASSUMPTION-22 <사유>` 형태의 **`DESCOPE:` 접두 행이 1건 이상**
+      존재한다.
+- 비고: 실행되지 않은 분기는 **축별로** `skip` 사유를 명시한 채 **남긴다 — 삭제하지 않는다**.
+  축 1이 GO여도 축 2의 ④는 남고 그 역도 같다 — 네 구간 중 실행되는 것은 **항상 2개**이고 나머지
+  2개는 `skip`으로 남는다. 후속 SPEC이 게이트를 다시 열 때 출발점이 된다(AC-BUSKWIZ-012 비고의 계승).
 
 ### AC-SONGCUE-013 — 섹션별 2단 보고
 
@@ -240,7 +267,8 @@ Then 번들에 타임코드 대상 커맨드가 **0건**이고 DESCOPE 사유가
 - 검증 방법: `pytest server/tests/test_songcue_report.py -q`
 - 기대 결과: 전량 PASS.
 - 검증 구간: ① 곡의 모든 섹션이 정확히 한 번씩 판정에 나타난다. ② 집계 수치가 섹션별 합과 일치한다.
-  ③ 판정 어휘가 닫힌 집합이다. ④ 한국어 요약에 섹션 이름이 사람이 읽는 형태로 나온다.
+  ③ 판정 어휘가 닫힌 집합이다. ④ 각 섹션의 이름 문자열이 한국어 요약 문자열에 **그대로(부분 문자열로)
+  포함된다** — `all(name in summary for name in section_names)`. 가독성 심사가 아니라 포함 판정이다.
 
 ### AC-SONGCUE-014 — 재조회 확인 + 한계 명시
 
@@ -249,7 +277,9 @@ Then 번들에 타임코드 대상 커맨드가 **0건**이고 DESCOPE 사유가
 
 - 대상 요구사항: REQ-SONGCUE-017
 - 검증 방법: `pytest server/tests/test_songcue_report.py -q` + M7 라이브
-- 기대 결과: 재조회 결과가 생성한 큐 수·이름과 일치하고, 결과 페이로드에 **한계 문구가 존재**한다.
+- 기대 결과: 재조회 결과가 생성한 큐 수·이름과 일치하고, 결과 페이로드의 `property_unobserved`
+  항목이 `server/looks/songcue_report.py`의 공개 상수 **`PROPERTY_UNOBSERVED_NOTE`**와 **문자열로
+  동일**하다(상수 동일성 비교이며 산문 대조가 아니다).
 - 검증 구간: ① 큐 존재·이름 대조. ② **CueFade·TrigType을 확인했다고 주장하는 필드가 0건**
   (`SPEC-COPILOT-EXECREF-001/design.md:167` 실측 — 응답기가 그것을 반환하지 않는다).
   관측하지 않은 것을 보고하지 않는다.
@@ -314,7 +344,7 @@ Then 번들에 타임코드 대상 커맨드가 **0건**이고 DESCOPE 사유가
 실행한 것의 일치를 보이고 재조회로 확인한다.
 
 - 대상 요구사항: **(종단 통합 — B.1~B.5 전체)**. 단일 REQ가 아니라 파이프라인 전체가 대상이므로
-  §C.0 역추적표에 행을 두지 않는다(BUSKWIZ AC-017의 선례).
+  §C.0 역추적표에 행을 두지 않는다(AC-BUSKWIZ-017의 선례).
 - 검증 방법: 실물 콘솔 세션. 툴 반환의 per-command status와 **감사 로그**를 대조한다.
 - 기대 결과:
   1. `console.executed == plan.commands` — 순서까지 동일, 전 행 `ok=True`.
@@ -333,9 +363,9 @@ Then 번들에 타임코드 대상 커맨드가 **0건**이고 DESCOPE 사유가
 | 섹션 0개 입력 | 거부. 빈 번들은 "완전 성공"이 아니다 | BUSKWIZ `GenreBundle.complete`의 규율 |
 | 섹션 1개 | 정상 — 시퀀스 1개 + 큐 1개 | ASSUMPTION-21의 `Cue 2` 경로를 타지 않음 |
 | 같은 이름 섹션 반복(`Chorus` ×3) | 큐 이름에 순번을 붙여 구별. 값 라인 충돌 가드가 별도로 작동 | REQ-SONGCUE-012 |
-| 리그가 역할을 하나도 주소 못 함 | 저장 0건이 **답변**이다(`is_error=False`), 보고가 이유를 담는다 | BUSKWIZ AC-SONGCUE-011 ② 선례 |
+| 리그가 역할을 하나도 주소 못 함 | 저장 0건이 **답변**이다(`is_error=False`), 보고가 이유를 담는다 | AC-BUSKWIZ-011 ② 선례 |
 | 리그 섹션 미도착 | 번들 구성 **이전에** `is_error=True` 조기 반환 | `server/orchestrator/tools.py`의 `instantiate_look` 리그 미도착 조기 반환 절 |
-| 섹션 시각이 모두 동일 | REQ-002가 중복으로 거부 | — |
+| 섹션 시각이 모두 동일 | REQ-SONGCUE-002가 중복으로 거부 | — |
 | 시퀀스 번호 여집합이 비어 있음(모든 번호 점유) | 거부. 추측하지 않는다 | AC-SONGCUE-008 ② |
 
 ---

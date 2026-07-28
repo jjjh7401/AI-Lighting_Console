@@ -94,7 +94,7 @@ related_specs: [SPEC-COPILOT-BUSKWIZ-001, SPEC-COPILOT-LOOKLIB-001, SPEC-COPILOT
 **REQ-SONGCUE-003** `[Ubiquitous]` The 시스템 **shall** 섹션 어휘를 `server/looks/matching.py`의
 기존 테이블(`:99-121` 인트로/벌스/빌드/프리코러스/코러스/드랍 한영 매핑, `DYNAMICS_TERMS` `:92`)에서만
 읽는다 — 본 SPEC은 어휘를 **재정의하지 않는다.** 재정의하면 한/영 어휘가 두 곳에 살고 그 순간
-갈라진다(BUSKWIZ REQ-002가 장르 별칭에서 세운 것과 같은 규율).
+갈라진다(REQ-BUSKWIZ-002가 장르 별칭에서 세운 것과 같은 규율).
 
 **REQ-SONGCUE-004** `[Where]` **Where** 섹션 이름이 기존 어휘에 없는 경우, the 시스템 **shall**
 다이내믹스를 추정하지 않고 사용자에게 명시적 지정을 요구한다. 과신 추정의 결과는 사용자가 원한 적
@@ -253,7 +253,7 @@ BUSKWIZ M0가 ASSUMPTION-16/17/19를 **전부 DESCOPE**로 판정했고 그 판�
 ### Out of Scope — 콘솔측 Lua 변경
 
 큐 프로퍼티를 읽으려면 응답기 확장이 필요하지만(`SPEC-COPILOT-EXECREF-001/design.md:167`),
-`console/lua/**`는 PRESERVE다. REQ-017이 그 한계를 **명시**하는 것으로 처리하며, 응답기 확장은
+`console/lua/**`는 PRESERVE다. REQ-SONGCUE-017이 그 한계를 **명시**하는 것으로 처리하며, 응답기 확장은
 그 자체로 별도 범위 결정이다(`SPEC-COPILOT-LOOKLIB-001/spec.md:213-215`의 선례).
 
 ### Out of Scope — dedupe 규칙 개정
@@ -284,15 +284,15 @@ PRESERVE인 본 SPEC의 범위 밖이다. 후속 SPEC으로 **이관**한다(예
 
 | 무엇 | 어디 | 왜 |
 |---|---|---|
-| 섹션 어휘 · 다이내믹스 양자화 | `server/looks/matching.py:92`, `:99-121` | REQ-003이 재정의를 금지하는 그 표 |
-| 룩 후보 전순서 | `server/looks/busking.py:81` `looks_for_genre` | REQ-005의 재사용 대상 |
+| 섹션 어휘 · 다이내믹스 양자화 | `server/looks/matching.py:92`, `:99-121` | REQ-SONGCUE-003이 재정의를 금지하는 그 표 |
+| 룩 후보 전순서 | `server/looks/busking.py:81` `looks_for_genre` | REQ-SONGCUE-005의 재사용 대상 |
 | 슬롯 원장 (frozen을 바깥에서 감싸는 형상) | `server/looks/busking.py:158` `_advance` | 하드 결함 1의 시간축 판본이 같은 형상을 쓴다 |
 | 번들 결합 (목적지 선두 1회) | `server/looks/busking.py:189` `_merge` | REQ-SONGCUE-011 |
 | 값 라인 충돌 가드 | `server/looks/busking.py:230`, `:240` | REQ-SONGCUE-012 |
 | 2단 보고 · 한국어 표현 계층 | `server/looks/report.py:63`, `:74`, `:205`, `:278` | REQ-SONGCUE-008 · REQ-SONGCUE-016 |
 | 큐 저작 문법 (T1 등급) | `server/rulebook/assets/v2.4.2/31_choreography_patterns.md:50`, `:71` | 감사 로그 실행 기록 있음 — `server/audit_logs/audit-20260719.jsonl:186`, `audit-20260726.jsonl:327` |
 | 큐 자동 진행 (T2 등급) | 같은 파일 `:111-112`, 대문자 규칙 `:115` | ASSUMPTION-22의 프로브 대상. 검증 예시 토큰은 `'Follow'` 하나 |
-| 시퀀스 본문 조회 경로 | `server/safety/console.py:399` `DataPool/Sequences/{ref}` | REQ-017의 재조회 수단 |
+| 시퀀스 본문 조회 경로 | `server/safety/console.py:399` `DataPool/Sequences/{ref}` | REQ-SONGCUE-017의 재조회 수단 |
 | 큐 이름이 본문 라인이 되는 체인 | `server/safety/console.py:478-484` → `expand.py:106-112` → `grammar.py:20` | 사전 확정 ③의 근거 |
 | 단일 실행 경로 앵커 | `server/orchestrator/tools.py:693`, `:817` 두 `@MX:ANCHOR` | REQ-SONGCUE-018 |
 | 시퀀스 생성이 패널 핀에 연동됨 | `server/orchestrator/last_created.py:30` | 곡 1개 = 시퀀스 1개일 때만 정상 동작(스냅샷 최신 1건) |
