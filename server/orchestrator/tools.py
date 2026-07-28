@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from server.llm.types import ToolCall, ToolDefinition, ToolResult
+from server.looks.busking import build_genre_bundle, select_genre
 from server.looks.instantiate import (
     CAPTURE_PER_FAMILY,
     CAPTURE_SHAPES,
@@ -26,6 +27,7 @@ from server.looks.instantiate import (
 )
 from server.looks.loader import LookSchemaError, load_library_from_dir
 from server.looks.matching import match_looks
+from server.looks.report import build_report, to_korean
 from server.looks.resolver import resolve_roles
 from server.looks.schema import LookLibrary
 from server.orchestrator.ports import BundleGate, CommandExecutionPort, StateQueryPort
@@ -44,6 +46,7 @@ TOOL_NAMES = (
     "get_rig_context",
     "find_looks",
     "instantiate_look",
+    "prepare_busking",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -115,6 +118,10 @@ RIG_DRILLDOWN_QUERY_CAP = 16
 # resolve to, and the preset pools its values are stored into. Named rather
 # than derived, so a rig_paths override that drops either one fails loudly
 # instead of binding a look against half a rig.
+# `SafetyGate._check_lock`가 LiveLock에서 발화하는 게이트 상태
+# (`server/safety/gate.py:478`). per-command status "proposal"과 다른 층이다.
+_LOCKED = "locked"
+
 LOOK_RIG_SECTIONS = ("groups", "preset_pools")
 
 # The preset-pool drill is not optional on the look path. Occupancy is what
@@ -805,6 +812,143 @@ def build_toolset(
             command_outcomes=execution.command_outcomes,
         )
 
+    # -- prepare_busking (REQ-BUSKWIZ-011/012/014/019/020 — 장르 팔레트 1왕복) ---
+    #
+    # @MX:ANCHOR: [AUTO] the busking wizard's ONE model-reachable entry.
+    # @MX:REASON: REQ-BUSKWIZ-011/012. Like instantiate_look this handler is a
+    #   CALLER of run_commands, never a second execution surface: the genre
+    #   bundle inherits gate screening, LiveLock, dedupe and the audit log from
+    #   that one path. Reaching execution_port from here would be invisible to
+    #   the gate. The rig is READ here for the same reason instantiate_look
+    #   reads it (:735-738) — a model retyping a section can paraphrase a name
+    #   or supply a number the console never gave.
+
+    def prepare_busking(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        nonlocal looks
+        genre = call.arguments.get("genre")
+        if not isinstance(genre, str) or not genre.strip():
+            return _error_result(
+                call, "'genre' must be the operator's own word for the genre (e.g. '록', 'EDM')"
+            )
+        if looks is None:
+            try:
+                looks = load_library_from_dir()
+            except LookSchemaError as error:
+                return _error_result(call, f"look library unavailable: {error}")
+        selection = select_genre(looks, genre)
+        if selection.genre is None:
+            # A genre this library does not hold is a CORRECTABLE mistake: the
+            # candidate list makes the retry succeed. Promoting the query to the
+            # nearest genre instead would leave a palette the operator never
+            # asked for in their showfile.
+            content = json.dumps(
+                {
+                    "error": f"unknown genre {genre!r}",
+                    "reason": selection.reason,
+                    "candidates": list(selection.candidates),
+                },
+                ensure_ascii=False,
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id, name=call.name, content=content, is_error=True
+                )
+            )
+        missing = [section for section in LOOK_RIG_SECTIONS if section not in rig_paths]
+        if missing:
+            return _error_result(
+                call,
+                f"rig context has no path configured for {missing} — a busking palette "
+                f"cannot be built without them",
+            )
+        sections, _resolved, _failed = collect_rig_sections(
+            state_port,
+            {section: rig_paths[section] for section in LOOK_RIG_SECTIONS},
+            drilldown | _LOOK_DRILLDOWN,
+            RIG_DRILLDOWN_QUERY_CAP,
+        )
+        unavailable = {
+            name: entry
+            for name, entry in sections.items()
+            if isinstance(entry, dict) and "reason" in entry
+        }
+        if unavailable:
+            # A section that never arrived is NOT a rig that answered "no such
+            # group" — the same split instantiate_look makes at :750.
+            content = json.dumps(
+                {
+                    "error": (
+                        "the rig sections a busking palette is built against did not "
+                        "arrive: "
+                        + "; ".join(f"{n}: {e['reason']}" for n, e in unavailable.items())
+                    ),
+                    "rig_unavailable": unavailable,
+                },
+                ensure_ascii=False,
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id, name=call.name, content=content, is_error=True
+                )
+            )
+        try:
+            bundle = build_genre_bundle(
+                selection.genre,
+                selection.looks,
+                resolution=resolve_roles(sections["groups"]),  # type: ignore[arg-type]
+                pools=resolve_pools(sections["preset_pools"]),  # type: ignore[arg-type]
+            )
+        except LookInstantiationError as error:
+            return _error_result(call, f"genre {selection.genre!r} cannot be instantiated: {error}")
+        if not bundle.commands:
+            # The rig addressed none of this genre's roles. Storing nothing is
+            # an ANSWER, not a failure: a retry cannot bind roles this rig does
+            # not have. The report still says which look died and why.
+            report = build_report(bundle)
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(
+                        {
+                            "executed": False,
+                            "genre": bundle.genre,
+                            "report": report.to_dict(),
+                            "summary_ko": to_korean(report),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    is_error=False,
+                )
+            )
+        execution = run_commands(
+            ToolCall(
+                id=call.id, name="run_commands", arguments={"commands": list(bundle.commands)}
+            ),
+            context,
+        )
+        payload = json.loads(execution.result.content)
+        is_error = execution.result.is_error
+        if payload.get("gate_status") == _LOCKED:
+            # LiveLock demotion is an ANSWER (REQ-BUSKWIZ-014): the proposal IS
+            # the deliverable. is_error=True would feed the self-correction loop
+            # and send the model back into the same lock.
+            is_error = False
+        report = build_report(bundle, execution.command_outcomes)
+        payload["executed"] = not execution.result.is_error
+        payload["genre"] = bundle.genre
+        payload["report"] = report.to_dict()
+        payload["summary_ko"] = to_korean(report)
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=is_error,
+            ),
+            command_outcomes=execution.command_outcomes,
+        )
+
     definitions = (
         ToolDefinition(
             name="run_commands",
@@ -891,10 +1035,10 @@ def build_toolset(
                 'Each object is {"no": <number>, "name": <name>}; ALWAYS '
                 'reference it by its REAL "no", NEVER by positional order — '
                 "numbers may be non-contiguous (e.g. 1, 2, 7), so the Nth "
-                'listed item is NOT necessarily object N. An entry with a '
+                "listed item is NOT necessarily object N. An entry with a "
                 '"name" but NO "no" means its number is UNKNOWN: do not guess '
                 "one — resolve it with query_state before addressing that "
-                'object. For groups, sequences, macros, plugins and pages the '
+                "object. For groups, sequences, macros, plugins and pages the "
                 '"no" IS the address you use (e.g. Group 2, Sequence 5). For '
                 'fixtures the "no" is the fixture\'s slot in the stage patch '
                 "list and is NOT guaranteed to be its fixture id (FID) — "
@@ -1048,6 +1192,34 @@ def build_toolset(
                 "required": ["look_id"],
             },
         ),
+        ToolDefinition(
+            name="prepare_busking",
+            description=(
+                "Prepare a busking palette for one genre: store the genre's whole "
+                "look set as colour/position/beam/dimmer presets on THIS rig, in a "
+                "single bundle needing one approval. Call this when the operator "
+                "asks to get ready for a rock / ballad / worship / EDM set rather "
+                "than to realise one specific look. The rig is read here — never "
+                "pass groups, pools or slot numbers. Returns a two-tier report: "
+                "totals plus a per-look verdict, so a partially stored palette says "
+                "which look is missing and why."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "genre": {
+                        "type": "string",
+                        "description": (
+                            "The operator's own word for the genre, Korean or "
+                            "English (e.g. '록', 'ballad', '워십', 'EDM'). An "
+                            "unrecognised word is answered with the genres this "
+                            "library actually holds."
+                        ),
+                    },
+                },
+                "required": ["genre"],
+            },
+        ),
     )
     handlers: dict[str, _Handler] = {
         "run_commands": run_commands,
@@ -1056,5 +1228,6 @@ def build_toolset(
         "get_rig_context": get_rig_context,
         "find_looks": find_looks,
         "instantiate_look": instantiate_look,
+        "prepare_busking": prepare_busking,
     }
     return ToolRegistry(definitions, handlers)

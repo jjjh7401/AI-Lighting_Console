@@ -26,6 +26,8 @@ from server.looks.instantiate import (
     LookInstantiation,
     LookInstantiationError,
     PoolIndex,
+    SkippedStore,
+    _values_line,  # dedupe가 비교하는 문자열의 단일 출처
     build_instantiation,
     resolve_pools,
 )
@@ -36,6 +38,7 @@ from server.looks.schema import Look, LookLibrary
 __all__ = [
     "EMPTY_QUERY",
     "UNRESOLVED_GENRE",
+    "VALUE_LINE_COLLISION",
     "GenreBundle",
     "GenreSelection",
     "build_genre_bundle",
@@ -224,6 +227,53 @@ def _merge(bundles: list[tuple[str, ...]]) -> tuple[tuple[str, ...], tuple[tuple
     return tuple(merged), tuple(spans)
 
 
+VALUE_LINE_COLLISION = "value_line_collision"
+"""이 룩의 값 라인이 앞선 룩의 것과 문자열로 같아 저장이 성립할 수 없다.
+
+`instantiate.py`의 사유 3종(`conflict` / `no_free_slot` / `pool_unresolved`)과
+같은 부류의 사실이다 — "이 저장은 안전하게 일어날 수 없다". 사유 코드가
+`busking.py`에 사는 것은 그 조건이 **번들 안의 이웃 룩**에 달려 있기 때문이며,
+룩 하나만 보는 `build_instantiation`은 원리적으로 이것을 알 수 없다.
+"""
+
+
+def _guard_collision(
+    look: Look, plan: LookInstantiation, emitted: dict[str, str]
+) -> LookInstantiation:
+    """값 라인이 이미 발화된 룩이면 저장을 건너뛴 계획으로 바꾼다 (결정 H).
+
+    거부(예외)가 아니라 건너뛰기인 이유는 `_plan_stores`의 선례다: 저장이
+    성립하지 않는 모든 경우를 그쪽은 사유를 단 `SkippedStore`로 답하고,
+    `LookInstantiationError`는 구조적 기형에만 쓴다. 룩 하나의 저작 결함으로
+    장르 전량을 실패시키면 버스킹 준비가 아무 산출도 내지 못한다.
+
+    값 라인 문자열은 `instantiate._values_line`에서 온다 — dedupe가 실제로
+    비교하는 바로 그 문자열이며, 여기서 다시 조립하면 두 곳이 갈라진다.
+    저장을 하나도 세우지 못한 룩(그룹 미매핑 등)은 값 라인을 발화하지 않았으므로
+    예약하지 않는다.
+    """
+    if not plan.commands:
+        return plan
+    line = _values_line(look.attributes)
+    first = emitted.get(line)
+    if first is None:
+        emitted[line] = look.look_id
+        return plan
+    skipped = tuple(
+        SkippedStore(
+            family=preset.family,
+            reason=VALUE_LINE_COLLISION,
+            pool=preset.pool,
+            detail=(
+                f"값 라인이 룩 {first!r}의 것과 같아 dedupe에 접힌다 — "
+                "빈 프로그래머 상태로 Store가 실행되는 것을 막기 위해 건너뛴다"
+            ),
+        )
+        for preset in plan.created
+    )
+    return replace(plan, commands=(), created=(), skipped=plan.skipped + skipped)
+
+
 def build_genre_bundle(
     genre: str,
     looks: tuple[Look, ...],
@@ -238,17 +288,18 @@ def build_genre_bundle(
     한 번 해석한 리그를 N개 룩에 재사용할 수 있다.
 
     캡처 형상은 ``shared_capture`` **고정**이며 파라미터로 노출하지 않는다
-    (REQ-BUSKWIZ-006 하위 절): per-family 형상은 룩마다 패밀리별 값 라인을 따로
-    발화하는데, 서로 다른 룩의 값 라인이 문자열로 같아지는 경우가 실재한다
-    (실측: edm 두 룩의 ``Attribute 'Dimmer' At 100``). 값 라인은 dedupe 면제
-    집합에 없고 직전 ``ClearAll``은 면제라 살아남으므로, 두 번째 값 라인이
-    탈락하면 **빈 프로그래머 상태로 ``Store``가 실행되고 콘솔은 성공으로
-    답한다.**
+    (REQ-BUSKWIZ-006 하위 절). 그 형상에서 서로 다른 룩의 값 라인이 문자열로
+    같아지는 경우가 실재하는데(실측: edm 두 룩의 ``Attribute 'Dimmer' At 100``),
+    값 라인은 dedupe 면제 집합에 없고 직전 ``ClearAll``은 면제라 살아남으므로,
+    두 번째 값 라인이 탈락하면 **빈 프로그래머 상태로 ``Store``가 실행되고
+    콘솔은 성공으로 답한다.** ``_guard_collision``이 그 룩을 건너뛴다 (결정 H).
     """
     plans: list[LookInstantiation] = []
     ledger = pools
+    emitted: dict[str, str] = {}
     for look in looks:
         plan = build_instantiation(look, resolution=resolution, pools=ledger)
+        plan = _guard_collision(look, plan, emitted)
         plans.append(plan)
         ledger = _advance(ledger, plan.created)
     commands, spans = _merge([plan.commands for plan in plans])

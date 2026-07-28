@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from server.looks.busking import GenreBundle
+from server.looks.busking import VALUE_LINE_COLLISION, GenreBundle
 from server.looks.instantiate import (
     CONFLICT,
     NO_FREE_SLOT,
@@ -65,6 +65,7 @@ _REASON_LABELS = {
     NO_FREE_SLOT: "점유 미관측 — 빈 슬롯을 확정할 수 없음",
     POOL_UNRESOLVED: "해당 풀 없음",
     POOL_UNADDRESSABLE: "풀은 있으나 번호가 없음",
+    VALUE_LINE_COLLISION: "값 라인이 앞선 룩과 동일 — 빈 저장을 막기 위해 건너뜀",
     AMBIGUOUS: "이름이 여러 역할에 걸림",
     NO_MATCH: "맞는 그룹 없음",
     UNADDRESSABLE: "그룹은 있으나 번호가 없음",
@@ -134,6 +135,58 @@ class BuskingReport:
     def skipped_count(self) -> int:
         """N in "N개 건너뜀" — 단위는 프리셋 저장 1회이지 룩이 아니다."""
         return len(self.skipped)
+
+    def to_dict(self) -> dict:
+        """구조화 보고 (REQ-BUSKWIZ-013). 사람이 읽을 요약은 ``to_korean``."""
+        return {
+            "genre": self.genre,
+            "executed": self.executed,
+            "created": [
+                {"family": c.family, "pool": c.pool, "slot": c.slot, "label": c.label}
+                for c in self.created
+            ],
+            "skipped": [
+                {
+                    "family": s.family,
+                    "reason": s.reason,
+                    "reason_ko": reason_label(s.reason),
+                    "pool": s.pool,
+                    "slot": s.slot,
+                    "detail": s.detail,
+                }
+                for s in self.skipped
+            ],
+            "unmapped": [
+                {
+                    "look_id": u.look_id,
+                    "role": u.role,
+                    "reason": u.reason,
+                    "reason_ko": reason_label(u.reason),
+                    "kind": u.kind,
+                }
+                for u in self.unmapped
+            ],
+            "unmapped_roles": list(self.unmapped_roles),
+            "looks": [
+                {
+                    "look_id": v.look_id,
+                    "display_name": v.display_name,
+                    "verdict": v.verdict,
+                    "created": v.created,
+                    "skipped": v.skipped,
+                    "unmapped": v.unmapped,
+                    "not_executed": v.not_executed,
+                    "failed": v.failed,
+                }
+                for v in self.looks
+            ],
+            "created_count": self.created_count,
+            "skipped_count": self.skipped_count,
+            "unmapped_count": self.unmapped_count,
+            "not_executed": self.not_executed,
+            "failed": self.failed,
+            "drilldown_capped": self.drilldown_capped,
+        }
 
     @property
     def unmapped_count(self) -> int:

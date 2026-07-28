@@ -302,6 +302,7 @@ class TestKoreanFirstClass:
         assert any("\uac00" <= ch <= "\ud7a3" for ch in rendered)
 
     def test_every_reason_code_has_a_korean_label(self):
+        from server.looks.busking import VALUE_LINE_COLLISION
         from server.looks.instantiate import (
             CONFLICT,
             NO_FREE_SLOT,
@@ -320,6 +321,7 @@ class TestKoreanFirstClass:
             AMBIGUOUS,
             NO_MATCH,
             UNADDRESSABLE,
+            VALUE_LINE_COLLISION,
         ):
             label = reason_label(code)
             assert label and label != code, f"{code}에 한국어 라벨이 없다"

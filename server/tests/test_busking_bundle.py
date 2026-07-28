@@ -17,6 +17,7 @@ import pytest
 
 from server.looks import instantiate as instantiate_mod
 from server.looks.busking import (
+    VALUE_LINE_COLLISION,
     GenreBundle,
     build_genre_bundle,
     instantiate_genre,
@@ -242,7 +243,14 @@ class TestBundleShape:
         assert bundle.commands.count(dest) == 1
 
     def test_every_look_cycle_is_clearall_bracketed(self):
-        bundle = make_bundle([make_look("a", "룩 A"), make_look("b", "룩 B")])
+        # 페이로드를 서로 다르게 둔다 — 같으면 값 라인 충돌 가드가 뒤 룩을
+        # 건너뛰므로 사이클이 하나만 남고, 이 테스트의 주제가 바뀐다.
+        bundle = make_bundle(
+            [
+                make_look("a", "룩 A", attrs=(("Dimmer", 80),)),
+                make_look("b", "룩 B", attrs=(("Dimmer", 70),)),
+            ]
+        )
         body = bundle.commands[1:]  # 선두 목적지 제외
         assert body[0] == "ClearAll"
         assert body[-1] == "ClearAll"
@@ -421,24 +429,40 @@ class TestLooksLayerUntouched:
         assert pools.bindings["Color"].occupied == before.occupied
 
 
-class TestValueLineCollisionHazard:
-    """값 라인 중복 — 현재 **보호되지 않는** 위험을 가시화한다.
+class TestValueLineCollisionGuard:
+    """값 라인 충돌 — **건너뛰기 + 사유 보고**로 막는다 (결정 H).
 
     `shared_capture`가 안전한 근거는 "출하 32룩 전수에서 값 라인 중복 0건"이며
-    이것은 **라이브러리 데이터의 성질이지 구조적 보장이 아니다**(plan.md §E가
-    같은 이유로 번들 불변식에 이 assert를 넣었다). 한 장르 안에 전체 속성
-    페이로드가 동일한 룩이 추가되면 `shared_capture`에서도 값 라인이 겹치고,
-    두 번째가 dedupe로 접히면서 **빈 프로그래머 상태로 `Store`가 실행되고
-    콘솔은 성공으로 답한다**.
+    이것은 **라이브러리 데이터의 성질이지 구조적 보장이 아니다**. 한 장르 안에
+    전체 속성 페이로드가 동일한 룩이 추가되면 값 라인이 겹치고, 두 번째가
+    dedupe로 접히면서 **빈 프로그래머 상태로 `Store`가 실행되고 콘솔은 성공으로
+    답한다** — M2가 characterization 테스트로 가시화했던 그 위험이다.
 
-    본 마일스톤은 이 위험에 **가드를 넣지 않는다** — 거부/건너뛰기 중 무엇을
-    할지는 등록부(결정 A~G) 밖의 새 결정이고, 감사 D6이 "등록부 밖에서 SPEC급
-    동작을 신설했다"를 지적한 그 부류이기 때문이다. 대신 현재 관측 사실을 여기
-    고정한다: 누군가 가드를 넣으면 이 테스트가 깨지고, 그 순간 결정이 기록을
-    강제받는다.
+    거부(예외)가 아니라 건너뛰기를 고른 이유: `_plan_stores`가 이미
+    `conflict`/`no_free_slot`/`pool_unresolved`를 전부 `SkippedStore`로 답한다
+    (`server/looks/instantiate.py:325-384`). "이 저장은 안전하게 일어날 수
+    없다"에 대한 이 코드베이스의 답은 예외가 아니라 사유를 단 건너뜀이고,
+    `LookInstantiationError`는 구조적 기형(알 수 없는 shape, 목적지 불일치)에만
+    쓴다. 장르 하나를 통째로 실패시키면 버스킹 준비가 아무 산출도 못 낸다.
+
+    가드는 `busking.py`에 산다 — `instantiate.py`는 PRESERVE이고, 결정 E가
+    "frozen을 바깥에서 감싼다"고 정한 그 형상이다.
     """
 
-    def test_identical_payloads_collide_and_are_deduped_today(self):
+    @staticmethod
+    def _colliding_pair():
+        return [
+            make_look("a", "룩 A", attrs=(("Dimmer", 80),)),
+            make_look("b", "룩 B", attrs=(("Dimmer", 80),)),  # 동일 페이로드
+        ]
+
+    def test_the_colliding_look_emits_no_commands(self):
+        bundle = make_bundle(self._colliding_pair())
+        values = [c for c in bundle.commands if c.startswith("Attribute ")]
+        assert len(values) == 1, "겹치는 값 라인은 애초에 번들에 들어가지 않는다"
+        assert bundle.spans[1] == (bundle.spans[1][0], bundle.spans[1][0])
+
+    def test_nothing_is_silently_eaten_by_dedupe_anymore(self):
         from server.orchestrator.tools import ToolCall, build_toolset
 
         executed: list[str] = []
@@ -454,25 +478,70 @@ class TestValueLineCollisionHazard:
             def query_state(self, path: str) -> dict:
                 return {}
 
-        bundle = make_bundle(
-            [
-                make_look("a", "룩 A", attrs=(("Dimmer", 80),)),
-                make_look("b", "룩 B", attrs=(("Dimmer", 80),)),  # 동일 페이로드
-            ]
-        )
-        values = [c for c in bundle.commands if c.startswith("Attribute ")]
-        assert len(values) == 2, "번들 문자열에는 두 줄이 살아 있다"
-        assert len(set(values)) == 1, "그러나 두 줄은 같은 문자열이다"
-
+        bundle = make_bundle(self._colliding_pair())
         registry = build_toolset(execution_port=_Port(), state_port=_State())
         execution = registry.dispatch(
             ToolCall(id="t1", name="run_commands", arguments={"commands": list(bundle.commands)})
         )
         statuses = [o.status for o in execution.command_outcomes]
-        assert "skipped_already_executed" in statuses, (
-            "이 위험이 사라졌다면 가드가 들어온 것이다 — 결정을 등록부에 기록하고 "
-            "이 characterization 테스트를 그 결정의 테스트로 교체하라"
+        assert statuses, "per-command status가 비어 있으면 이 검사는 공허하다"
+        assert "skipped_already_executed" not in statuses
+        assert executed == list(bundle.commands), "콘솔이 받은 것과 번들이 한 줄도 어긋나지 않는다"
+
+    def test_the_skip_is_reported_per_preset_store_with_its_reason(self):
+        bundle = make_bundle(self._colliding_pair())
+        second = bundle.looks[1]
+        assert second.created == ()
+        assert second.skipped, "조용히 사라지지 않는다 — 사유가 남는다"
+        assert {s.reason for s in second.skipped} == {VALUE_LINE_COLLISION}
+        # 단위는 프리셋 저장 1회다: Dimmer 하나만 값이 있으므로 1건.
+        assert second.skipped_count == 1
+        assert "a" in second.skipped[0].detail, "충돌 상대를 사유에 남긴다"
+
+    def test_the_first_look_is_untouched(self):
+        bundle = make_bundle(self._colliding_pair())
+        assert bundle.looks[0].created, "먼저 온 룩은 온전히 저장된다"
+        assert bundle.looks[0].skipped == ()
+
+    def test_the_skipped_look_does_not_consume_a_slot(self):
+        looks = [
+            *self._colliding_pair(),
+            make_look("c", "룩 C", attrs=(("Dimmer", 55),)),
+        ]
+        bundle = make_bundle(looks)
+        slots = [p.slot for plan in bundle.looks for p in plan.created]
+        assert slots == [1, 2], "건너뛴 룩이 슬롯을 먹으면 원장에 구멍이 남는다"
+
+    def test_the_guard_does_not_raise(self):
+        # 거부가 아니라 건너뛰기다 — 장르 전량이 죽지 않는다.
+        bundle = make_bundle(self._colliding_pair())
+        assert bundle.commands, "번들은 여전히 실행 가능하다"
+        assert len(bundle.looks) == 2, "룩은 둘 다 보고에 나타난다"
+
+    def test_distinct_payloads_are_not_affected(self):
+        # 비공허성 — 가드가 정상 경로를 잡아먹지 않는다.
+        bundle = make_bundle(
+            [
+                make_look("a", "룩 A", attrs=(("Dimmer", 80),)),
+                make_look("b", "룩 B", attrs=(("Dimmer", 81),)),
+            ]
         )
-        assert len(executed) == len(bundle.commands) - 1, (
-            "정확히 값 라인 한 줄이 콘솔에 닿지 않는다"
+        assert all(plan.created for plan in bundle.looks)
+        assert all(plan.skipped == () for plan in bundle.looks)
+
+    def test_a_look_that_stored_nothing_does_not_reserve_its_value_line(self):
+        # 그룹이 하나도 안 붙은 룩은 값 라인을 발화하지 않았으므로, **같은 번들
+        # 안에서** 같은 페이로드의 뒤 룩이 그것 때문에 막히면 안 된다.
+        # 번들을 따로 두 개 만들면 원장이 공유되지 않아 이 검사가 공허해진다 —
+        # 실제로 이 테스트의 첫 판이 그래서 "빈 룩도 예약" 뮤테이션을 놓쳤다.
+        bundle = make_bundle(
+            [
+                make_look("a", "룩 A", roles=("프론트",), attrs=(("Dimmer", 80),)),
+                make_look("b", "룩 B", roles=("백라이트",), attrs=(("Dimmer", 80),)),
+            ],
+            groups=((11, "Back Wash"),),  # 백라이트만 주소를 가진 리그
         )
+        assert bundle.looks[0].commands == (), "앞 룩은 아무것도 발화하지 않았다"
+        assert bundle.looks[0].created == ()
+        assert bundle.looks[1].created, "발화하지 않은 값 라인은 예약이 아니다"
+        assert bundle.looks[1].skipped == ()

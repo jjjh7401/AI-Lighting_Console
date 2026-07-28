@@ -121,14 +121,15 @@ def _call(name: str, arguments: dict | None = None, call_id: str = "call-1") -> 
 class TestRegistry:
     def test_the_registered_tools_are_exactly_the_declared_set(self):
         # AC-MVP-013 (run_commands / query_state / deploy_plugin /
-        # get_rig_context) + AC-LOOKLIB-010's find_looks and instantiate_look.
+        # get_rig_context) + AC-LOOKLIB-010's find_looks and instantiate_look
+        # + AC-BUSKWIZ-011's prepare_busking.
         # The count is asserted against the declared tuple's length so the set
         # stays CLOSED: adding a handler without declaring it, or declaring one
         # without a handler, still fails here.
         registry = _registry()
         names = [definition.name for definition in registry.definitions()]
         assert sorted(names) == sorted(TOOL_NAMES)
-        assert len(names) == len(TOOL_NAMES) == 6
+        assert len(names) == len(TOOL_NAMES) == 7
 
     def test_the_four_original_tools_are_still_registered(self):
         # The M5 addition must not have displaced any of them.

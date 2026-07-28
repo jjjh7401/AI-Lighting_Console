@@ -499,6 +499,98 @@ PRESERVE diff(`d176b81..`) **빈 출력** — `server/looks/instantiate.py` 포�
 **중복 제거**: M2 테스트의 지역 `FULL_RIG`/`_look`/`_bundle_for`가 신규 픽스처
 모듈과 동일해 그쪽으로 통합했다(호출부 50곳 기계 치환, 87 passed 유지).
 
+### 결정 H — 값 라인 충돌: 건너뛰기 + 사유 보고 (2026-07-27) — **확정**
+
+M2가 characterization 테스트로 가시화하고 사용자 결정으로 남겨 둔 위험을 닫았다.
+
+**위험**: 한 장르 안에 전체 속성 페이로드가 동일한 룩이 둘이면 `shared_capture`의
+값 라인이 문자열로 같아지고, 값 라인은 dedupe 면제 집합에 없으므로 두 번째가
+`skipped_already_executed`로 접힌다. 직전 `ClearAll`·선택은 면제라 살아남아
+**빈 프로그래머 상태로 `Store`가 실행되고 콘솔은 성공으로 답한다.**
+
+**결정**: 거부(예외)가 아니라 **건너뛰기 + 사유 보고**.
+
+| 후보 | 판정 | 근거 |
+|---|---|---|
+| 거부(`LookInstantiationError`) | 기각 | 룩 하나의 저작 결함으로 장르 전량이 죽는다. 그 예외는 이 코드베이스에서 **구조적 기형**(알 수 없는 shape, 목적지 불일치)에만 쓰인다 |
+| **건너뛰기 + `SkippedStore`** | **채택** | `_plan_stores`가 `conflict`/`no_free_slot`/`pool_unresolved`를 전부 이 형태로 답한다(`instantiate.py:325-384`) — "이 저장은 안전하게 일어날 수 없다"에 대한 기존 답이 정확히 이것이다. M3의 2단 보고가 이미 표현 채널을 갖고 있다 |
+| 현행 유지 | 기각 | 조용한 오작동. 콘솔이 성공으로 답하므로 사용자가 알 방법이 없다 |
+
+**거처**: `server/looks/busking.py`의 `_guard_collision` — `instantiate.py`는
+PRESERVE이고, 결정 E("frozen을 바깥에서 감싼다")가 정한 그 형상이다. 조건이
+**번들 안의 이웃 룩**에 달려 있어 룩 하나만 보는 `build_instantiation`은
+원리적으로 알 수 없다는 점도 거처를 정한다.
+
+비교 문자열은 `instantiate._values_line`에서 가져온다 — dedupe가 실제로 비교하는
+바로 그 문자열이며, 여기서 다시 조립하면 두 곳이 갈라진다.
+
+**v1 라이브러리에서는 발동하지 않는다**(출하 32룩 값 라인 중복 0건) — 오늘의
+동작 변화는 0이고, 내일 라이브러리에 중복이 들어올 때 조용히 깨지는 대신
+보고에 뜬다.
+
+| 뮤테이션 | 결과 |
+|---|---|
+| 가드 제거 | **4 failed** |
+| 빈 번들도 값 라인 예약 | **첫 판 33 passed — 미검출** → 테스트가 번들을 둘 따로 만들어 원장이 공유되지 않았다(공허). 한 번들 안에서 검사하도록 교체 → **1 failed** |
+| 건너뛴 룩도 원장 전진(`created` 유지) | **2 failed** |
+
+M2가 남긴 `TestValueLineCollisionHazard`는 예고대로 깨졌고, `TestValueLineCollisionGuard`
+8건으로 교체했다. 부수적으로 `test_every_look_cycle_is_clearall_bracketed`의 픽스처가
+우연히 동일 페이로드를 쓰고 있어(주제는 괄호 감싸기) 서로 다른 값으로 고쳤다.
+
+### M4 — 툴 배선 · 실행 경로 · LiveLock (cycle_type=tdd, 2026-07-27) — **완료**
+
+#### 산출물
+
+| 파일 | 상태 | 내용 |
+|---|---|---|
+| `server/orchestrator/tools.py` | 변경 | `prepare_busking` 핸들러 + `ToolDefinition` + `TOOL_NAMES`/`handlers` 등재 (**신규 툴 등록만**) |
+| `server/looks/report.py` | 변경 | `BuskingReport.to_dict()` — `LookInstantiation.to_dict()` 관례 준수 |
+| `server/tests/test_busking_tool.py` | 신규 | 20 tests — AC-BUSKWIZ-009/010/011 |
+| `server/tests/test_tools.py` | 변경 | 닫힌 집합 개수 6 → 7 (툴 추가의 정당한 귀결) |
+
+#### 결정과 근거
+
+1. **툴 1종 `prepare_busking`**, 인자는 `genre` 하나. 스키마에 그룹·풀·슬롯·픽스처
+   필드 **0개**이고 핸들러가 `collect_rig_sections`로 직접 읽는다(REQ-BUSKWIZ-020) —
+   근거는 `tools.py:735-738`이 이미 적어 둔 그것이다.
+2. **`run_commands`의 호출자**이지 제2 실행 표면이 아니다. 게이트·LiveLock·dedupe·
+   감사 로그를 그 한 경로에서 상속한다.
+3. **`is_error` 규약**: 알 수 없는 장르 = `True`(후보 목록으로 정정 가능),
+   저장 0건 = `False`(재시도해도 같은 리그는 같은 답), **LiveLock 강등 = `False`**.
+   강등을 `True`로 두면 자기수정 루프가 같은 잠금에 다시 부딪힌다.
+4. **LiveLock 감지는 `gate_status == "locked"`**. plan.md와 `gate.py:72` 주석은
+   `"proposal"`을 상태로 열거하지만 **실제 발화값은 `"locked"`**이고 `"proposal"`은
+   per-command status다(`gate.py:471-485` 실측). 리터럴을 `_LOCKED` 상수로 두고
+   출처를 주석에 박았다.
+5. **LiveLock 테스트는 실물 `SafetyGate` + 활성 `LiveLock`**. 목 게이트로 상태
+   문자열만 흉내내면 "우리가 그 문자열을 읽는가"만 검증된다. 콘솔 페이크는 송신
+   시도 시 `AssertionError`를 던진다.
+
+#### 뮤테이션 — 5종 전부 검출
+
+| 뮤테이션 | 결과 |
+|---|---|
+| LiveLock 강등을 `is_error=True`로 | 1 failed |
+| 알 수 없는 장르를 `is_error=False`로 | 1 failed |
+| 저장 0건을 `is_error=True`로 | 1 failed |
+| `handlers`에서만 누락(선언은 유지) | **14 failed** |
+| 스키마에 리그 필드 추가 | 1 failed |
+
+#### 게이트
+
+| 항목 | 결과 |
+|---|---|
+| `test_busking_tool.py` | **20 passed** |
+| `pytest server/tests/ -q` (전체 회귀, **직접 실측**) | **2405 passed · 0 failed** (85.82s) |
+| M3 종료 시점 실측 대비 | 2378 → 2405 (**+27** = 신규 20 + 가드 8 − 교체 1, 회귀 0건) |
+| `ruff check` / `format --check` | All checks passed |
+| PRESERVE `git diff --stat d176b81 -- <목록>` | **빈 출력** |
+| `tools.py` 잠긴 구간 (`_PROGRAMMER_STATE_COMMANDS` · `_is_programmer_state` · dedupe) | **바이트 단위 무변경** (`git show d176b81:` 대조) |
+| `tools.py` 변경 성격 | 175 insertions / 2 deletions — 2건은 `TOOL_NAMES`·`handlers` 등재 |
+
+**AC 판정**: AC-BUSKWIZ-009 PASS · AC-BUSKWIZ-010 PASS · AC-BUSKWIZ-011 PASS.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run>_
