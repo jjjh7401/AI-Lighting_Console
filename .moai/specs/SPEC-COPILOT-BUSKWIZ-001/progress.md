@@ -591,6 +591,63 @@ M2가 남긴 `TestValueLineCollisionHazard`는 예고대로 깨졌고, `TestValu
 
 **AC 판정**: AC-BUSKWIZ-009 PASS · AC-BUSKWIZ-010 PASS · AC-BUSKWIZ-011 PASS.
 
+### M5 — 익스큐터 레이아웃 GO/DESCOPE (cycle_type=tdd, 2026-07-27) — **완료 (② DESCOPE 분기)**
+
+#### 분기 판정
+
+M0 측정 2가 결정적이다: 미점유 익스큐터 인덱스가 어느 주소형으로도 해석되지
+않아 **"비어 있는 익스큐터"를 식별하는 질의 경로가 존재하지 않는다.**
+`REQ-BUSKWIZ-016`의 게이트는 `16 ∧ 17 ∧ 19`이므로 2번 하나로 이미 거짓이고,
+v1은 익스큐터·페이지 대상 커맨드를 **0건** 발화한다. **DESCOPE는 실패가 아니라
+정의된 결과다.**
+
+#### 산출물
+
+| 파일 | 상태 | 내용 |
+|---|---|---|
+| `server/tests/test_busking_executor.py` | 신규 | 10 passed + **3 skipped(GO 분기 보존)** — AC-BUSKWIZ-012 ② / AC-BUSKWIZ-013 |
+| `server/looks/busking.py` | **무변경** | GO 분기에서만 추가하도록 plan.md가 정했고, 분기가 ②이므로 추가 없음 |
+
+#### 검증 수단 — 소스 grep이 아니라 산출물 전수
+
+dotted form이 실제로 발화되는 유일한 경로는 `f"Page {page}.{executor}"` 같은
+변수 조립이고 **그 소스 문자열에는 숫자가 없어** `\d+\.\d+`가 결코 매치하지
+않는다(감사 D3). 그래서 4장르 전량이 **실제로 생성한 커맨드 튜플 전수**에 스캔을
+건다. 리터럴 `100` 검사도 텍스트가 아니라 **AST `BinOp` 피연산자** 검사다.
+
+**스캐너 자체의 비공허성을 별도 테스트로 증명한다** — 금지 형태를 심어 스캐너가
+그것을 잡는지 확인한다(`Assign Sequence 17 At Executor 191`,
+`Assign Sequence 17 At Page 1.102`, `page_no * 100 + slot`). 이것이 없으면
+"0건 통과"와 "정규식이 아무것도 안 잡음"이 구별되지 않는다.
+
+#### GO 분기 — 삭제하지 않고 skip 사유를 달아 보존
+
+`TestGoBranch` 3건이 `skip` 사유와 함께 남아 있다(AC-BUSKWIZ-012 비고). 사유
+문자열에 **후속 SPEC의 출발점**을 함께 기록했다: 익스큐터 축은 "문법이 없다"가
+아니라 **"문법은 파싱되나 효과와 대상 식별이 미검증"**에서 시작해야 한다
+(M0 G2의 정정). 번호 출처가 `resolved_executor_nos`가 **아님**(그것은 정의상
+점유된 익스큐터라 운영자 플레이백을 덮는다)도 테스트 본문 주석에 남겼다.
+
+#### 뮤테이션 — 3종 전부 검출
+
+| 뮤테이션 | 결과 |
+|---|---|
+| 번들에 `Assign Sequence 17 At Executor 191` 주입 | 2 failed |
+| 번들에 `Assign Sequence 17 At Page 1.102` 주입 | 3 failed |
+| `page * 100 + slot` 산술 도입 | 1 failed |
+
+#### 게이트
+
+| 항목 | 결과 |
+|---|---|
+| `test_busking_executor.py` | **10 passed · 3 skipped** |
+| `pytest server/tests/ -q` (전체 회귀, **직접 실측**) | **2415 passed · 3 skipped · 0 failed** (87.07s) |
+| M4 종료 시점 실측 대비 | 2405 → 2415 (**+10** = 신규 통과 테스트 수와 일치, 회귀 0건) |
+| `ruff check` / `format` | OK |
+| PRESERVE `git diff --stat d176b81 -- <목록>` | **빈 출력** |
+
+**AC 판정**: AC-BUSKWIZ-012 PASS(② 경로) · AC-BUSKWIZ-013 PASS.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run>_
