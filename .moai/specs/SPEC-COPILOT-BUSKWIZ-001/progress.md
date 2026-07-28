@@ -836,7 +836,31 @@ next: "/moai sync — 문서 동기화 · PR"
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync>_
+```yaml
+sync_status: audit-ready
+sync_complete_at: 2026-07-28
+gate_sync_1: "PASS — 작업 트리 clean, pytest 2423 passed · 3 skipped · 0 failed"
+artifacts_updated:
+  - "CHANGELOG.md — [Unreleased] Added 최상단에 BUSKWIZ 항목(M0~M7 + 결정 H + 정직한 잔여 4건 + 실측 테스트 수)"
+  - "spec.md frontmatter — status: draft → completed, updated 2026-07-28"
+  - "acceptance.md 상태 줄 — status: completed, AC 17/17 PASS 명시"
+  - "progress.md §E.3 run-phase / §E.4 sync-phase audit-ready 신호"
+artifacts_unchanged:
+  - "README.md — 툴 목록·기능 서술이 없어 갱신 대상 아님(grep 0건)"
+  - "docs/ — 본 SPEC이 참조하는 사용자 문서 없음"
+  - "plan.md · design.md · research.md — sync는 본문을 고치지 않는다(소유권 매트릭스)"
+spec_divergence:
+  requirements_implemented: "20/20"
+  scope_reductions: 0
+  scope_additions: 1   # 결정 H — 등록부 밖 신설이 아니라 M2가 남긴 사용자 결정을 닫은 것
+  descoped_by_live_verdict: "REQ-BUSKWIZ-016 (익스큐터 레이아웃) — M0 판정, AC-012 ② 경로로 판정 완료"
+honest_residuals:
+  - "라이브 검증은 슬롯·라벨 존재 수준 — 응답기가 프리셋 내용을 읽지 못한다"
+  - "M7에서 승인 채널 미호출 — 게이트가 승인 요구 없이 통과"
+  - "익스큐터 축 G1(페이지·익스큐터 저작 문법 존부) 미측정 — 후속 SPEC 최우선 항목"
+  - "값 라인 충돌 가드는 v1 라이브러리에서 발동하지 않아 라이브 실증 없음"
+next: "PR — feature/SPEC-COPILOT-BUSKWIZ-001 → main (수동, git-strategy auto_pr=false)"
+```
 
 ## §F. Phase 4 Mode Selection — 확정 기록 (오케스트레이터 소유)
 

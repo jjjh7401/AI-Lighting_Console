@@ -1,6 +1,6 @@
 # SPEC-COPILOT-BUSKWIZ-001 — 인수 기준 (acceptance)
 
-status: draft (v0.1.4, 2026-07-27) · Tier L · 본 문서는 spec.md의 요구를 관측 가능한 검증 기준으로 전개한다.
+status: completed (v0.1.4, 2026-07-28) · Tier L · 본 문서는 spec.md의 요구를 관측 가능한 검증 기준으로 전개한다. **AC-BUSKWIZ-001~017 17건 전량 PASS**(012는 ② DESCOPE 경로) — 판정 근거는 progress.md §E.2.
 
 > **v0.1.4 — 재감사(PASS 0.88) 조건부 지적 반영.** AC 17건·REQ 커버리지·마일스톤 배정 **무변경**. (재D2 부분 닫힘) AC-BUSKWIZ-004 구간 3의 열거에서 **"룩별 in-scope 풀 수 차이"를 삭제**했다 — 값 없는 패밀리는 `SkippedStore`를 만들지 않아(`server/looks/instantiate.py:332-334`) 그 룩은 완전 성공이며 보고할 건너뜀이 없다. 남은 트리거는 **풀 미해석**과 **라벨 충돌** 둘이고 **건너뜀 항목 비공허성** assert를 추가했다. §C.0의 REQ-BUSKWIZ-010 행 비고에 잔존하던 "원장 소진" 표현도 함께 교체했다. (재P3) §E·§F의 슬러그 없는 축약형 4건을 완전 토큰으로 교체 — 6종 전체 스캔 0건.
 >

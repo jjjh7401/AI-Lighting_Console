@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-BUSKWIZ-001
 title: "버스킹 준비 마법사 (Busking Preparation Wizard)"
 version: "0.1.4"
-status: draft
+status: completed
 created: 2026-07-27
-updated: 2026-07-27
+updated: 2026-07-28
 author: manager-spec
 priority: P1
 phase: "Phase 2 연출 계층 (v1.3.0 target)"
