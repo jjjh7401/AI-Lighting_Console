@@ -18,16 +18,29 @@ REQ-BUSKWIZ-001 (절단 없는 결정론적 조회) · REQ-BUSKWIZ-002 (한/영 
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, replace
 
+from server.looks.instantiate import (
+    CreatedPreset,
+    LookInstantiation,
+    LookInstantiationError,
+    PoolIndex,
+    build_instantiation,
+    resolve_pools,
+)
 from server.looks.matching import EMPTY_QUERY, resolve_genre
+from server.looks.resolver import RoleResolution, resolve_roles
 from server.looks.schema import Look, LookLibrary
 
 __all__ = [
     "EMPTY_QUERY",
     "UNRESOLVED_GENRE",
+    "GenreBundle",
     "GenreSelection",
+    "build_genre_bundle",
     "genres_in",
+    "instantiate_genre",
     "looks_for_genre",
     "select_genre",
 ]
@@ -101,3 +114,146 @@ def select_genre(library: LookLibrary, query: str) -> GenreSelection:
     if genre is None:
         return GenreSelection(reason=UNRESOLVED_GENRE, candidates=candidates)
     return GenreSelection(genre=genre, looks=looks_for_genre(library, genre))
+
+
+# -- M2: 슬롯 원장 + 다중 룩 번들 결합 ------------------------------------------
+
+
+@dataclass(frozen=True)
+class GenreBundle:
+    """한 장르의 룩 전량을 담은 **하나의** 커맨드 번들과 룩별 계획.
+
+    ``looks``는 룩 하나당 ``LookInstantiation`` 하나이며 조회 순서를 유지한다 —
+    보고 계층(M3)이 "장르의 모든 룩이 정확히 한 번씩" 판정에 나타남을
+    이 순서 위에서 세운다.
+    """
+
+    genre: str
+    commands: tuple[str, ...] = ()
+    looks: tuple[LookInstantiation, ...] = ()
+
+    @property
+    def created_count(self) -> int:
+        return sum(len(plan.created) for plan in self.looks)
+
+    @property
+    def skipped_count(self) -> int:
+        """N in "N개 건너뜀" — 단위는 프리셋 저장 1회이지 룩이 아니다."""
+        return sum(plan.skipped_count for plan in self.looks)
+
+    @property
+    def complete(self) -> bool:
+        """룩 0개짜리 실행은 완전 성공이 아니다 — 만든 것이 없다."""
+        return bool(self.looks) and all(plan.complete for plan in self.looks)
+
+
+def _advance(pools: PoolIndex, created: tuple[CreatedPreset, ...]) -> PoolIndex:
+    """이번 룩이 청구한 슬롯과 라벨을 원장에 누적한 **새** ``PoolIndex``.
+
+    ``PoolBinding``/``PoolIndex``는 frozen인 채로 두고 바깥에서 감싼다 — 그
+    자료구조를 고치는 순간 단일 룩 경로(``instantiate_look``)와 P1-1 소비자까지
+    함께 흔들린다(spec.md §A PRESERVE).
+
+    **라벨도 함께 누적하는 이유**: ``_plan_stores``의 충돌 검사는
+    ``binding.labels``, 즉 **콘솔이 이미 갖고 있는 라벨**만 본다. 같은 번들이
+    만들어 낼 라벨끼리는 비교 대상이 아니므로, 표시 이름이 같은 두 룩이 한
+    장르에 있으면 서로를 모른 채 각자 저장된다. 현행 32룩에는 그런 이름이
+    없지만 **막는 기제가 없던 것**이고, 0건 실측을 방어로 계산하지 않는다.
+    """
+    if not created:
+        return pools
+    bindings = dict(pools.bindings)
+    for preset in created:
+        binding = bindings[preset.family]
+        if binding.occupied is None:
+            # 도달 불가: 미관측 풀은 `_plan_stores`가 이미 건너뛰므로
+            # CreatedPreset를 내지 않는다. None을 튜플로 승격하면 미관측이
+            # 관측으로 둔갑하므로, 그 경우엔 원장을 전진시키지 않는다.
+            continue
+        bindings[preset.family] = replace(
+            binding,
+            occupied=binding.occupied + (preset.slot,),
+            labels=binding.labels + (preset.label,),
+        )
+    return replace(pools, bindings=bindings)
+
+
+def _merge(bundles: list[tuple[str, ...]]) -> tuple[str, ...]:
+    """룩별 번들을 **하나의** 번들로 결합한다.
+
+    단순 연접은 금지다(REQ-BUSKWIZ-006): 룩별 번들은 저마다 선두에 목적지
+    커맨드를 갖는데, 2..N번째의 그것은 ``run_commands``의 dedupe에 걸려
+    ``skipped_already_executed``로 접힌다. 그러면 번들의 문자열과 콘솔이 실제로
+    받은 것이 어긋난다 — LOOKLIB M7이 실물에서 관측한 그 탈락이다. 목적지는
+    **선두에 정확히 1회**만 둔다.
+
+    목적지 문자열을 여기서 다시 적지 않는다: 첫 비어 있지 않은 룩 번들의 선두가
+    정본이고, 뒤 번들은 **같은 선두를 가졌음을 확인한 뒤에만** 그 한 줄을
+    떼어낸다. 리터럴을 복제하면 룩 계층이 바꿔도 여기가 모른다.
+    """
+    merged: list[str] = []
+    destination: str | None = None
+    for commands in bundles:
+        if not commands:
+            continue  # 정직한 빈 출력 — 그 룩은 세울 저장이 없었다
+        if destination is None:
+            destination = commands[0]
+            merged.extend(commands)
+            continue
+        if commands[0] != destination:
+            raise LookInstantiationError(
+                "look bundles disagree on the destination command: "
+                f"{destination!r} vs {commands[0]!r}"
+            )
+        merged.extend(commands[1:])
+    return tuple(merged)
+
+
+def build_genre_bundle(
+    genre: str,
+    looks: tuple[Look, ...],
+    *,
+    resolution: RoleResolution,
+    pools: PoolIndex,
+) -> GenreBundle:
+    """이미 해석된 리그 하나로 룩 전량의 단일 번들을 만든다.
+
+    리그 해석을 **인자로 받는다**는 것이 LOOKLIB이 예약한 "API 형상"의 실체다 —
+    ``build_instantiation``이 해석 결과를 키워드 전용 파라미터로 받기 때문에
+    한 번 해석한 리그를 N개 룩에 재사용할 수 있다.
+
+    캡처 형상은 ``shared_capture`` **고정**이며 파라미터로 노출하지 않는다
+    (REQ-BUSKWIZ-006 하위 절): per-family 형상은 룩마다 패밀리별 값 라인을 따로
+    발화하는데, 서로 다른 룩의 값 라인이 문자열로 같아지는 경우가 실재한다
+    (실측: edm 두 룩의 ``Attribute 'Dimmer' At 100``). 값 라인은 dedupe 면제
+    집합에 없고 직전 ``ClearAll``은 면제라 살아남으므로, 두 번째 값 라인이
+    탈락하면 **빈 프로그래머 상태로 ``Store``가 실행되고 콘솔은 성공으로
+    답한다.**
+    """
+    plans: list[LookInstantiation] = []
+    ledger = pools
+    for look in looks:
+        plan = build_instantiation(look, resolution=resolution, pools=ledger)
+        plans.append(plan)
+        ledger = _advance(ledger, plan.created)
+    return GenreBundle(
+        genre=genre,
+        commands=_merge([plan.commands for plan in plans]),
+        looks=tuple(plans),
+    )
+
+
+def instantiate_genre(
+    library: LookLibrary,
+    genre: str,
+    *,
+    groups_section: Mapping[str, object],
+    preset_pools_section: Mapping[str, object],
+) -> GenreBundle:
+    """리그 섹션 원본에서 시작하는 편의 래퍼 — 해석은 **각각 정확히 1회**."""
+    return build_genre_bundle(
+        genre,
+        looks_for_genre(library, genre),
+        resolution=resolve_roles(groups_section),
+        pools=resolve_pools(preset_pools_section),
+    )

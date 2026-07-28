@@ -1,0 +1,510 @@
+"""M2 — 슬롯 원장 + 다중 룩 번들 빌더 (AC-BUSKWIZ-003 ~ 007).
+
+SPEC-COPILOT-BUSKWIZ-001 REQ-BUSKWIZ-004 ~ 010.
+
+본 SPEC의 핵심 마일스톤이다. 선행 구현의 하드 결함 2건이 여기서 해소(슬롯
+비전진)·회피(`ChangeDestination Root` dedupe 탈락)되며, 그 두 결함이 **실재
+한다는 것**과 **본 계층이 감쌌다는 것**을 같은 파일에서 함께 고정한다.
+"""
+
+from __future__ import annotations
+
+import ast
+import re
+from pathlib import Path
+
+import pytest
+
+from server.looks import instantiate as instantiate_mod
+from server.looks.busking import (
+    GenreBundle,
+    build_genre_bundle,
+    instantiate_genre,
+    looks_for_genre,
+)
+from server.looks.instantiate import (
+    CONFLICT,
+    NO_FREE_SLOT,
+    POOL_UNRESOLVED,
+    build_instantiation,
+    resolve_pools,
+)
+from server.looks.loader import load_library_from_dir
+from server.looks.resolver import resolve_roles
+from server.looks.schema import AttributeValue, Look
+from server.tests.test_looks_instantiate import (
+    FOUR_FAMILY_ATTRIBUTES,
+    _groups,
+    _pools,
+    _preset,
+)
+
+_BUSKING_MODULE = Path("server/looks/busking.py")
+
+# 역할 6종을 전부 덮는 리그. 룩이 선언한 역할이 무엇이든 그룹이 붙는다.
+FULL_RIG = (
+    (11, "Back Wash"),
+    (12, "FOH Wash"),
+    (13, "Side L"),
+    (14, "Top"),
+    (15, "Cyc"),
+    (16, "Special"),
+)
+
+
+def _look(look_id: str, name: str, *, dynamics: int = 3, roles=("백라이트",), attrs=None) -> Look:
+    return Look(
+        look_id=look_id,
+        display_name=name,
+        genre="rock",
+        dynamics=dynamics,
+        roles=roles,
+        attributes=tuple(AttributeValue(name=n, value=v) for n, v in (attrs or (("Dimmer", 80),))),
+    )
+
+
+def _bundle_for(looks, *, groups=FULL_RIG, pools=None) -> GenreBundle:
+    groups_section = _groups(*groups)
+    pools_section = pools if pools is not None else _pools()
+    return build_genre_bundle(
+        "rock",
+        tuple(looks),
+        resolution=resolve_roles(groups_section),
+        pools=resolve_pools(pools_section),
+    )
+
+
+def _stores(commands) -> list[str]:
+    return [c for c in commands if c.startswith("Store Preset ")]
+
+
+def _slots(commands, pool: int) -> list[int]:
+    out = []
+    for c in _stores(commands):
+        match = re.fullmatch(rf"Store Preset {pool}\.(\d+)", c)
+        if match:
+            out.append(int(match.group(1)))
+    return out
+
+
+@pytest.fixture(scope="module")
+def library():
+    return load_library_from_dir()
+
+
+# -- AC-BUSKWIZ-003 ------------------------------------------------------------
+
+
+class TestRigResolvedExactlyOnce:
+    """AC-BUSKWIZ-003 — 룩 수에 비례하는 해석 호출은 실패다."""
+
+    def test_eight_looks_resolve_the_rig_once(self, monkeypatch, library):
+        import server.looks.busking as busking
+
+        calls = {"roles": 0, "pools": 0}
+        real_roles, real_pools = busking.resolve_roles, busking.resolve_pools
+
+        def spy_roles(section):
+            calls["roles"] += 1
+            return real_roles(section)
+
+        def spy_pools(section):
+            calls["pools"] += 1
+            return real_pools(section)
+
+        monkeypatch.setattr(busking, "resolve_roles", spy_roles)
+        monkeypatch.setattr(busking, "resolve_pools", spy_pools)
+
+        bundle = instantiate_genre(
+            library,
+            "worship",
+            groups_section=_groups(*FULL_RIG),
+            preset_pools_section=_pools(),
+        )
+        assert len(bundle.looks) == 8, "8룩 장르가 아니면 이 테스트는 비례성을 못 본다"
+        assert calls == {"roles": 1, "pools": 1}
+
+
+# -- AC-BUSKWIZ-004 ------------------------------------------------------------
+
+
+class TestSlotLedger:
+    """AC-BUSKWIZ-004 — 어떤 두 룩도 같은 슬롯을 겨냥하지 않는다."""
+
+    def test_segment_1_three_looks_claim_distinct_slots(self):
+        # 구간 1 — 점유 (1,2)에서 시작하면 세 룩이 3·4·5를 나눠 갖는다.
+        pools = _pools(contents={4: [_preset(1, "기존 A"), _preset(2, "기존 B")]})
+        bundle = _bundle_for(
+            [
+                _look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),
+                _look("b", "룩 B", attrs=(("ColorRGB_R", 90),)),
+                _look("c", "룩 C", attrs=(("ColorRGB_R", 80),)),
+            ],
+            pools=pools,
+        )
+        claimed = _slots(bundle.commands, 4)
+        assert claimed == [3, 4, 5]
+        assert len(claimed) == len(set(claimed))
+
+    def test_segment_2_the_defect_is_real_and_this_layer_wraps_it(self):
+        """구간 2 — 결함의 실재와 해소를 함께 고정한다.
+
+        이 테스트가 사라지면 원장의 존재 이유가 문서에만 남는다.
+        """
+        looks = [
+            _look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),
+            _look("b", "룩 B", attrs=(("ColorRGB_R", 90),)),
+            _look("c", "룩 C", attrs=(("ColorRGB_R", 80),)),
+        ]
+        resolution = resolve_roles(_groups(*FULL_RIG))
+        pools = resolve_pools(_pools())
+
+        # 선행 구현을 동일 PoolIndex로 그대로 N회 부르면 —
+        naive = [build_instantiation(look, resolution=resolution, pools=pools) for look in looks]
+        naive_slots = [c.slot for plan in naive for c in plan.created if c.family == "Color"]
+        assert naive_slots == [1, 1, 1], "결함이 재현되지 않으면 원장은 아무것도 감싸지 않는다"
+
+        # — 본 계층은 같은 입력에서 서로 다른 슬롯을 낸다.
+        wrapped = _bundle_for(looks)
+        assert _slots(wrapped.commands, 4) == [1, 2, 3]
+
+    def test_segment_3_mixed_partial_success_pool_unresolved(self):
+        # 구간 3 (i) — Color 풀이 아예 없는 리그: 그 풀 대상 저장만 전량 건너뜀.
+        pools = _pools(pools=((1, "Dimmer"), (5, "Beam"), (6, "Focus")))
+        bundle = _bundle_for(
+            [
+                _look("a", "룩 A", attrs=FOUR_FAMILY_ATTRIBUTES),
+                _look("b", "룩 B", attrs=FOUR_FAMILY_ATTRIBUTES),
+            ],
+            pools=pools,
+        )
+        reasons = {s.reason for plan in bundle.looks for s in plan.skipped}
+        assert POOL_UNRESOLVED in reasons
+        assert bundle.skipped_count > 0, "건너뜀 항목이 비어 있으면 이 구간은 공허하다"
+        assert bundle.created_count > 0, "저장 가능한 것은 저장되어야 한다"
+        assert not bundle.complete
+
+    def test_segment_3_mixed_partial_success_label_conflict(self):
+        # 구간 3 (ii) — 콘솔에 같은 이름의 프리셋이 이미 있다.
+        pools = _pools(contents={4: [_preset(1, "룩 A")]})
+        bundle = _bundle_for(
+            [
+                _look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),
+                _look("b", "룩 B", attrs=(("ColorRGB_R", 90),)),
+            ],
+            pools=pools,
+        )
+        skipped = [s for plan in bundle.looks for s in plan.skipped]
+        assert [s.reason for s in skipped] == [CONFLICT]
+        assert _slots(bundle.commands, 4) == [2], "충돌한 룩은 건너뛰고 다음 룩은 계속된다"
+
+    def test_segment_4_families_are_independent(self):
+        pools = _pools(contents={1: [_preset(1, "기존"), _preset(2, "기존2")]})
+        bundle = _bundle_for(
+            [_look("a", "룩 A", attrs=(("Dimmer", 80), ("ColorRGB_R", 100)))],
+        )
+        assert _slots(bundle.commands, 1) == [1]
+        assert _slots(bundle.commands, 4) == [1]
+
+        bundle2 = _bundle_for(
+            [_look("a", "룩 A", attrs=(("Dimmer", 80), ("ColorRGB_R", 100)))],
+            pools=pools,
+        )
+        assert _slots(bundle2.commands, 1) == [3], "Dimmer 원장만 전진해야 한다"
+        assert _slots(bundle2.commands, 4) == [1], "Color 원장은 영향받지 않는다"
+
+    def test_segment_5_observation_wins_over_the_ledger(self):
+        # 구간 5 — 미관측 풀은 원장이 있든 없든 사용 불가.
+        pools = _pools()
+        pools["objects"][3]["contents_unavailable"] = True  # Color(4번 풀) 관측 실패
+        bundle = _bundle_for(
+            [
+                _look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),
+                _look("b", "룩 B", attrs=(("ColorRGB_R", 90),)),
+            ],
+            pools=pools,
+        )
+        assert _slots(bundle.commands, 4) == []
+        reasons = {s.reason for plan in bundle.looks for s in plan.skipped}
+        assert reasons == {NO_FREE_SLOT}
+
+    def test_segment_6_the_ledger_accumulates_labels_too(self):
+        """구간 6 — 콘솔에 기존 라벨이 없어도 같은 번들 안의 동명 룩을 막는다.
+
+        `_plan_stores`는 `binding.labels`(콘솔이 이미 가진 것)만 보므로 이
+        판정은 원장이 만든다.
+        """
+        bundle = _bundle_for(
+            [
+                _look("a", "같은 이름", attrs=(("ColorRGB_R", 100),)),
+                _look("b", "같은 이름", attrs=(("ColorRGB_R", 90),)),
+            ],
+        )
+        assert _slots(bundle.commands, 4) == [1], "두 번째는 저장되지 않는다"
+        skipped = [s for plan in bundle.looks for s in plan.skipped]
+        assert [s.reason for s in skipped] == [CONFLICT]
+
+
+# -- AC-BUSKWIZ-005 ------------------------------------------------------------
+
+
+class TestBundleShape:
+    """AC-BUSKWIZ-005 — `ChangeDestination Root` 선두 정확히 1회."""
+
+    @staticmethod
+    def _destination() -> str:
+        # 리터럴을 이 테스트가 새로 만들지 않는다 — 단일 룩 번들의 선두가 정본이다.
+        single = build_instantiation(
+            _look("x", "단일"),
+            resolution=resolve_roles(_groups(*FULL_RIG)),
+            pools=resolve_pools(_pools()),
+        )
+        return single.commands[0]
+
+    def test_destination_appears_exactly_once_at_the_head(self):
+        dest = self._destination()
+        bundle = _bundle_for([_look(f"l{i}", f"룩 {i}") for i in range(5)])
+        assert bundle.commands[0] == dest
+        assert bundle.commands.count(dest) == 1
+
+    def test_two_looks_do_not_produce_two_destinations(self):
+        # ③ 룩별 번들의 단순 연접이 아님을 고정.
+        dest = self._destination()
+        bundle = _bundle_for([_look("a", "룩 A"), _look("b", "룩 B")])
+        assert bundle.commands.count(dest) == 1
+
+    def test_every_look_cycle_is_clearall_bracketed(self):
+        bundle = _bundle_for([_look("a", "룩 A"), _look("b", "룩 B")])
+        body = bundle.commands[1:]  # 선두 목적지 제외
+        assert body[0] == "ClearAll"
+        assert body[-1] == "ClearAll"
+        cycles = [c for c in _split_cycles(body) if c]
+        assert len(cycles) == 2, "룩마다 하나의 캡처 사이클"
+        for cycle in cycles:
+            assert cycle[-1].startswith("Label Preset ")
+
+    def test_no_line_is_lost_to_dedupe(self):
+        # ④ 실제 run_commands 경로로 무손실을 확인한다.
+        from server.orchestrator.tools import ToolCall, build_toolset
+
+        executed: list[str] = []
+
+        class _Port:
+            def execute(self, command: str):
+                from server.orchestrator.ports import ExecutionResult
+
+                executed.append(command)
+                return ExecutionResult(ok=True, detail="ok")
+
+        class _State:
+            def query_state(self, path: str) -> dict:
+                return {}
+
+        # 룩마다 값 라인이 달라야 이 테스트가 재는 것을 잰다. 같은 페이로드를
+        # 주면 값 라인이 겹쳐 dedupe가 접는데, 그것은 결합 형상의 결함이 아니라
+        # 아래 `TestValueLineCollisionHazard`가 따로 다루는 별개 사실이다.
+        bundle = _bundle_for(
+            [_look(f"l{i}", f"룩 {i}", attrs=(("Dimmer", 40 + i),)) for i in range(4)]
+        )
+        registry = build_toolset(execution_port=_Port(), state_port=_State())
+        execution = registry.dispatch(
+            ToolCall(id="t1", name="run_commands", arguments={"commands": list(bundle.commands)})
+        )
+        statuses = [outcome.status for outcome in execution.command_outcomes]
+        assert statuses, "per-command status가 비어 있으면 이 검사는 공허하다"
+        assert "skipped_already_executed" not in statuses
+        assert set(statuses) == {"executed_ok"}
+        assert executed == list(bundle.commands), "콘솔이 받은 것과 번들이 한 줄도 어긋나지 않는다"
+
+    def test_capture_shape_is_fixed_and_not_a_parameter(self):
+        # ⑤ per_family 경로 미접촉을 AST 식별자로 고정 (M1의 교훈 — 텍스트 스캔 금지).
+        tree = ast.parse(_BUSKING_MODULE.read_text(encoding="utf-8"))
+        identifiers = (
+            {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
+            | {n.attr for n in ast.walk(tree) if isinstance(n, ast.Attribute)}
+            | {
+                alias.asname or alias.name
+                for n in ast.walk(tree)
+                if isinstance(n, ast.ImportFrom | ast.Import)
+                for alias in n.names
+            }
+            | {a.arg for n in ast.walk(tree) if isinstance(n, ast.arguments) for a in n.kwonlyargs}
+        )
+        assert identifiers, "AST에서 식별자를 하나도 모으지 못했다"
+        assert "build_instantiation" in identifiers, "비공허성: 실제로 쓰는 이름이 보여야 한다"
+        assert {"CAPTURE_PER_FAMILY", "capture_shape", "shape"} & identifiers == set()
+
+    def test_value_lines_never_collide_inside_one_bundle(self, library):
+        # ⑤ 값 라인 중복 0건 — 중복이 생기면 두 번째가 dedupe로 탈락하고
+        # 빈 프로그래머로 Store가 실행된다.
+        for genre in sorted({look.genre for look in library.looks}):
+            bundle = _bundle_for(looks_for_genre(library, genre))
+            values = [c for c in bundle.commands if c.startswith("Attribute ")]
+            assert values, f"{genre}: 값 라인이 하나도 없으면 이 검사는 공허하다"
+            assert len(values) == len(set(values)), f"{genre}: 값 라인 중복"
+
+
+def _split_cycles(body: list[str] | tuple[str, ...]) -> list[list[str]]:
+    cycles: list[list[str]] = []
+    current: list[str] = []
+    for command in body:
+        if command == "ClearAll":
+            if current:
+                cycles.append(current)
+            current = []
+            continue
+        current.append(command)
+    if current:
+        cycles.append(current)
+    return cycles
+
+
+# -- AC-BUSKWIZ-006 / 007 ------------------------------------------------------
+
+
+class TestNoDestructiveStore:
+    """AC-BUSKWIZ-006 — `Store /Overwrite` 0건, 재슬롯 0건."""
+
+    def test_no_overwrite_is_ever_emitted(self, library):
+        for genre in sorted({look.genre for look in library.looks}):
+            bundle = _bundle_for(looks_for_genre(library, genre))
+            for command in bundle.commands:
+                assert "/overwrite" not in command.casefold()
+
+    def test_source_never_mentions_overwrite(self):
+        source = _BUSKING_MODULE.read_text(encoding="utf-8").casefold()
+        assert "/overwrite" not in source
+
+    def test_a_conflicted_look_is_not_reslotted(self):
+        pools = _pools(contents={4: [_preset(1, "룩 A")]})
+        bundle = _bundle_for([_look("a", "룩 A", attrs=(("ColorRGB_R", 100),))], pools=pools)
+        assert _slots(bundle.commands, 4) == []
+        assert [s.reason for plan in bundle.looks for s in plan.skipped] == [CONFLICT]
+
+
+class TestUnobservedIsNotEmpty:
+    """AC-BUSKWIZ-007 — 미관측과 검증된 빈 풀은 서로 다른 결과를 낸다."""
+
+    def _bundle_with_color(self, *, unavailable: bool) -> GenreBundle:
+        pools = _pools()
+        if unavailable:
+            pools["objects"][3]["contents_unavailable"] = True
+        return _bundle_for([_look("a", "룩 A", attrs=(("ColorRGB_R", 100),))], pools=pools)
+
+    def test_unobserved_pool_skips_every_store(self):
+        bundle = self._bundle_with_color(unavailable=True)
+        assert _slots(bundle.commands, 4) == []
+        assert [s.reason for plan in bundle.looks for s in plan.skipped] == [NO_FREE_SLOT]
+
+    def test_verified_empty_pool_stores_at_slot_one(self):
+        bundle = self._bundle_with_color(unavailable=False)
+        assert _slots(bundle.commands, 4) == [1]
+        assert bundle.skipped_count == 0
+
+    def test_the_two_states_differ(self):
+        unobserved = self._bundle_with_color(unavailable=True)
+        empty = self._bundle_with_color(unavailable=False)
+        assert unobserved.commands != empty.commands
+
+
+class TestDegenerateCases:
+    """acceptance.md §D — 퇴화 케이스가 특수 분기를 만들지 않는다."""
+
+    def test_single_look_genre_matches_the_single_look_path(self):
+        look = _look("solo", "혼자")
+        bundle = _bundle_for([look])
+        single = build_instantiation(
+            look,
+            resolution=resolve_roles(_groups(*FULL_RIG)),
+            pools=resolve_pools(_pools()),
+        )
+        assert bundle.commands == single.commands
+
+    def test_no_mapped_role_yields_an_empty_bundle(self):
+        bundle = _bundle_for([_look("a", "룩 A")], groups=((99, "관계 없는 그룹"),))
+        assert bundle.commands == ()
+        assert bundle.created_count == 0
+        assert all(plan.unmapped for plan in bundle.looks)
+
+    def test_empty_look_set_is_an_empty_bundle(self):
+        bundle = _bundle_for([])
+        assert bundle.commands == ()
+        assert bundle.looks == ()
+        assert not bundle.complete, "룩이 0개인 실행을 '완전 성공'으로 읽지 않는다"
+
+
+class TestLooksLayerUntouched:
+    """REQ-BUSKWIZ-003 — 감싸되 고치지 않는다."""
+
+    def test_pool_index_and_binding_stay_frozen(self):
+        assert instantiate_mod.PoolIndex.__dataclass_params__.frozen
+        assert instantiate_mod.PoolBinding.__dataclass_params__.frozen
+
+    def test_the_caller_s_pool_index_is_not_mutated(self):
+        pools = resolve_pools(_pools())
+        before = pools.bindings["Color"]
+        build_genre_bundle(
+            "rock",
+            (_look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),),
+            resolution=resolve_roles(_groups(*FULL_RIG)),
+            pools=pools,
+        )
+        assert pools.bindings["Color"] is before
+        assert pools.bindings["Color"].occupied == before.occupied
+
+
+class TestValueLineCollisionHazard:
+    """값 라인 중복 — 현재 **보호되지 않는** 위험을 가시화한다.
+
+    `shared_capture`가 안전한 근거는 "출하 32룩 전수에서 값 라인 중복 0건"이며
+    이것은 **라이브러리 데이터의 성질이지 구조적 보장이 아니다**(plan.md §E가
+    같은 이유로 번들 불변식에 이 assert를 넣었다). 한 장르 안에 전체 속성
+    페이로드가 동일한 룩이 추가되면 `shared_capture`에서도 값 라인이 겹치고,
+    두 번째가 dedupe로 접히면서 **빈 프로그래머 상태로 `Store`가 실행되고
+    콘솔은 성공으로 답한다**.
+
+    본 마일스톤은 이 위험에 **가드를 넣지 않는다** — 거부/건너뛰기 중 무엇을
+    할지는 등록부(결정 A~G) 밖의 새 결정이고, 감사 D6이 "등록부 밖에서 SPEC급
+    동작을 신설했다"를 지적한 그 부류이기 때문이다. 대신 현재 관측 사실을 여기
+    고정한다: 누군가 가드를 넣으면 이 테스트가 깨지고, 그 순간 결정이 기록을
+    강제받는다.
+    """
+
+    def test_identical_payloads_collide_and_are_deduped_today(self):
+        from server.orchestrator.tools import ToolCall, build_toolset
+
+        executed: list[str] = []
+
+        class _Port:
+            def execute(self, command: str):
+                from server.orchestrator.ports import ExecutionResult
+
+                executed.append(command)
+                return ExecutionResult(ok=True, detail="ok")
+
+        class _State:
+            def query_state(self, path: str) -> dict:
+                return {}
+
+        bundle = _bundle_for(
+            [
+                _look("a", "룩 A", attrs=(("Dimmer", 80),)),
+                _look("b", "룩 B", attrs=(("Dimmer", 80),)),  # 동일 페이로드
+            ]
+        )
+        values = [c for c in bundle.commands if c.startswith("Attribute ")]
+        assert len(values) == 2, "번들 문자열에는 두 줄이 살아 있다"
+        assert len(set(values)) == 1, "그러나 두 줄은 같은 문자열이다"
+
+        registry = build_toolset(execution_port=_Port(), state_port=_State())
+        execution = registry.dispatch(
+            ToolCall(id="t1", name="run_commands", arguments={"commands": list(bundle.commands)})
+        )
+        statuses = [o.status for o in execution.command_outcomes]
+        assert "skipped_already_executed" in statuses, (
+            "이 위험이 사라졌다면 가드가 들어온 것이다 — 결정을 등록부에 기록하고 "
+            "이 characterization 테스트를 그 결정의 테스트로 교체하라"
+        )
+        assert len(executed) == len(bundle.commands) - 1, (
+            "정확히 값 라인 한 줄이 콘솔에 닿지 않는다"
+        )

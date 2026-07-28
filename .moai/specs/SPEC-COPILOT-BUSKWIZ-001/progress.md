@@ -375,6 +375,76 @@ PRESERVE diff(`d176b81..`) **빈 출력**, `server/orchestrator/tools.py` **미�
 
 **baseline 규율**: 착수 시점 전체 스위트 수를 직접 실측하지 않았으므로 **델타를 주장하지 않는다**. 위 2325는 M1 종료 시점에 본 마일스톤이 직접 측정한 수이며, 신규 실패 0건이라는 판정은 그 실행 자체로 성립한다.
 
+### M2 — 슬롯 원장 + 다중 룩 번들 빌더 (cycle_type=tdd, 2026-07-27) — **완료**
+
+**본 SPEC의 핵심 마일스톤.** 하드 결함 2건이 여기서 해소·회피되었다.
+
+#### 산출물
+
+| 파일 | 상태 | 내용 |
+|---|---|---|
+| `server/looks/busking.py` | 확장 | `GenreBundle` · `_advance`(슬롯·라벨 원장) · `_merge`(번들 결합) · `build_genre_bundle` · `instantiate_genre` |
+| `server/tests/test_busking_bundle.py` | **신규** | 26 tests |
+
+PRESERVE diff(`d176b81..`) **빈 출력** — `server/looks/instantiate.py` 포함. **결정 E("frozen을 바깥에서 감싼다")가 diff로 증명되었다**: 원장은 `dataclasses.replace`로 **새** `PoolBinding`/`PoolIndex`를 만들 뿐 룩 계층을 고치지 않는다. `server/orchestrator/tools.py`도 미접촉(툴 배선은 M4 소관).
+
+#### 하드 결함 1 — 슬롯 비전진: 해소
+
+`_advance`가 룩마다 청구한 슬롯과 **라벨을 함께** 누적해 다음 룩에 넘긴다. 라벨까지 누적하는 이유는 `_plan_stores`의 충돌 검사가 `binding.labels`(**콘솔이 이미 가진 것**)만 보기 때문이다 — 같은 번들이 만들 라벨끼리는 비교 대상이 아니라, 표시 이름이 같은 두 룩이 한 장르에 있으면 서로를 모른 채 각자 저장된다.
+
+**결함의 실재를 같은 파일에서 함께 고정했다**(`AC-BUSKWIZ-004` 구간 2). 동일 `PoolIndex`로 `build_instantiation`을 3회 직접 호출하면 Color 슬롯이 `[1, 1, 1]`로 나온다 — 실측이다. 본 계층을 통과시키면 같은 입력이 `[1, 2, 3]`이 된다. 이 테스트가 사라지면 원장의 존재 이유가 문서에만 남는다.
+
+미관측 풀(`occupied is None`)은 원장을 **전진시키지 않는다** — `None`을 튜플로 승격하면 미관측이 관측으로 둔갑한다(도달 불가 분기지만 방어적으로 막았다).
+
+#### 하드 결함 2 — `ChangeDestination Root` dedupe 탈락: 회피
+
+`_merge`가 목적지 커맨드를 **선두 1회**만 남긴다. 룩별 번들의 단순 연접은 금지다 — 2..N번째 목적지가 dedupe에 접히면서 번들 문자열과 콘솔이 받은 것이 어긋난다(LOOKLIB M7이 실물에서 관측한 그 탈락). **`tools.py`는 손대지 않았다**(결정 F).
+
+목적지 문자열을 `_merge`에 다시 적지 않았다: **첫 비어 있지 않은 룩 번들의 선두가 정본**이고, 뒤 번들은 같은 선두를 가졌음을 확인한 뒤에만 그 한 줄을 뗀다. 리터럴을 복제하면 룩 계층이 바꿔도 여기가 모른다. 불일치는 `LookInstantiationError`다.
+
+**결합 형상은 접지 않는다(unfolded)** — 룩 경계의 인접 `ClearAll` 두 줄을 1회로 병합하지 않았다. 근거는 **측정한 것을 출하한다**이다: M0의 ASSUMPTION-18은 접지 않은 상한 87행에서 GO를 받았고, 접는 것은 그보다 작은(따라서 안전하지만) **측정되지 않은** 형상이다. 부수적으로 룩별 사이클이 `build_instantiation`의 산출과 바이트 동일하게 유지되어 단일 룩 경로와의 동형성이 테스트로 직접 확인된다(퇴화 케이스).
+
+#### AC 판정
+
+| AC | 판정 | 근거 |
+|---|---|---|
+| **AC-BUSKWIZ-003** | **PASS** | 8룩 장르에서 `resolve_roles` 1회 · `resolve_pools` 1회(호출 카운팅 스파이). "8룩이 아니면 비례성을 못 본다"는 동반 단언으로 공허화 방지 |
+| **AC-BUSKWIZ-004** | **PASS** | 구간 1 점유 `(1,2)`+룩 3개 → `{3,4,5}` 중복 0 · **구간 2 결함 실재(`[1,1,1]`)와 해소(`[1,2,3]`) 동시 고정** · 구간 3 혼합 부분 성공 2경로(풀 미해석·라벨 충돌) + **건너뜀 비공허** · 구간 4 패밀리 독립 · 구간 5 관측 우선 · 구간 6 **라벨 원장**(콘솔에 기존 라벨이 없어도 동명 룩 차단) |
+| **AC-BUSKWIZ-005** | **PASS** | ① 목적지 `commands[0]`이고 count==1 · ③ 룩 2개에서도 1회 · 사이클이 `ClearAll`로 감싸짐 · ④ **실제 `run_commands` 경로**로 무손실 확인(per-command status 전량 `executed_ok`, `skipped_already_executed` 0건, `executed == commands`) · ⑤ **AST 식별자 스캔**으로 `CAPTURE_PER_FAMILY`/`capture_shape`/`shape` 부재 + 실라이브러리 4장르 값 라인 중복 0건 |
+| **AC-BUSKWIZ-006** | **PASS** | 실라이브러리 4장르 전 커맨드에 `/overwrite` 0건(대소문자 무관) · 소스에도 0건 · 라벨 충돌 시 재슬롯 0건 |
+| **AC-BUSKWIZ-007** | **PASS** | `occupied=None` → 전량 `no_free_slot` 스킵 · `occupied=()` → 슬롯 1 저장 · **두 상태의 산출 번들이 서로 다름**을 별도 단언 |
+
+#### 검증 수단의 정직성 — 뮤테이션 2종
+
+| 뮤테이션 | 결과 |
+|---|---|
+| `_advance`의 원장 전진 제거 | **5 failed** / 21 passed |
+| `_merge`를 단순 연접으로 | **5 failed** / 21 passed |
+| 복원 | **26 passed** |
+
+#### M2에서 드러난 것 — 값 라인 충돌 위험은 **보호되지 않는다**
+
+`run_commands` 무손실 테스트를 처음 작성했을 때 실패했다. 원인은 구현이 아니라 **픽스처**였다 — 룩 4개에 동일한 속성 페이로드를 줬더니 값 라인(`Attribute 'Dimmer' At 80`)이 겹쳐 두 번째가 dedupe에 접혔다.
+
+**이것은 픽스처 실수인 동시에 SPEC이 경고한 위험의 재현이다.** `shared_capture`의 안전 근거는 "출하 32룩 전수에서 값 라인 중복 0건"이며 그것은 **라이브러리 데이터의 성질이지 구조적 보장이 아니다**(plan.md §E가 같은 이유로 번들 불변식에 이 assert를 넣었다). 한 장르에 전체 페이로드가 동일한 룩이 추가되면 `shared_capture`에서도 겹치고, 접힌 결과는 **빈 프로그래머 상태의 `Store`인데 콘솔은 성공으로 답한다.**
+
+**본 마일스톤은 가드를 넣지 않았다.** 거부할지 건너뛸지는 결정 등록부(A~G) 밖의 새 결정이고, 감사 D6이 "등록부 밖에서 SPEC급 동작을 신설했다"를 지적한 바로 그 부류이기 때문이다. 대신 두 가지를 했다:
+
+1. **불변식 테스트 유지** — 실라이브러리 4장르에서 값 라인 중복 0건(`AC-BUSKWIZ-005` ⑤). 라이브러리 증보가 이 성질을 깨면 여기서 잡힌다.
+2. **characterization 테스트 신설** — `TestValueLineCollisionHazard`가 동일 페이로드 두 룩에서 dedupe 탈락이 **실제로 일어남**을 고정한다. 누군가 가드를 넣으면 이 테스트가 깨지고, 그 순간 결정이 기록을 강제받는다.
+
+**→ 사용자 결정 대기 항목**: 값 라인 충돌에 가드를 넣을 것인가(거부 / 해당 룩 건너뛰기 / 현행 유지). v1 출하 라이브러리에서는 발동하지 않으므로 **M3~M7을 막지 않는다.**
+
+#### 게이트
+
+| 항목 | 결과 |
+|---|---|
+| `pytest server/tests/test_busking_bundle.py -q` | **26 passed** |
+| `pytest server/tests/ -q` (전체 회귀, M2 종료 시점 **직접 실측**) | **2351 passed · 0 failed** (86.20s) |
+| M1 종료 시점 실측 대비 | 2325 → 2351 (**+26** = 신규 테스트 수와 일치, 회귀 0건) |
+| `ruff check` / `format --check` | clean / 2 files already formatted |
+| PRESERVE `git diff --stat d176b81 -- <목록 + tools.py>` | **빈 출력** |
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run>_
