@@ -317,6 +317,64 @@ DataPool/Pages/1/201 -> path segment not found
 
 **AC-BUSKWIZ-016 (LIVE — 2건 중 1번째) = PASS.** 측정 항목 1~4 판정 확정 · 5 정리 기록(잔여물 0건) · 6 Gaps 5건 명시. 라이브 세션 1/2 소진.
 
+### M1 — 장르 조회 계층 (cycle_type=tdd, 2026-07-27) — **완료**
+
+#### 산출물
+
+| 파일 | 상태 | 내용 |
+|---|---|---|
+| `server/looks/busking.py` | **신규** | `GenreSelection` · `genres_in` · `looks_for_genre` · `select_genre` · `UNRESOLVED_GENRE` |
+| `server/tests/test_busking_genre.py` | **신규** | 34 tests |
+
+PRESERVE diff(`d176b81..`) **빈 출력**, `server/orchestrator/tools.py` **미접촉**(M1은 툴을 배선하지 않는다 — M4 소관). 작업 트리 변경은 위 신규 2파일뿐.
+
+#### REQ 충족
+
+- **REQ-BUSKWIZ-001** — `looks_for_genre`가 장르 전량을 **다이내믹스 오름차순 → `look_id` 사전순** 전순서로 반환. 반환 형상(`GenreSelection`)에 절단 신호 필드가 **없다**.
+- **REQ-BUSKWIZ-002** — `select_genre`가 기존 `resolve_genre`를 호출한다(재정의 0건). 미해석은 후보 목록을 담은 실패 결과이며 **승격 없음**(`genre is None`).
+- **REQ-BUSKWIZ-003** — 읽기 전용 순회. 호출 후 `library.looks`가 **동일 객체**임을 테스트가 고정.
+
+**후보 목록은 자산에서 파생한다** — `genres_in`이 `{look.genre for look in library.looks}`를 정렬해 낸다. 상수로 박으면 라이브러리가 늘 때 한쪽만 갱신되어 거짓말이 된다.
+
+**사유 어휘를 둘로 나눴다**: `EMPTY_QUERY`(matching에서 **재사용**)와 `UNRESOLVED_GENRE`(신설). "아무것도 안 물었다"와 "우리가 모르는 것을 물었다"는 다른 사실이고 사용자의 조치도 다르다. **한계를 함께 적었다** — `resolve_genre`는 "장르어 0개"와 "2개 이상"을 모두 `None`으로 접으므로 그 둘은 가르지 못한다. 가르려면 별칭 표를 다시 훑어야 하고 그것이 곧 재정의라 하지 않았다(모듈 독스트링에 명시).
+
+#### AC 판정
+
+| AC | 판정 | 근거 |
+|---|---|---|
+| **AC-BUSKWIZ-001** | **PASS** | 4장르 개수 실측 일치(worship 8 / rock 8 / ballad 7 / edm 9) · ① **edm 9건 그대로**(+ `9 > MAX_TOOL_MATCHES` 동반 단언) · ② `truncated`/`total` 필드 부재 · ③ 2회 호출 리스트 동등(순서 포함) |
+| **AC-BUSKWIZ-002** | **PASS** | 한국어 7종·슬러그 4종 → 동일 장르 접힘(11 케이스) · ① `"재즈"` → 예외 아닌 실패 결과 + 후보 4종 · ② `genre is None`, `looks == ()` · ③ **AST 스캔** — 장르명을 담은 dict/set 리터럴 0건, `GENRE_ALIASES` 재할당 0건, 별칭 해석은 import로만 도달 |
+
+#### 검증 수단의 정직성 — 뮤테이션 2종
+
+통과하는 테스트가 무엇도 지키지 않는 경우를 배제했다.
+
+| 뮤테이션 | 결과 |
+|---|---|
+| 정렬 키를 `look_id` 단독으로 | **4 failed** / 30 passed |
+| 반환을 `[:8]`로 절단 | **4 failed** / 30 passed |
+| 복원 | **34 passed** |
+
+#### M1에서 재현된 결함 1건 — 검증 수단 쪽이었다
+
+최초 작성한 `test_the_truncating_constant_is_not_referenced`가 **raw 텍스트 스캔**(`"MAX_TOOL_MATCHES" not in source`)이었고, 구현이 아니라 **모듈 `@MX:NOTE`의 산문**을 위반으로 잡아 실패했다 — 그 주석은 "왜 그 경로를 쓰지 않는가"를 설명하느라 이름을 적어야 했다.
+
+이것은 `LOOKLIB v0.3.2`가 기록한 결함(**"raw 텍스트 스캔은 호출과 호출을 설명하는 독스트링을 구분할 수 없다"**)의 재현이고, 처방도 같다 — **AST 식별자 스캔**(`ast.Name.id` / `ast.Attribute.attr` / import 이름)으로 교체하고 **비공허성 2중 단언**(식별자를 실제로 모았는가 + 실제로 쓰는 `resolve_genre`·`EMPTY_QUERY`가 보이는가)을 붙였다. 독스트링을 지워 스캔을 통과시키는 방향은 택하지 않았다 — 그러면 경계를 문서화할 방법이 사라진다.
+
+`AC-BUSKWIZ-009` 구간 1이 M4에 대해 같은 규율을 이미 요구하고 있다. **M1이 그 규율이 필요한 이유를 한 번 더 실증했다.**
+
+#### 게이트
+
+| 항목 | 결과 |
+|---|---|
+| `pytest server/tests/test_busking_genre.py -q` | **34 passed** |
+| `pytest server/tests/ -q` (전체 회귀, M1 종료 시점 **직접 실측**) | **2325 passed · 0 failed** (89.11s) |
+| `ruff check` (신규 2파일) | All checks passed |
+| `ruff format --check` | 2 files already formatted (테스트 파일 1회 포맷 적용 후) |
+| PRESERVE `git diff --stat d176b81 -- <목록>` | **빈 출력** |
+
+**baseline 규율**: 착수 시점 전체 스위트 수를 직접 실측하지 않았으므로 **델타를 주장하지 않는다**. 위 2325는 M1 종료 시점에 본 마일스톤이 직접 측정한 수이며, 신규 실패 0건이라는 판정은 그 실행 자체로 성립한다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run>_
