@@ -31,7 +31,7 @@ from server.looks.instantiate import (
 )
 from server.looks.loader import load_library_from_dir
 from server.looks.resolver import resolve_roles
-from server.looks.schema import AttributeValue, Look
+from server.tests.busking_fixtures import FULL_RIG, make_bundle, make_look
 from server.tests.test_looks_instantiate import (
     FOUR_FAMILY_ATTRIBUTES,
     _groups,
@@ -40,38 +40,6 @@ from server.tests.test_looks_instantiate import (
 )
 
 _BUSKING_MODULE = Path("server/looks/busking.py")
-
-# 역할 6종을 전부 덮는 리그. 룩이 선언한 역할이 무엇이든 그룹이 붙는다.
-FULL_RIG = (
-    (11, "Back Wash"),
-    (12, "FOH Wash"),
-    (13, "Side L"),
-    (14, "Top"),
-    (15, "Cyc"),
-    (16, "Special"),
-)
-
-
-def _look(look_id: str, name: str, *, dynamics: int = 3, roles=("백라이트",), attrs=None) -> Look:
-    return Look(
-        look_id=look_id,
-        display_name=name,
-        genre="rock",
-        dynamics=dynamics,
-        roles=roles,
-        attributes=tuple(AttributeValue(name=n, value=v) for n, v in (attrs or (("Dimmer", 80),))),
-    )
-
-
-def _bundle_for(looks, *, groups=FULL_RIG, pools=None) -> GenreBundle:
-    groups_section = _groups(*groups)
-    pools_section = pools if pools is not None else _pools()
-    return build_genre_bundle(
-        "rock",
-        tuple(looks),
-        resolution=resolve_roles(groups_section),
-        pools=resolve_pools(pools_section),
-    )
 
 
 def _stores(commands) -> list[str]:
@@ -134,11 +102,11 @@ class TestSlotLedger:
     def test_segment_1_three_looks_claim_distinct_slots(self):
         # 구간 1 — 점유 (1,2)에서 시작하면 세 룩이 3·4·5를 나눠 갖는다.
         pools = _pools(contents={4: [_preset(1, "기존 A"), _preset(2, "기존 B")]})
-        bundle = _bundle_for(
+        bundle = make_bundle(
             [
-                _look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),
-                _look("b", "룩 B", attrs=(("ColorRGB_R", 90),)),
-                _look("c", "룩 C", attrs=(("ColorRGB_R", 80),)),
+                make_look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),
+                make_look("b", "룩 B", attrs=(("ColorRGB_R", 90),)),
+                make_look("c", "룩 C", attrs=(("ColorRGB_R", 80),)),
             ],
             pools=pools,
         )
@@ -152,9 +120,9 @@ class TestSlotLedger:
         이 테스트가 사라지면 원장의 존재 이유가 문서에만 남는다.
         """
         looks = [
-            _look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),
-            _look("b", "룩 B", attrs=(("ColorRGB_R", 90),)),
-            _look("c", "룩 C", attrs=(("ColorRGB_R", 80),)),
+            make_look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),
+            make_look("b", "룩 B", attrs=(("ColorRGB_R", 90),)),
+            make_look("c", "룩 C", attrs=(("ColorRGB_R", 80),)),
         ]
         resolution = resolve_roles(_groups(*FULL_RIG))
         pools = resolve_pools(_pools())
@@ -165,16 +133,16 @@ class TestSlotLedger:
         assert naive_slots == [1, 1, 1], "결함이 재현되지 않으면 원장은 아무것도 감싸지 않는다"
 
         # — 본 계층은 같은 입력에서 서로 다른 슬롯을 낸다.
-        wrapped = _bundle_for(looks)
+        wrapped = make_bundle(looks)
         assert _slots(wrapped.commands, 4) == [1, 2, 3]
 
     def test_segment_3_mixed_partial_success_pool_unresolved(self):
         # 구간 3 (i) — Color 풀이 아예 없는 리그: 그 풀 대상 저장만 전량 건너뜀.
         pools = _pools(pools=((1, "Dimmer"), (5, "Beam"), (6, "Focus")))
-        bundle = _bundle_for(
+        bundle = make_bundle(
             [
-                _look("a", "룩 A", attrs=FOUR_FAMILY_ATTRIBUTES),
-                _look("b", "룩 B", attrs=FOUR_FAMILY_ATTRIBUTES),
+                make_look("a", "룩 A", attrs=FOUR_FAMILY_ATTRIBUTES),
+                make_look("b", "룩 B", attrs=FOUR_FAMILY_ATTRIBUTES),
             ],
             pools=pools,
         )
@@ -187,10 +155,10 @@ class TestSlotLedger:
     def test_segment_3_mixed_partial_success_label_conflict(self):
         # 구간 3 (ii) — 콘솔에 같은 이름의 프리셋이 이미 있다.
         pools = _pools(contents={4: [_preset(1, "룩 A")]})
-        bundle = _bundle_for(
+        bundle = make_bundle(
             [
-                _look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),
-                _look("b", "룩 B", attrs=(("ColorRGB_R", 90),)),
+                make_look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),
+                make_look("b", "룩 B", attrs=(("ColorRGB_R", 90),)),
             ],
             pools=pools,
         )
@@ -200,14 +168,14 @@ class TestSlotLedger:
 
     def test_segment_4_families_are_independent(self):
         pools = _pools(contents={1: [_preset(1, "기존"), _preset(2, "기존2")]})
-        bundle = _bundle_for(
-            [_look("a", "룩 A", attrs=(("Dimmer", 80), ("ColorRGB_R", 100)))],
+        bundle = make_bundle(
+            [make_look("a", "룩 A", attrs=(("Dimmer", 80), ("ColorRGB_R", 100)))],
         )
         assert _slots(bundle.commands, 1) == [1]
         assert _slots(bundle.commands, 4) == [1]
 
-        bundle2 = _bundle_for(
-            [_look("a", "룩 A", attrs=(("Dimmer", 80), ("ColorRGB_R", 100)))],
+        bundle2 = make_bundle(
+            [make_look("a", "룩 A", attrs=(("Dimmer", 80), ("ColorRGB_R", 100)))],
             pools=pools,
         )
         assert _slots(bundle2.commands, 1) == [3], "Dimmer 원장만 전진해야 한다"
@@ -217,10 +185,10 @@ class TestSlotLedger:
         # 구간 5 — 미관측 풀은 원장이 있든 없든 사용 불가.
         pools = _pools()
         pools["objects"][3]["contents_unavailable"] = True  # Color(4번 풀) 관측 실패
-        bundle = _bundle_for(
+        bundle = make_bundle(
             [
-                _look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),
-                _look("b", "룩 B", attrs=(("ColorRGB_R", 90),)),
+                make_look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),
+                make_look("b", "룩 B", attrs=(("ColorRGB_R", 90),)),
             ],
             pools=pools,
         )
@@ -234,10 +202,10 @@ class TestSlotLedger:
         `_plan_stores`는 `binding.labels`(콘솔이 이미 가진 것)만 보므로 이
         판정은 원장이 만든다.
         """
-        bundle = _bundle_for(
+        bundle = make_bundle(
             [
-                _look("a", "같은 이름", attrs=(("ColorRGB_R", 100),)),
-                _look("b", "같은 이름", attrs=(("ColorRGB_R", 90),)),
+                make_look("a", "같은 이름", attrs=(("ColorRGB_R", 100),)),
+                make_look("b", "같은 이름", attrs=(("ColorRGB_R", 90),)),
             ],
         )
         assert _slots(bundle.commands, 4) == [1], "두 번째는 저장되지 않는다"
@@ -255,7 +223,7 @@ class TestBundleShape:
     def _destination() -> str:
         # 리터럴을 이 테스트가 새로 만들지 않는다 — 단일 룩 번들의 선두가 정본이다.
         single = build_instantiation(
-            _look("x", "단일"),
+            make_look("x", "단일"),
             resolution=resolve_roles(_groups(*FULL_RIG)),
             pools=resolve_pools(_pools()),
         )
@@ -263,18 +231,18 @@ class TestBundleShape:
 
     def test_destination_appears_exactly_once_at_the_head(self):
         dest = self._destination()
-        bundle = _bundle_for([_look(f"l{i}", f"룩 {i}") for i in range(5)])
+        bundle = make_bundle([make_look(f"l{i}", f"룩 {i}") for i in range(5)])
         assert bundle.commands[0] == dest
         assert bundle.commands.count(dest) == 1
 
     def test_two_looks_do_not_produce_two_destinations(self):
         # ③ 룩별 번들의 단순 연접이 아님을 고정.
         dest = self._destination()
-        bundle = _bundle_for([_look("a", "룩 A"), _look("b", "룩 B")])
+        bundle = make_bundle([make_look("a", "룩 A"), make_look("b", "룩 B")])
         assert bundle.commands.count(dest) == 1
 
     def test_every_look_cycle_is_clearall_bracketed(self):
-        bundle = _bundle_for([_look("a", "룩 A"), _look("b", "룩 B")])
+        bundle = make_bundle([make_look("a", "룩 A"), make_look("b", "룩 B")])
         body = bundle.commands[1:]  # 선두 목적지 제외
         assert body[0] == "ClearAll"
         assert body[-1] == "ClearAll"
@@ -303,8 +271,8 @@ class TestBundleShape:
         # 룩마다 값 라인이 달라야 이 테스트가 재는 것을 잰다. 같은 페이로드를
         # 주면 값 라인이 겹쳐 dedupe가 접는데, 그것은 결합 형상의 결함이 아니라
         # 아래 `TestValueLineCollisionHazard`가 따로 다루는 별개 사실이다.
-        bundle = _bundle_for(
-            [_look(f"l{i}", f"룩 {i}", attrs=(("Dimmer", 40 + i),)) for i in range(4)]
+        bundle = make_bundle(
+            [make_look(f"l{i}", f"룩 {i}", attrs=(("Dimmer", 40 + i),)) for i in range(4)]
         )
         registry = build_toolset(execution_port=_Port(), state_port=_State())
         execution = registry.dispatch(
@@ -338,7 +306,7 @@ class TestBundleShape:
         # ⑤ 값 라인 중복 0건 — 중복이 생기면 두 번째가 dedupe로 탈락하고
         # 빈 프로그래머로 Store가 실행된다.
         for genre in sorted({look.genre for look in library.looks}):
-            bundle = _bundle_for(looks_for_genre(library, genre))
+            bundle = make_bundle(looks_for_genre(library, genre))
             values = [c for c in bundle.commands if c.startswith("Attribute ")]
             assert values, f"{genre}: 값 라인이 하나도 없으면 이 검사는 공허하다"
             assert len(values) == len(set(values)), f"{genre}: 값 라인 중복"
@@ -367,7 +335,7 @@ class TestNoDestructiveStore:
 
     def test_no_overwrite_is_ever_emitted(self, library):
         for genre in sorted({look.genre for look in library.looks}):
-            bundle = _bundle_for(looks_for_genre(library, genre))
+            bundle = make_bundle(looks_for_genre(library, genre))
             for command in bundle.commands:
                 assert "/overwrite" not in command.casefold()
 
@@ -377,7 +345,7 @@ class TestNoDestructiveStore:
 
     def test_a_conflicted_look_is_not_reslotted(self):
         pools = _pools(contents={4: [_preset(1, "룩 A")]})
-        bundle = _bundle_for([_look("a", "룩 A", attrs=(("ColorRGB_R", 100),))], pools=pools)
+        bundle = make_bundle([make_look("a", "룩 A", attrs=(("ColorRGB_R", 100),))], pools=pools)
         assert _slots(bundle.commands, 4) == []
         assert [s.reason for plan in bundle.looks for s in plan.skipped] == [CONFLICT]
 
@@ -389,7 +357,7 @@ class TestUnobservedIsNotEmpty:
         pools = _pools()
         if unavailable:
             pools["objects"][3]["contents_unavailable"] = True
-        return _bundle_for([_look("a", "룩 A", attrs=(("ColorRGB_R", 100),))], pools=pools)
+        return make_bundle([make_look("a", "룩 A", attrs=(("ColorRGB_R", 100),))], pools=pools)
 
     def test_unobserved_pool_skips_every_store(self):
         bundle = self._bundle_with_color(unavailable=True)
@@ -411,8 +379,8 @@ class TestDegenerateCases:
     """acceptance.md §D — 퇴화 케이스가 특수 분기를 만들지 않는다."""
 
     def test_single_look_genre_matches_the_single_look_path(self):
-        look = _look("solo", "혼자")
-        bundle = _bundle_for([look])
+        look = make_look("solo", "혼자")
+        bundle = make_bundle([look])
         single = build_instantiation(
             look,
             resolution=resolve_roles(_groups(*FULL_RIG)),
@@ -421,13 +389,13 @@ class TestDegenerateCases:
         assert bundle.commands == single.commands
 
     def test_no_mapped_role_yields_an_empty_bundle(self):
-        bundle = _bundle_for([_look("a", "룩 A")], groups=((99, "관계 없는 그룹"),))
+        bundle = make_bundle([make_look("a", "룩 A")], groups=((99, "관계 없는 그룹"),))
         assert bundle.commands == ()
         assert bundle.created_count == 0
         assert all(plan.unmapped for plan in bundle.looks)
 
     def test_empty_look_set_is_an_empty_bundle(self):
-        bundle = _bundle_for([])
+        bundle = make_bundle([])
         assert bundle.commands == ()
         assert bundle.looks == ()
         assert not bundle.complete, "룩이 0개인 실행을 '완전 성공'으로 읽지 않는다"
@@ -445,7 +413,7 @@ class TestLooksLayerUntouched:
         before = pools.bindings["Color"]
         build_genre_bundle(
             "rock",
-            (_look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),),
+            (make_look("a", "룩 A", attrs=(("ColorRGB_R", 100),)),),
             resolution=resolve_roles(_groups(*FULL_RIG)),
             pools=pools,
         )
@@ -486,10 +454,10 @@ class TestValueLineCollisionHazard:
             def query_state(self, path: str) -> dict:
                 return {}
 
-        bundle = _bundle_for(
+        bundle = make_bundle(
             [
-                _look("a", "룩 A", attrs=(("Dimmer", 80),)),
-                _look("b", "룩 B", attrs=(("Dimmer", 80),)),  # 동일 페이로드
+                make_look("a", "룩 A", attrs=(("Dimmer", 80),)),
+                make_look("b", "룩 B", attrs=(("Dimmer", 80),)),  # 동일 페이로드
             ]
         )
         values = [c for c in bundle.commands if c.startswith("Attribute ")]

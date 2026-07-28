@@ -445,6 +445,60 @@ PRESERVE diff(`d176b81..`) **빈 출력** — `server/looks/instantiate.py` 포�
 | `ruff check` / `format --check` | clean / 2 files already formatted |
 | PRESERVE `git diff --stat d176b81 -- <목록 + tools.py>` | **빈 출력** |
 
+### M3 — 집계 보고 계층 (cycle_type=tdd, 2026-07-27) — **완료**
+
+#### 산출물
+
+| 파일 | 상태 | 내용 |
+|---|---|---|
+| `server/looks/report.py` | 신규 | `BuskingReport` · `LookVerdict` · `UnmappedPair` · `build_report` · `to_korean` · `reason_label` |
+| `server/tests/test_busking_report.py` | 신규 | 27 tests — AC-BUSKWIZ-008 |
+| `server/tests/busking_fixtures.py` | 신규 | M2·M3 공용 픽스처 (pytest 미수집 이름) |
+| `server/looks/busking.py` | 변경 | `_merge`가 **룩별 구간**을 함께 반환, `GenreBundle.spans` |
+
+#### 결정과 근거
+
+1. **별도 모듈**. 한국어 표현 매핑은 커맨드 생성과 무관하고 `busking.py`는 이미
+   조회·원장·결합 3책임을 진다.
+2. **룩 귀속은 `spans`가 다리를 놓는다.** 결합 경계를 아는 유일한 자리가 `_merge`다.
+   보고 계층이 결합 규칙을 다시 구현하면 두 곳이 갈라진다.
+3. **`(b)`의 단위는 `(룩, 역할)` 쌍.** 리그를 1회만 해석하므로(REQ-BUSKWIZ-004)
+   미매핑 역할 1종이 그것을 선언한 모든 룩에서 반복된다. distinct(언제나 6)로
+   세면 룩별 합계와 어긋난다. 실측 재확인: worship 25 / rock 26 / ballad 20 / edm 26.
+4. **매칭 판정 3종 ↔ 섹션 실패는 다른 부류.** 전자는 리그의 문제(그룹을 만들면
+   해소), 후자는 **관측 자체의 실패**. 후자를 `no_match`로 보고하면 보지 않은
+   리그에 대한 주장이 된다.
+5. **`(c)`와 `(e)`를 합산하지 않는다.** 빌드 시점 건너뜀과 실행 중단은 원인도
+   조치도 다르다.
+6. **재시도 경로 없음.** 같은 instruction 안에서 재발화하면 앞서 성공한
+   `Store Preset`/`Label Preset`이 dedupe에 조용히 접힌다(면제 집합 밖). AST 스캔이
+   `execute`/`run_commands`/`retry`/`resend` 부재를 고정한다.
+
+#### 뮤테이션 — 첫 판의 공허한 단언을 잡아냈다
+
+| 뮤테이션 | 결과 |
+|---|---|
+| A: `(c)`+`(e)` 합산 렌더 | **첫 판 27 passed — 미검출** → 단언이 `N개 건너뜀`을 찾는데 렌더는 `건너뜀 N개`였다(공허). 렌더된 숫자를 직접 파싱해 대조하도록 교체 → **1 failed** |
+| B: 미매핑을 distinct로 집계 | **2 failed** |
+| C: 섹션 실패를 매칭 판정으로 접기 | **2 failed** |
+| 복원 | 27 passed |
+
+#### 게이트
+
+| 항목 | 결과 |
+|---|---|
+| `test_busking_report.py` | **27 passed** |
+| `pytest server/tests/ -q` (전체 회귀, **직접 실측**) | **2378 passed · 0 failed** (87.44s) |
+| M2 종료 시점 실측 대비 | 2351 → 2378 (**+27** = 신규 테스트 수와 일치, 회귀 0건) |
+| `ruff check` / `format --check` | 신규·변경 5파일 clean / already formatted |
+| PRESERVE + `tools.py` `git diff --stat d176b81` | **빈 출력** |
+
+**범위 밖 기존 결함 1건**: `server/tests/test_web_dash.py:523` E501(103>100). baseline
+(stash 후 재측정)에서도 동일하고 본 SPEC의 변경 0건이라 정정하지 않는다.
+
+**중복 제거**: M2 테스트의 지역 `FULL_RIG`/`_look`/`_bundle_for`가 신규 픽스처
+모듈과 동일해 그쪽으로 통합했다(호출부 50곳 기계 치환, 87 passed 유지).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run>_

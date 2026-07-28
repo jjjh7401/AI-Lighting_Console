@@ -131,6 +131,11 @@ class GenreBundle:
     genre: str
     commands: tuple[str, ...] = ()
     looks: tuple[LookInstantiation, ...] = ()
+    spans: tuple[tuple[int, int], ...] = ()
+    """``looks``와 같은 길이·같은 순서. ``commands[start:end]``가 그 룩의 구간이다.
+
+    실행 결과의 per-command status를 룩에 귀속시키는 유일한 다리 —
+    보고 계층이 결합 규칙을 다시 구현하지 않게 한다."""
 
     @property
     def created_count(self) -> int:
@@ -178,7 +183,7 @@ def _advance(pools: PoolIndex, created: tuple[CreatedPreset, ...]) -> PoolIndex:
     return replace(pools, bindings=bindings)
 
 
-def _merge(bundles: list[tuple[str, ...]]) -> tuple[str, ...]:
+def _merge(bundles: list[tuple[str, ...]]) -> tuple[tuple[str, ...], tuple[tuple[int, int], ...]]:
     """룩별 번들을 **하나의** 번들로 결합한다.
 
     단순 연접은 금지다(REQ-BUSKWIZ-006): 룩별 번들은 저마다 선두에 목적지
@@ -190,23 +195,33 @@ def _merge(bundles: list[tuple[str, ...]]) -> tuple[str, ...]:
     목적지 문자열을 여기서 다시 적지 않는다: 첫 비어 있지 않은 룩 번들의 선두가
     정본이고, 뒤 번들은 **같은 선두를 가졌음을 확인한 뒤에만** 그 한 줄을
     떼어낸다. 리터럴을 복제하면 룩 계층이 바꿔도 여기가 모른다.
+
+    결합된 번들과 함께 **룩별 구간**(`[시작, 끝)` 인덱스)을 돌려준다. 실행
+    결과의 per-command status를 룩에 귀속시키려면 그 경계가 필요한데
+    (REQ-BUSKWIZ-013 (d)는 룩별 판정을 **실행 결과에서** 산출하라고 요구한다),
+    경계를 아는 유일한 자리가 여기다. 보고 계층이 이 규칙을 다시 구현하면
+    두 곳이 갈라진다. 빈 룩 번들은 길이 0 구간을 받는다.
     """
     merged: list[str] = []
+    spans: list[tuple[int, int]] = []
     destination: str | None = None
     for commands in bundles:
+        start = len(merged)
         if not commands:
-            continue  # 정직한 빈 출력 — 그 룩은 세울 저장이 없었다
+            spans.append((start, start))  # 정직한 빈 출력 — 그 룩은 세울 저장이 없었다
+            continue
         if destination is None:
             destination = commands[0]
             merged.extend(commands)
-            continue
-        if commands[0] != destination:
-            raise LookInstantiationError(
-                "look bundles disagree on the destination command: "
-                f"{destination!r} vs {commands[0]!r}"
-            )
-        merged.extend(commands[1:])
-    return tuple(merged)
+        else:
+            if commands[0] != destination:
+                raise LookInstantiationError(
+                    "look bundles disagree on the destination command: "
+                    f"{destination!r} vs {commands[0]!r}"
+                )
+            merged.extend(commands[1:])
+        spans.append((start, len(merged)))
+    return tuple(merged), tuple(spans)
 
 
 def build_genre_bundle(
@@ -236,11 +251,8 @@ def build_genre_bundle(
         plan = build_instantiation(look, resolution=resolution, pools=ledger)
         plans.append(plan)
         ledger = _advance(ledger, plan.created)
-    return GenreBundle(
-        genre=genre,
-        commands=_merge([plan.commands for plan in plans]),
-        looks=tuple(plans),
-    )
+    commands, spans = _merge([plan.commands for plan in plans])
+    return GenreBundle(genre=genre, commands=commands, looks=tuple(plans), spans=spans)
 
 
 def instantiate_genre(
