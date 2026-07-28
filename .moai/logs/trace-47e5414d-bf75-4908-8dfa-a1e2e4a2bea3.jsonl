@@ -1,0 +1,3 @@
+{"ts":"2026-07-23T17:04:55.962880542+09:00","event":"SessionStart","handler":"*hook.sessionStartHandler","duration_ms":20,"session_id":"47e5414d-bf75-4908-8dfa-a1e2e4a2bea3"}
+{"ts":"2026-07-23T17:04:55.983235292+09:00","event":"SessionStart","handler":"*hook.autoUpdateHandler","duration_ms":976,"session_id":"47e5414d-bf75-4908-8dfa-a1e2e4a2bea3"}
+{"ts":"2026-07-23T17:04:57.010322625+09:00","event":"SessionEnd","handler":"*hook.sessionEndHandler","duration_ms":16,"session_id":"47e5414d-bf75-4908-8dfa-a1e2e4a2bea3"}

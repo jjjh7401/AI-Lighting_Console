@@ -1,0 +1,10 @@
+{"ts":"2026-07-22T11:13:38.005240292+09:00","event":"SessionStart","handler":"*hook.sessionStartHandler","duration_ms":24,"session_id":"3400b0d1-5e24-438d-a837-cb2c1c182628"}
+{"ts":"2026-07-22T11:15:39.338711+09:00","event":"InstructionsLoaded","handler":"*hook.instructionsLoadedHandler","duration_ms":0,"session_id":"3400b0d1-5e24-438d-a837-cb2c1c182628"}
+{"ts":"2026-07-22T11:19:09.194792+09:00","event":"PreToolUse","handler":"*hook.preToolHandler","tool":"Bash","duration_ms":0,"decision":"allow","session_id":"3400b0d1-5e24-438d-a837-cb2c1c182628"}
+{"ts":"2026-07-22T11:19:24.418678583+09:00","event":"PreToolUse","handler":"*hook.preToolHandler","tool":"Bash","duration_ms":0,"decision":"allow","session_id":"3400b0d1-5e24-438d-a837-cb2c1c182628"}
+{"ts":"2026-07-22T11:19:46.689470791+09:00","event":"InstructionsLoaded","handler":"*hook.instructionsLoadedHandler","duration_ms":0,"session_id":"3400b0d1-5e24-438d-a837-cb2c1c182628"}
+{"ts":"2026-07-22T11:20:40.467528667+09:00","event":"InstructionsLoaded","handler":"*hook.instructionsLoadedHandler","duration_ms":0,"session_id":"3400b0d1-5e24-438d-a837-cb2c1c182628"}
+{"ts":"2026-07-22T11:21:41.017173917+09:00","event":"PreToolUse","handler":"*hook.preToolHandler","tool":"Bash","duration_ms":0,"decision":"allow","session_id":"3400b0d1-5e24-438d-a837-cb2c1c182628"}
+{"ts":"2026-07-22T11:22:07.710930125+09:00","event":"PreToolUse","handler":"*hook.preToolHandler","tool":"Bash","duration_ms":0,"decision":"allow","session_id":"3400b0d1-5e24-438d-a837-cb2c1c182628"}
+{"ts":"2026-07-22T13:44:23.2711755+09:00","event":"PreToolUse","handler":"*hook.preToolHandler","tool":"Bash","duration_ms":0,"decision":"allow","session_id":"3400b0d1-5e24-438d-a837-cb2c1c182628"}
+{"ts":"2026-07-22T13:48:01.192624583+09:00","event":"PostToolUse","handler":"*hook.postToolHandler","tool":"Edit","duration_ms":11,"session_id":"3400b0d1-5e24-438d-a837-cb2c1c182628"}

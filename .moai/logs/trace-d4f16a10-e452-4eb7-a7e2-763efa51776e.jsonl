@@ -1,0 +1,14 @@
+{"ts":"2026-07-20T13:27:23.736021625+09:00","event":"SessionStart","handler":"*hook.sessionStartHandler","duration_ms":17,"session_id":"d4f16a10-e452-4eb7-a7e2-763efa51776e"}
+{"ts":"2026-07-20T14:23:19.706434167+09:00","event":"PostToolUse","handler":"*hook.postToolHandler","tool":"Edit","duration_ms":11,"session_id":"d4f16a10-e452-4eb7-a7e2-763efa51776e"}
+{"ts":"2026-07-20T14:23:36.766187917+09:00","event":"PreToolUse","handler":"*hook.preToolHandler","tool":"Edit","duration_ms":0,"decision":"allow","session_id":"d4f16a10-e452-4eb7-a7e2-763efa51776e"}
+{"ts":"2026-07-20T14:28:01.182597042+09:00","event":"PostToolUse","handler":"*hook.postToolHandler","tool":"Edit","duration_ms":12,"session_id":"d4f16a10-e452-4eb7-a7e2-763efa51776e"}
+{"ts":"2026-07-20T14:31:10.843153208+09:00","event":"PostToolUse","handler":"*hook.postToolHandler","tool":"Edit","duration_ms":12,"session_id":"d4f16a10-e452-4eb7-a7e2-763efa51776e"}
+{"ts":"2026-07-20T15:54:55.5664055+09:00","event":"PostToolUse","handler":"*hook.postToolHandler","tool":"Edit","duration_ms":12,"session_id":"d4f16a10-e452-4eb7-a7e2-763efa51776e"}
+{"ts":"2026-07-20T16:21:33.7106195+09:00","event":"PreToolUse","handler":"*hook.preToolHandler","tool":"Edit","duration_ms":0,"decision":"allow","session_id":"d4f16a10-e452-4eb7-a7e2-763efa51776e"}
+{"ts":"2026-07-20T16:24:10.504039125+09:00","event":"PostToolUse","handler":"*hook.postToolHandler","tool":"Edit","duration_ms":11,"session_id":"d4f16a10-e452-4eb7-a7e2-763efa51776e"}
+{"ts":"2026-07-20T16:27:06.015673167+09:00","event":"PreToolUse","handler":"*hook.preToolHandler","tool":"Bash","duration_ms":424,"decision":"allow","session_id":"d4f16a10-e452-4eb7-a7e2-763efa51776e"}
+{"ts":"2026-07-20T16:47:03.708217792+09:00","event":"PostToolUse","handler":"*hook.postToolHandler","tool":"Edit","duration_ms":12,"session_id":"d4f16a10-e452-4eb7-a7e2-763efa51776e"}
+{"ts":"2026-07-20T17:41:43.9967145+09:00","event":"SessionStart","handler":"*hook.sessionStartHandler","duration_ms":51,"session_id":"d4f16a10-e452-4eb7-a7e2-763efa51776e"}
+{"ts":"2026-07-20T21:17:25.676133917+09:00","event":"SessionStart","handler":"*hook.sessionStartHandler","duration_ms":16,"session_id":"d4f16a10-e452-4eb7-a7e2-763efa51776e"}
+{"ts":"2026-07-20T21:17:25.692875458+09:00","event":"SessionStart","handler":"*hook.autoUpdateHandler","duration_ms":294,"session_id":"d4f16a10-e452-4eb7-a7e2-763efa51776e"}
+{"ts":"2026-07-20T22:50:47.256787041+09:00","event":"SessionStart","handler":"*hook.sessionStartHandler","duration_ms":16,"session_id":"d4f16a10-e452-4eb7-a7e2-763efa51776e"}
