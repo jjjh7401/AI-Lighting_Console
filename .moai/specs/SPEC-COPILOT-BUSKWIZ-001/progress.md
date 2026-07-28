@@ -648,6 +648,62 @@ dotted form이 실제로 발화되는 유일한 경로는 `f"Page {page}.{execut
 
 **AC 판정**: AC-BUSKWIZ-012 PASS(② 경로) · AC-BUSKWIZ-013 PASS.
 
+### M6 — 회귀 · PRESERVE · 정적 금지 스캔 (cycle_type=tdd, 2026-07-27) — **완료**
+
+#### 산출물 — 신규 테스트 파일 0개
+
+M6는 새 판정을 소유하지 않는다(소유 관계가 흐려진다). AC-BUSKWIZ-015의 정적
+스캔은 커맨드 조립을 소유한 **M2의 파일**에 넣었다.
+
+| 파일 | 상태 | 내용 |
+|---|---|---|
+| `server/tests/test_busking_bundle.py` | 변경 | `TestNoPerShowNumberEntersStatically` 8건 — AC-BUSKWIZ-015 |
+
+#### AC-BUSKWIZ-015 — 무엇을 어떻게 스캔했나
+
+| 검사 | 수단 |
+|---|---|
+| 커맨드 문자열에 박힌 리그 번호 | `(Group\|Preset\|Executor\|Page\|Fixture\|Sequence)\s+\d` — **독스트링을 제외한** 코드 문자열 상수 전수 |
+| f-string에 끼워 넣은 숫자 상수 | AST `FormattedValue.value`가 숫자 `Constant`인 노드 |
+| 리그 파라미터의 숫자 기본값 (`pool=4` 같은 룰북 예시) | AST 함수 인자 기본값 × 파라미터명 `pool\|slot\|group\|executor\|page\|fid\|fixture` |
+
+**독스트링 제외가 핵심이다** — 산문이 "왜 그것을 피하는가"를 설명하려면 금지
+토큰을 적어야 하고, 그 때문에 스캔이 무뎌지면 안 된다. `test_looks_resolver.py:495-497`이
+같은 이유로 만든 `_code_string_constants`를 **재사용**했다(재구현하면 두 곳이 갈라진다).
+
+세 스캐너 전부 **금지 형태를 심어 잡히는지 확인하는 비공허성 테스트**를 동반한다
+(`Store Preset 4.1` · `Group 11 + 12` · `def store(*, pool: int = 4)`). 없으면
+"0건 통과"와 "스캐너가 아무것도 안 잡음"이 구별되지 않는다.
+
+#### 게이트 — 전량
+
+| 항목 | 결과 |
+|---|---|
+| `pytest server/tests/ -q` (**M6가 직접 실측**, 이월 인용 없음) | **2423 passed · 3 skipped · 0 failed** (87.12s) |
+| M5 종료 시점 실측 대비 | 2415 → 2423 (**+8** = AC-015 스캔 수와 일치, 회귀 0건) |
+| PRESERVE `git diff --stat d176b81..HEAD -- <목록>` | **빈 출력** (`<BASE>..HEAD` 범위 — 인자 없는 `git diff`는 커밋 직후 항상 비어 게이트가 무력해진다) |
+| `tools.py` `_PROGRAMMER_STATE_COMMANDS` · `_is_programmer_state` · dedupe 블록 | **3구간 전부 무변경** (`git show d176b81:` ↔ `git show HEAD:` 바이트 대조) |
+| 신규 YAML·JSON 자산 (`--diff-filter=A`) | **0개** |
+| `ruff check` — 본 SPEC 변경 10파일 | **All checks passed** |
+| `ruff format --check` — 같은 10파일 | 9 formatted / **1 기존 결함** (아래) |
+
+#### 기존 비-clean 지점 2건 — 손대지 않고 기록 (M6 규칙)
+
+무관 재포맷은 PRESERVE 게이트의 신호를 흐리므로 정정하지 않는다.
+
+| 위치 | 내용 | baseline 확인 |
+|---|---|---|
+| `server/tests/test_web_dash.py:523` | `ruff check` E501 (103>100) | stash 후 재측정 — 동일. 본 SPEC 변경 0건 |
+| `server/tests/test_tools.py:567,598` | `ruff format` 미충족 2 hunk | `git show d176b81:` 사본에서도 동일. 본 SPEC 변경 위치는 122~132행으로 무관 |
+
+#### 재확인만 하고 소유하지 않은 AC
+
+`AC-BUSKWIZ-009`(M4) · `AC-BUSKWIZ-006`(M2) · `AC-BUSKWIZ-013`(M5)의 스캔이
+전체 스위트에서 깨지지 않았음을 회귀로 확인했다. 최초 판정은 각 소유
+마일스톤에 귀속한다.
+
+**AC 판정**: AC-BUSKWIZ-014 PASS · AC-BUSKWIZ-015 PASS.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run>_

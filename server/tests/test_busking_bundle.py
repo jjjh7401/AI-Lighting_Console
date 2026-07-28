@@ -39,8 +39,10 @@ from server.tests.test_looks_instantiate import (
     _pools,
     _preset,
 )
+from server.tests.test_looks_resolver import _code_string_constants
 
 _BUSKING_MODULE = Path("server/looks/busking.py")
+_SPEC_MODULES = (_BUSKING_MODULE, Path("server/looks/report.py"))
 
 
 def _stores(commands) -> list[str]:
@@ -545,3 +547,74 @@ class TestValueLineCollisionGuard:
         assert bundle.looks[0].created == ()
         assert bundle.looks[1].created, "발화하지 않은 값 라인은 예약이 아니다"
         assert bundle.looks[1].skipped == ()
+
+
+class TestNoPerShowNumberEntersStatically:
+    """AC-BUSKWIZ-015 — 그룹·풀·슬롯·FID·익스큐터 번호의 정적 진입 금지.
+
+    모든 번호는 **리그 조회 결과 객체의 필드**에서 와야 한다. 하드코딩된
+    `Preset 4.1`은 룰북 예시 값이지 이 리그의 값이 아니고, 그것을 기본값으로
+    두면 운영자가 손으로 만든 프리셋을 덮는다 — `resolve_pools`의 독스트링이
+    이미 그 함정을 적어 두었다(`server/looks/instantiate.py:220-222`).
+
+    독스트링은 스캔에서 제외한다: 산문이 왜 그것을 피하는지 설명하려면 금지
+    토큰을 적어야 하고, 그것 때문에 스캔이 무뎌지면 안 된다(`test_looks_resolver.py:495-497`
+    가 같은 이유로 같은 수집기를 쓴다). 주석을 지워 통과시키는 것은 금지다.
+    """
+
+    # 리그 번호를 실어 나르는 오브젝트 타입 + 바로 뒤의 숫자.
+    _NUMBERED_OBJECT = re.compile(r"\b(Group|Preset|Executor|Page|Fixture|Sequence)\s+\d")
+    _RIG_PARAM = re.compile(r"pool|slot|group|executor|page|fid|fixture", re.IGNORECASE)
+
+    @pytest.mark.parametrize("module", _SPEC_MODULES, ids=lambda p: p.name)
+    def test_no_command_string_carries_a_hardcoded_number(self, module: Path):
+        strings = _code_string_constants(module)
+        assert strings, "비공허성: 코드 문자열을 하나도 모으지 못했다"
+        offenders = [s for s in strings if self._NUMBERED_OBJECT.search(s)]
+        assert offenders == [], f"번호가 정적으로 박혔다: {offenders[:3]}"
+
+    def test_the_scan_would_catch_a_hardcoded_number(self):
+        # 비공허성 — 스캐너가 실제로 그 형태를 잡는지 심어서 확인한다.
+        assert self._NUMBERED_OBJECT.search("Store Preset 4.1")
+        assert self._NUMBERED_OBJECT.search("Group 11 + 12")
+        assert not self._NUMBERED_OBJECT.search("Store Preset {pool}.{slot}")
+
+    @pytest.mark.parametrize("module", _SPEC_MODULES, ids=lambda p: p.name)
+    def test_no_numeric_literal_is_interpolated_into_a_string(self, module: Path):
+        # f-string 안에 숫자 상수를 직접 끼워 넣는 형태 — `f"Preset {4}.{slot}"`.
+        tree = ast.parse(module.read_text(encoding="utf-8"))
+        planted = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FormattedValue)
+            and isinstance(node.value, ast.Constant)
+            and isinstance(node.value.value, int | float)
+        ]
+        assert planted == []
+
+    @pytest.mark.parametrize("module", _SPEC_MODULES, ids=lambda p: p.name)
+    def test_no_rig_parameter_defaults_to_a_number(self, module: Path):
+        """풀 번호를 `4`(Color) 같은 룰북 예시 값으로 기본값 지정하는 코드 0건."""
+        tree = ast.parse(module.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            args = node.args
+            pairs = list(
+                zip(args.args[len(args.args) - len(args.defaults) :], args.defaults, strict=True)
+            ) + list(zip(args.kwonlyargs, args.kw_defaults, strict=True))
+            for arg, default in pairs:
+                if default is None or not self._RIG_PARAM.search(arg.arg):
+                    continue
+                assert not (
+                    isinstance(default, ast.Constant) and isinstance(default.value, int | float)
+                ), f"{node.name}({arg.arg}=...)가 리그 번호를 기본값으로 갖는다"
+        # 대상이 0개인 것도 사실이다. 스캐너가 동작한다는 증거는 아래 심은 케이스가
+        # 대신 세운다 — 여기서 "몇 개를 봤다"를 세면 의미 없는 assert가 된다.
+
+    def test_the_default_scan_would_catch_a_pool_default(self):
+        tree = ast.parse("def store(look, *, pool: int = 4) -> None: ...")
+        node = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef))
+        arg, default = node.args.kwonlyargs[0], node.args.kw_defaults[0]
+        assert self._RIG_PARAM.search(arg.arg)
+        assert isinstance(default, ast.Constant) and isinstance(default.value, int)
