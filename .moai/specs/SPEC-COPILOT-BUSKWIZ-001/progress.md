@@ -704,9 +704,135 @@ M6는 새 판정을 소유하지 않는다(소유 관계가 흐려진다). AC-BU
 
 **AC 판정**: AC-BUSKWIZ-014 PASS · AC-BUSKWIZ-015 PASS.
 
+### M7 — 종단 라이브 검증 (실물 onPC 2.4.2, 2026-07-28) — **완료 · AC-BUSKWIZ-017 PASS**
+
+#### 세션 조건
+
+| 항목 | 값 |
+|---|---|
+| 콘솔 | grandMA3 onPC 2.4.2, `app_gma3` PID 38963, `HOSTTYPE=onPC` |
+| 응답기 | `CopilotResponder` v1.4.1 |
+| 포트 | send 8000 / **receive 9005** (기본 9000 아님 — M0가 기록한 그 자리) |
+| 왕복 프로브 | `responder_roundtrip --listen-port 9005` → **3/3 PASS** (ping · state · exec) |
+| 하네스 | `server/tools/busking_e2e.py` (신규, DEV TOOL — `server.tools` 예외 화이트리스트) |
+| 장르 | `록` → `rock` |
+
+**우회 배선을 만들지 않았다**: 콘솔 스택은 조립 루트 `build_console_stack`이 세우고,
+툴은 `ChatSession`이 쓰는 것과 같은 `build_toolset`으로 만들었다. 게이트·감사·브리지를
+손으로 엮었다면 M7이 검증한 것이 제품 경로가 아니게 된다.
+
+#### AC-BUSKWIZ-017 판정 — 4개 구간
+
+**① 무손실 — `console.executed == plan.commands` : PASS**
+
+증거는 툴 자신의 목록이 아니라 **감사 로그**다(`server/audit_logs/audit-20260728.jsonl`,
+`02:23:06.960856Z` → `02:23:11.026906Z`).
+
+| 항목 | 결과 |
+|---|---|
+| 감사 로그 송신 ↔ 계획 번들 | **61 == 61, 순서까지 동일** |
+| `ChangeDestination Root` | **1건** (기대 1 — 결정 F의 최종 증명) |
+| `ClearAll` | **12건 전량 생존** |
+| 전 행 `ok=True` | **예** (실패 0건) |
+
+**② `skipped_already_executed` 0건 : PASS** — 61건 전부 `executed_ok`.
+AC-BUSKWIZ-005 ④의 유닛 판정이 실물에서 재현됐다. **`tools.py`의 dedupe를 고치지 않고
+번들 형상만으로 회피한다는 결정 F가 실물에서 성립함이 여기서 확정된다.**
+
+**③ 슬롯 원장의 라이브 확인 : PASS**
+
+| 풀 | 계획 슬롯 | 재조회 실측 | 판정 |
+|---|---|---|---|
+| 1 (Dimmer) | 2,3,4,5,6,7 | 1,2,3,4,5,6,7 | 전부 존재 · 중복 0 |
+| 4 (Color) | 2,3,4,5,6,7 | 1,2,3,4,5,6,7 | 전부 존재 · 중복 0 |
+| 5 (Beam) | 1,2 | 1,2 | 전부 존재 · 중복 0 |
+| 6 (Focus) | 2,3,4,5 | 1,2,3,4,5 | 전부 존재 · 중복 0 |
+
+**슬롯 1이 계획에서 빠진 것이 원장이 실제로 동작한 증거다** — 세 풀의 슬롯 1은 LOOKLIB
+M7 세션이 남긴 기존 프리셋이 점유하고 있었고, 원장이 그것을 읽어 2부터 시작했다.
+빈 쇼파일이었으면 구별되지 않았을 사실이다.
+
+**④ 보고 집계 ↔ 재조회 실측 일치 : PASS**
+
+| 항목 | 결과 |
+|---|---|
+| `created_count` 18 | 재조회에서 **18/18이 슬롯·라벨까지 일치** |
+| 집계 == 룩별 합 | 생성 · 건너뜀 · 미매핑 **3항 전부 일치** |
+| `skipped_count` 0 · `not_executed` 0 | 재조회와 모순 없음 |
+
+#### 이 세션이 우연히 준 것 — 부분 성공의 실물 시연
+
+실물 쇼파일의 그룹이 역할 6종 중 2종(`백라이트`·`프론트`)만 주소해, 8룩 중
+**2룩 `none` · 6룩 `partial`**이 나왔다. 전부 초록인 세션보다 강한 증거다 —
+M3의 2단 보고가 실물에서 값을 했다.
+
+- 미매핑 **17쌍 / 4종**(`배경`·`사이드`·`스페셜`·`탑`) — 쌍과 종의 수가 다름이
+  실물에서 재현됐다(REQ-BUSKWIZ-013 (b)의 단위 결정).
+- 부류는 전부 `match_verdict`/`no_match` — **섹션 실패 0건**. 리그가 답을 준
+  상태이므로 M3의 부류 분리가 올바로 작동했다.
+- 한국어 요약이 그대로 나왔다: `[rock] 생성 18개 · 건너뜀 0개 · 미매핑 17건(4종) · 미실행 0개`.
+
+#### 명시하는 한계 2건
+
+1. **응답기는 프리셋 내용을 읽을 수 없다**(LOOKLIB M0 교차 발견의 계승). 검증은
+   **슬롯·라벨의 존재** 수준이며, 저장된 값이 룩이 의도한 값인지는 이 경로로
+   확인할 수 없다(`AC-BUSKWIZ-017` 비고).
+2. **승인 채널이 이번 세션에서 호출되지 않았다.** 게이트가 번들을 승인 요구 없이
+   통과시켰고(`approved_bundles` 빈 리스트), 따라서 M7은 승인 흐름을 실측하지
+   않았다. AC-BUSKWIZ-017은 이를 요구하지 않으며, 게이트 미통과 시 콘솔 송신 0건은
+   `AC-BUSKWIZ-009` 구간 3이 M4에서 유닛으로 소유한다. **관측하지 않은 것을
+   관측했다고 적지 않는다.**
+
+#### M0 판정과의 정합
+
+ASSUMPTION-16/17/18/19는 여기서 재측정하지 않았다(M7은 종단 통합의 실측이지 전제
+검증이 아니다). **M0 판정과 어긋난 관측 0건** — 익스큐터·페이지 커맨드는 61건 중
+0건이었고, 이는 M5의 ② DESCOPE 분기와 일치한다.
+
+**AC 판정**: AC-BUSKWIZ-017 PASS (LIVE 2건 중 2번째 — 라이브 세션 회계 2/2 소진).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run>_
+```yaml
+run_status: audit-ready
+run_complete_at: 2026-07-28
+base_sha: d176b81
+branch: feature/SPEC-COPILOT-BUSKWIZ-001
+mode: sub-agent          # plan §Phase 4 — 병렬 기각(concurrency benefit LOW)
+milestones: "M0~M7 8/8 완료"
+acceptance_criteria: "17/17 PASS (AC-BUSKWIZ-012는 ② DESCOPE 경로)"
+decisions_closed: 8      # A~G + H(값 라인 충돌 — run-phase 신설, 등록부 편입)
+live_sessions_spent: 2   # M0 프로브(2026-07-27) + M7 종단(2026-07-28) — 계획과 일치
+tests:
+  baseline_at_base_sha: 2291    # d176b81 워크트리 실측 2289 + 본 트리 환산 2건
+  baseline_measurement_note: "워크트리에서만 skip되는 tauri 번들 테스트 2건(dist/*.app 미빌드)을 본 트리 기준으로 환산"
+  final: 2423                   # + 3 skipped(M5 GO 분기 보존)
+  added: 132
+  new_failures: 0
+  per_milestone_measured: true  # 이월 인용 0 — 각 M이 착수 직전 직접 실측
+  arithmetic_closes: "2291 +34(M1) +26(M2) +27(M3) +27(M4·결정H) +10(M5) +8(M6) = 2423 — 6단계 전부 기록값과 일치"
+machine_gates:
+  preserve_diff_base_to_head: "빈 출력"
+  tools_py_locked_regions: "3구간 바이트 무변경(_PROGRAMMER_STATE_COMMANDS · _is_programmer_state · dedupe)"
+  new_yaml_json_assets: 0
+  executor_page_commands_generated: 0
+  dotted_address_forms_generated: 0
+  ruff_check_changed_files: "clean"
+  live_bundle_lossless: "61/61, 순서 동일, ok=True 전량"
+  live_skipped_already_executed: 0
+mutation_testing:
+  milestones_covered: "M1~M5 + 결정 H"
+  mutants_killed: "19/19"
+  vacuous_assertions_found_and_fixed: 3   # M3 1건 · 결정 H 1건 · M5 이전 M1 1건
+preexisting_defects_untouched:
+  - "server/tests/test_web_dash.py:523 — ruff E501(103>100), baseline 동일"
+  - "server/tests/test_tools.py:567,598 — ruff format 미충족, baseline 동일"
+limits_declared:
+  - "응답기는 프리셋 내용을 읽지 못한다 — 라이브 검증은 슬롯·라벨 존재 수준"
+  - "M7에서 승인 채널 미호출 — 게이트 보류 시 송신 0건은 M4가 유닛으로 소유"
+blocking_for_sync: "없음"
+next: "/moai sync — 문서 동기화 · PR"
+```
 
 ## §E.4 Sync-phase Audit-Ready Signal
 

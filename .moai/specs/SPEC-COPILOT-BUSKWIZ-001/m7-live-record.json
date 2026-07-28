@@ -1,0 +1,738 @@
+{
+ "is_error": false,
+ "executed": true,
+ "genre": "rock",
+ "approved_bundles": [],
+ "commands": [
+  {
+   "command": "ChangeDestination Root",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "ClearAll",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Group 11",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Attribute 'Dimmer' At 48 ; Attribute 'ColorRGB_R' At 20 ; Attribute 'ColorRGB_G' At 45 ; Attribute 'ColorRGB_B' At 95",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 1.2",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 1.2 '벌스 사이드'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 4.2",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 4.2 '벌스 사이드'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "ClearAll",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "ClearAll",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Group 11",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Attribute 'Dimmer' At 72 ; Attribute 'ColorRGB_R' At 95 ; Attribute 'ColorRGB_G' At 15 ; Attribute 'ColorRGB_B' At 70",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 1.3",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 1.3 '프리코러스 빌드'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 4.3",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 4.3 '프리코러스 빌드'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "ClearAll",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "ClearAll",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Group 11",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Attribute 'Dimmer' At 70 ; Attribute 'ColorRGB_R' At 25 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 30 ; Attribute 'Zoom' At 15",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 1.4",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 1.4 '리프 그린'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 4.4",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 4.4 '리프 그린'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 6.2",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 6.2 '리프 그린'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "ClearAll",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "ClearAll",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Group 11 + 12",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Attribute 'Dimmer' At 92 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 12 ; Attribute 'ColorRGB_B' At 12 ; Attribute 'Zoom' At 25",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 1.5",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 1.5 '코러스 히트'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 4.5",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 4.5 '코러스 히트'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 6.3",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 6.3 '코러스 히트'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "ClearAll",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "ClearAll",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Group 11 + 12",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Attribute 'Dimmer' At 95 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 20",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 1.6",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 1.6 '화이트 슬램'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 4.6",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 4.6 '화이트 슬램'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 5.1",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 5.1 '화이트 슬램'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 6.4",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 6.4 '화이트 슬램'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "ClearAll",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "ClearAll",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Group 11 + 12",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Attribute 'Dimmer' At 100 ; Attribute 'ColorRGB_R' At 88 ; Attribute 'ColorRGB_G' At 96 ; Attribute 'ColorRGB_B' At 100 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 10",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 1.7",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 1.7 '마지막 폭발'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 4.7",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 4.7 '마지막 폭발'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 5.2",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 5.2 '마지막 폭발'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Store Preset 6.5",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "Label Preset 6.5 '마지막 폭발'",
+   "status": "executed_ok",
+   "detail": "OK"
+  },
+  {
+   "command": "ClearAll",
+   "status": "executed_ok",
+   "detail": "OK"
+  }
+ ],
+ "report": {
+  "genre": "rock",
+  "executed": true,
+  "created": [
+   {
+    "family": "Dimmer",
+    "pool": 1,
+    "slot": 2,
+    "label": "벌스 사이드"
+   },
+   {
+    "family": "Color",
+    "pool": 4,
+    "slot": 2,
+    "label": "벌스 사이드"
+   },
+   {
+    "family": "Dimmer",
+    "pool": 1,
+    "slot": 3,
+    "label": "프리코러스 빌드"
+   },
+   {
+    "family": "Color",
+    "pool": 4,
+    "slot": 3,
+    "label": "프리코러스 빌드"
+   },
+   {
+    "family": "Dimmer",
+    "pool": 1,
+    "slot": 4,
+    "label": "리프 그린"
+   },
+   {
+    "family": "Color",
+    "pool": 4,
+    "slot": 4,
+    "label": "리프 그린"
+   },
+   {
+    "family": "Focus",
+    "pool": 6,
+    "slot": 2,
+    "label": "리프 그린"
+   },
+   {
+    "family": "Dimmer",
+    "pool": 1,
+    "slot": 5,
+    "label": "코러스 히트"
+   },
+   {
+    "family": "Color",
+    "pool": 4,
+    "slot": 5,
+    "label": "코러스 히트"
+   },
+   {
+    "family": "Focus",
+    "pool": 6,
+    "slot": 3,
+    "label": "코러스 히트"
+   },
+   {
+    "family": "Dimmer",
+    "pool": 1,
+    "slot": 6,
+    "label": "화이트 슬램"
+   },
+   {
+    "family": "Color",
+    "pool": 4,
+    "slot": 6,
+    "label": "화이트 슬램"
+   },
+   {
+    "family": "Beam",
+    "pool": 5,
+    "slot": 1,
+    "label": "화이트 슬램"
+   },
+   {
+    "family": "Focus",
+    "pool": 6,
+    "slot": 4,
+    "label": "화이트 슬램"
+   },
+   {
+    "family": "Dimmer",
+    "pool": 1,
+    "slot": 7,
+    "label": "마지막 폭발"
+   },
+   {
+    "family": "Color",
+    "pool": 4,
+    "slot": 7,
+    "label": "마지막 폭발"
+   },
+   {
+    "family": "Beam",
+    "pool": 5,
+    "slot": 2,
+    "label": "마지막 폭발"
+   },
+   {
+    "family": "Focus",
+    "pool": 6,
+    "slot": 5,
+    "label": "마지막 폭발"
+   }
+  ],
+  "skipped": [],
+  "unmapped": [
+   {
+    "look_id": "rock-empty-stage",
+    "role": "배경",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-verse-amber-grit",
+    "role": "사이드",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-verse-amber-grit",
+    "role": "탑",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-verse-side",
+    "role": "사이드",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-prechorus-build",
+    "role": "사이드",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-prechorus-build",
+    "role": "탑",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-riff-green",
+    "role": "사이드",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-chorus-hit",
+    "role": "사이드",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-chorus-hit",
+    "role": "탑",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-chorus-white-slam",
+    "role": "사이드",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-chorus-white-slam",
+    "role": "탑",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-chorus-white-slam",
+    "role": "배경",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-chorus-white-slam",
+    "role": "스페셜",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-final-blowout",
+    "role": "사이드",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-final-blowout",
+    "role": "탑",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-final-blowout",
+    "role": "배경",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   },
+   {
+    "look_id": "rock-final-blowout",
+    "role": "스페셜",
+    "reason": "no_match",
+    "reason_ko": "맞는 그룹 없음",
+    "kind": "match_verdict"
+   }
+  ],
+  "unmapped_roles": [
+   "배경",
+   "사이드",
+   "스페셜",
+   "탑"
+  ],
+  "looks": [
+   {
+    "look_id": "rock-empty-stage",
+    "display_name": "빈 무대",
+    "verdict": "none",
+    "created": 0,
+    "skipped": 0,
+    "unmapped": 1,
+    "not_executed": 0,
+    "failed": 0
+   },
+   {
+    "look_id": "rock-verse-amber-grit",
+    "display_name": "거친 앰버 벌스",
+    "verdict": "none",
+    "created": 0,
+    "skipped": 0,
+    "unmapped": 2,
+    "not_executed": 0,
+    "failed": 0
+   },
+   {
+    "look_id": "rock-verse-side",
+    "display_name": "벌스 사이드",
+    "verdict": "partial",
+    "created": 2,
+    "skipped": 0,
+    "unmapped": 1,
+    "not_executed": 0,
+    "failed": 0
+   },
+   {
+    "look_id": "rock-prechorus-build",
+    "display_name": "프리코러스 빌드",
+    "verdict": "partial",
+    "created": 2,
+    "skipped": 0,
+    "unmapped": 2,
+    "not_executed": 0,
+    "failed": 0
+   },
+   {
+    "look_id": "rock-riff-green",
+    "display_name": "리프 그린",
+    "verdict": "partial",
+    "created": 3,
+    "skipped": 0,
+    "unmapped": 1,
+    "not_executed": 0,
+    "failed": 0
+   },
+   {
+    "look_id": "rock-chorus-hit",
+    "display_name": "코러스 히트",
+    "verdict": "partial",
+    "created": 3,
+    "skipped": 0,
+    "unmapped": 2,
+    "not_executed": 0,
+    "failed": 0
+   },
+   {
+    "look_id": "rock-chorus-white-slam",
+    "display_name": "화이트 슬램",
+    "verdict": "partial",
+    "created": 4,
+    "skipped": 0,
+    "unmapped": 4,
+    "not_executed": 0,
+    "failed": 0
+   },
+   {
+    "look_id": "rock-final-blowout",
+    "display_name": "마지막 폭발",
+    "verdict": "partial",
+    "created": 4,
+    "skipped": 0,
+    "unmapped": 4,
+    "not_executed": 0,
+    "failed": 0
+   }
+  ],
+  "created_count": 18,
+  "skipped_count": 0,
+  "unmapped_count": 17,
+  "not_executed": 0,
+  "failed": 0,
+  "drilldown_capped": false
+ },
+ "summary_ko": "[rock] 생성 18개 · 건너뜀 0개 · 미매핑 17건(4종) · 미실행 0개\n  + 1.2 '벌스 사이드' (Dimmer)\n  + 4.2 '벌스 사이드' (Color)\n  + 1.3 '프리코러스 빌드' (Dimmer)\n  + 4.3 '프리코러스 빌드' (Color)\n  + 1.4 '리프 그린' (Dimmer)\n  + 4.4 '리프 그린' (Color)\n  + 6.2 '리프 그린' (Focus)\n  + 1.5 '코러스 히트' (Dimmer)\n  + 4.5 '코러스 히트' (Color)\n  + 6.3 '코러스 히트' (Focus)\n  + 1.6 '화이트 슬램' (Dimmer)\n  + 4.6 '화이트 슬램' (Color)\n  + 5.1 '화이트 슬램' (Beam)\n  + 6.4 '화이트 슬램' (Focus)\n  + 1.7 '마지막 폭발' (Dimmer)\n  + 4.7 '마지막 폭발' (Color)\n  + 5.2 '마지막 폭발' (Beam)\n  + 6.5 '마지막 폭발' (Focus)\n  ? 미매핑 [rock-empty-stage] 배경 — 맞는 그룹 없음\n  ? 미매핑 [rock-verse-amber-grit] 사이드 — 맞는 그룹 없음\n  ? 미매핑 [rock-verse-amber-grit] 탑 — 맞는 그룹 없음\n  ? 미매핑 [rock-verse-side] 사이드 — 맞는 그룹 없음\n  ? 미매핑 [rock-prechorus-build] 사이드 — 맞는 그룹 없음\n  ? 미매핑 [rock-prechorus-build] 탑 — 맞는 그룹 없음\n  ? 미매핑 [rock-riff-green] 사이드 — 맞는 그룹 없음\n  ? 미매핑 [rock-chorus-hit] 사이드 — 맞는 그룹 없음\n  ? 미매핑 [rock-chorus-hit] 탑 — 맞는 그룹 없음\n  ? 미매핑 [rock-chorus-white-slam] 사이드 — 맞는 그룹 없음\n  ? 미매핑 [rock-chorus-white-slam] 탑 — 맞는 그룹 없음\n  ? 미매핑 [rock-chorus-white-slam] 배경 — 맞는 그룹 없음\n  ? 미매핑 [rock-chorus-white-slam] 스페셜 — 맞는 그룹 없음\n  ? 미매핑 [rock-final-blowout] 사이드 — 맞는 그룹 없음\n  ? 미매핑 [rock-final-blowout] 탑 — 맞는 그룹 없음\n  ? 미매핑 [rock-final-blowout] 배경 — 맞는 그룹 없음\n  ? 미매핑 [rock-final-blowout] 스페셜 — 맞는 그룹 없음\n룩별:\n  빈 무대: 저장 0건 (생성 0 · 건너뜀 0)\n  거친 앰버 벌스: 저장 0건 (생성 0 · 건너뜀 0)\n  벌스 사이드: 부분 (생성 2 · 건너뜀 0)\n  프리코러스 빌드: 부분 (생성 2 · 건너뜀 0)\n  리프 그린: 부분 (생성 3 · 건너뜀 0)\n  코러스 히트: 부분 (생성 3 · 건너뜀 0)\n  화이트 슬램: 부분 (생성 4 · 건너뜀 0)\n  마지막 폭발: 부분 (생성 4 · 건너뜀 0)",
+ "requery": {
+  "1": [
+   {
+    "i": 1,
+    "name": "금빛 코러스"
+   },
+   {
+    "i": 2,
+    "name": "벌스 사이드"
+   },
+   {
+    "i": 3,
+    "name": "프리코러스 빌드"
+   },
+   {
+    "i": 4,
+    "name": "리프 그린"
+   },
+   {
+    "i": 5,
+    "name": "코러스 히트"
+   },
+   {
+    "i": 6,
+    "name": "화이트 슬램"
+   },
+   {
+    "i": 7,
+    "name": "마지막 폭발"
+   }
+  ],
+  "4": [
+   {
+    "i": 1,
+    "name": "금빛 코러스"
+   },
+   {
+    "i": 2,
+    "name": "벌스 사이드"
+   },
+   {
+    "i": 3,
+    "name": "프리코러스 빌드"
+   },
+   {
+    "i": 4,
+    "name": "리프 그린"
+   },
+   {
+    "i": 5,
+    "name": "코러스 히트"
+   },
+   {
+    "i": 6,
+    "name": "화이트 슬램"
+   },
+   {
+    "i": 7,
+    "name": "마지막 폭발"
+   }
+  ],
+  "5": [
+   {
+    "i": 1,
+    "name": "화이트 슬램"
+   },
+   {
+    "i": 2,
+    "name": "마지막 폭발"
+   }
+  ],
+  "6": [
+   {
+    "i": 1,
+    "name": "금빛 코러스"
+   },
+   {
+    "i": 2,
+    "name": "리프 그린"
+   },
+   {
+    "i": 3,
+    "name": "코러스 히트"
+   },
+   {
+    "i": 4,
+    "name": "화이트 슬램"
+   },
+   {
+    "i": 5,
+    "name": "마지막 폭발"
+   }
+  ]
+ }
+}
