@@ -17,7 +17,7 @@ status: draft (v0.1.0, 2026-07-28) · Tier L · 본 문서는 spec.md의 요구�
 | 순위 | 결정 | 확정 경로 | 위치 | 왜 먼저 재검토해야 하는가 |
 |---|---|---|---|---|
 | **1위** | **산출물 형상 = 곡 1개 = 시퀀스 1개, 섹션 1개 = 큐 1개 — 그리고 ASSUMPTION-21이 그 형상의 블로킹 전제** | 엔지니어링 판단 | §A.4a **결정 E** + §A.4a-E, spec.md §B.3 REQ-SONGCUE-007, §B M0/M3 | **되돌림 비용이 라이브 세션 단위이면서 동시에 산출물 정의 단위다.** ASSUMPTION-21(같은 시퀀스에 `Cue 2` 이상)이 부정이면 REQ-SONGCUE-007이 요구하는 물건을 **만들 수 없고**, DESCOPE로 우회할 축이 아니라 **저작이 차단**된다(§A.2). 형상을 사후에 바꾸면 M3~M5 전부와 M0 세션이 함께 되돌아간다. |
-| **2위** | **타임코드 · 큐 자동 진행 = M0 라이브 프로브 GO/DESCOPE 게이트** | 사용자 확정 ② | §A.4a **결정 B**, spec.md §B.4 REQ-SONGCUE-013 · REQ-SONGCUE-014, §B M0/M4 | **되돌림 비용이 라이브 세션 단위다.** M0 프로브의 측정 항목(ASSUMPTION-20 · ASSUMPTION-22)과 M4의 두 분기를 함께 규정한다. 게이트를 사후에 바꾸면 실물 콘솔 세션을 다시 잡아야 한다 — 사람과 쇼파일 일정이 본 SPEC에서 가장 비싼 자원이다. **v1 착수 전에만 변경 가능**하다. |
+| **2위** | **타임코드 · 큐 자동 진행 = M0 라이브 프로브 GO/DESCOPE 게이트** | 사용자 확정 ② | §A.4a **결정 B**, spec.md §B.4 REQ-SONGCUE-013 · REQ-SONGCUE-014, §B M0/M4 | **되돌림 비용이 라이브 세션 단위다.** M0 프로브의 측정 항목(ASSUMPTION-20 · ASSUMPTION-22)과 M4의 **두 축(축별 독립 판정)**을 함께 규정한다. 게이트를 사후에 바꾸면 실물 콘솔 세션을 다시 잡아야 한다 — 사람과 쇼파일 일정이 본 SPEC에서 가장 비싼 자원이다. **v1 착수 전에만 변경 가능**하다. |
 | **3위** | **큐 번호 원장 — 번호는 섹션 인덱스에 고정하고 당기지 않는다** | 엔지니어링 판단 | §A.4a **결정 F** + §A.4a-F, spec.md §A 하드 결함 1 + §B.3 REQ-SONGCUE-007, §B M3 | **이 결정이 없으면 본 SPEC은 존재 이유가 없다.** 선행 슬롯 원장이 푼 결함(`server/looks/instantiate.py:307-312` — `_first_free_slot`은 소비자가 누구든 전진하지 않는다)의 시간축 판본이며, 번호가 전진하지 않으면 섹션 N개가 같은 큐를 덮는다. "당기지 않는다"(건너뛴 섹션도 자기 번호를 소유)는 AC-SONGCUE-006과 AC-SONGCUE-011이 **동시에 참이 되는 유일한 형상**이다. |
 | 4위 | **음원 자동 분석은 본 SPEC의 범위가 아니다** | 사용자 확정 ① | §A.4a **결정 A**, spec.md §A 사전 확정 사실 ① + §D | 뒤집으면 신규 오디오 의존성 + 파일 업로드 경로 + 진행률·취소 프로토콜 **세 축이 동시에 열리고**, Tauri capability까지 개정 대상이 된다(`src-tauri/capabilities/default.json:4`의 `no upload`, 그것을 강제하는 테스트 `server/tests/test_deploy_tauri_shell.py:347-351`). 되돌림은 이 SPEC의 수정이 아니라 **다른 SPEC의 신설**이므로 본 계획 안에서는 가역적이지 않다. |
 | 5위 | **큐 이름 ASCII 고정 + 한국어는 표현 계층** | 사용자 확정 ③ | §A.4a **결정 C**, spec.md §A 사전 확정 사실 ③ + §B.3 REQ-SONGCUE-008 | 뒤집으면 큐 이름이 **안전 게이트의 본문 파싱 대상**이라는 사실과 충돌한다(§A.4a-C의 3단 체인). 표현 계층 매핑 자체는 이미 출하돼 있어 국소적이나(`server/looks/report.py:63`, `:74`, `:77-83`), 한국어가 자산·스키마로 새면 P1-1/P1-2 공통 기반이 함께 흔들린다(`server/looks/schema.py:20-25` `@MX:NOTE`). |
@@ -64,11 +64,11 @@ Store Sequence <n> Cue <m> '<name>' [CueFade <t>]
 ClearAll
 ```
 
-**4번째 줄의 발화 리터럴은 큐 1에만 확정돼 있다.** 위 형상의 `Store Sequence <n> Cue <m> '<name>' [CueFade <t>]`이 T1인 것은 `<m> = 1`에서다. **큐 2 이상은 M0가 잰 리터럴 그대로 발화하며, `/Merge` 포함 여부도 M0 실측분이다** — 계획이 `/Merge`의 유무를 임의로 정하지 않는다. M0의 ASSUMPTION-21이 그 형태를 재고, GO면 **잰 그 형태로** 발화한다. 줄 수 계산은 이 선택에 영향받지 않는다(어느 형태든 1줄이다).
+**4번째 줄의 발화 리터럴은 큐 1에만 확정돼 있다.** 위 형상의 `Store Sequence <n> Cue <m> '<name>' [CueFade <t>]`이 T1인 것은 `<m> = 1`에서다. **큐 2 이상은 M0가 잰 리터럴 그대로 발화하며, `/Merge` 포함 여부도 M0 실측분이다** — 계획이 `/Merge`의 유무를 임의로 정하지 않는다. M0의 ASSUMPTION-21은 `/Merge` **있는 형태와 없는 형태를 각각** 재고(§B M0의 분리 지시), GO면 **잰 그 형태로** 발화한다. 줄 수 계산은 이 선택에 영향받지 않는다(어느 형태든 1줄이다).
 
 = 섹션당 **5줄**. 여기에 번들 선두의 `ChangeDestination Root` 1줄(결정 G의 선두 1회 형상)과 `Label Sequence <n> '<song>'` 1줄을 더해 **5·S + 2**. ASSUMPTION-22가 GO면 섹션마다 `Set Cue <m> Sequence <n> Property 'TrigType' …` + `… 'TrigTime' <t>` 2줄이 붙어 **7·S + 2**.
 
-| 섹션 수 S | DESCOPE 분기 (5S+2) | ASSUMPTION-22 GO 분기 (7S+2) |
+| 섹션 수 S | ASSUMPTION-22 부정 (5S+2) | ASSUMPTION-22 GO 분기 (7S+2) |
 |---|---|---|
 | 6 | 32줄 | 44줄 |
 | 8 | 42줄 | 58줄 |
@@ -214,6 +214,7 @@ M0는 `SPEC-COPILOT-EXECBODY-001`의 GO/DESCOPE 라이브 프로브 패턴을 �
 각 항목의 진짜 차단 대상은 서로 다르고 **성격도 다르다**(§A.2 표): **블로킹은 ASSUMPTION-21 하나뿐**이고, ASSUMPTION-23은 **동작 축소**(부정이면 미점유 시퀀스 번호를 확정할 수 없으므로 **거부로 답한다**), ASSUMPTION-20 · ASSUMPTION-22는 **DESCOPE**, ASSUMPTION-24는 **정책**이다. M1 · M2를 기술적으로 막는 항목은 **0건**이고, **M3를 막는 항목도 ASSUMPTION-21 1건뿐**이다.
 
 - **ASSUMPTION-21 (같은 시퀀스에 `Cue 2` 이상) — 차단: M3, 블로킹**: `Store Sequence <n> Cue 1 '<name>'` 후 `Store Sequence <n> Cue 2 '<name>' /Merge`를 발화하고 `DataPool/Sequences/<n>` 재조회로 **자식 2개**를 확인한다. 조회 경로는 라이브 실행 기록이 있다(`server/safety/console.py:399`의 템플릿, `SPEC-COPILOT-EXECBODY-001/progress.md:180`). 현재 등급 **T2** — 룰북 `server/rulebook/assets/v2.4.2/31_choreography_patterns.md:55`에 있고 그 파일은 라이브 선언(`:7`)을 갖지만, 감사 로그의 `Cue 2` 이상은 전부 offline mock이다(`.moai/state/verify/m6b1/audit-full/audit-20260717.jsonl:71-73`).
+  - **`/Merge` 있는 형태와 없는 형태를 각각 발화해 결과를 구분 기록한다** — ASSUMPTION-22의 `'Follow'`/`'Time'` 분리 지시(아래)와 **동형**이다. `Store Sequence <n> Cue 2 '<name>' /Merge`와 `Store Sequence <n> Cue 2 '<name>'`를 **서로 다른 시퀀스 번호에서** 각각 발화하고 두 경우 모두 재조회로 자식 수를 센다. **왜 두 형태를 다 재는가**: `/Merge` 없는 `Store`가 **기존 큐에 대해** 병합인지 치환인지는 저장소 근거가 **0건**이고, 치환이면 앞 섹션의 큐가 지워져 REQ-SONGCUE-010(파괴적 커맨드 0건)을 위반한다 — 그 구분 자체가 실측 대상이며 계획이 추론으로 답할 수 있는 종류가 아니다. **두 형태를 하나의 판정으로 접지 않고**, 한쪽만 통과하면 그 사실을 그대로 적는다. M3는 **통과한 형태만** 발화한다(결정 E · §A.2 계수 각주).
   - **판정: GO / 부정.** DESCOPE라는 단어를 쓰지 않는다 — 끌 축이 없다. **부정이면 §A.2의 처리 지침을 집행한다**(M3 정지 · 대안 형상은 사용자 결정 · 우회 금지).
   - **파싱 성공과 효과 발생을 구분해 기록한다** — `Cmd()`가 거부된 커맨드에도 OK를 보고한 실측 사례가 있다(BUSKWIZ M0 측정 3). **재조회로 자식 수를 세는 것이 유일한 효과 증거다.**
 - **ASSUMPTION-23 (빈 시퀀스 번호 식별) — 대상: M3, 동작 축소(블로킹 아님)**: `DataPool/Sequences` 열거의 여집합에서 고른 번호가 **실제로 비어 있는지**, 그리고 "비어 있음"과 "존재하지 않음"이 **구별되는지** 관측한다. BUSKWIZ가 익스큐터에서 데인 함정("미점유 인덱스가 해석되지 않아 둘이 구별 불가", `SPEC-COPILOT-BUSKWIZ-001/progress.md:198`)의 시퀀스 축 재발 여부다. **익스큐터와 달리 시퀀스는 주소 공간 상한이 문제되지 않을 가능성이 있으나, 그 판단을 실측 없이 내리지 않는다.** 판정: GO / 부정.
@@ -228,14 +229,14 @@ M0는 `SPEC-COPILOT-EXECBODY-001`의 GO/DESCOPE 라이브 프로브 패턴을 �
 - **정리 기록과 Gaps**: 프로브가 쇼파일에 남긴 것(시퀀스·큐)과 그 무해성, 그리고 **측정하지 못한 것**을 명시적 섹션으로 남긴다(AC-SONGCUE-017 비고).
 - **baseline**: 해당 없음(코드 변경 0). 대신 **세션 조건표를 착수 전에 읽는다** — BUSKWIZ M0가 선행 SPEC의 OSC 수신 포트 기록을 읽지 않아 오진 1건을 냈다(`SPEC-COPILOT-BUSKWIZ-001/progress.md:191`).
 - **뮤테이션**: 해당 없음(테스트 없음).
-- 파일: **신규·수정 0**. 산출물은 `progress.md` M0 절의 판정 5건 + 실측 원문(콘솔 응답 · 감사 로그 · GUI 스크린샷)이며, 각주가 아니라 명시적 섹션으로 기록한다.
+- 파일: **신규·수정 0**. 산출물은 `progress.md` M0 절의 판정 5건 + 실측 원문(콘솔 응답 · 감사 로그 · GUI 스크린샷)이며, 각주가 아니라 명시적 섹션으로 기록한다. **DESCOPE 판정은 산문이 아니라 `DESCOPE: ASSUMPTION-nn <사유>` 접두 행으로 기록한다** — AC-SONGCUE-012 구간 ②④가 그 접두 행의 **존재 자체를 기계 판정**으로 삼으므로(행 존재 판정이며 산문 해석이 아니다), 부정을 산문으로만 적으면 M4의 부정 축이 판정 불가가 된다. 대상은 DESCOPE 축 둘 — `DESCOPE: ASSUMPTION-20 <사유>` · `DESCOPE: ASSUMPTION-22 <사유>`다. **ASSUMPTION-21은 이 형식의 대상이 아니다** — 끌 축이 없어 DESCOPE라는 단어를 쓰지 않으므로(위 판정 항) GO/부정으로만 적는다.
 - **AC**: AC-SONGCUE-017 (LIVE — 2건 중 1번째).
 
 ### M1 — 섹션 입력 계층 (cycle_type=tdd)
 
 - **시각 파싱**(REQ-SONGCUE-001): `mm:ss` · `mm:ss.mmm` · 초 단위 실수 3종을 받아 **밀리초 정수**로 정규화한다. 부동소수 비교를 남기지 않는다(AC-SONGCUE-001 ②). 파싱 결과의 순서는 입력 순서와 동일하다.
 - **단조 검증**(REQ-SONGCUE-002): 역행·중복 각각에서 거부하고 **어느 인덱스가 왜 어긋났는지**를 사유에 담는다. **정렬해서 진행하지 않는다** — 거부 후 반환에 섹션 목록이 없거나, 있다면 입력 순서와 동일하다(임의 재배열 0건).
-- **어휘 재사용은 import이지 재정의가 아니다**(REQ-SONGCUE-003, 결정 J): `server/looks/matching.py`의 `DYNAMICS_TERMS`(`:92`)와 섹션어 밴드(`:94-128`)를 **import해서** 쓰고 자체 매핑 리터럴을 0건으로 둔다. 검증은 **raw 텍스트 grep이 아니라 AST 식별자 스캔**이다 — 산문이 어휘를 설명할 수 있어 grep은 "표를 다시 적은 경우"와 "설명한 경우"를 구분하지 못한다(AC-SONGCUE-003 ①②).
+- **어휘 재사용은 import이지 재정의가 아니다**(REQ-SONGCUE-003, 결정 J): `server/looks/matching.py`의 `DYNAMICS_TERMS`(`:92`)와 섹션어 밴드(`:94-130`)를 **import해서** 쓰고 자체 매핑 리터럴을 0건으로 둔다. 검증은 **raw 텍스트 grep이 아니라 AST 식별자 스캔**이다 — 산문이 어휘를 설명할 수 있어 grep은 "표를 다시 적은 경우"와 "설명한 경우"를 구분하지 못한다(AC-SONGCUE-003 ①②).
 - **밴드는 밴드로 유지한다**(결정 J): `DYNAMICS_TERMS`의 반환은 `tuple[int, ...]`이며 점값으로 좁히지 않는다. 좁히면 그 표가 의도적으로 넓게 잡은 밴드를 무력화해 룩을 조용히 떨어뜨린다.
 - **미지 이름은 추정하지 않는다**(REQ-SONGCUE-004): 다이내믹스를 임의 기본값으로 채우지 않고 그 섹션을 "지정 필요"로 표시한다. **어휘에 있는 이름과 없는 이름이 섞인 입력에서 있는 것만 해석하고 없는 것만 표시한다** — 전량 실패로 접지 않는다.
 - **콘솔 무접촉**: 리그·게이트·실행 포트 어느 것도 건드리지 않는다. 인메모리 픽스처만으로 전량 검증된다.
@@ -277,26 +278,28 @@ M0는 `SPEC-COPILOT-EXECBODY-001`의 GO/DESCOPE 라이브 프로브 패턴을 �
 
 ### M4 — 타이밍 GO/DESCOPE · 섹션 축 보고 (cycle_type=tdd)
 
-**타이밍은 M0 판정에 따라 두 분기 중 정확히 하나를 실행한다**(AC-SONGCUE-012 검증 방법). 어느 쪽이든 이 마일스톤은 완료되며, DESCOPE는 실패가 아니다.
+**타이밍은 두 축을 각각 독립으로 판정한다** — ASSUMPTION-20이 **타임코드 축**을, ASSUMPTION-22가 **자동 진행 축**을 각각 GO/부정으로 정하고 **네 조합 전부에서 판정이 정의된다**(AC-SONGCUE-012 검증 방법: GO·GO → ①③ / GO·부정 → ①④ / 부정·GO → ②③ / 부정·부정 → ②④). **두 축을 하나의 논리곱으로 접지 않고 "둘 중 정확히 하나"로도 세지 않는다** — 등급이 서로 달라(ASSUMPTION-20은 **T5**로 부정 기대 · ASSUMPTION-22는 **T2**) **혼합 결과가 가장 개연성이 높고**, 하나로 접으면 혼합에서 부정 축의 0건을 아무도 요구하지 않게 된다. 어느 조합이든 이 마일스톤은 완료되며, 부정은 실패가 아니다.
 
-- **① GO 분기**(ASSUMPTION-20 또는 ASSUMPTION-22가 긍정, REQ-SONGCUE-013 · REQ-SONGCUE-014): **발화 형식은 M0가 실측한 것 하나뿐**이고, 시간값은 섹션 입력에서 **계산된 것만** 쓴다. `TrigTime`이 상대 의미론으로 실측되면 델타를 계산한다(M0 측정 4). 트리거 토큰은 대문자로 시작한다(`server/rulebook/assets/v2.4.2/31_choreography_patterns.md:115`).
-- **② DESCOPE 분기**: 생성 번들에 타임코드 대상 커맨드와 `Set Cue … Property 'TrigType'` 계열이 **0건**이고 DESCOPE 사유가 `progress.md` M0 절에 기록돼 있다. **실행되지 않은 분기의 테스트는 `skip` 사유를 명시한 채 남긴다 — 삭제하지 않는다.** 후속 SPEC이 게이트를 다시 열 때 출발점이 된다.
-  - **정직한 귀결을 결과에 적는다**(§A.3 1항): 둘 다 DESCOPE면 섹션 시작 시각은 콘솔에 전달되지 않는다. 시각을 `CueFade`에 밀어 넣지 않는다.
-- **MA2형 금지는 분기와 무관하다**(REQ-SONGCUE-015): `/trig=` 발화 0건. 판정은 M3의 AC-SONGCUE-009가 소유하고 여기서는 타이밍 코드가 그것을 깨지 않았음만 확인한다.
+- **축 1 — 타임코드**(ASSUMPTION-20, REQ-SONGCUE-013): **GO면** 발화 형식은 **M0가 실측한 것 하나뿐**이고 시간값은 섹션 입력에서 **계산된 것만** 쓴다(AC-SONGCUE-012 ①). **부정이면** 생성 번들에 타임코드 대상 커맨드가 **0건**이고, `progress.md` M0 절에 `DESCOPE: ASSUMPTION-20 <사유>` 형태의 **`DESCOPE:` 접두 행이 1건 이상** 존재한다 — **행 존재 판정이며 산문 해석이 아니다**(②).
+- **축 2 — 자동 진행**(ASSUMPTION-22, REQ-SONGCUE-014): **GO면** `Set Cue <m> Sequence <n> Property 'TrigType' <token>` / `'TrigTime' <t>`를 **M0가 실측한 토큰으로만** 발화한다 — `'Follow'`와 `'Time'`은 M0가 **각각 따로 재고 구분 기록한** 결과를 각각 따르고(AC-SONGCUE-017 측정 4), 룰북 줄 끝 주석의 토큰 메뉴를 **실측 없이 발화하지 않는다**. 트리거 토큰은 대문자로 시작하고(`server/rulebook/assets/v2.4.2/31_choreography_patterns.md:115`), `TrigTime`이 상대 의미론으로 실측되면 델타를 계산한다(M0 측정 4). 이상이 ③. **부정이면** `Set Cue … Property 'TrigType'`·`'TrigTime'` 계열이 **0건**이고 `DESCOPE: ASSUMPTION-22 <사유>` 접두 행이 존재한다(④).
+- **한 축의 부정이 다른 축의 GO를 취소하지 않는다.** 실행되지 않은 구간의 테스트는 **축별로** `skip` 사유를 명시한 채 남긴다 — **삭제하지 않는다.** 네 구간 중 실행되는 것은 **항상 2개**이고 나머지 2개는 `skip`으로 남으며, 후속 SPEC이 게이트를 다시 열 때 출발점이 된다.
+  - **정직한 귀결을 결과에 적는다**(§A.3 1항): **두 축이 모두 부정이면** 섹션 시작 시각은 콘솔에 전달되지 않는다. 시각을 `CueFade`에 밀어 넣지 않는다.
+- **MA2형 금지는 축 판정과 무관하다**(REQ-SONGCUE-015): `/trig=` 발화 0건. 판정은 M3의 AC-SONGCUE-009가 소유하고 여기서는 타이밍 코드가 그것을 깨지 않았음만 확인한다.
 - **섹션 축 2단 보고**(결정 I, REQ-SONGCUE-016): (a) 생성 큐의 시퀀스·번호·이름 **전량**, (b) 미매핑 섹션과 사유(어휘 미지 / 다이내믹스 룩 부재 / 역할 미주소를 **부류로 구분**해 병합하지 않는다), (c) 건너뛴 저장의 섹션·사유(**단위는 섹션 1개**), (d) **섹션별 판정**, (e) **미실행 커맨드 수**((c)와 합산 금지). **집계만 내고 섹션별을 생략하는 것은 금지** — 32~72줄(§A.2 계수 각주) 중 어느 섹션이 죽었는지 사용자가 알 수 없게 된다.
   - **산술 정합을 기계 고정**: 집계 수치가 섹션별 합과 일치해야 하며 불일치는 실패다. 곡의 **모든** 섹션이 정확히 한 번씩 판정에 나타난다(AC-SONGCUE-013 ①②). 판정 어휘는 닫힌 집합이다(③).
   - **두 종류의 "부분"을 섞지 않는다**(§C.9): **계획 시점의 건너뜀**(값 라인 충돌 · 룩 미매핑 → 커맨드가 애초에 발화되지 않음)과 **실행 시점의 중단 잔여**(`run_commands`의 stop-on-first-failure로 뒤 전량이 `not_executed` — `server/orchestrator/tools.py:535-543`)는 원인도 조치도 다르다. 별도 항목으로 싣고 합산하지 않는다.
   - **한국어 1급, 자산·스키마에는 넣지 않는다**(REQ-SONGCUE-008): 사용자 대면 문자열은 한국어이고 매핑은 **표현 계층 코드**에 둔다. 라벨 표는 `server/looks/report.py`의 **공개 접근자를 통해** 재사용한다 — 사유 코드는 기존 `reason_label`(`:77-83`), 판정 라벨은 **본 SPEC이 추가하는 공개 접근자 1건**이다. 밑줄 식별자(`_REASON_LABELS` `:63`, `_VERDICT_LABELS` `:74`)를 직접 import하지 않는다(결정 I 3항).
 - **재조회 확인 + 한계 명시**(REQ-SONGCUE-017): 재조회 결과가 생성한 큐 수·이름과 일치함을 확인하고, **CueFade·TrigType을 확인했다고 주장하는 필드가 0건**임을 함께 고정한다. 근거는 라이브 실측이다 — `DataPool/Sequences/<n>/<m>` 재조회는 `name`/`class`/`i`(+ 중첩 `Part` 자식)만 반환하고 커맨드·프로퍼티는 어떤 형태로도 반환하지 않는다(`SPEC-COPILOT-EXECREF-001/design.md:167`). 응답기가 `Cue`를 특별 취급하지 않는다는 것도 실측이다(`console/lua/copilot_responder.lua` 전체에 `Cue` 문자열 **0건**). **관측하지 않은 것을 보고하지 않는다.**
+  - **한계 문구는 산문이 아니라 상수다**(AC-SONGCUE-014 기대 결과): `server/looks/songcue_report.py`가 공개 상수 **`PROPERTY_UNOBSERVED_NOTE`**를 내놓고, 결과 페이로드의 **`property_unobserved`** 항목이 그 상수와 **문자열로 동일**해야 한다 — 판정은 **상수 동일성 비교**이며 산문 대조가 아니다. 따라서 문구를 페이로드에 직접 적어 넣거나 호출부마다 다시 쓰면 두 곳이 갈라져 그 비교가 깨진다.
 - **baseline**: 착수 직전 직접 실측. **이월 인용 금지.**
-- **뮤테이션**: ① DESCOPE 분기에 `Set Cue … Property 'TrigType' 'Time'` 한 줄을 주입한다 → AC-SONGCUE-012 ④(자동 진행 축의 부정 판정)가 죽는가. ② GO 분기에서 절대 시각을 델타 대신 그대로 넣는다 → 시간값 계산 assert가 죽는가. ③ 섹션 판정 1건을 목록에서 뺀다 → AC-SONGCUE-013 ①이 죽는가. ④ 집계 수치를 섹션별 합과 어긋나게 만든다 → ②가 죽는가. ⑤ 결과 페이로드에서 한계 문구를 제거한다 → AC-SONGCUE-014가 죽는가. ⑥ 결과에 `cue_fade_verified: true` 필드를 심는다 → AC-SONGCUE-014 ②가 죽는가(**BUSKWIZ가 잡은 공허한 단언 3건 중 M3 1건이 정확히 이 종류였다**).
-- 파일: `server/looks/songcue.py`(타이밍 절 — GO 분기에서만 발화 추가, DESCOPE 분기에서는 0건을 고정하는 형상), `server/looks/songcue_report.py`(**신규**), `server/looks/report.py`(**수정 — 비파괴적 공개 접근자 1건 추가**. 결정 I. 기존 심볼·시그니처 무변경의 순수 추가라 BUSKWIZ 계약은 깨지지 않는다), `server/tests/test_songcue_timing.py`(**신규 — 두 분기 모두에서 생성**. DESCOPE여도 "커맨드 0건"을 고정하는 스캔 테스트가 이 파일에 산다), `server/tests/test_songcue_report.py`(**신규**).
+- **뮤테이션**: ① **축 2가 부정인 조합**에 `Set Cue … Property 'TrigType' 'Time'` 한 줄을 주입한다 → AC-SONGCUE-012 ④가 죽는가. **혼합 조합(축 1 GO · 축 2 부정)에서도 같은 주입을 반복한다** — 축 하나가 GO라고 다른 축의 0건 스캔이 꺼지면 그것이 곧 이 절이 닫은 구멍의 재발이다. ② **축 1이 GO인 조합**에서 절대 시각을 델타 대신 그대로 넣는다 → 시간값 계산 assert가 죽는가. ③ 섹션 판정 1건을 목록에서 뺀다 → AC-SONGCUE-013 ①이 죽는가. ④ 집계 수치를 섹션별 합과 어긋나게 만든다 → ②가 죽는가. ⑤ 결과 페이로드에서 한계 문구를 제거한다 → AC-SONGCUE-014가 죽는가. ⑥ 결과에 `cue_fade_verified: true` 필드를 심는다 → AC-SONGCUE-014 ②가 죽는가(**BUSKWIZ가 잡은 공허한 단언 3건 중 M3 1건이 정확히 이 종류였다**).
+- 파일: `server/looks/songcue.py`(타이밍 절 — 축이 GO인 쪽에서만 발화 추가, 부정인 축은 0건을 고정하는 형상), `server/looks/songcue_report.py`(**신규** — 섹션 축 2단 보고 + 공개 상수 **`PROPERTY_UNOBSERVED_NOTE`**와 그것을 담는 페이로드 키 **`property_unobserved`**를 이 모듈이 소유한다), `server/looks/report.py`(**수정 — 비파괴적 공개 접근자 1건 추가**. 결정 I. 기존 심볼·시그니처 무변경의 순수 추가라 BUSKWIZ 계약은 깨지지 않는다), `server/tests/test_songcue_timing.py`(**신규 — 네 구간 전부를 담는다**. 실행되는 2개 외 나머지 2개는 `skip` 사유를 달아 남기고, 부정 축의 "커맨드 0건"을 고정하는 스캔 테스트가 이 파일에 산다), `server/tests/test_songcue_report.py`(**신규**).
 - **AC**: AC-SONGCUE-012, AC-SONGCUE-013, AC-SONGCUE-014.
 
 ### M5 — 툴 배선 · 실행 경로 · LiveLock (cycle_type=tdd)
 
 - **툴 1종 신설**(REQ-SONGCUE-019): 기존 등록 관례를 그대로 따른다 — `TOOL_NAMES` 등재(`server/orchestrator/tools.py:42`) + `build_toolset` 내부 클로저 핸들러 + `definitions` 튜플(`:952` 이하) + `handlers` 사전(`:1224` 이하). **등록부 3곳(`TOOL_NAMES` · `definitions` · `handlers`) 중 하나라도 누락되면 실패**로 판정하며, **핸들러 클로저를 포함한 변경 지점은 4자리다** — 클로저는 등록부가 아니라 등록 **대상**이므로 누락 판정의 항이 아니고, diff 범위 계수에는 들어간다(§B M6 · §E). 확인은 dict 조회가 아니라 **디스패치**로 한다(모델이 닿는 경로, AC-SONGCUE-015 ②).
-- **단일 실행 경로**(REQ-SONGCUE-018): 번들은 기존 `run_commands`(`:483`) → `bundle_gate.screen()`(`:492`) 경로로**만** 실행한다. 신규 REST 라우트·웹소켓 메시지 타입·`execution_port` 직접 접근 **0건**. 앵커 선례 둘을 그대로 따른다 — `:693-696`(`instantiate_look`, `:705`)과 `:817-821`(`prepare_busking`, `:826`)이 "이 핸들러는 `run_commands`의 **호출자**이지 제2 실행 표면이 아니다"를 이미 문서화한다.
+- **단일 실행 경로**(REQ-SONGCUE-018): 번들은 기존 `run_commands`(`:483`) → `bundle_gate.screen()`(`:492`) 경로로**만** 실행한다. 신규 REST 라우트·웹소켓 메시지 타입·`execution_port` 직접 접근 **0건**. 앵커 선례 둘을 그대로 따른다 — `:693-703`(`instantiate_look`, `:705`)과 `:817-824`(`prepare_busking`, `:826`)이 "이 핸들러는 `run_commands`의 **호출자**이지 제2 실행 표면이 아니다"를 이미 문서화한다.
 - **경계 검증은 AST 식별자 스캔이다**(AC-SONGCUE-015 ①): raw 텍스트 grep은 "호출"과 "호출을 설명하는 독스트링·주석"을 구분하지 못한다. 동형 구현이 이미 저장소에 있으므로 **재사용**한다 — `server/tests/test_busking_tool.py:75-85` `_identifiers`(`Name.id` | `Attribute.attr` | import 별칭)와 핸들러 서브트리 변형 `server/tests/test_looks_tool.py:714-721`. 비공허성 assert(스캔이 실제로 식별자를 모았는지)를 동반한다. 독스트링을 지워 스캔을 통과시키는 것은 금지.
 - **리그는 핸들러가 직접 읽는다**(REQ-SONGCUE-019 · REQ-SONGCUE-020): 툴 파라미터 스키마에 그룹·풀·슬롯·픽스처·**시퀀스 번호** 필드가 **0개**다(AC-SONGCUE-015 ③). 근거는 이미 코드 주석에 있다 — 모델이 리그 섹션을 다시 타이핑하면 이름을 바꿔 쓰거나 절단 신호를 떨어뜨리거나 콘솔이 준 적 없는 번호를 만들어 낸다.
 - **`is_error` 규약**: 정정 가능한 실수(어긋난 섹션 입력, 알 수 없는 섹션 이름)는 `is_error=True`, **답변인 실패**(저장 0건, LiveLock 강등)는 `is_error=False`. **게이트 보류는 `is_error=True`** — 강등과 보류는 다른 사건이다(AC-SONGCUE-015 ④).
@@ -349,7 +352,7 @@ M0는 `SPEC-COPILOT-EXECBODY-001`의 GO/DESCOPE 라이브 프로브 패턴을 �
 ## §C. 기술 제약
 
 1. **신규 런타임 의존성 0.** 순수 파이썬 + 기존 패키지 내부 확장. **신규 YAML·JSON 자산 0개** — 본 SPEC은 자산을 추가하지 않는다. 오디오 라이브러리(`librosa`/`essentia`/`numpy`)의 도입은 결정 A로 범위 밖이다.
-2. **`@MX:ANCHOR` 경계 (위반 불가)**: `server/orchestrator/tools.py:693-696`과 `:817-821`이 "룩 계층 핸들러는 `run_commands`의 **호출자**이지 제2 실행 표면이 아니다"를 문서화한다. 본 SPEC은 두 앵커를 **소비만** 하고 신설하지 않는다 — 신규 툴은 `instantiate_look`(`:705`) · `prepare_busking`(`:826`)과 동형이므로 그 보호 범위 안에 들어간다.
+2. **`@MX:ANCHOR` 경계 (위반 불가)**: `server/orchestrator/tools.py:693-703`과 `:817-824`가 "룩 계층 핸들러는 `run_commands`의 **호출자**이지 제2 실행 표면이 아니다"를 문서화한다. 본 SPEC은 두 앵커를 **소비만** 하고 신설하지 않는다 — 신규 툴은 `instantiate_look`(`:705`) · `prepare_busking`(`:826`)과 동형이므로 그 보호 범위 안에 들어간다.
 3. **PRESERVE 경계**(§A.5): `tools.py` 변경은 **신규 툴 1종의 등록**으로 한정된다. dedupe 블록(`:524-569`)과 `_PROGRAMMER_STATE_COMMANDS`(`:234-238`)는 무변경이며, 이것이 결정 G의 집행 형태다.
 4. **plan-phase 앵커 재실측 정정표 — 앵커는 줄번호가 아니라 심볼 식별자다.** BUSKWIZ에서 계승된 인용 몇 건이 현재 트리에서 어긋나 있어 plan-phase에서 직접 다시 쟀다. **본 계획은 아래 실측값을 쓴다.** run-phase는 인용 전에 **심볼로 재조회**하고, 어긋나면 이 표와 같은 형식으로 정정을 남긴다.
 
@@ -359,8 +362,8 @@ M0는 `SPEC-COPILOT-EXECBODY-001`의 GO/DESCOPE 라이브 프로브 패턴을 �
    | `server/orchestrator/tools.py:526-550` (dedupe 블록) | **`:524-569`** — 실행 루프의 실측 경계가 `:524`(`failed = False`)에서 `:569`(`failed = True`)까지이고 **dedupe 판정은 그 루프와 한 몸이다.** 내부: 주석 `:525-532` · `already_executed` `:533` · 루프 `:534` · stop-on-first-failure `:535-543` · `skipped_already_executed` 분기 `:544-557` · 실제 실행과 누적 `:558-569`(성공 시 `already_executed.add` `:561`, 실패 시 `failed = True` `:569`) | 경계를 `:557`에서 끊으면 `already_executed`에 **쓰는** `:561`과 루프를 끊는 `:569`가 게이트 밖에 남는다 — PRESERVE 범위로는 틀린 경계다 |
    | `server/safety/console.py:484-490` (자식 `name`을 본문 라인으로 수집) | **`:478-484`** | 파일이 **484행**에서 끝나(마지막 행이 `return tuple(lines)`) `:490`은 **존재하지 않는다** |
    | `server/safety/classify.py:46` (`RECOGNIZED_REFERENCE_TYPES`) | **`:44`** | `:46`은 `_NUMERIC_REF` |
-   | `server/looks/matching.py:21-25` (`DYNAMICS_TERMS`) | 정의는 **`:92`**, 섹션어 밴드는 **`:94-128`**(인트로 `:99` ~ 드랍 `:121`) | `:21-26`은 모듈 독스트링의 설명 산문 |
-   | `server/orchestrator/tools.py:692-697` / `:816-821` (`@MX:ANCHOR`) | **`:693-696`** / **`:817-821`** | 주석 블록의 시작이 1줄 뒤 |
+   | `server/looks/matching.py:21-25` (`DYNAMICS_TERMS`) | 정의는 **`:92`**, 섹션어 밴드 항목은 **`:94-130`** | `:21-26`은 모듈 독스트링의 설명 산문. 표의 닫는 `}`는 `:131`이고, `:99`~`:121`은 인트로~드랍 구간의 열거 항목 한정이라 `:129-130`의 `"피날레"`·`"finale"`가 그 밖에 남는다 — 범위를 `:128`에서 끊으면 그 두 항목이 빠진다 |
+   | `server/orchestrator/tools.py:692-697` / `:816-821` (`@MX:ANCHOR`) | **`:693-703`** / **`:817-824`** | `:692`·`:816`은 빈 `#` 줄이라 주석 블록의 본문은 `:693`/`:817`에서 시작하고 `:703`/`:824`에서 끝난다 — 시작이 1줄 뒤이면서 **끝도 각각 6줄·3줄 더 길다.** 끝을 `:696`/`:821`에서 끊으면 `@MX:REASON` 본문의 마지막 문장(`instantiate_look`은 "do not un-register it without giving the chain another model-reachable door", `prepare_busking`은 리그 READ 사유)이 앵커 밖으로 나간다 |
 
 5. **fail-safe는 협상 대상이 아니다.** 입력 부정합 · 미지 섹션 · 다이내믹스 룩 부재 · 값 라인 충돌 · 시퀀스 번호 미확인의 실패 방향은 항상 **거부 · 축소 · 건너뛰기**이지 추측 보완이 아니다(§A.3).
 6. **per-show 값의 정적 데이터 진입 금지**(REQ-SONGCUE-020): 그룹·풀·슬롯·FID·**시퀀스 번호**는 코드 상수·YAML 자산·룰북 어디에도 들어가지 않는다. 모든 실번호는 **런타임에 콘솔이 답한 값**이거나 **섹션 입력 순서**에서 온다. 큐 번호는 후자다.
@@ -383,7 +386,7 @@ M0는 `SPEC-COPILOT-EXECBODY-001`의 GO/DESCOPE 라이브 프로브 패턴을 �
 | `@MX:WARN` + `@MX:REASON` | `server/looks/songcue.py` 큐 이름 생성 지점 | ASCII 고정이 미감이 아니라 **게이트 본문 파싱 체인** 때문임을 3단으로 적는다(`server/safety/console.py:478-484` → `expand.py:106-109` → `grammar.py:20`). 위험 지대: "한국어 이름이 사용자 친화적이지 않나" — 그 순간 큐를 담은 시퀀스의 재생이 나중에 조용히 보류된다. 곡 제목(`Label Sequence`)도 같은 제약임을 함께 적는다 |
 | `@MX:NOTE` | `server/looks/songcue.py` 값 라인 충돌 가드 | 곡에서는 이것이 **예외가 아니라 기본 경로**임을 표시 — 후렴은 정의상 반복이고 `_values_line`·`_selection_line`이 섹션 정보를 담지 않으므로(`server/looks/instantiate.py:286-288`, `:300-304`) 같은 룩이 배정되면 문자열이 반드시 같아진다. BUSKWIZ의 장르 팔레트에서 충돌이 0건이었던 것을 근거로 이 가드를 지우면 안 된다 |
 | `@MX:NOTE` | `server/looks/songcue_report.py` | 판정의 단위가 **섹션 1개**이지 룩이 아님을 표시 — 룩 키로 세면 후렴 2개가 1행으로 접혀 AC-SONGCUE-013 ①이 깨진다. 이것이 `server/looks/report.py`의 `LookVerdict`(`:102`)를 확장하지 않고 분리한 이유다(결정 I) |
-| `@MX:WARN` + `@MX:REASON` | (GO 분기 시) `server/looks/songcue.py` 타이밍 지점 | `TrigTime`의 의미론(절대 시각 / 직전 큐 기준 상대 지연)은 **M0가 실측한 것만** 쓴다. 룰북은 답하지 않는다(`server/rulebook/assets/v2.4.2/31_choreography_patterns.md:111-112`). 위험 지대: 섹션 입력이 절대 시각이므로 상대 의미론에 절대값을 그대로 넣으면 전 큐가 어긋난다. MA2형 `/trig=` 금지도 함께 적는다(`:116-117`) |
+| `@MX:WARN` + `@MX:REASON` | (ASSUMPTION-22가 GO일 때) `server/looks/songcue.py` 타이밍 지점 | `TrigTime`의 의미론(절대 시각 / 직전 큐 기준 상대 지연)은 **M0가 실측한 것만** 쓴다. 룰북은 답하지 않는다(`server/rulebook/assets/v2.4.2/31_choreography_patterns.md:111-112`). 위험 지대: 섹션 입력이 절대 시각이므로 상대 의미론에 절대값을 그대로 넣으면 전 큐가 어긋난다. MA2형 `/trig=` 금지도 함께 적는다(`:116-117`) |
 | `@MX:ANCHOR` 신설 없음 | — | 기존 2앵커(§C.2)를 **소비만** 한다. 신규 툴은 `instantiate_look`·`prepare_busking`과 동형의 `run_commands` 호출자이므로 그 앵커의 보호 범위 안에 들어간다 |
 
 ## §E. 테스트 스캐폴딩 계획

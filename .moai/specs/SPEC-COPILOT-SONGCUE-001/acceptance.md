@@ -64,7 +64,7 @@ Then 번들에 타임코드 대상 커맨드가 **0건**이고, `progress.md` M0
 | REQ-SONGCUE-005 | AC-SONGCUE-005 | M2 | `looks_for_genre` 재사용 |
 | REQ-SONGCUE-006 | AC-SONGCUE-005 | M2 | 동일 AC 구간 ③ (승격 금지) |
 | REQ-SONGCUE-007 | AC-SONGCUE-006 | M3 | 시퀀스 1 · 큐 N |
-| REQ-SONGCUE-008 | AC-SONGCUE-007 | M3 | ASCII 고정 + 표현 계층 |
+| REQ-SONGCUE-008 | AC-SONGCUE-007 · AC-SONGCUE-009 | M3 | ASCII 고정 + 표현 계층. **발화 형태 한정**(`Store` 인라인 3번째 토큰 · 독립 동사 금지)은 AC-SONGCUE-009 구간 ①② |
 | REQ-SONGCUE-009 | AC-SONGCUE-008 | M3 | 빈 시퀀스 번호의 출처 |
 | REQ-SONGCUE-010 | AC-SONGCUE-009 | M3 | 파괴적 커맨드 0건 |
 | REQ-SONGCUE-011 | AC-SONGCUE-010 | M3 | 무손실 + dedupe 무개정 |
@@ -189,14 +189,22 @@ Then 번들에 타임코드 대상 커맨드가 **0건**이고, `progress.md` M0
 
 ### AC-SONGCUE-009 — 파괴적 커맨드 · 금지 문법 0건
 
-**The** 시스템 **shall not** `/Overwrite`·`/Remove`·`Delete`·MA2형 `/trig=`를 발화한다.
+**The** 시스템 **shall not** `/Overwrite`·`/Remove`·`Delete`·MA2형 `/trig=`·독립 동사 `Label Cue`·`Goto Cue`를 발화한다.
 
-- 대상 요구사항: REQ-SONGCUE-010 / REQ-SONGCUE-015
+- 대상 요구사항: REQ-SONGCUE-008(**발화 형태 한정** — 구간 ①②의 `Label Cue`) / REQ-SONGCUE-010 /
+  REQ-SONGCUE-015. `Goto Cue`는 REQ가 아니라 **범위 경계**에서 온다 — spec.md §D의
+  `Out of Scope — 재생 · 섹션 점프` 절이 근거이며, 그래서 이 AC가 그 경계의 기계 판정을 맡는다.
 - 검증 방법: 생성 커맨드 전수 스캔 + `pytest server/tests/test_songcue_bundle.py -q`
 - 기대 결과: 각 패턴 **0건**.
 - 검증 구간: ① **소스 grep이 아니라 생성된 커맨드 튜플 전수**에 스캔을 걸고 그 목록이 비어 있지
-  않음을 함께 assert한다(AC-BUSKWIZ-013의 감사 D3 교훈 계승). ② 스캐너가 금지 형태를 실제로
-  잡는지 **심어서** 확인한다(`Store Cue 5 /overwrite`, `Cue 1 /trig=Time`).
+  않음을 함께 assert한다(AC-BUSKWIZ-013의 감사 D3 교훈 계승). 금지 패턴 집합은 **여섯**이다 —
+  `/Overwrite` · `/Remove` · `Delete` · MA2형 `/trig=` · 독립 동사 **`Label Cue`** · **`Goto Cue`**
+  (매칭은 대소문자 무관). 뒤 둘의 근거: `Label Cue`는 룰북 0건이고 큐 이름의 발화 형태가 `Store`
+  인라인 3번째 토큰으로 **한정**되므로(REQ-SONGCUE-008) 사후 명명 커맨드가 애초에 존재하지 않는다.
+  `Goto Cue`는 spec.md §D의 `Out of Scope — 재생 · 섹션 점프` 절이 닫은 축이며, 게이트가 참조를
+  추출하지 못해 보류로 떨어지는 형태다. ② 스캐너가 금지 형태를 실제로 잡는지 **심어서** 확인한다 —
+  `Store Cue 5 /overwrite` · `Cue 1 /trig=Time` · `Label Cue 1 'X'` · `Goto Cue 2 Sequence 5`
+  **넷을 각각 주입해 넷 다 잡히는지** 본다(한 패턴만 심어 통과시키면 나머지 스캐너는 공허하다).
 
 ### AC-SONGCUE-010 — 무손실 + dedupe 무개정 + 정적 진입 금지
 
@@ -280,6 +288,12 @@ the 시스템 **shall not** **그 축의** 커맨드를 발화하며, 사유를 
 - 기대 결과: 재조회 결과가 생성한 큐 수·이름과 일치하고, 결과 페이로드의 `property_unobserved`
   항목이 `server/looks/songcue_report.py`의 공개 상수 **`PROPERTY_UNOBSERVED_NOTE`**와 **문자열로
   동일**하다(상수 동일성 비교이며 산문 대조가 아니다).
+- 추가 assert — **상수 자신의 최소 내용 불변식**: 상수 동일성만 보면 구현이 그 상수를 대입하기만
+  해도 통과하므로 **상수 값이 빈 문자열이어도 초록이 된다** — 이 SPEC이 반복해 금지한 공허한
+  단언이다. 그래서 상수 자신에 대해 함께 assert한다 — ① `PROPERTY_UNOBSERVED_NOTE.strip()`이
+  빈 문자열이 아니다. ② 그 값이 `CueFade`와 `TrigType` **두 토큰을 모두** 포함한다(관측하지 못한
+  대상을 이름으로 지목해야 한계 문구가 정보를 갖는다). 두 assert가 없으면 상수 동일성 비교는
+  자기참조로 닫혀 아무것도 지키지 않는다.
 - 검증 구간: ① 큐 존재·이름 대조. ② **CueFade·TrigType을 확인했다고 주장하는 필드가 0건**
   (`SPEC-COPILOT-EXECREF-001/design.md:167` 실측 — 응답기가 그것을 반환하지 않는다).
   관측하지 않은 것을 보고하지 않는다.
@@ -321,7 +335,12 @@ the 시스템 **shall not** **그 축의** 커맨드를 발화하며, 사유를 
 - 기대 결과: **5건 전부 판정 확정**(GO 또는 DESCOPE). 측정 항목:
   1. **ASSUMPTION-21 (블로킹)** — 같은 시퀀스에 `Cue 2` 이상 추가. `Store Sequence <n> Cue 1 …`
      후 `Cue 2 … /Merge`를 발화하고 `DataPool/Sequences/<n>` 재조회로 **자식 2개**를 확인한다.
-     **부정이면 M3 저작을 착수하지 않는다.**
+     **`/Merge` 있는 형태와 없는 형태를 각각 발화해 결과를 구분 기록한다** — 아래 측정 항목 4의
+     `'Follow'`/`'Time'` 분리와 **동형**이다. `Store Sequence <n> Cue 2 '<name>' /Merge`와
+     `Store Sequence <n> Cue 2 '<name>'`를 **서로 다른 시퀀스 번호에서** 발화하고 두 경우 모두
+     재조회로 자식 수를 센다 — `/Merge` 없는 `Store`가 기존 큐에 대해 병합인지 치환인지는
+     실측되지 않았으므로, 한 형태만 재면 결정 E가 말하는 "M0가 잰 리터럴 그대로"의 대상이
+     정해지지 않는다. **부정이면 M3 저작을 착수하지 않는다.**
   2. **ASSUMPTION-23** — 빈 시퀀스 번호 식별. `DataPool/Sequences` 열거의 여집합에서 고른 번호가
      실제로 비어 있는지, 그리고 "비어 있음"과 "존재하지 않음"이 구별되는지.
   3. **ASSUMPTION-20** — 타임코드 오브젝트·문법. **비파괴 범위에서** 존부를 재고 판정 불가면
@@ -335,6 +354,10 @@ the 시스템 **shall not** **그 축의** 커맨드를 발화하며, 사유를 
      사례가 있다(`SPEC-COPILOT-BUSKWIZ-001/progress.md` 측정 3).
   5. **ASSUMPTION-24** — 곡 1개 번들의 왕복. BUSKWIZ의 87줄/5.77s 실측을 기준으로 계산하고,
      계산이 그 범위를 넘으면 실측한다.
+- 기록 형식(**반드시**): 위 다섯 항목의 판정을 `progress.md` M0 절에 남길 때, 부정·DESCOPE 판정은
+  `DESCOPE: ASSUMPTION-nn <사유>` 형태의 **접두 행**으로 적는다(`nn`은 20~24이며 한 판정당 한 행).
+  **AC-SONGCUE-012 구간 ②④와 §B 시나리오 6의 행 존재 판정이 그 형식에 의존한다** — 산문 안에
+  녹여 쓰면 그 판정이 기계로 성립하지 않고 산문 해석으로 되돌아간다. GO 판정은 이 접두를 쓰지 않는다.
 - 비고: **우회 금지** — 타임코드가 없다고 시퀀스·큐를 임의로 더 만들어 우회하지 않는다.
   DESCOPE가 답이다. 정리 기록(생성한 프로브 산물의 처분)을 남긴다.
 
@@ -384,8 +407,8 @@ the 시스템 **shall not** **그 축의** 커맨드를 발화하며, 사유를 
 1. AC-SONGCUE-001~018 **18건 전량 판정 확정**(PASS 또는 정의된 DESCOPE 경로).
 2. §C.0 역추적표의 모든 REQ가 최소 1개 AC로 커버되고, 표가 최종 REQ 목록과 일치한다.
 3. 큐 번호가 `1..N` 빠짐없이 한 번씩임이 기계로 고정되어 있다(하드 결함 1).
-4. 생성 커맨드 전수에 비-ASCII **0건** · 파괴적 커맨드 **0건** · MA2형 `/trig=` **0건**이고,
-   각 스캐너의 비공허성이 금지 형태 주입으로 증명되어 있다.
+4. 생성 커맨드 전수에 비-ASCII **0건** · 파괴적 커맨드 **0건** · MA2형 `/trig=` **0건** · 독립 동사
+   `Label Cue`·`Goto Cue` **0건**이고, 각 스캐너의 비공허성이 금지 형태 주입으로 증명되어 있다.
 5. 값 라인 충돌 가드가 섹션 축에서 작동하고, 그것이 **거부가 아니라 건너뛰기**임이 고정되어 있다.
 6. PRESERVE 무변경 확인 — 특히 `server/looks/matching.py`와 `instantiate.py`의 diff가 빈 출력이다.
 7. 라이브 2회(M0 · M7)가 집행되고 **관측하지 않은 것을 보고하지 않았다**는 한계 명시가 결과에 있다.

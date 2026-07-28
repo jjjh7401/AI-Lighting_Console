@@ -188,7 +188,7 @@ Store Sequence 90 Cue 1 'Blue Look'                      audit-20260722.jsonl:10
 | **5** | **섹션 어휘** | `server/looks/matching.py:92` `DYNAMICS_TERMS` (내용 `:93-131`) | 섹션어 → 다이내믹스 밴드 매핑. 인트로 `:99-101`(1,2) · 벌스 `:103-104`(2,3) · 빌드/빌드업/프리코러스/라이저 `:106-113`(3) · 코러스/후렴/드랍/클라이맥스/엔딩 `:117-128`(4,5). **밴드가 의도적으로 넓다** — 모듈 독스트링 `:21-26`이 그 이유를 적었다("this table FILTERS, and an over-narrow filter drops a good look silently"). `:114-116`은 EDM 드랍이 다이내믹스 4로 저작돼 있어 단일 레벨 밴드면 사용자가 명백히 요청한 룩을 숨긴다는 실측 근거 | **재정의 금지** — `REQ-SONGCUE-003`. `AC-SONGCUE-003`이 raw grep이 아니라 **AST 식별자 스캔**으로 판정하는 이유는 산문이 어휘를 설명할 수 있기 때문이다 |
 | **6** | **다이내믹스 축** | `server/looks/schema.py:35-36` `DYNAMICS_MIN = 1` / `DYNAMICS_MAX = 5` | 정수 1..5 폐쇄 구간. 같은 파일 `:20-25`의 `@MX:NOTE`가 이 스키마를 **P1-1/P1-2 공통 기반**으로 못 박았다 — "a breaking change here breaks two downstream SPECs at once." 이어서 `:23-25`가 `REQ-LOOKLIB-004`의 강제 기제를 설명한다 — "there is no group number, preset slot, FID or executor field to put a per-show value in, and the loader rejects unknown keys" | 읽기만 한다. `REQ-SONGCUE-020`(정적 진입 금지)이 스키마 쪽에서 이미 기계로 강제되고 있다는 뜻이며, 본 SPEC은 신규 모듈 쪽에서 같은 금지를 다시 세운다(`AC-SONGCUE-010` 구간 ③) |
 | **7** | **룩 후보 전순서** | `server/looks/busking.py:81` `looks_for_genre(library, genre)` | 그 장르 룩 **전량**을 `(dynamics, look_id)` 오름차순으로 반환한다(`:92-97`). 모르는 장르는 예외가 아니라 **빈 튜플**이다(`:89-90` — "여기서는 '그런 룩이 없다'가 정직한 답이다"). 순서는 신규 발명이 아니라 `matching._ranked`의 타이브레이크가 점수 균일 구간에서 퇴화한 형태다(`:84-87`) | `REQ-SONGCUE-005`의 재사용 대상. `AC-SONGCUE-005` 구간 ②가 AST 식별자로 **재구현 0건**을 확인한다 |
-| **8** | **단일 실행 경로** | `server/orchestrator/tools.py:483` `run_commands` → `:492` `bundle_gate.screen()` | 번들 전체가 정확히 한 경로로 스크리닝된다. 앵커 선례 **2개**가 이미 있다 — `:693-701`(instantiate_look: "This handler is a **CALLER of run_commands, never a second execution surface**") · `:817-824`(prepare_busking: "Reaching `execution_port` from here would be **invisible to the gate**"). 실행 루프는 **stop-on-first-failure**다(분기 `:535-543` — 첫 실패 이후 전부 `not_executed`, 플래그 세팅 `:569`) | 신규 툴은 **3번째 준수 사례**이지 새 규범이 아니다 — `REQ-SONGCUE-018`. `AC-SONGCUE-015` 구간 ①의 AST 스캔이 기계 확인한다 |
+| **8** | **단일 실행 경로** | `server/orchestrator/tools.py:483` `run_commands` → `:492` `bundle_gate.screen()` | 번들 전체가 정확히 한 경로로 스크리닝된다. 앵커 선례 **2개**가 이미 있다 — `:693-703`(instantiate_look: "This handler is a **CALLER of run_commands, never a second execution surface**") · `:817-824`(prepare_busking: "Reaching `execution_port` from here would be **invisible to the gate**"). 실행 루프는 **stop-on-first-failure**다(분기 `:535-543` — 첫 실패 이후 전부 `not_executed`, 플래그 세팅 `:569`) | 신규 툴은 **3번째 준수 사례**이지 새 규범이 아니다 — `REQ-SONGCUE-018`. `AC-SONGCUE-015` 구간 ①의 AST 스캔이 기계 확인한다 |
 | **9** | **BUSKWIZ M0 실측 상한** | — (측정 기록) | `SPEC-COPILOT-BUSKWIZ-001/progress.md:200`, `:280` — **87줄 번들 87/87 성공 · 총 5.77s · 평균 66.3 ms/줄 · 누적 열화 없음** | ASSUMPTION-24의 계산 기준선. 곡 1개(섹션 6~10개) 번들 규모를 이 실측에서 **계산**하고, 계산이 87줄을 넘을 때만 M0에서 다시 잰다(`AC-SONGCUE-017` 측정 항목 5) |
 
 **부수 실측 — 시퀀스 생성이 패널 핀에 자동 연동된다.** `server/orchestrator/last_created.py:30` `_STORE_SEQUENCE = re.compile(r"^\s*Store\s+Sequence\s+(\d+)\b", re.IGNORECASE)`가 실행된 커맨드에서 시퀀스 번호를 뽑아 다음 턴의 대상 정체로 주입한다(모듈 독스트링 `:3-8`). 두 성질이 본 SPEC에 직접 걸린다:
@@ -285,7 +285,7 @@ Store Sequence 90 Cue 1 'Blue Look'                      audit-20260722.jsonl:10
 - **문법**: T1만 무조건 발화한다 — `Store Sequence <n> Cue <m> '<name>' [CueFade <t>]`(§2 항목 1·2). `Cue 2` 이상과 `/Merge`(T2, ASSUMPTION-21)는 M0 GO가 전제다. 타임코드·`TrigType`/`TrigTime`(T5/T2)은 각각 ASSUMPTION-20·ASSUMPTION-22 게이트 뒤에 있다. 큐 이름은 store 인라인 3번째 토큰으로만 넣고 ASCII 고정이다(기각 (c)·(f)).
 - **결합**: `server/looks/busking.py:189` `_merge`의 비대칭을 계승한다 — 목적지 선두 1회 + 섹션 단위 `ClearAll` 전량 유지. dedupe 규칙 무개정(기각 (d)).
 - **충돌**: `server/looks/busking.py:230`/`:240`의 건너뛰기 + 사유 보고를 섹션 축에 적용한다.
-- **실행**: 신규 툴 1종 → `server/orchestrator/tools.py:483` `run_commands` 재진입 → `:492` `bundle_gate.screen()`. 신규 실행 표면 0(앵커 선례 `:693-701`, `:817-824`).
+- **실행**: 신규 툴 1종 → `server/orchestrator/tools.py:483` `run_commands` 재진입 → `:492` `bundle_gate.screen()`. 신규 실행 표면 0(앵커 선례 `:693-703`, `:817-824`).
 - **보고**: `server/looks/report.py`의 2단 형상에 **섹션 축**을 얹는다. 재조회는 **존재와 이름**까지만 주장하고 프로퍼티 한계를 명시한다(§4).
 
 ---
@@ -306,10 +306,10 @@ Store Sequence 90 Cue 1 'Blue Look'                      audit-20260722.jsonl:10
 | `console/lua/copilot_responder.lua` | **`Cue` 문자열 0건**(875줄 전수) — 응답기가 큐를 특별 취급하지 않는다는 §4 근거. `EXECUTOR_ADDRESS_PATTERN`(`:405`)과 "the ONLY address form" 주석(`:397-404`). **PRESERVE** |
 | `server/looks/busking.py` | 재사용 계약 4종의 진원 — `looks_for_genre`(`:81`) · 슬롯 원장 `_advance`(`:158`, 형상 근거 `:161-163`, 미관측 방어 `:176-180`) · 번들 결합 `_merge`(`:189`, 룩별 구간 반환 `:202-206`) · 값 라인 충돌(`:230`, `:240`, 건너뛰기 근거 `:245-251`). **재사용하되 확장 가능** |
 | `server/looks/report.py` | 2단 보고 — `_REASON_LABELS`(`:63`, 8종 닫힌 집합) · `_VERDICT_LABELS`(`:74`, 3값) · `build_report`(`:205`, 룩별 판정은 실행 결과에서 `:208-212`) · `to_korean`(`:278`, 집계 형식 `:281-285`) · 모르는 코드는 지어내지 않음(`:77-83`). 한국어를 표현 계층에 두는 이유(`:60-62`). **재사용하되 확장 가능** |
-| `server/looks/matching.py` | `DYNAMICS_TERMS` **정의는 `:92`**(내용 `:93-131`) — 인트로 `:99-101` · 벌스 `:103-104` · 빌드 계열 `:106-113` · 코러스/드랍 계열 `:117-128`. 밴드를 넓게 잡은 이유는 모듈 독스트링 `:21-26`, EDM 드랍 실측 근거는 `:114-116`. 어휘를 지어내지 않는 `@MX:WARN`(`:28-33`) — 기각 (g)의 3항. **PRESERVE** |
+| `server/looks/matching.py` | `DYNAMICS_TERMS` **정의는 `:92`**(항목은 `:94-130`, 닫는 `}`는 `:131`) — 인트로 `:99-101` · 벌스 `:103-104` · 빌드 계열 `:106-113` · 코러스/드랍 계열 `:117-128`. 밴드를 넓게 잡은 이유는 모듈 독스트링 `:21-26`, EDM 드랍 실측 근거는 `:114-116`. 어휘를 지어내지 않는 `@MX:WARN`(`:28-33`) — 기각 (g)의 3항. **PRESERVE** |
 | `server/looks/schema.py` | `DYNAMICS_MIN`/`DYNAMICS_MAX`(`:35-36`). **P1-1/P1-2 공통 기반 경고**(`:20-25`) 와 per-show 값 진입을 스키마가 이미 막고 있다는 진술(`:23-25`). **PRESERVE** |
 | `server/looks/instantiate.py` | `_first_free_slot`(`:307-312`) — 전진 없는 순수 함수, 하드 결함 1의 형상 진원. `_plan_stores`(`:325-384`) — 모든 "저장 불가"를 `SkippedStore`로 답하는 선례(값 없는 패밀리는 `:332-334`에서 건너뜀이 아니라 `continue`). **PRESERVE** |
-| `server/orchestrator/tools.py` | 단일 실행 경로 — `run_commands`(`:483`) → `bundle_gate.screen()`(`:492`). **dedupe/실행 블록**(`:523-569`: 결과 목록·실패 플래그 초기화 `:523-524` · 시드 `:533` · 루프 `:534-569` · stop-on-first-failure 분기 `:535-543` · dedupe 판정 `:544` + 건너뛰기 분기 `:544-557` · `skipped_already_executed` 문자열 `:554` · 플래그 세팅 `:569`) — **무변경 대상**. **면제 집합 `_PROGRAMMER_STATE_COMMANDS`(`:234-238`)** 3종과 `fullmatch` 판정(`:241-244`), 확장 금지 사유(`:227-232`) — **무변경 대상**. 앵커 선례 2개(`:693-701`, `:817-824`). **변경은 신규 툴 등록으로 한정** |
+| `server/orchestrator/tools.py` | 단일 실행 경로 — `run_commands`(`:483`) → `bundle_gate.screen()`(`:492`). **dedupe/실행 블록**(`:524-569`: 실패 플래그 초기화 `:524` · dedupe 사유 주석 `:525-532` · 시드 `:533` · 루프 `:534-569` · stop-on-first-failure 분기 `:535-543` · dedupe 판정 `:544` + 건너뛰기 분기 `:544-557` · `skipped_already_executed` 문자열 `:554` · 플래그 세팅 `:569`) — **무변경 대상**. 바로 앞 `:523`은 결과 목록 초기화(`outcomes: list[CommandOutcome] = []`)로 PRESERVE 범위 밖이다. **면제 집합 `_PROGRAMMER_STATE_COMMANDS`(`:234-238`)** 3종과 `fullmatch` 판정(`:241-244`), 확장 금지 사유(`:227-232`) — **무변경 대상**. 앵커 선례 2개(`:693-703`, `:817-824`). **변경은 신규 툴 등록으로 한정** |
 | `server/orchestrator/last_created.py` | `_STORE_SEQUENCE`(`:30`)가 시퀀스 생성을 패널 핀에 자동 연동. **스냅샷 전용 · 최신 1건**(`:17-18`) — "곡 1개 = 시퀀스 1개"일 때만 정상 동작(기각 (b)의 2항). `Store Cue <m> Sequence <n>`을 생성으로 읽지 않음(`:27-29`) |
 | `server/tests/test_last_created.py` | `parse_last_created(["Store Cue 1 Sequence 71"]) is None` 고정(`:58-61`) — 위 성질의 회귀 방어 |
 | `server/tests/test_safety_classify.py` | `Store Cue 5` = `safe` · `risky is False` 고정(`:63-66`, 재확인 `:150`) — **저작 번들이 승인 보류를 유발하지 않는다**의 근거. `("Goto Cue 3", None)`(`:114`) — 섹션 점프가 보류되는 근거 |
@@ -350,19 +350,19 @@ LOOKLIB의 교훈(`SPEC-COPILOT-LOOKLIB-001/research.md:220`)을 적용해, **�
 2. **`Cue 2` 이상의 라이브 근거가 "룰북에 있음"으로 뭉뚱그려져 있었다 → 본 문서가 계수하고 ASSUMPTION-21로 승격한다.**
    `31_choreography_patterns.md:54-55`는 라이브 선언 파일 안에 있어 "검증됨"으로 읽히기 쉽다. 그러나 감사 로그 전수 census 결과 라이브 실행된 `Cue` 커맨드는 **5건이고 전부 `Cue 1`**이며(§2 정적 실측 1), 5건 모두 **서로 다른 신규 시퀀스에 대한 첫 저장**이다. **폐쇄**: ASSUMPTION-21로 승격하고 **블로킹**으로 등급을 매겼다 — DESCOPE가 아니라 M3 저작 자체를 막는다. `acceptance.md §C.0`이 이를 M0의 1번 측정 항목으로 올렸고, §7 기각 (b)가 "섹션마다 시퀀스 1개"라는 우회를 4사유로 닫았다.
 
-### §9.3 코드 앵커 드리프트 5건 — 본 문서가 실측 재접지, 정본이 수령
+### §9.3 코드 앵커 드리프트 5건 — 출처는 인계 브리핑, 정본은 처음부터 정정값
 
-정본(spec.md · acceptance.md)이 인용한 코드 앵커 중 **5건이 현재 트리와 어긋난다.** BUSKWIZ가 같은 부류를 5건 보고했던 것(`SPEC-COPILOT-BUSKWIZ-001/research.md:337`)과 같은 성격이며, **원인 유형별로 남긴다** — 같은 드리프트가 다시 생길 때 진단 순서가 된다.
+**본 SPEC 착수 시 받은 인계 브리핑**이 인용한 코드 앵커 중 **5건이 현재 트리와 어긋난다.** 어긋난 5건은 정본(`spec.md` · `acceptance.md`)에 **0건이다** — 최초 커밋(`b471ef6`) 시점의 두 문서에도 0건이고, 정본은 처음부터 아래 오른쪽 열의 정정값을 담고 있었다. 즉 드리프트의 출처는 정본이 아니라 브리핑이며, **정본이 낡은 값을 인용한 적은 없다**. BUSKWIZ가 같은 부류를 5건 보고했던 것(`SPEC-COPILOT-BUSKWIZ-001/research.md:337`)과 같은 성격이며, **원인 유형별로 남긴다** — 같은 드리프트가 다시 생길 때 진단 순서가 된다.
 
-| 정본의 인용 | 현재 트리의 실제 위치 | 원인 |
+| 인계 브리핑의 인용 | 현재 트리의 실제 위치 (정본·형제 문서가 쓰는 값) | 원인 |
 |---|---|---|
 | `server/safety/console.py:484-490` (자식 `name` → 본문 라인) | **`:478-484`**. **파일 총 484행이라 `:490`은 존재하지 않는다** | 범위 전체가 파일 끝을 넘어감 — 가장 심각한 부류 |
 | `server/orchestrator/tools.py:227-231` (`_PROGRAMMER_STATE_COMMANDS`) | **`:234-238`** (`:227-232`는 면제 원칙을 적은 사유 주석, `:233`은 `_SELECTION_OPERAND`) | +7행 오프셋 |
-| `server/orchestrator/tools.py:526-550` (dedupe 블록) | **`:523-569`** — 초기화 `:523-524` · 시드 `:533` · 루프 `:534-569` · stop-on-first-failure 분기 `:535-543` · dedupe 판정 `:544` + 건너뛰기 분기 `:544-557` · 플래그 세팅 `:569` | 같은 +7행 오프셋. 인용 범위가 블록의 시작과 끝 어느 쪽과도 맞지 않는다 |
+| `server/orchestrator/tools.py:526-550` (dedupe 블록) | **`:524-569`** — 실패 플래그 초기화 `:524` · dedupe 사유 주석 `:525-532` · 시드 `:533` · 루프 `:534-569` · stop-on-first-failure 분기 `:535-543` · dedupe 판정 `:544` + 건너뛰기 분기 `:544-557` · 플래그 세팅 `:569`(바로 앞 `:523`은 결과 목록 초기화 `outcomes: list[CommandOutcome] = []`로 범위 밖) | 같은 +7행 오프셋. 인용 범위가 블록의 시작과 끝 어느 쪽과도 맞지 않는다 |
 | `server/safety/classify.py:46` (`RECOGNIZED_REFERENCE_TYPES`) | **`:44`** (`:46`은 `_NUMERIC_REF`) | 2행 오프셋 |
-| `server/looks/matching.py:21-25` (`DYNAMICS_TERMS`) | **정의는 `:92`**(내용 `:93-131`). `:21-26`은 **모듈 독스트링**의 설명 절 | 상수 정의처와 독스트링의 혼동 — BUSKWIZ가 `resolver.py:70`에서 겪은 것과 **정확히 같은 부류** |
+| `server/looks/matching.py:21-25` (`DYNAMICS_TERMS`) | **정의는 `:92`**(항목은 `:94-130`, 닫는 `}`는 `:131`). `:21-26`은 **모듈 독스트링**의 설명 절 | 상수 정의처와 독스트링의 혼동 — BUSKWIZ가 `resolver.py:70`에서 겪은 것과 **정확히 같은 부류** |
 
-**처리 상태**: 본 문서와 형제 문서가 위 실측값을 쓰고, 정본은 run-phase 킥오프 전에 정정한다. **본 문서에서는 열린 항목이 아니라 처리 이력이다** — 미결로 오독하면 run-phase가 같은 대조를 반복한다.
+**처리 상태**: 본 문서와 형제 문서가 위 실측값을 쓰고, **정본은 이미 정정값을 담고 있다** — 최초 커밋부터 그러했으므로 정본 쪽에 남은 수행 대상은 **없다**. **본 문서에서는 열린 항목이 아니라 처리 이력이다** — 미결로 오독하면 run-phase가 같은 대조를 반복한다.
 
 **부수 관측 1건**:
 - `server/orchestrator/tools.py:823`의 주석이 리그 직접 읽기 사유로 `(:735-738)`을 자기 참조하는데, 이는 **소스 파일 안의 줄 참조**라 파일이 변하면 함께 낡는다. 본 SPEC은 그 파일을 신규 툴 등록 외로 고치지 않으므로 사실만 기록한다.
@@ -404,7 +404,7 @@ LOOKLIB의 교훈(`SPEC-COPILOT-LOOKLIB-001/research.md:220`)을 적용해, **�
 ### (1) 음원 자동 분석 — **예약한다** (입력 계약 1종)
 
 - **예약하는 것**: **섹션 목록의 형상 하나.** `REQ-SONGCUE-001`이 정의하는 구조(이름 · 시작 시각 · 입력 순서, 시각은 밀리초 정수로 정규화 — `AC-SONGCUE-001` 구간 ②)가 곧 음원 분석기의 **출력 계약**이 된다. 분석기가 붙어도 본 SPEC의 파이프라인은 무변경이며, 바뀌는 것은 그 목록을 **누가 만드느냐**뿐이다.
-- **예약하지 않는 것**: 오디오 의존성 · 업로드 경로 · 진행률·취소 프로토콜 · BPM·에너지 곡선의 표현. 본 SPEC은 이 축에 **아무 표면도 만들지 않는다** — 현재 리포지토리에 셋 다 0건이고(§7 기각 (e)), 하나라도 미리 만들면 쓰이지 않는 채로 출하되어 `server/orchestrator/tools.py:77-79`가 기록한 "추측된 경로는 죽은 채 출하된다" 사고를 반복한다.
+- **예약하지 않는 것**: 오디오 의존성 · 업로드 경로 · 진행률·취소 프로토콜 · BPM·에너지 곡선의 표현. 본 SPEC은 이 축에 **아무 표면도 만들지 않는다** — 현재 리포지토리에 셋 다 0건이고(§7 기각 (e)), 하나라도 미리 만들면 쓰이지 않는 채로 출하되어 `server/orchestrator/tools.py:80-82`가 기록한 "추측된 경로는 죽은 채 출하된다" 사고를 반복한다.
 - **경계선**: 분석기는 **섹션 목록까지만** 만들고 MA3에 아무것도 쓰지 않는다. 본 SPEC이 MA3 쪽 전부를 소유한다. 이 분할선이 유지되면 두 SPEC은 서로의 라이브 세션을 필요로 하지 않는다.
 
 ### (2) 시퀀스 → 익스큐터 바인딩 · 페이지 저작 — **예약하지 않는다** (이관)
