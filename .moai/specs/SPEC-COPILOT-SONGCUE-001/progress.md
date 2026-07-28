@@ -294,11 +294,130 @@ known_gaps:
   - "plan-audit 보고서가 .moai/reports/plan-audit/ 아래 SONGCUE 회차 파일로 남지 않았다 — git 추적 대상은 .gitkeep뿐이지만(.gitignore가 그 디렉터리의 *.md를 로컬 산출물로 의도적으로 제외한다) 로컬 보고서 6건이 실재하며 SONGCUE·LOOKLIB·BUSKWIZ 회차만 그중에 없다. 절차는 실행 지점을 갖고 있고 이번 두 회차가 그것을 쓰지 않았다. 두 회차의 유일한 사본은 Plan-phase log의 v0.1.1·v0.1.2 절이며, 2회차 감사가 1회차 원문을 못 본 것이 그 비용이다."
 blocking_for_run: "ASSUMPTION-21이 M3를 기술적으로 막는다 — 같은 시퀀스에 Cue 2 이상을 추가할 수 없으면 곡 1개 = 시퀀스 1개, 섹션 1개 = 큐 1개라는 산출물 정의(REQ-SONGCUE-007)가 성립하지 않으므로 DESCOPE가 아니라 저작 차단이다. M0 판정 전에 M3에 착수하지 않는다. 블로킹은 이 1건뿐이다 — ASSUMPTION-23이 부정이면 빈 시퀀스 번호를 확정할 수 없으므로 거부로 답하며(REQ-SONGCUE-009 · AC-SONGCUE-008 구간 2) M3 저작을 막지 않는다. ASSUMPTION-20/22는 M4의 정책 게이트일 뿐이며(두 축 각각의 GO/부정 분기가 AC-SONGCUE-012에 이미 정의됨), M1·M2는 M0와 독립이라 선행 가능하다."
 next: "M0 라이브 세션 접근성 확인 → Implementation Kickoff Approval (plan→run HUMAN GATE) → run(M0 프로브부터). plan-audit는 2회차 PASS 0.87로 종료하고 3회차를 열지 않는다 — 신규 16건은 전부 P1 이하 문서 정합·기계검증성 층이며 v0.1.2에서 전건 닫혔다. M0 이전에 M3 저작을 착수하지 않는다(ASSUMPTION-21 블로킹)."
+superseded_by_run: "§E.2 M0(2026-07-29)가 blocking_for_run과 next를 **소진**했다 — ASSUMPTION-20/21/22/23/24 다섯 건 전부 **GO**, DESCOPE 0건. ASSUMPTION-21 블로킹이 해제되어 **M3 저작 착수 가능**하다. 위 두 키는 plan-phase 시점의 감사 대상 기록으로 동결해 두며 현재 상태가 아니다. M0가 새로 연 항목은 §E.2 '계획을 고쳐야 하는 실측 4건'(F-1~F-4)과 Gaps 4건이고, 그중 **M4를 막는 것은 Gap 1(TrigTime 의미론 미관측)**, **M7을 막는 것은 F-1(큐 번호 재조회 불가)**이다."
 ```
 
 ## §E.2 Run-phase Evidence
 
-_<pending run>_
+### M0 — 라이브 프로브 (AC-SONGCUE-017, LIVE 2건 중 1번째) — 2026-07-29
+
+**판정 5건 전부 GO. DESCOPE 0건. M3 저작 차단 해제.** 코드 변경 0 · 소스 파일 신규·수정 0.
+
+#### 세션 조건 (착수 전 실측 — plan.md §B M0 baseline)
+
+| | |
+|---|---|
+| 콘솔 | grandMA3 onPC 2.4.2, macOS (`app_gma3` PID 38963, `HOSTTYPE=onPC`) |
+| 응답기 | `CopilotResponder` **v1.4.1** (ping 응답 `version` 실측) |
+| OSC | **send 8000 / receive 9005** |
+| 왕복 사전 확인 | `responder_roundtrip --listen-port 9005 --wait 5` → ping·state·exec **3/3 PASS** |
+| 쇼파일 착수 상태 | Sequences **17** (`1,2,11–17,20,30,41,50,62,71,80,90`) · Groups 4 (`1,11,12,13`) · Timecodes **0** |
+| 드라이버 | `.moai/state/verify/songcue-m0/probe.py` (scratch, `server.bridge.osc` 직결 — `responder_roundtrip`와 동일 등급의 매체 갭) |
+| 원문 로그 | `.moai/state/verify/songcue-m0/steps.jsonl` (전 스텝 raw payload) |
+
+**BUSKWIZ M0의 오진을 반복하지 않았다.** 착수 전 `SPEC-COPILOT-BUSKWIZ-001/progress.md:191`을 읽어 수신 포트 **9005**(기본 9000 아님)를 확인했고 첫 왕복에서 3/3 PASS했다.
+
+#### 판정 요약
+
+| # | 전제 | 판정 | 효과 증거 |
+|---|---|---|---|
+| 1 | **ASSUMPTION-21** 같은 시퀀스에 `Cue 2` 이상 (**블로킹**) | **GO** | 재조회 자식 수 증가 + 앞 큐 보존. `/Merge`·비`/Merge` **양 형태 모두** |
+| 2 | **ASSUMPTION-23** 빈 시퀀스 번호 식별 | **GO** | 여집합에서 고른 101·102·103에 `Store`가 **정확히 그 번호로** 착지 |
+| 3 | **ASSUMPTION-20** 타임코드 오브젝트·문법 | **GO** | `DataPool/Timecodes` 실재 + `Store Timecode 999` 후 childCount 0→1 |
+| 4 | **ASSUMPTION-22** `TrigType`/`TrigTime` | **GO** | `'Follow'`·`'Time'` **양쪽 OK**, 날조 토큰·날조 프로퍼티는 각각 거부 |
+| 5 | **ASSUMPTION-24** 곡 1개 번들 왕복 | **GO** | 86줄 **86/86** · 6.25s · 72.7 ms/줄 · 열화 +1.1ms |
+
+**`DESCOPE:` 접두 행은 0건이다** — 다섯 판정이 모두 GO이므로 plan.md §B M0 기록 규약("GO 판정은 이 접두를 쓰지 않는다")에 따라 한 행도 쓰지 않았다. **AC-SONGCUE-012 구간 ②④의 행 존재 판정은 따라서 거짓이고 ①③이 발동한다** — 두 축의 `skip` 구간 테스트는 plan.md §B M3의 지시대로 축별 사유를 명시한 채 남긴다.
+
+#### 측정 1 — ASSUMPTION-21 (블로킹 해제)
+
+`/Merge` 유무를 **서로 다른 시퀀스 번호에서** 각각 발화했다(계획 지시).
+
+| 시퀀스 | 발화 | 재조회 childCount | 사용자 큐 | 앞 큐 |
+|---|---|---|---|---|
+| 101 | `Store … Cue 1 'PROBEA1' CueFade 2` | 3 | 1 | — |
+| 101 | `Store … Cue 2 'PROBEA2' CueFade 2 /Merge` | **4** | **2** | **보존** |
+| 102 | `Store … Cue 1 'PROBEB1' CueFade 2` | 3 | 1 | — |
+| 102 | `Store … Cue 2 'PROBEB2' CueFade 2` (**`/Merge` 없음**) | **4** | **2** | **보존** |
+| 102 | `Store … Cue 1 'PROBEB3' CueFade 2` (**기존 큐**, `/Merge` 없음) | 4 (불변) | 2 | **거부 — `Not allowed`** |
+
+**계획이 던진 질문("`/Merge` 없는 `Store`가 기존 큐에 대해 병합인가 치환인가")에 답이 나왔다: 어느 쪽도 아니다 — 거부한다.** 새 큐 번호에는 두 형태 모두 가산이고, **기존 큐 번호에는 플래그 없는 `Store`가 `Not allowed`로 거부되며 쇼파일은 불변**이다. 치환은 명시적 `/Overwrite`를 요구하고 그것은 룰북이 DESTRUCTIVE로 표시해 게이트가 사람 승인으로 라우팅하는 경로다. **REQ-SONGCUE-010(파괴적 커맨드 0건)은 구조적으로 안전하다** — 실수로 파괴 경로에 도달할 수 없다. M3는 결정 E에 따라 두 형태 중 하나를 고르면 되고, 실측상 **`/Merge`는 새 큐 번호에 대해 불필요**하다.
+
+#### 측정 2 — ASSUMPTION-23 (BUSKWIZ 익스큐터 함정의 재발 없음)
+
+`DataPool/Sequences` 열거는 **점유 슬롯마다 명시적 인덱스 `i`를 준다**(`1,2,11–17,20,30,…`, 희소). 따라서 **여집합이 계산 가능**하다 — BUSKWIZ가 익스큐터에서 데인 "미점유 인덱스가 해석되지 않아 비어 있음과 존재하지 않음이 구별 불가"(`SPEC-COPILOT-BUSKWIZ-001/progress.md:198`)는 **시퀀스 축에서 재발하지 않았다.**
+
+개별 조회는 자유 번호(101·102)와 터무니없는 번호(9999)에 **똑같이** `path segment not found`를 준다. 그러나 이것은 함정이 아니다 — **시퀀스에는 "존재하지만 비어 있음"이라는 제3의 상태가 없기 때문**이다(점유=열거됨, 미점유=객체 없음). 익스큐터는 주소 공간이 선재해 그 구별이 필요했고, 시퀀스는 풀이 객체 기반이라 필요하지 않다. **결정적 증거는 착지 실측**이다 — 여집합에서 고른 101·102·103 전부에 `Store`가 정확히 그 번호로 착지했다. REQ-SONGCUE-009의 "여집합에서만 고른다"는 성립한다.
+
+#### 측정 3 — ASSUMPTION-20 (T5 → 실측 GO)
+
+**부정 프로브는 무력했다.** `Set Timecode 999 …`와 날조 키워드 `Set ZzzBogusType 999 …`가 **둘 다** `Illegal object`를 준다 — BUSKWIZ 측정 1이 겪은 "문법 없음과 대상 없음이 구별 불가"가 여기서는 실재한다. **판정을 가른 것은 생성 프로브다**: `Store Timecode 999` → `OK`, 재조회 `DataPool/Timecodes` childCount **0 → 1**(`Timecode 999`, `i=999`). 파싱이 아니라 **효과**다.
+
+실측한 문법 — **M3·M4는 이 목록만 발화한다**:
+
+| 커맨드 | 결과 | 효과 증거 |
+|---|---|---|
+| `Store Timecode <n>` | OK | 풀 childCount 0→1, `i=<n>` |
+| `Set Timecode <n> Property 'Name' '<ascii>'` | OK | 노드 name이 `PROBETC`로 변경됨 |
+| `Assign Sequence <s> At Timecode <n>` | OK | `TrackGroup 1` 자식 생성 |
+| `Record Timecode <n>` | OK | (녹화 무장 — `Off Timecode <n>`로 해제 확인) |
+| `Store Timecode <n> Sequence <s>` | **거부** | `User Canceled Command` (확인 대화상자 자동 취소) |
+| `Stop Timecode <n>` | **거부** | `Not implemented` |
+
+#### 측정 4 — ASSUMPTION-22 (`'Follow'`와 `'Time'`을 접지 않았다)
+
+계획 지시대로 두 토큰을 **각각 따로** 쟀고, **날조 대조군**을 함께 발화해 `ok=True`가 변별력을 갖는지 먼저 증명했다.
+
+| 커맨드 | `ok` | 응답 |
+|---|---|---|
+| `Set Cue 2 Sequence 101 Property 'TrigType' 'Follow'` | True | OK |
+| `Set Cue 2 Sequence 101 Property 'TrigType' 'Time'` | **True** | **OK** |
+| `Set Cue 2 Sequence 101 Property 'TrigType' 'Zzz'` | False | `Illegal value` |
+| `Set Cue 2 Sequence 101 Property 'ZzzBogus' 'Follow'` | False | `Illegal property` |
+| `Set Cue 2 Sequence 101 Property 'TrigTime' 4` | True | OK |
+| `Set Cue 99 Sequence 101 …` (없는 큐) | False | `Illegal object` |
+| `Set Cue 2 Sequence 9999 …` (없는 시퀀스) | False | `Illegal object` |
+
+**룰북 줄 끝 주석의 토큰 메뉴에서 온 `'Time'`이 실측으로 승격됐다** — 곡 섹션 타이밍이 요구하는 쪽이 바로 이것이므로 REQ-SONGCUE-014가 성립한다. 콘솔은 프로퍼티명·값 토큰·객체 존재를 **각각 독립적으로** 검증하며 서로 다른 오류 문자열을 준다. 즉 **BUSKWIZ 측정 3의 "거부된 커맨드에 `Cmd()`가 OK를 보고했다"는 경고가 이 축에는 적용되지 않는다** — 여기서 `ok=True`는 변별적이다. 그럼에도 재조회를 효과 증거로 삼는 규율은 유지했다.
+
+#### 측정 5 — ASSUMPTION-24 (계산 확인이 아니라 실측)
+
+**ASSUMPTION-20이 GO이므로 plan.md §A.2의 예외 조항이 발동했다** — 타임코드 발화 형식이 계수 불가였던 근거가 사라졌고, 계산 확인 대신 **실측**했다. 12섹션 곡 1개의 종단 형상을 단일 번들로 발화:
+
+| 항목 | 실측 | BUSKWIZ M0 기준 |
+|---|---|---|
+| 번들 줄 수 | **86** | 87 |
+| 성공 | **86/86** | 87/87 |
+| 총 시간 | **6.25s** | 5.77s |
+| 줄당 | **72.7 ms** | 66.3 ms |
+| 누적 열화 | **+1.1 ms**(전반 66.3 → 후반 67.4) | 없음 |
+
+재조회 결과 시퀀스 103은 `Label Sequence`로 **`PROBESONG`**이 되었고 자식 14 = 시스템 2 + **사용자 큐 12**(`SEC01`…`SEC12`, 순서 일치)였다. **REQ-SONGCUE-007의 산출물 정의("곡 1개 = 시퀀스 1개, 섹션 1개 = 큐 1개")가 실물에서 성립함을 종단으로 확인했다** — 타임코드 축 GO를 포함한 상태로. 번들 분할 정책은 필요 없다(§G 조건부 접점 2 미발생).
+
+#### 계획을 고쳐야 하는 실측 4건
+
+| # | 발견 | 영향 |
+|---|---|---|
+| **F-1** | **큐 자식의 `i`는 큐 번호가 아니라 나열 위치다.** `Store … Cue 7`로 저장한 `PROBEA7`이 `i=5`로 보고됐다. 반면 **풀 수준(`Sequences`·`Timecodes`)의 `i`는 실제 번호**다(101·999로 확인) | **AC-SONGCUE-018 측정 3의 "큐 N개가 서로 다른 번호로 존재"는 재조회로 직접 관측되지 않는다.** M7 착수 전 해당 AC의 검증 수단을 아래 우회로로 바꾸거나 응답기를 확장해야 한다 |
+| **F-2** | **모든 시퀀스는 암묵 시스템 큐 2개(`OffCue`·`CueZero`)를 갖는다.** 갓 만든 시퀀스도 childCount 2에서 출발한다 | **AC-SONGCUE-017 측정 1의 문자 그대로의 "자식 2개" 기준은 오판한다.** 사용자 큐 수 = `childCount − 2`. 본 절은 그 보정을 적용해 판정했다 |
+| **F-3** | **응답기 스냅샷에 `max_children = 24` 상한이 있다**(`console/lua/copilot_responder.lua`) | 시퀀스 풀이 24를 넘으면 열거가 `truncated`되어 **ASSUMPTION-23의 여집합 계산이 무효**가 된다. 현재 17이라 미발동. M3는 `truncated` 플래그를 반드시 확인하고 참이면 거부해야 한다(REQ-SONGCUE-020의 "추측 금지"와 동일 취지) |
+| **F-4** | **큐 번호는 커맨드로는 관측 가능하다.** `Set Cue 7 Sequence 101 Property 'TrigTime' 0` → OK인데 `Set Cue 3 …` → `Illegal object`. 즉 존재/부재가 번호로 변별된다 | **F-1의 우회로다.** `PROBEA7`이 실제로 큐 **번호 7**임을 이 채널이 증명했다(나열은 `i=5`로 감췄다). AC-SONGCUE-018은 이 채널로 번호를 확인할 수 있으나 **쓰기성 프로브**라는 한계가 있다 |
+
+#### 정리 기록 — 쇼파일 원상 복구 완료
+
+프로브가 남긴 것: 시퀀스 **101**(큐 1·2·7 + `TrigType`/`TrigTime` 설정) · **102**(큐 1·2) · **103**(`PROBESONG`, 큐 12) · 타임코드 **999**(`PROBETC`, `TrackGroup 1`, 시퀀스 101 배정).
+
+전량 삭제했고 **재조회로 베이스라인 일치를 확인**했다 — `DataPool/Sequences` = `[1,2,11,12,13,14,15,16,17,20,30,41,50,62,71,80,90]` (착수 시점과 **정확히 동일**), `DataPool/Timecodes` childCount **0**. **잔여물 0건.**
+
+정리 중 실측 1건: **`Delete Sequence 101`이 처음에는 `User Canceled Command`로 거부됐다** — 타임코드 999에 배정돼 있어 확인 대화상자가 떴고 응답기가 그것을 자동 취소했다. 타임코드를 먼저 지운 뒤 재시도해 성공했다. **파괴적 커맨드가 확인 대화상자를 띄우면 기본값이 "취소"라는 뜻이며, 이는 안전 방향의 실패다**(REQ-SONGCUE-010에 유리). `Record Timecode 999`로 무장된 녹화 상태도 `Off Timecode 999`로 해제해 확인했다.
+
+#### Gaps — 측정하지 못한 것
+
+1. **`TrigTime`의 의미론(절대 시각 vs 직전 큐 기준 상대 지연)은 관측하지 못했다.** 계획이 "GO 시 반드시 함께 측정할 것"으로 지목한 항목이다. 원인은 **값 되읽기 경로의 부재**다 — 상태 조회는 name·class·slot만 반환하고(`copilot_responder.lua`에 프로퍼티 접근자 없음), `List Cue 2 Sequence 101`과 `Get Cue 2 Sequence 101 Property 'TrigType'`은 둘 다 `OK`만 돌려준다(값은 콘솔 커맨드라인 창으로 가고 OSC 응답에 실리지 않는다). **비파괴 범위에서 소진했고 판정 불가다.** M4가 이 값에 의존하므로 **M4 착수 전에 닫아야 한다** — 선택지는 (i) 응답기에 프로퍼티 읽기 추가, (ii) 두 큐의 실제 발화 시각을 재는 거동 관측. 어느 쪽도 M0 범위가 아니다. `PROPERTY_UNOBSERVED_NOTE`의 대상이다.
+2. **매체 갭**: 전 발화가 `server.bridge.osc` 직결이며 `gate.screen()`을 경유하지 않았다 — LOOKLIB G2 · BUSKWIZ M0와 동일 등급이다. 안전 게이트를 통과한 발화의 종단 확인은 M7(AC-SONGCUE-018) 몫이다.
+3. **F-3의 상한은 미실측이다.** `max_children = 24`는 소스에서 읽은 값이고 24를 넘는 풀에서 `truncated`가 실제로 어떻게 오는지는 재지 않았다(현재 시퀀스 17).
+4. **`/Overwrite`는 발화하지 않았다.** 룰북이 DESTRUCTIVE로 표시한 경로이고 M3가 쓰지 않을 것이므로 비파괴 원칙에 따라 건드리지 않았다. 측정 1의 "치환은 명시적 플래그를 요구한다"는 `Not allowed` 거부로부터의 추론이며 `/Overwrite` 자체의 실측이 아니다.
+5. **실측 원문이 git에 남지 않는다 — `known_gaps` 4항과 같은 실패 계열이다.** 전 스텝 raw payload 181행은 `.moai/state/verify/songcue-m0/steps.jsonl`에 있고 드라이버는 같은 디렉터리의 `probe.py`인데, **`.gitignore:206`의 `.moai/state/`가 둘 다 추적에서 제외한다**(BUSKWIZ `showui-m6` 선례와 동일 관례). 따라서 **커밋되는 유일한 사본은 위 절의 표와 인용문**이다. plan-audit 2회차가 1회차 원문을 못 봐서 치른 비용이 정확히 이것이었으므로, 본 절은 판정을 뒷받침하는 **모든 커맨드와 응답 문자열을 표 안에 그대로 옮겨 적었다** — 요약 서술로 대체하지 않았다. 원문 로그는 이 세션이 살아 있는 동안의 보조 증거일 뿐이다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
