@@ -116,6 +116,11 @@ logs/*
 # audit data is ignored.
 server/audit_logs/
 
+# MoAI 세션 런타임 산출물 — 리뷰 가치 없음.
+# 루트 앵커된 `logs/*`가 .moai/logs/를 덮지 못해 실제로 PR에 110건이 쓸려 들어갔다.
+.moai/logs/
+.moai/reports/
+
 # ===========================================
 # Backups
 # ===========================================
