@@ -1,2 +1,0 @@
-{"ts":"2026-07-23T14:30:31.766851916+09:00","event":"SessionStart","handler":"*hook.sessionStartHandler","duration_ms":18,"session_id":"1c12ea40-af30-4f50-8511-5b8b792df641"}
-{"ts":"2026-07-23T14:30:31.785193334+09:00","event":"SessionStart","handler":"*hook.autoUpdateHandler","duration_ms":1453,"session_id":"1c12ea40-af30-4f50-8511-5b8b792df641"}

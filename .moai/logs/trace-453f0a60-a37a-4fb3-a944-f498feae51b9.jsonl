@@ -1,9 +1,0 @@
-{"ts":"2026-07-20T11:10:59.786570417+09:00","event":"PostToolUse","handler":"*hook.postToolHandler","tool":"Edit","duration_ms":12,"session_id":"453f0a60-a37a-4fb3-a944-f498feae51b9"}
-{"ts":"2026-07-20T11:16:45.734459959+09:00","event":"PostToolUse","handler":"*hook.postToolHandler","tool":"Edit","duration_ms":11,"session_id":"453f0a60-a37a-4fb3-a944-f498feae51b9"}
-{"ts":"2026-07-20T11:18:00.583196833+09:00","event":"PostToolUse","handler":"*hook.postToolHandler","tool":"Edit","duration_ms":11,"session_id":"453f0a60-a37a-4fb3-a944-f498feae51b9"}
-{"ts":"2026-07-20T12:09:39.6160295+09:00","event":"PreToolUse","handler":"*hook.preToolHandler","tool":"Bash","duration_ms":0,"decision":"allow","session_id":"453f0a60-a37a-4fb3-a944-f498feae51b9"}
-{"ts":"2026-07-20T12:33:45.944302958+09:00","event":"PostToolUse","handler":"*hook.postToolHandler","tool":"Write","duration_ms":18,"session_id":"453f0a60-a37a-4fb3-a944-f498feae51b9"}
-{"ts":"2026-07-20T12:36:05.599366792+09:00","event":"PostToolUse","handler":"*hook.postToolHandler","tool":"Edit","duration_ms":12,"session_id":"453f0a60-a37a-4fb3-a944-f498feae51b9"}
-{"ts":"2026-07-20T12:45:41.723721292+09:00","event":"PreToolUse","handler":"*hook.preToolHandler","tool":"Bash","duration_ms":0,"decision":"allow","session_id":"453f0a60-a37a-4fb3-a944-f498feae51b9"}
-{"ts":"2026-07-20T13:03:44.527138083+09:00","event":"PostToolUse","handler":"*hook.postToolHandler","tool":"Edit","duration_ms":13,"session_id":"453f0a60-a37a-4fb3-a944-f498feae51b9"}
-{"ts":"2026-07-20T13:04:08.205607083+09:00","event":"PreToolUse","handler":"*hook.preToolHandler","tool":"Bash","duration_ms":435,"decision":"allow","session_id":"453f0a60-a37a-4fb3-a944-f498feae51b9"}
