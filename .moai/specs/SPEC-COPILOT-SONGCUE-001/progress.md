@@ -431,4 +431,50 @@ _<pending sync>_
 
 > 본 절은 **오케스트레이터가 첫 run-phase `Agent()` 스폰 전에 작성**하는 구속력 있는 기록이다. plan-phase 문서의 대응 절은 **권고**이며 오케스트레이터가 확정하거나 기각한다. 이 헤딩은 v0.1.0 착수 시점에 **선제 생성**되었다 — LOOKLIB의 plan-phase 문서가 존재하지 않는 `progress.md` §F를 구속력 있는 기록으로 지목해 **끊어진 참조**를 만들었고(`SPEC-COPILOT-LOOKLIB-001/plan.md:289`), BUSKWIZ가 선제 생성으로 그것을 고쳤다(`SPEC-COPILOT-BUSKWIZ-001/progress.md:865-867`). 본 SPEC은 그 교정을 계승한다. 본문이 채워지기 전까지 이 절은 **비어 있음이 정상**이며, 비어 있다는 사실 자체가 "아직 스폰하지 않았다"의 기록이다.
 
-_<pending orchestrator>_
+### Decision: **parallel (2트랙)** — plan.md §G의 `sub-agent` 권고를 **기각한다**
+
+작성 시각 2026-07-29, **첫 run-phase `Agent()` 스폰 이전.** plan.md §G:459가 "여기의 Decision이 progress.md §F와 어긋나면 progress.md가 이긴다"고 규정하므로 본 절이 구속력을 갖는다.
+
+#### 착수 SHA (M6 PRESERVE 게이트의 `<BASE>`)
+
+```
+BASE = 38a6e7e2157a4862721fcd868056e0dbbb09c4c0   # docs(spec): SONGCUE M0 라이브 프로브
+```
+
+**이 값이 M6의 `git diff --stat <BASE>..HEAD -- <목록>` 게이트가 쓰는 유일한 기준점이다**(plan.md §B M6 — "`<BASE>..HEAD` 범위는 협상 불가"). PRESERVE 대상 6종 전부 현존 확인함: `server/looks/{matching,instantiate,resolver,schema,loader,roles}.py`.
+
+#### 기각 사유 — M0가 §G의 입력 파라미터 2개를 바꿨다
+
+§G는 네 근거로 병렬을 기각했다. M0(2026-07-29) 이후 재평가하면:
+
+| §G의 근거 | M0 이후 | 판정 |
+|---|---|---|
+| **게이트 사슬 M3 ← M0** — 부정이면 M3~M5 통째 정지 | ASSUMPTION-21 **GO**. 사슬이 사라졌다 | **소멸** |
+| **데이터 사슬 M1→M2→M3→M4→M5** | 그대로 | **유효 — 존중한다** |
+| **모듈 사슬** — M1~M4가 `server/looks/songcue.py` 한 파일을 층으로 쌓음 | 그대로(파일 미생성 확인) | **유효 — 존중한다** |
+| **domain count 1 · 단일 언어** | **뒤집혔다** — M0의 F-1·Gap 1이 `console/lua/copilot_responder.lua` + `server/bridge/` 작업을 새로 만들었다. Lua + 파이썬 브리지 = 제2 도메인 | **무효** |
+
+**결정적인 것은 네 번째다.** §G가 병렬을 기각할 때 존재하지 않았던 작업이 M0에서 생겼고, 그것은 songcue 모듈 사슬과 **파일도 언어도 겹치지 않는다.** 게다가 선택적 병렬이 아니라 **임계경로**다 — Gap 1(`TrigTime` 의미론 미관측)이 M4를, F-1(큐 번호 재조회 불가)이 M7을 막으므로, 순차로 가면 트랙 A가 **M4에서 반드시 정지한다.** M1~M3이 이 작업을 전혀 쓰지 않으므로 옆에서 돌리는 것이 정확한 배치다.
+
+#### 확정 형상 — 폭 2. 그 이상으로 늘리지 않는다
+
+| 트랙 | 범위 | 파일 | 라이브 콘솔 |
+|---|---|---|---|
+| **A** | M1 → M2 → M3 **순차** | `server/looks/songcue.py` · `server/tests/test_songcue_{sections,map,bundle}.py` | 미사용 |
+| **B** | 응답기 프로퍼티 리더 — Gap 1 + F-1 해소 | `console/lua/copilot_responder.lua` · `server/bridge/` · 해당 테스트 | **사용(배타)** |
+
+**§G의 유효한 기각 근거 2건을 그대로 집행한다**: ① **M1·M2·M3·M4 상호 병렬 금지** — 같은 파일을 층으로 쌓으므로 트랙 A 내부는 엄격히 순차다. ② **M6·M7은 병렬 대상이 아니다** — M6는 정의상 최후미이고 M7은 M6 완료 + 라이브 세션을 요구한다. 트랙을 3 이상으로 늘리는 것은 병렬로 **보이게** 만드는 것이지 병렬이 아니다.
+
+**합류 지점**: 트랙 B 완료가 M4의 착수 조건이다. B가 A보다 늦어지면 A는 M3에서 대기하며, **M4를 Gap 1 미해소 상태로 착수하지 않는다**(§E.2 Gaps 1항).
+
+#### 조율 수단
+
+**Orca 오케스트레이션** — `orca orchestration task-create` + `dispatch --inject`로 task/dispatch provenance와 `worker_done` 권한을 만든다. 두 워커 모두 **현재 워크트리**(`feature/SPEC-COPILOT-SONGCUE-001`)에 띄운다 — 두 트랙 다 이 브랜치의 커밋되지 않은 산출물과 M0 기록에 의존하므로 별도 워크트리를 만들 격리 요건이 없다.
+
+#### 사용자 접점 (plan.md §G:492 계승)
+
+1. **Kickoff** — M0 라이브 세션 접근성. **집행 완료**(2026-07-29, roundtrip 3/3 PASS → 승인 → §E.2).
+2. **M6 완료 직후** — M7 라이브 세션 접근성 재확인. **미도래.**
+3. **신설 — 트랙 B의 플러그인 재배포 시점**: 응답기 교체는 실행 중인 쇼에 영향을 주므로 배포 직전 확인한다. §G의 두 접점과 같은 종류(물리적 접근 가능성)이며 새 결정을 묻지 않는다.
+
+**조건부 접점 2건은 전부 미발생으로 닫혔다** — ASSUMPTION-21 GO(접점 1 불발), ASSUMPTION-24 GO(접점 2 불발, §E.2 측정 5).
