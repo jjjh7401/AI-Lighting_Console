@@ -403,6 +403,8 @@ superseded_by_run: "§E.2 M0(2026-07-29)가 blocking_for_run과 next를 **소진
 | **F-3** | **응답기 스냅샷에 `max_children = 24` 상한이 있다**(`console/lua/copilot_responder.lua`) | 시퀀스 풀이 24를 넘으면 열거가 `truncated`되어 **ASSUMPTION-23의 여집합 계산이 무효**가 된다. 현재 17이라 미발동. M3는 `truncated` 플래그를 반드시 확인하고 참이면 거부해야 한다(REQ-SONGCUE-020의 "추측 금지"와 동일 취지) |
 | **F-4** | **큐 번호는 커맨드로는 관측 가능하다.** `Set Cue 7 Sequence 101 Property 'TrigTime' 0` → OK인데 `Set Cue 3 …` → `Illegal object`. 즉 존재/부재가 번호로 변별된다 | **F-1의 우회로다.** `PROBEA7`이 실제로 큐 **번호 7**임을 이 채널이 증명했다(나열은 `i=5`로 감췄다). AC-SONGCUE-018은 이 채널로 번호를 확인할 수 있으나 **쓰기성 프로브**라는 한계가 있다 |
 
+> **F-1 폐쇄(2026-07-29, Track B 2차).** 응답기 v1.5.0이 Cue 자식에 `cueNo`를 방출한다 — `Store Sequence 104 Cue 7` 재조회가 `i=5`와 `cueNo=7`을 **동시에** 보고했다. `i`의 의미는 바꾸지 않았으므로 위 관측은 여전히 사실이며, **AC-SONGCUE-018 측정 3은 이제 재조회만으로 성립한다**(F-4의 쓰기성 우회로는 불필요해졌다). 코디네이터 독립 확인: `DataPool/Sequences/1` 조회에서 `CueZero`가 `cueNo: 0`을 갖고 **`OffCue`에는 `cueNo`가 없다** — 번호를 확실히 얻지 못하면 필드를 생략한다는 계약(추측 금지)이 실제로 지켜졌다. 상세는 아래 Track B 2차 절.
+
 #### 정리 기록 — 쇼파일 원상 복구 완료
 
 프로브가 남긴 것: 시퀀스 **101**(큐 1·2·7 + `TrigType`/`TrigTime` 설정) · **102**(큐 1·2) · **103**(`PROBESONG`, 큐 12) · 타임코드 **999**(`PROBETC`, `TrackGroup 1`, 시퀀스 101 배정).
@@ -412,6 +414,8 @@ superseded_by_run: "§E.2 M0(2026-07-29)가 blocking_for_run과 next를 **소진
 정리 중 실측 1건: **`Delete Sequence 101`이 처음에는 `User Canceled Command`로 거부됐다** — 타임코드 999에 배정돼 있어 확인 대화상자가 떴고 응답기가 그것을 자동 취소했다. 타임코드를 먼저 지운 뒤 재시도해 성공했다. **파괴적 커맨드가 확인 대화상자를 띄우면 기본값이 "취소"라는 뜻이며, 이는 안전 방향의 실패다**(REQ-SONGCUE-010에 유리). `Record Timecode 999`로 무장된 녹화 상태도 `Off Timecode 999`로 해제해 확인했다.
 
 #### Gaps — 측정하지 못한 것
+
+> **폐쇄 현황(2026-07-29).** 아래 5건 중 **1항은 Track B 2차가 닫았다** — `TrigTime`은 **곡/시퀀스 시작 기준 절대 시각**으로 판정됐고 **M4 착수 조건이 해제**됐다(근거는 아래 「Gap 1 폐쇄」 절). **2·3·4·5항은 열려 있다.** 1항 본문은 M0 시점의 기록으로 동결해 두며 현재 상태가 아니다.
 
 1. **`TrigTime`의 의미론(절대 시각 vs 직전 큐 기준 상대 지연)은 관측하지 못했다.** 계획이 "GO 시 반드시 함께 측정할 것"으로 지목한 항목이다. 원인은 **값 되읽기 경로의 부재**다 — 상태 조회는 name·class·slot만 반환하고(`copilot_responder.lua`에 프로퍼티 접근자 없음), `List Cue 2 Sequence 101`과 `Get Cue 2 Sequence 101 Property 'TrigType'`은 둘 다 `OK`만 돌려준다(값은 콘솔 커맨드라인 창으로 가고 OSC 응답에 실리지 않는다). **비파괴 범위에서 소진했고 판정 불가다.** M4가 이 값에 의존하므로 **M4 착수 전에 닫아야 한다** — 선택지는 (i) 응답기에 프로퍼티 읽기 추가, (ii) 두 큐의 실제 발화 시각을 재는 거동 관측. 어느 쪽도 M0 범위가 아니다. `PROPERTY_UNOBSERVED_NOTE`의 대상이다.
 2. **매체 갭**: 전 발화가 `server.bridge.osc` 직결이며 `gate.screen()`을 경유하지 않았다 — LOOKLIB G2 · BUSKWIZ M0와 동일 등급이다. 안전 게이트를 통과한 발화의 종단 확인은 M7(AC-SONGCUE-018) 몫이다.
