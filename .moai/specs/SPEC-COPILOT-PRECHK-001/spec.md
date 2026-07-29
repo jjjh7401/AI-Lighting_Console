@@ -72,7 +72,9 @@ related_specs: [SPEC-COPILOT-BUSKWIZ-001, SPEC-COPILOT-SONGCUE-001, SPEC-COPILOT
 
 ### B.3 응답 확인 매크로 생성
 
-- **REQ-PRECHK-011** `[Event-driven]` **When** 사용자가 응답 확인 매크로 생성을 요청하면, the 시스템 **shall** 픽스처를 하나씩 점등·소등하는 매크로를 저작해 **사람이 콘솔에서 실행하고 눈으로 확인**할 수 있게 한다. 매크로의 목적은 판정이 아니라 **관측 보조**다.
+- **REQ-PRECHK-011** `[Event-driven]` **When** 사용자가 응답 확인 매크로 생성을 요청하면, the 시스템 **shall** **리그가 정의한 그룹을 하나씩 점등·소등하는** 매크로를 저작해 **사람이 콘솔에서 실행하고 눈으로 확인**할 수 있게 한다. 매크로의 목적은 판정이 아니라 **관측 보조**다.
+  - **단위가 픽스처가 아니라 그룹인 이유는 강제된 것이다.** 픽스처를 개별 선택하려면 FID가 필요하고, `FID` 값의 의미는 현재 쇼파일로 증명할 수 없어 판정 근거에서 배제했다(REQ-PRECHK-005, `research.md` §4.6). 슬롯을 FID로 대신 쓰는 것은 `REQ-LOOKLIB-008`이 금지하며 조용히 틀린 리그를 선택한다. **따라서 "픽스처별 응답 확인"은 본 SPEC의 산출물이 아니다** — 슬롯 ≠ FID로 패치된 쇼파일이 준비되면 후속 SPEC이 그 단위를 연다.
+  - 검증 가능한 형상: 그룹 **1개당 점등·소등 1쌍**이며 대상 그룹 수와 커맨드 쌍 수가 일치한다(AC-PRECHK-010 ④).
 - **REQ-PRECHK-012** `[Option]` **Where** `ASSUMPTION-26`(매크로 저작 문법)이 GO로 판정되면, the 시스템 **shall** M0가 실측한 리터럴로만 매크로를 저작한다. **부정이면** 매크로 대상 커맨드를 **0건** 발화하고, `progress.md` M0 절에 `DESCOPE: ASSUMPTION-26 <사유>` 형태의 **접두 행**이 존재한다.
 - **REQ-PRECHK-013** `[Unwanted]` The 시스템 **shall not** 픽스처 선택에 `Fixture <n>`을 사용한다(REQ-PRECHK-005) — 매크로는 리그가 이미 정의한 **그룹**을 대상으로 하거나, 그것이 불가능하면 매크로를 생성하지 않고 사유로 답한다. 슬롯을 FID로 오인하는 경로를 만들지 않는 것이 유일하게 안전한 형상이다.
 - **REQ-PRECHK-014** `[Unwanted]` The 시스템 **shall not** 매크로 실행 결과를 응답 여부의 증거로 해석한다 — `Macro <n>` 실행의 `ok`는 **커맨드가 접수되었다**는 뜻이고 픽스처가 점등했다는 뜻이 아니다(`console/lua/copilot_responder.lua:690-706`).
@@ -116,7 +118,7 @@ related_specs: [SPEC-COPILOT-BUSKWIZ-001, SPEC-COPILOT-SONGCUE-001, SPEC-COPILOT
 
 `server/looks/{schema,loader,roles,resolver,instantiate,matching}.py` · `server/looks/library/` · `server/web/preview.py` · **`console/lua/**`** · `server/rulebook/assets/v2.4.2/**` · `server/orchestrator/tools.py`의 `_PROGRAMMER_STATE_COMMANDS`와 dedupe 실행 루프 · **`server/safety/**` — 단 아래 한 가지 예외(승인 대기)**.
 
-> **`server/safety/**`의 조건부 예외 — 강제된 것이며 사용자 승인이 필요하다.** 본 SPEC의 1차 산출물은 픽스처 **주소**를 읽어야 하고 주소는 **프로퍼티에만** 있다(`research.md` §4.2). 그런데 프로퍼티 조회(`prop`)는 **프로덕션 경로로 도달할 수 없다** — OSC 송신 표면을 import할 수 있는 디렉터리가 `server/bridge/` · `server/safety/` · `server/tests/` 셋으로 **테스트에 의해 강제**되고(`server/tests/test_architecture.py:27-39`, `:48-61` — `REQ-MVP-029`), `build_prop_query`에는 프로덕션 소비자가 **0건**이다. 즉 신규 모듈은 구조적으로 프로퍼티를 읽을 수 없고, 유일한 경로는 **초크포인트에 조회 메서드를 추가하는 것**이다. 우회 4종을 전수로 배제한 근거는 `research.md` §7.4다.
+> **`server/safety/**`의 조건부 예외 — 강제된 것이며 사용자 승인이 필요하다.** 본 SPEC의 1차 산출물은 픽스처 **주소**를 읽어야 하고 주소는 **프로퍼티에만** 있다(`research.md` §4.2). 그런데 프로퍼티 조회(`prop`)는 **프로덕션 경로로 도달할 수 없다** — OSC 송신 표면을 import할 수 있는 디렉터리가 `server/bridge/` · `server/safety/` · `server/tests/` 셋으로 **테스트에 의해 강제**되고(`server/tests/test_architecture.py:27-39`, `server/tests/test_architecture.py:48-61` — `REQ-MVP-029`), `build_prop_query`에는 프로덕션 소비자가 **0건**이다. 즉 신규 모듈은 구조적으로 프로퍼티를 읽을 수 없고, 유일한 경로는 **초크포인트에 조회 메서드를 추가하는 것**이다. 우회 4종을 전수로 배제한 근거는 `research.md` §7.4다.
 >
 > **예외의 범위는 순수 추가 4지점으로 한정한다** — `server/safety/console.py`에 `query_property`(기존 `query_state`와 동형) · `server/orchestrator/ports.py`에 대응 포트 프로토콜 · `server/safety/gate.py`에 위임 노출 · 테스트 대역 1건. **기존 심볼·시그니처는 무변경**이며 게이트의 스크리닝 의미론과 `REQ-MVP-029`의 단일 초크포인트 원칙은 **강화된다**(새 읽기가 초크포인트 밖으로 새지 않는다).
 >
@@ -132,7 +134,7 @@ related_specs: [SPEC-COPILOT-BUSKWIZ-001, SPEC-COPILOT-SONGCUE-001, SPEC-COPILOT
 
 ### Out of Scope — 무응답 픽스처 자동 탐지
 
-**제안서 원문이 요구했으나 관측 경로가 존재하지 않는다.** `build_exec_result`는 `pcall(Cmd, command)` 하나를 감싸 그 결과 문자열을 분류할 뿐이고 **픽스처 하드웨어 피드백을 수집하는 코드가 없다**(`console/lua/copilot_responder.lua:690-706`). 동사 디스패치 표가 `ping` · `state` · `prop` · `exec` · `deploy` **5종으로 닫혀 있어**(`:884-946`) 텔레메트리 동사를 추가할 자리도 없다. 룰북·선행 실측 전수에서도 판정 커맨드가 **0건**이다(`research.md` §3.2).
+**제안서 원문이 요구했으나 관측 경로가 존재하지 않는다.** `build_exec_result`는 `pcall(Cmd, command)` 하나를 감싸 그 결과 문자열을 분류할 뿐이고 **픽스처 하드웨어 피드백을 수집하는 코드가 없다**(`console/lua/copilot_responder.lua:690-706`). 동사 디스패치 표가 `ping` · `state` · `prop` · `exec` · `deploy` **5종으로 닫혀 있어**(`console/lua/copilot_responder.lua:884-946`) 텔레메트리 동사를 추가할 자리도 없다. 룰북·선행 실측 전수에서도 판정 커맨드가 **0건**이다(`research.md` §3.2).
 
 **사용자 확정 ①로 DESCOPE이며 실패가 아니다.** 본 SPEC이 대신 주는 것은 산출물 2 — 사람이 눈으로 확인할 매크로다.
 

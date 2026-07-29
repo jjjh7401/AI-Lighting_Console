@@ -43,7 +43,7 @@ status: draft (v0.1.0, 2026-07-29) · Tier L · 본 문서는 **읽기 전용 �
 
 제안서는 P2-4 항목에서 *"쇼파일 파서가 이미 있어 구현 부담이 낮다"*고 적었다(`docs/proposals/2026-07-26-lighting-direction-feature-proposal.md:92-95`) `[문서]`. **거짓이다.**
 
-- `server/showfile/` 디렉터리가 없다 `[실측]` — `server/` 하위는 `audit_logs` · `bridge` · `deploy` · `llm` · `looks` · `measurement` · `orchestrator` · `resources.py` · `rulebook` · `safety` · `tests` · `tools` · `web` 뿐이다.
+- `server/showfile/` 디렉터리가 없다 `[코드]`(저장소 정적 조사 — 라이브 실측이 아니다) — `server/` 하위는 `audit_logs` · `bridge` · `deploy` · `llm` · `looks` · `measurement` · `orchestrator` · `resources.py` · `rulebook` · `safety` · `tests` · `tools` · `web` 뿐이다.
 - XML 파싱 코드는 `server/deploy/pack.py` · `server/deploy/provisioning.py`(배포 패키징)와 `server/safety/console.py`에만 있고 **MA3 쇼파일 구조를 읽는 코드가 아니다** `[코드]`.
 
 **귀결**: 쇼파일 정보에 도달하는 경로는 **라이브 OSC 응답기 하나뿐**이다. 따라서 본 SPEC의 모든 읽기는 응답기의 읽기 표면에 종속되며, 그 표면의 한계가 곧 기능의 한계다.
@@ -57,7 +57,7 @@ status: draft (v0.1.0, 2026-07-29) · Tier L · 본 문서는 **읽기 전용 �
 | 1 (읽기 표면) | `관측 불가` | `build_exec_result`는 `pcall(Cmd, command)` 하나를 감싸고 그 결과 문자열을 `classify_result`로 분류할 뿐이다 — **픽스처 하드웨어 피드백을 수집하는 코드가 없다** `[코드]` `console/lua/copilot_responder.lua:690-706`. 동사 디스패치 표가 `ping` · `state` · `prop` · `exec` · `deploy` **5종으로 닫혀 있어** 텔레메트리 동사를 추가할 자리가 없다 `[코드]` `console/lua/copilot_responder.lua:884-946` |
 | 3 (룰북·선행 실측) | `T5 / 없음` | 픽스처 응답·무응답을 판정할 커맨드나 상태 경로가 **저장소 전체 근거 0건**. 정적 패치 메타데이터와 사람의 시각 확인 기록은 **픽스처 단위 응답 증거가 아니다** |
 
-**DMX 출력값도 관측 불가다** — 응답기가 노출하는 읽기 표면은 오브젝트 트리 `state`(`build_snapshot`, `console/lua/copilot_responder.lua:559-641`)와 단일 프로퍼티 `prop`(`build_prop_result`, 호출부 `:913`) 둘뿐이고, 출력·DMX 스트림 동사는 5종 디스패치 표에 없다 `[코드]` `console/lua/copilot_responder.lua:884-946`.
+**DMX 출력값도 관측 불가다** — 응답기가 노출하는 읽기 표면은 오브젝트 트리 `state`(`build_snapshot`, `console/lua/copilot_responder.lua:559-641`)와 단일 프로퍼티 `prop`(`build_prop_result`, 호출부 `console/lua/copilot_responder.lua:913`) 둘뿐이고, 출력·DMX 스트림 동사는 5종 디스패치 표에 없다 `[코드]` `console/lua/copilot_responder.lua:884-946`.
 
 **따라서 산출물 3은 DESCOPE다.** 이것은 실패가 아니라 **정의된 결과**이며, 우회(예: 임의 지연 후 "응답한 것으로 간주")는 금지다 — 관측하지 않은 것을 보고하지 않는다는 규율이 선행 SPEC 전체를 관통한다(`.moai/specs/SPEC-COPILOT-SONGCUE-001/spec.md:161-163`의 REQ-SONGCUE-017 계열) `[문서]`.
 
@@ -117,7 +117,7 @@ status: draft (v0.1.0, 2026-07-29) · Tier L · 본 문서는 **읽기 전용 �
 
 | 원인 | 좌표 | 발동 조건 |
 |---|---|---|
-| ① 자식 수 상한 | `console/lua/copilot_responder.lua:610` — `truncated = cap < total`, `cap = math.min(total, CONFIG.max_children)` (`:581`) | 자식이 **24개**를 넘을 때 |
+| ① 자식 수 상한 | `console/lua/copilot_responder.lua:610` — `truncated = cap < total`, `cap = math.min(total, CONFIG.max_children)` (`console/lua/copilot_responder.lua:581`) | 자식이 **24개**를 넘을 때 |
 | ② **페이로드 예산** | `console/lua/copilot_responder.lua:634-639` — `while #M.encode_payload(payload) > CONFIG.max_payload and #items > 0 do table.remove(items); payload.truncated = true end` | 인코딩 결과가 **1900바이트**를 넘을 때. 자식 수와 무관하다 |
 
 **픽스처 18개에서 뜬 절단은 ②다.** `max_payload = 1900`은 MA3 커맨드라인이 ~2048바이트 초과 회신을 **조용히 드롭**하는 실측(2000바이트 배달 / 2100바이트 드롭)에서 나온 값이다 `[문서]` `console/lua/copilot_responder.lua:33-39`. 픽스처 자식은 이름이 길어 개체당 바이트가 커서 24개에 닿기 전에 예산이 먼저 소진된다.
@@ -146,10 +146,10 @@ status: draft (v0.1.0, 2026-07-29) · Tier L · 본 문서는 **읽기 전용 �
 
 `console/lua/PROTOCOL.md:305-324`가 `DEFERRED (fixture id in the snapshot)` 항으로 적는다 `[문서]`:
 
-- `Patch/Stages/1/Fixtures`의 자식은 **컨테이너 슬롯 `i`만 carry하고 FID를 carry하지 않으므로**, 슬롯 ≠ FID인 리그에서 `Fixture <i>`는 **엉뚱한 리그를 선택하며 그것이 조용히 일어난다** — MA3가 그 범위를 받아들여 룩을 저장하기 때문이다(`:306-308`).
-- **`FID` 읽기 접근자는 이 저장소 어디에도 확립되어 있지 않다** — `child.fid`와 `child:Get("fid")`는 **추측**이고, `fid` 증거는 쓰기 측(`AddFixtures{ fid = ... }`, 라이브 증명됨)에만 있다(`:316-318`).
-- 슬롯 프로브가 `child.no`를 이미 읽으므로, **실제 2.4.2 픽스처에서 그것이 FID를 반환하면 응답기는 둘을 구별할 수 없다**(`:319-321`).
-- **결정적**: *"the site calibration showfile has slot == FID by coincidence and so **CANNOT distinguish a correct FID probe from a slot probe**. Verify only against a showfile patched so slot ≠ FID (e.g. FIDs 101..109 in stage slots 1..9)"* (`:322-324`).
+- `Patch/Stages/1/Fixtures`의 자식은 **컨테이너 슬롯 `i`만 carry하고 FID를 carry하지 않으므로**, 슬롯 ≠ FID인 리그에서 `Fixture <i>`는 **엉뚱한 리그를 선택하며 그것이 조용히 일어난다** — MA3가 그 범위를 받아들여 룩을 저장하기 때문이다(`console/lua/PROTOCOL.md:306-308`).
+- **`FID` 읽기 접근자는 이 저장소 어디에도 확립되어 있지 않다** — `child.fid`와 `child:Get("fid")`는 **추측**이고, `fid` 증거는 쓰기 측(`AddFixtures{ fid = ... }`, 라이브 증명됨)에만 있다(`console/lua/PROTOCOL.md:316-318`).
+- 슬롯 프로브가 `child.no`를 이미 읽으므로, **실제 2.4.2 픽스처에서 그것이 FID를 반환하면 응답기는 둘을 구별할 수 없다**(`console/lua/PROTOCOL.md:319-321`).
+- **결정적**: *"the site calibration showfile has slot == FID by coincidence and so **CANNOT distinguish a correct FID probe from a slot probe**. Verify only against a showfile patched so slot ≠ FID (e.g. FIDs 101..109 in stage slots 1..9)"* (`console/lua/PROTOCOL.md:322-324`).
 
 **따라서 본 조사의 `prop FID` → `'1'`은 두 가지로 나누어 적어야 한다.**
 
@@ -158,7 +158,7 @@ status: draft (v0.1.0, 2026-07-29) · Tier L · 본 문서는 **읽기 전용 �
 | `prop <fixture> FID`가 `ok=true`와 값 `'1'`을 **반환한다** | `[실측]` — 새 사실이다. 위 문서는 `prop` 동사가 없던 시점(v1.4.1)에 쓰였다 |
 | 그 값이 **슬롯이 아니라 FID라는 것** | **`[미확정]`** — 이 쇼파일은 슬롯 == FID라서 원리적으로 판별할 수 없다 |
 
-`REQ-LOOKLIB-008`도 같은 금지를 요구 층에서 적는다 — *"fixtures 섹션의 번호를 FID로 취급해 `Fixture … Thru …` 범위를 합성하지 않으며(슬롯≠FID, tools.py:33-36)"* (`.moai/specs/SPEC-COPILOT-LOOKLIB-001/spec.md:124`) `[문서]`.
+`REQ-LOOKLIB-008`도 같은 금지를 요구 층에서 적는다 — *"fixtures 섹션의 번호를 FID로 취급해 `Fixture … Thru …` 범위를 합성하지 않으며(슬롯≠FID, tools.py:33-36)"* (`.moai/specs/SPEC-COPILOT-LOOKLIB-001/spec.md:124`) `[문서]`. 인용문 안의 `tools.py:33-36`은 **LOOKLIB 원문의 표기**이며 본 SPEC의 직접 좌표가 아니다 — 본 SPEC이 쓰는 좌표는 `.moai/specs/SPEC-COPILOT-LOOKLIB-001/spec.md:124`다.
 
 **귀결 셋을 요구·계획에 반영한다.**
 
@@ -184,7 +184,7 @@ status: draft (v0.1.0, 2026-07-29) · Tier L · 본 문서는 **읽기 전용 �
 
 #### 절단되어도 계수는 정확하다 — 요구를 정밀하게 만드는 사실
 
-`build_snapshot`의 `node.childCount`는 `total`(= `#children`, 즉 **참 전체 수**)로 설정되고(`console/lua/copilot_responder.lua:607`, `total`은 `:580`), 페이로드 예산 루프는 `items`에서만 원소를 제거하며 `childCount`를 **건드리지 않는다**(`:634-639`) `[코드]`.
+`build_snapshot`의 `node.childCount`는 `total`(= `#children`, 즉 **참 전체 수**)로 설정되고(`console/lua/copilot_responder.lua:607`, `total`은 `console/lua/copilot_responder.lua:580`), 페이로드 예산 루프는 `items`에서만 원소를 제거하며 `childCount`를 **건드리지 않는다**(`console/lua/copilot_responder.lua:634-639`) `[코드]`.
 
 **귀결이 크다.**
 
@@ -304,9 +304,9 @@ scout 4가 선행 SPEC 7종의 미결을 전수 통합해(36행) PRECHK M0에 �
 
 | 파일 | 변경 | 성격 |
 |---|---|---|
-| `server/safety/console.py` | `query_property(path, property_name) -> dict` 추가. `query_state`(`:372-386`)와 **동형** — `build_prop_query`로 요청하고 `kind="prop"` 응답을 기다리며 실패·타임아웃에 예외 | **순수 추가.** 기존 심볼·시그니처 무변경 |
-| `server/orchestrator/ports.py` | 프로퍼티 조회 포트 프로토콜 추가(`StateQueryPort` `:68-73`과 동형) | 순수 추가 |
-| `server/safety/gate.py` | 위임 노출(`query_state` `:120`과 동형) | 순수 추가 |
+| `server/safety/console.py` | `query_property(path, property_name) -> dict` 추가. `query_state`(`server/safety/console.py:372-386`)와 **동형** — `build_prop_query`로 요청하고 `kind="prop"` 응답을 기다리며 실패·타임아웃에 예외 | **순수 추가.** 기존 심볼·시그니처 무변경 |
+| `server/orchestrator/ports.py` | 프로퍼티 조회 포트 프로토콜 추가(`StateQueryPort` `server/orchestrator/ports.py:68-73`과 동형) | 순수 추가 |
+| `server/safety/gate.py` | 위임 노출(`query_state` `server/safety/gate.py:120`과 동형) | 순수 추가 |
 | 테스트 대역 | `server/measurement/mock_provider.py:122`의 `query_state` 옆에 동형 추가 | 순수 추가 |
 
 **이것은 PRESERVE 개정을 요구하며 사용자 승인 사항이다.** 본 조사는 개정을 실행하지 않고 **강제성의 근거만 확립한다** — 승인 절차는 `plan.md`의 사용자 접점이 소유한다.
@@ -334,7 +334,7 @@ scout 4가 선행 SPEC 7종의 미결을 전수 통합해(36행) PRECHK M0에 �
 |---|---|---|
 | `console/lua/copilot_responder.lua` | 응답기 v1.5.0 (`prop` · `cueNo`) | **PRESERVE**(§7.2). 읽기 표면의 정의 |
 | `console/lua/PROTOCOL.md` | 동사·스키마 정본 | 읽기 전용 참조 |
-| `server/bridge/protocol.py` | `build_state_query` · `build_prop_query` | 재사용. `:141`이 T-2의 출처 |
+| `server/bridge/protocol.py` | `build_state_query` · `build_prop_query` | 재사용. `server/bridge/protocol.py:141`이 T-2의 출처 |
 | `server/orchestrator/tools.py` | 툴 등록부 · `run_commands` · `get_rig_context` | 신규 툴 등록만. 잠긴 2구간 무변경 |
 | `server/web/dash.py` | 풀 열거 · 익스큐터 주소 해석 | 재사용 대상 산정(scout 2) |
 | `.moai/state/verify/songcue-m0/probe.py` | 라이브 프로브 드라이버 | 사전 프로브에 재사용. `.gitignore` 대상 |
