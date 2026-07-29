@@ -1,10 +1,10 @@
 ---
 id: SPEC-COPILOT-SONGCUE-001
 title: "송 구조 기반 큐리스트 초안 생성기 (Song-Structure Cuelist Generator)"
-version: "0.1.0"
+version: "0.2.0"
 status: draft
 created: 2026-07-28
-updated: 2026-07-28
+updated: 2026-07-29
 author: manager-spec
 priority: P1
 phase: "Phase 3 음악분석 → 큐리스트 자동화 (v1.4.0 target)"
@@ -162,6 +162,13 @@ BUSKWIZ의 보고 형상(`server/looks/report.py`)에 **섹션 축**을 얹는�
 확인하고, **큐 프로퍼티(CueFade · TrigType)는 응답기가 노출하지 않는다는 한계**를 결과에 명시한다
 (`SPEC-COPILOT-EXECREF-001/design.md:167` 라이브 실측). 관측하지 않은 것을 관측했다고 보고하지 않는다.
 
+> **v0.2.0 개정 주석.** 응답기 v1.5.0이 `prop` 동사를 추가해 **큐 프로퍼티를 읽는 경로가 생겼다.**
+> 그럼에도 **본 요구의 한계 명시 의무는 폐지되지 않는다** — 재조회(상태 조회) 자체는 여전히 name·class·slot
+> (+`cueNo`)만 반환하며 `CueFade`·`TrigType`을 노출하지 않는다. 따라서 결과 페이로드의
+> `property_unobserved`(= `songcue_report.PROPERTY_UNOBSERVED_NOTE`)는 **재조회 경로의 한계**를 계속 명시하고,
+> `prop`으로 읽은 값이 있다면 그것은 **별개 경로의 관측**으로 구분해 보고한다. 두 경로를 뭉뚱그려
+> "확인했다"고 적는 것은 여전히 금지다.
+
 **REQ-SONGCUE-018** `[Ubiquitous]` The 시스템 **shall** 번들을 기존 `run_commands` → `gate.screen()`
 경로로**만** 실행한다. 신규 툴은 그 경로의 **호출자**이며 제2 실행 표면이 아니다
 (`server/orchestrator/tools.py:693`, `:817` 두 `@MX:ANCHOR` 두 앵커의 선례).
@@ -176,6 +183,11 @@ FID를 정적 데이터에 넣는다. 모든 번호는 리그 조회 결과 객�
 특히 `server/looks/matching.py`와 `server/looks/instantiate.py`의 diff가 빈 출력이어야 한다 —
 본 SPEC이 그 계층을 **재사용하되 고치지 않는다**는 형상의 기계적 증거이며, diff가 생기면
 "섹션 축을 바깥에서 감싼다"는 설계가 성립하지 않았다는 뜻이다(BUSKWIZ 결정 E의 반증 장치 계승).
+
+> **v0.2.0 개정 주석.** §C PRESERVE 목록에서 `console/lua/**`가 **제외**되었으므로 본 요구의 판정 대상도
+> 그만큼 좁아진다. 위에 이름을 든 `matching.py`·`instantiate.py`를 포함한 **나머지 전 항목의 diff 빈 출력 요구는
+> 그대로**이며, 실제로 M6가 게이트 비공허성까지 증명했다(`progress.md` §E.2 M6 절 — PRESERVE 파일에 공백을
+> 주입한 커밋을 게이트가 잡아냈고 되돌렸다). 개정 사유는 §C의 개정 블록과 §F 개정 절에 있다.
 
 ---
 
@@ -226,9 +238,16 @@ ASSUMPTION-3을 갖는 상황을 만들지 않는다).
 ### PRESERVE — 무변경 대상
 
 `server/looks/{schema,loader,roles,resolver,instantiate,matching}.py` · `server/looks/library/` ·
-`server/safety/**` · `server/web/preview.py` · `console/lua/**` ·
+`server/safety/**` · `server/web/preview.py` ·
 `server/rulebook/assets/v2.4.2/**` · `server/orchestrator/tools.py`의
 `_PROGRAMMER_STATE_COMMANDS`(`:234-238`)와 dedupe 실행 루프(`:524-569` — stop-on-first-failure `:535-543`, 이미 실행됨 분기 `:544-557`).
+
+> **v0.2.0 개정 — `console/lua/**`를 PRESERVE에서 제외한다.** v0.1.0은 이 항목을 목록에 두고 아래 §D에서
+> "응답기 확장은 별도 범위 결정"으로 닫았으나, **M0 라이브 프로브가 그 결정과 `plan.md`가 충돌함을 드러냈다** —
+> `plan.md §B M0`은 ASSUMPTION-22가 GO면 `TrigTime` 의미론을 "**반드시 함께 측정할 것**"으로 요구하는데,
+> 그것을 관측할 유일한 수단(응답기의 프로퍼티 읽기)이 바로 이 PRESERVE 항목에 막혀 있었다. 두 문서 중 하나는
+> 반드시 어긋나며, **오케스트레이터가 측정을 택했다**(승인 기록: `progress.md` §F). 개정 범위는
+> `console/lua/**` **한 항목뿐**이고 나머지 PRESERVE 항목은 그대로다 — 실측으로 확인했다(§F 개정 절).
 
 `server/looks/busking.py`와 `server/looks/report.py`는 **재사용하되 확장 가능**하다 — 다만 BUSKWIZ의
 테스트가 그 계약을 고정하고 있으므로 파괴적 변경은 즉시 회귀로 드러난다.
@@ -253,11 +272,28 @@ BUSKWIZ M0가 ASSUMPTION-16/17/19를 **전부 DESCOPE**로 판정했고 그 판�
 (`SPEC-COPILOT-BUSKWIZ-001/progress.md:197-202`). 본 SPEC은 그 축을 다시 열지 않는다. 생성한
 시퀀스를 익스큐터에 얹는 것은 후속 SPEC의 일이다.
 
-### Out of Scope — 콘솔측 Lua 변경
+### ~~Out of Scope~~ → **In Scope (v0.2.0 개정) — 콘솔측 Lua 응답기 확장**
 
-큐 프로퍼티를 읽으려면 응답기 확장이 필요하지만(`SPEC-COPILOT-EXECREF-001/design.md:167`),
+**v0.1.0 원문(동결)**: "큐 프로퍼티를 읽으려면 응답기 확장이 필요하지만(`SPEC-COPILOT-EXECREF-001/design.md:167`),
 `console/lua/**`는 PRESERVE다. REQ-SONGCUE-017이 그 한계를 **명시**하는 것으로 처리하며, 응답기 확장은
-그 자체로 별도 범위 결정이다(`SPEC-COPILOT-LOOKLIB-001/spec.md:213-215`의 선례).
+그 자체로 별도 범위 결정이다(`SPEC-COPILOT-LOOKLIB-001/spec.md:213-215`의 선례)."
+
+**개정 사유** — 원문이 예견한 "별도 범위 결정"을 **오케스트레이터가 내렸고 사용자가 승인했다**(2026-07-29).
+원문은 관측을 포기하고 한계를 명시하는 쪽을 택했으나, 같은 SPEC의 `plan.md §B M0`이 ASSUMPTION-22 GO 시
+`TrigTime` 의미론을 **반드시 측정하라**고 요구한다. M0 실측에서 ASSUMPTION-22는 GO로 나왔고, 그 순간 두 지시는
+동시에 만족될 수 없게 되었다 — 상태 조회는 name·class·slot만 주고 `List`·`Get`은 `OK`만 돌려주므로
+**응답기를 고치지 않고는 그 값을 볼 방법이 없다.**
+
+**개정 내용**: 응답기 확장을 본 SPEC 범위에 포함한다. 확장은 **가산적**이며 기존 동사·필드의 의미를 바꾸지 않는다.
+
+- 신규 동사 `prop <id> <object-path> <PropertyName>` → `kind="prop"` 응답의 `value`로 실값 반환. 못 읽으면 `ok=false`.
+- Cue 자식에 `cueNo`(실제 큐 번호) 추가. **기존 `i`(나열 위치)의 의미는 불변**이며 다른 SPEC의 소비자를 깨지 않는다.
+  큐 번호를 확실히 얻지 못하면 **필드를 생략한다**(추측 금지 — `copilot_responder.lua`의 기존 slot 규율과 동형).
+- 응답기 버전 `1.4.1` → `1.5.0`.
+
+**대가와 그 처리**: 이 확장이 없었다면 REQ-SONGCUE-017의 한계 명시로 끝났을 것이다. 확장 이후에도
+**그 한계 명시는 유지된다**(아래 REQ-SONGCUE-017 개정) — 상태 조회의 한계는 그대로이고 `prop`은 별개 경로이므로,
+"관측하지 않은 것을 보고하지 않는다"는 규율은 약해지지 않는다.
 
 ### Out of Scope — dedupe 규칙 개정
 
