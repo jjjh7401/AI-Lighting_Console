@@ -774,7 +774,51 @@ M0의 ASSUMPTION-20~24와 어긋난 관측은 0건이다. 타임코드 생성/�
 
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run>_
+```yaml
+run_status: audit-ready
+run_complete_at: 2026-07-29
+spec_version: "0.2.0"          # v0.1.0 → v0.2.0, console/lua/** PRESERVE 제외 (사용자 승인, §F 개정 절)
+base_sha: 38a6e7e2157a4862721fcd868056e0dbbb09c4c0
+head_sha: 0ebbaed
+execution_mode: "parallel (2트랙) — plan.md §G의 sub-agent 권고를 §F가 기각. Orca 오케스트레이션 task DAG, 워커 2"
+milestones_complete: "M0 · M1 · M2 · M3 · M4 · M5 · M6 · M7 = 8/8 (+ 트랙 B 응답기 확장 2회전)"
+acceptance_criteria: "18/18 PASS — AC-SONGCUE-001~018. 라이브 2건(017 M0 · 018 M7) 포함"
+live_sessions_executed: 2      # 결정 D의 회계 그대로 (M0 프로브 + M7 종단)
+assumptions_resolved: "5/5 전부 GO — ASSUMPTION-20/21/22/23/24. DESCOPE 0건이므로 `DESCOPE:` 접두 행도 0건이며, AC-SONGCUE-012는 구간 ①③이 발동하고 ②④는 skip으로 보존됐다"
+tests:
+  suite_final: "2489 passed · 5 skipped · 0 failed (코디네이터 직접 실측)"
+  suite_at_base: "2423 passed · 3 skipped · 0 failed"
+  net_added: 66                # 2489 − 2423. skipped +2는 M4가 보존한 DESCOPE 축 2구간
+  songcue_files: "6 — test_songcue_{sections,map,bundle,timing,report,tool}.py = 58 passed · 2 skipped"
+mutations_killed: 26           # M1 4 · M2 3 · M3 6 · M4 6 · M5 5 · M6 2. 전건 killed
+preserve:
+  verdict: "clean — 개정된 §C 목록 전 항목 `git diff 38a6e7e..HEAD` 빈 출력 (코디네이터 전수 재확인)"
+  gate_nonvacuity_proven: "M6가 `server/looks/matching.py`에 공백을 주입해 커밋(8e7aa57) → 게이트 적발 → revert(12deea2). 목록 오타로 게이트가 조용히 통과하는 위양성을 배제했다"
+  scope_amendment: "console/lua/** 1항목만 제외. 사유는 plan.md(TrigTime 의미론을 반드시 측정)와 spec.md(응답기 확장은 범위 밖)의 모순이며 M0가 그것을 드러냈다. §F 개정 절이 정본"
+  tools_py_forbidden_zones: "무침범 — 변경 hunk old 시작줄 32·49·125·951·1222·1231. `_PROGRAMMER_STATE_COMMANDS`(:234-238)·dedupe 루프(:524-569)와 겹치지 않는다"
+hard_defects:
+  defect_1_cue_ledger: "해소 — M7 재조회에서 시퀀스 1개에 사용자 큐 4개가 cueNo 1·2·3·4로 존재(이름 Intro·Verse·Chorus·Finale 일치). 코디네이터가 원장 뮤테이션(`cue_number += 1` → `= 1`)을 직접 심어 4개 테스트가 죽는 것까지 확인 후 원복했다"
+  defect_2_dedupe: "회피 — 코드 개정 없이 형상으로. M7 무손실 33/33 순서 일치 · skipped_already_executed 0건"
+  defect_3_property_unobserved: "명시 — `PROPERTY_UNOBSERVED_NOTE` 상수 동일성으로 기계 판정. prop 경로가 생긴 뒤에도 재조회 경로의 한계 명시 의무는 유지된다(spec.md v0.2.0 REQ-SONGCUE-017 개정 주석)"
+live_m7:
+  command_fidelity: "33/33 — console.executed == plan.commands, 순서까지 동일, 전 행 ok=true"
+  skipped_already_executed: 0
+  requery: "시퀀스 3, childCount 6 = 시스템 2 + 사용자 4"
+  report_arithmetic: "section_count=4 · generated=4 · unmapped=0 · skipped=0 · not_executed=0 · failed=0 — 재조회 실측과 일치"
+  evidence_source: "감사 로그와 대조 — 툴 반환만으로 판정하지 않았다(BUSKWIZ M7의 교훈)"
+  m0_consistency: "불일치 0건"
+  showfile_restored: "베이스라인 정확히 일치 — Sequences 17개 인덱스 동일, Timecodes 0. 코디네이터 독립 재확인"
+blocking_for_sync: "없음. 다만 아래 `report_requery_matched_false`는 sync 전에 판정해야 한다 — 결함이면 후속 SPEC, 관측 한계면 문서화로 닫는다."
+known_gaps:
+  - "**report_requery_matched_false — 유일한 미판정 항목.** M7에서 수동 재조회는 큐 4건을 cueNo·이름까지 일치 확인했는데, 툴 자신의 `report.requery.matched`는 `false`를 냈다. 즉 툴의 자기보고와 실측이 어긋난다. M7은 코드 변경 0의 측정 세션이라 고치지 않고 남겼다(옳은 선택이다 — 라이브 세션에서 코드를 고치면 무엇을 검증한 것인지 알 수 없게 된다). **결함 후보이며 sync 전에 판정이 필요하다.**"
+  - "`CueFade`는 prop 경로에서도 `property not readable: CueFade`로 남았다 — 응답기 v1.5.0으로도 읽히지 않는다. REQ-SONGCUE-017의 한계 명시가 계속 유효한 실측 근거다."
+  - "매체 갭은 M7에서 대부분 닫혔다 — M7은 M5 툴 → `run_commands` → `bundle_gate.screen()` 경로로 실행했다. 다만 `prop` 되읽기 자체는 여전히 게이트 미경유 직결이다."
+  - "`max_children = 24` 상한의 실제 절단 거동은 미실측(현재 시퀀스 17). M3가 `truncated` 참이면 거부하도록 고정했으나 그 분기의 라이브 발동은 관측되지 않았다."
+  - "`/Overwrite`는 끝내 발화하지 않았다. '치환은 명시적 플래그를 요구한다'는 여전히 `Not allowed` 거부로부터의 추론이다."
+  - "라이브 원문 로그는 `.moai/state/`(gitignore) 아래에만 있다. 커밋되는 사본은 §E.2 각 절의 표와 인용문이며, 그래서 커맨드·응답 문자열을 요약 없이 전재했다."
+  - "오케스트레이터 실수 2건을 §F 개정 절에 기록했다 — (i) spec.md PRESERVE 정본을 읽지 않고 트랙 B에 `console/lua` 변경을 지시한 것, (ii) 트랙 B를 'M4 임계경로'로 과장한 것. 둘 다 발견자는 내가 아니라 M6 워커였다."
+next: "sync-phase. PR은 BUSKWIZ #5 머지 이후 — SONGCUE 브랜치가 그 위에 스택돼 있어 순서는 위상으로 강제된다. #5는 squash가 아니라 **merge commit** 권장(squash 시 BUSKWIZ 13커밋이 재작성되어 SONGCUE 사본이 중복이 된다)."
+```
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
