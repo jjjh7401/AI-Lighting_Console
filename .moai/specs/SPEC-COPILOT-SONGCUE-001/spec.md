@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-SONGCUE-001
 title: "송 구조 기반 큐리스트 초안 생성기 (Song-Structure Cuelist Generator)"
 version: "0.2.0"
-status: draft
+status: completed
 created: 2026-07-28
 updated: 2026-07-29
 author: manager-spec

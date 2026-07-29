@@ -1,6 +1,6 @@
 # SPEC-COPILOT-SONGCUE-001 — 인수 기준 (acceptance)
 
-status: draft (v0.1.0, 2026-07-28) · Tier L · 본 문서는 spec.md의 요구를 관측 가능한 검증 기준으로 전개한다.
+status: completed (v0.2.0, 2026-07-29) · Tier L · **AC-SONGCUE-001~018 18/18 PASS** · 본 문서는 spec.md의 요구를 관측 가능한 검증 기준으로 전개한다.
 
 > **v0.1.0 — 최초 작성.** **AC 18건**(AC-SONGCUE-001~018) · **REQ 21건**(REQ-SONGCUE-001~021) 전량
 > 커버. 라이브 AC 2건(**AC-SONGCUE-017** M0 프로브 · **AC-SONGCUE-018** M7 종단)은 라이브 세션 회계 2회에 대응한다.

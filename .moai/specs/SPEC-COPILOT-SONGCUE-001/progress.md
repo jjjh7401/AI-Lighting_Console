@@ -822,7 +822,35 @@ next: "sync-phase. PR은 BUSKWIZ #5 머지 이후 — SONGCUE 브랜치가 그 �
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync>_
+```yaml
+sync_status: audit-ready
+sync_complete_at: 2026-07-29
+gate_sync_1: "PASS — 작업 트리에 sync 편집 3건 외 잔여 0, `uv run pytest server/tests/ -q` 2490 passed · 5 skipped · 0 failed (코디네이터 직접 실측)"
+artifacts_updated:
+  - "CHANGELOG.md — `[Unreleased] Added` 최상단에 SONGCUE 항목(M0~M7 + 트랙 B + M0 실측 4건 + M7이 잡은 결함 1건 + 정직한 잔여 5건 + 오케스트레이터 실수 2건 + 실측 테스트 수)"
+  - "spec.md frontmatter — status: draft → completed. version은 run-phase에서 이미 0.1.0 → 0.2.0(PRESERVE 개정)"
+  - "acceptance.md 상태 줄 — status: completed, AC 18/18 PASS 명시"
+  - "progress.md §E.3 run-phase / §E.4 sync-phase audit-ready 신호"
+artifacts_unchanged:
+  - "README.md — 툴 목록·기능 서술이 없어 갱신 대상 아님(`prepare_busking|instantiate_look|find_looks|run_commands` grep 0건)"
+  - "docs/proposals/2026-07-26-lighting-direction-feature-proposal.md — P1-1을 제안으로 서술한 **역사적 스냅샷**이며 살아 있는 상태 문서가 아니다. BUSKWIZ·LOOKLIB 완료 시에도 갱신하지 않은 선례를 따른다(그 파일의 커밋 이력은 최초 작성 1건뿐)"
+  - "plan.md · design.md · research.md — sync는 본문을 고치지 않는다(소유권 매트릭스)"
+spec_divergence:
+  requirements_implemented: "21/21"
+  scope_reductions: 0
+  scope_additions: 1   # console/lua/** 응답기 확장 — spec.md v0.2.0으로 PRESERVE에서 제외. 사용자 승인, §F 개정 절
+  descoped_by_live_verdict: "없음 — ASSUMPTION 5건 전부 GO. `DESCOPE:` 접두 행 0건이며 AC-SONGCUE-012는 구간 ①③이 발동하고 ②④는 skip으로 보존"
+  spec_version_bumped: "0.1.0 → 0.2.0 (PRESERVE 목록 개정 + REQ-SONGCUE-017/021 개정 주석)"
+honest_residuals:
+  - "`CueFade`는 응답기 v1.5.0의 `prop` 경로에서도 `property not readable`로 남는다 — REQ-SONGCUE-017의 한계 명시가 계속 유효한 실측 근거다"
+  - "`prop` 되읽기는 게이트 미경유 직결이다 — M7 본 경로(툴 → `run_commands` → `bundle_gate.screen()`)는 게이트를 거쳤으나 프로퍼티 관측만 직결로 남았다"
+  - "`max_children = 24`의 실제 절단 거동 미실측(현재 시퀀스 17) — M3의 `truncated` 거부 분기는 라이브 발동이 관측되지 않았다"
+  - "`/Overwrite` 미발화 — '치환은 명시적 플래그를 요구한다'는 여전히 `Not allowed` 거부로부터의 추론이며 직접 실측이 아니다"
+  - "라이브 원문 로그가 `.moai/state/`(gitignore) 아래에만 있다 — 커밋되는 사본은 §E.2의 표와 인용문이며 그래서 커맨드·응답을 요약 없이 전재했다"
+  - "M7의 승인 게이트는 승인 요구 없이 통과했다(BUSKWIZ M7과 동일) — 게이트 보류 시 송신 0건은 M5가 유닛으로 소유한다"
+orchestrator_errors_recorded: "2건 — (1) `spec.md §C` PRESERVE 정본 미확인 상태로 트랙 B에 `console/lua` 변경을 지시(발견자는 M6 워커), (2) 트랙 B를 'M4 임계경로'로 과장. 전문은 §F 개정 절. 추가로 감독 실수 1건 — 600초 블로킹 대기 때문에 트랙 B의 배포 승인 `ask`를 타임아웃시켜 1회전을 낭비했고 이후 120초 롤링으로 교체했다"
+next: "PR — feature/SPEC-COPILOT-SONGCUE-001 → main (수동, git-strategy auto_pr=false). **BUSKWIZ PR #5 머지가 선행한다** — 본 브랜치가 그 위에 스택돼 있어 순서는 위상으로 강제된다(BUSKWIZ는 SONGCUE HEAD의 조상). #5는 squash가 아니라 **merge commit** 권장 — squash 시 BUSKWIZ 13커밋이 main에서 재작성되어 본 브랜치의 사본이 중복이 되고 실제 리베이스가 필요해진다."
+```
 
 ## §F. Phase 4 Mode Selection — 확정 기록 (오케스트레이터 소유)
 
