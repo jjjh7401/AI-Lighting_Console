@@ -568,6 +568,210 @@ uv run ruff format --check <17 changed python files>
 
 AC-SONGCUE-010과 AC-SONGCUE-011은 M3 소유 판정을 반복하지 않고 전체 스위트 회귀로만 재확인했다.
 
+### M7 — 종단 라이브 검증 (AC-SONGCUE-018, LIVE 2건 중 2번째) — 2026-07-29
+
+**판정: PASS, 단 `report.requery.matched=false` 한계를 그대로 기록한다.** cueNo 기반 수동 재조회 판정과
+보고 집계 산술은 맞았지만, 도구 페이로드의 `report.requery` 보조 필드는 `OffCue`에 `cueNo`가 없을 때
+`i`로 폴백해 `OffCue`를 `cue_number:1`로 포함했다. M7은 코드 변경 0 원칙 때문에 이를 고치지 않고
+관측 사실로 남긴다.
+
+#### 세션 조건
+
+| | |
+|---|---|
+| 콘솔 | grandMA3 onPC 2.4.2, macOS |
+| OSC | **send 8000 / receive 9005** |
+| 응답기 | `CopilotResponder` **v1.5.0** |
+| 왕복 사전 확인 | `uv run python -m server.tools.responder_roundtrip --listen-port 9005 --wait 5 --expect-version 1.5.0` → ping·state·exec **3/3 PASS** |
+| 쇼파일 착수 상태 | Sequences **17** (`1,2,11,12,13,14,15,16,17,20,30,41,50,62,71,80,90`) · Timecodes **0** · Groups **4** (`1 Copilot Grp`, `11 Back`, `12 Front`, `13 All`) |
+| 실행 경로 | `build_console_stack(... receive_port=9005 ...)` → `build_toolset(...)` → `ToolCall(name="prepare_songcue")` |
+| 원문 로그 | `.moai/state/verify/songcue-m7/result.json`, `.moai/state/verify/songcue-m7/audit/audit-20260729.jsonl`, `.moai/state/verify/songcue-m7/cleanup.json` (gitignore 대상 — 본 절이 커밋되는 유일한 사본) |
+
+필수 responder 확인의 실제 출력:
+
+```text
+round-trip against osc.udp://127.0.0.1:8000 (replies on 9005)
+  [PASS] ping: ok
+         live version=1.5.0 plugin=CopilotResponder
+  [PASS] state: ok
+         node={'childCount': 17, 'class': 'Sequences', 'name': 'Sequences'} children=17
+  [PASS] exec: ok
+result: PASS
+```
+
+#### 입력 — M5가 만든 `prepare_songcue` 단일 경로
+
+```json
+{
+  "song_title": "M7 Live Song",
+  "genre": "발라드",
+  "timecode_number": 901,
+  "sections": [
+    {"name": "Intro", "start": "0:00", "dynamics": 2},
+    {"name": "Verse", "start": "0:10", "dynamics": 3},
+    {"name": "Chorus", "start": "0:24", "dynamics": 4},
+    {"name": "Finale", "start": "0:40", "dynamics": 5}
+  ]
+}
+```
+
+리그에는 Back/Front만 주소가 있으므로 발라드 dynamics 2~5를 명시했다. 선택된 네 룩은 모두 최소 1개
+주소 있는 역할을 가져 섹션 저장이 4/4 발생했고, 서로 다른 dynamics라 값 라인 충돌도 없었다.
+
+#### 판정 4건
+
+| # | 항목 | 실측값 | 판정 |
+|---|---|---|---|
+| 1 | 무손실 · 순서 동일 | `plan.commands` 33행 = audit `kind="command"` 33행, 순서 동일, 전 행 `ok:true`/`detail:"OK"` | PASS |
+| 2 | dedupe 손실 없음 | tool command status 집합 `["executed_ok"]`, `skipped_already_executed` **0건** | PASS |
+| 3 | 큐 번호 원장 live 확인 | `DataPool/Sequences/3` childCount 6 = 시스템 2 + 사용자 큐 4. `cueNo` 사용자 큐는 `(1 Intro),(2 Verse),(3 Chorus),(4 Finale)`로 서로 다른 번호와 이름 일치 | PASS |
+| 4 | 보고 산술 | report summary `section_count=4`, `generated_count=4`, `unmapped_count=0`, `skipped_save_count=0`, `not_executed=0`, `failed=0`; 재조회 사용자 큐 수 `childCount - 2 = 4`와 일치 | PASS |
+
+게이트 스크리닝은 `run_commands` 클로저에서 1회 수행되어 전량 clear됐다. risky hold가 없어 human approval
+audit row는 0건이고, session-start backup `SaveShow` 1건은 별도 `kind="backup"`으로 남았다.
+
+#### 감사 로그 원문 — plan.commands 대조 대상
+
+아래 JSONL이 gate audit의 커밋 사본이다. `kind:"command"` 행 33건만 `plan.commands`와 대조했고,
+`kind:"backup"` 및 `kind:"state_query"` 행은 운용 보조 이벤트로 분리했다.
+
+```jsonl
+{"ts": "2026-07-29T03:02:16.544297+00:00", "event": "executed", "command": "SaveShow", "kind": "backup", "ok": true, "detail": "OK"}
+{"ts": "2026-07-29T03:02:16.610704+00:00", "event": "executed", "command": "DataPool/Sequences", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-07-29T03:02:16.676201+00:00", "event": "executed", "command": "DataPool/Timecodes", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-07-29T03:02:16.744170+00:00", "event": "executed", "command": "DataPool/Groups", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-07-29T03:02:16.843264+00:00", "event": "executed", "command": "DataPool/Groups", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-07-29T03:02:16.910480+00:00", "event": "executed", "command": "DataPool/Sequences", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-07-29T03:02:16.976938+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.044271+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.110598+00:00", "event": "executed", "command": "Group 12", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.177777+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 50 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 52", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.244385+00:00", "event": "executed", "command": "Store Sequence 3 Cue 1 'Intro'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.310609+00:00", "event": "executed", "command": "Label Sequence 3 'M7 Live Song'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.377333+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.444714+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.510920+00:00", "event": "executed", "command": "Group 11 + 12", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.578528+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 65 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 58 ; Attribute 'ColorRGB_B' At 62", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.644818+00:00", "event": "executed", "command": "Store Sequence 3 Cue 2 'Verse'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.709975+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.776658+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.844563+00:00", "event": "executed", "command": "Group 11 + 12", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.911154+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 82 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 85 ; Attribute 'ColorRGB_B' At 62 ; Attribute 'Zoom' At 62", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:17.977793+00:00", "event": "executed", "command": "Store Sequence 3 Cue 3 'Chorus'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.043635+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.111336+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.177222+00:00", "event": "executed", "command": "Group 11 + 12", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.244628+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 92 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 92 ; Attribute 'ColorRGB_B' At 80 ; Attribute 'Iris' At 100 ; Attribute 'Zoom' At 78", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.309837+00:00", "event": "executed", "command": "Store Sequence 3 Cue 4 'Finale'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.377491+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.443519+00:00", "event": "executed", "command": "Store Timecode 901", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.509724+00:00", "event": "executed", "command": "Set Timecode 901 Property 'Name' 'M7 Live Song Timecode'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.577892+00:00", "event": "executed", "command": "Assign Sequence 3 At Timecode 901", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.643672+00:00", "event": "executed", "command": "Set Cue 1 Sequence 3 Property 'TrigType' 'Time'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.710855+00:00", "event": "executed", "command": "Set Cue 1 Sequence 3 Property 'TrigTime' 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.777728+00:00", "event": "executed", "command": "Set Cue 2 Sequence 3 Property 'TrigType' 'Time'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.844351+00:00", "event": "executed", "command": "Set Cue 2 Sequence 3 Property 'TrigTime' 10", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.910162+00:00", "event": "executed", "command": "Set Cue 3 Sequence 3 Property 'TrigType' 'Time'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:18.977946+00:00", "event": "executed", "command": "Set Cue 3 Sequence 3 Property 'TrigTime' 24", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:19.044531+00:00", "event": "executed", "command": "Set Cue 4 Sequence 3 Property 'TrigType' 'Time'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:19.111437+00:00", "event": "executed", "command": "Set Cue 4 Sequence 3 Property 'TrigTime' 40", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-07-29T03:02:19.177371+00:00", "event": "executed", "command": "DataPool/Sequences/3", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-07-29T03:02:19.243853+00:00", "event": "executed", "command": "DataPool/Sequences/3", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-07-29T03:02:19.311037+00:00", "event": "executed", "command": "DataPool/Timecodes/901", "kind": "state_query", "ok": true, "detail": ""}
+```
+
+#### 재조회 결과 — state snapshot
+
+시퀀스 재조회 원문:
+
+```json
+{"children":[{"class":"Cue","i":1,"name":"OffCue"},{"class":"Cue","cueNo":0,"i":2,"name":"CueZero"},{"class":"Cue","cueNo":1,"i":3,"name":"Intro"},{"class":"Cue","cueNo":2,"i":4,"name":"Verse"},{"class":"Cue","cueNo":3,"i":5,"name":"Chorus"},{"class":"Cue","cueNo":4,"i":6,"name":"Finale"}],"id":"gate-41","kind":"state","node":{"childCount":6,"class":"Sequence","name":"M7 Live Song"},"ok":true,"path":"DataPool/Sequences/3","truncated":false,"v":1}
+```
+
+타임코드 재조회 원문:
+
+```json
+{"children":[{"class":"TrackGroup","i":1,"name":"TrackGroup 1"}],"id":"gate-42","kind":"state","node":{"childCount":1,"class":"Timecode","name":"M7 Live Song Timecode"},"ok":true,"path":"DataPool/Timecodes/901","truncated":false,"v":1}
+```
+
+`OffCue`는 M0/Track B 2차 관측과 동일하게 `cueNo`를 싣지 않았다. `CueZero`는 `cueNo:0`, 사용자 큐
+4개는 `cueNo:1..4`를 실어 하드 결함 1(나열 위치를 큐 번호로 오인)을 실물에서 반증했다.
+
+#### 재조회 결과 — prop readback
+
+상태 재조회는 여전히 CueFade·TrigType·TrigTime 프로퍼티를 싣지 않는다. 별도 `prop` 경로로 읽은
+값은 아래와 같으며, 두 경로를 섞어 "상태 재조회가 프로퍼티를 확인했다"고 쓰지 않는다.
+
+```json
+[
+  {"path":"DataPool/Sequences/3/Intro","property":"TrigType","payload":{"id":"gate-43","kind":"prop","ok":true,"path":"DataPool/Sequences/3/Intro","property":"TrigType","v":1,"value":"Time"}},
+  {"path":"DataPool/Sequences/3/Intro","property":"TrigTime","payload":{"id":"gate-44","kind":"prop","ok":true,"path":"DataPool/Sequences/3/Intro","property":"TrigTime","v":1,"value":"0.0"}},
+  {"path":"DataPool/Sequences/3/Intro","property":"CueFade","payload":{"error":"property not readable: CueFade","id":"gate-45","kind":"prop","ok":false,"path":"DataPool/Sequences/3/Intro","property":"CueFade","v":1}},
+  {"path":"DataPool/Sequences/3/Verse","property":"TrigType","payload":{"id":"gate-46","kind":"prop","ok":true,"path":"DataPool/Sequences/3/Verse","property":"TrigType","v":1,"value":"Time"}},
+  {"path":"DataPool/Sequences/3/Verse","property":"TrigTime","payload":{"id":"gate-47","kind":"prop","ok":true,"path":"DataPool/Sequences/3/Verse","property":"TrigTime","v":1,"value":"10.0"}},
+  {"path":"DataPool/Sequences/3/Verse","property":"CueFade","payload":{"error":"property not readable: CueFade","id":"gate-48","kind":"prop","ok":false,"path":"DataPool/Sequences/3/Verse","property":"CueFade","v":1}},
+  {"path":"DataPool/Sequences/3/Chorus","property":"TrigType","payload":{"id":"gate-49","kind":"prop","ok":true,"path":"DataPool/Sequences/3/Chorus","property":"TrigType","v":1,"value":"Time"}},
+  {"path":"DataPool/Sequences/3/Chorus","property":"TrigTime","payload":{"id":"gate-50","kind":"prop","ok":true,"path":"DataPool/Sequences/3/Chorus","property":"TrigTime","v":1,"value":"24.0"}},
+  {"path":"DataPool/Sequences/3/Chorus","property":"CueFade","payload":{"error":"property not readable: CueFade","id":"gate-51","kind":"prop","ok":false,"path":"DataPool/Sequences/3/Chorus","property":"CueFade","v":1}},
+  {"path":"DataPool/Sequences/3/Finale","property":"TrigType","payload":{"id":"gate-52","kind":"prop","ok":true,"path":"DataPool/Sequences/3/Finale","property":"TrigType","v":1,"value":"Time"}},
+  {"path":"DataPool/Sequences/3/Finale","property":"TrigTime","payload":{"id":"gate-53","kind":"prop","ok":true,"path":"DataPool/Sequences/3/Finale","property":"TrigTime","v":1,"value":"40.0"}},
+  {"path":"DataPool/Sequences/3/Finale","property":"CueFade","payload":{"error":"property not readable: CueFade","id":"gate-54","kind":"prop","ok":false,"path":"DataPool/Sequences/3/Finale","property":"CueFade","v":1}}
+]
+```
+
+`TrigTime`은 M0/Track B의 절대 시각 판정과 일치했다: 0.0, 10.0, 24.0, 40.0 그대로 읽혔고
+델타값으로 바뀐 흔적은 없다. `CueFade`는 prop 경로에서도 읽히지 않아 한계로 남는다.
+
+#### 도구 보고 페이로드의 산술과 한계
+
+보고 summary:
+
+```json
+{"section_count":4,"generated_count":4,"unmapped_count":0,"skipped_save_count":0,"not_executed":0,"failed":0}
+```
+
+재조회 사용자 큐 수는 `childCount 6 - 시스템 큐 2 = 4`이고, `generated_count` 4와 일치한다.
+미매핑·건너뜀·미실행·실패는 모두 0이다. 다만 도구의 `report.requery` 보조 필드는 다음 값을 냈다.
+
+```json
+{"matched":false,"expected":[{"cue_number":1,"name":"Intro"},{"cue_number":2,"name":"Verse"},{"cue_number":3,"name":"Chorus"},{"cue_number":4,"name":"Finale"}],"observed":[{"cue_number":0,"name":"CueZero"},{"cue_number":1,"name":"OffCue"},{"cue_number":1,"name":"Intro"},{"cue_number":2,"name":"Verse"},{"cue_number":3,"name":"Chorus"},{"cue_number":4,"name":"Finale"}]}
+```
+
+이는 상태 재조회 계약의 불일치가 아니라 리포터의 하위 호환 폴백(`cueNo` 부재 시 `i`)이 `OffCue`에도
+적용된 결과다. M7 판정 3은 `cueNo`가 있는 사용자 큐만으로 수행했으며, `OffCue`에는 번호를 추측하지
+않는다는 M0/Track B 계약과 어긋나지 않는다.
+
+#### M0 판정과의 대조
+
+M0의 ASSUMPTION-20~24와 어긋난 관측은 0건이다. 타임코드 생성/이름/시퀀스 배정은 M0가 실측한
+세 문법만 발화했고 모두 OK였다. 자동 진행은 `TrigType 'Time'`과 곡 시작 기준 절대 `TrigTime`
+값을 썼으며, prop readback도 그 값을 그대로 돌려줬다. 응답기 v1.5.0의 `cueNo` 계약도 그대로
+성립했다.
+
+#### 정리 기록 — 쇼파일 원상 복구 완료
+
+타임코드에 시퀀스가 배정된 상태에서는 시퀀스 삭제가 확인 대화상자에 막힐 수 있으므로, M0 실측대로
+타임코드 901을 먼저 지우고 시퀀스 3을 지웠다.
+
+```json
+[
+  {"wire_command":"Delete Timecode 901","payload":{"id":"m7clean-1","kind":"result","ok":true,"result":"OK","v":1}},
+  {"wire_command":"Delete Sequence 3","payload":{"id":"m7clean-2","kind":"result","ok":true,"result":"OK","v":1}},
+  {"wire_command":"state DataPool/Sequences","payload":{"children":[{"class":"Sequence","i":1,"name":"Default"},{"class":"Sequence","i":2,"name":"Copilot Show"},{"class":"Sequence","i":11,"name":"Sequence 11"},{"class":"Sequence","i":12,"name":"Sequence 12"},{"class":"Sequence","i":13,"name":"Sequence 13"},{"class":"Sequence","i":14,"name":"Sequence 14"},{"class":"Sequence","i":15,"name":"Sequence 15"},{"class":"Sequence","i":16,"name":"Sequence 16"},{"class":"Sequence","i":17,"name":"Sequence 17"},{"class":"Sequence","i":20,"name":"Ballad Yellow Red"},{"class":"Sequence","i":30,"name":"Sequence 30"},{"class":"Sequence","i":41,"name":"Sequence 41"},{"class":"Sequence","i":50,"name":"Sequence 50"},{"class":"Sequence","i":62,"name":"Sequence 62"},{"class":"Sequence","i":71,"name":"Sequence 71"},{"class":"Sequence","i":80,"name":"Sequence 80"},{"class":"Sequence","i":90,"name":"Sequence 90"}],"id":"m7clean-3","kind":"state","node":{"childCount":17,"class":"Sequences","name":"Sequences"},"ok":true,"path":"DataPool/Sequences","truncated":false,"v":1}},
+  {"wire_command":"state DataPool/Timecodes","payload":{"children":[],"id":"m7clean-4","kind":"state","node":{"childCount":0,"class":"Timecodes","name":"Timecodes"},"ok":true,"path":"DataPool/Timecodes","truncated":false,"v":1}},
+  {"wire_command":"state DataPool/Groups","payload":{"children":[{"class":"Group","i":1,"name":"Copilot Grp"},{"class":"Group","i":11,"name":"Back"},{"class":"Group","i":12,"name":"Front"},{"class":"Group","i":13,"name":"All"}],"id":"m7clean-5","kind":"state","node":{"childCount":4,"class":"Groups","name":"Groups"},"ok":true,"path":"DataPool/Groups","truncated":false,"v":1}}
+]
+```
+
+복구 확인값은 착수 baseline과 정확히 같다: `DataPool/Sequences = [1,2,11,12,13,14,15,16,17,20,30,41,50,62,71,80,90]`,
+`DataPool/Timecodes` childCount **0**, `DataPool/Groups = [1,11,12,13]`. 잔여물 0건.
+
+#### 남은 한계
+
+상태 재조회는 큐 존재·이름·`cueNo`만 검증한다. `TrigType`/`TrigTime`은 별도 prop 경로에서 읽을 수
+있지만 상태 snapshot의 필드가 아니며, `CueFade`는 prop 경로에서도 `property not readable: CueFade`로
+남았다. 도구의 `report.requery.matched=false`는 M7에서 고치지 않은 관측 한계/후속 결함 후보로 남긴다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run>_
