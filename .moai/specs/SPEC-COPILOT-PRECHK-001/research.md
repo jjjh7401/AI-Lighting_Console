@@ -269,6 +269,50 @@ scout 4가 선행 SPEC 7종의 미결을 전수 통합해(36행) PRECHK M0에 �
 | `REQ-DASHUI-022` | `Patch/Fixtures`와 `DataPool/Presets`는 **2.4.2에서 죽은 것으로 실측**되어 사용 금지 | `.moai/specs/SPEC-COPILOT-DASHUI-001/spec.md:82` |
 | `REQ-LOOKLIB-008` | fixtures 섹션의 **슬롯 번호를 FID로 취급 금지**(슬롯 ≠ FID) | `.moai/specs/SPEC-COPILOT-LOOKLIB-001/spec.md:124` |
 
+### 7.4 강제된 충돌 — `prop`은 프로덕션 경로로 도달할 수 없고, 그 경로는 PRESERVE다
+
+**본 SPEC의 1차 산출물이 이 항목에 걸린다.** 조사가 마지막에 발견했고, 성격이 SONGCUE의 `plan.md` ↔ `spec.md` 모순과 **같은 계열**이다 — 두 규율이 각각 옳은데 동시에 만족될 수 없다.
+
+#### 사실 셋
+
+| # | 사실 | 좌표 |
+|---|---|---|
+| 1 | **OSC 송신 표면을 import할 수 있는 디렉터리는 셋뿐이다** — `server/bridge/`(표면 자신) · `server/safety/`(**게이트 — 유일한 프로덕션 호출자**, `REQ-MVP-029`) · `server/tests/`. 파일 단위 예외는 운영 유틸 2개(`server/tools/osc_smoke.py` · `server/tools/responder_roundtrip.py`)뿐이다 | `[코드]` `server/tests/test_architecture.py:27-39` |
+| 2 | **그 경계는 테스트로 강제된다** — 위반 시 `REQ-MVP-029 single-chokepoint violation`으로 실패한다 | `[코드]` `server/tests/test_architecture.py:48-61` |
+| 3 | **`build_prop_query`에는 프로덕션 소비자가 0건이다** — 정의(`server/bridge/protocol.py:136`) 외에 `server/safety/`나 `server/orchestrator/` 어디에서도 호출되지 않는다 | `[코드]` 전수 grep |
+
+#### 귀결
+
+프로덕션 읽기 경로는 `query_state` 하나다 — `ConsoleLink.query_state`(`server/safety/console.py:372`)가 구현하고 `server/safety/gate.py:120`이 노출하며 `StateQueryPort`(`server/orchestrator/ports.py:68-73`)가 계약을 고정하고 툴 층의 `query_state`(`server/orchestrator/tools.py:601`)가 소비한다 `[코드]`.
+
+**그런데 `state`는 프로퍼티를 반환하지 않는다**(`research.md` §4.2 — 픽스처 자식은 `name`/`class`/`i`만 준다). **주소는 프로퍼티에만 있다.** 따라서:
+
+- `server/prechk/`(신규 모듈)는 `server.bridge`를 import할 수 **없다**(사실 1·2).
+- 프로퍼티를 읽으려면 **초크포인트에 `query_property`가 있어야 한다**.
+- 그 초크포인트는 `server/safety/**`이고 **BUSKWIZ와 SONGCUE가 둘 다 PRESERVE로 잠갔다**(§7.2).
+
+**우회 경로를 전수로 배제했다.**
+
+| 우회 | 배제 사유 |
+|---|---|
+| `state`로 주소를 얻는다 | 프로퍼티를 반환하지 않는다(§4.2). 구조적으로 불가 |
+| `exec`로 커맨드를 쏘고 결과 문자열에서 주소를 읽는다 | `List` 계열이 `OK`만 돌려주는 것이 실측이다 — 값은 콘솔 커맨드라인 창으로 가고 OSC 응답에 실리지 않는다(SONGCUE M0) |
+| `server/tools/` 예외에 파일을 추가한다 | 그 예외는 **운영 유틸**용이며(`server/tests/test_architecture.py:33-39`의 docstring) 프로덕션 기능 경로가 아니다. 기능을 유틸로 위장하는 것이 된다 |
+| 응답기를 확장해 `state`가 프로퍼티를 싣게 한다 | `console/lua/**` PRESERVE를 건드리며(§7.2) 페이로드 예산을 더 압박한다(§4.4) — 절단을 악화시킨다 |
+
+#### 필요한 변경의 규모 — 가산적이다
+
+| 파일 | 변경 | 성격 |
+|---|---|---|
+| `server/safety/console.py` | `query_property(path, property_name) -> dict` 추가. `query_state`(`:372-386`)와 **동형** — `build_prop_query`로 요청하고 `kind="prop"` 응답을 기다리며 실패·타임아웃에 예외 | **순수 추가.** 기존 심볼·시그니처 무변경 |
+| `server/orchestrator/ports.py` | 프로퍼티 조회 포트 프로토콜 추가(`StateQueryPort` `:68-73`과 동형) | 순수 추가 |
+| `server/safety/gate.py` | 위임 노출(`query_state` `:120`과 동형) | 순수 추가 |
+| 테스트 대역 | `server/measurement/mock_provider.py:122`의 `query_state` 옆에 동형 추가 | 순수 추가 |
+
+**이것은 PRESERVE 개정을 요구하며 사용자 승인 사항이다.** 본 조사는 개정을 실행하지 않고 **강제성의 근거만 확립한다** — 승인 절차는 `plan.md`의 사용자 접점이 소유한다.
+
+> **SONGCUE의 교훈을 그대로 적용한다.** 그 SPEC에서 오케스트레이터가 정본 PRESERVE를 읽지 않고 워커에게 잠긴 파일 변경을 지시했고, 발견자는 워커였다. **본 SPEC은 착수 전에 발견해 문서에 적었다** — 그것이 이 절의 존재 이유다.
+
 ---
 
 ## 8. 기각한 대안
