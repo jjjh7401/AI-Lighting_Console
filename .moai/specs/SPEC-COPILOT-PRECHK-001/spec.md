@@ -45,7 +45,7 @@ related_specs: [SPEC-COPILOT-BUSKWIZ-001, SPEC-COPILOT-SONGCUE-001, SPEC-COPILOT
 
 선행 SPEC들이 "하드 결함"으로 불렀던 자리에, 본 SPEC은 **읽기 표면의 실측된 한계 4건**을 둔다. 셋은 조사가 닫았고 하나는 남아 있다.
 
-1. **절단이 기본 경로다** (`research.md` §4.4 · §4.7). 픽스처 **18개**에서 이미 `truncated = true`가 떴다 — 자식 수 상한(24)이 아니라 **페이로드 예산**(1900바이트)이 먼저 걸린다(`console/lua/copilot_responder.lua:634-639`). 패치 점검은 픽스처가 많은 것이 정상인 도메인이므로 절단 처리는 부가 기능이 아니라 **1급 요구**다.
+1. **절단이 기본 경로다** (`research.md` §4.4 · §4.7). 픽스처 **19개**(반환 18개)에서 이미 `truncated = true`가 떴다 — 자식 수 상한(24)이 아니라 **페이로드 예산**(1900바이트)이 먼저 걸린다(`console/lua/copilot_responder.lua:634-639`). 패치 점검은 픽스처가 많은 것이 정상인 도메인이므로 절단 처리는 부가 기능이 아니라 **1급 요구**다.
 2. **절단되어도 계수는 정확하다** (`research.md` §4.7). `node.childCount`는 참 전체 수이고(`console/lua/copilot_responder.lua:607`) 페이로드 루프는 목록만 자른다. **"몇 개인가"는 정확하고 "무엇인가"만 불완전하다** — 완전성을 `truncated` 플래그가 아니라 **읽은 개수와 `childCount`의 비교**로 판정한다.
 3. **`ok = true`가 값의 유효성을 보증하지 않는다** (`research.md` §4.3). `prop <fixture> Index`가 `ok = true`와 함께 `'function: 0x105b0f048'`을 반환했다 — Lua 함수 참조다. 원인은 `safe_property`가 `handle[name]`을 그대로 돌려주는 것이다(`console/lua/copilot_responder.lua:204-217`). **값 형태 검증이 필수다.**
 4. **`FID` 값의 의미는 이 쇼파일로 증명할 수 없다** (`research.md` §4.6). `console/lua/PROTOCOL.md:322-324`가 명시한다 — 현장 캘리브레이션 쇼파일은 슬롯 == FID라서 **올바른 FID 프로브와 슬롯 프로브를 구별할 수 없다.** 따라서 본 SPEC은 FID를 판정 근거로 쓰지 않는다.
@@ -105,7 +105,7 @@ related_specs: [SPEC-COPILOT-BUSKWIZ-001, SPEC-COPILOT-SONGCUE-001, SPEC-COPILOT
 
 번호는 선행 SPEC 이후를 이어받는다(SONGCUE가 `ASSUMPTION-20~24`를 썼다).
 
-- **ASSUMPTION-25** — **픽스처 주소 읽기.** `prop <fixture> Patch`가 `<유니버스>.<주소>` 형태의 값을 준다. 사전 프로브가 `'1.001'`을 포함해 **18개 전수**를 읽었으므로(`research.md` §4.2 · §4.5) 판정은 **GO 방향**이며 M0는 **재확인만** 한다. 차단 대상: 없음(부정이면 본 SPEC의 산출물 1이 성립하지 않으나 조사가 이미 반례를 배제했다).
+- **ASSUMPTION-25** — **픽스처 주소 읽기.** `prop <fixture> Patch`가 `<유니버스>.<주소>` 형태의 값을 준다. 사전 프로브가 `'1.001'`을 포함해 **19개 중 관측된 18개**를 읽었으므로(`research.md` §4.2 · §4.5) 판정은 **GO 방향**이며 M0는 **재확인만** 한다. 부정이면 결과 어휘 `REOPEN_SCOPE`이며 **폐쇄가 아니다** — 오케스트레이터 접점으로 올려 범위를 재개정한다(`acceptance.md` AC-PRECHK-016의 결과 어휘 표).
 - **ASSUMPTION-26** — **매크로 저작 문법.** `Store Macro <n>`과 라인 추가(`Set Macro <m>.<line> Property 'Command' '<cmd>'`)가 수용되고 **효과가 재조회로 확인된다.** 현재 등급 **T3** — 룰북에만 있고 라이브 `OK` 기록이 **0건**이다(`research.md` §5). **본 SPEC의 유일한 블로킹 전제다** — 부정이면 산출물 2(매크로 생성)가 성립하지 않는다. 차단 대상: 매크로 생성 마일스톤.
 - **ASSUMPTION-27** — **픽스처 → 픽스처타입 → 모드 → 점유폭 연결.** 픽스처가 주는 `FixtureType`·`Mode`는 **표시 문자열**이고 경로 인덱스가 아니다(`research.md` §4.7). 연결 경로가 표시 문자열 파싱 없이 확립되는가. **동작 축소 — 블로킹 아님**: 부정이면 구간 겹침 판정만 빠지고 주소 중복 판정은 남는다(REQ-PRECHK-008).
 - **ASSUMPTION-28** — **페이지·익스큐터 저작 문법의 존부** (BUSKWIZ G1 / `ASSUMPTION-16` 승계). BUSKWIZ가 *"결정적 테스트가 쇼파일 쓰기를 요구하고 그 결과가 v1 판정을 바꾸지 못한다"*는 이유로 미측정으로 남긴 항목이다. **본 SPEC은 쓰기 세션을 어차피 갖는다.** 차단 대상: 없음(본 SPEC의 산출물이 아니라 선행 SPEC의 미결을 닫는다).

@@ -38,8 +38,8 @@
 
 | 항목 | 착수 시 등급 | 조사 후 |
 |---|---|---|
-| 픽스처 주소 읽기 (`prop … Patch`) | `미확정` | **`[실측]`** — `'1.001'` 포함 18개 전수 |
-| 픽스처 열거 경로 | `미확정` | **`[실측]`** — `Patch/Stages/1/Fixtures` 18개 |
+| 픽스처 주소 읽기 (`prop … Patch`) | `미확정` | **`[실측]`** — `'1.001'` 포함, 19개 중 관측된 18개 |
+| 픽스처 열거 경로 | `미확정` | **`[실측]`** — `Patch/Stages/1/Fixtures`, `childCount` 19 / 반환 18 / `truncated` 참 |
 | 채널 점유폭 도달 | 미조사 | **`[실측]`** — `Patch/FixtureTypes/1/DMXModes/1/DMXChannels` `childCount = 29` |
 | 매크로 저작 문법 | T3 | **T3 유지** — 라이브 `OK` 0건. `ASSUMPTION-26`이 M0에서 판정 |
 | 픽스처 → 점유폭 연결 | 미조사 | **`[미확정]`** — 표시 문자열뿐. `ASSUMPTION-27` |
@@ -47,7 +47,7 @@
 
 ### 조사가 정정한 선행 산정 2건
 
-**1. 절단 원인이 둘이다.** SONGCUE는 `max_children = 24`를 근거로 *"자식이 24를 넘으면"* 절단된다고 산정했다(`.moai/specs/SPEC-COPILOT-SONGCUE-001/progress.md:403`). **픽스처 18개에서 절단이 떴다** `[실측]`. 코드에 독립된 경로가 둘이다 `[코드]` — ① 자식 수 상한(`console/lua/copilot_responder.lua:610`, `cap`은 `console/lua/copilot_responder.lua:581`) ② **페이로드 예산 루프**(`console/lua/copilot_responder.lua:634-639`, `max_payload = 1900`). 픽스처는 이름이 길어 24에 닿기 전에 ②가 먼저 발동한다. `SONGCUE-F3/G3`(절단 거동 미실측)를 승계해 닫았다.
+**1. 절단 원인이 둘이다.** SONGCUE는 `max_children = 24`를 근거로 *"자식이 24를 넘으면"* 절단된다고 산정했다(`.moai/specs/SPEC-COPILOT-SONGCUE-001/progress.md:403`). **픽스처 19개에서 절단이 떴다**(`childCount` 19 / 반환 18) `[실측]`. 코드에 독립된 경로가 둘이다 `[코드]` — ① 자식 수 상한(`console/lua/copilot_responder.lua:610`, `cap`은 `console/lua/copilot_responder.lua:581`) ② **페이로드 예산 루프**(`console/lua/copilot_responder.lua:634-639`, `max_payload = 1900`). 픽스처는 이름이 길어 24에 닿기 전에 ②가 먼저 발동한다. `SONGCUE-F3/G3`(절단 거동 미실측)를 승계해 닫았다.
 
 **2. 절단되어도 계수는 정확하다.** `node.childCount = total`이고(`console/lua/copilot_responder.lua:607`, `total`은 `console/lua/copilot_responder.lua:580`) 페이로드 루프는 `items`만 제거한다 `[코드]`. **"몇 개인가"는 정확하고 "무엇인가"만 불완전하다** — 그래서 완전성을 `truncated` 플래그가 아니라 **읽은 개수와 `childCount`의 비교**로 판정하고 못 읽은 개수를 수치로 보고한다(`AC-PRECHK-003`).
 
@@ -139,11 +139,11 @@ machine_gates:
   mutations_proposed: 35    # design.md §6.3 — 각 뮤테이션이 어느 AC를 죽이는지 명시
 preflight_probe:
   showfile_writes: 0        # 사전 프로브는 전량 읽기 전용. 쇼파일 무변경
-  fixtures_read: 18         # FID · Patch · FixtureType · Mode 전수
+  fixtures_read: "19개 중 18 — childCount 19이고 반환 18이다. FID · Patch · FixtureType · Mode를 관측된 18개에서 읽었다. 전수가 아니다"
   address_scheme: "'<유니버스>.<주소>' — 1.001~1.437(유니버스 1), 2.001~2.351(유니버스 2)"
-  rig_verdict: "정합 — 주소 중복 0 · FID 중복 0. 결함이 없으므로 탐지 로직 검증에는 결함 심은 인메모리 픽스처가 필수(design.md §6.1)"
+  rig_verdict: "**관측된 18개 범위에서** 주소 중복 0 · FID 중복 0. 19번째가 미관측이므로 정합성을 단정하지 않는다 — 그 단정은 REQ-PRECHK-010이 금지하는 형태다(research.md §4.8). 탐지 로직 검증에는 결함 심은 인메모리 픽스처가 필수(design.md §6.1)"
   traps_found: 3            # ok=true인 함수 참조 · 공백 프로퍼티명 거부 · 프로퍼티명 열거 불가
-  truncation_observed: "픽스처 18개에서 truncated=true. 원인은 페이로드 예산(1900B)이며 자식 수 상한(24)이 아니다"
+  truncation_observed: "childCount 19 / 반환 18 / truncated=true. 원인은 페이로드 예산(1900B)이며 자식 수 상한(24)이 아니다. 조사가 최초에 반환 18을 총수로 오독했고 최종 검증에서 잡았다 — research.md §4.8"
 blocking_for_run: "**승인 대기 1건이 최대 위험이다** — `server/safety/**` PRESERVE의 조건부 예외가 승인되지 않으면 M1에 착수할 수 없고, M1이 프로퍼티 조회를 제공하므로 M2 이후도 정지한다. 우회 4종(bridge 직접 import · server/tools 예외 증설 · 응답기 확장 · exec 문자열 파싱)은 전부 금지이며 plan.md가 명시한다. 기술적 블로킹은 `ASSUMPTION-26`(매크로 저작 문법) 1건뿐이고 그것도 부정이면 M4가 DESCOPE로 완료된다 — 저작 차단이 아니다. `ASSUMPTION-27`은 동작 축소이며, `ASSUMPTION-28/29/30`은 BUSKWIZ 후속 측정이라 본 SPEC의 어느 마일스톤도 막지 않는다."
 known_gaps:
   - "`FID` 값의 의미는 어떤 라이브 세션도 현재 쇼파일로 닫을 수 없다 — 슬롯 == FID이기 때문이다(`console/lua/PROTOCOL.md:322-324`). 슬롯 ≠ FID로 패치된 쇼파일이 선행 조건이며 사용자 GUI 작업이다. 본 SPEC은 FID를 판정 근거에서 배제한 형상으로 출하한다."
@@ -153,6 +153,7 @@ known_gaps:
   - "plan-audit 1회차는 **FAIL 0.76**을 냈고 지적 11건(P1 4 · P2 6 · P3 1)을 **전건 닫았다**(§E.1a). 계수는 불변이다. **다만 감사가 재검증하지 않았다** — 1회차 정정이 새 불일치를 만들지 않았다는 증명은 없고 run-phase 각 마일스톤의 착수 직전 실측이 덮는다. 2회차를 열지 않은 근거는 §E.1a에 있다."
   - "감사의 축약 토큰 검출이 코디네이터의 정규식보다 정확했다 — 완전 토큰 뒤에 중점으로 이어 붙인 **3자리 숫자만의 항목**은 슬러그도 `AC-` 접두도 없어 코디네이터가 쓴 패턴에 걸리지 않는다. 이후 게이트는 **중점 뒤 3자리 숫자**도 함께 센다."
   - "M0 결과 어휘 4값(`GO` · `NEGATIVE` · `CONDITION_NOT_MET` · `REOPEN_SCOPE`)과 접두 행 4종은 **감사 지적으로 신설된 것이며 아직 라이브에서 쓰인 적이 없다.** M0가 그 형식을 실제로 산출하는지는 착수 시 확인된다."
+  - "**조사가 스스로 절단 함정에 빠졌다가 최종 검증에서 잡았다**(`research.md` §4.8). 최초 프로브가 `len(children)` = 18만 출력하고 `node.childCount` = 19를 출력하지 않아 **반환 수를 총수로 기록**했고, 그 위에 *'정합한 리그'*라는 단정을 얹었다 — `REQ-PRECHK-010`이 금지하는 바로 그 형태다. 픽스처 수 서술과 정합 판정을 5개 절에서 한정 표현으로 정정했다. **이 오류가 `REQ-PRECHK-004`의 개수 비교가 이론적 방어가 아님을 실증한다** — `truncated` 플래그가 참이었는데도 오독을 막지 못했고, 플래그는 '얼마나 불완전한지'를 말하지 않는다. 미관측 1개는 M0가 슬롯별 보강 조회로 채운다."
 next: "**Kickoff 사용자 접점 2건**(`server/safety/**` 조건부 예외 승인 · M0 라이브 세션 접근 가능성) → Implementation Kickoff Approval(plan→run HUMAN GATE) → §F 작성(첫 run-phase 스폰 전) → run(M0 프로브부터). **승인 없이 M1에 착수하지 않는다.** plan-audit는 1회차 FAIL 0.76 → 11건 전건 처리로 종료하고 2회차를 열지 않는다."
 ```
 
