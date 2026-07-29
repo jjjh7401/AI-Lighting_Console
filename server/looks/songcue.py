@@ -30,6 +30,9 @@ ROLE_UNMAPPED = "role_unmapped"
 _DESTINATION = "ChangeDestination Root"
 _CLEAR = "ClearAll"
 _IMPLICIT_SYSTEM_CUE_COUNT = 2
+TIMECODE_DESCOPE = "timecode_descope"
+AUTO_ADVANCE_DESCOPE = "auto_advance_descope"
+TRIGGER_TYPE_TIME = "Time"
 
 
 @dataclass(frozen=True)
@@ -88,6 +91,28 @@ class SongCueBundle:
     @property
     def stored_sections(self) -> tuple[SongCueSectionBundle, ...]:
         return tuple(section for section in self.sections if section.commands)
+
+
+@dataclass(frozen=True)
+class SongCueTimingAxes:
+    timecode_go: bool = True
+    auto_advance_go: bool = True
+    timecode_skip_reason: str = "ASSUMPTION-20 is GO in M4; DESCOPE branch retained for future rerun"
+    auto_advance_skip_reason: str = "ASSUMPTION-22 is GO in M4; DESCOPE branch retained for future rerun"
+
+
+@dataclass(frozen=True)
+class SongCueTimingSkip:
+    axis: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class SongCueTimingPlan:
+    commands: tuple[str, ...]
+    timecode_commands: tuple[str, ...] = ()
+    auto_advance_commands: tuple[str, ...] = ()
+    skipped_axes: tuple[SongCueTimingSkip, ...] = ()
 
 
 class SectionTimeError(ValueError):
@@ -271,6 +296,36 @@ def observed_user_cue_count(sequence_payload: Mapping[str, object]) -> int:
     return max(0, child_count - _IMPLICIT_SYSTEM_CUE_COUNT)
 
 
+def build_songcue_timing(
+    bundle: SongCueBundle,
+    *,
+    timecode_number: int,
+    axes: SongCueTimingAxes | None = None,
+) -> SongCueTimingPlan:
+    if isinstance(timecode_number, bool) or timecode_number < 1:
+        raise ValueError(f"timecode_number must be positive: {timecode_number!r}")
+    selected_axes = axes or SongCueTimingAxes()
+    timecode_commands: tuple[str, ...] = ()
+    auto_advance_commands: tuple[str, ...] = ()
+    skipped: list[SongCueTimingSkip] = []
+    if selected_axes.timecode_go:
+        timecode_commands = _timecode_commands(bundle, timecode_number)
+    else:
+        skipped.append(SongCueTimingSkip(axis=TIMECODE_DESCOPE, reason=selected_axes.timecode_skip_reason))
+    if selected_axes.auto_advance_go:
+        auto_advance_commands = _auto_advance_commands(bundle)
+    else:
+        skipped.append(
+            SongCueTimingSkip(axis=AUTO_ADVANCE_DESCOPE, reason=selected_axes.auto_advance_skip_reason)
+        )
+    return SongCueTimingPlan(
+        commands=timecode_commands + auto_advance_commands,
+        timecode_commands=timecode_commands,
+        auto_advance_commands=auto_advance_commands,
+        skipped_axes=tuple(skipped),
+    )
+
+
 def _parse_section(raw: Mapping[str, object] | Sequence[object], index: int) -> SongCueSection:
     section = _raw_section(raw)
     name = section.name.strip()
@@ -394,6 +449,36 @@ def _section_bundle(
         commands=commands,
         bound=bound,
     )
+
+
+def _timecode_commands(bundle: SongCueBundle, timecode_number: int) -> tuple[str, ...]:
+    timecode_name = _ascii_label(f"{bundle.sequence_name} Timecode", fallback=f"Timecode {timecode_number}")
+    return (
+        f"Store Timecode {timecode_number}",
+        f"Set Timecode {timecode_number} Property 'Name' '{timecode_name}'",
+        f"Assign Sequence {bundle.sequence_number} At Timecode {timecode_number}",
+    )
+
+
+def _auto_advance_commands(bundle: SongCueBundle) -> tuple[str, ...]:
+    commands: list[str] = []
+    for section in bundle.stored_sections:
+        commands.append(
+            f"Set Cue {section.cue_number} Sequence {bundle.sequence_number} "
+            f"Property 'TrigType' '{TRIGGER_TYPE_TIME}'"
+        )
+        commands.append(
+            f"Set Cue {section.cue_number} Sequence {bundle.sequence_number} "
+            f"Property 'TrigTime' {_format_seconds(section.section.start_ms)}"
+        )
+    return tuple(commands)
+
+
+def _format_seconds(start_ms: int) -> str:
+    seconds = Decimal(start_ms) / _MILLISECONDS_PER_SECOND
+    if seconds == seconds.to_integral_value():
+        return str(int(seconds))
+    return format(seconds.normalize(), "f")
 
 
 def _selected_groups(bound: Mapping[str, tuple[GroupCandidate, ...]]) -> tuple[GroupCandidate, ...]:
