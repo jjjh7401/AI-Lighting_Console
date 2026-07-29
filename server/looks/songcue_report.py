@@ -230,9 +230,15 @@ def _observed_cues(payload: Mapping[str, object]) -> list[dict[str, object]]:
             continue
         if child.get("class") != "Cue":
             continue
-        number = child.get("cueNo", child.get("i"))
+        # F-2(M0 실측): 모든 시퀀스는 암묵 시스템 큐 `OffCue`·`CueZero`를 갖는다.
+        # `cueNo`가 없는 자식(`OffCue`)은 응답기가 "번호를 확신할 수 없다"고 말한 것이므로
+        # 나열 위치 `i`로 대체 추정하지 않는다 — 그 추정이 사용자 큐 1번과 충돌해
+        # `requery.matched`를 구조적으로 거짓으로 만들었다(M7 라이브 실측).
+        # 생성 큐 번호는 항상 1 이상이므로(REQ-SONGCUE-007) 0 이하는 시스템 큐다.
+        # 표시 이름으로 걸러내지 않는다 — 이름에서 정체성을 끌어내는 것은 금지다.
+        number = child.get("cueNo")
         name = child.get("name")
-        if isinstance(number, int) and isinstance(name, str):
+        if isinstance(number, int) and number >= 1 and isinstance(name, str):
             observed.append({"cue_number": number, "name": name})
     return sorted(observed, key=lambda item: int(item["cue_number"]))
 

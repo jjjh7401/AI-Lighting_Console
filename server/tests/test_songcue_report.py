@@ -138,6 +138,28 @@ def test_requery_confirms_cue_count_and_names_without_property_verification_clai
     assert _forbidden_property_claims(payload) == []
 
 
+def test_system_cues_are_excluded_and_offcue_position_is_never_guessed_as_a_number():
+    """M7이 라이브에서만 잡은 결함의 회귀 고정.
+
+    `OffCue`는 `cueNo`가 없다. 예전 구현은 나열 위치 `i`로 대체 추정했고, 그 값이
+    사용자 큐 1번과 충돌해 `observed != expected`가 되어 `matched`가 **구조적으로**
+    거짓이었다. 유닛 픽스처가 시스템 큐를 빠뜨려 그것을 놓쳤다.
+    """
+    bundle = _mixed_bundle()
+    payload = build_songcue_report(bundle, requery_payload=_requery_payload(bundle)).to_dict()
+    observed = payload["requery"]["observed"]
+
+    names = [row["name"] for row in observed]
+    assert "OffCue" not in names, "cueNo 없는 시스템 큐가 관측 목록에 새어 들어왔다"
+    assert "CueZero" not in names, "cueNo=0 시스템 큐가 관측 목록에 새어 들어왔다"
+    assert observed, "비공허성 — 필터가 사용자 큐까지 전부 지워 버리면 위 두 assert는 공허하다"
+    assert all(row["cue_number"] >= 1 for row in observed)
+    assert len({row["cue_number"] for row in observed}) == len(observed), (
+        "큐 번호가 중복이면 i 폴백이 되살아난 것이다"
+    )
+    assert payload["requery"]["matched"] is True
+
+
 def _mixed_bundle():
     complete, collision, unknown, no_look, no_role = parse_sections(
         (
@@ -219,14 +241,26 @@ def _sequences(*numbers: int) -> dict[str, object]:
 
 
 def _requery_payload(bundle) -> dict[str, object]:
+    """Requery payload shaped like the LIVE console, not an idealised one.
+
+    M0 실측(F-2): 모든 시퀀스는 암묵 시스템 큐 둘을 갖는다 — `OffCue`는 응답기가
+    실제 큐 번호를 확신하지 못해 `cueNo`를 **생략**하고, `CueZero`는 `cueNo: 0`이다.
+    이 픽스처가 그 둘을 빠뜨렸던 탓에 유닛은 통과하고 M7 라이브에서만
+    `requery.matched=false`가 났다. 픽스처는 콘솔이 실제로 주는 모양이어야 한다.
+    """
     return {
         "children": [
-            {
-                "class": "Cue",
-                "cueNo": section.cue_number,
-                "name": section.cue_name,
-            }
-            for section in bundle.stored_sections
+            {"class": "Cue", "i": 1, "name": "OffCue"},
+            {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"},
+            *(
+                {
+                    "class": "Cue",
+                    "cueNo": section.cue_number,
+                    "i": index,
+                    "name": section.cue_name,
+                }
+                for index, section in enumerate(bundle.stored_sections, start=3)
+            ),
         ]
     }
 

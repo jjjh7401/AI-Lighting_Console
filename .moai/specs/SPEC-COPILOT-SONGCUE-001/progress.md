@@ -808,9 +808,9 @@ live_m7:
   evidence_source: "감사 로그와 대조 — 툴 반환만으로 판정하지 않았다(BUSKWIZ M7의 교훈)"
   m0_consistency: "불일치 0건"
   showfile_restored: "베이스라인 정확히 일치 — Sequences 17개 인덱스 동일, Timecodes 0. 코디네이터 독립 재확인"
-blocking_for_sync: "없음. 다만 아래 `report_requery_matched_false`는 sync 전에 판정해야 한다 — 결함이면 후속 SPEC, 관측 한계면 문서화로 닫는다."
+blocking_for_sync: "없음. `report_requery_matched_false`는 **결함으로 판정되어 닫혔다**(아래 첫 항목)."
 known_gaps:
-  - "**report_requery_matched_false — 유일한 미판정 항목.** M7에서 수동 재조회는 큐 4건을 cueNo·이름까지 일치 확인했는데, 툴 자신의 `report.requery.matched`는 `false`를 냈다. 즉 툴의 자기보고와 실측이 어긋난다. M7은 코드 변경 0의 측정 세션이라 고치지 않고 남겼다(옳은 선택이다 — 라이브 세션에서 코드를 고치면 무엇을 검증한 것인지 알 수 없게 된다). **결함 후보이며 sync 전에 판정이 필요하다.**"
+  - "**report_requery_matched_false — 결함으로 판정하고 닫았다(2026-07-29).** M7이 남긴 유일한 미판정 항목이었다. **원인**: `songcue_report._observed_cues`가 시스템 큐를 걸러내지 않았고, 특히 `child.get(\"cueNo\", child.get(\"i\"))`의 **`i` 폴백**이 `cueNo` 없는 `OffCue`를 나열 위치 `i=1`로 **추정**해 사용자 큐 1번과 충돌시켰다. `matched`는 `observed == expected` 완전 일치라 **구조적으로 참이 될 수 없었다**(`CueZero`의 `cueNo=0`도 함께 오염원). 그 폴백은 트랙 B에 준 계약(\"번호를 확신 못 하면 생략, 추측 금지\")을 정확히 되돌려 놓은 것이었고, `songcue_report.py`가 `cueNo` 이전(M4)에 작성돼 남은 잔재다. **유닛이 놓친 이유**: `_requery_payload` 픽스처가 시스템 큐를 아예 넣지 않은 이상화된 모양이었다 — M0의 F-2 실측이 픽스처로 전파되지 않았다. **조치**: `i` 폴백 제거 + `cueNo >= 1` 필터(표시 이름으로 걸러내지 않는다 — 이름에서 정체성을 끌어내는 것은 금지), 픽스처를 라이브 모양으로 교정, 회귀 테스트 1건 신설. **검증**: 폴백을 되살리는 뮤테이션이 신규 테스트를 죽였고, **실제 콘솔 페이로드**(시퀀스 11·20·1)로 필터가 시스템 큐만 제거하고 사용자 큐 번호를 보존함을 확인했다. 스위트 2489 → **2490 passed · 5 skipped · 0 failed**."
   - "`CueFade`는 prop 경로에서도 `property not readable: CueFade`로 남았다 — 응답기 v1.5.0으로도 읽히지 않는다. REQ-SONGCUE-017의 한계 명시가 계속 유효한 실측 근거다."
   - "매체 갭은 M7에서 대부분 닫혔다 — M7은 M5 툴 → `run_commands` → `bundle_gate.screen()` 경로로 실행했다. 다만 `prop` 되읽기 자체는 여전히 게이트 미경유 직결이다."
   - "`max_children = 24` 상한의 실제 절단 거동은 미실측(현재 시퀀스 17). M3가 `truncated` 참이면 거부하도록 고정했으나 그 분기의 라이브 발동은 관측되지 않았다."
