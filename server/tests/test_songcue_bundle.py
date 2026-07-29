@@ -42,6 +42,20 @@ _FORBIDDEN_COMMANDS = {
     "label_cue": re.compile(r"^\s*label\s+cue\b", re.IGNORECASE),
     "goto_cue": re.compile(r"^\s*goto\s+cue\b", re.IGNORECASE),
 }
+_RUN_PHASE_BASE = "38a6e7e2157a4862721fcd868056e0dbbb09c4c0"
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_PRESERVE_LOOK_FILES = (
+    "server/looks/matching.py",
+    "server/looks/instantiate.py",
+    "server/looks/resolver.py",
+    "server/looks/schema.py",
+    "server/looks/loader.py",
+    "server/looks/roles.py",
+)
+_TOOLS_PATH = "server/orchestrator/tools.py"
+_TOOLS_EXPECTED_HUNK_OLD_STARTS = (32, 49, 125, 951, 1222, 1231)
+_TOOLS_PROTECTED_OLD_RANGES = ((234, 238), (524, 569))
+_HUNK_RE = re.compile(r"^@@ -(?P<old_start>\d+)(?:,(?P<old_count>\d+))? \+\d+(?:,\d+)? @@")
 
 
 def test_sequence_one_and_cues_one_to_n_for_six_and_ten_sections():
@@ -69,11 +83,11 @@ def test_sequence_number_comes_from_complement_and_rejects_unknown_snapshots():
 
     with pytest.raises(Exception) as failed:
         select_sequence_number({"reason": "path_not_resolved"})
-    assert getattr(failed.value, "reason") == SEQUENCE_UNAVAILABLE
+    assert failed.value.reason == SEQUENCE_UNAVAILABLE
 
     with pytest.raises(Exception) as truncated:
         select_sequence_number(_sequences(1, 2, truncated=True))
-    assert getattr(truncated.value, "reason") == SEQUENCE_TRUNCATED
+    assert truncated.value.reason == SEQUENCE_TRUNCATED
 
 
 def test_implicit_system_cues_are_subtracted_and_truncation_is_rejected():
@@ -82,7 +96,7 @@ def test_implicit_system_cues_are_subtracted_and_truncation_is_rejected():
     assert observed_user_cue_count(payload) == 6
     with pytest.raises(Exception) as raised:
         observed_user_cue_count({"node": {"childCount": 24}, "truncated": True})
-    assert getattr(raised.value, "reason") == SEQUENCE_TRUNCATED
+    assert raised.value.reason == SEQUENCE_TRUNCATED
 
 
 def test_commands_are_ascii_and_report_keeps_korean_in_presentation_only():
@@ -114,7 +128,10 @@ def test_repeated_section_names_are_disambiguated_in_store_names():
         groups_section=_groups(*FULL_RIG),
     )
 
-    assert [name for _sequence, _cue, name in _store_refs(bundle.commands)] == ["Chorus 1", "Chorus 2"]
+    assert [name for _sequence, _cue, name in _store_refs(bundle.commands)] == [
+        "Chorus 1",
+        "Chorus 2",
+    ]
 
 
 def test_forbidden_command_scanner_is_generated_tuple_based_and_nonempty():
@@ -152,7 +169,11 @@ def test_destination_is_once_at_head_and_clearall_cycles_survive():
 
 def test_label_sequence_is_after_first_store_once():
     bundle = _bundle_for_size(2)
-    store_indexes = [index for index, command in enumerate(bundle.commands) if command.startswith("Store Sequence ")]
+    store_indexes = [
+        index
+        for index, command in enumerate(bundle.commands)
+        if command.startswith("Store Sequence ")
+    ]
     label = f"Label Sequence {bundle.sequence_number} '{bundle.sequence_name}'"
 
     assert bundle.commands.count(label) == 1
@@ -164,7 +185,9 @@ def test_bundle_goes_through_run_commands_without_dedupe_loss():
     port = _RecordingPort()
     registry = build_toolset(execution_port=port, state_port=_StatePort())
     execution = registry.dispatch(
-        RegistryToolCall(id="songcue", name="run_commands", arguments={"commands": list(bundle.commands)})
+        RegistryToolCall(
+            id="songcue", name="run_commands", arguments={"commands": list(bundle.commands)}
+        )
     )
     statuses = [outcome.status for outcome in execution.command_outcomes]
 
@@ -174,20 +197,44 @@ def test_bundle_goes_through_run_commands_without_dedupe_loss():
     assert port.executed == list(bundle.commands)
 
 
-def test_tools_dedupe_block_is_unchanged_from_base():
+def test_preserve_gate_uses_run_phase_base_to_head_range():
+    command = _preserve_diff_command()
+
+    assert command[:4] == ["git", "diff", "--stat", f"{_RUN_PHASE_BASE}..HEAD"]
+    assert command[4] == "--"
+    assert tuple(command[5:]) == _PRESERVE_LOOK_FILES
+
+
+def test_preserve_look_files_are_unchanged_from_run_phase_base():
     result = subprocess.run(
-        ["git", "diff", "--name-only", "38a6e7e..HEAD", "--", "server/orchestrator/tools.py"],
-        cwd=Path(__file__).resolve().parents[2],
+        _preserve_diff_command(),
+        cwd=_REPO_ROOT,
         check=True,
         capture_output=True,
         text=True,
     )
 
+    assert _PRESERVE_LOOK_FILES
     assert result.stdout == ""
 
 
+def test_tools_hunks_are_only_songcue_registration_and_not_dedupe_or_state():
+    hunks = _tools_hunks_from_run_phase_base()
+
+    assert hunks
+    assert tuple(start for start, _count in hunks) == _TOOLS_EXPECTED_HUNK_OLD_STARTS
+    assert [
+        (start, count)
+        for start, count in hunks
+        for protected_start, protected_end in _TOOLS_PROTECTED_OLD_RANGES
+        if _overlaps(start, count, protected_start, protected_end)
+    ] == []
+
+
 def test_value_line_collision_skips_later_section_without_pulling_next_cue():
-    chorus_a, chorus_b, verse = parse_sections((("Chorus", "0:00"), ("Chorus", "0:30"), ("Verse", "1:00")))
+    chorus_a, chorus_b, verse = parse_sections(
+        (("Chorus", "0:00"), ("Chorus", "0:30"), ("Verse", "1:00"))
+    )
     chorus_look = _look("chorus", dynamics=4, value=80)
     verse_look = _look("verse", dynamics=2, value=45)
     bundle = build_songcue_bundle(
@@ -224,12 +271,16 @@ def test_value_line_collision_bundle_still_executes_without_dedupe_loss():
     )
     port = _RecordingPort()
     execution = build_toolset(execution_port=port, state_port=_StatePort()).dispatch(
-        RegistryToolCall(id="songcue", name="run_commands", arguments={"commands": list(bundle.commands)})
+        RegistryToolCall(
+            id="songcue", name="run_commands", arguments={"commands": list(bundle.commands)}
+        )
     )
 
     assert bundle.commands
     assert execution.result.is_error is False
-    assert "skipped_already_executed" not in [outcome.status for outcome in execution.command_outcomes]
+    assert "skipped_already_executed" not in [
+        outcome.status for outcome in execution.command_outcomes
+    ]
     assert port.executed == list(bundle.commands)
 
 
@@ -238,8 +289,12 @@ def test_distinct_value_lines_do_not_trigger_collision():
     bundle = build_songcue_bundle(
         "Song",
         (
-            SongCueLookSelection(section=first, requested_dynamics=(4,), look=_look("a", dynamics=4, value=80)),
-            SongCueLookSelection(section=second, requested_dynamics=(2,), look=_look("b", dynamics=2, value=45)),
+            SongCueLookSelection(
+                section=first, requested_dynamics=(4,), look=_look("a", dynamics=4, value=80)
+            ),
+            SongCueLookSelection(
+                section=second, requested_dynamics=(2,), look=_look("b", dynamics=2, value=45)
+            ),
         ),
         sequences_section=_sequences(),
         groups_section=_groups(*FULL_RIG),
@@ -251,13 +306,19 @@ def test_distinct_value_lines_do_not_trigger_collision():
 
 def test_zero_sections_rejects_one_section_succeeds_and_unmapped_roles_are_answer():
     with pytest.raises(SongCueBundleError) as raised:
-        build_songcue_bundle("Song", (), sequences_section=_sequences(), groups_section=_groups(*FULL_RIG))
+        build_songcue_bundle(
+            "Song", (), sequences_section=_sequences(), groups_section=_groups(*FULL_RIG)
+        )
     assert raised.value.reason == EMPTY_SECTIONS
 
     section = parse_sections((("Intro", "0:00"),))[0]
     normal = build_songcue_bundle(
         "Song",
-        (SongCueLookSelection(section=section, requested_dynamics=(1,), look=_look("intro", dynamics=1)),),
+        (
+            SongCueLookSelection(
+                section=section, requested_dynamics=(1,), look=_look("intro", dynamics=1)
+            ),
+        ),
         sequences_section=_sequences(),
         groups_section=_groups(*FULL_RIG),
     )
@@ -265,7 +326,11 @@ def test_zero_sections_rejects_one_section_succeeds_and_unmapped_roles_are_answe
 
     unresolved = build_songcue_bundle(
         "Song",
-        (SongCueLookSelection(section=section, requested_dynamics=(1,), look=_look("intro", dynamics=1)),),
+        (
+            SongCueLookSelection(
+                section=section, requested_dynamics=(1,), look=_look("intro", dynamics=1)
+            ),
+        ),
         sequences_section=_sequences(),
         groups_section=_groups((99, "Unmatched")),
     )
@@ -277,7 +342,9 @@ def test_zero_sections_rejects_one_section_succeeds_and_unmapped_roles_are_answe
 def test_static_scans_find_no_command_number_literals_or_numeric_rig_defaults():
     strings = _code_string_constants(_SONGCUE_MODULE)
     assert strings
-    numbered_object = re.compile(r"\b(Group|Pool|Preset|Sequence|Cue|Fixture|Executor|Page|FID|Slot)\s+\d")
+    numbered_object = re.compile(
+        r"\b(Group|Pool|Preset|Sequence|Cue|Fixture|Executor|Page|FID|Slot)\s+\d"
+    )
     assert [value for value in strings if numbered_object.search(value)] == []
 
     tree = ast.parse(_SONGCUE_MODULE.read_text(encoding="utf-8"))
@@ -286,7 +353,9 @@ def test_static_scans_find_no_command_number_literals_or_numeric_rig_defaults():
 
 
 def test_static_scanners_catch_injected_forbidden_shapes():
-    numbered_object = re.compile(r"\b(Group|Pool|Preset|Sequence|Cue|Fixture|Executor|Page|FID|Slot)\s+\d")
+    numbered_object = re.compile(
+        r"\b(Group|Pool|Preset|Sequence|Cue|Fixture|Executor|Page|FID|Slot)\s+\d"
+    )
     assert numbered_object.search("Store Sequence 3 Cue 1")
 
     fstring_tree = ast.parse('def x(slot):\n    return f"Preset {4}.{slot}"\n')
@@ -338,7 +407,9 @@ def _store_refs(commands: tuple[str, ...]) -> list[tuple[int, int, str]]:
     for command in commands:
         match = _STORE_RE.fullmatch(command)
         if match:
-            refs.append((int(match.group("sequence")), int(match.group("cue")), match.group("name")))
+            refs.append(
+                (int(match.group("sequence")), int(match.group("cue")), match.group("name"))
+            )
     return refs
 
 
@@ -359,6 +430,31 @@ def _has_hangul(value: str) -> bool:
     return any("가" <= char <= "힣" for char in value)
 
 
+def _preserve_diff_command() -> list[str]:
+    return ["git", "diff", "--stat", f"{_RUN_PHASE_BASE}..HEAD", "--", *_PRESERVE_LOOK_FILES]
+
+
+def _tools_hunks_from_run_phase_base() -> list[tuple[int, int]]:
+    result = subprocess.run(
+        ["git", "diff", "--unified=0", f"{_RUN_PHASE_BASE}..HEAD", "--", _TOOLS_PATH],
+        cwd=_REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    hunks: list[tuple[int, int]] = []
+    for line in result.stdout.splitlines():
+        match = _HUNK_RE.match(line)
+        if match is not None:
+            hunks.append((int(match.group("old_start")), int(match.group("old_count") or "1")))
+    return hunks
+
+
+def _overlaps(old_start: int, old_count: int, protected_start: int, protected_end: int) -> bool:
+    old_end = old_start + max(old_count, 1) - 1
+    return old_start <= protected_end and protected_start <= old_end
+
+
 def _numeric_fstring_constants(tree: ast.AST) -> list[ast.FormattedValue]:
     return [
         node
@@ -376,7 +472,11 @@ def _numeric_rig_defaults(tree: ast.AST) -> list[tuple[str, str]]:
         if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             continue
         pairs = list(
-            zip(node.args.args[len(node.args.args) - len(node.args.defaults) :], node.args.defaults, strict=True)
+            zip(
+                node.args.args[len(node.args.args) - len(node.args.defaults) :],
+                node.args.defaults,
+                strict=True,
+            )
         ) + list(zip(node.args.kwonlyargs, node.args.kw_defaults, strict=True))
         for arg, default in pairs:
             if (
