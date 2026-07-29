@@ -1,12 +1,13 @@
 # Session Summary: de659dec-eb73-4ad2-be2e-0a6bd1cdf1a6
 
-**Total Hook Invocations:** 17
+**Total Hook Invocations:** 20
 
-**Session Duration:** 19h7m5.888s
+**Session Duration:** 22h35m47.059s
 
 ## Event Breakdown
 
-- **SessionStart**: 17
+- **PostToolUse**: 2
+- **SessionStart**: 18
 
 ## Decision Breakdown
 
