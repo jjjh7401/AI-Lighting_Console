@@ -17,6 +17,7 @@ from server.bridge.protocol import (
     ProtocolError,
     build_exec_request,
     build_ping,
+    build_prop_query,
     build_state_query,
     decode_payload,
     encode_payload,
@@ -103,6 +104,17 @@ class TestRequestBuilders:
         # Path is rest-of-line on the Lua side, so embedded spaces are legal.
         line = build_state_query("1", "DataPool/Sequences/My Seq")
         assert line.endswith('"state 1 DataPool/Sequences/My Seq"')
+
+    def test_build_prop_query(self):
+        line = build_prop_query("p-1", "DataPool/Sequences/Sequence 101/Cue 2", "TrigTime")
+        assert line == (
+            f'Plugin "{PLUGIN_NAME}" '
+            '"prop p-1 DataPool/Sequences/Sequence 101/Cue 2 TrigTime"'
+        )
+
+    def test_build_prop_query_rejects_space_in_property_name(self):
+        with pytest.raises(ProtocolError):
+            build_prop_query("p-1", "DataPool/Sequences/1", "Trig Time")
 
     def test_build_exec_request(self):
         line = build_exec_request("9", "List")

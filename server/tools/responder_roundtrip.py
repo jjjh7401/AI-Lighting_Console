@@ -260,7 +260,7 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help=(
             "fail the ping step if the LIVE responder's version doesn't match "
-            "(e.g. '1.4.0') -- a fast, definitive 'did my deploy take effect' "
+            "(e.g. '1.5.0') -- a fast, definitive 'did my deploy take effect' "
             "check; run this FIRST after every plugin re-import"
         ),
     )

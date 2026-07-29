@@ -419,6 +419,100 @@ superseded_by_run: "§E.2 M0(2026-07-29)가 blocking_for_run과 next를 **소진
 4. **`/Overwrite`는 발화하지 않았다.** 룰북이 DESTRUCTIVE로 표시한 경로이고 M3가 쓰지 않을 것이므로 비파괴 원칙에 따라 건드리지 않았다. 측정 1의 "치환은 명시적 플래그를 요구한다"는 `Not allowed` 거부로부터의 추론이며 `/Overwrite` 자체의 실측이 아니다.
 5. **실측 원문이 git에 남지 않는다 — `known_gaps` 4항과 같은 실패 계열이다.** 전 스텝 raw payload 181행은 `.moai/state/verify/songcue-m0/steps.jsonl`에 있고 드라이버는 같은 디렉터리의 `probe.py`인데, **`.gitignore:206`의 `.moai/state/`가 둘 다 추적에서 제외한다**(BUSKWIZ `showui-m6` 선례와 동일 관례). 따라서 **커밋되는 유일한 사본은 위 절의 표와 인용문**이다. plan-audit 2회차가 1회차 원문을 못 봐서 치른 비용이 정확히 이것이었으므로, 본 절은 판정을 뒷받침하는 **모든 커맨드와 응답 문자열을 표 안에 그대로 옮겨 적었다** — 요약 서술로 대체하지 않았다. 원문 로그는 이 세션이 살아 있는 동안의 보조 증거일 뿐이다.
 
+### Track B 2차 — CopilotResponder v1.5.0 배포 + Gap 1/F-1 폐쇄 — 2026-07-29
+
+**판정: Gap 1 닫힘 · F-1 닫힘.** 코드 변경 10파일 + 본 절 1파일. 배포 승인은 사용자 접점 3으로 이미 완료되어 이 세션에서는 재질의하지 않았다.
+
+#### 세션 조건
+
+| | |
+|---|---|
+| 콘솔 | grandMA3 onPC 2.4.2, macOS |
+| OSC | **send 8000 / receive 9005** |
+| 응답기 착수 상태 | repo `VERSION = "1.5.0"` · live responder **v1.4.1**(코디네이터 착수 직전 실측) |
+| 배포 경로 | `install_responder(..., osc_slot=2)`로 `/Users/studiox/MALightingTechnology/gma3_library/datapools/plugins`에 `copilot_responder.xml` + `copilot_responder.lua` 복사 → raw OSC `Delete Plugin 1` → raw OSC `Import Plugin 1 'copilot_responder'` |
+| 왕복 배포 확인 | `uv run python -m server.tools.responder_roundtrip --listen-port 9005 --wait 5 --expect-version 1.5.0` → ping·state·exec **3/3 PASS**, ping `live version=1.5.0 plugin=CopilotResponder` |
+| 쇼파일 착수 상태 | `DataPool/Sequences` = `[1,2,11,12,13,14,15,16,17,20,30,41,50,62,71,80,90]` · `DataPool/Timecodes` childCount **0** |
+| 드라이버/원문 로그 | `.moai/state/verify/songcue-b2/steps.jsonl` (gitignore 대상 — 본 절이 커밋되는 유일한 사본) |
+
+배포는 `ConsoleLink.deploy_plugin()`을 쓰지 않았다. 그 경로는 일반 플러그인에는 맞지만, 기존 `CopilotResponder` 슬롯을 삭제한 뒤 다음 `Import Plugin`까지 다시 responder `exec`로 보내야 하므로 **응답기 자기 자신 재배포에는 부적합**하다. 대신 README §2.1의 "기존 슬롯 삭제 후 fresh import" 복구 절차를 raw `/copilot/cmd` 명령으로 수행했다. 배포 직전 plugin pool은 `[(1, 'CopilotResponder', 'UserPlugin'), (2, 'CopilotBusk', 'UserPlugin'), (3, 'kpop_summer_twinkle', 'UserPlugin')]`였고, slot 1만 삭제·재임포트했다.
+
+#### 배포 검증 — `--expect-version 1.5.0` 필수 조건 충족
+
+최종 배포 후 필수 명령의 실제 출력:
+
+```text
+round-trip against osc.udp://127.0.0.1:8000 (replies on 9005)
+  [PASS] ping: ok
+         live version=1.5.0 plugin=CopilotResponder
+  [PASS] state: ok
+         node={'childCount': 17, 'class': 'Sequences', 'name': 'Sequences'} children=17
+  [PASS] exec: ok
+result: PASS
+```
+
+중간에 **소스 보정 1회**가 있었다. 최초 v1.5.0 배포 직후 `Cue 7`의 raw property read는 `Plugin "CopilotResponder" "prop … DataPool/Sequences/104/B2CUE7 No"` → `{"kind":"prop","ok":true,"property":"No","value":"7000"}`였고, snapshot은 `{"name":"B2CUE7","class":"Cue","i":5,"cueNo":7000}`을 냈다. 같은 snapshot에서 `Cue 1`·`Cue 2`가 각각 `cueNo:1000`·`cueNo:2000`이었으므로, grandMA3의 `No` property는 큐 번호를 **1000배 스케일**로 노출한다고 판정했다. 응답기는 이 값을 실제 큐 번호로 환산하도록 고쳤고, 같은 slot 1에 다시 raw delete/import했다. 이후 위 `--expect-version 1.5.0` PASS와 아래 최종 `cueNo=7` 실측으로 갱신 소스가 live에 반영됐음을 확인했다. 커밋 직전에는 미검증 `No.`/`Cue`/`cue` fallback probe를 제거하고 **현재 커밋 소스 그대로** slot 1에 한 번 더 raw delete/import했다. 그 직후 sanity probe도 `Store Sequence 104 Cue 7 'B2S7' CueFade 1` → snapshot `{"class":"Cue","cueNo":7,"i":4,"name":"B2S7"}` → `Delete Sequence 104` `OK` → baseline `[1,2,11,12,13,14,15,16,17,20,30,41,50,62,71,80,90]`/Timecodes `0`로 끝났다.
+
+#### 프로브 시퀀스 104 — 발화와 응답 원문
+
+착수 baseline:
+
+| 조회 | 응답 핵심 |
+|---|---|
+| `Plugin "CopilotResponder" "state b2900c1c-1 DataPool/Sequences"` | `ok:true`, `node.childCount:17`, children `i` = `[1,2,11,12,13,14,15,16,17,20,30,41,50,62,71,80,90]`, `truncated:false` |
+| `Plugin "CopilotResponder" "state b2900c1c-2 DataPool/Timecodes"` | `ok:true`, `node.childCount:0`, `children:[]`, `truncated:false` |
+
+생성·설정 발화:
+
+| wire command | responder payload |
+|---|---|
+| `Plugin "CopilotResponder" "exec b2900c1c-3 Store Sequence 104 Cue 1 'B2ABS1' CueFade 1"` | `{"v":1,"kind":"result","id":"b2900c1c-3","ok":true,"result":"OK"}` |
+| `Plugin "CopilotResponder" "exec b2900c1c-4 Store Sequence 104 Cue 2 'B2ABS2' CueFade 1"` | `{"v":1,"kind":"result","id":"b2900c1c-4","ok":true,"result":"OK"}` |
+| `Plugin "CopilotResponder" "exec b2900c1c-5 Store Sequence 104 Cue 7 'B2CUE7' CueFade 1"` | `{"v":1,"kind":"result","id":"b2900c1c-5","ok":true,"result":"OK"}` |
+| `Plugin "CopilotResponder" "exec b2900c1c-6 Set Cue 1 Sequence 104 Property 'TrigType' 'Time'"` | `{"v":1,"kind":"result","id":"b2900c1c-6","ok":true,"result":"OK"}` |
+| `Plugin "CopilotResponder" "exec b2900c1c-7 Set Cue 1 Sequence 104 Property 'TrigTime' 10"` | `{"v":1,"kind":"result","id":"b2900c1c-7","ok":true,"result":"OK"}` |
+| `Plugin "CopilotResponder" "exec b2900c1c-8 Set Cue 2 Sequence 104 Property 'TrigType' 'Time'"` | `{"v":1,"kind":"result","id":"b2900c1c-8","ok":true,"result":"OK"}` |
+| `Plugin "CopilotResponder" "exec b2900c1c-9 Set Cue 2 Sequence 104 Property 'TrigTime' 14"` | `{"v":1,"kind":"result","id":"b2900c1c-9","ok":true,"result":"OK"}` |
+
+#### F-1 폐쇄 — `i`는 그대로 두고 `cueNo`가 실제 큐 번호를 준다
+
+최종 snapshot:
+
+```json
+{"v":1,"kind":"state","id":"b2900c1c-10","ok":true,"path":"DataPool/Sequences/104","node":{"name":"Sequence 104","class":"Sequence","childCount":5},"children":[{"class":"Cue","i":1,"name":"OffCue"},{"class":"Cue","cueNo":0,"i":2,"name":"CueZero"},{"class":"Cue","cueNo":1,"i":3,"name":"B2ABS1"},{"class":"Cue","cueNo":2,"i":4,"name":"B2ABS2"},{"class":"Cue","cueNo":7,"i":5,"name":"B2CUE7"}],"truncated":false}
+```
+
+**F-1은 닫혔다.** `Store Sequence 104 Cue 7 'B2CUE7'`로 만든 큐가 재조회에서 `i:5`와 `cueNo:7`을 동시에 보고했다. 즉 기존 `i`의 의미(나열 위치)는 바꾸지 않았고, AC-SONGCUE-018 측정 3이 소비할 실제 큐 번호는 신규 `cueNo`로 관측 가능하다. 원 property는 `Plugin "CopilotResponder" "prop b2900c1c-15 DataPool/Sequences/104/B2CUE7 No"` → `{"v":1,"kind":"prop","id":"b2900c1c-15","ok":true,"path":"DataPool/Sequences/104/B2CUE7","property":"No","value":"7000"}`였고, 응답기가 이를 `cueNo:7`로 환산한다.
+
+#### Gap 1 폐쇄 — TrigTime은 곡/시퀀스 시작 기준 절대 시각
+
+최종 prop readback:
+
+| wire command | payload |
+|---|---|
+| `Plugin "CopilotResponder" "prop b2900c1c-11 DataPool/Sequences/104/B2ABS1 TrigType"` | `{"v":1,"kind":"prop","id":"b2900c1c-11","ok":true,"path":"DataPool/Sequences/104/B2ABS1","property":"TrigType","value":"Time"}` |
+| `Plugin "CopilotResponder" "prop b2900c1c-12 DataPool/Sequences/104/B2ABS1 TrigTime"` | `{"v":1,"kind":"prop","id":"b2900c1c-12","ok":true,"path":"DataPool/Sequences/104/B2ABS1","property":"TrigTime","value":"10.0"}` |
+| `Plugin "CopilotResponder" "prop b2900c1c-13 DataPool/Sequences/104/B2ABS2 TrigType"` | `{"v":1,"kind":"prop","id":"b2900c1c-13","ok":true,"path":"DataPool/Sequences/104/B2ABS2","property":"TrigType","value":"Time"}` |
+| `Plugin "CopilotResponder" "prop b2900c1c-14 DataPool/Sequences/104/B2ABS2 TrigTime"` | `{"v":1,"kind":"prop","id":"b2900c1c-14","ok":true,"path":"DataPool/Sequences/104/B2ABS2","property":"TrigTime","value":"14.0"}` |
+
+**판정: `TrigType='Time'`에서 `TrigTime`은 곡/시퀀스 시작 기준 절대 시각이다.** 근거는 일부러 직전 큐와 구분되는 값으로 만든 두 점이다: Cue 1은 `TrigTime 10` → readback `"10.0"`, Cue 2는 `TrigTime 14` → readback `"14.0"`. 만약 Cue 2의 값이 직전 큐 기준 상대 지연이라면 Cue 1의 10초 뒤 Cue 2의 14초 지점은 `"4.0"`으로 관측되어야 한다. 실제 값은 `"14.0"` 그대로였으므로, M4/M7은 섹션 시작 시각을 누적값(곡 시작 기준 초)으로 써야 하고 직전 섹션과의 차분으로 바꾸면 안 된다.
+
+#### 정리 기록 — 쇼파일 원상 복구 완료
+
+프로브가 남긴 것은 시퀀스 **104** 하나뿐이다(타임코드 생성 0건). 정리 발화와 재조회:
+
+| wire command | payload |
+|---|---|
+| `Plugin "CopilotResponder" "exec b2900c1c-16 Delete Sequence 104"` | `{"v":1,"kind":"result","id":"b2900c1c-16","ok":true,"result":"OK"}` |
+| `Plugin "CopilotResponder" "state b2900c1c-17 DataPool/Sequences"` | `ok:true`, `node.childCount:17`, children `i` = `[1,2,11,12,13,14,15,16,17,20,30,41,50,62,71,80,90]`, `truncated:false` |
+| `Plugin "CopilotResponder" "state b2900c1c-18 DataPool/Timecodes"` | `ok:true`, `node.childCount:0`, `children:[]`, `truncated:false` |
+
+따라서 쇼파일 복구 확인값은 착수 baseline과 정확히 같다: `DataPool/Sequences = [1,2,11,12,13,14,15,16,17,20,30,41,50,62,71,80,90]`, `DataPool/Timecodes` childCount **0**, 잔여물 **0건**.
+
+#### 남은 Gap
+
+응답기 관측 능력 때문에 생긴 **Gap 1**과 **F-1**은 이 절에서 닫혔다. 이 세션이 새로 연 blocker는 없다. M0의 나머지 미실측은 그대로다: 매체 갭(전 발화가 안전 게이트가 아니라 `server.bridge.osc` 직결 — M7 종단 확인 몫), F-3의 `max_children=24` live truncation 미실측, `/Overwrite` 미발화.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run>_

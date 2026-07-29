@@ -107,7 +107,7 @@ Plugin "CopilotResponder"
 ```
 
 Expected: a usage line in the console feedback/system monitor
-(`copilot_responder v1.0.0 - no request. ...`). This verifies the plugin loads
+(`copilot_responder v1.5.0 - no request. ...`). This verifies the plugin loads
 and runs; replies are not exercised yet.
 
 ## 4. Round-trip verification from the server (AC-MVP-012 semi-automatic)

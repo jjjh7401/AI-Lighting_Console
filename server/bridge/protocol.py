@@ -133,6 +133,15 @@ def build_state_query(request_id: str, path: str) -> str:
     return build_plugin_call(f"state {request_id} {path}")
 
 
+def build_prop_query(request_id: str, path: str, property_name: str) -> str:
+    _validate_request_id(request_id)
+    _validate_rest(path, field="object path")
+    _validate_rest(property_name, field="property name")
+    if any(char.isspace() for char in property_name):
+        raise ProtocolError(f"property name must be a single token: {property_name!r}")
+    return build_plugin_call(f"prop {request_id} {path} {property_name}")
+
+
 def build_exec_request(request_id: str, command: str) -> str:
     """Wrapped command execution with result capture (REQ-MVP-004).
 
