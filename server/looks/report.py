@@ -41,6 +41,7 @@ __all__ = [
     "build_report",
     "reason_label",
     "to_korean",
+    "verdict_label",
 ]
 
 # 룩별 판정 3종. 닫힌 집합이며 "부분"을 "성공"으로 접지 않는다.
@@ -81,6 +82,10 @@ def reason_label(code: str) -> str:
     콘솔·리그 계층에서 그대로 올라오는 문자열이 그 부류다.
     """
     return _REASON_LABELS.get(code, code)
+
+
+def verdict_label(code: str) -> str:
+    return _VERDICT_LABELS.get(code, code)
 
 
 @dataclass(frozen=True)
@@ -301,5 +306,5 @@ def to_korean(report: BuskingReport) -> str:
         detail = f"생성 {verdict.created} · 건너뜀 {verdict.skipped}"
         if verdict.not_executed:
             detail += f" · 미실행 {verdict.not_executed}"
-        lines.append(f"  {verdict.display_name}: {_VERDICT_LABELS[verdict.verdict]} ({detail})")
+        lines.append(f"  {verdict.display_name}: {verdict_label(verdict.verdict)} ({detail})")
     return "\n".join(lines)

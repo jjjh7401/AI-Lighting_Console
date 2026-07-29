@@ -122,14 +122,14 @@ class TestRegistry:
     def test_the_registered_tools_are_exactly_the_declared_set(self):
         # AC-MVP-013 (run_commands / query_state / deploy_plugin /
         # get_rig_context) + AC-LOOKLIB-010's find_looks and instantiate_look
-        # + AC-BUSKWIZ-011's prepare_busking.
+        # + AC-BUSKWIZ-011's prepare_busking + AC-SONGCUE-015's prepare_songcue.
         # The count is asserted against the declared tuple's length so the set
         # stays CLOSED: adding a handler without declaring it, or declaring one
         # without a handler, still fails here.
         registry = _registry()
         names = [definition.name for definition in registry.definitions()]
         assert sorted(names) == sorted(TOOL_NAMES)
-        assert len(names) == len(TOOL_NAMES) == 7
+        assert len(names) == len(TOOL_NAMES) == 8
 
     def test_the_four_original_tools_are_still_registered(self):
         # The M5 addition must not have displaced any of them.
@@ -567,9 +567,7 @@ class TestRigContextReportsItsOwnCompleteness:
 
     def test_a_capped_section_says_so_and_names_the_real_total(self):
         tree = dict(_RIG_TREE)
-        capped = _snapshot(
-            DEFAULT_RIG_CONTEXT_PATHS["groups"], [f"G{n}" for n in range(1, 25)]
-        )
+        capped = _snapshot(DEFAULT_RIG_CONTEXT_PATHS["groups"], [f"G{n}" for n in range(1, 25)])
         capped["truncated"] = True
         capped["node"] = {"name": "Groups", "class": "Groups", "childCount": 37}
         tree[DEFAULT_RIG_CONTEXT_PATHS["groups"]] = capped
@@ -598,9 +596,7 @@ class TestRigContextOpensContainers:
 
     def test_preset_pool_contents_are_fetched(self):
         tree = dict(_RIG_TREE)
-        tree["DataPool/PresetPools/1"] = _snapshot(
-            "DataPool/PresetPools/1", ["Full", "Half"]
-        )
+        tree["DataPool/PresetPools/1"] = _snapshot("DataPool/PresetPools/1", ["Full", "Half"])
         tree["DataPool/PresetPools/2"] = _snapshot("DataPool/PresetPools/2", [])
 
         summary = _rig_summary(_registry(state_port=FakeStatePort(tree)))

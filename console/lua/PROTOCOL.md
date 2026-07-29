@@ -7,6 +7,11 @@ M2 deliverable; consumed by the M3 tool-runner and the M4 safety gate.
 Versioning: every reply payload carries `"v": 1`. Any breaking change bumps the
 version in BOTH implementations and revises this document.
 
+> Revision note (responder 1.5.0): ADDITIVE `prop` verb (§2) + `prop`
+> reply kind (§4.6), and `Cue` children in sequence snapshots may carry
+> `cueNo` (§4.2) when the responder can read the cue object's real number.
+> Wire protocol version stays 1.
+>
 > Revision note (responder 1.3.0): `send_reply` now tries **every** send
 > variant (configured first, then `packed`, `args`, `cmd_keyword`) instead of
 > the configured one followed immediately by `cmd_keyword`. Live 2026-07-22: on
@@ -60,6 +65,7 @@ Plugin "CopilotResponder" "<verb> <request-id> [rest]"
 |---|---|---|
 | `ping` | `ping <id>` | `/copilot/feedback`, kind=`pong` |
 | `state` | `state <id> <object-path>` | `/copilot/state`, kind=`state` |
+| `prop` | `prop <id> <object-path> <PropertyName>` | `/copilot/state`, kind=`prop` |
 | `exec` | `exec <id> <ma3-command>` | `/copilot/feedback`, kind=`result` |
 | `deploy` | `deploy <id> <enc-name> <enc-source>` (M7) | `/copilot/feedback`, kind=`deploy` |
 
@@ -77,8 +83,10 @@ Plugin "CopilotResponder" "<verb> <request-id> [rest]"
   server can correlate replies (UDP gives no ordering/delivery guarantee).
 - `<object-path>` and `<ma3-command>` are parsed **rest-of-line** (embedded
   spaces are legal) and MUST NOT contain a double quote (`"`), which would
-  terminate the MA3 plugin argument. MA3 accepts single-quoted strings, so
-  `Store Cue 5 'name'` is the workaround for quoted names.
+  terminate the MA3 plugin argument. `prop` parses the final non-space token
+  as `<PropertyName>` and everything before it as `<object-path>`, so paths may
+  still contain spaces but property names may not. MA3 accepts single-quoted
+  strings, so `Store Cue 5 'name'` is the workaround for quoted names.
 - Fallback transport (if plugin arguments do not reach `main` on the target
   build): set user variable `COPILOT_REQ` to the request string, then call
   `Plugin "CopilotResponder"` without arguments (two command lines; see
@@ -146,6 +154,13 @@ Success (depth-1 snapshot of the resolved node):
   exist. Server-side handling: `server/orchestrator/tools.py` emits a
   name-only rig-context entry (no `no`), and `server/safety/console.py`
   refuses to compute a free plugin slot rather than risk overwriting one.
+- **`children[].cueNo`** (additive, `Cue` children only, responder 1.5.0):
+  the actual cue number read from the cue object, e.g.
+  `{"i":5,"cueNo":7,"name":"PROBEA7","class":"Cue"}`. `i` remains the
+  listing/slot value already emitted by the generic child-slot contract; it is
+  not reinterpreted for cues. `cueNo` is omitted entirely when the responder
+  cannot read a numeric cue number from the cue object. Consumers MUST treat
+  absence as "unknown", never substitute the array position or `i`.
 - `children` is capped at `CONFIG.max_children` (default 24) and further
   reduced until the encoded payload fits `CONFIG.max_payload` (default 1900
   bytes — MA3 command-line budget, §5). `truncated:true` signals a partial
@@ -210,6 +225,19 @@ handling is server-side M4 scope).
 - Failure modes: console-side compile failure, missing plugin pool, or an
   accessor probe failure (ASSUMPTION-6) — all reported in `error`, never
   retried by the responder.
+
+### 4.6 `prop` (property readback — on `/copilot/state`, responder 1.5.0)
+
+```json
+{"v":1,"kind":"prop","id":"<id>","ok":true,"path":"DataPool/Sequences/101/5","property":"TrigTime","value":"00:00:04.000"}
+{"v":1,"kind":"prop","id":"<id>","ok":false,"path":"...","property":"TrigTime","error":"property not readable: TrigTime"}
+```
+
+The responder resolves `<object-path>` through the same path resolver used by
+`state`, then reads the requested property from the resolved handle. `value` is
+the string returned by the console-side property read path; the responder does
+not parse, normalize, or infer semantics. If the property cannot be read, the
+reply is `ok:false` with `error`; callers must not fill defaults.
 
 ## 5. Console-side reply transport (`CONFIG.send_variant`)
 

@@ -12,6 +12,7 @@
 -- Invocation (rides /copilot/cmd — plan.md §A-5 namespace):
 --   Plugin "CopilotResponder" "ping <id>"
 --   Plugin "CopilotResponder" "state <id> <object-path>"   e.g. DataPool/Sequences
+--   Plugin "CopilotResponder" "prop <id> <object-path> <PropertyName>"
 --   Plugin "CopilotResponder" "exec <id> <ma3-command>"    e.g. exec 7 List
 --   Plugin "CopilotResponder" "deploy <id> <enc-name> <enc-source>"  (M7 —
 --     both tokens percent-encoded; reviewed source only, see PROTOCOL.md §2)
@@ -51,8 +52,9 @@ local M = {
     -- unaffected. 1.4.1: max_payload 4000 -> 1900 -- the cmd_keyword
     -- transport dies silently past the MA3 ~2048-byte command-line limit
     -- (live-measured; big snapshots like a 27-macro pool never replied).
-    -- Protocol v1 throughout.
-    VERSION = "1.4.1",
+    -- 1.5.0: additive prop verb + Cue child cueNo when the real cue number
+    -- can be read from the cue object; Protocol v1 throughout.
+    VERSION = "1.5.0",
     PROTO = 1,
     CONFIG = CONFIG,
 }
@@ -199,6 +201,21 @@ function M.safe_class(handle)
     return "?"
 end
 
+function M.safe_property(handle, property_name)
+    if type(property_name) ~= "string" or property_name == "" then
+        return nil, "empty property name"
+    end
+    local ok, value = pcall(function() return handle:Get(property_name) end)
+    if ok and value ~= nil then
+        return tostring(value)
+    end
+    ok, value = pcall(function() return handle[property_name] end)
+    if ok and value ~= nil then
+        return tostring(value)
+    end
+    return nil, "property not readable: " .. property_name
+end
+
 -- Executor-only: the object (sequence) assigned to this executor, or nil.
 -- Live-verified on 2.4.2 (SPEC-COPILOT-EXECBODY-001 design.md §5.9,
 -- ASSUMPTION-12): `.Object` and both `:Get()` casings return the same handle.
@@ -315,6 +332,51 @@ function M.probe_slots(children)
         previous = value
     end
     return slots
+end
+
+local CUE_NO_PROBES = {
+    function(child) return child:Get("No") end,
+}
+
+local function as_cue_no(value)
+    local number
+    if type(value) == "number" then
+        number = value
+    elseif type(value) == "string" then
+        local trimmed = value:gsub("^%s+", ""):gsub("%s+$", "")
+        if not trimmed:match("^%d+%.?%d*$") then
+            return nil
+        end
+        number = tonumber(trimmed)
+    else
+        return nil
+    end
+    if not number or number < 0 then
+        return nil
+    end
+    if number >= 1000 and number % 1 == 0 then
+        return number / 1000
+    end
+    if number < 1000 then
+        return number
+    end
+    return nil
+end
+
+function M.safe_cue_no(child)
+    if M.safe_class(child) ~= "Cue" then
+        return nil
+    end
+    for _, probe in ipairs(CUE_NO_PROBES) do
+        local ok, raw = pcall(probe, child)
+        if ok then
+            local cue_no = as_cue_no(raw)
+            if cue_no then
+                return cue_no
+            end
+        end
+    end
+    return nil
 end
 
 -- Returns an array of { obj = <handle>, slot = <integer|nil> } in console
@@ -527,6 +589,10 @@ function M.build_snapshot(id, path)
         if entry.slot then
             item.i = entry.slot
         end
+        local cue_no = M.safe_cue_no(entry.obj)
+        if cue_no then
+            item.cueNo = cue_no
+        end
         items[#items + 1] = item
     end
     local payload = {
@@ -572,6 +638,37 @@ function M.build_snapshot(id, path)
         payload.truncated = true
     end
     return payload
+end
+
+function M.build_prop_result(id, path, property_name)
+    local function fail(message)
+        return {
+            v = M.PROTO,
+            kind = "prop",
+            id = id,
+            ok = false,
+            path = path,
+            property = property_name,
+            error = message,
+        }
+    end
+    local handle, err = M.resolve_path(path)
+    if not handle then
+        return fail(err)
+    end
+    local value, perr = M.safe_property(handle, property_name)
+    if value == nil then
+        return fail(perr)
+    end
+    return {
+        v = M.PROTO,
+        kind = "prop",
+        id = id,
+        ok = true,
+        path = path,
+        property = property_name,
+        value = value,
+    }
 end
 
 -- @MX:NOTE: [AUTO] Cmd() result classification is an assumption pending live
@@ -798,6 +895,22 @@ function M.handle_request(request)
             }
         else
             payload = M.build_snapshot(parsed.id, parsed.rest)
+        end
+        M.send_reply(CONFIG.state_address, payload)
+    elseif parsed.kind == "prop" then
+        local path, property_name = parsed.rest:match("^(.-)%s+(%S+)%s*$")
+        if not path or path == "" then
+            payload = {
+                v = M.PROTO,
+                kind = "prop",
+                id = parsed.id,
+                ok = false,
+                path = "",
+                property = "",
+                error = "malformed prop request (expected: prop <id> <path> <PropertyName>)",
+            }
+        else
+            payload = M.build_prop_result(parsed.id, path, property_name)
         end
         M.send_reply(CONFIG.state_address, payload)
     elseif parsed.kind == "exec" then

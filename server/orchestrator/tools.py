@@ -30,6 +30,17 @@ from server.looks.matching import match_looks
 from server.looks.report import build_report, to_korean
 from server.looks.resolver import resolve_roles
 from server.looks.schema import LookLibrary
+from server.looks.songcue import (
+    EXPLICIT_DYNAMICS_REQUIRED,
+    SectionTimeError,
+    SequenceNumberError,
+    SongCueBundleError,
+    build_songcue_bundle,
+    build_songcue_timing,
+    map_sections_to_looks,
+    parse_sections,
+)
+from server.looks.songcue_report import build_songcue_report
 from server.orchestrator.ports import BundleGate, CommandExecutionPort, StateQueryPort
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
@@ -47,6 +58,7 @@ TOOL_NAMES = (
     "find_looks",
     "instantiate_look",
     "prepare_busking",
+    "prepare_songcue",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -123,6 +135,7 @@ RIG_DRILLDOWN_QUERY_CAP = 16
 _LOCKED = "locked"
 
 LOOK_RIG_SECTIONS = ("groups", "preset_pools")
+SONGCUE_RIG_SECTIONS = ("groups", "sequences")
 
 # The preset-pool drill is not optional on the look path. Occupancy is what
 # makes "is this slot free" answerable at all; without it every store is
@@ -949,6 +962,245 @@ def build_toolset(
             command_outcomes=execution.command_outcomes,
         )
 
+    # -- prepare_songcue (REQ-SONGCUE-018/019 — song sections to one cue list) -
+    #
+    # @MX:ANCHOR: [AUTO] the song-cue generator's ONE model-reachable entry.
+    # @MX:REASON: REQ-SONGCUE-018/019. Like prepare_busking this handler is a
+    #   CALLER of run_commands, never a second execution surface: it reads the
+    #   rig itself, builds the sequence/cue/timing bundle, and re-enters the
+    #   local run_commands closure so gate.screen(), LiveLock demotion, dedupe
+    #   and audit stay owned by the same path.
+
+    def prepare_songcue(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        nonlocal looks
+        song_title = call.arguments.get("song_title")
+        if not isinstance(song_title, str) or not song_title.strip():
+            return _error_result(call, "'song_title' must be a non-empty song title string")
+        genre = call.arguments.get("genre")
+        if not isinstance(genre, str) or not genre.strip():
+            return _error_result(call, "'genre' must be the operator's own word for the genre")
+        timecode_number = call.arguments.get("timecode_number")
+        if (
+            isinstance(timecode_number, bool)
+            or not isinstance(timecode_number, int)
+            or timecode_number < 1
+        ):
+            return _error_result(call, "'timecode_number' must be a positive integer")
+        raw_sections = call.arguments.get("sections")
+        if not isinstance(raw_sections, list | tuple) or not raw_sections:
+            return _error_result(call, "'sections' must be a non-empty array of song sections")
+        raw_explicit = call.arguments.get("explicit_dynamics")
+        explicit_dynamics: dict[int, int] | None = None
+        if raw_explicit is not None:
+            if not isinstance(raw_explicit, Mapping):
+                return _error_result(
+                    call,
+                    "'explicit_dynamics' must map zero-based section indexes to dynamics 1..5",
+                )
+            explicit_dynamics = {}
+            for key, value in raw_explicit.items():
+                if isinstance(value, bool) or not isinstance(value, int):
+                    return _error_result(call, "'explicit_dynamics' values must be integers")
+                try:
+                    explicit_dynamics[int(key)] = value
+                except (TypeError, ValueError):
+                    return _error_result(
+                        call, "'explicit_dynamics' keys must be zero-based section indexes"
+                    )
+        try:
+            sections = parse_sections(raw_sections)
+        except SectionTimeError as error:
+            content = json.dumps(
+                {
+                    "error": "song sections are not strictly increasing",
+                    "reason": error.reason,
+                    "index": error.index,
+                    "previous_start_ms": error.previous_start_ms,
+                    "start_ms": error.start_ms,
+                    "sections": [
+                        {"index": section.index, "name": section.name, "start_ms": section.start_ms}
+                        for section in error.sections
+                    ],
+                },
+                ensure_ascii=False,
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id, name=call.name, content=content, is_error=True
+                )
+            )
+        except ValueError as error:
+            return _error_result(call, f"song sections cannot be parsed: {error}")
+        for index, raw_section in enumerate(raw_sections):
+            if not isinstance(raw_section, Mapping) or "dynamics" not in raw_section:
+                continue
+            value = raw_section["dynamics"]
+            if isinstance(value, bool) or not isinstance(value, int):
+                return _error_result(call, "'sections[].dynamics' values must be integers")
+            if explicit_dynamics is None:
+                explicit_dynamics = {}
+            explicit_dynamics[index] = value
+        if looks is None:
+            try:
+                looks = load_library_from_dir()
+            except LookSchemaError as error:
+                return _error_result(call, f"look library unavailable: {error}")
+        genre_selection = select_genre(looks, genre)
+        if genre_selection.genre is None:
+            content = json.dumps(
+                {
+                    "error": f"unknown genre {genre!r}",
+                    "reason": genre_selection.reason,
+                    "candidates": list(genre_selection.candidates),
+                },
+                ensure_ascii=False,
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id, name=call.name, content=content, is_error=True
+                )
+            )
+        try:
+            selections = map_sections_to_looks(
+                sections,
+                looks,
+                genre_selection.genre,
+                explicit_dynamics=explicit_dynamics,
+            )
+        except ValueError as error:
+            return _error_result(call, f"song sections cannot be mapped: {error}")
+        unknown_sections = [
+            {"index": selection.section.index, "name": selection.section.name}
+            for selection in selections
+            if selection.reason == EXPLICIT_DYNAMICS_REQUIRED
+        ]
+        if unknown_sections:
+            content = json.dumps(
+                {
+                    "error": "unknown section names need explicit dynamics",
+                    "reason": EXPLICIT_DYNAMICS_REQUIRED,
+                    "unknown_sections": unknown_sections,
+                },
+                ensure_ascii=False,
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id, name=call.name, content=content, is_error=True
+                )
+            )
+        missing = [section for section in SONGCUE_RIG_SECTIONS if section not in rig_paths]
+        if missing:
+            return _error_result(
+                call,
+                f"rig context has no path configured for {missing} — a song cue list "
+                f"cannot be built without them",
+            )
+        rig_sections, _resolved, _failed = collect_rig_sections(
+            state_port,
+            {section: rig_paths[section] for section in SONGCUE_RIG_SECTIONS},
+            drilldown,
+            RIG_DRILLDOWN_QUERY_CAP,
+        )
+        unavailable = {
+            name: entry
+            for name, entry in rig_sections.items()
+            if isinstance(entry, dict) and "reason" in entry
+        }
+        if unavailable:
+            content = json.dumps(
+                {
+                    "error": (
+                        "the rig sections a song cue list is built against did not "
+                        "arrive: "
+                        + "; ".join(f"{n}: {e['reason']}" for n, e in unavailable.items())
+                    ),
+                    "rig_unavailable": unavailable,
+                },
+                ensure_ascii=False,
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id, name=call.name, content=content, is_error=True
+                )
+            )
+        try:
+            bundle = build_songcue_bundle(
+                song_title,
+                selections,
+                sequences_section=rig_sections["sequences"],  # type: ignore[arg-type]
+                groups_section=rig_sections["groups"],  # type: ignore[arg-type]
+            )
+            timing = build_songcue_timing(bundle, timecode_number=timecode_number)
+        except (SequenceNumberError, SongCueBundleError, ValueError) as error:
+            return _error_result(call, f"song cue list cannot be built: {error}")
+        if not bundle.commands:
+            report = build_songcue_report(bundle)
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(
+                        {
+                            "executed": False,
+                            "song_title": bundle.song_title,
+                            "sequence": bundle.sequence_number,
+                            "report": report.to_dict(),
+                            "summary_ko": report.to_korean(),
+                            "timing": {
+                                "commands": [],
+                                "timecode_commands": [],
+                                "auto_advance_commands": [],
+                                "skipped_axes": [],
+                            },
+                        },
+                        ensure_ascii=False,
+                    ),
+                    is_error=False,
+                )
+            )
+        command_bundle = bundle.commands + timing.commands
+        execution = run_commands(
+            ToolCall(id=call.id, name="run_commands", arguments={"commands": list(command_bundle)}),
+            context,
+        )
+        payload = json.loads(execution.result.content)
+        is_error = execution.result.is_error
+        if payload.get("gate_status") == _LOCKED:
+            is_error = False
+        requery_payload = None
+        if not execution.result.is_error:
+            try:
+                requery_payload = state_port.query_state(
+                    f"{rig_paths['sequences']}/{bundle.sequence_number}"
+                )
+            except Exception as error:
+                payload["requery_error"] = str(error)
+        report = build_songcue_report(
+            bundle, execution.command_outcomes, requery_payload=requery_payload
+        )
+        payload["executed"] = not execution.result.is_error
+        payload["song_title"] = bundle.song_title
+        payload["sequence"] = bundle.sequence_number
+        payload["report"] = report.to_dict()
+        payload["summary_ko"] = report.to_korean()
+        payload["timing"] = {
+            "commands": list(timing.commands),
+            "timecode_commands": list(timing.timecode_commands),
+            "auto_advance_commands": list(timing.auto_advance_commands),
+            "skipped_axes": [
+                {"axis": skipped.axis, "reason": skipped.reason} for skipped in timing.skipped_axes
+            ],
+        }
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=is_error,
+            ),
+            command_outcomes=execution.command_outcomes,
+        )
+
     definitions = (
         ToolDefinition(
             name="run_commands",
@@ -1220,6 +1472,83 @@ def build_toolset(
                 "required": ["genre"],
             },
         ),
+        ToolDefinition(
+            name="prepare_songcue",
+            description=(
+                "Prepare one song-structure cue list on THIS rig. Provide the song "
+                "title, genre, section names and section start times; the tool reads "
+                "the current groups and sequences itself, maps sections through the "
+                "look library, stores one Sequence with one Cue per section, adds the "
+                "measured Timecode and TrigType/TrigTime commands, and sends the "
+                "whole bundle through the same run_commands path as any direct "
+                "console execution. Do not pass rig numbers or copied rig sections."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "song_title": {
+                        "type": "string",
+                        "description": "Song title used for the generated cue-list report.",
+                    },
+                    "genre": {
+                        "type": "string",
+                        "description": (
+                            "The operator's own word for the genre, Korean or English "
+                            "(e.g. '록', 'ballad', '워십', 'EDM')."
+                        ),
+                    },
+                    "timecode_number": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Positive Timecode object number to create for this draft.",
+                    },
+                    "sections": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": (
+                                        "Section name, such as Intro, Verse, Chorus or Drop."
+                                    ),
+                                },
+                                "start": {
+                                    "description": "Start time as mm:ss, mm:ss.mmm, or seconds.",
+                                },
+                                "dynamics": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 5,
+                                    "description": (
+                                        "Optional explicit dynamics for section names the library "
+                                        "does not recognise."
+                                    ),
+                                },
+                            },
+                            "required": ["name", "start"],
+                        },
+                        "description": (
+                            "Song sections in input order. The tool rejects duplicate or "
+                            "backward start times instead of sorting them."
+                        ),
+                    },
+                    "explicit_dynamics": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 5,
+                        },
+                        "description": (
+                            "Optional map from zero-based section index to explicit dynamics "
+                            "for unknown section names."
+                        ),
+                    },
+                },
+                "required": ["song_title", "genre", "timecode_number", "sections"],
+            },
+        ),
     )
     handlers: dict[str, _Handler] = {
         "run_commands": run_commands,
@@ -1229,5 +1558,6 @@ def build_toolset(
         "find_looks": find_looks,
         "instantiate_look": instantiate_look,
         "prepare_busking": prepare_busking,
+        "prepare_songcue": prepare_songcue,
     }
     return ToolRegistry(definitions, handlers)

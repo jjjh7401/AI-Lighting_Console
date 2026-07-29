@@ -176,6 +176,131 @@ class TestStateSnapshot:
         assert payload["ok"] is False
 
 
+class TestCueNumberExposure:
+    def test_cue_child_keeps_listing_i_and_adds_real_cue_no(self):
+        harness = ResponderHarness(
+            extra_env=(
+                "local node = __NODE\n"
+                "local function cue(name, cue_no, listed_index)\n"
+                '    local c = node(name, "Cue")\n'
+                "    function c:Index() return listed_index end\n"
+                "    function c:Get(prop)\n"
+                '        if prop == "No" then return cue_no end\n'
+                '        if prop == "name" then return self.name end\n'
+                "        return nil\n"
+                "    end\n"
+                "    return c\n"
+                "end\n"
+                'local seq = node("Sequence 101", "Sequence", {\n'
+                '    cue("OffCue", "0", 1),\n'
+                '    cue("CueZero", "0", 2),\n'
+                '    cue("PROBEA1", "1000", 3),\n'
+                '    cue("PROBEA2", "2000", 4),\n'
+                '    cue("PROBEA7", "7000", 5),\n'
+                "})\n"
+                '__DATAPOOL = node("Default", "DataPool", {\n'
+                '    node("Sequences", "Pool", { seq }),\n'
+                "})\n"
+                "function DataPool() return __DATAPOOL end\n"
+            )
+        )
+        harness.main(None, "state 50 DataPool/Sequences/Sequence 101")
+        payload = decode_payload(harness.sent()[0].payload)
+        probe = next(child for child in payload["children"] if child["name"] == "PROBEA7")
+        assert probe["i"] == 5
+        assert probe["cueNo"] == 7
+
+    def test_decimal_cue_no_is_scaled_from_live_no_property(self):
+        harness = ResponderHarness(
+            extra_env=(
+                "local node = __NODE\n"
+                'local cue = node("PROBEA1_5", "Cue")\n'
+                "function cue:Index() return 3 end\n"
+                "function cue:Get(prop)\n"
+                '    if prop == "No" then return "1500" end\n'
+                "    return nil\n"
+                "end\n"
+                'local seq = node("Sequence 101", "Sequence", { cue })\n'
+                '__DATAPOOL = node("Default", "DataPool", {\n'
+                '    node("Sequences", "Pool", { seq }),\n'
+                "})\n"
+                "function DataPool() return __DATAPOOL end\n"
+            )
+        )
+        harness.main(None, "state 52 DataPool/Sequences/Sequence 101")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["children"][0]["cueNo"] == 1.5
+
+    def test_cue_no_is_omitted_when_the_number_is_not_numeric(self):
+        harness = ResponderHarness(
+            extra_env=(
+                "local node = __NODE\n"
+                'local cue = node("PROBEA7", "Cue")\n'
+                "function cue:Index() return 5 end\n"
+                "function cue:Get(prop)\n"
+                '    if prop == "No" then return "Cue 7" end\n'
+                "    return nil\n"
+                "end\n"
+                'local seq = node("Sequence 101", "Sequence", { cue })\n'
+                '__DATAPOOL = node("Default", "DataPool", {\n'
+                '    node("Sequences", "Pool", { seq }),\n'
+                "})\n"
+                "function DataPool() return __DATAPOOL end\n"
+            )
+        )
+        harness.main(None, "state 51 DataPool/Sequences/Sequence 101")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert "cueNo" not in payload["children"][0]
+
+
+class TestPropRead:
+    def test_prop_reads_property_value_on_state_address(self):
+        harness = ResponderHarness(
+            extra_env=(
+                "local node = __NODE\n"
+                'local cue = node("Cue 2", "Cue")\n'
+                "function cue:Get(prop)\n"
+                '    if prop == "TrigTime" then return "00:00:04.000" end\n'
+                '    if prop == "name" then return self.name end\n'
+                "    return nil\n"
+                "end\n"
+                'local seq = node("Sequence 101", "Sequence", { cue })\n'
+                '__DATAPOOL = node("Default", "DataPool", {\n'
+                '    node("Sequences", "Pool", { seq }),\n'
+                "})\n"
+                "function DataPool() return __DATAPOOL end\n"
+            )
+        )
+        harness.main(None, "prop p1 DataPool/Sequences/Sequence 101/Cue 2 TrigTime")
+        sent = harness.sent()[0]
+        payload = decode_payload(sent.payload)
+        assert sent.address == STATE_ADDRESS
+        assert payload == {
+            "v": 1,
+            "kind": "prop",
+            "id": "p1",
+            "ok": True,
+            "path": "DataPool/Sequences/Sequence 101/Cue 2",
+            "property": "TrigTime",
+            "value": "00:00:04.000",
+        }
+
+    def test_prop_reports_unknown_property_without_guessing(self, harness):
+        harness.main(None, "prop p2 DataPool/Sequences/Sequence 1 ZzzBogus")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["kind"] == "prop"
+        assert payload["ok"] is False
+        assert payload["property"] == "ZzzBogus"
+        assert "not readable" in payload["error"]
+
+    def test_prop_requires_path_and_property(self, harness):
+        harness.main(None, "prop p3 DataPool/Sequences")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["kind"] == "prop"
+        assert payload["ok"] is False
+        assert "malformed prop" in payload["error"]
+
+
 class TestExecutorSequenceIdentity:
     """The Executor-only additive field (M2, REQ-EXECBODY-003/AC-EXECBODY-004).
 
@@ -221,9 +346,7 @@ class TestExecutorSequenceIdentity:
 
     def test_object_of_the_wrong_class_omits_the_field(self):
         harness = ResponderHarness(
-            extra_env=self._exec_env(
-                'local other = node("Weird", "Preset")\nexec.Object = other\n'
-            )
+            extra_env=self._exec_env('local other = node("Weird", "Preset")\nexec.Object = other\n')
         )
         harness.main(None, "state 32 DataPool/Execs/Exec 1")
         payload = decode_payload(harness.sent()[0].payload)
