@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 import server.looks.songcue as songcue
-from server.looks.schema import AttributeValue, DYNAMICS_MAX, DYNAMICS_MIN, Look, LookLibrary
+from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN, AttributeValue, Look, LookLibrary
 from server.looks.songcue import (
     EXPLICIT_DYNAMICS_REQUIRED,
     UNMAPPED_LOOK,
@@ -24,7 +24,13 @@ def test_explicit_dynamics_selects_each_requested_point():
         _look("rock-2-a", "rock", 2),
     )
     sections = parse_sections(
-        (("Custom 1", "0:01"), ("Custom 2", "0:02"), ("Custom 3", "0:03"), ("Custom 4", "0:04"), ("Custom 5", "0:05"))
+        (
+            ("Custom 1", "0:01"),
+            ("Custom 2", "0:02"),
+            ("Custom 3", "0:03"),
+            ("Custom 4", "0:04"),
+            ("Custom 5", "0:05"),
+        )
     )
     requested = tuple(range(DYNAMICS_MIN, DYNAMICS_MAX + 1))
 
@@ -32,11 +38,17 @@ def test_explicit_dynamics_selects_each_requested_point():
         sections,
         library,
         "rock",
-        explicit_dynamics={section.index: dynamics for section, dynamics in zip(sections, requested, strict=True)},
+        explicit_dynamics={
+            section.index: dynamics for section, dynamics in zip(sections, requested, strict=True)
+        },
     )
 
-    assert [selection.look.dynamics if selection.look else None for selection in selections] == list(requested)
-    assert [selection.requested_dynamics for selection in selections] == [(value,) for value in requested]
+    assert [
+        selection.look.dynamics if selection.look else None for selection in selections
+    ] == list(requested)
+    assert [selection.requested_dynamics for selection in selections] == [
+        (value,) for value in requested
+    ]
     assert [selection.reason for selection in selections] == [None, None, None, None, None]
 
 
@@ -61,7 +73,9 @@ def test_explicit_dynamics_overrides_section_band():
     library = _library(_look("rock-chorus-lift", "rock", 4), _look("rock-chorus-peak", "rock", 5))
     section = parse_sections((("Chorus", "0:00"),))[0]
 
-    selection = map_sections_to_looks((section,), library, "rock", explicit_dynamics={section.index: 5})[0]
+    selection = map_sections_to_looks(
+        (section,), library, "rock", explicit_dynamics={section.index: 5}
+    )[0]
 
     assert selection.requested_dynamics == (5,)
     assert selection.look is not None
@@ -72,7 +86,9 @@ def test_missing_requested_dynamics_is_unmapped_without_nearest_promotion():
     library = _library(_look("ballad-low", "ballad", 1), _look("ballad-high", "ballad", 5))
     section = parse_sections((("Custom", "0:00"),))[0]
 
-    selection = map_sections_to_looks((section,), library, "ballad", explicit_dynamics={section.index: 3})[0]
+    selection = map_sections_to_looks(
+        (section,), library, "ballad", explicit_dynamics={section.index: 3}
+    )[0]
 
     assert selection.requested_dynamics == (3,)
     assert selection.look is None
@@ -95,7 +111,9 @@ def test_invalid_explicit_dynamics_uses_schema_bounds():
     section = parse_sections((("Custom", "0:00"),))[0]
 
     with pytest.raises(ValueError) as raised:
-        map_sections_to_looks((section,), library, "rock", explicit_dynamics={section.index: DYNAMICS_MAX + 1})
+        map_sections_to_looks(
+            (section,), library, "rock", explicit_dynamics={section.index: DYNAMICS_MAX + 1}
+        )
 
     assert str(DYNAMICS_MIN) in str(raised.value)
     assert str(DYNAMICS_MAX) in str(raised.value)
@@ -104,7 +122,11 @@ def test_invalid_explicit_dynamics_uses_schema_bounds():
 def test_mapping_reuses_busking_order_and_schema_bounds_by_ast():
     tree = ast.parse(Path(songcue.__file__).read_text(encoding="utf-8"))
     names = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
-    calls = {node.func.id for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)}
+    calls = {
+        node.func.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
     schema_imports = {
         alias.name
         for node in ast.walk(tree)

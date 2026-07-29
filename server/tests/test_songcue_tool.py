@@ -112,7 +112,9 @@ class TestRegistrationConvention:
 
     def test_the_schema_has_no_rig_or_sequence_number_fields(self):
         registry = _registry()
-        definition = next(definition for definition in registry.definitions() if definition.name == _TOOL)
+        definition = next(
+            definition for definition in registry.definitions() if definition.name == _TOOL
+        )
         field_names = _schema_property_names(definition.parameters)
 
         assert field_names
@@ -145,7 +147,11 @@ class TestSingleExecutionPath:
 
     def test_the_scan_is_not_vacuous_against_the_real_sender(self):
         tree = ast.parse(_TOOLS_MODULE.read_text(encoding="utf-8"))
-        run_commands = next(node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == "run_commands")
+        run_commands = next(
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name == "run_commands"
+        )
         identifiers = _identifiers(run_commands)
 
         assert "execution_port" in identifiers

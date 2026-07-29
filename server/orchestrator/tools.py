@@ -980,7 +980,11 @@ def build_toolset(
         if not isinstance(genre, str) or not genre.strip():
             return _error_result(call, "'genre' must be the operator's own word for the genre")
         timecode_number = call.arguments.get("timecode_number")
-        if isinstance(timecode_number, bool) or not isinstance(timecode_number, int) or timecode_number < 1:
+        if (
+            isinstance(timecode_number, bool)
+            or not isinstance(timecode_number, int)
+            or timecode_number < 1
+        ):
             return _error_result(call, "'timecode_number' must be a positive integer")
         raw_sections = call.arguments.get("sections")
         if not isinstance(raw_sections, list | tuple) or not raw_sections:
@@ -1171,7 +1175,9 @@ def build_toolset(
                 )
             except Exception as error:
                 payload["requery_error"] = str(error)
-        report = build_songcue_report(bundle, execution.command_outcomes, requery_payload=requery_payload)
+        report = build_songcue_report(
+            bundle, execution.command_outcomes, requery_payload=requery_payload
+        )
         payload["executed"] = not execution.result.is_error
         payload["song_title"] = bundle.song_title
         payload["sequence"] = bundle.sequence_number
@@ -1182,8 +1188,7 @@ def build_toolset(
             "timecode_commands": list(timing.timecode_commands),
             "auto_advance_commands": list(timing.auto_advance_commands),
             "skipped_axes": [
-                {"axis": skipped.axis, "reason": skipped.reason}
-                for skipped in timing.skipped_axes
+                {"axis": skipped.axis, "reason": skipped.reason} for skipped in timing.skipped_axes
             ],
         }
         return ToolExecution(
@@ -1504,7 +1509,9 @@ def build_toolset(
                             "properties": {
                                 "name": {
                                     "type": "string",
-                                    "description": "Section name, such as Intro, Verse, Chorus or Drop.",
+                                    "description": (
+                                        "Section name, such as Intro, Verse, Chorus or Drop."
+                                    ),
                                 },
                                 "start": {
                                     "description": "Start time as mm:ss, mm:ss.mmm, or seconds.",

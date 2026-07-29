@@ -567,9 +567,7 @@ class TestRigContextReportsItsOwnCompleteness:
 
     def test_a_capped_section_says_so_and_names_the_real_total(self):
         tree = dict(_RIG_TREE)
-        capped = _snapshot(
-            DEFAULT_RIG_CONTEXT_PATHS["groups"], [f"G{n}" for n in range(1, 25)]
-        )
+        capped = _snapshot(DEFAULT_RIG_CONTEXT_PATHS["groups"], [f"G{n}" for n in range(1, 25)])
         capped["truncated"] = True
         capped["node"] = {"name": "Groups", "class": "Groups", "childCount": 37}
         tree[DEFAULT_RIG_CONTEXT_PATHS["groups"]] = capped
@@ -598,9 +596,7 @@ class TestRigContextOpensContainers:
 
     def test_preset_pool_contents_are_fetched(self):
         tree = dict(_RIG_TREE)
-        tree["DataPool/PresetPools/1"] = _snapshot(
-            "DataPool/PresetPools/1", ["Full", "Half"]
-        )
+        tree["DataPool/PresetPools/1"] = _snapshot("DataPool/PresetPools/1", ["Full", "Half"])
         tree["DataPool/PresetPools/2"] = _snapshot("DataPool/PresetPools/2", [])
 
         summary = _rig_summary(_registry(state_port=FakeStatePort(tree)))

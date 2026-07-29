@@ -346,9 +346,7 @@ class TestExecutorSequenceIdentity:
 
     def test_object_of_the_wrong_class_omits_the_field(self):
         harness = ResponderHarness(
-            extra_env=self._exec_env(
-                'local other = node("Weird", "Preset")\nexec.Object = other\n'
-            )
+            extra_env=self._exec_env('local other = node("Weird", "Preset")\nexec.Object = other\n')
         )
         harness.main(None, "state 32 DataPool/Execs/Exec 1")
         payload = decode_payload(harness.sent()[0].payload)

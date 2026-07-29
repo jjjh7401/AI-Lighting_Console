@@ -23,7 +23,9 @@ _TIMECODE_COMMANDS = (
     re.compile(r"^Assign Sequence \d+ At Timecode \d+$"),
 )
 _TRIG_TYPE_RE = re.compile(r"^Set Cue \d+ Sequence \d+ Property 'TrigType' 'Time'$")
-_TRIG_TIME_RE = re.compile(r"^Set Cue (?P<cue>\d+) Sequence (?P<sequence>\d+) Property 'TrigTime' (?P<time>\d+(?:\.\d+)?)$")
+_TRIG_TIME_RE = re.compile(
+    r"^Set Cue (?P<cue>\d+) Sequence (?P<sequence>\d+) Property 'TrigTime' (?P<time>\d+(?:\.\d+)?)$"
+)
 
 
 def test_axis1_timecode_go_emits_only_measured_command_forms():
@@ -55,7 +57,10 @@ def test_axis2_auto_advance_go_uses_time_token_and_absolute_section_starts():
         f"Set Cue 2 Sequence {bundle.sequence_number} Property 'TrigTime' 14",
     )
     assert plan.auto_advance_commands
-    assert all(_TRIG_TYPE_RE.fullmatch(command) or _TRIG_TIME_RE.fullmatch(command) for command in plan.auto_advance_commands)
+    assert all(
+        _TRIG_TYPE_RE.fullmatch(command) or _TRIG_TIME_RE.fullmatch(command)
+        for command in plan.auto_advance_commands
+    )
     assert _trig_times(plan.auto_advance_commands) == ["10", "14"]
     assert _commands_matching(plan.auto_advance_commands, r"\b(Follow|Sound|BPM|Go)\b") == []
     assert _commands_matching(plan.auto_advance_commands, r"/trig\s*=") == []
@@ -108,7 +113,10 @@ def test_axis1_timecode_descope_branch_retains_required_reason():
     )
 
     assert plan.timecode_commands == ()
-    assert any(skip.axis == TIMECODE_DESCOPE and "ASSUMPTION-20" in skip.reason for skip in plan.skipped_axes)
+    assert any(
+        skip.axis == TIMECODE_DESCOPE and "ASSUMPTION-20" in skip.reason
+        for skip in plan.skipped_axes
+    )
 
 
 @pytest.mark.skip(reason="ASSUMPTION-22 is GO in M4; DESCOPE branch retained for a future rerun")
@@ -121,7 +129,10 @@ def test_axis2_auto_advance_descope_branch_retains_required_reason():
     )
 
     assert plan.auto_advance_commands == ()
-    assert any(skip.axis == AUTO_ADVANCE_DESCOPE and "ASSUMPTION-22" in skip.reason for skip in plan.skipped_axes)
+    assert any(
+        skip.axis == AUTO_ADVANCE_DESCOPE and "ASSUMPTION-22" in skip.reason
+        for skip in plan.skipped_axes
+    )
 
 
 def _bundle():
@@ -171,7 +182,9 @@ def _commands_matching(commands: tuple[str, ...], pattern: str) -> list[str]:
 
 
 def _trig_times(commands: tuple[str, ...]) -> list[str]:
-    return [match.group("time") for command in commands if (match := _TRIG_TIME_RE.fullmatch(command))]
+    return [
+        match.group("time") for command in commands if (match := _TRIG_TIME_RE.fullmatch(command))
+    ]
 
 
 def _skip_axes(plan) -> set[str]:

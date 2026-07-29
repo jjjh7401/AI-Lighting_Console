@@ -517,6 +517,57 @@ result: PASS
 
 응답기 관측 능력 때문에 생긴 **Gap 1**과 **F-1**은 이 절에서 닫혔다. 이 세션이 새로 연 blocker는 없다. M0의 나머지 미실측은 그대로다: 매체 갭(전 발화가 안전 게이트가 아니라 `server.bridge.osc` 직결 — M7 종단 확인 몫), F-3의 `max_children=24` live truncation 미실측, `/Overwrite` 미발화.
 
+### M6 — 회귀 · PRESERVE · 정적 스캔
+
+착수 직전 baseline은 M5 head `9de0fa8`에서 직접 실측했다.
+
+```text
+uv run pytest server/tests/ -q
+1 failed, 2486 passed, 5 skipped, 1 warning in 87.33s
+FAILED server/tests/test_songcue_bundle.py::test_tools_dedupe_block_is_unchanged_from_base
+```
+
+이 실패는 M3가 `server/orchestrator/tools.py` 전체가 `38a6e7e..HEAD`에서 변하지 않는다고 고정한
+오래된 게이트였다. M5가 SONGCUE 툴 등록으로 `tools.py`를 합법 변경했으므로, M6는 파일 전체
+무변경 assert를 제거하고 변경 hunk의 위치·범위를 고정하는 회귀 게이트로 바꿨다. 최종 전체
+회귀는 다음과 같다.
+
+```text
+uv run pytest server/tests/ -q
+2489 passed, 5 skipped, 1 warning in 85.42s (0:01:25)
+```
+
+AC-SONGCUE-016의 Track A 실행 게이트 결과:
+
+- `git diff --stat 38a6e7e2157a4862721fcd868056e0dbbb09c4c0..HEAD -- server/looks/{matching,instantiate,resolver,schema,loader,roles}.py` → 빈 출력.
+- `server/tests/test_songcue_bundle.py`의 M6 게이트 3건은 `BASE..HEAD` 인자를 비워 둘 수 없음을 고정하고, PRESERVE look 파일 목록 비공허성을 확인하며, `tools.py` hunk 위치를 검증한다.
+- `tools.py` hunk old start는 `32, 49, 125, 951, 1222, 1231`이고, 보호 범위 `234-238`(`_PROGRAMMER_STATE_COMMANDS`) 및 `524-569`(dedupe 실행 루프)와 겹침 0건.
+
+정본 §C의 전체 PRESERVE 목록을 그대로 대입하면 Track B가 Gap 1/F-1 폐쇄를 위해 먼저 남긴
+`console/lua/PROTOCOL.md`, `console/lua/README.md`, `console/lua/copilot_responder.lua`,
+`console/lua/copilot_responder.xml` 변경 4건이 `BASE..HEAD`에 남는다. M6는 그 변경을 되돌리지
+않았고, Track A 소관 회귀 게이트는 `server/looks/{matching,instantiate,resolver,schema,loader,roles}.py`
+무변경과 `tools.py` 보호 hunk 무접촉으로 고정했다.
+
+ruff는 전역 실행 없이 `BASE..HEAD`의 Python 변경 파일 17개에만 수행했다.
+
+```text
+uv run ruff check <17 changed python files>
+All checks passed!
+uv run ruff format --check <17 changed python files>
+17 files already formatted
+```
+
+잔존하는 손대지 않은 기존 비-clean 지점은 targeted set 안에서는 0건이다. 전역 ruff/format은
+무관 파일 재포맷을 피하기 위해 실행하지 않았다.
+
+뮤테이션 2건 결과:
+
+1. `server/looks/matching.py`에 공백 1줄을 추가해 `8e7aa57`로 커밋했다. `test_preserve_look_files_are_unchanged_from_run_phase_base`가 `server/looks/matching.py | 1 +`를 보고 실패했으므로 게이트의 비공허성이 확인됐다. 이후 `git revert --no-edit 8e7aa57`로 `12deea2` 되돌림 커밋을 만들었고, 최종 동일 PRESERVE diff는 다시 빈 출력이다.
+2. `_preserve_diff_command()`에서 `<BASE>..HEAD`를 제거해 인자 없는 `git diff` 형태로 바꿨다. `test_preserve_gate_uses_run_phase_base_to_head_range`가 네 번째 인자가 `38a6e7e2157a4862721fcd868056e0dbbb09c4c0..HEAD`가 아니라고 실패했고, 복구 후 M6 게이트 3건은 다시 통과했다.
+
+AC-SONGCUE-010과 AC-SONGCUE-011은 M3 소유 판정을 반복하지 않고 전체 스위트 회귀로만 재확인했다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run>_

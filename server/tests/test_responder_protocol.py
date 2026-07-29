@@ -108,8 +108,7 @@ class TestRequestBuilders:
     def test_build_prop_query(self):
         line = build_prop_query("p-1", "DataPool/Sequences/Sequence 101/Cue 2", "TrigTime")
         assert line == (
-            f'Plugin "{PLUGIN_NAME}" '
-            '"prop p-1 DataPool/Sequences/Sequence 101/Cue 2 TrigTime"'
+            f'Plugin "{PLUGIN_NAME}" "prop p-1 DataPool/Sequences/Sequence 101/Cue 2 TrigTime"'
         )
 
     def test_build_prop_query_rejects_space_in_property_name(self):

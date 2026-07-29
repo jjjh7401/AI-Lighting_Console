@@ -46,10 +46,14 @@ def test_report_sections_cover_every_song_section_once_with_closed_verdicts():
     section_rows = payload["sections"]
 
     assert len(section_rows) == len(bundle.sections)
-    assert sorted(row["index"] for row in section_rows) == [section.section.index for section in bundle.sections]
-    assert [row["name"] for row in section_rows] == [section.section.name for section in bundle.sections]
+    assert sorted(row["index"] for row in section_rows) == [
+        section.section.index for section in bundle.sections
+    ]
+    assert [row["name"] for row in section_rows] == [
+        section.section.name for section in bundle.sections
+    ]
     assert {row["verdict"] for row in section_rows} <= VERDICTS
-    assert VERDICTS == frozenset({COMPLETE, PARTIAL, NONE})
+    assert frozenset({COMPLETE, PARTIAL, NONE}) == VERDICTS
 
 
 def test_report_summary_is_section_arithmetic_and_keeps_runtime_remainder_separate():
@@ -62,13 +66,17 @@ def test_report_summary_is_section_arithmetic_and_keeps_runtime_remainder_separa
     summary = payload["summary"]
 
     assert summary["section_count"] == len(sections)
-    assert summary["generated_count"] == sum(1 for row in sections if row["verdict"] in {COMPLETE, PARTIAL})
+    assert summary["generated_count"] == sum(
+        1 for row in sections if row["verdict"] in {COMPLETE, PARTIAL}
+    )
     assert summary["unmapped_count"] == sum(
         1
         for row in sections
         if row["reason_kind"] in {UNKNOWN_VOCABULARY, DYNAMICS_LOOK_MISSING, ROLE_UNADDRESSED}
     )
-    assert summary["skipped_save_count"] == sum(1 for row in sections if row["reason_kind"] == VALUE_SKIPPED)
+    assert summary["skipped_save_count"] == sum(
+        1 for row in sections if row["reason_kind"] == VALUE_SKIPPED
+    )
     assert summary["not_executed"] == sum(row["not_executed"] for row in sections)
     assert summary["failed"] == sum(row["failed"] for row in sections)
     assert summary["skipped_save_count"] == 1

@@ -97,8 +97,12 @@ class SongCueBundle:
 class SongCueTimingAxes:
     timecode_go: bool = True
     auto_advance_go: bool = True
-    timecode_skip_reason: str = "ASSUMPTION-20 is GO in M4; DESCOPE branch retained for future rerun"
-    auto_advance_skip_reason: str = "ASSUMPTION-22 is GO in M4; DESCOPE branch retained for future rerun"
+    timecode_skip_reason: str = (
+        "ASSUMPTION-20 is GO in M4; DESCOPE branch retained for future rerun"
+    )
+    auto_advance_skip_reason: str = (
+        "ASSUMPTION-22 is GO in M4; DESCOPE branch retained for future rerun"
+    )
 
 
 @dataclass(frozen=True)
@@ -175,7 +179,9 @@ def normalise_start_ms(raw: object) -> int:
     raise ValueError(f"unsupported section time format: {raw!r}")
 
 
-def parse_sections(raw_sections: Iterable[Mapping[str, object] | Sequence[object]]) -> tuple[SongCueSection, ...]:
+def parse_sections(
+    raw_sections: Iterable[Mapping[str, object] | Sequence[object]],
+) -> tuple[SongCueSection, ...]:
     sections = tuple(_parse_section(raw, index) for index, raw in enumerate(raw_sections))
     previous: SongCueSection | None = None
     for section in sections:
@@ -236,9 +242,9 @@ def build_songcue_bundle(
     section_bundles: list[SongCueSectionBundle] = []
     emitted: dict[str, tuple[int, int, str]] = dict()
     sequence_labelled = False
-    cue_number = 0
-    for selection, cue_name in zip(ordered, cue_names, strict=True):
-        cue_number += 1
+    for cue_number, (selection, cue_name) in enumerate(
+        zip(ordered, cue_names, strict=True), start=1
+    ):
         section_bundle = _section_bundle(
             selection=selection,
             cue_number=cue_number,
@@ -251,8 +257,12 @@ def build_songcue_bundle(
             commands.extend(section_bundle.commands)
             if not sequence_labelled:
                 store_index = _first_store_index(commands, sequence_number, cue_number)
-                commands.insert(store_index + 1, f"Label Sequence {sequence_number} '{sequence_name}'")
-                section_bundle = replace(section_bundle, commands=tuple(commands[-len(section_bundle.commands) - 1 :]))
+                commands.insert(
+                    store_index + 1, f"Label Sequence {sequence_number} '{sequence_name}'"
+                )
+                section_bundle = replace(
+                    section_bundle, commands=tuple(commands[-len(section_bundle.commands) - 1 :])
+                )
                 sequence_labelled = True
         section_bundles.append(section_bundle)
 
@@ -311,12 +321,16 @@ def build_songcue_timing(
     if selected_axes.timecode_go:
         timecode_commands = _timecode_commands(bundle, timecode_number)
     else:
-        skipped.append(SongCueTimingSkip(axis=TIMECODE_DESCOPE, reason=selected_axes.timecode_skip_reason))
+        skipped.append(
+            SongCueTimingSkip(axis=TIMECODE_DESCOPE, reason=selected_axes.timecode_skip_reason)
+        )
     if selected_axes.auto_advance_go:
         auto_advance_commands = _auto_advance_commands(bundle)
     else:
         skipped.append(
-            SongCueTimingSkip(axis=AUTO_ADVANCE_DESCOPE, reason=selected_axes.auto_advance_skip_reason)
+            SongCueTimingSkip(
+                axis=AUTO_ADVANCE_DESCOPE, reason=selected_axes.auto_advance_skip_reason
+            )
         )
     return SongCueTimingPlan(
         commands=timecode_commands + auto_advance_commands,
@@ -350,14 +364,20 @@ def _map_section_to_look(
     if explicit_dynamics is not None:
         requested_dynamics = (_validated_dynamics(explicit_dynamics, section.index),)
     elif section.dynamics is None:
-        return SongCueLookSelection(section=section, requested_dynamics=(), reason=EXPLICIT_DYNAMICS_REQUIRED)
+        return SongCueLookSelection(
+            section=section, requested_dynamics=(), reason=EXPLICIT_DYNAMICS_REQUIRED
+        )
     else:
         requested_dynamics = section.dynamics
 
     for look in ordered_looks:
         if look.dynamics in requested_dynamics:
-            return SongCueLookSelection(section=section, requested_dynamics=requested_dynamics, look=look)
-    return SongCueLookSelection(section=section, requested_dynamics=requested_dynamics, reason=UNMAPPED_LOOK)
+            return SongCueLookSelection(
+                section=section, requested_dynamics=requested_dynamics, look=look
+            )
+    return SongCueLookSelection(
+        section=section, requested_dynamics=requested_dynamics, reason=UNMAPPED_LOOK
+    )
 
 
 def _section_bundle(
@@ -421,7 +441,10 @@ def _section_bundle(
             section=selection.section,
             cue_number=cue_number,
             reason=VALUE_LINE_COLLISION,
-            detail=f"value line matches section {previous_section} cue {previous_cue} look {previous_look}",
+            detail=(
+                f"value line matches section {previous_section} "
+                f"cue {previous_cue} look {previous_look}"
+            ),
             collides_with_section_index=previous_section,
             collides_with_cue_number=previous_cue,
         )
@@ -452,7 +475,9 @@ def _section_bundle(
 
 
 def _timecode_commands(bundle: SongCueBundle, timecode_number: int) -> tuple[str, ...]:
-    timecode_name = _ascii_label(f"{bundle.sequence_name} Timecode", fallback=f"Timecode {timecode_number}")
+    timecode_name = _ascii_label(
+        f"{bundle.sequence_name} Timecode", fallback=f"Timecode {timecode_number}"
+    )
     return (
         f"Store Timecode {timecode_number}",
         f"Set Timecode {timecode_number} Property 'Name' '{timecode_name}'",
@@ -482,7 +507,9 @@ def _format_seconds(start_ms: int) -> str:
 
 
 def _selected_groups(bound: Mapping[str, tuple[GroupCandidate, ...]]) -> tuple[GroupCandidate, ...]:
-    selected = sorted({group.number: group for groups in bound.values() for group in groups}.items())
+    selected = sorted(
+        {group.number: group for groups in bound.values() for group in groups}.items()
+    )
     return tuple(group for _number, group in selected)
 
 
@@ -539,7 +566,9 @@ def _ascii_label(value: str, *, fallback: str) -> str:
     return label or fallback
 
 
-def _explicit_dynamics_for(section: SongCueSection, explicit_dynamics: Mapping[int, int] | None) -> int | None:
+def _explicit_dynamics_for(
+    section: SongCueSection, explicit_dynamics: Mapping[int, int] | None
+) -> int | None:
     if explicit_dynamics is None:
         return None
     return explicit_dynamics.get(section.index)
@@ -556,7 +585,9 @@ def _validated_dynamics(value: int, index: int) -> int:
 
 def _raw_section(raw: Mapping[str, object] | Sequence[object]) -> _RawSection:
     if isinstance(raw, Mapping):
-        return _RawSection(name=str(_first_present(raw, _NAME_KEYS)), start=_first_present(raw, _START_KEYS))
+        return _RawSection(
+            name=str(_first_present(raw, _NAME_KEYS)), start=_first_present(raw, _START_KEYS)
+        )
     if isinstance(raw, str):
         raise ValueError("section entries must provide both name and start time")
     if len(raw) != 2:
