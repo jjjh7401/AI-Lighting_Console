@@ -6,7 +6,9 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import NamedTuple
 
+from server.looks.busking import looks_for_genre
 from server.looks.matching import DYNAMICS_TERMS, resolve_dynamics
+from server.looks.schema import DYNAMICS_MAX, DYNAMICS_MIN, Look, LookLibrary
 
 _MILLISECONDS_PER_SECOND = Decimal("1000")
 _SECONDS_PER_MINUTE = Decimal("60")
@@ -15,6 +17,8 @@ _MMSS_PATTERN = re.compile(r"^(?P<minutes>\d+):(?P<seconds>\d{2})(?P<fraction>\.
 _SECONDS_PATTERN = re.compile(r"^\d+(?:\.\d+)?$")
 _NAME_KEYS = ("name", "section", "label")
 _START_KEYS = ("start", "start_time", "time")
+EXPLICIT_DYNAMICS_REQUIRED = "explicit_dynamics_required"
+UNMAPPED_LOOK = "unmapped_look"
 
 
 @dataclass(frozen=True)
@@ -24,6 +28,14 @@ class SongCueSection:
     index: int
     dynamics: tuple[int, ...] | None
     requires_explicit_dynamics: bool
+
+
+@dataclass(frozen=True)
+class SongCueLookSelection:
+    section: SongCueSection
+    requested_dynamics: tuple[int, ...]
+    look: Look | None = None
+    reason: str | None = None
 
 
 class SectionTimeError(ValueError):
@@ -99,6 +111,23 @@ def parse_sections(raw_sections: Iterable[Mapping[str, object] | Sequence[object
     return sections
 
 
+def map_sections_to_looks(
+    sections: Iterable[SongCueSection],
+    library: LookLibrary,
+    genre: str,
+    explicit_dynamics: Mapping[int, int] | None = None,
+) -> tuple[SongCueLookSelection, ...]:
+    ordered_looks = looks_for_genre(library, genre)
+    return tuple(
+        _map_section_to_look(
+            section=section,
+            ordered_looks=ordered_looks,
+            explicit_dynamics=_explicit_dynamics_for(section, explicit_dynamics),
+        )
+        for section in sections
+    )
+
+
 def _parse_section(raw: Mapping[str, object] | Sequence[object], index: int) -> SongCueSection:
     section = _raw_section(raw)
     name = section.name.strip()
@@ -112,6 +141,40 @@ def _parse_section(raw: Mapping[str, object] | Sequence[object], index: int) -> 
         dynamics=dynamics,
         requires_explicit_dynamics=dynamics is None,
     )
+
+
+def _map_section_to_look(
+    *,
+    section: SongCueSection,
+    ordered_looks: Sequence[Look],
+    explicit_dynamics: int | None,
+) -> SongCueLookSelection:
+    if explicit_dynamics is not None:
+        requested_dynamics = (_validated_dynamics(explicit_dynamics, section.index),)
+    elif section.dynamics is None:
+        return SongCueLookSelection(section=section, requested_dynamics=(), reason=EXPLICIT_DYNAMICS_REQUIRED)
+    else:
+        requested_dynamics = section.dynamics
+
+    for look in ordered_looks:
+        if look.dynamics in requested_dynamics:
+            return SongCueLookSelection(section=section, requested_dynamics=requested_dynamics, look=look)
+    return SongCueLookSelection(section=section, requested_dynamics=requested_dynamics, reason=UNMAPPED_LOOK)
+
+
+def _explicit_dynamics_for(section: SongCueSection, explicit_dynamics: Mapping[int, int] | None) -> int | None:
+    if explicit_dynamics is None:
+        return None
+    return explicit_dynamics.get(section.index)
+
+
+def _validated_dynamics(value: int, index: int) -> int:
+    if isinstance(value, bool) or value < DYNAMICS_MIN or value > DYNAMICS_MAX:
+        raise ValueError(
+            f"section index {index} explicit dynamics must be "
+            f"between {DYNAMICS_MIN} and {DYNAMICS_MAX}: {value!r}"
+        )
+    return value
 
 
 def _raw_section(raw: Mapping[str, object] | Sequence[object]) -> _RawSection:
