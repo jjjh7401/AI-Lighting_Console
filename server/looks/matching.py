@@ -36,7 +36,6 @@ its own, and each exists for a reason the library could not cover:
 
 from __future__ import annotations
 
-
 import re
 import unicodedata
 from collections.abc import Mapping
