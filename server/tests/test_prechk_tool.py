@@ -475,6 +475,36 @@ class TestPoolReadFailuresAreNotRigFindings:
         )
         assert execution.result.is_error is True
 
+    def test_a_zero_child_macro_pool_refuses_instead_of_taking_slot_one(self):
+        # `M.safe_children` returns an empty table when BOTH `Children()` and
+        # `Count()` pcall-fail, and `childCount` is derived from that same empty
+        # read — so a wholesale enumeration failure and a genuinely empty pool
+        # are ONE payload: ok=true, childCount 0, no children, truncated false.
+        # Trusting it leaves the occupied set empty, "lowest free" answers 1, and
+        # slot 1 holds the responder's own `Copilot Go` macro on the measured rig.
+        class DeadPoolLooksEmpty(RigPort):
+            def query_state(self, path: str) -> dict:
+                if path == "DataPool/Macros":
+                    return {
+                        "ok": True,
+                        "path": path,
+                        "node": {"name": "Macros", "class": "Macros", "childCount": 0},
+                        "children": [],
+                        "truncated": False,
+                    }
+                return super().query_state(path)
+
+        port = RecordingExecutionPort()
+        execution = _dispatch(
+            _registry(rig=DeadPoolLooksEmpty(), port=port, gate=ClearingGate()),
+            create_macro=True,
+        )
+        assert execution.result.is_error is True
+        assert port.executed == [], (
+            f"a macro was stored over a pool that may never have been read: {port.executed}"
+        )
+        assert not [c for c in port.executed if c.startswith("Store Macro 1")]
+
 
 class TestLiveLockDemotion:
     """run-audit P1-4 — AC-PRECHK-014 ④ separates a hold from a lock."""
@@ -499,3 +529,28 @@ class TestLiveLockDemotion:
         # The two states must not be collapsed in either direction.
         execution = _dispatch(_registry(gate=HoldingGate()), create_macro=True)
         assert execution.result.is_error is True
+
+    def test_a_locked_gate_says_the_macro_was_not_stored(self):
+        # The lock is not an error, so `is_error` cannot carry this. Without an
+        # explicit key the payload says `created` and instructs the user to go run
+        # the macro and watch the lights — about a macro that was never sent.
+        payload = json.loads(
+            _dispatch(_registry(gate=LockedGate()), create_macro=True).result.content
+        )
+        assert payload["macro"]["created"] is True, "authoring itself must still be reported"
+        assert payload["macro"]["executed"] is False, (
+            "a locked gate sent nothing, yet the report does not say so"
+        )
+
+    def test_a_hold_says_the_macro_was_not_stored_either(self):
+        payload = json.loads(
+            _dispatch(_registry(gate=HoldingGate()), create_macro=True).result.content
+        )
+        assert payload["macro"]["executed"] is False
+
+    def test_a_cleared_gate_says_the_macro_was_stored(self):
+        # Non-vacuity: the key must not be constant-false.
+        payload = json.loads(
+            _dispatch(_registry(gate=ClearingGate()), create_macro=True).result.content
+        )
+        assert payload["macro"]["executed"] is True

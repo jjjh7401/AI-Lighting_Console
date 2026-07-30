@@ -50,13 +50,16 @@ from server.prechk.verdicts import (
 
 COMPLETENESS_LABELS = {
     "complete": "열거 완전 — 보고된 자식 수를 전량 읽었다",
-    # NOT "there are unread fixtures": per-slot recovery can observe every
-    # declared child while the read stays incomplete, because the index domain's
-    # upper bound is unknown (design slot A). M8's live end-to-end run recovered
-    # all 19 fixtures with missing_count 0 and this label still claimed unread
-    # fixtures existed — a false statement in the one string the user reads
-    # first. The count is reported separately, and only when it is non-zero.
-    "incomplete": "열거 불완전 — 루트 열거가 짧았고 인덱스 정의역 상한을 모른다",
+    # NOT "there are unread fixtures" and NOT "the root enumeration was short":
+    # per-slot recovery can observe every declared child while the read stays
+    # incomplete because the index domain's upper bound is unknown (design slot
+    # A) -- M8's live end-to-end run recovered all 19 fixtures with
+    # ``missing_count`` 0 -- and a read can also be incomplete because children
+    # came back WITHOUT slot indices, which is not a short enumeration at all.
+    # The label therefore names only what is true in every incomplete case: the
+    # enumeration alone did not confirm the declared population. Causes belong in
+    # ``read_failures`` and the counts, which are reported separately.
+    "incomplete": "열거 불완전 — 열거만으로는 보고된 자식 수를 전량 확인하지 못했다",
 }
 
 FIXTURE_VERDICT_LABELS = {

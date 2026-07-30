@@ -904,6 +904,67 @@ class TestCompleteness:
         assert [failure.property for failure in inventory.read_failures] == ["i"]
         assert inventory.read_failures[0].kind == SHAPE_INVALID
 
+    def test_a_child_without_an_index_is_not_reported_as_a_short_root(self):
+        # The responder omits `i` whenever the slot is unestablished, and it
+        # returned EVERY child it declared. Folding that into "the root
+        # enumeration was short" puts a cause in front of the user that did not
+        # happen — the fourth instance of read-failure-as-absence in this SPEC.
+        pool = FixturePool({1: fixture_props("1.001", name="정상")})
+
+        class NoIndex(FixturePool):
+            def query_state(self, path: str) -> dict:
+                payload = super().query_state(path)
+                if path == FIXTURE_ROOT:
+                    payload["children"] = [{"name": "이름만", "class": "Fixture"}]
+                return payload
+
+        inventory = read_inventory(NoIndex(pool.slots, child_count=1))
+        assert inventory.child_count == 1
+        assert len(inventory.read_failures) == 1, "the slot-index failure vanished"
+        # The root returned all 1 of its 1 declared children: nothing was short.
+        assert inventory.index_domain_unknown is False
+        assert inventory.recovery_boundary is None
+        # Still incomplete — the population was declared but never confirmed.
+        assert inventory.completeness == INCOMPLETE
+        assert inventory.observed_count == 0
+        assert inventory.missing_count == 1
+
+    def test_recovery_is_skipped_when_no_child_established_a_slot(self):
+        # A numeric path segment degrades to a LIST POSITION when not one child
+        # of the node has an established slot, and that is exactly the state a
+        # slot-less enumeration reports. Sweeping then adopts positions as slots
+        # — the promotion read_inventory forbids outright.
+        pool = FixturePool(
+            {slot: fixture_props(f"1.{slot:03d}", name=f"MMX {slot}") for slot in (1, 2, 3)}
+        )
+
+        class SlotlessAndShort(FixturePool):
+            def query_state(self, path: str) -> dict:
+                payload = super().query_state(path)
+                if path == FIXTURE_ROOT:
+                    payload["children"] = [{"name": "MMX 1", "class": "Fixture"}]
+                    payload["truncated"] = True
+                return payload
+
+        broken = SlotlessAndShort(pool.slots, child_count=3, enumerated=(1,))
+        inventory = read_inventory(broken)
+        # The root WAS short (3 declared, 1 returned), so the old predicate ran
+        # the sweep and every probe answered ok — by list position.
+        assert inventory.recovered_count == 0, (
+            f"the sweep adopted positions as slots: {inventory.recovered_slots}"
+        )
+        assert inventory.recovery_boundary is None
+        assert [path for path in broken.state_calls if path != FIXTURE_ROOT] == [], (
+            "a per-slot probe was issued with no established slot to anchor it"
+        )
+        assert inventory.completeness == INCOMPLETE
+        assert inventory.missing_count == 3
+
+    def test_recovery_still_runs_when_a_slot_is_established(self):
+        # Non-vacuity: the guard must not have disabled recovery outright.
+        inventory = read_inventory(truncated_parent(hidden=(19, 20)))
+        assert inventory.recovered_slots == (19, 20)
+
 
 class TestFidIsNotAJudgementInput:
     """AC-PRECHK-004 — the three fixture-id bans."""

@@ -1268,12 +1268,27 @@ def build_toolset(
         children = [c for c in (payload.get("children") or ()) if isinstance(c, dict)]
         node = payload.get("node")
         child_count = node.get("childCount") if isinstance(node, dict) else None
-        if not isinstance(child_count, int):
+        if not isinstance(child_count, int) or isinstance(child_count, bool):
             raise _MacroPoolIncomplete("macro pool reported no childCount")
         if child_count > len(children):
             raise _MacroPoolIncomplete(
                 f"macro pool enumeration is short: childCount {child_count} "
                 f"but {len(children)} children returned"
+            )
+        if child_count == 0:
+            # A wholesale enumeration failure arrives as this exact payload:
+            # ``M.safe_children`` returns an empty table when BOTH ``Children()``
+            # and ``Count()`` pcall-fail, and ``childCount`` is derived from that
+            # same empty read -- so "the pool is empty" and "the pool did not
+            # read" are one payload with ``ok=true`` and ``truncated=false``.
+            # Trusting it makes the occupied set empty, "lowest free" answers 1,
+            # and the following ``Store Macro 1`` overwrites the responder's own
+            # ``Copilot Go`` macro -- the plugin this whole system talks through.
+            # Refusing costs a rig with a genuinely empty pool one slot; adopting
+            # it costs the console link.
+            raise _MacroPoolIncomplete(
+                "macro pool reported zero children — a failed enumeration and an "
+                "empty pool are indistinguishable here"
             )
         taken = {c["i"] for c in children if isinstance(c.get("i"), int)}
         if len(taken) != len(children):
@@ -1336,6 +1351,15 @@ def build_toolset(
                 context,
             )
             payload["macro_execution"] = json.loads(inner.result.content)
+            # A LiveLock demotion and a gate hold both send NOTHING, yet the
+            # macro block still says ``created`` and its reason tells the user to
+            # go run the macro on the console and watch the lights. On the lock
+            # path ``is_error`` is demoted below, so without this key the model
+            # reads a non-error report about a macro that does not exist -- the
+            # same shape as the read-failure-reported-as-absence defects this SPEC
+            # already fixed three times. The sibling handler publishes the same
+            # distinction as ``executed``.
+            payload["macro"]["executed"] = not inner.result.is_error
             return ToolExecution(
                 result=ToolResult(
                     tool_call_id=call.id,

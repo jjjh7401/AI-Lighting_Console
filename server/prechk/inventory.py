@@ -346,11 +346,28 @@ def read_inventory(port: InventoryPort, policy: InventoryPolicy | None = None) -
         enumerated.append(slot)
 
     enumerated_count = len(enumerated)
-    root_was_short = child_count > enumerated_count
+    # The root read is SHORT only when it returned FEWER children than the node
+    # declared. A child that carried no slot index, or a duplicate index, was
+    # still RETURNED: folding those into "short" makes the completeness label
+    # assert a cause that did not happen, and slot-index absence is documented
+    # responder behaviour rather than a hypothesis -- the responder omits ``i``
+    # whenever the slot is unestablished (``console/lua/copilot_responder.lua``
+    # ``safe_children``/``M.safe_children`` serialization) and ``PROTOCOL.md``
+    # §4.2 fixes that as the contract. The predicate is now the same
+    # count-vs-returned one the writing path uses for the macro pool.
+    root_was_short = child_count > len(children)
 
     recovered: list[int] = []
     recovery_boundary: int | None = None
-    if root_was_short and policy.recover_truncated:
+    # A numeric path segment degrades to a LIST POSITION when not one child of
+    # the node has an established slot: the responder's resolver only returns
+    # ``children[wanted_slot]`` after finding ``any_slot_known`` false. That is
+    # precisely the state that leaves ``enumerated`` empty, so sweeping then
+    # would adopt positions as slots -- the promotion this function forbids
+    # above, and the defect that issued commands against pools 1/5/7 once
+    # before. One established slot is the proof the resolver needs.
+    slots_established = enumerated_count > 0
+    if root_was_short and slots_established and policy.recover_truncated:
         # design slot A: a bounded 1..childCount sweep. It raises detail, and
         # the completeness verdict below refuses to be promoted by it.
         recovery_boundary = child_count
