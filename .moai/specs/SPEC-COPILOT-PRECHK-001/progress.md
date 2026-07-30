@@ -806,7 +806,8 @@ honest_residuals:
   - "`AC-PRECHK-015`의 PRESERVE 게이트가 상시 테스트가 아니다(1회성 수동 절차) — 후속 SPEC이 PRECHK의 PRESERVE를 깨도 스위트가 잡지 못한다. 선행 SPEC에 상시화 선례가 있으므로 채택이 옳고 이월한다"
   - "라이브 원문 로그가 `.moai/state/`(`.gitignore:206`) 아래에만 있다 — 커밋되는 사본은 §E.2와 §E.2a이며 그래서 커맨드·응답 문자열을 요약 없이 전재했다. run-audit도 이 한계를 §5에 적었다"
 orchestrator_errors_recorded: "4건 — (1) `ASSUMPTION-27`을 후보 부분집합 위에서 부정 단정(발견자는 읽기 전용 scout, 그 뒤 run-audit가 12건도 전수가 아님을 재지적). (2) `server.prechk.report.build_report`가 동명 심볼을 가려 busking 12건을 깨뜨렸다 — 신규 파일만 돌려서 놓쳤고 전체 스위트가 잡았다. (3) `summary_ko`의 incomplete 라벨이 거짓을 말했다 — 인메모리 32건을 통과했고 라이브 종단만이 잡았다. (4) §F.1을 추가하면서 내 M1 테스트의 §F 파싱을 깨뜨렸다 — 워커가 수리했다. 추가로 절차 실수 1건: 뮤테이션 복구 직후 `__pycache__`를 지우지 않아 유령 실패를 쫓았다(§E.2a에 방법론 위험으로 기록)"
-next: "PR — feature/SPEC-COPILOT-PRECHK-001 -> main. **원격에 브랜치가 없으므로 push가 선행한다.** `origin/main`이 95687a0이고 behind 0이므로 리베이스 불필요하며 선행 SPEC 위에 스택돼 있지 않은 단일 브랜치다. 머지 전략은 사용자 판단 — 본 브랜치는 커밋 27개이고 그중 2건은 M7의 PRESERVE 게이트 비공허성 실증 주입·revert 쌍이라 squash가 이력을 깔끔하게 만든다. 반면 개별 커밋이 마일스톤 경계와 감사 수정을 구분해 담고 있어 merge commit이 추적성을 보존한다."
+pr: "**#7 OPEN · MERGEABLE** — https://github.com/jjjh7401/AI-Lighting_Console/pull/7 · feature/SPEC-COPILOT-PRECHK-001 -> main · +7671/-5 · 27파일. push는 2026-07-30에 수행했고(원격에 브랜치가 없었다) `origin/main`이 95687a0에 behind 0이라 리베이스는 불필요했다. **머지 전략은 merge commit으로 사용자가 확정** — 개별 커밋이 M0~M8 마일스톤 경계와 run-audit 수정을 구분해 담아 '무엇이 계획된 구현이고 무엇이 감사 지적의 결과인가'가 이력에서 읽힌다. 커밋 27개 중 2건은 M7의 PRESERVE 게이트 비공허성 실증 주입·revert 쌍이며 그것도 게이트 작동의 기록이다. `auto_pr: false`(`.moai/config/sections/git-strategy.yaml`)이므로 사용자 확인 후 수동 생성했다"
+next: "**PR #7 리뷰·머지 대기.** 머지 후 후속 SPEC 착수 순서는 §E.3a의 후보표를 따른다 — FID 축은 사용자 GUI 작업(슬롯 != FID 쇼파일)이 선행하고, 구간 겹침 재개는 run-audit가 추가한 후보 I-15(보수적 점유폭 상계)가 **라이브 측정 없이** 되살릴 여지가 있어 가장 값싸며, 페이지·익스큐터 저작은 `Assign … At Executor <N>`의 비단사 사상 때문에 안전 설계가 선행 조건이다. 이월 1건(`AC-PRECHK-015` PRESERVE 상시 테스트)은 다음 SPEC의 M7에 흡수하는 편이 자연스럽다."
 ```
 
 ## §F. Phase 4 Mode Selection — 확정 기록 (오케스트레이터 소유)
