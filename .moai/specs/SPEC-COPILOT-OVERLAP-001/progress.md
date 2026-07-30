@@ -7,7 +7,7 @@
 ### 한 문단
 
 **무엇**: 픽스처를 자기 DMX 점유폭에 잇는 조인 키가 없어도, **열거 가능한 모드 전체의 폭 최대값**을 상계로 삼아 *"겹침 없음"*을 증명한다. 증명되지 않으면 **충돌이 아니라 미확정**으로 보고한다. PRECHK가 수행하지 않고 수행하지 않았다고 보고한 축을 되살리되 **판정의 비대칭을 계약으로 만든다.**
-**상태**: **plan-phase 완결 · 독립 plan-audit 1회차 완료(FAIL 0.806 → 지적 19건 전건 처리, §3).** 아티팩트 7종(`research` · `spec` · `acceptance` · `CONTRACT` · `design` · `plan` · 본 문서). REQ 18 · AC 21 · ASSUMPTION 31~35 · 마일스톤 M0~M8. **코드 변경 0건** — 아직 아무것도 구현하지 않았다.
+**상태**: **run-phase 완결 (2026-07-30) — M0~M8 전 마일스톤.** 스위트 **2758 → 2920 passed · 5 skipped · 0 failed** · 뮤테이션 36건 주입(33 killed · 3 생존→테스트 수정 · 1 주입 불가→형상 강화) · 라이브 세션 0회 · PRESERVE 위반 0건. **불일치 4건을 덮지 않고 §5에 올렸다.** 아래 §0의 나머지는 **plan-phase 시점의 인수인계 기록이며 그 시점의 판단으로 보존한다** — 현재 상태와 다음 단계는 **§4(마일스톤별 증거) · §5(run-phase 신호)**가 정본이다. plan-audit 1회차는 §3이다.
 **열린 사용자 접점**: **0건** — 어휘 확장 승인을 착수 전에 받았다(2026-07-30).
 **라이브 세션**: **0회** — 필요한 값이 전부 PRECHK에 실측 전재되어 있다. run-phase도 **라이브를 요구하지 않는다.**
 
@@ -746,6 +746,131 @@ SKIP: ASSUMPTION-35 Patch/FixtureTypes의 childCount 즉 타입 수 T. state Pat
 | 8 | PRECHK 문서 무변경(본 SPEC BASE) + `DESCOPE:` 1건 | 충족. **왜 이 한 항목만 다른 BASE인지**를 같은 클래스의 다른 테스트가 실측으로 보인다 |
 | 9 | ruff check · format --check가 손댄 전 파일에서 통과 | 충족 — 대상 목록을 `git diff --name-only`에서 도출하므로 목록이 낡지 않는다 |
 | 10 | 스위트 계수가 baseline 이상 | **2910 passed · 5 skipped · 0 failed** = 2887 + 23 |
+
+### M8 — 종단 통합 (`AC-OVERLAP-021` · `cycle_type=tdd` · 2026-07-30)
+
+#### 착수 전제 확인
+
+| 항목 | 산출 |
+|---|---|
+| M7 DoD 10항 | 전건 충족(위) |
+| `git status --porcelain` | **빈 출력** — 역방향 절차가 워킹트리를 건드리므로 시작 상태가 깨끗해야 한다 |
+| baseline | **2910 passed · 5 skipped · 0 failed** (M7 커밋 시점 실측) |
+
+#### 산출
+
+`server/tests/test_prechk_tool.py` **+10건**. 구현 0건 · 기존 테스트 갱신 0건. **라이브 세션 0회** — `AC-OVERLAP-021`이 명문화한 대로 인메모리 리그와 툴 디스패치로 닫았다.
+
+**감사 1:1을 프로덕션 초크포인트로 관통시켰다.** 대역을 손으로 만들지 않고 실제 `SafetyGate`를 세워(`console=` 인메모리 리그 · `audit=AuditLog(tmp_path)`) `gate.state_port`를 툴에 넘겼다. 그 결과 **감사 `state_query` 행 수 = 리그의 `state_calls` 수**이고 순회 경로가 그 집합의 부분집합임을 단정한다. 실패 조회도 1행을 남긴다는 것을 별도로 확인했다 — 타임아웃도 OSC 송신 1건이므로 회계가 새면 안 된다.
+
+**조회 계수를 등호로 고정했다.** 착수 시점에 조회 계수를 고정하는 단정이 저장소 전체에 0건이었으므로(연구 §6.1) `1 + T + ΣM` 등호와 예산 상한 부등호를 **둘 다** 신설했다. 부등호만 두면 조회 1건이 영구히 조용히 늘어난다.
+
+#### `AC-OVERLAP-021` ① 불일치 1건 — 오케스트레이터 접점으로 올린다
+
+**`exact_widths`는 툴 표면에서 산출 불가능하다.** ①은 *"툴을 통해 4개 값 각각이 산출되는 리그가 존재"*를 요구하지만 **출하된 핸들러는 `FootprintPolicy`를 만들지 않는다** — `ASSUMPTION-27`이 부정이라 정확폭 축이 꺼진 채 출하됐고, **본 SPEC의 상계 축이 존재하는 이유가 바로 그것**이다. 그 등급을 툴에서 내려면 기각된 축을 다시 켜는 코드 경로를 신설해야 하며 그것은 `spec.md` §D 범위 밖이다.
+
+| 항목 | 산출 |
+|---|---|
+| 툴 표면에서 도달 가능한 등급 | **3** — `bound_proves_clear` · `bound_inconclusive` · `not_performed`. 각각 리그를 만들어 디스패치로 확인하고 **세 등급이 서로 다름**을 단정한다 |
+| 도달 불가 등급 | **1** — `exact_widths`. 기계 증거: `server/orchestrator/tools.py`의 AST에 `FootprintPolicy(` 호출이 **0건** |
+| 그 등급이 죽은 어휘인가 | **아니다** — 판정·리포트 계층에서 산출되며 `AC-OVERLAP-017` ④의 4값 비공허성이 M5에서 충족됐다 |
+
+**이 불일치를 덮지 않고 기록한다.** 형태는 `AC-OVERLAP-021` ③에 대해 `plan.md` §E.2가 정한 접점 3번(*"M8 산출이 산술과 어긋나면 불일치 자체를 기록하고 오케스트레이터에게 후속 판단을 요청한다"*)과 같다. 그리고 이것은 **`bound_inconclusive`를 라이브로 증명할 수 없다**는 기록과 같은 계열이다 — 인수 조건의 전제가 출하 형상과 어긋나는 경우이며, 조건을 충족시키려 형상을 바꾸는 것이 결함이다.
+
+#### 역방향 검증 — 3등급을 섞지 않는다
+
+`plan.md` §B.8의 명령 순서를 그대로 실행했다. 5단계 복원 후 `git status --porcelain`이 빈 출력이다.
+
+**A 등급 — 모듈 부재(약한 증거이며 그렇게 적는다).**
+
+```
+ERROR server/tests/test_prechk_footprint.py
+ERROR server/tests/test_prechk_patch.py
+ERROR server/tests/test_prechk_report.py
+ERROR server/tests/test_prechk_verdicts.py
+```
+
+원문 2건: `ModuleNotFoundError: No module named 'server.prechk.footprint'` · `ImportError: cannot import name 'OVERLAP_BASIS' from 'server.prechk.verdicts'`. **무엇을 막는지는 말해 주지 않는다.**
+
+**B 등급 — 수집 오류를 넘기고 전량 실행: 19 failed · 80 passed · 4 errors.** `server/tests/test_prechk_tool.py` 단독으로 **19 failed · 57 passed**이며 57은 착수 시점부터 있던 테스트다. 즉 **그 파일의 신규 테스트 중 19건이 수정 전 코드에서 실패한다.** 클래스별 계수:
+
+| 클래스 | 수정 전 결과 |
+|---|---|
+| `TestFootprintWalkIsWiredThroughRigPaths` | 7 failed · 1 passed |
+| `TestTheOverlapAxisFiresNoCommand` | 1 failed · 1 passed |
+| `TestBoundaryProhibitions` | 1 failed · 3 passed |
+| `TestEveryGradeThroughTheTool` | **6 failed** |
+| `TestAuditAndBudgetEndToEnd` | **4 failed** |
+
+그리고 마일스톤별 뮤테이션이 **무엇을** 막는지 증명한다 — 고정 목록 4건이 전건 killed다: `AC-OVERLAP-003` ⑥(부분집합 상계 거짓 양성, M-1) · `AC-OVERLAP-008` ②(간격 == 상계, M-9) · `AC-OVERLAP-009` ③(유니버스 키잉 붕괴, M-7·M-8) · `AC-OVERLAP-014` ⑥⑦(라벨표 항목 제거 시 import 실패, MUT-A·MUT-A2).
+
+**C 등급 — 수정 전에도 통과하는 것 5건 + PRESERVE 게이트 전량. 회귀 테스트가 아니라고 코드에 라벨했다.**
+
+| 테스트 | 라벨 |
+|---|---|
+| `TestFootprintWalkIsWiredThroughRigPaths::test_a_missing_section_does_not_discard_the_report` | **INVARIANT GUARD** — 가드를 추가한 것이 호출을 거부하기 시작하지 않게 지킨다 |
+| `TestTheOverlapAxisFiresNoCommand::test_the_same_port_is_not_simply_inert` | **NON-VACUITY CONTROL** |
+| `TestBoundaryProhibitions::test_the_walk_never_touches_the_execution_port` | **INVARIANT GUARD** |
+| `TestBoundaryProhibitions::test_the_prechk_package_never_imports_the_send_surface` | **INVARIANT GUARD** |
+| `TestBoundaryProhibitions::test_the_operator_tool_exemption_list_is_unchanged` | **INVARIANT GUARD** |
+| `server/tests/test_overlap_preserve.py` **23건 전량** | **INVARIANT GATE** — 모듈 도크스트링에 명시. 수정을 잡는 것은 뮤테이션의 일이고, 이 파일이 잡는 것은 **아무도 재검사하지 않는 경계를 넘는 미래의 편집**이다 |
+
+**A 등급만으로 규율 16을 충족했다고 적지 않는다.** 선행 SPEC의 P1 4건은 2721개가 전부 통과하는 상태에서 살아 있었고 그것을 잡은 것은 존재 확인이 아니라 뮤테이션이었다. 본 run-phase의 뮤테이션 총계는 **36건 주입 · 33건 즉사 · 3건이 1회차 생존해 테스트를 고쳤다**(M-5 · M-21 · M-22) · **1건은 주입이 PRESERVE 위반을 요구해 형상 강화로 대체했다**(M-35).
+
+#### DoD 6항 — 전건 기계 판정
+
+| # | 조건 | 산출 |
+|---|---|---|
+| 1 | 툴을 통해 4값 각각 산출 · 페이로드가 스키마 정본과 일치 | **3값 충족 · 1값은 출하 형상에서 도달 불가**(위 별항). 도달 가능한 세 등급 전부에서 신규 최상위 키의 **정확 키집합**이 유지됨을 단정한다 |
+| 2 | 착수 시점 `precheck_patch` 테스트 전건 통과(=순회 예외 포착) | 충족 — 역방향 실행이 그 57건을 분리해 보여 준다 |
+| 3 | 조회 계수가 예산 상한을 넘지 않는다 | 충족 — **등호와 부등호 둘 다** 신설 |
+| 4 | 감사 로그에 순회 조회 전건 기록 — 조회 1건 = 감사 1건 | 충족 — 실제 `SafetyGate`를 관통시켜 등호로 단정. 실패 조회도 1행 |
+| 5 | 스위트 전체 통과 · 계수가 baseline 이상 | **2920 passed · 5 skipped · 0 failed** = 2910 + 10 |
+| 6 | 역방향 절차 실행·기록 · 통과하는 테스트를 회귀 테스트가 아니라고 코드에 명시 | 충족(위) |
+
+## §5 Run-phase Audit-Ready Signal
+
+```yaml
+run_status: audit-ready
+run_complete_at: 2026-07-30
+base_sha: 85a4b2389003cb61b0ab72eb4aa8d6b2ff90b94a
+baseline_at_entry: "2758 passed · 5 skipped · 0 failed (M0 착수 직전 직접 실측)"
+suite_at_exit: "2920 passed · 5 skipped · 0 failed"
+tests_added: 162            # 2920 − 2758. 마일스톤별: M1 4 · M2 35 · M3 41 · M4 21 · M5 10 · M6 26 · M7 23 · M8 10 (합 170 중 8건은 M4·M5가 갱신·재배치한 것으로 순증이 아니다 — 순증은 스위트 계수 차 162가 정본이다)
+milestones_complete: 9      # M0~M8
+live_sessions: 0            # 계획대로. AC-OVERLAP-021이 라이브 불요를 명문화했다
+code_files_new: 1           # server/prechk/footprint.py (395행)
+test_files_new: 2           # server/tests/test_prechk_footprint.py · server/tests/test_overlap_preserve.py
+code_files_changed: 4       # tools.py · prechk/{patch,report,verdicts}.py
+preserve_violations: 0      # PRESERVE 10경로 diff(PRECHK BASE) 빈 출력 · server/safety/ diff(본 SPEC BASE) 빈 출력
+precedent_file_changes: 0   # server/tests/test_songcue_bundle.py — 트립와이어 갱신이 불필요했다(M6 별항)
+prechk_docs_changes: 0      # .moai/specs/SPEC-COPILOT-PRECHK-001/ diff(본 SPEC BASE) 빈 출력
+assumptions_closed: 1       # ASSUMPTION-34 (GO) — M0
+assumptions_skipped: 4      # ASSUMPTION-31 · 32 · 33 · 35 (관측 없이 닫히지 않는다)
+prefix_lines: 5             # GO: 1 · SKIP: 4 · DESCOPE: 0 · REOPEN: 0
+mutations_injected: 36
+mutations_killed: 33
+mutations_survived_first_pass: 3   # M-5 · M-21 · M-22 — 전건 테스트를 고쳐 닫았다
+mutations_not_injectable: 1        # M-35 — 주입이 PRESERVE 위반을 요구해 형상 강화로 대체
+reverse_verification: "실행 완료 — A등급 수집 오류 4파일 · B등급 19 failed(신규 툴 테스트 전량) · C등급 5 + PRESERVE 게이트 23건을 코드에 라벨"
+ac_satisfied: 20            # AC-OVERLAP-001~021 중 20건
+ac_partially_satisfied: 1   # AC-OVERLAP-021 ① — 툴 표면에서 3/4 등급만 도달 가능(아래)
+deviations:
+  - "**`AC-OVERLAP-021` ① — `exact_widths`는 툴 표면에서 도달 불가능하다.** 출하된 핸들러가 `FootprintPolicy`를 만들지 않으며(AST로 `FootprintPolicy(` 호출 0건 확인) 그 이유는 `ASSUMPTION-27` 부정으로 정확폭 축이 꺼진 채 출하됐다는 것이다 — **본 SPEC의 상계 축이 존재하는 이유가 바로 그것**이다. 그 등급을 툴에서 내려면 기각된 축을 다시 켜는 경로를 신설해야 하고 그것은 `spec.md` §D 범위 밖이다. **죽은 어휘는 아니다** — 판정·리포트 계층에서 산출되며 `AC-OVERLAP-017` ④의 4값 비공허성이 M5에서 충족됐다. 오케스트레이터 접점으로 올린다."
+  - "**`AC-OVERLAP-019` ⑦의 *'트립와이어가 갱신되고'*는 전제가 성립하지 않았다.** M6의 tools.py 편집 전량이 선행 SPEC이 이미 연 hunk 영역 안에 떨어져 old-side 경계가 움직이지 않았다(실측 대조). 그 항의 실질 불변식(보호구역 교차 단정 계속 성립)은 유지되며 선례 파일은 **0행 변경**이라 ⑥의 *'1행에 한정'*보다 강하다. **갱신하지 않은 것을 갱신했다고 적지 않는다.**"
+  - "**D-3의 섹션 가드가 오류를 내지 않는다.** 별도 상수·분기 밖·이름으로 말함은 전건 집행됐으나 누락을 **호출 거부**로 만들 수 없었다 — 매크로 가드 메시지를 고정한 두 기존 테스트가 그 오버라이드를 쓰며, 거부는 이 툴의 존재 이유인 픽스처 재고를 버린다. 리포트에 담고 등급을 `not_performed`로 낸다(M6 별항)."
+  - "**순회에 `sibling_answered` 파라미터를 추가했다.** 설계 슬롯 C가 전제한 *'형제가 답했다'*를 순회는 자기 안에서 알 수 없고 프로덕션이 두 실패를 같은 예외로 던지므로 호출자가 넘긴다. 없으면 툴 경로의 분류가 항상 `console_unreachable`이 되어 설정 결함을 운영 조건으로 보고한다(결함 계열 1)."
+corrections_to_own_tests: 4
+  # M2 M-5(예산 소진 후 부분 폭) · M3 유니버스 리그가 붕괴해도 답이 안 바뀜 · M4 최약 등급 규칙에 맞춘 1건 · M5 M-21·M-22(대조에 순회 없음 · 모드 수 단일)
+known_gaps:
+  - "**`ruff check server/`가 착수 시점부터 3건 실패한다** — `server/safety/console.py:292`·`:346`(PRESERVE이므로 고치면 위반) · `server/tests/test_web_dash.py:523`. BASE 원본을 꺼내 같은 3건임을 확인했다. `AC-OVERLAP-019` ⑨의 판정 범위는 손댄 파일이며 그 10파일은 전건 통과한다."
+  - "**`server/tests/test_web_launcher.py::TestSidecarSelfReap::test_orphaned_sidecar_reaps_the_group_without_a_pipe`가 간헐 실패한다** — `_await_status`의 15초 벽시계 데드라인이며 머신 부하에 걸린다. 단독 실행 71건 전건 통과. 본 SPEC은 런처 계층을 건드리지 않는다."
+  - "**`ASSUMPTION-31` · `ASSUMPTION-32` · `ASSUMPTION-33`이 여전히 열려 있고 셋 다 다른 쇼파일을 요구한다.** 본 SPEC은 셋 중 하나라도 거짓이면 상계가 과대·과소평가되는 형상을 **한정 표현으로** 출하했다 — `bound_proves_clear`는 항상 *'열거된 모드 N개에 한정한 판정'*을 함께 말한다. 발화 억제가 아니라 한정이 정직한 형상인 이유는 `AC-OVERLAP-020` ④의 주석에 있다."
+  - "**`_SELECTION_OPERAND`(PRECHK BASE 246) 보호 공백은 그대로 남는다.** plan-phase가 `known_gaps`에 신설한 그대로이며 본 SPEC은 `tools.py` 보호구역을 소유하지 않으므로 범위를 넓히지 않았다."
+  - "**절단 계수 비교의 4번째 사본을 만들었고 수렴하지 않았다**(D-8). `_listing_is_whole`과 `_declared_child_count`가 그 사본이며 **의도적으로 서로 다른 정책**이다. 수렴은 별도 리팩터 SPEC의 일이다."
+  - "**상속된 스키마 드리프트 2건을 정정하지 않았다** — `spec.md` §D가 명시적 Out of Scope로 뒀다."
+next: "**run-phase 완결 — 독립 run-audit를 세울 것을 권고한다.** 근거는 선례다: PRECHK의 run-audit가 FAIL 0.695로 P1 4건을 냈고 **그 4건 전부가 2721개 스위트가 전건 통과하는 상태에서 살아 있었다.** 본 run-phase도 뮤테이션 3건이 1회차에 살아남아 테스트를 고쳤으므로(M-5 · M-21 · M-22) **작성자가 스스로 잡은 것의 한계가 실증됐다.** 감사가 먼저 볼 것: (1) `AC-OVERLAP-021` ① 불일치의 처분 (2) `AC-OVERLAP-019` ⑦ 전제 불성립의 처분 (3) D-3 가드가 오류를 내지 않는 형태의 수용 여부 (4) `sibling_answered` 추가가 슬롯 C를 벗어나지 않는가."
+```
 
 ## §F Phase 4 Mode Selection — 확정 (오케스트레이터 소유 · 2026-07-30)
 
