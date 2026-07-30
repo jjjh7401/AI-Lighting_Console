@@ -39,6 +39,7 @@ selection, and renders any fixture id through :func:`fid_note`
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -59,6 +60,16 @@ PROPERTY_WHITELIST = ("Patch", "FixtureType", "Mode", "Name")
 # sessions, which makes hardcoding the address tempting and wrong: a stable Lua
 # function object says nothing about the next show file.
 FUNCTION_REFERENCE_PREFIX = "function: 0x"
+
+# ``safe_property`` falls back to ``tostring`` on every non-nil value, and Lua's
+# ``tostring`` renders EVERY non-primitive type as ``<type>: 0x<addr>``. So the
+# fault is not "a function came back" -- it is "a pointer came back", and there
+# are four such types. Gating on the function prefix alone adopted
+# ``table: 0x…`` and ``userdata: 0x…`` as values: a pointer string printed where
+# a fixture type belongs, or an address parse failure blamed on the patch when
+# the real fault is a responder artefact -- the two faults AC-PRECHK-008 ②
+# exists to keep apart.
+POINTER_TEXT = re.compile(r"^(?:function|table|userdata|thread): 0x[0-9a-fA-F]+$")
 
 # Absence expressed as a string -- measured on ``CID``. Only the measured form
 # is listed; inventing more would reject legitimate names.
@@ -115,9 +126,10 @@ def fid_note(observed: str | None = None) -> str:
 def shape_error(raw: str | None) -> str | None:
     """Why ``raw`` may not be adopted as a value, or ``None`` when it may.
 
-    This is the per-property shape gate of design slot B. It rejects the three
-    forms the responder can hand back with ``ok=true``: nothing at all, a Lua
-    function reference, and absence spelled as a string.
+    This is the per-property shape gate of design slot B. It rejects what the
+    responder can hand back with ``ok=true`` and still be unusable: nothing at
+    all, a Lua POINTER of any non-primitive type, and absence spelled as a
+    string.
 
     The NUMERIC structure of an address is deliberately NOT checked here. That
     belongs to ``server/prechk/patch.py`` so the report can tell a responder
@@ -129,8 +141,8 @@ def shape_error(raw: str | None) -> str | None:
     text = raw.strip()
     if not text:
         return "빈 문자열"
-    if text.startswith(FUNCTION_REFERENCE_PREFIX):
-        return f"Lua 함수 참조: {raw!r}"
+    if POINTER_TEXT.match(text):
+        return f"Lua 포인터 값: {raw!r}"
     if text in ABSENT_VALUE_TEXTS:
         return f"부재를 문자열로 표현한 값: {raw!r}"
     return None
@@ -293,21 +305,40 @@ def _root_payload(port: InventoryPort, log: _Log) -> tuple[int, list[dict]]:
     return child_count, list(children)
 
 
-def _probe_slot(port: InventoryPort, slot: int, log: _Log) -> dict | None:
-    """Single-node read of one slot; ``None`` when the slot does not exist.
+def _probe_slot(
+    port: InventoryPort, slot: int, log: _Log
+) -> tuple[dict | None, ReadFailure | None]:
+    """Single-node read of one slot, and the failure if the read itself broke.
 
-    An absent index inside a bounded probe range is INFORMATION (the pool may
-    be sparse), not a read failure, so it is not reported as one.
+    Two outcomes that look alike are kept apart. ``ok=false`` means the path
+    segment is not there: an absent index inside a bounded probe range is
+    INFORMATION (the pool may be sparse), not a read failure. A raising port is
+    a TIMEOUT or a transport fault -- the console did not answer, which says
+    nothing about whether the slot exists. Folding the second into the first
+    made every probe failure vanish from the report, so a dead link and a sparse
+    pool were indistinguishable and the operator could not tell whether to
+    suspect the link or the patch. The sibling reader in ``query.py`` already
+    captures its own equivalent as a reported failure.
+
+    The verdict numbers do not change either way -- an unrecovered slot stays in
+    ``missing_count`` -- so this raises diagnosis, never the judgement.
     """
     path = slot_path(slot)
     log.state_paths.append(path)
     try:
         payload = port.query_state(path)
-    except Exception:  # the port raises on failure AND on timeout
-        return None
+    except Exception as error:
+        return None, ReadFailure(
+            slot=slot,
+            name=None,
+            property=path,
+            raw_value=None,
+            kind=PROPERTY_UNREADABLE,
+            detail=f"슬롯 보강 조회가 응답을 받지 못했다: {error}",
+        )
     if not payload.get("ok"):
-        return None
-    return payload
+        return None, None
+    return payload, None
 
 
 def read_inventory(port: InventoryPort, policy: InventoryPolicy | None = None) -> Inventory:
@@ -375,7 +406,9 @@ def read_inventory(port: InventoryPort, policy: InventoryPolicy | None = None) -
         for slot in range(1, recovery_boundary + 1):
             if slot in observed:
                 continue
-            payload = _probe_slot(port, slot, log)
+            payload, probe_failure = _probe_slot(port, slot, log)
+            if probe_failure is not None:
+                failures.append(probe_failure)
             if payload is None:
                 continue
             node = payload.get("node") or {}
@@ -433,9 +466,21 @@ def read_inventory(port: InventoryPort, policy: InventoryPolicy | None = None) -
         )
 
     observed_count = len(records)
-    # Clamped so a self-contradicting snapshot cannot emit a negative deficit.
-    # For any well-formed snapshot observed + missing == child_count exactly.
-    missing_count = max(child_count - observed_count, 0)
+    if observed_count > child_count:
+        # The clamp below used to absorb this, and the arithmetic
+        # AC-PRECHK-003 requires -- observed + still_unobserved == child_count --
+        # then closed FALSELY: a snapshot declaring two children while listing
+        # three reported "관측 3개 / 보고된 자식 수 2개" and called itself COMPLETE in
+        # the same sentence. Nothing verified the identity at runtime; the
+        # docstring merely asserted it. A root snapshot that contradicts its own
+        # count is not a rig fact, so it is refused exactly like an unreadable
+        # root rather than reported as a rig with a self-contradicting census.
+        raise InventoryReadError(
+            f"{FIXTURE_ROOT} 스냅샷이 자기모순이다: childCount {child_count}인데 "
+            f"관측 {observed_count}개"
+        )
+    # observed + missing == child_count now holds by construction, not by claim.
+    missing_count = child_count - observed_count
     complete = not root_was_short and missing_count == 0
     return Inventory(
         path=FIXTURE_ROOT,

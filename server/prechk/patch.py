@@ -289,6 +289,38 @@ def _address_duplicates(assessed: list[_Assessed]) -> tuple[Collision, ...]:
     return tuple(collisions)
 
 
+def _footprint_width(policy: FootprintPolicy, slot: int) -> int | None:
+    """The usable channel width for ``slot``, or ``None`` when there is none.
+
+    One source for "does this fixture have a width", because the overlap check
+    and the coverage notice must never disagree: if they drift, the report either
+    claims a comparison it skipped or announces a skip it performed.
+    """
+    width = policy.widths.get(slot)
+    if width is None or width < 1:
+        return None
+    return width
+
+
+def _judgeable_without_width(assessed: list[_Assessed], policy: FootprintPolicy) -> tuple[int, ...]:
+    """Slots the overlap check would have compared, but has no width for.
+
+    ``widths`` carries no totality constraint and its designed source is a
+    per-type read that can fail, so a PARTIAL map is a normal result rather than
+    a hypothetical. Excluding those fixtures silently gave them ``observed_clear``
+    and printed ``충돌 0건`` with no not-performed notice -- a fixture that was
+    never compared, reported as clear. "Not compared" and "no overlap" have to be
+    different strings.
+    """
+    return tuple(
+        item.record.slot
+        for item in assessed
+        if item.parse.ok
+        and item.type_mode_ok
+        and _footprint_width(policy, item.record.slot) is None
+    )
+
+
 def _range_overlaps(assessed: list[_Assessed], policy: FootprintPolicy) -> tuple[Collision, ...]:
     """One collision per maximal cluster of overlapping channel ranges.
 
@@ -297,8 +329,8 @@ def _range_overlaps(assessed: list[_Assessed], policy: FootprintPolicy) -> tuple
     """
     intervals: dict[int, list[tuple[int, int, _Assessed]]] = defaultdict(list)
     for item in assessed:
-        width = policy.widths.get(item.record.slot)
-        if not item.parse.ok or not item.type_mode_ok or width is None or width < 1:
+        width = _footprint_width(policy, item.record.slot)
+        if not item.parse.ok or not item.type_mode_ok or width is None:
             continue
         start = item.parse.address
         intervals[item.parse.universe].append((start, start + width - 1, item))
@@ -393,6 +425,27 @@ def evaluate_patch(
     if policy.enabled:
         overlaps = _range_overlaps(assessed, policy)
         skipped: list[SkippedCheck] = []
+        uncovered = _judgeable_without_width(assessed, policy)
+        if uncovered:
+            # An enabled axis with an incomplete width map did not answer for the
+            # whole rig. Without this the report prints `충돌 0건` and NOTHING
+            # else: with `enabled=True, widths={}` every fixture is excluded, no
+            # collision is found, `skipped_checks` stays empty, and the user reads
+            # that the range-overlap check ran and the rig is clean. The shipped
+            # handler does not build a policy, so today this is unreachable in
+            # production -- and the next caller to build one lands exactly here.
+            skipped.append(
+                SkippedCheck(
+                    kind=RANGE_OVERLAP_DESCOPE,
+                    reason=(
+                        f"점유폭이 없는 픽스처 {len(uncovered)}개는 구간 비교를 받지 않았다"
+                        f"(슬롯 {', '.join(str(slot) for slot in uncovered)}). "
+                        "폭 출처가 타입별 조회이므로 부분 판독이 정상 결과다. "
+                        "비교하지 않은 것은 겹침이 없다는 뜻이 아니다."
+                    ),
+                    assumption=ASSUMPTION_27,
+                )
+            )
     else:
         overlaps = ()
         skipped = [

@@ -48,9 +48,10 @@ from server.orchestrator.ports import (
     StateQueryPort,
 )
 from server.prechk.inventory import InventoryReadError, read_inventory
-from server.prechk.macro import MacroPolicy, build_response_check_macro
+from server.prechk.macro import MacroPolicy, MacroResult, build_response_check_macro
 from server.prechk.macro import groups_from_snapshot as read_group_pool
 from server.prechk.patch import evaluate_patch
+from server.prechk.query import read_properties
 from server.prechk.report import build_report as build_precheck_report
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
@@ -147,6 +148,30 @@ _LOCKED = "locked"
 
 LOOK_RIG_SECTIONS = ("groups", "preset_pools")
 SONGCUE_RIG_SECTIONS = ("groups", "sequences")
+
+# The two sections the pre-check's macro axis is wired against: the group pool it
+# reads its targets from, and the macro pool it derives a free slot from. Named
+# for the same reason as the two above — a rig_paths override that drops either
+# one must fail by NAME, not by an IndexError rendered as a pool that failed to
+# read (independent PR #7 review, P3).
+PRECHK_RIG_SECTIONS = ("groups", "macros")
+
+# The macro-line property that holds the command text, on both the authoring side
+# (`Set Macro <slot>.<line> Property 'Command' ...`) and the read-back side.
+# `server/safety/classify.py:140-141` screens the same name.
+_MACRO_COMMAND_PROPERTY = "Command"
+
+# Stand-in slot for the branch that authors NOTHING. `MacroPolicy.available`
+# requires a positive slot, and `build_response_check_macro` answers every
+# zero-target case BEFORE it reads `policy.macro_slot`
+# (`server/prechk/macro.py:441-457`), so on that branch no slot is ever spoken
+# and the pool read that would derive a real one is pure cost. Deliberately NOT
+# 1: slot 1 holds the responder's own `Copilot Go` macro on the measured rig, so
+# if that early return ever stopped holding, a placeholder of 1 would make
+# overwriting the console link the quiet failure mode. The handler additionally
+# refuses to execute anything produced under this policy, which is what keeps the
+# number off the wire rather than trust in another module's control flow.
+_UNSPOKEN_MACRO_SLOT = 9999
 
 # The preset-pool drill is not optional on the look path. Occupancy is what
 # makes "is this slot free" answerable at all; without it every store is
@@ -1298,6 +1323,74 @@ def build_toolset(
             slot += 1
         return slot
 
+    def _requery_macro_line(macro: MacroResult, prop: PropertyQueryPort) -> dict[str, object]:
+        """Read ONE stored macro line back off the console.
+
+        A command receipt is not evidence of effect. This SPEC measured both
+        halves of that live: a console answering ``OK`` for a command it had
+        REJECTED, and a console answering ``OK`` while writing somewhere other
+        than the named target (``Executor 201`` landed on page 1 index 101, not
+        page 2). The same session established this very macro grammar by
+        requerying ``DataPool/Macros/91/1 Command`` and reading back
+        ``On Group 11`` — the M0 GO record. So the stored line is READ BACK
+        rather than inferred from ``all_ok``.
+
+        ONE line, not all of them: a full sweep costs two extra audited property
+        reads per group, and the failures this guards against — nothing stored,
+        or stored somewhere else — are already visible on the first line. Line 1
+        is also the exact line the M0 measurement covered.
+
+        A requery that does not answer is reported AS an unanswered requery.
+        It is NEVER rendered as "the macro is not there", and it never rewrites
+        the authoring result: substituting absence for a failed read is the
+        defect class this SPEC has now fixed on three separate read paths.
+
+        ``lines[0]`` is safe by construction, not by luck: the caller only reaches
+        here with a non-empty ``commands``, which the authoring module emits only
+        after appending a line per target, and the handler's own zero-target
+        branch refuses a result that carries commands.
+        """
+        line = macro.lines[0]
+        path = f"{rig_paths['macros']}/{macro.macro_slot}/{line.number}"
+        read = read_properties(prop, path, (_MACRO_COMMAND_PROPERTY,))[_MACRO_COMMAND_PROPERTY]
+        requery: dict[str, object] = {
+            "path": path,
+            "property": _MACRO_COMMAND_PROPERTY,
+            "line": line.number,
+            "expected": line.payload,
+            "read": read.ok,
+            "value": read.value,
+            # null, NOT false, when the requery did not answer: false would say
+            # the console stored the wrong text, which is a claim about a value
+            # nobody read.
+            "matches": (read.value == line.payload) if read.ok else None,
+            "error": read.error,
+        }
+        if not read.ok:
+            requery["summary_ko"] = (
+                f"재조회 실패 — 매크로 {macro.macro_slot}.{line.number}의 저장 효과를 "
+                f"확인하지 못했다. 매크로가 없다는 뜻은 아니다(저작·전송은 별도로 "
+                f"보고된다): {read.error}"
+            )
+        elif requery["matches"]:
+            requery["summary_ko"] = (
+                f"재조회 확인 — 매크로 {macro.macro_slot}.{line.number}에 "
+                f"'{line.payload}'가 저장되어 있다"
+            )
+        else:
+            # Deliberately NOT promoted to is_error: exact string equality on a
+            # requeried `Command` was measured on ONE line of ONE rig (M0), so a
+            # console that normalises the text it stores would make every real
+            # pre-check an error — the false-alarm version of the same defect.
+            # The observation is reported in full instead, and the human who has
+            # to look at the lights anyway (REQ-PRECHK-014) can judge it.
+            requery["summary_ko"] = (
+                f"재조회 불일치 — 매크로 {macro.macro_slot}.{line.number}에 저작한 값은 "
+                f"'{line.payload}'인데 콘솔이 돌려준 값은 '{read.value}'다. "
+                f"콘솔에서 직접 확인하라"
+            )
+        return requery
+
     def precheck_patch(call: ToolCall, context: ExecutionContext) -> ToolExecution:
         create_macro = call.arguments.get("create_macro", False)
         if not isinstance(create_macro, bool):
@@ -1319,6 +1412,20 @@ def build_toolset(
         evaluation = evaluate_patch(inventory)
         macro = None
         if create_macro:
+            # Named up front, exactly like the three sibling handlers: indexing
+            # `rig_paths` inside the try blocks below made a MISSING section
+            # surface as `group pool unreadable: 'groups'`, blaming a pool that
+            # was never queried for a wiring mistake (independent PR #7 review,
+            # P3). The two causes stay separate here for the same reason the
+            # rig-context module keeps `path_not_resolved` apart from
+            # `console_unreachable`.
+            missing = [section for section in PRECHK_RIG_SECTIONS if section not in rig_paths]
+            if missing:
+                return _error_result(
+                    call,
+                    f"rig context has no path configured for {missing} — the response-"
+                    f"check macro cannot be built without them",
+                )
             try:
                 groups_payload = state_port.query_state(rig_paths["groups"])
             except Exception as error:
@@ -1333,13 +1440,35 @@ def build_toolset(
                 pool = read_group_pool(groups_payload)
             except Exception as error:
                 return _error_result(call, f"group pool unreadable: {error}")
-            try:
-                slot = _free_macro_slot(state_port.query_state(rig_paths["macros"]))
-            except Exception as error:
-                # Never fall back to slot 1 — it holds the responder's own macro
-                # on the measured rig, so a fallback would overwrite it quietly.
-                return _error_result(call, f"macro pool unreadable, no free slot: {error}")
-            macro = build_response_check_macro(pool, MacroPolicy.available(slot))
+            if pool.targets:
+                try:
+                    slot = _free_macro_slot(state_port.query_state(rig_paths["macros"]))
+                except Exception as error:
+                    # Never fall back to slot 1 — it holds the responder's own
+                    # macro on the measured rig, so a fallback would overwrite it
+                    # quietly.
+                    return _error_result(call, f"macro pool unreadable, no free slot: {error}")
+                macro = build_response_check_macro(pool, MacroPolicy.available(slot))
+            else:
+                # Zero targets: nothing will be stored, so the macro pool is not
+                # read at all. Deriving a slot first cost one audited OSC send on
+                # a pool no command would name, and — worse — let its failure
+                # turn a rig with no groups (an ANSWER under `AC-PRECHK-014` ④)
+                # into an error that DISCARDS the fixture inventory this tool
+                # exists to produce (independent PR #7 review, P2).
+                macro = build_response_check_macro(
+                    pool, MacroPolicy.available(_UNSPOKEN_MACRO_SLOT)
+                )
+                if macro.created or macro.commands:
+                    # Unreachable while `build_response_check_macro` answers the
+                    # zero-target cases before it reads the slot. If that ever
+                    # changes, refusing here is what keeps the placeholder off the
+                    # wire instead of storing a macro into slot 9999.
+                    return _error_result(
+                        call,
+                        "macro authoring produced commands for zero targets — no free "
+                        "slot was derived, so nothing may be stored",
+                    )
         payload = build_precheck_report(evaluation, macro=macro).to_dict()
         if macro is not None and macro.commands:
             inner = run_commands(
@@ -1360,6 +1489,14 @@ def build_toolset(
             # already fixed three times. The sibling handler publishes the same
             # distinction as ``executed``.
             payload["macro"]["executed"] = not inner.result.is_error
+            if not inner.result.is_error:
+                # Only when the bundle actually went out. A gate hold and a
+                # LiveLock demotion both send NOTHING, and requerying a slot the
+                # console was never asked to write would manufacture a read
+                # failure — noise about a macro that was never attempted. The
+                # sibling handler gates its own requery on the same raw flag,
+                # BEFORE the lock demotion is applied below.
+                payload["macro_requery"] = _requery_macro_line(macro, property_port)
             return ToolExecution(
                 result=ToolResult(
                     tool_call_id=call.id,
@@ -1743,7 +1880,12 @@ def build_toolset(
                 "enumeration completeness and any check it did NOT perform. Set "
                 "create_macro to also author a response-check macro that turns each "
                 "rig group on and off, sent through the same run_commands path as any "
-                "direct console execution. It does NOT decide whether a fixture "
+                "direct console execution. When that bundle IS sent, one stored macro "
+                'line is read back off the console and reported as "macro_requery" — a '
+                'command receipt alone is not evidence of effect. "read": false there '
+                "means the READ-BACK did not answer, so the store is UNCONFIRMED; it "
+                "does NOT mean the macro is absent, and the authoring result stands "
+                "unchanged. It does NOT decide whether a fixture "
                 "answered — no console read reports that, so a human still has to "
                 "watch the rig. Do not pass rig numbers: there are none to pass."
             ),

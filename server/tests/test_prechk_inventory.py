@@ -790,6 +790,39 @@ class TestValueShapeValidation:
         assert kinds[(1, "Patch")] == SHAPE_INVALID
         assert PROPERTY_UNREADABLE != SHAPE_INVALID
 
+    def test_every_lua_pointer_type_is_rejected_not_only_function(self):
+        # `safe_property` falls back to `tostring` on every non-nil value and
+        # Lua's `tostring` renders EVERY non-primitive as `<type>: 0x<addr>`, so
+        # the fault is "a pointer came back", not "a function came back". Gating
+        # on the function prefix alone adopted the other three as values.
+        for pointer in (
+            "table: 0x105b0f048",
+            "userdata: 0x105b0f048",
+            "thread: 0x105b0f048",
+            MEASURED_FUNCTION_REF,
+        ):
+            assert shape_error(pointer) is not None, pointer
+        # Non-vacuity: the widened gate must not swallow legitimate values that
+        # merely resemble one. Fixture names and type strings are free text.
+        for good in ("table", "0x105b0f048", "userdata 1", "table: value", "Robin MMX Spot"):
+            assert shape_error(good) is None, good
+
+    def test_a_pointer_in_the_type_slot_is_a_read_failure_not_a_type_name(self):
+        # Adopting it printed a pointer string where a fixture type belongs and
+        # let the fixture through the range-overlap check as a normal entry.
+        pool = FixturePool(
+            {
+                1: fixture_props("1.001", name="MMX 1", fixture_type="userdata: 0x105b0f048"),
+                2: fixture_props("1.002", name="MMX 2"),
+            }
+        )
+        inventory = read_inventory(pool)
+        record = {record.slot: record for record in inventory.fixtures}[1]
+        assert record.fixture_type is None, "a pointer was adopted as the fixture type"
+        failure = record.failure_for("FixtureType")
+        assert failure is not None
+        assert failure.kind == SHAPE_INVALID
+
 
 class TestCompleteness:
     """AC-PRECHK-003 — completeness comes from the counts, not the flag."""
@@ -964,6 +997,68 @@ class TestCompleteness:
         # Non-vacuity: the guard must not have disabled recovery outright.
         inventory = read_inventory(truncated_parent(hidden=(19, 20)))
         assert inventory.recovered_slots == (19, 20)
+
+    def test_a_snapshot_that_overcounts_its_own_children_is_refused(self):
+        # The clamp `max(child_count - observed_count, 0)` absorbed this and
+        # AC-PRECHK-003's identity then closed FALSELY: the report printed
+        # `관측 3개 / 보고된 자식 수 2개` and called itself COMPLETE in the same
+        # sentence. Nothing verified the identity at runtime — the docstring
+        # merely asserted it. A census that contradicts itself is not a rig fact.
+        pool = FixturePool(
+            {slot: fixture_props(f"1.{slot:03d}", name=f"MMX {slot}") for slot in (1, 2, 3)},
+            child_count=2,
+            enumerated=(1, 2, 3),
+            truncated=False,
+        )
+        with pytest.raises(InventoryReadError):
+            read_inventory(pool)
+
+    def test_the_arithmetic_identity_holds_by_construction(self):
+        # Non-vacuity for the refusal above: the well-formed pools still close,
+        # and now without a clamp absorbing anything.
+        for pool in (clean_rig_18(), truncated_parent(), truncated_parent(hidden=(19, 20))):
+            inventory = read_inventory(pool)
+            assert inventory.observed_count + inventory.still_unobserved_count == (
+                inventory.child_count
+            )
+
+    def test_a_probe_that_never_answered_is_recorded_not_silently_dropped(self):
+        # `ok=false` means the path segment is absent — information, since the
+        # pool may be sparse. A RAISING port is a timeout: the console did not
+        # answer, which says nothing about whether the slot exists. Folding the
+        # second into the first erased every probe failure from the report, so a
+        # dead link and a sparse pool read identically.
+        class DeadProbe(FixturePool):
+            def query_state(self, path: str) -> dict:
+                if path != FIXTURE_ROOT:
+                    raise RuntimeError("no reply within 3.0s")
+                return super().query_state(path)
+
+        pool = DeadProbe(
+            {slot: fixture_props(f"1.{slot:03d}", name=f"MMX {slot}") for slot in (1, 2)},
+            child_count=4,
+            enumerated=(1, 2),
+        )
+        inventory = read_inventory(pool)
+        probe_failures = [
+            failure
+            for failure in inventory.read_failures
+            if failure.kind == PROPERTY_UNREADABLE and failure.slot in (3, 4)
+        ]
+        assert len(probe_failures) == 2, (
+            "a probe that never answered left no trace in the report: "
+            f"{[f.property for f in inventory.read_failures]}"
+        )
+        # The judgement numbers are unchanged — this raises diagnosis only.
+        assert inventory.missing_count == 2
+        assert inventory.completeness == INCOMPLETE
+
+    def test_a_sparse_pool_stays_silent_and_is_not_a_read_failure(self):
+        # The other side of the same seam: `ok=false` must NOT become a failure,
+        # or every sparse rig would report phantom console faults.
+        inventory = read_inventory(truncated_parent())
+        assert inventory.missing_count == 22
+        assert [f for f in inventory.read_failures if f.slot and f.slot > 18] == []
 
 
 class TestFidIsNotAJudgementInput:

@@ -37,7 +37,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 
 from server.prechk.macro import MacroResult
-from server.prechk.patch import PatchEvaluation
+from server.prechk.patch import SCOPE_QUALIFIER, PatchEvaluation
 from server.prechk.verdicts import (
     COLLISION_KIND,
     COMPLETENESS,
@@ -76,7 +76,12 @@ COLLISION_KIND_LABELS = {
 
 READ_FAILURE_KIND_LABELS = {
     "property_unreadable": "프로퍼티 판독 불가 — 콘솔이 값을 주지 않았다",
-    "shape_invalid": "값 형태 부적합 — 함수 참조나 부재값 문자열",
+    # NOT "함수 참조나 부재값 문자열": the code also carries an empty/whitespace
+    # value and, separately, an enumeration child that had no slot index `i` at
+    # all — which is a MISSING KEY, not a value shape. Enumerating two of the four
+    # sent the user hunting for a function reference that was not there, and the
+    # aggregate row shows only the label, so it was the sole explanation visible.
+    "shape_invalid": "값 형태 부적합 — 그대로 쓸 수 없는 값이 왔다",
     "address_parse_failed": "주소 파싱 실패 — 유니버스·주소 정수를 얻지 못했다",
     "type_mode_unresolved": "타입·모드 미확정 — 점유폭을 잇지 못했다",
 }
@@ -175,7 +180,14 @@ class PrecheckReport:
         ]
         if inventory.missing_count:
             parts.append(f"미관측 {inventory.missing_count}개")
-        parts.append(f"충돌 {self.evaluation.collision_total}건")
+        # `scope_qualified` exists for exactly this claim and the paragraph was
+        # dropping it: a bare `충돌 N건` reads as a number covering the whole rig
+        # even when part of it was never observed — the reading REQ-PRECHK-010
+        # exists to prevent, and the one a log grep or a notification summary
+        # actually performs. The unobserved clause is NOT appended here: it is
+        # already printed above, and only when it is non-zero.
+        qualifier = f"{SCOPE_QUALIFIER} " if self.evaluation.scope_qualified else ""
+        parts.append(f"{qualifier}충돌 {self.evaluation.collision_total}건")
         verdicts = _labelled_counts("fixture_verdict", dict(self.evaluation.verdict_counts))
         if verdicts:
             parts.append(" · ".join(verdicts))

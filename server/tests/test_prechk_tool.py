@@ -18,12 +18,15 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from server.llm.types import ToolCall
+from server.orchestrator import tools as tools_module
 from server.orchestrator.tools import TOOL_NAMES, build_toolset
 from server.prechk.inventory import FIXTURE_ROOT, PROPERTY_WHITELIST
+from server.prechk.macro import MacroResult
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 TOOLS_SOURCE = PROJECT_ROOT / "server" / "orchestrator" / "tools.py"
@@ -40,10 +43,14 @@ _FIXTURES = {
 class RigPort:
     """State + property double covering the fixture root, groups and macros."""
 
-    def __init__(self, *, fixtures=None, groups=(11, 12), macros=(1,)):
+    def __init__(self, *, fixtures=None, groups=(11, 12), macros=(1,), macro_lines=None):
         self.fixtures = _FIXTURES if fixtures is None else fixtures
         self.groups = groups
         self.macros = macros
+        # Stored macro-line command text, keyed by the object path a requery
+        # names. Shared with :class:`MacroWritingExecutionPort` so a read-back
+        # returns what a command actually wrote instead of a fabricated answer.
+        self.macro_lines = {} if macro_lines is None else macro_lines
         self.state_calls: list[str] = []
         self.property_calls: list[tuple[str, str]] = []
 
@@ -86,6 +93,20 @@ class RigPort:
 
     def query_property(self, path: str, property_name: str) -> dict:
         self.property_calls.append((path, property_name))
+        if path.startswith("DataPool/Macros/"):
+            if path in self.macro_lines:
+                return {
+                    "ok": True,
+                    "path": path,
+                    "property": property_name,
+                    "value": self.macro_lines[path],
+                }
+            return {
+                "ok": False,
+                "path": path,
+                "property": property_name,
+                "error": "no reply within 3.0s",
+            }
         slot = int(path.rsplit("/", 1)[1])
         value = self.fixtures[slot].get(property_name)
         if value is None:
@@ -102,6 +123,29 @@ class RecordingExecutionPort:
 
         self.executed.append(command)
         return ExecutionResult(ok=True, detail="OK")
+
+
+class MacroWritingExecutionPort(RecordingExecutionPort):
+    """Execution port that actually STORES what a macro line writes.
+
+    Without it, "the requery agrees with the authored command" would be checked
+    against a double that invents the answer — a tautology. Here the value the
+    read-back returns is the one the ``Set Macro`` command carried, so the
+    assertion covers the round trip the M0 GO record measured live.
+    """
+
+    _SET_LINE = re.compile(r"^Set Macro (\d+)\.(\d+) Property 'Command' '(.*)'$")
+
+    def __init__(self, store: dict[str, str]):
+        super().__init__()
+        self.store = store
+
+    def execute(self, command: str):
+        match = self._SET_LINE.match(command.strip())
+        if match is not None:
+            slot, line, payload = match.groups()
+            self.store[f"DataPool/Macros/{slot}/{line}"] = payload
+        return super().execute(command)
 
 
 @dataclass(frozen=True)
@@ -554,3 +598,330 @@ class TestLiveLockDemotion:
             _dispatch(_registry(gate=ClearingGate()), create_macro=True).result.content
         )
         assert payload["macro"]["executed"] is True
+
+
+def _requery_reads(rig):
+    """The macro-line property reads the handler performed."""
+    return [call for call in rig.property_calls if call[0].startswith("DataPool/Macros/")]
+
+
+def _executed_bundle():
+    """A cleared, fully executed macro bundle plus the doubles that recorded it.
+
+    ``MacroWritingExecutionPort`` and ``RigPort`` share one store, so the value a
+    read-back returns is the value a ``Set Macro`` command actually carried.
+    """
+    store: dict[str, str] = {}
+    rig = RigPort(macro_lines=store)
+    port = MacroWritingExecutionPort(store)
+    execution = _dispatch(_registry(rig=rig, port=port, gate=ClearingGate()), create_macro=True)
+    return rig, port, json.loads(execution.result.content)
+
+
+class TestStoredMacroIsRequeried:
+    """PR #7 review A1-1 — a command receipt is not evidence of effect.
+
+    This SPEC measured a console answering ``OK`` for a command it had rejected,
+    and answering ``OK`` while writing to a different object than the one named.
+    Nothing in this handler read a stored macro back, even though the M0 GO
+    record establishes the macro grammar itself on a requery of
+    ``DataPool/Macros/91/1 Command`` returning ``On Group 11``.
+    """
+
+    def test_the_stored_line_is_read_back_off_the_console(self):
+        rig, port, payload = _executed_bundle()
+        assert port.executed, "no command was executed — the check would be vacuous"
+        # Default doubles: slot 1 is taken, so the free slot is 2; the first
+        # authored line drives the first group.
+        assert ("DataPool/Macros/2/1", "Command") in rig.property_calls
+        assert payload["macro_requery"]["path"] == "DataPool/Macros/2/1"
+        assert payload["macro_requery"]["read"] is True
+
+    def test_the_read_back_value_is_the_value_the_command_carried(self):
+        _rig, port, payload = _executed_bundle()
+        authored = [c for c in port.executed if c.startswith("Set Macro 2.1 ")]
+        assert len(authored) == 1, f"the first line was not authored once: {authored}"
+        # The value is not asserted as a literal: it is the payload the executed
+        # command actually carried, so the two cannot drift apart.
+        carried = authored[0].split("'Command' '", 1)[1].rstrip("'")
+        assert payload["macro_requery"]["value"] == carried
+        assert payload["macro_requery"]["expected"] == carried
+        assert payload["macro_requery"]["matches"] is True
+        assert carried == "On Group 11", f"the authoring grammar changed shape: {carried}"
+
+    def test_only_one_line_is_read_back_however_many_groups_there_are(self):
+        # A full sweep would cost two extra audited property reads per group.
+        store: dict[str, str] = {}
+        rig = RigPort(groups=(11, 12, 13, 14), macro_lines=store)
+        port = MacroWritingExecutionPort(store)
+        _dispatch(_registry(rig=rig, port=port, gate=ClearingGate()), create_macro=True)
+        assert len([c for c in port.executed if c.startswith("Set Macro ")]) == 8
+        assert len(_requery_reads(rig)) == 1, _requery_reads(rig)
+
+    def test_a_requery_that_answers_not_ok_does_not_erase_the_authoring(self):
+        # The default double has no stored line, so the read-back comes back
+        # ok=false — the shape a timeout or a bad path produces.
+        rig = RigPort()
+        port = RecordingExecutionPort()
+        payload = json.loads(
+            _dispatch(
+                _registry(rig=rig, port=port, gate=ClearingGate()), create_macro=True
+            ).result.content
+        )
+        assert _requery_reads(rig), "the requery never happened — the check would be vacuous"
+        assert payload["macro_requery"]["read"] is False
+        assert payload["macro_requery"]["error"]
+        # A failed read is NEVER a statement about the macro: it must not claim
+        # the console stored the wrong text either.
+        assert payload["macro_requery"]["matches"] is None
+        # And the authoring result stays exactly what it was — byte-identical to
+        # the run whose requery succeeded.
+        _rig, _port, confirmed = _executed_bundle()
+        assert payload["macro"] == confirmed["macro"]
+        assert payload["macro"]["created"] is True
+        assert payload["macro"]["executed"] is True
+
+    def test_a_failed_requery_says_requery_failed_not_macro_missing(self):
+        summary = json.loads(
+            _dispatch(_registry(gate=ClearingGate()), create_macro=True).result.content
+        )["macro_requery"]["summary_ko"]
+        # What the user reads must name the failed read as the failed thing.
+        assert "재조회 실패" in summary
+        # And must not be readable as "the macro is not there" — the substitution
+        # this SPEC has now fixed on three separate read paths.
+        assert "매크로가 없다는 뜻은 아니다" in summary
+
+    def test_a_raising_requery_is_captured_not_propagated(self):
+        class RaisingLineRead(RigPort):
+            def query_property(self, path: str, property_name: str) -> dict:
+                if path.startswith("DataPool/Macros/"):
+                    self.property_calls.append((path, property_name))
+                    raise RuntimeError("no reply within 3.0s")
+                return super().query_property(path, property_name)
+
+        rig = RaisingLineRead()
+        execution = _dispatch(_registry(rig=rig, gate=ClearingGate()), create_macro=True)
+        payload = json.loads(execution.result.content)
+        assert _requery_reads(rig), "the requery never happened — the check would be vacuous"
+        assert payload["macro_requery"]["read"] is False
+        assert "no reply within 3.0s" in payload["macro_requery"]["error"]
+        assert payload["macro"]["created"] is True
+        # The fixture inventory — the tool's primary product — survives it.
+        assert payload["inventory"]["observed_count"] == 3
+
+    def test_a_value_that_disagrees_is_reported_as_a_disagreement(self):
+        # Non-vacuity for `matches`: it must not be constant-true on a read that
+        # answered. The console returns a line the handler never authored.
+        store: dict[str, str] = {}
+        rig = RigPort(macro_lines=store)
+
+        class Overwriting(MacroWritingExecutionPort):
+            def execute(self, command: str):
+                result = super().execute(command)
+                self.store["DataPool/Macros/2/1"] = "On Group 99"
+                return result
+
+        port = Overwriting(store)
+        payload = json.loads(
+            _dispatch(
+                _registry(rig=rig, port=port, gate=ClearingGate()), create_macro=True
+            ).result.content
+        )
+        assert payload["macro_requery"]["read"] is True
+        assert payload["macro_requery"]["matches"] is False
+        assert payload["macro_requery"]["value"] == "On Group 99"
+        summary = payload["macro_requery"]["summary_ko"]
+        assert "재조회 불일치" in summary
+        # Both sides of the disagreement are in front of the user.
+        assert "On Group 11" in summary and "On Group 99" in summary
+
+    def test_a_held_bundle_is_never_requeried(self):
+        # Nothing was sent, so a read-back would manufacture a read failure about
+        # a macro the console was never asked to store.
+        rig = RigPort()
+        port = RecordingExecutionPort()
+        payload = json.loads(
+            _dispatch(
+                _registry(rig=rig, port=port, gate=HoldingGate()), create_macro=True
+            ).result.content
+        )
+        assert port.executed == []
+        assert _requery_reads(rig) == []
+        assert "macro_requery" not in payload
+
+    def test_a_locked_bundle_is_never_requeried(self):
+        rig = RigPort()
+        port = RecordingExecutionPort()
+        payload = json.loads(
+            _dispatch(
+                _registry(rig=rig, port=port, gate=LockedGate()), create_macro=True
+            ).result.content
+        )
+        assert port.executed == []
+        assert _requery_reads(rig) == []
+        assert "macro_requery" not in payload
+
+    def test_a_failed_command_is_never_requeried(self):
+        class FailingPort(RecordingExecutionPort):
+            def execute(self, command: str):
+                from server.orchestrator.ports import ExecutionResult
+
+                self.executed.append(command)
+                return ExecutionResult(ok=False, detail="Illegal object")
+
+        rig = RigPort()
+        execution = _dispatch(
+            _registry(rig=rig, port=FailingPort(), gate=ClearingGate()), create_macro=True
+        )
+        assert execution.result.is_error is True
+        assert _requery_reads(rig) == []
+
+    def test_the_tool_description_tells_the_model_what_a_failed_read_back_means(self):
+        # The description is the model's ONLY contract for reading this payload
+        # (the convention `TestRigContextDescription` fixes for get_rig_context).
+        # A new key the model reads as absence is the defect, not the key.
+        (definition,) = [d for d in _registry().definitions() if d.name == TOOL]
+        assert "macro_requery" in definition.description
+        assert "UNCONFIRMED" in definition.description
+        assert "does NOT mean the macro is absent" in definition.description
+
+
+class TestZeroTargetsDoesNotDeriveASlot:
+    """PR #7 review A1-2 — the slot read was unconditional.
+
+    A rig with no groups is an ANSWER (``AC-PRECHK-014`` ④, ``is_error=False``),
+    yet a macro pool that read short turned it into an error and threw away the
+    fixture inventory the tool exists to produce — plus one audited OSC send on a
+    pool no command would ever name.
+    """
+
+    class _ShortMacroPool(RigPort):
+        def query_state(self, path: str) -> dict:
+            if path == "DataPool/Macros":
+                # childCount 4 with one child returned: `_free_macro_slot` must
+                # refuse this, which is what used to sink the whole call.
+                return {
+                    "ok": True,
+                    "path": path,
+                    "node": {"name": "Macros", "class": "Macros", "childCount": 4},
+                    "children": [{"i": 1, "name": "Copilot Go", "class": "Macro"}],
+                    "truncated": True,
+                }
+            return super().query_state(path)
+
+    def test_a_short_macro_pool_does_not_sink_a_no_groups_answer(self):
+        rig = self._ShortMacroPool(groups=())
+        execution = _dispatch(_registry(rig=rig, gate=ClearingGate()), create_macro=True)
+        payload = json.loads(execution.result.content)
+        assert execution.result.is_error is False
+        assert "macro_no_groups" in [row["kind"] for row in payload["skipped_checks"]]
+        # The primary product survives: 3 fixtures with the planted duplicate.
+        assert payload["inventory"]["observed_count"] == 3
+        assert payload["collisions"]["address_duplicates"]
+
+    def test_the_macro_pool_is_not_read_when_there_is_nothing_to_store(self):
+        rig = RigPort(groups=())
+        _dispatch(_registry(rig=rig, gate=ClearingGate()), create_macro=True)
+        assert "DataPool/Groups" in rig.state_calls, "the group pool was not read at all"
+        assert "DataPool/Macros" not in rig.state_calls, (
+            f"the macro pool was read for a rig with no targets: {rig.state_calls}"
+        )
+
+    def test_the_placeholder_slot_never_reaches_the_console(self):
+        # INVARIANT GUARD, not a regression test: it holds on the pre-fix code
+        # too. What it pins is the absolute condition — the stand-in slot the
+        # zero-target branch hands to `MacroPolicy.available` is a real slot on a
+        # real console and must never be spoken.
+        rig = RigPort(groups=())
+        port = RecordingExecutionPort()
+        execution = _dispatch(_registry(rig=rig, port=port, gate=ClearingGate()), create_macro=True)
+        assert port.executed == [], f"zero targets produced commands: {port.executed}"
+        assert "9999" not in execution.result.content
+
+    def test_commands_authored_for_zero_targets_are_refused(self, monkeypatch):
+        """The refusal that keeps the stand-in slot off the wire.
+
+        ``build_response_check_macro`` answers every zero-target case before it
+        reads ``policy.macro_slot``, so the handler's refusal is unreachable as
+        the two modules stand today. It exists for the day that stops holding, so
+        it is exercised by making it stop holding: without it, a slot nobody
+        derived becomes a ``Store Macro`` target.
+        """
+
+        def _authors_anyway(pool, policy):
+            return MacroResult(
+                created=True,
+                target_kind="group",
+                reason="stub — authored despite zero targets",
+                reason_code="visual_confirmation_required",
+                commands=(f"Store Macro {policy.macro_slot}",),
+                macro_slot=policy.macro_slot,
+            )
+
+        monkeypatch.setattr(tools_module, "build_response_check_macro", _authors_anyway)
+        rig = RigPort(groups=())
+        port = RecordingExecutionPort()
+        execution = _dispatch(_registry(rig=rig, port=port, gate=ClearingGate()), create_macro=True)
+        assert execution.result.is_error is True
+        assert port.executed == [], f"a slot nobody derived was stored into: {port.executed}"
+
+    def test_the_macro_pool_is_still_read_when_there_are_groups(self):
+        # NON-VACUITY (passes pre-fix by design): the guard must skip the read on
+        # the branch that stores nothing, not disable it everywhere.
+        rig = RigPort(groups=(11,))
+        _dispatch(_registry(rig=rig, gate=ClearingGate()), create_macro=True)
+        assert "DataPool/Macros" in rig.state_calls
+
+
+class TestMissingRigSectionIsAWiringGap:
+    """PR #7 review A1-3 — a dropped rig_paths section blamed the group pool.
+
+    Indexing ``rig_paths`` inside the try block rendered a ``KeyError`` as
+    ``group pool unreadable: 'groups'``: a wiring mistake reported as a failed
+    read of a pool that was never queried.
+    """
+
+    def _dispatch_with(self, rig_paths):
+        rig = RigPort()
+        registry = build_toolset(
+            execution_port=RecordingExecutionPort(),
+            state_port=rig,
+            property_port=rig,
+            rig_paths=rig_paths,
+            bundle_gate=ClearingGate(),
+        )
+        return rig, _dispatch(registry, create_macro=True)
+
+    def test_an_override_missing_both_sections_names_them(self):
+        rig, execution = self._dispatch_with({"fixtures": FIXTURE_ROOT})
+        assert execution.result.is_error is True
+        content = execution.result.content
+        assert "groups" in content and "macros" in content
+        assert "no path configured" in content
+        # Not a failed read: nothing was queried, so nothing may be called
+        # unreadable.
+        assert "unreadable" not in content
+        assert "DataPool/Groups" not in rig.state_calls
+        assert "DataPool/Macros" not in rig.state_calls
+
+    def test_an_override_missing_only_the_macro_pool_names_only_it(self):
+        _rig, execution = self._dispatch_with(
+            {"fixtures": FIXTURE_ROOT, "groups": "DataPool/Groups"}
+        )
+        assert execution.result.is_error is True
+        content = execution.result.content
+        assert "macros" in content
+        assert "unreadable" not in content
+        assert "'groups'" not in content, f"a configured section was blamed: {content}"
+
+    def test_a_complete_override_still_builds_the_macro(self):
+        # Non-vacuity: the guard must not reject every override.
+        _rig, execution = self._dispatch_with(
+            {
+                "fixtures": FIXTURE_ROOT,
+                "groups": "DataPool/Groups",
+                "macros": "DataPool/Macros",
+            }
+        )
+        assert execution.result.is_error is False
+        assert json.loads(execution.result.content)["macro"]["created"] is True

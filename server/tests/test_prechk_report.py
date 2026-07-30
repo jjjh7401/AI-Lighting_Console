@@ -28,7 +28,7 @@ from server.prechk.macro import (
     MacroPolicy,
     build_response_check_macro,
 )
-from server.prechk.patch import FootprintPolicy, evaluate_patch
+from server.prechk.patch import SCOPE_QUALIFIER, FootprintPolicy, evaluate_patch
 from server.prechk.report import VOCABULARY_LABELS, build_report, label
 from server.prechk.verdicts import CLOSED_VOCABULARIES, UnknownVerdict
 
@@ -155,8 +155,18 @@ class TestArithmeticCloses:
         rows = payload["fixtures"]
         for verdict, count in payload["verdict_counts"].items():
             if verdict == "not_assessed":
-                continue  # the unobserved population has no rows, by definition
+                # The unobserved population has no rows — but "no rows" is not
+                # "unverifiable". Skipping it left the ONE number that is not
+                # derived from the rows unchecked: `not_assessed` is assigned
+                # straight from `inventory.missing_count`, and the other two
+                # tests here only read that assignment back. That is what let a
+                # snapshot report `관측 3개 / 보고된 자식 수 2개` while calling itself
+                # complete. Check it against the declared population instead.
+                assert count == payload["inventory"]["child_count"] - len(rows)
+                continue
             assert count == sum(1 for row in rows if row["verdict"] == verdict)
+        # And the whole census closes: AC-PRECHK-003's identity, at report level.
+        assert sum(payload["verdict_counts"].values()) == payload["inventory"]["child_count"]
 
     def test_every_observed_fixture_appears_exactly_once(self):
         inventory = _duplicate_rig()
@@ -311,6 +321,25 @@ class TestKoreanLabels:
         summary = build_report(evaluation).to_dict()["summary_ko"]
         # An incomplete read must not read as a clean bill of health.
         assert label("completeness", "incomplete") in summary
+
+    def test_an_incomplete_read_qualifies_the_collision_count(self):
+        # `scope_qualified`/`scope_note` exist for exactly this claim and the
+        # paragraph was dropping them: a bare `충돌 N건` reads as a number covering
+        # the whole rig even when part of it was never observed — the reading
+        # REQ-PRECHK-010 exists to prevent, and the one a log grep performs.
+        evaluation = evaluate_patch(_inventory([_record(1, "1.001")], child_count=9))
+        assert evaluation.scope_qualified is True
+        summary = build_report(evaluation).to_dict()["summary_ko"]
+        assert f"{SCOPE_QUALIFIER} 충돌" in summary, summary
+
+    def test_a_complete_read_does_not_qualify_the_collision_count(self):
+        # Non-vacuity: the qualifier must not become unconditional decoration —
+        # a rig read in full IS a rig-wide statement.
+        evaluation = evaluate_patch(_clean_rig())
+        assert evaluation.scope_qualified is False
+        summary = build_report(evaluation).to_dict()["summary_ko"]
+        assert SCOPE_QUALIFIER not in summary, summary
+        assert "충돌 0건" in summary
 
     def test_a_complete_read_says_so_with_the_other_label(self):
         summary = build_report(evaluate_patch(_clean_rig())).to_dict()["summary_ko"]

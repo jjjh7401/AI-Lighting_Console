@@ -269,6 +269,44 @@ class TestRangeOverlapBranches:
         assert rows[2].verdict == READ_FAILED
         assert TYPE_MODE_UNRESOLVED in rows[2].reasons
 
+    def test_a_fixture_with_no_width_is_announced_not_silently_excluded(self):
+        # `_range_overlaps` drops a width-less fixture with a bare `continue`,
+        # leaving no trace in `reasons`, `skipped_checks` or any row field — while
+        # the sibling exclusion (unresolved mode, above) leaves a code AND drops
+        # the verdict. So the fixture was never compared and the report called it
+        # clear. `widths` carries no totality constraint and its designed source
+        # is a per-type read that can fail: a PARTIAL map is a normal result.
+        pool = FixturePool(
+            {
+                1: fixture_props("1.001", name="폭 있음"),
+                2: fixture_props("1.011", name="폭 없음"),
+                3: fixture_props("1.021", name="폭 없음 2"),
+            }
+        )
+        policy = FootprintPolicy(enabled=True, widths={1: 29}, source="DMXChannels child count")
+        evaluation = evaluate_patch(read_inventory(pool), policy)
+        skipped = [c for c in evaluation.skipped_checks if c.kind == RANGE_OVERLAP_DESCOPE]
+        assert len(skipped) == 1, (
+            "two fixtures were never compared and the report said nothing: "
+            f"{[c.kind for c in evaluation.skipped_checks]}"
+        )
+        assert "2" in skipped[0].reason and "3" in skipped[0].reason, skipped[0].reason
+
+    def test_an_enabled_axis_with_no_widths_at_all_is_not_a_clean_bill(self):
+        # The worst shape of the same defect: every fixture is excluded, zero
+        # collisions are found, and without the notice the user reads that the
+        # range-overlap check ran and the rig is clean.
+        evaluation = evaluate_patch(
+            read_inventory(range_overlap_go()), FootprintPolicy(enabled=True, widths={})
+        )
+        assert evaluation.range_overlaps == ()
+        assert [c.kind for c in evaluation.skipped_checks] == [RANGE_OVERLAP_DESCOPE]
+
+    def test_full_width_coverage_announces_nothing(self):
+        # Non-vacuity: the notice must not fire whenever the axis is enabled.
+        evaluation = evaluate_patch(read_inventory(range_overlap_go()), GO_FOOTPRINT)
+        assert evaluation.skipped_checks == ()
+
     def test_the_descope_prefix_line_exists_in_progress(self):
         text = (
             PROJECT_ROOT / ".moai" / "specs" / "SPEC-COPILOT-PRECHK-001" / "progress.md"
