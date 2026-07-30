@@ -213,7 +213,137 @@ next: "**Kickoff 접점 2건 승인 완료 · §F 작성 완료**(첫 run-phase 
 
 ## §E.2 Run-phase Evidence
 
-_<pending run>_
+### M0 — 라이브 프로브 (AC-PRECHK-016 · cycle_type=none · 2026-07-30)
+
+`.moai/state/`는 `.gitignore:206` 대상이므로 커밋되지 않는다. **본 절이 M0의 추적되는 정본이며 실측 원문을 요약 없이 전재한다.**
+
+#### 세션 조건 — 착수 직전 직접 측정 (조사 문서 값을 이월하지 않았다)
+
+| 항목 | 측정값 |
+|---|---|
+| 응답기 | `version=1.5.0` · `plugin=CopilotResponder` |
+| OSC | send 8000 / receive 9005 (기본 9000 아님) |
+| `responder_roundtrip --expect-version 1.5.0` | ping · state · exec **3/3 PASS** |
+| 코드 baseline | `uv run pytest server/tests/ -q` → **2490 passed · 5 skipped · 0 failed** |
+| 저장소 diff | `git status --short` **빈 출력** — 코드 변경 0건 |
+
+쇼파일 착수 baseline: `DataPool/Sequences` childCount 17 인덱스 `[1,2,11,12,13,14,15,16,17,20,30,41,50,62,71,80,90]` · `DataPool/Timecodes` childCount 0 · `Patch/Stages/1/Fixtures` **childCount 19 / 반환 18 / truncated true** · `DataPool/Groups` childCount 4 인덱스 `[1,11,12,13]` · `DataPool/Macros` childCount 1 (`Copilot Go`) · `DataPool/Pages` childCount 1 (`Page 1`) · `DataPool/Pages/1` childCount 9 자식 `['Sequence 50','Sequence 17','Sequence 30','Sequence 41','Sequence 80','Sequence 14','Sequence 16','Sequence 62','Ballad Yellow Red']`.
+
+#### 판정 — 접두 행 합 6행, 한 `ASSUMPTION`이 두 행을 갖지 않는다
+
+```
+GO: ASSUMPTION-25 literal=prop Patch/Stages/1/Fixtures/<slot> Patch effect=슬롯 1~19 전량에서 Patch·FixtureType·Mode·Name 76건 조회 전부 ok=true, 판독 실패 0건, 미관측 19번째를 Patch/Stages/1/Fixtures/19 단일 조회로 채워 name='MMX 19' Patch='2.401' 실측
+GO: ASSUMPTION-26 literal=Store Macro 91 ; Store Macro 91.1 ; Set Macro 91.1 Property 'Command' 'On Group 11' effect=DataPool/Macros childCount 1에서 2로 증가하고 자식에 'Macro 91' 출현, DataPool/Macros/91 childCount 0에서 1로 증가해 'MacroLine 1' 출현, prop DataPool/Macros/91/1 Command 재조회 값 'On Group 11'
+DESCOPE: ASSUMPTION-27 표시 문자열 파싱 없이 점유폭에 도달하는 경로가 0건이다. 객체 경로 순회 3종(Patch/Stages/1/Fixtures/1/FixtureType · /Mode · /DMXChannels)이 전부 path segment not found이고 픽스처 노드 childCount는 0이다. 인덱스 반환 후보 프로퍼티 11종 중 판독 가능은 No(값 '1' — 슬롯이며 타입 인덱스가 아니다)와 Index(ok=true인데 값이 'function: 0x105b0f048')뿐이다. 구간 겹침 판정만 미수행이고 주소 중복 판정은 수행된다
+GO: ASSUMPTION-28 literal=Store Page 2 ; Label Page 2 'PRECHK Probe' effect=DataPool/Pages childCount 1에서 2로 증가하고 자식에 'Page 2' 출현, prop DataPool/Pages/2 Name 재조회 값 'PRECHK Probe'
+GO: ASSUMPTION-29 literal=Assign Sequence 20 At Executor 103 ; Delete Executor 103 effect=열거에 부재했던 인덱스 3이 배정 뒤 DataPool/Pages/1 자식으로 출현(childCount 9에서 10)하고 삭제 뒤 다시 사라져 childCount 9로 복귀, 즉 열거 부재가 빈 익스큐터를 뜻하고 그 인덱스가 주소형 <인덱스 더하기 100>으로 도달 가능하다
+DESCOPE: ASSUMPTION-30 두 연언 중 page 이상 2 일반화가 부정이므로 축이 꺼진다. Assign Preset 4.1 At Executor 202는 효과가 확인됐다(테스트 익스큐터 102의 Name이 'Ballad Yellow Red'에서 '금빛 코러스'로 재조회 변경 — BUSKWIZ G2의 파싱만 확인된 항목을 효과까지 닫았다). 그러나 page x 100 + slot의 page 이상 2는 성립하지 않는다: Assign Sequence 1 At Executor 201이 Cmd ok를 내면서 page 2가 아니라 page 1의 인덱스 101을 덮었고, Assign Sequence 1 At Executor 2.1은 Cannot Create Object이며, 생성된 page 2는 세션 종료까지 childCount 0을 유지했다
+```
+
+접두어 계수: `GO:` 4행 · `DESCOPE:` 2행 · `SKIP:` 0행 · `REOPEN:` 0행 = **합 6행.** `REOPEN_SCOPE` 0건이므로 범위 재개정 접점은 발생하지 않았고, `CONDITION_NOT_MET` 0건이므로 미측정을 폐쇄로 세는 항목도 없다.
+
+#### `ASSUMPTION-25` 실측 원문 — 19슬롯 전량
+
+| 슬롯 | `Name` | `Patch` | `FixtureType` | `Mode` |
+|---|---|---|---|---|
+| 1 | `RMMXSm1 1` | `1.001` | `FixtureType 1` | `1 Mode 1` |
+| 2 | `Copilot MMX 2` | `1.101` | `FixtureType 1` | `1 Mode 1` |
+| 3 | `Copilot MMX 3` | `1.143` | `FixtureType 1` | `1 Mode 1` |
+| 4 | `Copilot MMX 4` | `1.185` | `FixtureType 1` | `1 Mode 1` |
+| 5 | `Copilot MMX 5` | `1.227` | `FixtureType 1` | `1 Mode 1` |
+| 6 | `Copilot MMX 6` | `1.269` | `FixtureType 1` | `1 Mode 1` |
+| 7 | `Copilot MMX 7` | `1.311` | `FixtureType 1` | `1 Mode 1` |
+| 8 | `Copilot MMX 8` | `1.353` | `FixtureType 1` | `1 Mode 1` |
+| 9 | `Copilot MMX 9` | `1.395` | `FixtureType 1` | `1 Mode 1` |
+| 10 | `Copilot MMX 10` | `1.437` | `FixtureType 1` | `1 Mode 1` |
+| 11 | `MMX 11` | `2.001` | `FixtureType 1` | `1 Mode 1` |
+| 12 | `MMX 12` | `2.051` | `FixtureType 1` | `1 Mode 1` |
+| 13 | `MMX 13` | `2.101` | `FixtureType 1` | `1 Mode 1` |
+| 14 | `MMX 14` | `2.151` | `FixtureType 1` | `1 Mode 1` |
+| 15 | `MMX 15` | `2.201` | `FixtureType 1` | `1 Mode 1` |
+| 16 | `MMX 16` | `2.251` | `FixtureType 1` | `1 Mode 1` |
+| 17 | `MMX 17` | `2.301` | `FixtureType 1` | `1 Mode 1` |
+| 18 | `MMX 18` | `2.351` | `FixtureType 1` | `1 Mode 1` |
+| **19** | **`MMX 19`** | **`2.401`** | `FixtureType 1` | `1 Mode 1` |
+
+**19번째가 실측으로 채워졌다.** 인덱스 정의역은 경계 있는 범위 탐색으로 닫았다 — `Patch/Stages/1/Fixtures/20`부터 `Patch/Stages/1/Fixtures/30`까지 11건이 전부 `path segment not found`이고, 관측 18 + 미관측 1 = `childCount` 19로 **산술이 닫힌다.** 단 이것은 이 쇼파일의 실측이며, `design.md` 슬롯 A의 일반 규칙(보강 조회가 completeness를 `complete`로 승격하지 않는다)은 유지된다 — 상한을 코드로 아는 것이 아니라 탐색으로 확인했기 때문이다.
+
+#### `REQ-PRECHK-003`의 오염 사례를 라이브에서 재현했다
+
+`prop Patch/Stages/1/Fixtures/1 Index`가 **`ok=true`와 함께 `'function: 0x105b0f048'`** 을 반환했다. 응답기의 `safe_property`가 `handle:Get(name)` 실패 뒤 `handle[name]`을 `tostring`하기 때문이다(`console/lua/copilot_responder.lua:204-217`). `ok` 참만으로 값을 채택하면 Lua 함수 참조가 판정 입력으로 들어간다. **`REQ-PRECHK-003`은 이론적 방어가 아니고 이 쇼파일에서 재현되는 실측 현상이다.** M2는 이 문자열을 판독 실패 픽스처 fixture로 쓴다.
+
+#### `ASSUMPTION-26`의 부수 실측 — 룰북 리터럴만으로는 부족하다
+
+`research.md` §5가 기록한 라인 추가 리터럴 `Set Macro <m>.<line> Property 'Command' '<cmd>'`를 **선행 없이 발화하면 실패한다.** 실측 순서와 결과는 이렇다.
+
+| 순서 | 발화 | `Cmd` 접수 | 재조회 효과 |
+|---|---|---|---|
+| 1 | `Store Macro 91` | `OK` | `DataPool/Macros` childCount 1 → 2, `'Macro 91'` 출현 |
+| 2 | `Set Macro 91.1 Property 'Command' 'On Group 11'` | **`Illegal object`** | `DataPool/Macros/91` childCount 0 유지 — 효과 0 |
+| 3 | `Store Macro 91.1` | `OK` | `DataPool/Macros/91` childCount 0 → 1, `'MacroLine 1'` 출현 |
+| 4 | `Set Macro 91.1 Property 'Command' 'On Group 11'` | `OK` | `prop DataPool/Macros/91/1 Command` = `'On Group 11'` |
+
+**즉 라인 개체 생성(`Store Macro <m>.<line>`)이 프로퍼티 설정에 선행해야 한다.** 순서 2의 `Illegal object`는 "문법 없음"이 아니라 "대상 없음"이었고, `research.md` §5가 경고한 대로 **부정 프로브로는 그 둘이 갈리지 않았다** — 갈라낸 것은 생성 프로브와 재조회다. **M4는 3단계 순서를 그대로 저작해야 하며 룰북의 2리터럴만 발화하면 실패한다.**
+
+#### `Assign … At Executor <N>` 의 주소 기전 — 안전 관련 실측
+
+발화 5건의 관측을 모으면 기전이 하나로 정해진다: **`N`은 page 1 익스큐터 인덱스 `N` 빼기 100으로 해석된다.**
+
+| 발화 | `Cmd` 접수 | 관측된 대상 | 효과 |
+|---|---|---|---|
+| `Assign Sequence 1 At Executor 201` | `OK` | page 1 인덱스 101 | 기존 `'Ballad Yellow Red'`를 `'Default'`로 **덮어씀** |
+| `Assign Sequence 1 At Executor 2.1` | `Cannot Create Object` | 없음 | 효과 0 |
+| `Assign Sequence 20 At Executor 202` | `OK` | page 1 인덱스 102 | 부재 인덱스에 **신규 생성** |
+| `Assign Sequence 20 At Executor 195` | `OK` | page 1 인덱스 95 | 기존 `'Sequence 62'`를 덮어씀 |
+| `Assign Sequence 20 At Executor 103` | `OK` | page 1 인덱스 3 | 부재 인덱스에 신규 생성 |
+| `Assign Sequence 20 At Executor 1` · `Assign Sequence 20 At Executor 3` | `Cannot Create Object` | 없음 | 효과 0 (`N` 빼기 100이 1보다 작다) |
+
+`N`이 101부터 200까지면 `page x 100 + slot` 공식이 page 1에서 정확히 성립한다(인덱스 = `slot`). **그러나 `N`이 201 이상이면 page 성분이 존중되지 않고 page 1의 인덱스 공간으로 누출된다** — `Executor 201`은 page 2가 아니라 page 1 인덱스 101을 조용히 덮었다. 생성된 page 2는 선택(`Page 2` 발화 `OK`) 뒤에도 어떤 익스큐터도 받지 못하고 childCount 0을 유지했다. **이것이 `ASSUMPTION-30`을 부정으로 만든 근거이며, 동시에 `Cmd` 접수 `OK`가 의도한 대상에 닿았음을 뜻하지 않는다는 실측 사례다** — 슬롯을 FID로 오인해 엉뚱한 리그를 조용히 선택하는 형태(`console/lua/PROTOCOL.md:305-324`)와 같은 계열의 위험이다.
+
+#### 정리 기록 — 프로브가 남긴 것, 그 무해성, 원상 복구 증거
+
+생성 프로브가 쇼파일을 5지점 변경했고 **전건 복구했다.**
+
+| # | 변경 | 복구 발화 | 복구 후 재조회 |
+|---|---|---|---|
+| 1 | `Macro 91` 신규 + `MacroLine 1` | `Delete Macro 91` | `DataPool/Macros` childCount 1 · 자식 `['Copilot Go']` |
+| 2 | `Page 2` 신규(라벨 `PRECHK Probe`) | `Delete Page 2` | `DataPool/Pages` childCount 1 · 자식 `['Page 1']` |
+| 3 | page 1 인덱스 101이 `'Ballad Yellow Red'`에서 `'Default'`로 변경 | `Assign Sequence 20 At Executor 201` — **관측된 매핑을 그대로 역전시켰고 새 주소형을 도입하지 않았다** | 인덱스 101 = `'Ballad Yellow Red'` |
+| 4 | page 1 인덱스 95가 `'Sequence 62'`에서 `'Ballad Yellow Red'`로 변경 | `Assign Sequence 62 At Executor 195` | 인덱스 95 = `'Sequence 62'` |
+| 5 | page 1 인덱스 102·인덱스 3 신규 생성 | `Delete Executor 202` · `Delete Executor 103` | 두 인덱스 모두 자식 목록에서 사라짐 |
+
+부수로 선택 페이지를 `Page 2`로 옮겼고 `Page 1` 발화로 되돌렸다(쇼파일 내용이 아니라 세션 선택 상태다).
+
+**최종 대조 — 착수 baseline 전항 일치:**
+
+```
+응답기 1.5.0 CopilotResponder
+DataPool/Sequences        childCount=17 인덱스 일치 truncated=false
+DataPool/Timecodes        childCount=0  인덱스 일치 truncated=false
+Patch/Stages/1/Fixtures   childCount=19 반환 18 truncated=true  (baseline과 동일)
+DataPool/Groups           childCount=4  인덱스 일치 truncated=false
+DataPool/Macros           childCount=1  자식 ['Copilot Go']
+DataPool/Pages            childCount=1  자식 ['Page 1']
+DataPool/Pages/1          childCount=9  자식 ['Sequence 50','Sequence 17','Sequence 30','Sequence 41','Sequence 80','Sequence 14','Sequence 16','Sequence 62','Ballad Yellow Red']
+```
+
+**잔여물 0건.** 조건부 접점(`ASSUMPTION-28` GO 이후 테스트 오브젝트 잔여 시 복구 증거 공유)은 잔여가 0이므로 위 표가 그 증거다.
+
+#### 측정하지 못한 것
+
+1. **`FID` 의미.** 이 쇼파일은 슬롯과 `FID`가 같아 어떤 라이브 세션도 닫을 수 없다(`console/lua/PROTOCOL.md:322-324`). 본 SPEC은 `FID`를 판정 근거에서 배제한 형상으로 출하한다. 별도 쇼파일 준비가 선행 조건이다.
+2. **익스큐터 인덱스 정의역의 상한.** 인덱스 3과 인덱스 102가 배정 가능함은 실측했으나 유효 인덱스의 상한은 모른다. 픽스처 슬롯과 같은 `index_domain_unknown` 계열이다.
+3. **`Executor 201`이 인덱스 101에 닿은 기전의 내부 이유.** 관측은 `N` 빼기 100으로 일관되지만 MA3 내부에서 page 성분이 어떻게 누출되는지는 응답기 밖의 일이라 관측 경로가 없다.
+4. **무응답 픽스처.** 패치 메타데이터에는 응답 여부가 없다. 사용자가 이미 범위에서 제외했다.
+
+#### 후속 SPEC에 넘기는 신규 실측 2건
+
+1. **`DataPool/PresetPools`가 살아 있다** — childCount 14, 자식 `['Dimmer','Position','Gobo','Color','Beam','Focus','Control','Shapers','Video','All 1','All 2','All 3','All 4','All 5']`이고 `truncated=false`. 각 풀은 `class='Presets'`이며 `DataPool/PresetPools/1`과 `DataPool/PresetPools/4`가 각각 childCount 7로 LOOKLIB 산출물(`['금빛 코러스','벌스 사이드','프리코러스 빌드','리프 그린','코러스 히트','화이트 슬램','마지막 폭발']`)을 담고 있다. **`DataPool/Presets`와 `DataPool/AllPresets`는 `path segment not found`** 로 `REQ-PRECHK-002`의 사망 판정을 재확인했다 — 즉 프리셋의 살아 있는 경로는 `DataPool/PresetPools/<풀>`이다. 본 SPEC의 범위 밖이지만 프리셋을 읽는 후속 SPEC이 추측으로 경로를 고르지 않도록 기록한다.
+2. **`DataPool` 최상위 자식 16종** — `['Worlds','Filters','GeneratorTypes','PresetPools','Groups','Sequences','Plugins','Quickeys','MAtricks','Configurations','Pages','Layouts','Timecodes','Timers','Shapes']`에 `Macros`를 포함한 16개이고 `truncated=false`. 경로 추측을 대체하는 열거 근거다.
+
+#### M0 결론
+
+`ASSUMPTION-25`부터 `ASSUMPTION-30`까지 **6건 전부에 결과 어휘가 배정됐고 폐쇄 아님(`REOPEN_SCOPE`)이 0건**이다. 유일한 블로킹 전제였던 `ASSUMPTION-26`이 GO이므로 산출물 2(응답 확인 매크로)가 성립한다. `ASSUMPTION-27` 부정으로 구간 겹침 판정이 빠지고 주소 중복 판정만 남는다(`REQ-PRECHK-008`의 정의된 축소). **M1 착수 차단이 해소됐다.**
 
 ## §E.3 Run-phase Audit-Ready Signal
 
