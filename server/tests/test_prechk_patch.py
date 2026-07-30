@@ -873,6 +873,37 @@ class TestExactWidthsOutrankTheBound:
         bound_only = evaluate_patch(read_inventory(self._rig()), walk=_walked())
         assert bound_only.overlap_basis == BOUND_INCONCLUSIVE
 
+    def test_an_unread_population_drags_the_rig_wide_grade_down(self):
+        """AC-OVERLAP-013 · CONTRACT D-4 정직성 제약 1 — 미관측 개체도 미비교다.
+
+        ``assessed`` holds only the OBSERVED fixtures, so every clause that walks
+        it is blind to a truncated enumeration. A rig whose pool DECLARES more
+        children than it returned has fixtures nobody compared -- they have no
+        slot to compare -- and stamping ``bound_proves_clear`` over them is the
+        one error direction this axis can produce (`spec.md` §A 제약 4). The
+        run-audit measured exactly this: missing_count 22, grade
+        ``bound_proves_clear``, qualifier naming only the mode set.
+        """
+        spaced = FixturePool(
+            {1: fixture_props("1.100", name="A"), 2: fixture_props(f"1.{100 + BOUND}", name="B")}
+        )
+        whole = evaluate_patch(read_inventory(spaced), walk=_walked())
+        # Non-vacuity: the SAME rig read wholly really does clear, so the
+        # downgrade below is the unread population talking and not a rig that
+        # was unsettled anyway.
+        assert whole.overlap_basis == BOUND_PROVES_CLEAR
+        assert whole.inventory.missing_count == 0
+
+        spaced.child_count = 4
+        spaced.truncated = True
+        partial = evaluate_patch(read_inventory(spaced), walk=_walked())
+        assert partial.inventory.missing_count == 2
+        assert partial.overlap.bound == BOUND, "상계는 여전히 산출된다 — 순회는 성공했다"
+        assert partial.overlap_basis == NOT_PERFORMED
+        # And the qualifier must say so: naming only the mode set would leave the
+        # unread fixtures unmentioned in the one string the user reads.
+        assert "미관측" in partial.overlap.observation_note
+
     def test_a_mixed_rig_runs_both_axes_and_reports_each_origin(self):
         partial = FootprintPolicy(enabled=True, widths={1: 4, 2: 4}, source=FOOTPRINT_SOURCE)
         evaluation = evaluate_patch(read_inventory(self._rig()), partial, _walked())

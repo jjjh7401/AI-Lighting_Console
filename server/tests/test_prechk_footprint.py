@@ -872,6 +872,23 @@ class TestSiblingAnsweredDecidesTheFirstFailure:
     raises one exception type either way, so the fact has to be passed in.
     """
 
+    def test_the_flag_has_no_default_so_a_caller_cannot_omit_it(self):
+        """The omission must be LOUD, which is a shape claim, not a behaviour one.
+
+        Design slot C says the walk is reached only after the fixture-root read
+        succeeded, so "a sibling answered" is structurally true at the production
+        seam. A default of ``False`` would contradict that and, worse, would do it
+        silently: a caller that forgets the argument reports every configuration
+        defect as an unreachable console. Every call site passing the flag today
+        makes restoring a default invisible to behavioural tests -- an audit
+        re-injection confirmed a restored default kills nothing -- so the absence
+        has to be asserted directly. Same principle as D-6: remove the symptomless
+        step rather than trust the next caller to remember it.
+        """
+        parameter = signature(walk_mode_widths).parameters["sibling_answered"]
+        assert parameter.default is parameter.empty
+        assert parameter.kind is parameter.KEYWORD_ONLY
+
     def test_a_dead_root_with_no_sibling_is_an_unreachable_console(self):
         outcome = walk_mode_widths(
             Rig(dead_everything=True), root=ROOT, budget=WIDE_BUDGET, sibling_answered=False
