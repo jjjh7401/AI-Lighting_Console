@@ -304,7 +304,67 @@ next: "**plan-audit 1회차 완료 — FAIL 0.806 → 지적 19건 전건 처리
 17. **작성자의 교차 대조는 자기가 대조한 축에서만 유효하다.** 나는 마일스톤 AC 배정·고정 문자열·BASE 세 축을 프로그램으로 대조하고 *"드리프트 0건"*을 신호했다. **감사가 네 번째 축(계수 문구)에서 P1을 찾았다** — 내가 `acceptance.md`를 7/3으로 고친 그 커밋에 `design.md`의 4/6이 들어 있었다. **대조 집합을 열거하지 않으면 무엇이 대조되지 않았는지 아무도 알 수 없다**(P3-19가 P1-1과 짝인 이유). 이제 `cross_document_drift`가 대조 축을 열거한다.
 18. **자기가 방금 쓴 테스트도 잊는다.** P2-5에서 *"`state_calls` 등호 단정 0건"*을 `[코드]` 등급으로 단정했는데 **그 단정을 깨는 테스트를 같은 세션에서 내가 직접 썼다.** 전수 주장의 근거는 그것을 만든 사람의 기억이 아니라 **방금 돌린 명령의 출력**이어야 한다.
 
-## §F Phase 4 Mode Selection — 미도래 (오케스트레이터 소유)
+## §4 Run-phase Evidence
+
+### M0 — 전제 판정: `state`만으로 도달하는가 (`AC-OVERLAP-020` · `cycle_type=none` · 2026-07-30)
+
+> **본 절이 M0의 추적되는 정본이다.** 프로토타입은 저장소 밖(`/tmp`)에서 돌렸고 판정 직후 삭제했으므로 실행 원문을 여기 요약 없이 전재한다(`plan.md` §F.3).
+
+#### 착수 전제 확인 — 직접 실측이며 이월 인용이 아니다
+
+| 명령 | 산출 | 판정 |
+|---|---|---|
+| `git branch --show-current` | `feature/SPEC-COPILOT-OVERLAP-001` | 일치 |
+| `git status --short` | 빈 출력 | 일치 |
+| `git merge-base --is-ancestor 85a4b2389003cb61b0ab72eb4aa8d6b2ff90b94a HEAD` | 종료 코드 **0** (HEAD = `8a5fa77f7e57be23df887019c1f258dfdb06371a`) | 진입 조건 1 충족 |
+| `find server -name __pycache__ -type d -exec rm -rf {} + ; uv run pytest server/tests/ -q` | **2758 passed · 5 skipped · 0 failed** (89.12s) | 진입 조건 2 충족 · baseline 확정 |
+
+#### 프로토타입 — arm 5개이며 arm B가 없으면 arm A의 통과는 공허하다
+
+`StateOnlyPort`는 **`query_state` 하나만 정의하고 `query_property`를 정의하지 않는다** — 프로퍼티를 한 번이라도 요구하면 `AttributeError`로 즉시 드러난다. 그것이 판정 장치이며 arm B가 그 장치가 살아 있음을 대조군으로 고정한다. 페이로드 형태는 `console/lua/PROTOCOL.md` 제4절과 `console/lua/copilot_responder.lua:600-640`에서, 리그 수치(모드 폭 29·29·29·31, `DMXChannels` 열거 절단과 `childCount` 참값의 비대칭)는 `.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md:403`·`:408`에서 왔다 `[문서]`.
+
+| arm | 무엇을 갈랐나 | 산출 |
+|---|---|---|
+| **A** | 3단 순회가 state 전용 포트로 완주하는가 | 조회 **6회** = `1 + T(1) + ΣM(4)` · 호출된 포트 메서드 **`['query_state']`** · 관측 폭 `[29, 29, 29, 31]` → 상계 **31** · 열거 완전 `True` |
+| **B** | 판정 장치가 공허하지 않은가 (대조군) | `walk_needing_property`가 `AttributeError: 'StateOnlyPort' object has no attribute 'query_property'` — **부정 판정의 모습이 관측 가능하다** |
+| **C** | arm A가 쓴 표면이 프로덕션에 이미 있는가 | `StateQueryPort` 선언 메서드 = `['query_state']`이고 순회 호출 집합이 그 부분집합 · 초크포인트 3층 `ConsolePort` · `ConsoleLink` · `_GateStatePort` 전부 `query_state` 보유 · `server/prechk/inventory.py`의 `server.bridge` import **없음** |
+| **D** | 열거가 짧을 때 상계가 상계가 아님을 state 표면만으로 판별할 수 있는가 | 2단 예산을 3으로 줄이면 상계 후보 **29** · 완전성 **`False`** · 사유 `2단 열거 부분: 3/4 (타입 1)` — `childCount`와 `len(children)`이 **같은 스냅샷에** 있으므로 판별에 프로퍼티가 필요 없다 |
+| **E** | 예산 소진이 state 표면에서 관측되는가 | 예산 3에서 `BudgetExhausted: Patch/FixtureTypes/1/DMXModes/2/DMXChannels` |
+
+**부수 확립 1건 — 순회는 이름도 `FID`도 요구하지 않는다.** 경로 세그먼트에 스냅샷이 스스로 보고하는 **풀 슬롯 `i`**를 쓴다. `console/lua/copilot_responder.lua:426-449`가 숫자 세그먼트를 풀 슬롯으로 해석하고 그것이 `PROTOCOL.md`의 `i`와 같은 번호임을 주석으로 명시한다 `[코드]`. 즉 **식별자 해석 단계가 0단계**이며, 선행 SPEC이 `FID`를 판정 근거에서 배제해야 했던 종류의 미결이 이 축에는 발생하지 않는다.
+
+**arm C가 `ASSUMPTION-34`를 `server/safety/**`에 연결하는 방식.** PRECHK가 조건부 예외를 받은 사유는 `prop`이 **프로덕션 경로로 도달 불가**였다는 것이다 — `build_prop_query`에 프로덕션 소비자가 0건이었고 OSC 송신 표면 import이 `server/bridge/` · `server/safety/` · `server/tests/` 셋으로 강제된다(`server/tests/test_architecture.py:27-31`) `[코드]`. 본 SPEC의 순회는 `query_state`만 쓰고 그 메서드는 초크포인트 3층에 **이미** 있으므로 신규 예외 지점이 **0건**이다. `server/safety/gate.py:601-610`의 `_query_state`는 경로 화이트리스트를 갖지 않고 조회 1건을 감사 1건으로 기록하므로 순회가 그 계약을 바꾸지도 않는다 `[코드]`.
+
+#### 접두 행 5행 — 정본
+
+```
+GO: ASSUMPTION-34 ports=query_state effect=3단 순회(Patch/FixtureTypes 열거 -> Patch/FixtureTypes/1/DMXModes 열거 -> 각 모드 DMXChannels 계수)가 query_property를 정의하지 않은 인메모리 포트에서 조회 6회로 완주해 상계 31을 냈고 호출된 포트 메서드 집합이 정확히 {query_state}이며 그 집합이 StateQueryPort 선언 집합의 부분집합이고 ConsolePort·ConsoleLink·_GateStatePort 3층이 전부 그 메서드를 이미 보유한다. 대조군은 프로퍼티 요구가 AttributeError로 즉시 드러남을 확인했다. 귀결: server/safety/** 무변경이 확정되고 신규 예외 지점은 0건이다
+SKIP: ASSUMPTION-31 연속 블록 전제. 브레이크가 둘 이상인 픽스처타입을 패치한 쇼파일에서 그 픽스처의 Patch 값과 해당 모드 DMXChannels childCount를 비교하면 갈린다 — 하나의 연속 블록이면 start + width - 1이 점유 끝과 일치하고 두 블록이면 어긋난다. 현 쇼파일은 픽스처타입 1종뿐이라 실험이 원리적으로 불가능하며 라이브 세션을 열어도 갈리지 않는다. 거짓이면 상계가 첫 블록을 과대평가하고 둘째 블록을 완전히 놓친다
+SKIP: ASSUMPTION-32 DMXChannels 자식이 DMX 슬롯인가 논리 채널인가. 자식 이름을 확보하면 갈린다 — 열거가 절단되므로 DMXChannels/<n>을 개별 경로로 조회하거나 예산을 늘려 이름을 받고 16비트 어트리뷰트가 2슬롯을 차지하는 사례를 찾는다. 자식이 논리 채널이면 childCount < 실제 슬롯 수이고 상계가 과소평가되어 bound_proves_clear가 거짓 안심이 된다. 현재 저장소에 자식 이름 기록이 0건이다
+SKIP: ASSUMPTION-33 유니버스 용량 B. 판정이 갈리는 창은 B 구간 437 이상 466 이하의 30값뿐이고 B가 467 이상이면 몰라도 증명된다. state Patch/DmxAddresses의 childCount가 512의 배수인가를 조회하면 간접적으로 갈리며 직접 경계 실험은 상계 폭 픽스처를 주소 490 근처에 패치 시도하는 쓰기이므로 본 SPEC 범위 밖이다. 걸리는 축은 꼬리 초과 판정 하나이며 spec.md의 Out of Scope가 그것을 범위 밖으로 뒀다
+SKIP: ASSUMPTION-35 Patch/FixtureTypes의 childCount 즉 타입 수 T. state Patch/FixtureTypes 1회로 갈리며 node.childCount와 len(children)을 함께 읽어야 한다 — children 길이만 보면 절단된 풀에서 T를 과소평가한다. 본 SPEC은 T를 몰라도 안전하다: 예산 상한을 보수적으로 잡고 소진 시 not_performed를 내는 형상이며 M0 arm E가 그 소진이 state 표면에서 관측됨을 확인했다. 라이브 조회 1회로 닫히지만 본 SPEC은 라이브 세션 0회이므로 닫지 않는다
+```
+
+**접두어 계수: `GO:` 1행 · `SKIP:` 4행 · `DESCOPE:` 0행 · `REOPEN:` 0행 = 합 정확히 5행.** 한 전제가 두 행을 갖지 않는다. `REOPEN:` 0건이므로 범위 재개정 접점은 발생하지 않았고 `plan.md` §B.0의 부정 분기 3항은 **집행되지 않는다.**
+
+#### DoD 6항 — 전건 기계 판정
+
+| # | 조건 | 산출 | 판정 |
+|---|---|---|---|
+| 1 | 접두 행 합이 정확히 5행 | `grep -cE '^(GO\|DESCOPE\|SKIP\|REOPEN):'` → **5** (착수 시점 0) | 충족 |
+| 2 | `ASSUMPTION-34` 행에 포트 메서드 이름 목록이 병기되고 비공허 | `ports=query_state` — 원소 1개, 공집합 아님 | 충족 |
+| 3 | `ASSUMPTION-31`·`ASSUMPTION-32`·`ASSUMPTION-33` 접두어가 `SKIP:`이고 측정 방법을 담는다 | 3행 전부 `SKIP:` · 각 행이 "무엇을 조회하면 갈리는가"를 담는다. `ASSUMPTION-35`도 같은 형태(`AC-OVERLAP-020` ③) | 충족 |
+| 4 | `git status --porcelain -- server/ console/` 빈 출력 | 빈 출력 | 충족 |
+| 5 | `git status --porcelain` 빈 출력 (기록 커밋 이후) | 아래 §4의 커밋 직후 빈 출력 | 충족 |
+| 6 | 스위트 계수가 baseline과 동일 | **2758 passed · 5 skipped · 0 failed** — 진입 시와 동일 | 충족 |
+
+**`AC-OVERLAP-020` 중 M0가 판정하는 것은 ①②③이며 ④⑤는 M2·M5가 집행한다**(`acceptance.md` `AC-OVERLAP-020` 말미). M0는 ④⑤에 대해 아무것도 주장하지 않는다 — arm D·E가 그 형상이 state 표면에서 **표현 가능함**을 보였을 뿐이고 코드로 고정하는 것은 M2다.
+
+#### 프로토타입은 버려졌다
+
+`/tmp/overlap-m0-proto/proto.py`(7879바이트)를 판정 직후 `rm -rf`했다. 저장소 트리 안에 만들지 않았으므로 DoD 4·5는 삭제 여부와 무관하게 성립하며, 그것이 `/tmp`를 고른 이유다 — `server/`나 `server/tests/`에 두면 삭제를 잊는 순간 `cycle_type=none` 위반이 된다(`CONTRACT.md` §8 R-9).
+
+## §F Phase 4 Mode Selection — 확정 (오케스트레이터 소유 · 2026-07-30)
 
 > 본 절은 **오케스트레이터가 첫 run-phase 스폰 전에 작성**하는 구속력 있는 기록이다. `plan.md` §G의 대응 절은 **권고**이며 오케스트레이터가 확정하거나 기각한다. 어긋나면 **본 절이 이긴다.**
 >
@@ -315,3 +375,17 @@ next: "**plan-audit 1회차 완료 — FAIL 0.806 → 지적 19건 전건 처리
 **오케스트레이터는 M0 실측 후에 이 권고를 확정하거나 개정한다.** PRECHK가 폭 1로 확정한 뒤 M0 실측이 미지를 닫아 M4가 자립 슬라이스가 되자 **§F.1로 폭 2로 개정한 선례**가 있다(`.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md` §F.1). **폭을 미리 약속하지 않는다.**
 
 **읽기 전용 scout 병렬은 폭 권고와 무관하게 계속 유효하다** — 본 SPEC plan-phase가 scout 4개를 동시에 돌려 충돌 0건이었고 선행 기록 정정 5건을 냈다.
+
+### §F.1 확정 — 오케스트레이터 직접 집행 · 폭 1 (M0 실측 후)
+
+**`plan.md` §G의 권고를 방향에서 확정하고 수단에서 개정한다.** 권고는 *"sub-agent 순차 · 초기 폭 1"*이었다. **폭 1은 확정하고, 그 폭 1의 주체를 sub-agent가 아니라 오케스트레이터 직접으로 정한다.**
+
+| 축 | 확정 | 근거 |
+|---|---|---|
+| 폭 | **1** | `plan.md` §G의 근거 셋이 M0 실측으로도 약해지지 않았다 — M1은 여전히 M3·M4·M5의 import 선행물이고, 파일 교집합 0인 쌍은 M7 하나뿐이며 그것도 M6 커밋에 걸려 있다(`CONTRACT.md` §8 R-5) |
+| 주체 | **오케스트레이터 직접** (sub-agent 스폰 0건) | 폭 1에서 sub-agent는 병렬 이득이 0인데 **핸드오프 손실만 남긴다.** 본 SPEC의 P1 3건이 전부 교차 정합 축이었고(§3) 그 층은 전 아티팩트를 한 머리에 들고 있는 주체에게만 보인다 |
+| 읽기 전용 scout | **계속 유효** | plan-phase가 scout 4개로 충돌 0건 · 선행 기록 정정 5건을 냈다. 좌표 재발견이 필요해지면 쓴다 |
+
+**M0 실측이 폭을 넓히지 않은 이유 — PRECHK 선례와 갈리는 지점.** PRECHK는 M0 실측이 미지를 닫아 M4가 **자립 슬라이스**가 되면서 폭 2로 개정했다(`.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md` §F.1). 본 SPEC의 M0가 닫은 것은 `ASSUMPTION-34`이며 그것이 푼 것은 **`server/safety/**` 무변경 확정**뿐이다 — 즉 M6·M7의 *형상*을 고정했을 뿐 **어떤 마일스톤도 선행물에서 떼어내지 않았다.** 어휘 사슬은 그대로다. 폭을 넓힐 근거가 M0에서 나오지 않았다.
+
+**첫 스폰 시점의 기록.** 본 절 작성 시점의 sub-agent 스폰은 **0건**이며, 이후 폭을 넓히면 §F.2를 신설해 그 시점과 근거를 남긴다. **비어 있는 §F.2가 "넓히지 않았다"의 기록이다.**
