@@ -1200,3 +1200,213 @@ class TestBoundaryProhibitions:
             frozenset({"server/tools/osc_smoke.py", "server/tools/responder_roundtrip.py"})
             == _NAMED_TOOL_EXEMPTIONS
         )
+
+
+class GatedRig(FootprintRigPort):
+    """``FootprintRigPort`` plus the two methods the safety gate's console needs.
+
+    The gate is used verbatim rather than simulated: the "one query, one audit
+    row" property belongs to the chokepoint, and a hand-rolled double would only
+    restate what the test is supposed to check.
+    """
+
+    def execute(self, command: str):
+        from server.safety.console import ExecOutcome
+
+        return ExecOutcome(status="ok", detail="OK")
+
+    def ping(self) -> bool:
+        return True
+
+
+def _gated(tmp_path, rig=None):
+    from server.safety.audit import AuditLog
+    from server.safety.gate import SafetyGate
+
+    rig = rig or GatedRig()
+    audit = AuditLog(tmp_path / "audit")
+    gate = SafetyGate(console=rig, audit=audit)
+    registry = build_toolset(
+        execution_port=gate.execution_port,
+        state_port=gate.state_port,
+        property_port=gate.state_port,
+        rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+    )
+    return registry, rig, audit
+
+
+def _basis(payload) -> str:
+    return payload["overlap_basis"]["basis"]
+
+
+class TestEveryGradeThroughTheTool:
+    """AC-OVERLAP-021 ① — the axis end to end, one rig per reachable grade.
+
+    Three of the four grades are reachable here. The fourth, ``exact_widths``, is
+    NOT, and cannot be: the shipped handler builds no ``FootprintPolicy`` because
+    the fixture-to-footprint join was refuted, and the bound axis exists precisely
+    because of that. Inventing a code path to reach it would re-enable a refuted
+    axis. ``test_the_exact_width_grade_is_unreachable_through_the_tool`` states
+    that with its machine evidence instead of leaving it implied.
+    """
+
+    #: A rig with two fixtures 40 channels apart. The widest enumerated mode is
+    #: 17, so 40 clears the bound.
+    def _spaced_rig(self, gap: int) -> FootprintRigPort:
+        return FootprintRigPort(
+            fixtures={
+                1: {**_FIXTURES[1], "Patch": "1.100"},
+                2: {**_FIXTURES[2], "Patch": f"1.{100 + gap:03d}"},
+            }
+        )
+
+    def test_bound_proves_clear_is_produced(self):
+        rig = self._spaced_rig(max(FootprintRigPort.MODE_WIDTHS) + 1)
+        registry = build_toolset(
+            execution_port=RecordingExecutionPort(),
+            state_port=rig,
+            property_port=rig,
+            rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+        )
+        payload = json.loads(_dispatch(registry).result.content)
+        assert _basis(payload) == "bound_proves_clear"
+        assert payload["overlap_basis"]["bound"] == max(FootprintRigPort.MODE_WIDTHS)
+
+    def test_bound_inconclusive_is_produced(self):
+        rig = self._spaced_rig(max(FootprintRigPort.MODE_WIDTHS) - 1)
+        registry = build_toolset(
+            execution_port=RecordingExecutionPort(),
+            state_port=rig,
+            property_port=rig,
+            rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+        )
+        payload = json.loads(_dispatch(registry).result.content)
+        assert _basis(payload) == "bound_inconclusive"
+        assert "range_overlap_bound_inconclusive" in [
+            row["kind"] for row in payload["skipped_checks"]
+        ]
+        # Not a collision: an upper bound cannot prove an overlap EXISTS.
+        assert payload["collisions"]["range_overlaps"] == []
+
+    def test_not_performed_is_produced(self):
+        # The base double raises for the fixture-type root, so no bound exists.
+        payload = json.loads(_dispatch(_registry()).result.content)
+        assert _basis(payload) == "not_performed"
+
+    def test_the_exact_width_grade_is_unreachable_through_the_tool(self):
+        """The shipped handler builds no width policy — asserted, not assumed."""
+        tree = ast.parse(TOOLS_SOURCE.read_text(encoding="utf-8"))
+        constructions = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "FootprintPolicy"
+        ]
+        assert constructions == []
+        # Non-vacuity: the scan reached the handler, and the OTHER grades do come
+        # out of it, so this is an absence of one path rather than of all of them.
+        assert "precheck_patch" in TOOLS_SOURCE.read_text(encoding="utf-8")
+        assert _basis(json.loads(_dispatch(_registry()).result.content)) == "not_performed"
+
+    def test_the_payload_block_keeps_its_exact_key_set_in_every_grade(self):
+        expected = {
+            "basis",
+            "bound",
+            "bound_source",
+            "mode_widths",
+            "exact_width_slots",
+            "bound_slots",
+            "observation_note",
+        }
+        rigs = [
+            self._spaced_rig(max(FootprintRigPort.MODE_WIDTHS) + 1),
+            self._spaced_rig(max(FootprintRigPort.MODE_WIDTHS) - 1),
+        ]
+        payloads = []
+        for rig in rigs:
+            registry = build_toolset(
+                execution_port=RecordingExecutionPort(),
+                state_port=rig,
+                property_port=rig,
+                rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+            )
+            payloads.append(json.loads(_dispatch(registry).result.content))
+        payloads.append(json.loads(_dispatch(_registry()).result.content))
+        assert len({_basis(payload) for payload in payloads}) == 3
+        for payload in payloads:
+            assert set(payload["overlap_basis"]) == expected
+
+    def test_the_summary_names_the_grade_in_every_case(self):
+        for rig_gap in (
+            max(FootprintRigPort.MODE_WIDTHS) + 1,
+            max(FootprintRigPort.MODE_WIDTHS) - 1,
+        ):
+            rig = self._spaced_rig(rig_gap)
+            registry = build_toolset(
+                execution_port=RecordingExecutionPort(),
+                state_port=rig,
+                property_port=rig,
+                rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+            )
+            payload = json.loads(_dispatch(registry).result.content)
+            assert "겹침 판정 근거:" in payload["summary_ko"]
+
+
+class TestAuditAndBudgetEndToEnd:
+    """AC-OVERLAP-021 ③④ — cost and accountability, both newly pinned."""
+
+    def test_every_walk_query_leaves_exactly_one_audit_row(self, tmp_path):
+        registry, rig, audit = _gated(tmp_path)
+        _dispatch(registry)
+        rows = [
+            event
+            for event in audit.iter_events()
+            if event.get("event") == "executed" and event.get("kind") == "state_query"
+        ]
+        walk_calls = [call for call in rig.state_calls if call.startswith("Patch/FixtureTypes")]
+        # Non-vacuity on both sides: the walk ran, and the audit recorded.
+        assert walk_calls
+        assert rows
+        assert len(rows) == len(rig.state_calls)
+        assert set(walk_calls) <= {event["command"] for event in rows}
+
+    def test_the_walk_rides_the_same_chokepoint_as_everything_else(self, tmp_path):
+        registry, rig, audit = _gated(tmp_path)
+        _dispatch(registry)
+        # A walk that bypassed the gate would produce state calls with no audit
+        # row, which the equality above already forbids; this states the direction
+        # the equality is protecting.
+        commands = [
+            event["command"] for event in audit.iter_events() if event.get("kind") == "state_query"
+        ]
+        assert "Patch/FixtureTypes" in commands
+        assert "Patch/FixtureTypes/1/DMXModes" in commands
+
+    def test_the_query_count_never_exceeds_the_declared_ceiling(self, tmp_path):
+        registry, rig, _audit = _gated(tmp_path)
+        _dispatch(registry)
+        walk_calls = [call for call in rig.state_calls if call.startswith("Patch/FixtureTypes")]
+        # An EQUALITY, not a bound: the repository had no assertion pinning a query
+        # count anywhere, so one extra read could be added forever unnoticed.
+        assert len(walk_calls) == 1 + 1 + len(FootprintRigPort.MODE_WIDTHS)
+        assert len(walk_calls) <= tools_module.PRECHK_FOOTPRINT_QUERY_CAP
+
+    def test_a_failed_walk_costs_one_query_and_one_audit_row(self, tmp_path):
+        class DeadTypes(GatedRig):
+            def query_state(self, path: str) -> dict:
+                if path.startswith("Patch/FixtureTypes"):
+                    raise RuntimeError("no such path")
+                return super().query_state(path)
+
+        registry, rig, audit = _gated(tmp_path, rig=DeadTypes())
+        payload = json.loads(_dispatch(registry).result.content)
+        assert _basis(payload) == "not_performed"
+        failed = [
+            event
+            for event in audit.iter_events()
+            if event.get("kind") == "state_query" and event.get("ok") is False
+        ]
+        # A timed-out query still SENT one request, so it still owes one row.
+        assert len(failed) == 1
+        assert failed[0]["command"] == "Patch/FixtureTypes"
