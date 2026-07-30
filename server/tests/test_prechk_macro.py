@@ -693,8 +693,9 @@ class TestStoredLineLiterals:
         assert not off_line.payload.startswith("Off ")
 
     def test_the_gate_holds_the_off_verb_form_but_clears_the_value_form(self):
-        # This is the whole reason the off line is `Group <n> At 0`
-        # (.moai/state/verify/prechk-m0/MacroAuthoringProbe.md:138). The quoted
+        # This is the whole reason the off line is `Group <n> At 0` rather than
+        # the rulebook's `Off Group <n>`; the reasoning is recorded in
+        # `.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md` §E.2a. The quoted
         # property value is reclassified recursively
         # (server/safety/classify.py:201-222), and `Off` is an invoking verb
         # (server/safety/blacklist.yaml:29) whose target `Group` is NOT a

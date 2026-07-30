@@ -864,6 +864,88 @@ CI                         -> **체크 0건** (`gh pr checks 7` -> no checks rep
 14. **뮤테이션 사이클마다 `__pycache__`를 지운다.** 복구 쓰기가 같은 초 안에 일어나면 pyc의 mtime 검증(1초 해상도)을 통과해 **뮤테이션된 바이트코드가 재사용된다.** 유령 실패를 쫓게 되고, 반대 방향이면 **뮤테이션이 살아남았다고 오판된다.**
 15. **"판독 실패"와 "그런 것이 없음"을 절대 섞지 않는다.** 이번에 같은 계열 결함이 **3건** 나왔다(완전성 라벨 · 그룹 풀 판독 실패 · 그룹 열거 전부 절단). 코드가 방어 가능해도 **사용자가 읽는 문자열이 거짓**이면 결함이다. 새 판독 경로를 추가할 때마다 이 질문을 한다 — *"읽지 못했을 때 이 문자열이 여전히 참인가?"*
 
+## §E.6 다음 세션 착수 키트 (2026-07-30)
+
+> §E.5가 **무엇을 할지**를 적었다. 이 절은 **바로 착수할 수 있게** 재발견 비용을 0으로 만든다 — 검증 커맨드, 산출물 인벤토리, 두 트랙의 실행 브리프.
+
+### 1. 착수 전 검증 (커맨드와 기대값)
+
+```
+git branch --show-current                       -> feature/SPEC-COPILOT-PRECHK-001
+git status --short                              -> 비어 있음
+git rev-list --left-right --count origin/main...HEAD -> 0  29   (behind 0 / ahead 29)
+gh pr view 7 --json state,mergeStateStatus      -> OPEN · CLEAN
+gh pr checks 7                                  -> no checks reported  (CI 없음 — 의도된 사실)
+find server -name __pycache__ -type d -exec rm -rf {} + ; uv run pytest server/tests/ -q
+                                                -> 2721 passed · 5 skipped · 0 failed
+```
+
+**어긋나면 멈추고 보고한다.** 특히 `behind`가 0이 아니면 누군가 main을 진행시킨 것이므로 리베이스 판단이 선행한다.
+
+라이브 세션이 필요한 작업이면 추가로:
+```
+uv run python -m server.tools.responder_roundtrip --listen-port 9005 --wait 5 --expect-version 1.5.0
+                                                -> 3/3 PASS · version=1.5.0
+```
+**OSC는 send 8000 / receive 9005다**(기본 9000이 아니다 — 이 값을 안 읽어 선행 SPEC이 오진 1건을 냈다).
+
+### 2. 산출물 인벤토리 — 무엇이 살아남고 무엇이 사라지나
+
+| 산출물 | 위치 | 추적? | 신규 클론에서 |
+|---|---|---|---|
+| 요구·인수·설계·계획·진행 6문서 | `.moai/specs/SPEC-COPILOT-PRECHK-001/` | **추적됨** | 있음 |
+| 구현·테스트 | `server/prechk/` · `server/tests/test_prechk_*.py` | **추적됨** | 있음 |
+| M0 라이브 원문 로그 | `.moai/state/verify/prechk-m0/steps.jsonl` (152KB, 266+ 레코드) | `.gitignore:206` | **없음** |
+| M0 프로브 드라이버 | `.moai/state/verify/prechk-m0/probe.py` | `.gitignore:206` | **없음** |
+| M8 종단 하네스·결과 | `.moai/state/verify/prechk-m8/{e2e.py,result.json}` | `.gitignore:206` | **없음** |
+| run-audit 원문 | `.moai/state/verify/prechk-runaudit/AUDIT-1.md` (48KB) | `.gitignore:206` | **없음** |
+| scout 산출 4건 | `.moai/state/verify/prechk-m0/*.md` (216KB) | `.gitignore:206` | **없음** |
+
+**추적되지 않는 것의 결론은 §E.2 · §E.2a에 요약 없이 전재했다** — 라이브 커맨드·응답 문자열, 판정 6건의 접두 행, 감사 7축 점수와 지적 14건, C-10~C-12 후보 내용. **`server/` 안에 추적 불가 경로를 인용하는 코드·테스트는 0건이다**(실측 확인 — 런타임 의존도 주석 인용도 없다). 즉 **신규 클론에서 스위트가 깨지지 않는다.**
+
+재생성이 필요하면: 드라이버는 `server/bridge/{osc,protocol}.py`만 쓰므로 §E.2의 서술로 재작성 가능하고(스텝 종류는 `state`·`prop`·`exec`·`ping`), M8 하네스는 `build_console_stack` + `build_toolset` 조립이 전부다.
+
+### 3. 트랙 A 브리프 — PR #7 독립 코드 리뷰
+
+**왜**: `gh pr checks 7`이 0건이다. PR을 자동으로 검증하는 것이 없고, run-audit는 **SPEC 프로세스**(요구-AC 정합·증거·경계)를 채점했으므로 **코드 품질·보안 축은 아직 아무도 보지 않았다.** 감사도 좌표 검증이 표본이었음을 스스로 적었다.
+
+**리뷰 대상** (우선순위 순):
+1. `server/orchestrator/tools.py`의 `precheck_patch` 핸들러와 `_free_macro_slot` — **유일한 쓰기 경로**다. run-audit P1-3이 여기서 나왔고 수정 후에도 슬롯 유도 로직이 남아 있다.
+2. `server/prechk/{inventory,patch}.py` — 절단 복구와 주소 정규화. 경계값(빈 풀 · 1개 · 전부 절단 · 파싱 불가)의 처리.
+3. `server/safety/{console,gate}.py` 4지점 — 초크포인트 확장이 감사 경로를 우회하지 않는지.
+4. `server/prechk/{macro,report}.py` — 사용자 대면 문자열이 **읽지 못했을 때도 참인지**(이 계열 결함이 이번에 3건 나왔다).
+
+**특히 볼 것**: 새 판독 경로마다 *"읽지 못했을 때 이 문자열이 여전히 참인가"* 를 묻는다(규율 15). 그리고 `except Exception`으로 넓게 잡는 지점이 **판독 실패를 리그 사실로 바꾸지 않는지** — P1-2가 정확히 그 형태였다.
+
+**보지 않을 것**: 요구-AC 정합·계수·PRESERVE 경계는 run-audit가 이미 전건 재현했다(§E.2a). 중복 채점은 값이 없다.
+
+### 4. 트랙 B 브리프 — 후보 I-15 (구간 겹침 재개)
+
+**핵심 통찰**: `ASSUMPTION-27`이 부정인 것은 *"픽스처를 자기 점유폭에 잇는 조인 키가 없다"* 는 뜻이다. 그러나 **조인 없이도 상계는 안다** — 열거 가능한 모드 전체의 폭 중 최대값이다.
+
+**실측으로 산술이 닫힌다**(§E.2와 M8 산출물에서 재계산):
+- 모드별 폭: `Patch/FixtureTypes/1/DMXModes/{1,2,3}/DMXChannels` = **29**, 모드 4 = **31** → **상계 31**
+- 실측 주소 간격: 유니버스 1은 `[100, 42, 42, 42, 42, 42, 42, 42, 42]`, 유니버스 2는 `[50] × 8` → **최소 42**
+- **42 > 31 이므로 어느 픽스처가 어느 모드를 쓰는지 몰라도 겹침이 불가능하다**
+
+**판정의 비대칭이 설계의 핵심이다.** 상계 논증은 **"겹침 없음"을 증명할 수 있으나 "겹침 있음"은 증명할 수 없다** — 간격이 상계보다 작으면 그것은 충돌이 아니라 **미확정**이다. 현재 어휘에는 그 값이 없다. 새 SPEC은 다음을 요구한다:
+1. `server/prechk/patch.py`의 `FootprintPolicy(enabled, widths, source)`는 **슬롯별 정확한 폭**을 받는 이진 게이트다. **경계 있는 폭**(모드 집합의 최대값 + 그 근거)을 표현하는 형상이 필요하다.
+2. `server/prechk/verdicts.py`의 `COLLISION_KIND`와 `SKIPPED_CHECK_KIND`에 **"상계로 겹침 없음이 증명됨"** 과 **"간격이 상계 이하라 미확정"** 에 해당하는 부류가 없다. 닫힌 어휘를 늘리는 것은 계약 변경이므로 SPEC 층에서 결정해야 한다.
+3. `Patch/FixtureTypes` 열거 자체가 절단될 수 있다 — 모드 집합이 불완전하면 **상계도 상계가 아니다.** `REQ-PRECHK-004`의 계수 비교를 여기에도 적용해야 하며, 불완전하면 상계 논증을 쓰지 않는다.
+
+**착수 시 필요한 라이브 세션: 없다.** 폭과 간격이 모두 실측되어 있다. 다만 다른 쇼파일에서는 상계가 달라지므로 **런타임에 읽어야 한다**(하드코딩 금지 — `Patch/FixtureTypes/<t>/DMXModes` 열거 + 각 모드의 `DMXChannels` childCount).
+
+### 5. 함께 넣을 것 — 이월 1건
+
+`AC-PRECHK-015`의 PRESERVE 게이트가 1회성 수동 절차다. **CI가 0건인 저장소에서 PRESERVE를 지키는 유일한 수단은 상시 테스트**이며 선행 SPEC에 선례가 있다(`server/tests/test_songcue_bundle.py`의 `test_preserve_look_files_are_unchanged_from_run_phase_base`와 그 앞의 범위 검증 테스트). 다음 SPEC의 M7에 흡수하는 것이 자연스럽고, 그때 **PRECHK의 PRESERVE 10경로 + `server/safety/**` 승인 4지점 제한**도 같은 형태로 박는다.
+
+### 6. 착수 순서 권고
+
+1. **트랙 A와 트랙 B를 병렬로** 띄운다 — 둘 다 읽기 전용이라 충돌이 0이다. A는 `reviewer`, B는 `scout`가 맞다.
+2. A의 지적이 P1급이면 **머지 전에** 고친다. P2 이하면 PR에 적고 머지 후 후속 커밋으로 처리한다.
+3. B의 산출은 다음 SPEC의 `research.md` 초안 재료다 — **SPEC 문서를 바로 쓰지 말고** 사용자에게 범위(어휘 확장 승인 여부)를 먼저 확인한다. 닫힌 어휘를 늘리는 것은 계약 변경이다.
+4. 머지 후 `origin/main`이 새 SHA가 되므로 **다음 SPEC의 BASE는 그 SHA다** — `95687a0`이 아니다.
+
 ## §F. Phase 4 Mode Selection — 확정 기록 (오케스트레이터 소유)
 
 > 본 절은 **오케스트레이터가 첫 run-phase `Agent()` 스폰 전에 작성**하는 구속력 있는 기록이다. `plan.md` §G의 대응 절은 **권고**이며 오케스트레이터가 확정하거나 기각한다. 어긋나면 **본 절이 이긴다.** 이 헤딩은 v0.1.0 착수 시점에 **선제 생성**되었다 — 선행 SPEC에서 `plan.md`가 존재하지 않는 `progress.md` §F를 구속력 있는 기록으로 지목해 끊어진 참조를 만든 사례가 있었고(`.moai/specs/SPEC-COPILOT-LOOKLIB-001/plan.md:289`), BUSKWIZ가 선제 생성으로 그것을 고쳤다. 본 SPEC은 그 교정을 계승한다. 본문이 채워지기 전까지 이 절은 **비어 있음이 정상**이며, 비어 있다는 사실 자체가 "아직 스폰하지 않았다"의 기록이다.
