@@ -41,7 +41,17 @@ from server.looks.songcue import (
     parse_sections,
 )
 from server.looks.songcue_report import build_songcue_report
-from server.orchestrator.ports import BundleGate, CommandExecutionPort, StateQueryPort
+from server.orchestrator.ports import (
+    BundleGate,
+    CommandExecutionPort,
+    PropertyQueryPort,
+    StateQueryPort,
+)
+from server.prechk.inventory import InventoryReadError, read_inventory
+from server.prechk.macro import GroupPool, MacroPolicy, build_response_check_macro
+from server.prechk.macro import groups_from_snapshot as read_group_pool
+from server.prechk.patch import evaluate_patch
+from server.prechk.report import build_report as build_precheck_report
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
     from server.deploy.pipeline import DeployOutcome
@@ -59,6 +69,7 @@ TOOL_NAMES = (
     "instantiate_look",
     "prepare_busking",
     "prepare_songcue",
+    "precheck_patch",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -474,6 +485,7 @@ def build_toolset(
     bundle_gate: BundleGate | None = None,
     deploy_pipeline: DeployPipelinePort | None = None,
     look_library: LookLibrary | None = None,
+    property_port: PropertyQueryPort | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
 
@@ -486,10 +498,19 @@ def build_toolset(
     ``look_library`` is optional: production wiring passes nothing and the
     built-in library is read from disk on the first ``find_looks`` call, so a
     toolset that never looks up a look pays no file read.
+
+    ``property_port`` is the pre-check's extra read (REQ-PRECHK-019). When it is
+    omitted it is adopted from ``state_port`` if that object also implements
+    ``query_property`` — the gate's port object implements both, so production
+    wiring needs no change and gains the capability, while a narrow test double
+    stays narrow and ``precheck_patch`` says the capability is missing instead of
+    reporting an empty rig.
     """
     rig_paths = dict(rig_paths or DEFAULT_RIG_CONTEXT_PATHS)
     drilldown = frozenset(rig_drilldown if rig_drilldown is not None else DEFAULT_RIG_DRILLDOWN)
     looks = look_library
+    if property_port is None and hasattr(state_port, "query_property"):
+        property_port = state_port
 
     # -- run_commands (REQ-MVP-001 upstream, REQ-MVP-009/033 semantics) --------
 
@@ -1201,6 +1222,111 @@ def build_toolset(
             command_outcomes=execution.command_outcomes,
         )
 
+    # -- precheck_patch (REQ-PRECHK-018 — the pre-show rig check) --------------
+    #
+    # @MX:ANCHOR: [AUTO] the pre-check's ONE model-reachable entry.
+    # @MX:REASON: REQ-PRECHK-018. Like prepare_busking and prepare_songcue this
+    #   handler READS the rig and, when it has to speak, calls ``run_commands``
+    #   above rather than ``execution_port`` — the gate screens the whole macro
+    #   bundle before a single line reaches the console.
+
+    class _InventoryPort:
+        """The two reads the inventory needs, joined from the wired ports."""
+
+        def __init__(self, state: StateQueryPort, prop: PropertyQueryPort) -> None:
+            self._state = state
+            self._prop = prop
+
+        def query_state(self, path: str) -> dict:
+            return self._state.query_state(path)
+
+        def query_property(self, path: str, property_name: str) -> dict:
+            return self._prop.query_property(path, property_name)
+
+    def _free_macro_slot(payload: object) -> int:
+        """Lowest positive slot the macro pool does not already occupy.
+
+        The slot is DERIVED, never taken as a parameter: ``AC-PRECHK-014`` ③ bans
+        rig identifiers from the schema, and slot 1 holds the responder's own
+        macro on the measured rig, so a default would make overwriting it the
+        quiet outcome.
+        """
+        taken: set[int] = set()
+        if isinstance(payload, dict):
+            for child in payload.get("children") or ():
+                if isinstance(child, dict) and isinstance(child.get("i"), int):
+                    taken.add(child["i"])
+        slot = 1
+        while slot in taken:
+            slot += 1
+        return slot
+
+    def precheck_patch(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        create_macro = call.arguments.get("create_macro", False)
+        if not isinstance(create_macro, bool):
+            return _error_result(call, "'create_macro' must be a boolean")
+        if property_port is None:
+            # Never answer "zero fixtures" when the capability is missing: an
+            # empty report reads as a clean rig (REQ-PRECHK-010).
+            return _error_result(
+                call,
+                "property reads are not wired — build_toolset needs property_port "
+                "(or a state_port that also implements query_property)",
+            )
+        try:
+            inventory = read_inventory(_InventoryPort(state_port, property_port))
+        except InventoryReadError as error:
+            return _error_result(call, f"fixture inventory unreadable: {error}")
+        # ASSUMPTION-27 is NEGATIVE (progress.md §E.2 M0): the range-overlap check
+        # stays off and says so in skipped_checks. Address duplicates still run.
+        evaluation = evaluate_patch(inventory)
+        macro = None
+        if create_macro:
+            try:
+                pool = read_group_pool(state_port.query_state(rig_paths["groups"]))
+            except Exception:
+                # An unreadable group pool is an EMPTY pool, not an invented one:
+                # the macro axis then answers with a reason (REQ-PRECHK-011).
+                pool = GroupPool()
+            try:
+                slot = _free_macro_slot(state_port.query_state(rig_paths["macros"]))
+            except Exception as error:
+                # Never fall back to slot 1 — it holds the responder's own macro
+                # on the measured rig, so a fallback would overwrite it quietly.
+                return _error_result(call, f"macro pool unreadable, no free slot: {error}")
+            macro = build_response_check_macro(pool, MacroPolicy.available(slot))
+        payload = build_precheck_report(evaluation, macro=macro).to_dict()
+        if macro is not None and macro.commands:
+            inner = run_commands(
+                ToolCall(
+                    id=call.id,
+                    name="run_commands",
+                    arguments={"commands": list(macro.commands)},
+                ),
+                context,
+            )
+            payload["macro_execution"] = json.loads(inner.result.content)
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    # A gate hold or a failed line IS an error: the model must
+                    # react. A rig that simply has no groups is an ANSWER.
+                    is_error=inner.result.is_error,
+                ),
+                command_outcomes=inner.command_outcomes,
+            )
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            ),
+            command_outcomes=(),
+        )
+
     definitions = (
         ToolDefinition(
             name="run_commands",
@@ -1549,6 +1675,34 @@ def build_toolset(
                 "required": ["song_title", "genre", "timecode_number", "sections"],
             },
         ),
+        ToolDefinition(
+            name="precheck_patch",
+            description=(
+                "Pre-show check of THIS rig's patch. Reads the patched fixtures and "
+                "their addresses itself, reports every observed fixture plus the "
+                "aggregate, and names address collisions, unreadable properties, "
+                "enumeration completeness and any check it did NOT perform. Set "
+                "create_macro to also author a response-check macro that turns each "
+                "rig group on and off, sent through the same run_commands path as any "
+                "direct console execution. It does NOT decide whether a fixture "
+                "answered — no console read reports that, so a human still has to "
+                "watch the rig. Do not pass rig numbers: there are none to pass."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "create_macro": {
+                        "type": "boolean",
+                        "description": (
+                            "Also author and run the response-check macro. Omit or set "
+                            "false to report the patch without touching the showfile."
+                        ),
+                    },
+                },
+                "required": [],
+                "additionalProperties": False,
+            },
+        ),
     )
     handlers: dict[str, _Handler] = {
         "run_commands": run_commands,
@@ -1559,5 +1713,6 @@ def build_toolset(
         "instantiate_look": instantiate_look,
         "prepare_busking": prepare_busking,
         "prepare_songcue": prepare_songcue,
+        "precheck_patch": precheck_patch,
     }
     return ToolRegistry(definitions, handlers)
