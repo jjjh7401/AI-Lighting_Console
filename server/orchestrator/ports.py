@@ -71,3 +71,18 @@ class StateQueryPort(Protocol):
     def query_state(self, path: str) -> dict:
         """Query one object-tree path; raises on failure/timeout."""
         ...
+
+
+class PropertyQueryPort(Protocol):
+    """Returns the decoded property payload for one object path (REQ-PRECHK-019).
+
+    Separate from :class:`StateQueryPort` because a snapshot and a property read
+    are different requests: enumeration carries ``name``/``class``/``i`` only,
+    so fixture addresses are reachable ONLY through a property read. The gate
+    implements both on one object; keeping the protocols apart lets a consumer
+    declare exactly the capability it needs.
+    """
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        """Read one property of one object; raises on failure/timeout."""
+        ...

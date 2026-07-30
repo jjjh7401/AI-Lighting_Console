@@ -234,7 +234,7 @@ next: "**Kickoff 접점 2건 승인 완료 · §F 작성 완료**(첫 run-phase 
 ```
 GO: ASSUMPTION-25 literal=prop Patch/Stages/1/Fixtures/<slot> Patch effect=슬롯 1~19 전량에서 Patch·FixtureType·Mode·Name 76건 조회 전부 ok=true, 판독 실패 0건, 미관측 19번째를 Patch/Stages/1/Fixtures/19 단일 조회로 채워 name='MMX 19' Patch='2.401' 실측
 GO: ASSUMPTION-26 literal=Store Macro 91 ; Store Macro 91.1 ; Set Macro 91.1 Property 'Command' 'On Group 11' effect=DataPool/Macros childCount 1에서 2로 증가하고 자식에 'Macro 91' 출현, DataPool/Macros/91 childCount 0에서 1로 증가해 'MacroLine 1' 출현, prop DataPool/Macros/91/1 Command 재조회 값 'On Group 11'
-DESCOPE: ASSUMPTION-27 표시 문자열 파싱 없이 점유폭에 도달하는 경로가 0건이다. 객체 경로 순회 3종(Patch/Stages/1/Fixtures/1/FixtureType · /Mode · /DMXChannels)이 전부 path segment not found이고 픽스처 노드 childCount는 0이다. 인덱스 반환 후보 프로퍼티 11종 중 판독 가능은 No(값 '1' — 슬롯이며 타입 인덱스가 아니다)와 Index(ok=true인데 값이 'function: 0x105b0f048')뿐이다. 구간 겹침 판정만 미수행이고 주소 중복 판정은 수행된다
+DESCOPE: ASSUMPTION-27 표시 문자열 파싱 없이 점유폭에 도달하는 경로가 0건이며 이 판정은 후보 전수 12건을 닫은 뒤에 내렸다. 객체 경로 순회 3종(Patch/Stages/1/Fixtures/1/FixtureType 그리고 같은 픽스처의 /Mode 와 /DMXChannels)이 전부 path segment not found이고 픽스처 노드 childCount는 0이다. 인덱스 반환 후보 프로퍼티 11종 중 판독 가능은 No(값 '1' — 슬롯이며 타입 인덱스가 아니다)와 Index(ok=true인데 값이 'function: 0x…' 형태의 Lua 함수 참조)뿐이다. 동등 조인 프로퍼티는 없다 — Patch/FixtureTypes/1 의 판독 가능 프로퍼티는 Name 'Robin MMX Spot' · ShortName 'RMMXSm1' · No '1' · Manufacturer 'Robe'이고 픽스처가 주는 'FixtureType 1'과 일치하는 값이 0건이다. 역방향 열거도 없다 — Patch/FixtureTypes/1 의 자식 8종은 전부 정의 컨테이너이고 픽스처 목록이 아니다. Patch 루트의 다른 주소공간 컨테이너도 부정이다 — DmxUniverses 와 DmxAddresses 와 RTChannels 와 UIChannels 와 FixtureTypesOverview 를 열거하고 프로퍼티까지 발화했으나 어느 노드도 픽스처 연결이나 채널 점유를 싣지 않는다. 폭 유일성 우회도 성립하지 않는다 — 모드 4의 DMXChannels childCount 가 31이고 모드 1과 2와 3의 29와 다르다. 구간 겹침 판정만 미수행이고 주소 중복 판정은 어느 분기에서도 수행된다
 GO: ASSUMPTION-28 literal=Store Page 2 ; Label Page 2 'PRECHK Probe' effect=DataPool/Pages childCount 1에서 2로 증가하고 자식에 'Page 2' 출현, prop DataPool/Pages/2 Name 재조회 값 'PRECHK Probe'
 GO: ASSUMPTION-29 literal=Assign Sequence 20 At Executor 103 ; Delete Executor 103 effect=열거에 부재했던 인덱스 3이 배정 뒤 DataPool/Pages/1 자식으로 출현(childCount 9에서 10)하고 삭제 뒤 다시 사라져 childCount 9로 복귀, 즉 열거 부재가 빈 익스큐터를 뜻하고 그 인덱스가 주소형 <인덱스 더하기 100>으로 도달 가능하다
 DESCOPE: ASSUMPTION-30 두 연언 중 page 이상 2 일반화가 부정이므로 축이 꺼진다. Assign Preset 4.1 At Executor 202는 효과가 확인됐다(테스트 익스큐터 102의 Name이 'Ballad Yellow Red'에서 '금빛 코러스'로 재조회 변경 — BUSKWIZ G2의 파싱만 확인된 항목을 효과까지 닫았다). 그러나 page x 100 + slot의 page 이상 2는 성립하지 않는다: Assign Sequence 1 At Executor 201이 Cmd ok를 내면서 page 2가 아니라 page 1의 인덱스 101을 덮었고, Assign Sequence 1 At Executor 2.1은 Cannot Create Object이며, 생성된 page 2는 세션 종료까지 childCount 0을 유지했다
@@ -329,21 +329,106 @@ DataPool/Pages/1          childCount=9  자식 ['Sequence 50','Sequence 17','Seq
 
 **잔여물 0건.** 조건부 접점(`ASSUMPTION-28` GO 이후 테스트 오브젝트 잔여 시 복구 증거 공유)은 잔여가 0이므로 위 표가 그 증거다.
 
+#### `ASSUMPTION-27` 후보 전수 12건 — 판정 전에 닫았다
+
+최초 발화는 순회 3종과 인덱스 프로퍼티 11종만 닫은 상태였고, 그 부분집합 위에 부정을 단정한 것은 `REQ-PRECHK-010`이 금지하는 형태였다. 독립 scout가 후보를 전수 12건으로 열거하고 그중 5건이 라이브 검증 대상임을 지적했으므로 같은 세션에서 나머지를 발화해 닫았다. **불완전한 후보 집합 위의 판정을 정정한 기록이다.**
+
+| 후보 | 내용 | 닫힌 방법 | 결과 |
+|---|---|---|---|
+| C-1 · C-2 · C-3 | 픽스처 노드 하위 도달 | 라이브 순회 3종 + 픽스처 childCount 0 | 부정 |
+| C-4 | 이름 키 경로 도달 수단 | 도달 수단일 뿐 조인 키가 아니다 | 해당 없음 |
+| C-5 | 동등 조인 프로퍼티 | `Patch/FixtureTypes/1`의 판독 가능 프로퍼티 전수 발화 — `Name` `'Robin MMX Spot'` · `ShortName` `'RMMXSm1'` · `No` `'1'` · `Manufacturer` `'Robe'`. 픽스처의 `'FixtureType 1'`과 일치 0건 | 부정 |
+| C-6 | 직접 인덱스 프로퍼티 | 후보 11종 발화 — 판독 가능은 `No`(슬롯)와 `Index`(함수 참조) | 부정 |
+| C-7 | 타입에서 픽스처로 역방향 열거 | `Patch/FixtureTypes/1` 자식 8종 = `['AttributeDefinitions','Wheels','PhysicalDescriptions','Models','Geometries','DMXModes','Revisions','Protocols']` — 픽스처 목록 없음 | 부정 |
+| C-8 | `Patch` 루트의 다른 주소공간 컨테이너 | 루트 자식 14종 전량 열거 후 `DmxUniverses`(childCount 1024) · `DmxAddresses` · `RTChannels` · `UIChannels` · `FixtureTypesOverview`를 하위까지 발화. `Patch/DmxUniverses/1`은 자식 1개(`'DMX 2'`)이고 그 노드는 `Name`과 `No`만 판독되며 `Fixture` · `Patch` · `Address` · `Universe`가 전부 판독 불가 | 부정 |
+| C-9 | 폭 유일성 우회 | 모드 4종의 `DMXChannels` childCount = 29 · 29 · 29 · **31** — 폭이 유일하지 않다 | 부정 |
+| C-10 · C-11 · C-12 | 저장소 정적 조사로 이미 닫힘 | scout 산출 | 부정 |
+
+**후보 0건이 아니라 후보 12건 전건 부정이다.** 이 구별이 중요하다 — 후속 SPEC이 다른 쇼파일에서 재측정할 때 무엇을 이미 시도했는지 알 수 있다.
+
+부수 실측 2건: `Patch` 루트 자식 14종은 `['DmxCurves','AttributeDefinitions','Layers','Classes','PsrExtraData','FixtureTypes','Stages','UIChannels','RTChannels','IDTypes','DmxUniverses','DmxAddresses','FixtureTypesOverview','PatchFilter']`다. 그리고 `DMXChannels` 열거는 `truncated=true`인데 `childCount`가 참값 29 또는 31을 준다 — 절단과 계수 정확성의 비대칭이 픽스처 풀 밖에서도 성립한다는 확인이다.
+
+#### 독립 scout 지적에 대한 처리 — 5건
+
+M0 실행과 병행한 읽기 전용 scout 4개가 정본 드리프트와 판정 함정을 지적했다. 처리 결과를 남긴다.
+
+| # | 지적 | 처리 |
+|---|---|---|
+| 1 | `design.md` 슬롯 A는 보강 조회 경계를 `1..node.childCount` 하드 캡으로 못박았으나 `console/lua/PROTOCOL.md:172-174`는 상한 없는 정지 규칙이고 예시 리터럴이 27개 풀의 슬롯 150이다. 희소 풀에서 캡은 과소복구한다 | **이월.** 이 쇼파일에서는 19번째가 슬롯 19에서 잡혀 캡(19)이 충분했고 캡 밖 20부터 30까지 11건도 발화해 전부 부재를 확인했다. 즉 이번엔 두 규정이 같은 답을 준다. 그러나 **희소 풀에서 캡이 과소복구한다는 판정 자체는 유효**하므로 아래 이월 항목에 넣는다 |
+| 2 | 슬롯 값이 `probe_slots` 분기에서 왔는지 `slot_confirms` 분기에서 왔는지 조밀 풀에서는 가릴 수 없다 | **닫혔다 — 같은 세션의 다른 풀이 갭 풀이었다.** 처음엔 열린 채로 기록했으나 scout가 내 로그를 재검토해 `DataPool/Pages/1`의 자식 `i`가 `[1, 2, 5, 11, 91, 92, 93, 95, 101]`로 **희소**임을 지적했다. 판별자(`console/lua/PROTOCOL.md:289-291`)가 그 형태를 분기 (a) 작동으로 규정하고, 위치 승격 경로는 구조적으로 연속값만 낸다(`console/lua/copilot_responder.lua:391-393`). 판별용 갭 풀을 따로 만들 필요가 없었다 — 이미 찍혀 있었다. 아래 부수 실측 3에 전개한다 |
+| 3 | `completeness=incomplete`와 19슬롯 전량 관측을 한 문장에 넣으면 독자가 `AC-PRECHK-003` ④가 반증됐다고 읽는다 | **분리 서술 채택.** 전자는 열거 **실행**의 성질(루트가 절단됐고 인덱스 정의역 상한이 코드로 닫히지 않는다)이고 후자는 이 세션의 사실이다. `AC-PRECHK-003` ④는 유효하며 M0가 그것을 반증하지 않았다 |
+| 4 | `design.md` §6.1과 `acceptance.md` `AC-PRECHK-009`의 `clean_rig_18`이 *"실측 리그와 같은 정합 주소"*를 주장하는데 실측 리그는 19개가 됐다 | **결정: 합성 픽스처이며 라이브 미러가 아니다.** 확장하지 않는다. 인메모리 픽스처를 현장 쇼파일에 묶으면 리그가 바뀔 때마다 테스트가 깨지고 결정성이 사라진다. M2는 `clean_rig_18`을 **의도적 합성 리그**로 쓰고, 라이브 19슬롯 표는 본 절의 실측 기록으로만 쓴다 |
+| 5 | `Index`의 포인터 값 `0x105b0f048`이 사전 프로브와 동일 주소로 재현됐다 — 주소를 하드코딩하는 유혹이 생긴다 | **판별자 규칙 고정.** M2 형태검증기의 판별자는 **`function: 0x` 접두사**이며 특정 주소가 아니다. 동일 재현은 Lua 런타임에서 함수 객체가 안정적이라는 뜻일 뿐이고 판정 근거가 아니다 |
+
+scout가 정적으로 예측한 것 1건이 라이브와 일치했다 — **`page × 100 + slot`은 페이지 축을 넘으면 단사가 아니다**: page 1 슬롯 101과 page 2 슬롯 1이 둘 다 `201`로 사상된다. 내 관측(`Executor 201`이 page 1 인덱스 101을 덮음)은 그 충돌의 실측 재현이며, `N` 빼기 100이라는 서술보다 **비단사 사상**이라는 서술이 기전을 정확히 말한다.
+
 #### 측정하지 못한 것
 
 1. **`FID` 의미.** 이 쇼파일은 슬롯과 `FID`가 같아 어떤 라이브 세션도 닫을 수 없다(`console/lua/PROTOCOL.md:322-324`). 본 SPEC은 `FID`를 판정 근거에서 배제한 형상으로 출하한다. 별도 쇼파일 준비가 선행 조건이다.
 2. **익스큐터 인덱스 정의역의 상한.** 인덱스 3과 인덱스 102가 배정 가능함은 실측했으나 유효 인덱스의 상한은 모른다. 픽스처 슬롯과 같은 `index_domain_unknown` 계열이다.
-3. **`Executor 201`이 인덱스 101에 닿은 기전의 내부 이유.** 관측은 `N` 빼기 100으로 일관되지만 MA3 내부에서 page 성분이 어떻게 누출되는지는 응답기 밖의 일이라 관측 경로가 없다.
+3. **`Executor 201`이 page 1 인덱스 101에 닿은 기전의 내부 이유.** 관측은 비단사 사상으로 일관되지만 MA3 내부에서 page 성분이 어떻게 인덱스 공간으로 접히는지는 응답기 밖의 일이라 관측 경로가 없다.
 4. **무응답 픽스처.** 패치 메타데이터에는 응답 여부가 없다. 사용자가 이미 범위에서 제외했다.
+5. **픽스처 인덱스 정의역의 *일반* 상한.** 이 쇼파일에서는 1부터 19까지로 닫혔다(아래 부수 실측 3 참조). 그러나 임의의 쇼파일에서 상한을 코드로 아는 방법은 여전히 없다 — `design.md` 슬롯 A의 `index_domain_unknown`은 유지된다.
+6. **희소 풀에서의 보강 조회 경계.** `design.md` 슬롯 A의 `1..node.childCount` 하드 캡은 이 조밀 풀에서는 충분했으나 **희소 풀에서는 과소복구한다** — `console/lua/PROTOCOL.md:172-174`의 정지 규칙은 상한이 없고 예시 리터럴이 27개 풀의 슬롯 150이다. 본 SPEC은 캡으로 출하하고, 희소 픽스처 풀을 가진 쇼파일이 나오면 그 경계 서술을 개정해야 한다. **이것이 실측으로 확인된 잠재 미명세이며 이번 쇼파일이 조밀했을 뿐이다.**
 
-#### 후속 SPEC에 넘기는 신규 실측 2건
+#### 후속 SPEC에 넘기는 신규 실측 3건
 
 1. **`DataPool/PresetPools`가 살아 있다** — childCount 14, 자식 `['Dimmer','Position','Gobo','Color','Beam','Focus','Control','Shapers','Video','All 1','All 2','All 3','All 4','All 5']`이고 `truncated=false`. 각 풀은 `class='Presets'`이며 `DataPool/PresetPools/1`과 `DataPool/PresetPools/4`가 각각 childCount 7로 LOOKLIB 산출물(`['금빛 코러스','벌스 사이드','프리코러스 빌드','리프 그린','코러스 히트','화이트 슬램','마지막 폭발']`)을 담고 있다. **`DataPool/Presets`와 `DataPool/AllPresets`는 `path segment not found`** 로 `REQ-PRECHK-002`의 사망 판정을 재확인했다 — 즉 프리셋의 살아 있는 경로는 `DataPool/PresetPools/<풀>`이다. 본 SPEC의 범위 밖이지만 프리셋을 읽는 후속 SPEC이 추측으로 경로를 고르지 않도록 기록한다.
 2. **`DataPool` 최상위 자식 16종** — `['Worlds','Filters','GeneratorTypes','PresetPools','Groups','Sequences','Plugins','Quickeys','MAtricks','Configurations','Pages','Layouts','Timecodes','Timers','Shapes']`에 `Macros`를 포함한 16개이고 `truncated=false`. 경로 추측을 대체하는 열거 근거다.
+3. **`ASSUMPTION-7`(자식 풀 슬롯)이 2.4.2에서 분기 (a)로 충족됨이 실측됐다.** `DataPool/Pages/1` 열거가 자식 `i`를 `[1, 2, 5, 11, 91, 92, 93, 95, 101]`로 냈다 — **희소이며 번호 없는 항목이 0건**이다. `console/lua/PROTOCOL.md:289-291`의 판별자가 정확히 이 형태를 규정한다(`1,5,7` = (a) 작동 · `1` 더하기 번호 없는 항목 = (b) 전용 · `1,2,3` = 어느 것도 아님). `slot_confirms` 경로는 슬롯을 목록 위치로 승격하므로(`console/lua/copilot_responder.lua:391-393`) 구조적으로 연속값만 낼 수 있고, 따라서 희소값은 자식 자신의 인덱스 접근자에서 온 것이다 — **`probe_slots`가 이 콘솔·빌드에서 작동한다.** 귀결 둘: (i) `console/lua/PROTOCOL.md:283-286`이 최악으로 적은 실패 모드("(a) 부재 + (b) 위치형 = 콘솔 측에서 탐지 불가능한 원래 결함")가 **이 빌드에서는 발생하지 않는다.** (ii) 픽스처 풀의 `i` 1부터 19까지가 **자기보고 슬롯**이므로 19번째가 슬롯 19에서 잡힌 것은 위치 우연이 아니라 풀이 진짜로 조밀하다는 뜻이고, 캡 밖 20부터 30까지의 부재 확인과 합쳐 **이 쇼파일의 픽스처 인덱스 정의역은 정확히 1부터 19까지로 닫힌다.** 갭 풀 스냅샷을 따로 만들지 않았고 페이지 풀이 갭 풀이어서 우연히 판별이 성립했다 — 본 SPEC 범위 밖이지만 여러 선행 SPEC이 걸려 있는 응답기 계약의 미확정이라 남긴다.
 
 #### M0 결론
 
 `ASSUMPTION-25`부터 `ASSUMPTION-30`까지 **6건 전부에 결과 어휘가 배정됐고 폐쇄 아님(`REOPEN_SCOPE`)이 0건**이다. 유일한 블로킹 전제였던 `ASSUMPTION-26`이 GO이므로 산출물 2(응답 확인 매크로)가 성립한다. `ASSUMPTION-27` 부정으로 구간 겹침 판정이 빠지고 주소 중복 판정만 남는다(`REQ-PRECHK-008`의 정의된 축소). **M1 착수 차단이 해소됐다.**
+
+### M1 — 초크포인트 프로퍼티 조회 (AC-PRECHK-013 · cycle_type=tdd · 2026-07-30)
+
+#### 착수 전제 확인
+
+| 항목 | 값 |
+|---|---|
+| baseline (착수 직전 직접 실측) | `uv run pytest server/tests/ -q` → **2490 passed · 5 skipped · 0 failed** |
+| 승인 기록 (`AC-PRECHK-013` ④) | §F의 사용자 접점 표 — `server/safety/**` 조건부 예외 **승인** |
+| M0 결과 | `REOPEN_SCOPE` 0건 → 범위 재개정 선행 조건 없음. 착수 가능 |
+
+#### 집행한 변경 — 승인된 4지점 + 신규 경로
+
+| # | 파일 | 변경 | 동형 대상 |
+|---|---|---|---|
+| 1 | `server/safety/console.py` | `build_prop_query` import 1건 · `ConsolePort`에 `query_property` 선언 1건 · `ConsoleLink.query_property(path, property_name) -> dict` 1건 | `ConsoleLink.query_state` |
+| 2 | `server/orchestrator/ports.py` | 신규 `PropertyQueryPort` 프로토콜 | `StateQueryPort` |
+| 3 | `server/safety/gate.py` | `_GateStatePort.query_property` 위임 1건 · `SafetyGate._query_property` 감사 구현 1건 · 클래스 독스트링 1행 | `_GateStatePort.query_state` · `SafetyGate._query_state` |
+| 4 | `server/measurement/mock_provider.py` | `OfflineConsole.query_property` 1건 | `OfflineConsole.query_state` |
+| 5 | 신규 `server/prechk/__init__.py` · `server/prechk/query.py` | 포트만 소비하는 프로퍼티 판독 계층 | 없음 (신규 경로) |
+
+**기존 심볼·시그니처 변경 0건**이며 테스트가 그것을 고정한다 — `ConsoleLink.query_state` · `_GateStatePort.query_state` · `StateQueryPort.query_state`의 파라미터 목록이 `["self", "path"]`임을 `inspect.signature`로 assert한다.
+
+**지점 1이 두 hunk인 이유를 기록한다.** 승인 표의 지점 1은 `query_property` 추가 1건이지만, 게이트가 `self._console.query_property(...)`를 호출하므로 그 능력이 `ConsolePort`에 선언되지 않으면 게이트가 프로토콜에 없는 멤버에 의존한다. 그래서 같은 파일 안에서 선언 1행을 함께 넣었다. `ConsolePort`는 `runtime_checkable`이 아니므로(`server/llm/types.py:97`의 `LLMProvider`와 달리) 기존 대역의 런타임 계약을 깨지 않으며, 기존 4개 멤버의 시그니처는 그대로다. **`server/safety/**`의 hunk는 이 목록 밖으로 나가지 않는다.**
+
+`server/prechk/`를 M1에서 만든 이유도 기록한다 — `plan.md` §B는 그 경로를 M2 신규 파일로 적었으나, `AC-PRECHK-013` ①의 **비공허성**(스캔 방문 파일 1 이상 · import 노드 1 이상)이 그 디렉터리의 실존을 요구한다. 빈 디렉터리에서는 "`server.bridge` import 0건"이 자동 성립해 게이트가 무력해진다. M1이 만든 `server/prechk/query.py`는 스텁이 아니라 M2 인벤토리가 소비하는 판독 계층이며, 형태 검증은 M2 소관으로 남겼다.
+
+#### 뮤테이션 3건 — 전건 죽었다
+
+`plan.md` §B M1이 지정한 3건을 집행하고 원본을 복원했다. **비공허성**: 각 뮤테이션에서 통과 테스트가 함께 보고되므로 "테스트가 돌지 않아 실패한" 오탐이 아니다.
+
+| # | 뮤테이션 | 결과 |
+|---|---|---|
+| ① | `server/prechk/query.py`가 `server.bridge`를 import | **죽었다** — 신규 경계 테스트(1 failed · 3 passed)와 **기존** `server/tests/test_architecture.py`(1 failed · 3 passed) 양쪽 |
+| ② | `_NAMED_TOOL_EXEMPTIONS`에 `server/prechk/query.py` 추가 | **죽었다** (1 failed · 1 passed) |
+| ③ | 기존 `query_state`에 키워드 파라미터 추가 | **죽었다** (1 failed · 2 passed) |
+
+①의 첫 시도는 셀렉터 오류로 `no tests ran`을 내면서 `rc != 0`이 됐다. **그것을 통과로 세지 않고 재집행했다** — 종료 코드만 보면 뮤테이션이 검증되지 않은 채 게이트가 통과한다.
+
+#### 검증
+
+| 항목 | 결과 |
+|---|---|
+| 신규 테스트 | `server/tests/test_prechk_inventory.py` **17 passed** |
+| 전체 스위트 | **2507 passed · 5 skipped · 0 failed** (baseline 2490 대비 신규 17건) |
+| `ruff check` (신규·변경 파일) | `server/prechk/` · 신규 테스트 · `ports.py` · `gate.py` · `mock_provider.py` **All checks passed** |
+| `ruff format --check` | 위 6파일 **already formatted** |
+
+**기존 비-clean 지점 1건을 손대지 않고 기록한다** — `server/safety/console.py`는 `E501` 2건(292행 · 346행)과 미포맷 상태를 **BASE 95687a0에서 이미** 갖고 있다. `git show 95687a0:server/safety/console.py`를 꺼내 같은 검사를 돌려 확인했다: `E501` 2건 · `Would reformat` 1건. `AC-PRECHK-015` ⑤가 무관 재포맷을 금지하므로 본 SPEC은 그 파일을 포맷하지 않았고, 내 hunk 자체는 `E501`을 만들지 않았다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
