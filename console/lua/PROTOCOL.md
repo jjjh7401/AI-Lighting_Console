@@ -344,3 +344,4 @@ Recorded per Section E honesty rules; the round-trip tool
   plugin source (server-side cap: 16 KB source before encoding — calibrate at
   M6). Mitigation: every probe failure is reported verbatim in the `deploy`
   reply's `error`; verify on-site with a harmless one-line plugin first.
+
