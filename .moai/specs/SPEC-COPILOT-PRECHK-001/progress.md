@@ -504,11 +504,88 @@ scout가 정적으로 예측한 것 1건이 라이브와 일치했다 — **`pag
 
 #### 선행 SPEC 트립와이어 1건을 의도적으로 갱신했다
 
-`server/tests/test_songcue_bundle.py`의 `_TOOLS_EXPECTED_HUNK_OLD_STARTS`가 SONGCUE 자체 run-phase BASE 기준 `server/orchestrator/tools.py`의 hunk 시작점을 못박고 있었고, M6의 정당한 편집으로 깨졌다. **이 가드의 실제 불변식은 두 번째 단정**(보호 구간 `(234, 238)`과 `(524, 569)` 무침범)이며 그것은 그대로 통과한다. 첫 단정은 후속 SPEC이 tools.py를 건드릴 때 **의도적 갱신을 강제하는 트립와이어**이므로, 스냅샷을 `(33, 49, 125, 463, 475, 479, 951, 1222, 1231)`로 갱신하고 무엇이 왜 늘었는지를 상수 위 주석에 적었다 — PRECHK가 463·475·479 세 hunk(프리체크 import · `property_port` 파라미터 · 그 독스트링)를 더했고 import 블록을 한 행 아래에 넣어 첫 hunk의 구 시작점이 32에서 33으로 옮겼다. **보호 구간을 건드린 hunk는 0건이다.**
+`server/tests/test_songcue_bundle.py`의 `_TOOLS_EXPECTED_HUNK_OLD_STARTS`가 SONGCUE 자체 run-phase BASE 기준 `server/orchestrator/tools.py`의 hunk 시작점을 못박고 있었고, M6의 정당한 편집으로 깨졌다. **이 가드의 실제 불변식은 두 번째 단정**(보호 구간 `(234, 238)`과 `(524, 569)` 무침범)이며 그것은 그대로 통과한다. 첫 단정은 후속 SPEC이 tools.py를 건드릴 때 **의도적 갱신을 강제하는 트립와이어**이므로, 스냅샷을 `(33, 49, 125, 463, 475, 479, 951, 1222, 1231)`로 갱신하고 무엇이 왜 늘었는지를 상수 위 주석에 적었다 — PRECHK가 구 시작점 463과 475와 479에 hunk 3개(프리체크 import 그리고 `property_port` 파라미터 그리고 그 독스트링)를 더했고, import 블록을 한 행 아래에 넣어 첫 hunk의 구 시작점이 32에서 33으로 옮겼다. **보호 구간을 건드린 hunk는 0건이다.**
+
+### M8 — 종단 라이브 (AC-PRECHK-017 · cycle_type=none · 2026-07-30)
+
+**세션 조건 재측정** — `responder_roundtrip --expect-version 1.5.0` **3/3 PASS** · 응답기 `v1.5.0` · OSC send 8000 / receive 9005. `plan.md` §C가 고정한 라이브 회계 2회의 두 번째다.
+
+**우회 배선 0건.** 콘솔 스택은 제품 조립 루트 `build_console_stack`이 세우고 툴은 `ChatSession`이 쓰는 것과 같은 `build_toolset`으로 만들었다. 하네스는 `.moai/state/verify/prechk-m8/e2e.py`(`.gitignore:206` 대상)이며 **코드 변경 0건**이다.
+
+**쓰기 0건으로 실행했다.** `precheck_patch`를 `create_macro=false`로 발화했다 — `AC-PRECHK-017`의 기대 결과 6항은 전부 읽기·판정·보고 통합에 관한 것이고 매크로 발화를 요구하지 않는다. `attempt_session_backup`도 껐다(세션 백업은 쓰기다). 매크로 저작 경로의 라이브 증명은 M0가 이미 갖고 있다(리터럴 3단 + 재조회 효과 확인).
+
+| 기대 결과 | 관측 |
+|---|---|
+| ① 픽스처 목록이 재조회 실측과 일치 | 슬롯 19개 전량, **불일치 0건**. 슬롯 19 = `name 'MMX 19'` · `patch_raw '2.401'` · `universe 2` · `address 401` |
+| ② 완전성 3수치가 실제 `childCount`·읽은 개수에서 나온다 | `child_count 19` · `observed_count 19` · `missing_count 0` · `recovered_count 1` · `completeness incomplete` |
+| ③ 정합 리그이므로 충돌 0건, 오탐 없음 | `address_duplicates 0` · `range_overlaps 0` · `read_failures 0` |
+| ④ 집계 = 픽스처별 합 | `observed_clear 19`가 픽스처별 합과 일치, `not_assessed 0 == missing_count 0` |
+| ⑤ 증거는 감사 로그 대조 | `property_query` **95건** · `state_query` **27건** · `command` **0건**. 감사에 나타난 슬롯 집합이 리포트의 슬롯 집합과 동일 |
+| ⑥ M0 `ASSUMPTION` 재측정 금지 | 재측정 0건. `skipped_checks`가 `range_overlap_descope` / `ASSUMPTION-27`로 축소를 명시 |
+
+**불완전 경로를 실물에서 밟았다** — 이것이 이 AC의 핵심이다. 루트 열거가 19에서 절단되자 슬롯별 보강 조회가 발동해 19번째를 회수했고(`recovered_count 1`), 그럼에도 `completeness`는 `complete`로 **승격되지 않았다**(`index_domain_unknown true` · `recovery_boundary 19`). `design.md` 슬롯 A가 설계로 적은 것이 실물에서 그대로 동작했다.
+
+**쇼파일 원상 복구.** `command` 감사 이벤트가 0건이므로 이 세션은 콘솔에 아무것도 발화하지 않았다. 착수 baseline 6경로의 `childCount`가 전항 일치한다(`DataPool/Sequences 17` · `DataPool/Timecodes 0` · `Patch/Stages/1/Fixtures 19` · `DataPool/Groups 4` · `DataPool/Macros 1` · `DataPool/Pages 1`).
+
+**한계를 결과에 명시했다.** 무응답 여부는 판정하지 않으며 검증은 패치 메타데이터 수준이다. `macro` 키는 이 실행에 없다(요청하지 않았다).
+
+#### M8이 잡은 결함 1건 — 라이브 실행이 없으면 통과했다
+
+`summary_ko`의 첫 문장이 `열거 불완전 — 못 읽은 픽스처가 있다`였는데 이 세션의 `missing_count`는 **0**이었다. 보강 조회가 19개를 다 읽었으므로 그 문장은 **거짓**이고, 사용자가 가장 먼저 읽는 문자열에서 거짓을 말한 것이다. 라벨이 서로 다른 두 사실을 뒤섞고 있었다 — *"루트 열거가 짧았다"*(참)와 *"못 읽은 것이 남았다"*(이 경우 거짓).
+
+라벨을 `열거 불완전 — 루트 열거가 짧았고 인덱스 정의역 상한을 모른다`로 교정하고 회귀 테스트를 신설했다(`test_the_incomplete_label_does_not_claim_unread_fixtures`) — 보강으로 전량 관측했는데도 `incomplete`인 인벤토리에서 요약이 미관측을 주장하지 않음을 고정한다. **옛 라벨로 되돌리면 그 테스트가 죽는 것을 확인했다**(1 failed / 32 passed). 못 읽은 개수는 0보다 클 때만 별도로 싣는다.
+
+**라이브 세션에서 코드를 고치지 않았다.** 스택을 닫은 뒤 교정했고, 라이브 관측을 통과시키기 위한 수정이 아니라 관측이 드러낸 거짓 서술을 고친 것이다. 교정 후 하네스를 재실행해 같은 결과와 교정된 요약을 확인했다.
+
+전체 스위트 **2711 passed · 5 skipped · 0 failed**(회귀 테스트 1건 추가). `ruff check` / `format --check` clean.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run>_
+```yaml
+run_status: audit-ready
+base_sha: 95687a0
+milestones_closed: 9   # M0~M8
+assumption_verdicts:
+  ASSUMPTION-25: GO
+  ASSUMPTION-26: GO
+  ASSUMPTION-27: NEGATIVE
+  ASSUMPTION-28: GO
+  ASSUMPTION-29: GO
+  ASSUMPTION-30: NEGATIVE
+prefix_rows: 6          # GO 4 · DESCOPE 2 · SKIP 0 · REOPEN 0
+reopen_scope: 0
+live_sessions: 2        # M0 프로브 · M8 종단
+suite: "2711 passed · 5 skipped · 0 failed"
+suite_baseline_at_kickoff: "2490 passed · 5 skipped · 0 failed"
+tests_added: 216        # verdicts 8 · inventory 27+17 · patch 42 · macro 73 · report 33 · tool 21 (기존 M1 17 포함 계산)
+mutations_executed: 34
+mutations_survived: 0
+preserve_diff: "빈 출력 (git diff --stat 95687a0..HEAD -- <10경로>)"
+preserve_gate_nonvacuity: "주입 3회 전건 적발 후 revert"
+safety_diff_files: ["server/safety/console.py", "server/safety/gate.py"]
+safety_diff_outside_approval: 0
+ruff: "신규·변경 18파일 clean · 기존 비-clean(server/safety/console.py E501 2건)은 BASE에서 이미 존재하므로 손대지 않음"
+mode: "sub-agent — 폭 1(M0·M1) -> 폭 2(M2·M3 사슬 + M4) -> 폭 1(M5~M8). §F.1이 개정 근거를 기록"
+user_touchpoints:
+  - "server/safety/** 조건부 예외 — 승인(2026-07-29)"
+  - "M0 라이브 세션 접근 가능성 — 승인·실측(2026-07-29)"
+  - "M8 라이브 세션 접근 가능성 재확인 — 실측으로 충족(2026-07-30, roundtrip 3/3 PASS). 사용자가 착수 지시에서 차단 없음을 명시했고 접근 가능성은 기계 측정 대상이므로 재질의하지 않았다"
+defects_found_and_fixed:
+  - "M6: server.prechk.report.build_report가 server.looks.report의 동명 심볼을 가려 prepare_busking이 잘못된 함수를 호출(busking 12건 실패). 별칭으로 교정. 전체 스위트를 돌리지 않았으면 통과했다"
+  - "M8: summary_ko의 incomplete 라벨이 missing_count 0에서도 '못 읽은 픽스처가 있다'고 단정. 라벨 교정 + 회귀 테스트 신설. 라이브 실행이 없으면 통과했다"
+  - "M0: ASSUMPTION-27을 후보 부분집합 위에서 부정 단정. scout 지적으로 후보 전수 12건을 닫은 뒤 재확정"
+carried_forward:
+  - "FID 의미 — 슬롯 != FID로 패치된 쇼파일이 선행 조건(사용자 GUI 작업). 본 SPEC은 FID를 판정 근거에서 배제한 형상으로 출하"
+  - "희소 풀에서 design.md 슬롯 A의 1..childCount 캡이 과소복구한다 — 이번 쇼파일이 조밀했을 뿐"
+  - "익스큐터 인덱스 정의역 상한 미확정"
+  - "Assign ... At Executor <N>의 page 성분 누출 기전(비단사 사상)의 내부 이유"
+  - "ASSUMPTION-30의 프리셋 효과는 GO로 실측됐으나 page >= 2 일반화 부정으로 축이 꺼짐 — 후속 SPEC이 쓸 수 있는 실측"
+new_measurements_for_successors:
+  - "DataPool/PresetPools 생존(14개) · DataPool/Presets·AllPresets 사망 재확인"
+  - "DataPool 최상위 자식 16종 · Patch 루트 자식 14종 전량 열거"
+  - "ASSUMPTION-7(자식 풀 슬롯)이 분기 (a) probe_slots로 충족됨을 갭 풀(DataPool/Pages/1)로 실측"
+next: "run-phase 종료. M0~M8 9개 마일스톤 전건 닫힘 · REOPEN_SCOPE 0건 · 뮤테이션 생존 0건. 다음은 sync-phase(§E.4)이며 그 전에 run-audit를 세우는 것이 plan-phase의 경험(감사가 축약 토큰 8건과 근거 오류 1건을 잡았다)에 부합한다."
+```
 
 ## §E.4 Sync-phase Audit-Ready Signal
 

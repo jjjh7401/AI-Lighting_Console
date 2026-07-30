@@ -275,6 +275,27 @@ class TestKoreanLabels:
                     f"label for {code} carries no Korean: {text!r}"
                 )
 
+    def test_the_incomplete_label_does_not_claim_unread_fixtures(self):
+        """M8 live finding: recovery can observe everything and stay incomplete.
+
+        The rig read end-to-end on 2026-07-30 recovered all 19 declared fixtures
+        (``missing_count`` 0) while ``completeness`` stayed ``incomplete``,
+        because the index domain's upper bound is unknown. The label said unread
+        fixtures existed, which was false in the first string the user reads.
+        """
+        recovered = _inventory(
+            [_record(slot, f"1.{slot:03d}") for slot in range(1, 4)],
+            recovered_slots=(3,),
+        )
+        assert recovered.completeness == "incomplete"
+        assert recovered.missing_count == 0
+        summary = build_report(evaluate_patch(recovered)).to_dict()["summary_ko"]
+        assert label("completeness", "incomplete") in summary
+        for false_claim in ("못 읽은 픽스처가 있다", "미관측"):
+            assert false_claim not in summary, (
+                f"summary claims unread fixtures while missing_count is 0: {false_claim}"
+            )
+
     def test_summary_ko_is_not_empty(self):
         payload = build_report(evaluate_patch(_duplicate_rig()), macro=_macro()).to_dict()
         assert payload["summary_ko"].strip()
