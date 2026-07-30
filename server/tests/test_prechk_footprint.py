@@ -678,3 +678,42 @@ class TestBoundOrigin:
         origin = bound_source(_walk(Rig(widths=(5, 31))))
         assert origin.endswith("childCount")
         assert "DMXChannels" in origin
+
+
+class TestSiblingAnsweredDecidesTheFirstFailure:
+    """AC-OVERLAP-006 ① — the caller supplies what the walk cannot see.
+
+    When the very FIRST read fails there is no sibling inside the walk to reason
+    from, yet the caller may well have read this console a moment ago. Production
+    raises one exception type either way, so the fact has to be passed in.
+    """
+
+    def test_a_dead_root_with_no_sibling_is_an_unreachable_console(self):
+        outcome = walk_mode_widths(Rig(dead_everything=True), root=ROOT, budget=WIDE_BUDGET)
+        assert outcome.failure == REASON_UNREACHABLE
+
+    def test_a_dead_root_with_a_sibling_is_a_wrong_path(self):
+        outcome = walk_mode_widths(
+            Rig(dead_everything=True), root=ROOT, budget=WIDE_BUDGET, sibling_answered=True
+        )
+        assert outcome.failure == REASON_UNRESOLVED
+        assert "다른 경로가 답했으므로" in outcome.failure_detail
+
+    def test_the_two_answers_differ_on_the_same_rig_and_exception(self):
+        rig_kwargs = {"dead_everything": True, "exception": StateQueryError}
+        without = walk_mode_widths(Rig(**rig_kwargs), root=ROOT, budget=WIDE_BUDGET)
+        with_sibling = walk_mode_widths(
+            Rig(**rig_kwargs), root=ROOT, budget=WIDE_BUDGET, sibling_answered=True
+        )
+        assert without.failure != with_sibling.failure
+
+    def test_a_deeper_failure_is_a_wrong_path_either_way(self):
+        # Once any read inside the walk has answered, the flag adds nothing.
+        for flag in (False, True):
+            outcome = walk_mode_widths(
+                Rig(dead_paths=(f"{ROOT}/1/DMXModes",)),
+                root=ROOT,
+                budget=WIDE_BUDGET,
+                sibling_answered=flag,
+            )
+            assert outcome.failure == REASON_UNRESOLVED

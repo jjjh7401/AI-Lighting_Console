@@ -214,13 +214,22 @@ def _child_slots(payload: dict) -> list[int] | None:
     return slots
 
 
-def walk_mode_widths(reader: StateReader, *, root: str, budget: int) -> WalkOutcome:
+def walk_mode_widths(
+    reader: StateReader, *, root: str, budget: int, sibling_answered: bool = False
+) -> WalkOutcome:
     """Enumerate every mode footprint reachable under ``root``.
 
     ``root`` is the fixture-type listing path and arrives as an argument so the
     ``rig_paths`` override seam applies to this axis too; ``budget`` caps the
     number of queries, which is ``1 + types + modes`` and therefore unknown
     before the first read.
+
+    ``sibling_answered`` carries what only the CALLER knows: whether some other
+    path on this console already replied. It decides the failure class when the
+    very first read fails -- with a sibling answered the console is demonstrably
+    reachable and the path is wrong for this showfile (a configuration defect);
+    without one, nothing can be blamed on a path. Production raises the SAME
+    exception for both, so this cannot be inferred here.
 
     Returns an outcome whose ``complete`` is true only when every tier answered
     wholly and the budget held. Failures are classified, never raised: a walk
@@ -242,7 +251,7 @@ def walk_mode_widths(reader: StateReader, *, root: str, budget: int) -> WalkOutc
     def classify(path: str) -> WalkOutcome:
         # Whether a SIBLING answered is the discriminator, not the exception
         # type: production reports "no such path" and "no reply" identically.
-        if queried:
+        if queried or sibling_answered:
             return WalkOutcome(
                 complete=False,
                 queried_paths=tuple(queried),

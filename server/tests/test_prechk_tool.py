@@ -925,3 +925,278 @@ class TestMissingRigSectionIsAWiringGap:
         )
         assert execution.result.is_error is False
         assert json.loads(execution.result.content)["macro"]["created"] is True
+
+
+class FootprintRigPort(RigPort):
+    """``RigPort`` that also answers the three-tier fixture-type walk.
+
+    The base double raises for ``Patch/FixtureTypes``, which is deliberate — it
+    proves the walk classifies rather than raises. This subclass is the other
+    half: a rig where the bound axis actually produces a grade, so "no command was
+    fired" is asserted on a run that DID do the work.
+    """
+
+    #: Injected, never derived. Two modes so the widest is unambiguous.
+    MODE_WIDTHS = (11, 17)
+
+    def query_state(self, path: str) -> dict:
+        if path == "Patch/FixtureTypes":
+            self.state_calls.append(path)
+            return _walk_snapshot(path, 1, self._children([1]))
+        if path == "Patch/FixtureTypes/1/DMXModes":
+            self.state_calls.append(path)
+            return _walk_snapshot(
+                path, len(self.MODE_WIDTHS), self._children(range(1, len(self.MODE_WIDTHS) + 1))
+            )
+        parts = path.split("/")
+        if len(parts) == 6 and parts[-1] == "DMXChannels":
+            self.state_calls.append(path)
+            # Truncated listing with an exact count -- the measured shape.
+            return _walk_snapshot(path, self.MODE_WIDTHS[int(parts[4]) - 1], [], truncated=True)
+        return super().query_state(path)
+
+
+def _walk_snapshot(path: str, child_count: int, children, *, truncated: bool = False) -> dict:
+    return {
+        "ok": True,
+        "path": path,
+        "node": {"name": path.rsplit("/", 1)[-1], "class": "Pool", "childCount": child_count},
+        "children": list(children),
+        "truncated": truncated,
+    }
+
+
+class TestFootprintWalkIsWiredThroughRigPaths:
+    """AC-OVERLAP-018 · D-2 · D-3 — the axis rides the existing seams."""
+
+    def test_the_walk_module_hardcodes_no_rig_path(self):
+        source = (PROJECT_ROOT / "server" / "prechk" / "footprint.py").read_text(encoding="utf-8")
+        constants = [
+            node.value
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.Constant) and isinstance(node.value, str)
+        ]
+        assert constants, "문자열 상수를 모으지 못하면 이 단정이 공허하다"
+        assert "Patch/FixtureTypes" not in constants
+        # Non-vacuity: the path DOES exist -- as the rig-context default the
+        # handler passes in, which is the seam a literal would bypass.
+        assert tools_module.DEFAULT_RIG_CONTEXT_PATHS["fixture_types"] == "Patch/FixtureTypes"
+
+    def test_the_handler_walks_the_configured_path(self):
+        rig = FootprintRigPort()
+        registry = build_toolset(
+            execution_port=RecordingExecutionPort(),
+            state_port=rig,
+            property_port=rig,
+            rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+        )
+        _dispatch(registry)
+        assert "Patch/FixtureTypes" in rig.state_calls
+        assert "Patch/FixtureTypes/1/DMXModes" in rig.state_calls
+
+    def test_an_override_redirects_the_walk(self):
+        # The point of the seam: a different rig_paths entry moves the walk.
+        class Elsewhere(FootprintRigPort):
+            def __init__(self):
+                super().__init__()
+                self.requested: list[str] = []
+
+            def query_state(self, path: str) -> dict:
+                self.requested.append(path)
+                if path.startswith("Patch/OtherTypes"):
+                    return super().query_state(
+                        path.replace("Patch/OtherTypes", "Patch/FixtureTypes")
+                    )
+                return super().query_state(path)
+
+        rig = Elsewhere()
+        registry = build_toolset(
+            execution_port=RecordingExecutionPort(),
+            state_port=rig,
+            property_port=rig,
+            rig_paths={
+                **tools_module.DEFAULT_RIG_CONTEXT_PATHS,
+                "fixture_types": "Patch/OtherTypes",
+            },
+        )
+        payload = json.loads(_dispatch(registry).result.content)
+        # The walk asked for the overridden root, never the default one.
+        assert [path for path in rig.requested if path.startswith("Patch/OtherTypes")]
+        assert [path for path in rig.requested if path.startswith("Patch/FixtureTypes")] == []
+        # Non-vacuity: the redirected walk still produced a bound, so the override
+        # moved the walk rather than breaking it.
+        assert payload["overlap_basis"]["bound"] == max(FootprintRigPort.MODE_WIDTHS)
+        assert payload["overlap_basis"]["bound_source"].startswith("Patch/OtherTypes")
+
+    def test_the_macro_section_tuple_is_unchanged(self):
+        # D-3: adding "fixture_types" here would make one override omission behave
+        # differently depending on create_macro, and would break the two tests
+        # that pin the macro guard's message.
+        assert tools_module.PRECHK_RIG_SECTIONS == ("groups", "macros")
+        assert tools_module.PRECHK_FOOTPRINT_SECTIONS == ("fixture_types",)
+        assert (
+            set(tools_module.PRECHK_FOOTPRINT_SECTIONS) & set(tools_module.PRECHK_RIG_SECTIONS)
+            == set()
+        )
+
+    def test_the_footprint_section_is_checked_regardless_of_create_macro(self):
+        """D-3: the guard sits OUTSIDE the create_macro branch.
+
+        A guard inside that branch is the trap: the same override omission would
+        be named when a macro was requested and pass silently when it was not.
+        """
+        paths = {
+            key: value
+            for key, value in tools_module.DEFAULT_RIG_CONTEXT_PATHS.items()
+            if key != "fixture_types"
+        }
+        for create_macro in (False, True):
+            rig = FootprintRigPort()
+            registry = build_toolset(
+                execution_port=RecordingExecutionPort(),
+                state_port=rig,
+                property_port=rig,
+                rig_paths=paths,
+                bundle_gate=ClearingGate(),
+            )
+            execution = _dispatch(registry, create_macro=create_macro)
+            payload = json.loads(execution.result.content)
+            note = payload["overlap_basis"]["observation_note"]
+            assert payload["overlap_basis"]["basis"] == "not_performed", create_macro
+            assert "fixture_types" in note, create_macro
+            # Names the section; does NOT claim a pool read failed.
+            assert "판독 실패가 아니다" in note
+            assert "Patch/FixtureTypes" not in rig.state_calls
+
+    def test_a_missing_section_does_not_discard_the_report(self):
+        # Refusing the call would throw away the fixture inventory the tool exists
+        # to produce -- the shape the zero-target macro branch already fixed once.
+        paths = {
+            key: value
+            for key, value in tools_module.DEFAULT_RIG_CONTEXT_PATHS.items()
+            if key != "fixture_types"
+        }
+        rig = FootprintRigPort()
+        registry = build_toolset(
+            execution_port=RecordingExecutionPort(),
+            state_port=rig,
+            property_port=rig,
+            rig_paths=paths,
+        )
+        execution = _dispatch(registry)
+        assert execution.result.is_error is False
+        payload = json.loads(execution.result.content)
+        assert payload["inventory"]["observed_count"] == len(_FIXTURES)
+        assert payload["collisions"]["address_duplicates"]
+
+    def test_a_walk_that_cannot_read_its_root_blames_the_path_not_the_console(self):
+        # The base RigPort raises for Patch/FixtureTypes. The fixture inventory
+        # answered first, so the console is demonstrably reachable.
+        rig = RigPort()
+        execution = _dispatch(_registry(rig=rig))
+        payload = json.loads(execution.result.content)
+        assert payload["overlap_basis"]["basis"] == "not_performed"
+        assert "다른 경로가 답했으므로" in payload["overlap_basis"]["observation_note"]
+
+    def test_the_query_count_stays_inside_the_budget(self):
+        rig = FootprintRigPort()
+        registry = build_toolset(
+            execution_port=RecordingExecutionPort(),
+            state_port=rig,
+            property_port=rig,
+            rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+        )
+        _dispatch(registry)
+        walk_calls = [call for call in rig.state_calls if call.startswith("Patch/FixtureTypes")]
+        assert walk_calls, "순회 조회가 0건이면 상한 단정이 공허하다"
+        assert len(walk_calls) == 1 + 1 + len(FootprintRigPort.MODE_WIDTHS)
+        assert len(walk_calls) <= tools_module.PRECHK_FOOTPRINT_QUERY_CAP
+
+
+class TestTheOverlapAxisFiresNoCommand:
+    """AC-OVERLAP-018 ⑤ — read-only, fixed by observing the execution port."""
+
+    def test_the_bound_axis_speaks_nothing_to_the_console(self):
+        rig = FootprintRigPort()
+        port = RecordingExecutionPort()
+        registry = build_toolset(
+            execution_port=port,
+            state_port=rig,
+            property_port=rig,
+            rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+        )
+        payload = json.loads(_dispatch(registry).result.content)
+        # Non-vacuity: the axis really ran on this call.
+        assert payload["overlap_basis"]["bound"] == max(FootprintRigPort.MODE_WIDTHS)
+        assert port.executed == []
+
+    def test_the_same_port_is_not_simply_inert(self):
+        # Without this the assertion above would pass against a port that records
+        # nothing at all.
+        rig = FootprintRigPort()
+        port = RecordingExecutionPort()
+        registry = build_toolset(
+            execution_port=port,
+            state_port=rig,
+            property_port=rig,
+            rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+            bundle_gate=ClearingGate(),
+        )
+        _dispatch(registry, create_macro=True)
+        assert port.executed
+
+
+class TestBoundaryProhibitions:
+    """AC-OVERLAP-018 ①②③④ — four boundaries, each with a non-vacuity guard."""
+
+    def _prechk_sources(self) -> list[Path]:
+        return sorted((PROJECT_ROOT / "server" / "prechk").rglob("*.py"))
+
+    def test_the_axis_adds_no_web_surface(self):
+        visited = 0
+        hits: list[str] = []
+        for source in sorted((PROJECT_ROOT / "server" / "web").rglob("*.py")):
+            visited += 1
+            text = source.read_text(encoding="utf-8")
+            for needle in ("footprint", "walk_mode_widths", "overlap_basis"):
+                if needle in text:
+                    hits.append(f"{source.name}: {needle}")
+        assert visited >= 1, "web 계층 파일을 방문하지 않으면 0건 판정이 공허하다"
+        assert hits == []
+        # Non-vacuity: the axis IS reachable -- through the existing tool name.
+        assert TOOL in TOOL_NAMES
+        assert "walk_mode_widths" in TOOLS_SOURCE.read_text(encoding="utf-8")
+
+    def test_the_walk_never_touches_the_execution_port(self):
+        nodes = 0
+        hits: list[str] = []
+        for source in self._prechk_sources():
+            tree = ast.parse(source.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                nodes += 1
+                if isinstance(node, ast.Name) and node.id == "execution_port":
+                    hits.append(source.name)
+                if isinstance(node, ast.Attribute) and node.attr == "execution_port":
+                    hits.append(source.name)
+        assert nodes >= 1, "AST 노드를 방문하지 않으면 0건 판정이 공허하다"
+        assert hits == []
+
+    def test_the_prechk_package_never_imports_the_send_surface(self):
+        modules: list[str] = []
+        for source in self._prechk_sources():
+            tree = ast.parse(source.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    modules.extend(alias.name for alias in node.names)
+                elif isinstance(node, ast.ImportFrom):
+                    modules.append(node.module or "")
+        assert len(modules) >= 1, "import를 하나도 모으지 못하면 0건 판정이 공허하다"
+        assert [m for m in modules if m.startswith(("server.bridge", "pythonosc"))] == []
+
+    def test_the_operator_tool_exemption_list_is_unchanged(self):
+        from .test_architecture import _NAMED_TOOL_EXEMPTIONS
+
+        assert (
+            frozenset({"server/tools/osc_smoke.py", "server/tools/responder_roundtrip.py"})
+            == _NAMED_TOOL_EXEMPTIONS
+        )

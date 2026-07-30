@@ -47,6 +47,7 @@ from server.orchestrator.ports import (
     PropertyQueryPort,
     StateQueryPort,
 )
+from server.prechk.footprint import WalkOutcome, walk_mode_widths
 from server.prechk.inventory import InventoryReadError, read_inventory
 from server.prechk.macro import MacroPolicy, MacroResult, build_response_check_macro
 from server.prechk.macro import groups_from_snapshot as read_group_pool
@@ -155,6 +156,32 @@ SONGCUE_RIG_SECTIONS = ("groups", "sequences")
 # one must fail by NAME, not by an IndexError rendered as a pool that failed to
 # read (independent PR #7 review, P3).
 PRECHK_RIG_SECTIONS = ("groups", "macros")
+
+# The rig-context section the footprint bound needs. A SEPARATE tuple from
+# PRECHK_RIG_SECTIONS on purpose: that guard sits INSIDE the `create_macro`
+# branch, so adding a section to it would make one and the same override omission
+# behave differently depending on an argument — an error when a macro was asked
+# for, silence when it was not. The bound axis does not care about `create_macro`,
+# so it gets its own always-checked tuple.
+#
+# A missing section here does NOT fail the call. It cannot: the two tests that
+# pin the macro guard's message (`server/tests/test_prechk_tool.py:895-905`,
+# `:907`) pass an override with neither this section nor the macro ones, and an
+# error raised first would replace the message they assert. It should not either
+# — refusing the whole call would DISCARD the fixture inventory this tool exists
+# to produce, the same shape as the zero-target macro defect below. So the check
+# names the missing section in the report and the overlap axis grades itself
+# `not_performed`.
+PRECHK_FOOTPRINT_SECTIONS = ("fixture_types",)
+
+# Query ceiling for the three-tier footprint walk: one root read, one per fixture
+# type, one per mode. The type count is UNMEASURED on any rig, so this is a
+# deliberate over-provision rather than a fitted number, and exhaustion is safe by
+# construction — the walk returns an incomplete outcome and the axis grades itself
+# `not_performed` rather than folding a bound over a partial mode set. Kept beside
+# RIG_DRILLDOWN_QUERY_CAP so the two ceilings are read together; they are separate
+# because they bound separate walks reached by separate tools.
+PRECHK_FOOTPRINT_QUERY_CAP = 40
 
 # The macro-line property that holds the command text, on both the authoring side
 # (`Set Macro <slot>.<line> Property 'Command' ...`) and the read-back side.
@@ -1407,9 +1434,37 @@ def build_toolset(
             inventory = read_inventory(_InventoryPort(state_port, property_port))
         except InventoryReadError as error:
             return _error_result(call, f"fixture inventory unreadable: {error}")
-        # ASSUMPTION-27 is NEGATIVE (progress.md §E.2 M0): the range-overlap check
-        # stays off and says so in skipped_checks. Address duplicates still run.
-        evaluation = evaluate_patch(inventory)
+        # ASSUMPTION-27 is NEGATIVE (progress.md §E.2 M0): the EXACT-width
+        # range-overlap check stays off and says so in skipped_checks. Address
+        # duplicates still run, and so does the weaker axis below: an upper bound
+        # on the footprint needs no fixture-to-mode linkage, so it survives the
+        # refutation that killed the exact widths.
+        missing_sections = [
+            section for section in PRECHK_FOOTPRINT_SECTIONS if section not in rig_paths
+        ]
+        if missing_sections:
+            # Named, not blamed on a read: nothing was queried, so nothing may be
+            # called unreadable. The report survives; only the bound is lost.
+            walk = WalkOutcome(
+                complete=False,
+                failure=REASON_UNRESOLVED,
+                failure_detail=(
+                    f"리그 컨텍스트에 {missing_sections} 경로가 설정되지 않아 점유폭 상계를 "
+                    "계산하지 않았다 — 조회를 시도하지 않았으므로 판독 실패가 아니다."
+                ),
+            )
+        else:
+            walk = walk_mode_widths(
+                state_port,
+                root=rig_paths["fixture_types"],
+                budget=PRECHK_FOOTPRINT_QUERY_CAP,
+                # The fixture inventory above already answered on this console, so
+                # a walk that cannot read its own root is a WRONG PATH for this
+                # showfile rather than a dead console. The walk cannot see that
+                # from inside: production raises one exception type for both.
+                sibling_answered=True,
+            )
+        evaluation = evaluate_patch(inventory, walk=walk)
         macro = None
         if create_macro:
             # Named up front, exactly like the three sibling handlers: indexing
