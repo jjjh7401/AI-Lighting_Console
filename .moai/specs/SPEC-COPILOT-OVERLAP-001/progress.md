@@ -7,7 +7,8 @@
 ### 한 문단
 
 **무엇**: 픽스처를 자기 DMX 점유폭에 잇는 조인 키가 없어도, **열거 가능한 모드 전체의 폭 최대값**을 상계로 삼아 *"겹침 없음"*을 증명한다. 증명되지 않으면 **충돌이 아니라 미확정**으로 보고한다. PRECHK가 수행하지 않고 수행하지 않았다고 보고한 축을 되살리되 **판정의 비대칭을 계약으로 만든다.**
-**상태**: **run-phase 완결 (2026-07-30) — M0~M8 전 마일스톤.** 스위트 **2758 → 2920 passed · 5 skipped · 0 failed** · 뮤테이션 36건 주입(33 killed · 3 생존→테스트 수정 · 1 주입 불가→형상 강화) · 라이브 세션 0회 · PRESERVE 위반 0건. **불일치 4건을 덮지 않고 §5에 올렸다.** 아래 §0의 나머지는 **plan-phase 시점의 인수인계 기록이며 그 시점의 판단으로 보존한다** — 현재 상태와 다음 단계는 **§4(마일스톤별 증거) · §5(run-phase 신호)**가 정본이다. plan-audit 1회차는 §3이다.
+**상태**: **run-phase 완결 (2026-07-30) — M0~M8 전 마일스톤.** 스위트 **2758 → 2920 passed · 5 skipped · 0 failed** · 뮤테이션 36건 주입(33 killed · 3 생존→테스트 수정 · 1 주입 불가→형상 강화) · 라이브 세션 0회 · PRESERVE 위반 0건. **불일치 4건을 덮지 않고 §5에 올렸다.**
+**→ 지금 할 일은 §6 다음 세션 착수 키트에 있다.** 남은 것은 판단이지 구현이 아니다 — **독립 run-audit** 그리고 불일치 4건의 처분이다. 증거는 §4(마일스톤별) · 신호는 §5. **아래 §0의 나머지는 plan-phase 시점의 인수인계 기록이며 그 시점의 판단으로 보존한다**(*"읽는 순서"*와 *"기계 확인"* 두 블록만 run-phase 값으로 개정했고, M0 착수 키트는 §6이 대체함을 표시했다). plan-audit 1회차는 §3이다.
 **열린 사용자 접점**: **0건** — 어휘 확장 승인을 착수 전에 받았다(2026-07-30).
 **라이브 세션**: **0회** — 필요한 값이 전부 PRECHK에 실측 전재되어 있다. run-phase도 **라이브를 요구하지 않는다.**
 
@@ -27,19 +28,25 @@
 
 **PRECHK의 잔여 2건과 본 SPEC의 관계**: 부분 커버리지 고지의 슬롯 단위 정밀도와 *"어느 리포트 행이 보강에서 왔나"*가 그것이며 둘 다 **닫힌 어휘 또는 리포트 스키마 확장**을 요구한다. 본 SPEC이 그 확장을 승인받아 집행하므로 **M1 이후에 그 둘을 함께 처리할 여지가 생긴다** — 다만 본 SPEC의 요구가 아니므로 자동으로 닫히지는 않는다.
 
-### 읽는 순서
+### 읽는 순서 — **run-phase 완결 이후 개정 (2026-07-30)**
 
 | 순서 | 무엇을 알려주나 | 어디 |
 |---|---|---|
-| 1 | **왜 이 SPEC이 존재하나 / 무엇이 사실로 확립됐나** | `research.md` §1(출처) → §3(산술) → **§4(건전성 전제 3건 — 상계가 상계가 아닐 수 있는 경우)** |
-| 2 | 무엇을 만들기로 했나 | `spec.md` — REQ 18 · §C PRESERVE와 ASSUMPTION 5건 · §D Out of Scope |
-| 3 | 무엇을 통과해야 하나 | `acceptance.md` — AC 21 · 역추적표 · 계수 |
-| 4 | **협상 불가 결정과 마일스톤 경계** | `CONTRACT.md` — §2 D-1~D-8 · §4 **BASE 세 개** · §5 M0~M8 · **§8 비준 기록 11건** |
-| 5 | 왜 이 형상인가 | `design.md` — 슬롯 A~I · 후보 기록 25건(그중 기각 24) · 합성 리그 19 · 뮤테이션 35 |
-| 6 | 어떤 순서로 만드나 | `plan.md` — §B M0~M8 · §C 게이트 · §G Phase 4 권고 |
-| 7 | 조사 원문(가장 김) | `research.md` 전문 — 필요할 때만. **§F**(본 문서)는 첫 run-phase 스폰 전까지 비어 있음이 정상이다 |
+| **0** | **지금 무엇을 해야 하나** | **§6 다음 세션 착수 키트** — 재발견 비용을 0으로 만든다. 여기부터 읽는다 |
+| **1** | **무엇이 만들어졌고 어떻게 증명됐나** | **§4 Run-phase Evidence** — M0~M8 각 절에 착수 baseline · 산출 · 뮤테이션 · DoD 표 |
+| **2** | **감사가 먼저 볼 것 · 불일치 4건 · 정직한 잔여** | **§5 Run-phase Audit-Ready Signal** — `deviations` · `known_gaps` · `next` |
+| 3 | 무엇을 통과해야 했나 | `acceptance.md` — AC 21 · 역추적표. **20건 충족 · 1건 부분**(§5) |
+| 4 | **협상 불가 결정과 BASE 세 개** | `CONTRACT.md` — §2 D-1~D-8 · §4 BASE 3 · §5 M0~M8 · §8 비준 11건 |
+| 5 | 왜 이 형상인가 | `design.md` — 슬롯 A~I · 후보 25(기각 24) · 합성 리그 19 · 뮤테이션 35 |
+| 6 | 무엇을 만들기로 했나 | `spec.md` — REQ 18 · §C PRESERVE · §D Out of Scope. **`ASSUMPTION-34`가 `GO`였으므로 §C는 개정되지 않았다** |
+| 7 | 왜 이 SPEC이 존재하나 | `research.md` §1(출처) → §3(산술) → §4(건전성 전제 3건) |
+| 8 | 어떤 순서로 만들기로 했었나 | `plan.md` — §B M0~M8 · §C 게이트 · §G Phase 4 권고. **실측이 정정한 4건은 §5 `deviations`가 정본이다** |
 
-### 인수인계 시 반드시 알아야 할 함정 5건
+> **plan-phase 산출물 6종은 사후 재작성하지 않는다** — 그 시점의 판단 기록이며 고치면 판단이 흐려진다. 계획과 실측이 어긋난 지점은 **§4의 해당 마일스톤 절과 §5 `deviations`**가 정본이고 어긋남 자체를 기록으로 남긴다.
+
+### 인수인계 시 반드시 알아야 할 함정 5건 — **전건 run-phase에서 집행됐다**
+
+> 아래 5건은 plan-phase가 예고한 함정이며 **전부 코드와 테스트로 닫혔다.** 어느 것을 어디가 닫았는지 병기했다 — 후속 편집이 그것을 되돌리려 할 때 무엇이 발화할지 알아야 한다.
 
 1. **`간격 == 상계`는 깨끗하다.** 술어는 `간격 < 상계`이며 `이하`가 아니다. PRECHK `progress.md` §E.6 ④가 *"상계 이하라 미확정"*으로 적었고 그것은 off-by-one이다. **이 쇼파일에서는 42 > 31이라 두 표현이 같은 답을 내므로 오류가 잠복한다** — 간격이 정확히 상계인 리그에서 처음 드러나고 그때 깨끗한 리그를 미확정으로 보고한다.
 2. **열거가 짧으면 상계도 상계가 아니다.** 모드 집합이 불완전하면 `max`가 부분집합의 최대값이 되어 참 상계보다 **작아지고**, `bound_proves_clear`가 **거짓 양성**으로 발화한다. 구체 수치: 부분집합 상계 29 vs 참값 31, 간격 30인 리그에서 결론이 뒤집힌다. **완전성 판정이 `max` 앞에 와야 하며 표기만 붙이고 계산을 계속하는 형태는 그 자체가 결함이다.**
@@ -47,12 +54,23 @@
 4. **`tools.py`에 "삭제 0행" 규칙을 쓰면 즉시 실패한다.** 실측 삭제가 1행이다(import 1행이 12행 블록으로 대체). hunk 위치 봉쇄를 써야 한다. PRECHK §E.7 ⑤가 이것을 놓쳤다.
 5. **어휘 가드 튜플 누락은 무증상이다.** 신규 축을 표현 계층의 import 시점 가드 루프에 넣지 않아도 **어떤 테스트도 실패하지 않는다.** 그래서 `CONTRACT.md` D-6이 그 루프를 레지스트리 순회로 바꾸도록 결정했다 — 튜플에 항목을 추가하는 것으로 끝내면 다음 축을 추가하는 사람이 같은 함정을 만난다.
 
+| # | 무엇이 닫았나 | 되돌리면 무엇이 발화하나 |
+|---|---|---|
+| 1 | `unsettled_gaps`의 `gap.size < bound` + 경계 테스트를 **순회 층과 판정 층 두 곳**에 | `<=`로 바꾸면 **6건 실패**(M3 뮤테이션 M-9) |
+| 2 | `WalkOutcome`에 `bound` 필드가 **없고** 폴드가 완전성 참 분기 안에만 있다 + AST 판정 | 무조건 폴드로 바꾸면 **5건 실패**(M-1). 3단 예산 소진을 국소 표기로 강등하면 **1건 실패**(M-5 — 그 테스트는 뮤테이션이 1회차에 살아남아서 추가됐다) |
+| 3 | `server/tests/test_overlap_preserve.py`가 PRECHK BASE를 **단독 소유**하고 두 상수가 정확히 13 어긋남을 단정 | 선례 상수를 복사하면 **1건 실패**(M-33). 선례 SHA를 이 파일에 재타이핑하면 **자기참조로 실패한다**(초안이 실제로 그랬다) |
+| 4 | hunk **위치** 봉쇄 `(247, 251)` · `(537, 582)` + *"삭제 계수 규칙은 이 파일에 맞지 않다"*를 실측으로 단정 | 삭제 계수 규칙으로 바꾸면 착수 직후 실패한다 — 그 사실 자체를 테스트가 `added >= 1 and deleted >= 1`로 고정한다 |
+| 5 | 가드 루프를 `CLOSED_VOCABULARIES` **순회**로 교체(양방향) + **형태 단정**(리터럴 시퀀스 루프 재발 금지) | 라벨표 항목 1개 제거 → **import 예외**(MUT-A) · 튜플로 되돌리면 **2건 실패**(MUT-A2) |
+
+**그리고 run-phase가 함정 1건을 새로 발견했다** — `SKIPPED_CHECK_KIND_LABELS["range_overlap_descope"]`(*"구간 겹침 판정 미수행"*)이 `OVERLAP_BASIS_LABELS["not_performed"]`(*"겹침 판정 미수행"*)을 **부분문자열로 포함한다.** 따라서 `label(...) in summary` 형태의 단정은 `not_performed`에 대해 **등급이 한 번도 인쇄되지 않아도 통과한다.** 요약 단정은 반드시 **접두 포함형**(`겹침 판정 근거: <라벨>`)으로 쓴다(M5 절).
+
 ### 인수인계가 온전한지 기계로 확인하는 법
 
 ```
 git rev-parse --abbrev-ref HEAD              -> feature/SPEC-COPILOT-OVERLAP-001
 git status --short                           -> 비어 있음
-uv run pytest server/tests/ -q               -> 2758 passed · 5 skipped · 0 failed
+uv run pytest server/tests/ -q               -> 2920 passed · 5 skipped · 0 failed
+                                             #  (2758은 M0 착수 시점 값이며 run-phase 완결로 갱신됐다)
 git diff --stat 95687a0e0eba90b325daf76efbd0ac197e69e2fc..HEAD -- \
   server/looks/schema.py server/looks/loader.py server/looks/roles.py \
   server/looks/resolver.py server/looks/instantiate.py server/looks/matching.py \
@@ -60,11 +78,22 @@ git diff --stat 95687a0e0eba90b325daf76efbd0ac197e69e2fc..HEAD -- \
   server/rulebook/assets/v2.4.2/               -> 빈 출력 (PRESERVE 무변경)
 git diff --stat 85a4b2389003cb61b0ab72eb4aa8d6b2ff90b94a..HEAD -- \
   .moai/specs/SPEC-COPILOT-PRECHK-001/          -> 빈 출력 (PRECHK 문서 무변경)
+git diff --stat 85a4b2389003cb61b0ab72eb4aa8d6b2ff90b94a..HEAD -- \
+  server/safety/                               -> 빈 출력 (ASSUMPTION-34 GO의 귀결)
+git diff --numstat 85a4b2389003cb61b0ab72eb4aa8d6b2ff90b94a..HEAD -- \
+  server/tests/test_songcue_bundle.py          -> 빈 출력 (선례 게이트 파일 무변경)
+grep -cE '^(GO|DESCOPE|SKIP|REOPEN):' \
+  .moai/specs/SPEC-COPILOT-OVERLAP-001/progress.md   -> 5
+uv run pytest server/tests/test_overlap_preserve.py -q  -> 23 passed  (PRESERVE 상시 게이트)
 ```
 
 **마지막 두 줄이 서로 다른 BASE를 쓰는 것은 오타가 아니다.** PRESERVE는 PRECHK 기준점으로만 유효하고(새 BASE면 항상 0행이라 무력) PRECHK 문서 무변경은 본 SPEC BASE로만 유효하다(PRECHK 기준점이면 그 문서들의 최초 작성 2887행이 실린다). `CONTRACT.md` §4가 정본이다.
 
-### 다음 담당자가 먼저 할 일 — M0 착수 키트
+### ~~다음 담당자가 먼저 할 일~~ — M0 착수 키트 (**집행 완료 · §6이 대체한다**)
+
+> **이 절은 §6이 대체한다(2026-07-30).** M0는 집행됐고 판정은 `GO: ASSUMPTION-34`이며 그 증거는 §4의 M0 절이다. **지금 할 일은 §6에 있다.**
+>
+> 남기는 이유는 절차적이다 — 이 절이 예고한 것(**`GO` 방향이며 M0는 확인만 한다** · `SKIP:` 4건의 배정 · 접두 행 정확히 5행 · *"M0에서 절대 하지 말 것"* 3건)이 **전건 그대로 성립했다.** 예고가 맞았다는 기록은 다음 SPEC이 plan-phase에 같은 형태의 키트를 쓸 근거이며, 지우면 그 근거가 사라진다.
 
 **M0다.** `ASSUMPTION-34`(`state` 표면만으로 3단 순회가 도달하는가)를 닫는다. **라이브 불필요 · `cycle_type=none` · 프로토타입 비커밋.** `GO`면 `server/safety/**` 무변경이 확정되고, 부정이면 `spec.md` §C의 PRESERVE 서술을 개정한 뒤 M6·M7의 형상을 다시 본다. **M0 이전에 M1에 착수하지 않는다.**
 
@@ -871,6 +900,91 @@ known_gaps:
   - "**상속된 스키마 드리프트 2건을 정정하지 않았다** — `spec.md` §D가 명시적 Out of Scope로 뒀다."
 next: "**run-phase 완결 — 독립 run-audit를 세울 것을 권고한다.** 근거는 선례다: PRECHK의 run-audit가 FAIL 0.695로 P1 4건을 냈고 **그 4건 전부가 2721개 스위트가 전건 통과하는 상태에서 살아 있었다.** 본 run-phase도 뮤테이션 3건이 1회차에 살아남아 테스트를 고쳤으므로(M-5 · M-21 · M-22) **작성자가 스스로 잡은 것의 한계가 실증됐다.** 감사가 먼저 볼 것: (1) `AC-OVERLAP-021` ① 불일치의 처분 (2) `AC-OVERLAP-019` ⑦ 전제 불성립의 처분 (3) D-3 가드가 오류를 내지 않는 형태의 수용 여부 (4) `sibling_answered` 추가가 슬롯 C를 벗어나지 않는가."
 ```
+
+## §6 다음 세션 착수 키트 (2026-07-30)
+
+> **§5가 무엇을 할지를 적었다. 이 절은 바로 착수할 수 있게 재발견 비용을 0으로 만든다** — 검증 커맨드와 기대 출력, 산출물 인벤토리, 감사 브리프, 그리고 하지 말아야 할 것.
+>
+> **`.moai/state/`는 `.gitignore` 대상이므로 커밋되지 않는다.** `.moai/state/handoff/pending.json`에 같은 내용의 기계 판독용 사본이 있으나 **클론에서 살아남는 것은 본 절이며 충돌 시 본 절이 이긴다**(`CLAUDE.md` §5 "Resuming Work").
+
+### §6.1 한 문단
+
+**run-phase는 끝났다. 코드는 그린이고 게이트는 전건 통과하며 미결은 문서 위에 있다.** 남은 것은 판단이지 구현이 아니다 — **독립 run-audit**를 세우고, 감사 결과와 함께 **불일치 4건(§5 `deviations`)을 처분**한 뒤 sync-phase로 간다. 사용자 승인이 필요한 열린 접점은 **0건**이고, 라이브 콘솔 접근은 **필요하지 않다**.
+
+### §6.2 착수 즉시 돌릴 것 — 기대 출력을 병기한다
+
+```sh
+git branch --show-current                    # feature/SPEC-COPILOT-OVERLAP-001
+git status --porcelain                       # 빈 출력
+git log --oneline -1                         # 56977e6 docs(overlap): spec status draft -> in-progress …
+find server -name __pycache__ -type d -exec rm -rf {} + ; uv run pytest server/tests/ -q
+                                             # 2920 passed · 5 skipped · 0 failed
+uv run pytest server/tests/test_overlap_preserve.py -q          # 23 passed
+uv run pytest server/tests/test_prechk_footprint.py -q          # 52 passed
+uv run pytest server/tests/test_prechk_patch.py -q              # 94 passed
+uv run pytest server/tests/test_prechk_report.py -q             # 49 passed
+uv run pytest server/tests/test_prechk_tool.py -q               # 76 passed
+uv run pytest server/tests/test_prechk_verdicts.py -q           #  8 passed
+```
+
+**스위트가 2920이 아니면 먼저 그 차이를 설명하라.** 단 `server/tests/test_web_launcher.py::TestSidecarSelfReap::test_orphaned_sidecar_reaps_the_group_without_a_pipe` **1건은 간헐 실패한다** — `_await_status`의 15초 벽시계 데드라인이며 머신 부하에 걸린다. 단독 실행에서 71건 전건 통과하고 본 SPEC은 런처 계층을 건드리지 않았다(§4 M3 절의 별항). **그것 말고 다른 실패는 조사 대상이다.**
+
+**게이트 6종은 `test_overlap_preserve.py` 23건이 상시 판정하므로 손으로 돌릴 필요가 없다.** 손으로 확인하고 싶으면 §0의 *"인수인계가 온전한지 기계로 확인하는 법"* 블록이 그 6종을 그대로 담고 있다.
+
+### §6.3 산출물 인벤토리 — 무엇이 어디에 있나
+
+| 파일 | 성격 | 행수(±) |
+|---|---|---|
+| `server/prechk/footprint.py` | **신규** — 3단 순회 · 완전성 술어 2종 · 예산 · 실패 분류 · 간격 산수 · 술어 `간격 < 상계` | +395 |
+| `server/tests/test_overlap_preserve.py` | **신규** — PRESERVE 상시 게이트 23건. **PRECHK BASE를 단독 소유한다** | +369 |
+| `server/tests/test_prechk_footprint.py` | **신규** — 순회·간격·상계 48건 | +719 |
+| `server/prechk/patch.py` | 갱신 — `OverlapBasis` 7키 · `_overlap_basis` · 주소 하한 · 그룹핑 추출 | +275 −9 |
+| `server/prechk/report.py` | 갱신 — 가드 루프 구조 변경 · `OVERLAP_BASIS_LABELS` · 요약 배선 | +47 −15 |
+| `server/prechk/verdicts.py` | 갱신 — `OVERLAP_BASIS` · 레지스트리 맨 끝 append | +19 −1 |
+| `server/orchestrator/tools.py` | 갱신 — 섹션 가드 신설 · 예산 상한 · 순회 배선 | +58 −3 |
+| `server/tests/test_prechk_{patch,report,tool,verdicts}.py` | 갱신 — 추가만 | +1263 −2 |
+
+**커밋 16개** · 본 SPEC BASE `85a4b23…` 이후 **20파일 · +6697 −30**(문서 포함).
+
+### §6.4 run-audit 브리프 — 감사에게 그대로 넘길 것
+
+**감사 대상**: `HEAD`(현재 `56977e6`) 시점의 run-phase. 정본은 `progress.md` §4(마일스톤별 증거) · §5(신호).
+
+**감사가 먼저 볼 4건** — 전부 §5 `deviations`에 원문이 있다:
+
+| # | 불일치 | 물어야 할 것 |
+|---|---|---|
+| 1 | `AC-OVERLAP-021` ① — `exact_widths`가 **툴 표면에서 도달 불가능**(핸들러가 `FootprintPolicy`를 만들지 않으며 AST로 0건 확인) | 인수 조건을 좁히는 것이 옳은가, 아니면 기각된 축을 다시 켜는 것이 옳은가. **후자는 `spec.md` §D 범위 밖이다** |
+| 2 | `AC-OVERLAP-019` ⑦ — *"트립와이어가 갱신되고"*의 **전제가 성립하지 않았다**(old-side 경계 9개 바이트 동일 · 선례 파일 0행 변경) | 그 항의 실질 불변식만 남기고 표제를 고치는 것이 옳은가 |
+| 3 | D-3 섹션 가드가 **오류를 내지 않는다**(리포트에 담고 등급을 `not_performed`로) | D-3의 세 요건은 충족됐다. 거부가 아닌 형태를 수용하는가 |
+| 4 | 순회에 **`sibling_answered` 파라미터 추가** | 설계 슬롯 C를 벗어나는가, 아니면 슬롯 C가 전제한 사실을 명시적으로 만든 것인가 |
+
+**감사가 재현할 수 있는 계수**(전부 §4에 실측 원문이 있다): 스위트 2758 → 2920 · 마일스톤별 순증 · 뮤테이션 36 주입/33 killed/3 생존/1 주입 불가 · 역방향 검증 A·B·C 3등급 · PRESERVE 게이트 6종 · 접두 행 5 · 어휘 6축.
+
+**감사가 오탐으로 낼 수 있는 것 — 미리 선언한다:**
+
+1. *"`bound_inconclusive`가 라이브로 검증되지 않았다"* — **원리적으로 불가능하다.** 현 쇼파일 17 인접쌍 전부가 상계를 통과해 발동 입력이 0건이며 합성 인메모리 리그만이 덮는다(`research.md` §3.3).
+2. *"`ASSUMPTION-31`·`32`·`33`이 열려 있는데 `bound_proves_clear`를 낸다"* — **의도된 형상이다.** 관측 불가 전제에 대한 정직한 형상은 발화 억제가 아니라 **한정 표현**이며(`AC-OVERLAP-020` ④의 주석) 그 등급은 항상 *"열거된 모드 N개에 한정한 판정"*을 함께 말한다.
+3. *"`ruff check server/`가 실패한다"* — **착수 시점부터 3건 실패하며 그중 둘이 PRESERVE 파일이다.** BASE 원본을 꺼내 같은 3건임을 확인했고 판정 범위는 손댄 10파일이다.
+4. *"절단 계수 비교가 4번째 사본이다"* — **D-8이 수렴을 명시적으로 금지했다.** 세 기존 구현의 `childCount` 부재·0 정책이 서로 달라 통합이 `acceptance.md` §D와 충돌한다. 수렴은 별도 리팩터 SPEC의 일이다.
+
+### §6.5 그다음 — sync-phase에서 할 일
+
+감사와 불일치 처분이 끝난 뒤다. **먼저 하지 마라.**
+
+1. `CHANGELOG.md` `[Unreleased]`의 OVERLAP 항목은 **이미 run-phase 완결로 갱신돼 있다** — sync는 감사 결과를 덧붙인다.
+2. `spec.md`의 `status`는 현재 **`in-progress`**다. `completed`는 머지 시점의 값이다(선행 SPEC 9건의 관례).
+3. **plan-phase 산출물 6종을 고치지 마라** — 그 시점의 판단 기록이다. 어긋남은 §4·§5가 정본이다.
+4. PR을 올리면 **`gh pr checks`가 0건인 저장소**임을 기억하라 — 머지 전 유일한 관문이 사람 리뷰이며, PRECHK는 그 자리에서 독립 코드 리뷰 2건을 병렬로 붙여 **P1 4건을 머지 전에 잡았다.** 그 P1 넷 다 **2721개 스위트가 전건 통과하는 상태에서 살아 있었다.**
+
+### §6.6 절대 하지 말 것
+
+1. **`server/safety/**`를 건드리지 마라.** `ASSUMPTION-34`가 `GO`이므로 본 SPEC은 신규 예외 0지점으로 성립했고, `test_overlap_preserve.py`가 본 SPEC BASE 기준 빈 출력을 상시 단정한다.
+2. **`server/tests/test_songcue_bundle.py`를 확장하지 마라.** 그 파일은 SONGCUE BASE 상대이고 신규 게이트는 PRECHK BASE 상대다 — 한 모듈에 두 BASE를 섞으면 게이트가 **엉뚱한 곳을 지키면서 통과한다**(두 상수가 정확히 13 어긋난다).
+3. **PRESERVE diff를 본 SPEC BASE로 "단순화"하지 마라.** 커밋 직후 항상 빈 출력이라 게이트가 통째로 무력해진다. 그 뮤테이션(M-32)이 실제로 killed된다.
+4. **`PRECHK_RIG_SECTIONS`에 `"fixture_types"`를 추가하지 마라.** `create_macro` 값에 따라 다른 결과가 되고 기존 테스트 3건이 죽는다(M-25).
+5. **요약 라벨 단정을 단순 포함형으로 쓰지 마라.** §0 함정 표 아래의 부분문자열 충돌 때문에 등급이 인쇄되지 않아도 통과한다.
+6. **뮤테이션 없이 "검증됐다"고 적지 마라.** 이번 run-phase에서 뮤테이션 3건이 1회차에 살아남았고 **셋 다 코드가 옳고 테스트가 못 재고 있었다.**
 
 ## §F Phase 4 Mode Selection — 확정 (오케스트레이터 소유 · 2026-07-30)
 
