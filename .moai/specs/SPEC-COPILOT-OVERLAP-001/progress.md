@@ -420,6 +420,61 @@ SKIP: ASSUMPTION-35 Patch/FixtureTypes의 childCount 즉 타입 수 T. state Pat
 - **정정**: `server/prechk/report.py`와 `server/tests/test_prechk_report.py`의 도크스트링이 판정을 *"five closed sets의 원소"*로 적었다. 어휘가 6종이 되어 거짓이 되므로 **계수를 지웠다**(*"one of the closed sets"*). 계수를 손으로 적으면 다시 틀린다 — `CONTRACT.md` §8 R-1이 같은 이유로 분류를 기계 도출로 바꿨다.
 - **이월(본 SPEC이 고치지 않는다)**: `uv run ruff check server/`가 **착수 시점에 이미 3건 실패**한다 — `server/safety/console.py:292`·`:346`과 `server/tests/test_web_dash.py:523`의 E501. BASE 원본을 꺼내 같은 3건임을 확인했다. 앞의 두 파일은 **PRESERVE**이므로 고치는 것이 위반이다. `AC-OVERLAP-019` ⑨의 판정 범위는 *"본 SPEC이 손댄 전 파일"*이며 그 5파일은 `ruff check`·`ruff format --check` 전건 통과다.
 
+### M2 — 순회 모듈 (`AC-OVERLAP-001`~`AC-OVERLAP-006` · `cycle_type=tdd` · 2026-07-30)
+
+#### 착수 전제 확인
+
+| 항목 | 산출 |
+|---|---|
+| M1 DoD 11항 | 전건 충족(위) |
+| `import server.prechk.report` | 종료 0 — 순회 모듈이 판정 어휘를 쓸 수 있다 |
+| baseline | **2762 passed · 5 skipped · 0 failed** (M1 커밋 시점 실측) |
+
+#### 산출
+
+`server/prechk/footprint.py` **304행**(신규) · `server/tests/test_prechk_footprint.py` **35건**(신규). 기존 파일 갱신 **0건**.
+
+형상은 설계 슬롯 그대로다 — **A-ii**(순회는 `(완전성, 폭 집합)`을 돌려주고 `WalkOutcome`에 `bound` 필드가 **없다**) · **B-iii**(1·2단은 `_listing_is_whole` 목록 완전성, 3단은 `_declared_child_count` 계수 존재성 — 3단은 `children`을 **한 번도 참조하지 않는다**) · **C**(예산은 파라미터이고 소진은 국소 표기가 아니라 **전역 무효**).
+
+**사유 코드는 신설하지 않았다.** `server.orchestrator.tools`를 import하면 하드 순환이므로 `REASON_UNRESOLVED` · `REASON_UNREACHABLE` 두 값을 모듈에 재타이핑하고, **테스트가 원본과 등호로 고정한다** — 드리프트가 세 번째 어휘로 갈라지는 대신 실패한다. 이 저장소가 닫힌 어휘에 쓰는 재타이핑 정본과 같은 형태다.
+
+#### 뮤테이션 6건 — 5건 즉사 · **1건이 살아남아 테스트를 고쳤다**
+
+| # | 주입 | 결과 |
+|---|---|---|
+| **M-1** | `upper_bound`가 완전성과 무관하게 `max`를 접는다(**A-i 직역**) | **killed** — 5 failed. `AC-OVERLAP-003` ⑥의 부분집합 함정 테스트가 여기서 발화한다 |
+| **M-2** | 3단에도 목록 완전성 술어를 적용(**B-i**) | **killed** — 8 failed. 실측 형태(3단 `truncated=true`)에서 기능이 통째로 죽는 것이 관측된다 |
+| **M-3** | 자식을 풀 슬롯 `i` 대신 **열거 위치**로 주소 지정 | **killed** — 1 failed. 희소 풀(슬롯 4·9) 리그가 잡는다 |
+| **M-4** | 분류를 형제 응답 여부 대신 **예외 타입**으로 | **killed** — 3 failed |
+| **M-6** | 1·2단에서 `truncated` 플래그를 무시 | **killed** — 1 failed |
+| **M-5** | 3단 예산 소진을 `_exhausted` 대신 **국소 표기 + `break`**로 강등 | **1회차에서 살아남았다** — 아래 |
+
+**M-5가 살아남은 것이 이 마일스톤의 가장 값나가는 관측이다.** 코드는 옳았고 **테스트가 그 구멍을 재지 않았다.** 기존 예산 테스트 둘의 예산(2·3)이 **폭을 하나도 수집하기 전에** 소진되어 *"관측된 모드가 0개다"* 가드가 대신 통과시키고 있었다. 예산 **4**(3모드 중 2개를 읽고 세 번째에서 죽는다)로 재면 강등된 코드가 `complete=True` · `mode_widths=(5, 7)`을 내고 폴드가 **7**을 답한다 — 참 상계 11보다 **작은 상계**이며 정확히 거짓 안심이다. `test_exhaustion_after_some_widths_were_read_still_kills_the_bound`를 추가해 닫았고, 그 테스트가 **비공허성으로 `DMXChannels` 조회 2회가 실제로 발생했음**을 먼저 단정한다. 재주입하면 1 failed로 죽는다.
+
+**이것이 규율 16의 이번 사례다** — 34건이 전부 통과하는 상태에서 A-i 계열 결함 하나가 3단에 살아 있었다. 뮤테이션을 돌리지 않았다면 발견되지 않았다.
+
+#### DoD 15항 — 전건 기계 판정
+
+| # | 조건 | 산출 |
+|---|---|---|
+| 1 | `python -c "import server.prechk.footprint"` 종료 0 | 충족 — 테스트가 `subprocess`로 판정한다(A-4 핸들러 클로저 배치 배제) |
+| 2 | `server.orchestrator.tools` import 0건 + import 노드 ≥ 1 | 충족 |
+| 3 | 포트 사용이 `query_state` 하나 · `query_property` 0건 + 호출 노드 ≥ 1 | 충족. 리그 대역이 `query_property`를 **정의하지 않으므로** 의존이 생기면 `AttributeError`로 드러난다 |
+| 4 | `server/prechk/**` 상수에 `29`·`31`·`42`·`50` 0건 + 방문 파일 ≥ 1 + 정수 노드 ≥ 1 | 충족(실측 정수 집합은 `{0, 1, 2}`뿐) |
+| 5 | 폭 `{17, 23}` 주입 → 상계 **23** | 충족. 그리고 `{11, 19, 47}` → **47**로 **두 번째 주입**을 단정한다 — 한 주입만 보면 값이 고정된 코드도 통과한다 |
+| 6 | 조회 경로 3단 순서 기록 · 경로 수 ≥ 3 | 충족 |
+| 7 | 3단에서 `children` 참조 0건 + 방문 함수 ≥ 1 | 충족 |
+| 8 | `AC-OVERLAP-003` ①②③④ 네 경우 전부 상계 미산출 | 충족 |
+| 9 | `max` 노드가 완전성 판정 분기 **내부** | 충족 — 발견된 `max` 노드 전량이 `complete`를 보는 `If` 내부임을 단정하고 노드 수 ≥ 1을 함께 본다 |
+| 10 | `AC-OVERLAP-003` ⑥ 거짓 양성 재현 + 역방향 확인 | 충족 — M-1 재주입에서 그 테스트가 실패한다(killed) |
+| 11 | `AC-OVERLAP-004` ①②를 한 테스트에서 · ③ 계수 비교 미사용 | 충족. **대조군**으로 1·2단 술어가 실제로 `len()`을 쓴다는 것도 단정한다 — 분리가 무의미해지지 않게 |
+| 12 | `AC-OVERLAP-006` ①②③④ | 충족. ③은 두 시나리오를 **같은 `StateQueryError`**로 던져 재현한다 |
+| 13 | `git diff --stat BASE..HEAD -- server/safety/` 빈 출력 · `server/prechk/`는 비어 있지 않음 | safety **빈 출력** · prechk **4 files +364 −16**(비공허성 확인) |
+| 14 | `PROPERTY_WHITELIST` 바이트 동일 | `git show BASE:…`와 `cmp` → **IDENTICAL**(325바이트) |
+| 15 | 스위트 계수가 baseline 이상 | **2797 passed · 5 skipped · 0 failed** = 2762 + 35 |
+
+**갱신 0건이 유지됐다.** `server/tests/test_prechk_inventory.py`의 두 소비 테스트(`queried_paths`가 픽스처 루트 하위 · 금지 프로퍼티명 스캔)가 **무변경 통과**한다 — 순회가 자기 조회 기록을 `WalkOutcome.queried_paths`에 담고 `"DMXModes"`·`"DMXChannels"`는 금지 집합의 원소가 아니기 때문이다(금지 집합은 `"Channels"`·`"ChannelCount"`를 **정확 문자열**로 금지한다).
+
 ## §F Phase 4 Mode Selection — 확정 (오케스트레이터 소유 · 2026-07-30)
 
 > 본 절은 **오케스트레이터가 첫 run-phase 스폰 전에 작성**하는 구속력 있는 기록이다. `plan.md` §G의 대응 절은 **권고**이며 오케스트레이터가 확정하거나 기각한다. 어긋나면 **본 절이 이긴다.**
