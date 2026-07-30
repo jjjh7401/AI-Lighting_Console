@@ -98,3 +98,4 @@ class AuditLog:
     def log_blocked(self, command: str, *, reason: str, **extra) -> None:
         """One blocked command (grammar / risk / lock / health / backup)."""
         self.record({"event": "blocked", "command": command, "reason": reason} | extra)
+
