@@ -916,6 +916,41 @@ class TestExactWidthsOutrankTheBound:
         assert set(evaluation.overlap.bound_slots) == {1, 2}
         assert evaluation.overlap_basis == NOT_PERFORMED
 
+    def test_a_rig_with_no_fixture_at_all_grades_not_performed(self):
+        """D-4 정직성 제약 1 — 비교가 0건이면 최약 등급이고, 문구도 그렇게 말한다.
+
+        픽스처 0개는 오류가 아니라 **정상 리그**다
+        (``.moai/specs/SPEC-COPILOT-PRECHK-001/acceptance.md`` — "픽스처 0개 |
+        거부가 아니라 정상이다"). 이 SPEC의 문서 네 곳이 그 근거를
+        "``acceptance.md`` §D"로 적었으나 이 SPEC의 ``acceptance.md``에는 §D가
+        없다 — 실제 출처는 위 PRECHK 경로다.
+
+        여기가 ``_weakest``의 **빈 등급 집합 대비**에 도달하는 유일한 경로다.
+        ``assessed``가 비면 ``exact``도 ``bound_slots``도 비고 미관측도 0건이라
+        어떤 절도 등급을 넣지 못한다. 그 대비를 ``exact_widths``로 뒤집어도
+        스위트 전량이 통과하던 자리이고, 뒤집히면 비교를 한 번도 하지 않은 리그가
+        "실제 점유폭으로 비교했다 — 비교된 슬롯에 대해 한정이 없다."라는
+        **한정 없는 거짓 문장**을 사용자 요약으로 받는다(``CONTRACT.md`` §6
+        결함군 1).
+        """
+        evaluation = evaluate_patch(read_inventory(FixturePool({})), self._all_exact(), _walked())
+        # 비공허성 ①: 등급이 미비교 슬롯 절에서 온 것이 아님을 고정한다. 비교 대상
+        # 자체가 0개이므로 그 절은 빈 순회로 False이고, 미관측 population도 없다.
+        assert evaluation.inventory.completeness == COMPLETE
+        assert evaluation.inventory.observed_count == 0
+        assert evaluation.inventory.missing_count == 0
+        assert evaluation.rows == ()
+        assert evaluation.overlap.exact_width_slots == ()
+        assert evaluation.overlap.bound_slots == ()
+        # 비공허성 ②: 상계는 살아 있다 — 등급이 낮은 이유가 순회 실패가 아니다.
+        assert evaluation.overlap.bound == BOUND
+
+        assert evaluation.overlap_basis == NOT_PERFORMED
+        assert (
+            evaluation.overlap.observation_note
+            == "겹침 비교를 수행하지 않았다 — 겹침이 없다는 뜻이 아니다."
+        )
+
     def test_the_partial_coverage_notice_still_fires(self):
         """AC-OVERLAP-013 ⑤ — the pre-existing skip notice is not swallowed."""
         partial = FootprintPolicy(enabled=True, widths={1: 4}, source=FOOTPRINT_SOURCE)

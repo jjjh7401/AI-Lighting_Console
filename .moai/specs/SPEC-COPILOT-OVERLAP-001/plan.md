@@ -665,7 +665,7 @@ git diff --stat 95687a0e0eba90b325daf76efbd0ac197e69e2fc..HEAD -- server/safety/
 
 `CONTRACT.md` §2 D-8이 닫은 것을 위험으로 다시 적는다. 절단 계수 비교의 구현이 **3건** 있고(`server/prechk/inventory.py:389` · `server/prechk/macro.py:249-251` · `server/orchestrator/tools.py:1296-1302`) **`childCount` 부재·0 정책이 서로 다르다** — 예외 / 관용 / 예외+0거부다 `[코드]`. 본 SPEC은 **4번째 사본을 만들고 수렴을 시도하지 않는다.**
 
-**수렴 시도가 위험인 이유**: 단순 통합은 `acceptance.md` §D의 *"zero fixtures는 유효한 리그"*와 매크로 풀의 인용 근거를 충돌시킨다. 순회는 **자기 정책**을 갖는다 — 1·2단은 목록 완전성(짧으면 상계 미계산), 3단은 계수 존재성(`childCount`가 정수면 성공). **수렴은 별도 리팩터 SPEC의 일이며 본 계획이 그 사실을 기록한다.**
+**수렴 시도가 위험인 이유**: 단순 통합은 `.moai/specs/SPEC-COPILOT-PRECHK-001/acceptance.md:313`(§D 퇴화·경계 케이스)의 *"픽스처 0개는 거부가 아니라 정상이다"*와 매크로 풀의 인용 근거를 충돌시킨다. 순회는 **자기 정책**을 갖는다 — 1·2단은 목록 완전성(짧으면 상계 미계산), 3단은 계수 존재성(`childCount`가 **1 이상의 정수**면 성공). **수렴은 별도 리팩터 SPEC의 일이며 본 계획이 그 사실을 기록한다.**
 
 ---
 

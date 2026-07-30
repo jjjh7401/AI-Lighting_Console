@@ -215,7 +215,7 @@ def _child_slots(payload: dict) -> list[int] | None:
 
 
 def walk_mode_widths(
-    reader: StateReader, *, root: str, budget: int, sibling_answered: bool = False
+    reader: StateReader, *, root: str, budget: int, sibling_answered: bool
 ) -> WalkOutcome:
     """Enumerate every mode footprint reachable under ``root``.
 
@@ -229,7 +229,10 @@ def walk_mode_widths(
     very first read fails -- with a sibling answered the console is demonstrably
     reachable and the path is wrong for this showfile (a configuration defect);
     without one, nothing can be blamed on a path. Production raises the SAME
-    exception for both, so this cannot be inferred here.
+    exception for both, so this cannot be inferred here. It carries NO DEFAULT on
+    purpose: a caller that forgets it would silently report every configuration
+    defect as an unreachable console, and a wrong default is exactly the kind of
+    symptomless omission this package structurally removes elsewhere (D-6).
 
     Returns an outcome whose ``complete`` is true only when every tier answered
     wholly and the budget held. Failures are classified, never raised: a walk

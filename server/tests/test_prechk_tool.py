@@ -1411,6 +1411,32 @@ class TestAuditAndBudgetEndToEnd:
         assert len(walk_calls) == 1 + 1 + len(FootprintRigPort.MODE_WIDTHS)
         assert len(walk_calls) <= tools_module.PRECHK_FOOTPRINT_QUERY_CAP
 
+    def test_the_declared_ceiling_is_pinned_to_a_literal(self):
+        """AC-OVERLAP-021 ③ — the ceiling claim needs a ceiling of its own.
+
+        The ``<= PRECHK_FOOTPRINT_QUERY_CAP`` assertion above compares a
+        measurement against the very constant it is supposed to bound, so RAISING
+        the constant cannot fail it -- ``40 -> 1000000000`` leaves the suite green.
+        Sensitivity exists only downward, where the walk visibly starves. This
+        pins the ceiling to a LITERAL instead, the PRESERVE precedent's rule that
+        a gate copying the constant guards the wrong place.
+
+        Why a ceiling exists at all: one walk query is a UDP round trip plus a
+        bundle-gate pass plus an audit row (`design.md` C-ii), so an unbounded
+        walk makes one pre-check cost scale with the size of the showfile. 40 is
+        a deliberate over-provision, NOT a fitted number
+        (`server/orchestrator/tools.py:177-183`) -- the fixture-type count is
+        unmeasured on every rig -- and that is exactly why it needs an external
+        pin: nothing inside the walk would notice the number growing. Re-provisioning
+        the ceiling is legitimate; doing it without editing this line is not.
+
+        Deliberately the ONLY assertion in this test. A companion
+        ``CAP > 1 + 1 + len(MODE_WIDTHS)`` headroom check was written and removed:
+        the equality subsumes it, so it could never fail on its own -- the same
+        vacuity this test exists to repair.
+        """
+        assert tools_module.PRECHK_FOOTPRINT_QUERY_CAP == 40
+
     def test_a_failed_walk_costs_one_query_and_one_audit_row(self, tmp_path):
         class DeadTypes(GatedRig):
             def query_state(self, path: str) -> dict:

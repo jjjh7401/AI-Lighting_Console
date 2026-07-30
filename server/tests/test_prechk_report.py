@@ -416,6 +416,63 @@ def _registry_patched_to(registry: dict):
         importlib.reload(report_module)
 
 
+def _registry_walks(source: str) -> list[ast.For]:
+    """Every ``for`` in ``source`` whose iterable is a call on the registry.
+
+    One definition of "the guard loop", shared by both shape assertions below
+    and by the harness that proves they can fail -- a bypass cannot satisfy one
+    reading of the loop and dodge the other.
+    """
+    return [
+        node
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.For)
+        and isinstance(node.iter, ast.Call)
+        and isinstance(node.iter.func, ast.Attribute)
+        and isinstance(node.iter.func.value, ast.Name)
+        and node.iter.func.value.id == "CLOSED_VOCABULARIES"
+    ]
+
+
+def _subset_selection_in(loop: ast.For, names: set[str]) -> list[str]:
+    """Every way ``loop``'s body could check some registry entries and skip others.
+
+    D-6 deleted the step that could be forgotten, so the body has to treat every
+    entry alike. Four one-line ways to put that step back while the iterable
+    still reads ``CLOSED_VOCABULARIES.items()``: ``continue``/``break`` past the
+    unwanted entries, a branch that does anything other than raise (falling out
+    of it skips the check), a vocabulary name spelled inside the body to
+    special-case one, or the loop variable itself tested against an allow-list
+    bound to a name. The last is why a bare loop target may not be a comparand:
+    selecting a subset means asking WHICH entry this is, and the real check never
+    asks -- it compares the two label sets, not the name.
+
+    Shape gates are best-effort by nature; the one no bypass shape can dodge is
+    ``test_every_registered_vocabulary_is_reached_by_the_guard``, which reloads
+    with each vocabulary drifted in turn and demands a raise naming it.
+    """
+    targets = {node.id for node in ast.walk(loop.target) if isinstance(node, ast.Name)}
+    found: list[str] = []
+    for node in ast.walk(ast.Module(body=list(loop.body), type_ignores=[])):
+        if isinstance(node, ast.Continue | ast.Break):
+            found.append(f"{type(node).__name__.lower()} skips registry entries")
+        elif isinstance(node, ast.If):
+            found += [
+                f"a guard branch that does not raise: {ast.unparse(branch)!r}"
+                for branch in (*node.body, *node.orelse)
+                if not isinstance(branch, ast.Raise)
+            ]
+        elif isinstance(node, ast.Compare):
+            found += [
+                f"the loop variable is tested directly: {ast.unparse(node)!r}"
+                for operand in (node.left, *node.comparators)
+                if isinstance(operand, ast.Name) and operand.id in targets
+            ]
+        elif isinstance(node, ast.Constant) and node.value in names:
+            found.append(f"a vocabulary name inside the guard body: {node.value!r}")
+    return found
+
+
 class TestImportTimeLabelGuard:
     """SPEC-COPILOT-OVERLAP-001 D-6 — the guard walks the registry.
 
@@ -455,6 +512,28 @@ class TestImportTimeLabelGuard:
         ):
             importlib.reload(report_module)
 
+    @pytest.mark.parametrize("vocabulary", sorted(CLOSED_VOCABULARIES))
+    def test_every_registered_vocabulary_is_reached_by_the_guard(self, vocabulary: str):
+        """AC-OVERLAP-014 ⑥ — the walk's REACH, asserted once per registry entry.
+
+        The two cases above are satisfied by a guard that walks the registry and
+        then checks only a hardcoded subset of it, because the vocabularies they
+        name happen to be inside any plausible subset. This one names them all,
+        from the registry itself, so a vocabulary added later is covered without
+        anyone remembering to add a case -- which is the whole of D-6.
+
+        Drifting one vocabulary leaves the NAME set intact, so the table/registry
+        equality check above the loop cannot fire: only the per-entry loop can
+        raise here, and its message says which entry raised.
+        """
+        drifted = dict(CLOSED_VOCABULARIES)
+        drifted[vocabulary] = frozenset({*drifted[vocabulary], "an_unlabelled_code"})
+        with (
+            _registry_patched_to(drifted) as report_module,
+            pytest.raises(UnknownVerdict, match=f"label table for {vocabulary}"),
+        ):
+            importlib.reload(report_module)
+
     def test_the_guard_iterates_the_registry_rather_than_a_literal_tuple(self):
         """AC-OVERLAP-014 ⑦ — the form is the deliverable, not just the effect.
 
@@ -466,17 +545,11 @@ class TestImportTimeLabelGuard:
         ``label("fixture_verdict", code)`` has to spell one. It is the CODES the
         sibling scan forbids outside the tables.)
         """
-        tree = ast.parse(REPORT_SOURCE.read_text(encoding="utf-8"))
-        loops = [node for node in ast.walk(tree) if isinstance(node, ast.For)]
-        registry_walks = [
-            node
-            for node in loops
-            if isinstance(node.iter, ast.Call)
-            and isinstance(node.iter.func, ast.Attribute)
-            and isinstance(node.iter.func.value, ast.Name)
-            and node.iter.func.value.id == "CLOSED_VOCABULARIES"
-        ]
-        assert len(registry_walks) == 1, "the import-time guard must walk CLOSED_VOCABULARIES once"
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        loops = [node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.For)]
+        assert len(_registry_walks(source)) == 1, (
+            "the import-time guard must walk CLOSED_VOCABULARIES once"
+        )
         names = set(CLOSED_VOCABULARIES)
         relapsed = [
             ast.unparse(node.iter)
@@ -488,6 +561,30 @@ class TestImportTimeLabelGuard:
             )
         ]
         assert relapsed == [], f"a literal vocabulary sequence came back: {relapsed}"
+
+    def test_the_guard_body_cannot_select_a_subset_of_the_registry(self):
+        """AC-OVERLAP-014 ⑦ — walking the registry is not enough; it must check all of it.
+
+        The assertion above pins the loop's ITERABLE, and that alone survives a
+        one-line bypass: keep the traversal, make ``if _vocabulary not in
+        _CHECKED: continue`` the body's first statement, and the hardcoded tuple
+        is back with the iterable still reading ``CLOSED_VOCABULARIES.items()``
+        (the allow-list is bound to a NAME, so the literal-sequence clause above
+        never looks at it). Under that bypass an unlabelled ``overlap_basis``
+        code imports cleanly again -- the exact symptom-free state D-6 exists to
+        delete. So the BODY is pinned too: no early exit, no branch that merely
+        skips, no vocabulary name spelled inside it.
+        """
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        walks = _registry_walks(source)
+        assert len(walks) == 1, "the import-time guard must walk CLOSED_VOCABULARIES once"
+        (guard,) = walks
+        body = ast.Module(body=list(guard.body), type_ignores=[])
+        assert [node for node in ast.walk(body) if isinstance(node, ast.Raise)], (
+            "the guard loop parsed but raises nothing -- this assertion would be vacuous"
+        )
+        selection = _subset_selection_in(guard, set(CLOSED_VOCABULARIES))
+        assert selection == [], f"the guard body can skip registry entries: {selection}"
 
 
 class TestMacroSection:

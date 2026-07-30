@@ -502,7 +502,10 @@ def _exact_width_slots(assessed: list[_Assessed], policy: FootprintPolicy) -> tu
 
 
 def _overlap_basis(
-    assessed: list[_Assessed], policy: FootprintPolicy, walk: WalkOutcome | None
+    assessed: list[_Assessed],
+    policy: FootprintPolicy,
+    walk: WalkOutcome | None,
+    missing_count: int,
 ) -> tuple[OverlapBasis, tuple[AddressGap, ...]]:
     """The rig-wide grade, its evidence, and the pairs the bound left open.
 
@@ -519,6 +522,14 @@ def _overlap_basis(
     The returned grade is the WEAKEST of the comparisons performed. A rig where
     three slots were never compared is not a cleared rig, however strong the
     verdict on the rest.
+
+    ``missing_count`` is part of that rule and is easy to miss: ``assessed`` holds
+    only the OBSERVED fixtures, so an incomplete enumeration hides its unread
+    population from every clause that walks ``assessed``. Those fixtures were not
+    compared by either axis -- they have no slot to compare -- so they must drag
+    the rig-wide grade down exactly like an uncompared observed slot does.
+    Without this the axis stamps ``bound_proves_clear`` on a rig it only half
+    read, which is the one error direction this whole SPEC exists to prevent.
     """
     exact = _exact_width_slots(assessed, policy)
     exact_set = set(exact)
@@ -551,7 +562,7 @@ def _overlap_basis(
         grades.add(EXACT_WIDTHS)
     if bound_slots:
         grades.add(BOUND_INCONCLUSIVE if unsettled else BOUND_PROVES_CLEAR)
-    if any(item.record.slot not in covered for item in assessed):
+    if missing_count or any(item.record.slot not in covered for item in assessed):
         grades.add(NOT_PERFORMED)
 
     basis = _weakest(grades)
@@ -563,13 +574,26 @@ def _overlap_basis(
             mode_widths=walk.mode_widths if walk is not None else (),
             exact_width_slots=tuple(sorted(exact_set)),
             bound_slots=tuple(sorted(set(bound_slots))),
-            observation_note=_observation_note(basis, walk, len(unsettled)),
+            observation_note=_observation_note(
+                basis,
+                walk,
+                len(unsettled),
+                compared=bool(exact) or bool(bound_slots),
+                missing_count=missing_count,
+            ),
         ),
         unsettled,
     )
 
 
-def _observation_note(basis: str, walk: WalkOutcome | None, unsettled_count: int) -> str:
+def _observation_note(
+    basis: str,
+    walk: WalkOutcome | None,
+    unsettled_count: int,
+    *,
+    compared: bool,
+    missing_count: int,
+) -> str:
     """What the grade is limited to, in the reader's language.
 
     ``bound_proves_clear`` is the dangerous one: without the qualifier it reads as
@@ -588,6 +612,16 @@ def _observation_note(basis: str, walk: WalkOutcome | None, unsettled_count: int
         return f"상계로 판정하지 못한 인접쌍이 {unsettled_count}건 남았다 — 충돌이 아니다."
     if basis == EXACT_WIDTHS:
         return "실제 점유폭으로 비교했다 — 비교된 슬롯에 대해 한정이 없다."
+    # ``not_performed`` is also the correct WEAKEST grade for a rig where SOME
+    # slots were compared, so the blanket "nothing was compared" sentence would
+    # be false whenever ``bound_slots`` or ``exact_width_slots`` is non-empty.
+    if compared and missing_count:
+        return (
+            f"관측된 슬롯만 비교했다 — 미관측 {missing_count}건은 비교하지 않았으므로 "
+            "리그 전역 등급은 미수행이다."
+        )
+    if compared:
+        return "일부 슬롯만 비교했다 — 비교되지 않은 슬롯이 있어 리그 전역 등급은 미수행이다."
     return "겹침 비교를 수행하지 않았다 — 겹침이 없다는 뜻이 아니다."
 
 
@@ -711,7 +745,7 @@ def evaluate_patch(
     # rig nobody has shown to be faulty. The unsettled state instead reaches the
     # user through ``skipped_checks``, which is the channel for "ran, did not
     # conclude" -- silence would be the actual defect.
-    overlap, unsettled = _overlap_basis(assessed, policy, walk)
+    overlap, unsettled = _overlap_basis(assessed, policy, walk, inventory.missing_count)
     if unsettled and overlap.bound is not None:
         skipped.append(
             SkippedCheck(
