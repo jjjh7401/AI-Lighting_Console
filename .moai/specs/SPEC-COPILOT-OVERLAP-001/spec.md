@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-OVERLAP-001
 title: "보수적 점유폭 상계로 구간 겹침 판정 재개 (Bounded-Footprint Range Overlap)"
 version: "0.1.0"
-status: draft
+status: in-progress
 created: 2026-07-30
 updated: 2026-07-30
 author: manager-spec
