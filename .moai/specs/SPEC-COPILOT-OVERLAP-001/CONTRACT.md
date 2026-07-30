@@ -96,16 +96,37 @@ PRECHK 목록 전량 계승 + **`server/safety/**` 추가**(본 SPEC은 프로�
 
 **PRECHK의 `progress.md`는 무변경**이며 `DESCOPE: ASSUMPTION-27` 접두 행이 정확히 1건으로 유지된다.
 
-## 4. BASE 두 개 — 절대 섞지 않는다
+## 4. BASE 세 개 — 절대 섞지 않는다
 
-| 용도 | SHA |
-|---|---|
-| 본 SPEC의 BASE(스위트·회귀 기준) | `85a4b2389003cb61b0ab72eb4aa8d6b2ff90b94a` |
-| **PRECHK PRESERVE 게이트 기준점 — 영구 불변** | `95687a0e0eba90b325daf76efbd0ac197e69e2fc` |
+> **개정 1회차(2026-07-30).** 초안이 "두 개"라고 적었으나 `plan.md` 작성자가 **세 번째**를 찾았고 코디네이터가 실측으로 확인해 비준했다. `server/tests/test_songcue_bundle.py:45`의 `_RUN_PHASE_BASE`가 그것이며 그 파일의 보호구역 상수(`:65`)가 그 BASE 상대다.
 
-BASE 상대 좌표(실측 완료): tools.py 보호구역 `(247, 251)`과 `(537, 582)`. safety 심볼: `console.py` 96·372, `gate.py` 114·120·598.
+| 용도 | SHA | 누가 소유하나 |
+|---|---|---|
+| 본 SPEC의 BASE — 스위트·회귀 기준 | `85a4b2389003cb61b0ab72eb4aa8d6b2ff90b94a` | 본 SPEC |
+| **PRECHK PRESERVE 게이트 기준점 — 영구 불변** | `95687a0e0eba90b325daf76efbd0ac197e69e2fc` | M7의 신규 테스트 파일이 **단독 소유** |
+| **SONGCUE 런페이즈 기준점 — 바이트 동일 유지** | `38a6e7e2157a4862721fcd868056e0dbbb09c4c0` | 선례 파일 `server/tests/test_songcue_bundle.py` |
+
+BASE 상대 좌표(실측 완료):
+
+| BASE | tools.py 보호구역 | 차 |
+|---|---|---|
+| SONGCUE `38a6e7e…` | `(234, 238)` · `(524, 569)` | — |
+| PRECHK `95687a0e…` | `(247, 251)` · `(537, 582)` | **+13** |
+
+safety 심볼(PRECHK BASE 상대): `console.py` 96·372 · `gate.py` 114·120·598.
 
 **`tools.py`에 "삭제 0행" 규칙을 쓰지 마라** — 실측 삭제가 1행이며 즉시 실패한다. hunk 위치 봉쇄를 쓴다.
+
+### 예외 1건 — PRECHK 문서 무변경만은 본 SPEC BASE로 판정한다
+
+`AC-OVERLAP-019` ⑧(PRECHK `progress.md` 무변경)은 **PRECHK 기준점으로 판정할 수 없다.** 실측했다:
+
+| 명령 | 산출 |
+|---|---|
+| `git diff --stat 95687a0e…..HEAD -- .moai/specs/SPEC-COPILOT-PRECHK-001/` | **6 files changed, 2887 insertions(+)** |
+| `git diff --stat 85a4b23…..HEAD -- .moai/specs/SPEC-COPILOT-PRECHK-001/` | **빈 출력** |
+
+PRECHK SPEC 6문서 자체가 SONGCUE 머지 **이후**에 작성됐기 때문이다. 본 SPEC BASE는 PRECHK의 마지막 문서 커밋이므로 그 이후 변경이 정확히 *"본 SPEC이 손댄 것"*이다. **이 한 항목만 본 SPEC BASE를 쓰며, 그것은 BASE 혼용이 아니라 유일하게 유효한 기준이다.**
 
 ## 5. 마일스톤 M0~M8 — 오케스트레이터가 확정했다
 
@@ -145,3 +166,42 @@ BASE 상대 좌표(실측 완료): tools.py 보호구역 `(247, 251)`과 `(537, 
 - 등급: `[코드]`(저장소 정적 조사) · `[문서]` · `[실측]`(**라이브 콘솔 직접 관측만**) · `[미확정]`.
 - **본 SPEC은 라이브 세션 0회다. 따라서 두 문서가 자기 관측으로 `[실측]`을 주장하는 것은 0건이어야 한다** — 실측 값은 전부 `.moai/specs/SPEC-COPILOT-PRECHK-001/` 인용이며 그 사실을 밝힌다.
 - clarification 마커 **0건**을 유지한다. 미결이 있으면 `[미확정]`으로 쓰고 무엇을 측정하면 갈리는지 적는다.
+
+## 8. 비준 기록 — 병렬 작성 후 코디네이터가 닫은 11건 (2026-07-30)
+
+> 두 워커가 계약의 빈틈을 **11건** 올렸다. 코디네이터가 전건 검증하고 비준했다. **이 절이 그 결정의 정본이며 두 문서의 서술과 어긋나면 이 절이 이긴다.**
+>
+> 이것이 병렬을 세운 값이다 — 계약을 고정했어도 빈틈이 11건 있었고, 두 작성자가 각각 다른 각도에서 그것을 찾았다. 그중 **3건은 정본의 오류**였다.
+
+### 정본을 정정한 것 3건
+
+| # | 무엇이 틀렸나 | 정정 | 검증 |
+|---|---|---|---|
+| R-1 | `AC-OVERLAP-019` ③이 PRESERVE 10경로를 *"디렉터리 4개와 파일 6개"*로 적었다 | **파일 7 · 디렉터리 3**이다. 그리고 **분류를 손으로 적지 않고 목록에서 기계로 도출**하도록 고쳤다 — 계수를 손으로 적으면 다시 틀린다 | 코디네이터가 10경로 각각에 `is_file()`/`is_dir()`을 돌려 **3 DIR / 7 FILE** 확인 |
+| R-2 | `AC-OVERLAP-019` ⑧(PRECHK 문서 무변경)이 어느 BASE인지 적지 않았다 | **본 SPEC BASE로 판정한다.** PRECHK 기준점으로 돌리면 PRECHK SPEC 6문서의 최초 작성 전량이 실린다 — 그 문서들이 SONGCUE 머지 이후에 작성됐기 때문이다 | 두 명령을 실행해 대조: PRECHK 기준 **2887 insertions** vs 본 SPEC 기준 **빈 출력** |
+| R-3 | §4가 BASE를 *"두 개"*로 못박았다 | **세 개다.** `server/tests/test_songcue_bundle.py:45`의 SONGCUE 기준점이 세 번째이며 그 파일의 보호구역 상수가 그 BASE 상대다 | `grep`으로 원문 확인. PRECHK 상대 좌표와 정확히 **+13** 어긋난다 |
+
+### 워커 결정을 비준한 것 8건
+
+| # | 항목 | 비준 내용 | 근거 |
+|---|---|---|---|
+| R-4 | M7 PRESERVE 상시 테스트 파일명 | **`server/tests/test_overlap_preserve.py`** | 두 워커가 IRC로 합의하고 각자 문서에 같은 문자열을 썼다. 코디네이터가 교차 대조로 확인(design 3회 · plan 5회) |
+| R-5 | songcue 트립와이어 값 편집의 소속 마일스톤 | **값 편집은 `tools.py`를 커밋하는 M6에, `AC-OVERLAP-019` ⑦의 판정은 M7에.** 보호구역 상수 자체는 SONGCUE 상대이므로 바이트 동일 | `BASE..HEAD`는 커밋 대 커밋이므로 분리하면 M6 커밋 직후부터 M7 전까지 **스위트가 빨간 구간**이 된다. `plan.md` 작성자가 코드로 확인했다 |
+| R-6 | 리그 전역 스칼라의 등급 순서 | **`not_performed` ≺ `bound_inconclusive` ≺ `bound_proves_clear` ≺ `exact_widths`** | 주장 강도에서 유도된다. D-4의 *"최약 등급"*이 이 순서를 요구했으나 순서를 정의하지 않았던 것 |
+| R-7 | `AC-OVERLAP-013` ③ *"각각의 근거로 보고된다"*의 수용처 | **신규 최상위 키 내부의 `exact_width_slots` / `bound_slots` 두 목록** | `fixtures[]` 행이 정확 10키로 잠겨 있어 슬롯별 근거를 픽스처 행에 얹을 수 없다. D-4가 최상위 키 내부 구조를 자유로 둔 것이 이 자리를 만든다 |
+| R-8 | `overlap_basis` 내부 7키 이름 | `basis` · `bound` · `bound_source` · `mode_widths` · `exact_width_slots` · `bound_slots` · `observation_note` | 일곱 전부를 금지 토큰 스캐너 3종에 대조했다. `repr(payload)`가 **값까지** 훑으므로 `observation_note`는 순한국어로 쓴다 |
+| R-9 | M0 인메모리 프로토타입의 커밋 여부 | **커밋하지 않는다.** 임시 산출물이며 판정 기록만 남는다 | `cycle_type=none`(코드 변경 0)과 `AC-OVERLAP-020` ②(*"프로토타입으로 갈린다"*)가 동시에 참인 유일한 독법이다 |
+| R-10 | 설계 슬롯 H·I 신설 | **비준.** A~G만이면 M6·M7에 집행 슬롯이 비어 마일스톤 정렬이 뚫린다 | 둘 다 D-2·D-3·§4·`AC-OVERLAP-019`의 재게시이며 새 요구·AC 0건이다 |
+| R-11 | `AC-OVERLAP-002` ③과 `AC-OVERLAP-019` ⑤가 모순인가 | **모순 아니다.** 전자는 본 SPEC BASE 기준 `server/safety/` 빈 출력, 후자는 PRECHK 기준 변경 파일 정확 2개다 — **기준점이 다르므로 동시에 참**이다 | 같은 BASE로 읽는 것이 이 슬롯의 유일한 함정이며 두 문서가 그것을 명시했다 |
+
+### 코디네이터가 교차 대조한 결과 — 드리프트 0건
+
+| 검사 | 결과 |
+|---|---|
+| 마일스톤 수 | `design.md` 9 · `plan.md` 9 · CONTRACT 9 — 일치 |
+| 마일스톤별 AC 배정 | **전 9행 일치** (프로그램 대조) |
+| AC 합집합 | 세 문서 모두 **21** · 중복 0 · 누락 0 |
+| 고정 문자열 7종 | 두 문서에 동일하게 등장 |
+| 세 번째 BASE | 두 문서가 독립적으로 찾아 같은 프레이밍을 썼다 |
+
+`design.md` 작성자가 위험 1건을 스스로 고쳤다 — 초안이 `design.md:143` 같은 **경로 없는 좌표**를 썼는데 저장소 루트에 동명 파일이 실재해 오해석 위험이 있었다. 전부 전체 경로로 교정했다. **PRECHK plan-audit가 P3 지적으로 낸 것과 같은 계열이며 이번에는 작성자가 먼저 잡았다.**
