@@ -128,6 +128,21 @@ Phases: plan (manager-spec) → plan-audit (plan-auditor) → run (manager-devel
 
 All phases include @MX code annotation management (plan: identify targets; run: create/update; sync: validate + add missing). Tag types: `@MX:NOTE` (context/intent), `@MX:WARN` (danger zone, requires @MX:REASON), `@MX:ANCHOR` (invariant contract, high fan_in), `@MX:TODO` (incomplete, resolved in GREEN). Details: `.claude/rules/moai/workflow/mx-tag-protocol.md`.
 
+### Resuming Work — find the active SPEC before doing anything else
+
+**Derive it from the branch name, not from `status`.** `status: completed` is not a discriminator: three SPEC directories are currently non-completed (one `draft`, two stale `in-progress`), so filtering on it returns an ambiguous set.
+
+```
+git branch --show-current        # feature/SPEC-COPILOT-<SLUG>-001
+                                # -> .moai/specs/SPEC-COPILOT-<SLUG>-001/progress.md  §0
+```
+
+**`progress.md` §0 is the entry point of every SPEC in this repository.** It carries the one-paragraph state, the reading order for the other artifacts, the traps a newcomer must know, the machine commands that prove the handoff is intact, and the next owner's kickoff kit. Read it before opening any other artifact — the artifacts are large and §0 exists so you do not have to read them in full.
+
+On `main` with no feature branch, the newest `CHANGELOG.md` `[Unreleased]` entry names the most recent SPEC and its phase.
+
+**A machine-readable resume prompt may exist at `.moai/state/handoff/pending.json`** (`spec_id` · `phase` · `base_sha` · `baseline` · `approvals_granted` · `blocking` · `next_milestone` · `body`). It is faster to read than the documents, but **`.moai/state/` is gitignored** (`.gitignore:206`) so it is machine-local and may be absent or stale. The tracked documents win on conflict.
+
 ---
 
 ## 6. Quality Gates
