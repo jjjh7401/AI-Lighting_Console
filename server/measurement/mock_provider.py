@@ -125,6 +125,14 @@ class OfflineConsole:
             "children": [{"name": f"{path.rsplit('/', 1)[-1]} {n}"} for n in (1, 2, 3)],
         }
 
+    def query_property(self, path: str, property_name: str) -> dict:
+        return {
+            "ok": True,
+            "path": path,
+            "property": property_name,
+            "value": f"offline {property_name}",
+        }
+
     def deploy_plugin(self, name: str, lua_source: str) -> ExecOutcome:
         return ExecOutcome(status="ok", detail=f"offline mock deploy: {name}")
 

@@ -53,7 +53,15 @@ _PRESERVE_LOOK_FILES = (
     "server/looks/roles.py",
 )
 _TOOLS_PATH = "server/orchestrator/tools.py"
-_TOOLS_EXPECTED_HUNK_OLD_STARTS = (32, 49, 125, 951, 1222, 1231)
+# Snapshot of every tools.py hunk since SONGCUE's run-phase base. It is a
+# TRIPWIRE, not a constant: a later SPEC that legitimately edits tools.py must
+# update it deliberately, which is the point — the protected-range assertion
+# below is the real invariant and it must keep holding while this list grows.
+# PRECHK (SPEC-COPILOT-PRECHK-001, M6) added the three hunks at 463 / 475 / 479
+# (the prechk imports, the `property_port` parameter and its docstring) and moved
+# the first hunk's old start from 32 to 33 by inserting its import block one line
+# lower. None of them touches a protected range.
+_TOOLS_EXPECTED_HUNK_OLD_STARTS = (33, 49, 125, 463, 475, 479, 951, 1222, 1231)
 _TOOLS_PROTECTED_OLD_RANGES = ((234, 238), (524, 569))
 _HUNK_RE = re.compile(r"^@@ -(?P<old_start>\d+)(?:,(?P<old_count>\d+))? \+\d+(?:,\d+)? @@")
 

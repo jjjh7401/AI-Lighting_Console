@@ -112,13 +112,16 @@ class _GateExecutor:
 
 
 class _GateStatePort:
-    """StateQueryPort implementation riding the gate-audited console link."""
+    """StateQueryPort + PropertyQueryPort riding the gate-audited console link."""
 
     def __init__(self, gate: SafetyGate) -> None:
         self._gate = gate
 
     def query_state(self, path: str) -> dict:
         return self._gate._query_state(path)
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        return self._gate._query_property(path, property_name)
 
 
 class SafetyGate:
@@ -604,4 +607,16 @@ class SafetyGate:
             self._audit.log_executed(path, kind="state_query", ok=False)
             raise
         self._audit.log_executed(path, kind="state_query", ok=True)
+        return payload
+
+    def _query_property(self, path: str, property_name: str) -> dict:
+        # Audited on the same 1:1 send↔audit rule as _query_state: a property
+        # read is one OSC send, and a timeout still sent it.
+        subject = f"{path} {property_name}"
+        try:
+            payload = self._console.query_property(path, property_name)
+        except Exception:
+            self._audit.log_executed(subject, kind="property_query", ok=False)
+            raise
+        self._audit.log_executed(subject, kind="property_query", ok=True)
         return payload

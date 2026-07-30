@@ -26,6 +26,7 @@ from server.bridge.protocol import (
     build_deploy_request,
     build_exec_request,
     build_ping,
+    build_prop_query,
     build_state_query,
     decode_payload,
 )
@@ -94,6 +95,8 @@ class ConsolePort(Protocol):
     def ping(self) -> bool: ...
 
     def query_state(self, path: str) -> dict: ...
+
+    def query_property(self, path: str, property_name: str) -> dict: ...
 
     def deploy_plugin(self, name: str, lua_source: str) -> ExecOutcome:
         """Deploy one reviewed Lua plugin (M7); ok / failed / unconfirmed."""
@@ -383,6 +386,33 @@ class ConsoleLink:
             )
         if not payload.get("ok"):
             raise StateQueryError(str(payload.get("error") or f"state query failed: {path}"))
+        return payload
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        """Single-property read (REQ-PRECHK-019); raises on failure/timeout.
+
+        Homologous to :meth:`query_state`: same id correlation, same timeout
+        budget, same error type. The responder answers ``prop`` on the STATE
+        address (``console/lua/copilot_responder.lua:915``), which
+        :meth:`deliver` already accepts, so no new reply channel appears.
+        """
+        request_id = self._new_id()
+        payload = self._round_trip(
+            build_prop_query(request_id, path, property_name),
+            request_id,
+            self._timeouts.state_query_seconds,
+        )
+        if payload is None:
+            if self._monitor is not None:
+                self._monitor.note_query_timeout()
+            raise StateQueryError(
+                f"no prop reply for {path!r} {property_name!r} within "
+                f"{self._timeouts.state_query_seconds}s"
+            )
+        if not payload.get("ok"):
+            raise StateQueryError(
+                str(payload.get("error") or f"property query failed: {path} {property_name}")
+            )
         return payload
 
 
