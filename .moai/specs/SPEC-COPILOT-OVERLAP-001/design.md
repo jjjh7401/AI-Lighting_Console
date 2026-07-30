@@ -482,7 +482,7 @@ FOOTPRINT_SOURCE = "Patch/FixtureTypes/1/DMXModes/1/DMXChannels childCount"
 
 **근거 — "삭제 0행" 규칙은 `tools.py`에서 즉시 실패한다.** `research.md` §9.4가 파일별 삭제 행 수를 실측했고 `tools.py`가 **삭제 1행**이다 — 원문은 `-from server.orchestrator.ports import BundleGate, CommandExecutionPort, StateQueryPort`로, import 1행이 12행 블록으로 대체된 것이다. `CONTRACT.md` §4가 같은 지시를 반복한다. 따라서 hunk 위치 봉쇄를 유지한다(`AC-OVERLAP-019` ④).
 
-**근거 — 비공허성이 선례보다 강해야 한다.** 존재하지 않는 경로는 `--stat`에 조용히 0행을 기여하므로 **오타 한 글자로 게이트가 영구 통과한다.** `AC-OVERLAP-019` ③이 10경로 목록의 **각 경로 실재**를 요구하고 디렉터리 4개와 파일 6개의 판정 형태가 다름을 반영할 것을 요구한다. 그리고 ②가 argv 범위 인자를 `<PRECHK_BASE>..HEAD` 형태로 고정한다 — 인자 없는 `git diff`로의 *"단순화"*가 게이트를 무력화함이 실측으로 증명되어 있다(`.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md:558`, 선행 SPEC 인용 `[문서]`).
+**근거 — 비공허성이 선례보다 강해야 한다.** 존재하지 않는 경로는 `--stat`에 조용히 0행을 기여하므로 **오타 한 글자로 게이트가 영구 통과한다.** `AC-OVERLAP-019` ③이 10경로 목록의 **각 경로 실재**를 요구하고 **파일 7개와 디렉터리 3개**의 판정 형태가 다름을 반영할 것을 요구하며 **그 분류를 목록 자체에서 기계로 도출**하도록 못박는다(손으로 적으면 다시 틀린다 — 초안이 4/6으로 적었고 plan-audit 1회차가 P1로 잡았다). 그리고 ②가 argv 범위 인자를 `<PRECHK_BASE>..HEAD` 형태로 고정한다 — 인자 없는 `git diff`로의 *"단순화"*가 게이트를 무력화함이 실측으로 증명되어 있다(`.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md:558`, 선행 SPEC 인용 `[문서]`).
 
 **갱신이 강제되는 트립와이어 2건은 PRESERVE 위반이 아니다**(`CONTRACT.md` §3).
 
@@ -539,7 +539,7 @@ FOOTPRINT_SOURCE = "Patch/FixtureTypes/1/DMXModes/1/DMXChannels childCount"
 | I-ii | `PRECHK_RIG_SECTIONS`에 `"fixture_types"` 추가 | `create_macro`에 따라 다른 결과. `server/tests/test_prechk_tool.py:895-905`·`:907`이 깨져 `AC-OVERLAP-021` ②가 죽는다 |
 | I-iii | 기존 가드를 `create_macro` 분기 밖으로 끌어낸다 | 매크로 축의 계약을 바꾼다 — `create_macro=False`에서 그룹·매크로 경로 누락이 새로 오류가 되고, 같은 두 테스트가 깨진다 |
 | I-iv | 가드 없이 경로 누락을 순회 실패로 처리 | 설정 결함이 운영 조건과 섞인다. `AC-OVERLAP-006` ①이 죽고 결함 계열 1을 재생산한다 |
-| I-v | 신규 경로 키를 `DEFAULT_RIG_CONTEXT_PATHS`에 추가 | 11번째 키가 되어 `server/tests/test_tools.py:512-522`의 정확 10키 단정이 깨진다. **폭 상계 축은 신규 경로 키 0건으로 성립한다** — `fixture_types`가 이미 있다 |
+| I-v | 신규 경로 키를 `DEFAULT_RIG_CONTEXT_PATHS`에 추가 | 11번째 키가 되어 `server/tests/test_tools.py:511-522`의 정확 10키 단정이 깨진다. **폭 상계 축은 신규 경로 키 0건으로 성립한다** — `fixture_types`가 이미 있다 |
 
 **집행 마일스톤: M6.**
 **달린 인수 조건:** `AC-OVERLAP-018` ①~⑤ (M6 배정) · `AC-OVERLAP-005` ① · `AC-OVERLAP-006` ① (M2 배정) · `AC-OVERLAP-021` ② (M8 배정).
@@ -559,31 +559,31 @@ FOOTPRINT_SOURCE = "Patch/FixtureTypes/1/DMXModes/1/DMXChannels childCount"
 | **A-3** `server/prechk/` **신규 모듈** | **채택(D-1)** | 자기 조회 기록을 별도 자료구조에 담으면 `Inventory.queried_paths`에 섞이지 않는다 | 깨지는 테스트 **0건** |
 | **A-4** `server/orchestrator/tools.py` 핸들러 내부 | **기각. 위반 0건이나 검증 가능성 손실** | `_free_macro_slot`이 `build_toolset` 클로저라 import 불가하고 `_dispatch` 경유로만 테스트되는 **선례가 이미 있다**. `bound_inconclusive`가 합성 리그로만 도달 가능한 본 SPEC에서 그 손실은 치명적이다 | `AC-OVERLAP-005` ③(*"순회 모듈을 단독으로 import할 수 있다"*)이 이 배치를 배제하는 기계 판정이다. ④가 툴을 거치지 않는 직접 호출 테스트를 요구한다 |
 
-### §3.2 다른 지점에서 기각한 설계
+### §3.2 다른 지점에서 기각한 설계 — 식별자는 `X-n`이다
 
 | # | 후보 | 기각 사유 | **깨지는 테스트 · 좌표** |
 |---|---|---|---|
-| R-1 | `_range_overlaps`의 정렬 재사용 | `widths={}`이면 `intervals`가 비어 정렬 자체가 일어나지 않는다 | 형상 자체로 불가 — `server/prechk/patch.py:330-339` |
-| R-2 | 간격 대상에 `type_mode_ok`를 요구 | 상계 논증은 모드를 몰라도 성립한다(§1.1). 요구하면 논증의 오해다 | `AC-OVERLAP-010` ③④ |
-| R-3 | 중복 주소를 간격 집합에 그대로 넣어 간격 0을 낸다 | 주소 중복 축과 이중 계상 | `AC-OVERLAP-010` ①②. 대상은 `_address_duplicates`의 **키 집합**이다(`server/prechk/patch.py:268-271`) |
-| R-4 | 술어를 `간격 ≤ 상계`로 | off-by-one. 닫힌 끝 구간에서 `간격 == 상계`는 깨끗하다 | `AC-OVERLAP-008` ②. 실측 리그로는 안 잡힌다 — §4의 `bound_gap_equals`만이 잡는다 |
-| R-5 | 미확정을 `collisions.range_overlaps`에 넣는다 | 그 목록의 슬롯은 `collision` verdict를 받아 사용자가 *"충돌"*을 읽는다. 상계 논증은 겹침 있음을 증명하지 못한다 | `AC-OVERLAP-011` ①②③. 라벨은 `server/prechk/report.py:67` |
-| R-6 | 정확폭 축과 상계 축을 한 축으로 흡수 | 두 축의 필터 술어가 다르다(`type_mode_ok`). 그리고 기존 `FootprintPolicy` 경로가 깨진다 | `AC-OVERLAP-013` ④(착수 시점 정확폭 테스트 전건 통과) · `AC-OVERLAP-010` ④ |
-| R-7 | `truncated` 플래그만 신뢰 | 3단은 `truncated=true`인데 `childCount`가 참값이다 | `AC-OVERLAP-004` ①. 근거는 `.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md:408` |
-| R-8 | 상계 31 · 폭 29 · 간격 42를 상수로 | 셋 다 이 쇼파일 룰북 레시피의 산물이다 — `addr = addr + 42`를 9회 돌린 결과가 실측 유니버스 1의 슬롯 2~10 주소와 정확히 일치한다(`server/rulebook/assets/v2.4.2/30_plugin_patterns.md:45-50`) | `AC-OVERLAP-001` ①② |
-| R-9 | `PRECHK_RIG_SECTIONS`에 `"fixture_types"` 추가 | `create_macro`에 따라 다른 결과 | `server/tests/test_prechk_tool.py:895-905`·`:907` |
-| R-10 | `DEFAULT_RIG_CONTEXT_PATHS`에 11번째 키 추가 | 폭 상계 축은 신규 경로 키 0건으로 성립한다. 꼬리 초과 축만이 이 계약 변경을 요구하며 그 축은 범위 밖이다 | `server/tests/test_tools.py:512-522` 정확 10키 |
-| R-11 | 어휘 레지스트리에 중간 삽입 | 두 리스트의 어긋남을 단정 하나에만 맡긴다 | `server/tests/test_prechk_verdicts.py:55-61` 순서 있는 리스트 동일성 |
-| R-12 | 가드 튜플에 항목만 추가 | 무증상 단계를 남겨 다음 축이 같은 함정을 만난다 | `AC-OVERLAP-014` ⑦. 튜플은 `server/prechk/report.py:111-117` |
-| R-13 | `COLLISION_KIND` 또는 `FIXTURE_VERDICT`에 값 추가 | §2 슬롯 E의 거짓 문자열. 그리고 어휘 파생 단정 3건이 무변경으로 통과해야 한다 | `AC-OVERLAP-014` ③. `server/tests/test_prechk_verdicts.py:26-45` |
-| R-14 | 꼬리 초과 판정 축을 켠다 | 용량 `B`에 저장소 근거 0건이고, 현재 코드는 유니버스를 넘는 점유를 클러스터에 넣지 못하며, 런타임 조회는 11번째 경로 키를 요구한다 | `spec.md` §D가 범위 밖으로 뒀다. R-10과 같은 좌표 |
-| R-15 | 선례 테스트 파일(`test_songcue_bundle.py`) 확장 | 한 모듈에 두 BASE. 선례 값을 복사하면 주석 한복판과 루프 앞 13행을 지킨다(`research.md` §9.3) | `AC-OVERLAP-019` ⑥ |
-| R-16 | `tools.py`에 "삭제 0행" 규칙 | 실측 삭제 1행 | `AC-OVERLAP-019` ④ |
-| R-17 | 근거 필드만 만들고 페이로드 키를 생략 | `FootprintPolicy.source`(`server/prechk/patch.py:170`)가 소비자 0건으로 죽은 경로의 재생산 | `AC-OVERLAP-016` ③ |
-| R-18 | 신규 최상위 키를 얹고 정확 키집합 단정 생략 | 아무것도 안 깨지지만 아무도 안 지킨다 | `AC-OVERLAP-016` ④ |
-| R-19 | 절단 계수 비교 3구현을 수렴시킨다 | 세 정책이 서로 다르고 단순 통합이 *"zero fixtures는 유효한 리그"*와 충돌한다(D-8) | `server/prechk/inventory.py:389` · `server/prechk/macro.py:249-251` · `server/orchestrator/tools.py:1296-1302` |
-| R-20 | 순회 실패를 예외로 전파 | 리포트의 나머지를 잃는다. 41개 디스패치가 깨진다 | `AC-OVERLAP-007` ① · `AC-OVERLAP-021` ② |
-| R-21 | `ASSUMPTION-27`을 되살려 조인을 복원 | 응답기 확장(`console/lua/**` PRESERVE 위반)이나 다른 쇼파일이 필요하다. 상계 논증은 조인 없이 성립하는 더 약한 명제다 | `spec.md` §D. `DESCOPE: ASSUMPTION-27` 1건 보존은 `server/tests/test_prechk_patch.py:310-317` |
+| X-1 | `_range_overlaps`의 정렬 재사용 | `widths={}`이면 `intervals`가 비어 정렬 자체가 일어나지 않는다 | 형상 자체로 불가 — `server/prechk/patch.py:330-339` |
+| X-2 | 간격 대상에 `type_mode_ok`를 요구 | 상계 논증은 모드를 몰라도 성립한다(§1.1). 요구하면 논증의 오해다 | `AC-OVERLAP-010` ③④ |
+| X-3 | 중복 주소를 간격 집합에 그대로 넣어 간격 0을 낸다 | 주소 중복 축과 이중 계상 | `AC-OVERLAP-010` ①②. 대상은 `_address_duplicates`의 **키 집합**이다(`server/prechk/patch.py:268-271`) |
+| X-4 | 술어를 `간격 ≤ 상계`로 | off-by-one. 닫힌 끝 구간에서 `간격 == 상계`는 깨끗하다 | `AC-OVERLAP-008` ②. 실측 리그로는 안 잡힌다 — §4의 `bound_gap_equals`만이 잡는다 |
+| X-5 | 미확정을 `collisions.range_overlaps`에 넣는다 | 그 목록의 슬롯은 `collision` verdict를 받아 사용자가 *"충돌"*을 읽는다. 상계 논증은 겹침 있음을 증명하지 못한다 | `AC-OVERLAP-011` ①②③. 라벨은 `server/prechk/report.py:67` |
+| X-6 | 정확폭 축과 상계 축을 한 축으로 흡수 | 두 축의 필터 술어가 다르다(`type_mode_ok`). 그리고 기존 `FootprintPolicy` 경로가 깨진다 | `AC-OVERLAP-013` ④(착수 시점 정확폭 테스트 전건 통과) · `AC-OVERLAP-010` ④ |
+| X-7 | `truncated` 플래그만 신뢰 | 3단은 `truncated=true`인데 `childCount`가 참값이다 | `AC-OVERLAP-004` ①. 근거는 `.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md:408` |
+| X-8 | 상계 31 · 폭 29 · 간격 42를 상수로 | 셋 다 이 쇼파일 룰북 레시피의 산물이다 — `addr = addr + 42`를 9회 돌린 결과가 실측 유니버스 1의 슬롯 2~10 주소와 정확히 일치한다(`server/rulebook/assets/v2.4.2/30_plugin_patterns.md:45-50`) | `AC-OVERLAP-001` ①② |
+| X-9 | `PRECHK_RIG_SECTIONS`에 `"fixture_types"` 추가 | `create_macro`에 따라 다른 결과 | `server/tests/test_prechk_tool.py:895-905`·`:907` |
+| X-10 | `DEFAULT_RIG_CONTEXT_PATHS`에 11번째 키 추가 | 폭 상계 축은 신규 경로 키 0건으로 성립한다. 꼬리 초과 축만이 이 계약 변경을 요구하며 그 축은 범위 밖이다 | `server/tests/test_tools.py:511-522` 정확 10키 |
+| X-11 | 어휘 레지스트리에 중간 삽입 | 두 리스트의 어긋남을 단정 하나에만 맡긴다 | `server/tests/test_prechk_verdicts.py:55-61` 순서 있는 리스트 동일성 |
+| X-12 | 가드 튜플에 항목만 추가 | 무증상 단계를 남겨 다음 축이 같은 함정을 만난다 | `AC-OVERLAP-014` ⑦. 튜플은 `server/prechk/report.py:111-117` |
+| X-13 | `COLLISION_KIND` 또는 `FIXTURE_VERDICT`에 값 추가 | §2 슬롯 E의 거짓 문자열. 그리고 어휘 파생 단정 3건이 무변경으로 통과해야 한다 | `AC-OVERLAP-014` ③. `server/tests/test_prechk_verdicts.py:26-45` |
+| X-14 | 꼬리 초과 판정 축을 켠다 | 용량 `B`에 저장소 근거 0건이고, 현재 코드는 유니버스를 넘는 점유를 클러스터에 넣지 못하며, 런타임 조회는 11번째 경로 키를 요구한다 | `spec.md` §D가 범위 밖으로 뒀다. R-10과 같은 좌표 |
+| X-15 | 선례 테스트 파일(`test_songcue_bundle.py`) 확장 | 한 모듈에 두 BASE. 선례 값을 복사하면 주석 한복판과 루프 앞 13행을 지킨다(`research.md` §9.3) | `AC-OVERLAP-019` ⑥ |
+| X-16 | `tools.py`에 "삭제 0행" 규칙 | 실측 삭제 1행 | `AC-OVERLAP-019` ④ |
+| X-17 | 근거 필드만 만들고 페이로드 키를 생략 | `FootprintPolicy.source`(`server/prechk/patch.py:170`)가 소비자 0건으로 죽은 경로의 재생산 | `AC-OVERLAP-016` ③ |
+| X-18 | 신규 최상위 키를 얹고 정확 키집합 단정 생략 | 아무것도 안 깨지지만 아무도 안 지킨다 | `AC-OVERLAP-016` ④ |
+| X-19 | 절단 계수 비교 3구현을 수렴시킨다 | 세 정책이 서로 다르고 단순 통합이 *"zero fixtures는 유효한 리그"*와 충돌한다(D-8) | `server/prechk/inventory.py:389` · `server/prechk/macro.py:249-251` · `server/orchestrator/tools.py:1296-1302` |
+| X-20 | 순회 실패를 예외로 전파 | 리포트의 나머지를 잃는다. 41개 디스패치가 깨진다 | `AC-OVERLAP-007` ① · `AC-OVERLAP-021` ② |
+| X-21 | `ASSUMPTION-27`을 되살려 조인을 복원 | 응답기 확장(`console/lua/**` PRESERVE 위반)이나 다른 쇼파일이 필요하다. 상계 논증은 조인 없이 성립하는 더 약한 명제다 | `spec.md` §D. `DESCOPE: ASSUMPTION-27` 1건 보존은 `server/tests/test_prechk_patch.py:310-317` |
 
 ---
 
@@ -628,14 +628,14 @@ FOOTPRINT_SOURCE = "Patch/FixtureTypes/1/DMXModes/1/DMXChannels childCount"
 
 ## §5. 뮤테이션 제안
 
-각 항목은 **주입 / 죽어야 하는 인수 조건 / 집행 마일스톤**을 갖는다. `CONTRACT.md` §6 규율 3의 집행이다 — *"신규 테스트는 수정 전 코드에서 실패함을 역방향으로 확인하고, 통과하는 테스트는 회귀 테스트가 아니라고 코드에 명시한다."*
+각 항목은 **주입 / 죽어야 하는 인수 조건 / 마일스톤**을 갖는다. **주입 지점과 판정 지점이 다른 행은 `주입 Mx · 판정 My`로 적는다** — plan-audit 1회차가 이 관례 불일치를 P2로 지적했고 M-30 · M-31 · M-35를 그 형태로 고쳤다. 특히 M-35는 초안이 `M0`로 적었으나 M0는 `cycle_type=none`(코드 변경 0)이므로 `server/safety/**`에 hunk를 만드는 뮤테이션을 소유할 수 없다. `CONTRACT.md` §6 규율 3의 집행이다 — *"신규 테스트는 수정 전 코드에서 실패함을 역방향으로 확인하고, 통과하는 테스트는 회귀 테스트가 아니라고 코드에 명시한다."*
 
 | # | 주입할 결함 | **죽어야 하는 인수 조건** | 마일스톤 |
 |---|---|---|---|
 | **M-1** | **구간 겹침 축에서 유니버스 키잉을 제거해 단일 주소 공간으로 붕괴시킨다** | `AC-OVERLAP-009` ①②③④ | M3 |
 | **M-2** | 술어를 `간격 ≤ 상계`로 바꾼다(off-by-one) | `AC-OVERLAP-008` ②④ | M3 |
 | **M-3** | 완전성 판정을 `max` **뒤로** 옮긴다 — 부분 결과를 `max`에 넣고 사후에 플래그로 무효화 | `AC-OVERLAP-003` ⑤⑥ | M2 |
-| **M-4** | **어휘 가드에 신규 축을 등재하지 않는다** | `AC-OVERLAP-014` ⑥⑦ | M1 |
+| **M-4** | **어휘 가드를 하드코딩 튜플로 되돌린 뒤 신규 축을 등재하지 않는다** — D-6이 루프를 레지스트리 순회로 바꾸므로 *등재 누락* 자체는 주입 불가가 된다. 유증상 형태는 **구조를 되돌리는 것**이다 | `AC-OVERLAP-014` ⑥⑦ | M1 |
 | **M-5** | 미확정을 `collisions.range_overlaps` 목록에 넣는다 | `AC-OVERLAP-011` ①③⑤ | M3 |
 | M-6 | 미확정을 목록에는 안 넣고 `collision_total`에만 더한다 | `AC-OVERLAP-011` ②⑤ | M3 |
 | M-7 | `bound_proves_clear`를 관측 범위 한정 없이 무한정으로 발화 | `AC-OVERLAP-015` ①② | M5 |
@@ -661,12 +661,12 @@ FOOTPRINT_SOURCE = "Patch/FixtureTypes/1/DMXModes/1/DMXChannels childCount"
 | M-27 | 3단에서 `children` 목록을 읽어 폭을 센다 | `AC-OVERLAP-001` ④ | M2 |
 | M-28 | 순회 모듈이 `server.orchestrator.tools`를 import한다 | `AC-OVERLAP-005` ②③ | M2 |
 | M-29 | `Patch/FixtureTypes`를 `server/prechk/`에 리터럴로 박는다 | `AC-OVERLAP-005` ① | M2 · M6 |
-| M-30 | 순회 모듈에 `"Footprint"` · `"Channels"` · `"Universe"`를 문자열 리터럴로 쓴다 | `AC-OVERLAP-021` ②⑤ | M2 |
-| M-31 | `PRECHK_RIG_SECTIONS`에 `"fixture_types"`를 추가해 신규 가드를 대신한다 | `AC-OVERLAP-021` ② | M6 |
+| M-30 | 순회 모듈에 `"Footprint"` · `"Channels"` · `"Universe"`를 문자열 리터럴로 쓴다 | `AC-OVERLAP-021` ②⑤ | 주입 M2 · 판정 M8 |
+| M-31 | `PRECHK_RIG_SECTIONS`에 `"fixture_types"`를 추가해 신규 가드를 대신한다 | `AC-OVERLAP-021` ② | 주입 M6 · 판정 M8 |
 | M-32 | PRESERVE diff를 **본 SPEC의 BASE**로 검사한다 | `AC-OVERLAP-019` ①② | M7 |
 | M-33 | `tools.py` 보호구역 hunk 봉쇄를 "삭제 0행" 규칙으로 대체한다 | `AC-OVERLAP-019` ④ | M7 |
 | M-34 | PRESERVE 10경로 목록에 오타를 한 글자 넣는다 | `AC-OVERLAP-019` ③ | M7 |
-| M-35 | `server/safety/**`에 hunk를 1건 만든다 / PRECHK `progress.md`의 `DESCOPE:` 행을 편집한다 | `AC-OVERLAP-002` ③④ · `AC-OVERLAP-019` ⑧ | M0 · M7 |
+| M-35 | `server/safety/**`에 hunk를 1건 만든다 / PRECHK `progress.md`의 `DESCOPE:` 행을 편집한다 | `AC-OVERLAP-002` ③④ · `AC-OVERLAP-019` ⑧ | 주입 M2 · 판정 M7 |
 
 **제안 뮤테이션은 총 35개다.**
 

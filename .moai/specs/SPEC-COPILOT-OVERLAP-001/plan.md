@@ -8,7 +8,7 @@ status: draft (v0.1.0, 2026-07-30) · Tier M
 >
 > **참조 규약.** 본 SPEC의 정본은 줄번호로 인용하지 않고 `REQ-OVERLAP-003` · `AC-OVERLAP-014` · `ASSUMPTION-34` 같은 안정 토큰과 절 제목으로만 참조한다. `파일:줄` 좌표는 **코드 · 룰북 · 응답기 프로토콜 · 타 SPEC 아티팩트**에만 쓴다. 요구·인수 토큰은 슬러그 포함 완전형만 쓴다(축약형 **0건**).
 >
-> **등급 규약.** `[코드]`(저장소 정적 조사) · `[문서]` · `[실측]`(**라이브 콘솔 직접 관측만**) · `[미확정]`. **본 SPEC은 라이브 세션 0회이므로 본 계획이 자기 관측으로 주장하는 `[실측]`은 0건이다** — 실측 수치는 전부 `.moai/specs/SPEC-COPILOT-PRECHK-001/`을 출처로 하는 인용이며 그 사실을 인용마다 밝힌다.
+> **등급 규약.** `[코드]`(저장소 정적 조사) · `[문서]` · `[실측]`(**라이브 콘솔 직접 관측만**) · `[미확정]` · `[추론]`(저장소 근거에서 유도했으나 관측으로 확인되지 않음). **본 SPEC은 라이브 세션 0회이므로 본 계획이 자기 관측으로 주장하는 `[실측]`은 0건이다** — 실측 수치는 전부 `.moai/specs/SPEC-COPILOT-PRECHK-001/`을 출처로 하는 인용이며 그 사실을 인용마다 밝힌다.
 
 ---
 
@@ -70,7 +70,7 @@ status: draft (v0.1.0, 2026-07-30) · Tier M
 | `server/rulebook/assets/v2.4.2/**` | 룰북을 편집하지 않는다. `addr + 42` 레시피는 인용 대상이며 수정 대상이 아니다(`server/rulebook/assets/v2.4.2/30_plugin_patterns.md:37-56`) | 같음 |
 | `server/orchestrator/tools.py`의 `_PROGRAMMER_STATE_COMMANDS`와 dedupe 실행 루프 | M6가 tools.py를 고치지만 두 보호구역에 hunk를 만들지 않는다 | `AC-OVERLAP-019` ④ (hunk 위치 봉쇄, PRECHK BASE 상대) |
 | **`server/safety/**`** | 무변경. 단 이 판정이 `ASSUMPTION-34`이며 M0가 닫는다 | `AC-OVERLAP-002` ③④ (본 SPEC BASE) · `AC-OVERLAP-019` ⑤ (PRECHK BASE 파일집합 봉쇄) |
-| `.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md` | **무변경.** `server/tests/test_prechk_patch.py:310-320` · `server/tests/test_prechk_macro.py:49` · `server/tests/test_prechk_inventory.py:196`이 그 문서를 읽고, `DESCOPE: ASSUMPTION-27` 접두 행이 정확히 1건이어야 한다. 본 SPEC의 게이트 행은 자기 `progress.md`에 쓴다 | `AC-OVERLAP-019` ⑧ |
+| `.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md` | **무변경.** `server/tests/test_prechk_patch.py:310-317` · `server/tests/test_prechk_macro.py:49` · `server/tests/test_prechk_inventory.py:196`이 그 문서를 읽고, `DESCOPE: ASSUMPTION-27` 접두 행이 정확히 1건이어야 한다. 본 SPEC의 게이트 행은 자기 `progress.md`에 쓴다 | `AC-OVERLAP-019` ⑧ |
 
 **갱신이 강제되는 트립와이어 2건은 PRESERVE 위반이 아니다** — `server/tests/test_songcue_bundle.py:64`의 hunk 목록(M6 소유, §B.6), `server/tests/test_prechk_verdicts.py`의 재타이핑 정본 3단정(M1 소유, §B.1). **형태를 약화시키지 않는 것이 조건이다.**
 
@@ -139,7 +139,7 @@ git diff --stat 95687a0e0eba90b325daf76efbd0ac197e69e2fc..HEAD -- server/safety/
 
 ### §B.1 M1 — 어휘 확장
 
-**목표.** 승인된 어휘 확장을 **10편집점 + 배선 3** 전부 집행한다(`research.md` §7.1). 신규 축 `overlap_basis` 4값과 `SKIPPED_CHECK_KIND`의 1값을 넣고, 라벨표 `OVERLAP_BASIS_LABELS`를 만들고, **import 시점 가드 루프를 레지스트리 순회로 구조 변경하고**(D-6), 재타이핑 정본 3단정을 갱신한다. 이 마일스톤의 산출물은 다음 축을 추가하는 사람이 같은 함정을 만나지 않는 **구조**다.
+**목표.** 승인된 어휘 확장을 **13편집점 + 배선 3** 전부 집행한다 — 신규 축 생성 **10** + 기존 축 값 추가 **3**(`research.md` §7.1). 신규 축 `overlap_basis` 4값과 `SKIPPED_CHECK_KIND`의 1값을 넣고, 라벨표 `OVERLAP_BASIS_LABELS`를 만들고, **import 시점 가드 루프를 레지스트리 순회로 구조 변경하고**(D-6), 재타이핑 정본 3단정을 갱신한다. 이 마일스톤의 산출물은 다음 축을 추가하는 사람이 같은 함정을 만나지 않는 **구조**다.
 
 - **`cycle_type`**: **`tdd`**.
 - **산출 파일**
@@ -264,7 +264,7 @@ git diff --stat 95687a0e0eba90b325daf76efbd0ac197e69e2fc..HEAD -- server/safety/
   |---|---|
   | `server/tests/test_prechk_patch.py:217-226` | 기존 정확폭 GO 분기. `overlap.universe == 1` · `overlap.span == (1, 43)` 등이 그대로 성립해야 한다 — 상계 축 추가가 정확폭 경로를 바꾸지 않았음의 확인 |
   | `server/tests/test_prechk_patch.py:184-189` | 주소 중복 축의 유니버스 서로소성. M3가 상계 축에 같은 성질을 **추가**하되 기존 단정을 대체하지 않는다 |
-  | `server/tests/test_prechk_patch.py:310-320` | `DESCOPE: ASSUMPTION-27` 접두 행이 PRECHK `progress.md`에 정확히 1건. 본 SPEC이 `ASSUMPTION-27`을 뒤집지 않고 그 문서를 건드리지 않음의 기계 확인 |
+  | `server/tests/test_prechk_patch.py:310-317` | `DESCOPE: ASSUMPTION-27` 접두 행이 PRECHK `progress.md`에 정확히 1건. 본 SPEC이 `ASSUMPTION-27`을 뒤집지 않고 그 문서를 건드리지 않음의 기계 확인 |
 
 ### §B.4 M4 — 정확폭 우선 · 근거 배선
 
@@ -342,7 +342,7 @@ git diff --stat 95687a0e0eba90b325daf76efbd0ac197e69e2fc..HEAD -- server/safety/
   2. **D-2 기계 확인**: `server/prechk/footprint.py`에 `"Patch/FixtureTypes"` 리터럴이 **0건**이고, 핸들러가 `rig_paths["fixture_types"]`를 넘긴다. `Patch/FixtureTypes`는 이미 `server/orchestrator/tools.py:117`에 기본값으로 있으므로 **신규 경로 상수 0건**이며, 오버라이드 이음새(`server/orchestrator/tools.py:508` · `:534`)가 이 축에도 적용된다.
   3. **D-3 기계 확인**: `server/orchestrator/tools.py:157`의 `PRECHK_RIG_SECTIONS = ("groups", "macros")`가 **바이트 동일**하다. 신설 튜플(이름은 `design.md` 소유)이 `create_macro` 값과 **무관하게 항상** 검사되고, 누락 시 메시지가 **어느 섹션이 빠졌는지 이름으로 말하며** 풀 판독 실패를 암시하지 않는다.
   4. `server/tests/test_prechk_tool.py:895-905` · `:907`이 **무변경 통과**한다 — 누락 섹션 **집합**을 메시지로 단정하는 두 테스트가 2섹션을 유지한다. `PRECHK_RIG_SECTIONS`에 `"fixture_types"`를 추가하면 이 둘이 깨지므로 D-3이 신설을 택했다.
-  5. `server/tests/test_tools.py:512-523`의 **정확 10키** 단정이 무변경 통과한다 — 신규 경로 키 0건의 기계 확인. (11번째 키를 요구하는 것은 꼬리 초과 축뿐이며 `spec.md` §D가 그것을 범위 밖으로 두었다.)
+  5. `server/tests/test_tools.py:511-522`의 **정확 10키** 단정이 무변경 통과한다 — 신규 경로 키 0건의 기계 확인. (11번째 키를 요구하는 것은 꼬리 초과 축뿐이며 `spec.md` §D가 그것을 범위 밖으로 두었다.)
   6. **순회 예외 포착의 기계 판정**: `server/tests/test_prechk_tool.py`의 `_dispatch` 호출 **41지점**이 전건 통과한다. 그 파일의 `RigPort`(`server/tests/test_prechk_tool.py:43-60`)는 픽스처 루트·`DataPool/Groups`·`DataPool/Macros` 3경로 외 전부 `RuntimeError`를 던지고 `_registry()`가 `rig_paths`를 넘기지 않아 기본값을 쓰므로 `Patch/FixtureTypes`가 대상이 된다 — **순회가 예외를 포착하지 않으면 41개가 전량 깨진다**(`research.md` §6.1) `[코드]`.
   7. **트립와이어 갱신**: `git diff --unified=0 38a6e7e2157a4862721fcd868056e0dbbb09c4c0..HEAD -- server/orchestrator/tools.py`의 hunk old-start 목록이 `_TOOLS_EXPECTED_HUNK_OLD_STARTS`와 일치하고, `server/tests/test_songcue_bundle.py:65`의 `_TOOLS_PROTECTED_OLD_RANGES = ((234, 238), (524, 569))`가 **바이트 동일**하며 **보호구역 교차 단정이 계속 성립**한다(`server/tests/test_songcue_bundle.py:233` · `:237`).
   8. `uv run pytest server/tests/ -q`의 계수가 baseline **이상**.
@@ -378,7 +378,7 @@ git diff --stat 95687a0e0eba90b325daf76efbd0ac197e69e2fc..HEAD -- server/safety/
   5. **`server/safety/**` 파일집합 봉쇄와 삭제 행 봉쇄**(`AC-OVERLAP-019` ⑤): 변경 파일이 **정확히 2개**이고, 한쪽은 삭제 **0행**, 다른 쪽은 삭제 **≤ 1행**이며 **그 1행이 독스트링임**을 함께 단정한다. 두 번째 조건이 없으면 의미 있는 삭제가 허용치 아래로 숨는다. 착수 시점 값은 §A.5의 표다 `[코드]`.
   6. **신규 파일 확인**(`AC-OVERLAP-019` ⑥): `git diff --numstat 85a4b2389003cb61b0ab72eb4aa8d6b2ff90b94a..HEAD -- server/tests/test_songcue_bundle.py`의 변경이 **트립와이어 값 1행에 한정**된다. 선례 파일에 신규 게이트 상수가 들어가지 않았음의 기계 확인.
   7. **트립와이어 판정**(`AC-OVERLAP-019` ⑦): M6의 갱신이 성립하고 보호구역 교차 단정이 계속 성립한다.
-  8. **PRECHK progress.md 무변경**(`AC-OVERLAP-019` ⑧): `git diff --stat 85a4b2389003cb61b0ab72eb4aa8d6b2ff90b94a..HEAD -- .moai/specs/SPEC-COPILOT-PRECHK-001/`가 **빈 출력**이고, `DESCOPE: ASSUMPTION-27` 접두 행이 여전히 **정확히 1건**이다(`server/tests/test_prechk_patch.py:310-320`이 상시 판정한다). **이 한 항목만 본 SPEC의 BASE를 쓴다** — PRECHK BASE로 돌리면 PRECHK SPEC 6문서의 최초 작성 전량(6파일 · 추가 2887행)이 diff에 실려 판정이 성립하지 않는다 `[코드]`. 반면 `85a4b23…`은 PRECHK의 §E.9를 기록한 커밋이므로 그 시점 이후의 변경이 정확히 *"본 SPEC이 손댄 것"*이다.
+  8. **PRECHK progress.md 무변경**(`AC-OVERLAP-019` ⑧): `git diff --stat 85a4b2389003cb61b0ab72eb4aa8d6b2ff90b94a..HEAD -- .moai/specs/SPEC-COPILOT-PRECHK-001/`가 **빈 출력**이고, `DESCOPE: ASSUMPTION-27` 접두 행이 여전히 **정확히 1건**이다(`server/tests/test_prechk_patch.py:310-317`이 상시 판정한다). **이 한 항목만 본 SPEC의 BASE를 쓴다** — PRECHK BASE로 돌리면 PRECHK SPEC 6문서의 최초 작성 전량(6파일 · 추가 2887행)이 diff에 실려 판정이 성립하지 않는다 `[코드]`. 반면 `85a4b23…`은 PRECHK의 §E.9를 기록한 커밋이므로 그 시점 이후의 변경이 정확히 *"본 SPEC이 손댄 것"*이다.
   9. **`ruff check`와 `ruff format --check`가 본 SPEC이 손댄 전 파일에서 통과**한다(`AC-OVERLAP-019` ⑨).
   10. `uv run pytest server/tests/ -q`의 계수가 baseline **이상**.
 - **엄중한 경고 2건 — 위반하면 게이트가 즉시 실패하거나 엉뚱한 곳을 지킨다**

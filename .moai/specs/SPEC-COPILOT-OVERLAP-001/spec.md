@@ -40,14 +40,14 @@ PRECHK는 구간 겹침 판정을 **수행하지 않고 수행하지 않았다�
 ### 사전 확정 사실 (사용자 확정 — 재질의 금지)
 
 1. **닫힌 어휘 확장이 승인됐다** — 신규 축 `overlap_basis` = {`exact_widths`, `bound_proves_clear`, `bound_inconclusive`, `not_performed`} + `SKIPPED_CHECK_KIND` += `range_overlap_bound_inconclusive`. **`COLLISION_KIND`와 `FIXTURE_VERDICT`는 건드리지 않는다** — 상계로 증명된 청결은 충돌도 미수행도 아닌 제3의 결과이므로 기존 축 어디에도 들어갈 수 없다(`research.md` §8.1).
-2. **`ASSUMPTION-27`은 부정으로 유지된다.** 본 SPEC은 조인을 되살리지 않는다. PRECHK `progress.md`의 `DESCOPE: ASSUMPTION-27` 접두 행은 **원문 그대로 1건으로 보존**되며 `server/tests/test_prechk_patch.py:310-320`이 그것을 상시 단정한다.
+2. **`ASSUMPTION-27`은 부정으로 유지된다.** 본 SPEC은 조인을 되살리지 않는다. PRECHK `progress.md`의 `DESCOPE: ASSUMPTION-27` 접두 행은 **원문 그대로 1건으로 보존**되며 `server/tests/test_prechk_patch.py:310-317`이 그것을 상시 단정한다.
 3. **쓰기는 0건이다.** 본 SPEC은 읽고 판정하고 보고한다. 콘솔 발화가 없으므로 *"`Cmd` 접수 `OK`는 효과 증거가 아니다"* 계열은 적용 대상이 아니며 그 사실 자체가 범위 경계다.
 
 ### 조사가 확립한 제약 — 본 SPEC이 이 위에 선다
 
 1. **판정 술어는 `간격 < 폭`이다.** 구간이 닫힌 끝(`start + width - 1`)이므로 `간격 == 상계`는 **증명 가능하게 깨끗하다**. `progress.md` §E.6 ④의 *"상계 이하라 미확정"*은 off-by-one이며 `research.md` §3.1이 코드로 정정했다. **이 쇼파일에서는 두 표현이 같은 답을 내므로 오류가 잠복한다.**
 2. **상계는 열거 완전성 위에서만 성립한다.** 모드 집합이 불완전하면 `max`가 **부분집합의 최대값**이 되어 참 상계보다 작아지고, `bound_proves_clear`가 **거짓 양성**으로 발화한다(`research.md` §4.1의 구체 시나리오: 부분집합 상계 29 vs 참값 31, 간격 30인 리그에서 결론이 뒤집힌다).
-3. **1·2단과 3단은 절단 술어가 다르다.** `DMXChannels` 열거는 `truncated=true`인데 `childCount`가 참값을 준다(`progress.md:408`). 1·2단은 **자식 집합**이 필요하므로 절단이 치명적이고, 3단은 **계수만** 필요하므로 절단이 무해하다.
+3. **1·2단과 3단은 절단 술어가 다르다.** `DMXChannels` 열거는 `truncated=true`인데 `childCount`가 참값을 준다(`.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md:408`). 1·2단은 **자식 집합**이 필요하므로 절단이 치명적이고, 3단은 **계수만** 필요하므로 절단이 무해하다.
 4. **위험은 한 방향뿐이다.** 구간 겹침이 `intervals`를 유니버스로 키잉하고 `_flush_cluster`가 `universe`를 스칼라로 받으므로 유니버스를 넘는 점유는 **구조적으로 비가시**하다. 따라서 가능한 오류는 거짓 충돌이 아니라 **거짓 "겹침 없음 증명"** 뿐이다(`research.md` §5.3).
 5. **주소 공간에 검증이 0건이다.** 파서가 `^(\d+)\.(\d+)$` 하나이며 하한도 상한도 없다 — `normalize_address("0.0")`이 `ok=True`를 낸다(`research.md` §4.4, 실행 확인). 오늘은 정확 일치 중복만 보므로 무해하고, **간격을 계산하는 순간 무의미한 주소가 무의미한 판정을 만든다.**
 6. **최소 간격 42도 상계 31도 이 쇼파일의 산물이다.** 룰북 예제가 `addr = addr + 42`를 9회 돌린 결과가 실측 유니버스 1의 슬롯 2~10 주소와 **정확히 일치한다**(`research.md` §5.6). 두 수 중 어느 것도 하드코딩할 수 없다.
@@ -61,7 +61,7 @@ PRECHK는 구간 겹침 판정을 **수행하지 않고 수행하지 않았다�
 - **REQ-OVERLAP-001** `[Ubiquitous]` The 시스템 **shall** 점유폭 상계를 **런타임에 읽어** 얻는다 — `Patch/FixtureTypes` 열거 → 각 타입의 `DMXModes` 열거 → 각 모드의 `DMXChannels` `childCount`. 상계는 그 계수들의 **최대값**이다. **폭 값도 상계 값도 코드에 상수로 두지 않는다** — 실측 29·31과 최소 간격 42는 이 쇼파일 룰북 레시피의 산물이며 다른 리그에서 다르다(`research.md` §5.6).
 - **REQ-OVERLAP-002** `[Ubiquitous]` The 순회 **shall** `state` 표면(`query_state`)만 사용하고 프로퍼티를 **0건** 읽는다. 따라서 `PROPERTY_WHITELIST`에 추가할 이름이 없고 `server/safety/**`에 신규 예외 지점이 **0건**이다 — PRECHK가 받은 조건부 예외는 `prop` 때문이었으며 본 SPEC은 그것을 재사용하지 않는다(`.moai/specs/SPEC-COPILOT-PRECHK-001/spec.md:121`).
 - **REQ-OVERLAP-003** `[Event-driven]` **When** 1단 또는 2단 열거의 **읽은 개수가 `node.childCount`보다 작거나** 조회 예산이 소진되거나 조회가 예외를 냈으면, the 시스템 **shall** **상계 계산 자체를 수행하지 않는다.** 완전성 판정이 `max` 연산보다 **앞에** 온다. 부분 결과를 `max`에 넣고 사후에 플래그로 무효화하는 제어 흐름은 **금지**다 — 표기와 판정이 서로 다른 대상에 붙어 표기가 남아도 판정이 이미 오염된다(`research.md` §4.1).
-- **REQ-OVERLAP-004** `[Ubiquitous]` The 시스템 **shall** 1·2단에는 **목록 완전성** 술어를, 3단에는 **계수 존재성** 술어를 적용한다. 두 술어를 하나로 뭉개지 않는다 — 3단은 `truncated=true`에도 `childCount`가 참값이므로(`progress.md:408`) 뭉개면 3단이 불필요하게 실패하거나 1·2단이 잘못 통과한다.
+- **REQ-OVERLAP-004** `[Ubiquitous]` The 시스템 **shall** 1·2단에는 **목록 완전성** 술어를, 3단에는 **계수 존재성** 술어를 적용한다. 두 술어를 하나로 뭉개지 않는다 — 3단은 `truncated=true`에도 `childCount`가 참값이므로(`.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md:408`) 뭉개면 3단이 불필요하게 실패하거나 1·2단이 잘못 통과한다.
 - **REQ-OVERLAP-005** `[Ubiquitous]` The 순회 **shall** 조회 예산 상한을 갖고, 그 상한과 대상 경로를 **인자로 받는다.** 순회 모듈은 `server.orchestrator.tools`를 import하지 않는다 — `tools.py`가 `server.prechk.*`를 import하므로 역방향은 하드 순환이다(`research.md` §6).
 - **REQ-OVERLAP-006** `[Event-driven]` **When** 순회 조회가 실패하면, the 시스템 **shall** **설정·배선 결함**(경로가 이 쇼파일에 없다)과 **운영 조건**(콘솔이 응답하지 않는다)을 구분해 보고한다. 프로덕션 게이트 포트는 `ok=false`와 타임아웃을 **같은 예외 타입**으로 던지므로(`server/safety/console.py:387-388`) 구분은 예외 타입이 아닌 다른 근거로 해야 한다. 기존 분류 규칙(`REASON_UNRESOLVED` / `REASON_UNREACHABLE`, `server/orchestrator/tools.py:196-206`)을 **적용**하며 새 규칙을 만들지 않는다 — 순회는 픽스처 루트 조회가 이미 성공한 뒤에만 도달하므로 *"형제가 답했다"*가 참이다.
 - **REQ-OVERLAP-007** `[Unwanted]` The 시스템 **shall not** 순회 실패를 *"겹침 없음"*으로 읽히게 하고, 순회 실패로 인해 **리포트의 나머지를 잃는다**. 인벤토리·주소 중복 판정은 순회 결과와 무관하게 산출된다.
@@ -78,7 +78,7 @@ PRECHK는 구간 겹침 판정을 **수행하지 않고 수행하지 않았다�
 ### B.3 판정 어휘와 보고
 
 - **REQ-OVERLAP-014** `[Ubiquitous]` The 시스템 **shall** 겹침 판정의 **근거 등급**을 닫힌 어휘 `overlap_basis`로 표현한다 — `exact_widths`(슬롯별 정확폭으로 비교했다) · `bound_proves_clear`(열거 완전한 모드 집합의 상계로 겹침 없음이 증명됐다) · `bound_inconclusive`(최소 간격이 상계 미만이라 판정하지 못했다) · `not_performed`(정확폭도 상계도 없다). 어휘 밖 값은 **조용히 통과하지 않는다**.
-- **REQ-OVERLAP-015** `[Ubiquitous]` The `bound_proves_clear` 판정 **shall** *"관측된 모드 집합에 한정해"*를 함께 말한다. 응답기는 프로퍼티명을 열거할 수 없고 어떤 프로브 집합도 부재 증명이 될 수 없다 — PRECHK가 *"후보 12건 전건 부정"*을 무한정으로 적어 감사 지적을 받은 것이 같은 계열의 두 번째 미끄러짐이었다(`progress.md:646`).
+- **REQ-OVERLAP-015** `[Ubiquitous]` The `bound_proves_clear` 판정 **shall** *"관측된 모드 집합에 한정해"*를 함께 말한다. 응답기는 프로퍼티명을 열거할 수 없고 어떤 프로브 집합도 부재 증명이 될 수 없다 — PRECHK가 *"후보 12건 전건 부정"*을 무한정으로 적어 감사 지적을 받은 것이 같은 계열의 두 번째 미끄러짐이었다(`.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md:646`).
 - **REQ-OVERLAP-016** `[Ubiquitous]` The 리포트 **shall** 상계의 **근거를 페이로드에 싣는다** — 상계 값과 그 출처(어느 경로의 어느 계수에서 왔는가). `FootprintPolicy.source`가 필드로 존재하면서 소비자 0건으로 죽어 있는 것이 선례이며(`research.md` §8.4) **근거를 받는 필드를 만들고 내보내는 키를 만들지 않으면 같은 결과가 된다.**
 - **REQ-OVERLAP-017** `[Ubiquitous]` The 사용자 대면 한국어 요약 **shall** `overlap_basis` 라벨을 싣는다. 페이로드에만 넣고 요약에 넣지 않으면 **사용자에게 보이지 않는다** — 요약이 사용자가 실제로 읽는 유일한 문자열이다. 판정 어휘 라벨은 표현 계층에 두며 `REQ-PRECHK-017`의 형상을 계승한다.
 
@@ -94,16 +94,16 @@ PRECHK는 구간 겹침 판정을 **수행하지 않고 수행하지 않았다�
 
 착수 SHA **`85a4b2389003cb61b0ab72eb4aa8d6b2ff90b94a`**에서 **직접 실측**한 값은 `uv run pytest server/tests/ -q` → **2758 passed · 5 skipped · 0 failed**다. 전체 스위트 수는 **각 마일스톤이 착수 직전 직접 실측**하며 **이월 인용을 금지**한다.
 
-> **BASE 두 개를 혼동하지 않는다.** 본 SPEC의 BASE는 위 값이고, **PRECHK의 PRESERVE 기준점은 `95687a0e0eba90b325daf76efbd0ac197e69e2fc`로 영구 불변**이다. PRECHK의 PRESERVE를 새 BASE로 검사하면 착수 직후 항상 0행이라 게이트가 무력해진다 — `progress.md:558`이 같은 무력화를 실측으로 증명했다. `.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md` §E.9가 다음 BASE를 `b406a7b…`로 적었으나 실제로는 그 위 1커밋이며, **코드 무변경 문서 커밋이라 게이트 의미는 동일하다**(`research.md` §9.1).
+> **BASE 두 개를 혼동하지 않는다.** 본 SPEC의 BASE는 위 값이고, **PRECHK의 PRESERVE 기준점은 `95687a0e0eba90b325daf76efbd0ac197e69e2fc`로 영구 불변**이다. PRECHK의 PRESERVE를 새 BASE로 검사하면 착수 직후 항상 0행이라 게이트가 무력해진다 — `.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md:558`이 같은 무력화를 실측으로 증명했다. `.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md` §E.9가 다음 BASE를 `b406a7b…`로 적었으나 실제로는 그 위 1커밋이며, **코드 무변경 문서 커밋이라 게이트 의미는 동일하다**(`research.md` §9.1).
 
-**라이브 세션은 착수에 필요하지 않다.** 상계와 간격이 모두 선행 SPEC에 실측 전재되어 있고(`progress.md:308-326` · `:403`) 본 SPEC이 요구하는 것은 그 값을 **런타임에 읽는 형상**이다. 라이브가 필요한 항목은 전부 `ASSUMPTION-31`~`ASSUMPTION-35`이며 **어느 것도 착수를 막지 않는다.**
+**라이브 세션은 착수에 필요하지 않다.** 상계와 간격이 모두 선행 SPEC에 실측 전재되어 있고(`.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md:308-326` · `:403`) 본 SPEC이 요구하는 것은 그 값을 **런타임에 읽는 형상**이다. 라이브가 필요한 항목은 전부 `ASSUMPTION-31`~`ASSUMPTION-35`이며 **어느 것도 착수를 막지 않는다.**
 
 ### 미검증 전제 (ASSUMPTION)
 
 번호는 선행 SPEC 이후를 이어받는다(PRECHK가 `ASSUMPTION-25~30`을 썼다).
 
 - **ASSUMPTION-31** — **연속 블록 전제.** 픽스처가 `Patch` 시작점에서 시작하는 **하나의 연속 블록**을 점유한다. `BreakAddress` · `Break` · `BreakCount`가 전부 `property not readable`이고 `Patch` 값이 `<유니버스>.<주소>` 한 쌍뿐이므로(`.moai/specs/SPEC-COPILOT-PRECHK-001/research.md:97-99`) 현 표면에서 확인 불가다. **거짓이면 `start + width - 1`이 첫 블록을 과대평가하고 둘째 블록을 완전히 놓친다 — 상계가 상계가 아니다.** 현 쇼파일은 픽스처타입 1종뿐이라 실험이 원리적으로 불가능하다. **차단 대상: 없음** — 부정이면 `bound_proves_clear`를 내지 않는 형상으로 축소된다.
-- **ASSUMPTION-32** — **`DMXChannels` 자식 수 = DMX 슬롯 수.** `childCount` 29·31만 기록됐고 **자식 이름은 한 건도 기록되지 않았다**(열거가 `truncated=true`, `progress.md:408`). 자식이 어트리뷰트 논리 채널이고 16비트 어트리뷰트가 2슬롯을 쓰면 `childCount < 실제 슬롯 수`이며 **상계가 과소평가**된다. 저장소 내 유일한 방증은 룰북의 `addr + 42` 레시피가 겹침 회피를 요구하므로 `childCount ≤ 42`가 방증된다는 것뿐이고, **등식은 방증되지 않는다.** **차단 대상: 없음** — `ASSUMPTION-31`과 같은 축소.
+- **ASSUMPTION-32** — **`DMXChannels` 자식 수 = DMX 슬롯 수.** `childCount` 29·31만 기록됐고 **자식 이름은 한 건도 기록되지 않았다**(열거가 `truncated=true`, `.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md:408`). 자식이 어트리뷰트 논리 채널이고 16비트 어트리뷰트가 2슬롯을 쓰면 `childCount < 실제 슬롯 수`이며 **상계가 과소평가**된다. 저장소 내 유일한 방증은 룰북의 `addr + 42` 레시피가 겹침 회피를 요구하므로 `childCount ≤ 42`가 방증된다는 것뿐이고, **등식은 방증되지 않는다.** **차단 대상: 없음** — `ASSUMPTION-31`과 같은 축소.
 - **ASSUMPTION-33** — **유니버스 용량과 주소 기준.** 유니버스당 채널 상한 `B`에 대해 **저장소 근거 0건 · 라이브 관측 0건**이다(`research.md` §5.1의 범위 9곳 전수 살핌). 실측 리그에서 **판정이 갈리는 창은 `B ∈ [437, 466]` 30값뿐**이며 `B ≥ 467`이면 몰라도 증명된다 — **따라서 전제는 512가 아니라 `B ≥ 467`이라는 훨씬 약한 명제다.** 주소 기준(1-기준 vs 0-기준)은 **간격 산수에 무관하고**(차분은 원점 이동에 불변) **꼬리 산수 하나에만** 걸리므로 같은 전제에 묶는다. **차단 대상: 꼬리 초과 판정 축 하나뿐**이며 그 축은 아래 §D가 범위 밖으로 둔다.
 - **ASSUMPTION-34** — **`state` 표면만으로 3단 순회가 도달한다.** 상계가 요구하는 읽기가 전부 `state`이므로 `server/safety/**` 신규 예외가 0지점이라는 판정(`research.md` §9.6)은 **`[추론]`이다.** **차단 대상: `server/safety/**` PRESERVE의 유지 여부.** 부정이면 PRECHK가 연 4지점을 재사용해야 하고 그 경우 §E의 PRESERVE 서술을 개정한다. **첫 마일스톤이 이 전제를 닫는다** — 인메모리 프로토타입 1개로 갈리며 라이브가 필요 없다.
 - **ASSUMPTION-35** — **`Patch/FixtureTypes` 열거의 완전성과 타입 수 `T`.** `T`의 실측 기록이 저장소에 **0건**이다. `1 + T + Σ M_t` 회 조회가 필요하므로 예산 상한 결정이 `T`에 걸린다. **차단 대상: 없음** — 예산을 보수적으로 잡고 소진 시 `not_performed`를 내면 `T`를 몰라도 안전하다(`REQ-OVERLAP-003`). 다만 **`node.childCount`와 `len(children)`을 함께 읽는 것**이 요건이며 `children` 길이만 보면 안 된다.
@@ -125,7 +125,7 @@ PRECHK는 구간 겹침 판정을 **수행하지 않고 수행하지 않았다�
 | `server/tests/test_songcue_bundle.py`의 `_TOOLS_EXPECTED_HUNK_OLD_STARTS` | 주석이 스스로 *"tools.py를 정당하게 고치는 후속 SPEC은 이것을 의도적으로 갱신해야 하며 그것이 요점이다"*라고 선언한다. PRECHK가 이미 한 번 갱신했다. **보호구역 교차 단정은 계속 성립해야 한다** |
 | `server/tests/test_prechk_verdicts.py`의 재타이핑 정본 3단정 | 어휘 확장이 승인 사항이므로 이 정본을 갱신하는 것이 집행이다. **단 형태를 약화시키지 않는다** — 집합 동일성 · 레지스트리 키 동일성 · 레지스트리 **순서** 동일성 셋을 모두 유지한다 |
 
-**PRECHK의 `progress.md`는 손대지 않는다.** `server/tests/test_prechk_patch.py:310-320` · `test_prechk_macro.py:49` · `test_prechk_inventory.py:196`이 그 문서를 읽으며, 특히 `DESCOPE: ASSUMPTION-27` 접두 행이 **정확히 1건**이어야 한다. 본 SPEC의 게이트 행은 자기 `progress.md`에 쓴다.
+**PRECHK의 `progress.md`는 손대지 않는다.** `server/tests/test_prechk_patch.py:310-317` · `test_prechk_macro.py:49` · `test_prechk_inventory.py:196`이 그 문서를 읽으며, 특히 `DESCOPE: ASSUMPTION-27` 접두 행이 **정확히 1건**이어야 한다. 본 SPEC의 게이트 행은 자기 `progress.md`에 쓴다.
 
 ---
 
@@ -137,7 +137,7 @@ PRECHK는 구간 겹침 판정을 **수행하지 않고 수행하지 않았다�
 
 1. **용량 `B`에 대한 저장소 근거가 0건**이다(`research.md` §5.1). 512를 코드에 박는 것은 미검증 관례의 하드코딩이다.
 2. **현재 코드는 유니버스를 넘는 점유를 클러스터에 넣지 못한다** — 구조적으로 비가시하므로 오늘 이 축을 켜는 것은 새 자료구조를 요구한다.
-3. **용량을 런타임에 읽으려면 `DEFAULT_RIG_CONTEXT_PATHS`에 11번째 키가 필요하고 그 순간 `server/tests/test_tools.py:512-523`의 정확 10키 단정이 깨진다.** 폭 상계 축은 신규 경로 키 **0건**으로 성립하므로(`fixture_types`가 이미 있다) **꼬리 축만이 계약 변경을 요구한다.**
+3. **용량을 런타임에 읽으려면 `DEFAULT_RIG_CONTEXT_PATHS`에 11번째 키가 필요하고 그 순간 `server/tests/test_tools.py:511-522`의 정확 10키 단정이 깨진다.** 폭 상계 축은 신규 경로 키 **0건**으로 성립하므로(`fixture_types`가 이미 있다) **꼬리 축만이 계약 변경을 요구한다.**
 
 **`ASSUMPTION-33`으로 명시하고 실측 리그에서 발생하지 않음을 산술로 기록한다**(유니버스 1 최악 종단 467, 유니버스 2는 431). 후속 SPEC이 용량을 실측하면 그때 연다.
 
