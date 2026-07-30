@@ -430,6 +430,82 @@ scout가 정적으로 예측한 것 1건이 라이브와 일치했다 — **`pag
 
 **기존 비-clean 지점 1건을 손대지 않고 기록한다** — `server/safety/console.py`는 `E501` 2건(292행 · 346행)과 미포맷 상태를 **BASE 95687a0에서 이미** 갖고 있다. `git show 95687a0:server/safety/console.py`를 꺼내 같은 검사를 돌려 확인했다: `E501` 2건 · `Would reformat` 1건. `AC-PRECHK-015` ⑤가 무관 재포맷을 금지하므로 본 SPEC은 그 파일을 포맷하지 않았고, 내 hunk 자체는 `E501`을 만들지 않았다.
 
+### 병렬 웨이브 1 — M2·M3 사슬 + M4 (2026-07-30)
+
+§F.1이 확정한 폭 2로 집행했다. 워커 2개, 파일 교집합 0건, 충돌 0건.
+
+| 마일스톤 | 산출 | 테스트 | 뮤테이션 |
+|---|---|---|---|
+| M2 인벤토리 | `server/prechk/inventory.py` | 27건 | 8건 전건 사망 |
+| M3 패치 정합성 | `server/prechk/patch.py` | 42건 | 6건 전건 사망 |
+| M4 매크로 | `server/prechk/macro.py` | 73건 | 6건 전건 사망 |
+
+선행 공유 계약은 스폰 이전에 오케스트레이터가 직접 만들었다 — `server/prechk/verdicts.py`(닫힌 어휘 5종 + `validate()`)와 `server/tests/test_prechk_verdicts.py`(8건). 워커에게 계약을 협상시키지 않았다.
+
+**검증한 것과 그 방법.** 워커 보고를 신뢰하지 않고 직접 재고했다. 전체 스위트 2657 passed · 5 skipped · 0 failed. 공유 계약 4파일과 `server/safety/**` · `console/lua/**`의 diff가 빈 출력. `server/prechk/macro.py`에서 `Fixture` 토큰이 독스트링 1건뿐이고 생성 커맨드에 0건. `server.bridge` import 0건(`server/tests/test_architecture.py` 4 passed).
+
+**워커가 내 결함 1건을 수리했다.** 내가 §F.1을 추가하면서 M1 테스트 `test_approval_record_exists_in_progress`의 `progress.split("## §F.")[-1]`이 §F.1만 잡게 됐다. 워커가 §F 전 하위절을 결합하는 형태로 고치고 `len(parts) >= 2` 비공허성 assert를 더했다. 단정은 약화되지 않았음을 diff로 확인했다.
+
+**정본 드리프트 결정 1건.** `design.md` §6.1의 `clean_rig_18`은 *"실측 리그와 같은 정합 주소"*를 주장하지만 실측 리그는 M0에서 19개가 됐다. **합성 픽스처이며 라이브 미러가 아닌 것으로 확정**했다 — 인메모리 픽스처를 현장 쇼파일에 묶으면 리그가 바뀔 때마다 테스트가 깨지고 결정성이 사라진다.
+
+### M5 — 리포트 (AC-PRECHK-012 · 2026-07-30)
+
+`server/prechk/report.py` + `server/tests/test_prechk_report.py` 32건. 뮤테이션 5건 전건 사망(집계만 반환 · 집계와 픽스처별 불일치 · 밑줄 식별자 직접 import · 어휘 밖 코드 조용한 통과 · macro 산출 누락), 비공허 26~31건 통과 동반.
+
+**`AC-PRECHK-012` ④의 재사용 판정을 기록한다.** `server/looks/report.py`에서 **문자열을 재사용할 지점이 0건**이다. 두 어휘가 서로소이고(그쪽은 룩·프리셋 사유, 이쪽은 패치 판정), 유일한 겹치는 키 `complete`는 의미가 다르다 — 그쪽은 *"모든 룩 저장 성공"*, 이쪽은 *"열거가 짧지 않았다"*다. 빌려 쓰면 가장 중요한 수치를 오라벨링한다. 계승한 것은 **패턴**(라벨을 표현 계층의 공개 접근자 뒤에 두고 자산·스키마에 두지 않는다)이며, 밑줄 식별자 import 0건을 AST 스캔이 강제한다.
+
+**라벨 정책이 `server/looks/report.py`와 다른 이유도 코드에 적었다.** 그쪽 `reason_label`은 모르는 코드를 그대로 통과시킨다(`server/looks/report.py:78-84`) — 사유가 콘솔에서 자유 문자열로 올라오므로 지어낸 번역이 원문 검색을 막기 때문이다. 프리체크 판정은 그런 출처가 없고 항상 닫힌 5집합의 원소이므로 모르는 코드는 버그다. 그래서 `label()`은 `validate()`를 먼저 돌려 **실패**한다(`AC-PRECHK-012` ⑤ d).
+
+### M6 — 툴 배선 (AC-PRECHK-014 · 2026-07-30)
+
+`precheck_patch`를 등재 3곳(`TOOL_NAMES` · `definitions` · `handlers`)에 넣고 **디스패치로** 검증했다. 21건. 뮤테이션 5건 전건 사망.
+
+| 뮤테이션 | 결과 |
+|---|---|
+| `TOOL_NAMES`에서 신규 이름 제거 | 죽었다 (2 failed / 19 passed) |
+| 핸들러가 `execution_port`를 직접 호출 | 죽었다 (4 failed / 17 passed) |
+| 신규 전송 표면(`APIRouter`) 도입 | 죽었다 (1 failed / 20 passed) |
+| 스키마에 그룹·슬롯 인자 추가 | 죽었다 (1 failed / 20 passed) |
+| 게이트 보류의 `is_error`를 거짓으로 | 죽었다 (1 failed / 20 passed) |
+
+전송 표면 뮤테이션의 **첫 시도는 무효였다** — `WebSocket`을 모듈 최상단에 두어 `NameError`로 임포트를 깨뜨렸고 19건이 전면 실패했다. 그것은 스캔이 잡은 것이 아니라 임포트가 깨진 것이다. 미실행 함수 안의 `APIRouter()` 참조로 다시 집행해 **스캔이 정확히 1건만** 죽이는 것을 확인했다.
+
+**매크로 슬롯은 파라미터가 아니라 유도값이다.** `AC-PRECHK-014` ③이 스키마에서 리그 식별자를 금지하고, 측정된 리그에서 슬롯 1은 응답기 자신의 `Copilot Go` 매크로가 점유한다. 그래서 핸들러가 `DataPool/Macros`를 읽어 **점유되지 않은 최소 양의 정수**를 고르고, 풀을 읽지 못하면 슬롯 1로 폴백하지 않고 오류로 답한다.
+
+**`build_toolset`에 `property_port`를 추가했고 기존 호출 20곳을 고치지 않았다** — 생략 시 `state_port`가 `query_property`를 가지면 채택한다. 게이트의 포트 객체가 둘을 구현하므로 프로덕션 배선은 무변경으로 능력을 얻고, 좁은 테스트 대역은 좁은 채로 남아 `precheck_patch`가 *"프로퍼티 읽기가 배선되지 않았다"*고 말한다(빈 리포트를 내면 정합한 리그로 읽힌다).
+
+#### M6에서 내가 만든 버그 1건 — 자체 발견·수정
+
+`from server.prechk.report import build_report`가 **`server/looks/report.py`의 동명 심볼을 가렸다**(`server/orchestrator/tools.py:30`에서 이미 import되어 `prepare_busking`이 쓰던 것이다). 전체 스위트에서 busking 12건이 `'GenreBundle' object has no attribute 'to_dict'`로 죽었다 — 내 리포트 빌더가 호출된 것이다. `build_precheck_report` 별칭으로 교정했다. **전체 스위트를 돌리지 않았으면 이 버그가 통과했다** — 신규 파일만 돌린 결과는 21 passed였다.
+
+아울러 `server/tests/test_tools.py`의 툴 계수를 8에서 9로 갱신했다(선언 집합과 등재 집합의 동일성을 고정하는 테스트이며, 툴을 더하면 의도적 갱신이 필요한 형태다).
+
+### M7 — 회귀 · PRESERVE (AC-PRECHK-015 · 2026-07-30)
+
+**baseline은 이 마일스톤이 착수 직전 직접 실측했다**(이월 인용 없음): `uv run pytest server/tests/ -q` → **2710 passed · 5 skipped · 0 failed**.
+
+| 구간 | 결과 |
+|---|---|
+| ① PRESERVE diff `git diff --stat 95687a0..HEAD -- <10경로>` | **빈 출력** |
+| ② 게이트 비공허성 | 주입 2회 전건 적발 후 revert |
+| ③ `server/safety/**` diff 대상 | `server/safety/console.py` · `server/safety/gate.py` — **승인된 4지점 안** |
+| ④ 전체 스위트 신규 실패 | **0건** |
+| ⑤ `ruff check` · `format --check` (신규·변경 18파일) | **All checks passed · already formatted** |
+
+**목록 오타 위양성을 배제했다.** PRESERVE 10경로 전부가 BASE `95687a0`에 실존함을 `git cat-file -e` / `git ls-tree`로 확인했다 — 오타가 있으면 게이트는 언제나 통과한다.
+
+**게이트 비공허성 실증 2회.** (i) `console/lua/PROTOCOL.md`에 개행 1건을 주입해 커밋하니 게이트가 `console/lua/PROTOCOL.md | 1 +`로 적발했고 revert 후 빈 출력으로 돌아왔다. (ii) `server/safety/audit.py`에 같은 주입을 하니 diff 대상 목록에 `audit.py`가 출현했고 revert 후 승인 부분집합만 남았다 — ③의 비공허성이다.
+
+**뮤테이션 실증 2건.** `console/lua/copilot_responder.lua`에 주입한 상태에서 두 게이트 형태를 나란히 측정했다: **인자 없는 `git diff --stat -- <목록>`은 0행**(위반이 커밋돼 있는데도 무력화)이고 `<BASE>..HEAD`는 `copilot_responder.lua | 1 +`로 적발했다. 즉 `<BASE>..HEAD` 범위가 협상 불가라는 `AC-PRECHK-015` ①의 규정이 실측으로 뒷받침된다. 동시에 *"`console/lua/**`를 수정한다"*는 M7 뮤테이션도 이 사이클이 죽였다.
+
+**③의 hunk 내역을 전수 기록한다.** `server/safety/console.py`는 **hunk 3개 전부 순수 추가**이고 삭제 0행이다(import 1행 · `ConsolePort` 선언 2행 · `ConsoleLink.query_property` 33행). `server/safety/gate.py`는 추가 2개(`_GateStatePort.query_property` 위임 · `SafetyGate._query_property` 감사 구현)와 **삭제 1행**이며, 그 1행은 `_GateStatePort`의 **독스트링**이다 — `"StateQueryPort implementation ..."`을 `"StateQueryPort + PropertyQueryPort ..."`로 정정했다. 심볼도 시그니처도 게이트 스크리닝 의미론도 아니며, 두 포트를 구현하게 된 클래스가 하나만 구현한다고 적어 두면 거짓 주석이 된다. **승인 표의 금지 항목(기존 심볼·시그니처 변경 · 프로토콜 변경 · 스크리닝 의미론 변경)에 해당하는 hunk는 0건이다.**
+
+**⑤의 기존 비-clean 지점.** `server/safety/console.py`는 `E501` 2건(292행 · 346행)과 미포맷 상태를 **BASE `95687a0`에서 이미** 갖고 있다. `git show 95687a0:server/safety/console.py`를 꺼내 같은 검사를 돌려 확인했다. 무관 재포맷을 피해 손대지 않았고 내 hunk는 `E501`을 만들지 않았다.
+
+#### 선행 SPEC 트립와이어 1건을 의도적으로 갱신했다
+
+`server/tests/test_songcue_bundle.py`의 `_TOOLS_EXPECTED_HUNK_OLD_STARTS`가 SONGCUE 자체 run-phase BASE 기준 `server/orchestrator/tools.py`의 hunk 시작점을 못박고 있었고, M6의 정당한 편집으로 깨졌다. **이 가드의 실제 불변식은 두 번째 단정**(보호 구간 `(234, 238)`과 `(524, 569)` 무침범)이며 그것은 그대로 통과한다. 첫 단정은 후속 SPEC이 tools.py를 건드릴 때 **의도적 갱신을 강제하는 트립와이어**이므로, 스냅샷을 `(33, 49, 125, 463, 475, 479, 951, 1222, 1231)`로 갱신하고 무엇이 왜 늘었는지를 상수 위 주석에 적었다 — PRECHK가 463·475·479 세 hunk(프리체크 import · `property_port` 파라미터 · 그 독스트링)를 더했고 import 블록을 한 행 아래에 넣어 첫 hunk의 구 시작점이 32에서 33으로 옮겼다. **보호 구간을 건드린 hunk는 0건이다.**
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run>_
