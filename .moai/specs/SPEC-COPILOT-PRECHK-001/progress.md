@@ -144,7 +144,7 @@ preflight_probe:
   rig_verdict: "**관측된 18개 범위에서** 주소 중복 0 · FID 중복 0. 19번째가 미관측이므로 정합성을 단정하지 않는다 — 그 단정은 REQ-PRECHK-010이 금지하는 형태다(research.md §4.8). 탐지 로직 검증에는 결함 심은 인메모리 픽스처가 필수(design.md §6.1)"
   traps_found: 3            # ok=true인 함수 참조 · 공백 프로퍼티명 거부 · 프로퍼티명 열거 불가
   truncation_observed: "childCount 19 / 반환 18 / truncated=true. 원인은 페이로드 예산(1900B)이며 자식 수 상한(24)이 아니다. 조사가 최초에 반환 18을 총수로 오독했고 최종 검증에서 잡았다 — research.md §4.8"
-blocking_for_run: "**승인 대기 1건이 최대 위험이다** — `server/safety/**` PRESERVE의 조건부 예외가 승인되지 않으면 M1에 착수할 수 없고, M1이 프로퍼티 조회를 제공하므로 M2 이후도 정지한다. 우회 4종(bridge 직접 import · server/tools 예외 증설 · 응답기 확장 · exec 문자열 파싱)은 전부 금지이며 plan.md가 명시한다. 기술적 블로킹은 `ASSUMPTION-26`(매크로 저작 문법) 1건뿐이고 그것도 부정이면 M4가 DESCOPE로 완료된다 — 저작 차단이 아니다. `ASSUMPTION-27`은 동작 축소이며, `ASSUMPTION-28/29/30`은 BUSKWIZ 후속 측정이라 본 SPEC의 어느 마일스톤도 막지 않는다."
+blocking_for_run: "**승인 2건은 2026-07-29에 확보되었다**(§F 사용자 접점 표) — `server/safety/**` 조건부 예외 승인 + M0 라이브 세션 접근 가능성(실측 확인: onPC PID 38963 · 응답기 v1.5.0 · roundtrip 3/3 PASS). 따라서 착수 차단은 **해소되었다.** 남은 기술적 블로킹은 `ASSUMPTION-26`(매크로 저작 문법, 등급 T3) **1건뿐**이고 그것도 부정이면 M4가 DESCOPE로 완료된다 — 저작 차단이 아니다. `ASSUMPTION-27`은 동작 축소, `ASSUMPTION-28/29/30`은 BUSKWIZ 후속 측정이라 본 SPEC의 어느 마일스톤도 막지 않는다. **승인의 집행 범위는 순수 추가 4지점으로 한정되며 우회 4종은 승인 후에도 금지다**(§F). 절차적 제약 1건: **M0 이전에 M1에 착수하지 않는다** — M0가 `REOPEN_SCOPE`를 내면 범위 재개정이 선행한다."
 known_gaps:
   - "`FID` 값의 의미는 어떤 라이브 세션도 현재 쇼파일로 닫을 수 없다 — 슬롯 == FID이기 때문이다(`console/lua/PROTOCOL.md:322-324`). 슬롯 ≠ FID로 패치된 쇼파일이 선행 조건이며 사용자 GUI 작업이다. 본 SPEC은 FID를 판정 근거에서 배제한 형상으로 출하한다."
   - "절단 복구 경로의 인덱스 정의역을 모른다 — 풀이 희소할 수 있고(SONGCUE가 시퀀스에서 실측) 절단된 목록은 어느 슬롯이 존재하는지 알려주지 않는다. design.md 슬롯 A가 경계 있는 범위 탐색으로 결정하고 `index_domain_unknown`을 스키마에 두어 숨기지 않는다."
@@ -154,7 +154,7 @@ known_gaps:
   - "감사의 축약 토큰 검출이 코디네이터의 정규식보다 정확했다 — 완전 토큰 뒤에 중점으로 이어 붙인 **3자리 숫자만의 항목**은 슬러그도 `AC-` 접두도 없어 코디네이터가 쓴 패턴에 걸리지 않는다. 이후 게이트는 **중점 뒤 3자리 숫자**도 함께 센다."
   - "M0 결과 어휘 4값(`GO` · `NEGATIVE` · `CONDITION_NOT_MET` · `REOPEN_SCOPE`)과 접두 행 4종은 **감사 지적으로 신설된 것이며 아직 라이브에서 쓰인 적이 없다.** M0가 그 형식을 실제로 산출하는지는 착수 시 확인된다."
   - "**조사가 스스로 절단 함정에 빠졌다가 최종 검증에서 잡았다**(`research.md` §4.8). 최초 프로브가 `len(children)` = 18만 출력하고 `node.childCount` = 19를 출력하지 않아 **반환 수를 총수로 기록**했고, 그 위에 *'정합한 리그'*라는 단정을 얹었다 — `REQ-PRECHK-010`이 금지하는 바로 그 형태다. 픽스처 수 서술과 정합 판정을 5개 절에서 한정 표현으로 정정했다. **이 오류가 `REQ-PRECHK-004`의 개수 비교가 이론적 방어가 아님을 실증한다** — `truncated` 플래그가 참이었는데도 오독을 막지 못했고, 플래그는 '얼마나 불완전한지'를 말하지 않는다. 미관측 1개는 M0가 슬롯별 보강 조회로 채운다."
-next: "**Kickoff 사용자 접점 2건**(`server/safety/**` 조건부 예외 승인 · M0 라이브 세션 접근 가능성) → Implementation Kickoff Approval(plan→run HUMAN GATE) → §F 작성(첫 run-phase 스폰 전) → run(M0 프로브부터). **승인 없이 M1에 착수하지 않는다.** plan-audit는 1회차 FAIL 0.76 → 11건 전건 처리로 종료하고 2회차를 열지 않는다."
+next: "**Kickoff 접점 2건 승인 완료 · §F 작성 완료**(첫 run-phase 스폰 전 요건 충족). 다음은 **run-phase 착수 — M0 라이브 프로브부터**다. M0는 `cycle_type=none`(코드 변경 0)이며 `ASSUMPTION-25`~`ASSUMPTION-30` 6건에 결과 어휘 4값 중 하나를 배정하고 접두 행 4종(`GO:` · `DESCOPE:` · `SKIP:` · `REOPEN:`, 합 6행)으로 기록한다. **미관측 픽스처 1개(19번째)를 슬롯별 보강 조회로 채운다**(`research.md` §4.8). 쇼파일은 원상 복구하고 재조회로 확인한다. 그 뒤 M1(승인된 4지점만) → M2 → M3 → M4 → M5 → M6 → M7 → M8. plan-audit는 1회차 FAIL 0.76 → 11건 전건 처리로 종료하고 2회차를 열지 않는다."
 ```
 
 ## §E.1a Plan-audit 결과
@@ -227,4 +227,62 @@ _<pending sync>_
 
 > 본 절은 **오케스트레이터가 첫 run-phase `Agent()` 스폰 전에 작성**하는 구속력 있는 기록이다. `plan.md` §G의 대응 절은 **권고**이며 오케스트레이터가 확정하거나 기각한다. 어긋나면 **본 절이 이긴다.** 이 헤딩은 v0.1.0 착수 시점에 **선제 생성**되었다 — 선행 SPEC에서 `plan.md`가 존재하지 않는 `progress.md` §F를 구속력 있는 기록으로 지목해 끊어진 참조를 만든 사례가 있었고(`.moai/specs/SPEC-COPILOT-LOOKLIB-001/plan.md:289`), BUSKWIZ가 선제 생성으로 그것을 고쳤다. 본 SPEC은 그 교정을 계승한다. 본문이 채워지기 전까지 이 절은 **비어 있음이 정상**이며, 비어 있다는 사실 자체가 "아직 스폰하지 않았다"의 기록이다.
 
-_<pending orchestrator>_
+### Decision: **sub-agent (순차)** — `plan.md` §G의 권고를 **확정한다**
+
+작성 시각 2026-07-29, **첫 run-phase `Agent()` 스폰 이전.** `plan.md` §G가 낸 권고(`sub-agent`)를 검토해 **그대로 확정**한다. 기각하지 않는다.
+
+#### 착수 SHA (M7 PRESERVE 게이트의 `<BASE>`)
+
+```
+BASE = 95687a0    # = origin/main (SONGCUE squash 머지 직후)
+```
+
+**이 값이 `AC-PRECHK-015` ①의 `git diff --stat <BASE>..HEAD -- <목록>` 게이트가 쓰는 유일한 기준점이다.** 인자 없는 `git diff`로 대체하는 것은 협상 불가 — 커밋 직후 항상 빈 출력이라 게이트가 통째로 무력해진다.
+
+#### 병렬을 기각하는 근거 — plan-phase의 경험이 이것을 뒷받침한다
+
+`plan.md` §G의 입력 파라미터를 검토했고 전부 수용한다: tier L · 예상 13~16 파일 · **domain count 1** · Python + markdown 단일 언어 · **parallel benefit LOW**.
+
+결정적인 것은 **사슬이 셋 겹친다**는 것이다.
+
+| 사슬 | 내용 |
+|---|---|
+| **승인 사슬** | **M1이 승인 게이트에 걸려 있고 M1이 프로퍼티 조회를 제공한다.** 승인이 없으면 M2 이후 전부 정지한다 — 이것은 정책이 아니라 물리다 |
+| **데이터 사슬** | M2 인벤토리 → M3 판정 → M5 리포트. M3·M4의 결과 형상이 M5의 입력이고 M6 툴 반환 형상을 정한다 |
+| **모듈 사슬** | `server/prechk/`의 `inventory.py` → `patch.py` → `report.py`가 층으로 쌓인다. SONGCUE에서 `songcue.py` 하나를 M1~M4가 순차로 키운 것과 같은 형상이다 |
+
+**SONGCUE의 경험이 이 판단을 강화한다.** 그 SPEC에서 폭 2가 나온 것은 M0가 **우연히 제2 도메인**(Lua 응답기)을 만들었기 때문이고, 본 SPEC의 M0는 그런 것을 만들지 않는다 — `ASSUMPTION-28`~`ASSUMPTION-30`은 **측정 대상이지 산출물이 아니다**(spec.md §D). **폭을 미리 약속하지 않는다**: M0 실측이 새 도메인을 만들면 그때 §F를 개정하고 그 사유를 적는다.
+
+**단 plan-phase에서 검증된 병렬 형태 하나는 run-phase에서도 유효하다** — **읽기 전용 scout**다. 이번 plan-phase가 scout 4개를 동시에 돌려 586행을 냈고 충돌이 0이었다. run-phase에서 조사가 필요해지면 같은 형태를 쓴다.
+
+#### 사용자 접점 — **2건 모두 승인됨 (2026-07-29)**
+
+| # | 접점 | 상태 | 근거 |
+|---|---|---|---|
+| 1 | **`server/safety/**` PRESERVE 조건부 예외** | **승인** | 사용자 승인(2026-07-29). 강제 사유는 `research.md` §7.4 — 픽스처 주소는 프로퍼티에만 있고 `prop`은 프로덕션 경로로 도달 불가하며(`server/tests/test_architecture.py:27-39`, `:48-61`), `build_prop_query`에 프로덕션 소비자가 0건이다. 우회 4종 전수 배제 |
+| 2 | **M0 라이브 세션 접근 가능성** | **승인 · 실측 확인** | onPC 2.4.2 PID 38963 · 응답기 **v1.5.0** · `responder_roundtrip --expect-version 1.5.0` **3/3 PASS** · 쇼파일 베이스라인 인계 기록값과 전량 일치 |
+
+**승인 1의 집행 범위는 순수 추가 4지점으로 한정한다.** 이 목록 밖의 hunk가 `server/safety/**`에 생기면 `AC-PRECHK-015` ③이 실패로 판정한다.
+
+| # | 파일 | 추가 | 금지 |
+|---|---|---|---|
+| 1 | `server/safety/console.py` | `query_property(path, property_name) -> dict` — 기존 `query_state`(`server/safety/console.py:372-386`)와 **동형** | 기존 심볼·시그니처 변경 |
+| 2 | `server/orchestrator/ports.py` | 프로퍼티 조회 포트 프로토콜 — `StateQueryPort`(`server/orchestrator/ports.py:68-73`)와 동형 | 기존 프로토콜 변경 |
+| 3 | `server/safety/gate.py` | 위임 노출 — `query_state`(`server/safety/gate.py:120`)와 동형 | 게이트 스크리닝 의미론 변경 |
+| 4 | `server/measurement/mock_provider.py` | 테스트 대역 동형 1건 | — |
+
+**우회 4종은 승인 후에도 금지다** — `server.bridge` 직접 import · `server/tools/` 운영 유틸 예외 목록 증설(`REQ-PRECHK-020`) · 응답기 확장(`console/lua/**`는 PRESERVE) · `exec` 결과 문자열 파싱. 승인은 **초크포인트를 통과하는 경로 하나**를 연 것이고 경계를 푼 것이 아니다. `REQ-MVP-029`의 단일 초크포인트 원칙은 이 변경으로 **강화된다**.
+
+#### 남은 접점 1건과 조건부 접점
+
+**M7 완료 직후 — M8 라이브 세션 접근 가능성 재확인.** 미도래. M8은 완성된 파이프라인이 대상이라 M0와 병합할 수 없다(라이브 회계 2회는 `plan.md` §C가 정본).
+
+조건부 접점은 `plan.md` §G의 4건을 그대로 승계한다 — `ASSUMPTION-26` 부정 시 고지 · `ASSUMPTION-25` 부정 시 범위 재개정 요청 · `ASSUMPTION-28` GO 후 테스트 오브젝트 잔여 시 복구 증거 공유 · M8과 M0 판정 불일치 시 후속 판단 요청.
+
+#### 착수 순서 — 이 순서를 지킨다
+
+1. **M0 라이브 프로브**(`cycle_type=none`, 코드 변경 0) — `ASSUMPTION-25`~`ASSUMPTION-30` 6건에 결과 어휘 4값 중 하나를 배정하고 접두 행 4종으로 기록한다. **미관측 픽스처 1개(19번째)를 슬롯별 보강 조회로 채운다**(`research.md` §4.8). 쇼파일 원상 복구 + 재조회 확인.
+2. **M1 초크포인트** — 승인된 4지점만. `AC-PRECHK-013` ④가 승인 기록의 존재를 착수 전제로 삼으며 **본 절이 그 기록이다.**
+3. M2 → M3 → M4 → M5 → M6 → M7 → M8 순차.
+
+**M0 이전에 M1에 착수하지 않는다** — M0가 `REOPEN_SCOPE`를 내면 범위 재개정이 선행하므로 초크포인트 변경이 헛일이 될 수 있다.
