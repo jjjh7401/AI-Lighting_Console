@@ -364,6 +364,62 @@ SKIP: ASSUMPTION-35 Patch/FixtureTypes의 childCount 즉 타입 수 T. state Pat
 
 `/tmp/overlap-m0-proto/proto.py`(7879바이트)를 판정 직후 `rm -rf`했다. 저장소 트리 안에 만들지 않았으므로 DoD 4·5는 삭제 여부와 무관하게 성립하며, 그것이 `/tmp`를 고른 이유다 — `server/`나 `server/tests/`에 두면 삭제를 잊는 순간 `cycle_type=none` 위반이 된다(`CONTRACT.md` §8 R-9).
 
+### M1 — 어휘 확장 (`AC-OVERLAP-014` · `cycle_type=tdd` · 2026-07-30)
+
+#### 착수 전제 확인 — 직접 실측
+
+| 항목 | 산출 |
+|---|---|
+| M0 DoD 6항 | 전건 충족(위) |
+| `ASSUMPTION-34` 접두 행 | 존재 · `GO:` — 부정 분기 미발동이므로 `plan.md` §B.0의 3항 개정 없음 |
+| baseline | `uv run pytest server/tests/ -q` → **2758 passed · 5 skipped · 0 failed** (M0 기록 커밋 시점 재측정) |
+
+#### 절차 순서를 지켰다 — 구조 변경이 신규 축보다 먼저다
+
+| 단 | 무엇을 했나 | 관측 |
+|---|---|---|
+| 1 | `server/prechk/report.py`의 import 시점 가드를 하드코딩 5-튜플에서 **`CLOSED_VOCABULARIES` 순회**로 교체(D-6). 어휘 5종 시점이므로 결과 동일. 양방향으로 만들었다 — *어휘에 표 없음*과 *표에 어휘 없음* 둘 다 예외 | `2758 passed · 5 skipped · 0 failed` — **구조 변경 단독으로 무회귀** |
+| 2 | 1의 성질을 테스트로 고정 — `TestImportTimeLabelGuard` 4건 | 39 passed (신규 4건 포함). **신규 축 없이 `AC-OVERLAP-014` ⑦의 판정이 이미 성립** |
+| 3 | `OVERLAP_BASIS` 신설 + 레지스트리 **맨 끝** append | `uv run python -c "import server.prechk.report"` → `UnknownVerdict: label tables and closed vocabularies disagree` — **즉시 적발** |
+| 4 | `OVERLAP_BASIS_LABELS` + `VOCABULARY_LABELS` 항목 | import 복구. **3과 4 사이에 무증상 창이 0** |
+| 5 | `SKIPPED_CHECK_KIND` += `range_overlap_bound_inconclusive` + 대응 라벨 | — |
+| 6 | `server/tests/test_prechk_verdicts.py` 정본 3단정 갱신(집합 · 키 · **순서**) | 어느 것도 삭제·약화하지 않았다. 순서 단정은 `OVERLAP_BASIS`를 6번째 원소로 받는다 |
+| 배선 | `server/prechk/patch.py`의 `validate(...)` 상수 블록에 생산자 상수 **5개**(`RANGE_OVERLAP_BOUND_INCONCLUSIVE` + `overlap_basis` 4값) | D-5 — 표현 계층은 코드값을 라벨표 안에서만 철자한다 |
+
+**1을 마지막에 하면 3과 4 사이에 무증상 창이 열린다** — 그 창을 열지 않은 것이 이 마일스톤의 산출물이며, 단 3의 관측(`UnknownVerdict` 즉시 발화)이 그 창이 실재했음을 역방향으로 보여 준다.
+
+#### 뮤테이션 4건 — 전건 사망
+
+| # | 주입 | 죽인 것 | 결과 |
+|---|---|---|---|
+| **MUT-A** | `OVERLAP_BASIS_LABELS`에서 `not_performed` 행 삭제 | `import server.prechk.report` | **killed** — `UnknownVerdict: label table for overlap_basis does not match its vocabulary` (`AC-OVERLAP-014` ⑥) |
+| **MUT-A2** | 가드의 iterable을 하드코딩 튜플로 되돌림 | `TestImportTimeLabelGuard` | **killed** — 2 failed. **형태 단정이 하는 일이 이것이다**: 효과만 보는 단정은 튜플에 항목을 추가하는 조작으로 충족되고 그것이 D-6 위반이다(`AC-OVERLAP-014` ⑦) |
+| **MUT-B** | 레지스트리에서 `"overlap_basis": OVERLAP_BASIS` 행 삭제 | `test_prechk_verdicts.py` | **killed** — 2 failed (집합 단정 + 키 단정) |
+| **MUT-C** | append 위치를 **맨 끝에서 맨 앞으로** 이동 | `test_prechk_verdicts.py` | **killed** — 1 failed(순서 단정만). **집합 단정 단독이면 통과한다** — 순서 단정을 유지한 값이 여기서 관측된다(`AC-OVERLAP-014` ④) |
+
+**신규 테스트 4건은 회귀 테스트가 아니다** — 그 사실을 `TestImportTimeLabelGuard`의 도크스트링에 코드로 명시했다. 하드코딩 튜플이 어휘를 빠뜨려도 import은 성공했고 라벨 드리프트 테스트는 레지스트리를 순회하므로 아무것도 보지 못했다. **그 단계가 무증상이었기 때문에 이 테스트들이 존재하며 그것들이 증상이다**(규율 16).
+
+#### DoD 11항 — 전건 기계 판정
+
+| # | 조건 | 산출 |
+|---|---|---|
+| 1 | `python -c "import server.prechk.report"` 종료 0 | 충족 |
+| 2 | `test_prechk_verdicts.py` · `test_prechk_report.py` 전건 통과 | 8 + 39 passed |
+| 3 | 뮤테이션 A | **killed**(위) |
+| 4 | 뮤테이션 B | **killed**(위) |
+| 5 | `CLOSED_VOCABULARIES` 기존 5줄 바이트 동일 | `git diff BASE..HEAD -- server/prechk/verdicts.py`가 그 블록에 **`+` 1행만** 낸다(순수 삽입) |
+| 6 | `COLLISION_KIND` · `FIXTURE_VERDICT` 바이트 동일 | 같은 diff에서 두 상수를 건드리는 `+`/`-` 행 **0건**(`grep -cE '^[-+](COLLISION_KIND\|FIXTURE_VERDICT)'` → 0) |
+| 7 | 신규 축 값 집합 · `SKIPPED_CHECK_KIND` 그 밖 값 동일 | `overlap_basis = ['bound_inconclusive', 'bound_proves_clear', 'exact_widths', 'not_performed']` · `skipped_check_kind = ['gate_unapproved', 'macro_descope', 'macro_no_groups', 'range_overlap_bound_inconclusive', 'range_overlap_descope']` — 기존 4값 보존 |
+| 8 | 라벨표 이름이 `_LABELS`로 끝난다 | `OVERLAP_BASIS_LABELS` |
+| 9 | 표현 계층의 코드 리터럴이 라벨표 대입 안에만 · 스캔 비공허 | 착수 시점부터 있던 `test_no_vocabulary_code_is_spelled_as_a_literal_outside_the_tables`가 신규 4값을 자동 포함해 통과 |
+| 10 | 금지 토큰 스캐너 3종 통과 | 통과. **`bound_proves_clear`는 `proves`이며 금지 토큰 `proven`이 아니다.** 주석 산문에 있던 `proven` 1건도 `settled`로 바꿨다 — 스캐너 대상이 아니지만 규율을 메타레벨에서 어기지 않는다 |
+| 11 | 스위트 계수가 baseline 이상 | **2762 passed · 5 skipped · 0 failed** = 2758 + 신규 4 |
+
+#### 정정 1건 · 이월 1건
+
+- **정정**: `server/prechk/report.py`와 `server/tests/test_prechk_report.py`의 도크스트링이 판정을 *"five closed sets의 원소"*로 적었다. 어휘가 6종이 되어 거짓이 되므로 **계수를 지웠다**(*"one of the closed sets"*). 계수를 손으로 적으면 다시 틀린다 — `CONTRACT.md` §8 R-1이 같은 이유로 분류를 기계 도출로 바꿨다.
+- **이월(본 SPEC이 고치지 않는다)**: `uv run ruff check server/`가 **착수 시점에 이미 3건 실패**한다 — `server/safety/console.py:292`·`:346`과 `server/tests/test_web_dash.py:523`의 E501. BASE 원본을 꺼내 같은 3건임을 확인했다. 앞의 두 파일은 **PRESERVE**이므로 고치는 것이 위반이다. `AC-OVERLAP-019` ⑨의 판정 범위는 *"본 SPEC이 손댄 전 파일"*이며 그 5파일은 `ruff check`·`ruff format --check` 전건 통과다.
+
 ## §F Phase 4 Mode Selection — 확정 (오케스트레이터 소유 · 2026-07-30)
 
 > 본 절은 **오케스트레이터가 첫 run-phase 스폰 전에 작성**하는 구속력 있는 기록이다. `plan.md` §G의 대응 절은 **권고**이며 오케스트레이터가 확정하거나 기각한다. 어긋나면 **본 절이 이긴다.**

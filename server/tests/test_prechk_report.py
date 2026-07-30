@@ -9,7 +9,7 @@ The label policy differs from ``server/looks/report.py`` on purpose. That module
 passes an unknown code through, because its section-failure reasons arrive as
 free strings from the console and an invented translation would stop the user
 from searching for the original. A pre-check VERDICT has no such origin -- it is
-always a member of one of five closed sets -- so an unknown code there is a bug,
+always a member of one of the closed sets -- so an unknown code there is a bug,
 and :func:`server.prechk.report.label` raises instead of passing it through
 (AC-PRECHK-012 ⑤ d).
 """
@@ -17,7 +17,10 @@ and :func:`server.prechk.report.label` raises instead of passing it through
 from __future__ import annotations
 
 import ast
+import importlib
+from contextlib import contextmanager
 from pathlib import Path
+from types import MappingProxyType
 
 import pytest
 
@@ -389,6 +392,101 @@ class TestKoreanLabels:
             f"scan found only {in_tables} table codes; expected at least {len(every_code)}"
         )
         assert stray == [], f"vocabulary codes retyped outside the label tables: {stray}"
+
+
+@contextmanager
+def _registry_patched_to(registry: dict):
+    """Swap the closed-vocabulary registry, then put it back and re-import.
+
+    The guard under test runs at MODULE IMPORT, so the only way to observe it is
+    to re-import with a registry that disagrees with the label tables. The
+    ``finally`` reload matters: a failed reload leaves the module half-built, and
+    every later test in the suite imports from it.
+    """
+    import server.prechk.report as report_module
+    import server.prechk.verdicts as verdicts_module
+
+    original = verdicts_module.CLOSED_VOCABULARIES
+    verdicts_module.CLOSED_VOCABULARIES = MappingProxyType(dict(registry))
+    try:
+        yield report_module
+    finally:
+        verdicts_module.CLOSED_VOCABULARIES = original
+        importlib.reload(report_module)
+
+
+class TestImportTimeLabelGuard:
+    """SPEC-COPILOT-OVERLAP-001 D-6 — the guard walks the registry.
+
+    NOT a regression test: nothing here failed before this class existed. The
+    hand-kept ``(name, set)`` tuple this guard replaced skipped any vocabulary
+    nobody added to it, import still succeeded, and the label-drift test walks
+    the registry so it saw nothing either. These tests exist because that step
+    was symptom-free, and they are the symptom.
+    """
+
+    def test_the_unpatched_module_reimports_cleanly(self):
+        # Positive control: the two negative cases below mean nothing if a
+        # plain reload already raised.
+        import server.prechk.report as report_module
+
+        importlib.reload(report_module)
+        assert set(report_module.VOCABULARY_LABELS) == set(CLOSED_VOCABULARIES)
+
+    def test_a_vocabulary_with_no_label_table_fails_at_import(self):
+        extended = {**CLOSED_VOCABULARIES, "unlabelled_axis": frozenset({"a", "b"})}
+        with (
+            _registry_patched_to(extended) as report_module,
+            pytest.raises(UnknownVerdict, match="unlabelled_axis"),
+        ):
+            importlib.reload(report_module)
+
+    def test_a_label_table_short_one_code_fails_at_import(self):
+        # The realistic shape: the axis IS registered and IS labelled, but one
+        # value was added to the vocabulary and forgotten in the table.
+        short = dict(CLOSED_VOCABULARIES)
+        short["skipped_check_kind"] = frozenset(
+            {*short["skipped_check_kind"], "an_unlabelled_kind"}
+        )
+        with (
+            _registry_patched_to(short) as report_module,
+            pytest.raises(UnknownVerdict, match="skipped_check_kind"),
+        ):
+            importlib.reload(report_module)
+
+    def test_the_guard_iterates_the_registry_rather_than_a_literal_tuple(self):
+        """AC-OVERLAP-014 ⑦ — the form is the deliverable, not just the effect.
+
+        Satisfying the two negative tests above by re-adding a hardcoded tuple
+        and remembering to append to it is exactly the trap D-6 removes, so the
+        source shape is asserted too: the guard's iterable is a call on
+        ``CLOSED_VOCABULARIES``, and no loop enumerates the vocabularies from a
+        literal sequence. (Vocabulary NAMES stay legal as literals elsewhere --
+        ``label("fixture_verdict", code)`` has to spell one. It is the CODES the
+        sibling scan forbids outside the tables.)
+        """
+        tree = ast.parse(REPORT_SOURCE.read_text(encoding="utf-8"))
+        loops = [node for node in ast.walk(tree) if isinstance(node, ast.For)]
+        registry_walks = [
+            node
+            for node in loops
+            if isinstance(node.iter, ast.Call)
+            and isinstance(node.iter.func, ast.Attribute)
+            and isinstance(node.iter.func.value, ast.Name)
+            and node.iter.func.value.id == "CLOSED_VOCABULARIES"
+        ]
+        assert len(registry_walks) == 1, "the import-time guard must walk CLOSED_VOCABULARIES once"
+        names = set(CLOSED_VOCABULARIES)
+        relapsed = [
+            ast.unparse(node.iter)
+            for node in loops
+            if isinstance(node.iter, ast.Tuple | ast.List)
+            and any(
+                isinstance(constant, ast.Constant) and constant.value in names
+                for constant in ast.walk(node.iter)
+            )
+        ]
+        assert relapsed == [], f"a literal vocabulary sequence came back: {relapsed}"
 
 
 class TestMacroSection:

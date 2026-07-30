@@ -57,6 +57,13 @@ READ_FAILED = validate("fixture_verdict", "read_failed")
 NOT_ASSESSED = validate("fixture_verdict", "not_assessed")
 ADDRESS_PARSE_FAILED = validate("read_failure_kind", "address_parse_failed")
 TYPE_MODE_UNRESOLVED = validate("read_failure_kind", "type_mode_unresolved")
+RANGE_OVERLAP_BOUND_INCONCLUSIVE = validate(
+    "skipped_check_kind", "range_overlap_bound_inconclusive"
+)
+EXACT_WIDTHS = validate("overlap_basis", "exact_widths")
+BOUND_PROVES_CLEAR = validate("overlap_basis", "bound_proves_clear")
+BOUND_INCONCLUSIVE = validate("overlap_basis", "bound_inconclusive")
+NOT_PERFORMED = validate("overlap_basis", "not_performed")
 
 ASSUMPTION_27 = "ASSUMPTION-27"
 

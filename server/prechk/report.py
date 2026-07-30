@@ -17,7 +17,7 @@ Label policy, and why it differs from ``server/looks/report.py``. That module's
 ``reason_label`` deliberately passes an unknown code through, because its
 section-failure reasons come from the console as free strings and an invented
 translation would keep the user from searching for the original. A pre-check
-judgement has no such origin -- it is always a member of one of five closed sets
+judgement has no such origin -- it is always a member of one of the closed sets
 -- so an unknown code here means a bug upstream, and :func:`label` raises
 (AC-PRECHK-012 ⑤ d).
 
@@ -39,11 +39,7 @@ from types import MappingProxyType
 from server.prechk.macro import MacroResult
 from server.prechk.patch import SCOPE_QUALIFIER, PatchEvaluation
 from server.prechk.verdicts import (
-    COLLISION_KIND,
-    COMPLETENESS,
-    FIXTURE_VERDICT,
-    READ_FAILURE_KIND,
-    SKIPPED_CHECK_KIND,
+    CLOSED_VOCABULARIES,
     UnknownVerdict,
     validate,
 )
@@ -88,9 +84,27 @@ READ_FAILURE_KIND_LABELS = {
 
 SKIPPED_CHECK_KIND_LABELS = {
     "range_overlap_descope": "구간 겹침 판정 미수행",
+    # Distinct from ``range_overlap_descope``: that one says the axis was not
+    # attempted at all. This one says it WAS attempted, the bound was computed,
+    # and the bound did not settle the question -- which is not a collision.
+    "range_overlap_bound_inconclusive": "구간 겹침 상계 미확정 — 간격이 상계 이내라 판정 보류",
     "macro_descope": "매크로 저작 미수행",
     "macro_no_groups": "매크로 대상 그룹 없음",
     "gate_unapproved": "초크포인트 승인 없음",
+}
+
+#: Named ``*_LABELS`` because the retype scan recognizes tables by that suffix
+#: (SPEC-COPILOT-OVERLAP-001 D-5). ``bound_proves_clear`` carries its own scope
+#: qualifier: the bound is the widest footprint among the modes that were
+#: ENUMERATED, so an unqualified "no overlap" here would be the same
+#: over-claim the pre-check already fixed once for ``incomplete``.
+OVERLAP_BASIS_LABELS = {
+    "exact_widths": "정확폭 대조 — 실제 점유폭으로 판정",
+    "bound_proves_clear": "상계 판정 — 관측된 모드 집합의 최대 폭보다 간격이 커서 겹침이 불가능",
+    "bound_inconclusive": (
+        "상계 미확정 — 간격이 관측된 최대 폭 이내라 겹침 여부를 판정하지 못했다(충돌이 아니다)"
+    ),
+    "not_performed": "겹침 판정 미수행",
 }
 
 #: Every label table, keyed by vocabulary name. The test asserts each table's
@@ -102,19 +116,24 @@ VOCABULARY_LABELS = MappingProxyType(
         "collision_kind": MappingProxyType(COLLISION_KIND_LABELS),
         "read_failure_kind": MappingProxyType(READ_FAILURE_KIND_LABELS),
         "skipped_check_kind": MappingProxyType(SKIPPED_CHECK_KIND_LABELS),
+        "overlap_basis": MappingProxyType(OVERLAP_BASIS_LABELS),
     }
 )
 
 # Sanity: a table that drifted from its vocabulary is a defect at import time,
-# not at report time. The sets come from the vocabulary module so this cannot be
-# satisfied by retyping the codes here.
-for _vocabulary, _codes in (
-    ("completeness", COMPLETENESS),
-    ("fixture_verdict", FIXTURE_VERDICT),
-    ("collision_kind", COLLISION_KIND),
-    ("read_failure_kind", READ_FAILURE_KIND),
-    ("skipped_check_kind", SKIPPED_CHECK_KIND),
-):
+# not at report time. The loop walks the REGISTRY, not a hand-kept tuple of
+# (name, set) pairs: a tuple silently skips any vocabulary nobody remembered to
+# add to it, and that omission was SYMPTOM-FREE -- import still succeeded and no
+# test failed, because the label-drift test iterates the registry too. Walking
+# ``CLOSED_VOCABULARIES`` deletes the step where forgetting is possible
+# (SPEC-COPILOT-OVERLAP-001 D-6). Both directions are checked: a vocabulary with
+# no table, and a table with no vocabulary.
+if set(VOCABULARY_LABELS) != set(CLOSED_VOCABULARIES):
+    raise UnknownVerdict(
+        "label tables and closed vocabularies disagree: "
+        f"tables {sorted(VOCABULARY_LABELS)} vs vocabularies {sorted(CLOSED_VOCABULARIES)}"
+    )
+for _vocabulary, _codes in CLOSED_VOCABULARIES.items():
     if set(VOCABULARY_LABELS[_vocabulary]) != set(_codes):
         raise UnknownVerdict(f"label table for {_vocabulary} does not match its vocabulary")
 

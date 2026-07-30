@@ -15,6 +15,7 @@ from server.prechk.verdicts import (
     COLLISION_KIND,
     COMPLETENESS,
     FIXTURE_VERDICT,
+    OVERLAP_BASIS,
     READ_FAILURE_KIND,
     SKIPPED_CHECK_KIND,
     UnknownVerdict,
@@ -36,9 +37,16 @@ class TestVocabularies:
             },
             "skipped_check_kind": {
                 "range_overlap_descope",
+                "range_overlap_bound_inconclusive",
                 "macro_descope",
                 "macro_no_groups",
                 "gate_unapproved",
+            },
+            "overlap_basis": {
+                "exact_widths",
+                "bound_proves_clear",
+                "bound_inconclusive",
+                "not_performed",
             },
         }
         actual = {name: set(values) for name, values in CLOSED_VOCABULARIES.items()}
@@ -51,13 +59,19 @@ class TestVocabularies:
             "collision_kind",
             "read_failure_kind",
             "skipped_check_kind",
+            "overlap_basis",
         }
+        # Ordered, not just set-equal: ``overlap_basis`` was appended LAST so the
+        # five existing rows stayed byte-identical, and a reader can confirm the
+        # registry edit and this edit agree by eye. Weakening this to a set
+        # comparison would let the order drift unobserved.
         assert list(CLOSED_VOCABULARIES.values()) == [
             COMPLETENESS,
             FIXTURE_VERDICT,
             COLLISION_KIND,
             READ_FAILURE_KIND,
             SKIPPED_CHECK_KIND,
+            OVERLAP_BASIS,
         ]
 
     def test_the_registry_is_not_mutable(self):
