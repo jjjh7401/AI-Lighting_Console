@@ -24,6 +24,7 @@ from types import MappingProxyType
 
 import pytest
 
+from server.prechk.footprint import ModeFootprint, WalkOutcome
 from server.prechk.inventory import FixtureRecord, Inventory, ReadFailure
 from server.prechk.macro import (
     GroupPool,
@@ -32,7 +33,7 @@ from server.prechk.macro import (
     build_response_check_macro,
 )
 from server.prechk.patch import SCOPE_QUALIFIER, FootprintPolicy, evaluate_patch
-from server.prechk.report import VOCABULARY_LABELS, build_report, label
+from server.prechk.report import VOCABULARY_LABELS, PrecheckReport, build_report, label
 from server.prechk.verdicts import CLOSED_VOCABULARIES, UnknownVerdict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -544,3 +545,152 @@ class TestRangeOverlapBranchReachesTheReport:
         payload = build_report(evaluation).to_dict()
         assert payload["collisions"]["range_overlaps"]
         assert "range_overlap_descope" not in [r["kind"] for r in payload["skipped_checks"]]
+
+
+#: A bound the walk "enumerated". Not a measured width, so a summary built from a
+#: constant instead of this value would disagree.
+SUMMARY_BOUND = 19
+
+
+def _walk_of(modes: int, bound: int = SUMMARY_BOUND, *, complete: bool = True) -> WalkOutcome:
+    """A walk that enumerated ``modes`` modes, the widest of them ``bound``."""
+    widths = [max(1, bound - 3)] * (modes - 1) + [bound]
+    return WalkOutcome(
+        complete=complete,
+        footprints=tuple(
+            ModeFootprint(path=f"Patch/FixtureTypes/1/DMXModes/{n}/DMXChannels", width=width)
+            for n, width in enumerate(widths, start=1)
+        ),
+    )
+
+
+def _walk(bound: int = SUMMARY_BOUND, *, complete: bool = True) -> WalkOutcome:
+    return _walk_of(2, bound, complete=complete)
+
+
+def _spaced(gap: int) -> Inventory:
+    return _inventory([_record(1, "1.100"), _record(2, f"1.{100 + gap:03d}")])
+
+
+def _every_grade() -> dict[str, PrecheckReport]:
+    """One report per ``overlap_basis`` value.
+
+    Built by construction rather than by search: a grade nobody can produce is a
+    dead code in a closed vocabulary, and ``AC-OVERLAP-017`` ④ makes the four
+    reachable cases the non-vacuity guard for ①.
+    """
+    exact = FootprintPolicy(
+        enabled=True,
+        widths={1: 4, 2: 4},
+        source="Patch/FixtureTypes/1/DMXModes/1/DMXChannels childCount",
+    )
+    return {
+        "not_performed": build_report(evaluate_patch(_spaced(SUMMARY_BOUND))),
+        "bound_inconclusive": build_report(
+            evaluate_patch(_spaced(SUMMARY_BOUND - 1), walk=_walk())
+        ),
+        "bound_proves_clear": build_report(evaluate_patch(_spaced(SUMMARY_BOUND), walk=_walk())),
+        "exact_widths": build_report(evaluate_patch(_spaced(SUMMARY_BOUND), exact)),
+    }
+
+
+class TestOverlapBasisReachesTheSummary:
+    """AC-OVERLAP-017 — a grade only in the payload is a grade nobody reads."""
+
+    def test_all_four_grades_are_actually_reachable(self):
+        produced = {
+            name: report.evaluation.overlap_basis for name, report in _every_grade().items()
+        }
+        # Every grade in the closed vocabulary is reachable, and each rig produces
+        # the grade it was built for -- not merely SOME grade.
+        assert set(produced) == set(CLOSED_VOCABULARIES["overlap_basis"])
+        for expected, actual in produced.items():
+            assert actual == expected, f"{expected} 리그가 {actual}를 냈다"
+
+    def test_every_grade_puts_its_label_in_the_summary(self):
+        # Asserted on the PREFIXED form. Two labels overlap as substrings --
+        # "구간 겹침 판정 미수행" contains "겹침 판정 미수행" -- so a bare
+        # containment check would pass for ``not_performed`` on the strength of
+        # the skipped-check label alone, without the grade ever being printed.
+        for expected, report in _every_grade().items():
+            summary = report.summary_ko()
+            assert f"겹침 판정 근거: {label('overlap_basis', expected)}" in summary, expected
+
+    def test_the_label_table_covers_the_vocabulary_in_both_directions(self):
+        assert set(VOCABULARY_LABELS["overlap_basis"]) == set(CLOSED_VOCABULARIES["overlap_basis"])
+
+    def test_the_judging_layer_spells_no_korean_label(self):
+        """AC-OVERLAP-017 ② — labels live in the table, not at the call site."""
+        judge = ast.parse((PRECHK_DIR / "patch.py").read_text(encoding="utf-8"))
+        judge_strings = [
+            node.value
+            for node in ast.walk(judge)
+            if isinstance(node, ast.Constant) and isinstance(node.value, str)
+        ]
+        assert judge_strings, "판정 계층에서 문자열을 모으지 못하면 이 단정이 공허하다"
+        labels = set(VOCABULARY_LABELS["overlap_basis"].values())
+        assert labels & set(judge_strings) == set()
+        # Non-vacuity in the other direction: the labels DO exist, in the report.
+        report_strings = [
+            node.value
+            for node in ast.walk(ast.parse(REPORT_SOURCE.read_text(encoding="utf-8")))
+            if isinstance(node, ast.Constant) and isinstance(node.value, str)
+        ]
+        assert labels <= set(report_strings)
+
+
+class TestBoundClearanceIsQualified:
+    """AC-OVERLAP-015 — ``bound_proves_clear`` states what it is limited to."""
+
+    def _cleared(self) -> PrecheckReport:
+        return build_report(evaluate_patch(_spaced(SUMMARY_BOUND), walk=_walk()))
+
+    def test_the_grade_under_test_is_the_one_produced(self):
+        assert self._cleared().evaluation.overlap_basis == "bound_proves_clear"
+
+    def test_the_summary_carries_a_scope_qualifier(self):
+        summary = self._cleared().summary_ko()
+        assert "한정" in summary
+
+    def test_the_qualifier_names_the_mode_set_the_bound_came_from(self):
+        # Two walks with DIFFERENT mode counts. One would also pass against a
+        # summary that spelled the count as a constant.
+        two = build_report(evaluate_patch(_spaced(SUMMARY_BOUND), walk=_walk())).summary_ko()
+        three = build_report(evaluate_patch(_spaced(SUMMARY_BOUND), walk=_walk_of(3))).summary_ko()
+        assert "열거된 모드 2개" in two
+        assert "열거된 모드 3개" in three
+        assert "열거된 모드 3개" not in two
+
+    def test_the_qualifier_is_a_non_empty_korean_string(self):
+        note = self._cleared().evaluation.overlap.observation_note
+        assert note.strip()
+        assert any("\uac00" <= character <= "\ud7a3" for character in note)
+
+    def test_an_exact_width_verdict_carries_no_such_qualifier(self):
+        """AC-OVERLAP-015 ③ — the contrast, with the walk PRESENT.
+
+        The walk has to be supplied for this to mean anything: with no walk there
+        is no bound to qualify, and the absence of the qualifier would prove
+        nothing about the priority rule. Here a bound exists, exact widths
+        outrank it, and the clause that limits a bound must not follow along.
+        """
+        exact = FootprintPolicy(
+            enabled=True,
+            widths={1: 4, 2: 4},
+            source="Patch/FixtureTypes/1/DMXModes/1/DMXChannels childCount",
+        )
+        evaluation = evaluate_patch(_spaced(SUMMARY_BOUND), exact, walk=_walk())
+        assert evaluation.overlap_basis == "exact_widths"
+        assert evaluation.overlap.bound == SUMMARY_BOUND
+        summary = build_report(evaluation).summary_ko()
+        assert f"겹침 판정 근거: {label('overlap_basis', 'exact_widths')}" in summary
+        assert "열거된 모드" not in summary
+        assert "한정한 판정" not in summary
+
+    def test_an_unsettled_verdict_does_not_read_as_clear(self):
+        summary = build_report(
+            evaluate_patch(_spaced(SUMMARY_BOUND - 1), walk=_walk())
+        ).summary_ko()
+        assert label("overlap_basis", "bound_inconclusive") in summary
+        assert label("overlap_basis", "bound_proves_clear") not in summary
+        assert "충돌이 아니다" in summary

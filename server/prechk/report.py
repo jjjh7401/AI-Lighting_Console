@@ -207,6 +207,19 @@ class PrecheckReport:
         # already printed above, and only when it is non-zero.
         qualifier = f"{SCOPE_QUALIFIER} " if self.evaluation.scope_qualified else ""
         parts.append(f"{qualifier}충돌 {self.evaluation.collision_total}건")
+        # The grade of the overlap axis, in the ONLY string a user reads. Leaving
+        # it in the payload alone means nobody sees it: `충돌 0건` above is silent
+        # about WHY it is zero, and "no comparison was made" and "no overlap
+        # exists" are different facts that must not share a sentence.
+        overlap = self.evaluation.overlap
+        basis = f"겹침 판정 근거: {label('overlap_basis', overlap.basis)}"
+        if overlap.observation_note:
+            # The qualifier travels WITH the grade rather than in a separate
+            # sentence: an upper-bound clearance is limited to the modes that were
+            # enumerated, and a reader who skims one sentence must not get the
+            # unqualified half.
+            basis = f"{basis}({overlap.observation_note})"
+        parts.append(basis)
         verdicts = _labelled_counts("fixture_verdict", dict(self.evaluation.verdict_counts))
         if verdicts:
             parts.append(" · ".join(verdicts))
