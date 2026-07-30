@@ -35,8 +35,10 @@ from server.prechk.footprint import (
     REASON_UNRESOLVED as WALK_UNRESOLVED,
 )
 from server.prechk.footprint import (
+    ModeFootprint,
     WalkOutcome,
     address_gaps,
+    bound_source,
     unsettled_gaps,
     upper_bound,
     walk_mode_widths,
@@ -568,7 +570,9 @@ def test_the_outcome_carries_no_bound_attribute():
     If ``WalkOutcome`` grew a ``bound`` field, a consumer could read it without
     consulting ``complete`` -- which is the exact path a false all-clear takes.
     """
-    assert not hasattr(WalkOutcome(complete=True, mode_widths=(3,)), "bound")
+    assert not hasattr(
+        WalkOutcome(complete=True, footprints=(ModeFootprint(path="p", width=3),)), "bound"
+    )
     with pytest.raises(TypeError):
         WalkOutcome(complete=True, bound=3)  # type: ignore[call-arg]
 
@@ -646,3 +650,31 @@ class TestBoundPredicate:
         assert below != at
         assert at == above
         assert len(below) == 1
+
+
+class TestBoundOrigin:
+    """AC-OVERLAP-016 ①② — the bound carries the path it was read from."""
+
+    def test_the_origin_points_at_the_widest_mode(self):
+        rig = Rig(widths=(5, 31, 7))
+        outcome = _walk(rig)
+        assert upper_bound(outcome) == 31
+        assert bound_source(outcome) == f"{ROOT}/1/DMXModes/2/DMXChannels childCount"
+
+    def test_the_origin_moves_with_the_widest_mode(self):
+        # A single rig would also pass if the path were pinned to mode 2.
+        assert bound_source(_walk(Rig(widths=(31, 5, 7)))).endswith(
+            "/DMXModes/1/DMXChannels childCount"
+        )
+
+    def test_a_walk_with_no_bound_offers_no_origin(self):
+        incomplete = WalkOutcome(
+            complete=False, footprints=(ModeFootprint(path="어딘가", width=9),)
+        )
+        assert upper_bound(incomplete) is None
+        assert bound_source(incomplete) == ""
+
+    def test_the_origin_names_the_field_and_not_just_the_path(self):
+        origin = bound_source(_walk(Rig(widths=(5, 31))))
+        assert origin.endswith("childCount")
+        assert "DMXChannels" in origin

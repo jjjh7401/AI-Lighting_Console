@@ -537,6 +537,57 @@ SKIP: ASSUMPTION-35 Patch/FixtureTypes의 childCount 즉 타입 수 T. state Pat
 
 `server/tests/test_web_launcher.py::TestSidecarSelfReap::test_orphaned_sidecar_reaps_the_group_without_a_pipe`가 전체 스위트 실행 3회 중 2회 실패하고 **단독 실행에서는 71건 전건 통과**했으며 이후 전체 실행에서도 통과했다. 원인은 `_await_status`의 **15초 벽시계 데드라인**이며 사이드카 서브프로세스가 그 안에 `status.json`을 내지 못하면 실패한다 — 머신 부하에 걸린다. 본 SPEC의 변경은 `server/prechk/**`와 `server/tests/test_prechk_*`뿐이고 런처 계층은 그것을 import하지 않는다. **고치지 않고 기록만 남긴다** — 본 SPEC의 범위가 아니며 타이밍 데드라인 조정은 별건이다.
 
+### M4 — 정확폭 우선 · 근거 배선 (`AC-OVERLAP-007` · `AC-OVERLAP-013` · `AC-OVERLAP-016` · `cycle_type=tdd` · 2026-07-30)
+
+#### 착수 전제 확인
+
+| 항목 | 산출 |
+|---|---|
+| M3 DoD 10항 | 전건 충족(위) |
+| baseline | **2838 passed · 5 skipped · 0 failed** (M3 커밋 시점 실측) |
+
+#### 산출
+
+- `server/prechk/footprint.py` — `ModeFootprint(path, width)`로 폭을 **출처 경로와 함께** 담고 `WalkOutcome.footprints`가 그것을 싣는다(`mode_widths`는 파생 프로퍼티로 남긴다). `bound_source(outcome)` 신설 — `"<경로> childCount"`.
+- `server/prechk/patch.py` — `OverlapBasis` 7키(`basis` · `bound` · `bound_source` · `mode_widths` · `exact_width_slots` · `bound_slots` · `observation_note`, `CONTRACT.md` §8 R-8) · `_BASIS_ORDER`와 `_weakest` · `_exact_width_slots` · `_overlap_basis` · `_observation_note` · `PatchEvaluation.overlap` 필드와 `overlap_basis` 프로퍼티 · `to_dict`에 **신규 최상위 키 1개**.
+- 테스트 **+21건**.
+
+**등급 순서를 코드로 고정했다** — `not_performed ≺ bound_inconclusive ≺ bound_proves_clear ≺ exact_widths`(R-6). 리그 전역 스칼라는 **수행된 비교 전체의 최약 등급**이며 그것이 D-4 정직성 제약 1의 집행이다.
+
+**정확폭 우선은 두 층에서 집행된다** — ① 정확폭이 있는 슬롯은 `bound_slots`에서 제외되고 ② **양 끝이 모두 정확폭인 간격은 상계 판정 대상에서 빠진다.** ②가 없으면 정확폭으로 이미 깨끗하다고 판정된 쌍에 상계가 `bound_inconclusive`를 덮어씌운다(뮤테이션 M-16이 그것을 잡는다).
+
+**`bound_source`가 자유 산문이 아니다** — 가장 넓은 모드의 `DMXChannels` 경로에 읽은 필드명을 붙인다. 선례가 경고다: `FootprintPolicy.source`는 축이 출하된 이래 필드로 있었고 **페이로드에 도달한 적이 없어** 소비자가 0건이다. 값과 출처를 같은 블록에 넣는 것이 그 반복을 막는다.
+
+#### 뮤테이션 6건 — 전건 사망
+
+| # | 주입 | 결과 |
+|---|---|---|
+| **M-13** | 리그 전역 등급을 **최강**으로(등급 순서 역전) | **killed** — 4 failed |
+| **M-14** | 근거 7키 중 `bound_source`를 페이로드에서 누락 | **killed** — 4 failed. **이것이 `AC-OVERLAP-016` ④가 존재하는 이유다** — 착수 시점의 최상위 단정은 부분집합이라 키를 얹거나 빼도 아무것도 깨지지 않았다 |
+| **M-15** | 정확폭 우선 제거(상계를 전 슬롯에 적용) | **killed** — 3 failed |
+| **M-16** | 양 끝이 정확폭인 간격도 상계가 판정 | **killed** — 1 failed |
+| **M-17** | 순회 실패 사유를 `observation_note`에서 삭제 | **killed** — 1 failed |
+| **M-18** | 미비교 슬롯을 등급 계산에서 무시 | **killed** — 2 failed |
+
+#### DoD 12항 — 전건 기계 판정
+
+| # | 조건 | 산출 |
+|---|---|---|
+| 1 | 신규 최상위 키에 **정확 키집합 단정 신설** · 기존 부분집합·포함 단정은 그대로 | 충족 — `set(payload["overlap_basis"]) == EVIDENCE_KEYS`를 **네 등급 전부**에서 단정한다(등급별로 키집합이 달라지는 것도 결함이므로). 기존 최상위 부분집합 단정도 별도 테스트로 계속 확인 |
+| 2 | 상계 값 + 출처 문자열이 페이로드에 · 출처가 **경로와 계수**를 담는다 · 자료구조와 페이로드 키가 함께 | 충족. **출처가 최대 폭을 따라 움직인다는 것**을 두 리그로 단정한다 — 한 리그만 보면 경로가 고정된 코드도 통과한다 |
+| 3 | 정확폭 슬롯은 `exact_widths` · 없는 슬롯에만 상계 · 혼재 리그에서 둘 다 수행되고 각각의 근거로 보고 | 충족 |
+| 4 | 착수 시점 정확폭 테스트 전건 통과 | 충족 — 갱신 0건 |
+| 5 | 부분 커버리지 고지가 여전히 발화 | 충족 |
+| 6 | D-4 정직성 1 — 3슬롯 미비교 시 `bound_proves_clear`를 찍으면 **실패하는 테스트**가 존재 | 충족 — `test_the_rig_wide_grade_is_the_weakest_comparison_performed`. 유효 2슬롯은 간격이 정확히 상계라 **settled**이고 그 사실을 비공허성으로 먼저 단정하므로, 등급 하락이 미비교 3슬롯에서 왔음이 분리된다 |
+| 7 | D-4 정직성 2 — kind당 1행 · `skipped_checks[]` 정확 3키 단정 무변경 통과 | 충족 |
+| 8 | 순회 전면 실패 리그의 `observed_count`가 성공 시와 동일 | 충족 |
+| 9 | 같은 리그에서 주소 중복이 **검출된다**(비공허) | 충족 — 3중 중복 1건·구성원 3개를 단정 |
+| 10 | `overlap_basis`가 `not_performed` · `skipped_checks` 대응 행 · 요약이 *"충돌 0건"*을 한정 없이 말하지 않는다 | 충족 — 요약에 `충돌 0건`과 **미수행 판정 라벨이 함께** 있음을 단정한다 |
+| 11 | `collisions` 딕셔너리 전체 동등 단정 무변경 통과 | 충족 — 미확정이 `range_overlaps`에 들어가지 않음의 기계 확인 |
+| 12 | 스위트 계수가 baseline 이상 | **2859 passed · 5 skipped · 0 failed** = 2838 + 21 |
+
+**갱신 1건과 그 정당화.** M3이 쓴 `test_an_out_of_range_address_never_enters_the_gap_set`이 `bound_proves_clear`를 기대했는데 M4의 최약 등급 규칙에서는 **`not_performed`가 옳은 답이다** — 그 리그의 슬롯 1은 주소가 무의미해 어느 축도 비교하지 않았다. 테스트를 고치면서 **비공허성을 추가했다**: 같은 리그에서 슬롯 1을 빼면 `bound_proves_clear`가 나오므로 등급 하락이 미비교 슬롯에서 온 것이며 판정 실패에서 온 것이 아니다. 그 밖의 기존 테스트는 갱신 0건이다.
+
 ## §F Phase 4 Mode Selection — 확정 (오케스트레이터 소유 · 2026-07-30)
 
 > 본 절은 **오케스트레이터가 첫 run-phase 스폰 전에 작성**하는 구속력 있는 기록이다. `plan.md` §G의 대응 절은 **권고**이며 오케스트레이터가 확정하거나 기각한다. 어긋나면 **본 절이 이긴다.**

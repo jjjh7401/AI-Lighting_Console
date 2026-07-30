@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from server.prechk.footprint import WalkOutcome
+from server.prechk.footprint import ModeFootprint, WalkOutcome
 from server.prechk.inventory import (
     COMPLETE,
     INCOMPLETE,
@@ -483,8 +483,19 @@ class TestNoConsistencyClaimOnIncompleteReads:
 BOUND = 23
 
 
+#: Where the bound's evidence points. The shape matches the exact-width axis's
+#: ``source`` so a reader can compare the two origins.
+WALK_ROOT = "Patch/FixtureTypes/1/DMXModes"
+
+
 def _walked(bound: int = BOUND, *, complete: bool = True) -> WalkOutcome:
-    return WalkOutcome(complete=complete, mode_widths=(bound - 4, bound))
+    return WalkOutcome(
+        complete=complete,
+        footprints=(
+            ModeFootprint(path=f"{WALK_ROOT}/1/DMXChannels", width=bound - 4),
+            ModeFootprint(path=f"{WALK_ROOT}/2/DMXChannels", width=bound),
+        ),
+    )
 
 
 def _pair(gap: int, *, universe: int = 1, first: int = 100) -> FixturePool:
@@ -701,20 +712,35 @@ class TestAddressRangeValidation:
         assert normalize_address(raw).ok is True
 
     def test_an_out_of_range_address_never_enters_the_gap_set(self):
-        pool = FixturePool(
-            {
-                1: fixture_props("1.0", name="무의미"),
-                2: fixture_props("1.100", name="유효 A"),
-                3: fixture_props(f"1.{100 + BOUND:03d}", name="유효 B"),
-            }
+        """Two valid addresses exactly ``BOUND`` apart, plus one meaningless one.
+
+        Two things must hold at once. The bound settles the valid pair, so no
+        unsettled notice appears. And the meaningless address is not silently
+        dropped: its slot was never compared by either axis, so the RIG-WIDE grade
+        falls to ``not_performed`` -- the weakest of the comparisons performed.
+        Reporting ``bound_proves_clear`` for this rig would let an uncompared slot
+        ride on a compared one.
+        """
+        valid = {
+            2: fixture_props("1.100", name="유효 A"),
+            3: fixture_props(f"1.{100 + BOUND:03d}", name="유효 B"),
+        }
+        with_junk = evaluate_patch(
+            read_inventory(FixturePool({1: fixture_props("1.0", name="무의미"), **valid})),
+            walk=_walked(),
         )
-        evaluation = evaluate_patch(read_inventory(pool), walk=_walked())
-        # With 1.0 folded in, the distances would be 100 and BOUND; the first is
-        # wide and the second is exactly the bound, so a meaningless address
-        # cannot be shown to change THIS verdict -- what it does change is that
-        # slot 1 is reported as a read failure rather than as an address.
-        assert evaluation.overlap_basis == BOUND_PROVES_CLEAR
-        assert next(row for row in evaluation.rows if row.record.slot == 1).address is None
+        without_junk = evaluate_patch(read_inventory(FixturePool(valid)), walk=_walked())
+
+        # Non-vacuity: the valid pair on its own IS settled, so the grade below
+        # comes from the uncompared slot and not from a failed comparison.
+        assert without_junk.overlap_basis == BOUND_PROVES_CLEAR
+        assert with_junk.overlap_basis == NOT_PERFORMED
+        assert RANGE_OVERLAP_BOUND_INCONCLUSIVE not in [
+            check.kind for check in with_junk.skipped_checks
+        ]
+        assert next(row for row in with_junk.rows if row.record.slot == 1).address is None
+        assert 1 not in with_junk.overlap.bound_slots
+        assert set(with_junk.overlap.bound_slots) == {2, 3}
 
     def test_an_out_of_range_address_is_reported_as_a_read_failure(self):
         pool = FixturePool({1: fixture_props("0.0", name="무의미")})
@@ -741,3 +767,200 @@ class TestAddressRangeValidation:
         """
         for address in (512, 1024, 65535):
             assert normalize_address(f"1.{address}").ok is True
+
+
+class TestOverlapBasisPayload:
+    """AC-OVERLAP-016 — the grade travels with its evidence, and the key is locked."""
+
+    #: The one new top-level key's exact key set. Written down HERE because the
+    #: existing top-level assertion is a SUBSET check: laying a key on it breaks
+    #: nothing, which is precisely why nobody guards it. This closes that.
+    EVIDENCE_KEYS = {
+        "basis",
+        "bound",
+        "bound_source",
+        "mode_widths",
+        "exact_width_slots",
+        "bound_slots",
+        "observation_note",
+    }
+
+    def test_the_new_top_level_key_has_an_exact_key_set(self):
+        payload = evaluate_patch(read_inventory(_pair(BOUND)), walk=_walked()).to_dict()
+        assert set(payload["overlap_basis"]) == self.EVIDENCE_KEYS
+
+    def test_the_key_set_is_locked_in_every_grade(self):
+        # A grade-dependent key set would let one branch ship a field no consumer
+        # expects and another drop one it needs.
+        for evaluation in (
+            evaluate_patch(read_inventory(_pair(BOUND))),
+            evaluate_patch(read_inventory(_pair(BOUND - 1)), walk=_walked()),
+            evaluate_patch(read_inventory(_pair(BOUND)), walk=_walked()),
+            evaluate_patch(read_inventory(_pair(BOUND)), GO_FOOTPRINT),
+        ):
+            assert set(evaluation.to_dict()["overlap_basis"]) == self.EVIDENCE_KEYS
+
+    def test_the_bound_and_its_origin_both_reach_the_payload(self):
+        block = evaluate_patch(read_inventory(_pair(BOUND)), walk=_walked()).to_dict()[
+            "overlap_basis"
+        ]
+        assert block["bound"] == BOUND
+        assert block["mode_widths"] == [BOUND - 4, BOUND]
+
+    def test_the_origin_names_a_path_and_the_field_read_on_it(self):
+        block = evaluate_patch(read_inventory(_pair(BOUND)), walk=_walked()).to_dict()[
+            "overlap_basis"
+        ]
+        # Not free prose: the string carries the path of the WIDEST mode and the
+        # field name, so a reader can re-query it and disagree.
+        assert block["bound_source"] == f"{WALK_ROOT}/2/DMXChannels childCount"
+        assert block["bound_source"].startswith(WALK_ROOT)
+        assert block["bound_source"].endswith("childCount")
+
+    def test_a_walk_with_no_bound_offers_no_origin(self):
+        block = evaluate_patch(
+            read_inventory(_pair(BOUND)), walk=_walked(complete=False)
+        ).to_dict()["overlap_basis"]
+        assert block["bound"] is None
+        assert block["bound_source"] == ""
+
+    def test_the_note_is_a_non_empty_korean_string_in_every_grade(self):
+        for evaluation in (
+            evaluate_patch(read_inventory(_pair(BOUND))),
+            evaluate_patch(read_inventory(_pair(BOUND - 1)), walk=_walked()),
+            evaluate_patch(read_inventory(_pair(BOUND)), walk=_walked()),
+            evaluate_patch(read_inventory(_pair(BOUND)), GO_FOOTPRINT),
+        ):
+            note = evaluation.to_dict()["overlap_basis"]["observation_note"]
+            assert note.strip()
+            assert any("\uac00" <= character <= "\ud7a3" for character in note)
+
+    def test_the_existing_top_level_assertion_still_holds(self):
+        # The subset shape is deliberately left alone; this milestone ADDS a lock
+        # rather than tightening the old one.
+        payload = evaluate_patch(read_inventory(clean_rig_18())).to_dict()
+        assert {"inventory", "fixtures", "collisions", "skipped_checks"} <= set(payload)
+
+
+class TestExactWidthsOutrankTheBound:
+    """AC-OVERLAP-013 — a real footprint is stronger evidence than a ceiling."""
+
+    def _all_exact(self) -> FootprintPolicy:
+        return FootprintPolicy(enabled=True, widths={1: 4, 2: 4, 3: 4}, source=FOOTPRINT_SOURCE)
+
+    def _rig(self) -> FixturePool:
+        return FixturePool(
+            {
+                1: fixture_props("1.100", name="A"),
+                2: fixture_props("1.110", name="B"),
+                3: fixture_props("1.120", name="C"),
+            }
+        )
+
+    def test_a_slot_with_a_real_width_is_graded_by_it(self):
+        evaluation = evaluate_patch(read_inventory(self._rig()), self._all_exact(), _walked())
+        assert evaluation.overlap_basis == EXACT_WIDTHS
+        assert set(evaluation.overlap.exact_width_slots) == {1, 2, 3}
+        assert evaluation.overlap.bound_slots == ()
+
+    def test_the_bound_would_otherwise_have_left_the_rig_unsettled(self):
+        """Non-vacuity for the test above.
+
+        The same rig with NO widths is unsettled: the gaps are 10 and the bound is
+        23. So the ``exact_widths`` grade above is the priority rule at work, not
+        a rig that happened to be clear either way.
+        """
+        bound_only = evaluate_patch(read_inventory(self._rig()), walk=_walked())
+        assert bound_only.overlap_basis == BOUND_INCONCLUSIVE
+
+    def test_a_mixed_rig_runs_both_axes_and_reports_each_origin(self):
+        partial = FootprintPolicy(enabled=True, widths={1: 4, 2: 4}, source=FOOTPRINT_SOURCE)
+        evaluation = evaluate_patch(read_inventory(self._rig()), partial, _walked())
+        assert set(evaluation.overlap.exact_width_slots) == {1, 2}
+        assert set(evaluation.overlap.bound_slots) == {3}
+        # Weakest of the two grades: slot 3's neighbour pair is 10 apart, under
+        # the bound, so the bound axis did not settle it.
+        assert evaluation.overlap_basis == BOUND_INCONCLUSIVE
+        assert evaluation.overlap.bound == BOUND
+        assert evaluation.overlap.bound_source
+
+    def test_a_gap_between_two_exact_slots_is_left_to_the_other_axis(self):
+        # Slots 1 and 2 both carry real widths of 4: intervals 100..103 and
+        # 110..113 do not meet, and the bound must not overrule that with an
+        # unsettled verdict just because 10 < 23.
+        exact_pair = FootprintPolicy(enabled=True, widths={1: 4, 2: 4}, source=FOOTPRINT_SOURCE)
+        pair = FixturePool(
+            {1: fixture_props("1.100", name="A"), 2: fixture_props("1.110", name="B")}
+        )
+        evaluation = evaluate_patch(read_inventory(pair), exact_pair, _walked())
+        assert evaluation.overlap_basis == EXACT_WIDTHS
+        assert evaluation.range_overlaps == ()
+        assert RANGE_OVERLAP_BOUND_INCONCLUSIVE not in [
+            check.kind for check in evaluation.skipped_checks
+        ]
+
+    def test_the_rig_wide_grade_is_the_weakest_comparison_performed(self):
+        """D-4 honesty rule 1 — three uncompared slots sink the grade.
+
+        The two valid addresses are exactly ``BOUND`` apart and settled. Three
+        further fixtures have unreadable addresses, so neither axis compared them.
+        Stamping ``bound_proves_clear`` rig-wide would report them as clear.
+        """
+        slots = {
+            1: fixture_props("1.100", name="유효 A"),
+            2: fixture_props(f"1.{100 + BOUND:03d}", name="유효 B"),
+        }
+        for slot in (3, 4, 5):
+            slots[slot] = fixture_props("판독불가", name=f"미판정 {slot}")
+        evaluation = evaluate_patch(read_inventory(FixturePool(slots)), walk=_walked())
+        assert set(evaluation.overlap.bound_slots) == {1, 2}
+        assert evaluation.overlap_basis == NOT_PERFORMED
+
+    def test_the_partial_coverage_notice_still_fires(self):
+        """AC-OVERLAP-013 ⑤ — the pre-existing skip notice is not swallowed."""
+        partial = FootprintPolicy(enabled=True, widths={1: 4}, source=FOOTPRINT_SOURCE)
+        evaluation = evaluate_patch(read_inventory(self._rig()), partial)
+        kinds = [check.kind for check in evaluation.skipped_checks]
+        assert RANGE_OVERLAP_DESCOPE in kinds
+
+
+class TestWalkFailureKeepsTheReport:
+    """AC-OVERLAP-007 — a failed walk costs the bound, not the rest."""
+
+    def _dead_walk(self) -> WalkOutcome:
+        from server.prechk.footprint import REASON_UNREACHABLE
+
+        return WalkOutcome(
+            complete=False,
+            failure=REASON_UNREACHABLE,
+            failure_detail="경로 조회에 어느 응답도 오지 않았다 — 콘솔이 답하지 않는다.",
+        )
+
+    def test_the_inventory_block_is_unchanged(self):
+        healthy = evaluate_patch(read_inventory(duplicate_address_triple()), walk=_walked())
+        failed = evaluate_patch(read_inventory(duplicate_address_triple()), walk=self._dead_walk())
+        assert failed.inventory.observed_count == healthy.inventory.observed_count
+        assert failed.inventory.observed_count >= 1
+
+    def test_address_duplicates_are_still_detected(self):
+        failed = evaluate_patch(read_inventory(duplicate_address_triple()), walk=self._dead_walk())
+        # Non-vacuity: the rig really does carry a duplicate.
+        assert len(failed.address_duplicates) == 1
+        assert len(failed.address_duplicates[0].members) == 3
+
+    def test_the_grade_falls_back_and_the_failure_is_stated(self):
+        failed = evaluate_patch(read_inventory(duplicate_address_triple()), walk=self._dead_walk())
+        assert failed.overlap_basis == NOT_PERFORMED
+        assert "응답" in failed.overlap.observation_note
+        assert RANGE_OVERLAP_DESCOPE in [check.kind for check in failed.skipped_checks]
+
+    def test_the_summary_does_not_claim_an_unqualified_zero(self):
+        from server.prechk.report import build_report, label
+
+        clean = FixturePool({1: fixture_props("1.100", name="혼자")})
+        summary = build_report(
+            evaluate_patch(read_inventory(clean), walk=self._dead_walk())
+        ).to_dict()["summary_ko"]
+        assert "충돌 0건" in summary
+        # ...but never on its own: the not-performed notice rides alongside.
+        assert label("skipped_check_kind", RANGE_OVERLAP_DESCOPE) in summary

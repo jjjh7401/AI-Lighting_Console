@@ -44,6 +44,7 @@ from server.prechk.footprint import (
     AddressGap,
     WalkOutcome,
     address_gaps,
+    bound_source,
     unsettled_gaps,
     upper_bound,
 )
@@ -240,6 +241,54 @@ class FixtureVerdict:
         }
 
 
+#: Claim strength, weakest first. The rig-wide grade is the WEAKEST of the
+#: comparisons actually performed: stamping the strongest one would let a slot
+#: nobody compared ride on the back of a slot that was compared.
+_BASIS_ORDER = (NOT_PERFORMED, BOUND_INCONCLUSIVE, BOUND_PROVES_CLEAR, EXACT_WIDTHS)
+
+
+@dataclass(frozen=True)
+class OverlapBasis:
+    """How the range-overlap axis reached its answer, with its own evidence.
+
+    A grade with no origin is unauditable, and the precedent in this module is a
+    warning: ``FootprintPolicy.source`` has been a field since the axis shipped
+    and never reached the payload, so no consumer has ever been able to ask where
+    a width came from. ``bound`` and ``bound_source`` travel together for that
+    reason.
+
+    ``basis`` is RIG-WIDE. The two slot lists say which fixtures each axis
+    actually covered, so a reader can tell a rig where both axes ran from a rig
+    where one of them answered for everything.
+    """
+
+    basis: str
+    bound: int | None = None
+    bound_source: str = ""
+    mode_widths: tuple[int, ...] = ()
+    exact_width_slots: tuple[int, ...] = ()
+    bound_slots: tuple[int, ...] = ()
+    observation_note: str = ""
+
+    def to_dict(self) -> dict:
+        return {
+            "basis": self.basis,
+            "bound": self.bound,
+            "bound_source": self.bound_source,
+            "mode_widths": list(self.mode_widths),
+            "exact_width_slots": list(self.exact_width_slots),
+            "bound_slots": list(self.bound_slots),
+            "observation_note": self.observation_note,
+        }
+
+
+def _weakest(grades: set[str]) -> str:
+    for grade in _BASIS_ORDER:
+        if grade in grades:
+            return grade
+    return NOT_PERFORMED
+
+
 @dataclass(frozen=True)
 class PatchEvaluation:
     """The consistency verdict for one inventory.
@@ -267,12 +316,17 @@ class PatchEvaluation:
     read_failure_counts: Mapping[str, int]
     scope_qualified: bool
     scope_note: str
-    #: How the range-overlap axis was reached for this rig. A RIG-WIDE grade, and
-    #: therefore the weakest of the comparisons actually performed: stamping the
-    #: strongest one here would let a slot nobody compared ride on a slot that was.
-    #: It reaches the payload in the milestone that adds the evidence block; the
-    #: field lands first so the judging layer has one place to put the grade.
-    overlap_basis: str = NOT_PERFORMED
+    #: The range-overlap axis's grade AND its evidence. One new TOP-LEVEL payload
+    #: key: every existing block is locked to an exact key set, and this is the
+    #: only place a addition breaks nothing (``AC-OVERLAP-016`` pays for that by
+    #: locking the new key set itself, because a place where nothing breaks is a
+    #: place nobody guards).
+    overlap: OverlapBasis = field(default_factory=lambda: OverlapBasis(basis=NOT_PERFORMED))
+
+    @property
+    def overlap_basis(self) -> str:
+        """The rig-wide grade. Shorthand for ``overlap.basis``."""
+        return self.overlap.basis
 
     @property
     def collision_total(self) -> int:
@@ -292,6 +346,7 @@ class PatchEvaluation:
             "read_failure_counts": dict(self.read_failure_counts),
             "scope_qualified": self.scope_qualified,
             "scope_note": self.scope_note,
+            "overlap_basis": self.overlap.to_dict(),
         }
 
 
@@ -433,26 +488,107 @@ def _flush_cluster(universe: int, cluster: list[tuple[int, int, _Assessed]]) -> 
     ]
 
 
-def _bound_basis(
-    assessed: list[_Assessed], walk: WalkOutcome | None
-) -> tuple[str, tuple[AddressGap, ...], int | None]:
-    """The grade the bound axis reached, the gaps it left open, and the bound.
+def _exact_width_slots(assessed: list[_Assessed], policy: FootprintPolicy) -> tuple[int, ...]:
+    """Slots the exact-width axis actually compared."""
+    if not policy.enabled:
+        return ()
+    return tuple(
+        item.record.slot
+        for item in assessed
+        if item.parse.ok
+        and item.type_mode_ok
+        and _footprint_width(policy, item.record.slot) is not None
+    )
+
+
+def _overlap_basis(
+    assessed: list[_Assessed], policy: FootprintPolicy, walk: WalkOutcome | None
+) -> tuple[OverlapBasis, tuple[AddressGap, ...]]:
+    """The rig-wide grade, its evidence, and the pairs the bound left open.
+
+    Exact widths OUTRANK the bound. Where a real footprint is known the verdict
+    is unqualified for that slot, so the bound adds nothing there and a gap whose
+    both ends have real widths is left to the other axis entirely.
 
     An unsettled gap is NOT a collision. The bound argument runs one way: a gap
     of at least ``bound`` proves the intervals cannot meet, while a smaller gap
     proves nothing at all, because the fixtures involved may well be using a
     narrow mode. Turning that into a collision would print ``충돌`` for a rig
     nobody has shown to be faulty.
+
+    The returned grade is the WEAKEST of the comparisons performed. A rig where
+    three slots were never compared is not a cleared rig, however strong the
+    verdict on the rest.
     """
-    if walk is None:
-        return NOT_PERFORMED, (), None
-    bound = upper_bound(walk)
-    if bound is None:
-        return NOT_PERFORMED, (), None
-    unsettled = unsettled_gaps(address_gaps(set(_address_groups(assessed))), bound)
-    if unsettled:
-        return BOUND_INCONCLUSIVE, unsettled, bound
-    return BOUND_PROVES_CLEAR, (), bound
+    exact = _exact_width_slots(assessed, policy)
+    exact_set = set(exact)
+    bound = upper_bound(walk) if walk is not None else None
+    groups = _address_groups(assessed)
+
+    covered = set(exact)
+    bound_slots: tuple[int, ...] = ()
+    unsettled: tuple[AddressGap, ...] = ()
+    if bound is not None:
+        bound_slots = tuple(
+            item.record.slot
+            for item in assessed
+            if item.parse.ok and item.record.slot not in exact_set
+        )
+        covered |= set(bound_slots)
+
+        def has_exact_end(gap: AddressGap) -> bool:
+            return all(
+                item.record.slot in exact_set
+                for address in (gap.lower, gap.upper)
+                for item in groups.get((gap.universe, address), [])
+            )
+
+        relevant = tuple(gap for gap in address_gaps(set(groups)) if not has_exact_end(gap))
+        unsettled = unsettled_gaps(relevant, bound)
+
+    grades: set[str] = set()
+    if exact:
+        grades.add(EXACT_WIDTHS)
+    if bound_slots:
+        grades.add(BOUND_INCONCLUSIVE if unsettled else BOUND_PROVES_CLEAR)
+    if any(item.record.slot not in covered for item in assessed):
+        grades.add(NOT_PERFORMED)
+
+    basis = _weakest(grades)
+    return (
+        OverlapBasis(
+            basis=basis,
+            bound=bound,
+            bound_source=bound_source(walk) if walk is not None else "",
+            mode_widths=walk.mode_widths if walk is not None else (),
+            exact_width_slots=tuple(sorted(exact_set)),
+            bound_slots=tuple(sorted(set(bound_slots))),
+            observation_note=_observation_note(basis, walk, len(unsettled)),
+        ),
+        unsettled,
+    )
+
+
+def _observation_note(basis: str, walk: WalkOutcome | None, unsettled_count: int) -> str:
+    """What the grade is limited to, in the reader's language.
+
+    ``bound_proves_clear`` is the dangerous one: without the qualifier it reads as
+    an unconditional "no overlap", and the modes that were never enumerated are
+    outside the claim. The pre-check has already been wrong in exactly this shape
+    once, on the ``incomplete`` label.
+    """
+    if walk is not None and walk.failure is not None:
+        return walk.failure_detail
+    if basis == BOUND_PROVES_CLEAR and walk is not None:
+        return (
+            f"열거된 모드 {len(walk.mode_widths)}개에 한정한 판정이다 — "
+            "열거되지 않은 모드와 다중 브레이크 점유는 이 주장 밖이다."
+        )
+    if basis == BOUND_INCONCLUSIVE:
+        return f"상계로 판정하지 못한 인접쌍이 {unsettled_count}건 남았다 — 충돌이 아니다."
+    if basis == EXACT_WIDTHS:
+        return "실제 점유폭으로 비교했다 — 비교된 슬롯에 대해 한정이 없다."
+    return "겹침 비교를 수행하지 않았다 — 겹침이 없다는 뜻이 아니다."
 
 
 def _unsettled_reason(
@@ -575,12 +711,12 @@ def evaluate_patch(
     # rig nobody has shown to be faulty. The unsettled state instead reaches the
     # user through ``skipped_checks``, which is the channel for "ran, did not
     # conclude" -- silence would be the actual defect.
-    basis, unsettled, bound = _bound_basis(assessed, walk)
-    if unsettled and bound is not None:
+    overlap, unsettled = _overlap_basis(assessed, policy, walk)
+    if unsettled and overlap.bound is not None:
         skipped.append(
             SkippedCheck(
                 kind=RANGE_OVERLAP_BOUND_INCONCLUSIVE,
-                reason=_unsettled_reason(unsettled, bound, _address_groups(assessed)),
+                reason=_unsettled_reason(unsettled, overlap.bound, _address_groups(assessed)),
                 assumption=BOUND_ASSUMPTIONS,
             )
         )
@@ -641,5 +777,5 @@ def evaluate_patch(
         read_failure_counts=failure_counts,
         scope_qualified=qualified,
         scope_note=_scope_note(len(duplicates) + len(overlaps), inventory.missing_count, qualified),
-        overlap_basis=basis,
+        overlap=overlap,
     )

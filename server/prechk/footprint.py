@@ -89,6 +89,19 @@ class _Budget:
 
 
 @dataclass(frozen=True)
+class ModeFootprint:
+    """One mode's channel count, kept WITH the path that answered it.
+
+    The number alone cannot be audited. A reader who sees a bound of 31 and no
+    origin has to trust it; a reader who sees the path and the field name can
+    re-query and disagree.
+    """
+
+    path: str
+    width: int
+
+
+@dataclass(frozen=True)
 class WalkOutcome:
     """What the three-tier walk established -- and did NOT establish.
 
@@ -99,11 +112,15 @@ class WalkOutcome:
     """
 
     complete: bool
-    mode_widths: tuple[int, ...] = ()
+    footprints: tuple[ModeFootprint, ...] = ()
     queried_paths: tuple[str, ...] = ()
     notes: tuple[str, ...] = ()
     failure: str | None = None
     failure_detail: str = ""
+
+    @property
+    def mode_widths(self) -> tuple[int, ...]:
+        return tuple(footprint.width for footprint in self.footprints)
 
     @property
     def query_count(self) -> int:
@@ -120,6 +137,21 @@ def upper_bound(outcome: WalkOutcome) -> int | None:
     if outcome.complete and outcome.mode_widths:
         return max(outcome.mode_widths)
     return None
+
+
+def bound_source(outcome: WalkOutcome) -> str:
+    """Where the bound came from: the path, and the field read on it.
+
+    Guarded by the same completeness test as the fold, in the same positive-branch
+    shape: a walk with no bound must not hand back an origin for a number it never
+    produced, and the AST check that pins the fold's placement covers this
+    function too. The string matches the exact-width axis's own ``source`` shape,
+    so a reader compares like with like.
+    """
+    if outcome.complete and outcome.footprints:
+        widest = max(outcome.footprints, key=lambda footprint: footprint.width)
+        return f"{widest.path} childCount"
+    return ""
 
 
 def _payload_ok(payload: object) -> bool:
@@ -197,7 +229,7 @@ def walk_mode_widths(reader: StateReader, *, root: str, budget: int) -> WalkOutc
     limit = _Budget(limit=budget)
     queried: list[str] = []
     notes: list[str] = []
-    widths: list[int] = []
+    widths: list[ModeFootprint] = []
 
     def read(path: str) -> dict:
         limit.spend()
@@ -277,14 +309,14 @@ def walk_mode_widths(reader: StateReader, *, root: str, budget: int) -> WalkOutc
                 whole = False
                 notes.append(f"점유폭 계수를 얻지 못했다({channels_path})")
                 continue
-            widths.append(width)
+            widths.append(ModeFootprint(path=channels_path, width=width))
 
     if not widths:
         whole = False
         notes.append("관측된 모드가 0개다")
     return WalkOutcome(
         complete=whole,
-        mode_widths=tuple(widths),
+        footprints=tuple(widths),
         queried_paths=tuple(queried),
         notes=tuple(notes),
     )
