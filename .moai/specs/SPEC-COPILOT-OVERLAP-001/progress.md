@@ -631,6 +631,65 @@ SKIP: ASSUMPTION-35 Patch/FixtureTypes의 childCount 즉 타입 수 T. state Pat
 | 5 | **대조**: 정확폭 슬롯에는 한정이 붙지 않는다 | 충족 — 상계가 존재하는 리그로 재측정(M-21 수정) |
 | 6 | 스위트 계수가 baseline 이상 | **2869 passed · 5 skipped · 0 failed** = 2859 + 10 |
 
+### M6 — 툴 배선 (`AC-OVERLAP-018` · `cycle_type=tdd` · 2026-07-30)
+
+#### 착수 전제 확인
+
+| 항목 | 산출 |
+|---|---|
+| M5 DoD 6항 | 전건 충족(위) |
+| baseline | **2869 passed · 5 skipped · 0 failed** (M5 커밋 시점 실측) |
+| 트립와이어 착수 기준선 | `git diff --unified=0 38a6e7e2…..HEAD -- server/orchestrator/tools.py`의 old-start 목록 = `(33, 49, 125, 463, 475, 479, 951, 1222, 1231)` — `_TOOLS_EXPECTED_HUNK_OLD_STARTS`와 일치 |
+
+#### 산출
+
+`server/orchestrator/tools.py`(갱신) · `server/prechk/footprint.py`(`sibling_answered` 추가) · `server/tests/test_prechk_tool.py` **+22건** · `server/tests/test_prechk_footprint.py` **+4건**. 신규 파일 0건.
+
+#### 계획을 개정한 것 2건 — 둘 다 기계 증거가 강제했다
+
+**① 섹션 누락은 호출을 거부하지 않는다.** D-3은 *"별도 상수를 신설하고 `create_macro` 분기 밖에서 항상 검사"*를 요구했고 그것은 그대로 집행했다. 그러나 **누락을 오류로 만들 수 없다** — `server/tests/test_prechk_tool.py:895-905`가 `{"fixtures": FIXTURE_ROOT}` 오버라이드(즉 `fixture_types`도 없다)로 매크로 가드 메시지를 단정하므로, 먼저 발화하는 오류가 그 메시지를 대체한다. 그리고 그래야 **옳다**: 거부는 이 툴의 존재 이유인 픽스처 재고를 버리는 것이며 같은 파일의 zero-target 매크로 분기가 이미 그 계열을 한 번 고쳤다. 따라서 가드는 **항상 검사하되 결과를 리포트에 담는다** — 섹션 이름을 말하고 *"조회를 시도하지 않았으므로 판독 실패가 아니다"*를 붙이며 등급은 `not_performed`다. D-3의 세 요건(별도 상수 · 분기 밖 · 이름으로 말하고 풀 판독 실패를 암시하지 않음)은 전건 충족된다.
+
+**② 순회에 `sibling_answered`를 추가했다.** 설계 슬롯 C는 *"상계 순회는 픽스처 루트 조회가 이미 성공한 뒤에만 도달하므로 형제가 답했다가 참이고 `REASON_UNRESOLVED`가 근거 있게 도출된다"*고 적었다. 그런데 **순회는 그것을 안에서 알 수 없다** — 첫 조회가 실패하면 자기 기록이 비어 있고, 프로덕션은 *"경로 없음"*과 *"무응답"*을 같은 예외로 던진다. 그래서 호출자만 아는 사실을 파라미터로 받는다. 기본값은 `False`(보수적)이고 핸들러가 `True`를 넘긴다. 이 추가 없이는 툴 경로의 분류가 **항상 `console_unreachable`**이 되어 설정 결함을 운영 조건으로 보고했다 — 결함 계열 1의 재생산이다.
+
+#### 트립와이어는 갱신이 필요하지 않았다 — 실측이 계획을 정정한다
+
+`plan.md` §B.6이 *"tools.py를 고치므로 선례 트립와이어를 같은 커밋에서 갱신한다"*고 못박았다. **실측하니 갱신할 것이 없었다.**
+
+| 대상 | 산출 |
+|---|---|
+| M6 이전 old-side hunk 헤더 | `-33` · `-49,0` · `-125,0` · `-463,0` · `-475,0` · `-479,0` · `-951,0` · `-1222,0` · `-1231,0` |
+| M6 이후(워킹트리) old-side | **동일 9개** — `diff`로 대조해 `IDENTICAL_OLD_SIDE` |
+| `git diff --numstat -- server/tests/test_songcue_bundle.py` | **빈 출력**(0행 변경) |
+| 커밋 후 `test_songcue_bundle.py` | **20 passed** |
+
+**이유는 기계적이다** — M6의 편집 전량이 PRECHK가 **이미 연 hunk 영역 안**에 떨어졌고(`--unified=0`에서 인접 삽입은 기존 hunk에 병합된다) old-side 경계는 새 삽입의 크기에 무관하다. 새 side는 커졌지만(`+150,25` → `+151,51` 등) 트립와이어는 old-side만 본다.
+
+**귀결은 `AC-OVERLAP-019` ⑥에 유리하다** — 그 항이 *"변경이 트립와이어 값 1행에 한정"*을 요구하는데 실제 변경은 **0행**이다. ⑦의 *"갱신되고"*는 전제가 성립하지 않으나 그 항의 실질 불변식(**보호구역 교차 단정이 계속 성립**)은 유지되며 M7이 그것을 판정한다. **갱신하지 않은 것을 갱신했다고 적지 않는다.**
+
+#### 뮤테이션 6건 — 전건 사망
+
+| # | 주입 | 결과 |
+|---|---|---|
+| **M-25** | `PRECHK_RIG_SECTIONS`에 `"fixture_types"` 추가(기각 후보 X-9) | **killed** — 3 failed. **기존 테스트 `test_a_complete_override_still_builds_the_macro`까지 함께 죽는다** — 설계가 예측한 그대로다 |
+| **M-26** | 순회 모듈에 `"Patch/FixtureTypes"`를 리터럴로(기각 후보 I-i) | **killed** — 1 failed |
+| **M-27** | 섹션 가드를 `create_macro` 분기 안으로 | **killed** — 2 failed |
+| **M-28** | `sibling_answered=False` | **killed** — 1 failed. 설정 결함이 운영 조건으로 보고되는 것을 잡는다 |
+| **M-29** | 예산 상한을 40에서 2로 | **killed** — 3 failed |
+| **M-30** | 순회 모듈에 `"Footprint"`·`"Channels"`·`"Universe"` 문자열 상수 | **killed** — 2 failed(**기존** 금지 프로퍼티명 스캔 + 신규 모듈 스캔) |
+
+#### DoD 8항 — 전건 기계 판정
+
+| # | 조건 | 산출 |
+|---|---|---|
+| 1 | `AC-OVERLAP-018` ①②③④⑤ 전건 | 충족. ①은 `server/web/**` 전수에 `footprint`·`walk_mode_widths`·`overlap_basis` 0건 + **역방향 비공허성**(툴 이름이 `TOOL_NAMES`에 있고 `walk_mode_widths`가 `tools.py`에 있다) · ②③은 `server/prechk/**` AST 스캔 + 방문 노드/모듈 하한 · ④는 예외 목록 재타이핑 대조 · ⑤는 상계 축을 켠 리그에서 실행 포트 기록이 **빈 목록**이고 **같은 대역이 매크로 경로에서는 비어 있지 않음**을 함께 단정 |
+| 2 | D-2 — 순회 모듈에 경로 리터럴 0건 · 핸들러가 `rig_paths["fixture_types"]`를 넘긴다 · 신규 경로 상수 0건 | 충족. **오버라이드가 순회를 실제로 이동시킴**을 단정한다(`Patch/OtherTypes`로 바꾸면 그 경로만 조회되고 `bound_source`도 그 경로를 가리킨다) |
+| 3 | D-3 — `PRECHK_RIG_SECTIONS` 바이트 동일 · 신설 튜플이 `create_macro`와 무관하게 검사 · 메시지가 섹션 이름을 말하고 풀 판독 실패를 암시하지 않음 | 충족. `create_macro` **False·True 양쪽**에서 같은 결과임을 한 테스트가 순회한다 |
+| 4 | `test_prechk_tool.py:895-905`·`:907` 무변경 통과 | 충족 |
+| 5 | `test_tools.py:511-522` 정확 10키 무변경 통과 | 충족 — 신규 경로 키 0건 |
+| 6 | `_dispatch` **41지점** 전건 통과 = 순회 예외 포착의 기계 판정 | 충족. 기본 `RigPort`는 `Patch/FixtureTypes`에 `RuntimeError`를 던지며 순회가 그것을 분류로 흡수한다 |
+| 7 | 트립와이어 갱신 · 보호구역 상수 바이트 동일 · 교차 단정 성립 | **갱신 불필요**(위 별항). 상수 바이트 동일 · 교차 단정 성립 |
+| 8 | 스위트 계수가 baseline 이상 | **2887 passed · 5 skipped · 0 failed** = 2869 + 26 |
+
 ## §F Phase 4 Mode Selection — 확정 (오케스트레이터 소유 · 2026-07-30)
 
 > 본 절은 **오케스트레이터가 첫 run-phase 스폰 전에 작성**하는 구속력 있는 기록이다. `plan.md` §G의 대응 절은 **권고**이며 오케스트레이터가 확정하거나 기각한다. 어긋나면 **본 절이 이긴다.**
