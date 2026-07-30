@@ -259,7 +259,7 @@ BASE = 95687a0    # = origin/main (SONGCUE squash 머지 직후)
 
 | # | 접점 | 상태 | 근거 |
 |---|---|---|---|
-| 1 | **`server/safety/**` PRESERVE 조건부 예외** | **승인** | 사용자 승인(2026-07-29). 강제 사유는 `research.md` §7.4 — 픽스처 주소는 프로퍼티에만 있고 `prop`은 프로덕션 경로로 도달 불가하며(`server/tests/test_architecture.py:27-39`, `:48-61`), `build_prop_query`에 프로덕션 소비자가 0건이다. 우회 4종 전수 배제 |
+| 1 | **`server/safety/**` PRESERVE 조건부 예외** | **승인** | 사용자 승인(2026-07-29). 강제 사유는 `research.md` §7.4 — 픽스처 주소는 프로퍼티에만 있고 `prop`은 프로덕션 경로로 도달 불가하며(`server/tests/test_architecture.py:27-39`, `server/tests/test_architecture.py:48-61`), `build_prop_query`에 프로덕션 소비자가 0건이다. 우회 4종 전수 배제 |
 | 2 | **M0 라이브 세션 접근 가능성** | **승인 · 실측 확인** | onPC 2.4.2 PID 38963 · 응답기 **v1.5.0** · `responder_roundtrip --expect-version 1.5.0` **3/3 PASS** · 쇼파일 베이스라인 인계 기록값과 전량 일치 |
 
 **승인 1의 집행 범위는 순수 추가 4지점으로 한정한다.** 이 목록 밖의 hunk가 `server/safety/**`에 생기면 `AC-PRECHK-015` ③이 실패로 판정한다.
