@@ -1,4 +1,4 @@
-"""PRECHK chokepoint + fixture inventory tests (M1 — AC-PRECHK-013).
+"""PRECHK chokepoint + fixture inventory tests (AC-PRECHK-013 · 001 · 002 · 003 · 004).
 
 The pre-check needs fixture PROPERTIES (addresses live only in properties, not
 in the enumeration payload), and property reads must ride the SAME single
@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import ast
 import inspect
+import json
 import re
 from pathlib import Path
 
@@ -28,6 +29,24 @@ from server.bridge.osc import STATE_ADDRESS, FeedbackMessage
 from server.bridge.protocol import ProtocolError, encode_payload
 from server.measurement.mock_provider import OfflineConsole
 from server.orchestrator.ports import PropertyQueryPort, StateQueryPort
+from server.prechk.inventory import (
+    COMPLETE,
+    FID_UNRESOLVED_MARK,
+    FIXTURE_ROOT,
+    FUNCTION_REFERENCE_PREFIX,
+    INCOMPLETE,
+    PROPERTY_UNREADABLE,
+    PROPERTY_WHITELIST,
+    RETIRED_PATHS,
+    SHAPE_INVALID,
+    InventoryPolicy,
+    InventoryReadError,
+    fid_note,
+    read_inventory,
+    shape_error,
+    slot_path,
+)
+from server.prechk.patch import evaluate_patch
 from server.prechk.query import read_properties
 from server.safety.audit import AuditLog
 from server.safety.console import ConsoleLink, ExecOutcome, LinkTimeouts, StateQueryError
@@ -176,7 +195,11 @@ class TestChokepointBoundary:
         progress = (
             PROJECT_ROOT / ".moai" / "specs" / "SPEC-COPILOT-PRECHK-001" / "progress.md"
         ).read_text(encoding="utf-8")
-        section = progress.split("## §F.")[-1]
+        # §F grew a §F.1 revision, so the LAST chunk is the revision alone.
+        # The record lives in §F and its subsections -- take all of them.
+        parts = progress.split("## §F.")
+        assert len(parts) >= 2, "progress.md에 §F 절이 없다"
+        section = "## §F.".join(parts[1:])
         assert "server/safety/**" in section
         assert "승인" in section
         for approved in (
@@ -328,3 +351,599 @@ class TestReadProperties:
         # pass vacuously.
         with pytest.raises(ValueError):
             read_properties(gate.state_port, "Patch/Stages/1/Fixtures/1", ())
+
+
+# ---------------------------------------------------------------------------
+# In-memory rigs (design §6.1). A consistent rig alone cannot show that
+# detection works -- every verdict converges on "nothing wrong", which is
+# indistinguishable from a scanner that never fires. So the defects are planted
+# here, and the live session only has to show the absence of false positives.
+# ---------------------------------------------------------------------------
+
+#: A property the console refuses to answer.
+UNREADABLE = "<<unreadable-property>>"
+
+#: Measured verbatim: ``prop <fixture> Index`` answered ok=true with this.
+MEASURED_FUNCTION_REF = "function: 0x105b0f048"
+
+#: Footprint widths for the range-overlap branch. The value 29 is the measured
+#: ``DMXChannels`` child count of mode 1; it is INJECTED, never derived.
+RANGE_OVERLAP_WIDTHS = {1: 29, 2: 29, 3: 29, 4: 29}
+FOOTPRINT_SOURCE = "Patch/FixtureTypes/1/DMXModes/1/DMXChannels childCount"
+
+_FIXTURE_SELECTION = re.compile(r"\bFixture \d+\b")
+
+# Property names measured unreadable, or readable but banned as judgement
+# inputs. None of them may appear as a string constant anywhere in the package.
+_FORBIDDEN_PROPERTY_NAMES = frozenset(
+    {
+        "Address",
+        "DMXAddress",
+        "DmxAddress",
+        "BreakAddress",
+        "Break",
+        "Universe",
+        "DMXUniverse",
+        "FID",
+        "FixtureID",
+        "FixtureId",
+        "No",
+        "Index",
+        "CID",
+        "IDType",
+        "ChannelCount",
+        "Channels",
+        "Footprint",
+        "Fixture Id",
+        "Fixture ID",
+    }
+)
+
+
+def fixture_props(
+    patch: str,
+    *,
+    name: str,
+    fixture_type: str = "FixtureType 1",
+    mode: str = "1 Mode 1",
+    fid: str | None = None,
+) -> dict[str, str]:
+    """One fixture's property table as the responder would answer it.
+
+    ``fid`` is stored so a test can prove the inventory never ASKS for it --
+    the pool can answer, the reader must not request.
+    """
+    props = {"Patch": patch, "Name": name, "FixtureType": fixture_type, "Mode": mode}
+    if fid is not None:
+        props["FID"] = fid
+    return props
+
+
+class FixturePool:
+    """In-memory ``Patch/Stages/1/Fixtures`` — a state + property port double.
+
+    Answers what the responder answers: ``node.childCount`` is the TRUE total,
+    ``children`` may be short, a single-node read is never truncated, and one
+    property may fail while its siblings succeed.
+    """
+
+    def __init__(
+        self,
+        slots: dict[int, dict[str, str]],
+        *,
+        child_count: int | None = None,
+        enumerated: tuple[int, ...] | None = None,
+        truncated: bool | None = None,
+        snapshot_names: dict[int, str | None] | None = None,
+    ):
+        self.slots = {slot: dict(props) for slot, props in slots.items()}
+        self.enumerated = tuple(enumerated) if enumerated is not None else tuple(sorted(self.slots))
+        self.child_count = child_count if child_count is not None else len(self.enumerated)
+        self.truncated = (
+            truncated if truncated is not None else self.child_count > len(self.enumerated)
+        )
+        self.snapshot_names = dict(snapshot_names or {})
+        self.state_calls: list[str] = []
+        self.property_calls: list[tuple[str, str]] = []
+
+    def snapshot_name(self, slot: int) -> str | None:
+        if slot in self.snapshot_names:
+            return self.snapshot_names[slot]
+        value = self.slots.get(slot, {}).get("Name")
+        if isinstance(value, str) and value != UNREADABLE and shape_error(value) is None:
+            return value
+        return f"슬롯-{slot}"
+
+    def _slot_of(self, path: str) -> int | None:
+        prefix = f"{FIXTURE_ROOT}/"
+        if not path.startswith(prefix):
+            return None
+        tail = path[len(prefix) :]
+        return int(tail) if tail.isdigit() else None
+
+    def query_state(self, path: str) -> dict:
+        self.state_calls.append(path)
+        if path == FIXTURE_ROOT:
+            return {
+                "ok": True,
+                "path": path,
+                "node": {
+                    "name": "Fixtures",
+                    "class": "Fixtures",
+                    "childCount": self.child_count,
+                },
+                "children": [
+                    {"i": slot, "name": self.snapshot_name(slot), "class": "Fixture"}
+                    for slot in self.enumerated
+                ],
+                "truncated": self.truncated,
+            }
+        slot = self._slot_of(path)
+        if slot is not None and slot in self.slots:
+            return {
+                "ok": True,
+                "path": path,
+                "node": {
+                    "name": self.snapshot_name(slot),
+                    "class": "Fixture",
+                    "childCount": 0,
+                },
+                "children": [],
+                "truncated": False,
+            }
+        return {"ok": False, "path": path, "error": "path segment not found"}
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        self.property_calls.append((path, property_name))
+        slot = self._slot_of(path)
+        props = self.slots.get(slot) if slot is not None else None
+        if props is None or property_name not in props or props[property_name] == UNREADABLE:
+            return {
+                "ok": False,
+                "path": path,
+                "property": property_name,
+                "error": f"property not readable: {property_name}",
+            }
+        return {"ok": True, "path": path, "property": property_name, "value": props[property_name]}
+
+
+def clean_rig_18() -> FixturePool:
+    """18 consistent fixtures: no duplicate address, no truncation.
+
+    DELIBERATELY SYNTHETIC and frozen at 18. The calibration show file has since
+    grown to 19 fixtures and this pool does NOT follow it: binding an in-memory
+    rig to a field show file destroys determinism -- a patch edit on site would
+    turn into a test failure -- and the live 19-slot table is evidence recorded
+    in ``progress.md`` §E.2, not an input here.
+    """
+    slots = {1: fixture_props("1.001", name="RMMXSm1 1")}
+    for offset, slot in enumerate(range(2, 11)):
+        slots[slot] = fixture_props(f"1.{101 + offset * 42:03d}", name=f"Copilot MMX {slot}")
+    for offset, slot in enumerate(range(11, 19)):
+        slots[slot] = fixture_props(f"2.{1 + offset * 50:03d}", name=f"MMX {slot}")
+    return FixturePool(slots)
+
+
+def slot_not_fid() -> FixturePool:
+    """Slot 1 carries fixture id 101, slot 2 carries an unreadable one.
+
+    Both sit at ``1.001``, so the duplicate must be reported by SLOT and must
+    still be found while a fixture id is unavailable. The live rig has
+    slot == FID for every fixture, which makes this distinction unverifiable
+    there (``console/lua/PROTOCOL.md:322-324``).
+    """
+    return FixturePool(
+        {
+            1: fixture_props("1.001", name="스팟 좌", fid="101"),
+            2: fixture_props("1.001", name="스팟 우", fid=UNREADABLE),
+        }
+    )
+
+
+def duplicate_address_pair() -> FixturePool:
+    """Slots 1 and 2 share ``1.010``; slot 3 is unique (non-vacuity)."""
+    return FixturePool(
+        {
+            1: fixture_props("1.010", name="워시 1"),
+            2: fixture_props("1.010", name="워시 2"),
+            3: fixture_props("1.200", name="워시 3"),
+        }
+    )
+
+
+def duplicate_address_triple() -> FixturePool:
+    """Three fixtures on ``1.010`` — one collision, not three pairs."""
+    return FixturePool(
+        {
+            1: fixture_props("1.010", name="워시 1"),
+            2: fixture_props("1.010", name="워시 2"),
+            3: fixture_props("1.010", name="워시 3"),
+            4: fixture_props("1.200", name="워시 4"),
+        }
+    )
+
+
+def same_address_other_universe() -> FixturePool:
+    """``1.001`` and ``2.001`` — the same number, different universes."""
+    return FixturePool(
+        {
+            1: fixture_props("1.001", name="유니버스 1"),
+            2: fixture_props("2.001", name="유니버스 2"),
+        }
+    )
+
+
+def truncated_parent(*, hidden: tuple[int, ...] = ()) -> FixturePool:
+    """``childCount = 40`` with 18 enumerated children and ``truncated = true``.
+
+    ``hidden`` slots EXIST -- a single-node read finds them -- but are absent
+    from the enumeration. That is how per-slot recovery raises detail without
+    ever proving completeness.
+    """
+    slots = {slot: fixture_props(f"1.{slot:03d}", name=f"트러스 {slot}") for slot in range(1, 19)}
+    for slot in hidden:
+        slots[slot] = fixture_props(f"2.{slot:03d}", name=f"복구 {slot}")
+    return FixturePool(slots, child_count=40, enumerated=tuple(range(1, 19)), truncated=True)
+
+
+def truncated_flag_false() -> FixturePool:
+    """``childCount`` exceeds ``len(children)`` while ``truncated`` is FALSE.
+
+    Both responder truncation paths do set the flag, so this pool is the flag
+    lost or tampered with. The count comparison must still say incomplete.
+    """
+    slots = {slot: fixture_props(f"1.{slot:03d}", name=f"트러스 {slot}") for slot in range(1, 19)}
+    return FixturePool(slots, child_count=40, enumerated=tuple(range(1, 19)), truncated=False)
+
+
+def function_ref_property() -> FixturePool:
+    """Slot 1's ``Patch`` is the measured Lua function reference.
+
+    Slot 2 is clean (non-vacuity) and slot 3's ``FixtureType`` is unreadable --
+    a fixture that must be excluded from the consistency judgement rather than
+    counted either way (REQ-PRECHK-009).
+    """
+    return FixturePool(
+        {
+            1: fixture_props(MEASURED_FUNCTION_REF, name="함수참조 1"),
+            2: fixture_props("1.002", name="정상 2"),
+            3: fixture_props("1.100", name="타입불명 3", fixture_type=UNREADABLE),
+        }
+    )
+
+
+def none_string_property() -> FixturePool:
+    """Slot 1's ``Patch`` is the string ``'None'`` — absence spelled out."""
+    return FixturePool(
+        {
+            1: fixture_props("None", name="부재값 1"),
+            2: fixture_props("1.002", name="정상 2"),
+        }
+    )
+
+
+def bad_patch_value(raw: str) -> FixturePool:
+    """Slot 1's ``Patch`` will not parse; slot 2 is clean (non-vacuity)."""
+    return FixturePool(
+        {
+            1: fixture_props(raw, name="주소불명 1"),
+            2: fixture_props("1.002", name="정상 2"),
+        }
+    )
+
+
+def range_overlap_go() -> FixturePool:
+    """Slots 1 and 2 at addresses 1 and 15; slots 3 and 4 at 101 and 143.
+
+    At the measured width of 29 the first pair overlaps and the second pair does
+    not -- 143 minus 101 is the measured 42-channel spacing of the live rig.
+    """
+    return FixturePool(
+        {
+            1: fixture_props("1.001", name="겹침 A"),
+            2: fixture_props("1.015", name="겹침 B"),
+            3: fixture_props("1.101", name="간격 C"),
+            4: fixture_props("1.143", name="간격 D"),
+        }
+    )
+
+
+def range_descope() -> FixturePool:
+    """The same rig as :func:`range_overlap_go`.
+
+    The descope lives in the POLICY, not in the data: ``ASSUMPTION-27`` is
+    NEGATIVE, so the shipped configuration cannot reach a footprint at all and
+    records the check as not performed.
+    """
+    return range_overlap_go()
+
+
+def _retired_path_hits(lines) -> list[str]:
+    return [line for line in lines for dead in RETIRED_PATHS if dead in line]
+
+
+def _fixture_selection_hits(lines) -> list[str]:
+    return [line for line in lines if _FIXTURE_SELECTION.search(line)]
+
+
+def _string_constants(path: Path) -> list[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    return [
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    ]
+
+
+class TestFixtureEnumerationAndWhitelist:
+    """AC-PRECHK-001 — the enumeration path and the property whitelist."""
+
+    def test_enumeration_uses_the_live_path_and_never_a_retired_one(self):
+        inventory = read_inventory(clean_rig_18())
+        queries = inventory.generated_queries()
+        # Non-vacuity FIRST: an empty query list makes every "0 hits" scan below
+        # pass for free.
+        assert len(queries) >= 1, "생성 조회 목록이 비면 0건 스캔이 공허하다"
+        assert inventory.path == "Patch/Stages/1/Fixtures"
+        assert inventory.state_paths[0] == FIXTURE_ROOT
+        assert _retired_path_hits(queries) == []
+        planted = (*queries, f"state {RETIRED_PATHS[0]}", f"state {RETIRED_PATHS[1]}")
+        assert len(_retired_path_hits(planted)) == 2, "스캐너가 심어둔 죽은 경로를 놓쳤다"
+
+    def test_every_queried_path_stays_under_the_fixture_root(self):
+        inventory = read_inventory(clean_rig_18())
+        assert inventory.queried_paths
+        assert all(
+            path == FIXTURE_ROOT or path.startswith(f"{FIXTURE_ROOT}/")
+            for path in inventory.queried_paths
+        )
+
+    def test_requested_property_names_are_the_whitelist(self):
+        inventory = read_inventory(clean_rig_18())
+        assert inventory.queried_properties, "프로퍼티 조회 목록이 비면 부분집합 검사가 공허하다"
+        assert set(inventory.queried_properties) <= set(PROPERTY_WHITELIST)
+        assert set(inventory.queried_properties) == set(PROPERTY_WHITELIST)
+
+    def test_no_code_path_names_a_property_outside_the_whitelist(self):
+        collected: list[str] = []
+        visited = 0
+        for source in sorted(PRECHK_DIR.rglob("*.py")):
+            visited += 1
+            collected.extend(_string_constants(source))
+        assert visited >= 1, f"AST 스캔이 {PRECHK_DIR} 아래 파일을 방문하지 않았다"
+        assert len(collected) >= 1, "AST 스캔이 문자열 상수를 하나도 모으지 않았다"
+        assert set(collected) & _FORBIDDEN_PROPERTY_NAMES == set()
+        assert set([*collected, "Address"]) & _FORBIDDEN_PROPERTY_NAMES == {"Address"}
+
+    def test_whitelist_is_the_measured_four_and_carries_no_space(self):
+        # Non-vacuity: an empty whitelist would satisfy "no space-bearing name"
+        # automatically.
+        assert len(PROPERTY_WHITELIST) >= 1
+        assert "Patch" in PROPERTY_WHITELIST
+        assert set(PROPERTY_WHITELIST) == {"Patch", "FixtureType", "Mode", "Name"}
+        assert [name for name in PROPERTY_WHITELIST if " " in name] == []
+        assert [name for name in (*PROPERTY_WHITELIST, "Fixture Id") if " " in name] == [
+            "Fixture Id"
+        ]
+
+
+class TestValueShapeValidation:
+    """AC-PRECHK-002 — ``ok=true`` is not a licence to adopt the value."""
+
+    def test_a_function_reference_is_a_read_failure_not_a_value(self):
+        inventory = read_inventory(function_ref_property())
+        failures = [failure for failure in inventory.read_failures if failure.slot == 1]
+        assert [failure.property for failure in failures] == ["Patch"]
+        assert failures[0].kind == SHAPE_INVALID
+        assert failures[0].raw_value == MEASURED_FUNCTION_REF
+        record = {record.slot: record for record in inventory.fixtures}[1]
+        assert record.patch_raw is None, "형태 불만족 값이 픽스처 값으로 채택됐다"
+
+    def test_the_none_string_is_a_read_failure(self):
+        inventory = read_inventory(none_string_property())
+        failures = [failure for failure in inventory.read_failures if failure.slot == 1]
+        assert [(failure.property, failure.kind) for failure in failures] == [
+            ("Patch", SHAPE_INVALID)
+        ]
+        assert failures[0].raw_value == "None"
+        assert {record.slot: record for record in inventory.fixtures}[1].patch_raw is None
+
+    def test_a_read_failure_carries_its_reason_and_the_raw_text(self):
+        inventory = read_inventory(function_ref_property())
+        assert inventory.read_failures
+        for failure in inventory.read_failures:
+            assert failure.detail, "판독 실패가 사유 없이 실렸다"
+        detail = next(f.detail for f in inventory.read_failures if f.slot == 1)
+        assert MEASURED_FUNCTION_REF in detail
+
+    def test_a_valid_address_is_not_a_read_failure(self):
+        inventory = read_inventory(clean_rig_18())
+        assert inventory.fixtures, "픽스처가 0개면 '판독 실패 0건'이 공허하다"
+        assert inventory.read_failures == ()
+        assert {"1.001", "2.351"} <= {record.patch_raw for record in inventory.fixtures}
+
+    def test_the_discriminator_is_the_prefix_not_one_pointer(self):
+        other = f"{FUNCTION_REFERENCE_PREFIX}deadbeef"
+        assert other != MEASURED_FUNCTION_REF
+        assert shape_error(other) is not None
+        pool = FixturePool(
+            {
+                1: fixture_props(other, name="다른 포인터"),
+                2: fixture_props("1.002", name="정상"),
+            }
+        )
+        inventory = read_inventory(pool)
+        assert [failure.kind for failure in inventory.read_failures] == [SHAPE_INVALID]
+
+    def test_shape_error_accepts_display_strings_and_rejects_the_three_forms(self):
+        for good in ("1.001", "MMX 19", "FixtureType 1", "1 Mode 1", "Robin MMX Spot"):
+            assert shape_error(good) is None, good
+        for bad in (None, "", "   ", "None", MEASURED_FUNCTION_REF):
+            assert shape_error(bad) is not None, bad
+
+    def test_an_unreadable_property_is_a_different_class_from_a_bad_shape(self):
+        inventory = read_inventory(function_ref_property())
+        kinds = {
+            (failure.slot, failure.property): failure.kind for failure in inventory.read_failures
+        }
+        assert kinds[(3, "FixtureType")] == PROPERTY_UNREADABLE
+        assert kinds[(1, "Patch")] == SHAPE_INVALID
+        assert PROPERTY_UNREADABLE != SHAPE_INVALID
+
+
+class TestCompleteness:
+    """AC-PRECHK-003 — completeness comes from the counts, not the flag."""
+
+    def test_a_short_enumeration_is_incomplete_and_names_the_deficit(self):
+        inventory = read_inventory(truncated_parent())
+        assert inventory.child_count == 40
+        assert inventory.enumerated_count == 18
+        assert inventory.observed_count == 18
+        assert inventory.missing_count == 22
+        assert inventory.completeness == INCOMPLETE
+
+    def test_the_verdict_survives_a_falsified_truncated_flag(self):
+        pool = truncated_flag_false()
+        assert pool.truncated is False
+        inventory = read_inventory(pool)
+        assert inventory.completeness == INCOMPLETE
+        assert inventory.missing_count == 22
+
+    def test_equal_counts_are_complete(self):
+        inventory = read_inventory(clean_rig_18())
+        assert inventory.child_count == 18
+        assert inventory.observed_count == 18
+        assert inventory.missing_count == 0
+        assert inventory.completeness == COMPLETE
+        assert inventory.recovery_boundary is None
+        assert inventory.index_domain_unknown is False
+        assert len(inventory.fixtures) == 18
+
+    def test_recovery_raises_detail_but_never_promotes_to_complete(self):
+        inventory = read_inventory(truncated_parent(hidden=(19, 20)))
+        assert inventory.recovered_slots == (19, 20)
+        assert inventory.recovered_count == 2
+        assert inventory.observed_count == 20
+        assert inventory.missing_count == 20
+        assert inventory.completeness == INCOMPLETE
+        assert inventory.recovery_boundary == 40
+        assert inventory.index_domain_unknown is True
+        assert {record.slot for record in inventory.fixtures if record.recovered} == {19, 20}
+        assert {record.slot for record in inventory.fixtures} == set(range(1, 21))
+
+    def test_the_recovery_arithmetic_closes(self):
+        pools = (
+            clean_rig_18(),
+            truncated_parent(),
+            truncated_parent(hidden=(19, 20)),
+            truncated_flag_false(),
+        )
+        for pool in pools:
+            inventory = read_inventory(pool)
+            assert inventory.observed_count + inventory.missing_count == inventory.child_count
+            assert inventory.recovered_count <= inventory.observed_count
+            assert inventory.still_unobserved_count == inventory.missing_count
+
+    def test_recovery_can_be_disabled_without_changing_the_verdict(self):
+        inventory = read_inventory(
+            truncated_parent(hidden=(19, 20)), InventoryPolicy(recover_truncated=False)
+        )
+        assert inventory.recovered_count == 0
+        assert inventory.recovery_boundary is None
+        assert inventory.index_domain_unknown is True
+        assert inventory.completeness == INCOMPLETE
+        assert inventory.missing_count == 22
+
+    def test_the_inventory_block_carries_exactly_the_schema_keys(self):
+        payload = read_inventory(truncated_parent()).to_dict()
+        assert set(payload) == {
+            "path",
+            "child_count",
+            "observed_count",
+            "recovered_count",
+            "missing_count",
+            "completeness",
+            "recovery_boundary",
+            "index_domain_unknown",
+        }
+
+    def test_an_unreadable_root_is_refused_not_reported_as_an_empty_rig(self):
+        class DeadRoot:
+            def query_state(self, path: str) -> dict:
+                return {"ok": False, "path": path, "error": "path segment not found"}
+
+            def query_property(self, path: str, property_name: str) -> dict:
+                raise AssertionError("must not be reached")
+
+        with pytest.raises(InventoryReadError):
+            read_inventory(DeadRoot())
+
+    def test_a_snapshot_without_a_child_count_is_refused(self):
+        class NoCount:
+            def query_state(self, path: str) -> dict:
+                return {"ok": True, "path": path, "node": {"name": "Fixtures"}, "children": []}
+
+            def query_property(self, path: str, property_name: str) -> dict:
+                raise AssertionError("must not be reached")
+
+        with pytest.raises(InventoryReadError):
+            read_inventory(NoCount())
+
+    def test_a_child_without_an_index_is_a_read_failure_not_a_position(self):
+        pool = FixturePool({1: fixture_props("1.001", name="정상")})
+
+        class NoIndex(FixturePool):
+            def query_state(self, path: str) -> dict:
+                payload = super().query_state(path)
+                if path == FIXTURE_ROOT:
+                    payload["children"] = [{"name": "이름만", "class": "Fixture"}]
+                return payload
+
+        broken = NoIndex(pool.slots, child_count=1)
+        inventory = read_inventory(broken)
+        assert [failure.property for failure in inventory.read_failures] == ["i"]
+        assert inventory.read_failures[0].kind == SHAPE_INVALID
+
+
+class TestFidIsNotAJudgementInput:
+    """AC-PRECHK-004 — the three fixture-id bans."""
+
+    def test_the_judgement_keys_on_the_slot_not_the_fixture_id(self):
+        pool = slot_not_fid()
+        inventory = read_inventory(pool)
+        assert "FID" not in inventory.queried_properties
+        assert ("Patch/Stages/1/Fixtures/1", "FID") not in pool.property_calls
+        evaluation = evaluate_patch(inventory)
+        assert len(evaluation.address_duplicates) == 1
+        members = evaluation.address_duplicates[0].members
+        assert [member.slot for member in members] == [1, 2]
+        assert [member.name for member in members] == ["스팟 좌", "스팟 우"]
+        dumped = json.dumps(evaluation.to_dict(), ensure_ascii=False)
+        assert "101" not in dumped, "FID 값이 결과에 새어 나왔다"
+
+    def test_no_generated_request_selects_a_fixture_by_number(self):
+        inventory = read_inventory(clean_rig_18())
+        queries = inventory.generated_queries()
+        assert len(queries) >= 1, "생성 목록이 비면 'Fixture <n> 0건'이 공허하다"
+        assert _fixture_selection_hits(queries) == []
+        assert _fixture_selection_hits([*queries, "Fixture 7 At 100"]) == ["Fixture 7 At 100"]
+
+    def test_a_slot_reference_is_a_path_never_a_selection(self):
+        assert slot_path(7) == "Patch/Stages/1/Fixtures/7"
+        assert _fixture_selection_hits([slot_path(7)]) == []
+
+    def test_duplicates_are_found_while_the_fixture_id_is_unreadable(self):
+        pool = slot_not_fid()
+        assert pool.slots[2]["FID"] == UNREADABLE
+        evaluation = evaluate_patch(read_inventory(pool))
+        assert len(evaluation.address_duplicates) == 1
+        assert [member.slot for member in evaluation.address_duplicates[0].members] == [1, 2]
+
+    def test_every_fixture_row_marks_the_fixture_id_unresolved(self):
+        evaluation = evaluate_patch(read_inventory(clean_rig_18()))
+        rows = [row.to_dict() for row in evaluation.rows]
+        assert rows
+        assert all(FID_UNRESOLVED_MARK in row["fid_note"] for row in rows)
+        assert fid_note() == FID_UNRESOLVED_MARK
+        assert FID_UNRESOLVED_MARK in fid_note("101")
+        assert "101" in fid_note("101")
