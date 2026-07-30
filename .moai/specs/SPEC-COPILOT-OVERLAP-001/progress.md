@@ -916,7 +916,9 @@ next: "**run-phase 완결 — 독립 run-audit를 세울 것을 권고한다.** 
 ```sh
 git branch --show-current                    # feature/SPEC-COPILOT-OVERLAP-001
 git status --porcelain                       # 빈 출력
-git log --oneline -1                         # 56977e6 docs(overlap): spec status draft -> in-progress …
+git log --oneline -3                         # 최신 커밋이 docs(overlap) 계열이면 run-phase 완결 지점이다.
+                                             #  SHA를 여기 적지 않는다 — 이 절을 쓰는 커밋이 그 값을
+                                             #  바꾸므로 적는 순간 거짓이 된다. 판정은 아래 스위트 계수로 한다.
 find server -name __pycache__ -type d -exec rm -rf {} + ; uv run pytest server/tests/ -q
                                              # 2920 passed · 5 skipped · 0 failed
 uv run pytest server/tests/test_overlap_preserve.py -q          # 23 passed
