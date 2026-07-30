@@ -42,11 +42,16 @@ the stored text is screened as if it had been sent bare. ``Off`` is an invoking
 verb (``server/safety/blacklist.yaml:29``) and its target ``Group`` is not a
 recognized reference type (``server/safety/classify.py:44``), so ``Off Group
 <n>`` resolves to no verifiable reference and the whole authoring command is HELD
-(``server/safety/expand.py:83``). The evidence and the recommendation are
-``.moai/state/verify/prechk-m0/MacroAuthoringProbe.md:138``; the value form
-``Group <n> At 0`` (``server/rulebook/assets/v2.4.2/00_grammar.md:54``,
-``server/rulebook/assets/v2.4.2/31_choreography_patterns.md:35``) classifies safe
-and is what this module stores.
+(``server/safety/expand.py:83``). ``server/tests/test_prechk_macro.py`` pins that
+classification difference directly, so the reasoning is checked rather than
+asserted in prose. The value form ``Group <n> At 0`` classifies safe and is what
+this module stores; it was MEASURED on the live console in the M4 supplementary
+session and appears in the ``GO: ASSUMPTION-26`` prefix line of
+``.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md`` §E.2, which is the canon
+``server/tests/test_prechk_macro.py`` compares every stored payload against.
+The rulebook shows ``At`` as a value verb but never this exact target form
+(``server/rulebook/assets/v2.4.2/00_grammar.md:54`` gives ``Fixture 1 Thru 10 At
+80``), so the rulebook is NOT the authority here — the measurement is.
 
 The on line is ``On Group <n>``, the form M0 measured with its effect confirmed
 by re-query. Note that ``On`` sits in the SAME invoking-verb list as ``Off``
@@ -54,8 +59,9 @@ by re-query. Note that ``On`` sits in the SAME invoking-verb list as ``Off``
 for human approval on the production path — a defined outcome
 (``AC-PRECHK-014`` ④), and the gate screens bundles whole, so a hold means zero
 sends rather than a half-written macro. M0's probe channel bypasses the gate
-(``.moai/state/verify/prechk-m0/MacroAuthoringProbe.md`` §1.3), which is why the
-measurement did not surface it.
+(the driver reaches ``server.bridge`` directly, which is why the measurement did
+not surface the hold; the gate path is exercised by
+``server/tests/test_prechk_tool.py`` instead).
 
 No execution surface lives here
 ------------------------------
@@ -438,6 +444,15 @@ def build_response_check_macro(groups: GroupPool, policy: MacroPolicy) -> MacroR
                 GROUPS_UNADDRESSABLE,
                 skipped_kind=_SKIP_NO_GROUPS,
                 detail=", ".join(groups.unaddressable),
+            )
+        if groups.truncated:
+            # "이 리그에 그룹이 없다" would be a claim about a pool we did not
+            # finish reading. `acceptance.md` §D defines the fully-truncated
+            # enumeration as an INCOMPLETE REPORT, never a negative finding.
+            return _not_created(
+                PARTIAL_GROUP_COVERAGE,
+                skipped_kind=_SKIP_NO_GROUPS,
+                detail="열거가 전부 절단되어 대상 그룹을 하나도 관측하지 못했다",
             )
         return _not_created(GROUP_POOL_EMPTY, skipped_kind=_SKIP_NO_GROUPS)
 

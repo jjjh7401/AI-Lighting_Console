@@ -182,7 +182,7 @@ status: draft (v0.1.0, 2026-07-29) · Tier L · 출처: `docs/proposals/2026-07-
 
 | 픽스처 이름 | 심은 사실 | 죽이는 결함 | 관련 AC |
 |---|---|---|---|
-| `clean_rig_18` | 실측 리그와 같은 정합 주소, FID 중복 없음, 절단 없음 | 오탐 | `AC-PRECHK-006`, `AC-PRECHK-009`, `AC-PRECHK-012` |
+| `clean_rig_18` | **의도적 합성 정합 리그**(라이브 미러 아님 — run-phase 결정, `progress.md` §E.2). 정합 주소, FID 중복 없음, **열거 완전** | 오탐 | `AC-PRECHK-006`, `AC-PRECHK-012` |
 | `slot_not_fid` | 슬롯 1, FID 101 | 슬롯을 FID로 쓰는 구현 | `AC-PRECHK-004`, `AC-PRECHK-011` |
 | `duplicate_address_pair` | 서로 다른 슬롯 2개가 `1.001` | 주소 중복 미탐 | `AC-PRECHK-006` |
 | `duplicate_address_triple` | 서로 다른 슬롯 3개가 `1.001` | 쌍 단위 과다 카운트 | `AC-PRECHK-006` |

@@ -4,7 +4,7 @@ title: "프리쇼 패치 점검 + 응답 확인 매크로 생성 (Pre-Show Patch
 version: "0.1.0"
 status: draft
 created: 2026-07-29
-updated: 2026-07-29
+updated: 2026-07-30
 author: manager-spec
 priority: P2
 phase: "Phase 3 이후 차별화 기능 (P2 계층 착수)"
@@ -116,13 +116,15 @@ related_specs: [SPEC-COPILOT-BUSKWIZ-001, SPEC-COPILOT-SONGCUE-001, SPEC-COPILOT
 
 ### PRESERVE — 무변경 대상
 
-`server/looks/{schema,loader,roles,resolver,instantiate,matching}.py` · `server/looks/library/` · `server/web/preview.py` · **`console/lua/**`** · `server/rulebook/assets/v2.4.2/**` · `server/orchestrator/tools.py`의 `_PROGRAMMER_STATE_COMMANDS`와 dedupe 실행 루프 · **`server/safety/**` — 단 아래 한 가지 예외(승인 대기)**.
+`server/looks/{schema,loader,roles,resolver,instantiate,matching}.py` · `server/looks/library/` · `server/web/preview.py` · **`console/lua/**`** · `server/rulebook/assets/v2.4.2/**` · `server/orchestrator/tools.py`의 `_PROGRAMMER_STATE_COMMANDS`와 dedupe 실행 루프 · **`server/safety/**` — 단 아래 한 가지 예외(승인·집행 완료)**.
 
-> **`server/safety/**`의 조건부 예외 — 강제된 것이며 사용자 승인이 필요하다.** 본 SPEC의 1차 산출물은 픽스처 **주소**를 읽어야 하고 주소는 **프로퍼티에만** 있다(`research.md` §4.2). 그런데 프로퍼티 조회(`prop`)는 **프로덕션 경로로 도달할 수 없다** — OSC 송신 표면을 import할 수 있는 디렉터리가 `server/bridge/` · `server/safety/` · `server/tests/` 셋으로 **테스트에 의해 강제**되고(`server/tests/test_architecture.py:27-39`, `server/tests/test_architecture.py:48-61` — `REQ-MVP-029`), `build_prop_query`에는 프로덕션 소비자가 **0건**이다. 즉 신규 모듈은 구조적으로 프로퍼티를 읽을 수 없고, 유일한 경로는 **초크포인트에 조회 메서드를 추가하는 것**이다. 우회 4종을 전수로 배제한 근거는 `research.md` §7.4다.
+> **`server/safety/**`의 조건부 예외 — 강제된 것이며 사용자 승인을 요구했다.** 본 SPEC의 1차 산출물은 픽스처 **주소**를 읽어야 하고 주소는 **프로퍼티에만** 있다(`research.md` §4.2). 그런데 프로퍼티 조회(`prop`)는 **프로덕션 경로로 도달할 수 없었다** — OSC 송신 표면을 import할 수 있는 디렉터리가 `server/bridge/` · `server/safety/` · `server/tests/` 셋으로 **테스트에 의해 강제**되고(`server/tests/test_architecture.py:27-39`, `server/tests/test_architecture.py:48-61` — `REQ-MVP-029`), `build_prop_query`에는 프로덕션 소비자가 **0건**이었다. 즉 신규 모듈은 구조적으로 프로퍼티를 읽을 수 없고, 유일한 경로는 **초크포인트에 조회 메서드를 추가하는 것**이었다. 우회 4종을 전수로 배제한 근거는 `research.md` §7.4다.
 >
 > **예외의 범위는 순수 추가 4지점으로 한정한다** — `server/safety/console.py`에 `query_property`(기존 `query_state`와 동형) · `server/orchestrator/ports.py`에 대응 포트 프로토콜 · `server/safety/gate.py`에 위임 노출 · 테스트 대역 1건. **기존 심볼·시그니처는 무변경**이며 게이트의 스크리닝 의미론과 `REQ-MVP-029`의 단일 초크포인트 원칙은 **강화된다**(새 읽기가 초크포인트 밖으로 새지 않는다).
 >
-> **이 예외는 아직 승인되지 않았다.** `plan.md`의 사용자 접점이 승인 절차를 소유하며, 승인 전에는 해당 파일을 변경하지 않는다. 승인이 거부되면 본 SPEC의 1차 산출물이 성립하지 않으므로 **범위 재조정이 필요하다** — 그 분기도 `plan.md`가 적는다.
+> **이 예외는 승인되고 집행됐다 (승인 2026-07-29 · 집행 2026-07-30).** `plan.md`의 사용자 접점이 승인 절차를 소유했고 승인 기록은 `progress.md` §F의 사용자 접점 표다. M1이 4지점을 순수 추가로 집행했으며 그 hunk 내역은 `progress.md` §E.2의 M7 절이 전수로 적는다 — `server/safety/console.py`는 hunk 3개 전부 순수 추가(삭제 0행)이고 `server/safety/gate.py`는 추가 2개와 독스트링 1행 정정이다. **금지 항목(기존 심볼·시그니처 변경 · 프로토콜 변경 · 스크리닝 의미론 변경)에 해당하는 hunk는 0건**이며 `AC-PRECHK-015` ③이 그것을 기계로 확인한다. 목록 밖의 `server/safety/**` hunk는 여전히 실패로 판정된다.
+>
+> **거부 분기는 발동하지 않았다.** 승인이 거부되면 1차 산출물이 성립하지 않아 범위 재조정이 필요했고 그 분기는 `plan.md`가 적었으나, 승인으로 해소됐다. 이 문장을 지우지 않고 남기는 이유는 절차적이다 — 조건부 예외가 **어떤 조건으로** 열렸는지가 후속 SPEC이 같은 예외를 요구할 때의 선례다.
 
 `server/looks/report.py`는 **재사용하되 확장 가능**하다(REQ-PRECHK-017의 공개 접근자) — 다만 선행 SPEC의 테스트가 그 계약을 고정하므로 파괴적 변경은 즉시 회귀로 드러난다.
 

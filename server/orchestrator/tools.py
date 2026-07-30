@@ -48,7 +48,7 @@ from server.orchestrator.ports import (
     StateQueryPort,
 )
 from server.prechk.inventory import InventoryReadError, read_inventory
-from server.prechk.macro import GroupPool, MacroPolicy, build_response_check_macro
+from server.prechk.macro import MacroPolicy, build_response_check_macro
 from server.prechk.macro import groups_from_snapshot as read_group_pool
 from server.prechk.patch import evaluate_patch
 from server.prechk.report import build_report as build_precheck_report
@@ -1243,6 +1243,9 @@ def build_toolset(
         def query_property(self, path: str, property_name: str) -> dict:
             return self._prop.query_property(path, property_name)
 
+    class _MacroPoolIncomplete(RuntimeError):
+        """The macro pool enumeration was short, so no slot can be called free."""
+
     def _free_macro_slot(payload: object) -> int:
         """Lowest positive slot the macro pool does not already occupy.
 
@@ -1250,12 +1253,31 @@ def build_toolset(
         rig identifiers from the schema, and slot 1 holds the responder's own
         macro on the measured rig, so a default would make overwriting it the
         quiet outcome.
+
+        The occupied set is trusted ONLY when the enumeration is complete.
+        ``node.childCount`` is the true total while ``children`` may be truncated
+        (``console/lua/copilot_responder.lua:634-639`` — the path this SPEC
+        demonstrated live at nineteen fixtures). A short read makes the occupied
+        set a SUBSET, so the "lowest free" answer can name an occupied slot and
+        the following ``Store Macro <n>`` would overwrite the operator's macro.
+        That is the same count-vs-flag discipline ``REQ-PRECHK-004`` makes a
+        requirement, applied to the one path in this SPEC that writes.
         """
-        taken: set[int] = set()
-        if isinstance(payload, dict):
-            for child in payload.get("children") or ():
-                if isinstance(child, dict) and isinstance(child.get("i"), int):
-                    taken.add(child["i"])
+        if not isinstance(payload, dict):
+            raise _MacroPoolIncomplete("macro pool payload is not a mapping")
+        children = [c for c in (payload.get("children") or ()) if isinstance(c, dict)]
+        node = payload.get("node")
+        child_count = node.get("childCount") if isinstance(node, dict) else None
+        if not isinstance(child_count, int):
+            raise _MacroPoolIncomplete("macro pool reported no childCount")
+        if child_count > len(children):
+            raise _MacroPoolIncomplete(
+                f"macro pool enumeration is short: childCount {child_count} "
+                f"but {len(children)} children returned"
+            )
+        taken = {c["i"] for c in children if isinstance(c.get("i"), int)}
+        if len(taken) != len(children):
+            raise _MacroPoolIncomplete("macro pool children did not all carry a slot index")
         slot = 1
         while slot in taken:
             slot += 1
@@ -1283,11 +1305,19 @@ def build_toolset(
         macro = None
         if create_macro:
             try:
-                pool = read_group_pool(state_port.query_state(rig_paths["groups"]))
-            except Exception:
-                # An unreadable group pool is an EMPTY pool, not an invented one:
-                # the macro axis then answers with a reason (REQ-PRECHK-011).
-                pool = GroupPool()
+                groups_payload = state_port.query_state(rig_paths["groups"])
+            except Exception as error:
+                # A console that did not answer is NOT a rig without groups.
+                # Substituting an empty pool would put "리그에 그룹이 없어…" in front
+                # of the user about a rig whose group pool we never read — the same
+                # class of defect M8 caught in the completeness label. The sibling
+                # read below treats its own failure this way, and `acceptance.md`
+                # §D fixes it: 조회 실패 → is_error=True (정정 가능).
+                return _error_result(call, f"group pool unreadable: {error}")
+            try:
+                pool = read_group_pool(groups_payload)
+            except Exception as error:
+                return _error_result(call, f"group pool unreadable: {error}")
             try:
                 slot = _free_macro_slot(state_port.query_state(rig_paths["macros"]))
             except Exception as error:
@@ -1312,8 +1342,13 @@ def build_toolset(
                     name=call.name,
                     content=json.dumps(payload, ensure_ascii=False),
                     # A gate hold or a failed line IS an error: the model must
-                    # react. A rig that simply has no groups is an ANSWER.
-                    is_error=inner.result.is_error,
+                    # react. Two things are NOT errors — a rig with no groups is
+                    # an ANSWER, and a LiveLock demotion is the lock doing its
+                    # job, which `AC-PRECHK-014` ④ separates from a hold. The
+                    # sibling tools demote the same way.
+                    is_error=False
+                    if payload["macro_execution"].get("gate_status") == _LOCKED
+                    else inner.result.is_error,
                 ),
                 command_outcomes=inner.command_outcomes,
             )

@@ -148,6 +148,29 @@ class ClearingGate:
         return _Screen(cleared=True, status="cleared", notice="", commands=())
 
 
+class LockedGate:
+    """LiveLock is engaged: nothing is sent and the status says why.
+
+    Distinct from :class:`HoldingGate` on purpose — ``AC-PRECHK-014`` ④ makes a
+    hold an error (the model must react) and a lock an answer (the lock is doing
+    its job). ``server/safety/gate.py`` reports the lock as ``status='locked'``.
+    """
+
+    def __init__(self):
+        self.screened: list[list[str]] = []
+
+    def screen(self, commands):
+        self.screened.append(list(commands))
+        return _Screen(
+            cleared=False,
+            status="locked",
+            notice="라이브 락 — 송신하지 않았습니다",
+            commands=tuple(
+                _Decision(command=c, status="locked", reasons=("라이브 락",)) for c in commands
+            ),
+        )
+
+
 def _registry(*, rig=None, port=None, gate=None):
     rig = rig or RigPort()
     return build_toolset(
@@ -371,3 +394,108 @@ class TestErrorConvention:
         # One bad property must not lose the readable fixture.
         assert payload["inventory"]["observed_count"] == 2
         assert execution.result.is_error is False
+
+
+class TestPoolReadFailuresAreNotRigFindings:
+    """run-audit P1-2 · P1-3 — a failed read is never a statement about the rig."""
+
+    def test_a_group_pool_read_failure_is_an_error_not_a_no_groups_answer(self):
+        class DeadGroups(RigPort):
+            def query_state(self, path: str) -> dict:
+                if path == "DataPool/Groups":
+                    return {"ok": False, "path": path, "error": "timeout"}
+                return super().query_state(path)
+
+        execution = _dispatch(_registry(rig=DeadGroups(), gate=ClearingGate()), create_macro=True)
+        # acceptance.md §D: 조회 실패 -> is_error=True (정정 가능).
+        assert execution.result.is_error is True
+        # And it must NOT claim the rig has no groups -- we never read the pool.
+        assert "그룹이 없어" not in execution.result.content
+
+    def test_a_group_pool_transport_failure_is_an_error_too(self):
+        class RaisingGroups(RigPort):
+            def query_state(self, path: str) -> dict:
+                if path == "DataPool/Groups":
+                    raise RuntimeError("no reply within 3.0s")
+                return super().query_state(path)
+
+        execution = _dispatch(
+            _registry(rig=RaisingGroups(), gate=ClearingGate()), create_macro=True
+        )
+        assert execution.result.is_error is True
+        assert "그룹이 없어" not in execution.result.content
+
+    def test_a_truncated_macro_pool_refuses_to_name_a_free_slot(self):
+        class TruncatedMacros(RigPort):
+            def query_state(self, path: str) -> dict:
+                if path == "DataPool/Macros":
+                    # childCount 4 but only slot 1 returned: slots 2..4 are taken
+                    # and invisible, so "lowest free" would answer 2 and the
+                    # following `Store Macro 2` would overwrite the operator's.
+                    return {
+                        "ok": True,
+                        "path": path,
+                        "node": {"name": "Macros", "class": "Macros", "childCount": 4},
+                        "children": [{"i": 1, "name": "Copilot Go", "class": "Macro"}],
+                        "truncated": True,
+                    }
+                return super().query_state(path)
+
+        port = RecordingExecutionPort()
+        execution = _dispatch(
+            _registry(rig=TruncatedMacros(), port=port, gate=ClearingGate()), create_macro=True
+        )
+        assert execution.result.is_error is True
+        assert port.executed == [], "a slot was chosen from an incomplete enumeration"
+
+    def test_a_complete_macro_pool_still_picks_the_lowest_free_slot(self):
+        # Non-vacuity: the count check must not have disabled the happy path.
+        port = RecordingExecutionPort()
+        _dispatch(
+            _registry(rig=RigPort(macros=(1, 2, 3)), port=port, gate=ClearingGate()),
+            create_macro=True,
+        )
+        assert [c for c in port.executed if c.startswith("Store Macro 4")]
+
+    def test_a_macro_pool_child_without_a_slot_index_refuses_too(self):
+        class NamelessSlots(RigPort):
+            def query_state(self, path: str) -> dict:
+                if path == "DataPool/Macros":
+                    return {
+                        "ok": True,
+                        "path": path,
+                        "node": {"name": "Macros", "class": "Macros", "childCount": 1},
+                        "children": [{"name": "Copilot Go", "class": "Macro"}],
+                        "truncated": False,
+                    }
+                return super().query_state(path)
+
+        execution = _dispatch(
+            _registry(rig=NamelessSlots(), gate=ClearingGate()), create_macro=True
+        )
+        assert execution.result.is_error is True
+
+
+class TestLiveLockDemotion:
+    """run-audit P1-4 — AC-PRECHK-014 ④ separates a hold from a lock."""
+
+    def test_a_locked_gate_is_not_an_error(self):
+        port = RecordingExecutionPort()
+        gate = LockedGate()
+        execution = _dispatch(_registry(port=port, gate=gate), create_macro=True)
+        assert gate.screened, "the gate never saw a bundle"
+        assert port.executed == [], "a locked gate must send nothing"
+        # The lock doing its job is an ANSWER, not a correctable mistake.
+        assert execution.result.is_error is False
+
+    def test_a_locked_gate_still_returns_the_report_and_the_lock_status(self):
+        payload = json.loads(
+            _dispatch(_registry(gate=LockedGate()), create_macro=True).result.content
+        )
+        assert payload["macro_execution"]["gate_status"] == "locked"
+        assert payload["inventory"]["observed_count"] == 3
+
+    def test_a_hold_is_still_an_error(self):
+        # The two states must not be collapsed in either direction.
+        execution = _dispatch(_registry(gate=HoldingGate()), create_macro=True)
+        assert execution.result.is_error is True

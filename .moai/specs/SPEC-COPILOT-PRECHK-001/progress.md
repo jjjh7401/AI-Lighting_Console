@@ -233,7 +233,7 @@ next: "**Kickoff 접점 2건 승인 완료 · §F 작성 완료**(첫 run-phase 
 
 ```
 GO: ASSUMPTION-25 literal=prop Patch/Stages/1/Fixtures/<slot> Patch effect=슬롯 1~19 전량에서 Patch·FixtureType·Mode·Name 76건 조회 전부 ok=true, 판독 실패 0건, 미관측 19번째를 Patch/Stages/1/Fixtures/19 단일 조회로 채워 name='MMX 19' Patch='2.401' 실측
-GO: ASSUMPTION-26 literal=Store Macro 91 ; Store Macro 91.1 ; Set Macro 91.1 Property 'Command' 'On Group 11' effect=DataPool/Macros childCount 1에서 2로 증가하고 자식에 'Macro 91' 출현, DataPool/Macros/91 childCount 0에서 1로 증가해 'MacroLine 1' 출현, prop DataPool/Macros/91/1 Command 재조회 값 'On Group 11'
+GO: ASSUMPTION-26 literal=Store Macro 91 ; Store Macro 91.1 ; Set Macro 91.1 Property 'Command' 'On Group 11' ; Set Macro 91.1 Property 'Command' 'Group 11 At 0' effect=DataPool/Macros childCount 1에서 2로 증가하고 자식에 'Macro 91' 출현, DataPool/Macros/91 childCount 0에서 1로 증가해 'MacroLine 1' 출현, prop DataPool/Macros/91/1 Command 재조회 값 'On Group 11', 그리고 M4 보강 세션에서 같은 저작 문법으로 소등 페이로드를 저장해 prop DataPool/Macros/91/1 Command 재조회 값 'Group 11 At 0'
 DESCOPE: ASSUMPTION-27 표시 문자열 파싱 없이 점유폭에 도달하는 경로가 0건이며 이 판정은 후보 전수 12건을 닫은 뒤에 내렸다. 객체 경로 순회 3종(Patch/Stages/1/Fixtures/1/FixtureType 그리고 같은 픽스처의 /Mode 와 /DMXChannels)이 전부 path segment not found이고 픽스처 노드 childCount는 0이다. 인덱스 반환 후보 프로퍼티 11종 중 판독 가능은 No(값 '1' — 슬롯이며 타입 인덱스가 아니다)와 Index(ok=true인데 값이 'function: 0x…' 형태의 Lua 함수 참조)뿐이다. 동등 조인 프로퍼티는 없다 — Patch/FixtureTypes/1 의 판독 가능 프로퍼티는 Name 'Robin MMX Spot' · ShortName 'RMMXSm1' · No '1' · Manufacturer 'Robe'이고 픽스처가 주는 'FixtureType 1'과 일치하는 값이 0건이다. 역방향 열거도 없다 — Patch/FixtureTypes/1 의 자식 8종은 전부 정의 컨테이너이고 픽스처 목록이 아니다. Patch 루트의 다른 주소공간 컨테이너도 부정이다 — DmxUniverses 와 DmxAddresses 와 RTChannels 와 UIChannels 와 FixtureTypesOverview 를 열거하고 프로퍼티까지 발화했으나 어느 노드도 픽스처 연결이나 채널 점유를 싣지 않는다. 폭 유일성 우회도 성립하지 않는다 — 모드 4의 DMXChannels childCount 가 31이고 모드 1과 2와 3의 29와 다르다. 구간 겹침 판정만 미수행이고 주소 중복 판정은 어느 분기에서도 수행된다
 GO: ASSUMPTION-28 literal=Store Page 2 ; Label Page 2 'PRECHK Probe' effect=DataPool/Pages childCount 1에서 2로 증가하고 자식에 'Page 2' 출현, prop DataPool/Pages/2 Name 재조회 값 'PRECHK Probe'
 GO: ASSUMPTION-29 literal=Assign Sequence 20 At Executor 103 ; Delete Executor 103 effect=열거에 부재했던 인덱스 3이 배정 뒤 DataPool/Pages/1 자식으로 출현(childCount 9에서 10)하고 삭제 뒤 다시 사라져 childCount 9로 복귀, 즉 열거 부재가 빈 익스큐터를 뜻하고 그 인덱스가 주소형 <인덱스 더하기 100>으로 도달 가능하다
@@ -539,6 +539,100 @@ scout가 정적으로 예측한 것 1건이 라이브와 일치했다 — **`pag
 
 전체 스위트 **2711 passed · 5 skipped · 0 failed**(회귀 테스트 1건 추가). `ruff check` / `format --check` clean.
 
+## §E.2a Run-audit 1회차 — FAIL 0.695 → 지적 14건 처리 (2026-07-30)
+
+독립 감사자(작성자가 아닌 주체)가 커밋 `b355469` 시점의 run-phase를 채점했다. 원문은 `.moai/state/verify/prechk-runaudit/AUDIT-1.md`이며 그 경로가 `.gitignore:206` 대상이므로 **본 절이 추적되는 사본이다.**
+
+**Verdict: FAIL · 가중합 0.695 / 기준선 0.85 · 지적 14건(P1 4 · P2 7 · P3 3).**
+
+| 축 | 가중치 | 점수 | 감사 요지 |
+|---|---:|---:|---|
+| 인용 정확성 | 20% | 0.76 | `server/orchestrator/tools.py` 좌표 18건 중 17건이 M6 편집으로 어긋남 · 룰북 인용 2건이 리터럴을 담지 않음 · 계수 오류 2건 |
+| 교차 정합 | 30% | 0.58 | P1 4건이 전부 이 축 — 출하 코드가 `REQ-PRECHK-012`·`acceptance.md` §D·`AC-PRECHK-014` ④와 어긋남 |
+| 요구-AC 정합 | 15% | 0.74 | REQ 20/20 커버·역추적 20행·배정 17은 전건 재현. 감점은 `REQ-PRECHK-012` 미준수와 계수 비교가 두 풀 중 하나에만 적용된 것 |
+| AC 기계검증성 | 15% | 0.72 | 게이트가 결함을 **비껴간** 지점 4곳 |
+| 증거 등급 규율 | 10% | 0.72 | 오등급 0건이나 §E.2 이후 등급 태그가 0개 |
+| 범위 경계 | 5% | 0.94 | 모범적 — PRESERVE·초크포인트·예외목록 전건 통과 |
+| 미결 은닉 | 5% | 0.62 | 자기 결함 3건 자진 보고는 강한 긍정. 감점은 `REQ-PRECHK-012` 이탈 미기록 |
+
+**감사가 재현해 정확하다고 확인한 것**: 계수 8종 전건 일치(REQ 20 · AC 17 · 역추적 20행 · 마일스톤 9 · AC배정 17 · `ASSUMPTION` 6 · 슬롯 5 · 결정 7) · 접두 행 6행 동일 분포 · **`GO:` 4행의 `effect=`가 4/4 재조회이며 `Cmd` 접수만 인용한 행 0건** · M8 기대결과 6/6 원시 산출물 일치 · 전체 스위트 2711·5·0 정확 재현 · PRESERVE diff 빈 출력 + 10경로 BASE 실재 · `server/safety/**` 삭제 1행이 **정말로 독스트링** · `test_architecture.py`가 BASE와 바이트 동일 · 뮤테이션 3건 직접 재현(전건 비공허 사망 + sha256 복원 + 재통과) · **`AC-PRECHK-017`이 매크로 발화를 요구하지 않는다는 작성자 판단이 원문 대조로 옳음**.
+
+### 처리 표 — 14건
+
+| # | 등급 | 지적 | 처리 |
+|---|---|---|---|
+| **P1-1** | P1 | 매크로 소등 라인 `Group <n> At 0`이 **M0 미실측 리터럴**이며(`steps.jsonl`의 `exec` 24건에 `At 0`·`Off ` 0건) `REQ-PRECHK-012`·`AC-PRECHK-010` ①을 위반. 게이트가 구조적으로 비껴감(대조 전 페이로드 삭제 + ON 한정 필터) + 소등 형태가 테스트에 전사 | **닫힘 — 라이브로 측정했다.** M4 보강 세션에서 `Set Macro 91.1 Property 'Command' 'Group 11 At 0'`을 발화하고 재조회로 `Command` = `'Group 11 At 0'` 확인. 대조군으로 `Off Group 11`도 저장 가능함을 확인해 **치환 이유가 저장 가능성이 아니라 프로덕션 게이트의 재귀 분류**임을 입증. `GO: ASSUMPTION-26` 접두 행에 그 리터럴을 추가하고, 테스트를 **ON 한정 필터 제거 + 전 페이즈 대조**로 바꾸고 전사를 정본 대조로 교체. 쇼파일 복구 후 baseline 6경로 전항 일치 |
+| **P1-2** | P1 | 그룹 풀 판독 실패를 빈 풀로 치환해 *"리그에 그룹이 없어…"* 라는 **거짓 문자열**과 `is_error=False`를 냄. `acceptance.md` §D는 `is_error=True`를 요구하고 같은 SPEC의 `server/prechk/inventory.py:75-81`이 정반대 규율을 못박음 | **닫힘** — `server/orchestrator/tools.py`가 그룹 풀 판독 실패를 `_error_result`로 답한다(전송 실패와 `ok=false` 양쪽). 회귀 테스트 2건 신설 |
+| **P1-3** | P1 | `_free_macro_slot`이 `node.childCount`를 보지 않아 **절단된 매크로 풀에서 점유 슬롯을 골라 기존 매크로를 덮어쓴다.** 본 SPEC의 유일한 쓰기 경로가 본 SPEC의 1급 요구(`REQ-PRECHK-004` 계수 비교)를 지키지 않음 | **닫힘** — 계수 비교를 넣고 불완전 열거에서는 슬롯을 고르지 않고 오류로 답한다. 슬롯 인덱스가 없는 자식도 거부. 회귀 테스트 3건(절단 거부 · 비공허 정상경로 · 인덱스 부재 거부) |
+| **P1-4** | P1 | `AC-PRECHK-014` ④의 **LiveLock 강등이 구현·테스트 양쪽에 없다.** 형제 툴 2개에는 있음. 게이트 보류(참)와 LiveLock(거짓)을 한 덩어리로 뭉갬 | **닫힘** — `gate_status == _LOCKED`면 `is_error=False`로 강등한다. `LockedGate` 대역과 회귀 테스트 3건(락은 답변 · 리포트·상태 보존 · 보류는 여전히 오류) |
+| **P2-1** | P2 | 그룹 열거가 **전부 절단**돼도 같은 거짓 라벨이 나가고 절단 신호가 버려짐. `acceptance.md` §D는 같은 케이스를 *"불완전 보고"* 로 정의 | **닫힘** — `groups.truncated`면 `PARTIAL_GROUP_COVERAGE`로 답한다. 회귀 테스트 2건(절단은 절단으로 · **진짜 0그룹은 여전히 부재로** — 비공허성) |
+| **P2-2** | P2 | `tests_added: 216`이 자기 내역 합(221)과 스위트 델타(221) 양쪽과 어긋남 | **닫힘** — §E.3을 실측값으로 정정. 수정 후 현재값은 **231** |
+| **P2-3** | P2 | 뮤테이션 회계 불성립 — M0·M8 미집행 사유 미기록, M2·M3·M4의 20건이 집계만이라 채점 불가, `mutations_executed: 34`가 어떤 재구성과도 불일치 | **부분 닫힘** — 아래 「뮤테이션 회계」 절에서 미집행 사유를 적고 계수를 정정한다. **M2·M3·M4 20건의 개별 증거는 복원하지 못한다** — 워커 로그가 `.gitignore:206` 아래에 있고 그 20건은 워커가 자기 보고로만 남겼다. **증거 부재로 기록하고 재집행하지 않았다**(재집행하면 다른 사람이 다른 뮤테이션을 돌린 것이 되어 원래 주장을 검증하지 못한다) |
+| **P2-4** | P2 | `AC-PRECHK-006` ④의 둘째 연언이 테스트에서 반대로 단정되는데 17/17 PASS로 계상 | **닫힘** — `acceptance.md` `AC-PRECHK-006` ④와 `design.md` §6.1의 `clean_rig_18` 행을 **의도적 합성·열거 완전**으로 정정하고, 불완전 입력의 한정 유지는 `truncated_parent`와 `AC-PRECHK-009`가 소유함을 명시 |
+| **P2-5** | P2 | `ASSUMPTION-27` 부정이 **한정 없이** 단정됐고 후보 12건이 전수가 아님(감사가 2건 추가) | **닫힘** — 아래 「`ASSUMPTION-27` 주장 범위 정정」 절에서 주장을 *"변경하지 않은 응답기 읽기 표면 위에서, 실제 발화한 프로퍼티명 집합에 한정해 0건"* 으로 좁히고 감사의 후보 2건을 미측정으로 등재 |
+| **P2-6** | P2 | 증거 등급 규약이 §E.2 전체에서 버려짐(오등급 0건, 무등급) | **부분 닫힘** — 아래 「증거 등급 규약」 절에서 §E.2의 규약을 **절 단위**로 선언한다. 563행에 태그를 소급 부착하지는 않았다 |
+| **P2-7** | P2 | `server/orchestrator/tools.py` 좌표 18건 중 17건이 어긋났고 sync 정책상 정정 경로가 닫힘 | **닫힘(해소 방식 변경)** — 17건을 재작성하지 않고 아래 「좌표 해소 규칙」을 둔다. 재작성은 plan-phase 산출물의 provenance를 흐리고, 규칙 하나면 전건이 결정적으로 해소된다 |
+| **P3-1** | P3 | 추적 불가 증거 4지점(C-10·C-11·C-12 + `MacroAuthoringProbe.md:138`) | **닫힘** — C-10·C-11·C-12 내용을 아래에 전재하고, `server/prechk/macro.py`의 추적 불가 인용을 추적되는 좌표(`server/safety/classify.py` · `server/safety/blacklist.yaml` · 본 문서 접두 행)로 교체 |
+| **P3-2** | P3 | `AC-PRECHK-015`에 실행 가능한 테스트 0건(위반은 아니나 후속 SPEC이 PRECHK PRESERVE를 깨도 스위트가 못 잡음) | **이월** — 선행 SPEC의 상시 테스트 선례(`server/tests/test_songcue_bundle.py:212`·`:216`)를 채택하는 것이 옳다. 본 SPEC의 AC는 절차로 규정했으므로 요구 위반이 아니며, 상시화는 별도 변경이라 이월한다 |
+| **P3-3** | P3 | §E.2 M5의 *"두 어휘가 서로소"* 가 과장 — `server/looks/report.py:72`의 `UNADDRESSABLE`과 `server/prechk/macro.py`의 `GROUPS_UNADDRESSABLE`이 같은 사실을 말함 | **닫힘** — 아래 정정: 서로소는 **리포트의 판정 어휘 표**에 한정해 참이고, 사유 코드 층에는 의미가 겹치는 라벨이 1쌍 있다 |
+
+### 뮤테이션 회계 (P2-3)
+
+**M0와 M8은 `cycle_type=none`이며 코드 변경이 0건이다.** `design.md` §6.3이 그 두 마일스톤에 제안한 뮤테이션(*"매크로 저작 GO를 재조회 없이 기록한다"* · *"부정 판정에서 `DESCOPE:` 접두 행을 빼고 산문만 남긴다"* · *"툴을 거치지 않고 빌더를 직접 실행해 종단 검증한다"* · *"감사 로그 대조 없이 툴 반환만으로 검증한다"*)은 **코드 결함이 아니라 기록·절차 결함**이다. 주입 대상이 소스가 아니라 산출 기록이므로 코드 뮤테이션으로 집행할 수 없고, 그 대신 **기계 판정이 그 자리를 대신한다** — 접두 행 파싱(`server/tests/test_prechk_macro.py`의 `measured_authoring_literal`), 행 존재 판정(`server/tests/test_prechk_patch.py`), 감사 로그 대조(M8 하네스). **집행하지 않았고 그 사유가 이것이다** — 이전 기록에 이 사유가 없던 것이 감사 지적이며 여기서 채운다.
+
+**계수 정정.** 개별 기재된 뮤테이션은 M1 3 · M5 5 · M6 5 · M7 2(+주입 3회) = **15건**이고, M2 8 · M3 6 · M4 6 = **20건은 집계 수치만** 있다. `mutations_executed: 34`는 그 둘을 합산하며 M7의 주입 3회를 중복 계산한 값이었다. 감사 후 신설한 뮤테이션 5건(P1·P2 수정의 방어)을 더해 정정값은 **개별 20 + 집계 20 = 40건**이다. **집계 20건은 개별 증거가 없으므로 "검증됨"으로 세지 않는다.**
+
+### `ASSUMPTION-27` 주장 범위 정정 (P2-5)
+
+접두 행과 출하 코드가 *"후보 12건 전건 부정"* 을 **무한정**으로 적었다. 정확한 주장은 이렇다 — **변경하지 않은 응답기 읽기 표면(`state`·`prop`) 위에서, 실제 발화한 프로퍼티명 집합에 한정해 0건.** 응답기는 프로퍼티명을 열거할 수 없으므로(`console/lua/copilot_responder.lua:204-217`) **어떤 프로퍼티 프로브 집합도 부재 증명이 될 수 없다.** 이것은 §E.3a 규율 1(*"불완전한 집합에 판정을 단정하지 않는다"*)이 같은 항목에서 두 번째로 미끄러진 형태다.
+
+감사가 표에 없던 후보 2건을 열거했다. **둘 다 미측정이며 `NEGATIVE` 판정을 뒤집지 않는다** — 관측 없이 닫을 수 없고 어느 쪽이든 출하 형상의 축소(주소 중복만 수행)를 정당화한다.
+
+| 후보 | 내용 | 왜 표에 없었나 |
+|---|---|---|
+| I-14 | `deploy` + `exec`로 콘솔측 프로브 플러그인을 올려 `handle:Get("FixtureType")`의 실제 반환 타입을 판독. 응답기의 닫힌 5동사 안이고 저장소 파일을 건드리지 않아 `console/lua/**` PRESERVE를 침범하지 않는다 | 추적 불가 부록에서 *"측정 가치가 없다"* 로 기각됐고 12행 표에 진입하지 않았다 |
+| I-15 | 열거 가능한 모드 집합에 대한 **보수적 점유폭 상계** — 폭 ∈ {29, 31}, 실측 최소 주소 간격 42. 42 > 31이므로 연결 없이 겹침 0건이 증명된다 | C-9가 더 엄격한 게이트(*"전 모드 폭 동일"*)를 써서 배제했다. `server/prechk/patch.py`의 `FootprintPolicy`가 `enabled` 이진 게이트라 "경계 있는 폭" 형상을 표현할 수 없는 것이 구조적 이유다 |
+
+**I-15는 후속 SPEC이 가장 먼저 볼 후보다** — 라이브 측정 없이 기존 실측만으로 구간 겹침을 되살릴 여지가 있다. 본 SPEC은 `FootprintPolicy`가 그 형상을 표현하지 못하고 `SKIPPED_CHECK_KIND`에 대응 부류가 없어 채택하지 않았고, 그 구조적 이유를 여기 남긴다.
+
+### 추적 불가였던 후보 3건 전재 (P3-1)
+
+| 후보 | 내용 | 기각 근거 |
+|---|---|---|
+| C-10 | `exec` 결과 문자열 파싱으로 타입·모드 해석 | **금지.** `plan.md` §A.2와 `research.md` §7.4가 `exec` 문자열 파싱 우회를 전수 배제. 코드로도 `build_exec_result`는 `Cmd()` 접수 결과만 분류한다(`console/lua/copilot_responder.lua:690-706`) |
+| C-11 | 쇼파일 파일 직접 파싱 | **범위 밖.** `spec.md` §D Out of Scope · `research.md` §8 |
+| C-12 | 콘솔 주소형 API(`ObjectList`)로 타입·모드 직접 해석 | **사망.** `resolve_path`가 특수 처리하는 주소형은 `Executor <n>` 하나뿐이다(`console/lua/copilot_responder.lua:467-486`). 다른 주소형 추가는 응답기 변경(PRESERVE 위반)이며 `Fixture <n>`은 `REQ-PRECHK-005`가 별도로 금지 |
+
+### 증거 등급 규약 — §E.2의 절 단위 선언 (P2-6)
+
+머리말이 선언한 태그(`[실측]`·`[코드]`·`[문서]`·`[미확정]`)를 §E.2는 인라인으로 쓰지 않았다. 소급 부착 대신 **절 단위 규약**을 선언한다.
+
+- **M0 절과 M8 절, 그리고 M4 보강 측정** — 라이브 세션 기록이다. 그 안의 수치·응답 문자열·재조회 값은 **전부 `[실측]`** 이며 원시 산출물은 `.moai/state/verify/prechk-m0/steps.jsonl`과 `.moai/state/verify/prechk-m8/result.json`이다. 예외는 명시적으로 *"기전"* · *"내부 이유"* 로 적은 서술이며 그것은 `[추론]`이다.
+- **M1·M2·M3·M4·M5·M6·M7 절** — 저장소 정적 사실과 명령 출력이다. 전부 `[코드]`이며 인용한 명령을 다시 돌리면 재현된다.
+- **§E.2a(본 절)** — 감사 산출물 인용은 `[문서]`, 감사가 재현한 수치는 `[코드]`, 감사가 라이브를 재현하지 못한 항목은 감사 자신이 §5에 한계로 적었다.
+
+**이 선언이 인라인 태그보다 약하다는 것을 인정한다.** 감사가 걸린 지점은 *"어느 주장을 재현할 수 있는가"* 였고, 절 단위 규약은 그 판별을 절 경계까지만 좁힌다. 후속 SPEC은 처음부터 인라인으로 붙이는 편이 낫다.
+
+### 좌표 해소 규칙 (P2-7)
+
+M6가 `server/orchestrator/tools.py`에 프리체크 import 블록과 `property_port`를 더해 파일이 아래로 밀렸다 — `_PROGRAMMER_STATE_COMMANDS`가 BASE의 247행에서 258행으로, `def run_commands`가 496행에서 517행으로 옮겼다. 그 결과 `plan.md` · `design.md` · `research.md`가 `server/orchestrator/tools.py`를 가리키는 좌표 **18건 중 17건**이 어긋났다.
+
+**17건을 재작성하지 않는다.** plan-phase 산출물은 그 시점의 판단 기록이고, 사후 재작성은 *"무엇을 보고 그렇게 결정했는가"* 를 흐린다. 대신 규칙 하나를 둔다.
+
+> **`plan.md` · `design.md` · `research.md`가 인용하는 `server/orchestrator/tools.py:<줄>` 좌표는 전부 BASE `95687a0` 기준이다.** 해소는 `git show 95687a0:server/orchestrator/tools.py`로 한다. 그 세 문서는 M6 이전에 작성됐고 M6가 같은 파일을 편집했으므로 HEAD 기준으로는 맞지 않는다. `progress.md`(run-phase가 직접 쓴 좌표)는 **HEAD 기준**이다.
+
+**규약의 전제가 이 SPEC 자신에 의해 깨졌음을 기록한다.** 정본을 줄번호로 인용하지 않고 코드만 인용한 근거는 *"코드는 커밋 없이 움직이지 않는다"* 였다. 움직인 커밋이 본 SPEC의 것이다. **후속 SPEC은 자신이 편집할 파일의 좌표를 plan-phase에서 인용할 때 BASE 기준임을 명시하는 편이 낫다.**
+
+### M5 라벨 재사용 서술 정정 (P3-3)
+
+*"두 어휘가 서로소"* 는 **리포트의 판정 어휘 표**(`server/prechk/report.py`의 5개 표)에 한정해 참이다. 사유 코드 층으로 넓히면 `server/looks/report.py:72`의 `UNADDRESSABLE`(*"그룹은 있으나 번호가 없음"*)과 `server/prechk/macro.py`의 `GROUPS_UNADDRESSABLE`(*"그룹은 있으나 번호가 없어 대상으로 쓸 수 없습니다"*)이 **같은 사실을 말한다.** `AC-PRECHK-012` ④의 기계 요구(밑줄 식별자 직접 import 0건)는 충족되지만, *"재사용 지점 0건"* 이라는 서술은 그만큼 좁혀 적는 편이 정확하다.
+
+### 뮤테이션 방법론 위험 1건 — 감사가 아니라 이 수정 사이클이 드러냈다
+
+P1·P2 수정을 뮤테이션으로 검증한 직후 전체 스위트가 **존재하지 않는 실패**를 보고했다 — `server/prechk/macro.py:305`가 `Group 11 At 0`인데 테스트는 `Group 11 At 5`를 관측했다. 원인은 **stale `__pycache__`** 다. 뮤테이션 쓰기와 복구 쓰기가 같은 초 안에 일어나면 pyc가 기록한 소스 mtime(1초 해상도)이 복구된 소스의 mtime과 같아져 **캐시가 유효로 판정되고 뮤테이션된 바이트코드가 재사용된다.** `find server -name __pycache__ -type d -exec rm -rf {} +` 후 재실행하면 사라진다.
+
+**이것은 뮤테이션 방법론의 실제 위험이다.** 복구 직후의 검증 실행이 뮤테이션 코드를 볼 수 있고, 반대로 **뮤테이션 실행이 복구된 코드를 볼 수도 있다** — 후자면 뮤테이션이 "살아남았다"로 오판된다. 본 사이클의 뮤테이션 5건은 각각 1 failed를 냈으므로 오판 방향이 아니었으나, **이후 뮤테이션 절차는 매 사이클 전후로 `__pycache__`를 지운다.**
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
@@ -554,17 +648,20 @@ assumption_verdicts:
   ASSUMPTION-30: NEGATIVE
 prefix_rows: 6          # GO 4 · DESCOPE 2 · SKIP 0 · REOPEN 0
 reopen_scope: 0
-live_sessions: 2        # M0 프로브 · M8 종단
-suite: "2711 passed · 5 skipped · 0 failed"
+live_sessions: 3        # M0 프로브 · M8 종단 · M4 보강 (plan.md §C는 2회로 회계했고 감사 수정이 1회를 추가했다 — 사유는 §E.2a P1-1)
+suite: "2721 passed · 5 skipped · 0 failed (감사 수정 반영)"
 suite_baseline_at_kickoff: "2490 passed · 5 skipped · 0 failed"
-tests_added: 216        # verdicts 8 · inventory 27+17 · patch 42 · macro 73 · report 33 · tool 21 (기존 M1 17 포함 계산)
-mutations_executed: 34
+tests_added: 231        # 스위트 델타 2721-2490. 파일별 verdicts 8 · inventory 44 · patch 42 · macro 75 · report 33 · tool 29
+mutations_individually_recorded: 20   # M1 3 · M5 5 · M6 5 · M7 2 · 감사수정 5
+mutations_aggregate_only: 20          # M2 8 · M3 6 · M4 6 — 개별 증거 없음(§E.2a P2-3). "검증됨"으로 세지 않는다
+mutations_not_executed: "M0 4 · M8 2 — cycle_type=none이라 주입 대상이 소스가 아니라 기록·절차다. 사유는 §E.2a"
 mutations_survived: 0
 preserve_diff: "빈 출력 (git diff --stat 95687a0..HEAD -- <10경로>)"
 preserve_gate_nonvacuity: "주입 3회 전건 적발 후 revert"
 safety_diff_files: ["server/safety/console.py", "server/safety/gate.py"]
 safety_diff_outside_approval: 0
-ruff: "신규·변경 18파일 clean · 기존 비-clean(server/safety/console.py E501 2건)은 BASE에서 이미 존재하므로 손대지 않음"
+ruff: "신규·변경 파일 clean · 기존 비-clean(server/safety/console.py E501 2건)은 BASE에서 이미 존재하므로 손대지 않음"
+run_audit: "1회차 FAIL · 가중합 0.695 / 기준선 0.85 · 지적 14건(P1 4 · P2 7 · P3 3). P1 4건 + P2 5건 + P3 2건 닫힘 · P2 2건 부분 닫힘 · P3 1건 이월. 전문 사본은 §E.2a. 2회차를 열지 않은 근거도 §E.2a"
 mode: "sub-agent — 폭 1(M0·M1) -> 폭 2(M2·M3 사슬 + M4) -> 폭 1(M5~M8). §F.1이 개정 근거를 기록"
 user_touchpoints:
   - "server/safety/** 조건부 예외 — 승인(2026-07-29)"
@@ -573,7 +670,12 @@ user_touchpoints:
 defects_found_and_fixed:
   - "M6: server.prechk.report.build_report가 server.looks.report의 동명 심볼을 가려 prepare_busking이 잘못된 함수를 호출(busking 12건 실패). 별칭으로 교정. 전체 스위트를 돌리지 않았으면 통과했다"
   - "M8: summary_ko의 incomplete 라벨이 missing_count 0에서도 '못 읽은 픽스처가 있다'고 단정. 라벨 교정 + 회귀 테스트 신설. 라이브 실행이 없으면 통과했다"
-  - "M0: ASSUMPTION-27을 후보 부분집합 위에서 부정 단정. scout 지적으로 후보 전수 12건을 닫은 뒤 재확정"
+  - "M0: ASSUMPTION-27을 후보 부분집합 위에서 부정 단정. scout 지적으로 후보 전수 12건을 닫은 뒤 재확정. 그 뒤 run-audit가 12건도 전수가 아님을 지적해 주장 범위를 좁혔다(§E.2a P2-5)"
+  - "M4: 소등 라인 'Group <n> At 0'이 M0 미실측 리터럴이었다(REQ-PRECHK-012 위반). run-audit 적발 -> M4 보강 라이브 세션에서 측정해 정본에 등재. 게이트가 페이로드를 대조 전에 지우고 ON만 필터해 구조적으로 못 잡던 것도 고쳤다"
+  - "M6: 그룹 풀 판독 실패를 '리그에 그룹이 없다'로 보고하고 is_error=False를 냈다 — M8 라벨 결함과 같은 계열. run-audit 적발 -> 오류로 답한다"
+  - "M6: _free_macro_slot이 childCount를 보지 않아 절단된 풀에서 점유 슬롯을 골라 기존 매크로를 덮어쓸 수 있었다 — 본 SPEC의 유일한 쓰기 경로가 본 SPEC의 1급 요구를 어긴 지점. run-audit 적발 -> 계수 비교 추가"
+  - "M6: AC-PRECHK-014 ④의 LiveLock 강등이 구현·테스트에 없었다(형제 툴 2개에는 있음). run-audit 적발 -> 강등 + 회귀 테스트 3건"
+  - "M4: 그룹 열거가 전부 절단돼도 '그룹이 없다'로 단정했다. run-audit 적발 -> 절단으로 답한다"
 carried_forward:
   - "FID 의미 — 슬롯 != FID로 패치된 쇼파일이 선행 조건(사용자 GUI 작업). 본 SPEC은 FID를 판정 근거에서 배제한 형상으로 출하"
   - "희소 풀에서 design.md 슬롯 A의 1..childCount 캡이 과소복구한다 — 이번 쇼파일이 조밀했을 뿐"
@@ -584,7 +686,8 @@ new_measurements_for_successors:
   - "DataPool/PresetPools 생존(14개) · DataPool/Presets·AllPresets 사망 재확인"
   - "DataPool 최상위 자식 16종 · Patch 루트 자식 14종 전량 열거"
   - "ASSUMPTION-7(자식 풀 슬롯)이 분기 (a) probe_slots로 충족됨을 갭 풀(DataPool/Pages/1)로 실측"
-next: "run-phase 종료. M0~M8 9개 마일스톤 전건 닫힘 · REOPEN_SCOPE 0건 · 뮤테이션 생존 0건. 다음은 sync-phase(§E.4)이며 그 전에 run-audit를 세우는 것이 plan-phase의 경험(감사가 축약 토큰 8건과 근거 오류 1건을 잡았다)에 부합한다."
+live_sessions_total: 3   # M0 프로브 · M8 종단 · M4 보강(소등 페이로드 측정). 셋 다 쇼파일 원상 복구 확인
+next: "run-audit 1회차 FAIL을 지적 14건 처리로 닫았다. **2회차를 열지 않는 근거**: P1 4건이 전부 코드 결함이었고 각각 뮤테이션으로 방어를 확인했으며(5건 전건 사망, 비공허 동반), 계수·경계·회귀 층은 1회차가 이미 전건 재현으로 통과시켰다. 남은 열린 항목은 P2-3의 집계 20건(증거 부재 — 재집행하면 원래 주장을 검증하는 것이 아니게 된다)과 P3-2(PRESERVE 상시 테스트, 이월)뿐이며 둘 다 코드 정합이 아니라 기록·강화 층이다. 다음은 sync-phase(§E.4)다."
 ```
 
 ## §E.3a 핸드오프 — 다음 단계 착수 지시 (2026-07-30)

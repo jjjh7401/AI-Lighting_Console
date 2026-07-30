@@ -259,17 +259,29 @@ class TestTheMeasuredLiteralIsTheCanon:
         )
 
     def test_the_measured_literal_is_a_three_step_authoring_sequence(self):
+        """The invariant is the three-step ORDER, not the segment count.
+
+        The record grew a fourth segment when the M4 supplementary session
+        measured the off payload, so counting segments would break every time a
+        payload is added. What must hold is that the first two steps create the
+        macro and then the line, and that every remaining segment is a property
+        set — the line-object step is what turns the rulebook's two-step recipe
+        from ``Illegal object`` into ``OK``.
+        """
         literal = measured_authoring_literal(M0_PROGRESS.read_text(encoding="utf-8"))
         segments = measured_segments(literal)
-        assert len(segments) == 3, (
+        assert len(segments) >= 3, (
             f"M0 measured a three-step sequence; the record has {len(segments)}: {segments}"
         )
         shapes = [authoring_shape(segment) for segment in segments]
-        assert shapes == [
+        assert shapes[:3] == [
             "Store Macro <n>",
             "Store Macro <n>.<line>",
             "Set Macro <n>.<line> Property 'Command' '<cmd>'",
         ]
+        assert all(
+            shape == "Set Macro <n>.<line> Property 'Command' '<cmd>'" for shape in shapes[3:]
+        ), f"a segment past the third step is not a property set: {shapes[3:]}"
 
     def test_a_missing_go_line_fails_instead_of_passing(self):
         # The AC is explicit: with no canon the GO branch must NOT be let through.
@@ -341,7 +353,17 @@ class TestGoBranchUsesOnlyMeasuredShapes:
                     "reintroduces the `Illegal object` failure"
                 )
 
-    def test_the_on_payload_shape_is_the_measured_one(self):
+    def test_every_stored_payload_shape_is_measured(self):
+        """AC-PRECHK-010 ① — EVERY payload, not just the on line.
+
+        This test used to filter ``if line.phase == ON`` and the off payload was
+        transcribed elsewhere instead. That combination let an unmeasured literal
+        ship: ``assert_commands_match_record`` replaces the stored payload with a
+        placeholder before comparing, so the off form was invisible to the one
+        gate that reads the M0 record. The run-audit found it (P1-1). The off
+        payload is now measured — see the ``GO: ASSUMPTION-26`` prefix line — and
+        this comparison covers both phases.
+        """
         literal = measured_authoring_literal(M0_PROGRESS.read_text(encoding="utf-8"))
         measured_payloads = [
             stored_payload(segment)
@@ -350,10 +372,17 @@ class TestGoBranchUsesOnlyMeasuredShapes:
         ]
         assert measured_payloads, "the measured literal must store at least one line"
         measured = {payload_shape(payload) for payload in measured_payloads}
-        result = built()
-        on_shapes = {payload_shape(line.payload) for line in result.lines if line.phase == ON}
-        assert on_shapes, "non-vacuity: no ON line would make the comparison free"
-        assert on_shapes <= measured
+        result = built(LIVE_RIG_GROUPS)
+        shapes = {payload_shape(line.payload) for line in result.lines}
+        assert shapes, "non-vacuity: no line would make the comparison free"
+        assert {line.phase for line in result.lines} == {ON, OFF}, (
+            "non-vacuity: both phases must be present or the sweep misses one"
+        )
+        unmeasured = shapes - measured
+        assert unmeasured == set(), (
+            f"payload shapes absent from the M0 record: {sorted(unmeasured)} "
+            f"(measured: {sorted(measured)})"
+        )
 
     def test_no_command_carries_a_double_quote_or_newline(self):
         # server/bridge/protocol.py:105-111 rejects both before the wire.
@@ -612,6 +641,30 @@ class TestNoResponseEvidence:
     def test_an_untruncated_pool_carries_no_coverage_caveat(self):
         assert reason_label(PARTIAL_GROUP_COVERAGE) not in built(GROUPS_PRESENT).reason
 
+    def test_a_fully_truncated_group_pool_reports_truncation_not_absence(self):
+        """run-audit P2-1 — acceptance.md §D calls this an incomplete report.
+
+        ``childCount`` above zero with no children returned means the pool was
+        not finished, so "이 리그에 그룹이 없다" would be a claim about a pool we
+        never read — the same class of defect M8 caught in the completeness label.
+        """
+        pool = groups_from_snapshot(
+            {"ok": True, "node": {"childCount": 4}, "children": [], "truncated": True}
+        )
+        assert pool.truncated is True and pool.targets == ()
+        result = build_response_check_macro(pool, MacroPolicy.available(PROBE_SLOT))
+        assert result.created is False
+        assert result.commands == ()
+        assert "절단" in result.reason, f"reason does not say truncated: {result.reason!r}"
+        assert "그룹이 없어" not in result.reason
+
+    def test_a_genuinely_empty_group_pool_still_says_absence(self):
+        # Non-vacuity: the truncation branch must not swallow the real 0-group case.
+        result = build_response_check_macro(GroupPool(), MacroPolicy.available(PROBE_SLOT))
+        assert result.created is False
+        assert "그룹이 없어" in result.reason
+        assert "절단" not in result.reason
+
 
 class TestStoredLineLiterals:
     """The payload forms, and why the off line is not `Off Group <n>`."""
@@ -622,9 +675,21 @@ class TestStoredLineLiterals:
         assert on_line.payload == "On Group 11"
 
     def test_the_off_line_is_the_value_form_not_the_off_verb(self):
+        # Compared against the RECORD, not a transcribed copy: a transcription
+        # keeps passing after the record changes, which the module docstring
+        # rejects and the run-audit flagged (P1-1 ②).
+        measured = {
+            stored_payload(segment)
+            for segment in measured_segments(
+                measured_authoring_literal(M0_PROGRESS.read_text(encoding="utf-8"))
+            )
+            if stored_payload(segment) is not None
+        }
         result = built(((11, "Back"),))
         off_line = next(line for line in result.lines if line.phase == OFF)
-        assert off_line.payload == "Group 11 At 0"
+        assert off_line.payload in measured, (
+            f"off payload {off_line.payload!r} is not in the M0 record {sorted(measured)}"
+        )
         assert not off_line.payload.startswith("Off ")
 
     def test_the_gate_holds_the_off_verb_form_but_clears_the_value_form(self):
