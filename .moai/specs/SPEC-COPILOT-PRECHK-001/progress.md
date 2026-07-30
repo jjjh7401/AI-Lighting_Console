@@ -9,14 +9,14 @@
 ### 한 문단
 
 **무엇**: 조명 콘솔(grandMA3)의 패치를 프리쇼에 점검하는 기능. 리그의 픽스처를 읽어 **관측 픽스처 전량 + 집계 2단**으로 보고하고, 주소 중복·판독 실패·열거 완전성·**수행하지 않은 판정**까지 명시한다. 요청하면 그룹별 점등·소등 매크로를 저작해 사람이 눈으로 응답을 확인하게 한다. 모델이 닿는 표면은 툴 `precheck_patch` 하나다.
-**상태**: **완료.** `spec.md status: completed` · AC 17/17 PASS · M0~M8 9개 마일스톤 · 독립 run-audit 1회차(FAIL 0.695) 지적 14건 처리 · **PR #7 열림, 리뷰·머지 대기.**
-**열린 사용자 접점**: **0건.**
+**상태**: **완료.** `spec.md status: completed` · AC 17/17 PASS · M0~M8 9개 마일스톤 · 독립 run-audit 1회차(FAIL 0.695) 지적 14건 처리 · **PR #7 열림** · **독립 코드 리뷰 2건 완료 — P1 4건 수정·커밋(`5f89701`), 남은 P2·P3 10건은 머지 후.** 머지 대기.
+**열린 사용자 접점**: **1건** — 후속 SPEC(구간 겹침 재개)의 **닫힌 어휘 확장 승인**. 본 SPEC의 머지를 막지 않는다(§E.7 말미).
 
 ### 읽는 순서
 
 | 순서 | 무엇을 알려주나 | 어디 |
 |---|---|---|
-| 1 | **현재 상태와 다음에 할 일** | 본 문서 **§E.5**(3안과 근거) → **§E.6**(착수 키트: 검증 커맨드·산출물 인벤토리·트랙 브리프 2건) |
+| 1 | **현재 상태와 다음에 할 일** | 본 문서 **§E.7**(트랙 A·B 집행 결과: P1 4건과 그 수정 · 남은 지적 10건 · 트랙 B 산출과 승인 대상) ← **여기서 시작한다.** 배경이 필요하면 §E.5(3안과 근거) → §E.6(착수 키트) |
 | 2 | 무엇을 만들기로 했나 | `spec.md` — REQ 20건 · §C PRESERVE와 **승인된 조건부 예외** · §D Out of Scope |
 | 3 | 무엇을 통과해야 하나 | `acceptance.md` — AC 17건 · 역추적표 · 마일스톤별 배정 |
 | 4 | **실물 콘솔에서 무엇이 사실로 밝혀졌나** | 본 문서 **§E.2**의 M0 절 — 판정 6건의 접두 행과 실측 원문. 이 SPEC의 모든 설계가 여기서 나온다 |
@@ -24,7 +24,7 @@
 | 6 | 왜 이렇게 설계했나 / 왜 이 순서로 만들었나 | `design.md` 슬롯 A~E · `plan.md` §B M0~M8 |
 | 7 | 조사 원문(가장 김) | `research.md` — 필요할 때만 |
 
-**§E.1 · §E.1a · §E.3 · §E.3a · §E.4는 시점 기록이다**(plan 신호 · plan-audit · run 신호 · 1차 핸드오프 · sync 신호). 이력 추적이 필요할 때만 본다. **§E.3a는 §E.5가 대체했다.**
+**§E.1 · §E.1a · §E.3 · §E.3a · §E.4는 시점 기록이다**(plan 신호 · plan-audit · run 신호 · 1차 핸드오프 · sync 신호). 이력 추적이 필요할 때만 본다. **§E.3a는 §E.5가 대체했고, §E.5 · §E.6은 §E.7이 집행했다** — §E.6 ④의 서술 2건은 §E.7이 정정했으므로(`COLLISION_KIND` 추가 0건 · 미확정 술어의 off-by-one) **§E.6 ④를 단독으로 읽지 않는다.**
 
 ### 인수인계 시 반드시 알아야 할 함정 4건
 
@@ -1004,6 +1004,132 @@ uv run python -m server.tools.responder_roundtrip --listen-port 9005 --wait 5 --
 2. A의 지적이 P1급이면 **머지 전에** 고친다. P2 이하면 PR에 적고 머지 후 후속 커밋으로 처리한다.
 3. B의 산출은 다음 SPEC의 `research.md` 초안 재료다 — **SPEC 문서를 바로 쓰지 말고** 사용자에게 범위(어휘 확장 승인 여부)를 먼저 확인한다. 닫힌 어휘를 늘리는 것은 계약 변경이다.
 4. 머지 후 `origin/main`이 새 SHA가 되므로 **다음 SPEC의 BASE는 그 SHA다** — `95687a0`이 아니다.
+
+## §E.7 트랙 A·B 집행 — 독립 코드 리뷰가 P1 4건을 냈다 (2026-07-30)
+
+> §E.6이 착수 키트를 적었고 이 절이 그 집행 결과다. **§E.6 ②의 규정("A의 지적이 P1급이면 머지 전에 고친다")을 그대로 적용했다** — P1 4건을 이 브랜치에서 수정하고 PR #7에 얹었다.
+
+### 착수 검증 — §E.6 ①의 6줄
+
+| 커맨드 | 기대값 | 실측 |
+|---|---|---|
+| `git branch --show-current` | `feature/SPEC-COPILOT-PRECHK-001` | 일치 |
+| `git status --short` | 비어 있음 | 일치 |
+| `git rev-list --left-right --count origin/main...HEAD` | `0 29` | **`0 31`** — behind 0 일치, ahead가 2 크다(§E.5·§E.6 커밋 추가분이며 §E.6 작성 시점 이후의 정상 증가) |
+| `gh pr view 7` | OPEN · CLEAN | 일치 (`reviewDecision` 없음) |
+| `gh pr checks 7` | no checks reported | 일치 — **CI 0건 재확인** |
+| `uv run pytest server/tests/ -q` | 2721 passed · 5 skipped · 0 failed | 일치 |
+
+PRESERVE 게이트도 함께 돌렸다 — `git diff --stat 95687a0..HEAD -- <10경로>` **빈 출력**. `95687a0`의 40자 전체 SHA는 **`95687a0e0eba90b325daf76efbd0ac197e69e2fc`**다(이월 1건이 요구하는 값이며 여기 기록해 재조회를 없앤다).
+
+### 실행 형태 — 폭 3 병렬, 충돌 0건
+
+§E.6 ⑥이 트랙 A(`reviewer`) · 트랙 B(`scout`) 폭 2를 권고했다. **A를 2슬라이스로 쪼개 폭 3으로 확정했다** — PR 신규분이 5210행이고 §E.6의 리뷰 우선순위 4항목이 쓰기 경로(①③)와 판독 경로(②④)로 파일 교집합 없이 갈린다. 전 트랙 읽기 전용이라 충돌은 구조적으로 0이다.
+
+| 트랙 | 에이전트 | 대상 | 산출 |
+|---|---|---|---|
+| A1 | `reviewer` | `server/orchestrator/tools.py` 핸들러·`_free_macro_slot` · `server/prechk/{macro,query}.py` · 승인 4지점 | 지적 6건(P1 2 · P2 2 · P3 2) · `overall: incorrect` |
+| A2 | `reviewer` | `server/prechk/{inventory,patch,report,verdicts}.py` · 대응 테스트 3파일 | 지적 8건(P1 2 · P2 3 · P3 3) · `overall: incorrect` |
+| B | `scout` | 후보 I-15 구조적 장애 3건 + 이월 1건 | 장애 3건 해소 형상 + 소비자 전수 14지점 + **전제 정정 1건** |
+
+**두 리뷰어가 전 지적을 실행으로 재현했다** — 주장이 아니라 PR 자신의 테스트 더블로 돌려 출력을 붙였다. 이것이 값을 냈다: 14건 중 P1 4건이 전부 재현된 결함이다.
+
+### P1 4건 — 전건 수정하고 커밋했다 (`5f89701`)
+
+| # | 트랙 | 결함 | 근거 | 수정 |
+|---|---|---|---|---|
+| **1** | A1 | **`_free_macro_slot`이 자식 0건 매크로 풀을 신뢰한다.** `M.safe_children`는 `Children()`과 `Count()`가 **둘 다** pcall 실패하면 빈 테이블을 돌려주고(`console/lua/copilot_responder.lua:412`) `childCount`는 그 같은 빈 판독에서 파생된다(`:580`·`:607`) — 즉 **열거 전면 실패와 진짜 빈 풀이 한 페이로드**이며 `ok=true`·`truncated=false`다. 전 가드를 통과해 `slot = 1`이 나오고 `Store Macro 1`이 응답기 자신의 `Copilot Go`를 덮는다 | **재현됨** — 수정 전 툴이 번들 전량을 `is_error=False`로 실행했다. 함수 자신의 docstring(`server/orchestrator/tools.py:1252-1256`)과 호출부 주석(`:1324-1325`)이 "절대 일어나선 안 된다"고 적은 바로 그 폴백이다 | `child_count == 0`을 `_MacroPoolIncomplete`로 거부. `childCount`의 `bool` 배제도 함께(A1-P3, 같은 SPEC의 형제 판독기 `server/prechk/macro.py:222`·`:245`가 이미 하는 것) |
+| **2** | A1 | **LiveLock이 비오류 리포트로 "매크로를 실행해 눈으로 확인하라"를 낸다.** 락이면 `run_commands`가 `execution_port`에 닿기 전에 반환하는데 `macro.created=true`와 그 reason이 그대로 실려 나가고, 락은 ANSWER이므로 `is_error`가 이 사실을 나를 수 없다 | **재현됨** — `is_error=False` · `macro.created=true` · 커맨드 9건 · 시각 확인 고지까지 전부 실렸고 콘솔에는 매크로가 없다. **run-audit P1-2와 같은 형태가 락 경로에서 생존한 것** | `payload["macro"]["executed"] = not inner.result.is_error`. 형제 핸들러 `prepare_songcue`(`server/orchestrator/tools.py:1202`)가 이미 같은 구분을 발행한다 |
+| **3** | A2 | **`root_was_short`가 "자식이 슬롯 인덱스 `i`를 못 실었다"와 "`i` 중복"을 "루트 열거가 짧았다"로 접는다.** 그 자식들은 **반환됐다.** `i` 생략은 가정이 아니라 문서화된 응답기 거동(`console/lua/PROTOCOL.md` §4.2)이고 `server/tests/test_lua_responder.py:486`이 그 경로를 테스트한다 | **재현됨** — `childCount=2`에 `i` 없는 자식 2건(전량 반환)에서 사용자가 `열거 불완전 — 루트 열거가 짧았고…`를 읽었다. **이번 사이클 "판독 실패 vs 부재" 계열의 4번째 사례** | 술어를 `child_count > len(children)`로 좁혔다 — 쓰기 경로가 쓰는 것과 같은 계수-대-반환 비교다. `incomplete` 라벨은 원인 단정을 버리고 **모든 불완전 경우에 참인 것만** 말한다 |
+| **4** | A2 | **보강 스윕이 `ok=true`만 보고 노드 정체를 대조하지 않는다.** 숫자 경로 세그먼트는 자식 중 **하나도** 슬롯이 확립되지 않았을 때 `children[wanted_slot]` — 목록 위치 — 로 열화하고(`console/lua/copilot_responder.lua:444-448`), **그 상태가 바로 스윕을 촉발하는 조건**이다. 스윕이 자기를 깨뜨리는 조건에서만 돈다 | **재현됨** — 슬롯 없는 짧은 열거에서 스윕이 `(1,2,3)`을 **순수 위치로** 회수했다. `server/prechk/inventory.py:329-331`이 명시적으로 금지한 승격이고, 응답기 주석(`:249-251`)이 기록한 사고(풀 1/5/7 오발행)의 재발 경로다 | 스윕에 **확립된 슬롯 1개 이상**을 앵커 조건으로 요구한다(`slots_established`) |
+
+#### 게이트가 결함을 비껴갔다 — 규율 13의 3번째 실증
+
+**수정 전에도 스위트 2721개가 전부 통과했다.** 4건 모두 커버가 0이었다. 그래서 신규 테스트 6건을 넣고 **각각이 수정 전 코드에서 실제로 실패하는지 역방향으로 검증했다**(소스만 되돌려 실행 → 6/6 FAIL → 패치 복원). 통과만 확인하고 넘기면 그 자체가 규율 13이 말하는 비껴가는 게이트가 된다.
+
+| 신규 테스트 | 죽이는 결함 | 수정 전 |
+|---|---|---|
+| `test_a_zero_child_macro_pool_refuses_instead_of_taking_slot_one` | P1-1 | FAIL — `is_error=False`로 번들 실행 |
+| `test_a_locked_gate_says_the_macro_was_not_stored` | P1-2 | FAIL — `KeyError: 'executed'` |
+| `test_a_hold_says_the_macro_was_not_stored_either` | P1-2 | FAIL |
+| `test_a_cleared_gate_says_the_macro_was_stored`(비공허) | P1-2 | FAIL |
+| `test_a_child_without_an_index_is_not_reported_as_a_short_root` | P1-3 | FAIL — `index_domain_unknown` True |
+| `test_recovery_is_skipped_when_no_child_established_a_slot` | P1-4 | FAIL — `recovered_slots=(1,2,3)` |
+| `test_recovery_still_runs_when_a_slot_is_established`(비공허) | P1-4 가드가 회수를 죽이지 않음 | PASS(의도) |
+
+**수정 후: 2728 passed · 5 skipped · 0 failed.** PRESERVE 게이트 빈 출력 유지 · `server/safety/**` 이 커밋에서 무변경 · 손댄 5파일 전부 ruff check·format 통과.
+
+#### 계약을 건드리지 않았다 — 의도적 한정
+
+수정은 **닫힌 판정 어휘와 리포트 페이로드 스키마를 손대지 않는다.** 둘 중 어느 쪽이든 확장은 계약 변경이고 사용자 승인이 선행한다(§0의 "먼저 결정할 것"). P1 4건의 **인과는 코드 층에서 전부 끊었으므로** 어휘 확장 없이 닫힌다. 대가는 두 가지를 포기한 것이다 — ① 스윕을 건너뛴 사유를 `skipped_checks`로 고지하지 못한다(새 어휘값이 필요) ② 어느 행이 보강에서 왔는지 리포트에 노출하지 못한다(`FixtureVerdict.to_dict()` 키 추가 = `design.md` §5.1 스키마 변경). 둘 다 P2로 남기고 아래에 적었다.
+
+### 남은 지적 10건 — 머지 후 후속 커밋 (§E.6 ②의 P2 이하 처리)
+
+| # | 등급 | 좌표 | 요지 |
+|---|---|---|---|
+| A1-1 | P2 | `server/orchestrator/tools.py` 매크로 실행 직후 | **재조회로 효과를 확인하지 않는다.** 형제 `prepare_songcue`는 실행 후 `query_state`로 재조회해 `requery_payload`를 리포트에 싣는다(`:1192-1200`). 이 SPEC이 저작 문법을 확정한 방법 자체가 재조회였다(§E.2 M0 `ASSUMPTION-26`) |
+| A1-2 | P2 | `server/orchestrator/tools.py` 매크로 슬롯 유도 지점 | **대상 그룹이 0건이어도 슬롯을 먼저 유도한다.** 그룹 없음은 ANSWER인데(`AC-PRECHK-014` ④) 쓰이지도 않을 슬롯의 풀 판독 실패가 호출 전체를 오류로 만들고 성공적으로 읽은 인벤토리를 버린다. 감사 OSC 송신 1회도 낭비한다 |
+| A1-3 | P3 | `server/orchestrator/tools.py` `rig_paths` 인덱싱 | `rig_paths` 오버라이드가 섹션을 빼면 `KeyError`가 "group pool unreadable"로 렌더링된다 — 조회하지도 않은 풀에 배선 실수를 전가한다. 형제 핸들러 3개는 전부 명시 가드로 시작한다(`:769`·`:891`·`:1112`) |
+| A2-1 | P2 | `server/prechk/inventory.py` `missing_count` 클램프 | `max(child_count - observed_count, 0)`이 `AC-PRECHK-003`의 `observed + still_unobserved == child_count`를 **신호 없이** 깬다. 재현: `childCount=2`에 `i` 1·2·3 → `observed 3 / missing 0 / completeness complete`이며 요약이 `관측 3개 / 보고된 자식 수 2개`를 찍으면서 "완전"을 선언한다. 도달 가능성은 `[미확정]`(출하 응답기는 이 페이로드를 못 만든다, `read_inventory`는 임의 포트를 받는 공개 API다) |
+| A2-2 | P2 | `server/prechk/inventory.py` 형태 게이트 | 판별자가 `function: 0x` 하나뿐인데 결함 근원은 `safe_property`의 `tostring` 폴백(`console/lua/copilot_responder.lua:204-217`)이라 `table:`·`userdata:`·`thread:`가 **값으로 채택된다.** 응답기가 돌려줄 수 있는 포인터 형태는 4종인데 게이트는 1종이다 |
+| A2-3 | P2 | `server/prechk/patch.py` `_range_overlaps` | **폭이 없는 픽스처를 표시 없이 겹침 판정에서 뺀다.** 형제 배제(`type_mode_ok`)는 `reasons`에 코드를 남기고 verdict를 내리는데 폭 부재만 비대칭적으로 침묵하고 `observed_clear`를 준다. 부분 폭 맵은 설계상 정상 결과다. 출하 경로가 이 축을 켜지 않아 P2 |
+| A2-4 | P3 | `server/prechk/report.py` `shape_invalid` 라벨 | 라벨이 형태 2종을 열거하지만 실제 분류 대상은 4종이며 그중 하나(슬롯 인덱스 `i` 부재)는 값 형태 문제가 아니다 |
+| A2-5 | P3 | `server/prechk/report.py` `summary_ko` | `scope_note`를 버리고 무조건 `충돌 N건`을 적는다. 문단 전체를 읽으면 뒤집히지만 숫자만 보는 독법(로그 grep·알림)에는 관측 범위 밖까지 다룬 수치로 읽힌다 |
+| A2-6 | P3 | `server/prechk/inventory.py` `_probe_slot` | 포트 예외·타임아웃과 `ok=false`를 모두 `None`으로 접어 **기록을 0건 남긴다.** 형제 `read_properties`는 같은 상황을 `PropertyRead(ok=False, error=…)`로 붙잡는다. 판정 수치는 보수적이라 P3이지만 링크 장애와 희소 풀이 리포트상 구분되지 않는다 |
+| A2-7 | P3 | `server/tests/test_prechk_report.py` | 집계 검증 테스트가 `not_assessed`를 명시적으로 `continue`한다 — **행에서 파생되지 않는 유일한 수치**이며 A2-1을 통과시킨 게이트다. 나머지 두 테스트는 동어반복(대입문을 되읽는다) |
+
+**A2-1 · A2-3 · A2-6은 어휘 또는 스키마를 건드리므로 후속 SPEC의 계약 결정과 함께 처리하는 것이 자연스럽다.** A1-1 · A1-2 · A1-3 · A2-2 · A2-4는 계약 무변경으로 닫을 수 있다.
+
+### 트랙 B 산출 — 전제 1건을 정정했고 승인 대상이 좁아졌다
+
+§E.6 ④가 세운 3개 구조적 장애는 **전부 가법적 변경으로 해소 가능**하다. 다만 조사가 §E.6 ④의 서술 2건을 정정했다.
+
+**정정 1 — `COLLISION_KIND`에 추가할 것이 0건이다.** §E.6 ④②는 `COLLISION_KIND`와 `SKIPPED_CHECK_KIND`에 "부류가 없다"고 적었고 그것은 참이지만 **결론이 추가는 아니다.** `상계로 겹침 없음이 증명됨`은 **충돌도 미수행도 아닌 긍정 결과**다 — `COLLISION_KIND`에 넣으면 깨끗한 리그를 `충돌`로 라벨하고 전 슬롯에 `COLLISION`을 찍고, `SKIPPED_CHECK_KIND`에 넣으면 **수행된** 판정을 `미수행`이라 쓴다. **둘 다 거짓 문자열이므로 새 축이 필요하다.** 제안: 신규 어휘 `overlap_basis` = {`exact_widths`, `bound_proves_clear`, `bound_inconclusive`, `not_performed`} + `SKIPPED_CHECK_KIND` += `range_overlap_bound_inconclusive` 1값. **`FIXTURE_VERDICT`는 건드리지 않는다**(건드리면 `server/prechk/patch.py`의 수기 카운트 dict와 테스트 2곳이 깨진다).
+
+**정정 2 — off-by-one이 잠복해 있다.** §E.6 ④의 *"간격이 상계 **이하**라 미확정"*은 틀렸다. `server/prechk/patch.py`가 구간을 `(start, start + width - 1)` **닫힌 끝**으로 만들므로 겹침 조건은 `간격 < 폭`이다. 따라서 `간격 == 상계`는 **증명 가능하게 깨끗하다**(폭 31이 1~31을 점유하면 32는 자유). 올바른 술어는 `간격 < 상계 → 미확정` · `간격 ≥ 상계 → 겹침 없음 증명`. **현재 쇼파일에서는 42 > 31이라 두 표현이 같은 답을 내므로 오류가 드러나지 않는다** — 간격이 정확히 상계인 리그에서 처음 드러나고 그때 깨끗한 리그를 미확정으로 보고한다. SPEC 문안과 코드 양쪽에서 고쳐야 한다.
+
+#### 어휘 확장이 왜 계약 변경인지 — 실체가 확인됐다
+
+`server/prechk/verdicts.py`의 `validate()`가 어휘 밖 값을 `UnknownVerdict`로 실패시키고, **`server/prechk/report.py`가 그 계약을 라벨표와 import 시점에 이중 결속한다.** 라벨을 빠뜨리면 스위트 실패가 아니라 **`import server.prechk.report` 자체가 실패**하고 툴셋 전체가 죽는다. 확장은 ① `verdicts.py` 어휘 ② `report.py` 라벨표 ③ `report.py` 가드 튜플 ④ `server/tests/test_prechk_verdicts.py`의 재타이핑된 정본 — **4곳을 원자적으로** 움직여야 한다. 깨지는 소비자는 전수 14지점이며 그중 하드 브레이크는 어휘 순서 있는 리스트 단정 · `collisions` 정확 dict 단정 · `test_every_queried_path_stays_under_the_fixture_root` 3건이다.
+
+#### 미확정 분기는 라이브로 증명할 수 없다
+
+실측 주소로 계산하면 **17개 인접쌍 전부가 상계를 통과한다** — 유니버스 1 최소 간격 42, 유니버스 2는 50, 상계 31. 즉 **`미확정` 부류를 발동시키는 입력이 현재 쇼파일에 0건이다.** 그 분기는 합성 인메모리 리그만이 덮을 수 있고 그것이 이미 확립된 선례다(`range_overlap_go()`의 폭은 주입값이며 라이브 미러가 아니다). **따라서 미확정 분기에 라이브 증거를 요구하는 AC는 충족 불가능하므로 쓰지 않는다.**
+
+#### 조사가 새로 찾은 것 3건
+
+1. **오늘 도달 가능한 거짓 문자열 1건.** `FootprintPolicy(enabled=True, widths={})`면 겹침 축이 켜진 것으로 판정되는데 전 픽스처가 폭 없음으로 걸러져 `충돌 0건`만 찍히고 **미수행 고지가 없다** — 사용자는 구간 겹침이 수행되고 깨끗했다고 읽는다. 프로덕션은 이 입력을 만들지 않지만(`evaluate_patch(inventory)`로 인자 생략) **다음 SPEC이 정확히 이 입력을 만든다.** A2-3과 같은 뿌리다.
+2. **`source` 필드가 한 번도 읽히지 않는다.** `FootprintPolicy.source`의 소비자가 0건이다 — 근거를 받아 버린다. `bound_source`를 추가하면서 `PatchEvaluation.to_dict()`에 내보내는 키를 함께 만들지 않으면 그것도 똑같이 죽는다.
+3. **절단 계수 비교가 구현 3개·재사용 헬퍼 0개로 흩어져 있다**(`server/prechk/inventory.py` · `server/prechk/macro.py` · `server/orchestrator/tools.py`의 `_free_macro_slot`, 셋째는 `build_toolset` 내부 클로저라 import 불가). 경로를 인자로 받는 열거 헬퍼로 수렴시키는 것이 `Patch/FixtureTypes` 순회의 최소 변경이기도 하다.
+
+#### 하드코딩 금지 요건의 비용
+
+3단 순회 비용은 `1 + T + Σ M_t` 회 `query_state`다(`T` = 픽스처 타입 수, `M_t` = 타입 t의 모드 수). 현재 쇼파일은 `T=1`·`M=4` 가정 시 6회지만 **`Patch/FixtureTypes`의 `childCount` 자체가 미기록이라 `[미확정]`**이며 순회가 런타임에 읽어야 한다. 최악은 무계이므로 기존 선례(`RIG_DRILLDOWN_QUERY_CAP` + 자식당 예산 + 소진 시 표기)를 그대로 쓴다. **결정적 차이 1건**: 거기서 예산 소진은 정보지만 여기서는 **모드 집합을 불완전하게 만들어 상계를 무효화**한다 — 캡 도달 시 `겹침 없음 증명`이 아니라 `미수행`을 내야 한다. *"부분 상계"* 같은 것은 없다.
+
+**새 화이트리스트 항목은 필요 없다** — 순회는 프로퍼티를 0개 읽고 `childCount`만 쓴다. **경로 상수도 이미 있다**: `DEFAULT_RIG_CONTEXT_PATHS["fixture_types"]`가 2026-07-22 라이브 검증 후 기본값으로 승격돼 있으므로 핸들러가 `rig_paths["groups"]`·`rig_paths["macros"]`와 **똑같이** 넘기면 된다. `server/prechk/` 안에 리터럴로 박으면 `rig_paths` 오버라이드 이음새를 우회한다.
+
+#### 유니버스 경계 — 새 `[미확정]` 1건
+
+간격은 **각 유니버스 내부에서만** 계산하고 전 유니버스에 대해 최소를 취한다(기존 두 판정이 이미 유니버스를 서로소 공간으로 다룬다). 남는 문제는 **꼬리 초과**다 — 유니버스 마지막 픽스처의 점유가 512를 넘어 다음 유니버스로 걸치는가. 실측 리그는 둘 다 여유가 있어 발생하지 않지만 **유니버스당 채널 상한이 512라는 근거를 저장소에서 찾지 못했고**(`Patch/DmxUniverses` `childCount 1024`는 유니버스 **개수**다) 라이브 관측도 없다. **다음 SPEC의 명시적 `ASSUMPTION`으로 세운다** — 512를 코드에 박으면 미검증 관례의 하드코딩이다.
+
+### 이월 1건 — 구현 형상이 확정됐다
+
+`AC-PRECHK-015` PRESERVE 게이트의 상시 테스트는 신규 `server/tests/test_prechk_preserve.py`로 만든다(**선례 파일을 확장하지 않는다** — 상수가 SONGCUE BASE 상대이고 한 모듈에 두 BASE를 섞는 것이 혼동의 원인이다).
+
+| 요소 | 형상 |
+|---|---|
+| BASE 고정 | `_PRECHK_BASE = "95687a0e0eba90b325daf76efbd0ac197e69e2fc"`(40자, 선례와 동형). **범위 고정 테스트를 반드시 짝으로 넣는다** — argv 4번째 원소가 정확히 `f"{_PRECHK_BASE}..HEAD"`임을 단정. 없으면 누군가 인자 없는 `git diff`로 "단순화"하고 게이트가 영구히 0행을 낸다(§E.2 M7이 그 무력화를 실측했다) |
+| PRESERVE 10경로 | `spec.md`의 목록 그대로. 디렉터리는 git pathspec이 재귀 포함하므로 `**` 전개 불필요 |
+| **비공허성(선례보다 강하게)** | 선례는 목록이 비지 않았음만 단정하지만 **존재하지 않는 경로는 `--stat`에 조용히 0행을 기여한다** — 오타 1글자로 게이트가 영구 통과한다. 각 경로에 `exists()`를 단정해 이 부류를 잡는다 |
+| `server/safety/**` 4지점 한정 | 여기는 **diff가 비어 있지 않아야 정상**이라 선례 형태를 그대로 못 쓴다. 3중 단정: ① 파일집합 봉쇄(`--name-only`가 정확히 `{console.py, gate.py}`) ② **순수 추가 봉쇄** — "순수 추가"의 실체는 hunk 위치가 아니라 **삭제 0행**이다. `console.py`는 삭제 0행, `gate.py`는 승인된 삭제 1행이 **독스트링**이므로 `≤ 1` **그리고** 그 1행이 `"""`로 시작함을 함께 단정한다(없으면 의미 있는 삭제가 허용치 아래로 숨는다). **이것이 선례의 hunk 시작점 스냅샷보다 강하다 — 어디가 아니라 무엇이 바뀌었는지를 제약한다** ③ 보호 심볼 무침범(선례 `_overlaps()` 재사용) |
+| 승인 4지점 중 `server/safety/` 밖 2건 | `server/orchestrator/ports.py`·`server/measurement/mock_provider.py`는 별도 튜플로 같은 단정 |
+| BASE 상대 좌표 | `_PROGRAMMER_STATE_COMMANDS`는 BASE에서 **247-257**(HEAD 258-268), `_GateStatePort` BASE **114**·`query_state` BASE **120**·`_query_state` BASE **598**, `server/safety/console.py` `query_state` BASE **372**(프로토콜 선언 **96**). **§E.6 시점 `[미확정]` 3건 중 2건을 여기서 닫았다** — 남은 1건은 `Patch/FixtureTypes`의 `childCount`이며 라이브가 필요하다 |
+
+### 판단 — 머지 준비 상태
+
+**P1 4건이 닫혔고 커밋됐다(`5f89701`).** §E.5의 3안 중 **1(독립 코드 리뷰)이 값을 냈다** — 그것을 건너뛰고 2(바로 머지)를 골랐다면 응답기 자신의 매크로를 덮는 경로와 위치를 슬롯으로 위조하는 경로가 main에 들어갔다. **CI 0건인 저장소에서 사람 리뷰가 유일한 관문이라는 §E.5의 판단이 실증됐다.**
+
+남은 P2·P3 10건은 머지 후 후속 커밋이며 그중 3건은 후속 SPEC의 계약 결정과 묶인다. **사용자 결정이 필요한 것은 1건뿐이다** — 트랙 B가 요구하는 **어휘 확장 승인**(신규 축 `overlap_basis` 4값 + `SKIPPED_CHECK_KIND` 1값). 그것은 계약 변경이므로 SPEC 문서 착수 전에 받는다(§0이 이미 그렇게 규정했다).
 
 ## §F. Phase 4 Mode Selection — 확정 기록 (오케스트레이터 소유)
 
