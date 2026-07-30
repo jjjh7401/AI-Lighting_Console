@@ -17,6 +17,13 @@ new file rather than an extension of the old one.
 Every assertion here is paired with a non-vacuity guard. ``git diff --stat``
 contributes NOTHING for a path that does not exist, so a single typo in the path
 list would make this gate pass forever.
+
+**NOT regression tests — this whole module is an INVARIANT GATE**
+(``AC-OVERLAP-021`` ⑥). The reverse run confirms it: all of these pass against the
+pre-change tree, because the boundaries they assert already held. Catching a fix
+is a different job, done by the mutation batteries recorded per milestone. What
+this file catches is a FUTURE edit crossing a boundary nobody re-checks, which is
+the failure mode a one-off manual gate leaves open.
 """
 
 from __future__ import annotations

@@ -1069,8 +1069,14 @@ class TestFootprintWalkIsWiredThroughRigPaths:
             assert "Patch/FixtureTypes" not in rig.state_calls
 
     def test_a_missing_section_does_not_discard_the_report(self):
-        # Refusing the call would throw away the fixture inventory the tool exists
-        # to produce -- the shape the zero-target macro branch already fixed once.
+        """NOT a regression test — an INVARIANT GUARD (AC-OVERLAP-021 ⑥).
+
+        Verified by the reverse run: this passes on the pre-change code too, where
+        no guard existed at all and the report came out regardless. It is here so
+        that ADDING the guard cannot start refusing the call, which would throw
+        away the fixture inventory the tool exists to produce -- the shape the
+        zero-target macro branch already fixed once.
+        """
         paths = {
             key: value
             for key, value in tools_module.DEFAULT_RIG_CONTEXT_PATHS.items()
@@ -1131,8 +1137,11 @@ class TestTheOverlapAxisFiresNoCommand:
         assert port.executed == []
 
     def test_the_same_port_is_not_simply_inert(self):
-        # Without this the assertion above would pass against a port that records
-        # nothing at all.
+        """NOT a regression test — a NON-VACUITY CONTROL (AC-OVERLAP-021 ⑥).
+
+        Verified by the reverse run: it passes on the pre-change code. Without it
+        the assertion above would also pass against a port that records nothing.
+        """
         rig = FootprintRigPort()
         port = RecordingExecutionPort()
         registry = build_toolset(
@@ -1147,7 +1156,17 @@ class TestTheOverlapAxisFiresNoCommand:
 
 
 class TestBoundaryProhibitions:
-    """AC-OVERLAP-018 ①②③④ — four boundaries, each with a non-vacuity guard."""
+    """AC-OVERLAP-018 ①②③④ — four boundaries, each with a non-vacuity guard.
+
+    Three of these are INVARIANT GUARDS rather than regression tests, confirmed by
+    the reverse run: ``test_the_walk_never_touches_the_execution_port``,
+    ``test_the_prechk_package_never_imports_the_send_surface`` and
+    ``test_the_operator_tool_exemption_list_is_unchanged`` pass on the pre-change
+    code because those boundaries already held. They are here to keep holding
+    while a new axis is added, which is a different job from catching a fix
+    (AC-OVERLAP-021 ⑥). ``test_the_axis_adds_no_web_surface`` IS a regression test:
+    it fails on the pre-change tree.
+    """
 
     def _prechk_sources(self) -> list[Path]:
         return sorted((PROJECT_ROOT / "server" / "prechk").rglob("*.py"))
