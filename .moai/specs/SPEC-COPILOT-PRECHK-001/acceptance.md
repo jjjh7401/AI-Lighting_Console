@@ -1,6 +1,6 @@
 # SPEC-COPILOT-PRECHK-001 — 인수 기준 (acceptance)
 
-status: draft (v0.1.0, 2026-07-29) · Tier L · 본 문서는 spec.md의 요구를 관측 가능한 검증 기준으로 전개한다.
+status: completed (v0.1.0, 2026-07-30) · Tier L · **AC 17/17 PASS** — 소프트웨어 15건 기계 검증(pytest), 라이브 2건(AC-PRECHK-016 · AC-PRECHK-017) 실물 grandMA3 onPC 2.4.2. 본 문서는 spec.md의 요구를 관측 가능한 검증 기준으로 전개한다. run-audit 1회차 FAIL 0.695의 지적 14건 처리 기록은 `progress.md` §E.2a다 — 그 과정에서 `AC-PRECHK-006` ④가 실제 픽스처와 어긋나 있었음이 드러나 정정됐다.
 
 > **v0.1.0 — 최초 작성.** **AC 17건**(AC-PRECHK-001~017) · **REQ 20건**(REQ-PRECHK-001~020) 전량 커버. 라이브 AC 2건(**AC-PRECHK-016** M0 프로브 · **AC-PRECHK-017** M8 종단)이 라이브 세션 회계 2회에 대응한다.
 >

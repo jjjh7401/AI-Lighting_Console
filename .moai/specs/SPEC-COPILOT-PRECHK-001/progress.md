@@ -773,7 +773,41 @@ OSC: send 8000 / receive 9005 (기본 9000 아님) · 응답기 v1.5.0
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync>_
+```yaml
+sync_status: audit-ready
+sync_complete_at: 2026-07-30
+gate_sync_1: "PASS — 작업 트리에 sync 편집 외 잔여 0, `uv run pytest server/tests/ -q` 2721 passed · 5 skipped · 0 failed (오케스트레이터 직접 실측, `__pycache__` 정리 후)"
+artifacts_updated:
+  - "CHANGELOG.md — `[Unreleased] Added` 최상단에 PRECHK 항목(M0~M8 + M0 안전 관련 실측 2건 + 부수 폐쇄 3건 + 자체 발견 결함 3건 + run-audit P1 4건 + 정직한 잔여 6건)"
+  - "spec.md frontmatter — status: draft -> completed, updated: 2026-07-30. **version은 0.1.0 유지**"
+  - "spec.md §C — 조건부 예외의 승인 상태를 '아직 승인되지 않았다'에서 '승인·집행 완료(승인 2026-07-29 · 집행 2026-07-30)'로 정정하고 hunk 내역 참조를 추가. 거부 분기 서술은 후속 SPEC의 선례로 남겼다"
+  - "acceptance.md 상태 줄 — status: completed, AC 17/17 PASS 명시 + run-audit 처리 기록 참조"
+  - "acceptance.md `AC-PRECHK-006` ④ · design.md §6.1 `clean_rig_18` 행 — 실제 픽스처와 어긋난 서술을 '의도적 합성·열거 완전'으로 정정(run-audit P2-4)"
+  - "progress.md §E.2a(run-audit 처리) · §E.3(run-phase 신호 정정) · §E.3a(핸드오프) · 본 절"
+artifacts_unchanged:
+  - "README.md — `precheck_patch` 언급 0건이고 툴 목록 서술이 없어 갱신 대상 아님(실측 확인). SONGCUE가 같은 근거로 제외한 선례"
+  - "docs/proposals/2026-07-26-lighting-direction-feature-proposal.md — P2-6을 제안으로 서술한 역사적 스냅샷이며 살아 있는 상태 문서가 아니다. 선행 3 SPEC도 갱신하지 않았다"
+  - "plan.md · design.md · research.md 본문 — sync는 고치지 않는다(소유권 매트릭스). design.md §6.1은 예외이며 정본 정합 정정이라 위 목록에 있다"
+spec_version_decision:
+  kept: "0.1.0"
+  reason: "SONGCUE는 PRESERVE **목록을 실제로 개정**해 0.2.0을 올렸다(REQ 개정 주석 동반). PRECHK는 목록도 REQ 20건도 Out of Scope도 **바꾸지 않았다** — 조건부 예외는 이미 v0.1.0 본문에 있었고 바뀐 것은 그 **승인 상태의 기록**이다. 상태 기록 갱신에 버전을 올리면 버전이 규범 변경 신호로서의 의미를 잃는다. `updated` 필드가 그 변화를 담는다"
+spec_divergence:
+  requirements_implemented: "20/20"
+  scope_reductions: 0
+  scope_additions: 0
+  descoped_by_live_verdict: "2건 — ASSUMPTION-27(구간 겹침 미수행) · ASSUMPTION-30(page >= 2 일반화). 둘 다 `DESCOPE:` 접두 행으로 기록되고 리포트의 `skipped_checks`가 사용자에게 축소를 말한다. 매크로 축(ASSUMPTION-26)은 GO이므로 산출물 2는 성립한다"
+  live_sessions: "3 — plan.md §C가 2회로 회계했고 run-audit P1-1 수정이 M4 보강 1회를 추가했다. 계획 초과이며 그 사유가 §E.2a에 있다"
+honest_residuals:
+  - "`FID` 의미는 현재 쇼파일로 닫을 수 없다(슬롯 == FID). 슬롯 != FID로 패치된 쇼파일이 선행 조건이며 사용자 GUI 작업이다"
+  - "무응답 픽스처 자동 탐지는 관측 경로가 존재하지 않아 DESCOPE — 제안서 원문의 요구였고 사용자 확정으로 범위에서 제외됐다"
+  - "구간 겹침 미수행. run-audit가 추가 후보 2건을 열거했고 그중 보수적 점유폭 상계는 **라이브 측정 없이** 되살릴 여지가 있다 — FootprintPolicy가 이진 게이트라 그 형상을 표현하지 못하는 것이 구조적 이유다"
+  - "희소 풀에서 design.md 슬롯 A의 `1..childCount` 캡이 과소복구한다 — 이번 쇼파일이 1..19 조밀했을 뿐이다"
+  - "M2·M3·M4의 뮤테이션 20건은 집계 수치만 남아 개별 증거가 없다(워커 로그가 `.gitignore:206` 아래). '검증됨'으로 세지 않았고 재집행하지도 않았다 — 재집행은 다른 사람이 다른 뮤테이션을 돌린 것이 되어 원래 주장을 검증하지 못한다"
+  - "`AC-PRECHK-015`의 PRESERVE 게이트가 상시 테스트가 아니다(1회성 수동 절차) — 후속 SPEC이 PRECHK의 PRESERVE를 깨도 스위트가 잡지 못한다. 선행 SPEC에 상시화 선례가 있으므로 채택이 옳고 이월한다"
+  - "라이브 원문 로그가 `.moai/state/`(`.gitignore:206`) 아래에만 있다 — 커밋되는 사본은 §E.2와 §E.2a이며 그래서 커맨드·응답 문자열을 요약 없이 전재했다. run-audit도 이 한계를 §5에 적었다"
+orchestrator_errors_recorded: "4건 — (1) `ASSUMPTION-27`을 후보 부분집합 위에서 부정 단정(발견자는 읽기 전용 scout, 그 뒤 run-audit가 12건도 전수가 아님을 재지적). (2) `server.prechk.report.build_report`가 동명 심볼을 가려 busking 12건을 깨뜨렸다 — 신규 파일만 돌려서 놓쳤고 전체 스위트가 잡았다. (3) `summary_ko`의 incomplete 라벨이 거짓을 말했다 — 인메모리 32건을 통과했고 라이브 종단만이 잡았다. (4) §F.1을 추가하면서 내 M1 테스트의 §F 파싱을 깨뜨렸다 — 워커가 수리했다. 추가로 절차 실수 1건: 뮤테이션 복구 직후 `__pycache__`를 지우지 않아 유령 실패를 쫓았다(§E.2a에 방법론 위험으로 기록)"
+next: "PR — feature/SPEC-COPILOT-PRECHK-001 -> main. **원격에 브랜치가 없으므로 push가 선행한다.** `origin/main`이 95687a0이고 behind 0이므로 리베이스 불필요하며 선행 SPEC 위에 스택돼 있지 않은 단일 브랜치다. 머지 전략은 사용자 판단 — 본 브랜치는 커밋 27개이고 그중 2건은 M7의 PRESERVE 게이트 비공허성 실증 주입·revert 쌍이라 squash가 이력을 깔끔하게 만든다. 반면 개별 커밋이 마일스톤 경계와 감사 수정을 구분해 담고 있어 merge commit이 추적성을 보존한다."
+```
 
 ## §F. Phase 4 Mode Selection — 확정 기록 (오케스트레이터 소유)
 

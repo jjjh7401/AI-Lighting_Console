@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-PRECHK-001
 title: "프리쇼 패치 점검 + 응답 확인 매크로 생성 (Pre-Show Patch Check)"
 version: "0.1.0"
-status: draft
+status: completed
 created: 2026-07-29
 updated: 2026-07-30
 author: manager-spec
