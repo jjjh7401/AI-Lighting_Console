@@ -587,6 +587,87 @@ new_measurements_for_successors:
 next: "run-phase 종료. M0~M8 9개 마일스톤 전건 닫힘 · REOPEN_SCOPE 0건 · 뮤테이션 생존 0건. 다음은 sync-phase(§E.4)이며 그 전에 run-audit를 세우는 것이 plan-phase의 경험(감사가 축약 토큰 8건과 근거 오류 1건을 잡았다)에 부합한다."
 ```
 
+## §E.3a 핸드오프 — 다음 단계 착수 지시 (2026-07-30)
+
+> 이 절은 **다음 세션이 읽고 바로 착수할 수 있도록** 정리한 기록이다. `.moai/state/`는 커밋되지 않으므로 재개에 필요한 사실은 전부 여기와 §E.2에 있다.
+
+### 지금 어디까지 왔나
+
+**run-phase 완결.** M0부터 M8까지 9개 마일스톤 전건 닫힘. `REOPEN_SCOPE` 0건이므로 범위 재개정 없이 출하 형상이 확정됐다. 다음은 **sync-phase**이며 그 앞에 **run-audit**를 세울 것을 권고한다.
+
+| 마일스톤 | 산출 | AC | 상태 |
+|---|---|---|---|
+| M0 라이브 프로브 | 판정 6건(접두 행 6) | AC-PRECHK-016 | 닫힘 |
+| M1 초크포인트 | 승인된 4지점 + `server/prechk/query.py` | AC-PRECHK-013 | 닫힘 |
+| M2 인벤토리 | `server/prechk/inventory.py` | AC-PRECHK-001 · AC-PRECHK-002 · AC-PRECHK-003 · AC-PRECHK-004 | 닫힘 |
+| M3 패치 정합성 | `server/prechk/patch.py` | AC-PRECHK-005 · AC-PRECHK-006 · AC-PRECHK-007 · AC-PRECHK-008 · AC-PRECHK-009 | 닫힘 |
+| M4 매크로 | `server/prechk/macro.py` | AC-PRECHK-010 · AC-PRECHK-011 | 닫힘 |
+| M5 리포트 | `server/prechk/report.py` | AC-PRECHK-012 | 닫힘 |
+| M6 툴 배선 | `precheck_patch` in `server/orchestrator/tools.py` | AC-PRECHK-014 | 닫힘 |
+| M7 회귀·PRESERVE | 게이트 실증 | AC-PRECHK-015 | 닫힘 |
+| M8 종단 라이브 | `.moai/state/verify/prechk-m8/result.json` | AC-PRECHK-017 | 닫힘 |
+
+**AC 17건 전량 PASS.** 소프트웨어 15건은 기계 검증, 라이브 2건(AC-PRECHK-016 · AC-PRECHK-017)은 실물 grandMA3 onPC 2.4.2 세션.
+
+### 재개 시 검증할 전제 (어긋나면 멈추고 보고할 것)
+
+```
+git branch --show-current  -> feature/SPEC-COPILOT-PRECHK-001
+git log --oneline -1       -> 본 핸드오프 커밋 (§E.3a 추가). 그 부모가 f8619f8 (M8 종단 라이브 + run-phase 신호)
+git status --short         -> 비어 있음
+git rev-parse --short origin/main -> 95687a0 · ahead 25 / behind 0
+원격 PRECHK 브랜치 없음(미푸시) · 열린 PR 없음
+uv run pytest server/tests/ -q -> 2711 passed · 5 skipped · 0 failed
+OSC: send 8000 / receive 9005 (기본 9000 아님) · 응답기 v1.5.0
+```
+
+**BASE는 `95687a0`이며 협상 불가다** — `AC-PRECHK-015` ①의 `git diff --stat <BASE>..HEAD` 게이트가 쓰는 유일한 기준점이다. 인자 없는 `git diff`로 대체하면 위반이 커밋돼 있어도 0행을 내며 게이트가 통째로 무력해진다(M7이 실측으로 증명).
+
+### 다음 단계 — 이 순서
+
+**[1] run-audit (권고 · 미착수).** 작성자가 아닌 주체가 §E.2와 산출 코드를 채점한다. 근거: plan-audit 1회차가 **FAIL 0.76**으로 지적 11건을 냈고, 이번 run-phase에서도 독립 scout가 내 오류 2건을 잡았다. 반면 내 자체 게이트는 오탐 2건(`'2.351'`의 `, 351`을 축약 토큰으로 · 셀렉터 오류의 `no tests ran`을 뮤테이션 사망으로)을 냈다. **자기 감사의 한계가 이 세션에서 실측됐다.**
+  감사에 특히 볼 것을 지목한다 — (a) M0 판정 6건의 `effect=` 증거가 재조회에서 나온 것인지, (b) `ASSUMPTION-27` 후보 12건이 실제로 전수인지, (c) 뮤테이션 34건이 각각 해당 AC를 죽였는지와 비공허성 동반 여부, (d) `server/safety/**` hunk가 승인 4지점을 벗어나지 않는지.
+
+**[2] sync-phase.** SONGCUE의 §E.4 형상을 따른다(`.moai/specs/SPEC-COPILOT-SONGCUE-001/progress.md:823-853`). 갱신 대상과 각각의 근거:
+
+| 대상 | 편집 | 근거 |
+|---|---|---|
+| `CHANGELOG.md` | `[Unreleased] Added` 최상단에 PRECHK 항목 | SONGCUE가 같은 자리에 있다 |
+| `.moai/specs/SPEC-COPILOT-PRECHK-001/spec.md` frontmatter | `status: draft` → `completed` | 선례 동일 |
+| **`spec.md` §C 조건부 예외 문단** | *"이 예외는 아직 승인되지 않았다"* 를 **승인·집행 완료**로 정정 | **필수** — 현재 문장이 실제와 어긋난다. 승인은 2026-07-29이고 M1이 4지점을 집행했다 |
+| `acceptance.md` 상태 줄 | `status: completed` · AC 17/17 PASS 명시 | 선례 동일 |
+| `progress.md` §E.4 | sync 신호 작성 | 본 문서 |
+
+**`spec.md` 버전 판단이 열려 있다.** SONGCUE는 PRESERVE 목록을 실제로 개정해 `0.1.0` → `0.2.0`을 올렸다. PRECHK는 **PRESERVE 목록 자체를 바꾸지 않았다** — 조건부 예외가 이미 v0.1.0 본문에 있었고 승인 상태만 바뀌었다. 그래서 (i) 승인 상태 문장 정정을 편집으로 보고 `0.2.0`을 올리는 안과 (ii) 목록 불변이므로 `0.1.0`을 유지하는 안이 갈린다. **sync 착수자가 결정하고 사유를 §E.4에 적는다.**
+
+**갱신하지 않을 것도 미리 적는다** — `plan.md` · `design.md` · `research.md` 본문(소유권 매트릭스상 sync는 고치지 않는다) · `docs/proposals/2026-07-26-lighting-direction-feature-proposal.md`(역사적 스냅샷이며 선행 3 SPEC도 갱신하지 않았다) · `README.md`(**실측으로 확정** — `precheck_patch` 언급 0건이고 툴 목록 서술이 없어 갱신 대상이 아니다. SONGCUE가 같은 근거로 제외한 선례를 따른다).
+
+**[3] PR.** `feature/SPEC-COPILOT-PRECHK-001` → `main`. **원격에 브랜치가 없으므로 push가 선행한다.** `origin/main`이 `95687a0`이고 behind 0이므로 리베이스 불필요 — 선행 SPEC들이 이미 머지된 위에 스택돼 있지 않은 단일 브랜치다.
+
+### 후속 SPEC 후보 — 우선순위와 각각의 벽
+
+| 후보 | 상태 | 벽 |
+|---|---|---|
+| **FID 축** | 착수 가능하나 **사용자 GUI 작업이 선행** | 슬롯 ≠ FID로 패치된 쇼파일이 필요하다(`console/lua/PROTOCOL.md:322-324`). 현재 쇼파일은 슬롯과 FID가 같아 어떤 라이브 세션도 닫을 수 없다 |
+| **구간 겹침 재개** | `ASSUMPTION-27` 부정으로 축소된 기능 | 후보 12건 전건 부정을 §E.2가 기록했다. 다른 쇼파일·다른 응답기 버전에서 재측정할 때 **무엇을 이미 시도했는지** 그 표를 먼저 읽을 것 |
+| **페이지·익스큐터 저작** | `ASSUMPTION-28`·`ASSUMPTION-29` GO · `ASSUMPTION-30` 부정 | 저작은 되지만 `Assign … At Executor <N>`이 **page 성분을 page 1 인덱스 공간으로 누출**한다(비단사 사상). 안전 설계가 선행 조건이다 |
+| **프리셋 읽기** | 살아 있는 경로 실측 완료 | `DataPool/PresetPools/<풀>`이 정답이고 `DataPool/Presets`는 사망이다. 추측으로 경로를 고르지 말 것 |
+| SONGCUE 잔여 · P2-4 자동 페이퍼워크 · P2-5 볼런티어 런북 | 미착수 | 뒤 둘은 **큐 내용 관측 벽**에 막혀 있다(`research.md` §3.2). 착수 전 그 벽을 먼저 재는 산정이 필요하다 |
+
+### 이 세션에서 확립되어 반복할 규율
+
+1. **불완전한 집합에 판정을 단정하지 않는다.** 내가 `ASSUMPTION-27`을 후보 부분집합 위에서 부정 단정했고 scout가 잡았다. `REQ-PRECHK-010`이 금지하는 바로 그 형태를 요구 작성자가 반복했다.
+2. **종료 코드만 보고 뮤테이션 사망을 세지 않는다.** `no tests ran`도 비영 종료 코드를 낸다. 통과 잔여 건수를 함께 보고해 비공허성을 보인다.
+3. **임포트를 깨뜨리는 뮤테이션은 무효다.** 전면 실패는 게이트가 잡은 것이 아니다. 미실행 경로에 심어 스캔이 **정확히 해당 테스트만** 죽이는지 본다.
+4. **전체 스위트를 돌린다.** 신규 파일만 돌린 M6는 21 passed였고 그 상태에서 `build_report` 심볼 가림 버그로 busking 12건이 죽어 있었다.
+5. **라이브 종단 실행은 유닛이 못 잡는 것을 잡는다.** `summary_ko`의 거짓 서술은 인메모리 테스트 32건을 전부 통과했다.
+6. **`node.childCount`와 `len(children)`을 함께 본다.** `truncated`는 '불완전하다'만 말하고 '얼마나'를 말하지 않는다.
+7. **비파괴 프로브로 판정 불가면 생성 프로브를 쓴다.** 단 쇼파일을 원상 복구하고 **재조회로** 베이스라인 일치를 확인한다. M0는 5지점을 바꾸고 전건 복구했다.
+8. **부정 프로브로 문법 존부를 판정하지 않는다.** 날조 키워드도 `Illegal object`를 준다. 다만 `Illegal value` · `Illegal property` · `Cannot Create Object` · `User Canceled Command`는 변별적이다(scout 실측).
+9. **병렬은 계약이 닫힌 뒤에만.** 공유 계약(`server/prechk/verdicts.py`)은 스폰 이전에 오케스트레이터가 직접 만든다. 읽기 전용 scout 병렬은 항상 안전하고 실제로 값을 냈다.
+10. **위임 전 `spec.md` §C PRESERVE 정본을 읽는다.** `plan.md`의 좁은 목록만 보면 SONGCUE가 겪은 응답기 오지시가 반복된다.
+11. **라이브 세션에서 코드를 고치지 않는다.** M8의 라벨 결함은 스택을 닫은 뒤 고쳤다.
+
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<pending sync>_
