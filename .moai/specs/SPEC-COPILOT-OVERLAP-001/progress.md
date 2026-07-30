@@ -475,6 +475,68 @@ SKIP: ASSUMPTION-35 Patch/FixtureTypes의 childCount 즉 타입 수 T. state Pat
 
 **갱신 0건이 유지됐다.** `server/tests/test_prechk_inventory.py`의 두 소비 테스트(`queried_paths`가 픽스처 루트 하위 · 금지 프로퍼티명 스캔)가 **무변경 통과**한다 — 순회가 자기 조회 기록을 `WalkOutcome.queried_paths`에 담고 `"DMXModes"`·`"DMXChannels"`는 금지 집합의 원소가 아니기 때문이다(금지 집합은 `"Channels"`·`"ChannelCount"`를 **정확 문자열**로 금지한다).
 
+### M3 — 상계 판정 (`AC-OVERLAP-008`~`AC-OVERLAP-012` · `cycle_type=tdd` · 2026-07-30)
+
+#### 착수 전제 확인
+
+| 항목 | 산출 |
+|---|---|
+| M2 DoD 15항 | 전건 충족(위) |
+| baseline | **2797 passed · 5 skipped · 0 failed** (M2 커밋 시점 실측) |
+
+#### 산출
+
+- `server/prechk/footprint.py` — `AddressGap` · `address_gaps`(유니버스 내부 인접차) · `unsettled_gaps`(술어 **`간격 < 상계`**). 저장소 전체에 `a[i+1]-a[i]`를 구하는 지점이 0건이었으므로 신규다.
+- `server/prechk/patch.py` — `_address_groups`로 그룹핑을 **추출**해 두 축이 같은 집합을 보게 했다(D-7) · `normalize_address`에 **하한** 도입 · `_bound_basis` · `_unsettled_reason` · `evaluate_patch(…, walk=…)` 수령 · `PatchEvaluation.overlap_basis` 필드.
+- 테스트 **+41건**(`test_prechk_footprint.py` 9 · `test_prechk_patch.py` 32).
+
+**주소 하한만 넣고 상한은 넣지 않았다.** `_MINIMUM_INDEX = 1`이며 `0.0` · `1.0` · `0.1` · `12.0`이 판독 실패로 분류된다. 상한은 `ASSUMPTION-33`이 용량을 미확정으로 두므로 **없는 것이 옳다** — 그 사실을 `1.512` · `1.1024` · `1.65535`가 **통과함**을 단정해 기계로 고정했다(`AC-OVERLAP-012` ④). 어휘를 신설하지 않았고 기존 `address_parse_failed`로 흐른다.
+
+**미확정은 `range_overlaps`에 들어가지 않는다.** `_bound_basis`가 `(등급, 미확정 인접쌍, 상계)`를 돌려주고 미확정은 `skipped_checks`의 `range_overlap_bound_inconclusive` 한 행으로만 나간다 — 침묵이 결함이므로 고지하고, 충돌로 세지 않으므로 `충돌 N건`이 발화하지 않는다. 그 한 행의 `reason`에 유니버스·슬롯·간격·상계를 열거한다(kind당 1행이므로 행을 늘릴 수 없다, D-4).
+
+#### 뮤테이션 6건 — 전건 사망
+
+| # | 주입 | 결과 |
+|---|---|---|
+| **M-7** | 정확폭 축의 유니버스 키잉 붕괴 | **killed** — 아래 별항 |
+| **M-8** | 상계 축(`address_gaps`)의 유니버스 키잉 붕괴 | **killed** — 6 failed |
+| **M-9** | 술어를 `간격 <= 상계`로 | **killed** — 6 failed. **`간격 == 상계` 경계 테스트가 두 계층(순회 · 판정)에서 각각 발화한다** |
+| **M-10** | 미확정 인접쌍을 `range_overlaps`에 주입 | **killed** — 3 failed |
+| **M-11** | 주소 하한 제거 | **killed** — 8 failed |
+| **M-12** | 상계 축이 `type_mode_ok`를 요구 | **killed** — 3 failed. 기존 테스트 1건도 함께 죽는다 |
+
+#### `AC-OVERLAP-009` ③의 *"착수 시점에 살아 있었다"*를 실측으로 확인했다
+
+조사는 이것을 `[코드]` 추론으로 적었다. **직접 재현했다.** 첫 시도(`intervals[0]`)는 기존 테스트 1건을 죽였는데 그것은 붕괴 때문이 아니라 **보고되는 유니버스 라벨이 0이 되었기** 때문이다 — 즉 순수한 붕괴 뮤테이션이 아니다. 라벨을 클러스터 구성원에서 가져오도록 고쳐 **주소 공간만** 붕괴시키면:
+
+| 대상 | 결과 |
+|---|---|
+| 신규 테스트를 제외한 `test_prechk_patch.py` | **74 passed** — 뮤테이션이 살아 있다 |
+| 신규 `TestUniverseDisjointnessOnBothAxes` 포함 | **1 failed** — 닫혔다 |
+
+**그리고 리그를 고쳐야 했다.** 초안은 `1.500`·`2.001`을 썼는데 그 쌍은 **붕괴해도 답이 바뀌지 않는다** — 폭 40에서 구간 `500..539`와 `1..40`이 한 공간에서도 만나지 않는다. 초안 주석이 그 사실을 스스로 적으면서도 리그를 바꾸지 않았고, 그것은 **공허한 뮤테이션 테스트**였다. `1.100`·`2.110`으로 바꿔 붕괴 시 `100..139`와 `110..149`가 겹치게 하고, **같은 두 주소를 한 유니버스에 놓으면 두 축이 실제로 발화함**을 별도 테스트로 단정해 비공허성을 산문이 아니라 코드로 옮겼다.
+
+#### DoD 10항 — 전건 기계 판정
+
+| # | 조건 | 산출 |
+|---|---|---|
+| 1 | 간격 `W-1` → `bound_inconclusive` · **정확히 `W`** → `bound_proves_clear` · `W+1` → `bound_proves_clear`, 같은 리그 형상에서 간격만 변화 | 충족. `TestBoundBasisGrades`가 `_pair(gap)` 하나로 세 경우를 돌리고 `below != at` · `at == above`를 단정한다 |
+| 2 | 유니버스 경계 차분이 간격 집합에 없다 | 충족(`1.500`·`2.001` → 간격 0건) |
+| 3 | 간격 총수가 `Σ(n_u − 1)`이며 **17을 상수로 박지 않는다** | 충족 — 리그 형상에서 계산해 대조하고 기대값 ≥ 1을 함께 단정한다 |
+| 4 | 유니버스 키잉 제거 뮤테이션이 **양 축에서** 죽고, 착수 시점에 살아 있었음을 확인 | 충족 — 위 별항 |
+| 5 | 같은 `(유니버스, 주소)`가 간격 집합에 한 번만 · 간격 0 미산출 · 주소 중복 축은 여전히 검출 | 충족 — 그룹핑 **키 집합**을 쓰므로 형상으로 성립한다 |
+| 6 | 타입·모드 미확정 픽스처가 **간격에 포함**되고 **정확폭 축에서는 제외**됨을 한 테스트에서 | 충족. M-12가 그 술어 차이를 지키는 것을 확인 |
+| 7 | `AC-OVERLAP-011` ⑤ 먼저, 그 다음 ①②③ | 충족 — `test_the_unsettled_grade_is_actually_produced`가 먼저 등급 산출을 단정한다 |
+| 8 | 미확정이 침묵으로 처리되지 않는다 | 충족 — `skipped_checks` 행이 나가고 `report.summary_ko`가 그 라벨을 *"미수행 판정:"* 절에 싣는다. 라벨은 *"구간 겹침 상계 미확정 — 간격이 상계 이내라 판정 보류"*이며 *"이상 없음"*이 아니다. **요약 도달의 전량 판정은 M5 소유다** |
+| 9 | `AC-OVERLAP-012` ①②③④ | 충족(위) |
+| 10 | 스위트 계수가 baseline 이상 | **2838 passed · 5 skipped · 0 failed** = 2797 + 41 |
+
+**갱신 0건이 유지됐다** — `server/tests/test_prechk_patch.py`의 기존 3단정(정확폭 GO 분기 · 주소 중복 축 서로소성 · `DESCOPE: ASSUMPTION-27` 접두 행 1건)이 **무변경 통과**한다. 추가만 했다.
+
+#### 관측된 플레이크 1건 — 본 SPEC과 무관하다
+
+`server/tests/test_web_launcher.py::TestSidecarSelfReap::test_orphaned_sidecar_reaps_the_group_without_a_pipe`가 전체 스위트 실행 3회 중 2회 실패하고 **단독 실행에서는 71건 전건 통과**했으며 이후 전체 실행에서도 통과했다. 원인은 `_await_status`의 **15초 벽시계 데드라인**이며 사이드카 서브프로세스가 그 안에 `status.json`을 내지 못하면 실패한다 — 머신 부하에 걸린다. 본 SPEC의 변경은 `server/prechk/**`와 `server/tests/test_prechk_*`뿐이고 런처 계층은 그것을 import하지 않는다. **고치지 않고 기록만 남긴다** — 본 SPEC의 범위가 아니며 타이밍 데드라인 조정은 별건이다.
+
 ## §F Phase 4 Mode Selection — 확정 (오케스트레이터 소유 · 2026-07-30)
 
 > 본 절은 **오케스트레이터가 첫 run-phase 스폰 전에 작성**하는 구속력 있는 기록이다. `plan.md` §G의 대응 절은 **권고**이며 오케스트레이터가 확정하거나 기각한다. 어긋나면 **본 절이 이긴다.**

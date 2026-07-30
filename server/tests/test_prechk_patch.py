@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 
+from server.prechk.footprint import WalkOutcome
 from server.prechk.inventory import (
     COMPLETE,
     INCOMPLETE,
@@ -28,10 +29,15 @@ from server.prechk.patch import (
     ADDRESS_DUPLICATE,
     ADDRESS_PARSE_FAILED,
     ASSUMPTION_27,
+    BOUND_INCONCLUSIVE,
+    BOUND_PROVES_CLEAR,
     COLLISION,
+    EXACT_WIDTHS,
     NOT_ASSESSED,
+    NOT_PERFORMED,
     OBSERVED_CLEAR,
     RANGE_OVERLAP,
+    RANGE_OVERLAP_BOUND_INCONCLUSIVE,
     RANGE_OVERLAP_DESCOPE,
     READ_FAILED,
     SCOPE_QUALIFIER,
@@ -43,6 +49,7 @@ from server.prechk.patch import (
 from server.prechk.verdicts import (
     COLLISION_KIND,
     FIXTURE_VERDICT,
+    OVERLAP_BASIS,
     READ_FAILURE_KIND,
     SKIPPED_CHECK_KIND,
 )
@@ -469,3 +476,268 @@ class TestNoConsistencyClaimOnIncompleteReads:
         assert len(slots) == len(set(slots)) == evaluation.inventory.observed_count
         counts = evaluation.verdict_counts
         assert counts[OBSERVED_CLEAR] + counts[COLLISION] + counts[READ_FAILED] == len(slots)
+
+
+#: A bound the walk "enumerated". Deliberately not a measured width: a verdict
+#: that came from a constant instead of this value would disagree.
+BOUND = 23
+
+
+def _walked(bound: int = BOUND, *, complete: bool = True) -> WalkOutcome:
+    return WalkOutcome(complete=complete, mode_widths=(bound - 4, bound))
+
+
+def _pair(gap: int, *, universe: int = 1, first: int = 100) -> FixturePool:
+    """Two fixtures in one universe, ``gap`` channels apart."""
+    return FixturePool(
+        {
+            1: fixture_props(f"{universe}.{first:03d}", name="앞"),
+            2: fixture_props(f"{universe}.{first + gap:03d}", name="뒤"),
+        }
+    )
+
+
+class TestBoundBasisGrades:
+    """AC-OVERLAP-008 · AC-OVERLAP-011 — the predicate, and what it must not say."""
+
+    def _basis(self, gap: int) -> str:
+        return evaluate_patch(read_inventory(_pair(gap)), walk=_walked()).overlap_basis
+
+    def test_a_gap_below_the_bound_is_unsettled(self):
+        assert self._basis(BOUND - 1) == BOUND_INCONCLUSIVE
+
+    def test_a_gap_exactly_at_the_bound_is_clear(self):
+        """The off-by-one boundary, at the judgement layer.
+
+        A predecessor note wrote this as "at or below the bound, unsettled". On
+        the measured rig the gap is far wider than the bound, so that spelling
+        gives the same answer and the error waits for a rig that lands exactly
+        here.
+        """
+        assert self._basis(BOUND) == BOUND_PROVES_CLEAR
+
+    def test_a_gap_above_the_bound_is_clear(self):
+        assert self._basis(BOUND + 1) == BOUND_PROVES_CLEAR
+
+    def test_only_the_narrow_case_differs(self):
+        below, at, above = self._basis(BOUND - 1), self._basis(BOUND), self._basis(BOUND + 1)
+        assert below != at
+        assert at == above
+
+    def test_an_incomplete_walk_performs_no_comparison(self):
+        evaluation = evaluate_patch(read_inventory(_pair(BOUND - 1)), walk=_walked(complete=False))
+        assert evaluation.overlap_basis == NOT_PERFORMED
+
+    def test_no_walk_at_all_performs_no_comparison(self):
+        assert evaluate_patch(read_inventory(_pair(BOUND - 1))).overlap_basis == NOT_PERFORMED
+
+    def test_the_four_grades_are_the_closed_vocabulary(self):
+        assert {EXACT_WIDTHS, BOUND_PROVES_CLEAR, BOUND_INCONCLUSIVE, NOT_PERFORMED} == set(
+            OVERLAP_BASIS
+        )
+
+
+class TestUnsettledIsNotACollision:
+    """AC-OVERLAP-011 — an upper bound cannot prove that an overlap EXISTS."""
+
+    def _unsettled(self):
+        return evaluate_patch(read_inventory(_pair(BOUND - 1)), walk=_walked())
+
+    def test_the_unsettled_grade_is_actually_produced(self):
+        # ⑤ first: the three assertions below are vacuous if nothing fired.
+        assert self._unsettled().overlap_basis == BOUND_INCONCLUSIVE
+
+    def test_no_range_overlap_is_reported(self):
+        assert self._unsettled().range_overlaps == ()
+
+    def test_the_collision_total_stays_zero(self):
+        assert self._unsettled().collision_total == 0
+
+    def test_no_fixture_is_given_a_collision_verdict(self):
+        evaluation = self._unsettled()
+        assert [row.verdict for row in evaluation.rows] == [OBSERVED_CLEAR, OBSERVED_CLEAR]
+        assert COLLISION not in [row.verdict for row in evaluation.rows]
+
+    def test_the_state_is_announced_rather_than_swallowed(self):
+        evaluation = self._unsettled()
+        kinds = [check.kind for check in evaluation.skipped_checks]
+        assert RANGE_OVERLAP_BOUND_INCONCLUSIVE in kinds
+        row = next(
+            c for c in evaluation.skipped_checks if c.kind == RANGE_OVERLAP_BOUND_INCONCLUSIVE
+        )
+        assert str(BOUND) in row.reason
+        assert "충돌이 아니다" in row.reason
+        assert row.assumption
+
+    def test_the_notice_names_the_universe_and_the_slots(self):
+        row = next(
+            c
+            for c in self._unsettled().skipped_checks
+            if c.kind == RANGE_OVERLAP_BOUND_INCONCLUSIVE
+        )
+        assert "유니버스 1" in row.reason
+        assert "슬롯 1" in row.reason
+        assert "슬롯 2" in row.reason
+
+    def test_a_clear_rig_raises_no_notice(self):
+        # Contrast: the notice is a consequence of the grade, not a fixture.
+        evaluation = evaluate_patch(read_inventory(_pair(BOUND)), walk=_walked())
+        assert RANGE_OVERLAP_BOUND_INCONCLUSIVE not in [
+            check.kind for check in evaluation.skipped_checks
+        ]
+
+
+class TestUniverseDisjointnessOnBothAxes:
+    """AC-OVERLAP-009 ③④ — the mutation that was alive at the start of this SPEC.
+
+    Nothing walked ``_range_overlaps`` with two universes, so collapsing the
+    per-universe buckets into one address space broke no test. Closing that hole
+    needs a rig where the collapse CHANGES the answer, which is stricter than a
+    rig where the two addresses merely look adjacent: ``1.500`` and ``2.001`` are
+    one apart as bare numbers, yet the intervals ``500..539`` and ``1..40`` miss
+    each other even in one shared space, so such a rig proves nothing. The rig
+    below overlaps under a collapse and cannot overlap without one.
+    """
+
+    #: Universe 2's address sits INSIDE universe 1's interval once the spaces are
+    #: merged: 100..139 against 110..149. The distance, 10, is also under the
+    #: bound, so one rig exercises both axes.
+    def _cross_universe(self) -> FixturePool:
+        return FixturePool(
+            {
+                1: fixture_props("1.100", name="유니버스 1"),
+                2: fixture_props("2.110", name="유니버스 2"),
+            }
+        )
+
+    def test_the_collapse_would_be_visible(self):
+        """Non-vacuity for the two tests below, asserted rather than asserted-in-prose.
+
+        The same two addresses inside ONE universe produce a finding on both
+        axes. So if the axes keyed by address alone, the cross-universe rig would
+        produce those findings too -- and the tests below would fail.
+        """
+        merged = FixturePool(
+            {
+                1: fixture_props("1.100", name="같은 유니버스 A"),
+                2: fixture_props("1.110", name="같은 유니버스 B"),
+            }
+        )
+        policy = FootprintPolicy(enabled=True, widths={1: 40, 2: 40}, source=FOOTPRINT_SOURCE)
+        assert len(evaluate_patch(read_inventory(merged), policy).range_overlaps) == 1
+        assert evaluate_patch(read_inventory(merged), walk=_walked()).overlap_basis == (
+            BOUND_INCONCLUSIVE
+        )
+
+    def test_the_exact_width_axis_keeps_the_universes_apart(self):
+        policy = FootprintPolicy(enabled=True, widths={1: 40, 2: 40}, source=FOOTPRINT_SOURCE)
+        evaluation = evaluate_patch(read_inventory(self._cross_universe()), policy)
+        assert all(row.universe is not None for row in evaluation.rows)
+        assert evaluation.range_overlaps == ()
+
+    def test_the_bound_axis_keeps_the_universes_apart(self):
+        evaluation = evaluate_patch(read_inventory(self._cross_universe()), walk=_walked())
+        assert evaluation.overlap_basis == BOUND_PROVES_CLEAR
+        assert RANGE_OVERLAP_BOUND_INCONCLUSIVE not in [
+            check.kind for check in evaluation.skipped_checks
+        ]
+
+
+class TestBoundAxisTakesUnresolvedTypeMode:
+    """AC-OVERLAP-010 ③④ — the two axes have deliberately different filters."""
+
+    def _mixed(self) -> FixturePool:
+        return FixturePool(
+            {
+                1: fixture_props("1.100", name="타입 확정"),
+                # No FixtureType, no Mode: the reads fail, so the exact-width axis
+                # cannot judge this fixture. The bound argument does not need to
+                # know which mode it uses.
+                2: {"Patch": "1.110", "Name": "타입 미확정"},
+            }
+        )
+
+    def test_an_unresolved_fixture_is_inside_the_gap_set(self):
+        evaluation = evaluate_patch(read_inventory(self._mixed()), walk=_walked())
+        unresolved = next(row for row in evaluation.rows if row.record.slot == 2)
+        assert TYPE_MODE_UNRESOLVED in unresolved.reasons
+        # 110 - 100 = 10, under the bound, and it could only have been measured
+        # if slot 2 entered the gap set.
+        assert evaluation.overlap_basis == BOUND_INCONCLUSIVE
+
+    def test_the_same_fixture_is_excluded_from_the_exact_width_axis(self):
+        policy = FootprintPolicy(enabled=True, widths={1: 40, 2: 40}, source=FOOTPRINT_SOURCE)
+        evaluation = evaluate_patch(read_inventory(self._mixed()), policy)
+        # Intervals 100..139 and 110..149 overlap by 30 channels. The finding is
+        # absent only because slot 2 is excluded for an unresolved type/mode.
+        assert evaluation.range_overlaps == ()
+        assert (
+            TYPE_MODE_UNRESOLVED
+            in next(row for row in evaluation.rows if row.record.slot == 2).reasons
+        )
+
+    def test_both_filters_run_on_one_rig(self):
+        policy = FootprintPolicy(enabled=True, widths={1: 40, 2: 40}, source=FOOTPRINT_SOURCE)
+        evaluation = evaluate_patch(read_inventory(self._mixed()), policy, walk=_walked())
+        assert evaluation.range_overlaps == ()
+        assert evaluation.overlap_basis == BOUND_INCONCLUSIVE
+
+
+class TestAddressRangeValidation:
+    """AC-OVERLAP-012 — a floor and a form, and deliberately no ceiling."""
+
+    @pytest.mark.parametrize("raw", ["0.0", "1.0", "0.1", "0.100", "12.0"])
+    def test_an_index_below_one_is_a_parse_failure(self, raw):
+        parse = normalize_address(raw)
+        assert parse.ok is False
+        assert parse.universe is None
+        assert parse.address is None
+        assert parse.error
+
+    @pytest.mark.parametrize("raw", ["1.001", "2.401", "1.99999"])
+    def test_a_valid_address_still_passes(self, raw):
+        # ``1.99999`` is the ceiling case: capacity is unmeasured, so inventing a
+        # limit would reject an address the console accepts.
+        assert normalize_address(raw).ok is True
+
+    def test_an_out_of_range_address_never_enters_the_gap_set(self):
+        pool = FixturePool(
+            {
+                1: fixture_props("1.0", name="무의미"),
+                2: fixture_props("1.100", name="유효 A"),
+                3: fixture_props(f"1.{100 + BOUND:03d}", name="유효 B"),
+            }
+        )
+        evaluation = evaluate_patch(read_inventory(pool), walk=_walked())
+        # With 1.0 folded in, the distances would be 100 and BOUND; the first is
+        # wide and the second is exactly the bound, so a meaningless address
+        # cannot be shown to change THIS verdict -- what it does change is that
+        # slot 1 is reported as a read failure rather than as an address.
+        assert evaluation.overlap_basis == BOUND_PROVES_CLEAR
+        assert next(row for row in evaluation.rows if row.record.slot == 1).address is None
+
+    def test_an_out_of_range_address_is_reported_as_a_read_failure(self):
+        pool = FixturePool({1: fixture_props("0.0", name="무의미")})
+        evaluation = evaluate_patch(read_inventory(pool), walk=_walked())
+        kinds = [failure.kind for failure in evaluation.read_failures]
+        assert ADDRESS_PARSE_FAILED in kinds
+        row = next(row for row in evaluation.rows if row.record.slot == 1)
+        assert row.verdict == READ_FAILED
+        # NOT "no such fixture": the fixture was observed, its address was not.
+        assert row.record.name == "무의미"
+        assert evaluation.inventory.observed_count == 1
+
+    def test_a_meaningless_address_would_otherwise_produce_a_meaningless_gap(self):
+        # Non-vacuity for the pair above: without the floor, ``1.0`` parses and
+        # its distance to 1.001 is 1, which is under any bound.
+        assert normalize_address("1.001").address == 1
+        assert normalize_address("1.0").ok is False
+
+    def test_no_address_ceiling_is_written_down(self):
+        """AC-OVERLAP-012 ④ — the ceiling depends on an unmeasured assumption.
+
+        Behavioural rather than lexical: a hardcoded ceiling of any plausible
+        size would reject one of these.
+        """
+        for address in (512, 1024, 65535):
+            assert normalize_address(f"1.{address}").ok is True

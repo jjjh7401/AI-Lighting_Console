@@ -302,3 +302,53 @@ def _exhausted(queried: list[str], notes: list[str], error: BudgetExhausted) -> 
         queried_paths=tuple(queried),
         notes=(*notes, str(error)),
     )
+
+
+@dataclass(frozen=True)
+class AddressGap:
+    """The distance between two adjacent start addresses in ONE universe."""
+
+    universe: int
+    lower: int
+    upper: int
+
+    @property
+    def size(self) -> int:
+        return self.upper - self.lower
+
+
+def address_gaps(starts: set[tuple[int, int]]) -> tuple[AddressGap, ...]:
+    """Adjacent start-address distances, computed INSIDE each universe.
+
+    ``starts`` is the key set of the address-duplicate grouping, so a shared
+    start point appears once: a distance of zero belongs to the duplicate axis,
+    and producing it here as well would report one fault twice.
+
+    Buckets never merge. Subtracting an address in universe 2 from one in
+    universe 1 subtracts across separate address spaces, and the result would be
+    compared against a bound as though it meant something. The last fixture in
+    each universe contributes no distance, so the count is the sum of
+    ``members - 1`` over the universes rather than ``total - 1``.
+    """
+    buckets: dict[int, list[int]] = {}
+    for universe, address in sorted(starts):
+        buckets.setdefault(universe, []).append(address)
+    return tuple(
+        AddressGap(universe=universe, lower=lower, upper=upper)
+        for universe, addresses in sorted(buckets.items())
+        for lower, upper in zip(addresses, addresses[1:], strict=False)
+    )
+
+
+def unsettled_gaps(gaps: tuple[AddressGap, ...], bound: int) -> tuple[AddressGap, ...]:
+    """Gaps the bound does not settle: those STRICTLY smaller than ``bound``.
+
+    ``size == bound`` is settled. A fixture starting at ``a`` and occupying at
+    most ``bound`` channels ends at ``a + bound - 1`` inclusive, and the next
+    start is ``a + bound``, so the intervals touch without sharing a channel.
+    Writing ``<=`` here reports a demonstrably clear rig as unsettled -- and on
+    the measured rig the gap is far wider than the bound, so both spellings give
+    the same answer and the error stays dormant until a rig lands exactly on the
+    boundary.
+    """
+    return tuple(gap for gap in gaps if gap.size < bound)

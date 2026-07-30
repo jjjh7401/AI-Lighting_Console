@@ -40,6 +40,13 @@ from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+from server.prechk.footprint import (
+    AddressGap,
+    WalkOutcome,
+    address_gaps,
+    unsettled_gaps,
+    upper_bound,
+)
 from server.prechk.inventory import (
     INCOMPLETE,
     FixtureRecord,
@@ -67,6 +74,12 @@ NOT_PERFORMED = validate("overlap_basis", "not_performed")
 
 ASSUMPTION_27 = "ASSUMPTION-27"
 
+#: The bound axis rests on three propositions no reachable surface can check:
+#: one contiguous block per fixture, a channel count that equals DMX slots, and a
+#: complete mode enumeration. They are named on the notice so the reader knows
+#: what the grade is conditional on, rather than reading it as unqualified.
+BOUND_ASSUMPTIONS = "ASSUMPTION-31 · ASSUMPTION-32 · ASSUMPTION-33"
+
 #: The qualifier every claim carries while the read is incomplete.
 SCOPE_QUALIFIER = "관측된 범위에서"
 
@@ -77,6 +90,10 @@ RANGE_OVERLAP_DESCOPE_REASON = (
 )
 
 _ADDRESS = re.compile(r"^(\d+)\.(\d+)$")
+
+#: The lowest index the console's numbering produces. A floor, never a ceiling —
+#: see :func:`normalize_address` for why no ceiling exists here.
+_MINIMUM_INDEX = 1
 
 
 @dataclass(frozen=True)
@@ -100,16 +117,32 @@ class AddressParse:
 def normalize_address(raw: str | None) -> AddressParse:
     """Parse ``'<universe>.<address>'`` into two integers.
 
-    Leading zeros are insignificant, so ``'1.001'`` and ``'1.1'`` normalise to
-    the same address -- duplicate detection must not hinge on how the console
-    happened to pad the text.
+    Both halves must be at least :data:`_MINIMUM_INDEX`. The console's own
+    numbering starts at one, so ``0.0`` · ``1.0`` · ``0.1`` name no addressable
+    channel -- and the exact-match duplicate axis never noticed, because a
+    meaningless address only ever collides with itself. Once distances between
+    addresses are computed the same value produces a meaningless DISTANCE, and
+    that distance reaches a verdict.
+
+    There is deliberately NO upper bound. The per-universe channel capacity is
+    unmeasured (``ASSUMPTION-33``), and inventing a ceiling would reject
+    addresses the console accepts -- turning a working rig into a read failure.
+    So this validation is definite about the FORM and the FLOOR only, and a
+    large address parses. What the missing ceiling costs is confined to the
+    tail-overflow question, which is out of scope.
     """
     if raw is None:
-        return AddressParse(raw=raw, error="Patch 값이 없다")
+        return AddressParse(raw=raw, error="값 없음")
     match = _ADDRESS.match(raw.strip())
     if match is None:
-        return AddressParse(raw=raw, error=f"'<유니버스>.<주소>' 형태가 아니다: {raw!r}")
-    return AddressParse(raw=raw, universe=int(match.group(1)), address=int(match.group(2)))
+        return AddressParse(raw=raw, error="'<유니버스>.<주소>' 형태가 아니다")
+    universe, address = int(match.group(1)), int(match.group(2))
+    if universe < _MINIMUM_INDEX or address < _MINIMUM_INDEX:
+        return AddressParse(
+            raw=raw,
+            error=f"유니버스·주소는 {_MINIMUM_INDEX} 이상이어야 한다",
+        )
+    return AddressParse(raw=raw, universe=universe, address=address)
 
 
 @dataclass(frozen=True)
@@ -234,6 +267,12 @@ class PatchEvaluation:
     read_failure_counts: Mapping[str, int]
     scope_qualified: bool
     scope_note: str
+    #: How the range-overlap axis was reached for this rig. A RIG-WIDE grade, and
+    #: therefore the weakest of the comparisons actually performed: stamping the
+    #: strongest one here would let a slot nobody compared ride on a slot that was.
+    #: It reaches the payload in the milestone that adds the evidence block; the
+    #: field lands first so the judging layer has one place to put the grade.
+    overlap_basis: str = NOT_PERFORMED
 
     @property
     def collision_total(self) -> int:
@@ -270,12 +309,27 @@ def _ref(record: FixtureRecord) -> FixtureRef:
     return FixtureRef(slot=record.slot, name=record.name)
 
 
-def _address_duplicates(assessed: list[_Assessed]) -> tuple[Collision, ...]:
-    """One collision per shared ``(universe, address)`` start point."""
+def _address_groups(assessed: list[_Assessed]) -> dict[tuple[int, int], list[_Assessed]]:
+    """Fixtures bucketed by ``(universe, address)`` start point.
+
+    Extracted so the duplicate axis and the bound axis look at the SAME set. Two
+    independent groupings would drift the moment one side changed how it treats
+    an address, and the two axes would then disagree about which fixtures exist
+    without anything failing. The filter is ``parse.ok`` and nothing else: the
+    bound argument holds without knowing which mode a fixture uses, so requiring
+    a resolved type or mode here would be a misreading of the argument, not a
+    safety measure.
+    """
     groups: dict[tuple[int, int], list[_Assessed]] = defaultdict(list)
     for item in assessed:
         if item.parse.ok:
             groups[(item.parse.universe, item.parse.address)].append(item)
+    return groups
+
+
+def _address_duplicates(assessed: list[_Assessed]) -> tuple[Collision, ...]:
+    """One collision per shared ``(universe, address)`` start point."""
+    groups = _address_groups(assessed)
     collisions = []
     for (universe, address), members in sorted(groups.items()):
         if len(members) < 2:
@@ -379,6 +433,56 @@ def _flush_cluster(universe: int, cluster: list[tuple[int, int, _Assessed]]) -> 
     ]
 
 
+def _bound_basis(
+    assessed: list[_Assessed], walk: WalkOutcome | None
+) -> tuple[str, tuple[AddressGap, ...], int | None]:
+    """The grade the bound axis reached, the gaps it left open, and the bound.
+
+    An unsettled gap is NOT a collision. The bound argument runs one way: a gap
+    of at least ``bound`` proves the intervals cannot meet, while a smaller gap
+    proves nothing at all, because the fixtures involved may well be using a
+    narrow mode. Turning that into a collision would print ``충돌`` for a rig
+    nobody has shown to be faulty.
+    """
+    if walk is None:
+        return NOT_PERFORMED, (), None
+    bound = upper_bound(walk)
+    if bound is None:
+        return NOT_PERFORMED, (), None
+    unsettled = unsettled_gaps(address_gaps(set(_address_groups(assessed))), bound)
+    if unsettled:
+        return BOUND_INCONCLUSIVE, unsettled, bound
+    return BOUND_PROVES_CLEAR, (), bound
+
+
+def _unsettled_reason(
+    unsettled: tuple[AddressGap, ...], bound: int, groups: Mapping[tuple[int, int], list[_Assessed]]
+) -> str:
+    """One notice line enumerating every pair the bound did not settle.
+
+    ``skipped_checks`` keeps one row per kind, so the universes and addresses go
+    inside this one string rather than into rows that would be dropped.
+    """
+
+    def slots_at(universe: int, address: int) -> str:
+        members = groups.get((universe, address), [])
+        return "/".join(
+            str(item.record.slot) for item in sorted(members, key=lambda i: i.record.slot)
+        )
+
+    pairs = " · ".join(
+        f"유니버스 {gap.universe} 주소 {gap.lower}(슬롯 {slots_at(gap.universe, gap.lower)})"
+        f"~{gap.upper}(슬롯 {slots_at(gap.universe, gap.upper)}) 간격 {gap.size}"
+        for gap in unsettled
+    )
+    return (
+        f"열거된 모드의 최대 점유폭 {bound}보다 간격이 좁은 인접쌍 {len(unsettled)}건은 "
+        f"겹침 여부를 판정하지 못했다({pairs}). "
+        "상계는 겹침 없음만 증명할 수 있고 겹침 있음은 증명하지 못한다 — "
+        "판정하지 못한 것은 충돌이 아니다."
+    )
+
+
 def _scope_note(collision_total: int, missing_count: int, qualified: bool) -> str:
     if qualified:
         return (
@@ -389,7 +493,9 @@ def _scope_note(collision_total: int, missing_count: int, qualified: bool) -> st
 
 
 def evaluate_patch(
-    inventory: Inventory, footprint: FootprintPolicy | None = None
+    inventory: Inventory,
+    footprint: FootprintPolicy | None = None,
+    walk: WalkOutcome | None = None,
 ) -> PatchEvaluation:
     """Judge one inventory: normalise, group collisions, keep the exclusions."""
     policy = footprint or FootprintPolicy()
@@ -463,6 +569,22 @@ def evaluate_patch(
             )
         ]
 
+    # The bound axis, when a walk was supplied. Nothing it produces enters
+    # ``overlaps``: an unsettled pair is not a collision, and putting it there
+    # would give the fixtures a ``collision`` verdict and print ``충돌 N건`` for a
+    # rig nobody has shown to be faulty. The unsettled state instead reaches the
+    # user through ``skipped_checks``, which is the channel for "ran, did not
+    # conclude" -- silence would be the actual defect.
+    basis, unsettled, bound = _bound_basis(assessed, walk)
+    if unsettled and bound is not None:
+        skipped.append(
+            SkippedCheck(
+                kind=RANGE_OVERLAP_BOUND_INCONCLUSIVE,
+                reason=_unsettled_reason(unsettled, bound, _address_groups(assessed)),
+                assumption=BOUND_ASSUMPTIONS,
+            )
+        )
+
     duplicate_slots = {member.slot for c in duplicates for member in c.members}
     overlap_slots = {member.slot for c in overlaps for member in c.members}
 
@@ -519,4 +641,5 @@ def evaluate_patch(
         read_failure_counts=failure_counts,
         scope_qualified=qualified,
         scope_note=_scope_note(len(duplicates) + len(overlaps), inventory.missing_count, qualified),
+        overlap_basis=basis,
     )

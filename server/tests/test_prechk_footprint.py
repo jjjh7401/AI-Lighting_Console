@@ -36,6 +36,8 @@ from server.prechk.footprint import (
 )
 from server.prechk.footprint import (
     WalkOutcome,
+    address_gaps,
+    unsettled_gaps,
     upper_bound,
     walk_mode_widths,
 )
@@ -569,3 +571,78 @@ def test_the_outcome_carries_no_bound_attribute():
     assert not hasattr(WalkOutcome(complete=True, mode_widths=(3,)), "bound")
     with pytest.raises(TypeError):
         WalkOutcome(complete=True, bound=3)  # type: ignore[call-arg]
+
+
+class TestGapArithmetic:
+    """AC-OVERLAP-009 · AC-OVERLAP-010 — distances live inside one universe."""
+
+    def test_a_universe_boundary_is_not_a_gap(self):
+        # 1.500 and 2.001 look adjacent as numbers and share no address space.
+        gaps = address_gaps({(1, 500), (2, 1)})
+        assert gaps == ()
+
+    def test_adjacent_universes_never_contribute_a_difference(self):
+        gaps = address_gaps({(1, 100), (1, 500), (2, 1), (2, 40)})
+        sizes = sorted(gap.size for gap in gaps)
+        assert sizes == [39, 400]
+        # The cross-universe differences (500-1=499, 40-100=-60) must be absent.
+        assert 499 not in sizes
+        assert all(gap.size > 0 for gap in gaps)
+
+    def test_the_gap_count_is_the_sum_of_members_minus_one(self):
+        starts = {(1, address) for address in (1, 101, 143, 185)} | {
+            (2, address) for address in (1, 51, 101)
+        }
+        per_universe: dict[int, int] = {}
+        for universe, _ in starts:
+            per_universe[universe] = per_universe.get(universe, 0) + 1
+        expected = sum(count - 1 for count in per_universe.values())
+        assert expected >= 1, "리그 형상에서 간격이 0개면 이 단정이 공허하다"
+        assert len(address_gaps(starts)) == expected
+
+    def test_a_shared_start_point_appears_once_and_makes_no_zero_gap(self):
+        # The key set already folds duplicates, so a zero distance cannot arise
+        # here -- it belongs to the duplicate axis.
+        gaps = address_gaps({(1, 10), (1, 40)})
+        assert [gap.size for gap in gaps] == [30]
+        assert 0 not in [gap.size for gap in gaps]
+
+    def test_one_address_per_universe_yields_no_gap(self):
+        assert address_gaps({(1, 5), (2, 5), (3, 5)}) == ()
+
+
+class TestBoundPredicate:
+    """AC-OVERLAP-008 — the predicate is ``gap < bound``, not ``gap <= bound``."""
+
+    def _at(self, gap: int) -> tuple:
+        # Same rig shape every time; only the distance moves.
+        return address_gaps({(1, 100), (1, 100 + gap)})
+
+    def test_a_gap_one_below_the_bound_is_unsettled(self):
+        bound = 23
+        assert len(unsettled_gaps(self._at(bound - 1), bound)) == 1
+
+    def test_a_gap_exactly_at_the_bound_is_settled(self):
+        """The off-by-one test.
+
+        A fixture at ``a`` occupying at most ``bound`` channels ends at
+        ``a + bound - 1``; the next start is ``a + bound``. The intervals touch
+        and share nothing. Spelling the predicate ``<=`` fails right here, and on
+        the measured rig -- gap far wider than the bound -- both spellings agree,
+        so nothing else would catch it.
+        """
+        bound = 23
+        assert unsettled_gaps(self._at(bound), bound) == ()
+
+    def test_a_gap_one_above_the_bound_is_settled(self):
+        bound = 23
+        assert unsettled_gaps(self._at(bound + 1), bound) == ()
+
+    def test_the_three_answers_differ_only_where_they_should(self):
+        bound = 23
+        below = unsettled_gaps(self._at(bound - 1), bound)
+        at = unsettled_gaps(self._at(bound), bound)
+        above = unsettled_gaps(self._at(bound + 1), bound)
+        assert below != at
+        assert at == above
+        assert len(below) == 1
