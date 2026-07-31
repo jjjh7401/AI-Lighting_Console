@@ -7,15 +7,16 @@
 ### 한 문단
 
 **무엇**: 이펙트(시간축 움직임) 어휘 계층 — LOOKLIB(정지 화면)의 자매편. 페이저+MAtricks+원형 조합의 폐쇄 패턴 어휘(무조건 4종 + M0 게이트 2종)를 `server/fx/` 신규 패키지에 세우고, 자연어 매칭(`find_fx`)과 시퀀스+큐 인스턴스화(`instantiate_fx`)를 기존 `run_commands`→`gate.screen()` 경로로만 배선한다.
-**상태**: **plan-phase 완료 — 아티팩트 6종 작성, plan-audit 대기.** `status: draft`, 커밋 0건(작성만). REQ 21 · AC 22 · ASSUMPTION 4(36~39) · clarification 마커 0 · 라이브 세션 2회(M0·M7). 다음 단계 = plan-auditor 감사 → Implementation Kickoff Approval → M0.
+**상태**: **plan-phase 완료 + plan-audit 1회차 처리 + M0 라이브 프로브 완료 + M0 폴드인 완료(v0.2.0).** `status: draft`. REQ **22** · AC **23** · ASSUMPTION **5(36~40)** · clarification 마커 **0** · 라이브 세션 2회(M0 완료 · M7 대기). 다음 단계 = **M1 착수**(스텝 축 스키마 — 폴드인으로 착수 전제는 충족됐다). M0가 바꾼 것 한 줄: **페이저는 2스텝 이상을 요구하므로 전 패턴이 스텝 쌍을 내야 하고, 이펙트 효과는 기계로 검증되지 않는다**(§E.2).
 
 ### 읽는 순서
 
-1. `spec.md` §A(개요·사전 확정 ①~④·패턴 표) → §C(ASSUMPTION-36~39) → §D(제외 11항)
-2. `plan.md` §A.2(차단 표 — **ASSUMPTION-37만 저작을 막는다**) → §A.4(결정 A~H) → §B(M0~M7)
-3. `acceptance.md` §C.0/§C.0a(역추적·배정 — 합 22·중복 0·누락 0)
-4. `design.md` §3(fx-own 결정)·§5(값 라인 가드) — 왜 그런 형상인지의 정본
-5. `research.md` — 근거 등급과 드리프트 정정 기록
+1. **§E.2 (M0 기록)** — 여기가 지금 가장 중요한 절이다. 확립된 스텝 문법 + 증거 채널 부정 + 귀결 3건.
+2. `design.md` **§2.1(스텝 축 형상 계약)** · **§4(번들 형상 — v0.2.0 전면 개정)** · **§5(값 라인 가드 — 등급 상승·주장 철회)** — 왜 그런 형상인지의 정본
+3. `spec.md` §A(개요·사전 확정 ①~④·패턴 표) → §C(**ASSUMPTION-36~40** + M0 판정) → §D(제외 13항)
+4. `plan.md` §A.2(차단 표 + M0 판정) → §A.4(결정 **A~I**) → §B(M0~M7)
+5. `acceptance.md` §C.0/§C.0a(역추적·배정 — 합 **23**·중복 0·누락 0)
+6. `research.md` — 근거 등급과 드리프트 정정 기록
 
 ### 함정 (다음 소유자가 알아야 할 것)
 
@@ -28,23 +29,27 @@
 7. **OVERLAP 정본은 다른 브랜치**(`feature/SPEC-COPILOT-OVERLAP-001`) — 본 트리에 그 SPEC 디렉터리가 없는 것은 정상이다.
 8. **줄 앵커는 착수 직전 재실측** — plan-phase에서 이미 2건 드리프트를 잡았다.
 9. **`server/looks/**`는 PRESERVE** — 읽기 import만. 수정하고 싶어지면 그건 설계 오류 신호다(design.md AP-4).
+10. **스텝 축 없이는 페이저가 안 생긴다** (M0) — `Phase`/`Speed`/`Relative`는 **변형** 커맨드다. `Attribute 'X' At Step N`은 **금지 형태**(`ok:true`인데 효과 없음). 그리고 `Step 2` 라인은 dedupe 면제가 아니어서 **같은 지시 턴의 2번째 인스턴스화는 접힌다** — v1은 지시 턴당 1회가 운용 경계다(design.md §5).
+11. **효과는 기계로 확인할 수 없다** (M0 측정된 경계) — 큐 내용·프로퍼티·픽스처 실시간 값 어느 쪽도 안 읽히고 빈 큐와 구별 불가다. 형상 결함은 런타임에서 **아무 신호도 내지 않는다** → 테스트와 로더 검증이 유일한 그물이다. `ok`를 성공으로 읽는 순간 이 SPEC은 실패한다.
+12. **v0.1.0 번들 형상 인용 금지** — design.md §4는 v0.2.0에서 전면 교체됐다. 옛 형상(값 라인 1개 + Phase + Speed)은 M0가 3회 발화해 모션 0을 확인한 **반례**다.
 
 ### 기계 확인 (인수인계 무결성)
 
 ```bash
 git branch --show-current                      # → feature/SPEC-COPILOT-FXLIB-001
 ls .moai/specs/SPEC-COPILOT-FXLIB-001/         # → 6파일 (spec/plan/acceptance/design/research/progress)
-grep -c "REQ-FXLIB-" .moai/specs/SPEC-COPILOT-FXLIB-001/spec.md      # ≥ 21
-grep -c "^### AC-FXLIB-" .moai/specs/SPEC-COPILOT-FXLIB-001/acceptance.md  # = 22
-grep -c "ASSUMPTION-3[6-9]" .moai/specs/SPEC-COPILOT-FXLIB-001/spec.md     # ≥ 4
+grep -c "REQ-FXLIB-" .moai/specs/SPEC-COPILOT-FXLIB-001/spec.md      # ≥ 22
+grep -c "^### AC-FXLIB-" .moai/specs/SPEC-COPILOT-FXLIB-001/acceptance.md  # = 23
+grep -cE "ASSUMPTION-(3[6-9]|40)" .moai/specs/SPEC-COPILOT-FXLIB-001/spec.md  # ≥ 5
+grep -c "Step 2" .moai/specs/SPEC-COPILOT-FXLIB-001/design.md        # ≥ 3 (§4 번들 3종 전부 스텝 쌍)
 uv run pytest server/tests/ -q                 # 킥오프 baseline — 직접 실측(이월 금지)
 ```
 
 ### 다음 소유자 킥오프 킷
 
-- **plan-audit**: Tier L 기준(PASS ≥ 0.85). 감사가 볼 곳: ASSUMPTION-36의 기능/증거 이중 구조 분리가 유지되는가, 값 라인 가드가 dedupe 면제 판정을 재정의하지 않는가(design.md §5 마지막 불릿), 패턴 폐쇄 집합의 게이트 2종이 라이브러리에 새지 않는가.
-- **M0 준비물**: 실물 onPC 실행 + 이름 있는 그룹이 있는 쇼파일(GUI 사용자 작업) + 날조 대조군 커맨드 목록(plan.md §B M0).
-- **Kickoff 결정 없음**: 결정 A~H 전부 해소, clarification 0, 승인 대기 0 — 재질의할 것이 없다.
+- **M1 착수 준비물**: `design.md §2.1`(스텝 축 형상 계약 — 정본) + `plan.md §B M1`(로더 검증 4종 + 뮤테이션 4종). 착수 직전 baseline(`uv run pytest server/tests/ -q`) 직접 실측.
+- **재감사(2회차)가 볼 곳**: ① 1회차 지적 1~11의 델타, ② **M0 폴드인 델타** — 스텝 축이 스키마·번들·AC에 일관되게 반영됐는가, "번들 내 중복이 구조적으로 없다"의 철회가 전 표면에서 정합한가(design.md §5 · plan.md 결정 E · acceptance.md AC-009), ASSUMPTION-40의 게이트가 부정 비용을 정말 Pan/Tilt 4종으로 한정하는가, 리포트 문면의 **무조건성**이 조건부 잔재 없이 반영됐는가.
+- **Kickoff 결정 없음**: 결정 **A~I** 전부 해소, clarification 0, 승인 대기 0 — 재질의할 것이 없다.
 
 ## Plan-phase log
 
@@ -75,13 +80,38 @@ uv run pytest server/tests/ -q                 # 킥오프 baseline — 직접 �
 
 **처리 후 재측정** (grep 범위: 정본 문면 — 본 처리 절의 지적 인용은 제외): REQ 21 · AC 절 22 · 역추적 21/21 · 배정 합 22(중복 0·누락 0) **불변** · clarification 마커 0 · `66-73`/`73ms` 0건 · "제외 12항" 0건 · 무조건 "패턴 6종" 고정 표현 0건(조건부 문구만 잔존) · OVERLAP `:115` 단독 앵커 0건 · "산문만" 잔존 0건. 재감사(2회차)는 결함 1~11 델타 한정(감사 리포트 재감사 계약). **감사가 재검증하지 않은 상태다** — 1회차 정정이 새 불일치를 만들지 않았다는 증명은 2회차 델타 감사의 몫이다.
 
+### v0.2.0 — M0 폴드인 (2026-07-31, 코드 변경 0, 커밋 없음)
+
+M0 라이브 프로브(§E.2)의 판정을 plan 아티팩트에 반영했다. **M0가 열어 놓고 문서가 따라가지 못한 상태**를 닫는 작업이며, §E.2가 스스로 지목한 "귀결 3건"이 착수 조건이었다. M0 기록 자체는 여기서 재서술하지 않는다 — §E.2가 정본이다.
+
+**무엇이 왜 바뀌었나** (전부 §E.2의 실측이 몰아붙인 것이다):
+
+| # | 변경 | 유발한 M0 증거 |
+|---|---|---|
+| 1 | **번들 형상 전면 개정** — 전 패턴이 `<값>`→`Step 2`→`<값>` 스텝 쌍을 낸다. v0.1.0 예시 2종 폐기, M0 실측 Dimmer 형상을 §4.0 앵커로 신설 | 페이저는 2스텝 이상을 요구하고 `Relative`/`Phase`/`Speed`는 **변형** 커맨드다 — 옛 형상은 `ok:true` 전량에 모션 0(실패 3회) |
+| 2 | **스키마에 스텝 축 필수화** — `steps`(길이 ≥ 2, attribute→값 매핑) + 로더 검증 4종. v0.1.0의 "다단 필드(선택적)"은 **철회** | 같은 실측. 스텝 없이는 어떤 엔트리도 페이저를 못 만든다 |
+| 3 | **값 라인 가드 등급 상승 + 주장 철회** — "(attribute×동사)마다 1줄이라 번들 내 중복이 구조적으로 없다"는 v0.1.0 문장은 **거짓이 됐다**(한 패턴이 같은 attribute에 여러 줄). 가드 (a)·검출 (b)가 방어적 항목에서 상시 검사로 승격 | 스텝 값 라인(`At 100`/`At 0`)은 패턴 간 중복 가능성이 매우 높고, **`Step 2` 라인은 전 패턴 공통 + dedupe 면제 아님** → 같은 지시 턴 2회차는 다른 패턴이어도 접힌다. v1 운용 경계를 "지시 턴당 1회"로 명시 |
+| 4 | **REQ-FXLIB-022 신설** [Unwanted] — `Attribute '<attr>' At Step <k>` 금지 + **AC-FXLIB-023** 신설(M4 배정, 라이브러리·번들 전수 스캔) | 그 형태는 `ok:true`를 받고 **효과가 없다**. M0 프로브 자신이 이 형태로 3회 실패했다 |
+| 5 | **리포트 문면의 무조건화** — REQ-FXLIB-014 (c)의 "ASSUMPTION-36 판정 분기" 폐기, 성공 경로 포함 **모든** 리포트가 "효과는 기계로 확인 불가 — 사람 확인 필요"를 싣는다 | 증거 채널 부정이 **측정된 경계**로 확정(큐 트리 바닥·`property not readable`·빈 큐와 구별 불가·이펙트 전용 풀 없음) |
+| 6 | **ASSUMPTION-40 신설** (M7 측정) — 스텝 형상의 Pan/Tilt 일반화 + `Relative`의 스텝 값 성립 여부 | M0의 관측은 **Dimmer 축에서만** 이뤄졌고 `Relative 30`은 1스텝(페이저 미성립) 문맥에서만 발화됐다 — 실측을 조용히 일반화하지 않기 위해 별도 항목으로 연다 |
+| 7 | **결정 I 신설**(plan §A.4) — 스텝 축 필수 / `At Relative` 미발화 / Pan/Tilt는 M7 게이트 | M0가 **강제한 것**(측정)과 이 폴드인이 **선택한 것**(설계)을 분리해 남기기 위해 |
+| 8 | ASSUMPTION-37/38/39 게이트 해소 반영 — `pulse`/`chase` 진입, Speed = **BPM**, MAtricks 재조회 가능. **잔여**: `Accel`/`Decel`은 효과 미관측(SKIP)이라 구간 3에 남고 v1 미사용 | 판정 4건 GO + SKIP 1건 |
+
+**ASSUMPTION-40이 라이브 세션 3회차를 만들지 않는 이유**: 형상 게이트(결정 I)가 부정 비용을 **Pan/Tilt 패턴 4종의 효과**로 한정하고 스키마·로더·매칭·툴·리포트를 무영향으로 두므로, 별도 프로브를 사는 대신 M7에 배칭한다 — ASSUMPTION-38/39를 M0에 배칭했던 것과 같은 기준(**저작을 막지 않는 측정은 배칭한다**)이다. 사용자 확정 ③(라이브 2회)은 **불변**이다.
+
+**변경 파일 4종**: `spec.md`(v0.1.0→v0.2.0) · `plan.md` · `acceptance.md` · `design.md`. 코드 변경 0 · `research.md` 무변경(M0는 새 조사가 아니라 측정이며, 그 기록은 §E.2 + `.moai/reports/m0-probe/`가 소유한다).
+
+**재측정 후 토큰**: REQ **22**(21+022) · AC 절 **23**(22+023) · 역추적 22/22 · 마일스톤 배정 합 **23**(중복 0·누락 0, M4가 5→6) · ASSUMPTION **5**(36~40) · clarification 마커 **0**. **감사가 재검증하지 않은 상태다** — 본 폴드인이 새 불일치를 만들지 않았다는 증명은 재감사(2회차)의 몫이며, 그 시선의 위치는 §0 킥오프 킷에 적어 두었다.
+
 ## §E.1 Plan-phase Audit-Ready Signal
 
 ```yaml
 plan_status: audit-ready
 plan_complete_at: 2026-07-31
+plan_amended_at: 2026-07-31            # M0 폴드인 (v0.2.0)
 artifacts: [spec.md, plan.md, acceptance.md, design.md, research.md, progress.md]
-tokens: { req: 21, ac: 22, assumption: 4, clarification_markers: 0, live_sessions: 2 }
+tokens: { req: 22, ac: 23, assumption: 5, clarification_markers: 0, live_sessions: 2 }
+live_probe: { m0: complete, m7: pending }
 commit_sha: pending-backfill
 ```
 
