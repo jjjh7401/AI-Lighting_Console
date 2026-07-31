@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-FXLIB-001
 title: "이펙트 어휘 계층 — FX 라이브러리 (Effect Vocabulary Layer)"
 version: "0.2.0"
-status: draft
+status: in-progress
 created: 2026-07-31
 updated: 2026-07-31
 author: manager-spec

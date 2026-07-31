@@ -7,7 +7,7 @@
 ### 한 문단
 
 **무엇**: 이펙트(시간축 움직임) 어휘 계층 — LOOKLIB(정지 화면)의 자매편. 페이저+MAtricks+원형 조합의 폐쇄 패턴 어휘(무조건 4종 + M0 게이트 2종)를 `server/fx/` 신규 패키지에 세우고, 자연어 매칭(`find_fx`)과 시퀀스+큐 인스턴스화(`instantiate_fx`)를 기존 `run_commands`→`gate.screen()` 경로로만 배선한다.
-**상태**: **plan-phase 완료 + plan-audit 1회차 처리 + M0 라이브 프로브 완료 + M0 폴드인 완료(v0.2.0).** `status: draft`. REQ **22** · AC **23** · ASSUMPTION **5(36~40)** · clarification 마커 **0** · 라이브 세션 2회(M0 완료 · M7 대기). 다음 단계 = **M1 착수**(스텝 축 스키마 — 폴드인으로 착수 전제는 충족됐다). M0가 바꾼 것 한 줄: **페이저는 2스텝 이상을 요구하므로 전 패턴이 스텝 쌍을 내야 하고, 이펙트 효과는 기계로 검증되지 않는다**(§E.2).
+**상태**: **plan-phase 완료 + plan-audit 1회차 처리 + M0 라이브 프로브 완료 + M0 폴드인 완료(v0.2.0) + M1 완료.** `status: in-progress`(M1 커밋에서 전환). REQ **22** · AC **23** · ASSUMPTION **5(36~40)** · clarification 마커 **0** · 라이브 세션 2회(M0 완료 · M7 대기). 다음 단계 = **M2·M3·M4**(M1 완료로 병렬 가능 — plan.md §F). M0가 바꾼 것 한 줄: **페이저는 2스텝 이상을 요구하므로 전 패턴이 스텝 쌍을 내야 하고, 이펙트 효과는 기계로 검증되지 않는다**(§E.2).
 
 ### 읽는 순서
 
@@ -179,6 +179,58 @@ ASSUMPTION 4건 전부 `GO`이므로 run-phase 진행 조건은 충족됐다. �
 3. **값 라인 충돌 가드의 중요도 상승 (REQ-FXLIB-011)** — 스텝 값 라인은 `Attribute 'Dimmer' At 100` / `At 0` 처럼 **패턴 간 중복 가능성이 매우 높다.** 감사 F1이 지적한 교차 호출 접힘 위험이 실제로 커졌다.
 
 **효과 검증은 사람 관측이 유일 채널이다.** 큐 내용은 트리·프로퍼티 어느 쪽으로도 읽히지 않고(내용 있는 큐와 빈 큐가 구별 불가), 픽스처 실시간 값도 읽히지 않으며, MA3는 페이저를 별도 풀에 두지 않는다. 리포트 문면은 "효과는 기계로 확인되지 않음 — 사람 확인 필요"를 명시해야 한다(plan M4의 NEGATIVE 분기와 동일 취급).
+
+### M1 — FX 스키마 + 로더 (2026-07-31, cycle_type=tdd)
+
+**착수 baseline (직접 실측, 이월 없음)**: `.venv/bin/python -m pytest server/tests/ -q` → **2758 passed, 5 skipped** (exit 0). 브랜치 `feature/SPEC-COPILOT-FXLIB-001`, 착수 HEAD `04cc79b`. M0 판정 접두 행 존재 확인(`GO:` 4행 + `SKIP:` 1행 — 위 §E.2).
+
+**산출 (신규 4파일, 기존 파일 수정 0)**: `server/fx/__init__.py` · `server/fx/schema.py` · `server/fx/loader.py` · `server/tests/test_fx_schema.py`(86 tests).
+
+#### AC-FXLIB-001 — PASS
+
+| 항목 | 검증 | 결과 |
+|---|---|---|
+| 정상 라이브러리 로드 + 전 축 노출 | `pytest server/tests/test_fx_schema.py -q` | **86 passed** |
+| 위반 종별 개별 명시 에러 (병합 0건) | 위반 1종 = 테스트 1건 규율 | 로더 거부 경로 전수 개별 테스트 |
+| 스텝 축 4종 ①~④ | `TestStepAxisIsRequiredAndValidated` 13건 | 전건 PASS |
+| `accel`/`decel` 정의 존재 + 직렬화 왕복 | `TestAccelDecelAreDefinedButGated` 5건 | 전건 PASS |
+| 커버리지 | `--cov=server.fx` | **100%** (237/237 stmts, 기준 85%) |
+| 경계 | `pytest server/tests/test_architecture.py -q` | **4 passed** |
+| 전체 회귀 | `pytest server/tests/ -q` | **2844 passed, 5 skipped** (= 2758 + 86, 신규 실패 0) |
+| ruff | `ruff check server/fx/ server/tests/test_fx_schema.py` | clean |
+
+#### 뮤테이션 — 7건 전건 KILLED (plan §B M1 지정 4건 + 추가 3건)
+
+| # | 주입 | 결과 | 죽인 테스트(대표) |
+|---|---|---|---|
+| ① | 미지 패턴 종별 통과 | KILLED | `test_an_unknown_pattern_kind_is_rejected` |
+| ② | per-show 필드(group_number/sequence/executor) 스키마 추가 | KILLED | `test_a_smuggled_sequence_number_field_is_rejected` |
+| ③ | `len(steps) >= 2` 검사 제거 | KILLED | `test_a_single_step_entry_is_rejected` |
+| ④ | 스텝 값 동일성 검사 제거 | KILLED | `test_two_steps_carrying_the_same_value_for_one_attribute_are_rejected` |
+| ⑤ (추가) | 스텝 간 attribute 집합 동일성 검사 제거 | KILLED | `test_steps_with_differing_attribute_sets_are_rejected` |
+| ⑥ (추가) | 변형 축 단독 선언 거부 제거 | KILLED | `test_a_modifier_axis_declared_without_steps_is_rejected` |
+| ⑦ (추가) | `server/fx/schema.py`에 `server.bridge` import 1줄 주입 | KILLED | `test_only_the_safety_gate_reaches_the_osc_send_surface` |
+
+⑦은 plan.md §B M1의 *"`server/fx/` 생성 시점부터 `test_architecture.py` 전역 스캔에 자동 포섭된다"* 주장의 **비공허성 증명**이다 — 주장을 문서로 남기는 대신 실제로 죽는지 봤다. (AC-FXLIB-015의 정식 판정은 M6 몫이며 여기서 선점하지 않는다.)
+
+뮤테이션 복원은 **스크래치패드 백업본에서** 수행했다 — M1 파일은 아직 untracked이므로 `git checkout --`는 복원이 아니라 **삭제**다. 복원 후 4파일 SHA1 대조로 원본 동일성을 확인했고, 각 회차 전후로 `__pycache__`를 지워 mutant 바이트코드 잔류를 배제했다.
+
+#### 설계 결정 (M1이 선택한 것 — 측정이 강제한 것과 분리해 적는다)
+
+1. **`대상 attribute` 축은 저장하지 않고 파생시킨다** — REQ-FXLIB-001이 축으로 열거하지만, 로더가 "전 스텝 attribute 집합 동일"을 보장하므로 별도 필드는 **스텝과 어긋날 수만 있는 사본**이다. `Fx.attributes`는 스텝 1의 저작 순서를 그대로 돌려주는 프로퍼티다(빌더가 쓸 순서가 그것이다).
+2. **Pan/Tilt 값 범위는 ±360 "저작 봉투"** — 리포지토리에 `Attribute 'Pan' At <n>`의 단위(퍼센트/도)도 픽스처 한계도 **실측이 없다**. 퍼센트 판독과 도 판독 어느 쪽도 담을 만큼 넓게 두되 오타(2000)는 잡는다. 더 좁은 "콘솔 최대치"를 적는 것은 **저장소에 없는 수치를 인용하는 것**이라 본 SPEC 규율 위반이다.
+3. **`speed` 상한 미설정** — 같은 이유. `speed > 0`(BPM, ASSUMPTION-38 GO)만 강제한다.
+4. **`accel`/`decel`은 정의 + 로더 거부** — LOOKLIB `MovementSpec`은 "정의하되 발화 안 함"이고 로더는 값을 **받아준다**. FXLIB은 REQ-FXLIB-005의 "게이트 미충족 필드 사용" 거부 항목이 명시돼 있으므로 **한 단계 더 조인다**: 필드는 존재하고 직접 생성자로 값도 담기지만, 로더가 값을 거부해 미실측 어휘가 라이브러리에 들어올 수 없다.
+5. **looks `KNOWN_ATTRIBUTES` 읽기 import는 테스트 계층에만** — design.md §3이 허용한 "읽기 import로 중복 비용 완화"를 **런타임 결합 없이** 얻는 방식. `server/fx/`는 stdlib + PyYAML만 import하고, 드리프트(오타 attribute)는 `test_fx_schema.py`의 부분집합 assert가 잡는다.
+6. **`x_shuffle`은 카운트가 아니라 시드** — 룰북 `31_choreography_patterns.md`의 `Set Selection MAtricks 'XShuffle' 1234  # seeded random order` 리터럴을 착수 직전 재실측해 확인했다. 따라서 상한을 두지 않고 0을 허용한다(`x`/`x_wings`는 분할 카운트라 ≥ 1).
+
+#### 미검증 (Gaps — M1이 확인하지 않은 것)
+
+- **효과는 여전히 기계로 확인되지 않는다**(M0 측정된 경계). M1은 **형상·계약·거부 동작**만 검증했다. 스키마가 통과시킨 엔트리가 무대에서 실제로 움직이는지는 M7 사람 관측 몫이다.
+- **Pan/Tilt 스텝 값의 단위·성립 여부는 ASSUMPTION-40**(M7). ②의 봉투는 저작을 막지 않기 위한 폭이지 콘솔 계약이 아니다.
+- **번들 문자열은 M4 몫** — M1은 `Step <k>` 라인을 한 줄도 생성하지 않는다. 금지 형태 `At Step <k>`의 전수 차단(AC-FXLIB-023)도 M4/M2다.
+- **`server/fx/library/`는 아직 없다** — `load_library_from_dir()`를 인자 없이 부르면 "not found"로 죽는다(M2가 자산을 놓을 때까지 정상 동작).
+- **vitest 미실행** — M1은 서버측 순수 파이썬만 건드렸다. 전체 회귀(AC-FXLIB-020)는 M6 몫이다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
