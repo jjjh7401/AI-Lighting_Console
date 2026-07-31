@@ -904,6 +904,42 @@ class TestExactWidthsOutrankTheBound:
         # unread fixtures unmentioned in the one string the user reads.
         assert "미관측" in partial.overlap.observation_note
 
+    def test_a_collision_the_exact_axis_found_forbids_a_clearance_grade(self):
+        """AC-OVERLAP-011 · CONTRACT D-4 — 등급은 리그 전역이므로 한 축이 겹침을
+        증명한 뒤에는 어느 부분도 *"증명된 청결"*을 말할 수 없다.
+
+        ``_BASIS_ORDER``가 ``exact_widths``를 ``bound_proves_clear`` 위에 두는데
+        둘은 **같은 종류의 진술이 아니다** — 앞은 *어떻게 비교했나*(결과가 충돌일
+        수도 있다)이고 뒤는 *결과*다. 그래서 최약 규칙이 method를 result로
+        끌어내려 **충돌이 실재하는 리그에 청결 주장을 만들어 냈다.**
+
+        PR 시점 독립 코드 리뷰가 찾았다. 감사도, 그 앞의 R-2 수정도 놓쳤다 —
+        R-2는 ``bound_slots`` 문을 닫았는데 이 경로는 ``exact_set``으로 들어와
+        참여 검사를 우회한다. 출하 핸들러는 ``FootprintPolicy``를 만들지 않아
+        **잠복**이지만 그 어휘는 공개 API이고 스위트가 상시 발화시킨다.
+        """
+        both_at_one_address = FixturePool(
+            {
+                1: fixture_props("1.100", name="A"),
+                2: fixture_props("1.100", name="B"),
+                3: fixture_props("2.200", name="C"),
+            }
+        )
+        policy = FootprintPolicy(enabled=True, widths={1: 4, 2: 4}, source=FOOTPRINT_SOURCE)
+        evaluation = evaluate_patch(read_inventory(both_at_one_address), policy, _walked())
+        # 비공허성: 정확폭 축이 실제로 겹침을 찾았고, 상계 축도 실제로 돌았다.
+        # 둘 중 하나라도 비면 이 판정이 공허하다.
+        assert len(evaluation.range_overlaps) == 1
+        assert set(evaluation.overlap.exact_width_slots) == {1, 2}
+        assert evaluation.overlap.bound_slots == (3,)
+        # 등급이 청결을 주장하지 않는다 — method 라벨로 남는다.
+        assert evaluation.overlap_basis == EXACT_WIDTHS
+        assert evaluation.overlap_basis != BOUND_PROVES_CLEAR
+        # 그리고 사용자가 읽는 문장에 "겹침이 불가능"이 없다.
+        from server.prechk.report import build_report
+
+        assert "겹침이 불가능" not in build_report(evaluation).summary_ko()
+
     def test_a_mixed_rig_runs_both_axes_and_reports_each_origin(self):
         partial = FootprintPolicy(enabled=True, widths={1: 4, 2: 4}, source=FOOTPRINT_SOURCE)
         evaluation = evaluate_patch(read_inventory(self._rig()), partial, _walked())

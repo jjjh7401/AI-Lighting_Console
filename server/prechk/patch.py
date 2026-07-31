@@ -506,6 +506,7 @@ def _overlap_basis(
     policy: FootprintPolicy,
     walk: WalkOutcome | None,
     missing_count: int,
+    exact_overlaps: int,
 ) -> tuple[OverlapBasis, tuple[AddressGap, ...]]:
     """The rig-wide grade, its evidence, and the pairs the bound left open.
 
@@ -570,7 +571,15 @@ def _overlap_basis(
     grades: set[str] = set()
     if exact:
         grades.add(EXACT_WIDTHS)
-    if bound_slots:
+    # ``exact_widths`` and ``bound_proves_clear`` are not the same KIND of
+    # statement. The first is a METHOD label whose outcome may well be a
+    # collision; the second is a RESULT the report renders as "간격이 커서
+    # 겹침이 불가능". Because the ordering ranks the method above the result,
+    # ``_weakest`` would hand back the RESULT for a rig where the exact axis
+    # already found an overlap -- manufacturing a clearance claim that sits
+    # beside "충돌 N건" in the same sentence. A grade is rig-wide, so no part of
+    # it may say "proven clear" once any axis has proven the opposite.
+    if bound_slots and not exact_overlaps:
         grades.add(BOUND_INCONCLUSIVE if unsettled else BOUND_PROVES_CLEAR)
     if missing_count or any(item.record.slot not in covered for item in assessed):
         grades.add(NOT_PERFORMED)
@@ -755,7 +764,9 @@ def evaluate_patch(
     # rig nobody has shown to be faulty. The unsettled state instead reaches the
     # user through ``skipped_checks``, which is the channel for "ran, did not
     # conclude" -- silence would be the actual defect.
-    overlap, unsettled = _overlap_basis(assessed, policy, walk, inventory.missing_count)
+    overlap, unsettled = _overlap_basis(
+        assessed, policy, walk, inventory.missing_count, len(overlaps)
+    )
     if unsettled and overlap.bound is not None:
         skipped.append(
             SkippedCheck(
