@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-OVERLAP-001
 title: "보수적 점유폭 상계로 구간 겹침 판정 재개 (Bounded-Footprint Range Overlap)"
 version: "0.1.0"
-status: in-progress
+status: completed
 created: 2026-07-30
-updated: 2026-07-30
+updated: 2026-07-31
 author: manager-spec
 priority: P2
 phase: "Phase 3 이후 차별화 기능 — PRECHK 후속 1순위"
@@ -28,6 +28,7 @@ related_specs: [SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-SONGCUE-001, SPEC-COPILOT-
 | 버전 | 날짜 | 작성자 | 변경 |
 |---|---|---|---|
 | 0.1.0 | 2026-07-30 | manager-spec | 최초 작성 (draft, Tier M). 출처는 PRECHK run-audit 후보 I-15. 조사 방법은 **병렬 read-only scout 4개 + 코디네이터 직접 검산**(산술 재계산 · 주소 파서 실행 · git 이력 조회). **라이브 프로브 0회** — 필요한 값이 전부 선행 SPEC에 실측 전재되어 있다. REQ **18건** · ASSUMPTION **5건**(31~35) · clarification 마커 **0건**. 조사가 선행 기록의 오류·누락 **5건**을 정정했다(`research.md` §12). **승인 대기 0건** — 어휘 확장은 착수 전 승인 완료. |
+| 0.1.0 | 2026-07-31 | orchestrator | **sync-phase — `status: in-progress` → `completed`.** run-phase 완결(M0~M8) 후 **독립 run-audit 1회차 FAIL 0.714**가 지적 32건(P1 6 · P2 14 · P3 12)을 냈고 **P1 6건 전부가 2920개 스위트가 전건 통과하는 상태에서 살아 있었다.** 전건 폐쇄하고 격리 트리 재주입 8종으로 방어를 확인했다. 인수 조건 문언 3건을 감사 처분으로 개정했다 — `AC-OVERLAP-021` ①(툴 표면 3값으로 좁힘) · `AC-OVERLAP-019` ⑦(표제에서 *갱신* 제거) · `AC-OVERLAP-017` ②(*한국어 금지* → *라벨 소유권*). **REQ 18 · AC 21 · 계수 불변.** 감사와 폐쇄 기록은 `progress.md` §7, 팬아웃 근거는 §F.2. `completed`는 sync 시점의 값이며 PRECHK 선례를 따른다(머지는 별도 관문). |
 
 ---
 

@@ -759,6 +759,34 @@ class TestGapArithmetic:
         assert expected >= 1, "리그 형상에서 간격이 0개면 이 단정이 공허하다"
         assert len(address_gaps(starts)) == expected
 
+    def test_the_measured_rig_shape_ten_plus_nine_yields_seventeen_gaps(self):
+        """AC-OVERLAP-009 ② — the shape the clause names, built.
+
+        The test above proves the formula on a 4+3 rig; this one instantiates the
+        rig the clause actually pins it to (``design.md`` §4 rig 12
+        ``two_universe_counts``: 유니버스 1에 10, 유니버스 2에 9 -> 간격 총수 17).
+
+        Neither 42 nor 17 is a hardcoded judgement constant. 42 is the rulebook's
+        ``addr = addr + 42`` recipe spacing, and 17 falls out of the rig: it is
+        asserted only as the tail of an identity chain whose middle term is
+        recomputed from the member profile, so a per-universe bucketing that
+        collapsed into one address space would answer 18 and fail here.
+        """
+        starts = {(1, 1 + n * 42) for n in range(10)} | {(2, 1 + n * 50) for n in range(9)}
+        # Non-vacuity: the rig really is 10+9 distinct starts across two universes.
+        per_universe: dict[int, int] = {}
+        for universe, _ in starts:
+            per_universe[universe] = per_universe.get(universe, 0) + 1
+        assert sorted(per_universe.values()) == [9, 10], (
+            "리그 형상이 10+9가 아니면 이 단정이 공허하다"
+        )
+        assert len(starts) == 19
+        expected = sum(count - 1 for count in per_universe.values())
+        assert len(address_gaps(starts)) == expected == 17
+        # And the collapse-into-one-space answer is a DIFFERENT number, so the
+        # chain above discriminates rather than agreeing with the defect.
+        assert len(starts) - 1 == 18
+
     def test_a_shared_start_point_appears_once_and_makes_no_zero_gap(self):
         # The key set already folds duplicates, so a zero distance cannot arise
         # here -- it belongs to the duplicate axis.

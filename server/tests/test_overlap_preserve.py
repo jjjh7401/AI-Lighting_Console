@@ -267,6 +267,20 @@ class TestSafetyChokepointFileSet:
         # opening of its own.
         assert _git("diff", "--stat", f"{_OVERLAP_BASE}..HEAD", "--", _SAFETY_DIR) == ""
 
+    def test_this_spec_s_base_can_still_observe_a_change(self):
+        """AC-OVERLAP-002 ④ — 비공허성: 같은 명령이 변화를 볼 수 있는가.
+
+        위 ③은 ``_OVERLAP_BASE..HEAD`` 범위에서 chokepoint가 비어 있다고 주장한다.
+        같은 명령 형태를 이 SPEC이 실제로 건드린 ``server/prechk/``에 겨누면
+        비어 있지 않아야 한다. 여기가 비면 명령이 변화를 관측하지 못하게 된
+        것이고, ③의 빈 출력은 아무 의미도 없어진다.
+
+        이 구멍은 좁다: ``_OVERLAP_BASE``를 무력화하는 드리프트는
+        :func:`test_the_touched_set_is_not_empty`가 이미 잡는다. 그럼에도 ③이
+        이름 붙인 BASE에 대한 대조군은 그 자리에 있어야 한다.
+        """
+        assert _git("diff", "--stat", f"{_OVERLAP_BASE}..HEAD", "--", "server/prechk/") != ""
+
 
 class TestPrecedentGateFileIsNotExtended:
     """AC-OVERLAP-019 ⑥ — one base per module."""

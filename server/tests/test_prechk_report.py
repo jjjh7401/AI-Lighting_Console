@@ -746,8 +746,13 @@ class TestBoundClearanceIsQualified:
         assert self._cleared().evaluation.overlap_basis == "bound_proves_clear"
 
     def test_the_summary_carries_a_scope_qualifier(self):
+        # Not the bare stem "한정": the exact-width note reads "…한정이 없다", so the
+        # stem is present in the NEGATION of the qualifier too, and an UNQUALIFIED
+        # clearance would clear this test — the exact over-claim AC-OVERLAP-015 ①
+        # exists to forbid. Assert the qualifying phrase, and the negation's absence.
         summary = self._cleared().summary_ko()
-        assert "한정" in summary
+        assert "한정한 판정" in summary
+        assert "한정이 없다" not in summary
 
     def test_the_qualifier_names_the_mode_set_the_bound_came_from(self):
         # Two walks with DIFFERENT mode counts. One would also pass against a
@@ -788,6 +793,6 @@ class TestBoundClearanceIsQualified:
         summary = build_report(
             evaluate_patch(_spaced(SUMMARY_BOUND - 1), walk=_walk())
         ).summary_ko()
-        assert label("overlap_basis", "bound_inconclusive") in summary
-        assert label("overlap_basis", "bound_proves_clear") not in summary
+        assert f"겹침 판정 근거: {label('overlap_basis', 'bound_inconclusive')}" in summary
+        assert f"겹침 판정 근거: {label('overlap_basis', 'bound_proves_clear')}" not in summary
         assert "충돌이 아니다" in summary

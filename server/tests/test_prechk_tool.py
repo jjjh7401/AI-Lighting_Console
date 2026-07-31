@@ -30,6 +30,7 @@ from server.prechk.macro import MacroResult
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 TOOLS_SOURCE = PROJECT_ROOT / "server" / "orchestrator" / "tools.py"
+WEB_ROOT = PROJECT_ROOT / "server" / "web"
 
 TOOL = "precheck_patch"
 
@@ -1155,6 +1156,141 @@ class TestTheOverlapAxisFiresNoCommand:
         assert port.executed
 
 
+# AC-OVERLAP-018 ① — the web layer's surface, pinned ABSOLUTELY. These literals
+# are the enumeration of ``server/web/**.py`` as it stands at the axis's base
+# commit; they are NOT derived from the parse they are compared against, so a
+# route or a message type added by this axis moves the measured value away from
+# a fixed target instead of moving both sides of the comparison together.
+_EXPECTED_WEB_ROUTES = (
+    ("app.py", "app.get", "/healthz"),
+    ("app.py", "app.websocket", "/ws"),
+    ("provision_api.py", "router.get", "/api/provision/responder"),
+    ("provision_api.py", "router.post", "/api/provision/responder"),
+    ("settings_api.py", "router.delete", "/api/keys/{provider}"),
+    ("settings_api.py", "router.get", "/api/settings"),
+    ("settings_api.py", "router.post", "/api/keys"),
+    ("settings_api.py", "router.post", "/api/settings"),
+)
+
+# client -> server: the closed allowlists ``parse_client_message`` validates
+# against (``server/web/messages.py`` ``*_MESSAGE_TYPES``).
+_EXPECTED_CLIENT_MESSAGE_TYPES = (
+    "approval_decision",
+    "chat",
+    "dash_catalog_request",
+    "lock",
+    "panel_catalog_request",
+    "panel_execute",
+    "panel_pin",
+    "panel_stop",
+    "panel_unpin",
+    "review_decision",
+    "status_request",
+)
+
+# server -> client: every literal stamped into the outbound ``"type"`` field by
+# an ``_event(...)`` builder.
+_EXPECTED_SERVER_MESSAGE_TYPES = (
+    "approval_request",
+    "approval_resolved",
+    "busy",
+    "chat_response",
+    "dash_catalog",
+    "error",
+    "execution_preview",
+    "notice",
+    "panel_busy",
+    "panel_catalog",
+    "panel_item_state",
+    "proposal",
+    "review_request",
+    "review_resolved",
+    "status",
+)
+
+_ROUTE_VERBS = frozenset(
+    {"get", "post", "put", "patch", "delete", "head", "options", "trace", "websocket"}
+)
+_ROUTE_OBJECTS = frozenset({"app", "router"})
+
+
+@dataclass(frozen=True)
+class WebSurface:
+    """What one AST pass over the web layer actually found."""
+
+    visited: int
+    routes: tuple[tuple[str, str, str], ...]
+    client_message_types: tuple[str, ...]
+    server_message_types: tuple[str, ...]
+
+
+def _route_decorators(filename: str, node):
+    """``@app.<verb>(...)`` / ``@router.<verb>(...)`` on one function def."""
+    for decorator in node.decorator_list:
+        call = decorator.func if isinstance(decorator, ast.Call) else decorator
+        if not isinstance(call, ast.Attribute) or not isinstance(call.value, ast.Name):
+            continue
+        if call.value.id not in _ROUTE_OBJECTS or call.attr not in _ROUTE_VERBS:
+            continue
+        path = ""
+        if isinstance(decorator, ast.Call) and decorator.args:
+            first = decorator.args[0]
+            if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                path = first.value
+        yield (filename, f"{call.value.id}.{call.attr}", path)
+
+
+def _allowlist_literals(node: ast.Assign):
+    """String members of a module-level ``*_MESSAGE_TYPES`` allowlist tuple."""
+    names = [t.id for t in node.targets if isinstance(t, ast.Name)]
+    if not any(name.endswith("_MESSAGE_TYPES") for name in names):
+        return
+    if not isinstance(node.value, (ast.Tuple, ast.List)):
+        return
+    for element in node.value.elts:
+        if isinstance(element, ast.Constant) and isinstance(element.value, str):
+            yield element.value
+
+
+def _event_type_literal(node: ast.Call):
+    """The message type an ``_event("<type>", ...)`` builder stamps outbound."""
+    if not isinstance(node.func, ast.Name) or node.func.id != "_event" or not node.args:
+        return
+    first = node.args[0]
+    if isinstance(first, ast.Constant) and isinstance(first.value, str):
+        yield first.value
+
+
+def _scan_web_surface(sources: list[Path]) -> WebSurface:
+    """Enumerate the web surface by PARSING, not by searching for names.
+
+    A name search only answers "is this axis's vocabulary present"; the clause
+    counts routes and message types, so they are counted here — every route
+    decorator and every wire message type the sources declare, whatever it is
+    called.
+    """
+    routes: list[tuple[str, str, str]] = []
+    client_types: set[str] = set()
+    server_types: set[str] = set()
+    visited = 0
+    for source in sources:
+        visited += 1
+        tree = ast.parse(source.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                routes.extend(_route_decorators(source.name, node))
+            elif isinstance(node, ast.Assign):
+                client_types.update(_allowlist_literals(node))
+            elif isinstance(node, ast.Call):
+                server_types.update(_event_type_literal(node))
+    return WebSurface(
+        visited=visited,
+        routes=tuple(sorted(routes)),
+        client_message_types=tuple(sorted(client_types)),
+        server_message_types=tuple(sorted(server_types)),
+    )
+
+
 class TestBoundaryProhibitions:
     """AC-OVERLAP-018 ①②③④ — four boundaries, each with a non-vacuity guard.
 
@@ -1172,15 +1308,29 @@ class TestBoundaryProhibitions:
         return sorted((PROJECT_ROOT / "server" / "prechk").rglob("*.py"))
 
     def test_the_axis_adds_no_web_surface(self):
-        visited = 0
+        """AC-OVERLAP-018 ① — 신규 REST 라우트·웹소켓 메시지 타입이 0건이다.
+
+        The gate counts what the clause counts: routes and message types are
+        ENUMERATED with ``ast`` and compared against literals fixed at the
+        axis's base commit, so a route added under ANY name fails here. The
+        needle scan is kept — it is cheap and catches a different thing, this
+        axis's vocabulary leaking into the web layer — but it is not the count:
+        a planted ``@app.get("/api/precheck/bound")`` matches none of the three
+        needles, which is precisely why the count assertions exist.
+        """
+        sources = sorted(WEB_ROOT.rglob("*.py"))
+        surface = _scan_web_surface(sources)
+        assert surface.visited >= 1, "web 계층 파일을 방문하지 않으면 0건 판정이 공허하다"
+        assert surface.routes == _EXPECTED_WEB_ROUTES
+        assert surface.client_message_types == _EXPECTED_CLIENT_MESSAGE_TYPES
+        assert surface.server_message_types == _EXPECTED_SERVER_MESSAGE_TYPES
+
         hits: list[str] = []
-        for source in sorted((PROJECT_ROOT / "server" / "web").rglob("*.py")):
-            visited += 1
+        for source in sources:
             text = source.read_text(encoding="utf-8")
             for needle in ("footprint", "walk_mode_widths", "overlap_basis"):
                 if needle in text:
                     hits.append(f"{source.name}: {needle}")
-        assert visited >= 1, "web 계층 파일을 방문하지 않으면 0건 판정이 공허하다"
         assert hits == []
         # Non-vacuity: the axis IS reachable -- through the existing tool name.
         assert TOOL in TOOL_NAMES
