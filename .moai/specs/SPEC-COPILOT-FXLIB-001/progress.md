@@ -232,6 +232,56 @@ ASSUMPTION 4건 전부 `GO`이므로 run-phase 진행 조건은 충족됐다. �
 - **`server/fx/library/`는 아직 없다** — `load_library_from_dir()`를 인자 없이 부르면 "not found"로 죽는다(M2가 자산을 놓을 때까지 정상 동작).
 - **vitest 미실행** — M1은 서버측 순수 파이썬만 건드렸다. 전체 회귀(AC-FXLIB-020)는 M6 몫이다.
 
+### M2·M3·M4 — 병렬 웨이브 1 (2026-08-01, cycle_type=tdd)
+
+**오케스트레이션 형상**: plan §F가 분석한 파일 교집합 0을 근거로 3슬라이스 동시 스폰(PRECHK "병렬 웨이브 1" 선례). **커밋과 `progress.md` 쓰기는 오케스트레이터가 회수**했다 — 같은 브랜치 동시 커밋은 git 인덱스 경합, 같은 절 동시 쓰기는 3자 충돌이기 때문이다. 워커는 워킹 트리에 산출물만 남기고, 검증·커밋은 오케스트레이터가 슬라이스별로 수행했다. **`design.md` §2.1 스텝 축 계약을 세 프롬프트에 동일 문면으로 주입**했다(세 슬라이스가 이 계약에서 갈리면 M5 합류에서 깨진다).
+
+착수 baseline: 세 워커가 각자 직접 실측 — 전부 `2844 passed, 5 skipped`(HEAD `8bd220f`). 최종 회귀 **`3119 passed, 5 skipped`** = 2844 + 36(M2) + 93(M3) + 146(M4). 산술 정합 확인, 신규 실패 0.
+
+| 슬라이스 | 커밋 | 산출 | AC | 뮤테이션 |
+|---|---|---|---|---|
+| **M2** 라이브러리 | `35b8668` | `server/fx/library/{movement,dimmer,color}.yaml`(12엔트리) + `test_fx_library.py`(36) | 002/003/004 PASS (023 자산 절반) | 11/11 killed |
+| **M3** 매칭 | `8162c46` | `server/fx/matching.py` + `test_fx_matching.py`(93) | 005/006/007 PASS | 10/10 killed |
+| **M4** 빌더·가드·리포트 | `54887eb` | `server/fx/{instantiate,report}.py` + `test_fx_instantiate.py`(146) | 008/009/010/011/012/023 PASS | 16/16 killed |
+
+커버리지: M3 `matching.py` 100% · M4 `instantiate.py`+`report.py` 100%. ruff clean 3슬라이스 전부. PRESERVE diff **0건**(`server/looks` · `server/safety` · `console/lua` · `server/rulebook` · `tools.py` · M1 `{schema,loader}.py`).
+
+#### 오케스트레이터 직접 검증 — 워커가 할 수 없었던 이음매
+
+워커는 각자 인메모리 픽스처만 썼으므로 **슬라이스 경계는 아무도 검증하지 않았다.** 오케스트레이터가 직접 잰 것:
+
+1. **M2 자산 ↔ M1 로더**: `load_library_from_dir()`로 12엔트리 로드 확인, 패턴 6종 × 2, 금지 필드(`accel`/`decel`) 사용 0건.
+2. **M2 자산 ↔ M3 매처**(실제 라이브러리 대상 한국어 질의):
+   `'부드러운 웨이브'`→`wave-soft-rise` · `'빠른 체이스 돌려줘'`→`chase-club-rgb` · `'심장박동처럼 펄스'`→`pulse-beat` · `'좌우로 쓸어줘'`→`sweep-soft-wide` · `'대각선'`→`diagonal-soft-inphase` · `'아무말대잔치zzz'`→`no_match` · `''`→`empty_query`. **한국어 조사·어미가 실제 자산에 붙고, 없는 것은 지어내지 않는다.**
+3. **M2 자산 ↔ M4 빌더 — `pulse-beat` 번들이 M0 실측 앵커와 바이트 동일**:
+   ```
+   ChangeDestination Root / ClearAll / Group 11
+   Attribute 'Dimmer' At 100 / Step 2 / Attribute 'Dimmer' At 0
+   Attribute 'Dimmer' At Phase 0 Thru 360 / Attribute 'Dimmer' At Speed 60
+   Store Sequence 98 Cue 1 '<label>' / ClearAll
+   ```
+   이는 M0 §10.2에서 **라이브 발화해 "파도처럼 순차적으로"를 관측한 그 시퀀스**다. 효과가 기계 검증 불가한 이 SPEC에서 현 단계로 얻을 수 있는 가장 강한 증거다.
+4. **전 12엔트리 번들 전수 스캔**: 금지 형태(`At Step` / `/Overwrite` / `At Relative`) **0건**, `ChangeDestination Root` 정확히 1회 아닌 엔트리 **없음**.
+5. **circle ≠ diagonal 확인**: `circle-soft-ballyhoo` → `Pan At Phase 0` + `Tilt At Phase 90`; `diagonal-soft-inphase` → 둘 다 `Phase 0`.
+
+#### M4가 스스로 잡은 교차 슬라이스 결함 1건
+
+M4의 초기 구현은 위상 축을 attribute 개수로 배분해 **circle이 diagonal과 바이트 동일한 번들을 내고 있었다.** M2가 두 circle 엔트리를 `phase_from`만으로 저작하고 "90°는 필드가 아니라 **패턴 종별**이 담는다"고 기록했기 때문이다. M4가 M2의 커밋된 자산으로 자기 빌더를 돌려 발견했고, spec.md §A 패턴 표와 design.md §4.2가 형상을 지시하므로 **열린 결정이 아니라 자기 산출물의 결함으로 판단해 수정**했다 — 90°는 패턴 종별에서 파생하고, `circle`이 `phase_to`를 동시 선언하면 `CIRCLE_PHASE_CONFLICT`로 거부한다(두 메커니즘 중 하나를 조용히 고르지 않는다). **이 결함은 런타임에서 아무 신호도 내지 않았을 것이다**(효과 기계 검증 불가).
+
+#### 후속에 넘기는 발견 3건
+
+- **교차 호출 접힘은 design.md §5가 적은 것보다 한 줄 빠르다.** §5는 `Step 2`를 공유 라인으로 지목하지만, 실측하면 `ChangeDestination Root`도 전 번들 공통이며 면제 3종 밖이다 — 즉 같은 지시 턴의 2번째 인스턴스화는 **번들 첫 줄부터** 접힌다. SPEC의 "지시 턴당 1회" 경계를 **강화**하는 방향이며 `test_two_different_patterns_collide_on_the_lines_every_bundle_shares`가 고정한다. sync 시 §5에 한 줄 반영 대상.
+- **패턴 이름만 대면 동점으로 폴백된다.** 패턴당 엔트리가 2개(느린 것/빠른 것)라 `'원형으로 돌려줘'`·`'클럽 느낌 빠르게'`가 `low_confidence`를 낸다. 설계 의도(확신 있는 오답보다 정직한 미스)대로지만, 실사용에서는 안 먹는 것처럼 보인다. **M5의 룰북 폴백 경로(REQ-FXLIB-008)가 이 케이스를 건지는지 M5에서 확인한다.**
+- **`chase`의 다중 attribute 위상 배분**: R=0 / G=180 / B=360인데 360 ≡ 0이라 R과 B가 겹친다. SPEC이 `chase`의 위상 출력을 지시하지 않아 M4는 결정하지 않고 넘겼다. M5/M7 판단 대상.
+
+#### 미검증 (Gaps)
+
+- **효과** — 전 슬라이스의 단언이 문자열 수준이다. 무대에서 움직이는지는 M7 사람 관측뿐(M0가 확립한 경계).
+- **Pan/Tilt 단위** — 여전히 ASSUMPTION-40. 라이브러리 크기값은 design.md §4.1/§4.2를 따랐을 뿐 도/퍼센트 어느 쪽이라는 주장이 아니다.
+- **`test_fx_boundary.py`(M6) 미생성** — M4가 `_PROGRAMMER_STATE_COMMANDS` 집합 동치를 수동 대조해 현재 일치를 확인했으나, 그것을 고정하는 테스트는 M6 몫이다. 그 전까지 `tools.py`가 면제 집합을 넓히면 가드가 조용히 통과시킨다.
+- **vitest 미실행** — 전 슬라이스가 서버측 파이썬만 건드렸다. AC-FXLIB-020은 M6.
+- **시퀀스 번호 TOCTOU** — 재조회로 얻은 빈 번호를 이후 Store에서 쓴다. 그 사이 다른 오퍼레이터가 저장하는 경우는 콘솔의 무플래그 Store 거부가 마지막 방어선이다(SPEC 의도대로).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기 — 소유: manager-develop>_
