@@ -716,8 +716,21 @@ class TestInstantiationReachesTheConsoleOnlyThroughRunCommands:
         execution, payload = _instantiate(_registry(port=port, gate=gate))
         assert gate.screened, "non-vacuity: the gate must have been consulted"
         assert port.executed == []
-        assert execution.result.is_error is True
         assert payload["gate_status"] == "locked"
+        # A LiveLock demotion is an answer, not a failure — see the sibling
+        # tools' rationale (REQ-BUSKWIZ-014). The proposal is the deliverable.
+        assert execution.result.is_error is False
+
+    def test_a_hold_is_still_an_error_unlike_a_lock(self):
+        # The lock carve-out must be scoped to the lock. Any OTHER refusal is
+        # still something the model has to act on, so it stays an error —
+        # without this, the carve-out would swallow every gate refusal.
+        gate = _RecordingGate(cleared=False, status="held")
+        port = _RecordingPort()
+        execution, payload = _instantiate(_registry(port=port, gate=gate))
+        assert port.executed == []
+        assert payload["gate_status"] == "held"
+        assert execution.result.is_error is True
 
     def test_a_refused_bundle_is_never_reported_as_executed(self):
         # The trap: the gate's per-command decisions are not execution

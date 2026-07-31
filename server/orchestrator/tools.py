@@ -1789,16 +1789,25 @@ def build_toolset(
         payload["succeeded"] = report.succeeded
         payload["report"] = report.to_dict()
         payload["summary_ko"] = fx_report_to_korean(report)
+        # `run_commands` is content when every line came back ok — and a
+        # cross-call fold does exactly that while leaving an INCOMPLETE cue
+        # behind (REQ-FXLIB-011 (b)). Only a COMPLETE verdict is a success;
+        # anything else is an error the model must report.
+        is_error = execution.result.is_error or not report.succeeded
+        if payload.get("gate_status") == _LOCKED:
+            # ...except a LiveLock demotion, which is an ANSWER, not a failure:
+            # the proposal IS the deliverable. `is_error=True` would feed the
+            # self-correction loop and send the model back into the same lock —
+            # during a show, which is precisely when the lock is on. The sibling
+            # tools demote the same way (`prepare_busking` REQ-BUSKWIZ-014,
+            # `precheck_patch` AC-PRECHK-014 ④); fx diverged until M6 measured it.
+            is_error = False
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
                 name=call.name,
                 content=json.dumps(payload, ensure_ascii=False),
-                # `run_commands` is content when every line came back ok — and a
-                # cross-call fold does exactly that while leaving an INCOMPLETE
-                # cue behind (REQ-FXLIB-011 (b)). Only a COMPLETE verdict is a
-                # success; anything else is an error the model must report.
-                is_error=execution.result.is_error or not report.succeeded,
+                is_error=is_error,
             ),
             command_outcomes=execution.command_outcomes,
         )

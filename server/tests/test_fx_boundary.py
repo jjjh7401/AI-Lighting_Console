@@ -514,20 +514,22 @@ class TestFxInstantiationUnderLiveLock:
         assert payload["succeeded"] is False
         assert payload["summary_ko"]
 
-    def test_the_demotion_is_reported_as_an_error_result(self, tmp_path):
-        # CHARACTERIZATION, not an endorsement. `instantiate_fx` sets
-        # is_error = run_commands.is_error OR not report.succeeded, so a lock
-        # demotion arrives as is_error=True — unlike `busking_bundle`, which
-        # deliberately returns is_error=False so the self-correction loop does
-        # not retry into the same lock (tools.py, AC-BUSKWIZ-010). The
-        # divergence is real and is recorded in the M6 report as a finding; it
-        # is pinned here so a later change to it is a deliberate one.
+    def test_the_demotion_is_an_answer_not_an_error(self, tmp_path):
+        # A LiveLock demotion is an ANSWER: the proposal IS the deliverable.
+        # `is_error=True` would feed the model's self-correction loop and send it
+        # back into the same lock — during a show, which is exactly when the lock
+        # is on. The sibling tools already demote this way (`prepare_busking`
+        # REQ-BUSKWIZ-014, `precheck_patch` AC-PRECHK-014 ④); fx diverged until
+        # M6 measured it, and the divergence was closed rather than recorded.
         # `is_error` alone does not discriminate (M5 measured a mutation that
         # survived exactly that assert), so the lock signature rides along.
         execution, payload, port = _instantiate_first_fx(tmp_path, locked=True)
-        assert execution.result.is_error is True
+        assert execution.result.is_error is False
         assert payload["gate_status"] == "locked"
         assert port.executed == []
+        # ...and the demotion must not be mistaken for a success: nothing ran.
+        assert payload["succeeded"] is False
+        assert payload["executed"] is False
 
 
 # =============================================================================
