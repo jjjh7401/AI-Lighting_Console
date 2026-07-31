@@ -84,6 +84,7 @@ CIRCLE_PHASE_CONFLICT = "circle_phase_conflict"  # `circle` owns its offset; pha
 # the pattern kind, not to a field: the schema carries ONE phase pair for the
 # whole entry, so there is nowhere else to put a per-axis relationship.
 _QUARTER_CYCLE = 90.0
+_FULL_CYCLE = 360.0
 
 # The per-command status `run_commands` reports when the instruction-scoped
 # dedupe drops a line (`server/orchestrator/tools.py` run_commands loop).
@@ -391,9 +392,20 @@ def _phase_lines(fx: Fx) -> list[str]:
             f"Attribute '{attributes[0]}' At Phase {_format_value(start)} "
             f"Thru {_format_value(end)}"
         ]
-    last = len(attributes) - 1
+    # Endpoint inclusion depends on whether the arc closes on itself. Phase is
+    # cyclic, so a span of a whole cycle puts the far endpoint on the SAME phase
+    # as the near one: walking 0->360 across three attributes inclusively yields
+    # 0 / 180 / 360, and 360 == 0, so the first and last attribute run in phase
+    # and a three-colour chase renders as a two-phase flip. Dividing by the
+    # attribute COUNT instead spaces them 0 / 120 / 240 — evenly around the
+    # cycle, which is what spending the axis across N attributes means.
+    # A partial arc (0->180) does not close, so its far endpoint is meaningful
+    # and stays included: 0 / 90 / 180.
+    span = end - start
+    closes_on_itself = span != 0 and span % _FULL_CYCLE == 0
+    divisor = len(attributes) if closes_on_itself else len(attributes) - 1
     return [
-        f"Attribute '{name}' At Phase {_format_value(start + (end - start) * index / last)}"
+        f"Attribute '{name}' At Phase {_format_value(start + span * index / divisor)}"
         for index, name in enumerate(attributes)
     ]
 

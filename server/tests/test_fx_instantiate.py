@@ -866,3 +866,76 @@ def test_the_structured_report_carries_the_same_facts_as_the_korean_one():
     assert data["speed_bpm"] == 60
     assert data["effect_evidence"] == EFFECT_EVIDENCE_NOTICE
     assert data["succeeded"] is True
+
+
+# -- multi-attribute phase distribution ---------------------------------------
+#
+# Found by the orchestrator at the M5 seam: a chase over three colour attributes
+# was emitting 0 / 180 / 360, and phase is cyclic, so 360 == 0 put red and blue
+# in phase — a three-colour chase rendering as a two-phase flip. Machine-invisible
+# by construction (the effect is not readable back), so it is pinned here.
+
+
+def _phases(fx: Fx) -> list[str]:
+    lines = build_fx_bundle(fx, group=11, sequence=12).commands
+    return [line for line in lines if "At Phase" in line]
+
+
+def test_a_full_cycle_spreads_the_attributes_without_two_sharing_a_phase():
+    fx = _fx(
+        "chase",
+        steps=[
+            {"ColorRGB_R": 100, "ColorRGB_G": 0, "ColorRGB_B": 0},
+            {"ColorRGB_R": 0, "ColorRGB_G": 100, "ColorRGB_B": 100},
+        ],
+        phase_from=0,
+        phase_to=360,
+    )
+    assert _phases(fx) == [
+        "Attribute 'ColorRGB_R' At Phase 0",
+        "Attribute 'ColorRGB_G' At Phase 120",
+        "Attribute 'ColorRGB_B' At Phase 240",
+    ]
+
+
+def test_no_two_attributes_land_on_the_same_point_of_the_cycle():
+    # The defect this file exists to keep out, stated as the invariant rather
+    # than as the one arithmetic that happened to produce it.
+    fx = _fx(
+        "chase",
+        steps=[
+            {"ColorRGB_R": 100, "ColorRGB_G": 0, "ColorRGB_B": 0},
+            {"ColorRGB_R": 0, "ColorRGB_G": 100, "ColorRGB_B": 100},
+        ],
+        phase_from=0,
+        phase_to=360,
+    )
+    emitted = [float(line.rsplit(" ", 1)[1]) for line in _phases(fx)]
+    on_the_cycle = [value % 360.0 for value in emitted]
+    assert len(set(on_the_cycle)) == len(on_the_cycle)
+
+
+def test_a_partial_arc_still_reaches_its_far_endpoint():
+    # The far end of an arc that does NOT close is meaningful, so it stays
+    # included — the fix is scoped to the closing case, not applied blanket.
+    fx = _fx(
+        "chase",
+        steps=[
+            {"ColorRGB_R": 100, "ColorRGB_G": 0, "ColorRGB_B": 0},
+            {"ColorRGB_R": 0, "ColorRGB_G": 100, "ColorRGB_B": 100},
+        ],
+        phase_from=0,
+        phase_to=180,
+    )
+    assert _phases(fx) == [
+        "Attribute 'ColorRGB_R' At Phase 0",
+        "Attribute 'ColorRGB_G' At Phase 90",
+        "Attribute 'ColorRGB_B' At Phase 180",
+    ]
+
+
+def test_the_single_attribute_spread_keeps_the_measured_rulebook_literal():
+    # The one-attribute branch fans across the SELECTION and its `0 Thru 360`
+    # is a measured literal (M0 anchor). The fix must not have touched it.
+    fx = _fx("pulse", steps=[{"Dimmer": 100}, {"Dimmer": 0}], phase_from=0, phase_to=360)
+    assert _phases(fx) == ["Attribute 'Dimmer' At Phase 0 Thru 360"]
