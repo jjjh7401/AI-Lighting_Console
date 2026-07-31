@@ -183,7 +183,7 @@ B-i을 쓰면 **실측 형태(3단이 `truncated=true`)에서 상계가 영구�
 | # | 기각 사유 |
 |---|---|
 | B-i | 위. `AC-OVERLAP-004` ①③④가 각각 죽인다 |
-| B-ii | 파라미터화는 호출부에서 두 정책을 **선택 가능**하게 만들며, 선택 가능한 것은 잘못 선택될 수 있다 — 술어 분리는 형상으로 고정돼야 하고 인자로 고정되면 안 된다. 더 근본적으로 **`CONTRACT.md` §2 D-8이 수렴을 명시적으로 금지했다**: 저장소의 절단 계수 비교 3구현이 `childCount` 부재·0 정책에서 서로 다르다 — `server/prechk/inventory.py:389`(`root_was_short = child_count > len(children)`), `server/prechk/macro.py:249-251`(`countable`이 참일 때만 비교하는 관용), `server/orchestrator/tools.py:1296-1302`(정수 아니면 예외 + 짧으면 예외) `[코드]`. 파라미터 헬퍼는 그 셋을 통합하려는 시도의 첫 걸음이고, `acceptance.md` §D의 *"zero fixtures는 유효한 리그"*와 매크로 풀의 실측 근거를 충돌시킨다. **본 SPEC은 4번째 사본을 만들고 수렴하지 않으며, 수렴이 별도 리팩터 SPEC의 일임을 여기 적는다** |
+| B-ii | 파라미터화는 호출부에서 두 정책을 **선택 가능**하게 만들며, 선택 가능한 것은 잘못 선택될 수 있다 — 술어 분리는 형상으로 고정돼야 하고 인자로 고정되면 안 된다. 더 근본적으로 **`CONTRACT.md` §2 D-8이 수렴을 명시적으로 금지했다**: 저장소의 절단 계수 비교 3구현이 `childCount` 부재·0 정책에서 서로 다르다 — `server/prechk/inventory.py:389`(`root_was_short = child_count > len(children)`), `server/prechk/macro.py:249-251`(`countable`이 참일 때만 비교하는 관용), `server/orchestrator/tools.py:1296-1302`(정수 아니면 예외 + 짧으면 예외) `[코드]`. 파라미터 헬퍼는 그 셋을 통합하려는 시도의 첫 걸음이고, `.moai/specs/SPEC-COPILOT-PRECHK-001/acceptance.md:313`(§D 퇴화·경계 케이스)의 *"픽스처 0개는 거부가 아니라 정상이다"*와 매크로 풀의 실측 근거를 충돌시킨다. **본 SPEC은 4번째 사본을 만들고 수렴하지 않으며, 수렴이 별도 리팩터 SPEC의 일임을 여기 적는다** |
 
 **집행 마일스톤: M2.**
 **달린 인수 조건:** `AC-OVERLAP-003` ①② · `AC-OVERLAP-004` ①②③④ (전부 M2 배정).
