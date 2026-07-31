@@ -98,17 +98,35 @@ commit_sha: pending-backfill
 #### 접두 행 (판정 4건)
 
 ```
-REOPEN: ASSUMPTION-36 — 페이저 생성 문법 미확립으로 저장 캡처 측정 불가. 증거 채널은 별도로 부정(큐 내용 판독 불가·빈 큐와 구별 불가)
-SKIP:   ASSUMPTION-37 — 구문 접수 확인(ok:true)하나 효과 미판정. 페이저 생성이 확립되면 갈린다
+GO:     ASSUMPTION-36 — 페이저 생성·저장 캡처 모두 성립(GUI 관측). 단 증거 채널은 부정 — 재조회 불가, 사람 관측이 유일 채널
+GO:     ASSUMPTION-37 — 다단 스텝 문법 확립: <값> → `Step 2` → <값>. Accel/Decel 개별 효과는 미측정
 GO:     ASSUMPTION-38 — Speed 단위 = BPM (GUI 표시 판독)
 GO:     ASSUMPTION-39 — DataPool/MAtricks 재조회 가능 (childCount 1, truncated:false)
+SKIP:   Accel/Decel 곡선 — ok:true이나 효과 미관측. 2스텝 페이저 위에 얹어 가감속을 GUI로 보면 갈린다
 ```
 
-#### 핵심 관측 — 이펙트 커맨드는 접수되나 모션이 0회다
+#### 확립된 페이저 생성 문법 (라이브 실측)
 
-페이저 생성 시도 **3회**(딜머 진폭 없음 / 딜머 진폭 0~100 / 룰북 원문 Pan+Relative, 그룹 13·11 양쪽) 전부에서 모든 커맨드가 `ok:true "OK"`를 받았고 **GUI 모션 관측은 0회**다. Pan 자체는 살아 있다 — `Attribute 'Pan' At 20`으로 조준이 실제로 바뀌는 것을 관측했다. 즉 값은 먹히고 **페이저만 안 붙는다**. 재현 3회 · 반례 0회.
+```
+ClearAll
+Group 11
+Attribute 'Dimmer' At 100          # 스텝 1의 값
+Step 2                             # 스텝 2 생성
+Attribute 'Dimmer' At 0            # 스텝 2의 값 → 여기서 페이저가 성립
+Attribute 'Dimmer' At Phase 0 Thru 360   # 선택 전체에 위상 팬 → 웨이브
+Attribute 'Dimmer' At Speed 60           # BPM
+Store Sequence <n> Cue 1 '<라벨>'
+```
 
-이는 BUSKWIZ 판정 *"`Cmd` OK는 효과의 증거가 아니다"* 가 이펙트 축에서 가장 선명하게 재현된 것이다. **FXLIB는 이 축에서 `ok`를 성공 신호로 쓸 수 없다.**
+**GUI 관측(사용자)** — 프로그래머를 `ClearAll`로 비운 뒤 저장물만 발화한 상태에서 관측했으므로 관측 1건이 **생성**과 **저장 캡처**를 동시에 증명한다:
+- 2스텝만: *"깜빡인다 / 움직인다"*
+- 위상 확산 추가: *"파도처럼 순차적으로"* (일제 점멸 아님)
+
+#### 정정 — 실패 3회의 원인은 콘솔이 아니라 프로브였다
+
+본 세션 전반부의 페이저 생성 실패 3회는 **프로브가 스텝을 1개만 만든 결함**이었다. 페이저는 2개 이상의 스텝을 요구하며(MA Lighting 공식 문서), `Relative`·`Phase`·`Speed`는 **이미 존재하는** 페이저를 변형하는 커맨드이지 생성 커맨드가 아니다. 룰북 `31_choreography_patterns.md:73`이 이미 *"set a value, `Step 2`, set the next value"*라고 적어 두었고 프로브가 그 줄을 놓쳤다 — **룰북의 "validated" 선언은 옳았다.** 원문과 두 차례의 자기 정정은 `raw-log-01.md` §0 · §10.0에 보존했다.
+
+`Attribute 'X' At Step N` 형태는 **잘못된 문법**이다(`ok:true`를 받으나 효과 없음) — 라이브러리·빌더에서 금지 형태로 명시할 것.
 
 #### 증거 채널 — 저장된 큐의 내용은 기계로 읽히지 않는다
 
@@ -122,9 +140,15 @@ GO:     ASSUMPTION-39 — DataPool/MAtricks 재조회 가능 (childCount 1, trun
 
 `Delete Sequence 98` · `Delete Sequence 99` 후 재조회 `childCount 17`, 번호 집합이 착수 시와 동일. 프로브 생성 오브젝트 잔여 **0건**.
 
-#### 귀결 — M1 착수 보류
+#### 귀결 — M1 착수 가능, 단 design.md 개정이 선행한다
 
-`REOPEN: ASSUMPTION-36`은 plan §B M0의 "run-phase 중단 + 블로커 보고, 조용히 진행 금지" 경로다. 페이저 생성 문법이 확립되기 전에는 M1 이후를 착수하지 않는다. 미발화로 남긴 경로(Effect 풀 오브젝트 · 페이저 편집기 경유 · `Step` 조합)는 추측 발화를 중단했기 때문이며, 재개 시 여기서부터 잰다.
+ASSUMPTION 4건 전부 `GO`이므로 run-phase 진행 조건은 충족됐다. 다만 M0가 **스텝 축을 새로 확립**했으므로 착수 전에 다음 3건을 반영해야 한다.
+
+1. **번들 형상 개정 (design.md §4 · M4 선행 조건)** — 현재 형상(값 라인 1개 + Phase + Speed)으로는 페이저가 생기지 않는다. 패턴마다 `<값> → Step 2 → <값>` **스텝 쌍**을 담아야 한다. M4 착수 전 design.md 개정 필요.
+2. **스키마에 스텝 축 추가 (M1)** — `server/fx/schema.py`가 스텝 값 배열을 표현해야 한다. 기존 계획의 페이저 축(phase_from/phase_to/speed/relative)만으로는 부족하다.
+3. **값 라인 충돌 가드의 중요도 상승 (REQ-FXLIB-011)** — 스텝 값 라인은 `Attribute 'Dimmer' At 100` / `At 0` 처럼 **패턴 간 중복 가능성이 매우 높다.** 감사 F1이 지적한 교차 호출 접힘 위험이 실제로 커졌다.
+
+**효과 검증은 사람 관측이 유일 채널이다.** 큐 내용은 트리·프로퍼티 어느 쪽으로도 읽히지 않고(내용 있는 큐와 빈 큐가 구별 불가), 픽스처 실시간 값도 읽히지 않으며, MA3는 페이저를 별도 풀에 두지 않는다. 리포트 문면은 "효과는 기계로 확인되지 않음 — 사람 확인 필요"를 명시해야 한다(plan M4의 NEGATIVE 분기와 동일 취급).
 
 ## §E.3 Run-phase Audit-Ready Signal
 
