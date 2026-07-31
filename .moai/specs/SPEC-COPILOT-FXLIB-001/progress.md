@@ -87,7 +87,44 @@ commit_sha: pending-backfill
 
 ## §E.2 Run-phase Evidence
 
-_<run-phase 대기 — M0 프로브 판정 4건(ASSUMPTION-36~39, 접두 행 `GO:`/`DESCOPE:`/`SKIP:`/`REOPEN:`)과 마일스톤별 증거가 여기 기록된다. 소유: manager-develop>_
+### M0 — 라이브 프로브 1회차 (2026-07-31, cycle_type=none, 코드 변경 0)
+
+원문 전량: `.moai/reports/m0-probe/raw-log-01.md` (게이트 미경유 — 감사 로그 없음. 응답 원문 + 사용자 GUI 관측이 증거)
+
+**세션 조건 (직접 실측, 이월 없음)**: onPC `127.0.0.1:8000` · 수신 9005 · `osc_slot` 2 · 응답기 **v1.5.0** · `DataPool/Sequences` `childCount 17` `truncated:false` · `DataPool/Groups` 4개(1·11·12·13) · `DataPool/MAtricks` 1개(11 `Wave`).
+
+**날조 대조군 — 양 축 확립**: exec 축 `ZzzBogusVerb 1` → `ok:false "Illegal object"` / 양성 `List` → `ok:true "OK"`; state 축 `DataPool/ZzzBogusPath` → `ok:false "path segment not found"`. 이 세션에서 `ok`는 **구문 유효성**의 증거로 사용 가능하다(효과의 증거는 아니다).
+
+#### 접두 행 (판정 4건)
+
+```
+REOPEN: ASSUMPTION-36 — 페이저 생성 문법 미확립으로 저장 캡처 측정 불가. 증거 채널은 별도로 부정(큐 내용 판독 불가·빈 큐와 구별 불가)
+SKIP:   ASSUMPTION-37 — 구문 접수 확인(ok:true)하나 효과 미판정. 페이저 생성이 확립되면 갈린다
+GO:     ASSUMPTION-38 — Speed 단위 = BPM (GUI 표시 판독)
+GO:     ASSUMPTION-39 — DataPool/MAtricks 재조회 가능 (childCount 1, truncated:false)
+```
+
+#### 핵심 관측 — 이펙트 커맨드는 접수되나 모션이 0회다
+
+페이저 생성 시도 **3회**(딜머 진폭 없음 / 딜머 진폭 0~100 / 룰북 원문 Pan+Relative, 그룹 13·11 양쪽) 전부에서 모든 커맨드가 `ok:true "OK"`를 받았고 **GUI 모션 관측은 0회**다. Pan 자체는 살아 있다 — `Attribute 'Pan' At 20`으로 조준이 실제로 바뀌는 것을 관측했다. 즉 값은 먹히고 **페이저만 안 붙는다**. 재현 3회 · 반례 0회.
+
+이는 BUSKWIZ 판정 *"`Cmd` OK는 효과의 증거가 아니다"* 가 이펙트 축에서 가장 선명하게 재현된 것이다. **FXLIB는 이 축에서 `ok`를 성공 신호로 쓸 수 없다.**
+
+#### 증거 채널 — 저장된 큐의 내용은 기계로 읽히지 않는다
+
+`state 'DataPool/Sequences/98/3/1'` → `Part`, `childCount 0`(트리 바닥). `prop` 은 `TrigType`→`"Go"`로 읽히나 `CueFade`·`Phase`·`Speed`는 `"property not readable"`. 결정적으로 **빈 프로그래머로 저장된 큐와 객체 트리상 구별되지 않는다**(양쪽 다 `Cue → Part(childCount 0)`).
+
+#### 부수 — 무응답 ≠ 미실행
+
+프로브 드라이버 결함으로 응답을 못 받던 구간에도 `Store`는 실제 실행됐다(`childCount` 17→18, 재조회 확인). 드라이버 결함의 원인은 `kind="result"`(응답기) vs `kind="exec"`(드라이버) 불일치였고, **콘솔 결함이 아니었다** — 1차 기록의 오진을 `raw-log-01.md` §0에 정정 보존했다.
+
+#### 쇼파일 복구 — 확인됨
+
+`Delete Sequence 98` · `Delete Sequence 99` 후 재조회 `childCount 17`, 번호 집합이 착수 시와 동일. 프로브 생성 오브젝트 잔여 **0건**.
+
+#### 귀결 — M1 착수 보류
+
+`REOPEN: ASSUMPTION-36`은 plan §B M0의 "run-phase 중단 + 블로커 보고, 조용히 진행 금지" 경로다. 페이저 생성 문법이 확립되기 전에는 M1 이후를 착수하지 않는다. 미발화로 남긴 경로(Effect 풀 오브젝트 · 페이저 편집기 경유 · `Step` 조합)는 추측 발화를 중단했기 때문이며, 재개 시 여기서부터 잰다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
