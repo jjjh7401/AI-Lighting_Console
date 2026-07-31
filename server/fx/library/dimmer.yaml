@@ -1,0 +1,47 @@
+# Built-in fx library — intensity phasers (REQ-FXLIB-002).
+#
+# This file holds the only pattern whose effect was directly observed. M0 built
+# a two-step intensity phaser on a live console, stored it, emptied the
+# programmer and watched the stored object run (progress.md §E.2) — one
+# observation proving both that the phaser was created and that the store
+# captured it.
+#
+# `pulse-beat` below IS that measurement, transcribed. Its numbers are a
+# regression baseline rather than a taste decision: M4 has to render a bundle
+# from this entry that matches the measured shape string for string
+# (AC-FXLIB-008), so changing them changes what the word "measured" refers to
+# everywhere else in this SPEC.
+#
+# See movement.yaml for the authoring rules shared by every asset here.
+#
+# WHY THERE IS NO FAST FULL-RANGE ENTRY. An intensity phaser slamming zero to
+# full at club tempo is a flash effect in everything but the attribute name, and
+# that family is out of scope (spec.md §D — the preview classifier rates it a
+# direct risk to audience and camera). The second entry is a slow breath
+# instead, and the fast band is served by the movement and colour patterns.
+schema_version: 1
+
+fx:
+  - fx_id: "pulse-beat"
+    display_name: "박자 펄스"
+    pattern: "pulse"
+    aliases: ["펄스", "박자 펄스", "깜빡이는 딤머", "pulse"]
+    mood_keywords: ["박자", "깜빡이는", "리듬", "펄스", "또렷한", "pulse", "beat"]
+    steps:
+      - Dimmer: 100
+      - Dimmer: 0
+    phase_from: 0
+    phase_to: 360
+    speed: 60
+
+  - fx_id: "pulse-breath"
+    display_name: "숨쉬는 딤머"
+    pattern: "pulse"
+    aliases: ["숨쉬는 딤머", "브리딩", "느린 펄스", "breathing"]
+    mood_keywords: ["숨쉬는", "느린", "따뜻한", "잔잔한", "발라드", "breath", "slow"]
+    steps:
+      - Dimmer: 25
+      - Dimmer: 75
+    phase_from: 0
+    phase_to: 360
+    speed: 14

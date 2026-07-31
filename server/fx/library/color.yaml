@@ -1,0 +1,61 @@
+# Built-in fx library — colour phasers (REQ-FXLIB-002).
+#
+# `chase` entered v1 on the same M0 judgement that opened `pulse` — the step
+# syntax itself — but its axis is the three colour channels, and M0 observed
+# only the intensity axis. So like the movement file, the effect here rides on
+# the ASSUMPTION-40 generalisation rather than on a direct measurement.
+#
+# See movement.yaml for the authoring rules shared by every asset here.
+#
+# EVERY CHANNEL HAS TO TRAVEL. A colour chase names all three channels, and no
+# attribute may repeat a value inside one entry — so a red-to-blue chase that
+# leaves green at zero in both steps is not authorable here. The green line
+# would be emitted twice, the dedupe would drop the second one, and the steps
+# would stop matching each other. The colours below are therefore chosen so all
+# three channels genuinely move. That is a real constraint on colour choice and
+# it is worth knowing it was a decision rather than an accident.
+#
+# A THREE-STEP ENTRY, AND WHY IT STOPS AT THREE. `chase-club-rgb` walks three
+# colours, which is also the shape that exercises a second step transition. A
+# fourth step returning toward the first colour is not authorable for the same
+# no-repeated-value reason — and it is not needed, because a phaser already
+# loops from its last step back to its first.
+schema_version: 1
+
+fx:
+  - fx_id: "chase-warm-cool"
+    display_name: "따뜻함에서 차가움으로"
+    pattern: "chase"
+    aliases: ["웜쿨 체이스", "따뜻한 체이스", "색 전환", "warm cool chase"]
+    mood_keywords: ["따뜻한", "느린", "전환되는", "잔잔한", "발라드", "warm", "chase"]
+    steps:
+      - ColorRGB_R: 100
+        ColorRGB_G: 55
+        ColorRGB_B: 5
+      - ColorRGB_R: 5
+        ColorRGB_G: 20
+        ColorRGB_B: 100
+    phase_from: 0
+    phase_to: 360
+    speed: 16
+
+  # The shuffle seed replaces a phase spread here: the colours arrive in a
+  # scattered but repeatable order instead of walking the selection in sequence.
+  # Same seed, same look (31_choreography_patterns.md:89).
+  - fx_id: "chase-club-rgb"
+    display_name: "삼색 체이스"
+    pattern: "chase"
+    aliases: ["삼색 체이스", "알지비 체이스", "색 돌리기", "rgb chase"]
+    mood_keywords: ["빠른", "화려한", "클럽", "삼색", "돌아가는", "fast", "club", "chase"]
+    steps:
+      - ColorRGB_R: 100
+        ColorRGB_G: 10
+        ColorRGB_B: 0
+      - ColorRGB_R: 10
+        ColorRGB_G: 100
+        ColorRGB_B: 20
+      - ColorRGB_R: 0
+        ColorRGB_G: 30
+        ColorRGB_B: 100
+    speed: 128
+    x_shuffle: 1234
