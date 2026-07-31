@@ -61,7 +61,11 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # (the prechk imports, the `property_port` parameter and its docstring) and moved
 # the first hunk's old start from 32 to 33 by inserting its import block one line
 # lower. None of them touches a protected range.
-_TOOLS_EXPECTED_HUNK_OLD_STARTS = (33, 49, 125, 463, 475, 479, 951, 1222, 1231)
+# Grows by one entry per SPEC that registers a tool. FXLIB M5 added 17 (the fx
+# imports) and 436 (the fx argument/rig helpers, inserted above ToolRegistry).
+# The positional list is bookkeeping; the assertion that carries the PRESERVE
+# claim is the protected-range overlap check below.
+_TOOLS_EXPECTED_HUNK_OLD_STARTS = (17, 33, 49, 125, 436, 463, 475, 479, 951, 1222, 1231)
 _TOOLS_PROTECTED_OLD_RANGES = ((234, 238), (524, 569))
 _HUNK_RE = re.compile(r"^@@ -(?P<old_start>\d+)(?:,(?P<old_count>\d+))? \+\d+(?:,\d+)? @@")
 
