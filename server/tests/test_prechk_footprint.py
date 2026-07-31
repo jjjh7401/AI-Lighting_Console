@@ -51,12 +51,13 @@ from server.prechk.footprint import (
 from server.prechk.inventory import read_inventory
 from server.prechk.patch import (
     BOUND_PROVES_CLEAR,
+    NOT_PERFORMED,
     RANGE_OVERLAP_BOUND_INCONCLUSIVE,
     evaluate_patch,
 )
 from server.safety.console import StateQueryError
 
-from .test_prechk_inventory import duplicate_address_pair
+from .test_prechk_inventory import clean_rig_18, duplicate_address_pair
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PRECHK_DIR = PROJECT_ROOT / "server" / "prechk"
@@ -188,7 +189,9 @@ class PerTypeRig(Rig):
 
     ``slotless`` names ``(type slot, mode slot)`` pairs whose MODE child comes
     back without its pool slot; ``unreadable`` names pairs whose channel listing
-    declares its count as a string instead of an integer.
+    declares its count as a string instead of an integer; ``unlisted`` names TYPE
+    slots whose ``DMXModes`` answers ``childCount 0`` with an empty child list —
+    the shape the responder emits when it could not read the children at all.
     """
 
     def __init__(
@@ -197,11 +200,13 @@ class PerTypeRig(Rig):
         tables: tuple[tuple[int, ...], ...],
         slotless: tuple[tuple[int, int], ...] = (),
         unreadable: tuple[tuple[int, int], ...] = (),
+        unlisted: tuple[int, ...] = (),
     ) -> None:
         super().__init__(widths=tables[0], types=len(tables))
         self.tables = tables
         self.slotless = slotless
         self.unreadable = unreadable
+        self.unlisted = unlisted
 
     def query_state(self, path: str) -> dict:
         below = path[len(ROOT) + 1 :].split("/") if path.startswith(f"{ROOT}/") else []
@@ -213,6 +218,11 @@ class PerTypeRig(Rig):
             self.modes_listed = len(self.widths)
         payload = super().query_state(path)
         if path.endswith("DMXModes"):
+            if type_slot in self.unlisted:
+                # childCount DERIVED from the same empty read, so it agrees with
+                # len(children) and `truncated` stays unset — indistinguishable
+                # from a type that genuinely has no modes.
+                return {**payload, "node": {**payload["node"], "childCount": 0}, "children": []}
             payload["children"] = [
                 _without_slot(child) if (type_slot, child["i"]) in self.slotless else child
                 for child in payload["children"]
@@ -476,6 +486,36 @@ class TestPartialEnumerationRefusesABound:
         outcome = _walk(rig)
         # Non-vacuity: widths really were collected, and they are a SUBSET.
         assert outcome.mode_widths == TRAP_WIDTHS[:-1]
+        assert "관측된 모드가 0개다" not in outcome.notes
+        assert f"{ROOT}/2/DMXModes" in " ".join(outcome.notes)
+        assert outcome.complete is False
+        assert upper_bound(outcome) is None
+        assert max(outcome.mode_widths) <= gap < max(TRAP_WIDTHS)
+
+    def test_a_mode_listing_of_zero_children_costs_the_walk_its_completeness(self):
+        """AC-OVERLAP-003 ⑥ — a count of zero is a READ FAILURE, not an empty set.
+
+        This is the shape the responder actually emits when it cannot read a
+        node's children at all: ``safe_children`` returns an empty table when
+        both ``Children()`` and ``Count()`` fail, and ``childCount`` is derived
+        from that same empty read — so the count AGREES with the child list and
+        ``truncated`` stays unset. ``_listing_is_whole`` therefore calls it whole,
+        which is the unsafe reading: the walk cannot tell "this type has no
+        modes" from "this type's modes could not be listed".
+
+        Found by independent code review at PR time, not by the run-audit — the
+        audit reasoned from the acceptance clauses, which enumerate a short list
+        and a truncated flag and never named a zero count. Type 1 reads cleanly,
+        so widths ARE folded and the "관측된 모드가 0개다" guard is not what
+        refuses the bound; without this branch the fold returns 8 while the true
+        bound is 31 and a gap of 30 flips to ``bound_proves_clear``.
+        """
+        gap = 30
+        rig = PerTypeRig(tables=(TRAP_WIDTHS[:1], TRAP_WIDTHS[-1:]), unlisted=(2,))
+        outcome = _walk(rig)
+        # Non-vacuity: a width really was folded, and it is a SUBSET that would
+        # have cleared the gap had completeness not been withdrawn.
+        assert outcome.mode_widths == TRAP_WIDTHS[:1]
         assert "관측된 모드가 0개다" not in outcome.notes
         assert f"{ROOT}/2/DMXModes" in " ".join(outcome.notes)
         assert outcome.complete is False
@@ -818,10 +858,27 @@ class TestGapArithmetic:
         assert evaluation.overlap.bound == max(TWO_MODE_WIDTHS)
         # ① once in the gap set, and no gap of zero: the bound axis raises nothing
         # for the address the duplicate axis owns.
-        assert evaluation.overlap_basis == BOUND_PROVES_CLEAR
         assert RANGE_OVERLAP_BOUND_INCONCLUSIVE not in [
             check.kind for check in evaluation.skipped_checks
         ]
+        # ② division of labour, stated on the GRADE and not only on the notices.
+        # The first version of this test asserted ``bound_proves_clear`` here and
+        # that was wrong: a shared start point collapses into ONE group key, so
+        # the bound compared nothing about this pair, and grading it "proven
+        # clear" made the summary read "간격이 커서 겹침이 불가능" about two
+        # fixtures occupying IDENTICAL channels. Eligibility is not
+        # participation — an uncompared slot must drag the rig-wide grade down.
+        assert evaluation.overlap_basis == NOT_PERFORMED
+        # The SHARING slots are the ones excluded; a third fixture at its own
+        # address still participates, which is what keeps this from degenerating
+        # into "any duplicate silences the whole axis".
+        assert 1 not in evaluation.overlap.bound_slots
+        assert 2 not in evaluation.overlap.bound_slots
+        assert evaluation.overlap.bound_slots == (3,)
+        # Contrast, so this is not merely "duplicates always yield not_performed":
+        # the same walk on a rig whose starts are distinct DOES prove clear.
+        distinct = evaluate_patch(read_inventory(clean_rig_18()), walk=_walk(Rig()))
+        assert distinct.overlap_basis == BOUND_PROVES_CLEAR
 
     def test_one_address_per_universe_yields_no_gap(self):
         assert address_gaps({(1, 5), (2, 5), (3, 5)}) == ()

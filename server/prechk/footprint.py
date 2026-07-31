@@ -308,6 +308,21 @@ def walk_mode_widths(
             whole = False
             notes.append(f"모드 자식에 풀 슬롯이 없다({modes_path})")
             mode_slots = []
+        if not mode_slots:
+            # A listing that reports zero children is INDISTINGUISHABLE from one
+            # whose children could not be read: the responder's ``safe_children``
+            # returns an empty table when both ``Children()`` and ``Count()``
+            # fail, and then ``childCount`` is derived from that same empty read
+            # -- so ``childCount == len(children) == 0`` and ``truncated`` is
+            # unset. ``_listing_is_whole`` therefore says "whole", and this type
+            # would contribute no width while the walk still called itself
+            # complete. On a rig with a second type that DOES answer, the fold
+            # then returns a bound smaller than the true one and clears gaps it
+            # must not clear -- the one error direction this axis can produce
+            # (`spec.md` §A 제약 4). The empty-widths guard below only rescues
+            # the case where EVERY type collapses, so it cannot cover this.
+            whole = False
+            notes.append(f"모드가 하나도 열거되지 않았다({modes_path})")
         for mode_slot in mode_slots:
             channels_path = f"{modes_path}/{mode_slot}/{_CHANNELS_SEGMENT}"
             try:

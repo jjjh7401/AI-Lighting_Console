@@ -540,10 +540,20 @@ def _overlap_basis(
     bound_slots: tuple[int, ...] = ()
     unsettled: tuple[AddressGap, ...] = ()
     if bound is not None:
+        # Eligibility is NOT participation. A slot that shares its
+        # ``(universe, address)`` with another fixture collapses into one group
+        # key, so ``address_gaps`` never yields a gap for that pair and the bound
+        # compared nothing about it. Counting it as covered lets the rig-wide
+        # grade reach ``bound_proves_clear`` on a rig where two fixtures occupy
+        # IDENTICAL channels, and the summary then reads "간격이 커서 겹침이
+        # 불가능" about a measurement that never happened. The duplicate axis
+        # owns that pair; this axis must say it did not judge it.
         bound_slots = tuple(
             item.record.slot
             for item in assessed
-            if item.parse.ok and item.record.slot not in exact_set
+            if item.parse.ok
+            and item.record.slot not in exact_set
+            and len(groups.get((item.parse.universe, item.parse.address), ())) == 1
         )
         covered |= set(bound_slots)
 
