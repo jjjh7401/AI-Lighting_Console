@@ -8,7 +8,7 @@
 
 **무엇**: 씬 컴파일러 — **룩(정적 값) + 이펙트(스텝 열) + 타이밍을 하나의 큐로** 합성한다. LOOKLIB(정지 화면 어휘)·FXLIB(시간축 어휘)이 세운 "의도→메모리 파이프라인"의 **2단계**이며, FXLIB이 `spec.md:42`·`:70`·`:140` 세 곳에서 명시적으로 예약해 둔 좌석이다. 신규 패키지 `server/scene/`에 스키마·로더·2축 매칭·결합 컴파일러·리포트를 세우고, 툴 2종(`find_scene`·`compile_scene`)을 기존 `run_commands`→`gate.screen()` 경로로만 배선한다.
 
-**상태**: **plan-audit iter-3 PASS 0.90(문턱 0.85) · v0.2.2(iter-3 비차단 N1~N9 fix-forward) · M0 실행 완료(정리 잔여 1건 — AC-SCENE-019 미완결) · **M1~M6 완료**(M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`).** REQ **21** · AC **24** · ASSUMPTION **5(41~45 — 41·42는 판정 후 moot)** · clarification 마커 **0** · 결정 **A~K 전부 해소** · 라이브 세션 2회 중 **1회 소진(M0)**. AC **15/24** 충족 · 뮤테이션 누적 **30/30 killed**(survived 0). 다음 단계 = **M7(회귀 + 경계 전체 그린)** — M5부터 **순차**이며 진행 모드는 **반자율(마일스톤마다 확인, §F)**.
+**상태**: **plan-audit iter-3 PASS 0.90(문턱 0.85) · v0.2.2(iter-3 비차단 N1~N9 fix-forward) · M0 실행 완료(정리 잔여 1건 — AC-SCENE-019 미완결) · **M1~M7 완료**(M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`).** REQ **21** · AC **24** · ASSUMPTION **5(41~45 — 41·42는 판정 후 moot)** · clarification 마커 **0** · 결정 **A~K 전부 해소** · 라이브 세션 2회 중 **1회 소진(M0)**. AC **15/24** 충족 · 뮤테이션 누적 **30/30 killed**(survived 0). 다음 단계 = **M8(종단 라이브 — 실물 onPC)**. 오프라인으로 닫을 수 있는 것은 **여기까지 전부 닫혔다**(AC 22/24) — 남은 2건은 사용자의 콘솔 접근이 있어야 진행된다.
 
 **이 SPEC의 한 줄 (v0.2.0 개정)**: 트래킹 정책이 **M0 실측으로 한 번 뒤집혔다** — `/CueOnly`(미발화 커맨드)를 버리고 **속성 집합 균일화 + 미주장 속성 전수 열거**를 택했다. 그러나 **관측 천장은 그대로다**: "균일 집합을 발화했다"와 "트래킹이 무해해졌다"를 절대 뭉치지 않는 것이 여전히 전체 설계의 축이다.
 
@@ -461,20 +461,67 @@ REOPEN: D1 트래킹 정책 사용자 재결정(2026-08-01, AskUserQuestion)으�
 
 **AC 상태**: AC-SCENE-018 **충족** ⇒ 누적 **19/24**.
 
+---
+
+### M7 — 회귀 + 경계 전체 그린 (2026-08-01, 완료 · 검증 마일스톤)
+
+**착수 baseline (직접 실측)**: `pytest server/tests/ -q` @ `f7c4a8c` → **3765 passed / 1 failed / 5 skipped**. **failed 1건은 M6가 남긴 것이며, 그것이 이 마일스톤의 첫 발견이다.**
+
+#### 발견 1 — 커밋 전에는 보이지 않는 테스트가 있다 (트립와이어)
+
+`test_songcue_bundle.py`의 `_TOOLS_EXPECTED_HUNK_OLD_STARTS`는 `git diff <SONGCUE BASE>..HEAD -- server/orchestrator/tools.py`의 hunk 시작점을 못박는 **의도적 트립와이어**다(주석 원문: *"tools.py를 정당하게 고치는 후속 SPEC은 이것을 의도적으로 갱신해야 하며, 그것이 요점이다"*). M6가 `replace` import를 추가하며 old-start **15**를 새로 만들었다.
+
+**M6 커밋 직전 전체 회귀는 3766 passed로 그린이었다.** 모순이 아니다 — 이 테스트는 **`HEAD`를 읽는다.** 커밋 전에는 `tools.py` 변경이 `HEAD`에 없어 diff가 옛 hunk 목록 그대로였고, 커밋과 동시에 새 hunk가 나타났다. **git 상태에 의존하는 테스트는 커밋 *후* 에 한 번 더 돌려야 한다** — M6의 "신규 실패 0" 주장은 그 시점에는 참이었으나 커밋 직후에는 거짓이 됐다. 승계 사항으로 남긴다.
+
+처리: 스냅샷에 **15를 의도적으로 추가**하고 그 근거를 주석에 적었다(PRECHK·FXLIB가 같은 방식으로 갱신한 선례가 이미 두 건 있다). **약화시키지 않았다** — 이 가드의 진짜 불변식인 **보호구역 무침범 단정**(`(234,238)` · `(524,569)`)은 손대지 않았고 계속 통과한다.
+
+#### 산출
+
+`server/tests/test_scene_boundary.py`(**28 tests**) · `server/tests/test_songcue_bundle.py`(트립와이어 값 1줄 + 주석). **소스 변경 0** — 검증 마일스톤이다.
+
+| 축 | 내용 |
+|---|---|
+| **AC-SCENE-017 ②** | `server/scene/**` **AST 식별자 스캔** offender 0. raw grep 금지 — `__init__.py`가 `gate.screen()`을 **문서로** 적고 있어 텍스트 스캔은 불변식을 서술한 독스트링에 걸린다. 비공허성 4중: 모듈 수 ≥ 6 · 모듈당 식별자 > 20 · 알려진 심볼(`select_sequence_number`·`_values_line`) 포착 · 주입된 `gate.screen()`/`server.bridge` import 포착 |
+| **AC-SCENE-017 ③** | `_NAMED_TOOL_EXEMPTIONS`가 **정확히 두 운영 도구**임을 고정 + 씬이 어느 허용 목록에도 없음 + **씬 모듈이 실제로 스캔 대상임**(가드의 skip 술어를 복제해 skip 0건 확인 — 비공허성) |
+| **AC-SCENE-017 (룰북)** | 룰북 자산 전수에 `find_scene`·`compile_scene`·`scene_id` **0건**. 비공허성: `find_looks` 폴백 문장은 실제로 있다 |
+| **AC-SCENE-020** | **실물 `SafetyGate` + 실물 `LiveLock`** 으로 잠긴 씬 번들을 실제로 쏴 본다. 송신 0 · 전 커맨드 `status == "proposal"`(**Store 포함**) · `is_error is False` · `succeeded is False` · `gate_status == "locked"`. 비공허성 2중: **잠금 해제 대조군이 실제로 송신**하고, 같은 게이트가 블랙리스트 라인은 여전히 막는다 |
+| **결정 D의 대가** | 상류 **산출 형상 고정** — `_values_line`(`;` 체인·절대값·**인자 순서 보존**)과 `_step_lines`(`Step 1` 미발화·체이닝 0·금지 `At Step` 형태 0) |
+| **결정 K의 대가** | `SCENE_UNIFORM_ATTRIBUTES == CONFIRMED_ATTRIBUTES` **동치** + `KNOWN_ATTRIBUTES`가 **오늘 정확히 8원소**임을 형상 고정 |
+
+`_values_line`의 **인자 순서 보존**을 따로 고정한 이유: 상류가 내부 정렬을 도입하면 씬의 균일 집합 강제가 **무음 no-op**이 된다(오늘 자산이 이미 정렬돼 있어 아무 테스트도 눈치채지 못한다).
+
+**뮤테이션 7항 — 전부 killed** (PRESERVE 파일 변형 2건은 **sha256 대조로 원복 검증**):
+
+| # | 주입 | 결과 | 죽은 테스트 |
+|---|---|---|---|
+| ① | `server/scene/compile.py`에 `from server.bridge import osc` 1줄 | **killed** | `test_no_scene_module_names_an_execution_path_symbol` |
+| ② | 예외 명단에 `server/scene/compile.py` 추가 | **killed** 3 failed | `test_scene_is_in_neither_allow_list` · `..._still_the_two_operator_tools` · `..._survives_the_architecture_filter` |
+| ③ | 룰북 자산 헤딩에 `compile_scene` 1개 삽입 (**PRESERVE**, sha 원복 확인) | **killed** | `test_no_rulebook_asset_names_a_scene_tool` |
+| ④ | LiveLock 중 Store 라인이 게이트를 우회해 송신 | **killed** 3 failed | `test_a_locked_scene_bundle_sends_nothing` · `..._proposed_including_the_store` · `..._an_answer_not_an_error` |
+| ⑤ | 상류 `_values_line` 구분자 `" ; "` → `";"` (**PRESERVE**, sha 원복 확인) | **killed** | `test_the_look_value_line_shape_is_a_semicolon_chain_of_absolute_values` |
+| ⑥ | `SCENE_UNIFORM_ATTRIBUTES`에 `Zoom` 추가 | **killed** | `test_the_uniform_set_equals_the_upstream_measured_band` |
+| ⑦ | (형상 고정의 필요 실증) | **테스트로 고정** | `test_the_shape_lock_is_what_catches_a_widened_universe` — 유니버스에 속성 1개를 더하면 미주장 열거가 **정확히 그만큼 넓어진다**. 트리의 다른 어떤 검사도 이를 눈치채지 못하므로 형상 고정이 유일한 그물이다 |
+
+**검증 (AC-SCENE-022 — 협상 불가)**: `pytest server/tests/ -q` → **3794 passed / 5 skipped**(M1 기준선 3526 대비 신규 268, **신규 실패 0**) · `npx vitest run` → **223 passed / 13 files**(기준선 223과 동일) · ruff check/format 클린 · `test_architecture.py` 4 passed.
+
+**PRESERVE 게이트 (AC-SCENE-017)**: `git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety` → **빈 출력**. 워킹 트리 diff도 **빈 출력**(뮤테이션 원복을 sha256으로 확인).
+
+**AC 상태**: AC-SCENE-017 · AC-SCENE-020 · AC-SCENE-022 **충족** ⇒ 누적 **22/24**. 남은 2건은 **AC-SCENE-019**(M0 정리 잔여 — 사용자 GUI 삭제)와 **AC-SCENE-021**(M8 종단 라이브)이며 **둘 다 실물 콘솔이 있어야 닫힌다.**
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 - run_started_at: 2026-08-01 (M1)
 - baseline_measured: pytest **3432 passed / 5 skipped** @ `main` `3c701b1` (착수 직전 직접 실행 — 이월 없음)
-- milestones_done: **M0**(라이브 프로브, 정리 잔여 1건) · **M1**(스키마 + 로더) · **M2**(라이브러리) · **M3**(2축 매칭) · **M4**(결합·가드·번호) · **M5**(리포트) · **M6**(툴 표면 + 배선) — M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`, M5부터 순차
-- milestones_open: M7 · M8
-- ac_closed: AC-SCENE-001 · 002 · 003 · 004 · 005 · 006 · 007 · 008 · 009 · 010 · 011 · 012 · 013 · 014 · 015 · 016 · 018 · 023 · 024 (**19/24**)
-- ac_open: AC-SCENE-019(M0 정리 잔여) · 017 · 020 · 021 · 022
-- current_measured: pytest **3766 passed / 5 skipped** (M1 기준선 3526 대비 신규 240, **신규 실패 0**) · `server/scene` 커버리지 **99%**(문턱 85%) · ruff check/format 클린 · `test_architecture.py` 4 passed, 예외 명단 무변경 · 닫힌 툴 집합 **13**
-- mutations: M1 **4/4** · M2 **3/3** · M3 **3/3** · M4 **20/20** · M5 **7/7** · M6 **3/3** killed (누적 **40/40**, survived 0)
-- seam_verified: ① 실물 씬 자산 5건 × 실물 빌더 전수(28 테스트) — `/CueOnly` 주입으로 비공허성 실측 ② M3 별칭 사본 드리프트 1건 검출·정정(`task_ea9ff7620253`) ③ **M6에서 상류 예외 누출 1건 검출·정정** — `FxInstantiationError`가 씬 경계를 넘어 툴을 죽였다(컴파일 계층에서 번역, 사유 코드 보존)
+- milestones_done: **M0**(라이브 프로브, 정리 잔여 1건) · **M1**(스키마 + 로더) · **M2**(라이브러리) · **M3**(2축 매칭) · **M4**(결합·가드·번호) · **M5**(리포트) · **M6**(툴 표면 + 배선) · **M7**(회귀·경계) — M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`, M5부터 순차
+- milestones_open: **M8(종단 라이브 — 실물 콘솔 필요)**
+- ac_closed: AC-SCENE-001 · 002 · 003 · 004 · 005 · 006 · 007 · 008 · 009 · 010 · 011 · 012 · 013 · 014 · 015 · 016 · 017 · 018 · 020 · 022 · 023 · 024 (**22/24**)
+- ac_open: **AC-SCENE-019**(M0 정리 잔여 — 사용자 GUI 삭제) · **AC-SCENE-021**(M8 종단) — 둘 다 실물 콘솔 의존
+- current_measured: pytest **3794 passed / 5 skipped** (M1 기준선 3526 대비 신규 268, **신규 실패 0**) · vitest **223 passed / 13 files**(기준선과 동일) · `server/scene` 커버리지 **99%**(문턱 85%) · ruff check/format 클린 · `test_architecture.py` 4 passed, 예외 명단 무변경 · 닫힌 툴 집합 **13**
+- mutations: M1 **4/4** · M2 **3/3** · M3 **3/3** · M4 **20/20** · M5 **7/7** · M6 **3/3** · M7 **7/7** killed (누적 **47/47**, survived 0). M7의 PRESERVE 파일 변형 2건은 **sha256 대조로 원복 검증**
+- seam_verified: ① 실물 씬 자산 5건 × 실물 빌더 전수(28 테스트) — `/CueOnly` 주입으로 비공허성 실측 ② M3 별칭 사본 드리프트 1건 검출·정정(`task_ea9ff7620253`) ③ M6에서 **상류 예외 누출 1건** 검출·정정 — `FxInstantiationError`가 씬 경계를 넘어 툴을 죽였다(컴파일 계층에서 번역, 사유 코드 보존) ④ M7에서 **커밋 후에만 보이는 트립와이어 실패 1건** 검출·의도적 갱신(`_TOOLS_EXPECTED_HUNK_OLD_STARTS`에 15 추가, 보호구역 단정 무변경)
 - preserve_gate: `git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety` → **빈 출력**
 - open_items: ① M0 프로브 시퀀스 191~197 쇼파일 정리 **미이행**(사용자 GUI 삭제 필요) ⇒ AC-SCENE-019 미완결 ② M4가 M7에 위임한 상류 상수 결합 2건 미검증
-- commit_sha: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · M5 `79cea7e` · M6 `pending-backfill`
+- commit_sha: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · M5 `79cea7e` · M6 `f7c4a8c` · M7 `pending-backfill`
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
