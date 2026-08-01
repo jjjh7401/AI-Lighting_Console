@@ -455,3 +455,54 @@ class TestDirectoryLoader:
         (tmp_path / "broken.yaml").write_text("scenes: [", encoding="utf-8")
         with pytest.raises(SceneSchemaError, match="broken.yaml"):
             load_library_from_dir(tmp_path)
+
+
+# =============================================================================
+# guard sweep — the loader clauses that had no net
+#
+# From the post-review systematic sweep (75 guard clauses neutralised one at a
+# time; 68 died). These three survived: each is a refusal or an omission with
+# no test of its own.
+# =============================================================================
+
+
+class TestGuardsThatHadNoNet:
+    @pytest.mark.parametrize("key", ["aliases", "mood_keywords"])
+    def test_a_string_list_field_that_is_not_a_list_is_refused(self, key):
+        # `_string_tuple` refuses a non-list. Neutralised, a bare string would
+        # be iterated CHARACTER BY CHARACTER into the alias tuple — the entry
+        # would load, and the matcher would carry one-letter aliases.
+        with pytest.raises(SceneSchemaError, match="must be a list"):
+            load_library(_library(_scene(**{key: "파란 웨이브"})))
+
+    def test_a_boolean_trig_time_is_refused(self):
+        # Python's `bool` IS an `int`, so without the explicit bool clause
+        # `trig_time: true` passes the numeric check and becomes 1.0 seconds —
+        # a trigger time nobody authored, emitted as `Property 'TrigTime' 1`.
+        # The clause is `isinstance(value, bool) or not isinstance(value, (int, float))`
+        # and only the second operand was defended.
+        with pytest.raises(SceneSchemaError, match="must be a number"):
+            load_library(_library(_scene(trig_type="Follow", trig_time=True)))
+
+    def test_a_real_number_trig_time_is_still_accepted(self):
+        # Control — without it a loader that refuses every trig_time passes.
+        library = load_library(_library(_scene(trig_type="Follow", trig_time=12.5)))
+        assert library.by_id("blue-backlight-wave").trig_time == 12.5
+
+    def test_scene_to_dict_omits_the_axes_a_scene_does_not_declare(self):
+        # The `value is None: continue` clause. Neutralised, absent axes are
+        # serialised as explicit nulls. `scene_to_dict` promises "load of this
+        # is the same scene", and its only round-trip test used a fixture that
+        # declared every optional axis — so the omission was never exercised.
+        scene = load_library(_library(_scene(fx_id=None, trig_type=None, trig_time=None))).by_id(
+            "blue-backlight-wave"
+        )
+        wire = scene_to_dict(scene)
+
+        assert "fx_id" not in wire
+        assert "trig_type" not in wire
+        assert "trig_time" not in wire
+        # Non-vacuity: the keys that ARE declared must survive the same loop.
+        assert wire["look_id"] == "worship-blue-wash"
+        # And the promise itself still holds for this shape.
+        assert load_library(_library(wire)).by_id("blue-backlight-wave") == scene

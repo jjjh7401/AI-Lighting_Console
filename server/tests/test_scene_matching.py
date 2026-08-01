@@ -596,3 +596,65 @@ class TestPurity:
     def test_no_provider_name_appears_in_the_matching_surface(self):
         text = (SCENE_DIR / "matching.py").read_text(encoding="utf-8").casefold()
         assert [token for token in self._FORBIDDEN if token in text] == []
+
+
+class TestCandidateOrderingIsDeterministicNotScoreDriven:
+    """Why neutralising `_axis_score` changes nothing — recorded, not patched.
+
+    The post-review guard sweep flagged `_axis_score`'s match clause as a
+    survivor: making it always return 0 left every scene suite green. The first
+    reading was "the score has no net". Measuring it says otherwise — it is an
+    EQUIVALENT MUTANT, and the reason is structural.
+
+    `_scene_scores` only keeps candidates whose axis ids EQUAL the selected
+    ones (`scene.look_id != look.selected` → skip, and the same for fx). So
+    every surviving candidate is scored against the identical axis match and
+    receives the identical number. The sort key is `(-score, scene_id)` and its
+    first component is therefore constant across the set it orders — the score
+    can never decide anything, whatever value it takes.
+
+    That is worth pinning rather than "fixing": the score is still reported in
+    the payload (an operator-facing confidence number), and a future change
+    that made it vary per candidate would silently turn the deterministic
+    ordering into a score-driven one. These tests fail if either half of that
+    statement stops holding.
+    """
+
+    def _two_candidates_on_one_axis(self, library):
+        from dataclasses import replace as _replace
+
+        base = [s for s in library.scenes if s.look_id and not s.fx_id]
+        assert base, "fixture must carry a look-only scene to duplicate"
+        original = base[0]
+        rival = _replace(original, scene_id="zzz-" + original.scene_id)
+        return original, rival, _replace(library, scenes=(rival, *library.scenes))
+
+    def test_candidates_on_the_same_axis_all_carry_the_same_score(self, library):
+        original, _rival, widened = self._two_candidates_on_one_axis(library)
+        result = match_scene(original.display_name, widened)
+
+        # Non-vacuity first: the probe must actually produce two candidates,
+        # otherwise "all scores equal" is a statement about one number.
+        assert len(result.matches) == 2
+        assert len({scored.score for scored in result.matches}) == 1
+
+    def test_the_tie_is_broken_by_scene_id_and_nothing_else(self, library):
+        original, rival, widened = self._two_candidates_on_one_axis(library)
+        result = match_scene(original.display_name, widened)
+
+        ordered = [scored.scene.scene_id for scored in result.matches]
+        assert ordered == sorted(ordered)
+        assert result.selected.scene_id == original.scene_id
+        # And the rival really was the one that had to lose on id alone.
+        assert rival.scene_id > original.scene_id
+
+    def test_the_same_library_and_query_answer_identically_every_time(self, library):
+        # The property REQ-SCENE-007 actually asks for, exercised on the
+        # multi-candidate shape rather than the single-candidate one the
+        # shipped assets happen to produce.
+        original, _rival, widened = self._two_candidates_on_one_axis(library)
+        answers = {
+            tuple(s.scene.scene_id for s in match_scene(original.display_name, widened).matches)
+            for _ in range(5)
+        }
+        assert len(answers) == 1

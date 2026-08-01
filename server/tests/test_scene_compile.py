@@ -1230,3 +1230,59 @@ def test_a_conforming_fx_still_compiles_after_the_gate():
     scene = _scene("conforming", look_id=CORE4_LOOK.look_id, fx_id=MOVEMENT_FX.fx_id)
     result = _compile(scene, look=CORE4_LOOK, fx=MOVEMENT_FX)
     assert any(command.startswith("Store Sequence ") for command in result.commands)
+
+
+# =============================================================================
+# guard sweep — every refusal needs its OWN net
+#
+# Found by a systematic sweep after the pre-merge review: each guard clause in
+# `server/scene/**` was neutralised in turn (75 clauses, compound conditions
+# split per operand) and the scene suites re-run. 68 died. The survivors were
+# guards standing with no test of their own — most of them a SECOND door onto a
+# refusal whose FIRST door was covered, so a test asserting the reason code
+# passed without ever reaching them. That is the same shape as the single-axis
+# guard whose LOOK_ONLY half had no net while its FX_ONLY half carried both.
+# =============================================================================
+
+
+def test_a_cue_section_whose_objects_are_not_a_list_is_refused():
+    # `_cue_numbers` guards the SHAPE of the listing; `_select_cue_number`
+    # guards the section's self-reported failure. Both raise
+    # CUE_SECTION_UNAVAILABLE, so the existing reason-code tests were satisfied
+    # entirely by the second one. Neutralising this clause killed nothing.
+    scene = _scene("shape", fx_id=DIMMER_FX.fx_id)
+    with pytest.raises(SceneCompilationError) as excinfo:
+        compile_scene(
+            scene,
+            look=None,
+            fx=DIMMER_FX,
+            group=11,
+            sequences_section=_sequences(),
+            cues_section={"objects": "not-a-list"},
+        )
+    assert excinfo.value.reason == CUE_SECTION_UNAVAILABLE
+
+
+def test_a_cue_section_that_reports_not_ok_without_a_reason_is_refused():
+    # The refusal is `isinstance(reason, str) or ok is False` — two operands,
+    # and only the first had a test. A section can report failure by flag alone
+    # (no `reason` string), and that path reached the number picker unguarded.
+    scene = _scene("notok", fx_id=DIMMER_FX.fx_id)
+    with pytest.raises(SceneCompilationError) as excinfo:
+        compile_scene(
+            scene,
+            look=None,
+            fx=DIMMER_FX,
+            group=11,
+            sequences_section=_sequences(),
+            cues_section={"ok": False, "objects": []},
+        )
+    assert excinfo.value.reason == CUE_SECTION_UNAVAILABLE
+
+
+def test_a_readable_cue_section_is_still_accepted():
+    # Control for both refusals above — without it a compiler that rejects
+    # every cue section satisfies them.
+    scene = _scene("readable", fx_id=DIMMER_FX.fx_id)
+    result = _compile(scene, fx=DIMMER_FX)
+    assert any(command.startswith("Store Sequence ") for command in result.commands)

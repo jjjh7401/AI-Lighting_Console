@@ -8,7 +8,7 @@
 
 **무엇**: 씬 컴파일러 — **룩(정적 값) + 이펙트(스텝 열) + 타이밍을 하나의 큐로** 합성한다. LOOKLIB(정지 화면 어휘)·FXLIB(시간축 어휘)이 세운 "의도→메모리 파이프라인"의 **2단계**이며, FXLIB이 `spec.md:42`·`:70`·`:140` 세 곳에서 명시적으로 예약해 둔 좌석이다. 신규 패키지 `server/scene/`에 스키마·로더·2축 매칭·결합 컴파일러·리포트를 세우고, 툴 2종(`find_scene`·`compile_scene`)을 기존 `run_commands`→`gate.screen()` 경로로만 배선한다.
 
-**상태**: **3-phase 종결 — plan · run · sync 전부 닫힘 · AC 24/24 · 라이브 세션 2/2 소진.** plan-audit iter-3 **PASS 0.90**(문턱 0.85) · SPEC **v0.2.5** (`status: completed`). REQ **21** · AC **24** · Out of Scope **16** · 접두 행 **8** · ASSUMPTION 41~45(41·42는 판정 후 moot) · 결정 **A~K 전부 해소** · clarification 마커 **0** · **열린 질문 0**. 뮤테이션 누적 **47/47 killed**(survived 0) · pytest **3916 passed / 5 skipped** · vitest **223 passed** · PRESERVE diff **빈 출력**. 커밋 사슬: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · 웨이브 기록 `7755408` · M5 `79cea7e` · M6 `f7c4a8c` · M7 `3d062dc` · M8 `8c1e044` · 인수인계 `4437cc6`. **sync-phase 기록은 §E.4** — 스테일 소인 10건 · 어휘 결정 안 D 확정 · 정직한 잔여 4건.
+**상태**: **3-phase 종결 — plan · run · sync 전부 닫힘 · AC 24/24 · 라이브 세션 2/2 소진.** plan-audit iter-3 **PASS 0.90**(문턱 0.85) · SPEC **v0.2.5** (`status: completed`). REQ **21** · AC **24** · Out of Scope **16** · 접두 행 **8** · ASSUMPTION 41~45(41·42는 판정 후 moot) · 결정 **A~K 전부 해소** · clarification 마커 **0** · **열린 질문 0**. 뮤테이션 누적 **47/47 killed**(survived 0) · pytest **3927 passed / 5 skipped** · vitest **223 passed** · PRESERVE diff **빈 출력**. 커밋 사슬: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · 웨이브 기록 `7755408` · M5 `79cea7e` · M6 `f7c4a8c` · M7 `3d062dc` · M8 `8c1e044` · 인수인계 `4437cc6`. **sync-phase 기록은 §E.4** — 스테일 소인 10건 · 어휘 결정 안 D 확정 · 정직한 잔여 4건.
 
 **이 SPEC의 한 줄 (v0.2.0 개정)**: 트래킹 정책이 **M0 실측으로 한 번 뒤집혔다** — `/CueOnly`(미발화 커맨드)를 버리고 **속성 집합 균일화 + 미주장 속성 전수 열거**를 택했다. 그러나 **관측 천장은 그대로다**: "균일 집합을 발화했다"와 "트래킹이 무해해졌다"를 절대 뭉치지 않는 것이 여전히 전체 설계의 축이다.
 
@@ -71,7 +71,7 @@ print(len(TOOL_NAMES), TOOL_NAMES[-2:])"  # → 13 ('find_scene', 'compile_scene
 from server.scene.compile import SCENE_UNIFORM_ATTRIBUTES; \
 print(SCENE_UNIFORM_ATTRIBUTES == CONFIRMED_ATTRIBUTES, len(KNOWN_ATTRIBUTES))"   # → True 8
 
-.venv/bin/python -m pytest server/tests/ -q       # 3916 passed / 5 skipped — 직접 실측(이월 금지)
+.venv/bin/python -m pytest server/tests/ -q       # 3927 passed / 5 skipped — 직접 실측(이월 금지)
 cd ui && npx vitest run                            # 223 passed / 13 files
 ```
 
@@ -81,7 +81,7 @@ cd ui && npx vitest run                            # 223 passed / 13 files
 
 ```bash
 git log --oneline -9                      # a1faae3 … 8c1e044 (M1~M8 사슬)
-.venv/bin/python -m pytest server/tests/ -q   # 3916 passed / 5 skipped  ← 직접 실측, 이월 금지
+.venv/bin/python -m pytest server/tests/ -q   # 3927 passed / 5 skipped  ← 직접 실측, 이월 금지
 git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety   # 빈 출력
 grep -cE '^(GO|DESCOPE|SKIP|REOPEN):' .moai/specs/SPEC-COPILOT-SCENE-001/progress.md   # 8
 ```
@@ -681,7 +681,7 @@ M8 규율("코드 변경 0 — 결함 발견 시 별도 커밋")에 따라 **고
 - milestones_open: **없음 — M0~M8 전부 완료**
 - ac_closed: AC-SCENE-001 · 002 · 003 · 004 · 005 · 006 · 007 · 008 · 009 · 010 · 011 · 012 · 013 · 014 · 015 · 016 · 017 · 018 · **019** · 020 · **021** · 022 · 023 · 024 (**24/24**)
 - ac_open: **없음 (24/24)**
-- current_measured: pytest **3916 passed / 5 skipped** (정본 baseline `3c701b1` 3432 대비 신규 **484**, **신규 실패 0** — run-phase 종료 시 3794였고 머지 전 리뷰의 테스트 강화로 +117) · vitest **223 passed / 13 files**(기준선과 동일) · `server/scene` 커버리지 **99%**(문턱 85%) · ruff check/format 클린 — **범위는 `server/scene/**` + `server/tests/test_scene_*.py`다**(sync-phase 감사 정정: 무범위로 적혀 있어 저장소 전역 클린으로 읽혔다. 실측 `ruff check server/` = **3 errors** · `format --check server/` = **20 files** — 셋 다 이 SPEC 착수 전부터 있던 것이고 둘은 PRESERVE 경로다) · `test_architecture.py` 4 passed, 예외 명단 무변경 · 닫힌 툴 집합 **13**
+- current_measured: pytest **3927 passed / 5 skipped** (정본 baseline `3c701b1` 3432 대비 신규 **495**, **신규 실패 0** — run-phase 종료 시 3794였고 머지 전 리뷰의 테스트 강화로 +117) · vitest **223 passed / 13 files**(기준선과 동일) · `server/scene` 커버리지 **99%**(문턱 85%) · ruff check/format 클린 — **범위는 `server/scene/**` + `server/tests/test_scene_*.py`다**(sync-phase 감사 정정: 무범위로 적혀 있어 저장소 전역 클린으로 읽혔다. 실측 `ruff check server/` = **3 errors** · `format --check server/` = **20 files** — 셋 다 이 SPEC 착수 전부터 있던 것이고 둘은 PRESERVE 경로다) · `test_architecture.py` 4 passed, 예외 명단 무변경 · 닫힌 툴 집합 **13**
 - mutations: M1 **4/4** · M2 **3/3** · M3 **3/3** · M4 **20/20** · M5 **7/7** · M6 **3/3** · M7 **7/7** killed (누적 **47/47**, survived 0). M7의 PRESERVE 파일 변형 2건은 **sha256 대조로 원복 검증**
 - seam_verified: ① 실물 씬 자산 5건 × 실물 빌더 전수(28 테스트) — `/CueOnly` 주입으로 비공허성 실측 ② M3 별칭 사본 드리프트 1건 검출·정정(`task_ea9ff7620253`) ③ M6에서 **상류 예외 누출 1건** 검출·정정 — `FxInstantiationError`가 씬 경계를 넘어 툴을 죽였다(컴파일 계층에서 번역, 사유 코드 보존) ④ M7에서 **커밋 후에만 보이는 트립와이어 실패 1건** 검출·의도적 갱신(`_TOOLS_EXPECTED_HUNK_OLD_STARTS`에 15 추가, 보호구역 단정 무변경)
 - preserve_gate: `git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety` → **빈 출력**
@@ -831,6 +831,38 @@ run-phase가 M8에서 닫은 사실이 **선행 문서 5곳에 전파되지 않�
 **처리**: `TestASingleAxisAnswerNeverCarriesTheOtherAxis` 5건 신설 — **양 반쪽을 각각** 단언하고(한쪽이 다른 쪽에 기대지 못하게), 실측 재현 2건을 양방향으로 못박고(`worship-golden-chorus` → LOOK_ONLY, `pulse-beat` → FX_ONLY), 라이브러리가 **거부할 후보를 실제로 갖고 있는지**를 비공허성으로 함께 잰다. 검증: `LOOK_ONLY` 반쪽 제거 **0 → 2 failed**, `FX_ONLY` 반쪽 제거 **6 failed**, 원복 sha IDENTICAL.
 
 **이것이 재주입을 돌린 값이다.** 기록 47건은 전부 살아 있었고 — 결함은 **기록이 세지 않은 자리**에 있었다.
+
+#### 가드 전수 스윕 — 운으로 찾은 것을 부류로 훑었다
+
+생존자 1건을 **파생 프로브**가 냈다는 사실이 그 자체로 신호였다 — 기록된 47건은 전부 살아 있었고 결함은 **아무도 세지 않은 자리**에 있었으니, 그 자리가 하나뿐이라고 볼 근거가 없다. 그래서 부류를 훑었다.
+
+**방법**: `server/scene/**`의 모든 `if` 중 본문이 `raise`/`continue`/`return`으로 끝나는 것을 **AST로 열거**(= 가드), **복합 조건은 피연산자별로 분해**(`or`는 `False`로, `and`는 `True`로 — 생존자를 낸 형태가 정확히 반쪽 무력화였다). 각 절을 하나씩 무력화하고 씬 스위트 7개를 전부 돌렸다. 매 회 `sha256` 원복 대조.
+
+| 회차 | 가드 절 | killed | SURVIVED |
+|---|---|---|---|
+| 1차 | 75 | 68 | **7** |
+| 2차(폐쇄 후) | 75 | **73** | **2 — 둘 다 증명된 등가 뮤턴트** |
+
+**1차 생존자 7건의 처분**:
+
+| 위치 | 성질 | 처리 |
+|---|---|---|
+| `compile.py` `_cue_numbers` 형상 검사 | **문이 둘, 그물이 하나** — `CUE_SECTION_UNAVAILABLE`을 내는 두 지점 중 뒤쪽만 테스트돼 앞쪽은 사유 코드 단언에 무임승차했다 | 테스트 신설 |
+| `compile.py` `ok is False` 반쪽 | **복합 조건의 반쪽** — `reason` 문자열 경로만 방어됐고 플래그만으로 실패를 보고하는 섹션은 무방비 | 테스트 신설 |
+| `loader.py` `_string_tuple` 리스트 검사 | 무력화하면 `aliases: "파란 웨이브"`가 **글자 단위로 순회**돼 한 글자짜리 별칭이 로드된다 | 테스트 신설 |
+| `loader.py` `isinstance(value, bool)` | **파이썬 `bool`은 `int`다** — 이 절이 없으면 `trig_time: true`가 수치 검사를 통과해 **1.0초**가 되고 `Property 'TrigTime' 1`로 발화된다 | 테스트 신설(+ 양수 대조군) |
+| `schema.py` `value is None` 생략 | 미선언 축이 명시 `null`로 직렬화된다. `scene_to_dict`의 유일한 왕복 테스트가 **모든 선택 축을 선언한 픽스처**를 써서 생략 경로를 밟지 않았다 | 테스트 신설 |
+| `matching.py` `axis_id is None` | **등가 뮤턴트** | 아래 |
+| `matching.py` `scored.axis_id == axis_id` | **등가 뮤턴트** | 아래 |
+
+**남은 2건은 고치지 않았다 — 구조적으로 관측 불가임을 증명했기 때문이다.** 스위트가 안 죽는 것과 못 죽는 것은 다르므로 직접 쟀다:
+
+- `axis_id is None`을 지우면 루프로 떨어지는데, 그 루프가 무언가를 돌려주려면 **`AxisScore.axis_id`가 `None`이어야 한다.** 출하 라이브러리의 전 질의(display_name ∪ aliases ∪ mood_keywords)를 두 축으로 돌려 그런 사례 **0건**을 실측했다.
+- `scored.axis_id == axis_id`를 지우면 `_axis_score`가 **항상 0**을 낸다. 그런데 `_scene_scores`는 **축 id가 선택된 것과 같은 후보만** 남기므로 모든 후보가 같은 축에 대해 채점된다 — **정렬 키 `(-score, scene_id)`의 첫 성분이 후보 집합 전체에서 상수**다. 실측: 전 질의에서 한 매치 안 점수가 갈린 사례 **0건**, 인공 2후보 리그도 점수집합 `{2}` 단일값.
+
+**대신 그 사실을 테스트로 못박았다** — `TestCandidateOrderingIsDeterministicNotScoreDriven`. 후보들이 **같은 점수를 갖는다**는 것(비공허성: 후보가 실제로 2개인 리그에서), 순서가 **`scene_id` 결정론 타이브레이크로만** 정해진다는 것, 같은 입력이 **항상 같은 답**을 낸다는 것(REQ-SCENE-007). 점수는 여전히 payload에 실려 운영자에게 신뢰도로 보이므로 죽은 코드가 아니고, **후보별로 갈리기 시작하는 날 이 테스트가 먼저 죽는다.**
+
+**이것이 "결함 0"이 아니라 "경계를 알았다"의 내용이다.** 가드 75개 중 그물 없는 것은 이제 **0개**이고, 남은 2개는 **왜 그물이 필요 없는지가 측정으로 기록돼 있다.**
 
 ## §F Phase 4 Mode Selection
 
