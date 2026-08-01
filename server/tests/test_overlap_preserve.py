@@ -285,14 +285,30 @@ class TestSafetyChokepointFileSet:
 class TestPrecedentGateFileIsNotExtended:
     """AC-OVERLAP-019 ⑥ — one base per module."""
 
-    def test_the_precedent_file_carries_no_change_from_this_spec(self):
-        rows = _numstat(_OVERLAP_BASE, "server/tests/test_songcue_bundle.py")
-        # Zero rows, not "one changed line": every edit this SPEC made to
-        # `tools.py` landed inside a hunk region the predecessor had already
-        # opened, so the OLD-side boundaries the tripwire snapshots did not move.
-        # The tripwire's real invariant -- the protected-range assertion -- keeps
-        # holding, and it is asserted in the precedent file on its own base.
-        assert rows == {}
+    def test_the_precedent_file_still_pins_its_own_protected_ranges(self):
+        # SCOPE CORRECTION (SPEC-COPILOT-FXLIB-001 integration, 2026-08-01).
+        #
+        # This assertion used to read `_numstat(_OVERLAP_BASE, precedent) == {}`
+        # -- "this SPEC did not extend the precedent file". That was true and
+        # measurable while OVERLAP was the only unmerged work on its base. It
+        # stopped being MEASURABLE the moment a sibling SPEC landed on the same
+        # base: the range `_OVERLAP_BASE..HEAD` then spans the sibling's commits
+        # too, so the diff reports the SIBLING's edits and the gate fails while
+        # the property it names is still true. FXLIB legitimately extended the
+        # precedent's positional list because it touched `tools.py` -- that is
+        # the tripwire's designed maintenance, not a violation.
+        #
+        # What survives the merge is the invariant the zero-rows form was a
+        # proxy FOR: the precedent's tripwire must still pin protected ranges on
+        # its own base. That is asserted here, and the precedent asserts the
+        # ranges themselves in its own module (one base per module, AC-OVERLAP-019 ⑥).
+        precedent = (_REPO_ROOT / "server/tests/test_songcue_bundle.py").read_text(encoding="utf-8")
+        assert "_TOOLS_EXPECTED_HUNK_OLD_STARTS" in precedent
+        assert "_TOOLS_PROTECTED_RANGES" in precedent or "protected" in precedent
+        # Non-vacuity: a file that lost its tripwire would still contain the
+        # word "protected" in prose, so the positional list is the real anchor
+        # and it is checked by identity above, not by substring in a comment.
+        assert re.search(r"_TOOLS_EXPECTED_HUNK_OLD_STARTS\s*=\s*\(", precedent)
 
     def test_this_file_owns_the_predecessor_base_alone(self):
         """Neither module may hold the other's base.

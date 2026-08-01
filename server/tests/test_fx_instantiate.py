@@ -150,9 +150,7 @@ _STEP_LINE = re.compile(r"^Step (\d+)$")
 
 
 def _bundle(pattern: str, *, group: int = 11, sequence: int = 12, **kwargs) -> tuple[str, ...]:
-    return build_fx_bundle(
-        PATTERNS[pattern], group=group, sequence=sequence, **kwargs
-    ).commands
+    return build_fx_bundle(PATTERNS[pattern], group=group, sequence=sequence, **kwargs).commands
 
 
 def test_the_pattern_fixtures_cover_the_closed_vocabulary():
@@ -707,9 +705,7 @@ def test_instantiate_fx_binds_the_sequence_number_the_requery_measured():
 
 def test_instantiate_fx_refuses_a_truncated_requery_rather_than_inventing_a_number():
     with pytest.raises(FxInstantiationError) as excinfo:
-        instantiate_fx(
-            PATTERNS["pulse"], group=11, sequences_section=_sequences(1, truncated=True)
-        )
+        instantiate_fx(PATTERNS["pulse"], group=11, sequences_section=_sequences(1, truncated=True))
     assert excinfo.value.reason == SEQUENCE_TRUNCATED
 
 

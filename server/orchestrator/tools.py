@@ -2298,8 +2298,7 @@ def build_toolset(
                     "query": {
                         "type": "string",
                         "description": (
-                            "The movement / mood wording to match, in the "
-                            "operator's own language."
+                            "The movement / mood wording to match, in the operator's own language."
                         ),
                     }
                 },
@@ -2396,8 +2395,7 @@ def build_toolset(
                     "label": {
                         "type": "string",
                         "description": (
-                            "Optional cue label. Defaults to the fx's own "
-                            "display name."
+                            "Optional cue label. Defaults to the fx's own display name."
                         ),
                     },
                 },

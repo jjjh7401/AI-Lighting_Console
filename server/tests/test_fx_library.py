@@ -234,8 +234,7 @@ class TestVocabularyBands:
             for step in entry["steps"]:
                 for attribute in step:
                     assert attribute in KNOWN_ATTRIBUTES, (
-                        f"{where} uses attribute {attribute!r}, outside "
-                        f"{sorted(KNOWN_ATTRIBUTES)}"
+                        f"{where} uses attribute {attribute!r}, outside {sorted(KNOWN_ATTRIBUTES)}"
                     )
 
     def test_no_asset_carries_a_forbidden_command_form(self, asset_text):

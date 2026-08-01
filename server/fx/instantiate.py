@@ -270,8 +270,7 @@ def _label_of(fx: Fx, label: str | None) -> str:
     if "'" in text or "\n" in text:
         raise FxInstantiationError(
             LABEL_UNQUOTABLE,
-            f"fx {fx.fx_id!r} has a label that cannot be quoted on the MA3 command "
-            f"line: {text!r}",
+            f"fx {fx.fx_id!r} has a label that cannot be quoted on the MA3 command line: {text!r}",
         )
     return text
 
@@ -389,8 +388,7 @@ def _phase_lines(fx: Fx) -> list[str]:
         return [f"Attribute '{name}' At Phase {_format_value(start)}" for name in attributes]
     if len(attributes) == 1:
         return [
-            f"Attribute '{attributes[0]}' At Phase {_format_value(start)} "
-            f"Thru {_format_value(end)}"
+            f"Attribute '{attributes[0]}' At Phase {_format_value(start)} Thru {_format_value(end)}"
         ]
     # Endpoint inclusion depends on whether the arc closes on itself. Phase is
     # cyclic, so a span of a whole cycle puts the far endpoint on the SAME phase

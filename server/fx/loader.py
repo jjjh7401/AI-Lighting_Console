@@ -73,9 +73,7 @@ def _number(value: object, *, where: str) -> float:
 
 def _in_range(value: float, low: float, high: float, *, where: str) -> float:
     if not low <= value <= high:
-        raise FxSchemaError(
-            f"{where} is out of range: {value} (expected {low} <= value <= {high})"
-        )
+        raise FxSchemaError(f"{where} is out of range: {value} (expected {low} <= value <= {high})")
     return value
 
 
@@ -119,9 +117,7 @@ def _step(raw: object, *, where: str) -> FxStep:
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             # `At Relative <n>` as a step value is unmeasured (ASSUMPTION-40),
             # so there is no non-numeric step value v1 knows how to emit.
-            raise FxSchemaError(
-                f"{where} {name} must be an absolute number, got {value!r}"
-            )
+            raise FxSchemaError(f"{where} {name} must be an absolute number, got {value!r}")
         low, high = ATTRIBUTE_VALUE_RANGE[name]
         _in_range(value, low, high, where=f"{where} {name}")
         values.append(StepValue(attribute=name, value=value))

@@ -594,9 +594,7 @@ class TestTheTargetGroupMustBeOnThisRig:
         assert [c for c in port.executed if c.startswith("Fixture")] == []
 
     def test_a_group_that_is_not_an_integer_is_refused(self):
-        execution, payload = _instantiate(
-            _registry(), {"fx_id": "test-fx", "group": "백라이트"}
-        )
+        execution, payload = _instantiate(_registry(), {"fx_id": "test-fx", "group": "백라이트"})
         assert execution.result.is_error is True
         assert "get_rig_context" in payload["error"]
 
@@ -828,9 +826,7 @@ class TestACrossCallFoldIsAnExplicitFailure:
     @staticmethod
     def _second_call(second_fx_id: str, group: int):
         registry = _registry(library=_library(_fx(), SECOND_FX))
-        first, _payload = _instantiate(
-            registry, {"fx_id": "test-fx", "group": 11, "sequence": 5}
-        )
+        first, _payload = _instantiate(registry, {"fx_id": "test-fx", "group": 11, "sequence": 5})
         context = ExecutionContext(executed_ok=_executed_ok(first))
         return _instantiate(
             registry,

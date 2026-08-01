@@ -181,8 +181,7 @@ def to_korean(report: FxReport) -> str:
 
     lines.append("상세:")
     lines.append(
-        f"  패턴 {plan.pattern} · 대상 {', '.join(plan.attributes)} · "
-        f"스텝 {plan.step_count}단"
+        f"  패턴 {plan.pattern} · 대상 {', '.join(plan.attributes)} · 스텝 {plan.step_count}단"
     )
     if plan.speed_bpm is not None:
         # ASSUMPTION-38 GO — 단위는 BPM이다(M0 GUI 판독).

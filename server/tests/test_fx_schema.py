@@ -167,8 +167,11 @@ class TestLoaderAcceptsAValidLibrary:
         assert "reverse" not in PATTERN_KINDS
 
     def test_lookup_by_id_finds_a_loaded_entry(self):
-        library = load_library(_library(_fx(), _fx(fx_id="tilt-wave", pattern="wave",
-                                                  steps=[{"Tilt": -10}, {"Tilt": 10}])))
+        library = load_library(
+            _library(
+                _fx(), _fx(fx_id="tilt-wave", pattern="wave", steps=[{"Tilt": -10}, {"Tilt": 10}])
+            )
+        )
         assert library.by_id("tilt-wave").pattern == "wave"
 
     def test_lookup_by_an_absent_id_raises(self):
