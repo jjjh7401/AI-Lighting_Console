@@ -1,0 +1,69 @@
+schema_version: 1
+scenes:
+  - scene_id: worship-golden-pulse
+    display_name: 금빛 펄스
+    label: SCN GOLD PULSE
+    look_id: worship-golden-chorus
+    fx_id: pulse-beat
+    aliases:
+      - 금빛 펄스
+      - golden pulse
+    mood_keywords:
+      - 금빛
+      - 코러스
+      - 맥동
+      - 찬양
+
+  - scene_id: ballad-moonlight-rise
+    display_name: 달빛 상승 웨이브
+    label: SCN MOON RISE
+    look_id: ballad-moonlight
+    fx_id: wave-soft-rise
+    aliases:
+      - 달빛 웨이브
+      - moonlight rise
+    mood_keywords:
+      - 달빛
+      - 푸른
+      - 차분한
+      - 상승
+
+  - scene_id: edm-cyan-sweep
+    display_name: 시안 좌우 스윕
+    label: SCN CYAN SWEEP
+    look_id: edm-groove-cyan
+    fx_id: sweep-club-xwave
+    aliases:
+      - 시안 스윕
+      - cyan sweep
+    mood_keywords:
+      - 시안
+      - 그루브
+      - 클럽
+      - 좌우
+
+  - scene_id: worship-scripture-still
+    display_name: 말씀 스틸
+    label: SCN SCRIPTURE STILL
+    look_id: worship-scripture-key
+    aliases:
+      - 말씀 스틸
+      - scripture still
+    mood_keywords:
+      - 말씀
+      - 차분한
+      - 낭독
+      - 고요한
+
+  - scene_id: club-circle-motion
+    display_name: 클럽 서클 모션
+    label: SCN CLUB CIRCLE
+    fx_id: circle-club-wings
+    aliases:
+      - 서클 모션
+      - club circle
+    mood_keywords:
+      - 클럽
+      - 회전
+      - 움직임
+      - 화려한
