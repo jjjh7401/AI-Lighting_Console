@@ -366,6 +366,100 @@ M6가 "승인이 아니라 기록"으로 명시한 특성화 테스트 2건을 �
 
 pytest `3239` + vitest `223 / 13 files` 재측정(수정 후 `3240`). 뮤테이션 앵커가 3곳(busking·prechk·fx 공통)이라 1회차가 적용되지 않은 것을 자체 assert가 포착 — fx 고유 문맥으로 재앵커해 재실행했다.
 
+### M7 — 종단 라이브 검증 (2026-08-01, 실물 onPC, 코드 변경 0)
+
+**세션 조건 (직접 실측)**: onPC `127.0.0.1:8000` · 수신 9005 · 응답기 **v1.5.0** · `DataPool/Sequences` 착수 `childCount 17`. 착수 baseline `3240 passed, 5 skipped`.
+
+**M0와 결정적으로 다른 점**: M0는 bridge 직결이라 게이트를 경유하지 않았고 감사 로그가 없었다. M7은 **실물 게이트 스택**(`build_console_stack` → `build_toolset`)을 세워 **모델이 닿는 그 지점**(`registry.dispatch`)으로 진입했다. 하네스: `.moai/reports/m0-probe/fx_e2e.py`(BUSKWIZ `busking_e2e.py` 형상 계승; `server/tools/`에 두면 bridge-import 예외 목록에 걸리므로 리포트 디렉터리에 둔다).
+
+#### 종단 1 — `pulse` (M0 앵커 먼저, 귀속 규율)
+
+```
+find_fx '심장박동처럼 펄스' → pulse-beat (fallback=false, total=1)
+instantiate_fx pulse-beat group=11 → executed=true succeeded=true is_error=false
+  ChangeDestination Root / ClearAll / Group 11
+  Attribute 'Dimmer' At 100 / Step 2 / Attribute 'Dimmer' At 0
+  Attribute 'Dimmer' At Phase 0 Thru 360 / Attribute 'Dimmer' At Speed 60
+  Store Sequence 3 Cue 1 '박자 펄스' / ClearAll        ← 10줄 전량 executed_ok
+```
+
+**시퀀스 번호 3은 재조회 실측값**이다(하드코딩 아님 — 리그의 빈 번호를 측정해 채웠다).
+
+**GUI 관측(사용자)**: 프로그래머를 비우고 `Go+ Sequence 3` → *"파도처럼 순차적으로"*. **앱이 자연어 질의로 실제 이펙트를 만들었다.**
+
+#### 감사 로그 대조 — M0가 못 한 몫 (인수 조건)
+
+`server/audit_logs/audit-20260801.jsonl` 18건. 번들 10줄이 **전량 개별 기록**됐다:
+
+```
+executed  ChangeDestination Root                  True
+executed  ClearAll                                True
+executed  Group 11                                True
+executed  Attribute 'Dimmer' At 100               True
+executed  Step 2                                  True
+executed  Attribute 'Dimmer' At 0                 True
+executed  Attribute 'Dimmer' At Phase 0 Thru 360  True
+executed  Attribute 'Dimmer' At Speed 60          True
+executed  Store Sequence 3 Cue 1 '박자 펄스'        True
+executed  ClearAll                                True
+```
+
+리그 조회(`DataPool/Groups`·`DataPool/Sequences`)와 세션 백업(`SaveShow`)도 같은 로그에 남아 **1:1 송신↔감사 정합**이 확인된다.
+
+**자기 정정 1건**: 처음에 `~/Library/Application Support/GrandMA3 Copilot/audit_logs/`를 보고 "오늘 자 로그 없음 → 게이트 미경유"로 판단할 뻔했다. 그 경로는 **패키지 앱(frozen)용**이고 개발 체크아웃은 `server/audit_logs/`에 쓴다(`resolve_runtime_audit_dir` 실측). **결론 전에 자기 하네스를 먼저 의심하는 규율이 세 번째로 값을 냈다**(M0 §0·§10.0에 이은 3회차).
+
+#### 종단 2 — `sweep` (ASSUMPTION-40 판정)
+
+```
+find_fx '좌우로 쓸어줘' → sweep-soft-wide (fallback=false)
+instantiate_fx sweep-soft-wide group=11 → executed=true succeeded=true
+  ... Attribute 'Pan' At -30 / Step 2 / Attribute 'Pan' At 30
+      Attribute 'Pan' At Phase 0 Thru 360 / Attribute 'Pan' At Speed 14
+      Store Sequence 4 Cue 1 '부드러운 좌우 스윕'      ← 10줄 전량 executed_ok
+```
+
+**GUI 관측(사용자)**: *"좌우로 움직인다"* — **스텝 생성 형상이 Dimmer 밖에서도 성립한다.**
+
+#### 접두 행
+
+```
+GO:     ASSUMPTION-40 — 스텝 생성 형상의 Pan/Tilt 일반화 성립. sweep(Pan 2스텝 -30↔30, 위상 확산, 14 BPM)이 GUI에서 좌우 이동 관측. 대조 순서 준수 — pulse(M0 앵커)를 먼저 발화해 파이프라인 생존을 확립한 뒤 측정했으므로, 부정이 나왔다면 attribute 일반화 실패로 귀속됐을 것이다
+```
+
+**M0 판정(ASSUMPTION-36~39)은 재측정하지 않았다**(§A.2 재측정 금지 규율). 어긋난 관측 **0건**.
+
+#### 부수 관측 — 폴백이 실제로 작동한다
+
+`'좌우로 부드럽게 쓸어줘'`는 sweep 2엔트리 동점으로 `low_confidence` 폴백을 냈고, 하네스가 **추측하지 않고 정지**했다. M5가 기록한 "패턴 지명 동점" 현상이 라이브에서 재현된 것이며, **설계된 정직한 미스가 실물에서도 그대로 동작함**을 보여준다. 한 단어를 덜어낸 `'좌우로 쓸어줘'`는 선택에 성공했다.
+
+#### 리포트 문면 ↔ 실물 일치
+
+```
+[pulse] 시퀀스 3 큐 1 '박자 펄스' · 그룹 11 · 커맨드 10개 · 판정 전량 실행
+  실행 10개 · 실패 0개 · 미실행 0개 · 접힘 0개
+상세:
+  패턴 pulse · 대상 Dimmer · 스텝 2단 / 속도 60 BPM
+  ※ 이펙트 효과는 기계로 확인되지 않습니다 — 무대/GUI에서 사람이 직접 확인해야 합니다.
+  ※ 재조회로 확인할 수 있는 것은 시퀀스·큐의 존재뿐입니다 — 그것은 효과의 증거가 아닙니다.
+```
+
+커맨드 수·시퀀스 번호·라벨·속도 단위(BPM) 전부 실물과 일치하고, **효과 한계 문면이 무조건 실린다**(REQ-FXLIB-014 (c)) — 실제로 이 세션에서 효과 판정은 사람 관측이 유일 채널이었다.
+
+#### 쇼파일 복구 — 확인됨
+
+`Off Sequence 4` · `ClearAll` · `Delete Sequence 3` · `Delete Sequence 4` 후 재조회 `childCount 17` — 착수 시와 동일. 잔여 **0건**.
+
+#### AC-FXLIB-022 — **PASS**
+
+매칭 → 번들 → 게이트 → **감사 로그** → GUI 종단이 실물에서 1회 성립했고, ASSUMPTION-40이 같은 세션에서 GO로 닫혔다.
+
+#### 미검증 (Gaps)
+
+- **효과의 기계 검증은 여전히 불가** — M0가 측정한 경계 그대로다. 본 세션의 두 판정 모두 사람 GUI 관측이다.
+- **`wave`·`circle`·`diagonal`·`chase` 4패턴의 효과는 직접 관측하지 않았다** — ASSUMPTION-40은 "Pan/Tilt 축에서 스텝 형상이 성립하는가"를 `sweep` 1종으로 닫았고 plan이 요구한 것도 "Pan/Tilt 패턴 1종 이상"이다. 나머지는 같은 축·같은 형상의 파생이나 개별 관측은 없다.
+- **`chase` 위상 수정(0/120/240)의 효과 미관측** — 수정은 산술로 판정했고 라이브 관측은 하지 않았다.
+- **승인 채널 미발동** — fx 번들이 위험 분류에 걸리지 않아 승인 요청이 0건이었다(예상된 동작). 승인 경로 자체는 이 세션이 검증하지 않았다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기 — 소유: manager-develop>_
