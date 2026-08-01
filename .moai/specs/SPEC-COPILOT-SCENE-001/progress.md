@@ -671,7 +671,7 @@ M8 규율("코드 변경 0 — 결함 발견 시 별도 커밋")에 따라 **고
 ```yaml
 sync_status: synced
 sync_complete_at: 2026-08-01
-sync_commit_sha: pending-backfill   # 자기참조 불가 — sync 커밋 직후 백필 (spec-frontmatter-schema.md § SHA placeholder backfill exemption)
+sync_commit_sha: 8b2f308   # 백필 완료 — spec-frontmatter-schema.md § SHA placeholder backfill exemption 준용 (full: 8b2f3087aea11e65ad7b3237832a33828088ac6d, `git rev-parse` 실측)
 ```
 
 ### 착수 전 킥오프 확인 4종 (직접 실측 — 이월 금지)
