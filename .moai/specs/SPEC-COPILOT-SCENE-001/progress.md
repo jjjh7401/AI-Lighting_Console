@@ -8,7 +8,7 @@
 
 **무엇**: 씬 컴파일러 — **룩(정적 값) + 이펙트(스텝 열) + 타이밍을 하나의 큐로** 합성한다. LOOKLIB(정지 화면 어휘)·FXLIB(시간축 어휘)이 세운 "의도→메모리 파이프라인"의 **2단계**이며, FXLIB이 `spec.md:42`·`:70`·`:140` 세 곳에서 명시적으로 예약해 둔 좌석이다. 신규 패키지 `server/scene/`에 스키마·로더·2축 매칭·결합 컴파일러·리포트를 세우고, 툴 2종(`find_scene`·`compile_scene`)을 기존 `run_commands`→`gate.screen()` 경로로만 배선한다.
 
-**상태**: **plan-audit iter-3 PASS 0.90(문턱 0.85) · v0.2.2(iter-3 비차단 N1~N9 fix-forward) · M0 실행 완료(정리 잔여 1건 — AC-SCENE-019 미완결) · M1 완료.** REQ **21** · AC **24** · ASSUMPTION **5(41~45 — 41·42는 판정 후 moot)** · clarification 마커 **0** · 결정 **A~K 전부 해소** · 라이브 세션 2회 중 **1회 소진(M0)**. 다음 단계 = **M2(내장 씬 라이브러리 저작)** — 진행 모드는 **반자율(마일스톤마다 확인, §F)**.
+**상태**: **plan-audit iter-3 PASS 0.90(문턱 0.85) · v0.2.2(iter-3 비차단 N1~N9 fix-forward) · M0 실행 완료(정리 잔여 1건 — AC-SCENE-019 미완결) · **M1~M4 완료**(M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`).** REQ **21** · AC **24** · ASSUMPTION **5(41~45 — 41·42는 판정 후 moot)** · clarification 마커 **0** · 결정 **A~K 전부 해소** · 라이브 세션 2회 중 **1회 소진(M0)**. AC **15/24** 충족 · 뮤테이션 누적 **30/30 killed**(survived 0). 다음 단계 = **M5(리포트 — 주장 분리 + 미주장 열거)** — 여기서부터 다시 **순차**이며 진행 모드는 **반자율(마일스톤마다 확인, §F)**.
 
 **이 SPEC의 한 줄 (v0.2.0 개정)**: 트래킹 정책이 **M0 실측으로 한 번 뒤집혔다** — `/CueOnly`(미발화 커맨드)를 버리고 **속성 집합 균일화 + 미주장 속성 전수 열거**를 택했다. 그러나 **관측 천장은 그대로다**: "균일 집합을 발화했다"와 "트래킹이 무해해졌다"를 절대 뭉치지 않는 것이 여전히 전체 설계의 축이다.
 
@@ -342,19 +342,55 @@ REOPEN: D1 트래킹 정책 사용자 재결정(2026-08-01, AskUserQuestion)으�
 
 **승계 — 닫히지 않은 항목**: M0 프로브 시퀀스 **191~197** 쇼파일 잔존(위 "정리 의무" 절). M1은 순수 파이썬·콘솔 무접촉이므로 이 잔여에 영향받지 않으나, **AC-SCENE-019는 여전히 미완결**이다.
 
+---
+
+### M2 · M3 · M4 — 병렬 웨이브 (2026-08-01, 완료 · Orca Run `run_21629800d19e`)
+
+형상·계약·회수 규칙은 `§F 모드 변경` 절이 소유한다. 본 절은 **결과**다.
+
+**착수 baseline**: `a1faae3`(M1) · `pytest server/tests/test_scene_schema.py -q` → 94 passed. 세 워커가 각자 이 전제를 직접 확인하고 착수했다(각 `worker_done` Baseline-attribution).
+
+| 슬라이스 | 산출 | 테스트 | 뮤테이션 | 커밋 |
+|---|---|---|---|---|
+| **A · M2** 라이브러리 | `server/scene/library/core.yaml`(씬 5) | `test_scene_library.py` **12** | **3/3 killed** | `2d9ca9b` |
+| **B · M3** 매칭 | `server/scene/matching.py` | `test_scene_matching.py` **18** | **3/3 killed** | `3c9c29b` |
+| **C · M4** 컴파일 | `server/scene/compile.py` | `test_scene_compile.py` **117**(89 슬라이스 + 28 이음매) | **20/20 killed** | `23ce415` |
+
+**survived 0.** M4 뮤테이션 ⑰은 규율을 **실측으로 입증**했다 — 정렬 로직을 제거하자 32개 자산 전수 스윕은 **전부 통과한 채** 반전 픽스처 테스트만 죽었다. "픽스처 주입 필수"(§F.4-7 ②)가 가정이 아니라 관측이 됐다.
+
+**라이브러리 커버리지(AC-SCENE-003 실측)**: 결합 3 · 룩 단독 1 · fx 단독 1 · **충돌 witness 1**(`worship-golden-pulse`, `Dimmer` — dimmer fx라 교집합이 실제로 비어 있지 않다) · movement 3. 전 엔트리 한국어 무드 키워드 ≥ 1. `look_id`/`fx_id` 전건이 상류 LOOKLIB(32)·FXLIB(12) 실제 로드로 해석 — 끊긴 참조 0.
+
+#### 이음매 검증 — 코디네이터가 회수한 몫 (워커가 볼 수 없는 구간)
+
+병렬 창에서 M2 자산은 M4가 저작될 때 **존재하지 않았다.** 두 워커 모두 이 구멍을 Gaps에 정직하게 적었고, 코디네이터가 닫았다.
+
+1. **실물 자산 × 실물 빌더 (신규 28 테스트, `test_scene_compile.py` 말미)** — 출하된 씬 5건을 상류 룩/fx로 해석해 실제로 컴파일하고 전수 단정: Store 정확 1회 + **라벨 종료 따옴표 뒤 토큰 0** · `/merge`·`/overwrite`·`/cueonly`·`/trig=` 0건(소문자 비교) · `Step 1` 0건 · 금지 `At Step` 형태 0건 · 단독 `Step` 수 == `len(steps)-1` · 룩 보유 씬의 값 라인이 **균일 4개를 이 순서로** + 나머지 ⊆ {Zoom, Iris} · 충돌/미주장 열거가 **정확히** 교집합/차집합. 이로써 AC-SCENE-009/010/012/023이 픽스처가 아니라 **"라이브러리 전 씬 전수"** 라는 문면 그대로 닫혔다.
+   - **비공허성 실측**: Store 라인에 `/CueOnly`를 주입하자 5개 자산 케이스가 **전부 죽었다**(주입 후 원복 확인).
+   - **값 라인 식별자 규율(발견)**: "`;` 체인이면 룩 값 라인"은 **틀렸다** — `_speed_line`도 `;` 체인이다(`Attribute 'Pan' At Speed 112 ; …`). 판별식은 *모든 세그먼트가 절대값 형태(`At <수>`)인 `;` 체인*이다. 이 오판은 이음매 테스트를 처음 세울 때 실제로 발생했고 fx 단독 씬에서 잡혔다.
+2. **M3 드리프트 정정 (`task_ea9ff7620253`)** — `server/scene/matching.py`의 `_PATTERN_ALIASES`가 상류 공개 상수 `server.fx.matching.PATTERN_ALIASES`와 **오늘 27/27 완전 동일한 사본**임을 실측했다(대칭차 `[]`). **오늘 같기 때문에 증상이 0이고**, 상류가 별칭을 하나 더하면 씬 매칭만 조용히 몸란다 — 결정 E·K와 AP-6이 경계한 세 번째 사본이다. 사본을 지우고 **읽기 import**로 교체했다(정정도 슬라이스 소유자에게 되돌려 디스패치했다 — 코디네이터가 남의 파일을 고치지 않는다).
+   - **반대로 정상이라 판정한 것**: `_PARTICLES`/`_ENDINGS`/`_term_pattern` 중복은 **위반이 아니다** — `server/looks/matching.py`와 `server/fx/matching.py`가 각자 자기 본을 가진 확립된 선례다. 사본이라고 다 같은 사본이 아니다.
+   - fx 패턴을 `fx_id` 토큰에서 추론하는 설계는 유지했다(매칭기는 `FxLibrary`를 받지 않는다). 대신 **출하 fx 12개 전수에 대해 `entry.pattern`이 `entry.fx_id` 토큰에 실제로 들어 있음**을 단정하는 가드를 신설 — 추론이 깨지는 날 매칭기가 조용히 어휘를 잃는 대신 그 테스트가 먼저 죽는다.
+
+**검증 (웨이브 종료 후 코디네이터 실측)**: 전체 `pytest server/tests/ -q` → **3673 passed / 5 skipped** (M1 기준선 3526 대비 **신규 147, 신규 실패 0**). `ruff check`/`format --check` 전 신규 파일 클린. `server/scene` 커버리지 **99%**(문턱 85% — 미도달 2줄은 `compile.py:219`·`matching.py:302`). `test_architecture.py` 4 passed, 예외 명단 무변경. **PRESERVE 게이트**: `git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety` → **빈 출력**.
+
+**AC 상태**: AC-SCENE-003 · AC-SCENE-004(M2) · AC-SCENE-006 · AC-SCENE-007 · AC-SCENE-008(M3) · AC-SCENE-005 · AC-SCENE-009 · AC-SCENE-010 · AC-SCENE-011 · AC-SCENE-012 · AC-SCENE-013 · AC-SCENE-014 · AC-SCENE-023(M4) **충족**. 누적 **15/24**(M0 AC-SCENE-019는 정리 잔여로 미완결).
+
+**남은 것**: M5(리포트 — AC-SCENE-015/016/024) · M6(툴 배선 — AC-SCENE-018) · M7(회귀·경계 — AC-SCENE-017/020/022, **상류 상수 동치 2건 포함**) · M8(종단 라이브 — AC-SCENE-021). M4가 M7에 명시 위임한 2건(`SCENE_UNIFORM_ATTRIBUTES == CONFIRMED_ATTRIBUTES` 동치 · `KNOWN_ATTRIBUTES` 8원소 형상 고정)은 아직 **미검증**이다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 - run_started_at: 2026-08-01 (M1)
 - baseline_measured: pytest **3432 passed / 5 skipped** @ `main` `3c701b1` (착수 직전 직접 실행 — 이월 없음)
-- milestones_done: **M0**(라이브 프로브, 정리 잔여 1건) · **M1**(스키마 + 로더, cycle_type=tdd)
-- milestones_open: M2 · M3 · M4 · M5 · M6 · M7 · M8
-- ac_closed: AC-SCENE-001 · AC-SCENE-002
-- ac_open: AC-SCENE-019(정리 잔여) · 나머지 21건
-- current_measured: pytest **3526 passed / 5 skipped** (신규 94, 신규 실패 0) · `server/scene` 커버리지 **100%** (문턱 85%) · ruff check/format 클린
-- mutations: M1 **4/4 killed** (survived 0)
+- milestones_done: **M0**(라이브 프로브, 정리 잔여 1건) · **M1**(스키마 + 로더) · **M2**(라이브러리) · **M3**(2축 매칭) · **M4**(결합·가드·번호) — M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`
+- milestones_open: M5 · M6 · M7 · M8
+- ac_closed: AC-SCENE-001 · 002 · 003 · 004 · 005 · 006 · 007 · 008 · 009 · 010 · 011 · 012 · 013 · 014 · 023 (**15/24**)
+- ac_open: AC-SCENE-019(M0 정리 잔여) · 015 · 016 · 017 · 018 · 020 · 021 · 022 · 024
+- current_measured: pytest **3673 passed / 5 skipped** (M1 기준선 3526 대비 신규 147, **신규 실패 0**) · `server/scene` 커버리지 **99%** (문턱 85%) · ruff check/format 클린 · `test_architecture.py` 4 passed, 예외 명단 무변경
+- mutations: M1 **4/4** · M2 **3/3** · M3 **3/3** · M4 **20/20** killed (누적 **30/30**, survived 0)
+- seam_verified: 실물 씬 자산 5건 × 실물 빌더 전수(28 테스트) — `/CueOnly` 주입으로 비공허성 실측. M3 별칭 사본 드리프트 1건 검출·정정(`task_ea9ff7620253`)
 - preserve_gate: `git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety` → **빈 출력**
-- open_items: M0 프로브 시퀀스 191~197 쇼파일 정리 **미이행**(사용자 GUI 삭제 필요) ⇒ AC-SCENE-019 미완결
-- commit_sha: pending-backfill
+- open_items: ① M0 프로브 시퀀스 191~197 쇼파일 정리 **미이행**(사용자 GUI 삭제 필요) ⇒ AC-SCENE-019 미완결 ② M4가 M7에 위임한 상류 상수 결합 2건 미검증
+- commit_sha: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b`
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
@@ -401,3 +437,29 @@ plan.md §G가 사전 평가로 동일하게 sub-agent(Mode 5)를 권고했고 �
 - 승인: 획득 (2026-08-01, AskUserQuestion)
 - 진행 모드: **반자율 — 마일스톤마다 확인**. 각 M 완료 시 5섹션 증거 보고(Claim / Evidence / Baseline-attribution / Gaps / Residual-risk) 후 다음 M 진입 전 사용자 확인.
 - M0 착수 조건: 사용자가 콘솔 접근 가능함을 확인함.
+
+### 모드 변경 — M2/M3/M4 구간 한정 Mode 4 병렬 (2026-08-01, M1 완료 후)
+
+사용자가 **"오케스트레이션 스킬을 사용해서 병렬로"** 를 명시 지시했다. 위 Decision(sub-agent)은 **M1까지의 판단이며 철회하지 않는다** — 바뀐 것은 `plan.md §F.5`가 조건부로 열어 둔 **병렬 창(M2/M3/M4)의 채택 여부**이고, M5 이후는 여전히 순차다.
+
+**§F.5 채택 조건 3건 — 착수 시점에 전부 충족 확인**:
+
+| 조건 | 확인 |
+|---|---|
+| M1이 닫혔다 | 커밋 `a1faae3` · `test_scene_schema.py` 94 passed |
+| SC-1/SC-2/SC-3을 `design.md` **전문 인용**으로 주입 가능 | `.moai/reports/handoff/scene/00-공통-브리프.md`에 `design.md` §3(60-122) · §4(123-167) · §6(185-281)을 **스크립트로 바이트 추출**해 삽입(요약·재서술 0). 정본은 여전히 design.md이며 그 사실을 브리프가 명시한다 |
+| 쓰기 집합 서로소 | `git status --porcelain server/scene/ server/tests/` 빈 출력에서 착수. A={library/*.yaml, test_scene_library.py} · B={matching.py, test_scene_matching.py} · C={compile.py, test_scene_compile.py} — 교집합 ∅(§F.2) |
+
+**미채택 논거였던 "M4 지배성"은 사라지지 않았다** — 벽시계는 여전히 M4가 지배한다. 사용자 지시가 그 트레이드오프를 받아들인 것이며, 이 기록은 판단이 바뀐 이유를 **논거의 소멸이 아니라 지시**로 정직하게 남긴다.
+
+**형상**: Orca 오케스트레이션(`orca orchestration`) — Run `run_21629800d19e`, 워커 3인 전부 **현재 워크트리**(신규 워크트리 0 — 쓰기 집합이 서로소라 격리 요구가 성립하지 않는다).
+
+| 슬라이스 | Task | Dispatch | 에이전트 | 터미널 |
+|---|---|---|---|---|
+| A · M2 라이브러리 | `task_8e211c795214` | `ctx_1ffeac4c7ab3` | codex | `term_feddcaed` |
+| B · M3 매칭 | `task_a9cae25086d8` | `ctx_4219f583a4a1` | codex | `term_17d9f6eb` |
+| C · M4 컴파일 | `task_c31261ff66be` | `ctx_e606904f4b5e` | claude | `term_1a69f3f1` |
+
+**오케스트레이터가 회수한 3가지**(`TEMPLATE-병렬웨이브-파이프라인.md:33-37` — FXLIB 실증): ① **커밋** — 워커는 워킹 트리에 산출물만 남긴다(동시 커밋은 git 인덱스 경합). ② **공유 파일 쓰기** — 워커는 `.moai/specs/**`에 쓰지 않고 `worker_done` 본문으로 보고한다(본 문서의 3자 충돌 방지). ③ **이음매 검증** — 워커는 각자 인메모리 픽스처를 쓰므로 슬라이스 경계는 아무도 보지 않는다. 전체 회귀·경계·이음매(M2 자산 × M4 빌더 전수)는 웨이브 종료 후 오케스트레이터가 1회 수행한다.
+
+**추가 제약(본 웨이브 신설)**: 워커는 **전체 pytest를 돌리지 않는다** — 형제 슬라이스의 미완성 파일을 밟기 때문이다. 자기 테스트 파일만 실행한다.
