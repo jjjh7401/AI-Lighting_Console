@@ -8,7 +8,7 @@
 
 **무엇**: 씬 컴파일러 — **룩(정적 값) + 이펙트(스텝 열) + 타이밍을 하나의 큐로** 합성한다. LOOKLIB(정지 화면 어휘)·FXLIB(시간축 어휘)이 세운 "의도→메모리 파이프라인"의 **2단계**이며, FXLIB이 `spec.md:42`·`:70`·`:140` 세 곳에서 명시적으로 예약해 둔 좌석이다. 신규 패키지 `server/scene/`에 스키마·로더·2축 매칭·결합 컴파일러·리포트를 세우고, 툴 2종(`find_scene`·`compile_scene`)을 기존 `run_commands`→`gate.screen()` 경로로만 배선한다.
 
-**상태**: **plan-audit iter-3 PASS 0.90(문턱 0.85) · v0.2.2(iter-3 비차단 N1~N9 fix-forward) · M0 실행 완료(정리 잔여 1건 — AC-SCENE-019 미완결) · **M1~M8 완료**(M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`).** REQ **21** · AC **24** · ASSUMPTION **5(41~45 — 41·42는 판정 후 moot)** · clarification 마커 **0** · 결정 **A~K 전부 해소** · 라이브 세션 2회 중 **1회 소진(M0)**. AC **15/24** 충족 · 뮤테이션 누적 **30/30 killed**(survived 0). **run-phase 완료 — AC 24/24 · 마일스톤 M0~M8 전부 닫힘.** 다음 단계 = **sync-phase**(문서 정합성·PR). 비차단 후속 1건은 §E.3 `open_items` ②.
+**상태**: **run-phase 완료 — M0~M8 전부 닫힘 · AC 24/24 · 라이브 세션 2/2 소진.** plan-audit iter-3 **PASS 0.90**(문턱 0.85) · SPEC **v0.2.3**. REQ **21** · AC **24** · ASSUMPTION 41~45(41·42는 판정 후 moot) · 결정 **A~K 전부 해소** · clarification 마커 **0**. 뮤테이션 누적 **47/47 killed**(survived 0) · pytest **3794 passed / 5 skipped** · vitest **223 passed** · PRESERVE diff **빈 출력**. 커밋 사슬: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · 웨이브 기록 `7755408` · M5 `79cea7e` · M6 `f7c4a8c` · M7 `3d062dc` · M8 `8c1e044`. **다음 단계 = sync-phase(문서 정합성 감사 → PR).** 착수 전 판단이 필요한 비차단 결정 1건이 아래 킥오프 킷에 있다.
 
 **이 SPEC의 한 줄 (v0.2.0 개정)**: 트래킹 정책이 **M0 실측으로 한 번 뒤집혔다** — `/CueOnly`(미발화 커맨드)를 버리고 **속성 집합 균일화 + 미주장 속성 전수 열거**를 택했다. 그러나 **관측 천장은 그대로다**: "균일 집합을 발화했다"와 "트래킹이 무해해졌다"를 절대 뭉치지 않는 것이 여전히 전체 설계의 축이다.
 
@@ -20,6 +20,7 @@
 4. `acceptance.md` §C.0/§C.0a(역추적 · 배정 — 합 **24**·중복 0·누락 0) → **AC-SCENE-015(주장 분리 — 이 SPEC의 중심 AC)** → **AC-SCENE-023, AC-SCENE-024(개정 신설 — 균일성 · 미주장 열거)**
 5. `research.md` **§2(`/CueOnly` 전수 grep — 폐기된 정책의 조사 기록)** · §4(가드 3선례) · §5(SONGCUE 상속 부채) · §6(검증 천장 근거)
 6. **개정 근거 조사**: `.moai/reports/scene-uniform-attribute-set-proposal.md`(룩 라이브러리 속성 매트릭스 · 4옵션 비교 · Pan/Tilt 구멍) · **판정 정본**: 본 문서 **§E.2**
+7. **run-phase 기록(신규)**: 본 문서 **§E.2**의 M1 → M2·M3·M4 병렬 웨이브 → M5 → M6 → M7 → **M8** 절. 특히 **M8 절 ⑤(효과 관측 방법과 그 한계)** 와 **⑦(SPEC 표제 문장 미매칭)**, 그리고 **§F 모드 변경**(왜 병렬로 갔고 무엇을 회수했는가)
 
 ### 함정 (다음 소유자가 알아야 할 것)
 
@@ -43,6 +44,13 @@
 15. **뮤테이션 재료를 잘못 고르면 뮤테이션이 통과한다 (승계 필수 2건).** ① **충돌 열거 비공허성을 movement fx로 세우면 정답도 ∅이라 통과해 버린다** — dimmer/color fx로만 세운다. ② **균일 집합 순서 뮤테이션은 픽스처 주입이 필수다** — 오늘 자산 32/32가 이미 정렬돼 있어 정렬 제거가 자산만으로는 잡히지 않는다.
 16. **균일 집합은 자산이 우연히 보장하고 있다.** 32/32가 이미 코어 4를 이 순서로 담고 있어 도입 시점의 정렬은 **바이트 무변화**다. 그래서 강제 코드를 빼도 **오늘은 아무 일도 일어나지 않는다** — 미래 저작에서 조용히 깨진다. 이것이 정렬·강제 지점에 `@MX:ANCHOR`가 붙는 이유다.
 
+#### run-phase가 새로 가르친 것 4건 (승계 필수)
+
+17. **이음매에서만 보이는 결함이 실제로 두 번 나왔다.** 슬라이스는 각자 그린인데 붙이면 깨지는 자리가 있다. ① 병렬 웨이브에서 M3가 상류 공개 상수 `PATTERN_ALIASES`의 **오늘 완전히 동일한 사본**을 들고 있었다 — 같으니까 증상이 0이고, 상류가 별칭 하나만 더하면 씬만 조용히 몸란다. ② M6에서 `compile.py`가 부르는 fx `select_sequence_number`가 **`FxInstantiationError`를 던져** 툴이 구조화 에러 대신 예외로 죽었다. **둘 다 슬라이스 테스트로는 잡히지 않는다** — 오케스트레이터가 이음매를 직접 재야 나온다(`TEMPLATE-병렬웨이브-파이프라인.md:37`이 예고한 그대로다).
+18. **커밋 전에는 보이지 않는 테스트가 있다.** `test_songcue_bundle.py`의 `_TOOLS_EXPECTED_HUNK_OLD_STARTS`는 `git diff <BASE>..HEAD`를 읽는다. M6 커밋 **직전** 전체 회귀는 그린이었고 **직후** 실패했다 — 변경이 아직 `HEAD`에 없었기 때문이다. **git 상태에 의존하는 테스트는 커밋 후 한 번 더 돌린다.**
+19. **경계에서 예외 타입을 번역한다.** 상류의 로직·사유 코드는 재사용하되(결정 D·G·H) **예외 클래스는 이 패키지 것으로 바꾼다.** 안 그러면 씬을 쓰는 모든 호출자가 fx 예외를 알아야 정확해진다 — design.md §2.2가 경계한 결합이 그대로 번진다.
+20. **`;` 체인이라고 다 룩 값 라인이 아니다.** `_speed_line`도 `;` 체인이다(`Attribute 'Pan' At Speed 112 ; …`). 값 라인 판별식은 **모든 세그먼트가 절대값(`At <수>`) 형태인 `;` 체인**이다. 이음매 테스트를 처음 세울 때 실제로 이걸로 틀렸고 fx 단독 씬이 잡아냈다.
+
 ### 기계 확인 (인수인계 무결성)
 
 ```bash
@@ -50,33 +58,67 @@ ls .moai/specs/SPEC-COPILOT-SCENE-001/                                        # 
 grep -c "^- \*\*REQ-SCENE-" .moai/specs/SPEC-COPILOT-SCENE-001/spec.md        # = 21
 grep -c "^### AC-SCENE-" .moai/specs/SPEC-COPILOT-SCENE-001/acceptance.md     # = 24
 grep -c "^### Out of Scope" .moai/specs/SPEC-COPILOT-SCENE-001/spec.md        # = 16
-grep -cE "ASSUMPTION-4[1-5]" .moai/specs/SPEC-COPILOT-SCENE-001/spec.md       # ≥ 5
+grep -cE '^(GO|DESCOPE|SKIP|REOPEN):' .moai/specs/SPEC-COPILOT-SCENE-001/progress.md   # = 8
 
-# 개정 후 근본 사실 — 씬은 store 플래그를 쓰지 않는다
-grep -n "CueOnly" .moai/specs/SPEC-COPILOT-SCENE-001/design.md | grep -c "§6" # 폐기 기록은 §6.0에
+# run-phase 산출물 (전부 존재해야 정상)
+ls server/scene/                          # __init__ schema loader matching compile report library/
+ls server/tests/test_scene_*.py           # schema library matching compile report tool boundary (7)
+.venv/bin/python -c "from server.orchestrator.tools import TOOL_NAMES; \
+print(len(TOOL_NAMES), TOOL_NAMES[-2:])"  # → 13 ('find_scene', 'compile_scene')
 
-# 균일 집합의 전제 재실측 (개정 핵심 — 전부 오늘 참이어야 정상)
-uv run python -c "from server.looks.schema import CONFIRMED_ATTRIBUTES, KNOWN_ATTRIBUTES; \
-print(CONFIRMED_ATTRIBUTES); print(len(KNOWN_ATTRIBUTES))"
-# → ('Dimmer', 'ColorRGB_R', 'ColorRGB_G', 'ColorRGB_B') / 8
-uv run pytest server/tests/test_looks_library.py -q \
-  -k "specifies_a_colour or specifies_an_intensity or names_all_three"        # 3 passed
+# 상류 결합 2건 — 깨지면 M7 경계 테스트가 먼저 죽는다
+.venv/bin/python -c "from server.looks.schema import CONFIRMED_ATTRIBUTES, KNOWN_ATTRIBUTES; \
+from server.scene.compile import SCENE_UNIFORM_ATTRIBUTES; \
+print(SCENE_UNIFORM_ATTRIBUTES == CONFIRMED_ATTRIBUTES, len(KNOWN_ATTRIBUTES))"   # → True 8
 
-# 상류 계약 재실측 (드리프트 관례)
-grep -n "MIN_STEPS" server/fx/schema.py                                       # MIN_STEPS = 2
-grep -n "_CUE_NUMBER" server/fx/instantiate.py                                # = 1 (씬은 재사용 불가)
-grep -n "is_programmer_state\|collided_lines" server/fx/instantiate.py        # 공개 API 확인
-
-uv run pytest server/tests/ -q                    # 킥오프 baseline — 직접 실측(이월 금지)
+.venv/bin/python -m pytest server/tests/ -q       # 3794 passed / 5 skipped — 직접 실측(이월 금지)
+cd ui && npx vitest run                            # 223 passed / 13 files
 ```
 
-### 다음 소유자 킥오프 킷
+### 다음 소유자 킥오프 킷 — **sync-phase부터 시작한다**
 
-- **plan-audit 재실행 준비물 (v0.2.1 — iter-3, 하드캡)**: Tier L 문턱 **0.85**. **iter-3은 iter-2가 열거한 결함 델타(D1~D16)에 한정된 재감사다.** 감사가 볼 곳 — ① **개정 논거가 M0 실측(§E.2)과 정합한가**(spec §A D1 · §C.1a · §C.2 · design §6.0 · plan §A.2), ② **관측 천장이 바뀌지 않았다는 사실**이 리포트 규율에 반영됐는가(design §6.2 · AC-SCENE-015 — 개정의 최대 위험), ③ **Pan/Tilt 이월이 은폐되지 않고 §D + 미주장 열거로 노출되는가**, ④ 결합 순서의 **강제 근거**가 취향 서술로 약화되지 않았는가(design §3.2 — 44 `GO`로 실측 확정), ⑤ 1차 가드 정책 선택이 3선례 비교로 논증됐는가(design §4.1 · research §4), ⑥ §F 병렬 분석이 **교집합 실증 + 공유 계약(SC-1/SC-2/SC-3)** 을 담았는가, ⑦ **AC 24건 · REQ 21건**이 §C.0/§C.0a 양쪽에서 중복 0·누락 0인가, ⑧ iter-1 minor 결함 6건(D2~D7)이 실제로 닫혔는가.
-- **M1 착수 준비물**: M0는 완료됐다(§E.2). **재측정 금지** — 41/44 판정을 M1 이후에 덮어쓰지 않는다. 착수 직전 baseline은 직접 실측(이월 금지).
-- **M4 착수 준비물(병렬 시)**: `design.md §3` · `§4` · **`§6`** 전문을 **요약 없이** 브리프에 주입(plan.md §F.3 SC-1/SC-2/SC-3). 요약본을 만들면 요약이 세 번째 해석이 된다.
-- **미이행 잔여 1건**: M0 프로브 시퀀스 **191·192·193·194·195·196·197** 쇼파일 잔존. `Delete` 블랙리스트로 툴 경로 제거 불가 — **사용자 GUI 삭제 후 §E.2에 기록**. 닫히기 전에는 AC-SCENE-019가 완결이 아니다.
-- **Kickoff 결정 없음**: 결정 **A~K** 전부 해소, clarification 0, 승인 대기 0 — 재질의할 것이 없다. (D1은 2026-08-01 사용자 재확정으로 닫혔다.)
+**0. 먼저 확인 (2분)**
+
+```bash
+git log --oneline -9                      # a1faae3 … 8c1e044 (M1~M8 사슬)
+.venv/bin/python -m pytest server/tests/ -q   # 3794 passed / 5 skipped  ← 직접 실측, 이월 금지
+git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety   # 빈 출력
+grep -cE '^(GO|DESCOPE|SKIP|REOPEN):' .moai/specs/SPEC-COPILOT-SCENE-001/progress.md   # 8
+```
+
+**1. 착수 전에 사용자 판단이 필요한 결정 1건 (비차단, run-phase가 열어 둔 유일한 항목)**
+
+SPEC 표제 문장 `"파란 백라이트가 천천히 웨이브하는 씬 만들어줘"`(spec.md §A · acceptance.md 시나리오 1 · plan.md §B M8이 그대로 쓰는 문장)가 **양 축 `no_match`** 다. 원인은 **상류 어휘**이고 씬 계층은 REQ-SCENE-007이 지시한 미러를 했을 뿐이다 — `하는`(하다-용언 관형형)이 FXLIB 닫힌 어미 목록에 없고, `파란`이 LOOKLIB 별칭에 없다(라이브러리는 `푸른`). 어휘가 있는 문장(`달빛 웨이브`)에서는 두 축이 정확히 붙는다. 실측 표는 §E.2 M8 절 ⑦.
+
+| 안 | 내용 | 대가 |
+|---|---|---|
+| A | 씬 어미 목록에 `하는` 추가 | 씬만 붙고 `find_fx`는 안 붙는 **행동 분기**. M3 정정이 사본을 지운 방향과 반대다 |
+| B | 씬 자산 별칭 보강 | `하는` 문제는 남는다 — 부분 해결 |
+| C | 상류(FXLIB/LOOKLIB) 어휘 확장 | **PRESERVE 위반** — 별도 SPEC의 결정 |
+| D | 기록만 하고 넘긴다 (현 상태) | 표제 문장은 계속 폴백. 정직하지만 불편 |
+
+**결정 전에는 고치지 않는다** — M8 규율이 "코드 변경 0, 결함은 별도 커밋"이고, 이 축은 사본/미러 교리와 정면으로 맞물린다.
+
+**2. sync-phase가 볼 곳**
+
+- **정합성**: REQ **21** · AC **24** · Out of Scope **16** · 접두 행 **8**(M0분 6 + M8분 2). 산문 개수 주장이 이 기계값과 어긋나지 않는지 — iter-2가 정확히 이 축에서 0.91 → 0.80으로 떨어졌다.
+- **AC 24건 전부 "충족" 근거가 §E.2의 어느 절인지** 추적 가능한지.
+- **M8이 넓힌 것 1건**: REQ-SCENE-021의 `<대상>`에 `AC-SCENE-nnn`이 추가됐다(v0.2.3). 접두어 4종·행두 앵커·한 판정당 1행 규율은 **무변경**임을 확인할 것.
+- **`.moai/reports/` 는 gitignore**다 — 병렬 브리프(`handoff/scene/`), plan-audit 리포트, M8 프로브 드라이버(`m8-probe/`)와 스크린샷은 **저장소에 없다.** 인용할 때 그 사실을 적을 것.
+
+**3. 손대지 말 것**
+
+- **M0·M8 판정 접두 행 8줄** — 재측정·덮어쓰기 금지(AC-SCENE-021 뮤테이션 ②). 정규식 완화도 금지(AC-SCENE-019).
+- **PRESERVE**: `server/looks/**` · `server/fx/**` · `console/lua/**` · `server/rulebook/assets/**` · `server/safety/**`.
+- `_TOOLS_EXPECTED_HUNK_OLD_STARTS`의 **보호구역 단정**(`(234,238)` · `(524,569)`) — 트립와이어 값은 갱신 대상이지만 이 두 범위는 아니다.
+
+**4. 쇼파일에 남아 있는 것**
+
+시퀀스 **3(`SCN GOLD PULSE`) · 4(`SCN MOON RISE`)** — M8이 만든 **정상 산출물**이며 프로브 쓰레기가 아니다(재생 후 `Off`로 내렸다). 남길지 지울지는 사용자 판단이고, 지운다면 `Delete`가 블랙리스트이므로 **GUI 조작**이다. M0 프로브 잔여(191~197)는 **이미 삭제됐고 재조회로 확인됐다**.
+
+**5. 재질의 금지**
+
+결정 **A~K** 전부 해소 · clarification 0 · 승인 대기 0. D1은 2026-08-01 사용자 재확정으로 닫혔다. 위 §1의 어휘 결정만이 새로 열린 유일한 질문이다.
 
 ## Plan-phase log
 
