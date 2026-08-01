@@ -92,6 +92,17 @@ def _label(value: object, *, where: str) -> str:
     return text
 
 
+def validate_label(value: object, *, source: str = "<label>") -> str:
+    """The asset label rule, applied to a CALLER-supplied override.
+
+    A tool may let the operator name the cue, and that string lands in the same
+    ``Store … '<label>'`` literal as an authored one. One definition of a
+    storable label, used by both paths — a second copy is exactly what decision
+    E/K forbids.
+    """
+    return _label(value, where=source)
+
+
 def _trig_type(value: object, *, where: str) -> str | None:
     if value is None:
         return None

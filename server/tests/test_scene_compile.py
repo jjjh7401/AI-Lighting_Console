@@ -23,8 +23,10 @@ import re
 
 import pytest
 
+from server.fx.instantiate import SEQUENCE_OCCUPIED as fx_sequence_occupied
 from server.fx.instantiate import (
     SKIPPED_ALREADY_EXECUTED,
+    FxInstantiationError,
 )
 from server.fx.instantiate import (
     collided_lines as fx_collided_lines,
@@ -829,3 +831,27 @@ def test_the_shipped_library_contains_a_scene_that_leaves_pan_tilt_unclaimed():
     assert [
         s.scene_id for s, r in _compiled_assets() if {"Pan", "Tilt"} <= set(r.unclaimed_attributes)
     ]
+
+
+def test_an_occupied_sequence_surfaces_as_a_scene_error_not_an_fx_one():
+    """The upstream exception TYPE stops at this package's boundary.
+
+    `select_sequence_number` is fx's (decision H) and raises
+    `FxInstantiationError`. Letting that class travel would force every caller
+    of a scene to catch an fx exception to stay correct — the tool layer did not
+    know to, and crashed instead of refusing. The reason code travels unchanged
+    so the two layers keep ONE vocabulary.
+    """
+    scene = _scene("s40", look_id=CORE4_LOOK.look_id)
+    with pytest.raises(SceneCompilationError) as excinfo:
+        compile_scene(
+            scene,
+            look=CORE4_LOOK,
+            fx=None,
+            group=11,
+            sequences_section=_sequences(1, 2),
+            cues_section=_cues(),
+            sequence_number=1,
+        )
+    assert excinfo.value.reason == fx_sequence_occupied
+    assert not isinstance(excinfo.value, FxInstantiationError)

@@ -8,7 +8,7 @@
 
 **무엇**: 씬 컴파일러 — **룩(정적 값) + 이펙트(스텝 열) + 타이밍을 하나의 큐로** 합성한다. LOOKLIB(정지 화면 어휘)·FXLIB(시간축 어휘)이 세운 "의도→메모리 파이프라인"의 **2단계**이며, FXLIB이 `spec.md:42`·`:70`·`:140` 세 곳에서 명시적으로 예약해 둔 좌석이다. 신규 패키지 `server/scene/`에 스키마·로더·2축 매칭·결합 컴파일러·리포트를 세우고, 툴 2종(`find_scene`·`compile_scene`)을 기존 `run_commands`→`gate.screen()` 경로로만 배선한다.
 
-**상태**: **plan-audit iter-3 PASS 0.90(문턱 0.85) · v0.2.2(iter-3 비차단 N1~N9 fix-forward) · M0 실행 완료(정리 잔여 1건 — AC-SCENE-019 미완결) · **M1~M5 완료**(M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`).** REQ **21** · AC **24** · ASSUMPTION **5(41~45 — 41·42는 판정 후 moot)** · clarification 마커 **0** · 결정 **A~K 전부 해소** · 라이브 세션 2회 중 **1회 소진(M0)**. AC **15/24** 충족 · 뮤테이션 누적 **30/30 killed**(survived 0). 다음 단계 = **M6(툴 표면 + 배선)** — M5부터 **순차**이며 진행 모드는 **반자율(마일스톤마다 확인, §F)**.
+**상태**: **plan-audit iter-3 PASS 0.90(문턱 0.85) · v0.2.2(iter-3 비차단 N1~N9 fix-forward) · M0 실행 완료(정리 잔여 1건 — AC-SCENE-019 미완결) · **M1~M6 완료**(M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`).** REQ **21** · AC **24** · ASSUMPTION **5(41~45 — 41·42는 판정 후 moot)** · clarification 마커 **0** · 결정 **A~K 전부 해소** · 라이브 세션 2회 중 **1회 소진(M0)**. AC **15/24** 충족 · 뮤테이션 누적 **30/30 killed**(survived 0). 다음 단계 = **M7(회귀 + 경계 전체 그린)** — M5부터 **순차**이며 진행 모드는 **반자율(마일스톤마다 확인, §F)**.
 
 **이 SPEC의 한 줄 (v0.2.0 개정)**: 트래킹 정책이 **M0 실측으로 한 번 뒤집혔다** — `/CueOnly`(미발화 커맨드)를 버리고 **속성 집합 균일화 + 미주장 속성 전수 열거**를 택했다. 그러나 **관측 천장은 그대로다**: "균일 집합을 발화했다"와 "트래킹이 무해해졌다"를 절대 뭉치지 않는 것이 여전히 전체 설계의 축이다.
 
@@ -425,20 +425,56 @@ REOPEN: D1 트래킹 정책 사용자 재결정(2026-08-01, AskUserQuestion)으�
 
 **M7로 넘긴 것**: AC-SCENE-024가 함께 요구하는 **유니버스 형상 고정**(`server.looks.schema.KNOWN_ATTRIBUTES`가 오늘 정확히 8원소)은 경계 테스트 소유다(design.md §8) — M5는 문면·정렬·차집합 게재만 닫았다.
 
+---
+
+### M6 — 툴 표면 + 배선 (2026-08-01, 완료 · cycle_type=tdd)
+
+**착수 baseline (직접 실측)**: `pytest server/tests/ -q` → **3711 passed / 5 skipped** @ `79cea7e`.
+
+**산출**: `server/orchestrator/tools.py`(**툴 2종 등록만**) · `server/tests/test_scene_tool.py`(**54 tests**) · `server/scene/loader.py`에 `validate_label` 공개 1건 · `server/scene/compile.py` 경계 예외 번역 1건(아래 "발견한 결함") · `server/tests/test_tools.py` 닫힌 집합 개수 11 → **13**.
+
+`find_scene`(조회 전용, 콘솔 무접촉) · `compile_scene`(**`run_commands` 클로저의 caller**). 둘 다 `@MX:ANCHOR` + `@MX:REASON`을 달았다 — 제2 실행 표면을 만들면 게이트에 보이지 않는다.
+
+**M1의 설계 판단이 여기서 값을 냈다**: 툴은 타이밍 인자를 자기가 다시 검사하지 않고 **`loader.parse_timing`을 호출한다** — "적법한 큐 번호"의 정의가 저장소에 한 벌만 있다(REQ-SCENE-006). 라벨 오버라이드도 같다: `loader.validate_label`(신설 공개 래퍼)이 자산 라벨과 **같은 규칙**을 적용한다 — ASCII·인용 가능. 사본을 만들지 않는다는 결정 E·K의 연장이다.
+
+**큐 풀은 읽지 않고 유도한다(정직 표기)**: 컴파일러는 `cues_section`을 요구하지만 툴은 **빈 풀**을 넘긴다. 근거는 발명이 아니라 도출이다 — `select_sequence_number`(fx 판, 결정 H)는 **비어 있는 시퀀스 번호만** 돌려주고 점유된 요청은 거부하므로, 이 번들이 저장할 시퀀스는 항상 신규이고 신규 시퀀스는 큐를 갖지 않는다. 귀결로 **`CUE_OCCUPIED` 경로는 툴에서 도달 불가**이며, 그 사실을 주석이 아니라 **테스트로** 적었다(`test_an_occupied_sequence_number_is_refused_before_any_cue_question`). 해당 가드의 검증은 컴파일 계층(M4)이 소유한다.
+
+#### 발견한 결함 1건 — 상류 예외가 툴 경계를 넘어 샜다
+
+`test_an_occupied_sequence_number_is_refused_before_any_cue_question`을 세우자 **툴이 구조화 에러 대신 예외로 죽었다.** 원인: `server/scene/compile.py`가 fx의 `select_sequence_number`를 호출하는데 그것이 `FxInstantiationError`를 던지고, 씬 계층은 `SceneCompilationError`만 던진다고 계약해 두었으며 툴 핸들러는 그것만 잡았다.
+
+**고친 위치는 툴이 아니라 컴파일 계층이다.** 툴에 `except FxInstantiationError`를 더하면 **씬을 쓰는 모든 호출자가 fx 예외 클래스를 알아야** 정확해진다 — design.md §2.2가 경계한 결합이 그대로 번진다. 대신 컴파일러가 경계에서 번역한다: **사유 코드는 그대로 전달하고(두 계층이 한 어휘를 유지) 예외 타입만 씬의 것으로 바꾼다.** 회귀 고정은 `test_scene_compile.py::test_an_occupied_sequence_surfaces_as_a_scene_error_not_an_fx_one`.
+
+이 결함은 **M4·M6 어느 슬라이스의 테스트로도 잡히지 않았다** — M4는 컴파일러를 직접 부르며 예외 타입을 신경 쓰지 않았고, M6는 그 경로를 지나기 전까지 존재를 몰랐다. **이음매에서만 보이는 결함의 두 번째 사례**다(첫 번째는 병렬 웨이브의 별칭 사본).
+
+**뮤테이션 3항 — 전부 killed**:
+
+| # | 주입 | 결과 | 죽은 테스트 |
+|---|---|---|---|
+| ① | rig 미등재 그룹 검사 무력화 | **killed** 3 failed | `test_an_unlisted_group_is_refused_before_anything_is_sent` · `..._truncated_listing_does_not_license...` · `test_a_fixture_slot_number_is_not_a_group` |
+| ② | 핸들러가 `execution_port.execute`를 직접 호출 | **killed** 3 failed | `test_a_gate_that_does_not_clear_sends_nothing` · `test_the_bundle_reaches_the_port_in_order...` · **AST 스캔** `test_no_scene_handler_names_the_execution_port[compile_scene]` |
+| ③ | 번들이 `Group <n>` 대신 `Fixture <n>`을 타깃 | **killed** 1 failed | `test_no_bundle_ever_targets_a_fixture` |
+
+②는 **세 방향에서 동시에 죽었다** — 송신 0건 단언(게이트 미클리어), 포트 도달 순서 단언, 그리고 핸들러 본문 AST 식별자 스캔. 하나를 지워도 나머지가 남는다.
+
+**검증**: `test_scene_tool.py` **54 passed** · `server/scene` 커버리지 **99%** · ruff clean · 전체 `pytest server/tests/ -q` → **3766 passed / 5 skipped**(신규 55, **신규 실패 0**). **PRESERVE 게이트**: 커밋 기준·워킹 트리 양쪽 diff **빈 출력** — `tools.py`는 PRESERVE가 아니며(툴 2종 등록만) `_PROGRAMMER_STATE_COMMANDS`·dedupe 루프는 **무변경**이다.
+
+**AC 상태**: AC-SCENE-018 **충족** ⇒ 누적 **19/24**.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 - run_started_at: 2026-08-01 (M1)
 - baseline_measured: pytest **3432 passed / 5 skipped** @ `main` `3c701b1` (착수 직전 직접 실행 — 이월 없음)
-- milestones_done: **M0**(라이브 프로브, 정리 잔여 1건) · **M1**(스키마 + 로더) · **M2**(라이브러리) · **M3**(2축 매칭) · **M4**(결합·가드·번호) · **M5**(리포트) — M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`, M5부터 순차
-- milestones_open: M6 · M7 · M8
-- ac_closed: AC-SCENE-001 · 002 · 003 · 004 · 005 · 006 · 007 · 008 · 009 · 010 · 011 · 012 · 013 · 014 · 015 · 016 · 023 · 024 (**18/24**)
-- ac_open: AC-SCENE-019(M0 정리 잔여) · 017 · 018 · 020 · 021 · 022
-- current_measured: pytest **3711 passed / 5 skipped** (M1 기준선 3526 대비 신규 185, **신규 실패 0**) · `server/scene` 커버리지 **99%**(`report.py`는 100%, 문턱 85%) · ruff check/format 클린 · `test_architecture.py` 4 passed, 예외 명단 무변경
-- mutations: M1 **4/4** · M2 **3/3** · M3 **3/3** · M4 **20/20** · M5 **7/7** killed (누적 **37/37**, survived 0)
-- seam_verified: 실물 씬 자산 5건 × 실물 빌더 전수(28 테스트) — `/CueOnly` 주입으로 비공허성 실측. M3 별칭 사본 드리프트 1건 검출·정정(`task_ea9ff7620253`)
+- milestones_done: **M0**(라이브 프로브, 정리 잔여 1건) · **M1**(스키마 + 로더) · **M2**(라이브러리) · **M3**(2축 매칭) · **M4**(결합·가드·번호) · **M5**(리포트) · **M6**(툴 표면 + 배선) — M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`, M5부터 순차
+- milestones_open: M7 · M8
+- ac_closed: AC-SCENE-001 · 002 · 003 · 004 · 005 · 006 · 007 · 008 · 009 · 010 · 011 · 012 · 013 · 014 · 015 · 016 · 018 · 023 · 024 (**19/24**)
+- ac_open: AC-SCENE-019(M0 정리 잔여) · 017 · 020 · 021 · 022
+- current_measured: pytest **3766 passed / 5 skipped** (M1 기준선 3526 대비 신규 240, **신규 실패 0**) · `server/scene` 커버리지 **99%**(문턱 85%) · ruff check/format 클린 · `test_architecture.py` 4 passed, 예외 명단 무변경 · 닫힌 툴 집합 **13**
+- mutations: M1 **4/4** · M2 **3/3** · M3 **3/3** · M4 **20/20** · M5 **7/7** · M6 **3/3** killed (누적 **40/40**, survived 0)
+- seam_verified: ① 실물 씬 자산 5건 × 실물 빌더 전수(28 테스트) — `/CueOnly` 주입으로 비공허성 실측 ② M3 별칭 사본 드리프트 1건 검출·정정(`task_ea9ff7620253`) ③ **M6에서 상류 예외 누출 1건 검출·정정** — `FxInstantiationError`가 씬 경계를 넘어 툴을 죽였다(컴파일 계층에서 번역, 사유 코드 보존)
 - preserve_gate: `git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety` → **빈 출력**
 - open_items: ① M0 프로브 시퀀스 191~197 쇼파일 정리 **미이행**(사용자 GUI 삭제 필요) ⇒ AC-SCENE-019 미완결 ② M4가 M7에 위임한 상류 상수 결합 2건 미검증
-- commit_sha: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · M5 `pending-backfill`
+- commit_sha: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · M5 `79cea7e` · M6 `pending-backfill`
 
 ## §E.4 Sync-phase Audit-Ready Signal
 

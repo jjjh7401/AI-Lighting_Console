@@ -56,6 +56,7 @@ from dataclasses import dataclass
 #   private name across a package boundary is `server/looks/busking.py:30` and
 #   `server/looks/songcue.py:11`, both importing `_values_line` the same way.
 from server.fx.instantiate import (
+    FxInstantiationError,
     _matricks,
     _phase_lines,
     _speed_line,
@@ -364,7 +365,17 @@ def compile_scene(
     collided_attributes = tuple(sorted(look_attributes & fx_attributes))
     unclaimed_attributes = tuple(sorted(KNOWN_ATTRIBUTES - (look_attributes | fx_attributes)))
 
-    sequence = select_sequence_number(sequences_section, requested=sequence_number)
+    try:
+        sequence = select_sequence_number(sequences_section, requested=sequence_number)
+    except FxInstantiationError as error:
+        # fx owns the sequence-number LOGIC (decision H) and its reason
+        # vocabulary; this package owns its exception TYPE. Letting
+        # `FxInstantiationError` cross the boundary would make every caller of a
+        # scene catch an fx class to stay correct — and the tool layer that did
+        # not know to do so crashed instead of refusing (found by
+        # `test_scene_tool.py::...refused_before_any_cue_question`). The reason
+        # code travels unchanged so the two layers keep ONE vocabulary.
+        raise SceneCompilationError(error.reason, str(error)) from error
     cue = _select_cue_number(cues_section, requested=cue_number)
     effective_trig_type, effective_trig_time = _effective_trigger(scene, trig_type, trig_time)
 
