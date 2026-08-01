@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-SCENE-001
 title: "씬 컴파일러 — 룩 + 이펙트 + 타이밍을 하나의 큐로 (Scene Compiler)"
-version: "0.1.0"
+version: "0.2.1"
 status: draft
 created: 2026-08-01
 updated: 2026-08-01
@@ -10,7 +10,7 @@ priority: P1
 phase: "Phase 2 연출 계층 — 씬 합성 (의도→메모리 파이프라인 2단계)"
 module: "server/scene/ (신규), server/orchestrator/tools.py"
 lifecycle: spec-anchored
-tags: "scene-compiler, look-fx-merge, cue-only, tracking, sequence-cue, trigger, nl-matching, safety-gate, value-line-guard"
+tags: "scene-compiler, look-fx-merge, uniform-attributes, unasserted-enumeration, tracking, sequence-cue, trigger, nl-matching, safety-gate, value-line-guard"
 tier: L
 related_specs: [SPEC-COPILOT-FXLIB-001, SPEC-COPILOT-LOOKLIB-001, SPEC-COPILOT-SONGCUE-001, SPEC-COPILOT-BUSKWIZ-001, SPEC-COPILOT-OVERLAP-001, SPEC-COPILOT-PRECHK-001]
 ---
@@ -26,6 +26,8 @@ related_specs: [SPEC-COPILOT-FXLIB-001, SPEC-COPILOT-LOOKLIB-001, SPEC-COPILOT-S
 | 버전 | 날짜 | 작성자 | 변경 내용 |
 |---|---|---|---|
 | 0.1.0 | 2026-08-01 | manager-spec | 최초 작성 (draft, Tier L). 출처: FXLIB이 예약한 후속 좌석(spec.md:42, :70, :140) + 사용자 결정 4건(2026-08-01, 증거 리포트 후 확정 — 재질의 금지): **D1** 트래킹 정책 = 전 큐 `/CueOnly`, **D2** 결합 순서 = 룩 먼저·충돌은 이펙트 우선, **D3** `/Merge` 미사용·신규 큐 번호 전용, **D4** Tier L. 조사: 코디네이터 직접 판독(`/CueOnly` 전수 grep · fx/looks 소스 · dedupe 경계 · 게이트 어휘 · 선행 SPEC 실측 기록). REQ **20건** · AC **22건** · ASSUMPTION **41~45(5건)** · clarification 마커 **0건** · 라이브 세션 **2회(M0·M8)**. 아티팩트 6종 동시 생성. |
+| 0.2.0 | 2026-08-01 | manager-spec | **개정 — D1 폐기 후 옵션 D 채택.** 사유: **M0 라이브 프로브가 D1을 무너뜨렸다**(정본 기록 `progress.md §E.2`). ① ASSUMPTION-41(`/CueOnly` 접수)은 **기계 채널 소진** — 날조 플래그 `/CueOnlyy`가 `ok` + 저장까지 되어 `ok`도 재조회도 비변별로 판명. ② ASSUMPTION-42는 A/B 대조에서 **A=B**(둘 다 이월) — 후속 프로브가 **큐 생성이 실질 append-only**임을 실측해, 룰북이 정의한 `/CueOnly`의 보정 대상(“다음 큐”)이 저장 시점에 **존재할 수 없음**을 설명했다. ⇒ **`/CueOnly` 완전 제거**, 트래킹 정책을 **속성 집합 균일화 + 미주장 속성 전수 열거**(옵션 D)로 대체. 근거 조사: `.moai/reports/scene-uniform-attribute-set-proposal.md`. 반대로 ③ ASSUMPTION-44(룩+fx 결합) · ④ ASSUMPTION-45(충돌 승자)는 **사람 GUI 관측으로 GO** — D2/D3는 개정 없이 **강화**됐다. 동반 반영: plan-audit iter-1(PASS 0.91) minor 결함 6건 해소. 토큰 변동 REQ 20→**21**(REQ-SCENE-021 신설) · AC 22→**24**(AC-SCENE-023, AC-SCENE-024 신설) · ASSUMPTION 41·42 **moot**. **plan-artifact 해시 변경 ⇒ plan-audit 재실행 강제.** |
+| 0.2.1 | 2026-08-01 | manager-spec | **iter-2 감사 결함 16건 수정 (정책 무변경).** plan-audit iter-2(FAIL 0.80)가 열거한 D1~D16만을 범위로 삼은 **문서 정합성 개정**이며 — 요구·인수·결정·마일스톤을 **신설하지 않는다**. major 5건: ① **AC-SCENE-019의 자기 검증 grep이 0건을 반환하던 문제** — `progress.md §E.2`에 **행두(column 0) 접두 행 6행**을 신설했고, AC가 명시한 grep을 실행해 **6건**을 실측했다. ② **REQ-SCENE-021에 판정 어휘 → 접두 행 매핑 표를 인라인**하고, 어느 접두어에도 대응이 없던 `INCONCLUSIVE` 행을 신설했다(교차 SPEC 포인터 의존 제거). ③ M4 착수 게이트가 **moot된 ASSUMPTION-41의 `GO`** 를 요구해 영구 차단이던 것을 **ASSUMPTION-44 `GO`** 로 교체했다. ④ `progress.md §E.2`에 **ASSUMPTION-43 판정 절을 신설**(폐쇄 어휘 `GO` — v1 범위 한정; `truncated: True` 실측을 정본에 기록)하고, 폐쇄 어휘 밖이던 "부분 검증"을 전 surface에서 교체했다. ⑤ `plan.md §F.3` 공유 계약 표의 **SC-3 행 이탈**과 "둘/셋" 모순을 수정했다. minor 11건(D6~D16)은 개수·번호·헤딩·스테일 요약 일괄 정합. |
 
 ## A. 개요
 
@@ -39,38 +41,57 @@ related_specs: [SPEC-COPILOT-FXLIB-001, SPEC-COPILOT-LOOKLIB-001, SPEC-COPILOT-S
 
 아키텍처 전제: **LOOKLIB·FXLIB 파이프라인의 세 번째 미러**. 씬 데이터는 신규 패키지 `server/scene/`의 자기 소유 스키마이고, 커맨드는 문자열로만 구성되며, 실행은 기존 `run_commands` → `gate.screen()` 단일 관문만 쓴다. `server/looks/**` · `server/fx/**` · `console/lua/**` · `server/rulebook/assets/**` · `server/safety/**`는 전부 **PRESERVE**이며 **읽기 import만** 한다(plan.md §A.5).
 
-### 사전 확정 사실 (사용자 확정 D1~D4 — 재질의 금지, 전부 2026-08-01 확정)
+### 사전 확정 사실 (사용자 확정 D1~D4 — 재질의 금지. D1은 2026-08-01 M0 실측 후 개정, 나머지는 최초 확정 그대로)
 
-#### D1 — 트래킹 정책: 전 큐 `/CueOnly`
+#### D1 — 트래킹 정책: 속성 집합 균일화 + 미주장 속성 전수 열거 (개정 — `/CueOnly` 폐기)
 
-씬 컴파일러가 내는 **모든 Store는 `/CueOnly`를 단다.** 씬의 값이 다음 큐로 트래킹되지 않게 하기 위함이다. 룰북 근거: `server/rulebook/assets/v2.4.2/31_choreography_patterns.md:59` — *"`/CueOnly` stops the change tracking into the next cue"*, 그리고 `:130-134`의 트래킹 모델 서술(*"MA3 is a TRACKING console … `ClearAll` between looks does NOT stop this"*).
+**폐기된 것부터 적는다.** 최초 D1은 *"모든 Store에 `/CueOnly`를 단다"* 였다. **M0 라이브 프로브가 그 정책을 무너뜨렸고**(정본 기록 `progress.md §E.2`), 사용자가 대체 정책을 확정했다. 폐기 근거 2건은 전부 `[실측]`이다:
 
-**정직 제약 (이 SPEC에서 가장 중요한 한 줄)**: **`/CueOnly`는 이 리포지토리에서 한 번도 발화된 적이 없다.** 전수 grep 실측(2026-08-01, 코디네이터 직접) — `CueOnly` / `Block Sequence` / `Unblock` 세 토큰이 `server/` · `ui/src/` · `console/` 어디에도 **코드로는 0건**이고, 유일한 출현이 룰북 산문 2곳(`:59`, `:132-133`)이다. 따라서:
+1. **접수를 세울 기계 채널이 없다.** 날조 대조군으로 발화한 **존재하지 않는 플래그** `/CueOnlyy`가 `ok`를 받고 **저장까지 됐다**. 그 큐는 기대한 이름·`cueNo`를 그대로 갖는다 — 진짜 `/CueOnly`가 만들 큐와 재조회로 구별 불가다. 즉 `ok`도 재조회도 **플래그 철자에 대해 비변별**이며, 최초 계획의 대비책("`ok`가 무력하면 재조회에 의존한다")도 성립하지 않는다.
+2. **보정 대상이 존재할 수 없다.** 후속 프로브가 **이미 존재하는 큐보다 낮은 번호의 큐를 나중에 저장할 수 없음**을 실측했다(플래그 유무 무관 거부). 큐 생성이 **실질 append-only**이므로 저장 시점에 "다음 큐"가 있는 상황 자체가 만들어지지 않고, 룰북이 정의한 `/CueOnly`의 동작(*"stops the change tracking **into the next cue**"* — `31_choreography_patterns.md:59`, `:132`)은 보정할 대상을 영원히 갖지 못한다. A/B 대조에서 A군(`/CueOnly`)과 B군(무플래그)이 **동일하게 이월된 것**이 이것으로 설명된다.
 
-- **접수(acceptance)와 효과(effect)를 분리해 다룬다.** M0 라이브 프로브가 판정하는 것은 **접수**뿐이다: `/CueOnly` 플래그를 단 Store가 `ok:true`를 받고, **재조회로 그 큐가 기대한 이름·`cueNo`로 실존하는지** 확인된다(ASSUMPTION-41).
-- **트래킹이 실제로 차단되는지는 기계로 검증할 수 없다.** 큐의 내용을 돌려주는 경로가 존재하지 않기 때문이다(§C 검증 천장). 그 축은 **사람의 GUI 관측이 유일한 채널**이며, 리포트는 두 주장을 **뭉뚱그리지 않는다**(REQ-SCENE-014).
-- **상속된 부채의 표면화**: 이 저장소의 유일한 다중 큐 작성자인 SONGCUE는 **플래그 없이** Store한다(`server/looks/songcue.py:462-466` — `Store Sequence {n} Cue {c} '{name}'`). 즉 SONGCUE가 만든 큐들의 값은 **오늘 앞으로 트래킹되고 있으며**, 그 사실은 문서화·단언·측정 어디에도 없다. 씬 컴파일러가 정책을 바꾸면 그 잠재 부채가 표면화된다 — 본 SPEC은 그것을 **기록하되 고치지 않는다**(SONGCUE는 PRESERVE, research.md §5).
+**따라서 씬 컴파일러는 `/CueOnly`를 포함해 어떤 store 플래그도 발화하지 않는다.** 대신 트래킹이 샐 자리를 **구조적으로 좁히고, 좁히지 못한 자리는 매 컴파일마다 이름으로 노출한다.**
+
+**(가) 균일 집합 — 코어 4**
+
+```
+SCENE_UNIFORM_ATTRIBUTES = ("Dimmer", "ColorRGB_R", "ColorRGB_G", "ColorRGB_B")
+```
+
+**룩을 담은 모든 씬의 룩 값 라인은 이 4개를 반드시, 이 순서로 포함한다.** 앞 씬이 설정한 속성을 뒤 씬이 명시적으로 덮으므로, 트래킹이 존재해도 이 4개 축에서는 결과가 같다.
+
+이 집합은 발명이 아니라 **이미 참인 사실의 승격**이다 `[측정]`: 룩 라이브러리 32개 룩 전수에서 이 4개는 **32/32(100%)** 이고, 선언 순서까지 32/32가 위 순서다. 게다가 LOOKLIB이 이미 같은 교리를 세 테스트로 강제하고 있다(`server/tests/test_looks_library.py:231-237, :239-246, :248-252`), 그리고 그 근거 주석이 **트래킹 상속 논증 그 자체**다 — *"a look with no colour is a look whose colour is whatever the programmer left active — the same silent inheritance the rule above guards against"*. 즉 **자산 편집 0건**으로 성립한다.
+
+**(나) `Zoom` · `Iris`는 균일 보장 밖 — 채움값을 발명하지 않는다**
+
+두 속성은 등재율이 각각 16/32 · 8/32이고, **범위의 어느 끝이 무엇인지 콘솔에서 측정된 적이 없다** — 라이브러리 저자가 그 사실을 명문화해 두었다(`server/looks/library/worship.yaml:25-27`: *"it did not measure which end of each range is which"*). 룩이 선언한 경우에만 값 라인에 실리고, 선언하지 않은 룩에 씬 컴파일러가 값을 채워 넣지 않는다. `/CueOnly`를 버린 이유가 "미측정 축을 기본 경로에 넣지 않는다"였는데, 채움값 발명은 **같은 위험을 커맨드에서 값으로 옮기는 것**일 뿐이다(§D).
+
+**(다) 미주장 속성 전수 열거 — 닫지 못한 자리를 이름으로 노출한다**
+
+컴파일 결과는 **이 씬이 주장하지 않는 속성**을 전수 열거해 리포트에 싣는다:
+
+```
+미주장 = KNOWN_ATTRIBUTES − (룩이 낸 속성 ∪ fx가 구동하는 속성)
+```
+
+**유니버스의 정의는 상류 상수 `server.looks.schema.KNOWN_ATTRIBUTES`이지 오늘의 라이브러리 내용이 아니다.** 오늘 그 상수는 정확히 8개(`Dimmer` · `ColorRGB_R/G/B` · `Zoom` · `Iris` · `Pan` · `Tilt`)이고 이는 우연히 *유니온6 ∪ {Pan, Tilt}* 와 같지만, **그 등식은 예시일 뿐 정의가 아니다** — 라이브러리에서 `Iris` 보유 룩(오늘 8/32)이 전부 사라지면 유니온6은 줄어드는 반면 유니버스는 줄지 않아야 한다. 씬은 이 상수를 **읽기 import**로 소비하며 사본을 만들지 않는다(결정 E와 동형). "룩이 낸 속성 ∪ fx가 구동하는 속성"은 룩 값 라인의 속성 집합과 이펙트가 구동하는 속성 집합의 합집합이다.
+
+이 계산은 **정적이며 콘솔 질의를 요구하지 않는다** — `§3.3`의 충돌 열거와 정확히 동형이다. 열거는 "이 축이 이월될 **수 있다**"를 말할 뿐 "이월됐다"를 말하지 않는다. 실제 이월 여부는 여전히 관측 불가다(§C.1).
+
+**(라) 이 정책의 성질 — 무엇을 사고 무엇을 잃는가**
+
+- **신규 미발화 커맨드 0개.** `/CueOnly`처럼 발화 실적 없는 커맨드를 도입하지 않으므로 미측정 위험이 0이다. FXLIB이 "신규 시퀀스 Cue 1만"으로 택한 구조적 회피와 같은 계열이다.
+- **신규 발명 값 0개.** 자산 무편집(`server/looks/**`는 PRESERVE) — 경계 교차가 없다.
+- **기계 검증 가능.** "룩 값 라인이 균일 집합을 이 순서로 담는다"와 "미주장 열거가 정확히 차집합이다"는 둘 다 **정적으로 단정**된다. 관측 불가 축을 우회한다.
+- **잃는 것 — 의도적 지속(intentional tracking).** 트래킹은 조명 디자이너가 **의도적으로 쓰는 기법**이기도 하다(색만 바꾸고 위치는 유지). 균일 집합은 코어 4에 대해 "의견 없음"을 표현할 자리를 없앤다. 대신 (다)의 열거가 그 지속을 **우연이 아니라 매 컴파일마다 보고되는 사실**로 만든다.
+- **닫지 못하는 축이 남는다 — Pan/Tilt.** 균일화로 **원리적으로 닫히지 않는다**(§D). 은폐하지 않고 (다)로 노출한다.
+- **상속된 부채의 성질 변화**: SONGCUE도 무플래그로 Store하므로(`server/looks/songcue.py:462-466`) 이제 저장소에 **플래그 정책의 분기는 없다**. 남는 대비는 "SONGCUE는 균일 집합을 강제하지 않는다"이며, 그것은 **기록하되 고치지 않는다**(SONGCUE는 PRESERVE, research.md §5, design.md §6.1).
 
 #### D2 — 결합 순서: 룩 먼저, 충돌은 이펙트 우선
 
-하나의 씬 번들 안에서 커맨드 조립 순서는 아래 골격을 따른다. **정본은 design.md §3이며, 병렬 브리프는 그 절을 문면 그대로 인용한다.**
+하나의 씬 번들 안에서 커맨드 조립 순서는 **`design.md §3.1` 골격이 정본이다.** 본 절은 그 골격을 복제하지 않는다 — 병렬 브리프는 `design.md §3` 전문을 문면 그대로 인용하며(plan.md §F.3 SC-1), **여기에 두 번째 사본을 두면 그 사본이 세 번째 해석이 된다.** 요구 형태로 규범화된 판본은 REQ-SCENE-010이고, 그 역시 `design.md §3.1`을 정본으로 지시한다.
 
-```
-ChangeDestination Root
-ClearAll
-Group <n>
-<룩 값 라인 — 하나의 ';' 체인 라인>
-<fx step1 값 라인들>
-Step 2
-<fx step2 값 라인들>
-[Step 3 …]
-<위상 라인들>
-<속도 라인>
-[Set Selection MAtricks …]
-Store Sequence <s> Cue <c> '<이름>' /CueOnly
-[Reset Selection MAtricks]
-ClearAll
-```
+본 절이 소유하는 것은 골격이 아니라 **골격이 그런 모양인 이유** 둘이다.
 
 **왜 룩이 먼저인가 — 이건 취향이 아니라 강제다.** 페이저는 2개 이상의 스텝을 요구하고(`server/fx/schema.py:66` `MIN_STEPS = 2`), 빌더는 `Step 1` 라인을 **발화하지 않는다**(`server/fx/instantiate.py:326-342` — *"`Step 1` is never emitted — the first step is the current one"*). 즉 **첫 스텝은 "현재 프로그래머 상태"이며 이펙트가 그 위에서 변형을 시작한다.** 룩은 그 현재 상태를 채우는 값이므로 스텝 1에 **자연히** 착지해야 하고, 그러려면 첫 `Step 2` 라인보다 앞에 있어야 한다. 룩을 이펙트 뒤에 놓으면 룩 값이 마지막 스텝에 얹혀 페이저의 종점이 되어 버린다.
 
@@ -94,7 +115,7 @@ ClearAll
 
 #### D4 — Tier L
 
-아티팩트 5종(spec/plan/acceptance/design/research) + progress + 자동 생성 spec-compact. plan-auditor 문턱 **0.85**.
+아티팩트 5종(spec/plan/acceptance/design/research) + progress = **디렉터리 6파일**. plan-auditor 문턱 **0.85**.
 
 ### 씬의 폐쇄 어휘 — 무엇을 합성할 수 있는가
 
@@ -106,7 +127,7 @@ ClearAll
 | `fx_id` | FXLIB 라이브러리 실존 id (선택 — 룩 단독 씬 허용) | `server/fx/loader.py` |
 | 대상 그룹 | rig context 등재 번호 (발명 금지) | `31_choreography_patterns.md:210-211` |
 | 시퀀스 번호 | 재조회 실측 또는 사용자 지정 | `server/fx/instantiate.py:218` |
-| **큐 번호** | **임의 신규 번호** (fx의 `Cue 1` 상수 고정을 넘는 축) | D3 |
+| **큐 번호** | **비어 있는 정수 번호** (fx의 `Cue 1` 상수 고정을 넘는 축). 기존 큐보다 **낮은 번호는 콘솔이 거부**하므로 실질 오름 순이다(§C.1a-1) | D3 |
 | 트리거 | `TrigType` / `TrigTime` (선택) | `31_choreography_patterns.md:106-117` |
 | 라벨 | ASCII, Store 리터럴에 인라인 | `server/looks/songcue.py:462` |
 
@@ -131,14 +152,19 @@ ClearAll
 
 ### B.3 MA3 컴파일 (게이트 경유, 단일 큐)
 
-- **REQ-SCENE-010** [Event-driven] — **When** 사용자가 하나의 씬에 대한 컴파일을 지시하면, the 컴파일러 **shall** D2 결합 순서(design.md §3 정본)로 커맨드 번들을 구성한다: 선두 `ChangeDestination Root` 정확 1회 → `ClearAll` → 그룹 선택(bare `Group <n>` **번호형 단일**, `Select` 접두 금지) → **룩 값 라인**(하나의 `;` 체인) → **fx 스텝 열**(스텝 1 값 → `Step 2` → 스텝 2 값 → …) → 위상 라인들 → 속도 라인 → (선언 시) MAtricks 라인들 → `Store Sequence <s> Cue <c> '<라벨>' /CueOnly` → (MAtricks 사용 시) `Reset Selection MAtricks` → `ClearAll`. **산출물은 시퀀스 1개 + 큐 1개다.**
+- **REQ-SCENE-010** [Event-driven] — **When** 사용자가 하나의 씬에 대한 컴파일을 지시하면, the 컴파일러 **shall** D2 결합 순서(**정본 design.md §3.1**)로 커맨드 번들을 구성한다: 선두 `ChangeDestination Root` 정확 1회 → `ClearAll` → 그룹 선택(bare `Group <n>` **번호형 단일**, `Select` 접두 금지) → **룩 값 라인**(하나의 `;` 체인) → **fx 스텝 열**(스텝 1 값 → `Step 2` → 스텝 2 값 → …) → 위상 라인들 → 속도 라인 → (선언 시) MAtricks 라인들 → `Store Sequence <s> Cue <c> '<라벨>'`(**플래그 없음** — REQ-SCENE-013) → (MAtricks 사용 시) `Reset Selection MAtricks` → `ClearAll` → **(트리거 지정 시) 트리거 PROPERTY 2줄** → **(익스큐터 명시 지정 시) `Assign` 1줄**. **선택 말미 2종은 REQ-SCENE-016 · REQ-SCENE-017이 소유한다** — 본 요구의 사슬은 그 둘을 포함해야 완결이다. **산출물은 시퀀스 1개 + 큐 1개다.**
 - **REQ-SCENE-011** [Ubiquitous] — 컴파일 번들 **shall** 검증된 프로그래밍 규율을 따른다: 목적지 1회, 캡처 전·Store 후 `ClearAll`, MAtricks를 쓴 번들은 Store 후 `Reset Selection MAtricks`, 라벨은 Store 리터럴에 인라인. **스텝 규율(FXLIB M0 실측 계승)**: `Step 1` 라인은 발화하지 않고, 둘째 스텝부터 **단독 `Step <k>` 라인**을 그 스텝의 값 라인 **앞에** 놓으며, 스텝 값 라인은 `;` 체이닝하지 않는다. **금지 형태 `Attribute '<attr>' At Step <k>` 0건**(FXLIB REQ-FXLIB-022 계승 — `ok:true`이나 효과 없음).
-- **REQ-SCENE-012** [Ubiquitous] — **모든 Store 라인 shall `/CueOnly` 플래그를 담는다**(D1). 플래그 없는 Store, `/Merge` 달린 Store, `/Overwrite` 달린 Store는 어느 경로로도 발화되지 않는다.
-- **REQ-SCENE-013** [Unwanted] — the 컴파일 **shall not**: (a) `/Overwrite`를 어떤 경로로도 발화하지 않고(블랙리스트 — `server/safety/blacklist.yaml:18`), (b) **`/Merge`를 어떤 경로로도 발화하지 않으며**(D3 — 대소문자 무관 부재), (c) 기존 큐 번호에 Store를 시도하지 않고(재조회로 실측한 빈 번호만 — 콘솔의 `Not allowed` 거부는 마지막 방어선이지 계획 경로가 아니다), (d) 시퀀스·큐 번호를 발명하지 않는다 — 재조회 결과의 `truncated`가 참이면 자동 배정을 **거부**하고 명시 보고한다.
-- **REQ-SCENE-014** [Event-driven] — **When** 컴파일이 완료되면, the 시스템 **shall** 한국어 2단 리포트(요약 1단 + 상세 1단)를 반환하며, 그 문면은 아래 **세 주장을 분리해** 싣는다 — 뭉뚱그려 "확인했다"고 적는 것은 금지된다(SONGCUE REQ-SONGCUE-017 규율 계승, 구현 선례 `server/looks/songcue_report.py:15` `PROPERTY_UNOBSERVED_NOTE`):
+- **REQ-SCENE-012** [Ubiquitous] — **룩을 담은 씬의 룩 값 라인 shall 균일 속성 집합 `SCENE_UNIFORM_ATTRIBUTES = ("Dimmer", "ColorRGB_R", "ColorRGB_G", "ColorRGB_B")` 을 전부, 이 순서로 포함한다**(D1 (가)). 규율 4항:
+  - **(a) 적용 범위**: 룩을 담은 씬에만 적용된다 — 이펙트 단독 씬에는 룩 값 라인 자체가 없다(REQ-SCENE-001, REQ-SCENE-003이 허용하는 적법 형태). 그 씬의 미주장 축은 REQ-SCENE-014 (d)의 열거가 전담한다.
+  - **(b) 순서 강제**: 컴파일러는 값 시퀀스를 **균일 집합 순서 우선 + 나머지 선언 속성은 선언 순서 유지**로 정렬해 상류 `_values_line`에 넘긴다. 재조립이 아니라 **인자 순서 선택**이므로 결정 D(문자열 단일 출처)를 위반하지 않는다. 이 정렬은 오늘 라이브러리 32/32에 대해 **바이트 무변화**임이 측정됐다 `[측정]`.
+  - **(c) 위반 시**: 균일 집합을 채우지 못하는 룩을 받으면 컴파일러는 번들 생성을 **거부(raise)** 한다 — `UNIFORM_ATTRIBUTES_INCOMPLETE` 사유. 조용한 부분 발화는 금지된다.
+  - **(d) 균일 보장 밖**: `Zoom` · `Iris`는 룩이 선언한 경우에만 실린다. **컴파일러는 미선언 속성에 값을 발명해 채우지 않는다**(D1 (나) · §D).
+- **REQ-SCENE-013** [Unwanted] — the 컴파일 **shall not**: (a) `/Overwrite`를 어떤 경로로도 발화하지 않고(블랙리스트 — `server/safety/blacklist.yaml:18`), (b) **`/Merge`를 어떤 경로로도 발화하지 않으며**(D3 — 대소문자 무관 부재), (c) 기존 큐 번호에 Store를 시도하지 않고(재조회로 실측한 빈 번호만 — 콘솔의 `Not allowed` 거부는 마지막 방어선이지 계획 경로가 아니다), (d) 시퀀스·큐 번호를 발명하지 않으며 — 재조회 결과의 `truncated`가 참이면 자동 배정을 **거부**하고 명시 보고한다(이 방어가 가상이 아님은 M0에서 실측됐다: `DataPool/Sequences` childCount **24**에 반환 **18** + `truncated: True` — `progress.md §E.2`) — (e) **Store 라인에 어떤 플래그도 달지 않는다**(`/CueOnly` 포함, 대소문자 무관 0건). 근거는 취향이 아니라 실측이다: **콘솔은 미지 store 플래그를 조용히 접수한다**(존재하지 않는 `/CueOnlyy`가 `ok` + 저장까지 됨 — `progress.md §E.2`). 즉 플래그 철자에 대해 `ok`도 재조회도 변별력이 없으므로, **오타가 침묵으로 통과하는 축 자체를 열지 않는다.**
+- **REQ-SCENE-014** [Event-driven] — **When** 컴파일이 완료되면, the 시스템 **shall** 한국어 2단 리포트(요약 1단 + 상세 1단)를 반환하며, 그 문면은 아래 **네 주장을 분리해** 싣는다 — 뭉뚱그려 "확인했다"고 적는 것은 금지된다(SONGCUE REQ-SONGCUE-017 규율 계승, 구현 선례 `server/looks/songcue_report.py:15` `PROPERTY_UNOBSERVED_NOTE`):
   - **(a) 기계 확인된 사실** — 생성 시퀀스·큐의 **존재**와 이름·`cueNo`(재조회 실측), 발화 커맨드 수, 실행 결과(실패 시 `not_executed` 목록 전파; **비면제 라인의 `skipped_already_executed` 발생 시 그 목록도 전파하고 성공 보고를 금지**).
   - **(b) 기계 확인 불가 — 효과** — 이펙트의 모션·룩의 발색은 **기계로 확인되지 않는다.** 리포트 **shall** "무대/GUI에서 사람이 확인해야 한다"는 취지를 **무조건**(성공 경로 포함 전 경로에서) 싣는다. FXLIB이 같은 형상의 상수를 이미 갖는다(`server/fx/report.py:52` `EFFECT_EVIDENCE_NOTICE`) — 씬 리포트는 **동형의 자기 상수**를 갖고, 테스트는 **상수 동일성 검사**로 확인한다(산문 비교 금지 — 선례 `server/tests/test_songcue_report.py:119`).
-  - **(c) 기계 확인 불가 — 트래킹 차단** — `/CueOnly`가 **접수됐다는 것**과 **트래킹이 실제로 막혔다는 것**은 다른 주장이다. 전자만 기계로 확인되며(큐 실존 재조회), 후자는 **관측 채널이 존재하지 않는다.** 리포트 **shall** 이 둘을 분리해 적고, 접수 확인을 트래킹 차단의 증거로 제시하지 않는다.
+  - **(c) 기계 확인 불가 — 트래킹 무해화** — **균일 집합을 발화했다는 것**과 **그래서 트래킹이 무해해졌다는 것**은 다른 주장이다. 전자만 기계로 확인되며(산출 문자열 정적 검사), 후자는 **관측 채널이 존재하지 않는다** — 큐의 내용을 돌려주는 경로가 없다(§C.1). 리포트 **shall** 이 둘을 분리해 적고, 균일성 확인을 "트래킹이 해결됐다"의 증거로 제시하지 않는다. **실패 모드가 `/CueOnly` 때와 동일하다** — 정책은 바뀌었으나 관측 천장은 그대로다.
+  - **(d) 미주장 속성 전수 열거** — 리포트 **shall** `KNOWN_ATTRIBUTES − (룩이 낸 속성 ∪ fx가 구동하는 속성)`을 **전수 열거**해 싣는다(D1 (다)). 유니버스는 상류 공개 상수 `server.looks.schema.KNOWN_ATTRIBUTES`가 **정의**이며, *오늘 = 유니온6 ∪ {Pan, Tilt}* 는 **예시 값일 뿐 정의가 아니다**(AC-SCENE-024 · design.md §6 · plan.md 결정 K와 같은 문면). 계산은 **정적**이며 콘솔 질의를 요구하지 않는다. 문면은 "이 축은 앞 씬의 값이 **이월될 수 있다**"까지만 주장하며, **"이월됐다"고 적지 않는다** — 실제 이월 여부는 (c)와 같은 이유로 관측 불가다. 열거가 비어야 할 때 비고 채워져야 할 때 채워지는지는 정적으로 판정된다(AC-SCENE-024).
 - **REQ-SCENE-015** [Ubiquitous] — **값 라인 충돌 가드 (1급 요구 — 경계 2중, FXLIB REQ-FXLIB-011 계승)**:
   - **(a) 번들 내 경계 (구성 시점)**: 번들 구성기 **shall** 구성 완료 시점에 비면제 커맨드 문자열의 **번들 내 유일성**을 검사하고, 중복이 존재하면 번들을 **생성하지 않고** 명시적 에러(`VALUE_LINE_COLLISION` 동형 사유)로 보고한다. 씬 번들은 룩 값 라인과 fx 스텝 값 라인을 **함께** 담으므로 FXLIB 번들보다 값 라인 수가 크고, 따라서 충돌 표면이 넓다.
   - **(b) 지시 턴 경계 (교차 호출 — 실행 결과 시점)**: dedupe의 실제 경계는 번들이 아니라 **지시 턴 전체**다(`server/orchestrator/runner.py` 가 `ExecutionContext(executed_ok=…)`를 다음 호출로 전달; 판정 주석 원문 "either **in a prior tool call** … or earlier in THIS bundle" — `server/orchestrator/tools.py:699-703`). the 툴 **shall** 실행 결과의 커맨드별 outcome을 검사해 **비면제 라인에 `skipped_already_executed`가 1건이라도 있으면 해당 컴파일을 성공으로 보고하지 않고** 교차 호출 충돌을 명시적 실패로 보고한다.
@@ -156,10 +182,34 @@ ClearAll
 - **REQ-SCENE-019** [Unwanted] — 단일 초크포인트: `server/scene/` **shall not** 어떤 transport(`server.bridge`/`pythonosc`)도, 게이트 표면(`server.safety.gate` / `server.safety.console` / `server.orchestrator.ports`)도 import하지 않는다 — 커맨드는 문자열로만 구성되고, 실행은 `run_commands` → `gate.screen()` 경로 하나다. 신규 `server/scene/`는 `server/tests/test_architecture.py`의 전역 import 스캔에 **자동 포섭**되며, 예외 명단(`_NAMED_TOOL_EXEMPTIONS`)에 항목을 추가하는 것은 금지된다.
 - **REQ-SCENE-020** [State-driven] — **While** LiveLock이 활성인 동안, 씬 컴파일 **shall** 제안(Proposal) 전용으로 강등되고 콘솔 송신은 0건이다 — **Store 라인을 포함해** 전 커맨드가 `status == "proposal"`이며, 강등은 **실패가 아니라 답**이므로 `is_error is False`이고 `succeeded is False`다(`server/tests/test_fx_boundary.py:459` 패턴 계승). 본 SPEC은 그 강등 기제를 소비만 하고 수정하지 않는다.
 
+### B.6 라이브 판정 기록 의무
+
+- **REQ-SCENE-021** [Ubiquitous] — 라이브 세션(M0 프로브 · M8 종단)의 각 판정 **shall** `progress.md §E.2`에 **폐쇄 판정 어휘**(`GO` / `NEGATIVE` / `CONDITION_NOT_MET` / `INCONCLUSIVE` / `REOPEN_SCOPE`)와 그에 대응하는 **접두 행**(`GO:` / `DESCOPE:` / `SKIP:` / `REOPEN:`)을 갖는 **명시적 섹션**으로 기록되며, 각주로 대체되지 않는다. **두 어휘의 대응은 아래 매핑 표가 정본이다** — 어휘 5종과 접두어 4종은 개수가 다르므로 매핑 없이는 요구가 성립하지 않는다. 세부 3항:
+  - **(a) 분리 기록**: 서로 다른 ASSUMPTION의 판정을 하나로 합치지 않는다. 특히 **접수(무엇이 받아들여졌는가)와 효과(무엇이 일어났는가)는 언제나 별개 판정**이다.
+  - **(b) 부정 시 중단**: 사용자 확정 정책의 전제가 부정되면 the run-phase **shall** 중단하고 **블로커를 보고**한다 — 에이전트가 대체 정책을 골라 진행하는 것은 결정 월권이며 금지된다(plan.md §A.3 예외).
+  - **(c) 대조군 선행**: `ok`를 어느 축의 증거로 채택하기 전에 **날조 대조군 1발**로 그 축에서 `ok`가 변별적임을 확립한다. 변별적이지 않다고 판명되면 **그 사실 자체를 판정으로 기록**한다.
+  - 이 요구는 M0에서 **실제로 발동했다** — ASSUMPTION-41이 (c)에 걸려 `CONDITION_NOT_MET`으로 닫혔고 (b)에 따라 중단·보고됐으며, 그 결과가 D1 개정이다.
+
+**판정 어휘 → 접두 행 매핑 (REQ-SCENE-021이 소유하는 정본)**
+
+본 표는 **인라인 정본**이며 타 SPEC 요약을 가리키는 포인터로 대체되지 않는다 — 공유 계약을 요약본으로 참조하지 않는다는 규율(plan.md §F.3)이 판정 어휘에도 그대로 적용된다. PRECHK가 세운 4행(`GO` · `NEGATIVE` · `CONDITION_NOT_MET` · `REOPEN_SCOPE`)을 계승하되, **PRECHK에 대응 행이 없던 `INCONCLUSIVE`는 본 SPEC이 신설한다**(PRECHK 어휘에는 그 판정이 나오지 않았으나 본 SPEC의 ASSUMPTION-42가 실제로 그 판정을 받았다).
+
+| 판정 어휘 | 접두어 | 행 형태 (한 판정당 정확히 1행) |
+|---|---|---|
+| `GO` | `GO:` | `GO: <대상> literal=<발화 리터럴> effect=<재조회 또는 사람 GUI 관측 증거>` |
+| `NEGATIVE` | `DESCOPE:` | `DESCOPE: <대상> <부정 근거>` |
+| `CONDITION_NOT_MET` | `SKIP:` | `SKIP: <대상> precondition=<미성립 전제> <사유>` |
+| `INCONCLUSIVE` | `DESCOPE:` | `DESCOPE: <대상> verdict=INCONCLUSIVE <판정 불능 사유>` — **`verdict=` 키가 필수**다 |
+| `REOPEN_SCOPE` | `REOPEN:` | `REOPEN: <대상> <재개방 사유>` |
+
+`<대상>`은 `ASSUMPTION-nn` 또는 사용자 확정 결정 `Dn`이다(본 SPEC의 `REOPEN_SCOPE`는 D1을 대상으로 발동했다). **접두 행은 반드시 행두(column 0)에서 시작한다** — H4 헤딩이나 볼드/코드 스팬 안에 들어가면 `^` 앵커 grep이 잡지 못하고, 그러면 AC-SCENE-019의 기계 확인이 성립하지 않는다.
+
+**`INCONCLUSIVE`가 `DESCOPE:`를 공유하는 근거, 그리고 그 대가**: 접두어 4종이 표시하는 것은 판정의 *원인*이 아니라 **판정이 그 축에 대해 내리는 처분**이다. `INCONCLUSIVE`는 측정을 수행했으나 대조군이 갈리지 않아 판정이 서지 않은 상태이고, 본 SPEC의 교리("미검증 축을 기본 경로에 넣지 않는다" — D1 (나) · §D `Zoom`/`Iris` 제외)에 따라 **판정이 서지 않은 축은 `NEGATIVE`와 동일하게 v1 기본 경로에서 내려간다.** 처분이 같으므로 접두어를 공유한다. `SKIP:`이 아닌 이유는 `CONDITION_NOT_MET`이 *"전제 미성립으로 측정하지 못했다"* 인 반면 `INCONCLUSIVE`는 *"측정했으나 판정이 서지 않았다"* 로 성질이 다르기 때문이다 — 측정하지 않은 것을 측정한 것처럼 세지 않는다는 `SKIP:`의 취지를 역으로 위반하게 된다. 대가는 `^DESCOPE:` grep이 부정과 판정 불능을 함께 잡는다는 것이며, 그래서 `verdict=INCONCLUSIVE` 키를 **필수**로 두어 두 경우를 행 안에서 구별한다 — 접두어는 공유하되 **판정 어휘 자체는 뭉치지 않는다**((a) 분리 기록의 연장이다).
+
 ## C. 환경 및 전제 (Environment / Assumptions)
 
 - **대상 환경**: grandMA3 onPC 2.4.2, 앱과 콘솔 동일 머신 로컬 공존, OSC `127.0.0.1` UDP. site config는 effective 값에서만 읽는다 — 하드코딩 금지.
-- **기능 전제**: LOOKLIB(`server/looks/` — `status: completed`), FXLIB(`server/fx/` — `status: completed`, main `e4bc78e`에 머지됨), SONGCUE·BUSKWIZ·PRECHK·OVERLAP(전부 머지 완료), MVP 파이프라인(`run_commands`·`gate.screen()` 단일 관문·승인/제안 카드), `get_rig_context` 재조회 + 드릴다운. 전부 `related_specs`(비차단) 참조이며, **run-phase 킥오프 시 각 전제의 실제 상태를 재확인하고 어긋남을 progress.md에 기록한다**.
+- **기능 전제**: LOOKLIB(`server/looks/` — `status: completed`), FXLIB(`server/fx/` — `status: completed`, main `e4bc78e`에 머지됨), SONGCUE·BUSKWIZ·PRECHK·OVERLAP(전부 머지 완료), MVP 파이프라인(`run_commands`·`gate.screen()` 단일 관문·승인/제안 카드), `get_rig_context` 재조회 + 드릴다운. 전부 `related_specs`(비차단) 참조이며, **run-phase 킥오프 시 각 전제의 실제 상태를 재확인하고 어긋남을 progress.md에 기록한다**. (프론트매터가 `depends_on:`이 아니라 `related_specs:`를 쓰는 이유: 6건 전부 `status: completed`로 이미 머지돼 있어 차단할 대상이 없고, `depends_on:`은 Phase 1 Depends_on Pre-flight Check를 활성화해 **매 run 진입마다 완료된 SPEC 6건을 재해석**하게 만든다. 참조 관계는 남기되 게이트는 열지 않는다는 선택이다.)
 - **실행 특성 (선행 SPEC 실측 전재 — `[실측]` 원출처는 해당 SPEC 기록)**: `run_commands`는 stop-on-first-failure이며 실패 이후 커맨드는 `not_executed`로 전파된다. 번들 규모 기준선 87줄/5.77s, 줄당 ~66ms(66.3-66.7ms — BUSKWIZ progress.md:278-281 실측 전재). 씬 번들은 **~14-22줄**(룩 값 라인 1줄 + fx 스텝 열 + 트리거 2줄)이므로 여유가 크다.
 
 ### C.1 검증 천장 — 무엇이 기계로 확인되고 무엇이 안 되는가
@@ -170,23 +220,38 @@ ClearAll
 |---|---|---|
 | 큐의 **존재**, 이름, 실제 `cueNo` | **YES** | `state` 재조회 |
 | 시퀀스 이름, `childCount` | **YES** | `state` 재조회 |
+| **값 라인의 균일 속성 집합** | **YES** | 산출 문자열 정적 검사 — 콘솔 무접촉 |
+| **미주장 속성 열거의 정확성** | **YES** | 정적 차집합 — 콘솔 무접촉 |
+| **룩/이펙트 충돌 attribute 열거** | **YES** | 정적 교집합 — 콘솔 무접촉 |
 | `TrigType` / `TrigTime` | **YES** — 단 **게이트 우회 직결 경로** | 응답기 `prop` 동사(v1.5.0), `server/safety/console.py:391` `query_property` |
 | `CueFade` | **NO** | 두 경로 모두 `property not readable: CueFade` |
 | **큐의 내용(저장된 값)** | **NO** | 반환 경로가 존재하지 않는다 |
 | **효과 / 모션 / 발색** | **NO** | 사람의 GUI 관측이 유일 |
-| **트래킹 전파(= `/CueOnly`의 실제 작동)** | **NO** | 관측 주체가 없다(`ui/src/components/ExecutionPreviewCard.tsx:61`) |
+| **트래킹 전파(= 균일화가 실제로 무해화했는가)** | **NO** | 관측 주체가 없다(`ui/src/components/ExecutionPreviewCard.tsx:61`) |
+| **store 플래그의 철자·유효성** | **NO** | **M0 실측** — 존재하지 않는 `/CueOnlyy`가 `ok`를 받고 저장까지 됐고, 그 큐는 기대 이름·`cueNo`를 그대로 가졌다. `ok`도 재조회도 **비변별**이다 |
 
-`Cmd()` OK는 효과 증거가 아니다. FXLIB이 이를 라이브로 증명했다 — *"스텝 쌍 없이 변형 라인만 발화하면 `ok:true` 전량에 모션 0이다"*(M0 §3 실패 3회, `SPEC-COPILOT-FXLIB-001/spec.md:50`).
+`Cmd()` OK는 효과 증거가 아니다. FXLIB이 이를 라이브로 증명했다 — *"스텝 쌍 없이 변형 라인만 발화하면 `ok:true` 전량에 모션 0이다"*(M0 §3 실패 3회, `SPEC-COPILOT-FXLIB-001/spec.md:50`). 본 SPEC의 M0가 여기에 **한 층을 더 얹었다**: `ok`는 *일반적으로는* 변별적이지만(점유 큐 재저장은 실제로 거부됐다) **미지 store 플래그에 한해 관대하다.** "`ok`는 아무 의미 없다"도 과잉 일반화이고 "`ok`면 파싱됐다"도 틀렸다 — **축마다 대조군으로 확인해야 한다**(REQ-SCENE-021 (c)).
+
+### C.1a M0가 추가한 콘솔 제약 2건 (승계 필수)
+
+1. **큐 생성은 실질 append-only다** `[실측]`. 이미 존재하는 큐보다 **낮은 번호**의 큐를 나중에 저장하면 플래그 유무와 무관하게 `Not allowed`로 거부된다. ⚠️ 이 발견은 룰북 `:56`의 서술(*"Cue numbers carry decimals — insert between existing cues with `1.5`, `1.55`"*)과 **표면상 충돌하며, 소수 번호 삽입은 미측정이다.** 정수 번호 역순 저장이 거부된다는 것만이 실측이고, **"삽입 일반이 불가하다"로 확대 해석하면 안 된다**(소수 큐는 §D 제외).
+2. **거부 메시지 리터럴을 단정 근거로 쓰지 말 것** `[실측]`. 원인마다 메시지가 다르다 — 점유 큐 재저장은 `User Canceled Command`, 역순 저장은 `Not allowed`였다. SONGCUE M0가 기록한 것은 후자다. **메시지 문자열 일치로 원인을 판정하는 테스트·서술을 세우지 않는다.**
 
 ### C.2 미검증 전제 (ASSUMPTION — FXLIB이 36~40을 사용, 본 SPEC은 41부터)
 
 **각각이 실제로 막는 대상은 서로 다르다** — 전부가 저작을 막는 것은 아니다(LOOKLIB 순서 결함 교훈 계승, 표의 소유는 plan.md §A.2).
 
-- **ASSUMPTION-41 (`/CueOnly` 접수 가능성)**: onPC 2.4.2가 `Store Sequence <s> Cue <c> '<name>' /CueOnly`를 **접수**하고, 그 큐가 재조회에서 기대한 이름·`cueNo`로 실존한다. **미검증** — 리포지토리 전수 grep 0건(코드 발화 이력 없음), 근거는 룰북 산문뿐(`[문서]` 등급). **M0 1순위.** 막는 대상: **M4의 번들 형상(Store 라인) 전체.** 부정 실측(`Illegal object` 류 거부) 시: D1 정책이 성립 불가이므로 **run-phase 중단 + 블로커 보고**이며, 조용한 무플래그 폴백은 **금지**된다(정책이 사용자 확정이므로 대체 결정은 사용자 몫).
-- **ASSUMPTION-42 (`/CueOnly`의 트래킹 차단 효과)**: `/CueOnly`로 저장된 큐의 값이 실제로 다음 큐로 트래킹되지 않는다. **미검증이며 기계로는 영원히 미검증이다**(§C.1). **M0에서 사람 GUI 관측으로만 기록**한다. 막는 대상: **없음 — 저작을 막지 않는다.** 부정/미관측이어도 v1 형상은 불변이고, 바뀌는 것은 **리포트 문면의 정직도**뿐이다(REQ-SCENE-014 (c)). 의도적 배칭.
-- **ASSUMPTION-43 (임의 큐 번호 Store 가능성)**: `Store Sequence <s> Cue <c>`에서 `c`가 1이 아닌 임의 신규 번호일 때도 저장이 성립한다. **부분 검증** — SONGCUE가 `Cue 2`를 라이브로 성립시켰고(`progress.md:337-344`), `Cue 1.5` 류 소수 큐는 룰북 산문(`:56`)뿐이다. 막는 대상: **없음 — v1은 정수 큐 번호만 쓴다.** 소수 큐는 §D 제외.
-- **ASSUMPTION-44 (룩 값 라인과 fx 스텝 열의 결합 성립)**: 룩의 `;` 체인 값 라인이 스텝 1에 착지하고, 그 위에서 fx 스텝 열이 페이저를 성립시킨다. **미검증** — 두 계층이 한 번들에서 결합된 실측이 0건이다. **M0 2순위.** 막는 대상: **M4 번들 형상 + M2 결합 규칙.** 부정 실측 시: 결합 순서의 재설계가 필요하므로 **블로커 보고**(조용한 진행 금지).
-- **ASSUMPTION-45 (충돌 attribute의 승자 확인 가능성)**: 룩과 이펙트가 같은 attribute를 지정했을 때 **어느 쪽이 이겼는지**를 관측할 수 있다. **미검증이며 §C.1상 기계로는 불가**(큐 내용 판독 불가). **M0에서 GUI 사람 관측으로만 기록**한다. 막는 대상: **없음** — D2가 "나중 라인이 이긴다"를 **형상으로 강제**하므로(이펙트 라인이 뒤에 온다) 관측 실패는 리포트 열거의 신뢰도만 낮추고, 열거 자체는 **컴파일 시점 정적 계산**이라 관측과 무관하게 정확하다.
+**M0 실행 완료 (2026-08-01) — 판정 정본은 `progress.md §E.2`다.** 아래는 그 판정의 요약과 SPEC 저작에 미친 영향이며, 증거 원문을 여기에 복제하지 않는다.
+
+- **ASSUMPTION-41 (`/CueOnly` 접수 가능성)** — **`CONDITION_NOT_MET` → moot.** 판정 이력: 날조 대조군이 `ok`로 통과·저장까지 되어 **기계 채널이 소진**됐고(§C.1 마지막 행), 접수를 입증할 제3 경로가 없어 `GO`로 올릴 수 없었다. **가정 자체가 소멸한 이유**: D1 개정으로 `/CueOnly`를 포함한 store 플래그를 일절 쓰지 않으므로 접수 여부가 더 이상 어느 것도 막지 않는다. **삭제하지 않고 이력으로 남긴다** — 이 판정이 D1 개정의 직접 원인이기 때문이다.
+- **ASSUMPTION-42 (`/CueOnly`의 트래킹 차단 효과)** — **`INCONCLUSIVE` → 실질 무효 → moot.** A/B 대조에서 **A군(`/CueOnly`)과 B군(무플래그)이 동일**했다(둘 다 Cue 2에서 딤머 잔존). B군이 남았다는 것은 **전방 트래킹이 이 콘솔에서 실재함**을 확인해 주므로 관측 설계 자체는 유효했다. A=B의 설명은 §C.1a-1의 append-only 제약이다 — 보정 대상이 존재할 수 없다. 41과 동일하게 moot이며 이력으로 남긴다.
+- **ASSUMPTION-43 (임의 큐 번호 Store 가능성)** — **`GO`, 단 판정 대상을 v1이 실제로 쓰는 범위로 좁혀서다.** (판정 정본 `progress.md §E.2`. 이전 판본이 쓴 *"부분 검증"* 은 REQ-SCENE-021의 폐쇄 어휘 밖이었으므로 폐쇄 어휘로 교체했다 — 판정 내용은 바뀌지 않았고 어휘만 바뀌었다.) 성립(`GO`의 근거): **신규 시퀀스의 정수 큐 번호 Store가 성립한다** — SONGCUE가 `Cue 2`를 라이브로 성립시켰고(`progress.md:337-344`) M0 프로브도 같은 형태를 냈다. **좁힌 근거 2건이 같은 세션에서 실측됐다**: ① 존재하는 큐보다 낮은 번호의 나중 저장은 플래그 무관 거부된다(§C.1a-1), ② **`truncated: True`가 실측됐다**(childCount 24 / 반환 18) — REQ-SCENE-013 (d)의 `truncated` 거부 가드가 **가상의 방어가 아니라 실재 조건에 대한 방어**임이 확인됐다. 좁히지 않은 원형(*"임의"* 큐 번호)은 역순 축에서 부정이 실측됐고 소수 축은 미측정이므로 **둘 다 §D 제외**다. 막는 대상: **없음** — v1은 정수·신규·오름 번호만 쓴다.
+- **ASSUMPTION-44 (룩 값 라인과 fx 스텝 열의 결합 성립)** — **`GO` (사람 GUI 관측).** 관측: **파란색이 유지된 채 딤머가 순차 웨이브.** 기대 형상과 일치한다. ⇒ **`design.md §3.1` 결합 순서 골격이 실측으로 확정됐다** — 룩의 정지 값이 스텝 축에 흡수되지 않고 베이스로 남는다. **이제 가정이 아니라 실측이다.**
+- **ASSUMPTION-45 (충돌 attribute의 승자)** — **`GO` (사람 GUI 관측).** 관측: 룩 `Dimmer At 80` + fx `Dimmer` 스텝 열(100/0)에서 **딤머가 펄스 — 이펙트 승.** ⇒ **`design.md §3.3` 충돌 규칙이 확정됐다.** 열거 자체는 정적 계산이므로 이 관측과 무관하게 정확하다.
+
+**⚠️ 승계 필수 — M0가 남긴 프로브 설계 결함**: 플랜의 프로브 A와 B가 **같은 `Sequence 191 Cue 1`을 대상으로 삼았다.** 대조군이 표적을 점유해 설계대로는 B를 실행할 수 없었고, 실제로는 그 충돌을 이용한 추가 발화(A' — 점유 큐 무플래그 Store)가 판정의 핵심 근거가 됐다. **결함이 관측을 도운 우연이며, 후속 프로브는 프로브별 시퀀스를 분리해야 한다.**
+
+**정리 의무 (미이행)**: M0 프로브가 만든 시퀀스 **191·192·193·194·195·196·197**이 쇼파일에 잔존한다. `Delete`가 블랙리스트라 툴 경로로 제거 불가 — 사용자 GUI 삭제가 필요하며 그 사실을 `progress.md`에 기록한다.
 - **측정된 기준선**: 기반 `main` = `e4bc78e`(clean). pytest/vitest 수치는 plan-phase가 단언하지 않는다 — **각 마일스톤 착수 직전 직접 실측**한다(baseline-integrity 원칙). 오케스트레이터 세션 실측값(2026-08-01, 참고용): pytest 3432 passed / 5 skipped, vitest 223. 본 아티팩트 6종의 커밋 SHA는 자기참조 불가이므로 `pending-backfill`이다.
 
 ## D. 제외 범위 (Out of Scope)
@@ -217,7 +282,7 @@ ClearAll
 
 ### Out of Scope — 소수 큐 번호
 
-- `Cue 1.5` / `1.55` 류 소수 큐 번호. 룰북 산문(`:56`)에만 존재하고 라이브 실측 0건이다(ASSUMPTION-43). v1은 정수 큐 번호만 쓴다.
+- `Cue 1.5` / `1.55` 류 소수 큐 번호. 룰북 산문(`:56`)에만 존재하고 라이브 실측 0건이다(ASSUMPTION-43). v1은 정수 큐 번호만 쓴다. **M0가 정수 역순 저장의 거부를 실측했으나(§C.1a-1) 소수 삽입은 여전히 미측정이며, 그 실측을 "삽입 일반 불가"로 확대 해석해 이 제외의 근거로 삼지 않는다** — 제외 근거는 어디까지나 **미측정**이다.
 
 ### Out of Scope — 지시 턴당 2회 이상의 컴파일
 
@@ -231,9 +296,17 @@ ClearAll
 
 - `server/rulebook/assets/v2.4.2/**` 일체 (PRESERVE — byte-diff 0). `server/tests/test_fx_boundary.py:595`가 *"the rulebook never learned about fx"* 를 단언하는 것과 같은 규율로, **씬 계층도 룰북 어휘를 추가하지 않는다.** 툴 발견성은 툴 스키마 설명 문면이 전담한다.
 
-### Out of Scope — SONGCUE 트래킹 정책 소급 변경
+### Out of Scope — Pan/Tilt 트래킹 이월
 
-- SONGCUE가 무플래그로 Store하는 사실(= 오늘 그 큐들의 값이 트래킹된다)은 **기록하되 고치지 않는다**. `server/looks/**`는 PRESERVE이며, 소급 정책 변경은 별도 SPEC의 결정이다.
+- **movement 씬이 남긴 Pan/Tilt의 다음 씬 이월을 v1에서 닫지 않는다.** 균일화로 **원리적으로 닫을 수 없는 축**이며, 이것을 적지 않으면 *"균일화로 트래킹을 구조적으로 회피했다"* 는 서술이 **과잉 주장**이 된다. 구조 근거 3건이 맞물린다: ① **룩은 Pan/Tilt를 정적 값으로 가질 수 없다** — `server/looks/loader.py:105-110`이 풀 패밀리 없는 속성을 구조적으로 거부하고(*"movement-only attributes may appear inside a movement spec only"*), `server/looks/schema.py:47`이 `MOVEMENT_ONLY_ATTRIBUTES = ("Pan","Tilt")`를 `ATTRIBUTE_POOL_FAMILY`에서 제외한다 — 스키마 주석이 이유를 적는다: *"As a static value they are exactly the hard pan/tilt the SPEC forbids."* ② 라이브러리 32개 룩의 movement 선언은 **0/32**이며 `TestMovementAbsence`가 그것을 단언한다. ③ **fx 12개 중 8개(67%)가 Pan/Tilt 전용이다**(`server/fx/library/movement.yaml`) `[측정]`. ⇒ movement 씬 뒤에는 위치가 트래킹되고, **룩 값 라인이 그것을 덮을 수단이 구조적으로 없다.** 우회는 전부 경계를 넘는다 — 씬이 자체 `Attribute 'Pan' At <n>`을 발화하면 LOOKLIB이 명문으로 금지한 hard pan/tilt를 우회 발화하는 것이고 값도 미측정(`server/fx/schema.py:78-84`가 *"the repository carries no measured unit or fixture limit"* 라고 자인)이며, 로더 완화는 PRESERVE 위반이다. **은폐가 아니라 가시화로 다룬다**: REQ-SCENE-014 (d)의 미주장 열거가 이 구멍을 **매 컴파일마다 이름으로 노출**한다.
+
+### Out of Scope — `Zoom`/`Iris` 채움값 발명
+
+- **룩이 선언하지 않은 `Zoom`/`Iris`를 씬 컴파일러가 채워 넣는 축 일체**(범위 중점·극값·룩별 저작 어느 형태든). 두 속성은 **범위의 어느 끝이 무엇인지 콘솔에서 측정된 적이 없고**, 라이브러리 저자가 그 사실과 함께 저작 원칙을 명문화해 두었다(`server/looks/library/worship.yaml:25-27`: *"it did not measure which end of each range is which, so both are used sparingly and only where a wrong direction would be a cosmetic miss"*). 채움은 그 원칙을 정면으로 뒤집으며(“드물게”가 소멸한다), 미측정 방향 가정 위에 놓이는 값을 24개 → 64개로 늘린다 `[측정]`. **`/CueOnly`를 버린 이유가 "미검증 축을 기본 경로에 넣지 않는다"였는데, 채움값 발명은 그 위험을 커맨드에서 값으로 옮길 뿐 성질이 같다.** 이 축은 `Zoom`/`Iris` 방향이 라이브로 실측된 뒤에 재검토할 후보다.
+
+### Out of Scope — SONGCUE 균일 집합 소급 적용
+
+- SONGCUE가 균일 속성 집합을 강제하지 않는다는 사실은 **기록하되 고치지 않는다**. `server/looks/**`는 PRESERVE이며, 소급 정책 변경은 별도 SPEC의 결정이다. (D1 개정으로 **store 플래그 정책의 분기는 사라졌다** — SONGCUE도 씬도 무플래그다. 남는 대비는 균일 집합 축뿐이다.)
 
 ### Out of Scope — 콘솔측 Lua 변경 / 비게이트 실행 경로
 
@@ -252,8 +325,18 @@ ClearAll
 | 필요 패턴 | 참조 원본 (file:line — 착수 직전 재실측 관례 적용) |
 |---|---|
 | 후속 좌석 예약 3곳 (본 SPEC의 존재 근거) | `SPEC-COPILOT-FXLIB-001/spec.md:42, :70, :140` — `[문서]` |
-| **`/CueOnly` 코드 발화 0건 (전수 grep)** | `server/**` · `ui/src/**` · `console/**` — 매치 0건, 2026-08-01 코디네이터 직접 실행 — `[코드]` |
-| `/CueOnly` 문법·트래킹 모델 | `31_choreography_patterns.md:59, :130-134` — `[문서]` |
+| **`/CueOnly` 기계 판정 불능 + 미지 플래그 조용한 접수** | `progress.md §E.2` (M0 프로브 A/A′ — `/CueOnlyy`가 `ok`+저장) — `[실측]` |
+| **큐 생성 실질 append-only (역순 저장 거부)** | `progress.md §E.2` (프로브 D″) — `[실측]` |
+| **전방 트래킹 실재 (무플래그 B군 잔존)** | `progress.md §E.2` (프로브 D) — `[실측]` |
+| **룩+fx 결합 성립 · 충돌 시 이펙트 승** | `progress.md §E.2` (프로브 C·E, 사람 GUI) — `[실측]` |
+| **`truncated: True` 실재 조건** | `progress.md §E.2` (childCount 24 / 반환 18) — `[실측]` |
+| **균일 집합 = 코어 4가 32/32, 선언 순서까지 일치** | `server/looks/library/*.yaml` 파싱 계산 + `server/looks/schema.py:39-43` `CONFIRMED_ATTRIBUTES` — `[측정]`+`[코드]` |
+| **코어 4 균일성이 이미 테스트로 강제됨** | `server/tests/test_looks_library.py:231-237, :239-246, :248-252` — `[코드]` |
+| **미주장 열거 유니버스 = `KNOWN_ATTRIBUTES`(8개)** | `server/looks/schema.py:52-54` — `[코드]` |
+| **`Zoom`/`Iris` 방향 미측정 (자인 문면)** | `server/looks/library/worship.yaml:25-27` — `[문서]` |
+| **룩은 Pan/Tilt 정적 값 불가** | `server/looks/loader.py:105-110` · `server/looks/schema.py:11-14, :47, :62-69` — `[코드]` |
+| **fx 12개 중 8개가 Pan/Tilt 전용** | `server/fx/library/movement.yaml` · `server/fx/schema.py:46-56` — `[측정]`+`[코드]` |
+| `/CueOnly` 문법·트래킹 모델 (폐기된 D1의 원 근거) | `31_choreography_patterns.md:59, :130-134` — `[문서]` |
 | Store 플래그 라이브 실측 (신규 번호 = `/Merge` 불요 · 기존 번호 = `Not allowed`) | `SPEC-COPILOT-SONGCUE-001/progress.md:337-344` — `[실측]` |
 | `Not allowed` = 마지막 방어선 | `server/fx/instantiate.py:225` — `[코드]` |
 | `/Overwrite` 봉쇄 4곳 | `31_choreography_patterns.md:57-58` · `server/safety/blacklist.yaml:18` · `DESIGN.md:133` · `server/web/preview.py:113` — `[코드]` |

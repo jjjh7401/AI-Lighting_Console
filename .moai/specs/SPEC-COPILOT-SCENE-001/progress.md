@@ -8,46 +8,59 @@
 
 **무엇**: 씬 컴파일러 — **룩(정적 값) + 이펙트(스텝 열) + 타이밍을 하나의 큐로** 합성한다. LOOKLIB(정지 화면 어휘)·FXLIB(시간축 어휘)이 세운 "의도→메모리 파이프라인"의 **2단계**이며, FXLIB이 `spec.md:42`·`:70`·`:140` 세 곳에서 명시적으로 예약해 둔 좌석이다. 신규 패키지 `server/scene/`에 스키마·로더·2축 매칭·결합 컴파일러·리포트를 세우고, 툴 2종(`find_scene`·`compile_scene`)을 기존 `run_commands`→`gate.screen()` 경로로만 배선한다.
 
-**상태**: **plan-phase 완료 (v0.1.0, draft).** REQ **20** · AC **22** · ASSUMPTION **5(41~45)** · clarification 마커 **0** · 결정 **A~J 전부 해소** · 라이브 세션 2회(M0·M8) 예정. 다음 단계 = **plan-audit(Tier L 문턱 0.85)** → **M0 라이브 프로브**.
+**상태**: **plan-phase 개정 완료 (v0.2.1, draft) · M0 실행 완료(정리 잔여 1건 — AC-SCENE-019 미완결).** REQ **21** · AC **24** · ASSUMPTION **5(41~45 — 41·42는 판정 후 moot)** · clarification 마커 **0** · 결정 **A~K 전부 해소** · 라이브 세션 2회 중 **1회 소진(M0)**. 다음 단계 = **plan-audit 재실행(Tier L 문턱 0.85 — 개정으로 plan-artifact 해시 변경 ⇒ 강제)** → **M1**.
 
-**이 SPEC의 한 줄**: `/CueOnly`는 **이 저장소에서 한 번도 발화된 적이 없다** — 그래서 "접수됐다"와 "트래킹이 막혔다"를 절대 뭉치지 않는 것이 전체 설계의 축이다.
+**이 SPEC의 한 줄 (v0.2.0 개정)**: 트래킹 정책이 **M0 실측으로 한 번 뒤집혔다** — `/CueOnly`(미발화 커맨드)를 버리고 **속성 집합 균일화 + 미주장 속성 전수 열거**를 택했다. 그러나 **관측 천장은 그대로다**: "균일 집합을 발화했다"와 "트래킹이 무해해졌다"를 절대 뭉치지 않는 것이 여전히 전체 설계의 축이다.
 
 ### 읽는 순서
 
-1. **`design.md` §3(결합 순서) · §4(가드 정책)** — 가장 중요한 두 절이다. **병렬 브리프에 문면 그대로 주입되는 공유 계약**이며, 왜 룩이 먼저인지(강제 근거)와 왜 1차 가드가 raise인지(3선례 중 선택)가 여기 있다.
-2. `spec.md` §A(개요 · 사전 확정 D1~D4) → **§C.1(검증 천장)** → §C.2(ASSUMPTION-41~45) → §D(제외 16항)
-3. `plan.md` §A.2(차단 표) → §A.4(결정 A~J) → **§F(병렬 분석 — 교집합 실증 + 공유 계약 SC-1/SC-2)** → §B(M0~M8)
-4. `acceptance.md` §C.0/§C.0a(역추적 · 배정 — 합 **22**·중복 0·누락 0) → **AC-SCENE-015(3주장 분리 — 이 SPEC의 중심 AC)**
-5. `research.md` **§2(`/CueOnly` 전수 grep)** · §4(가드 3선례) · §5(SONGCUE 상속 부채) · §6(검증 천장 근거)
+1. **`design.md` §3(결합 순서) · §4(가드 정책) · §6(트래킹 정책 — 개정본)** — 가장 중요한 세 절이다. **병렬 브리프에 문면 그대로 주입되는 공유 계약**이며, 왜 룩이 먼저인지(강제 근거), 왜 1차 가드가 raise인지(3선례 중 선택), 왜 `/CueOnly`가 폐기됐고 균일 집합이 그 자리를 받는지(§6.0~§6.4)가 여기 있다. **§6.2(관측 천장은 바뀌지 않았다)를 건너뛰지 말 것** — 개정의 최대 위험이 그 절에 있다.
+2. `spec.md` §A(개요 · D1 개정본 · D2~D4) → **§C.1 + §C.1a(검증 천장 + M0가 추가한 콘솔 제약 2건)** → §C.2(ASSUMPTION-41~45 판정) → §D(제외 **16**항 — Pan/Tilt 이월 · Zoom/Iris 채움 금지 2항이 개정 신설)
+3. `plan.md` §A.2(**M0 판정 결과 표 + 교훈 3건**) → §A.4(결정 A~K) → **§F(병렬 분석 — 교집합 실증 + 공유 계약 SC-1/SC-2/**SC-3**)** → §B(M0 완료 기록 ~ M8)
+4. `acceptance.md` §C.0/§C.0a(역추적 · 배정 — 합 **24**·중복 0·누락 0) → **AC-SCENE-015(주장 분리 — 이 SPEC의 중심 AC)** → **AC-SCENE-023, AC-SCENE-024(개정 신설 — 균일성 · 미주장 열거)**
+5. `research.md` **§2(`/CueOnly` 전수 grep — 폐기된 정책의 조사 기록)** · §4(가드 3선례) · §5(SONGCUE 상속 부채) · §6(검증 천장 근거)
+6. **개정 근거 조사**: `.moai/reports/scene-uniform-attribute-set-proposal.md`(룩 라이브러리 속성 매트릭스 · 4옵션 비교 · Pan/Tilt 구멍) · **판정 정본**: 본 문서 **§E.2**
 
 ### 함정 (다음 소유자가 알아야 할 것)
 
-1. **`/CueOnly`는 발화 이력 0건이다.** 전수 grep 결과 코드 0건 / 룰북 산문 2곳(`31_choreography_patterns.md:59`, `:132-133`)뿐이다. ASSUMPTION-41(접수)이 M0 1순위이고, **그 판정 없이는 M4를 저작할 수 없다.**
-2. **41 부정은 "정직한 축소"가 아니라 중단이다.** 통상 부정 실측은 유효한 완료지만, D1은 **사용자 확정 정책**이므로 에이전트가 무플래그 폴백을 골라 진행하면 결정 월권이다 — **블로커 보고**가 정답이다(plan.md §A.3 예외).
-3. **접수 ≠ 트래킹 차단.** 트래킹 전파는 **관측 주체가 없다**(`ui/src/components/ExecutionPreviewCard.tsx:61`). 큐 재조회로 확인되는 것은 **큐의 존재**뿐이며 그것을 트래킹 증거로 제시하면 AC-SCENE-015가 실패한다.
+1. **`/CueOnly`는 폐기됐다 — 그리고 그 폐기 방식이 이 SPEC의 가장 중요한 이력이다.** M0에서 **날조 플래그 `/CueOnlyy`가 `ok`를 받고 저장까지 됐다.** 즉 콘솔은 미지 store 플래그를 조용히 접수하며, **`ok`도 재조회도 플래그 철자에 대해 비변별**이다. 그래서 씬은 **어떤 store 플래그도 달지 않는다**(REQ-SCENE-013 (e)). 이 사실을 모르고 "플래그 하나쯤 붙여도 `ok` 나오면 되는 것 아닌가"로 되돌아가면 **런타임 신호가 0인 결함 표면**을 다시 연다.
+2. **부정 판정에서 폴백하지 않은 것이 정답이었다.** 41이 `CONDITION_NOT_MET`으로 닫혔을 때 에이전트가 무플래그로 조용히 진행했다면 사용자는 **정책이 바뀐 사실조차 몰랐을 것**이다. 실제로는 중단·블로커 보고 → 사용자 재결정 → D1 개정으로 이어졌다. 이 규율은 v0.2.0에서 **REQ-SCENE-021 (b)로 요구화**됐다.
+3. **발화 ≠ 효과 — 정책이 바뀌어도 이 함정은 그대로다.** 트래킹 전파는 **관측 주체가 없다**(`ui/src/components/ExecutionPreviewCard.tsx:61`). "균일 집합을 발화했다"는 정적으로 확인되지만 **"그래서 트래킹이 무해해졌다"는 관측 불가**다. 둘을 같은 문단에 쓰면 AC-SCENE-015가 실패한다(design.md §6.2).
+3a. **균일화가 닫지 못하는 축이 있다 — Pan/Tilt.** 룩은 Pan/Tilt를 **구조적으로** 가질 수 없고(`server/looks/loader.py:105-110`), fx 12개 중 **8개가 Pan/Tilt 전용**이다. movement 씬 뒤에는 위치가 트래킹되며 룩 값 라인이 덮을 수단이 없다. **이것을 적지 않으면 "구조적 회피"라는 서술 자체가 과잉 주장**이 되므로, spec.md §D에 명시 제외하고 미주장 열거(REQ-SCENE-014 (d))가 매 컴파일마다 노출한다.
+3b. **큐 생성은 실질 append-only다.** 기존 큐보다 낮은 번호의 나중 저장은 플래그 무관 거부된다(M0 실측). ⚠️ 룰북 `:56`의 소수 번호 삽입 서술과 **표면상 충돌**하며 **소수 삽입은 미측정**이다 — "삽입 일반 불가"로 확대 해석 금지.
+3c. **거부 메시지 리터럴을 단정 근거로 쓰지 말 것.** 점유 큐 재저장은 `User Canceled Command`, 역순 저장은 `Not allowed`였다 — 원인마다 다르다.
 4. **룩이 먼저인 것은 취향이 아니라 강제다.** `MIN_STEPS = 2`(`server/fx/schema.py:66`) + `Step 1` 미발화(`server/fx/instantiate.py:326-342`) → **스텝 1 = 현재 프로그래머 상태 = 룩의 자리**. 순서를 뒤집으면 룩이 페이저의 **종점**이 되고, **런타임은 아무 신호도 내지 않는다**(design.md §3.2).
 5. **`/Merge` 금지는 비직관적이다.** `/Merge`는 파괴적이지 않다. 금지 이유는 새 큐 번호에서 **동작이 무플래그와 동일한데**(SONGCUE `progress.md:337-344` 실측) **기존 번호의 `Not allowed` 안전망만 꺼지기 때문**이다 — 실익 0에 방어선만 잃는다.
 6. **값 라인 dedupe는 지시 턴 경계다.** `executed_ok`가 툴 호출을 넘어 축적된다(`tools.py:699-703` 주석 원문 "in a prior tool call"). 면제는 `Clear`/`ClearAll`/bare 선택 3종뿐(`:327-331`). **씬 번들은 룩+fx 값 라인을 함께 담아 fx보다 충돌 표면이 넓다.** v1은 지시 턴당 컴파일 1회가 운용 경계다.
 7. **면제 집합 사본을 만들지 말 것.** `is_programmer_state`가 fx `__all__` 등재 **공개 API**다(`server/fx/instantiate.py:144`). 호출하면 되고, 사본을 만들면 fx가 `test_fx_boundary.py:256-379`에 진 동치 단언 의무를 새로 상속한다.
 8. **비공개 함수 import는 적법하다 — 선례 2건.** `server/looks/busking.py:30`·`songcue.py:11`이 `_values_line`을 import하며 이유를 주석으로 남겼다: "**여기서 다시 조립하면 두 곳이 갈라진다**". 씬도 같은 계산이다(결정 D). 단 **패키지 간** 결합이므로 `test_scene_boundary.py`의 산출 형상 고정이 안전벨트다.
-9. **fx의 Store는 재사용 불가.** `_CUE_NUMBER = 1` 상수 고정(`server/fx/instantiate.py:96`) + `/CueOnly` 부재 — 두 축 모두 씬 정책과 다르다. 씬은 **값 라인만** 상류에서 받고 조립·Store는 자기가 한다(결정 I).
+9. **fx의 Store는 재사용 불가 — 단, 개정으로 논거 하나가 약해졌다.** `_CUE_NUMBER = 1` 상수 고정(`server/fx/instantiate.py:96`)은 그대로지만, `/CueOnly` 부재는 이제 **차이가 아니다**(씬도 무플래그). 더 근본적인 이유는 **fx 번들에 룩 값 라인을 끼울 자리가 없다**는 것이다(`:475-477`이 `Group` 다음 곧바로 스텝 열). 씬은 **값 라인만** 상류에서 받고 조립·Store는 자기가 한다(결정 I).
 10. **`select_sequence_number`는 두 벌 있다.** fx 판(`instantiate.py:218` — 공개, `requested=` 지원, 점유 거부)과 songcue 판(`songcue.py:286`). **씬은 fx 판을 쓴다. 세 번째 판을 만들지 말 것.**
 11. **효과는 기계로 확인할 수 없다.** 큐 내용·`CueFade`·픽스처 실시간 값 어느 쪽도 안 읽힌다(spec.md §C.1). 형상 결함은 런타임에서 **아무 신호도 내지 않으므로 테스트가 유일한 그물이다.** `ok`를 성공으로 읽는 순간 이 SPEC은 실패한다.
-12. **SONGCUE는 오늘 무플래그로 쓴다.** 즉 그 큐들의 값은 트래킹되고 있고, 그 사실은 문서·단언·측정 어디에도 없다(research.md §5). **기록하되 고치지 않는다** — `server/looks/**`는 PRESERVE다(결정 J). 이것을 "결함"이라 부르지 말 것: 확인된 사실은 *"결정 기록이 없다"* 뿐이다.
-13. **`Delete`는 블랙리스트다.** M0 프로브가 만든 시퀀스(191~194)를 툴 경로로 지울 수 없다 — 사용자가 GUI에서 직접 삭제하고 그 사실을 기록한다.
+12. **SONGCUE는 오늘 무플래그로 쓴다 — 개정으로 대비가 축소됐다.** 씬도 무플래그가 됐으므로 **플래그 정책의 분기는 사라졌다.** 남는 대비는 하나: **SONGCUE는 균일 집합을 강제하지 않는다.** **기록하되 고치지 않는다** — `server/looks/**`는 PRESERVE다(결정 J). 이것을 "결함"이라 부르지 말 것: 확인된 사실은 *"결정 기록이 없다"* 뿐이다.
+13. **`Delete`는 블랙리스트다.** M0 프로브가 만든 시퀀스 **191·192·193·194·195·196·197**을 툴 경로로 지울 수 없다 — 사용자가 GUI에서 직접 삭제하고 그 사실을 기록한다. **아직 미이행이다.**
 14. **`Goto Cue`는 게이트가 모른다.** `RECOGNIZED_REFERENCE_TYPES`(`server/safety/classify.py:44`)에 `Cue`가 없다 — 큐 이동 축을 열려면 게이트 어휘 확장이 필요하므로 §D로 제외했다.
+15. **뮤테이션 재료를 잘못 고르면 뮤테이션이 통과한다 (승계 필수 2건).** ① **충돌 열거 비공허성을 movement fx로 세우면 정답도 ∅이라 통과해 버린다** — dimmer/color fx로만 세운다. ② **균일 집합 순서 뮤테이션은 픽스처 주입이 필수다** — 오늘 자산 32/32가 이미 정렬돼 있어 정렬 제거가 자산만으로는 잡히지 않는다.
+16. **균일 집합은 자산이 우연히 보장하고 있다.** 32/32가 이미 코어 4를 이 순서로 담고 있어 도입 시점의 정렬은 **바이트 무변화**다. 그래서 강제 코드를 빼도 **오늘은 아무 일도 일어나지 않는다** — 미래 저작에서 조용히 깨진다. 이것이 정렬·강제 지점에 `@MX:ANCHOR`가 붙는 이유다.
 
 ### 기계 확인 (인수인계 무결성)
 
 ```bash
 ls .moai/specs/SPEC-COPILOT-SCENE-001/                                        # → 6파일
-grep -c "REQ-SCENE-" .moai/specs/SPEC-COPILOT-SCENE-001/spec.md               # ≥ 20
-grep -c "^### AC-SCENE-" .moai/specs/SPEC-COPILOT-SCENE-001/acceptance.md     # = 22
+grep -c "^- \*\*REQ-SCENE-" .moai/specs/SPEC-COPILOT-SCENE-001/spec.md        # = 21
+grep -c "^### AC-SCENE-" .moai/specs/SPEC-COPILOT-SCENE-001/acceptance.md     # = 24
+grep -c "^### Out of Scope" .moai/specs/SPEC-COPILOT-SCENE-001/spec.md        # = 16
 grep -cE "ASSUMPTION-4[1-5]" .moai/specs/SPEC-COPILOT-SCENE-001/spec.md       # ≥ 5
-grep -c "CueOnly" .moai/specs/SPEC-COPILOT-SCENE-001/design.md                # ≥ 5
 
-# 본 SPEC의 근본 사실 — 착수 시 반드시 재확인 (0건이어야 정상)
-grep -rn "CueOnly" server/ ui/src/ console/ | grep -v rulebook | wc -l        # = 0
+# 개정 후 근본 사실 — 씬은 store 플래그를 쓰지 않는다
+grep -n "CueOnly" .moai/specs/SPEC-COPILOT-SCENE-001/design.md | grep -c "§6" # 폐기 기록은 §6.0에
+
+# 균일 집합의 전제 재실측 (개정 핵심 — 전부 오늘 참이어야 정상)
+uv run python -c "from server.looks.schema import CONFIRMED_ATTRIBUTES, KNOWN_ATTRIBUTES; \
+print(CONFIRMED_ATTRIBUTES); print(len(KNOWN_ATTRIBUTES))"
+# → ('Dimmer', 'ColorRGB_R', 'ColorRGB_G', 'ColorRGB_B') / 8
+uv run pytest server/tests/test_looks_library.py -q \
+  -k "specifies_a_colour or specifies_an_intensity or names_all_three"        # 3 passed
 
 # 상류 계약 재실측 (드리프트 관례)
 grep -n "MIN_STEPS" server/fx/schema.py                                       # MIN_STEPS = 2
@@ -59,10 +72,11 @@ uv run pytest server/tests/ -q                    # 킥오프 baseline — 직�
 
 ### 다음 소유자 킥오프 킷
 
-- **plan-audit 준비물**: Tier L 문턱 **0.85**. 감사가 볼 곳 — ① `/CueOnly` 미검증성이 전 표면에 정합하게 반영됐는가(spec §A D1 · §C.2 · design §6 · research §2 · AC-SCENE-015/019), ② 결합 순서의 **강제 근거**가 취향 서술로 약화되지 않았는가(design §3.2), ③ 1차 가드 정책 선택이 3선례 비교로 논증됐는가(design §4.1 · research §4), ④ §F 병렬 분석이 **교집합 실증 + 공유 계약 식별**을 둘 다 담았는가, ⑤ AC 22건이 §C.0/§C.0a 양쪽에서 중복 0·누락 0인가.
-- **M0 착수 준비물**: `plan.md §B M0`의 프로브 A~E **5종 전문**(날조 대조군 · `/CueOnly` 접수 · 룩+fx 결합 · 트래킹 A/B · 충돌 승자). 실물 onPC 세션 + 사용자 GUI 관측 필요. 프로브 시퀀스 191~194는 세션 종료 시 사용자가 GUI로 삭제.
-- **M4 착수 준비물(병렬 시)**: `design.md §3` 전문 + `design.md §4` 전문을 **요약 없이** 브리프에 주입(plan.md §F.3 SC-1/SC-2). 요약본을 만들면 요약이 세 번째 해석이 된다.
-- **Kickoff 결정 없음**: 결정 **A~J** 전부 해소, clarification 0, 승인 대기 0 — 재질의할 것이 없다.
+- **plan-audit 재실행 준비물 (v0.2.1 — iter-3, 하드캡)**: Tier L 문턱 **0.85**. **iter-3은 iter-2가 열거한 결함 델타(D1~D16)에 한정된 재감사다.** 감사가 볼 곳 — ① **개정 논거가 M0 실측(§E.2)과 정합한가**(spec §A D1 · §C.1a · §C.2 · design §6.0 · plan §A.2), ② **관측 천장이 바뀌지 않았다는 사실**이 리포트 규율에 반영됐는가(design §6.2 · AC-SCENE-015 — 개정의 최대 위험), ③ **Pan/Tilt 이월이 은폐되지 않고 §D + 미주장 열거로 노출되는가**, ④ 결합 순서의 **강제 근거**가 취향 서술로 약화되지 않았는가(design §3.2 — 44 `GO`로 실측 확정), ⑤ 1차 가드 정책 선택이 3선례 비교로 논증됐는가(design §4.1 · research §4), ⑥ §F 병렬 분석이 **교집합 실증 + 공유 계약(SC-1/SC-2/SC-3)** 을 담았는가, ⑦ **AC 24건 · REQ 21건**이 §C.0/§C.0a 양쪽에서 중복 0·누락 0인가, ⑧ iter-1 minor 결함 6건(D2~D7)이 실제로 닫혔는가.
+- **M1 착수 준비물**: M0는 완료됐다(§E.2). **재측정 금지** — 41/44 판정을 M1 이후에 덮어쓰지 않는다. 착수 직전 baseline은 직접 실측(이월 금지).
+- **M4 착수 준비물(병렬 시)**: `design.md §3` · `§4` · **`§6`** 전문을 **요약 없이** 브리프에 주입(plan.md §F.3 SC-1/SC-2/SC-3). 요약본을 만들면 요약이 세 번째 해석이 된다.
+- **미이행 잔여 1건**: M0 프로브 시퀀스 **191·192·193·194·195·196·197** 쇼파일 잔존. `Delete` 블랙리스트로 툴 경로 제거 불가 — **사용자 GUI 삭제 후 §E.2에 기록**. 닫히기 전에는 AC-SCENE-019가 완결이 아니다.
+- **Kickoff 결정 없음**: 결정 **A~K** 전부 해소, clarification 0, 승인 대기 0 — 재질의할 것이 없다. (D1은 2026-08-01 사용자 재확정으로 닫혔다.)
 
 ## Plan-phase log
 
@@ -77,20 +91,210 @@ uv run pytest server/tests/ -q                    # 킥오프 baseline — 직�
 - SPEC ID 사전 검증: `SPEC-COPILOT-SCENE-001` — 정규식 분해 `SPEC ✓ | COPILOT ✓ | SCENE ✓ | 001 ✓ → PASS` (Bash 실행 검증).
 - 아티팩트 커밋 SHA는 자기참조 불가이므로 `pending-backfill`.
 
+### v0.2.0 (개정 — 2026-08-01, M0 실측 후)
+
+- **개정 사유**: M0 라이브 프로브가 **D1(전 큐 `/CueOnly`)을 무너뜨렸다.** 근거 2건 전부 `[실측]` — ① 날조 플래그 `/CueOnlyy`가 `ok`+저장까지 되어 접수 판정의 **두 기계 채널(`ok`·재조회)이 동시에 소진**, ② 큐 생성이 **실질 append-only**라 `/CueOnly`의 보정 대상("다음 큐")이 저장 시점에 존재할 수 없음. 판정 정본은 §E.2(무수정 보존).
+- **사용자 재결정 (2026-08-01, AskUserQuestion)**: **옵션 D — 코어 4 균일 집합 + 미주장 속성 전수 열거.** `/CueOnly`를 포함한 store 플래그를 일절 쓰지 않는다. `Zoom`/`Iris`는 균일 보장 밖(방향 미측정 — 채움값 발명 금지). Pan/Tilt 이월은 v1에서 닫지 않고 §D에 명시 + 매 컴파일 열거로 노출.
+- **개정 근거 조사**: `.moai/reports/scene-uniform-attribute-set-proposal.md` — 룩 라이브러리 32개 전수 파싱(코어 4 = 32/32, 유니온 = 6, 형상 4가지, Zoom 16/32 · Iris 8/32), LOOKLIB이 이미 코어 4를 3개 테스트로 강제 중임을 확인 ⇒ **자산 편집 0건 · PRESERVE 무교차**.
+- **본 개정에서 직접 측정한 것 `[측정]`**: ① 32개 룩 전수의 attribute 선언 순서가 **32/32 코어 4 우선 일치**(순서 위반 0건), ② 균일 정렬이 오늘 자산에 대해 **바이트 무변화**(32/32 동일 문자열), ③ 값 라인 최대 길이 **171바이트**(MA3 명령줄 천장 ~2048 대비 8.3%), ④ `KNOWN_ATTRIBUTES` = 정확히 8원소, `CONFIRMED_ATTRIBUTES` = 코어 4 동일 순서.
+- **동반 반영**: plan-audit iter-1(PASS 0.91)의 minor 결함 **6건 전부 해소** — D2(REQ-SCENE-010 트리거/익스큐터 꼬리) · D3(design §10 AC 범위) · D4(§C.0 축약 토큰 → 완전형) · D5(AC-SCENE-008 GEARS 주어) · D6(제외 항목 수) · D7(ASSUMPTION 기록 의무 REQ 앵커 + ASSUMPTION-43 AC 커버리지).
+- **토큰 변동**: REQ 20 → **21**(REQ-SCENE-021 라이브 판정 기록 의무 신설) · AC 22 → **24**(AC-SCENE-023 균일 집합 / AC-SCENE-024 미주장 열거 신설) · 결정 A~J(10) → **A~K(11)**(K = 열거 유니버스 = 상류 상수 읽기 import) · ASSUMPTION 41·42 **moot**(삭제하지 않고 이력 보존) · 공유 계약 SC-1/SC-2 → **SC-1/SC-2/SC-3**.
+- **불변 확인**: D2(룩 먼저 · 충돌은 이펙트 우선) · D3(`/Merge` 미사용 · 신규 큐 번호 전용)는 **개정되지 않았고 ASSUMPTION-44/45 `GO`로 강화**됐다. §F 슬라이스 쓰기 집합 교집합 ∅ 증명도 불변(SC-3은 파일이 아니라 계약을 추가한다).
+- **귀결**: plan-artifact 해시 변경 ⇒ **plan-audit 재실행 강제.**
+
+### v0.2.1 (iter-2 감사 결함 수정 — 2026-08-01)
+
+- **성질**: **정책 무변경.** plan-audit iter-2(FAIL 0.80 — 문턱 0.85)가 열거한 **결함 16건(D1~D16)만**을 범위로 삼은 문서 정합성 개정이다. **요구·인수·결정·마일스톤을 신설하지 않았고**, 새 측정도 하지 않았다(기록된 M0 측정치만 사용). iter-2 회귀(0.91 → 0.80)의 절반이 "토큰을 늘리며 그 토큰을 세는 표면을 쓸지 않은" 실패 모드였으므로, 본 개정은 **개수 정합성 일괄 소인(sweep)** 을 마지막 단계로 수행했다.
+- **major 5건**: ① **D1** — AC-SCENE-019가 스스로 명시한 `grep -E '^(GO|DESCOPE|SKIP|REOPEN):' progress.md` 가 **0건**을 반환하고 있었다(판정 어휘가 H4 헤딩·볼드 코드 스팬 안에만 있어 `^` 앵커에 걸리지 않았다). **정규식을 약화시키지 않고** §E.2 말미에 행두 접두 행 **6행**을 신설했고, 그 grep을 실행해 **6건**을 실측했다. ② **D2** — REQ-SCENE-021이 어휘 5종과 접두어 4종을 매핑 없이 동시 강제하고 있었고 `INCONCLUSIVE`(ASSUMPTION-42가 실제로 받은 판정)에 대응 접두어가 **어느 SPEC에도 없었다.** 매핑 표를 **인라인**하고 `INCONCLUSIVE` → `DESCOPE:` + `verdict=` 키를 신설했다. ③ **D3** — M4 착수 게이트가 moot된 `ASSUMPTION-41 GO`를 요구해 **최대 마일스톤이 영구 차단**돼 있었다. `ASSUMPTION-44 GO`로 교체했다. ④ **D4** — AC-SCENE-019와 DoD 2가 요구하는 **ASSUMPTION-43 판정 기록이 §E.2에 없었다.** 폐쇄 어휘 `GO`(v1 범위 한정)로 판정 절을 신설하고 `truncated: True` 실측을 정본에 기록했다. ⑤ **D5** — `plan.md §F.3` SC-3 행이 표 밖으로 이탈해 렌더링되지 않았고 "공유 계약은 둘"이 7줄 뒤 "3개"와 모순이었다.
+- **minor 11건(D6~D16)**: 미주장 열거 정의를 상류 상수 기준으로 통일(D6) · §E.2 M0 헤딩 스테일(D7) · ASSUMPTION-45 "미관측" 요약 행 스테일(D8) · 정리 의무 블록 2개의 시퀀스 목록 불일치(D9) · M4 개수 스테일 2곳(D10) · §F.4 "6항 vs 7개" (D11) · `research.md` 결정 등록부 `A~J`(D12) · DoD 번호 순서 1·2·…·6·8·7(D13) · 존재하지 않는 `spec-compact` 선언(D14) · `related_specs` 선택 근거 명기(D15) · "M0 완료" 무조건 서술에 정리 잔여 단서 부기(D16).
+- **개수 소인 결과(실측)**: `REQ 21` · `AC 24` · `Out of Scope 16` · **접두 행 6**(직전 0). 산문 개수 주장은 전부 이 기계값에 맞췄다.
+- **불변 확인**: D1(균일 집합 + 미주장 열거) · D2(룩 먼저 · 충돌은 이펙트 우선) · D3(`/Merge` 미사용) · D4(Tier L) **전부 무변경**. ASSUMPTION-44/45는 `GO` 그대로, 41/42는 moot 그대로다.
+
 ## §E.1 Plan-phase Audit-Ready Signal
 
-- plan_complete_at: 2026-08-01T02:57:13Z
-- plan_status: audit-ready
+- plan_complete_at: 2026-08-01T02:57:13Z (v0.1.0)
+- plan_amended_at: 2026-08-01 (v0.2.0 — D1 개정 + audit iter-1 결함 6건 폴드인)
+- plan_amended_at: 2026-08-01 (v0.2.1 — audit iter-2 결함 16건 수정, 정책 무변경)
+- plan_status: audit-ready (**재감사 필요 — iter-3, 하드캡** · 결함 델타 한정 재감사)
 - tier: L (plan-auditor 문턱 0.85)
 - artifacts: spec.md · plan.md · acceptance.md · design.md · research.md · progress.md (6종)
-- tokens: REQ 20 · AC 22 · ASSUMPTION 41~45(5) · 결정 A~J(10, 전부 해소) · clarification 마커 0 · 승인 대기 0
-- live_sessions_planned: 2 (M0 프로브 · M8 종단)
+- tokens: REQ **21** · AC **24** · ASSUMPTION 41~45(5 — 41·42 판정 후 moot) · 결정 **A~K(11, 전부 해소)** · clarification 마커 0 · 승인 대기 0
+- live_sessions: 2 계획 / **1 소진(M0 — 실행 완료, 정리 잔여 1건 ⇒ AC-SCENE-019 미완결)** / 1 잔여(M8 종단)
 - baseline_measured: pytest 3432 passed / 5 skipped @ `main` `e4bc78e` (2026-08-01, 직접 실행)
+- open_items: M0 프로브 시퀀스 191~197 쇼파일 정리 **미이행**(사용자 GUI 삭제 필요)
 - commit_sha: pending-backfill
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+### M0 — 라이브 프로브 (2026-08-01, 완료 — 본 절 하단 "M0 종결" 표가 최종 판정)
+
+세션 조건: onPC `127.0.0.1:8000`, 응답기 수신 `9005`, **CopilotResponder v1.5.0**, 프로브 착수 시 `DataPool/Sequences` childCount **17**, `DataPool/Groups` = {1 Copilot Grp, 11 Back, 12 Front, 13 All}. 프로브 그룹은 **13 (All)**. 게이트 미경유(bridge 직결, `server.tools` 개발 도구) — 감사 로그 없음.
+
+프로브 대상 시퀀스 191~195는 발화 직전 전부 공석 확인(`path segment not found`).
+
+#### 🔴 CONDITION_NOT_MET: ASSUMPTION-41 (`/CueOnly` 접수) — 기계 채널 소진
+
+**프로브 A(날조 대조군)가 플랜이 예상한 분기를 밟았고, 플랜의 대비책까지 무너졌다.**
+
+| # | 발화 | 결과 |
+|---|---|---|
+| A | `Store Sequence 191 Cue 1 'SCN PROBE0' /CueOnlyy` (고의 오타 플래그) | **ok** — 기대는 not-ok였다 |
+| A-재조회 | `state DataPool/Sequences/191` | **큐 실존** — `{"class":"Cue","cueNo":1,"name":"SCN PROBE0"}`, childCount 17→18 |
+| A' | `Store Sequence 191 Cue 1 'SCN OCCUPIED'` (무플래그, **점유된 큐**) | **FAIL — `User Canceled Command`** |
+
+판정 근거 3단:
+
+1. **`ok` 채널은 일반적으로는 변별력이 있다.** A'가 거부됐다 — 콘솔은 거부할 것을 거부한다. 따라서 "`ok`는 이 콘솔에서 아무 의미 없다"는 과잉 일반화는 틀렸다.
+2. **그러나 미지 store 플래그에 한해 관대하다.** `/CueOnlyy`는 존재하지 않는 플래그인데 거부되지 않았고 저장까지 됐다.
+3. **재조회도 변별하지 못한다.** 날조 플래그가 만든 큐는 기대한 이름·`cueNo`를 그대로 갖는다 — 진짜 `/CueOnly`가 만들 큐와 재조회 상으로 구별 불가다.
+
+⇒ plan.md `:99`의 대비책("`ok`가 증거력이 없으면 **판정은 재조회에만 의존해야 한다**")은 **성립하지 않는다.** 재조회 역시 비변별적이다. ASSUMPTION-41은 **두 기계 채널 모두에서 판정 불능**이며, 이는 M0 설계가 예상하지 못한 상태다.
+
+`Cmd()` 응답과 재조회 외에 접수를 읽을 제3 경로는 없다: `/CueOnly`는 큐 프로퍼티가 아니라 **저장 시점의 인접 큐 내용 조작 동작**이므로 `prop`으로 읽을 대상이 존재하지 않고, 큐 내용 자체는 어떤 경로로도 반환되지 않는다(spec.md §C.1).
+
+**귀결**: 접수(41)를 기계로 세울 수 없다. 남은 유일한 단서는 **효과**(프로브 D, 사람 GUI)인데, 뮤테이션 ④가 접수와 효과의 판정 병합을 금지한다. 따라서 41은 `GO`로 올릴 수 없고 `CONDITION_NOT_MET`이며, plan.md `:107`에 따라 **run-phase 중단 + 블로커 보고**다.
+
+부수 관측: 거부 메시지가 SONGCUE M0의 `Not allowed`가 아니라 `User Canceled Command`였다. 확인 팝업이 떴다가 취소된 형상으로 보이며, 쇼파일 불변이라는 결론은 같으나 **메시지 리터럴을 단정에 쓰면 안 된다**는 뜻이다.
+
+#### 프로브 A 설계 결함 (승계 필수)
+
+plan.md의 프로브 A와 프로브 B가 **같은 `Sequence 191 Cue 1`을 대상**으로 삼는다. 대조군이 표적을 점유해 버리므로 설계대로는 B를 실행할 수 없다. 실제 발화에서는 이 충돌을 이용해 A'(점유 큐 무플래그 Store)를 추가 발화했고, 그것이 §1 판정의 핵심 근거가 됐다 — 결함이 관측을 도운 우연이며, 후속 SPEC은 프로브별 시퀀스를 분리해야 한다.
+
+#### 기계 발화 결과 (효과 증거 아님)
+
+| 프로브 | 시퀀스 | 커맨드 | 결과 |
+|---|---|---|---|
+| C — 룩+fx 결합 (ASSUMPTION-44) | 192 `SCN COMBINED` | 11 | **11/11 ok**, 큐 실존 |
+| D-A — /CueOnly 있음 (ASSUMPTION-42) | 193 `SCN TRK A1/A2` | 10 | **10/10 ok**, childCount 4 |
+| D-B — 무플래그 대조 | 194 `SCN TRK B1/B2` | 9 | **9/9 ok**, childCount 4 |
+| E — 충돌 승자 (ASSUMPTION-45) | 195 `SCN CONFLICT` | 10 | **10/10 ok**, 큐 실존 |
+
+**이 `ok` 합계는 효과의 증거가 아니다.** FXLIB M0가 39/39 `ok`에 모션 0을 겪은 선례가 정확히 이 형태다. C·D·E의 판정은 GUI 관측 없이는 내려지지 않는다.
+
+#### GO: ASSUMPTION-44 (룩 + fx 결합) — 사람 GUI 관측
+
+프로브 C(Seq 192 `SCN COMBINED`) Cue 1 실행 결과, 사용자 관측: **파란색이 유지된 채 딤머가 순차 웨이브.** 기대 형상과 일치한다. **판정 GO.**
+
+⇒ `design.md §3.1` 결합 순서 골격(룩 값 라인 → fx 스텝 열 → 위상/속도 → Store)이 실측으로 받쳐졌다. 룩의 정지 값이 스텝 축에 흡수되지 않고 베이스로 남는다. M4 번들 형상은 이 축에서 진행 가능하다.
+
+#### INCONCLUSIVE: ASSUMPTION-42 (트래킹 차단 효과) — 대조군이 갈리지 않음
+
+프로브 D 사용자 관측: **A군(Seq 193, `/CueOnly`)과 B군(Seq 194, 무플래그)이 동일 — 둘 다 Cue 2에서 딤머가 남았다.**
+
+B군이 남았다는 것은 **전방 트래킹이 이 콘솔에서 실재함**을 확인해 준다(대조군이 이론대로 거동했으므로 관측 설계 자체는 유효하다). 그런데 A군도 같았다 — **`/CueOnly`가 트래킹을 막지 못했다.**
+
+#### 후속 프로브 D'' — 저장 순서 역전 시도, 그리고 그 실패가 낳은 발견
+
+D의 A=B를 세 갈래(반대 방향 측정 / 플래그 무효 / 관측 설계 오류) 중 하나로 좁히려고, **큐 2를 먼저 만들고 큐 1을 나중에 `/CueOnly`로 저장**하는 형태를 설계했다(그러면 저장 시점에 보정 대상인 뒤 큐가 존재한다).
+
+| 발화 | 결과 |
+|---|---|
+| `Store Sequence 196 Cue 2 'D2 A2'` | ok |
+| `Store Sequence 196 Cue 1 'D2 A1' /CueOnly` | **FAIL — `Not allowed`** |
+| `Store Sequence 197 Cue 2 'D2 B2'` | ok |
+| `Store Sequence 197 Cue 1 'D2 B1'` (무플래그 대조) | **FAIL — `Not allowed`** |
+
+**설계는 실패했으나 그 실패가 더 중요한 사실을 냈다: 이미 존재하는 큐보다 낮은 번호의 큐를 나중에 저장할 수 없다.** 플래그 유무와 무관하게 거부된다.
+
+⇒ **이 시스템의 큐 생성은 실질적으로 append-only다.** 그러면 저장 시점에 "다음 큐"가 존재하는 상황 자체가 만들어지지 않고, 룰북이 정의한 `/CueOnly`의 동작(“stops the change tracking **into the next cue**” — `31_choreography_patterns.md:59`, `:132`)은 **보정할 대상을 영원히 갖지 못한다.** D의 A=B는 이것으로 설명된다.
+
+⚠️ 단, 이 발견은 룰북 `:56`의 서술("Cue numbers carry decimals — insert between existing cues with `1.5`, `1.55`")과 **표면상 충돌한다.** 소수 번호 삽입은 별도 경로일 수 있고 미측정이다. 정수 번호 역순 저장이 거부된다는 것만이 실측이며, "삽입 일반이 불가하다"로 확대 해석하면 안 된다.
+
+#### 거부 메시지 2종 — 원인이 다르다
+
+| 상황 | 메시지 |
+|---|---|
+| 점유된 큐에 재저장 (191 Cue 1) | `User Canceled Command` |
+| 존재하는 큐보다 낮은 번호 저장 (196/197 Cue 1) | `Not allowed` |
+
+SONGCUE M0가 기록한 것은 `Not allowed`다. 두 메시지가 다른 원인에 대응하므로, **거부 메시지 리터럴을 단정의 근거로 쓰면 안 된다.**
+
+#### GO: ASSUMPTION-43 (큐 번호 Store 가능성) — 기계 채널, v1 범위로 좁혀 판정
+
+> 기록 시각: 2026-08-01(본 절 신설은 plan-audit iter-2 결함 D4의 수정이며, 아래 세 측정치는 전부 **위 프로브 기록에서 이미 발화된 것**이다 — 새 측정을 하지 않았다).
+
+판정 대상을 **v1이 실제로 쓰는 범위(정수 · 신규 · 오름 번호)** 로 좁혀 `GO`로 닫는다. 좁히지 않은 원형("**임의** 큐 번호")은 아래 ②에서 부정이 실측됐고 소수 번호는 미측정이므로, 원형 그대로는 `GO`가 아니다.
+
+| # | 측정된 하위 결과 | 증거 | 귀결 |
+|---|---|---|---|
+| ① | **신규 정수 큐 번호 Store 성립** | 프로브 C·D·E가 공석 시퀀스 192~195에 `Cue 1`을, D″가 196·197에 `Cue 2`를 각각 `ok`로 저장하고 재조회로 실존 확인. SONGCUE가 `Cue 2`를 라이브로 성립시킨 선례와 일치(`SPEC-COPILOT-SONGCUE-001/progress.md:337-344`) | v1이 쓰는 축은 열려 있다 |
+| ② | **역순 저장 거부** | `Store Sequence 196 Cue 1 'D2 A1' /CueOnly` → **`Not allowed`**, `Store Sequence 197 Cue 1 'D2 B1'`(무플래그 대조) → **`Not allowed`** (본 절 "후속 프로브 D″" 표) | "임의" 번호는 성립하지 않는다 — 큐 생성은 실질 append-only |
+| ③ | **`truncated: True` 실측** | `DataPool/Sequences` 재조회에서 childCount **24** 에 반환 **18** + `truncated: True`. (프로브 착수 시점 childCount는 17이었고, 프로브가 191~197을 만들며 24까지 올라간 뒤 관측됐다) | REQ-SCENE-013 (d)의 `truncated` 자동배정 거부 가드가 **가상의 방어가 아니라 실재 조건에 대한 방어**임이 확인됨 |
+
+**막는 대상: 없음.** ①이 v1 경로를 열고, ②·③은 v1이 이미 채택한 제약(오름 정수 번호 · `truncated` 시 자동배정 거부)과 정확히 일치한다. 소수 큐 번호는 여전히 **미측정**이며 §D 제외 근거는 그 미측정이다 — ②를 "삽입 일반 불가"로 확대 해석해 제외 근거로 쓰지 않는다.
+
+##### 정정 — ①의 근거가 신설 시점에 절반만 성립했다 (plan-audit iter-3 N4)
+
+**신설 당시 ①은 과잉 주장이었다.** 문면은 "192~197을 재조회로 실존 확인"이었으나, 실제 프로브 세션에서 재조회한 것은 **192·193·194·195뿐**이고 **196·197은 `ok`만 기록돼 있었다.** `ok`를 실존 증거로 쓰는 것은 이 SPEC의 `§C.1`이 정확히 금지하는 혼동이며, iter-3 감사(N4)가 이를 잡았다.
+
+문면을 약화시키는 대신 **실제로 다시 측정했다** — 2026-08-01, iter-3 감사 지적 이후:
+
+| 대상 | 명령 | 관측 |
+|---|---|---|
+| Seq 196 | `state 'DataPool/Sequences/196'` | `ok` · `{'childCount': 3, 'class': 'Sequence', 'name': 'Sequence 196'}` |
+| Seq 197 | `state 'DataPool/Sequences/197'` | `ok` · `{'childCount': 3, 'class': 'Sequence', 'name': 'Sequence 197'}` |
+
+childCount 3 = `OffCue` + `CueZero` + `Cue 2` — D″가 저장한 큐가 실존한다. **이로써 ①의 문면이 사후적으로 참이 됐다.**
+
+**측정 순서를 명시해 둔다**: 이 두 행은 판정 절 신설 **이후**, 감사 지적을 받고 잰 것이다. 원래 판정이 이 근거 위에 서 있었던 것이 아니다. 순서를 감추면 "인용은 있는데 기록이 없다"(D4가 잡은 결함)와 같은 종류의 부정직이 된다.
+
+본 판정의 기계 판독용 접두 행은 §E.2 말미의 **"판정 접두 행"** 블록이 소유한다(한 판정당 정확히 1행 — REQ-SCENE-021 매핑 표).
+
+#### 판정 요약 (41과 42는 뮤테이션 ④에 따라 분리 기록)
+
+| ASSUMPTION | 판정 | 채널 |
+|---|---|---|
+| 41 `/CueOnly` **접수** | **CONDITION_NOT_MET** | 기계 채널 소진 — 거부 신호는 없었으나 접수를 입증할 경로도 없음 |
+| 42 `/CueOnly` **효과** | **INCONCLUSIVE → 실질 무효** | 사람 GUI. append-only 제약상 보정 대상이 존재하지 않음 |
+| 43 큐 번호 Store | **GO** (v1 범위 = 정수·신규·오름) | 기계 — 재조회 |
+| 44 룩+fx 결합 | **GO** | 사람 GUI |
+| 45 충돌 승자 | 미관측 (Seq 195 대기) → **이후 `GO`(본 절 하단 "GO: ASSUMPTION-45" 및 M0 종결 표가 최종)** | 사람 GUI |
+
+⇒ **D1(전 큐 `/CueOnly`)은 이 시스템의 사용 형태에서 관측 가능한 이득이 없다.** 정책은 사용자 확정 사항이므로 대체 결정은 사용자 몫이다(plan.md `:54` — 에이전트의 결정 월권 금지). **run-phase 중단 + 블로커 보고 상태.**
+
+#### GO: ASSUMPTION-45 (충돌 승자) — 사람 GUI 관측
+
+프로브 E(Seq 195 `SCN CONFLICT`, 룩 `Dimmer At 80` + fx `Dimmer` 스텝 100/0) 실행 결과, 사용자 관측: **딤머가 펄스한다 — 이펙트 승.** **판정 GO.** `design.md §3.3`의 "충돌 시 이펙트 우선 + 리포트 전수 열거" 규칙이 유지된다. 열거 자체는 정적 계산이므로 이 관측과 무관하게 정확하다.
+
+---
+
+### M0 종결 — 판정 5건 + 정책 개정 1건 (2026-08-01)
+
+| ASSUMPTION | 판정 | 채널 | 후속 |
+|---|---|---|---|
+| 41 `/CueOnly` 접수 | **CONDITION_NOT_MET → moot** | 기계 채널 소진 | D1 개정으로 `/CueOnly` 미사용 확정 ⇒ 이 가정 자체가 사라짐 |
+| 42 `/CueOnly` 효과 | **INCONCLUSIVE → moot** | 사람 GUI (A=B) | 동상 |
+| 43 큐 번호 Store | **GO** (v1 범위 = 정수·신규·오름) | 기계 — 재조회 | 역순은 부정 실측 · 소수는 미측정 ⇒ 둘 다 §D 제외. `truncated` 가드 실재 확인 |
+| 44 룩+fx 결합 | **GO** | 사람 GUI | `design.md §3.1` 골격 확정 |
+| 45 충돌 승자 | **GO** | 사람 GUI | `design.md §3.3` 규칙 확정 |
+
+**`REOPEN: D1 트래킹 정책 개정`** — 사용자 재결정(2026-08-01, AskUserQuestion): **속성 집합 균일화(구조적 회피)**. `/CueOnly`를 포함한 store 플래그를 일절 쓰지 않고, 모든 씬이 동일한 속성 집합을 빠짐없이 채우게 하여 트래킹이 샐 자리 자체를 제거한다. 앞 씬이 설정한 속성을 뒤 씬이 명시적으로 덮으므로 트래킹이 존재해도 결과가 동일하다.
+
+이 개정의 성질:
+- **신규 미발화 커맨드 0개** — `/CueOnly`처럼 발화 실적 없는 커맨드를 도입하지 않으므로 미측정 위험이 0이다. FXLIB이 "신규 시퀀스 Cue 1만"으로 택한 구조적 회피와 같은 계열이다.
+- **기계 검증 가능** — "모든 씬의 값 라인 속성 집합이 동일하다"는 정적으로 단정할 수 있다. 트래킹 효과를 관측할 필요가 없어진다(관측 불가 축을 우회한다).
+- **대가 2건** — (a) 씬마다 값 라인이 늘어 지시 턴 dedupe 충돌 위험이 커진다(가드 정책 §4가 더 중요해진다). (b) **룩 라이브러리의 속성 어휘가 룩마다 제각각이므로 균일 집합의 정의가 선행되어야 한다** — 이것이 개정의 실질 범위다.
+
+**영향 아티팩트**: `spec.md`(D1 서술·REQ-SCENE-010, REQ-SCENE-011, REQ-SCENE-014·§C.1 검증 천장·§D), `plan.md`(결정 A·ASSUMPTION 표·M0/M4 기술), `design.md`(§3 골격에서 `/CueOnly` 제거, §4 가드 비중 상향), `acceptance.md`(`/CueOnly` 관련 AC 대체 + 속성 집합 동일성 AC 신설). **소유권상 manager-spec 재위임 대상이며**(manager-develop은 SPEC 본문 수정 금지), 개정으로 plan-artifact 해시가 바뀌므로 **plan-audit 재실행이 강제된다**.
+
+**정리 의무 (미이행)**: 프로브 시퀀스 **191·192·193·194·195·196·197**이 쇼파일에 잔존. `Delete` 블랙리스트로 툴 경로 제거 불가 — 사용자 GUI 삭제 필요.
+
+#### 정리 의무 (미이행) — 기록 자리
+
+> 위 M0 종결 절의 같은 의무이며 **별개 항목이 아니다.** 이 절은 사용자 GUI 삭제 사실을 적을 자리다.
+
+프로브가 만든 **시퀀스 191·192·193·194·195·196·197**이 쇼파일에 남아 있다(**7개** — 196·197은 후속 프로브 D″가 만든 것이다). `Delete`는 블랙리스트라 툴 경로로 제거 불가 — 사용자가 GUI에서 직접 삭제하고 그 사실을 여기에 기록해야 한다. **이 항목이 닫히기 전에는 AC-SCENE-019가 완결이 아니다.**
+
+#### 판정 접두 행 (기계 판독 정본 — REQ-SCENE-021 매핑 표 적용)
+
+> **행두(column 0)에서 시작하는 이 6행이 `grep -E '^(GO|DESCOPE|SKIP|REOPEN):'` 의 판독 대상이다.** 위 각 판정 절의 산문이 근거이고, 이 블록은 그 판정들의 기계 판독 색인이다 — **한 판정당 정확히 1행**이며 같은 대상이 두 행을 갖지 않는다. 형태는 PRECHK 선례(`SPEC-COPILOT-PRECHK-001/progress.md`의 연속 6행)와 같은 배치이고, 어휘→접두어 대응은 `spec.md` REQ-SCENE-021의 인라인 매핑 표가 정본이다. (이 블록은 plan-audit iter-2 결함 D1의 수정으로 신설됐다 — 판정 내용은 위 절들에서 이미 확정된 것이며 **새 측정을 하지 않았다.** 이전에는 판정 어휘가 H4 헤딩·볼드 코드 스팬 안에만 있어 `^` 앵커 grep이 0건을 반환했다.)
+
+SKIP: ASSUMPTION-41 precondition=접수를 판정할 기계 채널의 변별력 날조 대조군 /CueOnlyy 가 ok 를 받고 저장까지 되어 ok 채널이 소진됐고, 그 큐가 기대한 이름과 cueNo 를 그대로 가져 재조회 채널도 소진됐다. Cmd 응답과 재조회 외에 접수를 읽을 제3 경로가 없다 — /CueOnly 는 큐 프로퍼티가 아니라 저장 시점 동작이라 prop 으로 읽을 대상이 존재하지 않는다
+DESCOPE: ASSUMPTION-42 verdict=INCONCLUSIVE A군(Seq 193, /CueOnly)과 B군(Seq 194, 무플래그)이 사람 GUI 관측에서 동일하게 Cue 2 에 딤머 잔존 — 대조군이 갈리지 않아 판정이 서지 않는다. B군 잔존은 전방 트래킹의 실재를 확인해 주므로 관측 설계 자체는 유효했다. A=B 의 설명은 후속 프로브 D″가 실측한 append-only 제약이며, 보정 대상인 다음 큐가 저장 시점에 존재할 수 없다. D1 개정으로 축 자체가 내려갔다
+GO: ASSUMPTION-43 literal=Store Sequence 196 Cue 2 'D2 A2' effect=신규 시퀀스의 정수 큐 번호 Store 가 ok 와 재조회 실존으로 성립(192~197). 같은 세션에서 경계 2건 동시 실측 — 역순 저장은 플래그 무관 Not allowed 거부(196/197 Cue 1), DataPool/Sequences 재조회가 childCount 24 에 반환 18 이고 truncated: True. v1 범위(정수·신규·오름)에 한해 GO 이며 역순과 소수는 v1 범위 밖이다
+GO: ASSUMPTION-44 literal=프로브 C 번들 11줄 Seq 192 'SCN COMBINED'(룩 값 라인 → fx 스텝 열 → 위상 → 속도 → Store) effect=사람 GUI 관측에서 파란색이 유지된 채 딤머가 순차 웨이브 — 룩의 정지 값이 스텝 축에 흡수되지 않고 베이스로 남았다. design.md §3.1 결합 순서 골격이 실측으로 확정됐다
+GO: ASSUMPTION-45 literal=프로브 E 번들 10줄 Seq 195 'SCN CONFLICT'(룩 Dimmer At 80 + fx Dimmer 스텝 100/0) effect=사람 GUI 관측에서 딤머가 펄스 — 이펙트 승. design.md §3.3 의 충돌 시 이펙트 우선 규칙이 확정됐다. 열거 자체는 정적 계산이므로 이 관측과 무관하게 정확하다
+REOPEN: D1 트래킹 정책 사용자 재결정(2026-08-01, AskUserQuestion)으로 전 큐 /CueOnly 를 폐기하고 속성 집합 균일화와 미주장 속성 전수 열거로 대체했다. ASSUMPTION-41 의 CONDITION_NOT_MET 이 plan.md §A.3 예외를 발동시켜 run-phase 가 중단되고 블로커가 보고된 결과이며, 에이전트가 대체 정책을 고르지 않았다
 
 ## §E.3 Run-phase Audit-Ready Signal
 
@@ -99,3 +303,45 @@ _<pending run-phase>_
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<pending sync-phase>_
+
+## §F Phase 4 Mode Selection
+
+기록 시각: 2026-08-01 · 기록자: 오케스트레이터 (첫 run-phase 스폰 전)
+
+### 입력 파라미터
+
+| 항목 | 값 |
+|---|---|
+| tier | L |
+| scope (파일 수) | ~14 |
+| 도메인 수 | 1 (Python 서버 — `server/scene/` 신규 + `server/orchestrator/tools.py` 배선) |
+| 파일 언어 구성 | 100% Python (+ YAML 라이브러리 자산) |
+| concurrency benefit | LOW — 코딩 중심, M4가 압도적 비중 |
+| Agent Teams 전제 | 해당 없음 (Mode 3 RETIRED) |
+
+### 모드 평가
+
+| 모드 | 선택 | 사유 |
+|---|---|---|
+| 1 trivial | 미선택 | 의미 변경 있는 다중 마일스톤 구현 |
+| 2 background | 미선택 | 쓰기 작업 — 읽기 전용 아님 |
+| 3 agent-team | 미선택 | RETIRED (tombstone) |
+| 4 parallel | 미선택 | 도메인 1개 < 문턱 3, 그리고 코딩 중심 — Anthropic coding-task parallelism caveat |
+| 5 sub-agent | **선택** | 순차 마일스톤 위임. 기본 폴백이자 코딩 작업의 안전 기본값 |
+| 6 workflow | 미선택 | 파일 ~14 < 문턱 ~30, 그리고 기계적 단일 변환 규칙이 아님(신규 코드) |
+
+### Decision: sub-agent
+
+### 근거
+
+plan.md §G가 사전 평가로 동일하게 sub-agent(Mode 5)를 권고했고 오케스트레이터가 확정한다. §F.2가 M2/M3/M4의 쓰기 집합 교집합 ∅을 증명해 Mode 4 병렬 창이 열려 있으나, §F.5가 스스로 미채택을 권고한다 — M4가 세 슬라이스 중 압도적으로 크므로(**AC 8건, 뮤테이션 20항**) 벽시계가 M4에 지배되어 병렬 이득이 가려진다. 사용자도 순차를 명시 선택했다. Anthropic의 coding-task parallelism caveat("most coding tasks involve fewer truly parallelizable tasks than research")이 이 선택을 지지한다.
+
+### 경계 사례
+
+도메인 수 1은 Mode 4 문턱(3)에 명확히 미달하여 경계 사례가 아니다. 파일 수 ~14는 Mode 6 문턱(~30)의 절반 이하로 역시 경계가 아니다. **§F.2의 교집합 ∅ 증명이 성립함에도 Mode 4를 선택하지 않은 것**만이 기록할 가치가 있는 판단이며, 그 근거는 위 문단의 M4 지배성이다.
+
+### 진행 모드 (Implementation Kickoff Approval 산출)
+
+- 승인: 획득 (2026-08-01, AskUserQuestion)
+- 진행 모드: **반자율 — 마일스톤마다 확인**. 각 M 완료 시 5섹션 증거 보고(Claim / Evidence / Baseline-attribution / Gaps / Residual-risk) 후 다음 M 진입 전 사용자 확인.
+- M0 착수 조건: 사용자가 콘솔 접근 가능함을 확인함.
