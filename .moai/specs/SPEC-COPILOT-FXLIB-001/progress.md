@@ -469,7 +469,7 @@ _<run-phase 대기 — 소유: manager-develop>_
 ```yaml
 sync_status: synced
 sync_complete_at: 2026-08-01
-sync_commit_sha: pending-backfill-fxlib-sync   # 본 커밋 이후 별도 백필 커밋으로 채운다 (자기참조 해저드 — LOOKLIB F4/DEPLOY-001 동일 패턴, spec-frontmatter-schema.md § SHA placeholder backfill exemption 준용)
+sync_commit_sha: 4b62f79   # 백필 완료 — spec-frontmatter-schema.md § SHA placeholder backfill exemption 준용 (full: 4b62f795ed05e7518a3dc500a32f0e633f2ad4d8)
 b12_self_test_a: "grep -c 'SPEC-COPILOT-FXLIB-001' CHANGELOG.md → 0 (사전) → 1 (사후, 신규 엔트리 1개) — 중복 없음"
 b12_self_test_b: "acceptance.md SSOT AC count = 23 (grep -cE '^### AC-FXLIB-') == CHANGELOG 엔트리 인용 AC 수 23"
 b12_self_test_c: "CHANGELOG 인용 경로 전건 ls 확인 — server/fx/{schema,loader,library,matching,instantiate,report}.py · server/orchestrator/tools.py · server/tests/test_fx_{schema,library,matching,instantiate,tool,boundary}.py"
