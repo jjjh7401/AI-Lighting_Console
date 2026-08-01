@@ -110,9 +110,9 @@ f"Store Sequence {sequence_number} Cue {cue_number} '{cue_name}'",
 
 | 항목 | 기계 검증 | 근거 |
 |---|---|---|
-| 큐 **존재** / 이름 / 실제 `cueNo` | **YES** | `state` 재조회 — SONGCUE가 라이브로 사용(`progress.md:337-344` 표의 `childCount` 열) `[실측]` 전재 |
+| 큐 **존재** / 이름 / 실제 `cueNo` | **YES** | `state` 재조회 — SONGCUE가 라이브로 사용(`SPEC-COPILOT-SONGCUE-001/progress.md:337-344` 표의 `childCount` 열) `[실측]` 전재 |
 | 시퀀스 이름 / `childCount` | **YES** | 동상 |
-| `TrigType` / `TrigTime` | **YES — 단 게이트 우회 직결 경로** | 응답기 `prop` 동사 → `server/safety/console.py:391` `query_property` `[코드]`. 라이브 사용 실증: SONGCUE `progress.md:500-502` `[실측]` 전재 |
+| `TrigType` / `TrigTime` | **YES — 단 게이트 우회 직결 경로** | 응답기 `prop` 동사 → `server/safety/console.py:391` `query_property` `[코드]`. 라이브 사용 실증: `SPEC-COPILOT-SONGCUE-001/progress.md:500-502` `[실측]` 전재 |
 | `CueFade` | **NO** | `property not readable: CueFade` — 양 경로 모두. `songcue_report.py:15` 상수가 이 사실을 문면화 `[코드]` |
 | **큐의 내용(저장된 값)** | **NO** | 반환 경로 부재. FXLIB M0가 측정된 경계로 확정(`FXLIB spec.md:99` — *"큐 트리는 `Cue → Part(childCount 0)`에서 바닥나 내용 있는 큐와 빈 큐가 구별되지 않는다"*) `[실측]` 전재 |
 | **효과 / 모션 / 발색** | **NO** | 사람 GUI가 유일. FXLIB `REQ-FXLIB-014 (c)` + `report.py:52` `EFFECT_EVIDENCE_NOTICE` `[코드]` |
@@ -148,11 +148,13 @@ SONGCUE의 판정 문장 전재: *"새 큐 번호에는 두 형태 모두 가산
 
 - **PROPERTY 형태만 검증됨**: `31_choreography_patterns.md:106-117` — *"Use the PROPERTY form (validated on 2.4.2)"*. 토큰은 Capitalized(`Follow`, not `follow`), 폐쇄 집합은 `Go / Time / Follow / Sound / BPM`. `[문서]`
 - **`/trig=` 금지**: 같은 절 `:115-117` — *"Do NOT emit `Assign Cue 1 Sequence 11 /trig=follow` — the `/trig=` option form returns \"Illegal object\" on 2.4.2."* `[문서]`
-- **`TrigTime`은 절대 초**: SONGCUE `progress.md:502` 라이브 2점 판별 `[실측]` 전재 — Cue 1에 `TrigTime 10`, Cue 2에 `TrigTime 14`를 넣고 readback이 각각 `"10.0"` / `"14.0"`. 상대 지연 해석이었다면 Cue 2는 `"4.0"`으로 관측됐어야 한다. **판정: 시퀀스 시작 기준 절대 시각.**
+- **`TrigTime`은 절대 초**: `SPEC-COPILOT-SONGCUE-001/progress.md:502` 라이브 2점 판별 `[실측]` 전재 — Cue 1에 `TrigTime 10`, Cue 2에 `TrigTime 14`를 넣고 readback이 각각 `"10.0"` / `"14.0"`. 상대 지연 해석이었다면 Cue 2는 `"4.0"`으로 관측됐어야 한다. **판정: 시퀀스 시작 기준 절대 시각.**
 - **큐 사후 개명 경로 부재**: `Label Cue`를 독립 동사로 쓴 룰북 근거 0건 → 큐 이름은 **Store 시점에 고정**된다(SONGCUE REQ-SONGCUE-008). 씬의 라벨은 Store 리터럴 인라인이 유일 경로다. `[문서]`
 - **게이트 참조 종별에 `Cue` 부재**: `server/safety/classify.py:44` — `RECOGNIZED_REFERENCE_TYPES = ("Macro", "Plugin", "Sequence", "Executor")`. `Goto Cue` 류를 열려면 게이트 어휘 확장이 필요하므로 §D 제외. `[코드]`
 
 ## §9. 조사 ⑧ — 미검증 축 5건 → ASSUMPTION-41~45
+
+> **이 표는 M0 이전(plan-phase) 조사 스냅샷이다 — 승계됨.** "현 상태" 열은 프로브 발화 전의 근거 등급이며(전부 `[미확정]`), 41~45의 **확정 판정은 `progress.md §E.2`와 `spec.md §C.2`가 정본**이다(41 `CONDITION_NOT_MET`→moot · 42 `INCONCLUSIVE`→moot · **43 `GO`** — v1 범위 = 정수·신규·오름 한정 · 44 `GO` · 45 `GO`). 특히 43 행의 "부분 검증"은 **REQ-SCENE-021의 폐쇄 어휘 밖 표현**이며, 판정 surface에서는 `GO`로 교체됐다 — 이 행은 조사 시점 기록으로 보존한다.
 
 | # | 축 | 현 상태 | 막는 대상 | 판정 소비처 |
 |---|---|---|---|---|

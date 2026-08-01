@@ -8,7 +8,7 @@
 
 **무엇**: 씬 컴파일러 — **룩(정적 값) + 이펙트(스텝 열) + 타이밍을 하나의 큐로** 합성한다. LOOKLIB(정지 화면 어휘)·FXLIB(시간축 어휘)이 세운 "의도→메모리 파이프라인"의 **2단계**이며, FXLIB이 `spec.md:42`·`:70`·`:140` 세 곳에서 명시적으로 예약해 둔 좌석이다. 신규 패키지 `server/scene/`에 스키마·로더·2축 매칭·결합 컴파일러·리포트를 세우고, 툴 2종(`find_scene`·`compile_scene`)을 기존 `run_commands`→`gate.screen()` 경로로만 배선한다.
 
-**상태**: **plan-phase 개정 완료 (v0.2.1, draft) · M0 실행 완료(정리 잔여 1건 — AC-SCENE-019 미완결).** REQ **21** · AC **24** · ASSUMPTION **5(41~45 — 41·42는 판정 후 moot)** · clarification 마커 **0** · 결정 **A~K 전부 해소** · 라이브 세션 2회 중 **1회 소진(M0)**. 다음 단계 = **plan-audit 재실행(Tier L 문턱 0.85 — 개정으로 plan-artifact 해시 변경 ⇒ 강제)** → **M1**.
+**상태**: **plan-audit iter-3 PASS 0.90(문턱 0.85) · v0.2.2(iter-3 비차단 N1~N9 fix-forward) · M0 실행 완료(정리 잔여 1건 — AC-SCENE-019 미완결) · M1 완료.** REQ **21** · AC **24** · ASSUMPTION **5(41~45 — 41·42는 판정 후 moot)** · clarification 마커 **0** · 결정 **A~K 전부 해소** · 라이브 세션 2회 중 **1회 소진(M0)**. 다음 단계 = **M2(내장 씬 라이브러리 저작)** — 진행 모드는 **반자율(마일스톤마다 확인, §F)**.
 
 **이 SPEC의 한 줄 (v0.2.0 개정)**: 트래킹 정책이 **M0 실측으로 한 번 뒤집혔다** — `/CueOnly`(미발화 커맨드)를 버리고 **속성 집합 균일화 + 미주장 속성 전수 열거**를 택했다. 그러나 **관측 천장은 그대로다**: "균일 집합을 발화했다"와 "트래킹이 무해해졌다"를 절대 뭉치지 않는 것이 여전히 전체 설계의 축이다.
 
@@ -30,7 +30,7 @@
 3b. **큐 생성은 실질 append-only다.** 기존 큐보다 낮은 번호의 나중 저장은 플래그 무관 거부된다(M0 실측). ⚠️ 룰북 `:56`의 소수 번호 삽입 서술과 **표면상 충돌**하며 **소수 삽입은 미측정**이다 — "삽입 일반 불가"로 확대 해석 금지.
 3c. **거부 메시지 리터럴을 단정 근거로 쓰지 말 것.** 점유 큐 재저장은 `User Canceled Command`, 역순 저장은 `Not allowed`였다 — 원인마다 다르다.
 4. **룩이 먼저인 것은 취향이 아니라 강제다.** `MIN_STEPS = 2`(`server/fx/schema.py:66`) + `Step 1` 미발화(`server/fx/instantiate.py:326-342`) → **스텝 1 = 현재 프로그래머 상태 = 룩의 자리**. 순서를 뒤집으면 룩이 페이저의 **종점**이 되고, **런타임은 아무 신호도 내지 않는다**(design.md §3.2).
-5. **`/Merge` 금지는 비직관적이다.** `/Merge`는 파괴적이지 않다. 금지 이유는 새 큐 번호에서 **동작이 무플래그와 동일한데**(SONGCUE `progress.md:337-344` 실측) **기존 번호의 `Not allowed` 안전망만 꺼지기 때문**이다 — 실익 0에 방어선만 잃는다.
+5. **`/Merge` 금지는 비직관적이다.** `/Merge`는 파괴적이지 않다. 금지 이유는 새 큐 번호에서 **동작이 무플래그와 동일한데**(`SPEC-COPILOT-SONGCUE-001/progress.md:337-344` 실측) **기존 번호의 `Not allowed` 안전망만 꺼지기 때문**이다 — 실익 0에 방어선만 잃는다.
 6. **값 라인 dedupe는 지시 턴 경계다.** `executed_ok`가 툴 호출을 넘어 축적된다(`tools.py:699-703` 주석 원문 "in a prior tool call"). 면제는 `Clear`/`ClearAll`/bare 선택 3종뿐(`:327-331`). **씬 번들은 룩+fx 값 라인을 함께 담아 fx보다 충돌 표면이 넓다.** v1은 지시 턴당 컴파일 1회가 운용 경계다.
 7. **면제 집합 사본을 만들지 말 것.** `is_programmer_state`가 fx `__all__` 등재 **공개 API**다(`server/fx/instantiate.py:144`). 호출하면 되고, 사본을 만들면 fx가 `test_fx_boundary.py:256-379`에 진 동치 단언 의무를 새로 상속한다.
 8. **비공개 함수 import는 적법하다 — 선례 2건.** `server/looks/busking.py:30`·`songcue.py:11`이 `_values_line`을 import하며 이유를 주석으로 남겼다: "**여기서 다시 조립하면 두 곳이 갈라진다**". 씬도 같은 계산이다(결정 D). 단 **패키지 간** 결합이므로 `test_scene_boundary.py`의 산출 형상 고정이 안전벨트다.
@@ -93,7 +93,7 @@ uv run pytest server/tests/ -q                    # 킥오프 baseline — 직�
 
 ### v0.2.0 (개정 — 2026-08-01, M0 실측 후)
 
-- **개정 사유**: M0 라이브 프로브가 **D1(전 큐 `/CueOnly`)을 무너뜨렸다.** 근거 2건 전부 `[실측]` — ① 날조 플래그 `/CueOnlyy`가 `ok`+저장까지 되어 접수 판정의 **두 기계 채널(`ok`·재조회)이 동시에 소진**, ② 큐 생성이 **실질 append-only**라 `/CueOnly`의 보정 대상("다음 큐")이 저장 시점에 존재할 수 없음. 판정 정본은 §E.2(무수정 보존).
+- **개정 사유**: M0 라이브 프로브가 **D1(전 큐 `/CueOnly`)을 무너뜨렸다.** 근거 2건 전부 `[실측]` — ① 날조 플래그 `/CueOnlyy`가 `ok`+저장까지 되어 접수 판정의 **두 기계 채널(`ok`·재조회)이 동시에 소진**, ② 큐 생성이 **실질 append-only**라 `/CueOnly`의 보정 대상("다음 큐")이 저장 시점에 존재할 수 없음. 판정 정본은 §E.2다 — **append-only**로 다룬다: 기록된 판정을 고쳐 쓰지 않고, 이후 추가분(v0.2.1의 ASSUMPTION-43 판정 절·판정 접두 행 블록, iter-3 N4의 정정 절)은 **자기 출처와 측정 순서를 밝힌 채 덧붙인다**.
 - **사용자 재결정 (2026-08-01, AskUserQuestion)**: **옵션 D — 코어 4 균일 집합 + 미주장 속성 전수 열거.** `/CueOnly`를 포함한 store 플래그를 일절 쓰지 않는다. `Zoom`/`Iris`는 균일 보장 밖(방향 미측정 — 채움값 발명 금지). Pan/Tilt 이월은 v1에서 닫지 않고 §D에 명시 + 매 컴파일 열거로 노출.
 - **개정 근거 조사**: `.moai/reports/scene-uniform-attribute-set-proposal.md` — 룩 라이브러리 32개 전수 파싱(코어 4 = 32/32, 유니온 = 6, 형상 4가지, Zoom 16/32 · Iris 8/32), LOOKLIB이 이미 코어 4를 3개 테스트로 강제 중임을 확인 ⇒ **자산 편집 0건 · PRESERVE 무교차**.
 - **본 개정에서 직접 측정한 것 `[측정]`**: ① 32개 룩 전수의 attribute 선언 순서가 **32/32 코어 4 우선 일치**(순서 위반 0건), ② 균일 정렬이 오늘 자산에 대해 **바이트 무변화**(32/32 동일 문자열), ③ 값 라인 최대 길이 **171바이트**(MA3 명령줄 천장 ~2048 대비 8.3%), ④ `KNOWN_ATTRIBUTES` = 정확히 8원소, `CONFIRMED_ATTRIBUTES` = 코어 4 동일 순서.
@@ -110,12 +110,20 @@ uv run pytest server/tests/ -q                    # 킥오프 baseline — 직�
 - **개수 소인 결과(실측)**: `REQ 21` · `AC 24` · `Out of Scope 16` · **접두 행 6**(직전 0). 산문 개수 주장은 전부 이 기계값에 맞췄다.
 - **불변 확인**: D1(균일 집합 + 미주장 열거) · D2(룩 먼저 · 충돌은 이펙트 우선) · D3(`/Merge` 미사용) · D4(Tier L) **전부 무변경**. ASSUMPTION-44/45는 `GO` 그대로, 41/42는 moot 그대로다.
 
+### v0.2.2 (iter-3 비차단 지적 9건 fix-forward — 2026-08-01, M1 커밋에 배치)
+
+- **성질**: **정책·요구·인수 무변경 · 재감사 불요.** plan-audit iter-3은 **PASS 0.90**(Tier L 문턱 0.85, 추세 0.91 → 0.80 → 0.90)으로 닫혔고, 감사가 새로 연 **N1~N9는 전부 비차단 문서 정합성 지적**이다(리포트 자신이 "None is blocking"으로 분류). 차단이 아니므로 별도 개정 사이클을 돌리지 않고 **M1 구현 커밋에 함께 배치**했다 — SHOWUI v0.2.1이 세운 fix-forward 선례와 같은 처리다.
+- **처리**: N1(썩은 `plan.md` 줄 앵커 3건 → 절 앵커) · N2(맨 `progress.md:NNN` 인용 11곳 → `SPEC-COPILOT-<X>-001/` 완전형) · **N3·N7**(REQ-SCENE-021의 "접두 행을 갖는 명시적 섹션"이 실제 기록 형태와 구조적으로 어긋나던 것을 두 조건 — *판정 절의 존재* + *행두 접두 행의 기계 판독 가능성* — 으로 재진술하고 `REOPEN_SCOPE`를 범위 문장에 명시) · N5(v0.2.1 HISTORY "전 surface" 과잉 주장 정정) · N6(`research.md §9`에 M0 이전 스냅샷 승계 포인터 신설) · N8(AC-SCENE-024 케이스 ②를 **Zoom-only** 재료로 좁힘) · N9("무수정 보존" → **append-only**로 재진술). **N4는 v0.2.1 시점에 이미 닫혔다**(196·197 실제 재조회 + 측정 순서 명기).
+- **N3을 "요구 완화"로 읽지 말 것**: 접두 행의 **물리적 배치 자유**만 인정했고, `^` 앵커 grep 판독 가능성과 한 판정당 정확히 1행이라는 조건은 그대로다. AC-SCENE-019가 금지하는 **정규식 완화는 하지 않았다** — 소인 후 재실행에서 여전히 **6행 · exit 0**이다.
+- **개수 소인 결과(실측, 소인 후)**: `REQ 21` · `AC 24` · `Out of Scope 16` · **접두 행 6** · **맨 `progress.md:NNN` 인용 0건**. 토큰 변동 **0**.
+
 ## §E.1 Plan-phase Audit-Ready Signal
 
 - plan_complete_at: 2026-08-01T02:57:13Z (v0.1.0)
 - plan_amended_at: 2026-08-01 (v0.2.0 — D1 개정 + audit iter-1 결함 6건 폴드인)
 - plan_amended_at: 2026-08-01 (v0.2.1 — audit iter-2 결함 16건 수정, 정책 무변경)
-- plan_status: audit-ready (**재감사 필요 — iter-3, 하드캡** · 결함 델타 한정 재감사)
+- plan_amended_at: 2026-08-01 (v0.2.2 — iter-3 비차단 N1~N9 fix-forward, 정책 무변경, M1 커밋에 배치)
+- plan_status: **audited — PASS 0.90** (iter-3, 2026-08-01 · 리포트 `.moai/reports/plan-audit/SPEC-COPILOT-SCENE-001-review-3.md`, gitignore 대상이라 저장소에는 없다). 재감사 불요
 - tier: L (plan-auditor 문턱 0.85)
 - artifacts: spec.md · plan.md · acceptance.md · design.md · research.md · progress.md (6종)
 - tokens: REQ **21** · AC **24** · ASSUMPTION 41~45(5 — 41·42 판정 후 moot) · 결정 **A~K(11, 전부 해소)** · clarification 마커 0 · 승인 대기 0
@@ -148,11 +156,11 @@ uv run pytest server/tests/ -q                    # 킥오프 baseline — 직�
 2. **그러나 미지 store 플래그에 한해 관대하다.** `/CueOnlyy`는 존재하지 않는 플래그인데 거부되지 않았고 저장까지 됐다.
 3. **재조회도 변별하지 못한다.** 날조 플래그가 만든 큐는 기대한 이름·`cueNo`를 그대로 갖는다 — 진짜 `/CueOnly`가 만들 큐와 재조회 상으로 구별 불가다.
 
-⇒ plan.md `:99`의 대비책("`ok`가 증거력이 없으면 **판정은 재조회에만 의존해야 한다**")은 **성립하지 않는다.** 재조회 역시 비변별적이다. ASSUMPTION-41은 **두 기계 채널 모두에서 판정 불능**이며, 이는 M0 설계가 예상하지 못한 상태다.
+⇒ **M0 플랜(v0.1.0)이 적어 둔 대비책**("`ok`가 증거력이 없으면 **판정은 재조회에만 의존해야 한다**")은 **성립하지 않는다.** 재조회 역시 비변별적이다. ASSUMPTION-41은 **두 기계 채널 모두에서 판정 불능**이며, 이는 M0 설계가 예상하지 못한 상태다.
 
 `Cmd()` 응답과 재조회 외에 접수를 읽을 제3 경로는 없다: `/CueOnly`는 큐 프로퍼티가 아니라 **저장 시점의 인접 큐 내용 조작 동작**이므로 `prop`으로 읽을 대상이 존재하지 않고, 큐 내용 자체는 어떤 경로로도 반환되지 않는다(spec.md §C.1).
 
-**귀결**: 접수(41)를 기계로 세울 수 없다. 남은 유일한 단서는 **효과**(프로브 D, 사람 GUI)인데, 뮤테이션 ④가 접수와 효과의 판정 병합을 금지한다. 따라서 41은 `GO`로 올릴 수 없고 `CONDITION_NOT_MET`이며, plan.md `:107`에 따라 **run-phase 중단 + 블로커 보고**다.
+**귀결**: 접수(41)를 기계로 세울 수 없다. 남은 유일한 단서는 **효과**(프로브 D, 사람 GUI)인데, 뮤테이션 ④가 접수와 효과의 판정 병합을 금지한다. 따라서 41은 `GO`로 올릴 수 없고 `CONDITION_NOT_MET`이며, `plan.md §A.3`(정직한 축소 원칙의 예외 — 사용자 확정 정책의 전제가 무너지면 축소가 아니라 중단이다)에 따라 **run-phase 중단 + 블로커 보고**다.
 
 부수 관측: 거부 메시지가 SONGCUE M0의 `Not allowed`가 아니라 `User Canceled Command`였다. 확인 팝업이 떴다가 취소된 형상으로 보이며, 쇼파일 불변이라는 결론은 같으나 **메시지 리터럴을 단정에 쓰면 안 된다**는 뜻이다.
 
@@ -250,7 +258,7 @@ childCount 3 = `OffCue` + `CueZero` + `Cue 2` — D″가 저장한 큐가 실�
 | 44 룩+fx 결합 | **GO** | 사람 GUI |
 | 45 충돌 승자 | 미관측 (Seq 195 대기) → **이후 `GO`(본 절 하단 "GO: ASSUMPTION-45" 및 M0 종결 표가 최종)** | 사람 GUI |
 
-⇒ **D1(전 큐 `/CueOnly`)은 이 시스템의 사용 형태에서 관측 가능한 이득이 없다.** 정책은 사용자 확정 사항이므로 대체 결정은 사용자 몫이다(plan.md `:54` — 에이전트의 결정 월권 금지). **run-phase 중단 + 블로커 보고 상태.**
+⇒ **D1(전 큐 `/CueOnly`)은 이 시스템의 사용 형태에서 관측 가능한 이득이 없다.** 정책은 사용자 확정 사항이므로 대체 결정은 사용자 몫이다(`plan.md §A.3` — 에이전트의 결정 월권 금지). **run-phase 중단 + 블로커 보고 상태.**
 
 #### GO: ASSUMPTION-45 (충돌 승자) — 사람 GUI 관측
 
@@ -296,9 +304,57 @@ GO: ASSUMPTION-44 literal=프로브 C 번들 11줄 Seq 192 'SCN COMBINED'(룩 �
 GO: ASSUMPTION-45 literal=프로브 E 번들 10줄 Seq 195 'SCN CONFLICT'(룩 Dimmer At 80 + fx Dimmer 스텝 100/0) effect=사람 GUI 관측에서 딤머가 펄스 — 이펙트 승. design.md §3.3 의 충돌 시 이펙트 우선 규칙이 확정됐다. 열거 자체는 정적 계산이므로 이 관측과 무관하게 정확하다
 REOPEN: D1 트래킹 정책 사용자 재결정(2026-08-01, AskUserQuestion)으로 전 큐 /CueOnly 를 폐기하고 속성 집합 균일화와 미주장 속성 전수 열거로 대체했다. ASSUMPTION-41 의 CONDITION_NOT_MET 이 plan.md §A.3 예외를 발동시켜 run-phase 가 중단되고 블로커가 보고된 결과이며, 에이전트가 대체 정책을 고르지 않았다
 
+---
+
+### M1 — 씬 스키마 + 로더 (2026-08-01, 완료 · cycle_type=tdd)
+
+**착수 baseline (직접 실측 — plan-phase 수치 이월 금지)**: `.venv/bin/python -m pytest server/tests/ -q` → **3432 passed / 5 skipped**, 기반 `main` = `3c701b1`(clean, 미푸시). M0 판정 접두 행 존재 확인: `grep -cE '^(GO|DESCOPE|SKIP|REOPEN):' progress.md` → **6**, exit 0.
+
+**산출**: `server/scene/__init__.py` · `server/scene/schema.py` · `server/scene/loader.py` · `server/tests/test_scene_schema.py`(**94 tests**). `server/orchestrator/tools.py` 무변경(툴 배선은 M6).
+
+**해석 기록 — 요구 2건이 표면상 충돌해 소유권을 분리했다.** REQ-SCENE-001은 타이밍 축(`cue_number`/`sequence_number`/`trig_type`/`trig_time`)을 **씬 스키마의 축**으로 정의하고, REQ-SCENE-004·AC-SCENE-004는 **시퀀스·큐 번호가 호출 인자이지 정적 자산 필드가 아니다**라고 못 박는다. 동시에 REQ-SCENE-006은 **`cue_number` 범위 검사를 로더에 배정**한다. 세 요구를 전부 만족하는 형태는 하나뿐이다:
+
+| 타입 | 축 | 근거 |
+|---|---|---|
+| `Scene` (정적 자산) | `scene_id` · `display_name` · `label` · `look_id?` · `fx_id?` · `aliases` · `mood_keywords` · `trig_type?` · `trig_time?` | 시퀀스·큐 번호 필드가 **존재하지 않는다** ⇒ 자산에 넣으면 **미지 필드로 거부**된다(REQ-SCENE-004의 기계 집행). `trig_type`은 자산 축이다 — REQ-SCENE-006 검증 ⑤(미지 `trig_type` 거부)가 **로더 검사**이므로 자산이 그 필드를 갖는다는 것이 요구의 전제다 |
+| `SceneTiming` (호출 인자) | `sequence_number?` · `cue_number?` · `trig_type?` · `trig_time?` | 전부 선택. 범위 검증은 `loader.parse_timing()`이 수행한다 — 자산 스키마와 타이밍 인자 스키마를 **한 모듈이 소유**해 "적법한 큐 번호"의 정의가 한 벌만 존재한다 |
+
+**해석 기록 2 — 라벨은 필수·ASCII·인용 가능**이다. `spec.md §A`의 씬 축 표가 라벨을 ASCII로 규정하고 Store 리터럴에 인라인한다. fx는 `_label_of`에서 `display_name` 폴백을 두지만(`server/fx/instantiate.py:264-275`), **씬의 `display_name`은 한국어**이므로 같은 폴백을 두면 ASCII 규율이 첫 호출에서 깨진다. 따라서 폴백 없이 필수로 두고, fx의 `LABEL_UNQUOTABLE`과 같은 인용 불가 문자(`'`·개행) 거부를 로더가 함께 수행한다.
+
+**해석 기록 3 — `server/scene/library/`는 M1이 만들지 않는다.** 자산은 §F.2 병렬 슬라이스 A(M2)의 쓰기 집합이다. `load_library_from_dir`의 기본 인자는 그 디렉터리를 가리키며 **부재 시 명시 에러**(`scene library directory not found`)를 낸다 — 조용한 빈 라이브러리를 서빙하지 않는다.
+
+**뮤테이션 4항 — 전부 killed** (각 항목은 소스를 실제로 변형해 실행하고 원복했다):
+
+| # | 주입 | 결과 | 죽은 테스트 (대표) |
+|---|---|---|---|
+| ① | 미지 필드 검사 무력화(`if unknown:` → `if False:`) | **killed** — 9 failed / 75 passed | `test_an_unknown_scene_key_is_refused` · `test_a_per_show_key_is_refused_as_an_unknown_field[group / fid / executor / sequence_number / cue_number …]` (8건) |
+| ② | `look_id`/`fx_id` 동시 부재 통과 | **killed** — 2 failed / 82 passed | `test_a_scene_with_neither_reference_is_refused` · `test_an_explicit_null_pair_is_refused_too` |
+| ③ | `Scene`에 per-show 필드(`executor` — 선택 정수) 추가 | **killed** — 2 failed / 82 passed | `test_the_scene_field_set_is_exactly_the_authored_axes` · `test_no_per_show_axis_exists_on_the_scene_dataclass[executor]` |
+| ④ | 소문자 `trig_type` 통과(`token.title()` 허용) | **killed** — 9 failed / 75 passed | `test_a_lowercase_token_is_refused[Go / Time / Follow / Sound / BPM]` · `test_an_all_caps_token_is_refused[…]` |
+
+뮤테이션 ③은 **AC-SCENE-004의 M1측 절반**이다(자산측 전수는 M2 `test_scene_library.py`). ④의 재료 규율 1건을 기록한다: `BPM`은 `upper()`가 자기 자신이므로 대문자 변형 파라미터에서 **구조적으로 제외**했다 — 넣으면 `test_every_closed_token_is_accepted`와 정반대를 단언하게 되고, 실제로 첫 실행에서 그 형태로 실패했다.
+
+**검증 (착수 후 실측)**: 전체 `pytest server/tests/ -q` → **3526 passed / 5 skipped** (신규 94, **신규 실패 0**). `ruff check` OK · `ruff format --check` 클린. 커버리지 `--cov=server.scene` → **100%** (문턱 85%). `test_architecture.py` 그린 — `server/scene/`는 `SERVER_DIR.rglob("*.py")` 전역 스캔에 **자동 포섭**되며 예외 명단(`_NAMED_TOOL_EXEMPTIONS`)에 아무것도 추가하지 않았다(REQ-SCENE-019 · AC-SCENE-017의 M1측 확인 — AST 식별자 스캔 전체는 M7 몫).
+
+**PRESERVE 게이트**: `git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety` → **빈 출력**. M1은 상류를 **import조차 하지 않는다**(스키마·로더는 순수 자기 정의) — 상류 읽기 import는 M4(값 라인)·M7(상수 동치)에서 시작된다.
+
+**AC 상태**: AC-SCENE-001 **충족**(위반 5종 각각 독립 테스트 — 미지 필드 / 중복 id / 참조 동시 부재 / 수치 범위 / 미지·소문자 `trig_type`), AC-SCENE-002 **충족**(거부 1케이스 + 적법 3케이스 대조군 — 둘 다 / 룩만 / fx만).
+
+**승계 — 닫히지 않은 항목**: M0 프로브 시퀀스 **191~197** 쇼파일 잔존(위 "정리 의무" 절). M1은 순수 파이썬·콘솔 무접촉이므로 이 잔여에 영향받지 않으나, **AC-SCENE-019는 여전히 미완결**이다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+- run_started_at: 2026-08-01 (M1)
+- baseline_measured: pytest **3432 passed / 5 skipped** @ `main` `3c701b1` (착수 직전 직접 실행 — 이월 없음)
+- milestones_done: **M0**(라이브 프로브, 정리 잔여 1건) · **M1**(스키마 + 로더, cycle_type=tdd)
+- milestones_open: M2 · M3 · M4 · M5 · M6 · M7 · M8
+- ac_closed: AC-SCENE-001 · AC-SCENE-002
+- ac_open: AC-SCENE-019(정리 잔여) · 나머지 21건
+- current_measured: pytest **3526 passed / 5 skipped** (신규 94, 신규 실패 0) · `server/scene` 커버리지 **100%** (문턱 85%) · ruff check/format 클린
+- mutations: M1 **4/4 killed** (survived 0)
+- preserve_gate: `git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety` → **빈 출력**
+- open_items: M0 프로브 시퀀스 191~197 쇼파일 정리 **미이행**(사용자 GUI 삭제 필요) ⇒ AC-SCENE-019 미완결
+- commit_sha: pending-backfill
 
 ## §E.4 Sync-phase Audit-Ready Signal
 

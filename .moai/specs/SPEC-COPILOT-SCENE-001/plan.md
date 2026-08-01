@@ -31,7 +31,7 @@
 | 1 | **트래킹 정책 = 균일 집합 + 미주장 열거** (D1 개정 — 결정 A) | **데이터 모델의 뿌리이며 이미 한 번 뒤집혔다.** 최초 정책(`/CueOnly`)이 M0 실측으로 폐기됐다 — 되돌리기 어려운 결정이 실제로 되돌려진 사례이므로 리뷰 1순위는 **개정본의 논거가 실측과 정합한가**다. 확인 지점: ① 폐기 근거 2건이 `progress.md §E.2`와 일치하는가, ② 균일 집합이 **자산 편집 0건**으로 성립하는가(32/32 측정), ③ **관측 천장이 바뀌지 않았다는 사실**이 리포트 규율에 반영됐는가(design.md §6.2 — 같은 실패 모드의 재생산이 최대 위험) |
 | 2 | **결합 순서 = 룩 먼저 · 충돌은 이펙트 우선** (D2 — 결정 B) | **사용자 대면 동작 + 형상 계약.** 순서를 뒤집으면 룩이 페이저의 종점이 되어 사용자가 본 것과 지시한 것이 달라진다. 그리고 그 결함은 **기계로 검출되지 않는다**. 정본 design.md §3 |
 | 3 | **상류 비공개 함수 import** (결정 D) | **신규 타입 인터페이스 결합.** 씬이 `_values_line`·`_step_lines`에 결합한다 — 저장소 선례가 2건 있으나(busking, songcue) 둘 다 **패키지 내부**였고 씬은 **패키지 간**이다. 되돌리려면 재구현이고, 재구현은 무음 드리프트다. design.md §2.2 |
-| 4 | **`/Merge` 미사용 · 신규 큐 번호 전용** (D3 — 결정 C) | 안전망 유지 결정. 라이브 실측이 뒷받침하므로(SONGCUE progress.md:337-344) 근거는 단단하지만, 큐 편집 축을 통째로 닫는 범위 결정이기도 하다 |
+| 4 | **`/Merge` 미사용 · 신규 큐 번호 전용** (D3 — 결정 C) | 안전망 유지 결정. 라이브 실측이 뒷받침하므로(SPEC-COPILOT-SONGCUE-001/progress.md:337-344) 근거는 단단하지만, 큐 편집 축을 통째로 닫는 범위 결정이기도 하다 |
 | 5 | **1차 가드 = raise (fx 정책)** (결정 F) | 세 선례가 갈려 있어 **선택**이 필요했다. 논거는 "씬 번들은 하나의 Store라 잔여가 없다" — design.md §4.1 |
 | 6 | **기계적 미러 구현** (스키마/로더/매칭/툴 배선) | LOOKLIB·FXLIB 선례를 따르는 기계 작업 — 마지막에 본다 |
 
@@ -67,7 +67,7 @@
 |---|---|---|
 | **A** | **트래킹 정책 = 속성 집합 균일화 + 미주장 전수 열거** (D1 **개정** — `/CueOnly` 폐기) | 사용자 재확정(2026-08-01, M0 실측 후). **폐기 근거 2건 전부 `[실측]`**: ① 미지 플래그가 조용히 접수돼 접수 판정의 기계 채널이 소진, ② 큐 생성이 실질 append-only라 `/CueOnly`의 보정 대상이 존재할 수 없음(정본 `progress.md §E.2`). **개정본**: 균일 집합 = 코어 4(`Dimmer`+RGB3) — 라이브러리 32/32가 이미 충족하고 LOOKLIB이 이미 3개 테스트로 강제 중이므로 **자산 편집 0건**. `Zoom`/`Iris`는 균일 보장 밖(방향 미측정 — 채움값 발명 금지). 닫지 못한 축(Pan/Tilt 포함)은 **매 컴파일 전수 열거**. 정본 design.md §6, 조사 `.moai/reports/scene-uniform-attribute-set-proposal.md`. 주장 분리 보고 의무는 REQ-SCENE-014 |
 | **B** | **결합 순서 = 룩 먼저, 충돌은 이펙트 우선** | 사용자 확정 D2. **정본 design.md §3.** 강제 근거: `MIN_STEPS = 2`(`server/fx/schema.py:66`) + `Step 1` 미발화(`server/fx/instantiate.py:326-342`) → 스텝 1 = 현재 프로그래머 상태 = 룩의 자리. 충돌 열거는 정적 교집합 계산(REQ-SCENE-005) |
-| **C** | **`/Merge` 0건 · 신규 큐 번호 전용** | 사용자 확정 D3. SONGCUE 라이브 실측(progress.md:337-344): 새 번호는 `/Merge` 유무 무관 동일, 기존 번호는 무플래그가 **`Not allowed` 거부** — 그 거부가 `server/fx/instantiate.py:225`가 "the LAST line of defence"라 부르는 안전망. `/Merge`는 실익 0에 안전망만 잃는 거래 |
+| **C** | **`/Merge` 0건 · 신규 큐 번호 전용** | 사용자 확정 D3. SONGCUE 라이브 실측(SPEC-COPILOT-SONGCUE-001/progress.md:337-344): 새 번호는 `/Merge` 유무 무관 동일, 기존 번호는 무플래그가 **`Not allowed` 거부** — 그 거부가 `server/fx/instantiate.py:225`가 "the LAST line of defence"라 부르는 안전망. `/Merge`는 실익 0에 안전망만 잃는 거래 |
 | **D** | **상류 재사용 = 비공개 함수 읽기 import** | design.md §2.2. 선례 2건: `server/looks/busking.py:30`(`_values_line`, 주석 "dedupe가 비교하는 문자열의 단일 출처") · `server/looks/songcue.py:11`. 재구현은 두 벌을 갈라지게 하고 **갈라짐은 무음**이다. 패키지 간 결합이라는 간격은 `test_scene_boundary.py`의 산출 형상 고정이 메운다 |
 | **E** | **면제 집합 사본 0** | `is_programmer_state`가 fx `__all__` 등재 **공개 API**(`server/fx/instantiate.py:144`)이므로 호출만 한다. fx가 자기 사본을 두면서 `test_fx_boundary.py:256-379`에 동치 단언 의무를 진 것과 달리, **씬은 사본을 만들지 않으므로 그 의무를 상속하지 않는다** |
 | **F** | **1차 가드 = raise (fx 정책)** | 세 선례가 갈림: fx=raise(`instantiate.py:432`) · busking=skip(`busking.py:240`) · songcue=skip+원장(`songcue.py:436`, `:243`). **씬은 fx를 따른다** — fx 독스트링의 논거가 그대로 적용된다: "an fx bundle is ONE store; there is no surviving remainder to report." 씬 번들도 정확히 하나의 Store다(design.md §4.1) |
@@ -230,7 +230,7 @@
 1. **신규 런타임 의존성 0.** stdlib + PyYAML(기존 의존) + 기존 스택만.
 2. **@MX:ANCHOR 경계 (위반 불가)**: `gate.screen()` 단일 스크리닝 경로, dedupe 판정 루프(`tools.py:688-712`), `_PROGRAMMER_STATE_COMMANDS`(`:327-331`), fx의 `MIN_STEPS`(`schema.py:66`) — 전부 소비만.
 3. **stop-on-first-failure**: 실패 이후 `not_executed` — 리포트가 반드시 전파(REQ-SCENE-014).
-4. **번들 규모**: 기준선 87줄/5.77s, ~66ms/줄(66.3-66.7ms — BUSKWIZ progress.md:278-281 전재). 씬 번들은 **~14-22줄** — 여유 큼.
+4. **번들 규모**: 기준선 87줄/5.77s, ~66ms/줄(66.3-66.7ms — SPEC-COPILOT-BUSKWIZ-001/progress.md:278-281 전재). 씬 번들은 **~14-22줄** — 여유 큼.
 5. **`Delete` 블랙리스트**: 프로브·테스트가 만든 콘솔 오브젝트는 툴 경로로 지울 수 없다. 정리는 사용자 GUI 조작이며 그 사실을 기록한다.
 6. **줄 앵커 드리프트**: 본 계획의 모든 file:line은 plan-phase 실측 시점(2026-08-01, `main` = `e4bc78e`) 값이다. **각 마일스톤 착수 직전 재실측**한다.
 
