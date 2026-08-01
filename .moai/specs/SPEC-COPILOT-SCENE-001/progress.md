@@ -8,7 +8,7 @@
 
 **무엇**: 씬 컴파일러 — **룩(정적 값) + 이펙트(스텝 열) + 타이밍을 하나의 큐로** 합성한다. LOOKLIB(정지 화면 어휘)·FXLIB(시간축 어휘)이 세운 "의도→메모리 파이프라인"의 **2단계**이며, FXLIB이 `spec.md:42`·`:70`·`:140` 세 곳에서 명시적으로 예약해 둔 좌석이다. 신규 패키지 `server/scene/`에 스키마·로더·2축 매칭·결합 컴파일러·리포트를 세우고, 툴 2종(`find_scene`·`compile_scene`)을 기존 `run_commands`→`gate.screen()` 경로로만 배선한다.
 
-**상태**: **run-phase 완료 — M0~M8 전부 닫힘 · AC 24/24 · 라이브 세션 2/2 소진.** plan-audit iter-3 **PASS 0.90**(문턱 0.85) · SPEC **v0.2.3**. REQ **21** · AC **24** · ASSUMPTION 41~45(41·42는 판정 후 moot) · 결정 **A~K 전부 해소** · clarification 마커 **0**. 뮤테이션 누적 **47/47 killed**(survived 0) · pytest **3794 passed / 5 skipped** · vitest **223 passed** · PRESERVE diff **빈 출력**. 커밋 사슬: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · 웨이브 기록 `7755408` · M5 `79cea7e` · M6 `f7c4a8c` · M7 `3d062dc` · M8 `8c1e044`. **다음 단계 = sync-phase(문서 정합성 감사 → PR).** 착수 전 판단이 필요한 비차단 결정 1건이 아래 킥오프 킷에 있다.
+**상태**: **3-phase 종결 — plan · run · sync 전부 닫힘 · AC 24/24 · 라이브 세션 2/2 소진.** plan-audit iter-3 **PASS 0.90**(문턱 0.85) · SPEC **v0.2.4** (`status: completed`). REQ **21** · AC **24** · Out of Scope **16** · 접두 행 **8** · ASSUMPTION 41~45(41·42는 판정 후 moot) · 결정 **A~K 전부 해소** · clarification 마커 **0** · **열린 질문 0**. 뮤테이션 누적 **47/47 killed**(survived 0) · pytest **3794 passed / 5 skipped** · vitest **223 passed** · PRESERVE diff **빈 출력**. 커밋 사슬: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · 웨이브 기록 `7755408` · M5 `79cea7e` · M6 `f7c4a8c` · M7 `3d062dc` · M8 `8c1e044` · 인수인계 `4437cc6`. **sync-phase 기록은 §E.4** — 스테일 소인 10건 · 어휘 결정 안 D 확정 · 정직한 잔여 4건.
 
 **이 SPEC의 한 줄 (v0.2.0 개정)**: 트래킹 정책이 **M0 실측으로 한 번 뒤집혔다** — `/CueOnly`(미발화 커맨드)를 버리고 **속성 집합 균일화 + 미주장 속성 전수 열거**를 택했다. 그러나 **관측 천장은 그대로다**: "균일 집합을 발화했다"와 "트래킹이 무해해졌다"를 절대 뭉치지 않는 것이 여전히 전체 설계의 축이다.
 
@@ -39,7 +39,7 @@
 10. **`select_sequence_number`는 두 벌 있다.** fx 판(`instantiate.py:218` — 공개, `requested=` 지원, 점유 거부)과 songcue 판(`songcue.py:286`). **씬은 fx 판을 쓴다. 세 번째 판을 만들지 말 것.**
 11. **효과는 기계로 확인할 수 없다.** 큐 내용·`CueFade`·픽스처 실시간 값 어느 쪽도 안 읽힌다(spec.md §C.1). 형상 결함은 런타임에서 **아무 신호도 내지 않으므로 테스트가 유일한 그물이다.** `ok`를 성공으로 읽는 순간 이 SPEC은 실패한다.
 12. **SONGCUE는 오늘 무플래그로 쓴다 — 개정으로 대비가 축소됐다.** 씬도 무플래그가 됐으므로 **플래그 정책의 분기는 사라졌다.** 남는 대비는 하나: **SONGCUE는 균일 집합을 강제하지 않는다.** **기록하되 고치지 않는다** — `server/looks/**`는 PRESERVE다(결정 J). 이것을 "결함"이라 부르지 말 것: 확인된 사실은 *"결정 기록이 없다"* 뿐이다.
-13. **`Delete`는 블랙리스트다.** M0 프로브가 만든 시퀀스 **191·192·193·194·195·196·197**을 툴 경로로 지울 수 없다 — 사용자가 GUI에서 직접 삭제하고 그 사실을 기록한다. **아직 미이행이다.**
+13. **`Delete`는 블랙리스트다.** M0 프로브가 만든 시퀀스 **191·192·193·194·195·196·197**을 툴 경로로 지울 수 없다 — 사용자가 GUI에서 직접 삭제하고 그 사실을 기록한다. **이행 완료(2026-08-01, M8 절 ③ — childCount 24→17 · truncated True→False · 전건 부재).** 규율 자체는 승계된다: 쇼파일 정리는 언제나 사람 단계이며 툴이 대신할 수 없다.
 14. **`Goto Cue`는 게이트가 모른다.** `RECOGNIZED_REFERENCE_TYPES`(`server/safety/classify.py:44`)에 `Cue`가 없다 — 큐 이동 축을 열려면 게이트 어휘 확장이 필요하므로 §D로 제외했다.
 15. **뮤테이션 재료를 잘못 고르면 뮤테이션이 통과한다 (승계 필수 2건).** ① **충돌 열거 비공허성을 movement fx로 세우면 정답도 ∅이라 통과해 버린다** — dimmer/color fx로만 세운다. ② **균일 집합 순서 뮤테이션은 픽스처 주입이 필수다** — 오늘 자산 32/32가 이미 정렬돼 있어 정렬 제거가 자산만으로는 잡히지 않는다.
 16. **균일 집합은 자산이 우연히 보장하고 있다.** 32/32가 이미 코어 4를 이 순서로 담고 있어 도입 시점의 정렬은 **바이트 무변화**다. 그래서 강제 코드를 빼도 **오늘은 아무 일도 일어나지 않는다** — 미래 저작에서 조용히 깨진다. 이것이 정렬·강제 지점에 `@MX:ANCHOR`가 붙는 이유다.
@@ -86,18 +86,20 @@ git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/ruleb
 grep -cE '^(GO|DESCOPE|SKIP|REOPEN):' .moai/specs/SPEC-COPILOT-SCENE-001/progress.md   # 8
 ```
 
-**1. 착수 전에 사용자 판단이 필요한 결정 1건 (비차단, run-phase가 열어 둔 유일한 항목)**
+**1. 착수 전 결정 1건 — 해소됨 (2026-08-01, 사용자 확정: 안 D)**
 
 SPEC 표제 문장 `"파란 백라이트가 천천히 웨이브하는 씬 만들어줘"`(spec.md §A · acceptance.md 시나리오 1 · plan.md §B M8이 그대로 쓰는 문장)가 **양 축 `no_match`** 다. 원인은 **상류 어휘**이고 씬 계층은 REQ-SCENE-007이 지시한 미러를 했을 뿐이다 — `하는`(하다-용언 관형형)이 FXLIB 닫힌 어미 목록에 없고, `파란`이 LOOKLIB 별칭에 없다(라이브러리는 `푸른`). 어휘가 있는 문장(`달빛 웨이브`)에서는 두 축이 정확히 붙는다. 실측 표는 §E.2 M8 절 ⑦.
 
-| 안 | 내용 | 대가 |
-|---|---|---|
-| A | 씬 어미 목록에 `하는` 추가 | 씬만 붙고 `find_fx`는 안 붙는 **행동 분기**. M3 정정이 사본을 지운 방향과 반대다 |
-| B | 씬 자산 별칭 보강 | `하는` 문제는 남는다 — 부분 해결 |
-| C | 상류(FXLIB/LOOKLIB) 어휘 확장 | **PRESERVE 위반** — 별도 SPEC의 결정 |
-| D | 기록만 하고 넘긴다 (현 상태) | 표제 문장은 계속 폴백. 정직하지만 불편 |
+| 안 | 내용 | 대가 | 판정 |
+|---|---|---|---|
+| A | 씬 어미 목록에 `하는` 추가 | 씬만 붙고 `find_fx`는 안 붙는 **행동 분기**. M3 정정이 사본을 지운 방향과 반대다 | 기각 |
+| B | 씬 자산 별칭 보강 | `하는` 문제는 남는다 — 부분 해결 | 기각 |
+| C | 상류(FXLIB/LOOKLIB) 어휘 확장 | **PRESERVE 위반** — 별도 SPEC의 결정 | 기각 |
+| D | 기록만 하고 넘긴다 | 표제 문장은 계속 폴백. 정직하지만 불편 | **채택** |
 
-**결정 전에는 고치지 않는다** — M8 규율이 "코드 변경 0, 결함은 별도 커밋"이고, 이 축은 사본/미러 교리와 정면으로 맞물린다.
+**채택 근거**: 결함의 귀속이 씬 계층이 아니라 **상류 어휘**이고 두 상류 모두 **PRESERVE**다 — 이 SPEC의 권한 안에서 고칠 수 있는 유일한 형태가 안 A인데, 그것은 `find_fx`와 `find_scene`이 같은 문장에 다르게 답하는 **행동 분기**를 만든다. 병렬 웨이브의 M3 정정이 정확히 그 반대 방향(사본 제거 → 상류 읽기 import)으로 갔으므로, 사본을 되살리는 것은 이미 지불한 이음매 비용을 되돌리는 일이다. **미해결로 남기되 후속 SPEC의 명시 대상으로 넘긴다** — 상류 어휘 확장은 FXLIB/LOOKLIB을 소유한 SPEC의 결정이다.
+
+**따라서 코드 변경 0**이다. sync-phase는 이 축에 대해 **기록만** 한다(M8 규율과 동일).
 
 **2. sync-phase가 볼 곳**
 
@@ -118,7 +120,7 @@ SPEC 표제 문장 `"파란 백라이트가 천천히 웨이브하는 씬 만들
 
 **5. 재질의 금지**
 
-결정 **A~K** 전부 해소 · clarification 0 · 승인 대기 0. D1은 2026-08-01 사용자 재확정으로 닫혔다. 위 §1의 어휘 결정만이 새로 열린 유일한 질문이다.
+결정 **A~K** 전부 해소 · clarification 0 · 승인 대기 0. D1은 2026-08-01 사용자 재확정으로 닫혔고, 위 §1의 어휘 결정도 **2026-08-01 안 D로 닫혔다**. **열린 질문 0건.**
 
 ## Plan-phase log
 
@@ -171,8 +173,8 @@ SPEC 표제 문장 `"파란 백라이트가 천천히 웨이브하는 씬 만들
 - tokens: REQ **21** · AC **24** · ASSUMPTION 41~45(5 — 41·42 판정 후 moot) · 결정 **A~K(11, 전부 해소)** · clarification 마커 0 · 승인 대기 0
 - live_sessions: 2 계획 / **2 소진(M0 프로브 · M8 종단)** / 0 잔여
 - baseline_measured: pytest 3432 passed / 5 skipped @ `main` `e4bc78e` (2026-08-01, 직접 실행)
-- open_items: M0 프로브 시퀀스 191~197 쇼파일 정리 **미이행**(사용자 GUI 삭제 필요)
-- commit_sha: pending-backfill
+- open_items: **없음** — M0 프로브 시퀀스 191~197 쇼파일 정리는 **M8에서 이행 완료**(사용자 GUI 삭제 + 재조회 실측). 이 행은 plan-phase 시점에 열려 있던 항목이며 sync-phase에서 닫았다
+- commit_sha: `c0157d3` (백필 완료 — `spec-frontmatter-schema.md` § SHA placeholder backfill exemption 준용. plan-phase 아티팩트 5종의 최초 커밋이며 `progress.md`는 자기 자신이라 같은 커밋에 실렸다)
 
 ## §E.2 Run-phase Evidence
 
@@ -662,11 +664,78 @@ M8 규율("코드 변경 0 — 결함 발견 시 별도 커밋")에 따라 **고
 - seam_verified: ① 실물 씬 자산 5건 × 실물 빌더 전수(28 테스트) — `/CueOnly` 주입으로 비공허성 실측 ② M3 별칭 사본 드리프트 1건 검출·정정(`task_ea9ff7620253`) ③ M6에서 **상류 예외 누출 1건** 검출·정정 — `FxInstantiationError`가 씬 경계를 넘어 툴을 죽였다(컴파일 계층에서 번역, 사유 코드 보존) ④ M7에서 **커밋 후에만 보이는 트립와이어 실패 1건** 검출·의도적 갱신(`_TOOLS_EXPECTED_HUNK_OLD_STARTS`에 15 추가, 보호구역 단정 무변경)
 - preserve_gate: `git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety` → **빈 출력**
 - open_items: ① **차단 0건** — M0 정리 완료(191~197 부재 실측), M7이 상류 상수 결합 2건 고정 ② **비차단 후속 1건**: SPEC 표제 문장 "파란 백라이트가 천천히 웨이브하는 씬"이 매칭되지 않는다(상류 어휘 귀속 — FXLIB 어미 `하는` 부재 · LOOKLIB `파란` 별칭 부재). 수정 축이 둘로 갈려 사용자 판단 필요 ③ 쇼파일에 M8 산출물 시퀀스 3·4 잔존(정상 산출물 — 삭제는 사용자 판단)
-- commit_sha: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · M5 `79cea7e` · M6 `f7c4a8c` · M7 `3d062dc` · M8 `pending-backfill`
+- commit_sha: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · M5 `79cea7e` · M6 `f7c4a8c` · M7 `3d062dc` · M8 `8c1e044` (백필 완료 — SHA placeholder backfill exemption 준용)
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+```yaml
+sync_status: synced
+sync_complete_at: 2026-08-01
+sync_commit_sha: pending-backfill   # 자기참조 불가 — sync 커밋 직후 백필 (spec-frontmatter-schema.md § SHA placeholder backfill exemption)
+```
+
+### 착수 전 킥오프 확인 4종 (직접 실측 — 이월 금지)
+
+| 확인 | 기대 | 실측 |
+|---|---|---|
+| `git log --oneline -9` | M1~M8 사슬 + 인수인계 커밋 | `4437cc6`(인수인계) ← `8c1e044`(M8) … `2d9ca9b`(M2) — **일치** |
+| `pytest server/tests/ -q` | 3794 passed / 5 skipped | **3794 passed / 5 skipped**(87.21s) |
+| PRESERVE diff `3c701b1..HEAD` | 빈 출력 | **빈 출력** |
+| 접두 행 grep | 8 | **8** |
+
+부수 확인: `TOOL_NAMES` **13** = `('find_scene', 'compile_scene')` 말미 2종 · `SCENE_UNIFORM_ATTRIBUTES == CONFIRMED_ATTRIBUTES` **True** · `len(KNOWN_ATTRIBUTES)` **8** · 아티팩트 **6종**.
+
+### 감사 대상 4축 (§0 킥오프 킷 §2가 지목한 것) — 결과
+
+**① 개수 정합성 — 소인 완료.** 기계값 `REQ 21` · `AC 24` · `Out of Scope 16` · `접두 행 8`. 산문 개수 주장을 전수 대조했고 **현재형 주장의 불일치 0건**이다. `v0.2.1`·`v0.2.2` HISTORY가 적은 `접두 행 6`은 **스테일이 아니다** — 그 시점의 실측이며 append-only 규율상 고쳐 쓰지 않는다(M8이 2행을 더해 8이 됐고 v0.2.3이 그 전이를 기록한다).
+
+**② AC 24건 역추적 — 전건 성립.** 각 AC의 "충족" 근거가 §E.2의 어느 절인지 1:1로 닫힌다:
+
+| §E.2 절 | AC | 수 |
+|---|---|---|
+| M1 | AC-SCENE-001, AC-SCENE-002 | 2 |
+| M2·M3·M4 병렬 웨이브 | AC-SCENE-003, AC-SCENE-004, AC-SCENE-005, AC-SCENE-006, AC-SCENE-007, AC-SCENE-008, AC-SCENE-009, AC-SCENE-010, AC-SCENE-011, AC-SCENE-012, AC-SCENE-013, AC-SCENE-014, AC-SCENE-023 | 13 |
+| M5 | AC-SCENE-015, AC-SCENE-016, AC-SCENE-024 | 3 |
+| M6 | AC-SCENE-018 | 1 |
+| M7 | AC-SCENE-017, AC-SCENE-020, AC-SCENE-022 | 3 |
+| M8 | AC-SCENE-019, AC-SCENE-021 | 2 |
+| **합** | | **24** |
+
+`acceptance.md §C.0a` 배정표와 **1:1 일치**(중복 0 · 누락 0). 각 절이 말미에 `**AC 상태**:` 줄로 자기 몫을 명시하므로 추적은 grep 가능하다.
+
+**③ REQ-SCENE-021 v0.2.3 확장 — 규율 무변경 확인.** `<대상>`에 `AC-SCENE-nnn`이 추가된 것은 `spec.md:207`이며, 함께 확인한 3개 규율은 **전부 무변경**이다: 접두어 **4종**(`GO:`/`DESCOPE:`/`SKIP:`/`REOPEN:` — 매핑 표 5행이 4접두어로 사상), **행두(column 0) 앵커** 명문, **한 판정당 정확히 1행**. 기계 확인 — 접두 행 8행의 `<대상>`이 `ASSUMPTION-41/42/43/44/45` · `D1` · `AC-SCENE-019` · `AC-SCENE-021`로 **전부 서로 다르며**(중복 대상 0), `INCONCLUSIVE` 행(ASSUMPTION-42)은 필수 `verdict=INCONCLUSIVE` 키를 갖는다. **정규식 완화 0건**(AC-SCENE-019 금지 사항).
+
+**④ gitignore 인용 — 표기 확인.** `.gitignore:122`가 `.moai/reports/`를 무시한다(`git check-ignore -v`로 실측). 따라서 병렬 브리프(`handoff/scene/`) · plan-audit 리포트 3종 · 균일 집합 제안서 · M8 프로브 드라이버(`m8-probe/`)와 스크린샷은 **저장소에 없다.** `§E.1 plan_status`와 `plan.md` §0이 이미 그 사실을 명기하고 있으며, 본 절도 같은 규율을 따른다 — **인용은 하되 저장소에 없음을 함께 적는다.**
+
+### 본 sync-phase가 고친 것 (스테일 소인 10건 · 정책 무변경)
+
+run-phase가 M8에서 닫은 사실이 **선행 문서 5곳에 전파되지 않아** 아티팩트가 자기 자신과 모순이던 것을 소인했다. **요구·인수·결정·마일스톤 신설 0건, 코드 변경 0건.**
+
+| # | 위치 | 스테일 내용 | 처리 |
+|---|---|---|---|
+| 1 | `spec.md` frontmatter | `status: draft` | → `completed` (+ `version 0.2.4`) |
+| 2 | `spec.md` §C.2 | "정리 의무 (미이행)" | → 이행 완료 + 재조회 실측 인용 |
+| 3 | `spec.md` §C.2 | 아티팩트 SHA `pending-backfill` | → `c0157d3` |
+| 4 | `plan.md` §0 헤더 | "M0 실행 완료" · "라이브 세션 2회(1회 소진)" | → "M0~M8 전부 실행 완료" · "2/2 소진" |
+| 5 | `plan.md` §B M0 헤딩 | "정리 잔여 1건 — AC-SCENE-019 미완결" | → "M8에서 닫힘 — AC-SCENE-019 충족" |
+| 6 | `plan.md` §B M0 | "⚠️ 미이행 — 정리 의무" | → 이행 완료 + 실측 인용 |
+| 7 | `plan.md` 라이브 세션 회계 | "1회 소진, 1회 잔여" · M8 행 미완료 | → "2/2 소진, 0회 잔여" · M8 완료 표기 |
+| 8 | `progress.md` §0 함정 13 | "아직 미이행이다" | → 이행 완료. 규율(쇼파일 정리는 사람 단계)은 승계 |
+| 9 | `progress.md` §E.1 | `open_items: … 미이행` · `commit_sha: pending-backfill` | → 없음 · `c0157d3` |
+| 10 | `progress.md` §E.3 | M8 `pending-backfill` | → `8c1e044` |
+
+**append-only는 지켰다** — §E.2의 M0·M1~M8 기록과 HISTORY의 v0.2.1/v0.2.2 측정치는 **한 글자도 고치지 않았다.** 고친 것은 전부 *현재 상태를 서술하는 표면*(frontmatter · 헤더 요약 · 신호 블록 · 함정 목록)이며, 각 항목이 어느 절에서 닫혔는지를 인용으로 가리킨다.
+
+### 어휘 결정 (§0 킥오프 킷 §1) — 안 D 확정
+
+사용자 확정(2026-08-01, AskUserQuestion): **안 D — 기록만 하고 넘긴다.** SPEC 표제 문장의 양 축 `no_match`는 **상류 어휘 귀속**이며 FXLIB·LOOKLIB 둘 다 PRESERVE다. 씬 계층에서 고칠 수 있는 유일한 형태(안 A)는 `find_fx`와 `find_scene`이 같은 문장에 다르게 답하는 **행동 분기**를 만들고, 병렬 웨이브 M3 정정이 사본을 지운 방향과 정면으로 반대다. **후속 SPEC의 명시 대상으로 넘긴다.** 상세 판정 표는 §0 킥오프 킷 §1.
+
+### 정직한 잔여 (닫지 않은 것)
+
+1. **SPEC 표제 문장은 여전히 폴백한다** — 안 D의 직접 귀결이다. `find_scene("달빛 웨이브")`는 두 축이 정확히 붙지만 SPEC이 자기 예시로 쓰는 문장은 붙지 않는다. **문서가 자기 예시를 실행하지 못하는 상태를 알면서 출하한다.**
+2. **`draft → in-progress` 전이 누락** — run-phase(M1 커밋)가 밟았어야 할 전이가 없어 이 SPEC의 git 이력은 `draft → completed` 단절을 보인다(`OwnershipTransitionInvalid` Warning 소지). **소급 위조하지 않고 기록만 한다** — 커밋은 이미 랜딩했고 이력을 고쳐 쓰는 것이 더 나쁘다.
+3. **쇼파일에 M8 산출물 시퀀스 3·4 잔존** — `SCN GOLD PULSE` · `SCN MOON RISE`. 프로브 쓰레기가 아니라 **정상 산출물**이므로 자동 삭제 대상이 아니다. 지울지는 사용자 판단이고, 지운다면 `Delete`가 블랙리스트이므로 GUI 조작이다.
+4. **효과는 여전히 기계로 확인되지 않는다** — M8 ⑤의 화면 캡처 다중 표본은 **GUI 시트 판독**이지 무대 실물이 아니고 표본도 이산이다. 이 SPEC의 관측 천장은 sync-phase가 바꾸지 않았다.
 
 ## §F Phase 4 Mode Selection
 

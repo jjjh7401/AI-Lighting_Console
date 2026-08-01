@@ -1,8 +1,8 @@
 ---
 id: SPEC-COPILOT-SCENE-001
 title: "씬 컴파일러 — 룩 + 이펙트 + 타이밍을 하나의 큐로 (Scene Compiler)"
-version: "0.2.3"
-status: draft
+version: "0.2.4"
+status: completed
 created: 2026-08-01
 updated: 2026-08-01
 author: manager-spec
@@ -30,6 +30,7 @@ related_specs: [SPEC-COPILOT-FXLIB-001, SPEC-COPILOT-LOOKLIB-001, SPEC-COPILOT-S
 | 0.2.1 | 2026-08-01 | manager-spec | **iter-2 감사 결함 16건 수정 (정책 무변경).** plan-audit iter-2(FAIL 0.80)가 열거한 D1~D16만을 범위로 삼은 **문서 정합성 개정**이며 — 요구·인수·결정·마일스톤을 **신설하지 않는다**. major 5건: ① **AC-SCENE-019의 자기 검증 grep이 0건을 반환하던 문제** — `progress.md §E.2`에 **행두(column 0) 접두 행 6행**을 신설했고, AC가 명시한 grep을 실행해 **6건**을 실측했다. ② **REQ-SCENE-021에 판정 어휘 → 접두 행 매핑 표를 인라인**하고, 어느 접두어에도 대응이 없던 `INCONCLUSIVE` 행을 신설했다(교차 SPEC 포인터 의존 제거). ③ M4 착수 게이트가 **moot된 ASSUMPTION-41의 `GO`** 를 요구해 영구 차단이던 것을 **ASSUMPTION-44 `GO`** 로 교체했다. ④ `progress.md §E.2`에 **ASSUMPTION-43 판정 절을 신설**(폐쇄 어휘 `GO` — v1 범위 한정; `truncated: True` 실측을 정본에 기록)하고, 폐쇄 어휘 밖이던 "부분 검증"을 **정본 4 surface(spec·plan·acceptance·progress)에서** 교체했다 — 조사 스냅샷 `research.md §9`는 **M0 이전** 기록이므로 남겼고, 대신 iter-3에서 그 표에 승계 포인터를 달았다(N5·N6). ⑤ `plan.md §F.3` 공유 계약 표의 **SC-3 행 이탈**과 "둘/셋" 모순을 수정했다. minor 11건(D6~D16)은 개수·번호·헤딩·스테일 요약 일괄 정합. |
 | 0.2.2 | 2026-08-01 | manager-develop | **iter-3 비차단 지적 9건(N1~N9) fix-forward — 정책·요구·인수 무변경, 재감사 불요.** plan-audit iter-3은 **PASS 0.90**(Tier L 문턱 0.85)이었고 N1~N9는 전부 문서 정합성 지적이다(감사 리포트 자신이 "None is blocking"으로 분류). M1 커밋에 배치했다. **N1** `progress.md §E.2`의 썩은 `plan.md` 줄 앵커 3건을 **절 앵커**(`§A.3`)와 출처 서술로 교체 — 줄 앵커는 다시 썩지만 절 앵커는 썩지 않는다. **N2** 타 SPEC을 가리키던 맨 `progress.md:NNN` 인용 11곳을 `SPEC-COPILOT-<X>-001/progress.md:NNN` 완전형으로 정규화(자기 문서 안에서 자기 `progress.md`로 해석되던 모호성 제거). **N3·N7** REQ-SCENE-021이 "접두 행을 **갖는** 명시적 섹션"을 요구해 **실제 기록 형태(§E.2 말미 통합 색인 블록)와 구조적으로 어긋나던 것**을 해소 — 요구를 완화한 것이 아니라 *판정 절의 존재*와 *행두 접두 행의 기계 판독 가능성*이라는 두 조건으로 정확히 재진술했고, `REOPEN_SCOPE`(사용자 재결정)를 범위 문장에 명시했다. **N5** v0.2.1 HISTORY의 "전 surface에서 교체" 과잉 주장을 실제 4 surface로 정정. **N6** `research.md §9`(M0 이전 스냅샷)에 승계 포인터 신설. **N8** AC-SCENE-024 케이스 ②의 재료를 **Zoom-only 룩**으로 좁힘 — Zoom 보유 16개 중 7개가 Iris도 가져 기대값이 `∅`가 되면 케이스가 무의미해진다(측정 재확인: Zoom 16 · Iris 8 · 양쪽 7). **N9** `progress.md`의 "무수정 보존"을 **append-only**로 정확히 재진술(v0.2.1·iter-3 추가분은 출처와 측정 순서를 밝힌 채 덧붙여졌다). **N4는 v0.2.1 시점에 이미 닫혔다** — 196·197을 실제로 재조회해 `§E.2`에 측정 순서와 함께 기록했다. 토큰 변동 0(REQ **21** · AC **24** · Out of Scope **16** · 접두 행 **6**). |
 | 0.2.3 | 2026-08-01 | manager-develop | **M8 종단 라이브 반영 — 판정 어휘 대상 1종 확장 + 인수 실행 결과 기록.** REQ-SCENE-021의 `<대상>`에 **`AC-SCENE-nnn`을 추가**했다: M0의 판정 대상은 전부 미검증 전제(ASSUMPTION)였으나 **M8의 판정 대상은 인수 기준 그 자체**이며, 그 축에 ASSUMPTION 토큰을 새로 발급하는 것은 없는 전제를 만들어 내는 일이다. v0.2.1이 `INCONCLUSIVE` 행을 신설했을 때와 같은 종류의 확장이며 **접두어 4종·행두 앵커·한 판정당 1행 규율은 무변경**이다. 동반: AC-SCENE-019의 정리 기록을 **이행 완료**로 닫고(191~197 삭제 후 재조회 실측 — childCount 24→17, truncated True→False), AC-SCENE-021에 **실행 결과 `GO`**를 기록했다. 접두 행 grep은 **6행 → 8행**(M0분 6행 무변경 + `GO: AC-SCENE-019` · `GO: AC-SCENE-021`). **요구·인수를 신설하지 않았고 정책은 무변경이다.** M8이 발견한 비차단 결함 1건(SPEC 표제 문장이 상류 어휘 부재로 매칭되지 않음 — FXLIB 어미 `하는` · LOOKLIB `파란` 별칭)은 **고치지 않고 기록만** 했다(M8 규율: 코드 변경 0, 결함은 별도 커밋). 토큰 변동 0(REQ **21** · AC **24** · Out of Scope **16**). |
+| 0.2.4 | 2026-08-01 | manager-docs | **sync-phase — 스테일 소인 + 어휘 결정 D 기록 + 상태 종결. 정책·요구·인수·마일스톤 무변경(REQ **21** · AC **24** · Out of Scope **16** · 접두 행 **8** — 토큰 변동 0).** ① **frontmatter `status: draft → completed`**(3-phase close가 sync 커밋에 실린다). ⚠️ 이 SPEC은 run-phase에서 `draft → in-progress` 전이를 밟지 않았다 — 소유 규율상 M1 커밋이 했어야 하며, **누락을 덮지 않고 여기 적는다**(`OwnershipTransitionInvalid` 소지). ② **M0 정리 의무 스테일 5건 소인** — M8 ③이 191~197 삭제를 실측(childCount 24→17 · truncated True→False)했는데도 `spec.md §C.2` · `plan.md` §0 헤더·M0 절·라이브 세션 회계 · `progress.md` §0 함정 13 · §E.1 `open_items`가 여전히 **미이행**으로 남아 자기 문서 안에서 모순이었다. ③ **라이브 세션 회계 `1회 소진` → `2/2 소진`**. ④ **커밋 SHA 백필 2건** — plan 아티팩트 `c0157d3` · M8 `8c1e044`(SHA placeholder backfill exemption 준용). ⑤ **§0 킥오프 킷 §1 어휘 결정 = 안 D(기록만 하고 넘긴다)** 를 사용자 확정으로 기록 — SPEC 표제 문장의 양 축 `no_match`는 **상류 어휘 귀속**(FXLIB 어미 `하는` 부재 · LOOKLIB `파란` 별칭 부재)이고 둘 다 **PRESERVE**이므로 본 SPEC이 손댈 수 없다. 안 A(씬 어미 목록 확장)는 `find_fx`와 갈리는 **행동 분기**를 만들고 M3가 지운 사본 방향과 반대다. **미해결로 남기되 후속 SPEC의 대상으로 명시**한다. ⑥ **§E.4 sync 신호 신설.** |
 
 ## A. 개요
 
@@ -253,8 +254,8 @@ SCENE_UNIFORM_ATTRIBUTES = ("Dimmer", "ColorRGB_R", "ColorRGB_G", "ColorRGB_B")
 
 **⚠️ 승계 필수 — M0가 남긴 프로브 설계 결함**: 플랜의 프로브 A와 B가 **같은 `Sequence 191 Cue 1`을 대상으로 삼았다.** 대조군이 표적을 점유해 설계대로는 B를 실행할 수 없었고, 실제로는 그 충돌을 이용한 추가 발화(A' — 점유 큐 무플래그 Store)가 판정의 핵심 근거가 됐다. **결함이 관측을 도운 우연이며, 후속 프로브는 프로브별 시퀀스를 분리해야 한다.**
 
-**정리 의무 (미이행)**: M0 프로브가 만든 시퀀스 **191·192·193·194·195·196·197**이 쇼파일에 잔존한다. `Delete`가 블랙리스트라 툴 경로로 제거 불가 — 사용자 GUI 삭제가 필요하며 그 사실을 `progress.md`에 기록한다.
-- **측정된 기준선**: 기반 `main` = `e4bc78e`(clean). pytest/vitest 수치는 plan-phase가 단언하지 않는다 — **각 마일스톤 착수 직전 직접 실측**한다(baseline-integrity 원칙). 오케스트레이터 세션 실측값(2026-08-01, 참고용): pytest 3432 passed / 5 skipped, vitest 223. 본 아티팩트 6종의 커밋 SHA는 자기참조 불가이므로 `pending-backfill`이다.
+**정리 의무 (이행 완료 — 2026-08-01 M8)**: M0 프로브가 만든 시퀀스 **191·192·193·194·195·196·197**은 `Delete`가 블랙리스트라 툴 경로로 제거할 수 없어 **사용자가 GUI에서 삭제**했고, 기계 재조회로 확인됐다 — `DataPool/Sequences` childCount **24 → 17** · `truncated` **True → False** · 191~197 **전건 부재**. 정본 기록은 `progress.md §E.2` M8 절 ③이며 접두 행은 `GO: AC-SCENE-019`다.
+- **측정된 기준선**: 기반 `main` = `e4bc78e`(clean). pytest/vitest 수치는 plan-phase가 단언하지 않는다 — **각 마일스톤 착수 직전 직접 실측**한다(baseline-integrity 원칙). 오케스트레이터 세션 실측값(2026-08-01, 참고용): pytest 3432 passed / 5 skipped, vitest 223. 본 아티팩트 6종의 커밋 SHA는 자기참조 불가로 `pending-backfill`이었고 **sync-phase에서 `c0157d3`으로 백필**했다.
 
 ## D. 제외 범위 (Out of Scope)
 
