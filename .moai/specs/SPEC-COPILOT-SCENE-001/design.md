@@ -335,6 +335,6 @@ assert set(names) - set(SCENE_UNIFORM_ATTRIBUTES) <= {"Zoom", "Iris"}        # �
 
 - **정본 요구**: spec.md §B (**REQ-SCENE-001~021**) · **인수**: acceptance.md (**AC-SCENE-001~024**)
 - **결정 등록부**: plan.md §A.4 · **PRESERVE**: plan.md §A.5 · **병렬 분석**: plan.md §F
-- **조사 근거**: research.md §2(`/CueOnly` 전수 grep)·§3(코드 슬롯)·§4(가드 3선례)·§5(상속 부채) · **M0 실측 정본**: `progress.md §E.2` · **균일 집합 조사**: `.moai/reports/scene-uniform-attribute-set-proposal.md`
+- **조사 근거**: research.md §2(`/CueOnly` 전수 grep)·§3(코드 슬롯)·§4(가드 3선례)·§5(상속 부채) · **M0 실측 정본**: `progress.md §E.2` · **균일 집합 조사**: `.moai/reports/scene-uniform-attribute-set-proposal.md`(gitignore — 저장소에 없다)
 - **본 문서의 공유 계약 절**: **§3**(결합 순서) · **§4**(가드 정책) · **§6**(트래킹 정책 — 균일 집합 + 미주장 열거) — 병렬 브리프 인용 대상
 - **선례**: FXLIB(미러 원형·M0 패턴·2차 가드·스텝 형상), LOOKLIB(값 라인·비공개 import 선례), SONGCUE(Store 안전·트리거·주장 분리 규율·상속 부채), BUSKWIZ(대소문자 무관 assert·익스큐터), PRECHK(판정 어휘·접두 행), OVERLAP(PRESERVE 게이트)

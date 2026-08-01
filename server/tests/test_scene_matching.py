@@ -464,6 +464,82 @@ class TestShippedLibrarySweep:
         assert len(axis_reason) >= 1
 
 
+class TestASingleAxisAnswerNeverCarriesTheOtherAxis:
+    """`_scene_scores` narrows a one-axis match to scenes that are one-axis TOO.
+
+    The guard is two halves — LOOK_ONLY refuses a candidate with an `fx_id`,
+    FX_ONLY refuses one with a `look_id`. **Only the FX_ONLY half was defended.**
+    Found by mutation re-injection after the pre-merge review: deleting the
+    LOOK_ONLY half alone leaves all 145 tests in this slice green, while
+    deleting the whole guard kills 4 — and all 4 sit on the FX_ONLY path. The
+    defence was being carried by one half for both.
+
+    What the unguarded half does in production, measured on the shipped
+    library: `match_scene("worship-golden-chorus")` (a look id used as query
+    text — the tool description tells the model to carry `selected_look_id`
+    around, so this is a designed path) answers `selected="worship-golden-pulse"`
+    with `fallback=False`. That scene declares `fx_id="pulse-beat"`, and
+    `compile_scene` emits the step/phase/speed run whenever `fx is not None` —
+    so a cue asked to hold a LOOK acquires a phaser nobody requested. Worse, it
+    revives the very shape `SceneMatch.fallback` was just repaired to close: a
+    success payload that is not the thing the operator asked for.
+
+    Both halves are asserted here so neither can rest on the other.
+    """
+
+    def _one_axis_answers(self, library):
+        """Every query in the corpus whose answer resolved exactly one axis."""
+        found = []
+        for query in _shipped_corpus(library):
+            result = match_scene(query, library)
+            if result.kind in {LOOK_ONLY, FX_ONLY} and result.selected is not None:
+                found.append((query, result))
+        return found
+
+    def test_a_look_only_answer_never_selects_a_scene_that_drives_an_effect(self, shipped_library):
+        offenders = [
+            (query, result.selected.scene_id, result.selected.fx_id)
+            for query, result in self._one_axis_answers(shipped_library)
+            if result.kind == LOOK_ONLY and result.selected.fx_id is not None
+        ]
+        assert offenders == []
+
+    def test_an_fx_only_answer_never_selects_a_scene_that_pins_a_look(self, shipped_library):
+        offenders = [
+            (query, result.selected.scene_id, result.selected.look_id)
+            for query, result in self._one_axis_answers(shipped_library)
+            if result.kind == FX_ONLY and result.selected.look_id is not None
+        ]
+        assert offenders == []
+
+    @pytest.mark.parametrize(
+        ("query", "expected_kind"),
+        [
+            ("worship-golden-chorus", LOOK_ONLY),
+            ("pulse-beat", FX_ONLY),
+        ],
+    )
+    def test_a_lone_axis_the_library_composes_no_solo_scene_for_is_a_fallback(
+        self, query, expected_kind, shipped_library
+    ):
+        # The measured production repro, pinned in both directions. The axis
+        # resolves; the library has no single-axis scene for it; the honest
+        # answer is the fifth state, NOT the nearest two-axis scene.
+        result = match_scene(query, shipped_library)
+        assert result.kind == expected_kind
+        assert result.selected is None
+        assert result.fallback is True
+        assert result.fallback_reason == NO_SCENE_COMPOSES_AXES
+
+    def test_the_guard_has_candidates_to_refuse_on_both_halves(self, shipped_library):
+        # Non-vacuity. The two assertions above are satisfied trivially if the
+        # library holds no two-axis scene sharing an axis with a one-axis query.
+        # Measure that both halves actually have something to reject.
+        two_axis = [s for s in shipped_library.scenes if s.look_id and s.fx_id]
+        assert [s for s in two_axis if s.look_id] != []
+        assert [s for s in two_axis if s.fx_id] != []
+
+
 class TestUpstreamAliasTableIsRead:
     """A 27/27 identical copy of ``PATTERN_ALIASES`` actually shipped here once.
 

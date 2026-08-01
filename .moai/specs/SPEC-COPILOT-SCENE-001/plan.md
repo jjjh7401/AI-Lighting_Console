@@ -4,7 +4,7 @@
 >
 > **한 줄 요약**: 룩(정적 값) + 이펙트(스텝 열) + 타이밍을 **하나의 큐**로 합성한다. 형상의 정본은 `design.md §3`(결합 순서), 가드 정책의 정본은 `design.md §4`, **트래킹 정책의 정본은 `design.md §6`(균일 집합 + 미주장 열거)** 이다 — **셋 다 병렬 브리프에 문면 그대로 주입되는 공유 계약**이다(§F).
 >
-> **⚠️ v0.2.0 개정 — 읽기 전에 알아야 할 것**: M0 라이브 프로브가 **D1(전 큐 `/CueOnly`)을 무너뜨렸고**, 사용자가 **속성 집합 균일화 + 미주장 속성 전수 열거**로 대체했다. 판정 정본은 `progress.md §E.2`이며, 개정 근거 조사는 `.moai/reports/scene-uniform-attribute-set-proposal.md`다. **D2·D3는 개정되지 않았고 ASSUMPTION-44/45 `GO`로 오히려 강화됐다.** plan-artifact 해시가 바뀌었으므로 **plan-audit 재실행이 강제된다.**
+> **⚠️ v0.2.0 개정 — 읽기 전에 알아야 할 것**: M0 라이브 프로브가 **D1(전 큐 `/CueOnly`)을 무너뜨렸고**, 사용자가 **속성 집합 균일화 + 미주장 속성 전수 열거**로 대체했다. 판정 정본은 `progress.md §E.2`이며, 개정 근거 조사는 `.moai/reports/scene-uniform-attribute-set-proposal.md`(gitignore — 저장소에 없다)다. **D2·D3는 개정되지 않았고 ASSUMPTION-44/45 `GO`로 오히려 강화됐다.** plan-artifact 해시가 바뀌었으므로 **plan-audit 재실행이 강제된다.**
 
 ## §A. 접근 요약 (Context)
 
@@ -65,7 +65,7 @@
 
 | # | 결정 | 내용 · 근거 |
 |---|---|---|
-| **A** | **트래킹 정책 = 속성 집합 균일화 + 미주장 전수 열거** (D1 **개정** — `/CueOnly` 폐기) | 사용자 재확정(2026-08-01, M0 실측 후). **폐기 근거 2건 전부 `[실측]`**: ① 미지 플래그가 조용히 접수돼 접수 판정의 기계 채널이 소진, ② 큐 생성이 실질 append-only라 `/CueOnly`의 보정 대상이 존재할 수 없음(정본 `progress.md §E.2`). **개정본**: 균일 집합 = 코어 4(`Dimmer`+RGB3) — 라이브러리 32/32가 이미 충족하고 LOOKLIB이 이미 3개 테스트로 강제 중이므로 **자산 편집 0건**. `Zoom`/`Iris`는 균일 보장 밖(방향 미측정 — 채움값 발명 금지). 닫지 못한 축(Pan/Tilt 포함)은 **매 컴파일 전수 열거**. 정본 design.md §6, 조사 `.moai/reports/scene-uniform-attribute-set-proposal.md`. 주장 분리 보고 의무는 REQ-SCENE-014 |
+| **A** | **트래킹 정책 = 속성 집합 균일화 + 미주장 전수 열거** (D1 **개정** — `/CueOnly` 폐기) | 사용자 재확정(2026-08-01, M0 실측 후). **폐기 근거 2건 전부 `[실측]`**: ① 미지 플래그가 조용히 접수돼 접수 판정의 기계 채널이 소진, ② 큐 생성이 실질 append-only라 `/CueOnly`의 보정 대상이 존재할 수 없음(정본 `progress.md §E.2`). **개정본**: 균일 집합 = 코어 4(`Dimmer`+RGB3) — 라이브러리 32/32가 이미 충족하고 LOOKLIB이 이미 3개 테스트로 강제 중이므로 **자산 편집 0건**. `Zoom`/`Iris`는 균일 보장 밖(방향 미측정 — 채움값 발명 금지). 닫지 못한 축(Pan/Tilt 포함)은 **매 컴파일 전수 열거**. 정본 design.md §6, 조사 `.moai/reports/scene-uniform-attribute-set-proposal.md`(gitignore — 저장소에 없다). 주장 분리 보고 의무는 REQ-SCENE-014 |
 | **B** | **결합 순서 = 룩 먼저, 충돌은 이펙트 우선** | 사용자 확정 D2. **정본 design.md §3.** 강제 근거: `MIN_STEPS = 2`(`server/fx/schema.py:66`) + `Step 1` 미발화(`server/fx/instantiate.py:326-342`) → 스텝 1 = 현재 프로그래머 상태 = 룩의 자리. 충돌 열거는 정적 교집합 계산(REQ-SCENE-005) |
 | **C** | **`/Merge` 0건 · 신규 큐 번호 전용** | 사용자 확정 D3. SONGCUE 라이브 실측(SPEC-COPILOT-SONGCUE-001/progress.md:337-344): 새 번호는 `/Merge` 유무 무관 동일, 기존 번호는 무플래그가 **`Not allowed` 거부** — 그 거부가 `server/fx/instantiate.py:225`가 "the LAST line of defence"라 부르는 안전망. `/Merge`는 실익 0에 안전망만 잃는 거래 |
 | **D** | **상류 재사용 = 비공개 함수 읽기 import** | design.md §2.2. 선례 2건: `server/looks/busking.py:30`(`_values_line`, 주석 "dedupe가 비교하는 문자열의 단일 출처") · `server/looks/songcue.py:11`. 재구현은 두 벌을 갈라지게 하고 **갈라짐은 무음**이다. 패키지 간 결합이라는 간격은 `test_scene_boundary.py`의 산출 형상 고정이 메운다 |
@@ -326,7 +326,7 @@ git diff --name-only <BASE>..HEAD -- server/scene/ server/tests/
 
 ### §F.4 병렬 웨이브 HARD 불변식 (공통 브리프 — 7항)
 
-`.moai/reports/handoff/TEMPLATE-병렬웨이브-파이프라인.md:76-81`의 **템플릿 6항**을 본 SPEC 문맥으로 이행하고, 여기에 **본 SPEC이 개정에서 신설한 7항(뮤테이션 재료 규율)** 을 더해 **총 7항**이 된다. **전부 충족 가능하다**:
+`.moai/reports/handoff/TEMPLATE-병렬웨이브-파이프라인.md:76-81`(gitignore — 저장소에 없다)의 **템플릿 6항**을 본 SPEC 문맥으로 이행하고, 여기에 **본 SPEC이 개정에서 신설한 7항(뮤테이션 재료 규율)** 을 더해 **총 7항**이 된다. **전부 충족 가능하다**:
 
 1. **전송 표면 무접촉** — `server/scene/`는 `server.bridge`·`pythonosc`·`gate`·`execution_port`를 import하지 않는다. → REQ-SCENE-019 · AC-SCENE-017 · M7 AST 스캔.
 2. **PRESERVE 경계** — `server/looks/**` · `server/fx/**` · `console/lua/**` · `server/rulebook/assets/**` · `server/safety/**` · `tools.py`의 dedupe 축. 읽기 import만. → §A.5 + `git diff --stat` 게이트.
