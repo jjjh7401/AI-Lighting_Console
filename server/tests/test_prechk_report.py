@@ -9,7 +9,7 @@ The label policy differs from ``server/looks/report.py`` on purpose. That module
 passes an unknown code through, because its section-failure reasons arrive as
 free strings from the console and an invented translation would stop the user
 from searching for the original. A pre-check VERDICT has no such origin -- it is
-always a member of one of five closed sets -- so an unknown code there is a bug,
+always a member of one of the closed sets -- so an unknown code there is a bug,
 and :func:`server.prechk.report.label` raises instead of passing it through
 (AC-PRECHK-012 ⑤ d).
 """
@@ -17,10 +17,14 @@ and :func:`server.prechk.report.label` raises instead of passing it through
 from __future__ import annotations
 
 import ast
+import importlib
+from contextlib import contextmanager
 from pathlib import Path
+from types import MappingProxyType
 
 import pytest
 
+from server.prechk.footprint import ModeFootprint, WalkOutcome
 from server.prechk.inventory import FixtureRecord, Inventory, ReadFailure
 from server.prechk.macro import (
     GroupPool,
@@ -29,7 +33,7 @@ from server.prechk.macro import (
     build_response_check_macro,
 )
 from server.prechk.patch import SCOPE_QUALIFIER, FootprintPolicy, evaluate_patch
-from server.prechk.report import VOCABULARY_LABELS, build_report, label
+from server.prechk.report import VOCABULARY_LABELS, PrecheckReport, build_report, label
 from server.prechk.verdicts import CLOSED_VOCABULARIES, UnknownVerdict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -391,6 +395,198 @@ class TestKoreanLabels:
         assert stray == [], f"vocabulary codes retyped outside the label tables: {stray}"
 
 
+@contextmanager
+def _registry_patched_to(registry: dict):
+    """Swap the closed-vocabulary registry, then put it back and re-import.
+
+    The guard under test runs at MODULE IMPORT, so the only way to observe it is
+    to re-import with a registry that disagrees with the label tables. The
+    ``finally`` reload matters: a failed reload leaves the module half-built, and
+    every later test in the suite imports from it.
+    """
+    import server.prechk.report as report_module
+    import server.prechk.verdicts as verdicts_module
+
+    original = verdicts_module.CLOSED_VOCABULARIES
+    verdicts_module.CLOSED_VOCABULARIES = MappingProxyType(dict(registry))
+    try:
+        yield report_module
+    finally:
+        verdicts_module.CLOSED_VOCABULARIES = original
+        importlib.reload(report_module)
+
+
+def _registry_walks(source: str) -> list[ast.For]:
+    """Every ``for`` in ``source`` whose iterable is a call on the registry.
+
+    One definition of "the guard loop", shared by both shape assertions below
+    and by the harness that proves they can fail -- a bypass cannot satisfy one
+    reading of the loop and dodge the other.
+    """
+    return [
+        node
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.For)
+        and isinstance(node.iter, ast.Call)
+        and isinstance(node.iter.func, ast.Attribute)
+        and isinstance(node.iter.func.value, ast.Name)
+        and node.iter.func.value.id == "CLOSED_VOCABULARIES"
+    ]
+
+
+def _subset_selection_in(loop: ast.For, names: set[str]) -> list[str]:
+    """Every way ``loop``'s body could check some registry entries and skip others.
+
+    D-6 deleted the step that could be forgotten, so the body has to treat every
+    entry alike. Four one-line ways to put that step back while the iterable
+    still reads ``CLOSED_VOCABULARIES.items()``: ``continue``/``break`` past the
+    unwanted entries, a branch that does anything other than raise (falling out
+    of it skips the check), a vocabulary name spelled inside the body to
+    special-case one, or the loop variable itself tested against an allow-list
+    bound to a name. The last is why a bare loop target may not be a comparand:
+    selecting a subset means asking WHICH entry this is, and the real check never
+    asks -- it compares the two label sets, not the name.
+
+    Shape gates are best-effort by nature; the one no bypass shape can dodge is
+    ``test_every_registered_vocabulary_is_reached_by_the_guard``, which reloads
+    with each vocabulary drifted in turn and demands a raise naming it.
+    """
+    targets = {node.id for node in ast.walk(loop.target) if isinstance(node, ast.Name)}
+    found: list[str] = []
+    for node in ast.walk(ast.Module(body=list(loop.body), type_ignores=[])):
+        if isinstance(node, ast.Continue | ast.Break):
+            found.append(f"{type(node).__name__.lower()} skips registry entries")
+        elif isinstance(node, ast.If):
+            found += [
+                f"a guard branch that does not raise: {ast.unparse(branch)!r}"
+                for branch in (*node.body, *node.orelse)
+                if not isinstance(branch, ast.Raise)
+            ]
+        elif isinstance(node, ast.Compare):
+            found += [
+                f"the loop variable is tested directly: {ast.unparse(node)!r}"
+                for operand in (node.left, *node.comparators)
+                if isinstance(operand, ast.Name) and operand.id in targets
+            ]
+        elif isinstance(node, ast.Constant) and node.value in names:
+            found.append(f"a vocabulary name inside the guard body: {node.value!r}")
+    return found
+
+
+class TestImportTimeLabelGuard:
+    """SPEC-COPILOT-OVERLAP-001 D-6 — the guard walks the registry.
+
+    NOT a regression test: nothing here failed before this class existed. The
+    hand-kept ``(name, set)`` tuple this guard replaced skipped any vocabulary
+    nobody added to it, import still succeeded, and the label-drift test walks
+    the registry so it saw nothing either. These tests exist because that step
+    was symptom-free, and they are the symptom.
+    """
+
+    def test_the_unpatched_module_reimports_cleanly(self):
+        # Positive control: the two negative cases below mean nothing if a
+        # plain reload already raised.
+        import server.prechk.report as report_module
+
+        importlib.reload(report_module)
+        assert set(report_module.VOCABULARY_LABELS) == set(CLOSED_VOCABULARIES)
+
+    def test_a_vocabulary_with_no_label_table_fails_at_import(self):
+        extended = {**CLOSED_VOCABULARIES, "unlabelled_axis": frozenset({"a", "b"})}
+        with (
+            _registry_patched_to(extended) as report_module,
+            pytest.raises(UnknownVerdict, match="unlabelled_axis"),
+        ):
+            importlib.reload(report_module)
+
+    def test_a_label_table_short_one_code_fails_at_import(self):
+        # The realistic shape: the axis IS registered and IS labelled, but one
+        # value was added to the vocabulary and forgotten in the table.
+        short = dict(CLOSED_VOCABULARIES)
+        short["skipped_check_kind"] = frozenset(
+            {*short["skipped_check_kind"], "an_unlabelled_kind"}
+        )
+        with (
+            _registry_patched_to(short) as report_module,
+            pytest.raises(UnknownVerdict, match="skipped_check_kind"),
+        ):
+            importlib.reload(report_module)
+
+    @pytest.mark.parametrize("vocabulary", sorted(CLOSED_VOCABULARIES))
+    def test_every_registered_vocabulary_is_reached_by_the_guard(self, vocabulary: str):
+        """AC-OVERLAP-014 ⑥ — the walk's REACH, asserted once per registry entry.
+
+        The two cases above are satisfied by a guard that walks the registry and
+        then checks only a hardcoded subset of it, because the vocabularies they
+        name happen to be inside any plausible subset. This one names them all,
+        from the registry itself, so a vocabulary added later is covered without
+        anyone remembering to add a case -- which is the whole of D-6.
+
+        Drifting one vocabulary leaves the NAME set intact, so the table/registry
+        equality check above the loop cannot fire: only the per-entry loop can
+        raise here, and its message says which entry raised.
+        """
+        drifted = dict(CLOSED_VOCABULARIES)
+        drifted[vocabulary] = frozenset({*drifted[vocabulary], "an_unlabelled_code"})
+        with (
+            _registry_patched_to(drifted) as report_module,
+            pytest.raises(UnknownVerdict, match=f"label table for {vocabulary}"),
+        ):
+            importlib.reload(report_module)
+
+    def test_the_guard_iterates_the_registry_rather_than_a_literal_tuple(self):
+        """AC-OVERLAP-014 ⑦ — the form is the deliverable, not just the effect.
+
+        Satisfying the two negative tests above by re-adding a hardcoded tuple
+        and remembering to append to it is exactly the trap D-6 removes, so the
+        source shape is asserted too: the guard's iterable is a call on
+        ``CLOSED_VOCABULARIES``, and no loop enumerates the vocabularies from a
+        literal sequence. (Vocabulary NAMES stay legal as literals elsewhere --
+        ``label("fixture_verdict", code)`` has to spell one. It is the CODES the
+        sibling scan forbids outside the tables.)
+        """
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        loops = [node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.For)]
+        assert len(_registry_walks(source)) == 1, (
+            "the import-time guard must walk CLOSED_VOCABULARIES once"
+        )
+        names = set(CLOSED_VOCABULARIES)
+        relapsed = [
+            ast.unparse(node.iter)
+            for node in loops
+            if isinstance(node.iter, ast.Tuple | ast.List)
+            and any(
+                isinstance(constant, ast.Constant) and constant.value in names
+                for constant in ast.walk(node.iter)
+            )
+        ]
+        assert relapsed == [], f"a literal vocabulary sequence came back: {relapsed}"
+
+    def test_the_guard_body_cannot_select_a_subset_of_the_registry(self):
+        """AC-OVERLAP-014 ⑦ — walking the registry is not enough; it must check all of it.
+
+        The assertion above pins the loop's ITERABLE, and that alone survives a
+        one-line bypass: keep the traversal, make ``if _vocabulary not in
+        _CHECKED: continue`` the body's first statement, and the hardcoded tuple
+        is back with the iterable still reading ``CLOSED_VOCABULARIES.items()``
+        (the allow-list is bound to a NAME, so the literal-sequence clause above
+        never looks at it). Under that bypass an unlabelled ``overlap_basis``
+        code imports cleanly again -- the exact symptom-free state D-6 exists to
+        delete. So the BODY is pinned too: no early exit, no branch that merely
+        skips, no vocabulary name spelled inside it.
+        """
+        source = REPORT_SOURCE.read_text(encoding="utf-8")
+        walks = _registry_walks(source)
+        assert len(walks) == 1, "the import-time guard must walk CLOSED_VOCABULARIES once"
+        (guard,) = walks
+        body = ast.Module(body=list(guard.body), type_ignores=[])
+        assert [node for node in ast.walk(body) if isinstance(node, ast.Raise)], (
+            "the guard loop parsed but raises nothing -- this assertion would be vacuous"
+        )
+        selection = _subset_selection_in(guard, set(CLOSED_VOCABULARIES))
+        assert selection == [], f"the guard body can skip registry entries: {selection}"
+
+
 class TestMacroSection:
     """The macro axis reaches the report without acquiring a response claim."""
 
@@ -446,3 +642,157 @@ class TestRangeOverlapBranchReachesTheReport:
         payload = build_report(evaluation).to_dict()
         assert payload["collisions"]["range_overlaps"]
         assert "range_overlap_descope" not in [r["kind"] for r in payload["skipped_checks"]]
+
+
+#: A bound the walk "enumerated". Not a measured width, so a summary built from a
+#: constant instead of this value would disagree.
+SUMMARY_BOUND = 19
+
+
+def _walk_of(modes: int, bound: int = SUMMARY_BOUND, *, complete: bool = True) -> WalkOutcome:
+    """A walk that enumerated ``modes`` modes, the widest of them ``bound``."""
+    widths = [max(1, bound - 3)] * (modes - 1) + [bound]
+    return WalkOutcome(
+        complete=complete,
+        footprints=tuple(
+            ModeFootprint(path=f"Patch/FixtureTypes/1/DMXModes/{n}/DMXChannels", width=width)
+            for n, width in enumerate(widths, start=1)
+        ),
+    )
+
+
+def _walk(bound: int = SUMMARY_BOUND, *, complete: bool = True) -> WalkOutcome:
+    return _walk_of(2, bound, complete=complete)
+
+
+def _spaced(gap: int) -> Inventory:
+    return _inventory([_record(1, "1.100"), _record(2, f"1.{100 + gap:03d}")])
+
+
+def _every_grade() -> dict[str, PrecheckReport]:
+    """One report per ``overlap_basis`` value.
+
+    Built by construction rather than by search: a grade nobody can produce is a
+    dead code in a closed vocabulary, and ``AC-OVERLAP-017`` ④ makes the four
+    reachable cases the non-vacuity guard for ①.
+    """
+    exact = FootprintPolicy(
+        enabled=True,
+        widths={1: 4, 2: 4},
+        source="Patch/FixtureTypes/1/DMXModes/1/DMXChannels childCount",
+    )
+    return {
+        "not_performed": build_report(evaluate_patch(_spaced(SUMMARY_BOUND))),
+        "bound_inconclusive": build_report(
+            evaluate_patch(_spaced(SUMMARY_BOUND - 1), walk=_walk())
+        ),
+        "bound_proves_clear": build_report(evaluate_patch(_spaced(SUMMARY_BOUND), walk=_walk())),
+        "exact_widths": build_report(evaluate_patch(_spaced(SUMMARY_BOUND), exact)),
+    }
+
+
+class TestOverlapBasisReachesTheSummary:
+    """AC-OVERLAP-017 — a grade only in the payload is a grade nobody reads."""
+
+    def test_all_four_grades_are_actually_reachable(self):
+        produced = {
+            name: report.evaluation.overlap_basis for name, report in _every_grade().items()
+        }
+        # Every grade in the closed vocabulary is reachable, and each rig produces
+        # the grade it was built for -- not merely SOME grade.
+        assert set(produced) == set(CLOSED_VOCABULARIES["overlap_basis"])
+        for expected, actual in produced.items():
+            assert actual == expected, f"{expected} 리그가 {actual}를 냈다"
+
+    def test_every_grade_puts_its_label_in_the_summary(self):
+        # Asserted on the PREFIXED form. Two labels overlap as substrings --
+        # "구간 겹침 판정 미수행" contains "겹침 판정 미수행" -- so a bare
+        # containment check would pass for ``not_performed`` on the strength of
+        # the skipped-check label alone, without the grade ever being printed.
+        for expected, report in _every_grade().items():
+            summary = report.summary_ko()
+            assert f"겹침 판정 근거: {label('overlap_basis', expected)}" in summary, expected
+
+    def test_the_label_table_covers_the_vocabulary_in_both_directions(self):
+        assert set(VOCABULARY_LABELS["overlap_basis"]) == set(CLOSED_VOCABULARIES["overlap_basis"])
+
+    def test_the_judging_layer_spells_no_korean_label(self):
+        """AC-OVERLAP-017 ② — labels live in the table, not at the call site."""
+        judge = ast.parse((PRECHK_DIR / "patch.py").read_text(encoding="utf-8"))
+        judge_strings = [
+            node.value
+            for node in ast.walk(judge)
+            if isinstance(node, ast.Constant) and isinstance(node.value, str)
+        ]
+        assert judge_strings, "판정 계층에서 문자열을 모으지 못하면 이 단정이 공허하다"
+        labels = set(VOCABULARY_LABELS["overlap_basis"].values())
+        assert labels & set(judge_strings) == set()
+        # Non-vacuity in the other direction: the labels DO exist, in the report.
+        report_strings = [
+            node.value
+            for node in ast.walk(ast.parse(REPORT_SOURCE.read_text(encoding="utf-8")))
+            if isinstance(node, ast.Constant) and isinstance(node.value, str)
+        ]
+        assert labels <= set(report_strings)
+
+
+class TestBoundClearanceIsQualified:
+    """AC-OVERLAP-015 — ``bound_proves_clear`` states what it is limited to."""
+
+    def _cleared(self) -> PrecheckReport:
+        return build_report(evaluate_patch(_spaced(SUMMARY_BOUND), walk=_walk()))
+
+    def test_the_grade_under_test_is_the_one_produced(self):
+        assert self._cleared().evaluation.overlap_basis == "bound_proves_clear"
+
+    def test_the_summary_carries_a_scope_qualifier(self):
+        # Not the bare stem "한정": the exact-width note reads "…한정이 없다", so the
+        # stem is present in the NEGATION of the qualifier too, and an UNQUALIFIED
+        # clearance would clear this test — the exact over-claim AC-OVERLAP-015 ①
+        # exists to forbid. Assert the qualifying phrase, and the negation's absence.
+        summary = self._cleared().summary_ko()
+        assert "한정한 판정" in summary
+        assert "한정이 없다" not in summary
+
+    def test_the_qualifier_names_the_mode_set_the_bound_came_from(self):
+        # Two walks with DIFFERENT mode counts. One would also pass against a
+        # summary that spelled the count as a constant.
+        two = build_report(evaluate_patch(_spaced(SUMMARY_BOUND), walk=_walk())).summary_ko()
+        three = build_report(evaluate_patch(_spaced(SUMMARY_BOUND), walk=_walk_of(3))).summary_ko()
+        assert "열거된 모드 2개" in two
+        assert "열거된 모드 3개" in three
+        assert "열거된 모드 3개" not in two
+
+    def test_the_qualifier_is_a_non_empty_korean_string(self):
+        note = self._cleared().evaluation.overlap.observation_note
+        assert note.strip()
+        assert any("\uac00" <= character <= "\ud7a3" for character in note)
+
+    def test_an_exact_width_verdict_carries_no_such_qualifier(self):
+        """AC-OVERLAP-015 ③ — the contrast, with the walk PRESENT.
+
+        The walk has to be supplied for this to mean anything: with no walk there
+        is no bound to qualify, and the absence of the qualifier would prove
+        nothing about the priority rule. Here a bound exists, exact widths
+        outrank it, and the clause that limits a bound must not follow along.
+        """
+        exact = FootprintPolicy(
+            enabled=True,
+            widths={1: 4, 2: 4},
+            source="Patch/FixtureTypes/1/DMXModes/1/DMXChannels childCount",
+        )
+        evaluation = evaluate_patch(_spaced(SUMMARY_BOUND), exact, walk=_walk())
+        assert evaluation.overlap_basis == "exact_widths"
+        assert evaluation.overlap.bound == SUMMARY_BOUND
+        summary = build_report(evaluation).summary_ko()
+        assert f"겹침 판정 근거: {label('overlap_basis', 'exact_widths')}" in summary
+        assert "열거된 모드" not in summary
+        assert "한정한 판정" not in summary
+
+    def test_an_unsettled_verdict_does_not_read_as_clear(self):
+        summary = build_report(
+            evaluate_patch(_spaced(SUMMARY_BOUND - 1), walk=_walk())
+        ).summary_ko()
+        assert f"겹침 판정 근거: {label('overlap_basis', 'bound_inconclusive')}" in summary
+        assert f"겹침 판정 근거: {label('overlap_basis', 'bound_proves_clear')}" not in summary
+        assert "충돌이 아니다" in summary

@@ -29,7 +29,24 @@ READ_FAILURE_KIND = frozenset(
 )
 
 SKIPPED_CHECK_KIND = frozenset(
-    {"range_overlap_descope", "macro_descope", "macro_no_groups", "gate_unapproved"}
+    {
+        "range_overlap_descope",
+        "range_overlap_bound_inconclusive",
+        "macro_descope",
+        "macro_no_groups",
+        "gate_unapproved",
+    }
+)
+
+#: How a range-overlap judgement was reached. Four grades ordered by claim
+#: strength: ``not_performed`` (no comparison) < ``bound_inconclusive`` (the
+#: gap is smaller than the widest enumerable footprint, so nothing is settled --
+#: NOT a collision) < ``bound_proves_clear`` (the gap exceeds that upper bound,
+#: so no overlap is possible ACROSS THE OBSERVED MODE SET) < ``exact_widths``
+#: (the real footprints were joined, so the verdict is unqualified).
+#: The asymmetry is the point: an upper bound can prove absence, never presence.
+OVERLAP_BASIS = frozenset(
+    {"exact_widths", "bound_proves_clear", "bound_inconclusive", "not_performed"}
 )
 
 CLOSED_VOCABULARIES = MappingProxyType(
@@ -39,6 +56,7 @@ CLOSED_VOCABULARIES = MappingProxyType(
         "collision_kind": COLLISION_KIND,
         "read_failure_kind": READ_FAILURE_KIND,
         "skipped_check_kind": SKIPPED_CHECK_KIND,
+        "overlap_basis": OVERLAP_BASIS,
     }
 )
 
