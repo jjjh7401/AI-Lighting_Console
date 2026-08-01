@@ -1,0 +1,1009 @@
+"""Upper-bound footprint walk tests (M2 — AC-OVERLAP-001..006).
+
+The walk exists because the fixture-to-footprint join was refuted, so its output
+is a WEAKER claim than the exact-width axis: it can prove that no overlap is
+possible and it can never prove that one is. Two consequences shape this file.
+
+**The dangerous failure is a false all-clear, not an exception.** Folding ``max``
+over a partial mode set produces a number that looks like a bound and is smaller
+than the real one, so it clears gaps it must not clear. Nothing raises, nothing
+logs, and the report says the rig is fine. ``TestPartialEnumerationRefusesABound``
+is that scenario, transcribed from the research note that found it.
+
+**The unsettled branch is unreachable on the measured rig.** Its minimum gap is
+larger than its widest mode, so every adjacent pair on that showfile clears the
+bound and no live session can exercise the other branch. Synthetic in-memory rigs
+are the only way to reach it, and the widths here are INJECTED for exactly the
+reason ``RANGE_OVERLAP_WIDTHS`` is injected in the inventory tests.
+"""
+
+from __future__ import annotations
+
+import ast
+import subprocess
+import sys
+from inspect import signature
+from pathlib import Path
+
+import pytest
+
+from server.orchestrator.tools import REASON_UNREACHABLE, REASON_UNRESOLVED
+from server.prechk.footprint import (
+    REASON_UNREACHABLE as WALK_UNREACHABLE,
+)
+from server.prechk.footprint import (
+    REASON_UNRESOLVED as WALK_UNRESOLVED,
+)
+from server.prechk.footprint import (
+    ModeFootprint,
+    WalkOutcome,
+    address_gaps,
+    bound_source,
+    unsettled_gaps,
+    upper_bound,
+    walk_mode_widths,
+)
+
+# One clause of AC-OVERLAP-010 is not expressible at this level: a SHARED start
+# point cannot be written as a Python set literal, so the rig has to travel
+# through the grouping the duplicate axis builds. These three imports serve that
+# one test and nothing else.
+from server.prechk.inventory import read_inventory
+from server.prechk.patch import (
+    BOUND_PROVES_CLEAR,
+    NOT_PERFORMED,
+    RANGE_OVERLAP_BOUND_INCONCLUSIVE,
+    evaluate_patch,
+)
+from server.safety.console import StateQueryError
+
+from .test_prechk_inventory import clean_rig_18, duplicate_address_pair
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PRECHK_DIR = PROJECT_ROOT / "server" / "prechk"
+WALK_SOURCE = PRECHK_DIR / "footprint.py"
+
+#: The fixture-type listing path. Passed in as an argument on every call — the
+#: module holds no rig path of its own, which is what lets the ``rig_paths``
+#: override seam reach this axis (D-2).
+ROOT = "Patch/FixtureTypes"
+
+#: Generous enough that no test hits it by accident. Budget behaviour gets its
+#: own tests with explicit small numbers.
+WIDE_BUDGET = 64
+
+#: Widths are INJECTED, never derived. These two are deliberately NOT the
+#: measured ones, so a bound that came from a hardcoded constant instead of the
+#: rig would disagree with the assertion.
+TWO_MODE_WIDTHS = (17, 23)
+
+#: The research scenario: three narrow modes and one wide one. Enumerate only the
+#: first three and the fold answers 29 -- smaller than the true 31 -- which
+#: clears a gap of 30 that the true bound leaves unsettled.
+TRAP_WIDTHS = (29, 29, 29, 31)
+
+
+def _snapshot(
+    path: str,
+    *,
+    child_count: int,
+    children: list[dict] | None = None,
+    truncated: bool = False,
+) -> dict:
+    """One ``state`` reply, shaped like the responder's (``PROTOCOL.md`` §4)."""
+    return {
+        "v": 1,
+        "kind": "state",
+        "id": "test",
+        "path": path,
+        "ok": True,
+        "node": {"name": path.rsplit("/", 1)[-1], "class": "Pool", "childCount": child_count},
+        "children": [] if children is None else children,
+        "truncated": truncated,
+    }
+
+
+class Rig:
+    """An in-memory ``state`` reader. Offers ``query_state`` and NOTHING else.
+
+    Omitting ``query_property`` is the point: if the walk ever grew a property
+    dependency, every test here would fail with ``AttributeError`` rather than
+    quietly widen the safety-chokepoint surface the module claims not to need.
+    """
+
+    def __init__(
+        self,
+        *,
+        widths: tuple[int, ...] = TWO_MODE_WIDTHS,
+        types: int = 1,
+        modes_listed: int | None = None,
+        types_listed: int | None = None,
+        channels_truncated: bool = True,
+        dead_paths: tuple[str, ...] = (),
+        dead_everything: bool = False,
+        exception: type[BaseException] = StateQueryError,
+    ) -> None:
+        self.widths = widths
+        self.types = types
+        self.modes_listed = len(widths) if modes_listed is None else modes_listed
+        self.types_listed = types if types_listed is None else types_listed
+        self.channels_truncated = channels_truncated
+        self.dead_paths = dead_paths
+        self.dead_everything = dead_everything
+        self.exception = exception
+        self.calls: list[str] = []
+
+    def query_state(self, path: str) -> dict:
+        self.calls.append(path)
+        if self.dead_everything or path in self.dead_paths:
+            raise self.exception(f"no state reply for {path!r}")
+        if path == ROOT:
+            kids = [
+                {"i": n, "name": f"Type {n}", "class": "FixtureType"}
+                for n in range(1, self.types_listed + 1)
+            ]
+            return _snapshot(path, child_count=self.types, children=kids)
+        parts = path.split("/")
+        if parts[-1] == "DMXModes":
+            kids = [
+                {"i": n, "name": f"Mode {n}", "class": "DMXMode"}
+                for n in range(1, self.modes_listed + 1)
+            ]
+            return _snapshot(path, child_count=len(self.widths), children=kids)
+        if parts[-1] == "DMXChannels":
+            width = self.widths[int(parts[-2]) - 1]
+            kids = (
+                None
+                if self.channels_truncated
+                else [
+                    {"i": n, "name": f"Slot {n}", "class": "DMXChannel"}
+                    for n in range(1, width + 1)
+                ]
+            )
+            return _snapshot(
+                path, child_count=width, children=kids, truncated=self.channels_truncated
+            )
+        raise self.exception(f"path segment not found: {path!r}")
+
+
+def _without_slot(child: dict) -> dict:
+    """One returned child MINUS its pool slot ``i``.
+
+    Every child of the measured snapshot carries ``i``, so this shape has to be
+    synthesised — and it is the shape that decides whether the walk folds a
+    SUBSET of the modes or refuses the listing outright.
+    """
+    return {key: value for key, value in child.items() if key != "i"}
+
+
+class PerTypeRig(Rig):
+    """A rig whose fixture types carry DIFFERENT mode tables, one of them defective.
+
+    ``Rig`` gives every type the same modes, so a defect planted there suppresses
+    the entire fold and the walk ends with zero widths — at which point the
+    "관측된 모드가 0개다" guard refuses the bound and a test can no longer tell
+    WHICH branch it just exercised. That is how the earlier slot-addressing
+    mutation stayed harmless. Here type 1 always reads cleanly, so widths are
+    folded whatever the defective type does and the refusal can only have come
+    from the branch under test.
+
+    ``slotless`` names ``(type slot, mode slot)`` pairs whose MODE child comes
+    back without its pool slot; ``unreadable`` names pairs whose channel listing
+    declares its count as a string instead of an integer; ``unlisted`` names TYPE
+    slots whose ``DMXModes`` answers ``childCount 0`` with an empty child list —
+    the shape the responder emits when it could not read the children at all.
+    """
+
+    def __init__(
+        self,
+        *,
+        tables: tuple[tuple[int, ...], ...],
+        slotless: tuple[tuple[int, int], ...] = (),
+        unreadable: tuple[tuple[int, int], ...] = (),
+        unlisted: tuple[int, ...] = (),
+    ) -> None:
+        super().__init__(widths=tables[0], types=len(tables))
+        self.tables = tables
+        self.slotless = slotless
+        self.unreadable = unreadable
+        self.unlisted = unlisted
+
+    def query_state(self, path: str) -> dict:
+        below = path[len(ROOT) + 1 :].split("/") if path.startswith(f"{ROOT}/") else []
+        type_slot = int(below[0]) if below else 0
+        if type_slot:
+            # ``Rig`` holds ONE mode table; pointing it at this type's table
+            # before delegating is what makes the types differ.
+            self.widths = self.tables[type_slot - 1]
+            self.modes_listed = len(self.widths)
+        payload = super().query_state(path)
+        if path.endswith("DMXModes"):
+            if type_slot in self.unlisted:
+                # childCount DERIVED from the same empty read, so it agrees with
+                # len(children) and `truncated` stays unset — indistinguishable
+                # from a type that genuinely has no modes.
+                return {**payload, "node": {**payload["node"], "childCount": 0}, "children": []}
+            payload["children"] = [
+                _without_slot(child) if (type_slot, child["i"]) in self.slotless else child
+                for child in payload["children"]
+            ]
+        if path.endswith("DMXChannels") and (type_slot, int(below[2])) in self.unreadable:
+            node = payload["node"]
+            payload["node"] = {**node, "childCount": str(node["childCount"])}
+        return payload
+
+
+def _walk(rig: Rig, budget: int = WIDE_BUDGET, *, sibling_answered: bool = False) -> WalkOutcome:
+    # Stated, never defaulted, at the production seam: `walk_mode_widths` refuses
+    # to guess this, so the helper names the choice these rigs are making.
+    return walk_mode_widths(rig, root=ROOT, budget=budget, sibling_answered=sibling_answered)
+
+
+def _module_tree() -> ast.Module:
+    return ast.parse(WALK_SOURCE.read_text(encoding="utf-8"))
+
+
+def _function(tree: ast.Module, name: str) -> ast.FunctionDef:
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            return node
+    raise AssertionError(f"no function named {name} in {WALK_SOURCE}")
+
+
+def _string_constants(source: Path) -> list[str]:
+    return [
+        node.value
+        for node in ast.walk(ast.parse(source.read_text(encoding="utf-8")))
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    ]
+
+
+class TestBoundComesFromTheRig:
+    """AC-OVERLAP-001 — nothing about the measured rig is written down."""
+
+    def test_no_measured_width_or_gap_is_a_constant_in_the_package(self):
+        forbidden = {29, 31, 42, 50}
+        visited = 0
+        collected = 0
+        planted: list[tuple[str, int]] = []
+        for source in sorted(PRECHK_DIR.rglob("*.py")):
+            visited += 1
+            for node in ast.walk(ast.parse(source.read_text(encoding="utf-8"))):
+                if not isinstance(node, ast.Constant):
+                    continue
+                if isinstance(node.value, bool) or not isinstance(node.value, int):
+                    continue
+                collected += 1
+                if node.value in forbidden:
+                    planted.append((source.name, node.value))
+        # Non-vacuity: a scan that reached no file, or found no integer at all,
+        # reports zero for the wrong reason.
+        assert visited >= 1, f"AST 스캔이 {PRECHK_DIR} 아래 파일을 방문하지 않았다"
+        assert collected >= 1, "AST 스캔이 정수 상수를 하나도 모으지 않았다"
+        assert planted == [], f"실측 폭·간격이 상수로 박혀 있다: {planted}"
+
+    def test_the_bound_is_whatever_was_injected(self):
+        outcome = _walk(Rig(widths=TWO_MODE_WIDTHS))
+        assert outcome.complete
+        assert outcome.mode_widths == TWO_MODE_WIDTHS
+        assert upper_bound(outcome) == max(TWO_MODE_WIDTHS)
+
+    def test_a_different_injection_gives_a_different_bound(self):
+        # The pair above would also pass if the bound were pinned to 23. Two
+        # injections with different maxima is what makes the claim non-vacuous.
+        wider = _walk(Rig(widths=(11, 19, 47)))
+        assert upper_bound(wider) == 47
+
+    def test_the_three_tiers_are_queried_in_order(self):
+        outcome = _walk(Rig(widths=(5, 7)))
+        assert len(outcome.queried_paths) >= 3
+        assert outcome.queried_paths[0] == ROOT
+        assert outcome.queried_paths[1] == f"{ROOT}/1/DMXModes"
+        assert outcome.queried_paths[2] == f"{ROOT}/1/DMXModes/1/DMXChannels"
+        assert outcome.query_count == len(outcome.queried_paths)
+
+    def test_the_channel_tier_never_reads_the_child_list(self):
+        """AC-OVERLAP-001 ④ — the width is the declared count, full stop."""
+        tier_three = _function(_module_tree(), "_declared_child_count")
+        names = [node.value for node in ast.walk(tier_three) if isinstance(node, ast.Constant)]
+        assert names, "3단 술어에서 상수를 하나도 모으지 못하면 이 단정이 공허하다"
+        assert "children" not in names
+        assert not any(
+            isinstance(node, ast.Name) and node.id == "children" for node in ast.walk(tier_three)
+        )
+
+    def test_the_walk_addresses_children_by_pool_slot_not_by_position(self):
+        """A sparse pool is where position and slot disagree.
+
+        The listing reports slots 4 and 9; walking positions 1 and 2 would read
+        two paths that do not exist, so the width pair proves the walk used ``i``.
+        """
+
+        class Sparse(Rig):
+            def query_state(self, path: str) -> dict:
+                payload = super().query_state(path)
+                if path.endswith("DMXModes"):
+                    payload["children"] = [
+                        {"i": 4, "name": "Mode 4", "class": "DMXMode"},
+                        {"i": 9, "name": "Mode 9", "class": "DMXMode"},
+                    ]
+                    payload["node"]["childCount"] = 2
+                return payload
+
+        rig = Sparse(widths=(0, 0, 0, 13, 0, 0, 0, 0, 21))
+        outcome = _walk(rig)
+        assert f"{ROOT}/1/DMXModes/4/DMXChannels" in outcome.queried_paths
+        assert f"{ROOT}/1/DMXModes/9/DMXChannels" in outcome.queried_paths
+        assert outcome.mode_widths == (13, 21)
+
+
+class TestStateOnlySurface:
+    """AC-OVERLAP-002 ① — one port method, and it is not the property read."""
+
+    def test_the_module_uses_query_state_and_never_query_property(self):
+        tree = _module_tree()
+        attributes = [node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)]
+        calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)]
+        assert len(calls) >= 1, "호출 노드를 하나도 방문하지 않으면 0건 판정이 공허하다"
+        assert "query_state" in attributes
+        assert "query_property" not in attributes
+
+    def test_a_reader_without_a_property_method_is_enough(self):
+        # Structural, not stylistic: ``Rig`` has no ``query_property`` at all, so
+        # a property dependency would raise here instead of passing silently.
+        rig = Rig()
+        assert not hasattr(rig, "query_property")
+        assert upper_bound(_walk(rig)) == max(TWO_MODE_WIDTHS)
+
+
+class TestPartialEnumerationRefusesABound:
+    """AC-OVERLAP-003 — an incomplete mode set has NO bound, not a small one."""
+
+    def test_a_short_type_listing_yields_no_bound(self):
+        outcome = _walk(Rig(types=5, types_listed=3))
+        assert outcome.complete is False
+        assert upper_bound(outcome) is None
+        assert outcome.notes
+
+    def test_a_short_mode_listing_yields_no_bound(self):
+        outcome = _walk(Rig(widths=(5, 7, 11), modes_listed=2))
+        assert outcome.complete is False
+        assert upper_bound(outcome) is None
+
+    def test_an_exhausted_budget_yields_no_bound(self):
+        outcome = _walk(Rig(widths=(5, 7, 11)), budget=2)
+        assert outcome.complete is False
+        assert upper_bound(outcome) is None
+        assert any("예산" in note for note in outcome.notes)
+
+    def test_a_raising_query_yields_no_bound(self):
+        outcome = _walk(Rig(dead_paths=(f"{ROOT}/1/DMXModes",)))
+        assert outcome.complete is False
+        assert upper_bound(outcome) is None
+
+    def test_the_fold_lives_inside_the_completeness_branch(self):
+        """AC-OVERLAP-003 ⑤ — control flow, not a comment.
+
+        A fold that runs unconditionally and gets annulled afterwards is the
+        defect: the annotation decorates the walk while the verdict decorates an
+        address pair and travels onward by itself.
+        """
+        tree = _module_tree()
+        folds = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "max"
+        ]
+        assert len(folds) >= 1, "max 노드를 찾지 못하면 이 판정이 공허하다"
+        guarded = 0
+        for branch in (node for node in ast.walk(tree) if isinstance(node, ast.If)):
+            mentions_completeness = any(
+                isinstance(inner, ast.Attribute) and inner.attr == "complete"
+                for inner in ast.walk(branch.test)
+            )
+            if not mentions_completeness:
+                continue
+            inside = {id(node) for node in ast.walk(branch) if node is not branch}
+            guarded += sum(1 for fold in folds if id(fold) in inside)
+        assert guarded == len(folds), (
+            "max 연산이 완전성 판정 분기 밖에 있다 — 부분 결과가 상계처럼 보이게 된다"
+        )
+
+    def test_the_subset_bound_trap_does_not_clear_a_gap_of_thirty(self):
+        """AC-OVERLAP-003 ⑥ — the research scenario, transcribed.
+
+        Enumerating three of four modes folds to 29. The true bound is 31, and
+        the gap under test is 30: ``30 >= 29`` would clear the rig while
+        ``30 < 31`` leaves it unsettled. The walk must therefore hand back NO
+        bound, so the caller has nothing to compare 30 against.
+        """
+        gap = 30
+        rig = Rig(widths=TRAP_WIDTHS, modes_listed=3)
+        outcome = _walk(rig)
+        subset_fold = max(outcome.mode_widths)
+        true_bound = max(TRAP_WIDTHS)
+        # The trap is real: the partial fold and the true bound disagree ACROSS
+        # the gap, so the two answers differ. Without this the test could pass on
+        # a rig where the distinction does not matter.
+        assert subset_fold < true_bound
+        assert gap >= subset_fold
+        assert gap < true_bound
+        assert outcome.complete is False
+        assert upper_bound(outcome) is None
+
+    def test_a_slotless_child_refuses_the_listing_instead_of_skipping_that_child(self):
+        """AC-OVERLAP-003 ⑥ — pins the ``return None`` inside ``_child_slots``.
+
+        A numeric path segment addresses the POOL SLOT, so a child that arrives
+        without one leaves the whole listing unaddressable. Skipping just that
+        child hands back a PARTIAL slot list, the walk reads the modes it can
+        still address, and no branch ever touches ``whole`` — the fold then
+        answers 29 over three of four modes and a gap of 30 clears a rig whose
+        true bound is 31.
+
+        Two guards could produce the refusal below and only one of them is under
+        test. Type 1 reads cleanly, so widths ARE folded and the "관측된 모드가
+        0개다" guard at the end of the walk never fires; what refuses the bound
+        here is the slot check on type 2's mode listing.
+        """
+        gap = 30
+        rig = PerTypeRig(tables=(TRAP_WIDTHS[:2], TRAP_WIDTHS[2:]), slotless=((2, 2),))
+        outcome = _walk(rig)
+        # Non-vacuity: the empty-width guard is not what answers on this rig.
+        assert outcome.mode_widths, "폭이 0개면 빈 폭 가드가 대신 막아 이 판정이 공허하다"
+        assert "관측된 모드가 0개다" not in outcome.notes
+        # The refusal is the slot check, and it names the listing it came from.
+        assert any("풀 슬롯" in note for note in outcome.notes), (
+            "슬롯 없는 자식을 만난 목록을 어느 노트도 지목하지 않는다"
+        )
+        assert f"{ROOT}/2/DMXModes" in " ".join(outcome.notes)
+        # Wholesale, not per child: a partial slot list would have contributed
+        # the one mode of type 2 it could still address.
+        assert outcome.mode_widths == TRAP_WIDTHS[:2]
+        assert outcome.complete is False
+        assert upper_bound(outcome) is None
+        # And the trap is live on this rig: the folded widths clear a gap of 30
+        # while the mode the listing hid does not.
+        assert max(outcome.mode_widths) <= gap < max(TRAP_WIDTHS)
+
+    def test_a_slotless_mode_listing_costs_the_walk_its_completeness(self):
+        """AC-OVERLAP-003 ⑥ — pins the ``whole = False`` on the mode-tier slot check.
+
+        ``_child_slots`` refusing is only half of the guard: the walk has to
+        SPEND that refusal on ``complete``. Dropping the assignment leaves the
+        note in place, so a reader still sees the note, while ``complete`` stays
+        true and the fold hands back 29 over the three modes it did read. The
+        note is therefore not the gate — ``complete`` is — and both are asserted
+        so a note-only implementation cannot pass.
+
+        Type 1 reads cleanly, so three widths were folded and the "관측된 모드가
+        0개다" guard is not what refuses the bound.
+        """
+        gap = 30
+        rig = PerTypeRig(tables=(TRAP_WIDTHS[:-1], TRAP_WIDTHS[-1:]), slotless=((2, 1),))
+        outcome = _walk(rig)
+        # Non-vacuity: widths really were collected, and they are a SUBSET.
+        assert outcome.mode_widths == TRAP_WIDTHS[:-1]
+        assert "관측된 모드가 0개다" not in outcome.notes
+        assert f"{ROOT}/2/DMXModes" in " ".join(outcome.notes)
+        assert outcome.complete is False
+        assert upper_bound(outcome) is None
+        assert max(outcome.mode_widths) <= gap < max(TRAP_WIDTHS)
+
+    def test_a_mode_listing_of_zero_children_costs_the_walk_its_completeness(self):
+        """AC-OVERLAP-003 ⑥ — a count of zero is a READ FAILURE, not an empty set.
+
+        This is the shape the responder actually emits when it cannot read a
+        node's children at all: ``safe_children`` returns an empty table when
+        both ``Children()`` and ``Count()`` fail, and ``childCount`` is derived
+        from that same empty read — so the count AGREES with the child list and
+        ``truncated`` stays unset. ``_listing_is_whole`` therefore calls it whole,
+        which is the unsafe reading: the walk cannot tell "this type has no
+        modes" from "this type's modes could not be listed".
+
+        Found by independent code review at PR time, not by the run-audit — the
+        audit reasoned from the acceptance clauses, which enumerate a short list
+        and a truncated flag and never named a zero count. Type 1 reads cleanly,
+        so widths ARE folded and the "관측된 모드가 0개다" guard is not what
+        refuses the bound; without this branch the fold returns 8 while the true
+        bound is 31 and a gap of 30 flips to ``bound_proves_clear``.
+        """
+        gap = 30
+        rig = PerTypeRig(tables=(TRAP_WIDTHS[:1], TRAP_WIDTHS[-1:]), unlisted=(2,))
+        outcome = _walk(rig)
+        # Non-vacuity: a width really was folded, and it is a SUBSET that would
+        # have cleared the gap had completeness not been withdrawn.
+        assert outcome.mode_widths == TRAP_WIDTHS[:1]
+        assert "관측된 모드가 0개다" not in outcome.notes
+        assert f"{ROOT}/2/DMXModes" in " ".join(outcome.notes)
+        assert outcome.complete is False
+        assert upper_bound(outcome) is None
+        assert max(outcome.mode_widths) <= gap < max(TRAP_WIDTHS)
+
+    def test_an_unreadable_channel_count_costs_the_walk_its_completeness(self):
+        """AC-OVERLAP-003 ⑥ — pins the ``whole = False`` on the channel-count read.
+
+        The widest mode's channel listing declares its count as a string, so tier
+        3 reads no width for it. The walk continues — correctly, the other modes
+        are still worth enumerating — and the danger is that continuing is ALL it
+        does: with the completeness assignment dropped, the three narrow modes
+        fold to 29 and the mode nobody could measure is 31 wide.
+
+        The three widths that WERE read are what makes this non-vacuous: the walk
+        ends with a non-empty fold, so the "관측된 모드가 0개다" guard cannot be
+        the branch that refuses the bound.
+        """
+        gap = 30
+        rig = PerTypeRig(tables=(TRAP_WIDTHS,), unreadable=((1, len(TRAP_WIDTHS)),))
+        outcome = _walk(rig)
+        assert outcome.mode_widths == TRAP_WIDTHS[:-1]
+        assert "관측된 모드가 0개다" not in outcome.notes
+        assert f"{ROOT}/1/DMXModes/{len(TRAP_WIDTHS)}/DMXChannels" in " ".join(outcome.notes)
+        assert outcome.complete is False
+        assert upper_bound(outcome) is None
+        assert max(outcome.mode_widths) <= gap < max(TRAP_WIDTHS)
+
+
+class TestTruncationPredicatesStaySeparate:
+    """AC-OVERLAP-004 — the channel count survives truncation; a listing does not."""
+
+    def test_a_truncated_channel_listing_still_yields_its_width(self):
+        rig = Rig(widths=(23,), channels_truncated=True)
+        outcome = _walk(rig)
+        assert outcome.mode_widths == (23,)
+        assert outcome.complete is True
+
+    def test_the_two_predicates_disagree_on_the_same_flag(self):
+        """AC-OVERLAP-004 ④ — run both in one test; merging them breaks this."""
+
+        class TruncatedRoot(Rig):
+            def query_state(self, path: str) -> dict:
+                payload = super().query_state(path)
+                if path == ROOT:
+                    payload["truncated"] = True
+                return payload
+
+        truncated_channels = _walk(Rig(widths=(23,), channels_truncated=True))
+        truncated_root = _walk(TruncatedRoot(widths=(23,), channels_truncated=True))
+        assert truncated_channels.complete is True
+        assert truncated_root.complete is False
+        assert upper_bound(truncated_channels) == 23
+        assert upper_bound(truncated_root) is None
+
+    def test_the_channel_predicate_makes_no_count_comparison(self):
+        """AC-OVERLAP-004 ③ — ``childCount > len(children)`` here kills the axis.
+
+        On the measured rig the channel listing is always truncated, so a count
+        comparison at this tier would mean the bound is never available.
+        """
+        tier_three = _function(_module_tree(), "_declared_child_count")
+        comparisons = [node for node in ast.walk(tier_three) if isinstance(node, ast.Compare)]
+        lens = [
+            node
+            for node in ast.walk(tier_three)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "len"
+        ]
+        assert lens == []
+        # A count comparison would need `len(...)`; the remaining comparisons are
+        # the type and lower-bound checks, which are not list-length tests.
+        assert all(
+            not any(isinstance(inner, ast.Call) for inner in ast.walk(node)) for node in comparisons
+        )
+
+    def test_the_listing_predicate_does_compare_counts(self):
+        # Positive control for the test above: the separation only means
+        # something if the OTHER predicate really does the comparison.
+        tier_one_two = _function(_module_tree(), "_listing_is_whole")
+        lens = [
+            node
+            for node in ast.walk(tier_one_two)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "len"
+        ]
+        assert lens, "1·2단 술어가 목록 길이를 보지 않으면 술어 분리가 무의미하다"
+
+
+class TestModuleBoundaries:
+    """AC-OVERLAP-005 — a pure function, importable on its own."""
+
+    def test_the_walk_takes_the_path_and_the_budget_as_parameters(self):
+        parameters = signature(walk_mode_widths).parameters
+        assert "root" in parameters
+        assert "budget" in parameters
+
+    def test_the_module_does_not_import_the_toolset(self):
+        tree = _module_tree()
+        imports = [node for node in ast.walk(tree) if isinstance(node, ast.Import | ast.ImportFrom)]
+        assert len(imports) >= 1, "import 노드를 방문하지 않으면 0건 판정이 공허하다"
+        modules = [
+            alias.name if isinstance(node, ast.Import) else (node.module or "")
+            for node in imports
+            for alias in node.names
+        ]
+        assert [m for m in modules if m.startswith("server.orchestrator.tools")] == []
+
+    def test_the_module_imports_standalone(self):
+        """AC-OVERLAP-005 ③ — the machine test that rules out a handler closure."""
+        finished = subprocess.run(  # noqa: S603
+            [sys.executable, "-c", "import server.prechk.footprint"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert finished.returncode == 0, finished.stderr
+
+    def test_the_walk_is_callable_without_a_toolset(self):
+        # The unsettled branch is reachable only through synthetic rigs, so unit
+        # access to the walk is not a convenience -- it is the only coverage.
+        assert upper_bound(_walk(Rig(widths=(3, 9)))) == 9
+
+    def test_the_package_names_no_forbidden_property(self):
+        collected = _string_constants(WALK_SOURCE)
+        assert collected, "문자열 상수를 모으지 못하면 이 단정이 공허하다"
+        forbidden = {"Address", "Universe", "Channels", "ChannelCount", "Footprint", "No", "Break"}
+        assert set(collected) & forbidden == set()
+
+
+class TestFailureClassification:
+    """AC-OVERLAP-006 — a configuration defect and a dead console differ."""
+
+    def test_the_reason_codes_are_the_existing_two(self):
+        # Retyped in the module to avoid a cycle; pinned here so a drift fails
+        # instead of forking the classification into a third vocabulary.
+        assert WALK_UNRESOLVED == REASON_UNRESOLVED
+        assert WALK_UNREACHABLE == REASON_UNREACHABLE
+
+    def test_a_missing_path_and_a_dead_console_get_different_codes(self):
+        missing = _walk(Rig(dead_paths=(f"{ROOT}/1/DMXModes",)))
+        dead = _walk(Rig(dead_everything=True))
+        assert missing.failure == REASON_UNRESOLVED
+        assert dead.failure == REASON_UNREACHABLE
+        assert missing.failure != dead.failure
+
+    def test_the_same_exception_type_still_splits(self):
+        """AC-OVERLAP-006 ③ — the discriminator is not the exception.
+
+        ``ConsoleLink.query_state`` raises ``StateQueryError`` for a refused path
+        AND for a timeout, so a classifier keyed on the exception type cannot
+        tell them apart. This walk keys on whether a sibling already answered.
+        """
+        missing = _walk(Rig(dead_paths=(f"{ROOT}/1/DMXModes",), exception=StateQueryError))
+        dead = _walk(Rig(dead_everything=True, exception=StateQueryError))
+        assert missing.failure == REASON_UNRESOLVED
+        assert dead.failure == REASON_UNREACHABLE
+
+    def test_an_ok_false_payload_is_treated_as_a_failed_read(self):
+        class Refusing(Rig):
+            def query_state(self, path: str) -> dict:
+                payload = super().query_state(path)
+                if path.endswith("DMXModes"):
+                    return {"ok": False, "path": path, "error": "path segment not found"}
+                return payload
+
+        outcome = _walk(Refusing())
+        assert outcome.failure == REASON_UNRESOLVED
+        assert upper_bound(outcome) is None
+
+    def test_neither_message_claims_an_absence_of_overlap_or_of_modes(self):
+        missing = _walk(Rig(dead_paths=(f"{ROOT}/1/DMXModes",)))
+        dead = _walk(Rig(dead_everything=True))
+        for outcome in (missing, dead):
+            detail = outcome.failure_detail
+            assert detail.strip(), "사용자가 읽는 문자열이 비어 있다"
+            assert any("\uac00" <= character <= "\ud7a3" for character in detail)
+            assert "겹침이 없다" not in detail
+            assert "모드가 없다" not in detail
+        assert missing.failure_detail != dead.failure_detail
+
+    def test_a_failed_walk_leaves_no_bound_behind(self):
+        for outcome in (
+            _walk(Rig(dead_paths=(f"{ROOT}/1/DMXModes",))),
+            _walk(Rig(dead_everything=True)),
+        ):
+            assert outcome.complete is False
+            assert upper_bound(outcome) is None
+
+    def test_an_empty_type_pool_is_not_a_bound(self):
+        # A rig with no fixture types is a valid rig, and it establishes nothing.
+        outcome = _walk(Rig(types=0, types_listed=0))
+        assert outcome.complete is False
+        assert upper_bound(outcome) is None
+        assert outcome.failure is None, "빈 풀은 판독 실패가 아니다"
+
+
+class TestBudgetAccounting:
+    """Slot C — exhaustion invalidates globally, not per branch."""
+
+    def test_the_budget_caps_the_query_count(self):
+        rig = Rig(widths=(5, 7, 11))
+        _walk(rig, budget=3)
+        assert len(rig.calls) == 3
+
+    def test_a_sufficient_budget_costs_one_plus_types_plus_modes(self):
+        rig = Rig(widths=(5, 7, 11))
+        outcome = _walk(rig)
+        assert outcome.query_count == 1 + rig.types + len(rig.widths)
+
+    def test_exhaustion_is_not_reported_as_a_read_failure(self):
+        outcome = _walk(Rig(widths=(5, 7, 11)), budget=2)
+        assert outcome.failure is None
+        assert any("예산" in note for note in outcome.notes)
+
+    def test_exhaustion_after_some_widths_were_read_still_kills_the_bound(self):
+        """The mutation that survived the first battery.
+
+        Budget 4 on a three-mode type reads two channel counts and dies on the
+        third. Downgrading that to a per-branch note leaves ``complete`` true
+        over a two-of-three mode set, and the fold then answers 7 while the true
+        bound is 11 -- a smaller bound, which is the false all-clear. The earlier
+        budget tests missed it because both of their budgets died before ANY
+        width was collected, so the empty-width guard covered for them.
+        """
+        rig = Rig(widths=(5, 7, 11))
+        outcome = _walk(rig, budget=4)
+        assert outcome.query_count == 4
+        # Non-vacuity: two channel counts really were read before the budget
+        # died, so the empty-width guard is not what makes this pass.
+        channel_reads = [path for path in outcome.queried_paths if path.endswith("DMXChannels")]
+        assert len(channel_reads) == 2
+        # And the walk hands none of them back: a partial width tuple is a bound
+        # waiting to be folded by a consumer that forgot to read ``complete``.
+        assert outcome.mode_widths == ()
+        assert outcome.complete is False
+        assert upper_bound(outcome) is None
+
+
+def test_the_outcome_carries_no_bound_attribute():
+    """Slot A-ii, as a shape rather than a promise.
+
+    If ``WalkOutcome`` grew a ``bound`` field, a consumer could read it without
+    consulting ``complete`` -- which is the exact path a false all-clear takes.
+    """
+    assert not hasattr(
+        WalkOutcome(complete=True, footprints=(ModeFootprint(path="p", width=3),)), "bound"
+    )
+    with pytest.raises(TypeError):
+        WalkOutcome(complete=True, bound=3)  # type: ignore[call-arg]
+
+
+class TestGapArithmetic:
+    """AC-OVERLAP-009 · AC-OVERLAP-010 — distances live inside one universe."""
+
+    def test_a_universe_boundary_is_not_a_gap(self):
+        # 1.500 and 2.001 look adjacent as numbers and share no address space.
+        gaps = address_gaps({(1, 500), (2, 1)})
+        assert gaps == ()
+
+    def test_adjacent_universes_never_contribute_a_difference(self):
+        gaps = address_gaps({(1, 100), (1, 500), (2, 1), (2, 40)})
+        sizes = sorted(gap.size for gap in gaps)
+        assert sizes == [39, 400]
+        # The cross-universe differences (500-1=499, 40-100=-60) must be absent.
+        assert 499 not in sizes
+        assert all(gap.size > 0 for gap in gaps)
+
+    def test_the_gap_count_is_the_sum_of_members_minus_one(self):
+        starts = {(1, address) for address in (1, 101, 143, 185)} | {
+            (2, address) for address in (1, 51, 101)
+        }
+        per_universe: dict[int, int] = {}
+        for universe, _ in starts:
+            per_universe[universe] = per_universe.get(universe, 0) + 1
+        expected = sum(count - 1 for count in per_universe.values())
+        assert expected >= 1, "리그 형상에서 간격이 0개면 이 단정이 공허하다"
+        assert len(address_gaps(starts)) == expected
+
+    def test_the_measured_rig_shape_ten_plus_nine_yields_seventeen_gaps(self):
+        """AC-OVERLAP-009 ② — the shape the clause names, built.
+
+        The test above proves the formula on a 4+3 rig; this one instantiates the
+        rig the clause actually pins it to (``design.md`` §4 rig 12
+        ``two_universe_counts``: 유니버스 1에 10, 유니버스 2에 9 -> 간격 총수 17).
+
+        Neither 42 nor 17 is a hardcoded judgement constant. 42 is the rulebook's
+        ``addr = addr + 42`` recipe spacing, and 17 falls out of the rig: it is
+        asserted only as the tail of an identity chain whose middle term is
+        recomputed from the member profile, so a per-universe bucketing that
+        collapsed into one address space would answer 18 and fail here.
+        """
+        starts = {(1, 1 + n * 42) for n in range(10)} | {(2, 1 + n * 50) for n in range(9)}
+        # Non-vacuity: the rig really is 10+9 distinct starts across two universes.
+        per_universe: dict[int, int] = {}
+        for universe, _ in starts:
+            per_universe[universe] = per_universe.get(universe, 0) + 1
+        assert sorted(per_universe.values()) == [9, 10], (
+            "리그 형상이 10+9가 아니면 이 단정이 공허하다"
+        )
+        assert len(starts) == 19
+        expected = sum(count - 1 for count in per_universe.values())
+        assert len(address_gaps(starts)) == expected == 17
+        # And the collapse-into-one-space answer is a DIFFERENT number, so the
+        # chain above discriminates rather than agreeing with the defect.
+        assert len(starts) - 1 == 18
+
+    def test_a_shared_start_point_appears_once_and_makes_no_zero_gap(self):
+        # The key set already folds duplicates, so a zero distance cannot arise
+        # here -- it belongs to the duplicate axis.
+        gaps = address_gaps({(1, 10), (1, 40)})
+        assert [gap.size for gap in gaps] == [30]
+        assert 0 not in [gap.size for gap in gaps]
+
+    def test_a_rig_that_really_shares_a_start_point_is_reported_once(self):
+        """AC-OVERLAP-010 ①② — the two axes divide this fault, they do not double it.
+
+        The test above cannot fail. Its input is a Python set literal, so two
+        distinct keys are the only thing it can express and ``0 not in sizes``
+        holds for everything it can build. The sharing has to come from a RIG,
+        and it has to reach the bound axis the way production reaches it: through
+        the address-duplicate GROUPING, whose keys fold a shared start point into
+        one. Walking the per-fixture list instead yields ``주소 10~10 간격 0``,
+        which is below any bound, so the rig is stamped unsettled and the reader
+        gets a second notice about a fault the duplicate axis already reported.
+
+        The bound is this file's own walk rather than a hand-built outcome, which
+        is what makes the two ends of the axis meet inside one test.
+        """
+        evaluation = evaluate_patch(read_inventory(duplicate_address_pair()), walk=_walk(Rig()))
+        # Non-vacuity: the rig really shares a start point, and the bound axis
+        # really ran. Without both, neither half of the clause is under test.
+        duplicates = evaluation.address_duplicates
+        assert len(duplicates) == 1, "리그가 시작점을 공유하지 않으면 이 판정이 공허하다"
+        assert [member.slot for member in duplicates[0].members] == [1, 2]
+        assert evaluation.overlap.bound == max(TWO_MODE_WIDTHS)
+        # ① once in the gap set, and no gap of zero: the bound axis raises nothing
+        # for the address the duplicate axis owns.
+        assert RANGE_OVERLAP_BOUND_INCONCLUSIVE not in [
+            check.kind for check in evaluation.skipped_checks
+        ]
+        # ② division of labour, stated on the GRADE and not only on the notices.
+        # The first version of this test asserted ``bound_proves_clear`` here and
+        # that was wrong: a shared start point collapses into ONE group key, so
+        # the bound compared nothing about this pair, and grading it "proven
+        # clear" made the summary read "간격이 커서 겹침이 불가능" about two
+        # fixtures occupying IDENTICAL channels. Eligibility is not
+        # participation — an uncompared slot must drag the rig-wide grade down.
+        assert evaluation.overlap_basis == NOT_PERFORMED
+        # The SHARING slots are the ones excluded; a third fixture at its own
+        # address still participates, which is what keeps this from degenerating
+        # into "any duplicate silences the whole axis".
+        assert 1 not in evaluation.overlap.bound_slots
+        assert 2 not in evaluation.overlap.bound_slots
+        assert evaluation.overlap.bound_slots == (3,)
+        # Contrast, so this is not merely "duplicates always yield not_performed":
+        # the same walk on a rig whose starts are distinct DOES prove clear.
+        distinct = evaluate_patch(read_inventory(clean_rig_18()), walk=_walk(Rig()))
+        assert distinct.overlap_basis == BOUND_PROVES_CLEAR
+
+    def test_one_address_per_universe_yields_no_gap(self):
+        assert address_gaps({(1, 5), (2, 5), (3, 5)}) == ()
+
+
+class TestBoundPredicate:
+    """AC-OVERLAP-008 — the predicate is ``gap < bound``, not ``gap <= bound``."""
+
+    def _at(self, gap: int) -> tuple:
+        # Same rig shape every time; only the distance moves.
+        return address_gaps({(1, 100), (1, 100 + gap)})
+
+    def test_a_gap_one_below_the_bound_is_unsettled(self):
+        bound = 23
+        assert len(unsettled_gaps(self._at(bound - 1), bound)) == 1
+
+    def test_a_gap_exactly_at_the_bound_is_settled(self):
+        """The off-by-one test.
+
+        A fixture at ``a`` occupying at most ``bound`` channels ends at
+        ``a + bound - 1``; the next start is ``a + bound``. The intervals touch
+        and share nothing. Spelling the predicate ``<=`` fails right here, and on
+        the measured rig -- gap far wider than the bound -- both spellings agree,
+        so nothing else would catch it.
+        """
+        bound = 23
+        assert unsettled_gaps(self._at(bound), bound) == ()
+
+    def test_a_gap_one_above_the_bound_is_settled(self):
+        bound = 23
+        assert unsettled_gaps(self._at(bound + 1), bound) == ()
+
+    def test_the_three_answers_differ_only_where_they_should(self):
+        bound = 23
+        below = unsettled_gaps(self._at(bound - 1), bound)
+        at = unsettled_gaps(self._at(bound), bound)
+        above = unsettled_gaps(self._at(bound + 1), bound)
+        assert below != at
+        assert at == above
+        assert len(below) == 1
+
+
+class TestBoundOrigin:
+    """AC-OVERLAP-016 ①② — the bound carries the path it was read from."""
+
+    def test_the_origin_points_at_the_widest_mode(self):
+        rig = Rig(widths=(5, 31, 7))
+        outcome = _walk(rig)
+        assert upper_bound(outcome) == 31
+        assert bound_source(outcome) == f"{ROOT}/1/DMXModes/2/DMXChannels childCount"
+
+    def test_the_origin_moves_with_the_widest_mode(self):
+        # A single rig would also pass if the path were pinned to mode 2.
+        assert bound_source(_walk(Rig(widths=(31, 5, 7)))).endswith(
+            "/DMXModes/1/DMXChannels childCount"
+        )
+
+    def test_a_walk_with_no_bound_offers_no_origin(self):
+        incomplete = WalkOutcome(
+            complete=False, footprints=(ModeFootprint(path="어딘가", width=9),)
+        )
+        assert upper_bound(incomplete) is None
+        assert bound_source(incomplete) == ""
+
+    def test_the_origin_names_the_field_and_not_just_the_path(self):
+        origin = bound_source(_walk(Rig(widths=(5, 31))))
+        assert origin.endswith("childCount")
+        assert "DMXChannels" in origin
+
+
+class TestSiblingAnsweredDecidesTheFirstFailure:
+    """AC-OVERLAP-006 ① — the caller supplies what the walk cannot see.
+
+    When the very FIRST read fails there is no sibling inside the walk to reason
+    from, yet the caller may well have read this console a moment ago. Production
+    raises one exception type either way, so the fact has to be passed in.
+    """
+
+    def test_the_flag_has_no_default_so_a_caller_cannot_omit_it(self):
+        """The omission must be LOUD, which is a shape claim, not a behaviour one.
+
+        Design slot C says the walk is reached only after the fixture-root read
+        succeeded, so "a sibling answered" is structurally true at the production
+        seam. A default of ``False`` would contradict that and, worse, would do it
+        silently: a caller that forgets the argument reports every configuration
+        defect as an unreachable console. Every call site passing the flag today
+        makes restoring a default invisible to behavioural tests -- an audit
+        re-injection confirmed a restored default kills nothing -- so the absence
+        has to be asserted directly. Same principle as D-6: remove the symptomless
+        step rather than trust the next caller to remember it.
+        """
+        parameter = signature(walk_mode_widths).parameters["sibling_answered"]
+        assert parameter.default is parameter.empty
+        assert parameter.kind is parameter.KEYWORD_ONLY
+
+    def test_a_dead_root_with_no_sibling_is_an_unreachable_console(self):
+        outcome = walk_mode_widths(
+            Rig(dead_everything=True), root=ROOT, budget=WIDE_BUDGET, sibling_answered=False
+        )
+        assert outcome.failure == REASON_UNREACHABLE
+
+    def test_a_dead_root_with_a_sibling_is_a_wrong_path(self):
+        outcome = walk_mode_widths(
+            Rig(dead_everything=True), root=ROOT, budget=WIDE_BUDGET, sibling_answered=True
+        )
+        assert outcome.failure == REASON_UNRESOLVED
+        assert "다른 경로가 답했으므로" in outcome.failure_detail
+
+    def test_the_two_answers_differ_on_the_same_rig_and_exception(self):
+        rig_kwargs = {"dead_everything": True, "exception": StateQueryError}
+        without = walk_mode_widths(
+            Rig(**rig_kwargs), root=ROOT, budget=WIDE_BUDGET, sibling_answered=False
+        )
+        with_sibling = walk_mode_widths(
+            Rig(**rig_kwargs), root=ROOT, budget=WIDE_BUDGET, sibling_answered=True
+        )
+        assert without.failure != with_sibling.failure
+
+    def test_a_deeper_failure_is_a_wrong_path_either_way(self):
+        # Once any read inside the walk has answered, the flag adds nothing.
+        for flag in (False, True):
+            outcome = walk_mode_widths(
+                Rig(dead_paths=(f"{ROOT}/1/DMXModes",)),
+                root=ROOT,
+                budget=WIDE_BUDGET,
+                sibling_answered=flag,
+            )
+            assert outcome.failure == REASON_UNRESOLVED

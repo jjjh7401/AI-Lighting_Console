@@ -30,6 +30,7 @@ from server.prechk.macro import MacroResult
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 TOOLS_SOURCE = PROJECT_ROOT / "server" / "orchestrator" / "tools.py"
+WEB_ROOT = PROJECT_ROOT / "server" / "web"
 
 TOOL = "precheck_patch"
 
@@ -925,3 +926,682 @@ class TestMissingRigSectionIsAWiringGap:
         )
         assert execution.result.is_error is False
         assert json.loads(execution.result.content)["macro"]["created"] is True
+
+
+class FootprintRigPort(RigPort):
+    """``RigPort`` that also answers the three-tier fixture-type walk.
+
+    The base double raises for ``Patch/FixtureTypes``, which is deliberate — it
+    proves the walk classifies rather than raises. This subclass is the other
+    half: a rig where the bound axis actually produces a grade, so "no command was
+    fired" is asserted on a run that DID do the work.
+    """
+
+    #: Injected, never derived. Two modes so the widest is unambiguous.
+    MODE_WIDTHS = (11, 17)
+
+    def query_state(self, path: str) -> dict:
+        if path == "Patch/FixtureTypes":
+            self.state_calls.append(path)
+            return _walk_snapshot(path, 1, self._children([1]))
+        if path == "Patch/FixtureTypes/1/DMXModes":
+            self.state_calls.append(path)
+            return _walk_snapshot(
+                path, len(self.MODE_WIDTHS), self._children(range(1, len(self.MODE_WIDTHS) + 1))
+            )
+        parts = path.split("/")
+        if len(parts) == 6 and parts[-1] == "DMXChannels":
+            self.state_calls.append(path)
+            # Truncated listing with an exact count -- the measured shape.
+            return _walk_snapshot(path, self.MODE_WIDTHS[int(parts[4]) - 1], [], truncated=True)
+        return super().query_state(path)
+
+
+def _walk_snapshot(path: str, child_count: int, children, *, truncated: bool = False) -> dict:
+    return {
+        "ok": True,
+        "path": path,
+        "node": {"name": path.rsplit("/", 1)[-1], "class": "Pool", "childCount": child_count},
+        "children": list(children),
+        "truncated": truncated,
+    }
+
+
+class TestFootprintWalkIsWiredThroughRigPaths:
+    """AC-OVERLAP-018 · D-2 · D-3 — the axis rides the existing seams."""
+
+    def test_the_walk_module_hardcodes_no_rig_path(self):
+        source = (PROJECT_ROOT / "server" / "prechk" / "footprint.py").read_text(encoding="utf-8")
+        constants = [
+            node.value
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.Constant) and isinstance(node.value, str)
+        ]
+        assert constants, "문자열 상수를 모으지 못하면 이 단정이 공허하다"
+        assert "Patch/FixtureTypes" not in constants
+        # Non-vacuity: the path DOES exist -- as the rig-context default the
+        # handler passes in, which is the seam a literal would bypass.
+        assert tools_module.DEFAULT_RIG_CONTEXT_PATHS["fixture_types"] == "Patch/FixtureTypes"
+
+    def test_the_handler_walks_the_configured_path(self):
+        rig = FootprintRigPort()
+        registry = build_toolset(
+            execution_port=RecordingExecutionPort(),
+            state_port=rig,
+            property_port=rig,
+            rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+        )
+        _dispatch(registry)
+        assert "Patch/FixtureTypes" in rig.state_calls
+        assert "Patch/FixtureTypes/1/DMXModes" in rig.state_calls
+
+    def test_an_override_redirects_the_walk(self):
+        # The point of the seam: a different rig_paths entry moves the walk.
+        class Elsewhere(FootprintRigPort):
+            def __init__(self):
+                super().__init__()
+                self.requested: list[str] = []
+
+            def query_state(self, path: str) -> dict:
+                self.requested.append(path)
+                if path.startswith("Patch/OtherTypes"):
+                    return super().query_state(
+                        path.replace("Patch/OtherTypes", "Patch/FixtureTypes")
+                    )
+                return super().query_state(path)
+
+        rig = Elsewhere()
+        registry = build_toolset(
+            execution_port=RecordingExecutionPort(),
+            state_port=rig,
+            property_port=rig,
+            rig_paths={
+                **tools_module.DEFAULT_RIG_CONTEXT_PATHS,
+                "fixture_types": "Patch/OtherTypes",
+            },
+        )
+        payload = json.loads(_dispatch(registry).result.content)
+        # The walk asked for the overridden root, never the default one.
+        assert [path for path in rig.requested if path.startswith("Patch/OtherTypes")]
+        assert [path for path in rig.requested if path.startswith("Patch/FixtureTypes")] == []
+        # Non-vacuity: the redirected walk still produced a bound, so the override
+        # moved the walk rather than breaking it.
+        assert payload["overlap_basis"]["bound"] == max(FootprintRigPort.MODE_WIDTHS)
+        assert payload["overlap_basis"]["bound_source"].startswith("Patch/OtherTypes")
+
+    def test_the_macro_section_tuple_is_unchanged(self):
+        # D-3: adding "fixture_types" here would make one override omission behave
+        # differently depending on create_macro, and would break the two tests
+        # that pin the macro guard's message.
+        assert tools_module.PRECHK_RIG_SECTIONS == ("groups", "macros")
+        assert tools_module.PRECHK_FOOTPRINT_SECTIONS == ("fixture_types",)
+        assert (
+            set(tools_module.PRECHK_FOOTPRINT_SECTIONS) & set(tools_module.PRECHK_RIG_SECTIONS)
+            == set()
+        )
+
+    def test_the_footprint_section_is_checked_regardless_of_create_macro(self):
+        """D-3: the guard sits OUTSIDE the create_macro branch.
+
+        A guard inside that branch is the trap: the same override omission would
+        be named when a macro was requested and pass silently when it was not.
+        """
+        paths = {
+            key: value
+            for key, value in tools_module.DEFAULT_RIG_CONTEXT_PATHS.items()
+            if key != "fixture_types"
+        }
+        for create_macro in (False, True):
+            rig = FootprintRigPort()
+            registry = build_toolset(
+                execution_port=RecordingExecutionPort(),
+                state_port=rig,
+                property_port=rig,
+                rig_paths=paths,
+                bundle_gate=ClearingGate(),
+            )
+            execution = _dispatch(registry, create_macro=create_macro)
+            payload = json.loads(execution.result.content)
+            note = payload["overlap_basis"]["observation_note"]
+            assert payload["overlap_basis"]["basis"] == "not_performed", create_macro
+            assert "fixture_types" in note, create_macro
+            # Names the section; does NOT claim a pool read failed.
+            assert "판독 실패가 아니다" in note
+            assert "Patch/FixtureTypes" not in rig.state_calls
+
+    def test_a_missing_section_does_not_discard_the_report(self):
+        """NOT a regression test — an INVARIANT GUARD (AC-OVERLAP-021 ⑥).
+
+        Verified by the reverse run: this passes on the pre-change code too, where
+        no guard existed at all and the report came out regardless. It is here so
+        that ADDING the guard cannot start refusing the call, which would throw
+        away the fixture inventory the tool exists to produce -- the shape the
+        zero-target macro branch already fixed once.
+        """
+        paths = {
+            key: value
+            for key, value in tools_module.DEFAULT_RIG_CONTEXT_PATHS.items()
+            if key != "fixture_types"
+        }
+        rig = FootprintRigPort()
+        registry = build_toolset(
+            execution_port=RecordingExecutionPort(),
+            state_port=rig,
+            property_port=rig,
+            rig_paths=paths,
+        )
+        execution = _dispatch(registry)
+        assert execution.result.is_error is False
+        payload = json.loads(execution.result.content)
+        assert payload["inventory"]["observed_count"] == len(_FIXTURES)
+        assert payload["collisions"]["address_duplicates"]
+
+    def test_a_walk_that_cannot_read_its_root_blames_the_path_not_the_console(self):
+        # The base RigPort raises for Patch/FixtureTypes. The fixture inventory
+        # answered first, so the console is demonstrably reachable.
+        rig = RigPort()
+        execution = _dispatch(_registry(rig=rig))
+        payload = json.loads(execution.result.content)
+        assert payload["overlap_basis"]["basis"] == "not_performed"
+        assert "다른 경로가 답했으므로" in payload["overlap_basis"]["observation_note"]
+
+    def test_the_query_count_stays_inside_the_budget(self):
+        rig = FootprintRigPort()
+        registry = build_toolset(
+            execution_port=RecordingExecutionPort(),
+            state_port=rig,
+            property_port=rig,
+            rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+        )
+        _dispatch(registry)
+        walk_calls = [call for call in rig.state_calls if call.startswith("Patch/FixtureTypes")]
+        assert walk_calls, "순회 조회가 0건이면 상한 단정이 공허하다"
+        assert len(walk_calls) == 1 + 1 + len(FootprintRigPort.MODE_WIDTHS)
+        assert len(walk_calls) <= tools_module.PRECHK_FOOTPRINT_QUERY_CAP
+
+
+class TestTheOverlapAxisFiresNoCommand:
+    """AC-OVERLAP-018 ⑤ — read-only, fixed by observing the execution port."""
+
+    def test_the_bound_axis_speaks_nothing_to_the_console(self):
+        rig = FootprintRigPort()
+        port = RecordingExecutionPort()
+        registry = build_toolset(
+            execution_port=port,
+            state_port=rig,
+            property_port=rig,
+            rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+        )
+        payload = json.loads(_dispatch(registry).result.content)
+        # Non-vacuity: the axis really ran on this call.
+        assert payload["overlap_basis"]["bound"] == max(FootprintRigPort.MODE_WIDTHS)
+        assert port.executed == []
+
+    def test_the_same_port_is_not_simply_inert(self):
+        """NOT a regression test — a NON-VACUITY CONTROL (AC-OVERLAP-021 ⑥).
+
+        Verified by the reverse run: it passes on the pre-change code. Without it
+        the assertion above would also pass against a port that records nothing.
+        """
+        rig = FootprintRigPort()
+        port = RecordingExecutionPort()
+        registry = build_toolset(
+            execution_port=port,
+            state_port=rig,
+            property_port=rig,
+            rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+            bundle_gate=ClearingGate(),
+        )
+        _dispatch(registry, create_macro=True)
+        assert port.executed
+
+
+# AC-OVERLAP-018 ① — the web layer's surface, pinned ABSOLUTELY. These literals
+# are the enumeration of ``server/web/**.py`` as it stands at the axis's base
+# commit; they are NOT derived from the parse they are compared against, so a
+# route or a message type added by this axis moves the measured value away from
+# a fixed target instead of moving both sides of the comparison together.
+_EXPECTED_WEB_ROUTES = (
+    ("app.py", "app.get", "/healthz"),
+    ("app.py", "app.websocket", "/ws"),
+    ("provision_api.py", "router.get", "/api/provision/responder"),
+    ("provision_api.py", "router.post", "/api/provision/responder"),
+    ("settings_api.py", "router.delete", "/api/keys/{provider}"),
+    ("settings_api.py", "router.get", "/api/settings"),
+    ("settings_api.py", "router.post", "/api/keys"),
+    ("settings_api.py", "router.post", "/api/settings"),
+)
+
+# client -> server: the closed allowlists ``parse_client_message`` validates
+# against (``server/web/messages.py`` ``*_MESSAGE_TYPES``).
+_EXPECTED_CLIENT_MESSAGE_TYPES = (
+    "approval_decision",
+    "chat",
+    "dash_catalog_request",
+    "lock",
+    "panel_catalog_request",
+    "panel_execute",
+    "panel_pin",
+    "panel_stop",
+    "panel_unpin",
+    "review_decision",
+    "status_request",
+)
+
+# server -> client: every literal stamped into the outbound ``"type"`` field by
+# an ``_event(...)`` builder.
+_EXPECTED_SERVER_MESSAGE_TYPES = (
+    "approval_request",
+    "approval_resolved",
+    "busy",
+    "chat_response",
+    "dash_catalog",
+    "error",
+    "execution_preview",
+    "notice",
+    "panel_busy",
+    "panel_catalog",
+    "panel_item_state",
+    "proposal",
+    "review_request",
+    "review_resolved",
+    "status",
+)
+
+_ROUTE_VERBS = frozenset(
+    {"get", "post", "put", "patch", "delete", "head", "options", "trace", "websocket"}
+)
+_ROUTE_OBJECTS = frozenset({"app", "router"})
+
+
+@dataclass(frozen=True)
+class WebSurface:
+    """What one AST pass over the web layer actually found."""
+
+    visited: int
+    routes: tuple[tuple[str, str, str], ...]
+    client_message_types: tuple[str, ...]
+    server_message_types: tuple[str, ...]
+
+
+def _route_decorators(filename: str, node):
+    """``@app.<verb>(...)`` / ``@router.<verb>(...)`` on one function def."""
+    for decorator in node.decorator_list:
+        call = decorator.func if isinstance(decorator, ast.Call) else decorator
+        if not isinstance(call, ast.Attribute) or not isinstance(call.value, ast.Name):
+            continue
+        if call.value.id not in _ROUTE_OBJECTS or call.attr not in _ROUTE_VERBS:
+            continue
+        path = ""
+        if isinstance(decorator, ast.Call) and decorator.args:
+            first = decorator.args[0]
+            if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                path = first.value
+        yield (filename, f"{call.value.id}.{call.attr}", path)
+
+
+def _allowlist_literals(node: ast.Assign):
+    """String members of a module-level ``*_MESSAGE_TYPES`` allowlist tuple."""
+    names = [t.id for t in node.targets if isinstance(t, ast.Name)]
+    if not any(name.endswith("_MESSAGE_TYPES") for name in names):
+        return
+    if not isinstance(node.value, (ast.Tuple, ast.List)):
+        return
+    for element in node.value.elts:
+        if isinstance(element, ast.Constant) and isinstance(element.value, str):
+            yield element.value
+
+
+def _event_type_literal(node: ast.Call):
+    """The message type an ``_event("<type>", ...)`` builder stamps outbound."""
+    if not isinstance(node.func, ast.Name) or node.func.id != "_event" or not node.args:
+        return
+    first = node.args[0]
+    if isinstance(first, ast.Constant) and isinstance(first.value, str):
+        yield first.value
+
+
+def _scan_web_surface(sources: list[Path]) -> WebSurface:
+    """Enumerate the web surface by PARSING, not by searching for names.
+
+    A name search only answers "is this axis's vocabulary present"; the clause
+    counts routes and message types, so they are counted here — every route
+    decorator and every wire message type the sources declare, whatever it is
+    called.
+    """
+    routes: list[tuple[str, str, str]] = []
+    client_types: set[str] = set()
+    server_types: set[str] = set()
+    visited = 0
+    for source in sources:
+        visited += 1
+        tree = ast.parse(source.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                routes.extend(_route_decorators(source.name, node))
+            elif isinstance(node, ast.Assign):
+                client_types.update(_allowlist_literals(node))
+            elif isinstance(node, ast.Call):
+                server_types.update(_event_type_literal(node))
+    return WebSurface(
+        visited=visited,
+        routes=tuple(sorted(routes)),
+        client_message_types=tuple(sorted(client_types)),
+        server_message_types=tuple(sorted(server_types)),
+    )
+
+
+class TestBoundaryProhibitions:
+    """AC-OVERLAP-018 ①②③④ — four boundaries, each with a non-vacuity guard.
+
+    Three of these are INVARIANT GUARDS rather than regression tests, confirmed by
+    the reverse run: ``test_the_walk_never_touches_the_execution_port``,
+    ``test_the_prechk_package_never_imports_the_send_surface`` and
+    ``test_the_operator_tool_exemption_list_is_unchanged`` pass on the pre-change
+    code because those boundaries already held. They are here to keep holding
+    while a new axis is added, which is a different job from catching a fix
+    (AC-OVERLAP-021 ⑥). ``test_the_axis_adds_no_web_surface`` IS a regression test:
+    it fails on the pre-change tree.
+    """
+
+    def _prechk_sources(self) -> list[Path]:
+        return sorted((PROJECT_ROOT / "server" / "prechk").rglob("*.py"))
+
+    def test_the_axis_adds_no_web_surface(self):
+        """AC-OVERLAP-018 ① — 신규 REST 라우트·웹소켓 메시지 타입이 0건이다.
+
+        The gate counts what the clause counts: routes and message types are
+        ENUMERATED with ``ast`` and compared against literals fixed at the
+        axis's base commit, so a route added under ANY name fails here. The
+        needle scan is kept — it is cheap and catches a different thing, this
+        axis's vocabulary leaking into the web layer — but it is not the count:
+        a planted ``@app.get("/api/precheck/bound")`` matches none of the three
+        needles, which is precisely why the count assertions exist.
+        """
+        sources = sorted(WEB_ROOT.rglob("*.py"))
+        surface = _scan_web_surface(sources)
+        assert surface.visited >= 1, "web 계층 파일을 방문하지 않으면 0건 판정이 공허하다"
+        assert surface.routes == _EXPECTED_WEB_ROUTES
+        assert surface.client_message_types == _EXPECTED_CLIENT_MESSAGE_TYPES
+        assert surface.server_message_types == _EXPECTED_SERVER_MESSAGE_TYPES
+
+        hits: list[str] = []
+        for source in sources:
+            text = source.read_text(encoding="utf-8")
+            for needle in ("footprint", "walk_mode_widths", "overlap_basis"):
+                if needle in text:
+                    hits.append(f"{source.name}: {needle}")
+        assert hits == []
+        # Non-vacuity: the axis IS reachable -- through the existing tool name.
+        assert TOOL in TOOL_NAMES
+        assert "walk_mode_widths" in TOOLS_SOURCE.read_text(encoding="utf-8")
+
+    def test_the_walk_never_touches_the_execution_port(self):
+        nodes = 0
+        hits: list[str] = []
+        for source in self._prechk_sources():
+            tree = ast.parse(source.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                nodes += 1
+                if isinstance(node, ast.Name) and node.id == "execution_port":
+                    hits.append(source.name)
+                if isinstance(node, ast.Attribute) and node.attr == "execution_port":
+                    hits.append(source.name)
+        assert nodes >= 1, "AST 노드를 방문하지 않으면 0건 판정이 공허하다"
+        assert hits == []
+
+    def test_the_prechk_package_never_imports_the_send_surface(self):
+        modules: list[str] = []
+        for source in self._prechk_sources():
+            tree = ast.parse(source.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    modules.extend(alias.name for alias in node.names)
+                elif isinstance(node, ast.ImportFrom):
+                    modules.append(node.module or "")
+        assert len(modules) >= 1, "import를 하나도 모으지 못하면 0건 판정이 공허하다"
+        assert [m for m in modules if m.startswith(("server.bridge", "pythonosc"))] == []
+
+    def test_the_operator_tool_exemption_list_is_unchanged(self):
+        from .test_architecture import _NAMED_TOOL_EXEMPTIONS
+
+        assert (
+            frozenset({"server/tools/osc_smoke.py", "server/tools/responder_roundtrip.py"})
+            == _NAMED_TOOL_EXEMPTIONS
+        )
+
+
+class GatedRig(FootprintRigPort):
+    """``FootprintRigPort`` plus the two methods the safety gate's console needs.
+
+    The gate is used verbatim rather than simulated: the "one query, one audit
+    row" property belongs to the chokepoint, and a hand-rolled double would only
+    restate what the test is supposed to check.
+    """
+
+    def execute(self, command: str):
+        from server.safety.console import ExecOutcome
+
+        return ExecOutcome(status="ok", detail="OK")
+
+    def ping(self) -> bool:
+        return True
+
+
+def _gated(tmp_path, rig=None):
+    from server.safety.audit import AuditLog
+    from server.safety.gate import SafetyGate
+
+    rig = rig or GatedRig()
+    audit = AuditLog(tmp_path / "audit")
+    gate = SafetyGate(console=rig, audit=audit)
+    registry = build_toolset(
+        execution_port=gate.execution_port,
+        state_port=gate.state_port,
+        property_port=gate.state_port,
+        rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+    )
+    return registry, rig, audit
+
+
+def _basis(payload) -> str:
+    return payload["overlap_basis"]["basis"]
+
+
+class TestEveryGradeThroughTheTool:
+    """AC-OVERLAP-021 ① — the axis end to end, one rig per reachable grade.
+
+    Three of the four grades are reachable here. The fourth, ``exact_widths``, is
+    NOT, and cannot be: the shipped handler builds no ``FootprintPolicy`` because
+    the fixture-to-footprint join was refuted, and the bound axis exists precisely
+    because of that. Inventing a code path to reach it would re-enable a refuted
+    axis. ``test_the_exact_width_grade_is_unreachable_through_the_tool`` states
+    that with its machine evidence instead of leaving it implied.
+    """
+
+    #: A rig with two fixtures 40 channels apart. The widest enumerated mode is
+    #: 17, so 40 clears the bound.
+    def _spaced_rig(self, gap: int) -> FootprintRigPort:
+        return FootprintRigPort(
+            fixtures={
+                1: {**_FIXTURES[1], "Patch": "1.100"},
+                2: {**_FIXTURES[2], "Patch": f"1.{100 + gap:03d}"},
+            }
+        )
+
+    def test_bound_proves_clear_is_produced(self):
+        rig = self._spaced_rig(max(FootprintRigPort.MODE_WIDTHS) + 1)
+        registry = build_toolset(
+            execution_port=RecordingExecutionPort(),
+            state_port=rig,
+            property_port=rig,
+            rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+        )
+        payload = json.loads(_dispatch(registry).result.content)
+        assert _basis(payload) == "bound_proves_clear"
+        assert payload["overlap_basis"]["bound"] == max(FootprintRigPort.MODE_WIDTHS)
+
+    def test_bound_inconclusive_is_produced(self):
+        rig = self._spaced_rig(max(FootprintRigPort.MODE_WIDTHS) - 1)
+        registry = build_toolset(
+            execution_port=RecordingExecutionPort(),
+            state_port=rig,
+            property_port=rig,
+            rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+        )
+        payload = json.loads(_dispatch(registry).result.content)
+        assert _basis(payload) == "bound_inconclusive"
+        assert "range_overlap_bound_inconclusive" in [
+            row["kind"] for row in payload["skipped_checks"]
+        ]
+        # Not a collision: an upper bound cannot prove an overlap EXISTS.
+        assert payload["collisions"]["range_overlaps"] == []
+
+    def test_not_performed_is_produced(self):
+        # The base double raises for the fixture-type root, so no bound exists.
+        payload = json.loads(_dispatch(_registry()).result.content)
+        assert _basis(payload) == "not_performed"
+
+    def test_the_exact_width_grade_is_unreachable_through_the_tool(self):
+        """The shipped handler builds no width policy — asserted, not assumed."""
+        tree = ast.parse(TOOLS_SOURCE.read_text(encoding="utf-8"))
+        constructions = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "FootprintPolicy"
+        ]
+        assert constructions == []
+        # Non-vacuity: the scan reached the handler, and the OTHER grades do come
+        # out of it, so this is an absence of one path rather than of all of them.
+        assert "precheck_patch" in TOOLS_SOURCE.read_text(encoding="utf-8")
+        assert _basis(json.loads(_dispatch(_registry()).result.content)) == "not_performed"
+
+    def test_the_payload_block_keeps_its_exact_key_set_in_every_grade(self):
+        expected = {
+            "basis",
+            "bound",
+            "bound_source",
+            "mode_widths",
+            "exact_width_slots",
+            "bound_slots",
+            "observation_note",
+        }
+        rigs = [
+            self._spaced_rig(max(FootprintRigPort.MODE_WIDTHS) + 1),
+            self._spaced_rig(max(FootprintRigPort.MODE_WIDTHS) - 1),
+        ]
+        payloads = []
+        for rig in rigs:
+            registry = build_toolset(
+                execution_port=RecordingExecutionPort(),
+                state_port=rig,
+                property_port=rig,
+                rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+            )
+            payloads.append(json.loads(_dispatch(registry).result.content))
+        payloads.append(json.loads(_dispatch(_registry()).result.content))
+        assert len({_basis(payload) for payload in payloads}) == 3
+        for payload in payloads:
+            assert set(payload["overlap_basis"]) == expected
+
+    def test_the_summary_names_the_grade_in_every_case(self):
+        for rig_gap in (
+            max(FootprintRigPort.MODE_WIDTHS) + 1,
+            max(FootprintRigPort.MODE_WIDTHS) - 1,
+        ):
+            rig = self._spaced_rig(rig_gap)
+            registry = build_toolset(
+                execution_port=RecordingExecutionPort(),
+                state_port=rig,
+                property_port=rig,
+                rig_paths={**tools_module.DEFAULT_RIG_CONTEXT_PATHS},
+            )
+            payload = json.loads(_dispatch(registry).result.content)
+            assert "겹침 판정 근거:" in payload["summary_ko"]
+
+
+class TestAuditAndBudgetEndToEnd:
+    """AC-OVERLAP-021 ③④ — cost and accountability, both newly pinned."""
+
+    def test_every_walk_query_leaves_exactly_one_audit_row(self, tmp_path):
+        registry, rig, audit = _gated(tmp_path)
+        _dispatch(registry)
+        rows = [
+            event
+            for event in audit.iter_events()
+            if event.get("event") == "executed" and event.get("kind") == "state_query"
+        ]
+        walk_calls = [call for call in rig.state_calls if call.startswith("Patch/FixtureTypes")]
+        # Non-vacuity on both sides: the walk ran, and the audit recorded.
+        assert walk_calls
+        assert rows
+        assert len(rows) == len(rig.state_calls)
+        assert set(walk_calls) <= {event["command"] for event in rows}
+
+    def test_the_walk_rides_the_same_chokepoint_as_everything_else(self, tmp_path):
+        registry, rig, audit = _gated(tmp_path)
+        _dispatch(registry)
+        # A walk that bypassed the gate would produce state calls with no audit
+        # row, which the equality above already forbids; this states the direction
+        # the equality is protecting.
+        commands = [
+            event["command"] for event in audit.iter_events() if event.get("kind") == "state_query"
+        ]
+        assert "Patch/FixtureTypes" in commands
+        assert "Patch/FixtureTypes/1/DMXModes" in commands
+
+    def test_the_query_count_never_exceeds_the_declared_ceiling(self, tmp_path):
+        registry, rig, _audit = _gated(tmp_path)
+        _dispatch(registry)
+        walk_calls = [call for call in rig.state_calls if call.startswith("Patch/FixtureTypes")]
+        # An EQUALITY, not a bound: the repository had no assertion pinning a query
+        # count anywhere, so one extra read could be added forever unnoticed.
+        assert len(walk_calls) == 1 + 1 + len(FootprintRigPort.MODE_WIDTHS)
+        assert len(walk_calls) <= tools_module.PRECHK_FOOTPRINT_QUERY_CAP
+
+    def test_the_declared_ceiling_is_pinned_to_a_literal(self):
+        """AC-OVERLAP-021 ③ — the ceiling claim needs a ceiling of its own.
+
+        The ``<= PRECHK_FOOTPRINT_QUERY_CAP`` assertion above compares a
+        measurement against the very constant it is supposed to bound, so RAISING
+        the constant cannot fail it -- ``40 -> 1000000000`` leaves the suite green.
+        Sensitivity exists only downward, where the walk visibly starves. This
+        pins the ceiling to a LITERAL instead, the PRESERVE precedent's rule that
+        a gate copying the constant guards the wrong place.
+
+        Why a ceiling exists at all: one walk query is a UDP round trip plus a
+        bundle-gate pass plus an audit row (`design.md` C-ii), so an unbounded
+        walk makes one pre-check cost scale with the size of the showfile. 40 is
+        a deliberate over-provision, NOT a fitted number
+        (`server/orchestrator/tools.py:177-183`) -- the fixture-type count is
+        unmeasured on every rig -- and that is exactly why it needs an external
+        pin: nothing inside the walk would notice the number growing. Re-provisioning
+        the ceiling is legitimate; doing it without editing this line is not.
+
+        Deliberately the ONLY assertion in this test. A companion
+        ``CAP > 1 + 1 + len(MODE_WIDTHS)`` headroom check was written and removed:
+        the equality subsumes it, so it could never fail on its own -- the same
+        vacuity this test exists to repair.
+        """
+        assert tools_module.PRECHK_FOOTPRINT_QUERY_CAP == 40
+
+    def test_a_failed_walk_costs_one_query_and_one_audit_row(self, tmp_path):
+        class DeadTypes(GatedRig):
+            def query_state(self, path: str) -> dict:
+                if path.startswith("Patch/FixtureTypes"):
+                    raise RuntimeError("no such path")
+                return super().query_state(path)
+
+        registry, rig, audit = _gated(tmp_path, rig=DeadTypes())
+        payload = json.loads(_dispatch(registry).result.content)
+        assert _basis(payload) == "not_performed"
+        failed = [
+            event
+            for event in audit.iter_events()
+            if event.get("kind") == "state_query" and event.get("ok") is False
+        ]
+        # A timed-out query still SENT one request, so it still owes one row.
+        assert len(failed) == 1
+        assert failed[0]["command"] == "Patch/FixtureTypes"
