@@ -2720,11 +2720,19 @@ def build_toolset(
                 "fx-only scene are both legal — but the axis that did NOT "
                 "match is left empty on purpose. Do not fill it in yourself.\n"
                 "\n"
-                'When "fallback" is true nothing matched well enough and '
-                '"fallback_reason" says which ("no_match", "low_confidence", '
-                '"ambiguous", "empty_query"). Ask the operator for one more '
-                "word rather than picking from the list; if it still falls "
-                "back, use find_looks and find_fx separately.\n"
+                'When "fallback" is true there is nothing here to compile and '
+                '"fallback_reason" says why. Four of the five are about the '
+                'axes ("no_match", "low_confidence", "ambiguous", '
+                '"empty_query"): ask the operator for one more word rather '
+                "than picking from the list; if it still falls back, use "
+                "find_looks and find_fx separately.\n"
+                "\n"
+                'The fifth is different — "no_scene_composes_axes" means both '
+                "axes DID resolve but this library holds no scene combining "
+                'them, so "selected_look_id" and "selected_fx_id" are still '
+                "valid: take them to find_looks/find_fx and place the two "
+                "halves separately, or ask the operator which one they "
+                "meant.\n"
                 "\n"
                 "A scene carries NO group, sequence, cue or executor number. "
                 "To put one on THIS rig, pass its scene_id to compile_scene."

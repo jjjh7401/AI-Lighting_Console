@@ -7,7 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from server.fx.loader import load_library_from_dir
+from server.fx.loader import load_library_from_dir as load_fx_library_from_dir
+from server.fx.matching import PATTERN_ALIASES
+from server.scene import matching as scene_matching
+from server.scene.loader import load_library_from_dir as load_scene_library_from_dir
 from server.scene.matching import (
     AMBIGUOUS,
     BOTH_MATCHED,
@@ -17,11 +20,18 @@ from server.scene.matching import (
     LOOK_ONLY,
     LOW_CONFIDENCE,
     NO_MATCH,
+    NO_SCENE_COMPOSES_AXES,
     match_scene,
 )
 from server.scene.schema import SCENE_SCHEMA_VERSION, Scene, SceneLibrary
 
 SCENE_DIR = Path(__file__).resolve().parents[1] / "scene"
+
+# The four facts about the AXES. The fifth reason, NO_SCENE_COMPOSES_AXES, is
+# deliberately NOT one of them: it says the axes resolved perfectly well and the
+# LIBRARY carries no entry composing them. Different fact, different repair —
+# reach for `find_looks`/`find_fx`, do not rewrite the instruction.
+AXIS_FALLBACK_REASONS = frozenset({EMPTY_QUERY, NO_MATCH, LOW_CONFIDENCE, AMBIGUOUS})
 
 
 def _scene(
@@ -117,6 +127,31 @@ def library() -> SceneLibrary:
             aliases=("빨간 서클",),
         ),
     )
+
+
+@pytest.fixture(scope="module")
+def shipped_library() -> SceneLibrary:
+    """The library that actually ships, not the one written to suit the tests.
+
+    The fixture above evades a whole class of defect BY CONSTRUCTION: every axis
+    id in it owns a single-axis scene (``look-blue``, ``fx-wave`` …), so a
+    LOOK_ONLY/FX_ONLY probe ALWAYS finds a scene. Today's ``core.yaml`` is the
+    opposite — 6 of its 8 axis ids appear only inside a combined scene (pinned
+    in ``test_scene_library.py``). Until this fixture landed, nothing in the
+    repository ran ``match_scene`` against the shipped assets at all.
+    """
+    return load_scene_library_from_dir()
+
+
+def _shipped_corpus(library: SceneLibrary) -> tuple[str, ...]:
+    """Every surface word an operator could plausibly type at this library."""
+    terms: set[str] = set()
+    for scene in library.scenes:
+        terms.add(scene.display_name)
+        terms.update(scene.aliases)
+        terms.update(scene.mood_keywords)
+    terms.update(PATTERN_ALIASES)
+    return tuple(sorted(terms))
 
 
 def _reversed(library: SceneLibrary) -> SceneLibrary:
@@ -265,12 +300,195 @@ class TestFallbackSignals:
 
 class TestFxPatternIdInference:
     def test_shipped_fx_ids_carry_the_pattern_slug_scene_matching_infers(self):
-        library = load_library_from_dir()
+        library = load_fx_library_from_dir()
 
         assert len(library.fx) == 12
         for entry in library.fx:
             tokens = frozenset(re.split(r"[-_\s]+", entry.fx_id.casefold()))
             assert entry.pattern in tokens, entry.fx_id
+
+
+_AXIS_REASON_CASES = (
+    ("shipped", "", EMPTY_QUERY),
+    ("shipped", "오늘 점심 뭐 먹지", NO_MATCH),
+    ("shipped", "체이스", NO_MATCH),
+    ("fixture", "부드러운", LOW_CONFIDENCE),
+    ("fixture", "파란색이랑 빨간색으로", AMBIGUOUS),
+)
+
+
+class TestTheFifthState:
+    """The axes resolved and the library composes no scene for them.
+
+    ``kind`` reports WHICH AXES resolved. ``fallback`` reports whether there is
+    anything to act on. Those two used to be one fact — ``SceneMatch.fallback``
+    read ``self.kind == FALLBACK`` — and the collision produced the success
+    shape with nothing in it: ``kind=fx_only``, ``fallback=False``,
+    ``fallback_reason=None``, ``selected=None``. A model handed that payload is
+    told to pass a ``scene_id`` the payload does not carry, and its only
+    remaining move is to hand-write ``run_commands`` — the exact failure this
+    SPEC exists to prevent. The console answers ``ok`` either way and no path
+    reads a cue back, so the defect emits NO runtime signal: these tests are the
+    only net under it.
+    """
+
+    def test_one_axis_resolved_with_no_composing_scene_declares_the_fallback(self, shipped_library):
+        result = match_scene("웨이브", shipped_library)
+
+        assert result.fx.selected == "wave-soft-rise"
+        assert result.selected is None
+        assert result.fallback is True
+        assert result.fallback_reason == NO_SCENE_COMPOSES_AXES
+        # The axis fact survives the actionability fact instead of being erased
+        # by it: the operator still learns which fx the words resolved to.
+        assert result.kind == FX_ONLY
+
+    def test_both_axes_resolved_with_no_composing_scene_declares_the_same_fallback(
+        self, shipped_library
+    ):
+        result = match_scene("말씀 회전", shipped_library)
+
+        assert result.look.selected == "worship-scripture-key"
+        assert result.fx.selected == "circle-club-wings"
+        assert result.selected is None
+        assert result.fallback is True
+        assert result.fallback_reason == NO_SCENE_COMPOSES_AXES
+        assert result.kind == BOTH_MATCHED
+
+    @pytest.mark.parametrize("query", ["웨이브", "말씀 회전"])
+    def test_the_payload_separates_the_axis_fact_from_the_actionable_fact(
+        self, query, shipped_library
+    ):
+        payload = match_scene(query, shipped_library).to_dict()
+
+        assert payload["selected"] is None
+        assert payload["fallback"] is True
+        assert payload["fallback_reason"] == NO_SCENE_COMPOSES_AXES
+        # Not FALLBACK: the two facts are reported separately, so a caller can
+        # still see which axes landed while being told there is nothing to run.
+        assert payload["kind"] != FALLBACK
+        assert payload["kind"] in {FX_ONLY, LOOK_ONLY, BOTH_MATCHED}
+
+    def test_an_axis_tie_elsewhere_does_not_rename_the_composition_reason(self, shipped_library):
+        # "차분한" ties the look axis (ballad-moonlight / worship-scripture-key)
+        # while the fx axis resolves cleanly. The top-level reason is about the
+        # LIBRARY; the tie is still reported, on its own axis, undisturbed.
+        result = match_scene("차분한", shipped_library)
+
+        assert result.look.selected is None
+        assert result.look.fallback_reason == LOW_CONFIDENCE
+        assert result.fx.selected == "wave-soft-rise"
+        assert result.kind == FX_ONLY
+        assert result.fallback_reason == NO_SCENE_COMPOSES_AXES
+
+    def test_the_composition_reason_is_none_of_the_axis_reasons(self):
+        assert NO_SCENE_COMPOSES_AXES not in AXIS_FALLBACK_REASONS
+        assert len(AXIS_FALLBACK_REASONS | {NO_SCENE_COMPOSES_AXES}) == 5
+
+
+class TestTheFifthStateControls:
+    """Without these, a mutant that fails EVERYTHING into fallback passes."""
+
+    @pytest.mark.parametrize(
+        ("query", "expected_kind", "expected_scene"),
+        [
+            ("달빛 웨이브", BOTH_MATCHED, "ballad-moonlight-rise"),
+            ("서클 모션", FX_ONLY, "club-circle-motion"),
+            ("말씀 스틸", LOOK_ONLY, "worship-scripture-still"),
+        ],
+    )
+    def test_a_query_the_library_does_compose_is_not_a_fallback(
+        self, query, expected_kind, expected_scene, shipped_library
+    ):
+        result = match_scene(query, shipped_library)
+
+        assert result.kind == expected_kind
+        assert result.selected is not None
+        assert result.selected.scene_id == expected_scene
+        assert result.fallback is False
+        assert result.fallback_reason is None
+
+    @pytest.mark.parametrize(("source", "query", "expected_reason"), _AXIS_REASON_CASES)
+    def test_a_query_that_resolves_no_axis_keeps_an_axis_reason(
+        self, source, query, expected_reason, library, shipped_library
+    ):
+        result = match_scene(query, shipped_library if source == "shipped" else library)
+
+        assert result.kind == FALLBACK
+        assert result.fallback is True
+        assert result.fallback_reason == expected_reason
+        assert result.fallback_reason in AXIS_FALLBACK_REASONS
+        assert result.fallback_reason != NO_SCENE_COMPOSES_AXES
+
+    def test_the_controls_exercise_every_axis_reason(self):
+        assert {reason for _, _, reason in _AXIS_REASON_CASES} == AXIS_FALLBACK_REASONS
+
+
+class TestShippedLibrarySweep:
+    """Run the shipped assets through the matcher — nothing else in the repo does.
+
+    The invariant is the structural bar under the fifth state: whatever a query
+    does, the payload must either NAME a scene or SAY it has none. A payload
+    that does neither is the shape a model cannot act on honestly.
+    """
+
+    def test_the_sweep_has_something_to_sweep(self, shipped_library):
+        assert len(shipped_library.scenes) >= 5
+        assert len(_shipped_corpus(shipped_library)) >= 40
+
+    def test_every_shipped_query_either_selects_a_scene_or_declares_a_fallback(
+        self, shipped_library
+    ):
+        corpus = _shipped_corpus(shipped_library)
+        offenders: list[tuple[str, str]] = []
+        selected: list[str] = []
+        composed_nothing: list[str] = []
+        axis_reason: list[str] = []
+        for query in corpus:
+            result = match_scene(query, shipped_library)
+            if result.selected is not None:
+                selected.append(query)
+            elif not result.fallback:
+                offenders.append((query, result.kind))
+            elif result.fallback_reason == NO_SCENE_COMPOSES_AXES:
+                composed_nothing.append(query)
+            else:
+                axis_reason.append(query)
+
+        assert offenders == []
+        # Non-vacuity, and more: the sweep must reach all three legitimate
+        # outcomes, so no single branch can carry the assertion alone.
+        assert len(corpus) >= 40
+        assert len(selected) >= 10
+        assert len(composed_nothing) >= 5
+        assert len(axis_reason) >= 1
+
+
+class TestUpstreamAliasTableIsRead:
+    """A 27/27 identical copy of ``PATTERN_ALIASES`` actually shipped here once.
+
+    Identical on the day it landed, so the symptom count was zero; the day
+    upstream adds one alias, scene matching alone goes deaf. Equality cannot see
+    that — identity can.
+    """
+
+    def test_scene_matching_reads_the_upstream_table_instead_of_copying_it(self):
+        assert scene_matching.PATTERN_ALIASES is PATTERN_ALIASES
+
+    def test_every_upstream_alias_for_a_shipped_pattern_reaches_its_fx_axis(self, shipped_library):
+        checked = 0
+        for scene in shipped_library.scenes:
+            if scene.fx_id is None:
+                continue
+            tokens = frozenset(re.split(r"[-_\s]+", scene.fx_id.casefold()))
+            for alias, slug in PATTERN_ALIASES.items():
+                if slug not in tokens:
+                    continue
+                reached = _axis_ids(match_scene(alias, shipped_library).fx)
+                assert scene.fx_id in reached, (alias, scene.fx_id)
+                checked += 1
+
+        assert checked >= 15
 
 
 def _imported_modules(path: Path) -> list[str]:

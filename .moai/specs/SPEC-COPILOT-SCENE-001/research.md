@@ -6,7 +6,9 @@
 >
 > ---
 >
-> ⚠️ **v0.2.0 개정 고지 (2026-08-01) — 본 문서는 plan-phase 조사 기록이며 개정 후에도 그대로 보존된다.** 그러나 **§2가 조사한 `/CueOnly` 정책은 M0 라이브 프로브 이후 폐기됐다.** §2의 조사 결론(*"발화 이력 0건이므로 접수를 실측해야 한다"*)은 **옳았고 실제로 M0 1순위가 됐으며**, 그 프로브가 정책을 무너뜨렸다 — 미지 store 플래그가 조용히 접수되어 접수 판정의 기계 채널이 소진됐고, 큐 생성이 실질 append-only라 `/CueOnly`의 보정 대상이 존재할 수 없음이 드러났다. **§2는 "왜 그 조사가 필요했는가"의 기록으로 읽고, 현행 정책은 `design.md §6`(균일 집합 + 미주장 열거)을 볼 것.** 판정 정본 `progress.md §E.2` · 개정 근거 조사 `.moai/reports/scene-uniform-attribute-set-proposal.md`. §5(SONGCUE 상속 부채)는 **범위가 축소**됐다 — 씬도 무플래그가 되어 플래그 정책 분기가 사라졌고, 남는 대비는 균일 집합 축뿐이다(design.md §6.4). §3·§4·§6은 개정 영향 없음.
+> ⚠️ **v0.2.0 개정 고지 (2026-08-01) — 본 문서는 plan-phase 조사 기록이며 개정 후에도 그대로 보존된다.** 그러나 **§2가 조사한 `/CueOnly` 정책은 M0 라이브 프로브 이후 폐기됐다.** §2의 조사 결론(*"발화 이력 0건이므로 접수를 실측해야 한다"*)은 **옳았고 실제로 M0 1순위가 됐으며**, 그 프로브가 정책을 무너뜨렸다 — 미지 store 플래그가 조용히 접수되어 접수 판정의 기계 채널이 소진됐고, 큐 생성이 실질 append-only라 `/CueOnly`의 보정 대상이 존재할 수 없음이 드러났다. **§2는 "왜 그 조사가 필요했는가"의 기록으로 읽고, 현행 정책은 `design.md §6`(균일 집합 + 미주장 열거)을 볼 것.** 판정 정본 `progress.md §E.2` · 개정 근거 조사 `.moai/reports/scene-uniform-attribute-set-proposal.md`(**gitignore — 저장소에 없다**). §5(SONGCUE 상속 부채)는 **범위가 축소**됐다 — 씬도 무플래그가 되어 플래그 정책 분기가 사라졌고, 남는 대비는 균일 집합 축뿐이다(design.md §6.4).
+>
+> **정정 (sync-phase, 2026-08-01 — 독립 감사 지적).** 이 고지의 이전 판본은 *"§3·§4·§6은 개정 영향 없음"* 으로 닫았는데 **§3은 영향이 있다.** `§3.1`이 *"씬은 fx의 Store를 재사용할 수 없다 — 임의 큐 번호 불가 **+ `/CueOnly` 부재**"* 라 적고 `§11` 기각 (b)가 같은 논거를 반복하는데, **씬도 D1 개정으로 무플래그가 됐으므로 `/CueOnly` 부재는 더 이상 fx와 씬을 가르는 축이 아니다.** `design.md §5`와 `plan.md` 결정 I는 이 약화를 명시 정정했고 **research.md만 정정도 승계 포인터도 없었다** — 게다가 이 고지가 그 절을 "영향 없음"으로 배제해 독자가 확인할 유인마저 없앴다. **본문 §3.1·§11은 조사 스냅샷이라 고쳐 쓰지 않는다**; 현행 판단은 `design.md §5` · `plan.md` 결정 I가 정본이며, **결정 I의 살아 있는 논거는 "`/CueOnly` 부재"가 아니라 "fx 번들에 룩 값 라인을 끼울 자리가 없다"** 이다. §4·§6은 영향 없음이 맞다.
 
 ## §1. 출처 — 발명이 아니라 예약된 좌석의 이행
 
@@ -72,6 +74,7 @@ server/rulebook/assets/v2.4.2/31_choreography_patterns.md:133:values against edi
 
 ### §3.3 tools.py — 툴 핸들러의 형상
 
+> **승계 포인터 (sync-phase 감사 지적 — 2026-08-01)**: 본 절의 `tools.py` 줄 앵커는 **plan-phase 스냅샷**(`main`=`e4bc78e`)이며 **지금은 전부 썩었다** — 이 SPEC이 M6에서 `tools.py`에 툴 2종을 등재하며 뒤쪽 전부가 밀려났다(+19 ~ +34행). **본문은 조사 기록이라 고쳐 쓰지 않는다.** 현행 좌표가 필요하면 **각 줄이 함께 적고 있는 심볼명**(`_PROGRAMMER_STATE_COMMANDS` · `run_commands` · `instantiate_look` · `prepare_songcue` · `instantiate_fx`)으로 찾아라 — 그것이 썩지 않는 앵커다. PRESERVE 구역 지정의 정본은 `plan.md §A.5`이며 그쪽은 심볼 앵커로 교체됐다.
 - **dedupe 판정 + 축적 경계**: `server/orchestrator/tools.py:688-712`. 판정 라인 `:699` (`command in already_executed and not _is_programmer_state(command)`) + 주석 원문 `:700-703`: *"either **in a prior tool call** (context.executed_ok) or earlier in **THIS bundle**"*. 비교 집합은 `ExecutionContext.executed_ok`(`:252-256`)로 **지시 턴 전체에 걸쳐 축적**된다. `[코드]`
 - **면제 3종**: `_PROGRAMMER_STATE_COMMANDS` `:327-331` — `Clear` / `ClearAll` / bare `(?:Fixture|Group)\s+<operand>`(fullmatch, 대소문자 무관). `[코드]`
 - **툴 핸들러 = `run_commands`의 caller**: `run_commands` 클로저 `:638`; `@MX:ANCHOR` 3곳이 같은 규율을 적는다 — `instantiate_look` `:848-858`, `prepare_songcue` `:1116`, `instantiate_fx` `:1688-1698`. 공통 문면: *"This handler is a CALLER of run_commands, never a second execution surface … Reaching execution_port directly from here would be the second path the SPEC forbids, and it would be invisible to the gate."* → 씬 핸들러가 계승할 형상. `[코드]`

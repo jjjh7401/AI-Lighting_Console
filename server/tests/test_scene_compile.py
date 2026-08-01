@@ -23,10 +23,35 @@ import re
 
 import pytest
 
+from server.fx.instantiate import (
+    CIRCLE_PHASE_CONFLICT as fx_circle_phase_conflict,
+)
+from server.fx.instantiate import (
+    GATED_AXIS_NOT_EMITTED as fx_gated_axis_not_emitted,
+)
+from server.fx.instantiate import (
+    RELATIVE_NOT_EMITTED as fx_relative_not_emitted,
+)
+from server.fx.instantiate import (
+    SEQUENCE_NUMBER_UNAVAILABLE as fx_sequence_number_unavailable,
+)
 from server.fx.instantiate import SEQUENCE_OCCUPIED as fx_sequence_occupied
+from server.fx.instantiate import (
+    SEQUENCE_TRUNCATED as fx_sequence_truncated,
+)
+from server.fx.instantiate import (
+    SEQUENCE_UNAVAILABLE as fx_sequence_unavailable,
+)
 from server.fx.instantiate import (
     SKIPPED_ALREADY_EXECUTED,
     FxInstantiationError,
+    build_fx_bundle,
+)
+from server.fx.instantiate import (
+    STEP_AXIS_TOO_SHORT as fx_step_axis_too_short,
+)
+from server.fx.instantiate import (
+    _refuse_unemitted_axes as fx_refuse_unemitted_axes,
 )
 from server.fx.instantiate import (
     collided_lines as fx_collided_lines,
@@ -46,6 +71,7 @@ from server.scene.compile import (
     CUE_OCCUPIED,
     CUE_SECTION_UNAVAILABLE,
     CUE_TRUNCATED,
+    INVALID_TRIGGER_TIME,
     INVALID_TRIGGER_TOKEN,
     NO_COMPOSITION_SOURCE,
     SCENE_UNIFORM_ATTRIBUTES,
@@ -54,11 +80,16 @@ from server.scene.compile import (
     VALUE_LINE_COLLISION,
     SceneCompilation,
     SceneCompilationError,
+    _guard_collision,
     collided_lines,
     compile_scene,
     is_programmer_state,
     select_sequence_number,
 )
+from server.scene.compile import (
+    _refuse_unemitted_axes as scene_refuse_unemitted_axes,
+)
+from server.scene.loader import SceneSchemaError, parse_timing
 from server.scene.schema import Scene
 
 # -- fixtures -------------------------------------------------------------
@@ -193,6 +224,55 @@ def test_compile_module_owns_no_second_exemption_regex():
     assert "import re" not in source
 
 
+def test_the_collision_guard_calls_the_shared_exemption_for_every_line(monkeypatch):
+    """Decision E asserted as a CALL, not as the absence of a second regex.
+
+    The grep test above only proves this module owns no `re.compile`. A copy
+    that is not a regex passes it untouched: replacing the `is_programmer_state`
+    call with the literal set `{"ClearAll", "Clear", "ChangeDestination Root"}`
+    killed 0 of the 135 tests this file had before this test existed (measured,
+    pre-merge review). What decision E actually forbids is a second DEFINITION
+    of "which line the dedupe exempts" — so the observable to pin is that the
+    guard consults the shared one for every line it classifies.
+    """
+    observed: list[str] = []
+
+    def _recording(command: str) -> bool:
+        observed.append(command)
+        return fx_is_programmer_state(command)
+
+    monkeypatch.setattr("server.scene.compile.is_programmer_state", _recording)
+    scene = _scene("s41", look_id=CORE4_LOOK.look_id, fx_id=DIMMER_FX.fx_id)
+    result = _compile(scene, look=CORE4_LOOK, fx=DIMMER_FX)
+    assert observed == list(result.commands)
+
+
+@pytest.mark.parametrize(
+    "exempt_line",
+    ["Group 11", "Group 5 Thru 9", "Fixture 1 + 2", "clearall", "CLEAR"],
+    ids=["group", "group_thru", "fixture_range", "lowercase_clearall", "uppercase_clear"],
+)
+def test_a_line_exempt_only_by_the_shared_pattern_is_not_refused(exempt_line):
+    # Each form is exempt because `is_programmer_state` matches a PATTERN — a
+    # selection operand, or a case-insensitive keyword. A hand-written set of
+    # the exact strings this module happens to emit misses every one of them,
+    # so these are the behavioural net the source-grep test cannot be.
+    # `Group 11` is not hypothetical: it is line 3 of every bundle this module
+    # builds.
+    assert fx_is_programmer_state(exempt_line)  # control on the premise itself
+    _guard_collision([exempt_line, exempt_line], scene_id="pattern-exempt")
+
+
+def test_a_duplicate_no_pattern_exempts_is_still_refused():
+    # Control: without this, the test above is satisfied by a guard that never
+    # raises at all.
+    line = "Attribute 'Dimmer' At 50"
+    assert not fx_is_programmer_state(line)
+    with pytest.raises(SceneCompilationError) as excinfo:
+        _guard_collision([line, line], scene_id="not-exempt")
+    assert excinfo.value.reason == VALUE_LINE_COLLISION
+
+
 # =============================================================================
 # AC-SCENE-009 — bundle shape + combination order + zero Store flags
 # =============================================================================
@@ -267,8 +347,38 @@ def test_no_store_flag_survives_across_a_fixture_matrix():
         assert not re.search(r"/\S", after_quote, re.IGNORECASE), store_line
 
 
+# @MX:ANCHOR: [AUTO] `;` alone does NOT identify the look value line.
+# @MX:REASON: `_speed_line` chains too as soon as an fx carries two attributes
+#   and a speed (`Attribute 'Pan' At Speed 60 ; Attribute 'Tilt' At Speed 60`),
+#   so "the chained line" is ambiguous in any bundle that carries a movement fx.
+#   What separates them is the value FORM: the look emits one `;` chain of bare
+#   absolute values (design.md §3.4), step value lines never chain, and the
+#   modifier lines carry a keyword (`At Speed` / `At Phase`) where the number
+#   would be. A shipped look always carries at least the uniform four, so a
+#   look-bearing bundle has exactly one such line and an fx-only bundle has none.
+_ABSOLUTE_VALUE = re.compile(r"^Attribute '[^']+' At -?\d+(?:\.\d+)?$")
+
+
+def _chained_value_lines(commands) -> list[str]:
+    """Every ``;``-chained line whose segments are all ABSOLUTE attribute values."""
+    chained = [line for line in commands if ";" in line]
+    return [
+        line
+        for line in chained
+        if all(_ABSOLUTE_VALUE.match(part.strip()) for part in line.split(";"))
+    ]
+
+
 def _values_line_of(result: SceneCompilation) -> str:
-    return next(c for c in result.commands if c.count(";") and c.startswith("Attribute"))
+    """The one LOOK value line of a look-bearing bundle.
+
+    The unpack is the assertion: if the discriminant ever widened back to "any
+    `;` chain", a bundle carrying both a look and a speed-chaining fx would
+    yield two and every caller of this helper would fail loudly instead of
+    silently reading the wrong line.
+    """
+    (line,) = _chained_value_lines(result.commands)
+    return line
 
 
 # =============================================================================
@@ -466,6 +576,79 @@ def test_a_cue_the_console_could_not_number_refuses_assignment():
     assert excinfo.value.reason == CUE_NUMBER_UNAVAILABLE
 
 
+# The sequence side of the SAME four refusals the cue side is swept for above.
+# `select_sequence_number` is fx's (decision H) and raises `FxInstantiationError`;
+# only `SEQUENCE_OCCUPIED` had a scene-side test, so three of the four reason
+# codes crossed this package's boundary with nothing asserting that the
+# translation happens at all. A caller that catches `SceneCompilationError` —
+# which is the whole contract of that translation — would have crashed instead
+# of refusing on any of the three.
+
+
+def test_truncated_sequence_listing_refuses_automatic_assignment():
+    scene = _scene("s18b", fx_id=DIMMER_FX.fx_id)
+    with pytest.raises(SceneCompilationError) as excinfo:
+        compile_scene(
+            scene,
+            look=None,
+            fx=DIMMER_FX,
+            group=11,
+            sequences_section=_sequences(1, truncated=True),
+            cues_section=_cues(),
+        )
+    assert excinfo.value.reason == fx_sequence_truncated
+    assert not isinstance(excinfo.value, FxInstantiationError)
+
+
+@pytest.mark.parametrize("reason", ["path_not_resolved", "console_unreachable"])
+def test_an_unarrived_sequence_section_refuses_and_propagates_the_reason(reason):
+    scene = _scene("s19b", fx_id=DIMMER_FX.fx_id)
+    with pytest.raises(SceneCompilationError) as excinfo:
+        compile_scene(
+            scene,
+            look=None,
+            fx=DIMMER_FX,
+            group=11,
+            sequences_section={"reason": reason},
+            cues_section=_cues(),
+        )
+    assert excinfo.value.reason == fx_sequence_unavailable
+    assert reason in str(excinfo.value)
+    assert not isinstance(excinfo.value, FxInstantiationError)
+
+
+def test_a_sequence_the_console_could_not_number_refuses_assignment():
+    scene = _scene("s20b", fx_id=DIMMER_FX.fx_id)
+    with pytest.raises(SceneCompilationError) as excinfo:
+        compile_scene(
+            scene,
+            look=None,
+            fx=DIMMER_FX,
+            group=11,
+            sequences_section=_sequences(1, unnumbered=1),
+            cues_section=_cues(),
+        )
+    assert excinfo.value.reason == fx_sequence_number_unavailable
+    assert not isinstance(excinfo.value, FxInstantiationError)
+
+
+def test_the_sequence_refusal_happens_before_any_cue_question_is_asked():
+    # Ordering control: an unreadable sequence pool must refuse even when the
+    # cue pool is ALSO unreadable, or the two reasons would race and the caller
+    # would be told to repair the wrong half of the rig.
+    scene = _scene("s20c", fx_id=DIMMER_FX.fx_id)
+    with pytest.raises(SceneCompilationError) as excinfo:
+        compile_scene(
+            scene,
+            look=None,
+            fx=DIMMER_FX,
+            group=11,
+            sequences_section={"reason": "console_unreachable"},
+            cues_section={"reason": "console_unreachable"},
+        )
+    assert excinfo.value.reason == fx_sequence_unavailable
+
+
 # =============================================================================
 # AC-SCENE-014 — trigger shape + executor never automatic
 # =============================================================================
@@ -502,6 +685,60 @@ def test_a_trigger_needs_both_type_and_time():
     with pytest.raises(SceneCompilationError) as excinfo:
         _compile(scene, fx=DIMMER_FX, trig_type="Go")
     assert excinfo.value.reason == TRIGGER_INCOMPLETE
+
+
+@pytest.mark.parametrize("bad_time", [-0.001, -1, -5.0, -1000.0])
+def test_a_negative_trigger_time_is_refused(bad_time):
+    # `_effective_trigger` re-validated the trigger TOKEN against the closed set
+    # while never looking at its paired TIME. The pair is authored, overridden
+    # and emitted together, so guarding one half is the defect: a negative was
+    # emitted verbatim as `Property 'TrigTime' -5`.
+    scene = _scene("s24b", fx_id=DIMMER_FX.fx_id)
+    with pytest.raises(SceneCompilationError) as excinfo:
+        _compile(scene, fx=DIMMER_FX, trig_type="Go", trig_time=bad_time)
+    assert excinfo.value.reason == INVALID_TRIGGER_TIME
+
+
+def test_a_negative_trigger_time_authored_on_the_scene_is_refused_too():
+    # The caller override is not the only door: `Scene` carries the pair itself
+    # and `_effective_trigger` reads the authored value when no override comes.
+    scene = _scene("s24c", fx_id=DIMMER_FX.fx_id, trig_type="Go", trig_time=-0.5)
+    with pytest.raises(SceneCompilationError) as excinfo:
+        _compile(scene, fx=DIMMER_FX)
+    assert excinfo.value.reason == INVALID_TRIGGER_TIME
+
+
+def test_a_refused_trigger_time_never_reaches_a_bundle():
+    # Under this SPEC's ceiling the console answers ok:true on the property line
+    # and a stored cue's content is not readable back (spec.md §C.1), so nothing
+    # downstream would ever have reported the nonsense value. Refusing before a
+    # bundle exists is the only net.
+    scene = _scene("s24d", fx_id=DIMMER_FX.fx_id)
+    with pytest.raises(SceneCompilationError) as excinfo:
+        _compile(scene, fx=DIMMER_FX, trig_type="Go", trig_time=-5.0)
+    assert not hasattr(excinfo.value, "commands")
+
+
+@pytest.mark.parametrize("good_time", [0.0, 0, 0.5, 12.5])
+def test_a_non_negative_trigger_time_still_compiles(good_time):
+    # Control: the refusal is a RANGE check, not a ban on falsy times — `BPM 0`
+    # is already an authored shape (`test_trig_equals_form_never_appears`).
+    scene = _scene("s24e", fx_id=DIMMER_FX.fx_id)
+    result = _compile(scene, fx=DIMMER_FX, trig_type="Go", trig_time=good_time)
+    assert result.trig_time == good_time
+    assert any("Property 'TrigTime'" in command for command in result.commands)
+
+
+def test_the_two_timing_doors_agree_on_a_negative_trigger_time():
+    # `parse_timing` is the tool-layer door and already refused this; `compile_scene`
+    # is an `__all__` builder any caller may reach directly and did not. One value,
+    # one verdict — the asymmetry was the defect, not the missing check.
+    with pytest.raises(SceneSchemaError):
+        parse_timing({"trig_type": "Go", "trig_time": -5.0})
+    scene = _scene("s24f", fx_id=DIMMER_FX.fx_id)
+    with pytest.raises(SceneCompilationError) as excinfo:
+        _compile(scene, fx=DIMMER_FX, trig_type="Go", trig_time=-5.0)
+    assert excinfo.value.reason == INVALID_TRIGGER_TIME
 
 
 def test_trig_equals_form_never_appears():
@@ -569,14 +806,56 @@ def test_every_real_look_emits_the_uniform_set_first_in_order(look):
     scene = _scene(f"scene-{look.look_id}", look_id=look.look_id)
     result = _compile(scene, look=look)
     names = re.findall(r"Attribute '([^']+)' At", _values_line_of(result))
-    assert tuple(n for n in names if n in set(SCENE_UNIFORM_ATTRIBUTES)) == SCENE_UNIFORM_ATTRIBUTES
+    # POSITION, not membership: filtering the names down to the uniform four
+    # before comparing makes `[Zoom, Dimmer, R, G, B]` satisfy the assertion too,
+    # which is exactly what `_ordered_look_values` exists to prevent.
+    assert tuple(names[:4]) == SCENE_UNIFORM_ATTRIBUTES
     assert set(names) - set(SCENE_UNIFORM_ATTRIBUTES) <= {"Zoom", "Iris"}
 
 
-def test_fx_only_scene_is_not_subject_to_the_uniform_set():
-    scene = _scene("s32", fx_id=DIMMER_FX.fx_id)
-    result = _compile(scene, fx=DIMMER_FX)
-    assert not any(c.count(";") for c in result.commands)  # no chained look line at all
+@pytest.mark.parametrize("fx", [DIMMER_FX, MOVEMENT_FX], ids=["no_chain", "speed_chain"])
+def test_fx_only_scene_is_not_subject_to_the_uniform_set(fx):
+    scene = _scene("s32", fx_id=fx.fx_id)
+    result = _compile(scene, fx=fx)
+    # No LOOK value line at all. The `MOVEMENT_FX` case is the one that matters:
+    # this test used to assert `not any(c.count(";") ...)`, which is FALSE for
+    # any fx with 2+ attributes and a speed and passed only because `DIMMER_FX`
+    # happens to be one attribute with no speed.
+    assert _chained_value_lines(result.commands) == []
+
+
+def test_a_speed_chain_is_never_mistaken_for_a_look_value_line():
+    # Non-vacuity for the case above: the chain really is there, it is just not
+    # a look value line. Its segments carry the keyword `At Speed` where an
+    # absolute value would be.
+    scene = _scene("s32b", fx_id=MOVEMENT_FX.fx_id)
+    result = _compile(scene, fx=MOVEMENT_FX)
+    assert [c for c in result.commands if ";" in c] == [
+        "Attribute 'Pan' At Speed 60 ; Attribute 'Tilt' At Speed 60"
+    ]
+    assert _chained_value_lines(result.commands) == []
+
+
+def test_an_fx_only_bundle_offers_no_look_value_line_to_read():
+    # The discriminant has to be a DEFINITION, not a lucky ordering. In every
+    # look-bearing bundle the look line happens to precede the speed line, so a
+    # "first `;` chain that starts with Attribute" copy returns the right string
+    # by accident and nothing notices. Here there is no look line at all and
+    # that copy hands back the SPEED line instead — a wrong answer, silently.
+    scene = _scene("s32d", fx_id=MOVEMENT_FX.fx_id)
+    result = _compile(scene, fx=MOVEMENT_FX)
+    with pytest.raises(ValueError):
+        _values_line_of(result)
+
+
+def test_a_look_bearing_bundle_with_a_speed_chain_still_has_exactly_one_value_line():
+    # The pair of the case above: two `;` chains in one bundle, only one of
+    # which is the look's. `_values_line_of`'s unpack is what enforces it.
+    scene = _scene("s32c", look_id=ZOOM_LOOK.look_id, fx_id=MOVEMENT_FX.fx_id)
+    result = _compile(scene, look=ZOOM_LOOK, fx=MOVEMENT_FX)
+    assert len([c for c in result.commands if ";" in c]) == 2
+    names = re.findall(r"Attribute '([^']+)' At", _values_line_of(result))
+    assert tuple(names) == (*SCENE_UNIFORM_ATTRIBUTES, "Zoom")
 
 
 def test_undeclared_zoom_is_never_invented():
@@ -607,7 +886,10 @@ def test_a_look_missing_a_uniform_attribute_is_refused():
 
 def test_a_reversed_declaration_order_look_is_still_reordered_to_uniform_first():
     # Today's 32/32 assets are already sorted, so this reversed-declaration
-    # fixture is required to prove the sort is doing real work.
+    # fixture is required to prove the sort is doing real work. The NON-uniform
+    # `Zoom` is load-bearing: without it `rest` is empty and `uniform + rest`
+    # and `rest + uniform` produce the identical line, which is why swapping
+    # them killed 0 of 118 tests (measured, pre-merge review).
     reversed_look = Look(
         look_id="reversed",
         display_name="reversed",
@@ -615,6 +897,7 @@ def test_a_reversed_declaration_order_look_is_still_reordered_to_uniform_first()
         dynamics=1,
         roles=("탑",),
         attributes=(
+            AttributeValue("Zoom", 40),
             AttributeValue("ColorRGB_B", 3),
             AttributeValue("ColorRGB_G", 2),
             AttributeValue("ColorRGB_R", 1),
@@ -624,7 +907,9 @@ def test_a_reversed_declaration_order_look_is_still_reordered_to_uniform_first()
     scene = _scene("s34", look_id=reversed_look.look_id)
     result = _compile(scene, look=reversed_look)
     names = re.findall(r"Attribute '([^']+)' At", _values_line_of(result))
-    assert tuple(names) == SCENE_UNIFORM_ATTRIBUTES
+    # The core-4 come FIRST, in order, and the declared remainder follows.
+    assert tuple(names[:4]) == SCENE_UNIFORM_ATTRIBUTES
+    assert tuple(names) == (*SCENE_UNIFORM_ATTRIBUTES, "Zoom")
 
 
 # =============================================================================
@@ -768,28 +1053,6 @@ def test_every_shipped_scene_keeps_the_step_discipline(scene):
         assert len(steps) == len(fx.steps) - 1
 
 
-_ABSOLUTE_VALUE = re.compile(r"^Attribute '[^']+' At -?\d+(?:\.\d+)?$")
-
-
-def _chained_value_lines(commands) -> list[str]:
-    """Every ``;``-chained line whose segments are all ABSOLUTE attribute values.
-
-    Chaining alone is not enough to identify the look line: `_speed_line`
-    chains too (``Attribute 'Pan' At Speed 112 ; ...``). What separates them is
-    the value form — the look emits one ``;`` chain of bare absolute values
-    (design.md §3.4), step value lines are never chained, and the modifier
-    lines carry a keyword (``At Speed`` / ``At Phase``) instead of a number.
-    A shipped look always carries at least the uniform four, so a look-bearing
-    bundle has exactly one such line and an fx-only bundle has none.
-    """
-    chained = [line for line in commands if ";" in line]
-    return [
-        line
-        for line in chained
-        if all(_ABSOLUTE_VALUE.match(part.strip()) for part in line.split(";"))
-    ]
-
-
 @pytest.mark.parametrize("scene", REAL_SCENES, ids=lambda s: s.scene_id)
 def test_every_shipped_look_bearing_scene_carries_the_uniform_set(scene):
     look, fx = _resolve(scene)
@@ -801,7 +1064,7 @@ def test_every_shipped_look_bearing_scene_carries_the_uniform_set(scene):
         return
     assert len(chained) == 1
     names = re.findall(r"Attribute '([^']+)' At", chained[0])
-    assert tuple(n for n in names if n in set(SCENE_UNIFORM_ATTRIBUTES)) == SCENE_UNIFORM_ATTRIBUTES
+    assert tuple(names[:4]) == SCENE_UNIFORM_ATTRIBUTES
     assert set(names) - set(SCENE_UNIFORM_ATTRIBUTES) <= {"Zoom", "Iris"}
 
 
@@ -855,3 +1118,115 @@ def test_an_occupied_sequence_surfaces_as_a_scene_error_not_an_fx_one():
         )
     assert excinfo.value.reason == fx_sequence_occupied
     assert not isinstance(excinfo.value, FxInstantiationError)
+
+
+# =============================================================================
+# fx refusal gate — the scene path must refuse what the fx path refuses
+#
+# Found by independent pre-merge review, NOT by this suite: `compile_scene`
+# reused fx's line BUILDERS but skipped `_refuse_unemitted_axes`, which
+# `build_fx_bundle` runs first (`server/fx/instantiate.py:472`). One asset
+# therefore behaved differently on the two console routes — refused by
+# `instantiate_fx`, silently compiled here with the declared axis DROPPED.
+#
+# Why nothing else catches it: under this SPEC's verification ceiling the
+# console returns ok:true on every line and cue content is not readable at all
+# (spec.md §C.1), so the defect emits NO runtime signal. These tests are the
+# only net. The fixtures below deliberately do NOT appear in the shipped fx
+# library — the whole point is that the gate must hold for assets the fx
+# loader accepts but this version cannot faithfully emit.
+# =============================================================================
+
+
+_UNEMITTED_AXIS_FX = {
+    # Reachable through the SHIPPED fx loader: it accepts `relative` and never
+    # cross-checks `circle` against `phase_to`.
+    "relative": (
+        _fx("pulse", steps=[{"Dimmer": 100}, {"Dimmer": 0}], relative=30),
+        fx_relative_not_emitted,
+    ),
+    "circle_phase": (
+        _fx(
+            "circle",
+            steps=[{"Pan": -20, "Tilt": -10}, {"Pan": 20, "Tilt": 10}],
+            phase_from=0,
+            phase_to=180,
+        ),
+        fx_circle_phase_conflict,
+    ),
+    # Reachable by constructing an `Fx` directly — the loader is not the only
+    # door, which is exactly why fx guards it a second time.
+    "one_step": (
+        _fx("pulse", steps=[{"Dimmer": 100}]),
+        fx_step_axis_too_short,
+    ),
+    "accel": (
+        _fx("pulse", steps=[{"Dimmer": 100}, {"Dimmer": 0}], accel=25),
+        fx_gated_axis_not_emitted,
+    ),
+    "decel": (
+        _fx("pulse", steps=[{"Dimmer": 100}, {"Dimmer": 0}], decel=25),
+        fx_gated_axis_not_emitted,
+    ),
+}
+
+
+@pytest.mark.parametrize("case", sorted(_UNEMITTED_AXIS_FX))
+def test_an_fx_with_an_unemitted_axis_is_refused_by_the_scene_path_too(case):
+    fx, expected_reason = _UNEMITTED_AXIS_FX[case]
+    scene = _scene(f"unemitted-{case}", fx_id=fx.fx_id)
+
+    with pytest.raises(SceneCompilationError) as excinfo:
+        _compile(scene, fx=fx)
+
+    # The reason code travels unchanged — the two layers keep ONE vocabulary.
+    assert excinfo.value.reason == expected_reason
+    # ...but the exception TYPE is this package's, or every caller of a scene
+    # would have to catch an fx class to stay correct (the boundary contract
+    # the `select_sequence_number` translation already established).
+    assert not isinstance(excinfo.value, FxInstantiationError)
+
+
+@pytest.mark.parametrize("case", sorted(_UNEMITTED_AXIS_FX))
+def test_the_two_console_routes_agree_on_every_unemitted_axis(case):
+    # The property that actually matters: one asset, one verdict. If fx refuses
+    # it, the scene path must refuse it — a divergence means the same authored
+    # entry fires on one route and is rejected on the other.
+    fx, _ = _UNEMITTED_AXIS_FX[case]
+
+    with pytest.raises(FxInstantiationError) as fx_error:
+        build_fx_bundle(fx, group=11, sequence=1)
+    with pytest.raises(SceneCompilationError) as scene_error:
+        _compile(_scene(f"agree-{case}", fx_id=fx.fx_id), fx=fx)
+
+    assert scene_error.value.reason == fx_error.value.reason
+
+
+@pytest.mark.parametrize("case", sorted(_UNEMITTED_AXIS_FX))
+def test_a_refused_fx_never_reaches_the_look_line_or_the_store(case):
+    # Non-emptiness with teeth: the refusal has to happen BEFORE anything is
+    # built, so a partially-assembled bundle can never escape. A look is
+    # supplied precisely so a late refusal would still have produced a value
+    # line to leak.
+    fx, _ = _UNEMITTED_AXIS_FX[case]
+    scene = _scene(f"noleak-{case}", look_id=CORE4_LOOK.look_id, fx_id=fx.fx_id)
+
+    with pytest.raises(SceneCompilationError) as excinfo:
+        _compile(scene, look=CORE4_LOOK, fx=fx)
+
+    assert not hasattr(excinfo.value, "commands")
+
+
+def test_the_refusal_gate_is_the_fx_module_object_not_a_copy():
+    # Decision E's rule applied to the gate: reuse, never re-implement. A
+    # scene-local copy would drift the moment fx adds a fifth refusal — and
+    # the drift would be silent for exactly the reason this section exists.
+    assert scene_refuse_unemitted_axes is fx_refuse_unemitted_axes
+
+
+def test_a_conforming_fx_still_compiles_after_the_gate():
+    # Control. Without this the four tests above are satisfied by a compiler
+    # that refuses everything.
+    scene = _scene("conforming", look_id=CORE4_LOOK.look_id, fx_id=MOVEMENT_FX.fx_id)
+    result = _compile(scene, look=CORE4_LOOK, fx=MOVEMENT_FX)
+    assert any(command.startswith("Store Sequence ") for command in result.commands)

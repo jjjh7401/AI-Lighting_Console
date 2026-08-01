@@ -1,9 +1,13 @@
 """Two-axis scene matching for REQ-SCENE-007/008/009.
 
 The matcher splits one instruction into look and fx axes, applies the same
-natural-language discipline as the upstream surfaces, and reports the four
-observable outcomes separately: both axes, look only, fx only, or fallback. The
-rules are Korean suffix handling, three fallback facts, ties select None, and
+natural-language discipline as the upstream surfaces, and reports which axes
+were resolved (both, look only, fx only, or neither) SEPARATELY from whether a
+scene can actually be acted on. Those are two different facts: an instruction
+can resolve both axes and still name no scene, because the library may carry no
+entry composing exactly that pair. ``fallback`` therefore means "there is
+nothing here to compile", never "no axis matched" — see ``SceneMatch.fallback``.
+The rules are Korean suffix handling, four fallback facts, ties select None, and
 deterministic ordering.
 
 ``match_scene`` receives a ``SceneLibrary``, not an ``FxLibrary``, so fx pattern
@@ -33,6 +37,7 @@ __all__ = [
     "LOW_CONFIDENCE",
     "MAX_TOOL_MATCHES",
     "NO_MATCH",
+    "NO_SCENE_COMPOSES_AXES",
     "AxisMatch",
     "AxisScore",
     "SceneMatch",
@@ -44,6 +49,12 @@ EMPTY_QUERY = "empty_query"
 NO_MATCH = "no_match"
 LOW_CONFIDENCE = "low_confidence"
 AMBIGUOUS = "ambiguous"
+# The fifth fact, and the only one that is not about the axes: the axes DID
+# resolve, but no scene in the library composes them. Kept apart from NO_MATCH
+# because the repair differs — nothing is wrong with the instruction, the
+# library simply has no entry, and the resolved axis ids are still worth
+# reporting so the operator can reach for `find_looks`/`find_fx` instead.
+NO_SCENE_COMPOSES_AXES = "no_scene_composes_axes"
 
 BOTH_MATCHED = "both_matched"
 LOOK_ONLY = "look_only"
@@ -169,7 +180,17 @@ class SceneMatch:
 
     @property
     def fallback(self) -> bool:
-        return self.kind == FALLBACK
+        # Deliberately the SAME definition `AxisMatch.fallback` already uses —
+        # a reason is present. It used to read `self.kind == FALLBACK`, and that
+        # divergence was the defect: when both axes resolved but the library
+        # composed no scene for them, `kind` said `both_matched`, `fallback`
+        # said False and `selected` was None. That is the success shape with
+        # nothing in it — the model is told to pass a `scene_id` that is not in
+        # the payload, and its only remaining move is to hand-write
+        # `run_commands`, the exact failure this SPEC exists to prevent.
+        # `kind` still reports WHICH AXES resolved; this reports whether there
+        # is anything to act on. Found by independent pre-merge review.
+        return self.fallback_reason is not None
 
     @property
     def partial(self) -> bool:
@@ -359,7 +380,15 @@ def match_scene(query: str, library: SceneLibrary) -> SceneMatch:
 
     matches = _scene_scores(library, look, fx, kind)
     selected = matches[0].scene if matches else None
-    reason = _fallback_reason(look, fx) if kind == FALLBACK else None
+    if kind == FALLBACK:
+        reason: str | None = _fallback_reason(look, fx)
+    elif selected is None:
+        # Axes resolved, library composed nothing. Reporting this as a
+        # success shape is what let a caller be handed `selected: null` with
+        # `fallback: false` and no reason at all.
+        reason = NO_SCENE_COMPOSES_AXES
+    else:
+        reason = None
 
     return SceneMatch(
         query=text,

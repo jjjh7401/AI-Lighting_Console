@@ -59,6 +59,7 @@ from server.fx.instantiate import (
     FxInstantiationError,
     _matricks,
     _phase_lines,
+    _refuse_unemitted_axes,
     _speed_line,
     _step_lines,
     collided_lines,
@@ -75,6 +76,7 @@ __all__ = [
     "CUE_OCCUPIED",
     "CUE_SECTION_UNAVAILABLE",
     "CUE_TRUNCATED",
+    "INVALID_TRIGGER_TIME",
     "INVALID_TRIGGER_TOKEN",
     "NO_COMPOSITION_SOURCE",
     "SCENE_UNIFORM_ATTRIBUTES",
@@ -96,6 +98,7 @@ __all__ = [
 NO_COMPOSITION_SOURCE = "no_composition_source"  # neither look nor fx supplied
 UNIFORM_ATTRIBUTES_INCOMPLETE = "uniform_attributes_incomplete"  # look misses a core-4 attr
 INVALID_TRIGGER_TOKEN = "invalid_trigger_token"  # trig_type outside the closed set
+INVALID_TRIGGER_TIME = "invalid_trigger_time"  # trig_time outside the legal range
 TRIGGER_INCOMPLETE = "trigger_incomplete"  # only one of trig_type/trig_time given
 CUE_SECTION_UNAVAILABLE = "cue_section_unavailable"  # the cue pool could not be read at all
 CUE_TRUNCATED = "cue_truncated"  # the cue listing was cut, so "free" is unknowable
@@ -320,6 +323,21 @@ def _effective_trigger(
             INVALID_TRIGGER_TOKEN,
             f"trig_type must be one of {list(TRIGGER_TOKENS)}, got {effective_type!r}",
         )
+    # The paired TIME gets the same second check the TOKEN gets above. The
+    # loader's `_trig_time` already refuses a negative (`server/scene/loader.py`
+    # :122), but only on the path that runs through `parse_timing`; this is an
+    # `__all__` builder any caller may reach directly, and a negative arriving
+    # that way was emitted verbatim as `Property 'TrigTime' -5`. Validating one
+    # half of the pair and not the other is the defect — the pair is authored,
+    # overridden and emitted together. Under this SPEC's verification ceiling
+    # the console answers ok:true on the line and a stored cue's property is not
+    # readable back (spec.md §C.1), so the nonsense value leaves no runtime
+    # signal at all; refusing here is the only net.
+    if effective_time is not None and effective_time < 0:
+        raise SceneCompilationError(
+            INVALID_TRIGGER_TIME,
+            f"trig_time must be >= 0, got {effective_time!r}",
+        )
     return effective_type, effective_time
 
 
@@ -378,6 +396,30 @@ def compile_scene(
         raise SceneCompilationError(error.reason, str(error)) from error
     cue = _select_cue_number(cues_section, requested=cue_number)
     effective_trig_type, effective_trig_time = _effective_trigger(scene, trig_type, trig_time)
+
+    # @MX:ANCHOR: [AUTO] the scene path MUST run fx's own refusal gate before it
+    #   emits a single fx line. `build_fx_bundle` calls `_refuse_unemitted_axes`
+    #   first (`server/fx/instantiate.py:472`); this package reuses the line
+    #   BUILDERS but assembles its own bundle, so skipping the gate would let
+    #   one asset behave differently on the two console routes.
+    # @MX:REASON: without it an fx the fx loader accepts — one carrying
+    #   `relative`, or `circle` together with `phase_to` — is refused by
+    #   `instantiate_fx` and silently compiled here with the declared axis
+    #   DROPPED. That is the failure the gate's own docstring says the fx SPEC
+    #   exists to prevent, and under this SPEC's verification ceiling it emits
+    #   no runtime signal at all: every line returns `ok:true` and a re-query
+    #   cannot read cue content (spec.md §C.1). A sub-MIN_STEPS fx built
+    #   directly would produce a bundle with NO `Step` line — the exact shape
+    #   M0 fired three times to zero motion. Found by independent pre-merge
+    #   review, not by the suite: no fixture reached any of the four reasons.
+    if fx is not None:
+        try:
+            _refuse_unemitted_axes(fx)
+        except FxInstantiationError as error:
+            # Same boundary contract as the `select_sequence_number` translation
+            # above: fx owns the refusal LOGIC and its reason vocabulary, this
+            # package owns the exception TYPE. The reason code travels unchanged.
+            raise SceneCompilationError(error.reason, str(error)) from error
 
     commands: list[str] = [_DESTINATION, _CLEAR, f"Group {group}"]
 

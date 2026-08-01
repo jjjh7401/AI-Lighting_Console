@@ -86,7 +86,7 @@
 | `console/lua/**` | 무변경 |
 | `server/rulebook/assets/**` | byte-diff 0. **씬 어휘를 룰북에 추가하지 않는다** — `test_fx_boundary.py:595`가 fx에 대해 단언한 것과 같은 규율 |
 | `server/safety/**` (gate/classify/blacklist/lock/console/preview) | 무변경 — 스크리닝 의미론 소비만 |
-| `server/orchestrator/tools.py`의 `_PROGRAMMER_STATE_COMMANDS`(:327-331)·dedupe 루프(:688-712) | 무변경 — 툴 2종 등록만 추가 |
+| `server/orchestrator/tools.py`의 `_PROGRAMMER_STATE_COMMANDS` 상수 · `run_commands` 내부 dedupe 판정 루프 | 무변경 — 툴 2종 등록만 추가. **심볼 앵커로 지정한다**: 줄 앵커(`:327-331`·`:688-712`)는 이 SPEC이 `tools.py`에 툴 2종을 등재하면서 **실제로 밀려났고**, 썩은 좌표로 PRESERVE 구역을 지정하면 후속 소유자가 **엉뚱한 곳을 지키면서 통과한다**(sync-phase 감사 지적 · OVERLAP CHANGELOG가 기록한 같은 함정) |
 | `server/bridge/**` | import 자체 금지 (REQ-SCENE-019) |
 
 **게이트**: 각 마일스톤 완료 시 `git diff --stat <BASE>..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety` 가 **빈 출력**이어야 한다(AC-SCENE-017). BASE는 착수 시점 SHA를 progress.md에 기록하고 그것을 쓴다.
@@ -228,7 +228,7 @@
 ## §C. 기술 제약
 
 1. **신규 런타임 의존성 0.** stdlib + PyYAML(기존 의존) + 기존 스택만.
-2. **@MX:ANCHOR 경계 (위반 불가)**: `gate.screen()` 단일 스크리닝 경로, dedupe 판정 루프(`tools.py:688-712`), `_PROGRAMMER_STATE_COMMANDS`(`:327-331`), fx의 `MIN_STEPS`(`schema.py:66`) — 전부 소비만.
+2. **@MX:ANCHOR 경계 (위반 불가)**: `gate.screen()` 단일 스크리닝 경로, `tools.py`의 dedupe 판정 루프(`run_commands` 내부 — 심볼 앵커), `_PROGRAMMER_STATE_COMMANDS` 상수, fx의 `MIN_STEPS`(`schema.py:66`) — 전부 소비만.
 3. **stop-on-first-failure**: 실패 이후 `not_executed` — 리포트가 반드시 전파(REQ-SCENE-014).
 4. **번들 규모**: 기준선 87줄/5.77s, ~66ms/줄(66.3-66.7ms — SPEC-COPILOT-BUSKWIZ-001/progress.md:278-281 전재). 씬 번들은 **~14-22줄** — 여유 큼.
 5. **`Delete` 블랙리스트**: 프로브·테스트가 만든 콘솔 오브젝트는 툴 경로로 지울 수 없다. 정리는 사용자 GUI 조작이며 그 사실을 기록한다.

@@ -8,7 +8,7 @@
 
 **무엇**: 씬 컴파일러 — **룩(정적 값) + 이펙트(스텝 열) + 타이밍을 하나의 큐로** 합성한다. LOOKLIB(정지 화면 어휘)·FXLIB(시간축 어휘)이 세운 "의도→메모리 파이프라인"의 **2단계**이며, FXLIB이 `spec.md:42`·`:70`·`:140` 세 곳에서 명시적으로 예약해 둔 좌석이다. 신규 패키지 `server/scene/`에 스키마·로더·2축 매칭·결합 컴파일러·리포트를 세우고, 툴 2종(`find_scene`·`compile_scene`)을 기존 `run_commands`→`gate.screen()` 경로로만 배선한다.
 
-**상태**: **3-phase 종결 — plan · run · sync 전부 닫힘 · AC 24/24 · 라이브 세션 2/2 소진.** plan-audit iter-3 **PASS 0.90**(문턱 0.85) · SPEC **v0.2.4** (`status: completed`). REQ **21** · AC **24** · Out of Scope **16** · 접두 행 **8** · ASSUMPTION 41~45(41·42는 판정 후 moot) · 결정 **A~K 전부 해소** · clarification 마커 **0** · **열린 질문 0**. 뮤테이션 누적 **47/47 killed**(survived 0) · pytest **3794 passed / 5 skipped** · vitest **223 passed** · PRESERVE diff **빈 출력**. 커밋 사슬: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · 웨이브 기록 `7755408` · M5 `79cea7e` · M6 `f7c4a8c` · M7 `3d062dc` · M8 `8c1e044` · 인수인계 `4437cc6`. **sync-phase 기록은 §E.4** — 스테일 소인 10건 · 어휘 결정 안 D 확정 · 정직한 잔여 4건.
+**상태**: **3-phase 종결 — plan · run · sync 전부 닫힘 · AC 24/24 · 라이브 세션 2/2 소진.** plan-audit iter-3 **PASS 0.90**(문턱 0.85) · SPEC **v0.2.5** (`status: completed`). REQ **21** · AC **24** · Out of Scope **16** · 접두 행 **8** · ASSUMPTION 41~45(41·42는 판정 후 moot) · 결정 **A~K 전부 해소** · clarification 마커 **0** · **열린 질문 0**. 뮤테이션 누적 **47/47 killed**(survived 0) · pytest **3911 passed / 5 skipped** · vitest **223 passed** · PRESERVE diff **빈 출력**. 커밋 사슬: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · 웨이브 기록 `7755408` · M5 `79cea7e` · M6 `f7c4a8c` · M7 `3d062dc` · M8 `8c1e044` · 인수인계 `4437cc6`. **sync-phase 기록은 §E.4** — 스테일 소인 10건 · 어휘 결정 안 D 확정 · 정직한 잔여 4건.
 
 **이 SPEC의 한 줄 (v0.2.0 개정)**: 트래킹 정책이 **M0 실측으로 한 번 뒤집혔다** — `/CueOnly`(미발화 커맨드)를 버리고 **속성 집합 균일화 + 미주장 속성 전수 열거**를 택했다. 그러나 **관측 천장은 그대로다**: "균일 집합을 발화했다"와 "트래킹이 무해해졌다"를 절대 뭉치지 않는 것이 여전히 전체 설계의 축이다.
 
@@ -32,7 +32,7 @@
 3c. **거부 메시지 리터럴을 단정 근거로 쓰지 말 것.** 점유 큐 재저장은 `User Canceled Command`, 역순 저장은 `Not allowed`였다 — 원인마다 다르다.
 4. **룩이 먼저인 것은 취향이 아니라 강제다.** `MIN_STEPS = 2`(`server/fx/schema.py:66`) + `Step 1` 미발화(`server/fx/instantiate.py:326-342`) → **스텝 1 = 현재 프로그래머 상태 = 룩의 자리**. 순서를 뒤집으면 룩이 페이저의 **종점**이 되고, **런타임은 아무 신호도 내지 않는다**(design.md §3.2).
 5. **`/Merge` 금지는 비직관적이다.** `/Merge`는 파괴적이지 않다. 금지 이유는 새 큐 번호에서 **동작이 무플래그와 동일한데**(`SPEC-COPILOT-SONGCUE-001/progress.md:337-344` 실측) **기존 번호의 `Not allowed` 안전망만 꺼지기 때문**이다 — 실익 0에 방어선만 잃는다.
-6. **값 라인 dedupe는 지시 턴 경계다.** `executed_ok`가 툴 호출을 넘어 축적된다(`tools.py:699-703` 주석 원문 "in a prior tool call"). 면제는 `Clear`/`ClearAll`/bare 선택 3종뿐(`:327-331`). **씬 번들은 룩+fx 값 라인을 함께 담아 fx보다 충돌 표면이 넓다.** v1은 지시 턴당 컴파일 1회가 운용 경계다.
+6. **값 라인 dedupe는 지시 턴 경계다.** `executed_ok`가 툴 호출을 넘어 축적된다(`tools.py`의 `run_commands` 내부 dedupe 판정 루프 주석 원문 "in a prior tool call" — **심볼 앵커**: 줄 앵커는 M6가 툴 2종을 등재하며 밀려났다). 면제는 `Clear`/`ClearAll`/bare 선택 3종뿐(`_PROGRAMMER_STATE_COMMANDS`). **씬 번들은 룩+fx 값 라인을 함께 담아 fx보다 충돌 표면이 넓다.** v1은 지시 턴당 컴파일 1회가 운용 경계다.
 7. **면제 집합 사본을 만들지 말 것.** `is_programmer_state`가 fx `__all__` 등재 **공개 API**다(`server/fx/instantiate.py:144`). 호출하면 되고, 사본을 만들면 fx가 `test_fx_boundary.py:256-379`에 진 동치 단언 의무를 새로 상속한다.
 8. **비공개 함수 import는 적법하다 — 선례 2건.** `server/looks/busking.py:30`·`songcue.py:11`이 `_values_line`을 import하며 이유를 주석으로 남겼다: "**여기서 다시 조립하면 두 곳이 갈라진다**". 씬도 같은 계산이다(결정 D). 단 **패키지 간** 결합이므로 `test_scene_boundary.py`의 산출 형상 고정이 안전벨트다.
 9. **fx의 Store는 재사용 불가 — 단, 개정으로 논거 하나가 약해졌다.** `_CUE_NUMBER = 1` 상수 고정(`server/fx/instantiate.py:96`)은 그대로지만, `/CueOnly` 부재는 이제 **차이가 아니다**(씬도 무플래그). 더 근본적인 이유는 **fx 번들에 룩 값 라인을 끼울 자리가 없다**는 것이다(`:475-477`이 `Group` 다음 곧바로 스텝 열). 씬은 **값 라인만** 상류에서 받고 조립·Store는 자기가 한다(결정 I).
@@ -71,7 +71,7 @@ print(len(TOOL_NAMES), TOOL_NAMES[-2:])"  # → 13 ('find_scene', 'compile_scene
 from server.scene.compile import SCENE_UNIFORM_ATTRIBUTES; \
 print(SCENE_UNIFORM_ATTRIBUTES == CONFIRMED_ATTRIBUTES, len(KNOWN_ATTRIBUTES))"   # → True 8
 
-.venv/bin/python -m pytest server/tests/ -q       # 3794 passed / 5 skipped — 직접 실측(이월 금지)
+.venv/bin/python -m pytest server/tests/ -q       # 3911 passed / 5 skipped — 직접 실측(이월 금지)
 cd ui && npx vitest run                            # 223 passed / 13 files
 ```
 
@@ -81,7 +81,7 @@ cd ui && npx vitest run                            # 223 passed / 13 files
 
 ```bash
 git log --oneline -9                      # a1faae3 … 8c1e044 (M1~M8 사슬)
-.venv/bin/python -m pytest server/tests/ -q   # 3794 passed / 5 skipped  ← 직접 실측, 이월 금지
+.venv/bin/python -m pytest server/tests/ -q   # 3911 passed / 5 skipped  ← 직접 실측, 이월 금지
 git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety   # 빈 출력
 grep -cE '^(GO|DESCOPE|SKIP|REOPEN):' .moai/specs/SPEC-COPILOT-SCENE-001/progress.md   # 8
 ```
@@ -341,6 +341,8 @@ childCount 3 = `OffCue` + `CueZero` + `Cue 2` — D″가 저장한 큐가 실�
 
 > **행두(column 0)에서 시작하는 이 6행이 `grep -E '^(GO|DESCOPE|SKIP|REOPEN):'` 의 판독 대상이다.** 위 각 판정 절의 산문이 근거이고, 이 블록은 그 판정들의 기계 판독 색인이다 — **한 판정당 정확히 1행**이며 같은 대상이 두 행을 갖지 않는다. 형태는 PRECHK 선례(`SPEC-COPILOT-PRECHK-001/progress.md`의 연속 6행)와 같은 배치이고, 어휘→접두어 대응은 `spec.md` REQ-SCENE-021의 인라인 매핑 표가 정본이다. (이 블록은 plan-audit iter-2 결함 D1의 수정으로 신설됐다 — 판정 내용은 위 절들에서 이미 확정된 것이며 **새 측정을 하지 않았다.** 이전에는 판정 어휘가 H4 헤딩·볼드 코드 스팬 안에만 있어 `^` 앵커 grep이 0건을 반환했다.)
 
+> **승계 정정 (sync-phase, 2026-08-01 — 독립 감사 F-1).** 위 문장의 **"이 6행"은 지금 틀렸다 — 블록은 8행이다.** v0.2.3(M8)이 `GO: AC-SCENE-019` · `GO: AC-SCENE-021` 두 행을 같은 블록에 **주석 없이** 삽입했고, 헤더 문장은 갱신되지 않았다. **위 문장을 고쳐 쓰지 않고 이 줄을 덧붙이는 이유**: 그 문장은 v0.2.1이 블록을 신설하며 남긴 기록이고 §E.2는 append-only이기 때문이다(v0.2.2 N6이 `research.md §9`에 승계 포인터를 단 것과 같은 처리). **현재 값은 8이며** `grep -cE '^(GO|DESCOPE|SKIP|REOPEN):'`이 그것을 돌려준다. 나머지 규율은 전부 그대로다 — 한 판정당 정확히 1행, 대상 8종 전부 상이, 행두 앵커, `INCONCLUSIVE` 행의 필수 `verdict=` 키. sync-phase가 "현재형 주장 불일치 0건"이라고 처음 적었던 것은 **이 줄을 놓친 거짓**이었고, 감사가 잡아 여기와 §E.4 ①에서 정정했다.
+
 SKIP: ASSUMPTION-41 precondition=접수를 판정할 기계 채널의 변별력 날조 대조군 /CueOnlyy 가 ok 를 받고 저장까지 되어 ok 채널이 소진됐고, 그 큐가 기대한 이름과 cueNo 를 그대로 가져 재조회 채널도 소진됐다. Cmd 응답과 재조회 외에 접수를 읽을 제3 경로가 없다 — /CueOnly 는 큐 프로퍼티가 아니라 저장 시점 동작이라 prop 으로 읽을 대상이 존재하지 않는다
 DESCOPE: ASSUMPTION-42 verdict=INCONCLUSIVE A군(Seq 193, /CueOnly)과 B군(Seq 194, 무플래그)이 사람 GUI 관측에서 동일하게 Cue 2 에 딤머 잔존 — 대조군이 갈리지 않아 판정이 서지 않는다. B군 잔존은 전방 트래킹의 실재를 확인해 주므로 관측 설계 자체는 유효했다. A=B 의 설명은 후속 프로브 D″가 실측한 append-only 제약이며, 보정 대상인 다음 큐가 저장 시점에 존재할 수 없다. D1 개정으로 축 자체가 내려갔다
 GO: ASSUMPTION-43 literal=Store Sequence 196 Cue 2 'D2 A2' effect=신규 시퀀스의 정수 큐 번호 Store 가 ok 와 재조회 실존으로 성립(192~197). 같은 세션에서 경계 2건 동시 실측 — 역순 저장은 플래그 무관 Not allowed 거부(196/197 Cue 1), DataPool/Sequences 재조회가 childCount 24 에 반환 18 이고 truncated: True. v1 범위(정수·신규·오름)에 한해 GO 이며 역순과 소수는 v1 범위 밖이다
@@ -581,7 +583,7 @@ reason "sequence_truncated" · 감사 델타 = state_query 2건뿐, command 0건
 
 가드가 **가상의 방어가 아님이 게이트 경유로 확인**됐다. 그리고 이것이 M8의 실제 차단 조건이었다 — 해제는 아래 ③.
 
-#### ③ AC-SCENE-019 정리 완료 — M0의 미이행 잔여가 닫혔다
+#### ③ GO: AC-SCENE-019 — 정리 완료, M0의 미이행 잔여가 닫혔다
 
 사용자가 GUI에서 시퀀스 **191·192·193·194·195·196·197**을 삭제했다(`Delete`가 블랙리스트라 툴 경로 불가 — 사람만 할 수 있는 단계). 기계 확인:
 
@@ -630,6 +632,26 @@ DataPool/Sequences  childCount 24 → 17 · truncated True → False · 191~197 
 
 `summary_ko`의 네 주장이 실물과 어긋나지 않는다: (a) 재조회를 하지 않은 호출이었으므로 문면은 **"재조회를 수행하지 않았습니다"** 로 나갔다 — 그리고 실제로 툴은 재조회를 하지 않았다(재조회는 이 세션에서 **하네스가 별도로** 수행했다). (a′) 균일 4개가 값 라인 선두에 이 순서로 실렸다 — 발화 커맨드 원문과 일치. (b)(c)는 전 경로에서 무조건 실렸다. (d) 미주장 열거가 **발화 커맨드가 건드리지 않은 축과 정확히 일치**했다 — 2회차의 `Pan`이 시트에서 `center`로 남아 있는 것이 그 대조다.
 
+#### ⑥a GO: AC-SCENE-021 — 종단 인수 판정 (폐쇄 어휘)
+
+> 신설 시각: 2026-08-01 sync-phase(독립 감사 지적). **새 측정을 하지 않았다** — 근거는 전부 위 ①~⑥에서 이미 발화·관측된 것이며, 이 절은 그 판정을 **REQ-SCENE-021이 요구하는 폐쇄 어휘 형태**로 세울 뿐이다. 감사가 잡은 것: M0의 다섯 판정은 절 제목 자체가 어휘를 담는데(`#### GO:` · `#### INCONCLUSIVE:` · `#### CONDITION_NOT_MET:`) v0.2.3이 `<대상>`을 AC로 넓히며 **접두 행만 추가하고 판정 절은 만들지 않았다.** `^` 앵커 grep은 8을 반환하므로 기계 검증은 통과했고, 그래서 아무도 눈치채지 못했다 — iter-2 D4("부분 검증"이 폐쇄 어휘 밖이었던 것)와 같은 계열이다.
+
+**판정: `GO`.** 근거 사슬(각 항이 위 절을 가리킨다):
+
+| AC-SCENE-021이 요구한 것 | 충족 근거 |
+|---|---|
+| 채팅 지시 → `find_scene` 매칭 | ④ — 라이브러리 씬 2건이 매칭돼 컴파일에 들어갔다 |
+| → `compile_scene` | ④ — 11/11 `executed_ok` × 2회 |
+| → **게이트 감사 로그 대조** (M0가 못 한 몫) | ①(채널 변별력을 날조 대조군으로 선행 확립) + ④(전 커맨드 `kind=command ok=true`, Store 포함) |
+| → 생성 시퀀스·큐 **재조회 확인** | ④ — `{class:Cue, cueNo:1, name:'SCN GOLD PULSE'}` · `{… 'SCN MOON RISE'}` |
+| → **효과의 GUI 관측** | ⑤ — 시계열 8표본 픽셀 차분. fx가 구동하는 축만 변하고 룩의 정지 값은 고정 |
+| → **리포트 주장 분리 문면 + 미주장 열거가 실물과 일치** | ⑥ — 네 주장이 발화 커맨드 원문과 어긋나지 않음. 두 씬의 열거가 실제로 달라졌다(④) |
+| **대조 순서**(M0 프로브 C 형상 먼저) | ④ — dimmer fx 씬을 먼저 발화해 파이프라인 생존을 세운 뒤 movement fx 씬 |
+
+**이 판정이 덮지 않는 것**: ⑤의 관측 한계 3건(GUI 시트 판독이지 무대 실물 아님 · 이산 표본 · 파형 주기 미주장)은 그대로다. `GO`는 **종단 사슬이 성립했다**는 판정이지 **효과가 기계로 확인됐다**는 판정이 아니다 — 그 둘을 뭉치면 AC-SCENE-015가 실패한다.
+
+기계 판독용 접두 행은 §E.2 말미 "판정 접두 행" 블록의 `GO: AC-SCENE-021`이 소유한다(한 판정당 정확히 1행).
+
 #### ⑦ 신규 결함 1건 (비차단, 상류 귀속) — SPEC 표제 문장이 매칭되지 않는다
 
 `find_scene("파란 백라이트가 천천히 웨이브하는 씬 만들어줘")` — **spec.md §A·acceptance.md 시나리오 1·plan.md §B M8이 그대로 쓰는 문장** — 이 **양 축 `no_match`** 로 떨어진다. 계층별 분해:
@@ -659,7 +681,7 @@ M8 규율("코드 변경 0 — 결함 발견 시 별도 커밋")에 따라 **고
 - milestones_open: **없음 — M0~M8 전부 완료**
 - ac_closed: AC-SCENE-001 · 002 · 003 · 004 · 005 · 006 · 007 · 008 · 009 · 010 · 011 · 012 · 013 · 014 · 015 · 016 · 017 · 018 · **019** · 020 · **021** · 022 · 023 · 024 (**24/24**)
 - ac_open: **없음 (24/24)**
-- current_measured: pytest **3794 passed / 5 skipped** (M1 기준선 3526 대비 신규 268, **신규 실패 0**) · vitest **223 passed / 13 files**(기준선과 동일) · `server/scene` 커버리지 **99%**(문턱 85%) · ruff check/format 클린 · `test_architecture.py` 4 passed, 예외 명단 무변경 · 닫힌 툴 집합 **13**
+- current_measured: pytest **3911 passed / 5 skipped** (정본 baseline `3c701b1` 3432 대비 신규 **479**, **신규 실패 0** — run-phase 종료 시 3794였고 머지 전 리뷰의 테스트 강화로 +117) · vitest **223 passed / 13 files**(기준선과 동일) · `server/scene` 커버리지 **99%**(문턱 85%) · ruff check/format 클린 — **범위는 `server/scene/**` + `server/tests/test_scene_*.py`다**(sync-phase 감사 정정: 무범위로 적혀 있어 저장소 전역 클린으로 읽혔다. 실측 `ruff check server/` = **3 errors** · `format --check server/` = **20 files** — 셋 다 이 SPEC 착수 전부터 있던 것이고 둘은 PRESERVE 경로다) · `test_architecture.py` 4 passed, 예외 명단 무변경 · 닫힌 툴 집합 **13**
 - mutations: M1 **4/4** · M2 **3/3** · M3 **3/3** · M4 **20/20** · M5 **7/7** · M6 **3/3** · M7 **7/7** killed (누적 **47/47**, survived 0). M7의 PRESERVE 파일 변형 2건은 **sha256 대조로 원복 검증**
 - seam_verified: ① 실물 씬 자산 5건 × 실물 빌더 전수(28 테스트) — `/CueOnly` 주입으로 비공허성 실측 ② M3 별칭 사본 드리프트 1건 검출·정정(`task_ea9ff7620253`) ③ M6에서 **상류 예외 누출 1건** 검출·정정 — `FxInstantiationError`가 씬 경계를 넘어 툴을 죽였다(컴파일 계층에서 번역, 사유 코드 보존) ④ M7에서 **커밋 후에만 보이는 트립와이어 실패 1건** 검출·의도적 갱신(`_TOOLS_EXPECTED_HUNK_OLD_STARTS`에 15 추가, 보호구역 단정 무변경)
 - preserve_gate: `git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety` → **빈 출력**
@@ -678,7 +700,7 @@ sync_commit_sha: 8b2f308   # 백필 완료 — spec-frontmatter-schema.md § SHA
 
 | 확인 | 기대 | 실측 |
 |---|---|---|
-| `git log --oneline -9` | M1~M8 사슬 + 인수인계 커밋 | `4437cc6`(인수인계) ← `8c1e044`(M8) … `2d9ca9b`(M2) — **일치** |
+| `git log --oneline -11` | M1~M8 사슬 + 인수인계 커밋 | `4437cc6`(인수인계) ← `8c1e044`(M8) … `a1faae3`(M1) — **일치**. ⚠️ 최초 기록은 `-9`로 적고 실측 열에 `… 2d9ca9b(M2)`라 써 놓고도 판정을 "일치"로 도장했다 — **`-9` 창에는 M1이 들어오지 않는다**(sync·백필 커밋이 얹힌 지금은 M4까지만 닿는다). 감사가 잡았고 창을 `-11`로 고쳐 재산정했다 |
 | `pytest server/tests/ -q` | 3794 passed / 5 skipped | **3794 passed / 5 skipped**(87.21s) |
 | PRESERVE diff `3c701b1..HEAD` | 빈 출력 | **빈 출력** |
 | 접두 행 grep | 8 | **8** |
@@ -687,9 +709,11 @@ sync_commit_sha: 8b2f308   # 백필 완료 — spec-frontmatter-schema.md § SHA
 
 ### 감사 대상 4축 (§0 킥오프 킷 §2가 지목한 것) — 결과
 
-**① 개수 정합성 — 소인 완료.** 기계값 `REQ 21` · `AC 24` · `Out of Scope 16` · `접두 행 8`. 산문 개수 주장을 전수 대조했고 **현재형 주장의 불일치 0건**이다. `v0.2.1`·`v0.2.2` HISTORY가 적은 `접두 행 6`은 **스테일이 아니다** — 그 시점의 실측이며 append-only 규율상 고쳐 쓰지 않는다(M8이 2행을 더해 8이 됐고 v0.2.3이 그 전이를 기록한다).
+**① 개수 정합성 — 소인 완료, 단 불일치 0건이 아니었다.** 기계값 `REQ 21` · `AC 24` · `Out of Scope 16` · `접두 행 8`. `v0.2.1`·`v0.2.2` HISTORY가 적은 `접두 행 6`은 **스테일이 아니다** — 그 시점의 실측이며 append-only 규율상 고쳐 쓰지 않는다.
 
-**② AC 24건 역추적 — 전건 성립.** 각 AC의 "충족" 근거가 §E.2의 어느 절인지 1:1로 닫힌다:
+⚠️ **정정 (독립 감사 F-1)**: 본 절의 이전 판본은 *"현재형 주장의 불일치 **0건**"* 이라 단정했고 **그것이 거짓이었다.** `§E.2` 접두 행 블록의 **헤더 문장이 "이 6행"이라 적는데 블록은 8행**이다 — v0.2.3(M8)이 두 행을 주석 없이 삽입했다. 이 줄은 HISTORY 측정 기록이 아니라 **바로 아래 블록을 가리키는 현재형 지시문**이므로 위 면제 목록 밖이고, **grep 한 번으로 반증된다.** 소인했다고 선언한 뒤 남았다는 점에서 더 나쁘며, iter-2가 0.91 → 0.80으로 떨어진 실패 모드의 재발이다. 처리: 블록에 **승계 정정 1행을 append**했다(§E.2는 append-only라 헤더를 덮어쓰지 않는다). **현재형 불일치는 1건이었고 승계 포인터로 닫혔다** — CHANGELOG의 같은 문장도 함께 정정했다.
+
+**② AC 24건 역추적 — 전건 성립.** 각 AC의 "충족" 근거가 §E.2의 어느 절인지 추적된다:
 
 | §E.2 절 | AC | 수 |
 |---|---|---|
@@ -701,28 +725,38 @@ sync_commit_sha: 8b2f308   # 백필 완료 — spec-frontmatter-schema.md § SHA
 | M8 | AC-SCENE-019, AC-SCENE-021 | 2 |
 | **합** | | **24** |
 
-`acceptance.md §C.0a` 배정표와 **1:1 일치**(중복 0 · 누락 0). 각 절이 말미에 `**AC 상태**:` 줄로 자기 몫을 명시하므로 추적은 grep 가능하다.
+`acceptance.md §C.0a`와 **집합으로 일치**한다 — 합 **24** · 중복 0 · 누락 0. ⚠️ **정정 (독립 감사)**: 이전 판본은 *"1:1 일치"* 라 적었으나 **행 단위로는 1건 다르다** — `AC-SCENE-019`가 `§C.0a`에서는 **M0 배정**인데 근거 절은 **M8 ③**이다. 두 표는 **다른 질문에 답하므로**(마일스톤 배정 vs 근거 절 위치) 갈리는 것이 정상이고, "1:1"이라 단정하면 **기록할 가치가 있는 사실**(M0에 배정된 AC가 M8에서야 닫혔다 — 정리 의무가 사람 단계였기 때문)을 오히려 가린다. 각 절이 말미에 `**AC 상태**:` 줄로 자기 몫을 명시하므로 추적은 grep 가능하다.
 
-**③ REQ-SCENE-021 v0.2.3 확장 — 규율 무변경 확인.** `<대상>`에 `AC-SCENE-nnn`이 추가된 것은 `spec.md:207`이며, 함께 확인한 3개 규율은 **전부 무변경**이다: 접두어 **4종**(`GO:`/`DESCOPE:`/`SKIP:`/`REOPEN:` — 매핑 표 5행이 4접두어로 사상), **행두(column 0) 앵커** 명문, **한 판정당 정확히 1행**. 기계 확인 — 접두 행 8행의 `<대상>`이 `ASSUMPTION-41/42/43/44/45` · `D1` · `AC-SCENE-019` · `AC-SCENE-021`로 **전부 서로 다르며**(중복 대상 0), `INCONCLUSIVE` 행(ASSUMPTION-42)은 필수 `verdict=INCONCLUSIVE` 키를 갖는다. **정규식 완화 0건**(AC-SCENE-019 금지 사항).
+**③ REQ-SCENE-021 v0.2.3 확장 — 규율 무변경 확인.** `<대상>`에 `AC-SCENE-nnn`이 추가된 것은 **`spec.md` REQ-SCENE-021 매핑 표 하단의 `<대상>` 문단**이며(안정 토큰 인용 — 이전 판본의 `spec.md:207`은 **빈 줄을 가리켰고** 본 SPEC 자신의 인용 규율 *"정본은 줄번호로 인용하지 않는다"* 를 위반했다), 함께 확인한 3개 규율은 **전부 무변경**이다: 접두어 **4종**(`GO:`/`DESCOPE:`/`SKIP:`/`REOPEN:` — 매핑 표 5행이 4접두어로 사상), **행두(column 0) 앵커** 명문, **한 판정당 정확히 1행**. 기계 확인 — 접두 행 8행의 `<대상>`이 `ASSUMPTION-41/42/43/44/45` · `D1` · `AC-SCENE-019` · `AC-SCENE-021`로 **전부 서로 다르며**(중복 대상 0), `INCONCLUSIVE` 행(ASSUMPTION-42)은 필수 `verdict=INCONCLUSIVE` 키를 갖는다. **정규식 완화 0건**(AC-SCENE-019 금지 사항).
 
-**④ gitignore 인용 — 표기 확인.** `.gitignore:122`가 `.moai/reports/`를 무시한다(`git check-ignore -v`로 실측). 따라서 병렬 브리프(`handoff/scene/`) · plan-audit 리포트 3종 · 균일 집합 제안서 · M8 프로브 드라이버(`m8-probe/`)와 스크린샷은 **저장소에 없다.** `§E.1 plan_status`와 `plan.md` §0이 이미 그 사실을 명기하고 있으며, 본 절도 같은 규율을 따른다 — **인용은 하되 저장소에 없음을 함께 적는다.**
+⚠️ **③이 처음에 점검하지 않은 조건 (독립 감사 지적)**: REQ-SCENE-021은 접두 행뿐 아니라 **"폐쇄 어휘로 판정되는 명시적 섹션"** 도 요구한다. M0의 다섯 판정은 절 제목이 어휘를 담는데(`#### GO:` 등) **M8이 추가한 AC 2건은 그렇지 않았다** — `^` 앵커 grep이 8을 돌려주므로 기계 검증은 통과했고 아무도 눈치채지 못했다(iter-2 D4와 같은 계열). 처리: M8 ③을 `#### ③ GO: AC-SCENE-019 — …`로 제목에 어휘를 싣고, **`#### ⑥a GO: AC-SCENE-021` 판정 절을 신설**했다(새 측정 0 — 근거는 ①~⑥에서 이미 발화된 것). 본 축의 점검 항목에 **"판정 절의 존재"** 를 추가한다.
 
-### 본 sync-phase가 고친 것 (스테일 소인 10건 · 정책 무변경)
+**④ gitignore 인용 — 표기 규율은 세웠으나 준수는 부분적이다.** `.gitignore:122`가 `.moai/reports/`를 무시한다(`git check-ignore -v`로 실측). 따라서 병렬 브리프(`handoff/scene/`) · plan-audit 리포트 3종 · 균일 집합 제안서 · **`TEMPLATE-병렬웨이브-파이프라인.md`**(`plan.md §F.4`가 "템플릿 6항"을 이행한다고 선언하는 구속력 있는 인용원 — 이전 판본이 열거에서 빠뜨렸다) · M8 프로브 드라이버(`m8-probe/`)와 스크린샷은 **저장소에 없다.**
 
-run-phase가 M8에서 닫은 사실이 **선행 문서 5곳에 전파되지 않아** 아티팩트가 자기 자신과 모순이던 것을 소인했다. **요구·인수·결정·마일스톤 신설 0건, 코드 변경 0건.**
+⚠️ **정정 (독립 감사)**: 이전 판본은 근거로 *"`§E.1 plan_status`와 **`plan.md §0`**"* 을 댔는데 **`plan.md`에 `§0`은 존재하지 않는다**(헤딩 전수 = 제목·§A~§F). 올바른 근거는 **`progress.md §0`**이다. 그리고 규율 준수는 전수가 아니다 — 실측 **표기 3곳 / 미표기 9곳**(`plan.md` 헤더 포함). 본 sync에서 `research.md` 개정 고지 1곳을 보강했고 **나머지는 잔여로 승계한다**(아래 "정직한 잔여" 5). 결론을 *"전수 준수"* 가 아니라 **"규율은 정본이고 준수는 진행 중"** 으로 낮춘다.
 
-| # | 위치 | 스테일 내용 | 처리 |
-|---|---|---|---|
-| 1 | `spec.md` frontmatter | `status: draft` | → `completed` (+ `version 0.2.4`) |
-| 2 | `spec.md` §C.2 | "정리 의무 (미이행)" | → 이행 완료 + 재조회 실측 인용 |
-| 3 | `spec.md` §C.2 | 아티팩트 SHA `pending-backfill` | → `c0157d3` |
-| 4 | `plan.md` §0 헤더 | "M0 실행 완료" · "라이브 세션 2회(1회 소진)" | → "M0~M8 전부 실행 완료" · "2/2 소진" |
-| 5 | `plan.md` §B M0 헤딩 | "정리 잔여 1건 — AC-SCENE-019 미완결" | → "M8에서 닫힘 — AC-SCENE-019 충족" |
-| 6 | `plan.md` §B M0 | "⚠️ 미이행 — 정리 의무" | → 이행 완료 + 실측 인용 |
-| 7 | `plan.md` 라이브 세션 회계 | "1회 소진, 1회 잔여" · M8 행 미완료 | → "2/2 소진, 0회 잔여" · M8 완료 표기 |
-| 8 | `progress.md` §0 함정 13 | "아직 미이행이다" | → 이행 완료. 규율(쇼파일 정리는 사람 단계)은 승계 |
-| 9 | `progress.md` §E.1 | `open_items: … 미이행` · `commit_sha: pending-backfill` | → 없음 · `c0157d3` |
-| 10 | `progress.md` §E.3 | M8 `pending-backfill` | → `8c1e044` |
+### 본 sync-phase가 고친 것 (문서 스테일 소인 16건 · 정책 무변경)
+
+run-phase가 M8에서 닫은 사실이 **선행 문서 5곳에 전파되지 않아** 아티팩트가 자기 자신과 모순이던 것을 소인했고, 그 뒤 **독립 sync-audit(FAIL 0.80)이 6건을 더 냈다.** **요구·인수·결정·마일스톤 신설 0건.**
+
+| # | 위치 | 스테일 내용 | 처리 | 출처 |
+|---|---|---|---|---|
+| 1 | `spec.md` frontmatter | `status: draft` | → `completed` (+ `version 0.2.4`) | sync |
+| 2 | `spec.md` §C.2 | "정리 의무 (미이행)" | → 이행 완료 + 재조회 실측 인용 | sync |
+| 3 | `spec.md` §C.2 | 아티팩트 SHA `pending-backfill` | → `c0157d3` | sync |
+| 4 | `plan.md` §0 헤더 | "M0 실행 완료" · "라이브 세션 2회(1회 소진)" | → "M0~M8 전부 실행 완료" · "2/2 소진" | sync |
+| 5 | `plan.md` §B M0 헤딩 | "정리 잔여 1건 — AC-SCENE-019 미완결" | → "M8에서 닫힘 — AC-SCENE-019 충족" | sync |
+| 6 | `plan.md` §B M0 | "⚠️ 미이행 — 정리 의무" | → 이행 완료 + 실측 인용 | sync |
+| 7 | `plan.md` 라이브 세션 회계 | "1회 소진, 1회 잔여" · M8 행 미완료 | → "2/2 소진, 0회 잔여" · M8 완료 표기 | sync |
+| 8 | `progress.md` §0 함정 13 | "아직 미이행이다" | → 이행 완료. 규율(쇼파일 정리는 사람 단계)은 승계 | sync |
+| 9 | `progress.md` §E.1 | `open_items: … 미이행` · `commit_sha: pending-backfill` | → 없음 · `c0157d3` | sync |
+| 10 | `progress.md` §E.3 | M8 `pending-backfill` | → `8c1e044` | sync |
+| 11 | `spec.md` REQ-SCENE-015 (b)·근거 표 2행 · `plan.md` §A.5·§C · `progress.md` §0 함정 6 · `research.md` §3.3 | **`tools.py` 줄 앵커 7계열 전건 부패**(+19 ~ +34행 — 이 SPEC이 M6에서 툴 2종을 등재해 밀렸다). 그중 하나가 **`plan.md §A.5`의 PRESERVE 좌표**라 후속 소유자가 **엉뚱한 곳을 지키며 통과**한다 | → **심볼 앵커로 교체**(`_PROGRAMMER_STATE_COMMANDS` · `run_commands` 내부 dedupe 루프 등). `research.md`는 조사 스냅샷이라 본문 보존 + **승계 포인터 신설** | 감사 P2 |
+| 12 | `progress.md` §E.2 접두 행 블록 헤더 | "이 **6행**"인데 블록은 **8행** | → **승계 정정 1행 append**(헤더는 append-only라 무변경) | 감사 **P1** |
+| 13 | `progress.md` §E.2 M8 절 | AC 판정 2건에 **폐쇄 어휘 판정 절이 없다**(접두 행만 있어 grep은 통과) | → M8 ③ 제목에 `GO:` 부여 + **`#### ⑥a GO: AC-SCENE-021` 절 신설**(새 측정 0) | 감사 P2 |
+| 14 | `research.md` 개정 고지 | *"§3은 개정 영향 없음"* 이 거짓 — §3.1·§11이 **폐기된 `/CueOnly` 논거**를 안고 있다 | → 고지에 **정정 문단 신설**. 본문은 스냅샷이라 보존, 현행 판단은 `design.md §5`·결정 I | 감사 P2 |
+| 15 | `acceptance.md §E` · `§E.3` | 무범위 **"ruff 클린"**(실측: `ruff check server/` = 3 errors · `format --check` = 20 files) · M8 접두 행을 **미래형**으로 서술 | → **범위 명기**(`server/scene/**` + `test_scene_*.py`) · 시제 정정 + "현재 8행" | 감사 P2·P3 |
+| 16 | `progress.md` §E.4 ①②③④ | 자기 감사 결론 4축 중 **3축이 거짓/미검증**(불일치 0건 · 1:1 일치 · `plan.md §0` 부재 · 킥오프 `-9` 창 도장) | → **전건 정정**(위 각 축의 ⚠️ 문단) | 감사 **P1**+P2 |
 
 **append-only는 지켰다** — §E.2의 M0·M1~M8 기록과 HISTORY의 v0.2.1/v0.2.2 측정치는 **한 글자도 고치지 않았다.** 고친 것은 전부 *현재 상태를 서술하는 표면*(frontmatter · 헤더 요약 · 신호 블록 · 함정 목록)이며, 각 항목이 어느 절에서 닫혔는지를 인용으로 가리킨다.
 
@@ -730,12 +764,47 @@ run-phase가 M8에서 닫은 사실이 **선행 문서 5곳에 전파되지 않�
 
 사용자 확정(2026-08-01, AskUserQuestion): **안 D — 기록만 하고 넘긴다.** SPEC 표제 문장의 양 축 `no_match`는 **상류 어휘 귀속**이며 FXLIB·LOOKLIB 둘 다 PRESERVE다. 씬 계층에서 고칠 수 있는 유일한 형태(안 A)는 `find_fx`와 `find_scene`이 같은 문장에 다르게 답하는 **행동 분기**를 만들고, 병렬 웨이브 M3 정정이 사본을 지운 방향과 정면으로 반대다. **후속 SPEC의 명시 대상으로 넘긴다.** 상세 판정 표는 §0 킥오프 킷 §1.
 
+### 머지 전 독립 리뷰 — P1 3건이 3794 그린 상태에서 살아 있었다
+
+이 저장소는 `gh pr checks`가 **0건**이라 머지 전 유일한 관문이 사람/독립 리뷰다. PRECHK PR #7은 **2721 전건 통과 상태에서 P1 4건**이, OVERLAP run-audit는 **P1 6건**이 살아 있었다. 같은 규율을 적용해 **읽기 전용 리뷰어 3 + 독립 sync-audit 1**을 병렬로 붙였다(코드 슬라이스: 컴파일 코어 / 매칭·리포트 / 툴 경계).
+
+**결과 — P1 3건. 전부 오케스트레이터가 직접 재현한 뒤 출하 코드를 고쳤다.**
+
+| # | 결함 | 실측 재현 | 수정 |
+|---|---|---|---|
+| P1-1 | **`compile_scene`이 fx의 거부 게이트를 우회한다.** `build_fx_bundle`은 `_refuse_unemitted_axes(fx)`를 먼저 부르는데 씬은 라인 **빌더만** 재사용하고 게이트를 건너뛰었다 — 같은 자산을 fx 경로는 거부하고 씬 경로는 **선언된 축을 조용히 버린 채 수락**한다 | fx 로더가 **수락하는** 자산으로 확인: `relative: 30` → fx `relative_not_emitted` 거부 / 씬 **수락**(`Relative` 라인 0건). `circle` + `phase_to: 180` → fx `circle_phase_conflict` 거부 / 씬 **수락**(`phase_to` 폐기). 1스텝 `Fx`는 **`Step` 라인이 아예 없는 번들** — M0가 세 번 발화해 모션 0을 본 그 형상 | `compile.py`가 `_refuse_unemitted_axes`를 import해 fx 브랜치 **직전**에 호출, `FxInstantiationError` → `SceneCompilationError` **번역(사유 코드 보존)**. 두 리뷰어가 **독립적으로** 같은 결함을 냈다 |
+| P1-2 | **매칭기의 다섯 번째 상태가 성공 형상으로 나간다.** `SceneMatch.fallback`이 `kind == FALLBACK`이라 축은 잡혔는데 그 조합의 씬이 라이브러리에 없으면 `selected=None · fallback=False · reason=None` | 출하 `core.yaml` 실측: `"웨이브"` → `kind=fx_only · selected=None · fallback=False`. `"말씀 회전"` → `kind=both_matched · selected=None · fallback=False`. axis id **8개 중 6개**가 단일축으로 잡히는 순간 이 막다른 길이다 — 모델은 payload에 없는 `scene_id`를 넘기라는 지시를 받고, 남는 길은 `run_commands` 손작성(**이 SPEC이 막으려는 바로 그 실패**) | `fallback`을 `AxisMatch`와 **같은 정의**(`fallback_reason is not None`)로 맞추고 신규 사유 `NO_SCENE_COMPOSES_AXES` 신설. `kind`는 여전히 **어느 축이 잡혔는지**를 보고한다 — 두 사실을 분리했다 |
+| P1-3 | **미확인 (a) 주장을 `기계 확인됨:` 표제 아래 렌더한다.** 표제는 "확인됨"이라 말하고 **바로 아래 줄**이 "재조회를 수행하지 않았습니다"라고 말한다. 툴이 `requery=`를 넘기지 않으므로 **모든 생산 리포트가 그 모양**이었다 | 출하 씬을 실제로 컴파일해 `to_korean` 렌더 — 문면을 눈으로 확인 | `to_korean`이 `artifact_claim`의 **사실에 따라** 표제를 고른다(확인됨 ↔ 확인 불가). 상수 문면은 무변경. 이 모듈 자신이 적어둔 규율(*"확인된 것과 확인되지 않은 것은 다른 표제 아래 산다"*)의 위반이었다 |
+
+**이 리뷰가 실증한 것 — 스위트가 공허했다.** P1-2·P1-3을 고친 직후 `pytest server/tests/test_scene_*.py` = **379 passed, 죽은 테스트 0건.** 관측 가능한 동작이 두 군데 바뀌었는데 스위트가 침묵했다. 그래서 수정과 **같은 커밋에서 테스트를 강화**했고, 모든 신규 테스트는 **수정을 되돌리면 죽는 것**을 뮤테이션으로 실증했다.
+
+**테스트 강화 — 4슬라이스 병렬 · 신규 117건 (3794 → 3911 passed / 5 skipped).** 슬라이스별 쓰기 집합이 서로소라 병렬로 돌렸다(컴파일 / 리포트 / 매칭·라이브러리 / 툴). **오케스트레이터가 P1 3건의 뮤테이션을 직접 재주입해 독립 검증했다** — 워커 주장을 이월하지 않는다:
+
+| 재주입한 변형 | 수정 전 (실측) | 수정 후 (실측) |
+|---|---|---|
+| `compile.py` 거부 게이트 호출 무력화 | 0 | **15 failed** |
+| `matching.py` `SceneMatch.fallback` → `kind == FALLBACK` 원복 | 0 | **6 failed** |
+| `report.py` `to_korean` 표제 분기 제거 | 0 | **8 failed** |
+
+`cp` 백업 + **sha256 원복 대조 IDENTICAL**. 워커들이 자기 슬라이스에서 추가로 실증한 것 중 승계할 만한 것:
+
+- **손으로 쓴 케이스가 못 잡는 결함을 출하 자산 순회가 잡았다.** `match_scene`의 다섯 번째 상태 판정을 `LOOK_ONLY`에서만 놓치도록 좁힌 변형은 **하드코딩 케이스를 전부 통과**하고 **출하 `core.yaml` 57질의 순회만** 죽였다. 그 순회는 이 저장소에서 **처음으로** 씬 라이브러리를 매칭기에 실제로 통과시킨다 — 이전에는 `match_scene`을 출하 자산으로 부르는 테스트가 **0건**이었고, 픽스처가 단일축 전용 씬을 항상 갖도록 짜여 있어 문제를 **구조적으로 회피**하고 있었다.
+- **워커 두 명이 자기 테스트의 공허함을 스스로 잡아 보고했다.** ① 값 라인 판별식 사본 변형이 1차 측정에서 **0건 사망**이었다(룩 라인이 스피드 라인보다 항상 앞서 `next()`가 우연히 맞는 값을 돌려줬다) — 룩 없는 movement fx 번들에서 순진한 판별식이 **스피드 라인을 룩 값 라인으로 돌려준다**는 것을 잡는 테스트를 추가해 닫았다. ② `select_sequence_number` 변형에서 **빈 목록 파라미터가 살아남았다**(점유 집합이 비어 루프가 무동작) — 그 파라미터를 지우고 비연속 갭 케이스로 교체해 4개 전건이 죽게 했다. **숨기지 않은 것이 이 배치의 산출물이다.**
+- **논리합 하나가 정확히 구멍이었다.** 위임 테스트의 `... or key in payload["error"]`는 `"cue"`가 `"cue_number"`의 부분문자열이라 **결코 실패할 수 없었다** — 제거 후 툴 로컬 검사를 심으면 죽고, 논리합을 되살리면 같은 변형이 **0건 사망**(72 passed)으로 되돌아간다. 반증까지 측정했다.
+- **비공허성 가드는 출하 코드 변형으로 죽지 않는다 — 입력이 공허해질 때 죽는다.** 리포트 픽스처의 적수(`_speed_line` 체인·`At Phase` 라인)를 제거하자 `test_the_fixture_actually_carries_the_adversary`가 죽었다. 그것이 그 테스트의 임무다.
+
+**반증에 실패한 것 (방어가 실제로 작동함)**: 결합 순서 · `Step 1` 미발화 · 스텝 라인 수 · 금지 `At Step` 형태 · Store 플래그 부재(대소문자 무관) · 충돌/미주장 열거의 **정확성** · M6의 예외 번역 · 단일 실행 경로(AST 스캔) · LiveLock 제안 강등(실물 게이트+실물 락) · 발화 전 rig 미등재 그룹 거부 · 타이밍·라벨 정의의 로더 위임 — **전부 표적 뮤테이션으로 죽었다.** 독립 감사도 append-only 준수·역추적 폐쇄성(REQ 21/21 · AC 24/24)·PRESERVE 게이트·상류 상수 결합·M8 산출 수치(출하 자산 인메모리 재컴파일로 값 라인과 두 열거가 기록과 **일치**)·인용 표본 약 30개를 **반증에 실패**했다.
+
 ### 정직한 잔여 (닫지 않은 것)
 
 1. **SPEC 표제 문장은 여전히 폴백한다** — 안 D의 직접 귀결이다. `find_scene("달빛 웨이브")`는 두 축이 정확히 붙지만 SPEC이 자기 예시로 쓰는 문장은 붙지 않는다. **문서가 자기 예시를 실행하지 못하는 상태를 알면서 출하한다.**
 2. **`draft → in-progress` 전이 누락** — run-phase(M1 커밋)가 밟았어야 할 전이가 없어 이 SPEC의 git 이력은 `draft → completed` 단절을 보인다(`OwnershipTransitionInvalid` Warning 소지). **소급 위조하지 않고 기록만 한다** — 커밋은 이미 랜딩했고 이력을 고쳐 쓰는 것이 더 나쁘다.
 3. **쇼파일에 M8 산출물 시퀀스 3·4 잔존** — `SCN GOLD PULSE` · `SCN MOON RISE`. 프로브 쓰레기가 아니라 **정상 산출물**이므로 자동 삭제 대상이 아니다. 지울지는 사용자 판단이고, 지운다면 `Delete`가 블랙리스트이므로 GUI 조작이다.
 4. **효과는 여전히 기계로 확인되지 않는다** — M8 ⑤의 화면 캡처 다중 표본은 **GUI 시트 판독**이지 무대 실물이 아니고 표본도 이산이다. 이 SPEC의 관측 천장은 sync-phase가 바꾸지 않았다.
+5. **gitignore 표기 규율이 9곳에서 미준수다** — `.moai/reports/` 인용마다 "저장소에 없음"을 함께 적는다는 규율을 본 sync가 정본으로 세웠으나 실측 준수는 **3곳뿐**이다(`plan.md` 헤더 포함 9곳 미표기). 1곳(`research.md` 개정 고지)만 보강했고 **나머지는 잔여**다. 더 근본적으로 `.gitignore:213-214`가 plan-audit 리포트를 별도로 무시하므로, **클론 받은 제3자에게는 "iter-3 PASS 0.90" · "iter-2 결함 16건" · "32개 룩 전수 파싱"의 근거 사슬이 끊긴다.** 리포트를 저장소에 넣을지는 이 SPEC 밖의 정책 결정이다.
+6. **재조회 증거 채널이 배선되지 않았다** — `compile_scene` 툴은 `build_report(..., requery=…)`를 **넘기지 않으므로** 주장 (a)는 영구히 "재조회하지 않았습니다"이고 `ARTIFACT_CONFIRMED_NOTE` 분기는 생산에서 도달 불가다. 형제 경로 `prepare_songcue`는 저장 후 재조회하고 `requery_error`까지 기록하는 **선례를 이미 갖고 있다.** 본 리뷰 패스에서 **배선하지 않기로 했다** — 라이브 콘솔 왕복을 추가하는 행동 변경이고 AC 24/24로 닫힌 SPEC의 범위 밖이다. **대신 (a)의 문면이 표제와 어긋나던 것(P1-3)을 고쳤으므로 지금 리포트는 정직하다.** 배선은 후속 SPEC 대상이며, 그때까지 툴 설명이 "재조회가 말해야 존재한다"고 적는 조건은 **이 툴로는 만족시킬 수 없다**는 것을 여기 적어 둔다.
+7. **뮤테이션 47/47 killed는 재주입으로 재검증하지 않았다** — 독립 감사가 남긴 열린 축이다. OVERLAP 선례에서 재주입이 **감사자 자신의 수정에서 2건을 더 잡았다.** 본 리뷰 패스가 신규로 심은 테스트는 전부 뮤테이션 실증을 거쳤으나, run-phase가 기록한 47건 자체를 다시 주입하지는 않았다.
+8. **라이브 관측은 재현 불가다** — M8 ⑤ 화면 캡처 8표본·픽셀 차분, M0 사람 GUI 관측, `/CueOnlyy` 접수, `Not allowed` 대 `User Canceled Command`, `truncated: True`는 **실물 onPC와 그 시점 쇼파일**이 있어야만 검증된다. 본 감사가 확인한 것은 기록 간 산술·형상 정합뿐이며 그 범위에서 모순은 0건이었다.
 
 ## §F Phase 4 Mode Selection
 

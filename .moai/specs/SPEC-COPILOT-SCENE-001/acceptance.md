@@ -292,9 +292,9 @@ AC는 **24건**이다. §C.0이 REQ(**21건**) ↔ AC 역추적을, §C.0a가 �
 
 ## §E. Quality Gate 기준
 
-- 신규 `server/scene/**` 커버리지 ≥ 85%(프로젝트 기준 — `.moai/config/sections/quality.yaml` `test_coverage_target: 85`), ruff 클린, 신규 실패 0.
+- 신규 `server/scene/**` 커버리지 ≥ 85%(프로젝트 기준 — `.moai/config/sections/quality.yaml` `test_coverage_target: 85`), **`server/scene/**` + `server/tests/test_scene_*.py` 범위** ruff 클린, 신규 실패 0. **범위를 밝히는 이유**: 저장소 전역 `ruff check server/`는 이 SPEC 착수 전부터 기존 3건을 내고 `ruff format --check server/`는 20파일을 지목한다 — 무범위로 "ruff 클린"이라 적으면 저장소 전역 클린으로 읽힌다(sync-phase 감사 지적). 씬이 만든 파일은 실측 `All checks passed` · `13 files already formatted`.
 - 경계: AC-SCENE-017의 3중 검증(전역 스캔·AST·예외 명단) + PRESERVE diff 0 전부 그린.
-- 문서: progress.md M0/M8 기록이 **행두 접두 행 grep으로 기계 확인 가능** — M0분은 v0.2.1에서 **실측 6행**으로 확인됐고(AC-SCENE-019 실측 줄), M8분은 종단 세션에서 같은 형태로 추가된다.
+- 문서: progress.md M0/M8 기록이 **행두 접두 행 grep으로 기계 확인 가능** — M0분은 v0.2.1에서 **실측 6행**으로 확인됐고(AC-SCENE-019 실측 줄), M8분 2행이 v0.2.3에서 같은 형태로 **추가됐다 — 현재 8행**.
 - 뮤테이션: 각 가드형 AC(**AC-SCENE-005, AC-SCENE-009, AC-SCENE-010, AC-SCENE-011, AC-SCENE-012, AC-SCENE-013, AC-SCENE-014, AC-SCENE-015, AC-SCENE-017, AC-SCENE-020, AC-SCENE-023, AC-SCENE-024**)에서 위반 주입이 실제로 죽는지 확인 — **survived = 마일스톤 미완료**.
 - **뮤테이션 재료 규율 2건 (개정 신설 — 승계 필수)**: ① **AC-SCENE-005의 충돌 열거 비공허성은 dimmer/color fx 조합으로만 세운다** — movement fx는 룩과 교집합이 항상 ∅이라 정답도 빈 집합이고, 그 조합으로 뮤테이션을 세우면 **통과해 버린다**(design.md §3.3 각주). ② **AC-SCENE-023의 순서 뮤테이션은 픽스처 주입이 필수다** — 오늘 자산 32/32가 이미 정렬돼 있어 자산만으로는 정렬 제거 뮤테이션이 살아남는다.
 

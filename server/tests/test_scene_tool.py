@@ -11,7 +11,7 @@ combination order M0 measured is enforced by nothing.
 These tests enter where a model enters — ``registry.dispatch`` — so a tool that
 is not registered fails them all.
 
-Four properties this file holds beyond "it works":
+Six properties this file holds beyond "it works":
 
 * The compile path reaches the console through ``run_commands`` and nothing else
   (REQ-SCENE-018/019). Asserted three ways: the gate sees the whole bundle as
@@ -25,6 +25,14 @@ Four properties this file holds beyond "it works":
   a slot number that is not a listed group is refused.
 * The report's four claims survive the tool boundary — the payload carries them
   as separate keys, and the effect notice is there on the SUCCESS path too.
+* A cross-call fold is an ERROR here even though every line reported ok. The
+  inner ``run_commands`` payload says ``all_ok: true`` — a dropped line is
+  ``skipped_already_executed``, not ``failed`` — and only the compile handler's
+  ``not report.succeeded`` flips it. The ``Store`` line never folds, so the cue
+  is already on the console with lines missing from it.
+* An answer that resolves both axes and selects no scene says so. It is the
+  success shape with nothing in it, and the model's only move out of it is the
+  fifth fallback reason and the route the tool description carries.
 
 Console contact: zero. Everything below is in-memory.
 """
@@ -38,19 +46,34 @@ from pathlib import Path
 
 import pytest
 
+import server.fx.instantiate as fx_instantiate
+import server.scene.compile as scene_compile
+from server.fx.instantiate import (
+    SEQUENCE_OCCUPIED,
+    FxInstantiationError,
+    select_sequence_number,
+)
 from server.fx.schema import Fx, FxLibrary, FxStep, StepValue
 from server.llm.types import ToolCall
 from server.looks.schema import AttributeValue, Look, LookLibrary
 from server.orchestrator.ports import ExecutionResult
 from server.orchestrator.tools import (
+    DEFAULT_RIG_CONTEXT_PATHS,
+    RIG_DRILLDOWN_QUERY_CAP,
+    SCENE_RIG_SECTIONS,
     TOOL_NAMES,
+    ExecutionContext,
     build_toolset,
+    collect_rig_sections,
 )
 from server.scene.compile import CUE_OCCUPIED, SCENE_UNIFORM_ATTRIBUTES
+from server.scene.matching import BOTH_MATCHED, NO_SCENE_COMPOSES_AXES
 from server.scene.report import (
+    CROSS_CALL_COLLISION,
     EFFECT_EVIDENCE_NOTICE,
     TRACKING_UNOBSERVABLE_NOTICE,
     UNCLAIMED_ENUMERATION_NOTE,
+    _look_value_line,
 )
 from server.scene.schema import Scene, SceneLibrary
 
@@ -211,6 +234,44 @@ def _fx(fx_id: str = "pulse-beat") -> Fx:
     )
 
 
+def _wide_fx(fx_id: str = "pulse-beat") -> Fx:
+    """An fx over TWO attributes — the shape that separates the two "value line"
+    discriminants.
+
+    With one attribute the speed line is ``Attribute 'Dimmer' At Speed 60``: a
+    single segment, no semicolon, so "the line with a ``;`` in it" happens to
+    name the look. With two it becomes ``Attribute 'Pan' At Speed 112 ;
+    Attribute 'Tilt' At Speed 112`` — a semicolon chain emitted AFTER the step
+    column. The producer's own discriminant is not the semicolon: it is a chain
+    whose every segment is an ABSOLUTE value (``At <number>``).
+
+    Pan/Tilt on purpose — the look drives Dimmer and the colour trio, so the two
+    axes do not collide and the bundle compiles.
+    """
+    return Fx(
+        fx_id=fx_id,
+        display_name="스윕",
+        pattern="pulse",
+        steps=(
+            FxStep(
+                values=(
+                    StepValue(attribute="Pan", value=100.0),
+                    StepValue(attribute="Tilt", value=40.0),
+                )
+            ),
+            FxStep(
+                values=(
+                    StepValue(attribute="Pan", value=0.0),
+                    StepValue(attribute="Tilt", value=0.0),
+                )
+            ),
+        ),
+        phase_from=0.0,
+        phase_to=360.0,
+        speed=112.0,
+    )
+
+
 def _scene(
     scene_id: str = "blue-wave",
     *,
@@ -229,19 +290,19 @@ def _scene(
     )
 
 
-def _libraries(*scenes: Scene):
+def _libraries(*scenes: Scene, fx_entry: Fx | None = None):
     return (
         SceneLibrary(schema_version=1, scenes=scenes or (_scene(),)),
         LookLibrary(schema_version=1, looks=(_look(),)),
-        FxLibrary(schema_version=1, fx=(_fx(),)),
+        FxLibrary(schema_version=1, fx=(fx_entry or _fx(),)),
     )
 
 
 # -- dispatch -----------------------------------------------------------------
 
 
-def _registry(*, scenes=None, tree=None, port=None, state=None, gate=None):
-    scene_lib, look_lib, fx_lib = _libraries(*(scenes or ()))
+def _registry(*, scenes=None, tree=None, port=None, state=None, gate=None, fx_entry=None):
+    scene_lib, look_lib, fx_lib = _libraries(*(scenes or ()), fx_entry=fx_entry)
     return build_toolset(
         execution_port=port or _RecordingPort(),
         state_port=state or _RigStatePort(tree if tree is not None else _tree()),
@@ -505,11 +566,47 @@ class TestSceneRulesHoldThroughTheTool:
         assert "/cueonly" not in blob
 
     def test_the_look_value_line_precedes_the_step_column(self):
+        # The discriminant is the PRODUCER's own (`report._look_value_line`), not
+        # "the line with a `;` in it". A semicolon chain is not enough to name a
+        # look value line: the fx speed line is a chain too, and it is emitted
+        # AFTER the step column — see the two tests below, which walk that shape.
         _execution, payload = _compile(_registry())
         commands = _lines(payload)
         first_step = next(i for i, c in enumerate(commands) if c == "Step 2")
-        value_line = next(i for i, c in enumerate(commands) if ";" in c)
-        assert value_line < first_step
+        line = _look_value_line(commands)
+        assert line is not None
+        assert commands.index(line) < first_step
+
+    def test_the_look_value_line_still_precedes_the_step_column_over_two_axes(self):
+        # Same claim, walked on a bundle that actually HAS a second semicolon
+        # chain: a two-attribute fx emits `Attribute 'Pan' At Speed 112 ;
+        # Attribute 'Tilt' At Speed 112` after the steps.
+        _execution, payload = _compile(_registry(fx_entry=_wide_fx()))
+        commands = _lines(payload)
+        first_step = next(i for i, c in enumerate(commands) if c == "Step 2")
+        chains = [i for i, c in enumerate(commands) if ";" in c]
+        # Non-vacuity: without a chain after the steps this bundle would not
+        # separate the two discriminants at all.
+        assert [i for i in chains if i > first_step]
+        line = _look_value_line(commands)
+        assert line is not None
+        assert commands.index(line) < first_step
+
+    def test_a_speed_chain_is_not_mistaken_for_a_look_value_line(self):
+        # An fx-only scene emits NO look value line — but with two attributes it
+        # still emits a semicolon chain (speed). The `At Speed` segments are not
+        # absolute values, so the producer reports no look line and the report's
+        # uniform claim is "not applicable" rather than a false reading of the
+        # speed line.
+        scene = _scene("fx-only", look_id=None)
+        _execution, payload = _compile(
+            _registry(scenes=(scene,), fx_entry=_wide_fx()),
+            {"scene_id": "fx-only", "group": 11},
+        )
+        commands = _lines(payload)
+        assert [c for c in commands if ";" in c]  # the speed chain IS there
+        assert _look_value_line(commands) is None
+        assert payload["report"]["uniform_attributes"] == []
 
     def test_the_uniform_attributes_reach_the_report(self):
         _execution, payload = _compile(_registry())
@@ -545,10 +642,16 @@ class TestSceneRulesHoldThroughTheTool:
             _registry(), {"scene_id": "blue-wave", "group": 11, key: value}
         )
         assert execution.result.is_error is True
+        # No disjunct. The loader renames the argument (`cue` -> `cue_number`,
+        # `sequence` -> `sequence_number`) and stamps `source="compile_scene"`,
+        # so ONLY a loader-authored message carries the long name. Accepting the
+        # short name as well would also accept a message the tool wrote itself —
+        # the second definition of "a legal cue number" that decisions E/K
+        # forbid, and `"cue"` is a substring of `"cue_number"`, so the disjunct
+        # could never fail.
         assert (
             key.replace("sequence", "sequence_number").replace("cue", "cue_number")
             in payload["error"]
-            or key in payload["error"]
         )
 
     def test_a_trigger_reaches_the_bundle_as_property_lines(self):
@@ -642,11 +745,226 @@ class TestClaimsReachTheModel:
 
 
 # =============================================================================
+# a cross-call fold is an ERROR at the tool boundary (REQ-SCENE-015 (b))
+# =============================================================================
+
+
+class TestACrossCallFoldIsAnError:
+    """The one place a fold becomes an error the model must report.
+
+    ``run_commands`` does not treat a fold as a failure: a dropped line is
+    ``skipped_already_executed``, not ``failed``, so the inner payload comes
+    back ``all_ok: true`` and the inner result is not an error. Only
+    ``not report.succeeded`` in the compile handler flips it. Nothing else in
+    the tree does — which is why widening that one expression to the inner
+    ``is_error`` used to leave the whole file green.
+
+    What it costs when it is missed: the ``Store`` line is its own unique
+    string, so it never folds. It FIRES. The cue exists on the console with
+    the folded lines missing from it, and a stored cue's content is not
+    machine-readable (spec.md §C.1), so nothing downstream can notice.
+    """
+
+    # `Step 2` is a bundle line the dedupe actually compares — the fold cannot
+    # be staged with `ClearAll` or `Group 11`, which are exempt.
+    FOLDED = "Step 2"
+
+    @classmethod
+    def _fold(cls, port=None):
+        return _compile(
+            _registry(port=port),
+            context=ExecutionContext(executed_ok=frozenset({cls.FOLDED})),
+        )
+
+    def test_the_seeded_line_is_one_the_dedupe_compares(self):
+        # Non-vacuity: seeding an EXEMPT line would fold nothing and every
+        # assertion below would pass for the wrong reason.
+        assert fx_instantiate.is_programmer_state(self.FOLDED) is False
+
+    def test_every_line_reports_ok_and_the_call_is_still_an_error(self):
+        # The whole point: these two DIVERGE. `all_ok` is the inner
+        # run_commands verdict and it is True; the scene layer overrides it.
+        execution, payload = self._fold()
+        assert payload["all_ok"] is True
+        assert execution.result.is_error is True
+
+    def test_the_fold_is_named_in_the_report(self):
+        _execution, payload = self._fold()
+        assert payload["succeeded"] is False
+        assert payload["report"]["verdict"] == CROSS_CALL_COLLISION
+        assert payload["report"]["collided"] == [self.FOLDED]
+
+    def test_the_dropped_line_carries_the_dedupe_status_not_a_failure(self):
+        _execution, payload = self._fold()
+        statuses = {entry["command"]: entry["status"] for entry in payload["commands"]}
+        assert statuses[self.FOLDED] == "skipped_already_executed"
+        assert "failed" not in set(statuses.values())
+
+    def test_the_store_line_fired_anyway_which_is_why_this_is_an_error(self):
+        # The incomplete artifact is not hypothetical: it is on the console.
+        port = _RecordingPort()
+        _execution, _payload = self._fold(port=port)
+        assert [c for c in port.executed if c.startswith("Store ")]
+        assert self.FOLDED not in port.executed
+
+    def test_a_bundle_that_folds_nothing_is_not_an_error(self):
+        # The control. Without it "is_error is True" could be satisfied by a
+        # handler that errors on every compile.
+        execution, payload = _compile(
+            _registry(), context=ExecutionContext(executed_ok=frozenset())
+        )
+        assert payload["all_ok"] is True
+        assert execution.result.is_error is False
+        assert payload["succeeded"] is True
+        assert payload["report"]["collided"] == []
+
+
+# =============================================================================
+# find_scene — the axes resolved and the library composed nothing
+# =============================================================================
+
+
+def _split_axis_scenes() -> tuple[Scene, ...]:
+    """Two half-scenes: one carries the look axis, one the fx axis, neither
+    carries both. A query naming both resolves both axes and selects nothing."""
+    return (
+        Scene(
+            scene_id="look-side",
+            display_name="파란 워시",
+            label="SCN L",
+            look_id="look-blue",
+            fx_id=None,
+            aliases=("파란",),
+            mood_keywords=(),
+        ),
+        Scene(
+            scene_id="fx-side",
+            display_name="펄스",
+            label="SCN F",
+            look_id=None,
+            fx_id="pulse-beat",
+            aliases=("펄스",),
+            mood_keywords=(),
+        ),
+    )
+
+
+class TestBothAxesResolvedAndNoSceneComposesThem:
+    """The success shape with nothing in it, closed.
+
+    ``kind`` says ``both_matched`` and ``selected`` is null: the model is told
+    to pass back a ``scene_id`` the payload does not contain. While ``fallback``
+    meant ``kind == FALLBACK`` this answer reported ``fallback: false`` and no
+    reason at all, so the model's only remaining move was to hand-write the
+    bundle — the one path where the combination order is enforced by nothing.
+    """
+
+    SPLIT = {"query": "파란 펄스"}
+
+    def test_the_axes_did_resolve(self):
+        _execution, payload = _dispatch(_registry(scenes=_split_axis_scenes()), FIND, self.SPLIT)
+        assert payload["kind"] == BOTH_MATCHED
+        assert payload["selected_look_id"] == "look-blue"
+        assert payload["selected_fx_id"] == "pulse-beat"
+
+    def test_no_scene_is_selected_and_the_answer_says_so(self):
+        execution, payload = _dispatch(_registry(scenes=_split_axis_scenes()), FIND, self.SPLIT)
+        assert payload["selected"] is None
+        assert payload["fallback"] is True
+        assert payload["fallback_reason"] == NO_SCENE_COMPOSES_AXES
+        # Still an ANSWER, not a tool failure (REQ-SCENE-009).
+        assert execution.result.is_error is False
+
+    def test_a_library_that_does_compose_them_is_not_a_fallback(self):
+        # The control: the SAME query against a library holding the composing
+        # scene selects it and reports no fallback at all.
+        scenes = (*_split_axis_scenes(), _scene())
+        _execution, payload = _dispatch(_registry(scenes=scenes), FIND, self.SPLIT)
+        assert payload["selected"] == "blue-wave"
+        assert payload["fallback"] is False
+        assert payload["fallback_reason"] is None
+
+    def test_the_description_names_the_fifth_reason_and_the_way_out(self):
+        # The rulebook is PRESERVE (byte-diff 0, test_scene_boundary.py), so
+        # this description is the ONLY surface that can route the model out of
+        # this answer. Four reasons were listed; this one was not.
+        text = _definition(_registry(), FIND).description
+        assert NO_SCENE_COMPOSES_AXES in text
+        assert "selected_look_id" in text
+        assert "find_looks" in text
+        assert "find_fx" in text
+
+
+# =============================================================================
 # reason codes
 # =============================================================================
 
 
+def _sequences_section(sequences: tuple[tuple[int | None, str], ...]):
+    """The sequences section EXACTLY as the compile handler reads it."""
+    sections, _resolved, _failed = collect_rig_sections(
+        _RigStatePort(_tree(sequences=sequences)),
+        {name: DEFAULT_RIG_CONTEXT_PATHS[name] for name in SCENE_RIG_SECTIONS},
+        frozenset(),
+        RIG_DRILLDOWN_QUERY_CAP,
+    )
+    return sections["sequences"]
+
+
 def test_the_cue_occupied_reason_code_is_the_scene_layers_own():
-    # Not asserted through the tool (a fresh sequence has no cues); asserted as
-    # the contract the tool re-exports when the compiler refuses.
-    assert CUE_OCCUPIED == "cue_occupied"
+    # The tool does NOT re-export this constant — it never imports or names it.
+    # What travels through the tool is `error.reason`, a string, so the code has
+    # exactly one definition and it lives in the scene layer. fx owns the
+    # SEQUENCE vocabulary and has no cue-number vocabulary at all: a cue number
+    # is not a thing fx can refuse, because its Store is fixed at Cue 1.
+    assert "CUE_OCCUPIED" in scene_compile.__all__
+    assert not hasattr(fx_instantiate, "CUE_OCCUPIED")
+    fx_reasons = {
+        value
+        for name, value in vars(fx_instantiate).items()
+        if not name.startswith("_") and isinstance(value, str)
+    }
+    assert CUE_OCCUPIED not in fx_reasons
+    # Non-vacuity: the set really does hold fx's own reason vocabulary.
+    assert SEQUENCE_OCCUPIED in fx_reasons
+
+
+def test_the_tool_holds_no_second_copy_of_the_cue_vocabulary():
+    import server.orchestrator.tools as tools
+
+    source = Path(tools.__file__).read_text(encoding="utf-8")
+    assert "CUE_OCCUPIED" not in source
+    assert "cue_occupied" not in source
+
+
+@pytest.mark.parametrize(
+    "sequences",
+    [
+        ((1, "Opening"),),
+        DEFAULT_SEQUENCES,
+        ((2, "Ballad"), (3, "Closing")),
+        ((1, "Opening"), (3, "Closing")),  # the free number is a GAP, not the end
+    ],
+)
+def test_a_selected_sequence_number_is_never_one_the_listing_showed(sequences):
+    # Why the tool may pass an EMPTY cue pool it never read: the sequence it
+    # stores into is one the listing showed as FREE, and a sequence that does
+    # not exist holds no cues. That makes the pool DERIVED, not invented — the
+    # fabrication REQ-SCENE-013 (d) forbids. If this property ever broke, the
+    # empty pool would become a claim about a sequence nobody read, and
+    # CUE_OCCUPIED would be unreachable for the wrong reason.
+    section = _sequences_section(sequences)
+    occupied = {number for number, _name in sequences}
+    assert select_sequence_number(section) not in occupied
+    for number in occupied:
+        with pytest.raises(FxInstantiationError) as caught:
+            select_sequence_number(section, requested=number)
+        assert caught.value.reason == SEQUENCE_OCCUPIED
+
+
+def test_the_stored_sequence_is_free_on_the_rig_the_tool_read():
+    # The same property walked through the tool, so it is not only a fact about
+    # a helper called in isolation.
+    _execution, payload = _compile(_registry(tree=_tree(sequences=((1, "A"), (2, "B")))))
+    (store,) = [c for c in _lines(payload) if c.startswith("Store ")]
+    assert store.startswith("Store Sequence 3 ")

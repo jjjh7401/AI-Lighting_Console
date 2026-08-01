@@ -52,6 +52,7 @@ __all__ = [
     "PLANNED",
     "TRACKING_UNOBSERVABLE_NOTICE",
     "UNCLAIMED_ENUMERATION_NOTE",
+    "UNIFORM_BROKEN_NOTE",
     "UNIFORM_CONFIRMED_NOTE",
     "UNIFORM_NOT_APPLICABLE_NOTE",
     "SceneReport",
@@ -342,10 +343,22 @@ def to_korean(report: SceneReport) -> str:
 
     # 주장 분리. 확인된 것과 확인되지 않은 것은 다른 표제 아래 산다 — 그리고
     # (a′)와 (c) 사이에는 반드시 표제가 하나 들어간다(design.md §6.2).
+    #
+    # (a)는 표제가 고정이 아니다. 재조회를 하지 않았으면 그 문면은 "확인하지
+    # 않았습니다"라고 말하는데, 그것을 `기계 확인됨:` 아래 놓으면 표제와 바로
+    # 아래 줄이 서로를 반박한다 — 그리고 툴은 `requery=`를 넘기지 않으므로
+    # 그것이 모든 생산 리포트의 모양이었다. 표제만 훑는 독자에게 산출물이
+    # 기계 확인된 것으로 제시되는 것이 교리(발화 ≠ 효과)가 가장 막고 싶어 하는
+    # 오독이다. 상수 문면은 그대로 두고 배치만 사실을 따라간다.
+    # 독립 사전 머지 리뷰가 찾았다 — 스위트는 두 표제의 존재만 보고 있었다.
+    artifact_confirmed = report.artifact_claim == ARTIFACT_CONFIRMED_NOTE
     lines.append("기계 확인됨:")
-    lines.append(f"  {report.artifact_claim}")
+    if artifact_confirmed:
+        lines.append(f"  {report.artifact_claim}")
     lines.append(f"  {report.uniform_claim}")
     lines.append("기계 확인 불가:")
+    if not artifact_confirmed:
+        lines.append(f"  {report.artifact_claim}")
     lines.append(f"  {EFFECT_EVIDENCE_NOTICE}")
     lines.append(f"  {TRACKING_UNOBSERVABLE_NOTICE}")
     return "\n".join(lines)
