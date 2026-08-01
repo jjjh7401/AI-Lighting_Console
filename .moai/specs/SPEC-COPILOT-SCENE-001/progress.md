@@ -8,7 +8,7 @@
 
 **무엇**: 씬 컴파일러 — **룩(정적 값) + 이펙트(스텝 열) + 타이밍을 하나의 큐로** 합성한다. LOOKLIB(정지 화면 어휘)·FXLIB(시간축 어휘)이 세운 "의도→메모리 파이프라인"의 **2단계**이며, FXLIB이 `spec.md:42`·`:70`·`:140` 세 곳에서 명시적으로 예약해 둔 좌석이다. 신규 패키지 `server/scene/`에 스키마·로더·2축 매칭·결합 컴파일러·리포트를 세우고, 툴 2종(`find_scene`·`compile_scene`)을 기존 `run_commands`→`gate.screen()` 경로로만 배선한다.
 
-**상태**: **plan-audit iter-3 PASS 0.90(문턱 0.85) · v0.2.2(iter-3 비차단 N1~N9 fix-forward) · M0 실행 완료(정리 잔여 1건 — AC-SCENE-019 미완결) · **M1~M7 완료**(M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`).** REQ **21** · AC **24** · ASSUMPTION **5(41~45 — 41·42는 판정 후 moot)** · clarification 마커 **0** · 결정 **A~K 전부 해소** · 라이브 세션 2회 중 **1회 소진(M0)**. AC **15/24** 충족 · 뮤테이션 누적 **30/30 killed**(survived 0). 다음 단계 = **M8(종단 라이브 — 실물 onPC)**. 오프라인으로 닫을 수 있는 것은 **여기까지 전부 닫혔다**(AC 22/24) — 남은 2건은 사용자의 콘솔 접근이 있어야 진행된다.
+**상태**: **plan-audit iter-3 PASS 0.90(문턱 0.85) · v0.2.2(iter-3 비차단 N1~N9 fix-forward) · M0 실행 완료(정리 잔여 1건 — AC-SCENE-019 미완결) · **M1~M8 완료**(M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`).** REQ **21** · AC **24** · ASSUMPTION **5(41~45 — 41·42는 판정 후 moot)** · clarification 마커 **0** · 결정 **A~K 전부 해소** · 라이브 세션 2회 중 **1회 소진(M0)**. AC **15/24** 충족 · 뮤테이션 누적 **30/30 killed**(survived 0). **run-phase 완료 — AC 24/24 · 마일스톤 M0~M8 전부 닫힘.** 다음 단계 = **sync-phase**(문서 정합성·PR). 비차단 후속 1건은 §E.3 `open_items` ②.
 
 **이 SPEC의 한 줄 (v0.2.0 개정)**: 트래킹 정책이 **M0 실측으로 한 번 뒤집혔다** — `/CueOnly`(미발화 커맨드)를 버리고 **속성 집합 균일화 + 미주장 속성 전수 열거**를 택했다. 그러나 **관측 천장은 그대로다**: "균일 집합을 발화했다"와 "트래킹이 무해해졌다"를 절대 뭉치지 않는 것이 여전히 전체 설계의 축이다.
 
@@ -127,7 +127,7 @@ uv run pytest server/tests/ -q                    # 킥오프 baseline — 직�
 - tier: L (plan-auditor 문턱 0.85)
 - artifacts: spec.md · plan.md · acceptance.md · design.md · research.md · progress.md (6종)
 - tokens: REQ **21** · AC **24** · ASSUMPTION 41~45(5 — 41·42 판정 후 moot) · 결정 **A~K(11, 전부 해소)** · clarification 마커 0 · 승인 대기 0
-- live_sessions: 2 계획 / **1 소진(M0 — 실행 완료, 정리 잔여 1건 ⇒ AC-SCENE-019 미완결)** / 1 잔여(M8 종단)
+- live_sessions: 2 계획 / **2 소진(M0 프로브 · M8 종단)** / 0 잔여
 - baseline_measured: pytest 3432 passed / 5 skipped @ `main` `e4bc78e` (2026-08-01, 직접 실행)
 - open_items: M0 프로브 시퀀스 191~197 쇼파일 정리 **미이행**(사용자 GUI 삭제 필요)
 - commit_sha: pending-backfill
@@ -303,6 +303,8 @@ GO: ASSUMPTION-43 literal=Store Sequence 196 Cue 2 'D2 A2' effect=신규 시퀀�
 GO: ASSUMPTION-44 literal=프로브 C 번들 11줄 Seq 192 'SCN COMBINED'(룩 값 라인 → fx 스텝 열 → 위상 → 속도 → Store) effect=사람 GUI 관측에서 파란색이 유지된 채 딤머가 순차 웨이브 — 룩의 정지 값이 스텝 축에 흡수되지 않고 베이스로 남았다. design.md §3.1 결합 순서 골격이 실측으로 확정됐다
 GO: ASSUMPTION-45 literal=프로브 E 번들 10줄 Seq 195 'SCN CONFLICT'(룩 Dimmer At 80 + fx Dimmer 스텝 100/0) effect=사람 GUI 관측에서 딤머가 펄스 — 이펙트 승. design.md §3.3 의 충돌 시 이펙트 우선 규칙이 확정됐다. 열거 자체는 정적 계산이므로 이 관측과 무관하게 정확하다
 REOPEN: D1 트래킹 정책 사용자 재결정(2026-08-01, AskUserQuestion)으로 전 큐 /CueOnly 를 폐기하고 속성 집합 균일화와 미주장 속성 전수 열거로 대체했다. ASSUMPTION-41 의 CONDITION_NOT_MET 이 plan.md §A.3 예외를 발동시켜 run-phase 가 중단되고 블로커가 보고된 결과이며, 에이전트가 대체 정책을 고르지 않았다
+GO: AC-SCENE-019 literal=사용자 GUI 삭제(툴 경로 불가 — Delete 는 블랙리스트) effect=DataPool/Sequences 재조회에서 childCount 24→17, truncated True→False, 191~197 전건 부재. M0 프로브가 남긴 쇼파일 잔여가 0 이 됐고 이로써 M0 의 정리 의무가 닫혔다
+GO: AC-SCENE-021 literal=게이트 경유 compile_scene 2회(Store Sequence 3 Cue 1 'SCN GOLD PULSE' · Store Sequence 4 Cue 1 'SCN MOON RISE', 각 11줄 전건 executed_ok) effect=감사 로그가 두 번들의 전 커맨드를 kind=command ok=true 로 기록했고, 재조회가 두 큐를 기대한 이름과 cueNo 1 로 돌려줬으며, 화면 캡처 다중 표본에서 씬마다 fx 가 구동하는 축만 프레임마다 변하고 룩의 정지 값은 고정으로 유지됐다(1회차 Dimmer 변동·RGB 프레임차 0.00 / 2회차 PanTilt 변동·Dimmer 와 RGB 프레임차 0.00). 리포트의 주장 분리 문면과 미주장 열거가 실물 발화 커맨드와 일치한다
 
 ---
 
@@ -508,20 +510,117 @@ REOPEN: D1 트래킹 정책 사용자 재결정(2026-08-01, AskUserQuestion)으�
 
 **AC 상태**: AC-SCENE-017 · AC-SCENE-020 · AC-SCENE-022 **충족** ⇒ 누적 **22/24**. 남은 2건은 **AC-SCENE-019**(M0 정리 잔여 — 사용자 GUI 삭제)와 **AC-SCENE-021**(M8 종단 라이브)이며 **둘 다 실물 콘솔이 있어야 닫힌다.**
 
+---
+
+### M8 — 종단 라이브 (2026-08-01, 완료 · cycle_type=none · 라이브 세션 2/2 소진)
+
+**세션 조건**: onPC 2.4.2.2 `[NewShow_2026.07.15]`, effective site config에서 읽음(`127.0.0.1:8000` · 수신 `9005` · osc_slot 2 — 하드코딩 0). **M0와 결정적으로 다른 점: 게이트 경유다.** 하네스는 프로덕션 합성 루트 `build_console_stack` → 실물 `SafetyGate` → 툴 레지스트리 `dispatch` → `run_commands`이며, **M0가 갖지 못했던 감사 로그가 이번엔 있다**. 드라이버는 `.moai/reports/m8-probe/scene_e2e.py`(gitignore — `test_architecture.py`가 `server/**`만 스캔하는 것과 같은 이유로 저장소 밖). 세션 시작 쇼파일 백업은 **의도적으로 끔**(측정 대상이 아니고, 프로브가 쇼파일에 남기는 것을 발화한 번들로 한정하기 위해).
+
+#### ① 감사 채널의 변별력 — 날조 대조군 선행 (REQ-SCENE-021 (c))
+
+`ok`를 어느 축의 증거로 쓰기 전에 그 축이 갈리는지부터 세웠다.
+
+| 발화 | 결과 | 감사 로그 |
+|---|---|---|
+| `state DataPool/Groups` | ok · 4 groups | `kind=state_query, ok=true` |
+| **`ZzzNotACommand 999`** (날조) | **failed · `Illegal object`** | `kind=command, ok=false, outcome=failed` |
+
+⇒ **감사 채널은 변별적이다.** M0의 store-플래그 축(`ok`도 재조회도 비변별)과 정반대이며, 그래서 이 세션의 기계 주장은 M0보다 등급이 높다.
+
+#### ② `truncated` 가드가 실물 조건에서 발동했다 (REQ-SCENE-013 (d))
+
+정리 전 `DataPool/Sequences` = **childCount 24 / 반환 18 / `truncated: True`** — M0가 실측한 바로 그 조건이다. 이 상태에서 `compile_scene`은 **발화 0건으로 거부**했다:
+
+```
+reason "sequence_truncated" · 감사 델타 = state_query 2건뿐, command 0건
+```
+
+가드가 **가상의 방어가 아님이 게이트 경유로 확인**됐다. 그리고 이것이 M8의 실제 차단 조건이었다 — 해제는 아래 ③.
+
+#### ③ AC-SCENE-019 정리 완료 — M0의 미이행 잔여가 닫혔다
+
+사용자가 GUI에서 시퀀스 **191·192·193·194·195·196·197**을 삭제했다(`Delete`가 블랙리스트라 툴 경로 불가 — 사람만 할 수 있는 단계). 기계 확인:
+
+```
+DataPool/Sequences  childCount 24 → 17 · truncated True → False · 191~197 전건 부재
+```
+
+#### ④ 종단 2회 — 대조 순서를 지켰다
+
+`plan.md §B M8`의 규율대로 **M0 프로브 C와 같은 형상(룩 + dimmer fx)을 먼저** 발화해 파이프라인 생존을 확립하고, 그다음 **다른 축의 라이브러리 씬(movement fx)** 을 발화했다. 두 씬은 서로의 대조군이다.
+
+| | 1회차 `worship-golden-pulse` | 2회차 `ballad-moonlight-rise` |
+|---|---|---|
+| 산출 | `Store Sequence 3 Cue 1 'SCN GOLD PULSE'` | `Store Sequence 4 Cue 1 'SCN MOON RISE'` |
+| 실행 | 11/11 `executed_ok` | 11/11 `executed_ok` |
+| 감사 | 전 커맨드 `kind=command ok=true`, Store 포함 | 동상 |
+| 재조회 | `{class:Cue, cueNo:1, name:'SCN GOLD PULSE'}` | `{class:Cue, cueNo:1, name:'SCN MOON RISE'}` |
+| 룩 값 라인 | `Dimmer 88 ; R 100 ; G 78 ; B 30 ; Zoom 45` | `Dimmer 30 ; R 35 ; G 55 ; B 92` |
+| 충돌 열거 | `[Dimmer]` | **`[]`** — movement fx는 룩과 교집합이 항상 ∅(design.md §3.3 각주가 라이브에서 확인됐다) |
+| 미주장 열거 | `[Iris, Pan, Tilt]` | **`[Iris, Pan, Zoom]`** — fx가 Tilt를 구동하므로 Tilt가 빠지고, 이 룩이 Zoom을 선언하지 않아 Zoom이 들어왔다 |
+
+**두 열거가 씬마다 실제로 달라졌다** — 정적 계산이 실물 자산을 따라간다는 것이 라이브 산출물로 확인됐다.
+
+#### ⑤ 효과 관측 — 화면 캡처 다중 표본 (관측 주체: 에이전트)
+
+사용자 요청으로 **에이전트가 computer-use로 관측**했다. 대상은 onPC Display 2의 **Fixture 시트(Absolute)** 이며, 정지 화면 1장으로는 모션을 주장할 수 없으므로 **시계열 표본 8장 + 픽셀 차분**으로 잰다. `Go+`/`Off`도 게이트 경유로 발화해 관측 구간에 provenance가 있다.
+
+| 열 | 1회차(dimmer fx) 프레임 간 차분 | 2회차(movement fx) 프레임 간 차분 |
+|---|---|---|
+| Dimmer | **4.10 · 3.67 · 4.42 · 4.13 · 4.41 · 4.01 · 4.28** (계속 변함) | **0.00 ×7** (고정) |
+| PanTilt | — | **1.46 · 1.38 · 1.27 · 1.39 · 1.27 · 1.45 · 1.35** (계속 변함) |
+| RGB | **0.00 ×7** (고정) | **0.00 ×7** (고정) |
+
+숫자 판독(같은 순간, 픽스처별):
+
+- 1회차 표본 02 — Dimmer `3 · 14 · 26 · 37 · 48 · 59 · 70 · 81 · 92`(FID 2~10) / 표본 05 — `50 · 39 · 28 · 17 · 6 · 6 · 17 · 28 · 39`. RGB는 두 표본 모두 전 픽스처 `max / 78`.
+- 2회차 표본 13 — Dimmer **전 픽스처 `30`**(룩 값 그대로), RGB **`35 / 55`**(룩 값 그대로), Tilt `-9.92 · -11.26 · -8.43 · -5.61 · -2.79 · 0.04 · 2.86 · 5.69 · 8.51 · 11.33`, Pan **전 픽스처 `center`**(미주장 축 — 건드리지 않았다).
+
+**판독**: ⓐ 한 순간에 픽스처마다 값이 다르다 ⇒ **위상 분산(웨이브)**, 균일 점멸이 아니다. ⓑ 시간에 따라 값이 바뀐다 ⇒ 정적 그라디언트가 아니다. ⓒ **fx가 구동하는 축만 움직이고 룩의 정지 값은 그대로다** — 씬마다 움직이는 축이 그 씬의 fx를 정확히 따라갔고, 두 씬이 서로의 대조군이 됐다. ⓓ 1회차에서 룩은 `Dimmer 88`을 냈는데 딤머는 6~92를 순회했다 ⇒ **충돌 축에서 이펙트가 이겼다**.
+
+**이것은 ASSUMPTION-44/45의 재판정이 아니다.** M0의 판정은 그대로이며(`plan.md §B M8` 규율 — 재측정·덮어쓰기 금지), 위 관측은 **같은 형상이 M8의 다른 맥락(게이트 경유·라이브러리 자산·다른 fx 축)에서도 어긋나지 않았다**는 기록이다. 어긋남은 없었다.
+
+**관측의 한계 (정직 표기)**: ⓐ 관측 채널은 **GUI 시트 판독**이며 무대 실물이 아니다 — 콘솔이 자기 출력값을 어떻게 표시하는지를 본 것이다. ⓑ 표본은 **연속이 아니라 이산**(1회차 ~1.5s, 2회차 ~1.7s 간격)이므로 파형의 정확한 주기·형태는 주장하지 않는다. ⓒ 그래도 **"발화 = 효과"로 뭉개지 않는다**는 이 SPEC의 규율에는 부합한다: `ok`가 아니라 **출력값의 시간 변화**를 근거로 삼았다.
+
+#### ⑥ 리포트 문면 × 실물 대조
+
+`summary_ko`의 네 주장이 실물과 어긋나지 않는다: (a) 재조회를 하지 않은 호출이었으므로 문면은 **"재조회를 수행하지 않았습니다"** 로 나갔다 — 그리고 실제로 툴은 재조회를 하지 않았다(재조회는 이 세션에서 **하네스가 별도로** 수행했다). (a′) 균일 4개가 값 라인 선두에 이 순서로 실렸다 — 발화 커맨드 원문과 일치. (b)(c)는 전 경로에서 무조건 실렸다. (d) 미주장 열거가 **발화 커맨드가 건드리지 않은 축과 정확히 일치**했다 — 2회차의 `Pan`이 시트에서 `center`로 남아 있는 것이 그 대조다.
+
+#### ⑦ 신규 결함 1건 (비차단, 상류 귀속) — SPEC 표제 문장이 매칭되지 않는다
+
+`find_scene("파란 백라이트가 천천히 웨이브하는 씬 만들어줘")` — **spec.md §A·acceptance.md 시나리오 1·plan.md §B M8이 그대로 쓰는 문장** — 이 **양 축 `no_match`** 로 떨어진다. 계층별 분해:
+
+| 질의 | fx | looks | scene |
+|---|---|---|---|
+| `웨이브` | `wave-soft-rise` | — | fx_only |
+| **`웨이브하는`** | **None** | — | fallback |
+| **`파란`** | — | **None** | fallback |
+| `달빛 웨이브` | `wave-soft-rise` | `ballad-moonlight` | **both_matched** |
+
+**귀속은 씬 계층이 아니라 상류 어휘다.** ① `하는`(하다-용언 관형형)이 **FXLIB의 닫힌 어미 목록에 없다** — 씬은 REQ-SCENE-007이 지시한 대로 그 규율을 미러했을 뿐이고, 상류에서 이미 `웨이브하는`이 떨어진다. ② `파란`은 LOOKLIB 별칭에 없다(라이브러리는 `푸른`). 둘 다 **PRESERVE**다. 체인 자체는 정상이며 어휘가 있는 문장에서는 두 축이 정확히 붙는다.
+
+M8 규율("코드 변경 0 — 결함 발견 시 별도 커밋")에 따라 **고치지 않고 기록**한다. 수정 축이 둘로 갈리므로(씬 어미 목록 확장 ↔ 상류 미러 유지) **사용자 판단이 필요한 결정**이며, 후속 SPEC 또는 별도 커밋의 대상이다.
+
+#### ⑧ 이 세션이 쇼파일에 남긴 것
+
+**시퀀스 3(`SCN GOLD PULSE`) · 4(`SCN MOON RISE`)** — M8이 만든 산출물이며 재생 후 `Off`로 내렸다(발화도 게이트 경유). 프로브 쓰레기가 아니라 **씬 컴파일러의 정상 산출물**이므로 자동 삭제 대상이 아니다. 남길지 지울지는 사용자 판단이고, 지운다면 `Delete`가 블랙리스트이므로 **GUI 조작**이다.
+
+**AC 상태**: AC-SCENE-019 · AC-SCENE-021 **충족** ⇒ **24/24**. 라이브 세션 **2/2 소진**.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 - run_started_at: 2026-08-01 (M1)
 - baseline_measured: pytest **3432 passed / 5 skipped** @ `main` `3c701b1` (착수 직전 직접 실행 — 이월 없음)
-- milestones_done: **M0**(라이브 프로브, 정리 잔여 1건) · **M1**(스키마 + 로더) · **M2**(라이브러리) · **M3**(2축 매칭) · **M4**(결합·가드·번호) · **M5**(리포트) · **M6**(툴 표면 + 배선) · **M7**(회귀·경계) — M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`, M5부터 순차
-- milestones_open: **M8(종단 라이브 — 실물 콘솔 필요)**
-- ac_closed: AC-SCENE-001 · 002 · 003 · 004 · 005 · 006 · 007 · 008 · 009 · 010 · 011 · 012 · 013 · 014 · 015 · 016 · 017 · 018 · 020 · 022 · 023 · 024 (**22/24**)
-- ac_open: **AC-SCENE-019**(M0 정리 잔여 — 사용자 GUI 삭제) · **AC-SCENE-021**(M8 종단) — 둘 다 실물 콘솔 의존
+- milestones_done: **M0**(라이브 프로브, 정리 잔여 1건) · **M1**(스키마 + 로더) · **M2**(라이브러리) · **M3**(2축 매칭) · **M4**(결합·가드·번호) · **M5**(리포트) · **M6**(툴 표면 + 배선) · **M7**(회귀·경계) · **M8**(종단 라이브) — M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`, M5부터 순차
+- milestones_open: **없음 — M0~M8 전부 완료**
+- ac_closed: AC-SCENE-001 · 002 · 003 · 004 · 005 · 006 · 007 · 008 · 009 · 010 · 011 · 012 · 013 · 014 · 015 · 016 · 017 · 018 · **019** · 020 · **021** · 022 · 023 · 024 (**24/24**)
+- ac_open: **없음 (24/24)**
 - current_measured: pytest **3794 passed / 5 skipped** (M1 기준선 3526 대비 신규 268, **신규 실패 0**) · vitest **223 passed / 13 files**(기준선과 동일) · `server/scene` 커버리지 **99%**(문턱 85%) · ruff check/format 클린 · `test_architecture.py` 4 passed, 예외 명단 무변경 · 닫힌 툴 집합 **13**
 - mutations: M1 **4/4** · M2 **3/3** · M3 **3/3** · M4 **20/20** · M5 **7/7** · M6 **3/3** · M7 **7/7** killed (누적 **47/47**, survived 0). M7의 PRESERVE 파일 변형 2건은 **sha256 대조로 원복 검증**
 - seam_verified: ① 실물 씬 자산 5건 × 실물 빌더 전수(28 테스트) — `/CueOnly` 주입으로 비공허성 실측 ② M3 별칭 사본 드리프트 1건 검출·정정(`task_ea9ff7620253`) ③ M6에서 **상류 예외 누출 1건** 검출·정정 — `FxInstantiationError`가 씬 경계를 넘어 툴을 죽였다(컴파일 계층에서 번역, 사유 코드 보존) ④ M7에서 **커밋 후에만 보이는 트립와이어 실패 1건** 검출·의도적 갱신(`_TOOLS_EXPECTED_HUNK_OLD_STARTS`에 15 추가, 보호구역 단정 무변경)
 - preserve_gate: `git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety` → **빈 출력**
-- open_items: ① M0 프로브 시퀀스 191~197 쇼파일 정리 **미이행**(사용자 GUI 삭제 필요) ⇒ AC-SCENE-019 미완결 ② M4가 M7에 위임한 상류 상수 결합 2건 미검증
-- commit_sha: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · M5 `79cea7e` · M6 `f7c4a8c` · M7 `pending-backfill`
+- open_items: ① **차단 0건** — M0 정리 완료(191~197 부재 실측), M7이 상류 상수 결합 2건 고정 ② **비차단 후속 1건**: SPEC 표제 문장 "파란 백라이트가 천천히 웨이브하는 씬"이 매칭되지 않는다(상류 어휘 귀속 — FXLIB 어미 `하는` 부재 · LOOKLIB `파란` 별칭 부재). 수정 축이 둘로 갈려 사용자 판단 필요 ③ 쇼파일에 M8 산출물 시퀀스 3·4 잔존(정상 산출물 — 삭제는 사용자 판단)
+- commit_sha: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · M5 `79cea7e` · M6 `f7c4a8c` · M7 `3d062dc` · M8 `pending-backfill`
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
