@@ -466,4 +466,17 @@ _<run-phase 대기 — 소유: manager-develop>_
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<sync-phase 대기 — 소유: manager-docs. `sync_commit_sha` 필드가 여기 실린다>_
+```yaml
+sync_status: synced
+sync_complete_at: 2026-08-01
+sync_commit_sha: pending-backfill-fxlib-sync   # 본 커밋 이후 별도 백필 커밋으로 채운다 (자기참조 해저드 — LOOKLIB F4/DEPLOY-001 동일 패턴, spec-frontmatter-schema.md § SHA placeholder backfill exemption 준용)
+b12_self_test_a: "grep -c 'SPEC-COPILOT-FXLIB-001' CHANGELOG.md → 0 (사전) → 1 (사후, 신규 엔트리 1개) — 중복 없음"
+b12_self_test_b: "acceptance.md SSOT AC count = 23 (grep -cE '^### AC-FXLIB-') == CHANGELOG 엔트리 인용 AC 수 23"
+b12_self_test_c: "CHANGELOG 인용 경로 전건 ls 확인 — server/fx/{schema,loader,library,matching,instantiate,report}.py · server/orchestrator/tools.py · server/tests/test_fx_{schema,library,matching,instantiate,tool,boundary}.py"
+changelog_entry_position: "CHANGELOG.md [Unreleased] > ### Added — SPEC-COPILOT-PRECHK-001 엔트리 바로 다음(SONGCUE 앞), 날짜순 최신 우선"
+frontmatter_status_transitions:
+  spec_md: "in-progress → completed (updated: 2026-08-01)"
+  plan_md: "frontmatter 없음 — 본문 상태 표기는 progress.md §0/§E.1이 소유"
+  acceptance_md: "frontmatter 없음 — 상태는 spec.md가 유일 SSOT"
+canary_compliance_check: n/a   # 본 SPEC은 forward-looking 정책을 정의하지 않으며 자기 sync가 검증하는 canary 대상이 없다
+```
