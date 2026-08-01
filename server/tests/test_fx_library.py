@@ -443,3 +443,54 @@ class TestCensusIsExhaustive:
     def test_a_missing_library_directory_is_an_explicit_error(self, tmp_path):
         with pytest.raises(FxSchemaError):
             load_library_from_dir(tmp_path / "does-not-exist")
+
+
+# -- F1: the closed key sets are pinned by MEMBERSHIP, not only by rejection ---
+#
+# Found by the independent sync-audit (24 mutations, this was the only survivor):
+# adding `group_number` to the loader's library-level key set AND shipping it in
+# an asset passed all 482 tests. Two nets were open at once —
+#   * the schema test proves an unknown key is rejected by feeding it "rig",
+#     which stays unknown no matter what the set gains; it never pinned WHICH
+#     keys are allowed.
+#   * PER_SHOW_PATTERN requires a digit right after the keyword, so it catches
+#     the console form `Group 11` but not the YAML form `group_number: 11`.
+# Both are closed below. The loader does not read such a key today, so this was
+# a hole in the net rather than a shipped defect — which is exactly the kind
+# that survives until someone widens the set for an unrelated reason.
+
+
+def test_the_library_level_key_set_is_exactly_these_two():
+    from server.fx.loader import _LIBRARY_KEYS
+
+    assert set(_LIBRARY_KEYS) == {"schema_version", "fx"}
+
+
+PER_SHOW_KEY_NAME = re.compile(
+    r"(?:group|preset|fixture|fid|executor|exec|page|sequence|cue|universe|dmx|rig|slot)",
+    re.IGNORECASE,
+)
+
+
+def _yaml_keys(node, path=""):
+    """Every mapping key in the document, with its path, at any depth."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            here = f"{path}.{key}" if path else str(key)
+            yield here, str(key)
+            yield from _yaml_keys(value, here)
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            yield from _yaml_keys(value, f"{path}[{index}]")
+
+
+def test_no_asset_declares_a_key_NAMED_after_a_per_show_binding(asset_text):
+    # The value-side scan above catches `group: 11`. This catches `group_number: 11`,
+    # where the binding hides in the KEY and the value is a bare integer.
+    for name, text in asset_text:
+        document = yaml.safe_load(text)
+        for path, key in _yaml_keys(document):
+            match = PER_SHOW_KEY_NAME.search(key)
+            assert match is None, (
+                f"{name}: key {path!r} is named after a per-show binding: {match.group(0)!r}"
+            )
