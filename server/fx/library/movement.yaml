@@ -1,0 +1,170 @@
+# Built-in fx library — movement phasers (REQ-FXLIB-002).
+#
+# The four unconditional patterns: sweep, wave, circle, diagonal. All four are
+# unconditional VOCABULARY (spec.md §A) but their EFFECT is not measured — M0
+# watched a phaser get built, stored and replayed on the intensity axis only,
+# and whether the same two-step shape generalises to the position axes is
+# ASSUMPTION-40, judged at M7. That is why these four sit in their own file: if
+# M7 comes back NEGATIVE the cost is bounded to this file, and dimmer.yaml (the
+# measured anchor) still proves the pipeline end to end.
+#
+# AUTHORING RULES — shared by every asset in this directory:
+#
+#   * Two steps minimum, and every step names the same attribute set. The steps
+#     CREATE the phaser; phase and speed only reshape one that already exists,
+#     so a one-step entry is accepted line by line and leaves the stage still.
+#   * Step values are absolute numbers, and no attribute may repeat a value
+#     inside one entry. A repeated value emits an identical command line, the
+#     dedupe drops the second one, and the phaser silently loses a step.
+#   * Amplitude is the DIFFERENCE between step values. The relative-amplitude
+#     verb is never emitted in v1 — whether it holds as a step value is
+#     unmeasured (ASSUMPTION-40).
+#   * No rig binding of any kind, and no command lines. Both arrive later.
+#   * Speed is BPM (ASSUMPTION-38 GO, read off the console display). The seeds
+#     come from the rulebook mood table (31_choreography_patterns.md:236-241):
+#     10-20 for warm / ballad / intimate, 90-180 for energetic / club / party.
+#     Under a BPM reading those two bands land on musical tempo, which is what
+#     makes them usable as seeds at all. The table's third row, "dramatic /
+#     accelerating", has no entry here: acceleration is the curve axis, and M0
+#     got acceptance with no observed effect from it, so v1 leaves it empty.
+#
+# THE POSITION MAGNITUDES ARE DELIBERATELY SMALL. The repository carries no
+# measured unit for a bare position value — percent and degrees are both
+# consistent with what is on record — so these follow the magnitudes in
+# design.md §4.1/§4.2 rather than inventing a wider swing. If the unit turns
+# out to be percent, a large number sweeps beams across the whole room; keeping
+# them modest costs a little travel and no safety.
+#
+# WHY VALUES DIFFER BETWEEN NEIGHBOURING ENTRIES. For variety only. It buys no
+# collision safety: every pattern emits the same step-transition line, so two
+# instantiations in one instruction turn collide no matter what values are
+# authored (design.md §4.3). The boundary is stated, not evaded.
+schema_version: 1
+
+fx:
+  # --- sweep — the pan axis --------------------------------------------------
+  - fx_id: "sweep-soft-wide"
+    display_name: "부드러운 좌우 스윕"
+    pattern: "sweep"
+    aliases: ["좌우 스윕", "부드러운 스윕", "좌우로 쓸어줘", "soft sweep"]
+    mood_keywords: ["부드러운", "느린", "잔잔한", "넓은", "발라드", "soft", "slow", "sweep"]
+    steps:
+      - Pan: -30
+      - Pan: 30
+    phase_from: 0
+    phase_to: 360
+    speed: 14
+
+  # The phase spread here comes from rig geometry rather than selection order —
+  # one wave across the X axis (31_choreography_patterns.md:85-86). It reads
+  # differently on stage than the entry above, which fans the phase across the
+  # selection in whatever order the selection happens to be in.
+  - fx_id: "sweep-club-xwave"
+    display_name: "클럽 좌우 웨이브"
+    pattern: "sweep"
+    aliases: ["클럽 스윕", "빠른 스윕", "엑스축 웨이브", "club sweep"]
+    mood_keywords: ["빠른", "신나는", "클럽", "에너지", "파도", "fast", "club", "energetic"]
+    steps:
+      - Pan: -20
+      - Pan: 20
+    speed: 120
+    phase_from_x: 0
+    phase_to_x: 360
+
+  # --- wave — the tilt axis --------------------------------------------------
+  - fx_id: "wave-soft-rise"
+    display_name: "부드러운 상하 웨이브"
+    pattern: "wave"
+    aliases: ["상하 웨이브", "웨이브", "부드러운 웨이브", "soft wave"]
+    mood_keywords: ["부드러운", "느린", "물결", "잔잔한", "예배", "soft", "wave", "gentle"]
+    steps:
+      - Tilt: -12
+      - Tilt: 12
+    phase_from: 0
+    phase_to: 360
+    speed: 12
+
+  # reverse walks the phase the other way round the circle. The pair of fields
+  # is deliberate: the spread is still 0 to 360, and reverse is the boolean
+  # parameter that flips its direction (spec.md §A — reverse is a parameter,
+  # not a pattern of its own).
+  - fx_id: "wave-fall-reverse"
+    display_name: "내려오는 웨이브"
+    pattern: "wave"
+    aliases: ["내려오는 웨이브", "역방향 웨이브", "폭포", "reverse wave"]
+    mood_keywords: ["내려오는", "역방향", "쏟아지는", "빠른", "reverse", "falling"]
+    steps:
+      - Tilt: 15
+      - Tilt: -15
+    phase_from: 0
+    phase_to: 360
+    reverse: true
+    speed: 96
+
+  # --- circle — pan and tilt a quarter cycle apart ---------------------------
+  #
+  # The quarter-cycle offset between the two axes is what makes the shape a
+  # circle rather than a line, and it is carried by the PATTERN KIND, not by a
+  # field: the schema holds one phase axis for the whole entry, and spec.md §A
+  # defines `circle` as the two axes 90 degrees apart. phase_from below is the
+  # base the offset is measured from.
+  - fx_id: "circle-soft-ballyhoo"
+    display_name: "느린 발리후"
+    pattern: "circle"
+    aliases: ["발리후", "느린 원", "동그라미", "slow circle"]
+    mood_keywords: ["느린", "원형", "발리후", "몽환적인", "부드러운", "circle", "slow"]
+    steps:
+      - Pan: -20
+        Tilt: -10
+      - Pan: 20
+        Tilt: 10
+    phase_from: 0
+    speed: 18
+
+  - fx_id: "circle-club-wings"
+    display_name: "미러 서클"
+    pattern: "circle"
+    aliases: ["미러 서클", "좌우 대칭 원", "빠른 원", "mirror circle"]
+    mood_keywords: ["빠른", "대칭", "화려한", "클럽", "원형", "fast", "mirror"]
+    steps:
+      - Pan: -25
+        Tilt: -12
+      - Pan: 25
+        Tilt: 12
+    phase_from: 0
+    speed: 112
+    x_wings: 2
+
+  # --- diagonal — pan and tilt in step, or against each other ----------------
+  #
+  # The in-phase and anti-phase forms are authored as STEP VALUES, not as a
+  # phase field: both axes travelling the same way is a diagonal, both axes
+  # travelling opposite ways is the crossing diagonal. That is the SPEC's own
+  # rule applied — amplitude, and here direction too, live in the difference
+  # between step values.
+  - fx_id: "diagonal-soft-inphase"
+    display_name: "부드러운 대각선"
+    pattern: "diagonal"
+    aliases: ["대각선", "사선", "비스듬히", "soft diagonal"]
+    mood_keywords: ["부드러운", "느린", "대각선", "사선", "잔잔한", "diagonal", "slow"]
+    steps:
+      - Pan: -28
+        Tilt: -14
+      - Pan: 28
+        Tilt: 14
+    phase_from: 0
+    speed: 16
+
+  - fx_id: "diagonal-club-cross"
+    display_name: "교차 대각선"
+    pattern: "diagonal"
+    aliases: ["교차 대각선", "엇갈린 사선", "엑스자", "cross diagonal"]
+    mood_keywords: ["빠른", "교차", "날카로운", "클럽", "엇갈리는", "cross", "fast"]
+    steps:
+      - Pan: -22
+        Tilt: 14
+      - Pan: 22
+        Tilt: -14
+    phase_from: 0
+    speed: 104
+    x: 2

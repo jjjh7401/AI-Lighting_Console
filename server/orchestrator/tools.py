@@ -15,6 +15,15 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
+from server.fx.instantiate import FxInstantiationError
+from server.fx.instantiate import instantiate_fx as bind_fx
+from server.fx.loader import DEFAULT_LIBRARY_DIR as FX_LIBRARY_DIR
+from server.fx.loader import FxSchemaError
+from server.fx.loader import load_library_from_dir as load_fx_library_from_dir
+from server.fx.matching import match_fx
+from server.fx.report import build_report as build_fx_report
+from server.fx.report import to_korean as fx_report_to_korean
+from server.fx.schema import FxLibrary
 from server.llm.types import ToolCall, ToolDefinition, ToolResult
 from server.looks.busking import build_genre_bundle, select_genre
 from server.looks.instantiate import (
@@ -72,6 +81,8 @@ TOOL_NAMES = (
     "prepare_busking",
     "prepare_songcue",
     "precheck_patch",
+    "find_fx",
+    "instantiate_fx",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -149,6 +160,12 @@ _LOCKED = "locked"
 
 LOOK_RIG_SECTIONS = ("groups", "preset_pools")
 SONGCUE_RIG_SECTIONS = ("groups", "sequences")
+
+# The two sections an fx must be bound against: the group its steps are captured
+# on, and the sequence pool a free number is MEASURED from. Same naming
+# discipline as the two above — a rig_paths override that drops either one fails
+# by name rather than by storing a phaser onto a number nobody read.
+FX_RIG_SECTIONS = ("groups", "sequences")
 
 # The two sections the pre-check's macro axis is wired against: the group pool it
 # reads its targets from, and the macro pool it derives a free slot from. Named
@@ -510,6 +527,54 @@ def _error_result(call: ToolCall, message: str) -> ToolExecution:
     )
 
 
+def _fx_error_result(call: ToolCall, message: str, **extra: object) -> ToolExecution:
+    """``_error_result`` plus the machine-readable facts behind the refusal.
+
+    The fx refusals are the ones a model can act on — which groups DO exist, why
+    the sequence pool could not be measured — and a reason code the caller can
+    branch on beats re-parsing the message text.
+    """
+    return ToolExecution(
+        result=ToolResult(
+            tool_call_id=call.id,
+            name=call.name,
+            content=json.dumps({"error": message, **extra}, ensure_ascii=False),
+            is_error=True,
+        )
+    )
+
+
+def _positive_int(value: object) -> int | None:
+    """``value`` as a positive console number, or ``None``.
+
+    ``bool`` is excluded explicitly: it is an ``int`` in Python, so ``True``
+    would otherwise address ``Group 1`` on a rig that may well have one.
+    """
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        return None
+    return value
+
+
+def _addressable_groups(groups_section: object) -> list[int]:
+    """The group numbers this rig listed AND numbered, ascending.
+
+    A name-only entry is dropped rather than counted from its position: the
+    responder omits ``i`` precisely when it could not establish the slot, and
+    turning that into a number is the hallucinated-``Group 3`` defect the rig
+    context exists to prevent.
+    """
+    objects = groups_section.get("objects") if isinstance(groups_section, Mapping) else None
+    if not isinstance(objects, list):
+        return []
+    return sorted(
+        {
+            entry["no"]
+            for entry in objects
+            if isinstance(entry, Mapping) and isinstance(entry.get("no"), int)
+        }
+    )
+
+
 class ToolRegistry:
     """The closed set of Phase 1 tools with neutral definitions + dispatch."""
 
@@ -537,6 +602,7 @@ def build_toolset(
     bundle_gate: BundleGate | None = None,
     deploy_pipeline: DeployPipelinePort | None = None,
     look_library: LookLibrary | None = None,
+    fx_library: FxLibrary | None = None,
     property_port: PropertyQueryPort | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
@@ -549,7 +615,9 @@ def build_toolset(
 
     ``look_library`` is optional: production wiring passes nothing and the
     built-in library is read from disk on the first ``find_looks`` call, so a
-    toolset that never looks up a look pays no file read.
+    toolset that never looks up a look pays no file read. ``fx_library`` is the
+    same arrangement for the fx layer, read on the first ``find_fx`` or
+    ``instantiate_fx`` call.
 
     ``property_port`` is the pre-check's extra read (REQ-PRECHK-019). When it is
     omitted it is adopted from ``state_port`` if that object also implements
@@ -561,6 +629,7 @@ def build_toolset(
     rig_paths = dict(rig_paths or DEFAULT_RIG_CONTEXT_PATHS)
     drilldown = frozenset(rig_drilldown if rig_drilldown is not None else DEFAULT_RIG_DRILLDOWN)
     looks = look_library
+    fx_lib = fx_library
     if property_port is None and hasattr(state_port, "query_property"):
         property_port = state_port
 
@@ -1578,6 +1647,226 @@ def build_toolset(
             command_outcomes=(),
         )
 
+    # -- find_fx (REQ-FXLIB-015 — lookup only, sends nothing) ------------------
+    #
+    # @MX:ANCHOR: [AUTO] the only model-reachable entry to the fx MATCHER
+    #   (match_fx -> the closed pattern vocabulary).
+    # @MX:REASON: REQ-FXLIB-015 + decision G. The rulebook is PRESERVE
+    #   (REQ-FXLIB-020, byte-diff 0) and its mood-table fallback sentence names
+    #   `find_looks`, not this tool — so nothing in the fixed prefix routes an fx
+    #   fallback anywhere. The description below is the ONLY surface carrying
+    #   that route; deleting a sentence from it silently removes the model's
+    #   documented move, and an fx invented instead of matched is indetectable
+    #   afterwards (the effect is not machine-verifiable, REQ-FXLIB-014 (c)).
+
+    def find_fx(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        nonlocal fx_lib
+        query = call.arguments.get("query")
+        if not isinstance(query, str):
+            return _error_result(call, "'query' must be a string — the operator's own words")
+        if fx_lib is None:
+            try:
+                fx_lib = load_fx_library_from_dir(FX_LIBRARY_DIR)
+            except FxSchemaError as error:
+                # A broken library is a structured failure, never a silent empty
+                # result that would read as "no fx matches".
+                return _error_result(call, f"fx library unavailable: {error}")
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(match_fx(query, fx_lib).to_dict(), ensure_ascii=False),
+                # A miss is an ANSWER (REQ-FXLIB-008), not a tool failure: an
+                # is_error payload feeds the self-correction loop and would
+                # invite a retry that can only miss again.
+                is_error=False,
+            )
+        )
+
+    # -- instantiate_fx (REQ-FXLIB-016/017 — the fx layer's ONE route) ---------
+    #
+    # @MX:ANCHOR: [AUTO] the only model-reachable entry to the fx instantiation
+    #   chain (find_fx -> rig read -> bundle -> gate.screen()).
+    # @MX:REASON: REQ-FXLIB-016/017. This handler is a CALLER of run_commands,
+    #   never a second execution surface: it re-enters the local run_commands
+    #   closure above, so the bundle inherits that path's gate screening, live
+    #   lock, execution preview, dedupe and audit log without any of them being
+    #   duplicated for fx. Reaching execution_port directly from here would be
+    #   the second path the SPEC forbids, and it would be invisible to the gate.
+    #   M1-M4 built the whole chain with no model-reachable door; that is what
+    #   this tool repairs, so do not un-register it without giving the chain
+    #   another one.
+
+    def instantiate_fx(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        nonlocal fx_lib
+        fx_id = call.arguments.get("fx_id")
+        if not isinstance(fx_id, str) or not fx_id.strip():
+            return _error_result(call, "'fx_id' must be the fx_id string returned by find_fx")
+        group = _positive_int(call.arguments.get("group"))
+        if group is None:
+            return _error_result(
+                call,
+                "'group' must be a positive integer group number that get_rig_context "
+                "listed on this rig — not a group name, and not a fixture slot",
+            )
+        sequence = call.arguments.get("sequence")
+        if sequence is not None and _positive_int(sequence) is None:
+            return _error_result(
+                call,
+                "'sequence' must be a positive integer, or omitted so this tool "
+                "measures a free number from the rig",
+            )
+        executor = call.arguments.get("executor")
+        if executor is not None and _positive_int(executor) is None:
+            return _error_result(call, "'executor' must be a positive integer executor number")
+        label = call.arguments.get("label")
+        if label is not None and (not isinstance(label, str) or not label.strip()):
+            return _error_result(
+                call, "'label' must be a non-empty label string, or omitted for the fx's own name"
+            )
+        if fx_lib is None:
+            try:
+                fx_lib = load_fx_library_from_dir(FX_LIBRARY_DIR)
+            except FxSchemaError as error:
+                return _error_result(call, f"fx library unavailable: {error}")
+        try:
+            fx = fx_lib.by_id(fx_id.strip())
+        except KeyError:
+            # An id this library does not hold is a correctable mistake, so it IS
+            # an error result — unlike a find_fx miss, a retry with the right id
+            # succeeds.
+            return _error_result(
+                call,
+                f"unknown fx_id {fx_id!r} — call find_fx and pass back the fx_id "
+                f"from one of its matches",
+            )
+        missing = [section for section in FX_RIG_SECTIONS if section not in rig_paths]
+        if missing:
+            return _error_result(
+                call,
+                f"rig context has no path configured for {missing} — an fx cannot be "
+                f"bound to this rig without them",
+            )
+        # The rig is READ here even though the group arrives as an argument: the
+        # argument says WHICH group, this read says whether that group exists.
+        # The sequence number is never an argument the tool trusts blind either —
+        # it is measured from this same read (AP-16).
+        sections, _resolved, _failed = collect_rig_sections(
+            state_port,
+            {section: rig_paths[section] for section in FX_RIG_SECTIONS},
+            drilldown,
+            RIG_DRILLDOWN_QUERY_CAP,
+        )
+        unavailable = {
+            name: entry
+            for name, entry in sections.items()
+            if isinstance(entry, dict) and "reason" in entry
+        }
+        if unavailable:
+            # A section that never arrived is NOT a rig that answered "no such
+            # group". Refusing the group here would state a fact about a rig
+            # nobody observed.
+            return _fx_error_result(
+                call,
+                "the rig sections an fx is bound against did not arrive: "
+                + "; ".join(f"{n}: {e['reason']}" for n, e in unavailable.items()),
+                rig_unavailable=unavailable,
+            )
+        groups_section = sections["groups"]
+        addressable = _addressable_groups(groups_section)
+        if group not in addressable:
+            # Refused BEFORE anything is sent. `Group 7` on a rig without group 7
+            # selects nothing, and the `Store` that follows then writes an EMPTY
+            # cue — silently, because a stored phaser cue and an empty one are
+            # indistinguishable on read-back (M0). A truncated listing does not
+            # license the number either: absence from a cut list is not evidence
+            # of absence, but it is not evidence of presence, which is what
+            # addressing it would assume.
+            truncated = bool(groups_section.get("truncated"))  # type: ignore[union-attr]
+            return _fx_error_result(
+                call,
+                f"group {group} is not addressable on this rig"
+                + (
+                    " and the group listing was truncated, so it may exist unlisted — "
+                    "re-read the rig or name one of the groups below"
+                    if truncated
+                    else " — use one of the groups below"
+                ),
+                groups=addressable,
+                groups_truncated=truncated,
+            )
+        try:
+            plan = bind_fx(
+                fx,
+                group=group,
+                sequences_section=sections["sequences"],  # type: ignore[arg-type]
+                sequence=sequence,
+                executor=executor,
+                label=label,
+            )
+        except FxInstantiationError as error:
+            return _fx_error_result(
+                call, f"fx {fx.fx_id!r} cannot be instantiated: {error}", reason=error.reason
+            )
+        if not plan.commands:
+            # Defensive: the builder always emits a destination, a clear, a
+            # selection and a store, so this is unreachable today. It stays
+            # because the alternative — sending an empty bundle and reporting it
+            # as executed — is the silent success this SPEC exists to prevent.
+            report = build_fx_report(plan)
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(
+                        {
+                            "executed": False,
+                            "succeeded": False,
+                            "report": report.to_dict(),
+                            "summary_ko": fx_report_to_korean(report),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    is_error=False,
+                )
+            )
+        execution = run_commands(
+            ToolCall(id=call.id, name="run_commands", arguments={"commands": list(plan.commands)}),
+            context,
+        )
+        payload = json.loads(execution.result.content)
+        # A gate refusal carries per-command DECISIONS, not execution outcomes.
+        # Feeding them to the report would count zero failures and zero folds and
+        # verdict a bundle that never left the process "전량 실행".
+        outcomes = () if "gate_status" in payload else execution.command_outcomes
+        report = build_fx_report(plan, outcomes)
+        payload["executed"] = report.executed
+        payload["succeeded"] = report.succeeded
+        payload["report"] = report.to_dict()
+        payload["summary_ko"] = fx_report_to_korean(report)
+        # `run_commands` is content when every line came back ok — and a
+        # cross-call fold does exactly that while leaving an INCOMPLETE cue
+        # behind (REQ-FXLIB-011 (b)). Only a COMPLETE verdict is a success;
+        # anything else is an error the model must report.
+        is_error = execution.result.is_error or not report.succeeded
+        if payload.get("gate_status") == _LOCKED:
+            # ...except a LiveLock demotion, which is an ANSWER, not a failure:
+            # the proposal IS the deliverable. `is_error=True` would feed the
+            # self-correction loop and send the model back into the same lock —
+            # during a show, which is precisely when the lock is on. The sibling
+            # tools demote the same way (`prepare_busking` REQ-BUSKWIZ-014,
+            # `precheck_patch` AC-PRECHK-014 ④); fx diverged until M6 measured it.
+            is_error = False
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=is_error,
+            ),
+            command_outcomes=execution.command_outcomes,
+        )
+
     definitions = (
         ToolDefinition(
             name="run_commands",
@@ -1959,6 +2248,161 @@ def build_toolset(
                 "additionalProperties": False,
             },
         ),
+        ToolDefinition(
+            name="find_fx",
+            description=(
+                "Ask the built-in effect library BEFORE hand-writing any "
+                "movement — call this the moment an instruction asks for "
+                "something that MOVES or CHANGES OVER TIME rather than for a "
+                "static picture (e.g. '좌우로 쓸어줘', 'a slow wave', 'make it "
+                "pulse with the beat', 'fast colour chase'). find_looks is the "
+                "STILL-PICTURE half of the vocabulary and this is the MOTION "
+                "half; an instruction can need both.\n"
+                "\n"
+                "Every entry here carries a step pair — a phaser only exists "
+                "once two steps hold different values — plus its phase and "
+                "speed. A phaser you write yourself from one value and a Phase "
+                "line is accepted by the console with ok:true and does not "
+                "move, which is why this library exists and why guessing is "
+                "worse here than anywhere else.\n"
+                "\n"
+                "This tool READS ONLY — it never sends anything to the "
+                'console. Each match is {"fx_id", "display_name", "pattern" '
+                "(sweep / wave / circle / diagonal / pulse / chase), "
+                '"attributes" (what moves), "speed" (BPM), "reverse", "score" '
+                'and "matched" (the library words your query hit)}. The list '
+                'is ranked; "total" and "truncated" say whether it was cut '
+                "short.\n"
+                "\n"
+                'When "fallback" is true NOTHING matched well enough, and '
+                '"fallback_reason" says which: "no_match" (nothing answered), '
+                '"low_confidence" (several entries tied and nothing narrows '
+                'them) or "empty_query" (nothing was asked). In that case do '
+                "NOT pick from the list.\n"
+                "\n"
+                "A low_confidence answer is usually a whole pattern band — the "
+                "operator named the shape ('원형으로', 'chase') but not which "
+                "of that pattern's entries — so ask again with one more word "
+                "from the operator, typically the speed ('빠른 체이스', 'slow "
+                "circle'). If it still falls back, design the movement "
+                "yourself from the rulebook's mood table (its movement "
+                "column), the same fallback path a look fallback takes. The "
+                "library never invents an effect, and neither should you.\n"
+                "\n"
+                "An fx carries NO group number, sequence number or executor. "
+                "To put one on THIS rig, pass its fx_id to instantiate_fx."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": (
+                            "The movement / mood wording to match, in the operator's own language."
+                        ),
+                    }
+                },
+                "required": ["query"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="instantiate_fx",
+            description=(
+                "Put an effect FROM find_fx onto THIS rig as a sequence + cue. "
+                "Pass the fx_id of the match you chose; do NOT hand-write the "
+                "bundle with run_commands, because this tool is the only thing "
+                "that emits the measured step grammar (values, then a "
+                "standalone 'Step 2' line, then the next values, and only "
+                "THEN the Phase / Speed lines). Written in any other order the "
+                "console answers ok:true and the rig stands still.\n"
+                "\n"
+                "Apart from the fx_id, the group is the ONLY rig number you "
+                "pass: give a group number get_rig_context listed on THIS rig "
+                "— never a group you have not seen listed, and never a fixture "
+                "slot, which is not a group and not a fixture id. Everything "
+                "else is measured here: the tool re-reads the rig on this call, "
+                "refuses a group this rig does not list, and picks a FREE "
+                "sequence number from the pool it just read. Leave sequence "
+                "unset unless the operator named one; pass executor only when "
+                "the operator asked for one, because an executor is assigned "
+                "to nothing by default. The whole bundle runs through the SAME "
+                "execution path as run_commands, so the live lock, the safety "
+                "screening and the approval gate all apply unchanged.\n"
+                "\n"
+                "It creates ONE sequence with ONE cue, and assigns an executor "
+                "only if you passed one. It never overwrites an existing "
+                "sequence.\n"
+                "\n"
+                'The result carries "succeeded", a per-command "commands" list '
+                'exactly like run_commands, a Korean "summary_ko" for the '
+                'operator, and a "report" whose "verdict" is one of:\n'
+                '- "complete": every command ran.\n'
+                '- "partial": something failed, and everything after it was '
+                "not executed — both lists are in the report.\n"
+                '- "planned": nothing was sent (the gate did not clear).\n'
+                '- "cross_call_collision": lines this bundle shares with an '
+                "EARLIER instantiation in the same instruction were dropped as "
+                "already-executed, so the cue that got stored is INCOMPLETE. "
+                "Report it as a failure and tell the operator the sequence may "
+                "need deleting.\n"
+                'Only "complete" is a success — never report a partial run '
+                "as a whole one.\n"
+                "\n"
+                "Because of that last verdict, run ONE instantiate_fx per "
+                "instruction. A second one in the same instruction folds from "
+                "its very first line. If the operator wants two effects, do "
+                "the second after they reply.\n"
+                "\n"
+                "Finally, and this holds even when every command came back "
+                "ok: the effect itself cannot be verified by machine. The "
+                "console reports that the commands were accepted, and a stored "
+                "phaser cue reads back exactly like an empty one — no query "
+                "returns its phase, its speed or its motion. So a human has to "
+                "watch the stage. Say so; never present a receipt, or the "
+                "existence of the sequence, as evidence that anything moved."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "fx_id": {
+                        "type": "string",
+                        "description": "The fx_id of a find_fx match, copied verbatim.",
+                    },
+                    "group": {
+                        "type": "integer",
+                        "description": (
+                            "The group number to run the effect on, as listed "
+                            "by get_rig_context on THIS rig."
+                        ),
+                    },
+                    "sequence": {
+                        "type": "integer",
+                        "description": (
+                            "Optional. Leave unset — a free number is measured "
+                            "from the rig. Pass one only when the operator "
+                            "named it; an occupied number is refused."
+                        ),
+                    },
+                    "executor": {
+                        "type": "integer",
+                        "description": (
+                            "Optional. Only when the operator asked for the "
+                            "effect to sit on a specific executor. Nothing is "
+                            "assigned automatically."
+                        ),
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": (
+                            "Optional cue label. Defaults to the fx's own display name."
+                        ),
+                    },
+                },
+                "required": ["fx_id", "group"],
+                "additionalProperties": False,
+            },
+        ),
     )
     handlers: dict[str, _Handler] = {
         "run_commands": run_commands,
@@ -1970,5 +2414,7 @@ def build_toolset(
         "prepare_busking": prepare_busking,
         "prepare_songcue": prepare_songcue,
         "precheck_patch": precheck_patch,
+        "find_fx": find_fx,
+        "instantiate_fx": instantiate_fx,
     }
     return ToolRegistry(definitions, handlers)
