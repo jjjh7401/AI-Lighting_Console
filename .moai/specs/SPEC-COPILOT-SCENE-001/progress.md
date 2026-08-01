@@ -8,7 +8,7 @@
 
 **무엇**: 씬 컴파일러 — **룩(정적 값) + 이펙트(스텝 열) + 타이밍을 하나의 큐로** 합성한다. LOOKLIB(정지 화면 어휘)·FXLIB(시간축 어휘)이 세운 "의도→메모리 파이프라인"의 **2단계**이며, FXLIB이 `spec.md:42`·`:70`·`:140` 세 곳에서 명시적으로 예약해 둔 좌석이다. 신규 패키지 `server/scene/`에 스키마·로더·2축 매칭·결합 컴파일러·리포트를 세우고, 툴 2종(`find_scene`·`compile_scene`)을 기존 `run_commands`→`gate.screen()` 경로로만 배선한다.
 
-**상태**: **plan-audit iter-3 PASS 0.90(문턱 0.85) · v0.2.2(iter-3 비차단 N1~N9 fix-forward) · M0 실행 완료(정리 잔여 1건 — AC-SCENE-019 미완결) · **M1~M4 완료**(M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`).** REQ **21** · AC **24** · ASSUMPTION **5(41~45 — 41·42는 판정 후 moot)** · clarification 마커 **0** · 결정 **A~K 전부 해소** · 라이브 세션 2회 중 **1회 소진(M0)**. AC **15/24** 충족 · 뮤테이션 누적 **30/30 killed**(survived 0). 다음 단계 = **M5(리포트 — 주장 분리 + 미주장 열거)** — 여기서부터 다시 **순차**이며 진행 모드는 **반자율(마일스톤마다 확인, §F)**.
+**상태**: **plan-audit iter-3 PASS 0.90(문턱 0.85) · v0.2.2(iter-3 비차단 N1~N9 fix-forward) · M0 실행 완료(정리 잔여 1건 — AC-SCENE-019 미완결) · **M1~M5 완료**(M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`).** REQ **21** · AC **24** · ASSUMPTION **5(41~45 — 41·42는 판정 후 moot)** · clarification 마커 **0** · 결정 **A~K 전부 해소** · 라이브 세션 2회 중 **1회 소진(M0)**. AC **15/24** 충족 · 뮤테이션 누적 **30/30 killed**(survived 0). 다음 단계 = **M6(툴 표면 + 배선)** — M5부터 **순차**이며 진행 모드는 **반자율(마일스톤마다 확인, §F)**.
 
 **이 SPEC의 한 줄 (v0.2.0 개정)**: 트래킹 정책이 **M0 실측으로 한 번 뒤집혔다** — `/CueOnly`(미발화 커맨드)를 버리고 **속성 집합 균일화 + 미주장 속성 전수 열거**를 택했다. 그러나 **관측 천장은 그대로다**: "균일 집합을 발화했다"와 "트래킹이 무해해졌다"를 절대 뭉치지 않는 것이 여전히 전체 설계의 축이다.
 
@@ -377,20 +377,68 @@ REOPEN: D1 트래킹 정책 사용자 재결정(2026-08-01, AskUserQuestion)으�
 
 **남은 것**: M5(리포트 — AC-SCENE-015/016/024) · M6(툴 배선 — AC-SCENE-018) · M7(회귀·경계 — AC-SCENE-017/020/022, **상류 상수 동치 2건 포함**) · M8(종단 라이브 — AC-SCENE-021). M4가 M7에 명시 위임한 2건(`SCENE_UNIFORM_ATTRIBUTES == CONFIRMED_ATTRIBUTES` 동치 · `KNOWN_ATTRIBUTES` 8원소 형상 고정)은 아직 **미검증**이다.
 
+---
+
+### M5 — 리포트 (주장 분리 + 미주장 열거) (2026-08-01, 완료 · cycle_type=tdd)
+
+병렬 창은 M4에서 닫혔다. **M5부터 다시 순차**이며(리포트는 M4의 컴파일 결과 데이터클래스를 소비한다 — §F.1) 오케스트레이터가 직접 수행했다.
+
+**착수 baseline (직접 실측)**: `pytest server/tests/ -q` → **3673 passed / 5 skipped** @ `7755408`, `server/` 클린.
+
+**산출**: `server/scene/report.py`(125 stmts) · `server/tests/test_scene_report.py`(**38 tests**).
+
+**주장 5종을 각각 자기 상수로 분리**(REQ-SCENE-014 · design.md §6.2 표):
+
+| 주장 | 상수 | 증거 채널 |
+|---|---|---|
+| (a) 산출물 | `ARTIFACT_CONFIRMED_NOTE` / **미수행 시** `ARTIFACT_UNVERIFIED_NOTE` | 재조회 — **존재·이름·`cueNo`까지만** |
+| (a′) 균일성 | `UNIFORM_CONFIRMED_NOTE` / `UNIFORM_NOT_APPLICABLE_NOTE`(이펙트 단독) / `UNIFORM_BROKEN_NOTE` | 산출 문자열 정적 검사 |
+| (b) 효과 | `EFFECT_EVIDENCE_NOTICE` | **없음** — 사람 GUI. **무조건**(성공 경로 포함 전 경로) |
+| (c) 트래킹 무해화 | `TRACKING_UNOBSERVABLE_NOTICE` | **관측 채널 부재** |
+| (d) 미주장 열거 | `UNCLAIMED_ENUMERATION_NOTE` | 정적 차집합 — "이월될 **수 있다**"까지만 |
+
+**설계 판단 3건 (기록)**:
+
+1. **(a)는 재조회 없이는 "확인됨"이 되지 않는다.** `build_report(..., requery=None)`이 기본이며 그 경로의 문면은 *"커맨드 접수(ok)는 큐가 생성됐다는 증거가 아닙니다"* 다. 발화를 존재로 승격시키지 않는 것이 §C.1의 요구다.
+2. **(a′)는 컴파일러를 믿지 않고 산출 문자열을 다시 읽는다.** 주장의 내용이 "빌더가 정렬을 의도했다"가 아니라 "번들이 실제로 그 순서를 담았다"이기 때문이다. 판별식은 **모든 세그먼트가 절대값(`At <수>`)인 `;` 체인** — 이음매 검증에서 배운 것을 그대로 적용했다(`_speed_line`도 `;` 체인이라 체인 여부만으로는 갈리지 않는다).
+3. **(c)는 침묵하지 않고 추론을 거절한다.** *"위 균일성 확인은 무엇을 발화했는지에 대한 사실이며 트래킹 무해화의 증거가 아닙니다."* — 독자가 기본값으로 그 추론을 하기 때문이다(design.md §6.2). 배치도 분리했다: (a)·(a′)는 `기계 확인됨:` 표제 아래, (b)·(c)는 `기계 확인 불가:` 표제 아래 — 두 주장 사이에 **반드시 표제가 하나 들어간다**(테스트가 그 사이 표제의 존재를 단언한다).
+
+**뮤테이션 7항 — 전부 killed** (소스 실변형 → 실행 → 원복):
+
+| # | 주입 | 결과 | 죽은 테스트 (대표) |
+|---|---|---|---|
+| ① | 성공 경로에서 (b) 문면 제거 | **killed** 1 failed | `test_the_effect_notice_is_present_on_every_path[all_ok]` |
+| ② | (c)를 (a′)와 합쳐 "확인했습니다"로 | **killed** 2 failed | `test_the_tracking_claim_names_the_absent_channel` · `..._denies_the_uniformity_inference` |
+| ③ | 관측 채널 언급은 남긴 채 **균일성을 무해화의 근거로** 문면화 | **killed** 1 failed | `test_the_tracking_claim_denies_the_uniformity_inference` |
+| ④ | payload가 상수 대신 **거의 같은 인라인 산문**을 싣게 함("직접" 한 단어 누락) | **killed** 5 failed | `test_the_payload_carries_each_claim_by_identity` 외 4 |
+| ⑤ | 비면제 `skipped_already_executed`인데 성공 판정 | **killed** 1 failed | `test_a_non_exempt_fold_is_reported_as_a_cross_call_collision` |
+| ⑥ | (d) 문면을 "이월됩니다"로 | **killed** 1 failed | `test_the_unclaimed_notice_claims_only_possibility` |
+| ⑦ | 결정론 정렬 제거 | **killed** 1 failed | `test_the_enumeration_is_sorted_deterministically` |
+
+**④가 실증한 것 (plan.md §B M5 ④의 요구)**: 그 변형된 문면은 **부분 일치 검사(`"사람" in text`)로는 통과한다** — 실제로 확인했다. 동일성 검사만 잡는다. 스위트 안에도 그 간극을 고정한 테스트를 두었다(`test_a_substring_check_would_miss_a_truncated_notice`). ⑥의 단언에서는 **위양성 하나를 잡아 고쳤다**: `"이월됐" not in ...`은 문면 자신의 부정문(*"이월됐다는 뜻이 아닙니다"*)까지 금지하므로, 단정형(`이월됐습니다`) 금지 + 부정문 존재로 바꿨다.
+
+**⑦의 정렬은 방어적으로 두 번 한다** — 컴파일러가 이미 정렬하지만 리포트도 다시 정렬한다. 호출자가 `SceneCompilation`을 손으로 만들 수 있고, 그때 집합 순회 순서가 리포트에 새는 것을 막는 것이 이 속성의 몫이기 때문이다.
+
+**검증**: `test_scene_report.py` **38 passed** · `server/scene/report.py` 커버리지 **100%** · ruff check/format 클린 · 전체 `pytest server/tests/ -q` → **3711 passed / 5 skipped**(신규 38, **신규 실패 0**).
+
+**AC 상태**: AC-SCENE-015 · AC-SCENE-016 · AC-SCENE-024 **충족** ⇒ 누적 **18/24**.
+
+**M7로 넘긴 것**: AC-SCENE-024가 함께 요구하는 **유니버스 형상 고정**(`server.looks.schema.KNOWN_ATTRIBUTES`가 오늘 정확히 8원소)은 경계 테스트 소유다(design.md §8) — M5는 문면·정렬·차집합 게재만 닫았다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 - run_started_at: 2026-08-01 (M1)
 - baseline_measured: pytest **3432 passed / 5 skipped** @ `main` `3c701b1` (착수 직전 직접 실행 — 이월 없음)
-- milestones_done: **M0**(라이브 프로브, 정리 잔여 1건) · **M1**(스키마 + 로더) · **M2**(라이브러리) · **M3**(2축 매칭) · **M4**(결합·가드·번호) — M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`
-- milestones_open: M5 · M6 · M7 · M8
-- ac_closed: AC-SCENE-001 · 002 · 003 · 004 · 005 · 006 · 007 · 008 · 009 · 010 · 011 · 012 · 013 · 014 · 023 (**15/24**)
-- ac_open: AC-SCENE-019(M0 정리 잔여) · 015 · 016 · 017 · 018 · 020 · 021 · 022 · 024
-- current_measured: pytest **3673 passed / 5 skipped** (M1 기준선 3526 대비 신규 147, **신규 실패 0**) · `server/scene` 커버리지 **99%** (문턱 85%) · ruff check/format 클린 · `test_architecture.py` 4 passed, 예외 명단 무변경
-- mutations: M1 **4/4** · M2 **3/3** · M3 **3/3** · M4 **20/20** killed (누적 **30/30**, survived 0)
+- milestones_done: **M0**(라이브 프로브, 정리 잔여 1건) · **M1**(스키마 + 로더) · **M2**(라이브러리) · **M3**(2축 매칭) · **M4**(결합·가드·번호) · **M5**(리포트) — M2/M3/M4는 Orca 병렬 웨이브 `run_21629800d19e`, M5부터 순차
+- milestones_open: M6 · M7 · M8
+- ac_closed: AC-SCENE-001 · 002 · 003 · 004 · 005 · 006 · 007 · 008 · 009 · 010 · 011 · 012 · 013 · 014 · 015 · 016 · 023 · 024 (**18/24**)
+- ac_open: AC-SCENE-019(M0 정리 잔여) · 017 · 018 · 020 · 021 · 022
+- current_measured: pytest **3711 passed / 5 skipped** (M1 기준선 3526 대비 신규 185, **신규 실패 0**) · `server/scene` 커버리지 **99%**(`report.py`는 100%, 문턱 85%) · ruff check/format 클린 · `test_architecture.py` 4 passed, 예외 명단 무변경
+- mutations: M1 **4/4** · M2 **3/3** · M3 **3/3** · M4 **20/20** · M5 **7/7** killed (누적 **37/37**, survived 0)
 - seam_verified: 실물 씬 자산 5건 × 실물 빌더 전수(28 테스트) — `/CueOnly` 주입으로 비공허성 실측. M3 별칭 사본 드리프트 1건 검출·정정(`task_ea9ff7620253`)
 - preserve_gate: `git diff --stat 3c701b1..HEAD -- server/looks server/fx console/lua server/rulebook/assets server/safety` → **빈 출력**
 - open_items: ① M0 프로브 시퀀스 191~197 쇼파일 정리 **미이행**(사용자 GUI 삭제 필요) ⇒ AC-SCENE-019 미완결 ② M4가 M7에 위임한 상류 상수 결합 2건 미검증
-- commit_sha: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b`
+- commit_sha: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · M5 `pending-backfill`
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
