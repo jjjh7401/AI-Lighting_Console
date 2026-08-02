@@ -1302,3 +1302,107 @@ body {
   font-size: 15px;
   color: var(--muted);
 }
+
+/* T-H — executor status chip (CueMonitor.tsx). THREE grades, each carried by
+   TEXT + icon glyph (never colour alone — colour-blind accessibility): the
+   chip is never a claim that the console is playing something right now,
+   only that the app itself sent a command and whether the console ok'd it
+   (see CueMonitor.tsx's module header). Reuses the existing --ok/--bad/
+   --muted tokens rather than inventing new ones (REQ-DASHUI-016 posture). */
+.cue-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.cue-status-chip-confirmed {
+  color: var(--ok);
+  border-color: var(--ok);
+  background: rgba(63, 185, 80, 0.12);
+}
+
+.cue-status-chip-failed {
+  color: var(--bad);
+  border-color: var(--bad);
+  background: rgba(248, 81, 73, 0.12);
+}
+
+.cue-status-chip-unknown {
+  color: var(--muted);
+  border-color: #2b2f36;
+  background: rgba(154, 160, 166, 0.08);
+}
+
+.cue-status-chip-age {
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+/* The acknowledgement pulse — fires for a few seconds right after a fresh
+   "confirmed" event (CueMonitor.tsx's isRecentAppAction/PULSE_WINDOW_MS).
+   NOT a running indicator: it stops on its own once the window elapses. */
+@keyframes cue-status-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(63, 185, 80, 0);
+  }
+}
+
+.cue-status-chip-pulse {
+  animation: cue-status-pulse 1.2s ease-in-out 2;
+}
+
+/* Accessibility carve-out (T-H requirement): reduced motion gets a static
+   emphasis instead of the pulse animation — still distinguishable without
+   any movement. This is the ONE @media rule in this stylesheet
+   (styles.test.ts's guard permits exactly this carve-out). */
+@media (prefers-reduced-motion: reduce) {
+  .cue-status-chip-pulse {
+    animation: none;
+    outline: 2px solid var(--ok);
+    outline-offset: 1px;
+  }
+}
+
+.cue-monitor-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.cue-monitor-action-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cue-monitor-action-btn:disabled {
+  background: #2b2f36;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.cue-monitor-action-btn-stop {
+  background: var(--warn);
+  color: #201a08;
+}
+
+.cue-monitor-action-reason {
+  color: var(--muted);
+  font-size: 13px;
+}

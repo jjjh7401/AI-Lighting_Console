@@ -32,6 +32,8 @@ execution surface of its own — it never imports the OSC send surface.
 
 from __future__ import annotations
 
+import re
+
 from server.orchestrator.ports import PropertyQueryPort, StateQueryPort
 from server.orchestrator.tools import rig_object
 from server.prechk.query import read_properties
@@ -52,6 +54,47 @@ SEQUENCE_PATH_TEMPLATE = "DataPool/Sequences/{sequence_no}"
 CURRENT_CUE_PROPERTY_CANDIDATES: tuple[str, ...] = ("Cue",)
 
 DEFAULT_HISTORY_LIMIT = 20
+
+# T-H — "app's last action" attribution (coordinator directive, 2026-08-02).
+# ``server/web/panel.py::playback_command`` is this project's ONLY command
+# author for these forms — "Go+ Executor <n>" / "Off Executor <n>" /
+# "Go+ Sequence <n>" / "Off Sequence <n>" / "Macro <n>" (macro is one-shot,
+# no verb word) — so parsing against exactly those literal shapes is not a
+# guess, it is the inverse of a function this module can read directly.
+# Anything else (a chat-composed command, an unrecognized verb) fails to
+# parse and is carried as "attribution unknown" rather than dropped — see
+# ``recent_execution_history``.
+_PLAYBACK_TARGET_RE = re.compile(r"^(?:Go\+|Off)\s+(Executor|Sequence)\s+(\d+)$")
+_MACRO_TARGET_RE = re.compile(r"^Macro\s+(\d+)$")
+
+_WORD_TO_TARGET_KIND = {"Executor": "executor", "Sequence": "sequence"}
+
+
+def _parse_command_target(command: str) -> tuple[str, int] | None:
+    """The ``(target_kind, target_no)`` a command addresses, or ``None``.
+
+    Best-effort inverse of ``panel.py::playback_command`` — a failure here is
+    the NORMAL degrade path for any command this module was never meant to
+    attribute (e.g. a chat-composed command), never an error.
+    """
+    match = _PLAYBACK_TARGET_RE.match(command)
+    if match:
+        return _WORD_TO_TARGET_KIND[match.group(1)], int(match.group(2))
+    match = _MACRO_TARGET_RE.match(command)
+    if match:
+        return "macro", int(match.group(1))
+    return None
+
+
+def _last_app_action_for_executor(history: list[dict], executor_no: int) -> dict | None:
+    """The most recent history row this app sent to ``executor_no``, or
+    ``None`` when the app has never sent this executor anything (T-H: a
+    console operated by hand, invisible to the app, is NOT a claim this
+    function can make either way)."""
+    for entry in reversed(history):
+        if entry.get("target_kind") == "executor" and entry.get("target_no") == executor_no:
+            return {"command": entry["command"], "ts": entry["ts"], "ok": entry["ok"]}
+    return None
 
 
 def _executor_reference(console_no: int) -> str:
@@ -94,25 +137,41 @@ def build_executor_cue_progress(
     state_port: StateQueryPort,
     property_port: PropertyQueryPort,
     console_no: int,
+    *,
+    last_app_action: dict | None = None,
 ) -> dict:
-    """One resolved executor's cue-progress entry (contract item 1)."""
+    """One resolved executor's cue-progress entry (contract item 1).
+
+    ``last_app_action`` (T-H) is attributed by the CALLER (see
+    ``build_cue_progress``) and threaded through every return branch — it is
+    an independent claim ("what did the app last send this executor, and did
+    the console ok it") from the live identity/sequence read above, and is
+    just as meaningful when that read fails as when it succeeds.
+    """
     executor_ref = _executor_reference(console_no)
     try:
         identity = state_port.query_state(executor_ref)
     except Exception:
-        return cue_executor_entry(executor_no=console_no, status="unavailable")
+        return cue_executor_entry(
+            executor_no=console_no, status="unavailable", last_app_action=last_app_action
+        )
 
     node = identity.get("node") if isinstance(identity, dict) else None
     sequence_no = node.get("sequenceNo") if isinstance(node, dict) else None
     if not isinstance(sequence_no, int):
-        return cue_executor_entry(executor_no=console_no, status="unassigned")
+        return cue_executor_entry(
+            executor_no=console_no, status="unassigned", last_app_action=last_app_action
+        )
 
     sequence_path = SEQUENCE_PATH_TEMPLATE.format(sequence_no=sequence_no)
     try:
         sequence_payload = state_port.query_state(sequence_path)
     except Exception:
         return cue_executor_entry(
-            executor_no=console_no, status="unavailable", sequence_no=sequence_no
+            executor_no=console_no,
+            status="unavailable",
+            sequence_no=sequence_no,
+            last_app_action=last_app_action,
         )
 
     sequence_node = sequence_payload.get("node") if isinstance(sequence_payload, dict) else None
@@ -127,6 +186,7 @@ def build_executor_cue_progress(
         sequence_name=sequence_name,
         cues=cues,
         current_cue=current_cue,
+        last_app_action=last_app_action,
     )
 
 
@@ -134,9 +194,26 @@ def build_cue_progress(
     state_port: StateQueryPort,
     property_port: PropertyQueryPort,
     console_nos: list[int],
+    *,
+    history: list[dict] | None = None,
 ) -> list[dict]:
-    """One entry per already-resolved executor console number (contract item 1)."""
-    return [build_executor_cue_progress(state_port, property_port, no) for no in console_nos]
+    """One entry per already-resolved executor console number (contract item 1).
+
+    ``history`` (T-H, optional — omission preserves the pre-T-H call shape
+    every existing caller/test uses) is the SAME oldest-first list
+    ``recent_execution_history`` builds; each executor's ``last_app_action``
+    is attributed from it via ``_last_app_action_for_executor``.
+    """
+    history = history or []
+    return [
+        build_executor_cue_progress(
+            state_port,
+            property_port,
+            no,
+            last_app_action=_last_app_action_for_executor(history, no),
+        )
+        for no in console_nos
+    ]
 
 
 def recent_execution_history(audit: AuditLog, *, limit: int = DEFAULT_HISTORY_LIMIT) -> list[dict]:
@@ -153,6 +230,12 @@ def recent_execution_history(audit: AuditLog, *, limit: int = DEFAULT_HISTORY_LI
     ``query_state``/``query_property`` calls this module's own executor-cue
     read performs — without this filter, building one cue-monitor snapshot
     would pollute its own "recent history" with its own read traffic.
+
+    T-H: each row also carries its best-effort ``(target_kind, target_no)``
+    attribution (``None``/``None`` when the command string does not parse as
+    one of ``panel.py``'s known forms) — an unattributable row is KEPT, never
+    dropped, so the operator's full history stays trustworthy even for
+    commands this module cannot address to an executor.
     """
     executed = [
         event
@@ -160,14 +243,20 @@ def recent_execution_history(audit: AuditLog, *, limit: int = DEFAULT_HISTORY_LI
         if event.get("event") == "executed" and event.get("kind") == "command"
     ]
     tail = executed[-limit:] if limit > 0 else executed
-    return [
-        cue_history_entry(
-            ts=str(event.get("ts", "")),
-            command=str(event.get("command", "")),
-            ok=bool(event.get("ok", True)),
+    entries = []
+    for event in tail:
+        command = str(event.get("command", ""))
+        parsed = _parse_command_target(command)
+        entries.append(
+            cue_history_entry(
+                ts=str(event.get("ts", "")),
+                command=command,
+                ok=bool(event.get("ok", True)),
+                target_kind=parsed[0] if parsed else None,
+                target_no=parsed[1] if parsed else None,
+            )
         )
-        for event in tail
-    ]
+    return entries
 
 
 def cue_monitor_snapshot(
@@ -178,8 +267,15 @@ def cue_monitor_snapshot(
     *,
     history_limit: int = DEFAULT_HISTORY_LIMIT,
 ) -> dict:
-    """The full ``cue_monitor`` server event for one refresh (contract items 1+2)."""
+    """The full ``cue_monitor`` server event for one refresh (contract items 1+2).
+
+    History is built ONCE and threaded into ``build_cue_progress`` (T-H) so
+    each executor's ``last_app_action`` and the flat history list are
+    attributed from the exact same read — never two independent audit-log
+    passes that could observe different tails under concurrent writes.
+    """
+    history = recent_execution_history(audit, limit=history_limit)
     return cue_monitor_event(
-        executors=build_cue_progress(state_port, property_port, console_nos),
-        history=recent_execution_history(audit, limit=history_limit),
+        executors=build_cue_progress(state_port, property_port, console_nos, history=history),
+        history=history,
     )

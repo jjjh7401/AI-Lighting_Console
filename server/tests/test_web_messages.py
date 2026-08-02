@@ -791,7 +791,27 @@ class TestCueHistoryEntrySchema:
             "ts": "2026-08-02T00:00:00+00:00",
             "command": "Go+ Executor 101",
             "ok": True,
+            "target_kind": None,
+            "target_no": None,
         }
+
+    def test_attribution_fields_carry_through_when_given(self):
+        entry = cue_history_entry(
+            ts="t", command="Go+ Executor 101", ok=True, target_kind="executor", target_no=101
+        )
+        assert entry["target_kind"] == "executor"
+        assert entry["target_no"] == 101
+
+
+class TestCueExecutorEntryLastAppAction:
+    def test_defaults_to_none(self):
+        entry = cue_executor_entry(executor_no=101, status="unassigned")
+        assert entry["last_app_action"] is None
+
+    def test_carries_the_given_action_through(self):
+        action = {"command": "Go+ Executor 101", "ts": "t", "ok": True}
+        entry = cue_executor_entry(executor_no=101, status="ok", last_app_action=action)
+        assert entry["last_app_action"] == action
 
 
 class TestCueMonitorEvent:

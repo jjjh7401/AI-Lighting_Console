@@ -97,6 +97,7 @@ class TestBuildExecutorCueProgress:
             "sequence_name": None,
             "cues": [],
             "current_cue": None,
+            "last_app_action": None,
         }
 
     def test_unassigned_when_the_executor_carries_no_sequence(self):
@@ -240,6 +241,90 @@ class TestRecentExecutionHistory:
         audit = self._audit(tmp_path)
         assert recent_execution_history(audit) == []
 
+    def test_executor_commands_are_attributed_to_their_target(self, tmp_path: Path):
+        audit = self._audit(tmp_path)
+        audit.log_executed("Go+ Executor 191", ok=True)
+        audit.log_executed("Off Executor 191", ok=False)
+        audit.log_executed("Go+ Sequence 80", ok=True)
+        audit.log_executed("Macro 5", ok=True)
+
+        history = recent_execution_history(audit)
+
+        assert [(entry["target_kind"], entry["target_no"]) for entry in history] == [
+            ("executor", 191),
+            ("executor", 191),
+            ("sequence", 80),
+            ("macro", 5),
+        ]
+
+    def test_an_unparseable_command_is_kept_with_unknown_attribution(self, tmp_path: Path):
+        # T-H requirement: a parse failure is NEVER a reason to drop the row —
+        # the full history must stay visible even for commands this module
+        # cannot address to a target.
+        audit = self._audit(tmp_path)
+        audit.log_executed("Store Cue 1", ok=True)
+        audit.log_executed("Delete Group 20", ok=True)
+
+        history = recent_execution_history(audit)
+
+        assert len(history) == 2
+        assert all(entry["target_kind"] is None for entry in history)
+        assert all(entry["target_no"] is None for entry in history)
+
+
+class TestLastAppActionAttribution:
+    """T-H — the app's last confirmed/failed action per executor, threaded
+    from `recent_execution_history` into `build_cue_progress`."""
+
+    def _audit(self, tmp_path: Path) -> AuditLog:
+        fixed = datetime(2026, 8, 2, tzinfo=UTC)
+        return AuditLog(directory=tmp_path / "audit", clock=lambda: fixed)
+
+    def test_an_executor_with_no_app_history_carries_no_last_app_action(self, tmp_path: Path):
+        audit = self._audit(tmp_path)
+        state_port = FakeStatePort({"Executor 101": _identity(None)})
+        property_port = FakePropertyPort({})
+
+        event = cue_monitor_snapshot(state_port, property_port, audit, [101])
+
+        assert event["executors"][0]["last_app_action"] is None
+
+    def test_the_most_recent_matching_command_wins(self, tmp_path: Path):
+        audit = self._audit(tmp_path)
+        audit.log_executed("Go+ Executor 101", ok=True)
+        audit.log_executed("Off Executor 101", ok=False)
+        state_port = FakeStatePort({"Executor 101": _identity(None)})
+        property_port = FakePropertyPort({})
+
+        event = cue_monitor_snapshot(state_port, property_port, audit, [101])
+
+        action = event["executors"][0]["last_app_action"]
+        assert action["command"] == "Off Executor 101"
+        assert action["ok"] is False
+
+    def test_a_different_executors_history_is_not_cross_attributed(self, tmp_path: Path):
+        audit = self._audit(tmp_path)
+        audit.log_executed("Go+ Executor 201", ok=True)
+        state_port = FakeStatePort({"Executor 101": _identity(None)})
+        property_port = FakePropertyPort({})
+
+        event = cue_monitor_snapshot(state_port, property_port, audit, [101])
+
+        assert event["executors"][0]["last_app_action"] is None
+
+    def test_last_app_action_is_reported_even_when_the_console_is_unreachable(self, tmp_path: Path):
+        # The app's own claim ("we sent this and it was ok'd") is independent
+        # of whether the LIVE identity read succeeds right now.
+        audit = self._audit(tmp_path)
+        audit.log_executed("Go+ Executor 101", ok=True)
+        state_port = FakeStatePort({})  # every query_state raises -> "unavailable"
+        property_port = FakePropertyPort({})
+
+        event = cue_monitor_snapshot(state_port, property_port, audit, [101])
+
+        assert event["executors"][0]["status"] == "unavailable"
+        assert event["executors"][0]["last_app_action"]["command"] == "Go+ Executor 101"
+
 
 class TestCueMonitorSnapshot:
     def test_combines_executor_progress_and_history(self, tmp_path: Path):
@@ -306,5 +391,11 @@ class TestCueMonitorRequestDispatch:
             _send(ws, type="cue_monitor_request")
             event = ws.receive_json()
         assert event["history"] == [
-            {"ts": event["history"][0]["ts"], "command": "Go+ Executor 101", "ok": True}
+            {
+                "ts": event["history"][0]["ts"],
+                "command": "Go+ Executor 101",
+                "ok": True,
+                "target_kind": "executor",
+                "target_no": 101,
+            }
         ]

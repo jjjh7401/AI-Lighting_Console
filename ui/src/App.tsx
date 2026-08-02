@@ -175,6 +175,9 @@ export function AppShell({
   onCueMonitorRefresh,
   isItemRunning,
   onItemPress,
+  isExecutorRunning,
+  onExecutorExecute,
+  onExecutorStop,
   sectionTileSize,
   onSectionTileSizeChange,
   sectionArea,
@@ -194,6 +197,10 @@ export function AppShell({
   isItemRunning?: (sectionName: string, item: DashItem) => boolean;
   /** M5 — fires panel_execute/panel_stop; see DashBoard.tsx. */
   onItemPress?: (sectionName: string, item: DashItem) => void;
+  /** T-H — CueMonitor's own run/stop affordance; see CueMonitor.tsx. */
+  isExecutorRunning?: (executorNo: number) => boolean;
+  onExecutorExecute?: (executorNo: number) => void;
+  onExecutorStop?: (executorNo: number) => void;
   /** M6-UX v3 — square cells (−/+) + pool-window area corner drag. */
   sectionTileSize?: (sectionName: string) => number | undefined;
   onSectionTileSizeChange?: (sectionName: string, next: number) => void;
@@ -216,7 +223,13 @@ export function AppShell({
         sectionArea={sectionArea}
         onSectionAreaResizeStart={onSectionAreaResizeStart}
       />
-      <CueMonitor cueMonitor={cueMonitor} onRefresh={onCueMonitorRefresh} />
+      <CueMonitor
+        cueMonitor={cueMonitor}
+        onRefresh={onCueMonitorRefresh}
+        isExecutorRunning={isExecutorRunning}
+        onExecute={onExecutorExecute}
+        onStop={onExecutorStop}
+      />
       {chatCollapsed ? (
         <aside className="chat-rail">
           <button className="chat-rail-open" onClick={onToggleChat} aria-label="채팅 펼치기">
@@ -414,6 +427,9 @@ export default function App() {
             onCueMonitorRefresh={sendCueMonitorRefresh}
             isItemRunning={isDashItemRunning}
             onItemPress={pressDashItem}
+            isExecutorRunning={isExecutorRunning}
+            onExecutorExecute={(executorNo) => sendPanelExecute("executor", executorNo)}
+            onExecutorStop={(executorNo) => sendPanelStop("executor", executorNo)}
             sectionTileSize={(sectionName) => sectionTileSizes[sectionName]}
             onSectionTileSizeChange={(sectionName, next) =>
               setSectionTileSizes((sizes) => ({ ...sizes, [sectionName]: next }))

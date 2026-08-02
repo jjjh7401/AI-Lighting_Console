@@ -593,6 +593,7 @@ def cue_executor_entry(
     sequence_name: str | None = None,
     cues: list[dict] | None = None,
     current_cue: dict | None = None,
+    last_app_action: dict | None = None,
 ) -> dict:
     """One executor's live cue-progress row.
 
@@ -605,6 +606,13 @@ def cue_executor_entry(
     its OWN ``status`` (``"ok"`` / ``"unavailable"``), because the current-cue
     property read can fail even when the sequence/cue-list read above
     succeeded — the two are never conflated into one verdict.
+
+    ``last_app_action`` (T-H, additive) is a THIRD independent claim: the most
+    recent command the app itself sent this executor and whether the console
+    ok'd it (``{"command", "ts", "ok"}``), or ``None`` when the app has never
+    sent this executor anything. It is never a claim about whether the
+    console is CURRENTLY playing that command — only that it was sent and
+    acknowledged (or not).
     """
     if status not in CUE_EXECUTOR_STATUSES:
         raise ValueError(
@@ -617,13 +625,36 @@ def cue_executor_entry(
         "sequence_name": sequence_name,
         "cues": list(cues) if cues is not None else [],
         "current_cue": current_cue,
+        "last_app_action": last_app_action,
     }
 
 
-def cue_history_entry(*, ts: str, command: str, ok: bool) -> dict:
+def cue_history_entry(
+    *,
+    ts: str,
+    command: str,
+    ok: bool,
+    target_kind: str | None = None,
+    target_no: int | None = None,
+) -> dict:
     """One recent-execution row (contract item 2) — read from the audit log,
-    independent of any console connection."""
-    return {"ts": ts, "command": command, "ok": bool(ok)}
+    independent of any console connection.
+
+    ``target_kind``/``target_no`` (T-H, additive) are the best-effort
+    attribution of which console object this command addressed, parsed from
+    the command string itself (``server/web/cue_monitor.py``'s
+    ``_parse_command_target``). Both are ``None`` when the command does not
+    parse as one of the known playback forms — the row is still returned,
+    never dropped, so the full history stays visible even when this module
+    cannot say who it was for.
+    """
+    return {
+        "ts": ts,
+        "command": command,
+        "ok": bool(ok),
+        "target_kind": target_kind,
+        "target_no": target_no,
+    }
 
 
 def cue_monitor_event(*, executors: list[dict], history: list[dict]) -> dict:

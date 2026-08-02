@@ -8,6 +8,22 @@
 // channel here confirms a fade's remaining time. An unavailable current cue
 // explains WHY it is empty rather than rendering a blank or a guessed number.
 //
+// T-H (coordinator directive, 2026-08-02) adds a THIRD, independent claim on
+// top of the two above: the status chip + run/stop affordance. The chip
+// NEVER means "the console is playing this now" — the live-probe findings
+// this task is built on establish that no channel here can confirm that. It
+// means only "what did the app itself last send this executor, and did the
+// console ok it" (`entry.last_app_action`, server/web/cue_monitor.py's T-H
+// attribution). Three grades, distinguished by TEXT + icon glyph, never
+// color alone (colour-blind accessibility):
+//   - confirmed (✓, green)  — the app sent a command and the console ok'd it
+//   - failed    (✕, red)    — the app sent a command that failed/no reply
+//   - unknown   (○, grey)   — the app has never sent this executor anything
+//     (a console operated by hand is invisible to the app either way)
+// The pulse animation fires ONLY for a few seconds right after a fresh
+// "confirmed" event — an acknowledgement flash, not a running indicator —
+// and degrades to a static emphasis under prefers-reduced-motion (styles.css).
+//
 // No internal hooks, same convention as DashBoard.tsx — a hook-free
 // component callable directly as a plain function in tests (this project has
 // no DOM/jsdom test harness; see protocol.ts's own header note).
@@ -19,6 +35,77 @@ export interface CueMonitorProps {
   /** Dispatches a manual `cue_monitor_request`. Optional, same pattern as
    * `DashBoard`'s `onRefresh` — a stub caller never breaks. */
   onRefresh?: () => void;
+  /** Whether this executor is currently shown as running (mirrors
+   * DashBoard's `isItemRunning` — same `panel.running` app-observed state,
+   * itself never a claim about the console's own playback). */
+  isExecutorRunning?: (executorNo: number) => boolean;
+  /** Fires `panel_execute` (Go+) — the SAME wire path DashBoard's executor
+   * tiles use; no second route to the console exists. */
+  onExecute?: (executorNo: number) => void;
+  /** Fires `panel_stop` (Off) — same path as `onExecute`. */
+  onStop?: (executorNo: number) => void;
+}
+
+/** The three status grades T-H's chip renders — see module header note for
+ * what each does and does NOT claim. */
+export type LastActionGrade = "confirmed" | "failed" | "unknown";
+
+/** Derives the grade from `entry.last_app_action` — pure, no clock read. */
+export function lastActionGrade(entry: CueExecutorEntry): LastActionGrade {
+  const action = entry.last_app_action;
+  if (action === null || action === undefined) return "unknown";
+  return action.ok ? "confirmed" : "failed";
+}
+
+/** Icon + text together (never a color-only signal) for each grade. */
+const GRADE_LABEL: Record<LastActionGrade, string> = {
+  confirmed: "✓ 확인됨",
+  failed: "✕ 실패/무응답",
+  unknown: "○ 미확인",
+};
+
+/** How long after a confirmed action the acknowledgement pulse plays. */
+export const APP_ACTION_PULSE_WINDOW_MS = 6_000;
+
+/**
+ * `HH:MM:SS` age spelled out in relative Korean ("12초 전"), or `""` when
+ * `ts` cannot be parsed. `nowMs` is an explicit parameter (not a hidden
+ * `Date.now()` read) so this stays a pure, deterministically testable
+ * function — the caller (a live render) passes the real clock.
+ */
+export function formatRelativeAgo(ts: string, nowMs: number = Date.now()): string {
+  const then = Date.parse(ts);
+  if (Number.isNaN(then)) return "";
+  const diffMs = nowMs - then;
+  if (diffMs < 5_000) return "방금 전";
+  const sec = Math.floor(diffMs / 1000);
+  if (sec < 60) return `${sec}초 전`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}분 전`;
+  const hour = Math.floor(min / 60);
+  return `${hour}시간 전`;
+}
+
+/** Whether a `last_app_action.ts` is fresh enough to still pulse. */
+export function isRecentAppAction(ts: string, nowMs: number = Date.now()): boolean {
+  const then = Date.parse(ts);
+  if (Number.isNaN(then)) return false;
+  const diffMs = nowMs - then;
+  return diffMs >= 0 && diffMs < APP_ACTION_PULSE_WINDOW_MS;
+}
+
+/**
+ * Fail-closed reason an executor's run/stop button is disabled, or `null`
+ * when it is fireable. Only a console-confirmed ("ok") or an answered-but-
+ * unassigned executor is fireable — "unavailable" (the live identity read
+ * itself failed) is refused, same posture as DashBoard's unresolved-executor
+ * guard (never fire on a target the console did not just confirm exists).
+ */
+export function executorFireDisabledReason(entry: CueExecutorEntry): string | null {
+  if (entry.status === "unavailable") {
+    return "콘솔 상태를 확인할 수 없어 안전을 위해 버튼이 비활성화되었습니다.";
+  }
+  return null;
 }
 
 /** The sequence identity line, or why one is not shown. */
@@ -43,12 +130,77 @@ export function currentCueLabel(entry: CueExecutorEntry): string {
   return `현재 큐: ${current.value}`;
 }
 
-function CueExecutorRow({ entry }: { entry: CueExecutorEntry }) {
+export function ExecutorStatusChip({ entry }: { entry: CueExecutorEntry }) {
+  const grade = lastActionGrade(entry);
+  const action = entry.last_app_action;
+  const pulsing = grade === "confirmed" && !!action && isRecentAppAction(action.ts);
+  const title = action
+    ? `${action.command} · ${action.ok ? "ok" : "실패"} · ${formatRelativeAgo(action.ts)}`
+    : "이 실행기로 앱이 보낸 명령이 아직 없습니다 — 콘솔에서 직접 조작했을 수 있습니다.";
+  return (
+    <span
+      className={`cue-status-chip cue-status-chip-${grade}${pulsing ? " cue-status-chip-pulse" : ""}`}
+      title={title}
+    >
+      {GRADE_LABEL[grade]}
+      {action && <span className="cue-status-chip-age">{formatRelativeAgo(action.ts)}</span>}
+    </span>
+  );
+}
+
+export function ExecutorActions({
+  entry,
+  running,
+  onExecute,
+  onStop,
+}: {
+  entry: CueExecutorEntry;
+  running: boolean;
+  onExecute?: (executorNo: number) => void;
+  onStop?: (executorNo: number) => void;
+}) {
+  const disabledReason = executorFireDisabledReason(entry);
+  const fireable = disabledReason === null;
+  const handleClick = () => {
+    if (running) {
+      onStop?.(entry.executor_no);
+    } else {
+      onExecute?.(entry.executor_no);
+    }
+  };
+  return (
+    <div className="cue-monitor-actions">
+      <button
+        type="button"
+        className={`cue-monitor-action-btn${running ? " cue-monitor-action-btn-stop" : ""}`}
+        onClick={handleClick}
+        disabled={!fireable}
+        aria-label={`Executor ${entry.executor_no} ${running ? "정지" : "실행"}`}
+      >
+        {running ? "■ 정지" : "▶ 실행"}
+      </button>
+      {disabledReason && <span className="cue-monitor-action-reason">{disabledReason}</span>}
+    </div>
+  );
+}
+
+export function CueExecutorRow({
+  entry,
+  running,
+  onExecute,
+  onStop,
+}: {
+  entry: CueExecutorEntry;
+  running?: boolean;
+  onExecute?: (executorNo: number) => void;
+  onStop?: (executorNo: number) => void;
+}) {
   return (
     <li className="cue-monitor-executor" data-executor-no={entry.executor_no}>
       <div className="cue-monitor-executor-header">
         <span className="cue-monitor-executor-no">Executor {entry.executor_no}</span>
         <span className="cue-monitor-sequence-name">{sequenceLabel(entry)}</span>
+        <ExecutorStatusChip entry={entry} />
       </div>
       {entry.status === "ok" && (
         <>
@@ -63,6 +215,12 @@ function CueExecutorRow({ entry }: { entry: CueExecutorEntry }) {
           </ol>
         </>
       )}
+      <ExecutorActions
+        entry={entry}
+        running={running ?? false}
+        onExecute={onExecute}
+        onStop={onStop}
+      />
     </li>
   );
 }
@@ -76,7 +234,13 @@ function CueHistoryRow({ entry }: { entry: CueHistoryEntry }) {
   );
 }
 
-export function CueMonitor({ cueMonitor, onRefresh }: CueMonitorProps) {
+export function CueMonitor({
+  cueMonitor,
+  onRefresh,
+  isExecutorRunning,
+  onExecute,
+  onStop,
+}: CueMonitorProps) {
   const handleRefresh = () => {
     if (onRefresh) {
       onRefresh();
@@ -107,7 +271,13 @@ export function CueMonitor({ cueMonitor, onRefresh }: CueMonitorProps) {
       <div className="cue-monitor-body">
         <ul className="cue-monitor-executors">
           {cueMonitor.executors.map((entry) => (
-            <CueExecutorRow key={entry.executor_no} entry={entry} />
+            <CueExecutorRow
+              key={entry.executor_no}
+              entry={entry}
+              running={isExecutorRunning?.(entry.executor_no) ?? false}
+              onExecute={onExecute}
+              onStop={onStop}
+            />
           ))}
           {cueMonitor.executors.length === 0 && (
             <li className="cue-monitor-empty">확인된 익스큐터 없음</li>

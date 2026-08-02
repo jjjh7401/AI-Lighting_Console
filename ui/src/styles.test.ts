@@ -8,8 +8,10 @@
 // Pure string/regex parsing over the raw CSS text — this project has no
 // DOM/jsdom test harness (see protocol.ts's own header), so this file reads
 // styles.css with node:fs and walks flat `selector { body }` blocks with a
-// regex rather than any CSSOM/browser API. styles.css has no @media or
-// nested at-rules, so a single-level block split is sufficient.
+// regex rather than any CSSOM/browser API. styles.css has exactly one nested
+// at-rule (T-H's `@media (prefers-reduced-motion: reduce)` carve-out) — the
+// flat splitter still finds the INNER selector correctly (see the describe
+// block below), so a single-level block split stays sufficient.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -51,9 +53,19 @@ function declaredFontSizePx(selector: string): number | null {
   return found ? Number(found[1]) : null;
 }
 
-describe("styles.css — no @media (single-level block parsing is valid)", () => {
-  it("has no nested at-rule blocks that would break the flat parser", () => {
-    expect(css).not.toMatch(/@media/);
+describe("styles.css — @media is restricted to the T-H prefers-reduced-motion carve-out", () => {
+  // T-H (coordinator directive, 2026-08-02) adds exactly ONE nested at-rule:
+  // the reduced-motion fallback for the cue-status acknowledgement pulse
+  // (CueMonitor.tsx). The flat block-splitter still parses the INNER
+  // selector correctly (the @media wrapper text is simply not captured as
+  // its own block), so this stays additive rather than requiring a real
+  // CSS parser — every @media in the file must be this one carve-out.
+  it("every @media block is the prefers-reduced-motion carve-out", () => {
+    const mediaBlocks = css.match(/@media[^{]*\{/g) ?? [];
+    expect(mediaBlocks.length).toBeGreaterThan(0);
+    for (const block of mediaBlocks) {
+      expect(block).toMatch(/prefers-reduced-motion:\s*reduce/);
+    }
   });
 
   it("parsed at least one block (sanity check the regex actually matched)", () => {

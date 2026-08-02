@@ -227,6 +227,19 @@ export interface CueCurrentCue {
   tried?: string[];
 }
 
+/**
+ * The app's own last confirmed/failed action on one executor (T-H). This is
+ * NOT a claim about whether the console is currently playing that command —
+ * only that the app sent it and the console did (or did not) ok it. `null`
+ * when the app has never sent this executor anything (a console operated by
+ * hand is invisible to the app either way).
+ */
+export interface CueLastAppAction {
+  command: string;
+  ts: string;
+  ok: boolean;
+}
+
 /** One executor's live cue-progress row. */
 export interface CueExecutorEntry {
   executor_no: number;
@@ -235,13 +248,18 @@ export interface CueExecutorEntry {
   sequence_name?: string | null;
   cues: CueItem[];
   current_cue: CueCurrentCue | null;
+  last_app_action?: CueLastAppAction | null;
 }
 
-/** One recent-execution row (audit-log derived, oldest-first). */
+/** One recent-execution row (audit-log derived, oldest-first). Attribution
+ * (`target_kind`/`target_no`) is best-effort — both `null` when the command
+ * did not parse as a known playback form; the row is still kept. */
 export interface CueHistoryEntry {
   ts: string;
   command: string;
   ok: boolean;
+  target_kind?: PanelTargetKind | null;
+  target_no?: number | null;
 }
 
 export type ServerEvent =
