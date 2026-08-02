@@ -454,6 +454,20 @@ describe("currentCueRowView — the SHORT per-row placeholder", () => {
       expect(currentCueRowView(entry).label.length).toBeGreaterThan(0);
     }
   });
+
+  it("T-H3: renders the server's 'index — name' current-cue value verbatim", () => {
+    // server/web/cue_monitor.py now reads the SEQUENCE handle's CurrentCue
+    // property and composes "<index> — <cue name>" server-side; the UI does
+    // no reformatting of its own, so a value this shape must render through
+    // unchanged (no reformatting to break, no re-derivation to drift).
+    const entry: CueExecutorEntry = {
+      ...OK_ENTRY,
+      current_cue: { status: "ok", value: "2 — Hook Drop", property: "CurrentCue", tried: ["CurrentCue"] },
+    };
+    const view = currentCueRowView(entry);
+    expect(view.hasValue).toBe(true);
+    expect(view.label).toBe("현재 큐: 2 — Hook Drop");
+  });
 });
 
 describe("currentCueBannerState — the three-way branch (REQ T-H2 §3)", () => {

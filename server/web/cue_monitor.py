@@ -16,15 +16,20 @@ independent read paths:
    independent of the console connection entirely. This is the monitor's
    guaranteed floor: it renders even when the console is unreachable.
 
-Current-cue read (UNVERIFIED — documented per this project's established
-doctrine that a static probe cannot answer what only live firing can): no
-PROTOCOL.md / rulebook entry names a confirmed MA3 property that exposes an
-executor's live cue position. ``CURRENT_CUE_PROPERTY_CANDIDATES`` below is
-tried, in order, as candidate guesses; every candidate failing is the
-EXPECTED and NORMAL degrade path, never an error — the entry reports
-``status: "unavailable"`` and the caller (the UI) is responsible for telling
-the operator why the field is empty, never for estimating a percentage or a
-countdown that no channel here confirms (out of scope by contract).
+Current-cue read (T-H3, coordinator live probe, 2026-08-02 — LIVE-VERIFIED,
+supersedes the earlier "unavailable" doctrine below the module docstring):
+the property lives on the SEQUENCE handle, not the executor — ``prop
+DataPool/Sequences/80 CurrentCue`` returned ``'Sequence 80.1'`` at rest and
+``'Sequence 80.2'`` after two ``Go+ Executor 191`` presses, i.e. it tracks
+playback. The earlier executor-handle probe (``CURRENT_CUE_PROPERTY_CANDIDATES``
+tried against ``Executor <n>``) was reading the WRONG object — that failure
+was real, but the "no channel exposes this" conclusion it supported was not.
+The console's own ``CueNo`` property is UNRELIABLE (observed ``'1'`` at rest,
+``''`` once playing) and is deliberately never read here. The value's shape
+is ``<sequence name>.<cue index>`` — the index is taken from after the LAST
+``.``; anything that does not end in a bare integer suffix (an unexpected
+shape, or an empty string) degrades to ``"unavailable"`` rather than being
+guessed at.
 
 Chokepoint discipline (unchanged from dash.py/panel.py): this module holds NO
 execution surface of its own — it never imports the OSC send surface.
@@ -42,16 +47,51 @@ from server.web.messages import cue_executor_entry, cue_history_entry, cue_monit
 
 SEQUENCE_PATH_TEMPLATE = "DataPool/Sequences/{sequence_no}"
 
-# @MX:NOTE: [AUTO] UNVERIFIED candidate(s) for an executor's live cue-position
-# property. console/lua/PROTOCOL.md documents the `state`/`prop`/`ping` reply
-# kinds only; no property name that exposes a PLAYBACK POSITION has ever been
-# exercised against a live console on this project (see module docstring
-# ASSUMPTION). Tried in order; every failure degrades to "unavailable".
-# @MX:CEILING: single unverified guess — do not add more without a live-probe
-# session that actually confirms (or refutes) a candidate name.
-# @MX:UPGRADE: replace/extend once a live "prop" round trip against a running
-# executor confirms which property (if any) exposes the current cue.
-CURRENT_CUE_PROPERTY_CANDIDATES: tuple[str, ...] = ("Cue",)
+# @MX:ANCHOR: [AUTO] the live-verified current-cue property — read off the
+# SEQUENCE handle (``DataPool/Sequences/<no>``), never the executor. A prior
+# `prop` round trip against a running executor confirmed this (module
+# docstring, T-H3): "CurrentCue" tracks playback (`.1` -> `.2` across two
+# Go+ presses); the console's own "CueNo" property is unreliable and is
+# deliberately NOT read (see module docstring).
+# @MX:REASON: this replaced an UNVERIFIED executor-handle guess
+# (`CURRENT_CUE_PROPERTY_CANDIDATES = ("Cue",)`, tried against `Executor <n>`)
+# that always failed — not because no such property exists, but because it
+# was aimed at the wrong object. Do not revert to probing the executor
+# handle without a fresh live probe that actually contradicts this one.
+CURRENT_CUE_PROPERTY_CANDIDATES: tuple[str, ...] = ("CurrentCue",)
+
+# T-H3 — `<sequence name>.<cue index>` is the confirmed shape; the index is
+# whatever follows the LAST '.', and must be a bare non-negative integer or
+# the read degrades to "unavailable" rather than guessing at a malformed or
+# empty value (the coordinator's probe: '' once playing rules out treating a
+# missing suffix as "still at cue 0").
+_CURRENT_CUE_INDEX_RE = re.compile(r"\.(\d+)$")
+
+
+def _parse_current_cue_index(value: str) -> int | None:
+    """The integer after the LAST ``.`` in ``value``, or ``None`` when the
+    shape does not match (empty string, no ``.``, non-integer suffix)."""
+    match = _CURRENT_CUE_INDEX_RE.search(value)
+    return int(match.group(1)) if match else None
+
+
+def _cue_name_for_index(cues: list[dict], index: int) -> str | None:
+    """The cue name matching ``index``, or ``None`` when no cue in the list
+    carries it — never silently dropped by the caller (the index itself is
+    still exposed; see ``_read_current_cue``).
+
+    Prefers the responder's real cue number (``cue_no``) when present, since
+    that is what ``CurrentCue``'s index almost certainly names; falls back to
+    the pool slot (``no``) for cues the responder could not number.
+    """
+    for cue in cues:
+        if cue.get("cue_no") == index:
+            return cue.get("name")
+    for cue in cues:
+        if cue.get("no") == index:
+            return cue.get("name")
+    return None
+
 
 DEFAULT_HISTORY_LIMIT = 20
 
@@ -121,15 +161,30 @@ def _cue_items(children: list) -> list[dict]:
     return items
 
 
-def _read_current_cue(property_port: PropertyQueryPort, executor_ref: str) -> dict:
-    """Best-effort current-cue read. Every candidate failing is the NORMAL
-    path (see module docstring) — this never raises."""
+def _read_current_cue(
+    property_port: PropertyQueryPort, sequence_path: str, cues: list[dict]
+) -> dict:
+    """Best-effort current-cue read off the SEQUENCE handle (T-H3 — see
+    module docstring for why this is the sequence, not the executor).
+
+    A read failure, an empty value, or a value that does not end in an
+    integer suffix all degrade to ``"unavailable"`` — never guessed at. On
+    success, ``value`` carries the parsed cue index, plus its name (from
+    ``cues``) when the index maps to a known cue — "index only" is a valid,
+    surfaced outcome (REQ: never silently dropped), not a failure.
+    """
     tried = list(CURRENT_CUE_PROPERTY_CANDIDATES)
-    reads = read_properties(property_port, executor_ref, tried)
+    reads = read_properties(property_port, sequence_path, tried)
     for name in tried:
         read = reads.get(name)
-        if read is not None and read.ok and read.value:
-            return {"status": "ok", "value": read.value, "property": name, "tried": tried}
+        if read is None or not read.ok or not read.value:
+            continue
+        index = _parse_current_cue_index(read.value)
+        if index is None:
+            continue
+        cue_name = _cue_name_for_index(cues, index)
+        value = str(index) if cue_name is None else f"{index} — {cue_name}"
+        return {"status": "ok", "value": value, "property": name, "tried": tried}
     return {"status": "unavailable", "tried": tried}
 
 
@@ -177,7 +232,7 @@ def build_executor_cue_progress(
     sequence_node = sequence_payload.get("node") if isinstance(sequence_payload, dict) else None
     sequence_name = str(sequence_node.get("name", "")) if isinstance(sequence_node, dict) else ""
     cues = _cue_items(sequence_payload.get("children", []))
-    current_cue = _read_current_cue(property_port, executor_ref)
+    current_cue = _read_current_cue(property_port, sequence_path, cues)
 
     return cue_executor_entry(
         executor_no=console_no,
