@@ -392,9 +392,7 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
     # A finished discovery changes no health state, and the heartbeat loop only
     # pushes status on a CHANGE — without this fan-out the verdict would be
     # computed correctly and never reach the operator.
-    reply_diagnostic.set_on_complete(
-        lambda: [notify() for notify in tuple(deps.status_listeners)]
-    )
+    reply_diagnostic.set_on_complete(lambda: [notify() for notify in tuple(deps.status_listeners)])
     # M7.4a (AC-DEPLOY-024 ③): mirror every gate-truth health change onto the
     # sidecar's stdout so the Stage-2 tray badge shows the SAME state the web UI
     # does. stdout is the shell's only inbound channel — it owns no socket
