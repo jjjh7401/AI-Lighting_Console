@@ -124,3 +124,9 @@ SCENE §0 교훈 21~25 승계(특히 22 "문이 둘이면 그물도 둘", 23 "�
 
 `푸른`↔`파란` 쌍둥이 문장 동일 답도 테스트로 고정(`test_the_blue_twin_words_answer_identically`).
 룰북(`server/rulebook/assets/**`) 무접촉.
+
+커밋 후에만 보이는 게이트(SCENE 교훈 18 재현): OVERLAP의 상시 PRESERVE 게이트
+(`test_overlap_preserve.py`)가 `server/looks/library/`를 PRECHK BASE 기준으로 잠그고 있어 커밋 직후
+1건 FAIL — 약화 대신 **정밀 허가**로 갱신했다(`TestLooksLibraryGrantedExtension`: 3파일·라인쌍
+정확 텍스트만 통과, 그 외는 여전히 FAIL). 최종: pytest **3941 passed / 5 skipped**.
+커밋: `761f01e`(확장 본체) · `c052d9f`(게이트 정밀 허가).
