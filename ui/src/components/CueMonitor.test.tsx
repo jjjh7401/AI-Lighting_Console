@@ -13,7 +13,10 @@ import {
   CueMonitor,
   ExecutorActions,
   ExecutorStatusChip,
+  currentCueBannerState,
   currentCueLabel,
+  currentCueRowView,
+  currentCueUnavailableReason,
   executorFireDisabledReason,
   formatRelativeAgo,
   isRecentAppAction,
@@ -371,5 +374,178 @@ describe("CueExecutorRow — panel_execute/panel_stop wiring end-to-end", () => 
       (child) => typeof (child as ReactElement)?.type === "function",
     );
     expect(chip).toBeDefined();
+  });
+});
+
+// -- T-H2: no more identical-sentence repetition across every executor row --
+//
+// User feedback (2026-08-02): the same long "확인 불가" sentence repeated on
+// every one of 8 rows reads as noise, not information. The fix keeps the
+// SAME honesty (no "playing now" claim, no % / countdown, no silent blank)
+// but says the shared fact ONCE at panel level when it really is shared, and
+// keeps each row down to a short placeholder — never dropping the fact that
+// this row's current cue is unknown, just moving the long explanation to a
+// tooltip (`title`) instead of the row body.
+
+const ENTRY_WITH_VALUE: CueExecutorEntry = {
+  ...OK_ENTRY,
+  executor_no: 401,
+  current_cue: { status: "ok", value: "3", property: "Cue", tried: ["Cue"] },
+};
+
+const ENTRY_UNAVAILABLE_SAME_TRIED: CueExecutorEntry = {
+  ...OK_ENTRY,
+  executor_no: 402,
+  current_cue: { status: "unavailable", tried: ["Cue"] },
+};
+
+const ENTRY_UNAVAILABLE_DIFFERENT_TRIED: CueExecutorEntry = {
+  ...OK_ENTRY,
+  executor_no: 403,
+  current_cue: { status: "unavailable", tried: ["Fader", "Phase"] },
+};
+
+describe("currentCueUnavailableReason", () => {
+  it("is null when the entry actually has a value — nothing to explain", () => {
+    expect(currentCueUnavailableReason(ENTRY_WITH_VALUE)).toBeNull();
+  });
+
+  it("names the tried property list in the reason text", () => {
+    expect(currentCueUnavailableReason(ENTRY_UNAVAILABLE_SAME_TRIED)).toContain("Cue");
+  });
+
+  it("two entries with the same tried list produce the identical reason text", () => {
+    const twin: CueExecutorEntry = { ...ENTRY_UNAVAILABLE_SAME_TRIED, executor_no: 999 };
+    expect(currentCueUnavailableReason(ENTRY_UNAVAILABLE_SAME_TRIED)).toBe(
+      currentCueUnavailableReason(twin),
+    );
+  });
+
+  it("a different tried list produces different reason text", () => {
+    expect(currentCueUnavailableReason(ENTRY_UNAVAILABLE_SAME_TRIED)).not.toBe(
+      currentCueUnavailableReason(ENTRY_UNAVAILABLE_DIFFERENT_TRIED),
+    );
+  });
+});
+
+describe("currentCueRowView — the SHORT per-row placeholder", () => {
+  it("shows the value when the entry has one", () => {
+    const view = currentCueRowView(ENTRY_WITH_VALUE);
+    expect(view.hasValue).toBe(true);
+    expect(view.label).toBe("현재 큐: 3");
+    expect(view.reason).toBeNull();
+  });
+
+  it("is a short dash placeholder (never the long sentence) when unavailable", () => {
+    const view = currentCueRowView(ENTRY_UNAVAILABLE_SAME_TRIED);
+    expect(view.hasValue).toBe(false);
+    expect(view.label).toBe("현재 큐 —");
+    expect(view.label.length).toBeLessThan(20);
+  });
+
+  it("still carries the full reason (for a tooltip), just not in the row body", () => {
+    const view = currentCueRowView(ENTRY_UNAVAILABLE_SAME_TRIED);
+    expect(view.reason).not.toBeNull();
+    expect(view.reason).toContain("확인 불가");
+  });
+
+  it("never renders a blank — the placeholder is always non-empty", () => {
+    for (const entry of [ENTRY_WITH_VALUE, ENTRY_UNAVAILABLE_SAME_TRIED, UNASSIGNED_ENTRY]) {
+      expect(currentCueRowView(entry).label.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("currentCueBannerState — the three-way branch (REQ T-H2 §3)", () => {
+  it("branch 1: every ok-status executor unavailable for the SAME reason -> uniform banner", () => {
+    const twin: CueExecutorEntry = { ...ENTRY_UNAVAILABLE_SAME_TRIED, executor_no: 404 };
+    const state = currentCueBannerState([ENTRY_UNAVAILABLE_SAME_TRIED, twin]);
+    expect(state.kind).toBe("uniform");
+    if (state.kind === "uniform") {
+      expect(state.reason).toContain("Cue");
+    }
+  });
+
+  it("branch 2: reasons are mixed across rows -> no blanket banner (mixed)", () => {
+    const state = currentCueBannerState([
+      ENTRY_UNAVAILABLE_SAME_TRIED,
+      ENTRY_UNAVAILABLE_DIFFERENT_TRIED,
+    ]);
+    expect(state.kind).toBe("mixed");
+  });
+
+  it("branch 3: at least one row already has a value -> no blanket claim (none)", () => {
+    const state = currentCueBannerState([ENTRY_WITH_VALUE, ENTRY_UNAVAILABLE_SAME_TRIED]);
+    expect(state.kind).toBe("none");
+  });
+
+  it("ignores non-ok-status executors (they never attempt a current-cue read at all)", () => {
+    const state = currentCueBannerState([
+      ENTRY_UNAVAILABLE_SAME_TRIED,
+      { ...ENTRY_UNAVAILABLE_DIFFERENT_TRIED, status: "unassigned" },
+    ]);
+    expect(state.kind).toBe("uniform");
+  });
+
+  it("no ok-status executors at all -> none", () => {
+    expect(currentCueBannerState([UNASSIGNED_ENTRY, UNAVAILABLE_ENTRY]).kind).toBe("none");
+  });
+
+  it("all ok-status executors have values -> none (nothing to bannner)", () => {
+    const other: CueExecutorEntry = { ...ENTRY_WITH_VALUE, executor_no: 405 };
+    expect(currentCueBannerState([ENTRY_WITH_VALUE, other]).kind).toBe("none");
+  });
+});
+
+describe("CueMonitor — panel-level banner rendering (T-H2)", () => {
+  function stateWith(executors: CueExecutorEntry[]): CueMonitorState {
+    return { ...POPULATED_STATE, executors };
+  }
+
+  /** `CurrentCueBanner` is a component, not a DOM node — the element in
+   * CueMonitor's own children array has `props.executors`, not a
+   * `className`. Find it by that prop, then invoke its own render function
+   * one level deeper (same "call the function component directly" pattern
+   * this whole suite uses) to inspect what it actually put on the page. */
+  function renderedBanner(element: ReactElement): ReactElement | null {
+    const bannerElement = childArray(element).find(
+      (child) => (child as ReactElement)?.props?.executors !== undefined,
+    ) as ReactElement | undefined;
+    if (!bannerElement) return null;
+    return (bannerElement.type as (props: unknown) => ReactElement | null)(bannerElement.props);
+  }
+
+  it("renders exactly one banner when every row shares the same unavailable reason", () => {
+    const twin: CueExecutorEntry = { ...ENTRY_UNAVAILABLE_SAME_TRIED, executor_no: 406 };
+    const element = CueMonitor({
+      cueMonitor: stateWith([ENTRY_UNAVAILABLE_SAME_TRIED, twin]),
+    }) as ReactElement;
+    const banner = renderedBanner(element);
+    expect(banner).not.toBeNull();
+    expect(banner!.props.className).toBe("cue-monitor-current-cue-banner");
+    expect((childArray(banner!).join("") as string)).toContain("확인 불가");
+  });
+
+  it("renders no banner when reasons are mixed", () => {
+    const element = CueMonitor({
+      cueMonitor: stateWith([ENTRY_UNAVAILABLE_SAME_TRIED, ENTRY_UNAVAILABLE_DIFFERENT_TRIED]),
+    }) as ReactElement;
+    expect(renderedBanner(element)).toBeNull();
+  });
+
+  it("renders no banner when some rows already have a value", () => {
+    const element = CueMonitor({
+      cueMonitor: stateWith([ENTRY_WITH_VALUE, ENTRY_UNAVAILABLE_SAME_TRIED]),
+    }) as ReactElement;
+    expect(renderedBanner(element)).toBeNull();
+    // ...and the row with a value shows it, never the long sentence.
+    const body = childArray(element).find(
+      (child) => (child as ReactElement).props?.className === "cue-monitor-body",
+    ) as ReactElement;
+    const [executorList] = childArray(body) as ReactElement[];
+    const rows = childArray(executorList).filter(
+      (child) => (child as ReactElement)?.props?.entry !== undefined,
+    ) as ReactElement[];
+    expect(rows.map((row) => row.props.entry.executor_no)).toEqual([401, 402]);
   });
 });

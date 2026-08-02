@@ -1406,3 +1406,24 @@ body {
   color: var(--muted);
   font-size: 13px;
 }
+
+/* T-H2 — the panel-level shared-fact banner (CueMonitor.tsx's
+   CurrentCueBanner/currentCueBannerState "uniform" branch ONLY). Says the
+   one shared fact once instead of repeating it on every row; each row keeps
+   only a short "현재 큐 —" placeholder (see .cue-monitor-current-cue below)
+   with the full explanation in its `title` tooltip. */
+.cue-monitor-current-cue-banner {
+  margin: 0 16px 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--warn);
+  background: rgba(210, 153, 34, 0.12);
+  color: var(--warn);
+  font-size: 13px;
+}
+
+.cue-monitor-current-cue {
+  color: var(--muted);
+  font-size: 13px;
+  cursor: default;
+}

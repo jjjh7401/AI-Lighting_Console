@@ -24,6 +24,18 @@
 // "confirmed" event — an acknowledgement flash, not a running indicator —
 // and degrades to a static emphasis under prefers-reduced-motion (styles.css).
 //
+// T-H2 (user feedback, 2026-08-02): the same "current cue confirm 불가"
+// sentence was repeating verbatim on every executor row — a single fact
+// about this console/responder combination, said 8 times, which reads as
+// noise rather than information. Fixed WITHOUT hiding the fact: when every
+// row's current-cue read fails for the SAME reason, that shared fact is
+// said ONCE at panel level (`CurrentCueBanner`/`currentCueBannerState`);
+// each row keeps only a short "현재 큐 —" placeholder (`currentCueRowView`)
+// with the full explanation moved to its `title` tooltip. If reasons ever
+// differ across rows (a future responder answering some but not others),
+// the banner is withheld and each row states its own case individually —
+// see `currentCueBannerState`'s three-way branch.
+//
 // No internal hooks, same convention as DashBoard.tsx — a hook-free
 // component callable directly as a plain function in tests (this project has
 // no DOM/jsdom test harness; see protocol.ts's own header note).
@@ -121,6 +133,11 @@ export function sequenceLabel(entry: CueExecutorEntry): string {
  * The current-cue line — independently Optional (contract item 1): an
  * "unavailable" read is expected and normal (no MA3 property confirmed to
  * expose it), so this always explains the gap rather than rendering a blank.
+ *
+ * Kept verbatim for RunbookMode.tsx, which still wants the full sentence
+ * inline (one big row at a time there, so repetition is not the problem
+ * T-H2 fixes). CueMonitor's own row rendering below uses the SHORT
+ * `currentCueRowView` instead — see the T-H2 module note.
  */
 export function currentCueLabel(entry: CueExecutorEntry): string {
   const current = entry.current_cue;
@@ -128,6 +145,77 @@ export function currentCueLabel(entry: CueExecutorEntry): string {
     return "현재 큐: 확인 불가 — 이 콘솔/응답기 조합에서 읽을 수 있는 속성이 확인되지 않았습니다";
   }
   return `현재 큐: ${current.value}`;
+}
+
+/**
+ * T-H2 (user feedback, 2026-08-02): the FULL reason a current-cue read is
+ * unavailable, or `null` when the entry actually has a value (nothing to
+ * explain). Distinct from `currentCueLabel` in two ways: (a) it names the
+ * property names actually tried (`current_cue.tried`), so two entries that
+ * failed for genuinely DIFFERENT reasons produce genuinely different text —
+ * this is what lets `currentCueBannerState` below tell "every row failed
+ * the same way" apart from "rows failed for different reasons" once the
+ * responder is extended and some rows start answering; (b) it returns
+ * `null` (not a sentence) when there IS a value, so callers can test
+ * "has an explanation" without re-deriving `hasValue` themselves.
+ */
+export function currentCueUnavailableReason(entry: CueExecutorEntry): string | null {
+  const current = entry.current_cue;
+  if (current && current.status === "ok" && current.value) return null;
+  const tried = current?.tried;
+  const triedClause =
+    tried && tried.length > 0 ? `${tried.join(", ")} 속성을` : "읽을 수 있는 속성이";
+  return `현재 큐 확인 불가 — 이 콘솔/응답기 조합에서 ${triedClause} 확인되지 않았습니다`;
+}
+
+/** The SHORT per-row placeholder T-H2 replaces the repeated sentence with:
+ * the value when there is one, else a bare dash — never a silent blank,
+ * never the long sentence repeated on every row. The full reason still
+ * rides along as `reason`, for the row's `title` tooltip. */
+export interface CurrentCueRowView {
+  hasValue: boolean;
+  label: string;
+  reason: string | null;
+}
+
+export function currentCueRowView(entry: CueExecutorEntry): CurrentCueRowView {
+  const current = entry.current_cue;
+  const hasValue = !!(current && current.status === "ok" && current.value);
+  if (hasValue) {
+    return { hasValue: true, label: `현재 큐: ${current!.value}`, reason: null };
+  }
+  return { hasValue: false, label: "현재 큐 —", reason: currentCueUnavailableReason(entry) };
+}
+
+/**
+ * T-H2 §3 — the panel-level banner's three-way branch. ONLY the "uniform"
+ * branch renders the shared-fact banner (per-row text stays short either
+ * way): every "ok"-status executor's current-cue read failed, and every one
+ * of them failed for the exact SAME reason — the observed present-day case
+ * (a single fixed candidate-property list), stated once instead of 8 times.
+ *
+ * "mixed" (rows fail for genuinely different reasons) and "none" (at least
+ * one row already has a value, or there is nothing to report at all) both
+ * render NO banner — a blanket claim would be false in either case, so each
+ * row is left to speak for itself via `currentCueRowView`.
+ *
+ * Non-"ok" executors (unassigned/unavailable) never attempt a current-cue
+ * read in the first place (see `CueExecutorRow` below) and are excluded.
+ */
+export type CurrentCueBannerState =
+  | { kind: "none" }
+  | { kind: "uniform"; reason: string }
+  | { kind: "mixed" };
+
+export function currentCueBannerState(executors: CueExecutorEntry[]): CurrentCueBannerState {
+  const reasons = executors
+    .filter((entry) => entry.status === "ok")
+    .map((entry) => currentCueUnavailableReason(entry));
+  if (reasons.length === 0) return { kind: "none" };
+  if (reasons.some((reason) => reason === null)) return { kind: "none" };
+  const unique = new Set(reasons as string[]);
+  if (unique.size > 1) return { kind: "mixed" };
+  return { kind: "uniform", reason: reasons[0] as string };
 }
 
 export function ExecutorStatusChip({ entry }: { entry: CueExecutorEntry }) {
@@ -204,7 +292,12 @@ export function CueExecutorRow({
       </div>
       {entry.status === "ok" && (
         <>
-          <div className="cue-monitor-current-cue">{currentCueLabel(entry)}</div>
+          <div
+            className="cue-monitor-current-cue"
+            title={currentCueRowView(entry).reason ?? undefined}
+          >
+            {currentCueRowView(entry).label}
+          </div>
           <ol className="cue-monitor-cue-list">
             {entry.cues.map((cue) => (
               <li key={cue.no} className="cue-monitor-cue-item">
@@ -222,6 +315,18 @@ export function CueExecutorRow({
         onStop={onStop}
       />
     </li>
+  );
+}
+
+/** T-H2 — renders the shared-fact banner ONLY in the "uniform" branch; `null`
+ * (no DOM node at all) for "mixed"/"none", per `currentCueBannerState`. */
+function CurrentCueBanner({ executors }: { executors: CueExecutorEntry[] }) {
+  const state = currentCueBannerState(executors);
+  if (state.kind !== "uniform") return null;
+  return (
+    <div className="cue-monitor-current-cue-banner" role="status">
+      ⚠ {state.reason}
+    </div>
   );
 }
 
@@ -268,6 +373,7 @@ export function CueMonitor({
           ⟳ 새로고침
         </button>
       </header>
+      <CurrentCueBanner executors={cueMonitor.executors} />
       <div className="cue-monitor-body">
         <ul className="cue-monitor-executors">
           {cueMonitor.executors.map((entry) => (
