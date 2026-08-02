@@ -94,6 +94,12 @@ _PARTICLES = (
     "과",
     "랑",
 )
+# A per-package copy of the fx ending list, kept in step by an equality guard
+# (`test_matching_endings_parity.py`) rather than by an import — `_ENDINGS` is
+# private and feeds `_SUFFIX` below. Two shapes: 주세요·줄래·줄까·다오·보자·
+# 줘·봐 attach to an 어/아 verb stem, while 하는 is the adnominal of a
+# 하다-verb on a NOUN stem (웨이브 + 하는). Closed set — adding one is a
+# decision, and it must be made in BOTH copies or the guard fails.
 _ENDINGS = (
     "주세요",
     "줄래",

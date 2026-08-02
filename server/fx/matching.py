@@ -157,9 +157,17 @@ _PARTICLES = (
 )
 
 # Movement words are VERBS in the field ("좌우로 쓸어줘"), which the nominal
-# particle list above cannot reach. A second CLOSED group covers the endings
-# that attach to an 어/아 stem. Closed for the same reason and with the same
-# cost of being wrong: an open ending rule would let 쓸어 swallow 쓸어담아.
+# particle list above cannot reach. A second CLOSED group covers the endings.
+# Closed for the same reason and with the same cost of being wrong: an open
+# ending rule would let 쓸어 swallow 쓸어담아.
+#
+# TWO shapes live here, and the difference is why the list is enumerated
+# rather than derived:
+#   * 주세요·줄래·줄까·다오·보자·줘·봐 attach to an 어/아 verb stem (쓸어 + 줘);
+#   * 하는 is the adnominal of a 하다-verb and attaches to a NOUN stem
+#     (웨이브 + 하는), added 2026-08-02 for the SCENE headline sentence.
+# Adding one is a decision, not a pattern to extend — the exact length is
+# pinned in `test_matching_endings_parity.py`.
 _ENDINGS = (
     "주세요",
     "줄래",
