@@ -212,6 +212,7 @@ class ChatSession:
         console_input_probe: Callable[[], str] | None = None,
         reply_port_probe: Callable[[], ReplyPortMismatch | None] | None = None,
         preshow_receive_port: int | None = None,
+        preshow_osc_slot: int | None = None,
     ) -> None:
         self._gate = gate
         # Injected so the status surface owns the I/O and the health state
@@ -254,6 +255,12 @@ class ChatSession:
                 _GateLivenessPort(gate) if preshow_receive_port is not None else None
             ),
             preshow_receive_port=preshow_receive_port,
+            # SPEC-COPILOT-PRESHOW-001 T-G3: the site's real osc_slot setting
+            # (wired from server/web/app.py WebDeps -> server/web/serve.py
+            # apply_effective_settings). None (unwired) is passed through
+            # unchanged — run_preshow_checklist itself discloses the
+            # unconfirmed-default fallback rather than this layer guessing.
+            preshow_osc_slot=preshow_osc_slot,
         )
         # Held so a look bundle re-enters the SAME run_commands tool the model
         # uses, rather than growing a second way to reach the console.

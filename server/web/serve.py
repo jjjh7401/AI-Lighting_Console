@@ -175,7 +175,7 @@ def apply_effective_settings(
     *,
     user_path: object | None = None,
 ) -> None:
-    """Fill the five host/port args from persisted settings, in place.
+    """Fill the five host/port args + ``osc_slot`` from persisted settings, in place.
 
     Precedence (``resolve_effective_settings`` — the M1 seam the settings + the
     provision APIs also read, so the runtime bind and the reported value AGREE BY
@@ -186,6 +186,11 @@ def apply_effective_settings(
     Called only on the real-serve entry (the packaged shell path). Test callers
     that build ``args`` directly are unaffected — this never runs for them, so
     their explicit ports stay byte-identical.
+
+    ``args.osc_slot`` (SPEC-COPILOT-PRESHOW-001 T-G3) carries no CLI flag (no
+    ``--osc-slot`` override exists) — it resolves purely from the settings
+    file/default, same precedence chain, so the pre-show checklist names the
+    site's ACTUAL configured OSC settings row.
     """
     passed = _explicitly_passed(argv)
     overrides = {
@@ -203,6 +208,7 @@ def apply_effective_settings(
     args.console_host = resolved.console_host
     args.console_port = resolved.console_port
     args.receive_port = resolved.receive_port
+    args.osc_slot = resolved.osc_slot
 
 
 def build_handshake_policy(args: argparse.Namespace) -> HandshakePolicy:
@@ -373,6 +379,10 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         # request (port 0), so the real bound value is what ChatSession
         # needs to wire the pre-show OSC checks correctly.
         preshow_receive_port=stack.receive_port,
+        # SPEC-COPILOT-PRESHOW-001 T-G3: args.osc_slot only exists when
+        # apply_effective_settings ran (the real-serve entry) — a test caller
+        # that builds args directly never gets a fabricated "confirmed" slot.
+        preshow_osc_slot=getattr(args, "osc_slot", None),
     )
     # REQ-DEPLOY-018/026 follow-up: a grandMA3 OSC entry has ONE port for BOTH
     # directions, so the port the console replies THROUGH and the port the app

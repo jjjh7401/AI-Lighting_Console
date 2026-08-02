@@ -629,6 +629,7 @@ def build_toolset(
     property_port: PropertyQueryPort | None = None,
     preshow_liveness_port: PreshowLivenessPort | None = None,
     preshow_receive_port: int | None = None,
+    preshow_osc_slot: int | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
 
@@ -662,6 +663,13 @@ def build_toolset(
     ``server.safety.gate.SafetyGate.heartbeat``), never a bridge type.
     ``preshow_receive_port`` is the numeric port that link already owns, used
     for reporting and feedback-port-drift comparison.
+
+    ``preshow_osc_slot`` (SPEC-COPILOT-PRESHOW-001 T-G3) is the site's real
+    ``osc_slot`` setting (``server.deploy.settings.UserSettings.osc_slot``).
+    Omitted by default (unchanged backward-compatible behavior): the
+    ``osc_slot_send_row`` check then falls back to the hardcoded default AND
+    discloses that fallback explicitly, rather than naming an unconfirmed
+    value as if it were the confirmed site setting.
     """
     rig_paths = dict(rig_paths or DEFAULT_RIG_CONTEXT_PATHS)
     drilldown = frozenset(rig_drilldown if rig_drilldown is not None else DEFAULT_RIG_DRILLDOWN)
@@ -1698,6 +1706,7 @@ def build_toolset(
             state_port=state_port,
             liveness_port=preshow_liveness_port,
             liveness_receive_port=preshow_receive_port,
+            configured_osc_slot=preshow_osc_slot,
             sequences_path=rig_paths.get("sequences", "DataPool/Sequences"),
             preset_pools_path=rig_paths.get("preset_pools", "DataPool/PresetPools"),
         )

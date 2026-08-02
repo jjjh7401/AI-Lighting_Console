@@ -65,7 +65,7 @@ def run_preshow_checklist(
     sequences_path: str = DEFAULT_SEQUENCES_PATH,
     preset_pools_path: str = DEFAULT_PRESET_POOLS_PATH,
     library_loader=None,
-    configured_osc_slot: int = DEFAULT_OSC_SLOT,
+    configured_osc_slot: int | None = None,
     live_osc_rows: Mapping[int, Mapping[str, object]] | None = None,
     configured_feedback_port: int | None = None,
 ) -> PreshowReport:
@@ -78,6 +78,16 @@ def run_preshow_checklist(
     when this runs inside the app itself, which already owns the receive
     port. ``osc_config`` remains the standalone/dev-tool path (opens its own
     socket) and is used only when no ``liveness_port`` is supplied.
+
+    ``configured_osc_slot`` (SPEC-COPILOT-PRESHOW-001 T-G3) is the site's real
+    ``osc_slot`` setting (``server.deploy.settings.UserSettings.osc_slot``),
+    when the caller resolved it. ``None`` (the default — matches every caller
+    that has not wired the setting through yet) falls back to
+    ``DEFAULT_OSC_SLOT``, and the resulting ``osc_slot_send_row`` check
+    explicitly discloses that the named value is an unconfirmed fallback, not
+    the confirmed site setting — this project has twice been bitten by an
+    ``osc_slot`` row that was NOT ``Send = Yes``, so naming the wrong row with
+    unwarranted confidence is worse than naming no row at all.
 
     ``configured_feedback_port`` defaults to ``osc_config.receive_port`` (or
     ``liveness_receive_port`` when no ``osc_config`` was given) when omitted,
@@ -123,7 +133,13 @@ def run_preshow_checklist(
 
     # ④ known pitfalls.
     checks.append(check_stale_socket_advisory(osc_roundtrip))
-    checks.append(check_osc_slot_send_row(configured_osc_slot, live_osc_rows))
+    slot_is_configured = configured_osc_slot is not None
+    effective_osc_slot = configured_osc_slot if slot_is_configured else DEFAULT_OSC_SLOT
+    checks.append(
+        check_osc_slot_send_row(
+            effective_osc_slot, live_osc_rows, slot_is_configured=slot_is_configured
+        )
+    )
     feedback_port = configured_feedback_port
     if feedback_port is None and osc_config is not None:
         feedback_port = osc_config.receive_port

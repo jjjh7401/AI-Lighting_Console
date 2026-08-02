@@ -82,3 +82,26 @@ class TestPreshowCheckOscWiring:
         by_name = {c["name"]: c for c in report["checks"]}
         assert by_name["osc_roundtrip"]["status"] == "skip"
         assert by_name["receive_port_binding"]["status"] == "skip"
+
+
+class TestPreshowCheckOscSlotWiring:
+    """T-G3 — the configured osc_slot must reach preshow_check, not the
+    hardcoded runner.py default (which sent operators to the wrong row)."""
+
+    def test_configured_osc_slot_is_named_in_the_guidance(self):
+        # RED before the fix: build_toolset accepts no preshow_osc_slot today,
+        # so the guidance always names DEFAULT_OSC_SLOT (1) regardless of the
+        # site's real setting.
+        registry = build_toolset(
+            execution_port=ScriptedPort(), state_port=FakeStatePort({}), preshow_osc_slot=2
+        )
+        report = _call_preshow_check(registry)
+        by_name = {c["name"]: c for c in report["checks"]}
+        assert "osc_slot=2" in by_name["osc_slot_send_row"]["detail"]
+        assert "확인할 수 없어" not in by_name["osc_slot_send_row"]["detail"]
+
+    def test_unwired_default_discloses_it_is_unconfirmed(self):
+        registry = build_toolset(execution_port=ScriptedPort(), state_port=FakeStatePort({}))
+        report = _call_preshow_check(registry)
+        by_name = {c["name"]: c for c in report["checks"]}
+        assert "확인할 수 없어" in by_name["osc_slot_send_row"]["detail"]

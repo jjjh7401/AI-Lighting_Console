@@ -82,6 +82,24 @@ class TestRunPreshowChecklistPitfallWiring:
         assert by_name["osc_slot_send_row"].status == "pass"
         assert by_name["osc_slot_send_row"].data["configured_slot"] == 2
 
+    def test_an_explicitly_configured_slot_is_named_without_a_disclosure(self):
+        # T-G3 (a): an injected settings value rides through into the detail
+        # text as the confirmed value — no "unconfirmed default" hedge.
+        report = run_preshow_checklist(configured_osc_slot=2)
+        by_name = {check.name: check for check in report.checks}
+        assert "osc_slot=2" in by_name["osc_slot_send_row"].detail
+        assert "확인할 수 없어" not in by_name["osc_slot_send_row"].detail
+
+    def test_no_configured_slot_falls_back_to_default_and_discloses_it(self):
+        # T-G3 (b): omitting configured_osc_slot entirely (today's every
+        # caller, until T-G3's wiring lands) must not silently claim the
+        # DEFAULT_OSC_SLOT fallback is a confirmed site setting.
+        report = run_preshow_checklist()
+        by_name = {check.name: check for check in report.checks}
+        detail = by_name["osc_slot_send_row"].detail
+        assert "확인할 수 없어" in detail
+        assert "기본값" in detail
+
     def test_feedback_port_drift_falls_back_to_a_configured_feedback_port(self):
         report = run_preshow_checklist(configured_feedback_port=9005)
         by_name = {check.name: check for check in report.checks}

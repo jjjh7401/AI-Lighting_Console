@@ -46,6 +46,7 @@ def _session(
     channel=None,
     recorder=None,
     preshow_receive_port=None,
+    preshow_osc_slot=None,
     **gate_kwargs,
 ):
     console = console or FakeConsole()
@@ -62,6 +63,7 @@ def _session(
         approval_channel=channel,
         recorder=recorder,
         preshow_receive_port=preshow_receive_port,
+        preshow_osc_slot=preshow_osc_slot,
     )
     return session, console, audit, sent, channel
 

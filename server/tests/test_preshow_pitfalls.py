@@ -54,6 +54,32 @@ class TestCheckOscSlotSendRow:
         assert "찾지 못했다" in result.detail
 
 
+class TestCheckOscSlotSendRowConfiguredDisclosure:
+    """T-G3 — a wrong slot number in the guidance is worse than no guidance.
+
+    ``slot_is_configured`` (default True, unchanged wording/behavior) marks
+    whether ``configured_slot`` was actually resolved from the site's real
+    settings, or is only a fallback default because the setting could not be
+    read. The two must never read the same to an operator.
+    """
+
+    def test_default_is_configured_true_and_names_the_value_plainly(self):
+        result = check_osc_slot_send_row(2, None)
+        assert "osc_slot=2" in result.detail
+        assert "확인할 수 없어" not in result.detail
+
+    def test_unconfigured_fallback_discloses_it_is_a_default_not_a_confirmed_value(self):
+        result = check_osc_slot_send_row(1, None, slot_is_configured=False)
+        assert result.status == "skip"
+        assert "확인할 수 없어" in result.detail
+        assert "기본값" in result.detail
+        assert "osc_slot=1" in result.detail
+
+    def test_unconfigured_fallback_marks_data_too(self):
+        result = check_osc_slot_send_row(1, None, slot_is_configured=False)
+        assert result.data == {"configured_slot": 1, "slot_is_configured": False}
+
+
 class TestCheckFeedbackPortDrift:
     def test_skip_when_nothing_observed(self):
         result = check_feedback_port_drift(9000, None)

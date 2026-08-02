@@ -82,3 +82,25 @@ class TestSessionLivenessPortReflectsGateState:
         console.ping_ok = False
         by_name = {c["name"]: c for c in _preshow_report(session)["checks"]}
         assert by_name["osc_roundtrip"]["status"] == "skip"
+
+
+class TestSessionWiresPreshowOscSlot:
+    """T-G3 (c) — ChatSession forwards the site's real osc_slot setting.
+
+    Live onPC E2E: this site's real osc_slot is 2, but runner.py's hardcoded
+    DEFAULT_OSC_SLOT is 1 — an unwired ChatSession sent the operator to check
+    the wrong console row, past the actual culprit row twice before.
+    """
+
+    def test_configured_osc_slot_reaches_the_guidance_text(self, tmp_path):
+        session, _, _, _, _ = _session(tmp_path, ScriptedProvider([]), preshow_osc_slot=2)
+        report = _preshow_report(session)
+        by_name = {c["name"]: c for c in report["checks"]}
+        assert "osc_slot=2" in by_name["osc_slot_send_row"]["detail"]
+        assert "확인할 수 없어" not in by_name["osc_slot_send_row"]["detail"]
+
+    def test_unwired_session_discloses_the_default_is_unconfirmed(self, tmp_path):
+        session, _, _, _, _ = _session(tmp_path, ScriptedProvider([]))
+        report = _preshow_report(session)
+        by_name = {c["name"]: c for c in report["checks"]}
+        assert "확인할 수 없어" in by_name["osc_slot_send_row"]["detail"]
