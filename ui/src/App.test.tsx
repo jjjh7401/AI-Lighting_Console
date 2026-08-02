@@ -18,7 +18,9 @@ import {
   AppShell,
   composerViewState,
   dashPressTargetNo,
+  readRunbookModeFromStorage,
   targetKindForDashSection,
+  writeRunbookModeToStorage,
 } from "./App";
 import { DashBoard } from "./components/DashBoard";
 import { initialState } from "./protocol";
@@ -254,5 +256,53 @@ describe("AppShell — console-primary split layout (M6 inversion)", () => {
     }) as ReactElement;
 
     expect(childArray(split)).toContain(CHAT_SENTINEL);
+  });
+});
+
+// T-E — runbook-mode toggle persistence. This vitest run has no jsdom/DOM
+// harness (see the file header), so `window` is not a real global here;
+// these tests stand a minimal fake in for it, matching the fail-open
+// contract the functions themselves already promise (storage unavailable →
+// behave as if the mode were off, never throw).
+describe("runbook-mode localStorage persistence (T-E)", () => {
+  function withFakeLocalStorage<T>(run: (store: Map<string, string>) => T): T {
+    const store = new Map<string, string>();
+    const fakeWindow = {
+      localStorage: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          store.set(key, value);
+        },
+        removeItem: (key: string) => {
+          store.delete(key);
+        },
+      },
+    };
+    (globalThis as { window?: unknown }).window = fakeWindow;
+    try {
+      return run(store);
+    } finally {
+      delete (globalThis as { window?: unknown }).window;
+    }
+  }
+
+  it("defaults to off when nothing was ever stored", () => {
+    withFakeLocalStorage(() => {
+      expect(readRunbookModeFromStorage()).toBe(false);
+    });
+  });
+
+  it("round-trips on → off through write/read", () => {
+    withFakeLocalStorage(() => {
+      writeRunbookModeToStorage(true);
+      expect(readRunbookModeFromStorage()).toBe(true);
+      writeRunbookModeToStorage(false);
+      expect(readRunbookModeFromStorage()).toBe(false);
+    });
+  });
+
+  it("never throws when storage is unavailable — degrades to off", () => {
+    expect(() => writeRunbookModeToStorage(true)).not.toThrow();
+    expect(readRunbookModeFromStorage()).toBe(false);
   });
 });

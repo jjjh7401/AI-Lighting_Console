@@ -1179,3 +1179,126 @@ body {
   background: var(--live-amber);
   color: #201a08;
 }
+
+/* T-E — volunteer runbook mode: a large-type, single-column list for a
+   non-expert operator. Deliberately much bigger than every other view's
+   type scale (design intent: "이 버튼만 누르세요"). */
+.runbook-mode-frame {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.runbook-mode {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.runbook-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.runbook-title {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.runbook-syncline {
+  color: var(--muted);
+  font-size: 14px;
+  flex: 1;
+}
+
+.runbook-refresh {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #2b2f36;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.runbook-empty {
+  color: var(--muted);
+  font-size: 18px;
+  padding: 24px 0;
+}
+
+.runbook-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.runbook-item {
+  background: var(--panel);
+  border: 1px solid #2b2f36;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.runbook-item-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.runbook-item-no {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--muted);
+  min-width: 32px;
+}
+
+.runbook-item-name {
+  font-size: 22px;
+  font-weight: 700;
+  flex: 1;
+}
+
+.runbook-item-run {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 22px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.runbook-item-run:disabled {
+  background: #2b2f36;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.runbook-item-run-active {
+  background: var(--warn);
+  color: #201a08;
+}
+
+.runbook-item-current-cue {
+  margin-top: 8px;
+  font-size: 16px;
+  color: var(--muted);
+}
+
+.runbook-item-caution {
+  margin-top: 8px;
+  font-size: 16px;
+  color: var(--warn);
+}
+
+.runbook-item-cues {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-size: 15px;
+  color: var(--muted);
+}
