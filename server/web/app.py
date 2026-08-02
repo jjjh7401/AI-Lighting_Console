@@ -100,6 +100,18 @@ class WebDeps:
     # the status surface omits both port numbers (the pre-existing meaning).
     # Non-blocking by contract: the status frame is built on the event loop.
     reply_port_probe: Callable[[], object] | None = None
+    # SPEC-COPILOT-PRESHOW-001 T-G2: the app's actual bound OSC receive port
+    # (server.safety.bootstrap.ConsoleStack.receive_port), so ChatSession can
+    # wire the gate's own heartbeat into the pre-show OSC checks instead of
+    # them always reporting skip. ``None`` = no wiring (the pre-T-G2 default).
+    preshow_receive_port: int | None = None
+    # SPEC-COPILOT-PRESHOW-001 T-G3: the site's real ``osc_slot`` setting
+    # (server.deploy.settings.UserSettings.osc_slot), resolved by
+    # apply_effective_settings and forwarded so the osc_slot_send_row check
+    # names the actual configured row instead of the hardcoded default.
+    # ``None`` = not resolved — the checklist discloses the fallback as
+    # unconfirmed rather than naming it as if it were the real setting.
+    preshow_osc_slot: int | None = None
     # SHOWUI M3: the show-control panel's server-side truth (pinned tiles + the
     # last rig enumeration), shared by every connection because both halves are
     # process state, not per-client state. ``None`` means "build the default on
@@ -242,6 +254,8 @@ def create_app(deps: WebDeps) -> FastAPI:
             deploy_pipeline=deps.deploy_pipeline,
             console_input_probe=deps.console_input_probe,
             reply_port_probe=deps.reply_port_probe,
+            preshow_receive_port=deps.preshow_receive_port,
+            preshow_osc_slot=deps.preshow_osc_slot,
         )
 
         def push_status() -> None:

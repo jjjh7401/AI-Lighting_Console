@@ -82,6 +82,24 @@ class TestRunPreshowChecklistPitfallWiring:
         assert by_name["osc_slot_send_row"].status == "pass"
         assert by_name["osc_slot_send_row"].data["configured_slot"] == 2
 
+    def test_an_explicitly_configured_slot_is_named_without_a_disclosure(self):
+        # T-G3 (a): an injected settings value rides through into the detail
+        # text as the confirmed value — no "unconfirmed default" hedge.
+        report = run_preshow_checklist(configured_osc_slot=2)
+        by_name = {check.name: check for check in report.checks}
+        assert "osc_slot=2" in by_name["osc_slot_send_row"].detail
+        assert "확인할 수 없어" not in by_name["osc_slot_send_row"].detail
+
+    def test_no_configured_slot_falls_back_to_default_and_discloses_it(self):
+        # T-G3 (b): omitting configured_osc_slot entirely (today's every
+        # caller, until T-G3's wiring lands) must not silently claim the
+        # DEFAULT_OSC_SLOT fallback is a confirmed site setting.
+        report = run_preshow_checklist()
+        by_name = {check.name: check for check in report.checks}
+        detail = by_name["osc_slot_send_row"].detail
+        assert "확인할 수 없어" in detail
+        assert "기본값" in detail
+
     def test_feedback_port_drift_falls_back_to_a_configured_feedback_port(self):
         report = run_preshow_checklist(configured_feedback_port=9005)
         by_name = {check.name: check for check in report.checks}
@@ -96,3 +114,43 @@ class TestRunPreshowChecklistPitfallWiring:
 
         report = run_preshow_checklist(library_loader=_broken_loader)
         assert report.signal == "red"
+
+
+class _FakeLiveness:
+    def __init__(self, *, ok: bool):
+        self._ok = ok
+
+    def ping(self) -> bool:
+        return self._ok
+
+
+class TestRunPreshowChecklistLivenessWiring:
+    """T-G — the in-app liveness path takes priority over osc_config."""
+
+    def test_liveness_port_runs_osc_checks_instead_of_skipping(self):
+        report = run_preshow_checklist(
+            liveness_port=_FakeLiveness(ok=True), liveness_receive_port=9005
+        )
+        by_name = {check.name: check for check in report.checks}
+        assert by_name["osc_roundtrip"].status == "pass"
+        assert by_name["receive_port_binding"].status == "pass"
+
+    def test_liveness_port_no_response_skips_rather_than_bind_failing(self):
+        report = run_preshow_checklist(
+            liveness_port=_FakeLiveness(ok=False), liveness_receive_port=9005
+        )
+        by_name = {check.name: check for check in report.checks}
+        assert by_name["osc_roundtrip"].status == "skip"
+        assert by_name["receive_port_binding"].status == "skip"
+        assert by_name["stale_socket_advisory"].status == "skip"
+
+    def test_liveness_path_feeds_the_feedback_port_drift_check(self):
+        report = run_preshow_checklist(
+            liveness_port=_FakeLiveness(ok=True), liveness_receive_port=9005
+        )
+        by_name = {check.name: check for check in report.checks}
+        assert by_name["feedback_port_drift"].status == "pass"
+        assert by_name["feedback_port_drift"].data == {
+            "configured_port": 9005,
+            "observed_port": 9005,
+        }

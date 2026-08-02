@@ -22,8 +22,11 @@ from server.preshow.checks import (
 from server.preshow.models import CheckResult, PreshowReport
 from server.preshow.osc_check import (
     DEFAULT_STATE_PATH,
+    LivenessPort,
     check_osc_roundtrip,
+    check_osc_roundtrip_via_liveness,
     check_receive_port_binding,
+    check_receive_port_binding_via_liveness,
 )
 from server.preshow.pitfalls import (
     check_feedback_port_drift,
@@ -54,26 +57,55 @@ def _skip(name: str, reason: str) -> CheckResult:
 def run_preshow_checklist(
     *,
     osc_config: BridgeConfigLike | None = None,
+    liveness_port: LivenessPort | None = None,
+    liveness_receive_port: int | None = None,
     state_port: StateQueryPort | None = None,
     osc_wait: float = 3.0,
     osc_state_path: str = DEFAULT_STATE_PATH,
     sequences_path: str = DEFAULT_SEQUENCES_PATH,
     preset_pools_path: str = DEFAULT_PRESET_POOLS_PATH,
     library_loader=None,
-    configured_osc_slot: int = DEFAULT_OSC_SLOT,
+    configured_osc_slot: int | None = None,
     live_osc_rows: Mapping[int, Mapping[str, object]] | None = None,
     configured_feedback_port: int | None = None,
 ) -> PreshowReport:
     """Run every pre-show check and return one traffic-light report.
 
-    ``configured_feedback_port`` defaults to ``osc_config.receive_port`` when
-    ``osc_config`` is given, otherwise the feedback-port-drift check reports
-    ``skip`` — there is nothing configured to drift from.
+    ``liveness_port`` is the in-app path (SPEC-COPILOT-PRESHOW-001 T-G): when
+    given, it takes priority over ``osc_config`` for the OSC round-trip and
+    receive-port checks, probing the console through the already-open link
+    the caller holds instead of opening a second socket — the correct choice
+    when this runs inside the app itself, which already owns the receive
+    port. ``osc_config`` remains the standalone/dev-tool path (opens its own
+    socket) and is used only when no ``liveness_port`` is supplied.
+
+    ``configured_osc_slot`` (SPEC-COPILOT-PRESHOW-001 T-G3) is the site's real
+    ``osc_slot`` setting (``server.deploy.settings.UserSettings.osc_slot``),
+    when the caller resolved it. ``None`` (the default — matches every caller
+    that has not wired the setting through yet) falls back to
+    ``DEFAULT_OSC_SLOT``, and the resulting ``osc_slot_send_row`` check
+    explicitly discloses that the named value is an unconfirmed fallback, not
+    the confirmed site setting — this project has twice been bitten by an
+    ``osc_slot`` row that was NOT ``Send = Yes``, so naming the wrong row with
+    unwarranted confidence is worse than naming no row at all.
+
+    ``configured_feedback_port`` defaults to ``osc_config.receive_port`` (or
+    ``liveness_receive_port`` when no ``osc_config`` was given) when omitted,
+    otherwise the feedback-port-drift check reports ``skip`` — there is
+    nothing configured to drift from.
     """
     checks: list[CheckResult] = []
 
     # ① OSC round trip (ping/state) + receive-port binding.
-    if osc_config is not None:
+    if liveness_port is not None:
+        osc_roundtrip = check_osc_roundtrip_via_liveness(liveness_port)
+        receive_port = liveness_receive_port
+        if receive_port is None and osc_config is not None:
+            receive_port = osc_config.receive_port
+        receive_port_binding = check_receive_port_binding_via_liveness(
+            liveness_port, receive_port=receive_port or 0
+        )
+    elif osc_config is not None:
         osc_roundtrip = check_osc_roundtrip(osc_config, wait=osc_wait, path=osc_state_path)
         receive_port_binding = check_receive_port_binding(osc_config)
     else:
@@ -101,10 +133,18 @@ def run_preshow_checklist(
 
     # ④ known pitfalls.
     checks.append(check_stale_socket_advisory(osc_roundtrip))
-    checks.append(check_osc_slot_send_row(configured_osc_slot, live_osc_rows))
+    slot_is_configured = configured_osc_slot is not None
+    effective_osc_slot = configured_osc_slot if slot_is_configured else DEFAULT_OSC_SLOT
+    checks.append(
+        check_osc_slot_send_row(
+            effective_osc_slot, live_osc_rows, slot_is_configured=slot_is_configured
+        )
+    )
     feedback_port = configured_feedback_port
     if feedback_port is None and osc_config is not None:
         feedback_port = osc_config.receive_port
+    if feedback_port is None and liveness_receive_port is not None:
+        feedback_port = liveness_receive_port
     observed_port = None
     if receive_port_binding.data is not None:
         observed_port = receive_port_binding.data.get("actual")

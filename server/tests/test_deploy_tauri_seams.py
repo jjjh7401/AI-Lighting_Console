@@ -428,7 +428,7 @@ class TestOnlyTheHostWindowIsOpened:
             "serve.py never consults browser_open_enabled — the real-serve path "
             "still schedules the browser open unconditionally"
         )
-        assert 'enabled=not args.no_browser' not in source, (
+        assert "enabled=not args.no_browser" not in source, (
             "the real-serve path still passes enabled=not args.no_browser, "
             "ignoring the host declaration"
         )
@@ -540,3 +540,60 @@ class TestPersistedSettingsDriveTheBoundPorts:
         serve.apply_effective_settings(args, [], user_path=user_file)
         assert args.port == 28770
         assert args.console_host == "127.0.0.1"
+
+
+class TestPersistedOscSlotReachesPreshowCheck:
+    """🔴 T-G3 live fix: the site's real ``osc_slot`` must reach the pre-show
+    checklist guidance — not runner.py's hardcoded ``DEFAULT_OSC_SLOT`` (1).
+
+    The live defect: this site's actual ``osc_slot`` setting is 2, but
+    ``preshow_check`` named row 1 in its guidance (the checklist's own
+    hardcoded default, never read from the settings file). An operator
+    checking the named row would find it fine and miss the real culprit —
+    exactly the class of incident (osc_slot Send=Yes misrouting) this project
+    already suffered twice. This mirrors ``TestPersistedSettingsDriveTheBoundPorts``
+    above: assert the value that actually reaches the CONSUMER, not just the
+    resolver in isolation.
+    """
+
+    def test_apply_effective_settings_resolves_osc_slot_onto_args(self, tmp_path):
+        user_file = tmp_path / "settings.toml"
+        _write_user_settings(user_file, osc_slot=2)
+        args = serve.parse_args([])
+        serve.apply_effective_settings(args, [], user_path=user_file)
+        assert args.osc_slot == 2
+
+    def test_no_user_file_keeps_the_shipped_default(self, tmp_path):
+        from server.deploy.settings import DEFAULT_OSC_SLOT
+
+        missing = tmp_path / "absent.toml"
+        args = serve.parse_args([])
+        serve.apply_effective_settings(args, [], user_path=missing)
+        assert args.osc_slot == DEFAULT_OSC_SLOT
+
+    def test_build_runtime_forwards_the_resolved_slot_into_web_deps(self, tmp_path, monkeypatch):
+        # The actual assembly point: build_runtime must read args.osc_slot (as
+        # apply_effective_settings sets it) into WebDeps.preshow_osc_slot — the
+        # field ChatSession -> build_toolset -> preshow_check ultimately reads.
+        user_file = tmp_path / "settings.toml"
+        _write_user_settings(user_file, osc_slot=2)
+        args = serve.parse_args(["--receive-port", "0", "--no-session-backup"])
+        serve.apply_effective_settings(args, [], user_path=user_file)
+        assert args.osc_slot == 2
+
+        app, stack = serve.build_runtime(args)
+        try:
+            assert app.state.deps.preshow_osc_slot == 2
+        finally:
+            stack.stop()
+
+    def test_build_runtime_without_apply_effective_settings_leaves_it_unwired(self):
+        # Test callers (and any future entry point) that construct args
+        # directly, bypassing apply_effective_settings, must not silently
+        # fabricate a "confirmed" slot value build_runtime never resolved.
+        args = serve.parse_args(["--receive-port", "0", "--no-session-backup"])
+        app, stack = serve.build_runtime(args)
+        try:
+            assert app.state.deps.preshow_osc_slot is None
+        finally:
+            stack.stop()
