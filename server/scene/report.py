@@ -75,6 +75,19 @@ ARTIFACT_CONFIRMED_NOTE = (
 ARTIFACT_UNVERIFIED_NOTE = (
     "※ 재조회를 수행하지 않았습니다 — 커맨드 접수(ok)는 큐가 생성됐다는 증거가 아닙니다."
 )
+# 시도했으나 확인하지 못한 것은 시도하지 않은 것과 **다른 사실**이다. 배선 이전에는
+# 위 문면이 언제나 참이었지만, 배선 이후 읽기 실패·불일치 경로에서 그것은 거짓이 된다
+# — "시도 안 함"으로 "시도했으나 실패"를 대체하는 것이 이 SPEC이 세 read 경로에서
+# 이미 고친 결함 부류다. 그래서 두 문면을 더 둔다. 둘 다 (a)를 **미확인**으로 두되,
+# 무엇이 일어났는지는 다르게 말한다.
+ARTIFACT_READ_FAILED_NOTE = (
+    "※ 재조회를 시도했으나 읽기가 응답하지 않았습니다 — 큐가 없다는 뜻이 아닙니다"
+    "(저작·전송 결과는 위에 따로 보고됩니다). 존재는 미확인입니다."
+)
+ARTIFACT_MISMATCH_NOTE = (
+    "※ 재조회가 응답했으나 이 큐를 확인해 주지 못했습니다 — 큐가 없다는 뜻이 아닙니다"
+    "(저작·전송 결과는 위에 따로 보고됩니다). 존재는 미확인입니다."
+)
 
 # (a′) — 산출 문자열을 다시 읽어 세운 사실이다. 콘솔에 묻지 않는다.
 UNIFORM_CONFIRMED_NOTE = (
@@ -176,6 +189,10 @@ class SceneReport:
     uniform_attributes: tuple[str, ...] = ()
     has_look_value_line: bool = False
     requery: Mapping[str, object] | None = None
+    #: 읽기가 응답하지 않았을 때의 사유. `requery`와 배타적이다.
+    requery_error: str | None = None
+    #: 읽기가 응답했으나 이 큐를 확인해 주지 못한 사유. 역시 배타적이다.
+    requery_mismatch: str | None = None
 
     @property
     def succeeded(self) -> bool:
@@ -194,7 +211,16 @@ class SceneReport:
 
     @property
     def artifact_claim(self) -> str:
-        return ARTIFACT_CONFIRMED_NOTE if self.requery else ARTIFACT_UNVERIFIED_NOTE
+        # 네 상태다. "확인됨" / "시도했으나 읽기 실패" / "응답했으나 미확인" /
+        # "시도하지 않음". 뒤 셋은 전부 (a)를 미확인으로 두지만 같은 사실이
+        # 아니며, 마지막 문면을 앞 둘에 쓰면 리포트가 거짓말을 한다.
+        if self.requery:
+            return ARTIFACT_CONFIRMED_NOTE
+        if self.requery_error is not None:
+            return ARTIFACT_READ_FAILED_NOTE
+        if self.requery_mismatch is not None:
+            return ARTIFACT_MISMATCH_NOTE
+        return ARTIFACT_UNVERIFIED_NOTE
 
     @property
     def uniform_claim(self) -> str:
@@ -231,6 +257,8 @@ class SceneReport:
             "unclaimed_attributes": list(self.unclaimed_attributes),
             "uniform_attributes": list(self.uniform_attributes),
             "requery": dict(self.requery) if self.requery else None,
+            "requery_error": self.requery_error,
+            "requery_mismatch": self.requery_mismatch,
             # 네 주장은 구조화 보고에서도 분리된 키다 — 모델이 읽는 것도
             # 이쪽이기 때문이다. 뭉치면 산문에서 분리한 의미가 사라진다.
             "claims": {
@@ -248,13 +276,17 @@ def build_report(
     outcomes: Sequence[object] | None = None,
     *,
     requery: Mapping[str, object] | None = None,
+    requery_error: str | None = None,
+    requery_mismatch: str | None = None,
 ) -> SceneReport:
     """번들과 (있다면) 실행 결과에서 2단 보고를 만든다.
 
     ``outcomes``는 ``run_commands``의 per-command status다. 없으면 계획 수준
     보고이며 ``executed=False``가 그 사실을 말한다 — 실행하지 않은 것을 실행한
     것처럼 보고하지 않는다. ``requery``도 같은 규율이다: 주지 않으면 (a)는
-    "확인됨"이 아니라 "미확인"으로 나간다.
+    "확인됨"이 아니라 "미확인"으로 나간다. ``requery_error``·``requery_mismatch``는
+    **시도했으나 확인하지 못한** 두 경우를 "시도하지 않음"과 갈라 놓는다 —
+    호출자가 셋 중 최대 하나만 준다.
     """
     uniform = _uniform_attributes(compilation.commands)
     has_look_line = _look_value_line(compilation.commands) is not None
@@ -266,6 +298,8 @@ def build_report(
             uniform_attributes=uniform,
             has_look_value_line=has_look_line,
             requery=requery,
+            requery_error=requery_error,
+            requery_mismatch=requery_mismatch,
         )
 
     failed = tuple(_field(o, "command") for o in listed if _field(o, "status") == "failed")
@@ -295,6 +329,8 @@ def build_report(
         uniform_attributes=uniform,
         has_look_value_line=has_look_line,
         requery=requery,
+        requery_error=requery_error,
+        requery_mismatch=requery_mismatch,
     )
 
 
@@ -325,6 +361,16 @@ def to_korean(report: SceneReport) -> str:
             f"  재조회 — 시퀀스 '{report.requery.get('sequence_name')}' · "
             f"큐 '{report.requery.get('cue_name')}' (cueNo {report.requery.get('cue_no')})"
         )
+    elif report.requery_error is not None:
+        # 콘솔이 돌려준 원문을 그대로 노출하되 **면책을 먼저** 둔다. 응답기의
+        # 실패 문면("path segment not found: …")은 그 자체로 부재를 진술하는
+        # 문장이라, 포장 없이 실으면 읽는 쪽이 그것을 결론으로 삼는다.
+        lines.append(
+            "  재조회 실패 — 읽기가 응답하지 않았다(큐 부재의 근거가 아니다): "
+            f"{report.requery_error}"
+        )
+    elif report.requery_mismatch is not None:
+        lines.append(f"  재조회 미확인 — {report.requery_mismatch}")
 
     lines.append(f"  {COLLIDED_ENUMERATION_NOTE}")
     lines.append(f"    {', '.join(report.collided_attributes) or '없음'}")
@@ -346,8 +392,10 @@ def to_korean(report: SceneReport) -> str:
     #
     # (a)는 표제가 고정이 아니다. 재조회를 하지 않았으면 그 문면은 "확인하지
     # 않았습니다"라고 말하는데, 그것을 `기계 확인됨:` 아래 놓으면 표제와 바로
-    # 아래 줄이 서로를 반박한다 — 그리고 툴은 `requery=`를 넘기지 않으므로
-    # 그것이 모든 생산 리포트의 모양이었다. 표제만 훑는 독자에게 산출물이
+    # 아래 줄이 서로를 반박한다. **2026-08-02 이전에는** 툴이 `requery=`를 넘기지
+    # 않아 그것이 모든 생산 리포트의 모양이었다 — 지금은 `compile_scene`이 저장
+    # 성공 시 읽어 넘기며, 확인/읽기실패/불일치/미시도 네 문면 중 하나가 온다.
+    # 표제만 훑는 독자에게 산출물이
     # 기계 확인된 것으로 제시되는 것이 교리(발화 ≠ 효과)가 가장 막고 싶어 하는
     # 오독이다. 상수 문면은 그대로 두고 배치만 사실을 따라간다.
     # 독립 사전 머지 리뷰가 찾았다 — 스위트는 두 표제의 존재만 보고 있었다.

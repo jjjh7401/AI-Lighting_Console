@@ -70,6 +70,8 @@ from server.scene.compile import CUE_OCCUPIED, SCENE_UNIFORM_ATTRIBUTES
 from server.scene.matching import BOTH_MATCHED, NO_SCENE_COMPOSES_AXES
 from server.scene.report import (
     ARTIFACT_CONFIRMED_NOTE,
+    ARTIFACT_MISMATCH_NOTE,
+    ARTIFACT_READ_FAILED_NOTE,
     ARTIFACT_UNVERIFIED_NOTE,
     CROSS_CALL_COLLISION,
     EFFECT_EVIDENCE_NOTICE,
@@ -998,13 +1000,35 @@ def test_the_stored_sequence_is_free_on_the_rig_the_tool_read():
 _SEQ_DETAIL = f"{SEQUENCES_PATH}/3"
 
 
-def _stored(cue_no: float | None = 1.0, *, cue_name: str = "SCN BLUE", seq="Sequence 3") -> dict:
-    """The requery answer for the sequence this bundle stores into."""
-    children = [] if cue_no is None else [{"class": "Cue", "cueNo": cue_no, "name": cue_name}]
+# The system cues EVERY sequence answers with, in the shape the live console
+# actually sends. `OffCue` carries `class: "Cue"` and NO `cueNo` — the
+# responder sets that key only when it can establish the number
+# (`console/lua/copilot_responder.lua:585-596`), and the SONGCUE live capture
+# recorded exactly this child sitting first in the list. An idealised fixture
+# that omits it is how the M7 `i`-fallback defect survived its own unit tests:
+# with no cueNo-less child in the read, a matcher that falls back to the child
+# INDEX confirms `OffCue` as the stored cue and files a false 기계 확인됨.
+_SYSTEM_CUES = (
+    {"class": "Cue", "i": 1, "name": "OffCue"},
+    {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"},
+)
+
+
+def _stored(
+    cue_no: float | None = 1.0,
+    *,
+    cue_name: str = "SCN BLUE",
+    seq: str = "Sequence 3",
+    path: str = _SEQ_DETAIL,
+) -> dict:
+    """The requery answer for a sequence, system cues included."""
+    children = [dict(child) for child in _SYSTEM_CUES]
+    if cue_no is not None:
+        children.append({"class": "Cue", "cueNo": cue_no, "i": 3, "name": cue_name})
     return {
         "v": 1,
         "kind": "state",
-        "path": _SEQ_DETAIL,
+        "path": path,
         "children": children,
         "node": {"childCount": len(children), "class": "Sequence", "name": seq},
         "truncated": False,
@@ -1033,13 +1057,67 @@ def test_a_successful_store_is_read_back_and_the_artifact_claim_is_confirmed():
     assert "requery_mismatch" not in payload
 
 
+def test_the_confirmed_values_come_from_the_console_not_from_what_we_already_knew():
+    """Every field is read back, and the read is aimed at OUR sequence.
+
+    The case above cannot tell the two apart: its sequence is the one the
+    pool forces, its cue is the default, its sequence name is derivable from
+    the number and its cue name is the label this tool just sent — so each
+    field, and the READ PATH itself, can be hardcoded with the suite green.
+    Here the operator names sequence 9 and cue 5, the console answers with a
+    name that is neither `Sequence 9` nor the label, and a DIFFERENT sequence
+    sits at the default slot holding a cue at the same number. Confirming
+    that foreign cue is the failure this pins.
+    """
+    foreign = _stored(cue_no=5.0, cue_name="SOMEONE ELSES CUE", seq="FOH SPARE")
+    target_path = f"{SEQUENCES_PATH}/9"
+    tree = _tree()
+    tree[_SEQ_DETAIL] = foreign
+    tree[target_path] = _stored(
+        cue_no=5.0, cue_name="SCN BLUE COPY", seq="SCENE TARGET", path=target_path
+    )
+    state = _RigStatePort(tree)
+
+    _execution, payload = _compile(
+        _registry(state=state),
+        {"scene_id": "blue-wave", "group": 11, "sequence": 9, "cue": 5},
+    )
+
+    assert target_path in state.queried
+    assert payload["report"]["requery"] == {
+        "sequence": 9,
+        "sequence_name": "SCENE TARGET",
+        "cue_name": "SCN BLUE COPY",
+        "cue_no": 5.0,
+    }
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_CONFIRMED_NOTE
+
+
+def test_a_cue_without_a_cue_number_is_never_taken_for_the_stored_one():
+    """The M7 defect, pinned: a cueNo-less child must not answer by index.
+
+    `OffCue` has no `cueNo` and sits at child index 1. A matcher that falls
+    back to the index — or that supplies a default for the missing key —
+    confirms it as cue 1 and files 기계 확인됨 for a cue nobody stored.
+    """
+    only_system = _stored(cue_no=None)
+    assert [child.get("cueNo") for child in only_system["children"]] == [None, 0]
+
+    state = _RigStatePort(_tree_with_requery(only_system))
+    _execution, payload = _compile(_registry(state=state))
+
+    assert payload["report"]["requery"] is None
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_MISMATCH_NOTE
+    assert "requery_mismatch" in payload
+
+
 def test_the_confirmed_claim_is_not_available_without_the_wiring():
     # Non-vacuity for the test above: the SAME compile, with the read absent,
     # must reach the other note. Otherwise "confirmed" says nothing.
     _execution, payload = _compile(_registry())
 
     assert payload["report"]["requery"] is None
-    assert payload["report"]["claims"]["artifact"] == ARTIFACT_UNVERIFIED_NOTE
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_READ_FAILED_NOTE
 
 
 def test_a_read_that_does_not_answer_is_reported_as_a_failed_read():
@@ -1052,7 +1130,7 @@ def test_a_read_that_does_not_answer_is_reported_as_a_failed_read():
     # the authoring result: the bundle still went out and still succeeded.
     assert payload["executed"] is True
     assert payload["succeeded"] is True
-    assert payload["report"]["claims"]["artifact"] == ARTIFACT_UNVERIFIED_NOTE
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_READ_FAILED_NOTE
 
 
 def test_a_read_that_answers_without_the_cue_is_a_mismatch_not_a_confirmation():
@@ -1062,7 +1140,7 @@ def test_a_read_that_answers_without_the_cue_is_a_mismatch_not_a_confirmation():
     assert "requery_mismatch" in payload
     assert "requery_error" not in payload
     assert payload["report"]["requery"] is None
-    assert payload["report"]["claims"]["artifact"] == ARTIFACT_UNVERIFIED_NOTE
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_MISMATCH_NOTE
     # And it says so without claiming absence.
     assert "큐가 없다는 뜻은 아니다" in payload["requery_mismatch"]
 
@@ -1074,7 +1152,7 @@ def test_a_different_cue_number_in_the_sequence_does_not_confirm_this_one():
     _execution, payload = _compile(_registry(state=state))
 
     assert payload["report"]["requery"] is None
-    assert payload["report"]["claims"]["artifact"] == ARTIFACT_UNVERIFIED_NOTE
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_MISMATCH_NOTE
 
 
 def test_a_live_lock_demotion_does_not_requery_a_sequence_nobody_wrote():
@@ -1116,3 +1194,106 @@ def test_the_confirmed_note_reaches_the_korean_summary_under_its_own_heading():
     # (a) confirmed never licenses (c): both notices still ship.
     assert EFFECT_EVIDENCE_NOTICE in summary
     assert TRACKING_UNOBSERVABLE_NOTICE in summary
+
+
+def test_a_read_that_arrives_without_names_is_not_promoted_to_confirmed():
+    """The confirmation note claims the NAMES were read. So they must be.
+
+    `ARTIFACT_CONFIRMED_NOTE` says the requery confirmed "시퀀스·큐의 존재와
+    이름, 실제 cueNo". A read that matched the cueNo but carried no names
+    would file that sentence while `summary_ko` printed `시퀀스 'None' · 큐
+    'None'` — the claim and the evidence contradicting each other in one
+    report. The songcue sibling refuses the same input for the same reason.
+    """
+    nameless = _stored()
+    nameless["children"] = [{"class": "Cue", "cueNo": 1.0}]
+    nameless["node"] = {"childCount": 1, "class": "Sequence"}
+    state = _RigStatePort(_tree_with_requery(nameless))
+
+    _execution, payload = _compile(_registry(state=state))
+
+    assert payload["report"]["requery"] is None
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_MISMATCH_NOTE
+    assert "이름을 담지 않았다" in payload["requery_mismatch"]
+    assert "None" not in payload["summary_ko"]
+
+
+@pytest.mark.parametrize("raw", [True, "1.0", " 1 ", None], ids=["bool", "str", "padded", "none"])
+def test_a_non_numeric_cue_number_never_confirms(raw):
+    """`float()` accepts more than the console can send.
+
+    `bool` is an `int` in Python — the repo excludes it by name at every other
+    responder-child read, and a defect from omitting exactly that operand is
+    already on record. A coerced `"1.0"` would confirm cue 1 just as happily.
+    """
+    odd = _stored()
+    odd["children"] = [{"class": "Cue", "cueNo": raw, "name": "X"}]
+    state = _RigStatePort(_tree_with_requery(odd))
+
+    _execution, payload = _compile(_registry(state=state))
+
+    assert payload["report"]["requery"] is None
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_MISMATCH_NOTE
+
+
+def test_a_non_numeric_control_confirms_when_the_number_is_real():
+    # Non-vacuity for the parametrised refusal above: the same fixture shape
+    # with a genuine number DOES confirm, so the refusals are about the type.
+    ok = _stored()
+    ok["children"] = [{"class": "Cue", "cueNo": 1, "name": "X"}]
+    state = _RigStatePort(_tree_with_requery(ok))
+
+    _execution, payload = _compile(_registry(state=state))
+
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_CONFIRMED_NOTE
+    assert payload["report"]["requery"]["cue_name"] == "X"
+
+
+def test_the_failed_read_reaches_the_operator_with_the_disclaimer_first():
+    """A failed read must SAY it failed, and must not read as absence.
+
+    The console's own failure text for an unresolvable path is a sentence
+    stating absence ("path segment not found: …"). Shipping it unframed is
+    the substitution this doctrine forbids, so the report puts the
+    disclaimer ahead of the quote — the macro sibling's shape.
+    """
+    _execution, payload = _compile(_registry())
+    summary = payload["summary_ko"]
+
+    assert payload["requery_error"] in summary
+    assert "큐 부재의 근거가 아니다" in summary
+    assert summary.index("큐 부재의 근거가 아니다") < summary.index(payload["requery_error"])
+    # And the "not attempted" sentence must NOT appear: it was attempted.
+    assert ARTIFACT_UNVERIFIED_NOTE not in summary
+
+
+def test_the_mismatch_reason_reaches_the_operator_too():
+    state = _RigStatePort(_tree_with_requery(_stored(cue_no=None)))
+    _execution, payload = _compile(_registry(state=state))
+    summary = payload["summary_ko"]
+
+    assert payload["requery_mismatch"] in summary
+    assert "큐가 없다는 뜻은 아니다" in summary
+    assert ARTIFACT_UNVERIFIED_NOTE not in summary
+
+
+def test_only_a_bundle_that_was_never_sent_says_the_read_was_not_attempted():
+    # The fourth state, and the only one the original note is true for.
+    gate = _RecordingGate(cleared=False, status="locked", notice="live lock")
+    _execution, payload = _compile(_registry(state=_RigStatePort(_tree_with_requery()), gate=gate))
+
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_UNVERIFIED_NOTE
+    assert ARTIFACT_READ_FAILED_NOTE not in payload["summary_ko"]
+    assert ARTIFACT_MISMATCH_NOTE not in payload["summary_ko"]
+
+
+def test_the_four_artifact_states_are_all_distinct_sentences():
+    # Non-vacuity for every assertion above: four notes, four texts. If two
+    # collapsed, the tests that tell them apart would pass on a lie.
+    notes = {
+        ARTIFACT_CONFIRMED_NOTE,
+        ARTIFACT_READ_FAILED_NOTE,
+        ARTIFACT_MISMATCH_NOTE,
+        ARTIFACT_UNVERIFIED_NOTE,
+    }
+    assert len(notes) == 4

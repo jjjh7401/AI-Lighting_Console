@@ -59,10 +59,15 @@ class TestEndingListParity:
         # wherever one ending is a prefix of another.
         assert fx_matching._ENDINGS == scene_matching._ENDINGS
 
-    def test_the_parity_guard_is_not_vacuous(self):
+    def test_the_parity_guard_is_not_vacuous_and_the_list_stays_closed(self):
         # Non-vacuity: the guard above passes trivially on two empty tuples.
         assert "하는" in fx_matching._ENDINGS
-        assert len(fx_matching._ENDINGS) >= 8
+        # EXACT, not a lower bound. The list is CLOSED and the extension was
+        # exactly one measured entry; a lower bound catches shrinkage but lets
+        # the list GROW silently, which is the failure mode the proposal named
+        # ("측정 없이 부류를 넓히지 말 것"). Widening it now costs one edit here,
+        # which is the decision record the closed set is supposed to have.
+        assert len(fx_matching._ENDINGS) == 8
 
 
 class TestParticleListParity:
@@ -85,12 +90,12 @@ class TestParticleListParity:
         assert fx_matching._PARTICLES == scene_matching._PARTICLES
         assert fx_matching._PARTICLES == looks_matching._PARTICLES
 
-    def test_the_three_way_guard_is_not_vacuous(self):
+    def test_the_three_way_guard_is_not_vacuous_and_the_list_stays_closed(self):
         # Non-vacuity: three empty tuples would satisfy the assertions above.
         # The longest-first ordering matters too — 으로 before 로 is what keeps
         # 으로 from being consumed as 로 in the regex alternation.
         particles = fx_matching._PARTICLES
-        assert len(particles) >= 20
+        assert len(particles) == 28
         assert particles.index("으로") < particles.index("로")
 
     def test_the_scene_surface_handles_every_looks_particle(self, shipped_scene_library):
@@ -101,11 +106,14 @@ class TestParticleListParity:
             axis = match_scene(f"웨이브{particle}", shipped_scene_library).fx.selected
             assert axis == "wave-soft-rise", particle
 
-    def test_only_the_scene_package_lacks_its_own_ending_list(self):
-        # Why _ENDINGS is a two-way guard while _PARTICLES is three-way: looks
-        # carries no ending axis at all (proposal §2). Pinned so that a future
-        # looks _ENDINGS arrives with a decision, not by accident.
+    def test_only_the_looks_package_lacks_its_own_ending_list(self):
+        # Why _ENDINGS is a two-way guard while _PARTICLES is three-way: LOOKS
+        # carries no ending axis at all (proposal §2) — fx and scene both have
+        # one, and the test two above asserts they agree. Pinned so that a
+        # future looks _ENDINGS arrives with a decision, not by accident.
         assert not hasattr(looks_matching, "_ENDINGS")
+        assert hasattr(fx_matching, "_ENDINGS")
+        assert hasattr(scene_matching, "_ENDINGS")
 
 
 class TestHaneunEnding:
@@ -135,6 +143,17 @@ class TestHaneunEnding:
         # let unrelated stems through (the 쓸어/쓸어담아 cost the fx comment
         # names). 웨이브하는구나 carries extra syllables past the ending.
         assert resolve_pattern("웨이브하는구나") is None
+
+    def test_exactly_one_suffix_attaches_not_a_run_of_them(self):
+        # `_SUFFIX` is `(?:...)?` — at most ONE. Relaxing it to `*` passes
+        # every other assertion in this file while letting a stacked run of
+        # particles and endings through, which is the same "open rule"
+        # hazard the closed lists exist to avoid.
+        assert resolve_pattern("웨이브로는") is None
+        assert resolve_pattern("웨이브하는줘") is None
+        # Non-vacuity: each of those stems resolves with ONE suffix.
+        assert resolve_pattern("웨이브로") == "wave"
+        assert resolve_pattern("웨이브하는") == "wave"
 
 
 class TestHeadlineSentence:

@@ -237,6 +237,16 @@ class TestLooksLibraryGrantedExtension:
                 added.append(line[1:])
         return deleted, added
 
+    def test_the_grant_is_not_an_empty_exemption(self):
+        # Non-vacuity, the standard this module sets for itself. All three
+        # assertions below are satisfied by an EMPTY dict — `set() == set()`
+        # and two loops that never run — while `server/looks/library/` stays
+        # filtered out of `_preserve_diff_command()`. That combination is a
+        # gate that is off AND green, so pin both halves: the grant has
+        # entries, and the directory it exempts really did change.
+        assert _LOOKS_GRANTED_LINE_PAIRS
+        assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", _LOOKS_LIBRARY_DIR) != ""
+
     def test_exactly_the_three_granted_files_changed(self):
         rows = _numstat(_PRECHK_BASE, _LOOKS_LIBRARY_DIR)
         assert set(rows) == set(_LOOKS_GRANTED_LINE_PAIRS)
