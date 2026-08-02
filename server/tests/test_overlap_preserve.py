@@ -117,18 +117,33 @@ _SAFETY_DIR = "server/safety/"
 #: `TestPrecedentGateFileIsNotExtended` above). Bounding both ends fixes it.
 _OVERLAP_MERGE_COMMIT = "156a3e1aaf6ef78788394d65cf724bacaec7b567"
 
-#: The safety chokepoint's measured state, PRECHK-base relative. Grown twice:
-#: the predecessor's (OVERLAP's) property-read addition (console.py, gate.py),
-#: then SPEC-COPILOT-BACKUP-001 T-B/T-B2's snapshot-retention + audit-linkage
-#: extension (backup.py, gate.py again). Every deletion's TEXT is pinned in
-#: `_SAFETY_ALLOWED_DELETED_LINES` below, because a bare count lets a
-#: meaningful removal hide under the allowance.
+#: The safety chokepoint's measured state, PRECHK-base relative. Grown three
+#: times: the predecessor's (OVERLAP's) property-read addition (console.py,
+#: gate.py), then SPEC-COPILOT-BACKUP-001 T-B/T-B2's snapshot-retention +
+#: audit-linkage extension (backup.py, gate.py again), then the T-I audit-log
+#: crash fix -- audit.py joins the set (SCOPE CORRECTION below). Every
+#: deletion's TEXT is pinned in `_SAFETY_ALLOWED_DELETED_LINES` below, because
+#: a bare count lets a meaningful removal hide under the allowance.
 _SAFETY_EXPECTED_DELETIONS = {
+    "server/safety/audit.py": 1,
     "server/safety/backup.py": 2,
     "server/safety/console.py": 0,
     "server/safety/gate.py": 3,
 }
 _SAFETY_ALLOWED_DELETED_LINES = {
+    # SCOPE CORRECTION (T-I audit-log crash fix): AuditLog.record() used a
+    # bare `json.dumps(enriched, ensure_ascii=False)` with no fallback for
+    # non-serializable values -- a value like a CommandDecision object landing
+    # in an event dict raised TypeError mid-write, so the single durable
+    # audit write point (@MX:ANCHOR) silently lost the event instead of
+    # recording it. The one-line write is replaced by a `default=str`
+    # variant that degrades an unserializable value to its str() form rather
+    # than dropping the whole event; this legitimately reopens audit.py under
+    # the chokepoint for the first time, the same maintenance shape as the
+    # `gate.py` extension above.
+    "server/safety/audit.py": (
+        r'            handle.write(json.dumps(enriched, ensure_ascii=False) + "\n")',
+    ),
     "server/safety/backup.py": (
         "Three rules: ① once at session start, ② periodic (default 10 minutes,",
         '    """Drives the 3-rule backup policy against an injected backup action."""',
