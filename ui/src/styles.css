@@ -1302,3 +1302,388 @@ body {
   font-size: 15px;
   color: var(--muted);
 }
+
+/* T-H — executor status chip (CueMonitor.tsx). THREE grades, each carried by
+   TEXT + icon glyph (never colour alone — colour-blind accessibility): the
+   chip is never a claim that the console is playing something right now,
+   only that the app itself sent a command and whether the console ok'd it
+   (see CueMonitor.tsx's module header). Reuses the existing --ok/--bad/
+   --muted tokens rather than inventing new ones (REQ-DASHUI-016 posture). */
+.cue-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.cue-status-chip-confirmed {
+  color: var(--ok);
+  border-color: var(--ok);
+  background: rgba(63, 185, 80, 0.12);
+}
+
+.cue-status-chip-failed {
+  color: var(--bad);
+  border-color: var(--bad);
+  background: rgba(248, 81, 73, 0.12);
+}
+
+.cue-status-chip-unknown {
+  color: var(--muted);
+  border-color: #2b2f36;
+  background: rgba(154, 160, 166, 0.08);
+}
+
+.cue-status-chip-age {
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+/* The acknowledgement pulse — fires for a few seconds right after a fresh
+   "confirmed" event (CueMonitor.tsx's isRecentAppAction/PULSE_WINDOW_MS).
+   NOT a running indicator: it stops on its own once the window elapses. */
+@keyframes cue-status-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(63, 185, 80, 0);
+  }
+}
+
+.cue-status-chip-pulse {
+  animation: cue-status-pulse 1.2s ease-in-out 2;
+}
+
+/* Accessibility carve-out (T-H requirement): reduced motion gets a static
+   emphasis instead of the pulse animation — still distinguishable without
+   any movement. This is the ONE @media rule in this stylesheet
+   (styles.test.ts's guard permits exactly this carve-out). */
+@media (prefers-reduced-motion: reduce) {
+  .cue-status-chip-pulse {
+    animation: none;
+    outline: 2px solid var(--ok);
+    outline-offset: 1px;
+  }
+}
+
+.cue-monitor-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+/* T-H4/T-H5: small + SHARP (2px), not the large rounded blue button this
+   used to be — a console Go/Off, not a web-app CTA. T-H5 widens this to
+   THREE buttons (이전/다음/정지 — Go-/Go+/Off), so padding/font shrink
+   further to keep the tile densely packable (task #8). */
+.cue-monitor-action-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 2px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cue-monitor-action-btn:disabled {
+  background: #2b2f36;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.cue-monitor-action-btn-back {
+  background: #2b2f36;
+  color: var(--text);
+}
+
+.cue-monitor-action-btn-stop {
+  background: var(--warn);
+  color: #201a08;
+}
+
+.cue-monitor-action-reason {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* T-H2 — the panel-level shared-fact banner (CueMonitor.tsx's
+   CurrentCueBanner/currentCueBannerState "uniform" branch ONLY). Says the
+   one shared fact once instead of repeating it on every row; each row keeps
+   only a short "현재 큐 —" placeholder (see .cue-monitor-current-cue below)
+   with the full explanation in its `title` tooltip. */
+.cue-monitor-current-cue-banner {
+  margin: 0 16px 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--warn);
+  background: rgba(210, 153, 34, 0.12);
+  color: var(--warn);
+  font-size: 13px;
+}
+
+/* T-H4 (user feedback, 2026-08-02) — console-style redesign. Executors
+   render as a GRID of small TILES (MA3's own executor-bar convention),
+   never a vertical list of fully-expanded rows. The cue list itself stays
+   collapsed behind the tile; opening it renders ONE `.cue-sheet` at a time
+   (never one per tile) — see CueMonitor.tsx's own module header for the
+   full rationale, including the two concrete defects this replaces
+   (executor-number/sequence-name run together with no gap; history
+   timestamp glued to the command with no separator or local formatting).
+   Deliberately sharper/darker than the rest of this app's chrome — thin 1px
+   borders, a small 2px radius (never the 6-12px used elsewhere), desaturated
+   surfaces with saturated status colour reserved for state only. */
+.cue-monitor-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #2b2f36;
+}
+
+.cue-monitor-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.cue-monitor-syncline {
+  color: var(--muted);
+  font-size: 13px;
+  flex: 1;
+}
+
+.cue-monitor-refresh {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #2b2f36;
+  border-radius: 2px;
+  padding: 4px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cue-monitor-body {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Auto-fill: the column count itself shrinks as the pane narrows — no fixed
+   column count to break at small widths. T-H5: minmax lowered from 150px so
+   MULTIPLE tiles fit side by side at the pane's typical width — a single
+   column reads as a list again, which is exactly the MA3-executor-bar
+   feeling this layout exists to avoid. */
+.cue-monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 6px;
+}
+
+.cue-monitor-empty {
+  color: var(--muted);
+  font-size: 13px;
+  grid-column: 1 / -1;
+}
+
+/* One executor = one tile. Info hierarchy top -> bottom: number (corner,
+   small) -> sequence name (title) -> current cue (emphasized, accent
+   colour — the value an operator checks most often) -> status+Go/Off. */
+.cue-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--bg);
+  border: 1px solid #2b2f36;
+  border-radius: 2px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.cue-tile:hover {
+  border-color: var(--accent);
+}
+
+.cue-tile-open {
+  border-color: var(--accent);
+  background: #1a2230;
+}
+
+.cue-tile-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.cue-tile-no {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cue-tile-sequence {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cue-tile-current-cue {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cue-tile-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+/* The cue sheet — ONE open at a time (CueMonitor.tsx never renders more
+   than one), a compact table (Cue No / 이름 — only columns this project's
+   data actually carries), current row highlighted. */
+.cue-sheet {
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.cue-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid #2b2f36;
+}
+
+.cue-sheet-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cue-sheet-close {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid #2b2f36;
+  border-radius: 2px;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cue-sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.cue-sheet-table th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 4px 10px;
+  border-bottom: 1px solid #2b2f36;
+}
+
+.cue-sheet-table td {
+  padding: 4px 10px;
+  border-bottom: 1px solid #23262c;
+}
+
+.cue-sheet-cue-no {
+  width: 60px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cue-sheet-row-current {
+  background: rgba(79, 140, 255, 0.14);
+  border-left: 2px solid var(--accent);
+}
+
+/* T-H5 — a row an operator CAN click to jump there (task #6: "다른 행이
+   눌리는 대상임이 드러나야 한다"). Cursor + hover/focus background make the
+   affordance visible without relying on the current-row highlight above,
+   which stays a SEPARATE visual signal (what IS current vs what CAN be
+   clicked are different facts). */
+.cue-sheet-row-gotoable {
+  cursor: pointer;
+}
+
+.cue-sheet-row-gotoable:hover,
+.cue-sheet-row-gotoable:focus-visible {
+  background: rgba(154, 160, 166, 0.14);
+  outline: none;
+}
+
+.cue-sheet-empty {
+  text-align: center;
+  color: var(--muted);
+}
+
+/* Recent-execution history — a real layout gap (T-H4 defect 2) plus local
+   HH:MM:SS formatting (CueMonitor.tsx's formatHistoryTime) instead of the
+   raw ISO timestamp glued to the command. */
+.cue-monitor-history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cue-monitor-history-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.cue-monitor-history-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+  padding: 2px 0;
+}
+
+.cue-monitor-history-ts {
+  min-width: 64px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cue-monitor-history-command {
+  color: var(--text);
+}
+
+.cue-monitor-history-failed .cue-monitor-history-command {
+  color: var(--bad);
+}
+
+.cue-monitor-history-empty {
+  color: var(--muted);
+  font-size: 13px;
+}

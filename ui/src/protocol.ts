@@ -227,6 +227,19 @@ export interface CueCurrentCue {
   tried?: string[];
 }
 
+/**
+ * The app's own last confirmed/failed action on one executor (T-H). This is
+ * NOT a claim about whether the console is currently playing that command —
+ * only that the app sent it and the console did (or did not) ok it. `null`
+ * when the app has never sent this executor anything (a console operated by
+ * hand is invisible to the app either way).
+ */
+export interface CueLastAppAction {
+  command: string;
+  ts: string;
+  ok: boolean;
+}
+
 /** One executor's live cue-progress row. */
 export interface CueExecutorEntry {
   executor_no: number;
@@ -235,13 +248,18 @@ export interface CueExecutorEntry {
   sequence_name?: string | null;
   cues: CueItem[];
   current_cue: CueCurrentCue | null;
+  last_app_action?: CueLastAppAction | null;
 }
 
-/** One recent-execution row (audit-log derived, oldest-first). */
+/** One recent-execution row (audit-log derived, oldest-first). Attribution
+ * (`target_kind`/`target_no`) is best-effort — both `null` when the command
+ * did not parse as a known playback form; the row is still kept. */
 export interface CueHistoryEntry {
   ts: string;
   command: string;
   ok: boolean;
+  target_kind?: PanelTargetKind | null;
+  target_no?: number | null;
 }
 
 export type ServerEvent =
@@ -413,6 +431,34 @@ export function buildPanelStop(targetKind: PanelTargetKind, target: number): str
     type: "panel_stop",
     target_kind: targetKind,
     target,
+  });
+}
+
+/** T-H5 — step to the PREVIOUS cue (console verb `Go-`). Same shape as
+ * `buildPanelExecute`/`buildPanelStop`. */
+export function buildPanelBack(targetKind: PanelTargetKind, target: number): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "panel_back",
+    target_kind: targetKind,
+    target,
+  });
+}
+
+/**
+ * T-H5 — jump to a specific cue (console form `Goto Cue <c> Sequence <s>`).
+ * `target`/`targetKind` still name the EXECUTOR the press originated on (the
+ * server resolves executor -> sequence and validates cue membership before
+ * building any command — see server/web/panel.py's own module notes); this
+ * builder does not, and must not, attempt that resolution itself.
+ */
+export function buildPanelGoto(targetKind: PanelTargetKind, target: number, cue: number): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "panel_goto",
+    target_kind: targetKind,
+    target,
+    cue,
   });
 }
 

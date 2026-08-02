@@ -175,6 +175,13 @@ export function AppShell({
   onCueMonitorRefresh,
   isItemRunning,
   onItemPress,
+  isExecutorRunning,
+  onExecutorExecute,
+  onExecutorBack,
+  onExecutorStop,
+  onExecutorGoto,
+  openCueExecutorNo,
+  onToggleCueExecutor,
   sectionTileSize,
   onSectionTileSizeChange,
   sectionArea,
@@ -194,6 +201,19 @@ export function AppShell({
   isItemRunning?: (sectionName: string, item: DashItem) => boolean;
   /** M5 — fires panel_execute/panel_stop; see DashBoard.tsx. */
   onItemPress?: (sectionName: string, item: DashItem) => void;
+  /** T-H — CueMonitor's own run/stop affordance; see CueMonitor.tsx. */
+  isExecutorRunning?: (executorNo: number) => boolean;
+  onExecutorExecute?: (executorNo: number) => void;
+  /** T-H5 — step back (Go-). */
+  onExecutorBack?: (executorNo: number) => void;
+  onExecutorStop?: (executorNo: number) => void;
+  /** T-H5 — jump to a specific cue (Goto). */
+  onExecutorGoto?: (executorNo: number, cue: number) => void;
+  /** T-H4 — which executor's cue sheet is open (controlled, one at a time);
+   * see CueMonitor.tsx's own module header for why this is lifted here
+   * rather than internal component state. */
+  openCueExecutorNo?: number | null;
+  onToggleCueExecutor?: (executorNo: number) => void;
   /** M6-UX v3 — square cells (−/+) + pool-window area corner drag. */
   sectionTileSize?: (sectionName: string) => number | undefined;
   onSectionTileSizeChange?: (sectionName: string, next: number) => void;
@@ -216,7 +236,17 @@ export function AppShell({
         sectionArea={sectionArea}
         onSectionAreaResizeStart={onSectionAreaResizeStart}
       />
-      <CueMonitor cueMonitor={cueMonitor} onRefresh={onCueMonitorRefresh} />
+      <CueMonitor
+        cueMonitor={cueMonitor}
+        onRefresh={onCueMonitorRefresh}
+        isExecutorRunning={isExecutorRunning}
+        onExecute={onExecutorExecute}
+        onBack={onExecutorBack}
+        onStop={onExecutorStop}
+        onGoto={onExecutorGoto}
+        openExecutorNo={openCueExecutorNo}
+        onToggleExecutor={onToggleCueExecutor}
+      />
       {chatCollapsed ? (
         <aside className="chat-rail">
           <button className="chat-rail-open" onClick={onToggleChat} aria-label="채팅 펼치기">
@@ -240,6 +270,8 @@ export default function App() {
     sendLock,
     sendPanelExecute,
     sendPanelStop,
+    sendPanelBack,
+    sendPanelGoto,
     sendDashRefresh,
     sendCueMonitorRefresh,
   } = useCopilotSocket();
@@ -270,6 +302,14 @@ export default function App() {
   // because the pool components are hook-free by design.
   const [sectionTileSizes, setSectionTileSizes] = useState<Record<string, number>>({});
   const [sectionAreas, setSectionAreas] = useState<Record<string, PoolArea>>({});
+  // T-H4 — CueMonitor's cue sheet opens ONE executor at a time (MA3 console
+  // convention); this is the SAME name toggling off as re-closing (see
+  // CueMonitor.tsx's own module header on why this is controlled here
+  // rather than internal component state).
+  const [openCueExecutorNo, setOpenCueExecutorNo] = useState<number | null>(null);
+  const toggleCueExecutor = (executorNo: number) => {
+    setOpenCueExecutorNo((current) => (current === executorNo ? null : executorNo));
+  };
   const startSectionAreaResize = (
     sectionName: string,
     start: { clientX: number; clientY: number },
@@ -414,6 +454,13 @@ export default function App() {
             onCueMonitorRefresh={sendCueMonitorRefresh}
             isItemRunning={isDashItemRunning}
             onItemPress={pressDashItem}
+            isExecutorRunning={isExecutorRunning}
+            onExecutorExecute={(executorNo) => sendPanelExecute("executor", executorNo)}
+            onExecutorBack={(executorNo) => sendPanelBack("executor", executorNo)}
+            onExecutorStop={(executorNo) => sendPanelStop("executor", executorNo)}
+            onExecutorGoto={(executorNo, cue) => sendPanelGoto("executor", executorNo, cue)}
+            openCueExecutorNo={openCueExecutorNo}
+            onToggleCueExecutor={toggleCueExecutor}
             sectionTileSize={(sectionName) => sectionTileSizes[sectionName]}
             onSectionTileSizeChange={(sectionName, next) =>
               setSectionTileSizes((sizes) => ({ ...sizes, [sectionName]: next }))

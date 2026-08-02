@@ -1174,14 +1174,24 @@ _EXPECTED_WEB_ROUTES = (
 
 # client -> server: the closed allowlists ``parse_client_message`` validates
 # against (``server/web/messages.py`` ``*_MESSAGE_TYPES``).
+#
+# T-H5 (coordinator directive, 2026-08-02) added "panel_back" and
+# "panel_goto" to the panel family's own closed allowlist (server/web/
+# messages.py PANEL_CLIENT_MESSAGE_TYPES) — a legitimate widening of the
+# PANEL surface, unrelated to the PRECHK/OVERLAP axis this baseline exists
+# to pin. This snapshot is updated to match, per this file's own docstring:
+# it is frozen "at the axis's base commit", not frozen against all future
+# web-layer feature work.
 _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "approval_decision",
     "chat",
     "cue_monitor_request",
     "dash_catalog_request",
     "lock",
+    "panel_back",
     "panel_catalog_request",
     "panel_execute",
+    "panel_goto",
     "panel_pin",
     "panel_stop",
     "panel_unpin",

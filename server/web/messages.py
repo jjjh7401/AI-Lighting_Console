@@ -27,6 +27,13 @@ PROTOCOL_VERSION = 1
 PANEL_CLIENT_MESSAGE_TYPES = (
     "panel_execute",
     "panel_stop",
+    # T-H5 (coordinator directive, 2026-08-02) — the closed Playback verb
+    # quartet widens to include step-back and jump-to-cue (server/web/
+    # panel.py's PANEL_VERBS). "panel_back" carries the SAME (target_kind,
+    # target) shape as panel_execute/panel_stop; "panel_goto" additionally
+    # carries the destination cue number.
+    "panel_back",
+    "panel_goto",
     "panel_pin",
     "panel_unpin",
     "panel_catalog_request",
@@ -60,8 +67,11 @@ CLIENT_MESSAGE_TYPES = (
 
 # The panel messages that address ONE console object, and therefore carry the
 # (target_kind, target) pair the parser validates before anything downstream
-# can build a command bundle out of it.
-PANEL_TARGETED_MESSAGE_TYPES = ("panel_execute", "panel_stop", "panel_unpin")
+# can build a command bundle out of it. "panel_goto" is NOT here — it shares
+# the (target_kind, target) shape but carries an ADDITIONAL "cue" field, so it
+# gets its own parsing branch below rather than silently accepting an extra
+# field this tuple's branch never checks.
+PANEL_TARGETED_MESSAGE_TYPES = ("panel_execute", "panel_stop", "panel_back", "panel_unpin")
 
 # The tile's type badge — design.md §4 (LOOK / FX / SEQ), plus the additive
 # MACRO badge (SPEC-COPILOT-DASHUI-001 REQ-DASHUI-012): without it the catalog
@@ -180,6 +190,32 @@ def parse_client_message(raw: str) -> dict:
             "type": message_type,
             "target_kind": target_kind,
             "target": target,
+        }
+
+    if message_type == "panel_goto":
+        # T-H5 — same target validation as PANEL_TARGETED_MESSAGE_TYPES above
+        # (repeated rather than shared via that tuple, since this branch adds
+        # a field the others don't have and never should), PLUS the
+        # destination cue number. Parse-time validation proves ``cue`` is a
+        # positive integer, not that the sequence actually carries it —
+        # that membership question is the panel store's job (T-H5's
+        # ``register_executor_cues``/``executor_has_cue``), exactly the same
+        # division of labor as the target's own membership check.
+        target = message.get("target")
+        if not _is_object_number(target):
+            raise ProtocolError("panel_goto.target must be a positive integer object number")
+        target_kind = message.get("target_kind")
+        if target_kind not in PANEL_TARGET_KINDS:
+            raise ProtocolError(f"panel_goto.target_kind must be one of {PANEL_TARGET_KINDS}")
+        cue = message.get("cue")
+        if not _is_object_number(cue):
+            raise ProtocolError("panel_goto.cue must be a positive integer cue number")
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "panel_goto",
+            "target_kind": target_kind,
+            "target": target,
+            "cue": cue,
         }
 
     if message_type in (
@@ -593,6 +629,7 @@ def cue_executor_entry(
     sequence_name: str | None = None,
     cues: list[dict] | None = None,
     current_cue: dict | None = None,
+    last_app_action: dict | None = None,
 ) -> dict:
     """One executor's live cue-progress row.
 
@@ -605,6 +642,13 @@ def cue_executor_entry(
     its OWN ``status`` (``"ok"`` / ``"unavailable"``), because the current-cue
     property read can fail even when the sequence/cue-list read above
     succeeded — the two are never conflated into one verdict.
+
+    ``last_app_action`` (T-H, additive) is a THIRD independent claim: the most
+    recent command the app itself sent this executor and whether the console
+    ok'd it (``{"command", "ts", "ok"}``), or ``None`` when the app has never
+    sent this executor anything. It is never a claim about whether the
+    console is CURRENTLY playing that command — only that it was sent and
+    acknowledged (or not).
     """
     if status not in CUE_EXECUTOR_STATUSES:
         raise ValueError(
@@ -617,13 +661,36 @@ def cue_executor_entry(
         "sequence_name": sequence_name,
         "cues": list(cues) if cues is not None else [],
         "current_cue": current_cue,
+        "last_app_action": last_app_action,
     }
 
 
-def cue_history_entry(*, ts: str, command: str, ok: bool) -> dict:
+def cue_history_entry(
+    *,
+    ts: str,
+    command: str,
+    ok: bool,
+    target_kind: str | None = None,
+    target_no: int | None = None,
+) -> dict:
     """One recent-execution row (contract item 2) — read from the audit log,
-    independent of any console connection."""
-    return {"ts": ts, "command": command, "ok": bool(ok)}
+    independent of any console connection.
+
+    ``target_kind``/``target_no`` (T-H, additive) are the best-effort
+    attribution of which console object this command addressed, parsed from
+    the command string itself (``server/web/cue_monitor.py``'s
+    ``_parse_command_target``). Both are ``None`` when the command does not
+    parse as one of the known playback forms — the row is still returned,
+    never dropped, so the full history stays visible even when this module
+    cannot say who it was for.
+    """
+    return {
+        "ts": ts,
+        "command": command,
+        "ok": bool(ok),
+        "target_kind": target_kind,
+        "target_no": target_no,
+    }
 
 
 def cue_monitor_event(*, executors: list[dict], history: list[dict]) -> dict:

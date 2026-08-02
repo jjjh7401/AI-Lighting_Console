@@ -51,7 +51,9 @@ from server.web.messages import (
     review_resolved_event,
 )
 from server.web.panel import (
+    PANEL_BACK_VERB,
     PANEL_GO_VERB,
+    PANEL_GOTO_VERB,
     PANEL_OFF_VERB,
     PANEL_UNKNOWN_TARGET_MESSAGE,
     PanelRuntime,
@@ -297,11 +299,13 @@ def create_app(deps: WebDeps) -> FastAPI:
         panel_execute_task: asyncio.Task | None = None
         panel_tasks: set[asyncio.Task] = set()
 
-        async def panel_task(fn, *args, lane: asyncio.Lock | None = None) -> None:
+        async def panel_task(fn, *args, lane: asyncio.Lock | None = None, **kwargs) -> None:
+            # T-H5: **kwargs additive (e.g. panel.fire's ``cue=`` for Goto) —
+            # every existing positional-only caller is unaffected.
             if lane is not None:
                 await lane.acquire()
             try:
-                await asyncio.to_thread(fn, *args)
+                await asyncio.to_thread(fn, *args, **kwargs)
             except Exception as error:  # a panel failure must not kill the socket
                 deps.audit.record({"event": "panel_task_failed", "detail": str(error)})
                 await _safe_send(
@@ -373,7 +377,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                         )
                 elif message_type == "lock":
                     session.set_lock(message["active"])
-                elif message_type in ("panel_execute", "panel_stop"):
+                elif message_type in ("panel_execute", "panel_back", "panel_stop"):
                     target_kind, target = message["target_kind"], message["target"]
                     if not panel.contains(target_kind, target):
                         # REQ-SHOWUI-022 membership half. Refused HERE, before a
@@ -383,12 +387,21 @@ def create_app(deps: WebDeps) -> FastAPI:
                             websocket,
                             error_event(message=PANEL_UNKNOWN_TARGET_MESSAGE, kind="panel"),
                         )
-                    elif message_type == "panel_execute":
+                    elif message_type in ("panel_execute", "panel_back"):
+                        # T-H5: panel_back (Go-, step to the previous cue)
+                        # shares panel_execute's busy-guard lane — it is an
+                        # ADVANCE action like Go+, not the emergency-stop
+                        # exemption Off gets below.
                         if panel_execute_task is not None and not panel_execute_task.done():
                             panel.busy(target_kind, target)
                         else:
+                            verb = (
+                                PANEL_GO_VERB
+                                if message_type == "panel_execute"
+                                else PANEL_BACK_VERB
+                            )
                             panel_execute_task = spawn_panel(
-                                panel_task(panel.fire, PANEL_GO_VERB, target_kind, target)
+                                panel_task(panel.fire, verb, target_kind, target)
                             )
                     else:
                         # Busy-guard EXEMPT (REQ-SHOWUI-012): a stop is handled
@@ -404,6 +417,30 @@ def create_app(deps: WebDeps) -> FastAPI:
                                 target,
                                 lane=panel_stop_lane,
                             )
+                        )
+                elif message_type == "panel_goto":
+                    # T-H5 — jump to a specific cue. Shares panel_execute's
+                    # busy-guard lane (same rationale as panel_back above: an
+                    # advance action, not an emergency stop). Membership +
+                    # cue-existence + the executor->sequence resolution all
+                    # happen inside panel.fire (the single gateway) — this
+                    # dispatch site does nothing but route the extra ``cue``
+                    # argument through.
+                    target_kind, target, cue = (
+                        message["target_kind"],
+                        message["target"],
+                        message["cue"],
+                    )
+                    if not panel.contains(target_kind, target):
+                        await _safe_send(
+                            websocket,
+                            error_event(message=PANEL_UNKNOWN_TARGET_MESSAGE, kind="panel"),
+                        )
+                    elif panel_execute_task is not None and not panel_execute_task.done():
+                        panel.busy(target_kind, target)
+                    else:
+                        panel_execute_task = spawn_panel(
+                            panel_task(panel.fire, PANEL_GOTO_VERB, target_kind, target, cue=cue)
                         )
                 elif message_type == "panel_catalog_request":
                     spawn_panel(panel_task(panel.send_catalog, lane=panel_side_lane))
@@ -452,6 +489,12 @@ def create_app(deps: WebDeps) -> FastAPI:
                             deps.audit,
                             console_nos,
                         )
+                        # T-H5 — the SAME cue lists the UI's cue sheet just
+                        # rendered become the Goto membership map: a jump to a
+                        # cue this snapshot never showed the operator is
+                        # refused before it reaches the gate (panel.py's
+                        # register_executor_cues/executor_has_cue).
+                        panel.register_executor_cues(event["executors"])
                         send_event(event)
 
                     spawn_panel(panel_task(_cue_monitor, lane=panel_side_lane))
