@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from server.looks.layout import OCCUPIED, UNCONFIRMED, plan_layout
-from server.web.layout_occupancy import check_occupancy, fetch_executor_states
 from server.tests.busking_fixtures import make_bundle, make_look
+from server.web.layout_occupancy import check_occupancy, fetch_executor_states
 
 
 class _FakeStatePort:

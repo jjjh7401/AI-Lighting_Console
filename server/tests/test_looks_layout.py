@@ -106,9 +106,7 @@ class TestPlanLayoutSkips:
 
     def test_page_capacity_exhaustion_skips_the_overflow(self):
         bundle = _bundle()
-        plan = plan_layout(
-            bundle, {"intro": 11, "verse": 12, "chorus": 13}, page_capacity=2
-        )
+        plan = plan_layout(bundle, {"intro": 11, "verse": 12, "chorus": 13}, page_capacity=2)
         assert [item.look_id for item in plan.items] == ["intro", "verse"]
         assert len(plan.skipped) == 1
         assert plan.skipped[0].look_id == "chorus"

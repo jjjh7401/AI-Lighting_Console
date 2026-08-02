@@ -173,7 +173,10 @@ def plan_layout(
                 LayoutSkip(
                     look_id=plan.look_id,
                     reason=PAGE_CAPACITY_EXHAUSTED,
-                    detail=f"page {page_no} holds {page_capacity} executors; slot {slot} would overflow",
+                    detail=(
+                        f"page {page_no} holds {page_capacity} executors; "
+                        f"slot {slot} would overflow"
+                    ),
                 )
             )
             continue
@@ -202,7 +205,9 @@ def plan_layout(
             )
         )
         slot += 1
-    return LayoutPlan(genre=bundle.genre, page_no=page_no, items=tuple(items), skipped=tuple(skipped))
+    return LayoutPlan(
+        genre=bundle.genre, page_no=page_no, items=tuple(items), skipped=tuple(skipped)
+    )
 
 
 def mark_occupancy_conflicts(
@@ -234,7 +239,9 @@ def mark_occupancy_conflicts(
                     item,
                     conflict=True,
                     conflict_reason=UNCONFIRMED,
-                    conflict_detail=f"Executor {item.executor_no} was never confirmed by a state query",
+                    conflict_detail=(
+                        f"Executor {item.executor_no} was never confirmed by a state query"
+                    ),
                 )
             )
             continue
@@ -246,7 +253,9 @@ def mark_occupancy_conflicts(
                     item,
                     conflict=True,
                     conflict_reason=OCCUPIED,
-                    conflict_detail=f"Executor {item.executor_no} already carries Sequence {sequence_no}",
+                    conflict_detail=(
+                        f"Executor {item.executor_no} already carries Sequence {sequence_no}"
+                    ),
                 )
             )
             continue
