@@ -1,6 +1,6 @@
 # 상류 어휘 확장 제안 — 표제 문장이 매칭되게 하라
 
-> 작성일: 2026-08-02 · 상태: 제안(proposal) · 작성 경위: SPEC-COPILOT-SCENE-001 M8 종단 라이브가 발견하고
+> 작성일: 2026-08-02 · 상태: **이행 완료(2026-08-02, 하단 §6)** · 작성 경위: SPEC-COPILOT-SCENE-001 M8 종단 라이브가 발견하고
 > 사용자가 **안 D(기록만 하고 넘긴다)** 로 확정하며 후속 SPEC의 명시 대상으로 넘긴 결함의 이행 문서.
 >
 > 원 기록: `SPEC-COPILOT-SCENE-001/progress.md` §E.2 M8 절 ⑦(실측 표) · §E.4 "어휘 결정" 절(안 A~D 판정 표).
@@ -93,3 +93,40 @@ git log --oneline -3          # 4598c36 … 85611a1 … e4bc78e
 **착수 전 금지 사항 승계**: `feat/spec-copilot-scene-001` 브랜치 삭제 금지(SCENE 증거 사슬) ·
 새 SPEC의 PRESERVE BASE는 **자기 착수 시점 SHA**(SCENE 게이트 명령 복사 금지 — PRECHK §E.9 함정) ·
 SCENE §0 교훈 21~25 승계(특히 22 "문이 둘이면 그물도 둘", 23 "가드 전수 스윕은 싸고 값지다").
+
+## 6. 이행 기록 (2026-08-02 — 경량 진행, Orca 오케스트레이션)
+
+사용자 확정: SPEC 미개설 **경량 진행**(결정 ④), 나머지 결정은 아래와 같이 닫혔다.
+
+| # | 결정 | 확정 |
+|---|---|---|
+| ① | fx↔scene 어미 사본 | **(a) 둘 다 편집 + 동치 가드 신설** — `server/tests/test_matching_endings_parity.py`가 원소·순서 동일을 강제 |
+| ② | 어미 범위 | **`하는` 1건만** (측정된 것만) |
+| ③ | `파란` 위치 | **`푸른`이 있는 모든 슬롯에 미러** — worship.yaml(aliases+mood) · ballad.yaml(aliases+mood) · edm.yaml(mood) · **scene core.yaml:27(mood)** |
+| ④ | SPEC 형식 | 경량 진행 — 코드+테스트+본 기록 |
+
+수행 형태: 쓰기 집합 교집합 ∅ 검증 후 Orca orchestration 2-병렬(Run `run_3549d1b7ee86`). 슬라이스 B(룩 별칭)는
+워커가 완주(`worker_done`, 431 green). 슬라이스 A(어미 축) 워커는 Claude CLI 로그인 만료로 착수 실패 —
+**코디네이터가 인라인 구현**(오케스트레이션 밖 실행임을 명기, task는 failed로 정산).
+
+이음매 발견(SCENE 교훈 17 재현): 상류 두 곳만으로는 표제 문장의 look 축이 열리지 않는다 —
+`match_scene`의 look 축 어휘는 **씬 자산의 자기 항목**에서 나오므로(`server/scene/matching.py` `_terms_for`),
+`server/scene/library/core.yaml`의 `푸른`(ballad-moonlight-rise mood)에도 미러가 필요했다. 워커 B는 scene/** 금지였고
+이 지점은 코디네이터가 통합 검증에서 잡아 반영했다.
+
+인수 실측 (§4 대비):
+
+1. 표제 문장 `find_scene` → **both_matched · ballad-moonlight-rise** (look=ballad-moonlight · fx=wave-soft-rise). ✅
+2. 두 표면 동일 답: `웨이브하는`에 `match_fx`·`match_scene` fx 축 모두 wave-soft-rise — 테스트로 고정. ✅
+3. 무회귀: pytest **3938 passed / 5 skipped** (직전 정본 3927+11 신규 — parity 8 + blue alias 3). ✅
+4. 동치 가드: `TestEndingListParity` — fx↔scene 갈라지면 죽는다. ✅
+5. 뮤테이션 실측: `하는` 제거 → 5 failed / `파란`(ballad) 제거 → 6 failed — 둘 다 킬 확인 후 원복. ✅
+
+`푸른`↔`파란` 쌍둥이 문장 동일 답도 테스트로 고정(`test_the_blue_twin_words_answer_identically`).
+룰북(`server/rulebook/assets/**`) 무접촉.
+
+커밋 후에만 보이는 게이트(SCENE 교훈 18 재현): OVERLAP의 상시 PRESERVE 게이트
+(`test_overlap_preserve.py`)가 `server/looks/library/`를 PRECHK BASE 기준으로 잠그고 있어 커밋 직후
+1건 FAIL — 약화 대신 **정밀 허가**로 갱신했다(`TestLooksLibraryGrantedExtension`: 3파일·라인쌍
+정확 텍스트만 통과, 그 외는 여전히 FAIL). 최종: pytest **3941 passed / 5 skipped**.
+커밋: `761f01e`(확장 본체) · `c052d9f`(게이트 정밀 허가).

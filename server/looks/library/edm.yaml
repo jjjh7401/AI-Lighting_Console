@@ -71,7 +71,7 @@ looks:
     # The one look with 프론트 — see the header note.
     roles: ["배경", "프론트"]
     aliases: ["브레이크다운", "breakdown", "깊은 파랑"]
-    mood_keywords: ["깊은", "푸른", "숨고르는", "브레이크다운", "deep", "breakdown"]
+    mood_keywords: ["깊은", "푸른", "파란", "숨고르는", "브레이크다운", "deep", "breakdown"]
     attributes:
       Dimmer: 42
       ColorRGB_R: 12

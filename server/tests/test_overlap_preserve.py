@@ -61,6 +61,43 @@ _PRESERVE_PATHS = (
     "server/rulebook/assets/v2.4.2/",
 )
 
+#: 2026-08-02 granted exception — the upstream vocabulary extension
+#: (docs/proposals/2026-08-02-upstream-vocabulary-extension-proposal.md §6,
+#: user-approved, lightweight track). ``server/looks/library/`` stays a locked
+#: boundary, but this ONE measured diff is sanctioned: 파란 mirrored beside 푸른
+#: in exactly these alias/mood lines. The grant is pinned by EXACT line text
+#: (the ``_SAFETY_ALLOWED_DELETED_LINE`` precedent): anything beyond these
+#: pairs — another file, another line, another wording — still fails the gate.
+_LOOKS_LIBRARY_DIR = "server/looks/library/"
+_LOOKS_GRANTED_LINE_PAIRS = {
+    "server/looks/library/ballad.yaml": (
+        (
+            '    aliases: ["달빛", "moonlight", "푸른 밤"]',
+            '    aliases: ["달빛", "moonlight", "푸른 밤", "파란 밤"]',
+        ),
+        (
+            '    mood_keywords: ["쓸쓸한", "푸른", "밤", "달빛", "차분한", "moonlit", "night"]',
+            '    mood_keywords: ["쓸쓸한", "푸른", "파란", "밤", "달빛", "차분한", "moonlit", "night"]',  # noqa: E501
+        ),
+    ),
+    "server/looks/library/edm.yaml": (
+        (
+            '    mood_keywords: ["깊은", "푸른", "숨고르는", "브레이크다운", "deep", "breakdown"]',
+            '    mood_keywords: ["깊은", "푸른", "파란", "숨고르는", "브레이크다운", "deep", "breakdown"]',  # noqa: E501
+        ),
+    ),
+    "server/looks/library/worship.yaml": (
+        (
+            '    aliases: ["푸른 벌스", "blue verse", "새벽"]',
+            '    aliases: ["푸른 벌스", "파란 벌스", "blue verse", "새벽"]',
+        ),
+        (
+            '    mood_keywords: ["서늘한", "고요한", "새벽", "푸른", "벌스", "cool", "calm"]',
+            '    mood_keywords: ["서늘한", "고요한", "새벽", "푸른", "파란", "벌스", "cool", "calm"]',  # noqa: E501
+        ),
+    ),
+}
+
 _TOOLS_PATH = "server/orchestrator/tools.py"
 
 #: Protected regions of ``tools.py``, PRECHK-base relative: the programmer-state
@@ -103,7 +140,10 @@ def _git(*arguments: str) -> str:
 
 
 def _preserve_diff_command() -> list[str]:
-    return ["git", "diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", *_PRESERVE_PATHS]
+    # The granted looks-library extension is checked by its own exact-text
+    # gate below; every OTHER preserved path must still diff empty.
+    paths = tuple(path for path in _PRESERVE_PATHS if path != _LOOKS_LIBRARY_DIR)
+    return ["git", "diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", *paths]
 
 
 def _numstat(base: str, *paths: str) -> dict[str, tuple[int, int]]:
@@ -162,7 +202,9 @@ class TestPreserveDiffIsEmpty:
         command = _preserve_diff_command()
         assert command[:4] == ["git", "diff", "--stat", f"{_PRECHK_BASE}..HEAD"]
         assert command[4] == "--"
-        assert tuple(command[5:]) == _PRESERVE_PATHS
+        assert tuple(command[5:]) == tuple(
+            path for path in _PRESERVE_PATHS if path != _LOOKS_LIBRARY_DIR
+        )
         # Explicitly NOT this SPEC's base: that range is empty right after the
         # work is committed, which disables the gate while keeping it green.
         assert _PRECHK_BASE != _OVERLAP_BASE
@@ -175,6 +217,58 @@ class TestPreserveDiffIsEmpty:
     def test_the_same_command_detects_a_change_elsewhere(self):
         # Non-vacuity for the emptiness above: the command shape CAN report.
         assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", "server/prechk/") != ""
+
+
+class TestLooksLibraryGrantedExtension:
+    """The 2026-08-02 grant — exactly the sanctioned 파란 mirror, nothing else.
+
+    Not a weakening: the boundary stays locked, and this class IS the lock's
+    new shape. Every deleted line must reappear as its paired insertion with
+    파란 added; an extra file, an extra hunk, or a different wording fails.
+    """
+
+    @staticmethod
+    def _diff_lines(path: str) -> tuple[list[str], list[str]]:
+        deleted, added = [], []
+        for line in _git("diff", "--unified=0", f"{_PRECHK_BASE}..HEAD", "--", path).splitlines():
+            if line.startswith("-") and not line.startswith("---"):
+                deleted.append(line[1:])
+            elif line.startswith("+") and not line.startswith("+++"):
+                added.append(line[1:])
+        return deleted, added
+
+    def test_the_grant_is_not_an_empty_exemption(self):
+        # Non-vacuity, the standard this module sets for itself. All three
+        # assertions below are satisfied by an EMPTY dict — `set() == set()`
+        # and two loops that never run — while `server/looks/library/` stays
+        # filtered out of `_preserve_diff_command()`. That combination is a
+        # gate that is off AND green, so pin both halves: the grant has
+        # entries, and the directory it exempts really did change.
+        assert _LOOKS_GRANTED_LINE_PAIRS
+        assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", _LOOKS_LIBRARY_DIR) != ""
+
+    def test_exactly_the_three_granted_files_changed(self):
+        rows = _numstat(_PRECHK_BASE, _LOOKS_LIBRARY_DIR)
+        assert set(rows) == set(_LOOKS_GRANTED_LINE_PAIRS)
+
+    def test_every_change_is_a_granted_line_pair_and_every_pair_is_present(self):
+        for path, pairs in _LOOKS_GRANTED_LINE_PAIRS.items():
+            deleted, added = self._diff_lines(path)
+            assert deleted == [old for old, _new in pairs], path
+            assert added == [new for _old, new in pairs], path
+
+    def test_the_grant_really_is_the_blue_mirror_and_nothing_broader(self):
+        # Non-vacuity + shape: each pair differs ONLY by inserting 파란 tokens.
+        for pairs in _LOOKS_GRANTED_LINE_PAIRS.values():
+            for old, new in pairs:
+                assert old != new
+                assert "파란" not in old
+                assert "파란" in new
+                # Removing the 파란 tokens from the new line restores the old
+                # one exactly — the grant cannot smuggle an unrelated edit.
+                stripped = new.replace(', "파란 밤"', "").replace(', "파란 벌스"', "")
+                stripped = stripped.replace('"파란", ', "")
+                assert stripped == old
 
 
 class TestToolsProtectedRegions:

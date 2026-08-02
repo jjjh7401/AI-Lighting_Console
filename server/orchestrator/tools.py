@@ -1921,6 +1921,70 @@ def build_toolset(
             )
         )
 
+    def _scene_requery(
+        state: object, sequence: int, cue: float
+    ) -> tuple[dict[str, object] | None, str | None]:
+        """Read the stored sequence back and pin ONLY what the read answered.
+
+        A command receipt is not evidence of effect — the doctrine this whole
+        SPEC is built on. `prepare_songcue` set the precedent (requery after a
+        successful send, `requery_error` when the read itself fails), and the
+        scene report has carried the consuming half since M5:
+        `ARTIFACT_CONFIRMED_NOTE` is reached ONLY when a requery mapping
+        arrives. Until this wiring existed the tool never passed one, so every
+        production scene report filed claim (a) as UNVERIFIED.
+
+        Returns `(mapping, None)` when the read confirms this cue, else
+        `(None, reason)`. A reason is NEVER "the cue is absent": the console
+        does not return cue CONTENT (spec.md §C.1), so absence is a claim
+        about a value nobody could read. The caller files the reason as a
+        mismatch and the report keeps (a) unconfirmed.
+
+        Two refusals beyond "no such cueNo", both following the songcue
+        sibling (`songcue_report.py` admits an observation only for a real
+        number plus a real name):
+
+        * a non-number `cueNo` — `bool` is an `int` in Python, and every other
+          responder-child read in this repo excludes it by name;
+        * a matched cue whose name (or its sequence's name) did not arrive.
+          `ARTIFACT_CONFIRMED_NOTE` says the requery confirmed the NAMES, so
+          confirming a nameless read would state something nobody read — and
+          the summary would print `시퀀스 'None' · 큐 'None'`.
+        """
+        if not isinstance(state, dict):
+            return None, "재조회 응답이 상태 객체가 아니다"
+        node = state.get("node")
+        children = state.get("children")
+        if not isinstance(children, list):
+            return None, "재조회 응답에 children 목록이 없다"
+        for child in children:
+            if not isinstance(child, dict) or child.get("class") != "Cue":
+                continue
+            raw = child.get("cueNo")
+            # System cues (`OffCue`) arrive as class Cue with NO cueNo, so a
+            # missing key is ordinary, not an error — skip to the next child.
+            if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+                continue
+            if float(raw) != float(cue):
+                continue
+            cue_name = child.get("name")
+            sequence_name = node.get("name") if isinstance(node, dict) else None
+            if not isinstance(cue_name, str) or not isinstance(sequence_name, str):
+                return None, (
+                    f"시퀀스 {sequence}의 큐 {cue}를 찾았으나 재조회가 이름을 담지 않았다 — "
+                    "확인 문면은 이름까지 확인됐다고 말하므로 확인으로 올리지 않는다"
+                )
+            return {
+                "sequence": sequence,
+                "sequence_name": sequence_name,
+                "cue_name": cue_name,
+                "cue_no": float(raw),
+            }, None
+        return None, (
+            f"재조회가 응답했으나 시퀀스 {sequence}에서 큐 {cue}를 찾지 못했다 — "
+            "큐가 없다는 뜻은 아니다(저작·전송은 별도로 보고된다). 콘솔에서 직접 확인하라"
+        )
+
     # -- compile_scene (REQ-SCENE-018 — the scene layer's ONE route) -----------
     #
     # @MX:ANCHOR: [AUTO] the only model-reachable entry to the scene compilation
@@ -2140,7 +2204,42 @@ def build_toolset(
         # Feeding them to the report would verdict a bundle that never left the
         # process as "전량 실행".
         outcomes = () if "gate_status" in payload else execution.command_outcomes
-        report = build_scene_report(compilation, outcomes)
+        # The evidence channel for claim (a). Gated on the RAW execution flag,
+        # BEFORE the LiveLock demotion below: a gate hold and a demotion both
+        # send NOTHING, and requerying a sequence the console was never asked
+        # to write would manufacture a read failure about a cue nobody
+        # attempted (the sibling `precheck_patch` gates its macro requery on
+        # the same raw flag for the same reason).
+        requery = None
+        requery_error = None
+        requery_mismatch = None
+        if not execution.result.is_error:
+            try:
+                state = state_port.query_state(f"{rig_paths['sequences']}/{compilation.sequence}")
+            except Exception as error:  # noqa: BLE001 — a failed READ, reported as one
+                # NEVER "the cue is not there": substituting absence for a
+                # failed read is the defect class the sibling read paths fixed.
+                # The console's own failure text ("path segment not found: …")
+                # IS a sentence stating absence, so the report frames it with
+                # the disclaimer FIRST and quotes the console second.
+                requery_error = str(error)
+                payload["requery_error"] = requery_error
+            else:
+                requery, requery_mismatch = _scene_requery(
+                    state, compilation.sequence, compilation.cue
+                )
+                if requery_mismatch is not None:
+                    payload["requery_mismatch"] = requery_mismatch
+        # Three states, three sentences. "Attempted and did not confirm" is a
+        # DIFFERENT fact from "not attempted", and before these two arguments
+        # existed the report said the latter for both.
+        report = build_scene_report(
+            compilation,
+            outcomes,
+            requery=requery,
+            requery_error=requery_error,
+            requery_mismatch=requery_mismatch,
+        )
         payload["executed"] = report.executed
         payload["succeeded"] = report.succeeded
         payload["report"] = report.to_dict()
@@ -2793,11 +2892,26 @@ def build_toolset(
                 "\n"
                 "The report keeps four claims APART, and so must you when you "
                 "speak to the operator:\n"
-                "- whether the cue EXISTS. THIS TOOL DOES NOT RE-QUERY, so it "
-                "never confirms that. An ok receipt is not existence, and the "
-                "report says so in as many words. If existence matters, read "
-                "the sequence back with get_rig_context and say which of the "
-                "two you are reporting;\n"
+                "- whether the cue EXISTS. When the bundle IS sent, the tool "
+                "reads the sequence back and reports it as the report's "
+                '"requery" — a command receipt alone is not evidence. Three '
+                "outcomes, and they are DIFFERENT: a mapping under "
+                '"requery" means the read found the cue and its name and '
+                'cueNo are confirmed; "requery_error" means the READ did not '
+                "answer, so existence is UNCONFIRMED — it does NOT mean the "
+                'cue is absent; "requery_mismatch" means the read answered '
+                "and did not confirm this cue — either it was not there or it "
+                "arrived without the names the confirmation claims — which is "
+                "still not a claim of absence. In the last two the authoring "
+                "result stands unchanged, the report says so in its own "
+                "sentence, and existence stays UNCONFIRMED. Nothing is read "
+                "back when the bundle was not sent (a gate hold, a live-lock "
+                "proposal or a failed line). One case reads back even though "
+                'THIS call sent nothing: a "cross_call_collision", where an '
+                "earlier bundle in the same instruction already stored the "
+                "cue — the read then confirms THAT cue, so report the "
+                "collision verdict alongside it and never as this call's "
+                "store;\n"
                 "- the value line carried the uniform attribute set (checked "
                 "in the emitted text);\n"
                 "- the EFFECT — the motion, the colour on stage — cannot be "
