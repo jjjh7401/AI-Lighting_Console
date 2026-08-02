@@ -164,9 +164,7 @@ class TestBuildExecutorCueProgress:
                 "DataPool/Sequences/5": _sequence_payload("Song A", []),
             }
         )
-        property_port = FakePropertyPort(
-            {("Executor 101", "Cue"): {"ok": True, "value": "3"}}
-        )
+        property_port = FakePropertyPort({("Executor 101", "Cue"): {"ok": True, "value": "3"}})
 
         entry = build_executor_cue_progress(state_port, property_port, 101)
 

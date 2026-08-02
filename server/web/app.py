@@ -217,9 +217,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                 subprotocols=websocket.scope.get("subprotocols") or (),
             )
             if not decision.accepted:
-                deps.audit.record(
-                    {"event": "ws_handshake_rejected", "reason": decision.reason}
-                )
+                deps.audit.record({"event": "ws_handshake_rejected", "reason": decision.reason})
                 await websocket.close(code=CLOSE_POLICY_VIOLATION)
                 return
             subprotocol = decision.subprotocol
@@ -396,9 +394,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                 elif message_type == "panel_catalog_request":
                     spawn_panel(panel_task(panel.send_catalog, lane=panel_side_lane))
                 elif message_type == "panel_pin":
-                    spawn_panel(
-                        panel_task(panel.pin, session.last_created, lane=panel_side_lane)
-                    )
+                    spawn_panel(panel_task(panel.pin, session.last_created, lane=panel_side_lane))
                 elif message_type == "panel_unpin":
                     spawn_panel(
                         panel_task(
@@ -422,13 +418,9 @@ def create_app(deps: WebDeps) -> FastAPI:
                         # tiles' only legitimate targets would be rejected
                         # as "not on the panel".
                         event = send_dash_catalog(deps.gate.state_port, send_event)
-                        panel.register_dash_executors(
-                            resolved_executor_nos(event["sections"])
-                        )
+                        panel.register_dash_executors(resolved_executor_nos(event["sections"]))
 
-                    spawn_panel(
-                        panel_task(_dash_catalog_and_membership, lane=panel_side_lane)
-                    )
+                    spawn_panel(panel_task(_dash_catalog_and_membership, lane=panel_side_lane))
                 elif message_type == "cue_monitor_request":
                     # T-C, wave 2 (ad-hoc contract, no SPEC on file). Resolves
                     # its own executor numbers on demand (dash.py's own
