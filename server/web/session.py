@@ -146,6 +146,33 @@ class _MeasuredExecutionPort:
         return UNCONFIRMED_MARKER not in detail
 
 
+class _GateLivenessPort:
+    """Adapts ``SafetyGate.heartbeat()`` to the preshow ``LivenessPort`` shape.
+
+    SPEC-COPILOT-PRESHOW-001 T-G2: the pre-show OSC checks need a
+    ``ping() -> bool``, but the gate exposes ``heartbeat() -> str`` (the
+    ``HealthMonitor`` state after probing the console once). The adapter
+    lives HERE, in the consuming web layer, rather than in
+    ``server/preshow/osc_check.py`` — the preshow package must not import
+    ``server.safety`` (that import would blur the package boundary the
+    architecture test enforces).
+
+    ``heartbeat()``'s only two branches (``server/safety/gate.py``) are: on a
+    successful ping, ``HealthMonitor.note_ping_success`` sets the state to
+    ``HealthMonitor.ONLINE`` UNCONDITIONALLY; on a failed/timed-out ping,
+    ``note_ping_timeout`` sets it to ``CONSOLE_OFFLINE`` or
+    ``RESPONDER_DEGRADED`` — never ``ONLINE``. So comparing the returned
+    state against ``HealthMonitor.ONLINE`` exactly recovers THIS ping's own
+    success/failure, not some stale prior state.
+    """
+
+    def __init__(self, gate: SafetyGate) -> None:
+        self._gate = gate
+
+    def ping(self) -> bool:
+        return self._gate.heartbeat() == HealthMonitor.ONLINE
+
+
 class _ObservingBundleGate:
     """BundleGate wrapper surfacing every screening decision to the session."""
 
@@ -184,6 +211,7 @@ class ChatSession:
         deploy_pipeline: DeployPipelinePort | None = None,
         console_input_probe: Callable[[], str] | None = None,
         reply_port_probe: Callable[[], ReplyPortMismatch | None] | None = None,
+        preshow_receive_port: int | None = None,
     ) -> None:
         self._gate = gate
         # Injected so the status surface owns the I/O and the health state
@@ -214,6 +242,18 @@ class ChatSession:
             bundle_gate=_ObservingBundleGate(gate, self._on_preview, self._on_decision),
             rig_paths=rig_paths,
             deploy_pipeline=deploy_pipeline,
+            # SPEC-COPILOT-PRESHOW-001 T-G2: reuse the gate's own audited
+            # heartbeat as the pre-show OSC checks' liveness probe — no
+            # second console link, no new socket. Gated on preshow_receive_port
+            # being supplied (wired from server/web/app.py WebDeps ->
+            # server/web/serve.py ConsoleStack.receive_port): without a real
+            # bound port to report/compare, receive_port_binding has nothing
+            # meaningful to check, and the whole OSC family stays the
+            # pre-T-G2 skip default — never partially wired.
+            preshow_liveness_port=(
+                _GateLivenessPort(gate) if preshow_receive_port is not None else None
+            ),
+            preshow_receive_port=preshow_receive_port,
         )
         # Held so a look bundle re-enters the SAME run_commands tool the model
         # uses, rather than growing a second way to reach the console.

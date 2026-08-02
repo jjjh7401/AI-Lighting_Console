@@ -367,6 +367,12 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         # Built from the resolved args, so an operator's saved console port is
         # the one probed (the M7.3 settings-fallthrough discipline).
         console_input_probe=make_console_input_probe(args.console_host, args.console_port),
+        # SPEC-COPILOT-PRESHOW-001 T-G2: stack.receive_port is the port the
+        # bridge ACTUALLY bound (bridge.receive_port), not the requested
+        # args.receive_port value — the two can differ for an ephemeral
+        # request (port 0), so the real bound value is what ChatSession
+        # needs to wire the pre-show OSC checks correctly.
+        preshow_receive_port=stack.receive_port,
     )
     # REQ-DEPLOY-018/026 follow-up: a grandMA3 OSC entry has ONE port for BOTH
     # directions, so the port the console replies THROUGH and the port the app

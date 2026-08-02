@@ -38,7 +38,16 @@ from .test_safety_gate import FakeConsole
 _PREFIX = "PREFIX"
 
 
-def _session(tmp_path, provider, *, console=None, channel=None, recorder=None, **gate_kwargs):
+def _session(
+    tmp_path,
+    provider,
+    *,
+    console=None,
+    channel=None,
+    recorder=None,
+    preshow_receive_port=None,
+    **gate_kwargs,
+):
     console = console or FakeConsole()
     audit = AuditLog(tmp_path / "audit")
     channel = channel or ApprovalChannel(timeout_seconds=1.0)
@@ -52,6 +61,7 @@ def _session(tmp_path, provider, *, console=None, channel=None, recorder=None, *
         send_event=sent.append,
         approval_channel=channel,
         recorder=recorder,
+        preshow_receive_port=preshow_receive_port,
     )
     return session, console, audit, sent, channel
 
