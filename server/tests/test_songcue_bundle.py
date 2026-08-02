@@ -66,9 +66,32 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # SCENE (SPEC-COPILOT-SCENE-001, M6) added 15 — the `replace` import the label
 # override needs — and widened the existing 17 hunk with the scene imports, the
 # two handlers and their tool definitions. Still no protected range touched.
+# PRESHOW (SPEC-COPILOT-PRESHOW-001) registered preshow_check the same way:
+# one import line, one TOOL_NAMES entry, one handler + ToolDefinition + one
+# handlers-dict entry. Its handler insertion sits inside the same large
+# build_toolset body the earlier SPECs already touch, so unified=0 splits the
+# old single hunk at 951 into five (952 / 971 / 989 / 1007 / 1118) instead of
+# adding a wholly new start — none of the five overlaps a protected range.
 # The positional list is bookkeeping; the assertion that carries the PRESERVE
 # claim is the protected-range overlap check below.
-_TOOLS_EXPECTED_HUNK_OLD_STARTS = (15, 17, 33, 49, 125, 436, 463, 475, 479, 951, 1222, 1231)
+_TOOLS_EXPECTED_HUNK_OLD_STARTS = (
+    15,
+    17,
+    33,
+    49,
+    125,
+    436,
+    463,
+    475,
+    479,
+    952,
+    971,
+    989,
+    1007,
+    1118,
+    1222,
+    1231,
+)
 _TOOLS_PROTECTED_OLD_RANGES = ((234, 238), (524, 569))
 _HUNK_RE = re.compile(r"^@@ -(?P<old_start>\d+)(?:,(?P<old_count>\d+))? \+\d+(?:,\d+)? @@")
 

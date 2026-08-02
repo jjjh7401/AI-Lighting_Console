@@ -1365,8 +1365,17 @@ class TestBoundaryProhibitions:
     def test_the_operator_tool_exemption_list_is_unchanged(self):
         from .test_architecture import _NAMED_TOOL_EXEMPTIONS
 
+        # SPEC-COPILOT-PRESHOW-001 added a third, deliberate exemption for the
+        # same class of reason (non-production diagnostic reusing the
+        # ping/state round-trip pattern).
         assert (
-            frozenset({"server/tools/osc_smoke.py", "server/tools/responder_roundtrip.py"})
+            frozenset(
+                {
+                    "server/tools/osc_smoke.py",
+                    "server/tools/responder_roundtrip.py",
+                    "server/preshow/osc_check.py",
+                }
+            )
             == _NAMED_TOOL_EXEMPTIONS
         )
 

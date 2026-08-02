@@ -63,6 +63,7 @@ from server.prechk.macro import groups_from_snapshot as read_group_pool
 from server.prechk.patch import evaluate_patch
 from server.prechk.query import read_properties
 from server.prechk.report import build_report as build_precheck_report
+from server.preshow.runner import run_preshow_checklist
 from server.scene.compile import SceneCompilationError
 from server.scene.compile import compile_scene as build_scene_bundle
 from server.scene.loader import DEFAULT_LIBRARY_DIR as SCENE_LIBRARY_DIR
@@ -92,6 +93,7 @@ TOOL_NAMES = (
     "prepare_busking",
     "prepare_songcue",
     "precheck_patch",
+    "preshow_check",
     "find_fx",
     "instantiate_fx",
     "find_scene",
@@ -1669,6 +1671,28 @@ def build_toolset(
             command_outcomes=(),
         )
 
+    # -- preshow_check (SPEC-COPILOT-PRESHOW-001 — the pre-show checklist) ----
+    #
+    # @MX:NOTE: read-only diagnostic; reuses the same state_port precheck_patch
+    #   already depends on. Never touches server.bridge (see
+    #   server/preshow/TOOLS_REGISTRATION.md for the rationale) — the live OSC
+    #   round-trip / receive-port-binding checks always report "skip" here.
+    def preshow_check(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        report = run_preshow_checklist(
+            state_port=state_port,
+            sequences_path=rig_paths.get("sequences", "DataPool/Sequences"),
+            preset_pools_path=rig_paths.get("preset_pools", "DataPool/PresetPools"),
+        )
+        content = json.dumps(report.to_dict(), ensure_ascii=False)
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=content,
+                is_error=report.signal == "red",
+            ),
+        )
+
     # -- find_fx (REQ-FXLIB-015 — lookup only, sends nothing) ------------------
     #
     # @MX:ANCHOR: [AUTO] the only model-reachable entry to the fx MATCHER
@@ -2644,6 +2668,28 @@ def build_toolset(
             },
         ),
         ToolDefinition(
+            name="preshow_check",
+            description=(
+                "Run the standard pre-show checklist in one pass: sequence/"
+                "executor presence, preset (look) library integrity, and the "
+                "project's known field pitfalls (stale OSC socket advisory, "
+                "osc_slot Send=Yes row, feedback-port drift). Returns a "
+                "traffic-light signal — green (every check passed), yellow "
+                "(at least one check could not be verified — SKIP, never a "
+                "silent pass), or red (at least one check failed). The live "
+                "OSC round-trip and receive-port checks always report SKIP "
+                "through this tool; run the operator-facing "
+                "server/preshow/osc_check.py diagnostic separately for those. "
+                "Takes no arguments."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
             name="find_fx",
             description=(
                 "Ask the built-in effect library BEFORE hand-writing any "
@@ -2995,6 +3041,7 @@ def build_toolset(
         "prepare_busking": prepare_busking,
         "prepare_songcue": prepare_songcue,
         "precheck_patch": precheck_patch,
+        "preshow_check": preshow_check,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,
         "find_scene": find_scene,
