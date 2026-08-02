@@ -12,6 +12,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { ApprovalCard } from "./components/ApprovalCard";
 import { ChatView } from "./components/ChatView";
+import { CueMonitor } from "./components/CueMonitor";
 import { DashBoard } from "./components/DashBoard";
 import { LockToggle } from "./components/LockToggle";
 import { OnboardingBanner } from "./components/OnboardingBanner";
@@ -25,6 +26,7 @@ import {
 } from "./components/PoolSection";
 import {
   panelItemId,
+  type CueMonitorState,
   type DashItem,
   type DashState,
   type PanelTargetKind,
@@ -138,8 +140,10 @@ export function composerViewState({
 export function AppShell({
   chatCollapsed,
   dash,
+  cueMonitor,
   onToggleChat,
   onRefresh,
+  onCueMonitorRefresh,
   isItemRunning,
   onItemPress,
   sectionTileSize,
@@ -150,9 +154,13 @@ export function AppShell({
 }: {
   chatCollapsed: boolean;
   dash: DashState;
+  /** T-C, wave 2 — the live cue-progress monitor's slice of state. */
+  cueMonitor: CueMonitorState;
   onToggleChat: () => void;
   /** M5 — manual [새로고침] dispatch; see DashBoard.tsx. */
   onRefresh?: () => void;
+  /** T-C — manual cue-monitor [새로고침] dispatch; see CueMonitor.tsx. */
+  onCueMonitorRefresh?: () => void;
   /** M5 — per-item running lookup; see DashBoard.tsx. */
   isItemRunning?: (sectionName: string, item: DashItem) => boolean;
   /** M5 — fires panel_execute/panel_stop; see DashBoard.tsx. */
@@ -179,6 +187,7 @@ export function AppShell({
         sectionArea={sectionArea}
         onSectionAreaResizeStart={onSectionAreaResizeStart}
       />
+      <CueMonitor cueMonitor={cueMonitor} onRefresh={onCueMonitorRefresh} />
       {chatCollapsed ? (
         <aside className="chat-rail">
           <button className="chat-rail-open" onClick={onToggleChat} aria-label="채팅 펼치기">
@@ -203,6 +212,7 @@ export default function App() {
     sendPanelExecute,
     sendPanelStop,
     sendDashRefresh,
+    sendCueMonitorRefresh,
   } = useCopilotSocket();
   const [draft, setDraft] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -314,8 +324,10 @@ export default function App() {
       <AppShell
         chatCollapsed={chatCollapsed}
         dash={state.dash}
+        cueMonitor={state.cueMonitor}
         onToggleChat={() => setChatCollapsed((collapsed) => !collapsed)}
         onRefresh={sendDashRefresh}
+        onCueMonitorRefresh={sendCueMonitorRefresh}
         isItemRunning={isDashItemRunning}
         onItemPress={pressDashItem}
         sectionTileSize={(sectionName) => sectionTileSizes[sectionName]}

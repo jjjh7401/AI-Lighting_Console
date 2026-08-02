@@ -27,6 +27,7 @@ client (`ui/`), and the M6 measurement harness. Executable half:
 | `panel_unpin` | `target_kind`, `target` | (SHOWUI M1) Remove one pinned tile; the removal is persisted (REQ-SHOWUI-023). |
 | `panel_catalog_request` | — | (SHOWUI M1) Ask for a `panel_catalog` event (sent on connect and on manual refresh). |
 | `dash_catalog_request` | — | (DASHUI M1, additive) Ask for a `dash_catalog` event. Payload-free; sent on connect and on manual refresh only — never on a timer (REQ-DASHUI-021). |
+| `cue_monitor_request` | — | (T-C, wave 2 — ad-hoc contract, no SPEC on file) Ask for a `cue_monitor` event. Payload-free; sent on connect, on manual refresh, AND on a client-side poll (`CUE_MONITOR_POLL_INTERVAL_MS`, unlike `dash_catalog_request` — see below). |
 
 Malformed frames (bad JSON, wrong `v`, unknown `type`, missing fields) yield an
 `error` event with `kind: "protocol"` and are otherwise ignored.
@@ -66,6 +67,7 @@ same change. `AC-SHOWUI-001` is the parity test that holds this.
 | `panel_item_state` | `id: string`, `target_kind`, `target: int`, `running: bool`, `cue: string\|null` | (SHOWUI M1) One tile's playback state. `cue` is the running sequence's current cue — a **string**, because MA3 cue numbers are not integers ("1.5"). |
 | `panel_busy` | `id: string`, `target_kind`, `target: int`, `message: string` | (SHOWUI M1) A panel execution was refused because one is in flight (REQ-SHOWUI-011). Names the tile it refused so the UI can unlock that tile — distinct from `busy`, which is the CHAT turn lock the panel deliberately does not share (REQ-SHOWUI-013). |
 | `dash_catalog` | `sections: DashSection[]` | (DASHUI M1) The console-info dashboard's read-only pool catalog. A refresh REPLACES the list; it does not merge (REQ-DASHUI-006). Info-only by shape — see DashSection / DashItem below. |
+| `cue_monitor` | `executors: CueExecutorEntry[]`, `history: CueHistoryEntry[]` | (T-C, wave 2) The live cue-progress monitor's snapshot — see "Live cue-progress monitor" below. A refresh REPLACES both lists; it does not merge. |
 
 ### Panel command outcomes (SHOWUI M3)
 
@@ -192,6 +194,69 @@ replace semantics, inherited). On disconnect the client keeps the sections but
 marks the catalog STALE — the freshness claim, not the data, is the volatile
 half (REQ-DASHUI-015) — and rebuilds via `dash_catalog_request` +
 `panel_catalog_request` + `status_request` on reconnect.
+
+### Live cue-progress monitor (T-C, wave 2 — ad-hoc contract, no SPEC on file)
+
+Two independent read paths, combined into one `cue_monitor` event
+(`server/web/cue_monitor.py`):
+
+1. Per-executor cue progress, for every executor `dash_catalog`'s own
+   resolution step has console-VERIFIED (`resolved_executor_nos` — this
+   module builds no executor list of its own).
+2. Recent execution history — a pure read of the audit log
+   (`server/safety/audit.py`), independent of the console connection. This is
+   the monitor's guaranteed floor: it renders even when the console is
+   completely unreachable.
+
+CueExecutorEntry:
+
+```json
+{
+  "executor_no": 101,
+  "status": "ok",
+  "sequence_no": 5,
+  "sequence_name": "Song A",
+  "cues": [{"no": 1, "name": "PROBEA1", "cue_no": 1}],
+  "current_cue": {"status": "unavailable", "tried": ["Cue"]}
+}
+```
+
+| field | values | meaning |
+|---|---|---|
+| `executor_no` | int ≥ 1 | The console-VERIFIED executor number (`dash_catalog`'s `meta.console_no`), never a pool slot. |
+| `status` | `ok` \| `unassigned` \| `unavailable` | `ok`: the assigned sequence's cue list was read. `unassigned`: the executor answered but carries no sequence. `unavailable`: the executor or its sequence could not be read at all. |
+| `sequence_no` / `sequence_name` | int / string \| null | The executor's assigned sequence (`node.sequenceNo`, the same identity probe `StateBodyFetcher._fetch_executor_body` uses), only present when `status: "ok"`. |
+| `cues` | CueItem[] | The sequence's cue children (`no` = pool slot, `cue_no` = the responder's additive real cue number when it could read one, PROTOCOL.md §4.2). Empty list when `status` is not `"ok"`. |
+| `current_cue` | object \| null | **Independently Optional** — see below. `null` only when `status` is not `"ok"` (there is no sequence to read a current cue against). |
+
+`current_cue.status` is `"ok"` (`value`/`property`/`tried` carried) or
+`"unavailable"` (`tried` carried, no `value`). **UNVERIFIED**: no property
+name that exposes an executor's live cue position has been confirmed on this
+console/responder combination (`CURRENT_CUE_PROPERTY_CANDIDATES` in
+`cue_monitor.py` — currently `("Cue",)`, an unverified guess). Every
+candidate failing is the EXPECTED and NORMAL path, never an error — the UI
+explains the gap to the operator rather than rendering a blank or guessing a
+value. **No progress percentage and no timer field exist anywhere in this
+shape** — out of scope by contract, since no channel here confirms a fade's
+remaining time.
+
+CueHistoryEntry:
+
+```json
+{"ts": "2026-08-02T00:00:00+00:00", "command": "Go+ Executor 101", "ok": true}
+```
+
+Filtered to the audit log's `kind: "command"` events only (real console
+sends) — excluding the gate's own internal `state_query`/`property_query`/
+`heartbeat`/`deploy` probing, so a cue-monitor refresh never pollutes its own
+history with the read traffic it just performed.
+
+A `cue_monitor` refresh REPLACES both lists (same replace semantics as
+`dash_catalog`). Unlike `dash_catalog_request` (REQ-DASHUI-021 forbids timer
+polling), `cue_monitor_request` is explicitly contracted to poll
+(`CUE_MONITOR_POLL_INTERVAL_MS`, `ui/src/useCopilotSocket.ts`) — "which cue is
+live right now" goes stale between chat turns with nothing else to trigger a
+refresh.
 
 ### status.console_input (additive, protocol stays v1)
 

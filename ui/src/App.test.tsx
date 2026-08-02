@@ -143,6 +143,7 @@ describe("AppShell — console-primary split layout (M6 inversion)", () => {
     const element = AppShell({
       chatCollapsed: false,
       dash: initialState.dash,
+      cueMonitor: initialState.cueMonitor,
       onToggleChat: vi.fn(),
       children: CHAT_SENTINEL,
     }) as ReactElement;
@@ -164,6 +165,7 @@ describe("AppShell — console-primary split layout (M6 inversion)", () => {
     const element = AppShell({
       chatCollapsed: true,
       dash: initialState.dash,
+      cueMonitor: initialState.cueMonitor,
       onToggleChat,
       children: CHAT_SENTINEL,
     }) as ReactElement;
@@ -193,6 +195,7 @@ describe("AppShell — console-primary split layout (M6 inversion)", () => {
     const element = AppShell({
       chatCollapsed: false,
       dash: initialState.dash,
+      cueMonitor: initialState.cueMonitor,
       onToggleChat: vi.fn(),
       children: CHAT_SENTINEL,
     }) as ReactElement;
@@ -210,6 +213,7 @@ describe("AppShell — console-primary split layout (M6 inversion)", () => {
     const element = AppShell({
       chatCollapsed: false,
       dash: initialState.dash,
+      cueMonitor: initialState.cueMonitor,
       onToggleChat: vi.fn(),
       onRefresh,
       isItemRunning,
@@ -228,6 +232,7 @@ describe("AppShell — console-primary split layout (M6 inversion)", () => {
     const element = AppShell({
       chatCollapsed: false,
       dash: initialState.dash,
+      cueMonitor: initialState.cueMonitor,
       onToggleChat: vi.fn(),
       children: CHAT_SENTINEL,
     }) as ReactElement;
@@ -243,6 +248,7 @@ describe("AppShell — console-primary split layout (M6 inversion)", () => {
     const split = AppShell({
       chatCollapsed: false,
       dash: initialState.dash,
+      cueMonitor: initialState.cueMonitor,
       onToggleChat: vi.fn(),
       children: CHAT_SENTINEL,
     }) as ReactElement;

@@ -33,7 +33,8 @@ from server.safety.backup import BackupManager
 from server.safety.gate import SafetyGate
 from server.safety.session_context import new_session_key
 from server.web.approval_bridge import ApprovalChannel
-from server.web.dash import resolved_executor_nos, send_dash_catalog
+from server.web.cue_monitor import cue_monitor_snapshot
+from server.web.dash import build_dash_catalog, resolved_executor_nos, send_dash_catalog
 from server.web.handshake import (
     CLOSE_POLICY_VIOLATION,
     HandshakePolicy,
@@ -216,9 +217,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                 subprotocols=websocket.scope.get("subprotocols") or (),
             )
             if not decision.accepted:
-                deps.audit.record(
-                    {"event": "ws_handshake_rejected", "reason": decision.reason}
-                )
+                deps.audit.record({"event": "ws_handshake_rejected", "reason": decision.reason})
                 await websocket.close(code=CLOSE_POLICY_VIOLATION)
                 return
             subprotocol = decision.subprotocol
@@ -395,9 +394,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                 elif message_type == "panel_catalog_request":
                     spawn_panel(panel_task(panel.send_catalog, lane=panel_side_lane))
                 elif message_type == "panel_pin":
-                    spawn_panel(
-                        panel_task(panel.pin, session.last_created, lane=panel_side_lane)
-                    )
+                    spawn_panel(panel_task(panel.pin, session.last_created, lane=panel_side_lane))
                 elif message_type == "panel_unpin":
                     spawn_panel(
                         panel_task(
@@ -421,13 +418,29 @@ def create_app(deps: WebDeps) -> FastAPI:
                         # tiles' only legitimate targets would be rejected
                         # as "not on the panel".
                         event = send_dash_catalog(deps.gate.state_port, send_event)
-                        panel.register_dash_executors(
-                            resolved_executor_nos(event["sections"])
-                        )
+                        panel.register_dash_executors(resolved_executor_nos(event["sections"]))
 
-                    spawn_panel(
-                        panel_task(_dash_catalog_and_membership, lane=panel_side_lane)
-                    )
+                    spawn_panel(panel_task(_dash_catalog_and_membership, lane=panel_side_lane))
+                elif message_type == "cue_monitor_request":
+                    # T-C, wave 2 (ad-hoc contract, no SPEC on file). Resolves
+                    # its own executor numbers on demand (dash.py's own
+                    # console-verification step, REQ-DASHUI-011) rather than
+                    # depending on a prior dash_catalog_request having run —
+                    # shares panel_side_lane for the same reason dash does:
+                    # another many-round-trip state_port read that should not
+                    # stack concurrent OSC query storms on the console.
+                    def _cue_monitor() -> None:
+                        sections = build_dash_catalog(deps.gate.state_port)
+                        console_nos = resolved_executor_nos(sections)
+                        event = cue_monitor_snapshot(
+                            deps.gate.state_port,
+                            deps.gate.state_port,
+                            deps.audit,
+                            console_nos,
+                        )
+                        send_event(event)
+
+                    spawn_panel(panel_task(_cue_monitor, lane=panel_side_lane))
                 else:  # status_request
                     await _safe_send(websocket, session.status_snapshot())
         except WebSocketDisconnect:

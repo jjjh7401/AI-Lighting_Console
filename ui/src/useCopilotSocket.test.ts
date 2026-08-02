@@ -103,9 +103,14 @@ describe("launch-token seam", () => {
 // pre-disconnect state. Pure function, same no-DOM bound as above; the live
 // `socket.onopen` handler calls this exact function (see useCopilotSocket.ts).
 describe("connectResyncFrames — reconnect resync dispatch (AC-DASHUI-017)", () => {
-  it("returns exactly three frames: panel_catalog_request, dash_catalog_request, status_request", () => {
+  it("returns exactly four frames: panel_catalog_request, dash_catalog_request, cue_monitor_request, status_request", () => {
     const frames = connectResyncFrames().map((frame) => JSON.parse(frame).type);
-    expect(frames).toEqual(["panel_catalog_request", "dash_catalog_request", "status_request"]);
+    expect(frames).toEqual([
+      "panel_catalog_request",
+      "dash_catalog_request",
+      "cue_monitor_request",
+      "status_request",
+    ]);
   });
 
   it("every frame is protocol v1 and payload-free besides v/type", () => {

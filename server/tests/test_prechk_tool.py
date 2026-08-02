@@ -1177,6 +1177,7 @@ _EXPECTED_WEB_ROUTES = (
 _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "approval_decision",
     "chat",
+    "cue_monitor_request",
     "dash_catalog_request",
     "lock",
     "panel_catalog_request",
@@ -1195,6 +1196,7 @@ _EXPECTED_SERVER_MESSAGE_TYPES = (
     "approval_resolved",
     "busy",
     "chat_response",
+    "cue_monitor",
     "dash_catalog",
     "error",
     "execution_preview",
