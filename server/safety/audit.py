@@ -54,8 +54,12 @@ class AuditLog:
         now = self._clock()
         enriched = {"ts": now.isoformat(), **event}
         path = self._directory / f"{_FILE_PREFIX}{now:%Y%m%d}{_FILE_SUFFIX}"
+        # default=str: a value that cannot be JSON-serialized is degraded to
+        # its str() form rather than losing the whole event — a demoted value
+        # is recoverable; a dropped audit line is not (see the class @MX:ANCHOR).
+        line = json.dumps(enriched, ensure_ascii=False, default=str) + "\n"
         with path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(enriched, ensure_ascii=False) + "\n")
+            handle.write(line)
         self._purge(now)
 
     def _purge(self, now: datetime) -> None:
