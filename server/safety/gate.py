@@ -583,6 +583,16 @@ class SafetyGate:
     # -- execution (clearance consumption) ----------------------------------------
 
     def _execute_cleared(self, command: str) -> ExecutionResult:
+        # Type contract, not a safety verdict: a caller passing something
+        # other than a command string (e.g. a ScreenDecision.commands entry)
+        # has violated CommandExecutionPort.execute's contract. Reject here,
+        # BEFORE any clearance/audit logic — recording it as "not cleared by
+        # the safety gate" would misattribute a caller bug to a gate denial.
+        if not isinstance(command, str):
+            raise TypeError(
+                "execution_port.execute() expects a command str, got "
+                f"{type(command).__name__}: {command!r}"
+            )
         if self.lock.is_active:
             self._audit.log_blocked(command, reason="live lock active (read-only)")
             return ExecutionResult(ok=False, detail="blocked: live lock active (read-only)")

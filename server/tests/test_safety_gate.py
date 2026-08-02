@@ -12,6 +12,8 @@ from __future__ import annotations
 import json
 import threading
 
+import pytest
+
 from server.llm.types import ModelTurn, ToolCall, ToolResultsMessage, Usage
 from server.orchestrator.runner import Orchestrator
 from server.orchestrator.tools import build_toolset
@@ -510,6 +512,23 @@ class TestClearanceEnforcement:
         assert "not cleared" in result.detail
         assert console.executed == []
         assert len(_events(audit, "blocked")) == 1
+
+    def test_non_string_command_is_rejected_as_a_type_error_not_blocked(self, tmp_path):
+        # A caller that passes a non-str object (e.g. a ScreenDecision.commands
+        # entry instead of a command line) hits a contract violation, not a
+        # safety-gate denial — it must never be recorded as "not cleared by
+        # the safety gate" (that reason would mislead anyone reading the log).
+        gate, console, audit = make_gate(tmp_path)
+
+        class NotACommand:
+            pass
+
+        with pytest.raises(TypeError, match="str"):
+            gate.execution_port.execute(NotACommand())
+        assert console.executed == []
+        # Rejected BEFORE reaching the audit log at all — not even a
+        # zero-byte file should have been opened for writing.
+        assert list((tmp_path / "audit").glob("audit-*.jsonl")) == []
 
     def test_a_clearance_is_consumed_by_execution(self, tmp_path):
         gate, console, _ = make_gate(tmp_path)

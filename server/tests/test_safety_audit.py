@@ -123,6 +123,23 @@ class TestEventHelpers:
         assert event["reason"] == "live lock active"
 
 
+class TestUnserializableValuesNeverDropTheEvent:
+    def test_record_with_unserializable_value_still_writes_one_line(self, tmp_path):
+        class Unserializable:
+            def __repr__(self) -> str:
+                return "Unserializable()"
+
+        log, _ = _log(tmp_path)
+        # Must not raise TypeError, and must not lose the event.
+        log.record({"event": "blocked", "command": Unserializable(), "reason": "bad type"})
+        files = _lines(tmp_path / "audit")
+        (line,) = files["audit-20260716.jsonl"]
+        event = json.loads(line)  # re-parses cleanly — no truncated/half-written JSON
+        assert event["event"] == "blocked"
+        assert event["reason"] == "bad type"
+        assert event["command"] == "Unserializable()"
+
+
 class TestFallbackDetectorWiring:
     def test_fallback_decision_lands_in_the_durable_audit_log(self, tmp_path):
         # Section B: wire the M3 fallback detector's audit sink to the real
