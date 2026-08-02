@@ -428,7 +428,7 @@ class TestOnlyTheHostWindowIsOpened:
             "serve.py never consults browser_open_enabled — the real-serve path "
             "still schedules the browser open unconditionally"
         )
-        assert 'enabled=not args.no_browser' not in source, (
+        assert "enabled=not args.no_browser" not in source, (
             "the real-serve path still passes enabled=not args.no_browser, "
             "ignoring the host declaration"
         )
