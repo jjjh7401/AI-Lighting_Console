@@ -30,6 +30,7 @@ import pytest
 from server.fx import matching as fx_matching
 from server.fx.loader import load_library_from_dir as load_fx_library_from_dir
 from server.fx.matching import match_fx, resolve_pattern
+from server.looks import matching as looks_matching
 from server.scene import matching as scene_matching
 from server.scene.loader import load_library_from_dir as load_scene_library_from_dir
 from server.scene.matching import BOTH_MATCHED, match_scene
@@ -62,6 +63,49 @@ class TestEndingListParity:
         # Non-vacuity: the guard above passes trivially on two empty tuples.
         assert "하는" in fx_matching._ENDINGS
         assert len(fx_matching._ENDINGS) >= 8
+
+
+class TestParticleListParity:
+    """Candidate ⑦ — the OTHER copied list, which had no equality net at all.
+
+    ``_PARTICLES`` exists three times (fx, scene, looks) and all three are
+    byte-identical today. That is exactly SCENE lesson 16: the assets happen
+    to agree, so deleting the agreement costs nothing TODAY and breaks
+    silently in a future authoring session. The only net that existed was
+    one-directional and behavioural — ``test_fx_matching.py``'s
+    ``TestKoreanParticleParityWithLooks`` walks the looks list through the fx
+    matcher — and the scene copy sat outside every net.
+
+    Divergence is not forbidden by fiat; it is forbidden by DEFAULT. A future
+    package that genuinely needs its own particle edits this guard on purpose,
+    which is the record the copies never had.
+    """
+
+    def test_all_three_particle_lists_are_identical_including_order(self):
+        assert fx_matching._PARTICLES == scene_matching._PARTICLES
+        assert fx_matching._PARTICLES == looks_matching._PARTICLES
+
+    def test_the_three_way_guard_is_not_vacuous(self):
+        # Non-vacuity: three empty tuples would satisfy the assertions above.
+        # The longest-first ordering matters too — 으로 before 로 is what keeps
+        # 으로 from being consumed as 로 in the regex alternation.
+        particles = fx_matching._PARTICLES
+        assert len(particles) >= 20
+        assert particles.index("으로") < particles.index("로")
+
+    def test_the_scene_surface_handles_every_looks_particle(self, shipped_scene_library):
+        # The behavioural half, extended to the copy that had no net. The fx
+        # half already lives in test_fx_matching.py; scene is added here rather
+        # than there so both halves of "문이 둘이면 그물도 둘" are visible.
+        for particle in looks_matching._PARTICLES:
+            axis = match_scene(f"웨이브{particle}", shipped_scene_library).fx.selected
+            assert axis == "wave-soft-rise", particle
+
+    def test_only_the_scene_package_lacks_its_own_ending_list(self):
+        # Why _ENDINGS is a two-way guard while _PARTICLES is three-way: looks
+        # carries no ending axis at all (proposal §2). Pinned so that a future
+        # looks _ENDINGS arrives with a decision, not by accident.
+        assert not hasattr(looks_matching, "_ENDINGS")
 
 
 class TestHaneunEnding:
