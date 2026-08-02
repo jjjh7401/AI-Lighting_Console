@@ -135,6 +135,7 @@ _NAMED_TOOL_EXEMPTIONS = frozenset(
     {
         "server/tools/osc_smoke.py",
         "server/tools/responder_roundtrip.py",
+        "server/preshow/osc_check.py",
     }
 )
 

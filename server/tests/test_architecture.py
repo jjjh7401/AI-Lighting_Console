@@ -11,6 +11,12 @@ Routing them through the gate would require an approval channel in a headless
 diagnostic context and would destroy their diagnostic value. The exemption is
 file-exact: any NEW module under ``server/tools/`` (or anywhere else) touching
 the bridge fails this test.
+
+``server/preshow/osc_check.py`` (SPEC-COPILOT-PRESHOW-001) is the same class
+of exemption: a pre-show diagnostic that reuses the ping/state round-trip
+pattern from ``responder_roundtrip.py`` above. It never sends the ``exec``
+verb, so it never executes an end-user MA3 command outside gate screening —
+only liveness (``ping``) and read-only object-tree queries (``state``).
 """
 
 from __future__ import annotations
@@ -35,6 +41,7 @@ _NAMED_TOOL_EXEMPTIONS = frozenset(
     {
         "server/tools/osc_smoke.py",
         "server/tools/responder_roundtrip.py",
+        "server/preshow/osc_check.py",
     }
 )
 

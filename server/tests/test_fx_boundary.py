@@ -223,10 +223,16 @@ class TestFxIsScannedByTheArchitectureGuardNotExemptedFromIt:
     def test_the_exemption_list_is_still_the_two_operator_tools(self):
         # If a THIRD exemption is ever legitimately added, this test is the
         # place that must be updated deliberately — that is what "diff 0" means
-        # mechanically. It is not a style rule.
+        # mechanically. It is not a style rule. SPEC-COPILOT-PRESHOW-001 added
+        # the third, deliberately, for the same class of reason (a
+        # non-production diagnostic reusing the ping/state round-trip pattern).
         _allowed, exemptions = self._lists()
         assert exemptions == frozenset(
-            {"server/tools/osc_smoke.py", "server/tools/responder_roundtrip.py"}
+            {
+                "server/tools/osc_smoke.py",
+                "server/tools/responder_roundtrip.py",
+                "server/preshow/osc_check.py",
+            }
         )
 
     def test_every_fx_module_actually_survives_the_architecture_filter(self):
