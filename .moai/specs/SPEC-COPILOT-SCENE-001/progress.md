@@ -8,7 +8,7 @@
 
 **무엇**: 씬 컴파일러 — **룩(정적 값) + 이펙트(스텝 열) + 타이밍을 하나의 큐로** 합성한다. LOOKLIB(정지 화면 어휘)·FXLIB(시간축 어휘)이 세운 "의도→메모리 파이프라인"의 **2단계**이며, FXLIB이 `spec.md:42`·`:70`·`:140` 세 곳에서 명시적으로 예약해 둔 좌석이다. 신규 패키지 `server/scene/`에 스키마·로더·2축 매칭·결합 컴파일러·리포트를 세우고, 툴 2종(`find_scene`·`compile_scene`)을 기존 `run_commands`→`gate.screen()` 경로로만 배선한다.
 
-**상태**: **3-phase 종결 — plan · run · sync 전부 닫힘 · AC 24/24 · 라이브 세션 2/2 소진.** plan-audit iter-3 **PASS 0.90**(문턱 0.85) · SPEC **v0.2.5** (`status: completed`). REQ **21** · AC **24** · Out of Scope **16** · 접두 행 **8** · ASSUMPTION 41~45(41·42는 판정 후 moot) · 결정 **A~K 전부 해소** · clarification 마커 **0** · **열린 질문 0**. 뮤테이션 누적 **47/47 killed**(survived 0) · pytest **3927 passed / 5 skipped** · vitest **223 passed** · PRESERVE diff **빈 출력**. 커밋 사슬: M1 `a1faae3` · M2 `2d9ca9b` · M4 `23ce415` · M3 `3c9c29b` · 웨이브 기록 `7755408` · M5 `79cea7e` · M6 `f7c4a8c` · M7 `3d062dc` · M8 `8c1e044` · 인수인계 `4437cc6`. **sync-phase 기록은 §E.4** — 스테일 소인 10건 · 어휘 결정 안 D 확정 · 정직한 잔여 4건.
+**상태**: **머지 완료 — PR #10 squash, 새 `origin/main` = `85611a1` (2026-08-02).** 3-phase 전부 닫힘 · AC 24/24 · 라이브 세션 2/2 소진. plan-audit iter-3 **PASS 0.90**(문턱 0.85) · SPEC **v0.2.5** (`status: completed`). REQ **21** · AC **24** · Out of Scope **16** · 접두 행 **8** · ASSUMPTION 41~45(41·42는 판정 후 moot) · 결정 **A~K 전부 해소** · **열린 질문 0**. 뮤테이션 **47/47 killed**(재주입으로 재확인) · 가드 전수 스윕 **75절 중 그물 없는 것 0** · pytest **3927 passed / 5 skipped** · vitest **223 passed** · PRESERVE diff **빈 출력**. **⚠️ 마일스톤 SHA(M1 `a1faae3` … M8 `8c1e044`)와 PRESERVE BASE `3c701b1`은 squash로 `main`에 없다 — 브랜치 `feat/spec-copilot-scene-001`에만 있으니 지우지 마라(§E.4 "BASE 함정").** sync·리뷰 기록은 **§E.4**.
 
 **이 SPEC의 한 줄 (v0.2.0 개정)**: 트래킹 정책이 **M0 실측으로 한 번 뒤집혔다** — `/CueOnly`(미발화 커맨드)를 버리고 **속성 집합 균일화 + 미주장 속성 전수 열거**를 택했다. 그러나 **관측 천장은 그대로다**: "균일 집합을 발화했다"와 "트래킹이 무해해졌다"를 절대 뭉치지 않는 것이 여전히 전체 설계의 축이다.
 
@@ -694,7 +694,35 @@ M8 규율("코드 변경 0 — 결함 발견 시 별도 커밋")에 따라 **고
 sync_status: synced
 sync_complete_at: 2026-08-01
 sync_commit_sha: 8b2f308   # 백필 완료 — spec-frontmatter-schema.md § SHA placeholder backfill exemption 준용 (full: 8b2f3087aea11e65ad7b3237832a33828088ac6d, `git rev-parse` 실측)
+merged_at: 2026-08-02T00:58:07Z
+merge_pr: 10
+merge_method: squash
+new_origin_main: 85611a1123e6655972ed8a36582e727eb5fa536d
 ```
+
+### 🔴 머지 — 그리고 후속 소유자를 죽일 BASE 함정 (2026-08-02)
+
+**PR #10 squash 머지 완료.** 새 `origin/main` = **`85611a1`**. 저장소 선례 그대로다 — 최근 4개 SPEC(#6 SONGCUE · #7 PRECHK · #8 OVERLAP · #9 FXLIB)이 전부 squash였다.
+
+**머지 후 독립 검증 (커밋 메시지를 믿지 않았다 — PRECHK 선례)**: `origin/main`에 **신규 워크트리를 붙여** 직접 돌렸다.
+
+| 확인 | 실측 |
+|---|---|
+| 신규 체크아웃 회귀 | **3925 passed / 7 skipped** |
+| 워킹 저장소와의 차이 2건 | `test_deploy_tauri_shell.py` — `.app` 번들 미빌드 skip. **3925 + 2 = 3927**로 닫힌다(`-rs`로 사유 실측, 추론 아님) |
+| **PRESERVE 게이트** `e4bc78e..85611a1` | **빈 출력** |
+| 툴 집합 | **13** = `('find_scene', 'compile_scene')` |
+| main 델타 | 24 파일 · **+9648 / −5** |
+
+#### ⚠️ BASE 함정 — 이 SPEC의 PRESERVE 기준점은 `main`에 없다
+
+squash가 18커밋을 하나로 접었으므로 **`3c701b1`(이 SPEC의 PRESERVE BASE)은 `85611a1`의 조상이 아니다** — `git merge-base --is-ancestor 3c701b1 85611a1` 실측 **거짓**. §E.2·§E.3이 인용하는 마일스톤 SHA(M1 `a1faae3` … M8 `8c1e044`)도 마찬가지다.
+
+**전부 브랜치 `feat/spec-copilot-scene-001`에 남아 있다**(머지 시 `--delete-branch=false`, 도달 가능성 실측 확인). **그 브랜치를 지우지 마라** — 지우는 순간 이 SPEC의 증거 사슬 전체가 unreachable이 된다.
+
+**후속 SPEC이 하면 안 되는 것**: 새 `main`을 자기 PRESERVE BASE로 삼고 이 SPEC의 게이트 명령을 복사하는 것. PRECHK가 §E.9에 적은 것과 같은 함정이다 — *"새 BASE로 검사하면 커밋 직후 항상 0행이라 게이트가 무력해진다."* 후속은 **자기 착수 시점 SHA**를 자기 BASE로 기록하고 그것을 써야 한다.
+
+**이 SPEC의 사후 검증에 쓸 좌표는 두 개다**: 씬이 PRESERVE를 건드렸는지 묻는 것이면 **`e4bc78e..85611a1`**(머지 전 main → 머지 후 main, 위에서 빈 출력 실측), 브랜치 안에서 묻는 것이면 **`3c701b1..1093651`**. 둘을 섞지 마라.
 
 ### 착수 전 킥오프 확인 4종 (직접 실측 — 이월 금지)
 
