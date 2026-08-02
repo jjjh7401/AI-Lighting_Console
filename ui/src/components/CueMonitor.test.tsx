@@ -20,9 +20,11 @@ import {
   currentCueMatch,
   currentCueRowView,
   currentCueUnavailableReason,
+  cueRowIsGotoable,
   executorFireDisabledReason,
   formatHistoryTime,
   formatRelativeAgo,
+  gotoDisabledReason,
   isCueRowCurrent,
   isRecentAppAction,
   lastActionGrade,
@@ -348,53 +350,116 @@ describe("executorFireDisabledReason — fail-closed posture", () => {
   });
 });
 
-describe("ExecutorActions", () => {
-  it("renders an enabled 실행 button for a fireable, non-running executor", () => {
+describe("gotoDisabledReason — Goto's STRICTER fail-closed posture (T-H5)", () => {
+  it("is fireable for an ok executor (known sequence)", () => {
+    expect(gotoDisabledReason(OK_ENTRY)).toBeNull();
+  });
+
+  it("is disabled for an unavailable executor, same as every other verb", () => {
+    expect(gotoDisabledReason(UNAVAILABLE_ENTRY)).not.toBeNull();
+  });
+
+  it("is ALSO disabled for an unassigned executor — unlike Go+/Go-/Off", () => {
+    // Go+/Go-/Off are fireable on an unassigned executor (executorFireDisabledReason
+    // above); Goto needs a KNOWN SEQUENCE NUMBER, which an unassigned executor
+    // does not have — so it must be refused here even though the executor
+    // itself answered.
+    expect(executorFireDisabledReason(UNASSIGNED_ENTRY)).toBeNull();
+    expect(gotoDisabledReason(UNASSIGNED_ENTRY)).not.toBeNull();
+  });
+});
+
+describe("cueRowIsGotoable — only a responder-numbered cue is a valid jump target", () => {
+  it("is true when the cue carries a responder cue_no", () => {
+    expect(cueRowIsGotoable({ no: 1, name: "Intro", cue_no: 1 })).toBe(true);
+  });
+
+  it("is false when the cue has no cue_no — the server never registers it as a Goto target", () => {
+    expect(cueRowIsGotoable({ no: 2, name: "Chorus" })).toBe(false);
+  });
+});
+
+describe("ExecutorActions — T-H5 three explicit console-verb buttons", () => {
+  it("renders exactly three buttons: Go- (이전), Go+ (다음), Off (정지)", () => {
     const element = ExecutorActions({ entry: OK_ENTRY, running: false }) as ReactElement;
-    const button = childArray(element)[0] as ReactElement;
-    expect(button.props.disabled).toBe(false);
-    expect(childArray(button)[0]).toBe("▶ 실행");
+    const [back, forward, stop] = childArray(element) as ReactElement[];
+    expect(childArray(back)[0]).toBe("◀ Go-");
+    expect(childArray(forward)[0]).toBe("▶ Go+");
+    expect(childArray(stop)[0]).toBe("■ Off");
   });
 
-  it("renders 정지 when running, and fires onStop (never onExecute) on click", () => {
-    const onExecute = vi.fn();
-    const onStop = vi.fn();
-    const element = ExecutorActions({
-      entry: OK_ENTRY,
-      running: true,
-      onExecute,
-      onStop,
-    }) as ReactElement;
-    const button = childArray(element)[0] as ReactElement;
-    expect(childArray(button)[0]).toBe("■ 정지");
-    button.props.onClick();
-    expect(onStop).toHaveBeenCalledWith(101);
-    expect(onExecute).not.toHaveBeenCalled();
+  it("all three buttons are enabled for a fireable executor", () => {
+    const element = ExecutorActions({ entry: OK_ENTRY, running: false }) as ReactElement;
+    const [back, forward, stop] = childArray(element) as ReactElement[];
+    expect(back.props.disabled).toBe(false);
+    expect(forward.props.disabled).toBe(false);
+    expect(stop.props.disabled).toBe(false);
   });
 
-  it("fires onExecute (never onStop) when not running", () => {
+  it("Go- fires onBack only", () => {
     const onExecute = vi.fn();
+    const onBack = vi.fn();
     const onStop = vi.fn();
     const element = ExecutorActions({
       entry: OK_ENTRY,
       running: false,
       onExecute,
+      onBack,
       onStop,
     }) as ReactElement;
-    const button = childArray(element)[0] as ReactElement;
-    button.props.onClick();
-    expect(onExecute).toHaveBeenCalledWith(101);
+    const [back] = childArray(element) as ReactElement[];
+    back.props.onClick();
+    expect(onBack).toHaveBeenCalledWith(101);
+    expect(onExecute).not.toHaveBeenCalled();
     expect(onStop).not.toHaveBeenCalled();
   });
 
-  it("disables the button and shows a reason for an unavailable executor — fail-closed", () => {
+  it("Go+ fires onExecute only", () => {
+    const onExecute = vi.fn();
+    const onBack = vi.fn();
+    const onStop = vi.fn();
+    const element = ExecutorActions({
+      entry: OK_ENTRY,
+      running: false,
+      onExecute,
+      onBack,
+      onStop,
+    }) as ReactElement;
+    const [, forward] = childArray(element) as ReactElement[];
+    forward.props.onClick();
+    expect(onExecute).toHaveBeenCalledWith(101);
+    expect(onBack).not.toHaveBeenCalled();
+    expect(onStop).not.toHaveBeenCalled();
+  });
+
+  it("Off fires onStop only", () => {
+    const onExecute = vi.fn();
+    const onBack = vi.fn();
+    const onStop = vi.fn();
+    const element = ExecutorActions({
+      entry: OK_ENTRY,
+      running: false,
+      onExecute,
+      onBack,
+      onStop,
+    }) as ReactElement;
+    const [, , stop] = childArray(element) as ReactElement[];
+    stop.props.onClick();
+    expect(onStop).toHaveBeenCalledWith(101);
+    expect(onExecute).not.toHaveBeenCalled();
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
+  it("disables all three buttons and shows one reason for an unavailable executor — fail-closed", () => {
     const element = ExecutorActions({ entry: UNAVAILABLE_ENTRY, running: false }) as ReactElement;
-    const [button, reason] = childArray(element) as ReactElement[];
-    expect(button.props.disabled).toBe(true);
+    const [back, forward, stop, reason] = childArray(element) as ReactElement[];
+    expect(back.props.disabled).toBe(true);
+    expect(forward.props.disabled).toBe(true);
+    expect(stop.props.disabled).toBe(true);
     expect(reason).toBeDefined();
   });
 
-  it("a fail-closed button click never calls onExecute, even if somehow invoked", () => {
+  it("a fail-closed button click never calls its handler, even if somehow invoked", () => {
     // Defence in depth: `disabled` is the real gate, but this documents the
     // handler itself still routes correctly rather than silently no-op'ing
     // into the wrong verb if a caller ever bypasses the disabled attribute.
@@ -404,8 +469,8 @@ describe("ExecutorActions", () => {
       running: false,
       onExecute,
     }) as ReactElement;
-    const button = childArray(element)[0] as ReactElement;
-    expect(button.props.disabled).toBe(true);
+    const [, forward] = childArray(element) as ReactElement[];
+    expect(forward.props.disabled).toBe(true);
   });
 });
 
@@ -469,15 +534,22 @@ describe("ExecutorTile — number/sequence/current-cue occupy SEPARATE places (T
     expect(stopPropagation).toHaveBeenCalledTimes(1);
   });
 
-  it("passes running/onExecute/onStop through to the nested ExecutorActions", () => {
+  it("passes running/onExecute/onBack/onStop through to the nested ExecutorActions", () => {
     const onExecute = vi.fn();
-    const tile = ExecutorTile({ entry: OK_ENTRY, running: true, onExecute }) as ReactElement;
+    const onBack = vi.fn();
+    const tile = ExecutorTile({
+      entry: OK_ENTRY,
+      running: true,
+      onExecute,
+      onBack,
+    }) as ReactElement;
     const footer = childArray(tile).find(
       (child) => (child as ReactElement)?.props?.className === "cue-tile-footer",
     ) as ReactElement;
     const actions = childArray(footer)[0] as ReactElement;
     expect(actions.props.running).toBe(true);
     expect(actions.props.onExecute).toBe(onExecute);
+    expect(actions.props.onBack).toBe(onBack);
   });
 
   it("no cue LIST is rendered on the tile itself — the sheet owns that (collapsed by default)", () => {
@@ -588,7 +660,10 @@ describe("CueSheet — the collapsed cue list, opened one at a time (T-H4)", () 
     ) as ReactElement;
     const [, tbody] = childArray(table) as ReactElement[];
     const rows = childArray(tbody) as ReactElement[];
-    expect(rows[0].props.className).toBe("cue-sheet-row-current");
+    // Row 0 (cue_no 1) is both the CURRENT cue and a valid Goto target.
+    expect(rows[0].props.className).toBe("cue-sheet-row-current cue-sheet-row-gotoable");
+    // Row 1 has no responder cue_no — never offered as a Goto target
+    // (T-H5: cueRowIsGotoable) — and is not the current cue either.
     expect(rows[1].props.className).toBeUndefined();
   });
 
@@ -613,6 +688,66 @@ describe("CueSheet — the collapsed cue list, opened one at a time (T-H4)", () 
     ) as ReactElement;
     closeButton.props.onClick();
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("CueSheet — clicking a row jumps to that cue (T-H5)", () => {
+  function rows(entry: CueExecutorEntry): ReactElement[] {
+    const sheet = CueSheet({ entry, onGoto: vi.fn() }) as ReactElement;
+    const table = childArray(sheet).find(
+      (child) => (child as ReactElement)?.type === "table",
+    ) as ReactElement;
+    const [, tbody] = childArray(table) as ReactElement[];
+    return childArray(tbody) as ReactElement[];
+  }
+
+  it("a goto-able row (has cue_no) is a clickable 'button' role and fires onGoto with its cue number", () => {
+    const onGoto = vi.fn();
+    const sheet = CueSheet({ entry: OK_ENTRY, onGoto }) as ReactElement;
+    const table = childArray(sheet).find(
+      (child) => (child as ReactElement)?.type === "table",
+    ) as ReactElement;
+    const [, tbody] = childArray(table) as ReactElement[];
+    const [firstRow] = childArray(tbody) as ReactElement[]; // {no:1, cue_no:1}
+    expect(firstRow.props.role).toBe("button");
+    firstRow.props.onClick();
+    expect(onGoto).toHaveBeenCalledWith(101, 1);
+  });
+
+  it("a row with no cue_no carries no click affordance at all", () => {
+    const [, secondRow] = rows(OK_ENTRY); // {no:2, name:"Chorus"} — no cue_no
+    expect(secondRow.props.role).toBeUndefined();
+    expect(secondRow.props.onClick).toBeUndefined();
+  });
+
+  it("fail-closed: when the executor itself is not goto-able (unassigned), no row fires onGoto", () => {
+    const entryWithCues: CueExecutorEntry = {
+      ...UNASSIGNED_ENTRY,
+      cues: [{ no: 1, name: "Intro", cue_no: 1 }],
+    };
+    const onGoto = vi.fn();
+    const sheet = CueSheet({ entry: entryWithCues, onGoto }) as ReactElement;
+    const table = childArray(sheet).find(
+      (child) => (child as ReactElement)?.type === "table",
+    ) as ReactElement;
+    const [, tbody] = childArray(table) as ReactElement[];
+    const [row] = childArray(tbody) as ReactElement[];
+    expect(row.props.role).toBeUndefined();
+    expect(row.props.onClick).toBeUndefined();
+  });
+
+  it("Enter/Space on a goto-able row also fires onGoto (keyboard access)", () => {
+    const onGoto = vi.fn();
+    const sheet = CueSheet({ entry: OK_ENTRY, onGoto }) as ReactElement;
+    const table = childArray(sheet).find(
+      (child) => (child as ReactElement)?.type === "table",
+    ) as ReactElement;
+    const [, tbody] = childArray(table) as ReactElement[];
+    const [firstRow] = childArray(tbody) as ReactElement[];
+    const preventDefault = vi.fn();
+    firstRow.props.onKeyDown({ key: "Enter", preventDefault });
+    expect(onGoto).toHaveBeenCalledWith(101, 1);
+    expect(preventDefault).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -681,6 +816,37 @@ describe("CueMonitor — cue sheet open/close (T-H4)", () => {
     ) as ReactElement;
     closeButton.props.onClick();
     expect(onToggleExecutor).toHaveBeenCalledWith(101);
+  });
+
+  it("T-H5: onGoto passed to CueMonitor reaches the open sheet's onGoto prop", () => {
+    const onGoto = vi.fn();
+    const element = CueMonitor({
+      cueMonitor: POPULATED_STATE,
+      openExecutorNo: 101,
+      onGoto,
+    }) as ReactElement;
+    const body = childArray(element).find(
+      (child) => (child as ReactElement).props?.className === "cue-monitor-body",
+    ) as ReactElement;
+    const sheet = childArray(body).find(
+      (child) => (child as ReactElement)?.type === CueSheet,
+    ) as ReactElement;
+    expect(sheet.props.onGoto).toBe(onGoto);
+  });
+
+  it("T-H5: onBack passed to CueMonitor reaches every tile's onBack prop", () => {
+    const onBack = vi.fn();
+    const element = CueMonitor({ cueMonitor: POPULATED_STATE, onBack }) as ReactElement;
+    const body = childArray(element).find(
+      (child) => (child as ReactElement).props?.className === "cue-monitor-body",
+    ) as ReactElement;
+    const grid = childArray(body)[0] as ReactElement;
+    const tiles = childArray(grid).filter(
+      (child) => (child as ReactElement)?.props?.entry !== undefined,
+    ) as ReactElement[];
+    for (const tile of tiles) {
+      expect(tile.props.onBack).toBe(onBack);
+    }
   });
 });
 

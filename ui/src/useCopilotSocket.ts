@@ -9,8 +9,10 @@ import {
   buildCueMonitorRequest,
   buildDashCatalogRequest,
   buildLock,
+  buildPanelBack,
   buildPanelCatalogRequest,
   buildPanelExecute,
+  buildPanelGoto,
   buildPanelStop,
   buildReviewDecision,
   buildStatusRequest,
@@ -130,6 +132,10 @@ export interface CopilotSocket {
   sendLock: (active: boolean) => void;
   sendPanelExecute: (targetKind: PanelTargetKind, target: number) => void;
   sendPanelStop: (targetKind: PanelTargetKind, target: number) => void;
+  /** T-H5 — step to the previous cue (Go-). */
+  sendPanelBack: (targetKind: PanelTargetKind, target: number) => void;
+  /** T-H5 — jump to a specific cue (Goto). */
+  sendPanelGoto: (targetKind: PanelTargetKind, target: number, cue: number) => void;
   sendDashRefresh: () => void;
   sendCueMonitorRefresh: () => void;
 }
@@ -232,6 +238,15 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     (targetKind: PanelTargetKind, target: number) => send(buildPanelStop(targetKind, target)),
     [send],
   );
+  const sendPanelBack = useCallback(
+    (targetKind: PanelTargetKind, target: number) => send(buildPanelBack(targetKind, target)),
+    [send],
+  );
+  const sendPanelGoto = useCallback(
+    (targetKind: PanelTargetKind, target: number, cue: number) =>
+      send(buildPanelGoto(targetKind, target, cue)),
+    [send],
+  );
   const sendDashRefresh = useCallback(() => send(buildDashCatalogRequest()), [send]);
   const sendCueMonitorRefresh = useCallback(() => send(buildCueMonitorRequest()), [send]);
 
@@ -244,6 +259,8 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendLock,
     sendPanelExecute,
     sendPanelStop,
+    sendPanelBack,
+    sendPanelGoto,
     sendDashRefresh,
     sendCueMonitorRefresh,
   };

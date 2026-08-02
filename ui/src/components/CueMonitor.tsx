@@ -88,11 +88,17 @@ export interface CueMonitorProps {
    * DashBoard's `isItemRunning` — same `panel.running` app-observed state,
    * itself never a claim about the console's own playback). */
   isExecutorRunning?: (executorNo: number) => boolean;
-  /** Fires `panel_execute` (Go+) — the SAME wire path DashBoard's executor
-   * tiles use; no second route to the console exists. */
+  /** Fires `panel_execute` (Go+, next cue) — the SAME wire path DashBoard's
+   * executor tiles use; no second route to the console exists. */
   onExecute?: (executorNo: number) => void;
+  /** T-H5 — fires `panel_back` (Go-, previous cue). */
+  onBack?: (executorNo: number) => void;
   /** Fires `panel_stop` (Off) — same path as `onExecute`. */
   onStop?: (executorNo: number) => void;
+  /** T-H5 — fires `panel_goto` (jump to a specific cue) from a cue-sheet row
+   * click. Server-side resolves the executor to its sequence and validates
+   * cue membership before any command is built (server/web/panel.py). */
+  onGoto?: (executorNo: number, cue: number) => void;
   /** T-H4 — which executor's cue sheet is open, or `null`/omitted for none.
    * Controlled by the caller (App.tsx `useState`) — this component has no
    * internal state of its own (see module header). */
@@ -179,6 +185,32 @@ export function executorFireDisabledReason(entry: CueExecutorEntry): string | nu
     return "콘솔 상태를 확인할 수 없어 안전을 위해 버튼이 비활성화되었습니다.";
   }
   return null;
+}
+
+/**
+ * T-H5 — fail-closed reason a Goto (jump-to-cue) press is disabled, or
+ * `null` when it is fireable. Stricter than `executorFireDisabledReason`:
+ * Goto additionally needs a KNOWN sequence number (only an "ok" executor
+ * carries one — server/web/panel.py resolves executor -> sequence before
+ * building the command, and refuses when it cannot), so an "unassigned"
+ * executor — fireable for Go+/Go-/Off — is still refused here.
+ */
+export function gotoDisabledReason(entry: CueExecutorEntry): string | null {
+  const base = executorFireDisabledReason(entry);
+  if (base) return base;
+  if (entry.status !== "ok") {
+    return "시퀀스 번호를 확인할 수 없어 특정 큐로 이동할 수 없습니다.";
+  }
+  return null;
+}
+
+/** T-H5 — whether one cue-sheet row can be a Goto target at all: the server
+ * only registers a cue's RESPONDER cue number (`cue_no`) as a valid jump
+ * target (server/web/panel.py's `register_executor_cues`) — a cue the
+ * responder could not number would always be refused server-side, so the
+ * row is never offered as clickable in the first place. */
+export function cueRowIsGotoable(cue: CueItem): boolean {
+  return cue.cue_no !== undefined;
 }
 
 /** The sequence identity line, or why one is not shown. */
@@ -338,36 +370,64 @@ export function ExecutorStatusChip({ entry }: { entry: CueExecutorEntry }) {
   );
 }
 
+/**
+ * T-H5 — three explicit console-vocabulary buttons (이전 큐 / 다음 큐 /
+ * 정지 — Go- / Go+ / Off), replacing the earlier single toggling
+ * 실행/정지 button. All three share the SAME fail-closed gate
+ * (`executorFireDisabledReason`): an executor whose state is not
+ * console-confirmed disables every button here and shows why, rather than
+ * letting one verb through and not the others.
+ */
 export function ExecutorActions({
   entry,
   running,
   onExecute,
+  onBack,
   onStop,
 }: {
   entry: CueExecutorEntry;
-  running: boolean;
+  running?: boolean;
   onExecute?: (executorNo: number) => void;
+  onBack?: (executorNo: number) => void;
   onStop?: (executorNo: number) => void;
 }) {
   const disabledReason = executorFireDisabledReason(entry);
   const fireable = disabledReason === null;
-  const handleClick = () => {
-    if (running) {
-      onStop?.(entry.executor_no);
-    } else {
-      onExecute?.(entry.executor_no);
-    }
-  };
   return (
     <div className="cue-monitor-actions">
       <button
         type="button"
-        className={`cue-monitor-action-btn${running ? " cue-monitor-action-btn-stop" : ""}`}
-        onClick={handleClick}
+        className="cue-monitor-action-btn cue-monitor-action-btn-back"
+        onClick={() => onBack?.(entry.executor_no)}
         disabled={!fireable}
-        aria-label={`Executor ${entry.executor_no} ${running ? "정지" : "실행"}`}
+        aria-label={`Executor ${entry.executor_no} 이전 큐 (Go-)`}
+        title="이전 큐 (Go-)"
       >
-        {running ? "■ 정지" : "▶ 실행"}
+        ◀ Go-
+      </button>
+      <button
+        type="button"
+        className="cue-monitor-action-btn"
+        onClick={() => onExecute?.(entry.executor_no)}
+        disabled={!fireable}
+        aria-label={`Executor ${entry.executor_no} 다음 큐 (Go+)`}
+        // `running` is the app-observed last-action state (see module
+        // header — never a claim about the console's own playback); surfaced
+        // here as aria-pressed for assistive tech, not as a colour signal.
+        aria-pressed={running}
+        title="다음 큐 (Go+)"
+      >
+        ▶ Go+
+      </button>
+      <button
+        type="button"
+        className="cue-monitor-action-btn cue-monitor-action-btn-stop"
+        onClick={() => onStop?.(entry.executor_no)}
+        disabled={!fireable}
+        aria-label={`Executor ${entry.executor_no} 정지 (Off)`}
+        title="정지 (Off)"
+      >
+        ■ Off
       </button>
       {disabledReason && <span className="cue-monitor-action-reason">{disabledReason}</span>}
     </div>
@@ -392,6 +452,7 @@ export function ExecutorTile({
   isOpen,
   onToggleOpen,
   onExecute,
+  onBack,
   onStop,
 }: {
   entry: CueExecutorEntry;
@@ -399,6 +460,7 @@ export function ExecutorTile({
   isOpen?: boolean;
   onToggleOpen?: (executorNo: number) => void;
   onExecute?: (executorNo: number) => void;
+  onBack?: (executorNo: number) => void;
   onStop?: (executorNo: number) => void;
 }) {
   const handleToggle = () => onToggleOpen?.(entry.executor_no);
@@ -432,7 +494,13 @@ export function ExecutorTile({
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.stopPropagation()}
       >
-        <ExecutorActions entry={entry} running={running ?? false} onExecute={onExecute} onStop={onStop} />
+        <ExecutorActions
+          entry={entry}
+          running={running ?? false}
+          onExecute={onExecute}
+          onBack={onBack}
+          onStop={onStop}
+        />
       </div>
     </div>
   );
@@ -450,11 +518,17 @@ export function ExecutorTile({
 export function CueSheet({
   entry,
   onClose,
+  onGoto,
 }: {
   entry: CueExecutorEntry;
   onClose?: () => void;
+  /** T-H5 — fires `panel_goto` for the clicked row's cue number. Omitted (or
+   * the row is not goto-able — see `cueRowIsGotoable`/`gotoDisabledReason`)
+   * means the row renders with no click affordance at all. */
+  onGoto?: (executorNo: number, cue: number) => void;
 }) {
   const match = currentCueMatch(entry);
+  const blockedReason = gotoDisabledReason(entry);
   return (
     <section className="cue-sheet" aria-label={`Executor ${entry.executor_no} 큐 시트`}>
       <header className="cue-sheet-header">
@@ -478,15 +552,53 @@ export function CueSheet({
           </tr>
         </thead>
         <tbody>
-          {entry.cues.map((cue) => (
-            <tr
-              key={cue.no}
-              className={isCueRowCurrent(match, cue) ? "cue-sheet-row-current" : undefined}
-            >
-              <td className="cue-sheet-cue-no">{cue.cue_no !== undefined ? cue.cue_no : `#${cue.no}`}</td>
-              <td>{cue.name}</td>
-            </tr>
-          ))}
+          {entry.cues.map((cue) => {
+            const current = isCueRowCurrent(match, cue);
+            // T-H5: a row is a Goto TARGET only when the executor itself is
+            // goto-able (known sequence, fail-closed otherwise) AND this
+            // specific cue carries a responder cue number the server would
+            // actually recognise (cueRowIsGotoable) — never offered as
+            // clickable when a press would only ever be refused server-side.
+            const gotoable = blockedReason === null && cueRowIsGotoable(cue);
+            const handleActivate = () => {
+              if (gotoable && cue.cue_no !== undefined) onGoto?.(entry.executor_no, cue.cue_no);
+            };
+            const rowClassName = [
+              current ? "cue-sheet-row-current" : null,
+              gotoable ? "cue-sheet-row-gotoable" : null,
+            ]
+              .filter(Boolean)
+              .join(" ");
+            return (
+              <tr
+                key={cue.no}
+                className={rowClassName || undefined}
+                role={gotoable ? "button" : undefined}
+                tabIndex={gotoable ? 0 : undefined}
+                onClick={gotoable ? handleActivate : undefined}
+                onKeyDown={
+                  gotoable
+                    ? (event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handleActivate();
+                        }
+                      }
+                    : undefined
+                }
+                title={
+                  gotoable
+                    ? `클릭하면 큐 ${cue.cue_no}로 이동합니다 (Goto)`
+                    : (blockedReason ?? "이 큐는 이동 대상 번호가 확인되지 않아 이동할 수 없습니다.")
+                }
+              >
+                <td className="cue-sheet-cue-no">
+                  {cue.cue_no !== undefined ? cue.cue_no : `#${cue.no}`}
+                </td>
+                <td>{cue.name}</td>
+              </tr>
+            );
+          })}
           {entry.cues.length === 0 && (
             <tr>
               <td className="cue-sheet-empty" colSpan={2}>
@@ -526,7 +638,9 @@ export function CueMonitor({
   onRefresh,
   isExecutorRunning,
   onExecute,
+  onBack,
   onStop,
+  onGoto,
   openExecutorNo,
   onToggleExecutor,
 }: CueMonitorProps) {
@@ -572,6 +686,7 @@ export function CueMonitor({
               isOpen={openExecutorNo === entry.executor_no}
               onToggleOpen={onToggleExecutor}
               onExecute={onExecute}
+              onBack={onBack}
               onStop={onStop}
             />
           ))}
@@ -580,7 +695,11 @@ export function CueMonitor({
           )}
         </div>
         {openEntry && (
-          <CueSheet entry={openEntry} onClose={() => onToggleExecutor?.(openEntry.executor_no)} />
+          <CueSheet
+            entry={openEntry}
+            onClose={() => onToggleExecutor?.(openEntry.executor_no)}
+            onGoto={onGoto}
+          />
         )}
         <div className="cue-monitor-history">
           <span className="cue-monitor-history-title">최근 실행 이력</span>

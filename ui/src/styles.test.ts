@@ -126,3 +126,38 @@ describe("existing :root tokens are additive-only (REQ-DASHUI-016 — extend, ne
     expect(rootBlock!.body).toMatch(new RegExp(`${token}:\\s*#`));
   });
 });
+
+describe("--live-amber stays exclusive to .pool-tile-running even after T-H5's action-button colours", () => {
+  // T-H5 adds .cue-monitor-action-btn-back/-stop colour variants; this
+  // re-asserts the pre-existing REQ-DASHUI-017 exclusivity guard still holds
+  // (a regression a careless copy-paste of --live-amber into a new button
+  // variant would otherwise slip past unnoticed).
+  it("no cue-monitor-action-btn selector references var(--live-amber)", () => {
+    const actionButtonBlocks = blocks.filter((b) => b.selector.startsWith(".cue-monitor-action-btn"));
+    expect(actionButtonBlocks.length).toBeGreaterThan(0);
+    for (const block of actionButtonBlocks) {
+      expect(block.body).not.toMatch(/var\(--live-amber\)/);
+    }
+  });
+});
+
+describe("T-H5 tile density — the grid fits multiple tiles side by side (task #8/#9)", () => {
+  // A regression guard on the MINMAX value driving column count
+  // (`repeat(auto-fill, minmax(<px>, 1fr))`): T-H4 shipped at 150px, which
+  // left the pane at ONE column — the exact "MA3 executor-bar 느낌이 안
+  // 난다" complaint T-H5 fixes. This pins the value low enough that at least
+  // two ~104px tiles plus their gap fit inside a typical cue-monitor pane
+  // width (documented assumption: >= 260px content width, this app's
+  // right-side panel is comfortably wider than that in practice).
+  it("cue-monitor-grid's tile minmax is narrow enough for 2+ columns at typical pane width", () => {
+    const block = blocks.find((b) => b.selector === ".cue-monitor-grid");
+    expect(block).toBeDefined();
+    const match = block!.body.match(/minmax\((\d+)px/);
+    expect(match).not.toBeNull();
+    const minmaxPx = Number(match![1]);
+    const gapMatch = block!.body.match(/gap:\s*(\d+)px/);
+    const gapPx = gapMatch ? Number(gapMatch[1]) : 0;
+    const ASSUMED_PANE_CONTENT_WIDTH_PX = 260;
+    expect(minmaxPx * 2 + gapPx).toBeLessThanOrEqual(ASSUMED_PANE_CONTENT_WIDTH_PX);
+  });
+});

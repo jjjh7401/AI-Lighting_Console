@@ -27,6 +27,13 @@ PROTOCOL_VERSION = 1
 PANEL_CLIENT_MESSAGE_TYPES = (
     "panel_execute",
     "panel_stop",
+    # T-H5 (coordinator directive, 2026-08-02) — the closed Playback verb
+    # quartet widens to include step-back and jump-to-cue (server/web/
+    # panel.py's PANEL_VERBS). "panel_back" carries the SAME (target_kind,
+    # target) shape as panel_execute/panel_stop; "panel_goto" additionally
+    # carries the destination cue number.
+    "panel_back",
+    "panel_goto",
     "panel_pin",
     "panel_unpin",
     "panel_catalog_request",
@@ -60,8 +67,11 @@ CLIENT_MESSAGE_TYPES = (
 
 # The panel messages that address ONE console object, and therefore carry the
 # (target_kind, target) pair the parser validates before anything downstream
-# can build a command bundle out of it.
-PANEL_TARGETED_MESSAGE_TYPES = ("panel_execute", "panel_stop", "panel_unpin")
+# can build a command bundle out of it. "panel_goto" is NOT here — it shares
+# the (target_kind, target) shape but carries an ADDITIONAL "cue" field, so it
+# gets its own parsing branch below rather than silently accepting an extra
+# field this tuple's branch never checks.
+PANEL_TARGETED_MESSAGE_TYPES = ("panel_execute", "panel_stop", "panel_back", "panel_unpin")
 
 # The tile's type badge — design.md §4 (LOOK / FX / SEQ), plus the additive
 # MACRO badge (SPEC-COPILOT-DASHUI-001 REQ-DASHUI-012): without it the catalog
@@ -180,6 +190,32 @@ def parse_client_message(raw: str) -> dict:
             "type": message_type,
             "target_kind": target_kind,
             "target": target,
+        }
+
+    if message_type == "panel_goto":
+        # T-H5 — same target validation as PANEL_TARGETED_MESSAGE_TYPES above
+        # (repeated rather than shared via that tuple, since this branch adds
+        # a field the others don't have and never should), PLUS the
+        # destination cue number. Parse-time validation proves ``cue`` is a
+        # positive integer, not that the sequence actually carries it —
+        # that membership question is the panel store's job (T-H5's
+        # ``register_executor_cues``/``executor_has_cue``), exactly the same
+        # division of labor as the target's own membership check.
+        target = message.get("target")
+        if not _is_object_number(target):
+            raise ProtocolError("panel_goto.target must be a positive integer object number")
+        target_kind = message.get("target_kind")
+        if target_kind not in PANEL_TARGET_KINDS:
+            raise ProtocolError(f"panel_goto.target_kind must be one of {PANEL_TARGET_KINDS}")
+        cue = message.get("cue")
+        if not _is_object_number(cue):
+            raise ProtocolError("panel_goto.cue must be a positive integer cue number")
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "panel_goto",
+            "target_kind": target_kind,
+            "target": target,
+            "cue": cue,
         }
 
     if message_type in (

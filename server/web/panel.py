@@ -84,9 +84,7 @@ PANEL_DRILLDOWN_QUERY_CAP = 16
 _CATALOG_ITEM_KIND = "sequence"
 
 # Korean, because it is shown to the operator (PROTOCOL.md language rule).
-PIN_SEED_UNAVAILABLE_MESSAGE = (
-    "패널에 추가할 연출이 없습니다 — 채팅에서 연출을 먼저 만들어 주세요."
-)
+PIN_SEED_UNAVAILABLE_MESSAGE = "패널에 추가할 연출이 없습니다 — 채팅에서 연출을 먼저 만들어 주세요."
 
 
 class PinSeedUnavailable(RuntimeError):
@@ -451,6 +449,13 @@ class PanelStore:
         # page 1 slot 1 is "Executor 101"), so the dash tiles fire these
         # verified numbers instead — membership must recognise them.
         self._dash_executors: set[int] = set()
+        # T-H5 — executor_no -> (sequence_no, {cue numbers the sequence
+        # actually carries}), populated from the SAME cue_monitor snapshot the
+        # UI's cue sheet renders (see ``register_executor_cues``). This is
+        # what lets a ``Goto`` request be refused BEFORE a bundle is built
+        # when the requested cue does not exist — never guessed at, never
+        # forwarded to the gate on faith.
+        self._executor_cues: dict[int, tuple[int, frozenset[int]]] = {}
 
     @property
     def catalog(self) -> PanelCatalog:
@@ -506,6 +511,52 @@ class PanelStore:
         """
         self._dash_executors = {no for no in console_nos if isinstance(no, int)}
 
+    # @MX:ANCHOR: [AUTO] the Goto membership half (T-H5) — the SAME discipline
+    # as ``contains``/``register_dash_executors`` above, applied one level
+    # deeper: not just "does this executor exist" but "does its sequence
+    # actually carry this cue". ``PanelRuntime.fire`` checks this BEFORE
+    # ``playback_command`` is ever called for a ``Goto``.
+    # @MX:REASON: without this, a stale/tampered client-supplied cue number
+    # would reach ``gate.screen()`` as a plausible-looking ``Goto`` bundle —
+    # the exact hazard ``contains`` already closes for the target itself.
+    def register_executor_cues(self, executors: list[dict]) -> None:
+        """REPLACE (never merge) each executor's known sequence + cue numbers.
+
+        ``executors`` is ``server/web/cue_monitor.py``'s own per-executor
+        entry list (``build_cue_progress``'s return shape) — the SAME data
+        the UI's cue sheet renders, so a Goto's membership check sees exactly
+        the cue list the operator saw when they clicked a row. Only
+        ``status == "ok"`` entries carry a resolved sequence — anything else
+        contributes nothing (an executor absent from this map fails the
+        Goto membership check rather than being guessed at).
+        """
+        cue_membership: dict[int, tuple[int, frozenset[int]]] = {}
+        for entry in executors:
+            if not isinstance(entry, dict) or entry.get("status") != "ok":
+                continue
+            executor_no = entry.get("executor_no")
+            sequence_no = entry.get("sequence_no")
+            if not isinstance(executor_no, int) or not isinstance(sequence_no, int):
+                continue
+            cue_nos = {
+                cue["cue_no"]
+                for cue in entry.get("cues", [])
+                if isinstance(cue, dict) and isinstance(cue.get("cue_no"), int)
+            }
+            cue_membership[executor_no] = (sequence_no, frozenset(cue_nos))
+        self._executor_cues = cue_membership
+
+    def sequence_for_executor(self, executor_no: int) -> int | None:
+        """The sequence number ``executor_no`` is currently assigned to, or
+        ``None`` when unknown — the Goto resolution step (T-H5)."""
+        entry = self._executor_cues.get(executor_no)
+        return entry[0] if entry is not None else None
+
+    def executor_has_cue(self, executor_no: int, cue_no: int) -> bool:
+        """Whether ``executor_no``'s sequence actually carries ``cue_no``."""
+        entry = self._executor_cues.get(executor_no)
+        return entry is not None and cue_no in entry[1]
+
     def pin_from_seed(self, seed: LastCreated | None) -> dict:
         """Pin the chat's last-created look (REQ-SHOWUI-004).
 
@@ -539,12 +590,27 @@ class PanelStore:
 
 
 # The console's own playback verbs (rulebook 31_choreography_patterns.md
-# "Playback"). Console vocabulary, never a media-player metaphor
-# (REQ-SHOWUI-020), and a CLOSED pair: a panel press can express exactly two
-# intentions, so no third verb can appear in a bundle by accident.
+# "Playback (validated)"). Console vocabulary, never a media-player metaphor
+# (REQ-SHOWUI-020).
+#
+# T-H5 (coordinator directive, 2026-08-02) widens this from a pair to a
+# CLOSED QUADRUPLE — step back/forward, jump-to-cue, and stop are the FOUR
+# rulebook-validated Playback forms (31_choreography_patterns.md:100-101):
+# ``Go+ Executor <n>`` (next cue), ``Go- Executor <n>`` (previous cue),
+# ``Goto Cue <c> Sequence <s>`` (jump), ``Off Executor <n>`` (release). All
+# four belong to the SAME validated family — none is a media-player
+# metaphor, none is invented — and the set stays CLOSED: a panel press can
+# express exactly these four intentions, so a fifth verb reaching
+# ``playback_command`` (typo, copy-paste, a future feature added carelessly)
+# must fail loudly rather than build a plausible-looking but unverified
+# command. ``TestPlaybackCommand.test_the_verb_set_is_frozen_at_exactly_four``
+# (test_web_panel_execute.py) pins the tuple's exact contents so a silent
+# fifth entry breaks the build.
 PANEL_GO_VERB = "Go+"
+PANEL_BACK_VERB = "Go-"
+PANEL_GOTO_VERB = "Goto"
 PANEL_OFF_VERB = "Off"
-PANEL_VERBS = (PANEL_GO_VERB, PANEL_OFF_VERB)
+PANEL_VERBS = (PANEL_GO_VERB, PANEL_BACK_VERB, PANEL_GOTO_VERB, PANEL_OFF_VERB)
 
 # The console keyword each addressable class is spoken with.
 _TARGET_WORD = {"executor": "Executor", "sequence": "Sequence"}
@@ -553,10 +619,14 @@ _TARGET_WORD = {"executor": "Executor", "sequence": "Sequence"}
 PANEL_UNKNOWN_TARGET_MESSAGE = (
     "패널에 없는 대상입니다 — 카탈로그를 새로고침한 뒤 다시 시도해 주세요."
 )
+# T-H5 — distinct from PANEL_UNKNOWN_TARGET_MESSAGE: the EXECUTOR is a known
+# panel member, but the requested cue number is not one this executor's
+# sequence actually carries (or the executor's sequence isn't known at all).
+# Kept as its own message rather than reusing the target one so the operator
+# is told the RIGHT thing failed — the executor, not the cue.
+PANEL_UNKNOWN_CUE_MESSAGE = "존재하지 않는 큐입니다 — 큐 시트를 새로고침한 뒤 다시 시도해 주세요."
 PANEL_BUSY_MESSAGE = "패널 실행이 진행 중입니다 — 완료된 뒤 다시 시도해 주세요."
-PANEL_UNCONFIRMED_MESSAGE = (
-    "실행 미확인 — 콘솔에서 실제 상태를 확인해 주세요 (자동 재전송 안 함)."
-)
+PANEL_UNCONFIRMED_MESSAGE = "실행 미확인 — 콘솔에서 실제 상태를 확인해 주세요 (자동 재전송 안 함)."
 PANEL_REFUSED_MESSAGE = "패널 명령이 실행되지 않았습니다."
 
 # One Korean line per gate bundle verdict. Mirrors the chat surface's
@@ -589,13 +659,23 @@ _UNCONFIRMED_MARKER = "execution unconfirmed"
 # closed verb pair and a single positive integer makes a wide target
 # UNCONSTRUCTIBLE rather than merely unwritten (REQ-SHOWUI-025 bounded
 # enumeration is then a property of the type, not of the caller's discipline).
-def playback_command(verb: str, target_kind: str, target: int) -> str:
-    """``"Go+ Executor 191"`` / ``"Macro 3"`` — one verb, one class, one number.
+def playback_command(verb: str, target_kind: str, target: int, *, cue: int | None = None) -> str:
+    """``"Go+ Executor 191"`` / ``"Goto Cue 2 Sequence 11"`` / ``"Macro 3"`` —
+    one verb, one class, one number (plus, for ``Goto`` only, a second
+    positive integer naming the cue).
 
     Raises on anything else. The parser already validated a client-supplied
     target (``server.web.messages``), so this second check exists for the
     callers the parser never sees: it is what stops a future internal caller
     from composing a range, a wildcard, or an unaddressable class.
+
+    ``Goto`` (T-H5) is rulebook-validated ONLY in the shape
+    ``Goto Cue <c> Sequence <s>`` (31_choreography_patterns.md:100) — it
+    addresses a SEQUENCE, never an executor, so ``target_kind`` MUST be
+    ``"sequence"`` here even when the press originated on an executor tile;
+    resolving an executor number to its sequence number is the CALLER's job
+    (``PanelRuntime.fire``), not this builder's — a builder that guessed at
+    that resolution itself would be a second, undocumented membership check.
 
     The macro form (SPEC-COPILOT-DASHUI-001 REQ-DASHUI-012) is the
     rulebook-verified ``Macro <no>`` (00_grammar.md:60) — the run form carries
@@ -605,6 +685,22 @@ def playback_command(verb: str, target_kind: str, target: int) -> str:
     """
     if verb not in PANEL_VERBS:
         raise ValueError(f"panel verb must be one of {PANEL_VERBS}, got {verb!r}")
+    if verb == PANEL_GOTO_VERB:
+        if target_kind != "sequence":
+            raise ValueError(
+                "Goto is rulebook-validated ONLY as 'Goto Cue <c> Sequence <s>' "
+                "(31_choreography_patterns.md:100) — target_kind must be "
+                f"'sequence', got {target_kind!r}"
+            )
+        if not _is_object_number(target):
+            raise ValueError(
+                f"panel target must be a positive integer object number, got {target!r}"
+            )
+        if not _is_object_number(cue):
+            raise ValueError(f"Goto requires a positive integer cue number, got {cue!r}")
+        return f"Goto Cue {cue} Sequence {target}"
+    if cue is not None:
+        raise ValueError(f"cue is only meaningful for {PANEL_GOTO_VERB!r}, got verb={verb!r}")
     if not _is_object_number(target):
         raise ValueError(f"panel target must be a positive integer object number, got {target!r}")
     if target_kind == "macro":
@@ -679,23 +775,49 @@ class PanelRuntime:
         """Delegate the dash-verified executor membership to the store."""
         self._store.register_dash_executors(console_nos)
 
-    # @MX:ANCHOR: [AUTO] the panel's ONE route to the console. Both panel_execute
-    # and panel_stop enter here; there is no second entry, and the All Off gesture
-    # is N calls to this same method.
+    def register_executor_cues(self, executors: list[dict]) -> None:
+        """Delegate the Goto cue-membership map to the store (T-H5)."""
+        self._store.register_executor_cues(executors)
+
+    # @MX:ANCHOR: [AUTO] the panel's ONE route to the console. panel_execute,
+    # panel_back, panel_goto, and panel_stop ALL enter here; there is no second
+    # entry, and the All Off gesture is N calls to this same method.
     # @MX:REASON: REQ-SHOWUI-006/007 (gate.py:260-264) — exactly one screening path
     # may exist. Every send below is preceded by gate.screen() in the same call,
     # so a bypass would require editing this method rather than adding a caller.
-    def fire(self, verb: str, target_kind: str, target: int) -> PanelOutcome:
+    def fire(
+        self, verb: str, target_kind: str, target: int, *, cue: int | None = None
+    ) -> PanelOutcome:
         """Screen one panel command, then execute it. Synchronous (worker thread).
 
         Order is load-bearing (REQ-SHOWUI-022): membership is checked FIRST, so
         an unknown target produces an explicit error with no bundle built and
         ``gate.screen()`` never called.
+
+        T-H5 — a ``Goto`` press is keyed on the EXECUTOR (the same identity
+        every other press uses), but the rulebook-validated command form
+        addresses the executor's SEQUENCE (``playback_command``'s own
+        docstring). This method does that resolution — never the builder,
+        never the caller — and additionally refuses when ``cue`` is not one
+        this executor's sequence actually carries, BEFORE any command string
+        is built.
         """
         if not self._store.contains(target_kind, target):
             self._send(error_event(message=PANEL_UNKNOWN_TARGET_MESSAGE, kind="panel"))
             return PanelOutcome(status="unknown_target")
-        command = playback_command(verb, target_kind, target)
+        if verb == PANEL_GOTO_VERB:
+            sequence_no = self._store.sequence_for_executor(target)
+            if (
+                target_kind != "executor"
+                or sequence_no is None
+                or cue is None
+                or not self._store.executor_has_cue(target, cue)
+            ):
+                self._send(error_event(message=PANEL_UNKNOWN_CUE_MESSAGE, kind="panel"))
+                return PanelOutcome(status="unknown_target")
+            command = playback_command(verb, "sequence", sequence_no, cue=cue)
+        else:
+            command = playback_command(verb, target_kind, target)
         token = bind_session_key(self._session_key)
         try:
             decision = self._gate.screen([command])
@@ -751,9 +873,7 @@ class PanelRuntime:
         (REQ-SHOWUI-011), so an anonymous refusal would leave it latched.
         """
         self._send(
-            panel_busy_event(
-                target_kind=target_kind, target=target, message=PANEL_BUSY_MESSAGE
-            )
+            panel_busy_event(target_kind=target_kind, target=target, message=PANEL_BUSY_MESSAGE)
         )
 
     # -- internals -------------------------------------------------------------
@@ -804,7 +924,12 @@ class PanelRuntime:
             # lit-as-running forever with no affordance that could clear it
             # (live defect, 2026-07-24). Only kinds with a stop affordance
             # track running.
-            if verb == PANEL_GO_VERB and target_kind != "macro":
+            #
+            # T-H5: Go- (step back) and Goto (jump) are grouped with Go+ here
+            # — all three leave the executor positioned on a cue and offer
+            # the SAME Off affordance next, so all three enter the running
+            # set the identical way Go+ always has. Only Off clears it.
+            if verb in (PANEL_GO_VERB, PANEL_BACK_VERB, PANEL_GOTO_VERB) and target_kind != "macro":
                 self._running.add(key)
             else:
                 self._running.discard(key)

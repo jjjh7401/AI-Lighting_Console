@@ -33,7 +33,9 @@ from server.web.approval_bridge import ApprovalChannel
 from server.web.messages import PROTOCOL_VERSION
 from server.web.panel import (
     PANEL_BUSY_MESSAGE,
+    PANEL_UNKNOWN_CUE_MESSAGE,
     PANEL_UNKNOWN_TARGET_MESSAGE,
+    PANEL_VERBS,
     PIN_SEED_UNAVAILABLE_MESSAGE,
     PanelRuntime,
     PanelStore,
@@ -305,10 +307,81 @@ class TestPlaybackCommand:
             with pytest.raises(ValueError):
                 playback_command("Go+", "executor", bad)
 
-    def test_only_the_two_console_verbs_are_constructible(self):
+    def test_only_rulebook_verified_verbs_are_constructible(self):
         for bad in ("Delete", "Off Everything", "Go", ""):
             with pytest.raises(ValueError):
                 playback_command(bad, "executor", 5)
+
+
+class TestPanelVerbSetIsClosed:
+    """T-H5 — the Playback verb set widened from a pair to a QUADRUPLE, and
+    must stay CLOSED at exactly four. This is the regression guard the task
+    demands: a silent fifth entry (typo, copy-paste, careless addition)
+    breaks this test rather than quietly widening what a panel press can
+    express."""
+
+    def test_the_verb_set_is_frozen_at_exactly_these_four(self):
+        assert PANEL_VERBS == ("Go+", "Go-", "Goto", "Off")
+
+    def test_a_fifth_verb_is_never_constructible_even_if_it_looks_plausible(self):
+        # A hypothetical fifth Playback-shaped verb (not rulebook-validated in
+        # this project) must still be refused — the closed set is not merely
+        # "the four we happened to name today", it is exhaustive.
+        for bad in ("Go++", "Goto+", "Pause", "Flash"):
+            with pytest.raises(ValueError):
+                playback_command(bad, "executor", 5)
+
+
+class TestStepBackPlaybackCommand:
+    """T-H5 — ``Go-`` (previous cue), rulebook-validated symmetrically with
+    ``Go+`` (31_choreography_patterns.md:100)."""
+
+    def test_executor_targets(self):
+        assert playback_command("Go-", "executor", 191) == "Go- Executor 191"
+
+    def test_sequence_targets(self):
+        assert playback_command("Go-", "sequence", 41) == "Go- Sequence 41"
+
+    def test_a_macro_has_no_step_back_form(self):
+        # Symmetric with the existing "no stop form" macro guard: a macro
+        # press is one-shot (plan.md §F D1), so Go- is UNCONSTRUCTIBLE on it
+        # exactly like Off is.
+        with pytest.raises(ValueError):
+            playback_command("Go-", "macro", 3)
+
+
+class TestGotoPlaybackCommand:
+    """T-H5 — ``Goto Cue <c> Sequence <s>``, rulebook-validated ONLY as a
+    SEQUENCE address (31_choreography_patterns.md:100). The executor ->
+    sequence resolution is the CALLER's job (PanelRuntime.fire), never this
+    builder's — see the builder's own docstring."""
+
+    def test_the_rulebook_form(self):
+        assert playback_command("Goto", "sequence", 11, cue=2) == "Goto Cue 2 Sequence 11"
+
+    def test_an_executor_target_is_refused_goto_addresses_a_sequence_only(self):
+        with pytest.raises(ValueError):
+            playback_command("Goto", "executor", 191, cue=2)
+
+    def test_a_macro_target_is_refused(self):
+        with pytest.raises(ValueError):
+            playback_command("Goto", "macro", 3, cue=2)
+
+    def test_missing_cue_is_refused(self):
+        with pytest.raises(ValueError):
+            playback_command("Goto", "sequence", 11)
+
+    def test_a_non_positive_cue_is_refused(self):
+        for bad in (0, -1, True, "2", None):
+            with pytest.raises(ValueError):
+                playback_command("Goto", "sequence", 11, cue=bad)
+
+    def test_cue_is_rejected_on_every_other_verb(self):
+        # A stray `cue=` on Go+/Go-/Off would silently do nothing useful —
+        # refusing it outright surfaces the caller's mistake instead.
+        for verb in ("Go+", "Go-", "Off"):
+            with pytest.raises(ValueError):
+                playback_command(verb, "executor", 191, cue=2)
 
 
 class TestMacroPlaybackCommand:
@@ -346,9 +419,7 @@ class TestWideTargetsAreUnconstructible:
 
     def test_the_panel_module_contains_no_wide_target_literal(self):
         source = PANEL_MODULE.read_text(encoding="utf-8")
-        code = "\n".join(
-            line for line in source.splitlines() if not line.lstrip().startswith("#")
-        )
+        code = "\n".join(line for line in source.splitlines() if not line.lstrip().startswith("#"))
         # Quoted string literals only — the prose in docstrings explains WHY
         # these are banned and must stay readable.
         literals = re.findall(r"""["']([^"'\n]*)["']""", code)
@@ -514,6 +585,193 @@ class TestGateRouting:
             _drain(ws, "panel_item_state")
         screened_commands = [c for bundle in harness.screened for c in bundle]
         assert harness.sent == screened_commands
+
+
+# -- T-H5: step back (Go-) + jump-to-cue (Goto) -----------------------------------
+
+
+def _cue_progress_entry(
+    *, executor_no: int, sequence_no: int, cues: list[dict], status: str = "ok"
+) -> dict:
+    """A minimal ``build_cue_progress``-shaped entry — only the fields
+    ``register_executor_cues`` actually reads."""
+    return {
+        "executor_no": executor_no,
+        "status": status,
+        "sequence_no": sequence_no,
+        "sequence_name": "Summer Rock",
+        "cues": cues,
+        "current_cue": None,
+        "last_app_action": None,
+    }
+
+
+class TestStepBackGateRouting:
+    def test_panel_back_builds_the_go_minus_bundle(self, harness):
+        with harness.client as client, client.websocket_connect("/ws") as ws:
+            _drain(ws, "status")
+            _send(ws, type="panel_back", target_kind="executor", target=191)
+            state = _drain(ws, "panel_item_state")
+        assert harness.screened == [["Go- Executor 191"]]
+        assert harness.sent == ["Go- Executor 191"]
+        assert state["running"] is True
+
+    def test_an_unknown_target_never_reaches_the_gate(self, harness):
+        with harness.client as client, client.websocket_connect("/ws") as ws:
+            _drain(ws, "status")
+            _send(ws, type="panel_back", target_kind="executor", target=9999)
+            event = _drain(ws, "error")
+        assert event["message"] == PANEL_UNKNOWN_TARGET_MESSAGE
+        assert harness.screened == []
+        assert harness.sent == []
+
+
+class TestGotoMembership:
+    """PanelStore's cue-membership map (T-H5) — the same discipline as
+    ``contains``/``register_dash_executors``, one level deeper."""
+
+    def test_unregistered_executor_has_no_known_sequence(self, tmp_path):
+        store = PanelStore(state_port=FakeStatePort({}), pins=PinStore(tmp_path / "pins.json"))
+        assert store.sequence_for_executor(191) is None
+        assert store.executor_has_cue(191, 1) is False
+
+    def test_registers_sequence_and_cue_numbers_from_a_cue_progress_snapshot(self, tmp_path):
+        store = PanelStore(state_port=FakeStatePort({}), pins=PinStore(tmp_path / "pins.json"))
+        store.register_executor_cues(
+            [
+                _cue_progress_entry(
+                    executor_no=191,
+                    sequence_no=41,
+                    cues=[{"no": 1, "name": "Intro", "cue_no": 1}, {"no": 2, "name": "Drop"}],
+                )
+            ]
+        )
+        assert store.sequence_for_executor(191) == 41
+        assert store.executor_has_cue(191, 1) is True
+        # Cue "Drop" carries no responder cue_no — its pool slot is NOT a
+        # substitute (the same "never guessed at" posture as _cue_items).
+        assert store.executor_has_cue(191, 2) is False
+
+    def test_a_non_ok_entry_contributes_no_membership(self, tmp_path):
+        store = PanelStore(state_port=FakeStatePort({}), pins=PinStore(tmp_path / "pins.json"))
+        store.register_executor_cues(
+            [_cue_progress_entry(executor_no=191, sequence_no=41, cues=[], status="unavailable")]
+        )
+        assert store.sequence_for_executor(191) is None
+
+    def test_registration_replaces_rather_than_merges(self, tmp_path):
+        store = PanelStore(state_port=FakeStatePort({}), pins=PinStore(tmp_path / "pins.json"))
+        store.register_executor_cues(
+            [
+                _cue_progress_entry(
+                    executor_no=191, sequence_no=41, cues=[{"no": 1, "cue_no": 1, "name": "A"}]
+                )
+            ]
+        )
+        store.register_executor_cues([])  # e.g. the console went unreachable on refresh
+        assert store.sequence_for_executor(191) is None
+        assert store.executor_has_cue(191, 1) is False
+
+
+class TestGotoGateRouting:
+    """T-H5 — the Goto press: resolved to a SEQUENCE address, refused before
+    any bundle exists when the cue is not one the executor's sequence
+    actually carries."""
+
+    def _harness_with_cues(self, tmp_path, *, cues: list[dict] | None = None):
+        harness = make_harness(tmp_path)
+        harness.store.register_executor_cues(
+            [
+                _cue_progress_entry(
+                    executor_no=191,
+                    sequence_no=41,
+                    cues=cues
+                    if cues is not None
+                    else [{"no": 1, "name": "Hook Drop", "cue_no": 2}],
+                )
+            ]
+        )
+        return harness
+
+    def test_goto_resolves_the_executor_to_its_sequence_and_addresses_it(self, tmp_path):
+        harness = self._harness_with_cues(tmp_path)
+        with harness.client as client, client.websocket_connect("/ws") as ws:
+            _drain(ws, "status")
+            _send(ws, type="panel_goto", target_kind="executor", target=191, cue=2)
+            state = _drain(ws, "panel_item_state")
+        # The command addresses the SEQUENCE (41), not the executor (191) —
+        # the rulebook-validated Goto shape (31_choreography_patterns.md:100).
+        assert harness.screened == [["Goto Cue 2 Sequence 41"]]
+        assert harness.sent == ["Goto Cue 2 Sequence 41"]
+        # But the TRACKED tile state is still keyed on the executor — the
+        # press originated on that tile and its Off affordance lives there.
+        assert state["id"] == "executor:191"
+        assert state["running"] is True
+
+    def test_a_cue_the_sequence_does_not_carry_is_refused_before_the_gate(self, tmp_path):
+        harness = self._harness_with_cues(tmp_path, cues=[{"no": 1, "name": "Intro", "cue_no": 1}])
+        with harness.client as client, client.websocket_connect("/ws") as ws:
+            _drain(ws, "status")
+            _send(ws, type="panel_goto", target_kind="executor", target=191, cue=99)
+            event = _drain(ws, "error")
+        assert event["message"] == PANEL_UNKNOWN_CUE_MESSAGE
+        assert harness.screened == [], "gate.screen() must NOT be called for a nonexistent cue"
+        assert harness.sent == []
+
+    def test_an_executor_with_no_registered_sequence_is_refused(self, tmp_path):
+        # 191 is a known panel MEMBER (the target check passes) but has never
+        # been through register_executor_cues (e.g. cue_monitor never ran).
+        harness = make_harness(tmp_path)
+        with harness.client as client, client.websocket_connect("/ws") as ws:
+            _drain(ws, "status")
+            _send(ws, type="panel_goto", target_kind="executor", target=191, cue=1)
+            event = _drain(ws, "error")
+        assert event["message"] == PANEL_UNKNOWN_CUE_MESSAGE
+        assert harness.screened == []
+        assert harness.sent == []
+
+    def test_a_sequence_target_kind_is_refused_goto_must_originate_on_an_executor_tile(
+        self, tmp_path
+    ):
+        harness = self._harness_with_cues(tmp_path)
+        with harness.client as client, client.websocket_connect("/ws") as ws:
+            _drain(ws, "status")
+            _send(ws, type="panel_goto", target_kind="sequence", target=41, cue=2)
+            event = _drain(ws, "error")
+        assert event["message"] in (PANEL_UNKNOWN_TARGET_MESSAGE, PANEL_UNKNOWN_CUE_MESSAGE)
+        assert harness.screened == []
+        assert harness.sent == []
+
+    def test_a_malformed_cue_is_refused_at_parse_time(self, harness):
+        with harness.client as client, client.websocket_connect("/ws") as ws:
+            _drain(ws, "status")
+            for bad in (0, -1, "2", 1.5, None, True):
+                _send(ws, type="panel_goto", target_kind="executor", target=191, cue=bad)
+                event = _drain(ws, "error")
+                assert event["kind"] == "protocol"
+        assert harness.screened == []
+        assert harness.sent == []
+
+    def test_membership_and_cue_check_are_rechecked_below_the_transport(self, tmp_path):
+        # Defence in depth, mirroring test_membership_is_rechecked_below_the_transport.
+        harness = self._harness_with_cues(tmp_path)
+        events: list[dict] = []
+        runtime = PanelRuntime(
+            gate=harness.gate,
+            store=harness.store,
+            send_event=events.append,
+            session_key=new_session_key(),
+        )
+        outcome = runtime.fire("Goto", "executor", 191, cue=99)
+        assert outcome.status == "unknown_target"
+        assert outcome.screened is False
+        assert outcome.command == ""
+        assert harness.screened == []
+        assert harness.sent == []
+
+        outcome = runtime.fire("Goto", "executor", 191, cue=2)
+        assert outcome.status == "executed"
+        assert harness.sent == ["Goto Cue 2 Sequence 41"]
 
 
 # -- macro gate routing (SPEC-COPILOT-DASHUI-001 M2, AC-DASHUI-006) ---------------
@@ -917,9 +1175,7 @@ class TestCatalogAndPinRouting:
         # holds no second source of truth for "what did the chat just create".
         provider = ScriptedProvider(
             [
-                _run_turn(
-                    ["Store Sequence 71", "Assign Sequence 71 At Executor 201"], "c1"
-                ),
+                _run_turn(["Store Sequence 71", "Assign Sequence 71 At Executor 201"], "c1"),
                 _final("연출을 만들었습니다"),
             ]
         )

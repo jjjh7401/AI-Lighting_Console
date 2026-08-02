@@ -7,8 +7,10 @@ import {
   buildCueMonitorRequest,
   buildDashCatalogRequest,
   buildLock,
+  buildPanelBack,
   buildPanelCatalogRequest,
   buildPanelExecute,
+  buildPanelGoto,
   buildPanelPin,
   buildPanelStop,
   buildPanelUnpin,
@@ -525,6 +527,20 @@ describe("panel protocol parity (AC-SHOWUI-001, client half)", () => {
       type: "panel_stop",
       target_kind: "sequence",
       target: 41,
+    });
+    // T-H5 — step back (Go-) and jump-to-cue (Goto).
+    expect(JSON.parse(buildPanelBack("executor", 191))).toEqual({
+      v: 1,
+      type: "panel_back",
+      target_kind: "executor",
+      target: 191,
+    });
+    expect(JSON.parse(buildPanelGoto("executor", 191, 2))).toEqual({
+      v: 1,
+      type: "panel_goto",
+      target_kind: "executor",
+      target: 191,
+      cue: 2,
     });
     expect(JSON.parse(buildPanelUnpin("executor", 201))).toEqual({
       v: 1,

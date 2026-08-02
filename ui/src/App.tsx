@@ -177,7 +177,9 @@ export function AppShell({
   onItemPress,
   isExecutorRunning,
   onExecutorExecute,
+  onExecutorBack,
   onExecutorStop,
+  onExecutorGoto,
   openCueExecutorNo,
   onToggleCueExecutor,
   sectionTileSize,
@@ -202,7 +204,11 @@ export function AppShell({
   /** T-H — CueMonitor's own run/stop affordance; see CueMonitor.tsx. */
   isExecutorRunning?: (executorNo: number) => boolean;
   onExecutorExecute?: (executorNo: number) => void;
+  /** T-H5 — step back (Go-). */
+  onExecutorBack?: (executorNo: number) => void;
   onExecutorStop?: (executorNo: number) => void;
+  /** T-H5 — jump to a specific cue (Goto). */
+  onExecutorGoto?: (executorNo: number, cue: number) => void;
   /** T-H4 — which executor's cue sheet is open (controlled, one at a time);
    * see CueMonitor.tsx's own module header for why this is lifted here
    * rather than internal component state. */
@@ -235,7 +241,9 @@ export function AppShell({
         onRefresh={onCueMonitorRefresh}
         isExecutorRunning={isExecutorRunning}
         onExecute={onExecutorExecute}
+        onBack={onExecutorBack}
         onStop={onExecutorStop}
+        onGoto={onExecutorGoto}
         openExecutorNo={openCueExecutorNo}
         onToggleExecutor={onToggleCueExecutor}
       />
@@ -262,6 +270,8 @@ export default function App() {
     sendLock,
     sendPanelExecute,
     sendPanelStop,
+    sendPanelBack,
+    sendPanelGoto,
     sendDashRefresh,
     sendCueMonitorRefresh,
   } = useCopilotSocket();
@@ -446,7 +456,9 @@ export default function App() {
             onItemPress={pressDashItem}
             isExecutorRunning={isExecutorRunning}
             onExecutorExecute={(executorNo) => sendPanelExecute("executor", executorNo)}
+            onExecutorBack={(executorNo) => sendPanelBack("executor", executorNo)}
             onExecutorStop={(executorNo) => sendPanelStop("executor", executorNo)}
+            onExecutorGoto={(executorNo, cue) => sendPanelGoto("executor", executorNo, cue)}
             openCueExecutorNo={openCueExecutorNo}
             onToggleCueExecutor={toggleCueExecutor}
             sectionTileSize={(sectionName) => sectionTileSizes[sectionName]}

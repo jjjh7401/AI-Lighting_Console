@@ -220,10 +220,13 @@ class TestPanelClientMessages:
     """AC-SHOWUI-001 (server half) + AC-SHOWUI-005 rejection half (REQ-022)."""
 
     def test_every_panel_type_is_on_the_client_allowlist(self):
-        # AC-SHOWUI-001: the five new client types parse. A type missing from
-        # the allowlist is the silent-feature-loss failure REQ-014 exists for.
+        # AC-SHOWUI-001: the client types parse. A type missing from the
+        # allowlist is the silent-feature-loss failure REQ-014 exists for.
+        # T-H5 adds panel_back (Go-) and panel_goto (jump-to-cue).
         assert set(PANEL_CLIENT_MESSAGE_TYPES) == {
             "panel_execute",
+            "panel_back",
+            "panel_goto",
             "panel_stop",
             "panel_pin",
             "panel_unpin",
@@ -247,6 +250,16 @@ class TestPanelClientMessages:
         assert message["target_kind"] == "sequence"
         assert message["target"] == 41
 
+    def test_panel_back_parses_with_a_real_object_number(self):
+        # T-H5 — same shape as panel_execute/panel_stop.
+        message = parse_client_message(_raw(type="panel_back", target_kind="executor", target=191))
+        assert message == {
+            "v": PROTOCOL_VERSION,
+            "type": "panel_back",
+            "target_kind": "executor",
+            "target": 191,
+        }
+
     def test_panel_unpin_parses_with_a_real_object_number(self):
         message = parse_client_message(_raw(type="panel_unpin", target_kind="executor", target=201))
         assert message["type"] == "panel_unpin"
@@ -267,7 +280,9 @@ class TestPanelClientMessages:
         with pytest.raises(ProtocolError):
             parse_client_message(_raw(type="panel_execute_all"))
 
-    @pytest.mark.parametrize("message_type", ["panel_execute", "panel_stop", "panel_unpin"])
+    @pytest.mark.parametrize(
+        "message_type", ["panel_execute", "panel_back", "panel_stop", "panel_unpin"]
+    )
     @pytest.mark.parametrize(
         "target",
         [
@@ -289,12 +304,16 @@ class TestPanelClientMessages:
         with pytest.raises(ProtocolError):
             parse_client_message(_raw(type=message_type, target_kind="executor", target=target))
 
-    @pytest.mark.parametrize("message_type", ["panel_execute", "panel_stop", "panel_unpin"])
+    @pytest.mark.parametrize(
+        "message_type", ["panel_execute", "panel_back", "panel_stop", "panel_unpin"]
+    )
     def test_a_missing_target_is_rejected(self, message_type):
         with pytest.raises(ProtocolError):
             parse_client_message(_raw(type=message_type, target_kind="executor"))
 
-    @pytest.mark.parametrize("message_type", ["panel_execute", "panel_stop", "panel_unpin"])
+    @pytest.mark.parametrize(
+        "message_type", ["panel_execute", "panel_back", "panel_stop", "panel_unpin"]
+    )
     @pytest.mark.parametrize("target_kind", ["fixtures", "fixture", "group", "", None, 1])
     def test_a_non_playback_target_kind_is_rejected(self, message_type, target_kind):
         # REQ-SHOWUI-003: a fixture's ``no`` is its patch slot, NOT its FID, so
@@ -304,7 +323,9 @@ class TestPanelClientMessages:
                 _raw(type=message_type, target_kind=target_kind, target=191),
             )
 
-    @pytest.mark.parametrize("message_type", ["panel_execute", "panel_stop", "panel_unpin"])
+    @pytest.mark.parametrize(
+        "message_type", ["panel_execute", "panel_back", "panel_stop", "panel_unpin"]
+    )
     def test_a_missing_target_kind_is_rejected(self, message_type):
         with pytest.raises(ProtocolError):
             parse_client_message(_raw(type=message_type, target=191))
@@ -318,6 +339,55 @@ class TestPanelClientMessages:
                     {"v": 2, "type": "panel_execute", "target_kind": "executor", "target": 1}
                 )
             )
+
+
+class TestPanelGotoClientMessage:
+    """T-H5 — jump-to-cue. Same target validation as the other targeted panel
+    messages, PLUS a positive-integer ``cue``."""
+
+    def test_parses_with_a_target_and_a_cue(self):
+        message = parse_client_message(
+            _raw(type="panel_goto", target_kind="executor", target=191, cue=2)
+        )
+        assert message == {
+            "v": PROTOCOL_VERSION,
+            "type": "panel_goto",
+            "target_kind": "executor",
+            "target": 191,
+            "cue": 2,
+        }
+
+    def test_a_missing_cue_is_rejected(self):
+        with pytest.raises(ProtocolError):
+            parse_client_message(_raw(type="panel_goto", target_kind="executor", target=191))
+
+    @pytest.mark.parametrize(
+        "cue",
+        [
+            "2",  # a string that merely looks like a number
+            1.5,  # a float
+            None,
+            True,  # bool is an int subclass — must NOT slip through
+            -1,
+            0,  # cues are 1-based; 0 addresses nothing
+            [2],
+            {"no": 2},
+        ],
+        ids=["string", "float", "null", "bool", "negative", "zero", "list", "object"],
+    )
+    def test_a_malformed_cue_is_rejected_at_parse_time(self, cue):
+        with pytest.raises(ProtocolError):
+            parse_client_message(
+                _raw(type="panel_goto", target_kind="executor", target=191, cue=cue)
+            )
+
+    def test_the_target_is_validated_the_same_way_as_every_other_panel_message(self):
+        with pytest.raises(ProtocolError):
+            parse_client_message(_raw(type="panel_goto", target_kind="executor", target=-1, cue=2))
+
+    def test_a_non_playback_target_kind_is_rejected(self):
+        with pytest.raises(ProtocolError):
+            parse_client_message(_raw(type="panel_goto", target_kind="fixture", target=191, cue=2))
 
 
 class TestPanelItemSchema:
@@ -700,7 +770,9 @@ class TestMacroAdditiveExtension:
         assert "macro" in PANEL_TARGET_KINDS
         assert "macro" in PANEL_ITEM_KINDS
 
-    @pytest.mark.parametrize("message_type", ["panel_execute", "panel_stop", "panel_unpin"])
+    @pytest.mark.parametrize(
+        "message_type", ["panel_execute", "panel_back", "panel_stop", "panel_unpin"]
+    )
     def test_a_macro_target_parses(self, message_type):
         message = parse_client_message(_raw(type=message_type, target_kind="macro", target=3))
         assert message["target_kind"] == "macro"

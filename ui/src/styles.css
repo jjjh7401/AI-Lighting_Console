@@ -1376,26 +1376,35 @@ body {
 .cue-monitor-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 3px;
+  flex-wrap: wrap;
 }
 
-/* T-H4: small + SHARP (2px), not the large rounded blue button this used to
-   be — a console Go/Off, not a web-app CTA. */
+/* T-H4/T-H5: small + SHARP (2px), not the large rounded blue button this
+   used to be — a console Go/Off, not a web-app CTA. T-H5 widens this to
+   THREE buttons (이전/다음/정지 — Go-/Go+/Off), so padding/font shrink
+   further to keep the tile densely packable (task #8). */
 .cue-monitor-action-btn {
   background: var(--accent);
   color: #fff;
   border: none;
   border-radius: 2px;
-  padding: 3px 10px;
-  font-size: 12px;
+  padding: 2px 6px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .cue-monitor-action-btn:disabled {
   background: #2b2f36;
   color: var(--muted);
   cursor: not-allowed;
+}
+
+.cue-monitor-action-btn-back {
+  background: #2b2f36;
+  color: var(--text);
 }
 
 .cue-monitor-action-btn-stop {
@@ -1405,7 +1414,7 @@ body {
 
 .cue-monitor-action-reason {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 /* T-H2 — the panel-level shared-fact banner (CueMonitor.tsx's
@@ -1471,11 +1480,14 @@ body {
 }
 
 /* Auto-fill: the column count itself shrinks as the pane narrows — no fixed
-   column count to break at small widths. */
+   column count to break at small widths. T-H5: minmax lowered from 150px so
+   MULTIPLE tiles fit side by side at the pane's typical width — a single
+   column reads as a list again, which is exactly the MA3-executor-bar
+   feeling this layout exists to avoid. */
 .cue-monitor-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 6px;
 }
 
 .cue-monitor-empty {
@@ -1490,11 +1502,11 @@ body {
 .cue-tile {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   background: var(--bg);
   border: 1px solid #2b2f36;
   border-radius: 2px;
-  padding: 8px 10px;
+  padding: 6px 8px;
   cursor: pointer;
 }
 
@@ -1522,7 +1534,7 @@ body {
 }
 
 .cue-tile-sequence {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
@@ -1531,7 +1543,7 @@ body {
 }
 
 .cue-tile-current-cue {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
@@ -1544,7 +1556,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 3px;
   margin-top: 2px;
 }
 
@@ -1612,6 +1624,21 @@ body {
 .cue-sheet-row-current {
   background: rgba(79, 140, 255, 0.14);
   border-left: 2px solid var(--accent);
+}
+
+/* T-H5 — a row an operator CAN click to jump there (task #6: "다른 행이
+   눌리는 대상임이 드러나야 한다"). Cursor + hover/focus background make the
+   affordance visible without relying on the current-row highlight above,
+   which stays a SEPARATE visual signal (what IS current vs what CAN be
+   clicked are different facts). */
+.cue-sheet-row-gotoable {
+  cursor: pointer;
+}
+
+.cue-sheet-row-gotoable:hover,
+.cue-sheet-row-gotoable:focus-visible {
+  background: rgba(154, 160, 166, 0.14);
+  outline: none;
 }
 
 .cue-sheet-empty {

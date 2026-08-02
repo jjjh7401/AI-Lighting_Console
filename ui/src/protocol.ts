@@ -434,6 +434,34 @@ export function buildPanelStop(targetKind: PanelTargetKind, target: number): str
   });
 }
 
+/** T-H5 — step to the PREVIOUS cue (console verb `Go-`). Same shape as
+ * `buildPanelExecute`/`buildPanelStop`. */
+export function buildPanelBack(targetKind: PanelTargetKind, target: number): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "panel_back",
+    target_kind: targetKind,
+    target,
+  });
+}
+
+/**
+ * T-H5 — jump to a specific cue (console form `Goto Cue <c> Sequence <s>`).
+ * `target`/`targetKind` still name the EXECUTOR the press originated on (the
+ * server resolves executor -> sequence and validates cue membership before
+ * building any command — see server/web/panel.py's own module notes); this
+ * builder does not, and must not, attempt that resolution itself.
+ */
+export function buildPanelGoto(targetKind: PanelTargetKind, target: number, cue: number): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "panel_goto",
+    target_kind: targetKind,
+    target,
+    cue,
+  });
+}
+
 /**
  * Pin whatever the chat just created. Payload-free by design: the seed is the
  * server's own `_last_created` cross-turn memory (REQ-SHOWUI-004), so there is
