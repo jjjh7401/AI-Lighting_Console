@@ -126,3 +126,51 @@ class TestCheckReceivePortBinding:
             assert result.status == "fail"
         finally:
             holder.close()
+
+
+class _FakeLiveness:
+    def __init__(self, *, ok: bool):
+        self._ok = ok
+
+    def ping(self) -> bool:
+        return self._ok
+
+
+class TestLivenessBasedChecksReproduction:
+    """RED before the fix — captures T-G's structural defect (2).
+
+    The app already owns its receive port; re-binding it (the standalone
+    dev-tool path above) always fails from *inside* the app. The desired
+    fix is a liveness-injected path that never attempts a bind: pass when
+    the already-open link answers, skip (not fail) when it does not.
+    """
+
+    def test_receive_port_binding_via_liveness_passes_on_an_already_held_port(self):
+        import socket
+
+        holder = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        holder.bind(("127.0.0.1", 0))
+        held_port = holder.getsockname()[1]
+        try:
+            from server.preshow.osc_check import check_receive_port_binding_via_liveness
+
+            liveness = _FakeLiveness(ok=True)
+            result = check_receive_port_binding_via_liveness(liveness, receive_port=held_port)
+            assert result.status == "pass"
+            assert result.data == {"configured": held_port, "actual": held_port}
+        finally:
+            holder.close()
+
+    def test_osc_roundtrip_via_liveness_passes_without_opening_a_socket(self):
+        from server.preshow.osc_check import check_osc_roundtrip_via_liveness
+
+        liveness = _FakeLiveness(ok=True)
+        result = check_osc_roundtrip_via_liveness(liveness)
+        assert result.status == "pass"
+
+    def test_osc_roundtrip_via_liveness_skips_when_no_response(self):
+        from server.preshow.osc_check import check_osc_roundtrip_via_liveness
+
+        liveness = _FakeLiveness(ok=False)
+        result = check_osc_roundtrip_via_liveness(liveness)
+        assert result.status == "skip"
