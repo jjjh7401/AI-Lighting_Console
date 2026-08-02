@@ -17,6 +17,7 @@ import { DashBoard } from "./components/DashBoard";
 import { LockToggle } from "./components/LockToggle";
 import { OnboardingBanner } from "./components/OnboardingBanner";
 import { ReviewCard } from "./components/ReviewCard";
+import { RunbookMode } from "./components/RunbookMode";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { StatusBanner } from "./components/StatusBanner";
 import {
@@ -63,6 +64,34 @@ export function dashPressTargetNo(sectionName: string, item: DashItem): number |
     return typeof consoleNo === "number" ? consoleNo : null;
   }
   return item.no;
+}
+
+// Runbook-mode toggle (T-E) — the one piece of client persistence this
+// component owns. localStorage (not session-volatile React state) so the
+// mode survives a refresh, matching the task's explicit requirement; every
+// other App.tsx view preference (chat-collapsed, tile sizes) stays
+// session-volatile by design (design.md §6 / D5) and is left alone.
+const RUNBOOK_MODE_STORAGE_KEY = "ma3-copilot.runbook-mode";
+
+export function readRunbookModeFromStorage(): boolean {
+  try {
+    return window.localStorage.getItem(RUNBOOK_MODE_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function writeRunbookModeToStorage(active: boolean): void {
+  try {
+    if (active) {
+      window.localStorage.setItem(RUNBOOK_MODE_STORAGE_KEY, "1");
+    } else {
+      window.localStorage.removeItem(RUNBOOK_MODE_STORAGE_KEY);
+    }
+  } catch {
+    // Storage unavailable (private mode, disabled) — the toggle still works
+    // for the current session, it just won't survive a refresh.
+  }
 }
 
 export interface ComposerViewState {
@@ -216,6 +245,17 @@ export default function App() {
   } = useCopilotSocket();
   const [draft, setDraft] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // T-E — volunteer runbook mode. localStorage-backed (see
+  // readRunbookModeFromStorage above) so it survives a refresh; the lazy
+  // initializer reads it once on mount.
+  const [runbookMode, setRunbookMode] = useState(readRunbookModeFromStorage);
+  const toggleRunbookMode = () => {
+    setRunbookMode((active) => {
+      const next = !active;
+      writeRunbookModeToStorage(next);
+      return next;
+    });
+  };
   // Bumped when the settings panel closes so the onboarding banner re-checks
   // whether a key was just added (and hides itself if so).
   const [settingsRefresh, setSettingsRefresh] = useState(0);
@@ -293,11 +333,34 @@ export default function App() {
     }
   };
 
+  // T-E — RunbookMode fires the SAME panel_execute/panel_stop wire path as
+  // the dashboard's executor tiles above, just keyed directly on the
+  // console-verified executor number cue_monitor already reports (no
+  // DashItem/meta.console_no lookup needed here — see cue_monitor.py's own
+  // note that it shares dash.py's resolved_executor_nos).
+  const isExecutorRunning = (executorNo: number): boolean =>
+    state.panel.running[panelItemId("executor", executorNo)]?.running ?? false;
+  const pressExecutor = (executorNo: number) => {
+    if (isExecutorRunning(executorNo)) {
+      sendPanelStop("executor", executorNo);
+    } else {
+      sendPanelExecute("executor", executorNo);
+    }
+  };
+
   return (
     <div className="app-frame">
       <header className="header">
         <h1>MA3 코파일럿</h1>
         <div className="header-actions">
+          <button
+            className={`runbook-toggle${runbookMode ? " runbook-toggle-active" : ""}`}
+            onClick={toggleRunbookMode}
+            aria-label={runbookMode ? "런북 모드 끄기" : "런북 모드 켜기"}
+            aria-pressed={runbookMode}
+          >
+            {runbookMode ? "✓ 런북 모드" : "런북 모드"}
+          </button>
           <button
             className="chat-toggle"
             onClick={() => setChatCollapsed((collapsed) => !collapsed)}
@@ -315,60 +378,83 @@ export default function App() {
           </button>
         </div>
       </header>
-      <StatusBanner status={state.status} connected={connected} />
-      <OnboardingBanner
-        onOpenSettings={() => setSettingsOpen(true)}
-        refreshSignal={settingsRefresh}
-      />
-      {settingsOpen && <SettingsPanel onClose={closeSettings} />}
-      <AppShell
-        chatCollapsed={chatCollapsed}
-        dash={state.dash}
-        cueMonitor={state.cueMonitor}
-        onToggleChat={() => setChatCollapsed((collapsed) => !collapsed)}
-        onRefresh={sendDashRefresh}
-        onCueMonitorRefresh={sendCueMonitorRefresh}
-        isItemRunning={isDashItemRunning}
-        onItemPress={pressDashItem}
-        sectionTileSize={(sectionName) => sectionTileSizes[sectionName]}
-        onSectionTileSizeChange={(sectionName, next) =>
-          setSectionTileSizes((sizes) => ({ ...sizes, [sectionName]: next }))
-        }
-        sectionArea={(sectionName) => sectionAreas[sectionName]}
-        onSectionAreaResizeStart={startSectionAreaResize}
-      >
-        <div className="app">
-          <main className="main">
-            <ChatView entries={state.entries} />
-            {state.pendingApprovals.map((approval) => (
-              <ApprovalCard
-                key={approval.request_id}
-                approval={approval}
-                onDecision={sendDecision}
-              />
-            ))}
-            {state.pendingReviews.map((review) => (
-              <ReviewCard key={review.request_id} review={review} onDecision={sendReviewDecision} />
-            ))}
-            <div ref={bottomRef} />
-          </main>
-          <footer className="composer">
-            {composer.helperText && <div className="composer-status">{composer.helperText}</div>}
-            <input
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.nativeEvent.isComposing) submit();
-              }}
-              placeholder={composer.placeholder}
-              disabled={composer.inputDisabled}
-            />
-            <button onClick={submit} disabled={composer.submitDisabled}>
-              {composer.buttonLabel}
-            </button>
-          </footer>
+      {runbookMode ? (
+        <div className="runbook-mode-frame">
+          <RunbookMode
+            cueMonitor={state.cueMonitor}
+            isExecutorRunning={isExecutorRunning}
+            onExecute={pressExecutor}
+            onRefresh={sendCueMonitorRefresh}
+          />
+          {/* Approvals/reviews still surface here — RunbookMode's run button
+              rides the same gated panel_execute path, so a required
+              approval never gets bypassed just because the rest of the UI
+              is hidden (contract item 4). */}
+          {state.pendingApprovals.map((approval) => (
+            <ApprovalCard key={approval.request_id} approval={approval} onDecision={sendDecision} />
+          ))}
+          {state.pendingReviews.map((review) => (
+            <ReviewCard key={review.request_id} review={review} onDecision={sendReviewDecision} />
+          ))}
         </div>
-      </AppShell>
+      ) : (
+        <>
+          <StatusBanner status={state.status} connected={connected} />
+          <OnboardingBanner
+            onOpenSettings={() => setSettingsOpen(true)}
+            refreshSignal={settingsRefresh}
+          />
+          {settingsOpen && <SettingsPanel onClose={closeSettings} />}
+          <AppShell
+            chatCollapsed={chatCollapsed}
+            dash={state.dash}
+            cueMonitor={state.cueMonitor}
+            onToggleChat={() => setChatCollapsed((collapsed) => !collapsed)}
+            onRefresh={sendDashRefresh}
+            onCueMonitorRefresh={sendCueMonitorRefresh}
+            isItemRunning={isDashItemRunning}
+            onItemPress={pressDashItem}
+            sectionTileSize={(sectionName) => sectionTileSizes[sectionName]}
+            onSectionTileSizeChange={(sectionName, next) =>
+              setSectionTileSizes((sizes) => ({ ...sizes, [sectionName]: next }))
+            }
+            sectionArea={(sectionName) => sectionAreas[sectionName]}
+            onSectionAreaResizeStart={startSectionAreaResize}
+          >
+            <div className="app">
+              <main className="main">
+                <ChatView entries={state.entries} />
+                {state.pendingApprovals.map((approval) => (
+                  <ApprovalCard
+                    key={approval.request_id}
+                    approval={approval}
+                    onDecision={sendDecision}
+                  />
+                ))}
+                {state.pendingReviews.map((review) => (
+                  <ReviewCard key={review.request_id} review={review} onDecision={sendReviewDecision} />
+                ))}
+                <div ref={bottomRef} />
+              </main>
+              <footer className="composer">
+                {composer.helperText && <div className="composer-status">{composer.helperText}</div>}
+                <input
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.nativeEvent.isComposing) submit();
+                  }}
+                  placeholder={composer.placeholder}
+                  disabled={composer.inputDisabled}
+                />
+                <button onClick={submit} disabled={composer.submitDisabled}>
+                  {composer.buttonLabel}
+                </button>
+              </footer>
+            </div>
+          </AppShell>
+        </>
+      )}
     </div>
   );
 }
