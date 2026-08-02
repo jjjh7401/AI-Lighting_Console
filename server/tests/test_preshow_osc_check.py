@@ -13,7 +13,6 @@ import re
 import socket
 import threading
 
-import pytest
 from pythonosc.dispatcher import Dispatcher
 from pythonosc.osc_server import ThreadingOSCUDPServer
 from pythonosc.udp_client import SimpleUDPClient
@@ -47,7 +46,9 @@ class FakeConsole:
             return
         verb, request_id, rest = match.group(1), match.group(2), match.group(3)
         if verb == "ping":
-            payload = encode_payload({"kind": "pong", "id": request_id, "v": 1, "version": "test-1.0"})
+            payload = encode_payload(
+                {"kind": "pong", "id": request_id, "v": 1, "version": "test-1.0"}
+            )
             self._client.send_message(FEEDBACK_ADDRESS, payload)
         elif verb == "state":
             payload = encode_payload(
@@ -60,7 +61,7 @@ class FakeConsole:
             )
             self._client.send_message(STATE_ADDRESS, payload)
 
-    def __enter__(self) -> "FakeConsole":
+    def __enter__(self) -> FakeConsole:
         self._thread.start()
         return self
 

@@ -77,9 +77,7 @@ class TestRunPreshowChecklistWithStatePort:
 
 class TestRunPreshowChecklistPitfallWiring:
     def test_osc_slot_send_row_uses_configured_slot(self):
-        report = run_preshow_checklist(
-            configured_osc_slot=2, live_osc_rows={2: {"send": True}}
-        )
+        report = run_preshow_checklist(configured_osc_slot=2, live_osc_rows={2: {"send": True}})
         by_name = {check.name: check for check in report.checks}
         assert by_name["osc_slot_send_row"].status == "pass"
         assert by_name["osc_slot_send_row"].data["configured_slot"] == 2

@@ -61,4 +61,6 @@ class TestPreshowReport:
         payload = report.to_dict()
         assert payload["signal"] == "green"
         assert "summary" in payload
-        assert payload["checks"] == [{"name": "a", "status": "pass", "detail": "a pass", "data": None}]
+        assert payload["checks"] == [
+            {"name": "a", "status": "pass", "detail": "a pass", "data": None}
+        ]

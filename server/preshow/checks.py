@@ -71,7 +71,9 @@ def _check_children_exist(
     )
 
 
-def check_sequences_exist(state_port: StateQueryPort, *, path: str = DEFAULT_SEQUENCES_PATH) -> CheckResult:
+def check_sequences_exist(
+    state_port: StateQueryPort, *, path: str = DEFAULT_SEQUENCES_PATH
+) -> CheckResult:
     """At least one sequence/executor target exists under ``path``."""
     return _check_children_exist(
         state_port, name="sequences_exist", path=path, empty_label="시퀀스"

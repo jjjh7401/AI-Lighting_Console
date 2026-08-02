@@ -81,7 +81,9 @@ def check_osc_slot_send_row(
         return CheckResult(
             name="osc_slot_send_row",
             status="fail",
-            detail=f"osc_slot={configured_slot} 행이 Send=Yes가 아니다 — 응답 미수신의 원인일 수 있다.",
+            detail=(
+                f"osc_slot={configured_slot} 행이 Send=Yes가 아니다 — 응답 미수신의 원인일 수 있다."
+            ),
             data={"configured_slot": configured_slot, "row": dict(row)},
         )
     return CheckResult(

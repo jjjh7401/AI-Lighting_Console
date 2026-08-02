@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from server.looks.loader import LookSchemaError
 from server.preshow.checks import (
     check_preset_library_integrity,
