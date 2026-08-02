@@ -42,7 +42,7 @@ from server.safety.approval import (
     DenyAllApprovalPort,
 )
 from server.safety.audit import AuditLog
-from server.safety.backup import BackupError, BackupManager, RestoreError, Snapshot
+from server.safety.backup import BackupError, BackupManager, Snapshot
 from server.safety.classify import RECOGNIZED_REFERENCE_TYPES, classify_command
 from server.safety.console import ConsolePort
 from server.safety.expand import BodyFetcher, BodyUnavailable, evaluate_reference
@@ -57,16 +57,6 @@ from server.safety.session_context import SessionKey, current_session_key
 # calibration): the MA3 ``SaveShow`` keyword saves the current showfile when
 # sent through the exec path. Recorded as a check-in ratification item.
 BACKUP_COMMAND = "SaveShow"
-
-# Showfile restore command (T-B snapshot/restore extension). ASSUMPTION
-# (onPC-unverified, same posture as BACKUP_COMMAND above): the actual MA3
-# keyword to reload a saved showfile has not been live-calibrated. Restore
-# is materially more dangerous than backup — it can discard the console's
-# current live show state — so, unlike backup, it is NEVER part of the
-# session-start/periodic/pre-risky auto-trigger policy: it only runs via
-# SafetyGate.restore_showfile, which requires human approval every time
-# (approval defaults to deny-all — see this module's docstring).
-RESTORE_COMMAND = "LoadShow"
 
 # Bounded-LRU cap for self._unconfirmed (M6c backlog). Order-of-magnitude
 # default for a long-running operating session; no existing constant to
@@ -222,19 +212,33 @@ class SafetyGate:
     ) -> BackupManager:
         """Attach a BackupManager whose action saves the showfile via this gate.
 
-        ``max_snapshots`` bounds how many retained backup points
-        :meth:`restore_showfile` can later target (oldest evicted first);
-        None keeps every snapshot for the manager's lifetime.
+        ``max_snapshots`` bounds how many retained backup points stay
+        addressable via :meth:`~server.safety.backup.BackupManager.find_snapshot`
+        (oldest evicted first); None keeps every snapshot for the manager's
+        lifetime. An eviction is audited via ``_log_snapshot_evicted`` rather
+        than silently dropped (T-B2 scope A item (c)).
         """
         manager = BackupManager(
             backup_action=self.make_showfile_backup_action(),
             interval_seconds=interval_seconds,
             clock=clock,
             max_snapshots=max_snapshots,
-            restore_action=self.make_showfile_restore_action(),
+            on_snapshot_evicted=self._log_snapshot_evicted,
         )
         self._backup = manager
         return manager
+
+    def _log_snapshot_evicted(self, snapshot: Snapshot) -> None:
+        """Audit a snapshot evicted past ``max_snapshots`` (T-B2 scope A item
+        (c)) — an eviction must never be silently dropped."""
+        self._audit.record(
+            {
+                "event": "snapshot_evicted",
+                "snapshot_id": snapshot.id,
+                "trigger": snapshot.trigger,
+                "label": snapshot.label,
+            }
+        )
 
     def make_showfile_backup_action(self) -> Callable[[], None]:
         """A backup action sending ``SaveShow`` through the audited gate path.
@@ -276,109 +280,16 @@ class SafetyGate:
 
         return action
 
-    def make_showfile_restore_action(self) -> Callable[[Snapshot], None]:
-        """A restore action sending ``RESTORE_COMMAND`` through the audited
-        gate path for one retained :class:`~server.safety.backup.Snapshot`.
-
-        Same lock/health discipline as :meth:`make_showfile_backup_action`
-        (M6c-2 Finding 3): a lock-active or degraded-console attempt raises
-        instead of sending, so :class:`~server.safety.backup.BackupManager`
-        converts it into a :class:`~server.safety.backup.RestoreError`. This
-        action is only ever invoked by :meth:`restore_showfile`, which gates
-        every call on human approval first (restore is never auto-triggered).
-        """
-
-        def action(snapshot: Snapshot) -> None:
-            if self.lock.is_active:
-                reason = "live lock active (read-only) — showfile restore skipped"
-                self._audit.log_blocked(RESTORE_COMMAND, reason=reason, snapshot_id=snapshot.id)
-                raise RuntimeError(f"showfile restore skipped: {reason}")
-            if self.monitor.executions_blocked:
-                reason = f"health: {self.monitor.state} — showfile restore skipped"
-                self._audit.log_blocked(RESTORE_COMMAND, reason=reason, snapshot_id=snapshot.id)
-                raise RuntimeError(f"showfile restore skipped: {reason}")
-            command = f"{RESTORE_COMMAND} '{snapshot.id}'"
-            outcome = self._console.execute(command)
-            self._audit.log_executed(
-                command,
-                kind="restore",
-                ok=outcome.status == "ok",
-                detail=outcome.detail,
-                snapshot_id=snapshot.id,
-            )
-            if outcome.status != "ok":
-                raise RuntimeError(f"showfile restore not confirmed: {outcome.detail}")
-
-        return action
-
-    def restore_showfile(self, snapshot_id: str) -> ScreenDecision:
-        """Restore a named snapshot — ALWAYS requires human approval.
-
-        Unlike backup, restore can discard the console's current live show
-        state, so it is never auto-triggered and never bypasses approval:
-        with the default ``DenyAllApprovalPort`` (approval defaults to
-        deny-all — module docstring), restore is refused unless an approval
-        port is explicitly wired. A rejected or failed restore is audited the
-        same way a rejected/blocked bundle is (AC-MVP-006 event taxonomy).
-        """
-        command = f"{RESTORE_COMMAND} '{snapshot_id}'"
-        if self._backup is None:
-            reason = "no backup manager attached — restore unavailable"
-            self._audit.log_blocked(command, reason=reason, snapshot_id=snapshot_id)
-            return ScreenDecision(
-                cleared=False, status="blocked_no_backup_manager", commands=(), notice=reason
-            )
-        approval_request = ApprovalRequest(
-            items=(
-                ApprovalItem(
-                    command=command,
-                    risk_reasons=("showfile restore discards current live show state",),
-                ),
-            )
-        )
-        approved = self._approval_port.request_approval(approval_request)
-        if not approved:
-            self._audit.log_rejected([command], held=[command])
-            return ScreenDecision(
-                cleared=False,
-                status="rejected",
-                commands=(),
-                approval_request=approval_request,
-                notice="showfile restore rejected by the approver — nothing was restored",
-            )
-        self._audit.log_approved([command])
-
-        # Lock-FIRST (REQ-MVP-035, same discipline screen() applies to risky
-        # commands): re-check before restoring in case a lock activated
-        # while the approval was pending.
-        if self.lock.is_active:
-            reason = "live lock activated during approval (lock-first) — showfile restore skipped"
-            self._audit.log_blocked(command, reason=reason, snapshot_id=snapshot_id)
-            return ScreenDecision(
-                cleared=False,
-                status="locked",
-                commands=(),
-                approval_request=approval_request,
-                notice=reason,
-            )
-
-        try:
-            self._backup.restore(snapshot_id)
-        except RestoreError as error:
-            return ScreenDecision(
-                cleared=False,
-                status="blocked_restore_failed",
-                commands=(),
-                approval_request=approval_request,
-                notice=f"showfile restore failed (fail-safe): {error}",
-            )
-        return ScreenDecision(
-            cleared=True,
-            status="restored",
-            commands=(),
-            approval_request=approval_request,
-            notice=f"showfile restored from snapshot {snapshot_id}",
-        )
+    # @MX:NOTE: [AUTO] future restore SEND seat. A `make_showfile_restore_action`
+    #   analogous to make_showfile_backup_action above — sending an MA3 reload
+    #   command for a BackupManager.find_snapshot-validated target, gated on
+    #   mandatory human approval (never auto-triggered, unlike backup) — would
+    #   live here. Deliberately NOT implemented (T-B2 scope cut): the actual
+    #   MA3 reload keyword is unverified, and restore is materially more
+    #   dangerous than backup (it can discard the console's current live show
+    #   state). Sending it live is a separate, higher-risk SPEC requiring its
+    #   own onPC live calibration and approval-gated design before any code
+    #   lands here — see server/safety/backup.py's module docstring.
 
     # -- screening pipeline (BundleGate) ---------------------------------------
 

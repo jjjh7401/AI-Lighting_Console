@@ -12,15 +12,13 @@ from __future__ import annotations
 import json
 import threading
 
-import pytest
-
 from server.llm.types import ModelTurn, ToolCall, ToolResultsMessage, Usage
 from server.orchestrator.runner import Orchestrator
 from server.orchestrator.tools import build_toolset
 from server.safety.audit import AuditLog
-from server.safety.backup import BackupError, BackupManager, RestoreError
+from server.safety.backup import BackupError, BackupManager
 from server.safety.console import ExecOutcome
-from server.safety.gate import _MAX_UNCONFIRMED, BACKUP_COMMAND, RESTORE_COMMAND, SafetyGate
+from server.safety.gate import _MAX_UNCONFIRMED, BACKUP_COMMAND, SafetyGate
 from server.safety.lock import LiveLock
 from server.safety.monitor import HealthMonitor
 from server.safety.registry import PluginFlagRegistry
@@ -310,119 +308,41 @@ class TestBackupRules:
         assert backup.history == []
 
 
-class TestRestoreShowfile:
-    """T-B snapshot/restore extension: restore ALWAYS requires human approval,
-    unlike backup — the default DenyAllApprovalPort refuses it (approval
-    defaults to deny-all)."""
+class TestShowfileSnapshotRetention:
+    """T-B2 scope A: snapshot retention + audit-logged eviction wired through
+    the gate. There is no restore SEND path here (see backup.py module
+    docstring and the @MX:NOTE seat next to make_showfile_backup_action) —
+    restore is out of scope until a separate, live-calibrated SPEC lands."""
 
-    def test_restore_without_approval_port_is_denied_by_default(self, tmp_path):
-        gate, console, audit = make_gate(tmp_path)
+    def test_use_showfile_backup_retains_labeled_snapshots(self, tmp_path):
+        gate, console, _ = make_gate(tmp_path)
         gate.use_showfile_backup()
         gate.start_session()
-        snapshot_id = gate._backup.latest_snapshot().id
-        decision = gate.restore_showfile(snapshot_id)
-        assert decision.cleared is False
-        assert decision.status == "rejected"
-        assert console.executed == [BACKUP_COMMAND]  # only the session-start backup
-        assert len(_events(audit, "rejected")) == 1
-
-    def test_restore_with_approval_sends_restore_command(self, tmp_path):
-        gate, console, audit = make_gate(tmp_path, approval_port=ScriptedApproval([True]))
-        gate.use_showfile_backup()
-        gate.start_session()
-        snapshot_id = gate._backup.latest_snapshot().id
-        decision = gate.restore_showfile(snapshot_id)
-        assert decision.cleared is True
-        assert decision.status == "restored"
-        assert console.executed[-1] == f"{RESTORE_COMMAND} '{snapshot_id}'"
-        (executed_restore,) = [e for e in _events(audit, "executed") if e["kind"] == "restore"]
-        assert executed_restore["snapshot_id"] == snapshot_id
-        assert len(_events(audit, "approved")) == 1
-
-    def test_restore_rejected_by_approver_sends_zero_osc(self, tmp_path):
-        gate, console, audit = make_gate(tmp_path, approval_port=ScriptedApproval([False]))
-        gate.use_showfile_backup()
-        gate.start_session()
-        snapshot_id = gate._backup.latest_snapshot().id
-        decision = gate.restore_showfile(snapshot_id)
-        assert decision.cleared is False
-        assert decision.status == "rejected"
-        assert console.executed == [BACKUP_COMMAND]
-        assert len(_events(audit, "rejected")) == 1
-
-    def test_restore_blocked_by_live_lock_after_approval_sends_zero_osc(self, tmp_path):
-        lock = LiveLock()
-        gate, console, audit = make_gate(
-            tmp_path, approval_port=ScriptedApproval([True]), lock=lock
-        )
-        gate.use_showfile_backup()
-        gate.start_session()
-        snapshot_id = gate._backup.latest_snapshot().id
-        lock.activate()  # activated after backup, before restore is requested
-        decision = gate.restore_showfile(snapshot_id)
-        assert decision.cleared is False
-        assert decision.status == "locked"
-        assert console.executed == [BACKUP_COMMAND]
-        assert len(_events(audit, "blocked")) == 1
-
-    def test_restore_unknown_snapshot_is_blocked_not_a_silent_success(self, tmp_path):
-        gate, console, _ = make_gate(tmp_path, approval_port=ScriptedApproval([True]))
-        gate.use_showfile_backup()
-        gate.start_session()
-        decision = gate.restore_showfile("no-such-snapshot")
-        assert decision.cleared is False
-        assert decision.status == "blocked_restore_failed"
+        snapshot = gate._backup.latest_snapshot()
+        assert snapshot.trigger == "session_start"
+        assert snapshot.label == "session start #1"
         assert console.executed == [BACKUP_COMMAND]
 
-    def test_restore_without_backup_manager_is_blocked(self, tmp_path):
-        gate, console, audit = make_gate(tmp_path, approval_port=ScriptedApproval([True]))
-        decision = gate.restore_showfile("anything")
-        assert decision.cleared is False
-        assert decision.status == "blocked_no_backup_manager"
-        assert console.executed == []
-        assert len(_events(audit, "blocked")) == 1
+    def test_max_snapshots_eviction_is_audited_not_silently_dropped(self, tmp_path):
+        gate, _, audit = make_gate(tmp_path, approval_port=ScriptedApproval([True]))
+        gate.use_showfile_backup(max_snapshots=1)
+        gate.start_session()
+        evicted_id = gate._backup.latest_snapshot().id
+        gate.screen(["Delete Sequence 5"])  # triggers rule ③ pre-risky backup
+        evicted_events = [e for e in audit.iter_events() if e["event"] == "snapshot_evicted"]
+        assert len(evicted_events) == 1
+        assert evicted_events[0]["snapshot_id"] == evicted_id
+        assert evicted_events[0]["label"] == "session start #1"
+        assert len(gate._backup.snapshots) == 1
 
-    def test_restore_action_blocked_by_console_offline_sends_zero_osc(self, tmp_path):
-        monitor = HealthMonitor()
-        gate, console, audit = make_gate(
-            tmp_path, approval_port=ScriptedApproval([True]), monitor=monitor
-        )
+    def test_snapshot_find_is_a_pure_lookup_no_console_send(self, tmp_path):
+        gate, console, _ = make_gate(tmp_path)
         gate.use_showfile_backup()
         gate.start_session()
-        snapshot_id = gate._backup.latest_snapshot().id
-        monitor.note_ping_timeout()  # degrade health after the session-start backup
-        decision = gate.restore_showfile(snapshot_id)
-        assert decision.cleared is False
-        assert decision.status == "blocked_restore_failed"
-        assert console.executed == [BACKUP_COMMAND]
-
-    def test_make_showfile_restore_action_sends_restore_command_via_the_gate(self, tmp_path):
-        gate, console, audit = make_gate(tmp_path)
-        backup = BackupManager(
-            backup_action=gate.make_showfile_backup_action(),
-            restore_action=gate.make_showfile_restore_action(),
-        )
-        backup.session_start()
-        snapshot = backup.latest_snapshot()
-        backup.restore(snapshot.id)
-        assert console.executed == [BACKUP_COMMAND, f"{RESTORE_COMMAND} '{snapshot.id}'"]
-        (executed_restore,) = [e for e in _events(audit, "executed") if e["kind"] == "restore"]
-        assert executed_restore["snapshot_id"] == snapshot.id
-
-    def test_restore_action_raises_restore_error_on_console_failure(self, tmp_path):
-        console = FakeConsole()
-        console.fail_on[BACKUP_COMMAND] = "cannot save"
-        gate, _, _ = make_gate(tmp_path, console=console)
-        del console.fail_on[BACKUP_COMMAND]
-        backup = BackupManager(
-            backup_action=gate.make_showfile_backup_action(),
-            restore_action=gate.make_showfile_restore_action(),
-        )
-        backup.session_start()
-        snapshot = backup.latest_snapshot()
-        console.fail_on[f"{RESTORE_COMMAND} '{snapshot.id}'"] = "cannot load"
-        with pytest.raises(RestoreError):
-            backup.restore(snapshot.id)
+        target_id = gate._backup.latest_snapshot().id
+        found = gate._backup.find_snapshot(target_id)
+        assert found.id == target_id
+        assert console.executed == [BACKUP_COMMAND]  # unchanged by the lookup
 
 
 class TestLiveLock:
