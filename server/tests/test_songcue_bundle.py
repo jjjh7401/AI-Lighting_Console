@@ -63,9 +63,12 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # lower. None of them touches a protected range.
 # Grows by one entry per SPEC that registers a tool. FXLIB M5 added 17 (the fx
 # imports) and 436 (the fx argument/rig helpers, inserted above ToolRegistry).
+# SCENE (SPEC-COPILOT-SCENE-001, M6) added 15 — the `replace` import the label
+# override needs — and widened the existing 17 hunk with the scene imports, the
+# two handlers and their tool definitions. Still no protected range touched.
 # The positional list is bookkeeping; the assertion that carries the PRESERVE
 # claim is the protected-range overlap check below.
-_TOOLS_EXPECTED_HUNK_OLD_STARTS = (17, 33, 49, 125, 436, 463, 475, 479, 951, 1222, 1231)
+_TOOLS_EXPECTED_HUNK_OLD_STARTS = (15, 17, 33, 49, 125, 436, 463, 475, 479, 951, 1222, 1231)
 _TOOLS_PROTECTED_OLD_RANGES = ((234, 238), (524, 569))
 _HUNK_RE = re.compile(r"^@@ -(?P<old_start>\d+)(?:,(?P<old_count>\d+))? \+\d+(?:,\d+)? @@")
 

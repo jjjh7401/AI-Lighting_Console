@@ -124,14 +124,15 @@ class TestRegistry:
         # get_rig_context) + AC-LOOKLIB-010's find_looks and instantiate_look
         # + AC-BUSKWIZ-011's prepare_busking + AC-SONGCUE-015's prepare_songcue
         # + AC-PRECHK-014's precheck_patch
-        # + AC-FXLIB-013/014's find_fx and instantiate_fx.
+        # + AC-FXLIB-013/014's find_fx and instantiate_fx
+        # + AC-SCENE-018's find_scene and compile_scene.
         # The count is asserted against the declared tuple's length so the set
         # stays CLOSED: adding a handler without declaring it, or declaring one
         # without a handler, still fails here.
         registry = _registry()
         names = [definition.name for definition in registry.definitions()]
         assert sorted(names) == sorted(TOOL_NAMES)
-        assert len(names) == len(TOOL_NAMES) == 11
+        assert len(names) == len(TOOL_NAMES) == 13
 
     def test_the_four_original_tools_are_still_registered(self):
         # The M5 addition must not have displaced any of them.

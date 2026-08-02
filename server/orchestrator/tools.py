@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
 
 from server.fx.instantiate import FxInstantiationError
@@ -63,6 +63,17 @@ from server.prechk.macro import groups_from_snapshot as read_group_pool
 from server.prechk.patch import evaluate_patch
 from server.prechk.query import read_properties
 from server.prechk.report import build_report as build_precheck_report
+from server.scene.compile import SceneCompilationError
+from server.scene.compile import compile_scene as build_scene_bundle
+from server.scene.loader import DEFAULT_LIBRARY_DIR as SCENE_LIBRARY_DIR
+from server.scene.loader import SceneSchemaError
+from server.scene.loader import load_library_from_dir as load_scene_library_from_dir
+from server.scene.loader import parse_timing as parse_scene_timing
+from server.scene.loader import validate_label as validate_scene_label
+from server.scene.matching import match_scene
+from server.scene.report import build_report as build_scene_report
+from server.scene.report import to_korean as scene_report_to_korean
+from server.scene.schema import SceneLibrary
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
     from server.deploy.pipeline import DeployOutcome
@@ -83,6 +94,8 @@ TOOL_NAMES = (
     "precheck_patch",
     "find_fx",
     "instantiate_fx",
+    "find_scene",
+    "compile_scene",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -166,6 +179,12 @@ SONGCUE_RIG_SECTIONS = ("groups", "sequences")
 # discipline as the two above — a rig_paths override that drops either one fails
 # by name rather than by storing a phaser onto a number nobody read.
 FX_RIG_SECTIONS = ("groups", "sequences")
+
+# A scene is bound against the same two sections as an fx — the group its values
+# are captured on, and the sequence pool a free number is MEASURED from. Named
+# separately rather than aliased to `FX_RIG_SECTIONS`: the two layers are free
+# to diverge, and a shared name would make that divergence a silent edit here.
+SCENE_RIG_SECTIONS = ("groups", "sequences")
 
 # The two sections the pre-check's macro axis is wired against: the group pool it
 # reads its targets from, and the macro pool it derives a free slot from. Named
@@ -603,6 +622,7 @@ def build_toolset(
     deploy_pipeline: DeployPipelinePort | None = None,
     look_library: LookLibrary | None = None,
     fx_library: FxLibrary | None = None,
+    scene_library: SceneLibrary | None = None,
     property_port: PropertyQueryPort | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
@@ -617,7 +637,8 @@ def build_toolset(
     built-in library is read from disk on the first ``find_looks`` call, so a
     toolset that never looks up a look pays no file read. ``fx_library`` is the
     same arrangement for the fx layer, read on the first ``find_fx`` or
-    ``instantiate_fx`` call.
+    ``instantiate_fx`` call, and ``scene_library`` for the scene layer, read on
+    the first ``find_scene`` or ``compile_scene`` call.
 
     ``property_port`` is the pre-check's extra read (REQ-PRECHK-019). When it is
     omitted it is adopted from ``state_port`` if that object also implements
@@ -630,6 +651,7 @@ def build_toolset(
     drilldown = frozenset(rig_drilldown if rig_drilldown is not None else DEFAULT_RIG_DRILLDOWN)
     looks = look_library
     fx_lib = fx_library
+    scene_lib = scene_library
     if property_port is None and hasattr(state_port, "query_property"):
         property_port = state_port
 
@@ -1867,6 +1889,280 @@ def build_toolset(
             command_outcomes=execution.command_outcomes,
         )
 
+    # -- find_scene (REQ-SCENE-018 — lookup only, sends nothing) ---------------
+    #
+    # @MX:ANCHOR: [AUTO] the only model-reachable entry to the scene MATCHER
+    #   (match_scene -> the two-axis look/fx split).
+    # @MX:REASON: REQ-SCENE-007/008/018. The rulebook is PRESERVE (spec.md §D,
+    #   byte-diff 0) and learned nothing about scenes, so this description is
+    #   the ONLY surface that routes the model here. A scene invented instead of
+    #   matched is undetectable afterwards — the effect is not machine-verifiable
+    #   (REQ-SCENE-014 (b)).
+
+    def find_scene(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        nonlocal scene_lib
+        query = call.arguments.get("query")
+        if not isinstance(query, str):
+            return _error_result(call, "'query' must be a string — the operator's own words")
+        if scene_lib is None:
+            try:
+                scene_lib = load_scene_library_from_dir(SCENE_LIBRARY_DIR)
+            except SceneSchemaError as error:
+                # A broken library is a structured failure, never a silent empty
+                # result that would read as "no scene matches".
+                return _error_result(call, f"scene library unavailable: {error}")
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(match_scene(query, scene_lib).to_dict(), ensure_ascii=False),
+                # A miss is an ANSWER (REQ-SCENE-009), not a tool failure.
+                is_error=False,
+            )
+        )
+
+    # -- compile_scene (REQ-SCENE-018 — the scene layer's ONE route) -----------
+    #
+    # @MX:ANCHOR: [AUTO] the only model-reachable entry to the scene compilation
+    #   chain (find_scene -> rig read -> look+fx bundle -> gate.screen()).
+    # @MX:REASON: REQ-SCENE-018/019. This handler is a CALLER of run_commands,
+    #   never a second execution surface: it re-enters the local run_commands
+    #   closure above, so the bundle inherits that path's gate screening, live
+    #   lock, execution preview, dedupe and audit log. Reaching execution_port
+    #   directly from here would be the second path REQ-SCENE-019 forbids, and
+    #   the gate would not see it. The single-tool shape is also FORCED, not
+    #   preferred: chaining instantiate_look then instantiate_fx in one
+    #   instruction turn folds from the shared `Step` lines onward and stores two
+    #   different artifacts, so one cue can never come out of it (design.md §2.1).
+
+    def compile_scene(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        nonlocal scene_lib, looks, fx_lib
+        scene_id = call.arguments.get("scene_id")
+        if not isinstance(scene_id, str) or not scene_id.strip():
+            return _error_result(
+                call, "'scene_id' must be the scene_id string returned by find_scene"
+            )
+        group = _positive_int(call.arguments.get("group"))
+        if group is None:
+            return _error_result(
+                call,
+                "'group' must be a positive integer group number that get_rig_context "
+                "listed on this rig — not a group name, and not a fixture slot",
+            )
+        # Timing is validated by the scene layer's OWN argument schema, not by a
+        # second copy here: `parse_timing` is where "a legal cue number" is
+        # defined (REQ-SCENE-006), and the closed trigger vocabulary with it.
+        timing_args = {
+            key: call.arguments[key]
+            for key in ("sequence", "cue", "trig_type", "trig_time")
+            if call.arguments.get(key) is not None
+        }
+        try:
+            timing = parse_scene_timing(
+                {
+                    **(
+                        {"sequence_number": timing_args["sequence"]}
+                        if "sequence" in timing_args
+                        else {}
+                    ),
+                    **({"cue_number": timing_args["cue"]} if "cue" in timing_args else {}),
+                    **{k: v for k, v in timing_args.items() if k in ("trig_type", "trig_time")},
+                },
+                source="compile_scene",
+            )
+        except SceneSchemaError as error:
+            return _error_result(call, str(error))
+        executor = call.arguments.get("executor")
+        if executor is not None and _positive_int(executor) is None:
+            return _error_result(call, "'executor' must be a positive integer executor number")
+        label = call.arguments.get("label")
+        if label is not None:
+            try:
+                label = validate_scene_label(label, source="compile_scene")
+            except SceneSchemaError as error:
+                return _error_result(call, str(error))
+        if scene_lib is None:
+            try:
+                scene_lib = load_scene_library_from_dir(SCENE_LIBRARY_DIR)
+            except SceneSchemaError as error:
+                return _error_result(call, f"scene library unavailable: {error}")
+        try:
+            scene = scene_lib.by_id(scene_id.strip())
+        except KeyError:
+            return _error_result(
+                call,
+                f"unknown scene_id {scene_id!r} — call find_scene and pass back the "
+                f"scene_id from one of its matches",
+            )
+        # The scene holds REFERENCES; the values live upstream and are read here.
+        look = None
+        if scene.look_id is not None:
+            if looks is None:
+                try:
+                    looks = load_library_from_dir()
+                except LookSchemaError as error:
+                    return _error_result(call, f"look library unavailable: {error}")
+            try:
+                look = looks.by_id(scene.look_id)
+            except KeyError:
+                return _error_result(
+                    call,
+                    f"scene {scene.scene_id!r} references look {scene.look_id!r}, which "
+                    "the look library does not hold",
+                )
+        fx = None
+        if scene.fx_id is not None:
+            if fx_lib is None:
+                try:
+                    fx_lib = load_fx_library_from_dir(FX_LIBRARY_DIR)
+                except FxSchemaError as error:
+                    return _error_result(call, f"fx library unavailable: {error}")
+            try:
+                fx = fx_lib.by_id(scene.fx_id)
+            except KeyError:
+                return _error_result(
+                    call,
+                    f"scene {scene.scene_id!r} references fx {scene.fx_id!r}, which the "
+                    "fx library does not hold",
+                )
+        missing = [section for section in SCENE_RIG_SECTIONS if section not in rig_paths]
+        if missing:
+            return _error_result(
+                call,
+                f"rig context has no path configured for {missing} — a scene cannot be "
+                f"bound to this rig without them",
+            )
+        # The rig is READ here even though the group arrives as an argument: the
+        # argument says WHICH group, this read says whether that group exists.
+        sections, _resolved, _failed = collect_rig_sections(
+            state_port,
+            {section: rig_paths[section] for section in SCENE_RIG_SECTIONS},
+            drilldown,
+            RIG_DRILLDOWN_QUERY_CAP,
+        )
+        unavailable = {
+            name: entry
+            for name, entry in sections.items()
+            if isinstance(entry, dict) and "reason" in entry
+        }
+        if unavailable:
+            # A section that never arrived is NOT a rig that answered "no such
+            # group" — refusing here would state a fact about a rig nobody read.
+            return _fx_error_result(
+                call,
+                "the rig sections a scene is bound against did not arrive: "
+                + "; ".join(f"{n}: {e['reason']}" for n, e in unavailable.items()),
+                rig_unavailable=unavailable,
+            )
+        groups_section = sections["groups"]
+        addressable = _addressable_groups(groups_section)
+        if group not in addressable:
+            # Refused BEFORE anything is sent. `Group 7` on a rig without group 7
+            # selects nothing and the `Store` that follows writes an EMPTY cue —
+            # silently, because a stored cue's content is not machine-readable
+            # (spec.md §C.1). A truncated listing does not license the number
+            # either: absence from a cut list is not evidence of presence.
+            truncated = bool(groups_section.get("truncated"))  # type: ignore[union-attr]
+            return _fx_error_result(
+                call,
+                f"group {group} is not addressable on this rig"
+                + (
+                    " and the group listing was truncated, so it may exist unlisted — "
+                    "re-read the rig or name one of the groups below"
+                    if truncated
+                    else " — use one of the groups below"
+                ),
+                groups=addressable,
+                groups_truncated=truncated,
+            )
+        # The cue pool of a sequence that does not exist yet. This is DERIVED,
+        # not invented: `select_sequence_number` (fx's, decision H) only ever
+        # returns a number the sequence listing showed as free, and refuses a
+        # requested number that is occupied — so the sequence this bundle stores
+        # into holds no cues. Passing a measured-looking pool we did not read
+        # would be the fabrication REQ-SCENE-013 (d) forbids; passing this one
+        # states exactly the fact the sequence listing established.
+        empty_cue_pool = rig_section([], {"truncated": False, "node": {"childCount": 0}})
+        try:
+            compilation = build_scene_bundle(
+                scene,
+                look=look,
+                fx=fx,
+                group=group,
+                sequences_section=sections["sequences"],  # type: ignore[arg-type]
+                cues_section=empty_cue_pool,
+                sequence_number=timing.sequence_number,
+                cue_number=timing.cue_number,
+                trig_type=timing.trig_type,
+                trig_time=timing.trig_time,
+                executor=executor,
+            )
+        except SceneCompilationError as error:
+            return _fx_error_result(
+                call,
+                f"scene {scene.scene_id!r} cannot be compiled: {error}",
+                reason=error.reason,
+            )
+        if label is not None and label != compilation.label:
+            # The operator's label replaces the authored one AFTER the bundle is
+            # built, by rebuilding it — never by editing the Store string, which
+            # would be the reassembly design.md §2.2 forbids.
+            try:
+                compilation = build_scene_bundle(
+                    replace(scene, label=label),
+                    look=look,
+                    fx=fx,
+                    group=group,
+                    sequences_section=sections["sequences"],  # type: ignore[arg-type]
+                    cues_section=empty_cue_pool,
+                    sequence_number=timing.sequence_number,
+                    cue_number=timing.cue_number,
+                    trig_type=timing.trig_type,
+                    trig_time=timing.trig_time,
+                    executor=executor,
+                )
+            except SceneCompilationError as error:
+                return _fx_error_result(
+                    call,
+                    f"scene {scene.scene_id!r} cannot be compiled: {error}",
+                    reason=error.reason,
+                )
+        execution = run_commands(
+            ToolCall(
+                id=call.id,
+                name="run_commands",
+                arguments={"commands": list(compilation.commands)},
+            ),
+            context,
+        )
+        payload = json.loads(execution.result.content)
+        # A gate refusal carries per-command DECISIONS, not execution outcomes.
+        # Feeding them to the report would verdict a bundle that never left the
+        # process as "전량 실행".
+        outcomes = () if "gate_status" in payload else execution.command_outcomes
+        report = build_scene_report(compilation, outcomes)
+        payload["executed"] = report.executed
+        payload["succeeded"] = report.succeeded
+        payload["report"] = report.to_dict()
+        payload["summary_ko"] = scene_report_to_korean(report)
+        # A cross-call fold comes back with every line ok while leaving an
+        # INCOMPLETE cue behind (REQ-SCENE-015 (b)). Only COMPLETE is success.
+        is_error = execution.result.is_error or not report.succeeded
+        if payload.get("gate_status") == _LOCKED:
+            # ...except a LiveLock demotion, which is an ANSWER, not a failure:
+            # the proposal IS the deliverable (REQ-SCENE-020). The sibling tools
+            # demote the same way.
+            is_error = False
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=is_error,
+            ),
+            command_outcomes=execution.command_outcomes,
+        )
+
     definitions = (
         ToolDefinition(
             name="run_commands",
@@ -2403,6 +2699,177 @@ def build_toolset(
                 "additionalProperties": False,
             },
         ),
+        ToolDefinition(
+            name="find_scene",
+            description=(
+                "Ask the built-in SCENE library when one instruction names a "
+                "still picture AND a movement at once — '파란 백라이트가 천천히 "
+                "웨이브하는 씬', 'a warm look that pulses with the beat'. A "
+                "scene is ONE cue holding both: the look's values and the "
+                "effect's step column, stored together.\n"
+                "\n"
+                "This is not a third vocabulary. A scene only REFERENCES a "
+                "find_looks entry and a find_fx entry, so nothing here can be "
+                "combined that those two libraries do not already hold.\n"
+                "\n"
+                "This tool READS ONLY — it never sends anything to the "
+                'console. The answer carries the two axes SEPARATELY: "look" '
+                'and "fx" each report what they matched, and "kind" is one of '
+                '"both_matched", "look_only", "fx_only" or "fallback". A '
+                "one-axis answer is a real answer — a look-only scene and an "
+                "fx-only scene are both legal — but the axis that did NOT "
+                "match is left empty on purpose. Do not fill it in yourself.\n"
+                "\n"
+                'When "fallback" is true there is nothing here to compile and '
+                '"fallback_reason" says why. Four of the five are about the '
+                'axes ("no_match", "low_confidence", "ambiguous", '
+                '"empty_query"): ask the operator for one more word rather '
+                "than picking from the list; if it still falls back, use "
+                "find_looks and find_fx separately.\n"
+                "\n"
+                'The fifth is different — "no_scene_composes_axes" means both '
+                "axes DID resolve but this library holds no scene combining "
+                'them, so "selected_look_id" and "selected_fx_id" are still '
+                "valid: take them to find_looks/find_fx and place the two "
+                "halves separately, or ask the operator which one they "
+                "meant.\n"
+                "\n"
+                "A scene carries NO group, sequence, cue or executor number. "
+                "To put one on THIS rig, pass its scene_id to compile_scene."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": (
+                            "The scene wording to match, in the operator's own language."
+                        ),
+                    }
+                },
+                "required": ["query"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="compile_scene",
+            description=(
+                "Put a scene FROM find_scene onto THIS rig as ONE sequence "
+                "with ONE cue holding the look AND the effect together. Pass "
+                "the scene_id of the match you chose.\n"
+                "\n"
+                "Do NOT try to build this by calling instantiate_look and then "
+                "instantiate_fx. That does not work and the failure is silent: "
+                "the two tools store two different things (a preset and a "
+                "sequence), and the second bundle of one instruction folds "
+                "from its shared step lines onward, so a cue gets stored with "
+                "values missing. This tool is the only path that emits both "
+                "halves in ONE bundle, in the measured order — the look's "
+                "values first, because the effect's first step IS the current "
+                "programmer state, then the step column, then phase and "
+                "speed.\n"
+                "\n"
+                "Apart from the scene_id, the group is the ONLY rig number you "
+                "pass: give a group number get_rig_context listed on THIS rig "
+                "— never a group you have not seen listed, and never a fixture "
+                "slot, which is not a group and not a fixture id. Everything "
+                "else is measured here: the tool re-reads the rig, refuses a "
+                "group this rig does not list, and picks a FREE sequence "
+                "number from the pool it just read. Leave sequence and cue "
+                "unset unless the operator named them. It never overwrites an "
+                "existing cue and never emits a store flag. The whole bundle "
+                "runs through the SAME execution path as run_commands, so the "
+                "live lock, the safety screening and the approval gate all "
+                "apply unchanged.\n"
+                "\n"
+                'The result carries "succeeded", a per-command "commands" '
+                'list exactly like run_commands, a Korean "summary_ko", and a '
+                '"report" whose "verdict" is one of "complete", "partial", '
+                '"planned" (nothing was sent) or "cross_call_collision" '
+                "(lines shared with an earlier bundle in this instruction were "
+                "dropped as already-executed, so the stored cue is "
+                'INCOMPLETE). Only "complete" is a success. Run ONE '
+                "compile_scene per instruction; a second one folds.\n"
+                "\n"
+                "The report keeps four claims APART, and so must you when you "
+                "speak to the operator:\n"
+                "- whether the cue EXISTS. THIS TOOL DOES NOT RE-QUERY, so it "
+                "never confirms that. An ok receipt is not existence, and the "
+                "report says so in as many words. If existence matters, read "
+                "the sequence back with get_rig_context and say which of the "
+                "two you are reporting;\n"
+                "- the value line carried the uniform attribute set (checked "
+                "in the emitted text);\n"
+                "- the EFFECT — the motion, the colour on stage — cannot be "
+                "verified by machine at all. A human has to watch;\n"
+                '- "unclaimed_attributes" lists what this scene does NOT set. '
+                "Those axes MAY still hold a previous scene's value. Say "
+                '"may" — nothing can observe whether they did.\n'
+                "Never present the receipt, or the existence of the cue, as "
+                "evidence that anything moved or that tracking was handled."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "scene_id": {
+                        "type": "string",
+                        "description": "The scene_id of a find_scene match, copied verbatim.",
+                    },
+                    "group": {
+                        "type": "integer",
+                        "description": (
+                            "The group number to build the scene on, as listed "
+                            "by get_rig_context on THIS rig."
+                        ),
+                    },
+                    "sequence": {
+                        "type": "integer",
+                        "description": (
+                            "Optional. Leave unset — a free number is measured "
+                            "from the rig. An occupied number is refused."
+                        ),
+                    },
+                    "cue": {
+                        "type": "integer",
+                        "description": (
+                            "Optional whole cue number. Leave unset unless the "
+                            "operator named one; decimals are not supported."
+                        ),
+                    },
+                    "trig_type": {
+                        "type": "string",
+                        "description": (
+                            "Optional cue trigger, Capitalized: Go, Time, "
+                            "Follow, Sound or BPM. Lowercase is refused."
+                        ),
+                    },
+                    "trig_time": {
+                        "type": "number",
+                        "description": (
+                            "Optional trigger time in seconds, measured from "
+                            "the START of the sequence (not from the previous "
+                            "cue). Zero is allowed."
+                        ),
+                    },
+                    "executor": {
+                        "type": "integer",
+                        "description": (
+                            "Optional. Only when the operator asked for the "
+                            "scene to sit on a specific executor. Nothing is "
+                            "assigned automatically."
+                        ),
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": (
+                            "Optional ASCII cue label. Defaults to the scene's own stored label."
+                        ),
+                    },
+                },
+                "required": ["scene_id", "group"],
+                "additionalProperties": False,
+            },
+        ),
     )
     handlers: dict[str, _Handler] = {
         "run_commands": run_commands,
@@ -2416,5 +2883,7 @@ def build_toolset(
         "precheck_patch": precheck_patch,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,
+        "find_scene": find_scene,
+        "compile_scene": compile_scene,
     }
     return ToolRegistry(definitions, handlers)
