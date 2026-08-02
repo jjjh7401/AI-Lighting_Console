@@ -1376,17 +1376,18 @@ body {
 .cue-monitor-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 8px;
+  gap: 8px;
 }
 
+/* T-H4: small + SHARP (2px), not the large rounded blue button this used to
+   be — a console Go/Off, not a web-app CTA. */
 .cue-monitor-action-btn {
   background: var(--accent);
   color: #fff;
   border: none;
-  border-radius: 6px;
-  padding: 6px 14px;
-  font-size: 14px;
+  border-radius: 2px;
+  padding: 3px 10px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -1422,8 +1423,240 @@ body {
   font-size: 13px;
 }
 
-.cue-monitor-current-cue {
+/* T-H4 (user feedback, 2026-08-02) — console-style redesign. Executors
+   render as a GRID of small TILES (MA3's own executor-bar convention),
+   never a vertical list of fully-expanded rows. The cue list itself stays
+   collapsed behind the tile; opening it renders ONE `.cue-sheet` at a time
+   (never one per tile) — see CueMonitor.tsx's own module header for the
+   full rationale, including the two concrete defects this replaces
+   (executor-number/sequence-name run together with no gap; history
+   timestamp glued to the command with no separator or local formatting).
+   Deliberately sharper/darker than the rest of this app's chrome — thin 1px
+   borders, a small 2px radius (never the 6-12px used elsewhere), desaturated
+   surfaces with saturated status colour reserved for state only. */
+.cue-monitor-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #2b2f36;
+}
+
+.cue-monitor-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.cue-monitor-syncline {
   color: var(--muted);
   font-size: 13px;
-  cursor: default;
+  flex: 1;
+}
+
+.cue-monitor-refresh {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #2b2f36;
+  border-radius: 2px;
+  padding: 4px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cue-monitor-body {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Auto-fill: the column count itself shrinks as the pane narrows — no fixed
+   column count to break at small widths. */
+.cue-monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.cue-monitor-empty {
+  color: var(--muted);
+  font-size: 13px;
+  grid-column: 1 / -1;
+}
+
+/* One executor = one tile. Info hierarchy top -> bottom: number (corner,
+   small) -> sequence name (title) -> current cue (emphasized, accent
+   colour — the value an operator checks most often) -> status+Go/Off. */
+.cue-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid #2b2f36;
+  border-radius: 2px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.cue-tile:hover {
+  border-color: var(--accent);
+}
+
+.cue-tile-open {
+  border-color: var(--accent);
+  background: #1a2230;
+}
+
+.cue-tile-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.cue-tile-no {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cue-tile-sequence {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cue-tile-current-cue {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cue-tile-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+/* The cue sheet — ONE open at a time (CueMonitor.tsx never renders more
+   than one), a compact table (Cue No / 이름 — only columns this project's
+   data actually carries), current row highlighted. */
+.cue-sheet {
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.cue-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid #2b2f36;
+}
+
+.cue-sheet-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cue-sheet-close {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid #2b2f36;
+  border-radius: 2px;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cue-sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.cue-sheet-table th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 4px 10px;
+  border-bottom: 1px solid #2b2f36;
+}
+
+.cue-sheet-table td {
+  padding: 4px 10px;
+  border-bottom: 1px solid #23262c;
+}
+
+.cue-sheet-cue-no {
+  width: 60px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cue-sheet-row-current {
+  background: rgba(79, 140, 255, 0.14);
+  border-left: 2px solid var(--accent);
+}
+
+.cue-sheet-empty {
+  text-align: center;
+  color: var(--muted);
+}
+
+/* Recent-execution history — a real layout gap (T-H4 defect 2) plus local
+   HH:MM:SS formatting (CueMonitor.tsx's formatHistoryTime) instead of the
+   raw ISO timestamp glued to the command. */
+.cue-monitor-history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cue-monitor-history-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.cue-monitor-history-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+  padding: 2px 0;
+}
+
+.cue-monitor-history-ts {
+  min-width: 64px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cue-monitor-history-command {
+  color: var(--text);
+}
+
+.cue-monitor-history-failed .cue-monitor-history-command {
+  color: var(--bad);
+}
+
+.cue-monitor-history-empty {
+  color: var(--muted);
+  font-size: 13px;
 }

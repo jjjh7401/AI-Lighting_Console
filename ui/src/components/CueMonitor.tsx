@@ -36,10 +36,47 @@
 // the banner is withheld and each row states its own case individually —
 // see `currentCueBannerState`'s three-way branch.
 //
+// T-H3 (coordinator live probe, 2026-08-02): the current-cue value's shape
+// on the wire is now `"<index>"` or `"<index> — <name>"` (server/web/
+// cue_monitor.py's own index/name composition off the Sequence handle). This
+// module's `currentCueMatch` re-derives the leading index CLIENT-side so the
+// cue sheet (below) can highlight the matching row — a UI-only re-derivation
+// of a value the server already computed, not a new claim.
+//
+// T-H4 (user feedback, 2026-08-02) redesigns the presentation layer to read
+// as a CONSOLE surface, not a document, per two concrete defects the user
+// found plus an MA3-benchmarked layout:
+//   - Defect 1: "Executor 101Sequence 50" — two adjacent <span>s with no
+//     layout gap between them read as one glued string. Fixed by the tile
+//     layout below (each fact gets its own line/row, never adjacent inline
+//     spans with no separator).
+//   - Defect 2: the history's raw ISO timestamp glued to the command text
+//     ("2026-08-02T10:38:32...Go+ Executor 191"). Fixed by `formatHistoryTime`
+//     (local HH:MM:SS) plus a real layout gap between the two fields.
+//   - Layout: executors render as a GRID of small tiles (`ExecutorTile`),
+//     never a vertical list — MA3's own executor-bar convention. A tile
+//     shows only the number (corner), sequence name (title), current cue
+//     (emphasized), and a status+Go/Off footer; the full cue list stays
+//     COLLAPSED behind a click that opens ONE `CueSheet` at a time (a
+//     compact table: Cue No / 이름, current row highlighted) — never every
+//     tile's cue list expanded simultaneously.
+// None of this changes what is CLAIMED — the three status grades, the pulse
+// window, the fail-closed button posture, the current-cue three-way branch,
+// and the "never estimate progress/time" boundary are all unchanged; only
+// how they are laid out on screen changes.
+//
 // No internal hooks, same convention as DashBoard.tsx — a hook-free
 // component callable directly as a plain function in tests (this project has
-// no DOM/jsdom test harness; see protocol.ts's own header note).
-import { type CueExecutorEntry, type CueHistoryEntry, type CueMonitorState } from "../protocol";
+// no DOM/jsdom test harness; see protocol.ts's own header note). "Which cue
+// sheet is open" is therefore a CONTROLLED prop (`openExecutorNo` /
+// `onToggleExecutor`), lifted to App.tsx's own `useState` — the same pattern
+// `chatCollapsed`/`sectionTileSizes` already use there.
+import {
+  type CueExecutorEntry,
+  type CueHistoryEntry,
+  type CueItem,
+  type CueMonitorState,
+} from "../protocol";
 import { formatSyncTime } from "./DashBoard";
 
 export interface CueMonitorProps {
@@ -56,6 +93,14 @@ export interface CueMonitorProps {
   onExecute?: (executorNo: number) => void;
   /** Fires `panel_stop` (Off) — same path as `onExecute`. */
   onStop?: (executorNo: number) => void;
+  /** T-H4 — which executor's cue sheet is open, or `null`/omitted for none.
+   * Controlled by the caller (App.tsx `useState`) — this component has no
+   * internal state of its own (see module header). */
+  openExecutorNo?: number | null;
+  /** T-H4 — toggles the given executor's cue sheet (open <-> closed). A
+   * caller SHOULD implement "one at a time" by tracking a single open
+   * executor number and flipping it to `null` when the same one reopens. */
+  onToggleExecutor?: (executorNo: number) => void;
 }
 
 /** The three status grades T-H's chip renders — see module header note for
@@ -104,6 +149,22 @@ export function isRecentAppAction(ts: string, nowMs: number = Date.now()): boole
   if (Number.isNaN(then)) return false;
   const diffMs = nowMs - then;
   return diffMs >= 0 && diffMs < APP_ACTION_PULSE_WINDOW_MS;
+}
+
+/**
+ * T-H4 defect 2 — the history row's LOCAL wall-clock time, `HH:MM:SS`. The
+ * server emits a raw ISO-8601 UTC timestamp (`AuditLog.record`'s
+ * `datetime.isoformat()`); rendering that verbatim next to the command with
+ * no separator is exactly the "unreadable, glued to the command" defect the
+ * user reported. Falls back to the raw string (never a blank) when `ts`
+ * cannot be parsed — an honest "couldn't format this" beats silently
+ * dropping the timestamp.
+ */
+export function formatHistoryTime(ts: string): string {
+  const date = new Date(ts);
+  if (Number.isNaN(date.getTime())) return ts;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
 /**
@@ -200,7 +261,7 @@ export function currentCueRowView(entry: CueExecutorEntry): CurrentCueRowView {
  * row is left to speak for itself via `currentCueRowView`.
  *
  * Non-"ok" executors (unassigned/unavailable) never attempt a current-cue
- * read in the first place (see `CueExecutorRow` below) and are excluded.
+ * read in the first place (see `ExecutorTile` below) and are excluded.
  */
 export type CurrentCueBannerState =
   | { kind: "none" }
@@ -216,6 +277,47 @@ export function currentCueBannerState(executors: CueExecutorEntry[]): CurrentCue
   const unique = new Set(reasons as string[]);
   if (unique.size > 1) return { kind: "mixed" };
   return { kind: "uniform", reason: reasons[0] as string };
+}
+
+/**
+ * T-H3/T-H4 — the leading integer off a composed current-cue value
+ * (`"<index>"` or `"<index> — <name>"`, per server/web/cue_monitor.py's own
+ * composition), or `null` when there is none to find. A UI-only
+ * re-derivation of a value the server already parsed — used solely to
+ * decide which row of the cue sheet to highlight, never to re-derive the
+ * displayed text itself (that stays `currentCueRowView.label` verbatim).
+ */
+export function currentCueIndexFromValue(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const match = /^(\d+)/.exec(value);
+  return match ? Number(match[1]) : null;
+}
+
+/** Which cue in `entry.cues` the current-cue value points at, or `null`
+ * when there is no current-cue value or no cue in the list carries a
+ * matching identifier. Mirrors server/web/cue_monitor.py's own preference
+ * order (`_cue_name_for_index`): the responder's real cue number
+ * (`cue_no`) first, the pool slot (`no`) as a fallback — so the row this
+ * highlights is the SAME row the server would have named, had it found one. */
+export interface CurrentCueMatch {
+  by: "cue_no" | "no";
+  index: number;
+}
+
+export function currentCueMatch(entry: CueExecutorEntry): CurrentCueMatch | null {
+  const current = entry.current_cue;
+  if (!current || current.status !== "ok" || !current.value) return null;
+  const index = currentCueIndexFromValue(current.value);
+  if (index === null) return null;
+  if (entry.cues.some((cue) => cue.cue_no === index)) return { by: "cue_no", index };
+  if (entry.cues.some((cue) => cue.no === index)) return { by: "no", index };
+  return null;
+}
+
+/** Whether `cue` is the one row `match` (from `currentCueMatch`) points at. */
+export function isCueRowCurrent(match: CurrentCueMatch | null, cue: CueItem): boolean {
+  if (match === null) return false;
+  return match.by === "cue_no" ? cue.cue_no === match.index : cue.no === match.index;
 }
 
 export function ExecutorStatusChip({ entry }: { entry: CueExecutorEntry }) {
@@ -272,49 +374,129 @@ export function ExecutorActions({
   );
 }
 
-export function CueExecutorRow({
+/**
+ * T-H4 — one executor as an MA3-style tile: (a) executor number small in a
+ * corner, (b) sequence name as the tile's own title, (c) current cue
+ * emphasized below it (the value an operator checks most often), (d)
+ * status chip + Go/Off footer. The full cue list stays collapsed; clicking
+ * the tile body toggles its `CueSheet` (rendered by the caller, `CueMonitor`
+ * below) rather than expanding inline — see module header.
+ *
+ * The tile itself is the click target for OPENING the sheet; the Go/Off
+ * button inside it stops that click from bubbling (`stopPropagation`) so a
+ * press on Go/Off never also toggles the sheet open/closed.
+ */
+export function ExecutorTile({
   entry,
   running,
+  isOpen,
+  onToggleOpen,
   onExecute,
   onStop,
 }: {
   entry: CueExecutorEntry;
   running?: boolean;
+  isOpen?: boolean;
+  onToggleOpen?: (executorNo: number) => void;
   onExecute?: (executorNo: number) => void;
   onStop?: (executorNo: number) => void;
 }) {
+  const handleToggle = () => onToggleOpen?.(entry.executor_no);
+  const view = currentCueRowView(entry);
   return (
-    <li className="cue-monitor-executor" data-executor-no={entry.executor_no}>
-      <div className="cue-monitor-executor-header">
-        <span className="cue-monitor-executor-no">Executor {entry.executor_no}</span>
-        <span className="cue-monitor-sequence-name">{sequenceLabel(entry)}</span>
+    <div
+      className={`cue-tile${isOpen ? " cue-tile-open" : ""}`}
+      data-executor-no={entry.executor_no}
+      role="button"
+      tabIndex={0}
+      aria-expanded={!!isOpen}
+      aria-label={`Executor ${entry.executor_no} 큐 시트 ${isOpen ? "닫기" : "열기"}`}
+      onClick={handleToggle}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          handleToggle();
+        }
+      }}
+    >
+      <div className="cue-tile-topline">
+        <span className="cue-tile-no">{entry.executor_no}</span>
         <ExecutorStatusChip entry={entry} />
       </div>
-      {entry.status === "ok" && (
-        <>
-          <div
-            className="cue-monitor-current-cue"
-            title={currentCueRowView(entry).reason ?? undefined}
-          >
-            {currentCueRowView(entry).label}
-          </div>
-          <ol className="cue-monitor-cue-list">
-            {entry.cues.map((cue) => (
-              <li key={cue.no} className="cue-monitor-cue-item">
-                {cue.cue_no !== undefined ? `Cue ${cue.cue_no}` : `#${cue.no}`} — {cue.name}
-              </li>
-            ))}
-            {entry.cues.length === 0 && <li className="cue-monitor-cue-empty">큐 없음</li>}
-          </ol>
-        </>
-      )}
-      <ExecutorActions
-        entry={entry}
-        running={running ?? false}
-        onExecute={onExecute}
-        onStop={onStop}
-      />
-    </li>
+      <div className="cue-tile-sequence">{sequenceLabel(entry)}</div>
+      <div className="cue-tile-current-cue" title={view.reason ?? undefined}>
+        {view.label}
+      </div>
+      <div
+        className="cue-tile-footer"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        <ExecutorActions entry={entry} running={running ?? false} onExecute={onExecute} onStop={onStop} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * T-H4 — the collapsed cue list, opened for exactly one executor at a time
+ * (`CueMonitor` renders at most one). A compact table (`Cue No` / `이름`)
+ * mirroring an MA3 sequence sheet, NOT the bullet list T-H4 replaces — only
+ * columns this project's data actually carries (no invented Trig/Fade/Delay).
+ * The current cue's row is highlighted via `currentCueMatch`/`isCueRowCurrent`
+ * — the SAME index the tile's own `currentCueRowView` label already shows,
+ * re-matched against the cue list rather than re-derived independently.
+ */
+export function CueSheet({
+  entry,
+  onClose,
+}: {
+  entry: CueExecutorEntry;
+  onClose?: () => void;
+}) {
+  const match = currentCueMatch(entry);
+  return (
+    <section className="cue-sheet" aria-label={`Executor ${entry.executor_no} 큐 시트`}>
+      <header className="cue-sheet-header">
+        <span className="cue-sheet-title">
+          Executor {entry.executor_no} — {sequenceLabel(entry)}
+        </span>
+        <button
+          type="button"
+          className="cue-sheet-close"
+          onClick={() => onClose?.()}
+          aria-label="큐 시트 닫기"
+        >
+          ✕
+        </button>
+      </header>
+      <table className="cue-sheet-table">
+        <thead>
+          <tr>
+            <th>Cue No</th>
+            <th>이름</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entry.cues.map((cue) => (
+            <tr
+              key={cue.no}
+              className={isCueRowCurrent(match, cue) ? "cue-sheet-row-current" : undefined}
+            >
+              <td className="cue-sheet-cue-no">{cue.cue_no !== undefined ? cue.cue_no : `#${cue.no}`}</td>
+              <td>{cue.name}</td>
+            </tr>
+          ))}
+          {entry.cues.length === 0 && (
+            <tr>
+              <td className="cue-sheet-empty" colSpan={2}>
+                큐 없음
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </section>
   );
 }
 
@@ -333,7 +515,7 @@ function CurrentCueBanner({ executors }: { executors: CueExecutorEntry[] }) {
 function CueHistoryRow({ entry }: { entry: CueHistoryEntry }) {
   return (
     <li className={`cue-monitor-history-item${entry.ok ? "" : " cue-monitor-history-failed"}`}>
-      <span className="cue-monitor-history-ts">{entry.ts}</span>
+      <span className="cue-monitor-history-ts">{formatHistoryTime(entry.ts)}</span>
       <span className="cue-monitor-history-command">{entry.command}</span>
     </li>
   );
@@ -345,6 +527,8 @@ export function CueMonitor({
   isExecutorRunning,
   onExecute,
   onStop,
+  openExecutorNo,
+  onToggleExecutor,
 }: CueMonitorProps) {
   const handleRefresh = () => {
     if (onRefresh) {
@@ -356,6 +540,10 @@ export function CueMonitor({
   };
 
   const staleSuffix = cueMonitor.stale ? " (오래됨)" : "";
+  const openEntry =
+    openExecutorNo === null || openExecutorNo === undefined
+      ? null
+      : (cueMonitor.executors.find((entry) => entry.executor_no === openExecutorNo) ?? null);
 
   return (
     <section className="cue-monitor" aria-label="라이브 큐 진행 모니터">
@@ -375,20 +563,25 @@ export function CueMonitor({
       </header>
       <CurrentCueBanner executors={cueMonitor.executors} />
       <div className="cue-monitor-body">
-        <ul className="cue-monitor-executors">
+        <div className="cue-monitor-grid">
           {cueMonitor.executors.map((entry) => (
-            <CueExecutorRow
+            <ExecutorTile
               key={entry.executor_no}
               entry={entry}
               running={isExecutorRunning?.(entry.executor_no) ?? false}
+              isOpen={openExecutorNo === entry.executor_no}
+              onToggleOpen={onToggleExecutor}
               onExecute={onExecute}
               onStop={onStop}
             />
           ))}
           {cueMonitor.executors.length === 0 && (
-            <li className="cue-monitor-empty">확인된 익스큐터 없음</li>
+            <div className="cue-monitor-empty">확인된 익스큐터 없음</div>
           )}
-        </ul>
+        </div>
+        {openEntry && (
+          <CueSheet entry={openEntry} onClose={() => onToggleExecutor?.(openEntry.executor_no)} />
+        )}
         <div className="cue-monitor-history">
           <span className="cue-monitor-history-title">최근 실행 이력</span>
           <ul>

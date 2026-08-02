@@ -178,6 +178,8 @@ export function AppShell({
   isExecutorRunning,
   onExecutorExecute,
   onExecutorStop,
+  openCueExecutorNo,
+  onToggleCueExecutor,
   sectionTileSize,
   onSectionTileSizeChange,
   sectionArea,
@@ -201,6 +203,11 @@ export function AppShell({
   isExecutorRunning?: (executorNo: number) => boolean;
   onExecutorExecute?: (executorNo: number) => void;
   onExecutorStop?: (executorNo: number) => void;
+  /** T-H4 — which executor's cue sheet is open (controlled, one at a time);
+   * see CueMonitor.tsx's own module header for why this is lifted here
+   * rather than internal component state. */
+  openCueExecutorNo?: number | null;
+  onToggleCueExecutor?: (executorNo: number) => void;
   /** M6-UX v3 — square cells (−/+) + pool-window area corner drag. */
   sectionTileSize?: (sectionName: string) => number | undefined;
   onSectionTileSizeChange?: (sectionName: string, next: number) => void;
@@ -229,6 +236,8 @@ export function AppShell({
         isExecutorRunning={isExecutorRunning}
         onExecute={onExecutorExecute}
         onStop={onExecutorStop}
+        openExecutorNo={openCueExecutorNo}
+        onToggleExecutor={onToggleCueExecutor}
       />
       {chatCollapsed ? (
         <aside className="chat-rail">
@@ -283,6 +292,14 @@ export default function App() {
   // because the pool components are hook-free by design.
   const [sectionTileSizes, setSectionTileSizes] = useState<Record<string, number>>({});
   const [sectionAreas, setSectionAreas] = useState<Record<string, PoolArea>>({});
+  // T-H4 — CueMonitor's cue sheet opens ONE executor at a time (MA3 console
+  // convention); this is the SAME name toggling off as re-closing (see
+  // CueMonitor.tsx's own module header on why this is controlled here
+  // rather than internal component state).
+  const [openCueExecutorNo, setOpenCueExecutorNo] = useState<number | null>(null);
+  const toggleCueExecutor = (executorNo: number) => {
+    setOpenCueExecutorNo((current) => (current === executorNo ? null : executorNo));
+  };
   const startSectionAreaResize = (
     sectionName: string,
     start: { clientX: number; clientY: number },
@@ -430,6 +447,8 @@ export default function App() {
             isExecutorRunning={isExecutorRunning}
             onExecutorExecute={(executorNo) => sendPanelExecute("executor", executorNo)}
             onExecutorStop={(executorNo) => sendPanelStop("executor", executorNo)}
+            openCueExecutorNo={openCueExecutorNo}
+            onToggleCueExecutor={toggleCueExecutor}
             sectionTileSize={(sectionName) => sectionTileSizes[sectionName]}
             onSectionTileSizeChange={(sectionName, next) =>
               setSectionTileSizes((sizes) => ({ ...sizes, [sectionName]: next }))
