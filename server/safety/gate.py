@@ -42,7 +42,7 @@ from server.safety.approval import (
     DenyAllApprovalPort,
 )
 from server.safety.audit import AuditLog
-from server.safety.backup import BackupError, BackupManager
+from server.safety.backup import BackupError, BackupManager, Snapshot
 from server.safety.classify import RECOGNIZED_REFERENCE_TYPES, classify_command
 from server.safety.console import ConsolePort
 from server.safety.expand import BodyFetcher, BodyUnavailable, evaluate_reference
@@ -208,15 +208,37 @@ class SafetyGate:
         *,
         interval_seconds: float = 600.0,
         clock: Callable[[], float] = time.monotonic,
+        max_snapshots: int | None = None,
     ) -> BackupManager:
-        """Attach a BackupManager whose action saves the showfile via this gate."""
+        """Attach a BackupManager whose action saves the showfile via this gate.
+
+        ``max_snapshots`` bounds how many retained backup points stay
+        addressable via :meth:`~server.safety.backup.BackupManager.find_snapshot`
+        (oldest evicted first); None keeps every snapshot for the manager's
+        lifetime. An eviction is audited via ``_log_snapshot_evicted`` rather
+        than silently dropped (T-B2 scope A item (c)).
+        """
         manager = BackupManager(
             backup_action=self.make_showfile_backup_action(),
             interval_seconds=interval_seconds,
             clock=clock,
+            max_snapshots=max_snapshots,
+            on_snapshot_evicted=self._log_snapshot_evicted,
         )
         self._backup = manager
         return manager
+
+    def _log_snapshot_evicted(self, snapshot: Snapshot) -> None:
+        """Audit a snapshot evicted past ``max_snapshots`` (T-B2 scope A item
+        (c)) — an eviction must never be silently dropped."""
+        self._audit.record(
+            {
+                "event": "snapshot_evicted",
+                "snapshot_id": snapshot.id,
+                "trigger": snapshot.trigger,
+                "label": snapshot.label,
+            }
+        )
 
     def make_showfile_backup_action(self) -> Callable[[], None]:
         """A backup action sending ``SaveShow`` through the audited gate path.
@@ -257,6 +279,17 @@ class SafetyGate:
                 raise RuntimeError(f"showfile backup not confirmed: {outcome.detail}")
 
         return action
+
+    # @MX:NOTE: [AUTO] future restore SEND seat. A `make_showfile_restore_action`
+    #   analogous to make_showfile_backup_action above — sending an MA3 reload
+    #   command for a BackupManager.find_snapshot-validated target, gated on
+    #   mandatory human approval (never auto-triggered, unlike backup) — would
+    #   live here. Deliberately NOT implemented (T-B2 scope cut): the actual
+    #   MA3 reload keyword is unverified, and restore is materially more
+    #   dangerous than backup (it can discard the console's current live show
+    #   state). Sending it live is a separate, higher-risk SPEC requiring its
+    #   own onPC live calibration and approval-gated design before any code
+    #   lands here — see server/safety/backup.py's module docstring.
 
     # -- screening pipeline (BundleGate) ---------------------------------------
 

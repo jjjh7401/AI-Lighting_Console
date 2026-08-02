@@ -308,6 +308,43 @@ class TestBackupRules:
         assert backup.history == []
 
 
+class TestShowfileSnapshotRetention:
+    """T-B2 scope A: snapshot retention + audit-logged eviction wired through
+    the gate. There is no restore SEND path here (see backup.py module
+    docstring and the @MX:NOTE seat next to make_showfile_backup_action) —
+    restore is out of scope until a separate, live-calibrated SPEC lands."""
+
+    def test_use_showfile_backup_retains_labeled_snapshots(self, tmp_path):
+        gate, console, _ = make_gate(tmp_path)
+        gate.use_showfile_backup()
+        gate.start_session()
+        snapshot = gate._backup.latest_snapshot()
+        assert snapshot.trigger == "session_start"
+        assert snapshot.label == "session start #1"
+        assert console.executed == [BACKUP_COMMAND]
+
+    def test_max_snapshots_eviction_is_audited_not_silently_dropped(self, tmp_path):
+        gate, _, audit = make_gate(tmp_path, approval_port=ScriptedApproval([True]))
+        gate.use_showfile_backup(max_snapshots=1)
+        gate.start_session()
+        evicted_id = gate._backup.latest_snapshot().id
+        gate.screen(["Delete Sequence 5"])  # triggers rule ③ pre-risky backup
+        evicted_events = [e for e in audit.iter_events() if e["event"] == "snapshot_evicted"]
+        assert len(evicted_events) == 1
+        assert evicted_events[0]["snapshot_id"] == evicted_id
+        assert evicted_events[0]["label"] == "session start #1"
+        assert len(gate._backup.snapshots) == 1
+
+    def test_snapshot_find_is_a_pure_lookup_no_console_send(self, tmp_path):
+        gate, console, _ = make_gate(tmp_path)
+        gate.use_showfile_backup()
+        gate.start_session()
+        target_id = gate._backup.latest_snapshot().id
+        found = gate._backup.find_snapshot(target_id)
+        assert found.id == target_id
+        assert console.executed == [BACKUP_COMMAND]  # unchanged by the lookup
+
+
 class TestLiveLock:
     def test_lock_active_produces_proposal_only(self, tmp_path):
         # AC-MVP-007a: zero console sends, proposal card only.

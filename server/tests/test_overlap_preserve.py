@@ -66,7 +66,7 @@ _PRESERVE_PATHS = (
 #: user-approved, lightweight track). ``server/looks/library/`` stays a locked
 #: boundary, but this ONE measured diff is sanctioned: 파란 mirrored beside 푸른
 #: in exactly these alias/mood lines. The grant is pinned by EXACT line text
-#: (the ``_SAFETY_ALLOWED_DELETED_LINE`` precedent): anything beyond these
+#: (the ``_SAFETY_ALLOWED_DELETED_LINES`` precedent): anything beyond these
 #: pairs — another file, another line, another wording — still fails the gate.
 _LOOKS_LIBRARY_DIR = "server/looks/library/"
 _LOOKS_GRANTED_LINE_PAIRS = {
@@ -109,17 +109,36 @@ _TOOLS_PROTECTED_OLD_RANGES = ((247, 251), (537, 582))
 
 _SAFETY_DIR = "server/safety/"
 
-#: The safety chokepoint's measured state at this SPEC's start: two files, the
-#: property-read addition the predecessor was granted. One deletion exists and it
-#: is a docstring line; the TEXT is asserted, because a bare "at most one
-#: deletion" lets a meaningful removal hide under the allowance.
+#: The OVERLAP SPEC's own merge commit into main (PR #8) -- a FIXED historical
+#: endpoint, unlike HEAD. "OVERLAP itself opened nothing new" is a fact about a
+#: SPEC that finished long ago; measuring it against the ever-moving HEAD makes
+#: it fail the moment any LATER, legitimate SPEC touches the chokepoint again
+#: (exactly the "sibling gate breaks by merge order" failure mode documented at
+#: `TestPrecedentGateFileIsNotExtended` above). Bounding both ends fixes it.
+_OVERLAP_MERGE_COMMIT = "156a3e1aaf6ef78788394d65cf724bacaec7b567"
+
+#: The safety chokepoint's measured state, PRECHK-base relative. Grown twice:
+#: the predecessor's (OVERLAP's) property-read addition (console.py, gate.py),
+#: then SPEC-COPILOT-BACKUP-001 T-B/T-B2's snapshot-retention + audit-linkage
+#: extension (backup.py, gate.py again). Every deletion's TEXT is pinned in
+#: `_SAFETY_ALLOWED_DELETED_LINES` below, because a bare count lets a
+#: meaningful removal hide under the allowance.
 _SAFETY_EXPECTED_DELETIONS = {
+    "server/safety/backup.py": 2,
     "server/safety/console.py": 0,
-    "server/safety/gate.py": 1,
+    "server/safety/gate.py": 3,
 }
-_SAFETY_ALLOWED_DELETED_LINE = (
-    '    """StateQueryPort implementation riding the gate-audited console link."""'
-)
+_SAFETY_ALLOWED_DELETED_LINES = {
+    "server/safety/backup.py": (
+        "Three rules: ① once at session start, ② periodic (default 10 minutes,",
+        '    """Drives the 3-rule backup policy against an injected backup action."""',
+    ),
+    "server/safety/gate.py": (
+        "from server.safety.backup import BackupError, BackupManager",
+        '    """StateQueryPort implementation riding the gate-audited console link."""',
+        '        """Attach a BackupManager whose action saves the showfile via this gate."""',
+    ),
+}
 
 _HUNK_RE = re.compile(r"^@@ -(?P<old_start>\d+)(?:,(?P<old_count>\d+))? \+\d+(?:,\d+)? @@")
 
@@ -317,7 +336,7 @@ class TestToolsProtectedRegions:
 class TestSafetyChokepointFileSet:
     """AC-OVERLAP-019 ⑤ — which files, and which deletions."""
 
-    def test_exactly_the_two_expected_files_changed(self):
+    def test_exactly_the_expected_files_changed(self):
         rows = _numstat(_PRECHK_BASE, _SAFETY_DIR)
         assert set(rows) == set(_SAFETY_EXPECTED_DELETIONS)
 
@@ -326,48 +345,62 @@ class TestSafetyChokepointFileSet:
         for path, expected in _SAFETY_EXPECTED_DELETIONS.items():
             assert rows[path][1] == expected, path
 
-    def test_the_one_allowed_deletion_is_the_docstring_it_claims_to_be(self):
-        """A bare "at most one deletion" lets a meaningful removal hide.
+    def test_the_deletions_are_exactly_the_pinned_lines(self):
+        """A bare count lets a meaningful removal hide -- the deleted TEXT is
+        pinned per file, not just the total.
 
-        So the deleted TEXT is asserted, not just the count.
+        SCOPE CORRECTION (SPEC-COPILOT-BACKUP-001 T-B/T-B2 integration,
+        mirroring the ``tools.py`` correction at
+        :class:`TestPrecedentGateFileIsNotExtended`): the predecessor's grant
+        removed exactly one docstring line in gate.py. This SPEC legitimately
+        extends the chokepoint further -- BackupManager gains snapshot
+        retention + a gate-level eviction hook, no restore SEND path (see
+        server/safety/backup.py's module docstring) -- so its own edits
+        delete an import line and two more docstrings alongside the
+        predecessor's line. Not every deletion is a docstring any more (the
+        import line is real code), so the old blanket "is-a-docstring" shape
+        check is retired in favor of the stricter, general invariant it was
+        always standing in for: exact text, per file.
         """
-        deleted = [
-            line[1:]
-            for line in _git(
-                "diff", "--unified=0", f"{_PRECHK_BASE}..HEAD", "--", _SAFETY_DIR
-            ).splitlines()
-            if line.startswith("-") and not line.startswith("---")
-        ]
-        assert deleted == [_SAFETY_ALLOWED_DELETED_LINE]
-        # And it is a docstring STRUCTURALLY, not just by matching a string that
-        # happens to be one. Relaxing the exact-text expectation to a count still
-        # leaves this standing, so an unknown meaningful deletion is caught even
-        # then -- which is the invariant, the text being merely today's instance.
-        assert deleted[0].strip().startswith('"""')
-        assert deleted[0].strip().endswith('"""')
+        for path, allowed in _SAFETY_ALLOWED_DELETED_LINES.items():
+            deleted = [
+                line[1:]
+                for line in _git(
+                    "diff", "--unified=0", f"{_PRECHK_BASE}..HEAD", "--", path
+                ).splitlines()
+                if line.startswith("-") and not line.startswith("---")
+            ]
+            assert deleted == list(allowed), path
 
-    def test_the_docstring_rule_rejects_a_meaningful_deletion(self):
-        # Non-vacuity for the structural rule above: it is not always true.
-        for planted in (
-            "        failed = True",
-            "    def query_state(self, path: str) -> dict:",
-            "        return self._gate._query_state(path)",
-        ):
-            assert not planted.strip().startswith('"""')
+    def test_overlap_s_own_scope_changed_nothing_under_the_chokepoint(self):
+        """SCOPE CORRECTION (SPEC-COPILOT-BACKUP-001 T-B/T-B2 integration).
 
-    def test_this_spec_changed_nothing_under_the_chokepoint(self):
-        # The two files above are the PREDECESSOR's granted exception. This SPEC
-        # reads only `state`, which the chokepoint already exposed, so it needs no
-        # opening of its own.
-        assert _git("diff", "--stat", f"{_OVERLAP_BASE}..HEAD", "--", _SAFETY_DIR) == ""
+        This used to read ``_git("diff", "--stat", f"{_OVERLAP_BASE}..HEAD",
+        ...) == ""`` -- "this SPEC changed nothing under the chokepoint". That
+        was true and MEASURABLE while OVERLAP's own merge was still HEAD. It
+        stops being measurable the moment a later SPEC legitimately reopens
+        the chokepoint (exactly the ``tools.py`` failure mode documented at
+        :class:`TestPrecedentGateFileIsNotExtended`): the range then spans the
+        later SPEC's commits too, and the gate fails while the fact it names
+        -- OVERLAP itself opened nothing new -- is still true.
+
+        What survives is bounding BOTH ends instead of leaving one open at
+        HEAD: ``_OVERLAP_BASE.._OVERLAP_MERGE_COMMIT`` is OVERLAP's own,
+        now-immutable commit range, so this fact is checked exactly where it
+        was made rather than at an ever-moving present.
+        """
+        assert (
+            _git("diff", "--stat", f"{_OVERLAP_BASE}..{_OVERLAP_MERGE_COMMIT}", "--", _SAFETY_DIR)
+            == ""
+        )
 
     def test_this_spec_s_base_can_still_observe_a_change(self):
         """AC-OVERLAP-002 ④ — 비공허성: 같은 명령이 변화를 볼 수 있는가.
 
-        위 ③은 ``_OVERLAP_BASE..HEAD`` 범위에서 chokepoint가 비어 있다고 주장한다.
-        같은 명령 형태를 이 SPEC이 실제로 건드린 ``server/prechk/``에 겨누면
-        비어 있지 않아야 한다. 여기가 비면 명령이 변화를 관측하지 못하게 된
-        것이고, ③의 빈 출력은 아무 의미도 없어진다.
+        위 ③은 ``_OVERLAP_BASE.._OVERLAP_MERGE_COMMIT`` 범위에서 chokepoint가
+        비어 있다고 주장한다. 같은 명령 형태를 이 SPEC이 실제로 건드린
+        ``server/prechk/``에 겨누면 비어 있지 않아야 한다. 여기가 비면 명령이
+        변화를 관측하지 못하게 된 것이고, ③의 빈 출력은 아무 의미도 없어진다.
 
         이 구멍은 좁다: ``_OVERLAP_BASE``를 무력화하는 드리프트는
         :func:`test_the_touched_set_is_not_empty`가 이미 잡는다. 그럼에도 ③이
