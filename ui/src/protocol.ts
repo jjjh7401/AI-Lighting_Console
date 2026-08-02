@@ -201,6 +201,49 @@ export interface DashSection {
   items: DashItem[];
 }
 
+// -- live cue-progress monitor (T-C, wave 2 — ad-hoc contract, no SPEC) -------
+//
+// Two independent read paths (server/web/cue_monitor.py): a per-executor cue-
+// progress row, and a console-independent recent-execution history read off
+// the audit log. Deliberately NO progress percentage and NO timer field — no
+// channel confirms a fade's remaining time (contract explicitly excludes
+// them); the UI must explain an "unavailable" current cue, never estimate one.
+
+export type CueExecutorStatus = "ok" | "unassigned" | "unavailable";
+
+/** One cue in a sequence's cue list: its pool slot + name, plus the
+ * responder's additive real cue number (`cue_no`) when it could read one. */
+export interface CueItem {
+  no: number;
+  name: string;
+  cue_no?: number;
+}
+
+/** The current-cue read outcome — independently Optional (see module note). */
+export interface CueCurrentCue {
+  status: "ok" | "unavailable";
+  value?: string;
+  property?: string;
+  tried?: string[];
+}
+
+/** One executor's live cue-progress row. */
+export interface CueExecutorEntry {
+  executor_no: number;
+  status: CueExecutorStatus;
+  sequence_no?: number | null;
+  sequence_name?: string | null;
+  cues: CueItem[];
+  current_cue: CueCurrentCue | null;
+}
+
+/** One recent-execution row (audit-log derived, oldest-first). */
+export interface CueHistoryEntry {
+  ts: string;
+  command: string;
+  ok: boolean;
+}
+
 export type ServerEvent =
   | {
       v: 1;
@@ -266,7 +309,13 @@ export type ServerEvent =
       target: number;
       message: string;
     }
-  | { v: 1; type: "dash_catalog"; sections: DashSection[] };
+  | { v: 1; type: "dash_catalog"; sections: DashSection[] }
+  | {
+      v: 1;
+      type: "cue_monitor";
+      executors: CueExecutorEntry[];
+      history: CueHistoryEntry[];
+    };
 
 const SERVER_EVENT_TYPES = new Set([
   "chat_response",
@@ -286,6 +335,8 @@ const SERVER_EVENT_TYPES = new Set([
   "panel_busy",
   // Dashboard (REQ-DASHUI-006) — mirrored by DASH_* in server/web/messages.py.
   "dash_catalog",
+  // Cue monitor (T-C, wave 2) — mirrored by CUE_* in server/web/messages.py.
+  "cue_monitor",
 ]);
 
 /** Parse one server frame; unknown/foreign frames return null (ignored). */
@@ -395,6 +446,14 @@ export function buildDashCatalogRequest(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "dash_catalog_request" });
 }
 
+/**
+ * Ask for a `cue_monitor` event (T-C, wave 2). Payload-free — the client
+ * polls for a fresh snapshot; there is nothing client-supplied to validate.
+ */
+export function buildCueMonitorRequest(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "cue_monitor_request" });
+}
+
 // -- UI state reducer ------------------------------------------------------------
 
 export type ChatEntry =
@@ -469,6 +528,21 @@ export interface DashState {
   stale: boolean;
 }
 
+/**
+ * The live cue-progress monitor's slice of the UI state (T-C, wave 2).
+ *
+ * Same freshness-claim shape as `DashState`: `executors`/`history` are server
+ * state (a `cue_monitor` REPLACES both, never merges) and survive a
+ * disconnect so the panel still renders, inert, while offline; `stale` marks
+ * that the last snapshot may no longer match the console.
+ */
+export interface CueMonitorState {
+  executors: CueExecutorEntry[];
+  history: CueHistoryEntry[];
+  lastSyncAt: number | null;
+  stale: boolean;
+}
+
 export interface UiState {
   entries: ChatEntry[];
   status: StatusState | null;
@@ -476,6 +550,7 @@ export interface UiState {
   pendingReviews: ReviewRequestView[];
   panel: PanelState;
   dash: DashState;
+  cueMonitor: CueMonitorState;
 }
 
 export const initialState: UiState = {
@@ -485,6 +560,7 @@ export const initialState: UiState = {
   pendingReviews: [],
   panel: { items: [], sections: [], running: {}, busy: null },
   dash: { sections: [], lastSyncAt: null, stale: false },
+  cueMonitor: { executors: [], history: [], lastSyncAt: null, stale: false },
 };
 
 /**
@@ -617,6 +693,19 @@ export function reduceServerEvent(
         ...state,
         dash: { sections: event.sections, lastSyncAt: nowMs, stale: false },
       };
+    case "cue_monitor":
+      // A refresh REPLACES both lists — same replace semantics as
+      // `dash_catalog`; merging would keep an executor's stale cue list
+      // alive after the showfile changed underneath it.
+      return {
+        ...state,
+        cueMonitor: {
+          executors: event.executors,
+          history: event.history,
+          lastSyncAt: nowMs,
+          stale: false,
+        },
+      };
   }
 }
 
@@ -668,6 +757,10 @@ export function clearOnDisconnect(state: UiState): UiState {
   // withdraw; before the first `dash_catalog` there is nothing to mark.
   if (next.dash.lastSyncAt !== null && !next.dash.stale) {
     next = { ...next, dash: { ...next.dash, stale: true } };
+  }
+  // Same withdrawal for the cue monitor's own freshness claim.
+  if (next.cueMonitor.lastSyncAt !== null && !next.cueMonitor.stale) {
+    next = { ...next, cueMonitor: { ...next.cueMonitor, stale: true } };
   }
   return next;
 }

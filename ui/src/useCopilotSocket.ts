@@ -6,6 +6,7 @@ import {
   addUserMessage,
   buildApprovalDecision,
   buildChat,
+  buildCueMonitorRequest,
   buildDashCatalogRequest,
   buildLock,
   buildPanelCatalogRequest,
@@ -85,8 +86,22 @@ export function connectProtocols(token: string | undefined): string[] | undefine
  * live WebSocket (this project's no-DOM-harness convention).
  */
 export function connectResyncFrames(): string[] {
-  return [buildPanelCatalogRequest(), buildDashCatalogRequest(), buildStatusRequest()];
+  return [
+    buildPanelCatalogRequest(),
+    buildDashCatalogRequest(),
+    buildCueMonitorRequest(),
+    buildStatusRequest(),
+  ];
 }
+
+// T-C, wave 2 (ad-hoc contract, no SPEC on file): unlike `dash_catalog`
+// (REQ-DASHUI-021 forbids timer polling — it resyncs only on connect and on
+// an executed chat command), the cue monitor is explicitly contracted to
+// poll, because "which cue is live right now" goes stale between chat turns
+// with nothing else to trigger a refresh. Kept as a named constant so the
+// cadence is a single, documented choice rather than a magic number buried
+// in the effect below.
+export const CUE_MONITOR_POLL_INTERVAL_MS = 5_000;
 
 /**
  * The dash resync frame one incoming server event earns, or null.
@@ -116,6 +131,7 @@ export interface CopilotSocket {
   sendPanelExecute: (targetKind: PanelTargetKind, target: number) => void;
   sendPanelStop: (targetKind: PanelTargetKind, target: number) => void;
   sendDashRefresh: () => void;
+  sendCueMonitorRefresh: () => void;
 }
 
 export function useCopilotSocket(url?: string): CopilotSocket {
@@ -173,6 +189,20 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     };
   }, [url]);
 
+  // Cue-monitor poll (contracted, unlike dash_catalog — see
+  // CUE_MONITOR_POLL_INTERVAL_MS). Only sends while the socket is actually
+  // open; a tick during a reconnect backoff is silently skipped rather than
+  // queued, since the next successful connect's resync frame already covers it.
+  useEffect(() => {
+    const poll = window.setInterval(() => {
+      const socket = socketRef.current;
+      if (socket !== null && socket.readyState === WebSocket.OPEN) {
+        socket.send(buildCueMonitorRequest());
+      }
+    }, CUE_MONITOR_POLL_INTERVAL_MS);
+    return () => window.clearInterval(poll);
+  }, []);
+
   const send = useCallback((frame: string) => {
     const socket = socketRef.current;
     if (socket !== null && socket.readyState === WebSocket.OPEN) socket.send(frame);
@@ -203,6 +233,7 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     [send],
   );
   const sendDashRefresh = useCallback(() => send(buildDashCatalogRequest()), [send]);
+  const sendCueMonitorRefresh = useCallback(() => send(buildCueMonitorRequest()), [send]);
 
   return {
     state,
@@ -214,5 +245,6 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendPanelExecute,
     sendPanelStop,
     sendDashRefresh,
+    sendCueMonitorRefresh,
   };
 }

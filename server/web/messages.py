@@ -38,6 +38,13 @@ PANEL_CLIENT_MESSAGE_TYPES = (
 # — sent on connect and on manual refresh, never on a timer (REQ-DASHUI-021).
 DASH_CLIENT_MESSAGE_TYPES = ("dash_catalog_request",)
 
+# The live cue-progress monitor's client message (T-C, wave 2 — ad-hoc
+# contract, no SPEC on file). Additive on the same terms as the dash/panel
+# families above: v stays 1, registered on both allowlists here and in
+# ``ui/src/protocol.ts``. Payload-free — the client asks for a fresh snapshot,
+# there is nothing client-supplied to validate.
+CUE_MONITOR_CLIENT_MESSAGE_TYPES = ("cue_monitor_request",)
+
 # Closed set of client -> server message types. "review_decision" is the M7
 # additive extension (deploy review) — protocol version stays 1.
 CLIENT_MESSAGE_TYPES = (
@@ -48,6 +55,7 @@ CLIENT_MESSAGE_TYPES = (
     "status_request",
     *PANEL_CLIENT_MESSAGE_TYPES,
     *DASH_CLIENT_MESSAGE_TYPES,
+    *CUE_MONITOR_CLIENT_MESSAGE_TYPES,
 )
 
 # The panel messages that address ONE console object, and therefore carry the
@@ -174,11 +182,17 @@ def parse_client_message(raw: str) -> dict:
             "target": target,
         }
 
-    if message_type in ("panel_pin", "panel_catalog_request", "dash_catalog_request"):
+    if message_type in (
+        "panel_pin",
+        "panel_catalog_request",
+        "dash_catalog_request",
+        "cue_monitor_request",
+    ):
         # Payload-free by design. The pin seed is the server's own
-        # ``_last_created`` cross-turn memory (REQ-SHOWUI-004), and the two
-        # catalog requests ask for the whole (replace-semantics) catalog — so
-        # there is no client-supplied target here to get wrong or to trust.
+        # ``_last_created`` cross-turn memory (REQ-SHOWUI-004), and the
+        # catalog/monitor requests ask for the whole (replace-semantics)
+        # snapshot — so there is no client-supplied target here to get wrong
+        # or to trust.
         return {"v": PROTOCOL_VERSION, "type": message_type}
 
     return {"v": PROTOCOL_VERSION, "type": "status_request"}
@@ -558,3 +572,64 @@ def dash_catalog_event(*, sections: list[dict]) -> dict:
     Section order is wire order; nothing sorts it (REQ-DASHUI-003).
     """
     return _event("dash_catalog", sections=list(sections))
+
+
+# -- live cue-progress monitor (T-C, wave 2 — ad-hoc contract, no SPEC) --------
+#
+# Two independent read paths (see ``server/web/cue_monitor.py`` for the
+# builders): a per-executor cue-progress row, and a console-independent
+# recent-execution history read off the audit log. Both ride inside ONE
+# ``cue_monitor`` event with replace semantics — same family convention as
+# ``dash_catalog``/``panel_catalog``.
+
+CUE_EXECUTOR_STATUSES = ("ok", "unassigned", "unavailable")
+
+
+def cue_executor_entry(
+    *,
+    executor_no: int,
+    status: str,
+    sequence_no: int | None = None,
+    sequence_name: str | None = None,
+    cues: list[dict] | None = None,
+    current_cue: dict | None = None,
+) -> dict:
+    """One executor's live cue-progress row.
+
+    ``status``:
+    - ``"ok"`` — the assigned sequence's cue list was read.
+    - ``"unassigned"`` — the executor answered but carries no sequence.
+    - ``"unavailable"`` — the executor (or its sequence) could not be read.
+
+    ``current_cue`` is independently Optional (contract item 1): it carries
+    its OWN ``status`` (``"ok"`` / ``"unavailable"``), because the current-cue
+    property read can fail even when the sequence/cue-list read above
+    succeeded — the two are never conflated into one verdict.
+    """
+    if status not in CUE_EXECUTOR_STATUSES:
+        raise ValueError(
+            f"cue executor status must be one of {CUE_EXECUTOR_STATUSES}, got {status!r}"
+        )
+    return {
+        "executor_no": executor_no,
+        "status": status,
+        "sequence_no": sequence_no,
+        "sequence_name": sequence_name,
+        "cues": list(cues) if cues is not None else [],
+        "current_cue": current_cue,
+    }
+
+
+def cue_history_entry(*, ts: str, command: str, ok: bool) -> dict:
+    """One recent-execution row (contract item 2) — read from the audit log,
+    independent of any console connection."""
+    return {"ts": ts, "command": command, "ok": bool(ok)}
+
+
+def cue_monitor_event(*, executors: list[dict], history: list[dict]) -> dict:
+    """The live cue-progress-monitor snapshot.
+
+    Replace semantics, same as ``dash_catalog``/``panel_catalog`` — no
+    server-side merge with a previous snapshot.
+    """
+    return _event("cue_monitor", executors=list(executors), history=list(history))

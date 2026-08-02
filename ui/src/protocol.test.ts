@@ -4,6 +4,7 @@ import {
   addUserMessage,
   buildApprovalDecision,
   buildChat,
+  buildCueMonitorRequest,
   buildDashCatalogRequest,
   buildLock,
   buildPanelCatalogRequest,
@@ -894,6 +895,121 @@ describe("clearOnDisconnect dash extension (AC-DASHUI-017, reducer half)", () =>
     // Before the first catalog there is no freshness claim to withdraw.
     const chatOnly = addUserMessage(initialState, "안녕");
     expect(clearOnDisconnect(chatOnly).dash.stale).toBe(false);
+  });
+
+  it("remains a no-op on an already-clean state", () => {
+    expect(clearOnDisconnect(initialState)).toBe(initialState);
+  });
+});
+
+// -- T-C, wave 2 — live cue-progress monitor protocol contract (no SPEC) -------
+//
+// Another ADDITIVE v1 extension on the panel/dash family's terms: this side's
+// unknown-type contract (silently drop) stays unchanged, and the new type
+// lands on both allowlists in the same change.
+
+const cueMonitorEvent = {
+  type: "cue_monitor",
+  executors: [
+    {
+      executor_no: 101,
+      status: "ok",
+      sequence_no: 5,
+      sequence_name: "Song A",
+      cues: [{ no: 1, name: "Intro", cue_no: 1 }],
+      current_cue: { status: "unavailable", tried: ["Cue"] },
+    },
+    { executor_no: 201, status: "unassigned", cues: [], current_cue: null },
+  ],
+  history: [{ ts: "2026-08-02T00:00:00+00:00", command: "Go+ Executor 101", ok: true }],
+};
+
+describe("cue monitor protocol parity (client half)", () => {
+  it("keeps the protocol at v1", () => {
+    expect(PROTOCOL_VERSION).toBe(1);
+  });
+
+  it("parses a cue_monitor event", () => {
+    const parsed = parseServerEvent(JSON.stringify({ v: 1, ...cueMonitorEvent }));
+    expect(parsed?.type).toBe("cue_monitor");
+  });
+
+  it("still drops the wrong version and unknown types silently", () => {
+    expect(parseServerEvent(JSON.stringify({ v: 2, ...cueMonitorEvent }))).toBeNull();
+    expect(parseServerEvent(JSON.stringify({ v: 1, type: "cue_monitor_mystery" }))).toBeNull();
+  });
+
+  it("builds the cue_monitor_request frame at v1, payload-free", () => {
+    expect(JSON.parse(buildCueMonitorRequest())).toEqual({
+      v: 1,
+      type: "cue_monitor_request",
+    });
+  });
+});
+
+describe("cue monitor reducer (replace + freshness)", () => {
+  it("starts empty, never-synced, and not stale", () => {
+    expect(initialState.cueMonitor.executors).toEqual([]);
+    expect(initialState.cueMonitor.history).toEqual([]);
+    expect(initialState.cueMonitor.lastSyncAt).toBeNull();
+    expect(initialState.cueMonitor.stale).toBe(false);
+  });
+
+  it("stores executors/history and stamps the sync time", () => {
+    const next = reduceServerEvent(initialState, event(cueMonitorEvent), 1_753_300_000_000);
+    expect(next.cueMonitor.executors.map((entry) => entry.executor_no)).toEqual([101, 201]);
+    expect(next.cueMonitor.history).toHaveLength(1);
+    expect(next.cueMonitor.lastSyncAt).toBe(1_753_300_000_000);
+    expect(next.cueMonitor.stale).toBe(false);
+  });
+
+  it("REPLACES both lists on refresh rather than merging", () => {
+    const first = reduceServerEvent(initialState, event(cueMonitorEvent), 1000);
+    const second = reduceServerEvent(
+      first,
+      event({ type: "cue_monitor", executors: [], history: [] }),
+      2000,
+    );
+    expect(second.cueMonitor.executors).toEqual([]);
+    expect(second.cueMonitor.history).toEqual([]);
+    expect(second.cueMonitor.lastSyncAt).toBe(2000);
+  });
+
+  it("leaves chat, status, panel, and dash state untouched", () => {
+    const next = reduceServerEvent(initialState, event(cueMonitorEvent), 1000);
+    expect(next.entries).toEqual([]);
+    expect(next.status).toBeNull();
+    expect(next.panel).toBe(initialState.panel);
+    expect(next.dash).toBe(initialState.dash);
+  });
+});
+
+describe("clearOnDisconnect cue monitor extension (reducer half)", () => {
+  function syncedState() {
+    return reduceServerEvent(initialState, event(cueMonitorEvent), 1000);
+  }
+
+  it("marks a synced cue monitor stale instead of guessing freshness", () => {
+    const cleared = clearOnDisconnect(syncedState());
+    expect(cleared.cueMonitor.stale).toBe(true);
+  });
+
+  it("keeps the executors/history so the panel renders (inert) offline", () => {
+    const cleared = clearOnDisconnect(syncedState());
+    expect(cleared.cueMonitor.executors).toHaveLength(2);
+    expect(cleared.cueMonitor.lastSyncAt).toBe(1000);
+  });
+
+  it("does not mark stale when the cue monitor never synced", () => {
+    const chatOnly = addUserMessage(initialState, "안녕");
+    expect(clearOnDisconnect(chatOnly).cueMonitor.stale).toBe(false);
+  });
+
+  it("a fresh snapshot after reconnect clears the stale mark", () => {
+    const cleared = clearOnDisconnect(syncedState());
+    const resynced = reduceServerEvent(cleared, event(cueMonitorEvent), 2000);
+    expect(resynced.cueMonitor.stale).toBe(false);
+    expect(resynced.cueMonitor.lastSyncAt).toBe(2000);
   });
 
   it("remains a no-op on an already-clean state", () => {

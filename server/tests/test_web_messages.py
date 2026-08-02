@@ -15,6 +15,7 @@ import pytest
 
 from server.safety.approval import ApprovalItem, ApprovalRequest
 from server.web.messages import (
+    CUE_MONITOR_CLIENT_MESSAGE_TYPES,
     DASH_CLIENT_MESSAGE_TYPES,
     PANEL_CLIENT_MESSAGE_TYPES,
     PANEL_ITEM_KINDS,
@@ -25,6 +26,9 @@ from server.web.messages import (
     approval_resolved_event,
     busy_event,
     chat_response_event,
+    cue_executor_entry,
+    cue_history_entry,
+    cue_monitor_event,
     dash_catalog_event,
     dash_item,
     dash_section,
@@ -721,3 +725,86 @@ class TestMacroAdditiveExtension:
             parse_client_message(_raw(type="panel_execute", target_kind="macro", target=0))
         with pytest.raises(ProtocolError):
             parse_client_message(_raw(type="panel_execute", target_kind="macro", target="3"))
+
+
+# -- T-C, wave 2 — live cue-progress monitor protocol contract (no SPEC) -------
+#
+# Another ADDITIVE v1 extension on the panel/dash family's terms: PROTOCOL_VERSION
+# stays 1, the new type lands on both allowlists in the same change (mirrored
+# manually in ui/src/protocol.ts — this project has no shared schema codegen).
+
+
+class TestCueMonitorClientMessages:
+    def test_the_cue_monitor_request_is_on_the_client_allowlist(self):
+        assert CUE_MONITOR_CLIENT_MESSAGE_TYPES == ("cue_monitor_request",)
+
+    def test_cue_monitor_request_parses_payload_free(self):
+        message = parse_client_message(_raw(type="cue_monitor_request"))
+        assert message == {"v": PROTOCOL_VERSION, "type": "cue_monitor_request"}
+
+    def test_a_cue_monitor_typo_is_still_an_unknown_type(self):
+        with pytest.raises(ProtocolError):
+            parse_client_message(_raw(type="cue_monitor_requests"))
+
+    def test_the_server_event_type_is_not_a_client_message(self):
+        with pytest.raises(ProtocolError):
+            parse_client_message(_raw(type="cue_monitor"))
+
+    def test_the_cue_monitor_extension_does_not_bump_the_protocol_version(self):
+        assert PROTOCOL_VERSION == 1
+        with pytest.raises(ProtocolError):
+            parse_client_message(json.dumps({"v": 2, "type": "cue_monitor_request"}))
+
+
+class TestCueExecutorEntrySchema:
+    def test_ok_status_carries_sequence_and_cues(self):
+        entry = cue_executor_entry(
+            executor_no=101,
+            status="ok",
+            sequence_no=5,
+            sequence_name="Song A",
+            cues=[{"no": 1, "name": "Intro", "cue_no": 1}],
+            current_cue={"status": "unavailable", "tried": ["Cue"]},
+        )
+        assert entry["executor_no"] == 101
+        assert entry["sequence_no"] == 5
+        assert entry["sequence_name"] == "Song A"
+        assert entry["cues"] == [{"no": 1, "name": "Intro", "cue_no": 1}]
+        assert entry["current_cue"] == {"status": "unavailable", "tried": ["Cue"]}
+
+    def test_cues_default_to_empty_list(self):
+        entry = cue_executor_entry(executor_no=101, status="unassigned")
+        assert entry["cues"] == []
+        assert entry["current_cue"] is None
+
+    def test_an_invalid_status_is_refused(self):
+        with pytest.raises(ValueError):
+            cue_executor_entry(executor_no=101, status="bogus")
+
+
+class TestCueHistoryEntrySchema:
+    def test_shape(self):
+        entry = cue_history_entry(
+            ts="2026-08-02T00:00:00+00:00", command="Go+ Executor 101", ok=True
+        )
+        assert entry == {
+            "ts": "2026-08-02T00:00:00+00:00",
+            "command": "Go+ Executor 101",
+            "ok": True,
+        }
+
+
+class TestCueMonitorEvent:
+    def test_event_shape_and_serializability(self):
+        event = cue_monitor_event(
+            executors=[cue_executor_entry(executor_no=101, status="unassigned")],
+            history=[cue_history_entry(ts="t", command="c", ok=True)],
+        )
+        assert event["v"] == PROTOCOL_VERSION
+        assert event["type"] == "cue_monitor"
+        json.dumps(event, ensure_ascii=False)
+
+    def test_an_empty_snapshot_is_valid(self):
+        event = cue_monitor_event(executors=[], history=[])
+        assert event["executors"] == []
+        assert event["history"] == []
