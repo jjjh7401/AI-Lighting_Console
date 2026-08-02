@@ -1921,6 +1921,46 @@ def build_toolset(
             )
         )
 
+    def _scene_requery(state: object, sequence: int, cue: float) -> dict[str, object] | None:
+        """Read the stored sequence back and pin ONLY what the read answered.
+
+        A command receipt is not evidence of effect — the doctrine this whole
+        SPEC is built on. `prepare_songcue` set the precedent (requery after a
+        successful send, `requery_error` when the read itself fails), and the
+        scene report has carried the consuming half since M5:
+        `ARTIFACT_CONFIRMED_NOTE` is reached ONLY when a requery mapping
+        arrives. Until this wiring existed the tool never passed one, so every
+        production scene report filed claim (a) as UNVERIFIED.
+
+        Returns None when the read answered but the cue is not in it. That is
+        NOT rendered as "the cue is absent": the caller reports it as a
+        mismatch and the report keeps saying (a) is unconfirmed, because a
+        claim of absence is a claim about a value nobody could read
+        (spec.md §C.1 — cue CONTENT is unreadable on this console).
+        """
+        if not isinstance(state, dict):
+            return None
+        node = state.get("node")
+        children = state.get("children")
+        if not isinstance(children, list):
+            return None
+        for child in children:
+            if not isinstance(child, dict) or child.get("class") != "Cue":
+                continue
+            try:
+                found = float(child["cueNo"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if found != float(cue):
+                continue
+            return {
+                "sequence": sequence,
+                "sequence_name": node.get("name") if isinstance(node, dict) else None,
+                "cue_name": child.get("name"),
+                "cue_no": found,
+            }
+        return None
+
     # -- compile_scene (REQ-SCENE-018 — the scene layer's ONE route) -----------
     #
     # @MX:ANCHOR: [AUTO] the only model-reachable entry to the scene compilation
@@ -2140,7 +2180,32 @@ def build_toolset(
         # Feeding them to the report would verdict a bundle that never left the
         # process as "전량 실행".
         outcomes = () if "gate_status" in payload else execution.command_outcomes
-        report = build_scene_report(compilation, outcomes)
+        # The evidence channel for claim (a). Gated on the RAW execution flag,
+        # BEFORE the LiveLock demotion below: a gate hold and a demotion both
+        # send NOTHING, and requerying a sequence the console was never asked
+        # to write would manufacture a read failure about a cue nobody
+        # attempted (the sibling `precheck_patch` gates its macro requery on
+        # the same raw flag for the same reason).
+        requery = None
+        if not execution.result.is_error:
+            try:
+                state = state_port.query_state(f"{rig_paths['sequences']}/{compilation.sequence}")
+            except Exception as error:  # noqa: BLE001 — a failed READ, reported as one
+                # NEVER "the cue is not there": substituting absence for a
+                # failed read is the defect class the sibling read paths fixed.
+                payload["requery_error"] = str(error)
+            else:
+                requery = _scene_requery(state, compilation.sequence, compilation.cue)
+                if requery is None:
+                    # The read answered and the cue was not in it. Claim (a)
+                    # stays UNCONFIRMED — the report needs no special case,
+                    # because it confirms only when a mapping arrives.
+                    payload["requery_mismatch"] = (
+                        f"재조회가 응답했으나 시퀀스 {compilation.sequence}에서 "
+                        f"큐 {compilation.cue}를 찾지 못했다 — 큐가 없다는 뜻은 아니다"
+                        "(저작·전송은 별도로 보고된다). 콘솔에서 직접 확인하라"
+                    )
+        report = build_scene_report(compilation, outcomes, requery=requery)
         payload["executed"] = report.executed
         payload["succeeded"] = report.succeeded
         payload["report"] = report.to_dict()
@@ -2793,11 +2858,19 @@ def build_toolset(
                 "\n"
                 "The report keeps four claims APART, and so must you when you "
                 "speak to the operator:\n"
-                "- whether the cue EXISTS. THIS TOOL DOES NOT RE-QUERY, so it "
-                "never confirms that. An ok receipt is not existence, and the "
-                "report says so in as many words. If existence matters, read "
-                "the sequence back with get_rig_context and say which of the "
-                "two you are reporting;\n"
+                "- whether the cue EXISTS. When the bundle IS sent, the tool "
+                "reads the sequence back and reports it as the report's "
+                '"requery" — a command receipt alone is not evidence. Three '
+                "outcomes, and they are DIFFERENT: a mapping under "
+                '"requery" means the read found the cue and its name and '
+                'cueNo are confirmed; "requery_error" means the READ did not '
+                "answer, so existence is UNCONFIRMED — it does NOT mean the "
+                'cue is absent; "requery_mismatch" means the read answered '
+                "and did not contain this cue, which is still not a claim of "
+                "absence. In the last two the authoring result stands "
+                "unchanged, and the report keeps saying existence is "
+                "unconfirmed. Nothing is read back when the bundle was not "
+                "sent (a gate hold, a live-lock proposal or a failed line);\n"
                 "- the value line carried the uniform attribute set (checked "
                 "in the emitted text);\n"
                 "- the EFFECT — the motion, the colour on stage — cannot be "

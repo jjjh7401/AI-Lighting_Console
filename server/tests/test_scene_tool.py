@@ -69,6 +69,8 @@ from server.orchestrator.tools import (
 from server.scene.compile import CUE_OCCUPIED, SCENE_UNIFORM_ATTRIBUTES
 from server.scene.matching import BOTH_MATCHED, NO_SCENE_COMPOSES_AXES
 from server.scene.report import (
+    ARTIFACT_CONFIRMED_NOTE,
+    ARTIFACT_UNVERIFIED_NOTE,
     CROSS_CALL_COLLISION,
     EFFECT_EVIDENCE_NOTICE,
     TRACKING_UNOBSERVABLE_NOTICE,
@@ -380,6 +382,18 @@ class TestToolRegistration:
         text = _definition(_registry(), COMPILE).description
         assert "unclaimed_attributes" in text
         assert "MAY" in text or "may" in text
+
+    def test_the_description_matches_what_the_tool_actually_does_about_requery(self):
+        # The description said "THIS TOOL DOES NOT RE-QUERY" while the tool did
+        # not; wiring the read makes that sentence a lie, and nothing was
+        # watching it. Two doors, two nets: the report's claim and the model's
+        # instruction must not contradict each other.
+        text = _definition(_registry(), COMPILE).description
+        assert "DOES NOT RE-QUERY" not in text
+        assert "requery_error" in text
+        assert "requery_mismatch" in text
+        # The read is evidence of EXISTENCE only — never of effect.
+        assert "not evidence" in text
 
 
 # =============================================================================
@@ -968,3 +982,137 @@ def test_the_stored_sequence_is_free_on_the_rig_the_tool_read():
     _execution, payload = _compile(_registry(tree=_tree(sequences=((1, "A"), (2, "B")))))
     (store,) = [c for c in _lines(payload) if c.startswith("Store ")]
     assert store.startswith("Store Sequence 3 ")
+
+
+# =============================================================================
+# requery evidence channel (candidate ② — 2026-08-02)
+# =============================================================================
+#
+# The report layer has carried the CONSUMING half since M5: claim (a) is filed
+# under `기계 확인됨:` only when a requery mapping arrives. Until this wiring
+# existed the tool never passed one, so EVERY production scene report said
+# (a) was unverified — `server/scene/report.py` says so in its own comment.
+# These tests pin the producing half, including the three ways it must NOT
+# manufacture confirmation.
+
+_SEQ_DETAIL = f"{SEQUENCES_PATH}/3"
+
+
+def _stored(cue_no: float | None = 1.0, *, cue_name: str = "SCN BLUE", seq="Sequence 3") -> dict:
+    """The requery answer for the sequence this bundle stores into."""
+    children = [] if cue_no is None else [{"class": "Cue", "cueNo": cue_no, "name": cue_name}]
+    return {
+        "v": 1,
+        "kind": "state",
+        "path": _SEQ_DETAIL,
+        "children": children,
+        "node": {"childCount": len(children), "class": "Sequence", "name": seq},
+        "truncated": False,
+    }
+
+
+def _tree_with_requery(answer: dict | None = None) -> dict[str, dict]:
+    tree = _tree()
+    tree[_SEQ_DETAIL] = _stored() if answer is None else answer
+    return tree
+
+
+def test_a_successful_store_is_read_back_and_the_artifact_claim_is_confirmed():
+    state = _RigStatePort(_tree_with_requery())
+    _execution, payload = _compile(_registry(state=state))
+
+    assert _SEQ_DETAIL in state.queried
+    assert payload["report"]["requery"] == {
+        "sequence": 3,
+        "sequence_name": "Sequence 3",
+        "cue_name": "SCN BLUE",
+        "cue_no": 1.0,
+    }
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_CONFIRMED_NOTE
+    assert "requery_error" not in payload
+    assert "requery_mismatch" not in payload
+
+
+def test_the_confirmed_claim_is_not_available_without_the_wiring():
+    # Non-vacuity for the test above: the SAME compile, with the read absent,
+    # must reach the other note. Otherwise "confirmed" says nothing.
+    _execution, payload = _compile(_registry())
+
+    assert payload["report"]["requery"] is None
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_UNVERIFIED_NOTE
+
+
+def test_a_read_that_does_not_answer_is_reported_as_a_failed_read():
+    # The default tree has no detail path, so the fake raises LookupError.
+    _execution, payload = _compile(_registry())
+
+    assert "requery_error" in payload
+    assert "requery_mismatch" not in payload
+    # A failed READ is never rendered as an absent cue, and it never rewrites
+    # the authoring result: the bundle still went out and still succeeded.
+    assert payload["executed"] is True
+    assert payload["succeeded"] is True
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_UNVERIFIED_NOTE
+
+
+def test_a_read_that_answers_without_the_cue_is_a_mismatch_not_a_confirmation():
+    state = _RigStatePort(_tree_with_requery(_stored(cue_no=None)))
+    _execution, payload = _compile(_registry(state=state))
+
+    assert "requery_mismatch" in payload
+    assert "requery_error" not in payload
+    assert payload["report"]["requery"] is None
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_UNVERIFIED_NOTE
+    # And it says so without claiming absence.
+    assert "큐가 없다는 뜻은 아니다" in payload["requery_mismatch"]
+
+
+def test_a_different_cue_number_in_the_sequence_does_not_confirm_this_one():
+    # The sequence answered and holds A cue -- just not the one this bundle
+    # stored. Matching on "some cue exists" would confirm the wrong artifact.
+    state = _RigStatePort(_tree_with_requery(_stored(cue_no=7.0)))
+    _execution, payload = _compile(_registry(state=state))
+
+    assert payload["report"]["requery"] is None
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_UNVERIFIED_NOTE
+
+
+def test_a_live_lock_demotion_does_not_requery_a_sequence_nobody_wrote():
+    # A demotion sends NOTHING. Requerying here would manufacture a read
+    # failure about a cue that was never attempted.
+    state = _RigStatePort(_tree_with_requery())
+    gate = _RecordingGate(cleared=False, status="locked", notice="live lock")
+    _execution, payload = _compile(_registry(state=state, gate=gate))
+
+    assert _SEQ_DETAIL not in state.queried
+    assert payload["report"]["requery"] is None
+    assert "requery_error" not in payload
+
+
+def test_a_failed_bundle_does_not_requery():
+    state = _RigStatePort(_tree_with_requery())
+    port = _RecordingPort(failures=frozenset({"ClearAll"}))
+    _execution, payload = _compile(_registry(state=state, port=port))
+
+    # `executed` means the bundle LEFT the process, not that every line was
+    # ok — the failing line is what makes this a non-success, and a bundle
+    # that broke mid-way must not have its artifact read back as confirmed.
+    assert payload["succeeded"] is False
+    assert _SEQ_DETAIL not in state.queried
+    assert payload["report"]["claims"]["artifact"] == ARTIFACT_UNVERIFIED_NOTE
+
+
+def test_the_confirmed_note_reaches_the_korean_summary_under_its_own_heading():
+    # The claim separation is the point of the whole report layer: the
+    # confirmed artifact must appear under 기계 확인됨, never beside the
+    # effect/tracking notices.
+    state = _RigStatePort(_tree_with_requery())
+    _execution, payload = _compile(_registry(state=state))
+    summary = payload["summary_ko"]
+
+    assert ARTIFACT_CONFIRMED_NOTE in summary
+    assert ARTIFACT_UNVERIFIED_NOTE not in summary
+    assert summary.index("기계 확인됨:") < summary.index(ARTIFACT_CONFIRMED_NOTE)
+    # (a) confirmed never licenses (c): both notices still ship.
+    assert EFFECT_EVIDENCE_NOTICE in summary
+    assert TRACKING_UNOBSERVABLE_NOTICE in summary
