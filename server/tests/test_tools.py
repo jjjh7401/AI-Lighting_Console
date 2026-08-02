@@ -127,13 +127,17 @@ class TestRegistry:
         # + AC-FXLIB-013/014's find_fx and instantiate_fx
         # + AC-SCENE-018's find_scene and compile_scene
         # + SPEC-COPILOT-PRESHOW-001's preshow_check.
+        # + T-J's build_patch_sheet / build_cue_sheet / build_preset_list
+        #   (SPEC-COPILOT-PAPERWORK-001, previously unregistered) and
+        #   plan_executor_layout (server/looks/layout.py, previously
+        #   unregistered).
         # The count is asserted against the declared tuple's length so the set
         # stays CLOSED: adding a handler without declaring it, or declaring one
         # without a handler, still fails here.
         registry = _registry()
         names = [definition.name for definition in registry.definitions()]
         assert sorted(names) == sorted(TOOL_NAMES)
-        assert len(names) == len(TOOL_NAMES) == 14
+        assert len(names) == len(TOOL_NAMES) == 18
 
     def test_the_four_original_tools_are_still_registered(self):
         # The M5 addition must not have displaced any of them.
@@ -845,3 +849,275 @@ class TestArchitectureBoundaries:
                 assert provider_name not in text, (
                     f"{source.name} must stay provider-neutral (found {provider_name!r})"
                 )
+
+
+# -- T-J: paperwork tools (build_patch_sheet / build_cue_sheet / build_preset_list) -
+
+
+class _FakeInventoryPort:
+    """State + property double for the fixture inventory (mirrors
+    test_paperwork_patch_sheet.FakeInventoryPort — kept local so this file does
+    not import a sibling test module)."""
+
+    def __init__(self, states: dict[str, dict], properties: dict[tuple[str, str], dict]):
+        self._states = states
+        self._properties = properties
+
+    def query_state(self, path: str) -> dict:
+        if path not in self._states:
+            raise LookupError(f"unknown state path: {path}")
+        return self._states[path]
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        key = (path, property_name)
+        if key not in self._properties:
+            raise LookupError(f"unknown property: {key}")
+        return self._properties[key]
+
+
+def _prop(value: str) -> dict:
+    return {"ok": True, "value": value}
+
+
+def _one_fixture_inventory_port() -> _FakeInventoryPort:
+    from server.prechk.inventory import FIXTURE_ROOT
+
+    states = {
+        FIXTURE_ROOT: {
+            "ok": True,
+            "node": {"name": "Fixtures", "class": "Container", "childCount": 1},
+            "children": [{"i": 1, "name": "Spot 1"}],
+        }
+    }
+    properties = {
+        (f"{FIXTURE_ROOT}/1", "Patch"): _prop("1.001"),
+        (f"{FIXTURE_ROOT}/1", "FixtureType"): _prop("Robe MegaPointe"),
+        (f"{FIXTURE_ROOT}/1", "Mode"): _prop("Standard"),
+        (f"{FIXTURE_ROOT}/1", "Name"): _prop("Spot 1"),
+    }
+    return _FakeInventoryPort(states, properties)
+
+
+class TestBuildPatchSheetTool:
+    def test_missing_property_port_is_a_structured_error(self):
+        # A state_port with no query_property means build_toolset never adopts
+        # a property_port — the tool must refuse, not silently answer "0 fixtures".
+        registry = build_toolset(execution_port=ScriptedPort(), state_port=FakeStatePort({}))
+        execution = registry.dispatch(_call("build_patch_sheet"))
+        assert execution.result.is_error is True
+        payload = json.loads(execution.result.content)
+        assert "property_port" in payload["error"]
+
+    def test_success_returns_a_path_and_a_summary_never_the_html(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("server.paperwork.output.resolve_paperwork_dir", lambda: tmp_path)
+        registry = build_toolset(
+            execution_port=ScriptedPort(), state_port=_one_fixture_inventory_port()
+        )
+        execution = registry.dispatch(_call("build_patch_sheet"))
+        assert execution.result.is_error is False
+        payload = json.loads(execution.result.content)
+        assert payload["fixture_count"] == 1
+        assert payload["completeness"] == "complete"
+        assert "<html" not in json.dumps(payload)
+        written = Path(payload["path"])
+        assert written.is_file()
+        assert "<html" in written.read_text(encoding="utf-8")
+
+    def test_an_unreadable_root_is_a_structured_error(self):
+        from server.prechk.inventory import FIXTURE_ROOT
+
+        registry = build_toolset(
+            execution_port=ScriptedPort(),
+            state_port=_FakeInventoryPort(
+                {FIXTURE_ROOT: {"ok": False, "error": "no reply within 3.0s"}}, {}
+            ),
+        )
+        execution = registry.dispatch(_call("build_patch_sheet"))
+        assert execution.result.is_error is True
+
+
+class TestBuildCueSheetTool:
+    def _tree(self) -> dict[str, dict]:
+        path = DEFAULT_RIG_CONTEXT_PATHS["sequences"]
+        return {
+            path: {"children": [{"i": 1, "name": "Main Show"}]},
+            f"{path}/1": {"children": [{"i": 1, "name": "Cyan Wash"}]},
+        }
+
+    def test_success_returns_a_path_and_a_summary_never_the_html(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("server.paperwork.output.resolve_paperwork_dir", lambda: tmp_path)
+        registry = build_toolset(
+            execution_port=ScriptedPort(), state_port=FakeStatePort(self._tree())
+        )
+        execution = registry.dispatch(_call("build_cue_sheet"))
+        assert execution.result.is_error is False
+        payload = json.loads(execution.result.content)
+        assert payload["sequence_count"] == 1
+        assert payload["cue_count"] == 1
+        written = Path(payload["path"])
+        assert written.is_file()
+        assert "<html" in written.read_text(encoding="utf-8")
+
+    def test_an_unreachable_console_is_a_structured_error(self):
+        registry = build_toolset(execution_port=ScriptedPort(), state_port=FakeStatePort({}))
+        execution = registry.dispatch(_call("build_cue_sheet"))
+        assert execution.result.is_error is True
+
+
+class TestBuildPresetListTool:
+    def _tree(self) -> dict[str, dict]:
+        path = DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]
+        return {
+            path: {"children": [{"i": 1, "name": "Dimmer"}]},
+            f"{path}/1": {"children": []},
+        }
+
+    def test_success_returns_a_path_and_a_summary_never_the_html(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("server.paperwork.output.resolve_paperwork_dir", lambda: tmp_path)
+        registry = build_toolset(
+            execution_port=ScriptedPort(), state_port=FakeStatePort(self._tree())
+        )
+        execution = registry.dispatch(_call("build_preset_list"))
+        assert execution.result.is_error is False
+        payload = json.loads(execution.result.content)
+        assert payload["pool_count"] == 1
+        assert payload["preset_count"] == 0
+        written = Path(payload["path"])
+        assert written.is_file()
+
+    def test_an_unreachable_console_is_a_structured_error(self):
+        registry = build_toolset(execution_port=ScriptedPort(), state_port=FakeStatePort({}))
+        execution = registry.dispatch(_call("build_preset_list"))
+        assert execution.result.is_error is True
+
+
+# -- T-J: plan_executor_layout (server/looks/layout.py wiring) ----------------
+
+from server.looks.schema import AttributeValue, Look, LookLibrary  # noqa: E402
+
+
+def _layout_look(look_id: str, display_name: str, *, dynamics: int) -> Look:
+    return Look(
+        look_id=look_id,
+        display_name=display_name,
+        genre="rock",
+        dynamics=dynamics,
+        roles=("백라이트",),
+        attributes=(AttributeValue(name="Dimmer", value=80),),
+    )
+
+
+def _layout_library() -> LookLibrary:
+    return LookLibrary(
+        schema_version=1,
+        looks=(
+            _layout_look("intro", "Intro Wash", dynamics=1),
+            _layout_look("verse", "Verse", dynamics=2),
+        ),
+    )
+
+
+class TestPlanExecutorLayoutTool:
+    def _registry(self, *, port=None, state=None):
+        return build_toolset(
+            execution_port=port or ScriptedPort(),
+            state_port=state if state is not None else FakeStatePort({}),
+            look_library=_layout_library(),
+        )
+
+    def test_unknown_genre_is_an_error_with_candidates(self):
+        registry = self._registry()
+        execution = registry.dispatch(
+            _call("plan_executor_layout", {"genre": "재즈", "sequence_numbers": {"intro": 1}})
+        )
+        assert execution.result.is_error is True
+        payload = json.loads(execution.result.content)
+        assert "rock" in payload["candidates"]
+
+    def test_missing_sequence_numbers_is_an_error(self):
+        registry = self._registry()
+        execution = registry.dispatch(_call("plan_executor_layout", {"genre": "rock"}))
+        assert execution.result.is_error is True
+
+    def test_places_looks_on_the_measured_page_one_addresses(self):
+        state = FakeStatePort({"Executor 101": {"node": {}}, "Executor 102": {"node": {}}})
+        registry = self._registry(state=state)
+        execution = registry.dispatch(
+            _call(
+                "plan_executor_layout",
+                {"genre": "rock", "sequence_numbers": {"intro": 11, "verse": 12}},
+            )
+        )
+        assert execution.result.is_error is False
+        payload = json.loads(execution.result.content)
+        assert payload["executed"] is False
+        assert [item["executor_no"] for item in payload["items"]] == [101, 102]
+        assert [item["conflict"] for item in payload["items"]] == [False, False]
+        assert "Assign Sequence 11 At Executor 101" in payload["commands"]
+        assert "Label Sequence 11 'Intro Wash'" in payload["commands"]
+        assert len(payload["commands"]) == 4
+
+    def test_a_look_missing_a_sequence_number_is_skipped_not_guessed(self):
+        state = FakeStatePort({"Executor 101": {"node": {}}})
+        registry = self._registry(state=state)
+        execution = registry.dispatch(
+            _call(
+                "plan_executor_layout",
+                {"genre": "rock", "sequence_numbers": {"intro": 11}},
+            )
+        )
+        payload = json.loads(execution.result.content)
+        assert len(payload["items"]) == 1
+        assert payload["skipped"] == [
+            {
+                "look_id": "verse",
+                "reason": "sequence_not_provided",
+                "detail": (
+                    "no existing sequence number was supplied for look "
+                    "'verse' — this planner does not create sequences"
+                ),
+            }
+        ]
+
+    def test_an_occupied_executor_is_flagged_and_excluded_from_commands(self):
+        state = FakeStatePort(
+            {"Executor 101": {"node": {"sequenceNo": 99}}, "Executor 102": {"node": {}}}
+        )
+        registry = self._registry(state=state)
+        execution = registry.dispatch(
+            _call(
+                "plan_executor_layout",
+                {"genre": "rock", "sequence_numbers": {"intro": 11, "verse": 12}},
+            )
+        )
+        payload = json.loads(execution.result.content)
+        assert payload["items"][0]["conflict"] is True
+        assert payload["items"][0]["conflict_reason"] == "occupied"
+        assert payload["items"][1]["conflict"] is False
+        # only the non-conflicted item's two lines survive
+        assert len(payload["commands"]) == 2
+        assert all("Executor 101" not in c for c in payload["commands"])
+
+    def test_an_unconfirmed_executor_is_treated_as_a_conflict_not_free(self):
+        # Executor 101's state query is never answered by this port at all.
+        state = FakeStatePort({})
+        registry = self._registry(state=state)
+        execution = registry.dispatch(
+            _call("plan_executor_layout", {"genre": "rock", "sequence_numbers": {"intro": 11}})
+        )
+        payload = json.loads(execution.result.content)
+        assert payload["items"][0]["conflict"] is True
+        assert payload["items"][0]["conflict_reason"] == "unconfirmed"
+        assert payload["commands"] == []
+
+    def test_never_sends_anything_to_the_console(self):
+        port = ScriptedPort()
+        state = FakeStatePort({"Executor 101": {"node": {}}, "Executor 102": {"node": {}}})
+        registry = self._registry(port=port, state=state)
+        registry.dispatch(
+            _call(
+                "plan_executor_layout",
+                {"genre": "rock", "sequence_numbers": {"intro": 11, "verse": 12}},
+            )
+        )
+        assert port.executed == []

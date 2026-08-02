@@ -34,6 +34,7 @@ from server.looks.instantiate import (
     build_instantiation,
     resolve_pools,
 )
+from server.looks.layout import build_layout_commands, plan_layout
 from server.looks.loader import LookSchemaError, load_library_from_dir
 from server.looks.matching import match_looks
 from server.looks.report import build_report, to_korean
@@ -50,6 +51,7 @@ from server.looks.songcue import (
     parse_sections,
 )
 from server.looks.songcue_report import build_songcue_report
+from server.orchestrator.layout_occupancy import check_occupancy
 from server.orchestrator.ports import (
     BundleGate,
     CommandExecutionPort,
@@ -99,6 +101,10 @@ TOOL_NAMES = (
     "instantiate_fx",
     "find_scene",
     "compile_scene",
+    "build_patch_sheet",
+    "build_cue_sheet",
+    "build_preset_list",
+    "plan_executor_layout",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -2313,6 +2319,252 @@ def build_toolset(
             command_outcomes=execution.command_outcomes,
         )
 
+    # -- build_patch_sheet / build_cue_sheet / build_preset_list (T-J — paperwork
+    #    read-only wiring) -------------------------------------------------------
+    #
+    # Every builder here rides the SAME gate-audited query ports every other
+    # rig-context tool uses; server/paperwork/data.py never imports the OSC send
+    # surface (server/tests/test_paperwork_boundary.py). The self-contained HTML
+    # a renderer produces is NEVER put in the tool result content — a model has
+    # no use for 3-6KB of markup, and a human opens the file in a browser — so
+    # the result carries only the written file's path plus a small numeric
+    # summary. The write location is frozen-aware
+    # (server.paperwork.output.resolve_paperwork_dir, the same split
+    # server.safety.bootstrap.resolve_runtime_audit_dir makes for audit logs)
+    # and the basename is a fixed, deterministic constant, so a rebuild
+    # overwrites the same file rather than littering the directory.
+
+    def build_patch_sheet(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        # Deferred (function-local), not module-level: server.paperwork.data
+        # itself imports DEFAULT_RIG_CONTEXT_PATHS/collect_rig_sections from
+        # THIS module (server.orchestrator.tools), so a module-level import
+        # here would close an import cycle (tools -> paperwork -> tools) that
+        # fails at interpreter load time. Deferring to call time is safe:
+        # both modules are fully initialized long before any handler runs.
+        from server.paperwork.data import build_patch_sheet as build_patch_sheet_query
+        from server.paperwork.output import write_paperwork_html
+        from server.paperwork.render import render_patch_sheet
+
+        if property_port is None:
+            # Same missing-capability wording precheck_patch uses — never answer
+            # "zero fixtures" when the capability is simply unwired.
+            return _error_result(
+                call,
+                "property reads are not wired — build_toolset needs property_port "
+                "(or a state_port that also implements query_property)",
+            )
+        try:
+            sheet = build_patch_sheet_query(_InventoryPort(state_port, property_port))
+        except InventoryReadError as error:
+            return _error_result(call, f"fixture inventory unreadable: {error}")
+        try:
+            path = write_paperwork_html("patch_sheet.html", render_patch_sheet(sheet))
+        except OSError as error:
+            return _error_result(call, f"patch sheet could not be written to disk: {error}")
+        content = json.dumps(
+            {
+                "path": str(path),
+                "fixture_count": sheet.observed_count,
+                "child_count": sheet.child_count,
+                "completeness": sheet.completeness,
+            },
+            ensure_ascii=False,
+        )
+        return ToolExecution(
+            result=ToolResult(tool_call_id=call.id, name=call.name, content=content, is_error=False)
+        )
+
+    def build_cue_sheet(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        # Deferred import — see build_patch_sheet's comment above.
+        from server.paperwork.data import build_cue_sheet as build_cue_sheet_query
+        from server.paperwork.output import write_paperwork_html
+        from server.paperwork.render import render_cue_sheet
+
+        listing = build_cue_sheet_query(
+            state_port,
+            sequences_path=rig_paths.get("sequences", DEFAULT_RIG_CONTEXT_PATHS["sequences"]),
+        )
+        if listing.unavailable_reason is not None:
+            content = json.dumps(
+                {
+                    "error": (f"the sequences pool did not arrive: {listing.unavailable_reason}"),
+                    "reason": listing.unavailable_reason,
+                    "detail": listing.unavailable_detail,
+                },
+                ensure_ascii=False,
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id, name=call.name, content=content, is_error=True
+                )
+            )
+        try:
+            path = write_paperwork_html("cue_sheet.html", render_cue_sheet(listing))
+        except OSError as error:
+            return _error_result(call, f"cue sheet could not be written to disk: {error}")
+        content = json.dumps(
+            {
+                "path": str(path),
+                "sequence_count": len(listing.pools),
+                "cue_count": sum(len(pool.items) for pool in listing.pools),
+                "truncated": listing.truncated,
+                "drilldown_capped": listing.drilldown_capped,
+            },
+            ensure_ascii=False,
+        )
+        return ToolExecution(
+            result=ToolResult(tool_call_id=call.id, name=call.name, content=content, is_error=False)
+        )
+
+    def build_preset_list(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        # Deferred import — see build_patch_sheet's comment above.
+        from server.paperwork.data import build_preset_list as build_preset_list_query
+        from server.paperwork.output import write_paperwork_html
+        from server.paperwork.render import render_preset_list
+
+        listing = build_preset_list_query(
+            state_port,
+            preset_pools_path=rig_paths.get(
+                "preset_pools", DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]
+            ),
+        )
+        if listing.unavailable_reason is not None:
+            content = json.dumps(
+                {
+                    "error": (f"the preset pools did not arrive: {listing.unavailable_reason}"),
+                    "reason": listing.unavailable_reason,
+                    "detail": listing.unavailable_detail,
+                },
+                ensure_ascii=False,
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id, name=call.name, content=content, is_error=True
+                )
+            )
+        try:
+            path = write_paperwork_html("preset_list.html", render_preset_list(listing))
+        except OSError as error:
+            return _error_result(call, f"preset list could not be written to disk: {error}")
+        content = json.dumps(
+            {
+                "path": str(path),
+                "pool_count": len(listing.pools),
+                "preset_count": sum(len(pool.items) for pool in listing.pools),
+                "truncated": listing.truncated,
+                "drilldown_capped": listing.drilldown_capped,
+            },
+            ensure_ascii=False,
+        )
+        return ToolExecution(
+            result=ToolResult(tool_call_id=call.id, name=call.name, content=content, is_error=False)
+        )
+
+    # -- plan_executor_layout (T-J — server/looks/layout.py wiring) ------------
+    #
+    # PLANS ONLY, NEVER SENDS: this handler never calls run_commands and never
+    # touches execution_port. It reuses select_genre's own result object as the
+    # "bundle" plan_layout expects — a GenreSelection already carries exactly
+    # the (genre, looks) shape plan_layout reads, so no preset-pool/group
+    # resolution (and no console write surface at all) is needed to place looks
+    # on executors; that is a SEPARATE concern instantiate_look/prepare_busking
+    # already own. The occupancy check (check_occupancy) is the one live read
+    # this handler performs, and only to CLASSIFY conflicts in the answer —
+    # never to act on them. Conflicted items are excluded from the returned
+    # commands (server/looks/layout.py::build_layout_commands), which the
+    # caller must pass to run_commands itself to actually apply — gate
+    # screening, LiveLock and the audit log all still apply unchanged there.
+
+    def plan_executor_layout(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        nonlocal looks
+        genre = call.arguments.get("genre")
+        if not isinstance(genre, str) or not genre.strip():
+            return _error_result(
+                call, "'genre' must be the operator's own word for the genre (e.g. '록', 'EDM')"
+            )
+        raw_sequence_numbers = call.arguments.get("sequence_numbers")
+        if not isinstance(raw_sequence_numbers, Mapping) or not raw_sequence_numbers:
+            return _error_result(
+                call,
+                "'sequence_numbers' must be a non-empty object mapping each look_id to an "
+                "EXISTING sequence number on this rig — this tool never creates a sequence",
+            )
+        sequence_numbers: dict[str, int] = {}
+        for key, value in raw_sequence_numbers.items():
+            if (
+                not isinstance(key, str)
+                or isinstance(value, bool)
+                or not isinstance(value, int)
+                or value < 1
+            ):
+                return _error_result(
+                    call,
+                    "'sequence_numbers' keys must be look_id strings and values must be "
+                    "positive integers",
+                )
+            sequence_numbers[key] = value
+        page_no = call.arguments.get("page_no", 1)
+        if isinstance(page_no, bool) or not isinstance(page_no, int) or page_no < 1:
+            return _error_result(call, "'page_no' must be a positive integer")
+        start_slot = call.arguments.get("start_slot", 1)
+        if isinstance(start_slot, bool) or not isinstance(start_slot, int) or start_slot < 1:
+            return _error_result(call, "'start_slot' must be a positive integer")
+        if looks is None:
+            try:
+                looks = load_library_from_dir()
+            except LookSchemaError as error:
+                return _error_result(call, f"look library unavailable: {error}")
+        selection = select_genre(looks, genre)
+        if selection.genre is None:
+            content = json.dumps(
+                {
+                    "error": f"unknown genre {genre!r}",
+                    "reason": selection.reason,
+                    "candidates": list(selection.candidates),
+                },
+                ensure_ascii=False,
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id, name=call.name, content=content, is_error=True
+                )
+            )
+        plan = plan_layout(selection, sequence_numbers, page_no=page_no, start_slot=start_slot)
+        plan = check_occupancy(state_port, plan)
+        commands = build_layout_commands(plan)
+        content = json.dumps(
+            {
+                "executed": False,
+                "genre": plan.genre,
+                "page_no": plan.page_no,
+                "complete": plan.complete,
+                "items": [
+                    {
+                        "look_id": item.look_id,
+                        "display_name": item.display_name,
+                        "sequence_number": item.sequence_number,
+                        "label": item.label,
+                        "page_no": item.page_no,
+                        "slot": item.slot,
+                        "executor_no": item.executor_no,
+                        "conflict": item.conflict,
+                        "conflict_reason": item.conflict_reason,
+                        "conflict_detail": item.conflict_detail,
+                    }
+                    for item in plan.items
+                ],
+                "skipped": [
+                    {"look_id": skip.look_id, "reason": skip.reason, "detail": skip.detail}
+                    for skip in plan.skipped
+                ],
+                "commands": list(commands),
+            },
+            ensure_ascii=False,
+        )
+        return ToolExecution(
+            result=ToolResult(tool_call_id=call.id, name=call.name, content=content, is_error=False)
+        )
+
     definitions = (
         ToolDefinition(
             name="run_commands",
@@ -3057,6 +3309,127 @@ def build_toolset(
                 "additionalProperties": False,
             },
         ),
+        ToolDefinition(
+            name="build_patch_sheet",
+            description=(
+                "Build a printable patch sheet — every observed fixture's "
+                "slot, universe/address, fixture type and mode — from the "
+                "SAME fixture inventory precheck_patch reads. READS ONLY, "
+                "sends nothing.\n"
+                "\n"
+                "This tool does NOT return the document itself. A patch "
+                "sheet is a self-contained HTML page meant for a HUMAN to "
+                "open in a browser and print, not for you to read — so the "
+                "result carries only the file path it was written to plus a "
+                "small numeric summary (fixture_count, child_count, "
+                "completeness). Tell the operator the path; do not try to "
+                "quote or summarize the HTML.\n"
+                "\n"
+                "'completeness' mirrors the fixture inventory's own verdict "
+                '— when it is not "complete" the enumeration was partial '
+                "and the sheet says so at the top, same as get_rig_context."
+            ),
+            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+        ),
+        ToolDefinition(
+            name="build_cue_sheet",
+            description=(
+                "Build a printable cue sheet — every sequence, drilled one "
+                "level into its stored cues — from the same sequences pool "
+                "get_rig_context lists. READS ONLY, sends nothing.\n"
+                "\n"
+                "Like build_patch_sheet this tool returns a file path plus a "
+                "small numeric summary (sequence_count, cue_count, "
+                "truncated, drilldown_capped), never the HTML itself — the "
+                "document is for a human to open, not for you to read."
+            ),
+            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+        ),
+        ToolDefinition(
+            name="build_preset_list",
+            description=(
+                "Build a printable preset list — every preset-pool type "
+                "(Dimmer, Color, Position, ...), drilled into the presets "
+                "actually stored inside it — from the same preset pools "
+                "get_rig_context lists. READS ONLY, sends nothing.\n"
+                "\n"
+                "Like build_patch_sheet this tool returns a file path plus a "
+                "small numeric summary (pool_count, preset_count, "
+                "truncated, drilldown_capped), never the HTML itself — the "
+                "document is for a human to open, not for you to read."
+            ),
+            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+        ),
+        ToolDefinition(
+            name="plan_executor_layout",
+            description=(
+                "Plan which executor each look of an already-chosen genre "
+                "palette lands on — page, slot, the console's REAL executor "
+                "number (page*100+slot) and an ASCII label — and return the "
+                "two rulebook-validated command lines per look "
+                "('Assign Sequence <n> At Executor <m>' and "
+                "'Label Sequence <n> \\'<name>\\''). "
+                "\n\n"
+                "THIS TOOL NEVER SENDS ANYTHING TO THE CONSOLE. It only "
+                "plans and returns command TEXT — to actually apply the "
+                "layout you must pass the returned 'commands' list to "
+                "run_commands yourself, which is where gate screening, the "
+                "live lock and the audit log apply, unchanged.\n"
+                "\n"
+                "'sequence_numbers' must map each look_id (from find_looks / "
+                "the genre's palette) to a sequence number that ALREADY "
+                "EXISTS on this rig — this tool never creates a sequence, it "
+                "only decides which executor an existing one lands on. A "
+                "look with no entry is reported under 'skipped' "
+                "(reason 'sequence_not_provided') and never guessed at.\n"
+                "\n"
+                "Before returning, this tool reads back every target "
+                "executor's live state (the ONE read it performs) and marks "
+                "any that are already occupied or could not be confirmed. A "
+                "conflicted item stays in 'items' with 'conflict': true and "
+                "a 'conflict_reason' of either 'occupied' (an existing "
+                "sequence is already bound there) or 'unconfirmed' (the read "
+                "did not answer, so it is NOT assumed free) — and it is "
+                "EXCLUDED from 'commands'. Never overwrite a conflicted "
+                "target yourself; re-plan onto a different page/slot or ask "
+                "the operator."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "genre": {
+                        "type": "string",
+                        "description": (
+                            "The operator's own word for the genre (e.g. '록', 'EDM') "
+                            "— the same vocabulary prepare_busking accepts."
+                        ),
+                    },
+                    "sequence_numbers": {
+                        "type": "object",
+                        "description": (
+                            "Map of look_id -> an EXISTING sequence number on this "
+                            "rig. A look_id missing from this map is skipped, never "
+                            "assigned a placeholder."
+                        ),
+                        "additionalProperties": {"type": "integer"},
+                    },
+                    "page_no": {
+                        "type": "integer",
+                        "description": (
+                            "Optional, defaults to 1. Only page 1's slot->executor "
+                            "arithmetic is live-verified; other pages compute the "
+                            "same formula unverified."
+                        ),
+                    },
+                    "start_slot": {
+                        "type": "integer",
+                        "description": "Optional, defaults to 1. The first slot to place onto.",
+                    },
+                },
+                "required": ["genre", "sequence_numbers"],
+                "additionalProperties": False,
+            },
+        ),
     )
     handlers: dict[str, _Handler] = {
         "run_commands": run_commands,
@@ -3073,5 +3446,9 @@ def build_toolset(
         "instantiate_fx": instantiate_fx,
         "find_scene": find_scene,
         "compile_scene": compile_scene,
+        "build_patch_sheet": build_patch_sheet,
+        "build_cue_sheet": build_cue_sheet,
+        "build_preset_list": build_preset_list,
+        "plan_executor_layout": plan_executor_layout,
     }
     return ToolRegistry(definitions, handlers)

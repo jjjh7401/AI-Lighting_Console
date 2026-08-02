@@ -72,11 +72,19 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # build_toolset body the earlier SPECs already touch, so unified=0 splits the
 # old single hunk at 951 into five (952 / 971 / 989 / 1007 / 1118) instead of
 # adding a wholly new start — none of the five overlaps a protected range.
+# T-J (tool-registration branch) registered the four previously-unregistered
+# paperwork/layout tools the same way: import lines, four TOOL_NAMES entries,
+# four handlers + four ToolDefinitions + four handlers-dict entries — all
+# widening hunks the earlier SPECs already opened, except ONE genuinely new
+# start at 27 (ruff's isort placing the `server.looks.layout` import between
+# the existing `server.looks.instantiate` and `server.looks.schema` imports).
+# None of it touches a protected range.
 # The positional list is bookkeeping; the assertion that carries the PRESERVE
 # claim is the protected-range overlap check below.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     15,
     17,
+    27,
     33,
     49,
     125,
