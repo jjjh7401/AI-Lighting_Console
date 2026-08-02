@@ -164,8 +164,7 @@ def _build_pool_listing(
         contents_unavailable = bool(obj.get("contents_unavailable"))
         items = (
             tuple(
-                PoolEntry(no=child.get("no"), name=str(child.get("name", "")))
-                for child in contents
+                PoolEntry(no=child.get("no"), name=str(child.get("name", ""))) for child in contents
             )
             if contents is not None
             else ()

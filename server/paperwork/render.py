@@ -95,11 +95,11 @@ def _render_pool_listing(
     for pool in listing.pools:
         pool_label = escape(pool.name) + (f" (#{pool.no})" if pool.no is not None else "")
         if pool.contents_unavailable:
-            rows_html = (
-                '<tr><td colspan="2" class="unavailable">contents unavailable</td></tr>\n'
-            )
+            rows_html = '<tr><td colspan="2" class="unavailable">contents unavailable</td></tr>\n'
         elif not pool.items:
-            rows_html = f'<tr><td colspan="2" class="empty">No {item_header.lower()} stored.</td></tr>\n'
+            rows_html = (
+                f'<tr><td colspan="2" class="empty">No {item_header.lower()} stored.</td></tr>\n'
+            )
         else:
             rows_html = "".join(
                 f"<tr><td>{item.no if item.no is not None else ''}</td>"
@@ -125,8 +125,8 @@ def _render_pool_listing(
     )
     body = (
         f"<h1>{escape(title)}{truncated_badge}{capped_badge}</h1>\n"
-        f'<div class="meta">Path: {escape(listing.path)} · {len(listing.pools)} {pool_header.lower()}</div>\n'
-        + "".join(sections)
+        f'<div class="meta">Path: {escape(listing.path)} · '
+        f"{len(listing.pools)} {pool_header.lower()}</div>\n" + "".join(sections)
     )
     return _page(title, body)
 
