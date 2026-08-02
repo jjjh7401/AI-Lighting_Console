@@ -86,8 +86,8 @@ looks:
     dynamics: 2
     # Backlight-led: the team reads as silhouette, which keeps a still verse still.
     roles: ["백라이트", "배경"]
-    aliases: ["푸른 벌스", "blue verse", "새벽"]
-    mood_keywords: ["서늘한", "고요한", "새벽", "푸른", "벌스", "cool", "calm"]
+    aliases: ["푸른 벌스", "파란 벌스", "blue verse", "새벽"]
+    mood_keywords: ["서늘한", "고요한", "새벽", "푸른", "파란", "벌스", "cool", "calm"]
     attributes:
       Dimmer: 50
       ColorRGB_R: 25

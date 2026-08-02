@@ -168,6 +168,7 @@ _ENDINGS = (
     "보자",
     "줘",
     "봐",
+    "하는",
 )
 
 _SUFFIX = "(?:" + "|".join(_PARTICLES + _ENDINGS) + ")?"

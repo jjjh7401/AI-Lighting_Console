@@ -41,8 +41,8 @@ looks:
     genre: "ballad"
     dynamics: 1
     roles: ["배경", "백라이트"]
-    aliases: ["달빛", "moonlight", "푸른 밤"]
-    mood_keywords: ["쓸쓸한", "푸른", "밤", "달빛", "차분한", "moonlit", "night"]
+    aliases: ["달빛", "moonlight", "푸른 밤", "파란 밤"]
+    mood_keywords: ["쓸쓸한", "푸른", "파란", "밤", "달빛", "차분한", "moonlit", "night"]
     attributes:
       Dimmer: 30
       ColorRGB_R: 35
