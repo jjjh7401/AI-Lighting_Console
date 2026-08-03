@@ -65,7 +65,7 @@ base: `feature/SPEC-COPILOT-SPATIAL-001` = `115eb6d` · branch: `feature/SPEC-CO
 
 ### M1 — 위상 분류기 (`server/spatial/topology.py` — 순수, 콘솔 무접촉)
 
-- **신규 축 3종 검출**: `lateral_split`(x축 갭) · `concentric`(중심으로부터 반지름 갭) · `vertical_levels`(z축 갭)
+- **신규 축 4종 검출**: `lateral_split`(x축 갭) · `concentric`(반지름 갭) · `vertical_levels`(z축 갭) · **`bilateral_pairs`**(x=0 대칭 쌍 — research §7.1: MAtricks `Mirror`/Pan Invert 프로그래밍의 전제이며 LD에게 "미러링 가능" 신호가 된다)
 - **기존 `depth_rows`는 편입, 대체 아님** — `rows.py`는 무변경(회귀 0)
 - 표준 라이브러리 산술만. **신규 의존성 0** (SPATIAL §C.1 승계 — sklearn 금지)
 - `vertical_span`이 관측에서 **분류 입력으로 승격**(SPATIAL §E.2.18의 후속)
@@ -79,16 +79,18 @@ base: `feature/SPEC-COPILOT-SPATIAL-001` = `115eb6d` · branch: `feature/SPEC-CO
 
 `research.md` §6이 어휘를 **조사로 확정**했다. 발명하지 않는다.
 
-- **깊이**: `Downstage` / `Center` / `Upstage` (**`Front`/`Back` 아님** — §6.2). 4+ → `Row 1..N` (DS→US)
+- **깊이**: `Downstage` / `Center` / `Upstage` (**`Front`/`Back` 아님** — §6.2). 4+ → **`Electric 1..N`** (DS→US — **업계 표준 방향**: 오버헤드 바는 프로시니엄에서 upstage로 번호를 매긴다, research §7.1)
 - **좌우**: `Stage Right` / `Center` / `Stage Left` — **맨 `Left`/`Right` 금지**(§6.3).
   stage 기준과 house 기준은 정반대이며 MA3는 **+x = stage left**다
 - **그리드**: 업계 표준 9칸 복합 명명 `DSR·DSC·DSL / CSR·CS·CSL / USR·USC·USL`(§6.4) 또는 축별 분리
 - **동심원**: `Inner` / `Outer` · 3+ → `Ring 1..N`. **업계 표준이 없음을 문서에 명시**(§6.6)
-- **수직**: `Low Side` / `High Side` · 3+ → `Level 1..N`(§6.5)
+- **수직**: `Low Side` / `High Side` · 3+ → `Level 1..N` (**위→아래** — 붐·래더 기물 번호 관례, §7.1)
 - 번호 폴백은 **순서 규칙을 문서화**한다 — McCandless 영역 번호도 방향이 표준화되지 않았다(§6.8)
 - **접두 규칙 강권**(예: `SP `) — §5.1 기존 이름 충돌 회피와 §6.7 기하/기능 축 구분을 **동시에** 해결
 - **기능 그룹을 대체하지 않는다**(§6.7 — ETC: 전문가는 물리 위치가 아니라 기능으로 묶는다).
   이름은 **위치**를 말하고 **역할**을 말하지 않는다 — `Downstage`가 곧 front light를 뜻하지 않는다
+- **기능 어휘를 차용하지 않는다**(§7.2) — `Front`는 front light **system**으로 읽힌다. 이것이
+  `Downstage`를 쓰는 두 번째 이유다(표준 준수 + 기능 축 충돌 회피)
 - 어휘·폴백·접두 전부 golden으로 고정. **임의 작명 0**
 - **역할 해석기 간섭 검사**: `server/looks/resolver.py`의 6역할 어휘와 겹치는지 정적 검사 +
   기존 룩 테스트 **무수정 PASS**
@@ -144,6 +146,31 @@ base: `feature/SPEC-COPILOT-SPATIAL-001` = `115eb6d` · branch: `feature/SPEC-CO
 - **`exec` 제약 승계**: 큰따옴표 금지 · 값은 작은따옴표 · 검증은 수치 허용오차
 - 코드·주석·커밋은 영어, SPEC 문서는 한국어
 
+### §C.0 ⚠ 명시적 범위 제외 — 세분화 축 (research §7)
+
+디자이너가 리그를 쪼개는 축은 5개이며 본 SPEC은 **1개(+선택적 1개)만** 다룬다. 축을 혼동하면
+할 수 없는 것을 약속하게 된다.
+
+| 축 | 상태 | 근거 |
+|---|---|---|
+| **A. 위치(기하)** | **본 SPEC의 주 대상** | 좌표로 판독 가능 |
+| **B. 기능/시스템**(front/back/side wash · key/fill/back · XL/XR sidelight · wash/special/cyc · warm/cool) | **범위 밖** | 전문가의 1차 축이지만 **좌표에 없는 정보**다. downstage 픽스처가 백라이트일 수 있다. 회전값(`rot*`)으로 조준 방향 추론은 원리적으로 가능하나 회전 좌표계가 미검증이고 *추론된* 기능을 확정 이름으로 붙이는 것은 "발명"이다 — **별도 SPEC 후보** |
+| **C. 픽스처 타입**(Spot/Wash/Beam/Strobe/Blinder…) | **v2 권고 · v1은 자리만** | 패치에서 판독 가능(우리 리그 `Robin MMX Spot` 실측)하나 **동종 리그에서 이득 0**. 위상 × 타입 교차는 세분화를 크게 늘린다 |
+| **D. 리깅 위치**(FOH · Boom · Box Boom · Ladder · Torm · floor package) | **범위 밖** | 하드웨어 구조명이며 패치에 없다. 좌표로 추정하면 거짓 자산이 영속한다. 단 `Electric N` 어휘는 깊이 폴백으로 **차용**한다(y 순서로 정직하게 말할 수 있는 것) |
+| **E. 런타임 효과 분할**(Wings · Block · Group · Shuffle · Invert/Mirror) | **명시적 제외 — 중복 구현 금지** | **MAtricks가 이미 한다**(MA3 공식). 룰북 `31:85-90`이 이미 검증된 문법으로 싣고 있다. 홀짝·윙은 런타임 재성형이며 영속 자산이 아니다 |
+
+**3층 관계를 `design.md`에 명기할 것**(§7.5.1) — 그러지 않으면 후속 작업이 MAtricks를 그룹으로
+재구현하려 든다:
+
+```
+GROUPGEN 그룹   = 누구를      (영속 · 이름 있음 · 콘솔에서 손으로도)
+SPATIAL 선택순서 = 어떤 순서로  (런타임 · 방향)
+MAtricks        = 어떻게 재성형 (런타임 · 윙·블록·홀짝·셔플)
+```
+
+**과약속 금지**: 사용자의 *"연출 의도에 맞게"* 를 *"의도를 자동 해석한다"* 로 읽으면 안 된다.
+정직한 약속은 **"연출에 쓸 수 있는 형태로 위치 그룹을 만들어 둔다"** 이며, 의도는 사용자가 그 위에 얹는다.
+
 ### §C.1 PRESERVE 목록
 
 | 대상 | 성질 |
@@ -163,6 +190,8 @@ base: `feature/SPEC-COPILOT-SPATIAL-001` = `115eb6d` · branch: `feature/SPEC-CO
 - **[Q5 트리거]** `arrange_fixtures` 자동 부착 vs 별도 툴
 - **[Q6 절단 리그 정책]** 거부 vs 명시 경고 후 진행
 - **[Q7 룰북 신설 여부]** 신설 시 OVERLAP 게이트 예외 절차 재수행 필요
+- **[Q9 픽스처 타입 축 포함 여부]** 축 C(§C.0) — v1에 넣으면 위상 × 타입 교차로 세분화가 크게 늘고, 동종 리그에서는 이득 0. **v2 권고**이나 스키마에 자리를 비워둘지 결정
+- **[Q10 `bilateral_pairs` 위상 채택 여부]** 대칭 검출이 그룹을 만드는가, 아니면 *신호*만 보고하는가(미러링 가능 여부는 그룹이 아닌 속성일 수 있다)
 - **[Q8 SPATIAL 정렬 어휘 개명]** `left_to_right`는 실제로 **house left → house right(= stage right → stage left)**다(§6.3.1 실증). 출하된 폐쇄 집합의 파괴적 변경이므로 **본 SPEC 범위 밖 · sync-phase 인계** — 최소한 SPATIAL 문서에 "left/right는 house 기준" 명기
 
 ## §E. Phase 4 Mode 사전 평가

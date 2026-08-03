@@ -1,6 +1,6 @@
 # SPEC-COPILOT-GROUPGEN-001 — 사전 조사 (research)
 
-status: **pre-plan (킥오프 브리프) v0.3.0** · 2026-08-03 · `/moai plan` 미실행
+status: **pre-plan (킥오프 브리프) v0.4.0** · 2026-08-03 · `/moai plan` 미실행
 
 > **성격.** plan-phase 전 **인계용 조사 기록**이다. `spec.md` · `acceptance.md` · `design.md`는 아직 없다.
 > 여기 담긴 `[실측]`은 라이브 onPC 2.4.2 직접 관측이며 **다시 재기 전에는 복구할 수 없는 정보**다.
@@ -327,15 +327,192 @@ key/fill/back, 밴드 멤버별 존)이고 **물리적 위치가 아니다.**
   개명은 파괴적 변경이므로 **본 SPEC 범위 밖 · sync-phase 인계**. 최소한 SPATIAL 문서에
   *"left/right는 house(객석) 기준"* 을 명기해야 한다
 
-## §7. ASSUMPTION 번호
+## §7. 세분화 축 분류 — 조명 연출·디자인 영역 심층 조사 (v0.4.0 신설)
+
+> 사용자 요구: *"좀더 세분화할 수 있도록"* · *"조명 연출과 디자인 영역을 중점으로"*.
+> 조사 결과 **디자이너가 리그를 쪼개는 축은 5개**이며, 그중 **본 SPEC이 좌표로 다룰 수 있는 것은
+> 1개(+1개 부분)** 뿐이다. 나머지는 원리적으로 다른 정보원을 요구하거나 **이미 콘솔이 한다.**
+> 축을 혼동하면 SPEC이 할 수 없는 것을 약속하게 된다.
+
+### §7.0 다섯 축 요약
+
+| 축 | 무엇으로 쪼개는가 | 정보원 | 본 SPEC | 
+|---|---|---|---|
+| **A. 위치(기하)** | 좌표 위상 | `posx/posy/posz` **판독 가능** | **주 대상** |
+| **B. 기능/시스템** | 빛의 역할·방향 | 디자이너 의도 (좌표로 유도 불가) | **범위 밖** — 이름으로 위장 금지 |
+| **C. 픽스처 타입** | 장비 종류 | 패치 fixture type **판독 가능** | **후보 — 값싸고 확실** |
+| **D. 리깅 위치** | 하드웨어 구조명 | 리그 도면 (패치에 없음) | 범위 밖 |
+| **E. 런타임 효과 분할** | 선택 재성형 | **MAtricks가 이미 한다** | **명시적 제외** |
+
+### §7.1 축 A — 위치(기하) · 본 SPEC의 주 대상
+
+§6.9 어휘표가 이 축을 덮는다. 조사로 **하나가 더 추가**됐다:
+
+**오버헤드 바 번호 관례** `[인수-웹]` — theatrecrafts:
+> *"Lighting bars over the stage are numbered from the proscenium arch towards upstage. The bar closest
+> to the proscenium is **LX1** (or **Electrics 1** / **Number 1 Electric** in the USA)"* · 다음은
+> Second Electric …
+
+→ **4행 이상 폴백의 정답이 `Row 1..N`이 아니라 `Electric 1..N`(또는 `LX1..N`)이다.**
+그리고 **방향이 표준으로 정해져 있다 — 프로시니엄(downstage)에서 upstage로.** §6.8에서 "번호 순서
+규칙을 문서화해야 한다"고 적었는데, **깊이 축만은 업계 표준 방향이 존재한다.**
+
+**붐(수직 측면) 번호** `[인수-웹]`: *"Booms are named by their position (e.g. **SR Boom #1** is the
+downstage boom on stage right)"* → **측면 접두 + downstage부터 번호.** 좌우 그룹을 여러 개로 쪼갤 때의
+표준 형태다(`SR Boom 1` / `SR Boom 2` …).
+
+**기물 번호 방향** `[인수-웹, 단일 출처]`: *"label instruments from stage left to right (for battens),
+and top to bottom for booms and ladders"* — 바텐은 좌우, 붐·래더는 위→아래. 단일 출처이므로
+`[미확정]`으로 다루되, **수직 축 번호는 위→아래**라는 신호다(§6.5의 `Level 1..N` 방향 근거).
+
+**추가 위상 후보 — 좌우 대칭(bilateral symmetry)** `[인수-웹]`:
+> *"If you set half your symmetrical rig to **Pan Invert**, you can speed up positioning… program an
+> entire rig with only half of it working"* · MA3 MAtricks의 **`Mirror` transform**이 이를 구현한다
+
+→ **리그가 x=0 기준 대칭 쌍을 이루는지**는 좌표로 **검출 가능**하며, 검출되면 (a) `Stage Left`/`Stage Right`
+분할의 근거가 확실해지고 (b) LD에게 *"이 리그는 미러링 가능"* 이라는 실용 정보를 준다.
+**§6.9에 없던 위상 후보로 추가할 것.**
+
+### §7.2 축 B — 기능/시스템 · **전문가의 1차 축이지만 본 SPEC의 범위 밖**
+
+§6.7의 ETC 인용을 조사가 더 강하게 확증했다. Vectorworks 광플롯 가이드 `[인수-웹]`:
+
+> *"One common method of channeling is to think of the different groups of lights as **'systems.'**
+> You'll have a **front light system**, a **backlight system** (or two if using two-color backlight),
+> a **cross left (xl) sidelight system**, a **cross right (xr) sidelight system**, and possibly
+> **gobo or template systems**"* · *"Channel numbering in a plot organizes lights according to how the
+> designer wants to control them — organized by the different groups or 'systems'"*
+
+**"System" = 전문가가 실제로 채널·그룹을 조직하는 단위**이며 **(방향/각도) × (색/타입)** 의 곱이다.
+
+전통 디자인 어휘 `[인수-웹]`:
+
+| 용어 | 정의 |
+|---|---|
+| **Acting area** | *"those spaces on the stage where specific scenes are played"* — 영역당 픽스처 2대(McCandless) |
+| **Wash** | Jean Rosenthal: *"bathes a section of the stage with an even field of light using a circuit of two or more lamps"* — front/side/back/down wash |
+| **Special** | *"any instrument which is not an acting area light, a toning and blending light, or a background light"* |
+| **Background** | cyc / 배경 조명 |
+| **Two-color system** | warm(≈3200K) / cool(≈5600K) 대비 — 자연광 표현의 기본 |
+| 방향 어휘 | Front(키) · Back(윤곽·분리) · Side(중흉·어깨·발) · Top · Up · **Cross Left(XL) / Cross Right(XR)** |
+| 3점 조명 | key / fill / back |
+
+**왜 범위 밖인가**: 이 축은 **빛이 무엇을 하는가**이고 좌표는 **장비가 어디 있는가**만 안다.
+downstage에 걸린 픽스처가 백라이트일 수 있고 upstage 픽스처가 프론트일 수 있다 — 조준 방향과
+연출 의도가 결정한다.
+
+**`[미확정]` 미래 가능성**: 우리는 `rotx/roty/rotz`도 **판독 가능**하다(SPATIAL §E.2.1 실측).
+위치 + 회전이면 **조준 방향**을 유도할 수 있어 front/back/side 추론이 원리적으로 가능하다.
+그러나 (a) 회전값의 의미(좌표계·영점)가 미검증이고 (b) *추론된* 기능을 확정 이름으로 붙이는 것은
+이 저장소가 금지한 "발명"에 가깝다. **v1 제외 · 별도 SPEC 후보로 기록.**
+
+**설계 함의(§6.7 강화)**: 기하 그룹 이름이 기능 어휘를 **차용하면 안 된다.**
+`Front` 같은 이름은 front light system으로 읽힌다 — **§6.2가 `Downstage`를 쓰라고 한 이유가
+표준 준수만이 아니라 기능 축과의 충돌 회피이기도 하다.**
+
+### §7.3 축 C — 픽스처 타입 · **값싼 추가 후보**
+
+업계 표준 타입 분류 `[인수-웹]`: **Beam · Spot · Wash · PAR · Fresnel · Profile · Strobe ·
+Blinder · Effect · Follow spot**. 역할이 뚜렷하다:
+
+- **Wash** — *"wide, even illumination"* · 큰 붓
+- **Spot/Profile** — *"smaller more detailed brush… highlight and shape specific objects"*
+- **Beam** — *"narrow aerial beams… readable over longer distances"* · 공중 효과
+- **Strobe** — *"rapid flashes… synchronized with music"* · 클라이맥스
+- **Blinder** — **관객을 비춘다** (*"illuminate the audience rather than the performers"*) →
+  **다른 축의 그룹과 절대 섞이면 안 되는 종류**
+
+**본 SPEC이 쓸 수 있는가: 예.** `get_rig_context`가 이미 `Patch/FixtureTypes`를 읽고, 우리 리그의
+타입이 **`Robin MMX Spot`** 으로 확인됐다(라이브 E2E 실측). 즉 **타입별 그룹은 좌표 없이도 가능**하며
+위상 그룹과 **교차**할 수 있다(예: `Upstage Wash` vs `Upstage Beam`).
+
+→ **plan-phase 결정 사항으로 승격**: v1에 타입 축을 넣는가? 넣으면 세분화가 크게 늘고
+(위상 × 타입), 넣지 않으면 SPEC이 단순해진다. **동종 리그(우리 19대 전부 MMX)에서는 이득이 0**이므로
+**v2 권고**가 정직하다 — 다만 SPEC에 자리를 비워둘 것.
+
+### §7.4 축 D — 리깅 위치 · 범위 밖
+
+`[인수-웹]` 구조명: **FOH**(프로시니엄 객석측 전부) · **LX1/Electric N**(오버헤드) ·
+**Boom**(수직 측면, 바닥 근처) · **Box Boom**(객석 측벽 — *"most used term for side positions in the
+auditorium"*) · **Ladder**(공중 붐, 씬 체인지에 인아웃 가능) · **Torm**(Proscenium Tormentor) ·
+**Floor package**(*"equipment brought by a touring band which sits on the stage deck on
+ground-supported truss"*) · 콘서트 레이어: **front / back / side / floor / aerial**
+
+**왜 범위 밖인가**: 이것들은 **하드웨어 구조의 이름**이고 패치에 없다. 좌표로 *추정*할 수는 있다
+(z가 낮고 x가 극단 → boom일 가능성) 그러나 그건 추측이며, `Boom`이라 이름 붙였는데 실제로는
+래더면 거짓 자산이 영속한다. **단, `Electric N` 어휘는 §7.1에서 깊이 폴백으로 차용한다** —
+"몇 번째 바인가"는 좌표(y 순서)로 정직하게 말할 수 있는 것이기 때문이다.
+
+### §7.5 축 E — 런타임 효과 분할 · **MAtricks가 이미 한다 → 명시적 제외**
+
+MA Lighting 공식 `[인수-웹, 규범]`:
+
+> *"**MAtricks** is a tool that can be used to **divide a selection of fixtures into sub-selections**"* ·
+> 창은 축별 3구획(X 빨강 · Y 파랑 · Z 초록) · Grid 속성 = **Axis · Block · Group · Wings · Width**
+
+| MAtricks 기능 | 공식 정의 | 연출 용도 |
+|---|---|---|
+| **Wings** | *"separate the selection into the number of wings set and select devices from each wing **from opposite directions**"* | 중앙 대칭 · 양끝→중앙 |
+| **Block** | *"creates blocks of fixtures of the specified size… **treats blocks as one fixture**"* | 덩어리 반복 |
+| **Group** | *"separate the selection into the number of groups set, **alternating** through the selection"* | 홀짝·인터리브 |
+| **Shuffle** | *"XShuffle is basically a **seed**… XShuffle 42 will always be the same random order"* | 재현 가능한 랜덤 |
+| **Invert / Mirror** | `Mirror`는 *"set invertstyle to pan, enable invert for enabled groupings like xwings"* | 대칭 리그 미러링 |
+
+그리고 **Selection Grid**: *"a virtual coordinate system that can be used to arrange the selection of
+fixtures in a **true three-dimensional space**"* — Phaser·딜레이·페이드를 그 축 위로 분배한다.
+
+**결론 — 이 축의 그룹을 만들면 안 된다.** 홀짝·윙·블록은 **런타임 재성형**이며 영속 자산이 아니다.
+콘솔이 이미 하고, 우리 룰북 `31_choreography_patterns.md:85-90`이 이미 `XWings`·`XShuffle`·
+`PhaseFromX/ToX`를 **검증된 문법으로** 싣고 있다. 여기에 그룹을 만들면 **콘솔 기능을 중복 구현**하는 것이다.
+
+#### §7.5.1 오히려 진짜 시너지가 여기 있다
+
+MAtricks는 **Selection Grid 위에서** 동작하고, 그리드는 **선택 순서로** 세워진다.
+공식 문서가 확인한다: *"when phasing an effect from 0 thru 360, the effect will spread evenly across
+the selected fixtures… the effect will appear to **walk across the stage**"*.
+
+→ **SPATIAL이 실측 좌표로 선택 순서를 세우고**(§SPATIAL M3), **GROUPGEN이 위상 그룹을 영속화하고**,
+그 위에 **MAtricks가 윙·블록·홀짝을 얹는다.** 세 층이 각자의 일을 한다:
+
+```
+GROUPGEN 그룹  = 누구를 (영속 · 이름 있음 · 콘솔에서 손으로도 쓸 수 있음)
+SPATIAL 선택순서 = 어떤 순서로 (런타임 · 방향을 만든다)
+MAtricks       = 그 순서를 어떻게 재성형할지 (런타임 · 윙·블록·홀짝·셔플)
+```
+
+**이 3층 관계를 `design.md`에 명기할 것** — 그러지 않으면 후속 작업이 MAtricks를 그룹으로
+재구현하려 든다.
+
+### §7.6 §6.9 어휘표 보정 (조사 반영)
+
+| 위상 | 2분할 | 3분할 | 4+ 폴백 | 변경점 |
+|---|---|---|---|---|
+| `depth_rows` | Downstage / Upstage | + Center | **`Electric 1..N`** (DS→US, **표준 방향**) | `Row N` → `Electric N` |
+| `lateral_split` | Stage Right / Stage Left | + Center | `SR Boom 1..N` / `SL Boom 1..N` 형태 참조 | 붐 번호 관례 반영 |
+| `grid` | — | `DSR…USL` 9칸 | `Area N` | 변경 없음 |
+| `concentric` | Inner / Outer | + Mid | `Ring 1..N` | 표준 없음 유지 |
+| `vertical_levels` | Low Side / High Side | — | `Level 1..N` (**위→아래**) | 번호 방향 근거 추가 |
+| **`bilateral_pairs`** | — | — | — | **신설 후보**(§7.1) — 미러링 가능 신호 |
+
+### §7.7 세분화의 상한 — 정직하게
+
+본 SPEC이 좌표만으로 **정당하게** 만들 수 있는 그룹은 **축 A(위치) + 선택적 축 C(타입)** 이다.
+디자이너가 실제로 가장 많이 쓰는 축 B(시스템/기능)는 **좌표에 없는 정보**를 요구한다.
+
+→ **SPEC은 *"배치 인식 위치 그룹"* 이라는 좁은 약속만 한다.** 사용자가 *"연출 의도에 맞게"* 라고 한
+것을 *"연출 의도를 자동으로 해석한다"* 로 읽으면 과약속이다. 정직한 해석은:
+**"연출에 쓸 수 있는 형태로 위치 그룹을 만들어 둔다"** — 의도는 사용자가 그 그룹 위에 얹는다.
+
+## §8. ASSUMPTION 번호
 
 전역 카운터: INTROSPECT-001 ~52 · SPATIAL-001 **53~60** → **본 SPEC은 61부터.**
 
-## §8. 다음 세션의 첫 명령
+## §9. 다음 세션의 첫 명령
 
 ```
 /moai plan SPEC-COPILOT-GROUPGEN-001
 ```
 
 브랜치 준비됨(`feature/SPEC-COPILOT-GROUPGEN-001`) — `--branch` 불필요.
-`progress.md` §0 → 본 문서 §2 · §3 · **§6** → `plan.md` §A 순서로 읽을 것.
+읽는 순서: `progress.md` §0 → 본 문서 **§2**(GO/NO-GO) · **§3**(오독 실증) · **§6**(표준 어휘) ·
+**§7**(세분화 축 — 무엇이 범위 밖인가) → `plan.md` §A.

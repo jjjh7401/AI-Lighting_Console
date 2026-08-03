@@ -30,9 +30,10 @@ status: **pre-plan** · plan-phase 미실행 · 구현 0 · 커밋 0 · 라이�
    왜 그렇게 생겼는지 이해된다.
 2. **`research.md` §3 (현재 계층의 고신뢰 오독)** — 2겹 동심원 → 9행 고신뢰. 위상 분류기가 필요한 이유.
 3. **`plan.md` §A.2(결정 우선순위) → §A.4(M0 게이트 분기표) → §B(M0~M6) → §D(열린 질문 Q1~Q7)**
-4. **`research.md` §6 (업계 표준 어휘 심층 분석)** — MA3 공식 축 의미 · 표준 어휘 · stage/house 함정 · 기능 vs 기하 반론. **어휘를 발명하기 전에 반드시 읽을 것.**
-5. **`research.md` §5(라이브 실측)** — 다시 재지 말고 그대로 쓸 값.
-6. **`SPEC-COPILOT-SPATIAL-001/progress.md` §E.2.14 · §E.2.18 · §E.2.20** — AC-031 되돌림의 대가 ·
+4. **`research.md` §6 (업계 표준 어휘)** — MA3 공식 축 의미 · 표준 어휘 · stage/house 함정. **어휘를 발명하기 전에 반드시 읽을 것.**
+5. **`research.md` §7 (세분화 축 5개)** — 무엇이 범위 밖이고 **왜** 그런지. 축 E가 MAtricks와 중복임을 놓치면 콘솔 기능을 재구현한다.
+6. **`research.md` §5(라이브 실측)** — 다시 재지 말고 그대로 쓸 값.
+7. **`SPEC-COPILOT-SPATIAL-001/progress.md` §E.2.14 · §E.2.18 · §E.2.20** — AC-031 되돌림의 대가 ·
    미검증 축이 낳은 결함 · 라이브 E2E 결함 2건. **이 SPEC의 위험이 전부 여기서 나온다.**
 
 ### 함정 (다음 소유자가 알아야 할 것)
@@ -64,14 +65,22 @@ status: **pre-plan** · plan-phase 미실행 · 구현 0 · 커밋 0 · 라이�
     MA3는 **+x = stage left**로 정의한다(공식 문서). 실증 결과 **SPATIAL의 `left_to_right`는 실제로
     house left → house right(= stage RIGHT → stage LEFT)** 다 — 디자이너가 "stage left에서
     stage right로"라고 하면 역방향이다. **그룹 이름에 맨 `Left`/`Right`를 쓰지 말 것.**
-11. **전문가는 위치가 아니라 기능으로 묶는다**(ETC 용어집). 기하 그룹은 기능 그룹을 **대체하지 않고
-    보완**한다 — 접두 규칙으로 두 축을 구분하고, `Downstage`가 곧 front light를 뜻하지 않음을 문서화.
-12. **의존: SPATIAL-001 미머지.** 본 브랜치는 `115eb6d`에서 분기했다. **main 머지 후 rebase할 것.**
-13. **Gemini 스키마**: `additionalProperties`는 자동 제거된다(커밋 `a5fa16a`). 단
+11. **전문가는 위치가 아니라 기능으로 묶는다** — 실제 단위는 **"system"**(front light system ·
+    backlight system · cross-left/right sidelight system)이며 채널 번호도 그걸로 조직한다.
+    기하 그룹은 기능 그룹을 **대체하지 않고 보완**한다. `Downstage`를 쓰는 이유가 표준 준수만이
+    아니라 **기능 어휘 충돌 회피**이기도 하다 — `Front`는 front light system으로 읽힌다.
+12. **⚠ 세분화 축 5개 중 4개가 범위 밖이다**(`research.md` §7 · `plan.md` §C.0).
+    특히 **축 E(홀짝·윙·블록·셔플)는 MAtricks가 이미 한다** — MA3 공식 기능이고 룰북 `31:85-90`이
+    검증된 문법으로 싣고 있다. **그룹으로 재구현하면 콘솔 기능 중복이다.**
+    3층 관계를 기억할 것: 그룹=누구 · 선택순서=어떤 순서로 · MAtricks=어떻게 재성형.
+13. **과약속 금지** — *"연출 의도에 맞게"* 는 *"의도를 자동 해석한다"* 가 아니다. 좌표는 장비가
+    어디 있는지만 안다. 정직한 약속은 **"연출에 쓸 수 있는 형태로 위치 그룹을 만들어 둔다"**.
+14. **의존: SPATIAL-001 미머지.** 본 브랜치는 `115eb6d`에서 분기했다. **main 머지 후 rebase할 것.**
+15. **Gemini 스키마**: `additionalProperties`는 자동 제거된다(커밋 `a5fa16a`). 단
     `_GEMINI_UNSUPPORTED_KEYS`는 DENY 리스트라 다른 미지원 키워드는 요청 전체를 400으로 죽인다.
-14. **한 턴 예산** `DEFAULT_MAX_MODEL_CALLS = 12` — *"배치 + 그룹 + 연출"* 복합 지시는 `loop_limit`
+16. **한 턴 예산** `DEFAULT_MAX_MODEL_CALLS = 12` — *"배치 + 그룹 + 연출"* 복합 지시는 `loop_limit`
     (부분 실행)이 된다. 실측 확인됨.
-15. **M0 프로브 정리 경로를 프로브 전에 정하라** — `Delete`가 블랙리스트다. SCENE M0가 "시퀀스 7개
+17. **M0 프로브 정리 경로를 프로브 전에 정하라** — `Delete`가 블랙리스트다. SCENE M0가 "시퀀스 7개
     GUI 삭제" 부채를 남긴 실수를 반복하지 말 것. **빈 슬롯 1개만** 표적으로 쓴다.
 
 ### 착수 키트
