@@ -217,7 +217,7 @@ M5를 "이미 그린인 것을 재확인하는 절차"로 돌렸다면 둘 다 �
 
 | 시도 | 결과 |
 |---|---|
-| 점유된 슬롯에 `Import Plugin <n> '<stem>'` (슬롯 12) | **무효** — 이름조차 바뀌지 않는다. M6가 `Delete`를 선행한 것은 정당한 순서였다 |
+| 점유된 슬롯에 `Import Plugin <n> '<stem>'` (슬롯 12) | 오브젝트가 **교체된다** — 다만 **반영이 지연된다**. Import 직후 조회에서는 옛 이름(`CopilotIntrospectProbe092745`)이 그대로였고, 정리 시점 재조회에서 `CopilotIntrospectM7Chunks131737#2`로 바뀌어 있었다. **정정 기록**: 최초 서술은 "무효 — 이름조차 바뀌지 않는다"였는데 그것은 Import 직후 1회 조회만 보고 내린 오판이다. 지연 반영을 고려하지 않은 관측이며, 이 SPEC이 없애려는 "한 번 보고 단정" 그 자체였다 |
 | 빈 슬롯에 Import — FileName 참조 래퍼(283 B), PascalCase 스템 (M1, 슬롯 4) | 오브젝트 생성, **실행 불발** |
 | 빈 슬롯에 Import — 임베드 Base64 XML, PascalCase 스템 (M1, 슬롯 5·6) | 오브젝트 생성, **실행 불발** |
 | 빈 슬롯에 Import — 임베드 XML, 소문자 슬러그 스템 (M7, 슬롯 7) | 오브젝트 생성(이름은 M1 잔여물의 `#2` 중복본), **실행 불발** |
@@ -234,11 +234,13 @@ M5를 "이미 그린인 것을 재확인하는 절차"로 돌렸다면 둘 다 �
 2. **재생 상태 소비 SPEC** — §M7.3의 실측(`TRIGGER`·`CUENAME`·`CURRENTCUE`)을 근거로 큐 모니터·실행 상태 UI를 만든다. `CUENO`는 배제하고 `LOADEDCUE`는 판독 불가로 취급할 것. 역주소(`TRIGGER`)는 EXECREF-001이 DESCOPE했던 갭을 메운다.
 3. **신규 플러그인 배포 경로 규명** — §M7.6의 6회 실측과 미해명 1건. 현재로서는 **신규 플러그인은 최초 1회 사용자 GUI 저장이 필수 전제**이며, 이 제약은 자동화 파이프라인 설계에 직접 영향을 준다.
 
-#### §M7.8 콘솔 정리 대상 (사용자 GUI 삭제 필요 — `Delete`는 툴 블랙리스트)
+#### §M7.8 콘솔 정리 — 완료 (2026-08-03)
 
-슬롯 **4~14** 전부가 본 SPEC이 남긴 일회용 잔여물이다. 슬롯 1 `CopilotResponder`(출하 응답기 v1.6.0) · 2 `CopilotBusk` · 3 `kpop_summer_twinkle`은 **정리 대상이 아니다.**
+`Delete`는 게이트 툴 블랙리스트지만 운영 도구(`server/tools/osc_smoke.py`, 파일명 고정 예외) 경로로는 실행 가능하다. M6·M7이 이미 그 경로를 썼으므로 같은 채널로 정리했다 — 사용자 GUI 삭제는 불필요했다.
 
-`4 CopilotIntrospectProbe083907` · `5 CopilotIntrospectProbe083907B` · `6 CopilotProbeEcho083907` · `7 CopilotIntrospectProbe083907B#2` · `8 introspect-m1-20260803T091729` · `9 introspect_m1_20260803T091729` · `10 CopilotIntrospectProbe091729` · `11 CopilotIntrospectProbe092425` · `12 CopilotIntrospectProbe092745` · `13 CopilotIntrospectM7Chunks131737` · `14 UserPlugin 14`(빈 껍데기)
+- **플러그인 풀**: 슬롯 4~14의 일회용 잔여물 11개 삭제. 삭제 후 재조회 결과 `childCount = 3`이며 남은 것은 `1 CopilotResponder`(출하 응답기 v1.6.0) · `2 CopilotBusk` · `3 kpop_summer_twinkle` — 유지 대상과 정확히 일치한다.
+- **라이브러리 폴더**(`~/MALightingTechnology/gma3_library/datapools/plugins`): 본 세션이 만든 파일 **15개** 삭제(`CopilotIntrospectProbe083907B.xml` · `CopilotProbeEcho083907.xml` · `copilot_introspect_m7.{lua,xml}` · `copilot_introspect_probe_20260803_083907.{lua,xml}` · `introspect-m1-*` · `introspect_m1_*` 계열). **보존 19개** — 출하 응답기(`copilot_responder.{lua,xml}`와 그 `.bak` 2종, `CopilotResponder.xml`)와 선행 세션 산출물(`CopilotBusk`·`CheckDest`·`PatchMMX`·`patch_*` 등)은 손대지 않았다.
+- **정리 후 건강 확인**: `responder_roundtrip --expect-version 1.6.0` → ping · state · exec **3/3 PASS**, `live version=1.6.0`. 쇼파일 내용 변경 없음(플러그인 풀 오브젝트 제거이며 큐·시퀀스·그룹 무변경, `DataPool/Sequences` childCount 19 유지).
 
 ## §E.3 Run-phase Audit-Ready Signal
 
