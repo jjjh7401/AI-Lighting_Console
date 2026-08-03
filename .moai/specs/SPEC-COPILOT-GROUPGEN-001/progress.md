@@ -30,8 +30,9 @@ status: **pre-plan** · plan-phase 미실행 · 구현 0 · 커밋 0 · 라이�
    왜 그렇게 생겼는지 이해된다.
 2. **`research.md` §3 (현재 계층의 고신뢰 오독)** — 2겹 동심원 → 9행 고신뢰. 위상 분류기가 필요한 이유.
 3. **`plan.md` §A.2(결정 우선순위) → §A.4(M0 게이트 분기표) → §B(M0~M6) → §D(열린 질문 Q1~Q7)**
-4. **`research.md` §5(라이브 실측)** — 다시 재지 말고 그대로 쓸 값. **§6**은 위상 어휘 후보.
-5. **`SPEC-COPILOT-SPATIAL-001/progress.md` §E.2.14 · §E.2.18 · §E.2.20** — AC-031 되돌림의 대가 ·
+4. **`research.md` §6 (업계 표준 어휘 심층 분석)** — MA3 공식 축 의미 · 표준 어휘 · stage/house 함정 · 기능 vs 기하 반론. **어휘를 발명하기 전에 반드시 읽을 것.**
+5. **`research.md` §5(라이브 실측)** — 다시 재지 말고 그대로 쓸 값.
+6. **`SPEC-COPILOT-SPATIAL-001/progress.md` §E.2.14 · §E.2.18 · §E.2.20** — AC-031 되돌림의 대가 ·
    미검증 축이 낳은 결함 · 라이브 E2E 결함 2건. **이 SPEC의 위험이 전부 여기서 나온다.**
 
 ### 함정 (다음 소유자가 알아야 할 것)
@@ -56,12 +57,21 @@ status: **pre-plan** · plan-phase 미실행 · 구현 0 · 커밋 0 · 라이�
 8. **좌표 기록이 현재 무승인으로 나간다** — AC-SPATIAL-031 `[DEFERRED]`. 요청하지 않은 기록 54건이
    실제로 통과한 관측 사례가 있다(SPATIAL §E.2.20 결함 2). 같은 사고가 **복구 불가 자산**에서 일어나면
    끝이다. `plan.md` Q4가 이 SPEC의 최우선 결정이다.
-9. **의존: SPATIAL-001 미머지.** 본 브랜치는 `115eb6d`에서 분기했다. **main 머지 후 rebase할 것.**
-10. **Gemini 스키마**: `additionalProperties`는 자동 제거된다(커밋 `a5fa16a`). 단
+9. **어휘를 발명하지 말 것 — 업계 표준이 있다**(`research.md` §6). 깊이는 `Front/Back`이 아니라
+   **Downstage / Center / Upstage**다. 그리드는 이미 표준 9칸 명명(`DSR…USL`)이 있다.
+   **동심원만 표준이 없다** — 그 사실을 명시해야 한다.
+10. **⚠ 좌우는 기준이 반대다.** stage left/right(배우 기준)와 house left/right(객석 기준)는 정반대이며
+    MA3는 **+x = stage left**로 정의한다(공식 문서). 실증 결과 **SPATIAL의 `left_to_right`는 실제로
+    house left → house right(= stage RIGHT → stage LEFT)** 다 — 디자이너가 "stage left에서
+    stage right로"라고 하면 역방향이다. **그룹 이름에 맨 `Left`/`Right`를 쓰지 말 것.**
+11. **전문가는 위치가 아니라 기능으로 묶는다**(ETC 용어집). 기하 그룹은 기능 그룹을 **대체하지 않고
+    보완**한다 — 접두 규칙으로 두 축을 구분하고, `Downstage`가 곧 front light를 뜻하지 않음을 문서화.
+12. **의존: SPATIAL-001 미머지.** 본 브랜치는 `115eb6d`에서 분기했다. **main 머지 후 rebase할 것.**
+13. **Gemini 스키마**: `additionalProperties`는 자동 제거된다(커밋 `a5fa16a`). 단
     `_GEMINI_UNSUPPORTED_KEYS`는 DENY 리스트라 다른 미지원 키워드는 요청 전체를 400으로 죽인다.
-11. **한 턴 예산** `DEFAULT_MAX_MODEL_CALLS = 12` — *"배치 + 그룹 + 연출"* 복합 지시는 `loop_limit`
+14. **한 턴 예산** `DEFAULT_MAX_MODEL_CALLS = 12` — *"배치 + 그룹 + 연출"* 복합 지시는 `loop_limit`
     (부분 실행)이 된다. 실측 확인됨.
-12. **M0 프로브 정리 경로를 프로브 전에 정하라** — `Delete`가 블랙리스트다. SCENE M0가 "시퀀스 7개
+15. **M0 프로브 정리 경로를 프로브 전에 정하라** — `Delete`가 블랙리스트다. SCENE M0가 "시퀀스 7개
     GUI 삭제" 부채를 남긴 실수를 반복하지 말 것. **빈 슬롯 1개만** 표적으로 쓴다.
 
 ### 착수 키트

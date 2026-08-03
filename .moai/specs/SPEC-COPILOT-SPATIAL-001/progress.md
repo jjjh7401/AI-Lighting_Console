@@ -523,6 +523,47 @@ z 범위)을 스키마·회신에 1급 필드로 추가**했다. 측정하고, �
 - 최종 전수 검사 후 **19대 전부 (0,0,0) 복귀** 확인, 프로그래머 `ClearAll`. 쇼파일 잔여 **0**
 - 라이브 기록 누계: M0 프로브 2 · P8 1 · M6 2 · Z축 2 · **앱 E2E 2** = 8회, 전부 원상복구 확인
 
+### §E.2.21 ⚠ 소급 발견 — 정렬 어휘 `left_to_right`의 기준이 house(객석)다
+
+후속 SPEC(GROUPGEN-001) 조사 중 발견. **코드 동작은 정상이고 용어가 모호하다.**
+
+**MA Lighting 공식 문서** (`help.malighting.com/grandMA3/2.2/HTML/qsg_3d_setup.html` ·
+`.../patch_position_fixtures.html`) `[인수-웹, 규범]`:
+
+- **X축 = stage left/right, 양수 = stage left 방향** · *"Stage right will be negative numbers"*
+- **Y축 = downstage/upstage, 양수 = upstage**
+- Z축 = height, 양수 = 바닥 위 · 기본 무대 30m×30m, 중앙 0 · Z 0~15m
+
+무대 관례 `[인수-웹]`: **stage left/right는 배우 기준**(객석을 향해 선 배우의 좌우)이고
+**house left/right는 객석 기준**이며 **둘은 정반대**다.
+
+**실증** (x = −4 / 0 / +4 3대 리그):
+
+```
+left_to_right = (1, 2, 3)
+  fid 1: x=-4.0 → stage RIGHT = house LEFT
+  fid 3: x=+4.0 → stage LEFT  = house RIGHT
+```
+
+→ **`left_to_right`는 house left → house right, 즉 stage RIGHT → stage LEFT 다.**
+조명 디자이너가 *"stage left에서 stage right로"* 라고 하면 **이 정렬의 역방향**을 뜻한다.
+
+**결함의 성질**:
+
+- **동작은 옳다.** P8 라이브 관측에서 사용자가 3D 뷰를 보며 최소 x를 "왼쪽에서 4번째"로 확인했고
+  이는 객석 시점과 일치한다. M6의 두 리그 판정도 유효하다 — 사용자가 본 "왼쪽"이 house left였고
+  코드가 그렇게 정렬했다.
+- **용어가 기준을 명시하지 않는다.** `left_to_right`·`right_to_left`·한국어 "왼쪽/오른쪽" 모두
+  누구 기준인지 말하지 않는다. 전문 용어로는 house 기준임을 밝혀야 한다.
+- **`SPATIAL_ROW_ORDER = "y_ascending"`("stage front to back")은 의미는 맞고 낱말이 틀렸다** —
+  표준 어휘는 `Downstage → Upstage`다.
+
+**조치**: 폐쇄 정렬 어휘 개명은 **출하된 집합의 파괴적 변경**이므로 이 SPEC에서 하지 않는다.
+**sync-phase 인계**: `spec.md`/`design.md`에 *"정렬 어휘의 left/right는 house(객석) 기준이며,
+무대 기준 stage left/right와는 반대"* 를 명기한다. GROUPGEN-001은 그룹 이름에 맨 `Left`/`Right`를
+쓰지 않고 `Stage Left`/`Stage Right`처럼 기준을 이름에 박는 것으로 대응한다
+(`SPEC-COPILOT-GROUPGEN-001/research.md` §6.3).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 - **마일스톤**: M0 ✓ · M1 ✓ · M2 ✓ · M3 ✓ · M4 ✓ · M5 ✓ · M6 ✓ (전 7개 완료) + Z축 검증 보강(§E.2.18)
@@ -537,7 +578,7 @@ z 범위)을 스키마·회신에 1급 필드로 추가**했다. 측정하고, �
 - **실사용 확인**(§E.2.20): 실제 앱 · 실제 `/ws` · 실제 Gemini · 실제 게이트 · 실제 onPC로 *"모든 장비를 5미터 높이에 자연스럽게 배치하고 컬러와 딤머 이펙트로 연출"* 실행. 5m 높이 ✅ · 컬러+딤머 이펙트 ✅ · "자연스럽게" → 프리셋 4회 조합으로 테이퍼 합성 ✅. **한 턴으로는 `loop_limit`**(`max_model_calls=12` 비용 상한) → 부분 실행을 정직하게 보고
 - **선재 결함 1건 수정**(본 SPEC 범위 밖, 커밋 `a5fa16a`): Gemini가 `additionalProperties`를 거부해 **모든 턴이 400으로 실패**하고 있었다. base `4d298b8`에서 11종이 이미 보유 — 원인이 본 SPEC이 아님을 워크트리 실측으로 확인. 앱이 기동 후 무응답이라 수정
 - **`[DEFERRED]` 3건**: ① Layout 기록(REQ-SPATIAL-003 · AC-SPATIAL-003) — ASSUMPTION-55 실측 근거 ② **AC-SPATIAL-031 risky 분류** — safety PRESERVE 경계(§E.2.14) ③ **REQ-SPATIAL-024 승인 흐름** — ②에 종속. ②③은 후속 SPEC이 `server/safety/`와 함께 소유해야 한다
-- **sync-phase 인계 4건**: ① spec.md §C.2와 plan.md §B M4의 risky 분류 문면 모순 → §C.2를 정본으로 삼고 plan.md M4·AC-031을 `[DEFERRED]` 재표기 ② `arrange_fixtures`가 승인 카드 없이 쇼파일을 변형한다는 사실을 spec.md의 알려진 천장에 명기 ③ **AC-031 우선순위 근거로 §E.2.20 결함 2를 인용** — 요청하지 않은 좌표 기록 54건이 무승인 통과한 관측 사례 ④ **절단 시 모델 미고지**(§E.2.20 결함 1) — 툴 설명문만으로는 강제되지 않으므로 구조적 강제를 후속 과제로 등록
+- **sync-phase 인계 5건**: ① spec.md §C.2와 plan.md §B M4의 risky 분류 문면 모순 → §C.2를 정본으로 삼고 plan.md M4·AC-031을 `[DEFERRED]` 재표기 ② `arrange_fixtures`가 승인 카드 없이 쇼파일을 변형한다는 사실을 spec.md의 알려진 천장에 명기 ③ **AC-031 우선순위 근거로 §E.2.20 결함 2를 인용** — 요청하지 않은 좌표 기록 54건이 무승인 통과한 관측 사례 ④ **절단 시 모델 미고지**(§E.2.20 결함 1) — 툴 설명문만으로는 강제되지 않으므로 구조적 강제를 후속 과제로 등록 ⑤ **정렬 어휘의 기준 명기**(§E.2.21) — `left_to_right`는 house(객석) 기준이며 무대 기준과 반대다. MA3 공식 축 의미(+x = stage left)와 함께 `design.md`에 기록
 
 
 ## §E.4 Sync-phase Audit-Ready Signal
