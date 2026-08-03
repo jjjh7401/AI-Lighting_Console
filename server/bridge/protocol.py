@@ -21,12 +21,16 @@ from __future__ import annotations
 import json
 import re
 import urllib.parse
+from collections.abc import Sequence
 
 # @MX:NOTE: [AUTO] protocol version is embedded in every reply payload as "v";
 #   bump only with a PROTOCOL.md revision (M3 tool-runner consumes this contract)
 PROTOCOL_VERSION = 1
 
 PLUGIN_NAME = "CopilotResponder"
+
+MAX_PROPS_NAMES = 16
+MAX_PLUGIN_CALL_BYTES = 2048
 
 _REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]+$")
 
@@ -111,6 +115,40 @@ def _validate_rest(rest: str, *, field: str) -> None:
         raise ProtocolError(f"{field} must be a single line: {rest!r}")
 
 
+def _validate_property_name_token(property_name: str) -> None:
+    _validate_rest(property_name, field="property name")
+    if any(char.isspace() for char in property_name):
+        raise ProtocolError(f"property name must be a single token: {property_name!r}")
+
+
+def _validate_props_names(property_names: Sequence[str]) -> tuple[str, ...]:
+    if isinstance(property_names, str):
+        raise ProtocolError("property names must be a sequence of individual names")
+    try:
+        names = tuple(property_names)
+    except TypeError as error:
+        raise ProtocolError("property names must be a sequence of individual names") from error
+    if not names:
+        raise ProtocolError("property names must be non-empty")
+    if len(names) > MAX_PROPS_NAMES:
+        raise ProtocolError(f"too many property names: max {MAX_PROPS_NAMES}, got {len(names)}")
+    for name in names:
+        if not isinstance(name, str):
+            raise ProtocolError(f"property name must be a string: {name!r}")
+        _validate_property_name_token(name)
+        if "," in name:
+            raise ProtocolError(f"property name must not contain a comma: {name!r}")
+    return names
+
+
+def _validate_plugin_call_budget(command_line: str, *, field: str) -> None:
+    size = len(command_line.encode("utf-8"))
+    if size > MAX_PLUGIN_CALL_BYTES:
+        raise ProtocolError(
+            f"{field} encoded command line must fit {MAX_PLUGIN_CALL_BYTES} bytes, got {size}"
+        )
+
+
 def build_plugin_call(request: str) -> str:
     """Wrap one responder request string as an MA3 plugin-invoking command line."""
     return f'Plugin "{PLUGIN_NAME}" "{request}"'
@@ -133,13 +171,28 @@ def build_state_query(request_id: str, path: str) -> str:
     return build_plugin_call(f"state {request_id} {path}")
 
 
+def build_introspect_query(request_id: str, path: str) -> str:
+    _validate_request_id(request_id)
+    _validate_rest(path, field="object path")
+    line = build_plugin_call(f"introspect {request_id} {path}")
+    _validate_plugin_call_budget(line, field="introspect request")
+    return line
+
+
 def build_prop_query(request_id: str, path: str, property_name: str) -> str:
     _validate_request_id(request_id)
     _validate_rest(path, field="object path")
-    _validate_rest(property_name, field="property name")
-    if any(char.isspace() for char in property_name):
-        raise ProtocolError(f"property name must be a single token: {property_name!r}")
+    _validate_property_name_token(property_name)
     return build_plugin_call(f"prop {request_id} {path} {property_name}")
+
+
+def build_props_query(request_id: str, path: str, property_names: Sequence[str]) -> str:
+    _validate_request_id(request_id)
+    _validate_rest(path, field="object path")
+    names = _validate_props_names(property_names)
+    line = build_plugin_call(f"props {request_id} {','.join(names)} {path}")
+    _validate_plugin_call_budget(line, field="props request")
+    return line
 
 
 def build_exec_request(request_id: str, command: str) -> str:

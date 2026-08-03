@@ -79,6 +79,16 @@
 - **절단 뮤테이션 확인**: `props` 절단 신호 줄을 `payload.truncated = false`로 바꾼 뒤 `TestPropsRead::test_props_payload_size_guard_drops_reads_and_signals_truncation`이 `assert False is True`로 실패함을 확인하고 복구했다. `introspect` 절단 신호 줄도 같은 방식으로 바꾼 뒤 `TestIntrospect::test_introspect_payload_truncation_preserves_total`이 `assert False is True`로 실패함을 확인하고 복구했다. 두 절단 재료는 기본 1900B 상한을 넘기는 mock 데이터로 합성했다.
 - **남은 위험**: 라이브 콘솔 배포와 왕복 검증은 M6 범위라 수행하지 않았다. `console/lua/PROTOCOL.md`와 `server/bridge/protocol.py` 동기화는 M3 범위라 건드리지 않았다. 로컬 LSP 서버(`lua-ls`, `basedpyright`)는 설치되어 있지 않아 후크가 진단을 건너뛰었고, 본 M2 검증은 lupa 하네스와 focused pytest로 수행했다.
 
+**2026-08-03 — M3 와이어 문서 + Python 트윈 완료**
+
+- **문서 동기화**: `console/lua/PROTOCOL.md` 상단에 responder 1.6.0 Revision note를 추가했고, §2 요청 표에 `props`/`introspect`를 가산했다. `prop` 행은 `<PropertyName>`이 마지막 토큰이고 path가 그 앞 전부임을, 바로 다음 `props` 행은 `<PropertyName,...>` 목록이 첫 rest 토큰이고 path가 나머지 줄임을 표 안에서 대조해 D-3 혼선을 막았다. §4.7 `introspect`, §4.8 `props`, §6 ASSUMPTION-46~52도 추가했다.
+- **회신 형상 기록**: §4.7은 `source="property_accessors"`, `fields[].n/t`, `total`(축소 이전 관측 총계), `truncated`(목록 축소), 실패 `error`를 설명한다. 구현이 이미 success payload에 싣는 `class`도 문서화했다. §4.8은 `reads[]` 성공/실패 항목, 항목별 값 축약 `reads[].truncated`, 목록 축소 top-level `truncated`, 그리고 top-level `ok:true`가 "모든 이름 판독 성공"이 아님을 명시했다.
+- **Python 트윈**: `server/bridge/protocol.py`에 `MAX_PROPS_NAMES = 16`, `MAX_PLUGIN_CALL_BYTES = 2048`, `build_introspect_query(request_id, path)`, `build_props_query(request_id, path, property_names)`를 추가했다. 두 빌더는 `_validate_request_id`와 `_validate_rest`를 재사용하고 `build_plugin_call`로 래핑한다. `props` 빌더는 빈 목록, 17개 이상, 공백 포함 이름, 콤마 포함 이름, 큰따옴표/개행, UTF-8 인코딩 후 2048B 초과를 `ProtocolError`로 거부한다.
+- **2048 산술 고정**: `server/tests/test_lua_responder_payload_budget.py::test_max_props_request_fits_the_ma3_command_line_limit`는 16개 이름 × 32B canonical ASCII property-name 가정, 32B request id, `DataPool/Sequences/Sequence 999999/Cue 999999` 경로, 전체 `Plugin "CopilotResponder" "..."` 래퍼로 계산한다. 실제 계산값은 640B, 2048B 한계 대비 여유 1408B다.
+- **Lua↔Python 상한 동치**: `ResponderHarness().config["max_props_names"]`로 Lua 모듈의 `CONFIG`를 직접 읽어 Python `MAX_PROPS_NAMES`와 비교한다. 뮤테이션 확인으로 Python 상수만 17로 바꿨을 때 `test_python_props_name_limit_matches_lua_config`가 `assert 16 == 17`로 실패함을 확인했고, 즉시 16으로 복원했다.
+- **테스트**: `uv run pytest server/tests/test_responder_protocol.py -q` → `40 passed`, `uv run pytest server/tests/test_lua_responder_payload_budget.py -q` → `4 passed`, 최종 묶음 `uv run pytest server/tests/test_responder_protocol.py server/tests/test_lua_responder_payload_budget.py -q` → `44 passed`.
+- **남은 위험**: 라이브 최대 길이 `props` 왕복과 배포 검증은 M6 범위라 수행하지 않았다. 로컬 LSP 서버(`basedpyright`)는 설치되어 있지 않아 후크가 진단을 건너뛰었다. 작업 지시의 compact `introspect` 형상 목록에는 `class`가 없었지만, M2 출하 Lua와 테스트가 이미 success payload에 `class`를 싣고 있어 문서는 구현을 따랐다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_

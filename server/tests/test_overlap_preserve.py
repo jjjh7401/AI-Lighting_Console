@@ -98,6 +98,37 @@ _LOOKS_GRANTED_LINE_PAIRS = {
     ),
 }
 
+#: 2026-08-03 granted exception (SPEC-COPILOT-INTROSPECT-001, user-approved) —
+#: the responder self-introspection verbs. This SPEC exists to extend the
+#: console-side responder (M2 `props`/`introspect`, M3 wire doc, M6 redeploy),
+#: so it collides with the `console/lua/` lock head-on; the predecessor's own
+#: SPEC set never anticipated a successor that must edit the plugin, and the
+#: plan-audit's D7 pass missed it too. Both facts are recorded rather than
+#: smoothed over: see `.moai/specs/SPEC-COPILOT-INTROSPECT-001/plan.md` §F.
+#:
+#: The grant is shaped like `_SAFETY_ALLOWED_DELETED_LINES`, NOT like a path
+#: removal: additions are allowed (the extension is the point), every DELETED
+#: line is pinned by exact text, and the changed-file set is pinned too. A
+#: removal that is not on this list — or a new file under `console/lua/` —
+#: still fails the gate. M6 will redeploy the plugin; if that touches another
+#: file here, this list must grow by review, which is the intended cost.
+_CONSOLE_LUA_DIR = "console/lua/"
+_CONSOLE_LUA_ALLOWED_DELETED_LINES = {
+    "console/lua/PROTOCOL.md": (
+        "| `prop` | `prop <id> <object-path> <PropertyName>` | `/copilot/state`, kind=`prop` |",
+        "- `<object-path>` and `<ma3-command>` are parsed **rest-of-line** (embedded",
+        '  spaces are legal) and MUST NOT contain a double quote (`"`), which would',
+        "  still contain spaces but property names may not. MA3 accepts single-quoted",
+        "  strings, so `Store Cue 5 'name'` is the workaround for quoted names.",
+    ),
+    "console/lua/copilot_responder.lua": (
+        "    -- can be read from the cue object; Protocol v1 throughout.",
+        '    VERSION = "1.5.0",',
+        "        return tostring(value)",
+        "        return tostring(value)",
+    ),
+}
+
 _TOOLS_PATH = "server/orchestrator/tools.py"
 
 #: Protected regions of ``tools.py``, PRECHK-base relative: the programmer-state
@@ -173,10 +204,17 @@ def _git(*arguments: str) -> str:
     return result.stdout
 
 
+#: The two granted directories, each policed by its own exact-text gate below.
+#: Kept as one tuple so the filter and the command-shape assertion cannot
+#: drift apart.
+_GRANTED_DIRS = (_LOOKS_LIBRARY_DIR, _CONSOLE_LUA_DIR)
+
+
 def _preserve_diff_command() -> list[str]:
-    # The granted looks-library extension is checked by its own exact-text
-    # gate below; every OTHER preserved path must still diff empty.
-    paths = tuple(path for path in _PRESERVE_PATHS if path != _LOOKS_LIBRARY_DIR)
+    # The granted looks-library and console/lua extensions are checked by their
+    # own exact-text gates below; every OTHER preserved path must still diff
+    # empty.
+    paths = tuple(path for path in _PRESERVE_PATHS if path not in _GRANTED_DIRS)
     return ["git", "diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", *paths]
 
 
@@ -237,8 +275,12 @@ class TestPreserveDiffIsEmpty:
         assert command[:4] == ["git", "diff", "--stat", f"{_PRECHK_BASE}..HEAD"]
         assert command[4] == "--"
         assert tuple(command[5:]) == tuple(
-            path for path in _PRESERVE_PATHS if path != _LOOKS_LIBRARY_DIR
+            path for path in _PRESERVE_PATHS if path not in _GRANTED_DIRS
         )
+        # Every exempted directory must be a real member of the locked list —
+        # an exemption naming a path the gate never covered would be a
+        # decoration that quietly widens nothing today and everything later.
+        assert all(path in _PRESERVE_PATHS for path in _GRANTED_DIRS)
         # Explicitly NOT this SPEC's base: that range is empty right after the
         # work is committed, which disables the gate while keeping it green.
         assert _PRECHK_BASE != _OVERLAP_BASE
@@ -303,6 +345,75 @@ class TestLooksLibraryGrantedExtension:
                 stripped = new.replace(', "파란 밤"', "").replace(', "파란 벌스"', "")
                 stripped = stripped.replace('"파란", ', "")
                 assert stripped == old
+
+
+class TestConsoleLuaGrantedExtension:
+    """The 2026-08-03 grant — the responder may GROW, it may not lose anything.
+
+    Not a weakening: `console/lua/` stays in `_PRESERVE_PATHS` and this class
+    IS the lock's new shape there. The predecessor locked the directory to stop
+    silent drift in a plugin nobody was supposed to be editing;
+    SPEC-COPILOT-INTROSPECT-001 edits it on purpose, additively, to add the
+    `props`/`introspect` verbs. So the invariant that actually carries the
+    predecessor's intent is not "no diff" but "no unpinned removal": every
+    deleted line is named here by exact text, and the changed-file set is
+    closed. An extra file, an extra removal, or a reworded removal fails.
+    """
+
+    def test_the_grant_is_not_an_empty_exemption(self):
+        # Non-vacuity, mirroring the looks grant: an empty dict would satisfy
+        # every loop below while `console/lua/` sits filtered out of
+        # `_preserve_diff_command()` — a gate that is off AND green.
+        assert _CONSOLE_LUA_ALLOWED_DELETED_LINES
+        assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", _CONSOLE_LUA_DIR) != ""
+
+    def test_exactly_the_granted_files_changed(self):
+        rows = _numstat(_PRECHK_BASE, _CONSOLE_LUA_DIR)
+        assert set(rows) == set(_CONSOLE_LUA_ALLOWED_DELETED_LINES)
+
+    def test_the_deletions_are_exactly_the_pinned_lines(self):
+        for path, allowed in _CONSOLE_LUA_ALLOWED_DELETED_LINES.items():
+            deleted = [
+                line[1:]
+                for line in _git(
+                    "diff", "--unified=0", f"{_PRECHK_BASE}..HEAD", "--", path
+                ).splitlines()
+                if line.startswith("-") and not line.startswith("---")
+            ]
+            assert deleted == list(allowed), path
+
+    def test_the_extension_is_additive_in_every_granted_file(self):
+        # The grant's whole justification is that the responder GREW. A file
+        # that only deletes pinned lines would pass the check above while
+        # shrinking the plugin, which is the opposite of what was approved.
+        rows = _numstat(_PRECHK_BASE, _CONSOLE_LUA_DIR)
+        for path, (added, deleted) in rows.items():
+            assert added > deleted, path
+
+    def test_the_only_pinned_code_removal_is_the_version_bump_and_a_wider_return(self):
+        # Shape check on the ONE granted source file, so the pin cannot quietly
+        # come to cover a behavioural deletion later: of its four removals, one
+        # is the old VERSION line (paired with a 1.6.0 addition below) and two
+        # are the `safe_property` return that gained a third value; the fourth
+        # is a comment. No dispatch branch, no reply field, no guard.
+        removals = _CONSOLE_LUA_ALLOWED_DELETED_LINES["console/lua/copilot_responder.lua"]
+        assert sum(1 for line in removals if line.strip().startswith("VERSION =")) == 1
+        assert sum(1 for line in removals if line.strip() == "return tostring(value)") == 2
+        assert sum(1 for line in removals if line.strip().startswith("--")) == 1
+        assert len(removals) == 4
+        added = [
+            line[1:]
+            for line in _git(
+                "diff",
+                "--unified=0",
+                f"{_PRECHK_BASE}..HEAD",
+                "--",
+                "console/lua/copilot_responder.lua",
+            ).splitlines()
+            if line.startswith("+") and not line.startswith("+++")
+        ]
+        assert '    VERSION = "1.6.0",' in added
+        assert sum(1 for line in added if line.strip().startswith("VERSION =")) == 1
 
 
 class TestToolsProtectedRegions:
