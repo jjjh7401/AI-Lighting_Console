@@ -93,10 +93,37 @@ def _is_missing_key_error(exc: ValueError) -> bool:
     return any(marker in text for marker in _MISSING_KEY_MARKERS)
 
 
+#: JSON Schema keywords the Gemini function-declaration schema subset REJECTS.
+#: Sending one fails the ENTIRE request with 400 INVALID_ARGUMENT ("Unknown name
+#: ... Cannot find field"), so a single tool carrying it takes the whole toolset
+#: — and the app — down. Live-observed 2026-08-03: eleven tool schemas carried
+#: ``additionalProperties`` and every Gemini turn died, cache path and uncached
+#: path alike.
+#:
+#: Deliberately a DENY list, not an allow list. An unsupported keyword fails
+#: LOUDLY (the request 400s), while a keyword wrongly missing from an allow list
+#: would be dropped SILENTLY and quietly weaken the contract the model is given.
+#: Loud beats quiet, so only what is known to break is removed here.
+#:
+#: ``additionalProperties`` is a model-facing hint on this path, not an
+#: enforcement point: every tool handler validates its own arguments and
+#: rejects unknown keys itself, so removing it costs no guarantee. The neutral
+#: schema keeps it for providers that accept it (Anthropic takes full JSON
+#: Schema) — this conversion is Gemini-local.
+_GEMINI_UNSUPPORTED_KEYS = frozenset({"additionalProperties"})
+
+
 def _to_gemini_schema(schema: dict) -> dict:
-    """Convert neutral JSON schema to Gemini schema (uppercased type values)."""
+    """Convert neutral JSON schema to Gemini schema (uppercased type values).
+
+    Recurses through ``properties`` and ``items`` so a keyword Gemini rejects is
+    removed at EVERY depth: the live failure included both a top-level
+    ``parameters`` and a nested ``properties[...]`` occurrence.
+    """
     converted: dict = {}
     for key, value in schema.items():
+        if key in _GEMINI_UNSUPPORTED_KEYS:
+            continue
         if key == "type" and isinstance(value, str):
             converted[key] = value.upper()
         elif key == "properties" and isinstance(value, dict):
