@@ -246,7 +246,39 @@ Plugin "CopilotResponder" "props <id> <n1>,<n2>,...,<nk> <path>"
 
 ### §5.7 판정 기록 슬롯
 
-*(run-phase M1이 채운다. GO면 채택 열거원과 그 근거, NEGATIVE면 사다리 5종 전부의 실패 양상. 어느 쪽이든 모호한 "아마도" 금지 — AC-INTROSPECT-029.)*
+**상태: GO (2026-08-03 M1 라이브 프로브 완료).**
+
+증거:
+
+- 원본 로그: `.moai/state/verify/introspect-m1-20260803T091729.log`
+- 최종 프로브 소스: `.moai/state/verify/introspect_m1_20260803T092930.lua`
+- 최종 프로브 플러그인: `CopilotIntrospectProbe092930` (`osc_slot=2`, `/copilot/state` 직접 회신, 수신 포트 9005)
+- 대상: `Executor 201`(정지 + `Go+` 재생 중), `DataPool/Sequences/80`, `DataPool/Groups/1`
+
+**대조군 확인.** 동일 세션에서 `prop`으로 `Executor 201 Index` → `function: 0x...`, `Executor 201 Fader` → `Master`, `DataPool/Sequences/80 CurrentCue` → `Sequence 80.3`을 확인했다. `PropertyName()`은 MA의 canonical uppercase 이름을 반환하므로, 같은 세션에서 `INDEX` → `201`, `FADER` → `Master`, `CURRENTCUE` → `Sequence 80.3`도 별도 확인했다. 게이트 비교는 이 canonical property name을 같은 이름의 대소문자 표기로 취급한다.
+
+| 사다리 | 결과 | 게이트 판정 |
+|---|---|---|
+| 1. `getmetatable(handle).__index` | `getmetatable`은 성공하지만 `__index` 타입이 `function`이다. 테이블 순회 불가, 이름 0건. | 폐기 |
+| 2. `pairs(handle)` | `bad argument #1 to 'for iterator'`로 실패, 이름 0건. | 폐기 |
+| 3. `PropertyCount()` + `PropertyName(i)` / `PropertyType(i)` | **성공.** Executor 71건, Sequence 65건, Group 101건. `PropertyName`/`PropertyType`는 응답했고 `GetPropertyDisplayName`은 응답 0건. Executor 정지/재생 모두 `INDEX`·`FADER` 포함, Sequence 80은 `CURRENTCUE` 포함. | **채택** |
+| 4. `handle:Get(i)` 정수 색인 | 호출은 성공하나 이름 0건. Sequence 80은 userdata 5건을 반환했지만 프로퍼티 이름으로 쓰지 못한다. | 폐기 |
+| 5. `handle:Dump()` 반환값 | 문자열 반환 있음. 토큰 스캔으로 Executor의 `INDEX`·`FADER`, Sequence의 `CURRENTCUE`를 포함해 게이트는 통과한다. | 구현 비채택 |
+
+**채택 열거원:** `property_accessors` 하나만 M2 구현 입력으로 채택한다. 이유: 같은 게이트를 통과한 `dump_return`은 문자열 토큰 파싱에 의존하고, §5.3이 예고한 대로 파싱 비용과 거짓 양성 위험이 있다. `PropertyCount()` + `PropertyName(i)`는 구조화된 이름 열거원이므로 M2는 이 경로만 구현한다.
+
+**부작용 확인(ASSUMPTION-49).** 정지 대상 `Executor 201`을 프로브 전후 `state`로 재조회했다. 전후 모두 `children=[]`, `node={ childCount=0, class=Executor, name="Ballad Yellow Red", sequenceNo=20 }`, `truncated=false`로 동일했다. 재생 대상은 `Go+ Executor 201` 후 프로브하고 `Off Executor 201`로 원복했다.
+
+**ASSUMPTION 판정.**
+
+| Assumption | 판정 | 근거 |
+|---|---|---|
+| ASSUMPTION-46 | TRUE | `PropertyCount()` + `PropertyName(i)`가 MA3 2.4.2 핸들에서 이름 집합을 열거했다. `Dump()`도 문자열 이름 후보를 반환했다. |
+| ASSUMPTION-47 | TRUE | 채택원 `property_accessors`가 Executor 정지/재생 대조 이름(`INDEX`·`FADER`)과 Sequence 대조 이름(`CURRENTCUE`)을 전부 포함했다. |
+| ASSUMPTION-48 | TRUE | 프로브 플러그인 자체가 `SendOSCMessage`로 `/copilot/state`에 percent-encoded JSON을 직접 회신했다. 매크로/라벨/쇼파일 증거 폴백은 사용하지 않았다. |
+| ASSUMPTION-49 | TRUE | 정지 `Executor 201`의 `state` 형상이 프로브 전후 동일했다. |
+
+**콘솔 잔여.** slot 지정 `Import Plugin <slot> '<slug>'`만 성공했다. slotless import 시도와 payload 축소 재시도 때문에 본 세션의 일회용 프로브 플러그인 슬롯이 남았다(`introspect-m1-20260803T091729`, `introspect_m1_20260803T091729`, `CopilotIntrospectProbe091729`, `CopilotIntrospectProbe092425`, `CopilotIntrospectProbe092745`, `CopilotIntrospectProbe092930`). 증거 채널로서의 매크로/라벨/씬 쓰기는 0건이다.
 
 ---
 

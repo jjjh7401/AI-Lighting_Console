@@ -23,7 +23,7 @@ related_specs: [SPEC-COPILOT-EXECBODY-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT
 
 | 버전 | 날짜 | 작성자 | 변경 내용 |
 |---|---|---|---|
-| 0.1.0 | 2026-08-03 | manager-spec | 최초 작성 (draft, Tier L). 출처: 코디네이터 라이브 실측(2026-08-02, onPC 2.4.2 + 응답기 v1.5.0) — Executor 핸들 대상 후보 프로퍼티 22종 전수 소진 후 `Sequence` 핸들에서 `CurrentCue`가 발견된 사건. 그 사건의 오판("한 핸들에서 후보를 소진했으니 그 정보는 없다")을 구조적으로 제거하는 것이 본 SPEC의 존재 이유다. |
+| 0.1.0 | 2026-08-03 | manager-spec | 최초 작성 (draft, Tier L). 출처: 코디네이터 라이브 실측(2026-08-02, onPC 2.4.2 + 응답기 v1.5.0) — Executor 핸들 대상 후보 프로퍼티 전수 소진 후 `Sequence` 핸들에서 `CurrentCue`가 발견된 사건. 그 사건의 오판("한 핸들에서 후보를 소진했으니 그 정보는 없다")을 구조적으로 제거하는 것이 본 SPEC의 존재 이유다. |
 
 ## A. 개요
 
@@ -31,13 +31,13 @@ related_specs: [SPEC-COPILOT-EXECBODY-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT
 
 코디네이터가 실물 onPC 2.4.2 + 응답기 `copilot_responder.lua` v1.5.0으로 측정한 사실 3건:
 
-1. **Executor 핸들은 거의 아무것도 주지 않는다.** `state` 조회 결과는 `{"class":"Executor","name":"Sequence 80","sequenceNo":80,"childCount":0}`가 전부였다. `prop`으로 **22종**(현재 큐 후보 8종 `Cue` `CueNo` `CurrentCue` `ActiveCue` `CueNumber` `Step` `CurrentCueNumber` `Progress` + 실행 상태 후보 14종 `Active` `IsRunning` `Running` `State` `Status` `Faderposition` `On` `Off` `Rate` `Speed` `Phase` `Master` `Value`)을 시도해 전부 `property not readable`. 예외 2건은 더 나쁜 신호였다 — `Index`는 `ok=true`지만 값이 `'function: 0x...'`(Lua 함수 포인터), `Fader`는 `'Master'`(페이더 **이름**)로 실행 여부와 무관.
+1. **Executor 핸들은 거의 아무것도 주지 않는다.** `state` 조회 결과는 `{"class":"Executor","name":"Sequence 80","sequenceNo":80,"childCount":0}`가 전부였다. `prop`으로 본 문서가 이름까지 확정해 열거하는 **후보 21종**(현재 큐 후보 8종 `Cue` `CueNo` `CurrentCue` `ActiveCue` `CueNumber` `Step` `CurrentCueNumber` `Progress` + 실행 상태 후보 13종 `Active` `IsRunning` `Running` `State` `Status` `Faderposition` `On` `Off` `Rate` `Speed` `Phase` `Master` `Value`)을 시도해 전부 `property not readable`이었다(8+13=21). 이 21종 밖의 추가 판독 2건은 더 나쁜 신호였다 — `Index`는 `ok=true`지만 값이 `'function: 0x...'`(Lua 함수 포인터), `Fader`는 `'Master'`(페이더 **이름**)로 실행 여부와 무관.
 2. **Sequence 핸들에는 현재 큐가 있다.** `prop DataPool/Sequences/80 CurrentCue` → 정지 시 `'Sequence 80.1'`, `Go+` 2회 후 `'Sequence 80.2'`. **재생에 따라 값이 이동한다.** 같은 핸들의 `CueNo`는 신뢰 불가(정지 시 `'1'`, 진행 후 빈 문자열).
 3. **경로가 틀렸을 뿐 채널은 있었다.** 한 핸들에서 후보를 소진했다는 사실이 "그 정보는 존재하지 않는다"를 **함의하지 않았다.**
 
 ### A.2 왜 도구를 먼저 만드는가 (사용자 결정)
 
-22종 소진이 만든 손해는 라운드트립 22회가 아니다. **틀린 일반화**다. 후보 소진은 "이 핸들에 이 이름이 없다"만 증명하는데, 그것이 "그 정보가 없다"로 확대되면 설계가 잘못된 전제 위에 세워진다. `server/web/cue_monitor.py`(base `3176900`)의 `@MX:REASON` 주석이 그 오판의 흔적을 이미 기록하고 있다 — *"이것은 그런 프로퍼티가 없어서가 아니라 잘못된 오브젝트를 겨냥했기 때문에 실패했다."*
+후보 소진이 만든 손해는 라운드트립 횟수가 아니다. **틀린 일반화**다. 후보 소진은 "이 핸들에 이 이름이 없다"만 증명하는데, 그것이 "그 정보가 없다"로 확대되면 설계가 잘못된 전제 위에 세워진다. `server/web/cue_monitor.py`(base `3176900`)의 `@MX:REASON` 주석이 그 오판의 흔적을 이미 기록하고 있다 — *"이것은 그런 프로퍼티가 없어서가 아니라 잘못된 오브젝트를 겨냥했기 때문에 실패했다."*
 
 핸들이 **실제로 무엇을 노출하는지 되돌려주는 동사**가 있으면 이 오판 자체가 구조적으로 불가능해진다. 후보를 하나씩 찍는 대신 목록을 받고, "없다"를 추측이 아니라 **열거의 부재**로 판정한다.
 
@@ -109,7 +109,7 @@ related_specs: [SPEC-COPILOT-EXECBODY-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT
 ### B.6 발견 산출물 (이 SPEC의 실질적 가치)
 
 - **REQ-INTROSPECT-019** [Event-driven] — **When** 자기진단 능력이 라이브로 검증되면, the SPEC **shall** 그 능력을 **Executor 핸들과 Sequence 핸들**에 실제로 적용하고, 관측된 필드 목록(또는 `props` 일괄 판독 기록)을 증거로 기록한다.
-- **REQ-INTROSPECT-020** [Ubiquitous] — REQ-INTROSPECT-019의 기록 **shall** *"실행 여부·진행률에 해당하는 필드가 발견되었는가"*에 대해 명시적 결론을 남긴다. **"발견되지 않았다"도 유효한 결론**이며, 그것은 22종 추측이 만들 수 없었던 종류의 증거다.
+- **REQ-INTROSPECT-020** [Ubiquitous] — REQ-INTROSPECT-019의 기록 **shall** *"실행 여부·진행률에 해당하는 필드가 발견되었는가"*에 대해 명시적 결론을 남긴다. **"발견되지 않았다"도 유효한 결론**이며, 그것은 후보 추측이 만들 수 없었던 종류의 증거다.
 - **REQ-INTROSPECT-021** [Unwanted] — 본 SPEC **shall not** REQ-INTROSPECT-019/020의 관측 결과를 소비하는 기능(재생 상태 표시, 진행률, 페이드 잔여시간)을 구현한다 — §D.
 
 ### B.7 소비 경로 규율
@@ -207,7 +207,7 @@ related_specs: [SPEC-COPILOT-EXECBODY-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT
 | 콘솔 링크 왕복(동일 id 상관, 동일 타임아웃 예산, 동일 예외 타입) | `server/safety/console.py` `ConsoleLink.query_property` |
 | 1 송신 = 1 감사 항목 규율 | `server/safety/gate.py` `_query_state` / `_query_property` |
 | 판독 실패를 포착하되 전파하지 않는 소비 패턴 | `server/prechk/query.py` `read_properties` — *"하나의 판독 실패가 판독 가능한 것들을 버리게 해서는 안 된다"* |
-| 22종 소진 오판의 흔적(본 SPEC의 동기) | `server/web/cue_monitor.py` `CURRENT_CUE_PROPERTY_CANDIDATES`의 `@MX:ANCHOR`/`@MX:REASON` |
+| 후보 소진 오판의 흔적(본 SPEC의 동기) | `server/web/cue_monitor.py` `CURRENT_CUE_PROPERTY_CANDIDATES`의 `@MX:ANCHOR`/`@MX:REASON` |
 | 커맨드 라인 2048 한계 고정 | `server/tests/test_lua_responder_payload_budget.py` `MA3_COMMAND_LINE_LIMIT = 2048` |
 | lupa 기반 Lua 테스트 하네스(실제 플러그인 파일 로드) | `server/tests/lua_mock_env.py` |
 | 배포 패키징(네이티브 인라인 Base64 XML) | `server/deploy/pack.py`, `server/deploy/provisioning.py` `install_responder` |

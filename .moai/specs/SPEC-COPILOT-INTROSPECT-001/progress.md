@@ -8,7 +8,7 @@
 
 **무엇**: 핸들 자기진단 동사 2종 — `introspect`(핸들이 노출하는 **필드 이름 + 타입** 열거)와 `props`(**명시한 이름 일괄 판독**). 이 SPEC은 **기능이 아니라 발견 도구**를 만든다. 재생 상태·진행률은 구현하지 않으며, 그것이 *존재하는지*를 추측이 아니라 증거로 판정할 수단을 만든다.
 
-**상태**: **plan-phase 산출물만 존재 (draft v0.1.0).** 구현 0 · 커밋 0 · 라이브 0. base `origin/main` = `3176900`. REQ **26** · AC **30** · Out of Scope **9항** · ASSUMPTION **46~52**(전역 카운터 45 다음) · 결정 **D-1~D-7** · 열린 질문 **2건**(plan.md §F).
+**상태**: **run-phase M1 완료 (GO, 2026-08-03).** 구현 코드 변경 0 · 커밋 0 · 라이브 프로브 1회. base `origin/main` = `3176900`. REQ **26** · AC **30** · Out of Scope **9항** · ASSUMPTION **46~49 TRUE**, **50~52 미해소** · 결정 **D-1~D-7**.
 
 **이 SPEC의 한 줄**: *"후보를 소진했다"는 "그 정보가 없다"를 함의하지 않는다* — 코디네이터가 Executor 핸들에 22종을 찍고 실패한 뒤 Sequence 핸들에서 `CurrentCue`를 찾은 사건이, 그 비약을 구조적으로 불가능하게 만들 도구를 요구했다.
 
@@ -31,14 +31,14 @@
 6. **예산 초과는 런타임 신호가 0이다.** `cmd_keyword` 전송에서 `Cmd()`가 성공을 보고하고 회신은 사라진다. **테스트가 유일한 그물이며**, 절단 테스트의 재료는 반드시 상한을 넘겨야 한다 — 오늘의 실제 핸들이 상한 미만이면 절단 코드를 제거해도 테스트가 통과한다.
 7. **`introspect`의 절단분은 회수할 수 없다.** `state`는 슬롯별 조회라는 우회로가 있지만, 이름을 모르면 `props`로 물을 수 없다. `total`이 누락 사실을 드러낼 뿐이다(design.md §8-1). 이것을 "페이징으로 해결하자"로 넘어가기 전에 M7 실측을 볼 것 — **예측으로 미리 만들지 않는다.**
 8. **감사에 값이 들어가면 안 된다.** 감사 주체는 `경로 + 요청 이름들`이며, 이 한 줄이 민감정보 경계의 실제 집행 지점이다. AC-INTROSPECT-018이 감시 문자열 부재로 기계 검증한다.
-9. **M1 NEGATIVE 시 spec.md 본문 편집이 필요하다.** `[DEFERRED]` 재표기는 manager-develop 권한 밖이므로 **오케스트레이터 경유 manager-spec 재위임**이 필요하다(plan.md §G).
-10. **매크로 폴백은 쇼파일을 쓴다.** ASSUMPTION-48(OSC 직접 회신)이 부정이면 매크로 경로로 내려가고, `Delete`가 블랙리스트라 사용자 GUI 삭제가 필요하다(SCENE-001 M0가 시퀀스 7개를 남긴 선례). 이 비용을 감수할지는 열린 질문이다.
+9. **M1은 GO로 닫혔다.** 따라서 REQ-INTROSPECT-001~005 `[DEFERRED]` 재표기와 manager-spec 재위임은 필요 없다.
+10. **M1 매크로 폴백은 사용하지 않았다.** ASSUMPTION-48은 TRUE로 닫혔고, 증거 채널은 OSC 직접 회신만 사용했다. 매크로/라벨/씬 증거 쓰기는 0건이다.
 11. **`prop`과 `props`는 한 글자 차이다.** 디스패치는 정확 일치라 기계적 위험은 없지만, 사람이 읽을 때 놓친다. AC-INTROSPECT-022가 교차 오배정을 봉쇄한다.
 
 ### 다음 소유자의 착수 키트
 
-- **다음 단계**: plan-audit → Implementation Kickoff Approval → **M1(라이브 프로브)**. M1은 실물 onPC 접근을 요구하며, 그 전까지 진행 가능한 것은 없다(M2가 M1 판정에 걸려 있다).
-- **run 진입 전 해소 필요**: plan.md §F의 열린 질문 2건 — (a) `props` 이름 목록 상한값, (b) M1 프로브의 쇼파일 쓰기 허용 여부.
+- **다음 단계**: **M2(응답기 확장)**. M1이 GO이므로 `props`와 `introspect` 둘 다 범위에 남고, M2의 `introspect` 구현 열거원은 `property_accessors` 하나다.
+- **남은 run-phase 미해소**: `props` 이름 목록 상한값(ASSUMPTION-50)과 M3/M6/M7 배정 전제(ASSUMPTION-51~52). M1 프로브의 쇼파일 증거 폴백 여부는 "불허 + 불필요"로 닫혔다.
 - **기준선 재측정 의무**: run-phase 킥오프 시점에 pytest/vitest 기준선을 **다시 측정한다.** plan-phase 수치 재사용 금지.
 
 ---
@@ -55,7 +55,17 @@
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+**2026-08-03 — M1 라이브 열거 가능성 프로브 완료 (GO)**
+
+- **판정**: GO. M2는 `props`와 `introspect` 둘 다 진행한다.
+- **채택 열거원**: `property_accessors` (`PropertyCount()` + `PropertyName(i)` + `PropertyType(i)`). `dump_return`도 문자열 토큰 스캔으로 게이트를 통과했지만, 문자열 파싱 기반이라 M2 구현 입력으로 채택하지 않는다.
+- **증거**: raw OSC 로그 `.moai/state/verify/introspect-m1-20260803T091729.log` (304 JSONL lines, 173 KB), 최종 Lua 소스 `.moai/state/verify/introspect_m1_20260803T092930.lua`, XML wrapper `.moai/state/verify/introspect_m1_20260803T092930.xml`.
+- **대상**: `Executor 201` 정지 + `Go+ Executor 201` 재생 중, `DataPool/Sequences/80`, `DataPool/Groups/1`.
+- **대조군**: `Executor 201 Index` = `function: 0x...`, `Executor 201 Fader` = `Master`, `DataPool/Sequences/80 CurrentCue` = `Sequence 80.3`. Canonical uppercase alias도 같은 세션에서 확인: `INDEX` = `201`, `FADER` = `Master`, `CURRENTCUE` = `Sequence 80.3`.
+- **사다리 결과**: `metatable_index`는 `__index`가 function이라 폐기. `pairs_handle`은 iterator 오류로 폐기. `property_accessors`는 Executor 71건, Sequence 65건, Group 101건을 열거했고 대조 이름 전부 포함. `get_integer`는 이름 0건. `dump_return`은 문자열 반환과 대조 이름 포함을 확인했지만 파싱 의존으로 구현 비채택.
+- **ASSUMPTION 판정**: 46 TRUE, 47 TRUE, 48 TRUE, 49 TRUE.
+- **부작용 확인**: 정지 `Executor 201`의 전후 `state` 형상이 동일했다(`children=[]`, `node.childCount=0`, `class=Executor`, `name="Ballad Yellow Red"`, `sequenceNo=20`, `truncated=false`). 재생 프로브 뒤 `Off Executor 201` 원복 완료.
+- **콘솔 잔여**: slot 지정 `Import Plugin <slot> '<slug>'`만 성공했다. 본 세션의 일회용 프로브 플러그인 슬롯이 남았다(`introspect-m1-20260803T091729`, `introspect_m1_20260803T091729`, `CopilotIntrospectProbe091729`, `CopilotIntrospectProbe092425`, `CopilotIntrospectProbe092745`, `CopilotIntrospectProbe092930`). 매크로/라벨/씬 증거 쓰기는 0건이다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
