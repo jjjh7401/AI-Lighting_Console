@@ -256,4 +256,8 @@ M5를 "이미 그린인 것을 재확인하는 절차"로 돌렸다면 둘 다 �
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_미도래._ sync-phase는 PR 생성·리뷰·머지 구간이며 아직 착수하지 않았다. 이 절은 그 구간에서 채운다 — PR 번호, 리뷰 지적과 소인, 머지 커밋, 머지 후 `origin/main` 기준 회귀 재측정.
+**착수 (2026-08-03).** PR **[#23](https://github.com/jjjh7401/AI-Lighting_Console/pull/23)** — `spec/introspect-001` → `main`, 14 커밋 · 22 파일 · `+3143/-39` · `mergeable=MERGEABLE`(생성 시점 `origin/main`은 `3176900`에서 움직이지 않아 0 behind).
+
+- **머지 게이트는 로컬 실측이다.** 이 저장소의 `.github/workflows/`에는 `label-sync.yml`뿐이라 테스트 CI가 없다. 따라서 PR 본문의 수치는 커밋 시점 로컬 실측이며, 리뷰어는 필요하면 재측정할 것.
+- **리뷰어에게 명시적으로 요청한 판단 3건**(PR 본문): ① `M.missing_introspect_contrast_names`의 정합성 게이트 ② PRESERVE 예외 2건이 게이트를 약화시키지 않았는지 ③ §M7.6 배포 함정의 미해명 1건.
+- **미도래**: 리뷰 지적과 그 소인, 머지 커밋, 머지 후 `origin/main` 기준 회귀 재측정. 그것이 채워지면 이 SPEC이 닫힌다.
