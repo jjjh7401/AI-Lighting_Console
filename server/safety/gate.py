@@ -123,6 +123,12 @@ class _GateStatePort:
     def query_property(self, path: str, property_name: str) -> dict:
         return self._gate._query_property(path, property_name)
 
+    def enumerate_fields(self, path: str) -> dict:
+        return self._gate._enumerate_fields(path)
+
+    def query_properties(self, path: str, property_names: Sequence[str]) -> dict:
+        return self._gate._query_properties(path, property_names)
+
 
 class SafetyGate:
     """3-stage safety gate + live lock + backup + health + audit (M4)."""
@@ -662,4 +668,32 @@ class SafetyGate:
             self._audit.log_executed(subject, kind="property_query", ok=False)
             raise
         self._audit.log_executed(subject, kind="property_query", ok=True)
+        return payload
+
+    def _enumerate_fields(self, path: str) -> dict:
+        # Audited on the same 1:1 send↔audit rule as _query_property: an
+        # introspection request is one OSC send, and a timeout still sent it.
+        # @MX:ANCHOR: [AUTO] introspect audit subject is path-only.
+        # @MX:REASON: REQ-INTROSPECT-018 forbids read values from entering audit logs.
+        subject = path
+        try:
+            payload = self._console.enumerate_fields(path)
+        except Exception:
+            self._audit.log_executed(subject, kind="introspect_query", ok=False)
+            raise
+        self._audit.log_executed(subject, kind="introspect_query", ok=True)
+        return payload
+
+    def _query_properties(self, path: str, property_names: Sequence[str]) -> dict:
+        # Audited on the same 1:1 send↔audit rule as _query_property: a bulk
+        # property request is one OSC send, and a timeout still sent it.
+        # @MX:ANCHOR: [AUTO] props audit subject is path plus requested names only.
+        # @MX:REASON: REQ-INTROSPECT-018 forbids read values from entering audit logs.
+        subject = f"{path} {','.join(property_names)}"
+        try:
+            payload = self._console.query_properties(path, property_names)
+        except Exception:
+            self._audit.log_executed(subject, kind="props_query", ok=False)
+            raise
+        self._audit.log_executed(subject, kind="props_query", ok=True)
         return payload

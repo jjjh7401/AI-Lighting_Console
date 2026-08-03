@@ -89,6 +89,16 @@
 - **테스트**: `uv run pytest server/tests/test_responder_protocol.py -q` → `40 passed`, `uv run pytest server/tests/test_lua_responder_payload_budget.py -q` → `4 passed`, 최종 묶음 `uv run pytest server/tests/test_responder_protocol.py server/tests/test_lua_responder_payload_budget.py -q` → `44 passed`.
 - **남은 위험**: 라이브 최대 길이 `props` 왕복과 배포 검증은 M6 범위라 수행하지 않았다. 로컬 LSP 서버(`basedpyright`)는 설치되어 있지 않아 후크가 진단을 건너뛰었다. 작업 지시의 compact `introspect` 형상 목록에는 `class`가 없었지만, M2 출하 Lua와 테스트가 이미 success payload에 `class`를 싣고 있어 문서는 구현을 따랐다.
 
+**2026-08-03 — M4 서버 소비 경로 완료**
+
+- **포트**: `server/orchestrator/ports.py`에 `FieldEnumerationPort.enumerate_fields(path: str) -> dict`와 `BulkPropertyQueryPort.query_properties(path: str, property_names: Sequence[str]) -> dict`를 추가했다. 기존 4종 포트와 `server/orchestrator/tools.py`는 변경하지 않았다.
+- **링크/게이트**: `ConsoleLink.enumerate_fields`는 `build_introspect_query`, `ConsoleLink.query_properties`는 `build_props_query`를 사용하고 둘 다 기존 `/copilot/state` 회신을 `deliver`로 받는다. `SafetyGate._enumerate_fields`와 `_query_properties`는 `introspect_query`/`props_query` kind로 성공·실패를 각각 1개 audit entry에 기록하고 예외를 재전파한다.
+- **감사 민감정보 경계**: props 감사 주체는 `f"{path} {','.join(property_names)}"`로 경로와 요청 이름만 담는다. 회신 값 `"Sequence 80.3"`을 포함하도록 게이트 audit write를 임시 변이했을 때 `TestIntrospectAndPropsGate::test_successful_bulk_property_query_audits_names_without_values`가 실패했고, 복구 후 통과했다.
+- **개발자 CLI**: `server/tools/introspect_probe.py`는 `server.safety.bootstrap.build_console_stack(...)`으로 제품 스택을 세우고 `stack.gate.state_port`를 경유한다. 신규 파일은 `server.bridge.*`를 직접 import하지 않으며, 기존 architecture test가 이를 포섭한다.
+- **검증**: `uv run pytest server/tests/test_safety_console.py -q` → `33 passed`; `uv run pytest server/tests/test_architecture.py -q` → `4 passed`; `uv run pytest server/tests/test_overlap_preserve.py -q` → `32 passed`; 최종 묶음 `uv run pytest server/tests/test_safety_console.py server/tests/test_architecture.py server/tests/test_overlap_preserve.py -q` → `69 passed`. `uv run python -m server.tools.introspect_probe --help`와 빈 `--names` 오류 경로도 확인했다.
+- **보존 확인**: `git diff --numstat server/safety/console.py server/safety/gate.py` → `57 0 server/safety/console.py`, `34 0 server/safety/gate.py`.
+- **남은 위험**: 라이브 콘솔 왕복은 M6 범위라 수행하지 않았다. 로컬 LSP 서버(`basedpyright`)는 설치되어 있지 않아 후크가 진단을 건너뛰었다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_

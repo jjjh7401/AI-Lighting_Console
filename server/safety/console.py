@@ -25,8 +25,10 @@ from server.bridge.protocol import (
     ProtocolError,
     build_deploy_request,
     build_exec_request,
+    build_introspect_query,
     build_ping,
     build_prop_query,
+    build_props_query,
     build_state_query,
     decode_payload,
 )
@@ -97,6 +99,10 @@ class ConsolePort(Protocol):
     def query_state(self, path: str) -> dict: ...
 
     def query_property(self, path: str, property_name: str) -> dict: ...
+
+    def enumerate_fields(self, path: str) -> dict: ...
+
+    def query_properties(self, path: str, property_names: Sequence[str]) -> dict: ...
 
     def deploy_plugin(self, name: str, lua_source: str) -> ExecOutcome:
         """Deploy one reviewed Lua plugin (M7); ok / failed / unconfirmed."""
@@ -412,6 +418,57 @@ class ConsoleLink:
         if not payload.get("ok"):
             raise StateQueryError(
                 str(payload.get("error") or f"property query failed: {path} {property_name}")
+            )
+        return payload
+
+    def enumerate_fields(self, path: str) -> dict:
+        """Field enumeration (REQ-INTROSPECT-017); raises on failure/timeout.
+
+        Homologous to :meth:`query_state`: same id correlation, same timeout
+        budget, same error type. The responder answers ``introspect`` on the
+        STATE address (``console/lua/PROTOCOL.md`` §4.7), which :meth:`deliver`
+        already accepts, so no new reply channel appears.
+        """
+        request_id = self._new_id()
+        payload = self._round_trip(
+            build_introspect_query(request_id, path),
+            request_id,
+            self._timeouts.state_query_seconds,
+        )
+        if payload is None:
+            if self._monitor is not None:
+                self._monitor.note_query_timeout()
+            raise StateQueryError(
+                f"no introspect reply for {path!r} within {self._timeouts.state_query_seconds}s"
+            )
+        if not payload.get("ok"):
+            raise StateQueryError(str(payload.get("error") or f"introspect query failed: {path}"))
+        return payload
+
+    def query_properties(self, path: str, property_names: Sequence[str]) -> dict:
+        """Bulk property read (REQ-INTROSPECT-018); raises on failure/timeout.
+
+        Homologous to :meth:`query_state`: same id correlation, same timeout
+        budget, same error type. The responder answers ``props`` on the STATE
+        address (``console/lua/PROTOCOL.md`` §4.8), which :meth:`deliver`
+        already accepts, so no new reply channel appears.
+        """
+        request_id = self._new_id()
+        payload = self._round_trip(
+            build_props_query(request_id, path, property_names),
+            request_id,
+            self._timeouts.state_query_seconds,
+        )
+        if payload is None:
+            if self._monitor is not None:
+                self._monitor.note_query_timeout()
+            raise StateQueryError(
+                f"no props reply for {path!r} {tuple(property_names)!r} within "
+                f"{self._timeouts.state_query_seconds}s"
+            )
+        if not payload.get("ok"):
+            raise StateQueryError(
+                str(payload.get("error") or f"props query failed: {path} {tuple(property_names)}")
             )
         return payload
 
