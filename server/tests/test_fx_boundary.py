@@ -634,6 +634,9 @@ class TestTheRulebookNeverLearnedAboutFx:
             "20_korean_terms.md",
             "30_plugin_patterns.md",
             "31_choreography_patterns.md",
+            # SPEC-COPILOT-SPATIAL-001 M3 — the ONLY asset that SPEC adds; the
+            # other five stay byte-identical (plan.md §C.2 PRESERVE).
+            "32_spatial_design.md",
         ]
 
     @pytest.mark.parametrize("token", FX_TOOL_VOCABULARY)

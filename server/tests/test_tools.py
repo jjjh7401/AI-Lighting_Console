@@ -131,13 +131,17 @@ class TestRegistry:
         #   (SPEC-COPILOT-PAPERWORK-001, previously unregistered) and
         #   plan_executor_layout (server/looks/layout.py, previously
         #   unregistered).
+        # + SPEC-COPILOT-SPATIAL-001's get_spatial_context (READ) and
+        #   arrange_fixtures (WRITE) — kept as TWO tools by decision D-4, so a
+        #   showfile-mutating call never hides behind the tool a model uses to
+        #   look at the rig.
         # The count is asserted against the declared tuple's length so the set
         # stays CLOSED: adding a handler without declaring it, or declaring one
         # without a handler, still fails here.
         registry = _registry()
         names = [definition.name for definition in registry.definitions()]
         assert sorted(names) == sorted(TOOL_NAMES)
-        assert len(names) == len(TOOL_NAMES) == 18
+        assert len(names) == len(TOOL_NAMES) == 20
 
     def test_the_four_original_tools_are_still_registered(self):
         # The M5 addition must not have displaced any of them.

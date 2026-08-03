@@ -61,6 +61,30 @@ _PRESERVE_PATHS = (
     "server/rulebook/assets/v2.4.2/",
 )
 
+#: 2026-08-03 granted exception — SPEC-COPILOT-SPATIAL-001 M3 adds ONE rulebook
+#: asset, ``32_spatial_design.md`` (user-approved). The rulebook prefix is a
+#: deliberately EXTENSIBLE asset set (00 -> 10 -> 20 -> 30 -> 31 -> 32), so a
+#: whole-directory lock would freeze every future rulebook milestone while
+#: reading as a preserved boundary. The boundary that actually matters is that
+#: the five EXISTING assets stay byte-identical, and that is what is now
+#: asserted — by naming them, so a modification to any one of them still fails.
+#:
+#: Additions are not blanket-permitted either: ``test_the_rulebook_additions_are_
+#: only_the_granted_asset`` below pins the added path by name and requires zero
+#: deletions across the directory. Another new file, or one byte removed from an
+#: old one, still fails the gate. ``server/rulebook/assets/v2.4.2/`` therefore
+#: stays in the tuple above as the documented boundary and is swapped for its
+#: named members in the diff, the same way ``server/looks/library/`` is.
+_RULEBOOK_DIR = "server/rulebook/assets/v2.4.2/"
+_RULEBOOK_LOCKED_ASSETS = (
+    "server/rulebook/assets/v2.4.2/00_grammar.md",
+    "server/rulebook/assets/v2.4.2/10_object_model.md",
+    "server/rulebook/assets/v2.4.2/20_korean_terms.md",
+    "server/rulebook/assets/v2.4.2/30_plugin_patterns.md",
+    "server/rulebook/assets/v2.4.2/31_choreography_patterns.md",
+)
+_RULEBOOK_GRANTED_ADDITION = "server/rulebook/assets/v2.4.2/32_spatial_design.md"
+
 #: 2026-08-02 granted exception — the upstream vocabulary extension
 #: (docs/proposals/2026-08-02-upstream-vocabulary-extension-proposal.md §6,
 #: user-approved, lightweight track). ``server/looks/library/`` stays a locked
@@ -174,10 +198,22 @@ def _git(*arguments: str) -> str:
 
 
 def _preserve_diff_command() -> list[str]:
-    # The granted looks-library extension is checked by its own exact-text
-    # gate below; every OTHER preserved path must still diff empty.
-    paths = tuple(path for path in _PRESERVE_PATHS if path != _LOOKS_LIBRARY_DIR)
-    return ["git", "diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", *paths]
+    # Two granted extensions are checked by their own narrower gates below: the
+    # looks-library one by exact line text, the rulebook one by named added path
+    # plus zero deletions. Every OTHER preserved path must still diff empty, and
+    # the rulebook's five EXISTING assets are named here so they keep doing so.
+    paths = tuple(
+        path for path in _PRESERVE_PATHS if path not in (_LOOKS_LIBRARY_DIR, _RULEBOOK_DIR)
+    )
+    return [
+        "git",
+        "diff",
+        "--stat",
+        f"{_PRECHK_BASE}..HEAD",
+        "--",
+        *paths,
+        *_RULEBOOK_LOCKED_ASSETS,
+    ]
 
 
 def _numstat(base: str, *paths: str) -> dict[str, tuple[int, int]]:
@@ -236,9 +272,17 @@ class TestPreserveDiffIsEmpty:
         command = _preserve_diff_command()
         assert command[:4] == ["git", "diff", "--stat", f"{_PRECHK_BASE}..HEAD"]
         assert command[4] == "--"
-        assert tuple(command[5:]) == tuple(
-            path for path in _PRESERVE_PATHS if path != _LOOKS_LIBRARY_DIR
+        # Both granted extensions are swapped out of the directory sweep and
+        # re-entered as the narrower thing that IS still locked: the looks
+        # library by its own exact-text gate, the rulebook by its five named
+        # existing assets.
+        assert tuple(command[5:]) == (
+            *(path for path in _PRESERVE_PATHS if path not in (_LOOKS_LIBRARY_DIR, _RULEBOOK_DIR)),
+            *_RULEBOOK_LOCKED_ASSETS,
         )
+        # The swap must not silently drop the rulebook from the gate entirely.
+        assert _RULEBOOK_DIR not in command
+        assert all(asset in command for asset in _RULEBOOK_LOCKED_ASSETS)
         # Explicitly NOT this SPEC's base: that range is empty right after the
         # work is committed, which disables the gate while keeping it green.
         assert _PRECHK_BASE != _OVERLAP_BASE
@@ -251,6 +295,44 @@ class TestPreserveDiffIsEmpty:
     def test_the_same_command_detects_a_change_elsewhere(self):
         # Non-vacuity for the emptiness above: the command shape CAN report.
         assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", "server/prechk/") != ""
+
+
+class TestRulebookGrantedAddition:
+    """The 2026-08-03 grant — exactly one added asset, and nothing removed.
+
+    Not a weakening: the five existing assets are named in
+    :func:`_preserve_diff_command`, so modifying any of them still fails the
+    emptiness gate above. This class is the other half — it bounds what the
+    grant permits, so "one new rulebook file" cannot quietly become two, or
+    become a rewrite of an old one.
+    """
+
+    def test_the_five_existing_assets_are_the_locked_set(self):
+        # Non-vacuity: a typo'd path contributes nothing to a git diff, so the
+        # locked list is checked against the real directory listing.
+        on_disk = sorted(
+            path.name for path in (_REPO_ROOT / _RULEBOOK_DIR).iterdir() if path.suffix == ".md"
+        )
+        locked = sorted(Path(path).name for path in _RULEBOOK_LOCKED_ASSETS)
+        assert locked == sorted(set(on_disk) - {Path(_RULEBOOK_GRANTED_ADDITION).name})
+        assert len(_RULEBOOK_LOCKED_ASSETS) == 5
+
+    def test_the_only_rulebook_change_is_the_granted_addition(self):
+        rows = _numstat(_PRECHK_BASE, _RULEBOOK_DIR)
+        assert set(rows) == {_RULEBOOK_GRANTED_ADDITION}
+
+    def test_the_grant_removes_nothing(self):
+        # A rulebook asset is a fixed system-prompt prefix; a deletion inside
+        # this directory changes what every model call is told, whichever file
+        # it lands in.
+        rows = _numstat(_PRECHK_BASE, _RULEBOOK_DIR)
+        for path, (_added, deleted) in rows.items():
+            assert deleted == 0, path
+
+    def test_the_locked_assets_are_byte_identical(self):
+        # Stated directly as well as via the emptiness gate: this is the claim
+        # the whole grant rests on, and it should be readable on its own.
+        assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", *_RULEBOOK_LOCKED_ASSETS) == ""
 
 
 class TestLooksLibraryGrantedExtension:
