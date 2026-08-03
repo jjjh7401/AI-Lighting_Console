@@ -4,8 +4,9 @@ status: **draft v0.1.0** · 2026-08-03 · `research.md` v0.2.0 기준 · 구현 
 
 base: `feature/SPEC-COPILOT-SPATIAL-001` = `115eb6d` · branch: `feature/SPEC-COPILOT-GROUPGEN-001`
 
-> `spec.md`(REQ) · `acceptance.md`(AC) · `design.md`는 `/moai plan`이 만든다. 본 문서는 **마일스톤 골격과
-> 게이트**를 먼저 고정해, 다음 세션이 순서를 다시 발명하지 않게 한다.
+> **`spec.md`(REQ-GROUPGEN-001~030 · ASSUMPTION 61~67)는 작성됐다.** `acceptance.md`(AC) ·
+> `design.md`는 `/moai plan`이 만든다. 본 문서는 **마일스톤 골격과 게이트**를 고정해, 다음 세션이
+> 순서를 다시 발명하지 않게 한다.
 
 ## §A. 접근 요약
 
