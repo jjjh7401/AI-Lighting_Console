@@ -422,7 +422,7 @@ class TestConsoleLuaGrantedExtension:
     def test_the_only_pinned_code_removal_is_the_version_bump_and_a_wider_return(self):
         # Shape check on the ONE granted source file, so the pin cannot quietly
         # come to cover a behavioural deletion later: of its four removals, one
-        # is the old VERSION line (paired with a 1.6.0 addition below) and two
+        # is the old VERSION line (paired with the shipped version below) and two
         # are the `safe_property` return that gained a third value; the fourth
         # is a comment. No dispatch branch, no reply field, no guard.
         removals = _CONSOLE_LUA_ALLOWED_DELETED_LINES["console/lua/copilot_responder.lua"]
@@ -441,7 +441,18 @@ class TestConsoleLuaGrantedExtension:
             ).splitlines()
             if line.startswith("+") and not line.startswith("+++")
         ]
-        assert '    VERSION = "1.6.0",' in added
+        # The paired addition is derived from the responder itself, not pinned to
+        # a literal: a later version bump is legitimate under this grant, and a
+        # hardcoded expectation would fail on the NEXT bump for no contract
+        # reason. (It did — the 1.6.0 literal broke at 1.6.1, and the failure
+        # only surfaced after commit because the diff range ends at HEAD.)
+        shipped = re.search(
+            r'^\s*VERSION = "([^"]+)",',
+            (_REPO_ROOT / "console/lua/copilot_responder.lua").read_text(encoding="utf-8"),
+            re.M,
+        )
+        assert shipped, "responder VERSION line not found"
+        assert f'    VERSION = "{shipped.group(1)}",' in added
         assert sum(1 for line in added if line.strip().startswith("VERSION =")) == 1
 
 

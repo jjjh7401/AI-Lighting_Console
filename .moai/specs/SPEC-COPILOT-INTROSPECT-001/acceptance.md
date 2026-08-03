@@ -210,10 +210,10 @@ The 디스패치 **shall not** `props` 요청을 `prop` 분기로, `prop` 요청
 
 ### AC-INTROSPECT-023 — 버전 범프 + 문서 동기화 (무조건)
 
-**When** 응답기가 변경되면, the 변경 **shall** `M.VERSION` 1.6.0 범프와 `PROTOCOL.md` Revision note를 동반한다.
+**When** 응답기가 변경되면, the 변경 **shall** `M.VERSION` 범프와 `PROTOCOL.md` Revision note를 동반한다.
 
 - 대상 요구: REQ-INTROSPECT-025
-- **통과 판정**: 소스에서 버전 문자열 확인 + `PROTOCOL.md` 상단에 1.6.0 Revision note 존재(기존 4건과 동일 형식) + §2 요청 표에 동사 행 추가 + §4 신규 kind 절 존재.
+- **통과 판정**: 소스의 `M.VERSION`이 base(`1.5.0`)보다 높고, `PROTOCOL.md` 상단에 그 버전의 Revision note가 존재(기존 4건과 동일 형식) + §2 요청 표에 동사 행 추가 + §4 신규 kind 절 존재. **버전 리터럴을 이 AC에 고정하지 않는다** — 소인으로 인한 정당한 추가 범프(1.6.0 → 1.6.1)까지 계약 위반으로 읽히기 때문이다(2026-08-03 실제 발생: 게이트 테스트에 박아둔 `1.6.0` 리터럴이 1.6.1에서 깨졌다).
 
 ### AC-INTROSPECT-024 — 부작용 무변화 (LIVE, 무조건)
 
