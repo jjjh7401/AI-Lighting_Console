@@ -780,7 +780,10 @@ function M.enumerate_property_accessors(handle)
         return nil, "property_accessors PropertyCount() did not return a non-negative integer"
     end
     local fields = M.array({})
-    for i = 1, count do
+    -- @MX:NOTE: [AUTO] LIVE M6 fixed the Property* accessor domain:
+    --   valid indices are 0..PropertyCount()-1; index PropertyCount() returns
+    --   nil. A 1-based loop skips field 0 and fails at the count boundary.
+    for i = 0, count - 1 do
         local ok_name, name = pcall(function() return handle:PropertyName(i) end)
         local ok_type, value_type = pcall(function() return handle:PropertyType(i) end)
         if not ok_name or type(name) ~= "string" or name == "" or not ok_type or value_type == nil then

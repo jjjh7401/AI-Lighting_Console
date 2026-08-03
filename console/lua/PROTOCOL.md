@@ -419,7 +419,9 @@ Recorded per Section E honesty rules; the round-trip tool
   SPEC-COPILOT-INTROSPECT-001 M1)**: MA3 object handles expose an enumerable
   property-name surface. Live 2026-08-03 (design.md §5.7) adopted exactly
   `PropertyCount()` + `PropertyName(i)` / `PropertyType(i)`, emitted as
-  `source:"property_accessors"` in §4.7. The same probe rejected the other
+  `source:"property_accessors"` in §4.7. M6 live correction from the M1
+  `accessor_stats` log fixed the valid index range as `0..PropertyCount()-1`;
+  index `PropertyCount()` returns nil. The same probe rejected the other
   ladder candidates for production use: `getmetatable(handle).__index` was a
   function, `pairs(handle)` failed, `handle:Get(i)` produced no property names,
   `GetPropertyDisplayName` returned 0 names, and `Dump()` was not adopted

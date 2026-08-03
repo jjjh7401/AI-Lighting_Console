@@ -67,9 +67,15 @@ function __NODE(name, class, children, props, property_order, property_types)
         return self._props[prop]
     end
     function n:PropertyCount() return #self._property_order end
-    function n:PropertyName(i) return self._property_order[i] end
+    function n:PropertyName(i)
+        local count = self:PropertyCount()
+        if type(i) ~= "number" or i < 0 or i >= count then return nil end
+        return self._property_order[i + 1]
+    end
     function n:PropertyType(i)
-        local prop = self._property_order[i]
+        local count = self:PropertyCount()
+        if type(i) ~= "number" or i < 0 or i >= count then return nil end
+        local prop = self._property_order[i + 1]
         if prop == nil then return nil end
         return self._property_types[prop] or type(self._props[prop])
     end

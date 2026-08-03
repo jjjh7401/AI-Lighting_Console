@@ -503,8 +503,8 @@ class TestIntrospect:
                 ["INDEX", "FADER"],
                 extra=(
                     "function seq:PropertyName(i)\n"
-                    "    if i == 2 then return nil end\n"
-                    "    return self._property_order[i]\n"
+                    "    if i == 1 then return nil end\n"
+                    "    return self._property_order[i + 1]\n"
                     "end\n"
                 ),
             )
