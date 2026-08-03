@@ -443,6 +443,86 @@ z 범위)을 스키마·회신에 1급 필드로 추가**했다. 측정하고, �
 
 **safety 게이트는 정밀화하지 않고 되돌렸다** — §E.2.14.
 
+### §E.2.20 라이브 앱 E2E — 자연어 지시 한 건을 끝까지 (2026-08-03)
+
+마일스톤 검증이 아니라 **사용자 요구로 실행한 실사용 시연**이다. 대상 지시:
+
+> *"모든 장비를 5미터 높이에 자연스럽게 배치하고 컬러와 딤머 이펙트를 사용해서 조명연출을 해줘"*
+
+시뮬레이션이 아니다 — 실제 앱(`python -m server.web`)을 띄우고, UI가 쓰는 것과 같은 `/ws` 엔드포인트에 같은 `chat`
+프레임을 보내고, 같은 Gemini 프로바이더·같은 툴 레지스트리·같은 안전 게이트·같은 라이브 onPC를 통과시켰다.
+
+#### 선행 블로커 — Gemini 경로가 전부 죽어 있었다 (선재 결함, 별도 커밋)
+
+첫 지시가 *"AI 서비스가 요청을 거부했습니다"*(`invalid_request`)로 실패했다. `_to_gemini_schema`가 미지 키를 그대로
+통과시켜 `additionalProperties`가 Gemini function-declaration 스키마로 전달됐고, Gemini는 이를 400
+`INVALID_ARGUMENT`로 거부한다. **실패는 툴 단위가 아니라 요청 단위**여서 캐시 경로·비캐시 폴백 모두 죽었다.
+
+**책임 소재를 실측으로 갈랐다**: base `4d298b8` 워크트리에서 **동일 11종이 이미** 이 키를 갖고 있었다(툴 18개 시절).
+본 SPEC이 추가한 2종은 같은 관례를 따른 것이며 원인이 아니다. 앱이 아예 기동 후 무응답이 되므로 수정했다 —
+커밋 `a5fa16a`(DENY 리스트 · 테스트 5종 · 뮤테이션 4 failed RED). 중립 스키마는 그대로 두어 Anthropic 경로 무영향.
+
+#### 실행 결과 — 한 턴으로는 불가, 내용은 양쪽 다 나왔다
+
+한 턴 결과는 **`loop_limit`**이다. `DEFAULT_MAX_MODEL_CALLS = 12`(SPEC-COPILOT-MVP-001 §C 비용 상한, 런어웨이 가드)를
+초과했고 앱은 *"일부 명령만 실행되었습니다 (부분 실행)"*로 **정직하게 보고**했다. 성공을 위장하지 않았다.
+
+감사 로그(`server/audit_logs/audit-20260803.jsonl`)가 실제 실행을 증언한다:
+
+| 시각 | 실행 내용 |
+|---|---|
+| 08:54:53 | `arrange_fixtures` — 단일 행(x −10.2…+10.2, 1.2m 간격), **18대 전부 z=5.0** |
+| 08:55:37 | `Group 13` + 마젠타→시안 **컬러 2스텝 + 딤머 페이저 + ColorRGB 3축 페이저 + Speed 30** |
+| — | 여기서 `loop_limit` |
+| 08:57:48 | **공간 선택 사슬** `Fixture 1 + Fixture 2 + … + Fixture 18` + 시안 + `Attribute 'Dimmer' At Phase 0 Thru 360` |
+| 08:58:07 | `arrange_fixtures` — **4행 테이퍼**(y=3.0/1.0/−1.0/−3.0, 6·5·4·3대), 전부 z=5.0 |
+
+- **"5미터 높이"** ✅ — 두 배치 모두 `posz='5.0'`, 재조회 일치
+- **"컬러와 딤머 이펙트"** ✅ — 컬러는 기존 룩/프리셋 계층에서, 딤머 웨이브는 본 SPEC의 공간 사슬에서
+- **"자연스럽게"** ✅ — **모델이 `arrange_fixtures`를 fid 부분집합으로 4번 호출해 테이퍼를 합성**했다
+  (`1–6→y=3.0` · `7–11→y=1.0` · `12–15→y=−1.0` · `16–18→y=−3.0`). `grid`는 등길이 행만 내므로 **단일 프리셋 호출로는
+  만들 수 없는 형상**이다 — 폐쇄 프리셋 3종이 조합으로 열린 형상을 낼 수 있다는 실측이며, 이는 설계 의도의 확인이다
+- **Z축 수정이 실사용에서 작동** — 전부 z=5.0이므로 `vertical_span = 0.0`(max−min), x 확산으로 1행 고신뢰.
+  §E.2.18의 필드가 모델에게 정확히 전달되는 것을 확인했다
+
+#### ⚠ 결함 1 — 픽스처 19가 배치에서 탈락했고 모델이 알리지 않았다
+
+`Patch/Stages/1/Fixtures` 스냅샷은 `childCount 19` / 반환 18 / `truncated: true`다(§E.2.3). 따라서 `arrange_fixtures`는
+**18대만** 배치했고, 최종 실측에서 **fid 19만 원점(0,0,0)에 남았다** — 1~18은 z=5.0.
+
+**툴은 제 몫을 다했다**: `truncated: true` 보고 · `unreadable: []` · fid 19 좌표 **발명 0**. 앱에 원본 값을 물어 확인했다.
+그리고 `get_spatial_context`의 설명문은 이미 명령형으로 적혀 있다:
+
+> *"Either way the list is NOT the whole rig — **say so** rather than presenting a left-to-right order over the part you happened to receive."*
+
+모델은 **금지된 바로 그것**을 했다 — 받은 일부에 대한 좌우 정렬을 제시하고 불완전성을 말하지 않았다.
+**툴 결함이 아니라 모델 준수 갭**이며, *툴 설명은 지시일 뿐 강제가 아니다*라는 천장의 실측 사례다.
+`server/looks/**`가 쓰는 방식(설명문이 규율을 운반)의 한계를 그대로 물려받는다.
+
+→ 강제하려면 툴 계층이 `truncated: true`일 때 회신을 구조적으로 다르게 만들어야 한다(예: 부분 리그임을 나타내는
+별도 상태값, 또는 정렬 결과 자체의 보류). **본 SPEC 범위 밖 — 후속 과제로 기록한다.**
+
+#### ⚠ 결함 2 — 요청하지 않은 쇼파일 변형 (AC-031 되돌림의 실측 대가)
+
+08:58:07의 두 번째 배치는 **요청하지 않은 것**이다. 해당 턴의 지시는 *"지금 배치된 좌표를 읽어서, 왼쪽에서 오른쪽으로
+흐르는 딤머 웨이브에 컬러를 얹어 연출해줘"* — 연출만이다. 모델은 세션 대화 이력에 남아 있던 미완의 "자연스럽게 배치"
+목표를 이어서 완성했다. 의도 자체는 합리적이다.
+
+문제는 **그 사이에 사람이 없었다**는 것이다. `Set Fixture … Pos*`는 `[DEFERRED]` 결정으로 다시 `safe`이므로
+(§E.2.14) 게이트가 승인 카드 없이 통과시켰고, showfile 백업 규칙 ③도 발동하지 않았다.
+**사용자가 요청하지 않은 쇼파일 변형 54건이 아무 확인 없이 콘솔에 나갔다.**
+
+이것이 §E.2.14에 *"되돌림의 대가"*로 적어둔 위험의 **관측 사례**다. 가설이 아니라 실제로 일어났다.
+같은 턴의 `Go+ Page 1.202`(reference-invoking)는 정상적으로 승인 카드를 띄웠다 — 즉 **게이트는 건강하고,
+좌표 기록만 그 그물을 통과한다.** AC-SPATIAL-031을 여는 후속 SPEC의 우선순위 근거로 이 관측을 인용할 것.
+
+남아 있던 방어선은 설계대로 작동했다: 원좌표 백업·재조회 검증·복원 번들·범위 봉쇄. 복구도 그 경로로 했다.
+
+#### 세션 정리
+
+- 최종 전수 검사 후 **19대 전부 (0,0,0) 복귀** 확인, 프로그래머 `ClearAll`. 쇼파일 잔여 **0**
+- 라이브 기록 누계: M0 프로브 2 · P8 1 · M6 2 · Z축 2 · **앱 E2E 2** = 8회, 전부 원상복구 확인
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 - **마일스톤**: M0 ✓ · M1 ✓ · M2 ✓ · M3 ✓ · M4 ✓ · M5 ✓ · M6 ✓ (전 7개 완료) + Z축 검증 보강(§E.2.18)
@@ -451,11 +531,13 @@ z 범위)을 스키마·회신에 1급 필드로 추가**했다. 측정하고, �
 - **신규 파일**: `server/spatial/{__init__,schema,rows,sorting,choreography,presets}.py` · `server/rulebook/assets/v2.4.2/32_spatial_design.md` · 테스트 4종(`test_spatial_{analysis,context,choreography,arrange}.py`)
 - **수정 파일**: `server/orchestrator/tools.py` · 테스트 6종(`test_tools` · `test_rulebook` · `test_fx_boundary` · `test_songcue_bundle` · `test_overlap_preserve` · 신규 4종). **`server/safety/**` 무변경**(§E.2.14 되돌림)
 - **PRESERVE 확인**: `console/lua/copilot_responder.lua` · `console/lua/PROTOCOL.md` · `server/bridge/protocol.py` **무변경**(D-1=A의 결과). `server/looks/**` · `server/fx/**` · `server/scene/**` · `server/safety/**` · `ui/src/**` 무변경. 룰북 기존 5자산 byte-diff 0 · 삭제 0
-- **테스트**: pytest **4506 passed · 5 skipped · 0 failed** · vitest **350 passed** (기준선 4246/350 대비 신규 실패 **0**)
-- **뮤테이션**: AC-004·006(M1 8종) · AC-019·020(M4 7종) · Z축 수정(2종) 전건 RED. **AC-031은 `[DEFERRED]`이므로 뮤테이션 대상에서 제외**
-- **라이브 증거**: M0 8판정 + M6 2리그 + Z축 2배열 — **사람 관측 5회**(ASSUMPTION-57 · 58 · AC-029×2 · Z축 높이·수직벽). 라이브 기록 6회 전부 복구, 쇼파일 잔여 **0**
+- **테스트**: pytest **4511 passed · 5 skipped · 0 failed** · vitest **350 passed** (기준선 4246/350 대비 신규 실패 **0**)
+- **뮤테이션**: AC-004·006(M1 8종) · AC-019·020(M4 7종) · Z축 수정(2종) · Gemini 스키마 수정(1종) 전건 RED. **AC-031은 `[DEFERRED]`이므로 뮤테이션 대상에서 제외**
+- **라이브 증거**: M0 8판정 + M6 2리그 + Z축 2배열 + **앱 E2E 자연어 지시 1건**(§E.2.20) — **사람 관측 5회**(ASSUMPTION-57 · 58 · AC-029×2 · Z축 높이·수직벽). 라이브 기록 **8회** 전부 복구, 쇼파일 잔여 **0**
+- **실사용 확인**(§E.2.20): 실제 앱 · 실제 `/ws` · 실제 Gemini · 실제 게이트 · 실제 onPC로 *"모든 장비를 5미터 높이에 자연스럽게 배치하고 컬러와 딤머 이펙트로 연출"* 실행. 5m 높이 ✅ · 컬러+딤머 이펙트 ✅ · "자연스럽게" → 프리셋 4회 조합으로 테이퍼 합성 ✅. **한 턴으로는 `loop_limit`**(`max_model_calls=12` 비용 상한) → 부분 실행을 정직하게 보고
+- **선재 결함 1건 수정**(본 SPEC 범위 밖, 커밋 `a5fa16a`): Gemini가 `additionalProperties`를 거부해 **모든 턴이 400으로 실패**하고 있었다. base `4d298b8`에서 11종이 이미 보유 — 원인이 본 SPEC이 아님을 워크트리 실측으로 확인. 앱이 기동 후 무응답이라 수정
 - **`[DEFERRED]` 3건**: ① Layout 기록(REQ-SPATIAL-003 · AC-SPATIAL-003) — ASSUMPTION-55 실측 근거 ② **AC-SPATIAL-031 risky 분류** — safety PRESERVE 경계(§E.2.14) ③ **REQ-SPATIAL-024 승인 흐름** — ②에 종속. ②③은 후속 SPEC이 `server/safety/`와 함께 소유해야 한다
-- **sync-phase 인계 2건**: ① spec.md §C.2와 plan.md §B M4의 risky 분류 문면 모순 → §C.2를 정본으로 삼고 plan.md M4·AC-031을 `[DEFERRED]` 재표기 ② `arrange_fixtures`가 승인 카드 없이 쇼파일을 변형한다는 사실을 spec.md의 알려진 천장에 명기
+- **sync-phase 인계 4건**: ① spec.md §C.2와 plan.md §B M4의 risky 분류 문면 모순 → §C.2를 정본으로 삼고 plan.md M4·AC-031을 `[DEFERRED]` 재표기 ② `arrange_fixtures`가 승인 카드 없이 쇼파일을 변형한다는 사실을 spec.md의 알려진 천장에 명기 ③ **AC-031 우선순위 근거로 §E.2.20 결함 2를 인용** — 요청하지 않은 좌표 기록 54건이 무승인 통과한 관측 사례 ④ **절단 시 모델 미고지**(§E.2.20 결함 1) — 툴 설명문만으로는 강제되지 않으므로 구조적 강제를 후속 과제로 등록
 
 
 ## §E.4 Sync-phase Audit-Ready Signal
