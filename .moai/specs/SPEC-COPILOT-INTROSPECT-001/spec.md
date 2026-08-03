@@ -120,7 +120,7 @@ related_specs: [SPEC-COPILOT-EXECBODY-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT
 
 ### B.8 배포·문서 동기화
 
-- **REQ-INTROSPECT-025** [Event-driven] — **When** 응답기가 변경되면, the 변경 **shall** `M.VERSION` 범프(1.5.0 → 1.6.0)와 `console/lua/PROTOCOL.md` 상단 Revision note 추가를 동반한다 — 기존 4개 Revision note와 동일한 형식.
+- **REQ-INTROSPECT-025** [Event-driven] — **When** 응답기가 변경되면, the 변경 **shall** `M.VERSION` 범프(base는 `1.5.0`)와 `console/lua/PROTOCOL.md` 상단 Revision note 추가를 동반한다 — 기존 4개 Revision note와 동일한 형식. **도달 버전 번호를 이 요구에 고정하지 않는다**: 소인으로 인한 추가 범프가 정당하며, 리터럴을 박으면 그것이 요구 위반으로 읽힌다(2026-08-03 실측).
 - **REQ-INTROSPECT-026** [Ubiquitous] — Python 트윈(`server/bridge/protocol.py`) **shall** 두 동사의 요청 빌더를 제공하며, 기존 빌더들과 동일한 검증 규율(요청 id 토큰, 큰따옴표 금지, 단일 라인)을 적용한다.
 
 ## C. 환경 및 전제 (Environment / Assumptions)

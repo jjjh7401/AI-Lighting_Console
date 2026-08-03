@@ -17,10 +17,10 @@
 ### 읽는 순서
 
 1. **`spec.md` §A.1(실측 3건) · §A.3(동사 2개 분리 이유) · §A.4(M1 게이트)** — 이 셋이 설계 전체를 규정한다. §A.3을 건너뛰면 왜 동사가 둘인지 이해할 수 없고, `Executor 80` 경로에서 파싱이 왜 깨지는지 재발견하게 된다.
-2. `spec.md` §C.2(검증 천장) → §C.3(ASSUMPTION-46~52) → §D(제외 8항 — 특히 "재생 상태 기능"과 "LLM 툴 추가")
+2. `spec.md` §C.2(검증 천장) → §C.3(ASSUMPTION-46~52) → §D(제외 범위 — 특히 "재생 상태 기능"과 "LLM 툴 추가")
 3. **`design.md` §3(회신 형상) · §4(예산 산술) · §5(M1 프로브 사다리)** — §5.4(정합성 게이트)가 이 SPEC의 중심 방어선이다. §8(알려진 천장)을 건너뛰지 말 것.
 4. `plan.md` §A.1(리뷰 순서) → §A.3(M1 두 분기) → §B(M1~M7) → §F(**확정 결정 3건** — 열린 질문 2건은 2026-08-03 게이트에서 해소됐고, `console/lua` PRESERVE 예외 승인이 세 번째다)
-5. `acceptance.md` §C(AC **31**건 — 뮤테이션 필수 4건: 004·010·014·018) → §F(DoD, 특히 항목 4의 협상 불가 목록)
+5. `acceptance.md` §C(AC 전량 — 뮤테이션 필수 4건: 004·010·014·018) → §F(DoD, 특히 항목 4의 협상 불가 목록)
 6. `research.md` §1(인수 실측) · §2(저장소가 남긴 오판 흔적) · §7(**룰북에 열거 API 문서 전건 0** — M1이 라이브인 이유)
 
 ### 함정 (다음 소유자가 알아야 할 것)
@@ -244,12 +244,16 @@ M5를 "이미 그린인 것을 재확인하는 절차"로 돌렸다면 둘 다 �
 
 - **플러그인 풀**: 슬롯 4~14의 일회용 잔여물 11개 삭제. 삭제 후 재조회 결과 `childCount = 3`이며 남은 것은 `1 CopilotResponder`(출하 응답기 v1.6.0) · `2 CopilotBusk` · `3 kpop_summer_twinkle` — 유지 대상과 정확히 일치한다.
 - **라이브러리 폴더**(`~/MALightingTechnology/gma3_library/datapools/plugins`): 본 세션이 만든 파일 **15개** 삭제(`CopilotIntrospectProbe083907B.xml` · `CopilotProbeEcho083907.xml` · `copilot_introspect_m7.{lua,xml}` · `copilot_introspect_probe_20260803_083907.{lua,xml}` · `introspect-m1-*` · `introspect_m1_*` 계열). **보존 19개** — 출하 응답기(`copilot_responder.{lua,xml}`와 그 `.bak` 2종, `CopilotResponder.xml`)와 선행 세션 산출물(`CopilotBusk`·`CheckDest`·`PatchMMX`·`patch_*` 등)은 손대지 않았다.
-- **정리 후 건강 확인**: `responder_roundtrip --expect-version 1.6.0` → ping · state · exec **3/3 PASS**, `live version=1.6.0`. 쇼파일 내용 변경 없음(플러그인 풀 오브젝트 제거이며 큐·시퀀스·그룹 무변경, `DataPool/Sequences` childCount 19 유지).
+- **정리 후 건강 확인**: `responder_roundtrip --expect-version 1.6.0` → ping · state · exec **3/3 PASS**. 쇼파일 내용 변경 없음(플러그인 풀 오브젝트 제거이며 큐·시퀀스·그룹 무변경, `DataPool/Sequences` childCount 19 유지). *(이 시점의 출하 버전은 1.6.0이었다. 이후 감사 소인으로 1.6.1을 재배포했다 — §E.3 참조.)*
 
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+- **범위 완료**: M1(라이브 프로브, GO) · M2(응답기 두 동사) · M3(와이어 문서 + Python 트윈) · M4(포트·링크·게이트·개발자 CLI) · M5(회귀·경계·뮤테이션) · M6(라이브 배포 + 4종 검증) · M7(발견 산출물) · 감사 소인 2회. 각 마일스톤의 증거는 §E.2에 있다.
+- **감사 이력**(정본은 `.moai/reports/`): plan-audit **review-1~4**, sync-audit **sync-1~3**. 각 라운드가 실제 결함을 냈고 전부 소인됐다 — 특히 sync-1의 Critical(AC-INTROSPECT-004 런타임 정합성 게이트 부재)은 이 SPEC이 없애려던 실패 양상이 출하 동사 안에 남아 있던 것이었고, sync-2가 소인을 하네스·라이브·뮤테이션 2종으로 종결 확인했다. **sync-3은 PASS + PR 준비 완료 판정**이다.
+- **품질 게이트**(수치는 정본에서 재측정할 것 — §0 주석 참조): 커밋 시점 실측으로 pytest 전량 그린 · vitest 전량 그린 · 변경 파일 ruff clean · PRESERVE 게이트 2건(`console/lua/`, `server/safety/console.py`) 그린이며 두 예외 모두 뮤테이션으로 비공허성을 확인했다.
+- **라이브 상태**: 응답기가 실물 콘솔(onPC 2.4.2)에 배포·동작 중이며 두 동사 모두 왕복한다. 일회용 프로브 잔여물은 §M7.8에서 정리 완료(풀에 유지 대상 3개만 잔존).
+- **남은 부채**(차단 아님): sync-3이 Low로 남긴 AC-026~029의 기록·정적 근거 한계. 그리고 §M7.7의 후속 SPEC 권고 3건 — 페이징(최우선) · 재생 상태 소비 · 신규 플러그인 배포 경로 규명(§M7.6 미해명 1건 포함).
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+_미도래._ sync-phase는 PR 생성·리뷰·머지 구간이며 아직 착수하지 않았다. 이 절은 그 구간에서 채운다 — PR 번호, 리뷰 지적과 소인, 머지 커밋, 머지 후 `origin/main` 기준 회귀 재측정.
