@@ -15,8 +15,6 @@ import io
 import json
 import math
 import re
-import time
-import zipfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
@@ -100,18 +98,6 @@ from server.spatial import (
     SpatialAnalysisError,
     analyze_spatial_records,
     spatial_analysis_to_dict,
-    spatial_fixtures_from_records,
-)
-from server.spatial.fixture_type import (
-    FixtureTypeAnalysisError,
-    analyze_fixture_type_records,
-    fixture_type_analysis_to_dict,
-)
-from server.spatial.naming import (
-    name_concentric_bucket,
-    name_depth_bucket,
-    name_lateral_bucket,
-    name_vertical_bucket,
 )
 from server.spatial.presets import (
     SPATIAL_PRESETS,
@@ -120,81 +106,6 @@ from server.spatial.presets import (
     spatial_placements_to_records,
     spatial_preset_placements,
 )
-from server.spatial.topology import TopologyResult
-from server.spatial.topology import classify as classify_topology
-from server.vwx.address import resolve_all as resolve_vwx_addresses
-from server.vwx.addressfit import Fit, occupants_from_patch_values
-from server.vwx.addressfit import evaluate as evaluate_address_fit
-from server.vwx.addressfit import first_free as first_free_address
-from server.vwx.apply import (
-    CONSOLE_READ_INCOMPLETE,
-    HandoffEntry,
-    build_patch_handoff,
-    console_read_caveat,
-    existing_footprint_skipped_check,
-    read_console_fixtures,
-    screen_console_occupancy,
-    screen_console_read,
-    screen_idempotent,
-    verify_patch,
-)
-from server.vwx.columns import resolve_columns as resolve_vwx_columns
-from server.vwx.diff import compare as compare_vectorworks_rig
-from server.vwx.librarywatch import read_snapshot as read_library_snapshot
-from server.vwx.librarywatch import selection_prompt as fixture_type_selection_prompt
-from server.vwx.librarywatch import wait_for_addition as wait_for_library_addition
-from server.vwx.mvr import SCENE_ENTRY
-from server.vwx.mvr import read as read_mvr
-from server.vwx.patchplan import (
-    ASSUMPTION_71_GO,
-    ASSUMPTION_71_NEGATIVE,
-    build_patch_plan,
-    designed_attributes_by_candidate,
-    plan_addresses,
-    read_existing_fids,
-    validate_assumption_71,
-)
-from server.vwx.reader import read as read_vwx_export
-from server.vwx.report import build_vwx_report
-from server.vwx.rig import build_designed_rig
-from server.vwx.stagedpatch import (
-    DESTINATION_MARKER,
-    HANDOVER_STEPS,
-    HANDOVER_WHY,
-    ZERO_CREATED,
-    free_fids,
-)
-from server.vwx.stagedpatch import judge as judge_staged_patch
-from server.vwx.stagedpatch import plan as staged_plan
-from server.vwx.typemap import TypeRequest, resolve_fixture_types
-from server.vwx.typesource import FIXTURE_TYPE_HINT
-from server.vwx.typesource import plan_for_missing_type as plan_missing_fixture_type
-from server.web.question import UNANSWERED, QuestionOption, QuestionRequest
-
-# [round24 후속] 라이브러리에 없는 타입을 만났을 때 도구가 **직접** 내는 갈래.
-# 분기가 이 문자열에 걸려 있으므로 한 자리에 모은다 — 표시 문구와 판정을 같은 값으로.
-ANSWER_PICK_ON_CONSOLE = "콘솔에서 직접 고르겠다"
-ANSWER_SUPPLY_FILE = "MVR 또는 GDTF 파일을 주겠다"
-ANSWER_CANCEL = "그만두겠다"
-
-# 주소가 겹쳤을 때 내는 갈래.
-ANSWER_USE_SUGGESTED = "제안한 자리에 놓겠다"
-ANSWER_TYPE_ADDRESS = "다른 주소를 직접 넣겠다"
-
-# 마지막 한 칸 — 조작자가 콘솔에서 직접 실행했는가.
-ANSWER_RAN_IT = "콘솔에서 실행했습니다"
-
-# 사용자가 콘솔 앞에서 실제로 고르는 데 걸리는 시간. 얕은 판독 1왕복 ≈ 66 ms이므로
-# 관측 자체는 무시할 수 있고, 사실상 전부 대기다.
-SELECTION_WATCH_INTERVAL_SECONDS = 2.0
-# [round24 후속] 처음에 60번(2분) 잡았다가 실물에서 무너졌다. 도구가 턴을 붙잡고
-# 있는 동안 UI로 프레임이 **하나도** 나가지 않아 129초간 화면이 죽은 듯 보였고,
-# 무엇보다 턴 예산을 태워 `status=loop_limit` · 본문 0자로 끝났다 — 사용자는 답을
-# 한 글자도 못 받았다. 빨리 고르는 경우만 잡고 나머지는 다음 메시지로 넘긴다.
-SELECTION_WATCH_ATTEMPTS = 10  # 약 20초
-
-#: 카드에 적어 사용자에게 알리는 대기 시간 — 침묵이 고장으로 보이지 않게 한다.
-_SELECTION_WATCH_SECONDS = round(SELECTION_WATCH_ATTEMPTS * SELECTION_WATCH_INTERVAL_SECONDS)
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
     from server.deploy.pipeline import DeployOutcome
@@ -232,10 +143,6 @@ TOOL_NAMES = (
     "plan_executor_layout",
     "get_spatial_context",
     "arrange_fixtures",
-    "classify_arrangement_topology",
-    "create_arrangement_groups",
-    "build_handover_pack",
-    "build_magic_sheet",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -831,12 +738,6 @@ def read_spatial_fixtures(
     property reads per fixture, both through the gate-audited query ports. No
     command line is composed and the execution port is never reached from here.
 
-    Returns ONE OF TWO SHAPES (SPEC-COPILOT-TRUNCATE-001). A complete read
-    returns the list under ``fixtures``; an incomplete one returns it under
-    ``partial_fixtures``, WITHOUT a ``fixtures`` key, plus ``missing``. Every
-    caller must handle both — see the anchor on the return below for why the
-    key MOVES instead of a flag being raised beside it.
-
     Raises whatever the state port raises when the container itself does not
     answer — a rig with no enumerable patch is a failed call, not an empty one.
     """
@@ -859,17 +760,6 @@ def read_spatial_fixtures(
     truncated = bool(payload.get("truncated", False)) or (
         isinstance(child_count, int) and child_count > len(children)
     )
-
-    # @MX:ANCHOR: [SPEC] coverage signal (REQ-GROUPGEN-024 amendment,
-    #   2026-08-04 — the discriminate-path guard, not the write-path guard).
-    #   ``of`` is the rig's real fixture count (``node.childCount`` when the
-    #   console reported one; otherwise the best available fallback is the
-    #   ``children`` array length actually returned). ``judged`` is filled in
-    #   by the caller once fixture records are parsed — this function only
-    #   knows the container-level shape, not which parsed records later fail
-    #   coordinate parsing, so the caller (``classify_arrangement_topology``)
-    #   completes ``judged`` from ``len(fixtures)`` in its own payload.
-    total_fixture_count = child_count if isinstance(child_count, int) else len(children)
 
     fixtures: list[dict[str, object]] = []
     unreadable: list[dict[str, object]] = []
@@ -909,69 +799,13 @@ def read_spatial_fixtures(
             unreadable.append(absence)  # type: ignore[arg-type]
         else:
             fixtures.append(record)
-    # REQ-GROUPGEN-024 amendment coverage signal — "judged" is how many
-    # fixtures actually fed a topology judgment, "of" is the rig's real
-    # total; "complete" is False whenever EITHER the container listing
-    # was truncated OR the per-fixture property walk was budget-capped
-    # OR the two counts simply disagree.
-    complete = not truncated and not roundtrip_capped and len(fixtures) == total_fixture_count
-    coverage = {"judged": len(fixtures), "of": total_fixture_count, "complete": complete}
-
-    # @MX:ANCHOR: [SPEC] the reply-SHAPE divergence (SPEC-COPILOT-TRUNCATE-001
-    #   REQ-TRUNCATE-001/002 / AC-TRUNCATE-001/002, mutation-required). ONE
-    #   predicate decides it — ``complete``, the coverage formula computed
-    #   directly above and nowhere else. No new judgment is introduced: the
-    #   truncation test (flag OR arithmetic) and the coverage arithmetic are
-    #   untouched (REQ-TRUNCATE-011); only where their result is PLACED
-    #   changes.
-    # @MX:REASON: A boolean beside the data is ignorable, and WAS ignored. On
-    #   the measured 18-of-19 read the model quoted the row analysis and said
-    #   nothing about the 19th fixture (SPATIAL progress.md:485-499), because
-    #   ``truncated: true`` sits next to a payload that reads perfectly well
-    #   without it. An ABSENT key is not ignorable — there is nothing left to
-    #   ignore: code written for the complete shape gets a KeyError, and a
-    #   prompt written for it finds nothing to quote. So a partial read does
-    #   not return a flagged ``fixtures`` list; it returns a DIFFERENT reply.
-    if complete:
-        return {
-            "source": SPATIAL_SOURCE_PATCH3D,
-            "path": fixtures_path,
-            "fixtures": fixtures,
-            "unreadable": unreadable,
-            "truncated": truncated,
-            "roundtrip_capped": roundtrip_capped,
-            "coverage": coverage,
-        }
     return {
         "source": SPATIAL_SOURCE_PATCH3D,
         "path": fixtures_path,
-        # NOT "fixtures". Every coordinate in this list was read off the
-        # console and is true of the fixture it names, but the LIST is not
-        # the rig — so it does not get to sit under the key a whole rig uses.
-        "partial_fixtures": fixtures,
+        "fixtures": fixtures,
         "unreadable": unreadable,
-        # Still SEPARATE fields (REQ-TRUNCATE-005 / REQ-SPATIAL-006): only
-        # ``roundtrip_capped`` is fixable by asking again. What the shape
-        # divergence unifies is the BRANCH, never the two signals.
         "truncated": truncated,
         "roundtrip_capped": roundtrip_capped,
-        "coverage": coverage,
-        # The shortfall as ARITHMETIC, not as an adjective (REQ-TRUNCATE-004):
-        # "19 expected, 18 received, 1 unseen", never "incomplete" — a flag
-        # does not say HOW MANY, and how many is what the reader needs.
-        # ``expected`` is the console's OWN count and stays None when it
-        # reported none: the unknown-total rule ``rig_section`` already fixes,
-        # and precisely the case where "the count equals what arrived" would
-        # be the lie. ``unseen_count`` is expected - received, so it covers a
-        # fixture the responder never delivered AND one whose coordinates
-        # would not parse; the latter are itemised in ``unreadable``.
-        "missing": {
-            "expected": child_count if isinstance(child_count, int) else None,
-            "received": len(fixtures),
-            "unseen_count": (
-                max(child_count - len(fixtures), 0) if isinstance(child_count, int) else None
-            ),
-        },
     }
 
 
@@ -4566,52 +4400,17 @@ def build_toolset(
             return _error_result(
                 call, f"stage patch enumeration failed for {fixtures_path!r}: {exc}"
             )
-        # @MX:ANCHOR: [SPEC] the WITHHELD analysis (SPEC-COPILOT-TRUNCATE-001
-        #   REQ-TRUNCATE-003 / AC-TRUNCATE-002, mutation-required). Branch on
-        #   the SHAPE the read returned, never on a second reading of the
-        #   coverage — `read_spatial_fixtures` already judged it once, and a
-        #   handler that re-judged could disagree with the payload it is
-        #   annotating.
-        # @MX:REASON: This is the half of the design that carries the load,
-        #   and the moved key is only the half that makes it visible.
-        #   `analyze_spatial_records` takes records and NOTHING else
-        #   (server/spatial/rows.py) — no truncation argument exists, so its
-        #   output is structurally incapable of knowing it describes part of a
-        #   rig. On the measured 18-of-19 read it therefore reported
-        #   `low_confidence: False` ("high confidence, one row") — a confident
-        #   layout asserted for a rig that does not exist. Flagging it is not
-        #   an option: the ability would have to come from `server/spatial/**`,
-        #   which REQ-TRUNCATE-012 keeps as a pure geometry layer that knows
-        #   nothing about read completeness. So the tool layer withholds. A
-        #   model that ignores a boolean can still quote a row ordering; it
-        #   cannot quote a key that was never computed.
-        if "partial_fixtures" in reply:
-            reply["analysis_withheld"] = {
-                "withheld": "analysis",
-                "reason": (
-                    "row structure was NOT computed for this read and is not in "
-                    "this reply. The analysis takes the coordinate records alone "
-                    "and has no way to know the list is incomplete, so folding it "
-                    "over a partial rig produces a confident layout for a rig "
-                    "that does not exist — measured: low_confidence false on an "
-                    "18-of-19 read. See 'missing' for the shortfall. If you need "
-                    "an order, derive it from the coordinates in "
-                    "'partial_fixtures' yourself AND say which fixtures are "
-                    "absent from it."
-                ),
-            }
-        else:
-            try:
-                reply["analysis"] = spatial_analysis_to_dict(
-                    analyze_spatial_records(reply["fixtures"])  # type: ignore[arg-type]
-                )
-            except SpatialAnalysisError as error:
-                # The coordinate map plus the absence report is the mandatory
-                # deliverable; row structure is a fold-in over it. A read defect
-                # the pure layer refuses (two records claiming one fid) costs the
-                # analysis, never the map the caller can still inspect.
-                reply["analysis"] = None
-                reply["analysis_error"] = str(error)
+        try:
+            reply["analysis"] = spatial_analysis_to_dict(
+                analyze_spatial_records(reply["fixtures"])  # type: ignore[arg-type]
+            )
+        except SpatialAnalysisError as error:
+            # The coordinate map plus the absence report is the mandatory
+            # deliverable; row structure is a fold-in over it. A read defect the
+            # pure layer refuses (two records claiming one fid) costs the
+            # analysis, never the map the caller can still inspect.
+            reply["analysis"] = None
+            reply["analysis_error"] = str(error)
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
@@ -5002,623 +4801,6 @@ def build_toolset(
             )
         return _arrange_result(
             payload, is_error=bool(mismatches), outcomes=execution.command_outcomes
-        )
-
-    # -- classify_arrangement_topology (SPEC-COPILOT-GROUPGEN-001 M1/M2/M3, --
-    #    REQ-GROUPGEN-028 read half — design.md §8) --------------------------
-    #
-    # READS ONLY: reuses the same patch enumeration `get_spatial_context` does
-    # (`read_spatial_fixtures`), then runs the pure `topology.classify()` +
-    # `naming.py` + `fixture_type.py` modules over the result. No command is
-    # composed and `execution_port`/`bundle_gate` are never reached — the
-    # safety gate has nothing to screen here (decision D-4, arrange_fixtures'
-    # own precedent for splitting a read tool from its write sibling).
-
-    def _name_topology_buckets(result: TopologyResult) -> list[dict[str, object]]:
-        """The selected topology's buckets, named (design.md §4) — a NAMING
-        PROPOSAL, never a write. ``bilateral_pairs`` is reported as a property
-        only (§5.3, contract D-Q10: the group-write path never consumes it),
-        so it is never turned into a suggested group here, and neither is an
-        unconfident/``None`` result — there is no structure to name."""
-        if result.kind == "grid":
-            axes = result.grid_axes or {}
-            depth_buckets = axes.get("depth", ())
-            lateral_buckets = axes.get("lateral", ())
-            groups = [
-                {"name": name_depth_bucket(index, len(depth_buckets)), "fids": list(fids)}
-                for index, fids in enumerate(depth_buckets)
-            ]
-            groups.extend(
-                {"name": name_lateral_bucket(index, len(lateral_buckets)), "fids": list(fids)}
-                for index, fids in enumerate(lateral_buckets)
-            )
-            return groups
-        namer = {
-            "depth_rows": name_depth_bucket,
-            "lateral_split": name_lateral_bucket,
-            "concentric": name_concentric_bucket,
-            "vertical_levels": name_vertical_bucket,
-        }.get(result.kind)
-        if namer is None or result.low_confidence:
-            return []
-        total = len(result.fids_by_bucket)
-        return [
-            {"name": namer(index, total), "fids": list(fids)}
-            for index, fids in enumerate(result.fids_by_bucket)
-        ]
-
-    def _topology_result_to_dict(result: TopologyResult) -> dict[str, object]:
-        payload: dict[str, object] = {
-            "kind": result.kind,
-            "low_confidence": result.low_confidence,
-            "reason": result.reason,
-            "fids_by_bucket": [list(bucket) for bucket in result.fids_by_bucket],
-        }
-        if result.grid_axes is not None:
-            payload["grid_axes"] = {
-                axis: [list(bucket) for bucket in buckets]
-                for axis, buckets in result.grid_axes.items()
-            }
-        return payload
-
-    def classify_arrangement_topology(call: ToolCall, context: ExecutionContext) -> ToolExecution:
-        fixtures_path = rig_paths.get("fixtures")
-        if not fixtures_path:
-            return _error_result(
-                call,
-                "rig context has no 'fixtures' path configured — arrangement "
-                "topology cannot be classified without the stage patch",
-            )
-        if property_port is None:
-            return _error_result(
-                call,
-                "property reads are not wired — build_toolset needs property_port "
-                "(or a state_port that also implements query_property)",
-            )
-        try:
-            reply = read_spatial_fixtures(
-                state_port, property_port, fixtures_path, SPATIAL_PROPERTY_QUERY_CAP
-            )
-        except Exception as exc:
-            return _error_result(
-                call, f"stage patch enumeration failed for {fixtures_path!r}: {exc}"
-            )
-        # The read reply now comes in TWO shapes (REQ-TRUNCATE-001/002): a
-        # complete read carries `fixtures`, a partial one carries
-        # `partial_fixtures` and NO `fixtures` key at all. This handler is the
-        # ONE in-process consumer of that reply, migrated in the same window
-        # (REQ-TRUNCATE-007) — and the KeyError a shape-blind reader would
-        # take here is the enforcement working in-process, not an accident to
-        # paper over with `.get(...)`. Both shapes hold the SAME kind of
-        # record; what differs is whether the list is the whole rig, and the
-        # coverage read below is where that difference is already handled.
-        records = reply["partial_fixtures"] if "partial_fixtures" in reply else reply["fixtures"]
-        try:
-            fixtures = spatial_fixtures_from_records(records)  # type: ignore[arg-type]
-        except SpatialAnalysisError as error:
-            return _error_result(call, f"fixture coordinates could not be parsed: {error}")
-
-        classification = classify_topology(fixtures)
-
-        # REQ-GROUPGEN-024 amendment (2026-08-04) — the DISCRIMINATE-path
-        # guard: a topology judged from a partial rig read must be marked
-        # low-confidence structurally, never silently treated as
-        # authoritative. This is entirely SEPARATE from the WRITE path
-        # (create_arrangement_groups / build_group_write_plan), which is
-        # unaffected by rig-listing truncation because it consumes
-        # caller-supplied fids, not this container listing.
-        coverage = reply.get("coverage") or {
-            "judged": len(fixtures),
-            "of": len(fixtures),
-            "complete": True,
-        }
-        topology_partial = not bool(coverage.get("complete", False))
-        topology_partial_reason = (
-            "the topology judgment above is based on a PARTIAL rig read "
-            f"({coverage.get('judged')} of {coverage.get('of')} fixtures) — "
-            "the container listing was truncated or the per-fixture property "
-            "walk was budget-capped, so 'topology.selected' is NOT "
-            "authoritative for the full rig; treat it as a low-confidence "
-            "hint pending a follow-up read"
-            if topology_partial
-            else ""
-        )
-
-        # Geometric-axis groups (design.md §4 GEO prefix) are DERIVED from
-        # the same partial-rig read as the topology judgment above, so they
-        # carry "axis": "geometry" + the SAME topology_partial annotation.
-        suggested_groups: list[dict[str, object]] = [
-            {**group, "axis": "geometry", "topology_partial": topology_partial}
-            for group in _name_topology_buckets(classification.selected)
-        ]
-
-        fixture_type_records = call.arguments.get("fixture_type_records")
-        fixture_type_payload: dict[str, object] | None = None
-        if fixture_type_records is not None:
-            if not isinstance(fixture_type_records, list):
-                return _error_result(
-                    call,
-                    "'fixture_type_records' must be a list of "
-                    "{'fid', 'manufacturer', 'type_name'} records",
-                )
-            try:
-                type_analysis = analyze_fixture_type_records(fixture_type_records)
-            except FixtureTypeAnalysisError as error:
-                return _error_result(call, f"'fixture_type_records' could not be parsed: {error}")
-            fixture_type_payload = fixture_type_analysis_to_dict(type_analysis)
-            # Species groups reuse the patch's own structured field as the name
-            # verbatim (design.md §4.1 "종류" row / §5.1 REQ-GROUPGEN-009) — no
-            # "GEO " prefix, which is reserved for the geometric axes (§D-Q3).
-            # "axis": "species" — the caller supplies fixture_type_records
-            # directly, so these groups are UNRELATED to rig-read coverage;
-            # they never carry a "topology_partial" key (there is nothing
-            # partial about a caller-supplied record list).
-            suggested_groups = [
-                *suggested_groups,
-                *(
-                    {"name": group["value"], "fids": list(group["fids"]), "axis": "species"}
-                    for group in fixture_type_payload["type_axis_groups"]
-                ),
-            ]
-
-        payload = {
-            "source": "topology",
-            "truncated": reply.get("truncated", False),
-            "roundtrip_capped": reply.get("roundtrip_capped", False),
-            "unreadable": reply.get("unreadable", []),
-            "coverage": coverage,
-            "topology_partial": topology_partial,
-            "topology_partial_reason": topology_partial_reason,
-            "topology": {
-                "selected": _topology_result_to_dict(classification.selected),
-                "candidates": [
-                    _topology_result_to_dict(candidate) for candidate in classification.candidates
-                ],
-                "partial": topology_partial,
-                "partial_reason": topology_partial_reason,
-            },
-            "fixture_types": fixture_type_payload,
-            "suggested_groups": suggested_groups,
-            "notice": (
-                "suggested_groups is a NAMING PROPOSAL only — nothing was sent to "
-                "the console. Pass a chosen subset as 'groups' to "
-                "create_arrangement_groups to actually write it, which itself "
-                "requires explicit human approval before anything is stored."
-            ),
-        }
-        return ToolExecution(
-            result=ToolResult(
-                tool_call_id=call.id,
-                name=call.name,
-                content=json.dumps(payload, ensure_ascii=False),
-                is_error=False,
-            )
-        )
-
-    # -- create_arrangement_groups (REQ-GROUPGEN-028 write half — design.md ---
-    #    §6/§7/§10 policy (c)) --------------------------------------------------
-    #
-    # The ONE order this tool may run in (design.md §7.2), and none of it is
-    # negotiable:
-    #
-    #   build_group_write_plan(...)         # pure assembly (server/groupgen/write.py)
-    #     -> approval_port.request_approval  # the ONLY route to a console send
-    #       -> not approved -> SEND NOTHING, return the plan only (fail-closed)
-    #       -> approved -> fire via run_commands (gate/LiveLock/dedupe/audit inherited)
-    #         -> re-query slot existence + label (never membership — policy (c))
-    #
-    # [HARD] structural enforcement (design.md §7.2): there is no code path to
-    # `run_commands` below that does not pass through
-    # `group_approval.request_approval(...)` first and observe `True` — no
-    # argument short-circuits it, and `server/safety/**` stays byte-diff 0
-    # (Store Group/Label Group are classified "safe" there and would otherwise
-    # never see ANY approval stage). Deleting the approval check is a RED
-    # mutation, not a silent behavior change.
-
-    # Why the acknowledgement is an ENUMERATION and not a boolean — read this
-    # before touching the checks below.
-    #
-    # `classify_arrangement_topology` has stamped every geometric group with
-    # `topology_partial` since the GROUPGEN-024 amendment (2026-08-04), and
-    # this handler read it ZERO times: the flag rode all the way into a
-    # console write and did nothing. Closing that hole with a boolean
-    # (`acknowledge_partial: true`) would have reproduced the exact defect
-    # this SPEC exists to close — a boolean beside the data gets filled in
-    # reflexively, without reading what is missing, which is precisely how
-    # `truncated: true` was ignored on the measured 18-of-19 read. An
-    # ENUMERATION cannot be produced without reading the reply: naming the
-    # fids a read never saw means looking at `missing` and at the fixtures
-    # that did arrive. A SPEC whose thesis is "an instruction is not an
-    # enforcement mechanism" has to hold its OWN acknowledgement to that bar.
-    def _unread_acknowledgement_refusal(
-        acknowledged: object,
-        partial_group_names: Sequence[str],
-        write_fids: frozenset[int],
-        shortfall: int | None,
-    ) -> str | None:
-        """Why this acknowledgement is not one — or ``None`` when it is valid."""
-        named = ", ".join(repr(name) for name in partial_group_names)
-        if not isinstance(acknowledged, list) or not acknowledged:
-            return (
-                f"{named} came from a PARTIAL rig read (topology_partial: true). "
-                "Writing them needs 'acknowledged_unread_fids': a non-empty list "
-                "of the fixture ids that read never saw. There is no boolean "
-                "acknowledgement here — name them. get_spatial_context's "
-                "'missing' says how many are unseen and 'partial_fixtures' says "
-                "which ones did arrive."
-            )
-        if not all(isinstance(fid, int) and not isinstance(fid, bool) for fid in acknowledged):
-            # `True` IS an `int` in Python, so this bool exclusion is the one
-            # line that refuses a boolean wearing a list: delete it and
-            # `[True]` passes as an enumeration of one fixture id, which is
-            # the reflexive acknowledgement this whole argument shape exists
-            # to prevent.
-            return (
-                "'acknowledged_unread_fids' must hold fixture ids as integers. A "
-                "boolean is not a fixture id, and it is not an acknowledgement "
-                "either."
-            )
-        if len(set(acknowledged)) != len(acknowledged):
-            return (
-                "'acknowledged_unread_fids' names the same fid more than once — "
-                "an unseen fixture is unseen once, and a repeat inflates the "
-                "count checked against the shortfall."
-            )
-        overlap = sorted(write_fids.intersection(acknowledged))
-        if overlap:
-            return (
-                f"'acknowledged_unread_fids' names {overlap}, which this same "
-                "call is writing into a group. A fixture you are grouping is one "
-                "the read DID see — the enumeration is for the ones it did not, "
-                "which is why it cannot be produced without reading the list."
-            )
-        if shortfall is not None and len(acknowledged) != shortfall:
-            return (
-                f"'acknowledged_unread_fids' names {len(acknowledged)} fixture "
-                f"id(s), but the fixture container reports {shortfall} unseen. "
-                "Acknowledge exactly the fixtures that are missing — if the "
-                "container now lists the whole rig, re-run "
-                "classify_arrangement_topology and write its fresh groups "
-                "instead."
-            )
-        return None
-
-    def create_arrangement_groups(call: ToolCall, context: ExecutionContext) -> ToolExecution:
-        groups_arg = call.arguments.get("groups")
-        if (
-            not isinstance(groups_arg, list)
-            or not groups_arg
-            or not all(
-                isinstance(entry, Mapping)
-                and isinstance(entry.get("name"), str)
-                and entry.get("name")
-                and isinstance(entry.get("fids"), list)
-                and entry.get("fids")
-                and all(
-                    isinstance(fid, int) and not isinstance(fid, bool)
-                    for fid in entry.get("fids", [])
-                )
-                for entry in groups_arg
-            )
-        ):
-            return _error_result(
-                call,
-                "'groups' must be a non-empty list of {'name': str, 'fids': "
-                "[int, ...]} entries — the groups to Store and Label",
-            )
-
-        groups_path = rig_paths.get("groups")
-        fixtures_path = rig_paths.get("fixtures")
-        if not groups_path or not fixtures_path:
-            return _error_result(
-                call,
-                "rig context has no 'groups'/'fixtures' path configured — a "
-                "group write needs both the group pool and the fixture "
-                "container to measure an empty slot",
-            )
-
-        buckets = {str(index): tuple(entry["fids"]) for index, entry in enumerate(groups_arg)}
-        names = {str(index): entry["name"] for index, entry in enumerate(groups_arg)}
-
-        sections, _resolved, _failed = collect_rig_sections(
-            state_port, {"groups": groups_path, "fixtures": fixtures_path}, frozenset(), 0
-        )
-        groups_section = sections["groups"]
-        fixtures_section = sections["fixtures"]
-
-        # @MX:ANCHOR: [SPEC] the partial-read write refusal
-        #   (SPEC-COPILOT-TRUNCATE-001 REQ-TRUNCATE-008 / AC-TRUNCATE-008,
-        #   mutation-required). Deleting this block restores the measured hole:
-        #   a group derived from a rig the tool never fully saw is written
-        #   without anybody naming what was missed.
-        # @MX:REASON: Placed AFTER the rig sections are read — they are the
-        #   shortfall's only source — and BEFORE the plan is built, so a
-        #   refusal costs exactly the two READS this call already makes and
-        #   reaches neither the approval card nor the console. The truthiness
-        #   test is deliberate rather than `is True`: fail-closed, an
-        #   unexpected value refuses. Species groups carry no
-        #   `topology_partial` key at all and are unaffected, and a group
-        #   flagged False passes straight through — this gate demands reading,
-        #   not abstinence.
-        partial_group_names = [
-            entry["name"] for entry in groups_arg if entry.get("topology_partial")
-        ]
-        if partial_group_names:
-            fixtures_total = fixtures_section.get("total")
-            arrived = len(fixtures_section.get("objects") or [])  # type: ignore[arg-type]
-            refusal = _unread_acknowledgement_refusal(
-                call.arguments.get("acknowledged_unread_fids"),
-                partial_group_names,
-                frozenset(fid for entry in groups_arg for fid in entry["fids"]),
-                # `total` is None when the responder reported no childCount —
-                # `rig_section`'s unknown-total rule. The size check simply
-                # does not apply then; the other three still do.
-                max(fixtures_total - arrived, 0) if isinstance(fixtures_total, int) else None,
-            )
-            if refusal is not None:
-                return _error_result(call, refusal)
-
-        try:
-            plan = build_group_write_plan(
-                buckets=buckets,
-                names=names,
-                groups_section=groups_section,
-                fixtures_section=fixtures_section,
-            )
-        except GroupSlotError as error:
-            return _error_result(call, f"{error.code}: {error.message}")
-        except ValueError as error:
-            return _error_result(call, str(error))
-
-        # [HARD] ONE run_commands bundle PER GROUP — never one bundle for the
-        # whole plan. `run_commands` folds a line that already succeeded in the
-        # same bundle into `skipped_already_executed`, and a group chain's
-        # SELECTION line is NOT dedupe-exempt (only a single bare
-        # `Fixture <operand>` is; `Fixture 1 + Fixture 2 + Fixture 3` is not —
-        # `_is_programmer_state` above). Two groups over the same fids — which
-        # `classify_arrangement_topology` produces on any rig whose
-        # manufacturer:model mapping is 1:1, because `type_axis_groups` then
-        # emits byte-identical fid tuples for two axes — would therefore lose
-        # the SECOND group's selection, and `Store Group N` would fire against
-        # the programmer its own leading `ClearAll` just emptied. The console
-        # answers ok either way and membership is unreadable
-        # (progress.md §E.2.8), so the human would have approved one plan and
-        # the console would have received another, undetectably.
-        #
-        # `bundles` is the ONE definition of what gets fired; the guard below
-        # and the execution loop both consume it, so re-concatenating the plan
-        # cannot slip past the guard.
-        bundles = [(step, list(step.commands)) for step in plan.steps]
-        all_commands = [command for _step, bundle in bundles for command in bundle]
-        # exec 큰따옴표 금지 계승 — write.py already refuses a double-quoted
-        # name (`_label_command`), so this is a static re-assertion over the
-        # assembled text on its way to the gate, not a belief about the
-        # builder that produced it (same shape as arrange_fixtures' own
-        # `arrange_scope_violations` seal).
-        assert all('"' not in command for command in all_commands)
-        # The same shape of re-assertion for the dedupe hazard, against the
-        # exact lists that will be fired (write.py already guarded each step
-        # it built — this re-checks the BUNDLING, which is this layer's call).
-        try:
-            for _step, bundle in bundles:
-                guard_bundle_collision(bundle)
-        except GroupSlotError as error:
-            return _error_result(call, f"{error.code}: {error.message}")
-
-        def _plan_payload(**extra: object) -> dict[str, object]:
-            payload: dict[str, object] = {
-                "plan": [
-                    {
-                        "slot": step.slot,
-                        "name": step.name,
-                        "fids": list(step.fids),
-                        "commands": list(step.commands),
-                        "verification": list(step.verification),
-                    }
-                    for step in plan.steps
-                ],
-                # Policy (c), design.md §10 — a STRUCTURAL field, never prose:
-                # `unverified` always carries "membership" (write.py already
-                # guarantees this), so a caller cannot lose the caveat by
-                # skipping a docstring (함정 6).
-                "unverified": list(plan.unverified),
-                "unverified_reason": plan.unverified_reason,
-                "human_check_commands": list(plan.human_check_commands),
-                # REQ-GROUPGEN-024 amendment (2026-08-04) — a STRUCTURAL
-                # notice, never docstring-only prose (함정 6): a truncated
-                # re-queried fixture listing never blocks this write (the
-                # group's membership is the caller's explicit fids), but the
-                # fact is still surfaced here for a human reviewer.
-                "fixture_list_truncated": plan.fixture_list_truncated,
-                "fixture_list_truncated_reason": plan.fixture_list_truncated_reason,
-            }
-            payload.update(extra)
-            return payload
-
-        approval_request = ApprovalRequest(
-            items=tuple(
-                ApprovalItem(
-                    command=command,
-                    risk_reasons=(
-                        "group write — membership cannot be re-verified after "
-                        "Store (grandMA3 exposes no membership read channel, "
-                        "progress.md §E.2.8)",
-                        *(
-                            (plan.fixture_list_truncated_reason,)
-                            if plan.fixture_list_truncated
-                            else ()
-                        ),
-                    ),
-                )
-                for command in all_commands
-            )
-        )
-        approved = group_approval.request_approval(approval_request)
-        if not approved:
-            # Fail-closed (design.md §7.2 ②③): approval withheld, unconfirmed
-            # or the port itself absent (DenyAllApprovalPort) all converge
-            # here — ZERO console sends, the plan demoted to a proposal.
-            return ToolExecution(
-                result=ToolResult(
-                    tool_call_id=call.id,
-                    name=call.name,
-                    content=json.dumps(
-                        _plan_payload(
-                            status="proposal",
-                            executed=False,
-                            notice=(
-                                "approval was not granted — nothing was sent to the "
-                                "console. Re-call with the same 'groups' once a human "
-                                "has approved the plan above."
-                            ),
-                        ),
-                        ensure_ascii=False,
-                    ),
-                    # A withheld approval is an ANSWER, not a failure (same
-                    # shape as arrange_fixtures' LiveLock demotion) — it must
-                    # not feed the self-correction loop back into re-asking
-                    # for the same approval.
-                    is_error=False,
-                )
-            )
-
-        # Approval was ONE request over the whole plan (the human saw every
-        # line at once); only the FIRING is split. Each bundle gets a FRESH
-        # context: `ExecutionContext.executed_ok` accumulates across every tool
-        # call in one instruction turn (server/orchestrator/runner.py:216,
-        # 222-223), so a selection line an earlier call already fired — a
-        # self-correction retry (REQ-MVP-012) is enough — would be folded out
-        # of a group chain even when this call asks for a single group. A group
-        # chain opens AND closes with `ClearAll`, so it depends on no state a
-        # previous tool call established; a fresh context is therefore safe as
-        # well as necessary.
-        outcomes: list[CommandOutcome] = []
-        command_reports: list[dict[str, object]] = []
-        slot_outcomes: list[dict[str, object]] = []
-        failure: dict[str, object] | None = None
-        for step, bundle in bundles:
-            if failure is not None:
-                # Stop-on-first-failure, inherited across bundles: a later
-                # group is never written on top of a broken one, and its
-                # slot is reported as untouched rather than omitted.
-                for command in bundle:
-                    outcomes.append(
-                        CommandOutcome(
-                            command=command,
-                            status="not_executed",
-                            detail="not executed (an earlier group's bundle failed)",
-                        )
-                    )
-                    command_reports.append(
-                        {
-                            "command": command,
-                            "status": "not_executed",
-                            "detail": "not executed (an earlier group's bundle failed)",
-                        }
-                    )
-                slot_outcomes.append(
-                    {"slot": step.slot, "name": step.name, "status": "not_attempted"}
-                )
-                continue
-            execution = run_commands(
-                ToolCall(id=call.id, name="run_commands", arguments={"commands": bundle}),
-                _EMPTY_CONTEXT,
-            )
-            bundle_payload = json.loads(execution.result.content)
-            outcomes.extend(execution.command_outcomes)
-            # Passed through verbatim rather than re-serialized from
-            # `outcomes`: a gate block reports `reasons` (a list), not `detail`.
-            command_reports.extend(bundle_payload.get("commands", []))
-            if execution.result.is_error:
-                failure = bundle_payload
-                slot_outcomes.append({"slot": step.slot, "name": step.name, "status": "failed"})
-            else:
-                slot_outcomes.append({"slot": step.slot, "name": step.name, "status": "executed"})
-
-        if failure is not None:
-            written = [entry for entry in slot_outcomes if entry["status"] == "executed"]
-            return ToolExecution(
-                result=ToolResult(
-                    tool_call_id=call.id,
-                    name=call.name,
-                    content=json.dumps(
-                        _plan_payload(
-                            status="failed",
-                            # "the write completed as planned" — never "nothing
-                            # reached the console". `slot_outcomes` carries the
-                            # per-slot truth so a partial write cannot read as
-                            # either a clean success or a clean no-op.
-                            executed=False,
-                            partial_write=bool(written),
-                            slot_outcomes=slot_outcomes,
-                            gate_status=failure.get("gate_status"),
-                            notice=failure.get("notice"),
-                            commands=command_reports,
-                            error=(
-                                "the group write stopped at the first failing bundle — "
-                                f"{len(written)} of {len(bundles)} group slots were "
-                                "written before it; see 'slot_outcomes' for which, and "
-                                "'commands' for the per-command gate/execution outcome. "
-                                "A written slot is NOT rolled back: grandMA3 exposes no "
-                                "membership read channel (progress.md §E.2.8), so a "
-                                "human must check the slots marked 'executed'."
-                            ),
-                        ),
-                        ensure_ascii=False,
-                    ),
-                    is_error=True,
-                ),
-                command_outcomes=tuple(outcomes),
-            )
-
-        # Re-query evidence (design.md §10 policy (c) automated-verification
-        # layer): slot existence and the LABEL, never membership. `ok:true`
-        # from the write above is NOT evidence — only this re-query is.
-        verified_steps: list[dict[str, object]] = []
-        for step in plan.steps:
-            slot_path = f"{groups_path}/{step.slot}"
-            try:
-                snapshot = state_port.query_state(slot_path)
-                slot_exists = bool(snapshot)
-            except Exception:
-                slot_exists = False
-            name_verified: bool | None = None
-            if property_port is not None:
-                try:
-                    name_read = read_properties(property_port, slot_path, ("Name",))["Name"]
-                    name_verified = name_read.ok and str(name_read.value).strip() == step.name
-                except Exception:
-                    name_verified = False
-            verified_steps.append(
-                {
-                    "slot": step.slot,
-                    "name": step.name,
-                    "fids": list(step.fids),
-                    "slot_exists": slot_exists,
-                    "name_verified": name_verified,
-                }
-            )
-
-        succeeded = all(
-            entry["slot_exists"] and entry["name_verified"] is not False for entry in verified_steps
-        )
-        return ToolExecution(
-            result=ToolResult(
-                tool_call_id=call.id,
-                name=call.name,
-                content=json.dumps(
-                    _plan_payload(
-                        status="created" if succeeded else "verification_failed",
-                        executed=True,
-                        succeeded=succeeded,
-                        verified_steps=verified_steps,
-                        commands=command_reports,
-                    ),
-                    ensure_ascii=False,
-                ),
-                is_error=not succeeded,
-            ),
-            command_outcomes=tuple(outcomes),
         )
 
     definitions = (
@@ -6943,21 +6125,9 @@ def build_toolset(
                 "\n"
                 "READS ONLY — it sends no command and changes nothing.\n"
                 "\n"
-                "Returns ONE OF TWO SHAPES, and which one you got is itself "
-                "the completeness signal.\n"
-                "\n"
-                'COMPLETE read: {"source": "patch3d", "fixtures": [...], '
-                '"unreadable": [...], "truncated": false, '
-                '"roundtrip_capped": false, "coverage": {...}, '
-                '"analysis": {...}}.\n'
-                "\n"
-                'INCOMPLETE read: there is NO "fixtures" key and NO "analysis" '
-                "key. The coordinates that did arrive are under "
-                '"partial_fixtures"; "missing" is {"expected", "received", '
-                '"unseen_count"}; "analysis_withheld" says why no row '
-                'structure was computed. Reaching for "fixtures" and not '
-                "finding it MEANS this read was partial — report that, and "
-                "never present the part you received as the rig.\n"
+                'Returns {"source": "patch3d", "fixtures": [...], '
+                '"unreadable": [...], "truncated": bool, '
+                '"roundtrip_capped": bool, "analysis": {...}}.\n'
                 "\n"
                 'Each fixture is {"fid", "name", "x", "y", "z"} in metres, '
                 'and "fid" is the fixture id the CONSOLE returned — it is the '
@@ -6976,15 +6146,11 @@ def build_toolset(
                 "fixture list, so fixtures exist that this call was never "
                 'shown; "roundtrip_capped": true means this call hit its own '
                 "query budget and stopped asking part-way through a rig "
-                "bigger than it can read in one go. Only the second one is "
-                "fixable by asking differently, which is why they stay "
-                "separate — but EITHER produces the incomplete shape above, "
-                'and so does a "childCount" that simply disagrees with what '
-                'arrived. "missing" gives you the arithmetic: how many the '
-                "console counted, how many you got, how many you never saw.\n"
+                "bigger than it can read in one go. Either way the list is "
+                "NOT the whole rig — say so rather than presenting a "
+                "left-to-right order over the part you happened to receive.\n"
                 "\n"
-                '"analysis" is present ONLY in the complete shape. It is the '
-                "row structure detected from those "
+                '"analysis" is the row structure detected from those '
                 'coordinates: "row_count", "rows" (each with its "fids" in '
                 'stage order), "row_order" and "low_confidence". This is what '
                 "makes one 30-fixture bar and a 3x10 grid produce DIFFERENT "
@@ -7114,161 +6280,6 @@ def build_toolset(
                 "additionalProperties": False,
             },
         ),
-        ToolDefinition(
-            name="classify_arrangement_topology",
-            description=(
-                "Classify WHAT STRUCTURE the current rig's positions form "
-                "(rows, a left/right split, concentric rings, vertical "
-                "levels, a grid, or mirror-symmetric pairs) and propose GROUP "
-                "NAMES for it, plus fixture-type groups when you already have "
-                "them. Call this BEFORE create_arrangement_groups when the "
-                "operator wants position-based groups but has not named the "
-                "buckets themselves ('group these up by position', "
-                "'위치별로 그룹 만들어줘').\n"
-                "\n"
-                "READS ONLY — it sends no command and changes nothing. It "
-                "reads the same stage patch coordinates get_spatial_context "
-                "does; call get_spatial_context first if you also need the "
-                "raw coordinates or the row/'analysis' view.\n"
-                "\n"
-                "'topology.selected' is the ONE winning structure (or "
-                "kind:null with low_confidence:true when nothing was clear); "
-                "'topology.candidates' lists every hypothesis considered, for "
-                "audit. 'suggested_groups' is the actionable output: a list "
-                "of {'name', 'fids'} — pass a chosen subset straight through "
-                "as create_arrangement_groups's 'groups' argument. This is a "
-                "NAMING PROPOSAL ONLY; nothing is written until "
-                "create_arrangement_groups is called AND approved.\n"
-                "\n"
-                "Optionally pass 'fixture_type_records' — "
-                "{'fid','manufacturer','type_name'} entries you already read "
-                "off Patch/FixtureTypes — to also get species-axis groups "
-                "(named after the patch's own type/manufacturer string "
-                "verbatim, never a guessed category like 'Spot' or 'Wash'). "
-                "Omit it and 'fixture_types' comes back null — this tool "
-                "does not read fixture types itself."
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "fixture_type_records": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "fid": {"type": "integer"},
-                                "manufacturer": {"type": "string"},
-                                "type_name": {"type": "string"},
-                                "short_name": {"type": "string"},
-                            },
-                            "required": ["fid", "manufacturer", "type_name"],
-                        },
-                        "description": (
-                            "Optional. Already-read patch structured fields per "
-                            "fixture — adds a species/manufacturer axis to "
-                            "'suggested_groups'. Omit to skip it."
-                        ),
-                    },
-                },
-                "additionalProperties": False,
-            },
-        ),
-        ToolDefinition(
-            name="create_arrangement_groups",
-            description=(
-                "STORE named position/type groups into the showfile: "
-                "Store Group + Label Group for each entry in 'groups'. This "
-                "CHANGES THE SHOWFILE — call it only when the operator "
-                "explicitly asked for groups to be created, typically after "
-                "classify_arrangement_topology proposed names.\n"
-                "\n"
-                "Every write here requires EXPLICIT HUMAN APPROVAL before "
-                "anything reaches the console — Store Group/Label Group are "
-                "NOT flagged risky by the safety gate on their own "
-                "(server/safety/** is unchanged by this tool), so this tool "
-                "enforces its own approval step. If approval is withheld, "
-                "unavailable or unconfirmed, NOTHING is sent — the reply "
-                "carries 'status':'proposal' and the plan only, and calling "
-                "again with the same 'groups' after a human approves is how "
-                "you proceed. Never claim a group was created because this "
-                "call returned without an error; check 'status'.\n"
-                "\n"
-                "Targets are ALWAYS empty slots, measured fresh from the "
-                "group pool — an occupied slot is never targeted, silently "
-                "skipped or overwritten. A truncated group pool or fixture "
-                "list refuses the whole call with a structured error rather "
-                "than guessing.\n"
-                "\n"
-                "'unverified' ALWAYS lists 'membership': grandMA3 exposes no "
-                "channel to read back which fixtures actually landed in a "
-                "group, so that fact is never verified and never silently "
-                "assumed true. What IS verified (after a successful write, "
-                "under 'verified_steps'): the slot exists and its label "
-                "reads back correctly. 'human_check_commands' gives you a "
-                "'Group <n>' line per group so the operator can confirm the "
-                "arrangement by eye on stage — that is the only way "
-                "membership is ever actually confirmed.\n"
-                "\n"
-                "If a group you pass carries 'topology_partial': true — "
-                "classify_arrangement_topology stamps that on every geometric "
-                "group it derived from a rig read that was NOT complete — "
-                "this call is REFUSED unless you also pass "
-                "'acknowledged_unread_fids'. There is no boolean form of that "
-                "acknowledgement on purpose: a flag can be set without "
-                "reading anything, and naming the fids cannot."
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "groups": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "name": {
-                                    "type": "string",
-                                    "description": (
-                                        "The group's label. Typically taken "
-                                        "verbatim from classify_arrangement_"
-                                        "topology's 'suggested_groups', or the "
-                                        "operator's own words."
-                                    ),
-                                },
-                                "fids": {
-                                    "type": "array",
-                                    "items": {"type": "integer"},
-                                    "description": "The fixture ids this group holds.",
-                                },
-                            },
-                            "required": ["name", "fids"],
-                        },
-                        "description": (
-                            "The groups to Store and Label, in order. Each "
-                            "one becomes exactly one showfile group at a "
-                            "freshly-measured empty slot."
-                        ),
-                    },
-                    "acknowledged_unread_fids": {
-                        "type": "array",
-                        "items": {"type": "integer"},
-                        "description": (
-                            "Required ONLY when a group carries "
-                            "'topology_partial': true. The fixture ids the "
-                            "partial rig read never saw, named one by one — "
-                            "non-empty, distinct, and none of them among the "
-                            "fids you are grouping (those were seen). Take "
-                            "them from get_spatial_context: 'missing' says "
-                            "how many are unseen and 'partial_fixtures' says "
-                            "which ones arrived. NOT a boolean — a flag can "
-                            "be set without reading what is absent, which is "
-                            "the failure this argument exists to prevent."
-                        ),
-                    },
-                },
-                "required": ["groups"],
-                "additionalProperties": False,
-            },
-        ),
     )
     handlers: dict[str, _Handler] = {
         "run_commands": run_commands,
@@ -7299,7 +6310,5 @@ def build_toolset(
         "plan_executor_layout": plan_executor_layout,
         "get_spatial_context": get_spatial_context,
         "arrange_fixtures": arrange_fixtures,
-        "classify_arrangement_topology": classify_arrangement_topology,
-        "create_arrangement_groups": create_arrangement_groups,
     }
     return ToolRegistry(definitions, handlers)
