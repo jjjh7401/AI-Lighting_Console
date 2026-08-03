@@ -41,6 +41,7 @@ local CONFIG = {
     max_payload = 1900, -- max encoded payload length in bytes (MA3 CLI 2048 limit)
     max_props_names = 16, -- max comma-separated names accepted by props requests
     max_prop_value = 240, -- max raw bytes per props value before item-level truncation
+    introspect_contrast_names = { "INDEX", "NAME", "NO", "FADER", "CURRENTCUE" },
     send_variant = "packed", -- "packed" | "args" | "cmd_keyword" (see PROTOCOL.md §5)
     uservar_name = "COPILOT_REQ",
 }
@@ -58,8 +59,9 @@ local M = {
     -- (live-measured; big snapshots like a 27-macro pool never replied).
     -- 1.5.0: additive prop verb + Cue child cueNo when the real cue number
     -- can be read from the cue object; Protocol v1 throughout. 1.6.0: props
-    -- + introspect read-only discovery verbs; Protocol v1 throughout.
-    VERSION = "1.6.0",
+    -- + introspect read-only discovery verbs; Protocol v1 throughout. 1.6.1:
+    -- introspect rejects enumerators missing same-handle prop-readable names.
+    VERSION = "1.6.1",
     PROTO = 1,
     CONFIG = CONFIG,
 }
@@ -191,6 +193,7 @@ function M.parse_props_rest(rest)
         return nil, "", "malformed props request (expected: props <id> <PropertyName,...> <path>)"
     end
     local names = M.array({})
+    local seen = {}
     for name in (name_list .. ","):gmatch("([^,]*),") do
         if name == "" then
             return nil, path, "empty property name in props request"
@@ -198,9 +201,12 @@ function M.parse_props_rest(rest)
         if name:match("%s") then
             return nil, path, "property names in props request must not contain whitespace"
         end
-        names[#names + 1] = name
-        if #names > CONFIG.max_props_names then
-            return nil, path, "too many property names in props request (max " .. tostring(CONFIG.max_props_names) .. ")"
+        if not seen[name] then
+            seen[name] = true
+            names[#names + 1] = name
+            if #names > CONFIG.max_props_names then
+                return nil, path, "too many property names in props request (max " .. tostring(CONFIG.max_props_names) .. ")"
+            end
         end
     end
     if #names == 0 then
@@ -794,6 +800,27 @@ function M.enumerate_property_accessors(handle)
     return fields, count
 end
 
+local function property_name_key(name)
+    return tostring(name):upper()
+end
+
+function M.missing_introspect_contrast_names(handle, fields)
+    local enumerated = {}
+    for _, field in ipairs(fields) do
+        if type(field.n) == "string" and field.n ~= "" then
+            enumerated[property_name_key(field.n)] = true
+        end
+    end
+    local missing = M.array({})
+    for _, candidate in ipairs(CONFIG.introspect_contrast_names) do
+        local value = M.safe_property(handle, candidate)
+        if value ~= nil and not enumerated[property_name_key(candidate)] then
+            missing[#missing + 1] = candidate
+        end
+    end
+    return missing
+end
+
 function M.build_introspect_result(id, path)
     local function fail(message)
         return {
@@ -812,6 +839,15 @@ function M.build_introspect_result(id, path)
     local fields, total = M.enumerate_property_accessors(handle)
     if not fields then
         return fail(total)
+    end
+    -- @MX:ANCHOR: [AUTO] enumerator adoption gate — contrast the full
+    --   pre-truncation enumerated name set against same-handle prop reads.
+    -- @MX:REASON: REQ-INTROSPECT-004/005 require discarding the whole
+    --   introspect result, not returning plausible partial fields, if an
+    --   independently confirmed readable name is absent from the enumerator.
+    local missing_contrast = M.missing_introspect_contrast_names(handle, fields)
+    if #missing_contrast > 0 then
+        return fail("property_accessors missing independently readable names: " .. table.concat(missing_contrast, ","))
     end
     local payload = {
         v = M.PROTO,

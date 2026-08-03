@@ -7,6 +7,11 @@ M2 deliverable; consumed by the M3 tool-runner and the M4 safety gate.
 Versioning: every reply payload carries `"v": 1`. Any breaking change bumps the
 version in BOTH implementations and revises this document.
 
+> Revision note (responder 1.6.1): `introspect` now discards the whole
+> enumerator result when it omits a same-handle `prop`-readable contrast name;
+> duplicate `props` request names collapse to their first occurrence. Wire
+> protocol version stays 1.
+>
 > Revision note (responder 1.6.0): ADDITIVE `props` and `introspect`
 > verbs (§2) + `introspect` and `props` reply kinds (§4.7/§4.8) +
 > ASSUMPTION-46..52 updates (§6). Wire protocol version stays 1.
@@ -278,7 +283,9 @@ not read or emit field values for this kind.
   consumer can see that the list is incomplete.
 - Failure (`ok:false`) means path resolution or the complete adopted
   enumerator failed. Partial enumerator results are not emitted as a best
-  effort list.
+  effort list. Responder 1.6.1 also fails the whole reply when the full
+  pre-truncation enumerated set omits any same-handle `prop`-readable
+  contrast name; the error names missing properties but never includes values.
 
 ### 4.8 `props` (bulk property readback — on `/copilot/state`, responder 1.6.0)
 
@@ -290,6 +297,8 @@ not read or emit field values for this kind.
 The responder reads only the names explicitly listed in the request's first
 rest token. It never has an "all field values" mode.
 
+- Duplicate request names collapse to the first occurrence before reads; the
+  order of distinct names remains the request order.
 - Top-level `ok:true` means the request was parsed, the path resolved, and the
   requested name list was processed. It does **not** mean "every name was
   read"; read failures ride inside `reads[]` as item-level `ok:false` entries

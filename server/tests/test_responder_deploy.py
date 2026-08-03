@@ -166,9 +166,9 @@ class TestVersionBump:
         # MA3 ~2048-byte command-line limit. 1.5.0 adds prop readback and
         # Cue child cueNo. 1.6.0 (SPEC-COPILOT-INTROSPECT-001 M2) adds the
         # additive props/introspect verbs — bulk property readback and
-        # handle field enumeration via the M1-adopted property accessors —
-        # all without changing protocol v1.
-        assert harness.module["VERSION"] == "1.6.0"
+        # handle field enumeration via the M1-adopted property accessors.
+        # 1.6.1 rejects enumerators missing same-handle prop-readable names.
+        assert harness.module["VERSION"] == "1.6.1"
         assert harness.module["PROTO"] == 1
 
 

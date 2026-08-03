@@ -78,7 +78,7 @@ class TestLoading:
         assert config["send_variant"] == "packed"
         assert config["max_props_names"] == 16
         assert harness.module["PROTO"] == 1
-        assert harness.module["VERSION"] == "1.6.0"
+        assert harness.module["VERSION"] == "1.6.1"
 
 
 class TestParseRequest:
@@ -444,6 +444,18 @@ class TestPropsRead:
         assert props_payload["kind"] == "props"
         assert props_payload["reads"][0]["n"] == "CURRENTCUE"
 
+    def test_props_duplicate_names_collapse_in_request_order(self):
+        harness = ResponderHarness(
+            extra_env=_sequence_props_env(
+                {"CURRENTCUE": "Sequence 80.3", "FADER": "Master"},
+                ["CURRENTCUE", "FADER"],
+            )
+        )
+        harness.main(None, "props bp8 CURRENTCUE,FADER,CURRENTCUE DataPool/Sequences/Sequence 101")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is True
+        assert [read["n"] for read in payload["reads"]] == ["CURRENTCUE", "FADER"]
+
 
 class TestIntrospect:
     def test_introspect_returns_names_types_source_and_total(self):
@@ -496,7 +508,7 @@ class TestIntrospect:
         assert "PropertyCount" in payload["error"]
         assert "fields" not in payload
 
-    def test_introspect_rejects_partial_property_accessor_set(self):
+    def test_introspect_rejects_nil_property_accessor_index(self):
         harness = ResponderHarness(
             extra_env=_sequence_props_env(
                 {"INDEX": "201", "FADER": "Master"},
@@ -515,6 +527,35 @@ class TestIntrospect:
         assert payload["ok"] is False
         assert "incomplete" in payload["error"]
         assert "fields" not in payload
+
+    def test_introspect_rejects_enumerator_missing_prop_readable_name(self):
+        harness = ResponderHarness(
+            extra_env=_sequence_props_env(
+                {"INDEX": "201", "FADER": "Master", "CURRENTCUE": "Sequence 80.3"},
+                ["INDEX", "FADER"],
+            )
+        )
+        harness.main(None, "introspect i6 DataPool/Sequences/Sequence 101")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["kind"] == "introspect"
+        assert payload["ok"] is False
+        assert "CURRENTCUE" in payload["error"]
+        assert "Sequence 80.3" not in payload["error"]
+        assert "fields" not in payload
+
+    def test_introspect_contrast_gate_uses_pre_truncation_field_set(self):
+        names = [f"FIELD{i:03d}_" + ("N" * 24) for i in range(1, 81)]
+        names.append("CURRENTCUE")
+        values = {name: "value" for name in names}
+        values["CURRENTCUE"] = "Sequence 80.3"
+        harness = ResponderHarness(extra_env=_sequence_props_env(values, names))
+        harness.main(None, "introspect i7 DataPool/Sequences/Sequence 101")
+        payload = decode_payload(harness.sent()[0].payload)
+        returned_names = [field["n"] for field in payload["fields"]]
+        assert payload["ok"] is True
+        assert payload["truncated"] is True
+        assert payload["total"] == len(names)
+        assert "CURRENTCUE" not in returned_names
 
     def test_introspect_payload_truncation_preserves_total(self):
         names = [f"FIELD{i:03d}_" + ("N" * 24) for i in range(1, 81)]
