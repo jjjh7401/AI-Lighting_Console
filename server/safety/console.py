@@ -282,9 +282,7 @@ class ConsoleLink:
         )
         return outcome
 
-    def _run_file_import(
-        self, name: str, lua_source: str, sends: list[DeploySend]
-    ) -> ExecOutcome:
+    def _run_file_import(self, name: str, lua_source: str, sends: list[DeploySend]) -> ExecOutcome:
         try:
             xml = build_plugin_xml(name, lua_source)
         except ValueError as error:
@@ -295,7 +293,9 @@ class ConsoleLink:
             self._import_dir.mkdir(parents=True, exist_ok=True)
             target.write_text(xml, encoding="utf-8")
         except OSError as error:
-            return ExecOutcome(status="failed", detail=f"cannot write plugin file {target}: {error}")
+            return ExecOutcome(
+                status="failed", detail=f"cannot write plugin file {target}: {error}"
+            )
 
         # One pool read: find an existing same-Name slot (idempotent redeploy)
         # AND the occupied slots (to pick a free one). A no-slot `Import Plugin`
@@ -349,7 +349,9 @@ class ConsoleLink:
         try:
             pool = self._deploy_query_state("DataPool/Plugins", sends)
         except StateQueryError as error:
-            return ExecOutcome(status="unconfirmed", detail=f"imported but pool unreadable: {error}")
+            return ExecOutcome(
+                status="unconfirmed", detail=f"imported but pool unreadable: {error}"
+            )
         names = [c.get("name") for c in pool.get("children", []) if isinstance(c, dict)]
         if name in names:
             return ExecOutcome(status="ok", detail=f"imported plugin {name!r} via file+Import")
@@ -525,9 +527,7 @@ class StateBodyFetcher:
         try:
             identity = self._query(reference)
         except Exception as error:
-            raise BodyUnavailable(
-                f"identity query failed for {reference!r}: {error}"
-            ) from error
+            raise BodyUnavailable(f"identity query failed for {reference!r}: {error}") from error
         node = identity.get("node") if isinstance(identity, dict) else None
         sequence_no = node.get("sequenceNo") if isinstance(node, dict) else None
         if not isinstance(sequence_no, int):
@@ -548,9 +548,7 @@ class StateBodyFetcher:
             sequence_reference, sequence_template.format(ref=sequence_no), allow_empty=True
         )
 
-    def _fetch_body_at_path(
-        self, reference: str, path: str, *, allow_empty: bool
-    ) -> Sequence[str]:
+    def _fetch_body_at_path(self, reference: str, path: str, *, allow_empty: bool) -> Sequence[str]:
         try:
             payload = self._query(path)
         except Exception as error:

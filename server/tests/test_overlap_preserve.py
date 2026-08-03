@@ -158,7 +158,7 @@ _OVERLAP_MERGE_COMMIT = "156a3e1aaf6ef78788394d65cf724bacaec7b567"
 _SAFETY_EXPECTED_DELETIONS = {
     "server/safety/audit.py": 1,
     "server/safety/backup.py": 2,
-    "server/safety/console.py": 0,
+    "server/safety/console.py": 11,
     "server/safety/gate.py": 3,
 }
 _SAFETY_ALLOWED_DELETED_LINES = {
@@ -178,6 +178,35 @@ _SAFETY_ALLOWED_DELETED_LINES = {
     "server/safety/backup.py": (
         "Three rules: ① once at session start, ② periodic (default 10 minutes,",
         '    """Drives the 3-rule backup policy against an injected backup action."""',
+    ),
+    # 2026-08-03 (SPEC-COPILOT-INTROSPECT-001 M4/M5, user-approved): console.py
+    # reopens with 11 deletions for the FIRST time, and every one of them is a
+    # formatter re-wrap, not a removal. Cause, recorded rather than smoothed
+    # over: a repo-wide `ruff format` drift accumulated after the last SPEC
+    # that touched this file, and `TestTouchedFilesPassLint` (AC-OVERLAP-019 ⑨)
+    # requires every file a SPEC touches to be lint- and format-clean. Adding
+    # the M4 round-trip methods therefore dragged the pre-existing drift into
+    # scope: gate ⑨ demanded the reformat, this pin forbade the deletions it
+    # produces, and the two could only be reconciled deliberately. Running the
+    # formatter also cleared the file's two pre-existing E501s.
+    #
+    # `test_the_console_reformat_removed_no_semantics` below is the other half
+    # of this grant: a re-wrap keeps its tokens, so every line named here must
+    # still be present in the file once whitespace is discarded. A genuine
+    # removal cannot satisfy that, which is what keeps the enlarged count from
+    # becoming a blanket allowance.
+    "server/safety/console.py": (
+        "    def _run_file_import(",
+        "        self, name: str, lua_source: str, sends: list[DeploySend]",
+        "    ) -> ExecOutcome:",
+        '            return ExecOutcome(status="failed", detail=f"cannot write plugin file {target}: {error}")',  # noqa: E501
+        '            return ExecOutcome(status="unconfirmed", detail=f"imported but pool unreadable: {error}")',  # noqa: E501
+        "            raise BodyUnavailable(",
+        '                f"identity query failed for {reference!r}: {error}"',
+        "            ) from error",
+        "    def _fetch_body_at_path(",
+        "        self, reference: str, path: str, *, allow_empty: bool",
+        "    ) -> Sequence[str]:",
     ),
     "server/safety/gate.py": (
         "from server.safety.backup import BackupError, BackupManager",
@@ -497,6 +526,30 @@ class TestSafetyChokepointFileSet:
                 if line.startswith("-") and not line.startswith("---")
             ]
             assert deleted == list(allowed), path
+
+    def test_the_console_reformat_removed_no_semantics(self):
+        """The other half of the 2026-08-03 console.py grant.
+
+        The count above went 0 -> 11 for a formatter re-wrap. A count alone
+        would now also admit eleven REAL removals, so pin the property that
+        actually separates the two: a re-wrap moves tokens across line breaks
+        but keeps every one of them, so each pinned deletion must still be
+        present in the current file once whitespace is discarded. A deleted
+        guard, branch, or call cannot satisfy that.
+
+        Whitespace is discarded rather than collapsed because the formatter
+        both joins lines (dropping indentation) and splits them (inserting
+        spaces inside brackets) -- a collapsed comparison reports false
+        removals on the split direction.
+        """
+        current = (_REPO_ROOT / "server/safety/console.py").read_text(encoding="utf-8")
+        without_space = re.sub(r"\s+", "", current)
+        pinned = _SAFETY_ALLOWED_DELETED_LINES["server/safety/console.py"]
+        assert pinned, "빈 핀은 아래 루프를 공허하게 만든다"
+        for line in pinned:
+            assert re.sub(r"\s+", "", line) in without_space, line
+        # Non-vacuity: the same check must REJECT a line that is not there.
+        assert re.sub(r"\s+", "", "        self._never_existed_sentinel()") not in without_space
 
     def test_overlap_s_own_scope_changed_nothing_under_the_chokepoint(self):
         """SCOPE CORRECTION (SPEC-COPILOT-BACKUP-001 T-B/T-B2 integration).

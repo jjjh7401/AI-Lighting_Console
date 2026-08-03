@@ -99,6 +99,48 @@
 - **보존 확인**: `git diff --numstat server/safety/console.py server/safety/gate.py` → `57 0 server/safety/console.py`, `34 0 server/safety/gate.py`.
 - **남은 위험**: 라이브 콘솔 왕복은 M6 범위라 수행하지 않았다. 로컬 LSP 서버(`basedpyright`)는 설치되어 있지 않아 후크가 진단을 건너뛰었다.
 
+### M5 — 회귀 · 경계 · 안전 불변식 (2026-08-03, 오케스트레이터 직접 수행)
+
+plan.md §G가 *"M5의 테스트 축들은 서로 독립이므로 오케스트레이터의 다중 Bash 검증 배치로 충분하며 별도 에이전트 팬아웃을 요구하지 않는다"*고 지정한 대로 코디네이터가 직접 실행했다.
+
+| 축 | 결과 | 근거 |
+|---|---|---|
+| 전체 회귀(pytest) | **4295 passed · 7 skipped · 0 failed** | run-phase 킥오프 기준선 **4244**(M2 착수 직전 실측) 대비 신규 실패 0. 증분 4244 → 4259(M2 +15) → 4284(M3 +20, PRESERVE 예외 +5) → 4294(M4 +10) → 4295(M5의 재포맷 생존 불변식 +1). 4294는 **아래 §"M5가 실제로 잡아낸 것" 2건을 해소하기 전**의 값이었다 |
+| 전체 회귀(vitest) | **350 passed (15 files)** | 기준선과 동일 — UI 파일 변경 0건 |
+| OSC import 경계 | `test_architecture.py` **4 passed** | 예외 명단 무변경: `git diff 3176900..HEAD -- server/tests/test_architecture.py` 빈 출력. 신규 CLI는 예외에 오르지 않고 게이트 경유로 해결 |
+| 읽기 전용(`Cmd(` 부재) | **0건** | `build_props_result` · `build_introspect_result` · `enumerate_property_accessors` · `parse_props_names` 함수 본문 전수 |
+| 닫힌 툴 집합 | **18 고정** | `test_tools.py:140` `len(names) == len(TOOL_NAMES) == 18` 그린. `build_toolset` 시그니처 무변경 — 신규 포트 2종은 툴로 등재되지 않았다(REQ-INTROSPECT-024) |
+| 기존 동사 5종 · kind 6종 가산성 | 무변경 | `test_lua_responder.py` 74 passed, `test_responder_deploy.py` / `test_responder_roundtrip.py` / `test_responder_protocol.py` 그린. kind는 6종 → 8종(`props`·`introspect` 추가)이며 기존 6종 형상 불변 |
+
+**뮤테이션 축 — 코디네이터 재실측 (워커 보고를 신뢰하지 않고 직접 죽여 봤다).** plan.md §B M5의 경고("절단 신호를 제거해도 통과하는 테스트가 있으면 그 테스트가 무용하다")를 지점별로 집행했다.
+
+| 뮤테이션 | 결과 |
+|---|---|
+| `payload.truncated = true` → `false`, **지점 1** (`M.build_snapshot:680`) | 1 failed |
+| 〃 **지점 2** (`M.build_props_result:761`) | 1 failed |
+| 〃 **지점 3** (`M.build_introspect_result:830`) | 1 failed |
+| `item.truncated = true` → `false` (props 항목별 축약) | 1 failed |
+| `MAX_PROPS_NAMES` 16 → 17 (Lua↔Python 동치) | 1 failed |
+| 게이트 감사 주체에 값 문자열 주입 | 2 failed |
+| PRESERVE 예외: 핀 삭제줄 1개 제거 / 허용 파일 1개 제거 / 예외를 빈 dict로 | 각각 2 · 1 · 3 failed |
+| 전 뮤테이션 복원 후 | 전부 통과 복귀 |
+
+절단 신호 3지점이 **개별로** 그물에 걸려 있음이 확인됐다 — 하나를 지우면 정확히 1건이 죽는다. 즉 절단 테스트의 재료가 실제로 상한(1900B)을 넘긴다(재료가 상한 미만이면 신호를 지워도 통과했을 것이다 — SCENE-001 M8이 남긴 함정).
+
+### M5가 실제로 잡아낸 것 (검증 마일스톤이 제 몫을 한 지점)
+
+M5를 "이미 그린인 것을 재확인하는 절차"로 돌렸다면 둘 다 놓쳤을 것이다. 둘 다 **커밋 경계에서만 드러나는** 종류였다.
+
+**① 거짓 통과 1건 — `.pyc` 캐시 무효화 함정 (코디네이터 자책).** 뮤테이션 하네스가 `MAX_PROPS_NAMES = 16` → `17`로 바꿨다가 되돌렸는데, `16`과 `17`은 **바이트 수가 같고** 복원이 **같은 초 안에** 일어났다. CPython의 pyc 무효화는 (mtime 초, 크기) 쌍만 보므로 변이된 바이트코드가 유효한 캐시로 남았고, 이후 전체 스위트에서 `test_python_props_name_limit_matches_lua_config`가 `assert 16 == 17`로 죽었다 — 디스크의 소스는 `16`인데도. `__pycache__` 제거 + `touch` 후 통과. **소스 파일을 되돌리는 뮤테이션 하네스는 크기가 같은 치환에서 이 함정을 밟는다** — 복원 후에는 캐시를 비우거나 mtime을 밀어야 한다.
+
+**② 게이트 2개의 실제 충돌 — 승인으로 해소.** `TestTouchedFilesPassLint`(AC-OVERLAP-019 ⑨, *손댄 파일은 lint·format clean*)와 `_SAFETY_EXPECTED_DELETIONS["server/safety/console.py"] = 0`이 정면으로 부딪쳤다. 저장소 전역 포매터 드리프트가 쌓인 뒤 `console.py`를 처음 건드린 SPEC이 본 SPEC이라, ⑨는 재포맷을 요구하고 핀은 그 재포맷이 만드는 삭제를 금지했다. **두 게이트 모두 커밋 범위(`BASE..HEAD`)를 보므로 미커밋 상태에서는 조용했고**, M4를 커밋한 뒤에야 드러났다(같은 은폐가 M2→M3 경계에서도 한 번 있었다).
+
+- 해소(2026-08-03 사용자 승인): `console.py`에 `ruff format` 적용 → 삭제 **0 → 11**, 추가 87 → 96, 기존 `E501` 2건도 함께 해소. `_SAFETY_EXPECTED_DELETIONS`를 11로 올리고 삭제 11줄을 **전문 고정**했다.
+- 핀을 늘리면 "진짜 제거 11건"도 통과할 수 있으므로 나머지 절반을 함께 걸었다 — `test_the_console_reformat_removed_no_semantics`: **핀된 각 줄은 공백을 제거하면 현재 파일에 여전히 존재해야 한다.** 재줄바꿈은 토큰을 옮길 뿐 없애지 않으므로 통과하고, 삭제된 가드·분기·호출은 통과할 수 없다. 실측 **11/11 생존**, 날조한 줄(`self._never_existed_sentinel()`)은 거부.
+- 공백을 **접지 않고 제거**하는 이유: 포매터가 줄을 붙이기도(들여쓰기 소실) 쪼개기도(괄호 안 공백 삽입) 하므로, 접는 비교는 쪼개는 방향에서 거짓 제거를 보고한다(실측 9/11로 오판).
+
+**남은 항목(본 SPEC 밖, 기록만)**: 저장소 전역에 동종 포매터 드리프트가 남아 있다(`ruff check .` 5 errors / `format --check` 18 files). 본 SPEC이 만든 것이 아니고, 잠긴 경로가 아닌 파일들이라 손대는 SPEC이 각자 흡수하게 된다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
