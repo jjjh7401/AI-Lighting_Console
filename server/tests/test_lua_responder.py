@@ -9,6 +9,8 @@ cross-language contract test of the v1 wire format.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from server.bridge.protocol import decode_payload
@@ -17,6 +19,7 @@ from server.orchestrator.tools import rig_object
 from .lua_mock_env import (
     GAPPED_GROUP_NAMES,
     GAPPED_GROUP_SLOTS,
+    RESPONDER_PATH,
     ResponderHarness,
     gapped_groups_env,
 )
@@ -30,6 +33,40 @@ def harness() -> ResponderHarness:
     return ResponderHarness()
 
 
+def _lua_string(value: str) -> str:
+    return json.dumps(value)
+
+
+def _lua_array(values: list[str]) -> str:
+    return "{ " + ", ".join(_lua_string(value) for value in values) + " }"
+
+
+def _lua_props(values: dict[str, str]) -> str:
+    return (
+        "{ "
+        + ", ".join(
+            f"[{_lua_string(name)}] = {_lua_string(value)}" for name, value in values.items()
+        )
+        + " }"
+    )
+
+
+def _sequence_props_env(
+    values: dict[str, str], order: list[str] | None = None, extra: str = ""
+) -> str:
+    order = order or list(values)
+    props, index = _lua_props(values), _lua_array(order)
+    return (
+        "local node = __NODE\n"
+        f'local seq = node("Sequence 101", "Sequence", {{}}, {props}, {index})\n'
+        f"{extra}\n"
+        '__DATAPOOL = node("Default", "DataPool", {\n'
+        '    node("Sequences", "Pool", { seq }),\n'
+        "})\n"
+        "function DataPool() return __DATAPOOL end\n"
+    )
+
+
 class TestLoading:
     def test_plugin_returns_callable_main(self, harness):
         assert callable(harness.main)
@@ -39,7 +76,9 @@ class TestLoading:
         assert config["state_address"] == STATE_ADDRESS
         assert config["feedback_address"] == FEEDBACK_ADDRESS
         assert config["send_variant"] == "packed"
+        assert config["max_props_names"] == 16
         assert harness.module["PROTO"] == 1
+        assert harness.module["VERSION"] == "1.6.0"
 
 
 class TestParseRequest:
@@ -299,6 +338,233 @@ class TestPropRead:
         assert payload["kind"] == "prop"
         assert payload["ok"] is False
         assert "malformed prop" in payload["error"]
+
+
+class TestPropsRead:
+    def test_props_mixed_reads_keep_top_level_ok_for_processed_request(self):
+        harness = ResponderHarness(
+            extra_env=_sequence_props_env(
+                {"CURRENTCUE": "Sequence 80.3", "CUENO": "", "FADER": "Master"},
+                ["CURRENTCUE", "CUENO", "FADER"],
+                extra=(
+                    "function seq:Get(prop)\n"
+                    '    if prop == "RAISES" then error("mock read failure") end\n'
+                    "    return self._props[prop]\n"
+                    "end\n"
+                ),
+            )
+        )
+        harness.main(
+            None,
+            "props bp1 CURRENTCUE,CUENO,MISSING,RAISES DataPool/Sequences/Sequence 101",
+        )
+        sent = harness.sent()[0]
+        payload = decode_payload(sent.payload)
+        assert sent.address == STATE_ADDRESS
+        assert payload["kind"] == "props"
+        assert payload["ok"] is True
+        assert payload["path"] == "DataPool/Sequences/Sequence 101"
+        assert payload["truncated"] is False
+        assert payload["reads"] == [
+            {"n": "CURRENTCUE", "ok": True, "t": "string", "v": "Sequence 80.3"},
+            {"n": "CUENO", "ok": True, "t": "string", "v": ""},
+            {"n": "MISSING", "ok": False, "e": "property not readable: MISSING"},
+            {"n": "RAISES", "ok": False, "e": "property not readable: RAISES"},
+        ]
+
+    def test_props_all_failed_reads_are_still_a_processed_request(self, harness):
+        harness.main(None, "props bp2 FOO,BAR DataPool/Sequences/Sequence 1")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["kind"] == "props"
+        assert payload["ok"] is True
+        assert [read["ok"] for read in payload["reads"]] == [False, False]
+
+    def test_props_malformed_request_reports_props_failure(self, harness):
+        harness.main(None, "props bp3 DataPool/Sequences")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["kind"] == "props"
+        assert payload["ok"] is False
+        assert payload["reads"] == []
+        assert "malformed props" in payload["error"]
+
+    def test_props_accepts_name_count_at_config_limit(self):
+        names = [f"P{i:02d}" for i in range(1, 17)]
+        harness = ResponderHarness(
+            extra_env=_sequence_props_env({name: name for name in names}, names)
+        )
+        harness.main(None, f"props bp4 {','.join(names)} DataPool/Sequences/Sequence 101")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["ok"] is True
+        assert len(payload["reads"]) == int(harness.config["max_props_names"])
+
+    def test_props_rejects_name_count_over_config_limit(self, harness):
+        names = [f"P{i:02d}" for i in range(1, 18)]
+        harness.main(None, f"props bp5 {','.join(names)} DataPool/Sequences/Sequence 1")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["kind"] == "props"
+        assert payload["ok"] is False
+        assert "too many property names" in payload["error"]
+        assert int(harness.config["max_props_names"]) == 16
+
+    def test_props_value_truncation_is_marked_per_item(self):
+        value = "A" * 80
+        harness = ResponderHarness(extra_env=_sequence_props_env({"LONG": value}, ["LONG"]))
+        harness.config["max_prop_value"] = 12
+        harness.main(None, "props bp6 LONG DataPool/Sequences/Sequence 101")
+        payload = decode_payload(harness.sent()[0].payload)
+        read = payload["reads"][0]
+        assert payload["truncated"] is False
+        assert read["ok"] is True
+        assert read["t"] == "string"
+        assert read["v"] == value[:12]
+        assert read["truncated"] is True
+
+    def test_props_payload_size_guard_drops_reads_and_signals_truncation(self):
+        names = [f"P{i:02d}" for i in range(1, 17)]
+        values = {name: "V" * 220 for name in names}
+        assert sum(len(value) for value in values.values()) > 1900
+        harness = ResponderHarness(extra_env=_sequence_props_env(values, names))
+        harness.main(None, f"props bp7 {','.join(names)} DataPool/Sequences/Sequence 101")
+        sent = harness.sent()[0]
+        payload = decode_payload(sent.payload)
+        assert len(sent.payload) <= int(harness.config["max_payload"])
+        assert payload["truncated"] is True
+        assert 0 < len(payload["reads"]) < len(names)
+
+    def test_prop_and_props_dispatch_are_not_confused(self):
+        harness = ResponderHarness(
+            extra_env=_sequence_props_env({"CURRENTCUE": "Sequence 80.3"}, ["CURRENTCUE"])
+        )
+        harness.main(None, "prop d1 DataPool/Sequences/Sequence 101 CURRENTCUE")
+        harness.main(None, "props d2 CURRENTCUE DataPool/Sequences/Sequence 101")
+        prop_payload = decode_payload(harness.sent()[0].payload)
+        props_payload = decode_payload(harness.sent()[1].payload)
+        assert prop_payload["kind"] == "prop"
+        assert prop_payload["property"] == "CURRENTCUE"
+        assert props_payload["kind"] == "props"
+        assert props_payload["reads"][0]["n"] == "CURRENTCUE"
+
+
+class TestIntrospect:
+    def test_introspect_returns_names_types_source_and_total(self):
+        harness = ResponderHarness(
+            extra_env=_sequence_props_env(
+                {"CURRENTCUE": "Sequence 80.3", "INDEX": "201", "FADER": "Master"},
+                ["INDEX", "FADER", "CURRENTCUE"],
+            )
+        )
+        harness.main(None, "introspect i1 DataPool/Sequences/Sequence 101")
+        sent = harness.sent()[0]
+        payload = decode_payload(sent.payload)
+        assert sent.address == STATE_ADDRESS
+        assert payload == {
+            "v": 1,
+            "kind": "introspect",
+            "id": "i1",
+            "ok": True,
+            "path": "DataPool/Sequences/Sequence 101",
+            "class": "Sequence",
+            "source": "property_accessors",
+            "fields": [
+                {"n": "INDEX", "t": "string"},
+                {"n": "FADER", "t": "string"},
+                {"n": "CURRENTCUE", "t": "string"},
+            ],
+            "total": 3,
+            "truncated": False,
+        }
+
+    def test_introspect_unknown_path_reports_failure(self, harness):
+        harness.main(None, "introspect i2 DataPool/NotThere")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["kind"] == "introspect"
+        assert payload["ok"] is False
+        assert "NotThere" in payload["error"]
+
+    def test_introspect_unavailable_enumerator_is_explicit_failure(self):
+        harness = ResponderHarness(
+            extra_env=_sequence_props_env(
+                {"CURRENTCUE": "Sequence 80.3"},
+                ["CURRENTCUE"],
+                extra="seq.PropertyCount = nil\n",
+            )
+        )
+        harness.main(None, "introspect i3 DataPool/Sequences/Sequence 101")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["kind"] == "introspect"
+        assert payload["ok"] is False
+        assert "PropertyCount" in payload["error"]
+        assert "fields" not in payload
+
+    def test_introspect_rejects_partial_property_accessor_set(self):
+        harness = ResponderHarness(
+            extra_env=_sequence_props_env(
+                {"INDEX": "201", "FADER": "Master"},
+                ["INDEX", "FADER"],
+                extra=(
+                    "function seq:PropertyName(i)\n"
+                    "    if i == 2 then return nil end\n"
+                    "    return self._property_order[i]\n"
+                    "end\n"
+                ),
+            )
+        )
+        harness.main(None, "introspect i4 DataPool/Sequences/Sequence 101")
+        payload = decode_payload(harness.sent()[0].payload)
+        assert payload["kind"] == "introspect"
+        assert payload["ok"] is False
+        assert "incomplete" in payload["error"]
+        assert "fields" not in payload
+
+    def test_introspect_payload_truncation_preserves_total(self):
+        names = [f"FIELD{i:03d}_" + ("N" * 24) for i in range(1, 81)]
+        values = {name: "value" for name in names}
+        assert sum(len(name) for name in names) > 1900
+        harness = ResponderHarness(extra_env=_sequence_props_env(values, names))
+        harness.main(None, "introspect i5 DataPool/Sequences/Sequence 101")
+        sent = harness.sent()[0]
+        payload = decode_payload(sent.payload)
+        assert len(sent.payload) <= int(harness.config["max_payload"])
+        assert payload["truncated"] is True
+        assert payload["total"] == len(names)
+        assert 0 < len(payload["fields"]) < payload["total"]
+
+    def test_function_fields_are_reported_without_calling_them(self):
+        harness = ResponderHarness(
+            extra_env=(
+                "local node = __NODE\n"
+                "__FUNC_CALLS = 0\n"
+                "local function spy()\n"
+                "    __FUNC_CALLS = __FUNC_CALLS + 1\n"
+                '    error("function field was called")\n'
+                "end\n"
+                'local seq = node("Sequence 101", "Sequence", {}, { INDEX = spy }, { "INDEX" })\n'
+                '__DATAPOOL = node("Default", "DataPool", {\n'
+                '    node("Sequences", "Pool", { seq }),\n'
+                "})\n"
+                "function DataPool() return __DATAPOOL end\n"
+            )
+        )
+        harness.main(None, "props f1 INDEX DataPool/Sequences/Sequence 101")
+        harness.main(None, "introspect f2 DataPool/Sequences/Sequence 101")
+        props_payload = decode_payload(harness.sent()[0].payload)
+        introspect_payload = decode_payload(harness.sent()[1].payload)
+        assert harness.lua.globals()["__FUNC_CALLS"] == 0
+        assert harness.cmd_log() == []
+        assert props_payload["reads"][0]["t"] == "function"
+        assert props_payload["reads"][0]["ok"] is True
+        assert introspect_payload["fields"][0] == {"n": "INDEX", "t": "function"}
+
+    def test_new_read_paths_do_not_reference_cmd(self):
+        source = RESPONDER_PATH.read_text(encoding="utf-8")
+        builders = source.split("function M.build_props_result", 1)[1].split(
+            "-- @MX:NOTE: [AUTO] Cmd() result classification", 1
+        )[0]
+        dispatch = source.split('elseif parsed.kind == "props"', 1)[1].split(
+            'elseif parsed.kind == "exec"', 1
+        )[0]
+        assert "Cmd(" not in builders
+        assert "Cmd(" not in dispatch
 
 
 class TestExecutorSequenceIdentity:

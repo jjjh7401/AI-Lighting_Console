@@ -67,6 +67,18 @@
 - **부작용 확인**: 정지 `Executor 201`의 전후 `state` 형상이 동일했다(`children=[]`, `node.childCount=0`, `class=Executor`, `name="Ballad Yellow Red"`, `sequenceNo=20`, `truncated=false`). 재생 프로브 뒤 `Off Executor 201` 원복 완료.
 - **콘솔 잔여**: slot 지정 `Import Plugin <slot> '<slug>'`만 성공했다. 본 세션의 일회용 프로브 플러그인 슬롯이 남았다(`introspect-m1-20260803T091729`, `introspect_m1_20260803T091729`, `CopilotIntrospectProbe091729`, `CopilotIntrospectProbe092425`, `CopilotIntrospectProbe092745`, `CopilotIntrospectProbe092930`). 매크로/라벨/씬 증거 쓰기는 0건이다.
 
+**2026-08-03 — M2 응답기 확장 완료 (props 무조건 + introspect, M1 GO 입력)**
+
+- **범위**: `console/lua/copilot_responder.lua`를 v1.6.0으로 올리고 `props`/`introspect` 분기를 상태 회신 주소(`/copilot/state`)에 가산 추가했다. `M.PROTO`는 1을 유지했다. 수정 파일은 `console/lua/copilot_responder.lua`, `server/tests/test_lua_responder.py`, `server/tests/lua_mock_env.py`, `.moai/specs/SPEC-COPILOT-INTROSPECT-001/progress.md`다.
+- **최종 `introspect` 회신 스키마**: 성공은 `{"v":1,"kind":"introspect","id":"<id>","ok":true,"path":"<path>","class":"<class>","source":"property_accessors","fields":[{"n":"<name>","t":"<type>"}],"total":<observed_count>,"truncated":<bool>}`다. 실패는 `{"v":1,"kind":"introspect","id":"<id>","ok":false,"path":"<path>","error":"<message>"}`다. `fields[]`는 이름과 타입만 담고 값은 담지 않는다.
+- **최종 `props` 회신 스키마**: 처리 성공은 `{"v":1,"kind":"props","id":"<id>","ok":true,"path":"<path>","reads":[...],"truncated":<bool>}`다. 성공 항목은 `{"n":"<name>","ok":true,"t":"<type>","v":"<value>","truncated":true?}`, 실패 항목은 `{"n":"<name>","ok":false,"e":"<message>"}`다. 요청/경로 실패는 `{"v":1,"kind":"props","id":"<id>","ok":false,"path":"<path>","reads":[],"truncated":false,"error":"<message>"}`다. 최상위 `ok`는 "요청 처리됨"만 의미하며, 모든 이름이 판독됐다는 뜻이 아니다.
+- **CONFIG 상한**: 이름 개수 상한은 `CONFIG.max_props_names = 16`이다. 값 항목 축약 상한은 `CONFIG.max_prop_value = 240` raw bytes이며, 축약된 항목은 `reads[].truncated = true`를 갖는다.
+- **채택 열거원**: 구현 열거원은 `property_accessors` 하나뿐이다. `PropertyCount()` + `PropertyName(i)` + `PropertyType(i)`만 호출하며, M1 사다리의 `__index` 순회, `pairs`, `Get(i)` 정수색인, `Dump()` 반환 문자열 파싱은 구현하지 않았다.
+- **@MX 배치**: M1 채택 근거 `@MX:NOTE`/`@MX:SPEC`는 `console/lua/copilot_responder.lua:67`에 있다. 함수 타입 미호출 `@MX:WARN`/`@MX:REASON`은 `console/lua/copilot_responder.lua:246`에 있다. `props` 절단 신호 `@MX:ANCHOR`/`@MX:REASON`은 `console/lua/copilot_responder.lua:758`에 있고, 열거원 전량 채택/전량 폐기 게이트 `@MX:ANCHOR`/`@MX:REASON`은 `console/lua/copilot_responder.lua:766`에 있으며, `introspect` 절단 신호 `@MX:ANCHOR`/`@MX:REASON`은 `console/lua/copilot_responder.lua:827`에 있다.
+- **테스트**: `server/tests/lua_mock_env.py`에 `PropertyCount`/`PropertyName`/`PropertyType`와 `Get` 모의 표면을 추가했다. `server/tests/test_lua_responder.py`에는 신규 M2 테스트 15건을 추가했다. 검증 결과는 `uv run pytest server/tests/test_lua_responder.py -q` → `74 passed`, `uv run pytest server/tests/test_lua_responder_payload_budget.py -q` → `2 passed`, 최종 묶음 `uv run pytest server/tests/test_lua_responder.py server/tests/test_lua_responder_payload_budget.py -q` → `76 passed`다. 기존 responder 테스트 59건은 무회귀로 통과했다.
+- **절단 뮤테이션 확인**: `props` 절단 신호 줄을 `payload.truncated = false`로 바꾼 뒤 `TestPropsRead::test_props_payload_size_guard_drops_reads_and_signals_truncation`이 `assert False is True`로 실패함을 확인하고 복구했다. `introspect` 절단 신호 줄도 같은 방식으로 바꾼 뒤 `TestIntrospect::test_introspect_payload_truncation_preserves_total`이 `assert False is True`로 실패함을 확인하고 복구했다. 두 절단 재료는 기본 1900B 상한을 넘기는 mock 데이터로 합성했다.
+- **남은 위험**: 라이브 콘솔 배포와 왕복 검증은 M6 범위라 수행하지 않았다. `console/lua/PROTOCOL.md`와 `server/bridge/protocol.py` 동기화는 M3 범위라 건드리지 않았다. 로컬 LSP 서버(`lua-ls`, `basedpyright`)는 설치되어 있지 않아 후크가 진단을 건너뛰었고, 본 M2 검증은 lupa 하네스와 focused pytest로 수행했다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_

@@ -13,6 +13,8 @@
 --   Plugin "CopilotResponder" "ping <id>"
 --   Plugin "CopilotResponder" "state <id> <object-path>"   e.g. DataPool/Sequences
 --   Plugin "CopilotResponder" "prop <id> <object-path> <PropertyName>"
+--   Plugin "CopilotResponder" "props <id> <PropertyName,...> <object-path>"
+--   Plugin "CopilotResponder" "introspect <id> <object-path>"
 --   Plugin "CopilotResponder" "exec <id> <ma3-command>"    e.g. exec 7 List
 --   Plugin "CopilotResponder" "deploy <id> <enc-name> <enc-source>"  (M7 —
 --     both tokens percent-encoded; reviewed source only, see PROTOCOL.md §2)
@@ -37,6 +39,8 @@ local CONFIG = {
     -- wrapper under that limit with margin. Payload sweep: 2000 delivered,
     -- 2100 dropped.
     max_payload = 1900, -- max encoded payload length in bytes (MA3 CLI 2048 limit)
+    max_props_names = 16, -- max comma-separated names accepted by props requests
+    max_prop_value = 240, -- max raw bytes per props value before item-level truncation
     send_variant = "packed", -- "packed" | "args" | "cmd_keyword" (see PROTOCOL.md §5)
     uservar_name = "COPILOT_REQ",
 }
@@ -53,11 +57,18 @@ local M = {
     -- transport dies silently past the MA3 ~2048-byte command-line limit
     -- (live-measured; big snapshots like a 27-macro pool never replied).
     -- 1.5.0: additive prop verb + Cue child cueNo when the real cue number
-    -- can be read from the cue object; Protocol v1 throughout.
-    VERSION = "1.5.0",
+    -- can be read from the cue object; Protocol v1 throughout. 1.6.0: props
+    -- + introspect read-only discovery verbs; Protocol v1 throughout.
+    VERSION = "1.6.0",
     PROTO = 1,
     CONFIG = CONFIG,
 }
+
+-- @MX:NOTE: [AUTO] M1 adopted exactly one enumerator for v1.6.0:
+--   property_accessors = PropertyCount() + PropertyName(i) + PropertyType(i).
+--   The other M1 ladder candidates stay out of production code.
+-- @MX:SPEC: SPEC-COPILOT-INTROSPECT-001 design.md §5.7 (2026-08-03 GO)
+local INTROSPECT_SOURCE = "property_accessors"
 
 -- -- logging ---------------------------------------------------------------
 
@@ -171,6 +182,33 @@ function M.parse_request(s)
     return { kind = kind:lower(), id = id, rest = rest }
 end
 
+function M.parse_props_rest(rest)
+    if type(rest) ~= "string" or rest == "" then
+        return nil, "", "malformed props request (expected: props <id> <PropertyName,...> <path>)"
+    end
+    local name_list, path = rest:match("^(%S+)%s+(.+)$")
+    if not name_list or path == "" then
+        return nil, "", "malformed props request (expected: props <id> <PropertyName,...> <path>)"
+    end
+    local names = M.array({})
+    for name in (name_list .. ","):gmatch("([^,]*),") do
+        if name == "" then
+            return nil, path, "empty property name in props request"
+        end
+        if name:match("%s") then
+            return nil, path, "property names in props request must not contain whitespace"
+        end
+        names[#names + 1] = name
+        if #names > CONFIG.max_props_names then
+            return nil, path, "too many property names in props request (max " .. tostring(CONFIG.max_props_names) .. ")"
+        end
+    end
+    if #names == 0 then
+        return nil, path, "empty property name list in props request"
+    end
+    return names, path
+end
+
 -- -- MA3 handle accessors (defensive: exact 2.4.2 surface verified live) ----
 
 function M.safe_name(handle)
@@ -205,13 +243,17 @@ function M.safe_property(handle, property_name)
     if type(property_name) ~= "string" or property_name == "" then
         return nil, "empty property name"
     end
+    -- @MX:WARN: [AUTO] function-valued fields are reported as values of Lua
+    --   type "function"; they are never invoked by discovery reads.
+    -- @MX:REASON: REQ-INTROSPECT-009 read-only boundary; calling a method found
+    --   during introspection would turn a diagnostic read into console action.
     local ok, value = pcall(function() return handle:Get(property_name) end)
     if ok and value ~= nil then
-        return tostring(value)
+        return tostring(value), nil, type(value)
     end
     ok, value = pcall(function() return handle[property_name] end)
     if ok and value ~= nil then
-        return tostring(value)
+        return tostring(value), nil, type(value)
     end
     return nil, "property not readable: " .. property_name
 end
@@ -671,6 +713,125 @@ function M.build_prop_result(id, path, property_name)
     }
 end
 
+function M.build_props_result(id, path, names)
+    local function fail(message)
+        return {
+            v = M.PROTO,
+            kind = "props",
+            id = id,
+            ok = false,
+            path = path,
+            reads = M.array({}),
+            truncated = false,
+            error = message,
+        }
+    end
+    local handle, err = M.resolve_path(path)
+    if not handle then
+        return fail(err)
+    end
+    local reads = M.array({})
+    for _, name in ipairs(names) do
+        local value, perr, value_type = M.safe_property(handle, name)
+        if value == nil then
+            reads[#reads + 1] = { n = name, ok = false, e = perr }
+        else
+            local item = { n = name, ok = true, t = value_type or "?", v = value }
+            if #value > CONFIG.max_prop_value then
+                item.v = safe_truncate(value, CONFIG.max_prop_value)
+                item.truncated = true
+            end
+            reads[#reads + 1] = item
+        end
+    end
+    local payload = {
+        v = M.PROTO,
+        kind = "props",
+        id = id,
+        ok = true,
+        path = path,
+        reads = reads,
+        truncated = false,
+    }
+    while #M.encode_payload(payload) > CONFIG.max_payload and #reads > 0 do
+        table.remove(reads)
+        -- @MX:ANCHOR: [AUTO] props list truncation signal.
+        -- @MX:REASON: REQ-INTROSPECT-013/014 forbid silently dropping read
+        --   entries when the encoded reply exceeds CONFIG.max_payload.
+        payload.truncated = true
+    end
+    return payload
+end
+
+-- @MX:ANCHOR: [AUTO] property_accessors is accepted as a complete set or
+--   rejected as a complete set; partial introspection results are not emitted.
+-- @MX:REASON: REQ-INTROSPECT-004 closes the plausible-partial-answer failure
+--   mode by requiring all adopted enumerator calls to pass the same gate.
+function M.enumerate_property_accessors(handle)
+    local ok_count, raw_count = pcall(function() return handle:PropertyCount() end)
+    if not ok_count then
+        return nil, "property_accessors PropertyCount() failed: " .. tostring(raw_count)
+    end
+    if type(raw_count) == "string" then
+        raw_count = tonumber(raw_count)
+    end
+    local count = math.tointeger(raw_count)
+    if not count or count < 0 then
+        return nil, "property_accessors PropertyCount() did not return a non-negative integer"
+    end
+    local fields = M.array({})
+    for i = 1, count do
+        local ok_name, name = pcall(function() return handle:PropertyName(i) end)
+        local ok_type, value_type = pcall(function() return handle:PropertyType(i) end)
+        if not ok_name or type(name) ~= "string" or name == "" or not ok_type or value_type == nil then
+            return nil, "property_accessors incomplete at index " .. tostring(i)
+        end
+        fields[#fields + 1] = { n = name, t = tostring(value_type) }
+    end
+    return fields, count
+end
+
+function M.build_introspect_result(id, path)
+    local function fail(message)
+        return {
+            v = M.PROTO,
+            kind = "introspect",
+            id = id,
+            ok = false,
+            path = path,
+            error = message,
+        }
+    end
+    local handle, err = M.resolve_path(path)
+    if not handle then
+        return fail(err)
+    end
+    local fields, total = M.enumerate_property_accessors(handle)
+    if not fields then
+        return fail(total)
+    end
+    local payload = {
+        v = M.PROTO,
+        kind = "introspect",
+        id = id,
+        ok = true,
+        path = path,
+        class = M.safe_class(handle),
+        source = INTROSPECT_SOURCE,
+        fields = fields,
+        total = total,
+        truncated = false,
+    }
+    while #M.encode_payload(payload) > CONFIG.max_payload and #fields > 0 do
+        table.remove(fields)
+        -- @MX:ANCHOR: [AUTO] introspect field truncation signal.
+        -- @MX:REASON: REQ-INTROSPECT-013/014/015 require a visible signal
+        --   while preserving the pre-shrink total field count.
+        payload.truncated = true
+    end
+    return payload
+end
+
 -- @MX:NOTE: [AUTO] Cmd() result classification is an assumption pending live
 --   2.4.2 verification (PROTOCOL.md §6 ASSUMPTION-3): nil/""/"ok" = success,
 --   any other string = failure with the raw string as the error message.
@@ -911,6 +1072,37 @@ function M.handle_request(request)
             }
         else
             payload = M.build_prop_result(parsed.id, path, property_name)
+        end
+        M.send_reply(CONFIG.state_address, payload)
+    elseif parsed.kind == "props" then
+        local names, path, perr = M.parse_props_rest(parsed.rest)
+        if not names then
+            payload = {
+                v = M.PROTO,
+                kind = "props",
+                id = parsed.id,
+                ok = false,
+                path = path or "",
+                reads = M.array({}),
+                truncated = false,
+                error = perr,
+            }
+        else
+            payload = M.build_props_result(parsed.id, path, names)
+        end
+        M.send_reply(CONFIG.state_address, payload)
+    elseif parsed.kind == "introspect" then
+        if parsed.rest == "" then
+            payload = {
+                v = M.PROTO,
+                kind = "introspect",
+                id = parsed.id,
+                ok = false,
+                path = "",
+                error = "missing object path (expected: introspect <id> <path>)",
+            }
+        else
+            payload = M.build_introspect_result(parsed.id, parsed.rest)
         end
         M.send_reply(CONFIG.state_address, payload)
     elseif parsed.kind == "exec" then
