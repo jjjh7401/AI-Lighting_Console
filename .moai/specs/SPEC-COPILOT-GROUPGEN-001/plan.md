@@ -75,12 +75,21 @@ base: `feature/SPEC-COPILOT-SPATIAL-001` = `115eb6d` · branch: `feature/SPEC-CO
 - **비공허성 필수**: 위상별 golden이 서로를 **구별**해야 한다. "항상 `depth_rows`"를 답하면 신호가 아니다
   (현재 계층이 2겹 동심원을 9행 고신뢰로 오독한 것이 바로 이 결함 — research §3)
 
-### M2 — 명명 어휘 (순수, 폐쇄 집합)
+### M2 — 명명 어휘 (순수, 폐쇄 집합 — **업계 표준 기반**)
 
-- 위상별 폐쇄 어휘 + **개수별 폴백**: 예) `concentric` 2링 → Inner/Outer · 3링+ → `Ring 1..N`
-- 어휘·폴백 전부 golden으로 고정. **임의 작명 0**
-- **기존 이름 충돌 검사**: `Front`·`Back`·`Inner Outer Opp`가 이미 있다(research §5.1).
-  §2.1에 따라 덮어쓰기는 배제 → 충돌 시 **명시 보고** 또는 접두 규칙(plan-phase 확정)
+`research.md` §6이 어휘를 **조사로 확정**했다. 발명하지 않는다.
+
+- **깊이**: `Downstage` / `Center` / `Upstage` (**`Front`/`Back` 아님** — §6.2). 4+ → `Row 1..N` (DS→US)
+- **좌우**: `Stage Right` / `Center` / `Stage Left` — **맨 `Left`/`Right` 금지**(§6.3).
+  stage 기준과 house 기준은 정반대이며 MA3는 **+x = stage left**다
+- **그리드**: 업계 표준 9칸 복합 명명 `DSR·DSC·DSL / CSR·CS·CSL / USR·USC·USL`(§6.4) 또는 축별 분리
+- **동심원**: `Inner` / `Outer` · 3+ → `Ring 1..N`. **업계 표준이 없음을 문서에 명시**(§6.6)
+- **수직**: `Low Side` / `High Side` · 3+ → `Level 1..N`(§6.5)
+- 번호 폴백은 **순서 규칙을 문서화**한다 — McCandless 영역 번호도 방향이 표준화되지 않았다(§6.8)
+- **접두 규칙 강권**(예: `SP `) — §5.1 기존 이름 충돌 회피와 §6.7 기하/기능 축 구분을 **동시에** 해결
+- **기능 그룹을 대체하지 않는다**(§6.7 — ETC: 전문가는 물리 위치가 아니라 기능으로 묶는다).
+  이름은 **위치**를 말하고 **역할**을 말하지 않는다 — `Downstage`가 곧 front light를 뜻하지 않는다
+- 어휘·폴백·접두 전부 golden으로 고정. **임의 작명 0**
 - **역할 해석기 간섭 검사**: `server/looks/resolver.py`의 6역할 어휘와 겹치는지 정적 검사 +
   기존 룩 테스트 **무수정 PASS**
 
@@ -148,12 +157,13 @@ base: `feature/SPEC-COPILOT-SPATIAL-001` = `115eb6d` · branch: `feature/SPEC-CO
 ## §D. 열린 질문 (run 진입 전 해소)
 
 - **[Q1 멤버십 검증 채널]** M0-P1이 판정. **NEGATIVE면 제안 전용 강등** — 대체 정책을 에이전트가 고르지 않는다
-- **[Q2 위상 경합]** 3×10은 `depth_rows`인가 `grid`인가. 우선순위 vs 복합 산출
-- **[Q3 이름 충돌]** `Front`·`Back`·`Inner Outer Opp` 기존 존재. 접두 규칙 vs 명시 보고 후 사용자 결정
+- **[Q2 위상 경합]** 3×10은 `depth_rows`인가 `grid`인가. **어휘는 업계 표준이 이미 답했다**(§6.4 9칸 복합 명명) — 남은 것은 *선택 규칙*이다: 축별 분리 그룹 vs 9칸 교차 그룹
+- **[Q3 이름 충돌]** `Front`·`Back`·`Inner Outer Opp` 기존 존재. **접두 규칙이 두 이유에서 정당**해졌다(§6.7) — 충돌 회피 + 기하/기능 축 구분. 접두 문자열 확정 필요
 - **[Q4 승인 흐름]** `server/safety/` 개정 필요 여부. **AC-SPATIAL-031 후속 SPEC과 묶을지** 결정
 - **[Q5 트리거]** `arrange_fixtures` 자동 부착 vs 별도 툴
 - **[Q6 절단 리그 정책]** 거부 vs 명시 경고 후 진행
 - **[Q7 룰북 신설 여부]** 신설 시 OVERLAP 게이트 예외 절차 재수행 필요
+- **[Q8 SPATIAL 정렬 어휘 개명]** `left_to_right`는 실제로 **house left → house right(= stage right → stage left)**다(§6.3.1 실증). 출하된 폐쇄 집합의 파괴적 변경이므로 **본 SPEC 범위 밖 · sync-phase 인계** — 최소한 SPATIAL 문서에 "left/right는 house 기준" 명기
 
 ## §E. Phase 4 Mode 사전 평가
 

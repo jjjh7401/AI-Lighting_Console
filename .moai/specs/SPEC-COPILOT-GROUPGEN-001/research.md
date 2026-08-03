@@ -1,6 +1,6 @@
 # SPEC-COPILOT-GROUPGEN-001 — 사전 조사 (research)
 
-status: **pre-plan (킥오프 브리프) v0.2.0** · 2026-08-03 · `/moai plan` 미실행
+status: **pre-plan (킥오프 브리프) v0.3.0** · 2026-08-03 · `/moai plan` 미실행
 
 > **성격.** plan-phase 전 **인계용 조사 기록**이다. `spec.md` · `acceptance.md` · `design.md`는 아직 없다.
 > 여기 담긴 `[실측]`은 라이브 onPC 2.4.2 직접 관측이며 **다시 재기 전에는 복구할 수 없는 정보**다.
@@ -165,23 +165,167 @@ rows = 9 · 구성 [1, 2, 2, 2, 4, 2, 2, 2, 1] · low_confidence = False
 - `additionalProperties`는 자동 제거된다(커밋 `a5fa16a`). 단 `_GEMINI_UNSUPPORTED_KEYS`는 **DENY 리스트**라
   다른 미지원 키워드를 쓰면 요청 전체가 400으로 죽는다
 
-## §6. 위상 어휘 후보 (plan-phase가 확정)
+## §6. 위상 어휘 — 업계 표준 조사 결과 (v0.3.0 신설)
 
-**폐쇄 집합**이어야 한다 — 임의 작명은 SPATIAL이 금지한 "조용한 임의 선택"과 같은 결함이다.
+> **조사 방법**: 웹 검색으로 무대조명 표준 용어를 조사했다. 근거 등급 `[인수-웹]`은 외부 문헌이며
+> **우리 콘솔의 실측이 아니다**. 단 §6.1(MA3 축 의미)은 **MA Lighting 공식 문서**이므로 사실상 규범이다.
+> **결론부터: v0.2.0에서 제가 제안한 `Front/Back`·`Left/Right`는 업계 용어가 아니며, `Left/Right`는
+> 위험하다.**
 
-| 위상 | 검출 축 | 어휘 후보 | 현재 지원 |
+### §6.1 축 의미 — MA Lighting 공식 `[인수-웹, 규범]`
+
+`help.malighting.com/grandMA3/2.2/HTML/qsg_3d_setup.html` ·
+`.../patch_position_fixtures.html`:
+
+| 축 | 의미 | 부호 규약 |
+|---|---|---|
+| **X** | stage left / right | **양수 = stage left 방향** · *"Stage right will be negative numbers if 0 is on the centerline"* |
+| **Y** | downstage / upstage | **양수 = upstage** (객석에서 멀어지는 방향) |
+| **Z** | height | 양수 = 바닥 위 |
+
+기본 무대: 폭(X) 30m × 깊이(Y) 30m, **중앙이 0** · 높이(Z) 0~15m. 신규 패치 픽스처는 전부 `(0,0,0)`에
+0° 회전으로 생성된다 — **우리 리그 19대가 전부 원점이었던 이유가 이것이다**(§5.2와 일치, 교차 확인됨).
+
+### §6.2 깊이 축 — `Downstage / Center / Upstage` (표준)
+
+`Front/Back`이 아니다. 표준은 **Downstage(DS)** = 객석에 가장 가까움 · **Upstage(US)** = 가장 멂 ·
+**Center Stage(CS)** = 중앙. 어원은 객석 쪽으로 기울어진 옛 raked stage다 — upstage로 가면 물리적으로
+높아졌다. 투어/콘서트 현장은 **downstage / mid-stage / upstage** 를 쓰며 트러스도 같은 어휘를 상속한다
+(*downstage truss · mid truss · upstage truss*).
+
+→ **y 오름차순 = downstage → upstage.** SPATIAL의 `SPATIAL_ROW_ORDER = "y_ascending"`("stage front to
+back")은 **의미는 맞고 낱말이 틀렸다.** 그룹 이름은 `Downstage` / `Center` / `Upstage`여야 한다.
+
+### §6.3 ⚠ 좌우 축 — 여기가 함정이다
+
+**stage left/right 는 배우 기준이고, house left/right 는 객석 기준이며, 둘은 정반대다.**
+
+- *"Stage left is the area to the performer's left when standing on stage and facing the audience"*
+- *"stage left sits on the audience's right, and stage right sits on the audience's left"*
+- house left/right 는 FOH 스태프가 좌석·조명 위치를 말할 때 쓴다
+
+MA3는 **+x = stage left**로 정의한다(§6.1). 따라서:
+
+| | −x | +x |
+|---|---|---|
+| 무대 기준 | **stage right** | **stage left** |
+| 객석 기준 | **house left** | **house right** |
+
+#### §6.3.1 소급 결함 — SPATIAL-001의 `left_to_right` `[실측]`
+
+실증했다(3대 리그, x = −4 / 0 / +4):
+
+```
+left_to_right = (1, 2, 3)
+  fid 1: x=-4.0 → stage RIGHT = house LEFT
+  fid 3: x=+4.0 → stage LEFT  = house RIGHT
+```
+
+→ **`left_to_right`는 house left → house right, 즉 stage RIGHT → stage LEFT 다.**
+조명 디자이너가 *"stage left에서 stage right로"* 라고 말하면 **이 정렬의 역방향**을 뜻한다.
+
+**평가**: *동작*은 순진한 사용자 기대와 맞는다 — P8 라이브 관측에서 사용자가 3D 뷰를 보며 최소 x를
+"왼쪽에서 4번째"로 확인했고 이는 객석 시점과 일치한다. 그러나 *용어*가 전문 표준이 아니고, **한국어
+"왼쪽/오른쪽"도 누구 기준인지 명시하지 않아 같은 모호성을 갖는다.**
+
+**GROUPGEN의 대응**: 그룹 이름에 **맨 `Left`/`Right`를 쓰지 않는다.** `Stage Left` / `Stage Right`처럼
+기준을 이름에 박는다. SPATIAL의 정렬 어휘 개명은 **출하된 폐쇄 집합의 파괴적 변경**이므로 이 SPEC의
+범위 밖이며, **sync-phase 인계 사항으로 등록**한다(§6.9).
+
+### §6.4 그리드 — 업계에 이미 표준 복합 명명이 있다 `[인수-웹]`
+
+*"Most stages can be divided into a 3×3 grid, three columns (left, center, right) crossed with three rows
+(downstage, center, upstage), producing nine positions, each with its own abbreviation used in blocking
+scripts, stage plots, and **lighting plots**"* — 앞이 깊이(DS/CS/US), 뒤가 좌우:
+
+|  | stage right | centre | stage left |
 |---|---|---|---|
-| `depth_rows` | y축 갭 | Front / Center / Back · 4행+ → `Row 1..N` | **있음** (`rows.py`) |
-| `lateral_split` | x축 갭 (또는 부호) | Left / Right · 3분할 → Left / Center / Right | 없음 |
-| `concentric` | 중심으로부터 **반지름** 갭 | Inner / Outer · 3링+ → `Ring 1..N` | 없음 |
-| `vertical_levels` | z축 갭 | Low / Mid / High · 4층+ → `Level 1..N` | 없음(`vertical_span`만 관측) |
-| `grid` | y·x 양축 유의 | 복합 — 행 그룹 + 열 그룹 | 없음 |
+| **Upstage** | USR | USC | USL |
+| **Center** | CSR | CS | CSL |
+| **Downstage** | DSR | DSC | DSL |
 
-**미해결 난점**(plan-phase 대상):
+→ **`plan.md` Q2(위상 경합: 3×10은 rows인가 grid인가)의 답이 업계에 이미 있다.** 그리드는 복합 명명이
+표준이므로, 깊이 그룹 3개 + 좌우 그룹 3개를 따로 만들 수도, 9개 교차 그룹을 만들 수도 있다.
+**plan-phase가 고를 것** — 다만 어휘는 발명하지 않는다.
 
-- **위상 경합** — 3×10 그리드는 `depth_rows`이면서 `lateral_split`이다. 우선순위 규칙 또는 복합 산출?
-- **모호 시 거동** — 어느 위상도 뚜렷하지 않으면? SPATIAL 규율대로 **단정하지 않고 저신뢰 + 거부**
-- **비공허성** — 위상 분류가 "항상 depth_rows"를 답하면 신호가 아니다. 위상별 golden이 서로를 **구별**해야 한다
+### §6.5 수직 축 — 층 어휘는 표준이 없고, 대신 **기능** 어휘가 있다 `[인수-웹]`
+
+찾은 것은 `Low/Mid/High` 같은 층 이름이 아니라 **방향·기능** 어휘였다:
+
+- **High side** *"mounted at the horizontal edge of the stage at an angle above the subject"* ·
+  **Low side** = 바닥 근처. 무용에서 low sidelight 붐을 60~90°로 쓰고, 붐 위치는 **upstage / midstage /
+  downstage** 로 부른다 — 즉 **붐도 깊이 어휘를 상속한다**
+- **Front light**(키라이트) · **Back light**(윤곽·입체감) · **Side light**(중흉·어깨·발) ·
+  **Top light**(전반 조명, 앞→뒤로 열 단위 구분) · **Uplight**(아래에서)
+- 3점 조명: **key / fill / back**
+
+→ **z축 층에 붙일 표준 어휘는 발견되지 않았다.** `High side`/`Low side`가 가장 가까운 실제 쌍이다.
+3층 이상은 `Level 1..N`처럼 **번호가 정직하다** — 없는 표준을 발명하는 것보다.
+
+### §6.6 동심원 — **업계 표준이 존재하지 않는다** (정직한 결과) `[인수-웹]`
+
+원형 트러스는 실재하고 널리 쓰인다(*"places lamps at measured intervals around a continuous loop"*).
+그러나 **inner/outer 링 그룹 명명의 확립된 표준은 찾지 못했다.** 검색 결과가 명시적으로 그렇게 말한다 —
+프로젝트·업체별 내부 관례이거나 아직 표준화되지 않았다는 것이다. (`inner chord`는 트러스 *구조* 용어이며
+픽스처 그룹 이름이 아니다.)
+
+**그런데 우리 리그에 `Inner Outer Opp`(no 15) 그룹이 이미 있다** — 이 LD는 이미 내/외 개념으로 사고한다.
+
+→ **`Inner`/`Outer`를 채택하되 "업계 표준 아님 · 현장 관례 기반"으로 명시**한다. 3링 이상은 `Ring 1..N`.
+표준이 없다는 사실 자체를 기록하는 것이 나중의 "왜 이 이름인가"를 막는다.
+
+### §6.7 ⚠ 가장 중요한 반론 — 전문가는 **기능**으로 묶는다 `[인수-웹]`
+
+ETC 공식 조명 용어집:
+
+> *"The control channel is the numerical name the designer uses for a luminaire or set of luminaires that
+> are controlled together. Control channels are used to group sets of luminaires or devices together in a
+> **logical way relating to how the designer thinks about the design, rather than to their physical
+> location in the venue**."*
+
+**이것은 본 SPEC의 전제를 정면으로 겨눈다.** 전문가의 1차 그룹 축은 **기능**(front/side/back/top wash,
+key/fill/back, 밴드 멤버별 존)이고 **물리적 위치가 아니다.**
+
+**그러므로 본 SPEC은 기능 그룹을 대체하지 않는다 — 보완한다.** 설계 함의:
+
+1. **기하 그룹은 기하 그룹으로 보이게 이름 붙인다.** 기능 그룹으로 위장하면 LD의 사고 모델과 충돌한다.
+   → 접두 규칙(§5.1 이름 충돌 대응과 동일한 해법)이 **두 이유에서** 정당해진다:
+   기존 이름 충돌 회피 + 기하/기능 축 구분.
+2. **`Downstage`라는 이름이 곧 "front light"를 뜻하지 않는다.** downstage에 걸린 픽스처가
+   백라이트로 쓰일 수 있다. 이름은 **위치**를 말하고 **역할**을 말하지 않는다 — 문서에 명시할 것.
+3. SPEC은 *"배치 인식 그룹"* 이라는 좁은 약속만 한다. **연출 의도의 자동 해석까지 주장하지 않는다.**
+
+### §6.8 McCandless acting areas — 번호 관례는 표준화되지 않았다 `[인수-웹]`
+
+무대를 **acting areas**로 쪼개는 것은 고전 방법론이다(영역당 픽스처 2대, 소형 무대 6영역 ·
+대형 최대 15영역, *"3 across and 2 deep"*가 출발점). 존 번호(1~7 + 특수 8·9) 예시는 있으나
+**번호를 어느 방향으로 매기는지는 표준이 없다** — 극장·디자인별이다.
+
+→ `Area N` / `Ring N` / `Level N` 같은 번호 폴백을 쓸 때 **순서 규칙을 문서화**해야 한다.
+번호 자체는 정당하나 순서를 암묵에 두면 안 된다.
+
+### §6.9 확정 어휘 제안 (plan-phase 최종 확정 대상)
+
+| 위상 | 검출 축 | 2분할 | 3분할 | 4+ 폴백 | 근거 |
+|---|---|---|---|---|---|
+| `depth_rows` | y 갭 (**+y = upstage**) | `Downstage` / `Upstage` | `Downstage` / `Center` / `Upstage` | `Row 1..N` (DS→US) | **표준** §6.2 |
+| `lateral_split` | x 갭 (**+x = stage left**) | `Stage Right` / `Stage Left` | `Stage Right` / `Center` / `Stage Left` | `Column 1..N` | **표준** §6.3 — 맨 Left/Right 금지 |
+| `grid` | y·x 양축 | — | 9칸 `DSR…USL` 또는 축별 분리 | `Area N` | **표준** §6.4 |
+| `concentric` | 반지름 갭 | `Inner` / `Outer` | `Inner` / `Mid` / `Outer` | `Ring 1..N` | **표준 없음** §6.6 — 관례 기반 명시 |
+| `vertical_levels` | z 갭 | `Low Side` / `High Side` | — | `Level 1..N` | 부분 표준 §6.5 |
+
+**전부 폐쇄 집합 + 번호 폴백.** 임의 작명 0. 접두 규칙(예: `SP ` 또는 `Spatial `)은 §5.1 충돌 회피와
+§6.7 기하/기능 구분을 **동시에** 해결하므로 강하게 권고한다.
+
+### §6.10 미해결 난점 (plan-phase)
+
+- **위상 경합** — 3×10은 `depth_rows`인가 `grid`인가. §6.4가 어휘는 주지만 *선택 규칙*은 우리 몫
+- **모호 시 거동** — 어느 위상도 뚜렷하지 않으면 SPATIAL 규율대로 **단정하지 않고 저신뢰 + 위상 `None`**
+- **비공허성** — 위상별 golden이 서로를 **구별**해야 한다. 현재 계층이 2겹 동심원을 9행 고신뢰로 오독한
+  것이 정확히 이 결함이다(§3)
+- **`left_to_right` 개명** — SPATIAL의 출하된 폐쇄 정렬 어휘는 house 기준이다(§6.3.1).
+  개명은 파괴적 변경이므로 **본 SPEC 범위 밖 · sync-phase 인계**. 최소한 SPATIAL 문서에
+  *"left/right는 house(객석) 기준"* 을 명기해야 한다
 
 ## §7. ASSUMPTION 번호
 
@@ -194,4 +338,4 @@ rows = 9 · 구성 [1, 2, 2, 2, 4, 2, 2, 2, 1] · low_confidence = False
 ```
 
 브랜치 준비됨(`feature/SPEC-COPILOT-GROUPGEN-001`) — `--branch` 불필요.
-`progress.md` §0 → 본 문서 §2 · §3 → `plan.md` §A 순서로 읽을 것.
+`progress.md` §0 → 본 문서 §2 · §3 · **§6** → `plan.md` §A 순서로 읽을 것.
