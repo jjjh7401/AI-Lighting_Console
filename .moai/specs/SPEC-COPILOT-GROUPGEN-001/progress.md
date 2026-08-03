@@ -69,18 +69,28 @@ status: **pre-plan** · plan-phase 미실행 · 구현 0 · 커밋 0 · 라이�
     backlight system · cross-left/right sidelight system)이며 채널 번호도 그걸로 조직한다.
     기하 그룹은 기능 그룹을 **대체하지 않고 보완**한다. `Downstage`를 쓰는 이유가 표준 준수만이
     아니라 **기능 어휘 충돌 회피**이기도 하다 — `Front`는 front light system으로 읽힌다.
-12. **⚠ 세분화 축 5개 중 4개가 범위 밖이다**(`research.md` §7 · `plan.md` §C.0).
+12. **장비 종류(C1)는 2-hop으로 읽힌다** `[실측]` — 픽스처 `fixturetype` → `'FixtureType 1'` →
+    `Patch/FixtureTypes/1` → `name`(`'Robin MMX Spot'`) · `ShortName`(`'RMMXSm1'`) ·
+    `Manufacturer`(`'Robe'`). 날조 대조군 3/3 FAIL로 채널 변별적. **단 GDTF 스펙에 `Categories`
+    필드가 없어** Spot/Wash/Beam은 **타입명 토큰 매칭**뿐이다 — 폐쇄 어휘 + 무매칭→그룹없음.
+13. **⚠ 장비 명칭(C2)으로 그룹을 자동 생성하지 말 것.** 우리 리그 실측: 동일 타입 19대에 명명 패턴
+    **3가지**(자동 `RMMXSm1 1` = `ShortName`+번호 · 사용자 `Copilot MMX n` · 사용자 `MMX n`).
+    이름 그룹은 의미 없는 3그룹을 **영속**시킨다. 자동 작명 패턴은 구별 가능하므로 *제안*까지만.
+14. **이 리그는 완전 동종이다**(`Patch/FixtureTypes` childCount **1**). 타입 축은 여기서 아무것도
+    나누지 못한다 — golden은 **합성 이종 리그**로 만들고, M6 타입 판정은 `SKIP:` 이 정직하다.
+15. **`Blinder`는 관객을 비춘다.** 무대 위상 그룹에 섞이면 연출이 관객을 때린다 — 분리 규칙 필수.
+16. **⚠ 세분화 축 6개 중 4개가 범위 밖이다**(`research.md` §7 · `plan.md` §C.0).
     특히 **축 E(홀짝·윙·블록·셔플)는 MAtricks가 이미 한다** — MA3 공식 기능이고 룰북 `31:85-90`이
     검증된 문법으로 싣고 있다. **그룹으로 재구현하면 콘솔 기능 중복이다.**
     3층 관계를 기억할 것: 그룹=누구 · 선택순서=어떤 순서로 · MAtricks=어떻게 재성형.
-13. **과약속 금지** — *"연출 의도에 맞게"* 는 *"의도를 자동 해석한다"* 가 아니다. 좌표는 장비가
+17. **과약속 금지** — *"연출 의도에 맞게"* 는 *"의도를 자동 해석한다"* 가 아니다. 좌표는 장비가
     어디 있는지만 안다. 정직한 약속은 **"연출에 쓸 수 있는 형태로 위치 그룹을 만들어 둔다"**.
-14. **의존: SPATIAL-001 미머지.** 본 브랜치는 `115eb6d`에서 분기했다. **main 머지 후 rebase할 것.**
-15. **Gemini 스키마**: `additionalProperties`는 자동 제거된다(커밋 `a5fa16a`). 단
+18. **의존: SPATIAL-001 미머지.** 본 브랜치는 `115eb6d`에서 분기했다. **main 머지 후 rebase할 것.**
+19. **Gemini 스키마**: `additionalProperties`는 자동 제거된다(커밋 `a5fa16a`). 단
     `_GEMINI_UNSUPPORTED_KEYS`는 DENY 리스트라 다른 미지원 키워드는 요청 전체를 400으로 죽인다.
-16. **한 턴 예산** `DEFAULT_MAX_MODEL_CALLS = 12` — *"배치 + 그룹 + 연출"* 복합 지시는 `loop_limit`
+20. **한 턴 예산** `DEFAULT_MAX_MODEL_CALLS = 12` — *"배치 + 그룹 + 연출"* 복합 지시는 `loop_limit`
     (부분 실행)이 된다. 실측 확인됨.
-17. **M0 프로브 정리 경로를 프로브 전에 정하라** — `Delete`가 블랙리스트다. SCENE M0가 "시퀀스 7개
+21. **M0 프로브 정리 경로를 프로브 전에 정하라** — `Delete`가 블랙리스트다. SCENE M0가 "시퀀스 7개
     GUI 삭제" 부채를 남긴 실수를 반복하지 말 것. **빈 슬롯 1개만** 표적으로 쓴다.
 
 ### 착수 키트
