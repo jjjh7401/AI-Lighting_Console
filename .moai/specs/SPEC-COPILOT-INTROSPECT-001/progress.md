@@ -155,6 +155,91 @@ M5를 "이미 그린인 것을 재확인하는 절차"로 돌렸다면 둘 다 �
 - **로그**: 원문 회신과 실패 보완 payload는 `.moai/state/verify/introspect-m6-20260803T125853.log`에 남겼다(gitignore 대상).
 - **남은 위험**: 1900B 예산 때문에 Sequence 80도 이미 `truncated:true`로 28/65개만 회신한다. 전체 필드 목록은 `total`로 누락을 드러낼 뿐 회수할 수 없다. 전체 `server/tests/`와 ruff는 코디네이터가 일괄 실행하기로 한 범위라 본 워커는 focused 묶음과 라이브 게이트를 수행했다. 로컬 LSP(`lua-ls`, `basedpyright`)는 설치되어 있지 않아 hook 진단은 건너뛰었다.
 
+### M7 — 발견 산출물 (2026-08-03, LIVE · 오케스트레이터 직접 수행)
+
+워커가 청크 프로브 배포에서 6회 막힌 뒤 코디네이터가 인계받아 **출하 동사만으로** 수행했다. 채널은 `server/tools/introspect_probe.py`(M4 산출, 게이트 경유)이고 재생 제어만 raw OSC다. 원문: `.moai/state/verify/introspect-m7-20260803T134947.log`(82 KB, gitignore 대상 — 아래 표가 커밋되는 유일한 사본).
+
+#### §M7.1 관측 범위 — 정직하게 분수로 적는다
+
+| 핸들 | 클래스 | 관측 / 전체 | 절단 |
+|---|---|---|---|
+| `Executor 201` | Executor | **27 / 71** | true |
+| `Executor 101` | Executor | **27 / 71** | true |
+| `DataPool/Sequences/80` | Sequence | **28 / 65** | true |
+| `DataPool/Sequences/1` | Sequence | **28 / 65** | true |
+| `DataPool/Groups/1` | Group | **28 / 101** | true |
+
+1900B 회신 예산이 천장이고 페이징이 없어(§Out-of-Scope) 재질의해도 같은 앞부분만 온다. **아래 모든 결론은 이 관측 범위 안에서만 성립한다** — 미관측분에 대해 본 SPEC은 아무것도 주장하지 않는다.
+
+#### §M7.2 ASSUMPTION-51 (클래스 단위 안정성) — 관측 범위 내 참
+
+같은 클래스 두 인스턴스의 관측 집합이 **이름·순서까지 완전히 동일**했다: Executor 201 ≡ Executor 101(27개), Sequences/80 ≡ Sequences/1(28개). 차집합 0. 대조군으로 Group 1은 Executor와 15개만 공유해, 집합이 클래스에 따라 실제로 갈린다는 것도 확인됐다(비공허).
+
+**판정: 관측된 앞 27~28개 범위에서 클래스 단위 일반화가 성립한다. 전체 집합(71/65/101)에 대한 판정이 아니다.** 후속 SPEC은 페이징 확보 후 이 판정을 전체 범위로 넓혀야 한다.
+
+#### §M7.3 REQ-INTROSPECT-019 — 출하 동사를 실제로 적용한 재생 대조
+
+`Executor 201`(assigned `sequenceNo = 20`)에 대해 **정지 → `Go+` → `Off`** 3구간에서 관측 필드 전량을 출하 `props`로 판독했다(상한 16이라 2회 왕복으로 분할 — 실사용 형태 그대로).
+
+| 핸들 | 재생으로 값이 변한 필드 |
+|---|---|
+| `Executor 201` | **0 / 27** |
+| `DataPool/Sequences/20` | **3 / 28** — `CUENO` · `CUENAME` · `TRIGGER` |
+
+| 필드 | 정지 | 재생 중 | `Off` 후 |
+|---|---|---|---|
+| `CURRENTCUE` | `Sequence 20.1` | `Sequence 20.1` | `Sequence 20.1` |
+| `CUENO` | `1` | `` (빈 문자열) | `1` |
+| `CUENAME` | `` | `Ballad Yellow Red` | `` |
+| `TRIGGER` | `` | `Page 1.Executor 201` | `` |
+| `LOADEDCUE` | `property not readable` | 〃 | 〃 |
+
+**큐 진행 대조(`Go+` 2회 추가)**: `CURRENTCUE` `Sequence 20.1` → **`Sequence 20.2`**, `CUENAME` `Ballad Yellow Red` → **`Energetic Chorus`**. 즉 `CURRENTCUE`는 재생 시작이 아니라 **큐 포인터 이동**을 추적한다.
+
+#### §M7.4 REQ-INTROSPECT-020 · ASSUMPTION-52 — 단정 결론
+
+**재생 상태에 해당하는 필드는 발견되었다. 단 Executor 핸들이 아니라 Sequence 핸들에 있다.**
+
+- `Executor` 핸들의 **관측된 27개 중 재생에 반응하는 필드는 0개**다. 27개는 전부 설정·UI 계열(`KEY*`·`FADER*`·`ENCODER*`·`LOCK`·`INDEX`·`NO`·`NAME` 등)이었다. 이는 선행 세션이 22종을 찍어 "Executor는 거의 비어 있다"고 내린 결론을 **열거 근거로 뒷받침**한다 — 추측이 아니라 판독이다. 나머지 44개는 미관측이므로 "Executor에 재생 필드가 없다"고까지는 말하지 않는다.
+- `Sequence` 핸들에는 있다. 실행 여부는 `TRIGGER`(재생 중에만 구동 익스큐터 주소를 담는다) 와 `CUENAME`(재생 중에만 현재 큐 이름을 담는다) 으로 판별 가능하고, **큐 진행은 `CURRENTCUE`** 가 추적한다.
+- **`CUENO`는 진행률 지표로 쓸 수 없다** — 정지 시 `1`, 재생 중 빈 문자열이다. 선행 세션의 "CueNo 신뢰 불가" 관측이 열거 범위에서 재확인됐다.
+- **`LOADEDCUE`는 열거되지만 판독되지 않는다.** 열거 가능 ≠ 판독 가능이며, 이 구분은 `props`의 항목별 `ok=false`가 그대로 드러낸다(REQ-INTROSPECT-007이 요구한 형상이 실물에서 값을 한 것).
+- **진행률(퍼센트·잔여시간)에 해당하는 필드는 관측 범위에서 발견되지 않았다.** 미관측 44/37개에 대해서는 주장하지 않는다.
+
+**부수 발견 — 역주소**: `TRIGGER`가 재생 중 `Page 1.Executor 201`을 돌려준다. 시퀀스에서 구동 익스큐터로 거슬러 올라가는 경로이며, 선행 SPEC(EXECREF-001)이 DESCOPE했던 역주소 갭에 해당한다. 후속 SPEC의 재료다.
+
+#### §M7.5 부작용·감사 확인
+
+- **감사 값 유출 0건**: 이번 세션이 만든 `audit-20260803.jsonl` 40행 전량을 스캔해 판독 값(`Ballad Yellow Red` · `Sequence 20.1` · `Energetic Chorus` · `Page 1.Executor 201`)이 **한 건도 없음**을 확인했다(REQ-INTROSPECT-018 라이브 재확인).
+- **재생 상태 원복**: `Off`만으로는 큐 포인터가 되돌아오지 않았다(`CURRENTCUE`가 `20.2`, `CUENO`가 빈 문자열로 잔류). `Goto Cue 1 Executor 201` + `Off` 후 **관측 28개 전량이 정지 기준선과 일치**함을 재판독으로 확인했다. 쇼파일 쓰기는 없다(재생 상태이지 쇼 내용이 아니다).
+
+#### §M7.6 배포 함정 — 6회 실측 (후속 SPEC 필수 입력)
+
+| 시도 | 결과 |
+|---|---|
+| 점유된 슬롯에 `Import Plugin <n> '<stem>'` (슬롯 12) | **무효** — 이름조차 바뀌지 않는다. M6가 `Delete`를 선행한 것은 정당한 순서였다 |
+| 빈 슬롯에 Import — FileName 참조 래퍼(283 B), PascalCase 스템 (M1, 슬롯 4) | 오브젝트 생성, **실행 불발** |
+| 빈 슬롯에 Import — 임베드 Base64 XML, PascalCase 스템 (M1, 슬롯 5·6) | 오브젝트 생성, **실행 불발** |
+| 빈 슬롯에 Import — 임베드 XML, 소문자 슬러그 스템 (M7, 슬롯 7) | 오브젝트 생성(이름은 M1 잔여물의 `#2` 중복본), **실행 불발** |
+| 편집기 생성 오브젝트를 Delete 후 같은 슬롯에 Import (M7, 슬롯 13) | 오브젝트가 **정확한 이름**으로 생성, **실행 불발** |
+| 편집기 저장 (M1, 슬롯 10~13) | **실행됨** |
+
+프로브 소스 자체는 결백하다 — lupa로 `compile: OK`, 청크 실행 시 함수 반환 확인.
+
+**미해명 1건**: 슬롯 1 응답기는 같은 빌더(`build_plugin_xml`)·같은 순서(`Delete Plugin 1` → `Import Plugin 1`)로 **실행에 성공했다**(M6, `--expect-version 1.6.0` PASS). 슬롯 13과 무엇이 달랐는지 이 SPEC은 규명하지 못했다. 추측을 기록하지 않는다.
+
+#### §M7.7 후속 SPEC 권고 (본 SPEC은 생성하지 않는다 — plan.md §D)
+
+1. **`introspect` 페이징/커서** — 28필드 천장이 실물로 드러났고, 그것이 M7의 모든 결론 범위를 제한했다. 오프셋 인자 + `total` 대조로 전량 회수가 가능해야 ASSUMPTION-51/52를 전체 범위에서 닫을 수 있다. **최우선.**
+2. **재생 상태 소비 SPEC** — §M7.3의 실측(`TRIGGER`·`CUENAME`·`CURRENTCUE`)을 근거로 큐 모니터·실행 상태 UI를 만든다. `CUENO`는 배제하고 `LOADEDCUE`는 판독 불가로 취급할 것. 역주소(`TRIGGER`)는 EXECREF-001이 DESCOPE했던 갭을 메운다.
+3. **신규 플러그인 배포 경로 규명** — §M7.6의 6회 실측과 미해명 1건. 현재로서는 **신규 플러그인은 최초 1회 사용자 GUI 저장이 필수 전제**이며, 이 제약은 자동화 파이프라인 설계에 직접 영향을 준다.
+
+#### §M7.8 콘솔 정리 대상 (사용자 GUI 삭제 필요 — `Delete`는 툴 블랙리스트)
+
+슬롯 **4~14** 전부가 본 SPEC이 남긴 일회용 잔여물이다. 슬롯 1 `CopilotResponder`(출하 응답기 v1.6.0) · 2 `CopilotBusk` · 3 `kpop_summer_twinkle`은 **정리 대상이 아니다.**
+
+`4 CopilotIntrospectProbe083907` · `5 CopilotIntrospectProbe083907B` · `6 CopilotProbeEcho083907` · `7 CopilotIntrospectProbe083907B#2` · `8 introspect-m1-20260803T091729` · `9 introspect_m1_20260803T091729` · `10 CopilotIntrospectProbe091729` · `11 CopilotIntrospectProbe092425` · `12 CopilotIntrospectProbe092745` · `13 CopilotIntrospectM7Chunks131737` · `14 UserPlugin 14`(빈 껍데기)
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
