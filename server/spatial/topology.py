@@ -180,9 +180,7 @@ def _compute_depth(fixtures: tuple[SpatialFixture, ...]) -> tuple[TopologyResult
         )
     score = 0.0
     if analysis.gaps is not None and analysis.gaps.median_gap > 0:
-        within_spread = max(
-            (row.fixtures[-1].y if row.fixtures else 0.0) for row in analysis.rows
-        )
+        within_spread = max((row.fixtures[-1].y if row.fixtures else 0.0) for row in analysis.rows)
         # Match _axis_buckets' scoring shape: weakest boundary gap over the
         # widest within-row spread, using the gap profile rows.py already
         # measured rather than re-deriving one.
@@ -234,9 +232,7 @@ def _compute_vertical(fixtures: tuple[SpatialFixture, ...]) -> tuple[TopologyRes
 def _compute_concentric(fixtures: tuple[SpatialFixture, ...]) -> tuple[TopologyResult, float]:
     """``concentric`` — radius-from-origin gap clustering
     (``math.hypot(x, y)``, design.md §2.3)."""
-    buckets, low_confidence, reason, score = _axis_buckets(
-        fixtures, lambda f: math.hypot(f.x, f.y)
-    )
+    buckets, low_confidence, reason, score = _axis_buckets(fixtures, lambda f: math.hypot(f.x, f.y))
     kind: TopologyKind = "concentric" if not low_confidence else None
     return (
         TopologyResult(
@@ -266,9 +262,7 @@ def _compute_bilateral(fixtures: tuple[SpatialFixture, ...]) -> tuple[TopologyRe
 
     # Deterministic scan order: ascending |x|, then y, then fid — so the
     # first candidate a mirror match is sought for is always the same one.
-    scan_order = sorted(
-        remaining, key=lambda fid: (abs(remaining[fid].x), remaining[fid].y, fid)
-    )
+    scan_order = sorted(remaining, key=lambda fid: (abs(remaining[fid].x), remaining[fid].y, fid))
     for fid in scan_order:
         fixture = remaining.get(fid)
         if fixture is None:
@@ -310,9 +304,7 @@ def _compute_bilateral(fixtures: tuple[SpatialFixture, ...]) -> tuple[TopologyRe
     )
 
 
-def _compute_grid(
-    depth: TopologyResult, lateral: TopologyResult
-) -> TopologyResult:
+def _compute_grid(depth: TopologyResult, lateral: TopologyResult) -> TopologyResult:
     """``grid`` — the contention outcome when BOTH depth and lateral are
     confident with >=2 buckets each (design.md §2.4, contract D-Q2). Output
     stays split per axis; no 9-cell cross product is ever built."""

@@ -156,9 +156,15 @@ def name_vertical_bucket(index: int, total: int) -> str:
 # ---------------------------------------------------------------------------
 
 GRID_9CELL_VOCAB: tuple[str, ...] = (
-    "DSR", "DSC", "DSL",   # Downstage Right/Center/Left
-    "CSR", "CS", "CSL",    # Center-stage Right/Center/Left
-    "USR", "USC", "USL",   # Upstage Right/Center/Left
+    "DSR",
+    "DSC",
+    "DSL",  # Downstage Right/Center/Left
+    "CSR",
+    "CS",
+    "CSL",  # Center-stage Right/Center/Left
+    "USR",
+    "USC",
+    "USL",  # Upstage Right/Center/Left
 )
 
 

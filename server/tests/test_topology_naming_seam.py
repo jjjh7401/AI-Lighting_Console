@@ -52,8 +52,13 @@ def two_ring_concentric() -> tuple[SpatialFixture, ...]:
 @pytest.fixture
 def grid_3x10() -> tuple[SpatialFixture, ...]:
     return tuple(
-        SpatialFixture(fid=1 + row * 10 + col, name=f"F{1 + row * 10 + col}",
-                       x=float(col) - 4.5, y=float(row * 3), z=0.0)
+        SpatialFixture(
+            fid=1 + row * 10 + col,
+            name=f"F{1 + row * 10 + col}",
+            x=float(col) - 4.5,
+            y=float(row * 3),
+            z=0.0,
+        )
         for row in range(3)
         for col in range(10)
     )
@@ -118,10 +123,7 @@ def test_seam_never_produces_rigging_hardware_names(grid_3x10, two_ring_concentr
         selected = classify(rig).selected
         if selected.grid_axes is not None:
             for axis, buckets in selected.grid_axes.items():
-                namer = (
-                    naming.name_depth_bucket if axis == "depth"
-                    else naming.name_lateral_bucket
-                )
+                namer = naming.name_depth_bucket if axis == "depth" else naming.name_lateral_bucket
                 produced += [namer(i, len(buckets)) for i in range(len(buckets))]
         else:
             total = len(selected.fids_by_bucket)
