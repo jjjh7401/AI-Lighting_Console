@@ -1,6 +1,6 @@
 # SPEC-COPILOT-GROUPGEN-001 — 진행 기록 (progress)
 
-status: **pre-plan** · plan-phase 미실행 · 구현 0 · 커밋 0 · 라이브 접근 0(조사 제외)
+status: **plan-complete (audit-ready)** · plan-phase 실행 완료 · 구현 0 · 라이브 접근 0
 
 ## §0 인수인계 — 여기서 시작한다 (2026-08-03 작성)
 
@@ -109,10 +109,16 @@ status: **pre-plan** · plan-phase 미실행 · 구현 0 · 커밋 0 · 라이�
 
 ### 환경 상태 (직전 세션이 남긴 것)
 
-- **앱이 실행 중일 수 있다** — `http://127.0.0.1:8765`, 수신 포트 **9005** 점유.
-  새 세션에서 앱을 다시 띄우려면 **먼저 기존 인스턴스를 끄거나** `ReceivePortInUseError`로 실패한다
-  (`server/bridge/osc.py:242` — *"No automatic port fallback"*, SPATIAL §E.2.10에서 실증).
-  확인: `curl -s http://127.0.0.1:8765/healthz` · 종료: 해당 프로세스 종료(포트 8765/9005 점유자).
+- **⚠ 이 항목은 2026-08-04 세션이 정정했다.** 직전 세션은 *"앱이 UDP 9005를 점유하니 있으면 종료"*
+  로 인계했으나, **9005의 실제 점유자는 grandMA3 onPC 자신**(`app_gma3` — `UDP *:8000` + `UDP *:9005`
+  와일드카드)이고 이는 **정상 상태**다. 코파일럿 앱은 `_ReuseAddrOSCUDPServer`가
+  `allow_reuse_address = True`(`server/bridge/osc.py:60` 부근)라 **SO_REUSEADDR로 9005에 공존 바인드된다**.
+  본 세션 실측: `SO_REUSEADDR` 바인드 **성공** / 평범 바인드 `errno 48`.
+  → **onPC를 종료하면 안 된다.** M0·M6 라이브 프로브가 그 콘솔을 필요로 하며, 종료해도 얻는 것이 없다.
+  (LOOKLIB·EXECREF가 *"구동 중 onPC의 9005 점유"*를 **환경적 기존 조건**으로 이미 기록해 둔 그 사실이다.)
+- **판별 기준**: 끄고 시작해야 하는 것은 **코파일럿 앱 인스턴스**이며 그 지표는 **TCP 8765**다
+  (`lsof -nP -iTCP:8765` · `curl -s http://127.0.0.1:8765/healthz`). UDP 9005 점유는 지표가 아니다.
+  본 세션 착수 시 8765는 **비어 있었다**(스테일 인스턴스 0).
 - **리그는 원점 상태**: 19대 전부 `(0,0,0)`, 프로그래머 `ClearAll`, 쇼파일 잔여 0.
 - **그룹 풀은 손대지 않았다**: 1 / 11 / 12 / 13 / 15 (조사 시점 그대로).
 - 앱 설정 정본: `~/Library/Application Support/GrandMA3 Copilot/settings.toml`
@@ -121,7 +127,58 @@ status: **pre-plan** · plan-phase 미실행 · 구현 0 · 커밋 0 · 라이�
 
 ## §E.1 Plan-phase Audit-Ready Signal
 
-_<pending plan-phase>_
+- plan_complete_at: 2026-08-04T00:40:00Z
+- plan_status: **audit-ready**
+- plan_audit_verdict: **CONDITIONAL-PASS → 조건 해소 완료** (BLOCKER 0 · MAJOR 2 → **0** · MINOR 0)
+- plan_audit_report: `.moai/reports/plan-audit/SPEC-COPILOT-GROUPGEN-001-plan-audit.md`
+- 산출물: `design.md`(신규) · `acceptance.md`(신규 · AC 37건) · `spec.md` v0.2.0 · `plan.md` v0.2.0
+- 결정 기록: `.plan-contract.md` (사용자 승인 3건 + coordinator 증거 확정 6건)
+- 소스 코드 diff: **0** (plan-phase는 문서 단계 · 콘솔 무접촉 · 라이브 프로브 0)
+
+### 실행 형태 — Orca 오케스트레이션 3-워커 병렬 + 감사 게이트
+
+Run `run_5f9ccdfbf0b6`. 파일 무교차 계약(`.plan-contract.md` §4)을 사전 고정한 뒤 병렬 1웨이브:
+
+| 워커 | Task / Dispatch | 산출 | 결과 |
+|---|---|---|---|
+| A | `task_a7abcd6778e4` / `ctx_8d1cce449ea2` | `design.md` | succeeded |
+| B | `task_72908baf7b3a` / `ctx_136692c04130` | `acceptance.md` | succeeded |
+| C | `task_38ebfd0a126f` / `ctx_a7c03315835c` | `spec.md` + `plan.md` v0.2.0 | succeeded |
+| D (게이트) | `task_dc774e9780ab` / `ctx_b0d2879ec52b` | plan-audit 리포트 | succeeded · CONDITIONAL-PASS |
+
+### coordinator가 감사에서 잡아 메운 결함 3건 (워커 자기보고로는 드러나지 않았다)
+
+1. **REQ↔AC 커버리지 공백 (coordinator 자체 감사)** — `REQ-GROUPGEN-031`(안전 게이트 확장)에
+   대응 AC가 **없었다**. 원인은 계약 설계 실수다: 워커 C에게 *"신규 REQ는 031부터"*,
+   워커 B에게 *"추가 AC는 031부터"* 를 **독립적으로** 지시해 번호가 충돌했다.
+   → `AC-GROUPGEN-036` 신설로 해소. **REQ 031 ↔ AC 036이며 번호가 어긋난다**(문서에 명시).
+2. **MAJOR-1 스키마 자기모순 (plan-auditor)** — `design.md`가 `TopologyResult.fids_by_bucket`을
+   `tuple[tuple[int,...],...]`로 타입 고정하면서, grid 분기에서는 같은 필드에
+   `{"depth": …, "lateral": …}` **딕셔너리**를 넣는다고 서술했다. M1∥M2 병렬이 의존하는
+   교차 스키마 계약이 바로 그 지점에서 깨진다.
+   → 전용 필드 `grid_axes`를 분리하고 **타입 불변식**을 명문화해 해소
+   (`kind == "grid"` ⟺ `fids_by_bucket == ()` and `grid_axes is not None`).
+   부수로 `Stage Right/Center/Stage Left` → `Centerline` 누락 1건도 정정(D-Q2 위반).
+3. **MAJOR-2 뮤테이션 계약 불이행 (plan-auditor)** — `plan.md` §B M5가 뮤테이션 필수 **5항목**을
+   약속했는데 `acceptance.md`는 **4개**만 실었다. 누락은 *"임의 작명 금지"* 이며, 대응 AC들이
+   전부 **정적 grep**이라 *"금지 로직을 제거하면 빨개지는가"*를 증명하지 못했다.
+   → `AC-GROUPGEN-037` 신설(반환값 폐쇄집합 전수 대조 + 적대적 입력 + f-string 보간 뮤테이션)로
+   5:5 정합. **정적 grep만으로는 통과시킬 수 없다.**
+
+> **교훈 (다음 소유자에게)**: 워커 4인 전원이 `outcome: succeeded` 로 자기보고했고 그 보고는
+> 거짓이 아니었다. 그러나 위 3건은 **어느 워커의 담당 범위 안에도 없었다** — 1은 coordinator가
+> 만든 계약의 결함이고, 2·3은 **문서 사이의 경계**에 있었다. `worker_done` 은 산출물 수용이 아니다.
+> 병렬 저작에서는 **교차 계약 자체를 감사 대상으로 삼아야 한다.**
+
+### plan→run 경계 (다음 세션이 여기서 시작한다)
+
+- **Implementation Kickoff Approval(HUMAN GATE)은 아직 받지 않았다.** `/moai run` 진입 전 필수.
+- **Q1(멤버십 판독 채널)은 `[OPEN-BY-DESIGN]`** — M0 라이브 프로브(run-phase)만이 답한다.
+  plan은 GO/NEGATIVE **양 분기를 모두 설계**했다. GO를 기본값으로 가정한 서술 **0건**(감사 확인).
+- **기준선 재측정 의무**: run 킥오프 시점에 pytest/vitest 재측정. plan-phase 참고 수치
+  (2026-08-03 pytest 4511 · vitest 350) **재사용 금지**(AC-034).
+- **의존**: SPATIAL-001 미머지. 본 브랜치는 `115eb6d` 분기 · 현 HEAD `f49020b`.
+  `git branch --contains 1c72d3e | grep main` → 비어 있음(정상). **main 머지 후 rebase.**
 
 ## §E.2 Run-phase Evidence
 

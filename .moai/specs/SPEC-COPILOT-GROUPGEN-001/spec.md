@@ -1,10 +1,10 @@
 ---
 id: SPEC-COPILOT-GROUPGEN-001
 title: "배치 인식 그룹 생성 — 위상 분류(topology) + 장비 종류 분류 (Arrangement-Aware Group Generation)"
-version: "0.1.0"
+version: "0.2.0"
 status: draft
 created: 2026-08-03
-updated: 2026-08-03
+updated: 2026-08-04
 author: orchestrator (pre-plan)
 priority: P1
 phase: "Phase 2 연출 계층 — 공간 축 후속 (배치를 영속 자산으로)"
@@ -23,14 +23,16 @@ related_specs: [SPEC-COPILOT-SPATIAL-001, SPEC-COPILOT-SCENE-001, SPEC-COPILOT-L
 > 그리고 더 나쁜 것: **현재 분석 계층은 행이 아닌 배치를 고신뢰로 오독한다** — 2겹 동심원을 넣으면
 > `rows=9`, 구성 `[1,2,2,2,4,2,2,2,1]`, `low_confidence=False`를 답한다(실측). 위상 가설이 하나뿐이기 때문이다.
 
-> **status 주의**: 본 문서는 `/moai plan` **전에** 작성된 draft다. `acceptance.md`(AC) · `design.md`는
-> 아직 없다. 근거는 `research.md`(v0.5.0)와 `plan.md`(v0.1.0)이며 **`research.md`의 `[실측]`은
+> **status 주의**: `acceptance.md`(AC) · `design.md`는 v0.2.0 시점에 **이미 존재**한다 —
+> design/acceptance/spec·plan 세 워커가 `.plan-contract.md`로 파일을 분리해 **동시 저작**했다.
+> 근거는 `research.md`(v0.5.0)와 `plan.md`(v0.2.0)이며 **`research.md`의 `[실측]`은
 > 라이브 onPC 2.4.2 직접 관측**이므로 구속력을 갖는다.
 
 ## HISTORY
 
 | version | date | 변경 |
 |---|---|---|
+| 0.2.0 | 2026-08-04 | `.plan-contract.md` 반영 — 사용자 승인 결정 4건(D-Q3 접두 `"GEO "` · D-Q4 `server/safety/**` 정식 게이트 · D-Q9/Q11 종류 축 보수 채택) + coordinator 증거 확정 6건(D-Q2 위상 경합 축별분리 · D-Q5 트리거 별도툴 · D-Q6 절단 거부 · D-Q7 룰북 미신설 · D-Q10 bilateral_pairs 신호만 · D-Q12 명칭 축 제안만)을 REQ/제외범위에 전개. REQ-010·011·012·027을 §D로 이관(결번 유지), ASSUMPTION-67 SKIP |
 | 0.1.0 | 2026-08-03 | 초안. `research.md` v0.5.0(요구 정정 · 업계 표준 어휘 · 세분화 축 6개 · 장비 종류·명칭 실측)과 `plan.md` v0.1.0(M0~M6 · 게이트 A~D)을 REQ로 전개. ASSUMPTION 61~67 배정 |
 
 ## A. 개요
@@ -117,14 +119,11 @@ MAtricks        = 어떻게 재성형 (런타임 · 윙 · 블록 · 홀짝 · �
   (`[실측]` `fixturetype` → `'FixtureType 1'` · `ShortName` → `'RMMXSm1'` · `Manufacturer` → `'Robe'`)
 - **REQ-GROUPGEN-009** [Ubiquitous] — 제조사·타입명 그룹 **shall** 패치의 구조화 필드를 **그대로** 쓴다
   (문자열 가공 0). 이것이 종류 축의 가장 안전한 층위다.
-- **REQ-GROUPGEN-010** [Event-driven] — **When** 업계 카테고리(`Spot`/`Wash`/`Beam`/`PAR`/`Fresnel`/
-  `Profile`/`Strobe`/`Blinder`/`Effect`/`Follow Spot`) 그룹을 만들면, the 분류 **shall** 타입명에 대한
-  **폐쇄 어휘 토큰 매칭**으로만 판정한다 — **GDTF 스펙 FixtureType 노드에 `Categories` 필드가 없어**
-  타입명 문자열이 유일한 근거이기 때문이다.
-- **REQ-GROUPGEN-011** [Unwanted] — 카테고리 판정 **shall not** 추측한다: **무매칭이면 그룹을 만들지
-  않고**, 다중 매칭(예: `Wash Beam`)은 **모호로 표기**한다.
-- **REQ-GROUPGEN-012** [Unwanted] — `Blinder`로 판정된 픽스처 **shall not** 무대 위상 그룹에 포함된다 —
-  블라인더는 **관객을 비추는** 장비이며, 위상 그룹에 섞이면 연출이 관객을 향한다.
+- **REQ-GROUPGEN-010** — **[이관 v0.2.0]** §D 제외 범위 "업계 카테고리 폐쇄 어휘 토큰 매칭"으로
+  이관됨(D-Q9/Q11 사용자 승인 결정). 결번이 아니라 이관이다 — 원문·복원 선결 조건은 §D 참조.
+- **REQ-GROUPGEN-011** — **[이관 v0.2.0]** REQ-010에 종속되어 동반 이관됨. §D 참조.
+- **REQ-GROUPGEN-012** — **[이관 v0.2.0]** REQ-010에 종속되어 동반 이관됨(Blinder 식별 불가 연쇄 —
+  §D "Blinder 복원 선결 조건" 참조). 결번이 아니라 이관이다.
 - **REQ-GROUPGEN-013** [Unwanted] — 본 SPEC **shall not** 픽스처 **명칭**(자유 문자열)으로 그룹을
   자동 생성한다. 근거는 실측이다: 동일 타입 19대에 명명 패턴이 **3가지**다
   (자동 `RMMXSm1 1` = `ShortName`+번호 · 사용자 `Copilot MMX n` · 사용자 `MMX n`).
@@ -143,8 +142,13 @@ MAtricks        = 어떻게 재성형 (런타임 · 윙 · 블록 · 홀짝 · �
   깊이 축은 **`Electric 1..N`이며 downstage → upstage**(오버헤드 바는 프로시니엄에서 upstage로 번호를
   매기는 업계 표준). 그 외 축의 번호 방향은 문서화 대상이다 — McCandless 영역 번호도 방향이
   표준화되지 않았다.
-- **REQ-GROUPGEN-018** [Ubiquitous] — 생성 그룹 이름 **shall** 접두 규칙으로 기하 그룹임을 드러낸다.
-  이는 두 문제를 동시에 해결한다: 기존 이름 충돌 회피(§C.3) + **기하 축과 기능 축의 구분**.
+- **REQ-GROUPGEN-018** [Ubiquitous] — 생성 그룹 이름 **shall** `"GEO "` 접두로 기하 그룹임을 드러낸다
+  (D-Q3 사용자 승인 결정 · v0.2.0 확정). 예: `GEO Downstage` · `GEO Ring 2` · `GEO Stage Left` ·
+  `GEO Robe Robin MMX Spot`. 이는 두 문제를 동시에 해결한다: 기존 이름 충돌 회피(§C.3, `Front`·`Back`·
+  `Inner Outer Opp` 이미 존재) + **기하 축과 기능 축의 구분**(REQ-019 — `Downstage`가 front light
+  system이 아님). 좌우 축 중앙은 깊이 축 `Center`와 문자열 충돌을 피하기 위해 **`GEO Centerline`**
+  (무대 중심선 — 업계 용어)으로 확정한다. 깊이 축 중앙만 `GEO Center`를 쓴다. 라벨 길이 상한은
+  실측되지 않았다 — `design.md`가 미검증을 명시하고 M0 프로브에 라벨 길이 확인을 추가한다.
 - **REQ-GROUPGEN-019** [Unwanted] — 그룹 이름 **shall not** 기능/시스템 어휘를 차용한다
   (front light system · backlight system · cross-left/right sidelight · key/fill/back · wash/special).
   이름은 **위치·종류**를 말하고 **역할**을 말하지 않는다 — `Downstage` 픽스처가 백라이트로 쓰일 수 있다.
@@ -169,9 +173,13 @@ MAtricks        = 어떻게 재성형 (런타임 · 윙 · 블록 · 홀짝 · �
   (정적 단언 가능). 기존 슬롯 접촉 0.
 - **REQ-GROUPGEN-026** [State-driven] — **While** LiveLock이 활성이면, the 전 단계 **shall** 제안으로
   강등된다 — 콘솔 송신 0(멤버십 판독조차 하지 않는다).
-- **REQ-GROUPGEN-027** [Ubiquitous] — 위상 × 종류 **교차** 그룹 **shall** 폭발 제어를 갖는다:
-  **멤버 0 교차는 그룹을 만들지 않으며**, 교차 그룹 수 상한과 초과 시 거동을 정의한다.
-  빈 슬롯이 유한하므로(`2~10 · 14 · 16+`) 교차 폭발은 **슬롯 고갈로 직결된다**.
+- **REQ-GROUPGEN-027** — **[이관 v0.2.0]** §D 제외 범위로 이관됨 — 위상×종류 교차 자체가 v1
+  미구현이므로(D-Q9) 폭발 제어 기계도 필요 없다. 결번이 아니라 이관이다. §D 참조.
+- **REQ-GROUPGEN-031** [Ubiquitous] — 그룹 쓰기 승인 흐름 **shall** `server/safety/**` 정식 안전
+  게이트를 경유한다(D-Q4 사용자 승인 결정). `server/safety/`에 그룹 쓰기 참조 타입을 추가해 `risky`
+  분류 + 승인 카드를 정규 경로로 발행한다 — `SPEC-COPILOT-EXECREF-001`이 게이트에 `Executor` 참조
+  타입을 추가한 방식을 계승한다. 게이트 확장은 **그룹 쓰기 참조 타입 인식 + 분류**에 한정되며,
+  3-stage screen · expand-or-hold · LiveLock · 백업 · 감사 의미론은 무변경 계승한다.
 
 ### B.5 툴 표면 + 라이브 판정 기록
 
@@ -209,8 +217,10 @@ MAtricks        = 어떻게 재성형 (런타임 · 윙 · 블록 · 홀짝 · �
   거부하는가. 조용히 덮으면 차단 요구(REQ-GROUPGEN-022)가 **더욱 절대적**이 된다.
 - **ASSUMPTION-66 (게이트 분류)** — `Store Group <n>` · `Label Group <n> '…'`이 안전 게이트에서
   `safe`/`risky` 어느 쪽으로 분류되는가. 블랙리스트 v1에 `Store Group`(무플래그)은 **없다**.
-- **ASSUMPTION-67 (카테고리 토큰 매칭의 실효성)** — 실제 이종 리그의 타입명이 폐쇄 어휘로 판정 가능한가.
-  **우리 리그로는 검증 불가**(타입 1종) — 합성 golden + 별도 리그 필요.
+- **ASSUMPTION-67 (카테고리 토큰 매칭의 실효성)** — **`SKIP: CONDITION_NOT_MET`**(v0.2.0, D-Q9 확정) —
+  카테고리 축 자체가 v1 범위에 없으므로 검증 대상이 아니다. 원문: 실제 이종 리그의 타입명이 폐쇄
+  어휘로 판정 가능한가. **우리 리그로는 검증 불가**(타입 1종) — 카테고리 축이 복원되면 합성 golden +
+  별도 리그로 재평가한다.
 
 ### C.3 상속 제약 (선행 SPEC·조사 실측 — 재발 방지)
 
@@ -231,6 +241,49 @@ MAtricks        = 어떻게 재성형 (런타임 · 윙 · 블록 · 홀짝 · �
    왕복 66.7 ms · `CONFIG.max_payload = 1900`.
 
 ## D. 제외 범위 (Out of Scope)
+
+### Out of Scope — 업계 카테고리 폐쇄 어휘 토큰 매칭 (REQ-GROUPGEN-010·011·012·027 이관, v0.2.0)
+
+REQ-GROUPGEN-010(카테고리 토큰 매칭) · REQ-GROUPGEN-011(무매칭→그룹없음·다중매칭→모호 판정) ·
+REQ-GROUPGEN-012(`Blinder` 분리) · REQ-GROUPGEN-027(위상×종류 교차 폭발 제어)은 **v1 범위 밖으로
+이관**한다(D-Q9/Q11 사용자 승인 결정, `.plan-contract.md` §1). **삭제가 아니라 이관**이며, REQ 번호는
+재번호하지 않고 §B에 이관 안내 행을 남긴다. 각각 **별도 SPEC 후보**다.
+
+- **REQ-GROUPGEN-010·011 복원 선결 조건**: GDTF `Categories` 필드 부재로 타입명 문자열이 유일한
+  근거이며 이는 추측이다(§E 참조). 복원하려면 (a) 합성 이종 리그 golden 최소 1식, (b) 오분류 허용
+  오차를 사용자가 명시 승인 — 둘 다 필요하다.
+- **REQ-GROUPGEN-012 복원 선결 조건 — Blinder 식별 불가 연쇄**: `Blinder` 분리는 **카테고리 판정에
+  종속**된다. 카테고리 축이 없으면 타입명 문자열 매칭 외에 `Blinder`를 가려낼 신호가 없어, **`Blinder`를
+  식별할 수단 자체가 없다**. 따라서 REQ-012는 REQ-010이 복원되기 **전에는 복원될 수 없다**. 이 연쇄를
+  놓치면 "블라인더를 분리한다"는 **지킬 수 없는 약속**이 SPEC에 남는다.
+- **REQ-GROUPGEN-027 복원 선결 조건**: 위상×종류 교차는 v1에서 미구현이다(D-Q9) — 교차를 만들지
+  않으므로 상한 기계도 필요 없다. 복원하려면 종류 축(REQ-010/011)이 먼저 복원되어야 하고, 빈 슬롯
+  경제(`2~10·14·16+`)를 감안한 교차 상한 정책이 별도로 확정되어야 한다.
+- `ASSUMPTION-67`은 `SKIP: CONDITION_NOT_MET`(§C.2) — 축이 v1에 없다.
+
+### Out of Scope — 9칸 복합 위상 명명 미발화 (D-Q2)
+
+3×10 그리드처럼 y·x 양축이 동시에 유의하면 위상 **판정**은 `grid`로 하되, **산출 그룹은 축별로
+분리**한다(`GEO Downstage`/`GEO Center`/`GEO Upstage` + `GEO Stage Right`/`GEO Centerline`/
+`GEO Stage Left`). 근거: (1) 슬롯 경제 — 9칸 복합(`DSR…USL`)은 그룹 9개를 쓰나 축별 분리는 6개,
+빈 슬롯이 `2~10·14·16+`뿐이라 한 번의 발화가 연속 빈 구간을 거의 소진한다. (2) D-Q9 보수 결정과의
+정합 — 종류 축에서 교차 폭발을 막아 놓고 위상 축에서 열면 모순이다. 9칸 복합 명명(`DSR·DSC·DSL/
+CSR·CS·CSL/USR·USC·USL`)은 업계 표준 어휘로 **유효**하지만(research §6.4), `naming.py`에 폐쇄
+집합으로 **정의는 하되 v1에서 호출하지 않는다** — 삭제가 아니라 미발화다.
+
+### Out of Scope — `bilateral_pairs` 그룹 미생성 (D-Q10)
+
+대칭(`bilateral_pairs`)은 **속성이지 멤버 집합이 아니다**. "미러링 가능"은 `GEO ...`라는 이름이
+붙을 대상이 아니다. MAtricks `Mirror`/Pan Invert가 런타임 재성형을 이미 담당하므로(§D 축 E), 대칭
+쌍을 그룹으로 굳히면 MAtricks를 그룹으로 재구현하는 것이다. `topology.py`는 `bilateral_pairs`를
+**검출·반환**하되, 그룹 쓰기 경로는 이를 **소비하지 않는다**. REQ-GROUPGEN-001은 `bilateral_pairs`를
+분류 대상으로 열거하므로 **REQ 무변경** — 분류는 하되 그룹을 만들지 않는다는 구분만 추가된다.
+
+### Out of Scope — 명칭 축(C2) 확정 경로 없음 (D-Q12)
+
+REQ-GROUPGEN-014는 `[Optional]`이다. v1은 읽기/제안 툴의 반환 구조에 클러스터를 실어 **보고**하는
+데서 멈춘다. 자동 작명 패턴(`ShortName + " " + n`)은 신호가 아니므로 제외한다. 사용자 확정 → 그룹
+생성 경로는 v1에 **없다** — 만들면 D-Q9 보수 결정과 모순된다.
 
 ### Out of Scope — 런타임 효과 분할 (MAtricks 중복 구현)
 `Wings` · `Block` · `Group`(MAtricks) · `Width` · `Shuffle` · `Invert`/`Mirror`는 **MA3의 기존 기능**이며
