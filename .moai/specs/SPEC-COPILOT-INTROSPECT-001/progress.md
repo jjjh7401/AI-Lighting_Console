@@ -113,7 +113,7 @@ plan.md §G가 *"M5의 테스트 축들은 서로 독립이므로 오케스트�
 | 전체 회귀(vitest) | **350 passed (15 files)** | 기준선과 동일 — UI 파일 변경 0건 |
 | OSC import 경계 | `test_architecture.py` **4 passed** | 예외 명단 무변경: `git diff 3176900..HEAD -- server/tests/test_architecture.py` 빈 출력. 신규 CLI는 예외에 오르지 않고 게이트 경유로 해결 |
 | 읽기 전용(`Cmd(` 부재) | **0건** | `build_props_result` · `build_introspect_result` · `enumerate_property_accessors` · `parse_props_names` 함수 본문 전수 |
-| 닫힌 툴 집합 | **18 고정** | `test_tools.py:140` `len(names) == len(TOOL_NAMES) == 18` 그린. `build_toolset` 시그니처 무변경 — 신규 포트 2종은 툴로 등재되지 않았다(REQ-INTROSPECT-024) |
+| 닫힌 툴 집합 | **본 SPEC 델타 0** | M5 시점 실측은 `test_tools.py` `len(names) == len(TOOL_NAMES) == 18` 그린이었다. `build_toolset` 시그니처 무변경 — 신규 포트 2종은 툴로 등재되지 않았다(REQ-INTROSPECT-024). *(그 뒤 `main`이 SPATIAL/GROUPGEN으로 집합을 22로 늘렸고 2026-08-03 머지로 합류했다. 본 SPEC의 델타는 여전히 0이며, 절대 개수는 판정 기준이 아니다 — REQ-024 참조.)* |
 | 기존 동사 5종 · kind 6종 가산성 | 무변경 | `test_lua_responder.py` 74 passed, `test_responder_deploy.py` / `test_responder_roundtrip.py` / `test_responder_protocol.py` 그린. kind는 6종 → 8종(`props`·`introspect` 추가)이며 기존 6종 형상 불변 |
 
 **뮤테이션 축 — 코디네이터 재실측 (워커 보고를 신뢰하지 않고 직접 죽여 봤다).** plan.md §B M5의 경고("절단 신호를 제거해도 통과하는 테스트가 있으면 그 테스트가 무용하다")를 지점별로 집행했다.

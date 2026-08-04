@@ -194,12 +194,12 @@ The 서버측 소비 경로 **shall** 좁은 포트 → 게이트 → 링크 규
 - 대상 요구: REQ-INTROSPECT-022
 - **통과 판정**: `test_architecture.py` PASS + 경계 grep 기준선 대비 diff 없음.
 
-### AC-INTROSPECT-021 — 툴 개수 18 유지 (무조건)
+### AC-INTROSPECT-021 — 툴 집합 델타 0 (무조건)
 
 The 본 SPEC **shall not** LLM 대면 툴을 추가한다.
 
 - 대상 요구: REQ-INTROSPECT-024 / 결정 D-4
-- **통과 판정**: 툴 정의 개수 = **18**(기준선 동일). `build_toolset` diff 없음.
+- **통과 판정**: `build_toolset` diff 없음 + 툴 정의 개수가 **본 SPEC의 base 대비 증가 0**. 절대 개수는 판정 기준이 아니다 — 다른 SPEC이 정당하게 늘리기 때문이다(base 18 → `main` 머지 후 22). 개수 자체의 고정은 `test_tools.py`가 `main` 기준으로 수행한다.
 
 ### AC-INTROSPECT-022 — `prop` ↔ `props` 디스패치 비혼선 (무조건)
 

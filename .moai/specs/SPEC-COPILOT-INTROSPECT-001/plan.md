@@ -84,14 +84,14 @@ M1 결과가 부정이면 M2의 범위가 절반으로 줄어든다(§A.3). 따�
 - `server/safety/console.py`: `ConsoleLink`에 왕복 메서드 추가. `query_property`와 **동일한 id 상관·동일 타임아웃 예산·동일 예외 타입**. 회신은 상태 주소로 오므로 신규 수신 채널이 생기지 않는다.
 - `server/safety/gate.py`: 게이트 메서드 + `_GateStatePort` 노출. **감사**: 1 송신 = 1 감사 항목, 실패(타임아웃 포함)도 기록. 감사 주체 문자열은 `경로 + 요청 이름들`이며 **판독된 값을 담지 않는다**(REQ-INTROSPECT-018) — 이 한 줄이 민감정보 경계의 실제 집행 지점이다.
 - `server/tools/introspect_probe.py`(신규, 개발자 CLI): `responder_roundtrip.py` 패턴. v1의 **유일한 소비자**다.
-- **툴 미등재 확인**: `build_toolset`은 무변경. 닫힌 툴 집합 18개 유지(REQ-INTROSPECT-024).
+- **툴 미등재 확인**: `build_toolset`은 무변경. 닫힌 툴 집합에 **본 SPEC의 추가 0** (본 SPEC 기준 델타 0 — 절대 개수는 다른 SPEC이 늘린다: base 18 → main 머지 후 22)(REQ-INTROSPECT-024).
 
 ### M5 — 회귀 · 경계 · 안전 불변식
 
 - 전체 pytest/vitest: run-phase 킥오프 기준선 대비 신규 실패 0건.
 - **경계 grep 무변경**: 오케스트레이터·세이프티의 OSC 브리지 import 경계(`server/tests/test_architecture.py`가 이미 지키는 계약).
 - **읽기 전용 grep**: 신규 동사 처리 경로에 `Cmd(` 부재.
-- **툴 개수 고정**: 18.
+- **툴 집합 델타 0**: 본 SPEC이 추가하는 툴 0개 (본 SPEC 기준 델타 0 — 절대 개수는 다른 SPEC이 늘린다: base 18 → main 머지 후 22).
 - 기존 동사 5종의 회신 형상 회귀(`test_lua_responder.py`) — 가산성 증명.
 - **뮤테이션 축(선택 재료 주의)**: 절단 신호를 제거해도 통과하는 테스트가 있으면 그 테스트가 무용하다. 절단 재료는 **반드시 상한을 넘기는 크기**로 만들 것 — 오늘의 실제 핸들이 상한 미만이면 자산만으로는 절단 경로가 실행되지 않는다(SCENE-001 M8의 "자산이 우연히 보장하고 있다" 교훈).
 
@@ -118,7 +118,7 @@ M1 결과가 부정이면 M2의 범위가 절반으로 줄어든다(§A.3). 따�
 - **회신 예산**: `CONFIG.max_payload = 1900`. 전송 변형 중 `cmd_keyword`가 이 한계에서 **조용히 드롭**하므로(pcall이 성공을 보고함) 예산 초과는 런타임 신호 0이다 — 테스트가 유일한 그물이다.
 - **읽기 전용**: 신규 경로에서 `Cmd()` 호출 금지, 발견된 함수 필드 호출 금지.
 - **감사에 값 금지.**
-- **닫힌 툴 집합 18개 유지.**
+- **닫힌 툴 집합에 본 SPEC의 추가 0.** 절대 개수는 다른 SPEC이 정당하게 늘린다(base 18 → `main` 머지 후 22) — 판정 기준은 델타다.
 - 코드 주석·커밋 메시지는 영어(`language.yaml`), SPEC 문서는 한국어(저장소 관례).
 
 ## §D. @MX 태그 대상 (예상 — 실제 배치는 run-phase에서 확정)
@@ -140,7 +140,7 @@ M1 결과가 부정이면 M2의 범위가 절반으로 줄어든다(§A.3). 따�
 | 예산 산술 | `server/tests/test_lua_responder_payload_budget.py` 확장 | `props` 최대 요청 ≤ 2048, Lua↔Python 상한 동치 |
 | 와이어 트윈 | `server/tests/`(신규 또는 기존 protocol 테스트) | 빌더 검증 규율(요청 id, 큰따옴표, 단일 라인, 이름 목록 상한) |
 | 서버 소비 | `server/tests/test_safety_console.py` 확장 | 왕복 성공/타임아웃/실패, 감사 1:1, **감사 주체에 값 부재** |
-| 경계 | `server/tests/test_architecture.py` | OSC import 경계 무변경, 툴 개수 18 |
+| 경계 | `server/tests/test_architecture.py` | OSC import 경계 무변경, 툴 집합 델타 0 |
 | 가산성 회귀 | 기존 responder 테스트 전량 | 기존 5동사·6 kind 형상 무변경 |
 
 **뮤테이션 재료 주의(승계 필수)**: 절단 테스트의 대상 핸들은 반드시 상한을 넘겨야 한다. 오늘의 실제 핸들이 상한 미만이면 절단 코드를 제거해도 테스트가 통과한다.
