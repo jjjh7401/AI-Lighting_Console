@@ -64,15 +64,23 @@ status: draft (v0.2.0, 2026-08-03) · Tier L · 본 문서는 spec.md 요구의 
 
 ### §3.2 정렬 어휘 (폐쇄 — REQ-SPATIAL-015의 표적)
 
-| 어휘 | 정의 | 한정어 예 |
-|---|---|---|
-| `left_to_right` | x 오름차순 (행 내) | "왼쪽에서 오른쪽" |
-| `right_to_left` | x 내림차순 | "오른쪽에서 왼쪽" |
-| `center_out` | 행 중심 \|x−cx\| 오름차순 | "가운데부터 바깥으로" |
-| `diagonal` | 행 순 × 행 내 x 순의 사선 결합 | "대각선으로" |
+> ⚠ **기준: `left`/`right`는 house(객석)다** `[실측, 소급 발견 — spec.md §C.4 · progress.md §E.2.21]`
+> MA3 공식 축 의미는 **+x = stage left**(*"Stage right will be negative numbers"*)이고, 무대 관례상
+> **stage left/right(배우 기준)와 house left/right(객석 기준)는 정반대**다. x 오름차순은 최소 x부터이므로
+> **`left_to_right` = house left → house right = stage RIGHT → stage LEFT** 다. 조명 디자이너가
+> *"stage left에서 stage right로"* 라고 하면 **이 정렬의 역방향**을 뜻한다. 한국어 "왼쪽/오른쪽"도 house 기준이다.
+> 동작·라이브 판정은 전부 유효하다(P8 관측에서 사용자가 본 "왼쪽"이 최소 x였다) — **낱말이 기준을 말하지 않는 것**이 결함이며,
+> 출하된 폐쇄 집합이라 개명하지 않는다. 후속 SPEC은 기준을 이름에 박아 대응한다(GROUPGEN-001 `GEO Stage Right N`).
+
+| 어휘 | 정의 | 한정어 예 | 무대 기준 환산 |
+|---|---|---|---|
+| `left_to_right` | x 오름차순 (행 내) | "왼쪽에서 오른쪽" | stage right → stage left |
+| `right_to_left` | x 내림차순 | "오른쪽에서 왼쪽" | stage left → stage right |
+| `center_out` | 행 중심 \|x−cx\| 오름차순 | "가운데부터 바깥으로" | 기준 무관 (대칭) |
+| `diagonal` | 행 순 × 행 내 x 순의 사선 결합 | "대각선으로" | 행 순 + 위 좌우 환산 |
 
 - **결정론 2차 키**: 좌표 동률은 fid 오름차순으로 안정 정렬 — "임의"가 아니라 **문서화된 키**다(AC-SPATIAL-010과 §D edge의 화해 지점).
-- 다행 리그의 행간 순서: y 오름차순(무대 앞→뒤)을 기본으로 하고 스키마에 명시.
+- 다행 리그의 행간 순서: y 오름차순을 기본으로 하고 스키마에 명시. ⚠ `SPATIAL_ROW_ORDER = "y_ascending"`의 서술 *"stage front to back"* 은 **의미는 맞고 낱말이 비표준**이다 — 표준 어휘는 **`Downstage → Upstage`**(+y = upstage). 상수명·동작은 유지하고 어휘만 여기서 정정 기록한다.
 
 ### §3.3 왜 MAtricks가 아니라 정렬인가 (그리고 언제 둘을 함께 쓰는가)
 

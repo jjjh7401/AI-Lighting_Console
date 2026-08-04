@@ -583,4 +583,64 @@ left_to_right = (1, 2, 3)
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+- sync_complete_at: 2026-08-04
+- sync_status: **audit-ready**
+- CHANGELOG 반영 확인: `CHANGELOG.md` `[Unreleased]` §Added에 `SPEC-COPILOT-SPATIAL-001` 항목 추가.
+- frontmatter 전이: `spec.md` `status: draft → completed` · `version: 0.2.0 → 0.3.0` · `updated: 2026-08-04`.
+- **코드 변경 0** — 본 sync는 문서만 고친다. `git diff --stat -- server/` 빈 출력.
+
+### 인계 5건 소요 — 대상과 근거를 1:1로 명시
+
+| # | 인계 항목 | 소요 위치 | 판정 |
+|---|---|---|---|
+| ① | risky 분류 문면 모순 | `spec.md` REQ-020 · REQ-024 (**정본**) · HISTORY 0.3.0 · `acceptance.md` AC-031 · `plan.md §B M4` | **완료**. `[DEFERRED]` 표기를 네 곳에 일치시켰다. v0.2.0이 확장을 *의무*로 적고 run-phase가 그것을 되돌린 것이 모순의 원인이었다 |
+| ② | `arrange_fixtures` 무승인 명기 | `spec.md` §C.1 검증 천장 신규 행 **"좌표 기록의 승인 카드 — NO"** | **완료**. 천장 표는 *"NO 행에 기계 증거를 주장하는 문면·AC는 그 자체로 결함"* 을 선언하므로 이 사실의 정본 위치가 맞다 |
+| ③ | AC-031 우선순위 근거 | `acceptance.md` AC-031 — §E.2.20 결함 2 인용(무승인 좌표 기록 **54건**) | **완료**. *"게이트는 건강하고 좌표 기록만 그물을 통과한다"* 는 대조 관측(`Go+ Page 1.202`는 카드 정상)까지 함께 실었다 |
+| ④ | 절단 시 모델 미고지 | `spec.md` §C.1 신규 행 **"절단된 리그에서 모델이 불완전성을 고지하는가 — NO"** | **완료**. 후속 과제로 등록. **툴 설명은 지시일 뿐 강제가 아니다** — `server/looks/**` 방식의 상속된 한계 |
+| ⑤ | 정렬 어휘 기준 명기 | `spec.md` **§C.4 신설** · `design.md §3.2`(경고 블록 + 표에 *무대 기준 환산* 열 추가) | **완료**. `SPATIAL_ROW_ORDER`의 *"stage front to back"* 비표준 낱말도 함께 정정 기록(표준은 `Downstage → Upstage`) |
+
+### ⑤의 주장을 코드로 재검증했다 (문서가 코드에서 떠 있으면 그게 새 드리프트다)
+
+```
+left_to_right   -> (1, 2, 3)      # fid 1 = x=-4.0 = MA3 음수 = stage RIGHT = house LEFT
+right_to_left   -> (3, 2, 1)
+center_out      -> (2, 1, 3)      # 대칭 - 기준 무관
+diagonal        -> (1, 2, 3)
+SPATIAL_ROW_ORDER = y_ascending
+```
+
+→ **`left_to_right`의 첫 원소가 최소 x**임을 실측 확인. §C.4·design.md §3.2의 문면이 코드 동작과 일치한다.
+
+**후속 SPEC과의 정합도 실측했다** — GROUPGEN-001의 `lateral_split` 골든 리그에서:
+
+```
+bucket 0: x=[-5.9, -5.6, -5.3]..-5.0  -> 'GEO Stage Right'
+bucket 1: x=[ 5.0,  5.3,  5.6].. 5.9  -> 'GEO Stage Left'
+```
+
+→ bucket 0(최소 x = 음수 = MA3 stage right)이 `Stage Right`로 명명된다. **두 SPEC이 같은 좌표를 같은
+방향으로 읽으며**, GROUPGEN은 기준을 이름에 박아 SPATIAL의 어휘 모호성을 구조적으로 회피한다.
+
+### ⚠ lifecycle drift 기록 (은폐하지 않는다)
+
+GROUPGEN-001과 **같은 드리프트**다. `.claude/rules/moai/development/spec-frontmatter-schema.md`의
+Status Transition Ownership Matrix는 `draft → in-progress` 전이를 manager-develop이 첫 run-phase
+커밋에서 수행하도록 규정하는데, 본 SPEC의 run-phase 커밋(`1c72d3e` · `115eb6d`)은 `status:` 필드를
+한 번도 갱신하지 않았다. 본 sync 커밋이 `draft → completed`로 **직접 점프**한다.
+
+두 SPEC이 연속으로 같은 전이를 건너뛴 것은 **개별 실수가 아니라 계통 결함**을 시사한다 — run-phase
+델리게이션 프롬프트에 frontmatter 전이 의무가 없다. 근본 원인 소유자는 워크플로 스킬 쪽이며 본 sync
+범위 밖이다. **두 번 관측됐다는 사실 자체를 여기 남긴다.**
+
+### 남은 `[DEFERRED]` 3건 — 후속 SPEC 소유
+
+1. **Layout 기록**(REQ-SPATIAL-003 · AC-SPATIAL-003) — ASSUMPTION-55 실측 근거. v1은 3D-only.
+2. **AC-SPATIAL-031 risky 분류** — `server/safety/` PRESERVE 경계(§E.2.14). **라이브 대가가 이미 실현됐다**(§E.2.20 결함 2, 무승인 54건) — 후속 SPEC 우선순위 근거.
+3. **REQ-SPATIAL-024 승인 흐름** — 2에 종속. 감사 의미로는 충족, 승인 의미로는 미충족.
+
+②③은 `server/safety/`를 함께 소유하는 후속 SPEC이 한 몸으로 처리해야 한다.
+
+### 후속 과제 2건 (이 sync가 새로 등록)
+
+1. **절단 시 구조적 강제** — `truncated: true`일 때 툴 회신을 구조적으로 다르게 만든다(부분 리그 상태값 또는 정렬 결과 보류). 설명문 지시로는 강제되지 않음이 §E.2.20 결함 1로 실증됐다.
+2. **정렬 어휘 개명** — `left_to_right` → house 기준을 이름에 박는 형태. 출하된 폐쇄 집합의 파괴적 변경이므로 SemVer major 창에서만. GROUPGEN-001의 `GEO Stage Right N`이 선례다.
