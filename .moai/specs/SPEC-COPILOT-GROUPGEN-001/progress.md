@@ -1,6 +1,6 @@
 # SPEC-COPILOT-GROUPGEN-001 — 진행 기록 (progress)
 
-status: **plan-complete (audit-ready)** · plan-phase 실행 완료 · 구현 0 · 라이브 접근 0
+status: **run-phase M0 완료** · 게이트 B **GO**(SPEC 존속) · 게이트 A **NEGATIVE**(제안 전용 강등 — 정책 결정 사용자 대기) · 구현 코드 0 · 잔여 프로브 자산 **`Group 14 'GroupgenProbe'` 1건**(사용자 GUI 삭제 대기)
 
 ## §0 인수인계 — 여기서 시작한다 (2026-08-03 작성)
 
@@ -182,4 +182,169 @@ Run `run_5f9ccdfbf0b6`. 파일 무교차 계약(`.plan-contract.md` §4)을 사�
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+### §E.2.0 M0 라이브 프로브 — 세션 조건 (직접 실측 · 이월 0)
+
+승인: Implementation Kickoff Approval **반자율** 획득(2026-08-04). 워크트리 격리 실행 —
+`/Users/studiox/orca/workspaces/AI-Lighting_Console/groupgen-m0` @ `5ce471f`
+(주 워킹트리는 **타 작업자가 `feature/SPEC-COPILOT-MCP-001`로 점유** 중이라 건드리지 않았다).
+
+| 항목 | 값 |
+|---|---|
+| 콘솔 | grandMA3 onPC 2.4.2 · `app_gma3` pid **1106** (2026-08-02 19:31 기동) |
+| OSC | send `127.0.0.1:8000` / receive **9005** · `osc_slot` 2 |
+| 앱(코파일럿) | **미기동**(TCP 8765 비어있음) — 프로브는 `.moai/reports/m0-probe/fx_probe.py` **bridge 직결** |
+| 채널 등급 | `gate.screen()` **미경유**(LOOKLIB M0와 동일 매체 갭 — 콘솔 *능력* 프로브이므로 정당) |
+| 소켓 | **낡지 않음** — 첫 시도에 ping+state 응답(`Enable` 사이클 불요) |
+| 기준선(AC-034 재측정) | pytest **4511 passed · 5 skipped · 0 failed**(93s) · vitest **350 passed** |
+
+**⚠ 응답기 버전 발산 (프로브 충실도)** — 콘솔 설치본 **v1.6.1**(1219줄) vs 본 브랜치 **v1.5.0**(988줄),
+diff 299줄. 설치본에만 `props`·`introspect`가 있으며 출처는 **INTROSPECT-001**(미머지).
+`prop` 디스패치 블록이 **바이트 동일**함을 확인한 뒤 **1.5.0 부분집합(`prop`·`state`·`exec`)으로만**
+프로브했다. `introspect`/`props`는 **한 번도 쓰지 않았다** — 그것으로 얻은 GO는 본 브랜치에서
+**재현 불가한 거짓 신호**이기 때문이다(`plan.md` §C *"응답기 무변경 목표"*).
+SPATIAL §E.2가 **같은 발산을 독립적으로 기록**해 두었다(교차 확인).
+
+**대조군 양 축 확립 (FXLIB 선례 — `ok`를 쓰기 전에 먼저 한다)**
+- 음성: `prop … ZzzBogusProperty` → `ok:false "property not readable"` (그룹 13·14 **양쪽에서** 재현)
+- 양성: `prop … Name` → `ok:true "All"` / `"GroupgenProbe"`
+→ **ASSUMPTION-62 = GO.** `prop` 채널은 변별적이며, 본 세션에서 `ok`는 *속성 판독 가능성*의 증거로
+  사용 가능하다(값의 *의미*에 대한 증거는 아니다).
+
+### §E.2.1 게이트 판정 (폐쇄 어휘 · 행두 접두)
+
+```
+NEGATIVE: ASSUMPTION-61  멤버십 판독 채널 — 기존 3동사로는 없다 (단 Lua에 채널이 실재)
+GO:       ASSUMPTION-62  날조 속성 판독은 실패한다 — prop 채널 변별적
+GO:       ASSUMPTION-63  Store Group <n> 이 그룹을 만든다 — 재조회로 확인
+GO:       ASSUMPTION-64  Label Group <n> '<name>' 이 적용된다 — 재조회로 확인
+NEGATIVE: ASSUMPTION-65  점유 슬롯은 조용히 덮이지 않는다 — 대신 GUI 확인 다이얼로그 (강화, 실패 아님)
+GO:       ASSUMPTION-66  Store/Label Group 은 안전 게이트에서 safe 로 분류된다 (= 무승인 통과)
+SKIP:     ASSUMPTION-67  CONDITION_NOT_MET — 카테고리 축이 v1 범위 밖(D-Q9) · 리그도 동종
+```
+
+| 게이트 | 판정 | 귀결 |
+|---|---|---|
+| **A. 멤버십 판독 채널** | **NEGATIVE** | 자동 생성 축 중단 → **제안 전용 강등**(정책 결정은 사용자 몫) |
+| **B. `Store Group` 생성** | **GO** | **SPEC 존속** — M3 진행 가능 |
+| **C. 점유 슬롯 덮어쓰기** | **NEGATIVE-강화** | REQ-022 정적 차단이 **더욱 절대적** |
+| **D. 절단 시 슬롯 안전** | 분기 없음 | D-Q6 거부 정책 유지 |
+
+### §E.2.2 게이트 A — 멤버십은 읽을 수 없다 (**증명됨, 추론 아님**)
+
+`state DataPool/Groups/13`(`'All'`, 실사용 그룹) → `childCount: 0` — research §2 **재확인**.
+
+| 후보 속성 | Group 13 | **Group 14 (우리가 만든 것 — 멤버 정답 기지: 픽스처 1·2)** |
+|---|---|---|
+| `Object` · `Fixtures` · `Content` · `Members` | `ok:false` | `ok:false` |
+| `Count` | `ok:true` → `"function: 0x1063df3b0"` | `ok:true` → `"function: 0x1063df3b0"` |
+| `Selection` | `ok:true` → `"table: 0x…"` | `ok:true` → `"table: 0x600002c680c0"` |
+| `state …/14` | — | `childCount: 0` |
+
+**주소 안정성 대조 실험 (핸들의 정체 판별)**
+- `Selection`을 **같은 그룹**에 2회 → `0x600002db2680` → `0x600002c78440` = **주소 불안정**
+  → 접근마다 **새 테이블을 조립**한다(실재 데이터 구조). 주소 비교는 판별력 없음.
+- `Count`를 **다른 그룹**(13·12)에 → **동일 주소** `0x1063df3b0` = **클래스 메서드**다.
+  값을 얻으려면 `obj:Count()` **호출**이 필요한데 `prop`은 절대 호출하지 않는다.
+
+**결론**: 멤버십은 Lua에서 **도달 가능**하나(`obj:Count()` + `Selection` 순회), **직렬화에 신규 동사가
+필요**하다. `plan.md` §C의 예비 조항이 정확히 이 경우다 — *"신규 동사가 필요하면 `M.VERSION` 1.7.0"*.
+
+**결정적 근거**: 멤버를 **정확히 아는** Group 14에서도 판독 채널이 없었다. 남의 그룹을 읽어서 낸
+추론이 아니라, **정답을 아는 표본에서의 반증**이다.
+
+**⚠ 주장하지 않는 것 (과약속 금지)** — `Selection`이 *그룹 멤버*를 담는다는 것은 **미증명**이다.
+룰북 `31_choreography_patterns.md:85-90`의 `Set Selection MAtricks …`는 `Selection`을
+**현재 프로그래머 선택**을 가리키는 커맨드 키워드로 쓴다 — 이는 오히려 **반대 가설을 지지**한다.
+`Count`가 멤버 수를 준다는 것도 미증명이다(호출하지 않았으므로). 정직한 서술은
+**"후보 핸들이 존재하나 내용 미검증"** 이다.
+
+### §E.2.3 게이트 B — `Store Group` 은 만든다 (GO)
+
+```
+exec ClearAll                → ok:true "OK"
+exec Fixture 1 Thru 2        → ok:true "OK"        (fid 1~19 — SPATIAL §E.2 실측 계승)
+exec Store Group 14          → ok:true "OK"
+state DataPool/Groups        → childCount 5 → 6 · 슬롯 14 출현 · name "Group 14"
+exec Label Group 14 'GroupgenProbe'  → ok:true "OK"
+prop DataPool/Groups/14 Name → ok:true value "GroupgenProbe"      ← 재조회가 증거
+```
+
+`ok:true`를 증거로 쓰지 않았다 — **풀 재조회(childCount 5→6)와 이름 재조회**가 증거다.
+기본 작명은 `"Group 14"`(슬롯 번호 기반)이며 `Label`이 이를 덮는다 — REQ-013의 *"자동 작명과
+사용자 의도는 구별 가능하다"* 가 그룹 축에서도 성립한다.
+
+**표적 슬롯 실측**: 착수 시 점유 `1·11·12·13·15`, `truncated:false` → 빈 슬롯 `2~10·14·16+`.
+`state DataPool/Groups/14` → `ok:false "path segment not found: '14'"` 로 **쓰기 직전 재실측**.
+14를 고른 이유는 13·15 사이 **고립 간극**이라 2~10 연속 구간을 보존하기 때문이다.
+
+### §E.2.4 게이트 C — 조용히 덮지 않는다. **더 나쁜 방식으로 덮는다** (NEGATIVE-강화)
+
+```
+exec ClearAll                → ok:true
+exec Fixture 5 Thru 7        → ok:true          (앞의 1·2와 다른 픽스처)
+exec Store Group 14          → ok:false  "User Canceled Command"     ← 점유 슬롯
+prop DataPool/Groups/14 Name → ok:true "GroupgenProbe"   (덮이지 않음 — 재조회 확인)
+state DataPool/Groups        → childCount 6 유지
+```
+
+콘솔은 **거부하지 않았다**. **GUI 확인 다이얼로그를 띄웠고**, 조작자가 없어 취소로 귀결됐다.
+세 가지가 드러난다:
+
+1. **결과가 사람 판단에 위임된다** — 조작자가 OK를 누르면 **덮인다**. 백업·복구 불가 자산인데.
+2. **앱 관점에서 비결정적** — 무인이면 `ok:false`, 사람이 클릭하면 `ok:true`. 같은 커맨드, 다른 답.
+3. **라이브 콘솔에 모달을 띄운다** — 공연 중 무인 발화가 콘솔 UI를 붙잡을 수 있다.
+   **어디에도 기록되지 않은 운영 위험이며 본 세션이 처음 관측했다.**
+
+→ REQ-022(점유 슬롯 **정적** 차단)는 선호가 아니라 **강제**임이 실측으로 확정됐다.
+  후속 3커맨드가 정상 응답했으므로 모달 잔류는 없다.
+
+### §E.2.5 게이트 분류 (ASSUMPTION-66) — **D-Q4를 경험적으로 정당화한다**
+
+`classify_command(validate(cmd), load_ruleset())` 직접 실행:
+
+| 커맨드 | category | risky |
+|---|---|---|
+| **`Store Group 14`** | **`safe`** | **False** |
+| **`Label Group 14 'GEO Downstage'`** | **`safe`** | **False** |
+| `Store Group 14 /overwrite` | `blacklisted` | True |
+| `Delete Group 14` | `blacklisted` | True |
+| `ClearAll` · `Fixture 1 Thru 2` | `safe` | False |
+
+`blacklist.yaml`은 `"Delete"`와 `"Store /overwrite"`만 담는다 — **무플래그 `Store`는 없다**.
+즉 **현행 게이트는 그룹 생성을 승인 카드 없이 콘솔로 내보낸다.** 함정 8(요청하지 않은 좌표 기록
+54건 무승인 통과)이 **복구 불가 자산**에서 그대로 재현될 구조다.
+
+→ **REQ-031(D-Q4 `server/safety` 확장)이 없었다면 GROUPGEN은 이 결함을 안고 출하됐다.**
+  사용자 승인 결정이 실측으로 뒷받침됐다.
+
+### §E.2.6 잔여 상태 — 정리 미완 (P8)
+
+| 항목 | 상태 |
+|---|---|
+| 생성된 프로브 자산 | **`Group 14 'GroupgenProbe'` 1건** (멤버: 픽스처 1·2) |
+| 기존 그룹 `1·11·12·13·15` | **무접촉** — 재조회로 확인(이름·슬롯 전부 착수 시점과 동일) |
+| 프로그래머 | `ClearAll` 로 비움 |
+| 픽스처 좌표 | **무변경** (좌표 커맨드 0건) |
+| 룰북·소스 | **무변경** |
+
+**정리 경로**: `Delete`는 블랙리스트다(위 표). `plan.md` M0 P8의 사전 합의는
+**사용자 GUI 삭제 1건**이다(함정 21 — SCENE M0의 "시퀀스 7개 GUI 삭제" 부채를 1건으로 묶은 설계).
+**에이전트가 블랙리스트 파괴 동사를 게이트 우회로 발화하지 않는다.**
+
+### §E.2.7 M0 종합 — SPEC은 존속하되 축 하나가 잘렸다
+
+게이트 B가 GO이므로 **SPEC 전체 중단은 없다**. 그러나 게이트 A가 NEGATIVE이므로
+`plan.md` §A.4에 따라 **자동 생성 축은 제안 전용으로 강등**되며, 이 정책 결정은
+*"대체 정책을 에이전트가 고르지 않는다 — 블로커 보고"* 규율에 따라 **사용자에게 올린다**.
+
+**M0가 바꾼 것 (plan/spec 개정 대상)**
+1. **REQ-023**(생성 후 멤버십 재조회 검증) — 기존 3동사로는 **이행 불가**. 게이트 A NEGATIVE 분기
+   (검증 불가 명시 + 제안 전용 강등)가 **실제 경로**가 된다.
+2. **REQ-022** — 정적 차단의 근거가 "조용한 덮어쓰기"에서 **"조작자 의존 + 모달 위험"**으로 바뀐다.
+   더 강한 근거다. `design.md` §6의 차단 서술에 이 실측을 반영해야 한다.
+3. **REQ-031** — `Store`/`Label`이 `safe`라는 실측이 확보됐다. `AC-GROUPGEN-036`의 뮤테이션
+   (*"게이트에서 그룹 쓰기 참조 타입 인식을 제거하면 빨개진다"*)이 **현행 동작을 정확히 기술**한다.
+4. **신규 관측 — 모달 위험**: 점유 슬롯 `Store`가 라이브 콘솔 UI를 블로킹할 수 있다.
+   `spec.md` §C.1 검증 천장 또는 §C.3 상속 제약에 신규 항목으로 추가할 것.
+
+**미프로브 (승인은 받았으나 미실행)** — 없음. P1~P7 전부 실행, P8만 사용자 GUI 대기.
