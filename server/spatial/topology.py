@@ -178,9 +178,20 @@ def _compute_depth(fixtures: tuple[SpatialFixture, ...]) -> tuple[TopologyResult
             ),
             0.0,
         )
+    # @MX:ANCHOR: [SPEC] depth score must survive perfectly-aligned rows
+    #   (REQ-GROUPGEN-003, mutation-required).
+    # @MX:REASON: This scoring guard used to also require
+    #   `analysis.gaps.median_gap > 0`, which zeroed the score on exactly the
+    #   rigs depth_rows answers BEST. `rows.py`'s own docstring says why: "in a
+    #   real multi-row rig the fixtures of a row SHARE a depth, so within-row
+    #   gaps collapse to zero" — so a clean 3x10 grid has median_gap == 0 and
+    #   scored 0.0, while the two-ring rig this SPEC exists to stop misreading
+    #   scored 36.60. The ranking was inverted: depth_rows was punished for
+    #   being exactly right. The quotient below is defined at median_gap == 0
+    #   (`within_spread` comes from `row_spans`, which never consults
+    #   median_gap), so the guard bought nothing and cost the ordering.
     score = 0.0
-    if analysis.gaps is not None and analysis.gaps.median_gap > 0:
-        within_spread = max((row.fixtures[-1].y if row.fixtures else 0.0) for row in analysis.rows)
+    if analysis.gaps is not None:
         # Match _axis_buckets' scoring shape: weakest boundary gap over the
         # widest within-row spread, using the gap profile rows.py already
         # measured rather than re-deriving one.
@@ -360,14 +371,24 @@ def classify(fixtures: tuple[SpatialFixture, ...]) -> TopologyClassification:
     Priority (design.md §2.4, §3):
     1. Both ``depth_rows`` and ``lateral_split`` confident with >=2 buckets
        each -> ``grid`` wins outright (the two-axis contract).
-    2. Otherwise, among every OTHER confident detector, the one with the
-       highest separation score (:func:`_axis_buckets`) wins — the axis that
-       explains the rig's structure most cleanly, not the first one that
-       happens to answer confidently (§3's non-vacuousness argument: a
-       spurious y-axis gap on a circle scores far below the circle's own
-       radius split, because the row bands sprawl on y while the rings do
-       not).
-    3. Nothing confident -> ``kind=None``, ``low_confidence=True``.
+    2. Two readings are then struck out of contention before scoring, each
+       for a stated reason rather than a number (see the ``@MX:ANCHOR`` blocks
+       below): ``concentric`` when the rig is flat in y, because
+       ``hypot(x, y)`` has collapsed to ``|x|`` and the "rings" are the
+       lateral buckets folded; and ``vertical_levels`` when ``depth_rows``
+       already partitions the rig into >=2 rows, because an electrics rig is
+       named front/mid/back and its trim heights are incidental.
+    3. Among what remains, the highest separation score
+       (:func:`_axis_buckets`) wins — the axis that explains the rig's
+       structure most cleanly, not the first one that happens to answer
+       confidently (§3's non-vacuousness argument: a spurious y-axis gap on a
+       circle scores far below the circle's own radius split, because the row
+       bands sprawl on y while the rings do not).
+    4. Nothing confident -> ``kind=None``, ``low_confidence=True``.
+
+    ``bilateral_pairs`` is never in contention at all (D-Q10 — symmetry is a
+    signal, never a group); everything struck out here still appears in
+    ``candidates``, so the audit trail shows what was weighed and why.
     """
     depth, depth_score = _compute_depth(fixtures)
     lateral, lateral_score = _compute_lateral(fixtures)
@@ -383,26 +404,32 @@ def classify(fixtures: tuple[SpatialFixture, ...]) -> TopologyClassification:
 
     # @MX:ANCHOR: [SPEC] degenerate mirror artefact (REQ-GROUPGEN-003, live-found
     #   in M6 stage 3, mutation-required).
-    # @MX:REASON: On a rig that is mirror-symmetric about the origin with y and z
-    #   flat — 9 fixtures stage-right, 9 stage-left, which a designer calls
-    #   "left/right" — the radius from origin collapses to |x|, so EVERY radius
-    #   holds exactly one pair. The concentric reading then scores a perfect
-    #   separation (live-measured 20.0 against lateral_split's 0.75) and answers
-    #   "9 rings of 2". That is the MIRROR IMAGE of the defect this SPEC exists to
-    #   fix (research.md §3: a 2-ring rig misread as 9 rows) — a confident answer
-    #   that describes pairs instead of structure. `bilateral_pairs` being
-    #   confident at the same time is the algebraic signature of that symmetry,
-    #   and D-Q10 already says symmetry is a SIGNAL, never a group. So the radius
-    #   reading is demoted out of contention here rather than allowed to win on a
-    #   score that measures a symmetry it is not entitled to name.
-    if (
-        concentric.kind == "concentric"
-        and not concentric.low_confidence
-        and bilateral.kind == "bilateral_pairs"
-        and not bilateral.low_confidence
-        and len(concentric.fids_by_bucket) > 2
-        and all(len(bucket) == 2 for bucket in concentric.fids_by_bucket)
-    ):
+    # @MX:REASON: `concentric` measures `math.hypot(x, y)`. When the rig is FLAT
+    #   in y, that expression is algebraically `|x|` — so the "radius" buckets are
+    #   not an independent hypothesis at all, they are the lateral buckets folded
+    #   about x=0. Live-measured on M6 stage 3 (9 fixtures stage-right, 9
+    #   stage-left, y and z flat — a rig a designer calls "left/right"): every
+    #   radius held exactly one mirror pair, `concentric` scored a perfect 20.0
+    #   against `lateral_split`'s 0.75, and answered "9 rings of 2". That is the
+    #   MIRROR IMAGE of the defect this SPEC exists to fix (research.md §3: a
+    #   2-ring rig misread as 9 rows) — a confident answer describing a fold
+    #   instead of a structure.
+    #
+    #   The guard is the COLLAPSE, not its symptoms. An earlier attempt keyed on
+    #   the M6 rig's own fingerprint (every radius bucket exactly 2 AND
+    #   `bilateral_pairs` confident), and both of those are accidents of that
+    #   18-fixture rig rather than properties of the phenomenon: one spare
+    #   fixture at x=-3.0 makes a bucket of 3 and drops `bilateral_pairs` to
+    #   partial, so the demotion stopped firing and `concentric` with
+    #   `buckets=[3,2,2,2,2,2,2,2,2]` came back (measured: 6 of 15 flat mirror-bar
+    #   swatches regressed that way). `y_span` is the thing that actually makes
+    #   the radius meaningless, so `y_span` is what is tested. A flat rig with
+    #   real distance-from-centre structure is not lost by this: there is nothing
+    #   to lose, because on a flat rig `hypot(x, y)` cannot see anything `x`
+    #   cannot, and the honest name for a fold of x is not "rings".
+    y_values = [fixture.y for fixture in fixtures]
+    plane_is_flat = bool(y_values) and (max(y_values) - min(y_values)) <= SPATIAL_ROW_NOISE_SPAN
+    if concentric.kind == "concentric" and plane_is_flat:
         concentric = TopologyResult(
             kind=None,
             fids_by_bucket=(),
@@ -411,6 +438,36 @@ def classify(fixtures: tuple[SpatialFixture, ...]) -> TopologyClassification:
         )
         concentric_score = 0.0
         candidates = (depth, lateral, concentric, vertical, grid, bilateral)
+
+    # @MX:ANCHOR: [SPEC] a confident depth partition outranks `vertical_levels`
+    #   (REQ-GROUPGEN-003, user-settled policy, mutation-required).
+    # @MX:REASON: A lighting domain call, not a numeric one. An electrics rig is
+    #   named front/mid/back; trim height is incidental to it, and the same three
+    #   bars hung at three trims produce a `vertical_levels` reading that is TRUE
+    #   and useless. Live-measured two distinct losses when score alone decided:
+    #   3 electrics (y=0/3/6, z=5.0/6.5/8.0) gave depth `[5,5,5]` and vertical
+    #   `[5,5,5]` — identical partition, wrong vocabulary; and 3 rows across only
+    #   2 trims gave depth `[5,5,5]` against vertical `[10,5]` — vertical won and
+    #   merged two rows into one group. Both are rigs `arrange_fixtures`' own grid
+    #   preset writes (`_centred_offsets` aligns y exactly per row), so the app
+    #   was misreading rigs it had just built.
+    #
+    #   >=2 buckets is the whole condition, and it is load-bearing: a rig flat in
+    #   y answers `depth_rows` with ONE bucket, which partitions nothing, so a
+    #   genuine z-tiered rig (`vertical_levels`) must still win there. Like
+    #   `bilateral_pairs` below, `vertical` stays in `candidates` fully confident
+    #   — the z axis really does split — and only leaves `scored`. Nothing here
+    #   touches the depth<->lateral two-axis contract: `grid` already returned
+    #   above, and a confident `lateral` always carries >=2 buckets, so a
+    #   confident depth partition can never reach this rule alongside one.
+    depth_partitions = depth.kind == "depth_rows" and len(depth.fids_by_bucket) >= 2
+    contenders: tuple[tuple[TopologyResult, float], ...] = (
+        (depth, depth_score),
+        (lateral, lateral_score),
+        (concentric, concentric_score),
+    )
+    if not depth_partitions:
+        contenders = (*contenders, (vertical, vertical_score))
 
     # @MX:ANCHOR: [SPEC] `bilateral_pairs` is a SIGNAL, never a selected topology
     #   (`.plan-contract.md` §2 D-Q10, mutation-required).
@@ -425,12 +482,7 @@ def classify(fixtures: tuple[SpatialFixture, ...]) -> TopologyClassification:
     #   `candidates` (fully reported) and out of `scored`.
     scored: list[tuple[float, TopologyResult]] = [
         (score, result)
-        for result, score in (
-            (depth, depth_score),
-            (lateral, lateral_score),
-            (concentric, concentric_score),
-            (vertical, vertical_score),
-        )
+        for result, score in contenders
         if result.kind is not None and not result.low_confidence
     ]
 

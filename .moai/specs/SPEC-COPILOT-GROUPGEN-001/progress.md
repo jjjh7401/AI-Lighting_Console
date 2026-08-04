@@ -1,6 +1,6 @@
 # SPEC-COPILOT-GROUPGEN-001 — 진행 기록 (progress)
 
-status: **run-phase M0~M6 완료 + amendment v0.4.0 완료 · 잔여 SKIP 0건** · 타입 축 라이브 GO(ASSUMPTION-67 종결, 결함 2건 소인) · Gemini 턴 GO(모델이 툴 선택 · 폐쇄 어휘 준수 · coverage 공시 도달 · 쓰기 0) · 그룹 축 쇼파일 순변화 **0**
+status: **run-phase M0~M6 완료 + amendment v0.5.0 완료 · 잔여 SKIP 0건** · 머지 전 독립 리뷰 4인이 P0 1건(승인 무결성)+P1 3건 소인 · 타입 축 라이브 GO · Gemini 턴 GO · 그룹 축 쇼파일 순변화 **0**
 
 ## §0 인수인계 — 여기서 시작한다 (2026-08-03 작성)
 
@@ -692,3 +692,164 @@ M0~M6 전 구간에서 라이브가 잡은 것 중 **단위 테스트로는 원�
 - `pytest` **4682 passed · 7 skipped · 0 failed** (amendment 전 4676 → +6)
 - `server/safety/**` · `server/rulebook/**` byte-diff **0** (PRESERVE 유지)
 - 콘솔 그룹 축 순변화 **0** — 턴 전후 풀 동일
+
+## §E.6 머지 전 독립 리뷰 4인 병렬 — P0 1건 + P1 3건 (2026-08-04)
+
+PR #24를 열고 **머지 전에** 독립 리뷰어 4인을 병렬로 붙였다(SCENE-001 선례 §E.2.10 계승).
+자기검토는 값이 낮으므로 리뷰어에게 *"주장을 반증하려 적극적으로 시도하라"* 를 지시하고
+파일 무교차 4축(안전 경계 · 위상 정확성 · 툴 표면 · 증거 정합성)으로 나눴다.
+
+**결과: 머지를 멈춰야 하는 P0 1건을 잡았다.** 그리고 그 P0은 **리뷰어 2인이 서로 다른 축에서
+독립적으로 수렴**했다 — 우연한 발견이 아니라는 뜻이다.
+
+### §E.6.1 P0 — 승인 무결성 붕괴 (dedupe가 선택 줄을 탈락시킨다)
+
+`_is_programmer_state`는 `Fixture 7`을 dedupe에서 면제하지만 **가산 체인은 면제하지 않는다**:
+
+```
+_is_programmer_state('Fixture 7')                      -> True
+_is_programmer_state('Fixture 1 + Fixture 2 + Fixture 3') -> False   <- 여기
+```
+
+`create_arrangement_groups`가 승인된 계획 전진을 **하나의** `run_commands` 번들로 넘겼으므로,
+번들 내 dedupe가 둘째 그룹의 동일한 선택 줄을 `skipped_already_executed`로 떨어뜨렸다.
+코디네이터 재현(수정 전):
+
+```
+사람이 승인한 카드         │ 콘솔이 실제로 받은 것
+──────────────────────────┼──────────────────────────
+ClearAll                  │ ClearAll
+Fixture 1 + 2 + 3         │ Fixture 1 + 2 + 3
+Store Group 1             │ Store Group 1
+Label Group 1 '…'         │ Label Group 1 '…'
+ClearAll                  │ ClearAll
+ClearAll                  │ ClearAll
+Fixture 1 + 2 + 3         │        ← 사라졌다
+Store Group 2             │ Store Group 2   ← 빈 프로그래머에서 발화
+```
+
+**사람이 승인한 것과 콘솔이 받은 것이 다르다** — 이 SPEC이 세우려던 바로 그 속성이 깨진다.
+
+왜 평범한 경우에 터지는가: 제조사·모델이 1:1인 리그(대부분의 실사용 리그)에서
+`type_axis_groups`가 두 축에 대해 **바이트 동일한** fid 튜플을 낸다. 그리고 **v0.4.0 개정이
+축을 전부 보고하게 만들어 오히려 발화를 쉽게 했다** — 내 수정이 다른 결함의 도달 범위를 넓혔다.
+
+**왜 이것이 P0인가**: 멤버십은 이 플랫폼에서 판독 불가(§E.2.1 게이트 A NEGATIVE)이므로
+**탐지도 복구도 원리적으로 불가**하다. 리뷰어 재현에서 쓰기를 반영하는 콘솔 더블을 쓰면
+`status:"created"` · `slot_exists:true` · `name_verified:true` 로 **빈 그룹을 긍정 확인**했다.
+
+#### 결정적 근거 — 저장소가 이미 세 곳에서 같은 형상을 가드한다
+
+- `server/looks/busking.py::_guard_collision` + `VALUE_LINE_COLLISION` — 토상 주석: *"두 번째 값 라인이
+  탈락하면 빈 프로그래머 상태로 Store가 실행되고 콘솔은 성공으로 답한다"*
+- `server/scene/compile.py::_guard_collision` — `VALUE_LINE_COLLISION` raise
+- `server/fx/instantiate.py:113-124` `@MX:ANCHOR` — *"the guard below decides which of ITS OWN lines the
+  dedupe will compare … the drop is silent, because `Store` still runs and the console still answers ok."*
+
+`server/groupgen/write.py`는 **같은 형상의 신규 빌더인데 가드가 없었다.** 판단 미스가 아니라
+**이미 문서화된 패턴을 놓친 것**이다. 이건 이 세션에서 가장 값비싼 교훈이다.
+
+#### 수정 — 두 겹
+
+1. **주 수정**(`tools.py`): 그룹당 한 번들을 **각기 새 `ExecutionContext`** 로 발화. 승인은 여전히
+   전 계획 1통(카드 분할 금지). 그룹 번들은 `ClearAll`로 여닫으므로 이전 툴 호출 상태에 의지하지
+   않는다 — 새 컨텍스트가 안전한 이유다. 부분 실패는 신규 `slot_outcomes`/`partial_write`로
+   **쓴 슬롯과 못 쓴 슬롯을 구분**하고 `executed`는 실패 시 `False`를 유지한다.
+2. **백업 수정**(`write.py`): `GROUP_LINE_COLLISION` + `guard_bundle_collision` — **write.py가 자기가
+   생산한 줄을 스스로 분류**한다(`fx/instantiate.py` 선례 그대로). `tools.py` import는 순환이라
+   면제 집합을 지역 재선언하고 **동일성을 테스트가 단정**한다(비교 자체의 판별력 3건 + 비공허성 1건 포함).
+
+**[HARD] `_PROGRAMMER_STATE_COMMANDS` 자체는 넓히지 않았다** — 넓히면 looks/scene/fx의 dedupe 면제가
+동시에 넓어져 본 PR 밖으로 파급된다. `test_fx_boundary.py` 그린 유지로 확인.
+
+**교차 호출 트리거도 함께 닫혔다**: `ExecutionContext.executed_ok`가 한 지시 내 누적되므로
+자기수정 재시도(REQ-MVP-012)만으로도 그룹 1개짜리 호출이 오염됐다.
+
+### §E.6.2 P1 — 미러 아티팩트 강등이 리그 "지문"에 걸려 있었다
+
+§E.2.8이 고쳤다고 적은 결함이 **여분 장비 1대만 추가하면 재발**했다. 강등 조건(*모든 반지름 버킷이
+정확히 2* ∧ *`bilateral` 고신뢰*)이 전부 **그 18대 리그의 우연한 성질**이었고 — 여분 1대가 두 조건을
+동시에 깬다 — 현상의 성질이 아니었다.
+
+**진짜 현상**: 평면이 평평하면 `math.hypot(x, y)`가 `|x|`로 붕괴해 **반지름 축이 좌우 축을 x=0에
+대해 접은 사본**일 뿐 독립 가설이 아니다. 붕괴 조건 1개(`y_span <= SPATIAL_ROW_NOISE_SPAN`)로 교체했다.
+평면 미러-바 계열 스윕에서 `concentric` **6/15 → 0/15**.
+
+> 같은 결함을 **두 번** 놓쳤다. 첫 수정이 *증상이 나타난 리그*를 고정했을 뿐 *원인*을 고정하지
+> 않았기 때문이다. 골든이 회귀를 막아주지만 **골든과 같은 형상만** 막아준다.
+
+### §E.6.3 P1 — depth 점수 영성 + 축 우선순위 (사용자 도메인 결정)
+
+`_compute_depth`의 `and analysis.gaps.median_gap > 0` 절이 **완벽 정렬 행 리그의 점수를 0.0**으로
+만들었다. `rows.py` 자신의 docstring이 *"한 행의 픽스처는 깊이를 공유하므로 행 내 갭이 0으로 붕괴"* 라
+적으므로 다행 리그의 `median_gap`은 **항상** 0이다. 실측 역전:
+
+| 리그 | depth score |
+|---|---|
+| 정렬 3×10 그리드 (완벽한 답) | **0.0** |
+| 2겹 동심원 — 이 SPEC의 **창립 오독** | **36.6** |
+
+**도달 범위가 이 PR 자신이다**: `arrange_fixtures`의 grid 프리셋이 `_centred_offsets`로 행당 y를
+완전 정렬해 쓰므로 **앱이 직접 쓴 리그를 자기 분류기가 오독한다.** 코디네이터 재현:
+
+```
+전기바 3개(깊이+트림 각기 다름): depth_rows[5,5,5] 고신뢰인데 vertical_levels 가 이김  (어휘 손실)
+3행 x 2트림                  : depth_rows[5,5,5] 버리고 vertical_levels[10,5]        (파티션 손실)
+```
+
+**수정**: 절 삭제(정렬 3×10 `0.0 → 60.0`, 동심원 36.6 불변) + **깊이 우선 정책**(사용자 확정) —
+`depth_rows` 고신뢰 ∧ 버킷 ≥2면 `vertical_levels`를 경합에서 제외. `vertical`은 `candidates`에
+고신뢰 그대로 남는다(`bilateral_pairs`의 *"보고하되 선택하지 않음"* 형상 승계).
+
+⚠ **남는 질문(후속)**: 영성을 고쳐도 점수만으로는 depth 60 vs vertical 80이다. 이 배제 규칙이 없으면
+여전히 vertical이 이긴다 — 근본적으로 **축 간 점수 비교 가능성**이 미해결이다.
+
+### §E.6.4 P1 — AC 인용 20건이 해석되지 않았다
+
+`acceptance.md`의 pytest 인용 **35건 중 20건**이 존재하지 않는 파일·테스트를 가리켰다
+(plan-phase에서 지은 이름을 구현 후 반영하지 않음). 실체는 다른 이름으로 커버되지만
+**AC 문면대로 돌리면 `no tests ran` / `ERROR: not found`** 가 나온다 — 즉 그 AC들은 재검증 불가였다.
+41건으로 정리해 전수 해석을 확인했고, 유일한 미해석분(`AC-014`, `[Optional]`)은 인용 지점에 SKIP을 명기했다.
+
+### §E.6.5 ⚠ 코디네이터의 자기 정정 — 내가 남의 정확한 숫자를 틀렸다고 단정했다
+
+v0.4.0에서 W8이 AC-043의 뮤테이션 카운트를 "3 failed"라 적었고, 나는 이를 **1건 과대**라 정정했다.
+**그 정정이 틀렸다**:
+
+```
+뮤테이션 후 -k axis_reports (내가 쓴 범위)  : 2 failed
+뮤테이션 후 파일 전체 (AC 가 함의한 범위)    : 3 failed
+```
+
+W8이 옳았다. 나는 **더 좁은 선택 범위로 재고** 그 차이를 상대의 오류로 귀속시켰다.
+`lesson-single-hypothesis-analyzer-lies-confidently`를 **검증하는 쪽이** 저지른 형태다 —
+"검증했다"는 사실이 "옳게 검증했다"를 함의하지 않는다. **범위를 명기하지 않은 AC 문면**이
+공범이므로 두 숫자를 모두 범위와 함께 기록했다.
+
+### §E.6.6 리뷰가 **찾지 못한** 것 (정직한 천장)
+
+리뷰어 4인이 각각 반증을 시도했고 실패한 항목은 그 자체로 증거다:
+
+- fail-closed 승인(`DenyAllApprovalPort` 기본값)은 **우회 경로가 발견되지 않았다** — 승인 없이는 `commands: []`
+- 폐쇄 어휘의 폐쇄성 — 입력이 그룹 이름으로 흘러드는 경로 **0건**
+- `server/safety/**` 간접 변경(monkeypatch·기본 인자·전역 상태) **0건**
+- 신규 툴 4종의 스키마가 Gemini/Anthropic 양쪽에서 거부되지 않음
+- 절단된 목록으로 쓰기가 막히는 것(`FIXTURE_LIST_TRUNCATED`)은 실제로 발화
+
+### §E.6.7 범위 밖 발견 — 타 브랜치 작업이 쓸려 들어왔다
+
+코디네이터가 diff 경계를 감사하다 `SPEC-COPILOT-INTROSPECT-001` **6파일(1,271줄)** 이
+`68db44f`의 `git add -A`로 추적에 들어온 것을 발견했다. `spec/introspect-001`은 **main 기준 15커밋
+앞선 타 작업자 브랜치**이고 우리 사본은 6파일 **전부** 그쪽과 다르다 — 즉 남의 진행 중 작업의
+**낡은 스냅샷**을 main에 밀어넣는 상태였다. 결정적으로 SPATIAL 자신의 `progress.md`가
+*"`.moai/specs/SPEC-COPILOT-INTROSPECT-001/`은 이 브랜치에서 **untracked**다"* 라 적고 있었다 —
+**문서가 트리와 모순되며 문서 쪽이 의도에 맞았다.** `git rm`으로 제거했다.
+
+### §E.6.8 검증
+
+- `pytest` **4716 passed · 7 skipped · 0 failed** (리뷰 전 4682 → **+34**)
+- `vitest` **350 passed / 15 files** (UI byte 무변경)
+- `ruff check server/` **3건** — 전부 base 부채(E501) · `ruff format --check` 16파일 이미 정렬
+- `server/safety/**` byte-diff **0** · `server/rulebook/**` 기존 파일 수정 **0**(신규 자산 추가만)
+- 뮤테이션 RED 실측: 미러 지문 복원 → **8 failed** · depth 영성 복원 → **1 failed** ·
+  깊이 우선 제거 → **1 failed** · 둘 다 → **3 failed** · P0 두 계층 각각 RED 확인

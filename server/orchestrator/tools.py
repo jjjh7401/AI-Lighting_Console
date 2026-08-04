@@ -25,7 +25,11 @@ from server.fx.matching import match_fx
 from server.fx.report import build_report as build_fx_report
 from server.fx.report import to_korean as fx_report_to_korean
 from server.fx.schema import FxLibrary
-from server.groupgen.write import GroupSlotError, build_group_write_plan
+from server.groupgen.write import (
+    GroupSlotError,
+    build_group_write_plan,
+    guard_bundle_collision,
+)
 from server.llm.types import ToolCall, ToolDefinition, ToolResult
 from server.looks.busking import build_genre_bundle, select_genre
 from server.looks.instantiate import (
@@ -3710,13 +3714,40 @@ def build_toolset(
         except ValueError as error:
             return _error_result(call, str(error))
 
-        all_commands = [command for step in plan.steps for command in step.commands]
+        # [HARD] ONE run_commands bundle PER GROUP — never one bundle for the
+        # whole plan. `run_commands` folds a line that already succeeded in the
+        # same bundle into `skipped_already_executed`, and a group chain's
+        # SELECTION line is NOT dedupe-exempt (only a single bare
+        # `Fixture <operand>` is; `Fixture 1 + Fixture 2 + Fixture 3` is not —
+        # `_is_programmer_state` above). Two groups over the same fids — which
+        # `classify_arrangement_topology` produces on any rig whose
+        # manufacturer:model mapping is 1:1, because `type_axis_groups` then
+        # emits byte-identical fid tuples for two axes — would therefore lose
+        # the SECOND group's selection, and `Store Group N` would fire against
+        # the programmer its own leading `ClearAll` just emptied. The console
+        # answers ok either way and membership is unreadable
+        # (progress.md §E.2.8), so the human would have approved one plan and
+        # the console would have received another, undetectably.
+        #
+        # `bundles` is the ONE definition of what gets fired; the guard below
+        # and the execution loop both consume it, so re-concatenating the plan
+        # cannot slip past the guard.
+        bundles = [(step, list(step.commands)) for step in plan.steps]
+        all_commands = [command for _step, bundle in bundles for command in bundle]
         # exec 큰따옴표 금지 계승 — write.py already refuses a double-quoted
         # name (`_label_command`), so this is a static re-assertion over the
         # assembled text on its way to the gate, not a belief about the
         # builder that produced it (same shape as arrange_fixtures' own
         # `arrange_scope_violations` seal).
         assert all('"' not in command for command in all_commands)
+        # The same shape of re-assertion for the dedupe hazard, against the
+        # exact lists that will be fired (write.py already guarded each step
+        # it built — this re-checks the BUNDLING, which is this layer's call).
+        try:
+            for _step, bundle in bundles:
+                guard_bundle_collision(bundle)
+        except GroupSlotError as error:
+            return _error_result(call, f"{error.code}: {error.message}")
 
         def _plan_payload(**extra: object) -> dict[str, object]:
             payload: dict[str, object] = {
@@ -3795,14 +3826,61 @@ def build_toolset(
                 )
             )
 
-        execution = run_commands(
-            ToolCall(id=call.id, name="run_commands", arguments={"commands": all_commands}),
-            context,
-        )
-        gate_payload = json.loads(execution.result.content)
-        executed = not execution.result.is_error
+        # Approval was ONE request over the whole plan (the human saw every
+        # line at once); only the FIRING is split. Each bundle gets a FRESH
+        # context: `ExecutionContext.executed_ok` accumulates across every tool
+        # call in one instruction turn (server/orchestrator/runner.py:216,
+        # 222-223), so a selection line an earlier call already fired — a
+        # self-correction retry (REQ-MVP-012) is enough — would be folded out
+        # of a group chain even when this call asks for a single group. A group
+        # chain opens AND closes with `ClearAll`, so it depends on no state a
+        # previous tool call established; a fresh context is therefore safe as
+        # well as necessary.
+        outcomes: list[CommandOutcome] = []
+        command_reports: list[dict[str, object]] = []
+        slot_outcomes: list[dict[str, object]] = []
+        failure: dict[str, object] | None = None
+        for step, bundle in bundles:
+            if failure is not None:
+                # Stop-on-first-failure, inherited across bundles: a later
+                # group is never written on top of a broken one, and its
+                # slot is reported as untouched rather than omitted.
+                for command in bundle:
+                    outcomes.append(
+                        CommandOutcome(
+                            command=command,
+                            status="not_executed",
+                            detail="not executed (an earlier group's bundle failed)",
+                        )
+                    )
+                    command_reports.append(
+                        {
+                            "command": command,
+                            "status": "not_executed",
+                            "detail": "not executed (an earlier group's bundle failed)",
+                        }
+                    )
+                slot_outcomes.append(
+                    {"slot": step.slot, "name": step.name, "status": "not_attempted"}
+                )
+                continue
+            execution = run_commands(
+                ToolCall(id=call.id, name="run_commands", arguments={"commands": bundle}),
+                _EMPTY_CONTEXT,
+            )
+            bundle_payload = json.loads(execution.result.content)
+            outcomes.extend(execution.command_outcomes)
+            # Passed through verbatim rather than re-serialized from
+            # `outcomes`: a gate block reports `reasons` (a list), not `detail`.
+            command_reports.extend(bundle_payload.get("commands", []))
+            if execution.result.is_error:
+                failure = bundle_payload
+                slot_outcomes.append({"slot": step.slot, "name": step.name, "status": "failed"})
+            else:
+                slot_outcomes.append({"slot": step.slot, "name": step.name, "status": "executed"})
 
-        if not executed:
+        if failure is not None:
+            written = [entry for entry in slot_outcomes if entry["status"] == "executed"]
             return ToolExecution(
                 result=ToolResult(
                     tool_call_id=call.id,
@@ -3810,20 +3888,31 @@ def build_toolset(
                     content=json.dumps(
                         _plan_payload(
                             status="failed",
+                            # "the write completed as planned" — never "nothing
+                            # reached the console". `slot_outcomes` carries the
+                            # per-slot truth so a partial write cannot read as
+                            # either a clean success or a clean no-op.
                             executed=False,
-                            gate_status=gate_payload.get("gate_status"),
-                            notice=gate_payload.get("notice"),
-                            commands=gate_payload.get("commands", []),
+                            partial_write=bool(written),
+                            slot_outcomes=slot_outcomes,
+                            gate_status=failure.get("gate_status"),
+                            notice=failure.get("notice"),
+                            commands=command_reports,
                             error=(
-                                "the group write bundle did not complete — see "
-                                "'commands' for the per-command gate/execution outcome"
+                                "the group write stopped at the first failing bundle — "
+                                f"{len(written)} of {len(bundles)} group slots were "
+                                "written before it; see 'slot_outcomes' for which, and "
+                                "'commands' for the per-command gate/execution outcome. "
+                                "A written slot is NOT rolled back: grandMA3 exposes no "
+                                "membership read channel (progress.md §E.2.8), so a "
+                                "human must check the slots marked 'executed'."
                             ),
                         ),
                         ensure_ascii=False,
                     ),
                     is_error=True,
                 ),
-                command_outcomes=execution.command_outcomes,
+                command_outcomes=tuple(outcomes),
             )
 
         # Re-query evidence (design.md §10 policy (c) automated-verification
@@ -3867,13 +3956,13 @@ def build_toolset(
                         executed=True,
                         succeeded=succeeded,
                         verified_steps=verified_steps,
-                        commands=gate_payload.get("commands", []),
+                        commands=command_reports,
                     ),
                     ensure_ascii=False,
                 ),
                 is_error=not succeeded,
             ),
-            command_outcomes=execution.command_outcomes,
+            command_outcomes=tuple(outcomes),
         )
 
     definitions = (

@@ -644,3 +644,26 @@ Status Transition Ownership Matrix는 `draft → in-progress` 전이를 manager-
 
 1. **절단 시 구조적 강제** — `truncated: true`일 때 툴 회신을 구조적으로 다르게 만든다(부분 리그 상태값 또는 정렬 결과 보류). 설명문 지시로는 강제되지 않음이 §E.2.20 결함 1로 실증됐다.
 2. **정렬 어휘 개명** — `left_to_right` → house 기준을 이름에 박는 형태. 출하된 폐쇄 집합의 파괴적 변경이므로 SemVer major 창에서만. GROUPGEN-001의 `GEO Stage Right N`이 선례다.
+
+### §E.4.1 ⚠ 머지 전 감사 — 타 브랜치 작업이 쓸려 들어와 있었다 (제거 완료)
+
+PR #24 머지 전 코디네이터가 base(`3176900`) 대비 diff 경계를 감사하다 발견했다.
+`SPEC-COPILOT-INTROSPECT-001` **6파일(1,271줄)** 이 `68db44f`(GROUPGEN 어휘 조사 커밋,
+제목에 INTROSPECT를 언급하지 않는다)의 `git add -A`로 추적에 들어와 있었다.
+
+| 확인 | 실측 |
+|---|---|
+| 전용 브랜치 존재 | `spec/introspect-001` — **main 기준 15커밋 앞섬**, `e2e-live` 워크트리에 체크아웃됨 |
+| 우리 사본 vs 그쪽 | **6파일 전부 blob sha 다름** — 남의 진행 중 작업의 **낡은 스냅샷** |
+| INTROSPECT 상태 | `status: draft` · 코드 **0건**(문서만) |
+| main 선례 | main에 `draft` SPEC은 **0건**(completed 12 · in-progress 2) — 머지되면 첫 사례가 사고로 생긴다 |
+
+**결정적 근거는 이 문서 자신이었다.** §E.2.5가 이렇게 적고 있다:
+
+> *부수 발견: … `.moai/specs/SPEC-COPILOT-INTROSPECT-001/`은 이 브랜치에서 **untracked**다.*
+
+즉 **문서가 트리와 모순되며 문서 쪽이 의도에 맞았다.** `git rm`으로 6파일을 제거해 §E.2.5의
+서술을 다시 참으로 만들었다. 정본은 `spec/introspect-001`이 계속 소유하며, 그 SPEC은 자기 PR로
+들어와야 한다 — 이 PR이 낡은 사본을 먼저 올리면 그쪽 PR이 없던 버전과 충돌한다.
+
+`related_specs`의 ID 참조와 ASSUMPTION 번호 예약(46~52)은 **파일 경로 의존이 아니므로** 무영향이다.
