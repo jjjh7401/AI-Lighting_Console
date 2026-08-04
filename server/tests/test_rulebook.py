@@ -6,18 +6,23 @@ assemblies (REQ-MVP-008 — no timestamps, session IDs, or any per-turn variable
 values; one changed byte invalidates the whole provider cache prefix).
 
 The Korean field-lighting term dictionary axis (REQ-MVP-042) is part of that
-fixed prefix and inherits the same stability contract.
+fixed prefix and inherits the same stability contract, and so does the spatial
+design axis (SPEC-COPILOT-SPATIAL-001 REQ-SPATIAL-016/017) — one asset added,
+five assets untouchable.
 """
 
 from __future__ import annotations
 
 import re
+import subprocess
+from pathlib import Path
 
 from server.rulebook.assembly import (
     RULEBOOK_VERSION,
     assemble_prefix,
     korean_term_entries,
     rulebook_asset_files,
+    rulebook_dir,
 )
 
 # Variable-value patterns that must never appear in the fixed prefix
@@ -25,6 +30,68 @@ from server.rulebook.assembly import (
 _ISO_TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}")
 _ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+# SPEC-COPILOT-SPATIAL-001 run-phase kickoff (progress.md §E.2.0 row 2). The
+# five assets that existed then are PRESERVE for the whole SPEC: byte-diff 0.
+_RUN_PHASE_BASE = "4d298b87225d4d0292b3c641360d90d231b5a177"
+_ASSETS_PREFIX = "server/rulebook/assets/v2.4.2"
+_PRESERVED_ASSETS = (
+    "00_grammar.md",
+    "10_object_model.md",
+    "20_korean_terms.md",
+    "30_plugin_patterns.md",
+    "31_choreography_patterns.md",
+)
+_SPATIAL_ASSET = "32_spatial_design.md"
+
+# A per-show binding is a rig object addressed by number. REQ-SPATIAL-017 keeps
+# them out of the NEW asset: an example id in a freshly added file reads to the
+# model as a universal fact about every show. The pattern is the one the
+# look/fx/scene asset gates already use (`test_looks_library.py:74`).
+_PER_SHOW_PATTERN = re.compile(
+    r"(?:group|preset|fixture|fid|executor|exec|page|sequence|cue|universe|dmx|채널|그룹|프리셋|익스큐터)"
+    r"\s*[.#]?\s*\d",
+    re.IGNORECASE,
+)
+
+
+def _git(*arguments: str) -> str:
+    result = subprocess.run(  # noqa: S603
+        ["git", *arguments],
+        cwd=_REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout
+
+
+def _preserved_paths() -> tuple[str, ...]:
+    return tuple(f"{_ASSETS_PREFIX}/{name}" for name in _PRESERVED_ASSETS)
+
+
+def _asset_text(name: str) -> str:
+    return (rulebook_dir() / name).read_text(encoding="utf-8")
+
+
+def _fenced_blocks(text: str) -> list[str]:
+    """The fenced code blocks of one markdown asset, fences excluded."""
+    blocks: list[str] = []
+    current: list[str] | None = None
+    for line in text.splitlines():
+        if line.startswith("```"):
+            if current is None:
+                current = []
+            else:
+                blocks.append("\n".join(current))
+                current = None
+            continue
+        if current is not None:
+            current.append(line)
+    assert current is None, "unbalanced code fence"
+    return blocks
 
 
 class TestPrefixStability:
@@ -184,3 +251,92 @@ class TestKoreanDictionaryAxis:
         prefix = assemble_prefix()
         for entry in korean_term_entries():
             assert entry.korean in prefix, f"{entry.korean} must live in the fixed prefix"
+
+
+class TestSpatialDesignAsset:
+    """AC-SPATIAL-016 / AC-SPATIAL-017 — the rulebook grows by exactly one file.
+
+    SPEC-COPILOT-SPATIAL-001 REQ-SPATIAL-016 allows one new asset and no other
+    change. The prefix is a provider cache key (REQ-MVP-008), so touching an
+    existing asset is not a documentation edit — it invalidates the cached
+    prefix for every turn of every conversation.
+    """
+
+    def test_the_spatial_asset_sorts_immediately_after_the_choreography_one(self):
+        names = [path.name for path in rulebook_asset_files()]
+        assert names[names.index("31_choreography_patterns.md") + 1] == _SPATIAL_ASSET
+        assert names[-1] == _SPATIAL_ASSET, "the spatial axis reads last, after the grammar"
+
+    def test_the_asset_set_is_the_five_preserved_files_plus_the_new_one(self):
+        names = tuple(path.name for path in rulebook_asset_files())
+        assert names == (*_PRESERVED_ASSETS, _SPATIAL_ASSET)
+
+    def test_the_preserved_assets_all_exist_at_the_run_phase_base(self):
+        # Non-vacuity for the gate below: `git diff` reports nothing for a path
+        # the base never had, so an empty diff is only evidence once the base is
+        # known to carry all five.
+        listed = _git("ls-tree", "--name-only", _RUN_PHASE_BASE, "--", *_preserved_paths())
+        assert sorted(listed.split()) == sorted(_preserved_paths())
+
+    def test_every_preserved_asset_is_byte_unchanged_from_the_run_phase_base(self):
+        # Working tree against the base commit — not `base..HEAD` — so an
+        # uncommitted edit is caught too. The five must not change at all.
+        assert _git("diff", "--stat", _RUN_PHASE_BASE, "--", *_preserved_paths()) == ""
+
+    def test_the_new_asset_is_appended_and_perturbs_no_earlier_byte(self):
+        # The five preserved files still assemble, in order, as the HEAD of the
+        # prefix. File 32 is appended, never interleaved.
+        head = "\n\n".join(_asset_text(name).strip() for name in _PRESERVED_ASSETS)
+        assert assemble_prefix().startswith(head + "\n\n")
+
+    def test_the_prefix_carries_the_new_asset_verbatim_and_stays_byte_stable(self):
+        builds = [assemble_prefix() for _ in range(5)]
+        assert _asset_text(_SPATIAL_ASSET).strip() in builds[0]
+        assert all(build == builds[0] for build in builds)
+
+    def test_the_spatial_asset_names_no_per_show_binding(self):
+        for number, line in enumerate(_asset_text(_SPATIAL_ASSET).splitlines(), 1):
+            match = _PER_SHOW_PATTERN.search(line)
+            assert match is None, f"{_SPATIAL_ASSET}:{number} binds {match.group(0)!r}"
+
+    def test_the_per_show_scan_would_catch_a_binding(self):
+        # Non-vacuity: the scan above must be able to fail.
+        assert _PER_SHOW_PATTERN.search("Fixture 11 + Fixture 12") is not None
+
+    def test_the_recipe_teaches_the_two_step_phaser(self):
+        text = _asset_text(_SPATIAL_ASSET)
+        for line in (
+            "Attribute 'Dimmer' At 0",
+            "Step 2",
+            "Attribute 'Dimmer' At 100",
+            "Attribute 'Dimmer' At Phase 0 Thru 360",
+            "Attribute 'Dimmer' At Speed 30",
+        ):
+            assert line in text, line
+
+    def test_no_recipe_spreads_a_phase_across_a_single_static_value(self):
+        # M0 measured this exact shape: one value, then `At Phase 0 Thru 360`.
+        # Every line answered ok and the stage stayed lit and MOTIONLESS
+        # (progress.md §E.2.7), so the one-step form must never be shown.
+        blocks = [
+            block for block in _fenced_blocks(_asset_text(_SPATIAL_ASSET)) if "At Phase" in block
+        ]
+        assert blocks, "non-vacuity: the asset must actually teach a phaser"
+        for block in blocks:
+            lines = block.splitlines()
+            fan = next(index for index, line in enumerate(lines) if "At Phase" in line)
+            assert any(line.strip().startswith("Step ") for line in lines[:fan]), block
+
+    def test_no_fenced_command_carries_a_coordinate_or_a_double_quote(self):
+        # REQ-SPATIAL-014 on the teaching surface. A coordinate is a DECIMAL
+        # number, and a recipe that showed one is a recipe the model would copy.
+        # A double quote cannot be sent at all (`server/bridge/protocol.py:105`),
+        # which is why every MA3 name in the recipe is single-quoted.
+        decimal = re.compile(r"\d\.|\.\d")
+        blocks = _fenced_blocks(_asset_text(_SPATIAL_ASSET))
+        assert blocks, "non-vacuity: the asset must actually show commands"
+        assert decimal.search("Attribute 'Posx' At -4.25"), "non-vacuity: the scan can fail"
+        for block in blocks:
+            for line in block.splitlines():
+                assert decimal.search(line) is None, line
+                assert '"' not in line, line

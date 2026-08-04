@@ -79,25 +79,73 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # start at 27 (ruff's isort placing the `server.looks.layout` import between
 # the existing `server.looks.instantiate` and `server.looks.schema` imports).
 # None of it touches a protected range.
+# SPATIAL (SPEC-COPILOT-SPATIAL-001) registered get_spatial_context and
+# arrange_fixtures: three genuinely new starts — 12 and 14 (ruff's isort placing
+# `import math` and the `server.spatial` import block among the existing
+# imports) and 425 (the spatial read/write module-level helpers, inserted above
+# ToolRegistry beside the fx ones at 436) — plus widening of hunks the earlier
+# SPECs already opened. 15 and 1118 disappear from the list because unified=0
+# merged them into neighbouring widened hunks, not because anything there was
+# reverted.
+# None of it touches a protected range (verified: zero overlap).
 # The positional list is bookkeeping; the assertion that carries the PRESERVE
 # claim is the protected-range overlap check below.
+# SPEC-COPILOT-GROUPGEN-001 M3/M4 — granted exception, re-walked per the SPATIAL
+# §E.2.19 precedent that this snapshot exists to force. Two tools were appended
+# (`classify_arrangement_topology`, `create_arrangement_groups`; TOOL_NAMES 20 ->
+# 22), which opens the 1067..1220 block plus 477.
+# Evidence this is additive-only, not a rewrite of anyone else's code:
+#   git diff --stat 5ce471f~1..HEAD -- server/orchestrator/tools.py  ->  +538 -0
+#   git diff --unified=0 ... | grep -cE '^-[^-]'                     ->  0
+# i.e. ZERO pre-existing lines were deleted or modified; every new start below is
+# a pure-insertion hunk. 1222 leaves the list because unified=0 merged it into the
+# widened 1220 hunk, not because anything there was reverted.
+# Protected-range overlap re-verified: ZERO (the assertion below is what actually
+# carries the PRESERVE claim; this positional list is bookkeeping).
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
-    15,
+    12,
+    14,
     17,
     27,
     33,
     49,
     125,
+    425,
     436,
     463,
     475,
+    477,
     479,
     952,
     971,
     989,
     1007,
+    1067,
+    1070,
+    1072,
+    1081,
+    1089,
+    1096,
+    1103,
+    1113,
     1118,
-    1222,
+    1122,
+    1124,
+    1129,
+    1140,
+    1146,
+    1167,
+    1175,
+    1177,
+    1179,
+    1181,
+    1183,
+    1192,
+    1196,
+    1198,
+    1213,
+    1218,
+    1220,
     1231,
 )
 _TOOLS_PROTECTED_OLD_RANGES = ((234, 238), (524, 569))
