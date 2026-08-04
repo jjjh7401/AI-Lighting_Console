@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-GROUPGEN-001
 title: "배치 인식 그룹 생성 — 위상 분류(topology) + 장비 종류 분류 (Arrangement-Aware Group Generation)"
-version: "0.4.0"
+version: "0.5.0"
 status: completed
 created: 2026-08-03
 updated: 2026-08-04
@@ -33,16 +33,29 @@ related_specs: [SPEC-COPILOT-SPATIAL-001, SPEC-COPILOT-SCENE-001, SPEC-COPILOT-L
 
 ### Amendments
 
+#### v0.5.0 — 머지 전 독립 리뷰가 잡은 P0 1건 + P1 3건
+
+| 항목 | 값 |
+|---|---|
+| prior completed version | 0.4.0 |
+| prior_completed_sha | 33ec474 |
+| rationale | **PR #24 머지 전 독립 리뷰 4인 병렬**(SCENE-001 선례)이 잡았다. **P0 — 승인 무결성 붕괴**: 리뷰어 2인이 독립적으로 수렴했다. `run_commands`의 번들 내 dedupe가 `_is_programmer_state`에 걸리지 않는 가산 선택 체인을 탈락시켜(`Fixture 1 + Fixture 2 + Fixture 3` → `False`, 반면 `Fixture 7` → `True`), 동일 fid 튜플 그룹 2개 요청 시 둘째 `Store Group N`이 **빈 프로그래머에서 발화**했다 — 사람이 승인한 카드와 콘솔이 받은 것이 다르다. 제조사·모델 1:1 리그(대부분의 실사용 리그)에서 두 축의 fid 튜플이 바이트 동일하므로 **평범한 경우에 터지며**, v0.4.0이 축을 전부 보고하게 만들어 오히려 더 쉽게 발화한다. 멤버십이 판독 불가라 **탐지·복구가 원리적으로 불가**하다. 결정적 근거: 이 저장소가 같은 번들 형상을 **이미 세 곳에서 가드**한다(`looks/busking.py` · `scene/compile.py` · `fx/instantiate.py`의 `@MX:ANCHOR`가 *"the drop is silent"* 를 명시) — `groupgen/write.py`는 같은 형상의 신규 빌더인데 가드가 없었으니 **판단 미스가 아니라 알려진 패턴을 놓친 것**이다. **P1 2건 — 위상 분류 오답**: (1) v0.3.0이 고쳤다던 미러 아티팩트가 **여분 장비 1대만 추가하면 재발**했다 — 강등 조건이 그 18대 리그의 우연한 성질(모든 반지름 버킷이 정확히 2 ∧ bilateral 고신뢰)에 걸려 있었고 진짜 현상은 *평면이 평평해 `hypot(x,y)`가 `|x|`로 붕괴한다*는 것이다. (2) `median_gap > 0` 가드가 **완벽 정렬 행 리그의 depth 점수를 0.0**으로 만들어(정렬 3×10 = 0.0 vs 창립 결함 리그 2겹 동심원 = 36.6, **역전**) `vertical_levels`가 어휘와 **파티션**까지 가로챘다 — 이 PR의 `arrange_fixtures` grid 프리셋이 행당 y를 완전 정렬해 쓰므로 **앱이 직접 쓴 리그를 자기 분류기가 오독**한다. **P1 1건 — 증거 정합성**: `acceptance.md`의 pytest 인용 35건 중 **20건이 해석 불가**(plan-phase 낡은 이름을 구현 후 반영하지 않음). 실체는 다른 이름으로 커버되지만 AC 문면대로 돌리면 collection error다. **자기 정정 1건**: v0.4.0에서 코디네이터가 W8의 AC-043 뮤테이션 카운트 "3 failed"를 1건 과대라 정정했는데 **그 정정이 틀렸다** — 원본은 파일 범위에서 옳았고 코디네이터가 `-k` 좁은 범위(2 failed)로 재서 오판했다. 범위를 명기하는 문면으로 재정정한다. |
+| scope | `server/orchestrator/tools.py`(그룹당 번들 분리 + 새 `ExecutionContext`) · `server/groupgen/write.py`(`GROUP_LINE_COLLISION` + `guard_bundle_collision`, 면제 집합 지역 재선언) · `server/spatial/topology.py`(미러 붕괴 조건 · depth 점수 영성 · 깊이 우선 정책) + 각 테스트 + `acceptance.md`(AC-047~050 신설, 인용 20건 정정, AC-043 범위 명기). **`_PROGRAMMER_STATE_COMMANDS` 자체는 넓히지 않았다** — 넓히면 looks/scene/fx의 dedupe 면제가 동시에 넓어진다. `server/safety/**` byte-diff **0** · `server/rulebook/**` 신규 자산 추가만(기존 파일 수정 0) · `server/{looks,scene,fx}/**` 무접촉. |
+| 축 우선순위 결정 | **깊이(depth) 우선 — 사용자 도메인 결정.** `depth_rows`가 고신뢰 ∧ 버킷 ≥2면 `vertical_levels`를 경합에서 제외한다(전기바는 '앞/중/뒤'로 부르고 트림 높이는 부수적). `vertical`은 `candidates`에 고신뢰 그대로 남는다 — `bilateral_pairs`의 *"보고하되 선택하지 않음"* 형상 승계. ⚠ **남는 질문(후속)**: 영성을 고친 뒤에도 두 축이 모두 확신일 때 점수만으로는 depth 60 vs vertical 80이므로, 이 배제 규칙이 없으면 여전히 vertical이 이긴다. 근본적으로는 **축 간 점수 비교 가능성**이 미해결이다. |
+
+#### v0.4.0 — 타입 축 결함 소인 (W8)
+
 | 항목 | 값 |
 |---|---|
 | prior completed version | 0.3.0 |
 | prior_completed_sha | 975d7b0 |
-| rationale | W8 인플레이스(타입 축 결함 소인) — (1) 축별 조용한 0: 리그가 이종(fid 1~19 `Robin MMX Spot` / 20~39 `Robin LEDBeam 350`, 제조사 전부 `Robe`)일 때 `manufacturer` 축이 아무것도 내지 않는데 그 사실이 반환 구조에 명시되지 않았다 — `_groups_for_axis`가 `len(values) <= 1`이면 `()`만 돌려주어, "이 축은 검토했으나 균일했다"와 "이 축은 애초에 안 봤다"를 독자가 구별할 수 없었다(REQ-030의 "조용한 0 금지" 규율이 축 단위에는 없었음). (2) 빈 제조사가 전체 호출을 죽인다: `_field`가 빈 문자열에 `FixtureTypeAnalysisError`를 raise했는데, 라이브 콘솔의 `Patch/FixtureTypes/2`는 `Manufacturer`가 정확히 `''`(MA3 제네릭 타입)이다 — 현재는 그 타입을 쓰는 픽스처가 0대라 안 밟혔지만 패치 한 번이면 타입 축 전체가 터진다. 두 결함 모두 M6 라이브 실측(이종 리그 39대, `type_name` 2그룹·`reason: null`)이 드러냈다. 동시에 ASSUMPTION-67(카테고리 토큰 매칭의 실효성)을 `SKIP: CONDITION_NOT_MET`에서 라이브 GO로 종결한다 — 축이 v1에 없다는 전제가 아니라, 실제 이종 리그가 관측되어 `type_name`/`manufacturer` 구조화 축(REQ-009, 카테고리 축이 아님)의 비공허성이 실측 확인됐기 때문이다. |
+| rationale | W8 인플레이스(타입 축 결함 소인) — (1) 축별 조용한 0: 리그가 이종(fid 1~19 `Robin MMX Spot` / 20~39 `Robin LEDBeam 350`, 제조사 전부 `Robe`)일 때 `manufacturer` 축이 아무것도 내지 않는데 그 사실이 반환 구조에 명시되지 않았다 — `_groups_for_axis`가 `len(values) <= 1`이면 `()`만 돌려주어, "이 축은 검토했으나 균일했다"와 "이 축은 애초에 안 봤다"를 독자가 구별할 수 없었다(REQ-030의 "조용한 0 금지" 규율이 축 단위에는 없었음). (2) 빈 제조사가 전체 호출을 죽인다: `_field`가 빈 문자열에 `FixtureTypeAnalysisError`를 raise했는데, 라이브 콘솔의 `Patch/FixtureTypes/2`는 `Manufacturer`가 정확히 `''`(MA3 제네릭 타입)이다 — 현재는 그 타입을 쓰는 픽스처가 0대라 안 밟혔지만 패치 한 번이면 타입 축 전체가 터진다. 두 결함 모두 M6 라이브 실측(이종 리그 39대, `type_name` 2그룹·`reason: null`)이 드러냈다. 동시에 ASSUMPTION-67을 `SKIP: CONDITION_NOT_MET`에서 라이브 GO로 종결한다. |
 | scope | `server/spatial/fixture_type.py` + `server/tests/test_fixture_type.py` + `acceptance.md`(AC-GROUPGEN-043 이상 신설) 한정. `server/safety/**` · `server/rulebook/**` · `server/spatial/{topology,naming}.py` · `server/groupgen/**` 무접촉(byte-diff 0). |
 
 | version | date | 변경 |
 |---|---|---|
-| 0.4.0 | 2026-08-04 | in-place amendment(W8) — `fixture_type.py` 축별 조용한 0 결함 소인(`FixtureTypeAxisReport` 신설, `FIXTURE_TYPE_AXES`의 모든 축이 매 호출 보고에 등장) + 빈 구조화 필드 항목별 강등(`FixtureTypeUnreadable`, raise 대신 해당 축에서만 제외) + ASSUMPTION-67 라이브 GO 종결(§C.2). 위 `## Amendments` 참조. |
+| 0.5.0 | 2026-08-04 | in-place amendment — **머지 전 독립 리뷰 4인**이 잡은 P0 1건(승인 무결성: dedupe가 선택 줄을 탈락시켜 `Store Group`이 빈 프로그래머에서 발화) + P1 3건(미러 강등이 리그 지문에 걸림 · depth 점수 영성 + 깊이 우선 정책 · AC 인용 20건 해석 불가) + 자기 정정 1건(AC-043 뮤테이션 범위 오판). AC-047~050 신설. 위 `#### v0.5.0` 참조. |
+| 0.4.0 | 2026-08-04 | in-place amendment(W8) — `fixture_type.py` 축별 조용한 0 결함 소인(`FixtureTypeAxisReport` 신설, `FIXTURE_TYPE_AXES`의 모든 축이 매 호출 보고에 등장) + 빈 구조화 필드 항목별 강등(`FixtureTypeUnreadable`, raise 대신 해당 축에서만 제외) + ASSUMPTION-67 라이브 GO 종결(§C.2). 위 `#### v0.4.0` 참조. |
 | 0.3.0 | 2026-08-04 | M0 라이브 실측 반영 + 게이트 A 정책 (c) 채택(사용자 승인). REQ-023을 "재조회 검증" 요구에서 "검증 가능분 요구 + 미검증 명시 요구"로 개정. REQ-022 근거를 "조용한 덮어쓰기"에서 "조작자 의존 + 모달 위험" 실측으로 교체. §C.1 멤버십 행을 NO(플랫폼 미노출)로 확정. §C.3에 모달 위험 항목(9) 추가. §C.2 ASSUMPTION 61~67에 M0 근거 부기. §D에 "멤버십 검증" 제외 항목 신설(73/101 미확인 천장 포함) |
 | 0.2.0 | 2026-08-04 | `.plan-contract.md` 반영 — 사용자 승인 결정 4건(D-Q3 접두 `"GEO "` · D-Q4 `server/safety/**` 정식 게이트 · D-Q9/Q11 종류 축 보수 채택) + coordinator 증거 확정 6건(D-Q2 위상 경합 축별분리 · D-Q5 트리거 별도툴 · D-Q6 절단 거부 · D-Q7 룰북 미신설 · D-Q10 bilateral_pairs 신호만 · D-Q12 명칭 축 제안만)을 REQ/제외범위에 전개. REQ-010·011·012·027을 §D로 이관(결번 유지), ASSUMPTION-67 SKIP |
 | 0.1.0 | 2026-08-03 | 초안. `research.md` v0.5.0(요구 정정 · 업계 표준 어휘 · 세분화 축 6개 · 장비 종류·명칭 실측)과 `plan.md` v0.1.0(M0~M6 · 게이트 A~D)을 REQ로 전개. ASSUMPTION 61~67 배정 |

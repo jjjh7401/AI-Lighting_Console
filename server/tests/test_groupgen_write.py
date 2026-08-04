@@ -15,14 +15,17 @@ import pytest
 from server.groupgen.write import (
     DEFAULT_GROUP_PLAN_CAP,
     FIXTURE_LIST_TRUNCATED,
+    GROUP_LINE_COLLISION,
     GROUP_PLAN_TOO_LARGE,
     GROUP_POOL_TRUNCATED,
     GROUP_POOL_UNAVAILABLE,
     GROUP_SLOT_OCCUPIED,
     GroupSlotError,
     build_group_write_plan,
+    guard_bundle_collision,
     guard_fixture_list_truncation,
     guard_plan_size,
+    is_programmer_state,
     measure_empty_slots,
     select_group_slot,
 )
@@ -389,3 +392,197 @@ def test_max_plan_size_is_an_explicit_per_call_override() -> None:
         max_plan_size=30,
     )
     assert len(plan.steps) == len(buckets) == 25
+
+
+# -- guard_bundle_collision: the dedupe hazard, refused at build time --------
+#
+# `run_commands` folds a line that already succeeded into
+# `skipped_already_executed` unless it establishes programmer state. A group
+# chain's MULTI-fixture selection is not exempt, so a bundle carrying two
+# groups over the same fids loses the second selection and stores an empty
+# programmer into the slot — `ok:true` on every line, and unreadable
+# afterwards (progress.md §E.2.8). Same class of fact, same shape of guard, as
+# `server/fx/instantiate.py` and `server/scene/compile.py` `_guard_collision`.
+
+SELECTION_123 = "Fixture 1 + Fixture 2 + Fixture 3"
+
+
+def test_guard_bundle_collision_refuses_a_repeated_non_exempt_line() -> None:
+    with pytest.raises(GroupSlotError) as excinfo:
+        guard_bundle_collision([SELECTION_123, "Store Group 2", SELECTION_123])
+    assert excinfo.value.code == GROUP_LINE_COLLISION
+    assert SELECTION_123 in excinfo.value.message
+
+
+def test_guard_bundle_collision_allows_a_repeated_exempt_line() -> None:
+    """Non-vacuity in the other direction: the chain opens AND closes with
+    `ClearAll` on purpose — two MOMENTS, not one instruction typed twice. A
+    guard that refused those would refuse every plan this module builds."""
+    assert is_programmer_state("ClearAll") is True
+    guard_bundle_collision(["ClearAll", "Store Group 2", "ClearAll"])  # must not raise
+
+
+def test_guard_bundle_collision_allows_a_repeated_single_fixture_selection() -> None:
+    """A ONE-fixture selection IS exempt (`Fixture 1` matches the bare
+    selection form), so it was never the line at risk — pinning it keeps the
+    guard from being read as "any repeated selection"."""
+    assert is_programmer_state("Fixture 1") is True
+    assert is_programmer_state(SELECTION_123) is False
+    guard_bundle_collision(["Fixture 1", "Store Group 2", "Fixture 1"])  # must not raise
+
+
+def _two_identical_fid_groups_plan():
+    """The ordinary shape that triggers this: a 1:1 manufacturer:model rig
+    makes `type_axis_groups` emit byte-identical fid tuples for two axes."""
+    return build_group_write_plan(
+        buckets={"right": (1, 2, 3), "left": (1, 2, 3)},
+        names={"right": "GEO Stage Right", "left": "GEO Stage Left"},
+        groups_section=MEASURED_GROUPS_SECTION,
+        fixtures_section=UNTRUNCATED_FIXTURES_SECTION,
+    )
+
+
+def test_the_whole_plan_concatenated_into_one_bundle_is_refused() -> None:
+    """Why the tool layer fires ONE BUNDLE PER GROUP, stated as a test: each
+    step is clean on its own, the concatenation is not."""
+    plan = _two_identical_fid_groups_plan()
+    for step in plan.steps:
+        guard_bundle_collision(step.commands)  # every step alone is safe to fire
+    concatenated = [command for step in plan.steps for command in step.commands]
+    with pytest.raises(GroupSlotError) as excinfo:
+        guard_bundle_collision(concatenated)
+    assert excinfo.value.code == GROUP_LINE_COLLISION
+    assert SELECTION_123 in excinfo.value.message
+
+
+def test_two_identical_fid_groups_still_build_a_full_two_step_plan() -> None:
+    """The guard is bundle-scoped, never plan-scoped: two groups over the same
+    fids are a legitimate request and must still be planned in full."""
+    plan = _two_identical_fid_groups_plan()
+    assert [step.slot for step in plan.steps] == [2, 3]
+    assert all(SELECTION_123 in step.commands for step in plan.steps)
+
+
+def test_build_group_write_plan_screens_every_step_it_builds(monkeypatch) -> None:
+    """Non-vacuity for the guard's placement: the plan builder must actually
+    call it, on each step's own chain. Deleting the call makes this RED."""
+    observed: list[tuple[str, ...]] = []
+    real = guard_bundle_collision
+
+    def _recording(commands):
+        observed.append(tuple(commands))
+        return real(commands)
+
+    monkeypatch.setattr("server.groupgen.write.guard_bundle_collision", _recording)
+    plan = _two_identical_fid_groups_plan()
+    assert observed == [step.commands for step in plan.steps]
+
+
+# -- the dedupe exemption set is the SAME set the tool layer uses ------------
+#
+# `server/fx/instantiate.py`'s `@MX:ANCHOR` obligation, inherited here: this
+# module decides which of ITS OWN lines the dedupe will compare. NARROWER than
+# the tool's is a false alarm (loud, harmless); WIDER waves through a line the
+# dedupe then drops, silently. Both directions are asserted — a set equality
+# has no cheaper form. The mirror test is
+# `server/tests/test_fx_boundary.py::TestTheDedupeExemptionSetsAreEqual`.
+
+
+def _pattern_set(patterns) -> set[tuple[str, int]]:
+    """A compiled-regex tuple as comparable (pattern text, flags) pairs."""
+    return {(p.pattern, p.flags) for p in patterns}
+
+
+def _both_declarations():
+    from server.groupgen.write import _PROGRAMMER_STATE_COMMANDS as write_side
+    from server.orchestrator.tools import _PROGRAMMER_STATE_COMMANDS as tool_side
+
+    return write_side, tool_side
+
+
+def test_the_two_declarations_are_the_same_set() -> None:
+    write_side, tool_side = _both_declarations()
+    assert _pattern_set(write_side) == _pattern_set(tool_side)
+
+
+def test_neither_declaration_is_empty() -> None:
+    # Non-vacuity: two empty tuples are equal and would prove nothing.
+    write_side, tool_side = _both_declarations()
+    assert len(_pattern_set(write_side)) == 3
+    assert len(_pattern_set(tool_side)) == 3
+
+
+def test_the_comparison_notices_a_widened_tool_side() -> None:
+    # The dangerous direction: the tool exempts MORE than this guard knows.
+    write_side, tool_side = _both_declarations()
+    widened = (*tool_side, re.compile(r"Store\s+Group\s+\d+", re.IGNORECASE))
+    assert _pattern_set(write_side) != _pattern_set(widened)
+
+
+def test_the_comparison_notices_a_narrowed_tool_side() -> None:
+    write_side, tool_side = _both_declarations()
+    assert _pattern_set(write_side) != _pattern_set(tool_side[:-1])
+
+
+def test_the_comparison_notices_a_changed_flag() -> None:
+    # A same-text pattern with different flags is a different matcher —
+    # dropping IGNORECASE on one side alone diverges on "clearall".
+    write_side, tool_side = _both_declarations()
+    reflagged = tuple(re.compile(p.pattern) for p in tool_side)
+    assert _pattern_set(write_side) != _pattern_set(reflagged)
+
+
+#: Lines that separate the two predicates if either is consumed differently
+#: (a `search` instead of a `fullmatch` would exempt `ClearAll Sequence 1`).
+ADVERSARIAL_LINES = (
+    "ClearAll",
+    "Clear",
+    "clearall",
+    "Fixture 1",
+    "Fixture 1 Thru 10",
+    "Group 2",
+    SELECTION_123,  # the line this whole section exists for
+    "ClearAll Sequence 1",  # fullmatch says no; a search would say yes
+    "Store Group 2",
+    "Label Group 2 'GEO Stage Right'",
+    "  ClearAll  ",  # both sides strip before matching
+)
+
+
+def _emitted_lines() -> list[str]:
+    buckets = {"a": (1,), "b": (1, 2, 3), "c": (4, 5)}
+    names = {"a": "GEO A", "b": "GEO B", "c": "GEO C"}
+    plan = build_group_write_plan(
+        buckets=buckets,
+        names=names,
+        groups_section=MEASURED_GROUPS_SECTION,
+        fixtures_section=UNTRUNCATED_FIXTURES_SECTION,
+    )
+    return [command for step in plan.steps for command in step.commands]
+
+
+def test_the_predicate_corpus_is_not_degenerate() -> None:
+    # An all-exempt or all-non-exempt corpus makes agreement trivial.
+    lines = _emitted_lines() + list(ADVERSARIAL_LINES)
+    assert len(_emitted_lines()) == 15
+    assert {is_programmer_state(line) for line in lines} == {True, False}
+
+
+def test_both_predicates_agree_on_every_line_this_module_emits() -> None:
+    from server.orchestrator.tools import _is_programmer_state as tool_side
+
+    disagreements = [
+        (line, is_programmer_state(line), tool_side(line))
+        for line in _emitted_lines() + list(ADVERSARIAL_LINES)
+        if is_programmer_state(line) != tool_side(line)
+    ]
+    assert disagreements == []
+
+
+def test_a_trailing_object_defeats_the_exemption_on_both_sides() -> None:
+    from server.orchestrator.tools import _is_programmer_state as tool_side
+
+    assert is_programmer_state("ClearAll") is True
+    assert is_programmer_state("ClearAll Sequence 1") is False
+    assert tool_side("ClearAll") is True
+    assert tool_side("ClearAll Sequence 1") is False

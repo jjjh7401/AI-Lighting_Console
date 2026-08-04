@@ -17,6 +17,7 @@ be read back, so an overwritten slot cannot be backed up or restored).
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
@@ -25,6 +26,7 @@ from server.spatial.choreography import build_spatial_selection_chain
 __all__ = [
     "DEFAULT_GROUP_PLAN_CAP",
     "FIXTURE_LIST_TRUNCATED",
+    "GROUP_LINE_COLLISION",
     "GROUP_PLAN_TOO_LARGE",
     "GROUP_POOL_TRUNCATED",
     "GROUP_POOL_UNAVAILABLE",
@@ -33,8 +35,10 @@ __all__ = [
     "GroupWritePlan",
     "GroupWriteStep",
     "build_group_write_plan",
+    "guard_bundle_collision",
     "guard_fixture_list_truncation",
     "guard_plan_size",
+    "is_programmer_state",
     "measure_empty_slots",
     "select_group_slot",
 ]
@@ -44,6 +48,7 @@ GROUP_POOL_TRUNCATED = "GROUP_POOL_TRUNCATED"  # the re-queried pool listing was
 GROUP_SLOT_OCCUPIED = "GROUP_SLOT_OCCUPIED"  # the target slot already holds a group
 FIXTURE_LIST_TRUNCATED = "FIXTURE_LIST_TRUNCATED"  # the target fixture list was cut
 GROUP_PLAN_TOO_LARGE = "GROUP_PLAN_TOO_LARGE"  # the requested plan exceeds the slot-economy cap
+GROUP_LINE_COLLISION = "GROUP_LINE_COLLISION"  # one bundle repeats a non-exempt line
 
 # A grid topology's axis-separated naming (design.md §4/§D-Q2) can still ask
 # for a double-digit bucket count on a wide rig (a 5x20 grid asks for 25:
@@ -61,6 +66,33 @@ GROUP_PLAN_TOO_LARGE = "GROUP_PLAN_TOO_LARGE"  # the requested plan exceeds the 
 DEFAULT_GROUP_PLAN_CAP = 16
 
 _CLEAR = "ClearAll"
+
+# @MX:ANCHOR: [AUTO] this exemption set MUST stay equal to
+#   `server/orchestrator/tools.py` `_PROGRAMMER_STATE_COMMANDS`.
+# @MX:REASON: `guard_bundle_collision` below decides which of THIS module's OWN
+#   lines the run_commands dedupe will compare. If this set is wider than the
+#   tool's, the guard waves through a line the dedupe then drops — and the drop
+#   is silent, because `Store Group N` still runs and the console still answers
+#   ok, leaving a group that holds whatever the PREVIOUS chain put in the
+#   programmer. Membership is unreadable on this platform (progress.md §E.2.8),
+#   so that corruption is neither detectable nor repairable afterwards. The
+#   equality is asserted by `server/tests/test_groupgen_write.py`, which may
+#   import both sides; this module may NOT import the tool layer, because
+#   `tools.py` imports `server.groupgen.write` at registration time and a
+#   top-level write->tools import would be circular. That is the identical
+#   cycle `server/fx/instantiate.py` faced, and this is its identical answer.
+_SELECTION_OPERAND = r"\d+(?:\s*[-+]\s*\d+|\s+Thru(?:\s+\d+)?)*"
+_PROGRAMMER_STATE_COMMANDS = (
+    re.compile(r"Clear", re.IGNORECASE),
+    re.compile(r"ClearAll", re.IGNORECASE),
+    re.compile(rf"(?:Fixture|Group)\s+{_SELECTION_OPERAND}", re.IGNORECASE),
+)
+
+
+def is_programmer_state(command: str) -> bool:
+    """True for a command that establishes programmer state (exempt from dedupe)."""
+    text = command.strip()
+    return any(pattern.fullmatch(text) is not None for pattern in _PROGRAMMER_STATE_COMMANDS)
 
 
 class GroupSlotError(Exception):
@@ -233,6 +265,48 @@ def guard_fixture_list_truncation(fixtures_section: Mapping[str, object]) -> Non
         )
 
 
+def guard_bundle_collision(commands: Sequence[str]) -> None:
+    """Refuse ONE ``run_commands`` bundle that repeats a non-exempt line.
+
+    The mirror precedents are `server/fx/instantiate.py` ``_guard_collision``
+    and `server/scene/compile.py` ``_guard_collision`` — the same class of
+    fact, guarded the same way: the module that BUILT the lines classifies
+    them, because only the builder knows the repeat was meant as two distinct
+    moments rather than one instruction typed twice.
+
+    ``run_commands`` drops the second occurrence of a line that already
+    succeeded in the same bundle or earlier in the same instruction turn
+    (``skipped_already_executed``), unless the line establishes programmer
+    state. A group chain's SELECTION line is not exempt: only a single bare
+    ``Fixture <operand>`` matches, never the multi-fixture
+    ``Fixture 1 + Fixture 2 + Fixture 3`` form this module emits
+    (``build_spatial_selection_chain``). So if one bundle carries two groups
+    that select the same fids, the second selection is dropped, the following
+    ``Store Group N`` fires against a programmer holding nothing (the chain's
+    own ``ClearAll`` ran first), and the console still answers ok. grandMA3
+    exposes no channel to read group membership back (progress.md §E.2.8), so
+    that outcome is neither detectable nor repairable afterwards — refusing to
+    build such a bundle is the only honest move.
+
+    Pass EXACTLY the list about to be handed to one ``run_commands`` call.
+    Concatenating several groups' chains into one bundle is the shape this
+    refuses; the tool layer therefore fires one bundle per group.
+    """
+    seen: set[str] = set()
+    for command in commands:
+        if is_programmer_state(command):
+            continue
+        if command in seen:
+            raise GroupSlotError(
+                GROUP_LINE_COLLISION,
+                f"this bundle would send the line {command!r} twice; the second one "
+                "is dropped by the run_commands dedupe and the following Store then "
+                "runs against a programmer that is missing its selection — silently, "
+                "because grandMA3 exposes no channel to read group membership back",
+            )
+        seen.add(command)
+
+
 def _label_command(slot: int, name: str) -> str:
     if "'" in name:
         # No escape convention for an embedded single quote is established
@@ -281,6 +355,11 @@ def build_group_write_plan(
     REQ-GROUPGEN-021 (a truncated GROUP POOL blocks slot allocation) is a
     separate, unchanged guard — see ``guard_pool_readable`` via
     ``measure_empty_slots`` below.
+
+    Each step's ``commands`` tuple is ONE ``run_commands`` bundle, and the
+    caller MUST fire it as one — never concatenated with another step's.
+    ``guard_bundle_collision`` states why, and is applied to every step here
+    so this module never hands out a self-colliding chain.
     """
     bucket_keys = list(buckets)
     guard_plan_size(len(bucket_keys), cap=max_plan_size)
@@ -300,6 +379,7 @@ def build_group_write_plan(
             _label_command(selected, name),
             _CLEAR,
         )
+        guard_bundle_collision(commands)
         verification = (
             f"state DataPool/Groups/{selected}",
             f"prop DataPool/Groups/{selected} Name",

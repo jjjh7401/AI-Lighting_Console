@@ -20,7 +20,12 @@ import json
 
 from server.llm.types import ToolCall
 from server.orchestrator.ports import ExecutionResult
-from server.orchestrator.tools import DEFAULT_RIG_CONTEXT_PATHS, TOOL_NAMES, build_toolset
+from server.orchestrator.tools import (
+    DEFAULT_RIG_CONTEXT_PATHS,
+    TOOL_NAMES,
+    ExecutionContext,
+    build_toolset,
+)
 from server.safety.approval import ApprovalRequest
 
 FIXTURES_PATH = DEFAULT_RIG_CONTEXT_PATHS["fixtures"]
@@ -527,3 +532,275 @@ class TestCreateArrangementGroupsRefusals:
         )
         assert any("Store Group 2" in command for command in port.executed)
         assert not any("Store Group 1" in command for command in port.executed)
+
+
+# -- create_arrangement_groups: ONE run_commands bundle PER GROUP ------------
+#
+# The defect this section pins: `run_commands` folds a line that already
+# succeeded in the same bundle (or earlier in the same instruction turn) into
+# `skipped_already_executed`, and a MULTI-fixture selection chain is NOT
+# dedupe-exempt. Firing the whole plan as one bundle therefore dropped the
+# second group's selection line and let `Store Group N` run against an empty
+# programmer — the console answers ok, group membership is unreadable
+# (progress.md §E.2.8), so the human approved one plan and the console
+# received another, undetectably.
+
+
+class FailingExecutionPort:
+    """Records every command it is asked to fire, and fails exactly one."""
+
+    def __init__(self, *, fail_on: str):
+        self.fail_on = fail_on
+        self.executed: list[str] = []
+
+    def execute(self, command: str) -> ExecutionResult:
+        self.executed.append(command)
+        if command == self.fail_on:
+            return ExecutionResult(ok=False, detail="console refused the store")
+        return ExecutionResult(ok=True, detail="OK")
+
+
+def _writable_console(slots: dict[int, str]) -> FakeConsole:
+    """A lateral rig with an EMPTY group pool whose target slots answer the
+    post-write re-query with exactly the label the write chain will set."""
+    states = _empty_group_pool()
+    for slot in slots:
+        states[f"{GROUPS_PATH}/{slot}"] = {"ok": True}
+    console = _lateral_pair_console(groups=states)
+    for slot, name in slots.items():
+        console._properties[(f"{GROUPS_PATH}/{slot}", "Name")] = {"ok": True, "value": name}
+    return console
+
+
+#: The selection line for fids (1, 2, 3) — the multi-fixture form, which is
+#: NOT dedupe-exempt (only a single bare `Fixture <operand>` is).
+SELECTION_123 = "Fixture 1 + Fixture 2 + Fixture 3"
+
+
+class TestCreateArrangementGroupsFiresOneBundlePerGroup:
+    def test_the_multi_fixture_selection_line_is_not_dedupe_exempt(self):
+        # The premise every test below rests on, asserted rather than assumed:
+        # a ONE-fixture group was never affected (its `Fixture 1` IS exempt),
+        # so a fixture-count-blind reading of these tests would misread them.
+        from server.orchestrator.tools import _is_programmer_state
+
+        assert _is_programmer_state("Fixture 1") is True
+        assert _is_programmer_state(SELECTION_123) is False
+
+    def test_two_groups_over_identical_fids_both_reach_the_console(self):
+        """`classify_arrangement_topology` emits byte-identical fid tuples for
+        two axes on any rig whose manufacturer:model mapping is 1:1, so this is
+        an ORDINARY plan, not a contrived one."""
+        console = _writable_console({1: "GEO Stage Right", 2: "GEO Stage Left"})
+        port = RecordingExecutionPort()
+        registry = build_toolset(
+            execution_port=port,
+            state_port=console,
+            group_approval_port=ScriptedApprovalPort(approve=True),
+        )
+        execution = registry.dispatch(
+            _call(
+                CREATE,
+                arguments={
+                    "groups": [
+                        {"name": "GEO Stage Right", "fids": [1, 2, 3]},
+                        {"name": "GEO Stage Left", "fids": [1, 2, 3]},
+                    ]
+                },
+            )
+        )
+        # The SECOND group's selection line reached the console — the whole
+        # point. Asserted as full equality so a dropped, reordered or
+        # duplicated line all fail here.
+        assert port.executed == [
+            "ClearAll",
+            SELECTION_123,
+            "Store Group 1",
+            "Label Group 1 'GEO Stage Right'",
+            "ClearAll",
+            "ClearAll",
+            SELECTION_123,
+            "Store Group 2",
+            "Label Group 2 'GEO Stage Left'",
+            "ClearAll",
+        ]
+        payload = json.loads(execution.result.content)
+        assert [entry["status"] for entry in payload["commands"]] == ["executed_ok"] * 10
+        assert payload["status"] == "created"
+        assert execution.result.is_error is False
+
+    def test_what_the_human_approved_is_exactly_what_the_console_received(self):
+        """The property the split exists to protect, stated directly: the
+        approval card and the wire carry the same lines, in the same order."""
+        console = _writable_console({1: "GEO Stage Right", 2: "GEO Stage Left"})
+        port = RecordingExecutionPort()
+        approval = ScriptedApprovalPort(approve=True)
+        registry = build_toolset(
+            execution_port=port, state_port=console, group_approval_port=approval
+        )
+        registry.dispatch(
+            _call(
+                CREATE,
+                arguments={
+                    "groups": [
+                        {"name": "GEO Stage Right", "fids": [1, 2, 3]},
+                        {"name": "GEO Stage Left", "fids": [1, 2, 3]},
+                    ]
+                },
+            )
+        )
+        # ONE approval card for the whole plan — the execution split must not
+        # fragment the human decision into one request per group.
+        assert len(approval.requests) == 1
+        assert [item.command for item in approval.requests[0].items] == port.executed
+
+    def test_a_prior_tool_calls_identical_selection_never_folds_this_write(self):
+        """`ExecutionContext.executed_ok` accumulates across every tool call in
+        one instruction turn (runner.py:216, 222-223), so a self-correction
+        retry alone (REQ-MVP-012) is enough to arm this — even for a plan that
+        holds a SINGLE group."""
+        console = _writable_console({1: "GEO Stage Right"})
+        port = RecordingExecutionPort()
+        registry = build_toolset(
+            execution_port=port,
+            state_port=console,
+            group_approval_port=ScriptedApprovalPort(approve=True),
+        )
+        execution = registry.dispatch(
+            _call(CREATE, arguments={"groups": [{"name": "GEO Stage Right", "fids": [1, 2, 3]}]}),
+            ExecutionContext(executed_ok=frozenset({SELECTION_123})),
+        )
+        assert port.executed == [
+            "ClearAll",
+            SELECTION_123,
+            "Store Group 1",
+            "Label Group 1 'GEO Stage Right'",
+            "ClearAll",
+        ]
+        payload = json.loads(execution.result.content)
+        assert "skipped_already_executed" not in [entry["status"] for entry in payload["commands"]]
+        assert payload["status"] == "created"
+
+    def test_distinct_fid_groups_still_fire_every_command_in_plan_order(self):
+        """Non-vacuity for the split: the ordinary N-group path is unchanged —
+        same commands, same count, same order, same verified_steps."""
+        console = _writable_console({1: "GEO A", 2: "GEO B", 3: "GEO C"})
+        port = RecordingExecutionPort()
+        registry = build_toolset(
+            execution_port=port,
+            state_port=console,
+            group_approval_port=ScriptedApprovalPort(approve=True),
+        )
+        execution = registry.dispatch(
+            _call(
+                CREATE,
+                arguments={
+                    "groups": [
+                        {"name": "GEO A", "fids": [1]},
+                        {"name": "GEO B", "fids": [2]},
+                        {"name": "GEO C", "fids": [3, 4]},
+                    ]
+                },
+            )
+        )
+        assert port.executed == [
+            "ClearAll",
+            "Fixture 1",
+            "Store Group 1",
+            "Label Group 1 'GEO A'",
+            "ClearAll",
+            "ClearAll",
+            "Fixture 2",
+            "Store Group 2",
+            "Label Group 2 'GEO B'",
+            "ClearAll",
+            "ClearAll",
+            "Fixture 3 + Fixture 4",
+            "Store Group 3",
+            "Label Group 3 'GEO C'",
+            "ClearAll",
+        ]
+        payload = json.loads(execution.result.content)
+        assert payload["status"] == "created"
+        assert payload["succeeded"] is True
+        assert [entry["slot"] for entry in payload["verified_steps"]] == [1, 2, 3]
+        # No partial-write bookkeeping leaks onto a clean success.
+        assert "slot_outcomes" not in payload
+        assert "partial_write" not in payload
+
+    def test_a_failing_middle_bundle_stops_there_and_separates_written_slots(self):
+        console = _writable_console({1: "GEO A", 2: "GEO B", 3: "GEO C"})
+        port = FailingExecutionPort(fail_on="Store Group 2")
+        registry = build_toolset(
+            execution_port=port,
+            state_port=console,
+            group_approval_port=ScriptedApprovalPort(approve=True),
+        )
+        execution = registry.dispatch(
+            _call(
+                CREATE,
+                arguments={
+                    "groups": [
+                        {"name": "GEO A", "fids": [1]},
+                        {"name": "GEO B", "fids": [2]},
+                        {"name": "GEO C", "fids": [3, 4]},
+                    ]
+                },
+            )
+        )
+        # Stopped AT the failure: group 3's chain never reached the console.
+        assert port.executed[-1] == "Store Group 2"
+        assert "Store Group 3" not in port.executed
+        assert execution.result.is_error is True
+        payload = json.loads(execution.result.content)
+        assert payload["status"] == "failed"
+        # Partial success never reads as success...
+        assert payload["executed"] is False
+        assert "succeeded" not in payload
+        assert "verified_steps" not in payload
+        # ...but which slots were written is still recoverable.
+        assert payload["partial_write"] is True
+        assert payload["slot_outcomes"] == [
+            {"slot": 1, "name": "GEO A", "status": "executed"},
+            {"slot": 2, "name": "GEO B", "status": "failed"},
+            {"slot": 3, "name": "GEO C", "status": "not_attempted"},
+        ]
+        assert [entry["status"] for entry in payload["commands"]] == [
+            *["executed_ok"] * 5,
+            "executed_ok",
+            "executed_ok",
+            "failed",
+            "not_executed",
+            "not_executed",
+            *["not_executed"] * 5,
+        ]
+        assert "1 of 3" in payload["error"]
+
+    def test_a_first_bundle_failure_reports_no_written_slot_at_all(self):
+        """The other side of ``partial_write``: nothing landed, so the flag
+        must be False rather than a constant True."""
+        console = _writable_console({1: "GEO A", 2: "GEO B"})
+        port = FailingExecutionPort(fail_on="Store Group 1")
+        registry = build_toolset(
+            execution_port=port,
+            state_port=console,
+            group_approval_port=ScriptedApprovalPort(approve=True),
+        )
+        execution = registry.dispatch(
+            _call(
+                CREATE,
+                arguments={
+                    "groups": [
+                        {"name": "GEO A", "fids": [1]},
+                        {"name": "GEO B", "fids": [2]},
+                    ]
+                },
+            )
+        )
+        payload = json.loads(execution.result.content)
+        assert payload["partial_write"] is False
+        assert [entry["status"] for entry in payload["slot_outcomes"]] == [
+            "failed",
+            "not_attempted",
+        ]
+        assert "0 of 2" in payload["error"]
