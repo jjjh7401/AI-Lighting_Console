@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-GROUPGEN-001
 title: "배치 인식 그룹 생성 — 위상 분류(topology) + 장비 종류 분류 (Arrangement-Aware Group Generation)"
 version: "0.3.0"
-status: draft
+status: completed
 created: 2026-08-03
 updated: 2026-08-04
 author: orchestrator (pre-plan)
