@@ -381,6 +381,48 @@ def classify(fixtures: tuple[SpatialFixture, ...]) -> TopologyClassification:
     if grid.kind == "grid":
         return TopologyClassification(selected=grid, candidates=candidates)
 
+    # @MX:ANCHOR: [SPEC] degenerate mirror artefact (REQ-GROUPGEN-003, live-found
+    #   in M6 stage 3, mutation-required).
+    # @MX:REASON: On a rig that is mirror-symmetric about the origin with y and z
+    #   flat — 9 fixtures stage-right, 9 stage-left, which a designer calls
+    #   "left/right" — the radius from origin collapses to |x|, so EVERY radius
+    #   holds exactly one pair. The concentric reading then scores a perfect
+    #   separation (live-measured 20.0 against lateral_split's 0.75) and answers
+    #   "9 rings of 2". That is the MIRROR IMAGE of the defect this SPEC exists to
+    #   fix (research.md §3: a 2-ring rig misread as 9 rows) — a confident answer
+    #   that describes pairs instead of structure. `bilateral_pairs` being
+    #   confident at the same time is the algebraic signature of that symmetry,
+    #   and D-Q10 already says symmetry is a SIGNAL, never a group. So the radius
+    #   reading is demoted out of contention here rather than allowed to win on a
+    #   score that measures a symmetry it is not entitled to name.
+    if (
+        concentric.kind == "concentric"
+        and not concentric.low_confidence
+        and bilateral.kind == "bilateral_pairs"
+        and not bilateral.low_confidence
+        and len(concentric.fids_by_bucket) > 2
+        and all(len(bucket) == 2 for bucket in concentric.fids_by_bucket)
+    ):
+        concentric = TopologyResult(
+            kind=None,
+            fids_by_bucket=(),
+            low_confidence=True,
+            reason="concentric_reading_is_a_mirror_artefact",
+        )
+        concentric_score = 0.0
+        candidates = (depth, lateral, concentric, vertical, grid, bilateral)
+
+    # @MX:ANCHOR: [SPEC] `bilateral_pairs` is a SIGNAL, never a selected topology
+    #   (`.plan-contract.md` §2 D-Q10, mutation-required).
+    # @MX:REASON: D-Q10 settled that symmetry is reported and never grouped —
+    #   "미러링 가능" is a property, not a member set, and MAtricks already owns
+    #   runtime mirroring (§C.0 axis E). So `naming.py` deliberately has NO
+    #   vocabulary for it. Letting it WIN contention therefore produces a dead
+    #   end: `selected.kind == "bilateral_pairs"` yields zero suggested groups,
+    #   which reads to the operator as "the tool found nothing" when in truth it
+    #   found a symmetric rig it simply must not name. Live-found in M6 stage 3,
+    #   where the mirror-artefact demotion above handed it the win. It stays in
+    #   `candidates` (fully reported) and out of `scored`.
     scored: list[tuple[float, TopologyResult]] = [
         (score, result)
         for result, score in (
@@ -388,7 +430,6 @@ def classify(fixtures: tuple[SpatialFixture, ...]) -> TopologyClassification:
             (lateral, lateral_score),
             (concentric, concentric_score),
             (vertical, vertical_score),
-            (bilateral, bilateral_score),
         )
         if result.kind is not None and not result.low_confidence
     ]

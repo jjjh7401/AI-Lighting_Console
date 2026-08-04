@@ -363,3 +363,85 @@ class TestIndividualDetectors:
             result = detector(empty)
             assert result.low_confidence is True
             assert result.kind is None
+
+
+# ---------------------------------------------------------------------------
+# M6 live-found contention defects (REQ-GROUPGEN-003 · D-Q10)
+# ---------------------------------------------------------------------------
+
+
+def _flat_row(xs: list[float]) -> tuple[SpatialFixture, ...]:
+    """A rig spread on x only — y and z flat."""
+    return tuple(
+        SpatialFixture(fid=index, name=f"F{index}", x=float(value), y=0.0, z=0.0)
+        for index, value in enumerate(xs, start=1)
+    )
+
+
+#: The exact arrangement M6 stage 3 wrote to the live console: 9 fixtures
+#: stage-right, 9 stage-left, mirror-symmetric about the origin, y and z flat.
+_MIRRORED_LEFT_RIGHT = [-11, -10, -9, -8, -7, -6, -5, -4, -3, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
+
+def test_mirrored_left_right_rig_is_lateral_not_nine_rings():
+    """A rig a designer calls "left/right" must not come back as 9 rings of 2.
+
+    Live-measured in M6 stage 3 BEFORE the fix: radius-from-origin collapses to
+    ``|x|`` on a mirror-symmetric flat rig, so every radius held exactly one
+    pair and ``concentric`` scored 20.0 against ``lateral_split``'s 0.75 —
+    winning with ``buckets=[2]*9``. That is the MIRROR IMAGE of the defect this
+    SPEC exists to fix (research.md §3: a 2-ring rig misread as 9 rows).
+
+    MUTATION: remove the mirror-artefact demotion in ``classify`` and this goes
+    RED with ``concentric`` and nine 2-member buckets.
+    """
+    classification = classify(_flat_row(_MIRRORED_LEFT_RIGHT))
+    selected = classification.selected
+
+    assert selected.kind == "lateral_split"
+    assert [len(bucket) for bucket in selected.fids_by_bucket] == [9, 9]
+
+    # the radius reading is still REPORTED, and says why it was set aside
+    concentric = [
+        c
+        for c in classification.candidates
+        if c.reason == "concentric_reading_is_a_mirror_artefact"
+    ]
+    assert len(concentric) == 1
+    assert concentric[0].kind is None
+    assert concentric[0].low_confidence is True
+
+
+def test_bilateral_pairs_is_reported_but_never_selected():
+    """D-Q10 — symmetry is a SIGNAL, never a group, so it must not win.
+
+    ``naming.py`` deliberately has no vocabulary for ``bilateral_pairs``, so a
+    selected ``bilateral_pairs`` yields zero suggested groups — which reads as
+    "found nothing" when the tool in fact found a symmetric rig it must not
+    name. Live-found in M6 stage 3, where demoting the mirror artefact handed
+    ``bilateral_pairs`` the win.
+
+    MUTATION: put ``(bilateral, bilateral_score)`` back into ``scored`` and this
+    goes RED.
+    """
+    classification = classify(_flat_row(_MIRRORED_LEFT_RIGHT))
+
+    assert classification.selected.kind != "bilateral_pairs"
+    # but it IS reported, confidently, among the candidates
+    bilateral = [c for c in classification.candidates if c.kind == "bilateral_pairs"]
+    assert len(bilateral) == 1
+    assert bilateral[0].low_confidence is False
+
+
+def test_a_genuine_two_ring_rig_still_wins_as_concentric():
+    """Non-vacuity guard for the demotion: it must not eat real rings.
+
+    The demotion is narrow on purpose — it fires only when EVERY radius bucket
+    holds exactly 2 and ``bilateral_pairs`` is confident. A real 2-ring rig has
+    6 and 12 members, so it is untouched.
+    """
+    fixtures = _golden_concentric()
+    selected = classify(fixtures).selected
+
+    assert selected.kind == "concentric"
+    assert [len(bucket) for bucket in selected.fids_by_bucket] == [6, 12]
