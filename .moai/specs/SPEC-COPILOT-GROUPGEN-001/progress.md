@@ -355,3 +355,57 @@ state DataPool/Groups        → childCount 6 유지
    `spec.md` §C.1 검증 천장 또는 §C.3 상속 제약에 신규 항목으로 추가할 것.
 
 **미프로브** — 없음. **P1~P8 전부 완료** (P8 = 사용자 GUI 삭제, §E.2.6). M0 종결.
+
+### §E.2.8 게이트 A 사후 심층 — **응답기 한계가 아니라 MA3 플랫폼 한계다** (2026-08-04)
+
+§E.2.2의 결론(*"신규 동사(1.7.0)가 필요하다"*)은 **한 사다리만** 타서 나온 것이었다
+(Group 오브젝트의 Lua 인덱싱 속성). 정책 결정 (a)/(b) 자문 요청을 받고 **나머지 사다리를
+전부** 타 봤다. 결과가 결론을 바꿨다.
+
+#### 추가로 닫은 채널 (전부 읽기 전용 · 쇼파일 변경 0 · 프로그래머는 `ClearAll` 원복)
+
+| 사다리 | 프로브 | 결과 |
+|---|---|---|
+| **간접 — 픽스처 측 선택 상태** | `prop Patch/Stages/1/Fixtures/1` × `Selected`/`IsSelected`/`Sel`/`Selection` | **4/4 `ok:false`** — 날조 대조군 `ZzzBogusProp`와 동일. `ClearAll` → `Group <n>` → 픽스처에서 선택 판독하는 우회로는 **없다** |
+| **심층 자식** | `state DataPool/Groups/13/1` | `ok:false "path segment not found: '1'"` |
+| **개수·멤버 의미 속성 5종** | `SelectionCount` · `FixtureCount` · `NoFixtures` · `Subfixtures` · `Class` | **5/5 `ok:false`** |
+| **1.6.1 `introspect`** (설치본 능력 측정 — 본 브랜치 판정 아님) | `introspect DataPool/Groups/13` | `ok:true` · `class: Group` · **`total: 101` · `truncated: true` · 반환 28** · `source: property_accessors` |
+| **1.6.1 `props`** (접근자 경로 판독) | `props COUNT,NAME,NO` × 그룹 `13`·`12`·`11`·`1` | **`COUNT` 4/4 = `"0"`** · `NAME`은 전부 정확 |
+| 같은 배치 날조 대조군 | `props ZzzBogus,COUNT DataPool/Groups/13` | `ZzzBogus` `ok:false` / `COUNT` `ok:true` `"0"` |
+
+#### 왜 이것이 결론을 바꾸는가
+
+`introspect`가 `COUNT`를 **`UInt32` 읽기 가능 속성**으로 열거했고, `prop`이 `"function: 0x…"`를
+준 것은 **응답기가 Lua 인덱싱으로 읽어 동명 메서드에 먼저 걸린** 구현 문제였다 —
+여기까지는 *"접근자 경로로 읽는 신규 동사면 풀린다"*는 §E.2.2 가설을 지지했다.
+
+**그런데 접근자 경로로 실제 읽으니 `COUNT`가 실사용 그룹 4개 전부 `0`이다.**
+`Group 13 'All'`은 `exec`이 `executed_ok`인 그룹이고 `Group 11 'Back'`은 룰북의 검증된
+페이저 예시가 쓰는 그룹이다. 같은 배치의 날조 대조군이 `ok:false`인데 `COUNT`는 `ok:true`이므로
+**`0`은 오류가 아니라 실제 판독값**이다. 오브젝트 트리의 `childCount: 0`과 정확히 일치한다.
+
+→ **그룹 멤버십을 오브젝트·속성 표면에 노출하지 않는 것은 MA3의 성질이다.**
+응답기를 고쳐서 닿을 수 있는 곳에 데이터가 없다. 저장소 교훈
+`grandma3-group-membership-not-readable`가 이름 그대로 옳았다.
+
+#### 정직한 천장 (주장하지 않는 것)
+
+- Group 속성 **101개 중 73개는 보지 못했다**(`introspect` payload 절단, `max_payload = 1900`).
+  그 안에 멤버 열거 필드가 있을 가능성을 **배제하지 못한다**. `introspect`에는 offset 인자가 없다.
+- `Selection`(불투명 테이블)의 **내용**은 여전히 미확인이다. 다만 MA3 자신의 `COUNT`가 0을
+  말하는 상황에서 이 테이블에 SPEC을 거는 것은 근거 없는 낙관이다.
+- 위 두 항목을 뚫으려면 **`props`를 후보 이름으로 무한 추측**하거나 응답기에 페이지네이션을
+  넣어야 한다. 둘 다 **본 SPEC의 범위 밖**이며, 성공 근거가 아니라 희망에 기반한다.
+
+#### 정책 결정에 대한 함의
+
+- **(b) 응답기 1.7.0 확장은 증거상 사망했다.** 가장 유망한 두 접근자 경로(`COUNT` 속성 ·
+  오브젝트 트리)가 실사용 그룹에서 **0**을 답한다. 신규 동사가 무엇을 직렬화할 것인지
+  가리킬 수 있는 대상이 없다. INTROSPECT-001이 목적 구축한 발견 기계(101필드 열거)조차
+  멤버십 필드를 보이지 못했다.
+- **멤버십 검증은 이 플랫폼에서 원리적으로 불가**하다고 기록한다. REQ-023의 GO 분기는
+  **도달 불가 분기**이며, `acceptance.md` AC-023의 GO 열은 `SKIP: CONDITION_NOT_MET`이
+  정직한 표기다(NEGATIVE 분기만 실재).
+- 단 **검증 가능한 것이 남아 있다**(M0 실측): 슬롯 존재(`state` 재조회) · **이름**
+  (`prop NAME` 재조회 — `"GroupgenProbe"`로 실증) · 절단 거부 · 점유 슬롯 차단.
+  *"아무것도 검증 못 한다"*가 아니라 **"멤버십만 검증 못 한다"**가 정확하다.
