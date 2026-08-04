@@ -192,7 +192,7 @@ Run `run_5f9ccdfbf0b6`. 파일 무교차 계약(`.plan-contract.md` §4)을 사�
 |---|---|
 | 콘솔 | grandMA3 onPC 2.4.2 · `app_gma3` pid **1106** (2026-08-02 19:31 기동) |
 | OSC | send `127.0.0.1:8000` / receive **9005** · `osc_slot` 2 |
-| 앱(코파일럿) | **미기동**(TCP 8765 비어있음) — 프로브는 `.moai/reports/m0-probe/fx_probe.py` **bridge 직결** |
+| 앱(코파일럿) | **미기동**(TCP 8765 비어있음) — 프로브는 `tools/console_probe.py` **bridge 직결** |
 | 채널 등급 | `gate.screen()` **미경유**(LOOKLIB M0와 동일 매체 갭 — 콘솔 *능력* 프로브이므로 정당) |
 | 소켓 | **낡지 않음** — 첫 시도에 ping+state 응답(`Enable` 사이클 불요) |
 | 기준선(AC-034 재측정) | pytest **4511 passed · 5 skipped · 0 failed**(93s) · vitest **350 passed** |
@@ -412,7 +412,7 @@ state DataPool/Groups        → childCount 6 유지
 
 ### §E.2.9 M6 라이브 E2E — 같은 지시, 세 배치 (2026-08-04)
 
-승인: 사용자 "진행해줘". 하네스 `.moai/reports/m0-probe/groupgen_m6_e2e.py` (gitignored DEV TOOL) —
+승인: 사용자 "진행해줘". 하네스 `server/tools/groupgen_e2e.py` (gitignored DEV TOOL) —
 **실물 게이트 스택**(`build_console_stack` → `build_toolset(bundle_gate=, group_approval_port=)`)을
 세워 **`registry.dispatch`**, 즉 *모델이 닿는 그 지점*으로 진입했다(FXLIB M7 `fx_e2e.py` 선례).
 bridge 직결 프로브는 콘솔 *능력*만 증명하고, 툴 사슬은 이렇게만 증명된다.
