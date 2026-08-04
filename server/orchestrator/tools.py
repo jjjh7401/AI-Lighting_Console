@@ -10,8 +10,9 @@ never sends anything.
 from __future__ import annotations
 
 import json
+import math
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
 
@@ -24,6 +25,11 @@ from server.fx.matching import match_fx
 from server.fx.report import build_report as build_fx_report
 from server.fx.report import to_korean as fx_report_to_korean
 from server.fx.schema import FxLibrary
+from server.groupgen.write import (
+    GroupSlotError,
+    build_group_write_plan,
+    guard_bundle_collision,
+)
 from server.llm.types import ToolCall, ToolDefinition, ToolResult
 from server.looks.busking import build_genre_bundle, select_genre
 from server.looks.instantiate import (
@@ -63,10 +69,16 @@ from server.prechk.inventory import InventoryReadError, read_inventory
 from server.prechk.macro import MacroPolicy, MacroResult, build_response_check_macro
 from server.prechk.macro import groups_from_snapshot as read_group_pool
 from server.prechk.patch import evaluate_patch
-from server.prechk.query import read_properties
+from server.prechk.query import PropertyRead, read_properties
 from server.prechk.report import build_report as build_precheck_report
 from server.preshow.osc_check import LivenessPort as PreshowLivenessPort
 from server.preshow.runner import run_preshow_checklist
+from server.safety.approval import (
+    ApprovalItem,
+    ApprovalPort,
+    ApprovalRequest,
+    DenyAllApprovalPort,
+)
 from server.scene.compile import SceneCompilationError
 from server.scene.compile import compile_scene as build_scene_bundle
 from server.scene.loader import DEFAULT_LIBRARY_DIR as SCENE_LIBRARY_DIR
@@ -78,6 +90,32 @@ from server.scene.matching import match_scene
 from server.scene.report import build_report as build_scene_report
 from server.scene.report import to_korean as scene_report_to_korean
 from server.scene.schema import SceneLibrary
+from server.spatial import (
+    SpatialAnalysisError,
+    analyze_spatial_records,
+    spatial_analysis_to_dict,
+    spatial_fixtures_from_records,
+)
+from server.spatial.fixture_type import (
+    FixtureTypeAnalysisError,
+    analyze_fixture_type_records,
+    fixture_type_analysis_to_dict,
+)
+from server.spatial.naming import (
+    name_concentric_bucket,
+    name_depth_bucket,
+    name_lateral_bucket,
+    name_vertical_bucket,
+)
+from server.spatial.presets import (
+    SPATIAL_PRESETS,
+    SpatialPlacement,
+    SpatialPresetError,
+    spatial_placements_to_records,
+    spatial_preset_placements,
+)
+from server.spatial.topology import TopologyResult
+from server.spatial.topology import classify as classify_topology
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
     from server.deploy.pipeline import DeployOutcome
@@ -105,6 +143,10 @@ TOOL_NAMES = (
     "build_cue_sheet",
     "build_preset_list",
     "plan_executor_layout",
+    "get_spatial_context",
+    "arrange_fixtures",
+    "classify_arrangement_topology",
+    "create_arrangement_groups",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -544,6 +586,396 @@ def collect_rig_sections(
     return summary, resolved, len(failures)
 
 
+# -- spatial read helpers (SPEC-COPILOT-SPATIAL-001 M1) ------------------------
+#
+# @MX:NOTE: [SPEC] The READ channel is candidate A — the responder's EXISTING
+#   ``prop`` verb, one fixture at a time, no new wire (design.md §2.1, adopted
+#   as decision D-1 in progress.md §E.2.8). Candidate B (a bulk ``spatial``
+#   verb) was deliberately left unbuilt: it costs a responder branch, a
+#   PROTOCOL.md revision, a protocol builder, a console redeploy and a version
+#   negotiation, and the live round-trip measurement below says the per-fixture
+#   loop fits the budget without any of them. Do not promote this to a new verb
+#   without a MEASUREMENT saying the loop stopped fitting.
+# @MX:SPEC: SPEC-COPILOT-SPATIAL-001 REQ-SPATIAL-001/004/006/007.
+
+#: Which source answered (REQ-SPATIAL-002). A fixed string rather than a
+#: computed one: the Layout-pool source is DEFERRED by decision D-3 — the
+#: measured showfile's only layout has zero assigned elements, so it holds no
+#: coordinate to prefer — and a reply that could not name its provenance is
+#: exactly the shape this field exists to prevent.
+SPATIAL_SOURCE_PATCH3D = "patch3d"
+
+#: The properties ONE fixture costs. All four were read back from a live onPC
+#: 2.4.2 on all 19 fixtures of the calibration rig (progress.md §E.2.1), where
+#: property lookup also proved case-INSENSITIVE — so the spelling here is a
+#: style choice, not a probe result. ``name`` is deliberately absent: the
+#: container snapshot already carries it, and spending a round trip to re-read
+#: a string we already hold is the whole difference between the 4-per-fixture
+#: budget below and a 5-per-fixture one.
+SPATIAL_FIXTURE_PROPERTIES = ("fid", "posx", "posy", "posz")
+
+#: Reply axis -> console property, ordered. The order is observable: the FIRST
+#: axis that fails to read is the reason the whole fixture is reported absent.
+SPATIAL_AXES = (("x", "posx"), ("y", "posy"), ("z", "posz"))
+
+#: Ceiling on property round trips per ``get_spatial_context`` call — 30
+#: fixtures at ``SPATIAL_FIXTURE_PROPERTIES`` each. Not a round number picked
+#: for looks: one round trip is a MEASURED 66.7 ms (progress.md §E.2.2, where
+#: 18 fixtures x 3 axes took 3.60 s), so 120 trips is ~8.0 s — the exact
+#: 30-fixture cost design.md §7 tabulated and decision D-1 accepted. A larger
+#: rig stops AT the ceiling and says so; the one thing it must never do is
+#: return most of a rig as if it were all of it.
+SPATIAL_PROPERTY_QUERY_CAP = 120
+
+#: Why a container child was never queried at all. Distinct from a property
+#: read that FAILED: the responder declined to establish this child's slot, so
+#: there is no path to read a coordinate off (``rig_object``'s degraded
+#: name-only entry rests on the same responder guarantee).
+_SPATIAL_NO_SLOT_REASON = "container slot not established by the responder"
+
+
+def _spatial_absence(name: str, reason: str, fid: int | None = None) -> dict[str, object]:
+    """One entry in ``unreadable``: a fixture that has NO coordinate here, and why.
+
+    Carries ``fid`` only when the console actually returned one — the same
+    slot-is-not-an-identifier rule ``rig_object`` applies to ``no``
+    (REQ-SPATIAL-007 / AC-SPATIAL-007). A fixture whose ``fid`` read failed
+    comes back name-only, because there is no number anybody observed.
+    """
+    if fid is None:
+        return {"name": name, "reason": reason}
+    return {"fid": fid, "name": name, "reason": reason}
+
+
+# @MX:ANCHOR: [SPEC] the coordinate-invention guard (REQ-SPATIAL-004 /
+#   AC-SPATIAL-004, mutation-required).
+# @MX:REASON: A fixture reaches ``fixtures`` only when the console answered for
+#   fid AND all three axes. Every other outcome returns ``(None, absence)``, so
+#   there is no branch on which a missing coordinate can be filled with 0, with
+#   a neighbour's value or with a rig average. This matters more here than
+#   anywhere else in the SPEC: a fabricated 0 is INDISTINGUISHABLE from the
+#   all-(0,0,0) rig that was actually measured (progress.md §E.2.4), so the
+#   moment a default is filled in, "this choreography matches your rig" becomes
+#   a claim nobody can check — quietly, and on exactly the rigs where it is
+#   false. Absence is an ITEM, never a zero.
+def spatial_fixture_record(
+    name: str, reads: Mapping[str, PropertyRead]
+) -> tuple[dict[str, object] | None, dict[str, object] | None]:
+    """One fixture's property reads -> a coordinate record, or the reason it has none.
+
+    Returns ``(record, None)`` or ``(None, absence)`` — never both, and never a
+    record with an axis filled in that the console did not answer for.
+
+    Values arrive as the responder's strings (``"19"``, ``"0.0"``, ``"-3.5"``)
+    and are parsed here rather than downstream: an unparseable value is a read
+    that produced no usable coordinate, which is the same event as a read that
+    failed, and both belong in ``unreadable`` with the console's own words.
+    Non-finite floats are refused for the same reason — ``float("nan")`` parses
+    and would then sort unpredictably, which is the silent-arbitrary-order
+    failure AC-SPATIAL-010 forbids.
+    """
+    fid_read = reads[SPATIAL_FIXTURE_PROPERTIES[0]]
+    if not fid_read.ok:
+        return None, _spatial_absence(name, fid_read.error or "fid not readable")
+    try:
+        fid = int(str(fid_read.value).strip())
+    except ValueError:
+        return None, _spatial_absence(name, f"fid is not a number: {fid_read.value!r}")
+    record: dict[str, object] = {"fid": fid, "name": name}
+    for axis, prop in SPATIAL_AXES:
+        read = reads[prop]
+        if not read.ok:
+            return None, _spatial_absence(name, read.error or f"{prop} not readable", fid)
+        try:
+            value = float(str(read.value).strip())
+        except ValueError:
+            return None, _spatial_absence(name, f"{prop} is not a number: {read.value!r}", fid)
+        if not math.isfinite(value):
+            return None, _spatial_absence(name, f"{prop} is not finite: {read.value!r}", fid)
+        record[axis] = value
+    return record, None
+
+
+def read_spatial_fixtures(
+    state_port: StateQueryPort,
+    property_port: PropertyQueryPort,
+    fixtures_path: str,
+    budget: int,
+) -> dict[str, object]:
+    """Read ``(fid, name, x, y, z)`` for every fixture in the stage patch container.
+
+    READ ONLY: one snapshot of ``fixtures_path`` plus ``SPATIAL_FIXTURE_PROPERTIES``
+    property reads per fixture, both through the gate-audited query ports. No
+    command line is composed and the execution port is never reached from here.
+
+    Raises whatever the state port raises when the container itself does not
+    answer — a rig with no enumerable patch is a failed call, not an empty one.
+    """
+    payload = state_port.query_state(fixtures_path)
+    children = [child for child in (payload.get("children") or []) if isinstance(child, dict)]
+    node = payload.get("node")
+    child_count = node.get("childCount") if isinstance(node, dict) else None
+
+    # @MX:ANCHOR: [SPEC] item-drop signal (REQ-SPATIAL-006 / AC-SPATIAL-006,
+    #   mutation-required). Read TWO ways on purpose: the responder's own
+    #   ``truncated`` flag, and the arithmetic it is derived from
+    #   (``node.childCount`` against the children that actually arrived).
+    # @MX:REASON: The live rig already crosses this boundary — the measured
+    #   container answered childCount 19 with 18 children and truncated:true
+    #   (progress.md §E.2.3), and slot 19 read back perfectly well when asked
+    #   directly. So the missing fixture is NOT unreadable and NOT absent; it
+    #   is unseen, and a reply that did not say so would describe an 18-fixture
+    #   rig that does not exist. Keeping the arithmetic alongside the flag means
+    #   a responder that ever drops the flag still cannot make the loss silent.
+    truncated = bool(payload.get("truncated", False)) or (
+        isinstance(child_count, int) and child_count > len(children)
+    )
+
+    # @MX:ANCHOR: [SPEC] coverage signal (REQ-GROUPGEN-024 amendment,
+    #   2026-08-04 — the discriminate-path guard, not the write-path guard).
+    #   ``of`` is the rig's real fixture count (``node.childCount`` when the
+    #   console reported one; otherwise the best available fallback is the
+    #   ``children`` array length actually returned). ``judged`` is filled in
+    #   by the caller once fixture records are parsed — this function only
+    #   knows the container-level shape, not which parsed records later fail
+    #   coordinate parsing, so the caller (``classify_arrangement_topology``)
+    #   completes ``judged`` from ``len(fixtures)`` in its own payload.
+    total_fixture_count = child_count if isinstance(child_count, int) else len(children)
+
+    fixtures: list[dict[str, object]] = []
+    unreadable: list[dict[str, object]] = []
+    roundtrip_capped = False
+    per_fixture = len(SPATIAL_FIXTURE_PROPERTIES)
+    for child in children:
+        # @MX:ANCHOR: [SPEC] round-trip cap signal (REQ-SPATIAL-006). A SEPARATE
+        #   field from ``truncated`` — the console shortened its answer, this
+        #   code stopped asking, and only the second one is fixable by asking
+        #   again (design.md §2.3, acceptance.md §D "값 축약과 항목 탈락은 다른
+        #   사건").
+        # @MX:REASON: Every read here is a UDP round trip through the gate and
+        #   the audit log at a measured 66.7 ms, so an unbounded walk makes this
+        #   tool cost scale with the showfile. Stopping is fine; stopping
+        #   QUIETLY is the recurring defect this project already paid for once
+        #   (the eight vanished looks), because a caller that cannot see the cut
+        #   will happily choreograph the fixtures it was never shown.
+        if budget < per_fixture:
+            roundtrip_capped = True
+            break
+        name = child.get("name", "")
+        if not isinstance(name, str):
+            name = str(name)
+        slot = child.get("i")
+        if not isinstance(slot, int) or isinstance(slot, bool):
+            # Never queried, so no budget was spent: there is no address to
+            # spend it on. Reported as absent rather than skipped, because a
+            # fixture missing from BOTH lists is a fixture nobody mentioned.
+            unreadable.append(_spatial_absence(name, _SPATIAL_NO_SLOT_REASON))
+            continue
+        budget -= per_fixture
+        reads = read_properties(
+            property_port, f"{fixtures_path}/{slot}", SPATIAL_FIXTURE_PROPERTIES
+        )
+        record, absence = spatial_fixture_record(name, reads)
+        if record is None:
+            unreadable.append(absence)  # type: ignore[arg-type]
+        else:
+            fixtures.append(record)
+    return {
+        "source": SPATIAL_SOURCE_PATCH3D,
+        "path": fixtures_path,
+        "fixtures": fixtures,
+        "unreadable": unreadable,
+        "truncated": truncated,
+        "roundtrip_capped": roundtrip_capped,
+        # REQ-GROUPGEN-024 amendment coverage signal — "judged" is how many
+        # fixtures actually fed a topology judgment, "of" is the rig's real
+        # total; "complete" is False whenever EITHER the container listing
+        # was truncated OR the per-fixture property walk was budget-capped
+        # OR the two counts simply disagree.
+        "coverage": {
+            "judged": len(fixtures),
+            "of": total_fixture_count,
+            "complete": (
+                not truncated and not roundtrip_capped and len(fixtures) == total_fixture_count
+            ),
+        },
+    }
+
+
+# -- arrange_fixtures: the coordinate WRITE axis (REQ-SPATIAL-019~024) ---------
+#
+# @MX:NOTE: [MANUAL] the adopted write channel is the ORDINARY COMMAND LINE.
+# @MX:SPEC: SPEC-COPILOT-SPATIAL-001 D-2 (progress.md §E.2.6/§E.2.8). The M0
+#   live probe landed a coordinate write on the FIRST candidate, so the
+#   responder gained no write verb, `PROTOCOL.md` gained no revision and the
+#   gate gained no second surface: this bundle rides `run_commands` ->
+#   `gate.screen()` exactly like every other mutating tool. A future reader
+#   tempted to "just add a responder verb for speed" should read that section
+#   first — the measurement is why the wire stayed closed.
+
+#: The writable position axes: the attribute on a placement, and the console
+#: property that stores it. THREE axes, and only these three — v1 writes
+#: position and nothing else (REQ-SPATIAL-022 c). Orientation properties are
+#: excluded from the write axis entirely: their sign convention and units are
+#: unmeasured on this console, and on a physical rig a moving head aimed the
+#: wrong way is worse than one standing in the wrong place. Nothing here can
+#: emit one — the bundle is built from this tuple and then sealed against the
+#: whitelist below.
+ARRANGE_AXES: tuple[tuple[str, str], ...] = (("x", "Posx"), ("y", "Posy"), ("z", "Posz"))
+
+#: The same three axes as the responder wants them for a READ. Property lookup
+#: is case-insensitive live (progress.md §E.2.1); lower case matches the read
+#: tool so both paths ask for one spelling.
+ARRANGE_READ_AXES: tuple[str, ...] = ("posx", "posy", "posz")
+
+#: The ONE command form for a coordinate write — LIVE-MEASURED, and the single
+#: quotes are not decoration (progress.md §E.2.6a). Of five forms probed on
+#: onPC 2.4.2, THREE answered `ok:true` while storing the wrong value or
+#: nothing at all:
+#:     Set Fixture 11 Posx -3.5     -> stored 3.5   (sign silently dropped), OK
+#:     Set Fixture 11 Posx - 3.5    -> stored nothing (silent no-op),        OK
+#:     Set Fixture 11 Posx 0-3.5    -> stored 0.0    (wrong value),          OK
+#:     Set Fixture 11 Posx '-3.5'   -> stored -3.5                           OK
+#: Stage coordinates are negative left of the origin, so the trap sits on this
+#: tool's MAIN path, not an edge. Double quotes are not an alternative: the
+#: exec request builder rejects the character outright
+#: (`server/bridge/protocol.py:109`).
+ARRANGE_COMMAND_TEMPLATE = "Set Fixture {fid} {axis} '{value}'"
+
+#: What a line of this tool's bundle may look like — a positive whitelist, so
+#: the scope seal below refuses anything else BY CONSTRUCTION rather than by
+#: blacklisting the forms someone thought of.
+_ARRANGE_COMMAND = re.compile(r"^Set Fixture (?P<fid>\d+) (?P<axis>Pos[xyz]) '(?P<value>[^']+)'$")
+
+#: A coordinate as plain decimal text. Both the values this tool emits and the
+#: values it reads back must match: anything else (scientific notation, a
+#: quote, a unit suffix) is not something that can be quoted back onto a
+#: command line and re-stored, so it fails the backup instead of being guessed
+#: at.
+_ARRANGE_VALUE = re.compile(r"-?\d+(?:\.\d+)?")
+
+#: Re-query tolerance. The console stores float32: 9.9 is written and reads
+#: back as 9.8999996185303 (progress.md §E.2.6a), so STRING equality would
+#: report a correct write as a failure. float32's relative epsilon is ~1.2e-7,
+#: so 1e-6 clears the drift with an ~8x margin while staying two orders of
+#: magnitude below the preset layer's 1e-4 m quantisation — two distinct target
+#: coordinates can never alias into one tolerance band, so a WRONG value cannot
+#: pass either.
+ARRANGE_VERIFY_REL_TOLERANCE = 1e-6
+ARRANGE_VERIFY_ABS_TOLERANCE = 1e-6
+
+#: Ceiling on the fid -> slot resolution walk. A fixture's SLOT in the patch
+#: container is not its FID (`rig_object` docstring), so every named target's
+#: slot is MEASURED — one property read per slot, stopping the moment the last
+#: target is located. 120 is design.md §7's 30-fixture arithmetic (~66.7 ms per
+#: round trip, ~8 s); a walk that hits the ceiling says so rather than
+#: presenting a partial resolution as a complete one.
+ARRANGE_SLOT_QUERY_CAP = 120
+
+
+@dataclass(frozen=True)
+class ArrangeBackup:
+    """One target's coordinates as they were BEFORE the write.
+
+    ``raw`` keeps the console's own strings, not a re-rendered float: the
+    restore bundle re-writes exactly the text the console handed back, so a
+    float32 value like ``9.8999996185303`` restores bit-for-bit instead of
+    through a decimal round trip that could land one ulp away.
+    """
+
+    fid: int
+    slot: int
+    name: str
+    raw: tuple[str, str, str]
+    values: tuple[float, float, float]
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "fid": self.fid,
+            "slot": self.slot,
+            "name": self.name,
+            "x": self.values[0],
+            "y": self.values[1],
+            "z": self.values[2],
+        }
+
+
+def arrange_format_value(value: float) -> str:
+    """Render one computed coordinate as command-line text.
+
+    ``repr`` gives the shortest decimal that round-trips, which for a value the
+    preset layer already quantised to 1e-4 is at most four decimals. The guard
+    is not theatre: a value large enough to render as ``1e+16`` would reach the
+    console as a token it does not read as that number.
+    """
+    text = repr(float(value))
+    if not _ARRANGE_VALUE.fullmatch(text):
+        raise SpatialPresetError(f"coordinate {value!r} does not render as plain decimal text")
+    return text
+
+
+def arrange_write_commands(placements: Sequence[SpatialPlacement]) -> tuple[str, ...]:
+    """The write bundle: one line per axis per placement, x then y then z."""
+    return tuple(
+        ARRANGE_COMMAND_TEMPLATE.format(
+            fid=placement.fid,
+            axis=axis_property,
+            value=arrange_format_value(getattr(placement, attribute)),
+        )
+        for placement in placements
+        for attribute, axis_property in ARRANGE_AXES
+    )
+
+
+# @MX:ANCHOR: [MANUAL] the restore bundle — the ONLY route back from a
+#   coordinate write.
+# @MX:REASON: REQ-SPATIAL-020 / AC-SPATIAL-019. `server/safety/backup.py` takes
+#   showfile snapshots but has NO restore SEND path (T-B2; `gate.py:283` marks
+#   the seat as deliberately unimplemented), so a snapshot cannot undo this
+#   tool. Re-writing the original coordinates is the entire recovery story, and
+#   it only works if the bundle covers EVERY target — `run_commands` stops on
+#   the first failure, so a partial write is the expected failure mode and a
+#   restore bundle that only covered the written prefix would strand it.
+def arrange_restore_commands(backups: Sequence[ArrangeBackup]) -> tuple[str, ...]:
+    """The re-write bundle that puts every backed-up target back where it was."""
+    return tuple(
+        ARRANGE_COMMAND_TEMPLATE.format(fid=backup.fid, axis=axis_property, value=backup.raw[index])
+        for backup in backups
+        for index, (_attribute, axis_property) in enumerate(ARRANGE_AXES)
+    )
+
+
+def arrange_scope_violations(commands: Sequence[str], fids: Sequence[int]) -> tuple[str, ...]:
+    """Every way ``commands`` exceeds the explicitly named target set.
+
+    A STATIC check (AC-SPATIAL-021): the bundle is text, the target set is a
+    list of integers, and the answer needs no console. Run before the bundle is
+    handed to ``run_commands`` so a scope escape is refused rather than sent —
+    "the builder can only emit position lines" is an argument about code that
+    was true right up until someone edited the builder.
+    """
+    allowed = set(fids)
+    violations: list[str] = []
+    for command in commands:
+        match = _ARRANGE_COMMAND.match(command)
+        if match is None:
+            violations.append(f"not a position write: {command!r}")
+            continue
+        if int(match["fid"]) not in allowed:
+            violations.append(f"fid {match['fid']} was never named as a target: {command!r}")
+    return tuple(violations)
+
+
+def arrange_values_match(expected: float, actual: float) -> bool:
+    """Compare a written coordinate with its read-back NUMERICALLY.
+
+    Never by string equality — see :data:`ARRANGE_VERIFY_REL_TOLERANCE`.
+    """
+    return abs(actual - expected) <= max(
+        ARRANGE_VERIFY_ABS_TOLERANCE, ARRANGE_VERIFY_REL_TOLERANCE * abs(expected)
+    )
+
+
 def _error_result(call: ToolCall, message: str) -> ToolExecution:
     return ToolExecution(
         result=ToolResult(
@@ -636,6 +1068,7 @@ def build_toolset(
     preshow_liveness_port: PreshowLivenessPort | None = None,
     preshow_receive_port: int | None = None,
     preshow_osc_slot: int | None = None,
+    group_approval_port: ApprovalPort | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
 
@@ -676,8 +1109,19 @@ def build_toolset(
     ``osc_slot_send_row`` check then falls back to the hardcoded default AND
     discloses that fallback explicitly, rather than naming an unconfirmed
     value as if it were the confirmed site setting.
+
+    ``group_approval_port`` (SPEC-COPILOT-GROUPGEN-001 §7 — the tool-layer
+    approval seam) is the ONLY route ``create_arrangement_groups`` has to a
+    console send: it reuses ``server.safety.approval.ApprovalPort`` (the same
+    human-approval channel the M4 gate wires for risky commands), because
+    ``Store Group``/``Label Group`` classify as ``safe`` (design.md §7.3,
+    ``server/safety/**`` stays byte-diff 0) and so never reach the gate's own
+    approval stage on their own. Omitted (the default), it falls back to
+    ``DenyAllApprovalPort`` — fail-closed, matching the port's own module
+    docstring: with no approval channel wired, nothing is ever sent.
     """
     rig_paths = dict(rig_paths or DEFAULT_RIG_CONTEXT_PATHS)
+    group_approval = group_approval_port or DenyAllApprovalPort()
     drilldown = frozenset(rig_drilldown if rig_drilldown is not None else DEFAULT_RIG_DRILLDOWN)
     looks = look_library
     fx_lib = fx_library
@@ -2565,6 +3009,962 @@ def build_toolset(
             result=ToolResult(tool_call_id=call.id, name=call.name, content=content, is_error=False)
         )
 
+    # -- get_spatial_context (SPEC-COPILOT-SPATIAL-001 M1 — REQ-SPATIAL-001/
+    #    004/005/006/007) ---------------------------------------------------------
+    #
+    # The READ half of the spatial axis, and a strict sibling of
+    # get_rig_context rather than an extension of it: rig context answers
+    # "which objects exist", this answers "where they are", and REQ-SPATIAL-008
+    # makes that separation non-negotiable — the ten rig-context paths and the
+    # snapshot shape are unchanged, and their tests pass unedited.
+    #
+    # Reads only. It obtains its console seam exactly the way get_rig_context
+    # does (the injected query ports, never the execution port), composes no
+    # command line and mutates nothing, so there is no gate surface for it to
+    # need. The WRITE half — the one that does compose command lines and does
+    # ride the gate — is a separate tool on purpose (decision D-4): folding a
+    # showfile mutation into the tool a model calls to LOOK at the rig would
+    # blur which approval card the operator is being shown.
+
+    def get_spatial_context(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        fixtures_path = rig_paths.get("fixtures")
+        if not fixtures_path:
+            # Fail by NAME, like every other rig-section guard here — a
+            # rig_paths override that drops the stage patch must not read as a
+            # rig that has no fixtures.
+            return _error_result(
+                call,
+                "rig context has no 'fixtures' path configured — the stage patch "
+                "cannot be read for coordinates without it",
+            )
+        if property_port is None:
+            # Same missing-capability wording precheck_patch and
+            # build_patch_sheet use. Coordinates live ONLY in properties, so an
+            # unwired port means the answer is unavailable, never "no fixtures
+            # have coordinates".
+            return _error_result(
+                call,
+                "property reads are not wired — build_toolset needs property_port "
+                "(or a state_port that also implements query_property)",
+            )
+        try:
+            reply = read_spatial_fixtures(
+                state_port, property_port, fixtures_path, SPATIAL_PROPERTY_QUERY_CAP
+            )
+        except Exception as exc:
+            return _error_result(
+                call, f"stage patch enumeration failed for {fixtures_path!r}: {exc}"
+            )
+        try:
+            reply["analysis"] = spatial_analysis_to_dict(
+                analyze_spatial_records(reply["fixtures"])  # type: ignore[arg-type]
+            )
+        except SpatialAnalysisError as error:
+            # The coordinate map plus the absence report is the mandatory
+            # deliverable; row structure is a fold-in over it. A read defect the
+            # pure layer refuses (two records claiming one fid) costs the
+            # analysis, never the map the caller can still inspect.
+            reply["analysis"] = None
+            reply["analysis_error"] = str(error)
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(reply, ensure_ascii=False),
+                # A rig that answered with no usable coordinates is an ANSWER,
+                # carrying its own demotion signal in analysis.low_confidence
+                # (REQ-SPATIAL-005). Marking it an error would feed the
+                # self-correction loop a retry that can only read the same rig
+                # again. Only a container that never answered is a failed call,
+                # and that returned above.
+                is_error=False,
+            )
+        )
+
+    # -- arrange_fixtures (REQ-SPATIAL-019~024 — the coordinate WRITE axis) ----
+    #
+    # The ONE order this tool may run in, and none of it is negotiable:
+    #
+    #   read + retain EVERY target's current coordinates   (backup)
+    #     -> gate screening + approval                     (run_commands)
+    #       -> write                                       (run_commands)
+    #         -> read the coordinates back and COMPARE     (verification)
+    #           -> restore bundle in the report            (always)
+    #
+    # Like `instantiate_look` this handler is a CALLER of `run_commands`, never
+    # a second execution surface: the bundle inherits gate screening, the live
+    # lock, dedupe and the audit log from that one path (REQ-SPATIAL-024).
+
+    def arrange_fixtures(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        preset = call.arguments.get("preset")
+        if not isinstance(preset, str) or preset not in SPATIAL_PRESETS:
+            return _error_result(
+                call, f"'preset' must be one of {list(SPATIAL_PRESETS)}, not {preset!r}"
+            )
+        fids = call.arguments.get("fids")
+        if not isinstance(fids, list) or not fids:
+            return _error_result(
+                call,
+                "'fids' must be a non-empty list of the fixture ids to move — this tool "
+                "moves exactly what it is told to and never widens the set itself",
+            )
+        params = {
+            key: value for key, value in call.arguments.items() if key not in ("preset", "fids")
+        }
+        try:
+            plan = spatial_preset_placements(preset, fids, params)
+        except SpatialPresetError as error:
+            return _error_result(call, f"{preset!r} arrangement cannot be computed: {error}")
+        targets = plan.fids
+
+        def _arrange_payload(**extra: object) -> dict[str, object]:
+            """The report skeleton every branch returns, in one place."""
+            payload: dict[str, object] = {
+                "preset": plan.preset,
+                "resolved": plan.resolved,
+                "targets": list(targets),
+                "planned": spatial_placements_to_records(plan.placements),
+            }
+            payload.update(extra)
+            return payload
+
+        def _arrange_result(
+            payload: Mapping[str, object],
+            *,
+            is_error: bool,
+            outcomes: tuple[CommandOutcome, ...] = (),
+        ) -> ToolExecution:
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=is_error,
+                ),
+                command_outcomes=outcomes,
+            )
+
+        # LiveLock is checked BEFORE the backup read, not after. Every other
+        # mutating tool learns about the lock from `run_commands`, but this one
+        # reaches the console one step earlier: the backup is itself a console
+        # round trip, and REQ-SPATIAL-023 demotes the WHOLE bundle to a proposal
+        # with ZERO sends — backup read included (acceptance.md §D). The gate
+        # stays authoritative for the write; this probe only decides whether to
+        # start reading. It is duck-typed on the wired gate for the same reason
+        # `property_port` is adopted from `state_port` above: a narrow test
+        # double stays narrow instead of being forced to grow a lock.
+        # `SafetyGate.status` is a PROPERTY returning
+        # `{"health": ..., "live_lock": bool}` (gate.py:186); a callable is
+        # accepted too so a differently-shaped gate is not silently read as
+        # unlocked.
+        lock_status = getattr(bundle_gate, "status", None)
+        live_locked = False
+        try:
+            if callable(lock_status):
+                lock_status = lock_status()
+            if isinstance(lock_status, Mapping):
+                live_locked = bool(lock_status.get("live_lock"))
+        except Exception:  # a gate that cannot answer is not a locked gate
+            live_locked = False
+        if live_locked:
+            proposed = arrange_write_commands(plan.placements)
+            notice = (
+                "live lock active (read-only) — proposal only. Nothing was read and "
+                "nothing was written: the original-coordinate backup this tool "
+                "requires is itself a console round trip, so it is proposed too."
+            )
+            return _arrange_result(
+                _arrange_payload(
+                    status="proposal",
+                    gate_status=_LOCKED,
+                    executed=False,
+                    succeeded=False,
+                    verified=False,
+                    backup=[],
+                    restore_bundle=[],
+                    proposed_commands=list(proposed),
+                    notice=notice,
+                ),
+                # A demotion is an ANSWER, not a failure (REQ-SPATIAL-023): an
+                # is_error payload would feed the self-correction loop and send
+                # the model back into the same lock, during a show.
+                is_error=False,
+                outcomes=tuple(
+                    CommandOutcome(command=command, status="proposal", detail=notice)
+                    for command in proposed
+                ),
+            )
+
+        fixtures_path = rig_paths.get("fixtures")
+        if not fixtures_path:
+            return _error_result(
+                call,
+                "rig context has no path configured for 'fixtures' — coordinates "
+                "cannot be backed up or written without it",
+            )
+        if property_port is None:
+            # Not a degraded mode: a write with no way to read the original
+            # coordinates back is exactly what REQ-SPATIAL-020 prohibits.
+            return _error_result(
+                call,
+                "arrange_fixtures needs a property-read capability to back up the "
+                "original coordinates; this session has none, so nothing is written",
+            )
+        reader: PropertyQueryPort = property_port
+
+        def _arrange_locate() -> tuple[dict[int, tuple[int, str]], list[int], dict[str, object]]:
+            """Measure which container slot holds each named fid.
+
+            A slot is NOT an fid (`rig_object` docstring, REQ-SPATIAL-007), so
+            every target's slot is read rather than assumed. The walk stops as
+            soon as the last target is found.
+            """
+            snapshot = state_port.query_state(fixtures_path)
+            children = snapshot.get("children") if isinstance(snapshot, dict) else None
+            if not isinstance(children, list):
+                raise LookupError(f"{fixtures_path} returned no children list")
+            remaining = list(targets)
+            found: dict[int, tuple[int, str]] = {}
+            queries = 0
+            capped = False
+            for child in children:
+                if not remaining:
+                    break
+                if queries >= ARRANGE_SLOT_QUERY_CAP:
+                    capped = True
+                    break
+                if not isinstance(child, dict) or not isinstance(child.get("i"), int):
+                    continue
+                slot = int(child["i"])
+                queries += 1
+                read = read_properties(reader, f"{fixtures_path}/{slot}", ("fid",))["fid"]
+                if not read.ok or read.value is None:
+                    continue
+                try:
+                    fid = int(str(read.value).strip())
+                except ValueError:
+                    continue
+                if fid in remaining:
+                    remaining.remove(fid)
+                    found[fid] = (slot, str(child.get("name") or "").strip())
+            walk = {
+                "slot_queries": queries,
+                "roundtrip_capped": capped,
+                # `snapshot` is a dict by here — the children guard above
+                # raised otherwise.
+                "truncated": bool(snapshot.get("truncated")),
+            }
+            return found, remaining, walk
+
+        def _arrange_read(slot: int) -> tuple[list[str], list[float], str | None]:
+            """Read one slot's three position axes; report the first failure."""
+            reads = read_properties(reader, f"{fixtures_path}/{slot}", ARRANGE_READ_AXES)
+            raw: list[str] = []
+            values: list[float] = []
+            for axis in ARRANGE_READ_AXES:
+                read = reads[axis]
+                if not read.ok or read.value is None:
+                    return raw, values, read.error or f"property not readable: {axis}"
+                text = str(read.value).strip()
+                if not _ARRANGE_VALUE.fullmatch(text):
+                    return raw, values, f"{axis} read back as {text!r}, not a plain decimal"
+                raw.append(text)
+                values.append(float(text))
+            return raw, values, None
+
+        try:
+            located, unresolved, walk = _arrange_locate()
+        except Exception as error:
+            return _error_result(call, f"the patch container could not be read: {error}")
+
+        # @MX:ANCHOR: [MANUAL] the backup-before-write guard. EVERY target's
+        #   current coordinates are read and retained here, before a single
+        #   command line is built, and any target that cannot be backed up
+        #   cancels the WHOLE write rather than being skipped.
+        # @MX:REASON: REQ-SPATIAL-020 / AC-SPATIAL-019. `server/safety/backup.py`
+        #   snapshots the showfile but has NO restore SEND path (T-B2;
+        #   `gate.py:283` marks the seat deliberately unimplemented), so a
+        #   snapshot cannot undo this tool — re-writing the original coordinates
+        #   is the only recovery that exists. Backing up per target as the
+        #   writes go would satisfy the letter and lose the point: run_commands
+        #   stops on the first failure, so a partial write is the EXPECTED
+        #   failure mode and only an up-front backup of every target keeps it
+        #   recoverable. Reordering this below the write, or letting an
+        #   unreadable target through, removes the last defence a physical rig's
+        #   surveyed positions have.
+        backups: list[ArrangeBackup] = []
+        unreadable: list[dict[str, object]] = []
+        for fid in targets:
+            if fid not in located:
+                unreadable.append(
+                    {
+                        "fid": fid,
+                        "reason": (
+                            "no patch slot answered with this fid"
+                            + (
+                                " (the container snapshot was truncated, so it may "
+                                "simply not have been read)"
+                                if walk["truncated"] or walk["roundtrip_capped"]
+                                else ""
+                            )
+                        ),
+                    }
+                )
+                continue
+            slot, name = located[fid]
+            raw, values, failure = _arrange_read(slot)
+            if failure is not None:
+                unreadable.append({"fid": fid, "slot": slot, "name": name, "reason": failure})
+                continue
+            backups.append(
+                ArrangeBackup(
+                    fid=fid,
+                    slot=slot,
+                    name=name,
+                    raw=(raw[0], raw[1], raw[2]),
+                    values=(values[0], values[1], values[2]),
+                )
+            )
+        if unreadable:
+            return _arrange_result(
+                _arrange_payload(
+                    status="refused",
+                    executed=False,
+                    succeeded=False,
+                    verified=False,
+                    backup=[backup.to_dict() for backup in backups],
+                    restore_bundle=list(arrange_restore_commands(backups)),
+                    unreadable=unreadable,
+                    walk=walk,
+                    error=(
+                        "the original coordinates of "
+                        f"{len(unreadable)} of {len(targets)} targets could not be read, "
+                        "so NOTHING was written — a coordinate write with no backup has "
+                        "no way back (REQ-SPATIAL-020)"
+                    ),
+                ),
+                is_error=True,
+            )
+
+        commands = arrange_write_commands(plan.placements)
+        restore_bundle = arrange_restore_commands(backups)
+        violations = arrange_scope_violations(commands, targets)
+        if violations:
+            # Unreachable while the builder is correct, which is the point: the
+            # seal is a static assertion about the TEXT on its way to the gate,
+            # not a belief about the code that produced it (AC-SPATIAL-021).
+            return _arrange_result(
+                _arrange_payload(
+                    status="refused",
+                    executed=False,
+                    succeeded=False,
+                    verified=False,
+                    backup=[backup.to_dict() for backup in backups],
+                    restore_bundle=list(restore_bundle),
+                    scope_violations=list(violations),
+                    error="the arrangement bundle left its declared scope; nothing was sent",
+                ),
+                is_error=True,
+            )
+
+        execution = run_commands(
+            ToolCall(id=call.id, name="run_commands", arguments={"commands": list(commands)}),
+            context,
+        )
+        gate_payload = json.loads(execution.result.content)
+        gate_status = gate_payload.get("gate_status")
+        executed = not execution.result.is_error
+        payload = _arrange_payload(
+            backup=[backup.to_dict() for backup in backups],
+            restore_bundle=list(restore_bundle),
+            commands=gate_payload.get("commands", []),
+            walk=walk,
+            executed=executed,
+        )
+        if gate_status is not None:
+            payload["gate_status"] = gate_status
+        if "notice" in gate_payload:
+            payload["notice"] = gate_payload["notice"]
+        if gate_status == _LOCKED:
+            # The lock won a race against the probe above: the backup was read,
+            # but not one write left. Still an ANSWER, not a failure.
+            payload["status"] = "proposal"
+            payload["succeeded"] = False
+            payload["verified"] = False
+            payload["proposed_commands"] = list(commands)
+            return _arrange_result(payload, is_error=False, outcomes=execution.command_outcomes)
+        if not executed:
+            payload["status"] = "failed"
+            payload["succeeded"] = False
+            payload["verified"] = False
+            payload["error"] = (
+                "the arrangement bundle did not complete. run_commands stops on the "
+                "first failure, so some targets may already have moved — run "
+                "'restore_bundle' to put every target back where it was"
+            )
+            return _arrange_result(payload, is_error=True, outcomes=execution.command_outcomes)
+
+        # @MX:WARN: [MANUAL] `ok: true` from the console is NOT evidence that a
+        #   coordinate was stored. This re-query is the only evidence there is.
+        # @MX:REASON: REQ-SPATIAL-021 / AC-SPATIAL-020, live-measured on onPC
+        #   2.4.2 (progress.md §E.2.6a): of five write forms probed, THREE
+        #   answered OK while storing the wrong value or nothing at all — a
+        #   dropped minus sign, a silent no-op and a 0.0. Delete this block and
+        #   the tool reports success for a rig it never moved, with a report
+        #   that looks identical to a correct one. The comparison is NUMERIC
+        #   with a tolerance and must stay that way: the console stores float32,
+        #   so a correct 9.9 reads back as 9.8999996185303 and string equality
+        #   would fail it.
+        readback: list[dict[str, object]] = []
+        mismatches: list[dict[str, object]] = []
+        for placement, backup in zip(plan.placements, backups, strict=True):
+            raw, values, failure = _arrange_read(backup.slot)
+            if failure is not None:
+                mismatches.append({"fid": placement.fid, "reason": failure})
+                continue
+            entry: dict[str, object] = {"fid": placement.fid}
+            for index, (attribute, axis_property) in enumerate(ARRANGE_AXES):
+                expected = float(getattr(placement, attribute))
+                actual = values[index]
+                entry[attribute] = actual
+                if not arrange_values_match(expected, actual):
+                    mismatches.append(
+                        {
+                            "fid": placement.fid,
+                            "axis": axis_property,
+                            "expected": expected,
+                            "actual": actual,
+                            "raw": raw[index],
+                            "reason": "the console reported OK but stored a different value",
+                        }
+                    )
+            readback.append(entry)
+        payload["readback"] = readback
+        payload["verified"] = not mismatches
+        payload["succeeded"] = not mismatches
+        payload["status"] = "arranged" if not mismatches else "verification_failed"
+        payload["tolerance"] = {
+            "relative": ARRANGE_VERIFY_REL_TOLERANCE,
+            "absolute": ARRANGE_VERIFY_ABS_TOLERANCE,
+        }
+        if mismatches:
+            payload["mismatches"] = mismatches
+            payload["error"] = (
+                f"{len(mismatches)} coordinate(s) did not read back as written — the "
+                "console answered OK but the rig does not hold the requested "
+                "arrangement. Run 'restore_bundle' to put every target back where it was"
+            )
+        return _arrange_result(
+            payload, is_error=bool(mismatches), outcomes=execution.command_outcomes
+        )
+
+    # -- classify_arrangement_topology (SPEC-COPILOT-GROUPGEN-001 M1/M2/M3, --
+    #    REQ-GROUPGEN-028 read half — design.md §8) --------------------------
+    #
+    # READS ONLY: reuses the same patch enumeration `get_spatial_context` does
+    # (`read_spatial_fixtures`), then runs the pure `topology.classify()` +
+    # `naming.py` + `fixture_type.py` modules over the result. No command is
+    # composed and `execution_port`/`bundle_gate` are never reached — the
+    # safety gate has nothing to screen here (decision D-4, arrange_fixtures'
+    # own precedent for splitting a read tool from its write sibling).
+
+    def _name_topology_buckets(result: TopologyResult) -> list[dict[str, object]]:
+        """The selected topology's buckets, named (design.md §4) — a NAMING
+        PROPOSAL, never a write. ``bilateral_pairs`` is reported as a property
+        only (§5.3, contract D-Q10: the group-write path never consumes it),
+        so it is never turned into a suggested group here, and neither is an
+        unconfident/``None`` result — there is no structure to name."""
+        if result.kind == "grid":
+            axes = result.grid_axes or {}
+            depth_buckets = axes.get("depth", ())
+            lateral_buckets = axes.get("lateral", ())
+            groups = [
+                {"name": name_depth_bucket(index, len(depth_buckets)), "fids": list(fids)}
+                for index, fids in enumerate(depth_buckets)
+            ]
+            groups.extend(
+                {"name": name_lateral_bucket(index, len(lateral_buckets)), "fids": list(fids)}
+                for index, fids in enumerate(lateral_buckets)
+            )
+            return groups
+        namer = {
+            "depth_rows": name_depth_bucket,
+            "lateral_split": name_lateral_bucket,
+            "concentric": name_concentric_bucket,
+            "vertical_levels": name_vertical_bucket,
+        }.get(result.kind)
+        if namer is None or result.low_confidence:
+            return []
+        total = len(result.fids_by_bucket)
+        return [
+            {"name": namer(index, total), "fids": list(fids)}
+            for index, fids in enumerate(result.fids_by_bucket)
+        ]
+
+    def _topology_result_to_dict(result: TopologyResult) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "kind": result.kind,
+            "low_confidence": result.low_confidence,
+            "reason": result.reason,
+            "fids_by_bucket": [list(bucket) for bucket in result.fids_by_bucket],
+        }
+        if result.grid_axes is not None:
+            payload["grid_axes"] = {
+                axis: [list(bucket) for bucket in buckets]
+                for axis, buckets in result.grid_axes.items()
+            }
+        return payload
+
+    def classify_arrangement_topology(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        fixtures_path = rig_paths.get("fixtures")
+        if not fixtures_path:
+            return _error_result(
+                call,
+                "rig context has no 'fixtures' path configured — arrangement "
+                "topology cannot be classified without the stage patch",
+            )
+        if property_port is None:
+            return _error_result(
+                call,
+                "property reads are not wired — build_toolset needs property_port "
+                "(or a state_port that also implements query_property)",
+            )
+        try:
+            reply = read_spatial_fixtures(
+                state_port, property_port, fixtures_path, SPATIAL_PROPERTY_QUERY_CAP
+            )
+        except Exception as exc:
+            return _error_result(
+                call, f"stage patch enumeration failed for {fixtures_path!r}: {exc}"
+            )
+        try:
+            fixtures = spatial_fixtures_from_records(reply["fixtures"])  # type: ignore[arg-type]
+        except SpatialAnalysisError as error:
+            return _error_result(call, f"fixture coordinates could not be parsed: {error}")
+
+        classification = classify_topology(fixtures)
+
+        # REQ-GROUPGEN-024 amendment (2026-08-04) — the DISCRIMINATE-path
+        # guard: a topology judged from a partial rig read must be marked
+        # low-confidence structurally, never silently treated as
+        # authoritative. This is entirely SEPARATE from the WRITE path
+        # (create_arrangement_groups / build_group_write_plan), which is
+        # unaffected by rig-listing truncation because it consumes
+        # caller-supplied fids, not this container listing.
+        coverage = reply.get("coverage") or {
+            "judged": len(fixtures),
+            "of": len(fixtures),
+            "complete": True,
+        }
+        topology_partial = not bool(coverage.get("complete", False))
+        topology_partial_reason = (
+            "the topology judgment above is based on a PARTIAL rig read "
+            f"({coverage.get('judged')} of {coverage.get('of')} fixtures) — "
+            "the container listing was truncated or the per-fixture property "
+            "walk was budget-capped, so 'topology.selected' is NOT "
+            "authoritative for the full rig; treat it as a low-confidence "
+            "hint pending a follow-up read"
+            if topology_partial
+            else ""
+        )
+
+        # Geometric-axis groups (design.md §4 GEO prefix) are DERIVED from
+        # the same partial-rig read as the topology judgment above, so they
+        # carry "axis": "geometry" + the SAME topology_partial annotation.
+        suggested_groups: list[dict[str, object]] = [
+            {**group, "axis": "geometry", "topology_partial": topology_partial}
+            for group in _name_topology_buckets(classification.selected)
+        ]
+
+        fixture_type_records = call.arguments.get("fixture_type_records")
+        fixture_type_payload: dict[str, object] | None = None
+        if fixture_type_records is not None:
+            if not isinstance(fixture_type_records, list):
+                return _error_result(
+                    call,
+                    "'fixture_type_records' must be a list of "
+                    "{'fid', 'manufacturer', 'type_name'} records",
+                )
+            try:
+                type_analysis = analyze_fixture_type_records(fixture_type_records)
+            except FixtureTypeAnalysisError as error:
+                return _error_result(call, f"'fixture_type_records' could not be parsed: {error}")
+            fixture_type_payload = fixture_type_analysis_to_dict(type_analysis)
+            # Species groups reuse the patch's own structured field as the name
+            # verbatim (design.md §4.1 "종류" row / §5.1 REQ-GROUPGEN-009) — no
+            # "GEO " prefix, which is reserved for the geometric axes (§D-Q3).
+            # "axis": "species" — the caller supplies fixture_type_records
+            # directly, so these groups are UNRELATED to rig-read coverage;
+            # they never carry a "topology_partial" key (there is nothing
+            # partial about a caller-supplied record list).
+            suggested_groups = [
+                *suggested_groups,
+                *(
+                    {"name": group["value"], "fids": list(group["fids"]), "axis": "species"}
+                    for group in fixture_type_payload["type_axis_groups"]
+                ),
+            ]
+
+        payload = {
+            "source": "topology",
+            "truncated": reply.get("truncated", False),
+            "roundtrip_capped": reply.get("roundtrip_capped", False),
+            "unreadable": reply.get("unreadable", []),
+            "coverage": coverage,
+            "topology_partial": topology_partial,
+            "topology_partial_reason": topology_partial_reason,
+            "topology": {
+                "selected": _topology_result_to_dict(classification.selected),
+                "candidates": [
+                    _topology_result_to_dict(candidate) for candidate in classification.candidates
+                ],
+                "partial": topology_partial,
+                "partial_reason": topology_partial_reason,
+            },
+            "fixture_types": fixture_type_payload,
+            "suggested_groups": suggested_groups,
+            "notice": (
+                "suggested_groups is a NAMING PROPOSAL only — nothing was sent to "
+                "the console. Pass a chosen subset as 'groups' to "
+                "create_arrangement_groups to actually write it, which itself "
+                "requires explicit human approval before anything is stored."
+            ),
+        }
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            )
+        )
+
+    # -- create_arrangement_groups (REQ-GROUPGEN-028 write half — design.md ---
+    #    §6/§7/§10 policy (c)) --------------------------------------------------
+    #
+    # The ONE order this tool may run in (design.md §7.2), and none of it is
+    # negotiable:
+    #
+    #   build_group_write_plan(...)         # pure assembly (server/groupgen/write.py)
+    #     -> approval_port.request_approval  # the ONLY route to a console send
+    #       -> not approved -> SEND NOTHING, return the plan only (fail-closed)
+    #       -> approved -> fire via run_commands (gate/LiveLock/dedupe/audit inherited)
+    #         -> re-query slot existence + label (never membership — policy (c))
+    #
+    # [HARD] structural enforcement (design.md §7.2): there is no code path to
+    # `run_commands` below that does not pass through
+    # `group_approval.request_approval(...)` first and observe `True` — no
+    # argument short-circuits it, and `server/safety/**` stays byte-diff 0
+    # (Store Group/Label Group are classified "safe" there and would otherwise
+    # never see ANY approval stage). Deleting the approval check is a RED
+    # mutation, not a silent behavior change.
+
+    def create_arrangement_groups(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        groups_arg = call.arguments.get("groups")
+        if (
+            not isinstance(groups_arg, list)
+            or not groups_arg
+            or not all(
+                isinstance(entry, Mapping)
+                and isinstance(entry.get("name"), str)
+                and entry.get("name")
+                and isinstance(entry.get("fids"), list)
+                and entry.get("fids")
+                and all(
+                    isinstance(fid, int) and not isinstance(fid, bool)
+                    for fid in entry.get("fids", [])
+                )
+                for entry in groups_arg
+            )
+        ):
+            return _error_result(
+                call,
+                "'groups' must be a non-empty list of {'name': str, 'fids': "
+                "[int, ...]} entries — the groups to Store and Label",
+            )
+
+        groups_path = rig_paths.get("groups")
+        fixtures_path = rig_paths.get("fixtures")
+        if not groups_path or not fixtures_path:
+            return _error_result(
+                call,
+                "rig context has no 'groups'/'fixtures' path configured — a "
+                "group write needs both the group pool and the fixture "
+                "container to measure an empty slot",
+            )
+
+        buckets = {str(index): tuple(entry["fids"]) for index, entry in enumerate(groups_arg)}
+        names = {str(index): entry["name"] for index, entry in enumerate(groups_arg)}
+
+        sections, _resolved, _failed = collect_rig_sections(
+            state_port, {"groups": groups_path, "fixtures": fixtures_path}, frozenset(), 0
+        )
+        groups_section = sections["groups"]
+        fixtures_section = sections["fixtures"]
+
+        try:
+            plan = build_group_write_plan(
+                buckets=buckets,
+                names=names,
+                groups_section=groups_section,
+                fixtures_section=fixtures_section,
+            )
+        except GroupSlotError as error:
+            return _error_result(call, f"{error.code}: {error.message}")
+        except ValueError as error:
+            return _error_result(call, str(error))
+
+        # [HARD] ONE run_commands bundle PER GROUP — never one bundle for the
+        # whole plan. `run_commands` folds a line that already succeeded in the
+        # same bundle into `skipped_already_executed`, and a group chain's
+        # SELECTION line is NOT dedupe-exempt (only a single bare
+        # `Fixture <operand>` is; `Fixture 1 + Fixture 2 + Fixture 3` is not —
+        # `_is_programmer_state` above). Two groups over the same fids — which
+        # `classify_arrangement_topology` produces on any rig whose
+        # manufacturer:model mapping is 1:1, because `type_axis_groups` then
+        # emits byte-identical fid tuples for two axes — would therefore lose
+        # the SECOND group's selection, and `Store Group N` would fire against
+        # the programmer its own leading `ClearAll` just emptied. The console
+        # answers ok either way and membership is unreadable
+        # (progress.md §E.2.8), so the human would have approved one plan and
+        # the console would have received another, undetectably.
+        #
+        # `bundles` is the ONE definition of what gets fired; the guard below
+        # and the execution loop both consume it, so re-concatenating the plan
+        # cannot slip past the guard.
+        bundles = [(step, list(step.commands)) for step in plan.steps]
+        all_commands = [command for _step, bundle in bundles for command in bundle]
+        # exec 큰따옴표 금지 계승 — write.py already refuses a double-quoted
+        # name (`_label_command`), so this is a static re-assertion over the
+        # assembled text on its way to the gate, not a belief about the
+        # builder that produced it (same shape as arrange_fixtures' own
+        # `arrange_scope_violations` seal).
+        assert all('"' not in command for command in all_commands)
+        # The same shape of re-assertion for the dedupe hazard, against the
+        # exact lists that will be fired (write.py already guarded each step
+        # it built — this re-checks the BUNDLING, which is this layer's call).
+        try:
+            for _step, bundle in bundles:
+                guard_bundle_collision(bundle)
+        except GroupSlotError as error:
+            return _error_result(call, f"{error.code}: {error.message}")
+
+        def _plan_payload(**extra: object) -> dict[str, object]:
+            payload: dict[str, object] = {
+                "plan": [
+                    {
+                        "slot": step.slot,
+                        "name": step.name,
+                        "fids": list(step.fids),
+                        "commands": list(step.commands),
+                        "verification": list(step.verification),
+                    }
+                    for step in plan.steps
+                ],
+                # Policy (c), design.md §10 — a STRUCTURAL field, never prose:
+                # `unverified` always carries "membership" (write.py already
+                # guarantees this), so a caller cannot lose the caveat by
+                # skipping a docstring (함정 6).
+                "unverified": list(plan.unverified),
+                "unverified_reason": plan.unverified_reason,
+                "human_check_commands": list(plan.human_check_commands),
+                # REQ-GROUPGEN-024 amendment (2026-08-04) — a STRUCTURAL
+                # notice, never docstring-only prose (함정 6): a truncated
+                # re-queried fixture listing never blocks this write (the
+                # group's membership is the caller's explicit fids), but the
+                # fact is still surfaced here for a human reviewer.
+                "fixture_list_truncated": plan.fixture_list_truncated,
+                "fixture_list_truncated_reason": plan.fixture_list_truncated_reason,
+            }
+            payload.update(extra)
+            return payload
+
+        approval_request = ApprovalRequest(
+            items=tuple(
+                ApprovalItem(
+                    command=command,
+                    risk_reasons=(
+                        "group write — membership cannot be re-verified after "
+                        "Store (grandMA3 exposes no membership read channel, "
+                        "progress.md §E.2.8)",
+                        *(
+                            (plan.fixture_list_truncated_reason,)
+                            if plan.fixture_list_truncated
+                            else ()
+                        ),
+                    ),
+                )
+                for command in all_commands
+            )
+        )
+        approved = group_approval.request_approval(approval_request)
+        if not approved:
+            # Fail-closed (design.md §7.2 ②③): approval withheld, unconfirmed
+            # or the port itself absent (DenyAllApprovalPort) all converge
+            # here — ZERO console sends, the plan demoted to a proposal.
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(
+                        _plan_payload(
+                            status="proposal",
+                            executed=False,
+                            notice=(
+                                "approval was not granted — nothing was sent to the "
+                                "console. Re-call with the same 'groups' once a human "
+                                "has approved the plan above."
+                            ),
+                        ),
+                        ensure_ascii=False,
+                    ),
+                    # A withheld approval is an ANSWER, not a failure (same
+                    # shape as arrange_fixtures' LiveLock demotion) — it must
+                    # not feed the self-correction loop back into re-asking
+                    # for the same approval.
+                    is_error=False,
+                )
+            )
+
+        # Approval was ONE request over the whole plan (the human saw every
+        # line at once); only the FIRING is split. Each bundle gets a FRESH
+        # context: `ExecutionContext.executed_ok` accumulates across every tool
+        # call in one instruction turn (server/orchestrator/runner.py:216,
+        # 222-223), so a selection line an earlier call already fired — a
+        # self-correction retry (REQ-MVP-012) is enough — would be folded out
+        # of a group chain even when this call asks for a single group. A group
+        # chain opens AND closes with `ClearAll`, so it depends on no state a
+        # previous tool call established; a fresh context is therefore safe as
+        # well as necessary.
+        outcomes: list[CommandOutcome] = []
+        command_reports: list[dict[str, object]] = []
+        slot_outcomes: list[dict[str, object]] = []
+        failure: dict[str, object] | None = None
+        for step, bundle in bundles:
+            if failure is not None:
+                # Stop-on-first-failure, inherited across bundles: a later
+                # group is never written on top of a broken one, and its
+                # slot is reported as untouched rather than omitted.
+                for command in bundle:
+                    outcomes.append(
+                        CommandOutcome(
+                            command=command,
+                            status="not_executed",
+                            detail="not executed (an earlier group's bundle failed)",
+                        )
+                    )
+                    command_reports.append(
+                        {
+                            "command": command,
+                            "status": "not_executed",
+                            "detail": "not executed (an earlier group's bundle failed)",
+                        }
+                    )
+                slot_outcomes.append(
+                    {"slot": step.slot, "name": step.name, "status": "not_attempted"}
+                )
+                continue
+            execution = run_commands(
+                ToolCall(id=call.id, name="run_commands", arguments={"commands": bundle}),
+                _EMPTY_CONTEXT,
+            )
+            bundle_payload = json.loads(execution.result.content)
+            outcomes.extend(execution.command_outcomes)
+            # Passed through verbatim rather than re-serialized from
+            # `outcomes`: a gate block reports `reasons` (a list), not `detail`.
+            command_reports.extend(bundle_payload.get("commands", []))
+            if execution.result.is_error:
+                failure = bundle_payload
+                slot_outcomes.append({"slot": step.slot, "name": step.name, "status": "failed"})
+            else:
+                slot_outcomes.append({"slot": step.slot, "name": step.name, "status": "executed"})
+
+        if failure is not None:
+            written = [entry for entry in slot_outcomes if entry["status"] == "executed"]
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(
+                        _plan_payload(
+                            status="failed",
+                            # "the write completed as planned" — never "nothing
+                            # reached the console". `slot_outcomes` carries the
+                            # per-slot truth so a partial write cannot read as
+                            # either a clean success or a clean no-op.
+                            executed=False,
+                            partial_write=bool(written),
+                            slot_outcomes=slot_outcomes,
+                            gate_status=failure.get("gate_status"),
+                            notice=failure.get("notice"),
+                            commands=command_reports,
+                            error=(
+                                "the group write stopped at the first failing bundle — "
+                                f"{len(written)} of {len(bundles)} group slots were "
+                                "written before it; see 'slot_outcomes' for which, and "
+                                "'commands' for the per-command gate/execution outcome. "
+                                "A written slot is NOT rolled back: grandMA3 exposes no "
+                                "membership read channel (progress.md §E.2.8), so a "
+                                "human must check the slots marked 'executed'."
+                            ),
+                        ),
+                        ensure_ascii=False,
+                    ),
+                    is_error=True,
+                ),
+                command_outcomes=tuple(outcomes),
+            )
+
+        # Re-query evidence (design.md §10 policy (c) automated-verification
+        # layer): slot existence and the LABEL, never membership. `ok:true`
+        # from the write above is NOT evidence — only this re-query is.
+        verified_steps: list[dict[str, object]] = []
+        for step in plan.steps:
+            slot_path = f"{groups_path}/{step.slot}"
+            try:
+                snapshot = state_port.query_state(slot_path)
+                slot_exists = bool(snapshot)
+            except Exception:
+                slot_exists = False
+            name_verified: bool | None = None
+            if property_port is not None:
+                try:
+                    name_read = read_properties(property_port, slot_path, ("Name",))["Name"]
+                    name_verified = name_read.ok and str(name_read.value).strip() == step.name
+                except Exception:
+                    name_verified = False
+            verified_steps.append(
+                {
+                    "slot": step.slot,
+                    "name": step.name,
+                    "fids": list(step.fids),
+                    "slot_exists": slot_exists,
+                    "name_verified": name_verified,
+                }
+            )
+
+        succeeded = all(
+            entry["slot_exists"] and entry["name_verified"] is not False for entry in verified_steps
+        )
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(
+                    _plan_payload(
+                        status="created" if succeeded else "verification_failed",
+                        executed=True,
+                        succeeded=succeeded,
+                        verified_steps=verified_steps,
+                        commands=command_reports,
+                    ),
+                    ensure_ascii=False,
+                ),
+                is_error=not succeeded,
+            ),
+            command_outcomes=tuple(outcomes),
+        )
+
     definitions = (
         ToolDefinition(
             name="run_commands",
@@ -3430,6 +4830,306 @@ def build_toolset(
                 "additionalProperties": False,
             },
         ),
+        ToolDefinition(
+            name="get_spatial_context",
+            description=(
+                "Read WHERE this rig physically is — every patched fixture's "
+                "3D stage coordinates from the console's own patch data. Call "
+                "this before any instruction that names a DIRECTION or a "
+                "SHAPE across the rig ('left to right', 'from the centre "
+                "out', 'diagonally', 'the back row', '왼쪽에서 오른쪽으로', "
+                "'가운데부터 바깥으로'). get_rig_context tells you which "
+                "objects exist; this tells you where they stand, and a "
+                "directional instruction needs both.\n"
+                "\n"
+                "READS ONLY — it sends no command and changes nothing.\n"
+                "\n"
+                'Returns {"source": "patch3d", "fixtures": [...], '
+                '"unreadable": [...], "truncated": bool, '
+                '"roundtrip_capped": bool, "analysis": {...}}.\n'
+                "\n"
+                'Each fixture is {"fid", "name", "x", "y", "z"} in metres, '
+                'and "fid" is the fixture id the CONSOLE returned — it is the '
+                "number you address (Fixture <fid>), unlike the patch-list "
+                "slot get_rig_context shows. Negative coordinates are normal: "
+                "the stage origin has sides.\n"
+                "\n"
+                '"unreadable" lists fixtures that have NO coordinate here, '
+                "each with the console's own reason. Their positions are "
+                "genuinely unknown — never assume 0, a neighbour's value or "
+                "the middle of the stage for them; leave them out of the "
+                "choreography or ask the operator.\n"
+                "\n"
+                "Two DIFFERENT incompleteness signals, never merged: "
+                '"truncated": true means the console shortened its own '
+                "fixture list, so fixtures exist that this call was never "
+                'shown; "roundtrip_capped": true means this call hit its own '
+                "query budget and stopped asking part-way through a rig "
+                "bigger than it can read in one go. Either way the list is "
+                "NOT the whole rig — say so rather than presenting a "
+                "left-to-right order over the part you happened to receive.\n"
+                "\n"
+                '"analysis" is the row structure detected from those '
+                'coordinates: "row_count", "rows" (each with its "fids" in '
+                'stage order), "row_order" and "low_confidence". This is what '
+                "makes one 30-fixture bar and a 3x10 grid produce DIFFERENT "
+                'choreography. When "low_confidence" is true the layout was '
+                'not established — "no_spatial_spread" means every fixture '
+                "reports the same point, which is a real reading of a rig "
+                "that was patched but never positioned (NOT a failed read). "
+                "In that case fall back to non-spatial choreography and say "
+                "why; do not invent a left-to-right order the patch does not "
+                "support."
+            ),
+            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+        ),
+        ToolDefinition(
+            name="arrange_fixtures",
+            description=(
+                "MOVE fixtures in the patch: compute a grid / row / circle "
+                "arrangement and WRITE the resulting 3D stage coordinates "
+                "(metres) onto the fixtures you name. This CHANGES THE "
+                "SHOWFILE — call it only when the operator explicitly asked "
+                "for an arrangement ('line these 8 PARs up', 'lay this out as "
+                "a 3x10 grid'). Never call it to 'tidy up' a rig on your own "
+                "initiative, and never as a step toward some other goal.\n"
+                "\n"
+                "'fids' is the EXPLICIT target list and it is also the ORDER "
+                "they occupy the shape in: fids[0] takes the first slot "
+                "(leftmost of a row, front-left of a grid, start_angle of a "
+                "circle). Fixtures you do not name are never touched. Only "
+                "position is written; fixture orientation is never changed.\n"
+                "\n"
+                "The stage origin is the CENTRE, so negative coordinates are "
+                "normal and expected. Unspecified 'spacing' is 1.0 m, "
+                "'origin' is (0,0,0), 'radius' is 3.0 m, 'start_angle' is 0 "
+                "degrees; the effective values come back under 'resolved'.\n"
+                "\n"
+                "Before writing anything the tool READS and retains every "
+                "target's current coordinates, and the reply always carries a "
+                "'restore_bundle' — the exact command lines that put every "
+                "target back where it was. That bundle is the ONLY way to undo "
+                "this call, so keep it: pass it to run_commands to revert. If "
+                "any target's coordinates cannot be read, NOTHING is written.\n"
+                "\n"
+                "After writing, the tool reads every coordinate back and "
+                "compares numerically. Report success ONLY when 'verified' is "
+                "true: this console has been measured answering OK while "
+                "storing the wrong value, so a cleared command list is not "
+                "evidence. 'mismatches' names every coordinate that did not "
+                "land, and the restore bundle still applies.\n"
+                "\n"
+                "Whether the rig LOOKS right on stage or in the 3D viewer is "
+                "not machine-checkable — the operator has to look."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "preset": {
+                        "type": "string",
+                        "enum": list(SPATIAL_PRESETS),
+                        "description": (
+                            "The arrangement shape. 'row' spreads the fixtures "
+                            "along one axis, 'grid' fills rows x columns, "
+                            "'circle' spaces them evenly around a ring."
+                        ),
+                    },
+                    "fids": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": (
+                            "The fixture ids to move, in the order they should "
+                            "occupy the shape. These are FIDs as the console "
+                            "reports them (get_spatial_context returns them), "
+                            "not positions in a list."
+                        ),
+                    },
+                    "rows": {
+                        "type": "integer",
+                        "description": (
+                            "grid only. Give 'rows' and/or 'columns'; the "
+                            "product must equal the number of fids. One may be "
+                            "omitted and is derived. Never defaulted — the "
+                            "shape is the request."
+                        ),
+                    },
+                    "columns": {
+                        "type": "integer",
+                        "description": "grid only — see 'rows'.",
+                    },
+                    "spacing": {
+                        "type": "number",
+                        "description": (
+                            "grid/row only. Metres between neighbours. Defaults to 1.0."
+                        ),
+                    },
+                    "radius": {
+                        "type": "number",
+                        "description": "circle only. Ring radius in metres. Defaults to 3.0.",
+                    },
+                    "start_angle": {
+                        "type": "number",
+                        "description": (
+                            "circle only. Degrees counter-clockwise from the +X "
+                            "axis for the FIRST fid. Defaults to 0, which puts "
+                            "it stage-right of the origin."
+                        ),
+                    },
+                    "origin": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "description": (
+                            "[x, y, z] centre of the shape in metres. Defaults "
+                            "to the stage origin [0, 0, 0]."
+                        ),
+                    },
+                    "orientation": {
+                        "type": "string",
+                        "description": (
+                            "Which axis or plane to lay out on. row: 'x' "
+                            "(default, left-right), 'y' (upstage depth) or 'z' "
+                            "(height). grid/circle: 'xy' (default, floor plan) "
+                            "or 'xz' (a vertical wall or truss array)."
+                        ),
+                    },
+                },
+                "required": ["preset", "fids"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="classify_arrangement_topology",
+            description=(
+                "Classify WHAT STRUCTURE the current rig's positions form "
+                "(rows, a left/right split, concentric rings, vertical "
+                "levels, a grid, or mirror-symmetric pairs) and propose GROUP "
+                "NAMES for it, plus fixture-type groups when you already have "
+                "them. Call this BEFORE create_arrangement_groups when the "
+                "operator wants position-based groups but has not named the "
+                "buckets themselves ('group these up by position', "
+                "'위치별로 그룹 만들어줘').\n"
+                "\n"
+                "READS ONLY — it sends no command and changes nothing. It "
+                "reads the same stage patch coordinates get_spatial_context "
+                "does; call get_spatial_context first if you also need the "
+                "raw coordinates or the row/'analysis' view.\n"
+                "\n"
+                "'topology.selected' is the ONE winning structure (or "
+                "kind:null with low_confidence:true when nothing was clear); "
+                "'topology.candidates' lists every hypothesis considered, for "
+                "audit. 'suggested_groups' is the actionable output: a list "
+                "of {'name', 'fids'} — pass a chosen subset straight through "
+                "as create_arrangement_groups's 'groups' argument. This is a "
+                "NAMING PROPOSAL ONLY; nothing is written until "
+                "create_arrangement_groups is called AND approved.\n"
+                "\n"
+                "Optionally pass 'fixture_type_records' — "
+                "{'fid','manufacturer','type_name'} entries you already read "
+                "off Patch/FixtureTypes — to also get species-axis groups "
+                "(named after the patch's own type/manufacturer string "
+                "verbatim, never a guessed category like 'Spot' or 'Wash'). "
+                "Omit it and 'fixture_types' comes back null — this tool "
+                "does not read fixture types itself."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "fixture_type_records": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "fid": {"type": "integer"},
+                                "manufacturer": {"type": "string"},
+                                "type_name": {"type": "string"},
+                                "short_name": {"type": "string"},
+                            },
+                            "required": ["fid", "manufacturer", "type_name"],
+                        },
+                        "description": (
+                            "Optional. Already-read patch structured fields per "
+                            "fixture — adds a species/manufacturer axis to "
+                            "'suggested_groups'. Omit to skip it."
+                        ),
+                    },
+                },
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="create_arrangement_groups",
+            description=(
+                "STORE named position/type groups into the showfile: "
+                "Store Group + Label Group for each entry in 'groups'. This "
+                "CHANGES THE SHOWFILE — call it only when the operator "
+                "explicitly asked for groups to be created, typically after "
+                "classify_arrangement_topology proposed names.\n"
+                "\n"
+                "Every write here requires EXPLICIT HUMAN APPROVAL before "
+                "anything reaches the console — Store Group/Label Group are "
+                "NOT flagged risky by the safety gate on their own "
+                "(server/safety/** is unchanged by this tool), so this tool "
+                "enforces its own approval step. If approval is withheld, "
+                "unavailable or unconfirmed, NOTHING is sent — the reply "
+                "carries 'status':'proposal' and the plan only, and calling "
+                "again with the same 'groups' after a human approves is how "
+                "you proceed. Never claim a group was created because this "
+                "call returned without an error; check 'status'.\n"
+                "\n"
+                "Targets are ALWAYS empty slots, measured fresh from the "
+                "group pool — an occupied slot is never targeted, silently "
+                "skipped or overwritten. A truncated group pool or fixture "
+                "list refuses the whole call with a structured error rather "
+                "than guessing.\n"
+                "\n"
+                "'unverified' ALWAYS lists 'membership': grandMA3 exposes no "
+                "channel to read back which fixtures actually landed in a "
+                "group, so that fact is never verified and never silently "
+                "assumed true. What IS verified (after a successful write, "
+                "under 'verified_steps'): the slot exists and its label "
+                "reads back correctly. 'human_check_commands' gives you a "
+                "'Group <n>' line per group so the operator can confirm the "
+                "arrangement by eye on stage — that is the only way "
+                "membership is ever actually confirmed."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": (
+                                        "The group's label. Typically taken "
+                                        "verbatim from classify_arrangement_"
+                                        "topology's 'suggested_groups', or the "
+                                        "operator's own words."
+                                    ),
+                                },
+                                "fids": {
+                                    "type": "array",
+                                    "items": {"type": "integer"},
+                                    "description": "The fixture ids this group holds.",
+                                },
+                            },
+                            "required": ["name", "fids"],
+                        },
+                        "description": (
+                            "The groups to Store and Label, in order. Each "
+                            "one becomes exactly one showfile group at a "
+                            "freshly-measured empty slot."
+                        ),
+                    },
+                },
+                "required": ["groups"],
+                "additionalProperties": False,
+            },
+        ),
     )
     handlers: dict[str, _Handler] = {
         "run_commands": run_commands,
@@ -3450,5 +5150,9 @@ def build_toolset(
         "build_cue_sheet": build_cue_sheet,
         "build_preset_list": build_preset_list,
         "plan_executor_layout": plan_executor_layout,
+        "get_spatial_context": get_spatial_context,
+        "arrange_fixtures": arrange_fixtures,
+        "classify_arrangement_topology": classify_arrangement_topology,
+        "create_arrangement_groups": create_arrangement_groups,
     }
     return ToolRegistry(definitions, handlers)

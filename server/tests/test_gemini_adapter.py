@@ -19,7 +19,7 @@ from google.genai import errors as genai_errors
 
 from server.llm.config import GeminiSettings
 from server.llm.errors import ProviderError
-from server.llm.gemini_adapter import GeminiAdapter
+from server.llm.gemini_adapter import GeminiAdapter, _to_gemini_schema
 from server.llm.types import (
     ToolDefinition,
     ToolResult,
@@ -524,3 +524,107 @@ class TestMissingKeyClassification:
             )
         assert "unrelated config problem" in str(excinfo.value)
         assert not isinstance(excinfo.value, ProviderError)
+
+
+class TestSchemaConversionDropsKeysGeminiRejects:
+    """Live-observed 2026-08-03: one unsupported keyword kills the whole request.
+
+    Gemini's function-declaration schema subset rejects `additionalProperties`
+    with 400 INVALID_ARGUMENT ("Unknown name ... Cannot find field"), and the
+    failure is per-REQUEST, not per-tool: eleven tool schemas carried it and
+    EVERY turn died — the cached path and the uncached fallback alike, so the
+    app answered "AI 서비스가 요청을 거부했습니다" to every instruction.
+
+    The neutral schema keeps the keyword for providers that accept it (Anthropic
+    takes full JSON Schema); the stripping is Gemini-local.
+    """
+
+    def test_additional_properties_is_stripped_at_the_top_level(self):
+        converted = _to_gemini_schema(
+            {"type": "object", "properties": {}, "additionalProperties": False}
+        )
+        assert "additionalProperties" not in converted
+
+    def test_additional_properties_is_stripped_from_nested_properties(self):
+        # The live failure named BOTH a top-level `parameters` and a nested
+        # `parameters.properties[...]` occurrence, so depth matters.
+        converted = _to_gemini_schema(
+            {
+                "type": "object",
+                "properties": {
+                    "spec": {
+                        "type": "object",
+                        "properties": {"fid": {"type": "integer"}},
+                        "additionalProperties": False,
+                    }
+                },
+            }
+        )
+        assert "additionalProperties" not in converted["properties"]["spec"]
+
+    def test_additional_properties_is_stripped_from_array_items(self):
+        converted = _to_gemini_schema(
+            {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": False,
+                },
+            }
+        )
+        assert "additionalProperties" not in converted["items"]
+
+    def test_the_conversion_still_does_its_original_job(self):
+        # Non-vacuity: stripping must not have replaced the uppercasing.
+        converted = _to_gemini_schema(
+            {
+                "type": "object",
+                "properties": {"path": {"type": "string"}},
+                "required": ["path"],
+                "additionalProperties": False,
+            }
+        )
+        assert converted["type"] == "OBJECT"
+        assert converted["properties"]["path"]["type"] == "STRING"
+        assert converted["required"] == ["path"]
+
+    def test_no_shipped_tool_schema_reaches_gemini_with_a_rejected_keyword(self):
+        # The regression that matters: assert over the REAL toolset, so a tool
+        # added later with `additionalProperties` cannot resurrect the outage.
+        import json
+
+        from server.orchestrator.tools import build_toolset
+
+        class _Port:
+            def execute(self, command):
+                raise AssertionError("no console in a schema test")
+
+            def ping(self):
+                return True
+
+            def query_state(self, path):
+                return {}
+
+            def read_property(self, path, name):
+                return {}
+
+        registry = build_toolset(execution_port=_Port(), state_port=_Port())
+        definitions = (
+            registry.tool_definitions()
+            if hasattr(registry, "tool_definitions")
+            else registry.definitions()
+        )
+        assert definitions, "the toolset must not be empty or this proves nothing"
+        carried = [
+            tool.name
+            for tool in definitions
+            if "additionalProperties" in json.dumps(tool.parameters)
+        ]
+        assert carried, "non-vacuity: some shipped schema must still USE the keyword"
+        leaked = [
+            tool.name
+            for tool in definitions
+            if "additionalProperties" in json.dumps(_to_gemini_schema(tool.parameters))
+        ]
+        assert leaked == []
