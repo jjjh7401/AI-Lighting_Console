@@ -567,3 +567,70 @@ M0~M6 전 구간에서 라이브가 잡은 것 중 **단위 테스트로는 원�
 5. **미러 아티팩트**(§E.2.9.2) — 이 SPEC이 고치려던 결함의 거울상.
 6. **`bilateral_pairs`가 경합에서 이겼다**(§E.2.9.2) — D-Q10 위반이 산출 0으로 나타났다.
 7. **슬롯 ≠ fid**(§E.2.9.0) — `arrange_fixtures`의 fail-closed 거부가 이를 드러냈다.
+
+## §E.3 Run-phase Audit-Ready Signal
+
+- run_complete_at: 2026-08-04
+- run_status: **audit-ready**
+- 완료 신호: M0~M6 전 마일스톤 완료(§E.2.0~§E.2.10) · Implementation Kickoff Approval 반자율 획득 · 사람 무대 관측 GO(§E.2.9.5)
+
+### AC 충족 요약 (§E.2 인용 — 수치 재산출 없음)
+
+| 게이트/AC | 판정 | 근거 (§E.2 참조) |
+|---|---|---|
+| 게이트 A (멤버십 판독) | **NEGATIVE**(플랫폼 한계) | §E.2.8 — `props COUNT` 실사용 그룹 4/4 = 0, 날조 대조군과 변별 |
+| 게이트 B (`Store Group` 생성) | **GO** | §E.2.3 — 재조회 childCount 5→6 |
+| 게이트 C (점유 슬롯 덮어쓰기) | **NEGATIVE-강화** | §E.2.4 — GUI 모달, 조작자 의존 |
+| AC-GROUPGEN-036 (REQ-031 대응) | PASS | §E.2.5 — `Store`/`Label` `safe` 분류 실측 |
+| REQ-024 (절단 가드 위치) | 정정 완료 | §E.2.9.0 — 판별 경로 이동, `coverage`/`topology_partial` 신설 |
+| M6 3개 배치 판정 | GO×3 + SKIP-정당 | §E.2.9.1 — grid/concentric/lateral_split/None |
+| 정책 (c) 그룹 쓰기 라이브 | GO | §E.2.9.3 — 독립 교차 확인(childCount 5→7) |
+| 사람 무대 관측 | **GO** | §E.2.9.5 — 내륜 6대/외륜 12대 |
+
+### 기준선/최종 수치
+
+- 기준선(run 킥오프, §E.2.0): pytest **4511 passed · 5 skipped**(93s) · vitest **350 passed**
+- 최종(sync 시점 재측정 없음 — coordinator 3-phase close가 일괄 재측정): pytest **4676 passed · 7 skipped · 0 failed** · vitest **350 passed**(UI byte 무변경) · ruff 기존 부채 3건(신규 0) · `server/safety` byte-diff **0** · 룰북 byte-diff **0**
+- 뮤테이션: **6/6 RED**(§E.2.9.2 미러 아티팩트 강등 제거 1건 · bilateral 재투입 1건 + plan-audit MAJOR-3 해소 AC-GROUPGEN-037 4항목 포함 5:5 정합)
+
+### 경계 확인
+
+- `TOOL_NAMES` 20 → 22 (`classify_arrangement_topology` · `create_arrangement_groups`)
+- 그룹 축 쇼파일 순변화 **0**(§E.2.6 M0 정리 · §E.2.9.6 M6 정리, 전부 재조회로 확인)
+- 좌표는 M6 동심원 배치 상태로 **의도적으로 남김**(§E.2.9.6) — 후속 타입 축 라이브가 재배치 없이 이어받을 수 있게
+
+## §E.4 Sync-phase Audit-Ready Signal
+
+- sync_complete_at: 2026-08-04
+- sync_status: **audit-ready**
+- CHANGELOG 반영 확인: `CHANGELOG.md` `[Unreleased]` §Added에 `SPEC-COPILOT-GROUPGEN-001` 항목 추가(핵심 요약 + M0/M6 근본원인 7건 + 정정 2건 + 알려진 천장). `grep -c 'GROUPGEN' CHANGELOG.md` > 0 확인.
+- frontmatter 전이: `spec.md` `status: draft → completed` · `updated: 2026-08-04`. **본문 diff 0**(frontmatter 헝크만).
+
+### ⚠ lifecycle drift 기록 (은폐하지 않는다)
+
+`.claude/rules/moai/development/spec-frontmatter-schema.md`의 Status Transition Ownership Matrix에 따르면
+`draft → in-progress` 전이는 **manager-develop이 첫 run-phase 커밋(M1)에서 수행**해야 한다.
+**본 SPEC은 그 전이를 건너뛰었다** — `git log`상 M0~M6 전 run-phase 커밋(`bca04d0` 이하 ~ `601eedd`)이
+`spec.md` frontmatter의 `status:` 필드를 한 번도 갱신하지 않았고, `status: draft`인 채로 run-phase
+전체를 마쳤다. 본 sync 커밋이 `draft → completed`로 **직접 점프**한다 — 정상 경로라면
+`draft → in-progress`(run 킥오프) → `in-progress → implemented → completed`(sync)의 2단계였을 것이다.
+**드리프트를 조용히 넘기지 않고 여기에 기록한다.** 원인은 run-phase 델리게이션 프롬프트가 frontmatter
+전이 의무를 명시적으로 지시하지 않은 것으로 추정되나, 본 sync 워커의 소유 범위(frontmatter status/updated만)
+밖이라 근본 원인 조사는 하지 않았다.
+
+### 남은 SKIP 2건
+
+1. **타입 축 라이브**(`ASSUMPTION-67`, `SKIP: CONDITION_NOT_MET`) — M6 시점 리그가 이종(Robin MMX Spot ·
+   Robin LEDBeam 350)이 됐으나 M6가 `fixture_type_records` 호출자 전달 경로를 쓰지 않았다. 막는 것은
+   이제 리그가 아니라 실행뿐이다(§E.2.9.5a).
+2. **실제 Gemini 턴** — M6는 `registry.dispatch` 직결이다. 모델이 자연어 지시를 듣고 이 툴을 **선택**하는지는
+   LOOKLIB M7처럼 별도 라이브 채팅 턴이 필요하다. 툴 동작은 증명됐고 모델 도달은 미증명(§E.2.9.5a).
+
+### 별도 SPEC 후보 3건
+
+1. **채팅 경로 무승인 그룹 생성** — 본 SPEC 툴을 경유하지 않는 직접 `Store Group` 발화는 여전히
+   무승인(spec.md §C.1.1). 본 SPEC 범위 밖.
+2. **무승인 좌표 쓰기** — `arrange_fixtures`가 `status: arranged`로 좌표를 기록하는데 승인 요청 번들이
+   0이다(§E.2.9.4). AC-SPATIAL-031 `[DEFERRED]`의 라이브 재현. SPATIAL 후속 SPEC 소관.
+3. **`corpus.yaml` 큰따옴표 미노출 결함** — `group_create`가 `Label Group 3 "Vocal"`을 쓰는데
+   `protocol.py:109`가 이 형태를 거부한다(mock 전용 코퍼스라 실행 경로에 미노출된 기존 잠재 결함).
