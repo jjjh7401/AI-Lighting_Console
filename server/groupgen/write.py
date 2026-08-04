@@ -90,12 +90,20 @@ class GroupWriteStep:
 
 @dataclass(frozen=True)
 class GroupWritePlan:
-    """The full plan for one ``create_arrangement_groups`` call."""
+    """The full plan for one ``create_arrangement_groups`` call.
+
+    ``fixture_list_truncated``/``fixture_list_truncated_reason`` are
+    STRUCTURAL fields (design.md §10 policy (c), 4th layer "정직한 고지"),
+    never docstring-only prose (함정 6) — a caller that only reads the
+    ``plan`` field still receives the truncation fact.
+    """
 
     steps: tuple[GroupWriteStep, ...]
     unverified: tuple[str, ...]
     unverified_reason: str
     human_check_commands: tuple[str, ...]
+    fixture_list_truncated: bool
+    fixture_list_truncated_reason: str
 
 
 def _group_numbers(groups_section: Mapping[str, object]) -> set[int]:
@@ -201,11 +209,20 @@ def guard_plan_size(requested: int, *, cap: int) -> None:
 
 
 def guard_fixture_list_truncation(fixtures_section: Mapping[str, object]) -> None:
-    """Refuse a group write whose target fixture list was truncated.
+    """Refuse an AUTO-SELECTED fixture list that was truncated.
 
     An 18/19-fixture group would silently persist as a wrong asset
     (research.md §5.2) — the selection that built it vanishes on the next
     ``ClearAll``, but the group itself does not (design.md §6.3, "함정 7").
+
+    **Not called by ``build_group_write_plan`` (amended 2026-08-04, user
+    decision).** ``build_group_write_plan`` takes explicit caller-supplied
+    ``fids`` per group — the group's membership is fully determined by that
+    argument, so a truncated *re-query* of the fixture container cannot make
+    an explicitly-named group incomplete. This guard remains for a FUTURE
+    auto-selection caller ("group the whole rig for me") that would derive
+    ``fids`` FROM the (possibly truncated) fixture listing itself — there,
+    REQ-GROUPGEN-024's original rationale still applies unchanged.
     """
     if fixtures_section.get("truncated"):
         raise GroupSlotError(
@@ -248,8 +265,23 @@ def build_group_write_plan(
     (``guard_plan_size`` — DEFAULT_GROUP_PLAN_CAP, a policy default, not a
     measured console limit). A caller may raise it explicitly per call; the
     default is never silently widened.
+
+    **``fixtures_section`` truncation never blocks this call (amended
+    2026-08-04, user decision — REQ-GROUPGEN-024 correction).** Every
+    group's membership here is the caller-supplied ``fids`` in ``buckets``,
+    never a value derived from re-reading ``fixtures_section`` — a rig that
+    answers 18 of 39 fixtures in one UDP round trip (``truncated: true``)
+    still names all 39 correctly if the caller already knows their fids.
+    REQ-GROUPGEN-024's original "18/19-fixture group persists silently"
+    hazard applies only to a caller that AUTO-SELECTS fids from the
+    (possibly truncated) listing — that hazard does not exist here, so the
+    call proceeds and the truncation fact is carried structurally on the
+    returned plan instead (``fixture_list_truncated`` /
+    ``fixture_list_truncated_reason``), never as a raised refusal.
+    REQ-GROUPGEN-021 (a truncated GROUP POOL blocks slot allocation) is a
+    separate, unchanged guard — see ``guard_pool_readable`` via
+    ``measure_empty_slots`` below.
     """
-    guard_fixture_list_truncation(fixtures_section)
     bucket_keys = list(buckets)
     guard_plan_size(len(bucket_keys), cap=max_plan_size)
     empty_slots = measure_empty_slots(groups_section, count=len(bucket_keys))
@@ -290,6 +322,7 @@ def build_group_write_plan(
         f"write scope {written_slots} exceeds measured empty slots {empty_slots}"
     )
 
+    fixture_list_truncated = bool(fixtures_section.get("truncated"))
     return GroupWritePlan(
         steps=tuple(steps),
         unverified=("membership",),
@@ -300,4 +333,14 @@ def build_group_write_plan(
             "slot's existence and its label are re-queried as evidence"
         ),
         human_check_commands=tuple(f"Group {slot}" for slot in written_slots),
+        fixture_list_truncated=fixture_list_truncated,
+        fixture_list_truncated_reason=(
+            "the re-queried fixture container listing was truncated "
+            "(truncated: true) — this does NOT affect this call's groups, "
+            "which were built from caller-supplied fids, not from the "
+            "truncated listing; recorded structurally so a reviewer can see "
+            "the rig may hold more fixtures than any single listing showed"
+            if fixture_list_truncated
+            else ""
+        ),
     )

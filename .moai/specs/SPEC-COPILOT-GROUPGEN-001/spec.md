@@ -180,9 +180,32 @@ MAtricks        = 어떻게 재성형 (런타임 · 윙 · 블록 · 홀짝 · �
   **[HARD] `ok:true`를 멤버십 검증의 증거로 삼지 않는다** — 이는 *"검증했다"*가 아니라
   *"검증하지 않았음을 명시한다"*는 뜻이며, 침묵도 `ok:true` 대체도 금지된다(§10 정책 (c) 3층 "정직한
   고지").
-- **REQ-GROUPGEN-024** [Event-driven] — **When** 픽스처 목록이 절단된 상태면, the 그룹 생성 **shall**
-  거부되거나 **명시 경고**를 동반한다. 18/19만 담긴 그룹은 조용히 틀린 자산으로 **영속**한다 —
-  선택은 `ClearAll`로 사라지지만 그룹은 남는다.
+- **REQ-GROUPGEN-024** [Event-driven] — **정정(v0.3.0, 사용자 승인 2026-08-04, W6)**:
+  절단 거부 가드를 **쓰기 경로에서 판별 경로로 이동**한다. 원안(*"픽스처 목록이 절단되면 그룹
+  생성을 거부하거나 명시 경고를 동반한다"*)은 자동 선택 경로에는 유효하지만, `create_arrangement_groups`의
+  입력이 **명시 `fids`**(`groups: [{name, fids:[...]}]`)라는 사실과 충돌한다 — 그룹 멤버십이
+  호출자 지정 `fids`로 완전히 결정되므로, 재조회한 픽스처 **목록**이 절단됐다는 사실이 이미
+  완전히 알려진 그 그룹을 불완전하게 만들 수 없다.
+  **실측 근거**: 라이브 리그가 39대로 늘었고(`state Patch/Stages/1/Fixtures` → `childCount:39`,
+  반환 18, `truncated:true` — UDP 응답 예산·퍼센트 인코딩 후 `max_payload=1900` 초과), 원안 그대로면
+  18대를 초과하는 모든 리그(사실상 모든 실공연 리그)에서 그룹 생성이 전면 거부되어 실사용 불가
+  구조였다.
+  **정정된 요구**:
+  1. **쓰기 경로**(`build_group_write_plan` → `create_arrangement_groups`) **shall not** 절단된
+     픽스처 목록을 이유로 그룹 생성을 거부한다. 대신 절단 사실을
+     `GroupWritePlan.fixture_list_truncated`(구조적 필드, docstring 아님 — 함정 6) +
+     사람이 읽는 이유로 반환값과 승인 카드에 싣는다.
+  2. **판별 경로**(`classify_arrangement_topology`) **shall** 위상 판정에 실제로 쓰인 픽스처
+     수와 리그 전체 수를 `coverage: {"judged": N, "of": M, "complete": bool}`로 명시하고,
+     불완전하면(`complete: false`) `topology_partial: true` + 이유 문장으로 판정을 **저신뢰**로
+     강제 표기한다(거부하지 않는다 — 저신뢰 표기가 사용자 결정). 기하 축 `suggested_groups`에는
+     같은 `topology_partial` 표기가 따라가며, 종류 축(`fixture_type_records` 유래)은 커버리지와
+     무관하므로 이 표기를 받지 않는다.
+  3. **[HARD] REQ-GROUPGEN-021은 무변경이다** — 그룹 *풀*(빈 슬롯 후보) 절단 시 슬롯 할당 거부는
+     별개 사건(슬롯 번호를 실측할 수 없음)이며 이 정정의 영향을 받지 않는다.
+  18/19만 담긴 그룹이 조용히 틀린 자산으로 영속한다는 원안의 위험(선택은 `ClearAll`로 사라지지만
+  그룹은 남는다)은 **자동 선택 경로**에서 여전히 유효하며, `guard_fixture_list_truncation` 함수와
+  그 단위 테스트는 그 미래 호출자를 위해 삭제하지 않고 보존한다.
 - **REQ-GROUPGEN-025** [Ubiquitous] — 발화 슬롯 집합 **shall** 실측 빈 슬롯 집합과 일치한다
   (정적 단언 가능). 기존 슬롯 접촉 0.
 - **REQ-GROUPGEN-026** [State-driven] — **While** LiveLock이 활성이면, the 전 단계 **shall** 제안으로
