@@ -246,11 +246,15 @@ The 전체 테스트 스위트 **shall** run-phase 킥오프 기준선 대비 �
 
 ### 감사 fold-in 추가 AC (v0.2.0)
 
-#### AC-SPATIAL-031 — 기록 번들 risky 분류 + 규칙 ③ 발동 (조건부: WRITE 축 진행 시, **뮤테이션 필수**)
+#### AC-SPATIAL-031 — 기록 번들 risky 분류 + 규칙 ③ 발동 — **`[DEFERRED]`** (후속 SPEC이 `server/safety/`와 함께 소유)
 
 **When** 배치 기록 번들이 게이트 스크리닝에 들어가면, the 게이트 **shall** 번들을 risky로 분류하고 showfile 백업 규칙 ③(`before_risky_execution()`)을 발동한다.
 
-- 대상 요구: REQ-SPATIAL-020(발동 조건 절) / REQ-SPATIAL-024 · **통과 판정**: 단위 — arrange 번들에 대한 게이트 스크리닝 판정 `risky=True` + `before_risky_execution()` 호출 확인(모의 백업 훅). **뮤테이션**: 좌표 기록 계열의 risky 분류(스크리닝 분류 확장)를 제거하면 반드시 빨개져야 한다 — 통과하면 규칙 ③이 발동하지 않는 기록 경로가 존재한다는 뜻이다.
+- 대상 요구: REQ-SPATIAL-020(발동 조건 절) / REQ-SPATIAL-024 · **통과 판정**: 단위 — arrange 번들에 대한 게이트 스크리닝 판정 `risky=True` + `before_risky_execution()` 호출 확인(모의 백업 훅). **뮤테이션**: 좌표 기록 계열의 risky 분류(스크리닝 분류 확장)를 제거하면 반드시 빨개져야 한다.
+- ⚠ **`[DEFERRED]` 판정 (run-phase §E.2.14 · sync-phase 확정)**: 구현했다가 **되돌렸다**. `server/safety/classify.py` 확장이 (a) `server/safety/**` PRESERVE 경계를 넘고 (b) 기존 테스트 **10건**을 깨뜨리며 (c) `server/measurement/corpus.yaml` 헤더가 *"non-risky verbs only"* 를 불변식으로 선언한다. 되돌렸으므로 **뮤테이션 대상에서도 제외**된다(없는 코드는 변이시킬 수 없다). `server/safety/**` byte-diff **0**.
+- **되돌림의 대가가 라이브에서 실현됐다 — 후속 SPEC 우선순위 근거**: §E.2.20 결함 2에서 **사용자가 요청하지 않은 좌표 기록 54건이 승인 카드 없이 콘솔에 나갔다.** 모델이 이전 턴의 미완 목표를 이어 완성한 것이고 의도는 합리적이었으나 **그 사이에 사람이 없었다.** `Set Fixture … Pos*`가 `safe`이므로 게이트가 통과시키고 규칙 ③ 백업도 발동하지 않았다. 같은 턴의 `Go+ Page 1.202`(reference-invoking)는 **정상적으로 카드를 띄웠다** — 즉 **게이트는 건강하고 좌표 기록만 그 그물을 통과한다.** 이것은 §E.2.14가 *"되돌림의 대가"* 로 적어둔 위험의 **가설이 아닌 관측 사례**이며, AC-031을 여는 후속 SPEC은 이 관측을 우선순위 근거로 인용해야 한다.
+- **남은 방어선은 설계대로 작동했다**: 원좌표 백업 · 재조회 검증 · 복원 번들 · 범위 봉쇄. §E.2.20의 복구도 이 경로로 했고 쇼파일 잔여 **0**이다. 즉 `[DEFERRED]`는 *"방어가 없다"* 가 아니라 *"승인 게이트 계층의 방어만 없다"* 다.
+- **종속 항목**: REQ-SPATIAL-024의 **승인 흐름** 절이 이 AC에 종속되어 함께 `[DEFERRED]`다(spec.md REQ-024 · §C.1). `plan.md §B M4`의 risky 분류 확장 행도 같은 표기로 맞췄다 — **정본은 spec.md REQ-020 · 024이며 이 AC가 그 판정을 운반한다.**
 
 #### AC-SPATIAL-032 — look/fx/scene PRESERVE (무조건, 협상 불가)
 

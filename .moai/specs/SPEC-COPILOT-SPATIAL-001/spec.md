@@ -1,10 +1,10 @@
 ---
 id: SPEC-COPILOT-SPATIAL-001
 title: "공간 인식 연출 — 배치 판독(READ) + 배치 생성(WRITE) (Spatial-Aware Choreography)"
-version: "0.2.0"
-status: draft
+version: "0.3.0"
+status: completed
 created: 2026-08-03
-updated: 2026-08-03
+updated: 2026-08-04
 author: manager-spec
 priority: P1
 phase: "Phase 2 연출 계층 — 공간 축 (배치 인식 연출 + 배치 생성)"
@@ -29,6 +29,7 @@ related_specs: [SPEC-COPILOT-SCENE-001, SPEC-COPILOT-LOOKLIB-001, SPEC-COPILOT-F
 |---|---|---|---|
 | 0.1.0 | 2026-08-03 | manager-spec | 최초 작성 (draft, Tier L). 출처: 사용자 미션(양방향 공간 인식) + 코디네이터 인수 웹 조사(MA help/포럼/선례 플러그인 — research.md §1) + 저장소 직접 판독(base `origin/main` = `3176900`). REQ **26건** · AC **30건** · ASSUMPTION **53~60(8건)** · 열린 질문 **5건**(plan.md §F) · 라이브 세션 **2회(M0·M6)**. Lua 프로퍼티 이름 대소문자는 **전건 미검증** — M0 라이브 프로브가 첫 마일스톤이다. 아티팩트 6종 동시 생성. |
 | 0.2.0 | 2026-08-03 | manager-spec | **plan-audit fold-in** (PASS-WITH-DEBT 0.86 — 지적 10건 전건 반영). M1: REQ-014 좌표 금지를 **연출 발화** 커맨드로 재범위(WRITE 기록 커맨드는 REQ-019~024 소유 — 모순 해소). M2: REQ-020에 risky 분류 **발동 조건** 절 신설(`gate.py:362` 규칙 ③은 risky 경로 전용) + **AC-SPATIAL-031** 신설(게이트 risky 판정 + `before_risky_execution()` 발동, 뮤테이션 필수). M3: REQ-026에 5판정→4접두 매핑 표 **본문 내장**(SCENE-001 출처 명기 — 포인터 상속 제거). M4: **AC-SPATIAL-032** 신설(look/fx/scene PRESERVE — REQ-018 커버 공백 해소). m5~m10: plan.md(M0 SKIP 행·M6 GUI 대안·WRITE AC 열거)·acceptance.md(AC-024 Ubiquitous 전환·AC-028/030 정박·AC-025 주석)·design.md(§5 표적 공유 근거·§6 프리셋 파라미터 계약) 동반 반영. 최종 카운트: REQ **26건** · AC **32건**(뮤테이션 필수 5건: 004·006·019·020·031). C1(§F D-1~D-5 열린 질문 5건)은 킥오프 게이트 대상으로 **미변경**. |
+| 0.3.0 | 2026-08-04 | orchestrator | **sync-phase 인계 5건 소요** (progress.md §E.3 → §E.4). ① **risky 분류 문면 모순 해소** — REQ-020의 *"스크리닝에서 risky로 분류되어야 한다"* 는 run-phase에서 `[DEFERRED]`가 됐다(§E.2.14: `server/safety/` PRESERVE 경계). 본 HISTORY 행과 REQ-020·024의 `[DEFERRED]` 표기를 **정본**으로 삼고 `plan.md §B M4` · `AC-SPATIAL-031`을 같은 표기로 맞췄다. ② `arrange_fixtures`의 **무승인 쇼파일 변형**을 §C.1 검증 천장에 행으로 명기. ③ AC-031 우선순위 근거로 **§E.2.20 결함 2**(요청하지 않은 좌표 기록 54건 무승인 통과)를 인용. ④ **절단 시 모델 미고지**(§E.2.20 결함 1)를 §C.1에 행으로 등록 — 툴 설명문은 지시일 뿐 강제가 아니다. ⑤ **정렬 어휘의 기준 명기**(§E.2.21) — §C.4 신설. 코드 변경 **0** · 문서만. |
 
 ## A. 개요
 
@@ -90,11 +91,11 @@ MA3에서 공간 이펙트의 방향을 정하는 것은 **선택 순서(selecti
 ### B.4 배치 생성 (WRITE)
 
 - **REQ-SPATIAL-019** [Event-driven] — **When** 사용자가 배치 생성을 명시 요청하면(예: "3×10 그리드로 정렬"), the 시스템 **shall** 프리셋 형상(grid / row / circle)의 목표 3D 좌표(미터)를 결정론적으로 계산하고, 대상 픽스처의 패치 좌표에 기록한다.
-- **REQ-SPATIAL-020** [Ubiquitous] — the 기록 경로 **shall** 기록 전에 대상 전 픽스처의 **현재 좌표를 판독·기록(원좌표 백업)**하고, 복원 경로(원좌표 재기록 번들)를 리포트에 싣는다. 기존 showfile 백업 규칙(위험 커맨드 직전 백업 — `server/safety/backup.py` 규칙 ③)도 함께 적용된다 — **발동 조건**: 게이트는 RISKY 분류 커맨드만 백업하므로(`server/safety/gate.py:362` — 규칙 ③ `before_risky_execution()`은 risky 경로 전용), 신규 커맨드 계열인 좌표 기록 번들은 **스크리닝에서 risky로 분류되어야 한다**(스크리닝 분류 확장 포함 — AC-SPATIAL-031이 검증). 원좌표 백업 없는 기록은 금지된다.
+- **REQ-SPATIAL-020** [Ubiquitous] — the 기록 경로 **shall** 기록 전에 대상 전 픽스처의 **현재 좌표를 판독·기록(원좌표 백업)**하고, 복원 경로(원좌표 재기록 번들)를 리포트에 싣는다. 이 원좌표 백업·복원 번들 의무는 **구현됐고 라이브에서 작동했다**(§E.2.20 복구가 이 경로로 이뤄졌다). ⚠ **`[DEFERRED]` — showfile 백업 규칙 ③ 연동 부분만**: 게이트는 RISKY 분류 커맨드만 백업하므로(`server/safety/gate.py:362` — 규칙 ③ `before_risky_execution()`은 risky 경로 전용) 좌표 기록 번들이 **스크리닝에서 risky로 분류되어야** 규칙 ③이 발동하는데, 그 분류 확장은 run-phase에서 **되돌려졌다**(§E.2.14 — `server/safety/` PRESERVE 경계를 넘고 기존 테스트 10건이 깨진다). 따라서 좌표 기록은 **오늘 `safe`로 분류되어 승인 카드 없이 콘솔에 나가고 규칙 ③ 백업도 발동하지 않는다**(§C.1 · 관측 사례 §E.2.20 결함 2). 남은 방어선은 **본 SPEC 자체의 원좌표 백업·재조회 검증·복원 번들·범위 봉쇄**이며 이들은 작동한다. risky 분류 확장은 `server/safety/`를 함께 소유하는 후속 SPEC의 몫이다(AC-SPATIAL-031 `[DEFERRED]`).
 - **REQ-SPATIAL-021** [Ubiquitous] — 기록 검증 **shall** 재조회로 한다: 기록 후 대상 픽스처의 좌표를 재판독해 목표값 일치를 확인한다. `ok:true` 단독은 증거가 아니며(SCENE M0 실측 계승), 재조회 불일치는 명시 실패로 보고된다.
 - **REQ-SPATIAL-022** [Unwanted] — the 기록 경로 **shall not**: (a) 명시 대상 외 픽스처의 좌표를 건드리고, (b) 사용자 요청 없이 선제 재배치를 제안·실행하며, (c) v1에서 `rotx`/`roty`/`rotz`를 기록한다(판독은 허용 — 기록은 방향 미측정 축이므로 제외).
 - **REQ-SPATIAL-023** [State-driven] — **While** LiveLock이 활성인 동안, 배치 기록 **shall** 제안(Proposal) 전용으로 강등되고 콘솔 송신은 0건이다 — 강등은 실패가 아니라 답이다(SCENE REQ-SCENE-020 계승).
-- **REQ-SPATIAL-024** [Ubiquitous] — 좌표 기록 **shall** 게이트 단일 관문을 경유한다 — 커맨드라인 경로든 응답기 신규 동사든, 스크리닝·감사·승인 흐름 없이 콘솔에 도달하는 기록 경로는 존재하지 않는다.
+- **REQ-SPATIAL-024** [Ubiquitous] — 좌표 기록 **shall** 게이트 단일 관문을 경유한다 — 커맨드라인 경로든 응답기 신규 동사든, 스크리닝·감사·승인 흐름 없이 콘솔에 도달하는 기록 경로는 존재하지 않는다. ⚠ **부분 `[DEFERRED]`**: **단일 관문·스크리닝·감사**는 충족된다(모든 기록이 `gate.screen()`을 지나고 감사 로그에 남는다 — §E.2.20이 54건 전부를 감사 로그로 재구성했다). **승인 흐름만** REQ-020의 risky 분류에 종속되어 `[DEFERRED]`다 — `safe` 분류이므로 승인 카드가 뜨지 않는다. 즉 "확인 없이 콘솔에 도달하는 경로는 없다"는 **감사 의미로는 참이고 승인 의미로는 오늘 거짓**이다. 이 문장을 두 뜻으로 읽을 수 있게 둔 것이 §E.2.20 결함 2를 놓친 문면상의 원인이다.
 
 ### B.5 툴 표면 + 라이브 판정 기록
 
@@ -130,6 +131,8 @@ MA3에서 공간 이펙트의 방향을 정하는 것은 **선택 순서(selecti
 | **선택 순서가 실제 웨이브 방향을 정하는가** | **NO** | 사람의 GUI/무대 관측이 유일 (ASSUMPTION-58) |
 | **3D 뷰어의 시각적 반영** | **NO** (기계) | 좌표 값 재조회는 YES, 시각 확인은 사람 |
 | 미지 프로퍼티 이름에 대한 `ok`의 변별력 | **미측정 — M0 날조 대조군이 판정** | SCENE M0 선례: 축마다 다르다 |
+| **좌표 기록의 승인 카드** | **NO — 오늘 뜨지 않는다** | `Set Fixture … Pos*`가 `safe`로 분류된다(AC-031 `[DEFERRED]`, §E.2.14). 라이브 관측: 요청하지 않은 좌표 기록 **54건**이 무승인 통과(§E.2.20 결함 2). 같은 턴의 `Go+ Page 1.202`는 정상적으로 카드를 띄웠다 — **게이트는 건강하고 좌표 기록만 그물을 통과한다** |
+| **절단된 리그에서 모델이 불완전성을 고지하는가** | **NO — 강제 수단이 없다** | 툴은 `truncated: true`를 보고하고 설명문이 *"say so"* 를 명령형으로 적지만, 모델은 받은 일부에 대한 좌우 정렬을 제시하고 **불완전성을 말하지 않았다**(§E.2.20 결함 1, fid 19 탈락). **툴 설명은 지시일 뿐 강제가 아니다** — `server/looks/**`가 쓰는 방식의 한계를 그대로 물려받는다. 구조적 강제(부분 리그 상태값 또는 정렬 결과 보류)는 **후속 과제** |
 
 ### C.2 미검증 전제 (ASSUMPTION — INTROSPECT-001이 46~52를 사용, 본 SPEC은 53부터)
 
@@ -150,6 +153,27 @@ MA3에서 공간 이펙트의 방향을 정하는 것은 **선택 순서(selecti
 2. **슬롯≠FID** `[실측 전재]` — rig context 픽스처 항목의 번호는 컨테이너 내 위치이지 FID가 아니다(`rig_object` docstring). 공간 맵의 식별자 규율(REQ-SPATIAL-007)과 M0의 ASSUMPTION-57 판정이 이 함정을 전담한다.
 3. **효과는 사람만 본다** `[확립]` — 모션·발색·웨이브 방향은 기계 확인 채널이 없다. 리포트 문면은 이 한계를 무조건 싣는다(FXLIB `EFFECT_EVIDENCE_NOTICE` 동형 상수).
 4. **프로브 표적 분리** `[실측 전재]` — SCENE M0에서 프로브 A/B가 같은 표적을 공유해 대조군이 표적을 점유했다. 본 SPEC의 프로브는 픽스처·값 축에서 표적을 분리한다(REQ-SPATIAL-026 (d)).
+
+### C.4 정렬 어휘의 기준 — `left/right`는 house(객석)다 `[실측, 소급 발견]`
+
+**코드 동작은 옳고 용어가 기준을 말하지 않는다.** 후속 SPEC(GROUPGEN-001) 조사 중 발견해 §E.2.21에 기록했다.
+
+MA Lighting 공식 문서 `[인수-웹, 규범]`: **+x = stage left** · *"Stage right will be negative numbers"* · +y = upstage · +z = height.
+무대 관례상 **stage left/right는 배우 기준**이고 **house left/right는 객석 기준**이며 **둘은 정반대**다.
+
+실증(x = −4 / 0 / +4 3대 리그): `left_to_right = (1, 2, 3)` 에서 `fid 1: x=−4.0` = stage **RIGHT** = house **LEFT**.
+
+> **따라서 폐쇄 정렬 어휘 `left_to_right`는 house left → house right, 즉 stage RIGHT → stage LEFT 다.**
+> 조명 디자이너가 *"stage left에서 stage right로"* 라고 하면 **이 정렬의 역방향**을 뜻한다.
+> 한국어 "왼쪽/오른쪽"도 동일하게 house 기준으로 해석된다.
+
+**개명하지 않는 이유**: `left_to_right`·`right_to_left`는 이미 출하된 폐쇄 집합이므로 개명은 파괴적 변경이다.
+P8 라이브 관측에서 사용자가 3D 뷰의 "왼쪽"을 최소 x로 확인했고 코드가 그렇게 정렬했으므로 **동작·판정은 전부 유효하다**.
+`SPATIAL_ROW_ORDER = "y_ascending"`("stage front to back")도 의미는 맞고 낱말만 비표준이다 — 표준 어휘는 `Downstage → Upstage`.
+
+**후속 SPEC의 대응 선례**: GROUPGEN-001은 그룹 이름에 맨 `Left`/`Right`를 쓰지 않고 **기준을 이름에 박았다**
+(`GEO Stage Right N` / `GEO Stage Left N`, 폐쇄 어휘 `_LATERAL_2/_3`). 그 버킷 index 0은 최소 x = stage right이므로
+MA3 공식 축 의미와 일치한다 — 두 SPEC의 좌우 판정은 **같은 좌표를 같은 방향으로** 읽는다.
 
 ## D. 제외 범위 (Out of Scope)
 

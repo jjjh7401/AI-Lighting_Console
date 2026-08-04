@@ -74,7 +74,7 @@ base: `origin/main` = `3176900` · branch: `feature/SPEC-COPILOT-SPATIAL-001`
 ### M4 — WRITE: 배치 생성 (`arrange_fixtures` 안)
 
 - 프리셋 좌표 계산(grid / row / circle — 순수 산술, golden 테스트) → M0 확정 채널로 기록.
-- **기록 전 원좌표 백업 의무 + 복원 번들 리포트 동봉**(REQ-SPATIAL-020) + showfile 백업 규칙 ③ 연동 — 기록 번들의 **risky 스크리닝 분류 확장** 포함(규칙 ③ `before_risky_execution()`은 risky 경로 전용 — AC-SPATIAL-031).
+- **기록 전 원좌표 백업 의무 + 복원 번들 리포트 동봉**(REQ-SPATIAL-020) — **구현·라이브 작동 확인**. ⚠ showfile 백업 규칙 ③ 연동에 필요한 기록 번들의 **risky 스크리닝 분류 확장은 `[DEFERRED]`** (구현했다가 되돌렸다 — `server/safety/**` PRESERVE 경계 · 기존 테스트 10건 · `corpus.yaml`의 *"non-risky verbs only"* 불변식. progress.md §E.2.14, AC-SPATIAL-031 `[DEFERRED]`). **정본은 spec.md REQ-SPATIAL-020 · 024의 `[DEFERRED]` 표기**이며 이 행은 그것을 따른다 — v0.2.0의 이 행이 확장을 의무로 적어 둔 것이 sync 인계 ①의 문면 모순이었다.
 - 기록 후 **재조회 검증** — 목표값 불일치는 명시 실패(REQ-SPATIAL-021).
 - 범위 봉쇄: 명시 대상 외 0건 · rot* 기록 0건 · LiveLock 제안 강등(REQ-SPATIAL-022/023).
 - 착수 게이트: ASSUMPTION-54 **GO**.
