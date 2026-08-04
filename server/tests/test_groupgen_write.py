@@ -13,13 +13,16 @@ from pathlib import Path
 import pytest
 
 from server.groupgen.write import (
+    DEFAULT_GROUP_PLAN_CAP,
     FIXTURE_LIST_TRUNCATED,
+    GROUP_PLAN_TOO_LARGE,
     GROUP_POOL_TRUNCATED,
     GROUP_POOL_UNAVAILABLE,
     GROUP_SLOT_OCCUPIED,
     GroupSlotError,
     build_group_write_plan,
     guard_fixture_list_truncation,
+    guard_plan_size,
     measure_empty_slots,
     select_group_slot,
 )
@@ -252,3 +255,105 @@ def test_module_source_imports_no_transport_or_safety() -> None:
     assert not re.search(r"\bserver\.bridge\b", source)
     assert not re.search(r"\bpythonosc\b", source)
     assert not re.search(r"\bserver\.safety\b", source)
+
+
+# -- guard_plan_size / grid slot-explosion cap (D-Q6 discipline: reject, ------
+#    never warn-and-proceed; never silently truncate) -------------------------
+
+
+def _wide_grid_buckets(depth: int, lateral: int) -> dict[str, tuple[int, ...]]:
+    """A synthetic axis-separated grid bucket set (design.md §D-Q2): depth +
+    lateral buckets, ``depth + lateral`` groups total — one fixture per
+    bucket is enough, only the bucket *count* matters for the cap."""
+    fid = 1
+    buckets: dict[str, tuple[int, ...]] = {}
+    for i in range(depth):
+        buckets[f"depth{i}"] = (fid,)
+        fid += 1
+    for i in range(lateral):
+        buckets[f"lateral{i}"] = (fid,)
+        fid += 1
+    return buckets
+
+
+def test_guard_plan_size_accepts_a_request_at_or_below_the_cap() -> None:
+    guard_plan_size(DEFAULT_GROUP_PLAN_CAP, cap=DEFAULT_GROUP_PLAN_CAP)  # must not raise
+
+
+def test_guard_plan_size_rejects_a_request_above_the_cap() -> None:
+    with pytest.raises(GroupSlotError) as excinfo:
+        guard_plan_size(DEFAULT_GROUP_PLAN_CAP + 1, cap=DEFAULT_GROUP_PLAN_CAP)
+    assert excinfo.value.code == GROUP_PLAN_TOO_LARGE
+    # error message states what the caller needs and what the cap is
+    assert str(DEFAULT_GROUP_PLAN_CAP + 1) in excinfo.value.message
+    assert str(DEFAULT_GROUP_PLAN_CAP) in excinfo.value.message
+
+
+def test_3x10_grid_axis_separated_groups_pass_under_the_default_cap() -> None:
+    """3x10 그리드(축별 분리 3+10=13그룹, design.md §D-Q2) — 기본 상한(16) 이하이므로
+    거부 없이 전량 발화된다. 이 테스트 이름/독스트링이 곧 '통과가 의도'라는 명세다.
+    """
+    buckets = _wide_grid_buckets(depth=3, lateral=10)
+    names = {key: f"GEO Bucket {key}" for key in buckets}
+    plan = build_group_write_plan(
+        buckets=buckets,
+        names=names,
+        groups_section=MEASURED_GROUPS_SECTION,
+        fixtures_section=UNTRUNCATED_FIXTURES_SECTION,
+    )
+    assert len(buckets) == 13
+    # 조용한 절단 0: 계획의 step 수 == 요청된 버킷 수 == 할당 슬롯 수.
+    assert len(plan.steps) == len(buckets)
+    assert len({step.slot for step in plan.steps}) == len(buckets)
+
+
+def test_5x20_grid_axis_separated_groups_are_rejected_by_the_default_cap() -> None:
+    """5x20 그리드(축별 분리 5+20=25그룹) — 기본 상한(16)을 넘으므로 **거부**된다.
+    이 테스트 이름/독스트링이 곧 '거부가 의도'라는 명세다 — 부분 계획으로 조용히
+    절단하는 대신 GROUP_PLAN_TOO_LARGE 로 전량 거부한다(D-Q6 규율 계승).
+    """
+    buckets = _wide_grid_buckets(depth=5, lateral=20)
+    names = {key: f"GEO Bucket {key}" for key in buckets}
+    assert len(buckets) == 25
+    with pytest.raises(GroupSlotError) as excinfo:
+        build_group_write_plan(
+            buckets=buckets,
+            names=names,
+            groups_section=MEASURED_GROUPS_SECTION,
+            fixtures_section=UNTRUNCATED_FIXTURES_SECTION,
+        )
+    assert excinfo.value.code == GROUP_PLAN_TOO_LARGE
+
+
+def test_plan_size_cap_is_reachable_and_never_silently_truncates() -> None:
+    """A plan above the DEFAULT cap must be entirely refused, never demoted to
+    a partial plan covering only the first ``cap`` buckets — mutating
+    ``build_group_write_plan`` to silently slice ``buckets`` to ``cap`` and
+    proceed would make this RED (no exception, and the plan would carry a
+    step count smaller than the requested bucket count, both of which the
+    surrounding cap tests already pin)."""
+    buckets = _wide_grid_buckets(depth=5, lateral=20)
+    names = {key: f"GEO Bucket {key}" for key in buckets}
+    with pytest.raises(GroupSlotError):
+        build_group_write_plan(
+            buckets=buckets,
+            names=names,
+            groups_section=MEASURED_GROUPS_SECTION,
+            fixtures_section=UNTRUNCATED_FIXTURES_SECTION,
+        )
+
+
+def test_max_plan_size_is_an_explicit_per_call_override() -> None:
+    """The cap is a policy DEFAULT, not a ceiling baked into the code — a
+    caller may explicitly raise it for one call (design.md-mandated
+    keyword-only override on build_group_write_plan)."""
+    buckets = _wide_grid_buckets(depth=5, lateral=20)
+    names = {key: f"GEO Bucket {key}" for key in buckets}
+    plan = build_group_write_plan(
+        buckets=buckets,
+        names=names,
+        groups_section=MEASURED_GROUPS_SECTION,
+        fixtures_section=UNTRUNCATED_FIXTURES_SECTION,
+        max_plan_size=30,
+    )
+    assert len(plan.steps) == len(buckets) == 25

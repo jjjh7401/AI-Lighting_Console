@@ -97,7 +97,8 @@ base: `feature/SPEC-COPILOT-SPATIAL-001` = `115eb6d` · branch: `feature/SPEC-CO
   **폐쇄 집합으로 정의는 하되 v1에서 호출하지 않는다** — 슬롯 경제(빈 슬롯 `2~10·14·16+`, 9칸=그룹9개
   vs 축별분리=그룹6개) + D-Q9 보수 결정과의 정합(종류 축 교차를 막아 놓고 위상 축에서 열면 모순)이 근거
 - **동심원**: `GEO Inner` / `GEO Outer` · 3+ → `GEO Ring 1..N`. **업계 표준이 없음을 문서에 명시**(§6.6)
-- **수직**: `GEO Low Side` / `GEO High Side` · 3+ → `GEO Level 1..N` (**위→아래** — 붐·래더 기물 번호
+- **수직**: `GEO Low` / `GEO High` **(v0.3.0 정정 — `Low Side`/`High Side` 는 사이드라이트 시스템
+  어휘이며 `roles.py` 사이드 role 힌트 `Side` 와 실제 충돌)** · 3+ → `GEO Level 1..N` (**위→아래** — 붐·래더 기물 번호
   관례, §7.1)
 - 번호 폴백은 **순서 규칙을 문서화**한다 — McCandless 영역 번호도 방향이 표준화되지 않았다(§6.8)
 - **[CLOSED — D-Q9/Q11, v0.2.0] 종류 축 어휘는 v1에서 제조사·타입명 구조화 필드로 한정**한다.

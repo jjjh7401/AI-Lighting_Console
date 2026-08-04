@@ -128,19 +128,30 @@ def name_concentric_bucket(index: int, total: int) -> str:
 
 # ---------------------------------------------------------------------------
 # Vertical axis vocabulary (design.md §4.1)
+#
+# v0.3.0 정정: 이 축은 ("Low Side", "High Side") 였다. 실제 충돌이 확인돼 교체했다 —
+# `server/looks/roles.py` 의 사이드 role 이 힌트 "Side" 를 단어경계로 매칭하므로
+# `GEO Low Side` 가 사이드라이트 그룹으로 오인된다. 더 근본적으로 무대에서
+# "low side"/"high side" 는 사이드라이트 **위치(system)** 를 뜻하며 REQ-GROUPGEN-019
+# (기능/시스템 어휘 차용 금지)가 정확히 금지하는 것이다 — `SR Boom N` 과 같은 오류 계열이다.
+# 좌표가 정직하게 말할 수 있는 것은 "더 낮다 / 더 높다" 뿐이다.
 # ---------------------------------------------------------------------------
 
-_VERTICAL_2 = ("Low Side", "High Side")
+_VERTICAL_2 = ("Low", "High")
 
 
 def name_vertical_bucket(index: int, total: int) -> str:
     """Vertical-axis bucket name, index 0 = lowest -> index total-1 = highest.
 
-    total == 2 -> Low Side/High Side (no 3-way split defined — table §4.1)
-    total >= 4 -> Level 1..N (up -> down, REQ-GROUPGEN-017 direction disclosure)
+    total == 2 -> Low/High (no 3-way split defined — table §4.1)
+    total >= 3 -> Level 1..N (up -> down, REQ-GROUPGEN-017 direction disclosure)
 
     Reading order for the numbered fallback is UP -> DOWN (opposite of the
     index's low->high construction) per design.md §4.1 table ("위→아래").
+
+    Claims no lighting system and no rigging structure: "Side" would collide
+    with `server/looks/roles.py`'s 사이드 role hint AND assert a sidelight
+    position the patch does not contain (REQ-GROUPGEN-019, spec.md §D).
     """
     if total == 2:
         return GEO_PREFIX + _VERTICAL_2[index]

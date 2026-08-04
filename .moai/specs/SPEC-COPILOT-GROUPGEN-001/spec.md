@@ -73,7 +73,7 @@ MAtricks        = 어떻게 재성형 (런타임 · 윙 · 블록 · 홀짝 · �
 | 좌우 | Stage Right / Stage Left | + Center | — | **표준** |
 | 그리드 | — | `DSR…USL` 9칸 | `Area N` | **표준** |
 | 동심원 | Inner / Outer | + Mid | `Ring 1..N` | **표준 없음** — 관례 |
-| 수직 | Low Side / High Side | — | `Level 1..N` | 부분 표준 |
+| 수직 | `Low` / `High` **(v0.3.0 정정)** | — | `Level 1..N` | 업계 표준어(`low/high side`)는 **사이드라이트 시스템** 어휘라 REQ-019 위반 → 채택 불가 |
 
 ### A.4 M0 게이트 — 멤버십을 읽을 수 없으면 이 SPEC은 성립하지 않는다
 
