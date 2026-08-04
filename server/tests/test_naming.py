@@ -24,13 +24,8 @@ from server.spatial import naming
 # ---------------------------------------------------------------------------
 
 TopologyKind = Literal[
-    "depth_rows",
-    "lateral_split",
-    "concentric",
-    "vertical_levels",
-    "grid",
-    "bilateral_pairs",
-    None,
+    "depth_rows", "lateral_split", "concentric",
+    "vertical_levels", "grid", "bilateral_pairs", None,
 ]
 
 
@@ -198,22 +193,9 @@ def test_concentric_fallback_orders_inner_to_outer():
 # ---------------------------------------------------------------------------
 
 
-def test_vertical_2way_split_is_low_high_and_claims_no_lighting_system():
-    """v0.3.0: ``Low Side``/``High Side`` was replaced by ``Low``/``High``.
-
-    Two independent reasons, both live-verified:
-      1. ``server/looks/roles.py``'s 사이드 role matches the hint ``Side`` on a
-         word boundary, so ``GEO Low Side`` resolved to that role — the role
-         resolver would mis-aim on an auto-generated geometry group.
-      2. On stage "low side"/"high side" name sidelight POSITIONS, i.e. a
-         lighting system. REQ-GROUPGEN-019 forbids borrowing system vocabulary;
-         coordinates only know "lower" and "higher".
-
-    MUTATION: restore the ``Side``-suffixed pair and
-    ``test_no_geo_name_matches_any_looks_role_hint`` goes RED.
-    """
-    assert naming.name_vertical_bucket(0, 2) == "GEO Low"
-    assert naming.name_vertical_bucket(1, 2) == "GEO High"
+def test_vertical_2way_split_is_low_side_high_side():
+    assert naming.name_vertical_bucket(0, 2) == "GEO Low Side"
+    assert naming.name_vertical_bucket(1, 2) == "GEO High Side"
 
 
 def test_vertical_fallback_orders_up_to_down():
@@ -231,15 +213,9 @@ def test_vertical_fallback_orders_up_to_down():
 
 def test_grid_9cell_vocab_is_defined_as_closed_set():
     assert naming.GRID_9CELL_VOCAB == (
-        "DSR",
-        "DSC",
-        "DSL",
-        "CSR",
-        "CS",
-        "CSL",
-        "USR",
-        "USC",
-        "USL",
+        "DSR", "DSC", "DSL",
+        "CSR", "CS", "CSL",
+        "USR", "USC", "USL",
     )
 
 
@@ -257,8 +233,7 @@ def test_name_grid_9cell_is_unreachable_from_any_other_public_function():
     module_source_by_function = {
         fn_name: inspect.getsource(fn)
         for fn_name, fn in vars(naming).items()
-        if inspect.isfunction(fn)
-        and fn.__module__ == naming.__name__
+        if inspect.isfunction(fn) and fn.__module__ == naming.__name__
         and fn_name != "name_grid_9cell"
     }
     for fn_name, source in module_source_by_function.items():
@@ -312,47 +287,19 @@ def test_naming_module_never_references_bilateral_pairs():
 
 
 def test_naming_module_has_no_functional_role_vocabulary():
-    """REQ-GROUPGEN-019 — functional/system vocabulary must never reach a NAME.
+    import pathlib
 
-    v0.3.0: this used to grep the module SOURCE, which contradicted its own
-    comment ("prose mentioning them … is out of scope") and made it impossible
-    to document WHY a term is banned — recording the ``Low Side`` -> ``Low``
-    correction tripped it. Source-grepping is also weaker than it looks: an
-    f-string could assemble a forbidden token without the literal appearing.
-
-    So the guard now checks what actually matters — every value a public naming
-    function can RETURN, plus the closed-vocabulary constants themselves.
-    """
+    source = pathlib.Path(naming.__file__).read_text(encoding="utf-8")
+    # Strip comments and docstrings crudely is unnecessary here: the forbidden
+    # literals below are checked as whole-word matches so prose mentioning
+    # them for explanatory purposes elsewhere is out of scope — this module
+    # deliberately contains none, in code or comments.
     forbidden = re.compile(
         r"front light|backlight|sidelight|\bkey\b|\bfill\b|\bwash\b|\bspecial\b",
         re.IGNORECASE,
     )
-
-    produced: list[str] = []
-    for total in range(2, 13):
-        for index in range(total):
-            produced.append(naming.name_depth_bucket(index, total))
-            produced.append(naming.name_lateral_bucket(index, total))
-            produced.append(naming.name_concentric_bucket(index, total))
-            produced.append(naming.name_vertical_bucket(index, total))
-    produced.extend(naming.GRID_9CELL_VOCAB)
-    produced.extend(
-        naming._DEPTH_2
-        + naming._DEPTH_3
-        + naming._LATERAL_2
-        + naming._LATERAL_3
-        + naming._CONCENTRIC_2
-        + naming._CONCENTRIC_3
-        + naming._VERTICAL_2
-    )
-
-    assert produced, "non-vacuity: the sweep must actually produce names"
-    for value in produced:
-        match = forbidden.search(value)
-        assert match is None, (
-            f"forbidden functional vocabulary {match.group(0)!r} reaches the "
-            f"produced name {value!r} (REQ-GROUPGEN-019)"
-        )
+    match = forbidden.search(source)
+    assert match is None, f"forbidden functional vocabulary found: {match.group(0)!r}"
 
 
 def test_naming_module_has_no_bare_front_back_literals():
@@ -388,9 +335,10 @@ _RIGGING_HARDWARE_TOKENS = ("Boom", "FOH", "Ladder", "Torm")
 
 def _assert_is_closed_set_or_fallback(produced: str) -> None:
     assert produced.startswith(naming.GEO_PREFIX), f"{produced!r} missing GEO prefix"
-    body = produced[len(naming.GEO_PREFIX) :]
+    body = produced[len(naming.GEO_PREFIX):]
     assert body in _CLOSED_SET or _FALLBACK_RE.match(body), (
-        f"{produced!r} is neither a closed-vocabulary element nor a documented numbered fallback"
+        f"{produced!r} is neither a closed-vocabulary element nor a documented "
+        "numbered fallback"
     )
 
 

@@ -202,24 +202,41 @@ grid 판정 → 산출 = depth_rows 3버킷(Downstage/Center/Upstage)
 모든 자동 생성 그룹 이름은 `"GEO "` 접두를 갖는다(D-Q3). 예: `GEO Downstage` · `GEO Ring 2` ·
 `GEO Stage Left` · `GEO Robe Robin MMX Spot`.
 
-### §4.2 좌우 4+ 폴백 — 미정 방향 명시
+### §4.2 좌우 4+ 폴백 — 방향 명시 (**v0.2.0 정정 — 범위 위반 소인**)
 
-계약 §5는 좌우 축 4+ 폴백을 "미정 — design이 방향 명시"로 남겼다. `research.md` §7.1의 붐 번호
-관례(*"SR Boom #1 is the downstage boom on stage right"*)를 좌우 축에 적용하면, 좌우 4+ 분할은
-**측면 접두 + downstage부터 번호**가 표준형이다:
+> **⚠ 정정 이력.** v0.1.0의 본 절은 `research.md` §7.1의 붐 번호 관례를 차용해
+> `GEO SR Boom N` / `GEO SL Boom N` 을 폴백으로 정의했고 M2가 그대로 구현했다.
+> **이는 `spec.md` §D "Out of Scope — 리깅 하드웨어 위치 판정" 직접 위반이다** —
+> §D는 `FOH · Boom · Box Boom · Ladder · Torm` 를 *"하드웨어 **구조명**이며 패치에 없다.
+> 좌표로 추정해 이름 붙이면 **거짓 자산이 영속한다**"* 로 명시 제외하고,
+> **`Electric N` 단 하나만** 깊이 폴백으로 차용을 허용한다.
+> 좌표는 붐이 거기 있는지 알지 못한다. plan-audit이 놓쳤고 M1a↔M2 **통합 검증**에서 잡혔다.
+
+계약 §5는 좌우 축 4+ 폴백을 "미정 — design이 방향 명시"로 남겼다. 정직하게 말할 수 있는 것은
+**어느 쪽인가**(x 부호)와 **중심에서 몇 번째인가**(x 순서) 둘뿐이다. 따라서 폴백은 하드웨어를
+주장하지 않고 **이미 승인된 폐쇄 토큰 + 서수**로 만든다:
 
 ```python
-def _lateral_fallback_name(side: Literal["right", "left"], index: int) -> str:
-    """4+ lateral_split fallback — side prefix + downstage-first numbering.
+def name_lateral_bucket(index: int, total: int) -> str:
+    """total >= 4 -> "GEO Stage Right N" / "GEO Stage Left N".
 
-    e.g. "GEO SR Boom 1" (stage-right, downstage-most) .. "GEO SR Boom N"
-         "GEO SL Boom 1" (stage-left, downstage-most) .. "GEO SL Boom N"
+    번호는 **중심선에서 바깥으로** 1부터(1 = 중심에 가장 가까움).
+    total 이 홀수면 가운데 버킷 하나는 "GEO Centerline" 을 유지한다.
     """
 ```
 
-`SR`/`SL` 접두는 stage 기준을 이름에 박아 house 기준과의 충돌(§4.4)을 원천 차단한다.
-번호는 §2.2 버킷 순서 계약에 따라 downstage(가장 작은 y)부터 1로 매긴다 — `Electric 1..N`과
-동일한 방향 규율(DS→US)을 좌우 축에도 일관 적용한다.
+- **왜 `Stage Right`/`Stage Left` 재사용인가** — 이미 §4.1 폐쇄 집합에 있고, stage 기준을
+  이름에 박아 house 기준과의 충돌(§4.4 · REQ-016)을 원천 차단한다. 신규 어휘 발명 0.
+- **왜 중심에서 바깥으로인가** — 좌우 버킷은 **x 순서**로 만들어진다. `Electric N`의
+  DS→US 는 **y 축** 규율이라 좌우 축에 그대로 옮길 수 없다(v0.1.0이 이 지점을 혼동했다).
+  x 축에서 방향을 정직하게 고정할 수 있는 기준점은 **중심선**이며, 이는 좌우 대칭 리그에서
+  같은 서수가 좌우 대응 위치를 가리킨다는 부수 이점도 있다. REQ-017의 "방향 명시" 충족.
+- **공개 경로가 완결이다** — v0.1.0은 `name_lateral_bucket` 이 4+에서 `ValueError` 를 던지고
+  **private** `_lateral_fallback_name` 을 쓰라고 했다. 깊이 축(`Electric N` 내부 처리)과
+  비대칭이고, D-Q2의 grid 축별 분리(좌우 버킷이 4+가 되는 주 시나리오)에서 **공개 API로는
+  이름을 만들 수 없었다**. 이제 `name_lateral_bucket` 하나가 2·3·4+ 전부를 처리한다.
+- **회귀 방지**: `test_no_produced_name_ever_claims_rigging_hardware` 가 전 축·전 버킷 수를
+  훑어 `Boom`·`FOH`·`Ladder`·`Torm` 토큰 부재를 단언한다. 붐 형태 폴백을 되살리면 **RED** 다.
 
 ### §4.3 깊이 vs 좌우 Center 충돌 회피
 
