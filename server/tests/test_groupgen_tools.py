@@ -196,6 +196,84 @@ class TestClassifyArrangementTopology:
         assert "Robe" in names
         assert not any(name.startswith("GEO Robe") for name in names)
 
+    def test_full_coverage_rig_reports_complete_and_not_partial(self):
+        console = _lateral_pair_console()
+        registry = build_toolset(execution_port=RecordingExecutionPort(), state_port=console)
+        execution = registry.dispatch(_call(CLASSIFY))
+        payload = json.loads(execution.result.content)
+        assert payload["coverage"] == {"judged": 4, "of": 4, "complete": True}
+        assert payload["topology_partial"] is False
+        assert payload["topology"]["partial"] is False
+        for group in payload["suggested_groups"]:
+            assert group["axis"] == "geometry"
+            assert group["topology_partial"] is False
+
+    def test_truncated_rig_read_reports_partial_coverage_and_lowconfidence_flag(self):
+        """REQ-GROUPGEN-024 amendment (2026-08-04) — the DISCRIMINATE-path
+        guard. Mutation-required: removing 'coverage'/'topology_partial'
+        population must turn this test RED (a KeyError or a wrong boolean).
+        """
+        fixtures_state = {
+            FIXTURES_PATH: {
+                "ok": True,
+                "truncated": True,
+                "node": {"childCount": 39},
+                "children": [{"i": slot, "name": f"Spot {slot}"} for slot in range(1, 19)],
+            }
+        }
+        properties: dict[tuple[str, str], dict] = {}
+        for slot in range(1, 19):
+            for prop, read in _fixture_props(slot, str(float(slot))).items():
+                properties[(f"{FIXTURES_PATH}/{slot}", prop)] = read
+        console = FakeConsole(fixtures_state, properties)
+        registry = build_toolset(execution_port=RecordingExecutionPort(), state_port=console)
+        execution = registry.dispatch(_call(CLASSIFY))
+        assert execution.result.is_error is False
+        payload = json.loads(execution.result.content)
+        assert payload["coverage"] == {"judged": 18, "of": 39, "complete": False}
+        assert payload["topology_partial"] is True
+        assert payload["topology_partial_reason"]
+        assert payload["topology"]["partial"] is True
+        assert payload["topology"]["partial_reason"]
+        for group in payload["suggested_groups"]:
+            assert group["axis"] == "geometry"
+            assert group["topology_partial"] is True
+
+    def test_species_axis_groups_are_independent_of_rig_read_coverage(self):
+        """The type axis (fixture_type_records) is caller-supplied and MUST
+        NOT inherit a topology_partial flag it has no relationship to."""
+        fixtures_state = {
+            FIXTURES_PATH: {
+                "ok": True,
+                "truncated": True,
+                "node": {"childCount": 39},
+                "children": [{"i": slot, "name": f"Spot {slot}"} for slot in range(1, 19)],
+            }
+        }
+        properties: dict[tuple[str, str], dict] = {}
+        for slot in range(1, 19):
+            for prop, read in _fixture_props(slot, str(float(slot))).items():
+                properties[(f"{FIXTURES_PATH}/{slot}", prop)] = read
+        console = FakeConsole(fixtures_state, properties)
+        registry = build_toolset(execution_port=RecordingExecutionPort(), state_port=console)
+        execution = registry.dispatch(
+            _call(
+                CLASSIFY,
+                arguments={
+                    "fixture_type_records": [
+                        {"fid": 1, "manufacturer": "Robe", "type_name": "Robin MMX Spot"},
+                        {"fid": 2, "manufacturer": "Chauvet", "type_name": "Rogue R2"},
+                    ]
+                },
+            )
+        )
+        payload = json.loads(execution.result.content)
+        assert payload["topology_partial"] is True  # the geometric axis IS partial
+        species_groups = [g for g in payload["suggested_groups"] if g["axis"] == "species"]
+        assert species_groups
+        for group in species_groups:
+            assert "topology_partial" not in group
+
     def test_missing_property_port_is_a_structured_error(self):
         class StateOnly:
             def query_state(self, path: str) -> dict:
@@ -397,6 +475,39 @@ class TestCreateArrangementGroupsRefusals:
         assert execution.result.is_error is True
         assert "GROUP_POOL_TRUNCATED" in execution.result.content
         assert port.executed == []
+
+    def test_truncated_fixture_container_never_blocks_an_explicit_fids_write(self):
+        """REQ-GROUPGEN-024 amendment (2026-08-04) — LIVE-shape regression.
+
+        The scenario: a 39-fixture rig where one UDP round trip only returns
+        18 fixtures (``truncated: true``, real ``childCount`` 39). The write
+        path consumes caller-supplied ``fids`` — not this listing — so the
+        write must PROCEED, carrying the truncation as a structural notice
+        rather than a refusal."""
+        groups = _empty_group_pool()
+        states = dict(groups)
+        states[FIXTURES_PATH] = {
+            "ok": True,
+            "truncated": True,
+            "node": {"childCount": 39},
+            "children": [{"i": slot, "name": f"Spot {slot}"} for slot in range(1, 19)],
+        }
+        states[f"{GROUPS_PATH}/1"] = {"ok": True}
+        console = FakeConsole(states, {(f"{GROUPS_PATH}/1", "Name"): {"ok": True, "value": "X"}})
+        port = RecordingExecutionPort()
+        approval = ScriptedApprovalPort(approve=True)
+        registry = build_toolset(
+            execution_port=port, state_port=console, group_approval_port=approval
+        )
+        execution = registry.dispatch(
+            _call(CREATE, arguments={"groups": [{"name": "X", "fids": [3, 5, 7]}]})
+        )
+        assert execution.result.is_error is False
+        assert port.executed  # the write actually fired — never refused
+        payload = json.loads(execution.result.content)
+        assert payload["status"] == "created"
+        assert payload["fixture_list_truncated"] is True
+        assert payload["fixture_list_truncated_reason"]
 
     def test_never_targets_an_occupied_slot(self):
         console = _lateral_pair_console(groups=_empty_group_pool(occupied=(1,)))

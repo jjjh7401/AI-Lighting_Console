@@ -727,6 +727,17 @@ def read_spatial_fixtures(
         isinstance(child_count, int) and child_count > len(children)
     )
 
+    # @MX:ANCHOR: [SPEC] coverage signal (REQ-GROUPGEN-024 amendment,
+    #   2026-08-04 — the discriminate-path guard, not the write-path guard).
+    #   ``of`` is the rig's real fixture count (``node.childCount`` when the
+    #   console reported one; otherwise the best available fallback is the
+    #   ``children`` array length actually returned). ``judged`` is filled in
+    #   by the caller once fixture records are parsed — this function only
+    #   knows the container-level shape, not which parsed records later fail
+    #   coordinate parsing, so the caller (``classify_arrangement_topology``)
+    #   completes ``judged`` from ``len(fixtures)`` in its own payload.
+    total_fixture_count = child_count if isinstance(child_count, int) else len(children)
+
     fixtures: list[dict[str, object]] = []
     unreadable: list[dict[str, object]] = []
     roundtrip_capped = False
@@ -772,6 +783,18 @@ def read_spatial_fixtures(
         "unreadable": unreadable,
         "truncated": truncated,
         "roundtrip_capped": roundtrip_capped,
+        # REQ-GROUPGEN-024 amendment coverage signal — "judged" is how many
+        # fixtures actually fed a topology judgment, "of" is the rig's real
+        # total; "complete" is False whenever EITHER the container listing
+        # was truncated OR the per-fixture property walk was budget-capped
+        # OR the two counts simply disagree.
+        "coverage": {
+            "judged": len(fixtures),
+            "of": total_fixture_count,
+            "complete": (
+                not truncated and not roundtrip_capped and len(fixtures) == total_fixture_count
+            ),
+        },
     }
 
 
@@ -3516,7 +3539,38 @@ def build_toolset(
             return _error_result(call, f"fixture coordinates could not be parsed: {error}")
 
         classification = classify_topology(fixtures)
-        suggested_groups = _name_topology_buckets(classification.selected)
+
+        # REQ-GROUPGEN-024 amendment (2026-08-04) — the DISCRIMINATE-path
+        # guard: a topology judged from a partial rig read must be marked
+        # low-confidence structurally, never silently treated as
+        # authoritative. This is entirely SEPARATE from the WRITE path
+        # (create_arrangement_groups / build_group_write_plan), which is
+        # unaffected by rig-listing truncation because it consumes
+        # caller-supplied fids, not this container listing.
+        coverage = reply.get("coverage") or {
+            "judged": len(fixtures),
+            "of": len(fixtures),
+            "complete": True,
+        }
+        topology_partial = not bool(coverage.get("complete", False))
+        topology_partial_reason = (
+            "the topology judgment above is based on a PARTIAL rig read "
+            f"({coverage.get('judged')} of {coverage.get('of')} fixtures) — "
+            "the container listing was truncated or the per-fixture property "
+            "walk was budget-capped, so 'topology.selected' is NOT "
+            "authoritative for the full rig; treat it as a low-confidence "
+            "hint pending a follow-up read"
+            if topology_partial
+            else ""
+        )
+
+        # Geometric-axis groups (design.md §4 GEO prefix) are DERIVED from
+        # the same partial-rig read as the topology judgment above, so they
+        # carry "axis": "geometry" + the SAME topology_partial annotation.
+        suggested_groups: list[dict[str, object]] = [
+            {**group, "axis": "geometry", "topology_partial": topology_partial}
+            for group in _name_topology_buckets(classification.selected)
+        ]
 
         fixture_type_records = call.arguments.get("fixture_type_records")
         fixture_type_payload: dict[str, object] | None = None
@@ -3535,10 +3589,14 @@ def build_toolset(
             # Species groups reuse the patch's own structured field as the name
             # verbatim (design.md §4.1 "종류" row / §5.1 REQ-GROUPGEN-009) — no
             # "GEO " prefix, which is reserved for the geometric axes (§D-Q3).
+            # "axis": "species" — the caller supplies fixture_type_records
+            # directly, so these groups are UNRELATED to rig-read coverage;
+            # they never carry a "topology_partial" key (there is nothing
+            # partial about a caller-supplied record list).
             suggested_groups = [
                 *suggested_groups,
                 *(
-                    {"name": group["value"], "fids": list(group["fids"])}
+                    {"name": group["value"], "fids": list(group["fids"]), "axis": "species"}
                     for group in fixture_type_payload["type_axis_groups"]
                 ),
             ]
@@ -3548,11 +3606,16 @@ def build_toolset(
             "truncated": reply.get("truncated", False),
             "roundtrip_capped": reply.get("roundtrip_capped", False),
             "unreadable": reply.get("unreadable", []),
+            "coverage": coverage,
+            "topology_partial": topology_partial,
+            "topology_partial_reason": topology_partial_reason,
             "topology": {
                 "selected": _topology_result_to_dict(classification.selected),
                 "candidates": [
                     _topology_result_to_dict(candidate) for candidate in classification.candidates
                 ],
+                "partial": topology_partial,
+                "partial_reason": topology_partial_reason,
             },
             "fixture_types": fixture_type_payload,
             "suggested_groups": suggested_groups,
@@ -3674,6 +3737,13 @@ def build_toolset(
                 "unverified": list(plan.unverified),
                 "unverified_reason": plan.unverified_reason,
                 "human_check_commands": list(plan.human_check_commands),
+                # REQ-GROUPGEN-024 amendment (2026-08-04) — a STRUCTURAL
+                # notice, never docstring-only prose (함정 6): a truncated
+                # re-queried fixture listing never blocks this write (the
+                # group's membership is the caller's explicit fids), but the
+                # fact is still surfaced here for a human reviewer.
+                "fixture_list_truncated": plan.fixture_list_truncated,
+                "fixture_list_truncated_reason": plan.fixture_list_truncated_reason,
             }
             payload.update(extra)
             return payload
@@ -3686,6 +3756,11 @@ def build_toolset(
                         "group write — membership cannot be re-verified after "
                         "Store (grandMA3 exposes no membership read channel, "
                         "progress.md §E.2.8)",
+                        *(
+                            (plan.fixture_list_truncated_reason,)
+                            if plan.fixture_list_truncated
+                            else ()
+                        ),
                     ),
                 )
                 for command in all_commands

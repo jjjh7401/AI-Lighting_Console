@@ -158,15 +158,47 @@ def test_build_group_write_plan_always_flags_membership_unverified() -> None:
     assert plan.human_check_commands == ("Group 2",)
 
 
-def test_build_group_write_plan_rejects_truncated_fixture_list() -> None:
-    with pytest.raises(GroupSlotError) as excinfo:
-        build_group_write_plan(
-            buckets={"a": (1, 2)},
-            names={"a": "GEO Downstage"},
-            groups_section=MEASURED_GROUPS_SECTION,
-            fixtures_section=TRUNCATED_FIXTURES_SECTION,
-        )
-    assert excinfo.value.code == FIXTURE_LIST_TRUNCATED
+def test_build_group_write_plan_proceeds_on_truncated_fixture_list() -> None:
+    """REQ-GROUPGEN-024 amendment (2026-08-04, user decision): the write path
+    consumes caller-supplied ``fids``, not the re-queried fixture listing —
+    a truncated listing (39-fixture rig, 18 returned) never blocks an
+    explicit-fids group write. This is a LIVE-shape regression: the scenario
+    is exactly ``{"ok": True, "truncated": True, "objects": [18 entries]}``
+    against a rig whose real ``childCount`` is 39."""
+    live_shape_truncated_fixtures = {"ok": True, "truncated": True, "childCount": 39}
+    plan = build_group_write_plan(
+        buckets={"a": (1, 2)},
+        names={"a": "GEO Downstage"},
+        groups_section=MEASURED_GROUPS_SECTION,
+        fixtures_section=live_shape_truncated_fixtures,
+    )
+    assert len(plan.steps) == 1
+    assert plan.steps[0].fids == (1, 2)
+
+
+def test_build_group_write_plan_structurally_flags_fixture_list_truncation() -> None:
+    """Mutation-required: removing the population of ``fixture_list_truncated``
+    on the returned plan must turn this test RED — the fact is a STRUCTURAL
+    field, never docstring-only prose (함정 6)."""
+    plan = build_group_write_plan(
+        buckets={"a": (1, 2)},
+        names={"a": "GEO Downstage"},
+        groups_section=MEASURED_GROUPS_SECTION,
+        fixtures_section=TRUNCATED_FIXTURES_SECTION,
+    )
+    assert plan.fixture_list_truncated is True
+    assert plan.fixture_list_truncated_reason  # non-empty human-readable string
+
+
+def test_build_group_write_plan_flags_no_truncation_when_list_was_complete() -> None:
+    plan = build_group_write_plan(
+        buckets={"a": (1, 2)},
+        names={"a": "GEO Downstage"},
+        groups_section=MEASURED_GROUPS_SECTION,
+        fixtures_section=UNTRUNCATED_FIXTURES_SECTION,
+    )
+    assert plan.fixture_list_truncated is False
+    assert plan.fixture_list_truncated_reason == ""
 
 
 def test_build_group_write_plan_rejects_truncated_group_pool() -> None:
