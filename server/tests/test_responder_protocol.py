@@ -12,12 +12,16 @@ import json
 import pytest
 
 from server.bridge.protocol import (
+    MAX_PLUGIN_CALL_BYTES,
+    MAX_PROPS_NAMES,
     PLUGIN_NAME,
     PROTOCOL_VERSION,
     ProtocolError,
     build_exec_request,
+    build_introspect_query,
     build_ping,
     build_prop_query,
+    build_props_query,
     build_state_query,
     decode_payload,
     encode_payload,
@@ -105,6 +109,16 @@ class TestRequestBuilders:
         line = build_state_query("1", "DataPool/Sequences/My Seq")
         assert line.endswith('"state 1 DataPool/Sequences/My Seq"')
 
+    def test_build_introspect_query(self):
+        line = build_introspect_query("i-1", "DataPool/Sequences/Sequence 101")
+        assert line == f'Plugin "{PLUGIN_NAME}" "introspect i-1 DataPool/Sequences/Sequence 101"'
+        assert "\n" not in line
+        assert "\r" not in line
+
+    def test_build_introspect_query_allows_spaces_in_path(self):
+        line = build_introspect_query("i-2", "DataPool/Sequences/My Seq")
+        assert line.endswith('"introspect i-2 DataPool/Sequences/My Seq"')
+
     def test_build_prop_query(self):
         line = build_prop_query("p-1", "DataPool/Sequences/Sequence 101/Cue 2", "TrigTime")
         assert line == (
@@ -114,6 +128,45 @@ class TestRequestBuilders:
     def test_build_prop_query_rejects_space_in_property_name(self):
         with pytest.raises(ProtocolError):
             build_prop_query("p-1", "DataPool/Sequences/1", "Trig Time")
+
+    def test_build_props_query(self):
+        line = build_props_query(
+            "ps-1",
+            "DataPool/Sequences/Sequence 101/Cue 2",
+            ["INDEX", "CURRENTCUE"],
+        )
+        assert line == (
+            f'Plugin "{PLUGIN_NAME}" '
+            '"props ps-1 INDEX,CURRENTCUE DataPool/Sequences/Sequence 101/Cue 2"'
+        )
+        assert "\n" not in line
+        assert "\r" not in line
+
+    def test_build_props_query_accepts_name_count_at_limit(self):
+        names = [f"P{i:02d}" for i in range(1, MAX_PROPS_NAMES + 1)]
+        line = build_props_query("ps-limit", "DataPool/Sequences/1", names)
+        assert f'"props ps-limit {",".join(names)} DataPool/Sequences/1"' in line
+
+    def test_build_props_query_rejects_name_count_over_limit(self):
+        names = [f"P{i:02d}" for i in range(1, MAX_PROPS_NAMES + 2)]
+        with pytest.raises(ProtocolError):
+            build_props_query("ps-over", "DataPool/Sequences/1", names)
+
+    def test_build_props_query_rejects_empty_name_list(self):
+        with pytest.raises(ProtocolError):
+            build_props_query("ps-empty", "DataPool/Sequences/1", [])
+
+    def test_build_props_query_rejects_string_name_list(self):
+        with pytest.raises(ProtocolError):
+            build_props_query("ps-string", "DataPool/Sequences/1", "INDEX")
+
+    def test_build_props_query_rejects_space_in_property_name(self):
+        with pytest.raises(ProtocolError):
+            build_props_query("ps-space", "DataPool/Sequences/1", ["Trig Time"])
+
+    def test_build_props_query_rejects_comma_in_property_name(self):
+        with pytest.raises(ProtocolError):
+            build_props_query("ps-comma", "DataPool/Sequences/1", ["TRIG,TIME"])
 
     def test_build_exec_request(self):
         line = build_exec_request("9", "List")
@@ -128,9 +181,33 @@ class TestRequestBuilders:
         with pytest.raises(ProtocolError):
             build_state_query("1", 'DataPool/"Sequences"')
 
+    def test_double_quote_in_introspect_path_is_rejected(self):
+        with pytest.raises(ProtocolError):
+            build_introspect_query("1", 'DataPool/"Sequences"')
+
+    def test_double_quote_in_props_name_is_rejected(self):
+        with pytest.raises(ProtocolError):
+            build_props_query("1", "DataPool/Sequences/1", ['"INDEX"'])
+
+    def test_newline_in_introspect_path_is_rejected(self):
+        with pytest.raises(ProtocolError):
+            build_introspect_query("1", "DataPool/Sequences\nList")
+
+    def test_newline_in_props_path_is_rejected(self):
+        with pytest.raises(ProtocolError):
+            build_props_query("1", "DataPool/Sequences\nList", ["INDEX"])
+
     def test_request_id_with_space_is_rejected(self):
         with pytest.raises(ProtocolError):
             build_ping("4 2")
+
+    def test_introspect_request_id_with_space_is_rejected(self):
+        with pytest.raises(ProtocolError):
+            build_introspect_query("4 2", "DataPool/Sequences")
+
+    def test_props_request_id_with_space_is_rejected(self):
+        with pytest.raises(ProtocolError):
+            build_props_query("4 2", "DataPool/Sequences", ["INDEX"])
 
     def test_empty_request_id_is_rejected(self):
         with pytest.raises(ProtocolError):
@@ -139,6 +216,22 @@ class TestRequestBuilders:
     def test_empty_path_is_rejected(self):
         with pytest.raises(ProtocolError):
             build_state_query("1", "")
+
+    def test_empty_props_path_is_rejected(self):
+        with pytest.raises(ProtocolError):
+            build_props_query("1", "", ["INDEX"])
+
+    def test_introspect_query_rejects_encoded_line_over_limit(self):
+        with pytest.raises(ProtocolError):
+            build_introspect_query("1", "DataPool/" + ("X" * MAX_PLUGIN_CALL_BYTES))
+
+    def test_props_query_rejects_encoded_line_over_limit(self):
+        with pytest.raises(ProtocolError):
+            build_props_query(
+                "1",
+                "DataPool/" + ("X" * MAX_PLUGIN_CALL_BYTES),
+                ["INDEX"],
+            )
 
     def test_protocol_version_is_one(self):
         assert PROTOCOL_VERSION == 1

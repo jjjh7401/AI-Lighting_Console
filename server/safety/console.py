@@ -25,8 +25,10 @@ from server.bridge.protocol import (
     ProtocolError,
     build_deploy_request,
     build_exec_request,
+    build_introspect_query,
     build_ping,
     build_prop_query,
+    build_props_query,
     build_state_query,
     decode_payload,
 )
@@ -97,6 +99,10 @@ class ConsolePort(Protocol):
     def query_state(self, path: str) -> dict: ...
 
     def query_property(self, path: str, property_name: str) -> dict: ...
+
+    def enumerate_fields(self, path: str) -> dict: ...
+
+    def query_properties(self, path: str, property_names: Sequence[str]) -> dict: ...
 
     def deploy_plugin(self, name: str, lua_source: str) -> ExecOutcome:
         """Deploy one reviewed Lua plugin (M7); ok / failed / unconfirmed."""
@@ -276,9 +282,7 @@ class ConsoleLink:
         )
         return outcome
 
-    def _run_file_import(
-        self, name: str, lua_source: str, sends: list[DeploySend]
-    ) -> ExecOutcome:
+    def _run_file_import(self, name: str, lua_source: str, sends: list[DeploySend]) -> ExecOutcome:
         try:
             xml = build_plugin_xml(name, lua_source)
         except ValueError as error:
@@ -289,7 +293,9 @@ class ConsoleLink:
             self._import_dir.mkdir(parents=True, exist_ok=True)
             target.write_text(xml, encoding="utf-8")
         except OSError as error:
-            return ExecOutcome(status="failed", detail=f"cannot write plugin file {target}: {error}")
+            return ExecOutcome(
+                status="failed", detail=f"cannot write plugin file {target}: {error}"
+            )
 
         # One pool read: find an existing same-Name slot (idempotent redeploy)
         # AND the occupied slots (to pick a free one). A no-slot `Import Plugin`
@@ -343,7 +349,9 @@ class ConsoleLink:
         try:
             pool = self._deploy_query_state("DataPool/Plugins", sends)
         except StateQueryError as error:
-            return ExecOutcome(status="unconfirmed", detail=f"imported but pool unreadable: {error}")
+            return ExecOutcome(
+                status="unconfirmed", detail=f"imported but pool unreadable: {error}"
+            )
         names = [c.get("name") for c in pool.get("children", []) if isinstance(c, dict)]
         if name in names:
             return ExecOutcome(status="ok", detail=f"imported plugin {name!r} via file+Import")
@@ -415,6 +423,57 @@ class ConsoleLink:
             )
         return payload
 
+    def enumerate_fields(self, path: str) -> dict:
+        """Field enumeration (REQ-INTROSPECT-017); raises on failure/timeout.
+
+        Homologous to :meth:`query_state`: same id correlation, same timeout
+        budget, same error type. The responder answers ``introspect`` on the
+        STATE address (``console/lua/PROTOCOL.md`` §4.7), which :meth:`deliver`
+        already accepts, so no new reply channel appears.
+        """
+        request_id = self._new_id()
+        payload = self._round_trip(
+            build_introspect_query(request_id, path),
+            request_id,
+            self._timeouts.state_query_seconds,
+        )
+        if payload is None:
+            if self._monitor is not None:
+                self._monitor.note_query_timeout()
+            raise StateQueryError(
+                f"no introspect reply for {path!r} within {self._timeouts.state_query_seconds}s"
+            )
+        if not payload.get("ok"):
+            raise StateQueryError(str(payload.get("error") or f"introspect query failed: {path}"))
+        return payload
+
+    def query_properties(self, path: str, property_names: Sequence[str]) -> dict:
+        """Bulk property read (REQ-INTROSPECT-018); raises on failure/timeout.
+
+        Homologous to :meth:`query_state`: same id correlation, same timeout
+        budget, same error type. The responder answers ``props`` on the STATE
+        address (``console/lua/PROTOCOL.md`` §4.8), which :meth:`deliver`
+        already accepts, so no new reply channel appears.
+        """
+        request_id = self._new_id()
+        payload = self._round_trip(
+            build_props_query(request_id, path, property_names),
+            request_id,
+            self._timeouts.state_query_seconds,
+        )
+        if payload is None:
+            if self._monitor is not None:
+                self._monitor.note_query_timeout()
+            raise StateQueryError(
+                f"no props reply for {path!r} {tuple(property_names)!r} within "
+                f"{self._timeouts.state_query_seconds}s"
+            )
+        if not payload.get("ok"):
+            raise StateQueryError(
+                str(payload.get("error") or f"props query failed: {path} {tuple(property_names)}")
+            )
+        return payload
+
 
 # -- reference body fetching (expand-or-hold production path) -----------------
 
@@ -468,9 +527,7 @@ class StateBodyFetcher:
         try:
             identity = self._query(reference)
         except Exception as error:
-            raise BodyUnavailable(
-                f"identity query failed for {reference!r}: {error}"
-            ) from error
+            raise BodyUnavailable(f"identity query failed for {reference!r}: {error}") from error
         node = identity.get("node") if isinstance(identity, dict) else None
         sequence_no = node.get("sequenceNo") if isinstance(node, dict) else None
         if not isinstance(sequence_no, int):
@@ -491,9 +548,7 @@ class StateBodyFetcher:
             sequence_reference, sequence_template.format(ref=sequence_no), allow_empty=True
         )
 
-    def _fetch_body_at_path(
-        self, reference: str, path: str, *, allow_empty: bool
-    ) -> Sequence[str]:
+    def _fetch_body_at_path(self, reference: str, path: str, *, allow_empty: bool) -> Sequence[str]:
         try:
             payload = self._query(path)
         except Exception as error:

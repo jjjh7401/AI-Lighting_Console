@@ -9,24 +9,34 @@ sockets, deterministic timeouts.
 
 from __future__ import annotations
 
+import inspect
+import json
 import re
 
 import pytest
 
 from server.bridge.osc import FEEDBACK_ADDRESS, STATE_ADDRESS, FeedbackMessage
 from server.bridge.protocol import encode_payload
+from server.orchestrator.ports import BulkPropertyQueryPort, FieldEnumerationPort
+from server.safety.audit import AuditLog
 from server.safety.console import (
     ConsoleLink,
+    ExecOutcome,
     LinkTimeouts,
     StateBodyFetcher,
     StateQueryError,
 )
 from server.safety.expand import BodyUnavailable
+from server.safety.gate import SafetyGate
 from server.safety.monitor import HealthMonitor
 
 _REQUEST = re.compile(r'^Plugin "CopilotResponder" "(ping|state|exec) (\S+)(?: (.*))?"$')
+_INTROSPECT_REQUEST = re.compile(r'^Plugin "CopilotResponder" "introspect (\S+) (.+)"$')
+_PROPS_REQUEST = re.compile(r'^Plugin "CopilotResponder" "props (\S+) ([^ ]+) (.+)"$')
 
 _FAST = LinkTimeouts(exec_confirm_seconds=0.05, ping_seconds=0.05, state_query_seconds=0.05)
+_PROBE_PATH = "DataPool/Sequences/Sequence 101"
+_PROBE_NAMES = ("CURRENTCUE", "FADER")
 
 
 def _reply(link: ConsoleLink, payload: dict, address: str = FEEDBACK_ADDRESS) -> None:
@@ -59,6 +69,136 @@ def _echo_send(link: ConsoleLink, *, ok: bool = True, silent: bool = False):
             )
 
     return send, sent
+
+
+def _probe_send(link: ConsoleLink, *, ok: bool = True, silent: bool = False):
+    sent: list[str] = []
+
+    def send(wire: str) -> None:
+        sent.append(wire)
+        if silent:
+            return
+        introspect_match = _INTROSPECT_REQUEST.match(wire)
+        props_match = _PROPS_REQUEST.match(wire)
+        assert introspect_match or props_match, f"unexpected wire line: {wire!r}"
+        if introspect_match:
+            rid, path = introspect_match.groups()
+            payload = {
+                "v": 1,
+                "kind": "introspect",
+                "id": rid,
+                "ok": ok,
+                "path": path,
+            }
+            if ok:
+                payload.update(
+                    {
+                        "class": "Sequence",
+                        "source": "property_accessors",
+                        "fields": [
+                            {"n": "CURRENTCUE", "t": "string"},
+                            {"n": "FADER", "t": "string"},
+                        ],
+                        "total": 2,
+                        "truncated": False,
+                    }
+                )
+            else:
+                payload["error"] = "introspect unavailable"
+        else:
+            rid, names, path = props_match.groups()
+            payload = {
+                "v": 1,
+                "kind": "props",
+                "id": rid,
+                "ok": ok,
+                "path": path,
+                "reads": [],
+            }
+            if ok:
+                payload["reads"] = [
+                    {"n": "CURRENTCUE", "ok": True, "t": "string", "v": "Sequence 80.3"},
+                    {"n": "FADER", "ok": True, "t": "string", "v": "Master"},
+                ]
+                payload["truncated"] = False
+            else:
+                payload["error"] = f"props unavailable: {names}"
+        link.deliver(FeedbackMessage(address=STATE_ADDRESS, args=(encode_payload(payload),)))
+
+    return send, sent
+
+
+def _run_probe(link: ConsoleLink, operation: str) -> dict:
+    if operation == "introspect":
+        return link.enumerate_fields(_PROBE_PATH)
+    return link.query_properties(_PROBE_PATH, _PROBE_NAMES)
+
+
+class _ProbeConsole:
+    def __init__(self) -> None:
+        self.field_calls: list[str] = []
+        self.props_calls: list[tuple[str, tuple[str, ...]]] = []
+        self.field_errors: set[str] = set()
+        self.props_errors: set[tuple[str, tuple[str, ...]]] = set()
+
+    def execute(self, command: str) -> ExecOutcome:
+        return ExecOutcome(status="ok", detail=command)
+
+    def ping(self) -> bool:
+        return True
+
+    def query_state(self, path: str) -> dict:
+        return {"ok": True, "path": path, "children": []}
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        return {"ok": True, "path": path, "property": property_name, "value": "unused"}
+
+    def enumerate_fields(self, path: str) -> dict:
+        self.field_calls.append(path)
+        if path in self.field_errors:
+            raise StateQueryError(f"introspect failed: {path}")
+        return {
+            "ok": True,
+            "kind": "introspect",
+            "path": path,
+            "class": "Sequence",
+            "fields": [{"n": "CURRENTCUE", "t": "string"}],
+            "total": 1,
+            "truncated": False,
+        }
+
+    def query_properties(self, path: str, property_names) -> dict:
+        names = tuple(property_names)
+        self.props_calls.append((path, names))
+        if (path, names) in self.props_errors:
+            raise StateQueryError(f"props failed: {path} {names}")
+        return {
+            "ok": True,
+            "kind": "props",
+            "path": path,
+            "reads": [
+                {"n": "CURRENTCUE", "ok": True, "t": "string", "v": "Sequence 80.3"},
+                {"n": "FADER", "ok": True, "t": "string", "v": "Master"},
+            ],
+            "truncated": False,
+        }
+
+    def deploy_plugin(self, name: str, lua_source: str) -> ExecOutcome:
+        return ExecOutcome(status="ok", detail=name)
+
+
+def _make_probe_gate(tmp_path, console: _ProbeConsole | None = None):
+    console = console or _ProbeConsole()
+    audit = AuditLog(tmp_path / "audit")
+    return SafetyGate(console=console, audit=audit), console, audit
+
+
+def _executed(audit: AuditLog, kind: str) -> list[dict]:
+    return [
+        event
+        for event in audit.iter_events()
+        if event["event"] == "executed" and event["kind"] == kind
+    ]
 
 
 class TestExecute:
@@ -152,6 +292,105 @@ class TestPingAndState:
         link.deliver(FeedbackMessage(address=FEEDBACK_ADDRESS, args=()))
 
 
+class TestIntrospectAndPropsLink:
+    def test_round_trips_arrive_on_the_existing_state_address(self):
+        link = ConsoleLink(timeouts=_FAST)
+        send, sent = _probe_send(link)
+        link.bind_send(send)
+        fields = link.enumerate_fields(_PROBE_PATH)
+        props = link.query_properties(_PROBE_PATH, _PROBE_NAMES)
+        assert fields["fields"] == [
+            {"n": "CURRENTCUE", "t": "string"},
+            {"n": "FADER", "t": "string"},
+        ]
+        assert props["reads"][0]["v"] == "Sequence 80.3"
+        assert _INTROSPECT_REQUEST.match(sent[0]).groups()[1] == _PROBE_PATH
+        assert _PROPS_REQUEST.match(sent[1]).groups()[1:] == ("CURRENTCUE,FADER", _PROBE_PATH)
+
+    @pytest.mark.parametrize("operation", ("introspect", "props"))
+    def test_timeout_raises_state_query_error_and_notes_monitor(self, operation):
+        monitor = HealthMonitor()
+        link = ConsoleLink(timeouts=_FAST, monitor=monitor)
+        send, _ = _probe_send(link, silent=True)
+        link.bind_send(send)
+        with pytest.raises(StateQueryError):
+            _run_probe(link, operation)
+        assert monitor.state == HealthMonitor.CONSOLE_OFFLINE
+
+    @pytest.mark.parametrize("operation", ("introspect", "props"))
+    def test_ok_false_reply_raises_state_query_error(self, operation):
+        link = ConsoleLink(timeouts=_FAST)
+        send, _ = _probe_send(link, ok=False)
+        link.bind_send(send)
+        with pytest.raises(StateQueryError, match="unavailable"):
+            _run_probe(link, operation)
+
+
+class TestIntrospectAndPropsGate:
+    def test_state_port_exposes_the_declared_introspection_ports(self, tmp_path):
+        gate, _, _ = _make_probe_gate(tmp_path)
+        assert hasattr(gate.state_port, "enumerate_fields")
+        assert hasattr(gate.state_port, "query_properties")
+        assert list(inspect.signature(gate.state_port.enumerate_fields).parameters) == ["path"]
+        assert list(inspect.signature(gate.state_port.query_properties).parameters) == [
+            "path",
+            "property_names",
+        ]
+        assert list(inspect.signature(FieldEnumerationPort.enumerate_fields).parameters) == [
+            "self",
+            "path",
+        ]
+        assert list(inspect.signature(BulkPropertyQueryPort.query_properties).parameters) == [
+            "self",
+            "path",
+            "property_names",
+        ]
+
+    def test_successful_field_enumeration_is_audited_once(self, tmp_path):
+        gate, _, audit = _make_probe_gate(tmp_path)
+        payload = gate.state_port.enumerate_fields(_PROBE_PATH)
+        assert payload["fields"] == [{"n": "CURRENTCUE", "t": "string"}]
+        events = _executed(audit, "introspect_query")
+        assert len(events) == 1
+        assert events[0]["ok"] is True
+        assert events[0]["command"] == _PROBE_PATH
+
+    def test_failed_field_enumeration_is_audited_once_and_reraised(self, tmp_path):
+        console = _ProbeConsole()
+        console.field_errors.add(_PROBE_PATH)
+        gate, _, audit = _make_probe_gate(tmp_path, console)
+        with pytest.raises(StateQueryError, match="introspect failed"):
+            gate.state_port.enumerate_fields(_PROBE_PATH)
+        events = _executed(audit, "introspect_query")
+        assert len(events) == 1
+        assert events[0]["ok"] is False
+        assert events[0]["command"] == _PROBE_PATH
+
+    def test_successful_bulk_property_query_audits_names_without_values(self, tmp_path):
+        gate, _, audit = _make_probe_gate(tmp_path)
+        payload = gate.state_port.query_properties(_PROBE_PATH, _PROBE_NAMES)
+        assert payload["reads"][0]["v"] == "Sequence 80.3"
+        events = _executed(audit, "props_query")
+        assert len(events) == 1
+        assert events[0]["ok"] is True
+        assert events[0]["command"] == f"{_PROBE_PATH} CURRENTCUE,FADER"
+        serialized = "\n".join(
+            json.dumps(event, ensure_ascii=False, sort_keys=True) for event in audit.iter_events()
+        )
+        assert "Sequence 80.3" not in serialized
+
+    def test_failed_bulk_property_query_is_audited_once_and_reraised(self, tmp_path):
+        console = _ProbeConsole()
+        console.props_errors.add((_PROBE_PATH, _PROBE_NAMES))
+        gate, _, audit = _make_probe_gate(tmp_path, console)
+        with pytest.raises(StateQueryError, match="props failed"):
+            gate.state_port.query_properties(_PROBE_PATH, _PROBE_NAMES)
+        events = _executed(audit, "props_query")
+        assert len(events) == 1
+        assert events[0]["ok"] is False
+        assert events[0]["command"] == f"{_PROBE_PATH} CURRENTCUE,FADER"
+
+
 class TestStateBodyFetcher:
     def _fetcher(self, tree: dict, calls: list | None = None):
         def query(path: str) -> dict:
@@ -219,9 +458,7 @@ class TestStateBodyFetcherExecutor:
     def test_executor_unassigned_is_unavailable(self):
         # Node resolves, but nothing is assigned to it (no sequenceNo key —
         # PROTOCOL.md §4.2: "absent entirely ... when unassigned").
-        fetcher = self._fetcher(
-            {"Executor 201": {"ok": True, "node": {"class": "Executor"}}}
-        )
+        fetcher = self._fetcher({"Executor 201": {"ok": True, "node": {"class": "Executor"}}})
         with pytest.raises(BodyUnavailable, match="Executor 201"):
             fetcher.fetch_body("Executor 201")
 

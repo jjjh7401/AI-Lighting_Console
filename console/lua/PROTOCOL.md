@@ -7,6 +7,15 @@ M2 deliverable; consumed by the M3 tool-runner and the M4 safety gate.
 Versioning: every reply payload carries `"v": 1`. Any breaking change bumps the
 version in BOTH implementations and revises this document.
 
+> Revision note (responder 1.6.1): `introspect` now discards the whole
+> enumerator result when it omits a same-handle `prop`-readable contrast name;
+> duplicate `props` request names collapse to their first occurrence. Wire
+> protocol version stays 1.
+>
+> Revision note (responder 1.6.0): ADDITIVE `props` and `introspect`
+> verbs (§2) + `introspect` and `props` reply kinds (§4.7/§4.8) +
+> ASSUMPTION-46..52 updates (§6). Wire protocol version stays 1.
+>
 > Revision note (responder 1.5.0): ADDITIVE `prop` verb (§2) + `prop`
 > reply kind (§4.6), and `Cue` children in sequence snapshots may carry
 > `cueNo` (§4.2) when the responder can read the cue object's real number.
@@ -65,7 +74,9 @@ Plugin "CopilotResponder" "<verb> <request-id> [rest]"
 |---|---|---|
 | `ping` | `ping <id>` | `/copilot/feedback`, kind=`pong` |
 | `state` | `state <id> <object-path>` | `/copilot/state`, kind=`state` |
-| `prop` | `prop <id> <object-path> <PropertyName>` | `/copilot/state`, kind=`prop` |
+| `prop` | `prop <id> <object-path> <PropertyName>` — name is the **last** token; path is everything before it | `/copilot/state`, kind=`prop` |
+| `props` | `props <id> <PropertyName,...> <object-path>` — name list is the **first** rest token; path is the rest of the line | `/copilot/state`, kind=`props` |
+| `introspect` | `introspect <id> <object-path>` | `/copilot/state`, kind=`introspect` |
 | `exec` | `exec <id> <ma3-command>` | `/copilot/feedback`, kind=`result` |
 | `deploy` | `deploy <id> <enc-name> <enc-source>` (M7) | `/copilot/feedback`, kind=`deploy` |
 
@@ -81,12 +92,17 @@ Plugin "CopilotResponder" "<verb> <request-id> [rest]"
 
 - `<request-id>`: token matching `[A-Za-z0-9._-]+`; echoed back verbatim so the
   server can correlate replies (UDP gives no ordering/delivery guarantee).
-- `<object-path>` and `<ma3-command>` are parsed **rest-of-line** (embedded
-  spaces are legal) and MUST NOT contain a double quote (`"`), which would
+- `<object-path>` and `<ma3-command>` are parsed **rest-of-line** except where
+  a verb defines a split token above; embedded spaces are legal in paths and
+  commands, and both MUST NOT contain a double quote (`"`), which would
   terminate the MA3 plugin argument. `prop` parses the final non-space token
   as `<PropertyName>` and everything before it as `<object-path>`, so paths may
-  still contain spaces but property names may not. MA3 accepts single-quoted
-  strings, so `Store Cue 5 'name'` is the workaround for quoted names.
+  still contain spaces but property names may not. `props` does the opposite:
+  it parses the comma-separated `<PropertyName,...>` list as the first rest
+  token (no whitespace inside names, no empty names, max 16 names) and parses
+  the remaining text as `<object-path>`. `introspect` parses its path as
+  rest-of-line. MA3 accepts single-quoted strings, so `Store Cue 5 'name'` is
+  the workaround for quoted names.
 - Fallback transport (if plugin arguments do not reach `main` on the target
   build): set user variable `COPILOT_REQ` to the request string, then call
   `Plugin "CopilotResponder"` without arguments (two command lines; see
@@ -239,6 +255,70 @@ the string returned by the console-side property read path; the responder does
 not parse, normalize, or infer semantics. If the property cannot be read, the
 reply is `ok:false` with `error`; callers must not fill defaults.
 
+### 4.7 `introspect` (field-name/type discovery — on `/copilot/state`, responder 1.6.0)
+
+```json
+{"v":1,"kind":"introspect","id":"<id>","ok":true,"path":"DataPool/Sequences/80","class":"Sequence","source":"property_accessors","fields":[{"n":"CURRENTCUE","t":"string"}],"total":65,"truncated":false}
+{"v":1,"kind":"introspect","id":"<id>","ok":false,"path":"...","error":"path segment not found: ..."}
+```
+
+The responder resolves `<object-path>` through the same path resolver used by
+`state` and `prop`, then enumerates field names and Lua value types. It does
+not read or emit field values for this kind.
+
+- `source` identifies the adopted enumerator. Responder 1.6.0 emits
+  `property_accessors`, meaning `PropertyCount()` + `PropertyName(i)` +
+  `PropertyType(i)` — the single M1-adopted enumerator documented in §6
+  ASSUMPTION-46/47.
+- `class` is the best-effort class string from the resolved handle, included
+  only as handle context; it is not an interpretation of any field.
+- Each `fields[]` entry is `{"n":"<canonical-property-name>","t":"<lua-type>"}`
+  and carries no value. Function-typed fields are reported as type `"function"`
+  and are never invoked.
+- `total` is the observed field count **before** payload-budget shrinking
+  (REQ-INTROSPECT-015). `fields.length` can therefore be smaller than `total`.
+- `truncated:true` means trailing `fields[]` entries were dropped until the
+  encoded reply fit `CONFIG.max_payload` (default 1900 bytes). There is no
+  cursor or paging mechanism for the omitted names; the signal exists so a
+  consumer can see that the list is incomplete.
+- Failure (`ok:false`) means path resolution or the complete adopted
+  enumerator failed. Partial enumerator results are not emitted as a best
+  effort list. Responder 1.6.1 also fails the whole reply when the full
+  pre-truncation enumerated set omits any same-handle `prop`-readable
+  contrast name; the error names missing properties but never includes values.
+
+### 4.8 `props` (bulk property readback — on `/copilot/state`, responder 1.6.0)
+
+```json
+{"v":1,"kind":"props","id":"<id>","ok":true,"path":"DataPool/Sequences/80","reads":[{"n":"CURRENTCUE","ok":true,"t":"string","v":"Sequence 80.3"},{"n":"MISSING","ok":false,"e":"property not readable: MISSING"}],"truncated":false}
+{"v":1,"kind":"props","id":"<id>","ok":false,"path":"...","reads":[],"truncated":false,"error":"malformed props request ..."}
+```
+
+The responder reads only the names explicitly listed in the request's first
+rest token. It never has an "all field values" mode.
+
+- Duplicate request names collapse to the first occurrence before reads; the
+  order of distinct names remains the request order.
+- Top-level `ok:true` means the request was parsed, the path resolved, and the
+  requested name list was processed. It does **not** mean "every name was
+  read"; read failures ride inside `reads[]` as item-level `ok:false` entries
+  with `e` (REQ-INTROSPECT-007).
+- Success items are `{"n":"<name>","ok":true,"t":"<lua-type>","v":"<value>"}`
+  where `v` is the responder's string form of the console value. The responder
+  does not parse, normalize, or infer semantics.
+- Failed items are `{"n":"<name>","ok":false,"e":"<message>"}` and do not
+  stop the rest of the reads.
+- If an individual raw value exceeds `CONFIG.max_prop_value` (default 240
+  bytes), that item's `v` is shortened and that item carries
+  `truncated:true` (REQ-INTROSPECT-008). This item-level marker is separate
+  from the top-level list marker.
+- Top-level `truncated:true` means trailing `reads[]` entries were dropped
+  until the encoded reply fit `CONFIG.max_payload` (default 1900 bytes). It
+  does not describe item-level value shortening; check each read item for that.
+- Request syntax failures, name-list limit failures, and path-resolution
+  failures return top-level `ok:false` with `error`, `reads:[]`, and
+  `truncated:false`.
+
 ## 5. Console-side reply transport (`CONFIG.send_variant`)
 
 | Variant | Mechanism |
@@ -344,3 +424,48 @@ Recorded per Section E honesty rules; the round-trip tool
   plugin source (server-side cap: 16 KB source before encoding — calibrate at
   M6). Mitigation: every probe failure is reported verbatim in the `deploy`
   reply's `error`; verify on-site with a harmless one-line plugin first.
+- **ASSUMPTION-46 (property-name enumeration, VERIFIED on 2.4.2,
+  SPEC-COPILOT-INTROSPECT-001 M1)**: MA3 object handles expose an enumerable
+  property-name surface. Live 2026-08-03 (design.md §5.7) adopted exactly
+  `PropertyCount()` + `PropertyName(i)` / `PropertyType(i)`, emitted as
+  `source:"property_accessors"` in §4.7. M6 live correction from the M1
+  `accessor_stats` log fixed the valid index range as `0..PropertyCount()-1`;
+  index `PropertyCount()` returns nil. The same probe rejected the other
+  ladder candidates for production use: `getmetatable(handle).__index` was a
+  function, `pairs(handle)` failed, `handle:Get(i)` produced no property names,
+  `GetPropertyDisplayName` returned 0 names, and `Dump()` was not adopted
+  because it required string parsing.
+- **ASSUMPTION-47 (enumerator coherence gate, VERIFIED on 2.4.2,
+  SPEC-COPILOT-INTROSPECT-001 M1)**: the adopted `property_accessors`
+  enumerator includes the independently read control names used by the M1
+  gate. Live 2026-08-03 (design.md §5.7): `PropertyName()` returned MA
+  canonical uppercase names, including `INDEX`, `FADER`, and `CURRENTCUE`;
+  observed enumeration counts were Executor 71, Sequence 65, and Group 101.
+- **ASSUMPTION-48 (probe direct OSC reply, VERIFIED on 2.4.2,
+  SPEC-COPILOT-INTROSPECT-001 M1)**: a probe plugin can send its own
+  percent-encoded JSON reply to `/copilot/state` with `SendOSCMessage`, the
+  same direct OSC evidence channel used by the responder. Live 2026-08-03
+  (design.md §5.7) used no macro, label, or showfile-evidence fallback.
+- **ASSUMPTION-49 (read-only discovery side effects, VERIFIED on 2.4.2,
+  SPEC-COPILOT-INTROSPECT-001 M1)**: unknown-name and discovery reads did not
+  mutate the inspected object. Live 2026-08-03 (design.md §5.7) re-read
+  stopped `Executor 201` before and after probing and observed the same
+  `state` shape (`children=[]`, `childCount=0`, class `Executor`, name
+  `Ballad Yellow Red`, `sequenceNo=20`, `truncated=false`); the playback probe
+  was restored with `Off Executor 201`.
+- **ASSUMPTION-50 (`props` request command-line budget, SOURCE-PINNED for
+  M3; live max-request still M6)**: MA3's command-line limit is treated as
+  2048 bytes for responder plugin calls. The Python request builder rejects a
+  `props` command line after UTF-8 encoding if the full `Plugin
+  "CopilotResponder" "..."` call exceeds that limit, and the M3 payload-budget
+  test pins the configured 16-name maximum against the same source-level
+  arithmetic. M6 must still fire a maximum-length request on the live console.
+- **ASSUMPTION-51 (class-level field stability, PENDING M7)**: the repo does
+  not yet assume that two handles of the same MA class expose the same
+  `introspect` field set. Until M7 compares at least two live instances per
+  relevant class, consumers must treat `fields[]` as an observation of the
+  specific queried handle, not a class schema.
+- **ASSUMPTION-52 (playback/progress fields exist, PENDING M7)**: this
+  protocol does not assume that Executor or Sequence handles expose a field
+  carrying playback state, progress, or fade remaining time. M7 records either
+  "found" or "not found"; both are valid outcomes for the discovery tool.

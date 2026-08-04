@@ -152,7 +152,7 @@ class TestDeployErrors:
 
 
 class TestVersionBump:
-    def test_responder_version_is_1_5_0_with_proto_1(self, harness):
+    def test_responder_version_is_1_6_0_with_proto_1(self, harness):
         # The plugin version tracks console-side behaviour changes while the
         # wire protocol stays v1: 1.1.0 added the deploy verb (additive),
         # 1.2.0 made the snapshot `i` the real pool slot and made it optional
@@ -164,8 +164,11 @@ class TestVersionBump:
         # (SPEC-COPILOT-DASHUI-001 M6) lowers max_payload 4000 -> 1900: the
         # cmd_keyword reply transport dies silently past the live-measured
         # MA3 ~2048-byte command-line limit. 1.5.0 adds prop readback and
-        # Cue child cueNo without changing protocol v1.
-        assert harness.module["VERSION"] == "1.5.0"
+        # Cue child cueNo. 1.6.0 (SPEC-COPILOT-INTROSPECT-001 M2) adds the
+        # additive props/introspect verbs — bulk property readback and
+        # handle field enumeration via the M1-adopted property accessors.
+        # 1.6.1 rejects enumerators missing same-handle prop-readable names.
+        assert harness.module["VERSION"] == "1.6.1"
         assert harness.module["PROTO"] == 1
 
 

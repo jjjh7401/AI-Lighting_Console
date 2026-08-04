@@ -122,6 +122,37 @@ _LOOKS_GRANTED_LINE_PAIRS = {
     ),
 }
 
+#: 2026-08-03 granted exception (SPEC-COPILOT-INTROSPECT-001, user-approved) —
+#: the responder self-introspection verbs. This SPEC exists to extend the
+#: console-side responder (M2 `props`/`introspect`, M3 wire doc, M6 redeploy),
+#: so it collides with the `console/lua/` lock head-on; the predecessor's own
+#: SPEC set never anticipated a successor that must edit the plugin, and the
+#: plan-audit's D7 pass missed it too. Both facts are recorded rather than
+#: smoothed over: see `.moai/specs/SPEC-COPILOT-INTROSPECT-001/plan.md` §F.
+#:
+#: The grant is shaped like `_SAFETY_ALLOWED_DELETED_LINES`, NOT like a path
+#: removal: additions are allowed (the extension is the point), every DELETED
+#: line is pinned by exact text, and the changed-file set is pinned too. A
+#: removal that is not on this list — or a new file under `console/lua/` —
+#: still fails the gate. M6 will redeploy the plugin; if that touches another
+#: file here, this list must grow by review, which is the intended cost.
+_CONSOLE_LUA_DIR = "console/lua/"
+_CONSOLE_LUA_ALLOWED_DELETED_LINES = {
+    "console/lua/PROTOCOL.md": (
+        "| `prop` | `prop <id> <object-path> <PropertyName>` | `/copilot/state`, kind=`prop` |",
+        "- `<object-path>` and `<ma3-command>` are parsed **rest-of-line** (embedded",
+        '  spaces are legal) and MUST NOT contain a double quote (`"`), which would',
+        "  still contain spaces but property names may not. MA3 accepts single-quoted",
+        "  strings, so `Store Cue 5 'name'` is the workaround for quoted names.",
+    ),
+    "console/lua/copilot_responder.lua": (
+        "    -- can be read from the cue object; Protocol v1 throughout.",
+        '    VERSION = "1.5.0",',
+        "        return tostring(value)",
+        "        return tostring(value)",
+    ),
+}
+
 _TOOLS_PATH = "server/orchestrator/tools.py"
 
 #: Protected regions of ``tools.py``, PRECHK-base relative: the programmer-state
@@ -151,7 +182,7 @@ _OVERLAP_MERGE_COMMIT = "156a3e1aaf6ef78788394d65cf724bacaec7b567"
 _SAFETY_EXPECTED_DELETIONS = {
     "server/safety/audit.py": 1,
     "server/safety/backup.py": 2,
-    "server/safety/console.py": 0,
+    "server/safety/console.py": 11,
     "server/safety/gate.py": 3,
 }
 _SAFETY_ALLOWED_DELETED_LINES = {
@@ -171,6 +202,35 @@ _SAFETY_ALLOWED_DELETED_LINES = {
     "server/safety/backup.py": (
         "Three rules: ① once at session start, ② periodic (default 10 minutes,",
         '    """Drives the 3-rule backup policy against an injected backup action."""',
+    ),
+    # 2026-08-03 (SPEC-COPILOT-INTROSPECT-001 M4/M5, user-approved): console.py
+    # reopens with 11 deletions for the FIRST time, and every one of them is a
+    # formatter re-wrap, not a removal. Cause, recorded rather than smoothed
+    # over: a repo-wide `ruff format` drift accumulated after the last SPEC
+    # that touched this file, and `TestTouchedFilesPassLint` (AC-OVERLAP-019 ⑨)
+    # requires every file a SPEC touches to be lint- and format-clean. Adding
+    # the M4 round-trip methods therefore dragged the pre-existing drift into
+    # scope: gate ⑨ demanded the reformat, this pin forbade the deletions it
+    # produces, and the two could only be reconciled deliberately. Running the
+    # formatter also cleared the file's two pre-existing E501s.
+    #
+    # `test_the_console_reformat_removed_no_semantics` below is the other half
+    # of this grant: a re-wrap keeps its tokens, so every line named here must
+    # still be present in the file once whitespace is discarded. A genuine
+    # removal cannot satisfy that, which is what keeps the enlarged count from
+    # becoming a blanket allowance.
+    "server/safety/console.py": (
+        "    def _run_file_import(",
+        "        self, name: str, lua_source: str, sends: list[DeploySend]",
+        "    ) -> ExecOutcome:",
+        '            return ExecOutcome(status="failed", detail=f"cannot write plugin file {target}: {error}")',  # noqa: E501
+        '            return ExecOutcome(status="unconfirmed", detail=f"imported but pool unreadable: {error}")',  # noqa: E501
+        "            raise BodyUnavailable(",
+        '                f"identity query failed for {reference!r}: {error}"',
+        "            ) from error",
+        "    def _fetch_body_at_path(",
+        "        self, reference: str, path: str, *, allow_empty: bool",
+        "    ) -> Sequence[str]:",
     ),
     "server/safety/gate.py": (
         "from server.safety.backup import BackupError, BackupManager",
@@ -197,14 +257,22 @@ def _git(*arguments: str) -> str:
     return result.stdout
 
 
+#: The granted directories, each policed by its own narrower gate below. Kept
+#: as one tuple so the filter and the command-shape assertion cannot drift
+#: apart. Two SPECs arrived at this same shape independently — SPATIAL/GROUPGEN
+#: swapped the rulebook out on `main` while INTROSPECT swapped `console/lua/`
+#: out on its branch — and the merge keeps BOTH swaps rather than letting the
+#: later one silently re-lock the earlier grant.
+_GRANTED_DIRS = (_LOOKS_LIBRARY_DIR, _CONSOLE_LUA_DIR, _RULEBOOK_DIR)
+
+
 def _preserve_diff_command() -> list[str]:
-    # Two granted extensions are checked by their own narrower gates below: the
-    # looks-library one by exact line text, the rulebook one by named added path
-    # plus zero deletions. Every OTHER preserved path must still diff empty, and
-    # the rulebook's five EXISTING assets are named here so they keep doing so.
-    paths = tuple(
-        path for path in _PRESERVE_PATHS if path not in (_LOOKS_LIBRARY_DIR, _RULEBOOK_DIR)
-    )
+    # Three granted extensions are checked by their own narrower gates below:
+    # the looks-library one and the console/lua one by exact deleted-line text,
+    # the rulebook one by named added path plus zero deletions. Every OTHER
+    # preserved path must still diff empty, and the rulebook's five EXISTING
+    # assets are named here so they keep doing so.
+    paths = tuple(path for path in _PRESERVE_PATHS if path not in _GRANTED_DIRS)
     return [
         "git",
         "diff",
@@ -272,14 +340,18 @@ class TestPreserveDiffIsEmpty:
         command = _preserve_diff_command()
         assert command[:4] == ["git", "diff", "--stat", f"{_PRECHK_BASE}..HEAD"]
         assert command[4] == "--"
-        # Both granted extensions are swapped out of the directory sweep and
+        # Every granted extension is swapped out of the directory sweep and
         # re-entered as the narrower thing that IS still locked: the looks
-        # library by its own exact-text gate, the rulebook by its five named
-        # existing assets.
+        # library and console/lua by their own exact-text gates, the rulebook
+        # by its five named existing assets.
         assert tuple(command[5:]) == (
-            *(path for path in _PRESERVE_PATHS if path not in (_LOOKS_LIBRARY_DIR, _RULEBOOK_DIR)),
+            *(path for path in _PRESERVE_PATHS if path not in _GRANTED_DIRS),
             *_RULEBOOK_LOCKED_ASSETS,
         )
+        # Every exempted directory must be a real member of the locked list —
+        # an exemption naming a path the gate never covered would be a
+        # decoration that quietly widens nothing today and everything later.
+        assert all(path in _PRESERVE_PATHS for path in _GRANTED_DIRS)
         # The swap must not silently drop the rulebook from the gate entirely.
         assert _RULEBOOK_DIR not in command
         assert all(asset in command for asset in _RULEBOOK_LOCKED_ASSETS)
@@ -387,6 +459,86 @@ class TestLooksLibraryGrantedExtension:
                 assert stripped == old
 
 
+class TestConsoleLuaGrantedExtension:
+    """The 2026-08-03 grant — the responder may GROW, it may not lose anything.
+
+    Not a weakening: `console/lua/` stays in `_PRESERVE_PATHS` and this class
+    IS the lock's new shape there. The predecessor locked the directory to stop
+    silent drift in a plugin nobody was supposed to be editing;
+    SPEC-COPILOT-INTROSPECT-001 edits it on purpose, additively, to add the
+    `props`/`introspect` verbs. So the invariant that actually carries the
+    predecessor's intent is not "no diff" but "no unpinned removal": every
+    deleted line is named here by exact text, and the changed-file set is
+    closed. An extra file, an extra removal, or a reworded removal fails.
+    """
+
+    def test_the_grant_is_not_an_empty_exemption(self):
+        # Non-vacuity, mirroring the looks grant: an empty dict would satisfy
+        # every loop below while `console/lua/` sits filtered out of
+        # `_preserve_diff_command()` — a gate that is off AND green.
+        assert _CONSOLE_LUA_ALLOWED_DELETED_LINES
+        assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", _CONSOLE_LUA_DIR) != ""
+
+    def test_exactly_the_granted_files_changed(self):
+        rows = _numstat(_PRECHK_BASE, _CONSOLE_LUA_DIR)
+        assert set(rows) == set(_CONSOLE_LUA_ALLOWED_DELETED_LINES)
+
+    def test_the_deletions_are_exactly_the_pinned_lines(self):
+        for path, allowed in _CONSOLE_LUA_ALLOWED_DELETED_LINES.items():
+            deleted = [
+                line[1:]
+                for line in _git(
+                    "diff", "--unified=0", f"{_PRECHK_BASE}..HEAD", "--", path
+                ).splitlines()
+                if line.startswith("-") and not line.startswith("---")
+            ]
+            assert deleted == list(allowed), path
+
+    def test_the_extension_is_additive_in_every_granted_file(self):
+        # The grant's whole justification is that the responder GREW. A file
+        # that only deletes pinned lines would pass the check above while
+        # shrinking the plugin, which is the opposite of what was approved.
+        rows = _numstat(_PRECHK_BASE, _CONSOLE_LUA_DIR)
+        for path, (added, deleted) in rows.items():
+            assert added > deleted, path
+
+    def test_the_only_pinned_code_removal_is_the_version_bump_and_a_wider_return(self):
+        # Shape check on the ONE granted source file, so the pin cannot quietly
+        # come to cover a behavioural deletion later: of its four removals, one
+        # is the old VERSION line (paired with the shipped version below) and two
+        # are the `safe_property` return that gained a third value; the fourth
+        # is a comment. No dispatch branch, no reply field, no guard.
+        removals = _CONSOLE_LUA_ALLOWED_DELETED_LINES["console/lua/copilot_responder.lua"]
+        assert sum(1 for line in removals if line.strip().startswith("VERSION =")) == 1
+        assert sum(1 for line in removals if line.strip() == "return tostring(value)") == 2
+        assert sum(1 for line in removals if line.strip().startswith("--")) == 1
+        assert len(removals) == 4
+        added = [
+            line[1:]
+            for line in _git(
+                "diff",
+                "--unified=0",
+                f"{_PRECHK_BASE}..HEAD",
+                "--",
+                "console/lua/copilot_responder.lua",
+            ).splitlines()
+            if line.startswith("+") and not line.startswith("+++")
+        ]
+        # The paired addition is derived from the responder itself, not pinned to
+        # a literal: a later version bump is legitimate under this grant, and a
+        # hardcoded expectation would fail on the NEXT bump for no contract
+        # reason. (It did — the 1.6.0 literal broke at 1.6.1, and the failure
+        # only surfaced after commit because the diff range ends at HEAD.)
+        shipped = re.search(
+            r'^\s*VERSION = "([^"]+)",',
+            (_REPO_ROOT / "console/lua/copilot_responder.lua").read_text(encoding="utf-8"),
+            re.M,
+        )
+        assert shipped, "responder VERSION line not found"
+        assert f'    VERSION = "{shipped.group(1)}",' in added
+        assert sum(1 for line in added if line.strip().startswith("VERSION =")) == 1
+
+
 class TestToolsProtectedRegions:
     """AC-OVERLAP-019 ④ — position blockade on the predecessor's base."""
 
@@ -468,6 +620,30 @@ class TestSafetyChokepointFileSet:
                 if line.startswith("-") and not line.startswith("---")
             ]
             assert deleted == list(allowed), path
+
+    def test_the_console_reformat_removed_no_semantics(self):
+        """The other half of the 2026-08-03 console.py grant.
+
+        The count above went 0 -> 11 for a formatter re-wrap. A count alone
+        would now also admit eleven REAL removals, so pin the property that
+        actually separates the two: a re-wrap moves tokens across line breaks
+        but keeps every one of them, so each pinned deletion must still be
+        present in the current file once whitespace is discarded. A deleted
+        guard, branch, or call cannot satisfy that.
+
+        Whitespace is discarded rather than collapsed because the formatter
+        both joins lines (dropping indentation) and splits them (inserting
+        spaces inside brackets) -- a collapsed comparison reports false
+        removals on the split direction.
+        """
+        current = (_REPO_ROOT / "server/safety/console.py").read_text(encoding="utf-8")
+        without_space = re.sub(r"\s+", "", current)
+        pinned = _SAFETY_ALLOWED_DELETED_LINES["server/safety/console.py"]
+        assert pinned, "빈 핀은 아래 루프를 공허하게 만든다"
+        for line in pinned:
+            assert re.sub(r"\s+", "", line) in without_space, line
+        # Non-vacuity: the same check must REJECT a line that is not there.
+        assert re.sub(r"\s+", "", "        self._never_existed_sentinel()") not in without_space
 
     def test_overlap_s_own_scope_changed_nothing_under_the_chokepoint(self):
         """SCOPE CORRECTION (SPEC-COPILOT-BACKUP-001 T-B/T-B2 integration).
