@@ -1,6 +1,6 @@
 # SPEC-COPILOT-GROUPGEN-001 — 진행 기록 (progress)
 
-status: **run-phase M1/M2 완료** · M0 종결(P1~P8 · 쇼파일 순변화 0) · 게이트 B **GO** · 게이트 A **NEGATIVE**(정책 결정 대기 — M3 차단) · 순수 계층 3모듈 구현 완료
+status: **run-phase M0~M6 완료** · 게이트 B GO · 게이트 A NEGATIVE(정책 (c)) · M6 라이브 E2E 3배치 판정 GO · 잔여 프로브 그룹 2건 + 좌표 배치(사용자 정리 대기)
 
 ## §0 인수인계 — 여기서 시작한다 (2026-08-03 작성)
 
@@ -409,3 +409,118 @@ state DataPool/Groups        → childCount 6 유지
 - 단 **검증 가능한 것이 남아 있다**(M0 실측): 슬롯 존재(`state` 재조회) · **이름**
   (`prop NAME` 재조회 — `"GroupgenProbe"`로 실증) · 절단 거부 · 점유 슬롯 차단.
   *"아무것도 검증 못 한다"*가 아니라 **"멤버십만 검증 못 한다"**가 정확하다.
+
+### §E.2.9 M6 라이브 E2E — 같은 지시, 세 배치 (2026-08-04)
+
+승인: 사용자 "진행해줘". 하네스 `.moai/reports/m0-probe/groupgen_m6_e2e.py` (gitignored DEV TOOL) —
+**실물 게이트 스택**(`build_console_stack` → `build_toolset(bundle_gate=, group_approval_port=)`)을
+세워 **`registry.dispatch`**, 즉 *모델이 닿는 그 지점*으로 진입했다(FXLIB M7 `fx_e2e.py` 선례).
+bridge 직결 프로브는 콘솔 *능력*만 증명하고, 툴 사슬은 이렇게만 증명된다.
+
+#### §E.2.9.0 세션 조건 — 리그가 커졌다 (사용자가 장비 추가)
+
+| 항목 | 값 |
+|---|---|
+| 픽스처 | **39대**, 슬롯 `1..39` 연속(40 → not found) |
+| 슬롯 `1..20` → **fid `20..39`** | `Robin LEDBeam 350` (`RLB350M1 n`) — 신규 |
+| 슬롯 `21..39` → **fid `1..19`** | `Robin MMX Spot` (`Copilot MMX n`·`MMX n`) — 기존 |
+| `Patch/FixtureTypes` | **3슬롯**: `1 Robin MMX Spot` · `2 FixtureType 2` · `3 Robin LEDBeam 350` |
+| 목록 응답 | 반환 **18/39** · `truncated: True` (퍼센트 인코딩 후 `max_payload 1900` 초과) |
+
+**⚠ 슬롯 ≠ fid.** 첫 시도가 fid `1..18`(= 슬롯 21~38, 목록에 안 보이는 MMX)을 노렸고,
+`arrange_fixtures`가 *"the original coordinates of 18 of 18 targets could not be read, so
+NOTHING was written — a coordinate write with no backup has no way back (REQ-SPATIAL-020)"*로
+**fail-closed 거부**했다. 백업 없는 좌표 쓰기를 막은 것이며 **이 거부 자체가 M6 증거**다.
+보이는 18대의 fid는 **`20..37`**.
+
+**⚠ 워크트리 import 함정 (기록)**: 스크립트를 하위 디렉터리에서 실행하면 `sys.path[0]`가
+스크립트 디렉터리라서 `server` 패키지가 **editable 설치를 통해 주 체크아웃**(다른 브랜치)에서
+로드된다. `PYTHONPATH=$PWD` 없이는 이 워크트리가 아닌 코드를 재게 된다.
+**M0 프로브 증거는 유효함을 확인**했다 — `server/bridge/{osc,protocol}.py`가 두 트리에서
+바이트 동일(sha256 대조)이고 주 트리에 미커밋 변경 0이었다.
+
+#### §E.2.9.1 판정 — 같은 지시가 세 배치에서 서로 다른 위상·어휘를 냈다
+
+```
+GO: 3x6 그리드   -> grid          depth[6,6,6] + lateral[3x6]
+                   GEO Downstage/Center/Upstage + GEO Stage Right 3..1 / Stage Left 1..3
+GO: 2겹 동심원   -> concentric    buckets [6, 12]   -> GEO Inner / GEO Outer
+GO: 좌우 분할    -> lateral_split buckets [9, 9]    -> GEO Stage Right / GEO Stage Left
+GO: 전대 원점    -> None + 저신뢰 (REQ-004 — 위상을 발명하지 않는다)
+```
+
+- **`grid` 불변식 라이브 준수**: `fids_by_bucket == []` + `grid_axes` not-None (design.md §2.2).
+- **`Boom` 소인이 라이브 확인**: 좌우 6분할이 `GEO Stage Right 3`…`GEO Stage Left 3`.
+  리깅 하드웨어 어휘 0건(spec.md §D).
+- **coverage 표기 라이브 동작**: `{judged: 18, of: 39, complete: false}` + `topology_partial: true`.
+  `truncated: true` 만으로는 "39대 중 18대"를 말하지 못한다 — W6 신규 필드가 제 몫을 했다.
+
+#### §E.2.9.2 M6가 잡은 경합 결함 2건 — **단위 테스트로는 나올 수 없었다**
+
+**결함 1 — 미러 아티팩트.** 좌우 대칭 평면 배치(x=±3…±11, y=z=0)에서 원점 반지름이 `|x|`로
+붕괴해 **모든 반지름이 정확히 한 쌍**을 갖는다. `concentric`이 완벽 분리로 **score 20.0** 을 얻어
+`lateral_split`(0.75)을 압도하고 **"9개의 2대짜리 링"** 을 답했다.
+→ **이것은 이 SPEC이 고치려던 결함의 거울상**이다(research §3: 2겹 동심원을 9행으로 오독).
+디자이너가 "좌/우"라 부르는 리그를 "9개 링"이라 답하는 것은 같은 등급의 오답이다.
+수정: 모든 반지름 버킷이 정확히 2이고 `bilateral_pairs`가 고신뢰면 그것은 **대칭의 대수적
+서명**이므로 반지름 판독을 경합에서 강등한다(`concentric_reading_is_a_mirror_artefact`).
+
+**결함 2 — `bilateral_pairs`가 경합에서 이겼다.** 결함 1을 고치자 대칭 신호가 승자가 됐다.
+그런데 **D-Q10은 대칭이 그룹이 되지 않는다**고 못박았고 `naming.py`에 어휘가 **없다** —
+선택되면 산출 그룹이 0이 되어 조작자에게 *"아무것도 못 찾았다"*로 읽힌다(실제로는 이름 붙이면
+안 되는 대칭 리그를 찾은 것이다). 수정: `scored`에서 제외. `candidates`에는 **그대로 보고**된다.
+
+두 수정 모두 **뮤테이션 RED 증명**: 강등 제거 → 1 failed · `bilateral` 재투입 → 2 failed.
+**비공허성 가드**: 진짜 2겹 동심원(6·12)은 여전히 `concentric` (강등은 "모든 버킷이 정확히 2"
++ bilateral 고신뢰 조건에서만 발화 — 좁게 설계).
+
+**테스트 설계 실패도 기록한다**: 기대치를 먼저 적어 둔 덕에 불일치가 발견으로 남았다.
+첫 좌우 배치는 3×3 격자 2개였고 y축도 3행으로 유의해 `grid`가 이겼다 — **분류기가 아니라
+배치 설계의 결함**이었으므로 **기대치를 완화하지 않고 배치를 고쳤다**. 두 번째 배치(순수 x축
+2클러스터)가 결함 1을 드러냈다.
+
+#### §E.2.9.3 정책 (c) 라이브 검증 — 그룹 쓰기 1회
+
+동심원 배치에서 `create_arrangement_groups` 1회 실행:
+
+```
+status: created   executed: true   승인 요청 번들 = 1   (툴 계층 승인 게이트 정확히 1회 경유)
+verified_steps:
+  slot 2  GEO Inner  fids [20..25]   slot_exists: true   name_verified: true
+  slot 3  GEO Outer  fids [26..37]   slot_exists: true   name_verified: true
+unverified: ["membership"]            fixture_list_truncated: true
+human_check_commands: ["Group 2", "Group 3"]
+```
+
+**독립 교차 확인**(bridge 직결 프로브, 툴을 믿지 않고): 풀 `childCount 5 → 7`,
+`{1 Copilot Grp, 2 GEO Inner, 3 GEO Outer, 11 Back, 12 Front, 13 All, 15 Inner Outer Opp}`.
+기존 슬롯 `1·11·12·13·15` **무접촉**. `ok:true`가 아니라 **재조회**가 증거다.
+
+정책 (c) 4층이 전부 실물에서 동작했다 — 승인 강제 · 검증 가능분(슬롯·이름) 재조회 검증 ·
+멤버십 미검증 구조적 고지 · 사람 확인 커맨드 동봉.
+
+#### §E.2.9.4 ⚠ 라이브로 재확인된 범위 밖 결함
+
+**좌표 쓰기가 무승인으로 나갔다.** `arrange_fixtures`가 `status: arranged`로 좌표를 기록하는데
+`승인 요청 번들 = 0`이었다 — AC-SPATIAL-031 `[DEFERRED]`(함정 8)의 라이브 재현이다.
+본 SPEC의 그룹 쓰기는 승인을 강제하지만(REQ-031) **좌표 축은 여전히 무승인**이다.
+GROUPGEN 범위 밖이며 SPATIAL 후속 SPEC 소관이다 — 침묵하지 않고 기록한다.
+
+#### §E.2.9.5 미검증으로 남는 것 (정직한 천장)
+
+- **`SKIP: CONDITION_NOT_MET` — 사람 무대 관측**: `Group 2`/`Group 3`이 실제로 내륜/외륜을
+  잡는지는 **기계로 확인 불가**(spec.md §C.1). 사용자에게 확인 커맨드를 전달했다.
+- **`SKIP: CONDITION_NOT_MET` — 타입 축 라이브**: 리그가 이제 이종(2 실타입)이지만 M6는
+  `fixture_type_records`를 호출자가 넘기는 경로를 쓰지 않았다. ASSUMPTION-67은 여전히 SKIP이며,
+  이종 리그가 확보된 만큼 **후속 세션에서 닫을 수 있다**.
+- **`SKIP` — 실제 Gemini 턴**: M6는 `registry.dispatch` 직결이다. 모델이 이 툴을 *선택*하는지는
+  LOOKLIB M7처럼 별도 라이브 채팅 턴이 필요하다.
+
+#### §E.2.9.6 잔여 상태 — 정리 필요
+
+| 항목 | 상태 |
+|---|---|
+| 프로브 그룹 | **`Group 2 'GEO Inner'` · `Group 3 'GEO Outer'` 2건** — 사용자 GUI 삭제 대기 |
+| 픽스처 좌표 | 슬롯 `1..18`(fid 20~37)이 **2겹 동심원 배치 상태**. 착수 시 원점이었다 |
+| 기존 그룹 | `1·11·12·13·15` 무접촉(재조회 확인) |
+| 슬롯 `21..39`(fid 1~19) | 무접촉 — 목록에 안 보여 배치 대상이 아니었다 |
