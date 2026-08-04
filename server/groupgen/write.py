@@ -23,7 +23,9 @@ from dataclasses import dataclass
 from server.spatial.choreography import build_spatial_selection_chain
 
 __all__ = [
+    "DEFAULT_GROUP_PLAN_CAP",
     "FIXTURE_LIST_TRUNCATED",
+    "GROUP_PLAN_TOO_LARGE",
     "GROUP_POOL_TRUNCATED",
     "GROUP_POOL_UNAVAILABLE",
     "GROUP_SLOT_OCCUPIED",
@@ -32,6 +34,7 @@ __all__ = [
     "GroupWriteStep",
     "build_group_write_plan",
     "guard_fixture_list_truncation",
+    "guard_plan_size",
     "measure_empty_slots",
     "select_group_slot",
 ]
@@ -40,6 +43,22 @@ GROUP_POOL_UNAVAILABLE = "GROUP_POOL_UNAVAILABLE"  # the group pool could not be
 GROUP_POOL_TRUNCATED = "GROUP_POOL_TRUNCATED"  # the re-queried pool listing was cut
 GROUP_SLOT_OCCUPIED = "GROUP_SLOT_OCCUPIED"  # the target slot already holds a group
 FIXTURE_LIST_TRUNCATED = "FIXTURE_LIST_TRUNCATED"  # the target fixture list was cut
+GROUP_PLAN_TOO_LARGE = "GROUP_PLAN_TOO_LARGE"  # the requested plan exceeds the slot-economy cap
+
+# A grid topology's axis-separated naming (design.md §4/§D-Q2) can still ask
+# for a double-digit bucket count on a wide rig (a 5x20 grid asks for 25:
+# depth 5 + lateral 20) — grandMA3 group slots are a finite, shared LD asset
+# (a single reserved GS SHOP showfile pool measured `{2..10, 14, 16+}` empty,
+# progress.md §E.2.3), so an unbounded plan can silently eat most of it in one
+# call. This is a POLICY DEFAULT, not a measured console limit — no live probe
+# has established a hard ceiling on group count. The value borrows this
+# repository's already-established batch-size ceiling for one bounded round
+# trip against this same console family (`RIG_DRILLDOWN_QUERY_CAP = 16`,
+# server/orchestrator/tools.py) as the nearest precedent for "how large a
+# single automated batch against this console is allowed to be" — the
+# constant is NOT imported (the domains differ: drilldown reads vs. group
+# writes), it is re-declared here with its own name and its own rationale.
+DEFAULT_GROUP_PLAN_CAP = 16
 
 _CLEAR = "ClearAll"
 
@@ -157,6 +176,30 @@ def measure_empty_slots(groups_section: Mapping[str, object], *, count: int) -> 
     return tuple(empty)
 
 
+def guard_plan_size(requested: int, *, cap: int) -> None:
+    """Refuse a group-write plan that would explode past the slot-economy cap.
+
+    Same discipline as REQ-GROUPGEN-021/024 (D-Q6): **reject**, never "warn
+    and proceed" (`.plan-contract.md` §2 D-Q6) — and never silently truncate
+    the plan to the first ``cap`` buckets and store only those (a partial
+    plan is the worst outcome: an incomplete auto-generated set persists in
+    the showfile exactly like an 18/19-fixture group does, REQ-GROUPGEN-024).
+    A caller that genuinely needs more slots must say so explicitly via
+    ``build_group_write_plan(..., max_plan_size=...)`` — the cap is a
+    default, not a ceiling baked into the code.
+    """
+    if requested > cap:
+        raise GroupSlotError(
+            GROUP_PLAN_TOO_LARGE,
+            f"the requested plan needs {requested} group slots, which exceeds "
+            f"the plan-size cap of {cap}; group slots are a finite, shared LD "
+            "asset and an unbounded write is refused rather than silently "
+            "truncated — either split the request into smaller batches or "
+            "pass an explicit max_plan_size to build_group_write_plan to "
+            "raise the cap for this call",
+        )
+
+
 def guard_fixture_list_truncation(fixtures_section: Mapping[str, object]) -> None:
     """Refuse a group write whose target fixture list was truncated.
 
@@ -192,6 +235,7 @@ def build_group_write_plan(
     names: Mapping[str, str],
     groups_section: Mapping[str, object],
     fixtures_section: Mapping[str, object],
+    max_plan_size: int = DEFAULT_GROUP_PLAN_CAP,
 ) -> GroupWritePlan:
     """Assemble the full write plan for one ``create_arrangement_groups`` call.
 
@@ -199,9 +243,15 @@ def build_group_write_plan(
     ``unverified`` always carries ``"membership"`` as a structural field, not
     prose, so a caller cannot lose the caveat by skipping a docstring
     (함정 6: 툴 설명문은 지시일 뿐 강제가 아니다).
+
+    ``max_plan_size`` bounds how many group slots a single call may claim
+    (``guard_plan_size`` — DEFAULT_GROUP_PLAN_CAP, a policy default, not a
+    measured console limit). A caller may raise it explicitly per call; the
+    default is never silently widened.
     """
     guard_fixture_list_truncation(fixtures_section)
     bucket_keys = list(buckets)
+    guard_plan_size(len(bucket_keys), cap=max_plan_size)
     empty_slots = measure_empty_slots(groups_section, count=len(bucket_keys))
 
     steps: list[GroupWriteStep] = []

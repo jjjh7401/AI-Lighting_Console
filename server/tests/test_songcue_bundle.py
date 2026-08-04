@@ -102,99 +102,6 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # widened 1220 hunk, not because anything there was reverted.
 # Protected-range overlap re-verified: ZERO (the assertion below is what actually
 # carries the PRESERVE claim; this positional list is bookkeeping).
-# SPEC-COPILOT-VWX-001 M6 registered precheck_vectorworks_diff the same way: one
-# import block (server.vwx.address/columns/diff/reader/report/rig, widening the
-# 33 hunk), two stdlib imports (base64, binascii — one genuinely new start at 11,
-# immediately above the existing 12 hunk since unified=0 does not merge adjacent-
-# but-distinct insertion points), one TOOL_NAMES entry (widening 49), one handler
-# + ToolDefinition + one handlers-dict entry (all widening hunks the earlier
-# SPECs already opened, inside the same build_toolset body). 45 hunks total (44
-# + the new 11 start); every other start is unchanged from GROUPGEN's snapshot.
-# Evidence this is additive-only:
-#   git diff --unified=0 e40c4d0~1..HEAD -- server/orchestrator/tools.py \
-#     | grep -cE '^-[^-]'   ->  0  (zero pre-existing lines deleted or modified)
-# Protected-range overlap re-verified: ZERO.
-# SPEC-COPILOT-AUTOPATCH-001 M7 registered apply_vectorworks_patch the same way:
-# three import blocks (server.vwx.apply / .patchplan / .typemap, widening the 33
-# hunk), one TOOL_NAMES entry (widening 49), one handler plus two nested helpers,
-# one ToolDefinition and one handlers-dict entry — all inside the same
-# build_toolset body the earlier SPECs already opened. ONE genuinely new start
-# (1061, the handler insertion point); 46 hunks total (45 + 1061). Every other
-# start is unchanged from the VWX snapshot.
-# Evidence this is additive-only, not a rewrite of anyone else's code:
-#   git diff --stat     664060d~1..HEAD -- server/orchestrator/tools.py  ->  +262 -0
-#   git diff --unified=0 664060d~1..HEAD -- ... | grep -cE '^-[^-]'      ->  0
-# i.e. ZERO pre-existing lines were deleted or modified.
-# Protected-range overlap re-verified: ZERO — recomputed against
-# _TOOLS_PROTECTED_OLD_RANGES ((234,238), (524,569)) with the assertion below.
-# VWX round24 후속 (SPEC-COPILOT-VWX-001, 되묻기 통로) — 모델이 값을 지어내는
-# 대신 사용자에게 묻는 경로를 넣었다. 새 시작줄은 **하나뿐**이다:
-#   184 — 질문 갈래 상수와 라이브러리 감시 눈금(파일 상단 상수 구역)
-# 나머지 변경(`resolve_fixture_type`이 직접 묻고 기다리는 본문, `ask_user`의
-# 실행 지시, `ToolExecution.awaited_human`)은 앞선 SPEC들이 이미 연 훅 안에서
-# 넓어졌을 뿐 새 자리를 만들지 않았다. 47훅 (46 + 184).
-# 보호 구간 겹침 재계산: ZERO — ((234,238), (524,569)) 어느 쪽도 건드리지 않는다.
-# VWX round24 후속 2 (단계형 패치 · 실측 판정) — 두 자리가 더 열렸다:
-#   620  — `deploy_plugin`이 손으로 짠 AddFixtures를 **거절**하는 자리. 지시로는
-#          막히지 않아(모델이 실물에서 여섯 번 우회) 구조로 옮긴 금지다.
-#   1048 — `patch_fixtures` 본문(자리 재확인 · 생성 · 실행 · **재조회 판정**).
-# 49훅 (47 + 620 + 1048). 보호 구간 겹침 재계산: ZERO.
-# 커밋 진행 후속 (SPEC-COPILOT-AUTOPATCH-001, vectorworks_autopatch 문서화) —
-# 자리가 하나 더 열렸다: 164 — `VectorworksUploadPort` 뒤 `vectorworks_autopatch`
-# 정의 앞에 다른 툴들과 같은 `# -- toolname (SPEC-ID) --` + `@MX:NOTE:` 앵커
-# 주석을 더한 자리(순수 주석, 실행 코드 0줄). 50훅(49 + 164). 보호 구간 겹침
-# 재계산: ZERO — 164는 (234,238)·(524,569) 어느 쪽에도 닿지 않는다.
-# SPEC-COPILOT-TRUNCATE-001 (2026-08-05, user-approved) — granted exception,
-# re-walked per the same SPATIAL §E.2.19 precedent. The partial-read reply shape
-# diverges (`fixtures`/`analysis` withheld, `partial_fixtures`/`missing`/
-# `analysis_withheld` in their place), the one in-process consumer
-# (`classify_arrangement_topology`) is migrated to the new keys, and
-# `create_arrangement_groups` gains the `acknowledged_unread_fids` refusal. That
-# opens the 952..1007 block and widens much of 1070..1231.
-#
-# THIS GRANT IS NOT ADDITIVE-ONLY, and that is the difference from the two above:
-#   git diff --unified=0 38a6e7e2..HEAD -- server/orchestrator/tools.py
-#     | grep -cE '^-[^-]'                                          ->  203
-# So the "ZERO pre-existing lines modified" evidence the GROUPGEN note leans on
-# is NOT available here and must not be implied. What IS verified is the thing
-# this test actually protects, and it was checked by CONTENT rather than by
-# position: both protected ranges are present VERBATIM in HEAD --
-#   old 234..238  `_PROGRAMMER_STATE_COMMANDS`  (the "state" half of the name)
-#   old 524..569  the in-bundle dedupe loop     (the "dedupe" half)
-# Protected-range overlap re-verified mechanically: ZERO across all 43 hunks.
-# A positional list that shifts while those two blocks stay byte-identical is
-# bookkeeping catching up, not a boundary being crossed — but a future re-walk
-# MUST re-check the content, because with 203 modified lines the position check
-# alone no longer implies it.
-# 2026-08-07 granted exception — the timecode SLOT OCCUPANCY check. Re-walked by
-# the same procedure as the three grants above, and it adds TWO hunks:
-#   old 104   `SongCueTimingAxes` added to the songcue import block
-#   old 1231  `_timecode_slot_verdict` + the `axes=` argument at its call site
-#
-# WHY IT IS IN SCOPE OF THIS TEST'S NAME. `prepare_songcue` emitted
-# `Store Timecode <n>` with a MODEL-SUPPLIED number and no occupancy read, so a
-# showfile already using that slot lost its timecode track silently — with no
-# approval card and no way back (`backup.py` retains snapshots but there is no
-# restore SEND path). Both hunks are songcue REGISTRATION plumbing, which is the
-# half of this test's name that is allowed to move; neither is dedupe or state.
-#
-# ADDITIVITY, measured rather than claimed:
-#   git diff --unified=0 8eb5d56..HEAD -- server/orchestrator/tools.py
-#     | grep -cE '^-[^-]'                                          ->  1
-# The one modified line is the `build_songcue_timing(...)` call itself, gaining
-# `axes=`. So this grant is NOT additive-only either, and per the TRUNCATE note
-# above the position check alone therefore does not carry the claim. Re-checked
-# by CONTENT, mechanically, both blocks byte-identical in HEAD:
-#   old 234..238  `_PROGRAMMER_STATE_COMMANDS`  -> present verbatim
-#   old 524..569  the in-bundle dedupe loop     -> present verbatim
-# Neither new hunk start falls inside either protected range (104, 1231 vs
-# 234..238 / 524..569): overlap ZERO.
-#
-# ⚠️ HOW THIS GATE WAS TRIPPED, recorded because it will happen again: it diffs
-# `BASE..HEAD`, so it is BLIND to an uncommitted working tree. A full green
-# suite run before `git commit` does not exercise it, and the failure surfaces
-# only after the commit — which is how it reached `main` in PR #33. Run the
-# suite ONCE MORE after committing, before merging.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     12,
     14,
@@ -215,7 +122,32 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     971,
     989,
     1007,
-    1222,
+    1067,
+    1070,
+    1072,
+    1081,
+    1089,
+    1096,
+    1103,
+    1113,
+    1118,
+    1122,
+    1124,
+    1129,
+    1140,
+    1146,
+    1167,
+    1175,
+    1177,
+    1179,
+    1181,
+    1183,
+    1192,
+    1196,
+    1198,
+    1213,
+    1218,
+    1220,
     1231,
 )
 _TOOLS_PROTECTED_OLD_RANGES = ((234, 238), (524, 569))

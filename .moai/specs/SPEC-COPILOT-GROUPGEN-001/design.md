@@ -195,7 +195,7 @@ grid 판정 → 산출 = depth_rows 3버킷(Downstage/Center/Upstage)
 | 깊이 | `Downstage` / `Upstage` | + `Center` | `Electric 1..N` (**DS→US**) |
 | 좌우 | `Stage Right` / `Stage Left` | + `Centerline` | (미정 — 아래 §4.2) |
 | 동심원 | `Inner` / `Outer` | + `Mid` | `Ring 1..N` (**안→밖**) |
-| 수직 | `Low Side` / `High Side` | — | `Level 1..N` (**위→아래**) |
+| 수직 | `Low` / `High` **(v0.3.0 정정 — `Low Side`/`High Side` 폐기)** | — | `Level 1..N` (**위→아래**) |
 | 그리드 | 축별 분리(D-Q2) | 축별 분리 | 축별 분리 |
 | 종류 | 패치 구조화 필드 그대로 | — | — |
 
