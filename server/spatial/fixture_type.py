@@ -183,9 +183,7 @@ def analyze_fixture_types(fixtures: Sequence[FixtureTypeRecord]) -> FixtureTypeA
             type_axis_groups=(), fixture_count=count, reason="homogeneous_rig"
         )
 
-    return FixtureTypeAnalysis(
-        type_axis_groups=tuple(groups), fixture_count=count, reason=None
-    )
+    return FixtureTypeAnalysis(type_axis_groups=tuple(groups), fixture_count=count, reason=None)
 
 
 def analyze_fixture_type_records(records: Sequence[Mapping[str, object]]) -> FixtureTypeAnalysis:

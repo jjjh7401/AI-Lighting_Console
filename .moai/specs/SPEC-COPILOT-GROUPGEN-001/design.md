@@ -480,55 +480,72 @@ def assert_write_scope(requested_slots: set[int], measured_empty_slots: set[int]
 
 ---
 
-## §7. `server/safety/**` 게이트 확장 설계 (계약 D-Q4)
+## §7. 승인 강제 설계 — **툴 계층 (v0.3.0 정정: `server/safety/**` 무변경)**
 
-### §7.1 선례 계승 — EXECREF-001 패턴
+> **⚠ 정정 이력 (사용자 승인 2026-08-04).** v0.1.0/v0.2.0은 D-Q4에 따라
+> `server/safety/classify.py`를 확장해 `Store Group`/`Label Group`을 게이트에서 risky로
+> 분류하기로 했다. **구현했고, 되돌렸다.** 실측 결과 파급이 GROUPGEN 범위를 넘었다:
+>
+> - 기존 테스트 **10건 실패**. 원인은 `Store Group`이 저장소 전역에서 *"양성 커맨드의
+>   대표 예시"*로 쓰이고 있었다는 것이다(`test_web_app`·`test_web_session`·`test_web_e2e`
+>   해피패스, `test_deploy_pipeline::SAFE_SOURCE`, `test_deploy_scan`).
+> - 결정타: **`server/measurement/corpus.yaml`** 헤더가 *"Baseline mock command lines …
+>   **clear the safety gate without approval (non-risky verbs only)**"* 를 불변식으로
+>   선언하고, 그 코퍼스의 첫 `task_type`이 **`group_create`(그룹 생성)** — **AC-MVP-001의
+>   10개 대표 작업 유형 중 하나**다.
+> - 즉 게이트 확장은 *"1번부터 12번 조명 묶어서 보컬 그룹으로 만들어줘"* 같은 **평범한 채팅
+>   경로까지 승인 게이트 뒤로 옮긴다**. 이는 MVP SPEC 소유 자산(코퍼스·대표작업 기준선)의
+>   변경이며 GROUPGEN이 단독으로 결정할 사안이 아니다.
+>
+> → 사용자가 **툴 계층 강제(파급 0)** 를 선택했다. `server/safety/**` **byte-diff 0** 으로 되돌아간다.
 
-`server/safety/classify.py:44`(실제 확인됨)의 `RECOGNIZED_REFERENCE_TYPES`가 선례다:
+### §7.1 함정 6 재해석 — 설명문이 아니라 코드다
 
-```python
-# 기존 (server/safety/classify.py:44, PRESERVE)
-RECOGNIZED_REFERENCE_TYPES = ("Macro", "Plugin", "Sequence", "Executor")
+v0.1.0이 툴 계층을 약하게 평가한 근거는 함정 6(*"툴 설명문은 지시일 뿐 강제가 아니다"* —
+SPATIAL이 설명문에 명령형으로 적었는데 모델이 무시했다)이었다. **그 적용이 부정확했다.**
+함정 6은 **모델에게 주는 설명문**에 관한 것이고, 툴 *코드*가 승인 결과 없이는 송신 자체를
+거부하는 것은 **구조적 강제**다 — 모델의 협조를 요구하지 않는다.
+
+### §7.2 강제 지점 — `create_arrangement_groups` 내부
+
+```
+create_arrangement_groups
+  ① build_group_write_plan(...)            # 순수 조립 (server/groupgen/write.py)
+  ② 승인 요청 발행 — plan.steps 전량을 한 장의 카드로
+  ③ 승인 결과가 True 가 아니면 → 콘솔 송신 0 · 계획만 반환 (제안으로 강등)
+  ④ 승인 True → 발화 → 검증 재조회(슬롯 존재 · 이름) → unverified 고지 동봉
 ```
 
-`Executor`가 SPEC-COPILOT-EXECREF-001 M1에서 추가된 방식 — **닫힌 튜플에 원소 하나를 추가하고,
-`@MX:NOTE`로 변경 근거를 남기는 것** — 을 본 SPEC이 그대로 계승한다. `RECOGNIZED_REFERENCE_TYPES`에
-`"Group"`을 추가할지, 별도의 그룹 쓰기 참조 타입 인식 경로를 둘지는 M0 P7(게이트 분류 실측) 이후
-확정한다(ASSUMPTION-66) — 여기서 고정하는 것은 **확장 지점의 형태**다:
+**[HARD] 구조 요구 (모델 협조에 의존하지 않는다):**
 
-```python
-# 확장 후 (개정 대상 — server/safety/classify.py, 사용자 승인 획득된 유일한 소스 파일 변경)
-RECOGNIZED_REFERENCE_TYPES = ("Macro", "Plugin", "Sequence", "Executor", "Group")
-```
+1. 승인 결과를 **인자로 받거나** 승인 포트를 **호출해야만** 송신 경로에 도달할 수 있는 형태여야
+   한다. "승인을 받았다고 가정하고 보내는" 코드 경로가 **존재하지 않아야** 한다.
+2. 승인 거부·미확인·포트 부재는 전부 **송신 0**으로 수렴한다(fail-closed).
+3. 이 불변식은 **뮤테이션으로 증명**한다: 승인 확인을 제거하면 테스트가 RED.
+4. 툴 설명문(docstring)에 *"승인을 받으세요"* 라고 적는 것은 **강제가 아니다** — 적어도 되지만
+   그것에 의존하지 않는다.
 
-### §7.2 경계 — 인식 + 분류에 한정
+### §7.3 그대로 유지되는 것 — `server/safety/**` byte-diff 0
 
-게이트 확장은 **그룹 쓰기 참조 타입 인식 + 위험도 분류**에 한한다(계약 §1 D-Q4). 다음은
-**무변경 계승**이다:
+3-stage screen · expand-or-hold · LiveLock · 백업 · 감사 · `classify.py` · `blacklist.yaml`
+**전부 무변경**. 그룹 쓰기 사슬은 기존 게이트를 **그대로 통과**하며(현행 분류: `safe`),
+승인은 그 **위층**에서 강제된다.
 
-- **3-stage screen** (`server/safety/gate.py` — grammar → risk classification → human approval)
-- **expand-or-hold** (`server/safety/expand.py::evaluate_reference` — 본문 미검증 시 hold)
-- **LiveLock** (`server/safety/gate.py` 락 재확인)
-- **백업** (`server/safety/backup.py` — `before_risky_execution`)
-- **감사 의미론** (`server/safety/audit.py`)
+### §7.4 알려진 천장 — 정직하게 기록한다 (spec.md §C.1 반영 대상)
 
-`Store Group <n>`(무플래그)은 블랙리스트 v1에 **없다**(research §5.4 실측) — ASSUMPTION-66이
-GO/NEGATIVE를 가른다:
+**본 SPEC의 툴을 경유하지 않는 그룹 생성은 여전히 무승인으로 나간다.** 사용자가 채팅으로
+*"보컬 그룹 만들어줘"* 라고 하면 모델이 `Store Group <n>`을 직접 발화하고 게이트는 `safe`로
+통과시킨다 — **복구 불가 자산에 대한 무승인 쓰기이며, 함정 8(요청하지 않은 좌표 기록 54건
+무승인 통과)과 동형의 구멍이다.**
 
-| ASSUMPTION-66 결과 | 게이트 분류 | 승인 카드 |
-|---|---|---|
-| `Store Group` = `risky` (분류됨) | 정규 승인 흐름 경유 | 카드 발행 |
-| `Store Group` = `safe` (미분류) | **본 SPEC이 blacklist.yaml 또는 classify.py에 그룹 쓰기 명령을 명시 추가** | 카드 발행 강제 |
+GROUPGEN이 이 구멍을 **발견했으나 닫지 않는다** — 닫으려면 MVP 소유 자산을 바꿔야 하기 때문이다.
+**별도 SPEC 후보**로 등록하며, 그 SPEC이 다뤄야 할 것:
+`server/measurement/corpus.yaml` 헤더 불변식 · `group_create` 3시나리오 기대값 ·
+`test_web_{app,session,e2e}` 해피패스 · `test_deploy_{pipeline,scan}` 양성 예시 · AC-MVP-001 기준선.
 
-**함정 6 대응**: 툴 설명문은 지시일 뿐 강제가 아니다(SPATIAL의 "say so" 무시 사례). 승인 요구는
-설명문이 아니라 **게이트 구조**로 강제된다 — 이것이 D-Q4가 이 선택지를 고른 이유다.
-
-### §7.3 PRESERVE 경계 재확인
-
-`server/safety/**`의 다른 모든 파일(`approval.py`·`audit.py`·`backup.py`·`bootstrap.py`·
-`console.py`·`gate.py`·`grammar.py`·`lock.py`·`monitor.py`·`registry.py`·`ruleset.py`·
-`session_context.py`)은 그룹 참조 타입 인식이 요구하는 최소 변경(위 `classify.py` 튜플 확장
-+ 필요 시 `blacklist.yaml` 엔트리 추가) 외에는 **손대지 않는다**.
+**부수 발견 (범위 밖, 기록만)**: `corpus.yaml`의 `group_create` 시나리오가
+`Label Group 3 "Vocal"` — **큰따옴표**를 쓴다. `server/bridge/protocol.py:109`가 거부하는
+형태다(§C.3 제약 3). mock 전용이라 와이어에 나가지 않아 드러나지 않은 기존 잠재 결함이다.
 
 ---
 
@@ -551,9 +568,10 @@ TOOL_NAMES = (
 - **`classify_arrangement_topology`**: 읽기 전용. `topology.classify()` + `naming` 매핑 +
   `resolve_fixture_types` + 명칭 클러스터 감지(§4.6 계약 D-Q12 — 제안으로만)를 조합해
   구조화 결과를 반환한다. 콘솔 쓰기 0. 안전 게이트 경유 0(읽기이므로).
-- **`create_arrangement_groups`**: 변형. §6의 발화 사슬을 실행한다. 안전 게이트(§7 확장분)를
-  경유하며, 게이트 A(멤버십 판독) NEGATIVE 시 이 툴은 **제안 전용 강등**되어 발화 문자열만
-  반환하고 콘솔에 아무것도 보내지 않는다(§10 게이트 A NEGATIVE 분기).
+- **`create_arrangement_groups`**: 변형. §6의 발화 사슬을 실행한다. **승인은 §7의 툴 계층에서
+  구조적으로 강제**되며(`server/safety/**` 무변경 — 기존 게이트는 그대로 통과), 승인이
+  확인되지 않으면 **콘솔 송신 0**으로 수렴해 계획만 반환한다. 멤버십은 검증하지 않고
+  `unverified` 구조적 필드로 고지한다(§10 게이트 A — 정책 (c)).
 
 두 툴을 분리하는 이유는 승인 카드 분류가 흐려지지 않게 하기 위함이다(SPATIAL D-4 선례) — 읽기와
 변형이 한 툴에 있으면 안전 게이트가 "이 호출이 위험한가"를 일관되게 판단할 수 없다.
@@ -592,17 +610,44 @@ TOOL_NAMES = (
 계약 §3의 표를 설계 관점으로 확장한다. **`ok:true`는 게이트 판정의 증거로 쓰지 않는다** — 아래
 모든 GO 분기는 재조회 확인을 전제로 한다.
 
-### 게이트 A — 멤버십 판독 채널
+### 게이트 A — 멤버십 판독 채널 — **M0로 확정됨. 정책 (c) 채택 (사용자 승인 2026-08-04)**
 
-- **GO 분기** (P1/P5가 판독 가능한 채널을 찾음): `create_arrangement_groups`는 그룹 생성 후
-  §6.4의 채널로 **재조회 검증**을 수행한다. 검증이 실패하면(생성했는데 멤버가 다름) 이는 게이트 A
-  GO 분기 내부의 별도 실패이며 그룹 생성 자체를 거부한다(REQ-GROUPGEN-023).
-- **NEGATIVE 분기** (P1/P5 전부 실패 — `query_state`가 답하지 않음): **자동 생성 축 전체 중단.**
-  `create_arrangement_groups` 툴은 콘솔에 **아무것도 송신하지 않고**, `classify_arrangement_topology`
-  가 이미 반환한 위상 판정 + 이름 매핑을 그대로 **발화 목록 텍스트**로 재포장해 사용자에게
-  제시한다(예: `"Fixture 1 Thru 6 / Store Group 14 / Label Group 14 'GEO Downstage'"` 형태의
-  문자열 나열). 사용자가 그 텍스트를 콘솔에 손으로 입력한다. **대체 정책(어느 채널을 대신 쓸지,
-  얼마나 자주 재시도할지)을 에이전트가 스스로 고르지 않는다** — 블로커 보고로 전달한다.
+> **M0 실측 결론** (`progress.md` §E.2.2 · §E.2.8): 멤버십은 **MA3가 오브젝트·속성 표면에
+> 노출하지 않는다**. 응답기 한계가 아니라 플랫폼 성질이다 — 접근자 경로로 읽은 `COUNT`가
+> 실사용 그룹 4개(`13 All`·`12 Front`·`11 Back`·`1 Copilot Grp`) 전부 **`0`** 이고,
+> 같은 배치의 날조 대조군은 `ok:false`이므로 그 `0`은 실제 판독값이다.
+> **GO 분기는 도달 불가 분기다** — 아래에 기록만 남기고 구현하지 않는다.
+
+- **GO 분기 — `UNREACHABLE`**: 판독 채널이 존재했다면 생성 후 재조회로 멤버를 검증했을 것이다.
+  M0가 채널 부재를 증명했으므로 **이 분기의 코드는 존재하지 않는다.** `acceptance.md` AC-023의
+  GO 열은 `SKIP: CONDITION_NOT_MET`이 정직한 표기다. 후속 SPEC이 채널을 찾으면 되살린다.
+
+- **NEGATIVE 분기 → 정책 (c) 로 확정**: v0.1.0은 이 분기를 *"콘솔에 아무것도 송신하지 않고
+  발화 목록 텍스트만 반환"*(제안 전용)으로 설계했다. **사용자가 (c)를 선택해 이를 대체한다.**
+  근거는 M0가 원래 전제를 좁혔다는 것이다:
+
+  1. **파괴 위험이 없다** — REQ-022가 점유 슬롯을 **정적 차단**하므로 쓰기는 **빈 슬롯에만**
+     일어난다. 덮어쓸 자산이 없으므로 *"복구 불가"*가 이 경로에서는 발동하지 않는다.
+  2. **검증 가능한 것이 남아 있다** (M0 실측): 슬롯 존재(`state` 재조회) · **이름**
+     (`prop NAME` 재조회 — `"GroupgenProbe"`로 실증) · 절단 거부 · 점유 차단.
+     정확한 서술은 *"아무것도 검증 못 한다"*가 아니라 **"멤버십만 검증 못 한다"** 다.
+  3. 제안 전용은 검증 불가 **하나** 때문에 자동화 전체를 버리고, 3×10 그리드에서
+     **54줄 타이핑**을 사용자에게 넘긴다 — 사실상 사용 불가다.
+
+  **(c) 의 4층 구조 — `create_arrangement_groups`가 반드시 갖출 것:**
+
+  | 층 | 요구 | 근거 |
+  |---|---|---|
+  | **안전** | 빈 슬롯만 · 점유 정적 차단 · 절단 거부 · **툴 계층 승인 강제**(§7 — `server/safety/**` 무변경) | REQ-020·021·022·024·031 |
+  | **자동 검증** | 생성 후 ① 슬롯 존재 `state` 재조회 ② **이름** `prop NAME` 재조회 ③ 발화 슬롯 집합 == 실측 빈 슬롯 집합 | REQ-025 · M0 P3/P4 실증 |
+  | **정직한 고지** | 반환 구조에 **구조적 필드**로 미검증 사실을 싣는다(예: `unverified: ("membership",)` + 사람이 읽는 이유 문장). **설명문·docstring 이 아니라 데이터**여야 한다 | 함정 6 — *"툴 설명문은 지시일 뿐 강제가 아니다"* |
+  | **사람 확인 경로** | 반환에 `Group <n>` 1줄 확인 커맨드를 실어 사용자가 무대에서 눈으로 검증할 수 있게 한다 | §C.1 검증 천장 — *"연출에서 맞게 동작하는가"*는 사람 관측만 |
+
+  **`ok:true`를 멤버십의 증거로 쓰지 않는다.** ①②③은 각각 재조회 증거이고, 멤버십은
+  **검증하지 않았다고 명시**한다 — 침묵하거나 `ok:true`로 대신하지 않는다. 이것이 (c)가
+  저장소 최상위 규율과 화해하는 방식이다: 규율을 어기는 게 아니라 **천장을 정직하게 표시**한다.
+
+  LiveLock 활성 시에는 (c)와 무관하게 **전 단계가 제안으로 강등**된다(REQ-026 — 콘솔 송신 0).
 
 ### 게이트 B — `Store Group <n>` 생성
 

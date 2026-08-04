@@ -25,6 +25,7 @@ from server.fx.matching import match_fx
 from server.fx.report import build_report as build_fx_report
 from server.fx.report import to_korean as fx_report_to_korean
 from server.fx.schema import FxLibrary
+from server.groupgen.write import GroupSlotError, build_group_write_plan
 from server.llm.types import ToolCall, ToolDefinition, ToolResult
 from server.looks.busking import build_genre_bundle, select_genre
 from server.looks.instantiate import (
@@ -68,6 +69,12 @@ from server.prechk.query import PropertyRead, read_properties
 from server.prechk.report import build_report as build_precheck_report
 from server.preshow.osc_check import LivenessPort as PreshowLivenessPort
 from server.preshow.runner import run_preshow_checklist
+from server.safety.approval import (
+    ApprovalItem,
+    ApprovalPort,
+    ApprovalRequest,
+    DenyAllApprovalPort,
+)
 from server.scene.compile import SceneCompilationError
 from server.scene.compile import compile_scene as build_scene_bundle
 from server.scene.loader import DEFAULT_LIBRARY_DIR as SCENE_LIBRARY_DIR
@@ -83,6 +90,18 @@ from server.spatial import (
     SpatialAnalysisError,
     analyze_spatial_records,
     spatial_analysis_to_dict,
+    spatial_fixtures_from_records,
+)
+from server.spatial.fixture_type import (
+    FixtureTypeAnalysisError,
+    analyze_fixture_type_records,
+    fixture_type_analysis_to_dict,
+)
+from server.spatial.naming import (
+    name_concentric_bucket,
+    name_depth_bucket,
+    name_lateral_bucket,
+    name_vertical_bucket,
 )
 from server.spatial.presets import (
     SPATIAL_PRESETS,
@@ -91,6 +110,8 @@ from server.spatial.presets import (
     spatial_placements_to_records,
     spatial_preset_placements,
 )
+from server.spatial.topology import TopologyResult
+from server.spatial.topology import classify as classify_topology
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
     from server.deploy.pipeline import DeployOutcome
@@ -120,6 +141,8 @@ TOOL_NAMES = (
     "plan_executor_layout",
     "get_spatial_context",
     "arrange_fixtures",
+    "classify_arrangement_topology",
+    "create_arrangement_groups",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -1018,6 +1041,7 @@ def build_toolset(
     preshow_liveness_port: PreshowLivenessPort | None = None,
     preshow_receive_port: int | None = None,
     preshow_osc_slot: int | None = None,
+    group_approval_port: ApprovalPort | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
 
@@ -1058,8 +1082,19 @@ def build_toolset(
     ``osc_slot_send_row`` check then falls back to the hardcoded default AND
     discloses that fallback explicitly, rather than naming an unconfirmed
     value as if it were the confirmed site setting.
+
+    ``group_approval_port`` (SPEC-COPILOT-GROUPGEN-001 §7 — the tool-layer
+    approval seam) is the ONLY route ``create_arrangement_groups`` has to a
+    console send: it reuses ``server.safety.approval.ApprovalPort`` (the same
+    human-approval channel the M4 gate wires for risky commands), because
+    ``Store Group``/``Label Group`` classify as ``safe`` (design.md §7.3,
+    ``server/safety/**`` stays byte-diff 0) and so never reach the gate's own
+    approval stage on their own. Omitted (the default), it falls back to
+    ``DenyAllApprovalPort`` — fail-closed, matching the port's own module
+    docstring: with no approval channel wired, nothing is ever sent.
     """
     rig_paths = dict(rig_paths or DEFAULT_RIG_CONTEXT_PATHS)
+    group_approval = group_approval_port or DenyAllApprovalPort()
     drilldown = frozenset(rig_drilldown if rig_drilldown is not None else DEFAULT_RIG_DRILLDOWN)
     looks = look_library
     fx_lib = fx_library
@@ -3396,6 +3431,376 @@ def build_toolset(
             payload, is_error=bool(mismatches), outcomes=execution.command_outcomes
         )
 
+    # -- classify_arrangement_topology (SPEC-COPILOT-GROUPGEN-001 M1/M2/M3, --
+    #    REQ-GROUPGEN-028 read half — design.md §8) --------------------------
+    #
+    # READS ONLY: reuses the same patch enumeration `get_spatial_context` does
+    # (`read_spatial_fixtures`), then runs the pure `topology.classify()` +
+    # `naming.py` + `fixture_type.py` modules over the result. No command is
+    # composed and `execution_port`/`bundle_gate` are never reached — the
+    # safety gate has nothing to screen here (decision D-4, arrange_fixtures'
+    # own precedent for splitting a read tool from its write sibling).
+
+    def _name_topology_buckets(result: TopologyResult) -> list[dict[str, object]]:
+        """The selected topology's buckets, named (design.md §4) — a NAMING
+        PROPOSAL, never a write. ``bilateral_pairs`` is reported as a property
+        only (§5.3, contract D-Q10: the group-write path never consumes it),
+        so it is never turned into a suggested group here, and neither is an
+        unconfident/``None`` result — there is no structure to name."""
+        if result.kind == "grid":
+            axes = result.grid_axes or {}
+            depth_buckets = axes.get("depth", ())
+            lateral_buckets = axes.get("lateral", ())
+            groups = [
+                {"name": name_depth_bucket(index, len(depth_buckets)), "fids": list(fids)}
+                for index, fids in enumerate(depth_buckets)
+            ]
+            groups.extend(
+                {"name": name_lateral_bucket(index, len(lateral_buckets)), "fids": list(fids)}
+                for index, fids in enumerate(lateral_buckets)
+            )
+            return groups
+        namer = {
+            "depth_rows": name_depth_bucket,
+            "lateral_split": name_lateral_bucket,
+            "concentric": name_concentric_bucket,
+            "vertical_levels": name_vertical_bucket,
+        }.get(result.kind)
+        if namer is None or result.low_confidence:
+            return []
+        total = len(result.fids_by_bucket)
+        return [
+            {"name": namer(index, total), "fids": list(fids)}
+            for index, fids in enumerate(result.fids_by_bucket)
+        ]
+
+    def _topology_result_to_dict(result: TopologyResult) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "kind": result.kind,
+            "low_confidence": result.low_confidence,
+            "reason": result.reason,
+            "fids_by_bucket": [list(bucket) for bucket in result.fids_by_bucket],
+        }
+        if result.grid_axes is not None:
+            payload["grid_axes"] = {
+                axis: [list(bucket) for bucket in buckets]
+                for axis, buckets in result.grid_axes.items()
+            }
+        return payload
+
+    def classify_arrangement_topology(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        fixtures_path = rig_paths.get("fixtures")
+        if not fixtures_path:
+            return _error_result(
+                call,
+                "rig context has no 'fixtures' path configured — arrangement "
+                "topology cannot be classified without the stage patch",
+            )
+        if property_port is None:
+            return _error_result(
+                call,
+                "property reads are not wired — build_toolset needs property_port "
+                "(or a state_port that also implements query_property)",
+            )
+        try:
+            reply = read_spatial_fixtures(
+                state_port, property_port, fixtures_path, SPATIAL_PROPERTY_QUERY_CAP
+            )
+        except Exception as exc:
+            return _error_result(
+                call, f"stage patch enumeration failed for {fixtures_path!r}: {exc}"
+            )
+        try:
+            fixtures = spatial_fixtures_from_records(reply["fixtures"])  # type: ignore[arg-type]
+        except SpatialAnalysisError as error:
+            return _error_result(call, f"fixture coordinates could not be parsed: {error}")
+
+        classification = classify_topology(fixtures)
+        suggested_groups = _name_topology_buckets(classification.selected)
+
+        fixture_type_records = call.arguments.get("fixture_type_records")
+        fixture_type_payload: dict[str, object] | None = None
+        if fixture_type_records is not None:
+            if not isinstance(fixture_type_records, list):
+                return _error_result(
+                    call,
+                    "'fixture_type_records' must be a list of "
+                    "{'fid', 'manufacturer', 'type_name'} records",
+                )
+            try:
+                type_analysis = analyze_fixture_type_records(fixture_type_records)
+            except FixtureTypeAnalysisError as error:
+                return _error_result(call, f"'fixture_type_records' could not be parsed: {error}")
+            fixture_type_payload = fixture_type_analysis_to_dict(type_analysis)
+            # Species groups reuse the patch's own structured field as the name
+            # verbatim (design.md §4.1 "종류" row / §5.1 REQ-GROUPGEN-009) — no
+            # "GEO " prefix, which is reserved for the geometric axes (§D-Q3).
+            suggested_groups = [
+                *suggested_groups,
+                *(
+                    {"name": group["value"], "fids": list(group["fids"])}
+                    for group in fixture_type_payload["type_axis_groups"]
+                ),
+            ]
+
+        payload = {
+            "source": "topology",
+            "truncated": reply.get("truncated", False),
+            "roundtrip_capped": reply.get("roundtrip_capped", False),
+            "unreadable": reply.get("unreadable", []),
+            "topology": {
+                "selected": _topology_result_to_dict(classification.selected),
+                "candidates": [
+                    _topology_result_to_dict(candidate) for candidate in classification.candidates
+                ],
+            },
+            "fixture_types": fixture_type_payload,
+            "suggested_groups": suggested_groups,
+            "notice": (
+                "suggested_groups is a NAMING PROPOSAL only — nothing was sent to "
+                "the console. Pass a chosen subset as 'groups' to "
+                "create_arrangement_groups to actually write it, which itself "
+                "requires explicit human approval before anything is stored."
+            ),
+        }
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            )
+        )
+
+    # -- create_arrangement_groups (REQ-GROUPGEN-028 write half — design.md ---
+    #    §6/§7/§10 policy (c)) --------------------------------------------------
+    #
+    # The ONE order this tool may run in (design.md §7.2), and none of it is
+    # negotiable:
+    #
+    #   build_group_write_plan(...)         # pure assembly (server/groupgen/write.py)
+    #     -> approval_port.request_approval  # the ONLY route to a console send
+    #       -> not approved -> SEND NOTHING, return the plan only (fail-closed)
+    #       -> approved -> fire via run_commands (gate/LiveLock/dedupe/audit inherited)
+    #         -> re-query slot existence + label (never membership — policy (c))
+    #
+    # [HARD] structural enforcement (design.md §7.2): there is no code path to
+    # `run_commands` below that does not pass through
+    # `group_approval.request_approval(...)` first and observe `True` — no
+    # argument short-circuits it, and `server/safety/**` stays byte-diff 0
+    # (Store Group/Label Group are classified "safe" there and would otherwise
+    # never see ANY approval stage). Deleting the approval check is a RED
+    # mutation, not a silent behavior change.
+
+    def create_arrangement_groups(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        groups_arg = call.arguments.get("groups")
+        if (
+            not isinstance(groups_arg, list)
+            or not groups_arg
+            or not all(
+                isinstance(entry, Mapping)
+                and isinstance(entry.get("name"), str)
+                and entry.get("name")
+                and isinstance(entry.get("fids"), list)
+                and entry.get("fids")
+                and all(
+                    isinstance(fid, int) and not isinstance(fid, bool)
+                    for fid in entry.get("fids", [])
+                )
+                for entry in groups_arg
+            )
+        ):
+            return _error_result(
+                call,
+                "'groups' must be a non-empty list of {'name': str, 'fids': "
+                "[int, ...]} entries — the groups to Store and Label",
+            )
+
+        groups_path = rig_paths.get("groups")
+        fixtures_path = rig_paths.get("fixtures")
+        if not groups_path or not fixtures_path:
+            return _error_result(
+                call,
+                "rig context has no 'groups'/'fixtures' path configured — a "
+                "group write needs both the group pool and the fixture "
+                "container to measure an empty slot",
+            )
+
+        buckets = {str(index): tuple(entry["fids"]) for index, entry in enumerate(groups_arg)}
+        names = {str(index): entry["name"] for index, entry in enumerate(groups_arg)}
+
+        sections, _resolved, _failed = collect_rig_sections(
+            state_port, {"groups": groups_path, "fixtures": fixtures_path}, frozenset(), 0
+        )
+        groups_section = sections["groups"]
+        fixtures_section = sections["fixtures"]
+
+        try:
+            plan = build_group_write_plan(
+                buckets=buckets,
+                names=names,
+                groups_section=groups_section,
+                fixtures_section=fixtures_section,
+            )
+        except GroupSlotError as error:
+            return _error_result(call, f"{error.code}: {error.message}")
+        except ValueError as error:
+            return _error_result(call, str(error))
+
+        all_commands = [command for step in plan.steps for command in step.commands]
+        # exec 큰따옴표 금지 계승 — write.py already refuses a double-quoted
+        # name (`_label_command`), so this is a static re-assertion over the
+        # assembled text on its way to the gate, not a belief about the
+        # builder that produced it (same shape as arrange_fixtures' own
+        # `arrange_scope_violations` seal).
+        assert all('"' not in command for command in all_commands)
+
+        def _plan_payload(**extra: object) -> dict[str, object]:
+            payload: dict[str, object] = {
+                "plan": [
+                    {
+                        "slot": step.slot,
+                        "name": step.name,
+                        "fids": list(step.fids),
+                        "commands": list(step.commands),
+                        "verification": list(step.verification),
+                    }
+                    for step in plan.steps
+                ],
+                # Policy (c), design.md §10 — a STRUCTURAL field, never prose:
+                # `unverified` always carries "membership" (write.py already
+                # guarantees this), so a caller cannot lose the caveat by
+                # skipping a docstring (함정 6).
+                "unverified": list(plan.unverified),
+                "unverified_reason": plan.unverified_reason,
+                "human_check_commands": list(plan.human_check_commands),
+            }
+            payload.update(extra)
+            return payload
+
+        approval_request = ApprovalRequest(
+            items=tuple(
+                ApprovalItem(
+                    command=command,
+                    risk_reasons=(
+                        "group write — membership cannot be re-verified after "
+                        "Store (grandMA3 exposes no membership read channel, "
+                        "progress.md §E.2.8)",
+                    ),
+                )
+                for command in all_commands
+            )
+        )
+        approved = group_approval.request_approval(approval_request)
+        if not approved:
+            # Fail-closed (design.md §7.2 ②③): approval withheld, unconfirmed
+            # or the port itself absent (DenyAllApprovalPort) all converge
+            # here — ZERO console sends, the plan demoted to a proposal.
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(
+                        _plan_payload(
+                            status="proposal",
+                            executed=False,
+                            notice=(
+                                "approval was not granted — nothing was sent to the "
+                                "console. Re-call with the same 'groups' once a human "
+                                "has approved the plan above."
+                            ),
+                        ),
+                        ensure_ascii=False,
+                    ),
+                    # A withheld approval is an ANSWER, not a failure (same
+                    # shape as arrange_fixtures' LiveLock demotion) — it must
+                    # not feed the self-correction loop back into re-asking
+                    # for the same approval.
+                    is_error=False,
+                )
+            )
+
+        execution = run_commands(
+            ToolCall(id=call.id, name="run_commands", arguments={"commands": all_commands}),
+            context,
+        )
+        gate_payload = json.loads(execution.result.content)
+        executed = not execution.result.is_error
+
+        if not executed:
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(
+                        _plan_payload(
+                            status="failed",
+                            executed=False,
+                            gate_status=gate_payload.get("gate_status"),
+                            notice=gate_payload.get("notice"),
+                            commands=gate_payload.get("commands", []),
+                            error=(
+                                "the group write bundle did not complete — see "
+                                "'commands' for the per-command gate/execution outcome"
+                            ),
+                        ),
+                        ensure_ascii=False,
+                    ),
+                    is_error=True,
+                ),
+                command_outcomes=execution.command_outcomes,
+            )
+
+        # Re-query evidence (design.md §10 policy (c) automated-verification
+        # layer): slot existence and the LABEL, never membership. `ok:true`
+        # from the write above is NOT evidence — only this re-query is.
+        verified_steps: list[dict[str, object]] = []
+        for step in plan.steps:
+            slot_path = f"{groups_path}/{step.slot}"
+            try:
+                snapshot = state_port.query_state(slot_path)
+                slot_exists = bool(snapshot)
+            except Exception:
+                slot_exists = False
+            name_verified: bool | None = None
+            if property_port is not None:
+                try:
+                    name_read = read_properties(property_port, slot_path, ("Name",))["Name"]
+                    name_verified = name_read.ok and str(name_read.value).strip() == step.name
+                except Exception:
+                    name_verified = False
+            verified_steps.append(
+                {
+                    "slot": step.slot,
+                    "name": step.name,
+                    "fids": list(step.fids),
+                    "slot_exists": slot_exists,
+                    "name_verified": name_verified,
+                }
+            )
+
+        succeeded = all(
+            entry["slot_exists"] and entry["name_verified"] is not False for entry in verified_steps
+        )
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(
+                    _plan_payload(
+                        status="created" if succeeded else "verification_failed",
+                        executed=True,
+                        succeeded=succeeded,
+                        verified_steps=verified_steps,
+                        commands=gate_payload.get("commands", []),
+                    ),
+                    ensure_ascii=False,
+                ),
+                is_error=not succeeded,
+            ),
+            command_outcomes=execution.command_outcomes,
+        )
+
     definitions = (
         ToolDefinition(
             name="run_commands",
@@ -4430,6 +4835,137 @@ def build_toolset(
                 "additionalProperties": False,
             },
         ),
+        ToolDefinition(
+            name="classify_arrangement_topology",
+            description=(
+                "Classify WHAT STRUCTURE the current rig's positions form "
+                "(rows, a left/right split, concentric rings, vertical "
+                "levels, a grid, or mirror-symmetric pairs) and propose GROUP "
+                "NAMES for it, plus fixture-type groups when you already have "
+                "them. Call this BEFORE create_arrangement_groups when the "
+                "operator wants position-based groups but has not named the "
+                "buckets themselves ('group these up by position', "
+                "'위치별로 그룹 만들어줘').\n"
+                "\n"
+                "READS ONLY — it sends no command and changes nothing. It "
+                "reads the same stage patch coordinates get_spatial_context "
+                "does; call get_spatial_context first if you also need the "
+                "raw coordinates or the row/'analysis' view.\n"
+                "\n"
+                "'topology.selected' is the ONE winning structure (or "
+                "kind:null with low_confidence:true when nothing was clear); "
+                "'topology.candidates' lists every hypothesis considered, for "
+                "audit. 'suggested_groups' is the actionable output: a list "
+                "of {'name', 'fids'} — pass a chosen subset straight through "
+                "as create_arrangement_groups's 'groups' argument. This is a "
+                "NAMING PROPOSAL ONLY; nothing is written until "
+                "create_arrangement_groups is called AND approved.\n"
+                "\n"
+                "Optionally pass 'fixture_type_records' — "
+                "{'fid','manufacturer','type_name'} entries you already read "
+                "off Patch/FixtureTypes — to also get species-axis groups "
+                "(named after the patch's own type/manufacturer string "
+                "verbatim, never a guessed category like 'Spot' or 'Wash'). "
+                "Omit it and 'fixture_types' comes back null — this tool "
+                "does not read fixture types itself."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "fixture_type_records": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "fid": {"type": "integer"},
+                                "manufacturer": {"type": "string"},
+                                "type_name": {"type": "string"},
+                                "short_name": {"type": "string"},
+                            },
+                            "required": ["fid", "manufacturer", "type_name"],
+                        },
+                        "description": (
+                            "Optional. Already-read patch structured fields per "
+                            "fixture — adds a species/manufacturer axis to "
+                            "'suggested_groups'. Omit to skip it."
+                        ),
+                    },
+                },
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="create_arrangement_groups",
+            description=(
+                "STORE named position/type groups into the showfile: "
+                "Store Group + Label Group for each entry in 'groups'. This "
+                "CHANGES THE SHOWFILE — call it only when the operator "
+                "explicitly asked for groups to be created, typically after "
+                "classify_arrangement_topology proposed names.\n"
+                "\n"
+                "Every write here requires EXPLICIT HUMAN APPROVAL before "
+                "anything reaches the console — Store Group/Label Group are "
+                "NOT flagged risky by the safety gate on their own "
+                "(server/safety/** is unchanged by this tool), so this tool "
+                "enforces its own approval step. If approval is withheld, "
+                "unavailable or unconfirmed, NOTHING is sent — the reply "
+                "carries 'status':'proposal' and the plan only, and calling "
+                "again with the same 'groups' after a human approves is how "
+                "you proceed. Never claim a group was created because this "
+                "call returned without an error; check 'status'.\n"
+                "\n"
+                "Targets are ALWAYS empty slots, measured fresh from the "
+                "group pool — an occupied slot is never targeted, silently "
+                "skipped or overwritten. A truncated group pool or fixture "
+                "list refuses the whole call with a structured error rather "
+                "than guessing.\n"
+                "\n"
+                "'unverified' ALWAYS lists 'membership': grandMA3 exposes no "
+                "channel to read back which fixtures actually landed in a "
+                "group, so that fact is never verified and never silently "
+                "assumed true. What IS verified (after a successful write, "
+                "under 'verified_steps'): the slot exists and its label "
+                "reads back correctly. 'human_check_commands' gives you a "
+                "'Group <n>' line per group so the operator can confirm the "
+                "arrangement by eye on stage — that is the only way "
+                "membership is ever actually confirmed."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": (
+                                        "The group's label. Typically taken "
+                                        "verbatim from classify_arrangement_"
+                                        "topology's 'suggested_groups', or the "
+                                        "operator's own words."
+                                    ),
+                                },
+                                "fids": {
+                                    "type": "array",
+                                    "items": {"type": "integer"},
+                                    "description": "The fixture ids this group holds.",
+                                },
+                            },
+                            "required": ["name", "fids"],
+                        },
+                        "description": (
+                            "The groups to Store and Label, in order. Each "
+                            "one becomes exactly one showfile group at a "
+                            "freshly-measured empty slot."
+                        ),
+                    },
+                },
+                "required": ["groups"],
+                "additionalProperties": False,
+            },
+        ),
     )
     handlers: dict[str, _Handler] = {
         "run_commands": run_commands,
@@ -4452,5 +4988,7 @@ def build_toolset(
         "plan_executor_layout": plan_executor_layout,
         "get_spatial_context": get_spatial_context,
         "arrange_fixtures": arrange_fixtures,
+        "classify_arrangement_topology": classify_arrangement_topology,
+        "create_arrangement_groups": create_arrangement_groups,
     }
     return ToolRegistry(definitions, handlers)

@@ -24,8 +24,13 @@ from server.spatial import naming
 # ---------------------------------------------------------------------------
 
 TopologyKind = Literal[
-    "depth_rows", "lateral_split", "concentric",
-    "vertical_levels", "grid", "bilateral_pairs", None,
+    "depth_rows",
+    "lateral_split",
+    "concentric",
+    "vertical_levels",
+    "grid",
+    "bilateral_pairs",
+    None,
 ]
 
 
@@ -213,9 +218,15 @@ def test_vertical_fallback_orders_up_to_down():
 
 def test_grid_9cell_vocab_is_defined_as_closed_set():
     assert naming.GRID_9CELL_VOCAB == (
-        "DSR", "DSC", "DSL",
-        "CSR", "CS", "CSL",
-        "USR", "USC", "USL",
+        "DSR",
+        "DSC",
+        "DSL",
+        "CSR",
+        "CS",
+        "CSL",
+        "USR",
+        "USC",
+        "USL",
     )
 
 
@@ -233,7 +244,8 @@ def test_name_grid_9cell_is_unreachable_from_any_other_public_function():
     module_source_by_function = {
         fn_name: inspect.getsource(fn)
         for fn_name, fn in vars(naming).items()
-        if inspect.isfunction(fn) and fn.__module__ == naming.__name__
+        if inspect.isfunction(fn)
+        and fn.__module__ == naming.__name__
         and fn_name != "name_grid_9cell"
     }
     for fn_name, source in module_source_by_function.items():
@@ -335,10 +347,9 @@ _RIGGING_HARDWARE_TOKENS = ("Boom", "FOH", "Ladder", "Torm")
 
 def _assert_is_closed_set_or_fallback(produced: str) -> None:
     assert produced.startswith(naming.GEO_PREFIX), f"{produced!r} missing GEO prefix"
-    body = produced[len(naming.GEO_PREFIX):]
+    body = produced[len(naming.GEO_PREFIX) :]
     assert body in _CLOSED_SET or _FALLBACK_RE.match(body), (
-        f"{produced!r} is neither a closed-vocabulary element nor a documented "
-        "numbered fallback"
+        f"{produced!r} is neither a closed-vocabulary element nor a documented numbered fallback"
     )
 
 
