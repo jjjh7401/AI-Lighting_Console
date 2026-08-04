@@ -28,9 +28,12 @@ the failure mode a one-off manual gate leaves open.
 
 from __future__ import annotations
 
+import ast
 import re
 import subprocess
 from pathlib import Path
+
+import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -272,14 +275,31 @@ class TestPreserveDiffIsEmpty:
         command = _preserve_diff_command()
         assert command[:4] == ["git", "diff", "--stat", f"{_PRECHK_BASE}..HEAD"]
         assert command[4] == "--"
-        # Both granted extensions are swapped out of the directory sweep and
-        # re-entered as the narrower thing that IS still locked: the looks
-        # library by its own exact-text gate, the rulebook by its five named
-        # existing assets.
+        # An INDEPENDENT literal, not a recomputation of the filter the
+        # command already applies: restating the expression makes the two
+        # sides move together, so retargeting an exemption constant would
+        # leave this assertion green while pointing the diagnosis at the
+        # grant instead of the path set.
         assert tuple(command[5:]) == (
-            *(path for path in _PRESERVE_PATHS if path not in (_LOOKS_LIBRARY_DIR, _RULEBOOK_DIR)),
-            *_RULEBOOK_LOCKED_ASSETS,
+            "server/looks/schema.py",
+            "server/looks/loader.py",
+            "server/looks/roles.py",
+            "server/looks/resolver.py",
+            "server/looks/instantiate.py",
+            "server/looks/matching.py",
+            "server/web/preview.py",
+            "console/lua/",
+            "server/rulebook/assets/v2.4.2/00_grammar.md",
+            "server/rulebook/assets/v2.4.2/10_object_model.md",
+            "server/rulebook/assets/v2.4.2/20_korean_terms.md",
+            "server/rulebook/assets/v2.4.2/30_plugin_patterns.md",
+            "server/rulebook/assets/v2.4.2/31_choreography_patterns.md",
         )
+        # Exactly TWO directory sweeps are swapped out, and they are the
+        # granted ones — each re-entered as the narrower thing that IS still
+        # locked: the looks library by its own exact-text gate, the rulebook
+        # by its five named existing assets.
+        assert set(_PRESERVE_PATHS) - set(command[5:]) == {_LOOKS_LIBRARY_DIR, _RULEBOOK_DIR}
         # The swap must not silently drop the rulebook from the gate entirely.
         assert _RULEBOOK_DIR not in command
         assert all(asset in command for asset in _RULEBOOK_LOCKED_ASSETS)
@@ -295,6 +315,66 @@ class TestPreserveDiffIsEmpty:
     def test_the_same_command_detects_a_change_elsewhere(self):
         # Non-vacuity for the emptiness above: the command shape CAN report.
         assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", "server/prechk/") != ""
+
+    def test_each_exemption_is_locked_by_a_replacement_gate_that_still_exists(self):
+        """A directory dropped from the sweep above is only safe while its
+        replacement lock exists. Delete the looks class and this module was
+        still GREEN — the exemption stayed, the gate did not. Both grants are
+        pinned here, because both opened the same hole.
+
+        Asserted through the AST, NOT through a substring search. A text
+        assertion is self-satisfying here: the very line
+        `assert "class TestLooksLibraryGrantedExtension:" in source` contains
+        the string it looks for, so the guard passed with the class deleted.
+        Measured, on the way to this version.
+        """
+        module = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+        classes = {node.name: node for node in module.body if isinstance(node, ast.ClassDef)}
+        required = {
+            "TestLooksLibraryGrantedExtension": {
+                "test_the_grant_is_not_an_empty_exemption",
+                "test_exactly_the_three_granted_files_changed",
+                "test_every_change_is_a_granted_line_pair_and_every_pair_is_present",
+                "test_the_grant_really_is_the_blue_mirror_and_nothing_broader",
+            },
+            "TestRulebookGrantedAddition": {
+                "test_the_five_existing_assets_are_the_locked_set",
+                "test_the_only_rulebook_change_is_the_granted_addition",
+                "test_the_grant_removes_nothing",
+                "test_the_locked_assets_are_byte_identical",
+            },
+        }
+        for name, expected in required.items():
+            assert name in classes, name
+            methods = {
+                child.name for child in classes[name].body if isinstance(child, ast.FunctionDef)
+            }
+            assert expected <= methods, name
+
+    def test_the_ast_lock_can_tell_a_missing_class_from_a_present_one(self):
+        # Non-vacuity for the lock above, and the exact property the text
+        # version lacked: parsing a source that merely MENTIONS the name must
+        # not satisfy it.
+        mentions_only = ast.parse(
+            'x = "class TestLooksLibraryGrantedExtension:"\n'
+            'y = "def test_the_grant_is_not_an_empty_exemption"\n'
+        )
+        names = {n.name for n in mentions_only.body if isinstance(n, ast.ClassDef)}
+        assert "TestLooksLibraryGrantedExtension" not in names
+
+    @pytest.mark.parametrize("granted", [_LOOKS_LIBRARY_DIR, _RULEBOOK_DIR])
+    def test_no_granted_path_changed_mode_only(self, granted):
+        # `--numstat` counts lines and `--unified=0` lists them, so a commit
+        # that only flips the mode bit shows up in NEITHER — the grant classes
+        # enumerate content ("an extra file, an extra hunk, or a different
+        # wording") and mode is outside that list. `--summary` names it.
+        summary = _git("diff", "--summary", f"{_PRECHK_BASE}..HEAD", "--", granted)
+        assert "mode change" not in summary
+
+    def test_the_mode_probe_can_see_a_mode_line(self):
+        # Non-vacuity: `--summary` really is the surface that reports modes.
+        # Any create/delete/mode line proves the flag is not inert here.
+        assert "create mode" in _git("diff", "--summary", f"{_PRECHK_BASE}..HEAD")
 
 
 class TestRulebookGrantedAddition:
