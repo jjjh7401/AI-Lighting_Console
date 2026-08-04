@@ -1,6 +1,6 @@
 # SPEC-COPILOT-GROUPGEN-001 — 진행 기록 (progress)
 
-status: **run-phase M0~M6 완료 · M6 사람 관측 GO** · 게이트 B GO · 게이트 A NEGATIVE(정책 (c) 라이브 검증) · 그룹 축 쇼파일 순변화 **0**(정리 완료) · 잔여 SKIP 2건(타입 축 라이브 · Gemini 턴)
+status: **run-phase M0~M6 완료 + amendment v0.4.0 완료 · 잔여 SKIP 0건** · 타입 축 라이브 GO(ASSUMPTION-67 종결, 결함 2건 소인) · Gemini 턴 GO(모델이 툴 선택 · 폐쇄 어휘 준수 · coverage 공시 도달 · 쓰기 0) · 그룹 축 쇼파일 순변화 **0**
 
 ## §0 인수인계 — 여기서 시작한다 (2026-08-03 작성)
 
@@ -634,3 +634,61 @@ M0~M6 전 구간에서 라이브가 잡은 것 중 **단위 테스트로는 원�
    0이다(§E.2.9.4). AC-SPATIAL-031 `[DEFERRED]`의 라이브 재현. SPATIAL 후속 SPEC 소관.
 3. **`corpus.yaml` 큰따옴표 미노출 결함** — `group_create`가 `Label Group 3 "Vocal"`을 쓰는데
    `protocol.py:109`가 이 형태를 거부한다(mock 전용 코퍼스라 실행 경로에 미노출된 기존 잠재 결함).
+
+## §E.5 amendment v0.4.0 — 잔여 SKIP 2건 종결 (2026-08-04)
+
+`975d7b0`에서 `status: completed`였던 SPEC을 **in-place amendment**로 열어(`completed -> in-progress`,
+`amendment_of` 자기참조, HISTORY `## Amendments`) 남은 두 SKIP을 라이브로 닫았다.
+
+### §E.5.1 SKIP 1 — 타입 축 라이브 검증 → **GO** (ASSUMPTION-67 종결)
+
+라이브 리그가 이질(異質)이라 타입 축이 실제로 분할된다는 것이 처음으로 실측됐다.
+
+| 항목 | 실측 |
+|---|---|
+| 리그 규모 | 39대 (`fid 1..19` Robin MMX Spot · `fid 20..39` Robin LEDBeam 350) |
+| `type_name` 축 | **2개로 분할** → `Robin MMX Spot`(19대) · `Robin LEDBeam 350`(20대) |
+| `manufacturer` 축 | 분할 **없음** — 전부 `Robe` |
+| 2-hop 경로 | `Fixtures/<n> fixturetype` → `FixtureType <k>` → `Patch/FixtureTypes/<k>` (`ShortName` = `RLB350M1 n`) |
+
+이 실측이 **결함 2건**을 드러냈고, 둘 다 amendment로 소인했다(`server/spatial/fixture_type.py`):
+
+1. **축별 침묵 영성(silent per-axis zero)** — `_groups_for_axis`가 분할 없는 축에서 빈 튜플을 조용히
+   반환했다. `manufacturer`가 균일해서 사라진 것인지 읽기가 실패한 것인지 호출자가 구분할 수 없었다.
+   → `FixtureTypeAxisReport` 신설. `FIXTURE_TYPE_AXES`의 **모든** 축이 매 호출마다 명시적으로 보고된다
+   (`uniform_across_rig` / `all_values_unreadable`). 침묵하는 축은 이제 없다.
+2. **전체-호출 raise가 부분 결손을 삼킴** — 장비 1대의 구조 필드가 빈 문자열이면 `FixtureTypeAnalysisError`가
+   호출 전체를 죽였다. 읽을 수 있는 38대의 타입 축이 1대 때문에 통째로 사라졌다.
+   → **항목별 강등**으로 변경. `FixtureTypeUnreadable` 목록으로 빠지고 나머지 축 참여는 유지된다
+   (`fid 11`의 `manufacturer`가 비어도 `type_name` 축에는 정상 참여함을 검증). 키 누락·타입 오류는 여전히 raise.
+
+### §E.5.2 SKIP 2 — 실제 Gemini 턴 → **GO** (모델이 툴을 고른다)
+
+앱 기동(`--receive-port 9005`) 후 `/ws`로 한국어 지시 **1건**을 넣었다: *"지금 배치에 맞게 그룹 잡아줘"*.
+승인 카드는 **거부**해서 쓰기 경로를 막고, 모델이 무엇을 고르는지만 관측했다.
+
+| 관측 | 증거 (감사 로그 + 응답 본문) |
+|---|---|
+| 모델이 위상 분류 툴을 **선택** | `05:59:53~58` `property_query` **72건** — `Patch/Stages/1/Fixtures/{1..18}` 의 `fid/posx/posy/posz`. `classify_arrangement_topology`의 `read_spatial_fixtures` 서명 그대로 |
+| 슬롯 실측도 실행 | `06:00:02` · `06:00:37` `state_query DataPool/Groups` (`state_query` = 읽기) |
+| **폐쇄 어휘를 그대로 사용** | 응답이 `GEO Inner` / `GEO Outer`를 씀. 창작 이름 **0건** |
+| **coverage 공시가 사용자에게 도달** | *"전체 패치에는 39대의 장비가 존재하지만, 나머지 21대(Robin MMX Spot 등)는 … 이번 공간 배치 분석에서 제외되었습니다"* — `coverage{judged:18, of:39}` + `topology_partial`이 자연어로 전달됐다 |
+| 위상 판정 일치 | 모델이 *"동심원(Concentric Rings) 형태 … 18대(FIDs 20~37)"* 로 보고. 반지름 약 2m / 약 6m 까지 정확 |
+| **쓰기 0건** | 턴 창 내 `Store|Label Group` **0건** · `commands: []` · 모델이 승인 요청에서 멈췄다. 턴 후 풀 = `{1,11,12,13,15}` (기준선 동일, 슬롯 2·3 비어 있음) |
+
+기존 감사 로그의 `Store/Label Group` 4건은 `04:26:21` — §E.2.8 하네스 실행분이며 이 턴과 무관하다.
+`ws_handshake_rejected` 1건은 첫 시도에서 `Origin` 헤더를 빼서 게이트가 정상 거부한 것(감사됨).
+
+#### §E.5.2a ⚠ 이 턴에서 새로 드러난 조종 위험 (범위 밖 · 기록만)
+
+모델은 승인을 청하면서 **원시 명령 체인을 산문으로 적었다** —
+`ChangeDestination Root / ClearAll / Fixture 20 + Fixture 21 + … / Store Group 2 / Label Group 2 'GEO Inner'`.
+사용자가 *"진행해줘"* 라고 답할 때 모델이 `create_arrangement_groups`를 부르지 않고 그 체인을
+`run_commands`로 흘려보낼 경로가 열려 있다. 그러면 우리 툴의 **슬롯 재실측 · 멤버십 재조회 · coverage 공시**가
+전부 우회된다. 툴 설명(description)의 조종 문제이며 코드 결함은 아니다 — 다음 SPEC 후보.
+
+### §E.5.3 검증
+
+- `pytest` **4682 passed · 7 skipped · 0 failed** (amendment 전 4676 → +6)
+- `server/safety/**` · `server/rulebook/**` byte-diff **0** (PRESERVE 유지)
+- 콘솔 그룹 축 순변화 **0** — 턴 전후 풀 동일

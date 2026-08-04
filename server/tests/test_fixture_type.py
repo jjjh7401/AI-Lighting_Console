@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from server.spatial.fixture_type import (
+    FIXTURE_TYPE_AXES,
     FixtureTypeAnalysisError,
     FixtureTypeRecord,
     analyze_fixture_type_records,
@@ -54,9 +55,14 @@ def test_missing_type_name_refused() -> None:
         fixture_type_record_from_record({"fid": 1, "manufacturer": "Robe"})
 
 
-def test_empty_string_field_refused() -> None:
-    with pytest.raises(FixtureTypeAnalysisError):
-        fixture_type_record_from_record({"fid": 1, "manufacturer": "", "type_name": "X"})
+def test_empty_string_field_parses_without_raising() -> None:
+    # SPEC amendment v0.4.0, defect 2: an empty structured field is real MA3
+    # data (Patch/FixtureTypes/2 Manufacturer == '' on the live console, a
+    # generic MA3 type) and must NOT raise at parse time. Per-axis exclusion
+    # happens downstream in analyze_fixture_types, not here.
+    fixture = fixture_type_record_from_record({"fid": 1, "manufacturer": "", "type_name": "X"})
+    assert fixture.manufacturer == ""
+    assert fixture.type_name == "X"
 
 
 def test_non_string_manufacturer_refused() -> None:
@@ -231,7 +237,127 @@ def test_analysis_to_dict_homogeneous_shape() -> None:
         "fixture_count": 1,
         "reason": "homogeneous_rig",
         "type_axis_groups": [],
+        "axis_reports": [
+            {
+                "axis": "type_name",
+                "distinct_value_count": 1,
+                "split": False,
+                "reason": "uniform_across_rig",
+            },
+            {
+                "axis": "manufacturer",
+                "distinct_value_count": 1,
+                "split": False,
+                "reason": "uniform_across_rig",
+            },
+        ],
+        "unreadable": [],
     }
+
+
+# ---------------------------------------------------------------------------
+# SPEC amendment v0.4.0, defect 1 — axis-level output is never silent
+# ---------------------------------------------------------------------------
+
+
+def test_every_axis_appears_in_axis_reports_even_when_it_did_not_split() -> None:
+    # Live-shape golden (amendment rationale): fid 1..19 Robin MMX Spot,
+    # fid 20..39 Robin LEDBeam 350, manufacturer 'Robe' throughout — 39
+    # fixtures. type_name splits into 2 groups; manufacturer does not split
+    # at all, and that must be an EXPLICIT report, not a missing one.
+    fixtures = tuple(
+        FixtureTypeRecord(fid=fid, manufacturer="Robe", type_name="Robin MMX Spot")
+        for fid in range(1, 20)
+    ) + tuple(
+        FixtureTypeRecord(fid=fid, manufacturer="Robe", type_name="Robin LEDBeam 350")
+        for fid in range(20, 40)
+    )
+    analysis = analyze_fixture_types(fixtures)
+    assert analysis.reason is None
+    assert analysis.fixture_count == 39
+
+    axes_reported = {r.axis for r in analysis.axis_reports}
+    assert axes_reported == set(FIXTURE_TYPE_AXES)
+
+    by_axis = {r.axis: r for r in analysis.axis_reports}
+    assert by_axis["type_name"].split is True
+    assert by_axis["type_name"].distinct_value_count == 2
+    assert by_axis["type_name"].reason is None
+
+    assert by_axis["manufacturer"].split is False
+    assert by_axis["manufacturer"].distinct_value_count == 1
+    assert by_axis["manufacturer"].reason == "uniform_across_rig"
+
+    type_name_groups = {g.value: g.fids for g in analysis.type_axis_groups if g.axis == "type_name"}
+    assert type_name_groups == {
+        "Robin MMX Spot": tuple(range(1, 20)),
+        "Robin LEDBeam 350": tuple(range(20, 40)),
+    }
+    manufacturer_groups = [g for g in analysis.type_axis_groups if g.axis == "manufacturer"]
+    assert manufacturer_groups == []
+
+
+def test_mutation_removing_axis_reports_field_breaks_non_vacuity_assertion() -> None:
+    # Mutation-required guard (task Acceptance (a)): if axis_reports ever
+    # goes back to being dropped/empty, this assertion catches it RED.
+    fixtures = (
+        FixtureTypeRecord(fid=1, manufacturer="Robe", type_name="Robin MMX Spot"),
+        FixtureTypeRecord(fid=2, manufacturer="Robe", type_name="Robin MMX Spot"),
+    )
+    analysis = analyze_fixture_types(fixtures)
+    assert len(analysis.axis_reports) == len(FIXTURE_TYPE_AXES)
+    assert all(r.axis in FIXTURE_TYPE_AXES for r in analysis.axis_reports)
+
+
+# ---------------------------------------------------------------------------
+# SPEC amendment v0.4.0, defect 2 — empty structured field demotes per-item
+# ---------------------------------------------------------------------------
+
+
+def test_empty_manufacturer_excluded_from_manufacturer_axis_but_not_type_name() -> None:
+    # Live MA3 shape (task rationale): Patch/FixtureTypes/2 Manufacturer ==
+    # '' (a generic MA3 type). Must not raise; must be excluded ONLY from
+    # the manufacturer axis, and must still participate in type_name.
+    fixtures = (
+        FixtureTypeRecord(fid=1, manufacturer="Robe", type_name="Robin MMX Spot"),
+        FixtureTypeRecord(fid=11, manufacturer="", type_name="FixtureType 2"),
+    )
+    analysis = analyze_fixture_types(fixtures)
+    assert analysis.reason is None  # type_name still divides -> not homogeneous
+
+    unreadable_fids = {(u.fid, u.axis) for u in analysis.unreadable}
+    assert (11, "manufacturer") in unreadable_fids
+    assert (11, "type_name") not in unreadable_fids
+
+    type_name_groups = {g.value: g.fids for g in analysis.type_axis_groups if g.axis == "type_name"}
+    assert type_name_groups["FixtureType 2"] == (11,)
+
+    manufacturer_groups = [g for g in analysis.type_axis_groups if g.axis == "manufacturer"]
+    assert manufacturer_groups == []  # only 'Robe' remains readable -> uniform, not split
+
+
+def test_analyze_fixture_type_records_end_to_end_tolerates_empty_manufacturer() -> None:
+    # End-to-end record path with the live MA3 shape mixed in — must not
+    # raise via analyze_fixture_type_records either.
+    records = [
+        {"fid": 1, "manufacturer": "Robe", "type_name": "Robin MMX Spot"},
+        {"fid": 11, "manufacturer": "", "type_name": "FixtureType 2"},
+    ]
+    analysis = analyze_fixture_type_records(records)
+    assert analysis.fixture_count == 2
+    assert any(u.fid == 11 and u.axis == "manufacturer" for u in analysis.unreadable)
+
+
+def test_missing_field_still_raises_not_demoted() -> None:
+    # Field ABSENCE (as opposed to empty-string presence) remains a caller
+    # contract violation — the relaxation must not bleed into this case.
+    with pytest.raises(FixtureTypeAnalysisError):
+        analyze_fixture_type_records([{"fid": 1, "type_name": "Robin MMX Spot"}])
+
+
+def test_wrong_type_field_still_raises_not_demoted() -> None:
+    with pytest.raises(FixtureTypeAnalysisError):
+        analyze_fixture_type_records([{"fid": 1, "manufacturer": 5, "type_name": "Robin MMX Spot"}])
 
 
 # ---------------------------------------------------------------------------
