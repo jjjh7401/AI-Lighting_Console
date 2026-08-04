@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-GROUPGEN-001
 title: "배치 인식 그룹 생성 — 위상 분류(topology) + 장비 종류 분류 (Arrangement-Aware Group Generation)"
-version: "0.3.0"
+version: "0.4.0"
 status: completed
 created: 2026-08-03
 updated: 2026-08-04
@@ -12,6 +12,7 @@ module: "server/spatial/topology.py (신규), server/spatial/naming.py (신규),
 lifecycle: spec-anchored
 tags: "group, topology, classification, downstage-upstage, stage-left-right, concentric, fixture-type, gdtf, store-group, membership-readback, industry-terminology"
 tier: L
+amendment_of: SPEC-COPILOT-GROUPGEN-001
 related_specs: [SPEC-COPILOT-SPATIAL-001, SPEC-COPILOT-SCENE-001, SPEC-COPILOT-LOOKLIB-001, SPEC-COPILOT-FXLIB-001, SPEC-COPILOT-OVERLAP-001]
 ---
 
@@ -30,8 +31,18 @@ related_specs: [SPEC-COPILOT-SPATIAL-001, SPEC-COPILOT-SCENE-001, SPEC-COPILOT-L
 
 ## HISTORY
 
+### Amendments
+
+| 항목 | 값 |
+|---|---|
+| prior completed version | 0.3.0 |
+| prior_completed_sha | 975d7b0 |
+| rationale | W8 인플레이스(타입 축 결함 소인) — (1) 축별 조용한 0: 리그가 이종(fid 1~19 `Robin MMX Spot` / 20~39 `Robin LEDBeam 350`, 제조사 전부 `Robe`)일 때 `manufacturer` 축이 아무것도 내지 않는데 그 사실이 반환 구조에 명시되지 않았다 — `_groups_for_axis`가 `len(values) <= 1`이면 `()`만 돌려주어, "이 축은 검토했으나 균일했다"와 "이 축은 애초에 안 봤다"를 독자가 구별할 수 없었다(REQ-030의 "조용한 0 금지" 규율이 축 단위에는 없었음). (2) 빈 제조사가 전체 호출을 죽인다: `_field`가 빈 문자열에 `FixtureTypeAnalysisError`를 raise했는데, 라이브 콘솔의 `Patch/FixtureTypes/2`는 `Manufacturer`가 정확히 `''`(MA3 제네릭 타입)이다 — 현재는 그 타입을 쓰는 픽스처가 0대라 안 밟혔지만 패치 한 번이면 타입 축 전체가 터진다. 두 결함 모두 M6 라이브 실측(이종 리그 39대, `type_name` 2그룹·`reason: null`)이 드러냈다. 동시에 ASSUMPTION-67(카테고리 토큰 매칭의 실효성)을 `SKIP: CONDITION_NOT_MET`에서 라이브 GO로 종결한다 — 축이 v1에 없다는 전제가 아니라, 실제 이종 리그가 관측되어 `type_name`/`manufacturer` 구조화 축(REQ-009, 카테고리 축이 아님)의 비공허성이 실측 확인됐기 때문이다. |
+| scope | `server/spatial/fixture_type.py` + `server/tests/test_fixture_type.py` + `acceptance.md`(AC-GROUPGEN-043 이상 신설) 한정. `server/safety/**` · `server/rulebook/**` · `server/spatial/{topology,naming}.py` · `server/groupgen/**` 무접촉(byte-diff 0). |
+
 | version | date | 변경 |
 |---|---|---|
+| 0.4.0 | 2026-08-04 | in-place amendment(W8) — `fixture_type.py` 축별 조용한 0 결함 소인(`FixtureTypeAxisReport` 신설, `FIXTURE_TYPE_AXES`의 모든 축이 매 호출 보고에 등장) + 빈 구조화 필드 항목별 강등(`FixtureTypeUnreadable`, raise 대신 해당 축에서만 제외) + ASSUMPTION-67 라이브 GO 종결(§C.2). 위 `## Amendments` 참조. |
 | 0.3.0 | 2026-08-04 | M0 라이브 실측 반영 + 게이트 A 정책 (c) 채택(사용자 승인). REQ-023을 "재조회 검증" 요구에서 "검증 가능분 요구 + 미검증 명시 요구"로 개정. REQ-022 근거를 "조용한 덮어쓰기"에서 "조작자 의존 + 모달 위험" 실측으로 교체. §C.1 멤버십 행을 NO(플랫폼 미노출)로 확정. §C.3에 모달 위험 항목(9) 추가. §C.2 ASSUMPTION 61~67에 M0 근거 부기. §D에 "멤버십 검증" 제외 항목 신설(73/101 미확인 천장 포함) |
 | 0.2.0 | 2026-08-04 | `.plan-contract.md` 반영 — 사용자 승인 결정 4건(D-Q3 접두 `"GEO "` · D-Q4 `server/safety/**` 정식 게이트 · D-Q9/Q11 종류 축 보수 채택) + coordinator 증거 확정 6건(D-Q2 위상 경합 축별분리 · D-Q5 트리거 별도툴 · D-Q6 절단 거부 · D-Q7 룰북 미신설 · D-Q10 bilateral_pairs 신호만 · D-Q12 명칭 축 제안만)을 REQ/제외범위에 전개. REQ-010·011·012·027을 §D로 이관(결번 유지), ASSUMPTION-67 SKIP |
 | 0.1.0 | 2026-08-03 | 초안. `research.md` v0.5.0(요구 정정 · 업계 표준 어휘 · 세분화 축 6개 · 장비 종류·명칭 실측)과 `plan.md` v0.1.0(M0~M6 · 게이트 A~D)을 REQ로 전개. ASSUMPTION 61~67 배정 |
@@ -297,10 +308,16 @@ gate without approval (non-risky verbs only)"*를 불변식으로 선언하고, 
   `Store Group 14`·`Label Group 14 '…'` 전부 `category: safe`·`risky: False`. 블랙리스트 v1에
   `Store Group`(무플래그)은 **없다** — REQ-GROUPGEN-031(툴 계층 승인 강제 — v0.3.0 개정)이 이 실측 결함을
   선제 차단한다.
-- **ASSUMPTION-67 (카테고리 토큰 매칭의 실효성)** — **`SKIP`(M0 §E.2.1 재확인)** —
-  `CONDITION_NOT_MET`(v0.2.0 D-Q9 확정) — 카테고리 축 자체가 v1 범위에 없으므로 검증 대상이 아니다.
-  원문: 실제 이종 리그의 타입명이 폐쇄 어휘로 판정 가능한가. **우리 리그로는 검증 불가**(타입 1종) —
-  카테고리 축이 복원되면 합성 golden + 별도 리그로 재평가한다.
+- **ASSUMPTION-67 (카테고리 토큰 매칭의 실효성)** — **GO 확정(v0.4.0, W8 M6 라이브 실측)** —
+  원문은 "실제 이종 리그의 타입명이 폐쇄 어휘로 판정 가능한가"였으나, 카테고리 축(REQ-010/011/012/027)
+  자체는 여전히 §D로 이관된 채 v1 범위 밖이다 — 이 GO가 종결하는 것은 **구조화 종류 축(REQ-009,
+  `type_name`/`manufacturer`)의 이종 리그 비공허성**이다. 리그가 실제로 이종이 됐다(실측):
+  fid 1~19 = `Robe`/`Robin MMX Spot`, fid 20~39 = `Robe`/`Robin LEDBeam 350`. `type_axis_groups`가
+  `type_name` 축에서 **2그룹**으로 갈렸고 `reason: null`·`fixture_count: 39`(라이브 M6, W8). 종전
+  `SKIP: CONDITION_NOT_MET`(v0.2.0 D-Q9)은 "우리 리그는 타입 1종이라 검증 불가"였던 전제이며, 그
+  전제가 무너졌으므로 SKIP을 유지할 근거가 없다. 카테고리 토큰 매칭 자체의 복원은 여전히 §D의
+  선결 조건(합성 이종 리그 golden + 사용자 오분류 허용 오차 승인)을 요구한다 — 이 GO는 그 선결
+  조건을 충족시키지 않는다.
 
 ### C.3 상속 제약 (선행 SPEC·조사 실측 — 재발 방지)
 
@@ -364,7 +381,9 @@ REQ-GROUPGEN-012(`Blinder` 분리) · REQ-GROUPGEN-027(위상×종류 교차 폭
 - **REQ-GROUPGEN-027 복원 선결 조건**: 위상×종류 교차는 v1에서 미구현이다(D-Q9) — 교차를 만들지
   않으므로 상한 기계도 필요 없다. 복원하려면 종류 축(REQ-010/011)이 먼저 복원되어야 하고, 빈 슬롯
   경제(`2~10·14·16+`)를 감안한 교차 상한 정책이 별도로 확정되어야 한다.
-- `ASSUMPTION-67`은 `SKIP: CONDITION_NOT_MET`(§C.2) — 축이 v1에 없다.
+- `ASSUMPTION-67`은 **GO 확정**(§C.2, v0.4.0) — 구조화 종류 축(`type_name`/`manufacturer`)의 이종
+  리그 비공허성이 라이브 실측됐다. 카테고리 토큰 매칭(REQ-010/011/012/027) 자체는 이 GO와 무관하게
+  여전히 v1 범위 밖이며, 이 절의 복원 선결 조건(합성 golden + 오분류 허용 오차 승인)도 그대로다.
 
 ### Out of Scope — 9칸 복합 위상 명명 미발화 (D-Q2)
 
