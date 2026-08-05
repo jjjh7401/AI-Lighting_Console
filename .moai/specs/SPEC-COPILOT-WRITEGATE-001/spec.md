@@ -62,13 +62,14 @@ SPATIAL run-phase가 `blacklist.yaml` v1→v2에 `"Set Fixture"`를 넣어 **기
 - **REQ-WRITEGATE-002** [Event-driven] — **When** 픽스처 패치 쓰기 커맨드가 게이트 스크리닝에 들어가면, the 게이트 **shall** 이를 `risky=True`로 분류하고 (a) 승인 카드를 띄우며 (b) showfile 백업 규칙 ③ `before_risky_execution()`을 발동한다. 승인 거부 시 콘솔 송신은 **0건**이다.
 - **REQ-WRITEGATE-003** [Unwanted] — the 본 SPEC **shall not** 게이트 밖에 새로운 승인 창구를 만든다 — 툴 계층 승인 seam 신설, `screen()`에 호출자측 risky 선언 인자 추가, 제2 분류기 도입은 모두 금지된다. 분류는 `classify_command` **단일 함수** 안에서 성립한다(`classify.py:169-172` @MX:ANCHOR · `AC-EXECBODY-009`).
 - **REQ-WRITEGATE-004** [Ubiquitous] — the 분류 **shall** 발화 주체와 무관하게 동일하다: 조립기가 만든 번들이든 모델이 `run_commands`에 손으로 쓴 줄이든, 같은 문면은 같은 판정을 받는다.
-- **REQ-WRITEGATE-005** [Event-driven] — **When** 패치 쓰기가 매크로 본문 또는 배포 대상 Lua 소스에 담겨 간접적으로 도달하면, the 시스템 **shall** 각각 expand-or-hold(`expand.py:110-112`)와 배포 스캔(`deploy/scan.py:138-146`)에서 **수정 없이** 이를 잡는다 — 그러므로 분류는 기존 `category` 값을 유지하며 신규 category 값을 도입하지 않는다(신규 값은 두 소비처에서 조용히 통과한다 — `research.md` §8).
+- **REQ-WRITEGATE-005** [Event-driven] — **When** 패치 쓰기가 매크로 본문 또는 배포 대상 Lua 소스의 **`Cmd()` 문자열 리터럴**에 담겨 간접적으로 도달하면, the 시스템 **shall** 각각 expand-or-hold(`expand.py:110-112`)와 배포 스캔(`deploy/scan.py:138-146`)에서 **수정 없이** 이를 잡는다 — 그러므로 분류는 기존 `category` 값을 유지하며 신규 category 값을 도입하지 않는다(신규 값은 두 소비처에서 조용히 통과한다 — `research.md` §8).
+  - ⚠ **`Cmd()` 리터럴 한정임을 명시한다.** `deploy/scan.py`는 `Cmd(...)`의 문자열 인자만 추출하므로(`_CMD_HEAD`), MA3 Lua API로 패치를 직접 대입하는 플러그인은 **`Cmd()`를 하나도 발화하지 않아 finding도 `dynamic_call`도 만들지 않는다.** 이 경로는 본 SPEC이 닫지 않는다(§D). 초안의 문면은 "배포 대상 Lua 소스"를 통째로 덮는다고 읽혔고 그것은 과잉 주장이었다 — `REQ-SPATIAL-024`의 두 뜻 읽기와 **같은 결함 계열**이며, 그 결함을 지적한 SPEC이 같은 실수를 했다는 사실을 남긴다.
 
 ### B.2 무엇을 바꾸지 않는가 (범위 봉쇄)
 
 - **REQ-WRITEGATE-006** [Unwanted] — the 개정 **shall not** `Store` 계열(`Store Group`·`Store Preset`·`Store Cue`·`Store Page`·`Store Macro`)·`Assign`·`Copy`·`Label`의 분류를 변경한다. `Store Group`의 risky 화는 **명시적으로 본 SPEC의 범위 밖**이며(§D) 별도 결정 게이트를 갖는다.
 - **REQ-WRITEGATE-007** [Unwanted] — the 개정 **shall not** `server/measurement/corpus.yaml`을 수정한다. 코퍼스 `:10`의 *"non-risky verbs only"* 불변식은 **문면 그대로 보존**되며, 21 시나리오·대표 작업 10종은 하나도 교체되지 않는다.
-- **REQ-WRITEGATE-008** [Unwanted] — the 개정 **shall not** `Set Selection MAtricks '<property>' <v>`(프로그래머 상태)와 `Set Macro <p>.<l> Property 'Command' '<safe command>'`(매크로 저작)의 분류를 변경한다 — 인용 토큰은 키워드 매칭 대상이 아니라는 기존 규율(`classify.py:77-78`)이 이를 보장한다.
+- **REQ-WRITEGATE-008** [Unwanted] — the 개정 **shall not** `Set Selection MAtricks '<property>' <v>`(프로그래머 상태)와 `Set Macro <p>.<l> Property 'Command' '<safe command>'`(매크로 저작)의 분류를 변경한다. 보장 기전은 **인용이 아니다**: `_match_blacklist`는 동사가 `Set`에 맞고 **동시에 인용되지 않은 인자 하나가 `Fixture`에 맞을 것**을 요구하므로(`classify.py`), 위 두 형태를 막는 것은 *"`Fixture`를 철자한 비인용 인자가 없다"*는 사실이다. 실측: `Set Selection MAtricks PhaseFromX 0`(**비인용**)도 `safe`이고 `Set Selection MAtricks Fixture 0`은 `risky=True`다 — 즉 `PhaseFromX`의 인용 여부는 무관하다. 초안이 인용을 기전으로 적었던 것은 오기이며, `Store` 축 후속 SPEC이 *"인용이 프로그래머 상태를 보호한다"*를 물려받으면 안 되므로 정정한다.
 
 ### B.3 예외 목록 — 비준
 
@@ -125,7 +126,7 @@ SPATIAL run-phase가 `blacklist.yaml` v1→v2에 `"Set Fixture"`를 넣어 **기
 ## D. 범위 밖 (Out of Scope)
 
 ### Out of Scope — `Store` 계열의 risky 화
-- `Store Group`을 risky로 만드는 일(계획서 "후보 3", `run_commands` 우회 경로)은 **본 SPEC에 흡수하지 않는다.** 사용자 결정(2026-08-05 범위 분리)이며 근거는 실측이다: `Store`는 `corpus.yaml`의 21 시나리오 중 **13건 / 대표 10종 중 7종**과 충돌하고(무플래그 `Store` 엔트리 기준), DEPLOY 3파일이 `Store Group 3`을 **정캐논 안전 픽스처**로 고정한다(`test_deploy_pipeline.py:26` `SAFE_SOURCE` 등).
+- `Store Group`을 risky로 만드는 일(계획서 "후보 3", `run_commands` 우회 경로)은 **본 SPEC에 흡수하지 않는다.** 사용자 결정(2026-08-05 범위 분리). **실측 근거(정정됨)**: 엔트리 `Store`는 `corpus.yaml`의 21 시나리오 중 **10건 / 대표 10종 중 5종**과 충돌하고, 엔트리 `Store Group`은 **3건 / 1종**(`group-create-1/2/3`)과 충돌한다. 그리고 `Store Group`은 DEPLOY 테스트 **정확히 3건**을 깨뜨린다 — `Store Group 3`을 정캐논 안전 픽스처로 쓰는 `test_deploy_gate_e2e` · `test_deploy_pipeline` · `test_deploy_scan`. ⚠ **초안은 "13건 / 7종"이라 적었고 그것은 틀렸다** — `Store|Set|Assign|Copy` 광역 정규식으로 센 **커맨드 13개**를 `Store`의 시나리오 수로 옮겨 적은 것이다(대표 작업도 6→7로 틀렸다). 결정 자체는 정정된 숫자에서도 유지된다(`group_create`는 AC-MVP-001 10대 대표 중 1이고, DEPLOY 충돌은 코퍼스 규모와 무관하다) — 그러나 **대안의 비용을 과대계상했다는 사실을 남긴다.**
 - 남는 손실을 명시한다: 손으로 쓴 `Store Group`의 무승인 경로는 이번 창에 **열린 채로 남는다.** 이는 관측 사고가 아니라 가설이며(관측된 54건은 전부 좌표 기록), GROUPGEN의 툴 계층 seam이 조립기 경로는 이미 덮는다.
 - 본 SPEC이 **폐쇄집합 개정 절차의 첫 선례를 만들므로**, 후속 SPEC은 절차를 재발명하지 않고 엔트리 추가와 코퍼스 갈래 결정만 다루면 된다.
 
@@ -138,6 +139,16 @@ SPATIAL run-phase가 `blacklist.yaml` v1→v2에 `"Set Fixture"`를 넣어 **기
 ### Out of Scope — `rotx`/`roty`/`rotz` 기록 기능
 - 방향 축 기록을 **가능하게 만드는** 일은 범위 밖이다(REQ-SPATIAL-022c가 v1 금지). 다만 `Set Fixture 11 Rotx '90.0'`가 **분류상 risky가 되는 것**은 본 SPEC의 귀결이며 의도된 것이다 — 방향 쓰기도 무승인 쇼파일 변형이므로.
 
+### Out of Scope — 배포 플러그인의 Lua 직접 대입 경로
+- `deploy/scan.py`는 `Cmd(...)`의 문자열 리터럴만 추출한다. MA3 Lua API로 패치를 직접 대입하는 플러그인(`f.posx = 5.0`, `AddFixtures{...}`)은 **`Cmd()`를 발화하지 않으므로 finding도 `dynamic_call`도 만들지 않고**, `pipeline.py:166`이 `destructive=False`로 등록하며, 호출 시 `expand.py:96-104`가 `hold=False`를 돌려준다 — **카드도 규칙 ③도 없다.** 본 SPEC은 이 경로를 **닫지 않는다.**
+- **가설이 아니다**: 저장소 룰북 `server/rulebook/assets/v2.4.2/30_plugin_patterns.md:13-19`가 모델에게 *"Command lines CANNOT create fixtures. The patch is exactly TWO steps"*라고 가르치고 `:42-52`에 fid·name·패치 주소를 쓰는 `AddFixtures{...}` 예제를 싣는다. 즉 **저장소가 권장하는 패치 경로가 곧 이 구멍이다.**
+- 남은 방어선: 배포는 deny-by-default이고 사람이 소스를 **한 번** 리뷰한다(`pipeline.py:150-160`). 그리고 이 잔여 위험은 `deploy/scan.py:10-16`이 **이미 규범적으로 선언**해 둔 것이다(REQ-MVP-027 — *"best-effort … the HUMAN REVIEW GATE remains the authoritative control"*). 본 SPEC이 만든 구멍이 아니다.
+- 닫으려면 Lua AST 수준 스캔이나 패치 쓰기 능력 플래그가 필요하다 — 별도 SPEC의 몫이다.
+
+### Out of Scope — Layout 요소 좌표 기록
+- `Set Layout <l>.<e> 'PositionX' <v>`는 **오늘도 `safe`다.** 이는 저장소가 문서화한 두 번째 좌표 쓰기이며(SPATIAL `research.md:19`·`:103` — 포럼 moderator 확인, ASSUMPTION-56), SPATIAL `spec.md`가 Layout pool의 `PositionX`/`PositionY`를 **보조 공간 출처**로 명시한다.
+- 본 SPEC의 엔트리는 `Set Fixture`이므로 이 형태를 잡지 않는다. 어떤 툴도 이 형태를 발화하지 않으니 제품이 깨지는 것은 아니지만, `run_commands`는 모델이 손으로 쓴 줄을 받으므로(REQ-WRITEGATE-004가 존재하는 이유) **경로가 열려 있다.** Layout 축 자체가 SPATIAL에서 `[DEFERRED]`이므로 함께 후속으로 넘긴다.
+
 ### Out of Scope — 정렬 어휘 개명 · 절단 고지 강제 · 축 점수 비교
 - 계획서의 SPEC B/C/D. 본 SPEC과 파일 무교차이며 승인 흐름이 열린 뒤 병렬 가능하다.
 
@@ -145,12 +156,13 @@ SPATIAL run-phase가 `blacklist.yaml` v1→v2에 `"Set Fixture"`를 넣어 **기
 
 | 기준 | 확인 수단 | 성격 |
 |---|---|---|
-| 좌표·패치 쓰기가 무승인으로 콘솔 도달하는 경로 **0건** | 단위 + 뮤테이션 | 구조 |
+| **픽스처 패치 행** 쓰기가 무승인으로 콘솔 도달하는 커맨드라인 경로 **0건** | 단위 + 뮤테이션 | 구조 |
 | `before_risky_execution()` 발동 | 모의 백업 훅 | 구조 |
 | 승인 거부 시 콘솔 송신 0건 | `DenyAllApprovalPort` + 기록 콘솔 | 구조 |
 | `AC-SPATIAL-031` · `REQ-SPATIAL-024` `[DEFERRED]` 해소 | SPATIAL 문서 표기 갱신 | 문서 |
 | 코퍼스 불변식 문면 무수정 + `gate_anomalies == {}` | byte-diff 0 + 기존 테스트 | 회귀 |
 | `Store`·MAtricks·`Set Macro`·DEPLOY 픽스처 분류 불변 | 회귀 단정 | 회귀 |
-| 매크로 본문·Lua 소스 간접 경로 차단 | `expand.py`·`deploy/scan.py` 단위 | 구조 |
+| 매크로 본문·Lua 소스의 **`Cmd()` 리터럴** 간접 경로 차단 | `expand.py`·`deploy/scan.py` 단위 + 신규 category 뮤테이션 | 구조 |
 | 트립와이어 개정이 날짜·소유자·승인 표기를 갖춘 그랜트 | 코드 리뷰 | 절차 |
+| 닫지 않은 두 경로가 §D에 명시 (Lua 직접 대입 · Layout 요소) | 문서 | **정직성** |
 | 라이브 1턴에서 카드 관측 | ASSUMPTION-68 | **보조 증거** |

@@ -972,8 +972,14 @@ class TestGateChokepoint:
         assert finding.matched_entry == "Set Fixture"
 
         # The MAtricks programmer form must STAY safe — carried over from the
-        # replaced tripwire. `PhaseFromX` is a quoted token, and quoted tokens
-        # never match keywords, so the widening cannot reach it.
+        # replaced tripwire. NOT because `PhaseFromX` is quoted: `_match_blacklist`
+        # needs the verb to match `Set` AND some UNQUOTED arg to match `Fixture`,
+        # and none of `Selection`/`MAtricks`/`PhaseFromX`/`0` spells `Fixture`.
+        # Measured: unquoting it (`Set Selection MAtricks PhaseFromX 0`) leaves it
+        # safe, while `Set Selection MAtricks Fixture 0` classifies risky with
+        # matched_entry='Set Fixture'. Quoting is NOT what holds this line back —
+        # anyone scoping the descoped `Store` follow-up must not read it as a
+        # protection that programmer-state commands enjoy against a widening.
         matricks = validate("Set Selection MAtricks 'PhaseFromX' 0")
         assert matricks.ok
         assert classify_command(matricks.parsed, ruleset).risky is False
@@ -1028,6 +1034,13 @@ class TestGateChokepoint:
         _execution, payload = arrange(console, {"preset": "row", "fids": [11, 12]}, gate=gate)
         assert console.writes == []
         assert payload["succeeded"] is False
+        # Discriminating: at least five other paths on this tool produce that
+        # same pair — a scope refusal (`status: refused`), a grammar block
+        # (`gate_status: blocked_grammar`), a health block, a failed backup
+        # (`blocked_backup_failed`) and a LiveLock demotion (`gate_status:
+        # locked`). Only an approver saying no reads as "rejected", which is
+        # what an unwired channel must produce.
+        assert payload["gate_status"] == "rejected"
 
     def test_a_gate_rejection_leaves_the_rig_untouched(self, tmp_path):
         class _Decision:

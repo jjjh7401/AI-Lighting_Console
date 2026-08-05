@@ -39,7 +39,9 @@ Stored line text — why the off line is not ``Off Group <n>``
 On the production path the quoted value of ``Property 'Command' '<text>'`` is
 reclassified RECURSIVELY by the gate (``server/safety/classify.py:201-222``), so
 the stored text is screened as if it had been sent bare. ``Off`` is an invoking
-verb (``server/safety/blacklist.yaml:29``) and its target ``Group`` is not a
+verb (``server/safety/blacklist.yaml`` key ``invoking_verbs.verbs`` -- the key
+path and not a line number, because that file grows and this anchor drifted
+twice during SPEC-COPILOT-WRITEGATE-001 alone) and its target ``Group`` is not a
 recognized reference type (``server/safety/classify.py:44``), so ``Off Group
 <n>`` resolves to no verifiable reference and the whole authoring command is HELD
 (``server/safety/expand.py:83``). ``server/tests/test_prechk_macro.py`` pins that
@@ -55,12 +57,12 @@ The rulebook shows ``At`` as a value verb but never this exact target form
 
 The on line is ``On Group <n>``, the form M0 measured with its effect confirmed
 by re-query. Note that ``On`` sits in the SAME invoking-verb list as ``Off``
-(``server/safety/blacklist.yaml:28``), so that authoring line is likewise held
-for human approval on the production path — a defined outcome
-(``AC-PRECHK-014`` ④), and the gate screens bundles whole, so a hold means zero
-sends rather than a half-written macro. M0's probe channel bypasses the gate
-(the driver reaches ``server.bridge`` directly, which is why the measurement did
-not surface the hold; the gate path is exercised by
+(``server/safety/blacklist.yaml`` key ``invoking_verbs.verbs``), so that
+authoring line is likewise held for human approval on the production path — a
+defined outcome (``AC-PRECHK-014`` ④), and the gate screens bundles whole, so a
+hold means zero sends rather than a half-written macro. M0's probe channel
+bypasses the gate (the driver reaches ``server.bridge`` directly, which is why
+the measurement did not surface the hold; the gate path is exercised by
 ``server/tests/test_prechk_tool.py`` instead).
 
 No execution surface lives here
