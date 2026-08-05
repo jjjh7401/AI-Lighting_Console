@@ -8,7 +8,7 @@ base `origin/main` = `b1a630e` · branch `spec/writepath-001` · worktree `~/orc
 
 | 결정 | 선택 | 근거 |
 |---|---|---|
-| **코퍼스 갈래** | **③ 범위 분리** — 좌표(패치 쓰기)만 본 SPEC, `Store Group`은 별도 게이트 | 실측: `corpus.yaml`에 `Set` 토큰 **0개**. 좌표 축은 코퍼스 충돌 0건이고, 충돌은 오직 `Store` 축에만 있다(13/21 시나리오 · 7/10 대표). 계획서의 ①/② 이분법은 `Store Group`을 A에 넣는다는 전제에서만 성립했다 |
+| **코퍼스 갈래** | **③ 범위 분리** — 좌표(패치 쓰기)만 본 SPEC, `Store Group`은 별도 게이트 | 실측: `corpus.yaml`에 `Set` 토큰 **0개**. 좌표 축은 코퍼스 충돌 0건이고, 충돌은 오직 `Store` 축에만 있다 — 패치의 `_would_be_held` 술어를 `load_corpus()`에 직접 돌린 재실측으로 엔트리 `Store`가 **21 시나리오 중 10건 · 10 대표 태스크 유형 중 5종**(`cue-store-1/2`·`group-create-1/2/3`·`macro-create-1/2`·`page-setup-1`·`preset-store-1/2`), 실제로 거명된 리터럴 `Store Group`은 **3/21 · 1/10**(`group-create-1/2/3`)이다. 이전 문면의 *"13/21 · 7/10"*은 `Store\|Set\|Assign\|Copy` 광역 정규식이 센 **커맨드 13건**(13 시나리오 / 6 유형)을 `Store`의 시나리오 수로 옮겨 적은 것이다 — `Store`를 포함하는 어떤 코퍼스 동사 합집합도 13/7에 닿지 않는다(코퍼스 천장은 17/8. 21건 중 4건은 `mock.commands`가 없다). **결정은 그대로 선다**(`group_create`가 AC-MVP-001 10대표 중 1종이고, DEPLOY 픽스처 충돌은 코퍼스 규모와 무관하다) — 과대 계상된 것은 대안의 비용뿐이다. 계획서의 ①/② 이분법은 `Store Group`을 A에 넣는다는 전제에서만 성립했다 |
 | **예외 목록** | **먼저 무접촉 설계를 찾고, 불가피하면 비준 AC** | 찾았고 불가피하다(§C). 무접촉 대안 2건은 검토 후 기각 — 기각 이유를 문서에 남긴다 |
 
 ## B. 설계 결정 — 왜 폐쇄집합 데이터 1행인가
@@ -36,7 +36,7 @@ base `origin/main` = `b1a630e` · branch `spec/writepath-001` · worktree `~/orc
 
 ## C. 트립와이어 — 무접촉이 왜 불가능한가
 
-`test_overlap_preserve.py`는 `_PRECHK_BASE..HEAD` **커밋 범위**의 `server/safety/` **변경 파일 집합**을 고정한다(`:436-438`). *무엇을 바꿨는가*가 아니라 *어느 파일을 건드렸는가*에 민감하다. 그리고 SPATIAL `progress.md:294-296`이 확립했듯 **`screen()`에는 호출자측 risky 선언 seam이 없다** — 따라서 어떤 설계든 `server/safety/` 아래 최소 한 파일을 건드린다. 회피 불가.
+`test_overlap_preserve.py`는 `_PRECHK_BASE..HEAD` **커밋 범위**의 `server/safety/` **변경 파일 집합**을 고정한다 — `TestSafetyChokepointFileSet::test_exactly_the_expected_files_changed`(현재 `:467-469`, 착수 시점 `:436-438`. 본 SPEC이 같은 파일에 그랜트 주석 블록 `:153-174`를 삽입해 +31행 밀렸으므로 **테스트 이름이 정본이고 행 번호는 보조**다). *무엇을 바꿨는가*가 아니라 *어느 파일을 건드렸는가*에 민감하다. 그리고 SPATIAL `progress.md:294-296`이 확립했듯 **`screen()`에는 호출자측 risky 선언 seam이 없다** — 따라서 어떤 설계든 `server/safety/` 아래 최소 한 파일을 건드린다. 회피 불가.
 
 실측한 정확한 비용(커밋 후 측정 — 미커밋 상태에서는 커밋 범위를 읽으므로 관측되지 않는다):
 

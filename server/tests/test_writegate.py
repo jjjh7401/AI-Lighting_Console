@@ -37,8 +37,9 @@ from __future__ import annotations
 import pytest
 
 from server.deploy.scan import scan_lua_source
+from server.measurement.corpus import Scenario, load_corpus
 from server.safety.classify import classify_command
-from server.safety.expand import evaluate_reference
+from server.safety.expand import BodyUnavailable, evaluate_reference
 from server.safety.grammar import validate
 from server.safety.ruleset import load_ruleset
 
@@ -54,8 +55,19 @@ HELD_FORMS = (
     ("Set Fixture 11 Posx -3.5", "live: answered OK and stored 3.5 — sign dropped"),
     ("Set Fixture 11 Posx - 3.5", "live: answered OK and stored nothing — silent no-op"),
     ("Set Fixture 11 Posx 0-3.5", "live: answered OK and stored 0.0 — wrong value"),
-    ("Set Fixture 11 Pos -3.5", "3-char abbreviation; MA3 abbreviates keywords"),
-    ("Set Fix 11 Posx '1.0'", "the VERB abbreviates too"),
+    # `Pos` is a PROPERTY token and the entry is `Set` + `Fixture`: nothing in
+    # the entry matches `Pos`, so this walks the IDENTICAL `_match_blacklist`
+    # path as the plain form above (same verb, same unquoted `Fixture` arg). It
+    # varies the VALUE shape, not the matching — kept because it is a shape
+    # observed live, not because it reaches a distinct branch.
+    ("Set Fixture 11 Pos -3.5", "duplicate match path; a live-observed value shape"),
+    # The OBJECT abbreviates, not the verb: the parse is verb='Set',
+    # args=['Fix','11','Posx',"'1.0'"], and `Fix` reaches `Fixture` through the
+    # >=3-char-prefix branch of `_keyword_match` (`classify.py:62-65`). This is
+    # the ONLY one of the nine forms that exercises that branch. The verb cannot
+    # abbreviate at all: `Set` is already 3 characters, so any shortening falls
+    # under the length floor (measured: `Se Fixture 11 Posx '1.0'` -> safe).
+    ("Set Fix 11 Posx '1.0'", "the OBJECT abbreviates: `Fix` -> `Fixture`"),
     ("Set Fixture 1 Thru 18 Posz '5.0'", "range write — 18 fixtures in one line"),
     ("Set Fixture 11 Rotx '90.0'", "orientation: also a showfile mutation"),
     ("Set Fixture 11 Name 'Spot 11'", "non-coordinate patch write — over-match, on purpose"),
@@ -63,8 +75,30 @@ HELD_FORMS = (
 
 #: Every form whose classification must NOT move. The scope of this SPEC is the
 #: whole point of this tuple: `Store` was descoped by user decision because it
-#: collides with the measurement corpus in 13 of 21 scenarios, and with the
-#: DEPLOY tests that use `Store Group 3` as their canonical SAFE fixture.
+#: collides with the measurement corpus, and with the DEPLOY tests that use
+#: `Store Group 3` as their canonical SAFE fixture.
+#:
+#: The collision was re-measured with `_would_be_held` over `load_corpus()`. An
+#: earlier "13 of 21 scenarios (7 of 10 representative task types)" was WRONG:
+#: the 13 came from a broad `Store|Set|Assign|Copy` write-verb regex counting 13
+#: COMMANDS, which was then restated as `Store`'s scenario count. Measured:
+#:
+#:   * entry `Store`       -> 10 of 21 scenarios, 5 of 10 task types
+#:     (cue-store-1/2, group-create-1/2/3, macro-create-1/2, page-setup-1,
+#:     preset-store-1/2)
+#:   * entry `Store Group` ->  3 of 21 scenarios, 1 of 10 task types
+#:     (group-create-1/2/3) — and `Store Group` is the literal actually named
+#:
+#: The "3 DEPLOY tests" half of that sentence is exactly right, but for
+#: `Store Group`, not `Store`: `test_deploy_gate_e2e::
+#: test_registered_non_destructive_plugin_passes_audited`, `test_deploy_pipeline::
+#: test_non_destructive_plugin_registers_unflagged`, and `test_deploy_scan::
+#: test_safe_commands_yield_no_findings`. The two halves were computed against
+#: DIFFERENT entries — that is the mechanism by which the mismatch survived.
+#:
+#: The descope DECISION stands; only the magnitude was inflated. `group_create`
+#: is 1 of the AC-MVP-001 10 representatives, so even 3/21 costs a whole task
+#: type, and the DEPLOY fixture collision is independent of corpus size.
 UNCHANGED_SAFE = (
     ("Store Group 3", "descoped: DEPLOY's canonical SAFE_SOURCE literal"),
     ("Store Preset 4.1", "descoped: measurement corpus representative"),
@@ -77,7 +111,14 @@ UNCHANGED_SAFE = (
     ("Fixture 1 Thru 12", "selection, not a write"),
     ("Group 4", "selection, not a write"),
     ("At 100", "programmer state, not a write"),
-    ("Set Selection MAtricks 'PhaseFromX' 0", "programmer state: the property name is QUOTED"),
+    # NOT because the property name is quoted. `_match_blacklist` needs the verb
+    # to match `Set` AND some UNQUOTED arg to match `Fixture`; the args here are
+    # `Selection`, `MAtricks`, `'PhaseFromX'`, `0`, and none of them spells
+    # `Fixture`. Measured: dropping the quotes leaves it safe
+    # (`Set Selection MAtricks PhaseFromX 0`), while `Set Selection MAtricks
+    # Fixture 0` is risky with matched_entry='Set Fixture'. Quoting is not what
+    # protects programmer-state commands from this widening.
+    ("Set Selection MAtricks 'PhaseFromX' 0", "programmer state: no arg spells `Fixture`"),
     ("Set Macro 1.1 Property 'Command' 'Group 11 At 0'", "macro authoring with a safe body"),
 )
 
@@ -132,14 +173,7 @@ class TestScopeIsHeldExactly:
         a future revision adds a `Store` entry, THIS is the test that stops it,
         naming the exact scenarios it would break.
         """
-        from server.measurement.corpus import load_corpus
-
-        offenders = [
-            (scenario.id, command)
-            for scenario in load_corpus()
-            for command in scenario.mock.commands
-            if _would_be_held(command)
-        ]
+        offenders = _corpus_offenders(load_corpus())
         assert offenders == [], (
             "a baseline corpus command is now risky — the corpus header's "
             f"'non-risky verbs only' invariant is broken by: {offenders}"
@@ -150,14 +184,121 @@ class TestScopeIsHeldExactly:
         # would pass over an empty check.
         assert _would_be_held("Set Fixture 11 Posx '-3.5'") is True
         assert _would_be_held("Store Group 3") is False
+        # The invoking branch counts too: `Go Macro 9` is not risky on its own
+        # line, but the gate holds it because the body is unverifiable.
+        assert _would_be_held("Go Macro 9") is True
+
+    def test_the_corpus_plugin_collision_check_can_actually_fail(self):
+        """Non-vacuity for the plugin half, which folds ZERO findings today.
+
+        Both shipped corpus plugin bodies are inert (`return true` / `return
+        {}`), so the scan half cannot demonstrate itself against the real
+        corpus. Run the same fold over synthetic scenarios of each kind: a
+        mis-wired comprehension — wrong `mock` field, wrong kind filter — comes
+        back empty here instead of silently guarding nothing.
+        """
+        from server.measurement.corpus import MockScript
+
+        write = "Set Fixture 11 Posx '5.0'"
+        scenarios = (
+            Scenario(
+                id="probe-commands",
+                task_type="group_create",
+                instruction="probe",
+                mock=MockScript(kind="commands", commands=(write,)),
+            ),
+            Scenario(
+                id="probe-plugin",
+                task_type="plugin_deploy",
+                instruction="probe",
+                mock=MockScript(
+                    kind="plugin",
+                    plugin_name="Probe",
+                    plugin_source=f'local function main()\n    Cmd("{write}")\nend\nreturn main\n',
+                ),
+            ),
+        )
+        assert _corpus_offenders(scenarios) == [
+            ("probe-commands", write),
+            ("probe-plugin", write),
+        ]
+
+
+class _NoBodyAvailable:
+    """The gate's own default fetcher (`gate.py:97-101`): nothing is verifiable."""
+
+    def fetch_body(self, reference: str):
+        raise BodyUnavailable("no body fetcher configured — reference bodies unverifiable")
 
 
 def _would_be_held(command: str) -> bool:
-    """True when a corpus mock command line would be held by the gate."""
+    """True when the gate would HOLD this command line for human approval.
+
+    Mirrors `gate.py::_stage_classify` (`:461-489`) instead of stopping at
+    `classify_command(...).risky`, because the gate's hold is a strict SUPERSET
+    of riskiness: an `invoking` verdict also holds when the referenced body
+    cannot be verified. Stopping at `.risky` made `_would_be_held("Go Macro 9")`
+    return False even though the gate raises a card for it — the very card shape
+    SPATIAL-001 progress.md §E.2.20 records as having correctly fired — while
+    the invariant this feeds is "clears the gate WITHOUT APPROVAL", not "is not
+    risky". Inert against today's corpus (all 35 parseable lines are safe and
+    none uses an invoking verb), which is exactly why the mismatch was invisible.
+
+    The unavailable-body fetcher is not a pessimistic modelling choice: it is
+    the gate's OWN default (`gate.py:152`), i.e. what an offline M6a run gets.
+    The one hold branch NOT modelled is `self._unconfirmed` (`gate.py:484`) —
+    per-session state rather than a property of a command line, so it is beyond
+    the reach of a source-level check by construction.
+    """
     grammar = validate(command)
     if not grammar.ok:
         return False
-    return classify_command(grammar.parsed, RULESET).risky
+    verdict = classify_command(grammar.parsed, RULESET)
+    if verdict.risky:
+        return True
+    if verdict.category == "invoking":
+        return evaluate_reference(
+            verdict.reference,
+            ruleset=RULESET,
+            fetcher=_NoBodyAvailable(),
+            plugin_registry=None,
+        ).hold
+    return False
+
+
+def _corpus_offenders(scenarios: tuple[Scenario, ...]) -> list[tuple[str, str]]:
+    """Every corpus line that would NOT clear the gate without approval.
+
+    Two halves, because a scenario's mock action has three kinds and only one of
+    them is a command list (`Counter(s.mock.kind for s in load_corpus())` =
+    `{'commands': 17, 'query': 2, 'plugin': 2}`):
+
+    * `commands` — every line through `_would_be_held`;
+    * `plugin` — the Lua body through the deploy-time scan, the SAME route
+      `test_a_deployable_lua_source_carrying_a_patch_write_is_refused` proves a
+      patch write now travels. EVERY finding counts, not just `blacklisted`:
+      `scan.py::_classify_literal` also emits `invoking` and `unparseable`, and
+      neither of those clears without a human either. Iterating only
+      `mock.commands` skipped `plugin-deploy-1/2` outright, so a future revision
+      that tripped a corpus plugin body would have left this guard green while
+      M6a broke at runtime.
+
+    `query` scenarios (`state-query-1/2`) carry neither commands nor a source —
+    a read path gives the gate nothing to hold — so they contribute nothing.
+    """
+    offenders = [
+        (scenario.id, command)
+        for scenario in scenarios
+        for command in scenario.mock.commands
+        if _would_be_held(command)
+    ]
+    offenders += [
+        (scenario.id, finding.command)
+        for scenario in scenarios
+        if scenario.mock.kind == "plugin"
+        for finding in scan_lua_source(scenario.mock.plugin_source, RULESET).findings
+    ]
+    return offenders
 
 
 class TestIndirectRoutes:

@@ -25,7 +25,7 @@ base `origin/main` = `b1a630e` · worktree `writepath` · branch `spec/writepath
 | 경로 | 발화자 | 실측 |
 |---|---|---|
 | **조립기** | `arrange_write_commands` (`tools.py:917-926`), 템플릿 `tools.py:843` `"Set Fixture {fid} {axis} '{value}'"` | 관측된 54건이 이 경로(모델이 `arrange_fixtures`를 fid 부분집합으로 4회 호출 — SPATIAL `progress.md:482-484`, 18대×3축=54) |
-| **모델 직접 작성** | `run_commands` = `TOOL_NAMES[0]` (`tools.py:128`)에 임의 커맨드라인 | 룰북(`32_spatial_design.md`)이 **산문으로만** 금지. SPATIAL `spec.md:135`가 한계를 자백한다 — *"툴 설명은 지시일 뿐 강제가 아니다"* |
+| **모델 직접 작성** | `run_commands` = `TOOL_NAMES[0]` (`tools.py:128`)에 임의 커맨드라인 | 룰북(`32_spatial_design.md`)이 **산문으로만** 금지. SPATIAL `spec.md` §C.1 검증 천장 표의 *"절단된 리그에서 모델이 불완전성을 고지하는가"* 행이 한계를 자백한다 — *"툴 설명은 지시일 뿐 강제가 아니다"*. 행 제목으로 가리킨다: 본 SPEC이 SPATIAL `spec.md`에 HISTORY 행을 삽입해 이 문구가 `:135`→`:138`로 밀렸고, 같은 파일이 지금도 편집 중이다 |
 
 두 경로는 `run_commands` 클로저의 `bundle_gate.screen(commands)`(`tools.py:1142-1143`)에서 합류하고, 거기서 `SafetyGate.screen(Sequence[str])`(`gate.py:301`)로 들어간다.
 
@@ -106,7 +106,7 @@ SPATIAL `progress.md` §E.2.14(`:289-311`):
 
 사용자 지시는 *"먼저 안 건드리는 설계를 찾고, 불가피하면 비준 AC"*였다. 찾았고, **불가피하다**:
 
-- `test_overlap_preserve.py`는 `_PRECHK_BASE..HEAD` **커밋 범위**의 `server/safety/` 변경 **파일 집합**을 고정한다(`:436-438`). 내용이 아니라 *어느 파일을 건드렸는가*에 민감하다.
+- `test_overlap_preserve.py`는 `_PRECHK_BASE..HEAD` **커밋 범위**의 `server/safety/` 변경 **파일 집합**을 고정한다 — `TestSafetyChokepointFileSet::test_exactly_the_expected_files_changed`(현재 `:467-469`). 내용이 아니라 *어느 파일을 건드렸는가*에 민감하다. 착수 시점 `:436-438`이었고 본 SPEC이 그 파일에 그랜트 주석 블록(`:153-174`)을 삽입하며 +31행 밀렸다 — **테스트 이름이 정본이고 행 번호는 보조**다.
 - `screen()`에 호출자측 risky 선언 seam이 없다(§4)는 것은 곧 **어떤 설계든 `server/safety/` 아래 최소 한 파일을 건드린다**는 뜻이다. 회피 불가.
 
 검토하고 **기각한** 무접촉 대안 2건:
@@ -145,10 +145,14 @@ SPATIAL `progress.md` §E.2.14(`:289-311`):
 
 ## 10. 확인 명령
 
-| 대상 | 명령 | 기대 |
-|---|---|---|
-| 현재 분류 (구멍) | `uv run python -c "from server.safety.grammar import validate; from server.safety.classify import classify_command; from server.safety.ruleset import load_ruleset; print(classify_command(validate(\"Set Fixture 11 Posx '-3.5'\").parsed, load_ruleset()))"` | `risky=False category='safe'` |
-| 코퍼스 무충돌 | `grep -c 'Set' server/measurement/corpus.yaml` | `0` |
-| 트립와이어 파일집합 | `sed -n '151,156p' server/tests/test_overlap_preserve.py` | 4항목 — `blacklist.yaml` 없음 |
-| 심어둔 트립와이어 | `sed -n '935,951p' server/tests/test_spatial_arrange.py` | `assert finding.risky is False` + 교체 지시 메시지 |
-| 그랜트 선례 | `sed -n '64,95p' server/tests/test_overlap_preserve.py` | 날짜·SPEC·user-approved 표기 2건 |
+**행 번호는 as-of 열이 말하는 리비전 기준이다.** base 행은 `git show b1a630e:` 형태로 적어 지금도 그대로 재현된다 — 본 SPEC 자신의 삽입이 `test_overlap_preserve.py` 앵커를 +31행 밀었고, 심어둔 트립와이어는 M1이 제거했기 때문에 base 행 번호를 현재 파일에 대고 실행하면 전부 빗나간다.
+
+| 대상 | as-of | 명령 | 기대 |
+|---|---|---|---|
+| 분류 프로브 (구멍 → 폐쇄) | HEAD | `uv run python -c "from server.safety.grammar import validate; from server.safety.classify import classify_command; from server.safety.ruleset import load_ruleset; print(classify_command(validate(\"Set Fixture 11 Posx '-3.5'\").parsed, load_ruleset()))"` | `risky=True category='blacklisted'`. **같은 명령이 base `b1a630e`에서는 `risky=False category='safe'`였다** — 그 착수 시점 실측이 §1 표이고, 이 한 행의 반전이 본 SPEC 전체다 |
+| 코퍼스 무충돌 | HEAD | `grep -c 'Set' server/measurement/corpus.yaml` | `0` |
+| 트립와이어 파일집합 (착수 시점) | base `b1a630e` | `git show b1a630e:server/tests/test_overlap_preserve.py \| sed -n '151,156p'` | `_SAFETY_EXPECTED_DELETIONS` 4항목 — `blacklist.yaml` 없음 |
+| 트립와이어 파일집합 (현재) | HEAD | `sed -n '175,181p' server/tests/test_overlap_preserve.py` | 5항목 — `blacklist.yaml: 1` 추가됨 |
+| 심어둔 트립와이어 (착수 시점) | base `b1a630e` | `git show b1a630e:server/tests/test_spatial_arrange.py \| sed -n '935,951p'` | `test_a_coordinate_bundle_is_not_yet_classified_risky` — `assert finding.risky is False` + 교체 지시 메시지 |
+| 심어둔 트립와이어 (현재) | HEAD | `grep -rn 'def test_a_coordinate_bundle_is_not_yet_classified_risky' server/` | **0건** — M1이 예고대로 제거·교체했다 |
+| 그랜트 선례 | base·HEAD 동일 | `sed -n '64,95p' server/tests/test_overlap_preserve.py` | 날짜·SPEC·user-approved 표기 2건 |
