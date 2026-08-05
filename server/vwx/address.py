@@ -22,19 +22,10 @@ MULTI_SYSTEM_AMBIGUOUS = "multi_system_ambiguous"
 
 ADDRESS_CLASSIFICATION = frozenset({PATCHED, UNPATCHED_DESIGNED, MULTI_SYSTEM_AMBIGUOUS})
 
-#: 퇴역(v0.1.7) — 절대주소 단독 파일은 더 이상 이 사유로 판정을 거부하지 않는다
-#: (ASSUMPTION-69 재정의: "미해소로 보류" 대신 "선언된 전제 위에서 역산 지원").
-#: 상수 자체는 과거 기록·grep 대비 보존한다(실사용 경로 없음).
 READ_FAILURE_ABS_UNVERIFIED = "absolute_address_premise_unverified"
 READ_FAILURE_MULTI_SYSTEM = "multi_system_ambiguous_universe"
 READ_FAILURE_ADDRESS_UNPARSEABLE = "address_unparseable"
 READ_FAILURE_NO_ADDRESS_DATA = "no_address_data"
-#: 3중 표현 교차검증(M0 실물 샘플 반영) — Universe+DMX Address 쌍이 최우선
-#: 신뢰 소스이므로 해석 자체는 그대로 진행하되(REQ-VWX-009 우선순위 불변),
-#: 동시에 존재하는 Absolute Address가 (u-1)*512+a와 다르면 Universes pane이
-#: 기본 연속 512블록이 아니라는 뜻이다(Start#/End# 편집 또는 유니버스 삭제로
-#: 구멍) — 경고로만 남기고 Absolute Address로 유니버스를 역산하지 않는다.
-READ_FAILURE_ADDRESS_TRIPLE_MISMATCH = "address_triple_mismatch"
 
 _KIND_RESOLVED = "resolved"
 _KIND_BLOCKED = "blocked"
@@ -44,22 +35,6 @@ _UNIVERSE_ADDRESS_SPLIT = re.compile(r"[/:\-.]")
 
 #: 콘솔의 유니버스당 채널 슬롯 수. Absolute Address 역산(REQ-VWX-009)에서만 쓴다.
 _UNIVERSE_WIDTH = 512
-
-#: 주소 근거 등급 (v0.1.7 — ``server/prechk/patch.py`` ``OverlapBasis``의
-#: "판정을 거부하는 대신 가장 약한 근거를 등급으로 선언한다" 규약을 그대로
-#: 따른다). 직접값(Universe+DMX Address 쌍, 또는 Universe/Address 조합값)이
-#: 가장 강하고, Absolute Address 역산은 그 전제(Universes pane이 연속 기본
-#: 512블록)가 검증됐는지에 따라 두 등급으로 갈린다.
-ADDRESS_BASIS_DIRECT = "universe_address_direct"
-ADDRESS_BASIS_ABS_CONFIRMED = "absolute_confirmed"
-ADDRESS_BASIS_ABS_BACK_CALCULATED = "absolute_back_calculated"
-
-#: 리그 전체 등급이 역산(``ADDRESS_BASIS_ABS_BACK_CALCULATED``)일 때 payload·
-#: summary_ko에 함께 실어야 하는 전제 문구(코디네이터 지정 원문, 축약 금지).
-ABSOLUTE_BACK_CALCULATED_PREMISE_NOTE = (
-    "Universes pane이 기본 연속 512블록이라는 전제 위에서 역산했다. Start#/End#를 "
-    "편집했거나 유니버스를 삭제해 구멍이 있으면 이 유니버스·주소는 틀린다."
-)
 
 
 @dataclass(frozen=True)
@@ -77,13 +52,6 @@ class AddressOutcome:
     classification: str | None = None
     reason_code: str | None = None
     detail: str = ""
-    #: 해석은 성공했지만 별도로 보고해야 할 경고(3중 표현 불일치 등). 성공/실패와
-    #: 독립적인 축이다 — ``kind``가 ``resolved``여도 이 값이 채워질 수 있다.
-    warning_kind: str | None = None
-    warning_detail: str = ""
-    #: 주소 근거 등급(``ADDRESS_BASIS_*``) — ``kind == resolved`` 이고
-    #: ``classification == PATCHED``일 때만 채워진다(v0.1.7).
-    address_basis: str | None = None
 
 
 def _blank(value: str | None) -> bool:
@@ -122,24 +90,19 @@ def classify_and_resolve(
     """컬럼 해석된 레코드 하나의 정규화 주소 + 분류(REQ-VWX-008~010).
 
     ``system_letters``는 파일 전체에서 관측된 System(A-Z) 문자 집합이다 —
-    v0.1.6부터 이 값이 2개 이상이어도 설계 측 주소 해석 자체는 더 이상
-    차단하지 않는다(결함 1, P0 — 실물 샘플 3종 재현). 주소 아이덴티티를
-    ``(system, universe, address)``로 확장해 System별로 스코프를 나누면
-    Universe 재사용은 더 이상 모호하지 않다 — 콘솔에는 System 개념이 없어
-    콘솔 대조(``diff.py``)만 별도로 미수행 처리한다(REQ-VWX-010 재해석).
+    2개 이상이면 순수 ``Universe`` 해석을 모호로 차단한다(REQ-VWX-010).
     ``contiguous_512_confirmed``는 그 파일의 Universes 창이 연속 기본
-    512블록이라는 전제가 외부에서 검증됐는지 여부다 — 기본값 False다.
-    **False여도 ``Absolute Address`` 역산은 수행한다**(v0.1.7 재설계,
-    ASSUMPTION-69 재정의): 판정을 거부하는 대신 ``server/prechk/patch.py``
-    ``OverlapBasis``와 같은 규약으로 **가장 약한 근거 등급**
-    (``ADDRESS_BASIS_ABS_BACK_CALCULATED``)을 선언하고 ``detail``에 전제
-    미확인을 명시한다. True면 등급만 ``ADDRESS_BASIS_ABS_CONFIRMED``로
-    올라가고 역산 결과 ``(universe, address)`` 자체는 동일하다. 즉 이
-    플래그는 **역산 수행 여부가 아니라 근거 등급**을 가른다(날조 금지이지
-    파생 금지가 아니다 — REQ-VWX-009). 하드 거부가 남는 자리는 Universe/
-    DMX Address 쌍과 Absolute가 **둘 다 있는데 어긋나는** 경우뿐이다
-    (``READ_FAILURE_ADDRESS_TRIPLE_MISMATCH``).
+    512블록이라는 전제가 외부에서 검증됐는지 여부다 — 기본값 False로,
+    검증되지 않은 한 ``Absolute Address`` 역산을 절대 수행하지 않는다
+    (추측 금지, REQ-VWX-009).
     """
+    if len(system_letters) >= 2:
+        return AddressOutcome(
+            kind=_KIND_BLOCKED,
+            reason_code=READ_FAILURE_MULTI_SYSTEM,
+            detail="멀티시스템 — Universe 컬럼만으로 구분 불가",
+        )
+
     universe_raw = fields.get("universe")
     dmx_raw = fields.get("address")
     combined_raw = fields.get("universe_address")
@@ -179,27 +142,8 @@ def classify_and_resolve(
                 reason_code=READ_FAILURE_ADDRESS_UNPARSEABLE,
                 detail=f"Universe/DMX Address 쌍 파싱 불가('{universe_raw}'/'{dmx_raw}')",
             )
-        warning_kind, warning_detail = None, ""
-        if absolute_raw is not None and not _blank(absolute_raw):
-            absolute_value = _to_int(absolute_raw)
-            if absolute_value is not None:
-                expected = (universe - 1) * _UNIVERSE_WIDTH + address
-                if absolute_value != expected:
-                    warning_kind = READ_FAILURE_ADDRESS_TRIPLE_MISMATCH
-                    warning_detail = (
-                        f"Absolute Address({absolute_value})가 (u-1)*512+a 기댓값({expected})과 "
-                        f"불일치 — Universes pane이 기본 연속 512블록이 아닐 수 있다(Start#/End# "
-                        "편집 또는 유니버스 삭제). Universe+DMX Address 조합을 그대로 신뢰하고 "
-                        "Absolute Address로 유니버스를 역산하지 않는다."
-                    )
         return AddressOutcome(
-            kind=_KIND_RESOLVED,
-            classification=PATCHED,
-            universe=universe,
-            address=address,
-            warning_kind=warning_kind,
-            warning_detail=warning_detail,
-            address_basis=ADDRESS_BASIS_DIRECT,
+            kind=_KIND_RESOLVED, classification=PATCHED, universe=universe, address=address
         )
 
     # 차선 — Universe/Address 조합값(역산이 필요 없다).
@@ -220,20 +164,10 @@ def classify_and_resolve(
                 detail="설계됨 · 미배정(조합값 주소=0)",
             )
         return AddressOutcome(
-            kind=_KIND_RESOLVED,
-            classification=PATCHED,
-            universe=universe,
-            address=address,
-            address_basis=ADDRESS_BASIS_DIRECT,
+            kind=_KIND_RESOLVED, classification=PATCHED, universe=universe, address=address
         )
 
-    # 최후 — Absolute Address 역산(v0.1.7 재설계, 결함 1 P0 — ASSUMPTION-69).
-    # Universe/DMX Address 쌍도 조합값도 없고 Absolute Address만 있으면 **역산한다**
-    # — "전제를 확인할 수 없으니 거부한다"가 아니라 `server/prechk/patch.py`의
-    # `OverlapBasis`처럼 **선언된 전제 위에서 가장 약한 근거로 역산을 수행하고
-    # 그 근거를 등급으로 표기**한다(날조 금지이지 파생 금지가 아니다). 하드 거부는
-    # Universe/DMX Address와 Absolute가 **둘 다 있는데 서로 어긋나는** 경우
-    # (위 분기의 ``READ_FAILURE_ADDRESS_TRIPLE_MISMATCH``)에만 남는다.
+    # 최후 — Absolute Address 역산. 전제(연속 512블록) 검증 성공 시에만.
     if absolute_raw is not None and not _blank(absolute_raw):
         value = _to_int(absolute_raw)
         if value is None:
@@ -250,21 +184,19 @@ def classify_and_resolve(
                 address=0,
                 detail="설계됨 · 미배정(Absolute Address=0)",
             )
+        if not contiguous_512_confirmed:
+            return AddressOutcome(
+                kind=_KIND_READ_FAILURE,
+                reason_code=READ_FAILURE_ABS_UNVERIFIED,
+                detail=(
+                    "Absolute Address 단일값 — 연속 기본 512블록 전제가 검증되지 "
+                    "않아 역산을 보류한다(추측 금지, REQ-VWX-009)"
+                ),
+            )
         universe = ((value - 1) // _UNIVERSE_WIDTH) + 1
         address = ((value - 1) % _UNIVERSE_WIDTH) + 1
-        if contiguous_512_confirmed:
-            basis = ADDRESS_BASIS_ABS_CONFIRMED
-        else:
-            basis = ADDRESS_BASIS_ABS_BACK_CALCULATED
         return AddressOutcome(
-            kind=_KIND_RESOLVED,
-            classification=PATCHED,
-            universe=universe,
-            address=address,
-            address_basis=basis,
-            detail=(
-                "" if contiguous_512_confirmed else "Absolute Address 역산 — 전제 미확인, 등급 하향"
-            ),
+            kind=_KIND_RESOLVED, classification=PATCHED, universe=universe, address=address
         )
 
     return AddressOutcome(
@@ -284,9 +216,6 @@ class ResolvedRecord:
     universe: int | None
     address: int | None
     classification: str
-    #: 주소 근거 등급(``ADDRESS_BASIS_*``) — v0.1.7. ``classification`` ==
-    #: ``PATCHED``일 때만 의미 있는 값이 채워진다.
-    address_basis: str | None = None
 
 
 @dataclass(frozen=True)
@@ -333,19 +262,8 @@ def resolve_all(
                     universe=outcome.universe,
                     address=outcome.address,
                     classification=outcome.classification or PATCHED,
-                    address_basis=outcome.address_basis,
                 )
             )
-            if outcome.warning_kind is not None:
-                # 해석은 성공했으나 3중 표현 불일치 등 별도 경고가 있다 — 레코드는
-                # resolved에 그대로 남고, 경고만 구조화된 형태로 추가 보고된다.
-                failures.append(
-                    AddressReadFailure(
-                        row=record.row_index,
-                        kind=outcome.warning_kind,
-                        detail=outcome.warning_detail,
-                    )
-                )
         else:
             failures.append(
                 AddressReadFailure(
