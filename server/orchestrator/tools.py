@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import base64
 import binascii
-import io
 import json
 import math
 import re
@@ -120,6 +119,12 @@ from server.spatial.presets import (
 )
 from server.spatial.topology import TopologyResult
 from server.spatial.topology import classify as classify_topology
+from server.vwx.address import resolve_all as resolve_vwx_addresses
+from server.vwx.columns import resolve_columns as resolve_vwx_columns
+from server.vwx.diff import compare as compare_vectorworks_rig
+from server.vwx.reader import read as read_vwx_export
+from server.vwx.report import build_vwx_report
+from server.vwx.rig import build_designed_rig
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
     from server.deploy.pipeline import DeployOutcome
@@ -139,8 +144,6 @@ TOOL_NAMES = (
     "prepare_songcue",
     "precheck_patch",
     "precheck_vectorworks_diff",
-    "apply_vectorworks_patch",
-    "vectorworks_autopatch",
     "preshow_check",
     "ask_user",
     "resolve_fixture_type",
@@ -2320,376 +2323,21 @@ def build_toolset(
             return _error_result(call, f"'file_content_base64' is not valid base64: {error}")
 
         try:
-            with zipfile.ZipFile(io.BytesIO(raw_bytes)) as archive:
-                is_mvr = SCENE_ENTRY in archive.namelist()
-        except zipfile.BadZipFile:
-            is_mvr = False
-
-        try:
             inventory = read_inventory(_InventoryPort(state_port, property_port))
         except InventoryReadError as error:
             return _error_result(call, f"fixture inventory unreadable: {error}")
 
-        # @MX:WARN: 결함 1(P0, SPEC-COPILOT-VWX-001 실물 파일 투입 재현) —
-        #   server/vwx/reader.py는 자체적으로 csv 계층 예외를 흡수하지만,
-        #   이 try/except는 그 위 계층(columns/address/rig/diff)에서 예상치
-        #   못한 예외가 나더라도 툴 경계를 절대 넘지 않게 하는 방어선이다.
-        #   비협상 원칙(server/prechk/patch.py:15-21) — 읽기 실패는 예외
-        #   산문이 아니라 정상 페이로드의 구조화된 부류다.
-        # @MX:REASON: 실물 파일(리깅 하중 CSV) 투입에서 예외가 오케스트레이터
-        #   까지 탈출한 결함이 발견됐다 — 리더 계층 수정만으로는 미래의
-        #   유사 입력(다른 예외를 던지는 파서 계층)을 방어하지 못한다.
-        try:
-            read_result = read_mvr(raw_bytes) if is_mvr else read_vwx_export(raw_bytes)
-            column_records, column_failures, excluded_rows = resolve_vwx_columns(
-                list(read_result.records)
-            )
-            resolved_records, address_failures = resolve_vwx_addresses(column_records)
-            designed_rig = build_designed_rig(resolved_records, candidate_count=len(column_records))
-            diff = compare_vectorworks_rig(designed_rig, inventory)
-            all_read_failures = (
-                *read_result.read_failures,
-                *column_failures,
-                *address_failures,
-            )
-            payload = build_vwx_report(
-                diff, read_failures=all_read_failures, excluded_rows=tuple(excluded_rows)
-            ).to_dict()
-        except Exception as error:  # noqa: BLE001 — 툴 경계 최종 방어선(설계상 의도적)
-            payload = {
-                "designed_rig": {
-                    "fixture_count": 0,
-                    "device_type_column_present": False,
-                    "join_key_conflicts": [],
-                    "vw_patch_conflicts": [],
-                },
-                "console_rig": {"inventory": inventory.to_dict()},
-                "diffs": {
-                    "missing_in_console": [],
-                    "address_collision": [],
-                    "quantity_mismatch": [],
-                },
-                "skipped_checks": [],
-                "read_failures": [
-                    {
-                        "row": None,
-                        "kind": "unexpected_parse_exception",
-                        "detail": (
-                            f"판독-대조 파이프라인에서 예상치 못한 예외 발생"
-                            f"({type(error).__name__}): {error}"
-                        ),
-                    }
-                ],
-                "summary_ko": (
-                    "판독 실패 1건. 예상치 못한 예외로 대조를 완료하지 못했다 — "
-                    "정상 결과가 아니라 구조화된 판독 실패로 보고한다."
-                ),
-            }
-        return ToolExecution(
-            result=ToolResult(
-                tool_call_id=call.id,
-                name=call.name,
-                content=json.dumps(payload, ensure_ascii=False),
-                is_error=False,
-            ),
-            command_outcomes=(),
+        read_result = read_vwx_export(raw_bytes)
+        column_records, column_failures = resolve_vwx_columns(list(read_result.records))
+        resolved_records, address_failures = resolve_vwx_addresses(column_records)
+        designed_rig = build_designed_rig(resolved_records)
+        diff = compare_vectorworks_rig(designed_rig, inventory)
+        all_read_failures = (
+            *read_result.read_failures,
+            *column_failures,
+            *address_failures,
         )
-
-    # -- vectorworks_autopatch (single conversational entry over VWX-001 M6 +
-    #    AUTOPATCH-001 M7) ----------------------------------------------------
-    #
-    # @MX:NOTE: wraps `precheck_vectorworks_diff` (analyse) and
-    #   `apply_vectorworks_patch` (prepare) behind one tool so the model never
-    #   asks the operator to re-paste a report or a base64 blob mid-conversation.
-    #   The uploaded export stays in this WebSocket session. Keeping its bytes
-    #   and report behind this handler avoids spending model context on base64
-    #   or asking the operator to paste a report back into chat.
-    def vectorworks_autopatch(call: ToolCall, context: ExecutionContext) -> ToolExecution:
-        action = call.arguments.get("action", "analyse")
-        if action not in ("analyse", "prepare"):
-            return _error_result(call, "'action' must be 'analyse' or 'prepare'")
-
-        if action == "analyse":
-            content = vectorworks_upload.content_base64 if vectorworks_upload is not None else None
-            if not isinstance(content, str) or not content:
-                return _error_result(
-                    call,
-                    "이번 대화에 업로드된 Vectorworks 파일이 없다 — 먼저 파일을 업로드해 달라고 "
-                    "안내하고 내용을 채팅에 붙여 넣으라고 요구하지 마라",
-                )
-            execution = precheck_vectorworks_diff(
-                ToolCall(
-                    id=call.id,
-                    name="precheck_vectorworks_diff",
-                    arguments={"file_content_base64": content},
-                ),
-                context,
-            )
-            if not execution.result.is_error:
-                try:
-                    report = json.loads(execution.result.content)
-                except json.JSONDecodeError:
-                    report = None
-                if isinstance(report, Mapping):
-                    vectorworks_upload.report = report
-            return ToolExecution(
-                result=ToolResult(
-                    tool_call_id=call.id,
-                    name=call.name,
-                    content=execution.result.content,
-                    is_error=execution.result.is_error,
-                ),
-                command_outcomes=execution.command_outcomes,
-            )
-
-        report = vectorworks_upload.report if vectorworks_upload is not None else None
-        if not isinstance(report, Mapping):
-            return _error_result(
-                call,
-                "아직 이 업로드 파일의 대조 결과가 없다 — 먼저 action='analyse'로 대조를 수행하라",
-            )
-        arguments = dict(call.arguments)
-        arguments.pop("action", None)
-        arguments["report"] = report
-        execution = apply_vectorworks_patch(
-            ToolCall(id=call.id, name="apply_vectorworks_patch", arguments=arguments), context
-        )
-        return ToolExecution(
-            result=ToolResult(
-                tool_call_id=call.id,
-                name=call.name,
-                content=execution.result.content,
-                is_error=execution.result.is_error,
-            ),
-            command_outcomes=execution.command_outcomes,
-        )
-
-    # -- apply_vectorworks_patch (SPEC-COPILOT-AUTOPATCH-001 M7) ---------------
-    #
-    # @MX:ANCHOR: [AUTO] the only model-reachable entry to the patch layer.
-    # @MX:NOTE: THIS TOOL NEVER EXECUTES THE PATCH. It plans, renders reviewable
-    #   `AddFixtures` Lua, hands the human an execution procedure, and re-reads
-    #   the console to verify. `execution_port` and `deploy_pipeline` are not
-    #   named anywhere in it — that is not caution, it is measurement: server-
-    #   driven `AddFixtures` created ZERO fixtures across 10 execution paths and
-    #   8 argument variants (REQ-AUTOPATCH-018 [v0.1.3],
-    #   `.moai/specs/SPEC-COPILOT-AUTOPATCH-001/progress.md` §E.2 M0 1~5차).
-    #   Every console touch below is a READ, through the same `_InventoryPort`
-    #   `precheck_patch`/`precheck_vectorworks_diff` already use.
-    # @MX:WARN: `dry_run` omitted means TRUE. Do not "helpfully" flip that —
-    #   this app has no undo and no backup restore path, so the default has to
-    #   be the harmless one (REQ-AUTOPATCH-003 · AC-AUTOPATCH-019③).
-
-    #: 이 콘솔에서 FID 프로퍼티가 읽힌다는 **실측 판정**(progress.md §E.2 M0 1차).
-    #: 재측정으로 뒤집히면 여기 한 줄만 바꾼다 — payload의 도달성 표기가 함께 따라간다.
-    _INJECTED_ASSUMPTION_71 = ASSUMPTION_71_GO
-
-    def apply_vectorworks_patch(call: ToolCall, context: ExecutionContext) -> ToolExecution:
-        if property_port is None:
-            return _error_result(
-                call,
-                "property reads are not wired — build_toolset needs property_port "
-                "(or a state_port that also implements query_property)",
-            )
-        report = call.arguments.get("report")
-        if not isinstance(report, Mapping):
-            return _error_result(call, "'report' must be the precheck_vectorworks_diff payload")
-        dry_run = call.arguments.get("dry_run", True)
-        if not isinstance(dry_run, bool):
-            return _error_result(call, "'dry_run' must be a boolean (omitted means true)")
-        names = call.arguments.get("names")
-        if names is not None and not isinstance(names, Mapping):
-            return _error_result(call, "'names' must be an object mapping candidate id -> name")
-
-        selected = call.arguments.get("selected")
-        inventory_port = _InventoryPort(state_port, property_port)
-
-        # 콘솔이 무엇을 보여줬고 무엇을 못 봤는지를 **어느 분기에서든** 먼저 싣는다.
-        # 절단은 이 콘솔의 기본 경로이고(픽스처 19대에서 이미 절단 — §E.2 M0 1차) 그 상태의
-        # "없음"은 관측이 아니라 미판독이다. 거부로 끝나는 호출에서도 사용자는 그 이유를 봐야 한다.
-        try:
-            inventory = read_inventory(inventory_port)
-        except InventoryReadError as error:
-            return _error_result(call, f"fixture inventory unreadable: {error}")
-        caveat = console_read_caveat(inventory)
-        read_complete = caveat is None or caveat["kind"] != CONSOLE_READ_INCOMPLETE
-        console_read = {
-            **inventory.to_dict(),
-            "complete_enough_to_judge_absence": read_complete,
-            "caveat": caveat,
-        }
-
-        plan = build_patch_plan(
-            report,
-            selected=selected,
-            dry_run=dry_run,
-            fid_range=call.arguments.get("fid_range"),
-            # 선택이 있으면 곧 FID를 배정하겠다는 뜻이므로 배정 분기를 **명시 신호로** 켠다 —
-            # 그래야 `fid_range` 누락이 항목별 `fid_not_assigned`로 흩어지지 않고
-            # `fid_range_required` 거부 하나로 올라온다(REQ-AUTOPATCH-007).
-            # [round11 M7 N03] 이전 판은 `assumption_71`을 그 신호로 겸용했다 — 실측 판정을
-            # 제어 신호로 쓰면 툴 경계에서 NEGATIVE·INCONCLUSIVE 분기에 도달할 수 없게 되고
-            # `fid_range_visually_confirmed_empty`가 죽은 필드가 된다. 둘을 분리했고,
-            assignment_requested=bool(selected),
-            # 실측 판정을 **명시적으로** 넘긴다. 값 `go`의 근거는 progress.md §E.2 M0 1차다
-            # (FID 프로퍼티가 읽히고 슬롯≠FID 쇼파일에서 확인됨).
-            # **[round13 S04 고지] 이 주입은 현재 관측 가능한 변화를 만들지 않는다** —
-            # 모듈 기본값도 GO이고 분기 개방은 `assignment_requested`가 전담한다. 그래서
-            # `ASSUMPTION-71` NEGATIVE·INCONCLUSIVE 분기와 `fid_range_visually_confirmed_empty`
-            # 요구는 **툴 경계에서 도달 불가**이며, 그 사실을 payload가 스스로 밝힌다(아래
-            # `assumption_71_reachability`). 재측정으로 GO가 뒤집히면 여기 한 줄만 바꾼다.
-            assumption_71=_INJECTED_ASSUMPTION_71,
-            fid_range_visually_confirmed_empty=call.arguments.get(
-                "fid_range_visually_confirmed_empty"
-            ),
-            fid_property_port=inventory_port,
-        )
-        payload: dict[str, object] = {
-            "plan": plan.to_dict(),
-            "console_read": console_read,
-            # 도달 불가 분기를 숨기지 않고 밝힌다(round13 S04).
-            # [round14 T08] ① 값은 닫힌 어휘 검증을 거쳐 나간다 — payload로 나가는 판정
-            # 문자열에 대한 규칙이 여기에도 적용된다. ② 도달성은 **하드코딩 자기주장이
-            # 아니라 주입값에서 파생**한다 — 주입이 바뀌면 이 필드가 따라간다.
-            "assumption_71_reachability": {
-                "injected": validate_assumption_71(_INJECTED_ASSUMPTION_71),
-                "source": "progress.md §E.2 M0 1차 실측",
-                # [round15 N08] 필드 이름이 주장하는 명제보다 넓은 술어를 쓰지 않는다.
-                # `!= go`는 **확인 요구 분기**의 도달성이지 NEGATIVE 값의 도달성이 아니다 —
-                # `inconclusive` 주입에서 둘이 갈린다. 두 명제를 따로 싣는다.
-                "negative_branch_reachable": (_INJECTED_ASSUMPTION_71 == ASSUMPTION_71_NEGATIVE),
-                "confirmation_branch_reachable": (_INJECTED_ASSUMPTION_71 != ASSUMPTION_71_GO),
-                "note": (
-                    "이 툴은 주입된 분기만 노출한다 — GO인 동안 "
-                    "fid_range_visually_confirmed_empty 는 요구되지 않는다(REQ-AUTOPATCH-026)."
-                ),
-            },
-        }
-        if not plan.ok or not plan.targets:
-            return _patch_payload(call, payload)
-
-        designed = designed_attributes_by_candidate(report, plan.targets)
-        type_plan = resolve_fixture_types(
-            tuple(
-                TypeRequest(
-                    candidate_id=target.id,
-                    instrument_type=target.instrument_type,
-                    gdtf_fixture=designed[target.id].gdtf_fixture,
-                    mode=designed[target.id].mode,
-                    footprint=designed[target.id].footprint,
-                )
-                for target in plan.targets
-            ),
-            library_port=inventory_port,
-            type_aliases=call.arguments.get("type_aliases"),
-        )
-        payload["types"] = type_plan.to_dict()
-
-        console_fixtures = read_console_fixtures(inventory, library=type_plan.library)
-
-        # 계획 내 겹침·폭 미확정은 계획 전체를 보고 판정한다(occupied는 여기서 비운다).
-        address_plan = plan_addresses(
-            plan.targets,
-            footprints={target.id: designed[target.id].footprint for target in plan.targets},
-            occupied={},
-        )
-        address_plan = screen_console_read(
-            plan.targets, address_plan=address_plan, inventory=inventory
-        )
-        # **멱등을 먼저 판정한다.** [round12 R05] 점유 선별을 앞에 두면, 우리 자리에 우리와
-        # 동일한 픽스처가 있고 구간 안에 무관한 픽스처가 하나 더 있을 때 항목이
-        # `address_already_occupied`로 먼저 빠져 `already_patched_identical`이 영영 나오지
-        # 않는다 — 2회차 재호출이 "이미 했음" 대신 "점유됨"으로 보고되는, REQ-AUTOPATCH-022가
-        # 금지하는 바로 그 뭉갬이다(round11 M7 N01이 다른 방향에서 잡았던 것과 같은 결함).
-        address_plan = screen_idempotent(
-            plan.targets,
-            address_plan=address_plan,
-            resolutions=type_plan.resolutions,
-            console_fixtures=console_fixtures,
-        )
-        # 남은 항목(= 우리 자리는 비어 있다고 판정된 것)에 대해서만 구간 침입을 본다.
-        address_plan = screen_console_occupancy(
-            plan.targets, address_plan=address_plan, console_fixtures=console_fixtures
-        )
-        effective_names = dict(names or {})
-        for target in plan.targets:
-            design_name = designed[target.id].fixture_name
-            if design_name and target.id not in effective_names:
-                effective_names[target.id] = design_name
-        handoff = build_patch_handoff(
-            plan.targets,
-            address_plan=address_plan,
-            resolutions=type_plan.resolutions,
-            names=effective_names,
-            dry_run=dry_run,
-        )
-        payload["handoff"] = handoff.to_dict()
-        payload["plan"]["skipped_checks"] = [
-            *payload["plan"]["skipped_checks"],
-            existing_footprint_skipped_check(),
-        ]
-
-        # 검증은 **승인 항목 전체**를 본다 — 방금 전달한 것만 보면 2회차(이미 만들어진 뒤)와
-        # 재조회 불완전 분기에서 결과가 통째로 비고, AC-AUTOPATCH-021①("승인 항목마다 확인
-        # 결과")이 성립하지 않는다. round11 M6 N04가 그 사각을 짚었다.
-        payload["verification"] = {
-            **verify_patch(
-                _approved_entries(plan.targets, type_plan.resolutions, designed, handoff),
-                console_fixtures=console_fixtures,
-                read_complete=read_complete,
-                # [round13 S03] **드라이런은 전달분 0건이다.** `handoff.entries`는 드라이런에도
-                # 채워지므로(REQ-AUTOPATCH-003이 소스 전문을 요구한다) 그대로 넘기면 같은 payload가
-                # `handoff.delivered=false`와 `delivered_count=1`을 동시에 실었고, 기본 경로인
-                # 드라이런에서 "플러그인을 실제로 실행했는지 확인하라"가 나갔다 — 검토만 받으려던
-                # Lua를 실행하게 만드는 안내다.
-                delivered_ids=(
-                    [entry.candidate_id for entry in handoff.entries] if handoff.delivered else []
-                ),
-            ).to_dict(),
-            "scope": "승인 항목 전체(전달분 + 이미 있다고 판정된 것)",
-            "as_of": "이 호출이 방금 읽은 콘솔 상태",
-            "note": (
-                "아직 사람이 플러그인을 실행하지 않았다면 '미관측'이 정상이다 — "
-                "실행한 뒤 같은 인자로 다시 호출하면 그때의 관측이 성공의 근거가 된다."
-            ),
-        }
-        return _patch_payload(call, payload)
-
-    def _approved_entries(targets, resolutions, designed, handoff):
-        """검증 대상 = **승인 항목 전체**. 전달분은 그대로, 나머지는 도면 의도로 채운다.
-
-        전달분(`handoff.entries`)에는 이미 확정된 이름·FID가 있다. 전달되지 않은 승인 항목은
-        타입·모드가 확정된 것에 한해 도면 주소로 확인 결과를 낸다 — 이름이 없어 빠진 항목까지
-        "그 주소에 뭐가 있나"는 답할 수 있고, 2회차에서 그것이 곧 검증이다.
-        """
-        entries = list(handoff.entries)
-        delivered = {entry.candidate_id for entry in entries}
-        by_id = {r.request.candidate_id: r for r in resolutions}
-        for target in targets:
-            if target.id in delivered:
-                continue
-            resolution = by_id.get(target.id)
-            if (
-                resolution is None
-                or resolution.console_type is None
-                or resolution.console_mode is None
-            ):
-                continue
-            entries.append(
-                HandoffEntry(
-                    candidate_id=target.id,
-                    fid=target.assigned_fid or 0,
-                    name="",
-                    console_type=resolution.console_type.name,
-                    console_mode=resolution.console_mode.name,
-                    universe=target.universe,
-                    address=target.address,
-                    footprint=designed[target.id].footprint or 0,
-                )
-            )
-        return tuple(entries)
-
-    def _patch_payload(call: ToolCall, payload: Mapping[str, object]) -> ToolExecution:
+        payload = build_vwx_report(diff, read_failures=all_read_failures).to_dict()
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
@@ -5936,6 +5584,45 @@ def build_toolset(
             },
         ),
         ToolDefinition(
+            name="precheck_vectorworks_diff",
+            description=(
+                "Compare a Vectorworks Instrument Data export (Export Instrument "
+                "Data tab-text, or Export Worksheet .xls/.xlsx/.txt/.csv/.dif/.slk) "
+                "against THIS console's actual patch. Reads the file content and "
+                "the console's own fixture inventory itself and reports three "
+                "difference classes: fixtures the drawing has but the console does "
+                "not (missing_in_console), address collisions the console "
+                "inventory already knows about (address_collision, reused from "
+                "precheck_patch — never recomputed), and per-type quantity "
+                "mismatches between drawing and console (quantity_mismatch). The "
+                "join key is (universe, address) plus fixture type — never a "
+                "fixture id or custom id: a show file where console slot and "
+                "fixture id coincide makes that comparison structurally "
+                "unverifiable, and that gap is reported under skipped_checks "
+                "rather than silently attempted. A fixture the drawing marks "
+                "unpatched (DMX Address/Absolute Address is 0 or blank) is a "
+                "third state, never counted as missing_in_console. Do not pass "
+                "rig numbers: none are accepted — the console side is read "
+                "directly, and the parsed file never reaches the console."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "file_content_base64": {
+                        "type": "string",
+                        "description": (
+                            "The Vectorworks export file's raw bytes, base64-"
+                            "encoded. Text or binary — encoding and file "
+                            "structure are detected from content, never from a "
+                            "file name or extension."
+                        ),
+                    },
+                },
+                "required": ["file_content_base64"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
             name="preshow_check",
             description=(
                 "Run the standard pre-show checklist in one pass: sequence/"
@@ -6967,8 +6654,6 @@ def build_toolset(
         "prepare_songcue": prepare_songcue,
         "precheck_patch": precheck_patch,
         "precheck_vectorworks_diff": precheck_vectorworks_diff,
-        "apply_vectorworks_patch": apply_vectorworks_patch,
-        "vectorworks_autopatch": vectorworks_autopatch,
         "preshow_check": preshow_check,
         "ask_user": ask_user,
         "resolve_fixture_type": resolve_fixture_type,
