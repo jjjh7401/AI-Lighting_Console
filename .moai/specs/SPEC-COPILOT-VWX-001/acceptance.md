@@ -222,7 +222,7 @@ The 주소 해석기가 산출하는 정규화 표현 **shall** `normalize_addre
 - 검증 방법: `server/tests/test_vwx_rig.py`
 - 기대 결과:
   - ① `Part Index` 1~3을 가진 3행이 설계상 리그 모델에서 1개 픽스처로 접힌다.
-  - ② 접힌 픽스처의 `unit_number`/`instrument_type`은 명시된 대표 규칙(예: `Part Index` 최솟값 행)에서 오며 임의 값이 아니다.
+  - ② 접힌 픽스처의 `unit_number`/`instrument_type`은 **정본 대표 규칙 — `Part Index` 최솟값 행을 대표로 채택한다**(닫힌 결정, 대안 아님)에서 오며 임의 값이 아니다.
   - ③ `Part Index`가 없는 일반 픽스처는 접힘 없이 1:1로 반영된다(비공허성).
 
 ### AC-VWX-014 — 액세서리 필터링 (M4)
@@ -326,8 +326,8 @@ The 대조 리포트 **shall** 판독 실패·데이터블록 미탐·미수행�
 - 대상 요구사항: REQ-VWX-024
 - 검증 방법: `server/tests/test_vwx_report.py`
 - 기대 결과:
-  - ① 신규 판정 부류(`missing_in_console` 등)가 `server/prechk/verdicts.py CLOSED_VOCABULARIES`에 등재되고 `server/prechk/report.py`의 라벨 표에 대응 한국어 라벨을 갖는다(키 집합 정확히 일치).
-  - ② 밑줄 식별자(내부 라벨 딕셔너리)를 본 SPEC의 신규 코드가 직접 import하는 지점이 AST 스캔으로 0건이다.
+  - ① **(v0.1.1 — run-phase 확정 설계로 갱신)** 신규 판정 부류(`missing_in_console` 등)가 `server/vwx/report.py`의 독립 닫힌 어휘 레지스트리 `VWX_CLOSED_VOCABULARIES`에 등재되고 동일 파일의 라벨 표에 대응 한국어 라벨을 갖는다(키 집합 정확히 일치). `server/prechk/verdicts.py`의 공유 `CLOSED_VOCABULARIES`는 **건드리지 않는다** — 시도 시 기존 `test_prechk_verdicts.py`/`test_prechk_report.py`의 정확-집합 assert가 깨짐이 실측으로 확인됐다(`progress.md` M6). 이 변경으로 `verdicts.py`도 PRESERVE 0-diff에 포함된다(spec.md §C 갱신).
+  - ② 밑줄 식별자(내부 라벨 딕셔너리)를 본 SPEC의 신규 코드가 직접 import하는 지점이 AST 스캔으로 **0건**이다(비공허성 — 스캔이 실제 코드 트리를 방문했음을, 임시로 밑줄 식별자 직접 import를 심어 스캔이 잡아내는지 확인 후 되돌리는 방식으로 함께 assert한다).
 
 ### AC-VWX-024 — 툴 배선 · 콘솔 실측 경유 · 경계 (M6)
 
@@ -339,7 +339,7 @@ The 대조 리포트 **shall** 판독 실패·데이터블록 미탐·미수행�
   - ① 툴 등록 4지점(`TOOL_NAMES`·핸들러·`definitions`·`handlers`) 전부에 등재되며 **디스패치**로 확인한다(dict 조회만으로 확인하지 않는다).
   - ② `server/vwx/` 어느 파일도 `server.bridge`·`pythonosc`를 직접 import하지 않는다(기존 `_FORBIDDEN_MODULE_PREFIXES` 테스트가 통과).
   - ③ 콘솔 실측 데이터가 `read_inventory` 또는 `build_patch_sheet` 호출을 경유함을 대역 모킹으로 확인한다.
-  - ④ 신규 REST 라우트·웹소켓 메시지·`execution_port` 직접 접근이 AST 스캔으로 0건이다.
+  - ④ 신규 REST 라우트·웹소켓 메시지·`execution_port` 직접 접근이 AST 스캔으로 **0건**이다(비공허성 — 스캔이 실제 트리를 방문했음을, 임시로 REST 라우트 데코레이터 또는 `execution_port` 직접 호출을 심어 스캔이 잡아내는지 확인 후 되돌리는 방식으로 함께 assert한다).
 
 ### AC-VWX-025 — 회귀 · PRESERVE (M7)
 

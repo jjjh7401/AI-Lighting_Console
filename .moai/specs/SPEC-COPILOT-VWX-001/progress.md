@@ -56,7 +56,7 @@ grep -oE '^### AC-VWX-[0-9]{3}' .moai/specs/SPEC-COPILOT-VWX-001/acceptance.md |
 | `spec.md` | REQ 25건 · Out of Scope 6개 H3(전부 `-` 불릿 보유) · ASSUMPTION 68~70 | 184 |
 | `plan.md` | 마일스톤 M0~M8 · 결정 A~G · 라이브 세션 0회 근거 · Phase 4 Mode Selection 권고 | 253 |
 | `acceptance.md` | AC 26건 · 역추적표 REQ 25/25 · 마일스톤별 배정 합 26 | 405 |
-| `design.md` | 변경 표면 · 흐름 8단계 · 위험 검토 13항 · 설계 슬롯 A~E · 뮤테이션 24개 | 338 |
+| `design.md` | 변경 표면 · 흐름 8단계 · 위험 검토 13항 · 설계 슬롯 A~E · 뮤테이션 25개 | 338 |
 | `research.md` | 2경로 export · 별칭 테이블 · 주소 4형식 · 7가지 대조 함정 · 재사용 계약 | 206 |
 | `progress.md`(본 파일) | 인수인계 + plan-phase 로그 + §E 골격 | (본 절 포함, §E.1 참조) |
 
@@ -66,7 +66,7 @@ grep -oE '^### AC-VWX-[0-9]{3}' .moai/specs/SPEC-COPILOT-VWX-001/acceptance.md |
 
 ### 사용자 브리핑이 이미 확정한 사실을 그대로 반영했다
 
-사용자 브리핑이 제공한 조사(두 export 경로, 4가지 주소 표현, 별칭 테이블, 7가지 대조 함정, FID/CID 불가 근거, 실물 샘플 부재)는 이미 검증된 기존 지식으로 취급하고 재조사하지 않았다 — 다만 저장소 코드 인용(`inventory.py:54` 등)은 실제 파일과 대조해 **드리프트를 3건 발견하고 정정했다**:
+사용자 브리핑이 제공한 조사(두 export 경로, 4가지 주소 표현, 별칭 테이블, 7가지 대조 함정, FID/CID 불가 근거, 실물 샘플 부재)는 이미 검증된 기존 지식으로 취급하고 재조사하지 않았다 — 다만 저장소 코드 인용(`inventory.py:54` 등)은 실제 파일과 대조해 **드리프트를 5건 발견하고 정정했다**(plan-audit 지적 반영 — 아래 표는 5행이며 프로즈 수치를 표와 일치시켰다):
 
 | 브리핑 인용 | 실제 값 | 정정 |
 |---|---|---|
@@ -113,10 +113,10 @@ machine_gates:
   out_of_scope_h3_headings: "6 — 전부 `-` 불릿 1건 이상 보유(OutOfScopeRule 요건 충족)"
   abbreviated_tokens_all_artifacts: 0     # 정규식 [^A-Z-](AC|REQ)-[0-9]{3} — 6문서 합 0
   clarification_markers_all_artifacts: 0  # NEEDS CLARIFICATION/TODO/TBD/FIXME 검색 — 6문서 합 0
-  mutations_proposed: 24    # design.md §6.3
+  mutations_proposed: 25    # design.md §6.3 (plan-audit 지적 반영 — 표 25행과 일치)
 preflight_probe:
   real_sample_present: false   # 이 저장소에 실물 Vectorworks export 샘플 0건. M0가 확보를 소유한다
-  code_citation_drift_found: 3 # tools.py TOOL_NAMES/handler/definition/handlers dict 4개 좌표 + inventory.py 1개 좌표가 브리핑 인용과 어긋나 직접 재확인 후 정정
+  code_citation_drift_found: 5 # tools.py TOOL_NAMES/handler/definition/handlers dict 4개 좌표 + inventory.py 1개 좌표가 브리핑 인용과 어긋나 직접 재확인 후 정정 (plan-audit 지적 반영 — 표 5행과 일치)
 known_gaps:
   - "이 저장소에 실물 Vectorworks export 샘플이 없다 — 컬럼 별칭 테이블(research.md §3)은 Vectorworks 공식 문서 조사에 근거한 초안이며 M0가 실물 파일로 검증·확장한다."
   - "openpyxl 신규 의존성 승인이 확보되지 않았다 — 미승인이어도 산출물은 성립하며 경로 B의 .xlsx만 v1 범위 밖으로 축소된다(spec.md §D)."
@@ -170,9 +170,65 @@ M0는 사용자가 실물 export 파일(경로 A 또는 경로 B, 최소 1건)�
 
 M0가 미충족이므로 M1~M7은 **합성 픽스처**(문서 근거·실물 미검증, research.md §3 알려진 형식 조사에만 근거)로 선행 진행한다. M8(종단 검증)은 실물 샘플 없이는 닫히지 않으므로 아래에서 별도 BLOCKED로 기록한다.
 
-### M1~M7 구현 로그
+### M1~M7 구현 로그 (manager-develop 위임 완료, 오케스트레이터 직접 재검증 완료)
 
-_<manager-develop 위임 후 마일스톤별로 본 절에 追記>_
+**AC PASS/FAIL 매트릭스** (M0/M8 제외 24건 전량):
+
+| 마일스톤 | AC | 검증 명령 | 결과(오케스트레이터 재실측) |
+|---|---|---|---|
+| M1 | AC-VWX-002~005 | `uv run pytest server/tests/test_vwx_reader.py -q` | 15 passed |
+| M2 | AC-VWX-006~008 | `uv run pytest server/tests/test_vwx_columns.py -q` | 8 passed |
+| M3 | AC-VWX-009~012 | `uv run pytest server/tests/test_vwx_address.py -q` | 12 passed |
+| M4 | AC-VWX-013~017 | `uv run pytest server/tests/test_vwx_rig.py -q` | 17 passed |
+| M5 | AC-VWX-018~021 | `uv run pytest server/tests/test_vwx_diff.py -q` | 11 passed |
+| M6 | AC-VWX-022~024 | `uv run pytest server/tests/test_vwx_report.py server/tests/test_vwx_tool.py -q` | 22 passed |
+| M7 | AC-VWX-025 | PRESERVE diff + 전체 스위트 + AST 스캔 비공허성 | PASS(아래) |
+
+**전체 스위트 (오케스트레이터 직접 재실측, HEAD 7c2a19b)**:
+```
+uv run pytest server/tests -q
+→ 4801 passed, 7 skipped, 1 warning in 92.58s (0:01:32)
+```
+착수 baseline `4716 passed, 7 skipped`(2bc95cf) 대비 **+85**(신규 VWX 테스트 7파일 합계: 15+8+12+17+11+8+14=85), skip·warning 카운트 불변 — 델타 전량 설명됨. 회귀 0건.
+
+**ruff (오케스트레이터 직접 재실측)**: `uv run ruff check server/vwx/ server/tests/test_vwx_*.py server/orchestrator/tools.py` → `All checks passed!`
+
+**PRESERVE diff 게이트 (오케스트레이터 직접 재실측)**:
+```
+git diff --stat 2bc95cf..HEAD -- console/lua/ server/safety/ \
+  server/prechk/__init__.py server/prechk/inventory.py server/prechk/patch.py \
+  server/prechk/report.py server/prechk/footprint.py server/prechk/macro.py server/prechk/query.py \
+  server/prechk/verdicts.py \
+  server/paperwork/data.py server/paperwork/render.py server/paperwork/output.py server/looks/
+→ (완전 빈 출력, exit=0) — 8개 prechk 파일 전부 포함. verdicts.py도 0-diff(당초 순수 추가 예외보다 엄격).
+```
+비공허성 증명: manager-develop이 `server/prechk/patch.py`에 임시 라인을 추가·커밋해 게이트가 `1 file changed, 1 insertion(+)`로 적발함을 확인한 뒤 `git revert`로 되돌려 재확인함(커밋 582746c → 9f3de4b, 히스토리에 정직하게 보존 — squash 미실시).
+
+**아키텍처 경계 (오케스트레이터 직접 재실측)**: `uv run pytest server/tests/test_architecture.py -q` → `4 passed`.
+
+**툴 등록 검증 (dispatch 기반, dict 조회 아님)**: `test_vwx_tool.py::TestRegistrationByDispatch` 4-assertion 전부 PASS — `TOOL_NAMES` 포함 · `definitions()` 이름집합 포함 · dispatch가 'unknown tool' 미발생 · `advertised == set(TOOL_NAMES)`.
+
+**M6 설계 변경 (계획 대비 더 안전한 결과)**: 신규 판정 어휘를 `server/prechk/verdicts.py`의 공유 `CLOSED_VOCABULARIES`에 추가하면 기존 `test_prechk_verdicts.py`/`test_prechk_report.py`의 정확-집합 assert 3건이 깨짐을 실측으로 발견. `server/vwx/report.py`에 독립 닫힌 어휘 레지스트리(`VWX_CLOSED_VOCABULARIES` + `vwx_label()`, 동일 패턴: 닫힌 집합+라벨표+미등록 예외)를 신설해 `verdicts.py`를 완전 비접촉으로 유지 — spec.md §C·acceptance.md AC-VWX-023①을 이 실제 설계로 갱신했다.
+
+**M7 부수 수정**: `server/tests/test_songcue_bundle.py`가 `tools.py` 위치 트립와이어(과거 여러 SPEC이 갱신해온 관례)를 갖고 있어 M6의 신규 hunk(`base64`/`binascii` import) 반영을 위해 튜플 갱신. `test_tools.py`의 하드코딩 툴 개수(22→23)도 함께 갱신.
+
+**환경 메모**: 커밋 시점 품질 게이트가 `npm test`(ui vitest)를 무조건 실행하는데 `ui/node_modules`가 부재해 커밋이 전부 막혔다 — `npm --prefix ui install`(기존 lockfile 기준 의존성 설치만, 소스 미변경)로 해소. 소스 코드 범위 밖.
+
+**커밋 (전부 로컬, push 0건 — `git status -sb`로 확인, upstream 추적 없음)**:
+```
+e40c4d0 feat(SPEC-COPILOT-VWX-001): M1-M2 file reading + column alias resolution
+3f2da4a feat(SPEC-COPILOT-VWX-001): M3 address handling
+5349269 feat(SPEC-COPILOT-VWX-001): M4 designed-rig domain model
+071d29a feat(SPEC-COPILOT-VWX-001): M5 precheck_patch diff
+a83a42f feat(SPEC-COPILOT-VWX-001): M6 report + tool wiring
+582746c test: PRESERVE-gate non-vacuity probe (to be reverted)
+9f3de4b Revert "test: PRESERVE-gate non-vacuity probe (to be reverted)"
+7c2a19b fix(SPEC-COPILOT-VWX-001): M7 update SONGCUE tools.py hunk tripwire
+```
+
+**신규/변경 파일**: 신규 `server/vwx/{__init__,reader,columns,address,rig,diff,report}.py`, `server/tests/test_vwx_{reader,columns,address,rig,diff,report,tool}.py`(7파일). 수정 `pyproject.toml`(openpyxl 추가)·`uv.lock`·`server/orchestrator/tools.py`(신규 툴 5지점 등록)·`server/tests/test_tools.py`·`server/tests/test_songcue_bundle.py`.
+
+**plan-audit minor 10건 처리 (오케스트레이터 직접 정정, M1 병행)**: 자기모순 2건(드리프트 "3건"→5건 정정, 뮤테이션 "24"→25 정정) · REQ-VWX-025 shall 누락 정정 · AC-VWX-023②/AC-VWX-024④ 비공허성 주석 추가 · AC-VWX-013② 대표 규칙을 닫힌 결정으로 명확화. 나머지 6건(비차단, `related_specs` 미문서화·`id` 정규식 문구·REQ 7건 비정형 조건절·REQ 5건 file:line 인용)은 감사 비차단 판정대로 후속 사이클로 이연한다.
 
 ### M8 — `BLOCKED: 실물 Vectorworks export 샘플 없이는 종단 검증을 닫을 수 없음`
 
@@ -180,7 +236,32 @@ M0가 미충족인 채로는 M8(실물 파일 기반 종단 통합 검증, AC-VW
 
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending — M1~M7 구현 완료 후 채움>_
+```yaml
+run_status: partial-blocked   # M1~M7 completed + verified; M0/M8 BLOCKED (real Vectorworks sample not provided)
+run_complete_at: 2026-08-05
+head_sha: 7c2a19b
+base_sha: 2bc95cf309457de5f6fc2b6757b3a8c7aa9f6ec7
+milestones_completed: [M1, M2, M3, M4, M5, M6, M7]
+milestones_blocked: [M0, M8]
+milestones_blocked_reason: "실물 Vectorworks export 샘플 미제공 — 사용자 산출물 대기"
+acceptance_criteria_verified: 24   # AC-VWX-002~025 (M0=AC-VWX-001, M8=AC-VWX-026 제외)
+acceptance_criteria_blocked: 2     # AC-VWX-001 (M0), AC-VWX-026 (M8)
+full_suite: "4801 passed, 7 skipped, 1 warning in 92.58s — entry baseline 4716 passed 7 skipped, delta +85 fully explained (7 new test files), 0 regressions"
+ruff: "All checks passed! (server/vwx/, server/tests/test_vwx_*.py, server/orchestrator/tools.py)"
+preserve_gate: "empty diff on all 8 server/prechk/ files (including verdicts.py — stricter than the pure-addition exception spec.md originally allowed) + console/lua/** + server/safety/** + server/paperwork/{data,render,output}.py + server/looks/**; non-vacuity proven via plant-and-revert (582746c/9f3de4b)"
+tool_registration: "dispatch-verified — TOOL_NAMES membership, definitions() name-set, dispatch no-unknown-tool, advertised==set(TOOL_NAMES) — all 4 assertions PASS"
+architecture_boundary: "server/tests/test_architecture.py — 4 passed — server/vwx/ imports neither server.bridge nor pythonosc"
+plan_audit_minor_findings_closed: 4   # 자기모순 2건 + REQ-VWX-025 shall + AC-013②
+plan_audit_minor_findings_deferred: 6 # 비차단, 후속 사이클로 이연
+push_count: 0
+pr_count: 0
+main_touched: false
+known_gaps:
+  - "M0/M8은 완료되지 않았다 — 실물 Vectorworks export 샘플이 사용자로부터 제공되어야 재개 가능하다."
+  - "M1~M7은 전량 합성 픽스처(문서 근거·실물 미검증)로 검증됐다 — ASSUMPTION-68~70은 여전히 미판정(GO/NEGATIVE 없음)."
+  - "M6 설계가 계획 대비 변경됐다 — server/prechk/verdicts.py를 건드리지 않고 server/vwx/report.py에 독립 어휘 레지스트리를 신설했다(spec.md §C·acceptance.md AC-VWX-023 갱신 완료)."
+next: "실물 Vectorworks export 샘플 확보(M0) 후 M8 종단 검증 재개. 그 전까지는 sync-phase로 진행하지 않는다(M0/M8 BLOCKED가 SPEC 완결을 막는다)."
+```
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
