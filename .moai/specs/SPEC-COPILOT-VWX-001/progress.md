@@ -531,6 +531,96 @@ uv run ruff format --check server/vwx server/tests/test_vwx_*.py → 14 files al
 git diff --stat 2bc95cf..HEAD -- console/lua/ server/safety/ server/prechk/{__init__,inventory,patch,report,footprint,macro,query,verdicts}.py server/paperwork/{data,render,output}.py server/looks/ → (완전 빈 출력, exit=0)
 ```
 
+### 조인 키 스코프 결함 수정 (2026-08-05, v0.1.5) — 실사용 리그 대부분이 전멸하던 결함
+
+**결함 (코디네이터 재현, 툴 dispatch 경유)**: `unit_number`를 사실상 전역 유일 조인 키로 취급하고
+있었다. 재현 입력:
+
+```
+헤더: Fixture Type,Universe,DMX Address,Unit Number,Position
+A) MAC Encore,1,1,1,Upstage Truss
+   Source Four,2,1,1,FOH
+```
+
+서로 다른 포지션(`Upstage Truss`·`FOH`)에 있는 **서로 다른** 픽스처 2대가 둘 다 `Unit Number=1`
+이라는 이유만으로 "동일 픽스처의 중복"으로 오판정되어 last-write-wins 병합을 거부하고
+`join_key_conflicts` 1건으로 **둘 다 탈락**했다 — `fixture_count: 0`이 되어 v0.1.3의 "픽스처
+0대 = 대조 미수행" 불변식까지 걸려 "대조를 수행하지 않았다"로 보고됐다. Vectorworks에서
+`Unit Number`는 **포지션 안에서만 유일**하다(트러스마다 1번부터 다시 센다 — 정상적인 도면이고
+예외가 아니다, 브리핑이 이미 경고했던 함정이다). 지금 구현은 포지션이 2개 이상인 리그를
+**사실상 전부 전멸**시켰다.
+
+**왜 M0 실물 샘플이 이 결함을 못 잡았는가 — 정직한 기록**: `vectorworks_export_sample_with_data.csv`
+(v0.1.4가 검증한 실물 샘플)는 `Position`이 `'Upstage Truss'` **하나뿐**이었다. 포지션이 하나면
+"포지션 안에서만 유일"과 "전역으로 유일" 두 스코프가 우연히 일치하므로 결함이 드러나지
+않는다 — **통과한 것은 우연이지 검증된 것이 아니다.** 이것이 정확히 M0 PARTIAL의 "행복 경로만
+검증했다" 한계 목록에 이미 적혀 있던 항목("단일 포지션") 중 하나가 실제로 결함을 가렸던
+사례다. 조용히 병합하지 않고 거부한 것 자체는 옳았다 — 고칠 것은 **키의 스코프**였다.
+
+**수정 (`server/vwx/rig.py`)**: 조인 키 우선순위를 재정의했다 — ① `channel`(Vectorworks
+**전역 유일** 디자이너 번호, 문서상 비숫자 "channel name"일 수 있어 항상 문자열로 다룬다,
+`_fold_by_channel` 신설) → ② `(position, unit_number)` **복합 키**(channel이 없거나 공란일
+때만, `_fold_by_position_and_unit_number` 신설 — position 공란도 하나의 스코프로 취급해
+공란끼리만 충돌) → ③ 둘 다 없으면 기존대로 조인 불가 거부. `_fold_group`이 사람이 읽을 수 있는
+스코프 라벨(예: `"포지션 'FOH' 내 unit_number '1'"`)을 받아 충돌 사유에 **어느 스코프에서
+중복인지** 명시하도록 갱신했다. `part_index` 멀티셀 폴딩 규약은 새 스코프 안에서도 그대로
+유지된다(회귀 테스트로 확인).
+
+**부수 발견 — 기존 테스트 1건의 전제가 바뀜**: `TestVectorworksNativeConflictPassthrough`의
+"Identical Patch" 테스트가 두 행에 **문자 그대로 같은 `channel` 값**("1")을 부여하고 있었다.
+channel이 전역 유일 최우선 키가 된 이상, 정말로 같은 channel 값을 가진 두 행은 서로 다른
+2대의 픽스처가 아니라 **조인 키 중복**이다 — 이제 이 시나리오는 `join_key_conflicts`로 먼저
+잡히고 `_classify_vw_conflicts`(서로 다른 조인 키로 만들어진 별개 픽스처가 우연히 같은 주소를
+공유하는 경우) 단계에는 도달하지 않는다. 테스트를 이 새 행동을 검증하도록 갱신했다(설명 주석
+포함) — `VW_IDENTICAL_PATCH`/`VW_PATCH_CONFLICT`/`VW_PATCH_OVERLAP` 분류 코드 자체는 무변경이며
+나머지 두 VW 충돌 테스트(서로 다른 channel · channel 부재)는 그대로 통과한다.
+
+**회귀 테스트 (`test_vwx_rig.py::TestUnitNumberIsScopedToPositionNotGlobal` 신설 7건 +
+`test_vwx_tool.py::TestUnitNumberScopeFixEndToEndThroughDispatch` 신설 2건)**:
+- 코디네이터 재현 A(서로 다른 포지션의 Unit 1 두 개) → `fixture_count 2`, 충돌 0.
+- **비공허성 대조군** — 같은 포지션 안의 Unit 1 두 개 → 충돌 1건, 사유에 "포지션"·"FOH" 명시
+  (스코프가 죽어있지 않음을 증명 — 이게 없으면 이번 수정이 충돌 탐지 자체를 통째로 죽인 것을
+  못 잡는다).
+- 포지션 공란은 그 자체로 하나의 스코프(공란끼리만 충돌, 공란 vs 실포지션은 서로 다른 스코프).
+- channel이 있고 unit_number가 전 행 공란인 파일 → channel로 정상 조인(3행 전량).
+- channel이 비숫자 문자열("House Left A"/"House Left B")이어도 정상 조인.
+- part_index 멀티셀 폴딩이 새 스코프에서도 유지됨.
+- 실물 샘플(`vectorworks_export_sample_with_data.csv`)이 **여전히 10 픽스처**(직접 재실측 확인
+  — 이 파일은 포지션 1종이라 이번 수정으로 영향받지 않는다).
+
+**비공허성 — stash-and-rerun**: 수정 전 코드로 되돌려 신규 테스트를 재실행한 결과, 코디네이터
+재현과 정확히 일치하는 4건이 실패했다(`fixture_count`가 기대와 다르게 0으로 나옴) — 수정
+되돌림 없이는 재현되지 않는 새 테스트임을 직접 확인했다.
+
+**SPEC 아티팩트 동기화**: `spec.md` REQ-VWX-016을 조인 키 우선순위(①channel→②(position,
+unit_number)→③거부) 형태로 재정의(v0.1.5), HISTORY v0.1.5 행 추가. `acceptance.md` AC-VWX-016을
+동일 스코프로 갱신 + 회귀 시나리오(③~⑦) 추가. REQ/AC 개수는 불변(28/29, 기존 항목의 내용만
+갱신) — §C.0/§C.0a 갱신 불필요.
+
+**경로 B(워크시트 그리드) 합성 검증 — 코디네이터 요청, ⚠ 합성물이지 실물 아님**: 손으로
+`server/tests/fixtures/vwx/synthetic_path_b_worksheet_grid.csv`를 만들었다(제목행 + DB헤더행 +
+데이터 4행(포지션 2종, 조인 키 스코프 수정 재현 조건과 같은 형태) + 소계행, CRLF). 이 파일로
+**처음으로** 경로 B 판별·헤더 구조적 식별·소계행 배제 휴리스틱이 실행됐다 — M0 실물 샘플은
+`path_kind=A`(flat 단일 테이블)라 이 경로를 한 번도 타지 않았었다. 직접 실측 결과:
+`path_kind=B` 정확히 판별 · 소계행 1건이 `worksheet_subtotal_row`로 데이터에서 구조적으로
+배제 · 데이터 4행 전량 판독 · 새 조인 키 스코프도 이 파일 안에서 정상 동작(fixture_count 4,
+충돌 0) — **전부 확인됨**. 그러나 **이건 합성물이므로 실물 워크시트 export의 실제 마커·서식·
+인코딩 특이성을 대변하지 않는다 — `ASSUMPTION-70`은 여전히 미해소로 남는다.** 실물로 오인해
+GO로 닫으면 안 된다는 경고를 픽스처 README에 명시했다(`server/tests/fixtures/vwx/README.md`).
+회귀 테스트: `test_vwx_tool.py::TestSyntheticPathBGridEndToEndThroughDispatch`(신설 1건).
+
+**재검증(오케스트레이터 직접 실측)**:
+```
+uv run pytest server/tests -q → 4852 passed, 7 skipped, 1 warning in 91.88s
+```
+이번 라운드 착수 baseline `4842 passed, 7 skipped` 대비 **+10**(join-scope 회귀 9건 + 경로 B
+합성 검증 1건), 회귀 0건.
+```
+uv run ruff check server/vwx server/tests/test_vwx_*.py → All checks passed!
+uv run ruff format --check server/vwx server/tests/test_vwx_*.py → 14 files already formatted
+git diff --stat 2bc95cf..HEAD -- console/lua/ server/safety/ server/prechk/{__init__,inventory,patch,report,footprint,macro,query,verdicts}.py server/paperwork/{data,render,output}.py server/looks/ → (완전 빈 출력, exit=0)
+```
+
 ### M1~M7 구현 로그 (manager-develop 위임 완료, 오케스트레이터 직접 재검증 완료)
 
 **AC PASS/FAIL 매트릭스** (M0/M8 제외 24건 전량):

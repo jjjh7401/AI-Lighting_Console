@@ -2,7 +2,7 @@
 
 콘솔 슬롯 대응이 아니라 도면이 선언한 장비 목록의 구조화된 표현이다.
 ``Part Index`` 멀티셀 폴딩, ``Device Type`` 액세서리 필터링, 타입·모드
-퍼지 매칭, 파일 내부 조인키(``unit_number``/``channel``) 충돌 거부,
+퍼지 매칭, 파일 내부 조인키(``channel`` 최우선, 차선 ``(position,unit_number)``) 충돌 거부,
 Vectorworks 자체 패치 충돌 분류(Patch overlap · Identical Patch · Patch
 conflict) 통과를 대조(``diff.py``) 이전 단계에서 전부 마친다
 (``research.md`` §6 대조 7가지 함정 ①②③⑤⑥).
@@ -87,7 +87,7 @@ class DesignOverlapEntry:
 
 @dataclass(frozen=True)
 class JoinKeyConflict:
-    """파일 내부 조인키(unit_number/channel) 충돌 — last-write-wins 거부."""
+    """파일 내부 조인키(channel 최우선, 차선 (position,unit_number)) 충돌 — last-write-wins 거부."""
 
     key: str
     detail: str
@@ -211,24 +211,63 @@ def _compute_design_overlaps(fixtures: list[DesignedFixture]) -> list[DesignOver
     return overlaps
 
 
-def _fold_by_key(
+def _fold_by_channel(
     records: list[ResolvedRecord],
-    key_field: str,
 ) -> tuple[dict[str, list[ResolvedRecord]], list[str], list[ResolvedRecord]]:
-    """``key_field`` 값으로 레코드를 그룹핑한다. 공란인 레코드는 별도 목록으로."""
+    """``channel``(Vectorworks 전역 유일 디자이너 번호) 값으로 그룹핑한다.
+
+    최우선 조인 키다(REQ-VWX-016 v0.1.5) — 파일 전체에서 유일하기 때문에
+    ``unit_number``(포지션 안에서만 유일)보다 안전하다. 문서상 비숫자
+    ("channel name")일 수 있으므로 항상 문자열로 다룬다 — 정수 변환을
+    시도하지 않는다. 공란인 레코드는 다음 우선순위(position+unit_number)로
+    넘어간다.
+    """
     groups: dict[str, list[ResolvedRecord]] = {}
     order: list[str] = []
     unkeyed: list[ResolvedRecord] = []
     for record in records:
-        raw_key = record.fields.get(key_field)
-        if raw_key and raw_key.strip():
-            key = raw_key.strip()
+        raw_channel = record.fields.get("channel")
+        if raw_channel and raw_channel.strip():
+            key = raw_channel.strip()
             if key not in groups:
                 groups[key] = []
                 order.append(key)
             groups[key].append(record)
         else:
             unkeyed.append(record)
+    return groups, order, unkeyed
+
+
+def _fold_by_position_and_unit_number(
+    records: list[ResolvedRecord],
+) -> tuple[
+    dict[tuple[str, str], list[ResolvedRecord]], list[tuple[str, str]], list[ResolvedRecord]
+]:
+    """``(position, unit_number)`` 복합 키로 그룹핑한다 — channel이 없을 때의 차선책.
+
+    ``Unit Number``는 Vectorworks에서 **포지션 안에서만 유일**하다(전역 유일이
+    아니다 — 트러스마다 1번부터 다시 센다, 브리핑이 이미 경고했던 함정).
+    ``unit_number``만으로 그룹핑하면 서로 다른 포지션의 동명 유닛이 충돌로
+    오판정돼 실사용 리그 대부분이 전멸한다(코디네이터 재현). ``position``이
+    공란이면 그 자체가 하나의 스코프다 — 공란끼리만 서로 충돌한다.
+    ``unit_number``가 공란인 레코드는 이 계층에서도 조인 불가로 다음
+    우선순위(둘 다 없음)로 넘어간다.
+    """
+    groups: dict[tuple[str, str], list[ResolvedRecord]] = {}
+    order: list[tuple[str, str]] = []
+    unkeyed: list[ResolvedRecord] = []
+    for record in records:
+        raw_unit = record.fields.get("unit_number")
+        if not raw_unit or not raw_unit.strip():
+            unkeyed.append(record)
+            continue
+        raw_position = record.fields.get("position")
+        position_key = raw_position.strip() if raw_position and raw_position.strip() else ""
+        key = (position_key, raw_unit.strip())
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(record)
     return groups, order, unkeyed
 
 
@@ -265,18 +304,17 @@ def _classify_vw_conflicts(fixtures: list[DesignedFixture]) -> list[VwPatchConfl
 
 
 def _fold_group(
-    key: str,
+    key_label: str,
     members: list[ResolvedRecord],
     device_type_present: bool,
-    conflict_detail_prefix: str,
 ) -> tuple[DesignedFixture | None, JoinKeyConflict | None]:
     """한 조인키 그룹을 접는다 — Part Index가 전량 있으면 멀티셀 폴딩, 없으면
-    진짜 중복(join key conflict)이다."""
+    진짜 중복(join key conflict)이다. ``key_label``은 이미 사람이 읽을 수 있는
+    형태(어느 스코프에서 중복인지 포함)로 준비돼 들어온다."""
     if len(members) > 1 and not all(m.fields.get("part_index", "").strip() for m in members):
         conflict = JoinKeyConflict(
-            key=key,
-            detail=f"{conflict_detail_prefix} '{key}' 중복 {len(members)}건 — "
-            "Part Index 없이 last-write-wins 병합 거부",
+            key=key_label,
+            detail=f"{key_label} 중복 {len(members)}건 — Part Index 없이 last-write-wins 병합 거부",
             rows=tuple(m.row_index for m in members),
         )
         return None, conflict
@@ -287,37 +325,48 @@ def _fold_group(
 
 
 def build_designed_rig(records: list[ResolvedRecord]) -> DesignedRig:
-    """주소 해석까지 끝난 레코드 목록 -> 설계상 리그 모델(REQ-VWX-012~017)."""
-    device_type_present = any("device_type" in record.fields for record in records)
+    """주소 해석까지 끝난 레코드 목록 -> 설계상 리그 모델(REQ-VWX-012~017).
 
-    unit_groups, unit_order, unkeyed = _fold_by_key(records, "unit_number")
+    조인 키 우선순위(REQ-VWX-016 v0.1.5 — 코디네이터 재현으로 드러난 결함 수정):
+    ① ``channel`` — Vectorworks 전역 유일 디자이너 번호(비숫자 가능, 문자열로 취급).
+    ② ``(position, unit_number)`` 복합 키 — channel이 없거나 공란일 때. ``unit_number``는
+       포지션 안에서만 유일하므로 position과 묶지 않으면 서로 다른 포지션의 동명 유닛이
+       충돌로 오판정된다. position 공란도 하나의 스코프다.
+    ③ 둘 다 없으면 조인 불가로 거부(기존과 동일).
+    """
+    device_type_present = any("device_type" in record.fields for record in records)
 
     fixtures: list[DesignedFixture] = []
     join_conflicts: list[JoinKeyConflict] = []
 
-    for key in unit_order:
-        fixture, conflict = _fold_group(key, unit_groups[key], device_type_present, "unit_number")
-        if fixture is not None:
-            fixtures.append(fixture)
-        if conflict is not None:
-            join_conflicts.append(conflict)
-
-    # unit_number가 공란인 레코드 — 대체 조인키로 channel을 시도한다.
-    channel_groups, channel_order, truly_unjoinable = _fold_by_key(unkeyed, "channel")
+    # ① channel — 전역 유일 디자이너 번호(최우선).
+    channel_groups, channel_order, no_channel = _fold_by_channel(records)
     for key in channel_order:
-        fixture, conflict = _fold_group(
-            key, channel_groups[key], device_type_present, "unit_number 공란 + 대체 조인키 channel"
-        )
+        label = f"channel '{key}'"
+        fixture, conflict = _fold_group(label, channel_groups[key], device_type_present)
         if fixture is not None:
             fixtures.append(fixture)
         if conflict is not None:
             join_conflicts.append(conflict)
 
+    # ② (position, unit_number) 복합 키 — channel이 없는 레코드만 대상.
+    pu_groups, pu_order, truly_unjoinable = _fold_by_position_and_unit_number(no_channel)
+    for key in pu_order:
+        position_key, unit_key = key
+        scope_label = f"포지션 '{position_key}'" if position_key else "포지션 공란"
+        label = f"{scope_label} 내 unit_number '{unit_key}'"
+        fixture, conflict = _fold_group(label, pu_groups[key], device_type_present)
+        if fixture is not None:
+            fixtures.append(fixture)
+        if conflict is not None:
+            join_conflicts.append(conflict)
+
+    # ③ 둘 다 없음 — 조인 불가.
     for record in truly_unjoinable:
         join_conflicts.append(
             JoinKeyConflict(
                 key="",
-                detail="unit_number·channel 둘 다 공란 — 조인 불가",
+                detail="channel·unit_number 둘 다 공란 — 조인 불가",
                 rows=(record.row_index,),
             )
         )

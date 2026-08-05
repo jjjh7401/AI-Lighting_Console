@@ -312,3 +312,68 @@ class TestRealWorldPositiveSampleEndToEndThroughDispatch:
         payload = json.loads(execution.result.content)
         skipped_kinds = {entry["kind"] for entry in payload["skipped_checks"]}
         assert "console_footprint_width_injection_deferred" in skipped_kinds
+
+
+class TestUnitNumberScopeFixEndToEndThroughDispatch:
+    """v0.1.5 회귀(코디네이터 정확 재현) — 서로 다른 포지션의 동명 Unit Number가
+    dispatch 전체 경로에서 더 이상 전멸하지 않는다."""
+
+    @staticmethod
+    def _b64(text: str) -> str:
+        return base64.b64encode(text.encode("utf-8")).decode("ascii")
+
+    def test_two_different_positions_with_the_same_unit_number_both_survive(self):
+        """코디네이터 재현 A — 수정 전에는 fixture_count 0, join_key_conflicts 1건이었다."""
+        header = "Fixture Type,Universe,DMX Address,Unit Number,Position"
+        rows = [
+            "MAC Encore,1,1,1,Upstage Truss",
+            "Source Four,2,1,1,FOH",
+        ]
+        data = "\n".join([header, *rows])
+        execution = _dispatch(_registry(), file_content_base64=self._b64(data))
+        payload = json.loads(execution.result.content)
+        assert payload["designed_rig"]["fixture_count"] == 2
+        assert payload["designed_rig"]["join_key_conflicts"] == []
+        assert payload["diffs"]["performed"] is True
+
+    def test_same_position_same_unit_number_still_conflicts(self):
+        """대조군 — 같은 포지션 안에서는 여전히 충돌로 잡힌다(스코프가 살아있음을 증명)."""
+        header = "Fixture Type,Universe,DMX Address,Unit Number,Position"
+        rows = [
+            "MAC Encore,1,1,1,FOH",
+            "Source Four,1,2,1,FOH",
+        ]
+        data = "\n".join([header, *rows])
+        execution = _dispatch(_registry(), file_content_base64=self._b64(data))
+        payload = json.loads(execution.result.content)
+        assert payload["designed_rig"]["fixture_count"] == 0
+        assert len(payload["designed_rig"]["join_key_conflicts"]) == 1
+        assert payload["diffs"]["performed"] is False
+
+
+class TestSyntheticPathBGridEndToEndThroughDispatch:
+    """경로 B(워크시트 그리드) 휴리스틱이 최초로 실행됨을 확인 — ⚠ 합성물, 실물 아님.
+
+    `synthetic_path_b_worksheet_grid.csv`는 손으로 만든 합성 워크시트 그리드다
+    (제목행+DB헤더행+데이터4행+소계행). M0가 확보한 실물 샘플은 path_kind=A라
+    이 경로를 한 번도 타지 않았다 — 이 테스트는 코드 경로가 실제로 동작함만
+    증명하며, ASSUMPTION-70(실물 워크시트에서도 그런가)은 미해소로 남는다.
+    """
+
+    _FIXTURE_PATH = (
+        Path(__file__).parent / "fixtures" / "vwx" / "synthetic_path_b_worksheet_grid.csv"
+    )
+
+    @staticmethod
+    def _b64_bytes(data: bytes) -> str:
+        return base64.b64encode(data).decode("ascii")
+
+    def test_title_row_and_subtotal_row_are_structurally_excluded_data_rows_survive(self):
+        data = self._FIXTURE_PATH.read_bytes()
+        execution = _dispatch(_registry(), file_content_base64=self._b64_bytes(data))
+        payload = json.loads(execution.result.content)
+        # 4개 데이터 행이 전량 판독되고(제목행·소계행은 데이터로 세지 않음),
+        # 포지션별 조인 키 스코프가 이 파일 안에서도 정상 동작한다(2 포지션 × 2 유닛 = 4).
+        assert payload["designed_rig"]["fixture_count"] == 4
+        assert payload["designed_rig"]["join_key_conflicts"] == []
+        assert payload["diffs"]["performed"] is True
