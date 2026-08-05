@@ -3,8 +3,15 @@
 The blacklist and the invoking-verb set are CLOSED sets defined verbatim in a
 single version-controlled config file (``server/safety/blacklist.yaml``). Set
 changes are allowed ONLY via a file revision (version bump) — these tests pin
-the initial v1 content exactly so any change creates review friction on purpose
+the shipped content exactly so any change creates review friction on purpose
 (safety asymmetry: silent set widening/narrowing must be impossible).
+
+The friction is working as designed, not being worked around: the pins below
+were updated for the v1 -> v2 revision (SPEC-COPILOT-WRITEGATE-001) BECAUSE
+that revision is deliberate and ratified — the file's REVISION HISTORY header
+carries its justification, and this update is the second half of the same
+ratification. A pin edit with no corresponding entry in that header is the
+thing these tests exist to stop.
 """
 
 from __future__ import annotations
@@ -18,7 +25,9 @@ from server.safety.ruleset import (
     load_ruleset,
 )
 
-# The exact initial closed sets from REQ-MVP-013 and REQ-MVP-026 (verbatim).
+# The shipped closed set: the 6 initial entries from REQ-MVP-013 (verbatim)
+# plus the one v2 addition (SPEC-COPILOT-WRITEGATE-001 — fixture patch writes
+# are showfile mutations and need a human; see blacklist.yaml REVISION HISTORY).
 EXPECTED_BLACKLIST = {
     "Delete",
     "Remove",
@@ -26,6 +35,7 @@ EXPECTED_BLACKLIST = {
     "Store /overwrite",
     "Shutdown",
     "Format",
+    "Set Fixture",
 }
 EXPECTED_INVOKING_VERBS = (
     "Go", "Go+", "Go-", "Goto", "On", "Off", "Toggle", "Temp", "Flash", "Call"
@@ -43,11 +53,32 @@ class TestShippedRuleset:
         assert isinstance(ruleset.version, int)
         assert ruleset.version >= 1
 
-    def test_blacklist_is_exactly_the_six_initial_entries(self):
-        # REQ-MVP-013: exactly 6 entries, verbatim — no open-ended list.
+    def test_blacklist_is_exactly_the_shipped_closed_set(self):
+        # REQ-MVP-013 (6 initial) + the ratified v2 addition — no open-ended list.
         ruleset = load_ruleset()
         assert set(ruleset.blacklist) == EXPECTED_BLACKLIST
-        assert len(ruleset.blacklist) == 6
+        assert len(ruleset.blacklist) == 7
+
+    def test_every_shipped_revision_is_documented_in_the_file(self):
+        """A version bump with no recorded reason is a silent widening.
+
+        Pinning entry text alone is not enough: it forces an edit here, but it
+        cannot force the edit to be JUSTIFIED. This asserts the file documents
+        its own current version, so `version: N` cannot ship without a
+        `v<N-1> -> v<N>` line saying what changed and which SPEC ratified it.
+        Deliberately NOT an entry-count rule — a future revision may add two
+        entries at once, and a count formula would manufacture false friction.
+        """
+        ruleset = load_ruleset()
+        assert ruleset.version == 2
+        text = DEFAULT_RULESET_PATH.read_text(encoding="utf-8")
+        assert "REVISION HISTORY" in text
+        for bump in range(2, ruleset.version + 1):
+            assert f"v{bump - 1} -> v{bump}" in text, (
+                f"blacklist.yaml ships version {ruleset.version} but documents no "
+                f"'v{bump - 1} -> v{bump}' revision — a closed-set change must "
+                f"carry its justification in the file (REQ-MVP-013)"
+            )
 
     def test_invoking_verbs_are_exactly_the_ten_initial_verbs(self):
         # REQ-MVP-026: 10 verbs, verbatim, order preserved from the file.

@@ -1,10 +1,10 @@
 ---
 id: SPEC-COPILOT-SPATIAL-001
 title: "공간 인식 연출 — 배치 판독(READ) + 배치 생성(WRITE) (Spatial-Aware Choreography)"
-version: "0.3.0"
+version: "0.3.1"
 status: completed
 created: 2026-08-03
-updated: 2026-08-04
+updated: 2026-08-05
 author: manager-spec
 priority: P1
 phase: "Phase 2 연출 계층 — 공간 축 (배치 인식 연출 + 배치 생성)"
@@ -30,6 +30,7 @@ related_specs: [SPEC-COPILOT-SCENE-001, SPEC-COPILOT-LOOKLIB-001, SPEC-COPILOT-F
 | 0.1.0 | 2026-08-03 | manager-spec | 최초 작성 (draft, Tier L). 출처: 사용자 미션(양방향 공간 인식) + 코디네이터 인수 웹 조사(MA help/포럼/선례 플러그인 — research.md §1) + 저장소 직접 판독(base `origin/main` = `3176900`). REQ **26건** · AC **30건** · ASSUMPTION **53~60(8건)** · 열린 질문 **5건**(plan.md §F) · 라이브 세션 **2회(M0·M6)**. Lua 프로퍼티 이름 대소문자는 **전건 미검증** — M0 라이브 프로브가 첫 마일스톤이다. 아티팩트 6종 동시 생성. |
 | 0.2.0 | 2026-08-03 | manager-spec | **plan-audit fold-in** (PASS-WITH-DEBT 0.86 — 지적 10건 전건 반영). M1: REQ-014 좌표 금지를 **연출 발화** 커맨드로 재범위(WRITE 기록 커맨드는 REQ-019~024 소유 — 모순 해소). M2: REQ-020에 risky 분류 **발동 조건** 절 신설(`gate.py:362` 규칙 ③은 risky 경로 전용) + **AC-SPATIAL-031** 신설(게이트 risky 판정 + `before_risky_execution()` 발동, 뮤테이션 필수). M3: REQ-026에 5판정→4접두 매핑 표 **본문 내장**(SCENE-001 출처 명기 — 포인터 상속 제거). M4: **AC-SPATIAL-032** 신설(look/fx/scene PRESERVE — REQ-018 커버 공백 해소). m5~m10: plan.md(M0 SKIP 행·M6 GUI 대안·WRITE AC 열거)·acceptance.md(AC-024 Ubiquitous 전환·AC-028/030 정박·AC-025 주석)·design.md(§5 표적 공유 근거·§6 프리셋 파라미터 계약) 동반 반영. 최종 카운트: REQ **26건** · AC **32건**(뮤테이션 필수 5건: 004·006·019·020·031). C1(§F D-1~D-5 열린 질문 5건)은 킥오프 게이트 대상으로 **미변경**. |
 | 0.3.0 | 2026-08-04 | orchestrator | **sync-phase 인계 5건 소요** (progress.md §E.3 → §E.4). ① **risky 분류 문면 모순 해소** — REQ-020의 *"스크리닝에서 risky로 분류되어야 한다"* 는 run-phase에서 `[DEFERRED]`가 됐다(§E.2.14: `server/safety/` PRESERVE 경계). 본 HISTORY 행과 REQ-020·024의 `[DEFERRED]` 표기를 **정본**으로 삼고 `plan.md §B M4` · `AC-SPATIAL-031`을 같은 표기로 맞췄다. ② `arrange_fixtures`의 **무승인 쇼파일 변형**을 §C.1 검증 천장에 행으로 명기. ③ AC-031 우선순위 근거로 **§E.2.20 결함 2**(요청하지 않은 좌표 기록 54건 무승인 통과)를 인용. ④ **절단 시 모델 미고지**(§E.2.20 결함 1)를 §C.1에 행으로 등록 — 툴 설명문은 지시일 뿐 강제가 아니다. ⑤ **정렬 어휘의 기준 명기**(§E.2.21) — §C.4 신설. 코드 변경 **0** · 문서만. |
+| 0.3.1 | 2026-08-05 | manager-spec | **지연 판정 3건 해소 — SPEC-COPILOT-WRITEGATE-001 인계.** `server/safety/blacklist.yaml`을 **version 1 → 2**로 개정하고 폐쇄 집합에 항목 **단 1건 `"Set Fixture"`** 를 추가했다(`blacklist.yaml:24` 버전 · `:50` 항목) — **코드 변경 0**(`classify.py` · `ruleset.py` · `gate.py` · `expand.py` 전부 무수정, 테스트가 이 파일을 직접 순회하므로 개정이 FN 코퍼스를 자동 확장한다). 좌표 기록이 `risky=True` · `category="blacklisted"` · `matched_entry="Set Fixture"`로 분류되면서 ① **REQ-020의 규칙 ③ 연동 절**(`gate.py:362-365` `before_risky_execution()` 발동) ② **REQ-024의 승인 흐름 절**(승인 카드 상승) ③ **AC-SPATIAL-031 전건**이 함께 열렸다. v0.3.0이 든 유예 사유 3건은 실측으로 반증됐다 — `server/safety/**` PRESERVE 경계는 WRITEGATE-001이 그 디렉터리를 **소유**하면서 해소 · *"기존 테스트 10건이 깨진다"* 는 미측정 추정이고 **실측 5건** · `server/measurement/corpus.yaml`의 *"non-risky verbs only"* 불변식은 코퍼스에 `Set` 토큰이 **0건**이라 **편집 0으로 보존**된다. 폐쇄 범위는 **19/19 커맨드 형태 실측(불일치 0)** 으로 `Set Fixture`에 한정되며 `Set Selection MAtricks` · `Store`/`Assign`/`Copy`/`Label`은 `safe`를 유지한다. `Store Group` risky화는 21개 측정 시나리오 중 **13개**와 충돌하므로 **2026-08-05 사용자 결정으로 descope**(후속 SPEC 몫). AC-031은 **뮤테이션 대상으로 복원**됐다. §C.1 승인 카드 행 · `plan.md §B M4` 행 동반 갱신. 본 SPEC 측 코드 변경 **0** · 문서만. |
 
 ## A. 개요
 
@@ -91,11 +92,11 @@ MA3에서 공간 이펙트의 방향을 정하는 것은 **선택 순서(selecti
 ### B.4 배치 생성 (WRITE)
 
 - **REQ-SPATIAL-019** [Event-driven] — **When** 사용자가 배치 생성을 명시 요청하면(예: "3×10 그리드로 정렬"), the 시스템 **shall** 프리셋 형상(grid / row / circle)의 목표 3D 좌표(미터)를 결정론적으로 계산하고, 대상 픽스처의 패치 좌표에 기록한다.
-- **REQ-SPATIAL-020** [Ubiquitous] — the 기록 경로 **shall** 기록 전에 대상 전 픽스처의 **현재 좌표를 판독·기록(원좌표 백업)**하고, 복원 경로(원좌표 재기록 번들)를 리포트에 싣는다. 이 원좌표 백업·복원 번들 의무는 **구현됐고 라이브에서 작동했다**(§E.2.20 복구가 이 경로로 이뤄졌다). ⚠ **`[DEFERRED]` — showfile 백업 규칙 ③ 연동 부분만**: 게이트는 RISKY 분류 커맨드만 백업하므로(`server/safety/gate.py:362` — 규칙 ③ `before_risky_execution()`은 risky 경로 전용) 좌표 기록 번들이 **스크리닝에서 risky로 분류되어야** 규칙 ③이 발동하는데, 그 분류 확장은 run-phase에서 **되돌려졌다**(§E.2.14 — `server/safety/` PRESERVE 경계를 넘고 기존 테스트 10건이 깨진다). 따라서 좌표 기록은 **오늘 `safe`로 분류되어 승인 카드 없이 콘솔에 나가고 규칙 ③ 백업도 발동하지 않는다**(§C.1 · 관측 사례 §E.2.20 결함 2). 남은 방어선은 **본 SPEC 자체의 원좌표 백업·재조회 검증·복원 번들·범위 봉쇄**이며 이들은 작동한다. risky 분류 확장은 `server/safety/`를 함께 소유하는 후속 SPEC의 몫이다(AC-SPATIAL-031 `[DEFERRED]`).
+- **REQ-SPATIAL-020** [Ubiquitous] — the 기록 경로 **shall** 기록 전에 대상 전 픽스처의 **현재 좌표를 판독·기록(원좌표 백업)**하고, 복원 경로(원좌표 재기록 번들)를 리포트에 싣는다. 이 원좌표 백업·복원 번들 의무는 **구현됐고 라이브에서 작동했다**(§E.2.20 복구가 이 경로로 이뤄졌다). **showfile 백업 규칙 ③ 연동도 이제 충족된다 (SPEC-COPILOT-WRITEGATE-001)**: 게이트는 RISKY 분류 커맨드만 백업하는데(`server/safety/gate.py:362-365` — 규칙 ③ `before_risky_execution()`은 risky 경로 전용), `server/safety/blacklist.yaml`의 폐쇄 집합 개정(**version 1 → 2**, 항목 `"Set Fixture"` **1건** 추가 — `:24` · `:50`, **코드 변경 0**)으로 좌표 기록 번들이 스크리닝에서 `risky=True` · `category="blacklisted"`로 분류된다. 따라서 **규칙 ③이 발동해 기록 전 쇼파일 스냅샷이 남고, 같은 경로에서 승인 카드가 뜬다.** run-phase에서 되돌려졌던 분류 확장(§E.2.14)의 유예 사유 3건은 실측으로 반증됐다 — PRESERVE 경계는 WRITEGATE-001의 `server/safety/` **소유**로 해소, *"기존 테스트 10건"* 은 **실측 5건**, `corpus.yaml` 불변식은 `Set` 토큰 **0건**이라 **편집 0으로 보존**(판정 운반은 AC-SPATIAL-031). 본 SPEC 자체의 방어선(원좌표 백업 · 재조회 검증 · 복원 번들 · 범위 봉쇄)은 그대로 유지되며, 그 위에 게이트 계층이 얹혔다.
 - **REQ-SPATIAL-021** [Ubiquitous] — 기록 검증 **shall** 재조회로 한다: 기록 후 대상 픽스처의 좌표를 재판독해 목표값 일치를 확인한다. `ok:true` 단독은 증거가 아니며(SCENE M0 실측 계승), 재조회 불일치는 명시 실패로 보고된다.
 - **REQ-SPATIAL-022** [Unwanted] — the 기록 경로 **shall not**: (a) 명시 대상 외 픽스처의 좌표를 건드리고, (b) 사용자 요청 없이 선제 재배치를 제안·실행하며, (c) v1에서 `rotx`/`roty`/`rotz`를 기록한다(판독은 허용 — 기록은 방향 미측정 축이므로 제외).
 - **REQ-SPATIAL-023** [State-driven] — **While** LiveLock이 활성인 동안, 배치 기록 **shall** 제안(Proposal) 전용으로 강등되고 콘솔 송신은 0건이다 — 강등은 실패가 아니라 답이다(SCENE REQ-SCENE-020 계승).
-- **REQ-SPATIAL-024** [Ubiquitous] — 좌표 기록 **shall** 게이트 단일 관문을 경유한다 — 커맨드라인 경로든 응답기 신규 동사든, 스크리닝·감사·승인 흐름 없이 콘솔에 도달하는 기록 경로는 존재하지 않는다. ⚠ **부분 `[DEFERRED]`**: **단일 관문·스크리닝·감사**는 충족된다(모든 기록이 `gate.screen()`을 지나고 감사 로그에 남는다 — §E.2.20이 54건 전부를 감사 로그로 재구성했다). **승인 흐름만** REQ-020의 risky 분류에 종속되어 `[DEFERRED]`다 — `safe` 분류이므로 승인 카드가 뜨지 않는다. 즉 "확인 없이 콘솔에 도달하는 경로는 없다"는 **감사 의미로는 참이고 승인 의미로는 오늘 거짓**이다. 이 문장을 두 뜻으로 읽을 수 있게 둔 것이 §E.2.20 결함 2를 놓친 문면상의 원인이다.
+- **REQ-SPATIAL-024** [Ubiquitous] — 좌표 기록 **shall** 게이트 단일 관문을 경유한다 — 커맨드라인 경로든 응답기 신규 동사든, **스크리닝·감사·승인이 모두 선행하지 않고서는** 콘솔에 도달하는 기록 경로가 존재하지 않는다. 세 절이 **전부** 충족된다(SPEC-COPILOT-WRITEGATE-001). **단일 관문·스크리닝**: 모든 기록이 `gate.screen()`을 지난다. **감사**: 모든 기록이 감사 로그에 남는다 — §E.2.20이 54건 전부를 감사 로그만으로 재구성할 수 있었던 것이 그 증거다. **승인**: 폐쇄 집합 항목 **`"Set Fixture"`**(`server/safety/blacklist.yaml` v2 `:50`)가 `Set Fixture <fid> Pos[xyz] '<v>'`를 `risky=True` · `category="blacklisted"` · `matched_entry="Set Fixture"`로 분류하므로 **사람의 승인 카드 없이는 실행되지 않으며**, 같은 경로에서 규칙 ③ 쇼파일 백업도 발동한다(`gate.py:362-365`). 즉 *"확인 없이 콘솔에 도달하는 경로는 없다"* 는 **감사 의미로도 승인 의미로도 참**이고, 더는 두 뜻으로 갈리지 않는다. ⚑ **삭제 금지 교훈**: v0.3.0까지 이 문장은 *"감사 의미로는 참, 승인 의미로는 거짓"* 두 갈래로 읽혔고, **그 문면상의 모호함이 §E.2.20 결함 2(무승인 좌표 기록 54건)를 놓친 원인**이었다. 요구 문장이 두 뜻을 허용하면 그중 약한 뜻이 구현의 알리바이가 된다 — 폐쇄된 뒤에도 이 교훈은 남긴다.
 
 ### B.5 툴 표면 + 라이브 판정 기록
 
@@ -131,7 +132,7 @@ MA3에서 공간 이펙트의 방향을 정하는 것은 **선택 순서(selecti
 | **선택 순서가 실제 웨이브 방향을 정하는가** | **NO** | 사람의 GUI/무대 관측이 유일 (ASSUMPTION-58) |
 | **3D 뷰어의 시각적 반영** | **NO** (기계) | 좌표 값 재조회는 YES, 시각 확인은 사람 |
 | 미지 프로퍼티 이름에 대한 `ok`의 변별력 | **미측정 — M0 날조 대조군이 판정** | SCENE M0 선례: 축마다 다르다 |
-| **좌표 기록의 승인 카드** | **NO — 오늘 뜨지 않는다** | `Set Fixture … Pos*`가 `safe`로 분류된다(AC-031 `[DEFERRED]`, §E.2.14). 라이브 관측: 요청하지 않은 좌표 기록 **54건**이 무승인 통과(§E.2.20 결함 2). 같은 턴의 `Go+ Page 1.202`는 정상적으로 카드를 띄웠다 — **게이트는 건강하고 좌표 기록만 그물을 통과한다** |
+| **좌표 기록의 승인 카드** | **YES — 뜬다** (SPEC-COPILOT-WRITEGATE-001) | `Set Fixture <fid> Pos[xyz] '<v>'`가 폐쇄 집합 항목 `"Set Fixture"`(`server/safety/blacklist.yaml` v2 `:50`)에 걸려 `risky=True` · `category="blacklisted"`로 분류되고 규칙 ③ `before_risky_execution()`도 발동한다(`gate.py:362-365`) — 단위 테스트로 **기계 검증되며 뮤테이션 필수**(AC-SPATIAL-031). **이 행은 v0.3.0까지 NO였다**: 당시 `Set Fixture … Pos*`가 `safe`로 분류돼, 라이브에서 요청하지 않은 좌표 기록 **54건**이 무승인 통과했다(§E.2.20 결함 2). 같은 턴의 `Go+ Page 1.202`는 정상적으로 카드를 띄웠다 — **게이트는 건강했고 좌표 기록만 그물을 통과했으며, 그 구멍이 닫혔다** |
 | **절단된 리그에서 모델이 불완전성을 고지하는가** | **NO — 강제 수단이 없다** | 툴은 `truncated: true`를 보고하고 설명문이 *"say so"* 를 명령형으로 적지만, 모델은 받은 일부에 대한 좌우 정렬을 제시하고 **불완전성을 말하지 않았다**(§E.2.20 결함 1, fid 19 탈락). **툴 설명은 지시일 뿐 강제가 아니다** — `server/looks/**`가 쓰는 방식의 한계를 그대로 물려받는다. 구조적 강제(부분 리그 상태값 또는 정렬 결과 보류)는 **후속 과제** |
 
 ### C.2 미검증 전제 (ASSUMPTION — INTROSPECT-001이 46~52를 사용, 본 SPEC은 53부터)
