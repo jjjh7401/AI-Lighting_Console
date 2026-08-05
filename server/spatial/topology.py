@@ -53,6 +53,32 @@ TopologyKind = Literal[
 GridAxis = Literal["depth", "lateral"]
 
 
+#: Total order over the four contending axes, consulted ONLY to break an EXACT
+#: tie in the normalised score (SPEC-COPILOT-AXISCORE-001, REQ-AXISCORE-005).
+#:
+#: This is not a new policy — it is the one that was already running by
+#: accident. `scored.sort` is stable, so before this constant existed the
+#: order in which `classify` happened to build its `contenders` tuple was
+#: silently deciding every tie. Writing it down changes nothing about which
+#: rig gets which answer; it makes the rule testable, and it makes adding a
+#: fifth axis a decision someone has to state rather than an insertion-point.
+#:
+#: The ordering itself is the lighting domain's: an electrics rig is named
+#: front/mid/back before it is named by trim, and a designer reads a bird as
+#: "the missing column" (left/right) before reading it as a level. Depth and
+#: lateral therefore outrank the two readings that describe the same fixtures
+#: with more incidental vocabulary. It fires ONLY on an exact tie: a
+#: `vertical_levels` reading that scores higher still wins outright, which is
+#: what separates this from the exclusion rule it replaced (that rule struck
+#: an 80-point candidate out so a 60-point one could win).
+AXIS_TIE_BREAK_ORDER: tuple[TopologyKind, ...] = (
+    "depth_rows",
+    "lateral_split",
+    "concentric",
+    "vertical_levels",
+)
+
+
 @dataclass(frozen=True)
 class TopologyResult:
     """One topology candidate's verdict — one per detector; the contention
@@ -100,6 +126,53 @@ class TopologyClassification:
     candidates: tuple[TopologyResult, ...]
 
 
+def _partition_score(
+    min_boundary_gap: float,
+    within_bucket_span: float,
+    bucket_sizes: Sequence[int],
+) -> float:
+    """Score one axis' partition on a scale every axis shares: `[0, 1]`,
+    dimensionless (SPEC-COPILOT-AXISCORE-001, REQ-AXISCORE-001/002/003/004).
+
+    Two axes are only comparable if their scores mean the same thing. The
+    previous formula was `boundary_gap / max(within_spread, NOISE_SPAN)`, and
+    `within_spread == 0` is the ORDINARY case — `rows.py` says so in its own
+    docstring: "in a real multi-row rig the fixtures of a row SHARE a depth,
+    so within-row gaps collapse to zero". The denominator therefore pinned to
+    the 0.05 m constant and the score degenerated to `20 x metres-on-this-axis`.
+    Comparing that across axes is a unit error: it asks whether 3 m of depth
+    beats 4 m of trim, and answers 60 against 80 on a rig whose depth reading
+    is the correct one. It is also not scale-invariant — shrinking one axis'
+    coordinates changed the verdict on a rig in the golden corpus.
+
+    The three terms below close that, one per cause:
+
+    * `separation` is a RATIO of two lengths measured on the SAME axis, so the
+      units cancel and multiplying that axis' coordinates by any constant
+      leaves it unchanged.
+    * saturating at `SPATIAL_ROW_GAP_RATIO` stops a bigger physical gap from
+      buying more credit forever. The cap is not a new constant: it is the
+      threshold the boundary detector already used to decide this WAS a
+      boundary, so everything at or past it is equally "cleanly separated" and
+      the question moves to which partition is better.
+    * `min(bucket_sizes) / count` is the partition-quality term the old score
+      had no equivalent for. Without it, reading 18 fixtures as nine rings of
+      two outscored reading them as the 9+9 left/right split they actually are
+      by 27x, because only gap sizes were being compared and the fold happened
+      to have tidier gaps. A partition whose smallest part holds a real share
+      of the rig explains more of it than one that shaves off singletons.
+
+    `bucket_sizes` shorter than 2 scores 0.0: an axis that puts every fixture
+    in one bucket has not partitioned anything, whatever its gaps look like.
+    """
+    count = sum(bucket_sizes)
+    if len(bucket_sizes) < 2 or count <= 0:
+        return 0.0
+    separation = min_boundary_gap / max(within_bucket_span, SPATIAL_ROW_NOISE_SPAN)
+    saturated = min(separation / SPATIAL_ROW_GAP_RATIO, 1.0)
+    return saturated * (min(bucket_sizes) / count)
+
+
 def _axis_buckets(
     fixtures: Sequence[SpatialFixture], value_fn
 ) -> tuple[tuple[tuple[int, ...], ...], bool, str | None, float]:
@@ -108,14 +181,11 @@ def _axis_buckets(
     ``rows.py`` uses for y, generalised to any axis via ``value_fn``).
 
     Returns ``(buckets, low_confidence, reason, score)``. ``buckets`` is
-    ascending on the axis value. ``score`` ranks competing confident
-    detectors against each other (higher = cleaner separation) and is
-    otherwise meaningless — it is the weakest surviving boundary gap over the
-    widest within-bucket spread, i.e. "how many noise-spans of daylight
-    separates the closest two buckets, relative to how much a bucket
-    internally sprawls on this axis". A perfect ring (zero within-bucket
-    radius spread) scores far higher than a same-shaped-but-noisy row band,
-    which is exactly the asymmetry §3's non-vacuousness argument needs.
+    ascending on the axis value. ``score`` comes from
+    :func:`_partition_score`, so it is dimensionless, lies in ``[0, 1]``, and
+    means the same thing here as it does for the y axis in
+    :func:`_compute_depth` — that shared scale is what lets :func:`classify`
+    compare a radius split against a trim split at all.
     """
     if not fixtures:
         return (), True, "no_fixtures", 0.0
@@ -156,9 +226,11 @@ def _axis_buckets(
         bucket_spans.append(max(chunk_values) - min(chunk_values))
         start = boundary + 1
 
-    within_spread = max(bucket_spans)
-    min_boundary_gap = min(gaps[i] for i in boundaries)
-    score = min_boundary_gap / max(within_spread, SPATIAL_ROW_NOISE_SPAN)
+    score = _partition_score(
+        min_boundary_gap=min(gaps[i] for i in boundaries),
+        within_bucket_span=max(bucket_spans),
+        bucket_sizes=[len(bucket) for bucket in buckets],
+    )
 
     return tuple(buckets), False, None, score
 
@@ -179,29 +251,37 @@ def _compute_depth(fixtures: tuple[SpatialFixture, ...]) -> tuple[TopologyResult
             0.0,
         )
     # @MX:ANCHOR: [SPEC] depth score must survive perfectly-aligned rows
-    #   (REQ-GROUPGEN-003, mutation-required).
+    #   (REQ-GROUPGEN-003, REQ-AXISCORE-002, mutation-required).
     # @MX:REASON: This scoring guard used to also require
     #   `analysis.gaps.median_gap > 0`, which zeroed the score on exactly the
     #   rigs depth_rows answers BEST. `rows.py`'s own docstring says why: "in a
     #   real multi-row rig the fixtures of a row SHARE a depth, so within-row
-    #   gaps collapse to zero" — so a clean 3x10 grid has median_gap == 0 and
+    #   gaps collapse to zero" — so a clean 3x10 grid had median_gap == 0 and
     #   scored 0.0, while the two-ring rig this SPEC exists to stop misreading
     #   scored 36.60. The ranking was inverted: depth_rows was punished for
-    #   being exactly right. The quotient below is defined at median_gap == 0
-    #   (`within_spread` comes from `row_spans`, which never consults
-    #   median_gap), so the guard bought nothing and cost the ordering.
-    score = 0.0
-    if analysis.gaps is not None:
-        # Match _axis_buckets' scoring shape: weakest boundary gap over the
-        # widest within-row spread, using the gap profile rows.py already
-        # measured rather than re-deriving one.
-        row_spans = [
-            max((f.y for f in row.fixtures), default=0.0)
-            - min((f.y for f in row.fixtures), default=0.0)
-            for row in analysis.rows
-        ]
-        within_spread = max(row_spans) if row_spans else 0.0
-        score = analysis.gaps.max_gap / max(within_spread, SPATIAL_ROW_NOISE_SPAN)
+    #   being exactly right.
+    #
+    #   AXISCORE-001 closed the second half of the same defect. The numerator
+    #   was `analysis.gaps.max_gap` — the BEST gap anywhere in the y sequence,
+    #   not even restricted to gaps that became boundaries — while every other
+    #   axis was scored on its WEAKEST boundary. Depth was graded on its best
+    #   and its rivals on their worst, and that asymmetry is half of why a
+    #   two-ring rig read as nine rows: `6@r=3.0 + 12@r=5.0` scored max_gap
+    #   2.500 where its weakest boundary is 0.098. Every axis now uses the
+    #   weakest boundary gap. `SpatialGapProfile` does not carry one and adding
+    #   a field would ripple through every `rows.py` consumer
+    #   (REQ-AXISCORE-011), so it is derived here from the rows themselves:
+    #   rows arrive y-ascending, so the gap between two of them is the distance
+    #   from the back of one to the front of the next.
+    row_extents = [
+        (min(f.y for f in row.fixtures), max(f.y for f in row.fixtures)) for row in analysis.rows
+    ]
+    boundary_gaps = [row_extents[i + 1][0] - row_extents[i][1] for i in range(len(row_extents) - 1)]
+    score = _partition_score(
+        min_boundary_gap=min(boundary_gaps, default=0.0),
+        within_bucket_span=max((hi - lo for lo, hi in row_extents), default=0.0),
+        bucket_sizes=[len(row.fids) for row in analysis.rows],
+    )
     return (
         TopologyResult(kind="depth_rows", fids_by_bucket=buckets, low_confidence=False),
         score,
@@ -303,7 +383,14 @@ def _compute_bilateral(fixtures: tuple[SpatialFixture, ...]) -> tuple[TopologyRe
     paired_count = 2 * len(pairs) + on_axis
     low_confidence = paired_count < len(fixtures)
     buckets = tuple(sorted(pairs))
-    score = float(len(pairs)) if not low_confidence else 0.0
+    # Share of the rig that is mirror-paired — the same closed [0, 1] interval
+    # every axis score lives in (REQ-AXISCORE-016). It was `float(len(pairs))`,
+    # a raw count in a field named `score`: 15.00 on a 30-fixture grid, against
+    # a lateral reading of 20.00 that meant something else entirely. The two
+    # were never comparable, and this candidate stays out of `scored` (D-Q10)
+    # so nothing depended on them being so — but a field called `score` that
+    # holds two different scales is how the axis-comparability defect got in.
+    score = (2 * len(pairs) / len(fixtures)) if not low_confidence else 0.0
     return (
         TopologyResult(
             kind="bilateral_pairs" if not low_confidence else None,
@@ -371,19 +458,20 @@ def classify(fixtures: tuple[SpatialFixture, ...]) -> TopologyClassification:
     Priority (design.md §2.4, §3):
     1. Both ``depth_rows`` and ``lateral_split`` confident with >=2 buckets
        each -> ``grid`` wins outright (the two-axis contract).
-    2. Two readings are then struck out of contention before scoring, each
-       for a stated reason rather than a number (see the ``@MX:ANCHOR`` blocks
+    2. One reading is then struck out of contention before scoring, for a
+       stated reason rather than a number (see the ``@MX:ANCHOR`` block
        below): ``concentric`` when the rig is flat in y, because
        ``hypot(x, y)`` has collapsed to ``|x|`` and the "rings" are the
-       lateral buckets folded; and ``vertical_levels`` when ``depth_rows``
-       already partitions the rig into >=2 rows, because an electrics rig is
-       named front/mid/back and its trim heights are incidental.
-    3. Among what remains, the highest separation score
-       (:func:`_axis_buckets`) wins — the axis that explains the rig's
-       structure most cleanly, not the first one that happens to answer
-       confidently (§3's non-vacuousness argument: a spurious y-axis gap on a
-       circle scores far below the circle's own radius split, because the row
-       bands sprawl on y while the rings do not).
+       lateral buckets folded. A second such rule — striking
+       ``vertical_levels`` out whenever ``depth_rows`` already partitioned —
+       stood here until AXISCORE-001 made the scores comparable and it became
+       redundant; see the note above ``contenders``.
+    3. Among what remains, the highest :func:`_partition_score` wins — the
+       axis that explains the rig's structure most cleanly, not the first one
+       that happens to answer confidently. The score is dimensionless and
+       means the same thing on every axis, so this is a real comparison
+       rather than a comparison of metres measured along different axes.
+       Exact ties break on :data:`AXIS_TIE_BREAK_ORDER`.
     4. Nothing confident -> ``kind=None``, ``low_confidence=True``.
 
     ``bilateral_pairs`` is never in contention at all (D-Q10 — symmetry is a
@@ -439,35 +527,33 @@ def classify(fixtures: tuple[SpatialFixture, ...]) -> TopologyClassification:
         concentric_score = 0.0
         candidates = (depth, lateral, concentric, vertical, grid, bilateral)
 
-    # @MX:ANCHOR: [SPEC] a confident depth partition outranks `vertical_levels`
-    #   (REQ-GROUPGEN-003, user-settled policy, mutation-required).
-    # @MX:REASON: A lighting domain call, not a numeric one. An electrics rig is
-    #   named front/mid/back; trim height is incidental to it, and the same three
-    #   bars hung at three trims produce a `vertical_levels` reading that is TRUE
-    #   and useless. Live-measured two distinct losses when score alone decided:
-    #   3 electrics (y=0/3/6, z=5.0/6.5/8.0) gave depth `[5,5,5]` and vertical
-    #   `[5,5,5]` — identical partition, wrong vocabulary; and 3 rows across only
-    #   2 trims gave depth `[5,5,5]` against vertical `[10,5]` — vertical won and
-    #   merged two rows into one group. Both are rigs `arrange_fixtures`' own grid
-    #   preset writes (`_centred_offsets` aligns y exactly per row), so the app
-    #   was misreading rigs it had just built.
+    # AXISCORE-001 DELETED an exclusion rule that stood here: when `depth_rows`
+    # was confident with >=2 buckets, `vertical_levels` was struck out of
+    # `scored` entirely. It existed because the scores were not comparable. On
+    # three depth rows crossed with only two trims the z reading scored 80.00
+    # against depth's 60.00 and won, fusing two depth rows into one group — and
+    # since 80 really is more than 60, no number could be pointed at to stop
+    # it. Removing the higher-scoring candidate was the only lever the code
+    # had, and GROUPGEN-001 recorded at the time that this left the real
+    # question open: "근본적으로 축 간 점수 비교 가능성이 미해결이다".
     #
-    #   >=2 buckets is the whole condition, and it is load-bearing: a rig flat in
-    #   y answers `depth_rows` with ONE bucket, which partitions nothing, so a
-    #   genuine z-tiered rig (`vertical_levels`) must still win there. Like
-    #   `bilateral_pairs` below, `vertical` stays in `candidates` fully confident
-    #   — the z axis really does split — and only leaves `scored`. Nothing here
-    #   touches the depth<->lateral two-axis contract: `grid` already returned
-    #   above, and a confident `lateral` always carries >=2 buckets, so a
-    #   confident depth partition can never reach this rule alongside one.
-    depth_partitions = depth.kind == "depth_rows" and len(depth.fids_by_bucket) >= 2
+    # `_partition_score` supplies the number that was missing, so the lever is
+    # gone. That same rig now scores 0.3333 against 0.3333 — an exact tie,
+    # because both partitions separate perfectly and both leave the same 5-of-15
+    # smallest share — and `AXIS_TIE_BREAK_ORDER` picks depth.
+    #
+    # The two mechanisms are NOT the same policy renamed. The rule discarded a
+    # candidate that scored HIGHER; the total order chooses only among
+    # candidates that scored the SAME. A `vertical_levels` reading that really
+    # does explain a rig better still wins outright, which is what
+    # `test_a_better_vertical_reading_beats_a_partitioning_depth` pins — and
+    # that test is also what fails if the rule is ever put back.
     contenders: tuple[tuple[TopologyResult, float], ...] = (
         (depth, depth_score),
         (lateral, lateral_score),
         (concentric, concentric_score),
+        (vertical, vertical_score),
     )
-    if not depth_partitions:
-        contenders = (*contenders, (vertical, vertical_score))
 
     # @MX:ANCHOR: [SPEC] `bilateral_pairs` is a SIGNAL, never a selected topology
     #   (`.plan-contract.md` §2 D-Q10, mutation-required).
@@ -492,5 +578,5 @@ def classify(fixtures: tuple[SpatialFixture, ...]) -> TopologyClassification:
         )
         return TopologyClassification(selected=fallback, candidates=candidates)
 
-    scored.sort(key=lambda item: item[0], reverse=True)
+    scored.sort(key=lambda item: (-item[0], AXIS_TIE_BREAK_ORDER.index(item[1].kind)))
     return TopologyClassification(selected=scored[0][1], candidates=candidates)
