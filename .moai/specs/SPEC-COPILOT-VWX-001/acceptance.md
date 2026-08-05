@@ -1,6 +1,6 @@
 # SPEC-COPILOT-VWX-001 — 인수 기준 (acceptance)
 
-status: draft (v0.1.7, 2026-08-05) · Tier L · AC 29건 계획(불변). 본 문서는 spec.md의 요구를 관측 가능한 검증 기준으로 전개한다.
+status: draft (v0.1.0, 2026-08-05) · Tier L · AC 26건 계획. 본 문서는 spec.md의 요구를 관측 가능한 검증 기준으로 전개한다.
 
 > **v0.1.0 — 최초 작성.** **AC 26건**(AC-VWX-001~026) · **REQ 25건**(REQ-VWX-001~025) 전량 커버. 라이브 AC는 **0건**이다 — `plan.md` §C가 라이브 세션 0회 결정의 근거를 적는다.
 >
@@ -68,11 +68,8 @@ status: draft (v0.1.7, 2026-08-05) · Tier L · AC 29건 계획(불변). 본 문
 | REQ-VWX-023 | AC-VWX-022 | M6 | 구조화된 페이로드 |
 | REQ-VWX-024 | AC-VWX-023 | M6 | 한국어 표현 계층 |
 | REQ-VWX-025 | AC-VWX-024 | M6 | 툴 배선 4지점(같은 AC의 별 구간) |
-| REQ-VWX-026 | AC-VWX-027 | M2 | fixture_name·gdtf_fixture 정규 필드 승격 |
-| REQ-VWX-027 | AC-VWX-028 | M3 | 주소 3중 표현 교차검증 |
-| REQ-VWX-028 | AC-VWX-029 | M5 | 설계 측 구간 겹침 판정 |
 
-**REQ 28/28 커버, 누락 0.** 역추적표에 행이 없는 AC는 **3건**이며 의도다 — **AC-VWX-001**(M0 전제 확보 게이트) · **AC-VWX-025**(회귀·PRESERVE, 단일 REQ가 아니라 형상 전체가 대상) · **AC-VWX-026**(종단 통합).
+**REQ 25/25 커버, 누락 0.** 역추적표에 행이 없는 AC는 **3건**이며 의도다 — **AC-VWX-001**(M0 전제 확보 게이트) · **AC-VWX-025**(회귀·PRESERVE, 단일 REQ가 아니라 형상 전체가 대상) · **AC-VWX-026**(종단 통합).
 
 ### §C.0a 마일스톤별 AC 배정 (정본)
 
@@ -80,15 +77,15 @@ status: draft (v0.1.7, 2026-08-05) · Tier L · AC 29건 계획(불변). 본 문
 |---|---|---|
 | M0 — 실물 Vectorworks export 샘플 확보 | AC-VWX-001 | 1 |
 | M1 — 파일 판독 + 인코딩 | AC-VWX-002 · AC-VWX-003 · AC-VWX-004 · AC-VWX-005 | 4 |
-| M2 — 컬럼 해석 | AC-VWX-006 · AC-VWX-007 · AC-VWX-008 · AC-VWX-027 | 4 |
-| M3 — 주소 처리 | AC-VWX-009 · AC-VWX-010 · AC-VWX-011 · AC-VWX-012 · AC-VWX-028 | 5 |
+| M2 — 컬럼 해석 | AC-VWX-006 · AC-VWX-007 · AC-VWX-008 | 3 |
+| M3 — 주소 처리 | AC-VWX-009 · AC-VWX-010 · AC-VWX-011 · AC-VWX-012 | 4 |
 | M4 — 설계상 리그 모델 | AC-VWX-013 · AC-VWX-014 · AC-VWX-015 · AC-VWX-016 · AC-VWX-017 | 5 |
-| M5 — precheck_patch 대조 | AC-VWX-018 · AC-VWX-019 · AC-VWX-020 · AC-VWX-021 · AC-VWX-029 | 5 |
+| M5 — precheck_patch 대조 | AC-VWX-018 · AC-VWX-019 · AC-VWX-020 · AC-VWX-021 | 4 |
 | M6 — 보고 + 툴 배선 | AC-VWX-022 · AC-VWX-023 · AC-VWX-024 | 3 |
 | M7 — 회귀 · PRESERVE | AC-VWX-025 | 1 |
 | M8 — 종단 검증 | AC-VWX-026 | 1 |
 
-**합 29 · 중복 0 · 누락 0.** 이 표가 정본이며 `plan.md`의 마일스톤별 `AC` 줄과 1:1이다(v0.1.4 — M0 실물 샘플 반영으로 M2/M3/M5에 각 1건씩 추가).
+**합 26 · 중복 0 · 누락 0.** 이 표가 정본이며 `plan.md`의 마일스톤별 `AC` 줄과 1:1이다.
 
 ---
 
@@ -114,7 +111,6 @@ status: draft (v0.1.7, 2026-08-05) · Tier L · AC 29건 계획(불변). 본 문
   - ① 헤더가 있는 파일과 없는 파일 둘 다 별칭 매칭 개수로 헤더 유무를 스니핑해 올바르게 판독한다.
   - ② `.txt` 확장자이며 값 안에 comma를 포함한 tab-text 파일에서 구분자를 comma로 오인하지 않는다(확장자·내용 혼동 방지, 비공허성 — 실제로 comma 포함 값이 온전히 한 필드로 보존됨을 확인).
   - ③ 자동 추가된 `UID` 컬럼이 별칭 테이블의 `uid` 필드로 인식된다.
-  - ④ **(v0.1.6 — 결함 3 P1, 실물 헤더없음 샘플)** 헤더 없는 실물 경로 A 파일(28필드×17행)에서 컬럼 해석 단계가 행마다 개별 판독 실패를 내지 않고 파일 단위 판정 **1건**(`headerless_path_a_export`, "Export field names as first record"를 켜라는 실행 가능한 해결책 포함)만 낸다(비공허성 — 수정 전에는 17건이었다). 리더 계층의 헤더 유무 스니핑 자체는 정확했음을 별도로 확인한다(REQ-VWX-001의 긍정 증거).
 
 ### AC-VWX-003 — 경로 B(워크시트) 데이터 블록 구조적 식별 (M1)
 
@@ -169,15 +165,13 @@ The 컬럼 해석기 **shall** 별칭 테이블 밖 컬럼을 `extra`에 보존�
 
 ### AC-VWX-008 — 최소 유효 레코드 판정 (M2)
 
-**When** 레코드가 `instrument_type` + 해석 가능한 주소 표현을 갖지 못하면, the 컬럼 해석기 **shall** 구조화된 판독 실패로 분류한다. **(v0.1.6 — 판독 실패와 의도적 제외 분리, 결함 2 P1)** 워크시트 집계행(`Device Type` == SUBTOTAL/TOTAL)과 해석 가능한 주소가 없는 액세서리 계열 행은 판독 실패가 아니라 `excluded_rows`로 분류한다.
+**When** 레코드가 `instrument_type` + 해석 가능한 주소 표현을 갖지 못하면, the 컬럼 해석기 **shall** 구조화된 판독 실패로 분류한다.
 
 - 대상 요구사항: REQ-VWX-007
-- 검증 방법: `server/tests/test_vwx_columns.py`, `server/tests/test_vwx_multisystem_real_samples.py`
+- 검증 방법: `server/tests/test_vwx_columns.py`
 - 기대 결과:
   - ① `instrument_type` 없는 행이 예외를 던지지 않고 판독 실패 레코드로 반환된다.
   - ② 정상 레코드는 판독 실패로 오분류되지 않는다(비공허성).
-  - ③ **(v0.1.6)** SUBTOTAL/TOTAL 집계행은 `read_failures`가 아니라 `excluded_rows`(`aggregate_row`)로 분류되며, 실물 파일(집계행 3건)에서 `read_failures` 건수를 0건으로 유지한다(비공허성 — 수정 전에는 4건이었다).
-  - ④ **(v0.1.6)** 주소 표현이 없는 액세서리 행(비-DMX)도 마찬가지로 `excluded_rows`(`non_dmx_accessory`)로 분류된다.
 
 ### AC-VWX-009 — 미패치 sentinel 분류 (M3)
 
@@ -189,31 +183,26 @@ The 컬럼 해석기 **shall** 별칭 테이블 밖 컬럼을 `extra`에 보존�
   - ① 값 `0`인 레코드와 공란인 레코드 둘 다 같은 분류를 받는다.
   - ② 이 분류가 대조 단계의 `missing_in_console`과 **다른 코드값**을 갖는다(비공허성 — 두 값이 서로 다름을 직접 assert).
 
-### AC-VWX-010 — `Absolute Address` 근거 등급 역산 (M3) — (v0.1.7 재정의)
+### AC-VWX-010 — `Absolute Address` 조건부 역산 (M3)
 
-**Where** `Universe`/`DMX Address` 쌍도 조합값도 없고 `Absolute Address`만 있으면, the 주소 해석기 **shall** `abs=(u-1)*512+a` 역산을 항상 수행하고 그 근거를 등급(`address_basis`)으로 표기한다. **(v0.1.7 — 결함 1 P0 재정의, 02 재설계)** v0.1.6까지는 전제(연속 기본 512블록) 검증 불가 시 역산 자체를 거부해 절대주소 단독 실물 파일이 사실상 미지원이었다(16행 중 15행 탈락) — `server/prechk/patch.py`의 `OverlapBasis` 규약(거부 대신 가장 약한 근거로 등급 선언)을 따라 재정의했다.
+**Where** Universes 창이 연속 기본 512블록이라는 전제가 검증 가능할 때만, the 주소 해석기 **shall** `abs=(u-1)*512+a` 역산을 수행한다.
 
 - 대상 요구사항: REQ-VWX-009
-- 검증 방법: `server/tests/test_vwx_address.py`, `server/tests/test_vwx_multisystem_real_samples.py`
+- 검증 방법: `server/tests/test_vwx_address.py`
 - 기대 결과:
-  - ① `Universe`/`DMX Address` 쌍 컬럼이 존재하면 그 쌍을 우선 사용하고 역산을 시도하지 않는다 — 근거는 `universe_address_direct`(비공허성 — 실제로 이 값이 찍힘을 확인).
-  - ② **(v0.1.7)** `Absolute Address` 단일값만 있고 전제를 검증할 근거가 없어도 이제 역산을 **수행한다** — 근거는 `absolute_back_calculated`(비공허성 — 수정 전에는 판독 실패였다). 명시적으로 `contiguous_512_confirmed=True`가 주입되면 근거는 `absolute_confirmed`로 격상된다.
-  - ③ 리그 전체 근거 등급(`designed_rig.address_basis`)은 실제로 쓰인 근거 중 가장 약한 것이다 — 역산이 하나라도 섞이면 리그 등급은 `absolute_back_calculated`다.
-  - ④ 리그 등급이 `absolute_back_calculated`면 payload(`address_basis_note`)와 `summary_ko` 양쪽에 전제 문구("Universes pane이 기본 연속 512블록이라는 전제 위에서 역산했다…")가 실린다. 직접값만 쓰는 리그는 이 문구가 전혀 등장하지 않는다(비공허성 대조군).
-  - ⑤ 하드 거부는 `Universe`/`DMX Address` 쌍과 `Absolute Address`가 **둘 다 있는데 어긋나는** 경우(AC-VWX-028 `address_triple_mismatch`)에만 남는다 — 그때는 여전히 직접값을 그대로 쓰고 역산하지 않는다(회귀 확인, 기존 테스트 유지).
-  - ⑥ `ASSUMPTION-69`는 GO(선언된 전제 위에서 역산 지원)로 판정됐으며, 02 실물 샘플이 01과 동일한 9대 리그로 정확히 복원됨이 `progress.md`에 재검증 기록으로 추가됐다.
+  - ① `Universe`/`DMX Address` 쌍 컬럼이 존재하면 그 쌍을 우선 사용하고 역산을 시도하지 않는다.
+  - ② `Absolute Address` 단일값만 있고 전제를 검증할 근거가 없으면 역산하지 않고 판독 실패로 분류한다(추측 0건).
+  - ③ `ASSUMPTION-69`가 GO로 판정된 경우에 한해 M0 샘플의 실측 역산 값이 `progress.md`에 재검증 기록으로 추가된다.
 
-### AC-VWX-011 — 멀티시스템에서도 설계 측 해석은 차단하지 않는다 (M3) — (v0.1.6 재정의)
+### AC-VWX-011 — 멀티시스템 모호 차단 (M3)
 
-**When** System 문자 2개 이상이 관측되면, the 시스템 **shall** 주소 아이덴티티를 `(system, universe, address)`로 확장해 설계 측 해석·산출을 정상 수행하고, 콘솔 대조(§B.5)만 System→콘솔 매핑 부재로 별도 미수행 처리한다. **(v0.1.6 — 결함 1 P0 재정의)** v0.1.5까지는 이 지점에서 전 행을 차단(`blocked`)했다 — 실물 샘플 재현으로 설계 측 산출 전체가 무너지는 결함이 드러나 재정의했다.
+**When** System 문자 2개 이상이 관측되면, the 주소 해석기 **shall** 순수 `Universe` 해석을 모호로 차단한다.
 
 - 대상 요구사항: REQ-VWX-010
-- 검증 방법: `server/tests/test_vwx_address.py`, `server/tests/test_vwx_rig.py`, `server/tests/test_vwx_diff.py`, `server/tests/test_vwx_multisystem_real_samples.py`
+- 검증 방법: `server/tests/test_vwx_address.py`
 - 기대 결과:
-  - ① **(v0.1.6)** System A와 System B가 둘 다 `Universe 1`을 쓰는 파일에서 `classify_and_resolve`는 더 이상 차단하지 않고 정상 `resolved`를 반환한다(비공허성 — 수정 전에는 `blocked`였다).
-  - ② 단일 System 파일과 멀티시스템 파일에서 개별 레코드의 (universe, address) 해석 결과가 동일하다(비공허성).
-  - ③ **(v0.1.6)** 설계 측 구간 겹침(`design_overlaps`)·VW 자체 충돌(`vw_patch_conflicts`)은 `(system, universe, address)`로 버킷팅되어, System이 다르면 같은 (universe, address)라도 겹침/충돌로 오탐하지 않는다(비공허성 — System 무시 시 발생하는 오탐 시나리오를 별도로 검증).
-  - ④ **(v0.1.6)** 콘솔 대조는 System 2개 이상 관측 시에만 미수행 처리되며, 그 사유(`multi_system_mapping_absent`)는 일반 판독 실패 사유와 뭉뚱그려지지 않는다 — `skipped_checks`에 관측된 System 문자 집합이 명시된다.
+  - ① System A와 System B가 둘 다 `Universe 1`을 쓰는 합성 파일에서 두 유니버스를 임의로 병합하지 않고 차단 + 사유("멀티시스템 — Universe 컬럼만으로 구분 불가")를 반환한다.
+  - ② 단일 System 파일에서는 이 차단이 오발동하지 않는다(비공허성).
 
 ### AC-VWX-012 — `normalize_address` 표현 일치 (M3)
 
@@ -233,20 +222,19 @@ The 주소 해석기가 산출하는 정규화 표현 **shall** `normalize_addre
 - 검증 방법: `server/tests/test_vwx_rig.py`
 - 기대 결과:
   - ① `Part Index` 1~3을 가진 3행이 설계상 리그 모델에서 1개 픽스처로 접힌다.
-  - ② 접힌 픽스처의 `unit_number`/`instrument_type`은 **정본 대표 규칙 — `Part Index` 최솟값 행을 대표로 채택한다**(닫힌 결정, 대안 아님)에서 오며 임의 값이 아니다.
+  - ② 접힌 픽스처의 `unit_number`/`instrument_type`은 명시된 대표 규칙(예: `Part Index` 최솟값 행)에서 오며 임의 값이 아니다.
   - ③ `Part Index`가 없는 일반 픽스처는 접힘 없이 1:1로 반영된다(비공허성).
 
 ### AC-VWX-014 — 액세서리 필터링 (M4)
 
-The 시스템 **shall** `Device Type`으로 Light-class와 비-DMX 액세서리를 대조 계수 이전에 필터링한다. **(v0.1.6 — 결함 2 P1 재정의)** 배제 기준은 문자열 리터럴이 아니라 실제 DMX 점유(양수 `DMX Footprint`) 여부다.
+The 시스템 **shall** `Device Type`으로 Light-class와 비-DMX `Static Accessory`를 대조 계수 이전에 필터링한다.
 
 - 대상 요구사항: REQ-VWX-014
-- 검증 방법: `server/tests/test_vwx_rig.py`, `server/tests/test_vwx_multisystem_real_samples.py`
+- 검증 방법: `server/tests/test_vwx_rig.py`
 - 기대 결과:
   - ① `Device Type = "Static Accessory"`인 행이 설계상 리그의 대조 대상 픽스처 수에서 제외된다.
-  - ② `Device Type = "Accessory"`이고 양수 `DMX Footprint`가 있으면(DMX 소비, 예: 컬러 스크롤러) 포함된다.
+  - ② `Device Type = "Accessory"`(DMX 소비, 예: 컬러 스크롤러)는 포함된다.
   - ③ `Device Type` 컬럼이 아예 없는 파일에서는 필터링을 수행하지 않고 그 사실을 리포트에 명시한다(임의 배제 금지 — 비공허성).
-  - ④ **(v0.1.6)** 같은 `Device Type = "Accessory"` 리터럴을 쓰더라도 `DMX Footprint`가 없거나 0이면(비-DMX) 배제된다 — 리터럴이 같아도 실제 DMX 점유로 구분함을 실물 샘플(DMX 소비 스크롤러 vs 비-DMX Top Hat, 둘 다 `"Accessory"` 리터럴)로 확인(비공허성).
 
 ### AC-VWX-015 — 타입·모드 퍼지 매칭 (M4)
 
@@ -259,21 +247,15 @@ The 시스템 **shall not** 타입·모드 명칭을 동등 비교로 판정한�
   - ② 매칭이 해결되지 않는 임의 문자열 쌍은 "미해결"로 표시되고 정합/부적합 어느 쪽으로도 세지 않는다.
   - ③ 타입/모드 비교 지점에서 `==` 연산자를 직접 쓰는 코드가 AST 스캔으로 **0건**이다(비공허성 — 스캔이 실제 비교 지점을 방문했음을 함께 확인).
 
-### AC-VWX-016 — 파일 내부 조인키 충돌 거부, 스코프 준수 (M4)
+### AC-VWX-016 — 파일 내부 조인키 충돌 거부 (M4)
 
-**When** 조인 키(스코프 안에서)가 중복이거나 공란인 레코드가 2개 이상이면, the 시스템 **shall** 자동 병합을 거부하고 충돌로 보고한다. **(v0.1.5 — 스코프 수정)** 조인 키는 ① `channel`(전역 유일) 우선, 없으면 ② `(position, unit_number)` 복합 키다 — `unit_number` 단독을 전역 조인 키로 쓰지 않는다.
+**When** `unit_number`/`channel`이 중복이거나 공란인 레코드가 2개 이상이면, the 시스템 **shall** 자동 병합을 거부하고 충돌로 보고한다.
 
 - 대상 요구사항: REQ-VWX-016
-- 검증 방법: `server/tests/test_vwx_rig.py`, `server/tests/test_vwx_tool.py`
+- 검증 방법: `server/tests/test_vwx_rig.py`
 - 기대 결과:
-  - ① 동일 `channel`을 가진 서로 다른 두 행이 last-write-wins로 조용히 병합되지 않고 둘 다 충돌 목록에 남는다.
-  - ② `channel`이 모두 공란인 서로 다른 픽스처는 `(position, unit_number)` 복합 키를 시도하고, 그것도 실패(둘 다 공란)하면 충돌로 보고한다.
-  - ③ **핵심 회귀(코디네이터 재현)** — 서로 다른 `position`의 같은 `unit_number`(예: `Upstage Truss`의 `1`번과 `FOH`의 `1`번)는 **충돌이 아니다** — 각각 독립된 픽스처로 성립한다.
-  - ④ **비공허성 대조군** — 같은 `position` 안에서 같은 `unit_number`가 중복되면 여전히 충돌로 잡힌다(스코프가 죽어있지 않음을 증명). 충돌 사유 문구에 어느 스코프(포지션 값 또는 "포지션 공란")에서 중복인지 명시한다.
-  - ⑤ `position`이 공란인 레코드끼리는 하나의 스코프로 취급해 공란끼리만 충돌하며, 공란 스코프와 실제 포지션 스코프는 서로 다른 스코프다.
-  - ⑥ `channel`이 비숫자 문자열("channel name")이어도 문자열 그대로 정상 조인된다.
-  - ⑦ `part_index`가 있으면 이 스코프 수정 이후에도 기존 멀티셀 폴딩 규약이 그대로 유지된다.
-  - ⑧ **(v0.1.6 — 결함 4 P1)** `Device Type`이 액세서리 계열인 레코드는 channel이 부모 픽스처와 동일해도 channel 조인을 건너뛰고 `(position, unit_number)`로 직행한다 — 부모(channel 공유)와 액세서리 여러 개가 하나로 잘못 접히지 않는다(비공허성 — 실물 샘플에서 부모 1개 + 액세서리 1개가 별개 픽스처로 남음을 확인).
+  - ① 동일 `unit_number`를 가진 서로 다른 두 행이 last-write-wins로 조용히 병합되지 않고 둘 다 충돌 목록에 남는다.
+  - ② `unit_number`가 모두 공란인 서로 다른 픽스처는 대체 조인키(채널명)를 시도하고, 그것도 실패하면 충돌로 보고한다.
 
 ### AC-VWX-017 — VW 자체 충돌 분류 통과 (M4)
 
@@ -316,9 +298,6 @@ The 대조 리포트 **shall** `missing_in_console`·실제 `address_collision`�
   - ② 콘솔 실측이 이미 아는 주소 중복이 대조 리포트에도 반영된다(`precheck_patch`의 판정을 재사용, 재계산하지 않는다).
   - ③ 도면 수량과 콘솔 관측 수량이 타입별로 다른 경우 `quantity_mismatch`에 타입·도면수·콘솔수가 함께 열거된다.
   - ④ 3부류 전부가 항상 응답에 존재한다(비어 있어도 포함 — 비공허성).
-  - ⑤ **(v0.1.7 — 스코프 한정, 결함 2 P1)** 컬럼 해석을 통과한 후보 행 중 주소 해석 단계에서 진짜로 탈락한 행이 있으면 `designed_rig.scope_qualified`가 True이고, `summary_ko`가 그 탈락 사실을 담는다. 탈락 비율이 30% 이상이면 `summary_ko`는 "도면 픽스처 N개"보다 탈락 사실을 먼저 말한다(비공허성 — 실물 케이스에 준하는 대량 탈락 합성 케이스로 직접 확인).
-  - ⑥ 집계행·비-DMX 액세서리처럼 컬럼 해석 이전에 의도적으로 제외된 행은 탈락으로 세지 않는다(비공허성 — 그런 행만 있는 파일에서 `scope_qualified`가 여전히 False임을 확인).
-  - ⑦ 탈락 0건인 파일에서는 스코프 한정이 전혀 붙지 않는다(비공허성 대조군 — 실물 01 샘플로 확인).
 
 ### AC-VWX-021 — 옵션 구간 겹침 재사용 (M5)
 
@@ -339,8 +318,6 @@ The 대조 리포트 **shall** 판독 실패·데이터블록 미탐·미수행�
 - 기대 결과:
   - ① 4종(판독 실패·데이터블록 미탐·미수행·부정 전제) 각각이 최상위 리포트 키에 독립적으로 존재한다.
   - ② Python 예외 traceback 문자열이 사용자 대면 필드에 노출되는 지점이 0건이다(비공허성 — 정상 케이스에서 각 필드가 빈 목록으로 존재).
-  - ③ **(v0.1.3 — kind 열거에서 불변식으로 재설계)** **설계상 리그 픽스처가 0대이면**(트리거 무관 — 판독 실패든 파일 내부 조인키(`unit_number`/`channel`) 충돌로 전 행이 탈락한 경우든 그 밖의 원인이든) `diffs`는 `missing_in_console`/`address_collision`/`quantity_mismatch` 빈 배열 3종을 **생략**하고 `{"performed": false, "reason": …}` 형태로만 존재한다 — "찾아봤는데 없다"(빈 배열)와 "애초에 수행하지 않았다"(미수행)를 구조적으로 구별한다. `reason`은 실제 원인을 지목한다(판독 실패 사유 · 조인키 충돌 상세 · 그 밖의 경우 방어적 폴백 문구). 정상 대조(픽스처 ≥1)에서는 `{"performed": true, ...}` + 기존 3키가 그대로 유지된다(비공허성 — 정상 케이스에서 `performed: true` + 3키가 실제로 존재함을 함께 확인).
-  - ④ **(v0.1.6 — 멀티시스템 사유 분리, 결함 1 P0)** 픽스처가 1대 이상이어도 System 2개 이상 관측 시 `diffs`는 여전히 `{"performed": false, "reason": …}`이며, 이때의 `reason`은 "픽스처 0대" 사유와 **다른 문구**(System→콘솔 매핑 부재)를 쓴다 — 두 원인이 뭉뚱그려지지 않음을 직접 assert한다(비공허성).
 
 ### AC-VWX-023 — 한국어 표현 계층 (M6)
 
@@ -349,10 +326,8 @@ The 대조 리포트 **shall** 판독 실패·데이터블록 미탐·미수행�
 - 대상 요구사항: REQ-VWX-024
 - 검증 방법: `server/tests/test_vwx_report.py`
 - 기대 결과:
-  - ① **(v0.1.1 — run-phase 확정 설계로 갱신)** 신규 판정 부류(`missing_in_console` 등)가 `server/vwx/report.py`의 독립 닫힌 어휘 레지스트리 `VWX_CLOSED_VOCABULARIES`에 등재되고 동일 파일의 라벨 표에 대응 한국어 라벨을 갖는다(키 집합 정확히 일치). `server/prechk/verdicts.py`의 공유 `CLOSED_VOCABULARIES`는 **건드리지 않는다** — 시도 시 기존 `test_prechk_verdicts.py`/`test_prechk_report.py`의 정확-집합 assert가 깨짐이 실측으로 확인됐다(`progress.md` M6). 이 변경으로 `verdicts.py`도 PRESERVE 0-diff에 포함된다(spec.md §C 갱신).
-  - ② 밑줄 식별자(내부 라벨 딕셔너리)를 본 SPEC의 신규 코드가 직접 import하는 지점이 AST 스캔으로 **0건**이다(비공허성 — 스캔이 실제 코드 트리를 방문했음을, 임시로 밑줄 식별자 직접 import를 심어 스캔이 잡아내는지 확인 후 되돌리는 방식으로 함께 assert한다).
-  - ③ **(v0.1.3 — kind 열거에서 불변식으로 재설계)** `summary_ko()`는 대조가 성립하지 않을 때(위 AC-VWX-022 ③ 불변식 조건 — 픽스처 0대) **"차이 없음"이라는 문구를 절대 포함하지 않는다** — 대신 실제 원인으로 문장을 시작한다(판독 실패 경로: "패치 출처로 성립하지 않는다 — …. 대조를 수행하지 않았다." · 조인키 충돌 경로: "조인 키 충돌 N건으로 설계상 리그를 세우지 못했다 — …. 대조를 수행하지 않았다."). 정상 대조(픽스처 ≥1, 차이 없음)에서는 "차이 없음" 문구가 그대로 등장한다(비공허성 — 판독 실패·조인키 충돌·정상 3경로 모두 실제로 검증해 문자열 검사기가 살아 있음을 증명한다).
-  - ④ **(v0.1.6 — 결함 2 P1, excluded_rows 구별)** `excluded_rows`가 1건 이상이면 `summary_ko()`는 판독 실패가 0건이어도 "판독 실패 N건 · 제외 M건(집계행 A · 비DMX 액세서리 B)" 형태로 두 사건을 명시한다 — 판독 실패 없이 제외행만 있는 파일을 "판독 실패 없는 깨끗한 파일"로 오독시키지 않는다(비공허성 — 판독 실패 0건 + 제외 4건 실물 케이스로 직접 확인). `excluded_rows`가 0건이면 기존 "판독 실패 N건" 단독 문구를 그대로 유지한다(비공허성 대조군).
+  - ① 신규 판정 부류(`missing_in_console` 등)가 `server/prechk/verdicts.py CLOSED_VOCABULARIES`에 등재되고 `server/prechk/report.py`의 라벨 표에 대응 한국어 라벨을 갖는다(키 집합 정확히 일치).
+  - ② 밑줄 식별자(내부 라벨 딕셔너리)를 본 SPEC의 신규 코드가 직접 import하는 지점이 AST 스캔으로 0건이다.
 
 ### AC-VWX-024 — 툴 배선 · 콘솔 실측 경유 · 경계 (M6)
 
@@ -364,44 +339,7 @@ The 대조 리포트 **shall** 판독 실패·데이터블록 미탐·미수행�
   - ① 툴 등록 4지점(`TOOL_NAMES`·핸들러·`definitions`·`handlers`) 전부에 등재되며 **디스패치**로 확인한다(dict 조회만으로 확인하지 않는다).
   - ② `server/vwx/` 어느 파일도 `server.bridge`·`pythonosc`를 직접 import하지 않는다(기존 `_FORBIDDEN_MODULE_PREFIXES` 테스트가 통과).
   - ③ 콘솔 실측 데이터가 `read_inventory` 또는 `build_patch_sheet` 호출을 경유함을 대역 모킹으로 확인한다.
-  - ④ 신규 REST 라우트·웹소켓 메시지·`execution_port` 직접 접근이 AST 스캔으로 **0건**이다(비공허성 — 스캔이 실제 트리를 방문했음을, 임시로 REST 라우트 데코레이터 또는 `execution_port` 직접 호출을 심어 스캔이 잡아내는지 확인 후 되돌리는 방식으로 함께 assert한다).
-
-### AC-VWX-027 — fixture_name·gdtf_fixture 정규 필드 승격 (M2)
-
-The 컬럼 해석기 **shall** `Fixture Name`·`GDTF Fixture`를 정규 필드로 해석하고, 후자를 타입 퍼지 매칭에 우선 사용한다.
-
-- 대상 요구사항: REQ-VWX-026
-- 검증 방법: `server/tests/test_vwx_columns.py`, `server/tests/test_vwx_rig.py`
-- 기대 결과:
-  - ① `Fixture Name`/`FixtureName` 헤더가 `fixture_name`으로, `GDTF Fixture`/`GDTFFixture` 헤더가 `gdtf_fixture`로 해석된다 — `extra`에 남지 않는다.
-  - ② `fixture_name`이 `symbol_name`과 다른 정규화 키를 가짐을 직접 assert한다(비공허성 — 합쳐지지 않았음을 증명).
-  - ③ `gdtf_fixture`가 `mode`의 `GDTF Fixture Mode` 별칭과 다른 정규화 키를 가짐을 직접 assert한다(비공허성 — `gdtffixture` vs `gdtffixturemode`).
-  - ④ `DesignedFixture.match_type`이 `gdtf_fixture`가 있으면 그것을, 없으면 `instrument_type`을 반환한다(비공허성 — 두 경로 모두 검증).
-
-### AC-VWX-028 — 주소 3중 표현 교차검증 (M3)
-
-**Where** `Universe`·`DMX Address`·`Absolute Address`가 모두 존재하면, the 주소 해석기 **shall** `absolute == (universe-1)*512+address`를 검증하고 불일치를 경고로 보고한다.
-
-- 대상 요구사항: REQ-VWX-027
-- 검증 방법: `server/tests/test_vwx_address.py`
-- 기대 결과:
-  - ① 세 표현이 일치하면(음성 대조군) 경고 없이 `Universe`+`DMX Address` 그대로 해석된다.
-  - ② **불일치하면**(양성 케이스, 합성 픽스처) `address_triple_mismatch` 경고가 생성되고, 그럼에도 유니버스는 **Absolute Address로 역산되지 않는다** — `Universe`+`DMX Address` 조합 값이 그대로 유지됨을 직접 assert한다(추측 금지 원칙 준수).
-  - ③ 경고가 있어도 레코드는 `resolved`에서 탈락하지 않는다(해석 성공 + 경고는 독립적인 축).
-
-### AC-VWX-029 — 설계 측 구간 겹침 판정 (M5)
-
-**Where** `DMX Footprint`가 해석되면, the 대조기 **shall** 설계 도면 내부에서 (유니버스,주소,폭)만으로 구간 겹침을 판정한다.
-
-- 대상 요구사항: REQ-VWX-028
-- 검증 방법: `server/tests/test_vwx_rig.py`, `server/tests/test_vwx_diff.py`, `server/tests/test_vwx_tool.py`
-- 기대 결과:
-  - ① stride == footprint(완벽 패킹, M0 실물 샘플과 동일 형태)이면 겹침 0건을 **필드로 명시**한다(생략이 아니다 — 비공허성).
-  - ② **stride < footprint면**(양성 케이스, 합성 픽스처) 실제로 겹침이 잡힌다 — 겹침 판정 기능이 항상 빈 목록만 내지 않음을 직접 assert한다(비공허성 핵심).
-  - ③ 서로 다른 유니버스 간에는 겹침이 오발동하지 않는다(비공허성 대조군).
-  - ④ `DMX Footprint`가 없는 파일에서는 기존과 같이 미수행 + 사유(`footprint_overlap_descope`)로 보고된다(회귀 확인).
-  - ⑤ 설계 측 판정이 수행됐으면 콘솔 측 폭 주입(2차 작업)이 의도적으로 미뤄졌다는 별도 미수행 판정(`console_footprint_width_injection_deferred`)이 `skipped_checks`에 남는다.
-  - ⑥ VW 자체 다중패치(정확히 같은 시작 주소)는 이 판정으로 실패시키지 않는다 — 기존 `vw_patch_conflicts` 규약과 독립적으로 공존한다(회귀 확인).
+  - ④ 신규 REST 라우트·웹소켓 메시지·`execution_port` 직접 접근이 AST 스캔으로 0건이다.
 
 ### AC-VWX-025 — 회귀 · PRESERVE (M7)
 
@@ -458,12 +396,10 @@ The 컬럼 해석기 **shall** `Fixture Name`·`GDTF Fixture`를 정규 필드�
 
 ## §F. Definition of Done
 
-**(v0.1.4 갱신 — REQ 25→28·AC 26→29. 3행 status 줄과의 자기모순을 바로잡음. 코디네이터 검증 중 발견.)**
-
-1. AC-VWX-001~029 **29건 전량 PASS**(§C.0a 마일스톤 배정 합 29와 일치).
-2. REQ-VWX-001~028 **28건 전량** 커버(§C.0 "REQ 28/28 커버, 누락 0"과 일치).
-3. `ASSUMPTION-68`~`70` **3건 전부 판정 확정**. **아직 참이 아니다** — `68`은 v0.1.4에서 NEGATIVE로 해소됐지만 `69`(Absolute Address 단독 파일)·`70`(경로 B 워크시트)은 M0가 PARTIAL에 머물러 있는 한 미해소다. 이 항목은 **M8이 실제로 닫혀야 참이 되는 DoD**다 — M8이 BLOCKED인 현재는 이 조건이 미충족이며, 그것이 SPEC 전체가 아직 완결이 아닌 이유 그 자체다(`progress.md` §E.2 M0 절 참조).
-4. `openpyxl` 신규 의존성 승인 여부가 `progress.md`에 기록되고, 미승인 시 §D의 `.xlsx` 축소가 실제 코드 사유 문자열과 일치. **(충족됨 — 승인 확정, `progress.md` Implementation Kickoff Approval 절)**
-5. PRESERVE diff 빈 출력(`server/prechk/**` 8개 파일 전량, `verdicts.py` 포함 완전 0-diff) + 게이트 비공허성 증명.
+1. AC-VWX-001~026 **26건 전량 PASS**.
+2. REQ-VWX-001~025 **25건 전량** 커버(§C.0 누락 0).
+3. `ASSUMPTION-68`~`70` **3건 전부 판정 확정**.
+4. `openpyxl` 신규 의존성 승인 여부가 `progress.md`에 기록되고, 미승인 시 §D의 `.xlsx` 축소가 실제 코드 사유 문자열과 일치.
+5. PRESERVE diff 빈 출력(`verdicts.py` 순수 추가 예외) + 게이트 비공허성 증명.
 6. 전체 스위트 0 failed · `ruff` clean(신규·변경 파일).
 7. CHANGELOG · frontmatter · `progress.md` §E.1~§E.4가 갱신.

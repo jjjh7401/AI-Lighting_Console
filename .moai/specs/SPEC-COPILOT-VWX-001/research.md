@@ -73,7 +73,7 @@ Vectorworks Instrument Data 워크시트가 노출하는 컬럼은 버전마다 
 | `circuit_number` | Circuit Number, Circuit #, Circuit | |
 | `circuit_name` | Circuit Name | |
 | `color` | Color, Colour, Gel | 다중 젤은 `+`로 결합될 수 있다 |
-| `frame_size` / `focus` / `wattage` / `weight` | (각 자체 헤더) | 대조와 무관, `extra`로 보존. **문서-구현 정본 정리(v0.1.4)**: 이 4개는 `server/vwx/columns.py` `ALIAS_TABLE`(구현)에 실제로는 등록돼 있지 않다 — 등록 없이도 `extra`로 보존되는 동작은 동일하므로 기능 결함은 아니지만, "정규 필드 후보"였다는 이 표의 언급과 "실제 정규 필드 여부"는 별개다. **정본은 `ALIAS_TABLE`(구현)**이다 — 이 표는 조사 기록이지 구현 약속이 아니며, 이 4개를 정규 필드로 승격할지는 범위 밖 결정으로 남겨둔다. |
+| `frame_size` / `focus` / `wattage` / `weight` | (각 자체 헤더) | 대조와 무관, `extra`로 보존 |
 | `device_type` | Device Type, DeviceType | 액세서리 필터링 필수(REQ-VWX-014) |
 | `layer` | Layer, Design Layer, Class | |
 | `uid` | UID, Unique ID, EID, External ID, VW_ID | 경로 A의 자동 추가 컬럼 |
