@@ -102,7 +102,20 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # widened 1220 hunk, not because anything there was reverted.
 # Protected-range overlap re-verified: ZERO (the assertion below is what actually
 # carries the PRESERVE claim; this positional list is bookkeeping).
+# SPEC-COPILOT-VWX-001 M6 registered precheck_vectorworks_diff the same way: one
+# import block (server.vwx.address/columns/diff/reader/report/rig, widening the
+# 33 hunk), two stdlib imports (base64, binascii — one genuinely new start at 11,
+# immediately above the existing 12 hunk since unified=0 does not merge adjacent-
+# but-distinct insertion points), one TOOL_NAMES entry (widening 49), one handler
+# + ToolDefinition + one handlers-dict entry (all widening hunks the earlier
+# SPECs already opened, inside the same build_toolset body). 45 hunks total (44
+# + the new 11 start); every other start is unchanged from GROUPGEN's snapshot.
+# Evidence this is additive-only:
+#   git diff --unified=0 e40c4d0~1..HEAD -- server/orchestrator/tools.py \
+#     | grep -cE '^-[^-]'   ->  0  (zero pre-existing lines deleted or modified)
+# Protected-range overlap re-verified: ZERO.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
+    11,
     12,
     14,
     17,
