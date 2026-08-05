@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from server.prechk.patch import normalize_address
 from server.vwx.address import (
+    ADDRESS_BASIS_ABS_BACK_CALCULATED,
+    ADDRESS_BASIS_ABS_CONFIRMED,
+    ADDRESS_BASIS_DIRECT,
     PATCHED,
-    READ_FAILURE_ABS_UNVERIFIED,
     READ_FAILURE_ADDRESS_TRIPLE_MISMATCH,
     READ_FAILURE_MULTI_SYSTEM,
     UNPATCHED_DESIGNED,
@@ -48,18 +50,36 @@ class TestAbsoluteAddressConditionalInversion:
         assert outcome.kind == "resolved"
         assert outcome.classification == PATCHED
         assert (outcome.universe, outcome.address) == (2, 5)
+        assert outcome.address_basis == ADDRESS_BASIS_DIRECT
 
-    def test_absolute_only_without_confirmed_premise_never_guesses(self):
+    def test_absolute_only_without_confirmed_premise_derives_with_a_weak_basis(self):
+        """v0.1.7 재설계(결함 1 P0, ASSUMPTION-69) — 전제 미확인은 더 이상 거부
+        사유가 아니다. ``server/prechk/patch.py`` ``OverlapBasis``처럼 판정을
+        거부하는 대신 가장 약한 근거로 역산하고 그 근거를 등급으로 남긴다."""
+        # abs=600 -> universe=(600-1)//512+1=2, address=(600-1)%512+1=88
         outcome = classify_and_resolve({"absolute_address": "600"}, contiguous_512_confirmed=False)
-        assert outcome.kind == "read_failure"
-        assert outcome.reason_code == READ_FAILURE_ABS_UNVERIFIED
-        assert outcome.universe is None and outcome.address is None
+        assert outcome.kind == "resolved"
+        assert (outcome.universe, outcome.address) == (2, 88)
+        assert outcome.address_basis == ADDRESS_BASIS_ABS_BACK_CALCULATED
 
-    def test_absolute_only_with_confirmed_premise_inverts_correctly(self):
+    def test_absolute_only_with_confirmed_premise_inverts_with_a_stronger_basis(self):
         # abs=600 -> universe=(600-1)//512+1=2, address=(600-1)%512+1=88
         outcome = classify_and_resolve({"absolute_address": "600"}, contiguous_512_confirmed=True)
         assert outcome.kind == "resolved"
         assert (outcome.universe, outcome.address) == (2, 88)
+        assert outcome.address_basis == ADDRESS_BASIS_ABS_CONFIRMED
+
+    def test_confirmed_and_unconfirmed_premises_derive_the_same_address_different_basis(self):
+        """비공허성 — 근거 등급만 다르고 역산된 (universe, address)는 동일하다."""
+        confirmed = classify_and_resolve({"absolute_address": "600"}, contiguous_512_confirmed=True)
+        unconfirmed = classify_and_resolve(
+            {"absolute_address": "600"}, contiguous_512_confirmed=False
+        )
+        assert (confirmed.universe, confirmed.address) == (
+            unconfirmed.universe,
+            unconfirmed.address,
+        )
+        assert confirmed.address_basis != unconfirmed.address_basis
 
 
 class TestMultiSystemAmbiguity:
@@ -197,7 +217,9 @@ class TestTripleRepresentationCrossCheck:
 
     def test_absolute_address_alone_is_unaffected_by_the_cross_check(self):
         """교차검증은 Universe+DMX Address 쌍이 있을 때만 발동한다 — Absolute 단독
-        경로(ASSUMPTION-69)는 이 변경으로 바뀌지 않는다(회귀 확인)."""
+        경로(v0.1.7 재설계, ASSUMPTION-69)는 3중 표현 교차검증과 무관하게 자체
+        분기(역산, 약한 근거)로만 처리된다(회귀 확인 — 교차검증 경고가 섞이지 않음)."""
         outcome = classify_and_resolve({"absolute_address": "39"})
-        assert outcome.kind == "read_failure"
-        assert outcome.reason_code == READ_FAILURE_ABS_UNVERIFIED
+        assert outcome.kind == "resolved"
+        assert outcome.address_basis == ADDRESS_BASIS_ABS_BACK_CALCULATED
+        assert outcome.warning_kind is None
