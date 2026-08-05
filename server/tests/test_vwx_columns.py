@@ -91,3 +91,47 @@ class TestMinimumValidRecord:
         records, failures = resolve_columns(raw)
         assert not failures
         assert len(records) == 1
+
+
+class TestFixtureNameAndGdtfFixtureAliases:
+    """M0 실물 샘플(2026-08-05) 반영 — ASSUMPTION-68 NEGATIVE로 별칭표 확장."""
+
+    def test_fixture_name_header_resolves_to_the_new_canonical_field(self):
+        assert resolve_header("Fixture Name") == "fixture_name"
+        assert resolve_header("FixtureName") == "fixture_name"
+
+    def test_gdtf_fixture_header_resolves_to_the_new_canonical_field(self):
+        assert resolve_header("GDTF Fixture") == "gdtf_fixture"
+        assert resolve_header("GDTFFixture") == "gdtf_fixture"
+
+    def test_fixture_name_never_collides_with_symbol_name(self):
+        """요구사항 명시 — 이 둘은 다른 필드다, 합치지 않는다."""
+        assert resolve_header("Fixture Name") != resolve_header("Symbol Name")
+        assert resolve_header("Symbol Name") == "symbol_name"
+
+    def test_gdtf_fixture_never_collides_with_gdtf_fixture_mode(self):
+        """정규화 키가 다름을 테스트로 못박는다 — gdtffixture vs gdtffixturemode."""
+        assert resolve_header("GDTF Fixture") == "gdtf_fixture"
+        assert resolve_header("GDTF Fixture Mode") == "mode"
+        assert resolve_header("GDTF Fixture") != resolve_header("GDTF Fixture Mode")
+
+    def test_real_sample_row_resolves_both_new_fields_out_of_extra(self):
+        """비공허성 종단 — 실물 헤더 전체를 넣으면 두 필드 다 extra가 아니라 정규 필드로 간다."""
+        raw = [
+            {
+                "Instrument Type": "Martin MAC Encore Performance CLD",
+                "Fixture Name": "Encore 1",
+                "GDTF Fixture": "Martin Professional@MAC Encore Performance CLD",
+                "Universe": "1",
+                "DMX Address": "1",
+                "Gobo": "",  # 범위 밖 필드 — extra로 남아야 한다.
+            }
+        ]
+        records, failures = resolve_columns(raw)
+        assert not failures
+        assert len(records) == 1
+        assert records[0].fields["fixture_name"] == "Encore 1"
+        assert records[0].fields["gdtf_fixture"] == "Martin Professional@MAC Encore Performance CLD"
+        assert "fixture_name" not in records[0].extra
+        assert "gdtf_fixture" not in records[0].extra
+        assert "Gobo" in records[0].extra  # 범위 밖 필드는 여전히 extra 보존.

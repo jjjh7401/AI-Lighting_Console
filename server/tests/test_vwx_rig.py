@@ -25,6 +25,9 @@ def rr(
     classification: str = PATCHED,
     part_index: str | None = None,
     device_type: str | None = None,
+    fixture_name: str | None = None,
+    gdtf_fixture: str | None = None,
+    footprint: str | None = None,
     extra: dict | None = None,
 ) -> ResolvedRecord:
     fields: dict[str, str] = {"instrument_type": instrument_type}
@@ -38,6 +41,12 @@ def rr(
         fields["part_index"] = part_index
     if device_type is not None:
         fields["device_type"] = device_type
+    if fixture_name is not None:
+        fields["fixture_name"] = fixture_name
+    if gdtf_fixture is not None:
+        fields["gdtf_fixture"] = gdtf_fixture
+    if footprint is not None:
+        fields["footprint"] = footprint
     return ResolvedRecord(
         fields=fields,
         extra=extra or {},
@@ -197,3 +206,88 @@ class TestVectorworksNativeConflictPassthrough:
         ]
         rig = build_designed_rig(records)
         assert rig.vw_patch_conflicts == ()
+
+
+class TestFixtureNameAndGdtfFixtureFields:
+    """M0 실물 샘플 반영 — fixture_name·gdtf_fixture가 extra가 아닌 정규 필드로 해석된다."""
+
+    def test_fixture_name_and_gdtf_fixture_are_carried_onto_the_designed_fixture(self):
+        records = [
+            rr(
+                0,
+                unit_number="1",
+                instrument_type="Martin MAC Encore Performance CLD",
+                fixture_name="Encore 1",
+                gdtf_fixture="Martin Professional@MAC Encore Performance CLD",
+            )
+        ]
+        rig = build_designed_rig(records)
+        assert len(rig.fixtures) == 1
+        fixture = rig.fixtures[0]
+        assert fixture.fixture_name == "Encore 1"
+        assert fixture.gdtf_fixture == "Martin Professional@MAC Encore Performance CLD"
+
+    def test_match_type_prefers_gdtf_fixture_over_instrument_type(self):
+        records = [
+            rr(
+                0,
+                unit_number="1",
+                instrument_type="Martin MAC Encore Performance CLD",
+                gdtf_fixture="Martin Professional@MAC Encore Performance CLD",
+            )
+        ]
+        rig = build_designed_rig(records)
+        assert rig.fixtures[0].match_type == "Martin Professional@MAC Encore Performance CLD"
+
+    def test_match_type_falls_back_to_instrument_type_when_gdtf_fixture_absent(self):
+        """비공허성 대조군 — gdtf_fixture가 없는 정상 경로가 그대로 동작한다."""
+        records = [rr(0, unit_number="1", instrument_type="Robin MMX Spot")]
+        rig = build_designed_rig(records)
+        assert rig.fixtures[0].gdtf_fixture is None
+        assert rig.fixtures[0].match_type == "Robin MMX Spot"
+
+
+class TestDesignSideOverlapDetection:
+    """M0 실물 샘플이 준 DMX Footprint 폭 출처로 설계 측 구간 겹침을 직접 판정한다."""
+
+    def test_stride_equal_to_footprint_reports_zero_overlaps(self):
+        """음성 대조군 — M0 실물 샘플과 동일한 형태(stride==footprint, 완벽 패킹)."""
+        records = [
+            rr(0, unit_number="1", universe=1, address=1, footprint="38"),
+            rr(1, unit_number="2", universe=1, address=39, footprint="38"),
+            rr(2, unit_number="3", universe=1, address=77, footprint="38"),
+        ]
+        rig = build_designed_rig(records)
+        assert rig.footprint_data_present is True
+        assert rig.design_overlaps == ()
+
+    def test_stride_smaller_than_footprint_is_caught_as_an_overlap(self):
+        """양성 케이스(합성) — stride(20) < footprint(38)면 실제로 겹친다.
+
+        비공허성 핵심 — 이 assert가 없으면 겹침 판정 기능이 항상 빈 목록만
+        내도 테스트가 통과해버린다.
+        """
+        records = [
+            rr(0, unit_number="1", universe=1, address=1, footprint="38"),
+            rr(1, unit_number="2", universe=1, address=21, footprint="38"),  # 1~38 vs 21~58 겹침
+        ]
+        rig = build_designed_rig(records)
+        assert len(rig.design_overlaps) == 1
+        entry = rig.design_overlaps[0]
+        assert entry.universe == 1
+        assert "1" in entry.members and "2" in entry.members
+
+    def test_different_universes_never_report_a_false_overlap(self):
+        records = [
+            rr(0, unit_number="1", universe=1, address=1, footprint="38"),
+            rr(1, unit_number="2", universe=2, address=1, footprint="38"),
+        ]
+        rig = build_designed_rig(records)
+        assert rig.design_overlaps == ()
+
+    def test_no_footprint_column_leaves_footprint_data_present_false(self):
+        """footprint 컬럼이 아예 없는 파일 — 기존(footprint_overlap_descope) 경로 보존."""
+        records = [rr(0, unit_number="1", universe=1, address=1)]
+        rig = build_designed_rig(records)
+        assert rig.footprint_data_present is False
+        assert rig.design_overlaps == ()

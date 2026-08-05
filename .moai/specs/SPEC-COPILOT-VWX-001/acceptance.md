@@ -1,6 +1,6 @@
 # SPEC-COPILOT-VWX-001 — 인수 기준 (acceptance)
 
-status: draft (v0.1.3, 2026-08-05) · Tier L · AC 26건 계획. 본 문서는 spec.md의 요구를 관측 가능한 검증 기준으로 전개한다.
+status: draft (v0.1.4, 2026-08-05) · Tier L · AC 29건 계획. 본 문서는 spec.md의 요구를 관측 가능한 검증 기준으로 전개한다.
 
 > **v0.1.0 — 최초 작성.** **AC 26건**(AC-VWX-001~026) · **REQ 25건**(REQ-VWX-001~025) 전량 커버. 라이브 AC는 **0건**이다 — `plan.md` §C가 라이브 세션 0회 결정의 근거를 적는다.
 >
@@ -68,8 +68,11 @@ status: draft (v0.1.3, 2026-08-05) · Tier L · AC 26건 계획. 본 문서는 s
 | REQ-VWX-023 | AC-VWX-022 | M6 | 구조화된 페이로드 |
 | REQ-VWX-024 | AC-VWX-023 | M6 | 한국어 표현 계층 |
 | REQ-VWX-025 | AC-VWX-024 | M6 | 툴 배선 4지점(같은 AC의 별 구간) |
+| REQ-VWX-026 | AC-VWX-027 | M2 | fixture_name·gdtf_fixture 정규 필드 승격 |
+| REQ-VWX-027 | AC-VWX-028 | M3 | 주소 3중 표현 교차검증 |
+| REQ-VWX-028 | AC-VWX-029 | M5 | 설계 측 구간 겹침 판정 |
 
-**REQ 25/25 커버, 누락 0.** 역추적표에 행이 없는 AC는 **3건**이며 의도다 — **AC-VWX-001**(M0 전제 확보 게이트) · **AC-VWX-025**(회귀·PRESERVE, 단일 REQ가 아니라 형상 전체가 대상) · **AC-VWX-026**(종단 통합).
+**REQ 28/28 커버, 누락 0.** 역추적표에 행이 없는 AC는 **3건**이며 의도다 — **AC-VWX-001**(M0 전제 확보 게이트) · **AC-VWX-025**(회귀·PRESERVE, 단일 REQ가 아니라 형상 전체가 대상) · **AC-VWX-026**(종단 통합).
 
 ### §C.0a 마일스톤별 AC 배정 (정본)
 
@@ -77,15 +80,15 @@ status: draft (v0.1.3, 2026-08-05) · Tier L · AC 26건 계획. 본 문서는 s
 |---|---|---|
 | M0 — 실물 Vectorworks export 샘플 확보 | AC-VWX-001 | 1 |
 | M1 — 파일 판독 + 인코딩 | AC-VWX-002 · AC-VWX-003 · AC-VWX-004 · AC-VWX-005 | 4 |
-| M2 — 컬럼 해석 | AC-VWX-006 · AC-VWX-007 · AC-VWX-008 | 3 |
-| M3 — 주소 처리 | AC-VWX-009 · AC-VWX-010 · AC-VWX-011 · AC-VWX-012 | 4 |
+| M2 — 컬럼 해석 | AC-VWX-006 · AC-VWX-007 · AC-VWX-008 · AC-VWX-027 | 4 |
+| M3 — 주소 처리 | AC-VWX-009 · AC-VWX-010 · AC-VWX-011 · AC-VWX-012 · AC-VWX-028 | 5 |
 | M4 — 설계상 리그 모델 | AC-VWX-013 · AC-VWX-014 · AC-VWX-015 · AC-VWX-016 · AC-VWX-017 | 5 |
-| M5 — precheck_patch 대조 | AC-VWX-018 · AC-VWX-019 · AC-VWX-020 · AC-VWX-021 | 4 |
+| M5 — precheck_patch 대조 | AC-VWX-018 · AC-VWX-019 · AC-VWX-020 · AC-VWX-021 · AC-VWX-029 | 5 |
 | M6 — 보고 + 툴 배선 | AC-VWX-022 · AC-VWX-023 · AC-VWX-024 | 3 |
 | M7 — 회귀 · PRESERVE | AC-VWX-025 | 1 |
 | M8 — 종단 검증 | AC-VWX-026 | 1 |
 
-**합 26 · 중복 0 · 누락 0.** 이 표가 정본이며 `plan.md`의 마일스톤별 `AC` 줄과 1:1이다.
+**합 29 · 중복 0 · 누락 0.** 이 표가 정본이며 `plan.md`의 마일스톤별 `AC` 줄과 1:1이다(v0.1.4 — M0 실물 샘플 반영으로 M2/M3/M5에 각 1건씩 추가).
 
 ---
 
@@ -342,6 +345,43 @@ The 대조 리포트 **shall** 판독 실패·데이터블록 미탐·미수행�
   - ② `server/vwx/` 어느 파일도 `server.bridge`·`pythonosc`를 직접 import하지 않는다(기존 `_FORBIDDEN_MODULE_PREFIXES` 테스트가 통과).
   - ③ 콘솔 실측 데이터가 `read_inventory` 또는 `build_patch_sheet` 호출을 경유함을 대역 모킹으로 확인한다.
   - ④ 신규 REST 라우트·웹소켓 메시지·`execution_port` 직접 접근이 AST 스캔으로 **0건**이다(비공허성 — 스캔이 실제 트리를 방문했음을, 임시로 REST 라우트 데코레이터 또는 `execution_port` 직접 호출을 심어 스캔이 잡아내는지 확인 후 되돌리는 방식으로 함께 assert한다).
+
+### AC-VWX-027 — fixture_name·gdtf_fixture 정규 필드 승격 (M2)
+
+The 컬럼 해석기 **shall** `Fixture Name`·`GDTF Fixture`를 정규 필드로 해석하고, 후자를 타입 퍼지 매칭에 우선 사용한다.
+
+- 대상 요구사항: REQ-VWX-026
+- 검증 방법: `server/tests/test_vwx_columns.py`, `server/tests/test_vwx_rig.py`
+- 기대 결과:
+  - ① `Fixture Name`/`FixtureName` 헤더가 `fixture_name`으로, `GDTF Fixture`/`GDTFFixture` 헤더가 `gdtf_fixture`로 해석된다 — `extra`에 남지 않는다.
+  - ② `fixture_name`이 `symbol_name`과 다른 정규화 키를 가짐을 직접 assert한다(비공허성 — 합쳐지지 않았음을 증명).
+  - ③ `gdtf_fixture`가 `mode`의 `GDTF Fixture Mode` 별칭과 다른 정규화 키를 가짐을 직접 assert한다(비공허성 — `gdtffixture` vs `gdtffixturemode`).
+  - ④ `DesignedFixture.match_type`이 `gdtf_fixture`가 있으면 그것을, 없으면 `instrument_type`을 반환한다(비공허성 — 두 경로 모두 검증).
+
+### AC-VWX-028 — 주소 3중 표현 교차검증 (M3)
+
+**Where** `Universe`·`DMX Address`·`Absolute Address`가 모두 존재하면, the 주소 해석기 **shall** `absolute == (universe-1)*512+address`를 검증하고 불일치를 경고로 보고한다.
+
+- 대상 요구사항: REQ-VWX-027
+- 검증 방법: `server/tests/test_vwx_address.py`
+- 기대 결과:
+  - ① 세 표현이 일치하면(음성 대조군) 경고 없이 `Universe`+`DMX Address` 그대로 해석된다.
+  - ② **불일치하면**(양성 케이스, 합성 픽스처) `address_triple_mismatch` 경고가 생성되고, 그럼에도 유니버스는 **Absolute Address로 역산되지 않는다** — `Universe`+`DMX Address` 조합 값이 그대로 유지됨을 직접 assert한다(추측 금지 원칙 준수).
+  - ③ 경고가 있어도 레코드는 `resolved`에서 탈락하지 않는다(해석 성공 + 경고는 독립적인 축).
+
+### AC-VWX-029 — 설계 측 구간 겹침 판정 (M5)
+
+**Where** `DMX Footprint`가 해석되면, the 대조기 **shall** 설계 도면 내부에서 (유니버스,주소,폭)만으로 구간 겹침을 판정한다.
+
+- 대상 요구사항: REQ-VWX-028
+- 검증 방법: `server/tests/test_vwx_rig.py`, `server/tests/test_vwx_diff.py`, `server/tests/test_vwx_tool.py`
+- 기대 결과:
+  - ① stride == footprint(완벽 패킹, M0 실물 샘플과 동일 형태)이면 겹침 0건을 **필드로 명시**한다(생략이 아니다 — 비공허성).
+  - ② **stride < footprint면**(양성 케이스, 합성 픽스처) 실제로 겹침이 잡힌다 — 겹침 판정 기능이 항상 빈 목록만 내지 않음을 직접 assert한다(비공허성 핵심).
+  - ③ 서로 다른 유니버스 간에는 겹침이 오발동하지 않는다(비공허성 대조군).
+  - ④ `DMX Footprint`가 없는 파일에서는 기존과 같이 미수행 + 사유(`footprint_overlap_descope`)로 보고된다(회귀 확인).
+  - ⑤ 설계 측 판정이 수행됐으면 콘솔 측 폭 주입(2차 작업)이 의도적으로 미뤄졌다는 별도 미수행 판정(`console_footprint_width_injection_deferred`)이 `skipped_checks`에 남는다.
+  - ⑥ VW 자체 다중패치(정확히 같은 시작 주소)는 이 판정으로 실패시키지 않는다 — 기존 `vw_patch_conflicts` 규약과 독립적으로 공존한다(회귀 확인).
 
 ### AC-VWX-025 — 회귀 · PRESERVE (M7)
 

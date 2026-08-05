@@ -26,6 +26,12 @@ READ_FAILURE_ABS_UNVERIFIED = "absolute_address_premise_unverified"
 READ_FAILURE_MULTI_SYSTEM = "multi_system_ambiguous_universe"
 READ_FAILURE_ADDRESS_UNPARSEABLE = "address_unparseable"
 READ_FAILURE_NO_ADDRESS_DATA = "no_address_data"
+#: 3중 표현 교차검증(M0 실물 샘플 반영) — Universe+DMX Address 쌍이 최우선
+#: 신뢰 소스이므로 해석 자체는 그대로 진행하되(REQ-VWX-009 우선순위 불변),
+#: 동시에 존재하는 Absolute Address가 (u-1)*512+a와 다르면 Universes pane이
+#: 기본 연속 512블록이 아니라는 뜻이다(Start#/End# 편집 또는 유니버스 삭제로
+#: 구멍) — 경고로만 남기고 Absolute Address로 유니버스를 역산하지 않는다.
+READ_FAILURE_ADDRESS_TRIPLE_MISMATCH = "address_triple_mismatch"
 
 _KIND_RESOLVED = "resolved"
 _KIND_BLOCKED = "blocked"
@@ -52,6 +58,10 @@ class AddressOutcome:
     classification: str | None = None
     reason_code: str | None = None
     detail: str = ""
+    #: 해석은 성공했지만 별도로 보고해야 할 경고(3중 표현 불일치 등). 성공/실패와
+    #: 독립적인 축이다 — ``kind``가 ``resolved``여도 이 값이 채워질 수 있다.
+    warning_kind: str | None = None
+    warning_detail: str = ""
 
 
 def _blank(value: str | None) -> bool:
@@ -142,8 +152,26 @@ def classify_and_resolve(
                 reason_code=READ_FAILURE_ADDRESS_UNPARSEABLE,
                 detail=f"Universe/DMX Address 쌍 파싱 불가('{universe_raw}'/'{dmx_raw}')",
             )
+        warning_kind, warning_detail = None, ""
+        if absolute_raw is not None and not _blank(absolute_raw):
+            absolute_value = _to_int(absolute_raw)
+            if absolute_value is not None:
+                expected = (universe - 1) * _UNIVERSE_WIDTH + address
+                if absolute_value != expected:
+                    warning_kind = READ_FAILURE_ADDRESS_TRIPLE_MISMATCH
+                    warning_detail = (
+                        f"Absolute Address({absolute_value})가 (u-1)*512+a 기댓값({expected})과 "
+                        f"불일치 — Universes pane이 기본 연속 512블록이 아닐 수 있다(Start#/End# "
+                        "편집 또는 유니버스 삭제). Universe+DMX Address 조합을 그대로 신뢰하고 "
+                        "Absolute Address로 유니버스를 역산하지 않는다."
+                    )
         return AddressOutcome(
-            kind=_KIND_RESOLVED, classification=PATCHED, universe=universe, address=address
+            kind=_KIND_RESOLVED,
+            classification=PATCHED,
+            universe=universe,
+            address=address,
+            warning_kind=warning_kind,
+            warning_detail=warning_detail,
         )
 
     # 차선 — Universe/Address 조합값(역산이 필요 없다).
@@ -264,6 +292,16 @@ def resolve_all(
                     classification=outcome.classification or PATCHED,
                 )
             )
+            if outcome.warning_kind is not None:
+                # 해석은 성공했으나 3중 표현 불일치 등 별도 경고가 있다 — 레코드는
+                # resolved에 그대로 남고, 경고만 구조화된 형태로 추가 보고된다.
+                failures.append(
+                    AddressReadFailure(
+                        row=record.row_index,
+                        kind=outcome.warning_kind,
+                        detail=outcome.warning_detail,
+                    )
+                )
         else:
             failures.append(
                 AddressReadFailure(

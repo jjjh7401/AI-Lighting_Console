@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-VWX-001
 title: "Vectorworks 연계 1단계 — Instrument Data CSV/엑셀 가져오기 + 설계상 리그 모델 + precheck_patch 대조 리포트"
-version: "0.1.3"
+version: "0.1.4"
 status: draft
 created: 2026-08-05
 updated: 2026-08-05
@@ -29,6 +29,7 @@ related_specs: [SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVERLAP-001]
 | 0.1.1 | 2026-08-05 | (run-phase worker) | **Implementation Kickoff Approval 확정.** `openpyxl` 신규 의존성 **승인** — 경로 B `.xlsx` 지원을 v1 범위에 포함(§C 갱신, §D `.xlsx` 조건부 Out-of-Scope 절 무효화 명시). 실물 Vectorworks export 샘플은 **여전히 미제공** — M0는 완료 처리하지 않고 BLOCKED로 유지, M1~M7은 합성 픽스처(문서 근거·실물 미검증)로 선행 진행한다(`progress.md` §E.2). |
 | 0.1.2 | 2026-08-05 | (run-phase worker) | **실물 파일 투입이 드러낸 P0 결함 2건 수정 + 잔존 지적 1건 교정.** 결함 1(CR 전용 줄바꿈 예외 탈출)·결함 2(패치 출처 아닌 파일에 "이상 없음" 오발) 최초 수정 후, 결함 2의 핵심(사용자가 읽는 `summary_ko` 문장이 여전히 "차이 없음"으로 시작하던 거짓 안전 신호)이 잔존한다는 재현이 들어와 교정했다. `REQ-VWX-023` 문구를 이 규칙을 명시하도록 갱신(§B), `AC-VWX-022`/`AC-VWX-023`에 대응 기대 결과 각 1건 추가(비공허성 포함). 코드 변경 상세는 `progress.md` §E.2 이번 라운드 기록. |
 | 0.1.3 | 2026-08-05 | (run-phase worker) | **거짓 안전 신호 3라운드째 — kind 열거를 불변식으로 대체.** v0.1.2의 미수행 판정이 `read_failures`의 특정 kind 2종(`not_patch_source`·`worksheet_block_undetected`)에만 걸려 있어, 그 목록에 없는 새 경로(주소 열은 있어 판독 자체는 성공하지만 `unit_number`/`channel`이 전부 공란이라 `join_key_conflicts`로 전 행이 탈락하는 경우 — `read_failures`는 빈 튜플)에서 정확히 같은 거짓 안전 신호가 다시 샜다(코디네이터 재현). `REQ-VWX-023`을 "설계상 리그 픽스처 0대 = 대조 미수행" **불변식**으로 재정의해 트리거 목록 열거 방식을 폐기했다 — 이제 원인이 무엇이든(판독 실패·조인키 충돌·그 밖의 무엇이든) 픽스처 0대이면 동일하게 처리된다. 기존 두 read_failure 경로의 사유 문구는 그대로 유지(회귀 테스트로 검증). |
+| 0.1.4 | 2026-08-05 | (run-phase worker) | **M0 실물 샘플 수령 — PARTIAL.** `vectorworks_export_sample_with_data.csv`(25컬럼×10행, UTF-8 BOM·CRLF·쉼표)로 ASSUMPTION-68을 NEGATIVE 판정, 별칭 테이블에 `fixture_name`·`gdtf_fixture` 2개 정규 필드 승격(REQ-VWX-026)으로 해소. 신규 REQ 3건(REQ-VWX-026~028) 추가 — 컬럼 승격, 주소 3중 표현 교차검증(REQ-VWX-027), 설계 측 구간 겹침 판정(REQ-VWX-028). AC 3건(AC-VWX-027~029) 대응 추가. ASSUMPTION-69/70은 이 샘플로 미해소(전자는 위험 완화, 후자는 전혀 미검증) — `progress.md` §E.2 M0 절이 덮는 범위·안 덮는 범위를 상세히 기록. M0=PARTIAL, M8=BLOCKED 유지, run_status=partial-blocked 유지. |
 
 ---
 
@@ -98,6 +99,9 @@ related_specs: [SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVERLAP-001]
 - **REQ-VWX-023** `[Ubiquitous]` The 대조 리포트 **shall** 판독 실패·데이터 블록 미탐·미수행 판정·부정 전제를 모두 **구조화된 페이로드 부류**로 담는다 — 예외 산문으로 흘리지 않는다. **(v0.1.3 — 불변식으로 재정의)** **설계상 리그 픽스처가 0대이면 대조를 수행한 것이 아니다** — 트리거가 판독 실패(주소 열 없음·데이터 블록 미탐)이든, 파일 내부 조인키(`unit_number`/`channel`) 충돌로 전 행이 탈락한 경우이든, 그 밖의 어떤 원인으로 픽스처가 0대가 되든 동일하게 적용된다. 이때 `diffs`는 빈 배열 3종이 아니라 `performed: false` + 실제 원인을 지목하는 사유로 미수행임을 구조적으로 드러내며, `summary_ko`는 "차이 없음"을 말하지 않고 그 사유로 시작한다 — 대조를 수행하지 않은 상태를 "찾아봤는데 없다"로 오독시키지 않는다. **트리거는 kind 목록 열거가 아니라 픽스처 수 0건이라는 결과로 판정한다** — 특정 kind에만 매칭하는 방식은 목록에 없는 새 경로(조인키 충돌 등)에서 반드시 새기 때문이다(`progress.md` §E.2 v0.1.3 라운드).
 - **REQ-VWX-024** `[Ubiquitous]` 사용자 대면 문자열 **shall** 한국어이며 표현 계층 코드에 둔다. 라벨 재사용은 `server/prechk/report.py:143 label()`의 공개 접근자를 통하며 밑줄 식별자를 직접 import하지 않는다.
 - **REQ-VWX-025** `[Ubiquitous]` The 신규 대조 리포트 툴 **shall** `server/orchestrator/tools.py`의 **`TOOL_NAMES`·핸들러 클로저·`definitions`·`handlers`** 전 지점에 등재되며, 신규 REST 라우트·웹소켓 메시지·`execution_port` 직접 접근을 **0건**으로 유지한다.
+- **REQ-VWX-026** `[Ubiquitous]` **(v0.1.4 — M0 실물 샘플 ASSUMPTION-68 NEGATIVE 반영)** The 컬럼 해석기 **shall** `Fixture Name`을 정규 필드 `fixture_name`으로, `GDTF Fixture`를 정규 필드 `gdtf_fixture`로 해석한다. `fixture_name`은 `symbol_name`과 별개 필드다(합치지 않는다). 타입 퍼지 매칭(REQ-VWX-015)은 `gdtf_fixture`가 있으면 그것을 우선 사용하고, 없으면 `instrument_type`으로 폴백한다.
+- **REQ-VWX-027** `[Where]` **(v0.1.4)** **Where** `Universe`·`DMX Address`·`Absolute Address` 세 표현이 모두 존재하면, the 주소 해석기 **shall** `absolute == (universe-1)*512 + address` 공식으로 교차검증한다. 불일치 시 **Absolute Address로 유니버스를 역산하지 않고**(추측 금지, REQ-VWX-009와 동일 원칙) `Universe`+`DMX Address` 조합을 그대로 채택하며, 구조화된 경고(`address_triple_mismatch`)로 보고한다.
+- **REQ-VWX-028** `[Where]` **(v0.1.4)** **Where** `DMX Footprint` 컬럼이 해석되면, the 대조기 **shall** 설계 도면 내부에서 (유니버스, 주소, 폭)만으로 주소 구간 겹침을 판정한다(콘솔 SLOT 키가 필요한 `FootprintPolicy.widths`는 쓰지 않는다 — `server/prechk/**` PRESERVE). `DMX Footprint`가 없으면 이 판정은 기존과 같이 미수행으로 보고한다. 콘솔 측 폭 주입((유니버스,주소) 조인 이후 2차 작업)은 이 SPEC의 범위 밖이며, 설계 측 판정이 수행됐을 때 그 사실을 별도 미수행 판정(`console_footprint_width_injection_deferred`)으로 남긴다.
 
 ---
 
@@ -111,9 +115,9 @@ related_specs: [SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVERLAP-001]
 
 번호는 선행 SPEC 이후를 이어받는다(GROUPGEN이 `ASSUMPTION-67`까지 썼다, `.moai/specs/SPEC-COPILOT-GROUPGEN-001/spec.md:324`).
 
-- **ASSUMPTION-68** — **별칭 테이블의 실효성.** `research.md`가 열거한 별칭 테이블(instrument_type, symbol_name, mode, footprint, channel, unit_number, position, universe_address, universe, address, absolute_address, system, dimmer, circuit_number/name, color, device_type, layer, uid, fixture_id 등)이 **실물 Vectorworks export 파일의 실제 헤더와 합치하는가.** M0가 사용자 제공 실물 샘플로 판정한다. **본 SPEC의 컬럼 계약 동결을 막는 유일한 전제다** — 부정(또는 부분 GO)이면 별칭 테이블을 실물 헤더로 확장하고 그 확장분을 `progress.md`에 기록한다(테이블 확장은 계약 위반이 아니라 계약이 예정한 조정이다 — 별칭 매칭 규약 자체(REQ-VWX-005)는 불변).
-- **ASSUMPTION-69** — **`Absolute Address` 단일값만 있는 파일의 존재.** 실물 파일이 `Universe`/`DMX Address` 쌍을 항상 함께 제공하는가, 아니면 `Absolute Address` 단일값만 제공하는 파일이 실제로 존재하는가. **동작 축소 — 블로킹 아님**: 부정(쌍 컬럼이 항상 있음)이면 REQ-VWX-009의 역산 경로는 방어적으로 존재하되 실행되지 않는다. GO(단일값 파일이 존재)면 그 경로가 M0 샘플로 검증된다.
-- **ASSUMPTION-70** — **경로 B(워크시트 export) 데이터 블록의 구조적 식별 가능성.** 헤더가 없거나 소계행이 섞인 실물 워크시트 export에서 REQ-VWX-002의 "별칭 매칭 2개 이상인 첫 행 + 컬럼 수 연속 구간" 휴리스틱이 실제로 데이터 블록을 정확히 잘라내는가. **동작 축소 — 블로킹 아님**: 부정이면 경로 B는 "Recalculate worksheet"·"Export field names as first record" 체크박스를 사용자가 명시적으로 켠 파일만 지원하고, 그 제약을 리포트와 사용자 안내에 명시한다. 우회(추측으로 블록을 자르는 것)는 금지한다.
+- **ASSUMPTION-68** — **별칭 테이블의 실효성. `PARTIAL — NEGATIVE 판정, 확장으로 해소(v0.1.4)`.** M0 실물 샘플(`vectorworks_export_sample_with_data.csv`, 25컬럼×10행, UTF-8 BOM·CRLF·쉼표) 투입 결과 **부정**이었다 — 실물 컬럼 10개(`Fixture Name`·`GDTF Fixture`·`Gobo`·`Focus`·`X`·`Y`·`Z`·`Rotation Z`·`Pan`·`Tilt`)가 원래 별칭 테이블 밖으로 떨어졌다. 이 중 결정적인 2개(`Fixture Name`→`fixture_name`, `GDTF Fixture`→`gdtf_fixture`)를 정규 필드로 승격해 별칭 테이블을 확장했다(REQ-VWX-026). 나머지 8개(Gobo/Focus/X/Y/Z/Rotation Z/Pan/Tilt)는 이번 SPEC 범위 밖이며 `extra`로 계속 보존된다(REQ-VWX-006) — 확장 상세는 `progress.md` §E.2 M0 절.
+- **ASSUMPTION-69** — **`Absolute Address` 단일값만 있는 파일의 존재. `미해소`.** M0 샘플은 `Universe`+`DMX Address` 쌍을 항상 함께 제공해 이 질문에 답하지 않는다(Absolute 단독 파일이 아니다). **위험도는 낮아졌다** — v0.1.4에서 추가된 3중 표현 교차검증(REQ-VWX-027)이 세 표현이 모두 있을 때 불일치를 구조적으로 잡아내므로, 향후 Absolute 단독 파일이 나타나도 조용한 오역산 위험이 이미 한 겹 줄어든 상태다. 동작 축소 — 블로킹 아님(원문 그대로): 부정(쌍 컬럼이 항상 있음)이면 REQ-VWX-009의 역산 경로는 방어적으로 존재하되 실행되지 않는다. GO(단일값 파일이 존재)면 그 경로가 향후 M0 재확장 샘플로 검증된다.
+- **ASSUMPTION-70** — **경로 B(워크시트 export) 데이터 블록의 구조적 식별 가능성. `미해소, 전혀 건드리지 못함`.** M0 샘플은 `path_kind=A`(flat 단일 테이블, 헤더 있음)로 판독됐다 — 제목행·DB헤더행·서브행·소계행이 섞인 경로 B 워크시트 그리드 휴리스틱(REQ-VWX-002)을 **한 번도 실행하지 않았다.** 동작 축소 — 블로킹 아님(원문 그대로): 부정이면 경로 B는 "Recalculate worksheet"·"Export field names as first record" 체크박스를 사용자가 명시적으로 켠 파일만 지원하고, 그 제약을 리포트와 사용자 안내에 명시한다. 우회(추측으로 블록을 자르는 것)는 금지한다.
 
 > **FID/CID의 의미는 ASSUMPTION이 아니다.** `console/lua/PROTOCOL.md:322-324`가 슬롯 ≠ FID로 패치된 쇼파일을 검증 조건으로 명시하며, 그것은 선행 SPEC(PRECHK)이 이미 구조적으로 배제하고 출하한 사실이다(`.moai/specs/SPEC-COPILOT-PRECHK-001/spec.md` §C). 본 SPEC은 그 판정을 재측정하지 않고 **조인 키 설계로 그 필요 자체를 우회한다**(REQ-VWX-018) — 새 라이브 프로브를 열지 않는다(라이브 세션 회계는 `plan.md` §C 소유이며 0회다).
 

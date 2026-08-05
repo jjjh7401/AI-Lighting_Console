@@ -1,8 +1,10 @@
 # SPEC-COPILOT-VWX-001 — 구현 계획 (plan)
 
-status: draft (v0.1.0, 2026-08-05) · Tier L
+status: draft (v0.1.4, 2026-08-05) · Tier L
 
 > **v0.1.0 — 최초 작성.** 마일스톤 **M0~M8**(9개), 결정 등록부 **7건(A~G)**, 열린 결정 **0건**. 본 계획은 닫힌 정본 3종의 토큰 계약을 따른다: REQ 25건, AC 26건, ASSUMPTION 3건(68~70), 라이브 세션 **0회**. 마일스톤별 `- **AC**:` 줄은 `acceptance.md §C.0a`와 1:1이며, 합 **26 · 중복 0 · 누락 0**이다.
+>
+> **v0.1.4 — M0 실물 샘플 반영.** REQ 3건(REQ-VWX-026~028) · AC 3건(AC-VWX-027~029) 추가 — REQ **28건**, AC **29건**으로 갱신. M2/M3/M5에 각 1건씩 배정(위 마일스톤별 `- **AC**:` 줄 참조). 마일스톤 수·ASSUMPTION 수·라이브 세션 회계는 불변.
 >
 > **참조 규약.** 본 SPEC의 정본 3종은 줄번호로 인용하지 않고 `REQ-VWX-001`, `AC-VWX-001`, `ASSUMPTION-68` 같은 안정 토큰과 절 제목으로만 참조한다. 코드·룰북·응답기 프로토콜·타 SPEC 아티팩트는 `파일:줄` 좌표를 쓴다.
 
@@ -110,7 +112,7 @@ status: draft (v0.1.0, 2026-08-05) · Tier L
 - **baseline**: 착수 직전 전체 스위트 실측.
 - **뮤테이션**: ① 위치 기반 매칭을 쓰면 `AC-VWX-006`이 죽어야 한다. ② `extra` 필드를 버리면 `AC-VWX-007`이 죽어야 한다. ③ 최소 조건 미달 레코드에서 예외를 던지면 `AC-VWX-008`이 죽어야 한다.
 - **파일**: 신규 `server/vwx/columns.py`; 테스트 `server/tests/test_vwx_columns.py`.
-- **AC**: AC-VWX-006, AC-VWX-007, AC-VWX-008.
+- **AC**: AC-VWX-006, AC-VWX-007, AC-VWX-008, AC-VWX-027(v0.1.4 — M0 실물 샘플 반영).
 
 ### M3 — 주소 처리 (cycle_type=tdd)
 
@@ -118,7 +120,7 @@ status: draft (v0.1.0, 2026-08-05) · Tier L
 - **baseline**: 착수 직전 전체 스위트 실측.
 - **뮤테이션**: ① `0`/공란을 "콘솔에 없음"과 합치면 `AC-VWX-009`가 죽어야 한다. ② 연속 512 블록 전제 확인 없이 절대주소를 역산하면 `AC-VWX-010`이 죽어야 한다. ③ 멀티시스템 파일에서 임의 유니버스를 추측하면 `AC-VWX-011`이 죽어야 한다. ④ 정규화 표현이 `AddressParse`와 다른 형태를 가지면 `AC-VWX-012`가 죽어야 한다.
 - **파일**: 신규 `server/vwx/address.py`; 테스트 `server/tests/test_vwx_address.py`.
-- **AC**: AC-VWX-009, AC-VWX-010, AC-VWX-011, AC-VWX-012.
+- **AC**: AC-VWX-009, AC-VWX-010, AC-VWX-011, AC-VWX-012, AC-VWX-028(v0.1.4).
 
 ### M4 — 설계상 리그 모델 (cycle_type=tdd)
 
@@ -134,7 +136,7 @@ status: draft (v0.1.0, 2026-08-05) · Tier L
 - **baseline**: 착수 직전 전체 스위트 실측.
 - **뮤테이션**: ① `FID`/`CID`를 조인 키에 쓰면 `AC-VWX-018`이 죽어야 한다. ② `FID`/`CID` 미수행을 산문으로만 적으면 `AC-VWX-019`가 죽어야 한다. ③ 3부류 중 하나를 생략하면 `AC-VWX-020`이 죽어야 한다. ④ `FootprintPolicy` 미주입 상태에서 구간겹침을 판정하면 `AC-VWX-021`이 죽어야 한다.
 - **파일**: 신규 `server/vwx/diff.py`; 테스트 `server/tests/test_vwx_diff.py`.
-- **AC**: AC-VWX-018, AC-VWX-019, AC-VWX-020, AC-VWX-021.
+- **AC**: AC-VWX-018, AC-VWX-019, AC-VWX-020, AC-VWX-021, AC-VWX-029(v0.1.4).
 
 ### M6 — 보고 + 툴 배선 (cycle_type=tdd)
 
