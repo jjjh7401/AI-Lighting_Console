@@ -574,7 +574,7 @@ M0가 미충족인 채로는 M8(실물 파일 기반 종단 통합 검증, AC-VW
 ```yaml
 run_status: partial-blocked   # M1~M7 completed + verified; M0=PARTIAL (1 real column-contract sample verified); M8 BLOCKED
 run_complete_at: 2026-08-05
-head_sha: "<이번 라운드 커밋 SHA — 아래 §E.2 결론 절에서 실측 후 backfill>"
+head_sha: 6a2fbd25834f3d1a361311231e9773d7a1176df5   # M0 실물 컬럼 계약 검증(v0.1.4) 커밋(직접 실측)
 base_sha: 2bc95cf309457de5f6fc2b6757b3a8c7aa9f6ec7
 milestones_completed: [M1, M2, M3, M4, M5, M6, M7]
 milestones_partial: [M0]   # 실물 컬럼 계약 1건 검증 — ASSUMPTION-68 해소, 69/70 미해소
