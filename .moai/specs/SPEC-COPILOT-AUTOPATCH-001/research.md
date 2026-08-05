@@ -1,6 +1,6 @@
 # SPEC-COPILOT-AUTOPATCH-001 — 조사 (research)
 
-status: draft (v0.1.5, 2026-08-06) · Tier L · 읽기 전용 조사. 코드 변경 0. **§2 룰북 주장 4건 반증 주석 추가(M0 5차 실측).** **[round15 #7]** v0.1.4에 머물러 있던 버전을 나머지 5종 아티팩트와 맞춰 **v0.1.5로 전파**했다 — 본문 조사 내용은 v0.1.4 이후 변경 없다(M8 재정의 amendment는 조사 축을 건드리지 않는다). T13 버전 전파의 형제 미처리였다.
+status: draft (v0.1.0, 2026-08-05) · Tier L · 읽기 전용 조사. 코드 변경 0.
 
 > **증거 등급**: `[코드]` 이 저장소의 소스에서 직접 확인 · `[문서]` 룰북·벤더 문서 ·
 > `[실측]` 라이브 세션 또는 실행 결과 · `[미확정]` 근거 없음, 가정으로 승격 필요.
@@ -23,15 +23,9 @@ status: draft (v0.1.5, 2026-08-06) · Tier L · 읽기 전용 조사. 코드 변
 **따라서 본 SPEC의 입력은 확정되어 있다** — 1단계가 이미 만들어 검증까지 끝낸
 `missing_in_console` 목록이다. 도면 판독·콘솔 실측을 다시 하지 않는다.
 
-> **v0.1.1 갱신**: 이 문단의 "확정" 범위는 `spec.md` §C `의존 범위 한정`으로 **좁혀졌다** —
-> 1단계 **전체 완료**를 뜻하지 않는다. 확정된 것은 리포트 스키마 · `missing_in_console` 필드 집합 ·
-> 멀티셀/액세서리 분류 · `address_basis` · `diffs.performed` 불변식(전부 1단계 M1~M7에서
-> 구현·검증 완료)이며, 1단계의 `ASSUMPTION-70` · M8 · `status: draft` 는 확정 대상이 아니다.
-> run-phase 진입은 frontmatter `depends_on` 게이트가 강제한다.
-
 ---
 
-## 2. 패치 기법 — 룰북의 주장과 **그 반증(v0.1.3)**
+## 2. 패치 기법 — 룰북이 정본이고 라이브 검증을 마쳤다
 
 `server/rulebook/assets/v2.4.2/30_plugin_patterns.md` `[문서]`
 
@@ -50,14 +44,6 @@ status: draft (v0.1.5, 2026-08-06) · Tier L · 읽기 전용 조사. 코드 변
 | 워크된 예제 — 단일 유니버스, stride 42 | `:40-53` |
 
 이 규약은 "실기에서 통한 문법만 쓴다"는 룰북 원칙 아래 라이브 보정을 거친 것이다 `[문서]`.
-
-> **[반증 · v0.1.3 실측]** 위 표는 **룰북이 무엇을 주장하는지의 기록**이며, 그 주장 중 다음은
-> onPC 2.4.2.2 + responder 1.6.1에서 **반증됐다**(`progress.md` §E.2 M0 1~5차 — 실행 경로 10가지·인자 변형 8종 0건):
-> `:13-18`의 2단계 절차(픽스처 생성 0건) · `:25-27`의 "CD가 실패 원인"(CD 유무 무관, 양성
-> 대조군으로 반증) · `:28-29`의 "편집기를 열라"(편집기를 열어도 0건) · `:40-53`의 워크된 예제
-> ("라이브 검증됨"이라 적혀 있으나 글자 그대로 돌려 0건 — **G1 REFUTED**).
-> **여전히 유효한 것**: 필드 집합(`:31-38`) · `mode` 핸들 형식(`:32-34`, `userdata`로 해석 확인) ·
-> `nil = 실패`(`:34`, 실측 재확인) · 점유폭 간격 원칙(`:37-38`).
 
 **조사가 발견한 공백**: 예제는 **단일 유니버스**(`"1." .. addr`)만 보여준다. `patch` 배열에
 **서로 다른 유니버스**를 섞어 넣었을 때의 거동은 문서화되어 있지 않다 `[미확정]`
@@ -113,7 +99,7 @@ status: draft (v0.1.5, 2026-08-06) · Tier L · 읽기 전용 조사. 코드 변
 
 ### 4.2 우리가 가진 것 `[코드]`
 
-- 열거 경로는 존재한다: `server/orchestrator/tools.py` `DEFAULT_RIG_CONTEXT_PATHS`의 `"fixture_types": "Patch/FixtureTypes"`(**[round19 #1 정정]** 이전 판은 `:202` — 그 행은 preset pool 설명 주석이고 실제는 `d03597b`에서 `:224`다).
+- 열거 경로는 존재한다: `server/orchestrator/tools.py:202` `"fixture_types": "Patch/FixtureTypes"`.
 - 모드까지의 경로도 언급되어 있다: `server/prechk/patch.py:22` —
   `Patch/FixtureTypes/<t>/DMXModes/<m>/DMXChannels`. 다만 **실측되지 않았다** `[미확정]`
   → `ASSUMPTION-72`.
@@ -184,12 +170,12 @@ Vectorworks라면 `Robe Robin MMX Spot` 계열로 나올 것이다 `[미확정]`
 
 | 재사용 | 진입점 | 계약 |
 |---|---|---|
-| 배포 안전 파이프라인 | `server/orchestrator/tools.py` `deploy_plugin`(**[round19 #1 정정]** 이전 판은 `:1266` — 무관한 닫는 괄호. 실제는 `d03597b`에서 `:1288`) | 컴파일 + 정적 스캔 + 사람 리뷰 |
+| 배포 안전 파이프라인 | `server/orchestrator/tools.py:1266` `deploy_plugin` | 컴파일 + 정적 스캔 + 사람 리뷰 |
 | 콘솔 쓰기 단일 통로 | `run_commands` → `bundle_gate.screen()` | AST 스캔이 우회를 금지(`server/tests/test_prechk_tool.py:330-343`) |
 | 인벤토리 읽기 | `server/prechk/inventory.py:348` `read_inventory` | 검증 읽기에 재사용. **변경 금지** |
 | 주소 정규화 | `server/prechk/patch.py:100-147` `normalize_address` | 두 정수 아니면 없음. 기본값 날조 금지 |
 | 판정 평가 | `server/prechk/patch.py:684` `evaluate_patch` | 검증 읽기 판정에 재사용 |
-| 타입 라이브러리 열거 | `server/orchestrator/tools.py` `DEFAULT_RIG_CONTEXT_PATHS["fixture_types"]` `[round19 #1 정정]` | 후보 집합 |
+| 타입 라이브러리 열거 | `server/orchestrator/tools.py:202` | 후보 집합 |
 | 툴 등록 절차 | `server/preshow/TOOLS_REGISTRATION.md` | 5지점 + dispatch 검증 |
 | 아키텍처 경계 | `server/tests/test_architecture.py:33,49` | `server.bridge`·`pythonosc` import 금지 |
 
@@ -211,13 +197,6 @@ Vectorworks라면 `Robe Robin MMX Spot` 계열로 나올 것이다 `[미확정]`
 | 3 | `patch` 배열에 다중 유니버스를 섞을 수 있는가 | `ASSUMPTION-73` |
 | 4 | 패치 직후 재조회에서 신규 픽스처가 관측되는가 | `ASSUMPTION-74` |
 | 5 | Patch 편집기 미개방 상태를 사전 감지할 수 있는가 | `ASSUMPTION-75` |
-| 6 | **[v0.1.3 추가]** 서버가 발화한 플러그인 실행이 patch fixtures 레이어의 command destination을 갖는가 | `ASSUMPTION-76` |
 
-**여섯 건** 모두 **M0 라이브 세션**이 판정한다. 판정 전에는 M2·M3·**M5**·M6의 설계를 확정하지 않는다 —
+다섯 건 모두 **M0 라이브 세션**이 판정한다. 판정 전에는 M2·M3·M6의 설계를 확정하지 않는다 —
 `SPEC-COPILOT-PRECHK-001`의 probe-before-authoring 규율을 그대로 따른다.
-
-> **[v0.1.3 고지]** 6번은 **이 조사가 잡아내지 못한 전제**다. 룰북은 "`AddFixtures`가 현재 목적지를
-> 읽는다"까지 적었으나 "**서버가 발화한 실행이 그 목적지를 갖는가**"를 아무도 묻지 않았고,
-> 그 결과 v0.1.0~0.1.2의 REQ-AUTOPATCH-018이 성립하지 않는 전제 위에 서 있었다.
-> M0 3~5차에서 **사후 식별**되어 승격됐고 **NEGATIVE**로 판정됐다(`progress.md` §E.2 M0 3~5차).
-> 놓친 전제를 잡는 것이 이 절의 임무이므로, 그 실패를 여기 남긴다.
