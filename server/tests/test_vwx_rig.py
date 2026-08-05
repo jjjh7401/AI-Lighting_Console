@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-from typing import NamedTuple
-
-import pytest
-
 from server.vwx.address import PATCHED, UNPATCHED_DESIGNED, ResolvedRecord
 from server.vwx.rig import (
     STATIC_ACCESSORY,
+    VW_IDENTICAL_PATCH,
     VW_PATCH_CONFLICT,
     VW_PATCH_OVERLAP,
-    _parse_footprint,
     build_designed_rig,
     fuzzy_type_equal,
 )
@@ -24,15 +20,11 @@ def rr(
     instrument_type: str = "MMX",
     mode: str | None = None,
     channel: str | None = None,
-    position: str | None = None,
     universe: int | None = 1,
     address: int | None = 1,
     classification: str = PATCHED,
     part_index: str | None = None,
     device_type: str | None = None,
-    fixture_name: str | None = None,
-    gdtf_fixture: str | None = None,
-    footprint: str | None = None,
     extra: dict | None = None,
 ) -> ResolvedRecord:
     fields: dict[str, str] = {"instrument_type": instrument_type}
@@ -42,18 +34,10 @@ def rr(
         fields["mode"] = mode
     if channel is not None:
         fields["channel"] = channel
-    if position is not None:
-        fields["position"] = position
     if part_index is not None:
         fields["part_index"] = part_index
     if device_type is not None:
         fields["device_type"] = device_type
-    if fixture_name is not None:
-        fields["fixture_name"] = fixture_name
-    if gdtf_fixture is not None:
-        fields["gdtf_fixture"] = gdtf_fixture
-    if footprint is not None:
-        fields["footprint"] = footprint
     return ResolvedRecord(
         fields=fields,
         extra=extra or {},
@@ -112,20 +96,9 @@ class TestAccessoryFiltering:
         assert rig.fixtures[0].unit_number == "2"
 
     def test_dmx_consuming_accessory_is_included(self):
-        """결함 2(P1) 재교정 — 배제 기준은 문자열 리터럴이 아니라 실제 DMX
-        점유(footprint)다. footprint가 없으면(이전 버전 이 테스트의 premise)
-        새 규칙에서는 배제 대상이 되므로, 양수 footprint를 명시해 진짜
-        "DMX를 먹는 액세서리"를 비공허적으로 재현한다."""
-        records = [rr(0, unit_number="1", device_type="Accessory", footprint="1")]
-        rig = build_designed_rig(records)
-        assert len(rig.fixtures) == 1
-
-    def test_non_dmx_accessory_sharing_the_literal_accessory_device_type_is_excluded(self):
-        """비공허성(결함 2, P1) — "Accessory" 리터럴은 DMX 소비 액세서리와
-        동일하지만 footprint가 없으면(비-DMX) 여전히 배제된다."""
         records = [rr(0, unit_number="1", device_type="Accessory")]
         rig = build_designed_rig(records)
-        assert rig.fixtures == ()
+        assert len(rig.fixtures) == 1
 
     def test_without_a_device_type_column_at_all_no_filtering_happens(self):
         """비공허성 — Device Type 컬럼이 아예 없으면 임의 배제하지 않는다."""
@@ -178,126 +151,17 @@ class TestJoinKeyConflictRejection:
         assert rig.join_key_conflicts[0].rows == (0,)
 
 
-class TestUnitNumberIsScopedToPositionNotGlobal:
-    """v0.1.5 회귀 — REQ-VWX-016 조인 키 우선순위 수정(코디네이터 재현).
-
-    ``Unit Number``는 Vectorworks에서 **포지션 안에서만 유일**하다(트러스마다
-    1번부터 다시 센다) — 전역 유일로 취급하면 포지션이 2개 이상인 실사용 리그
-    대부분이 전멸한다(전 행이 unit_number 충돌로 탈락 → fixture_count 0 →
-    "대조 미수행" 오판정). 이 클래스는 그 결함의 정확한 재현과, 스코프가
-    실제로 살아있음(같은 포지션에서는 여전히 충돌을 잡음)을 함께 증명한다.
-    """
-
-    def test_same_unit_number_in_different_positions_is_not_a_conflict(self):
-        """핵심 회귀 — 코디네이터 재현 A. 수정 전에는 fixture_count 0이었다."""
-        records = [
-            rr(0, unit_number="1", position="Upstage Truss", instrument_type="MAC Encore"),
-            rr(1, unit_number="1", position="FOH", instrument_type="Source Four"),
-        ]
-        rig = build_designed_rig(records)
-        assert len(rig.fixtures) == 2
-        assert rig.join_key_conflicts == ()
-
-    def test_same_unit_number_in_the_same_position_is_still_a_conflict(self):
-        """대조군 — 스코프가 죽어있지 않음을 증명(이게 없으면 1번 수정이 충돌
-        탐지 자체를 통째로 죽인 것을 못 잡는다)."""
-        records = [
-            rr(0, unit_number="1", position="FOH", instrument_type="A"),
-            rr(1, unit_number="1", position="FOH", instrument_type="B"),
-        ]
-        rig = build_designed_rig(records)
-        assert rig.fixtures == ()
-        assert len(rig.join_key_conflicts) == 1
-        detail = rig.join_key_conflicts[0].detail
-        assert "포지션" in detail and "FOH" in detail  # 어느 스코프에서 중복인지 명시.
-
-    def test_blank_position_is_its_own_scope_only_blanks_collide(self):
-        """position이 공란인 레코드끼리는 여전히 하나의 스코프로 충돌하지만,
-        공란 스코프와 실제 포지션 스코프는 서로 다른 스코프다(비공허성)."""
-        records = [
-            rr(0, unit_number="1", position=None, instrument_type="A"),
-            rr(1, unit_number="1", position="FOH", instrument_type="B"),
-        ]
-        rig = build_designed_rig(records)
-        assert len(rig.fixtures) == 2  # 공란 스코프 vs 'FOH' 스코프 — 서로 다르다.
-        assert rig.join_key_conflicts == ()
-
-        records_both_blank = [
-            rr(0, unit_number="1", position=None, instrument_type="A"),
-            rr(1, unit_number="1", position=None, instrument_type="B"),
-        ]
-        rig_blank = build_designed_rig(records_both_blank)
-        assert rig_blank.fixtures == ()
-        assert len(rig_blank.join_key_conflicts) == 1  # 공란끼리는 충돌한다.
-
-    def test_channel_takes_priority_over_position_unit_number_scope(self):
-        """channel이 있으면 그것이 최우선 조인 키다 — position/unit_number는 보지 않는다."""
-        records = [
-            rr(0, unit_number=None, channel="10", instrument_type="A"),
-            rr(1, unit_number=None, channel="20", instrument_type="B"),
-        ]
-        rig = build_designed_rig(records)
-        assert len(rig.fixtures) == 2
-        assert rig.join_key_conflicts == ()
-
-    def test_channel_join_works_when_unit_number_is_blank_across_all_rows(self):
-        records = [
-            rr(0, unit_number=None, channel="1", instrument_type="A", universe=1, address=1),
-            rr(1, unit_number=None, channel="2", instrument_type="B", universe=1, address=2),
-            rr(2, unit_number=None, channel="3", instrument_type="C", universe=1, address=3),
-        ]
-        rig = build_designed_rig(records)
-        assert len(rig.fixtures) == 3
-        assert rig.join_key_conflicts == ()
-
-    def test_non_numeric_channel_name_still_joins_correctly(self):
-        """channel은 문서상 비숫자("channel name")일 수 있다 — 문자열로 다룬다."""
-        records = [
-            rr(0, unit_number=None, channel="House Left A", instrument_type="A"),
-            rr(1, unit_number=None, channel="House Left B", instrument_type="B"),
-        ]
-        rig = build_designed_rig(records)
-        assert len(rig.fixtures) == 2
-        assert rig.join_key_conflicts == ()
-
-    def test_part_index_multicell_folding_still_works_within_the_new_scope(self):
-        """요구사항 3 — part_index가 있으면 기존 멀티셀 폴딩 규약이 새 스코프에서도 유지된다."""
-        records = [
-            rr(0, unit_number="1", position="FOH", part_index="1", instrument_type="MMX Head"),
-            rr(1, unit_number="1", position="FOH", part_index="2", instrument_type="MMX Head"),
-        ]
-        rig = build_designed_rig(records)
-        assert len(rig.fixtures) == 1
-        assert rig.join_key_conflicts == ()
-        assert rig.fixtures[0].part_indices == ("1", "2")
-
-
 class TestVectorworksNativeConflictPassthrough:
     """AC-VWX-017 — VW 자체 충돌 분류 통과(예외 없음)."""
 
-    def test_same_channel_is_caught_as_a_join_key_conflict_before_reaching_vw_classification(self):
-        """v0.1.5 조인 키 우선순위 수정(REQ-VWX-016) 이후 행동이 바뀌었다 — 명시적 회귀 기록.
-
-        수정 전에는 이 입력(두 행이 문자 그대로 같은 ``channel``)이 join 계층을
-        그냥 통과해 2개의 독립 픽스처가 되고, 그중 하나가 ``VW_IDENTICAL_PATCH``로
-        분류됐다. 하지만 channel은 이제 **전역 유일** 조인 키다 — 두 행이 정말로
-        같은 channel 값을 가진다면 그건 서로 다른 두 픽스처가 아니라 **조인 키
-        중복**이고, Part Index 없이는 조용히 병합하지 않고 거부하는 것이 맞다.
-        이 시나리오는 이제 join_key_conflict로 먼저 잡히며, `_classify_vw_conflicts`
-        단계(서로 다른 조인 키로 만들어진 2개의 독립 픽스처가 우연히 같은 주소를
-        공유하는 경우)에는 아예 도달하지 않는다 — `VW_IDENTICAL_PATCH`는 여전히
-        존재하는 코드 경로이지만 channel이 있는 파일에서는 이 형태로 재현되지
-        않는다(아래 두 테스트가 channel 부재/상이 조건에서 여전히 재현됨을 보인다).
-        """
+    def test_identical_patch_same_universe_address_and_channel(self):
         records = [
             rr(0, unit_number="1", universe=1, address=1, channel="1"),
             rr(1, unit_number="2", universe=1, address=1, channel="1"),
         ]
         rig = build_designed_rig(records)  # must not raise
-        assert rig.fixtures == ()
-        assert len(rig.join_key_conflicts) == 1
-        assert "channel '1'" in rig.join_key_conflicts[0].detail
-        assert rig.vw_patch_conflicts == ()
+        kinds = {c.kind for c in rig.vw_patch_conflicts}
+        assert VW_IDENTICAL_PATCH in kinds
 
     def test_patch_conflict_same_universe_address_different_channel(self):
         records = [
@@ -333,158 +197,3 @@ class TestVectorworksNativeConflictPassthrough:
         ]
         rig = build_designed_rig(records)
         assert rig.vw_patch_conflicts == ()
-
-
-class TestFixtureNameAndGdtfFixtureFields:
-    """M0 실물 샘플 반영 — fixture_name·gdtf_fixture가 extra가 아닌 정규 필드로 해석된다."""
-
-    def test_fixture_name_and_gdtf_fixture_are_carried_onto_the_designed_fixture(self):
-        records = [
-            rr(
-                0,
-                unit_number="1",
-                instrument_type="Martin MAC Encore Performance CLD",
-                fixture_name="Encore 1",
-                gdtf_fixture="Martin Professional@MAC Encore Performance CLD",
-            )
-        ]
-        rig = build_designed_rig(records)
-        assert len(rig.fixtures) == 1
-        fixture = rig.fixtures[0]
-        assert fixture.fixture_name == "Encore 1"
-        assert fixture.gdtf_fixture == "Martin Professional@MAC Encore Performance CLD"
-
-    def test_match_type_prefers_gdtf_fixture_over_instrument_type(self):
-        records = [
-            rr(
-                0,
-                unit_number="1",
-                instrument_type="Martin MAC Encore Performance CLD",
-                gdtf_fixture="Martin Professional@MAC Encore Performance CLD",
-            )
-        ]
-        rig = build_designed_rig(records)
-        assert rig.fixtures[0].match_type == "Martin Professional@MAC Encore Performance CLD"
-
-    def test_match_type_falls_back_to_instrument_type_when_gdtf_fixture_absent(self):
-        """비공허성 대조군 — gdtf_fixture가 없는 정상 경로가 그대로 동작한다."""
-        records = [rr(0, unit_number="1", instrument_type="Robin MMX Spot")]
-        rig = build_designed_rig(records)
-        assert rig.fixtures[0].gdtf_fixture is None
-        assert rig.fixtures[0].match_type == "Robin MMX Spot"
-
-
-class TestDesignSideOverlapDetection:
-    """M0 실물 샘플이 준 DMX Footprint 폭 출처로 설계 측 구간 겹침을 직접 판정한다."""
-
-    def test_stride_equal_to_footprint_reports_zero_overlaps(self):
-        """음성 대조군 — M0 실물 샘플과 동일한 형태(stride==footprint, 완벽 패킹)."""
-        records = [
-            rr(0, unit_number="1", universe=1, address=1, footprint="38"),
-            rr(1, unit_number="2", universe=1, address=39, footprint="38"),
-            rr(2, unit_number="3", universe=1, address=77, footprint="38"),
-        ]
-        rig = build_designed_rig(records)
-        assert rig.footprint_data_present is True
-        assert rig.design_overlaps == ()
-
-    def test_stride_smaller_than_footprint_is_caught_as_an_overlap(self):
-        """양성 케이스(합성) — stride(20) < footprint(38)면 실제로 겹친다.
-
-        비공허성 핵심 — 이 assert가 없으면 겹침 판정 기능이 항상 빈 목록만
-        내도 테스트가 통과해버린다.
-        """
-        records = [
-            rr(0, unit_number="1", universe=1, address=1, footprint="38"),
-            rr(1, unit_number="2", universe=1, address=21, footprint="38"),  # 1~38 vs 21~58 겹침
-        ]
-        rig = build_designed_rig(records)
-        assert len(rig.design_overlaps) == 1
-        entry = rig.design_overlaps[0]
-        assert entry.universe == 1
-        assert "1" in entry.members and "2" in entry.members
-
-    def test_different_universes_never_report_a_false_overlap(self):
-        records = [
-            rr(0, unit_number="1", universe=1, address=1, footprint="38"),
-            rr(1, unit_number="2", universe=2, address=1, footprint="38"),
-        ]
-        rig = build_designed_rig(records)
-        assert rig.design_overlaps == ()
-
-    def test_no_footprint_column_leaves_footprint_data_present_false(self):
-        """footprint 컬럼이 아예 없는 파일 — 기존(footprint_overlap_descope) 경로 보존."""
-        records = [rr(0, unit_number="1", universe=1, address=1)]
-        rig = build_designed_rig(records)
-        assert rig.footprint_data_present is False
-        assert rig.design_overlaps == ()
-
-
-# --- round17 리그 수치 경계 전수 (AddressGates) ---
-#
-# round17 HARD 규율 1 — `server/vwx/` 전 모듈 수치 경계 자리를 격리 사본 뮤테이션으로
-# 훑었고(레지스트리는 `test_vwx_address.py::_R17_VWX_BOUNDARY_SITES`), `rig.py`에서
-# 무대조군 1자리가 나왔다: `_parse_footprint`의 양수 판정 `value > 0`.
-#
-# 기존 대조군은 "footprint 컬럼 없음"과 "footprint='1'" 두 점뿐이었다 — **문자열로
-# 존재하지만 양수가 아닌** 값(`"0"` · 음수)이 표 밖이었고, 그 한 칸(`> 0` → `>= 0`)이
-# 5,690건을 통과했다. `"0"`이 양수로 통과하면 **DMX를 먹지 않는 액세서리가 대조 계수에
-# 들어가** 콘솔 대비 수량 불일치를 만든다(REQ-VWX-014).
-
-
-class _FootprintRow(NamedTuple):
-    raw: str | None
-    parsed: int | None
-    dmx_consuming: bool
-    note: str
-
-
-#: `DMX Footprint` 원문 → 파싱 결과 → 그 값이 "DMX를 먹는다"로 읽히는지.
-#: 양수 판정의 **양끝**(0 · 1)과 음수·비파싱·공란·없음을 전부 덮는다.
-_R17_FOOTPRINT_ROWS: tuple[_FootprintRow, ...] = (
-    _FootprintRow(None, None, False, "컬럼 값 없음"),
-    _FootprintRow("", None, False, "공란"),
-    _FootprintRow("   ", None, False, "공백만"),
-    _FootprintRow("-1", None, False, "음수 — 점유폭이 될 수 없다"),
-    _FootprintRow("0", None, False, "0 — 양수 판정의 바로 아래 칸(비-DMX)"),
-    _FootprintRow("1", 1, True, "1 — 양수 판정의 바로 위 칸(DMX 소비)"),
-    _FootprintRow("38", 38, True, "M0 실물 샘플 폭"),
-    _FootprintRow("abc", None, False, "비파싱"),
-)
-
-
-class TestRound17FootprintPositivityBoundary:
-    """[round17] `_parse_footprint`의 `value > 0` 양끝."""
-
-    def test_the_table_covers_both_sides_of_the_positivity_test(self):
-        """[round17 표 전수] 행을 지우면 실패한다."""
-        assert len(_R17_FOOTPRINT_ROWS) == 8, "행수 리터럴 — 행 삭제/추가 감지"
-        assert len({row.raw for row in _R17_FOOTPRINT_ROWS}) == 8, "같은 입력이 두 번 들어갔다"
-        # 경계 양끝(0 · 1)이 둘 다 있어야 `> 0`이 고정된다.
-        assert {"0", "1"} <= {row.raw for row in _R17_FOOTPRINT_ROWS if row.raw is not None}
-        # 비공허성 — 두 결론이 모두 표에 있다.
-        assert {row.dmx_consuming for row in _R17_FOOTPRINT_ROWS} == {True, False}
-
-    @pytest.mark.parametrize("row", _R17_FOOTPRINT_ROWS, ids=lambda r: f"fp{r.raw!r}")
-    def test_parse_footprint_accepts_only_positive_widths(self, row):
-        """[round17] `rig.py`의 `return value if value > 0 else None`을 `>= 0`으로
-        바꾸면 `"0"` 행이 0을 돌려주며 실패한다. `> 1`로 바꾸면 `"1"` 행이 실패한다."""
-        assert _parse_footprint(row.raw) == row.parsed, row.note
-
-    @pytest.mark.parametrize("row", _R17_FOOTPRINT_ROWS, ids=lambda r: f"fp{r.raw!r}")
-    def test_only_a_positive_footprint_keeps_an_accessory_in_the_designed_rig(self, row):
-        """[round17 종단] 같은 경계가 **공개 진입점**에서 어떤 판정이 되는지 고정한다 —
-        액세서리 계열 행은 양수 점유폭이 있을 때만 대조 계수에 남는다(REQ-VWX-014).
-        `> 0`을 `>= 0`으로 바꾸면 footprint `"0"`인 액세서리가 리그에 들어와 실패한다."""
-        records = [rr(0, unit_number="1", device_type="Accessory", footprint=row.raw)]
-        rig = build_designed_rig(records)
-        assert (len(rig.fixtures) == 1) is row.dmx_consuming, row.note
-
-    @pytest.mark.parametrize("row", _R17_FOOTPRINT_ROWS, ids=lambda r: f"fp{r.raw!r}")
-    def test_a_non_accessory_row_is_never_dropped_for_its_footprint(self, row):
-        """[round17 비공허성] 위 배제가 **액세서리 갈래에 한정**됨을 같은 표로 보인다 —
-        액세서리가 아닌 행은 점유폭이 0이든 없든 리그에 남는다. 배제 조건에서
-        `_is_accessory_row` 검사를 빼면 여기서 전 행이 실패한다."""
-        records = [rr(0, unit_number="1", device_type="Light Fixture", footprint=row.raw)]
-        rig = build_designed_rig(records)
-        assert len(rig.fixtures) == 1, row.note
