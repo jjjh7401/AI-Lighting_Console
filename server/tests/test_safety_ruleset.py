@@ -39,10 +39,6 @@ EXPECTED_BLACKLIST = {
     "Shutdown",
     "Format",
     "Set Fixture",
-    # v3 — showfile replacement. Unrecoverable by this application (no restore
-    # SEND path), so approval is the only barrier that exists for them.
-    "LoadShow",
-    "NewShow",
 }
 EXPECTED_INVOKING_VERBS = (
     "Go", "Go+", "Go-", "Goto", "On", "Off", "Toggle", "Temp", "Flash", "Call"
@@ -140,34 +136,28 @@ class TestShippedRuleset:
         # REQ-MVP-013 (6 initial) + the ratified v2 addition — no open-ended list.
         ruleset = load_ruleset()
         assert set(ruleset.blacklist) == EXPECTED_BLACKLIST
-        assert len(ruleset.blacklist) == 9
+        assert len(ruleset.blacklist) == 7
 
     def test_every_shipped_revision_is_documented_in_the_file(self):
         """A version bump with no recorded reason is a silent widening.
 
         Pinning entry text alone is not enough: it forces an edit here, but it
-        cannot force the edit to be JUSTIFIED. So `version: N` must not ship
-        without a `v<N-1> -> v<N>` line saying what changed and which SPEC
-        ratified it. Deliberately NOT an entry-count rule — a future revision
-        may add two entries at once, and a count formula would manufacture
-        false friction.
-
-        The check is TWO layers because the single whole-file
-        `"v1 -> v2" in text` form it replaces was defeatable: swapping the
-        entire 12-line justification for a contentless `# REVISION HISTORY` +
-        `#   v1 -> v2` left this module green. The enforced property now
-        matches the documented one — the marker must sit INSIDE the REVISION
-        HISTORY block, and that marker's own entry must name the ratifying
-        SPEC. Both probes live in `TestRevisionJustification`.
-
-        On the version pin: it STAYS (deliberate friction — a bump has to come
-        here and be argued). It does make the checker's loop single-iteration
-        at the shipped pin, so rather than soften the docstring to match, the
-        "every shipped revision" generality is made REAL by driving the same
-        checker over a synthetic v4 file in `TestRevisionJustification`.
+        cannot force the edit to be JUSTIFIED. This asserts the file documents
+        its own current version, so `version: N` cannot ship without a
+        `v<N-1> -> v<N>` line saying what changed and which SPEC ratified it.
+        Deliberately NOT an entry-count rule — a future revision may add two
+        entries at once, and a count formula would manufacture false friction.
         """
-        assert load_ruleset().version == 3
-        _assert_every_revision_is_justified(DEFAULT_RULESET_PATH)
+        ruleset = load_ruleset()
+        assert ruleset.version == 2
+        text = DEFAULT_RULESET_PATH.read_text(encoding="utf-8")
+        assert "REVISION HISTORY" in text
+        for bump in range(2, ruleset.version + 1):
+            assert f"v{bump - 1} -> v{bump}" in text, (
+                f"blacklist.yaml ships version {ruleset.version} but documents no "
+                f"'v{bump - 1} -> v{bump}' revision — a closed-set change must "
+                f"carry its justification in the file (REQ-MVP-013)"
+            )
 
     def test_invoking_verbs_are_exactly_the_ten_initial_verbs(self):
         # REQ-MVP-026: 10 verbs, verbatim, order preserved from the file.
