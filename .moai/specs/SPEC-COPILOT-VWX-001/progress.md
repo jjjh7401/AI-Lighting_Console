@@ -441,7 +441,7 @@ M0가 미충족인 채로는 M8(실물 파일 기반 종단 통합 검증, AC-VW
 ```yaml
 run_status: partial-blocked   # M1~M7 completed + verified; M0/M8 BLOCKED (real Vectorworks sample not provided — the 1 file received is a non-VW rigging CSV, used only as a negative-case fixture)
 run_complete_at: 2026-08-05
-head_sha: 227ebc85f37c4c1ba81f234d735a7b9edb05c3fc   # 결함 2 잔존 교정 커밋(직접 실측)
+head_sha: 41f696eaa38896107768bdee62eee3db99e2e1da   # 거짓 안전 신호 3라운드째 교정(불변식 재설계) 커밋(직접 실측)
 base_sha: 2bc95cf309457de5f6fc2b6757b3a8c7aa9f6ec7
 milestones_completed: [M1, M2, M3, M4, M5, M6, M7]
 milestones_blocked: [M0, M8]
