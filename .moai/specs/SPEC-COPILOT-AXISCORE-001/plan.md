@@ -50,8 +50,17 @@ score = s * (min_bucket_size / n)                                        # [0, 1
 
 성질(전부 실측 · `research.md` §7):
 
-- **스케일 불변**: `sep`은 같은 축 위 두 길이의 비이므로 축 좌표 ×k에 불변. `min_bucket_size / n`은 개수
-  비. 오늘의 결함(`golden_vertical_levels` z×0.1에서 판정 뒤집힘)이 사라진다.
+- **스케일 불변 — 단, 포화 구간에서만**: `min_bucket_size / n`은 개수 비이므로 무조건 불변이다. `sep`은
+  다르다. `within_bucket_span > SPATIAL_ROW_NOISE_SPAN`이면 같은 축 위 두 길이의 비라 ×k에 불변이지만,
+  **스프레드가 0인 리그 — `rows.py`가 정상이라고 적는 바로 그 경우 — 에는 비를 만들 두 번째 길이가
+  없어** 분모가 절대 하한으로 떨어지고 `sep`은 여전히 미터 비례다. 따라서 불변성은 **분리도가 포화한
+  뒤에만** 성립한다: 모든 분할 축의 최소 경계 갭이 `SPATIAL_ROW_GAP_RATIO × SPATIAL_ROW_NOISE_SPAN`
+  이상일 때. 오늘의 결함(`golden_vertical_levels` z×0.1에서 판정 뒤집힘)은 그 구간 **안**이라 사라진다.
+
+  실측(구현 후 · 8100 조합): 포화 구간 안 **5510건 반례 0** · 구간 밖 **165건 변동** · 절대 하한이 분할
+  자체를 다시 자른 **2163건**(다른 리그이므로 불변성 질문이 아니다 — 두 모집단을 합치지 말 것).
+  **이 절의 초안은 이 조건을 무조건으로 적었다.** 정식 조건절은 REQ-AXISCORE-001에 들어갔고, 거기에
+  같은 결함 유형의 선례 2건(`REQ-SPATIAL-024` · `REQ-WRITEGATE-005`)도 함께 기록돼 있다.
 - **포화가 요점**: `min(…, 1.0)`이 없으면 `three_rows_two_trims`에서 z의 4 m 갭이 y의 3 m 갭을 계속
   이긴다. 임계(`SPATIAL_ROW_GAP_RATIO = 4.0`)에서 포화시키는 이유는 그것이 **검출기가 이미 "경계다"라고
   판정하는 지점**이기 때문이다 — 새 상수를 발명하지 않는다.
@@ -183,6 +192,13 @@ M1에서 열거한 변경 리그를 `progress.md`에 전수 기록하고, 각각
 그대로 `vertical`이다. 나머지는 REQ-AXISCORE-019에 따라 M5에서 전수 열거·정당화된다. 이 결정으로
 `acceptance.md` AC-AXISCORE-007 스윕 B의 기대값이 **"일관성만 단정"에서 "일관성 + 동점 시 `lateral`"로
 승격**된다.
+
+**구현 후 실증 (2026-08-05) — 결정대로 구현됐는가**: 스윕 B 72 리그를 정규화 점수로 분해하면 **정확한
+동점 12건 · `lateral`이 점수로 이긴 6건 · `vertical`이 점수로 이긴 54건**이고, **전순서가 더 높은 점수를
+덮은 리그는 0건**이다. 이 **0**이 D1이 *결정된 대로* 구현됐다는 직접 증거다 — "평면 격자는 `lateral`"을
+무조건 선호로 구현했다면 54건이 전부 `lateral`로 넘어가고 `_golden_vertical_levels`가 RED가 됐을 것이다.
+세 계수는 `test_sweep_b_exercises_both_the_tie_and_the_score_branch`가 고정하고, 덮지 않음은 72 리그
+전수에 걸린 `test_sweep_b_lateral_is_a_tie_break_default_not_a_preference`가 고정한다.
 
 ### D2 — 2겹 링 2종의 정답은 `concentric`이다 (사용자 결정)
 
