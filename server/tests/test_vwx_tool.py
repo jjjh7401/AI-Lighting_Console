@@ -222,20 +222,33 @@ class TestRealWorldNegativeSampleEndToEndThroughDispatch:
         assert execution.result is not None
 
     def test_real_sample_is_not_reported_as_a_clean_zero_diff_match(self):
-        """결함 2 — "설계 0대 · 차이 0건"이 정상 결과로 위장하지 않는다."""
+        """결함 2(잔존 교정) — "설계 0대 · 차이 0건"이 정상 결과로 위장하지 않는다.
+
+        1차 수정에서는 ``read_failures``만 채워졌을 뿐, ``diffs``가 여전히
+        빈 배열 3종으로 남아 있어 "찾아봤는데 없다"로 오독될 여지가 있었다.
+        이 교정은 ``diffs.performed: False`` + ``summary_ko``가 "차이 없음"을
+        절대 말하지 않고 거부 사유로 시작함을 검증한다.
+        """
         data = self._FIXTURE_PATH.read_bytes()
         execution = _dispatch(_registry(), file_content_base64=self._b64_bytes(data))
         payload = json.loads(execution.result.content)
 
-        # 비공허성 — 이 파일이 실제로 픽스처 0대·차이 0건 형태임을 먼저 확인한다
-        # (거부 신호가 없다면 그것만으로 "일치"로 오독될 수 있는 형태다).
         assert payload["designed_rig"]["fixture_count"] == 0
-        assert payload["diffs"]["missing_in_console"] == []
-        assert payload["diffs"]["address_collision"] == []
-        assert payload["diffs"]["quantity_mismatch"] == []
 
-        # 핵심 assert — 그럼에도 판독 실패가 반드시 동반돼 "정상 일치"로
-        # 읽히지 않는다. 120개의 개별 실패가 아니라 소수의 구조화된 거부다.
+        # diffs가 "찾아봤는데 없다"(빈 배열 3종)가 아니라 "애초에 수행하지
+        # 않았다"로 구조화돼야 한다 — 빈 배열 키 자체가 없어야 한다.
+        assert payload["diffs"]["performed"] is False
+        assert "missing_in_console" not in payload["diffs"]
+        assert "address_collision" not in payload["diffs"]
+        assert "quantity_mismatch" not in payload["diffs"]
+
+        # 핵심 assert — 판독 실패가 반드시 동반돼 "정상 일치"로 읽히지 않는다.
+        # 120개의 개별 실패가 아니라 소수의 구조화된 거부다.
         assert len(payload["read_failures"]) >= 1
         assert len(payload["read_failures"]) < 10  # 수정 전엔 120개였다(비공허성).
-        assert "판독 실패" in payload["summary_ko"]
+
+        # 사용자가 실제로 읽는 단 하나의 한국어 문장 — "차이 없음"이 절대
+        # 등장하지 않고, 거부 사유로 시작해야 한다.
+        assert "차이 없음" not in payload["summary_ko"]
+        assert payload["summary_ko"].startswith("패치 출처로 성립하지 않는다")
+        assert "대조를 수행하지 않았다" in payload["summary_ko"]

@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-VWX-001
 title: "Vectorworks 연계 1단계 — Instrument Data CSV/엑셀 가져오기 + 설계상 리그 모델 + precheck_patch 대조 리포트"
-version: "0.1.1"
+version: "0.1.2"
 status: draft
 created: 2026-08-05
 updated: 2026-08-05
@@ -27,6 +27,7 @@ related_specs: [SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVERLAP-001]
 |---|---|---|---|
 | 0.1.0 | 2026-08-05 | manager-spec | 최초 작성 (draft, Tier L). 출처는 `.moai/reports/ma3-copilot-overview.html` §7 P0 항목. **아티팩트 6종**(spec/plan/acceptance/design/research/progress). REQ **25건**, AC **26건**, ASSUMPTION **3건**(68~70), 마일스톤 **9개**(M0~M8), 라이브 세션 **0회**(§C가 근거를 적는다), clarification 마커 **0건**. Vectorworks 형식 조사(경로 A/B, 인코딩, 컬럼 별칭표, 주소 표현, 7가지 대조 함정)는 `research.md`가 소유. **승인 대기 1건** — 신규 의존성 `openpyxl` 채택 여부(§C, `plan.md` 사용자 접점). |
 | 0.1.1 | 2026-08-05 | (run-phase worker) | **Implementation Kickoff Approval 확정.** `openpyxl` 신규 의존성 **승인** — 경로 B `.xlsx` 지원을 v1 범위에 포함(§C 갱신, §D `.xlsx` 조건부 Out-of-Scope 절 무효화 명시). 실물 Vectorworks export 샘플은 **여전히 미제공** — M0는 완료 처리하지 않고 BLOCKED로 유지, M1~M7은 합성 픽스처(문서 근거·실물 미검증)로 선행 진행한다(`progress.md` §E.2). |
+| 0.1.2 | 2026-08-05 | (run-phase worker) | **실물 파일 투입이 드러낸 P0 결함 2건 수정 + 잔존 지적 1건 교정.** 결함 1(CR 전용 줄바꿈 예외 탈출)·결함 2(패치 출처 아닌 파일에 "이상 없음" 오발) 최초 수정 후, 결함 2의 핵심(사용자가 읽는 `summary_ko` 문장이 여전히 "차이 없음"으로 시작하던 거짓 안전 신호)이 잔존한다는 재현이 들어와 교정했다. `REQ-VWX-023` 문구를 이 규칙을 명시하도록 갱신(§B), `AC-VWX-022`/`AC-VWX-023`에 대응 기대 결과 각 1건 추가(비공허성 포함). 코드 변경 상세는 `progress.md` §E.2 이번 라운드 기록. |
 
 ---
 
@@ -93,7 +94,7 @@ related_specs: [SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVERLAP-001]
 
 ### B.6 보고 · 경계
 
-- **REQ-VWX-023** `[Ubiquitous]` The 대조 리포트 **shall** 판독 실패·데이터 블록 미탐·미수행 판정·부정 전제를 모두 **구조화된 페이로드 부류**로 담는다 — 예외 산문으로 흘리지 않는다.
+- **REQ-VWX-023** `[Ubiquitous]` The 대조 리포트 **shall** 판독 실패·데이터 블록 미탐·미수행 판정·부정 전제를 모두 **구조화된 페이로드 부류**로 담는다 — 예외 산문으로 흘리지 않는다. **(v0.1.2)** 판독이 패치 출처로 성립하지 않으면(주소 열 없음·데이터 블록 미탐) `diffs`는 빈 배열 3종이 아니라 `performed: false` + 사유로 미수행임을 구조적으로 드러내며, `summary_ko`는 "차이 없음"을 말하지 않고 거부 사유로 시작한다 — 대조를 수행하지 않은 상태를 "찾아봤는데 없다"로 오독시키지 않는다.
 - **REQ-VWX-024** `[Ubiquitous]` 사용자 대면 문자열 **shall** 한국어이며 표현 계층 코드에 둔다. 라벨 재사용은 `server/prechk/report.py:143 label()`의 공개 접근자를 통하며 밑줄 식별자를 직접 import하지 않는다.
 - **REQ-VWX-025** `[Ubiquitous]` The 신규 대조 리포트 툴 **shall** `server/orchestrator/tools.py`의 **`TOOL_NAMES`·핸들러 클로저·`definitions`·`handlers`** 전 지점에 등재되며, 신규 REST 라우트·웹소켓 메시지·`execution_port` 직접 접근을 **0건**으로 유지한다.
 
