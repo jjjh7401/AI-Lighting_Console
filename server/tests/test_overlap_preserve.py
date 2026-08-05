@@ -141,16 +141,41 @@ _SAFETY_DIR = "server/safety/"
 #: `TestPrecedentGateFileIsNotExtended` above). Bounding both ends fixes it.
 _OVERLAP_MERGE_COMMIT = "156a3e1aaf6ef78788394d65cf724bacaec7b567"
 
-#: The safety chokepoint's measured state, PRECHK-base relative. Grown three
+#: The safety chokepoint's measured state, PRECHK-base relative. Grown four
 #: times: the predecessor's (OVERLAP's) property-read addition (console.py,
 #: gate.py), then SPEC-COPILOT-BACKUP-001 T-B/T-B2's snapshot-retention +
 #: audit-linkage extension (backup.py, gate.py again), then the T-I audit-log
-#: crash fix -- audit.py joins the set (SCOPE CORRECTION below). Every
-#: deletion's TEXT is pinned in `_SAFETY_ALLOWED_DELETED_LINES` below, because
-#: a bare count lets a meaningful removal hide under the allowance.
+#: crash fix -- audit.py joins the set (SCOPE CORRECTION below), then the
+#: closed-set revision below. Every deletion's TEXT is pinned in
+#: `_SAFETY_ALLOWED_DELETED_LINES` below, because a bare count lets a
+#: meaningful removal hide under the allowance.
+#:
+#: 2026-08-05 granted exception -- SPEC-COPILOT-WRITEGATE-001 revises the
+#: closed-set SSOT `blacklist.yaml` from version 1 to 2, adding exactly ONE
+#: entry ("Set Fixture"). User-approved after the alternatives were searched
+#: and rejected, which is the part worth recording: a design touching only
+#: `gate.py` would have cost ZERO entries here (gate.py is already an allowed
+#: row and the addition deletes nothing), but it would have forked the
+#: closed-set interpretation that `classify.py`'s @MX:ANCHOR forbids and,
+#: concretely, missed a patch write smuggled through a quoted `Property
+#: 'Command'` value -- the recursion that catches those calls
+#: `classify_command`, not the gate. So the cheaper boundary was declined for
+#: the correct layer, and the cost is this one row.
+#:
+#: Why it could not be avoided at all: `SafetyGate.screen()` takes a command
+#: sequence and nothing else, so no caller can declare a bundle risky
+#: (SPATIAL-001 progress.md:294-296). Every possible design edits at least one
+#: file under `server/safety/`. The FIRST attempt at this change was reverted
+#: precisely here (SPATIAL progress.md:302-306) -- it was blocked by ownership,
+#: not by being wrong, and WRITEGATE-001 owns `server/safety/`.
+#:
+#: The grant is one FILE with one PINNED deletion, and it widens nothing else.
+#: Another file under the chokepoint, a second deleted line in this one, or any
+#: text other than `version: 1` still fails the gate.
 _SAFETY_EXPECTED_DELETIONS = {
     "server/safety/audit.py": 1,
     "server/safety/backup.py": 2,
+    "server/safety/blacklist.yaml": 1,
     "server/safety/console.py": 0,
     "server/safety/gate.py": 3,
 }
@@ -172,6 +197,12 @@ _SAFETY_ALLOWED_DELETED_LINES = {
         "Three rules: ① once at session start, ② periodic (default 10 minutes,",
         '    """Drives the 3-rule backup policy against an injected backup action."""',
     ),
+    # The version bump IS the revision: `version: 1` is replaced by
+    # `version: 2`, which is the one deletion granted above. The entry addition
+    # and the REVISION HISTORY block that justifies it are pure additions, so
+    # they need no allowance -- and `test_safety_ruleset.py` pins the new
+    # content exactly, so this grant cannot be used to smuggle a second entry.
+    "server/safety/blacklist.yaml": ("version: 1",),
     "server/safety/gate.py": (
         "from server.safety.backup import BackupError, BackupManager",
         '    """StateQueryPort implementation riding the gate-audited console link."""',

@@ -9,7 +9,19 @@
 # - invoking_verbs: reference-invoking command forms subject to the
 #   expand-or-hold rule (REQ-MVP-026): target bodies are fetched and
 #   classified; unverifiable references are held for human approval.
-version: 1
+#
+# REVISION HISTORY (the version field below is the ratification record):
+#   v1 -> v2  SPEC-COPILOT-WRITEGATE-001 adds "Set Fixture". FIRST revision of
+#     this literal in the repository's history; the procedure this header has
+#     always specified now has one execution, weighted the same as
+#     SPEC-COPILOT-EXECREF-001's RECOGNIZED_REFERENCE_TYPES revision
+#     (`classify.py` @MX:NOTE). A false-negative OBSERVATION backs it, not a
+#     review: SPATIAL-001 progress.md §E.2.20 recorded 54 unrequested fixture
+#     coordinate writes reaching the console with no approval card and no
+#     showfile snapshot, because `Set Fixture <fid> Pos* '<v>'` classified
+#     "safe". The same turn's `Go+ Page 1.202` DID raise a card -- the gate was
+#     healthy and only writes slipped the net.
+version: 2
 
 blacklist:
   - "Delete"
@@ -18,6 +30,43 @@ blacklist:
   - "Store /overwrite"
   - "Shutdown"
   - "Format"
+  # A fixture's patch row is SHOWFILE STATE, and every write to it needs a
+  # human. Deliberately the OBJECT and not the property: enumerating
+  # `Posx`/`Posy`/`Posz`/`Rotx`/... would be the open-ended list this file's
+  # header prohibits, and it would invite "what about the next property?".
+  #
+  # SCOPE OF THAT CLAIM, stated precisely because "closed and complete" is
+  # easy to over-read: this entry closes the PROPERTY dimension. It is keyed on
+  # one VERB (`Set`) and one ADDRESS keyword (`Fixture`), and neither of those
+  # two dimensions was varied by the evidence behind it. Candidate escapes that
+  # parse cleanly and classify `safe` today: `Edit|Assign|Change|Update Fixture
+  # 11 Posx '5.0'`, `Set Stage 1.Fixtures.1 Posx '5.0'`, `Set Fixtures 11 Posx
+  # '5.0'` (plural is not a prefix of `Fixture`), `Set Posx '5.0'`. None is
+  # established as MA3-accepted -- the rulebook documents no patch-write
+  # command line at all -- so they are unproven candidates, not known holes.
+  # The working assumption is that `Set` is the only patch-write verb; if that
+  # is ever falsified, this entry is incomplete and the fix is another revision.
+  #
+  # Over-matching here is the designed direction (`classify.py` module
+  # docstring): a non-coordinate patch write such as `Set Fixture 11 Name
+  # 'Spot 11'` also raises a card, and that is correct -- it is still a
+  # showfile mutation. Under-matching would be a safety false negative.
+  #
+  # Scoped to `Set Fixture` ON PURPOSE. `Store Group` is NOT here. MEASURED
+  # cost of taking it (with this file's own `_would_be_held` predicate over
+  # `load_corpus()`): entry `Store` collides with the measurement corpus's
+  # "non-risky verbs only" invariant in 10 of 21 scenarios (5 of 10
+  # representative task types); entry `Store Group` in 3 of 21 (1 of 10). It
+  # also breaks exactly 3 DEPLOY tests that use `Store Group 3` as their
+  # canonical SAFE fixture. An earlier draft of this comment said "13 of 21
+  # (7 of 10)" -- that was a count of write-bearing COMMANDS under a broad
+  # `Store|Set|Assign|Copy` regex, restated as `Store`'s scenario count. The
+  # descope still holds on the corrected numbers (`group_create` is 1 of the
+  # AC-MVP-001 ten representatives, and the DEPLOY collision is independent of
+  # corpus size), but the cost of the alternative was overstated and is not.
+  # Descoped by user decision 2026-08-05; a follow-up SPEC owns it and inherits
+  # the procedure this revision establishes.
+  - "Set Fixture"
 
 invoking_verbs:
   verbs:

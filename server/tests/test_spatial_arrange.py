@@ -235,8 +235,33 @@ def arrange(console: ArrangeConsole, arguments: dict, *, gate=None):
     return execution, json.loads(execution.result.content)
 
 
-def real_gate(tmp_path, *, locked: bool) -> SafetyGate:
-    """A REAL gate. A fake handing back the string "locked" proves nothing."""
+class ScriptedApprovalPort:
+    """Records every approval request and answers with a scripted verdict."""
+
+    def __init__(self, approve: bool):
+        self.approve = approve
+        self.requests: list = []
+
+    def request_approval(self, request) -> bool:
+        self.requests.append(request)
+        return self.approve
+
+
+def real_gate(
+    tmp_path, *, locked: bool, approve: bool = True, backup=None, approval_port=None
+) -> SafetyGate:
+    """A REAL gate. A fake handing back the string "locked" proves nothing.
+
+    ``approve`` defaults to True because a coordinate bundle is RISKY since the
+    `blacklist.yaml` v2 revision (SPEC-COPILOT-WRITEGATE-001): every write below
+    now needs an approval, so a gate with no approval channel could never write
+    and every write assertion in this file would pass vacuously on a gate that
+    is simply refusing. The fail-CLOSED default is not lost — it is asserted
+    directly in ``test_an_unwired_approval_channel_is_not_read_as_pre_approved``.
+
+    Pass ``approval_port`` to keep a handle on the port and inspect the cards it
+    was shown, instead of reading the gate's private attribute back out.
+    """
     lock = LiveLock()
     if locked:
         lock.activate()
@@ -244,6 +269,8 @@ def real_gate(tmp_path, *, locked: bool) -> SafetyGate:
         console=RefusingConsole() if locked else None,
         audit=AuditLog(tmp_path / "audit"),
         lock=lock,
+        approval_port=approval_port or ScriptedApprovalPort(approve),
+        backup=backup,
     )
 
 
@@ -914,41 +941,106 @@ class TestGateChokepoint:
         assert screened[0] == console.writes
         assert payload["verified"] is True
 
-    # AC-SPATIAL-031 is [DEFERRED] — and this test pins the consequence rather
-    # than leaving it to be discovered.
+    # AC-SPATIAL-031 — RESOLVED by SPEC-COPILOT-WRITEGATE-001.
     #
-    # `Set Fixture <fid> Pos* '<v>'` classifies "safe", so the gate CLEARS a
-    # coordinate bundle with no approval card and no showfile snapshot: backup
-    # rule 3 (`before_risky_execution()`) fires on the risky path only. Making
-    # it risky needs a `server/safety/blacklist.yaml` closed-set revision, and
-    # server/safety/** is PRESERVE for this SPEC (spec.md §C.2) — a boundary
-    # OVERLAP-001's always-on gate independently enforces. A follow-up SPEC
-    # owns that change.
+    # This replaces the deferred-gap tripwire that used to stand here
+    # (`test_a_coordinate_bundle_is_not_yet_classified_risky`). That test
+    # asserted `risky is False` and carried an instruction in its own failure
+    # message: when the follow-up SPEC landed, it "must be replaced by the
+    # approval-flow assertions it was standing in for". These are those
+    # assertions. The MAtricks pin it also carried is kept below — a tripwire
+    # being lifted is the classic moment to drop a guard that rode along with
+    # it, so it moves here rather than disappearing.
     #
-    # What still protects the rig on this path: the mandatory original-coordinate
-    # backup, the re-query verification, the restore bundle, the scope seal and
-    # the LiveLock demotion — all asserted elsewhere in this file and all
-    # independent of the gate's risk verdict.
-    #
-    # When that follow-up lands, this test goes RED. That is the point: it is a
-    # tripwire on a known gap, not an endorsement of it.
-    def test_a_coordinate_bundle_is_not_yet_classified_risky(self, tmp_path):
+    # The gap it named is closed by a closed-set revision (`blacklist.yaml`
+    # v1 -> v2, entry "Set Fixture"), not by code: a coordinate bundle now
+    # classifies risky, so the gate raises a card AND fires showfile backup
+    # rule 3. The four defences that carried this path while the gap was open
+    # — original-coordinate backup, re-query verification, restore bundle,
+    # scope seal — are unchanged and still asserted elsewhere in this file.
+    def test_a_coordinate_write_is_classified_risky(self):
         from server.safety.classify import classify_command
         from server.safety.grammar import validate
         from server.safety.ruleset import load_ruleset
 
+        ruleset = load_ruleset()
         parsed = validate("Set Fixture 11 Posx '-3.5'")
         assert parsed.ok
-        finding = classify_command(parsed.parsed, load_ruleset())
-        assert finding.risky is False, (
-            "a coordinate write is now classified risky — AC-SPATIAL-031 has "
-            "landed, so this deferred-gap tripwire must be replaced by the "
-            "approval-flow assertions it was standing in for"
-        )
-        # ...and the MAtricks programmer form must stay safe either way.
+        finding = classify_command(parsed.parsed, ruleset)
+        assert finding.risky is True
+        assert finding.category == "blacklisted"
+        assert finding.matched_entry == "Set Fixture"
+
+        # The MAtricks programmer form must STAY safe — carried over from the
+        # replaced tripwire. NOT because `PhaseFromX` is quoted: `_match_blacklist`
+        # needs the verb to match `Set` AND some UNQUOTED arg to match `Fixture`,
+        # and none of `Selection`/`MAtricks`/`PhaseFromX`/`0` spells `Fixture`.
+        # Measured: unquoting it (`Set Selection MAtricks PhaseFromX 0`) leaves it
+        # safe, while `Set Selection MAtricks Fixture 0` classifies risky with
+        # matched_entry='Set Fixture'. Quoting is NOT what holds this line back —
+        # anyone scoping the descoped `Store` follow-up must not read it as a
+        # protection that programmer-state commands enjoy against a widening.
         matricks = validate("Set Selection MAtricks 'PhaseFromX' 0")
         assert matricks.ok
-        assert classify_command(matricks.parsed, load_ruleset()).risky is False
+        assert classify_command(matricks.parsed, ruleset).risky is False
+
+    def test_the_bundle_raises_one_card_and_takes_a_showfile_snapshot(self, tmp_path):
+        """AC-SPATIAL-031's two halves: the card AND backup rule ③."""
+        snapshots: list[str] = []
+
+        class RecordingBackup:
+            def before_risky_execution(self):
+                snapshots.append("pre_risky")
+
+        port = ScriptedApprovalPort(approve=True)
+        gate = real_gate(tmp_path, locked=False, approval_port=port, backup=RecordingBackup())
+        console = rig()
+        _execution, payload = arrange(console, {"preset": "row", "fids": [11, 12]}, gate=gate)
+
+        assert len(port.requests) == 1, "exactly one card per bundle"
+        approved = port.requests[0]
+        assert len(approved.items) == 6, "every line of the bundle is on the card"
+        assert all(item.risk_reasons for item in approved.items), (
+            "a card with no stated reason asks the operator to approve a blank"
+        )
+        assert snapshots == ["pre_risky"], "backup rule ③ fires on the risky path"
+        assert payload["verified"] is True
+        assert console.writes, "approval granted — the write proceeds"
+
+    def test_a_withheld_approval_sends_nothing_and_still_hands_back_the_way_out(self, tmp_path):
+        console = rig()
+        _execution, payload = arrange(
+            console,
+            {"preset": "row", "fids": [11, 12]},
+            gate=real_gate(tmp_path, locked=False, approve=False),
+        )
+        assert console.writes == [], "refused approval means ZERO console writes"
+        assert payload["succeeded"] is False
+        assert len(payload["restore_bundle"]) == 6, (
+            "the restore bundle rides along even on the refused path"
+        )
+
+    def test_an_unwired_approval_channel_is_not_read_as_pre_approved(self, tmp_path):
+        """The fail-CLOSED default, asserted rather than assumed.
+
+        `real_gate` passes an approval port explicitly, so this builds a gate
+        the way production would if nobody wired the channel: the constructor
+        falls back to `DenyAllApprovalPort`. Safety asymmetry — an absent
+        approver must read as "no", never as "yes".
+        """
+        lock = LiveLock()
+        gate = SafetyGate(console=None, audit=AuditLog(tmp_path / "audit"), lock=lock)
+        console = rig()
+        _execution, payload = arrange(console, {"preset": "row", "fids": [11, 12]}, gate=gate)
+        assert console.writes == []
+        assert payload["succeeded"] is False
+        # Discriminating: at least five other paths on this tool produce that
+        # same pair — a scope refusal (`status: refused`), a grammar block
+        # (`gate_status: blocked_grammar`), a health block, a failed backup
+        # (`blocked_backup_failed`) and a LiveLock demotion (`gate_status:
+        # locked`). Only an approver saying no reads as "rejected", which is
+        # what an unwired channel must produce.
+        assert payload["gate_status"] == "rejected"
 
     def test_a_gate_rejection_leaves_the_rig_untouched(self, tmp_path):
         class _Decision:
