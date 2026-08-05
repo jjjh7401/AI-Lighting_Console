@@ -1,8 +1,8 @@
 ---
 id: SPEC-COPILOT-WRITEGATE-001
 title: "쓰기 경로 무결성 — 좌표 기록의 게이트 risky 분류 + 승인 흐름 (Write-Path Integrity)"
-version: "0.1.0"
-status: draft
+version: "0.2.0"
+status: in-progress
 created: 2026-08-05
 updated: 2026-08-05
 author: manager-spec
