@@ -438,10 +438,12 @@ The 컬럼 해석기 **shall** `Fixture Name`·`GDTF Fixture`를 정규 필드�
 
 ## §F. Definition of Done
 
-1. AC-VWX-001~026 **26건 전량 PASS**.
-2. REQ-VWX-001~025 **25건 전량** 커버(§C.0 누락 0).
-3. `ASSUMPTION-68`~`70` **3건 전부 판정 확정**.
-4. `openpyxl` 신규 의존성 승인 여부가 `progress.md`에 기록되고, 미승인 시 §D의 `.xlsx` 축소가 실제 코드 사유 문자열과 일치.
-5. PRESERVE diff 빈 출력(`verdicts.py` 순수 추가 예외) + 게이트 비공허성 증명.
+**(v0.1.4 갱신 — REQ 25→28·AC 26→29. 3행 status 줄과의 자기모순을 바로잡음. 코디네이터 검증 중 발견.)**
+
+1. AC-VWX-001~029 **29건 전량 PASS**(§C.0a 마일스톤 배정 합 29와 일치).
+2. REQ-VWX-001~028 **28건 전량** 커버(§C.0 "REQ 28/28 커버, 누락 0"과 일치).
+3. `ASSUMPTION-68`~`70` **3건 전부 판정 확정**. **아직 참이 아니다** — `68`은 v0.1.4에서 NEGATIVE로 해소됐지만 `69`(Absolute Address 단독 파일)·`70`(경로 B 워크시트)은 M0가 PARTIAL에 머물러 있는 한 미해소다. 이 항목은 **M8이 실제로 닫혀야 참이 되는 DoD**다 — M8이 BLOCKED인 현재는 이 조건이 미충족이며, 그것이 SPEC 전체가 아직 완결이 아닌 이유 그 자체다(`progress.md` §E.2 M0 절 참조).
+4. `openpyxl` 신규 의존성 승인 여부가 `progress.md`에 기록되고, 미승인 시 §D의 `.xlsx` 축소가 실제 코드 사유 문자열과 일치. **(충족됨 — 승인 확정, `progress.md` Implementation Kickoff Approval 절)**
+5. PRESERVE diff 빈 출력(`server/prechk/**` 8개 파일 전량, `verdicts.py` 포함 완전 0-diff) + 게이트 비공허성 증명.
 6. 전체 스위트 0 failed · `ruff` clean(신규·변경 파일).
 7. CHANGELOG · frontmatter · `progress.md` §E.1~§E.4가 갱신.

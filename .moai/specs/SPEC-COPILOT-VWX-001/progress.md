@@ -9,15 +9,15 @@
 ### 한 문단
 
 **무엇**: Vectorworks Instrument Data(엑셀/CSV/tab-text)를 읽어 **설계상 리그(designed rig)** 모델을 만들고, 이미 라이브 검증된 `precheck_patch`(콘솔 실측)와 대조해 **"도면 vs 실제 콘솔 패치"** 차이 리포트를 낸다. `.moai/reports/ma3-copilot-overview.html` §7 P0 항목의 1단계만을 범위로 하며, 2단계(`AddFixtures` 자동 패치)와 3단계(MVR/GDTF)는 후속 SPEC으로 분리한다.
-**상태**: **plan-phase 아티팩트 6종 작성 완료. 미커밋 · 미감사.** REQ 25건 · AC 26건 · ASSUMPTION 3건(68~70) · 마일스톤 9개(M0~M8) · 라이브 세션 0회 · clarification 마커 0건.
+**상태**: **plan-phase 아티팩트 6종 작성 완료. 미커밋 · 미감사.** REQ 25건 · AC 26건 · ASSUMPTION 3건(68~70) · 마일스톤 9개(M0~M8) · 라이브 세션 0회 · clarification 마커 0건. **(v0.1.0 시점 스냅샷. 현재 v0.1.4 기준 REQ 28건 · AC 29건 · run_status=partial-blocked — 아래 §E.2 "M0 실물 컬럼 계약 검증" 절 참조.)**
 **열린 사용자 접점**: **2건** — ① 실물 Vectorworks export 샘플 제공(M0 선행조건, 컬럼 계약 동결의 유일한 전제) · ② 신규 의존성 `openpyxl` 채택 승인(`.xlsx` 경로 B 지원 여부, 미승인이어도 산출물은 성립).
 
 ### 읽는 순서
 
 | 순서 | 무엇을 알려주나 | 어디 |
 |---|---|---|
-| 1 | 무엇을 만들기로 했나 | `spec.md` — REQ 25건 · §C PRESERVE와 **신규 의존성 승인 대기** · §D Out of Scope 6건 |
-| 2 | 무엇을 통과해야 하나 | `acceptance.md` — AC 26건 · 역추적표 · 마일스톤별 배정 |
+| 1 | 무엇을 만들기로 했나 | `spec.md` — REQ 25건(v0.1.0)→**현재 28건**(REQ-VWX-026~028 v0.1.4 추가) · §C PRESERVE와 **신규 의존성 승인**(확정) · §D Out of Scope 6건 |
+| 2 | 무엇을 통과해야 하나 | `acceptance.md` — AC 26건(v0.1.0)→**현재 29건**(AC-VWX-027~029 v0.1.4 추가) · 역추적표 · 마일스톤별 배정 |
 | 3 | 왜 이렇게 설계했나 / 왜 이 순서로 만들었나 | `design.md` 슬롯 A~E · `plan.md` §B M0~M8 |
 | 4 | Vectorworks 형식 조사 원문(가장 김) | `research.md` — 2경로·별칭 테이블·주소 4형식·7가지 함정. 필요할 때만 |
 | 5 | 라이브 세션 0회의 근거 | `plan.md` §C — 검토 후 적극적으로 0으로 결정한 것이지 생략이 아니다 |
@@ -30,8 +30,18 @@
 
 ### 인수인계가 온전한지 기계로 확인하는 법
 
+아래는 **plan-phase 착수 시점(v0.1.0)의 기록**이다 — 그대로 재실행하면 지금은 다른 값이 나온다(코드가 M1~M7까지 구현되고 M0가 v0.1.4까지 진행됐기 때문). **현재 값으로 다시 확인하려면**:
+
 ```
 git rev-parse --abbrev-ref HEAD                 -> feature/SPEC-COPILOT-VWX-001
+git status --short                              -> (클린 — 전부 커밋됨, 최신 HEAD는 §E.3 head_sha 참조)
+uv run pytest server/tests -q                    -> 4842 passed 이상 · 7 skipped (M1~M7 구현 완료, 회귀 0)
+grep -oE 'REQ-VWX-[0-9]{3}' .moai/specs/SPEC-COPILOT-VWX-001/spec.md | sort -u | wc -l        -> 28
+grep -oE '^### AC-VWX-[0-9]{3}' .moai/specs/SPEC-COPILOT-VWX-001/acceptance.md | sort -u | wc -l -> 29
+```
+
+**v0.1.0 시점 기록(참고용, 재실행하지 말 것 — 이월 인용 금지 원칙과 별개로 이 블록 자체가 이미 과거 값이다)**:
+```
 git status --short                              -> spec.md/plan.md/acceptance.md/design.md/research.md/progress.md 6개 신규(미커밋)
 uv run pytest server/tests -q                   -> 4716 passed · 7 skipped · 1 warning (코드 변경 0 — plan-phase만 진행됨)
 grep -oE 'REQ-VWX-[0-9]{3}' .moai/specs/SPEC-COPILOT-VWX-001/spec.md | sort -u | wc -l       -> 25
@@ -89,13 +99,17 @@ PRECHK와 달리 본 SPEC은 라이브 세션을 **0회**로 결정했다. 콘�
 ```yaml
 plan_status: audit-ready
 plan_complete_at: 2026-08-05
+plan_amended_at: 2026-08-05   # v0.1.4 — M0 실물 샘플 반영으로 REQ 25→28 · AC 26→29 (아래 amendment 블록 참조)
 spec_version: "0.1.0"
 base_sha: b1a630eb9380fd37436252e366289350bd22feff
 baseline_measured: "uv run pytest server/tests -q → 4716 passed, 7 skipped, 1 warning in 91.35s (0:01:31)"
 artifacts: [spec.md, plan.md, acceptance.md, design.md, research.md, progress.md]
 artifact_lines: "spec 184 · plan 253 · acceptance 405 · design 338 · research 206"
-requirements: 25          # REQ-VWX-001~025 — spec.md 정의 25 = 고유 토큰 25
-acceptance_criteria: 26   # AC-VWX-001~026 — acceptance.md 절 제목 26 = 고유 토큰 26
+#: 아래 requirements/acceptance_criteria/mutations_proposed는 plan-phase(v0.1.0) 착수 시점의
+#: 날짜 있는 스냅샷이다 — 덮어쓰지 않는다(리포 선례: SPEC-COPILOT-FXLIB-001/SCENE-001의
+#: plan_amended_at 패턴). run-phase에서 늘어난 실제 수치는 amendment 블록(§E.2 M0 절 참조)을 본다.
+requirements: 25          # REQ-VWX-001~025 — spec.md 정의 25 = 고유 토큰 25 (v0.1.0 시점, 이후 v0.1.4에서 28로 증가 — amendment 블록 참조)
+acceptance_criteria: 26   # AC-VWX-001~026 — acceptance.md 절 제목 26 = 고유 토큰 26 (v0.1.0 시점, 이후 v0.1.4에서 29로 증가 — amendment 블록 참조)
 milestones: 9             # M0~M8. M0·M8만 cycle_type=none (코드 변경 0)
 assumptions_open: 3       # ASSUMPTION-68~70
 decisions_closed: 7       # plan.md 결정 등록부 A~G
@@ -124,6 +138,18 @@ known_gaps:
   - "plan-audit 1회차 PASS(0.92) — minor 지적 10건 잔존(§E.1a), P0/P1 0건이라 run-phase 착수를 막지 않는다."
 next: "Implementation Kickoff Approval(실물 Vectorworks export 샘플 제공 + openpyxl 의존성 승인, 2건) 확보 후 /moai run SPEC-COPILOT-VWX-001."
 ```
+
+### plan_amended_at 2026-08-05 (v0.1.4 — M0 실물 샘플 반영으로 REQ/AC 증가)
+
+M0 실물 컬럼 계약 검증(§E.2 "M0 실물 컬럼 계약 검증" 절)이 ASSUMPTION-68을 NEGATIVE로 닫으며
+`fixture_name`·`gdtf_fixture` 정규 필드 승격, 주소 3중 표현 교차검증, 설계 측 구간 겹침 판정
+3개 기능을 추가로 요구했다 — 계획 시점(v0.1.0)에는 예견되지 않았던 실물 검증 결과다.
+
+- `requirements: 25 → 28` (REQ-VWX-026~028 신설 — 위 `requirements:` 필드는 v0.1.0 스냅샷 그대로 보존)
+- `acceptance_criteria: 26 → 29` (AC-VWX-027~029 신설 — 위 `acceptance_criteria:` 필드도 v0.1.0 스냅샷 그대로 보존)
+- `mutations_proposed: 25` (v0.1.0 스냅샷) — v0.1.4에서 신규 기능당 뮤테이션이 추가됐으나 design.md는 개정하지 않았다(코드 변경 없이 뮤테이션 표만 갱신하는 것은 비례성 밖으로 판단, 회귀 테스트로 비공허성은 이미 증명됨).
+- 마일스톤·ASSUMPTION 수·라이브 세션 회계는 불변(M2/M3/M5에 각 AC 1건씩 추가됐을 뿐 마일스톤 자체는 늘지 않았다).
+- **정본은 `acceptance.md` §C.0/§C.0a·§F(Definition of Done)이며, 이 절의 25/26 숫자는 plan-phase 착수 시점 기록으로 고정된다** — 현재 값을 확인하려면 §0의 기계 확인 커맨드(현재 값 블록) 또는 `acceptance.md` §F를 본다.
 
 ## §E.1a Plan-audit 결과
 
@@ -603,6 +629,26 @@ known_gaps:
   - "research.md §3의 focus/frame_size/wattage/weight 언급과 ALIAS_TABLE(구현) 사이 문서-구현 드리프트를 발견해 research.md에 '정본은 구현' 한 줄로 정리했다 — 이 4개는 여전히 정규 필드가 아니다(extra 보존, 범위 밖 결정)."
 next: "경로 B 워크시트 export 또는 Absolute Address 단독 파일을 추가로 확보해 ASSUMPTION-69/70을 닫아야 M8 종단 검증을 시작할 수 있다. 그 전까지는 sync-phase로 진행하지 않는다(M8 BLOCKED가 SPEC 완결을 막는다)."
 ```
+
+### 카운트 드리프트 정리 (2026-08-05) — 살아있는 기준 vs 날짜 있는 기록 전수 스캔
+
+REQ가 25→28, AC가 26→29로 늘어난 뒤(v0.1.4), `acceptance.md` §F Definition of Done이 옛 숫자
+("AC-VWX-001~026 26건 전량 PASS", "REQ-VWX-001~025 25건 전량 커버")를 그대로 들고 있어 신규
+REQ-VWX-026~028·AC-VWX-027~029가 검증되지 않은 채로도 DoD를 통과할 수 있는 실질 결함이었다 —
+같은 문서 3행의 status 줄은 이미 "AC 29건 계획"으로 갱신돼 있어 **문서 내부 자기모순**이었다
+(코디네이터가 검증 중 발견). `acceptance.md` §F를 28 REQ/29 AC 기준으로 갱신했고, ASSUMPTION
+68~70 판정 확정 항목은 "M8이 실제로 닫혀야 참이 되는 조건"임을 명시해 지금은 미충족임을 분명히
+했다. `spec.md`·`plan.md`·`design.md`·`research.md`·`acceptance.md`·`progress.md` 6종 전수를
+`25건`/`26건`/`REQ 25`/`AC 26`/`25/25`/`26/26` 패턴으로 훑은 결과, 나머지 매치는 전부 **날짜가
+붙은 기록**이었다 — `spec.md`/`plan.md`/`acceptance.md`의 `v0.1.0 — 최초 작성` HISTORY·블록쿼트
+행, `progress.md`의 "Plan-phase log v0.1.0" 아티팩트 요약 표, `§E.1` yaml의 `requirements:`/
+`acceptance_criteria:` 필드(FXLIB-001·SCENE-001 선례를 따라 `plan_amended_at:` 개정 줄 + 별도
+amendment 서술 블록을 추가하고 원 필드는 보존), `§E.1a`의 1회차 감사 결과 서술(그 감사가 실제로
+v0.1.0 시점의 25/26을 대상으로 수행됐다는 사실 자체를 담고 있으므로 보존)이 그것이다 — 이들은
+"현재 값"을 주장하지 않고 "그 시점에 무엇이었는가"를 기록하므로 손대지 않았다. `progress.md` §0
+(상태 줄·읽는 순서 표·기계 확인 커맨드)만 다음 담당자가 실제로 참고할 **살아있는 안내**이므로
+현재 값(28/29)을 병기하도록 갱신했고, 기계 확인 커맨드 블록은 v0.1.0 시점 기록과 현재 재실행 시
+기대값 블록으로 분리했다.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
