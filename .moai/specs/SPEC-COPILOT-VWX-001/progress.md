@@ -300,6 +300,78 @@ uv run ruff format --check server/vwx server/tests/test_vwx_*.py → 14 files al
 PRESERVE diff 재확인: 위 M1~M7 블록의 동일 명령이 이번 라운드 커밋 이후에도 빈 출력이다(아래
 결함 2 잔존 교정 커밋 SHA까지 재실측 완료).
 
+### 거짓 안전 신호 3라운드째 교정 (2026-08-05, v0.1.3) — kind 열거가 새는 근본 원인을 불변식으로 닫음
+
+**정직한 기록: 2라운드째 교정도 미충족이었다.** `not_patch_source`/`worksheet_block_undetected`
+두 kind에만 걸린 방어는 **트리거를 kind 목록으로 열거**하는 방식이었다 — 그 목록에 없는 새 경로가
+생기면 반드시 다시 새는 구조였고, 실제로 코디네이터가 정확히 그 경로를 재현해 지적했다:
+
+```
+입력: Instrument Type,Universe,DMX Address,Position
+      Robin MMX Spot,1,1,FOH
+      Mac Aura,1,43,Truss 1
+```
+주소 열(`Universe`·`DMX Address`)이 존재해 **판독 자체는 성공**한다(`read_failures = []`). 하지만
+`Unit Number`·`Channel` 컬럼이 아예 없어 전 행이 `unit_number`·`channel` 둘 다 공란으로 조인
+불가 판정을 받고(`join_key_conflicts` 2건), `designed_rig.fixture_count`가 0으로 떨어진다.
+2라운드째 방어는 `read_failures`만 검사했으므로 이 경로를 통과시켜 `diffs.performed: true` +
+"차이 없음"을 그대로 냈다 — 직전 교정과 **정확히 같은 종류의 거짓 안전 신호**가 트리거만 바뀌어
+재발한 것이다.
+
+**근본 교정 — 트리거 열거를 불변식으로 대체.** `server/vwx/report.py`:
+- `comparison_performed()`를 재정의 — 더 이상 `read_failures`의 kind를 검사하지 않고, **불변식
+  하나**로 판정한다: `len(self.diff.designed_rig.fixtures) > 0`. 원인이 판독 실패든 조인키
+  충돌이든 그 밖의 무엇이든, 비교할 설계 픽스처가 0대이면 대조는 성립하지 않는다 — 결과로
+  판정하므로 새 경로가 추가돼도 자동으로 커버된다.
+- `_no_fixtures_reason()`(신설) — 픽스처 0대의 **실제 원인**을 우선순위대로 지목한다: ①
+  `not_patch_source`/`worksheet_block_undetected`(기존 사유 문구 그대로 유지 — 회귀 테스트가
+  검사) → ② 그 밖의 판독 실패(건수 기반 문구) → ③ `join_key_conflicts`(신규 — 충돌 상세를
+  최대 3건까지 나열) → ④ 그 무엇도 해당하지 않는 방어적 폴백 문구(이 분기가 실제로 도달하면
+  아직 발견되지 않은 새 원인이 있다는 신호로 남겨둔다).
+- `_no_fixtures_summary_lead()`(신설) — `summary_ko`의 첫 문장을 원인 종류에 맞게 감싼다.
+  구조적 판독 실패는 "패치 출처로 성립하지 않는다 — {사유}", 그 밖은 `_no_fixtures_reason()`이
+  이미 완결된 문장이므로 그대로 쓴다.
+- `_diffs_payload()`는 변경 없음(이미 `comparison_performed()`를 소비하도록 2라운드째 설계돼
+  있었다 — 이번 교정은 그 판정 함수의 **내부 로직만** 재설계했다).
+- 신규 어휘 없음 — `join_key_conflicts`의 `.detail`은 이미 `rig.py`가 만드는 필드를 그대로
+  읽었을 뿐이다. `server/prechk/**`는 이번에도 완전 비접촉.
+
+**SPEC 아티팩트 동기화 (요구사항 4)**: `spec.md` REQ-VWX-023을 "픽스처 0대 = 미수행" **불변식**
+형태로 재정의(v0.1.3), 기존 "read_failure 일 때"로 좁게 읽히던 표현을 제거. `acceptance.md`
+AC-VWX-022③·AC-VWX-023③을 동일하게 갱신 — 트리거를 kind 목록으로 서술하지 않고 불변식으로
+서술한다. HISTORY에 v0.1.3 행 추가. REQ/AC 개수는 불변(기존 항목의 하위 기대 결과만 갱신).
+
+**회귀 테스트 (`server/tests/test_vwx_report.py::TestZeroFixturesInvariantCoversNonReadFailureTriggers`,
+신설 3건)**:
+- `test_join_key_conflict_with_no_read_failures_is_still_not_performed` — 코디네이터 재현 입력을
+  정확히 재구성(`read_failures=()`이면서 `join_key_conflicts` 2건). `performed: false` ·
+  "차이 없음" 부재 · `reason`/`summary_ko` 양쪽에 "조인 키 충돌"이 등장함을 assert. 비공허성:
+  재구성한 레코드가 실제로 `join_key_conflicts`를 만듦을 먼저 확인.
+- `test_read_failure_paths_still_covered_by_the_invariant` — 기존 두 read_failure 경로(1·2라운드째
+  방어 대상)가 불변식 전환 이후에도 여전히 미수행으로 판정됨을 회귀 확인.
+- `test_normal_comparison_control_group_still_reports_no_difference` — **비공허성 대조군**: 설계
+  픽스처 ≥1이고 실제로 차이가 없으면 `performed: true` + "차이 없음"이 **여전히** 나온다. 이
+  대조군이 없으면 불변식이 정상 경로까지 삼켜버린 회귀를 못 잡는다(요구사항 3 명시 사항).
+
+**재검증(오케스트레이터 직접 실측)**:
+```
+uv run pytest server/tests -q → 4818 passed, 7 skipped, 1 warning in 92.01s
+```
+이번 라운드 착수 baseline `4812 passed, 7 skipped` 대비 **+6**(2라운드째 신규 3건 + 이번 라운드
+신규 3건, 누적), 회귀 0건.
+```
+uv run ruff check server/vwx server/tests/test_vwx_*.py → All checks passed!
+uv run ruff format --check server/vwx server/tests/test_vwx_*.py → 14 files already formatted
+git diff --stat 2bc95cf..HEAD -- console/lua/ server/safety/ server/prechk/{__init__,inventory,patch,report,footprint,macro,query,verdicts}.py server/paperwork/{data,render,output}.py server/looks/ → (완전 빈 출력, exit=0)
+```
+
+**교훈 (자기 자신에게 남기는 기록)**: 거짓 안전 신호 방어를 "어떤 kind가 있으면"으로 열거하면,
+그 목록 밖의 새 경로가 생길 때마다 같은 결함이 다른 얼굴로 재발한다. 이번처럼 **트리거를
+열거하지 말고 결과(픽스처 0대)로 판정**하면 새 경로가 추가돼도 자동으로 커버된다 — 다음에
+"이번엔 어떤 kind가 새로 새는가"를 또 찾지 않아도 되는 설계가 됐다(불변식이 다시 새려면
+`fixture_count > 0`인데도 대조가 성립하지 않는 경우가 있어야 하는데, 그런 경우는 정의상
+존재하지 않는다).
+
 ### M1~M7 구현 로그 (manager-develop 위임 완료, 오케스트레이터 직접 재검증 완료)
 
 **AC PASS/FAIL 매트릭스** (M0/M8 제외 24건 전량):
@@ -377,7 +449,7 @@ milestones_blocked_reason: "실물 Vectorworks export 샘플 미제공 — 사�
 acceptance_criteria_verified: 24   # AC-VWX-002~025 (M0=AC-VWX-001, M8=AC-VWX-026 제외)
 acceptance_criteria_blocked: 2     # AC-VWX-001 (M0), AC-VWX-026 (M8)
 defects_found_and_fixed: 2   # P0 결함 2건 — 실물 파일 투입(코디네이터 실측)으로 드러남
-defect2_correction_rounds: 2 # 1차 수정은 read_failures만 채워 미충족(summary_ko가 여전히 "차이 없음") — 2차 교정으로 종결, 회귀 테스트 +3건
+defect2_correction_rounds: 3 # 1차: read_failures만 채워 미충족(summary_ko "차이 없음" 잔존). 2차: summary_ko/diffs 수정했으나 kind 열거 방식이라 join_key_conflicts 경로에서 재발. 3차: kind 열거를 "픽스처 0대=미수행" 불변식으로 대체해 종결. 회귀 테스트 누적 +6건
 full_suite: "4812 passed, 7 skipped, 1 warning in 90.69s — this-round entry baseline 4801 passed 7 skipped, delta +11 fully explained (2 defect-fix regression test classes: 9 reader + 2 tool), 0 regressions"
 ruff: "All checks passed! (server/vwx/, server/tests/test_vwx_*.py, server/orchestrator/tools.py) — ruff format --check also clean"
 preserve_gate: "empty diff on all 8 server/prechk/ files (including verdicts.py) + console/lua/** + server/safety/** + server/paperwork/{data,render,output}.py + server/looks/** — reverified after the defect-fix commit"

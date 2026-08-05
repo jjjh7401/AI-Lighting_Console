@@ -32,11 +32,13 @@ from server.vwx.diff import (
 )
 from server.vwx.reader import READ_FAILURE_NOT_PATCH_SOURCE
 
-#: 판독이 애초에 패치 출처로 성립하지 않은 판독 실패 종류(REQ-VWX-003 대응).
-#: 이 종류가 read_failures에 등장하면 대조 자체를 "수행하지 않았다" —
-#: fixture_count 0 + diffs 전부 빈 배열은 "찾아봤는데 차이가 없다"로 읽히는
-#: 거짓 안전 신호이므로(결함 2 잔존 지적), summary_ko/diffs 양쪽에서 절대
-#: "차이 없음"으로 표현하지 않는다.
+#: 특정 판독 실패 kind — "찾아봤는데 없다"가 아니라 "패치 출처로 성립하지
+#: 않는다"는 더 구체적인 사유 문구를 낼 수 있는 두 경우(REQ-VWX-003 대응)만
+#: 특별 취급한다. **이 목록이 미수행 판정의 트리거는 아니다** — 아래
+#: :meth:`VwxReport.comparison_performed`가 실제 트리거(불변식)이고, 이
+#: 목록은 그 불변식이 참일 때 "왜"를 더 구체적으로 말하기 위한 사유 우선순위
+#: 표일 뿐이다(v0.1.3 — kind 열거로 트리거를 정의하던 방식이 join_key_conflicts
+#: 경로에서 샌 것을 계기로 재설계했다, `progress.md` §E.2 참조).
 _STRUCTURAL_REJECTION_KINDS = frozenset({READ_FAILURE_NOT_PATCH_SOURCE, WORKSHEET_BLOCK_UNDETECTED})
 
 
@@ -199,36 +201,88 @@ class VwxReport:
             for entry in self.diff.designed_rig.join_key_conflicts
         ]
 
-    def _rejection_reason(self) -> _ShapedReadFailure | None:
-        """대조 자체가 성립하지 않는 판독 실패가 있으면 그 항목을 돌려준다.
-
-        ``not_patch_source``(주소 열 없음) 또는 ``worksheet_block_undetected``
-        (데이터 블록 미탐)가 하나라도 있으면 이 판독으로는 애초에 도면
-        픽스처를 세울 수 없었다는 뜻이다 — 이후 "차이 없음"을 말하는 건
-        "찾아봤는데 없었다"로 오독되는 거짓 안전 신호다.
-        """
-        for failure in self.read_failures:
-            if failure.kind in _STRUCTURAL_REJECTION_KINDS:
-                return failure
-        return None
-
     def comparison_performed(self) -> bool:
-        """대조를 실제로 수행했는가 — :meth:`_rejection_reason`이 없을 때만 True."""
-        return self._rejection_reason() is None
+        """대조를 실제로 수행했는가 — **불변식**: 설계상 리그 픽스처가 0대이면 False.
+
+        v0.1.3 재설계 — 이전 버전은 ``read_failures``의 특정 kind(``not_
+        patch_source``/``worksheet_block_undetected``) 목록에 매칭될 때만
+        미수행으로 판정했다. 트리거를 kind로 나열하는 방식은 그 목록에 없는
+        새 경로(예: ``join_key_conflicts``로 전 행이 탈락해 ``read_failures``는
+        비어 있지만 ``fixture_count``는 0인 경우)에서 반드시 샌다 — 실제로
+        샜다(코디네이터 재현). 트리거를 열거하는 대신 **결과로 판정**한다:
+        비교할 설계 픽스처가 한 대도 없으면, 트리거가 무엇이든(판독 실패·
+        조인키 충돌·전 행 액세서리 필터링·빈 파일·그 밖의 무엇이든) 대조는
+        성립하지 않는다.
+        """
+        return len(self.diff.designed_rig.fixtures) > 0
+
+    def _no_fixtures_reason(self) -> str:
+        """설계 픽스처가 0대인 **실제 원인**을 우선순위대로 지목한다.
+
+        ``diffs.reason``에 실리는 값이다 — 결함 2 1차 교정 때부터 이 필드는
+        판독 실패의 **원문 사유**를 그대로 실었다(회귀 테스트가 정확한
+        문구를 검사한다). 이 값은 바뀌지 않는다; :meth:`summary_ko`가 문장
+        형태로 감쌀 때만 접두어를 붙인다.
+
+        여러 원인이 동시에 있을 수 있으므로(예: 판독 실패도 있고 조인키
+        충돌도 있는 경우) 가장 구체적인 단서부터 우선한다: ① 판독이 애초에
+        패치 출처로 성립하지 않은 두 종류 → ② 그 밖의 판독 실패 → ③ 조인키
+        충돌(오늘 새로 드러난 경로) → ④ 그 무엇도 해당하지 않는 구조화되지
+        않은 잔여 사례(방어적 폴백 — 이 분기가 실제로 도달하면 새 원인이
+        발견됐다는 신호다).
+        """
+        structural = next(
+            (
+                failure
+                for failure in self.read_failures
+                if failure.kind in _STRUCTURAL_REJECTION_KINDS
+            ),
+            None,
+        )
+        if structural is not None:
+            return structural.detail
+        if self.read_failures:
+            return f"판독 실패 {len(self.read_failures)}건으로 설계상 리그를 세우지 못했다"
+        join_conflicts = self.diff.designed_rig.join_key_conflicts
+        if join_conflicts:
+            details = " · ".join(entry.detail for entry in join_conflicts[:3])
+            more = f" 외 {len(join_conflicts) - 3}건" if len(join_conflicts) > 3 else ""
+            count = len(join_conflicts)
+            return f"조인 키 충돌 {count}건으로 설계상 리그를 세우지 못했다 — {details}{more}"
+        return "설계상 리그에 유효한 픽스처가 0대다 — 구조화된 원인이 식별되지 않았다"
+
+    def _no_fixtures_summary_lead(self) -> str:
+        """``summary_ko``의 첫 문장 — 원인 종류에 맞는 서술로 감싼다.
+
+        구조적 거부(``not_patch_source``/``worksheet_block_undetected``)는
+        "패치 출처로 성립하지 않는다 — {사유}" 형태를, 그 밖의 원인은
+        :meth:`_no_fixtures_reason`이 이미 완결된 문장이므로 그대로 쓴다.
+        """
+        structural = next(
+            (
+                failure
+                for failure in self.read_failures
+                if failure.kind in _STRUCTURAL_REJECTION_KINDS
+            ),
+            None,
+        )
+        if structural is not None:
+            return f"패치 출처로 성립하지 않는다 — {structural.detail}"
+        return self._no_fixtures_reason()
 
     def summary_ko(self) -> str:
-        rejection = self._rejection_reason()
-        if rejection is not None:
-            # 거부 사유로 문장을 시작한다 — "차이 없음"이라는 표현은 여기서
-            # 절대 등장하지 않는다(비협상). 미수행 판정·판독 실패 건수는
-            # 여전히 뒤에 덧붙여 정보를 잃지 않는다.
-            parts = [f"패치 출처로 성립하지 않는다 — {rejection.detail}", "대조를 수행하지 않았다"]
+        if not self.comparison_performed():
+            # 사유로 문장을 시작한다 — "차이 없음"이라는 표현은 여기서 절대
+            # 등장하지 않는다(비협상). 미수행 판정·판독 실패 건수는 여전히
+            # 뒤에 덧붙여 정보를 잃지 않는다.
+            parts = [self._no_fixtures_summary_lead(), "대조를 수행하지 않았다"]
             if self.diff.skipped_checks:
                 names = " · ".join(
                     skipped_check_kind_label(entry.kind) for entry in self.diff.skipped_checks
                 )
                 parts.append(f"미수행 판정: {names}")
-            parts.append(f"판독 실패 {len(self.read_failures)}건")
+            if self.read_failures:
+                parts.append(f"판독 실패 {len(self.read_failures)}건")
             return ". ".join(parts) + "."
 
         diffs = self._diffs()
@@ -253,14 +307,14 @@ class VwxReport:
         """대조가 성립하지 않으면 빈 배열 3종 대신 ``performed: False``를 낸다.
 
         빈 배열(``missing_in_console: []`` 등)은 "찾아봤는데 없다"로 읽힌다
-        — 대조 자체가 성립하지 않은 경우 이 세 키를 아예 생략하고
-        ``performed``/``reason``만 실어 구조적으로 미수행임을 드러낸다
-        (결함 2 잔존 지적 대응). 정상 대조에서는 기존 3키 + ``performed:
-        True``를 그대로 낸다 — 기존 호출자·테스트가 참조하는 형태를 보존.
+        — 대조 자체가 성립하지 않은 경우(:meth:`comparison_performed`가
+        False) 이 세 키를 아예 생략하고 ``performed``/``reason``만 실어
+        구조적으로 미수행임을 드러낸다. 정상 대조에서는 기존 3키 +
+        ``performed: True``를 그대로 낸다 — 기존 호출자·테스트가 참조하는
+        형태를 보존.
         """
-        rejection = self._rejection_reason()
-        if rejection is not None:
-            return {"performed": False, "reason": rejection.detail}
+        if not self.comparison_performed():
+            return {"performed": False, "reason": self._no_fixtures_reason()}
         return {"performed": True, **self._diffs()}
 
     def to_dict(self) -> dict:
