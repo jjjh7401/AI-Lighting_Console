@@ -2201,7 +2201,7 @@ def build_toolset(
                 list(read_result.records)
             )
             resolved_records, address_failures = resolve_vwx_addresses(column_records)
-            designed_rig = build_designed_rig(resolved_records)
+            designed_rig = build_designed_rig(resolved_records, candidate_count=len(column_records))
             diff = compare_vectorworks_rig(designed_rig, inventory)
             all_read_failures = (
                 *read_result.read_failures,

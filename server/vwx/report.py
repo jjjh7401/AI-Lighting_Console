@@ -43,6 +43,15 @@ from server.vwx.reader import READ_FAILURE_NOT_PATCH_SOURCE
 #: 경로에서 샌 것을 계기로 재설계했다, `progress.md` §E.2 참조).
 _STRUCTURAL_REJECTION_KINDS = frozenset({READ_FAILURE_NOT_PATCH_SOURCE, WORKSHEET_BLOCK_UNDETECTED})
 
+#: 결함 2(P1, v0.1.7) — 스코프 한정 리드 임계값. 후보 행의 이 비율 이상이
+#: 판독 실패로 탈락하면 ``summary_ko``는 "도면 픽스처 N개"보다 탈락 사실을
+#: 먼저 말한다. 30%는 "이 대조 결과가 원본 리그를 대표한다고 보기 어려운"
+#: 손실 규모의 보수적 하한이다 — 오탈자 한 줄 수준의 잡음(수 % 이내)과 실물
+#: 02 사례(16행 중 15행, 93.75%)처럼 리그 대부분이 무너진 경우를 확실히
+#: 가르는 값으로 골랐다. 임계 미만이어도(0건 초과) 스코프 한정 문구 자체는
+#: 여전히 붙는다 — 다만 문장 맨 앞이 아니라 뒤에 붙는다.
+_LARGE_DROP_LEAD_THRESHOLD = 0.3
+
 
 class _ShapedReadFailure(Protocol):
     """판독 단계 3종(reader/columns/address)이 공유하는 (row, kind, detail) 형태.
@@ -225,6 +234,23 @@ class VwxReport:
             for entry in self.diff.designed_rig.design_overlaps
         ]
 
+    def _fixtures(self) -> list[dict]:
+        """픽스처마다 주소 근거(``address_basis``)를 개별 표기한다(v0.1.7, 결함 1 P0
+        요건 b) — 리그 전체 등급(``designed_rig.address_basis``)과 별개로, 어느
+        픽스처가 역산 근거를 썼는지 숨기지 않는다."""
+        return [
+            {
+                "unit_number": fixture.unit_number,
+                "instrument_type": fixture.instrument_type,
+                "system": fixture.system,
+                "universe": fixture.universe,
+                "address": fixture.address,
+                "classification": fixture.classification,
+                "address_basis": fixture.address_basis,
+            }
+            for fixture in self.diff.designed_rig.fixtures
+        ]
+
     def comparison_performed(self) -> bool:
         """대조를 실제로 수행했는가 — **불변식**: 설계상 리그 픽스처가 0대이면 False.
 
@@ -333,6 +359,12 @@ class VwxReport:
         )
         return f"제외 {len(self.excluded_rows)}건({breakdown})"
 
+    def _drop_ratio(self) -> float:
+        rig = self.diff.designed_rig
+        if rig.candidate_row_count <= 0:
+            return 0.0
+        return rig.dropped_row_count / rig.candidate_row_count
+
     def _append_read_failure_and_excluded_parts(self, parts: list[str]) -> None:
         """``판독 실패``/``제외`` 두 사건을 절대 뭉뚱그리지 않고 각각 명시한다(결함 2, P1).
 
@@ -357,6 +389,8 @@ class VwxReport:
                     self._multi_system_reason(),
                     "콘솔 대조를 수행하지 않았다",
                 ]
+                if self.diff.designed_rig.address_basis_note:
+                    parts.append(self.diff.designed_rig.address_basis_note)
             else:
                 parts = [self._no_fixtures_summary_lead(), "대조를 수행하지 않았다"]
             if self.diff.skipped_checks:
@@ -365,10 +399,23 @@ class VwxReport:
                 )
                 parts.append(f"미수행 판정: {names}")
             self._append_read_failure_and_excluded_parts(parts)
+            if self.diff.designed_rig.scope_qualified:
+                parts.append(self.diff.designed_rig.scope_note)
             return ". ".join(parts) + "."
 
         diffs = self._diffs()
-        parts = [f"도면 픽스처 {len(self.diff.designed_rig.fixtures)}개"]
+        rig = self.diff.designed_rig
+        parts: list[str] = []
+        lead_with_drop = rig.scope_qualified and self._drop_ratio() >= _LARGE_DROP_LEAD_THRESHOLD
+        if lead_with_drop:
+            # 결함 2(P1) — 큰 탈락 비율에서는 "도면 픽스처 N개"보다 탈락 사실이
+            # 먼저 나와야 한다: 원본 대비 얼마나 못 읽었는지가 그 뒤에 나오는
+            # 수량/충돌 판정보다 더 중요한 정보다.
+            parts.append(rig.scope_note)
+        parts.append(f"도면 픽스처 {len(rig.fixtures)}개")
+        if rig.address_basis_note:
+            # 결함 1(P0) 요건 c — 리그 등급이 역산이면 전제 문구를 숨기지 않는다.
+            parts.append(rig.address_basis_note)
         any_diff = False
         for diff_kind, entries in diffs.items():
             if entries:
@@ -381,8 +428,11 @@ class VwxReport:
                 skipped_check_kind_label(entry.kind) for entry in self.diff.skipped_checks
             )
             parts.append(f"미수행 판정: {names}")
-        if self.read_failures:
-            parts.append(f"판독 실패 {len(self.read_failures)}건")
+        self._append_read_failure_and_excluded_parts(parts)
+        if rig.scope_qualified and not lead_with_drop:
+            # 임계 미만이지만 여전히 0건은 아니다 — 정보를 숨기지 않는다,
+            # 다만 문장 맨 앞을 차지할 정도는 아니므로 꼬리에 붙인다.
+            parts.append(rig.scope_note)
         return ". ".join(parts) + "."
 
     def _diffs_payload(self) -> dict:
@@ -410,6 +460,13 @@ class VwxReport:
                 "design_overlaps": self._design_overlaps(),
                 "footprint_data_present": designed.footprint_data_present,
                 "observed_systems": sorted(designed.observed_systems),
+                "address_basis": designed.address_basis,
+                "address_basis_note": designed.address_basis_note,
+                "scope_qualified": designed.scope_qualified,
+                "scope_note": designed.scope_note,
+                "candidate_row_count": designed.candidate_row_count,
+                "dropped_row_count": designed.dropped_row_count,
+                "fixtures": self._fixtures(),
             },
             "console_rig": {
                 # 재계산 없이 read_inventory/build_patch_sheet의 산출을 그대로

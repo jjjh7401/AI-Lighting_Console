@@ -9,7 +9,7 @@
 ### 한 문단
 
 **무엇**: Vectorworks Instrument Data(엑셀/CSV/tab-text)를 읽어 **설계상 리그(designed rig)** 모델을 만들고, 이미 라이브 검증된 `precheck_patch`(콘솔 실측)와 대조해 **"도면 vs 실제 콘솔 패치"** 차이 리포트를 낸다. `.moai/reports/ma3-copilot-overview.html` §7 P0 항목의 1단계만을 범위로 하며, 2단계(`AddFixtures` 자동 패치)와 3단계(MVR/GDTF)는 후속 SPEC으로 분리한다.
-**상태**: **plan-phase 아티팩트 6종 작성 완료. 미커밋 · 미감사.** REQ 25건 · AC 26건 · ASSUMPTION 3건(68~70) · 마일스톤 9개(M0~M8) · 라이브 세션 0회 · clarification 마커 0건. **(v0.1.0 시점 스냅샷. 현재 v0.1.6 기준 REQ 28건 · AC 29건 · run_status=partial-blocked — ASSUMPTION-69 NEGATIVE 확정·ASSUMPTION-70 PARTIAL 유지·M8 여전히 BLOCKED, 아래 §E.2 "실물 샘플 3종 투입 — 결함 1/2/3 수정" 절 참조.)**
+**상태**: **plan-phase 아티팩트 6종 작성 완료. 미커밋 · 미감사.** REQ 25건 · AC 26건 · ASSUMPTION 3건(68~70) · 마일스톤 9개(M0~M8) · 라이브 세션 0회 · clarification 마커 0건. **(v0.1.0 시점 스냅샷. 현재 v0.1.7 기준 REQ 28건 · AC 29건 · run_status=partial-blocked — ASSUMPTION-69 GO(선언된 전제 위에서 역산 지원)로 재판정·ASSUMPTION-70 PARTIAL 유지·M8 여전히 BLOCKED, 아래 §E.2 "02(절대주소 단독) 재설계" 절 참조.)**
 **열린 사용자 접점**: **2건** — ① 실물 Vectorworks export 샘플 제공(M0 선행조건, 컬럼 계약 동결의 유일한 전제) · ② 신규 의존성 `openpyxl` 채택 승인(`.xlsx` 경로 B 지원 여부, 미승인이어도 산출물은 성립).
 
 ### 읽는 순서
@@ -748,24 +748,65 @@ uv run ruff format --check server/vwx server/tests/test_vwx_multisystem_real_sam
 git diff --stat 2bc95cf..HEAD -- console/lua/ server/safety/ server/prechk/{__init__,inventory,patch,report,footprint,macro,query,verdicts}.py server/paperwork/{data,render,output}.py server/looks/ → (완전 빈 출력, exit=0)
 ```
 
+### 02(절대주소 단독) 재설계 — 거부 대신 근거 등급, 대량 탈락 스코프 한정 (2026-08-05, v0.1.7)
+
+**착수 baseline (오케스트레이터 직접 실측)**: `4884 passed, 7 skipped, 1 warning in 90.29s` — 코디네이터가 직접 실측한 baseline(`4884 passed / 7 skipped · ruff(server/vwx) clean · PRESERVE diff 0`)과 정확히 일치.
+
+**인정 재확인**: 코디네이터가 직전 라운드(v0.1.6)를 전수 재검증한 결과를 그대로 신뢰했다 — 01(멀티시스템 전체 리그, fixture_count 9, 멀티셀 8→1 산술, read_failures 0)·조인 충돌 0(액세서리 channel-collision 구멍 닫힘)·겹침 시스템 버킷팅 비공허 확인(같은 A/U1 겹침 1건, A/U1 vs B/U1 겹침 0건)·다중 시스템 사유 분리·03 판정 1건 통합, 전부 재작업 없이 그대로 둔다.
+
+**문제 1(P0) — 절대주소 단독 파일이 사실상 미지원이었다.** 02 실측: 유효 16행 중 15행 탈락, `fixture_count=1`(Titan Tube만 — Absolute Address=0인 미배정 sentinel만 추측 없이 해석 가능했고, 나머지 15행 전부 `absolute_address_premise_unverified`로 보류됐다). 코디네이터 지적: "의도는 옳지만 결과가 틀렸다" — 이 파일은 사용자가 실제로 요청해 받은 정상 export이고, VW 2019 이하의 기본 컬럼 구성이기도 하다. 리포 교리는 **날조 금지**이지 **파생 금지**가 아니다 — `server/prechk/patch.py`의 `OverlapBasis`(판정을 거부하는 대신 실제로 수행한 비교의 가장 약한 근거를 등급으로 선언)가 정확히 이 상황의 선례였다.
+
+**수정 (`server/vwx/address.py`)**: 절대주소 단독 분기(`classify_and_resolve` 최후 분기)에서 `contiguous_512_confirmed` 게이트를 제거했다 — 이제 항상 `universe = (abs-1)//512 + 1`, `address = (abs-1)%512 + 1`로 역산한다. 대신 새 축 `address_basis`(`ADDRESS_BASIS_DIRECT` / `ADDRESS_BASIS_ABS_CONFIRMED` / `ADDRESS_BASIS_ABS_BACK_CALCULATED`, 약한 순서)를 도입해 근거를 숨기지 않는다 — `contiguous_512_confirmed=False`(기본값, 대부분의 실사용 케이스)는 `absolute_back_calculated`(약함)로, 외부에서 명시적으로 참을 주입하면 `absolute_confirmed`(강함)로 등급을 매긴다. Universe+DMX Address 쌍/조합값 직접 경로는 `universe_address_direct`(가장 강함)다. `READ_FAILURE_ABS_UNVERIFIED` 상수는 실사용 경로가 없어졌지만(grep 대비) 보존만 해뒀다.
+
+**전파 (`server/vwx/rig.py`)**: `ResolvedRecord`·`DesignedFixture` 양쪽에 `address_basis` 필드를 추가해 대표 레코드의 근거를 그대로 물려받는다. `DesignedRig`에 리그 전체 등급(`address_basis` — 실제로 쓰인 근거 중 가장 약한 것, `OverlapBasis._BASIS_ORDER`와 동일한 "약한 순서" 규약)과 `address_basis_note`(등급이 `absolute_back_calculated`일 때만 채워지는 전제 문구, 코디네이터 지정 원문 그대로: "Universes pane이 기본 연속 512블록이라는 전제 위에서 역산했다. Start#/End#를 편집했거나 유니버스를 삭제해 구멍이 있으면 이 유니버스·주소는 틀린다.")를 신설했다. `report.py::to_dict()`가 `designed_rig.fixtures`(픽스처마다 `address_basis` 포함, 전에는 payload에 개별 픽스처 목록 자체가 없었다 — 신설)와 `designed_rig.address_basis`/`address_basis_note`를 노출하고, `summary_ko()`가 리그 등급이 역산이면 전제 문구를 함께 싣는다.
+
+**하드 거부는 좁혔다** — Universe/DMX Address 쌍과 Absolute Address가 **둘 다 있는데 어긋나는** 경우(기존 `address_triple_mismatch`, REQ-VWX-027)에만 역산을 금지하고 직접값을 쓴다. 이 경로는 무변경이다(회귀 테스트로 확인, `TestTripleMismatchStillRejectsDerivation`).
+
+**문제 2(P1) — 대량 탈락 후에도 확신에 찬 대조를 냈다.** 02 수정 전 출력: "도면 픽스처 1개. 수량 불일치 … 1건."(`diffs.performed = true`) — 16행 중 15행이 죽었는데 9대짜리 리그를 1대로 보고 콘솔과 비교해 "수량 불일치"를 단정했다. `fixture_count == 0` 불변식은 1이니까 걸리지 않았다 — 불변식에 동반 규칙이 없었다.
+
+**수정 (`server/vwx/rig.py`, `server/vwx/report.py`)**: `build_designed_rig`가 `candidate_count`(컬럼 해석을 통과한 후보 행 수) 선택 인자를 받아 `dropped_row_count = candidate_count - len(records)`, `scope_qualified = dropped_row_count > 0`, `scope_note`를 계산한다 — `server/prechk/patch.py`의 `scope_qualified`/`scope_note`/`SCOPE_QUALIFIER`("관측된 범위에서") 규약을 vwx 자체 구현으로 재현했다(PRESERVE 파일은 import하지 않는다). `server/orchestrator/tools.py`의 실제 파이프라인이 `candidate_count=len(column_records)`를 넘긴다 — `column_records`는 이미 집계행·비-DMX 액세서리 같은 의도적 제외(`excluded_rows`)를 걷어낸 뒤의 수이므로, 분모는 정확히 "읽으려 했으나 실패한 행"이다(문제 2 요건 c). `summary_ko()`는 탈락 비율(`dropped_row_count / candidate_row_count`)이 **30% 이상**이면 "도면 픽스처 N개"보다 스코프 한정 문구를 먼저 낸다 — 30%는 오탈자 한 줄 수준의 잡음(수 % 이내)과 리그 대부분이 무너진 경우(02의 원래 증상, 93.75%)를 확실히 가르는 값으로 골랐다(코드 주석에 근거 명시). 임계 미만이지만 0건은 아닌 경우 문구는 여전히 붙되 꼬리에 붙는다 — 정보를 숨기지 않되 맨 앞을 차지하지는 않는다. 탈락 0건이면 스코프 한정 자체가 붙지 않는다(01로 확인).
+
+**부수 발견**: performed=True 분기(정상 대조 경로)가 `excluded_rows` 구별(직전 라운드 결함 2 수정)을 전혀 반영하지 않고 있었다 — performed=False 분기만 `_append_read_failure_and_excluded_parts`를 썼다. 이번에 정상 대조 경로도 같은 헬퍼를 쓰도록 통일했다(스코프 한정 로직을 추가하며 같은 메서드를 다시 여는 김에 정정 — 별도 드라이브바이 아님).
+
+**02가 이제 9대로 읽힌다 — 01과 정확히 같은 리그.** 코디네이터가 직접 검산한 5개 좌표(A/abs1→u1a1, A/abs45→u1a45, A/abs513→u2a1, A/abs642→u2a130, B/abs1→u1a1)를 포함해 미패치(주소 0) 이외의 전 픽스처가 01과 동일한 (system, universe, address)로 수렴함을 회귀 테스트로 확인했다(`test_02_and_01_derive_the_same_universe_address_pairs_per_system`). 02의 리그 전체 근거는 `absolute_back_calculated` + 전제 문구, 01은 `universe_address_direct` + 빈 문구(비공허성 대조군).
+
+**ASSUMPTION-69 판정 재작성**: v0.1.6의 "NEGATIVE(미해소)"는 관측(System 구분 불가)은 맞았지만, 그 결론("그래서 거부한다")이 실제로는 실사용 리그의 94%를 죽이는 구현과 결과적으로 어긋났다 — 코디네이터가 지적한 "판정문과 구현이 일치해야 한다"를 반영해 **GO(선언된 전제 위에서 역산 지원)**로 재작성했다. 관측 자체(System을 별도로 안 붙이면 절대주소만으로 원리적 구분 불가)는 그대로 유지되지만, 결론이 "그래서 System을 근거 축과 별개로 보존해 역산을 지원한다"로 바뀌었다 — 결함 1(P0, v0.1.6)이 도입한 `(system, universe, address)` 아이덴티티 확장이 정확히 그 보존 메커니즘이었다는 것도 이번에 명확히 드러났다.
+
+**M8/ASSUMPTION-70 — 이 라운드가 손대지 않는다(코디네이터 지시).** 제목행 선행형 실물 워크시트 그리드(`path_kind=B`)가 여전히 없다는 기록은 정확하며, 이 라운드는 그 갭을 메우지 않았다. M8은 여전히 BLOCKED, ASSUMPTION-70은 여전히 PARTIAL.
+
+**회귀 테스트**: `test_vwx_address.py::TestAbsoluteAddressConditionalInversion`(2건 재작성 — 거부 대신 근거 등급 역산을 검증, 신규 비공허성 대조군 1건 추가), `TestTripleRepresentationCrossCheck`(1건 재작성 — 절대주소 단독 경로가 이제 resolved임을 확인), `test_vwx_multisystem_real_samples.py`에 신규 클래스 4개(`TestPerSystemAbsoluteAddressAmbiguity` 4건 재작성/확장, `TestAddressBasisPayloadAndSummary` 4건 신설, `TestTripleMismatchStillRejectsDerivation` 1건 신설, `TestScopeQualificationOnMassDrop` 6건 신설) — 스위트 순증 14건. 모든 "0건"/"탈락 없음" 주장에 비공허성 대조군 동반(예: 01 스코프 한정 0건 주장은 합성 대량 탈락 케이스와 대조, 소액 탈락 케이스는 대량 탈락 케이스와 대조).
+
+**SPEC 아티팩트 동기화**: `spec.md` REQ-VWX-009 전면 재정의(전제 게이트 제거, 근거 등급 도입) + REQ-VWX-020 확장(스코프 한정), HISTORY v0.1.7 행 추가, ASSUMPTION-69 판정문 전면 재작성(GO). `acceptance.md` AC-VWX-010 전면 재정의 + AC-VWX-020 확장(⑤~⑦). REQ/AC 개수는 **불변**(28/29 — 전부 기존 항목 내용 확장, 신규 번호 없음).
+
+**재검증 (오케스트레이터 직접 실측)**:
+```
+uv run pytest server/tests -q → 4898 passed, 7 skipped, 1 warning in 90.39s
+```
+착수 baseline `4884 passed, 7 skipped` 대비 **+14**, 회귀 0건.
+```
+uv run ruff check server/vwx server/tests/test_vwx_multisystem_real_samples.py server/tests/test_vwx_address.py server/orchestrator/tools.py → All checks passed!
+uv run ruff format --check server/vwx server/tests/test_vwx_multisystem_real_samples.py server/tests/test_vwx_address.py → 9 files already formatted
+git diff --stat 2bc95cf..HEAD -- console/lua/ server/safety/ server/prechk/{__init__,inventory,patch,report,footprint,macro,query,verdicts}.py server/paperwork/{data,render,output}.py server/looks/ → (완전 빈 출력, exit=0)
+```
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
-run_status: partial-blocked   # M1~M7 completed + verified; M0=PARTIAL (4 real samples verified); M8 still BLOCKED (ASSUMPTION-70 partial)
+run_status: partial-blocked   # M1~M7 completed + verified; M0=PARTIAL (4 real samples, ASSUMPTION-69 now GO); M8 still BLOCKED (ASSUMPTION-70 partial)
 run_complete_at: 2026-08-05
-head_sha: 2c966fff890a28667a4672e4012fdfc079ac9fb0   # 실물 샘플 3종 투입 — 결함 1/2/3/4 수정(v0.1.6) 커밋(직접 실측)
+head_sha: pending-backfill-v017   # 02 재설계(결함 1 P0/2 P1) 커밋(v0.1.7, 백필 예정, 자기참조 불가 원칙)
 base_sha: 2bc95cf309457de5f6fc2b6757b3a8c7aa9f6ec7
 milestones_completed: [M1, M2, M3, M4, M5, M6, M7]
-milestones_partial: [M0]   # 실물 컬럼 계약 4건 검증 — ASSUMPTION-68/69 해소, 70 여전히 PARTIAL
+milestones_partial: [M0]   # 실물 컬럼 계약 4건 검증 — ASSUMPTION-68/69 해소(69는 v0.1.7에서 GO로 재판정), 70 여전히 PARTIAL
 milestones_blocked: [M8]
-milestones_blocked_reason: "ASSUMPTION-70(경로 B 진짜 path_kind=B 워크시트 그리드 — 제목행 선행형·헤더 반복형)만 남아 M8을 닫을 수 없다. ASSUMPTION-68/69는 v0.1.6에서 해소됐다 — 사유가 v0.1.4 시점보다 훨씬 좁아졌다."
+milestones_blocked_reason: "ASSUMPTION-70(경로 B 진짜 path_kind=B 워크시트 그리드 — 제목행 선행형·헤더 반복형)만 남아 M8을 닫을 수 없다. ASSUMPTION-68/69는 해소됐다(69는 v0.1.6 NEGATIVE에서 v0.1.7 GO로 판정문이 구현에 맞춰 재작성됨) — 사유가 v0.1.4 시점보다 훨씬 좁아졌다."
 acceptance_criteria_verified: 24   # AC-VWX-002~025 (M0=AC-VWX-001, M8=AC-VWX-026 제외)
-acceptance_criteria_verified_v016: 7   # AC-VWX-002④·008③④·011①~④·014④·016⑧·022④·023④ — v0.1.6 확장분, 전부 PASS
+acceptance_criteria_verified_v017: 11   # AC-VWX-010①~⑥(재정의) + AC-VWX-020⑤~⑦(신규) — v0.1.7 확장분, 전부 PASS
 acceptance_criteria_blocked: 2     # AC-VWX-001 (M0, PARTIAL로 격상됐으나 완전 GO는 아님) · AC-VWX-026 (M8)
-defects_found_and_fixed: 6   # 누적: v0.1.2 P0 2건 + v0.1.5 조인키스코프 1건 + v0.1.6 결함1(P0)/2(P1)/3(P1)/4(P1) 4건
-defect2_correction_rounds: 3 # v0.1.2~v0.1.3, 아래 v0.1.6 결함2는 별개 재발(집계행/비-DMX 오분류)
-m0_partial_round: 2   # v0.1.4(실물 1종) → v0.1.6(실물 4종 누적, ASSUMPTION-68/69 해소)
-full_suite: "4884 passed, 7 skipped, 1 warning in 91.28s — this-round entry baseline 4852 passed 7 skipped, delta +32, 0 regressions"
+defects_found_and_fixed: 8   # 누적: v0.1.2 P0 2건 + v0.1.5 조인키스코프 1건 + v0.1.6 결함1~4 4건 + v0.1.7 결함1(P0)/2(P1) 2건
+defect2_correction_rounds: 3 # v0.1.2~v0.1.3, v0.1.6/v0.1.7 결함2는 각각 별개 재발(집계행/비-DMX 오분류 → 대량 탈락 확신 대조)
+m0_partial_round: 3   # v0.1.4(실물 1종) → v0.1.6(실물 4종 누적, ASSUMPTION-68 해소) → v0.1.7(ASSUMPTION-69 GO 재판정, 02 전체 리그 복원)
+full_suite: "4898 passed, 7 skipped, 1 warning in 90.39s — this-round entry baseline 4884 passed 7 skipped, delta +14, 0 regressions"
 ruff: "All checks passed! (server/vwx/, server/tests/test_vwx_*.py) — ruff format --check also clean"
 preserve_gate: "empty diff on all 8 server/prechk/ files + console/lua/** + server/safety/** + server/paperwork/{data,render,output}.py + server/looks/** — reverified after this round's commit"
 tool_registration: "unchanged — no new tool sites added this round, existing dispatch-based verification still passes"
@@ -776,10 +817,11 @@ push_count: 0
 pr_count: 0
 main_touched: false
 known_gaps:
-  - "M8은 ASSUMPTION-70(진짜 path_kind=B 워크시트 그리드 — 제목행 선행형 또는 헤더 반복형) 실물 샘플이 최소 1건 더 필요하다. 지금까지 확보한 실물 경로 B 파일은 전부 헤더가 0번 행이라 path_kind=A로 판독된다."
+  - "M8은 ASSUMPTION-70(진짜 path_kind=B 워크시트 그리드 — 제목행 선행형 또는 헤더 반복형) 실물 샘플이 최소 1건 더 필요하다. 지금까지 확보한 실물 경로 B 파일은 전부 헤더가 0번 행이라 path_kind=A로 판독된다. 이 라운드(v0.1.7)는 이 갭을 손대지 않았다(코디네이터 지시)."
   - "합성 픽스처 synthetic_path_b_worksheet_grid.csv는 여전히 합성물이다 — path_kind=B 코드 경로가 실행됨은 증명하지만 실물 워크시트의 마커·서식을 대변하지 않는다(ASSUMPTION-70을 이걸로 GO 판정하면 안 됨)."
   - "M6 설계가 계획 대비 변경됐다 — server/prechk/verdicts.py를 건드리지 않고 server/vwx/report.py에 독립 어휘 레지스트리를 신설했다(spec.md §C·acceptance.md AC-VWX-023 갱신 완료, v0.1.6에서 skipped_check_kind 1건 추가 등록)."
   - "research.md §3의 focus/frame_size/wattage/weight 언급과 ALIAS_TABLE(구현) 사이 문서-구현 드리프트를 발견해 research.md에 '정본은 구현' 한 줄로 정리했다 — 이 4개는 여전히 정규 필드가 아니다(extra 보존, 범위 밖 결정)."
+  - "address_basis 근거 등급은 v0.1.7 신설이라 M0 실물 샘플(vectorworks_export_sample_with_data.csv, 직접값만 존재)에서는 한 번도 absolute_confirmed 등급(외부 확인 절차로 격상)을 실측하지 못했다 — 그 등급은 단위 테스트로만 비공허성 확보됨."
 next: "진짜 path_kind=B(제목행 선행형) 워크시트 그리드 실물 샘플을 추가로 확보해 ASSUMPTION-70을 닫아야 M8 종단 검증을 시작할 수 있다. 그 전까지는 sync-phase로 진행하지 않는다(M8 BLOCKED가 SPEC 완결을 막는다)."
 ```
 

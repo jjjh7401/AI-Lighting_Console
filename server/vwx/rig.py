@@ -12,9 +12,37 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from server.vwx.address import PATCHED, ResolvedRecord
+from server.vwx.address import (
+    ABSOLUTE_BACK_CALCULATED_PREMISE_NOTE,
+    ADDRESS_BASIS_ABS_BACK_CALCULATED,
+    ADDRESS_BASIS_ABS_CONFIRMED,
+    ADDRESS_BASIS_DIRECT,
+    PATCHED,
+    ResolvedRecord,
+)
 
 STATIC_ACCESSORY = "Static Accessory"
+
+#: 근거 등급, 약한 순서(v0.1.7 — ``OverlapBasis._BASIS_ORDER``와 동일 규약:
+#: 리그 전체 등급은 실제로 쓰인 근거 중 가장 약한 것이다).
+_ADDRESS_BASIS_ORDER = (
+    ADDRESS_BASIS_ABS_BACK_CALCULATED,
+    ADDRESS_BASIS_ABS_CONFIRMED,
+    ADDRESS_BASIS_DIRECT,
+)
+
+
+def _weakest_address_basis(grades: set[str]) -> str | None:
+    for grade in _ADDRESS_BASIS_ORDER:
+        if grade in grades:
+            return grade
+    return None
+
+
+#: 대조 결과에 붙는 스코프 한정 문구 접두어 — ``server/prechk/patch.py``의
+#: ``SCOPE_QUALIFIER``("관측된 범위에서") 규약을 본떴다(같은 파일은 PRESERVE라
+#: import하지 않고 vwx 자체로 소유한다).
+SCOPE_QUALIFIER = "관측된 범위에서"
 
 VW_PATCH_OVERLAP = "vw_patch_overlap"
 VW_IDENTICAL_PATCH = "vw_identical_patch"
@@ -63,6 +91,9 @@ class DesignedFixture:
     #: ``(system, universe, address)``가 진짜 주소 스코프다; System 컬럼이
     #: 없으면 단일 암묵 스코프(``None``)로 취급한다.
     system: str | None = None
+    #: 주소 근거 등급(``ADDRESS_BASIS_*``) — v0.1.7. 대표 레코드(멀티셀이면
+    #: Part Index 최솟값 행)의 근거를 그대로 물려받는다.
+    address_basis: str | None = None
     extra: dict[str, str] = field(default_factory=dict)
 
     @property
@@ -123,6 +154,26 @@ class DesignedRig:
     #: 별도로 미수행 처리한다; 설계 측 산출(픽스처 목록·수량·내부 주소
     #: 충돌·미패치 목록·멀티셀 폴딩)은 System 수와 무관하게 항상 낸다.
     observed_systems: frozenset[str] = field(default_factory=frozenset)
+    #: 리그 전체 주소 근거 등급(v0.1.7) — 실제로 쓰인 근거 중 가장 약한 것
+    #: (``OverlapBasis`` 규약). 픽스처가 하나도 없거나 전부 미패치(근거 없음)면
+    #: ``None``이다.
+    address_basis: str | None = None
+    #: 등급이 역산(``ADDRESS_BASIS_ABS_BACK_CALCULATED``)일 때만 채워지는 전제
+    #: 문구 — 그 밖에는 빈 문자열.
+    address_basis_note: str = ""
+    #: 스코프 한정(v0.1.7, 결함 2 P1) — 컬럼 해석까지 통과한 후보 행 중 주소
+    #: 해석 단계에서 탈락(진짜 판독 실패)한 행 수. 집계행·비-DMX 액세서리처럼
+    #: 컬럼 해석 이전에 의도적으로 제외된 행은 후보에 애초에 포함되지 않으므로
+    #: 여기 세지 않는다(``candidate_count``가 이미 그 배제를 반영해 들어온다).
+    dropped_row_count: int = 0
+    #: 대조에 실제로 쓰인 후보 행 수(= 컬럼 해석을 통과한 행 수). 스코프 한정
+    #: 비율 계산의 분모.
+    candidate_row_count: int = 0
+    #: ``dropped_row_count > 0``이면 True — 대조 결과가 관측된 범위로 한정된다
+    #: (``server/prechk/patch.py``의 ``scope_qualified`` 규약).
+    scope_qualified: bool = False
+    #: 사람이 읽을 수 있는 스코프 한정 문구 — ``scope_qualified``가 False면 빈 문자열.
+    scope_note: str = ""
 
 
 def _part_index_sort_key(record: ResolvedRecord) -> tuple[int, int]:
@@ -206,6 +257,7 @@ def _to_designed_fixture(
         gdtf_fixture=representative.fields.get("gdtf_fixture"),
         footprint=_parse_footprint(representative.fields.get("footprint")),
         system=_normalize_system(representative.fields.get("system")),
+        address_basis=representative.address_basis,
         extra=dict(representative.extra),
     )
 
@@ -384,8 +436,26 @@ def _fold_group(
     return _to_designed_fixture(representative, members), None
 
 
-def build_designed_rig(records: list[ResolvedRecord]) -> DesignedRig:
+def _scope_note(resolved_count: int, dropped_count: int, qualified: bool) -> str:
+    """``server/prechk/patch.py`` ``_scope_note``의 규약을 그대로 본뜬다(PRESERVE라
+    import는 하지 않고 vwx 자체 구현으로 소유한다)."""
+    if qualified:
+        return (
+            f"{SCOPE_QUALIFIER} 픽스처 {resolved_count}건 · "
+            f"판독 실패로 탈락 {dropped_count}건은 대조하지 않았다"
+        )
+    return f"픽스처 {resolved_count}건"
+
+
+def build_designed_rig(
+    records: list[ResolvedRecord], *, candidate_count: int | None = None
+) -> DesignedRig:
     """주소 해석까지 끝난 레코드 목록 -> 설계상 리그 모델(REQ-VWX-012~017).
+
+    ``candidate_count``는 컬럼 해석을 통과한 후보 행 수(v0.1.7, 결함 2 P1) —
+    ``records``(주소 해석까지 성공한 행)보다 크면 그 차이가 주소 해석 단계에서
+    탈락(진짜 판독 실패)한 행이다. ``None``이면(호출자가 후보 수를 모르면)
+    스코프 한정을 계산하지 않는다(기존 호출자·테스트와 하위호환).
 
     조인 키 우선순위(REQ-VWX-016 v0.1.5/v0.1.6 — 코디네이터 재현으로 드러난 결함 수정):
     ① ``channel`` — Vectorworks 전역 유일 디자이너 번호(비숫자 가능, 문자열로 취급).
@@ -448,6 +518,28 @@ def build_designed_rig(records: list[ResolvedRecord]) -> DesignedRig:
         if _normalize_system(record.fields.get("system")) is not None
     )
 
+    basis_grades = {
+        fixture.address_basis for fixture in fixtures if fixture.address_basis is not None
+    }
+    address_basis = _weakest_address_basis(basis_grades)
+    address_basis_note = (
+        ABSOLUTE_BACK_CALCULATED_PREMISE_NOTE
+        if address_basis == ADDRESS_BASIS_ABS_BACK_CALCULATED
+        else ""
+    )
+
+    resolved_count = len(records)
+    dropped_row_count = 0
+    candidate_row_count = 0
+    scope_qualified = False
+    scope_note = ""
+    if candidate_count is not None:
+        candidate_row_count = candidate_count
+        dropped_row_count = max(candidate_count - resolved_count, 0)
+        scope_qualified = dropped_row_count > 0
+        if scope_qualified:
+            scope_note = _scope_note(resolved_count, dropped_row_count, scope_qualified)
+
     return DesignedRig(
         fixtures=tuple(fixtures),
         join_key_conflicts=tuple(join_conflicts),
@@ -456,4 +548,10 @@ def build_designed_rig(records: list[ResolvedRecord]) -> DesignedRig:
         design_overlaps=tuple(design_overlaps),
         footprint_data_present=footprint_data_present,
         observed_systems=observed_systems,
+        address_basis=address_basis,
+        address_basis_note=address_basis_note,
+        dropped_row_count=dropped_row_count,
+        candidate_row_count=candidate_row_count,
+        scope_qualified=scope_qualified,
+        scope_note=scope_note,
     )

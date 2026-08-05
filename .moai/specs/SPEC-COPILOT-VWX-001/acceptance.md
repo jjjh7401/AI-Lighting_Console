@@ -1,6 +1,6 @@
 # SPEC-COPILOT-VWX-001 — 인수 기준 (acceptance)
 
-status: draft (v0.1.6, 2026-08-05) · Tier L · AC 29건 계획(불변). 본 문서는 spec.md의 요구를 관측 가능한 검증 기준으로 전개한다.
+status: draft (v0.1.7, 2026-08-05) · Tier L · AC 29건 계획(불변). 본 문서는 spec.md의 요구를 관측 가능한 검증 기준으로 전개한다.
 
 > **v0.1.0 — 최초 작성.** **AC 26건**(AC-VWX-001~026) · **REQ 25건**(REQ-VWX-001~025) 전량 커버. 라이브 AC는 **0건**이다 — `plan.md` §C가 라이브 세션 0회 결정의 근거를 적는다.
 >
@@ -189,16 +189,19 @@ The 컬럼 해석기 **shall** 별칭 테이블 밖 컬럼을 `extra`에 보존�
   - ① 값 `0`인 레코드와 공란인 레코드 둘 다 같은 분류를 받는다.
   - ② 이 분류가 대조 단계의 `missing_in_console`과 **다른 코드값**을 갖는다(비공허성 — 두 값이 서로 다름을 직접 assert).
 
-### AC-VWX-010 — `Absolute Address` 조건부 역산 (M3)
+### AC-VWX-010 — `Absolute Address` 근거 등급 역산 (M3) — (v0.1.7 재정의)
 
-**Where** Universes 창이 연속 기본 512블록이라는 전제가 검증 가능할 때만, the 주소 해석기 **shall** `abs=(u-1)*512+a` 역산을 수행한다.
+**Where** `Universe`/`DMX Address` 쌍도 조합값도 없고 `Absolute Address`만 있으면, the 주소 해석기 **shall** `abs=(u-1)*512+a` 역산을 항상 수행하고 그 근거를 등급(`address_basis`)으로 표기한다. **(v0.1.7 — 결함 1 P0 재정의, 02 재설계)** v0.1.6까지는 전제(연속 기본 512블록) 검증 불가 시 역산 자체를 거부해 절대주소 단독 실물 파일이 사실상 미지원이었다(16행 중 15행 탈락) — `server/prechk/patch.py`의 `OverlapBasis` 규약(거부 대신 가장 약한 근거로 등급 선언)을 따라 재정의했다.
 
 - 대상 요구사항: REQ-VWX-009
-- 검증 방법: `server/tests/test_vwx_address.py`
+- 검증 방법: `server/tests/test_vwx_address.py`, `server/tests/test_vwx_multisystem_real_samples.py`
 - 기대 결과:
-  - ① `Universe`/`DMX Address` 쌍 컬럼이 존재하면 그 쌍을 우선 사용하고 역산을 시도하지 않는다.
-  - ② `Absolute Address` 단일값만 있고 전제를 검증할 근거가 없으면 역산하지 않고 판독 실패로 분류한다(추측 0건).
-  - ③ `ASSUMPTION-69`가 GO로 판정된 경우에 한해 M0 샘플의 실측 역산 값이 `progress.md`에 재검증 기록으로 추가된다.
+  - ① `Universe`/`DMX Address` 쌍 컬럼이 존재하면 그 쌍을 우선 사용하고 역산을 시도하지 않는다 — 근거는 `universe_address_direct`(비공허성 — 실제로 이 값이 찍힘을 확인).
+  - ② **(v0.1.7)** `Absolute Address` 단일값만 있고 전제를 검증할 근거가 없어도 이제 역산을 **수행한다** — 근거는 `absolute_back_calculated`(비공허성 — 수정 전에는 판독 실패였다). 명시적으로 `contiguous_512_confirmed=True`가 주입되면 근거는 `absolute_confirmed`로 격상된다.
+  - ③ 리그 전체 근거 등급(`designed_rig.address_basis`)은 실제로 쓰인 근거 중 가장 약한 것이다 — 역산이 하나라도 섞이면 리그 등급은 `absolute_back_calculated`다.
+  - ④ 리그 등급이 `absolute_back_calculated`면 payload(`address_basis_note`)와 `summary_ko` 양쪽에 전제 문구("Universes pane이 기본 연속 512블록이라는 전제 위에서 역산했다…")가 실린다. 직접값만 쓰는 리그는 이 문구가 전혀 등장하지 않는다(비공허성 대조군).
+  - ⑤ 하드 거부는 `Universe`/`DMX Address` 쌍과 `Absolute Address`가 **둘 다 있는데 어긋나는** 경우(AC-VWX-028 `address_triple_mismatch`)에만 남는다 — 그때는 여전히 직접값을 그대로 쓰고 역산하지 않는다(회귀 확인, 기존 테스트 유지).
+  - ⑥ `ASSUMPTION-69`는 GO(선언된 전제 위에서 역산 지원)로 판정됐으며, 02 실물 샘플이 01과 동일한 9대 리그로 정확히 복원됨이 `progress.md`에 재검증 기록으로 추가됐다.
 
 ### AC-VWX-011 — 멀티시스템에서도 설계 측 해석은 차단하지 않는다 (M3) — (v0.1.6 재정의)
 
@@ -313,6 +316,9 @@ The 대조 리포트 **shall** `missing_in_console`·실제 `address_collision`�
   - ② 콘솔 실측이 이미 아는 주소 중복이 대조 리포트에도 반영된다(`precheck_patch`의 판정을 재사용, 재계산하지 않는다).
   - ③ 도면 수량과 콘솔 관측 수량이 타입별로 다른 경우 `quantity_mismatch`에 타입·도면수·콘솔수가 함께 열거된다.
   - ④ 3부류 전부가 항상 응답에 존재한다(비어 있어도 포함 — 비공허성).
+  - ⑤ **(v0.1.7 — 스코프 한정, 결함 2 P1)** 컬럼 해석을 통과한 후보 행 중 주소 해석 단계에서 진짜로 탈락한 행이 있으면 `designed_rig.scope_qualified`가 True이고, `summary_ko`가 그 탈락 사실을 담는다. 탈락 비율이 30% 이상이면 `summary_ko`는 "도면 픽스처 N개"보다 탈락 사실을 먼저 말한다(비공허성 — 실물 케이스에 준하는 대량 탈락 합성 케이스로 직접 확인).
+  - ⑥ 집계행·비-DMX 액세서리처럼 컬럼 해석 이전에 의도적으로 제외된 행은 탈락으로 세지 않는다(비공허성 — 그런 행만 있는 파일에서 `scope_qualified`가 여전히 False임을 확인).
+  - ⑦ 탈락 0건인 파일에서는 스코프 한정이 전혀 붙지 않는다(비공허성 대조군 — 실물 01 샘플로 확인).
 
 ### AC-VWX-021 — 옵션 구간 겹침 재사용 (M5)
 
