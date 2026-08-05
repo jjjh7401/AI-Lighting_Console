@@ -214,3 +214,94 @@ class TestStructuralRejectionNeverReadsAsACleanMatch:
             kind=READ_FAILURE_NOT_PATCH_SOURCE, detail="사유"
         )
         assert rejected_report.comparison_performed() is False
+
+
+class TestZeroFixturesInvariantCoversNonReadFailureTriggers:
+    """v0.1.3 재설계 — kind 열거가 아니라 "설계 픽스처 0대" 불변식으로 미수행을 판정한다.
+
+    1·2차 교정은 ``read_failures``의 특정 kind 목록에 매칭될 때만 미수행으로
+    판정했다 — 그 목록에 없는 경로(주소 열은 있어 판독은 성공했지만
+    ``unit_number``/``channel``이 전부 공란이라 ``join_key_conflicts``로 전
+    행이 탈락하는 경우, ``read_failures`` 자체는 빈 튜플이다)에서 정확히
+    같은 거짓 안전 신호가 다시 샜다(코디네이터 재현, 3라운드째). 이 클래스는
+    그 구체적 재현 입력과, 불변식이 read_failures 경로 두 가지도 여전히
+    커버함을 함께 검증한다.
+    """
+
+    def _blank_join_key_record(self, row_index: int, *, instrument_type: str = "Robin MMX Spot"):
+        # unit_number·channel 둘 다 공란 — build_designed_rig가 조인 불가로 분류한다.
+        return ResolvedRecord(
+            fields={"instrument_type": instrument_type},
+            extra={},
+            row_index=row_index,
+            classification=PATCHED,
+            universe=1,
+            address=row_index + 1,
+        )
+
+    def test_join_key_conflict_with_no_read_failures_is_still_not_performed(self):
+        """코디네이터 정확 재현 — 주소 열은 존재해 판독은 성공(read_failures=())하지만
+        조인키 전부 공란이라 fixture_count가 0으로 떨어지는 경우."""
+        records = [
+            self._blank_join_key_record(0),
+            self._blank_join_key_record(1, instrument_type="Mac Aura"),
+        ]
+        designed_rig = build_designed_rig(records)
+        assert designed_rig.join_key_conflicts  # 비공허성 — 재현 조건이 실제로 성립함을 먼저 확인.
+        assert len(designed_rig.fixtures) == 0
+
+        diff = compare(designed_rig, make_inventory([]))
+        report = build_vwx_report(diff, read_failures=())  # read_failures가 정말 비어 있다.
+
+        assert report.comparison_performed() is False
+        payload = report.to_dict()
+        assert payload["diffs"]["performed"] is False
+        assert "missing_in_console" not in payload["diffs"]
+
+        # 핵심 assert — "차이 없음"이 사라지고, 사유가 조인키 충돌을 지목한다.
+        summary = payload["summary_ko"]
+        assert "차이 없음" not in summary
+        assert "조인 키 충돌" in summary
+        assert "조인 키 충돌" in payload["diffs"]["reason"]
+
+    def test_read_failure_paths_still_covered_by_the_invariant(self):
+        """불변식 전환이 기존 두 read_failure 경로를 퇴행시키지 않았는지 재확인."""
+        from dataclasses import dataclass
+
+        @dataclass(frozen=True)
+        class _Failure:
+            row: int | None
+            kind: str
+            detail: str
+
+        for kind, detail in (
+            (
+                READ_FAILURE_NOT_PATCH_SOURCE,
+                "패치 출처 아님(주소 열 없음) — Instrument Summary류로 판단",
+            ),
+            (
+                READ_FAILURE_BLOCK_UNDETECTED,
+                "헤더 없음 — 데이터 블록 미탐(임의 추측으로 자르지 않는다)",
+            ),
+        ):
+            diff = compare(build_designed_rig([]), make_inventory([]))
+            report = build_vwx_report(
+                diff, read_failures=(_Failure(row=0, kind=kind, detail=detail),)
+            )
+            assert report.comparison_performed() is False, kind
+            assert "차이 없음" not in report.summary_ko(), kind
+
+    def test_normal_comparison_control_group_still_reports_no_difference(self):
+        """비공허성 대조군 — 설계 픽스처 ≥1이고 실제로 차이가 없으면 여전히
+        performed:true + "차이 없음"이 나온다(불변식이 정상 경로까지 삼키지
+        않았는지의 최종 확인)."""
+        console = make_inventory([(1, "1.001", "Robin MMX Spot", "Mode 1", "A")])
+        designed_rig = build_designed_rig([rr(0)])
+        diff = compare(designed_rig, console)
+        report = build_vwx_report(diff)
+
+        assert report.comparison_performed() is True
+        payload = report.to_dict()
+        assert payload["diffs"]["performed"] is True
+        assert payload["diffs"]["missing_in_console"] == []
+        assert "차이 없음" in payload["summary_ko"]
