@@ -30,6 +30,14 @@ from server.vwx.diff import (
     WORKSHEET_BLOCK_UNDETECTED,
     DiffResult,
 )
+from server.vwx.reader import READ_FAILURE_NOT_PATCH_SOURCE
+
+#: 판독이 애초에 패치 출처로 성립하지 않은 판독 실패 종류(REQ-VWX-003 대응).
+#: 이 종류가 read_failures에 등장하면 대조 자체를 "수행하지 않았다" —
+#: fixture_count 0 + diffs 전부 빈 배열은 "찾아봤는데 차이가 없다"로 읽히는
+#: 거짓 안전 신호이므로(결함 2 잔존 지적), summary_ko/diffs 양쪽에서 절대
+#: "차이 없음"으로 표현하지 않는다.
+_STRUCTURAL_REJECTION_KINDS = frozenset({READ_FAILURE_NOT_PATCH_SOURCE, WORKSHEET_BLOCK_UNDETECTED})
 
 
 class _ShapedReadFailure(Protocol):
@@ -191,7 +199,38 @@ class VwxReport:
             for entry in self.diff.designed_rig.join_key_conflicts
         ]
 
+    def _rejection_reason(self) -> _ShapedReadFailure | None:
+        """대조 자체가 성립하지 않는 판독 실패가 있으면 그 항목을 돌려준다.
+
+        ``not_patch_source``(주소 열 없음) 또는 ``worksheet_block_undetected``
+        (데이터 블록 미탐)가 하나라도 있으면 이 판독으로는 애초에 도면
+        픽스처를 세울 수 없었다는 뜻이다 — 이후 "차이 없음"을 말하는 건
+        "찾아봤는데 없었다"로 오독되는 거짓 안전 신호다.
+        """
+        for failure in self.read_failures:
+            if failure.kind in _STRUCTURAL_REJECTION_KINDS:
+                return failure
+        return None
+
+    def comparison_performed(self) -> bool:
+        """대조를 실제로 수행했는가 — :meth:`_rejection_reason`이 없을 때만 True."""
+        return self._rejection_reason() is None
+
     def summary_ko(self) -> str:
+        rejection = self._rejection_reason()
+        if rejection is not None:
+            # 거부 사유로 문장을 시작한다 — "차이 없음"이라는 표현은 여기서
+            # 절대 등장하지 않는다(비협상). 미수행 판정·판독 실패 건수는
+            # 여전히 뒤에 덧붙여 정보를 잃지 않는다.
+            parts = [f"패치 출처로 성립하지 않는다 — {rejection.detail}", "대조를 수행하지 않았다"]
+            if self.diff.skipped_checks:
+                names = " · ".join(
+                    skipped_check_kind_label(entry.kind) for entry in self.diff.skipped_checks
+                )
+                parts.append(f"미수행 판정: {names}")
+            parts.append(f"판독 실패 {len(self.read_failures)}건")
+            return ". ".join(parts) + "."
+
         diffs = self._diffs()
         parts = [f"도면 픽스처 {len(self.diff.designed_rig.fixtures)}개"]
         any_diff = False
@@ -210,6 +249,20 @@ class VwxReport:
             parts.append(f"판독 실패 {len(self.read_failures)}건")
         return ". ".join(parts) + "."
 
+    def _diffs_payload(self) -> dict:
+        """대조가 성립하지 않으면 빈 배열 3종 대신 ``performed: False``를 낸다.
+
+        빈 배열(``missing_in_console: []`` 등)은 "찾아봤는데 없다"로 읽힌다
+        — 대조 자체가 성립하지 않은 경우 이 세 키를 아예 생략하고
+        ``performed``/``reason``만 실어 구조적으로 미수행임을 드러낸다
+        (결함 2 잔존 지적 대응). 정상 대조에서는 기존 3키 + ``performed:
+        True``를 그대로 낸다 — 기존 호출자·테스트가 참조하는 형태를 보존.
+        """
+        rejection = self._rejection_reason()
+        if rejection is not None:
+            return {"performed": False, "reason": rejection.detail}
+        return {"performed": True, **self._diffs()}
+
     def to_dict(self) -> dict:
         designed = self.diff.designed_rig
         return {
@@ -224,7 +277,7 @@ class VwxReport:
                 # 참조한다(REQ-VWX-022) — Inventory.to_dict()가 그 산출이다.
                 "inventory": self.diff.console_inventory.to_dict(),
             },
-            "diffs": self._diffs(),
+            "diffs": self._diffs_payload(),
             "skipped_checks": self._skipped_checks(),
             "read_failures": self._read_failures(),
             "summary_ko": self.summary_ko(),

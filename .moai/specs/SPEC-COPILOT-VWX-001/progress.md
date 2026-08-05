@@ -243,6 +243,63 @@ git diff --stat 2bc95cf..HEAD -- console/lua/ server/safety/ \
 → (완전 빈 출력, exit=0)
 ```
 
+### 결함 2 잔존 교정 라운드 (2026-08-05, v0.1.2) — 1차 수정은 미충족이었다
+
+**정직한 기록**: 위 결함 2 수정(1차)은 `read_failures`를 채우는 데는 성공했지만 **핵심을 놓쳤다.**
+코디네이터가 직접 재현해 지적한 대로, 사용자·모델이 실제로 읽는 단 하나의 한국어 문장인
+`summary_ko`가 여전히 **"차이 없음"으로 시작**했다 — 재현 입력(별칭에 잡히는 헤더 + 주소 계열
+컬럼 0개: `Instrument Type,Position,Purpose,Unit Number`)에서 `summary_ko`가 `"도면 픽스처
+0개. 차이 없음. …"`을 냈다. `read_failures`에 `not_patch_source`가 있어도, 사람이 실제로 읽는
+문장은 "패치 출처 아님"이 아니라 "차이 없음"이었다 — 대조를 아예 수행하지 않았음에도 "찾아봤는데
+일치한다"로 오독될 수 있는 거짓 안전 신호였다. `diffs`도 여전히 빈 배열 3종(`missing_in_console:
+[]` 등)이라 "찾아봤는데 없다"로 읽혔다.
+
+**교정 (`server/vwx/report.py`)**:
+- `_rejection_reason()` / `comparison_performed()` 신설 — `read_failures`에 `not_patch_source`
+  또는 `worksheet_block_undetected`(결함 1 경로도 동일 규칙 적용, 요구사항 2)가 있으면 대조가
+  성립하지 않은 것으로 판정한다.
+- `summary_ko()`: 대조 미성립 시 **거부 사유로 시작**하고 **"차이 없음"이라는 문구를 절대 내지
+  않는다** — `"패치 출처로 성립하지 않는다 — {사유}. 대조를 수행하지 않았다. …"` 형태로 고정.
+- `_diffs_payload()`(신설, `to_dict()`가 소비): 대조 미성립 시 `diffs`가 3키 빈 배열 대신
+  `{"performed": false, "reason": …}`로 축소된다 — 3키 자체가 **생략**돼 "찾아봤는데 없다"와
+  구조적으로 구별된다. 정상 대조는 `{"performed": true, ...기존 3키}`로 확장(기존 호출자·테스트
+  호환 유지 — 3키 존재 자체는 안 바뀜, `performed` 키만 추가됨).
+- 신규 판정 어휘 없음 — `not_patch_source`/`worksheet_block_undetected`는 이미 `reader.py`/
+  `diff.py`에 존재하던 자유형 문자열이며 `VWX_CLOSED_VOCABULARIES`(diff_kind·skipped_check_kind만
+  검증) 대상이 아니므로 신규 등록이 불필요했다. `server/prechk/**`는 이번에도 완전 비접촉이다.
+
+**SPEC 아티팩트 동기화**: `spec.md` REQ-VWX-023 문구에 이 규칙을 명시하도록 v0.1.2로 갱신,
+HISTORY에 v0.1.2 행 추가. `acceptance.md`에 `AC-VWX-022 ③`(diffs.performed 구조)·
+`AC-VWX-023 ③`(summary_ko "차이 없음" 금지) 기대 결과를 각각 추가(REQ/AC 개수는 불변 — 기존 AC에
+하위 항목만 추가). — "코드만 고치고 SPEC을 방치하지 마라"는 지시에 따름.
+
+**회귀 테스트 (비공허성 필수 조건 충족)**:
+- `server/tests/test_vwx_report.py::TestStructuralRejectionNeverReadsAsACleanMatch` 신설 3건 —
+  `not_patch_source` 케이스 1건 · `worksheet_block_undetected` 케이스 1건(결함 1 경로도 동일 규칙,
+  요구사항 2) · `comparison_performed()` 플래그 일치 1건. 각각 "차이 없음" **부재**를 assert하며,
+  대조군인 기존 `test_a_fully_clean_comparison_reports_no_difference`(정상 케이스에서 "차이 없음"이
+  **실제로 등장**함을 확인)가 문자열 검사기가 죽어있지 않음을 함께 증명한다 — 요구사항 4의 "부재만
+  assert하면 공허해지기 쉽다" 지적에 대한 직접 대응.
+- `server/tests/test_vwx_tool.py::test_real_sample_is_not_reported_as_a_clean_zero_diff_match`
+  (기존 테스트 갱신) — drop.dk 실물 파일이 dispatch 종단까지 `diffs.performed: False` +
+  `summary_ko` 거부-사유-시작을 낸다.
+- 정상 케이스(주소 열 존재, 차이 있음/없음) 기존 테스트 전량(`test_vwx_report.py`·
+  `test_vwx_tool.py`의 `TestPayloadShape` 등)이 그대로 통과함을 재확인 — 이번 교정이 정상 경로를
+  건드리지 않았음을 증명한다.
+
+**재검증(오케스트레이터 직접 실측)**:
+```
+uv run pytest server/tests -q → 4815 passed, 7 skipped, 1 warning in 91.52s
+```
+이번 라운드 착수 baseline(코디네이터 재실측) `4812 passed, 7 skipped` 대비 **+3**(신규 회귀 테스트
+3건), 회귀 0건.
+```
+uv run ruff check server/vwx server/tests/test_vwx_*.py → All checks passed!
+uv run ruff format --check server/vwx server/tests/test_vwx_*.py → 14 files already formatted
+```
+PRESERVE diff 재확인: 위 M1~M7 블록의 동일 명령이 이번 라운드 커밋 이후에도 빈 출력이다(아래
+결함 2 잔존 교정 커밋 SHA까지 재실측 완료).
+
 ### M1~M7 구현 로그 (manager-develop 위임 완료, 오케스트레이터 직접 재검증 완료)
 
 **AC PASS/FAIL 매트릭스** (M0/M8 제외 24건 전량):
@@ -319,7 +376,8 @@ milestones_blocked: [M0, M8]
 milestones_blocked_reason: "실물 Vectorworks export 샘플 미제공 — 사용자가 보낸 파일 1건은 drop.dk 리깅 하중 CSV이며 Vectorworks export가 아니다(주소 계열 컬럼 0개) — 결함 회귀 픽스처로만 승격, M0 판정에는 못 쓴다"
 acceptance_criteria_verified: 24   # AC-VWX-002~025 (M0=AC-VWX-001, M8=AC-VWX-026 제외)
 acceptance_criteria_blocked: 2     # AC-VWX-001 (M0), AC-VWX-026 (M8)
-defects_found_and_fixed: 2   # P0 결함 2건 — 실물 파일 투입(코디네이터 실측)으로 드러남, 본 워커가 수정+회귀 테스트 11건 추가
+defects_found_and_fixed: 2   # P0 결함 2건 — 실물 파일 투입(코디네이터 실측)으로 드러남
+defect2_correction_rounds: 2 # 1차 수정은 read_failures만 채워 미충족(summary_ko가 여전히 "차이 없음") — 2차 교정으로 종결, 회귀 테스트 +3건
 full_suite: "4812 passed, 7 skipped, 1 warning in 90.69s — this-round entry baseline 4801 passed 7 skipped, delta +11 fully explained (2 defect-fix regression test classes: 9 reader + 2 tool), 0 regressions"
 ruff: "All checks passed! (server/vwx/, server/tests/test_vwx_*.py, server/orchestrator/tools.py) — ruff format --check also clean"
 preserve_gate: "empty diff on all 8 server/prechk/ files (including verdicts.py) + console/lua/** + server/safety/** + server/paperwork/{data,render,output}.py + server/looks/** — reverified after the defect-fix commit"

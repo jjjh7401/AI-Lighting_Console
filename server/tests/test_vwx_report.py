@@ -10,6 +10,7 @@ from pathlib import Path
 from server.prechk.inventory import COMPLETE, FixtureRecord, Inventory
 from server.vwx.address import PATCHED, ResolvedRecord
 from server.vwx.diff import DIFF_KIND, SKIPPED_CHECK_KIND_VWX, compare
+from server.vwx.reader import READ_FAILURE_BLOCK_UNDETECTED, READ_FAILURE_NOT_PATCH_SOURCE
 from server.vwx.report import (
     VWX_CLOSED_VOCABULARIES,
     UnknownVwxVerdict,
@@ -138,3 +139,78 @@ class TestReportSummaryKorean:
         diff = compare(designed_rig, console)
         report = build_vwx_report(diff)
         assert "차이 없음" in report.summary_ko()
+
+
+class TestStructuralRejectionNeverReadsAsACleanMatch:
+    """결함 2 잔존 교정 — 대조가 성립하지 않으면 "차이 없음"을 절대 말하지 않는다.
+
+    1차 수정은 ``read_failures``만 채웠을 뿐 ``summary_ko``가 여전히 "차이
+    없음"으로 시작해 거짓 안전 신호였다(코디네이터 재현). 이 클래스는 사용자가
+    실제로 읽는 ``summary_ko`` 단일 문장과 ``diffs`` 페이로드 형태를
+    검증한다.
+
+    비공허성: "차이 없음" 부재만 assert하면 문자열 검사기가 죽어 있어도
+    통과할 수 있다 — 그래서 정상 케이스(:meth:`test_a_fully_clean_comparison_
+    reports_no_difference`, 위)에서는 실제로 그 문구가 등장함을 이미
+    확인했다. 이 클래스는 그 대조군에 더해, 두 거부 경로(``not_patch_source``
+    ·``worksheet_block_undetected``) 각각에서 부재를 확인한다.
+    """
+
+    def _empty_designed_rig_report(self, *, kind: str, detail: str):
+        from dataclasses import dataclass
+
+        @dataclass(frozen=True)
+        class _Failure:
+            row: int | None
+            kind: str
+            detail: str
+
+        console = make_inventory([])
+        designed_rig = build_designed_rig([])  # 판독 실패로 레코드 0건인 상황을 대역.
+        diff = compare(designed_rig, console)
+        return build_vwx_report(diff, read_failures=(_Failure(row=0, kind=kind, detail=detail),))
+
+    def test_not_patch_source_rejection_never_says_no_difference(self):
+        report = self._empty_designed_rig_report(
+            kind=READ_FAILURE_NOT_PATCH_SOURCE,
+            detail="패치 출처 아님(주소 열 없음) — Instrument Summary류로 판단",
+        )
+        summary = report.summary_ko()
+        assert "차이 없음" not in summary
+        assert summary.startswith("패치 출처로 성립하지 않는다")
+        assert "대조를 수행하지 않았다" in summary
+
+        payload = report.to_dict()
+        assert payload["diffs"] == {
+            "performed": False,
+            "reason": "패치 출처 아님(주소 열 없음) — Instrument Summary류로 판단",
+        }
+
+    def test_worksheet_block_undetected_rejection_never_says_no_difference(self):
+        """결함 1 경로(CR 전용 등)도 동일 규칙을 따른다(요구사항 2)."""
+        report = self._empty_designed_rig_report(
+            kind=READ_FAILURE_BLOCK_UNDETECTED,
+            detail="헤더 없음 — 데이터 블록 미탐(임의 추측으로 자르지 않는다)",
+        )
+        summary = report.summary_ko()
+        assert "차이 없음" not in summary
+        assert summary.startswith("패치 출처로 성립하지 않는다")
+        assert "대조를 수행하지 않았다" in summary
+
+        payload = report.to_dict()
+        assert payload["diffs"]["performed"] is False
+        assert "missing_in_console" not in payload["diffs"]
+
+    def test_comparison_performed_flag_matches_rejection_presence(self):
+        clean_report = build_vwx_report(
+            compare(
+                build_designed_rig([rr(0)]),
+                make_inventory([(1, "1.001", "Robin MMX Spot", "Mode 1", "A")]),
+            )
+        )
+        assert clean_report.comparison_performed() is True
+
+        rejected_report = self._empty_designed_rig_report(
+            kind=READ_FAILURE_NOT_PATCH_SOURCE, detail="사유"
+        )
+        assert rejected_report.comparison_performed() is False
