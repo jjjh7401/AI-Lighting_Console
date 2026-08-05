@@ -1,4 +1,4 @@
-# server/vwx 픽스처 — 실물 음성 사례 1건 + 실물 양성 사례 1건
+# server/vwx 픽스처 — 실물 음성 사례 1건 + 실물 양성 사례 1건 + 합성 그리드 1건
 
 ## `drop_dk_rigging_not_a_vectorworks_export.csv` (음성 사례)
 
@@ -42,3 +42,23 @@
     파일 자체에는 없다 — 두 기능의 비공허성은 합성 픽스처로 별도 증명했다
     (`test_vwx_rig.py::TestDesignSideOverlapDetection`,
     `test_vwx_address.py::TestTripleRepresentationCrossCheck`).
+
+## `synthetic_path_b_worksheet_grid.csv` (⚠ 합성물 — 실물 워크시트 export 아님)
+
+- **이 파일은 손으로 만든 합성물이다. 실물 Vectorworks 워크시트 export 가 아니다.** 제목행
+  (`Instrument Data`) + DB 헤더행 + 4개 데이터행(포지션 2종 `FOH`/`Truss 1`, 각 포지션 안에서
+  `Unit Number` 1·2가 재사용됨 — v0.1.5 조인 키 스코프 수정의 재현 조건과 동일한 형태) + 소계행
+  (`Totals,4`, 헤더보다 적은 필드 수로 구조적 감지 대상)으로 구성했다. CRLF.
+- **목적**: 경로 B(워크시트 그리드) 판별 휴리스틱(`path_kind=B` 판정 · 헤더 행 구조적 식별 ·
+  소계행을 필드 수 불일치로 걸러내기)이 **최초로 실행**되도록 만든 입력이다 — M0가 확보한
+  실물 샘플(`vectorworks_export_sample_with_data.csv`)은 `path_kind=A`(flat 단일 테이블)라 이
+  경로를 한 번도 타지 않았다.
+- **결과(직접 실측)**: `path_kind=B` 정확히 판별 · 소계행 1건이 `worksheet_subtotal_row`로
+  구조적으로 배제(데이터 행에 섞이지 않음) · 데이터 4행 전량 판독 · 조인 키 우선순위(포지션별
+  스코프) 정상 동작(fixture_count 4, 충돌 0) — **전부 확인됨**.
+- **이 파일이 증명하지 않는 것**: 이건 합성물이므로 실물 워크시트 export의 실제 마커·서식·
+  인코딩 특이성을 대변하지 않는다. **`ASSUMPTION-70`(경로 B 데이터 블록의 구조적 식별 가능성)
+  은 여전히 미해소로 남는다** — 이 파일은 "휴리스틱 코드 경로가 실제로 실행되고 구조적으로
+  동작한다"는 것만 보이며, "실물 워크시트에서도 그렇다"는 것은 보이지 않는다. 실물로 오인해
+  ASSUMPTION-70을 GO로 닫으면 안 된다(`.moai/specs/SPEC-COPILOT-VWX-001/progress.md` §E.2 M0
+  절 참조).

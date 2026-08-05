@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-VWX-001
 title: "Vectorworks 연계 1단계 — Instrument Data CSV/엑셀 가져오기 + 설계상 리그 모델 + precheck_patch 대조 리포트"
-version: "0.1.4"
+version: "0.1.5"
 status: draft
 created: 2026-08-05
 updated: 2026-08-05
@@ -30,6 +30,7 @@ related_specs: [SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVERLAP-001]
 | 0.1.2 | 2026-08-05 | (run-phase worker) | **실물 파일 투입이 드러낸 P0 결함 2건 수정 + 잔존 지적 1건 교정.** 결함 1(CR 전용 줄바꿈 예외 탈출)·결함 2(패치 출처 아닌 파일에 "이상 없음" 오발) 최초 수정 후, 결함 2의 핵심(사용자가 읽는 `summary_ko` 문장이 여전히 "차이 없음"으로 시작하던 거짓 안전 신호)이 잔존한다는 재현이 들어와 교정했다. `REQ-VWX-023` 문구를 이 규칙을 명시하도록 갱신(§B), `AC-VWX-022`/`AC-VWX-023`에 대응 기대 결과 각 1건 추가(비공허성 포함). 코드 변경 상세는 `progress.md` §E.2 이번 라운드 기록. |
 | 0.1.3 | 2026-08-05 | (run-phase worker) | **거짓 안전 신호 3라운드째 — kind 열거를 불변식으로 대체.** v0.1.2의 미수행 판정이 `read_failures`의 특정 kind 2종(`not_patch_source`·`worksheet_block_undetected`)에만 걸려 있어, 그 목록에 없는 새 경로(주소 열은 있어 판독 자체는 성공하지만 `unit_number`/`channel`이 전부 공란이라 `join_key_conflicts`로 전 행이 탈락하는 경우 — `read_failures`는 빈 튜플)에서 정확히 같은 거짓 안전 신호가 다시 샜다(코디네이터 재현). `REQ-VWX-023`을 "설계상 리그 픽스처 0대 = 대조 미수행" **불변식**으로 재정의해 트리거 목록 열거 방식을 폐기했다 — 이제 원인이 무엇이든(판독 실패·조인키 충돌·그 밖의 무엇이든) 픽스처 0대이면 동일하게 처리된다. 기존 두 read_failure 경로의 사유 문구는 그대로 유지(회귀 테스트로 검증). |
 | 0.1.4 | 2026-08-05 | (run-phase worker) | **M0 실물 샘플 수령 — PARTIAL.** `vectorworks_export_sample_with_data.csv`(25컬럼×10행, UTF-8 BOM·CRLF·쉼표)로 ASSUMPTION-68을 NEGATIVE 판정, 별칭 테이블에 `fixture_name`·`gdtf_fixture` 2개 정규 필드 승격(REQ-VWX-026)으로 해소. 신규 REQ 3건(REQ-VWX-026~028) 추가 — 컬럼 승격, 주소 3중 표현 교차검증(REQ-VWX-027), 설계 측 구간 겹침 판정(REQ-VWX-028). AC 3건(AC-VWX-027~029) 대응 추가. ASSUMPTION-69/70은 이 샘플로 미해소(전자는 위험 완화, 후자는 전혀 미검증) — `progress.md` §E.2 M0 절이 덮는 범위·안 덮는 범위를 상세히 기록. M0=PARTIAL, M8=BLOCKED 유지, run_status=partial-blocked 유지. |
+| 0.1.5 | 2026-08-05 | (run-phase worker) | **조인 키 스코프 결함 수정 — 실사용 리그 대부분이 전멸하던 결함(코디네이터 재현).** `unit_number`를 전역 유일로 취급해 서로 다른 포지션의 동명 유닛(예: `Upstage Truss`의 `1`번과 `FOH`의 `1`번)을 같은 픽스처로 오판정·충돌 거부해 전 행이 탈락하던 결함을 고쳤다. M0 실물 샘플이 이를 못 잡은 이유는 그 샘플이 포지션 1종(`Upstage Truss`)뿐이라 우연히 통과했기 때문이다(Position이 유일했다는 것이 결함을 가린 것이지 해소한 것이 아니다). REQ-VWX-016/AC-VWX-016을 조인 키 우선순위(① `channel` 전역 유일 → ② `(position, unit_number)` 복합 키 → ③ 조인 불가)로 재정의. REQ/AC 개수는 불변(기존 항목의 내용·기대 결과만 갱신). 부수: 손으로 만든 합성 경로 B 워크시트 그리드로 그 휴리스틱 코드 경로가 최초로 실행됨을 확인(구조 탐지·소계 배제 정상 동작) — 합성물이므로 `ASSUMPTION-70`은 여전히 미해소. |
 
 ---
 
@@ -83,7 +84,7 @@ related_specs: [SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVERLAP-001]
 - **REQ-VWX-013** `[Event-driven]` **When** 동일 픽스처의 여러 셀/액세서리 행이 `Part Index` 컬럼으로 관측되면, the 시스템 **shall** 대조 전에 **논리적 픽스처 1개로 접는다** — 셀 N행 = 픽스처 1대는 정상이며 위양성 수량 불일치로 세지 않는다.
 - **REQ-VWX-014** `[Ubiquitous]` The 시스템 **shall** `Device Type` 컬럼으로 Light-class와 비-DMX Static Accessory를 대조 계수 이전에 **필터링**한다. Static Accessory는 콘솔 패치 대상이 아니다.
 - **REQ-VWX-015** `[Unwanted]` The 시스템 **shall not** Vectorworks 타입·모드 표시 문자열과 콘솔 타입·모드 표시 문자열을 **동등 비교(`==`)**로 판정한다. 별칭·퍼지 매칭을 쓰고, 해결되지 않으면 **미해결 표시**를 판정에 남긴다 — 둘의 명명 체계는 서로 다른 소스에서 온다.
-- **REQ-VWX-016** `[Event-driven]` **When** 파일 내부에서 조인 키(`unit_number` 또는 `channel`)가 중복이거나 공란인 레코드가 2개 이상이면, the 시스템 **shall** 자동 last-write-wins 병합을 **거부**하고 그 충돌을 판독 실패로 보고한다.
+- **REQ-VWX-016** `[Event-driven]` **When** 파일 내부에서 조인 키가 중복이거나 공란인 레코드가 2개 이상이면, the 시스템 **shall** 자동 last-write-wins 병합을 **거부**하고 그 충돌을 판독 실패로 보고한다. **(v0.1.5 — 조인 키 스코프 수정)** 조인 키 우선순위는 ① `channel`(Vectorworks **전역 유일** 디자이너 번호, 비숫자 가능 — 문자열로 다룬다) → ② `(position, unit_number)` **복합 키**(channel이 없거나 공란일 때만) → ③ 둘 다 없으면 조인 불가로 거부다. `unit_number`는 **포지션 안에서만 유일**하다(Vectorworks 문서·브리핑이 명시한 함정) — `unit_number`만으로 전역 조인하면 서로 다른 포지션의 동명 유닛이 충돌로 오판정돼 포지션이 2개 이상인 실사용 리그가 전멸한다(코디네이터 재현 결함). 충돌 판정은 그 스코프(channel 값 또는 (position, unit_number) 조합) 안에서만 성립하며, 충돌 보고 사유에 어느 스코프에서 중복인지 명시한다.
 - **REQ-VWX-017** `[Ubiquitous]` The 시스템 **shall** Vectorworks 자체 패치 충돌 분류(Patch overlap · Identical Patch · Patch conflict)를 **판정 실패로 만들지 않고 구조화된 부류로 통과**시킨다 — MA3의 `Multipatch` IDType과 동형으로 취급한다.
 
 ### B.5 precheck_patch 대조
