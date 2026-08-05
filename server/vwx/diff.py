@@ -29,6 +29,11 @@ WORKSHEET_BLOCK_UNDETECTED = "worksheet_block_undetected"
 #: 조인 이후에나 가능한 2차 작업)만은 이번 SPEC에서 의도적으로 미룬다 — 그 결정을
 #: 구조화된 미수행 판정으로 남긴다(범위 밖, `progress.md` §E.2 M0 절 참조).
 CONSOLE_FOOTPRINT_WIDTH_INJECTION_DEFERRED = "console_footprint_width_injection_deferred"
+#: 결함 1(P0, v0.1.6) — 멀티시스템(System 2개 이상 관측)에서는 콘솔에 System
+#: 개념이 없어 System->콘솔 유니버스 매핑을 추측할 수 없다. 설계 측 산출은
+#: 전부 정상 수행하되 콘솔 대조(missing_in_console/quantity_mismatch)만 이
+#: 사유로 미수행 처리한다 — 일반 판독 실패 사유와 절대 뭉뚱그리지 않는다.
+MULTI_SYSTEM_MAPPING_ABSENT = "multi_system_mapping_absent"
 
 SKIPPED_CHECK_KIND_VWX = frozenset(
     {
@@ -36,6 +41,7 @@ SKIPPED_CHECK_KIND_VWX = frozenset(
         FOOTPRINT_OVERLAP_DESCOPE,
         WORKSHEET_BLOCK_UNDETECTED,
         CONSOLE_FOOTPRINT_WIDTH_INJECTION_DEFERRED,
+        MULTI_SYSTEM_MAPPING_ABSENT,
     }
 )
 
@@ -114,39 +120,80 @@ def compare(
     *,
     footprint_policy: FootprintPolicy | None = None,
 ) -> DiffResult:
-    """설계상 리그 vs 콘솔 실측 대조(REQ-VWX-018~021)."""
+    """설계상 리그 vs 콘솔 실측 대조(REQ-VWX-018~021).
+
+    결함 1(P0, v0.1.6) — System이 2개 이상 관측되면 콘솔 대조(System->콘솔
+    유니버스 매핑 부재)만 미수행 처리한다. 설계 측 산출(``designed_rig``의
+    픽스처 목록·수량·내부 주소 충돌·미패치 목록·멀티셀 폴딩)은 이 함수
+    호출 이전에 이미 완결돼 있으므로 System 수와 무관하다 — 여기서 건너뛰는
+    것은 오직 콘솔과의 조인(missing_in_console/quantity_mismatch)뿐이다.
+    """
     console_rows = _console_rows(console_inventory)
-    console_by_address: dict[tuple[int, int], list[tuple[int, str | None]]] = {}
-    for slot, universe, address, fixture_type in console_rows:
-        if universe is None or address is None:
-            continue
-        console_by_address.setdefault((universe, address), []).append((slot, fixture_type))
+    multi_system = len(designed_rig.observed_systems) >= 2
 
     missing: list[MissingInConsoleEntry] = []
-    for fixture in designed_rig.fixtures:
-        # 미패치("설계됨·미배정")는 콘솔에 대응 주소가 없는 게 정상이다 —
-        # missing_in_console(콘솔 부재)과 혼동하지 않는다(REQ-VWX-008).
-        unresolved_address = fixture.universe is None or fixture.address is None
-        if fixture.classification != "patched" or unresolved_address:
-            continue
-        candidates = console_by_address.get((fixture.universe, fixture.address), [])
-        found = any(fuzzy_type_equal(fixture.match_type, ftype) for _slot, ftype in candidates)
-        if found:
-            continue
-        missing.append(
-            MissingInConsoleEntry(
-                unit_number=fixture.unit_number,
-                instrument_type=fixture.instrument_type,
-                universe=fixture.universe,
-                address=fixture.address,
-                detail=(
-                    f"도면 유니버스 {fixture.universe} 주소 {fixture.address} "
-                    f"'{fixture.instrument_type}'가 콘솔 실측에 없다"
-                ),
+    mismatches: list[QuantityMismatchEntry] = []
+    if not multi_system:
+        console_by_address: dict[tuple[int, int], list[tuple[int, str | None]]] = {}
+        for slot, universe, address, fixture_type in console_rows:
+            if universe is None or address is None:
+                continue
+            console_by_address.setdefault((universe, address), []).append((slot, fixture_type))
+
+        for fixture in designed_rig.fixtures:
+            # 미패치("설계됨·미배정")는 콘솔에 대응 주소가 없는 게 정상이다 —
+            # missing_in_console(콘솔 부재)과 혼동하지 않는다(REQ-VWX-008).
+            unresolved_address = fixture.universe is None or fixture.address is None
+            if fixture.classification != "patched" or unresolved_address:
+                continue
+            candidates = console_by_address.get((fixture.universe, fixture.address), [])
+            found = any(fuzzy_type_equal(fixture.match_type, ftype) for _slot, ftype in candidates)
+            if found:
+                continue
+            missing.append(
+                MissingInConsoleEntry(
+                    unit_number=fixture.unit_number,
+                    instrument_type=fixture.instrument_type,
+                    universe=fixture.universe,
+                    address=fixture.address,
+                    detail=(
+                        f"도면 유니버스 {fixture.universe} 주소 {fixture.address} "
+                        f"'{fixture.instrument_type}'가 콘솔 실측에 없다"
+                    ),
+                )
             )
-        )
+
+        # quantity_mismatch — 타입별 도면 수량 vs 콘솔 관측 수량.
+        designed_counts: dict[str, int] = {}
+        for fixture in designed_rig.fixtures:
+            itype = fixture.match_type
+            designed_counts[itype] = designed_counts.get(itype, 0) + 1
+        console_counts: dict[str, int] = {}
+        for _slot, _universe, _address, fixture_type in console_rows:
+            if fixture_type is None:
+                continue
+            console_counts[fixture_type] = console_counts.get(fixture_type, 0) + 1
+
+        for instrument_type in sorted(designed_counts):
+            designed_count = designed_counts[instrument_type]
+            matched_console_type = next(
+                (ctype for ctype in console_counts if fuzzy_type_equal(instrument_type, ctype)),
+                None,
+            )
+            console_count = (
+                console_counts.get(matched_console_type, 0) if matched_console_type else 0
+            )
+            if designed_count != console_count:
+                mismatches.append(
+                    QuantityMismatchEntry(
+                        instrument_type=instrument_type,
+                        designed_count=designed_count,
+                        console_count=console_count,
+                    )
+                )
 
     # address_collision — precheck_patch의 판정을 재사용한다(재계산 금지).
+    # 콘솔 실측 자체 내부 판정이라 System 관측 수와 무관하게 항상 수행한다.
     evaluation = evaluate_patch(console_inventory, footprint=footprint_policy)
     collisions = tuple(
         AddressCollisionEntry(
@@ -158,34 +205,18 @@ def compare(
         for c in evaluation.address_duplicates
     )
 
-    # quantity_mismatch — 타입별 도면 수량 vs 콘솔 관측 수량.
-    designed_counts: dict[str, int] = {}
-    for fixture in designed_rig.fixtures:
-        itype = fixture.match_type
-        designed_counts[itype] = designed_counts.get(itype, 0) + 1
-    console_counts: dict[str, int] = {}
-    for _slot, _universe, _address, fixture_type in console_rows:
-        if fixture_type is None:
-            continue
-        console_counts[fixture_type] = console_counts.get(fixture_type, 0) + 1
-
-    mismatches: list[QuantityMismatchEntry] = []
-    for instrument_type in sorted(designed_counts):
-        designed_count = designed_counts[instrument_type]
-        matched_console_type = next(
-            (ctype for ctype in console_counts if fuzzy_type_equal(instrument_type, ctype)), None
-        )
-        console_count = console_counts.get(matched_console_type, 0) if matched_console_type else 0
-        if designed_count != console_count:
-            mismatches.append(
-                QuantityMismatchEntry(
-                    instrument_type=instrument_type,
-                    designed_count=designed_count,
-                    console_count=console_count,
-                )
-            )
-
     skipped = [SkippedCheckEntry(kind=FID_CID_UNREACHABLE, reason=FID_CID_UNREACHABLE_REASON)]
+    if multi_system:
+        observed = " ".join(sorted(designed_rig.observed_systems))
+        skipped.append(
+            SkippedCheckEntry(
+                kind=MULTI_SYSTEM_MAPPING_ABSENT,
+                reason=(
+                    f"System {observed} 관측 — System→콘솔 유니버스 매핑이 없어 콘솔 대조를 "
+                    "수행하지 않았다. 매핑이 주어지면 수행 가능하다."
+                ),
+            )
+        )
     if footprint_policy is None or not footprint_policy.enabled:
         skipped.append(
             SkippedCheckEntry(

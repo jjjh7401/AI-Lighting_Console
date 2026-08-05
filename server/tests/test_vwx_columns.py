@@ -26,8 +26,8 @@ class TestAliasTableColumnMatching:
         reversed_order = [
             {"DMX Address": "1", "Universe": "1", "Instrument Type": "MMX"},
         ]
-        records_a, failures_a = resolve_columns(forward)
-        records_b, failures_b = resolve_columns(reversed_order)
+        records_a, failures_a, _excluded_a = resolve_columns(forward)
+        records_b, failures_b, _excluded_b = resolve_columns(reversed_order)
         assert not failures_a and not failures_b
         assert records_a[0].fields == records_b[0].fields
 
@@ -48,7 +48,7 @@ class TestExtraColumnPreservation:
                 "Custom Field 1": "hello",
             }
         ]
-        records, failures = resolve_columns(raw)
+        records, failures, _excluded = resolve_columns(raw)
         assert not failures
         assert records[0].extra["Custom Field 1"] == "hello"
 
@@ -63,7 +63,7 @@ class TestExtraColumnPreservation:
                 "Wattage": "575W",
             }
         ]
-        records, _failures = resolve_columns(raw)
+        records, _failures, _excluded = resolve_columns(raw)
         assert records[0].extra  # non-empty
         assert set(records[0].extra) == {"Weight", "Wattage"}
 
@@ -73,14 +73,14 @@ class TestMinimumValidRecord:
 
     def test_missing_instrument_type_is_a_structured_failure_not_an_exception(self):
         raw = [{"Universe": "1", "DMX Address": "1"}]
-        records, failures = resolve_columns(raw)  # must not raise
+        records, failures, _excluded = resolve_columns(raw)  # must not raise
         assert records == []
         assert len(failures) == 1
         assert failures[0].kind == READ_FAILURE_MIN_RECORD
 
     def test_missing_address_family_is_also_a_structured_failure(self):
         raw = [{"Instrument Type": "MMX", "Symbol Name": "MMX_SYM"}]
-        records, failures = resolve_columns(raw)
+        records, failures, _excluded = resolve_columns(raw)
         assert records == []
         assert len(failures) == 1
         assert failures[0].kind == READ_FAILURE_MIN_RECORD
@@ -88,7 +88,7 @@ class TestMinimumValidRecord:
     def test_a_normal_record_is_never_misclassified_as_a_failure(self):
         """비공허성 — 정상 레코드가 판독 실패로 오분류되지 않는다."""
         raw = [{"Instrument Type": "MMX", "Universe": "1", "DMX Address": "1"}]
-        records, failures = resolve_columns(raw)
+        records, failures, _excluded = resolve_columns(raw)
         assert not failures
         assert len(records) == 1
 
@@ -127,7 +127,7 @@ class TestFixtureNameAndGdtfFixtureAliases:
                 "Gobo": "",  # 범위 밖 필드 — extra로 남아야 한다.
             }
         ]
-        records, failures = resolve_columns(raw)
+        records, failures, _excluded = resolve_columns(raw)
         assert not failures
         assert len(records) == 1
         assert records[0].fields["fixture_name"] == "Encore 1"

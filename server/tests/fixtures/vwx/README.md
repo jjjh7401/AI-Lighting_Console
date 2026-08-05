@@ -1,4 +1,4 @@
-# server/vwx 픽스처 — 실물 음성 사례 1건 + 실물 양성 사례 1건 + 합성 그리드 1건
+# server/vwx 픽스처 — 실물 음성 1건 + 실물 양성 4건 + 합성 그리드 1건
 
 ## `drop_dk_rigging_not_a_vectorworks_export.csv` (음성 사례)
 
@@ -42,6 +42,57 @@
     파일 자체에는 없다 — 두 기능의 비공허성은 합성 픽스처로 별도 증명했다
     (`test_vwx_rig.py::TestDesignSideOverlapDetection`,
     `test_vwx_address.py::TestTripleRepresentationCrossCheck`).
+
+## `vectorworks_worksheet_multisystem_full.csv` (실물 — 9번째 라운드, 멀티시스템·멀티셀·집계행)
+
+- **REAL.** 코디네이터가 직접 준비한 실물 형식 파일(2026-08-05). UTF-8 BOM ·
+  CRLF · 쉼표 구분 · 29컬럼 × 20행(제목행 없이 DB 헤더 + 데이터 + 소계행이
+  섞인 경로 B 워크시트 형태지만 헤더가 0번 행이라 `path_kind=A`로 판독됨).
+- **이 파일이 덮는 것**:
+  - 결함 1(P0) 재현·회귀 — System 2개(A/B) 관측 시 예전에는 전 행이
+    `blocked`로 차단돼 `fixture_count=0`이었다. 이제는 `(system, universe,
+    address)` 스코프 확장으로 설계 측 산출이 전부 정상 수행되고, 콘솔
+    대조(`diffs`)만 별도로 미수행 처리된다(`skipped_checks`에 사유 명시).
+  - 결함 2(P1) 재현·회귀 — SUBTOTAL×2·TOTAL×1(집계행)과 Top Hat(비-DMX
+    액세서리)이 "판독 실패"가 아니라 `excluded_rows`로 별도 분리된다.
+  - 결함 4(P1) 재현·회귀 — Channel "1"을 공유하는 부모 픽스처(S4 26 1)와
+    액세서리 2개(Unit 2A/2B)가 channel 우선 조인으로 잘못 접히지 않는다
+    (액세서리는 `(position, unit_number)` 스코프로 라우팅).
+  - 멀티셀 폴딩(Part Index 1~8, ColorForce 72) → 정확히 1개 픽스처.
+  - DMX 소비 액세서리(Coloram 스크롤러, footprint 1)는 포함, 비-DMX
+    액세서리(Top Hat, footprint 0)는 배제 — 둘 다 `Device Type=Accessory`
+    리터럴을 공유해 문자열만으로는 구분 불가함을 실물로 증명.
+  - 미패치(Titan Tube, DMX Address 0) → `unpatched_designed` 3번째 분류.
+  - `(system, universe)` 스코프 도입 후 설계 측 구간 겹침이 정확히 0건
+    (System을 무시했다면 A/U1/1과 B/U1/1이 오탐 겹침이었을 것).
+- **이 파일이 덮지 못하는 것**: 콘솔 실측 대조 자체(멀티시스템이라 항상
+  미수행) — 단일 System 콘솔 조인은 기존 실물 샘플
+  (`vectorworks_export_sample_with_data.csv`)이 이미 덮는다.
+
+## `vectorworks_worksheet_absolute_address_only.csv` (실물 — 9번째 라운드, ASSUMPTION-69)
+
+- **REAL.** 위 파일과 같은 리그를 Universe/DMX Address 컬럼 없이 Absolute
+  Address만으로 내보낸 변형(27컬럼, CRLF). System별로 Absolute Address가
+  독립적으로 매겨진다는 사실(A/U1/abs=1과 B/U1/abs=1이 완전히 같은 값)을
+  실물로 증명한다.
+- **덮는 것**: `ASSUMPTION-69`(Absolute Address 단독 파일) — 이제 실물로
+  판정 가능. Universe/DMX Address 쌍이 전혀 없으므로 역산 경로가 실제
+  실행되고, `contiguous_512_confirmed=False`(기본값)에서는 여전히 추측하지
+  않고 `absolute_address_premise_unverified`로 보류함을 확인. System 문자가
+  `fields["system"]`에 별도로 보존되지 않으면 abs=1만으로는 A/U1과 B/U1을
+  원리적으로 구분할 수 없음(NEGATIVE 판정의 근거)도 함께 확인.
+
+## `vectorworks_export_instrument_data_no_header.txt` (실물 — 9번째 라운드, 결함 3)
+
+- **REAL.** 경로 A(`Export Instrument Data`) 진짜 헤더 없는 내보내기 — 탭
+  구분 · LF · BOM 없음 · 28필드 × 17행. "Export field names as first
+  record" 체크박스를 끈 상태의 실물 재현.
+- **덮는 것**: 결함 3(P1) — 헤더 없는 경로 A 파일이 예전에는 행마다
+  개별 `min_record_incomplete` 17건을 냈다. 이제는 파일 단위 판정 1건
+  (`headerless_path_a_export`) + 실행 가능한 해결책("Export field names as
+  first record"를 켜고 재수출)으로 압축된다. 헤더 유무 스니퍼 자체가
+  정확히 "헤더 없음"을 식별한 것은 REQ-VWX-001을 뒷받침하는 **긍정** 증거로
+  기록한다(`progress.md` §E.2 참조) — 실패가 아니다.
 
 ## `synthetic_path_b_worksheet_grid.csv` (⚠ 합성물 — 실물 워크시트 export 아님)
 

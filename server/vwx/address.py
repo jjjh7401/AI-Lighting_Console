@@ -100,19 +100,16 @@ def classify_and_resolve(
     """컬럼 해석된 레코드 하나의 정규화 주소 + 분류(REQ-VWX-008~010).
 
     ``system_letters``는 파일 전체에서 관측된 System(A-Z) 문자 집합이다 —
-    2개 이상이면 순수 ``Universe`` 해석을 모호로 차단한다(REQ-VWX-010).
+    v0.1.6부터 이 값이 2개 이상이어도 설계 측 주소 해석 자체는 더 이상
+    차단하지 않는다(결함 1, P0 — 실물 샘플 3종 재현). 주소 아이덴티티를
+    ``(system, universe, address)``로 확장해 System별로 스코프를 나누면
+    Universe 재사용은 더 이상 모호하지 않다 — 콘솔에는 System 개념이 없어
+    콘솔 대조(``diff.py``)만 별도로 미수행 처리한다(REQ-VWX-010 재해석).
     ``contiguous_512_confirmed``는 그 파일의 Universes 창이 연속 기본
     512블록이라는 전제가 외부에서 검증됐는지 여부다 — 기본값 False로,
     검증되지 않은 한 ``Absolute Address`` 역산을 절대 수행하지 않는다
     (추측 금지, REQ-VWX-009).
     """
-    if len(system_letters) >= 2:
-        return AddressOutcome(
-            kind=_KIND_BLOCKED,
-            reason_code=READ_FAILURE_MULTI_SYSTEM,
-            detail="멀티시스템 — Universe 컬럼만으로 구분 불가",
-        )
-
     universe_raw = fields.get("universe")
     dmx_raw = fields.get("address")
     combined_raw = fields.get("universe_address")

@@ -375,7 +375,7 @@ class TestRealWorldNonPatchSourceIsRejectedStructurally:
 
         data = _real_negative_sample_bytes()
         result = read(data)
-        column_records, column_failures = resolve_columns(list(result.records))
+        column_records, column_failures, _column_excluded = resolve_columns(list(result.records))
         resolved_records, address_failures = resolve_all(column_records)
         designed_rig = build_designed_rig(resolved_records)
 

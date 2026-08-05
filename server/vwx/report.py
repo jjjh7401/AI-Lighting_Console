@@ -27,6 +27,7 @@ from server.vwx.diff import (
     DIFF_KIND,
     FID_CID_UNREACHABLE,
     FOOTPRINT_OVERLAP_DESCOPE,
+    MULTI_SYSTEM_MAPPING_ABSENT,
     SKIPPED_CHECK_KIND_VWX,
     WORKSHEET_BLOCK_UNDETECTED,
     DiffResult,
@@ -97,6 +98,9 @@ _SKIPPED_CHECK_KIND_LABELS = {
     CONSOLE_FOOTPRINT_WIDTH_INJECTION_DEFERRED: (
         "콘솔 측 구간 겹침 폭 주입 미수행 — 설계 측은 수행했으나 콘솔 SLOT 키 주입은 2차 작업"
     ),
+    MULTI_SYSTEM_MAPPING_ABSENT: (
+        "콘솔 대조 미수행 — System→콘솔 유니버스 매핑이 없다(설계 측 산출은 정상 수행됨)"
+    ),
 }
 
 #: 라벨 표 레지스트리 — 어휘와 키 집합이 정확히 일치함을 아래서 즉시 검증한다
@@ -147,6 +151,10 @@ class VwxReport:
 
     diff: DiffResult
     read_failures: tuple[_ShapedReadFailure, ...] = ()
+    #: 결함 2(P1) — 판독은 됐으나 의도적으로 배제된 행(집계행·비-DMX 액세서리).
+    #: ``read_failures``와 절대 섞지 않는다("판독 실패"와 "판독됐으나 제외"는
+    #: 다른 사건이다).
+    excluded_rows: tuple = ()
 
     def _diffs(self) -> dict[str, list[dict]]:
         return {
@@ -199,6 +207,12 @@ class VwxReport:
             for failure in self.read_failures
         ]
 
+    def _excluded_rows(self) -> list[dict]:
+        return [
+            {"row": entry.row, "kind": entry.kind, "detail": entry.detail}
+            for entry in self.excluded_rows
+        ]
+
     def _join_key_conflicts(self) -> list[dict]:
         return [
             {"key": entry.key, "detail": entry.detail, "rows": list(entry.rows)}
@@ -223,8 +237,33 @@ class VwxReport:
         비교할 설계 픽스처가 한 대도 없으면, 트리거가 무엇이든(판독 실패·
         조인키 충돌·전 행 액세서리 필터링·빈 파일·그 밖의 무엇이든) 대조는
         성립하지 않는다.
+
+        v0.1.6 추가 — 설계 픽스처가 1대 이상이어도, System이 2개 이상
+        관측되면(``observed_systems``) 콘솔 대조(``diffs``)는 여전히
+        미수행이다(결함 1, P0). 이 경우와 "픽스처 0대"는 서로 다른 원인이며
+        :meth:`_diffs_payload`/:meth:`summary_ko`가 사유 문구를 절대
+        뭉뚱그리지 않는다 — 전자는 :meth:`_multi_system_reason`, 후자는
+        :meth:`_no_fixtures_reason`만 쓴다.
         """
-        return len(self.diff.designed_rig.fixtures) > 0
+        return (
+            len(self.diff.designed_rig.fixtures) > 0
+            and len(self.diff.designed_rig.observed_systems) <= 1
+        )
+
+    def _multi_system_reason(self) -> str:
+        """멀티시스템으로 콘솔 대조만 미수행인 사유 — 일반 판독 실패와 구별되는 문구다."""
+        observed = " ".join(sorted(self.diff.designed_rig.observed_systems))
+        return (
+            f"System {observed} 관측 — System→콘솔 유니버스 매핑이 없어 콘솔 대조를 "
+            "수행하지 않았다. 매핑이 주어지면 수행 가능하다."
+        )
+
+    def _diffs_not_performed_reason(self) -> str:
+        """``diffs.reason``에 실릴 사유 — 픽스처 0대(:meth:`_no_fixtures_reason`)와
+        멀티시스템(:meth:`_multi_system_reason`)을 원인별로 분리해 돌려준다."""
+        if not self.diff.designed_rig.fixtures:
+            return self._no_fixtures_reason()
+        return self._multi_system_reason()
 
     def _no_fixtures_reason(self) -> str:
         """설계 픽스처가 0대인 **실제 원인**을 우선순위대로 지목한다.
@@ -280,19 +319,52 @@ class VwxReport:
             return f"패치 출처로 성립하지 않는다 — {structural.detail}"
         return self._no_fixtures_reason()
 
+    def _excluded_breakdown_ko(self) -> str:
+        """제외행 사유별 건수 — ``제외 4건(집계행 3 · 비DMX 액세서리 1)`` 형태(결함 2, P1)."""
+        counts: dict[str, int] = {}
+        for entry in self.excluded_rows:
+            counts[entry.kind] = counts.get(entry.kind, 0) + 1
+        labels = {
+            "aggregate_row": "집계행",
+            "non_dmx_accessory": "비DMX 액세서리",
+        }
+        breakdown = " · ".join(
+            f"{labels.get(kind, kind)} {count}" for kind, count in counts.items()
+        )
+        return f"제외 {len(self.excluded_rows)}건({breakdown})"
+
+    def _append_read_failure_and_excluded_parts(self, parts: list[str]) -> None:
+        """``판독 실패``/``제외`` 두 사건을 절대 뭉뚱그리지 않고 각각 명시한다(결함 2, P1).
+
+        제외행이 있으면 판독 실패가 0건이어도 "판독 실패 0건 · 제외 M건(...)"을
+        명시한다 — "이 파일은 판독 실패가 없는 깨끗한 파일"이라는 오해를 막는다.
+        제외행이 없으면 기존과 동일하게 판독 실패가 있을 때만 표기한다.
+        """
+        if self.excluded_rows:
+            parts.append(f"판독 실패 {len(self.read_failures)}건 · {self._excluded_breakdown_ko()}")
+        elif self.read_failures:
+            parts.append(f"판독 실패 {len(self.read_failures)}건")
+
     def summary_ko(self) -> str:
         if not self.comparison_performed():
             # 사유로 문장을 시작한다 — "차이 없음"이라는 표현은 여기서 절대
             # 등장하지 않는다(비협상). 미수행 판정·판독 실패 건수는 여전히
             # 뒤에 덧붙여 정보를 잃지 않는다.
-            parts = [self._no_fixtures_summary_lead(), "대조를 수행하지 않았다"]
+            if self.diff.designed_rig.fixtures:
+                # 멀티시스템 — 설계 측 산출은 정상이므로 픽스처 수를 먼저 밝힌다.
+                parts = [
+                    f"도면 픽스처 {len(self.diff.designed_rig.fixtures)}개",
+                    self._multi_system_reason(),
+                    "콘솔 대조를 수행하지 않았다",
+                ]
+            else:
+                parts = [self._no_fixtures_summary_lead(), "대조를 수행하지 않았다"]
             if self.diff.skipped_checks:
                 names = " · ".join(
                     skipped_check_kind_label(entry.kind) for entry in self.diff.skipped_checks
                 )
                 parts.append(f"미수행 판정: {names}")
-            if self.read_failures:
-                parts.append(f"판독 실패 {len(self.read_failures)}건")
+            self._append_read_failure_and_excluded_parts(parts)
             return ". ".join(parts) + "."
 
         diffs = self._diffs()
@@ -324,7 +396,7 @@ class VwxReport:
         형태를 보존.
         """
         if not self.comparison_performed():
-            return {"performed": False, "reason": self._no_fixtures_reason()}
+            return {"performed": False, "reason": self._diffs_not_performed_reason()}
         return {"performed": True, **self._diffs()}
 
     def to_dict(self) -> dict:
@@ -337,6 +409,7 @@ class VwxReport:
                 "vw_patch_conflicts": self._vw_patch_conflicts(),
                 "design_overlaps": self._design_overlaps(),
                 "footprint_data_present": designed.footprint_data_present,
+                "observed_systems": sorted(designed.observed_systems),
             },
             "console_rig": {
                 # 재계산 없이 read_inventory/build_patch_sheet의 산출을 그대로
@@ -346,12 +419,16 @@ class VwxReport:
             "diffs": self._diffs_payload(),
             "skipped_checks": self._skipped_checks(),
             "read_failures": self._read_failures(),
+            "excluded_rows": self._excluded_rows(),
             "summary_ko": self.summary_ko(),
         }
 
 
 def build_vwx_report(
-    diff: DiffResult, *, read_failures: tuple[_ShapedReadFailure, ...] = ()
+    diff: DiffResult,
+    *,
+    read_failures: tuple[_ShapedReadFailure, ...] = (),
+    excluded_rows: tuple = (),
 ) -> VwxReport:
     """대조 결과 -> :class:`VwxReport`(REQ-VWX-023)."""
-    return VwxReport(diff=diff, read_failures=read_failures)
+    return VwxReport(diff=diff, read_failures=read_failures, excluded_rows=excluded_rows)

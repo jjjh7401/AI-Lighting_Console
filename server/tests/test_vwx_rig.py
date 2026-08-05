@@ -107,9 +107,20 @@ class TestAccessoryFiltering:
         assert rig.fixtures[0].unit_number == "2"
 
     def test_dmx_consuming_accessory_is_included(self):
-        records = [rr(0, unit_number="1", device_type="Accessory")]
+        """결함 2(P1) 재교정 — 배제 기준은 문자열 리터럴이 아니라 실제 DMX
+        점유(footprint)다. footprint가 없으면(이전 버전 이 테스트의 premise)
+        새 규칙에서는 배제 대상이 되므로, 양수 footprint를 명시해 진짜
+        "DMX를 먹는 액세서리"를 비공허적으로 재현한다."""
+        records = [rr(0, unit_number="1", device_type="Accessory", footprint="1")]
         rig = build_designed_rig(records)
         assert len(rig.fixtures) == 1
+
+    def test_non_dmx_accessory_sharing_the_literal_accessory_device_type_is_excluded(self):
+        """비공허성(결함 2, P1) — "Accessory" 리터럴은 DMX 소비 액세서리와
+        동일하지만 footprint가 없으면(비-DMX) 여전히 배제된다."""
+        records = [rr(0, unit_number="1", device_type="Accessory")]
+        rig = build_designed_rig(records)
+        assert rig.fixtures == ()
 
     def test_without_a_device_type_column_at_all_no_filtering_happens(self):
         """비공허성 — Device Type 컬럼이 아예 없으면 임의 배제하지 않는다."""
