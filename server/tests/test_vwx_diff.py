@@ -12,6 +12,7 @@ from server.prechk.patch import FootprintPolicy
 from server.vwx.address import PATCHED, ResolvedRecord
 from server.vwx.diff import (
     ADDRESS_COLLISION,
+    CONSOLE_FOOTPRINT_WIDTH_INJECTION_DEFERRED,
     FID_CID_UNREACHABLE,
     FOOTPRINT_OVERLAP_DESCOPE,
     MISSING_IN_CONSOLE,
@@ -186,6 +187,36 @@ class TestOptionalFootprintOverlapReuse:
         assert FOOTPRINT_OVERLAP_DESCOPE not in kinds
         # REQ-VWX-021 재사용 확인 — evaluate_patch의 range_overlap 축이 실행됐다
         # (겹치는 폭 4채널짜리 두 픽스처가 1.001/1.003에서 실제로 겹친다).
+
+
+class TestDesignSideFootprintDeferralNote:
+    """M0 실물 샘플 반영 — 설계 측 구간 겹침을 수행했으면 콘솔 측 폭 주입만
+    2차 작업으로 미룬다는 별도 미수행 판정을 남긴다."""
+
+    def test_footprint_data_present_adds_the_console_side_deferral_skip(self):
+        from server.vwx.rig import DesignedRig
+
+        console = make_inventory([])
+        empty_but_footprint_present = DesignedRig(
+            fixtures=(),
+            join_key_conflicts=(),
+            vw_patch_conflicts=(),
+            device_type_column_present=False,
+            design_overlaps=(),
+            footprint_data_present=True,
+        )
+        result = compare(empty_but_footprint_present, console)
+        kinds = {entry.kind for entry in result.skipped_checks}
+        assert CONSOLE_FOOTPRINT_WIDTH_INJECTION_DEFERRED in kinds
+
+    def test_no_footprint_data_never_adds_the_deferral_skip(self):
+        """비공허성 대조군 — footprint 컬럼이 아예 없으면(기존 build_designed_rig([])
+        경로) 새 skip이 나오지 않는다."""
+        console = make_inventory([])
+        designed_rig = build_designed_rig([])
+        result = compare(designed_rig, console)
+        kinds = {entry.kind for entry in result.skipped_checks}
+        assert CONSOLE_FOOTPRINT_WIDTH_INJECTION_DEFERRED not in kinds
 
 
 class TestDiffKindClosedVocabulary:

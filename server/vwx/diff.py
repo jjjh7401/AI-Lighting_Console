@@ -24,9 +24,19 @@ from server.vwx.rig import DesignedRig, fuzzy_type_equal
 FID_CID_UNREACHABLE = "fid_cid_identity_unreachable"
 FOOTPRINT_OVERLAP_DESCOPE = "footprint_overlap_descope"
 WORKSHEET_BLOCK_UNDETECTED = "worksheet_block_undetected"
+#: M0 실물 샘플이 DMX Footprint 폭 출처를 줘서 설계 측 구간 겹침 판정(``rig.py``
+#: ``design_overlaps``)은 이제 항상 수행된다. 콘솔 SLOT 키 폭 주입((유니버스,주소)
+#: 조인 이후에나 가능한 2차 작업)만은 이번 SPEC에서 의도적으로 미룬다 — 그 결정을
+#: 구조화된 미수행 판정으로 남긴다(범위 밖, `progress.md` §E.2 M0 절 참조).
+CONSOLE_FOOTPRINT_WIDTH_INJECTION_DEFERRED = "console_footprint_width_injection_deferred"
 
 SKIPPED_CHECK_KIND_VWX = frozenset(
-    {FID_CID_UNREACHABLE, FOOTPRINT_OVERLAP_DESCOPE, WORKSHEET_BLOCK_UNDETECTED}
+    {
+        FID_CID_UNREACHABLE,
+        FOOTPRINT_OVERLAP_DESCOPE,
+        WORKSHEET_BLOCK_UNDETECTED,
+        CONSOLE_FOOTPRINT_WIDTH_INJECTION_DEFERRED,
+    }
 )
 
 MISSING_IN_CONSOLE = "missing_in_console"
@@ -120,7 +130,7 @@ def compare(
         if fixture.classification != "patched" or unresolved_address:
             continue
         candidates = console_by_address.get((fixture.universe, fixture.address), [])
-        found = any(fuzzy_type_equal(fixture.instrument_type, ftype) for _slot, ftype in candidates)
+        found = any(fuzzy_type_equal(fixture.match_type, ftype) for _slot, ftype in candidates)
         if found:
             continue
         missing.append(
@@ -151,7 +161,7 @@ def compare(
     # quantity_mismatch — 타입별 도면 수량 vs 콘솔 관측 수량.
     designed_counts: dict[str, int] = {}
     for fixture in designed_rig.fixtures:
-        itype = fixture.instrument_type
+        itype = fixture.match_type
         designed_counts[itype] = designed_counts.get(itype, 0) + 1
     console_counts: dict[str, int] = {}
     for _slot, _universe, _address, fixture_type in console_rows:
@@ -181,6 +191,19 @@ def compare(
             SkippedCheckEntry(
                 kind=FOOTPRINT_OVERLAP_DESCOPE,
                 reason="FootprintPolicy가 주입되지 않아 구간 겹침 확장 판정을 수행하지 않았다.",
+            )
+        )
+    if designed_rig.footprint_data_present:
+        # 설계 측 구간 겹침(designed_rig.design_overlaps)은 이미 수행됐다 —
+        # 여기서 미수행으로 남기는 것은 콘솔 SLOT 키 폭 주입(2차 작업)뿐이다.
+        skipped.append(
+            SkippedCheckEntry(
+                kind=CONSOLE_FOOTPRINT_WIDTH_INJECTION_DEFERRED,
+                reason=(
+                    "설계 측 구간 겹침은 DMX Footprint 컬럼으로 수행했다. 콘솔 SLOT 키 폭 "
+                    "주입((유니버스,주소) 조인 이후 2차 작업)은 이번 SPEC 범위 밖이라 "
+                    "의도적으로 미룬다."
+                ),
             )
         )
 

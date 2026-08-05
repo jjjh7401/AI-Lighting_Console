@@ -23,6 +23,7 @@ from types import MappingProxyType
 from typing import Protocol
 
 from server.vwx.diff import (
+    CONSOLE_FOOTPRINT_WIDTH_INJECTION_DEFERRED,
     DIFF_KIND,
     FID_CID_UNREACHABLE,
     FOOTPRINT_OVERLAP_DESCOPE,
@@ -93,6 +94,9 @@ _SKIPPED_CHECK_KIND_LABELS = {
     FID_CID_UNREACHABLE: "FID/CID 아이덴티티 대조 미수행 — 슬롯==FID 쇼파일에서 원리적으로 불가",
     FOOTPRINT_OVERLAP_DESCOPE: "구간 겹침 확장 판정 미수행 — DMX Footprint 폭 출처 미주입",
     WORKSHEET_BLOCK_UNDETECTED: "워크시트 데이터 블록 미탐 — 헤더 후보를 구조적으로 찾지 못함",
+    CONSOLE_FOOTPRINT_WIDTH_INJECTION_DEFERRED: (
+        "콘솔 측 구간 겹침 폭 주입 미수행 — 설계 측은 수행했으나 콘솔 SLOT 키 주입은 2차 작업"
+    ),
 }
 
 #: 라벨 표 레지스트리 — 어휘와 키 집합이 정확히 일치함을 아래서 즉시 검증한다
@@ -199,6 +203,12 @@ class VwxReport:
         return [
             {"key": entry.key, "detail": entry.detail, "rows": list(entry.rows)}
             for entry in self.diff.designed_rig.join_key_conflicts
+        ]
+
+    def _design_overlaps(self) -> list[dict]:
+        return [
+            {"universe": entry.universe, "detail": entry.detail, "members": list(entry.members)}
+            for entry in self.diff.designed_rig.design_overlaps
         ]
 
     def comparison_performed(self) -> bool:
@@ -325,6 +335,8 @@ class VwxReport:
                 "device_type_column_present": designed.device_type_column_present,
                 "join_key_conflicts": self._join_key_conflicts(),
                 "vw_patch_conflicts": self._vw_patch_conflicts(),
+                "design_overlaps": self._design_overlaps(),
+                "footprint_data_present": designed.footprint_data_present,
             },
             "console_rig": {
                 # 재계산 없이 read_inventory/build_patch_sheet의 산출을 그대로

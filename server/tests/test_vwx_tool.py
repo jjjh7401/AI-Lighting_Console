@@ -252,3 +252,63 @@ class TestRealWorldNegativeSampleEndToEndThroughDispatch:
         assert "차이 없음" not in payload["summary_ko"]
         assert payload["summary_ko"].startswith("패치 출처로 성립하지 않는다")
         assert "대조를 수행하지 않았다" in payload["summary_ko"]
+
+
+class TestRealWorldPositiveSampleEndToEndThroughDispatch:
+    """M0 실물 컬럼 계약 검증 — 실물 양성 샘플이 dispatch 전체 경로를 정상 통과한다.
+
+    ``vectorworks_export_sample_with_data.csv``(25컬럼×10행, UTF-8 BOM·CRLF·
+    쉼표)를 그대로 base64 인코딩해 툴 dispatch에 넣는다. 10 픽스처 · 주소
+    교차검증 통과(경고 없음) · 구간 겹침 0 · fixture_name/gdtf_fixture가
+    extra가 아니라 정규 필드로 해석됨을 종단으로 확인한다.
+    """
+
+    _FIXTURE_PATH = (
+        Path(__file__).parent / "fixtures" / "vwx" / "vectorworks_export_sample_with_data.csv"
+    )
+
+    @staticmethod
+    def _b64_bytes(data: bytes) -> str:
+        return base64.b64encode(data).decode("ascii")
+
+    def test_ten_fixtures_resolved_with_no_exception(self):
+        data = self._FIXTURE_PATH.read_bytes()
+        execution = _dispatch(_registry(), file_content_base64=self._b64_bytes(data))
+        payload = json.loads(execution.result.content)
+        assert payload["designed_rig"]["fixture_count"] == 10
+        assert payload["diffs"]["performed"] is True
+
+    def test_address_triple_cross_check_passes_with_no_warning(self):
+        """비공허성 — 이 파일의 절반(주소 정합성)이 실제로 검증됐음을 확인한다.
+        (양성 불일치 케이스는 test_vwx_address.py의 합성 픽스처가 별도로 증명한다.)"""
+        data = self._FIXTURE_PATH.read_bytes()
+        execution = _dispatch(_registry(), file_content_base64=self._b64_bytes(data))
+        payload = json.loads(execution.result.content)
+        warning_kinds = {f["kind"] for f in payload["read_failures"]}
+        assert "address_triple_mismatch" not in warning_kinds
+
+    def test_zero_design_overlaps_reported_not_omitted(self):
+        """stride(38) == footprint(38) — 완벽 패킹, 겹침 0이 정답이다. 빈 목록이
+        실제로 계산된 결과임을(생략이 아님을) 필드 존재로 확인한다."""
+        data = self._FIXTURE_PATH.read_bytes()
+        execution = _dispatch(_registry(), file_content_base64=self._b64_bytes(data))
+        payload = json.loads(execution.result.content)
+        assert payload["designed_rig"]["footprint_data_present"] is True
+        assert payload["designed_rig"]["design_overlaps"] == []
+
+    def test_fixture_name_and_gdtf_fixture_reach_the_dispatch_boundary(self):
+        """extra가 아니라 정규 필드로 해석됐음을 종단에서 간접 확인 — quantity_mismatch의
+        instrument_type이 gdtf_fixture 값(더 정규화된 소스)을 우선 사용한다."""
+        data = self._FIXTURE_PATH.read_bytes()
+        execution = _dispatch(_registry(), file_content_base64=self._b64_bytes(data))
+        payload = json.loads(execution.result.content)
+        mismatches = payload["diffs"]["quantity_mismatch"]
+        assert len(mismatches) == 1
+        assert mismatches[0]["instrument_type"] == "Martin Professional@MAC Encore Performance CLD"
+
+    def test_console_footprint_width_injection_is_reported_as_deferred_not_silent(self):
+        data = self._FIXTURE_PATH.read_bytes()
+        execution = _dispatch(_registry(), file_content_base64=self._b64_bytes(data))
+        payload = json.loads(execution.result.content)
+        skipped_kinds = {entry["kind"] for entry in payload["skipped_checks"]}
+        assert "console_footprint_width_injection_deferred" in skipped_kinds

@@ -161,7 +161,7 @@ uv run pytest server/tests -q → 4716 passed, 7 skipped, 1 warning in 89.90s (0
 1. **`openpyxl` 신규 의존성 — 승인.** `pyproject.toml` 런타임 의존성에 추가, 경로 B `.xlsx`를 v1 범위에 포함. spec.md §C/§D v0.1.1로 갱신됨(무효화된 조건부 Out-of-Scope 절 명시).
 2. **실물 Vectorworks export 샘플 — 미제공.** 사용자가 아직 제공하지 않았다. M0는 완료 처리하지 않는다.
 
-### M0 — `BLOCKED: 사용자 산출물 대기 — 실물 Vectorworks export 샘플 미제공`
+### M0 — `PARTIAL: 컬럼 계약 1건 실물 검증 — ASSUMPTION-68 해소, 69/70 미해소 (v0.1.4)`
 
 M0는 사용자가 실물 export 파일(경로 A 또는 경로 B, 최소 1건)을 제공해야 완료 가능하다. 제공되면 다음을 검증한다:
 - 컬럼 계약 검증: `research.md` §3 별칭 테이블이 실제 헤더와 합치하는지(ASSUMPTION-68) — 불일치 시 별칭 테이블을 실물 헤더로 확장하고 확장분을 본 절에 기록.
@@ -372,6 +372,139 @@ git diff --stat 2bc95cf..HEAD -- console/lua/ server/safety/ server/prechk/{__in
 `fixture_count > 0`인데도 대조가 성립하지 않는 경우가 있어야 하는데, 그런 경우는 정의상
 존재하지 않는다).
 
+### M0 실물 컬럼 계약 검증 (2026-08-05, v0.1.4) — M0 = PARTIAL
+
+**수령한 파일**: `vectorworks_export_sample_with_data.csv`
+(원본: `/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/src/vectorworks_export_sample_with_data.csv`).
+UTF-8 BOM · CRLF · 쉼표 구분 · 25컬럼 × 10행. `UID`는 Vectorworks UID 형식, `GDTF Fixture`는
+`Martin Professional@MAC Encore Performance CLD` 정품 GDTF 표기. **실물 형식 샘플로 취급한다.**
+코디네이터가 현행 파이프라인 통과 결과와 주소 산술을 10행 전수 직접 계산해 실측·보고했다 —
+본 절은 그 실측을 오케스트레이터가 재검증한 기록이다.
+
+**오케스트레이터 재검증(직접 실측)**:
+```
+python3 -c "read → columns → address → rig → diff → report" (10행 전수)
+→ encoding=utf-8-sig, path_kind=A, nrec=10, read_failures=()
+→ col valid 10 / fail 0, extra keys = {Gobo,Focus,X,Y,Z,'Rotation Z',Pan,Tilt} (8개, 범위 밖)
+→ resolved 10, addr_failures=[] (3중 표현 10/10 일치 재확인)
+→ fixture_count=10, design_overlaps=(), footprint_data_present=True
+→ diffs.performed=true, missing_in_console 10건, quantity_mismatch 1건
+→ skipped: fid_cid_identity_unreachable, console_footprint_width_injection_deferred
+```
+
+#### 【1】ASSUMPTION-68 — NEGATIVE(부정) 판정, 별칭표 확장으로 해소
+
+`research.md` §3 별칭 테이블이 실물 헤더와 **합치하지 않았다** — 실물 컬럼 10개가 원래 별칭표
+밖으로 떨어졌다: `Fixture Name`·`GDTF Fixture`·`Gobo`·`Focus`·`X`·`Y`·`Z`·`Rotation Z`·`Pan`·`Tilt`.
+
+**정규 필드로 승격한 2개** (`server/vwx/columns.py` `ALIAS_TABLE` 확장, REQ-VWX-026 신설):
+- `fixture_name` ← `Fixture Name`/`FixtureName`/`Instrument Name`. 콘솔에서 실제로 읽을 수 있는
+  4개 화이트리스트 속성(`server/prechk/inventory.py` `PROPERTY_WHITELIST`) 중 하나가
+  `FixtureRecord.name`이므로, 이름은 도면·콘솔 양쪽에서 다 관측 가능한 몇 안 되는 축이다 — 대조
+  조인이 (유니버스,주소)+타입뿐이었던 것에 비해 놀리고 있던 신호였다. `symbol_name`과는 정규화
+  키가 다름을 테스트로 못박았다(합치지 않았다).
+- `gdtf_fixture` ← `GDTF Fixture`/`GDTFFixture`. 자유문자열 `Fixture Type`보다 정규화된 제조사@모델
+  식별자다. `mode`의 `GDTF Fixture Mode` 별칭과 정규화 키 충돌이 없음(`gdtffixture` vs
+  `gdtffixturemode`)을 테스트로 확인했다. `DesignedFixture.match_type`(신설)이 타입 퍼지 매칭에서
+  이 값을 우선 사용하고, 없으면 `instrument_type`으로 폴백한다(`diff.py`의 두 지점 — 콘솔 대조
+  매칭·수량 집계 키 — 모두 `match_type`으로 갱신).
+
+**범위 밖으로 남긴 8개** — `Gobo`·`Focus`·`X`·`Y`·`Z`·`Rotation Z`·`Pan`·`Tilt`는 여전히 `extra`
+로 보존된다(REQ-VWX-006, 코드 변경 없이 기존 동작 그대로). **3D 좌표(X/Y/Z/Rotation Z/Pan/Tilt)가
+CSV 워크시트로도 나온다 — 3단계(MVR/GDTF) 전유물이 아니었다.** extra 보존 결정(REQ-VWX-006) 덕에
+후속 SPEC이 재파싱 없이 쓸 수 있다.
+
+**문서-구현 드리프트 정리**: `research.md` §3에 `frame_size`/`focus`/`wattage`/`weight`가 "정규 필드
+후보"로 언급돼 있었으나 `ALIAS_TABLE`(구현)에는 등록돼 있지 않았다 — 기능적으로는 문제없다(미등록
+컬럼은 이미 `extra`로 보존되므로). **정본은 `ALIAS_TABLE`(구현)이다** — `research.md`는 조사
+기록이지 구현 약속이 아니다. 이 4개의 정규 필드 승격 여부는 범위 밖 결정으로 남긴다(`research.md`
+해당 행에 이 정리를 직접 기록했다).
+
+#### 【2】주소 3중 표현 교차검증 — REQ-VWX-027 신설
+
+이 샘플의 주소 산술을 오케스트레이터가 10행 전수 재계산해 코디네이터 실측과 일치함을 확인했다:
+`Universe=1` 고정, `DMX Address` = 1,39,77,115,153,191,229,267,305,343(stride 38),
+`Absolute Address == DMX Address`가 10/10 일치하며 공식 `(u-1)*512+a`와 전수 일치한다 — **음성
+대조군**이다.
+
+`server/vwx/address.py`의 Universe+DMX Address 최우선 분기에 교차검증을 추가했다 — 세 표현이
+모두 있으면 `absolute == (u-1)*512+a`를 검사하고, **불일치해도 Absolute Address로 유니버스를
+역산하지 않는다**(추측 금지, REQ-VWX-009와 동일 원칙) — `Universe`+`DMX Address` 조합을 그대로
+채택하고 구조화된 경고(`address_triple_mismatch`)로만 보고한다. 이 샘플에는 양성(불일치) 케이스가
+없으므로 합성 픽스처로 별도 증명했다(`test_vwx_address.py::TestTripleRepresentationCrossCheck`).
+
+`ASSUMPTION-69`(Absolute 단독 파일 존재)는 **이 샘플로 해소되지 않는다** — Universe+DMX Address가
+항상 함께 있어 역산 경로 자체가 실행되지 않았다. 다만 **위험도는 낮아졌다** — 이 교차검증이 있으면
+향후 Absolute 단독 파일이 나타나도 3중 표현이 동시에 존재하는 다른 레코드들에서 조용한 오역산을
+잡아낼 여지가 생겼다(간접 완화 — 직접 해소는 아니다).
+
+#### 【3】설계 측 구간 겹침 판정 — REQ-VWX-028 신설, 실제로 수행됨
+
+이전엔 `footprint_overlap_descope`("DMX Footprint 폭 출처 미주입")가 항상 떴다. 이 샘플에는
+`DMX Footprint`(38, 전 행)가 있고 이미 `footprint`로 파싱되고 있었으므로 — **설계 측
+(universe, address, footprint)만으로 구간 겹침을 실제로 계산하도록 구현했다**(`server/vwx/rig.py`
+`_compute_design_overlaps`, `DesignedRig.design_overlaps`/`footprint_data_present` 신설).
+
+- **스코프**: 설계 도면 내부의 주소 구간 겹침으로 한정했다. `server/prechk/patch.py`의
+  `FootprintPolicy.widths`(콘솔 SLOT 키)는 건드리지 않았다 — `server/prechk/**`는 PRESERVE다.
+  콘솔 측 폭 주입((유니버스,주소) 조인 이후에나 가능한 2차 작업)은 이번엔 하지 않았고, 그 이유를
+  새 미수행 판정(`console_footprint_width_injection_deferred`)으로 `skipped_checks`에 남겼다.
+- 이 샘플은 stride(38) == footprint(38) → **겹침 0이 정답**이다(음성 대조군, 완벽 패킹).
+  **양성 케이스(stride < footprint)는 합성 픽스처로 만들어 비공허성을 증명했다**
+  (`test_vwx_rig.py::TestDesignSideOverlapDetection::test_stride_smaller_than_footprint_is_caught_as_an_overlap`)
+  — 실제로 겹침 1건이 잡힘을 확인했다.
+- VW 자체 다중패치는 기존 `vw_patch_conflicts` 규약과 독립적으로 공존하며 실패시키지 않는다(회귀
+  테스트로 확인).
+
+#### 【4】M0 상태 — PARTIAL, 이 샘플의 한계 (정직한 기록)
+
+- `ASSUMPTION-68`: **부정 → 별칭표 확장(fixture_name·gdtf_fixture)으로 해소.** 위 【1】.
+- `ASSUMPTION-69`: **미해소** — Absolute 단독 파일이 아니다. 【2】의 교차검증이 위험을 완화했을
+  뿐 직접 해소는 아니다.
+- `ASSUMPTION-70`: **미해소, 전혀 건드리지 못함** — 이 파일은 `path_kind=A`(flat 단일 테이블)라
+  경로 B 워크시트 그리드(제목행·DB헤더행·서브행·소계행) 휴리스틱을 **한 번도 실행하지 않았다.**
+- **이 샘플이 덮지 못하는 것**(M8 종단 검증을 이걸로 닫으면 안 되는 이유 — 행복 경로만 검증했다):
+  단일 유니버스 · 단일 픽스처 타입 · `Device Type` 열 없음(액세서리 구분 불가) · `Part Index`
+  없음(멀티셀 접기 미검증) · `System` 열 없음(멀티시스템 차단 미검증) · 미패치 행(주소 0/공란)
+  없음 · 조인키 중복 없음 · 경로 B 워크시트 아님 · 탭 구분 아님(경로 A tab-text 실물 미검증) ·
+  구간 겹침 양성 케이스 없음(합성으로만 증명) · 주소 3중 표현 불일치 케이스 없음(합성으로만 증명).
+- **결론**: `M0 = PARTIAL(컬럼 계약 1건 실물 검증 — ASSUMPTION-68 해소, 69/70 미해소)`,
+  `M8 = BLOCKED 유지`, `run_status = partial-blocked 유지`. 사용자가 경로 B 워크시트 export 또는
+  Absolute 단독 파일을 추가로 제공해야 69/70이 닫힌다.
+
+**픽스처 커밋**: `server/tests/fixtures/vwx/vectorworks_export_sample_with_data.csv`(원문 그대로).
+`server/tests/fixtures/vwx/README.md`에 출처·성격(양성 사례)·덮는 범위·안 덮는 범위를 기록했다
+(기존 drop.dk 음성 픽스처 항목은 그대로 유지).
+
+**SPEC 아티팩트 동기화**: `spec.md` REQ-VWX-026~028 신설(v0.1.4), ASSUMPTION-68~70 판정 갱신,
+HISTORY v0.1.4 행 추가. `acceptance.md` AC-VWX-027~029 신설, §C.0 역추적표(REQ 28/28) ·
+§C.0a 마일스톤표(M2/M3/M5 각 +1, 합 29) 갱신. `plan.md` §B M2/M3/M5의 `- **AC**:` 줄 갱신 +
+헤더에 v0.1.4 요약 추가.
+
+**회귀 테스트 (신규 클래스, 비공허성 대조군 동반)**:
+- `test_vwx_columns.py::TestFixtureNameAndGdtfFixtureAliases`(5건) — 별칭 해석, symbol_name/mode
+  비충돌, extra 승격 종단.
+- `test_vwx_rig.py::TestFixtureNameAndGdtfFixtureFields`(3건, match_type 폴백 대조군 포함) +
+  `::TestDesignSideOverlapDetection`(4건, 음성/양성/멀티유니버스/footprint없음 대조군).
+- `test_vwx_address.py::TestTripleRepresentationCrossCheck`(5건, 음성 2·양성 1·종단 1·회귀 1).
+- `test_vwx_diff.py::TestDesignSideFootprintDeferralNote`(2건, 있음/없음 대조군).
+- `test_vwx_tool.py::TestRealWorldPositiveSampleEndToEndThroughDispatch`(5건) — 이 실물 파일
+  기반 종단 테스트: 10 픽스처 확인 · 주소 교차검증 통과(경고 없음) · 겹침 0(필드 존재로 확인,
+  생략 아님) · fixture_name/gdtf_fixture가 quantity_mismatch의 instrument_type에 gdtf 값으로
+  반영됨(extra 아님을 간접 확인) · 콘솔 측 폭 주입 이연 판정 노출.
+
+**재검증(오케스트레이터 직접 실측)**:
+```
+uv run pytest server/tests -q → 4842 passed, 7 skipped, 1 warning in 90.47s
+```
+이번 라운드 착수 baseline(3라운드째 종료 시점) `4818 passed, 7 skipped` 대비 **+24**(이번 라운드
+신규 회귀 테스트), 필수 최소 기준선 `4812 passed, 7 skipped` 대비로는 **+30**. 회귀 0건.
+```
+uv run ruff check server/vwx server/tests/test_vwx_*.py → All checks passed!
+uv run ruff format --check server/vwx server/tests/test_vwx_*.py → 14 files already formatted
+git diff --stat 2bc95cf..HEAD -- console/lua/ server/safety/ server/prechk/{__init__,inventory,patch,report,footprint,macro,query,verdicts}.py server/paperwork/{data,render,output}.py server/looks/ → (완전 빈 출력, exit=0)
+```
+
 ### M1~M7 구현 로그 (manager-develop 위임 완료, 오케스트레이터 직접 재검증 완료)
 
 **AC PASS/FAIL 매트릭스** (M0/M8 제외 24건 전량):
@@ -439,21 +572,24 @@ M0가 미충족인 채로는 M8(실물 파일 기반 종단 통합 검증, AC-VW
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
-run_status: partial-blocked   # M1~M7 completed + verified; M0/M8 BLOCKED (real Vectorworks sample not provided — the 1 file received is a non-VW rigging CSV, used only as a negative-case fixture)
+run_status: partial-blocked   # M1~M7 completed + verified; M0=PARTIAL (1 real column-contract sample verified); M8 BLOCKED
 run_complete_at: 2026-08-05
-head_sha: 41f696eaa38896107768bdee62eee3db99e2e1da   # 거짓 안전 신호 3라운드째 교정(불변식 재설계) 커밋(직접 실측)
+head_sha: "<이번 라운드 커밋 SHA — 아래 §E.2 결론 절에서 실측 후 backfill>"
 base_sha: 2bc95cf309457de5f6fc2b6757b3a8c7aa9f6ec7
 milestones_completed: [M1, M2, M3, M4, M5, M6, M7]
-milestones_blocked: [M0, M8]
-milestones_blocked_reason: "실물 Vectorworks export 샘플 미제공 — 사용자가 보낸 파일 1건은 drop.dk 리깅 하중 CSV이며 Vectorworks export가 아니다(주소 계열 컬럼 0개) — 결함 회귀 픽스처로만 승격, M0 판정에는 못 쓴다"
-acceptance_criteria_verified: 24   # AC-VWX-002~025 (M0=AC-VWX-001, M8=AC-VWX-026 제외)
-acceptance_criteria_blocked: 2     # AC-VWX-001 (M0), AC-VWX-026 (M8)
+milestones_partial: [M0]   # 실물 컬럼 계약 1건 검증 — ASSUMPTION-68 해소, 69/70 미해소
+milestones_blocked: [M8]
+milestones_blocked_reason: "M0가 PARTIAL — ASSUMPTION-69(Absolute 단독 파일)·70(경로 B 워크시트)이 실물로 미검증이라 종단 검증(M8)을 이 샘플만으로 닫을 수 없다(행복 경로만 검증)"
+acceptance_criteria_verified: 24   # AC-VWX-002~025 (M0=AC-VWX-001, M8=AC-VWX-026 제외). AC-VWX-027~029(v0.1.4)는 M0 실물 샘플로 실측 검증됨(아래 별도 라인)
+acceptance_criteria_verified_v014: 3   # AC-VWX-027(fixture_name/gdtf_fixture) · AC-VWX-028(주소 교차검증) · AC-VWX-029(설계 측 겹침) — 전부 PASS
+acceptance_criteria_blocked: 2     # AC-VWX-001 (M0, PARTIAL로 격상됐으나 완전 GO는 아님) · AC-VWX-026 (M8)
 defects_found_and_fixed: 2   # P0 결함 2건 — 실물 파일 투입(코디네이터 실측)으로 드러남
 defect2_correction_rounds: 3 # 1차: read_failures만 채워 미충족(summary_ko "차이 없음" 잔존). 2차: summary_ko/diffs 수정했으나 kind 열거 방식이라 join_key_conflicts 경로에서 재발. 3차: kind 열거를 "픽스처 0대=미수행" 불변식으로 대체해 종결. 회귀 테스트 누적 +6건
-full_suite: "4812 passed, 7 skipped, 1 warning in 90.69s — this-round entry baseline 4801 passed 7 skipped, delta +11 fully explained (2 defect-fix regression test classes: 9 reader + 2 tool), 0 regressions"
-ruff: "All checks passed! (server/vwx/, server/tests/test_vwx_*.py, server/orchestrator/tools.py) — ruff format --check also clean"
-preserve_gate: "empty diff on all 8 server/prechk/ files (including verdicts.py) + console/lua/** + server/safety/** + server/paperwork/{data,render,output}.py + server/looks/** — reverified after the defect-fix commit"
-tool_registration: "dispatch-verified — TOOL_NAMES membership, definitions() name-set, dispatch no-unknown-tool, advertised==set(TOOL_NAMES) — all 4 assertions PASS"
+m0_partial_round: 1   # v0.1.4 — 실물 컬럼 계약 검증 라운드. REQ 3건(026~028)/AC 3건(027~029) 신설
+full_suite: "4842 passed, 7 skipped, 1 warning in 90.47s — this-round entry baseline 4818 passed 7 skipped, delta +24, 0 regressions"
+ruff: "All checks passed! (server/vwx/, server/tests/test_vwx_*.py) — ruff format --check also clean"
+preserve_gate: "empty diff on all 8 server/prechk/ files + console/lua/** + server/safety/** + server/paperwork/{data,render,output}.py + server/looks/** — reverified after the M0 partial-verification commit"
+tool_registration: "unchanged — no new tool sites added this round, existing dispatch-based verification still passes"
 architecture_boundary: "server/tests/test_architecture.py — 4 passed — server/vwx/ imports neither server.bridge nor pythonosc"
 plan_audit_minor_findings_closed: 4   # 자기모순 2건 + REQ-VWX-025 shall + AC-013②
 plan_audit_minor_findings_deferred: 6 # 비차단, 후속 사이클로 이연
@@ -461,11 +597,11 @@ push_count: 0
 pr_count: 0
 main_touched: false
 known_gaps:
-  - "M0/M8은 완료되지 않았다 — 실물 Vectorworks export 샘플이 사용자로부터 제공되어야 재개 가능하다. 수령한 파일 1건(drop.dk 리깅 하중 CSV)은 Vectorworks export가 아니라 M0 판정에 쓸 수 없다."
-  - "M1~M7은 전량 합성 픽스처(문서 근거·실물 미검증) + 실물 음성 사례 1건(회귀 전용)으로 검증됐다 — ASSUMPTION-68~70은 여전히 미판정(GO/NEGATIVE 없음)."
+  - "M0=PARTIAL — ASSUMPTION-68만 해소됐다. ASSUMPTION-69(Absolute 단독 파일)·70(경로 B 워크시트 그리드)은 이 샘플이 flat 단일 테이블(path_kind=A)이라 전혀 건드리지 못했다 — 별도 실물 샘플이 필요하다."
+  - "M8은 이 샘플만으로 닫을 수 없다 — 단일 유니버스·단일 타입·Device Type 없음·Part Index 없음·System 없음·미패치 행 없음·조인키 중복 없음·경로 B 아님·탭 구분 아님. 행복 경로만 검증했다."
   - "M6 설계가 계획 대비 변경됐다 — server/prechk/verdicts.py를 건드리지 않고 server/vwx/report.py에 독립 어휘 레지스트리를 신설했다(spec.md §C·acceptance.md AC-VWX-023 갱신 완료)."
-  - "이번 회차에서 P0 결함 2건이 실물 파일 투입으로 드러나 수정됐다 — 향후 다른 실물 파일이 도착하면 유사한 잔여 결함이 또 나올 수 있으므로, M0가 열릴 때 결함 발견을 예상하고 대응할 것."
-next: "실물 Vectorworks export 샘플 확보(M0) 후 M8 종단 검증 재개. 그 전까지는 sync-phase로 진행하지 않는다(M0/M8 BLOCKED가 SPEC 완결을 막는다)."
+  - "research.md §3의 focus/frame_size/wattage/weight 언급과 ALIAS_TABLE(구현) 사이 문서-구현 드리프트를 발견해 research.md에 '정본은 구현' 한 줄로 정리했다 — 이 4개는 여전히 정규 필드가 아니다(extra 보존, 범위 밖 결정)."
+next: "경로 B 워크시트 export 또는 Absolute Address 단독 파일을 추가로 확보해 ASSUMPTION-69/70을 닫아야 M8 종단 검증을 시작할 수 있다. 그 전까지는 sync-phase로 진행하지 않는다(M8 BLOCKED가 SPEC 완결을 막는다)."
 ```
 
 ## §E.4 Sync-phase Audit-Ready Signal

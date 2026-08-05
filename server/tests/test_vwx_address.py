@@ -6,9 +6,11 @@ from server.prechk.patch import normalize_address
 from server.vwx.address import (
     PATCHED,
     READ_FAILURE_ABS_UNVERIFIED,
+    READ_FAILURE_ADDRESS_TRIPLE_MISMATCH,
     READ_FAILURE_MULTI_SYSTEM,
     UNPATCHED_DESIGNED,
     classify_and_resolve,
+    resolve_all,
     to_console_form,
 )
 from server.vwx.columns import resolve_columns
@@ -127,3 +129,55 @@ class TestResolveAllPipeline:
         assert resolved[0].universe == 1
         assert resolved[0].address == 1
         assert resolved[0].classification == PATCHED
+
+
+class TestTripleRepresentationCrossCheck:
+    """M0 실물 샘플 반영 — Universe+DMX Address+Absolute Address 3중 표현 교차검증."""
+
+    def test_consistent_absolute_address_resolves_with_no_warning(self):
+        """음성 대조군 — M0 실물 샘플과 동일 형태(10/10 일치)."""
+        outcome = classify_and_resolve({"universe": "1", "address": "39", "absolute_address": "39"})
+        assert outcome.kind == "resolved"
+        assert outcome.universe == 1
+        assert outcome.address == 39
+        assert outcome.warning_kind is None
+
+    def test_universe_2_consistent_absolute_address_resolves_with_no_warning(self):
+        """비공허성 — 유니버스 2 이상에서도 공식이 실제로 검증됨을 확인."""
+        outcome = classify_and_resolve({"universe": "2", "address": "1", "absolute_address": "513"})
+        assert outcome.kind == "resolved"
+        assert outcome.warning_kind is None
+
+    def test_mismatched_absolute_address_is_flagged_but_still_resolved_via_the_pair(self):
+        """양성 케이스(합성) — Universes pane에 구멍이 있는 경우. Universe+DMX Address
+        조합을 그대로 신뢰하고(값이 바뀌지 않는다), Absolute Address로 유니버스를
+        역산하지 않는다 — 대신 구조화된 경고를 낸다."""
+        outcome = classify_and_resolve(
+            {"universe": "1", "address": "39", "absolute_address": "9999"}
+        )
+        assert outcome.kind == "resolved"
+        assert outcome.universe == 1  # 역산되지 않았다 — Universe+DMX Address 그대로.
+        assert outcome.address == 39
+        assert outcome.warning_kind == READ_FAILURE_ADDRESS_TRIPLE_MISMATCH
+        assert "불일치" in outcome.warning_detail
+
+    def test_resolve_all_surfaces_the_mismatch_warning_without_dropping_the_record(self):
+        """비공허성 종단 — resolve_all을 통과해도 레코드는 여전히 resolved에 남고,
+        경고만 failures에 별도로 추가된다(레코드가 사라지지 않음)."""
+        raw = [{"Instrument Type": "MMX", "Universe": "1", "Absolute Address": "9999"}]
+        # Universe + Address(DMX) 쌍이 최우선이므로 DMX Address도 채운다.
+        raw[0]["DMX Address"] = "39"
+        records, _failures = resolve_columns(raw)
+        resolved, failures = resolve_all(records)
+        assert len(resolved) == 1
+        assert resolved[0].universe == 1
+        assert resolved[0].address == 39
+        assert len(failures) == 1
+        assert failures[0].kind == READ_FAILURE_ADDRESS_TRIPLE_MISMATCH
+
+    def test_absolute_address_alone_is_unaffected_by_the_cross_check(self):
+        """교차검증은 Universe+DMX Address 쌍이 있을 때만 발동한다 — Absolute 단독
+        경로(ASSUMPTION-69)는 이 변경으로 바뀌지 않는다(회귀 확인)."""
+        outcome = classify_and_resolve({"absolute_address": "39"})
+        assert outcome.kind == "read_failure"
+        assert outcome.reason_code == READ_FAILURE_ABS_UNVERIFIED

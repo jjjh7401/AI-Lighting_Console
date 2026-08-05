@@ -14,6 +14,15 @@ from dataclasses import dataclass, field
 #: 정규 필드 -> 별칭(원문 표기, 비교 시 정규화된다). ``research.md`` §3이 정본.
 ALIAS_TABLE: dict[str, tuple[str, ...]] = {
     "instrument_type": ("Instrument Type", "InstrumentType", "Type", "Fixture Type"),
+    # M0 실물 샘플(2026-08-05, vectorworks_export_sample_with_data.csv)이 ASSUMPTION-68을
+    # NEGATIVE로 닫으며 승격시킨 2개 필드. `fixture_name`은 콘솔에서 실제로 읽을 수 있는
+    # 4개 화이트리스트 속성 중 하나(FixtureRecord.name)와 대응하는 몇 안 되는 축이라
+    # 결정적이다. `symbol_name`과는 다른 필드다 — 합치지 않는다.
+    "fixture_name": ("Fixture Name", "FixtureName", "Instrument Name"),
+    # 정규화된 GDTF 제조사@모델 식별자 — 자유문자열 instrument_type보다 신뢰도 높은
+    # 타입 소스다(REQ-VWX-015 퍼지 매칭에서 우선 사용). "GDTF Fixture Mode"(mode 별칭)와
+    # 정규화 키가 충돌하지 않음을 테스트로 확인했다(gdtffixture vs gdtffixturemode).
+    "gdtf_fixture": ("GDTF Fixture", "GDTFFixture"),
     "symbol_name": ("Symbol Name", "SymbolName"),
     "mode": ("Fixture Mode", "GDTF Fixture Mode", "Mode"),
     "footprint": ("DMX Footprint", "Num Channels", "NumChannels"),

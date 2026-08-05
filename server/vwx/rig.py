@@ -56,7 +56,33 @@ class DesignedFixture:
     classification: str  # "patched" | "unpatched_designed"
     part_indices: tuple[str, ...]
     device_type: str | None
+    fixture_name: str | None = None
+    gdtf_fixture: str | None = None
+    footprint: int | None = None
     extra: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def match_type(self) -> str:
+        """타입 퍼지 매칭용 값 — ``gdtf_fixture``가 있으면 우선, 없으면 ``instrument_type``.
+
+        M0 실물 샘플이 드러낸 개선: 자유문자열 ``Fixture Type``보다 정규화된
+        GDTF 제조사@모델 식별자가 더 신뢰도 높은 타입 소스다(REQ-VWX-015).
+        """
+        return self.gdtf_fixture or self.instrument_type
+
+
+@dataclass(frozen=True)
+class DesignOverlapEntry:
+    """설계 도면 내부 주소 구간 겹침 — (universe, address, footprint)만으로 판정한다.
+
+    콘솔 SLOT 키가 필요한 ``FootprintPolicy.widths``(``server/prechk/patch.py``,
+    PRESERVE)는 여기서 쓰지 않는다 — 설계 측 자체 판정이며, 콘솔 측 폭 주입은
+    (유니버스,주소) 조인 이후의 별도 2차 작업으로 미룬다(범위 밖).
+    """
+
+    universe: int
+    detail: str
+    members: tuple[str, ...]  # unit_number 목록(겹치는 두 픽스처)
 
 
 @dataclass(frozen=True)
@@ -86,6 +112,8 @@ class DesignedRig:
     join_key_conflicts: tuple[JoinKeyConflict, ...]
     vw_patch_conflicts: tuple[VwPatchConflictEntry, ...]
     device_type_column_present: bool
+    design_overlaps: tuple[DesignOverlapEntry, ...] = ()
+    footprint_data_present: bool = False
 
 
 def _part_index_sort_key(record: ResolvedRecord) -> tuple[int, int]:
@@ -103,6 +131,16 @@ def _is_static_accessory(record: ResolvedRecord, device_type_present: bool) -> b
         return False
     device_type = record.fields.get("device_type")
     return device_type is not None and device_type.strip() == STATIC_ACCESSORY
+
+
+def _parse_footprint(raw: str | None) -> int | None:
+    if raw is None or not raw.strip():
+        return None
+    try:
+        value = int(raw.strip())
+    except ValueError:
+        return None
+    return value if value > 0 else None
 
 
 def _to_designed_fixture(
@@ -123,8 +161,54 @@ def _to_designed_fixture(
         classification=representative.classification,
         part_indices=part_indices,
         device_type=representative.fields.get("device_type"),
+        fixture_name=representative.fields.get("fixture_name"),
+        gdtf_fixture=representative.fields.get("gdtf_fixture"),
+        footprint=_parse_footprint(representative.fields.get("footprint")),
         extra=dict(representative.extra),
     )
+
+
+def _compute_design_overlaps(fixtures: list[DesignedFixture]) -> list[DesignOverlapEntry]:
+    """설계 측 (universe, address, footprint)만으로 구간 겹침을 판정한다.
+
+    콘솔 SLOT 폭 주입 없이도 가능한 판정이다 — 이 파일 스코프 내부의 주소
+    구간이 서로 겹치는지만 본다. 정확히 같은 시작 주소의 다중패치는
+    ``vw_patch_conflicts``가 이미 별도로(의도적일 수 있는 규약으로) 처리하므로
+    여기서는 실패시키지 않고 별개 구조로 보고한다.
+    """
+    intervals: list[tuple[int, int, int, DesignedFixture]] = []
+    for fixture in fixtures:
+        if (
+            fixture.classification != PATCHED
+            or fixture.universe is None
+            or fixture.address is None
+            or fixture.footprint is None
+        ):
+            continue
+        intervals.append(
+            (fixture.universe, fixture.address, fixture.address + fixture.footprint - 1, fixture)
+        )
+    intervals.sort(key=lambda item: (item[0], item[1]))
+
+    overlaps: list[DesignOverlapEntry] = []
+    for i, (u1, s1, e1, fx1) in enumerate(intervals):
+        for u2, s2, e2, fx2 in intervals[i + 1 :]:
+            if u2 != u1:
+                break  # 정렬 순서상 이 universe는 더 이상 등장하지 않는다.
+            if s2 > e1:
+                break  # 시작 주소가 이미 앞 구간 끝을 넘으면 이후는 전부 겹치지 않는다.
+            overlaps.append(
+                DesignOverlapEntry(
+                    universe=u1,
+                    detail=(
+                        f"유니버스 {u1} — 주소 {s1}~{e1}({fx1.footprint}ch, "
+                        f"{fx1.unit_number}) 와 {s2}~{e2}({fx2.footprint}ch, {fx2.unit_number}) "
+                        "구간 겹침"
+                    ),
+                    members=(str(fx1.unit_number), str(fx2.unit_number)),
+                )
+            )
+    return overlaps
 
 
 def _fold_by_key(
@@ -239,10 +323,14 @@ def build_designed_rig(records: list[ResolvedRecord]) -> DesignedRig:
         )
 
     vw_conflicts = _classify_vw_conflicts(fixtures)
+    design_overlaps = _compute_design_overlaps(fixtures)
+    footprint_data_present = any(fixture.footprint is not None for fixture in fixtures)
 
     return DesignedRig(
         fixtures=tuple(fixtures),
         join_key_conflicts=tuple(join_conflicts),
         vw_patch_conflicts=tuple(vw_conflicts),
         device_type_column_present=device_type_present,
+        design_overlaps=tuple(design_overlaps),
+        footprint_data_present=footprint_data_present,
     )
