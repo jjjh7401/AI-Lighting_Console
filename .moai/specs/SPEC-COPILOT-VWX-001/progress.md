@@ -753,7 +753,7 @@ git diff --stat 2bc95cf..HEAD -- console/lua/ server/safety/ server/prechk/{__in
 ```yaml
 run_status: partial-blocked   # M1~M7 completed + verified; M0=PARTIAL (4 real samples verified); M8 still BLOCKED (ASSUMPTION-70 partial)
 run_complete_at: 2026-08-05
-head_sha: pending-backfill-v016   # 실물 샘플 3종 투입 — 결함 1/2/3/4 수정(v0.1.6) 커밋(백필 예정, 자기참조 불가 원칙)
+head_sha: 2c966fff890a28667a4672e4012fdfc079ac9fb0   # 실물 샘플 3종 투입 — 결함 1/2/3/4 수정(v0.1.6) 커밋(직접 실측)
 base_sha: 2bc95cf309457de5f6fc2b6757b3a8c7aa9f6ec7
 milestones_completed: [M1, M2, M3, M4, M5, M6, M7]
 milestones_partial: [M0]   # 실물 컬럼 계약 4건 검증 — ASSUMPTION-68/69 해소, 70 여전히 PARTIAL
