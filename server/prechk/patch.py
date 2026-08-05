@@ -834,4 +834,3 @@ def evaluate_patch(
         scope_note=_scope_note(len(duplicates) + len(overlaps), inventory.missing_count, qualified),
         overlap=overlap,
     )
-// PRESERVE-gate non-vacuity probe -- must be reverted immediately
