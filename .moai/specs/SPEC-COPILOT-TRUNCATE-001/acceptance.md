@@ -2,6 +2,8 @@
 
 base `origin/main` = `b1a630e` · 판정 원칙: **성공은 구조에 걸고 라이브는 반증 전용이다**(REQ-TRUNCATE-013).
 
+> **base 이동 예정 — 머지 후 rebase 필요**(plan.md 머리말). WRITEGATE-001의 PR #26이 머지되면 `origin/main`이 `b1a630e`를 넘어간다. AC-TRUNCATE-009 ①의 `git diff origin/main -- …`는 **rebase 후 새 base 기준**으로 실행한다(기대값은 그대로 "비어 있음").
+
 **뮤테이션 규약**: 각 AC는 *"어떤 코드를 제거하면 RED가 되는가"*를 명시한다. 표적은 **분기 코드 자체**이며 테스트 리그가 아니다. 그리고 각 AC는 **비공허성 짝**을 갖는다 — 완전 판독 경로에서 같은 단정이 반대로 성립해야 한다. 하드코딩된 상수가 통과시킬 수 있는 AC는 무효다.
 
 **공용 재료**: 라이브 실측 형상 — `childCount 19` / 반환 `children` 18 / `truncated: true`(SPATIAL `progress.md:113-120`). `test_spatial_context.py:338-354`가 이미 이 리그를 만든다. 재료가 절단 경계를 넘는다는 사실이 뮤테이션 함정을 무력화한다(plan.md §E 위험 6).
@@ -49,7 +51,7 @@ base `origin/main` = `b1a630e` · 판정 원칙: **성공은 구조에 걸고 �
 ### 시나리오 7 — 죽어 있던 플래그가 일한다
 
 - **Given** `create_arrangement_groups`가 오늘 `topology_partial`을 **한 번도 읽지 않는다**(`tools.py:3642-` grep 0건).
-- **When** `topology_partial: true`를 실은 그룹이 명시 확인 없이 쓰기로 들어온다.
+- **When** `topology_partial: true`를 실은 그룹이 확인 인자 없이 — 또는 불리언 확인(`acknowledge_partial: true`)만 달고 — 쓰기로 들어온다.
 - **Then** **거부된다.** 콘솔 송신 0건.
 
 ### 시나리오 8 — 경계는 움직이지 않는다
@@ -78,7 +80,7 @@ base `origin/main` = `b1a630e` · 판정 원칙: **성공은 구조에 걸고 �
 - 대상 요구: REQ-TRUNCATE-003
 - **근거**: 모델이 제시한 것이 **바로 이 필드**다(`progress.md:496-498`). 그리고 `analyze_spatial_records`는 records 외 인자를 받지 않으므로(`server/spatial/rows.py:202-204`) 그 산출물은 **자신이 부분임을 표현할 능력이 없다** — 실측 리그에서 `low_confidence: False`(`server/spatial/schema.py:249`).
 - **통과 판정**: 단위 — `"analysis" not in reply` **AND** `"analysis_error" not in reply`(보류는 실패가 아니다) **AND** `reply["analysis_withheld"]`가 사유를 담는다. 추가로 **회신 JSON 전체에 `row_order` 문자열이 등장하지 않는다** — 중첩 어디에도 정렬 결과가 없음을 확인하는 단정.
-- **뮤테이션**: `get_spatial_context`(`tools.py:3059-3060`)의 **부분 시 `analysis` 계산 생략을 제거**하면(= 오늘처럼 무조건 계산) RED. `analysis_withheld`만 추가하고 `analysis`를 함께 남기는 절충(M0 갈래 ③)도 이 AC에서 RED — **가산은 강제가 아니다.**
+- **뮤테이션**: `get_spatial_context`(`tools.py:3059-3060`)의 **부분 시 `analysis` 계산 생략을 제거**하면(= 오늘처럼 무조건 계산) RED. `analysis_withheld`만 추가하고 `analysis`를 함께 남기는 절충(plan.md §C M0.1이 기각한 갈래 ③)도 이 AC에서 RED — **가산은 강제가 아니다.** 그리고 *"`analysis`에 부분 플래그를 붙인다"*는 대안은 애초에 존재하지 않는다 — `analyze_spatial_records`가 records 외 인자를 받지 않으므로(`server/spatial/rows.py:202-204`) 능력을 주려면 `server/spatial/**`를 고쳐야 하고 REQ-TRUNCATE-012가 그것을 금지한다. **보류가 이 설계의 하중을 받는 절반이다.**
 - **비공허성 짝**: 완전 리그에서 `"analysis" in reply` **AND** `reply["analysis"]["row_order"]`가 실제 값을 갖는다.
 
 ### AC-TRUNCATE-003 — 결손이 산술로 명시된다
@@ -128,12 +130,16 @@ base `origin/main` = `b1a630e` · 판정 원칙: **성공은 구조에 걸고 �
 
 ### AC-TRUNCATE-008 — 죽어 있던 플래그가 쓰기를 막는다
 
-**When** `create_arrangement_groups`가 `topology_partial: true` 그룹을 명시 확인 없이 받으면, the 툴 **shall** 거부한다.
+**When** `create_arrangement_groups`가 `topology_partial: true` 그룹을 **미판독 fid 명시 열거 없이** 받으면, the 툴 **shall** 거부한다. 확인 인자는 `acknowledged_unread_fids: list[int]`이며 **불리언이 아니다**(plan.md §C M0.3 — 에이전트 결정, 2026-08-05).
 
-- 대상 요구: REQ-TRUNCATE-008 · ASSUMPTION-75 (M0 갈래 ① 승인 조건부)
-- **통과 판정**: 단위 — 기록 콘솔 송신 **0건** + 에러 회신이 **어느 그룹이 부분 유래인지 이름으로** 지목. 명시 확인 인자를 주면 통과한다.
-- **뮤테이션**: 거부 분기를 제거하면 RED. **개정 전 base에서 이 단정은 이미 RED다** — 해당 핸들러(`tools.py:3642-`)가 `topology_partial`을 **한 번도 읽지 않으므로**(grep 0건) 오늘은 그냥 통과시킨다. 즉 이 AC는 **실측된 구멍을 직접 지목한다.**
-- **비공허성 짝**: `topology_partial: false` 그룹은 **정상 통과**한다 → 무조건 거부가 아니다. 그리고 종(species) 그룹은 `topology_partial` 키가 없으므로 영향받지 않는다.
+- 대상 요구: REQ-TRUNCATE-008 · ASSUMPTION-75 (**M0 결정 ③으로 범위 확정 — 조건부 아님**)
+- **통과 판정**: 단위 4건 — ① 확인 인자 **없음** → 거부, 기록 콘솔 송신 **0건**, 에러 회신이 **어느 그룹이 부분 유래인지 이름으로** 지목 ② `acknowledged_unread_fids`가 **유효 열거**(비어 있지 않은 정수 리스트 · 중복 없음 · `⋃ groups[].fids`와 서로소 · 결손량이 판독 가능하면 크기 일치) → **통과** ③ 열거가 쓰기 대상 fid와 **겹치면** 거부 ④ 결손량이 판독 가능한데 크기가 **불일치**하면 거부.
+- **뮤테이션 표적**:
+  - 거부 분기를 제거하면 전건 RED. **개정 전 base에서 판정 ①은 이미 RED다** — 해당 핸들러(`tools.py:3642-`)가 `topology_partial`을 **한 번도 읽지 않으므로**(grep 0건) 오늘은 그냥 통과시킨다. 즉 이 AC는 **실측된 구멍을 직접 지목한다.**
+  - **불리언 수용은 RED다.** 확인 인자로 `True`를 주거나 `acknowledged_unread_fids: [True]`를 주었을 때 쓰기가 진행되면 이 AC는 실패한다. 구현에서 `not isinstance(fid, bool)` 배제를 빼면 파이썬의 `bool <: int` 때문에 `[True]`가 정수 열거로 통과하므로, **그 한 줄이 뮤테이션 표적**이다(같은 핸들러가 `groups[].fids`에 이미 쓰는 판정 — `tools.py:3673-3676`).
+  - 서로소 검사를 제거하면 판정 ③이 RED — 이 검사가 *"판독된 목록을 실제로 읽어야 한다"*를 강제하는 지점이다.
+- **비공허성 짝**: `topology_partial: false` 그룹은 **정상 통과**한다 → 무조건 거부가 아니다. 그리고 종(species) 그룹은 `topology_partial` 키가 없으므로 영향받지 않는다. 판정 ②가 *읽으면 통과*를 증명하므로 이 AC는 기능을 막는 것이 아니라 **읽기를 강제**한다.
+- **왜 열거인가(설계 근거 · 은폐 금지)**: 불리언은 무엇이 빠졌는지 읽지 않아도 참이 되므로 확인 인자가 다시 *"데이터 옆의 boolean"* — 본 SPEC이 결함으로 지목한 형상 — 이 된다. 본 SPEC의 표적이 *"지시는 강제가 아니다"*(`progress.md:499`)이므로 **그 자신의 확인 절차가 무심코 통과되면 SPEC은 자기가 닫으려는 결함을 재생산한다.**
 
 ### AC-TRUNCATE-009 — 경계 무접촉
 
