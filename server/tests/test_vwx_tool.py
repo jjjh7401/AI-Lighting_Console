@@ -196,3 +196,46 @@ class TestPayloadShape:
     def test_invalid_base64_is_a_structured_error_not_a_crash(self):
         execution = _dispatch(_registry(), file_content_base64="not-valid-base64!!!")
         assert execution.result.is_error is True
+
+
+class TestRealWorldNegativeSampleEndToEndThroughDispatch:
+    """결함 1·2(P0) 회귀 — 실물 음성 사례가 dispatch 경계를 넘어 예외를 던지지 않고,
+    "이상 없음"으로 위장하지도 않는다. server/tests/test_vwx_reader.py의 단위
+    수준 회귀와 달리 이 클래스는 **툴 dispatch 전체 경로**(base64 디코드 →
+    reader → columns → address → rig → diff → report → JSON 직렬화)를
+    통과시킨다 — reader.py 수정만으로는 잡히지 않는 상위 계층 회귀를 방어한다.
+    """
+
+    _FIXTURE_PATH = (
+        Path(__file__).parent / "fixtures" / "vwx" / "drop_dk_rigging_not_a_vectorworks_export.csv"
+    )
+
+    @staticmethod
+    def _b64_bytes(data: bytes) -> str:
+        return base64.b64encode(data).decode("ascii")
+
+    def test_cr_only_real_sample_never_raises_through_dispatch(self):
+        """결함 1 — CR 전용 실물 파일이 dispatch까지 예외 없이 도달한다."""
+        data = self._FIXTURE_PATH.read_bytes()
+        execution = _dispatch(_registry(), file_content_base64=self._b64_bytes(data))
+        # 예외가 dispatch()를 뚫고 나오면 이 호출 자체가 pytest 에러가 된다.
+        assert execution.result is not None
+
+    def test_real_sample_is_not_reported_as_a_clean_zero_diff_match(self):
+        """결함 2 — "설계 0대 · 차이 0건"이 정상 결과로 위장하지 않는다."""
+        data = self._FIXTURE_PATH.read_bytes()
+        execution = _dispatch(_registry(), file_content_base64=self._b64_bytes(data))
+        payload = json.loads(execution.result.content)
+
+        # 비공허성 — 이 파일이 실제로 픽스처 0대·차이 0건 형태임을 먼저 확인한다
+        # (거부 신호가 없다면 그것만으로 "일치"로 오독될 수 있는 형태다).
+        assert payload["designed_rig"]["fixture_count"] == 0
+        assert payload["diffs"]["missing_in_console"] == []
+        assert payload["diffs"]["address_collision"] == []
+        assert payload["diffs"]["quantity_mismatch"] == []
+
+        # 핵심 assert — 그럼에도 판독 실패가 반드시 동반돼 "정상 일치"로
+        # 읽히지 않는다. 120개의 개별 실패가 아니라 소수의 구조화된 거부다.
+        assert len(payload["read_failures"]) >= 1
+        assert len(payload["read_failures"]) < 10  # 수정 전엔 120개였다(비공허성).
+        assert "판독 실패" in payload["summary_ko"]

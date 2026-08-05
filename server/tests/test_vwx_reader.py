@@ -5,17 +5,32 @@ fixture 이름은 ``design.md`` §6.1을 따른다.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from server.vwx import reader
 from server.vwx.reader import (
     PATH_A,
     PATH_B,
     READ_FAILURE_BLOCK_UNDETECTED,
     READ_FAILURE_ENCODING,
+    READ_FAILURE_MALFORMED_CSV,
     READ_FAILURE_NOT_PATCH_SOURCE,
     READ_FAILURE_UNAPPROVED_DEPENDENCY,
     READ_FAILURE_WORKSHEET_SUBTOTAL,
     read,
 )
+
+#: 실물 음성 사례 픽스처 — drop.dk 리깅 하중 CSV. Vectorworks export가 아니다
+#: (server/tests/fixtures/vwx/README.md 참조). REQ-VWX-003·결함 1·결함 2 회귀
+#: 테스트 전용이며 M0(실물 Vectorworks 샘플 확보)의 산출물이 아니다.
+_REAL_NEGATIVE_SAMPLE_PATH = (
+    Path(__file__).parent / "fixtures" / "vwx" / "drop_dk_rigging_not_a_vectorworks_export.csv"
+)
+
+
+def _real_negative_sample_bytes() -> bytes:
+    return _REAL_NEGATIVE_SAMPLE_PATH.read_bytes()
+
 
 _HEADER_A = "Instrument Type\tUnit Number\tUniverse\tDMX Address\tUID"
 _ROWS_A = [
@@ -228,3 +243,144 @@ class TestInstrumentSummaryDoesNotBlockNormalXlsx:
         assert result.records == ()
         assert result.read_failures[0].kind == READ_FAILURE_UNAPPROVED_DEPENDENCY
         assert "미승인 의존성" in result.read_failures[0].detail
+
+
+class TestNewlineVariantsNeverEscapeAsExceptions:
+    """결함 1(P0) 회귀 — CR 전용/CRLF/LF 전부 예외 없이 구조화된 결과를 낸다.
+
+    수정 전 코드는 CR 전용(classic Mac) 텍스트를 ``io.StringIO``에
+    ``newline=''`` 없이 넘겨 ``csv.reader``가 ``_csv.Error: new-line
+    character seen in unquoted field``를 던졌다 — 예외가 ``read()`` 호출자
+    (툴 핸들러)까지 그대로 탈출했다. 비공허성: 이 테스트들은 수정 전 커밋에서
+    반드시 실패했다(``_csv.Error``가 그대로 전파되어 ``pytest``가 테스트
+    함수 실행 자체를 에러로 표시함).
+    """
+
+    _HEADER = "Instrument Type,Unit Number,Universe,DMX Address"
+    _ROW = "Robe Robin MMX Spot,1,1,1"
+
+    def test_cr_only_classic_mac_newlines_never_raise(self):
+        data = f"{self._HEADER}\r{self._ROW}".encode()
+        result = read(data)  # 예외를 던지면 이 테스트 자체가 실패한다.
+        assert len(result.records) == 1
+        assert result.records[0]["Instrument Type"] == "Robe Robin MMX Spot"
+
+    def test_crlf_newlines_never_raise(self):
+        data = f"{self._HEADER}\r\n{self._ROW}".encode()
+        result = read(data)
+        assert len(result.records) == 1
+        assert result.records[0]["Instrument Type"] == "Robe Robin MMX Spot"
+
+    def test_lf_newlines_never_raise(self):
+        data = f"{self._HEADER}\n{self._ROW}".encode()
+        result = read(data)
+        assert len(result.records) == 1
+        assert result.records[0]["Instrument Type"] == "Robe Robin MMX Spot"
+
+    def test_the_three_newline_variants_produce_identical_records(self):
+        """비공허성 — 세 변형이 실제로 동일한 판독 산출을 낸다(우연히 통과가 아님)."""
+        variants = {
+            "CR": f"{self._HEADER}\r{self._ROW}".encode(),
+            "CRLF": f"{self._HEADER}\r\n{self._ROW}".encode(),
+            "LF": f"{self._HEADER}\n{self._ROW}".encode(),
+        }
+        results = {name: read(data) for name, data in variants.items()}
+        for name, result in results.items():
+            assert len(result.records) == 1, name
+            assert result.records[0]["Instrument Type"] == "Robe Robin MMX Spot", name
+
+    def test_csv_layer_exception_is_converted_to_a_structured_read_failure(self, monkeypatch):
+        """결함 1 ② — 정규화 이후에도 csv가 거부하는 입력은 예외가 아니라 구조화된 실패다.
+
+        정규화만으로는 막을 수 없는 csv 예외(예: 따옴표 불균형)를 강제로
+        재현하기 위해 ``csv.reader``를 몽키패치해 ``csv.Error``를 던지게 한다
+        — 이 테스트는 "모든 입력이 우연히 정규화로 해결됐다"는 거짓양성을
+        배제한다(비공허성).
+        """
+        import csv as csv_module
+
+        def _always_raises_csv_error(*args, **kwargs):
+            raise csv_module.Error("synthetic malformed csv for test")
+
+        monkeypatch.setattr(csv_module, "reader", _always_raises_csv_error)
+        data = f"{self._HEADER}\n{self._ROW}".encode()
+        result = read(data)  # 예외를 던지면 이 테스트 자체가 실패한다.
+        assert result.records == ()
+        assert result.read_failures[0].kind == READ_FAILURE_MALFORMED_CSV
+        assert "synthetic malformed csv" in result.read_failures[0].detail
+
+
+class TestDelimiterTieBreakPrefersMultiColumnStructure:
+    """결함 2(P0) 부수 결함 회귀 — 별칭 점수 동점 시 다중 컬럼 구조를 우선한다.
+
+    수정 전 코드는 ``("\\t", ",")`` 순회에서 tab을 먼저 시도하고 ``score >
+    best[3]``(엄격한 초과)만으로 갱신했다 — 별칭 매칭이 전부 0으로 동점이면
+    tab이 최초 채택된 채로 절대 교체되지 않았다. comma로 쪼개면 진짜 다중
+    컬럼 구조가 나오는 파일도 tab 순회 우선순위 때문에 단일 컬럼(col_0)
+    쓰레기 구조로 오분류됐다.
+    """
+
+    def test_real_world_rigging_csv_is_not_misparsed_as_single_column_tab_data(self):
+        """실물 픽스처(드롭.dk 리깅 CSV) — 별칭 매칭 0으로 동점이어도 comma의
+        5컬럼 구조가 tab의 1컬럼 구조보다 우선 채택된다(비공허성 — 실제로
+        구분자가 바뀌었음을 내부 헬퍼로 직접 확인)."""
+        text = _real_negative_sample_bytes().decode("utf-8-sig").replace("\r", "\n")
+        delimiter, rows, header_index, score = reader._choose_delimiter(text)
+        assert delimiter == ","
+        assert score == 0  # 별칭 매칭 자체가 없다 — 그래도 comma가 이겨야 한다.
+        assert reader._uniform_width(rows)
+        assert len(rows[0]) == 5  # Name,PT-NAME,X_Coordinate,Y_Coordinate,LOAD
+
+    def test_tie_break_falls_back_to_widest_consistent_delimiter_when_both_score_zero(self):
+        """합성 재현 — tab 없는 순수 comma 다중열 데이터에서 tab이 잘못 채택되지 않는다."""
+        text = "aaa,bbb,ccc\nddd,eee,fff\n"  # 별칭 매칭 0, comma로 쪼개야 3컬럼.
+        delimiter, rows, header_index, score = reader._choose_delimiter(text)
+        assert delimiter == ","
+        assert len(rows[0]) == 3
+
+
+class TestRealWorldNonPatchSourceIsRejectedStructurally:
+    """결함 2(P0) 회귀 — 실물 음성 사례가 "정상 결과"로 위장하지 않는다.
+
+    수정 전 코드는 이 파일을 (tie-break 결함으로) 단일 컬럼 ``col_0`` 데이터로
+    오판독해 120개의 개별 ``min_record_incomplete`` 실패를 만들면서도,
+    ``designed_rig.fixture_count: 0`` + ``diffs`` 전부 빈 배열을 반환해
+    "도면과 콘솔이 일치"로 오독될 수 있는 정상-형태 페이로드를 냈다. 수정 후에는
+    ① 예외가 없고 ② 단일 구조화된 거부(주소 계열 컬럼 0개)로 명확히 보고된다.
+    """
+
+    def test_real_negative_sample_is_rejected_not_silently_accepted(self):
+        data = _real_negative_sample_bytes()
+        result = read(data)  # 예외를 던지면 이 테스트 자체가 실패한다(결함 1).
+
+        # 비공허성 — 픽스처 자체가 실제로 주소 계열 컬럼을 하나도 갖지 않음을
+        # 먼저 확인한다(거부가 우연이 아니라 파일 특성 때문임을 증명).
+        header_line = data.decode("utf-8-sig").splitlines()[0]
+        from server.vwx.columns import has_address_family
+
+        assert not has_address_family(header_line.split(","))
+
+        assert result.records == ()
+        assert len(result.read_failures) == 1  # 120개 개별 실패가 아니라 단일 구조화 거부.
+        failure = result.read_failures[0]
+        assert failure.kind in {READ_FAILURE_BLOCK_UNDETECTED, READ_FAILURE_NOT_PATCH_SOURCE}
+        assert failure.detail  # 사유가 실려 있다 — 빈 문자열이 아니다.
+
+    def test_tool_level_payload_never_reports_zero_diffs_as_a_clean_match(self):
+        """R End-to-end에 준하는 검증 — reader→columns→address→rig 파이프라인 전체가
+        일관되게 판독 실패를 신호하고, 위장된 "차이 없음" 을 만들지 않는다."""
+        from server.vwx.address import resolve_all
+        from server.vwx.columns import resolve_columns
+        from server.vwx.rig import build_designed_rig
+
+        data = _real_negative_sample_bytes()
+        result = read(data)
+        column_records, column_failures = resolve_columns(list(result.records))
+        resolved_records, address_failures = resolve_all(column_records)
+        designed_rig = build_designed_rig(resolved_records)
+
+        all_failures = (*result.read_failures, *column_failures, *address_failures)
+        assert len(designed_rig.fixtures) == 0
+        # 픽스처 0대 자체는 정상일 수 있으나(빈 도면), 이 경우는 판독 실패가
+        # 동반되어야 "차이 없음"으로 오독되지 않는다 — 비공허성 핵심 assert.
+        assert len(all_failures) >= 1
