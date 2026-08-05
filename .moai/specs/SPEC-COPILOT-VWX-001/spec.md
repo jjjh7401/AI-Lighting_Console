@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-VWX-001
 title: "Vectorworks 연계 1단계 — Instrument Data CSV/엑셀 가져오기 + 설계상 리그 모델 + precheck_patch 대조 리포트"
-version: "0.1.0"
+version: "0.1.1"
 status: draft
 created: 2026-08-05
 updated: 2026-08-05
@@ -26,6 +26,7 @@ related_specs: [SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVERLAP-001]
 | 버전 | 날짜 | 작성자 | 변경 |
 |---|---|---|---|
 | 0.1.0 | 2026-08-05 | manager-spec | 최초 작성 (draft, Tier L). 출처는 `.moai/reports/ma3-copilot-overview.html` §7 P0 항목. **아티팩트 6종**(spec/plan/acceptance/design/research/progress). REQ **25건**, AC **26건**, ASSUMPTION **3건**(68~70), 마일스톤 **9개**(M0~M8), 라이브 세션 **0회**(§C가 근거를 적는다), clarification 마커 **0건**. Vectorworks 형식 조사(경로 A/B, 인코딩, 컬럼 별칭표, 주소 표현, 7가지 대조 함정)는 `research.md`가 소유. **승인 대기 1건** — 신규 의존성 `openpyxl` 채택 여부(§C, `plan.md` 사용자 접점). |
+| 0.1.1 | 2026-08-05 | (run-phase worker) | **Implementation Kickoff Approval 확정.** `openpyxl` 신규 의존성 **승인** — 경로 B `.xlsx` 지원을 v1 범위에 포함(§C 갱신, §D `.xlsx` 조건부 Out-of-Scope 절 무효화 명시). 실물 Vectorworks export 샘플은 **여전히 미제공** — M0는 완료 처리하지 않고 BLOCKED로 유지, M1~M7은 합성 픽스처(문서 근거·실물 미검증)로 선행 진행한다(`progress.md` §E.2). |
 
 ---
 
@@ -94,7 +95,7 @@ related_specs: [SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVERLAP-001]
 
 - **REQ-VWX-023** `[Ubiquitous]` The 대조 리포트 **shall** 판독 실패·데이터 블록 미탐·미수행 판정·부정 전제를 모두 **구조화된 페이로드 부류**로 담는다 — 예외 산문으로 흘리지 않는다.
 - **REQ-VWX-024** `[Ubiquitous]` 사용자 대면 문자열 **shall** 한국어이며 표현 계층 코드에 둔다. 라벨 재사용은 `server/prechk/report.py:143 label()`의 공개 접근자를 통하며 밑줄 식별자를 직접 import하지 않는다.
-- **REQ-VWX-025** `[Ubiquitous]` 신규 모델 도달 툴은 `server/orchestrator/tools.py`의 **`TOOL_NAMES`·핸들러 클로저·`definitions`·`handlers`** 전 지점에 등재되며, 신규 REST 라우트·웹소켓 메시지·`execution_port` 직접 접근이 **0건**이다.
+- **REQ-VWX-025** `[Ubiquitous]` The 신규 대조 리포트 툴 **shall** `server/orchestrator/tools.py`의 **`TOOL_NAMES`·핸들러 클로저·`definitions`·`handlers`** 전 지점에 등재되며, 신규 REST 라우트·웹소켓 메시지·`execution_port` 직접 접근을 **0건**으로 유지한다.
 
 ---
 
@@ -114,15 +115,15 @@ related_specs: [SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVERLAP-001]
 
 > **FID/CID의 의미는 ASSUMPTION이 아니다.** `console/lua/PROTOCOL.md:322-324`가 슬롯 ≠ FID로 패치된 쇼파일을 검증 조건으로 명시하며, 그것은 선행 SPEC(PRECHK)이 이미 구조적으로 배제하고 출하한 사실이다(`.moai/specs/SPEC-COPILOT-PRECHK-001/spec.md` §C). 본 SPEC은 그 판정을 재측정하지 않고 **조인 키 설계로 그 필요 자체를 우회한다**(REQ-VWX-018) — 새 라이브 프로브를 열지 않는다(라이브 세션 회계는 `plan.md` §C 소유이며 0회다).
 
-### 신규 의존성 — 승인 대기 1건
+### 신규 의존성 — **승인 확정 (v0.1.1)**
 
-**경로 B의 `.xlsx` 바이너리 포맷 지원은 신규 의존성(`openpyxl`)을 요구한다.** 현재 `pyproject.toml`의 런타임 의존성은 `anthropic`·`fastapi`·`google-genai`·`keyring`·`lupa`·`python-osc`·`pyyaml`·`uvicorn`·`websockets` 9건이며 CSV/Excel 파싱 라이브러리가 **0건**이다(직접 확인). `.xls/.txt/.csv`는 표준 라이브러리(`csv`, 텍스트 판독)로 충분하지만 `.xlsx`는 아니다. **채택 여부는 사용자 승인 사항이며 승인 절차는 `plan.md`의 사용자 접점이 소유한다** — 미승인이어도 산출물은 성립한다(경로 B의 `.xlsx`만 v1 범위 밖으로 축소, §D).
+**경로 B의 `.xlsx` 바이너리 포맷 지원은 신규 의존성(`openpyxl`)을 요구한다.** 기존 `pyproject.toml`의 런타임 의존성은 `anthropic`·`fastapi`·`google-genai`·`keyring`·`lupa`·`python-osc`·`pyyaml`·`uvicorn`·`websockets` 9건이며 CSV/Excel 파싱 라이브러리가 **0건**이었다(직접 확인). `.xls/.txt/.csv`는 표준 라이브러리(`csv`, 텍스트 판독)로 충분하지만 `.xlsx`는 아니다. **Implementation Kickoff Approval에서 사용자가 채택을 승인했다** — `openpyxl`을 `pyproject.toml` 런타임 의존성에 추가하고, 경로 B의 `.xlsx`를 v1 범위에 **포함**한다. §D의 조건부 Out-of-Scope 절("`.xlsx` 바이너리 지원(신규 의존성 미승인 시)")은 이 승인으로 **무효화**된다.
 
 ### PRESERVE — 무변경 대상
 
-`console/lua/**` · `server/safety/**` · `server/prechk/{inventory,patch,report,verdicts}.py`(본 SPEC은 **소비만** 한다, `verdicts.py`는 신규 부류 순수 추가만 예외) · `server/paperwork/{data,render,output}.py`(소비만 한다) · `server/looks/**` · `server/orchestrator/tools.py`의 `_PROGRAMMER_STATE_COMMANDS`와 실행/dedupe 루프 · `server/rulebook/assets/v2.4.2/**`.
+`console/lua/**` · `server/safety/**` · `server/prechk/{__init__,inventory,patch,report,verdicts,footprint,macro,query}.py`(8개 파일 전량, 본 SPEC은 **소비만** 한다; `verdicts.py`는 신규 부류 순수 추가만 예외) · `server/paperwork/{data,render,output}.py`(소비만 한다) · `server/looks/**` · `server/orchestrator/tools.py`의 `_PROGRAMMER_STATE_COMMANDS`와 실행/dedupe 루프 · `server/rulebook/assets/v2.4.2/**`.
 
-> **`server/prechk/**`를 PRESERVE로 두는 근거.** 본 SPEC의 대조 절반(콘솔 실측 측)은 이미 라이브 검증된 `read_inventory`/`evaluate_patch`/`build_patch_sheet`를 그대로 소비한다 — 재구현하지 않는다. 신규 판정 어휘(`missing_in_console` 등)는 `server/prechk/verdicts.py`의 `CLOSED_VOCABULARIES`(`server/prechk/verdicts.py:52`)에 **신규 부류로 추가**하되, 기존 부류(`address_duplicate` 등)의 의미는 변경하지 않는다. 게이트 검증: `git diff --stat <BASE>..HEAD -- server/prechk/inventory.py server/prechk/patch.py server/prechk/report.py`가 빈 출력이어야 한다 — `verdicts.py`만 순수 추가 hunk를 허용한다.
+> **`server/prechk/**`를 PRESERVE로 두는 근거(plan-audit 지적 반영 — 8개 파일 전량 잠금).** 본 SPEC의 대조 절반(콘솔 실측 측)은 이미 라이브 검증된 `read_inventory`/`evaluate_patch`/`build_patch_sheet`를 그대로 소비한다 — 재구현하지 않는다. `footprint.py`/`macro.py`/`query.py`/`__init__.py`는 본 SPEC이 직접 호출하지 않는 무관 기능이지만, PRESERVE 게이트가 파일 단위가 아니라 **디렉터리 단위**로 명확하도록 8개 파일 전량을 명시한다. 신규 판정 어휘(`missing_in_console` 등)는 `server/prechk/verdicts.py`의 `CLOSED_VOCABULARIES`(`server/prechk/verdicts.py:52`)에 **신규 부류로 추가**하되, 기존 부류(`address_duplicate` 등)의 의미는 변경하지 않는다. 게이트 검증: `git diff --stat <BASE>..HEAD -- server/prechk/__init__.py server/prechk/inventory.py server/prechk/patch.py server/prechk/report.py server/prechk/footprint.py server/prechk/macro.py server/prechk/query.py`가 빈 출력이어야 한다 — `verdicts.py`만 순수 추가 hunk를 허용한다.
 
 ---
 
@@ -162,12 +163,11 @@ Vectorworks 도면의 시각적 이미지(플롯·뷰포트 렌더)를 자동으
 - 콘솔에 `exec` 발화를 보내 패치를 옮기거나 재배치하는 코드는 0건이다.
 - 도면 파일을 되쓰는(write-back) 코드는 0건이다.
 
-### Out of Scope — `.xlsx` 바이너리 지원(신규 의존성 미승인 시)
+### Out of Scope — `.xlsx` 바이너리 지원(신규 의존성 미승인 시) — **v0.1.1: 무효화됨**
 
-§C의 승인이 확보되지 않으면 경로 B의 `.xlsx` 형식은 v1 범위 밖이다 — `.txt(tab)`·`.csv`(텍스트 기반 워크시트 export)만 지원하고, `.xlsx` 파일이 주어지면 판독 실패로 분류하며 사유에 "미승인 의존성"을 명시한다. 승인되면 이 절은 무효화된다.
+**이 절은 §C의 승인으로 무효화됐다.** `openpyxl`이 승인되어 경로 B의 `.xlsx` 형식은 v1 범위에 **포함**된다. 이 절은 승인 전 조건부 축소 규칙이 실제로 무엇이었는지 감사 가능하도록 기록으로만 남긴다 — 승인 전에는 `.txt(tab)`·`.csv`(텍스트 기반 워크시트 export)만 지원하고 `.xlsx` 파일을 판독 실패("미승인 의존성")로 분류하는 규칙이었다.
 
-- 미승인 상태에서 `openpyxl`(또는 대체 xlsx 파서)을 `pyproject.toml`에 추가하는 커밋은 0건이다.
-- 미승인 상태에서 `.xlsx` 바이너리를 바이트 단위로 자체 파싱하는 우회 코드는 0건이다.
+- `.xlsx` 파서를 바이트 단위로 자체 구현(우회)하는 코드는 여전히 0건이다 — `openpyxl` 표준 API만 사용한다.
 
 ---
 

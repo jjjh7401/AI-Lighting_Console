@@ -149,14 +149,71 @@ Minor 지적 10건(P0/P1 없음, 전부 run-phase 착수 비차단):
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+### run-phase 착수 baseline (직접 실측, 이월 인용 아님)
+
+```
+git rev-parse HEAD → 2bc95cf309457de5f6fc2b6757b3a8c7aa9f6ec7 (feature/SPEC-COPILOT-VWX-001, base origin/main b1a630e)
+uv run pytest server/tests -q → 4716 passed, 7 skipped, 1 warning in 89.90s (0:01:29)
+```
+
+### Implementation Kickoff Approval — 확정 (2건 모두 종결)
+
+1. **`openpyxl` 신규 의존성 — 승인.** `pyproject.toml` 런타임 의존성에 추가, 경로 B `.xlsx`를 v1 범위에 포함. spec.md §C/§D v0.1.1로 갱신됨(무효화된 조건부 Out-of-Scope 절 명시).
+2. **실물 Vectorworks export 샘플 — 미제공.** 사용자가 아직 제공하지 않았다. M0는 완료 처리하지 않는다.
+
+### M0 — `BLOCKED: 사용자 산출물 대기 — 실물 Vectorworks export 샘플 미제공`
+
+M0는 사용자가 실물 export 파일(경로 A 또는 경로 B, 최소 1건)을 제공해야 완료 가능하다. 제공되면 다음을 검증한다:
+- 컬럼 계약 검증: `research.md` §3 별칭 테이블이 실제 헤더와 합치하는지(ASSUMPTION-68) — 불일치 시 별칭 테이블을 실물 헤더로 확장하고 확장분을 본 절에 기록.
+- `Absolute Address` 단일값 파일의 실존 여부(ASSUMPTION-69).
+- 경로 B 데이터 블록 구조적 식별 휴리스틱의 실물 적중 여부(ASSUMPTION-70).
+
+M0가 미충족이므로 M1~M7은 **합성 픽스처**(문서 근거·실물 미검증, research.md §3 알려진 형식 조사에만 근거)로 선행 진행한다. M8(종단 검증)은 실물 샘플 없이는 닫히지 않으므로 아래에서 별도 BLOCKED로 기록한다.
+
+### M1~M7 구현 로그
+
+_<manager-develop 위임 후 마일스톤별로 본 절에 追記>_
+
+### M8 — `BLOCKED: 실물 Vectorworks export 샘플 없이는 종단 검증을 닫을 수 없음`
+
+M0가 미충족인 채로는 M8(실물 파일 기반 종단 통합 검증, AC-VWX-026)을 완료로 표시하지 않는다. M8은 합성 픽스처 기반 종단 스모크(있다면)와는 별개로, 실물 샘플이 도착한 뒤 재개한다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+_<pending — M1~M7 구현 완료 후 채움>_
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<pending sync-phase>_
 
 ## §F. Phase 4 Mode Selection — 확정 기록 (오케스트레이터 소유)
+
+### 입력 파라미터
+
+- **tier**: L
+- **scope (file count)**: 예상 10~13 파일 — 신규 `server/vwx/{__init__,reader,columns,address,rig,diff,report}.py`(7) · `pyproject.toml`(1, openpyxl 승인 확정) · `server/orchestrator/tools.py` 수정(1) · `server/prechk/verdicts.py`/`server/prechk/report.py` 신규 부류 순수 추가(2) · 신규 테스트 7개 이상
+- **domain count**: 1 (Python 백엔드 단일 도메인)
+- **concurrency benefit**: LOW — M1(판독)→M2(컬럼)→M3(주소)→M4(리그)→M5(대조)→M6(보고/툴)의 강한 순차 데이터 사슬
+- **Agent Teams prereqs**: 해당 없음 (Mode 3 retired)
+
+### 모드 평가
+
+| # | 모드 | 선택 | 근거 |
+|---|---|---|---|
+| 1 | trivial | 미선택 | 신규 모듈 7개 + 툴 배선 |
+| 2 | background | 미선택 | Write/Edit 포함 |
+| 3 | agent-team | 미선택 | retired |
+| 4 | parallel | 미선택 | 단일 도메인 + 강한 순차 의존(코딩 중심 caveat) |
+| 5 | **sub-agent** | **선택** | 순차 데이터 사슬(M1→…→M7), 단일 worker가 계약대로 순서대로 진행하는 편이 충돌·재작업이 적다 |
+| 6 | workflow | 미선택 | 균일 기계 변환이 아니다 — 판정·미수행·보고 형상을 매 마일스톤 확인해야 함 |
+
+### Decision: sub-agent
+
+plan.md §G의 권고(sub-agent)와 일치한다 — 어긋나지 않으므로 §F가 §G를 override할 필요 없음. M1~M7을 manager-develop 단일 sequential 위임으로 순서대로 진행하며, 마일스톤 경계마다 오케스트레이터(본 워커)가 PRESERVE diff·ruff·pytest를 직접 재실측한다.
+
+### 사용자 접점 표 (Kickoff 시점 확정 반영)
+
+| 시점 | 접점 | 결과 |
+|---|---|---|
+| Kickoff | `openpyxl` 신규 의존성 채택 여부 | **승인** — .xlsx v1 범위 포함 |
+| Kickoff | 실물 Vectorworks export 샘플 제공 | **미제공** — M0/M8 BLOCKED 유지, M1~M7은 합성 픽스처로 진행 |
