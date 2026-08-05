@@ -2186,17 +2186,57 @@ def build_toolset(
         except InventoryReadError as error:
             return _error_result(call, f"fixture inventory unreadable: {error}")
 
-        read_result = read_vwx_export(raw_bytes)
-        column_records, column_failures = resolve_vwx_columns(list(read_result.records))
-        resolved_records, address_failures = resolve_vwx_addresses(column_records)
-        designed_rig = build_designed_rig(resolved_records)
-        diff = compare_vectorworks_rig(designed_rig, inventory)
-        all_read_failures = (
-            *read_result.read_failures,
-            *column_failures,
-            *address_failures,
-        )
-        payload = build_vwx_report(diff, read_failures=all_read_failures).to_dict()
+        # @MX:WARN: 결함 1(P0, SPEC-COPILOT-VWX-001 실물 파일 투입 재현) —
+        #   server/vwx/reader.py는 자체적으로 csv 계층 예외를 흡수하지만,
+        #   이 try/except는 그 위 계층(columns/address/rig/diff)에서 예상치
+        #   못한 예외가 나더라도 툴 경계를 절대 넘지 않게 하는 방어선이다.
+        #   비협상 원칙(server/prechk/patch.py:15-21) — 읽기 실패는 예외
+        #   산문이 아니라 정상 페이로드의 구조화된 부류다.
+        # @MX:REASON: 실물 파일(리깅 하중 CSV) 투입에서 예외가 오케스트레이터
+        #   까지 탈출한 결함이 발견됐다 — 리더 계층 수정만으로는 미래의
+        #   유사 입력(다른 예외를 던지는 파서 계층)을 방어하지 못한다.
+        try:
+            read_result = read_vwx_export(raw_bytes)
+            column_records, column_failures = resolve_vwx_columns(list(read_result.records))
+            resolved_records, address_failures = resolve_vwx_addresses(column_records)
+            designed_rig = build_designed_rig(resolved_records)
+            diff = compare_vectorworks_rig(designed_rig, inventory)
+            all_read_failures = (
+                *read_result.read_failures,
+                *column_failures,
+                *address_failures,
+            )
+            payload = build_vwx_report(diff, read_failures=all_read_failures).to_dict()
+        except Exception as error:  # noqa: BLE001 — 툴 경계 최종 방어선(설계상 의도적)
+            payload = {
+                "designed_rig": {
+                    "fixture_count": 0,
+                    "device_type_column_present": False,
+                    "join_key_conflicts": [],
+                    "vw_patch_conflicts": [],
+                },
+                "console_rig": {"inventory": inventory.to_dict()},
+                "diffs": {
+                    "missing_in_console": [],
+                    "address_collision": [],
+                    "quantity_mismatch": [],
+                },
+                "skipped_checks": [],
+                "read_failures": [
+                    {
+                        "row": None,
+                        "kind": "unexpected_parse_exception",
+                        "detail": (
+                            f"판독-대조 파이프라인에서 예상치 못한 예외 발생"
+                            f"({type(error).__name__}): {error}"
+                        ),
+                    }
+                ],
+                "summary_ko": (
+                    "판독 실패 1건. 예상치 못한 예외로 대조를 완료하지 못했다 — "
+                    "정상 결과가 아니라 구조화된 판독 실패로 보고한다."
+                ),
+            }
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,

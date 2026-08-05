@@ -170,6 +170,79 @@ M0는 사용자가 실물 export 파일(경로 A 또는 경로 B, 최소 1건)�
 
 M0가 미충족이므로 M1~M7은 **합성 픽스처**(문서 근거·실물 미검증, research.md §3 알려진 형식 조사에만 근거)로 선행 진행한다. M8(종단 검증)은 실물 샘플 없이는 닫히지 않으므로 아래에서 별도 BLOCKED로 기록한다.
 
+**사용자 제공 파일 1건 수령 (2026-08-05) — M0 여전히 미충족, BLOCKED 유지.** `/tmp/vwx_sample.csv`
+(원본: <https://d3cvt6oaff0blz.cloudfront.net/drop.dk/website/Downloads/Examples%20Shows/csv_example1.csv>)를
+수령했으나, **이 파일은 Vectorworks Instrument Data export가 아니다** — drop.dk의 리깅 포인트/하중
+(rigging point/load) CSV다. 헤더 `Name,PT-NAME,X_Coordinate,Y_Coordinate,LOAD`, 픽스처 타입·유니버스·
+DMX 주소 컬럼이 전부 없다(주소 계열 컬럼 0개, `ADDRESS_FAMILY_FIELDS` 교집합 0). 줄바꿈은 CR 전용
+(classic Mac 스타일 — `\r` 120개, `\n` 0개). 따라서 M0의 실물 검증 산출물(ASSUMPTION-68~70 판정)로
+쓸 수 없다 — M0/M8은 계속 BLOCKED다. 이 파일은 오직 **REQ-VWX-003(패치 출처 아님 거부) 경로의 실물
+음성(negative) 사례**로만 활용했다 — `server/tests/fixtures/vwx/drop_dk_rigging_not_a_vectorworks_export.csv`
+(+ 동 디렉터리 `README.md`가 출처·특성을 기록)로 커밋해 회귀 픽스처로 승격했다.
+
+**이 실물 파일 투입이 결함 2건(P0)을 드러냈다 — 코디네이터가 직접 실측·재현·보고, 본 워커가 수정·검증.**
+
+- **결함 1(P0) — CR 전용 줄바꿈에서 예외가 툴 경계 밖으로 탈출.** 재현:
+  `reg.dispatch(ToolCall(name='precheck_vectorworks_diff', arguments={'file_content_base64': <파일 base64>}))`
+  → `_csv.Error: new-line character seen in unquoted field`
+  (`server/vwx/reader.py:117 _split_rows` → `:136 _choose_delimiter` → `:248 _read_text` → `:289 read`).
+  원인: `io.StringIO(text)`를 `newline=''` 없이 만들어 `csv.reader`에 넘겼다 — bare `\r`이 필드 내부
+  개행으로 오인됐다. REQ-VWX-004는 "명시적으로 실패"이지 예외 투척이 아니며, 리포 비협상 원칙
+  (`server/prechk/patch.py:15-21`)을 위반했다.
+  **수정**: ① `_normalize_newlines()`로 CR 전용·CRLF·LF를 파싱 전 전부 LF로 통일 + `newline=''`
+  적용(`server/vwx/reader.py`). ② 정규화 이후에도 csv 계층이 거부할 수 있는 입력(따옴표 불균형 등)을
+  `_MalformedCsv` 내부 신호로 흡수해 신규 `READ_FAILURE_MALFORMED_CSV` 구조화 실패로 변환 —
+  `_read_text`가 예외를 최종 흡수한다. ③ **방어선 2중화**: `server/orchestrator/tools.py`의
+  `precheck_vectorworks_diff` 핸들러 자체에도 read→columns→address→rig→diff 파이프라인 전체를 감싸는
+  `try/except Exception`을 추가해, reader.py 이후 계층(예상 못한 예외)도 툴 경계를 절대 넘지 않게 했다.
+  **검증**: CR 전용·CRLF·LF 3종 + 몽키패치로 강제 유발한 csv 예외 1종 회귀 테스트 4건
+  (`test_vwx_reader.py::TestNewlineVariantsNeverEscapeAsExceptions`) + 실물 파일 dispatch 종단 테스트 2건
+  (`test_vwx_tool.py::TestRealWorldNegativeSampleEndToEndThroughDispatch`). **비공허성**: 수정 전 코드로
+  되돌려(`git stash`) 재실행한 결과, `test_vwx_reader.py` 전체가 `ImportError`(신규 상수 부재)로
+  collection 자체가 실패했고, `test_vwx_tool.py`의 신규 2건은 정확히 위와 동일한 `_csv.Error`로
+  실패함을 직접 확인했다(수정 되돌림 없이는 재현되지 않는 새 테스트임을 증명).
+
+- **결함 2(P0) — 패치 출처가 아닌 파일에 "이상 없음"을 내준다.** 재현(LF로 바꿔 예외를 우회): `is_error:
+  False`, `{"designed_rig": {"fixture_count": 0}, "diffs": {전부 빈 배열}}` — "설계 0대·차이 0건"이
+  "도면과 콘솔이 일치"로 오독될 수 있는 거짓 안전 신호였다. 부수 원인: `_choose_delimiter`가 tab을 먼저
+  순회하고 `score > best[3]`(엄격한 초과)만으로 갱신해, 별칭 매칭이 전부 0으로 동점인 파일에서 tab이
+  최초 채택된 채 절대 교체되지 않았다 — comma로 쪼개면 5컬럼짜리 진짜 구조가 나오는 이 파일도 tab
+  순회 우선순위 때문에 단일 컬럼(`col_0`) 쓰레기 구조 121개 레코드로 오분류됐다.
+  **수정**: ① `_column_width_score()`를 도입해 점수 동점 시 **다중 컬럼 일관성이 더 높은** 구분자를
+  우선 채택하도록 `_choose_delimiter`의 타이브레이크를 수정. 이 파일은 이제 comma(5컬럼, `_uniform_width`
+  참)로 정확히 채택되고, 별칭 매칭 헤더가 여전히 0(2 미만)이므로 `READ_FAILURE_BLOCK_UNDETECTED` 단일
+  구조화 거부(레코드 0건)로 귀결된다 — 120개 개별 `min_record_incomplete`가 아니라 명확한 단일 거부다.
+  ② 신규 판정 코드(`READ_FAILURE_MALFORMED_CSV`)는 `server/vwx/reader.py`의 **자유형 문자열**
+  `ReadFailure.kind`이며 `VWX_CLOSED_VOCABULARIES`(diff_kind·skipped_check_kind만 검증) 대상이 아니다 —
+  등록 불필요. `server/prechk/**`는 완전히 비접촉 유지(아래 PRESERVE 확인).
+  **검증**: `_choose_delimiter` 타이브레이크 단위 테스트 2건 + 실물 파일 단일 구조화 거부 검증 2건
+  (`test_vwx_reader.py::TestDelimiterTieBreakPrefersMultiColumnStructure`,
+  `::TestRealWorldNonPatchSourceIsRejectedStructurally`) + 툴 dispatch 종단 검증 1건
+  (`test_vwx_tool.py::test_real_sample_is_not_reported_as_a_clean_zero_diff_match` — `read_failures`
+  1건 이상 & 10건 미만임을 직접 assert, "수정 전엔 120개였다"를 주석으로 명시). **비공허성**: 결함 1과
+  동일한 stash-and-rerun으로 재확인 — 수정 되돌리면 이 테스트들도 함께 실패한다(신규 상수 의존).
+
+**재검증(오케스트레이터 직접 실측, 수정 후 최종 HEAD)**:
+```
+uv run pytest server/tests -q → 4812 passed, 7 skipped, 1 warning in 90.69s
+```
+착수 baseline(이 회차) `4801 passed, 7 skipped` 대비 **+11**(신규 회귀 테스트: reader 9건 + tool 2건),
+회귀 0건.
+```
+uv run ruff check server/vwx server/tests/test_vwx_*.py → All checks passed!
+uv run ruff format --check server/vwx server/tests/test_vwx_*.py server/orchestrator/tools.py → 15 files already formatted
+```
+`server/safety/console.py:292,346` · `server/tests/test_web_dash.py:523`의 E501 3건은 b1a630e 시점
+선재 결함이며 손대지 않았다(PRESERVE·범위 밖, 코디네이터 지시).
+```
+git diff --stat 2bc95cf..HEAD -- console/lua/ server/safety/ \
+  server/prechk/__init__.py server/prechk/inventory.py server/prechk/patch.py \
+  server/prechk/report.py server/prechk/footprint.py server/prechk/macro.py server/prechk/query.py \
+  server/prechk/verdicts.py \
+  server/paperwork/data.py server/paperwork/render.py server/paperwork/output.py server/looks/
+→ (완전 빈 출력, exit=0)
+```
+
 ### M1~M7 구현 로그 (manager-develop 위임 완료, 오케스트레이터 직접 재검증 완료)
 
 **AC PASS/FAIL 매트릭스** (M0/M8 제외 24건 전량):
@@ -237,18 +310,19 @@ M0가 미충족인 채로는 M8(실물 파일 기반 종단 통합 검증, AC-VW
 ## §E.3 Run-phase Audit-Ready Signal
 
 ```yaml
-run_status: partial-blocked   # M1~M7 completed + verified; M0/M8 BLOCKED (real Vectorworks sample not provided)
+run_status: partial-blocked   # M1~M7 completed + verified; M0/M8 BLOCKED (real Vectorworks sample not provided — the 1 file received is a non-VW rigging CSV, used only as a negative-case fixture)
 run_complete_at: 2026-08-05
-head_sha: 7c2a19b
+head_sha: "<M8 이후 마지막 커밋 SHA — git log -1 --format=%H로 실측할 것>"
 base_sha: 2bc95cf309457de5f6fc2b6757b3a8c7aa9f6ec7
 milestones_completed: [M1, M2, M3, M4, M5, M6, M7]
 milestones_blocked: [M0, M8]
-milestones_blocked_reason: "실물 Vectorworks export 샘플 미제공 — 사용자 산출물 대기"
+milestones_blocked_reason: "실물 Vectorworks export 샘플 미제공 — 사용자가 보낸 파일 1건은 drop.dk 리깅 하중 CSV이며 Vectorworks export가 아니다(주소 계열 컬럼 0개) — 결함 회귀 픽스처로만 승격, M0 판정에는 못 쓴다"
 acceptance_criteria_verified: 24   # AC-VWX-002~025 (M0=AC-VWX-001, M8=AC-VWX-026 제외)
 acceptance_criteria_blocked: 2     # AC-VWX-001 (M0), AC-VWX-026 (M8)
-full_suite: "4801 passed, 7 skipped, 1 warning in 92.58s — entry baseline 4716 passed 7 skipped, delta +85 fully explained (7 new test files), 0 regressions"
-ruff: "All checks passed! (server/vwx/, server/tests/test_vwx_*.py, server/orchestrator/tools.py)"
-preserve_gate: "empty diff on all 8 server/prechk/ files (including verdicts.py — stricter than the pure-addition exception spec.md originally allowed) + console/lua/** + server/safety/** + server/paperwork/{data,render,output}.py + server/looks/**; non-vacuity proven via plant-and-revert (582746c/9f3de4b)"
+defects_found_and_fixed: 2   # P0 결함 2건 — 실물 파일 투입(코디네이터 실측)으로 드러남, 본 워커가 수정+회귀 테스트 11건 추가
+full_suite: "4812 passed, 7 skipped, 1 warning in 90.69s — this-round entry baseline 4801 passed 7 skipped, delta +11 fully explained (2 defect-fix regression test classes: 9 reader + 2 tool), 0 regressions"
+ruff: "All checks passed! (server/vwx/, server/tests/test_vwx_*.py, server/orchestrator/tools.py) — ruff format --check also clean"
+preserve_gate: "empty diff on all 8 server/prechk/ files (including verdicts.py) + console/lua/** + server/safety/** + server/paperwork/{data,render,output}.py + server/looks/** — reverified after the defect-fix commit"
 tool_registration: "dispatch-verified — TOOL_NAMES membership, definitions() name-set, dispatch no-unknown-tool, advertised==set(TOOL_NAMES) — all 4 assertions PASS"
 architecture_boundary: "server/tests/test_architecture.py — 4 passed — server/vwx/ imports neither server.bridge nor pythonosc"
 plan_audit_minor_findings_closed: 4   # 자기모순 2건 + REQ-VWX-025 shall + AC-013②
@@ -257,9 +331,10 @@ push_count: 0
 pr_count: 0
 main_touched: false
 known_gaps:
-  - "M0/M8은 완료되지 않았다 — 실물 Vectorworks export 샘플이 사용자로부터 제공되어야 재개 가능하다."
-  - "M1~M7은 전량 합성 픽스처(문서 근거·실물 미검증)로 검증됐다 — ASSUMPTION-68~70은 여전히 미판정(GO/NEGATIVE 없음)."
+  - "M0/M8은 완료되지 않았다 — 실물 Vectorworks export 샘플이 사용자로부터 제공되어야 재개 가능하다. 수령한 파일 1건(drop.dk 리깅 하중 CSV)은 Vectorworks export가 아니라 M0 판정에 쓸 수 없다."
+  - "M1~M7은 전량 합성 픽스처(문서 근거·실물 미검증) + 실물 음성 사례 1건(회귀 전용)으로 검증됐다 — ASSUMPTION-68~70은 여전히 미판정(GO/NEGATIVE 없음)."
   - "M6 설계가 계획 대비 변경됐다 — server/prechk/verdicts.py를 건드리지 않고 server/vwx/report.py에 독립 어휘 레지스트리를 신설했다(spec.md §C·acceptance.md AC-VWX-023 갱신 완료)."
+  - "이번 회차에서 P0 결함 2건이 실물 파일 투입으로 드러나 수정됐다 — 향후 다른 실물 파일이 도착하면 유사한 잔여 결함이 또 나올 수 있으므로, M0가 열릴 때 결함 발견을 예상하고 대응할 것."
 next: "실물 Vectorworks export 샘플 확보(M0) 후 M8 종단 검증 재개. 그 전까지는 sync-phase로 진행하지 않는다(M0/M8 BLOCKED가 SPEC 완결을 막는다)."
 ```
 
