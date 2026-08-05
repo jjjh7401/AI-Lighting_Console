@@ -139,13 +139,17 @@ class TestRegistry:
         #   and create_arrangement_groups (WRITE) — same D-4 split: a group
         #   write carries its own tool-layer approval gate (design.md §7) and
         #   must never hide behind the read tool.
+        # + SPEC-COPILOT-VWX-001's precheck_vectorworks_diff — reads an
+        #   uploaded Vectorworks Instrument Data export plus THIS console's own
+        #   fixture inventory and reports the difference; 0 exec verbs, never
+        #   touches execution_port (spec.md §D).
         # The count is asserted against the declared tuple's length so the set
         # stays CLOSED: adding a handler without declaring it, or declaring one
         # without a handler, still fails here.
         registry = _registry()
         names = [definition.name for definition in registry.definitions()]
         assert sorted(names) == sorted(TOOL_NAMES)
-        assert len(names) == len(TOOL_NAMES) == 22
+        assert len(names) == len(TOOL_NAMES) == 23
 
     def test_the_four_original_tools_are_still_registered(self):
         # The M5 addition must not have displaced any of them.

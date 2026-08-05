@@ -9,6 +9,8 @@ never sends anything.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import math
 import re
@@ -116,6 +118,12 @@ from server.spatial.presets import (
 )
 from server.spatial.topology import TopologyResult
 from server.spatial.topology import classify as classify_topology
+from server.vwx.address import resolve_all as resolve_vwx_addresses
+from server.vwx.columns import resolve_columns as resolve_vwx_columns
+from server.vwx.diff import compare as compare_vectorworks_rig
+from server.vwx.reader import read as read_vwx_export
+from server.vwx.report import build_vwx_report
+from server.vwx.rig import build_designed_rig
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
     from server.deploy.pipeline import DeployOutcome
@@ -134,6 +142,7 @@ TOOL_NAMES = (
     "prepare_busking",
     "prepare_songcue",
     "precheck_patch",
+    "precheck_vectorworks_diff",
     "preshow_check",
     "find_fx",
     "instantiate_fx",
@@ -2133,6 +2142,61 @@ def build_toolset(
                 ),
                 command_outcomes=inner.command_outcomes,
             )
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            ),
+            command_outcomes=(),
+        )
+
+    # -- precheck_vectorworks_diff (SPEC-COPILOT-VWX-001 M6 — REQ-VWX-022/025) -
+    #
+    # @MX:NOTE: reads an uploaded Vectorworks Instrument Data export (base64
+    #   bytes) and this console's own fixture inventory, then reports the
+    #   difference (missing_in_console / address_collision / quantity_
+    #   mismatch). Never sends anything toward the console -- 0 exec verbs
+    #   (spec.md §D). Reuses ``_InventoryPort`` defined above for
+    #   ``precheck_patch`` (the same console-read adapter) rather than a
+    #   second one, and the server/vwx/ modules it calls into never import
+    #   server.bridge/pythonosc directly at all -- the whole package sits
+    #   outside the single-chokepoint boundary (test_architecture.py).
+
+    def precheck_vectorworks_diff(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        if property_port is None:
+            # Same missing-capability wording precheck_patch uses — never
+            # answer "no differences" when the capability is simply unwired.
+            return _error_result(
+                call,
+                "property reads are not wired — build_toolset needs property_port "
+                "(or a state_port that also implements query_property)",
+            )
+        file_content_b64 = call.arguments.get("file_content_base64")
+        if not isinstance(file_content_b64, str) or not file_content_b64.strip():
+            return _error_result(call, "'file_content_base64' must be a non-empty base64 string")
+        try:
+            raw_bytes = base64.b64decode(file_content_b64, validate=True)
+        except (binascii.Error, ValueError) as error:
+            return _error_result(call, f"'file_content_base64' is not valid base64: {error}")
+
+        try:
+            inventory = read_inventory(_InventoryPort(state_port, property_port))
+        except InventoryReadError as error:
+            return _error_result(call, f"fixture inventory unreadable: {error}")
+
+        read_result = read_vwx_export(raw_bytes)
+        column_records, column_failures = resolve_vwx_columns(list(read_result.records))
+        resolved_records, address_failures = resolve_vwx_addresses(column_records)
+        designed_rig = build_designed_rig(resolved_records)
+        diff = compare_vectorworks_rig(designed_rig, inventory)
+        all_read_failures = (
+            *read_result.read_failures,
+            *column_failures,
+            *address_failures,
+        )
+        payload = build_vwx_report(diff, read_failures=all_read_failures).to_dict()
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
@@ -4347,6 +4411,45 @@ def build_toolset(
             },
         ),
         ToolDefinition(
+            name="precheck_vectorworks_diff",
+            description=(
+                "Compare a Vectorworks Instrument Data export (Export Instrument "
+                "Data tab-text, or Export Worksheet .xls/.xlsx/.txt/.csv/.dif/.slk) "
+                "against THIS console's actual patch. Reads the file content and "
+                "the console's own fixture inventory itself and reports three "
+                "difference classes: fixtures the drawing has but the console does "
+                "not (missing_in_console), address collisions the console "
+                "inventory already knows about (address_collision, reused from "
+                "precheck_patch — never recomputed), and per-type quantity "
+                "mismatches between drawing and console (quantity_mismatch). The "
+                "join key is (universe, address) plus fixture type — never a "
+                "fixture id or custom id: a show file where console slot and "
+                "fixture id coincide makes that comparison structurally "
+                "unverifiable, and that gap is reported under skipped_checks "
+                "rather than silently attempted. A fixture the drawing marks "
+                "unpatched (DMX Address/Absolute Address is 0 or blank) is a "
+                "third state, never counted as missing_in_console. Do not pass "
+                "rig numbers: none are accepted — the console side is read "
+                "directly, and the parsed file never reaches the console."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "file_content_base64": {
+                        "type": "string",
+                        "description": (
+                            "The Vectorworks export file's raw bytes, base64-"
+                            "encoded. Text or binary — encoding and file "
+                            "structure are detected from content, never from a "
+                            "file name or extension."
+                        ),
+                    },
+                },
+                "required": ["file_content_base64"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
             name="preshow_check",
             description=(
                 "Run the standard pre-show checklist in one pass: sequence/"
@@ -5141,6 +5244,7 @@ def build_toolset(
         "prepare_busking": prepare_busking,
         "prepare_songcue": prepare_songcue,
         "precheck_patch": precheck_patch,
+        "precheck_vectorworks_diff": precheck_vectorworks_diff,
         "preshow_check": preshow_check,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,
