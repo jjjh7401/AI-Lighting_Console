@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-TRUNCATE-001
 title: "절단 고지의 구조적 강제 — 부분 판독 회신의 형상 분기 (Truncation Disclosure)"
-version: "0.1.0"
+version: "0.2.0"
 status: draft
 created: 2026-08-05
 updated: 2026-08-05
@@ -51,6 +51,8 @@ def analyze_spatial_records(records: Sequence[Mapping[str, object]]) -> SpatialA
 따라서 `analysis`의 어떤 필드도 커버리지 불완전성을 실을 수 없다 — `low_confidence`(`server/spatial/schema.py:249`)는 **기하학적 확산** 신호이고(`tools.py:4876-4879`) 커버리지 신호가 아니다. 그리고 이것은 추론이 아니다: 같은 절단 리그에서 `progress.md:485`가 *"x 확산으로 **1행 고신뢰**"*를 기록했다 — **`low_confidence: False`가 18대 판독 위에서 실제로 관측됐다.**
 
 > **존재하지 않는 리그(18대)에 대한 고신뢰 좌우 정렬이, 완전 판독과 형상으로 구별되지 않는다.** 모델이 인용할 것이 있었다는 사실 자체가 결함이다.
+>
+> **그러므로 요구는 *플래그*가 아니라 *보류*다.** `analysis`에 *"이것은 부분이다"*를 붙이는 길은 **구조적으로 막혀 있다** — `analyze_spatial_records`는 **records 하나만** 받고 절단·커버리지 인자가 **없으므로**(`server/spatial/rows.py:202-204`), 그 산출물에 부분성을 실으려면 `server/spatial/**`의 시그니처를 고쳐야 하고 그것은 REQ-TRUNCATE-012가 금지한다. 남는 유일한 수단은 **툴 계층에서 그 필드를 아예 계산하지 않는 것**이다. 즉 채택안(D2)의 두 절반 중 **`analysis` 보류가 하중을 받는 쪽**이고, `fixtures` → `partial_fixtures` 개명은 그 보류가 목록 쪽으로 우회되지 않도록 형상을 함께 옮기는 보강이다.
 
 ### A.3 저장소는 이미 "절단이면 거부"를 규율로 갖고 있다
 
@@ -80,7 +82,7 @@ GROUPGEN-001의 REQ-GROUPGEN-024 amendment는 **한 SPEC 앞서 정확히 그 �
 ### B.2 인프로세스 소비자 — 교차 SPEC 계약 보존
 
 - **REQ-TRUNCATE-007** [Where] — **Where** `classify_arrangement_topology`가 같은 판독 함수를 재사용하는 경우(`tools.py:3533`), the 툴 **shall** 새 키에서 부분 목록을 읽어 **기존 부분 토폴로지 계약을 무변경으로 유지한다** — `topology_partial` · `topology_partial_reason` · 그룹별 `axis`/`topology_partial`(`tools.py:3559-3575`, `:3608-3632`)은 문면 그대로 산다. 본 SPEC은 GROUPGEN-024 amendment를 **대체하지 않고 그 위에 형상 분기를 얹는다.**
-- **REQ-TRUNCATE-008** [Event-driven] — **When** `create_arrangement_groups`가 `topology_partial: true`를 실은 그룹을 받으면, the 툴 **shall** 명시적 확인 인자 없이는 이를 **거부**한다. 이는 실측 구멍의 소인이다 — 해당 핸들러(`tools.py:3642-`)는 오늘 `topology_partial`을 **한 번도 읽지 않는다.**
+- **REQ-TRUNCATE-008** [Event-driven] — **When** `create_arrangement_groups`가 `topology_partial: true`를 실은 그룹을 받으면, the 툴 **shall** 확인 인자 `acknowledged_unread_fids` 없이는 이를 **거부**한다. 이는 실측 구멍의 소인이다 — 해당 핸들러(`tools.py:3642-`)는 오늘 `topology_partial`을 **한 번도 읽지 않는다**(grep 0건). **확인 인자는 미판독 픽스처의 fid를 정수로 명시 열거한 비어 있지 않은 리스트이며, the 툴 shall not 불리언 확인 인자(`acknowledge_partial: true` 형태)를 정의하거나 수용한다.** 수용 조건 넷: ① 각 원소가 `isinstance(fid, int) and not isinstance(fid, bool)` — 같은 핸들러가 `groups[].fids`에 이미 쓰는 판정이며(`tools.py:3673-3676`), 파이썬에서 `True`가 `int`의 부분형이므로 **이 배제가 불리언 확인을 기계적으로 막는 지점**이다 ② 중복 없음 ③ **`⋃ groups[].fids`와 서로소** — 이미 쓰고 있는 fid를 *미판독*이라 부를 수 없다 ④ 결손량이 판독 가능하면 열거 크기가 그 값과 일치(`fixtures_section.total` − 도착 `objects` 수, `tools.py:3699-3703`; `total`이 `None`이면 총수 자체가 미상이므로 — `tools.py:483-488` *"unknown total, never 'the count equals what arrived'"* — 크기 검증은 성립하지 않고 ①~③만 적용된다). **왜 열거인가**: 불리언은 무엇이 빠졌는지 읽지 않아도 참이 되므로 확인 인자가 다시 *"그 데이터 옆의 boolean"* — 본 SPEC 서두와 §A.1이 오늘의 결함으로 지목한 바로 그 형상 — 이 된다. ③과 ④는 호출자가 **판독된 fid 집합과 결손 산술을 실제로 읽어야** 값을 만들 수 있게 한다. 본 SPEC의 표적이 *"툴 설명은 지시일 뿐 강제가 아니다"*(`progress.md:499`)이므로 **그 자신의 확인 절차도 같은 기준을 받는다** — 무심코 통과되는 확인은 SPEC이 닫으려는 결함의 재생산이다(결정 근거: plan.md §C M0.3).
 
 ### B.3 무엇을 바꾸지 않는가 (범위 봉쇄)
 
@@ -106,10 +108,12 @@ GROUPGEN-001의 REQ-GROUPGEN-024 amendment는 **한 SPEC 앞서 정확히 그 �
 | 결손 산술(19/18/1) 정확성 | **YES** | 라이브 형상 재현 리그(`test_spatial_context.py:338-354`) |
 | 두 신호 분리 보존 | **YES** | 기존 `roundtrip_capped` 단정 7건 |
 | 부분 토폴로지 계약 보존 | **YES** | `test_groupgen_tools.py` 9건 회귀 |
-| `create_arrangement_groups` 거부 | **YES** | 단위 — `topology_partial: true` 그룹 투입 |
+| `create_arrangement_groups` 거부 | **YES** | 단위 — 확인 인자 없이 `topology_partial: true` 그룹 투입 |
+| 불리언 확인 인자가 통과하지 못함 | **YES** | 단위 — `acknowledged_unread_fids`에 `True` / `[True]` 투입 → 거부. `isinstance(fid, bool)` 배제가 판정한다 |
+| 확인 열거가 쓰기 fid와 서로소 | **YES** | 단위 — 이미 쓰는 fid를 열거하면 거부 |
 | `TOOL_NAMES` 22 불변 | **YES** | `test_tools.py:147-148` |
 | **모델이 실제로 고지하는가** | **NO** | ASSUMPTION-71 — 원리적 미검증(§B.4 비대칭) |
-| **파괴적 변경의 허용 창** | **NO** | ASSUMPTION-72 — 사람 결정 |
+| **파괴적 변경의 허용 창** | **검증 대상 아님 — 결정됨** | ASSUMPTION-72 — **사용자 결정 2026-08-05**: 이번 창에서 수행하며 `progress.md:646` 선례에 대한 **명시적 예외**로 기록한다(plan.md §C M0.1) |
 
 ### C.2 PRESERVE
 
@@ -125,10 +129,10 @@ GROUPGEN-001의 REQ-GROUPGEN-024 amendment는 **한 SPEC 앞서 정확히 그 �
 레포 전역 최대 사용 id는 **67**이고 WRITEGATE-001이 68-70을 점유했다. 본 SPEC은 **71-75만** 사용한다.
 
 - **ASSUMPTION-71 (형상 분기의 실효성)** — `fixtures`/`analysis` 키 제거가 모델의 고지를 유도한다. **키 부재는 기계 검증 완료 가능 · 모델 순응은 원리적 미검증**(§B.4). NEGATIVE면 D3(필수 확인응답)으로 승격하되 그 비용은 `TOOL_NAMES` 파괴다(`research.md` §5).
-- **ASSUMPTION-72 (파괴적 변경 허용 창)** — 출하된 회신 형상의 파괴적 변경이 이번 창에서 허용된다. **미검증 — 사람 결정.** 동류 변경(`left_to_right` 개명)을 *"출하된 폐쇄 집합의 파괴적 변경이므로 SemVer major 창에서만"*으로 판정한 선례가 있다(SPATIAL `progress.md:646`). 결정 게이트는 plan.md §C M0 결정 ①이다.
-- **ASSUMPTION-73 (`roundtrip_capped` 동급 처리)** — 두 절단 사유가 같은 형상 분기를 촉발해야 한다. `coverage.complete`가 이미 둘을 OR로 합치므로 분기 술어는 하나로 족하다. **부분 검증** — 코드 확인 완료, 설계 승인 미완.
+- **ASSUMPTION-72 (파괴적 변경 허용 창)** — 출하된 회신 형상의 파괴적 변경이 이번 창에서 허용된다. **결정됨 (사용자, 2026-08-05) — 허용.** 동류 변경(`left_to_right` 개명)을 *"출하된 폐쇄 집합의 파괴적 변경이므로 SemVer major 창에서만"*으로 판정한 선례가 있으나(SPATIAL `progress.md:646`), **본 변경에는 그 선례를 적용하지 않는 명시적 예외**로 결정됐다 — 모델을 향한 계약은 바뀌지만 **코드 계약은 바뀌지 않기 때문**이다(`TOOL_NAMES` 22 불변 · `test_tools.py:148`의 `== 22` 무수정 · 툴 파라미터 스키마 무변경 · 인프로세스 소비자 1곳이 같은 창에서 함께 전환). 선례 자체는 개명 과제에 대해 **여전히 유효**하다(§D 범위 밖). 기록: plan.md §C M0 결정 ① · M0.1.
+- **ASSUMPTION-73 (`roundtrip_capped` 동급 처리)** — 두 절단 사유가 같은 형상 분기를 촉발해야 한다. `coverage.complete`가 이미 둘을 OR로 합치므로 분기 술어는 하나로 족하다. **결정됨 (에이전트, 2026-08-05) — 동급 처리.** 코드 확인 완료 + 설계 승인 완료. 결정 근거는 경계 산술이다 — 분기를 `truncated`에만 걸면 `SPATIAL_PROPERTY_QUERY_CAP = 120` ÷ 4프로퍼티 = **30대** 초과 리그에서 같은 침묵이 재발한다. **신호는 분리 유지 · 분기만 통합**(REQ-TRUNCATE-005). 기록: plan.md §C M0 결정 ② · M0.2.
 - **ASSUMPTION-74 (인프로세스 전환 무해)** — `classify_arrangement_topology`가 새 키를 읽어도 GROUPGEN 계약이 유지된다. **부분 검증** — 소비 키 5개를 전수 확인했다(`research.md` §4.1).
-- **ASSUMPTION-75 (`create_arrangement_groups` 거부의 운영 수용성)** — 부분 유래 그룹의 쓰기를 명시 확인 없이 거부해도 운영이 막히지 않는다. **미검증 — 사람 결정.** 결정 게이트는 plan.md §C M0 결정 ③이다.
+- **ASSUMPTION-75 (`create_arrangement_groups` 거부의 운영 수용성)** — 부분 유래 그룹의 쓰기를 명시 확인 없이 거부해도 운영이 막히지 않는다. **결정됨 (에이전트, 2026-08-05) — 본 SPEC 범위에 포함.** 확인 인자는 **미판독 fid의 명시 열거**이며 불리언이 아니다(REQ-TRUNCATE-008). 열거를 요구하면 호출자가 판독된 fid 집합과 결손 산술을 **실제로 읽어야** 하므로 확인이 형식화되지 않으며, 이것이 운영 수용성의 근거이기도 하다 — 거부는 무조건이 아니라 *읽으면 통과*다. 기록: plan.md §C M0 결정 ③ · M0.3.
 
 ## D. 범위 밖 (Out of Scope)
 

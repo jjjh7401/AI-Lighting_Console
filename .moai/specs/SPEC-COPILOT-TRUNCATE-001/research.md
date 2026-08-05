@@ -87,6 +87,8 @@ def analyze_spatial_records(records: Sequence[Mapping[str, object]]) -> SpatialA
 
 그러므로 §1의 모델은 `low_confidence: False`인 `row_order`를 인용했다. **인용할 것이 있었다는 게 결함이다.**
 
+**그래서 고칠 수 있는 자리가 하나뿐이다.** `analysis`에 커버리지를 실어 *"이것은 부분이다"*라고 **플래그하는 길은 구조적으로 막혀 있다** — 시그니처에 그 인자가 없으므로(`rows.py:202-204`) 주입하려면 `server/spatial/**`를 고쳐야 하고, 그것은 순수 기하 계층에 판독 완전성을 밀어 넣어 `low_confidence`의 의미를 두 축으로 오염시킨다(§5의 기각 항목 · REQ-TRUNCATE-012). 남는 유일한 수단은 **툴 계층에서 그 필드를 아예 계산하지 않는 것**, 즉 **보류**다. 이것이 D2의 두 절반 중 **하중을 받는 쪽**이며, `fixtures` → `partial_fixtures` 개명은 보류가 목록 쪽으로 우회되지 않도록 형상을 함께 옮기는 보강이다.
+
 ### 2.4 두 번째 절단 지점 — `rig_section` (`tools.py:474-489`)
 
 `{objects, truncated, total}`(`:486-488`). 같은 병리(데이터 옆의 boolean)이나 **폭발반경이 전혀 다르다** — §4.2.
@@ -200,6 +202,8 @@ parameters={"type": "object", "properties": {}, "additionalProperties": False}
 
 `progress.md:502-503`의 처방(*"별도 상태값, 또는 정렬 결과 자체의 보류"*)과 **두 절 모두 일치한다.**
 
+**두 절반의 하중은 같지 않다.** `analysis` 보류가 **하중을 받는 쪽**이다 — §2.3이 실측한 대로 그 산출물은 자신이 부분임을 **표현할 능력이 없고**(`rows.py:202-204`에 인자가 없다), 능력을 주려면 `server/spatial/**`를 고쳐야 하므로(REQ-TRUNCATE-012 금지) *플래그*라는 선택지 자체가 존재하지 않는다. 그러므로 *"보류가 아니라 표시하면 되지 않는가"*는 이 설계에서 **가능한 대안이 아니다.** `fixtures` → `partial_fixtures`는 보류가 목록 쪽으로 우회되는 것을 막는 보강이며, 단독으로는 §1의 사고를 막지 못한다(모델이 인용한 것은 목록이 아니라 정렬 결과였다).
+
 ### D3 · Poisoned payload / 필수 확인응답
 
 **기각(주설계로서).** 확정 비용 2건: ① 새 툴이면 `TOOL_NAMES` 22→23 + `test_tools.py:148` 리터럴 파괴(§4.4) ② 필수 인자면 인자 0개 툴의 첫 호출이 불가능해진다(§4.4). 게다가 토큰을 호출 간에 보관해야 하므로 **무상태 툴 계층에 새 상태면(state surface)** 이 생긴다.
@@ -213,6 +217,8 @@ parameters={"type": "object", "properties": {}, "additionalProperties": False}
 그리고 관측 사실이 결정적이다: **fid 19는 원점에 남았고 쓰기는 지시받은 대로 정확히 동작했다**(`progress.md:491`). 결함은 나쁜 쓰기가 아니라 **침묵**이다. 툴은 *"18개인 이유가 운영자의 뜻인지 절단인지"*를 **호출 간 상태 없이 구별할 수 없다**(D3와 같은 벽).
 
 **단, 좁은 실측 구멍 1건은 진짜다** → 채택. `create_arrangement_groups`(`tools.py:3642-`)에서 `topology_partial`을 **grep한 결과 0건**이다. 즉 `:3575`가 그룹마다 붙여 보낸 플래그가 **쓰기 툴에서 아무 일도 하지 않고 죽는다.** 이것은 오진이 아니라 실측된 누락이다.
+
+**확인 인자의 형태는 fid 열거로 결정됐다**(에이전트, 2026-08-05 — plan.md §C M0.3). 불리언 `acknowledge_partial: true`가 아니라 **미판독 픽스처 fid의 명시 열거**(`acknowledged_unread_fids: list[int]`)다. 이유는 자기일관성이다 — 불리언은 무엇이 빠졌는지 읽지 않아도 참이 되므로 확인 인자가 다시 *"데이터 옆의 boolean"*, 즉 본 SPEC이 §2.1에서 결함으로 지목한 형상이 된다. 열거는 두 재료를 실제로 읽게 만든다: **판독된 fid 집합**(열거는 `⋃ groups[].fids`와 서로소여야 한다)과 **결손 산술**(열거 크기가 `fixtures_section.total` − 도착 `objects` 수와 일치해야 한다 — 핸들러가 이미 그 섹션을 읽는다, `tools.py:3699-3703`). 불리언 배제는 기계적으로 성립한다: 같은 핸들러가 `groups[].fids`에 이미 `isinstance(fid, int) and not isinstance(fid, bool)`를 쓰고 있고(`tools.py:3673-3676`), 파이썬에서 `True`는 `int`의 부분형이므로 그 배제가 없으면 `[True]`가 통과한다. 계약 정본은 REQ-TRUNCATE-008 / AC-TRUNCATE-008.
 
 ### 판정 요약
 
@@ -243,10 +249,10 @@ WRITEGATE-001이 같은 판정을 이미 내렸다(`REQ-WRITEGATE-014`): *"라�
 레포 전역 최대 사용 id는 **67**(`.moai/specs/` 실측)이고 WRITEGATE-001이 68-70을 점유했다. **71-75는 미사용이며 본 SPEC 전용이다.**
 
 - **ASSUMPTION-71 (형상 분기의 실효성)** — 절단 회신에서 `fixtures`/`analysis` 키를 **제거**하면 모델이 부분성을 고지한다. **기계 검증 가능(키 부재) · 모델 순응은 원리적으로 미검증** — §6의 비대칭 때문이다. NEGATIVE면 D3(확인응답)로 승격.
-- **ASSUMPTION-72 (파괴적 변경 허용 창)** — 출하된 회신 형상의 파괴적 변경이 이번 창에서 허용된다. **미검증 — 사람 결정.** `progress.md:646`이 동류 변경(`left_to_right` 개명)을 *"출하된 폐쇄 집합의 파괴적 변경이므로 **SemVer major 창에서만**"*으로 판정한 선례가 있다. plan.md `[NEEDS CLARIFICATION]` ①.
-- **ASSUMPTION-73 (`roundtrip_capped` 동급 처리)** — `truncated`와 `roundtrip_capped`가 같은 형상 분기를 촉발해야 한다. `coverage.complete`(`tools.py:798-800`)가 이미 둘을 OR로 합치므로 **분기 조건은 `coverage.complete == False` 하나로 충분하다**. 단 REQ-SPATIAL-006이 두 신호의 **분리 보고**를 요구하므로 신호는 분리 유지하고 **분기만 통합**한다. 부분 검증(코드 확인 완료 · 설계 승인 미완).
+- **ASSUMPTION-72 (파괴적 변경 허용 창)** — 출하된 회신 형상의 파괴적 변경이 이번 창에서 허용된다. **결정됨 (사용자, 2026-08-05) — 허용.** `progress.md:646`이 동류 변경(`left_to_right` 개명)을 *"출하된 폐쇄 집합의 파괴적 변경이므로 **SemVer major 창에서만**"*으로 판정한 선례가 있으나, **본 변경에는 적용하지 않는 명시적 예외**로 결정됐다 — 바뀌는 것은 **모델을 향한 계약**이고 **코드 계약은 무접촉**이기 때문이다(`TOOL_NAMES` 22 유지 · `test_tools.py:148` 무수정 · 툴 파라미터 스키마 무변경 · 인프로세스 소비자 1곳, §4.1·§4.4). 예외의 대가로 인정된 것은 지연 시 관측 결함(`low_confidence: False` on 18-of-19, `progress.md:485`)이 열린 채 남는다는 점이다. 선례는 개명 과제에 대해 여전히 유효하다. 기록: plan.md §C M0 결정 ① · M0.1.
+- **ASSUMPTION-73 (`roundtrip_capped` 동급 처리)** — `truncated`와 `roundtrip_capped`가 같은 형상 분기를 촉발해야 한다. `coverage.complete`(`tools.py:798-800`)가 이미 둘을 OR로 합치므로 **분기 조건은 `coverage.complete == False` 하나로 충분하다**. 단 REQ-SPATIAL-006이 두 신호의 **분리 보고**를 요구하므로 신호는 분리 유지하고 **분기만 통합**한다. **결정됨 (에이전트, 2026-08-05) — 동급 처리.** 코드 확인 완료 + 설계 승인 완료. 결정 근거는 §2.1의 경계 산술이다 — `SPATIAL_PROPERTY_QUERY_CAP = 120` ÷ 4프로퍼티 = **30대**이므로, `truncated`만 분기하면 30대 초과 리그에서 §1의 침묵이 재발한다. 기록: plan.md §C M0 결정 ② · M0.2.
 - **ASSUMPTION-74 (인프로세스 소비자 전환 무해)** — `classify_arrangement_topology`가 새 키를 읽도록 바꿔도 GROUPGEN 부분토폴로지 계약(`test_groupgen_tools.py` 9건)이 유지된다. **부분 검증** — 소비 키 5개를 §4.1에서 전수 확인했다.
-- **ASSUMPTION-75 (`create_arrangement_groups` 거부의 운영 수용성)** — `topology_partial: true` 그룹의 쓰기를 명시 확인 없이 거부해도 운영이 막히지 않는다. **미검증 — 사람 결정.** plan.md `[NEEDS CLARIFICATION]` ③.
+- **ASSUMPTION-75 (`create_arrangement_groups` 거부의 운영 수용성)** — `topology_partial: true` 그룹의 쓰기를 명시 확인 없이 거부해도 운영이 막히지 않는다. **결정됨 (에이전트, 2026-08-05) — 본 SPEC 범위에 포함.** 확인 인자는 **미판독 fid의 명시 열거**이며 불리언이 아니다(§5 D4 말미 · REQ-TRUNCATE-008). 거부는 무조건이 아니라 *읽으면 통과*이므로 운영이 막히지 않고, 열거 요구가 확인의 형식화를 막는다. 기록: plan.md §C M0 결정 ③ · M0.3.
 
 ---
 
