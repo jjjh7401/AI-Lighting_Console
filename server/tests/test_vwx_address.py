@@ -63,24 +63,41 @@ class TestAbsoluteAddressConditionalInversion:
 
 
 class TestMultiSystemAmbiguity:
-    """AC-VWX-011 — 멀티시스템 모호 차단."""
+    """AC-VWX-011 — 멀티시스템에서도 설계 측 주소 해석은 차단하지 않는다(결함 1, P0, v0.1.6).
 
-    def test_two_systems_sharing_universe_1_are_blocked_not_merged(self):
+    v0.1.5까지는 System 2개 이상이 관측되면 ``classify_and_resolve`` 자체가
+    전 행을 차단(blocked)했다 — 실물 샘플 3종(SPEC-COPILOT-VWX-001 9번째
+    라운드) 재현으로 이 차단이 설계 측 리그 전체를 0대로 무너뜨린다는 결함이
+    드러났다. v0.1.6부터는 System 수와 무관하게 개별 레코드의 주소 해석은
+    항상 정상 진행하고, 콘솔 대조만 별도로(``diff.py``) 미수행 처리한다.
+    """
+
+    def test_two_systems_sharing_universe_1_no_longer_blocks_resolution(self):
+        """Defect-1 수정 — 이전에는 blocked였던 경로가 이제는 정상 resolved다."""
         outcome = classify_and_resolve(
             {"universe": "1", "address": "1"},
             system_letters=frozenset({"A", "B"}),
         )
-        assert outcome.kind == "blocked"
-        assert outcome.reason_code == READ_FAILURE_MULTI_SYSTEM
-        assert "멀티시스템" in outcome.detail
-
-    def test_a_single_system_file_never_triggers_the_block(self):
-        """비공허성 — 단일 System 파일에서 오발동하지 않는다."""
-        outcome = classify_and_resolve(
-            {"universe": "1", "address": "1"},
-            system_letters=frozenset({"A"}),
-        )
         assert outcome.kind == "resolved"
+        assert (outcome.universe, outcome.address) == (1, 1)
+
+    def test_a_single_system_file_resolves_identically_to_multi_system(self):
+        """비공허성 — 단일 System과 멀티시스템에서 개별 레코드 해석 결과가 같다."""
+        single = classify_and_resolve(
+            {"universe": "1", "address": "1"}, system_letters=frozenset({"A"})
+        )
+        multi = classify_and_resolve(
+            {"universe": "1", "address": "1"}, system_letters=frozenset({"A", "B"})
+        )
+        assert single.kind == multi.kind == "resolved"
+        assert (single.universe, single.address) == (multi.universe, multi.address)
+
+    def test_multi_system_blocked_reason_code_is_retired_from_classify_and_resolve(self):
+        """비공허성 — READ_FAILURE_MULTI_SYSTEM은 더 이상 이 함수에서 나오지 않는다."""
+        outcome = classify_and_resolve(
+            {"universe": "1", "address": "1"}, system_letters=frozenset({"A", "B", "C"})
+        )
+        assert outcome.reason_code != READ_FAILURE_MULTI_SYSTEM
 
 
 class TestNormalizeAddressRepresentationParity:
@@ -107,23 +124,26 @@ class TestNormalizeAddressRepresentationParity:
 class TestResolveAllPipeline:
     """address.resolve_all — columns.ColumnRecord 목록을 통째로 해석한다."""
 
-    def test_system_letters_are_computed_across_the_whole_file(self):
+    def test_multi_system_records_resolve_normally_through_the_full_pipeline(self):
+        """Defect-1 수정 — 결함 1(P0) 이전에는 이 파이프라인이 2건 모두 blocked
+        판독 실패로 만들었다; 이제는 둘 다 정상 resolved다(비공허성)."""
         from server.vwx.address import resolve_all
 
         raw = [
             {"Instrument Type": "MMX", "System": "A", "Universe": "1", "DMX Address": "1"},
             {"Instrument Type": "MMX", "System": "B", "Universe": "1", "DMX Address": "2"},
         ]
-        records, _failures = resolve_columns(raw)
+        records, _failures, _excluded = resolve_columns(raw)
         resolved, failures = resolve_all(records)
-        assert resolved == []
-        assert len(failures) == 2
+        assert not failures
+        assert len(resolved) == 2
+        assert {(r.universe, r.address) for r in resolved} == {(1, 1), (1, 2)}
 
     def test_a_normal_file_resolves_cleanly(self):
         from server.vwx.address import resolve_all
 
         raw = [{"Instrument Type": "MMX", "Universe": "1", "DMX Address": "1"}]
-        records, _failures = resolve_columns(raw)
+        records, _failures, _excluded = resolve_columns(raw)
         resolved, failures = resolve_all(records)
         assert not failures
         assert resolved[0].universe == 1
@@ -167,7 +187,7 @@ class TestTripleRepresentationCrossCheck:
         raw = [{"Instrument Type": "MMX", "Universe": "1", "Absolute Address": "9999"}]
         # Universe + Address(DMX) 쌍이 최우선이므로 DMX Address도 채운다.
         raw[0]["DMX Address"] = "39"
-        records, _failures = resolve_columns(raw)
+        records, _failures, _excluded = resolve_columns(raw)
         resolved, failures = resolve_all(records)
         assert len(resolved) == 1
         assert resolved[0].universe == 1

@@ -2338,7 +2338,9 @@ def build_toolset(
         #   유사 입력(다른 예외를 던지는 파서 계층)을 방어하지 못한다.
         try:
             read_result = read_vwx_export(raw_bytes)
-            column_records, column_failures = resolve_vwx_columns(list(read_result.records))
+            column_records, column_failures, excluded_rows = resolve_vwx_columns(
+                list(read_result.records)
+            )
             resolved_records, address_failures = resolve_vwx_addresses(column_records)
             designed_rig = build_designed_rig(resolved_records)
             diff = compare_vectorworks_rig(designed_rig, inventory)
@@ -2347,7 +2349,9 @@ def build_toolset(
                 *column_failures,
                 *address_failures,
             )
-            payload = build_vwx_report(diff, read_failures=all_read_failures).to_dict()
+            payload = build_vwx_report(
+                diff, read_failures=all_read_failures, excluded_rows=tuple(excluded_rows)
+            ).to_dict()
         except Exception as error:  # noqa: BLE001 — 툴 경계 최종 방어선(설계상 의도적)
             payload = {
                 "designed_rig": {

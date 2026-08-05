@@ -88,6 +88,24 @@ def has_address_family(headers: list[str]) -> bool:
 
 READ_FAILURE_MIN_RECORD = "min_record_incomplete"
 
+#: 결함 3(P1) — 헤더 없는 경로 A(Export Instrument Data, "Export field names
+#: as first record" 미체크) 파일은 자리표시자 헤더(``col_0``..``col_N``,
+#: ``reader.py``가 부여)라 모든 행이 예외 없이 min-record 미달이다. 행마다
+#: 개별 실패를 N건 내는 대신 파일 단위 판정 1건 + 실행 가능한 해결책을 낸다.
+READ_FAILURE_HEADERLESS_EXPORT = "headerless_path_a_export"
+
+_SYNTHETIC_HEADER_RE = re.compile(r"^col_\d+$")
+
+#: 결함 2(P1) — "판독 실패"와 "판독은 됐으나 의도적으로 제외"는 서로 다른
+#: 사건이다. 이 두 kind는 ``read_failures``가 아니라 별도의 ``excluded_rows``
+#: 부류로 분리한다(``report.py`` ``summary_ko``가 "판독 실패 N건 · 제외 M건"
+#: 형태로 구별해 낸다).
+EXCLUDED_ROW_AGGREGATE = "aggregate_row"
+EXCLUDED_ROW_NON_DMX_ACCESSORY = "non_dmx_accessory"
+
+#: 워크시트 소계/합계행이 ``Device Type``에 남기는 리터럴 — 대소문자 무시 비교.
+_AGGREGATE_DEVICE_TYPES = frozenset({"SUBTOTAL", "TOTAL"})
+
 
 @dataclass(frozen=True)
 class ColumnRecord:
@@ -107,18 +125,68 @@ class ColumnReadFailure:
     detail: str
 
 
+@dataclass(frozen=True)
+class ExcludedRow:
+    """판독은 됐으나 의도적으로 배제된 행 — 판독 실패(:class:`ColumnReadFailure`)와
+    다른 사건이다(결함 2, P1). 집계행(SUBTOTAL/TOTAL)·비-DMX 액세서리가 해당한다."""
+
+    row: int | None
+    kind: str
+    detail: str
+
+
+def _is_aggregate_row(device_type: str) -> bool:
+    return device_type.strip().upper() in _AGGREGATE_DEVICE_TYPES
+
+
+def _is_accessory_device_type(device_type: str) -> bool:
+    return "accessory" in device_type.strip().lower()
+
+
+def _is_synthetic_placeholder_header(headers: list[str]) -> bool:
+    """``reader.py``가 헤더 없는 경로 A 파일에 부여하는 ``col_0``..``col_N``
+    자리표시자 헤더인가 — 위치 기반 의미 해석은 하지 않으므로(REQ-VWX-005)
+    이 패턴의 행은 예외 없이 전량 min-record 미달이다(결함 3, P1)."""
+    return bool(headers) and all(_SYNTHETIC_HEADER_RE.match(header) for header in headers)
+
+
 def resolve_columns(
     raw_records: list[dict[str, str]],
-) -> tuple[list[ColumnRecord], list[ColumnReadFailure]]:
-    """원시 레코드(원문 헤더 dict) 목록을 (해석 레코드, 판독 실패)로 나눈다.
+) -> tuple[list[ColumnRecord], list[ColumnReadFailure], list[ExcludedRow]]:
+    """원시 레코드(원문 헤더 dict) 목록을 (해석 레코드, 판독 실패, 제외행)으로 나눈다.
 
     최소 유효 레코드 = ``instrument_type`` + 해석 가능한 주소 표현 하나
     (REQ-VWX-007). 미달 레코드는 예외를 던지지 않고 판독 실패로 분류되며
     판정에 쓰이지 않는다. 별칭 테이블 밖 컬럼은 폐기하지 않고 ``extra``에
     원문 그대로 보존한다(REQ-VWX-006).
+
+    결함 2(P1) — 워크시트 소계/합계행(``Device Type`` == SUBTOTAL/TOTAL)과
+    비-DMX 액세서리(``Device Type``가 액세서리 계열인데 해석 가능한 주소
+    표현이 없는 행)는 "판독 실패"가 아니라 "판독은 됐으나 의도적 제외"다 —
+    최소 유효 레코드 조건 미달 판독 실패로 잘못 세지 않는다.
     """
+    if raw_records and _is_synthetic_placeholder_header(list(raw_records[0].keys())):
+        # 결함 3(P1) — 헤더 없는 경로 A 파일: 행별로 개별 실패를 내지 않고
+        # 파일 단위 판정 1건 + 실행 가능한 해결책을 낸다.
+        return (
+            [],
+            [
+                ColumnReadFailure(
+                    row=None,
+                    kind=READ_FAILURE_HEADERLESS_EXPORT,
+                    detail=(
+                        "헤더 행이 없다 — 컬럼을 위치로 추측하지 않는다. Vectorworks의 "
+                        "File > Export > Export Instrument Data에서 'Export field names "
+                        "as first record'를 켜고 다시 내보내라."
+                    ),
+                )
+            ],
+            [],
+        )
+
     records: list[ColumnRecord] = []
     failures: list[ColumnReadFailure] = []
+    excluded: list[ExcludedRow] = []
     for row_index, raw in enumerate(raw_records):
         fields: dict[str, str] = {}
         extra: dict[str, str] = {}
@@ -130,9 +198,31 @@ def resolve_columns(
                 # 같은 행에서 별칭이 우연히 중복 매칭되면(드문 경우) 첫 값을
                 # 유지한다 — 나중 값으로 조용히 덮어쓰지 않는다.
                 fields.setdefault(canonical, value)
+        device_type = fields.get("device_type", "")
+        if _is_aggregate_row(device_type):
+            excluded.append(
+                ExcludedRow(
+                    row=row_index,
+                    kind=EXCLUDED_ROW_AGGREGATE,
+                    detail=(
+                        f"집계행(Device Type={device_type.strip()!r}) — 판독 실패가 아니라 "
+                        "의도적 제외"
+                    ),
+                )
+            )
+            continue
         has_type = bool(fields.get("instrument_type", "").strip())
         has_address = any(fields.get(name, "").strip() for name in ADDRESS_FAMILY_FIELDS)
         if not has_type or not has_address:
+            if has_type and not has_address and _is_accessory_device_type(device_type):
+                excluded.append(
+                    ExcludedRow(
+                        row=row_index,
+                        kind=EXCLUDED_ROW_NON_DMX_ACCESSORY,
+                        detail=("비-DMX 액세서리(주소 표현 없음) — 판독 실패가 아니라 의도적 제외"),
+                    )
+                )
+                continue
             failures.append(
                 ColumnReadFailure(
                     row=row_index,
@@ -145,4 +235,4 @@ def resolve_columns(
             )
             continue
         records.append(ColumnRecord(fields=fields, extra=extra, row_index=row_index))
-    return records, failures
+    return records, failures, excluded

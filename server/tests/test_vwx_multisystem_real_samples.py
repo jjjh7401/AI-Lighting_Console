@@ -26,7 +26,6 @@ from server.vwx.columns import (
 from server.vwx.diff import MULTI_SYSTEM_MAPPING_ABSENT, compare
 from server.vwx.reader import PATH_A, read
 from server.vwx.report import build_vwx_report
-from server.vwx.rig import SCOPE_QUALIFIER as SCOPE_QUALIFIER_TEXT
 from server.vwx.rig import build_designed_rig
 
 FIXTURES = Path(__file__).parent / "fixtures" / "vwx"
@@ -50,15 +49,11 @@ def _empty_inventory() -> Inventory:
 
 
 def _run_pipeline(data: bytes):
-    """리더->컬럼->주소->리그 전 파이프라인. 테스트 전용 헬퍼.
-
-    ``candidate_count``를 실제 파이프라인(``server/orchestrator/tools.py``)과
-    동일하게 넘긴다 — 스코프 한정(v0.1.7, 결함 2 P1)이 여기서도 계산된다.
-    """
+    """리더->컬럼->주소->리그 전 파이프라인. 테스트 전용 헬퍼."""
     read_result = read(data)
     column_records, column_failures, excluded_rows = resolve_columns(list(read_result.records))
     resolved_records, address_failures = resolve_all(column_records)
-    designed_rig = build_designed_rig(resolved_records, candidate_count=len(column_records))
+    designed_rig = build_designed_rig(resolved_records)
     return read_result, column_failures, excluded_rows, address_failures, designed_rig
 
 
@@ -339,54 +334,13 @@ class TestPerSystemAbsoluteAddressAmbiguity:
     파일 2(Universe/DMX Address 컬럼 없음)로 확인: B/System U1/abs=1과
     A/System U1/abs=1은 숫자값이 완전히 같다 — System이 별도 필드로
     보존되지 않으면 원리적으로 구분 불가능하다.
-
-    v0.1.7 재설계(결함 1, P0) — "전제 미검증이면 거부"에서 "선언된 전제 위에서
-    역산하고 근거를 등급으로 남긴다"로 바뀌었다. 02는 이제 01과 동일하게
-    9대로 읽히며, 근거는 전부 역산(``absolute_back_calculated``)이고 리그
-    전체에 전제 문구가 실린다.
     """
 
-    def test_absolute_only_file_now_resolves_the_full_rig_not_just_the_unpatched_row(self):
-        """비공허성 — 수정 전에는 fixture_count가 1(Titan Tube만)이었다."""
+    def test_absolute_only_files_still_never_guess_without_the_confirmed_premise(self):
+        """비공허성 — Absolute Address 단독 파일은 여전히 추측하지 않는다(REQ-VWX-009)."""
         _read, _cf, excluded, address_failures, rig = _run_pipeline(ABSOLUTE_ONLY.read_bytes())
-        assert not address_failures  # 더 이상 미검증 사유로 탈락하는 행이 없다
-        assert len(rig.fixtures) == 9  # 01과 동일한 리그(멀티셀 폴딩 포함)
-
-    def test_rig_wide_address_basis_is_back_calculated_with_the_premise_note(self):
-        from server.vwx.address import (
-            ABSOLUTE_BACK_CALCULATED_PREMISE_NOTE,
-            ADDRESS_BASIS_ABS_BACK_CALCULATED,
-        )
-
-        _read, _cf, _ex, _af, rig = _run_pipeline(ABSOLUTE_ONLY.read_bytes())
-        assert rig.address_basis == ADDRESS_BASIS_ABS_BACK_CALCULATED
-        assert rig.address_basis_note == ABSOLUTE_BACK_CALCULATED_PREMISE_NOTE
-        assert all(
-            fixture.address_basis == ADDRESS_BASIS_ABS_BACK_CALCULATED
-            for fixture in rig.fixtures
-            if fixture.classification == "patched"
-        )
-
-    def test_multisystem_full_file_is_direct_basis_not_back_calculated(self):
-        """비공허성 대조군 — 01(Universe+DMX Address 쌍 존재)은 역산이 전혀 없다."""
-        from server.vwx.address import ADDRESS_BASIS_DIRECT
-
-        _read, _cf, _ex, _af, rig = _run_pipeline(MULTISYSTEM_FULL.read_bytes())
-        assert rig.address_basis == ADDRESS_BASIS_DIRECT
-        assert rig.address_basis_note == ""
-
-    def test_02_and_01_derive_the_same_universe_address_pairs_per_system(self):
-        """02(abs 역산)와 01(직접값)이 같은 (system, universe, address)로 수렴한다 —
-        abs1→u1a1(A) · abs45→u1a45(A) · abs513→u2a1(A) · abs642→u2a130(A) ·
-        B abs1→u1a1(B)를 코디네이터가 직접 검산했다."""
-        _read, _cf, _ex, _af, rig_02 = _run_pipeline(ABSOLUTE_ONLY.read_bytes())
-        _read, _cf, _ex, _af, rig_01 = _run_pipeline(MULTISYSTEM_FULL.read_bytes())
-        key = lambda fx: (fx.system, fx.unit_number)  # noqa: E731 — 로컬 테스트 헬퍼
-        # 미패치(주소 0)는 제외한다 — Absolute Address=0 경로는 universe를 복원할
-        # 근거가 없어 universe=None으로 남는다(기존 sentinel 분기, 이번 결함과 무관).
-        addr_02 = {key(fx): (fx.universe, fx.address) for fx in rig_02.fixtures if fx.address != 0}
-        addr_01 = {key(fx): (fx.universe, fx.address) for fx in rig_01.fixtures if fx.address != 0}
-        assert addr_02 == addr_01
+        assert address_failures  # 전부 미검증 사유로 보류됨
+        assert len(rig.fixtures) == 1  # Titan Tube(주소=0)만 추측 없이 해석 가능
 
     def test_abs_1_resolves_identically_regardless_of_system_letter(self):
         """System A와 System B가 동일한 abs=1을 가지면 (universe,address) 역산 결과가
@@ -496,169 +450,3 @@ class TestOverlapFalsePositivePreventionAcrossSystems:
         ]
         rig = build_designed_rig(records)
         assert rig.design_overlaps == ()
-
-
-class TestAddressBasisPayloadAndSummary:
-    """02 재설계(v0.1.7, 결함 1 P0) — 근거 등급이 payload·summary_ko에 실제로 실린다."""
-
-    def test_02_payload_reports_back_calculated_basis_per_fixture_and_rig_wide(self):
-        from server.vwx.address import ADDRESS_BASIS_ABS_BACK_CALCULATED
-
-        _read, cf, ex, af, rig = _run_pipeline(ABSOLUTE_ONLY.read_bytes())
-        diff = compare(rig, _empty_inventory())
-        report = build_vwx_report(diff, read_failures=(*cf, *af), excluded_rows=tuple(ex))
-        payload = report.to_dict()
-        designed = payload["designed_rig"]
-        assert designed["address_basis"] == ADDRESS_BASIS_ABS_BACK_CALCULATED
-        assert "Universes pane" in designed["address_basis_note"]
-        assert "512블록" in designed["address_basis_note"]
-        patched_fixtures = [f for f in designed["fixtures"] if f["classification"] == "patched"]
-        assert patched_fixtures
-        assert all(
-            f["address_basis"] == ADDRESS_BASIS_ABS_BACK_CALCULATED for f in patched_fixtures
-        )
-
-    def test_01_payload_reports_direct_basis_and_empty_note(self):
-        from server.vwx.address import ADDRESS_BASIS_DIRECT
-
-        _read, cf, ex, af, rig = _run_pipeline(MULTISYSTEM_FULL.read_bytes())
-        diff = compare(rig, _empty_inventory())
-        report = build_vwx_report(diff, read_failures=(*cf, *af), excluded_rows=tuple(ex))
-        payload = report.to_dict()
-        designed = payload["designed_rig"]
-        assert designed["address_basis"] == ADDRESS_BASIS_DIRECT
-        assert designed["address_basis_note"] == ""
-
-    def test_02_summary_ko_carries_the_premise_disclaimer(self):
-        _read, cf, ex, af, rig = _run_pipeline(ABSOLUTE_ONLY.read_bytes())
-        diff = compare(rig, _empty_inventory())
-        report = build_vwx_report(diff, read_failures=(*cf, *af), excluded_rows=tuple(ex))
-        summary = report.summary_ko()
-        assert "Universes pane" in summary
-        assert "Start#/End#" in summary
-
-    def test_01_summary_ko_never_mentions_the_premise_disclaimer(self):
-        """비공허성 — 직접값 근거인 01은 역산 전제 문구가 전혀 등장하지 않는다."""
-        _read, cf, ex, af, rig = _run_pipeline(MULTISYSTEM_FULL.read_bytes())
-        diff = compare(rig, _empty_inventory())
-        report = build_vwx_report(diff, read_failures=(*cf, *af), excluded_rows=tuple(ex))
-        summary = report.summary_ko()
-        assert "Universes pane" not in summary
-
-
-class TestTripleMismatchStillRejectsDerivation:
-    """완료 조건 — 진짜 triple mismatch 파일에서는 여전히 역산을 금지하고 직접값을 쓴다."""
-
-    def test_universe_dmx_pair_wins_even_when_absolute_disagrees(self):
-        from server.vwx.address import ADDRESS_BASIS_DIRECT, READ_FAILURE_ADDRESS_TRIPLE_MISMATCH
-
-        outcome = classify_and_resolve(
-            {"universe": "1", "address": "39", "absolute_address": "9999"}
-        )
-        assert outcome.kind == "resolved"
-        assert (outcome.universe, outcome.address) == (1, 39)
-        assert outcome.address_basis == ADDRESS_BASIS_DIRECT
-        assert outcome.warning_kind == READ_FAILURE_ADDRESS_TRIPLE_MISMATCH
-
-
-class TestScopeQualificationOnMassDrop:
-    """결함 2(P1) — 대량 탈락 후 확신에 찬 대조를 내지 않는다."""
-
-    def test_no_drop_file_carries_no_scope_qualification(self):
-        """완료 조건 — 탈락 0건인 01에서는 스코프 한정이 붙지 않는다(비공허성)."""
-        _read, _cf, _ex, _af, rig = _run_pipeline(MULTISYSTEM_FULL.read_bytes())
-        assert rig.dropped_row_count == 0
-        assert rig.scope_qualified is False
-        assert rig.scope_note == ""
-
-    def test_02_after_the_p0_fix_no_longer_drops_any_row(self):
-        """비공허성 — 결함 1 수정으로 02 자체는 더 이상 탈락이 없다(근본 원인 해소)."""
-        _read, _cf, _ex, _af, rig = _run_pipeline(ABSOLUTE_ONLY.read_bytes())
-        assert rig.dropped_row_count == 0
-        assert rig.scope_qualified is False
-
-    def _mass_drop_raw_records(self) -> list[dict]:
-        """9개는 정상, 1개는 진짜 판독 실패(주소 파싱 불가)인 합성 후보 집합."""
-        raw: list[dict] = []
-        for i in range(9):
-            raw.append(
-                {
-                    "Instrument Type": "MMX",
-                    "Unit Number": str(i + 1),
-                    "Universe": "1",
-                    "DMX Address": str(i + 1),
-                }
-            )
-        raw.append(
-            {
-                "Instrument Type": "MMX",
-                "Unit Number": "99",
-                "Absolute Address": "not-a-number",
-            }
-        )
-        return raw
-
-    def test_large_drop_ratio_leads_summary_with_the_drop_before_fixture_count(self):
-        """양성 케이스 — 탈락 비율이 크면 '도면 픽스처'보다 탈락 사실이 먼저 나온다."""
-        raw = [
-            {
-                "Instrument Type": "MMX",
-                "Unit Number": "1",
-                "Universe": "1",
-                "DMX Address": "1",
-            }
-        ]
-        # 나머지 8개는 판독 실패(주소 표현이 파싱 불가)로 만든다 — 9개 후보 중 1개만 산다.
-        for i in range(8):
-            raw.append(
-                {
-                    "Instrument Type": "MMX",
-                    "Unit Number": str(i + 2),
-                    "Absolute Address": "not-a-number",
-                }
-            )
-        records, _failures, _excluded = resolve_columns(raw)
-        resolved, address_failures = resolve_all(records)
-        assert len(address_failures) == 8
-        rig = build_designed_rig(resolved, candidate_count=len(records))
-        assert rig.dropped_row_count == 8
-        assert rig.scope_qualified is True
-        diff = compare(rig, _empty_inventory())
-        report = build_vwx_report(diff, read_failures=tuple(address_failures))
-        summary = report.summary_ko()
-        assert summary.index(SCOPE_QUALIFIER_TEXT) < summary.index("도면 픽스처")
-
-    def test_small_drop_ratio_still_mentions_the_note_but_not_as_the_lead(self):
-        """음성 대조군 — 탈락 비율이 작으면(1/9 ≈ 11%) 문구는 붙되 맨 앞은 아니다."""
-        raw = self._mass_drop_raw_records()
-        records, _failures, _excluded = resolve_columns(raw)
-        resolved, address_failures = resolve_all(records)
-        assert len(address_failures) == 1
-        rig = build_designed_rig(resolved, candidate_count=len(records))
-        assert rig.scope_qualified is True
-        assert rig.dropped_row_count == 1
-        diff = compare(rig, _empty_inventory())
-        report = build_vwx_report(diff, read_failures=tuple(address_failures))
-        summary = report.summary_ko()
-        assert SCOPE_QUALIFIER_TEXT in summary
-        assert summary.index("도면 픽스처") < summary.index(SCOPE_QUALIFIER_TEXT)
-
-    def test_excluded_rows_are_never_counted_as_dropped(self):
-        """완료 조건 (c) — 집계행·비DMX 액세서리 같은 의도적 제외는 탈락이 아니다."""
-        raw = [
-            {
-                "Instrument Type": "MMX",
-                "Unit Number": "1",
-                "Universe": "1",
-                "DMX Address": "1",
-            },
-            {"Device Type": "SUBTOTAL"},
-        ]
-        records, failures, excluded = resolve_columns(raw)
-        assert not failures
-        assert len(excluded) == 1
-        resolved, address_failures = resolve_all(records)
-        assert not address_failures
-        rig = build_designed_rig(resolved, candidate_count=len(records))
-        assert rig.scope_qualified is False
-        assert rig.dropped_row_count == 0
