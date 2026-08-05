@@ -102,6 +102,28 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # widened 1220 hunk, not because anything there was reverted.
 # Protected-range overlap re-verified: ZERO (the assertion below is what actually
 # carries the PRESERVE claim; this positional list is bookkeeping).
+# SPEC-COPILOT-TRUNCATE-001 (2026-08-05, user-approved) — granted exception,
+# re-walked per the same SPATIAL §E.2.19 precedent. The partial-read reply shape
+# diverges (`fixtures`/`analysis` withheld, `partial_fixtures`/`missing`/
+# `analysis_withheld` in their place), the one in-process consumer
+# (`classify_arrangement_topology`) is migrated to the new keys, and
+# `create_arrangement_groups` gains the `acknowledged_unread_fids` refusal. That
+# opens the 952..1007 block and widens much of 1070..1231.
+#
+# THIS GRANT IS NOT ADDITIVE-ONLY, and that is the difference from the two above:
+#   git diff --unified=0 38a6e7e2..HEAD -- server/orchestrator/tools.py
+#     | grep -cE '^-[^-]'                                          ->  203
+# So the "ZERO pre-existing lines modified" evidence the GROUPGEN note leans on
+# is NOT available here and must not be implied. What IS verified is the thing
+# this test actually protects, and it was checked by CONTENT rather than by
+# position: both protected ranges are present VERBATIM in HEAD --
+#   old 234..238  `_PROGRAMMER_STATE_COMMANDS`  (the "state" half of the name)
+#   old 524..569  the in-bundle dedupe loop     (the "dedupe" half)
+# Protected-range overlap re-verified mechanically: ZERO across all 43 hunks.
+# A positional list that shifts while those two blocks stay byte-identical is
+# bookkeeping catching up, not a boundary being crossed — but a future re-walk
+# MUST re-check the content, because with 203 modified lines the position check
+# alone no longer implies it.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     12,
     14,
@@ -120,7 +142,6 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     971,
     989,
     1007,
-    1067,
     1070,
     1072,
     1081,
