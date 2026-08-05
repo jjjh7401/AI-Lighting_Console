@@ -153,7 +153,20 @@ def _read(rig) -> dict:
 
 
 def _fids(reply) -> list[int]:
+    """Fids out of a COMPLETE reply.
+
+    Deliberately shape-strict (SPEC-COPILOT-TRUNCATE-001): a partial reply has
+    no ``fixtures`` key at all, so a helper that quietly accepted either shape
+    would erase from these tests the exact distinction the divergence exists to
+    create.
+    """
     return [fixture["fid"] for fixture in reply["fixtures"]]
+
+
+def _partial_fids(reply) -> list[int]:
+    """Fids out of a PARTIAL reply — the other shape, named so that no test can
+    take one for the other."""
+    return [fixture["fid"] for fixture in reply["partial_fixtures"]]
 
 
 class TestRegistration:
@@ -211,7 +224,16 @@ class TestReadPathOnly:
 
 
 class TestCoordinateInventionIsImpossible:
-    """AC-SPATIAL-004 (mutation-required) — absence is an ITEM, never a zero."""
+    """AC-SPATIAL-004 (mutation-required) — absence is an ITEM, never a zero.
+
+    Every rig in this class is PARTIAL by arithmetic: a fixture whose
+    coordinate does not parse never reaches the record list, so ``judged``
+    falls short of the container's ``childCount`` and ``coverage.complete`` is
+    False. That is the SAME predicate ``truncated`` trips, so these replies
+    carry ``partial_fixtures`` and no ``fixtures`` key (AC-TRUNCATE-001). The
+    invariant below is unchanged — it is simply asserted on the shape a short
+    read actually returns.
+    """
 
     def test_an_unreadable_axis_makes_the_fixture_absent_with_the_consoles_reason(self):
         rig = SpatialRig(
@@ -223,14 +245,14 @@ class TestCoordinateInventionIsImpossible:
         )
         reply = _read(rig)
 
-        assert _fids(reply) == [11, 13]
+        assert _partial_fids(reply) == [11, 13]
         assert reply["unreadable"] == [
             {"fid": 12, "name": "PAR 2", "reason": "property not readable: posx"}
         ]
         # The load-bearing half: PAR 2 is not in the map AT ALL. Fill its x
         # with a default and it reappears here with a coordinate nobody read.
-        assert all(fixture["fid"] != 12 for fixture in reply["fixtures"])
-        assert 0.0 not in [fixture["x"] for fixture in reply["fixtures"]]
+        assert all(fixture["fid"] != 12 for fixture in reply["partial_fixtures"])
+        assert 0.0 not in [fixture["x"] for fixture in reply["partial_fixtures"]]
 
     def test_a_fixture_that_fails_on_the_second_axis_is_absent_whole(self):
         # posx answered, posy did not. A record with two real axes and one
@@ -244,11 +266,11 @@ class TestCoordinateInventionIsImpossible:
         )
         reply = _read(rig)
 
-        assert _fids(reply) == [11]
+        assert _partial_fids(reply) == [11]
         assert reply["unreadable"] == [
             {"fid": 12, "name": "PAR 2", "reason": "property not readable: posy"}
         ]
-        assert all("y" in fixture for fixture in reply["fixtures"])
+        assert all("y" in fixture for fixture in reply["partial_fixtures"])
 
     def test_an_unparseable_coordinate_is_an_absence_not_a_zero(self):
         # The console answered ok with something that is not a number. That
@@ -262,7 +284,7 @@ class TestCoordinateInventionIsImpossible:
         )
         reply = _read(rig)
 
-        assert _fids(reply) == [11]
+        assert _partial_fids(reply) == [11]
         assert reply["unreadable"] == [
             {"fid": 12, "name": "PAR 2", "reason": "posx is not a number: 'n/a'"}
         ]
@@ -273,7 +295,7 @@ class TestCoordinateInventionIsImpossible:
         rig = SpatialRig([_fixture(1, "11", "PAR 1", x="nan")])
         reply = _read(rig)
 
-        assert reply["fixtures"] == []
+        assert reply["partial_fixtures"] == []
         assert reply["unreadable"] == [
             {"fid": 11, "name": "PAR 1", "reason": "posx is not finite: 'nan'"}
         ]
@@ -289,7 +311,7 @@ class TestCoordinateInventionIsImpossible:
         )
         reply = _read(rig)
 
-        assert _fids(reply) == [12]
+        assert _partial_fids(reply) == [12]
         assert reply["unreadable"] == [{"name": "PAR 1", "reason": "property not readable: fid"}]
         assert "fid" not in reply["unreadable"][0]
 
@@ -309,7 +331,7 @@ class TestCoordinateInventionIsImpossible:
         rig.query_state = unslotted  # type: ignore[method-assign]
         reply = _read(rig)
 
-        assert _fids(reply) == [2]
+        assert _partial_fids(reply) == [2]
         assert reply["unreadable"] == [
             {"name": "PAR 1", "reason": "container slot not established by the responder"}
         ]
@@ -333,7 +355,11 @@ class TestCoordinateInventionIsImpossible:
 
 
 class TestTruncationSignal:
-    """AC-SPATIAL-006 (mutation-required) — the container's own item drop."""
+    """AC-SPATIAL-006 (mutation-required) — the container's own item drop.
+
+    A truncated read returns the PARTIAL shape (AC-TRUNCATE-001): the records
+    are under ``partial_fixtures`` and there is no ``fixtures`` key to read.
+    """
 
     def test_the_live_calibration_container_is_reported_truncated(self):
         # The exact measured shape (progress.md §E.2.3): childCount 19, 18
@@ -346,7 +372,7 @@ class TestTruncationSignal:
         reply = _read(rig)
 
         assert reply["truncated"] is True
-        assert len(reply["fixtures"]) == 18
+        assert len(reply["partial_fixtures"]) == 18
         # The 18 that DID arrive are complete, and the missing one is not
         # slandered as a read failure.
         assert reply["unreadable"] == []
@@ -361,7 +387,7 @@ class TestTruncationSignal:
         reply = _read(rig)
 
         assert reply["truncated"] is True
-        assert len(reply["fixtures"]) == 18
+        assert len(reply["partial_fixtures"]) == 18
 
     def test_the_arithmetic_raises_it_when_the_flag_is_missing(self):
         # A responder that ever drops the flag still cannot make the loss
@@ -370,7 +396,7 @@ class TestTruncationSignal:
         reply = _read(rig)
 
         assert reply["truncated"] is True
-        assert len(reply["fixtures"]) == 18
+        assert len(reply["partial_fixtures"]) == 18
 
     def test_a_complete_container_is_not_reported_truncated(self):
         # Non-vacuity for the three above: a hardcoded True would pass them all.
@@ -380,14 +406,19 @@ class TestTruncationSignal:
 
 
 class TestRoundTripCap:
-    """REQ-SPATIAL-006 — stopping is fine; stopping quietly is the defect."""
+    """REQ-SPATIAL-006 — stopping is fine; stopping quietly is the defect.
+
+    A capped read is incomplete for a different reason and returns the SAME
+    partial shape (AC-TRUNCATE-005); a rig that stops exactly AT the cap is
+    complete and keeps ``fixtures``.
+    """
 
     def test_a_rig_past_the_cap_stops_and_says_so(self):
         rig = SpatialRig(_bar(CAP_FIXTURES + 1))
         reply = _read(rig)
 
         assert reply["roundtrip_capped"] is True
-        assert len(reply["fixtures"]) == CAP_FIXTURES
+        assert len(reply["partial_fixtures"]) == CAP_FIXTURES
         # Spent the whole budget and not one round trip more.
         assert len(rig.property_calls) == SPATIAL_PROPERTY_QUERY_CAP
         # A different signal from the console shortening its own list.
@@ -402,7 +433,7 @@ class TestRoundTripCap:
 
         assert reply["unreadable"] == []
         assert reply["roundtrip_capped"] is True
-        assert max(_fids(reply)) == CAP_FIXTURES
+        assert max(_partial_fids(reply)) == CAP_FIXTURES
 
     def test_a_rig_exactly_at_the_cap_is_complete(self):
         # Non-vacuity + the off-by-one: the last fixture that fits must be read.
