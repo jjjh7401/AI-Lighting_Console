@@ -261,7 +261,7 @@ M0 실물 샘플이 fixture의 근거이지만, 결함을 심은 합성 fixture 
 | M7 | `console/lua/**` 또는 `server/prechk/{inventory,patch,report}.py`를 수정한다. | `AC-VWX-025` |
 | M8 | 툴을 거치지 않고 내부 함수를 직접 호출해 종단 검증한다. | `AC-VWX-026` |
 
-제안 뮤테이션은 총 24개다.
+제안 뮤테이션은 총 25개다(M1 3 · M2 3 · M3 4 · M4 5 · M5 4 · M6 3 · M7 2 · M8 1 = 25, plan-audit 지적 반영 — 표 25행과 재계산 일치시킴).
 
 ---
 
