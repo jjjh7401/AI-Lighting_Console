@@ -32,11 +32,14 @@ ALREADY_PATCHED_IDENTICAL = "already_patched_identical"
 ADDRESS_CONFLICTS_WITH_EXISTING = "address_conflicts_with_existing_fixture"
 EXISTING_IDENTITY_UNCONFIRMED = "existing_fixture_identity_unconfirmed"
 CONSOLE_READ_INCOMPLETE = "console_read_incomplete"
+FID_PRECHECK_READ_INCOMPLETE = "fid_precheck_read_incomplete"
 
 FID_CONFLICT_PRECHECK_DESCOPE = "fid_conflict_precheck_descope"
 FOOTPRINT_MATCH_DESCOPE = "footprint_match_descope"
 FIXTURE_TYPE_LIBRARY_TRUNCATED = "fixture_type_library_truncated"
 FIXTURE_TYPE_LIBRARY_UNREADABLE = "fixture_type_library_unreadable"
+FID_CONFLICT_PRECHECK_INCOMPLETE = "fid_conflict_precheck_incomplete"
+EXISTING_FOOTPRINT_UNREADABLE = "existing_footprint_unreadable"
 
 TYPE_RESOLVED = "resolved"
 TYPE_NEEDS_CONFIRMATION = "needs_confirmation"
@@ -47,6 +50,10 @@ VERIFICATION_OBSERVED = "observed"
 VERIFICATION_NOT_OBSERVED = "not_observed"
 VERIFICATION_MISMATCHED = "mismatched"
 VERIFICATION_IDENTITY_UNCONFIRMED = "identity_unconfirmed"
+
+# 재조회가 무엇을 못 봤는지 — caveat으로 payload에 실리므로 닫힌 어휘여야 한다
+# (round11 N03: 이전 판은 apply.py의 맨 문자열이라 라벨도 검증도 없이 나갔다).
+CONSOLE_READ_INDEX_DOMAIN_UNKNOWN = "console_read_index_domain_unknown"
 
 CANDIDATE_REJECTION_REASON = frozenset(
     {
@@ -80,6 +87,7 @@ TARGET_EXCLUSION_REASON = frozenset(
         ADDRESS_CONFLICTS_WITH_EXISTING,
         EXISTING_IDENTITY_UNCONFIRMED,
         CONSOLE_READ_INCOMPLETE,
+        FID_PRECHECK_READ_INCOMPLETE,
     }
 )
 SKIPPED_CHECK_KIND = frozenset(
@@ -88,6 +96,8 @@ SKIPPED_CHECK_KIND = frozenset(
         FOOTPRINT_MATCH_DESCOPE,
         FIXTURE_TYPE_LIBRARY_TRUNCATED,
         FIXTURE_TYPE_LIBRARY_UNREADABLE,
+        FID_CONFLICT_PRECHECK_INCOMPLETE,
+        EXISTING_FOOTPRINT_UNREADABLE,
     }
 )
 TYPE_RESOLUTION_STATUS = frozenset(
@@ -96,6 +106,12 @@ TYPE_RESOLUTION_STATUS = frozenset(
         TYPE_NEEDS_CONFIRMATION,
         TYPE_LIBRARY_ABSENT,
         TYPE_LIBRARY_INCOMPLETE,
+    }
+)
+CONSOLE_READ_CAVEAT_KIND = frozenset(
+    {
+        CONSOLE_READ_INCOMPLETE,
+        CONSOLE_READ_INDEX_DOMAIN_UNKNOWN,
     }
 )
 VERIFICATION_OUTCOME = frozenset(
@@ -116,6 +132,7 @@ AUTOPATCH_CLOSED_VOCABULARIES = MappingProxyType(
         "target_exclusion_reason": TARGET_EXCLUSION_REASON,
         "type_resolution_status": TYPE_RESOLUTION_STATUS,
         "verification_outcome": VERIFICATION_OUTCOME,
+        "console_read_caveat_kind": CONSOLE_READ_CAVEAT_KIND,
     }
 )
 
@@ -172,18 +189,29 @@ _TARGET_EXCLUSION_LABELS = {
     CONSOLE_READ_INCOMPLETE: (
         "콘솔 재조회에 미판독이 남아 있음 — 없음을 단정할 수 없어 생성하지 않음"
     ),
+    FID_PRECHECK_READ_INCOMPLETE: (
+        "FID 충돌 사전검사가 불완전 — 빈 FID를 단정할 수 없어 배정하지 않음"
+    ),
 }
 _SKIPPED_CHECK_LABELS = {
     FID_CONFLICT_PRECHECK_DESCOPE: "FID 충돌 사전검사 미수행",
     FOOTPRINT_MATCH_DESCOPE: "점유폭 일치 확인 미수행",
     FIXTURE_TYPE_LIBRARY_TRUNCATED: "FixtureType 열거 절단 — 부재 단정 불가",
     FIXTURE_TYPE_LIBRARY_UNREADABLE: "FixtureType 열거 실패 — 부재 단정 불가",
+    FID_CONFLICT_PRECHECK_INCOMPLETE: "FID 충돌 사전검사 부분 관측 — 빈 FID 단정 불가",
+    EXISTING_FOOTPRINT_UNREADABLE: ("기존 픽스처 점유폭 미판독 — 꼬리 구간 겹침은 검출되지 않는다"),
 }
 _TYPE_RESOLUTION_STATUS_LABELS = {
     TYPE_RESOLVED: "타입·모드 확정",
     TYPE_NEEDS_CONFIRMATION: "후보 제시 — 사용자 확인 대기",
     TYPE_LIBRARY_ABSENT: "콘솔 라이브러리 부재 — 하드 스톱",
     TYPE_LIBRARY_INCOMPLETE: "라이브러리 관측 불완전 — 부재를 단정하지 않음",
+}
+_CONSOLE_READ_CAVEAT_LABELS = {
+    CONSOLE_READ_INCOMPLETE: "재조회에 미판독이 남았다 — 없음을 단정할 수 없다",
+    CONSOLE_READ_INDEX_DOMAIN_UNKNOWN: (
+        "열거는 절단됐으나 선언된 자식을 전부 관측했다 — 인덱스 도메인만 미상"
+    ),
 }
 _VERIFICATION_OUTCOME_LABELS = {
     VERIFICATION_OBSERVED: "재조회에서 관측됨",
@@ -201,6 +229,7 @@ _AUTOPATCH_VOCABULARY_LABELS = MappingProxyType(
         "target_exclusion_reason": MappingProxyType(_TARGET_EXCLUSION_LABELS),
         "type_resolution_status": MappingProxyType(_TYPE_RESOLUTION_STATUS_LABELS),
         "verification_outcome": MappingProxyType(_VERIFICATION_OUTCOME_LABELS),
+        "console_read_caveat_kind": MappingProxyType(_CONSOLE_READ_CAVEAT_LABELS),
     }
 )
 
@@ -240,6 +269,10 @@ def target_exclusion_label(code: str) -> str:
 
 def verification_outcome_label(code: str) -> str:
     return autopatch_label("verification_outcome", code)
+
+
+def console_read_caveat_label(code: str) -> str:
+    return autopatch_label("console_read_caveat_kind", code)
 
 
 def skipped_check_label(code: str) -> str:
