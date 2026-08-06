@@ -1050,6 +1050,58 @@ ASSUMPTION-71~75 어디에도 이 항목이 없다.
 저장소 무변경: 프로브 파일은 전부 콘솔 라이브러리 폴더였고 `console/lua/**`(PRESERVE)는 무접촉이다
 (`git diff --stat -- console/lua` 빈 출력).
 
+### M0 라이브 세션 3차 — `ChangeDestination` 승인 측정 (2026-08-06)
+
+#### 승인 기록
+
+사용자가 **"쓰고 측정해라"** 로 `ChangeDestination` 1회 사용을 명시 승인했다(2026-08-06).
+이는 `spec.md` §A 사전 확정 사실 2 · `design.md` §7 안티패턴 1을 **의도적으로 위반하는
+측정**이며, 위반 사실과 승인 근거를 여기 남긴다. 생성 코드에 CD를 넣는 것이 아니라
+**M0 측정 프로브에 한정**된다 — REQ-AUTOPATCH-017(생성기 산출물의 CD 금지)은 불변이다.
+
+#### 측정 결과 — CD로도 목적지를 옮기지 못한다
+
+| # | 경로 | CD 명령 결과 | 이후 `CmdObj()` | `AddFixtures` |
+|---|---|---|---|---|
+| 1 | 플러그인 내부 `Cmd("ChangeDestination " .. Patch():Addr(), undo)`<br/>(`patch_proper.xml` 방식, `CreateUndo`/`CloseUndo`로 감쌈) | — | `TempCmdlines Cmdline 1` **불변** | `T1 NIL · T2 NIL` |
+| 2 | 플러그인 내부 CD, 대상을 `Fixtures:AddrNative()`로 교체 | — | **불변** | — |
+| 3 | OSC 명령줄 `ChangeDestination 149712`(숫자 주소) | **`Failed`** | 불변 | `T1 NIL · T2 NIL` |
+| 4 | OSC 명령줄 `ChangeDestination ShowData.LivePatch.Stages.'Stage 1'.Fixtures` | **`OK`** | **불변** | `T1 NIL · T2 NIL` |
+| 5 | 플러그인 내부 `CmdIndirect("ChangeDestination " .. 위 경로)` | 호출 성공 | **불변** | `T1 NIL` |
+
+**기계적 원인**: `Cmd()`·OSC exec는 호출마다 **일회용 임시 명령줄**에서 실행된다.
+CD는 그 임시 명령줄의 목적지를 바꾸고 함께 소멸한다 — 플러그인이 `AddFixtures`를 부를 때
+보는 앰비언트 목적지에는 도달하지 못한다. 4번이 `OK`를 반환하고도 다음 호출에 남지 않는 것이
+그 직접 증거다.
+
+#### 확보한 부수 사실 (후속 SPEC 자산)
+
+| 사실 | 값 |
+|---|---|
+| `Patch()`가 가리키는 실제 객체 | **`ShowData.LivePatch`** (`ShowData.Patch`가 아니다) |
+| Fixtures 컨테이너 네이티브 경로 | `ShowData.LivePatch.Stages.'Stage 1'.Fixtures` |
+| 동 숫자 주소 | `149712` |
+| 유효한 CD 인자 형식 | 위 **경로 형식은 `OK`**, **숫자 주소는 `Failed`**, `LivePatch` 단독은 `Failed`, `Patch`·`Root`는 `OK` |
+| 라벨 문자열 특성 | MA3 라벨이 `.`·`/` 구분자를 제거한다(경로를 라벨로 실어 나를 때 주의) |
+
+#### 남은 단 하나의 시나리오 — 룰북이 실제로 기술한 상태
+
+지금까지의 GUI 탭 측정은 **콘솔 메인 명령줄의 목적지를 명시적으로 옮기지 않은 채** 수행됐다.
+사용자는 Patch 편집기 **창**을 열었을 뿐이고, 그것이 메인 명령줄 목적지를 옮긴다는 보장이 없다.
+룰북이 기술한 상태는 정확히 이것이다:
+
+> `AddFixtures`는 콘솔의 **현재 command destination**을 읽으며, 그것은 이미 patch fixtures
+> 레이어다 — **프롬프트가 `…/Patch/Stages/Stage 1/Fixtures>` 로 읽히기 때문**이다.
+
+즉 **프롬프트 자체가 그 경로여야** 한다. 미측정 상태로 남은 시나리오:
+콘솔 메인 명령줄에 직접 `ChangeDestination ShowData.LivePatch.Stages.'Stage 1'.Fixtures`를
+입력해 프롬프트를 옮긴 뒤, GUI에서 플러그인을 탭한다. 이 경로만 남았고 프로브를 배치해 두었다
+(슬롯 6 `AM0FINAL`, 결과는 슬롯 5 `AM0 RESULT HERE` 라벨로 회수).
+
+이 시나리오가 성공하면 **서버 자동화로는 패치할 수 없고 사람이 목적지를 잡아 줘야 한다**는
+결론이 되며, 그것은 REQ-AUTOPATCH-018과 M5 설계를 근본에서 바꾼다.
+실패하면 이 빌드에서 `AddFixtures` 경로 자체가 성립하지 않는다는 결론이다.
+
 ---
 
 ## §E.3 Run-phase Audit-Ready Signal
