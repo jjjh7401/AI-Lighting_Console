@@ -375,3 +375,34 @@ def test_no_console_write_leaves_the_wired_tool(dry_run):
     """배선 계층에서도 발화 0건 — 실행 포트 대역은 호출되면 AssertionError를 던진다."""
     payload, _ = _full_call(_registry(), dry_run=dry_run)
     assert payload["handoff"]["execution_performed_by"] == "human"
+
+
+# --------------------------------------------------------------------------
+# 재조회 절단 — 배선 계층에서 막히는가
+# --------------------------------------------------------------------------
+
+
+class _TruncatingRigPort(RigPort):
+    """`childCount`는 진짜 총계인데 자식 목록이 짧게 오는 콘솔 — 이 빌드의 **기본 경로**."""
+
+    def query_state(self, path: str) -> dict:
+        payload = super().query_state(path)
+        if path == FIXTURE_ROOT:
+            payload["node"]["childCount"] = 5  # 5대 선언, 목록은 0대
+            payload["truncated"] = True
+        return payload
+
+
+def test_a_truncated_console_read_blocks_creation_and_says_why():
+    payload, _ = _full_call(_registry(rig=_TruncatingRigPort()), dry_run=False)
+    assert payload["console_read"]["complete_enough_to_judge_absence"] is False
+    assert payload["console_read"]["caveat"]["kind"] == "console_read_incomplete"
+    assert payload["handoff"]["lua_source"] is None
+    assert [x["code"] for x in payload["handoff"]["exclusions"]] == ["console_read_incomplete"]
+
+
+def test_the_truncation_block_control_a_complete_read_still_delivers():
+    """비공허성 — 완전한 재조회에서는 같은 경로가 Lua를 실제로 낸다."""
+    payload, _ = _full_call(_registry(), dry_run=False)
+    assert payload["console_read"]["complete_enough_to_judge_absence"] is True
+    assert "AddFixtures({" in payload["handoff"]["lua_source"]

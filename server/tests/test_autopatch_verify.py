@@ -30,11 +30,15 @@ from server.tests.test_autopatch_execute import (
     _load,
 )
 from server.vwx.apply import (
+    CONSOLE_READ_INCOMPLETE,
+    CONSOLE_READ_INDEX_DOMAIN_UNKNOWN,
     NO_AUTO_CORRECTION,
     ZERO_CREATED_GUIDANCE,
     HandoffEntry,
     build_patch_handoff,
+    console_read_caveat,
     read_console_fixtures,
+    screen_console_read,
     screen_idempotent,
     verify_patch,
 )
@@ -62,6 +66,8 @@ from server.vwx.verdicts import (
 )
 
 APPLY_PATH = Path("server/vwx/apply.py")
+
+INCOMPLETE = "incomplete"
 
 LED = "Robin LEDBeam 350"
 MMX = "Robin MMX Spot"
@@ -403,9 +409,25 @@ def test_an_unconfirmable_identity_is_reported_as_such_not_as_success():
 
 
 def test_verification_takes_no_plugin_outcome_argument():
-    """AC-021② — 플러그인 무오류 종료만으로 성공 판정하는 경로가 0건."""
+    """AC-021② — 플러그인 무오류 종료만으로 성공 판정하는 경로가 0건.
+
+    파라미터 집합을 통째로 얼리지 않는다 — 그러면 정당한 확장(`read_complete`가 그랬다)마다
+    깨지고 결국 기계적으로 갱신된다. 지키려는 것은 **플러그인의 종료 상태가 인자로 들어오지
+    않는다**는 것 하나이므로, 그것만 이름으로 금지한다. 아래 대조군이 그 금지의 실효성을 본다.
+    """
     parameters = set(inspect.signature(verify_patch).parameters)
-    assert parameters == {"entries", "console_fixtures"}
+    assert parameters == {"entries", "console_fixtures", "read_complete"}
+    assert not _plugin_outcome_parameters(parameters)
+
+
+def _plugin_outcome_parameters(parameters) -> list[str]:
+    words = ("plugin", "exec", "reported", "success", "_ok")
+    return [name for name in parameters if any(word in name.lower() for word in words)]
+
+
+def test_the_plugin_outcome_parameter_ban_is_not_vacuous():
+    assert _plugin_outcome_parameters({"entries", "plugin_reported_ok"}) == ["plugin_reported_ok"]
+    assert _plugin_outcome_parameters({"entries", "exec_result"}) == ["exec_result"]
 
 
 def test_a_clean_plugin_exit_cannot_make_an_absent_fixture_observed():
@@ -620,3 +642,117 @@ def test_an_empty_approval_set_is_not_a_zero_creation_alarm():
     assert report.results == ()
     assert report.guidance == ()
     assert report.all_observed is True
+
+
+# --------------------------------------------------------------------------
+# 재조회 불완전 — "관측되지 않음"과 "읽히지 않았음"을 구별한다
+#
+# `read_inventory`는 **절단을 기본 경로로** 다룬다(실물 콘솔은 19대에서 이미 절단됐다,
+# `progress.md` §E.2 M0 1차). 절단된 재조회에서 "그 주소에 아무것도 없다"는 관측이 아니라
+# **미판독**일 수 있고, 그것을 관측으로 취급하면 ① 있는 픽스처를 못 보고 중복 생성 대상으로
+# 올리고 ② 검증이 거짓 미관측을 낸다. 되돌릴 수 없는 쓰기 앞에서 둘 다 위험하다.
+# --------------------------------------------------------------------------
+
+
+def _truncated_inventory(*records: FixtureRecord, missing: int = 1) -> Inventory:
+    return Inventory(
+        path=FIXTURE_ROOT,
+        child_count=len(records) + missing,
+        enumerated_count=len(records),
+        recovered_count=0,
+        observed_count=len(records),
+        missing_count=missing,
+        completeness=INCOMPLETE,
+        recovery_boundary=len(records),
+        index_domain_unknown=True,
+        fixtures=records,
+    )
+
+
+def test_a_complete_read_reports_no_caveat():
+    assert console_read_caveat(_inventory(_record(1, "1.1", "FixtureType 3", "1 Mode 1"))) is None
+
+
+def test_an_incomplete_read_is_reported_as_a_caveat():
+    caveat = console_read_caveat(_truncated_inventory())
+    assert caveat is not None
+    assert caveat["kind"] == CONSOLE_READ_INCOMPLETE
+    assert caveat["missing_count"] == 1
+
+
+def test_an_incomplete_read_blocks_every_creation_target():
+    """미판독이 남아 있으면 **아무것도 생성 대상으로 넘기지 않는다**."""
+    plan = screen_console_read(
+        (_candidate("a", 1, 1, 101),),
+        address_plan=AddressPlan(entries=(_planned("a", 1, 1),)),
+        inventory=_truncated_inventory(),
+    )
+    assert plan.entries == ()
+    assert [exclusion.code for exclusion in plan.exclusions] == [CONSOLE_READ_INCOMPLETE]
+
+
+def test_the_block_control_a_complete_read_passes_everything_through():
+    """비공허성 — 완전한 재조회에서는 같은 경로가 항목을 그대로 통과시킨다."""
+    plan = screen_console_read(
+        (_candidate("a", 1, 1, 101),),
+        address_plan=AddressPlan(entries=(_planned("a", 1, 1),)),
+        inventory=_inventory(),
+    )
+    assert [entry.candidate_id for entry in plan.entries] == ["a"]
+    assert plan.exclusions == ()
+
+
+def test_a_root_truncation_that_recovered_everything_is_a_caveat_not_a_block():
+    """열거는 짧았지만 선언된 자식을 전부 관측했다면 **수량 비교는 정확하다**.
+
+    `read_inventory`의 계약이 그렇다 — `childCount`가 진짜 총계이고 절단은 목록만 줄인다.
+    그래서 `missing_count == 0`이면 막지 않고, 인덱스 도메인 미상만 주의로 남긴다.
+    """
+    recovered = Inventory(
+        path=FIXTURE_ROOT,
+        child_count=1,
+        enumerated_count=0,
+        recovered_count=1,
+        observed_count=1,
+        missing_count=0,
+        completeness=INCOMPLETE,
+        recovery_boundary=1,
+        index_domain_unknown=True,
+        fixtures=(_record(1, "1.1", "FixtureType 3", "1 Mode 1"),),
+    )
+    plan = screen_console_read(
+        (_candidate("a", 1, 17, 101),),
+        address_plan=AddressPlan(entries=(_planned("a", 1, 17),)),
+        inventory=recovered,
+    )
+    assert [entry.candidate_id for entry in plan.entries] == ["a"]
+    caveat = console_read_caveat(recovered)
+    assert caveat is not None
+    assert caveat["kind"] == CONSOLE_READ_INDEX_DOMAIN_UNKNOWN
+
+
+def test_verification_marks_unobserved_as_unconfirmable_when_the_read_was_short():
+    """AC-021② 정신 — 확인할 수 없는 것을 '없다'로 단정하지 않는다."""
+    report = verify_patch(
+        (_entry("a", 1, 1),),
+        console_fixtures=_console(),
+        read_complete=False,
+    )
+    (result,) = report.results
+    assert result.outcome == VERIFICATION_IDENTITY_UNCONFIRMED
+    assert "재조회가 불완전" in result.detail
+
+
+def test_the_short_read_control_a_complete_read_still_says_not_observed():
+    """비공허성 — 완전한 재조회에서는 같은 입력이 그대로 '미관측'이다."""
+    report = verify_patch((_entry("a", 1, 1),), console_fixtures=_console())
+    assert [result.outcome for result in report.results] == [VERIFICATION_NOT_OBSERVED]
+
+
+def test_a_short_read_does_not_downgrade_an_actual_observation():
+    report = verify_patch(
+        (_entry("a", 1, 1),),
+        console_fixtures=_console(_record(1, "1.1", "FixtureType 3", "1 Mode 1")),
+        read_complete=False,
+    )
+    assert [result.outcome for result in report.results] == [VERIFICATION_OBSERVED]

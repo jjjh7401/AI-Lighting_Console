@@ -114,6 +114,19 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 #   git diff --unified=0 e40c4d0~1..HEAD -- server/orchestrator/tools.py \
 #     | grep -cE '^-[^-]'   ->  0  (zero pre-existing lines deleted or modified)
 # Protected-range overlap re-verified: ZERO.
+# SPEC-COPILOT-AUTOPATCH-001 M7 registered apply_vectorworks_patch the same way:
+# three import blocks (server.vwx.apply / .patchplan / .typemap, widening the 33
+# hunk), one TOOL_NAMES entry (widening 49), one handler plus two nested helpers,
+# one ToolDefinition and one handlers-dict entry — all inside the same
+# build_toolset body the earlier SPECs already opened. ONE genuinely new start
+# (1061, the handler insertion point); 46 hunks total (45 + 1061). Every other
+# start is unchanged from the VWX snapshot.
+# Evidence this is additive-only, not a rewrite of anyone else's code:
+#   git diff --stat     664060d~1..HEAD -- server/orchestrator/tools.py  ->  +262 -0
+#   git diff --unified=0 664060d~1..HEAD -- ... | grep -cE '^-[^-]'      ->  0
+# i.e. ZERO pre-existing lines were deleted or modified.
+# Protected-range overlap re-verified: ZERO — recomputed against
+# _TOOLS_PROTECTED_OLD_RANGES ((234,238), (524,569)) with the assertion below.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -135,6 +148,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     971,
     989,
     1007,
+    1061,
     1067,
     1070,
     1072,

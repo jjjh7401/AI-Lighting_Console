@@ -31,6 +31,7 @@ LUA_GENERATION_REFUSED = "lua_generation_refused"
 ALREADY_PATCHED_IDENTICAL = "already_patched_identical"
 ADDRESS_CONFLICTS_WITH_EXISTING = "address_conflicts_with_existing_fixture"
 EXISTING_IDENTITY_UNCONFIRMED = "existing_fixture_identity_unconfirmed"
+CONSOLE_READ_INCOMPLETE = "console_read_incomplete"
 
 FID_CONFLICT_PRECHECK_DESCOPE = "fid_conflict_precheck_descope"
 FOOTPRINT_MATCH_DESCOPE = "footprint_match_descope"
@@ -78,6 +79,7 @@ TARGET_EXCLUSION_REASON = frozenset(
         ALREADY_PATCHED_IDENTICAL,
         ADDRESS_CONFLICTS_WITH_EXISTING,
         EXISTING_IDENTITY_UNCONFIRMED,
+        CONSOLE_READ_INCOMPLETE,
     }
 )
 SKIPPED_CHECK_KIND = frozenset(
@@ -166,6 +168,9 @@ _TARGET_EXCLUSION_LABELS = {
     ADDRESS_CONFLICTS_WITH_EXISTING: "같은 주소를 타입 또는 모드가 다른 픽스처가 점유 — 충돌",
     EXISTING_IDENTITY_UNCONFIRMED: (
         "같은 주소의 기존 픽스처 정체를 확인할 수 없음 — 멱등으로 간주하지 않음"
+    ),
+    CONSOLE_READ_INCOMPLETE: (
+        "콘솔 재조회에 미판독이 남아 있음 — 없음을 단정할 수 없어 생성하지 않음"
     ),
 }
 _SKIPPED_CHECK_LABELS = {

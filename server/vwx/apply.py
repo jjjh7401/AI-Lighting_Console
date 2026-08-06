@@ -58,6 +58,7 @@ from server.vwx.typemap import FixtureTypeLibrary, LibraryMode, LibraryType, Typ
 from server.vwx.verdicts import (
     ADDRESS_CONFLICTS_WITH_EXISTING,
     ALREADY_PATCHED_IDENTICAL,
+    CONSOLE_READ_INCOMPLETE,
     EXISTING_IDENTITY_UNCONFIRMED,
     FID_NOT_ASSIGNED,
     FIXTURE_NAME_MISSING,
@@ -424,6 +425,80 @@ def _single_unambiguous(by_name: list, by_index: list):
     return candidates[0] if len(candidates) == 1 else None
 
 
+CONSOLE_READ_INDEX_DOMAIN_UNKNOWN = "console_read_index_domain_unknown"
+
+
+def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
+    """재조회가 무엇을 못 봤는지 — 구조화해서 돌려준다. 완전하면 `None`.
+
+    `read_inventory`는 **절단을 기본 경로로** 다루고(실물 콘솔은 픽스처 19대에서 이미
+    절단됐다 — §E.2 M0 1차) 두 가지를 구별해 보고한다:
+
+    - `missing_count > 0` — 선언된 자식 중 **못 읽은 것이 남아 있다**. 이 상태에서
+      "그 주소에 아무것도 없다"는 관측이 아니라 **미판독**이다.
+    - `missing_count == 0` 인데 `index_domain_unknown` — 열거는 짧았지만 선언된 것을
+      전부 관측했다. `childCount`가 진짜 총계이므로 **수량 비교는 정확하다**
+      (`server/prechk/inventory.py` 모듈 독스트링 2번). 주의는 남기되 막지 않는다.
+    """
+    if inventory.missing_count > 0:
+        return {
+            "kind": CONSOLE_READ_INCOMPLETE,
+            "completeness": inventory.completeness,
+            "child_count": inventory.child_count,
+            "observed_count": inventory.observed_count,
+            "missing_count": inventory.missing_count,
+            "reason": (
+                f"콘솔 재조회에서 선언된 {inventory.child_count}대 중 "
+                f"{inventory.missing_count}대를 읽지 못했다 — 이 상태의 '없음'은 관측이 아니라 "
+                "미판독이다."
+            ),
+        }
+    if inventory.index_domain_unknown:
+        return {
+            "kind": CONSOLE_READ_INDEX_DOMAIN_UNKNOWN,
+            "completeness": inventory.completeness,
+            "child_count": inventory.child_count,
+            "observed_count": inventory.observed_count,
+            "missing_count": 0,
+            "reason": (
+                "열거가 절단됐으나 선언된 자식을 전부 관측했다 — 수량 비교는 정확하고, "
+                "인덱스 도메인만 미상이다."
+            ),
+        }
+    return None
+
+
+def screen_console_read(
+    targets: Sequence[PatchCandidate],
+    *,
+    address_plan: AddressPlan,
+    inventory: Inventory,
+) -> AddressPlan:
+    """재조회에 **미판독이 남아 있으면 아무것도 생성 대상으로 넘기지 않는다**.
+
+    멱등 판정은 "그 주소에 이미 있는가"를 묻는데, 못 읽은 픽스처가 남아 있으면 그 물음에
+    답할 수 없다 — 없다고 답하면 **중복 생성**이고, 이 앱에는 실행 취소가 없다.
+    그래서 막고 사유를 붙인다. 되돌릴 수 없는 쓰기에서 "모르면 하지 않는다"가 기본값이다.
+
+    `missing_count == 0`이면 통과시킨다 — 열거 절단만으로는 막지 않는다(위 독스트링).
+    """
+    caveat = console_read_caveat(inventory)
+    if caveat is None or caveat["kind"] != CONSOLE_READ_INCOMPLETE:
+        return address_plan
+
+    target_by_id = {target.id: target for target in targets}
+    exclusions = list(address_plan.exclusions)
+    for planned in address_plan.entries:
+        target = target_by_id.get(planned.candidate_id)
+        if target is None:
+            raise ValueError(
+                f"주소 계획에 대상 없는 항목이 있다: {planned.candidate_id!r} — "
+                "계획과 대상 집합은 같은 호출에서 나온 것이어야 한다."
+            )
+        exclusions.append(_exclusion(target, CONSOLE_READ_INCOMPLETE, str(caveat["reason"])))
+    return AddressPlan(entries=(), exclusions=tuple(exclusions))
+
+
 def screen_idempotent(
     targets: Sequence[PatchCandidate],
     *,
@@ -580,18 +655,27 @@ class PatchVerification:
 
 
 def verify_patch(
-    entries: Sequence[HandoffEntry], *, console_fixtures: Sequence[ConsoleFixture]
+    entries: Sequence[HandoffEntry],
+    *,
+    console_fixtures: Sequence[ConsoleFixture],
+    read_complete: bool = True,
 ) -> PatchVerification:
     """전달한 항목이 실제로 그 주소에 그 타입으로 생겼는지 **재조회로만** 판정한다.
 
     **플러그인의 종료 상태를 받는 인자가 없다** — 그것이 성공의 근거가 될 수 없기 때문이다
-    (함정 4 · AC-AUTOPATCH-021②). 성공은 오직 관측에서 나온다.
+    (함정 4 · AC-AUTOPATCH-021②). 성공은 오직 관측에서 나온다. `read_complete`는 그 반대편을
+    막는다: 재조회가 불완전하면 **미판독을 미관측으로 적지 않는다**.
     불일치는 구조화해 보고하고 **자동 보정도 재시도도 하지 않는다**(AC-AUTOPATCH-022).
     """
     results: list[VerificationResult] = []
     for entry in entries:
         occupant = _fixture_at(console_fixtures, entry.universe, entry.address)
-        if occupant is None:
+        if occupant is None and not read_complete:
+            # 못 읽은 픽스처가 남아 있으면 "없다"고 단정할 수 없다 — 미판독을 미관측으로
+            # 적으면 사용자가 "실행이 안 됐다"고 읽고 다시 실행해 중복을 만든다.
+            outcome = VERIFICATION_IDENTITY_UNCONFIRMED
+            detail = "재조회가 불완전해 그 주소의 상태를 단정할 수 없다 — 미관측이 아니다."
+        elif occupant is None:
             outcome = VERIFICATION_NOT_OBSERVED
             detail = "그 유니버스·주소에서 픽스처가 관측되지 않았다."
         elif not occupant.identity_resolved:
