@@ -1,10 +1,10 @@
 ---
 id: SPEC-COPILOT-AUTOPATCH-001
 title: "Vectorworks 연계 2단계 — 차이 리포트 승인 기반 자동 패치 생성 (AddFixtures Lua 플러그인)"
-version: "0.1.1"
+version: "0.1.2"
 status: draft
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-08-06
 author: orchestrator
 priority: P0
 phase: "Vectorworks 연계 2단계 — 자동 패치 생성 (1단계 대조 리포트의 후속, MVR/GDTF는 3단계)"
@@ -38,6 +38,7 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 |---|---|---|---|
 | 0.1.0 | 2026-08-05 | orchestrator | 최초 작성 (draft, Tier L). 출처는 `.moai/reports/ma3-copilot-overview.html` §7 P0 항목의 **2단계**와 `SPEC-COPILOT-VWX-001` §D `### Out of Scope — Lua AddFixtures 자동 패치`. **아티팩트 6종**(spec/plan/acceptance/design/research/progress). REQ **25건**(REQ-AUTOPATCH-001~025), AC **26건**, ASSUMPTION **5건**(71~75), 마일스톤 **9개**(M0~M8), 라이브 세션 **2회**(M0 프로브 · M8 종단), clarification 마커 **0건**. 위험 4건(FID 충돌 · FixtureType 핸들 해석 · 비가역성 · 멀티셀/액세서리)을 각각 요구·가정·마일스톤으로 구조화했다. |
 | 0.1.1 | 2026-08-05 | orchestrator | **독립 plan-audit 1회차 FAIL(0.80 / Tier L 임계 0.85) 지적 10건 반영.** REQ **25→26**(REQ-AUTOPATCH-026 신설 — `ASSUMPTION-71` 부정 시 구조화된 사용자 확인 강제, D2), AC **26→27**(AC-AUTOPATCH-027 신설). frontmatter `depends_on` 추가 + §C `의존 범위 한정` 신설(**D1 critical** — 1단계가 `partial-blocked`인데 게이트 없이 완료로 취급하던 것). REQ-AUTOPATCH-003에 `address_basis` 열 강제(D3), REQ-AUTOPATCH-022에 멱등 일치 튜플 명시(D7). AC-AUTOPATCH-014③ 구조 테스트 구체화(D4), AC-AUTOPATCH-025 계약 스냅샷 기법 정의(D5), AC-AUTOPATCH-001 `Where`→`When`(D8). `plan.md` M0 테스트 쇼파일 전제 승격(D6), `design.md` §4 잔여 위험 R8 추가(D10), `progress.md` 선례 인용 정정(D9). |
+| 0.1.2 | 2026-08-06 | orchestrator | **독립 plan-audit 2회차 PASS(0.857 ≥ Tier L 0.85).** 1회차 지적 10건 전량 CLOSED가 원문 대조로 확인됨. 2회차 신규 지적 4건도 전량 반영 — N1(major, D3와 같은 결함 패턴 재발): `design.md` §2.3 툴 스키마에 `fid_range_visually_confirmed_empty` 필드 신설하고 AC-AUTOPATCH-027이 그 필드명을 직접 인용하게 해 요구와 인터페이스 계약을 일치시킴. N2: `design.md` §6.2 테스트 매핑에 AC-AUTOPATCH-027 등재. N3: `research.md` §1의 "입력 확정" 문구를 §C `의존 범위 한정`으로 좁힘. N4: AC-AUTOPATCH-027을 AC-AUTOPATCH-008 직후로 이동(소속 마일스톤 그룹 배치 관례). **요구·AC 수 불변**(REQ 26 · AC 27). 코드 변경 0. |
 
 ---
 

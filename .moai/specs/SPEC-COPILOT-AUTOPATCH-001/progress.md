@@ -88,17 +88,19 @@ git -C "$W" diff --stat ca00bc5..HEAD -- console/lua server/safety server/prechk
 
 ## §E.1 Plan-phase Audit-Ready Signal
 
-**상태: 작성 완료 · plan-audit 대기.** audit-ready 신호는 plan-auditor 통과 후 이 절에 기록한다.
-감사 통과 전에 신호를 쓰지 않는 것은 **의도된 규율**이다 — 감사가 FAIL이면 신호가 거짓이 되기 때문이다.
-(이 브랜치의 `.moai/specs/` 에는 같은 규율을 쓴 선행 SPEC이 없다. 유사 선례가 미머지 형제 브랜치에
-존재하나 여기서 인용 가능한 자산이 아니므로 인용하지 않는다.)
+**상태: plan-audit 2회차 PASS(0.857 ≥ Tier L 0.85) — audit-ready 확정.**
+감사 통과 전에는 신호를 쓰지 않았다. 이는 **의도된 규율**이다 — 감사가 FAIL이면 신호가 거짓이 되기
+때문이며, 실제로 1회차는 FAIL(0.80)이었다. (이 브랜치의 `.moai/specs/` 에는 같은 규율을 쓴 선행
+SPEC이 없다. 유사 선례가 미머지 형제 브랜치에 존재하나 여기서 인용 가능한 자산이 아니다.)
+2회차 이후 N1~N4 반영으로 **v0.1.2**가 되었으며, 그 반영은 신규 요구·AC를 만들지 않고
+기존 요구를 인터페이스 계약과 일치시킨 것이라 감사 판정을 무효화하지 않는다(§E.1a 2회차 반영 절).
 
-기록 예정 값(감사 통과 시 확정):
+기록된 값 (2회차 감사 PASS로 확정 — round2 리포트 참조):
 
 ```yaml
-plan_status: (audit 대기)
-plan_complete_at: (audit 통과일)
-spec_version: "0.1.0"
+plan_status: audit-ready
+plan_complete_at: "2026-08-06 — round2 plan-auditor PASS (0.857 ≥ Tier L 0.85), 감사 대상 HEAD 0869fdd"
+spec_version: "0.1.2"     # 감사 대상은 v0.1.1(HEAD 0869fdd). v0.1.2는 round2 N1~N4 반영분 — 요구·AC 수 불변
 base_sha: ca00bc5c853bfe5d9391290f1b9db263610b4bfa
 baseline_measured: "uv run pytest server/tests -q → 4898 passed, 7 skipped, 1 warning in 92.28s"
 artifacts: [spec.md, plan.md, acceptance.md, design.md, research.md, progress.md]
@@ -123,7 +125,8 @@ known_gaps:
   - "테스트 쇼파일이 아직 지정되지 않았다. M0·M8 둘 다 파괴적 측정을 포함한다."
   - "ASSUMPTION-71 판정에는 슬롯≠FID 픽스처가 있는 쇼파일이 필요하다. 없으면 INCONCLUSIVE."
   - "CID/다른 idtype 축(research.md §3.3 경로 c)은 조사 부족으로 이번 범위 밖이다."
-next: "plan-auditor 감사 → PASS 후 이 절에 audit-ready 신호 기록 → M0 라이브 세션 일정과 테스트 쇼파일 확보 → Implementation Kickoff Approval."
+  # round2 N1~N4는 v0.1.2에서 전량 CLOSED — §E.1a "2회차 지적 반영" 절 참조. 잔여 gap 아님.
+next: "M0 라이브 세션 일정과 테스트 쇼파일 확보 → Implementation Kickoff Approval. round2 지적 N1~N4는 v0.1.2에서 전량 반영 완료(§E.1a 2회차 반영 절)."
 ```
 
 ---
@@ -179,9 +182,58 @@ D6~D10 일괄. 구조적 결함이 아니라 열거 가능한 구체적 gap이�
 
 **반영 후 기계 재검증**(작성자 실측): REQ 26 · AC 27 · 역추적 26/26 누락 0 · 표 밖 AC 5(의도) ·
 §C.0a 합 27 · `plan.md` 마일스톤 AC 줄과 **1:1 전수 일치** · 약어 토큰 0 · 명료화 마커 0 ·
-`IF/THEN` 0 · `[Option]` 0 · `depends_on` 1건.
+레거시 EARS 조건절 키워드 0 · 레거시 패턴 라벨 0 · `depends_on` 1건.
 
 **2회차 감사 필요.** 이 절의 반영 주장은 작성자 자신의 것이므로 독립 확인 대상이다.
+
+### 2회차 (round2) — 2026-08-06 — plan-auditor 독립 감사
+
+**판정: PASS** — Overall Score **0.857**(조화평균) ≥ Tier L 임계 **0.85**(여유 +0.007, 근소).
+1회차 0.80 → 2회차 0.857로 **상승**(LEAN 점수 역행 STOP 미해당). 전문:
+`.moai/reports/plan-audit/SPEC-COPILOT-AUTOPATCH-001-round2.md`
+
+**회귀 확인**: D1~D10 **10건 전량 각 지적의 원문 required-fix 문구 기준으로 CLOSED 재확인**됨
+(작성자의 claimed-fix 표를 그대로 신뢰하지 않고 인용 위치를 직접 재열람·재검증). 어느 지적도
+미반영 상태로 재발하지 않았다. D1만 예외적으로 "핵심은 CLOSED, 잔향(research.md의 미조정 문구)은
+새 지적 N3로 별도 기록" — round1의 D1 required-fix가 명시적으로 지목한 위치(spec.md §A/§C)는
+둘 다 충족되었으므로 D1 자체는 재개방하지 않는다.
+
+**신규 지적 4건**(모두 PASS를 막지 않음, N1만 major): 이 라운드는 회귀 확인에 그치지 않고
+"수정 자체가 새 결함을 낳았는가"를 별도로 스캔했다 — REQ-AUTOPATCH-026/AC-AUTOPATCH-027이 닿은
+모든 아티팩트의 전체 동기화 여부를 확인.
+
+- **N1 (major)** — design.md §2.3 파라미터 스키마 초안이 REQ-AUTOPATCH-026/AC-AUTOPATCH-027의
+  구조화된 확인 필드를 위한 필드명을 여전히 갖지 않는다 — D3가 잡았던 결함 **패턴**(안전 요구가
+  REQ/AC 산문에는 있으나 구체 스키마엔 없음)이 새 요구사항에서 재발했다.
+- **N2 (minor)** — design.md §6.2 "AC → 테스트 파일" 표에 AC-AUTOPATCH-027 행 누락.
+- **N3 (minor, D1 잔향)** — research.md:23이 여전히 "본 SPEC의 입력은 확정되어 있다"는 무조건
+  문구를 쓴다 — spec.md §C `의존 범위 한정`과 미조정. research.md는 v0.1.1에서 손대지 않았다.
+- **N4 (minor)** — AC-AUTOPATCH-027(M2)이 문서 순서상 AC-AUTOPATCH-026(M8) **뒤**에 위치 —
+  자매 SPEC `SPEC-COPILOT-VWX-001`의 v0.1.4 증분 삽입 관례(신규 AC는 M7/M8 말미 쌍보다 **앞**에
+  삽입)와 어긋난다. §C.0a 배정표는 정확해 추적성·검증가능성 피해는 없다.
+
+**축별 점수**: Clarity 0.75(변화 없음 — D7·D8 CLOSED로 상쇄, N3·N4가 잔여) · Completeness 0.75
+(변화 없음 — D1·D3·D5 CLOSED이나 N1·N2가 같은 결함급을 재도입) · Testability 1.0(D4·D5 완전
+CLOSED, weasel word 재스캔 0건) · Traceability 1.0(REQ-AUTOPATCH-026→AC-AUTOPATCH-027 신규 1:1, 26/26 유지).
+
+**권고**: PASS이므로 3회차 의무 아님. N1(major)은 M2 착수 전 경량 v0.1.2 패치로 필드명을
+확정하는 것을 권한다 — required fix는 round2 리포트 Defects Found N1 참조. N2~N4는 선택.
+
+### 2회차 지적 반영 — v0.1.2 (2026-08-06, 작성자=오케스트레이터)
+
+**N1~N4 4건 전량 반영. 미반영 0건.** 2회차가 PASS(0.857)였으므로 의무는 아니나,
+N1은 D3와 **같은 결함 패턴**(설계가 약속한 것이 인터페이스 계약에 없음)의 재발이라 방치하지 않는다.
+
+| # | 반영 내용 | 위치 |
+|---|---|---|
+| N1 major | `design.md` §2.3 툴 스키마에 **`fid_range_visually_confirmed_empty: boolean`** 필드 신설 — `ASSUMPTION-71` 부정·INCONCLUSIVE 분기 필수, 생략 시 실행 거부, `selected`·`dry_run`과 독립임을 주석에 명시. AC-AUTOPATCH-027 기대결과가 **그 정확한 필드명을 인용**하도록 재작성해 요구와 인터페이스 계약이 같은 자산을 지목하게 했다 | `design.md` §2.3 · `acceptance.md` AC-AUTOPATCH-027 |
+| N2 minor | `design.md` §6.2 AC→테스트 파일 표의 `test_autopatch_fid.py` 행에 `027` 추가 | `design.md` §6.2 |
+| N3 minor | `research.md` §1의 무조건적 "입력은 확정되어 있다" 문단 아래에 v0.1.1 갱신 주석 추가 — 확정 범위가 `spec.md` §C `의존 범위 한정`으로 좁혀졌고 1단계 전체 완료를 뜻하지 않음을 명시. `status:` 줄도 v0.1.2로 갱신 | `research.md` §1 · status |
+| N4 minor | AC-AUTOPATCH-027 절을 AC-AUTOPATCH-008 **직후**로 이동 — 개정 AC를 종단 마일스톤(M7/M8) 뒤가 아니라 소속 마일스톤(M2) 그룹에 두는 `SPEC-COPILOT-VWX-001` v0.1.4 관례를 따른다. 문서 순서: … 007 · 008 · **027** · 009 … | `acceptance.md` |
+
+**반영 후 기계 재검증**(작성자 실측): REQ 26 · AC 27 · 역추적 26/26 누락 0 · 표 밖 AC 5 ·
+§C.0a 합 27 · `plan.md` 1:1 일치 · 약어 토큰 0 · 명료화 마커 0 · 필드명이 `design.md`와
+`acceptance.md` 양쪽에 동일 문자열로 존재.
 
 ---
 
