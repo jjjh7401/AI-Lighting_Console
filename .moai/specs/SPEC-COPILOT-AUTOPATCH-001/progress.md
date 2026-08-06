@@ -88,19 +88,46 @@ git -C "$W" diff --stat ca00bc5..HEAD -- console/lua server/safety server/prechk
 
 ## §E.1 Plan-phase Audit-Ready Signal
 
-**상태: plan-audit 2회차 PASS(0.857 ≥ Tier L 0.85) — audit-ready 확정.**
+**상태: plan-audit 6회차(재시도 상한 3회차 이후 독립 위임 재확인) PASS(1.000 ≥ Tier L 0.85, round5
+0.923보다 +0.077 — 개선, 역행 아님) — audit-ready 유지.**
 감사 통과 전에는 신호를 쓰지 않았다. 이는 **의도된 규율**이다 — 감사가 FAIL이면 신호가 거짓이 되기
 때문이며, 실제로 1회차는 FAIL(0.80)이었다. (이 브랜치의 `.moai/specs/` 에는 같은 규율을 쓴 선행
 SPEC이 없다. 유사 선례가 미머지 형제 브랜치에 존재하나 여기서 인용 가능한 자산이 아니다.)
 2회차 이후 N1~N4 반영으로 **v0.1.2**가 되었으며, 그 반영은 신규 요구·AC를 만들지 않고
 기존 요구를 인터페이스 계약과 일치시킨 것이라 감사 판정을 무효화하지 않는다(§E.1a 2회차 반영 절).
+**3회차가 v0.1.2를 독립 재검증해 PASS(0.857, round2와 동일 점수 — 역행 아님)를 재확인했다.**
+3회차는 N1~N4 CLOSED를 재확인하는 한편 신규 지적 2건(N5 major · N6 minor)을 발견했다 — 둘 다
+PASS를 막지 않는 경량 후속 항목이다(§E.1a 3회차 절 참조). N5(design.md §6.2 표 행 손실)는
+Implementation Kickoff Approval 전 경량 패치를 권고하나, audit-ready 신호를 철회할 사유는 아니다
+(요구·AC 수 불변, must-pass 전부 PASS/N/A 유지).
+**4회차(재시도 상한 이후 오케스트레이터 재량 위임)가 작성자의 N5·N6 자기수정을 독립 재검증해
+PASS(0.923, round3보다 +0.066 — 개선, 역행 아님)를 확인했다.** N5·N6은 원문 대조로 **genuinely
+CLOSED** 확인됨(§E.1a 4회차 절 참조). 4회차는 이번 회차의 전수 스윕 지시(`design.md` §6.2 27개
+AC 전부를 acceptance.md 자체 인용과 대조)로 **신규 지적 3건**(N7 major · N8·N9 minor)을 발견했다 —
+전부 `design.md` §6.2(테스트 파일 포인터 표, 추적성 SSOT인 §C.0/§C.0a와는 별개)에 국한되며,
+PASS를 막지 않는다. N7(AC-AUTOPATCH-015가 잘못된 테스트 파일 행에 배정됨)은 §6.2 표가 4회차 연속
+동일 위치에서 결함을 낸다는 **공정 관찰**(§E.1a 4회차 절 "공정 관찰" 참조)의 근거이며, Implementation
+Kickoff Approval 전 경량 패치를 권고하나 audit-ready 신호를 철회할 사유는 아니다.
+**5회차가 N7 자기수정을 독립 재검증해 PASS(0.923, round4와 동일 — 횡보)를 확인했다.** N7은 여섯
+AC(013~019) 전부 대조로 **genuinely CLOSED** 확인됨(§E.1a 5회차 절 참조). N8·N9는 작성자의 신고대로
+미반영 상태로 정확히 남아 있음을 원문 대조로 확인했다. 5회차는 전수 스윕(27개 AC 전부를
+acceptance.md 자체 인용과 대조)에서 **신규 지적 1건**(N10 minor — AC-004 이중 인용의 두 번째 파일
+누락, round4가 "무결"로 인증했던 배치 안에서 발견)을 찾았다 — PASS를 막지 않으며, §6.2 표가
+5회차 연속 동일 결함 클래스를 낸다는 공정 관찰을 심화한다(§E.1a 5회차 절 "공정 관찰" 참조,
+구조적 대안 — §6.2 삭제 — 을 자문으로 제시).
+**6회차(재시도 상한 이후 오케스트레이터 재량 위임)가 작성자의 §6.2 폐지 자기수정(N8·N9·N10 구조적
+해소 주장)을 독립 재검증해 PASS(1.000, round5보다 +0.077 — 개선, 역행 아님)를 확인했다.** N8·N9·N10
+전부 원문 대조로 **genuinely CLOSED** 확인됨(§E.1a 6회차 절 참조) — §6.2 표가 진짜로 삭제되었고,
+6개 아티팩트 전체에 §6.2를 권위 출처로 참조하는 곳이 0건이며, N8·N10의 실제 대상이었던 AC-004·
+AC-025 자신의 검증방법 필드가 이미 두 파일 모두 완전히 명시하고 있었음을 확인했다(삭제가 정보를
+옮긴 게 아니라 부정확한 사본만 제거). round1 이후 처음으로 **4개 축 전부 잔여 결함 0건**이다.
 
-기록된 값 (2회차 감사 PASS로 확정 — round2 리포트 참조):
+기록된 값 (6회차 감사 PASS로 갱신 — round6 리포트 참조):
 
 ```yaml
 plan_status: audit-ready
-plan_complete_at: "2026-08-06 — round2 plan-auditor PASS (0.857 ≥ Tier L 0.85), 감사 대상 HEAD 0869fdd"
-spec_version: "0.1.2"     # 감사 대상은 v0.1.1(HEAD 0869fdd). v0.1.2는 round2 N1~N4 반영분 — 요구·AC 수 불변
+plan_complete_at: "2026-08-06 — round6 plan-auditor PASS (1.000 ≥ Tier L 0.85, round5(0.923)보다 +0.077 — 개선, 역행 아님), 감사 대상 작업트리(round3 HEAD fa70cf3 + round4·round5·round6 미커밋 자기수정 4파일)"
+spec_version: "0.1.2"     # round6은 spec.md에 손대지 않은 미커밋 §6.2 폐지 자기수정을 감사 대상으로 재검증. 요구·AC 수 불변(26/27)
 base_sha: ca00bc5c853bfe5d9391290f1b9db263610b4bfa
 baseline_measured: "uv run pytest server/tests -q → 4898 passed, 7 skipped, 1 warning in 92.28s"
 artifacts: [spec.md, plan.md, acceptance.md, design.md, research.md, progress.md]
@@ -126,7 +153,34 @@ known_gaps:
   - "ASSUMPTION-71 판정에는 슬롯≠FID 픽스처가 있는 쇼파일이 필요하다. 없으면 INCONCLUSIVE."
   - "CID/다른 idtype 축(research.md §3.3 경로 c)은 조사 부족으로 이번 범위 밖이다."
   # round2 N1~N4는 v0.1.2에서 전량 CLOSED — §E.1a "2회차 지적 반영" 절 참조. 잔여 gap 아님.
-next: "M0 라이브 세션 일정과 테스트 쇼파일 확보 → Implementation Kickoff Approval. round2 지적 N1~N4는 v0.1.2에서 전량 반영 완료(§E.1a 2회차 반영 절)."
+  # round3 N5·N6은 round4가 원문 대조로 독립 재검증해 CLOSED 확정(§E.1a 4회차 절). 잔여 gap 아님.
+  - "[CLOSED · round4 독립 검증] round3 N5(major) — design.md §6.2 표에 `002 · 003 · 004 |
+    test_autopatch_candidates.py` 행 복원 확인(누락 지점에 정확히 삽입, 27/27 행 커버로 복귀 —
+    전수 재열거로 재확인, 복원 편집 자체의 부수 손상 없음)."
+  - "[CLOSED · round4 독립 검증] round3 N6(minor) — acceptance.md:3·plan.md:3 상태줄이
+    `v0.1.2, 2026-08-06`로 갱신되고 acceptance.md:3의 'AC 27건 계획'이 §C.0a '합 27'과 일치함을
+    직접 대조로 확인. 6개 아티팩트 전체 26/27건 언급 광역 재스캔에서 잔여 staleness 0건."
+  - "[CLOSED · round5 독립 검증] round4 N7(major) — design.md §6.2에서 AC-AUTOPATCH-015를
+    `013·014·016 | test_autopatch_lua.py` 행에서 분리해 `015·017·018·019 |
+    test_autopatch_execute.py` 행으로 재배정. AC-013·014·015·016·017·018·019 여섯 건 전부를
+    acceptance.md 자체 검증방법과 개별 대조해 확인, git diff로 단일 훅·부수 손상 없음 확인.
+    잔여 gap 아님."
+  - "[CLOSED · round6 독립 검증] round4 N8(minor) — design.md §6.2 폐지로 `024·025` 행 자체가
+    소멸. AC-025 자신의 검증방법(acceptance.md:427-429)이 test_vwx_*.py 전수 + 골든스냅샷
+    test_autopatch_contract.py를 이미 완전히 명시하고 있었음을 원문 대조로 확인 — 삭제가
+    정보를 옮긴 게 아니라 부정확한 사본만 제거했다. 잔여 gap 아님."
+  - "[CLOSED · round6 독립 검증] round4 N9(minor) — design.md:3 상태줄 접미사가
+    '1~5회차 지적 반영 · §6.2 폐지'로 갱신됨을 원문 대조로 확인. 잔여 gap 아님."
+  - "[CLOSED · round6 독립 검증] round5 N10(minor) — design.md §6.2 폐지로 `002·003·004` 행 자체가
+    소멸. AC-004 자신의 검증방법(acceptance.md:159)이 test_autopatch_candidates.py ·
+    test_autopatch_execute.py 두 파일을 이미 완전히 명시하고 있었음을 원문 대조로 확인. 잔여
+    gap 아님."
+  - "[CLOSED · round6 독립 검증] §6.2 폐지가 다른 참조를 깨뜨리지 않음 — 6개 아티팩트 전체를
+    '§6.2'·'design.md §6' 패턴으로 광역 재스캔해 §6.2를 권위 출처로 참조하는 곳 0건을 확인
+    (매치는 전부 다른 절 참조이거나 progress.md 자체 감사기록). plan.md §E 테스트 골격이
+    §6.2와 독립적으로 이미 파일→주제 매핑을 제공하고 있어 온보딩 가독성도 유지됨. 잔여
+    gap 아님 — round1 이후 최초로 4개 축 전부 잔여 결함 0건."
+next: "M0 라이브 세션 일정과 테스트 쇼파일 확보 → Implementation Kickoff Approval. round2 지적 N1~N4는 v0.1.2에서 전량 반영 완료(round3 독립 재검증 PASS). round3 N5~N6은 round4가 독립 재검증해 CLOSED 확정. round4 N7(major)은 round5가 독립 재검증해 CLOSED 확정. round4 N8·N9·round5 N10은 round6이 design.md §6.2 폐지 자기수정을 독립 재검증해 전량 CLOSED 확정 — 잔여 plan-audit 결함 0건. 남은 전제는 M0 라이브 세션 일정과 테스트 쇼파일 확보뿐이며 run-phase 착수 전제이지 plan-audit 지적 사항이 아니다."
 ```
 
 ---
@@ -234,6 +288,186 @@ N1은 D3와 **같은 결함 패턴**(설계가 약속한 것이 인터페이스 
 **반영 후 기계 재검증**(작성자 실측): REQ 26 · AC 27 · 역추적 26/26 누락 0 · 표 밖 AC 5 ·
 §C.0a 합 27 · `plan.md` 1:1 일치 · 약어 토큰 0 · 명료화 마커 0 · 필드명이 `design.md`와
 `acceptance.md` 양쪽에 동일 문자열로 존재.
+
+### 3회차 (round3) — 2026-08-06 — plan-auditor 독립 감사
+
+**판정: PASS** — Overall Score **0.857**(조화평균, round2와 **동일** — 역행 아님, LEAN 점수 역행
+STOP 미해당). 전문: `.moai/reports/plan-audit/SPEC-COPILOT-AUTOPATCH-001-round3.md`
+
+**공정 이상 사항 발견**: 감사 지시는 v0.1.2가 "미커밋 작업트리 변경"이라 전제했으나, 실제로는 이미
+`fa70cf3`(0869fdd의 자식 1커밋)로 커밋되어 있었다(`git status --short`가 SPEC 디렉터리에 대해
+비어 있음을 반환). 3회차 감사는 이 사실을 그대로 보고하고, `0869fdd..HEAD` diff를 감사 대상으로
+삼아 진행했다 — 감사 자체의 유효성에는 영향이 없다(대상 텍스트는 동일).
+
+**N1~N4 전량 CLOSED 재확인**(작성자의 claimed-fix 표를 신뢰하지 않고 원문 재대조): N1(필드명
+`fid_range_visually_confirmed_empty`가 `design.md` §2.3와 `acceptance.md` AC-027 양쪽에 정확히
+일치) · N2(`design.md` §6.2에 027 추가, 문구 그대로 충족) · N3(`research.md` 갱신 문구가
+`spec.md` §C와 무모순, `status:` v0.1.2로 갱신 확인) · N4(VWX-001의 실제 `acceptance.md`를
+**직접 재조회**해 관례를 독립 재검증 — AC-VWX-027/028/029가 M7/M8 종단쌍보다 앞에 위치함을 확인).
+
+**신규 지적 2건 발견**(모두 PASS를 막지 않음, N5는 major):
+- **N5 (major)** — `design.md` §6.2에 027을 추가한 바로 그 편집이 기존 `002 · 003 · 004 →
+  test_autopatch_candidates.py` 행을 **삭제**했다. 실제 테스트 파일 매핑은 `acceptance.md`의
+  각 AC 본문과 `plan.md` §E에 여전히 정확하게 남아 있어 실질 피해는 design.md 로컬이지만,
+  round2 이후에도 자기검증 범위가 "전체 표 재대조"가 아니라 "대상 행만"이었다는 동일 실패
+  패턴이 재발했다. `progress.md`의 N2 claimed-fix 행은 이 삭제를 언급하지 않아 과소 신고다.
+- **N6 (minor)** — `acceptance.md:3` · `plan.md:3` 상태줄이 여전히 `v0.1.0`이며,
+  `acceptance.md:3`의 "AC 26건 계획"은 같은 문서 §C.0a의 "합 27"과 **자기모순**이다.
+
+**축별 점수**: Clarity 0.75(N3·N4 CLOSED로 상쇄되나 N6이 같은 밴드를 유지) · Completeness 0.75
+(N1 CLOSED가 개선이나 N5가 같은 결함 패턴을 더 나쁜 형태로 재도입 — round2의 26/27 커버가
+24/27로 후퇴) · Testability 1.0(AC-027이 구체 필드명을 얻어 오히려 개선, weasel word 0건) ·
+Traceability 1.0(§C.0/§C.0a는 design.md §6.2와 별개 SSOT, N5 영향 없음, 26/26·27/27 유지).
+
+**권고**: 3회차(재시도 상한)이므로 4회차 의무 아님. N5(major)를 경량 패치로 되돌리기를 권한다 —
+`design.md` §6.2에 `002 · 003 · 004 | test_autopatch_candidates.py` 행 복원. N6은 선택.
+
+### 4회차 (round4) — 2026-08-06 — plan-auditor 독립 감사 (재시도 상한 이후, 오케스트레이터 재량 위임)
+
+**판정: PASS** — Overall Score **0.923**(조화평균, round3의 0.857보다 **+0.066 개선** — 역행 아님,
+LEAN 점수 역행 STOP 미해당). 전문: `.moai/reports/plan-audit/SPEC-COPILOT-AUTOPATCH-001-round4.md`
+
+**감사 대상**: round3 이후 오케스트레이터(작성자, 감사 에이전트 아님)가 직접 손댄 `acceptance.md`·
+`design.md`·`plan.md` 3개 파일의 미커밋 작업트리 변경(round3 N5·N6 자기수정) — `progress.md` §E.1
+`known_gaps`에 `[반영됨·미검증]` 접두로 기록된 바로 그 변경. 이 접두 자체가 "자기검증만 거쳤다"는
+신호이므로, 이전 라운드와 동일한 규율로 신뢰하지 않고 원문 대조로 독립 재검증했다.
+
+**N5·N6 전량 CLOSED 확인**(claimed-fix 표를 신뢰하지 않고 `git diff fa70cf3`로 실제 diff를 직접
+대조): N5(`design.md` §6.2에 `002 · 003 · 004 | test_autopatch_candidates.py` 행이 정확한 위치에
+복원되었고, 표 전체를 처음부터 다시 세어 27/27 AC 커버·중복 0·누락 0을 확인. 복원 편집 자체는
+`git diff` 상 1줄 추가뿐으로 부수 손상 없음) · N6(양쪽 상태줄이 `v0.1.2, 2026-08-06`으로 갱신되고
+acceptance.md:3의 "AC 27건"이 §C.0a "합 27"과 일치함을 직접 대조로 확인, 6개 아티팩트 전체에 대한
+광역 "26건/27건" 재스캔에서 잔여 staleness 0건).
+
+**신규 지적 3건 발견**(모두 PASS를 막지 않음, N7만 major) — 이번 회차의 과제 지시가 요구한 "터치된
+행뿐 아니라 27개 AC 전부를 acceptance.md 자체 검증방법과 대조"하는 전수 스윕에서 처음 발견됨:
+
+- **N7 (major)** — `design.md` §6.2의 `013·014·015·016 | test_autopatch_lua.py` 행에
+  AC-AUTOPATCH-015가 잘못 배정되어 있다. AC-015 자신의 `acceptance.md:313` 검증방법
+  (`test_autopatch_execute.py`)과 `plan.md:180`의 파일별 주제 설명이 모두 execute.py를 가리킨다.
+  v0.1.0부터 존재해온 결함으로 이번 라운드의 N5 복원 편집이 만든 것이 아니다(`git diff`로 확인 —
+  그 행은 이번 회차에 손대지 않았다). §C.0/§C.0a 추적성 SSOT는 무영향.
+- **N8 (minor)** — `design.md` §6.2의 `024·025` 행이 AC-025의 신설 골든스냅샷 파일
+  `test_autopatch_contract.py`를 명시하지 않는다(`plan.md:183`·`acceptance.md:427-428`은 명시).
+- **N9 (minor)** — `design.md:3` 상태줄 접미사 "plan-audit 1·2회차 지적 반영"이 이번 회차 N5 반영
+  사실을 반영하지 못해 이 파일 자체의 변경사항과 어긋난다.
+
+**축별 점수**: Clarity 1.0(N6 CLOSED로 상승 — 잔여 Clarity급 결함 없음, weasel word 재스캔 0건) ·
+Completeness 0.75(N5는 깨끗이 닫혔으나 N7이 같은 결함급을 다른 구체적 사유로 재도입 — round3와
+동일 밴드 유지) · Testability 1.0(무변화) · Traceability 1.0(무변화 — N7~N9는 §6.2 국소, SSOT
+무영향).
+
+**공정 관찰(과제 명시 요청)**: round2→round3는 "수정이 직접 새 결함(N5)을 낳음"(N2의 편집이 N5를
+유발)이었으나, round3→round4는 그 특정 하위 패턴이 재발하지 **않았다**(N5 복원 편집 자체는
+`git diff`로 확인된 대로 깨끗함). 그러나 더 넓은 패턴 — "`design.md` §6.2가 4회차 동안 한 번도
+전수·정확성 기준으로 완전히 검증된 적이 없다" — 는 여전히 살아 있다: 1회차는 §6.2를 아예 감사하지
+않았고, 2회차(N2)는 027 등재 여부만, 3회차(N5)는 행의 존재 여부만 확인했을 뿐 행 **내용의 정확성**은
+아무도 확인하지 않았다. 이번 회차가 처음으로 27개 AC 전부에 대해 acceptance.md 자체 인용과 대조하는
+전수 스윕을 수행했고, 그 즉시 v0.1.0부터 있던 N7을 찾아냈다. **Kickoff 전에 N7 수정 후 다시 한 번
+전수 대조를 권고한다** — round2→round3의 "좁은 범위 자기검증이 새 결함을 놓친다" 실패 패턴이 N7 수정
+자체에서도 재발하지 않는지 확인하기 위함이다.
+
+**권고**: 재시도 상한(3회차) 이후 재량 위임 검증이므로 5회차 의무 아님. N7(major)을 경량 패치로
+수정하기를 권한다 — `013·014·016 | test_autopatch_lua.py`와 `015·017·018·019 |
+test_autopatch_execute.py`로 행 분리. N8·N9는 선택(같은 패치에 묶어도 무방).
+
+### 5회차 (round5) — 2026-08-06 — plan-auditor 독립 감사 (재시도 상한 이후, 오케스트레이터 재량 위임)
+
+**판정: PASS** — Overall Score **0.923**(조화평균, round4와 **동일** — 역행도 개선도 아닌 **횡보**,
+LEAN 점수 역행 STOP 미해당). 전문: `.moai/reports/plan-audit/SPEC-COPILOT-AUTOPATCH-001-round5.md`
+
+**감사 대상**: round4 이후 오케스트레이터(작성자, 감사 에이전트 아님)가 직접 손댄 `design.md` §6.2
+표의 미커밋 작업트리 변경(round4 N7 자기수정 — `013·014·015·016` 행을 `013·014·016`과
+`015·017·018·019`로 분리) — `progress.md` §E.1 `known_gaps`에 `[반영됨·미검증]` 접두로 기록된 바로
+그 변경. N8·N9는 이번 회차에 손대지 않았다고 기록되어 있어(각각 `[신규 · round4 발견]` 접두, 
+`[반영됨]` 아님), 이 주장 자체를 원문 대조로 독립 검증했다.
+
+**N7 전량 CLOSED 확인**(claimed-fix 표를 신뢰하지 않고 AC-013·014·015·016·017·018·019 여섯 건
+전부를 acceptance.md 자체 검증방법과 개별 대조): `design.md` §6.2가 `013·014·016 |
+test_autopatch_lua.py`와 `015·017·018·019 | test_autopatch_execute.py`로 정확히 분리되었고,
+여섯 AC 전부 자체 인용과 정확히 일치함을 확인. `git diff fa70cf3`로 이 편집이 단일 훅(hunk)이며
+그 두 행 외 다른 어떤 행도 건드리지 않았음을 확인 — 부수 손상 없음.
+
+**N8·N9 원문 대조로 미반영 확정**(작성자 기록이 정확함을 독립 검증): `024·025` 행은 여전히
+`test_autopatch_contract.py`를 명시하지 않고, `design.md:3` 상태줄 접미사는 여전히 "1·2회차
+지적 반영"에 머문다. `git diff fa70cf3 -- design.md`가 두 지점 모두 이번 회차에 손대지 않았음을
+확인 — 작성자가 은폐 없이 정확히 신고한 대로다.
+
+**신규 지적 1건 발견**(PASS를 막지 않음, minor) — 이번 회차의 과제 지시가 요구한 "27개 AC 전부를
+acceptance.md 자체 인용과 대조"하는 전수 스윕에서 발견됨. round4의 "25건 무결" 주장의 범위(001-014
+포함) 안에 있었으나 round4가 놓쳤다:
+
+- **N10 (minor)** — `design.md` §6.2의 `002 · 003 · 004 | test_autopatch_candidates.py` 행이
+  AC-AUTOPATCH-004 자신의 검증방법(`acceptance.md:159` — `test_autopatch_candidates.py` ·
+  `test_autopatch_execute.py` 이중 인용)의 두 번째 파일을 표에 담지 않는다. v0.1.0(`db95781`)부터
+  존재해온 결함(`git show`로 확인) — 이번 회차 편집이 만든 것이 아니다. N8과 같은 결함급(행이
+  일부 파일만 담고 나머지를 누락)이며, round4가 "무결"이라 인증한 바로 그 배치(001-014) 안에서
+  나왔다는 점이 이번 회차 공정 관찰의 근거다.
+
+**축별 점수**: Clarity 1.0(무변화) · Completeness 0.75(N7은 깨끗이 닫혔으나 N10이 같은 결함급을
+같은 표에서 재도입 — round4와 동일 밴드, 이산 루브릭상 항목 수와 무관하게 0이 아니면 0.75) ·
+Testability 1.0(무변화) · Traceability 1.0(무변화 — N8~N10은 §6.2 국소, SSOT 무영향).
+
+**공정 관찰(과제 명시 요청)**: round2→round3의 "수정이 직접 새 결함을 낳는" 하위 패턴은 두 회차
+연속(round3→round4, round4→round5) 재발하지 않았다 — N7 분리 편집 자체는 `git diff`로 확인된 대로
+깨끗하다. 그러나 더 넓은 패턴은 이번 회차가 한층 더 구체적으로 보여준다: round4가 "전수"라 부른
+스윕조차 "행 배정이 맞는가"만 확인했을 뿐 "행이 그 AC가 인용하는 모든 파일을 담는가"는 확인하지
+않았다 — AC-004(이중 인용)가 그 사각지대에 있었다. §6.2는 acceptance.md 각 AC의 검증방법 필드를
+손으로 베낀 중복 표이며, 5회차 연속 발견된 모든 결함(N2·N5·N7·N8·N9·N10)이 "두 문서가 불일치"
+패턴이다. **권고(자문, 차단 아님)**: §6.2를 유지·재검증하는 대신 **삭제하고 "각 AC의 검증방법
+필드를 보라"는 한 문장으로 대체**하는 편이 이 결함 클래스 자체를 없앤다 — 손으로 유지되는 요약은
+아무리 신중히 재검증해도 다음 편집에서 또 어긋날 수 있다.
+
+**회귀 워치(미발동)**: N8·N9가 이제 2회 연속(round4, round5) 미반영으로 남았다 — 정체 감지
+조항은 3회 연속을 요구하므로 아직 미해당이나, round6이 있다면 주시 대상이다.
+
+**권고**: 재시도 상한(3회차) 이후 재량 위임 검증이므로 6회차 의무 아님. N8·N9·N10을 한 번에 묶어
+경량 패치하거나, 공정 관찰의 구조적 대안(§6.2 삭제)을 고려하기를 권한다.
+
+### 6회차 (round6) — 2026-08-06 — plan-auditor 독립 감사 (재시도 상한 이후, 오케스트레이터 재량 위임)
+
+**판정: PASS** — Overall Score **1.000**(조화평균, round5(0.923)보다 **+0.077 개선** — 역행 아님,
+LEAN 점수 역행 STOP 미해당). 전문: `.moai/reports/plan-audit/SPEC-COPILOT-AUTOPATCH-001-round6.md`
+
+**감사 대상**: round5 이후 오케스트레이터(작성자, 감사 에이전트 아님)가 직접 손댄 `design.md`
+§6.2 — 8행 표 전체를 삭제하고 "유일한 출처는 acceptance.md 각 AC의 검증 방법 줄" 이라는 안내
+문단으로 대체(v0.1.3), 상태줄도 "1·2회차 지적 반영" → "1~5회차 지적 반영 · §6.2 폐지"로 갱신.
+`progress.md` §E.1 `known_gaps`에 `[구조적으로 해소 · 재검증 대상 아님]` 접두로 기록되었으나, 그
+항목 자신이 "폐지가 다른 참조를 깨지 않았는지는 6회차 독립 재확인 전까지 미검증으로 취급"이라고
+명시한 바로 그 주장을 원문 대조로 독립 검증했다.
+
+**N8·N9·N10 전량 genuinely CLOSED 확인**(작성자의 "구조적으로 해소" 주장을 신뢰하지 않고 6가지
+과제로 독립 재검증): (1) §6.2 표가 진짜로 삭제되었고 잔여 표·주석 표 없음을 직접 읽어 확인. (2)
+6개 아티팩트 전체를 "§6.2"·"design.md §6" 패턴으로 광역 재스캔 — §6.2를 권위 출처로 참조하는
+곳 0건(발견된 매치는 전부 다른 절(§2.3·§5) 참조이거나 progress.md 자체 감사기록). (3) N8·N10의
+실제 대상이었던 AC-004·AC-025 자신의 검증방법 필드를 직접 읽어 두 파일 모두 필드 안에 이미
+완전히 명시되어 있었음을 확인 — 삭제가 정보를 옮긴 게 아니라 부정확한 사본만 제거했음을 실증.
+(4) 새 안내 문단 자체에 과장·잘못된 리포트 경로·구조 넘버링 붕괴 없음을 확인(§6 넘버링 §1~§8
+전부 재추출, 간극·중복 없음, §6.2 제목 자체는 보존되어 있어 참조 넘버링 붕괴 없음). N9는 상태줄
+자체가 "1~5회차 지적 반영"으로 갱신되어 직접 재확인으로 해소 확인.
+
+**신규 지적 0건.** 과제가 명시 요청한 "새 지적을 감추지 말 것"에 따라 인용 정밀도 관점(§6.2 폐지
+사유 인용이 "round5 N7/N8/N10"만 들고 N9를 뺀 점)을 별도로 조사했으나, N9는 §6.2 표-드리프트와
+다른 결함급(같은 파일의 별개 상태줄 문제)이며 같은 편집의 다른 훅으로 이미 해소되어 있어 결함으로
+접수하지 않았다(전문 참조).
+
+**축별 점수**: Clarity 1.0(무변화) · **Completeness 0.75→1.0**(N7은 round5가, N8·N9·N10은 이번
+회차가 각각 원문 대조로 genuinely CLOSED 확인 — round1 이후 최초로 4개 축 전부 잔여 결함 0건) ·
+Testability 1.0(무변화) · Traceability 1.0(§C.0a 9행을 plan.md M0~M8 `AC` 줄과 행 단위로 재대조,
+합 27 확인).
+
+**공정 관찰 마무리**: round2~round5에 걸쳐 4연속으로 새 결함을 낸 §6.2가 이번 회차로 완전히
+사라졌다 — round5 리포트가 제안한 구조적 대안이 실행되었고, 독립 검증으로 그 대안이 실제로
+결함 클래스 자체를 제거했음이 확인됐다(표가 없으므로 더 이상 드리프트할 대상이 없다). `plan.md
+§E 테스트 골격`이 이미 파일→주제 매핑을 독립적으로 제공하고 있어 온보딩 가독성 손실도 크지
+않다는 점도 확인했다(전문 과제 6 참조).
+
+**회귀 워치**: N8·N9가 2회 연속(round4·round5) 미반영이었으나 3회 연속에 도달하기 전(이번
+회차)에 해소되어 정체(stagnation) 플래그는 발동하지 않았다.
+
+**권고**: 4연속 라운드 재발 패턴이 근본 원인(수기 사본 구조) 제거로 종결됨. 잔여 결함 0건 —
+추가 delta-check 불필요. Implementation Kickoff Approval로 진행 가능(plan-phase 관점에서;
+M0 라이브 세션 일정·테스트 쇼파일 확보는 run-phase 착수 전제이며 plan-audit 지적 사항 아님).
 
 ---
 
