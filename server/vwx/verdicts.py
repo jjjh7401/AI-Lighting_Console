@@ -9,6 +9,15 @@ INVALID_REPORT_PAYLOAD = "invalid_report_payload"
 
 UNKNOWN_CANDIDATE_ID = "unknown_candidate_id"
 
+FID_RANGE_REQUIRED = "fid_range_required"
+INVALID_FID_RANGE = "invalid_fid_range"
+FID_RANGE_CONFIRMATION_REQUIRED = "fid_range_confirmation_required"
+
+FID_RANGE_EXHAUSTED = "fid_range_exhausted"
+FID_ALREADY_IN_USE = "fid_already_in_use"
+
+FID_CONFLICT_PRECHECK_DESCOPE = "fid_conflict_precheck_descope"
+
 CANDIDATE_REJECTION_REASON = frozenset(
     {
         COMPARISON_NOT_PERFORMED,
@@ -17,11 +26,23 @@ CANDIDATE_REJECTION_REASON = frozenset(
     }
 )
 SELECTION_ERROR_REASON = frozenset({UNKNOWN_CANDIDATE_ID})
+FID_ASSIGNMENT_REJECTION_REASON = frozenset(
+    {
+        FID_RANGE_REQUIRED,
+        INVALID_FID_RANGE,
+        FID_RANGE_CONFIRMATION_REQUIRED,
+    }
+)
+TARGET_EXCLUSION_REASON = frozenset({FID_RANGE_EXHAUSTED, FID_ALREADY_IN_USE})
+SKIPPED_CHECK_KIND = frozenset({FID_CONFLICT_PRECHECK_DESCOPE})
 
 AUTOPATCH_CLOSED_VOCABULARIES = MappingProxyType(
     {
         "candidate_rejection_reason": CANDIDATE_REJECTION_REASON,
+        "fid_assignment_rejection_reason": FID_ASSIGNMENT_REJECTION_REASON,
         "selection_error_reason": SELECTION_ERROR_REASON,
+        "skipped_check_kind": SKIPPED_CHECK_KIND,
+        "target_exclusion_reason": TARGET_EXCLUSION_REASON,
     }
 )
 
@@ -53,11 +74,26 @@ _CANDIDATE_REJECTION_LABELS = {
 _SELECTION_ERROR_LABELS = {
     UNKNOWN_CANDIDATE_ID: "존재하지 않는 패치 후보 식별자",
 }
+_FID_ASSIGNMENT_REJECTION_LABELS = {
+    FID_RANGE_REQUIRED: "빈 FID 범위 미제공",
+    INVALID_FID_RANGE: "빈 FID 범위 형식 오류",
+    FID_RANGE_CONFIRMATION_REQUIRED: "FID 범위 육안 확인 미제공",
+}
+_TARGET_EXCLUSION_LABELS = {
+    FID_RANGE_EXHAUSTED: "빈 FID 범위 초과",
+    FID_ALREADY_IN_USE: "기존 FID와 충돌",
+}
+_SKIPPED_CHECK_LABELS = {
+    FID_CONFLICT_PRECHECK_DESCOPE: "FID 충돌 사전검사 미수행",
+}
 
 _AUTOPATCH_VOCABULARY_LABELS = MappingProxyType(
     {
         "candidate_rejection_reason": MappingProxyType(_CANDIDATE_REJECTION_LABELS),
+        "fid_assignment_rejection_reason": MappingProxyType(_FID_ASSIGNMENT_REJECTION_LABELS),
         "selection_error_reason": MappingProxyType(_SELECTION_ERROR_LABELS),
+        "skipped_check_kind": MappingProxyType(_SKIPPED_CHECK_LABELS),
+        "target_exclusion_reason": MappingProxyType(_TARGET_EXCLUSION_LABELS),
     }
 )
 
@@ -85,3 +121,15 @@ def candidate_rejection_label(code: str) -> str:
 
 def selection_error_label(code: str) -> str:
     return autopatch_label("selection_error_reason", code)
+
+
+def fid_assignment_rejection_label(code: str) -> str:
+    return autopatch_label("fid_assignment_rejection_reason", code)
+
+
+def target_exclusion_label(code: str) -> str:
+    return autopatch_label("target_exclusion_reason", code)
+
+
+def skipped_check_label(code: str) -> str:
+    return autopatch_label("skipped_check_kind", code)

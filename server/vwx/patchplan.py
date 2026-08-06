@@ -2,25 +2,46 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from hashlib import sha256
 from types import MappingProxyType
+from typing import Protocol
 
 from server.vwx.address import ADDRESS_BASIS_ABS_BACK_CALCULATED
 from server.vwx.diff import MULTI_SYSTEM_MAPPING_ABSENT
 from server.vwx.verdicts import (
     COMPARISON_NOT_PERFORMED,
+    FID_ALREADY_IN_USE,
+    FID_CONFLICT_PRECHECK_DESCOPE,
+    FID_RANGE_CONFIRMATION_REQUIRED,
+    FID_RANGE_EXHAUSTED,
+    FID_RANGE_REQUIRED,
+    INVALID_FID_RANGE,
     INVALID_REPORT_PAYLOAD,
     UNKNOWN_CANDIDATE_ID,
-    candidate_rejection_label,
+    autopatch_label,
+    skipped_check_label,
+    target_exclusion_label,
     validate_autopatch,
 )
 
 IRREVERSIBLE_WARNING = (
-    "이 앱에는 실행 취소·백업 복원 경로가 없고, 잘못 생성된 픽스처는 콘솔에서 "
-    "사람이 지워야 한다."
+    "이 앱에는 실행 취소·백업 복원 경로가 없고, 잘못 생성된 픽스처는 콘솔에서 사람이 지워야 한다."
 )
 SOURCE_PATH_MISSING_IN_CONSOLE = "diffs.missing_in_console"
+FID_FIXTURE_ROOT = "Patch/Stages/1/Fixtures"
+FID_PROPERTY_NAME = "FID"
+
+ASSUMPTION_71_GO = "go"
+ASSUMPTION_71_NEGATIVE = "negative"
+ASSUMPTION_71_INCONCLUSIVE = "inconclusive"
+ASSUMPTION_71_VALUES = frozenset(
+    {
+        ASSUMPTION_71_GO,
+        ASSUMPTION_71_NEGATIVE,
+        ASSUMPTION_71_INCONCLUSIVE,
+    }
+)
 
 DEFERRED_TO_M2 = "deferred_to_m2"
 DEFERRED_TO_M3 = "deferred_to_m3"
@@ -44,6 +65,18 @@ UNRESOLVED_TARGET_FIELDS = MappingProxyType(
 )
 
 
+class FidPropertyPort(Protocol):
+    def query_state(self, path: str) -> Mapping[str, object]: ...
+
+    def query_property(self, path: str, property_name: str) -> Mapping[str, object]: ...
+
+
+@dataclass(frozen=True)
+class FIDRange:
+    start: int
+    end: int
+
+
 @dataclass(frozen=True)
 class PatchCandidate:
     id: str
@@ -54,6 +87,8 @@ class PatchCandidate:
     detail: str
     address_basis: str | None
     source_index: int
+    assigned_fid: int | None = None
+    fid_range_visually_confirmed_empty: bool | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -68,17 +103,49 @@ class PatchCandidate:
             "source_index": self.source_index,
         }
 
+    def with_fid(
+        self, fid: int, *, fid_range_visually_confirmed_empty: bool | None = None
+    ) -> PatchCandidate:
+        return replace(
+            self,
+            assigned_fid=fid,
+            fid_range_visually_confirmed_empty=fid_range_visually_confirmed_empty,
+        )
+
     def target_row(self) -> dict[str, object]:
-        return {
+        unresolved_reason = dict(UNRESOLVED_TARGET_FIELDS)
+        if self.assigned_fid is not None:
+            unresolved_reason.pop("fid")
+        row: dict[str, object] = {
             "id": self.id,
             "type": self.instrument_type,
             "mode": None,
-            "fid": None,
+            "fid": self.assigned_fid,
             "universe": self.universe,
             "address": self.address,
             "footprint": None,
             "address_basis": self.address_basis,
-            "unresolved_reason": dict(UNRESOLVED_TARGET_FIELDS),
+            "unresolved_reason": unresolved_reason,
+        }
+        if self.fid_range_visually_confirmed_empty is not None:
+            row["fid_range_visually_confirmed_empty"] = self.fid_range_visually_confirmed_empty
+        return row
+
+
+@dataclass(frozen=True)
+class PatchTargetExclusion:
+    candidate_id: str
+    code: str
+    reason: str
+    proposed_fid: int | None = None
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "candidate_id": self.candidate_id,
+            "code": validate_autopatch("target_exclusion_reason", self.code),
+            "label": target_exclusion_label(self.code),
+            "reason": self.reason,
+            "proposed_fid": self.proposed_fid,
         }
 
 
@@ -87,11 +154,12 @@ class PatchPlanRejection:
     code: str
     reason: str
     quoted_report_reason: str | None = None
+    vocabulary: str = "candidate_rejection_reason"
 
     def to_dict(self) -> dict[str, object]:
         payload: dict[str, object] = {
-            "code": validate_autopatch("candidate_rejection_reason", self.code),
-            "label": candidate_rejection_label(self.code),
+            "code": validate_autopatch(self.vocabulary, self.code),
+            "label": autopatch_label(self.vocabulary, self.code),
             "reason": self.reason,
         }
         if self.quoted_report_reason is not None:
@@ -110,6 +178,10 @@ class PatchPlan:
     rejection: PatchPlanRejection | None = None
     errors: tuple[dict[str, str], ...] = ()
     address_basis_notes: tuple[str, ...] = ()
+    target_exclusions: tuple[PatchTargetExclusion, ...] = ()
+    skipped_checks: tuple[Mapping[str, object], ...] = ()
+    fid_safety: Mapping[str, object] | None = None
+    fid_range_visually_confirmed_empty: bool | None = None
 
     @property
     def execution_requested(self) -> bool:
@@ -130,9 +202,15 @@ class PatchPlan:
             },
             "warnings": [IRREVERSIBLE_WARNING],
             "address_basis_notes": list(self.address_basis_notes),
+            "target_exclusions": [exclusion.to_dict() for exclusion in self.target_exclusions],
+            "skipped_checks": [dict(check) for check in self.skipped_checks],
             "lua_source": None,
             "lua_source_unresolved_reason": DEFERRED_TO_M4,
         }
+        if self.fid_safety is not None:
+            payload["fid_safety"] = dict(self.fid_safety)
+        if self.fid_range_visually_confirmed_empty is not None:
+            payload["fid_range_visually_confirmed_empty"] = self.fid_range_visually_confirmed_empty
         if self.rejection is not None:
             payload["rejection"] = self.rejection.to_dict()
         if self.errors:
@@ -145,6 +223,10 @@ def build_patch_plan(
     *,
     selected: Sequence[str] | None = None,
     dry_run: bool = True,
+    fid_range: Mapping[str, object] | None = None,
+    assumption_71: str | None = None,
+    fid_range_visually_confirmed_empty: bool | None = None,
+    fid_property_port: FidPropertyPort | None = None,
 ) -> PatchPlan:
     rejection = _rejection_for_report(report)
     if rejection is not None:
@@ -180,15 +262,265 @@ def build_patch_plan(
 
     target_ids = frozenset(selected_ids)
     targets = tuple(candidate for candidate in candidates if candidate.id in target_ids)
+    if not _fid_assignment_requested(fid_range, assumption_71, fid_range_visually_confirmed_empty):
+        return PatchPlan(
+            ok=True,
+            status="planned",
+            dry_run=dry_run,
+            candidates=candidates,
+            selected=selected_ids,
+            targets=targets,
+            address_basis_notes=_address_basis_notes(report, targets),
+        )
+
+    assumption_71_value = _assumption_71_or_default(assumption_71)
+    parsed_fid_range = _parse_fid_range(fid_range)
+    if fid_range is None:
+        return PatchPlan(
+            ok=False,
+            status="rejected",
+            dry_run=dry_run,
+            candidates=candidates,
+            selected=selected_ids,
+            targets=targets,
+            rejection=PatchPlanRejection(
+                code=FID_RANGE_REQUIRED,
+                reason=(
+                    "패치할 빈 FID 범위를 fid_range {'start': int, 'end': int} 형식으로 "
+                    "입력해야 한다."
+                ),
+                vocabulary="fid_assignment_rejection_reason",
+            ),
+        )
+    if parsed_fid_range is None:
+        return PatchPlan(
+            ok=False,
+            status="rejected",
+            dry_run=dry_run,
+            candidates=candidates,
+            selected=selected_ids,
+            targets=targets,
+            rejection=PatchPlanRejection(
+                code=INVALID_FID_RANGE,
+                reason=(
+                    "fid_range는 정수 start와 end를 포함해야 하며 end는 start보다 작을 수 없다."
+                ),
+                vocabulary="fid_assignment_rejection_reason",
+            ),
+        )
+
+    confirmation_required = assumption_71_value != ASSUMPTION_71_GO
+    confirmation_recorded = (
+        bool(fid_range_visually_confirmed_empty) if confirmation_required else None
+    )
+    fid_safety = _fid_safety_payload(
+        assumption_71_value,
+        confirmation_required=confirmation_required,
+        confirmation_recorded=confirmation_recorded,
+        existing_fids=(),
+        precheck_performed=assumption_71_value == ASSUMPTION_71_GO,
+    )
+    if confirmation_required and confirmation_recorded is not True:
+        return PatchPlan(
+            ok=False,
+            status="rejected",
+            dry_run=dry_run,
+            candidates=candidates,
+            selected=selected_ids,
+            targets=targets,
+            rejection=PatchPlanRejection(
+                code=FID_RANGE_CONFIRMATION_REQUIRED,
+                reason=(
+                    "ASSUMPTION-71 부정 또는 INCONCLUSIVE 분기에서는 FID 범위를 콘솔에서 "
+                    "눈으로 확인했다는 별도 확인(fid_range_visually_confirmed_empty=true)이 "
+                    "필요하다."
+                ),
+                vocabulary="fid_assignment_rejection_reason",
+            ),
+            fid_safety=fid_safety,
+            fid_range_visually_confirmed_empty=False,
+        )
+
+    existing_fids = (
+        _existing_fids_from_console(fid_property_port)
+        if assumption_71_value == ASSUMPTION_71_GO
+        else ()
+    )
+    planned_targets, target_exclusions = _assign_fids(
+        targets,
+        parsed_fid_range,
+        existing_fids=frozenset(existing_fids),
+        fid_range_visually_confirmed_empty=confirmation_recorded,
+    )
+    skipped_checks = _fid_skipped_checks(assumption_71_value)
     return PatchPlan(
         ok=True,
         status="planned",
         dry_run=dry_run,
         candidates=candidates,
         selected=selected_ids,
-        targets=targets,
-        address_basis_notes=_address_basis_notes(report, targets),
+        targets=planned_targets,
+        address_basis_notes=_address_basis_notes(report, planned_targets),
+        target_exclusions=target_exclusions,
+        skipped_checks=skipped_checks,
+        fid_safety=_fid_safety_payload(
+            assumption_71_value,
+            confirmation_required=confirmation_required,
+            confirmation_recorded=confirmation_recorded,
+            existing_fids=existing_fids,
+            precheck_performed=assumption_71_value == ASSUMPTION_71_GO,
+        ),
+        fid_range_visually_confirmed_empty=confirmation_recorded,
     )
+
+
+def _fid_assignment_requested(
+    fid_range: Mapping[str, object] | None,
+    assumption_71: str | None,
+    fid_range_visually_confirmed_empty: bool | None,
+) -> bool:
+    return (
+        fid_range is not None
+        or assumption_71 is not None
+        or fid_range_visually_confirmed_empty is not None
+    )
+
+
+def _assumption_71_or_default(value: str | None) -> str:
+    if value is None:
+        return ASSUMPTION_71_GO
+    if value not in ASSUMPTION_71_VALUES:
+        raise ValueError(
+            f"assumption_71 must be one of {sorted(ASSUMPTION_71_VALUES)}, got {value!r}"
+        )
+    return value
+
+
+def _parse_fid_range(value: Mapping[str, object] | None) -> FIDRange | None:
+    if value is None:
+        return None
+    start = _optional_int(value.get("start"))
+    end = _optional_int(value.get("end"))
+    if start is None or end is None or end < start:
+        return None
+    return FIDRange(start=start, end=end)
+
+
+def _assign_fids(
+    targets: tuple[PatchCandidate, ...],
+    fid_range: FIDRange,
+    *,
+    existing_fids: frozenset[int],
+    fid_range_visually_confirmed_empty: bool | None,
+) -> tuple[tuple[PatchCandidate, ...], tuple[PatchTargetExclusion, ...]]:
+    planned: list[PatchCandidate] = []
+    exclusions: list[PatchTargetExclusion] = []
+    next_fid = fid_range.start
+    for target in targets:
+        if next_fid > fid_range.end:
+            exclusions.append(
+                PatchTargetExclusion(
+                    candidate_id=target.id,
+                    code=FID_RANGE_EXHAUSTED,
+                    reason=(
+                        f"사용자가 입력한 FID 범위 {fid_range.start}-{fid_range.end}를 "
+                        "초과해 이 장비에는 FID를 배정하지 않았다."
+                    ),
+                )
+            )
+            continue
+        proposed_fid = next_fid
+        next_fid += 1
+        if proposed_fid in existing_fids:
+            exclusions.append(
+                PatchTargetExclusion(
+                    candidate_id=target.id,
+                    code=FID_ALREADY_IN_USE,
+                    reason=f"FID {proposed_fid}는 콘솔 기존 픽스처가 이미 사용 중이다.",
+                    proposed_fid=proposed_fid,
+                )
+            )
+            continue
+        planned.append(
+            target.with_fid(
+                proposed_fid,
+                fid_range_visually_confirmed_empty=fid_range_visually_confirmed_empty,
+            )
+        )
+    return tuple(planned), tuple(exclusions)
+
+
+def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> tuple[int, ...]:
+    if fid_property_port is None:
+        return ()
+    state = fid_property_port.query_state(FID_FIXTURE_ROOT)
+    existing_fids: list[int] = []
+    for child in _mapping_rows(state.get("children")):
+        child_index = _optional_int(child.get("i"))
+        if child_index is None:
+            continue
+        response = fid_property_port.query_property(
+            f"{FID_FIXTURE_ROOT}/{child_index}", FID_PROPERTY_NAME
+        )
+        if response.get("ok") is not True:
+            continue
+        fid = _fid_int(response.get("value"))
+        if fid is not None:
+            existing_fids.append(fid)
+    return tuple(existing_fids)
+
+
+def _fid_int(value: object) -> int | None:
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if isinstance(value, str) and value.isdecimal():
+        return int(value)
+    return None
+
+
+def _fid_skipped_checks(assumption_71: str) -> tuple[Mapping[str, object], ...]:
+    if assumption_71 == ASSUMPTION_71_GO:
+        return ()
+    return (
+        {
+            "kind": validate_autopatch("skipped_check_kind", FID_CONFLICT_PRECHECK_DESCOPE),
+            "label": skipped_check_label(FID_CONFLICT_PRECHECK_DESCOPE),
+            "reason": (
+                "ASSUMPTION-71이 부정 또는 INCONCLUSIVE라 기존 FID 충돌 사전검사를 수행하지 "
+                "않고, 사용자가 입력한 FID 범위와 별도 육안 확인에 의존한다."
+            ),
+            "assumption_71": assumption_71,
+        },
+    )
+
+
+def _fid_safety_payload(
+    assumption_71: str,
+    *,
+    confirmation_required: bool,
+    confirmation_recorded: bool | None,
+    existing_fids: Sequence[int],
+    precheck_performed: bool,
+) -> Mapping[str, object]:
+    return {
+        "assumption_71": assumption_71,
+        "active_safety": (
+            "fid_conflict_precheck"
+            if assumption_71 == ASSUMPTION_71_GO
+            else "visual_empty_range_confirmation"
+        ),
+        "conflict_precheck": {
+            "performed": precheck_performed,
+            "property": FID_PROPERTY_NAME if precheck_performed else None,
+            "source_path": FID_FIXTURE_ROOT if precheck_performed else None,
+            "existing_fids": list(existing_fids),
+        },
+        "visual_confirmation": {
+            "required": confirmation_required,
+            "confirmed": confirmation_recorded,
+            "field": "fid_range_visually_confirmed_empty",
+        },
+    }
 
 
 def _rejection_for_report(report: Mapping[str, object]) -> PatchPlanRejection | None:
