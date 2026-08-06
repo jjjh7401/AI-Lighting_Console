@@ -687,6 +687,56 @@ not readable, `ShowMetaData` childCount 0). **테스트 쇼파일임이 확인�
 | M6 | 사전 안내 없음, **사후 안내만**(ASSUMPTION-75 NEGATIVE) |
 | M4·M5 | ASSUMPTION-73·74 미판정이라 **주소 배열 형태와 검증 읽기 재시도 정책이 아직 확정되지 않았다** |
 
+### M2 — FID 배정 (완료)
+
+**상태: COMPLETE — FID 배정은 사용자 `fid_range` 안에서만 수행하며, `ASSUMPTION-71` 런타임 입력에
+따라 GO 분기는 `FID` 프로퍼티 충돌 사전검사를 수행하고 부정/INCONCLUSIVE 분기는 구조화된 축소와
+`fid_range_visually_confirmed_empty` 별도 확인을 요구한다.** M1 호환을 위해 `fid_range`나
+`assumption_71` 등 M2 표면이 주입되지 않은 기존 `build_patch_plan()` 호출은 M1의 `deferred_to_m2`
+산출을 유지한다.
+
+**TDD RED 증거**: `uv run pytest server/tests/test_autopatch_fid.py -q` →
+`ImportError: cannot import name 'ASSUMPTION_71_GO' from 'server.vwx.patchplan'`, `1 error in 0.06s`.
+
+**구현 산출**:
+
+- `server/vwx/patchplan.py` — `fid_range` 파라미터, `ASSUMPTION_71_*` 런타임 분기, 순차 FID 배정,
+  범위 초과/기존 FID 충돌 건별 제외, `FID` 프로퍼티 기반 기존 FID 읽기, 안전망/축소/확인 감사 payload.
+- `server/vwx/verdicts.py` — FID 범위 거부, 대상 제외, skipped-check 닫힌 어휘와 라벨 추가.
+- `server/tests/test_autopatch_fid.py` — AC-AUTOPATCH-005·006·007·008·027 인메모리 더블 기반 9건.
+
+**AC 판정**:
+
+| AC | 판정 근거 | 실측 명령 · 결과 |
+|---|---|---|
+| AC-AUTOPATCH-005 | `test_fids_stay_inside_user_range_and_excess_targets_are_reported` — FID 100·101만 배정, 3번째 항목은 `fid_range_exhausted` 제외, 같은 입력/범위 재호출도 같은 배정 | `uv run pytest server/tests/test_autopatch_fid.py -q` → `9 passed in 0.07s` |
+| AC-AUTOPATCH-006 | `test_missing_fid_range_rejects_m2_and_does_not_guess_from_slots` — M2 표면에서 `fid_range` 부재 시 `fid_range_required` 거부, `start`·`end` 입력 안내, 배정 0건 | 동 |
+| AC-AUTOPATCH-007 | `test_fid_assignment_source_does_not_read_fixture_record_slot`, `test_unresolved_fid_note_is_not_assignment_basis_and_no_fixture_selection_is_generated` — `patchplan.py` AST에서 `.slot`/`'slot'` 참조 0건, `fid_note`의 `999 (미확정)` 대신 범위 FID 100 배정, payload 내 `Fixture <n>` 선택 명령 0건 | 동 |
+| AC-AUTOPATCH-008 | `test_go_branch_reads_fid_property_and_excludes_existing_fid_collisions`, `test_negative_branch_skips_precheck_structurally_and_lists_all_assignments` — GO는 `Patch/Stages/1/Fixtures/<i>`에서 `FID`만 읽고 기존 100 충돌 항목 제외, 부정은 포트를 호출하지 않고 `fid_conflict_precheck_descope`를 `skipped_checks`에 기록, 양쪽 모두 대상별 FID 표를 산출 | 동 |
+| AC-AUTOPATCH-027 | `test_negative_or_inconclusive_execution_requires_separate_visual_empty_confirmation`, `test_visual_confirmation_is_independent_and_audited_when_present` — 부정/INCONCLUSIVE에서 확인 필드 누락·거짓 거부, GO는 필드 없이 통과, 부정+확인 참은 통과하고 건별 row에 확인 사실 기록 | 동 |
+
+**비공허성 대조군**:
+
+- 추정 배정 로직: `FixtureRecord(slot=41)`에서 `slot+1` 추정 FID 42를 심은 payload를
+  `assert_no_fid_assignments()`에 통과시켜 `AssertionError`가 실제 발생함을 확인.
+- 슬롯 참조 AST: 가짜 소스 `record.slot`과 `row['slot']`를 `ast` 스캐너에 넣어 검출되는 대조군 확인.
+- GO vs 부정 확인필드: 같은 입력에서 GO는 `fid_range_visually_confirmed_empty` 없이 통과하고,
+  부정은 같은 필드 누락 시 거부되며 참일 때만 통과함을 확인.
+
+**M0 GO 판정 소비**: `ASSUMPTION-71`은 GO로 소비해 충돌 사전검사 ON이 기본 분기이며, 기존 FID는
+정규 프로퍼티명 `FID`로만 읽는다. 부정/INCONCLUSIVE 분기도 런타임 입력으로 구현·테스트했다.
+
+**실측 결과**:
+
+| command | result |
+|---|---|
+| `uv run pytest server/tests/test_autopatch_fid.py -q` | `9 passed in 0.07s` |
+| `uv run pytest server/tests/test_autopatch_candidates.py -q` | `13 passed in 0.06s` |
+| `uv run pytest server/tests -q` | `4920 passed, 7 skipped, 1 warning in 91.78s` |
+| `uv run ruff check server/vwx server/tests/test_autopatch_*.py` | `All checks passed!` |
+| `git diff --stat -- console/lua server/safety server/prechk server/paperwork server/looks` | 빈 출력(PRESERVE 0-diff) |
+| 인메모리 planner driver | GO: 기존 FID 100 충돌 제외 후 101 배정. 부정: `fid_conflict_precheck_descope` 기록 후 200·201 배정 |
+
 ---
 
 ## §E.3 Run-phase Audit-Ready Signal
