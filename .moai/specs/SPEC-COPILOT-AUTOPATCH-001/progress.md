@@ -568,6 +568,125 @@ to AddFixtures or M0-dependent implementation milestones.
 | `git diff --stat -- console/lua server/safety server/prechk server/paperwork server/looks` | 빈 출력(PRESERVE 0-diff) |
 | `uv run python -c '...build_patch_plan(report, selected=[candidate_id])...'` | `{'ok': True, 'dry_run': True, 'target_count': 1, 'lua_source': None, 'warnings': 1}` |
 
+### M0 라이브 세션 1차 — 읽기 프로브 3건 판정 (2026-08-06, 오케스트레이터 직접 실측)
+
+**세션 성립.** onPC를 기동하자 이전 세션의 OSC 설정이 유지되어 responder 왕복이 즉시 성립했다 —
+직전 checkpoint의 BLOCKED 사유(프로브 timeout)는 **콘솔 미기동**이 원인이었고 설정 문제가 아니었다.
+
+```
+uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 \
+  --listen-port 9005 --skip-exec --wait 4
+  [PASS] ping: ok   live version=1.6.1 plugin=CopilotResponder
+  [PASS] state: ok  node={'childCount': 21, 'class': 'Sequences'} children=18
+```
+
+**측정 도구**: `tools/console_probe.py`(게이트 하위 M0 전용 프로브, FXLIB·SPATIAL·GROUPGEN M0에서
+이미 쓰인 도구). 아래 3건은 **전부 읽기 전용**이며 콘솔에 아무것도 쓰지 않았다.
+
+**responder 버전 드리프트 고지**: 라이브 responder는 **1.6.1**인데 저장소 `console/lua/`는
+**1.5.0**이다(299줄 차이). 아래 판정은 **1.6.1 동작에 대한 실측**이다. 저장소 사본이 더 낡았으므로
+덮어쓰지 않았고, `console/lua/**`는 본 SPEC의 PRESERVE라 여기서 조정하지 않는다 — 별도 건이다.
+
+#### `GO: ASSUMPTION-71` — FID는 콘솔에서 읽히는 프로퍼티다
+
+**판정 근거가 성립하는 쇼파일이다.** AC-AUTOPATCH-001 ②가 요구한 **슬롯≠FID** 조건을 현재 로드된
+쇼파일이 이미 만족한다 — 슬롯 `n` → FID `n+19`가 표본 7개 전부에서 일관된다.
+
+| slot | FID | Patch | FixtureType(표시문자열) | Mode(표시문자열) |
+|---|---|---|---|---|
+| 1 | 20 | 3.001 | `FixtureType 3` | `2 Mode 2` |
+| 2 | 21 | 3.017 | `FixtureType 3` | `2 Mode 2` |
+| 3 | 22 | 3.033 | `FixtureType 3` | `2 Mode 2` |
+| 4 | 23 | 3.049 | `FixtureType 3` | `2 Mode 2` |
+| 5 | 24 | 3.065 | `FixtureType 3` | `2 Mode 2` |
+| 9 | 28 | 3.129 | `FixtureType 3` | `2 Mode 2` |
+| 14 | 33 | 3.209 | `FixtureType 3` | `2 Mode 2` |
+
+읽기 가능한 프로퍼티 이름: `FID` · `Fid` · `fid` · `No` · `no` — 다섯 이름이 **모두 같은 값 20**을
+반환한다(slot 1). `FixtureId`/`FixtureID`는 not readable. `CID`는 readable이나 값이 nil.
+`IDType` = `Fixture`.
+
+**부수 성과 — `PROTOCOL.md:319-321`의 미해소 모호성이 해소됐다.** 그 문서는 ASSUMPTION-7 프로브가
+읽는 `child.no`가 슬롯인지 FID인지 "responder가 둘을 구별할 수 없다"고 적었다. 슬롯≠FID 쇼파일에서
+`no`가 **FID(20)를 반환**하므로 `no`는 슬롯이 아니라 FID다. (본 SPEC은 이 사실을 소비만 하고
+`server/prechk/**`·`console/lua/**`를 고치지 않는다 — 둘 다 PRESERVE다.)
+
+**요구에 미치는 영향**: REQ-AUTOPATCH-009의 **충돌 사전검사를 켠다**(GO 분기). 따라서
+REQ-AUTOPATCH-026의 `fid_range_visually_confirmed_empty` 강제는 **발동하지 않는다**
+(`spec.md` REQ-AUTOPATCH-026 마지막 문장 — GO 분기에서는 요구하지 않는다).
+
+#### `GO(한정): ASSUMPTION-72` — 드릴다운은 되지만 점유폭은 얻지 못한다
+
+**되는 것**: `Patch/FixtureTypes` 열거(3종: `Robin MMX Spot` · `FixtureType 2` ·
+`Robin LEDBeam 350`) → 타입 드릴다운(`DMXModes` 자식 존재) → 모드 열거 → 모드 이름 읽기
+(`prop:…/DMXModes/1|Name` → `Mode 1`) → `DMXChannels` 자식 수 읽기.
+
+| 타입 | 모드 | `DMXChannels` childCount |
+|---|---|---|
+| Robin MMX Spot | Mode 1 · 2 · 3 | 29 · 29 · 29 |
+| Robin MMX Spot | Mode 4 | 31 |
+| Robin LEDBeam 350 | Mode 1 · 2 | 14 · 14 |
+| Robin LEDBeam 350 | Mode 3 | 16 |
+
+**안 되는 것 — 그리고 이것이 핵심이다**: `DMXChannels` childCount는 **DMX 점유폭이 아니다.**
+실측 반증: 위 표의 패치된 픽스처는 전부 `Robin LEDBeam 350` **Mode 2**(childCount **14**)인데
+실제 주소 간격은 **16**이다(`3.001 → 3.017 → 3.033 …`, slot 14가 `3.209 = 1 + 13x16`으로 일관).
+**14를 점유폭으로 쓰면 픽스처마다 2채널씩 겹친다** — `design.md` §4 R4가 경고한 주소 계획 붕괴다.
+
+정확한 점유폭 획득 시도, 전부 실패:
+
+| 시도 | 결과 |
+|---|---|
+| `prop:…/DMXModes/1\|DMXFootprint` | **존재하나 `table: 0x600001b703c0`** — responder 1.6.1이 테이블을 직렬화하지 못한다(`inventory.py:64-72` POINTER_TEXT 사례) |
+| `prop:…/DMXModes/1\|Footprint` · `ChannelCount` · `Channels` · `ChannelWidth` · `Width` · `Size` | 전부 `property not readable` |
+| `prop:…/DMXChannels/1\|Offset` · `Resolution` | 전부 `property not readable` |
+| `state:…/DMXModes/1/DMXFootprint` | `path segment not found` — 프로퍼티이지 자식 객체가 아니다 |
+| `prop:…/DMXChannels/1\|DMXBreak` | readable(`1`) — 점유폭과 무관 |
+
+**요구에 미치는 영향**: REQ-AUTOPATCH-014(점유폭 일치 확인)를 **읽기 표면만으로는 충족할 수 없다.**
+`plan.md` §A.3의 `ASSUMPTION-72` 부정 처리를 적용한다 — 점유폭 일치 확인 **descope**, 모드 선택은
+사용자 확인 단독, 드라이런 표에 "점유폭 미검증" 열 추가. 근본 해결(responder가 `DMXFootprint`
+테이블을 직렬화)은 `console/lua/**` 변경이 필요하고 그것은 본 SPEC의 PRESERVE이므로 **범위 밖**이다.
+
+#### `NEGATIVE: ASSUMPTION-75` — Patch 편집기 상태는 감지되지 않는다
+
+객체 트리를 전수 열거해 편집기/윈도우/커맨드 목적지를 노출하는 객체를 찾았으나 **0건**이다.
+
+| 열거한 경로 | 자식 |
+|---|---|
+| `Root` | MessageCenter · StationSettings · Interfaces · KeyRegistry · MAnetSocket · Cloud · NDI · UsbNotifier · WebServer · VirtualKeys · HardwareConfigurations · KeyboardLayouts · ShowData · TimecodeSlots |
+| `ShowData` | ShowSettings · MediaPools · Scribbles · Appearances · Tags · GelPools · Meshes · RDMData · LivePatch · Patch · PsrPatch · Output · Masters · DataPools |
+| `Patch` | DmxCurves · AttributeDefinitions · Layers · Classes · PsrExtraData · FixtureTypes · Stages · UIChannels · RTChannels · IDTypes · DmxUniverses · DmxAddresses · FixtureTypesOverview · PatchFilter |
+| `ShowData/ShowSettings` | DefaultPlaybackSettings · GlobalSettings · MidiSettings · SoundSettings · TimecodeStatuses · GlobalVariables · AddonVariables · ShowMetaData · ShowDeletedData · ScreenEncoder |
+| `ShowData/DataPools` | Default · Preview |
+
+보조 확인: `orca computer list-windows --app grandMA3` → `windows: []`,
+`get-app-state` → `window_not_found`. grandMA3는 접근성 API에 창을 노출하지 않아 **GUI 관측 경로도
+없다.** `ChangeDestination`/`CD` 전송은 룰북이 무조건 금지하므로 시도하지 않았다.
+
+**요구에 미치는 영향**: `plan.md` §A.3대로 **사전 안내를 포기하고 사후 안내만** 한다 —
+REQ-AUTOPATCH-024가 이미 그 경로("생성 0건이면 Patch > Fixtures 편집기를 먼저 열라")를 규정한다.
+
+#### 미판정 2건 — 파괴적 측정, 쇼파일 확인 대기
+
+`ASSUMPTION-73`(다중 유니버스 `patch` 배열) · `ASSUMPTION-74`(패치 직후 관측)는 **AddFixtures 실제
+쓰기**를 요구한다. 현재 로드된 쇼파일은 **픽스처 39대가 패치된 리그**이며(`Patch/Stages/1/Fixtures`
+childCount = 39), 이름을 읽을 수 있는 경로가 없다(`ShowData|ShowName`·`ShowFileName` 둘 다
+not readable, `ShowMetaData` childCount 0). **테스트 쇼파일임이 확인되지 않았다.**
+
+`plan.md` §C는 "세션 시작 전 사용자에게 쇼파일이 테스트용임을 확인받고 그 확인을 `progress.md`에
+기록한다"를 요구한다. 그 확인은 오케스트레이터가 자체 발급할 수 없다 — **73·74는 확인 전까지
+미판정으로 남긴다.** 운영 쇼파일로 대체하지 않는다(`plan.md` §B M0 진입 전제 D6).
+
+#### 후속 마일스톤 확정 사항
+
+| 마일스톤 | M0가 확정한 것 |
+|---|---|
+| M2 | **충돌 사전검사 ON**(ASSUMPTION-71 GO). REQ-AUTOPATCH-026 확인 필드 강제 **미발동**. `FID` 프로퍼티명으로 읽는다 |
+| M3 | **점유폭 일치 확인 descope**(ASSUMPTION-72 한정). 드라이런 표에 "점유폭 미검증" 열 추가. 모드 이름은 `DMXModes/<i>` 열거 + `Name` 프로퍼티로 확정 |
+| M6 | 사전 안내 없음, **사후 안내만**(ASSUMPTION-75 NEGATIVE) |
+| M4·M5 | ASSUMPTION-73·74 미판정이라 **주소 배열 형태와 검증 읽기 재시도 정책이 아직 확정되지 않았다** |
+
 ---
 
 ## §E.3 Run-phase Audit-Ready Signal
