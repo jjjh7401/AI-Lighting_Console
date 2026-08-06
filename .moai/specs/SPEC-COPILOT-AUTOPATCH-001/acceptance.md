@@ -85,8 +85,9 @@ status: draft (v0.1.0, 2026-08-05) · Tier L · AC 26건 계획. 본 문서는 `
 | REQ-AUTOPATCH-023 | AC-AUTOPATCH-021 | M6 | 검증 읽기 |
 | REQ-AUTOPATCH-024 | AC-AUTOPATCH-022 | M6 | 불일치 보고 · 자동 보정 0 |
 | REQ-AUTOPATCH-025 | AC-AUTOPATCH-002 | M1 | 미대조 리포트 거부 (같은 AC의 별 구간) |
+| REQ-AUTOPATCH-026 | AC-AUTOPATCH-027 | M2 | `ASSUMPTION-71` 부정 시 구조화된 FID 범위 확인 |
 
-**REQ 25/25 커버, 누락 0.** 역추적표에 행이 없는 AC는 **5건**이며 의도다 —
+**REQ 26/26 커버, 누락 0.** 역추적표에 행이 없는 AC는 **5건**이며 의도다 —
 **AC-AUTOPATCH-001**(M0 전제 판정 게이트) · **AC-AUTOPATCH-023**(툴 등록, 형상) ·
 **AC-AUTOPATCH-024**(PRESERVE, 형상 전체가 대상) · **AC-AUTOPATCH-025**(1단계 계약 회귀) ·
 **AC-AUTOPATCH-026**(라이브 종단 통합).
@@ -97,7 +98,7 @@ status: draft (v0.1.0, 2026-08-05) · Tier L · AC 26건 계획. 본 문서는 `
 |---|---|---|
 | M0 — 라이브 전제 측정 | AC-AUTOPATCH-001 | 1 |
 | M1 — 후보 입력 모델 | AC-AUTOPATCH-002 · 003 · 004 | 3 |
-| M2 — FID 배정 | AC-AUTOPATCH-005 · 006 · 007 · 008 | 4 |
+| M2 — FID 배정 | AC-AUTOPATCH-005 · 006 · 007 · 008 · 027 | 5 |
 | M3 — 타입·모드 해석 | AC-AUTOPATCH-009 · 010 · 011 · 012 | 4 |
 | M4 — Lua 생성 · 주소 계획 | AC-AUTOPATCH-013 · 014 · 015 · 016 | 4 |
 | M5 — 배포 · 실행 | AC-AUTOPATCH-017 · 018 · 019 | 3 |
@@ -105,13 +106,13 @@ status: draft (v0.1.0, 2026-08-05) · Tier L · AC 26건 계획. 본 문서는 `
 | M7 — 배선 · 회귀 · PRESERVE | AC-AUTOPATCH-023 · 024 · 025 | 3 |
 | M8 — 라이브 종단 | AC-AUTOPATCH-026 | 1 |
 
-**합 26 · 중복 0 · 누락 0.** 이 표가 정본이며 `plan.md`의 마일스톤별 `AC` 줄과 1:1이다.
+**합 27 · 중복 0 · 누락 0.** 이 표가 정본이며 `plan.md`의 마일스톤별 `AC` 줄과 1:1이다.
 
 ---
 
 ### AC-AUTOPATCH-001 — 5개 전제 판정 게이트 (M0)
 
-**Where** 라이브 세션이 종료되면, the M0 **shall** `ASSUMPTION-71`~`-75`에 GO / NEGATIVE /
+**When** 라이브 세션이 종료되면, the M0 **shall** `ASSUMPTION-71`~`-75`에 GO / NEGATIVE /
 INCONCLUSIVE 중 하나를 배정한다.
 
 - 대상 요구사항: (전제 게이트 — 특정 REQ가 아니라 M2·M3·M6의 설계를 확정한다)
@@ -158,8 +159,13 @@ INCONCLUSIVE 중 하나를 배정한다.
 - 검증 방법: `server/tests/test_autopatch_candidates.py` · `test_autopatch_execute.py`
 - 기대 결과:
   - ① `dry_run` 인자를 **생략**하면 드라이런이다. 실행은 명시적 값을 요구한다.
-  - ② 산출물에 Lua 소스 **전문**과 대상 표(타입 · 모드 · FID · 유니버스 · 주소 · 점유폭)가 들어간다.
-  - ③ 산출물에 "실행 취소·백업 복원 경로가 없다"는 취지의 경고 문구가 포함된다.
+  - ② 산출물에 Lua 소스 **전문**과 대상 표가 들어가고, 표의 열이 최소한
+       **타입 · 모드 · FID · 유니버스 · 주소 · 점유폭 · `address_basis`**를 포함한다.
+  - ③ 선택 항목 중 하나라도 `address_basis`가 `absolute_back_calculated`이면 산출물에
+       **역산 전제 문구**("Universes pane이 기본 연속 512블록이라는 전제 위에서 역산했다 …")가
+       포함된다. **비공허성**: 전 항목이 `universe_address_direct`인 입력에서는 그 문구가
+       **나오지 않음**을 함께 assert한다.
+  - ④ 산출물에 "실행 취소·백업 복원 경로가 없다"는 취지의 경고 문구가 포함된다.
        **비공허성**: 그 문구의 부재를 검사하는 테스트가 실제로 실패하는지 확인한다.
 
 ### AC-AUTOPATCH-005 — 사용자 범위 내 FID 배정 (M2)
@@ -268,12 +274,19 @@ INCONCLUSIVE 중 하나를 배정한다.
 **Unwanted** The 생성기 **shall not** `ChangeDestination`/`CD`를 산출물에 포함한다.
 
 - 대상 요구사항: REQ-AUTOPATCH-017
-- 검증 방법: `server/tests/test_autopatch_lua.py` — 생성물 전수 스캔
+- 검증 방법: `server/tests/test_autopatch_lua.py` — **두 기법을 분리해서** 쓴다.
+  ①② 는 산출물 문자열 스캔, ③ 은 `server/vwx/luagen.py` **소스 AST 스캔**
+  (`server/tests/test_prechk_tool.py:330-343` 의 AST 패턴 계승, AC-AUTOPATCH-007① 과 동일 기법).
 - 기대 결과:
   - ① 생성된 Lua 소스와 `run_commands` 배열 전수에서 `ChangeDestination`·`CD` 토큰 **0건**.
   - ② **비공허성**: 스캐너 테스트에 `ChangeDestination`을 심은 가짜 산출물을 넣어 **실제로 잡히는지**
        확인한다. 이 대조군 없이는 인수하지 않는다.
-  - ③ 생성 어휘 자체에 그 명령이 없음을 구조적으로 보인다(사후 문자열 검사에만 의존하지 않는다).
+  - ③ **구조 보장 — ①② 와 다른 기법이다.** `server/vwx/luagen.py`를 AST로 파싱해
+       (a) `ChangeDestination`·`CD` 를 담은 **문자열 리터럴이 모듈 전체에 0건**이고,
+       (b) 호출자가 준 자유 문자열이 `run_commands` 배열 빌더나 Lua 본문 조립부로
+       **도달하는 경로가 0건**임을 확인한다(생성기가 노출하는 API가 `AddFixtures` 인자만 받고
+       자유 문자열 삽입 지점을 두지 않는다는 §5 슬롯 C 주장의 기계 검증).
+       **비공허성**: 자유 문자열 파라미터를 심은 모듈 사본에서 (b)가 실제로 실패하는지 확인한다.
 
 ### AC-AUTOPATCH-015 — 단일 명령 실행 (M4)
 
@@ -338,9 +351,12 @@ INCONCLUSIVE 중 하나를 배정한다.
 - 대상 요구사항: REQ-AUTOPATCH-022
 - 검증 방법: `server/tests/test_autopatch_verify.py` — 상태를 갖는 더블
 - 기대 결과:
-  - ① 2회차 실행에서 생성 명령이 **0건**이고 건너뛴 항목이 보고된다.
+  - ① 멱등 일치 기준은 **(유니버스, 주소, FixtureType, DMXMode 이름) 네 값 전부 일치**다.
+       2회차 실행에서 그 항목의 생성 명령이 **0건**이고 건너뛴 사실이 보고된다.
   - ② **비공허성**: 1회차에서는 같은 경로가 실제로 생성한다.
   - ③ 부분 중복(일부만 이미 존재)에서 나머지만 생성된다.
+  - ④ **주소는 같지만 타입 또는 모드가 다른** 기존 픽스처가 있으면 **건너뛰지 않고 충돌로 보고**한다.
+       **비공허성**: 네 값이 모두 같은 경우와 대조해 두 경로가 실제로 갈라지는지 확인한다.
 
 ### AC-AUTOPATCH-021 — 검증 읽기 (M6)
 
@@ -391,11 +407,21 @@ INCONCLUSIVE 중 하나를 배정한다.
 **Ubiquitous** The 확장 **shall** `precheck_vectorworks_diff`의 출력 계약을 바꾸지 않는다.
 
 - 대상 요구사항: (회귀)
-- 검증 방법: 기존 `server/tests/test_vwx_*.py` 전수 + 계약 스냅샷 비교
+- 검증 방법: 기존 `server/tests/test_vwx_*.py` 전수 + **골든 계약 스냅샷** 비교
+  (`server/tests/test_autopatch_contract.py` 신설, 픽스처는
+  `server/tests/fixtures/vwx/stage1_contract_snapshot.json`)
 - 기대 결과:
-  - ① 1단계 payload의 최상위 키 집합과 각 값의 의미가 그대로다.
-  - ② 1단계 테스트 전수 통과.
-  - ③ 전체 스위트 무회귀(착수 기준선 이상).
+  - ① **스냅샷 정의**: M1 착수 시점에 1단계 실물 픽스처
+       (`vectorworks_worksheet_multisystem_full.csv`)로 `precheck_vectorworks_diff`를 돌려
+       payload의 **최상위 키 집합 + 키별 타입 시그니처**(dict/list/str/int/bool, 리스트는 원소 타입)를
+       JSON으로 고정한다. 값 자체는 고정하지 않는다 — 값 고정은 무관한 변경에도 깨져 무의미해진다.
+  - ② **변경 후 비교**: 같은 픽스처로 다시 돌려 **최상위 키 집합이 정확히 동일**하고
+       키별 타입 시그니처가 동일함을 assert한다. 키 추가·삭제·타입 변경이 전부 실패로 잡힌다.
+  - ③ 키 **내부** 의미는 기존 구조 assert로 지킨다 — 1단계의
+       `test_all_four_structured_categories_exist_independently` 계열을 그대로 통과해야 한다.
+       ("각 값의 의미" 를 사람이 판단하는 문장 대신 기존 기계 assert에 위임한다.)
+  - ④ **비공허성**: 최상위 키를 하나 추가한 사본에서 ②가 실제로 실패하는지 확인한다.
+  - ⑤ 1단계 테스트 전수 통과 · 전체 스위트 무회귀(착수 기준선 이상).
 
 ### AC-AUTOPATCH-026 — 라이브 종단 (M8)
 
@@ -409,12 +435,28 @@ INCONCLUSIVE 중 하나를 배정한다.
   - ③ 세션 후 생성물 제거를 사용자가 확인했음이 기록된다.
   - ④ 실패했으면 실패로 기록한다 — 부분 성공을 통과로 적지 않는다.
 
+### AC-AUTOPATCH-027 — `ASSUMPTION-71` 부정 시 구조화된 FID 범위 확인 (M2)
+
+**When** `ASSUMPTION-71`이 부정 또는 INCONCLUSIVE인 상태에서 실행을 시도하면, the 시스템
+**shall** 별도 페이로드 필드로 캡처된 사용자 확인을 요구하고, 없으면 거부한다.
+
+- 대상 요구사항: REQ-AUTOPATCH-026
+- 검증 방법: `server/tests/test_autopatch_fid.py` — 세 분기(GO · 부정+확인있음 · 부정+확인없음)
+- 기대 결과:
+  - ① 부정/INCONCLUSIVE 분기에서 확인 필드가 **없으면 실행이 거부**되고, 사유가
+       "FID 범위를 콘솔에서 눈으로 확인했다는 별도 확인이 필요하다"를 담는다.
+  - ② 확인은 **일반 승인과 구분되는 별도 필드**로 캡처된다 — 항목 선택이나 `dry_run=false`가
+       그 확인을 함축하지 않는다. 실행 결과 페이로드에 그 확인이 기록되어 **건별로 감사 가능**하다.
+  - ③ **GO 분기에서는 이 확인을 요구하지 않는다.** **비공허성**: 같은 입력에서 GO는 통과하고
+       부정은 거부되는 것을 대조로 확인한다 — 확인이 항상 요구되면 이 AC는 공허하다.
+  - ④ 산문 경고만 있고 필드가 없는 페이로드는 ①에 의해 거부된다.
+
 ---
 
 ## §F. Definition of Done
 
-1. AC-AUTOPATCH-001~026 **26건 전량 PASS**(§C.0a 마일스톤 배정 합 26과 일치).
-2. REQ-AUTOPATCH-001~025 **25건 전량** 커버(§C.0 "REQ 25/25 커버, 누락 0"과 일치).
+1. AC-AUTOPATCH-001~027 **27건 전량 PASS**(§C.0a 마일스톤 배정 합 27과 일치).
+2. REQ-AUTOPATCH-001~026 **26건 전량** 커버(§C.0 "REQ 26/26 커버, 누락 0"과 일치).
 3. `ASSUMPTION-71`~`-75` **5건 전부 판정 확정**(GO / NEGATIVE / INCONCLUSIVE).
 4. 라이브 세션 2회 수행 및 기록. 두 세션 모두 테스트 쇼파일.
 5. PRESERVE diff 빈 출력 + 게이트 **비공허성 증명**.
