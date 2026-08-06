@@ -1,6 +1,6 @@
 # SPEC-COPILOT-AUTOPATCH-001 — 설계 (design)
 
-status: draft (v0.1.2, 2026-08-06) · Tier L · 설계 슬롯 5건 전부 종결 · 미결 0 · plan-audit 1·2회차 지적 반영
+status: draft (v0.1.3, 2026-08-06) · Tier L · 설계 슬롯 5건 전부 종결 · 미결 0 · plan-audit 1~5회차 지적 반영 · §6.2 폐지(acceptance.md 단일 출처화)
 
 ---
 
@@ -167,16 +167,11 @@ run_commands(["Plugin 'X'"])   ── 단일 명령 · bundle_gate.screen()
 
 ### §6.2 AC → 테스트 파일
 
-| AC | 파일 |
-|---|---|
-| 005 · 006 · 007 · 008 · 027 | `test_autopatch_fid.py` |
-| 009 · 010 · 011 · 012 | `test_autopatch_types.py` |
-| 013 · 014 · 015 · 016 | `test_autopatch_lua.py` |
-| 017 · 018 · 019 | `test_autopatch_execute.py` |
-| 020 · 021 · 022 | `test_autopatch_verify.py` |
-| 023 | `test_autopatch_tool.py` |
-| 024 · 025 | 게이트 커맨드 + 기존 `test_vwx_*.py` 전수 |
-| 001 · 026 | 라이브 세션 (`progress.md` §E.2 기록) |
+**폐지(round5 N7/N8/N10, `.moai/reports/plan-audit/SPEC-COPILOT-AUTOPATCH-001-round5.md` 권고).**
+이 절은 `acceptance.md` 각 AC의 "검증 방법" 필드를 손으로 복사한 사본이었다 — 사본이 둘이면
+한쪽만 고치는 편집마다 드리프트가 생긴다(round3~5에 걸쳐 4연속 결함으로 실증됨). **유일한
+출처는 `acceptance.md`의 각 AC 항목 자체의 "검증 방법" 줄이다.** 테스트 파일을 알아야 하면
+거기서 읽는다 — 이 표를 복원하지 않는다.
 
 ### §6.3 비공허성 대조군 (필수 8건)
 

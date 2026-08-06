@@ -1,6 +1,6 @@
 # SPEC-COPILOT-AUTOPATCH-001 — 구현 계획 (plan)
 
-status: draft (v0.1.0, 2026-08-05) · Tier L · 마일스톤 M0~M8 · 라이브 세션 2회
+status: draft (v0.1.2, 2026-08-06) · Tier L · 마일스톤 M0~M8 · 라이브 세션 2회
 
 ---
 

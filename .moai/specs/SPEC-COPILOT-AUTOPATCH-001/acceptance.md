@@ -1,6 +1,6 @@
 # SPEC-COPILOT-AUTOPATCH-001 — 인수 기준 (acceptance)
 
-status: draft (v0.1.0, 2026-08-05) · Tier L · AC 26건 계획. 본 문서는 `spec.md`의 요구를 관측 가능한 검증 기준으로 전개한다.
+status: draft (v0.1.2, 2026-08-06) · Tier L · AC 27건 계획. 본 문서는 `spec.md`의 요구를 관측 가능한 검증 기준으로 전개한다.
 
 > **인용 규율**: 본 SPEC의 `spec.md`·`acceptance.md`는 행 번호로 인용하지 않는다 — 안정 토큰
 > (`REQ-AUTOPATCH-…`, `AC-AUTOPATCH-…`, `ASSUMPTION-nn`, `§C`)만 쓴다. `file:line`은 코드·룰북·
