@@ -10,12 +10,15 @@ from typing import Protocol
 from server.vwx.address import ADDRESS_BASIS_ABS_BACK_CALCULATED
 from server.vwx.diff import MULTI_SYSTEM_MAPPING_ABSENT
 from server.vwx.verdicts import (
+    ADDRESS_ALREADY_OCCUPIED,
+    ADDRESS_OVERLAP_IN_PLAN,
     COMPARISON_NOT_PERFORMED,
     FID_ALREADY_IN_USE,
     FID_CONFLICT_PRECHECK_DESCOPE,
     FID_RANGE_CONFIRMATION_REQUIRED,
     FID_RANGE_EXHAUSTED,
     FID_RANGE_REQUIRED,
+    FOOTPRINT_UNKNOWN,
     INVALID_FID_RANGE,
     INVALID_REPORT_PAYLOAD,
     UNKNOWN_CANDIDATE_ID,
@@ -147,6 +150,122 @@ class PatchTargetExclusion:
             "reason": self.reason,
             "proposed_fid": self.proposed_fid,
         }
+
+
+@dataclass(frozen=True)
+class AddressPlanEntry:
+    """계획된 한 항목의 점유 구간. `address`는 **언제나 도면 주소 그대로**다."""
+
+    candidate_id: str
+    universe: int
+    address: int
+    footprint: int
+    end_address: int
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "candidate_id": self.candidate_id,
+            "universe": self.universe,
+            "address": self.address,
+            "footprint": self.footprint,
+            "end_address": self.end_address,
+        }
+
+
+@dataclass(frozen=True)
+class AddressPlan:
+    entries: tuple[AddressPlanEntry, ...] = ()
+    exclusions: tuple[PatchTargetExclusion, ...] = ()
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "entries": [entry.to_dict() for entry in self.entries],
+            "exclusions": [exclusion.to_dict() for exclusion in self.exclusions],
+        }
+
+
+def plan_addresses(
+    targets: Sequence[PatchCandidate],
+    *,
+    footprints: Mapping[str, int | None],
+    occupied: Mapping[int, Sequence[tuple[int, int]]],
+) -> AddressPlan:
+    """도면 주소를 그대로 쓰면서 겹치는 항목을 **제외**한다 (REQ-AUTOPATCH-019).
+
+    `footprints`는 **1단계 도면이 준 점유폭**이다 — 콘솔에서 읽은 `DMXChannels` 개수를
+    넣으면 안 된다(M0 함정 7: 그것은 점유폭이 아니다). 폭을 모르는 항목은 추측하지 않고
+    `footprint_unknown`으로 제외한다.
+
+    `occupied`는 유니버스별 기존 점유 구간 `(시작, 끝)` 목록이다.
+
+    **재배치는 하지 않는다** — 빈 주소를 찾아 옮겨 붙이는 경로가 이 함수에 없다.
+    그것은 사람이 결정할 일이다(design.md §7 안티패턴 7).
+    """
+    entries: list[AddressPlanEntry] = []
+    exclusions: list[PatchTargetExclusion] = []
+    planned_spans: dict[int, list[tuple[int, int]]] = {}
+
+    for target in targets:
+        footprint = footprints.get(target.id)
+        if not isinstance(footprint, int) or isinstance(footprint, bool) or footprint <= 0:
+            exclusions.append(
+                PatchTargetExclusion(
+                    candidate_id=target.id,
+                    code=FOOTPRINT_UNKNOWN,
+                    reason=(
+                        "점유폭이 확정되지 않아 간격을 계산할 수 없다 — "
+                        "콘솔의 DMXChannels 개수는 점유폭이 아니므로 대체하지 않는다."
+                    ),
+                )
+            )
+            continue
+
+        span = (target.address, target.address + footprint - 1)
+
+        console_spans = tuple(occupied.get(target.universe, ()))
+        if any(_spans_overlap(span, existing) for existing in console_spans):
+            exclusions.append(
+                PatchTargetExclusion(
+                    candidate_id=target.id,
+                    code=ADDRESS_ALREADY_OCCUPIED,
+                    reason=(
+                        f"유니버스 {target.universe} 주소 {span[0]}~{span[1]} 구간이 "
+                        "콘솔에서 이미 점유되어 있다 — 빈 주소로 옮겨 붙이지 않고 제외한다."
+                    ),
+                )
+            )
+            continue
+
+        same_universe = planned_spans.setdefault(target.universe, [])
+        if any(_spans_overlap(span, existing) for existing in same_universe):
+            exclusions.append(
+                PatchTargetExclusion(
+                    candidate_id=target.id,
+                    code=ADDRESS_OVERLAP_IN_PLAN,
+                    reason=(
+                        f"유니버스 {target.universe} 주소 {span[0]}~{span[1]} 구간이 "
+                        "같은 계획의 다른 항목과 겹친다 — 도면 주소를 바꾸지 않고 제외한다."
+                    ),
+                )
+            )
+            continue
+
+        same_universe.append(span)
+        entries.append(
+            AddressPlanEntry(
+                candidate_id=target.id,
+                universe=target.universe,
+                address=target.address,
+                footprint=footprint,
+                end_address=span[1],
+            )
+        )
+
+    return AddressPlan(entries=tuple(entries), exclusions=tuple(exclusions))
+
+
+def _spans_overlap(left: tuple[int, int], right: tuple[int, int]) -> bool:
+    return left[0] <= right[1] and right[0] <= left[1]
 
 
 @dataclass(frozen=True)
