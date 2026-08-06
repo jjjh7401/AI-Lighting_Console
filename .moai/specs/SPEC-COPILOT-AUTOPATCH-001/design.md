@@ -1,6 +1,6 @@
 # SPEC-COPILOT-AUTOPATCH-001 — 설계 (design)
 
-status: draft (v0.1.1, 2026-08-05) · Tier L · 설계 슬롯 5건 전부 종결 · 미결 0 · 독립 plan-audit 1회차 지적 반영
+status: draft (v0.1.2, 2026-08-06) · Tier L · 설계 슬롯 5건 전부 종결 · 미결 0 · plan-audit 1·2회차 지적 반영
 
 ---
 
@@ -52,6 +52,12 @@ status: draft (v0.1.1, 2026-08-05) · Tier L · 설계 슬롯 5건 전부 종결
   "report": object,            # 1단계 리포트 payload (필수)
   "selected": array[string],   # 항목 식별자. 생략 시 빈 배열 = 대상 0건
   "fid_range": {"start": int, "end": int},   # 생략 시 실행 거부
+  "fid_range_visually_confirmed_empty": boolean,
+                               # REQ-AUTOPATCH-026 / AC-AUTOPATCH-027.
+                               # ASSUMPTION-71 부정·INCONCLUSIVE 분기에서 **필수**,
+                               # 생략 시 실행 거부. GO 분기에서는 요구하지 않는다.
+                               # `selected`·`dry_run` 과 **독립된 필드**여야 한다 —
+                               # 항목 선택이나 dry_run=false 가 이 확인을 함축하지 않는다.
   "type_aliases": object,      # VW 이름 -> 콘솔 라이브러리 이름 (선택)
   "dry_run": boolean           # 생략 시 true
 }
@@ -163,8 +169,7 @@ run_commands(["Plugin 'X'"])   ── 단일 명령 · bundle_gate.screen()
 
 | AC | 파일 |
 |---|---|
-| 002 · 003 · 004 | `test_autopatch_candidates.py` |
-| 005 · 006 · 007 · 008 | `test_autopatch_fid.py` |
+| 005 · 006 · 007 · 008 · 027 | `test_autopatch_fid.py` |
 | 009 · 010 · 011 · 012 | `test_autopatch_types.py` |
 | 013 · 014 · 015 · 016 | `test_autopatch_lua.py` |
 | 017 · 018 · 019 | `test_autopatch_execute.py` |
