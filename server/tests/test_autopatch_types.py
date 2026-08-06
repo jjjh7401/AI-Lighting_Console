@@ -92,9 +92,7 @@ class LibraryRigPort:
                 "children": children,
                 "truncated": self.truncated,
             }
-        modes_match = re.fullmatch(
-            rf"{FIXTURE_TYPE_LIBRARY_ROOT}/(\d+)/{DMX_MODES_SEGMENT}", path
-        )
+        modes_match = re.fullmatch(rf"{FIXTURE_TYPE_LIBRARY_ROOT}/(\d+)/{DMX_MODES_SEGMENT}", path)
         if modes_match is not None:
             if not self.modes_readable:
                 return {"ok": False, "path": path, "error": "no reply within 3.0s"}
@@ -131,9 +129,7 @@ class LibraryRigPort:
 
     def query_property(self, path: str, property_name: str) -> dict:
         self.property_calls.append((path, property_name))
-        match = re.fullmatch(
-            rf"{FIXTURE_TYPE_LIBRARY_ROOT}/(\d+)/{DMX_MODES_SEGMENT}/(\d+)", path
-        )
+        match = re.fullmatch(rf"{FIXTURE_TYPE_LIBRARY_ROOT}/(\d+)/{DMX_MODES_SEGMENT}/(\d+)", path)
         if match is None:
             raise RuntimeError(f"unexpected property path: {path}")
         if not self.mode_names_readable:

@@ -486,9 +486,7 @@ def _type_candidates(
     else:
         keys = (request.instrument_type, request.gdtf_fixture)
     return tuple(
-        entry
-        for entry in library.types
-        if any(fuzzy_type_equal(key, entry.name) for key in keys)
+        entry for entry in library.types if any(fuzzy_type_equal(key, entry.name) for key in keys)
     )
 
 
@@ -605,9 +603,7 @@ def _read_type(
             continue
         mode_path = f"{modes_path}/{mode_index}"
         mode_name = _read_mode_name(port, mode_path) or _optional_string(child.get("name")) or ""
-        channel_count = (
-            _read_channel_count(port, mode_path) if read_channel_counts else None
-        )
+        channel_count = _read_channel_count(port, mode_path) if read_channel_counts else None
         modes.append(LibraryMode(index=mode_index, name=mode_name, channel_count=channel_count))
     return LibraryType(
         index=index,
