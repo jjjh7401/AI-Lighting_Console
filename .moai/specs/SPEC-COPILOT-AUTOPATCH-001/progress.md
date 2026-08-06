@@ -476,6 +476,98 @@ M0 라이브 세션 일정·테스트 쇼파일 확보는 run-phase 착수 전�
 (마일스톤별 증거를 기록한다. M0는 `GO:` / `NEGATIVE:` / `INCONCLUSIVE:` 접두 행으로
 `ASSUMPTION-71`~`-75` 판정을 남긴다.)
 
+### M0 checkpoint — live access blocked (2026-08-06 10:42 KST)
+
+**상태: BLOCKED — M0 전제 측정 미착수.** Implementation Kickoff Approval은 통과했으나,
+현재 디스패치에서 실기 onPC/responder 왕복이 성립하지 않아 `ASSUMPTION-71`~`75`에
+`GO:` / `NEGATIVE:` / `INCONCLUSIVE:` 판정 행을 쓰지 않는다. 이 판정 행들은 실제 라이브
+증거가 있을 때만 추가한다.
+
+**실측한 환경 값**: `resolve_effective_settings()` 기준 site config는
+`console_host=127.0.0.1`, `console_port=8000`, `receive_port=9005`, `osc_slot=2`,
+`plugin_import_dir=~/MALightingTechnology/gma3_library/datapools/plugins`.
+
+**읽기 전용 프로브 결과**:
+
+| probe | command | result |
+|---|---|---|
+| FixtureType root | `uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9005 --path "Patch/FixtureTypes" --skip-exec --wait 3` | `ping` timeout · `state` timeout · `result: FAIL` |
+| reply-port control | `uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9000 --path "Patch/FixtureTypes" --skip-exec --wait 3` | `ping` timeout · `state` timeout · `result: FAIL` |
+| existing DataPool root | `uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9005 --path "DataPool/Sequences" --skip-exec --wait 3` | `ping` timeout · `state` timeout · `result: FAIL` |
+| passive receive check | `uv run python -m server.tools.responder_roundtrip --host 127.0.0.1 --port 8000 --listen-port 9005 --diagnose --wait 3` | listened for 3s; no OSC messages observed |
+
+**Orca coordinator decision**: `record_blocked`. Coordinator instructed this worker to record M0 as blocked
+using the observed timeout evidence and missing immediate destructive-write/showfile details, and to not proceed
+to AddFixtures or M0-dependent implementation milestones.
+
+**후속 차단 사유**:
+
+- 테스트 쇼파일의 실제 이름/상태를 이 디스패치에서 관측하지 못했다.
+- `ASSUMPTION-73`·`74`의 AddFixtures 측정은 파괴적 쓰기라 즉시 승인 없이는 수행하지 않았다.
+- `plan.md` §A.2·§B M0가 **M2·M3·M6** 설계를 M0 판정에 의존시켜 두었으므로 **M2 이후**를 착수하지
+  않는다. **[정정 · 후속 디스패치]** 이 절의 최초 기록은 "M1 이후 코드 마일스톤도 착수하지 않는다"고
+  적었으나 그것은 과했다 — `plan.md` §A.2가 막는 것은 "M2 이후"이고 M1은 콘솔 무접촉이라
+  차단 대상이 아니다. M1은 아래 절에서 완료되었다.
+
+### M1 — 패치 후보 입력 모델 (완료)
+
+**상태: COMPLETE — M1은 콘솔 무접촉 인메모리 리포트 payload 범위에서 완료.** 직전 M0 checkpoint의
+"M1 이후 코드 마일스톤도 착수하지 않는다" 판단은 이번 디스패치 handoff가 정정했다. 근거:
+`plan.md` §A.2 문구는 "M0 없이 M2 이후를 착수하지 않는다"이며, M1의 AC-002·003·004는
+1단계 리포트 payload 기반이라 라이브 콘솔 없이 검증 가능하다.
+
+**TDD RED 증거**: `uv run pytest server/tests/test_autopatch_candidates.py -q` →
+`ModuleNotFoundError: No module named 'server.vwx.patchplan'`, `1 error in 0.06s`.
+
+**구현 산출**:
+
+- `server/vwx/verdicts.py` — `candidate_rejection_reason` · `selection_error_reason` 닫힌 어휘와
+  라벨표-어휘 키집합 일치 검증. 후보 거부 사유는 `comparison_not_performed` ·
+  `invalid_report_payload` · `multi_system_mapping_absent`, 선택 오류 사유는 `unknown_candidate_id`.
+- `server/vwx/patchplan.py` — `build_patch_plan(report, selected=None, dry_run=True)` 리포트 전용
+  후보 정규화, 결정적 후보 ID, 항목 단위 선택, 구조화 거부/선택 오류, 드라이런 대상 표 산출.
+  M2·M3·M4 산출물인 FID·모드·점유폭·Lua 소스는 추측하지 않고 `None` + `deferred_to_*` 표식으로 둔다.
+- `server/tests/test_autopatch_candidates.py` — AC-AUTOPATCH-002·003 전체, AC-AUTOPATCH-004 부분
+  비공허 테스트 13건.
+
+**AC 판정**:
+
+- AC-AUTOPATCH-002: PASS. `test_candidates_are_derived_only_from_missing_in_console_without_new_reads`,
+  `test_reader_and_console_recorders_are_nonvacuous_on_a_phase_one_control_path`,
+  `test_diffs_not_performed_is_rejected_with_the_report_reason_quoted`,
+  `test_multi_system_mapping_absent_skip_rejects_as_structured_payload`로 검증.
+- AC-AUTOPATCH-003: PASS. `test_candidate_ids_are_stable_for_the_same_report_payload`,
+  `test_default_selection_has_zero_targets_and_explicit_selection_targets_only_that_item`,
+  `test_unknown_candidate_id_is_reported_as_an_error_not_silently_ignored`로 검증.
+- AC-AUTOPATCH-004: PARTIAL. `dry_run` 생략 기본값, 대상 표 필수 열, `address_basis` 전제 문구,
+  비가역 경고는 `test_dry_run_is_the_default_and_target_table_carries_required_unresolved_columns`,
+  `test_absolute_back_calculated_basis_reuses_phase_one_premise_note`,
+  `test_direct_address_basis_does_not_emit_the_back_calculation_note`,
+  `test_irreversible_warning_is_present_and_the_absence_checker_is_nonvacuous`로 검증. Lua 소스 전문은
+  `server/vwx/luagen.py`가 M4 산출물이고 주소 계획이 `ASSUMPTION-72` 판정에 의존하므로 M1에서
+  완결 주장하지 않는다.
+
+**비공허성 대조군**:
+
+- 도면 재판독 0건: planner 호출에서 `RecordingDrawingReader.calls == []`를 assert했고,
+  대조군 `exercise_phase_one_recorders()`에서 같은 기록기가 1건을 잡음을 assert.
+- 실측 호출 0건: planner 호출에서 `RecordingConsolePort.state_calls/property_calls == []`를 assert했고,
+  대조군에서 `read_inventory()` 경유 호출 기록이 실제로 생김을 assert.
+- 기본 비선택 0건: `selected` 생략 시 `targets == []`를 assert했고, 특정 ID 1건 선택 시 정확히
+  그 1건만 대상이 됨을 같은 테스트에서 assert.
+- 비가역 경고 부재 검출: 결과 payload에서 warning을 제거한 사본을 검사해 `AssertionError`가
+  실제로 발생함을 `with pytest.raises(AssertionError)`로 assert.
+
+**실측 결과**:
+
+| command | result |
+|---|---|
+| `uv run pytest server/tests/test_autopatch_candidates.py -q` | `13 passed in 0.06s` |
+| `uv run pytest server/tests -q` | `4911 passed, 7 skipped, 1 warning in 91.81s` |
+| `uv run ruff check server/vwx server/tests/test_autopatch_candidates.py` | `All checks passed!` |
+| `git diff --stat -- console/lua server/safety server/prechk server/paperwork server/looks` | 빈 출력(PRESERVE 0-diff) |
+| `uv run python -c '...build_patch_plan(report, selected=[candidate_id])...'` | `{'ok': True, 'dry_run': True, 'target_count': 1, 'lua_source': None, 'warnings': 1}` |
+
 ---
 
 ## §E.3 Run-phase Audit-Ready Signal
@@ -492,6 +584,38 @@ M0 라이브 세션 일정·테스트 쇼파일 확보는 run-phase 착수 전�
 
 ## §F. Phase 4 Mode Selection — 확정 기록 (오케스트레이터 소유)
 
+Decision: `sub-agent`
+
 본 절은 **오케스트레이터가 첫 run-phase `Agent()` 스폰 전에 작성**하는 구속력 있는 기록이다.
 `plan.md` §G의 대응 절은 **권고**이며 오케스트레이터가 확정하거나 기각한다.
 어긋나면 **본 절이 이긴다.** 본문이 채워지기 전까지 이 절은 **비어 있음이 정상**이다.
+
+### Input Parameters
+
+```yaml
+tier: L
+scope: "server/vwx 확장 + 신규 orchestrator tool + tests, but M0 blocked before code"
+domain_count: 2
+file_language_mix: "Python + Markdown"
+concurrency_benefit: LOW
+agent_teams_prereq_status: "retired / not selectable"
+implementation_kickoff_approval: "passed by coordinator handoff"
+```
+
+### Mode Evaluation
+
+| mode | result | rationale |
+|---|---|---|
+| trivial | not selected | Tier L SPEC이며 M0 이후 여러 코드 마일스톤이 예정되어 있다. |
+| background | not selected | run-phase 증거와 차단 판단은 동기 체크포인트가 필요하다. |
+| agent-team | not selected | Mode 3 is retired. |
+| parallel | not selected | M0가 M2·M3·M6 설계를 직렬로 결정하므로 병렬 이득이 낮다. |
+| sub-agent | selected | coding-heavy work의 기본 안전 모드이며 `plan.md` §G 권고와 일치한다. |
+| workflow | not selected | 고볼륨 기계적 변환이 아니며 M0 전제 측정이 먼저 필요하다. |
+
+### Justification
+
+`sub-agent`를 확정한다. 이 SPEC은 콘솔 쓰기를 포함하고 M0 판정이 후속 설계를 결정하므로,
+한 번에 한 마일스톤씩 진행하는 직렬 모드가 맞다. 실제 진행: M0는 라이브 접근 부재로 BLOCKED
+(§E.2 M0 checkpoint), M1은 콘솔 무접촉 범위라 같은 sub-agent 모드로 완료(§E.2 M1 절).
+M2 이후는 `ASSUMPTION-71`~`75` 판정 전까지 착수하지 않는다.
