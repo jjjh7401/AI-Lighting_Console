@@ -253,11 +253,20 @@ def test_the_delivery_warns_that_a_clean_plugin_exit_is_not_success():
     assert END_TO_END_UNVERIFIED in handoff.warnings
 
 
+# 반증된 처방 계열 전체 — 한 문구만 막으면 같은 조언을 다르게 적어 통과한다(round11 M5 N04).
+REFUTED_REMEDY_TOKENS = ("편집기", "편집 세션", "Patch 화면", "Fixtures 뷰", "목적지")
+
+
 def test_the_delivery_does_not_repeat_the_refuted_patch_editor_remedy():
     """REQ-AUTOPATCH-024 [v0.1.3] — 반증된 원인을 사용자에게 안내하지 않는다."""
     text = "\n".join((*HUMAN_EXECUTION_PROCEDURE, *_handoff(dry_run=False).warnings))
-    assert "편집기를 먼저" not in text
+    assert [token for token in REFUTED_REMEDY_TOKENS if token in text] == []
     assert CD_TOKEN.search(text) is None
+
+
+def test_the_refuted_remedy_guard_is_not_vacuous():
+    planted = "1. Patch > Fixtures 편집기를 먼저 열어라."
+    assert [token for token in REFUTED_REMEDY_TOKENS if token in planted] == ["편집기"]
 
 
 def test_the_generated_delivery_payload_carries_no_destination_token():
@@ -374,26 +383,49 @@ def test_bypass_argument_control_is_caught():
 # --------------------------------------------------------------------------
 
 
-def _attribute_targets(source: str) -> set[str]:
+def _attribute_names(source: str) -> set[str]:
+    """**점 표기 체인 전체**의 이름을 모은다 — bare name도, 중간 속성도 포함.
+
+    [round11 M5 N02] 이전 판은 `Attribute.value`가 bare `Name`일 때 그 `id`만 모았다.
+    그래서 `execution_port.execute(...)`는 잡았지만 프로덕션의 실제 호출 형태인
+    `gate.execution_port.execute(...)` · `self._gate.execution_port.execute(...)`는
+    **전부 놓쳤다** — 스캐너가 자기가 볼 수 있는 형태로만 시험되고 있었다.
+    """
     tree = ast.parse(source)
-    return {
-        node.value.id
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
-    }
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute):
+            names.add(node.attr)
+        elif isinstance(node, ast.Name):
+            names.add(node.id)
+    return names
+
+
+# `server/vwx/**`가 콘솔로 나가려면 반드시 이 이름들 중 하나를 거쳐야 한다.
+_CONSOLE_WARD_NAMES = frozenset({"execution_port", "deploy_pipeline", "ConsoleLink", "OscBridge"})
 
 
 @pytest.mark.parametrize("module", VWX_MODULES, ids=lambda path: path.name)
 def test_no_vwx_module_reaches_the_execution_port(module: Path):
-    """AC-018① — `server/vwx/` 전수에서 `execution_port.execute` 참조 0건."""
+    """AC-018① — `server/vwx/` 전수에서 콘솔 발화 표면 참조 0건(점 표기 포함)."""
+    assert VWX_MODULES, "스캔 대상이 0개면 이 확인은 공허하다"
     source = module.read_text(encoding="utf-8")
-    assert "execution_port" not in _attribute_targets(source)
+    assert _CONSOLE_WARD_NAMES & _attribute_names(source) == set()
 
 
-def test_execution_port_scanner_control_is_caught():
-    """AC-018② 비공허성 — 직접 호출을 심으면 스캐너가 잡는다."""
-    planted = APPLY_SOURCE + "\n\ndef _planted(execution_port):\n    execution_port.execute('x')\n"
-    assert "execution_port" in _attribute_targets(planted)
+@pytest.mark.parametrize(
+    "plant",
+    [
+        "def _planted(execution_port):\n    execution_port.execute('x')\n",
+        "def _planted(gate):\n    gate.execution_port.execute('x')\n",
+        "class _P:\n    def go(self):\n        self._gate.execution_port.execute('x')\n",
+        "def _planted(build):\n    build().deploy_pipeline.deploy('n', 's')\n",
+    ],
+    ids=["bare", "through_gate", "through_self", "through_call"],
+)
+def test_execution_port_scanner_control_is_caught(plant):
+    """AC-018② 비공허성 — **프로덕션 호출 형태를 포함해** 심으면 스캐너가 잡는다."""
+    assert _CONSOLE_WARD_NAMES & _attribute_names(APPLY_SOURCE + "\n\n" + plant)
 
 
 def _imported_modules(source: str) -> set[str]:
@@ -407,26 +439,43 @@ def _imported_modules(source: str) -> set[str]:
     return names
 
 
+# `server.bridge`/`pythonosc`만 막으면 봉인이 완결되지 않는다 — 실제 콘솔 도달 경로는
+# vwx → `server.safety.gate` → `server.safety.console` → `server.bridge`이고, 그 첫 칸은
+# `test_architecture.py`의 금지 목록에 없다(round11 M5 N01). 그래서 **여기서 막는다**:
+# `server/vwx/**`는 안전 게이트도 import하지 않는다. 포트가 필요하면 프로토콜을 인자로 받는다
+# (`patchplan.FidPropertyPort`·`typemap.LibraryPort` 선례).
+_CONSOLE_WARD_MODULES = ("server.bridge", "pythonosc", "server.safety")
+
+
 @pytest.mark.parametrize("module", VWX_MODULES, ids=lambda path: path.name)
 def test_no_vwx_module_imports_the_console_send_surface(module: Path):
-    """AC-018③ — `server.bridge`·`pythonosc` import 0건."""
+    """AC-018③ — 콘솔 발화로 이어지는 모듈 import 0건(게이트 포함)."""
+    assert VWX_MODULES, "스캔 대상이 0개면 이 확인은 공허하다"
     offenders = [
         name
         for name in _imported_modules(module.read_text(encoding="utf-8"))
-        if name.startswith(("server.bridge", "pythonosc"))
+        if name.startswith(_CONSOLE_WARD_MODULES)
     ]
     assert offenders == []
 
 
-def test_console_import_scanner_control_is_caught():
-    """AC-018③ 비공허성 — 그 import를 심은 사본에서 스캐너가 실제로 잡는다."""
-    planted = APPLY_SOURCE + "\n\nfrom server.bridge import execution_port  # noqa: F401\n"
+@pytest.mark.parametrize(
+    "plant,expected",
+    [
+        ("from server.bridge import osc  # noqa: F401", "server.bridge"),
+        ("from server.safety.gate import SafetyGate  # noqa: F401", "server.safety.gate"),
+        ("import pythonosc  # noqa: F401", "pythonosc"),
+    ],
+    ids=["bridge", "safety_gate", "pythonosc"],
+)
+def test_console_import_scanner_control_is_caught(plant, expected):
+    """AC-018③ 비공허성 — **게이트 경유 포함** 심은 사본에서 스캐너가 실제로 잡는다."""
     offenders = [
         name
-        for name in _imported_modules(planted)
-        if name.startswith(("server.bridge", "pythonosc"))
+        for name in _imported_modules(APPLY_SOURCE + "\n\n" + plant + "\n")
+        if name.startswith(_CONSOLE_WARD_MODULES)
     ]
-    assert offenders == ["server.bridge"]
+    assert offenders == [expected]
 
 
 # --------------------------------------------------------------------------
@@ -634,3 +683,29 @@ def test_the_payload_reports_each_entry_with_its_designed_address():
             "footprint": 16,
         }
     ]
+
+
+def test_the_refusal_reason_names_the_field_that_was_actually_rejected():
+    """[round11 M5 N03] 생성기는 이름만 거부하지 않는다 — 원인 필드를 지목해야 재시도가 성립한다.
+
+    이전 판은 어느 필드가 걸렸든 "이름을 고쳐 다시 요청하라"고 적었다. 콘솔 타입·모드는
+    라이브러리 열거에서 오지 호출자의 `names`에서 오지 않으므로, 그 안내를 따르면
+    사용자는 원인이 아닌 필드를 고치고 재시도는 영원히 실패한다.
+    """
+    by_name = _handoff(names={"a": "CD spare"}, dry_run=False)
+    assert "name 필드를 거부" in by_name.exclusions[0].reason
+
+    by_type = _handoff(
+        resolutions=(_resolution(candidate_id="a", console_type="Acme CD 700"),), dry_run=False
+    )
+    assert by_type.exclusions[0].code == LUA_GENERATION_REFUSED
+    assert "console_type 필드를 거부" in by_type.exclusions[0].reason
+
+
+def test_the_refusal_reason_still_does_not_echo_the_rejected_value():
+    """필드 이름은 말하되 **값은 싣지 않는다** — 값을 되싣으면 산출물 스캐너가 거짓 양성을 낸다."""
+    for handoff in (
+        _handoff(names={"a": "CD spare"}, dry_run=False),
+        _handoff(resolutions=(_resolution(candidate_id="a", console_type="Acme CD 700"),)),
+    ):
+        assert CD_TOKEN.search(repr(handoff.to_dict())) is None

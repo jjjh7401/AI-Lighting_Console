@@ -397,3 +397,127 @@ class TestVisualEmptyConfirmation:
                 "fid_range_visually_confirmed_empty": True,
             }
         ]
+
+
+# --------------------------------------------------------------------------
+# round11 회귀 — 절단된 FID 열거를 완전한 것으로 취급하지 않는다
+#
+# 실물 콘솔은 이 루트(`Patch/Stages/1/Fixtures`)가 **19대에서 이미 절단**된다
+# (`progress.md` §E.2 M0 1차). `server/prechk/inventory.py` 모듈 독스트링 1·2번이
+# "절단은 기본 경로다 · childCount가 진짜 총계다 · len(children)를 총계로 읽은 조사가
+# 이 저장소에서 실제로 틀렸다"를 명시하는데, 이전 판의 `_existing_fids_from_console`이
+# 정확히 그 오류를 재현해 **이미 쓰이는 FID를 배정**했다(round11 N01).
+# --------------------------------------------------------------------------
+
+
+class _CountingFidPort:
+    """콘솔에 FID 100·101이 있고, 열거는 원하는 만큼만 돌려준다."""
+
+    def __init__(self, *, enumerated: int, child_count: int = 2, fid_readable: bool = True):
+        self.enumerated = enumerated
+        self.child_count = child_count
+        self.fid_readable = fid_readable
+
+    def query_state(self, path: str) -> dict:
+        children = [{"i": i, "name": f"f{i}"} for i in range(1, self.enumerated + 1)]
+        return {
+            "ok": True,
+            "path": path,
+            "node": {"childCount": self.child_count},
+            "children": children,
+            "truncated": self.enumerated < self.child_count,
+        }
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        if not self.fid_readable:
+            return {"ok": False, "path": path, "property": property_name, "error": "not readable"}
+        slot = int(path.rsplit("/", 1)[1])
+        return {"ok": True, "path": path, "property": property_name, "value": 99 + slot}
+
+
+def _one_candidate_report() -> dict:
+    fixture = {
+        "unit_number": "1",
+        "instrument_type": "Robin LEDBeam 350",
+        "gdtf_fixture": None,
+        "mode": "Mode 1",
+        "footprint": 16,
+        "system": None,
+        "universe": 1,
+        "address": 1,
+        "classification": "patched",
+        "address_basis": "universe_address_direct",
+    }
+    return {
+        "designed_rig": {"fixture_count": 1, "fixtures": [fixture]},
+        "diffs": {
+            "performed": True,
+            "missing_in_console": [
+                {
+                    "unit_number": "1",
+                    "instrument_type": "Robin LEDBeam 350",
+                    "universe": 1,
+                    "address": 1,
+                    "detail": "",
+                }
+            ],
+            "address_collision": [],
+            "quantity_mismatch": [],
+        },
+        "skipped_checks": [],
+    }
+
+
+def _plan_with(port):
+    report = _one_candidate_report()
+    candidate = build_patch_plan(report).candidates[0].id
+    return build_patch_plan(
+        report,
+        selected=[candidate],
+        fid_range={"start": 101, "end": 110},
+        fid_property_port=port,
+    )
+
+
+def test_a_truncated_fid_enumeration_refuses_to_assign():
+    """부분 관측으로 '빈 FID'를 단정하면 이미 쓰이는 번호를 배정하게 된다."""
+    plan = _plan_with(_CountingFidPort(enumerated=1, child_count=2))
+    assert plan.ok is False
+    assert plan.rejection.code == "fid_precheck_read_incomplete"
+    assert [target.assigned_fid for target in plan.targets] == [None]
+    read = plan.fid_safety["conflict_precheck"]["read"]
+    assert read == {
+        "child_count": 2,
+        "enumerated_count": 1,
+        "unread_count": 1,
+        "complete": False,
+    }
+
+
+def test_the_truncation_control_a_complete_enumeration_still_assigns():
+    """비공허성 — 같은 범위·같은 콘솔이라도 열거가 완전하면 배정이 진행된다."""
+    plan = _plan_with(_CountingFidPort(enumerated=2, child_count=2))
+    assert plan.ok is True
+    assert plan.fid_safety["conflict_precheck"]["read"]["complete"] is True
+    assert plan.fid_safety["conflict_precheck"]["existing_fids"] == [100, 101]
+
+
+def test_an_unreadable_fid_property_also_blocks_assignment():
+    """열거는 완전해도 FID 값을 못 읽으면 빈 FID를 단정할 수 없다."""
+    plan = _plan_with(_CountingFidPort(enumerated=2, child_count=2, fid_readable=False))
+    assert plan.ok is False
+    assert plan.fid_safety["conflict_precheck"]["read"]["unread_count"] == 2
+
+
+def test_an_unknown_child_count_is_treated_as_unread_rather_than_complete():
+    """`childCount`를 못 읽으면 총계를 모르므로 완전하다고 말할 수 없다."""
+
+    class _NoCount(_CountingFidPort):
+        def query_state(self, path: str) -> dict:
+            payload = super().query_state(path)
+            payload["node"] = {}
+            return payload
+
+    plan = _plan_with(_NoCount(enumerated=2, child_count=2))
+    assert plan.ok is False
+    assert plan.fid_safety["conflict_precheck"]["read"]["child_count"] is None

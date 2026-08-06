@@ -121,9 +121,12 @@ from server.spatial.topology import classify as classify_topology
 from server.vwx.address import resolve_all as resolve_vwx_addresses
 from server.vwx.apply import (
     CONSOLE_READ_INCOMPLETE,
+    HandoffEntry,
     build_patch_handoff,
     console_read_caveat,
+    existing_footprint_skipped_check,
     read_console_fixtures,
+    screen_console_occupancy,
     screen_console_read,
     screen_idempotent,
     verify_patch,
@@ -131,7 +134,6 @@ from server.vwx.apply import (
 from server.vwx.columns import resolve_columns as resolve_vwx_columns
 from server.vwx.diff import compare as compare_vectorworks_rig
 from server.vwx.patchplan import (
-    ASSUMPTION_71_GO,
     build_patch_plan,
     designed_attributes_by_candidate,
     plan_addresses,
@@ -2303,24 +2305,41 @@ def build_toolset(
 
         selected = call.arguments.get("selected")
         inventory_port = _InventoryPort(state_port, property_port)
+
+        # 콘솔이 무엇을 보여줬고 무엇을 못 봤는지를 **어느 분기에서든** 먼저 싣는다.
+        # 절단은 이 콘솔의 기본 경로이고(픽스처 19대에서 이미 절단 — §E.2 M0 1차) 그 상태의
+        # "없음"은 관측이 아니라 미판독이다. 거부로 끝나는 호출에서도 사용자는 그 이유를 봐야 한다.
+        try:
+            inventory = read_inventory(inventory_port)
+        except InventoryReadError as error:
+            return _error_result(call, f"fixture inventory unreadable: {error}")
+        caveat = console_read_caveat(inventory)
+        read_complete = caveat is None or caveat["kind"] != CONSOLE_READ_INCOMPLETE
+        console_read = {
+            **inventory.to_dict(),
+            "complete_enough_to_judge_absence": read_complete,
+            "caveat": caveat,
+        }
+
         plan = build_patch_plan(
             report,
             selected=selected,
             dry_run=dry_run,
             fid_range=call.arguments.get("fid_range"),
-            # 선택이 있으면 곧 FID를 배정하겠다는 뜻이므로 배정 분기를 명시적으로 켠다 —
+            # 선택이 있으면 곧 FID를 배정하겠다는 뜻이므로 배정 분기를 **명시 신호로** 켠다 —
             # 그래야 `fid_range` 누락이 항목별 `fid_not_assigned`로 흩어지지 않고
             # `fid_range_required` 거부 하나로 올라온다(REQ-AUTOPATCH-007).
-            # 값 `go`는 이 콘솔에서 FID 프로퍼티가 읽힌다는 실측이다(`ASSUMPTION-71` GO,
-            # progress.md §E.2 M0 1차) — 그래서 충돌 사전검사가 켜진다. 선택이 없는
-            # 목록 조회 호출은 배정 자체를 요청하지 않으므로 범위를 요구하지 않는다.
-            assumption_71=ASSUMPTION_71_GO if selected else None,
+            # [round11 M7 N03] 이전 판은 `assumption_71`을 그 신호로 겸용했다 — 실측 판정을
+            # 제어 신호로 쓰면 툴 경계에서 NEGATIVE·INCONCLUSIVE 분기에 도달할 수 없게 되고
+            # `fid_range_visually_confirmed_empty`가 죽은 필드가 된다. 둘을 분리했고,
+            # `assumption_71`은 여기서 **주입하지 않는다**(모듈 기본값 = 실측 GO).
+            assignment_requested=bool(selected),
             fid_range_visually_confirmed_empty=call.arguments.get(
                 "fid_range_visually_confirmed_empty"
             ),
             fid_property_port=inventory_port,
         )
-        payload: dict[str, object] = {"plan": plan.to_dict()}
+        payload: dict[str, object] = {"plan": plan.to_dict(), "console_read": console_read}
         if not plan.ok or not plan.targets:
             return _patch_payload(call, payload)
 
@@ -2341,27 +2360,18 @@ def build_toolset(
         )
         payload["types"] = type_plan.to_dict()
 
-        try:
-            inventory = read_inventory(inventory_port)
-        except InventoryReadError as error:
-            return _error_result(call, f"fixture inventory unreadable: {error}")
         console_fixtures = read_console_fixtures(inventory, library=type_plan.library)
-        # 재조회가 무엇을 못 봤는지 먼저 말한다. 절단은 이 콘솔의 **기본 경로**이고
-        # (픽스처 19대에서 이미 절단됨 — progress.md §E.2 M0 1차), 그 상태의 "없음"은
-        # 관측이 아니라 미판독이다. 미판독이 남아 있으면 생성 대상을 전부 막는다 —
-        # 없다고 답했다가 중복을 만들면 되돌릴 방법이 없다.
-        caveat = console_read_caveat(inventory)
-        read_complete = caveat is None or caveat["kind"] != CONSOLE_READ_INCOMPLETE
-        payload["console_read"] = {
-            **inventory.to_dict(),
-            "complete_enough_to_judge_absence": read_complete,
-            "caveat": caveat,
-        }
 
+        # 계획 내 겹침·폭 미확정은 계획 전체를 보고 판정한다(occupied는 여기서 비운다).
         address_plan = plan_addresses(
             plan.targets,
             footprints={target.id: designed[target.id].footprint for target in plan.targets},
-            occupied=_occupied_spans(console_fixtures, plan.targets),
+            occupied={},
+        )
+        # 콘솔 점유는 **대상별로** 본다 — 자기 자리는 멱등 판정에 넘기고 나머지는 여기서 잡는다
+        # (round11 M7 N01: 전역 면제는 무관한 후보 하나로 겹침 가드를 없앴다).
+        address_plan = screen_console_occupancy(
+            plan.targets, address_plan=address_plan, console_fixtures=console_fixtures
         )
         address_plan = screen_console_read(
             plan.targets, address_plan=address_plan, inventory=inventory
@@ -2380,12 +2390,21 @@ def build_toolset(
             dry_run=dry_run,
         )
         payload["handoff"] = handoff.to_dict()
+        payload["plan"]["skipped_checks"] = [
+            *payload["plan"]["skipped_checks"],
+            existing_footprint_skipped_check(),
+        ]
+
+        # 검증은 **승인 항목 전체**를 본다 — 방금 전달한 것만 보면 2회차(이미 만들어진 뒤)와
+        # 재조회 불완전 분기에서 결과가 통째로 비고, AC-AUTOPATCH-021①("승인 항목마다 확인
+        # 결과")이 성립하지 않는다. round11 M6 N04가 그 사각을 짚었다.
         payload["verification"] = {
             **verify_patch(
-                handoff.entries,
+                _approved_entries(plan.targets, type_plan.resolutions, designed, handoff),
                 console_fixtures=console_fixtures,
                 read_complete=read_complete,
             ).to_dict(),
+            "scope": "승인 항목 전체(전달분 + 이미 있다고 판정된 것)",
             "as_of": "이 호출이 방금 읽은 콘솔 상태",
             "note": (
                 "아직 사람이 플러그인을 실행하지 않았다면 '미관측'이 정상이다 — "
@@ -2393,6 +2412,40 @@ def build_toolset(
             ),
         }
         return _patch_payload(call, payload)
+
+    def _approved_entries(targets, resolutions, designed, handoff):
+        """검증 대상 = **승인 항목 전체**. 전달분은 그대로, 나머지는 도면 의도로 채운다.
+
+        전달분(`handoff.entries`)에는 이미 확정된 이름·FID가 있다. 전달되지 않은 승인 항목은
+        타입·모드가 확정된 것에 한해 도면 주소로 확인 결과를 낸다 — 이름이 없어 빠진 항목까지
+        "그 주소에 뭐가 있나"는 답할 수 있고, 2회차에서 그것이 곧 검증이다.
+        """
+        entries = list(handoff.entries)
+        delivered = {entry.candidate_id for entry in entries}
+        by_id = {r.request.candidate_id: r for r in resolutions}
+        for target in targets:
+            if target.id in delivered:
+                continue
+            resolution = by_id.get(target.id)
+            if (
+                resolution is None
+                or resolution.console_type is None
+                or resolution.console_mode is None
+            ):
+                continue
+            entries.append(
+                HandoffEntry(
+                    candidate_id=target.id,
+                    fid=target.assigned_fid or 0,
+                    name="",
+                    console_type=resolution.console_type.name,
+                    console_mode=resolution.console_mode.name,
+                    universe=target.universe,
+                    address=target.address,
+                    footprint=designed[target.id].footprint or 0,
+                )
+            )
+        return tuple(entries)
 
     def _patch_payload(call: ToolCall, payload: Mapping[str, object]) -> ToolExecution:
         return ToolExecution(
@@ -2404,35 +2457,6 @@ def build_toolset(
             ),
             command_outcomes=(),
         )
-
-    def _occupied_spans(console_fixtures, targets) -> dict[int, list[tuple[int, int]]]:
-        """콘솔이 이미 쓰는 구간 — **정확히 같은 주소는 빼고** 넘긴다.
-
-        두 가지 사실이 이 함수의 모양을 정한다.
-
-        1. 기존 픽스처의 **점유폭을 읽을 경로가 이 빌드에 없다** (`DMXFootprint`는
-           직렬화되지 않고 `DMXChannels` 개수는 폭이 아니다 — M0 함정 7). 그래서
-           관측된 사실(그 주소에 픽스처가 있다)만 1채널 구간으로 쓴다. 폭을 추측해
-           넓게 잡으면 멀쩡한 주소를 막고, 그것도 되돌릴 수 없는 결정에 영향을 준다.
-        2. **도면 주소와 정확히 같은 자리는 `screen_idempotent`의 몫**이다. 그쪽은
-           타입·모드까지 보고 멱등 건너뜀 / 충돌 / 확인 불가를 갈라내는데, 여기서
-           먼저 `address_already_occupied`로 잡아버리면 그 셋이 하나로 뭉개진다
-           (REQ-AUTOPATCH-022가 금지하는 바로 그 뭉갬 — 2회차 재호출이 "이미 했음"
-           대신 "점유됨"으로 보고되는 실제 증상으로 드러났다).
-
-        그래서 여기 남는 것은 **도면 주소가 아닌 자리의 기존 픽스처**뿐이다 —
-        계획 항목의 점유 구간 **안쪽에** 남의 픽스처가 시작하는 경우가 그것이고,
-        그것은 멱등이 아니라 명백한 겹침이므로 `plan_addresses`가 판정해야 한다.
-        """
-        exact = {(target.universe, target.address) for target in targets}
-        spans: dict[int, list[tuple[int, int]]] = {}
-        for fixture in console_fixtures:
-            if fixture.universe is None or fixture.address is None:
-                continue
-            if (fixture.universe, fixture.address) in exact:
-                continue
-            spans.setdefault(fixture.universe, []).append((fixture.address, fixture.address))
-        return spans
 
     # -- preshow_check (SPEC-COPILOT-PRESHOW-001 — the pre-show checklist) ----
     #

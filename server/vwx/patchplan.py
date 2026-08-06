@@ -15,6 +15,8 @@ from server.vwx.verdicts import (
     COMPARISON_NOT_PERFORMED,
     FID_ALREADY_IN_USE,
     FID_CONFLICT_PRECHECK_DESCOPE,
+    FID_CONFLICT_PRECHECK_INCOMPLETE,
+    FID_PRECHECK_READ_INCOMPLETE,
     FID_RANGE_CONFIRMATION_REQUIRED,
     FID_RANGE_EXHAUSTED,
     FID_RANGE_REQUIRED,
@@ -398,6 +400,7 @@ def build_patch_plan(
     assumption_71: str | None = None,
     fid_range_visually_confirmed_empty: bool | None = None,
     fid_property_port: FidPropertyPort | None = None,
+    assignment_requested: bool | None = None,
 ) -> PatchPlan:
     rejection = _rejection_for_report(report)
     if rejection is not None:
@@ -433,7 +436,9 @@ def build_patch_plan(
 
     target_ids = frozenset(selected_ids)
     targets = tuple(candidate for candidate in candidates if candidate.id in target_ids)
-    if not _fid_assignment_requested(fid_range, assumption_71, fid_range_visually_confirmed_empty):
+    if not _fid_assignment_requested(
+        fid_range, assumption_71, fid_range_visually_confirmed_empty, assignment_requested
+    ):
         return PatchPlan(
             ok=True,
             status="planned",
@@ -488,7 +493,7 @@ def build_patch_plan(
         assumption_71_value,
         confirmation_required=confirmation_required,
         confirmation_recorded=confirmation_recorded,
-        existing_fids=(),
+        existing_read=ExistingFidRead(),
         precheck_performed=assumption_71_value == ASSUMPTION_71_GO,
     )
     if confirmation_required and confirmation_recorded is not True:
@@ -512,15 +517,46 @@ def build_patch_plan(
             fid_range_visually_confirmed_empty=False,
         )
 
-    existing_fids = (
-        _existing_fids_from_console(fid_property_port)
-        if assumption_71_value == ASSUMPTION_71_GO
-        else ()
+    precheck_enabled = assumption_71_value == ASSUMPTION_71_GO
+    existing_read = (
+        _existing_fids_from_console(fid_property_port) if precheck_enabled else ExistingFidRead()
     )
+
+    # [round11 N01] 사전검사가 **부분 관측**이면 배정하지 않는다. 부분 집합을 전부라고 읽고
+    # "빈" FID를 고르면 이미 쓰이는 번호를 배정하게 되고, MA3는 그것을 조용히 받아들여
+    # 엉뚱한 픽스처를 덮는다(§0 함정 2). 이 앱에는 실행 취소가 없으므로 모르면 하지 않는다.
+    if precheck_enabled and not existing_read.complete:
+        return PatchPlan(
+            ok=False,
+            status="rejected",
+            dry_run=dry_run,
+            candidates=candidates,
+            selected=selected_ids,
+            targets=targets,
+            rejection=PatchPlanRejection(
+                code=FID_PRECHECK_READ_INCOMPLETE,
+                reason=(
+                    f"기존 FID 사전검사가 불완전하다 — 선언 "
+                    f"{existing_read.child_count}대 중 {existing_read.unread}대를 읽지 못했다. "
+                    "부분 관측으로 빈 FID를 단정하면 이미 쓰이는 번호를 배정하게 된다."
+                ),
+                vocabulary="target_exclusion_reason",
+            ),
+            skipped_checks=(_fid_precheck_incomplete_check(existing_read),),
+            fid_safety=_fid_safety_payload(
+                assumption_71_value,
+                confirmation_required=confirmation_required,
+                confirmation_recorded=confirmation_recorded,
+                existing_read=existing_read,
+                precheck_performed=False,
+            ),
+            fid_range_visually_confirmed_empty=confirmation_recorded,
+        )
+
     planned_targets, target_exclusions = _assign_fids(
         targets,
         parsed_fid_range,
-        existing_fids=frozenset(existing_fids),
+        existing_fids=frozenset(existing_read.fids),
         fid_range_visually_confirmed_empty=confirmation_recorded,
     )
     skipped_checks = _fid_skipped_checks(assumption_71_value)
@@ -538,18 +574,40 @@ def build_patch_plan(
             assumption_71_value,
             confirmation_required=confirmation_required,
             confirmation_recorded=confirmation_recorded,
-            existing_fids=existing_fids,
-            precheck_performed=assumption_71_value == ASSUMPTION_71_GO,
+            existing_read=existing_read,
+            precheck_performed=precheck_enabled,
         ),
         fid_range_visually_confirmed_empty=confirmation_recorded,
     )
+
+
+def _fid_precheck_incomplete_check(read: ExistingFidRead) -> Mapping[str, object]:
+    return {
+        "kind": validate_autopatch("skipped_check_kind", FID_CONFLICT_PRECHECK_INCOMPLETE),
+        "label": skipped_check_label(FID_CONFLICT_PRECHECK_INCOMPLETE),
+        "reason": (
+            "기존 FID 열거가 부분 관측이라 빈 FID를 단정할 수 없다 — "
+            "절단은 이 콘솔의 기본 경로이고 childCount가 진짜 총계다."
+        ),
+        **read.to_dict(),
+    }
 
 
 def _fid_assignment_requested(
     fid_range: Mapping[str, object] | None,
     assumption_71: str | None,
     fid_range_visually_confirmed_empty: bool | None,
+    assignment_requested: bool | None = None,
 ) -> bool:
+    """FID를 배정하려는 호출인가.
+
+    `assignment_requested`는 **명시 신호**다(round11 M7 N03). 이전에는 호출자가
+    `assumption_71`을 넘기는 것으로 이 분기를 열었는데, 그러면 실측 판정값이 요청 신호를
+    겸하게 되어 ① 툴 경계에서 NEGATIVE·INCONCLUSIVE 분기에 영영 도달하지 못하고
+    ② `fid_range_visually_confirmed_empty`가 요구되지도 기록되지도 않는 죽은 필드가 된다.
+    """
+    if assignment_requested is not None:
+        return assignment_requested
     return (
         fid_range is not None
         or assumption_71 is not None
@@ -621,24 +679,81 @@ def _assign_fids(
     return tuple(planned), tuple(exclusions)
 
 
-def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> tuple[int, ...]:
+@dataclass(frozen=True)
+class ExistingFidRead:
+    """콘솔에서 읽은 기존 FID와 **못 읽은 것의 수**.
+
+    `unread`가 0이 아니면 `fids`는 기존 FID의 **부분 집합**이다 — 그것을
+    전체로 읽고 "빈 FID"를 고르면 **이미 쓰이는 번호를 배정**하게 되고,
+    §0 함정 2가 적은 대로 MA3는 그것을 조용히 받아들여 엉뚱한 픽스처를 덮는다.
+    이 앱에는 실행 취소가 없다.
+    """
+
+    fids: tuple[int, ...] = ()
+    child_count: int | None = None
+    enumerated_count: int = 0
+    unread: int = 0
+
+    @property
+    def complete(self) -> bool:
+        return self.unread == 0
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "child_count": self.child_count,
+            "enumerated_count": self.enumerated_count,
+            "unread_count": self.unread,
+            "complete": self.complete,
+        }
+
+
+def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> ExistingFidRead:
+    """기존 FID를 읽되 **못 읽은 것을 세서 함께 돌려준다**.
+
+    `server/prechk/inventory.py` 모듈 독스트링 1·2번이 정한 규율을 그대로 따른다:
+    **절단은 기본 경로**이고(실물 콘솔은 19대에서 절단된다), `node.childCount`가
+    **진짜 총계**며, `len(children)`를 총계로 읽은 조사가 이 저장소에서 실제로 틀렸다.
+    그래서 열거 수와 `childCount`를 대조하고, 프로퍼티 읽기 실패도 미판독으로 센다
+    (round11 N01 — 이전 판은 둘 다 삼켜 이미 쓰이는 FID를 배정했다).
+    """
     if fid_property_port is None:
-        return ()
+        return ExistingFidRead()
     state = fid_property_port.query_state(FID_FIXTURE_ROOT)
+    if state.get("ok") is not True:
+        return ExistingFidRead(child_count=None, enumerated_count=0, unread=1)
+
+    node = state.get("node")
+    child_count = _optional_int(node.get("childCount")) if isinstance(node, Mapping) else None
+    children = _mapping_rows(state.get("children"))
     existing_fids: list[int] = []
-    for child in _mapping_rows(state.get("children")):
+    unread = 0
+    for child in children:
         child_index = _optional_int(child.get("i"))
         if child_index is None:
+            unread += 1
             continue
         response = fid_property_port.query_property(
             f"{FID_FIXTURE_ROOT}/{child_index}", FID_PROPERTY_NAME
         )
-        if response.get("ok") is not True:
+        fid = _fid_int(response.get("value")) if response.get("ok") is True else None
+        if fid is None:
+            unread += 1
             continue
-        fid = _fid_int(response.get("value"))
-        if fid is not None:
-            existing_fids.append(fid)
-    return tuple(existing_fids)
+        existing_fids.append(fid)
+
+    # 열거가 짧았으면 그 차이만큼이 그대로 미판독이다.
+    # `childCount`를 읽지 못했으면 총계를 모르므로 완전하다고 말할 수 없다.
+    if child_count is None:
+        unread += 1
+    elif child_count > len(children):
+        unread += child_count - len(children)
+
+    return ExistingFidRead(
+        fids=tuple(existing_fids),
+        child_count=child_count,
+        enumerated_count=len(children),
+        unread=unread,
+    )
 
 
 def _fid_int(value: object) -> int | None:
@@ -670,7 +785,7 @@ def _fid_safety_payload(
     *,
     confirmation_required: bool,
     confirmation_recorded: bool | None,
-    existing_fids: Sequence[int],
+    existing_read: ExistingFidRead,
     precheck_performed: bool,
 ) -> Mapping[str, object]:
     return {
@@ -680,11 +795,13 @@ def _fid_safety_payload(
             if assumption_71 == ASSUMPTION_71_GO
             else "visual_empty_range_confirmation"
         ),
+        # `performed`가 부분 관측을 감추지 못하게 열거 계수를 함께 싣는다(round11 N01).
         "conflict_precheck": {
             "performed": precheck_performed,
             "property": FID_PROPERTY_NAME if precheck_performed else None,
             "source_path": FID_FIXTURE_ROOT if precheck_performed else None,
-            "existing_fids": list(existing_fids),
+            "existing_fids": list(existing_read.fids),
+            "read": existing_read.to_dict(),
         },
         "visual_confirmation": {
             "required": confirmation_required,

@@ -51,14 +51,18 @@ from server.vwx.luagen import (
 from server.vwx.patchplan import (
     IRREVERSIBLE_WARNING,
     AddressPlan,
+    AddressPlanEntry,
     PatchCandidate,
     PatchTargetExclusion,
 )
 from server.vwx.typemap import FixtureTypeLibrary, LibraryMode, LibraryType, TypeResolution
 from server.vwx.verdicts import (
+    ADDRESS_ALREADY_OCCUPIED,
     ADDRESS_CONFLICTS_WITH_EXISTING,
     ALREADY_PATCHED_IDENTICAL,
     CONSOLE_READ_INCOMPLETE,
+    CONSOLE_READ_INDEX_DOMAIN_UNKNOWN,
+    EXISTING_FOOTPRINT_UNREADABLE,
     EXISTING_IDENTITY_UNCONFIRMED,
     FID_NOT_ASSIGNED,
     FIXTURE_NAME_MISSING,
@@ -69,6 +73,8 @@ from server.vwx.verdicts import (
     VERIFICATION_MISMATCHED,
     VERIFICATION_NOT_OBSERVED,
     VERIFICATION_OBSERVED,
+    console_read_caveat_label,
+    skipped_check_label,
     validate_autopatch,
     verification_outcome_label,
 )
@@ -247,14 +253,18 @@ def build_patch_handoff(
         try:
             render_addfixtures_call(lua_entry)
         except LuaGenerationError:
-            # 거부 사유에 **거부된 입력을 되싣지 않는다** — 그 이름이 목적지 토큰을 담고 있으면
+            # 거부 사유에 **거부된 입력을 되싣지 않는다** — 그 값이 목적지 토큰을 담고 있으면
             # 사유 문구가 산출물 스캐너에 거짓 양성을 내 AC-AUTOPATCH-014①이 강제력을 잃는다.
+            # 단 **어느 필드가 거부됐는지는 말한다**(round11 M5 N3) — 생성기는 이름뿐 아니라
+            # 콘솔 타입·모드·정수 필드도 거부하는데, 전부 "이름을 고쳐라"로 적으면 사용자는
+            # 원인이 아닌 필드를 고치게 되고 재시도는 영원히 실패한다.
             exclusions.append(
                 _exclusion(
                     target,
                     LUA_GENERATION_REFUSED,
-                    "Lua 생성기가 이 항목의 이름을 거부했다 — 조용히 고치지 않고 제외한다. "
-                    "이름을 고쳐 다시 요청하라.",
+                    "Lua 생성기가 이 항목의 "
+                    f"{_rejected_field(lua_entry)} 필드를 거부했다 — "
+                    "조용히 고치지 않고 제외한다.",
                 )
             )
             continue
@@ -285,6 +295,31 @@ def build_patch_handoff(
         exclusions=tuple(exclusions),
         procedure=HUMAN_EXECUTION_PROCEDURE if delivered else (),
     )
+
+
+def _rejected_field(entry: LuaPatchEntry) -> str:
+    """생성기가 거부한 필드 이름 — **값은 싣지 않는다**."""
+    rejected = [
+        field
+        for field, value in (
+            ("name", entry.name),
+            ("console_type", entry.console_type),
+            ("console_mode", entry.console_mode),
+        )
+        if _rejects(field, value, entry)
+    ]
+    return " · ".join(rejected) if rejected else "정수(fid/universe/address)"
+
+
+def _rejects(field: str, value: object, entry: LuaPatchEntry) -> bool:
+    from dataclasses import replace
+
+    probe = replace(entry, **{field: "ok"}) if isinstance(value, str) else entry
+    try:
+        render_addfixtures_call(probe)
+    except LuaGenerationError:
+        return False  # 이 필드를 중립값으로 바꿔도 여전히 거부 -> 원인이 아니다
+    return True
 
 
 def _exclusion(target: PatchCandidate, code: str, reason: str) -> PatchTargetExclusion:
@@ -387,7 +422,10 @@ def _resolve_library_type(display: str | None, library: FixtureTypeLibrary) -> L
     `PROTOCOL.md`의 슬롯==FID 우연일치와 같은 구조이고, 우연일치를 판별하는 실험은
     이 저장소에서 아직 수행되지 않았다. 추측 대신 거부한다.
     """
-    if display is None or not library.available:
+    # [round11 N01] 열거가 절단됐으면 "그 이름의 타입이 없다"를 단정할 수 없다 —
+    # `by_name`이 비었다는 사실이 증거가 되지 못하므로 모호성 가드가 바로 그때 공허해진다.
+    # `typemap.LIBRARY_TRUNCATED_REASON`이 같은 라이브러리 객체에 대해 이미 같은 규율을 정했다.
+    if display is None or not library.available or library.truncated:
         return None
     by_name = [entry for entry in library.types if entry.name == display]
     index_match = _TYPE_DISPLAY_INDEX.match(display)
@@ -419,13 +457,23 @@ def _resolve_library_mode(
 
 
 def _single_unambiguous(by_name: list, by_index: list):
+    """두 해석이 **각각 유일**하고 **같은 대상**을 가리킬 때만 확정한다.
+
+    [round11 N06] 이전 판은 두 목록이 비어 있지 않으면 첫 원소만 비교해서, 이름이 같은 타입이
+    둘 있을 때 열거 **순서에 따라** 확정하기도 거부하기도 했다. 모호성 판정이 순서에 의존하면
+    그것은 판정이 아니다.
+    """
     if by_name and by_index:
+        if len(by_name) != 1 or len(by_index) != 1:
+            return None
         return by_name[0] if by_name[0] is by_index[0] else None
     candidates = by_name or by_index
     return candidates[0] if len(candidates) == 1 else None
 
 
-CONSOLE_READ_INDEX_DOMAIN_UNKNOWN = "console_read_index_domain_unknown"
+def _address_readable(fixture) -> bool:
+    """그 픽스처의 `Patch` 값이 주소로 판독됐는가 — 판독 실패는 **미판독**이다."""
+    return normalize_address(fixture.patch_raw).ok
 
 
 def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
@@ -440,26 +488,41 @@ def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
       전부 관측했다. `childCount`가 진짜 총계이므로 **수량 비교는 정확하다**
       (`server/prechk/inventory.py` 모듈 독스트링 2번). 주의는 남기되 막지 않는다.
     """
-    if inventory.missing_count > 0:
+    # [round11 N02] `missing_count`는 **열거·복구** 축만 센다. 열거는 됐는데 그 픽스처의
+    # `Patch` 프로퍼티를 못 읽었으면 주소가 `None`이 되어 점유·멱등·검증 어디에서도 보이지
+    # 않는다 — 그것도 미판독이다. `read_inventory`가 그 사실을 `read_failures`로 이미 들고 있다.
+    unreadable_addresses = sum(
+        1 for fixture in inventory.fixtures if not _address_readable(fixture)
+    )
+    unread = inventory.missing_count + unreadable_addresses
+    if unread > 0:
         return {
-            "kind": CONSOLE_READ_INCOMPLETE,
+            "kind": validate_autopatch("console_read_caveat_kind", CONSOLE_READ_INCOMPLETE),
+            "label": console_read_caveat_label(CONSOLE_READ_INCOMPLETE),
             "completeness": inventory.completeness,
             "child_count": inventory.child_count,
             "observed_count": inventory.observed_count,
             "missing_count": inventory.missing_count,
+            "unreadable_address_count": unreadable_addresses,
+            "unread_count": unread,
             "reason": (
                 f"콘솔 재조회에서 선언된 {inventory.child_count}대 중 "
-                f"{inventory.missing_count}대를 읽지 못했다 — 이 상태의 '없음'은 관측이 아니라 "
-                "미판독이다."
+                f"{inventory.missing_count}대를 열거하지 못했고 {unreadable_addresses}대는 "
+                "주소를 판독하지 못했다 — 이 상태의 '없음'은 관측이 아니라 미판독이다."
             ),
         }
     if inventory.index_domain_unknown:
         return {
-            "kind": CONSOLE_READ_INDEX_DOMAIN_UNKNOWN,
+            "kind": validate_autopatch(
+                "console_read_caveat_kind", CONSOLE_READ_INDEX_DOMAIN_UNKNOWN
+            ),
+            "label": console_read_caveat_label(CONSOLE_READ_INDEX_DOMAIN_UNKNOWN),
             "completeness": inventory.completeness,
             "child_count": inventory.child_count,
             "observed_count": inventory.observed_count,
             "missing_count": 0,
+            "unreadable_address_count": 0,
+            "unread_count": 0,
             "reason": (
                 "열거가 절단됐으나 선언된 자식을 전부 관측했다 — 수량 비교는 정확하고, "
                 "인덱스 도메인만 미상이다."
@@ -499,6 +562,72 @@ def screen_console_read(
     return AddressPlan(entries=(), exclusions=tuple(exclusions))
 
 
+def screen_console_occupancy(
+    targets: Sequence[PatchCandidate],
+    *,
+    address_plan: AddressPlan,
+    console_fixtures: Sequence[ConsoleFixture],
+) -> AddressPlan:
+    """계획 구간 **안쪽에서 시작하는 남의 픽스처**를 잡아 그 항목을 제외한다.
+
+    자기 도면 주소에 있는 픽스처는 건드리지 않는다 — 그것은 `screen_idempotent`가 타입·모드까지
+    보고 멱등/충돌/확인 불가로 갈라야 하는 대상이다. 여기서 먼저 점유로 잡으면 그 셋이 뭉개진다.
+
+    **점유폭은 1채널로만 본다.** 기존 픽스처의 폭을 읽을 경로가 이 빌드에 없다(`DMXFootprint`는
+    직렬화되지 않고 `DMXChannels` 개수는 폭이 아니다 — M0 함정 7). 그래서 **꼬리 방향 겹침**
+    (기존 픽스처가 우리 구간 **앞에서** 시작해 우리 시작 주소를 덮는 경우)은 **검출되지 않는다** —
+    그 미검출은 추측으로 메우지 않고 `existing_footprint_unreadable`로 보고한다(round11 N04).
+    """
+    target_by_id = {target.id: target for target in targets}
+    kept: list[AddressPlanEntry] = []
+    exclusions: list[PatchTargetExclusion] = list(address_plan.exclusions)
+
+    for planned in address_plan.entries:
+        target = target_by_id.get(planned.candidate_id)
+        if target is None:
+            raise ValueError(
+                f"주소 계획에 대상 없는 항목이 있다: {planned.candidate_id!r} — "
+                "계획과 대상 집합은 같은 호출에서 나온 것이어야 한다."
+            )
+        intruder = next(
+            (
+                fixture
+                for fixture in console_fixtures
+                if fixture.universe == planned.universe
+                and fixture.address is not None
+                and planned.address < fixture.address <= planned.end_address
+            ),
+            None,
+        )
+        if intruder is None:
+            kept.append(planned)
+            continue
+        exclusions.append(
+            _exclusion(
+                target,
+                ADDRESS_ALREADY_OCCUPIED,
+                f"유니버스 {planned.universe} 주소 {planned.address}~{planned.end_address} 구간 "
+                f"안에서 기존 픽스처(슬롯 {intruder.slot}, 주소 {intruder.address})가 시작한다 — "
+                "빈 주소로 옮겨 붙이지 않고 제외한다.",
+            )
+        )
+
+    return AddressPlan(entries=tuple(kept), exclusions=tuple(exclusions))
+
+
+def existing_footprint_skipped_check() -> Mapping[str, object]:
+    """기존 픽스처 점유폭 미판독 — **무엇을 못 잡는지** 구조화해 보고한다(round11 N04)."""
+    return {
+        "kind": validate_autopatch("skipped_check_kind", EXISTING_FOOTPRINT_UNREADABLE),
+        "label": skipped_check_label(EXISTING_FOOTPRINT_UNREADABLE),
+        "reason": (
+            "기존 픽스처의 점유폭을 읽을 경로가 이 빌드에 없어(DMXFootprint 미직렬화 · "
+            "DMXChannels 개수는 폭이 아님) 기존 픽스처를 시작 주소 1채널로만 본다 — "
+            "기존 픽스처가 계획 구간 **앞에서** 시작해 우리 주소를 덮는 겹침은 검출되지 않는다."
+        ),
+    }
+
+
 def screen_idempotent(
     targets: Sequence[PatchCandidate],
     *,
@@ -530,10 +659,39 @@ def screen_idempotent(
                 "계획과 대상 집합은 같은 호출에서 나온 것이어야 한다."
             )
         resolution = resolution_by_id.get(planned.candidate_id)
-        occupant = _fixture_at(console_fixtures, planned.universe, planned.address)
+        occupants = _fixtures_at(console_fixtures, planned.universe, planned.address)
 
-        if occupant is None:
+        if not occupants:
             kept.append(planned)
+            continue
+
+        # [round11 N10] 그 주소에 둘 이상이 있으면 어느 것과 대조해야 하는지 알 수 없다 —
+        # 첫 일치가 우리와 같다고 '이미 했음'으로 삼키면 두 번째 점유자를 못 본 채 넘긴다.
+        if len(occupants) > 1:
+            exclusions.append(
+                _exclusion(
+                    target,
+                    EXISTING_IDENTITY_UNCONFIRMED,
+                    f"유니버스 {planned.universe} 주소 {planned.address}에 "
+                    f"픽스처가 {len(occupants)}대 관측된다 — 어느 것과 대조할지 확정할 수 없다.",
+                )
+            )
+            continue
+
+        occupant = occupants[0]
+
+        # [round11 N08] 우리 쪽 타입이 미확정이면 그것은 '남의 픽스처가 점유'가 아니라
+        # '우리가 아직 확인을 못 받았다'이다. 둘을 같은 코드로 적으면 사용자가 원인을 오독한다.
+        expected_type, expected_mode = _expected_identity(resolution)
+        if expected_type is None or expected_mode is None:
+            exclusions.append(
+                _exclusion(
+                    target,
+                    TYPE_CONFIRMATION_PENDING,
+                    "콘솔 타입·모드가 확정되지 않아 기존 픽스처와 대조할 수 없다 — "
+                    "확인 전에는 멱등 판정도 충돌 판정도 내리지 않는다.",
+                )
+            )
             continue
 
         if not occupant.identity_resolved:
@@ -548,7 +706,6 @@ def screen_idempotent(
             )
             continue
 
-        expected_type, expected_mode = _expected_identity(resolution)
         if occupant.type_name == expected_type and occupant.mode_name == expected_mode:
             exclusions.append(
                 _exclusion(
@@ -579,13 +736,26 @@ def _expected_identity(resolution: TypeResolution | None) -> tuple[str | None, s
     return resolution.console_type.name, resolution.console_mode.name
 
 
+def _fixtures_at(
+    console_fixtures: Sequence[ConsoleFixture], universe: int, address: int
+) -> tuple[ConsoleFixture, ...]:
+    return tuple(
+        fixture
+        for fixture in console_fixtures
+        if fixture.universe == universe and fixture.address == address
+    )
+
+
 def _fixture_at(
     console_fixtures: Sequence[ConsoleFixture], universe: int, address: int
 ) -> ConsoleFixture | None:
-    for fixture in console_fixtures:
-        if fixture.universe == universe and fixture.address == address:
-            return fixture
-    return None
+    """그 주소의 픽스처. **둘 이상이면 `None`이 아니라 모호**이므로 호출자가 갈라 처리한다.
+
+    [round11 N10] 이전 판은 첫 일치만 돌려줘서, 콘솔에 이미 중복이 있고 첫 일치가 우리와
+    동일하면 두 번째 충돌 점유자를 보지 못한 채 `already_patched_identical`을 냈다.
+    """
+    found = _fixtures_at(console_fixtures, universe, address)
+    return found[0] if len(found) == 1 else None
 
 
 @dataclass(frozen=True)

@@ -59,6 +59,11 @@ status: draft (v0.1.4, 2026-08-06) · Tier L · 설계 슬롯 5건 전부 종결
                                # `selected`·`dry_run` 과 **독립된 필드**여야 한다 —
                                # 항목 선택이나 dry_run=false 가 이 확인을 함축하지 않는다.
   "type_aliases": object,      # VW 이름 -> 콘솔 라이브러리 이름 (선택)
+  "names": object,             # [M7] 후보 식별자 -> 생성할 픽스처 이름.
+                               # 없으면 그 항목은 `fixture_name_missing`으로 **제외**된다 —
+                               # 이 계층은 이름을 지어내지 않는다. 도면에 픽스처 이름 열이
+                               # 없어서(1단계 `DesignedFixture`에 대응 필드 부재) 호출자가
+                               # 줘야 하며, 이것 없이는 툴이 구조적으로 아무것도 만들지 못한다.
   "dry_run": boolean           # 생략 시 true
 }
 ```

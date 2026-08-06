@@ -24,6 +24,7 @@ import pytest
 from server.prechk.inventory import COMPLETE, FIXTURE_ROOT, FixtureRecord, Inventory
 from server.tests.test_autopatch_execute import (
     APPLY_SOURCE,
+    REFUTED_REMEDY_TOKENS,
     RecordingDeployPipeline,
     RecordingExecutionPort,
     _console_surface,
@@ -37,7 +38,9 @@ from server.vwx.apply import (
     HandoffEntry,
     build_patch_handoff,
     console_read_caveat,
+    existing_footprint_skipped_check,
     read_console_fixtures,
+    screen_console_occupancy,
     screen_console_read,
     screen_idempotent,
     verify_patch,
@@ -51,10 +54,14 @@ from server.vwx.typemap import (
     TypeResolution,
 )
 from server.vwx.verdicts import (
+    ADDRESS_ALREADY_OCCUPIED,
     ADDRESS_CONFLICTS_WITH_EXISTING,
     ALREADY_PATCHED_IDENTICAL,
+    EXISTING_FOOTPRINT_UNREADABLE,
     EXISTING_IDENTITY_UNCONFIRMED,
     TARGET_EXCLUSION_REASON,
+    TYPE_CONFIRMATION_PENDING,
+    TYPE_NEEDS_CONFIRMATION,
     TYPE_RESOLVED,
     VERIFICATION_IDENTITY_UNCONFIRMED,
     VERIFICATION_MISMATCHED,
@@ -415,19 +422,47 @@ def test_verification_takes_no_plugin_outcome_argument():
     깨지고 결국 기계적으로 갱신된다. 지키려는 것은 **플러그인의 종료 상태가 인자로 들어오지
     않는다**는 것 하나이므로, 그것만 이름으로 금지한다. 아래 대조군이 그 금지의 실효성을 본다.
     """
-    parameters = set(inspect.signature(verify_patch).parameters)
-    assert parameters == {"entries", "console_fixtures", "read_complete"}
-    assert not _plugin_outcome_parameters(parameters)
+    assert not _plugin_outcome_parameters(inspect.signature(verify_patch).parameters)
+
+
+# 플러그인이 "어떻게 끝났는지"를 실어 나를 수 있는 이름들. 집합 동결이 아니라 **금지**다 —
+# 동결은 정당한 확장(`read_complete`가 그랬다)마다 깨지고 결국 기계적으로 갱신된다.
+_PLUGIN_OUTCOME_WORDS = (
+    "plugin",
+    "exec",
+    "reported",
+    "success",
+    "outcome",
+    "status",
+    "result",
+    "verified",
+    "claimed",
+    "assumed",
+    "_ok",
+    "ok_",
+)
 
 
 def _plugin_outcome_parameters(parameters) -> list[str]:
-    words = ("plugin", "exec", "reported", "success", "_ok")
-    return [name for name in parameters if any(word in name.lower() for word in words)]
+    return [name for name in parameters if any(w in name.lower() for w in _PLUGIN_OUTCOME_WORDS)]
 
 
 def test_the_plugin_outcome_parameter_ban_is_not_vacuous():
-    assert _plugin_outcome_parameters({"entries", "plugin_reported_ok"}) == ["plugin_reported_ok"]
-    assert _plugin_outcome_parameters({"entries", "exec_result"}) == ["exec_result"]
+    """AC-021② 비공허성 — **프로덕션 사본**에 그 인자를 심으면 단정이 실제로 깨진다.
+
+    [round11 N02] 이전 판은 테스트 로컬 헬퍼를 리터럴 집합으로 부를 뿐 `verify_patch`를
+    건드리지 않는 자기충족 테스트였다. 이 SPEC이 M5·M6에서 일관되게 쓴 기준
+    ("같은 하네스로 사본을 실행해 실제로 잡힌다")에 맞춘다.
+    """
+    planted = APPLY_SOURCE.replace(
+        "    read_complete: bool = True,",
+        "    read_complete: bool = True,\n    plugin_reported_ok: bool = False,",
+        1,
+    )
+    assert planted != APPLY_SOURCE
+    namespace = _load(planted)
+    offenders = _plugin_outcome_parameters(inspect.signature(namespace["verify_patch"]).parameters)
+    assert offenders == ["plugin_reported_ok"]
 
 
 def test_a_clean_plugin_exit_cannot_make_an_absent_fixture_observed():
@@ -609,11 +644,19 @@ def test_zero_created_asks_the_user_to_recheck_execution_and_procedure():
 
 
 def test_the_zero_created_guidance_does_not_repeat_the_refuted_remedy():
-    """AC-022③ [v0.1.3] — 반증된 원인 설명을 안내하지 않는다."""
-    assert "편집기" not in ZERO_CREATED_GUIDANCE
-    assert "목적지" not in ZERO_CREATED_GUIDANCE
+    """AC-022③ [v0.1.3] — 반증된 원인 설명을 안내하지 않는다.
+
+    한 문구가 아니라 **계열 전체**를 막는다 — 같은 조언을 다르게 적으면 통과하던
+    이전 판의 약점을 닫는다(round11 N09).
+    """
+    assert [t for t in REFUTED_REMEDY_TOKENS if t in ZERO_CREATED_GUIDANCE] == []
     assert "실행" in ZERO_CREATED_GUIDANCE
     assert "절차" in ZERO_CREATED_GUIDANCE
+
+
+def test_the_zero_created_guard_is_not_vacuous():
+    planted = "Patch 화면을 먼저 열어 둔 상태에서 다시 실행하라."
+    assert [t for t in REFUTED_REMEDY_TOKENS if t in planted] == ["Patch 화면"]
 
 
 def test_the_guidance_control_a_successful_verification_does_not_nag():
@@ -756,3 +799,102 @@ def test_a_short_read_does_not_downgrade_an_actual_observation():
         read_complete=False,
     )
     assert [result.outcome for result in report.results] == [VERIFICATION_OBSERVED]
+
+
+# --------------------------------------------------------------------------
+# round11 회귀 — 독립 감사가 잡은 결함을 다시 나지 않게 못박는다
+# --------------------------------------------------------------------------
+
+
+def test_a_truncated_type_library_refuses_to_resolve_a_display_string():
+    """[N01] 열거가 절단되면 '그 이름의 타입이 없다'를 단정할 수 없다 — 모호성 가드가 공허해진다."""
+    truncated = FixtureTypeLibrary(
+        types=(LibraryType(index=2, name="Robin MMX"),), available=True, truncated=True
+    )
+    (observed,) = _console(_record(1, "1.1", "FixtureType 2", "1 Mode 1"), library=truncated)
+    assert observed.type_name is None
+    assert observed.identity_resolved is False
+
+
+def test_the_truncation_refusal_control_a_complete_library_still_resolves():
+    """비공허성 — 같은 입력이 완전한 열거에서는 해석된다."""
+    complete = FixtureTypeLibrary(
+        types=(LibraryType(index=2, name="Robin MMX", modes=(LibraryMode(index=1, name=MODE_1),)),),
+        available=True,
+        truncated=False,
+    )
+    (observed,) = _console(_record(1, "1.1", "FixtureType 2", "1 Mode 1"), library=complete)
+    assert observed.type_name == "Robin MMX"
+
+
+@pytest.mark.parametrize("order", [(3, 9), (9, 3)], ids=["index3_first", "index9_first"])
+def test_ambiguity_is_refused_regardless_of_enumeration_order(order):
+    """[N06] 같은 이름의 타입이 둘이면 **열거 순서와 무관하게** 거부한다."""
+    by_index = {
+        i: LibraryType(index=i, name="FixtureType 3", modes=(LibraryMode(index=1, name=MODE_1),))
+        for i in (3, 9)
+    }
+    library = FixtureTypeLibrary(types=tuple(by_index[i] for i in order))
+    (observed,) = _console(_record(1, "1.1", "FixtureType 3", "1 Mode 1"), library=library)
+    assert observed.type_name is None
+
+
+def test_an_unresolved_own_type_is_not_reported_as_an_address_conflict():
+    """[N08] 우리 타입이 미확정인 것과 남의 픽스처가 점유한 것은 다른 사유다."""
+    plan = _screen(
+        console=_console(_record(1, "1.1", "FixtureType 3", "1 Mode 1")),
+        resolutions=(
+            TypeResolution(
+                request=TypeRequest(candidate_id="a", instrument_type=LED),
+                status=TYPE_NEEDS_CONFIRMATION,
+                reason="",
+                console_type=None,
+                console_mode=None,
+            ),
+        ),
+    )
+    assert [x.code for x in plan.exclusions] == [TYPE_CONFIRMATION_PENDING]
+
+
+def test_two_fixtures_at_one_address_are_not_swallowed_as_already_patched():
+    """[N10] 첫 일치가 우리와 같아도 두 번째 점유자를 못 본 채 넘기지 않는다."""
+    plan = _screen(
+        console=_console(
+            _record(1, "1.1", "FixtureType 3", "1 Mode 1"),
+            _record(2, "1.1", "FixtureType 1", "1 Mode 1"),
+        )
+    )
+    assert [x.code for x in plan.exclusions] == [EXISTING_IDENTITY_UNCONFIRMED]
+
+
+def test_the_duplicate_control_a_single_occupant_still_reads_as_idempotent():
+    plan = _screen(console=_console(_record(1, "1.1", "FixtureType 3", "1 Mode 1")))
+    assert [x.code for x in plan.exclusions] == [ALREADY_PATCHED_IDENTICAL]
+
+
+def test_a_fixture_inside_the_planned_span_is_excluded_as_occupied():
+    """[M7 N01] 계획 구간 **안쪽에서** 시작하는 기존 픽스처는 겹침이다."""
+    plan = screen_console_occupancy(
+        (_candidate("a", 1, 1, 101),),
+        address_plan=AddressPlan(entries=(_planned("a", 1, 1),)),
+        console_fixtures=_console(_record(1, "1.5", "FixtureType 3", "1 Mode 1")),
+    )
+    assert plan.entries == ()
+    assert [x.code for x in plan.exclusions] == [ADDRESS_ALREADY_OCCUPIED]
+
+
+def test_the_occupancy_screen_leaves_the_targets_own_address_to_the_idempotency_screen():
+    """자기 자리는 여기서 잡지 않는다 — 멱등/충돌/확인 불가 3분기가 그것을 갈라야 한다."""
+    plan = screen_console_occupancy(
+        (_candidate("a", 1, 1, 101),),
+        address_plan=AddressPlan(entries=(_planned("a", 1, 1),)),
+        console_fixtures=_console(_record(1, "1.1", "FixtureType 3", "1 Mode 1")),
+    )
+    assert [entry.candidate_id for entry in plan.entries] == ["a"]
+
+
+def test_the_unreadable_existing_footprint_is_reported_rather_than_guessed():
+    """[N04] 꼬리 방향 겹침을 못 잡는다는 사실을 구조화해 보고한다."""
+    check = existing_footprint_skipped_check()
+    assert check["kind"] == EXISTING_FOOTPRINT_UNREADABLE
+    assert "검출되지 않는다" in check["reason"]
