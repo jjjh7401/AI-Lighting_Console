@@ -11,11 +11,10 @@
 round7 18건 + round8 13건 + round9 8건 + round10 7건 반영. round6 PASS(1.000)는 v0.1.2에 대한
 판정이므로 승계하지 않고, **round10이 v0.1.4를 직접 감사해 PASS했다**.) ·
 run-phase 진행 중 ·
-M0 종결(5차까지) · **M1·M2·M3·M4·M5 완료** · M6·M7 착수 가능 · M8 재정의 필요.**
-테스트 **5,044 passed / 7 skipped**(착수 4,898 → +146, 회귀 0) ·
-커밋 **run-phase 15건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 19건 — **본 갱신을 담은 커밋을
-포함한 계수**다. 이전 판은 자기 커밋을 빼고 세어 갱신 직후부터 1 어긋나 있었다,
-round10 감사 N55. §0을 갱신할 때마다 재계산하라) ·
+M0 종결(5차까지) · **M1~M6 완료** · M7 착수 가능 · M8 재정의 필요.**
+테스트 **5,082 passed / 7 skipped**(착수 4,898 → +184, 회귀 0) ·
+커밋 **run-phase 16건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 20건 — **본 갱신을 담은 커밋을
+포함한 계수**다. 갱신마다 재계산하라. round10 감사 N55) ·
 PRESERVE 5경로 0-diff · 콘솔 세션 전 상태로 완전 원복.
 **2026-08-06 5차**: §0 미시험 6건 중 **L1·L3·L4·L5 전부 NEGATIVE** ·
 **L6은 "명령줄 목적지는 옮겨지고 듣는다"의 양성 대조군을 확보**했다 →
@@ -23,8 +22,11 @@ PRESERVE 5경로 0-diff · 콘솔 세션 전 상태로 완전 원복.
 **2026-08-06 amendment v0.1.4**: 반자동 실행 모델로 전환(§E.2aa, 사용자 승인) +
 독립 감사 round7·8·9 지적 39건 + round10 7건 반영(§E.1a 7·8·9·10회차).
 **2026-08-06 M4 완료**: Lua 생성기 + 주소 계획, 테스트 +38, AC-013·014·016(§E.2 M4 절).
-**2026-08-06 M5 완료**: 실행 전달(사람) · 검증 인계, 테스트 +63, AC-015·017·018·019.
-`RecordingExecutionPort` 도달 발화 **0건**을 **사본 대조군 9종**으로 비공허하게 닫았다(§E.2 M5 절).
+**2026-08-06 M5 완료**: 실행 전달(사람) · 검증 인계, 테스트 +63, AC-015·017·018·019 —
+`RecordingExecutionPort` 도달 발화 **0건**을 사본 대조군 9종으로 비공허하게 닫았다(§E.2 M5 절).
+**2026-08-06 M6 완료**: 멱등 · 검증 읽기, 테스트 +38, AC-020·021·022 —
+**콘솔 표시 문자열(`FixtureType 3`·`2 Mode 2`)은 라이브러리 이름과 다른 어휘라 네 값 일치가
+문자열 동등으로 성립하지 않는다.** 라이브러리 대조로 확정하되 모호하면 거부한다(§E.2 M6 절).
 
 ### 지금 이 SPEC이 막혔던 것 — 무엇에 막혔고 어떻게 우회했나
 
@@ -183,7 +185,7 @@ round9도 FAIL(0.8025)로 8건을 지적해 반영했고, **round10이 v0.1.4를
 ```bash
 W=/Users/studiox/orca/workspaces/AI-Lighting_Console/spec-vwx-001
 git -C "$W" rev-parse --abbrev-ref HEAD   # feature/SPEC-COPILOT-VWX-001 (1단계 위에 스택)
-uv run pytest server/tests -q             # 현재 기준선: 5044 passed / 7 skipped (착수 4898)
+uv run pytest server/tests -q             # 현재 기준선: 5082 passed / 7 skipped (착수 4898)
 uv run ruff check        server/vwx server/tests/test_autopatch_*.py
 uv run ruff format --check server/vwx server/tests/test_autopatch_*.py   # [필수] check만으로는 부족
 git -C "$W" diff --stat ca00bc5..HEAD -- console/lua server/safety server/prechk server/paperwork server/looks
@@ -203,12 +205,12 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
 ### 다음 담당자가 먼저 할 것 (**2026-08-06 v0.1.4 기준으로 갱신**)
 
 1. **L1·L3·L4·L5·L6은 이미 측정됐다 — 다시 돌리지 마라.** §E.2 M0 5차에 원문 라벨까지 있다.
-2. **반자동 모델 전환도, 그 재감사도, M4·M5도 이미 끝났다 — 되돌리거나 다시 제안하지 마라.**
+2. **반자동 모델 전환도, 그 재감사도, M4·M5·M6도 이미 끝났다 — 되돌리거나 다시 제안하지 마라.**
    2026-08-06 사용자 승인으로 `v0.1.3` → round7·8·9 지적 39건 + round10 7건 반영 → **`v0.1.4`**,
    **round10 독립 감사 PASS(0.865)** 로 `plan_status: audit-ready`(§E.2aa · §E.1a 7·8·9·10회차).
-   **M4(Lua 생성기 + 주소 계획, +38)·M5(실행 전달 · 검증 인계, +63)도 완료**됐다
-   (§E.2 M4·M5 절). **다음 코드 마일스톤은 `M6`**(멱등 · 검증 읽기, AC-020·021·022),
-   이어 M7. **M8은 사람 실행 단계를 포함하도록 재정의가 필요**하다.
+   **M4(+38)·M5(+63)·M6(+38) 완료**(§E.2 M4·M5·M6 절).
+   **다음 코드 마일스톤은 `M7`**(툴 배선 · 회귀 · PRESERVE, AC-023·024·025).
+   **M8은 사람 실행 단계를 포함하도록 재정의가 필요**하다.
 2a. **M4가 남긴 계약 3건은 M5에서 지켜졌다 — 되돌리지 마라**:
    ① `luagen.render_addfixtures_plugin(entries)`가 전달물의 본체다 —
       `LuaPatchEntry(console_type, console_mode, fid, name, universe, address)` 6필드뿐이고
@@ -218,7 +220,7 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
    ③ `patchplan.plan_addresses(targets, footprints=..., occupied=...)`의 `footprints`는
       **1단계 도면이 준 폭**이다. 콘솔의 `DMXChannels` 개수를 넣지 마라 — 그것은 폭이 아니다
       (실측 14 vs stride 16). 폭을 모르면 `footprint_unknown`으로 제외된다.
-2b. **M6·M7을 쓸 때 M5가 남긴 계약 4건을 지켜라**:
+2b. **M7을 쓸 때 M5가 남긴 계약 4건을 지켜라**:
    ① `apply.build_patch_handoff(targets, address_plan=, resolutions=, names=, dry_run=True)`가
       전달 진입점이다 — 파라미터 **5개가 전부**이고, 여기에 인자를 더하면
       AC-017②(리뷰 우회 인자 0건) 테스트가 깨진다. **실행 포트·배포 파이프라인을 넘기지 마라.**
@@ -232,6 +234,20 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
    ④ 제외 사유는 `verdicts.TARGET_EXCLUSION_REASON`에 **등재된 코드로만** 보고한다.
       **거부된 입력을 사유 문구에 되싣지 마라** — 이름이 목적지 토큰을 담고 있으면
       AC-014① 산출물 스캐너가 거짓 양성을 내 게이트가 강제력을 잃는다(M5에서 실제로 걸렸다).
+2c. **M7을 쓸 때 M6이 남긴 계약 3건을 지켜라**:
+   ① **콘솔 표시 문자열을 이름으로 믿지 마라.** 픽스처의 `FixtureType`/`Mode`는
+      `FixtureType 3`·`2 Mode 2` 형태로 오고 라이브러리 이름(`Robin LEDBeam 350`·`Mode 2`)과
+      **다른 어휘**다. 해석은 `apply.read_console_fixtures(inventory, library=...)` **한 곳**에만
+      있고, 모호하면 `identity_resolved=False`로 남는다 — 그 값을 이름처럼 쓰지 마라.
+      **이 문법은 표본 1종에서 온 가설이며 판별 실험은 미수행**이다(§E.2 M6 절 [HARD]).
+   ② **확인 불가를 멱등으로 올리지 마라.** `screen_idempotent`은 멱등 건너뜀 · 충돌 ·
+      확인 불가를 **세 코드로 갈라** 보고한다. 셋을 하나로 뭉치면 필요한 픽스처가 조용히
+      누락되거나 무관한 픽스처를 "이미 했음"으로 삼키게 된다.
+   ③ **`verify_patch`에 플러그인 종료 상태 인자를 추가하지 마라.** 성공의 근거는 재조회뿐이며
+      (함정 4 · AC-021②), 시그니처 전수 단정과 사본 대조군이 그것을 지킨다.
+   **M7이 새로 져야 할 몫**: `read_inventory`의 `Inventory`가 **절단**됐을 때(절단은 기본
+      경로다) M6은 "관측되지 않음"과 "읽히지 않았음"을 구별하지 않는다 —
+      `inventory.completeness`를 판정에 반영하는 것은 인벤토리 정책을 정하는 **툴 계층의 일**이다.
 3. **L2를 돌리려면 사용자가 패치 편집 세션에 진입해야 한다.** 자동화로 대체 불가.
 4. **배포는 `deploy` 동사로 하지 마라 — 이 빌드에서 소스가 써지지 않는다**
    (`cannot confirm plugin source write`, 객체만 생기고 소스는 빈 상태로 조용히 실행됨).
@@ -389,7 +405,7 @@ known_gaps:
     (매치는 전부 다른 절 참조이거나 progress.md 자체 감사기록). plan.md §E 테스트 골격이
     §6.2와 독립적으로 이미 파일→주제 매핑을 제공하고 있어 온보딩 가독성도 유지됨. 잔여
     gap 아님 — round1 이후 최초로 4개 축 전부 잔여 결함 0건."
-next: "**M6 착수**(멱등 · 검증 읽기, AC-020·021·022). **M5 완료**(실행 전달·검증 인계, +63 테스트, §E.2 M5 절) — `RecordingExecutionPort` 도달 발화 0건을 사본 대조군 9종으로 비공허하게 닫았고, 드라이런·전달 두 모드 모두 쓰기 0건이다. **M4 완료**(Lua 생성기 + 주소 계획, +38 테스트, §E.2 M4 절). round10 독립 감사가 v0.1.4를 **PASS(0.865)** 했다 — plan-phase 관점의 착수 전제는 해소됐다. 지적 누계 N1~N55 **전량 반영**(round1~6 N1~N10 CLOSED 확정 · round7 N11~N28 · round8 N29~N41 · round9 N42~N49 · round10 N50~N55). M1~M5가 완료 상태이므로 다음 코드 마일스톤은 **M6(멱등 · 검증 읽기)**이고, 이어 **M7(툴 배선 · 회귀 · PRESERVE)**이다. M7은 `PatchPlan.to_dict()`의 `deferred_to_m2·m3·m4` 마커 3종을 함께 해소해야 한다(§E.2 M5 절 미검증 잔여). **M8은 사람 실행 단계를 포함하도록 재정의가 필요**하다(미착수). 남은 사용자 접점 2건: ① **L2 측정**(패치 편집 세션 진입 — 선택. 긍정이면 REQ-AUTOPATCH-018을 v0.1.2 형태로 복원 가능) · ② M8 라이브 종단 세션 일정. 착수 전 `spec.md` §A 사실 7·8과 §0 함정 9·10·11을 읽어라 — 배포·회수 경로가 그 위에 서 있다. M5가 남긴 계약 4건은 §0 항목 2b."
+next: "**M7 착수**(툴 배선 · 회귀 · PRESERVE, AC-023·024·025). **M6 완료**(멱등 · 검증 읽기, +38 테스트, §E.2 M6 절) — 멱등 건너뜀·충돌·확인 불가를 세 코드로 갈라 보고하고, 성공은 재조회에서만 나오며(플러그인 종료 상태 인자 부재), 보정·재시도 호출 0건을 사본 대조군으로 닫았다. **[HARD] 콘솔 표시 문자열(`FixtureType 3`·`2 Mode 2`)은 라이브러리 이름과 다른 어휘이고, 그 문법은 표본 1종에서 온 가설이다 — 판별 실험 미수행.** 라이브러리 대조가 모호하면 해석을 거부한다(§E.2 M6 절 [HARD] · round11 감사 판단 대상). **M5 완료**(+63, §E.2 M5 절) · **M4 완료**(+38, §E.2 M4 절). round10 독립 감사가 v0.1.4를 **PASS(0.865)** 했다. 지적 누계 N1~N55 **전량 반영**. M1~M6이 완료 상태이므로 다음 코드 마일스톤은 **M7(툴 배선 · 회귀 · PRESERVE)**이며, M7은 ① `PatchPlan.to_dict()`의 `deferred_to_m2·m3·m4` 마커 3종 해소 ② 절단된 `Inventory`에서 '미관측'과 '미판독'을 구별하는 정책 두 가지를 함께 져야 한다(§E.2 M5·M6 절 미검증 잔여). **M8은 사람 실행 단계를 포함하도록 재정의가 필요**하다(미착수). 남은 사용자 접점 2건: ① **L2 측정**(패치 편집 세션 진입 — 선택. 긍정이면 REQ-AUTOPATCH-018을 v0.1.2 형태로 복원 가능) · ② M8 라이브 종단 세션 일정. 착수 전 `spec.md` §A 사실 7·8과 §0 함정 9·10·11을 읽어라. M5·M6이 남긴 계약은 §0 항목 2b·2c."
 ```
 
 ---
@@ -1525,6 +1541,154 @@ dry_run=False  delivered=True   next_step=human_execution_then_verification_read
   지금 그 마커는 "이 계층이 아직 배선되지 않았다"는 뜻으로만 참이다 —
   `deferred_to_m2`·`deferred_to_m3`와 같은 처지이며, **셋을 함께 해소하는 것은 M7 배선의 일**이다.
   M5가 단독으로 이름만 바꾸면 어휘가 세 벌로 어긋난다.
+
+### M6 — 멱등 · 검증 읽기 (완료)
+
+**상태: COMPLETE — 이미 있는 픽스처는 전달되는 Lua에서 빠지고, 성공은 재조회에서만 나온다.
+플러그인의 종료 상태를 받는 인자가 검증 함수에 **존재하지 않으며**, 불일치·0건에서
+자동 보정·재시도 호출은 0건이다(같은 기록기 대조군으로 확인).**
+
+**AC**: AC-AUTOPATCH-020 · 021 · 022 (`acceptance.md` §C.0a M6 = 3건)
+
+**테스트**: **5,044 → 5,082 passed / 7 skipped (+38, 회귀 0)** ·
+`ruff check` OK · `ruff format --check` 18 files already formatted.
+
+#### 산출물
+
+| 파일 | 신규/변경 | 역할 |
+|---|---|---|
+| `server/vwx/apply.py` | 변경 | `read_console_fixtures` · `screen_idempotent` · `verify_patch` + `ConsoleFixture`·`VerificationResult`·`PatchVerification` |
+| `server/vwx/verdicts.py` | 변경 | 제외 사유 3종 + **신규 닫힌 어휘 `verification_outcome` 4종** |
+| `server/tests/test_autopatch_verify.py` | **신규** | 38건 |
+
+#### [HARD] 네 값 일치가 문자열 동등으로 성립하지 않는다 — 이 마일스톤의 진짜 난점
+
+`REQ-AUTOPATCH-022`는 멱등 기준을 **(유니버스, 주소, FixtureType, DMXMode 이름) 네 값 일치**로
+정했다. 그런데 두 출처의 문자열이 **같은 어휘가 아니다**:
+
+```
+콘솔 픽스처 프로퍼티 (prechk read_inventory) : FixtureType -> "FixtureType 3"
+                                              Mode        -> "2 Mode 2"
+콘솔 라이브러리 열거 (vwx typemap)           : name        -> "Robin LEDBeam 350"
+                                              mode name   -> "Mode 2"
+```
+
+둘 다 **2026-08-06 실측**이다(§E.2 M0 1차: 인벤토리 표본 7건 · 라이브러리 열거 3종).
+그대로 `==` 비교하면 **멱등이 영원히 성립하지 않아** 2회차에서 중복 픽스처가 생성된다.
+
+**택한 해법 — 파싱하되 라이브러리에 대조해 확정하고, 모호하면 거부한다.**
+`FixtureType <n>`을 index로, `<i> <이름>`을 (index, 이름)으로 읽되, 그 결과를
+**열거된 라이브러리와 대조**해서만 이름을 확정한다. 그리고 **두 해석이 서로 다른 대상을
+가리키면 확정을 거부**한다 — 즉 문자열이 어떤 타입의 **이름**이면서 동시에 다른 타입의
+**index 형태**이기도 하면 `identity_unconfirmed`다.
+
+이것은 `PROTOCOL.md:322-324`의 **슬롯==FID 우연일치**와 같은 구조이고, 1단계가
+`fid_cid_identity_unreachable`로 남긴 것과 같은 처리다. 실제로 이 쇼파일에는
+**`FixtureType 2`라는 이름의 타입이 실재**한다(라이브러리 열거 3종 중 하나) — 우연일치가
+가설이 아니라 **이미 관측된 조건**이라는 뜻이다.
+
+**[미확정 · 잔여 위험] 표시 문자열의 문법은 표본 1종에서 온 가설이다.**
+`FixtureType <index>` 형태는 **한 타입(index 3) · 한 쇼파일 · 표본 7건**에서만 관측됐다.
+"이름 없는 타입은 `FixtureType <index>`로 표시된다"는 규칙 자체는 **반증 가능한 형태로
+시험되지 않았다** — 판별 실험(이름이 `FixtureType k`인 타입이 index j≠k에 놓인 쇼파일)은
+수행된 적이 없다. 그래서 이 모듈은 그 형태를 **단독 근거로 쓰지 않고** 라이브러리 대조를
+통과할 때만 채택하며, 갈라지면 거부한다. **거부의 대가는 안전한 쪽이다** — 확인 불가는
+멱등으로 승격되지 않으므로 필요한 픽스처가 조용히 누락되지 않고, 대신 사람이 판단할
+항목으로 올라온다.
+**이 판단은 새 `ASSUMPTION`으로 승격하지 않았다** — spec.md를 건드리면 재감사 대상이 되고,
+본 항목은 요구를 바꾸지 않고 **구조화된 미확정 보고**로 닫히기 때문이다. 이 선택이
+옳은지는 **round11 독립 감사의 판단에 맡긴다**(이 문단이 그 판단 근거다).
+
+#### 세 갈래로 갈라 보고한다 — 뭉뚱그리지 않는다
+
+| 관측 | 판정 | 코드 |
+|---|---|---|
+| 그 주소에 아무것도 없음 | 생성 진행 | — |
+| 네 값 전부 일치 | **멱등 건너뜀** | `already_patched_identical` |
+| 주소 같고 타입/모드 다름 | **충돌**(건너뛰지 않음) | `address_conflicts_with_existing_fixture` |
+| 주소 같고 정체 확정 불가 | **확인 불가** | `existing_fixture_identity_unconfirmed` |
+
+**세 경우 모두 산출물에서는 빠진다** — 되돌릴 수 없는 쓰기에서 그것이 안전한 방향이다.
+다른 것은 **사유뿐**이며, 그 사유가 사람이 다음에 무엇을 할지를 가른다. 확인 불가를
+멱등으로 삼키지 않는 것을 별도 테스트가 지킨다.
+
+`screen_idempotent`가 다시 `AddressPlan`을 돌려주는 것은 의도다 — `build_patch_handoff`이
+그대로 받아 같은 보고 경로로 내보내므로 **멱등 판정이 전달되는 Lua의 내용에 반영**된다
+(AC-020① [v0.1.3]: 판정 대상은 콘솔로 보낸 명령이 아니라 생성된 Lua다).
+
+#### 검증 읽기 — 성공의 근거를 구조로 봉인했다
+
+`verify_patch(entries, *, console_fixtures)`에는 **플러그인 종료 상태를 받는 인자가 없다.**
+무오류 종료를 성공으로 읽는 분기를 쓰려야 쓸 수가 없다(함정 4 · AC-021②). 시그니처 전수
+단정과, **그 인자를 되살려 심은 사본이 빈 콘솔에서 "관측됨"을 내는** 대조군으로 닫았다.
+
+콘솔 읽기 경로를 새로 만들지 않았다 — `read_inventory`가 만든 `Inventory`를 소비하고
+주소는 `normalize_address`가 판독한다(1단계 `diff.py` 선례). AST 스캐너가
+`query_state`/`query_property` 호출 **0건**을 확인하고, 자체 읽기를 심은 사본에서 잡힌다.
+
+#### 대조군 실측 (사본에서 **잡혔다**)
+
+| 심은 것 | 잡힌 것 | AC |
+|---|---|---|
+| 무오류 종료를 성공으로 읽는 분기 | 빈 콘솔인데 `observed` · `all_observed=True` | 021② |
+| 자체 콘솔 읽기(`port.query_state`) | AST 스캐너가 `query_state` 검출 | 021③ |
+| 불일치 시 `Delete Fixture` 보정 | `port.executed == ["Delete Fixture 1"]` | 022② |
+| 1회차(빈 콘솔) 대조 | 같은 경로가 항목을 **실제로 산출물에 넣는다** | 020② |
+| 네 값 일치 vs 모드 상이 | 두 경로의 코드가 **실제로 갈라진다** | 020④ |
+| 성공 시 안내 | 0건 안내가 **붙지 않는다**(무조건 붙는 게 아니다) | 022③ |
+
+#### 스모크 — 실물 2회차 사이클
+
+```
+1회차(빈 콘솔)   전달 a·b·c·d · AddFixtures 4회
+  ↓ 사람이 실행 — a·b는 그대로, c는 Mode 2로, d는 라이브러리에 없는 index로 관측된다
+2회차(재조회)    전달 0건 · AddFixtures 0회
+    a 멱등 건너뜀 · b 멱등 건너뜀 · c 충돌 · d 확인 불가
+검증 읽기        관측 2 · 미관측 0 · 불일치 1 · 확인불가 1 · all_observed=False · created=2
+                 안내: 자동 재시도·보정 없음
+0건 관측         안내: 실행 여부 + 절차 각 단계 재확인 · 자동 재시도·보정 없음
+```
+
+부분 성공이 **전체 성공으로 적히지 않는다**(설계 슬롯 E) — `created_count`는 `observed`만
+세고 불일치·확인 불가는 넣지 않는다.
+
+#### 안내 문구에서 뺀 것
+
+0건 안내는 **실행 여부와 실행 절차 재확인**만 말한다. 룰북의 *"Patch > Fixtures 편집기를
+먼저 열라"* 도, 목적지 이동도 넣지 않았다 — 둘 다 반증됐다(`ASSUMPTION-75`·`-76` NEGATIVE).
+**틀린 원인을 사용자에게 안내하지 않는다**(REQ-AUTOPATCH-024 [v0.1.3]). 그 부재를 테스트가
+직접 단정한다(`편집기`·`목적지` 문자열 0건).
+
+#### 범위 경계
+
+`server/orchestrator/tools.py` 무접촉(툴 배선은 M7) · 콘솔 접촉 0건 ·
+`server/prechk/**` 무접촉(소비만) · PRESERVE 5경로 무접촉.
+
+**실측 결과**:
+
+| command | result |
+|---|---|
+| `uv run pytest server/tests/test_autopatch_verify.py -q` | `38 passed in 0.08s` |
+| `uv run pytest server/tests -q` | `5082 passed, 7 skipped, 1 warning in 91.14s` (직전 baseline 5044 + 신규 38, **회귀 0**) |
+| `uv run ruff check server/vwx server/tests/test_autopatch_*.py` | `All checks passed!` |
+| `uv run ruff format --check server/vwx server/tests/test_autopatch_*.py` | `18 files already formatted` |
+| `git diff --stat ca00bc5..HEAD -- console/lua server/safety server/prechk server/paperwork server/looks` | 빈 출력(PRESERVE 0-diff) |
+| 스모크(실물 2회차 사이클) | 위 블록 |
+
+**착수 시 실패 확인(TDD RED)**: `git stash push server/vwx/apply.py server/vwx/verdicts.py`로
+M6 구현만 되돌린 뒤 `uv run pytest server/tests/test_autopatch_verify.py -q` →
+`1 error in 0.06s`(수집 단계 ImportError). 되돌리고 재실행 → `38 passed`.
+**고지**: 테스트를 먼저 썼으나 구현 전에 실행하지는 않았다 — 위 RED는 **사후 재현**이다.
+
+**미검증 잔여**:
+- 표시 문자열 문법이 표본 1종 기반이라는 위 [HARD] 절의 잔여 위험. **판별 실험 미수행.**
+  실기 확인은 M8이며, 그 전까지 이 경로는 "모호하면 거부"로만 안전하다.
+- 콘솔 접촉 0건이므로 판정은 전부 **더블·AST·소스 사본 기반**이다. 사람이 실행한 뒤의
+  실제 재조회가 이 코드가 기대하는 형태를 주는지는 **M8에서만 확인된다**.
+- `Inventory`가 **절단**됐을 때(함정: 절단은 기본 경로다) 이 모듈은 "관측되지 않음"과
+  "읽히지 않았음"을 **구별하지 않는다**. `inventory.completeness`를 판정에 반영하는 것은
+  **M7 배선의 몫**으로 남긴다 — 툴 계층이 `read_inventory` 정책을 정하는 자리이기 때문이다.
+  그 전까지 절단된 인벤토리로 검증하면 **거짓 미관측**이 날 수 있다.
 
 
 ### M0 라이브 세션 2차 — 테스트 쇼파일 확인 · 파괴적 측정 착수 전 기록 (2026-08-06)
