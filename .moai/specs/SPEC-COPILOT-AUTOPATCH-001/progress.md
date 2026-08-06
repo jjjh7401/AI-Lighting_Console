@@ -946,18 +946,109 @@ REQ-AUTOPATCH-018은 그 경로를 요구사항으로 못박고 있고 M5 전체
 REQ-AUTOPATCH-018을 조정하는 것은 plan-phase 아티팩트 개정(amendment)이며 재감사 대상이다.
 사용자 결정 항목으로 남긴다.
 
-#### 콘솔 잔여물 대장 (정리 대상)
+#### 근본 원인 확정 — command destination이 `TempCmdlines Cmdline 1`이고 옮길 수단이 없다
 
-측정이 끝나지 않아 아직 제거하지 않았다. **픽스처는 0건 생성이므로 리그 오염 없음.**
+측정을 계속해 **원인을 특정했다.** 아래는 전부 라이브 실측이다.
 
-| 위치 | 항목 | 처리 |
+**증거 1 — GUI 탭도 동일하게 실패한다(destination 컨텍스트 분리 가설 기각).**
+슬롯 5 라벨을 `AM0 WAITING GUI TAP` 센티넬로 두고 사용자가 GUI에서 플러그인을 탭했다.
+라벨이 `AM0 T1 NIL T2 NIL`로 **바뀌었다** — 실행은 됐고 결과는 OSC 경로와 **동일**하다.
+GUI/OSC 컨텍스트 차이는 원인이 아니다. (부수 효과: 이후 반복 측정을 서버측에서 자유롭게 수행했다.)
+
+**증거 2 — `patch` 배열도 유니버스도 원인이 아니다.**
+
+| 변형 | 결과 |
+|---|---|
+| `patch` 배열 **생략**(룰북상 optional) | `NIL` |
+| 유니버스 **1**(기존 픽스처가 사는 살아있는 유니버스), 빈 주소 `1.461` | `NIL` |
+
+**증거 3 — `AddFixtures`는 컨테이너 메서드가 아니다.**
+`Patch().Stages[1].Fixtures`는 `userdata`로 해석되고 `:Count()` = **39**로 정상 동작하나,
+`.AddFixtures` 필드는 **nil**이다. 즉 대상을 명시적으로 지정해 호출할 방법이 없고,
+**앰비언트 목적지에만 의존하는 전역 함수**다.
+
+**증거 4 — 현재 목적지를 직접 읽었다.**
+
+```
+CmdObj() → class = Cmdline · name = 'Cmdline 1' · AddrNative = 'TempCmdlines Cmdline 1'
+```
+
+patch fixtures 레이어가 아니라 **임시 명령줄 객체**다. 룰북이 전제한
+"`…/Patch/Stages/Stage 1/Fixtures>` 상태"가 플러그인 실행 시점에 성립하지 않는다.
+
+**증거 5 — 목적지를 옮길 Lua API가 존재하지 않는다.** (존재 여부만 조회, 호출 없음)
+
+| 심볼 | 존재 |
+|---|---|
+| `SetCmdObj` · `SetDestination` · `ChangeDestination`(Lua 전역) | **전부 없음** |
+| `CurrentCommandLine()` | **없음**(이 빌드에서 미제공 — 선행 세션의 `CheckDest.xml`이 쓰던 API다) |
+| `Patch` · `AddFixtures` · `CmdIndirect` · `CurrentExecPage` | function |
+| `Obj` | table |
+
+`CurrentCommandLine().destination`에 컨테이너를 대입하는 비-CD 경로도 시도했으나
+`CurrentCommandLine()` 자체가 없어 성립하지 않았다.
+
+**증거 6 — 선행 세션이 같은 벽에 부딪혔다(콘솔 라이브러리 고고학).**
+콘솔 플러그인 라이브러리 폴더에 본 세션과 무관한 선행 산물이 남아 있다:
+`CheckDest.xml` · `CheckDest2.xml`(목적지 판독 시도) · `patch_here.xml`(CD 없이 현재 목적지로
+패치 시도) · `patch_proper.xml` · `PatchMMX.xml` · `patch_order.xml` · `patch_rest.xml`.
+`patch_proper.xml`을 디코딩하면 **`Cmd("ChangeDestination " .. Patch():Addr(), undo)`로 목적지를
+옮긴 뒤 `AddFixtures`를 부르고 다시 `ChangeDestination Root`로 되돌리는** 구조다
+(`CreateUndo`/`CloseUndo` 세션 안에서). 즉 선행 세션도 CD 없이는 성립하지 않는다고 판단해
+CD 경로를 만들었다. 그 결과는 이 파일들만으로 알 수 없다.
+
+#### 판정
+
+```
+INCONCLUSIVE: ASSUMPTION-73 — 다중 유니버스 patch 배열. AddFixtures가 어떤 인자로도
+              실행되지 않아 배열 의미론을 관측할 기회 자체가 없었다.
+INCONCLUSIVE: ASSUMPTION-74 — 패치 직후 관측. 생성이 0건이라 관측 대상이 없었다.
+```
+
+`plan.md` §A.3의 부정 처리를 적용한다(INCONCLUSIVE는 부정과 동일 취급):
+`ASSUMPTION-73` → 유니버스별 분할 실행으로 대체하되 **그 대체안도 미검증**이다.
+`ASSUMPTION-74` → 검증 읽기에 재시도 대기를 넣되 미관측 시 "확인 불가" 보고.
+
+**M0 최종: 5건 중 3건 판정(71 GO · 72 GO(한정) · 75 NEGATIVE), 2건 INCONCLUSIVE.**
+`plan.md` §B M0 D6에 따라 **M8은 BLOCKED로 남고 SPEC은 완결되지 않는다.**
+
+#### 이것이 무효화하는 plan-phase 전제 — 사용자 결정 필요
+
+`spec.md` §A **"사전 확정 사실 (조사 확정 — 재질의 금지)"** 의 두 항목이 이 빌드에서
+**동시에 성립할 수 없다**:
+
+| # | 내용 | 실측 결과 |
 |---|---|---|
-| Plugins 풀 슬롯 5 | `AM0 VERDICT SLOT`(원래 `AutopatchM0Probe`, 라벨 변경됨) | 측정 종료 후 삭제 |
-| Plugins 풀 슬롯 6 | `AutopatchM0Probe3` | 측정 종료 후 삭제 |
-| `~/MALightingTechnology/gma3_library/datapools/plugins/` | `autopatch_m0_probe{,2,3}.{lua,xml}` 6파일 | 측정 종료 후 삭제 |
-| 픽스처 | **없음 — 0건 생성** | 해당 없음 |
+| 1 | 패치는 정확히 2단계 — `deploy_plugin` → `run_commands(["Plugin '<이름>'"])` | 그 경로로는 목적지가 `TempCmdlines Cmdline 1`이라 **항상 0건 생성** |
+| 2 | `ChangeDestination`/`CD`를 **어디에서도** 보내면 안 된다 | 목적지를 옮길 다른 수단이 **존재하지 않음**(증거 5) |
 
-저장소 무변경: 위 파일은 전부 콘솔 라이브러리 폴더이며 `console/lua/**`(PRESERVE)는 무접촉이다.
+1을 지키면서 2를 지키면 **픽스처가 만들어지지 않는다.** 이는 조사 부족이 아니라
+**plan-phase가 놓친 전제**다 — 룰북은 "`AddFixtures`가 현재 목적지를 읽는다"까지 적었으나
+"서버가 발화한 플러그인 실행이 그 목적지를 갖는가"는 아무도 묻지 않았다.
+ASSUMPTION-71~75 어디에도 이 항목이 없다.
+
+**오케스트레이터는 다음 중 어느 것도 임의로 하지 않는다** — 전부 사용자 결정이다:
+
+| 선택지 | 내용 | 대가 |
+|---|---|---|
+| A | **CD 경로를 M0 측정으로 1회 승인** — `patch_proper.xml` 방식(`Patch():Addr()`로 CD → `AddFixtures` → `CD Root`, undo 세션)을 테스트 쇼파일에서 측정. 룰북의 CD 금지가 과일반화인지 실측으로 판정한다 | `spec.md` §A 사전 확정 사실 2 · `design.md` §7 안티패턴 1을 **의도적으로 1회 위반**. 승인 없이는 불가 |
+| B | **`ASSUMPTION-76` 신설 + REQ-AUTOPATCH-018 조정** — plan-phase amendment. spec/plan/acceptance/design 개정 후 **plan-auditor 재감사** | 아티팩트 개정 + 재감사 비용. round6 PASS 1.000이 재평가된다 |
+| C | **여기서 마감** — 73·74 INCONCLUSIVE 확정, M8 BLOCKED, SPEC 미완결로 기록 | M4~M8 미착수. M1·M2·M3 성과는 보존 |
+
+#### 콘솔 잔여물 — **전량 정리 완료**
+
+세션 종료 시점 실측(`plan.md` §C "세션 후 생성물 제거" 이행):
+
+| 항목 | 세션 전 | 세션 후 | 상태 |
+|---|---|---|---|
+| `Patch/Stages/1/Fixtures` | 39 | **39** | 무손상 — 생성 0건이었으므로 삭제할 픽스처도 없었다 |
+| Plugins 풀 | 4 (`CopilotResponder`·`CopilotBusk`·`kpop_summer_twinkle`·`GenSequence100Look`) | **4 (동일)** | 프로브 8종 전량 `Delete Plugin` 완료 |
+| Macros 풀 | 1 (`Copilot Go`) | **1 (동일)** | 프로브가 매크로를 만들지 않았다 |
+| 라이브러리 폴더 | — | — | `autopatch_m0_probe{,2..7}` · `am0p8` 파일 전량 삭제 |
+| FID · 유니버스 | 1~39 · U1~3 | **동일** | 프로브는 FID 501~503 · U10~11만 겨냥했고 하나도 생성되지 않았다 |
+
+저장소 무변경: 프로브 파일은 전부 콘솔 라이브러리 폴더였고 `console/lua/**`(PRESERVE)는 무접촉이다
+(`git diff --stat -- console/lua` 빈 출력).
 
 ---
 
