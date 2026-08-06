@@ -16,7 +16,18 @@ FID_RANGE_CONFIRMATION_REQUIRED = "fid_range_confirmation_required"
 FID_RANGE_EXHAUSTED = "fid_range_exhausted"
 FID_ALREADY_IN_USE = "fid_already_in_use"
 
+FIXTURE_TYPE_NOT_IN_LIBRARY = "fixture_type_not_in_library"
+DMX_MODE_NOT_IN_LIBRARY = "dmx_mode_not_in_library"
+
 FID_CONFLICT_PRECHECK_DESCOPE = "fid_conflict_precheck_descope"
+FOOTPRINT_MATCH_DESCOPE = "footprint_match_descope"
+FIXTURE_TYPE_LIBRARY_TRUNCATED = "fixture_type_library_truncated"
+FIXTURE_TYPE_LIBRARY_UNREADABLE = "fixture_type_library_unreadable"
+
+TYPE_RESOLVED = "resolved"
+TYPE_NEEDS_CONFIRMATION = "needs_confirmation"
+TYPE_LIBRARY_ABSENT = "library_absent"
+TYPE_LIBRARY_INCOMPLETE = "library_incomplete"
 
 CANDIDATE_REJECTION_REASON = frozenset(
     {
@@ -33,8 +44,30 @@ FID_ASSIGNMENT_REJECTION_REASON = frozenset(
         FID_RANGE_CONFIRMATION_REQUIRED,
     }
 )
-TARGET_EXCLUSION_REASON = frozenset({FID_RANGE_EXHAUSTED, FID_ALREADY_IN_USE})
-SKIPPED_CHECK_KIND = frozenset({FID_CONFLICT_PRECHECK_DESCOPE})
+TARGET_EXCLUSION_REASON = frozenset(
+    {
+        FID_RANGE_EXHAUSTED,
+        FID_ALREADY_IN_USE,
+        FIXTURE_TYPE_NOT_IN_LIBRARY,
+        DMX_MODE_NOT_IN_LIBRARY,
+    }
+)
+SKIPPED_CHECK_KIND = frozenset(
+    {
+        FID_CONFLICT_PRECHECK_DESCOPE,
+        FOOTPRINT_MATCH_DESCOPE,
+        FIXTURE_TYPE_LIBRARY_TRUNCATED,
+        FIXTURE_TYPE_LIBRARY_UNREADABLE,
+    }
+)
+TYPE_RESOLUTION_STATUS = frozenset(
+    {
+        TYPE_RESOLVED,
+        TYPE_NEEDS_CONFIRMATION,
+        TYPE_LIBRARY_ABSENT,
+        TYPE_LIBRARY_INCOMPLETE,
+    }
+)
 
 AUTOPATCH_CLOSED_VOCABULARIES = MappingProxyType(
     {
@@ -43,6 +76,7 @@ AUTOPATCH_CLOSED_VOCABULARIES = MappingProxyType(
         "selection_error_reason": SELECTION_ERROR_REASON,
         "skipped_check_kind": SKIPPED_CHECK_KIND,
         "target_exclusion_reason": TARGET_EXCLUSION_REASON,
+        "type_resolution_status": TYPE_RESOLUTION_STATUS,
     }
 )
 
@@ -82,9 +116,20 @@ _FID_ASSIGNMENT_REJECTION_LABELS = {
 _TARGET_EXCLUSION_LABELS = {
     FID_RANGE_EXHAUSTED: "빈 FID 범위 초과",
     FID_ALREADY_IN_USE: "기존 FID와 충돌",
+    FIXTURE_TYPE_NOT_IN_LIBRARY: "콘솔 라이브러리에 대응 FixtureType 없음",
+    DMX_MODE_NOT_IN_LIBRARY: "콘솔 라이브러리에 대응 DMXMode 없음",
 }
 _SKIPPED_CHECK_LABELS = {
     FID_CONFLICT_PRECHECK_DESCOPE: "FID 충돌 사전검사 미수행",
+    FOOTPRINT_MATCH_DESCOPE: "점유폭 일치 확인 미수행",
+    FIXTURE_TYPE_LIBRARY_TRUNCATED: "FixtureType 열거 절단 — 부재 단정 불가",
+    FIXTURE_TYPE_LIBRARY_UNREADABLE: "FixtureType 열거 실패 — 부재 단정 불가",
+}
+_TYPE_RESOLUTION_STATUS_LABELS = {
+    TYPE_RESOLVED: "타입·모드 확정",
+    TYPE_NEEDS_CONFIRMATION: "후보 제시 — 사용자 확인 대기",
+    TYPE_LIBRARY_ABSENT: "콘솔 라이브러리 부재 — 하드 스톱",
+    TYPE_LIBRARY_INCOMPLETE: "라이브러리 관측 불완전 — 부재를 단정하지 않음",
 }
 
 _AUTOPATCH_VOCABULARY_LABELS = MappingProxyType(
@@ -94,6 +139,7 @@ _AUTOPATCH_VOCABULARY_LABELS = MappingProxyType(
         "selection_error_reason": MappingProxyType(_SELECTION_ERROR_LABELS),
         "skipped_check_kind": MappingProxyType(_SKIPPED_CHECK_LABELS),
         "target_exclusion_reason": MappingProxyType(_TARGET_EXCLUSION_LABELS),
+        "type_resolution_status": MappingProxyType(_TYPE_RESOLUTION_STATUS_LABELS),
     }
 )
 
@@ -133,3 +179,7 @@ def target_exclusion_label(code: str) -> str:
 
 def skipped_check_label(code: str) -> str:
     return autopatch_label("skipped_check_kind", code)
+
+
+def type_resolution_status_label(code: str) -> str:
+    return autopatch_label("type_resolution_status", code)
