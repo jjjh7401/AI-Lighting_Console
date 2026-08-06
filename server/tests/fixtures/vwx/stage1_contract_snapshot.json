@@ -1,0 +1,19 @@
+{
+  "console_rig": "dict",
+  "designed_rig": "dict",
+  "diffs": "dict",
+  "excluded_rows": {
+    "list": [
+      "dict"
+    ]
+  },
+  "read_failures": {
+    "list": []
+  },
+  "skipped_checks": {
+    "list": [
+      "dict"
+    ]
+  },
+  "summary_ko": "str"
+}

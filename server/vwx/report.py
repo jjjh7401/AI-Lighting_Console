@@ -237,11 +237,23 @@ class VwxReport:
     def _fixtures(self) -> list[dict]:
         """픽스처마다 주소 근거(``address_basis``)를 개별 표기한다(v0.1.7, 결함 1 P0
         요건 b) — 리그 전체 등급(``designed_rig.address_basis``)과 별개로, 어느
-        픽스처가 역산 근거를 썼는지 숨기지 않는다."""
+        픽스처가 역산 근거를 썼는지 숨기지 않는다.
+
+        ``gdtf_fixture``/``mode``/``footprint``는 2단계
+        (``SPEC-COPILOT-AUTOPATCH-001`` M7)가 **추가한 열**이다 — 패치 계층은 이
+        payload만 입력으로 받으므로, 도면이 준 점유폭과 모드가 여기 없으면 주소
+        계획이 전부 ``footprint_unknown``으로 제외된다. 최상위 키 집합과 키별 타입
+        시그니처는 그대로이므로 1단계 출력 계약(AC-AUTOPATCH-025)은 불변이다.
+        여기 실리는 ``footprint``는 **도면 값**이지 콘솔의 ``DMXChannels`` 개수가
+        아니다(그것은 점유폭이 아니다 — 실측 14 vs stride 16).
+        """
         return [
             {
                 "unit_number": fixture.unit_number,
                 "instrument_type": fixture.instrument_type,
+                "gdtf_fixture": fixture.gdtf_fixture,
+                "mode": fixture.mode,
+                "footprint": fixture.footprint,
                 "system": fixture.system,
                 "universe": fixture.universe,
                 "address": fixture.address,

@@ -11,11 +11,10 @@
 round7 18건 + round8 13건 + round9 8건 + round10 7건 반영. round6 PASS(1.000)는 v0.1.2에 대한
 판정이므로 승계하지 않고, **round10이 v0.1.4를 직접 감사해 PASS했다**.) ·
 run-phase 진행 중 ·
-M0 종결(5차까지) · **M1~M6 완료** · M7 착수 가능 · M8 재정의 필요.**
-테스트 **5,082 passed / 7 skipped**(착수 4,898 → +184, 회귀 0) ·
-커밋 **run-phase 16건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 20건 — **본 갱신을 담은 커밋을
+M0 종결(5차까지) · **M1~M7 완료** · **M8만 남았고 재정의 필요**.**
+테스트 **5,112 passed / 7 skipped**(착수 4,898 → +214, 회귀 0) ·
+커밋 **run-phase 17건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 21건 — **본 갱신을 담은 커밋을
 포함한 계수**다. 갱신마다 재계산하라. round10 감사 N55) ·
-PRESERVE 5경로 0-diff · 콘솔 세션 전 상태로 완전 원복.
 **2026-08-06 5차**: §0 미시험 6건 중 **L1·L3·L4·L5 전부 NEGATIVE** ·
 **L6은 "명령줄 목적지는 옮겨지고 듣는다"의 양성 대조군을 확보**했다 →
 **목적지 조작 처방이 반증**됐다(§E.2 M0 5차). 남은 미시험은 **L2 1건**(사용자 자원 필요).
@@ -27,6 +26,11 @@ PRESERVE 5경로 0-diff · 콘솔 세션 전 상태로 완전 원복.
 **2026-08-06 M6 완료**: 멱등 · 검증 읽기, 테스트 +38, AC-020·021·022 —
 **콘솔 표시 문자열(`FixtureType 3`·`2 Mode 2`)은 라이브러리 이름과 다른 어휘라 네 값 일치가
 문자열 동등으로 성립하지 않는다.** 라이브러리 대조로 확정하되 모호하면 거부한다(§E.2 M6 절).
+**2026-08-06 M7 완료**: 툴 배선 · 회귀 · PRESERVE, 테스트 +30, AC-023·024·025 —
+`apply_vectorworks_patch` 5지점 등록. 1단계 payload에 도면 열 3종을 **추가**했고
+최상위 계약 불변은 **변경 전 코드에서 뜬 스냅샷**과 대조해 확인했다(§E.2 M7 절).
+**[남은 빚] `Inventory` 절단을 판정에 반영하지 않는다** — 절단 시 "미관측"이 실제로는
+"미판독"일 수 있다. **M8 착수 전 필수 처리**(§E.2 M7 절 미검증 잔여).
 
 ### 지금 이 SPEC이 막혔던 것 — 무엇에 막혔고 어떻게 우회했나
 
@@ -185,10 +189,13 @@ round9도 FAIL(0.8025)로 8건을 지적해 반영했고, **round10이 v0.1.4를
 ```bash
 W=/Users/studiox/orca/workspaces/AI-Lighting_Console/spec-vwx-001
 git -C "$W" rev-parse --abbrev-ref HEAD   # feature/SPEC-COPILOT-VWX-001 (1단계 위에 스택)
-uv run pytest server/tests -q             # 현재 기준선: 5082 passed / 7 skipped (착수 4898)
-uv run ruff check        server/vwx server/tests/test_autopatch_*.py
+uv run pytest server/tests -q             # 현재 기준선: 5112 passed / 7 skipped (착수 4898)
+uv run ruff check        server/vwx server/orchestrator/tools.py server/tests/test_autopatch_*.py
 uv run ruff format --check server/vwx server/tests/test_autopatch_*.py   # [필수] check만으로는 부족
-git -C "$W" diff --stat ca00bc5..HEAD -- console/lua server/safety server/prechk server/paperwork server/looks
+# PRESERVE 0-diff. `..HEAD` 없는 형태가 **미커밋 변경까지** 포함해 더 안전하다.
+# [금지] 대조군을 돌린다고 `git reset --hard`를 쓰지 마라 — 미커밋 작업이 날아간다(M7에서 실제로 겪음).
+#        되돌리기는 심은 파일 하나만 `git checkout -- <path>`.
+git -C "$W" diff --stat ca00bc5 -- console/lua server/safety server/prechk server/paperwork server/looks
 ```
 
 **라이브 콘솔 프로브**(onPC 기동 상태에서):
@@ -205,12 +212,19 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
 ### 다음 담당자가 먼저 할 것 (**2026-08-06 v0.1.4 기준으로 갱신**)
 
 1. **L1·L3·L4·L5·L6은 이미 측정됐다 — 다시 돌리지 마라.** §E.2 M0 5차에 원문 라벨까지 있다.
-2. **반자동 모델 전환도, 그 재감사도, M4·M5·M6도 이미 끝났다 — 되돌리거나 다시 제안하지 마라.**
+2. **반자동 모델 전환도, 그 재감사도, M4·M5·M6·M7도 이미 끝났다 — 되돌리거나 다시 제안하지 마라.**
    2026-08-06 사용자 승인으로 `v0.1.3` → round7·8·9 지적 39건 + round10 7건 반영 → **`v0.1.4`**,
    **round10 독립 감사 PASS(0.865)** 로 `plan_status: audit-ready`(§E.2aa · §E.1a 7·8·9·10회차).
-   **M4(+38)·M5(+63)·M6(+38) 완료**(§E.2 M4·M5·M6 절).
-   **다음 코드 마일스톤은 `M7`**(툴 배선 · 회귀 · PRESERVE, AC-023·024·025).
-   **M8은 사람 실행 단계를 포함하도록 재정의가 필요**하다.
+   **M4(+38)·M5(+63)·M6(+38)·M7(+30) 완료**(§E.2 M4·M5·M6·M7 절).
+   **코드 마일스톤은 M7까지 전부 끝났고 남은 것은 `M8`**(라이브 종단, AC-026)이다.
+   **M8은 사람 실행 단계를 포함하도록 재정의가 필요**하며(미착수), 그 전에 아래 2d를 처리하라.
+2d. **[BLOCKER] M8 착수 전에 갚아야 할 빚 — `Inventory` 절단**:
+   `read_inventory`는 **절단을 기본 경로로** 다루고 `completeness`·`missing_count`로 보고하는데,
+   `apply_vectorworks_patch`는 그 값을 **읽지 않는다**. 그래서 절단된 인벤토리에서는
+   ① 검증 읽기의 "미관측"이 실제로는 **"미판독"**일 수 있고, ② 멱등 판정이 있는 픽스처를
+   못 보고 **중복 생성 대상으로 올릴 수 있다**. 되돌릴 수 없는 쓰기 앞에서 둘 다 위험하다.
+   실물 콘솔은 `Patch/Stages/1/Fixtures`가 **19대에서 이미 절단됐다**(§E.2 M0 1차) —
+   가상의 위험이 아니다. M7의 AC 3건에 걸리지 않아 통과했을 뿐이다(§E.2 M7 절 미검증 잔여).
 2a. **M4가 남긴 계약 3건은 M5에서 지켜졌다 — 되돌리지 마라**:
    ① `luagen.render_addfixtures_plugin(entries)`가 전달물의 본체다 —
       `LuaPatchEntry(console_type, console_mode, fid, name, universe, address)` 6필드뿐이고
@@ -405,7 +419,7 @@ known_gaps:
     (매치는 전부 다른 절 참조이거나 progress.md 자체 감사기록). plan.md §E 테스트 골격이
     §6.2와 독립적으로 이미 파일→주제 매핑을 제공하고 있어 온보딩 가독성도 유지됨. 잔여
     gap 아님 — round1 이후 최초로 4개 축 전부 잔여 결함 0건."
-next: "**M7 착수**(툴 배선 · 회귀 · PRESERVE, AC-023·024·025). **M6 완료**(멱등 · 검증 읽기, +38 테스트, §E.2 M6 절) — 멱등 건너뜀·충돌·확인 불가를 세 코드로 갈라 보고하고, 성공은 재조회에서만 나오며(플러그인 종료 상태 인자 부재), 보정·재시도 호출 0건을 사본 대조군으로 닫았다. **[HARD] 콘솔 표시 문자열(`FixtureType 3`·`2 Mode 2`)은 라이브러리 이름과 다른 어휘이고, 그 문법은 표본 1종에서 온 가설이다 — 판별 실험 미수행.** 라이브러리 대조가 모호하면 해석을 거부한다(§E.2 M6 절 [HARD] · round11 감사 판단 대상). **M5 완료**(+63, §E.2 M5 절) · **M4 완료**(+38, §E.2 M4 절). round10 독립 감사가 v0.1.4를 **PASS(0.865)** 했다. 지적 누계 N1~N55 **전량 반영**. M1~M6이 완료 상태이므로 다음 코드 마일스톤은 **M7(툴 배선 · 회귀 · PRESERVE)**이며, M7은 ① `PatchPlan.to_dict()`의 `deferred_to_m2·m3·m4` 마커 3종 해소 ② 절단된 `Inventory`에서 '미관측'과 '미판독'을 구별하는 정책 두 가지를 함께 져야 한다(§E.2 M5·M6 절 미검증 잔여). **M8은 사람 실행 단계를 포함하도록 재정의가 필요**하다(미착수). 남은 사용자 접점 2건: ① **L2 측정**(패치 편집 세션 진입 — 선택. 긍정이면 REQ-AUTOPATCH-018을 v0.1.2 형태로 복원 가능) · ② M8 라이브 종단 세션 일정. 착수 전 `spec.md` §A 사실 7·8과 §0 함정 9·10·11을 읽어라. M5·M6이 남긴 계약은 §0 항목 2b·2c."
+next: "**M8만 남았다**(라이브 종단, AC-026 — 사람 실행 단계를 포함하도록 **재정의 필요**, 미착수). **[BLOCKER] M8 착수 전에 `Inventory` 절단을 판정에 반영하라** — `apply_vectorworks_patch`가 `inventory.completeness`를 읽지 않아 절단 시 '미관측'이 실제로는 '미판독'일 수 있고 멱등이 있는 픽스처를 놓칠 수 있다. 실물 콘솔은 19대에서 이미 절단됐다(§0 항목 2d · §E.2 M7 절). **M7 완료**(툴 배선 · 회귀 · PRESERVE, +30 테스트, §E.2 M7 절) — `apply_vectorworks_patch` 5지점 등록, 1단계 payload에 도면 열 3종 추가(최상위 계약은 **변경 전 코드에서 뜬 스냅샷**과 대조해 불변 확인), PRESERVE 0-diff를 심었다 되돌리는 대조군으로 확인. **M6 완료**(+38, 멱등 3분기 · 재조회 기반 성공 판정) · **M5 완료**(+63, 발화 0건 사본 대조군 9종) · **M4 완료**(+38). round10 독립 감사가 v0.1.4를 **PASS(0.865)** 했다. 지적 누계 N1~N55 **전량 반영**. 남은 사용자 접점 2건: ① **L2 측정**(패치 편집 세션 진입 — 선택. 긍정이면 REQ-AUTOPATCH-018을 v0.1.2 형태로 복원 가능) · ② M8 라이브 종단 세션 일정. 착수 전 `spec.md` §A 사실 7·8과 §0 함정 9·10·11, 그리고 §0 항목 2b·2c(M5·M6이 남긴 계약)를 읽어라."
 ```
 
 ---
@@ -1689,6 +1703,168 @@ M6 구현만 되돌린 뒤 `uv run pytest server/tests/test_autopatch_verify.py 
   "읽히지 않았음"을 **구별하지 않는다**. `inventory.completeness`를 판정에 반영하는 것은
   **M7 배선의 몫**으로 남긴다 — 툴 계층이 `read_inventory` 정책을 정하는 자리이기 때문이다.
   그 전까지 절단된 인벤토리로 검증하면 **거짓 미관측**이 날 수 있다.
+
+### M7 — 툴 배선 · 회귀 · PRESERVE (완료)
+
+**상태: COMPLETE — `apply_vectorworks_patch`가 5지점에 등록되고 디스패치로 동작한다.
+M1~M6 계층이 처음으로 하나의 호출로 이어졌고, 1단계 최상위 출력 계약은 변경 전 코드에서
+뜬 스냅샷과 대조해 불변임을 확인했다. PRESERVE 5경로 0-diff는 심었다 되돌리는 대조군으로
+비공허하게 닫았다.**
+
+**AC**: AC-AUTOPATCH-023 · 024 · 025 (`acceptance.md` §C.0a M7 = 3건)
+
+**테스트**: **5,082 → 5,112 passed / 7 skipped (+30, 회귀 0)** ·
+`ruff check` OK · `ruff format --check` 21 files already formatted.
+
+#### 산출물
+
+| 파일 | 신규/변경 | 역할 |
+|---|---|---|
+| `server/orchestrator/tools.py` | 변경 | `apply_vectorworks_patch` 5지점 등록 + 조립 핸들러 |
+| `server/vwx/report.py` | 변경 | `designed_rig.fixtures[*]`에 `gdtf_fixture`·`mode`·`footprint` **추가** |
+| `server/vwx/patchplan.py` | 변경 | `DesignedAttributes` · `designed_attributes_by_candidate` |
+| `server/tests/test_autopatch_tool.py` | **신규** | 25건 |
+| `server/tests/test_autopatch_contract.py` | **신규** | 5건 |
+| `server/tests/fixtures/vwx/stage1_contract_snapshot.json` | **신규** | 계약 스냅샷 |
+| `server/tests/test_tools.py` | 변경 | 닫힌 툴 집합 계수 23 → 24 |
+
+#### 조립 순서 — 그리고 순서를 틀렸을 때 실제로 난 증상
+
+```
+build_patch_plan            후보 · 선택 · FID 배정            [읽기]
+  ↓
+designed_attributes_by_candidate   도면 폭·모드·GDTF를 후보에 붙인다
+  ↓
+resolve_fixture_types       콘솔 라이브러리 열거 · 타입 매칭    [읽기]
+  ↓
+read_inventory → read_console_fixtures   재조회 정규화          [읽기]
+  ↓
+plan_addresses              폭 간격 · 계획 내 겹침 · **도면 주소가 아닌 자리**의 점유
+  ↓
+screen_idempotent           **도면 주소와 같은 자리** — 멱등/충돌/확인 불가 3분기
+  ↓
+build_patch_handoff         Lua + 실행 절차                    [쓰기 0]
+  ↓
+verify_patch                방금 읽은 콘솔 기준 건별 관측       [쓰기 0]
+```
+
+**처음에는 `plan_addresses`에 콘솔 점유를 전부 넘겼다가 실패했다.** 2회차 재호출에서
+이미 만든 픽스처가 `address_already_occupied`로 잡혀 `already_patched_identical`에
+도달하지 못했다 — REQ-AUTOPATCH-022가 금지하는 **정확히 그 뭉갬**("무관한 픽스처가 그 주소를
+점유한 것을 '이미 했음'으로 삼키지 않는다"의 거울상)이 반대 방향으로 난 것이다.
+`test_the_second_pass_skips_a_fixture_that_now_exists`가 그것을 잡았다.
+
+고친 방법: **도면 주소와 정확히 같은 자리는 `screen_idempotent`에 넘긴다**(그쪽이 타입·모드까지
+본다). `plan_addresses`에는 그 외 자리의 기존 픽스처만 준다 — 계획 구간 **안쪽에** 남의 픽스처가
+시작하는 경우가 그것이고, 그건 멱등이 아니라 명백한 겹침이다.
+
+**콘솔 점유는 1채널 구간으로만 넘긴다** — 기존 픽스처의 폭을 읽을 경로가 이 빌드에 없다.
+폭을 추측해 넓게 잡으면 멀쩡한 주소를 막고, 그 판단도 되돌릴 수 없는 결정에 영향을 준다.
+
+#### 1단계 payload에 열 셋을 **추가**했다 — 왜 불가피했나
+
+패치 툴은 설계상 **1단계 리포트 payload만** 입력으로 받는다(design.md §2.3). 그런데 그
+payload의 `designed_rig.fixtures[*]`에는 **도면 점유폭도 모드도 없었다** — `DesignedFixture`는
+둘 다 들고 있는데 리포트가 싣지 않았다. 그대로 두면 `plan_addresses`가 모든 항목을
+`footprint_unknown`으로 제외해 툴이 **구조적으로 아무것도 못 만든다**.
+
+그래서 `gdtf_fixture`·`mode`·`footprint` 세 열을 추가했다. **중첩 키 추가이고 최상위 계약은
+불변**이다 — 그것을 주장이 아니라 기계로 닫았다(아래 스냅샷). 콘솔의 `DMXChannels` 개수를
+넣지 않았다는 점이 중요하다(§0 항목 2a③).
+
+#### 계약 스냅샷 — **변경 전 코드에서 떴다**
+
+스냅샷을 지금 코드로 뜨면 "자기 자신과 같다"만 증명한다. 그래서
+`git stash push server/vwx/report.py`로 **열 추가 이전 상태로 되돌린 뒤** 스냅샷을 생성하고,
+되살린 뒤 현재 payload와 대조했다 — 통과했다. 즉 **변경 전 형상과 변경 후 형상이 같다**는
+진짜 before/after 대조다.
+
+고정 깊이는 AC-AUTOPATCH-025①이 정한 그대로 **최상위 키 + 키별 타입 시그니처**(리스트는
+원소 타입)다. 더 깊이 고정하지 않은 것은 의도다 — 중첩까지 고정하면 이번 열 추가 같은 정당한
+확장마다 깨지고, 그러면 스냅샷은 기계적으로 갱신되어 아무것도 막지 못한다. 중첩 의미는
+1단계 자신의 구조 assert가 지킨다(AC-025③, `test_vwx_*.py` 전수 통과).
+
+```json
+{"console_rig":"dict","designed_rig":"dict","diffs":"dict",
+ "excluded_rows":{"list":["dict"]},"read_failures":{"list":[]},
+ "skipped_checks":{"list":["dict"]},"summary_ko":"str"}
+```
+
+#### 대조군 실측
+
+| 심은 것 | 잡힌 것 | AC |
+|---|---|---|
+| 스키마에 `slot` 파라미터 | 리그 식별자 스캐너가 검출 | 023③ |
+| payload에 최상위 키 `patch_result` 추가 | 키 집합·시그니처 둘 다 불일치 | 025④ |
+| `summary_ko`를 str → list로 (키 집합은 유지) | **키 집합만 보면 못 잡는 것**을 시그니처가 잡음 | 025④ |
+| `server/prechk/verdicts.py`에 2줄 심기 | `git diff --stat ca00bc5 -- <PRESERVE>`가 검출 → 되돌림 | 024② |
+| 툴 1개 추가 | `test_tools.py`의 닫힌 계수(23)가 **실제로 실패**했다 | 023① |
+
+마지막 줄은 심은 대조군이 아니라 **실제로 걸린 게이트**다 — 툴을 등록하자 기존 닫힌 집합
+테스트가 `assert 24 == 23`으로 깨졌다. 계수를 24로 올리고 근거 주석을 남겼다.
+
+#### 실행 포트는 배선 계층에서도 닿지 않는다
+
+`test_autopatch_tool.py`의 실행 포트 대역은 **호출되면 즉시 `AssertionError`를 던진다**.
+드라이런·전달 두 모드의 종단 디스패치가 그 대역을 물고 통과한다 — 배선을 거쳐도 서버가
+패치를 발화하지 않는다는 뜻이다. `server/vwx/*.py` 전수 AST 스캔(M5)은 그대로 유효하다.
+
+#### 타입 확인이 없으면 아무것도 전달되지 않는다 — 설계된 기본값
+
+배선하고 나서야 드러난 것: `type_aliases` 없이 호출하면 **모든 항목이
+`type_confirmation_pending`으로 빠진다**. M3가 "사용자 확인 없이 타입을 확정하지 않는다"
+(위험 R2)로 설계했기 때문이며, 되돌릴 수 없는 쓰기에서 옳은 기본값이다.
+툴 설명문에 그 사실과 해소 방법(`type_aliases`)을 명시했고,
+`test_an_unconfirmed_type_match_never_reaches_the_lua`가 그 기본값을 지킨다.
+
+#### 검증 절의 시점 문제 — 정직하게 표기했다
+
+서버는 사람이 플러그인을 실행했는지 알 수 없다. 그래서 `verification` 절에
+`as_of`(이 호출이 방금 읽은 콘솔 상태)와 **"아직 실행하지 않았다면 미관측이 정상"**이라는
+주석을 함께 싣는다. 전용 검증 트리거를 새로 만들지 않은 이유는 `design.md` §2.3 스키마에
+없는 어휘를 늘리지 않기 위해서다 — 사람이 실행한 뒤 **같은 인자로 다시 호출**하면 그때의
+관측이 성공의 근거가 된다. 이 왕복 구조는 **M8 재정의에서 다시 볼 항목**이다.
+
+#### 사고 기록 — `git reset --hard`로 미커밋 작업을 날렸다
+
+AC-024 대조군을 "PRESERVE에 심고 → 커밋 → diff 확인 → `git reset --hard HEAD~1`"로 돌렸다.
+그 리셋이 **커밋되지 않은 M7 변경 4개 파일을 함께 지웠다**(`tools.py`·`report.py`·
+`patchplan.py`·`test_tools.py`). 신규 파일은 untracked라 살아남았다. git에서 복구 불가함을
+`fsck`로 확인한 뒤 전량 재작성했고, 재작성 후 테스트 수가 손실 이전과 **정확히 같다**
+(5,112 passed / 7 skipped).
+
+**교훈 — 대조군에 `git reset --hard`를 쓰지 마라.** PRESERVE 게이트는 커밋 없이도 확인된다:
+작업트리에 심고 `git diff --stat <BASE> -- <PRESERVE>`(`..HEAD` 없이)로 보면 미커밋 변경까지
+포함해 잡히고, 되돌리기는 **해당 파일 하나만** `git checkout --`으로 한다. 위 대조군 표의
+마지막 실행은 그 안전한 절차로 다시 돌린 결과다.
+
+#### 범위 경계
+
+`server/prechk/**` 무접촉(소비만) · PRESERVE 5경로 0-diff · 콘솔 접촉 0건 ·
+1단계 공개 계약 최상위 불변.
+
+**실측 결과**:
+
+| command | result |
+|---|---|
+| `uv run pytest server/tests/test_autopatch_tool.py -q` | `25 passed` |
+| `uv run pytest server/tests/test_autopatch_contract.py -q` | `5 passed` |
+| `uv run pytest server/tests -q` | `5112 passed, 7 skipped, 1 warning in 90.98s` (직전 baseline 5082 + 신규 30, **회귀 0**) |
+| `uv run ruff check server/vwx server/orchestrator/tools.py server/tests/test_autopatch_*.py` | `All checks passed!` |
+| `uv run ruff format --check …` | `21 files already formatted` |
+| `git diff --stat ca00bc5 -- console/lua server/safety server/prechk server/paperwork server/looks` | 빈 출력(작업트리 포함 0-diff) |
+
+**미검증 잔여**:
+- **툴 종단은 여전히 더블 기반**이다. 실물 콘솔에서 이 툴을 호출한 적이 없다 — 그것이 M8이다.
+- **`Inventory` 절단을 아직 판정에 반영하지 않는다.** M6이 M7에 넘긴 빚인데, 이번 배선에서
+  갚지 못했다. `read_inventory`는 절단을 기본 경로로 다루고 `completeness`로 보고하는데,
+  `apply_vectorworks_patch`는 그 값을 읽지 않는다 — **절단된 인벤토리에서는 "관측되지 않음"이
+  실제로는 "읽히지 않았음"일 수 있다.** 멱등 판정도 같은 위험을 진다(있는 픽스처를 못 보고
+  중복 생성 대상으로 올릴 수 있다). **M8 착수 전에 반드시 처리해야 하는 항목**이며,
+  이번 마일스톤의 AC 3건에는 걸리지 않아 통과했다는 사실 자체를 여기 남긴다.
+- `PatchPlan.to_dict()`의 `deferred_to_m2·m3·m4` 마커 3종도 **해소하지 못했다**. 툴 payload는
+  `plan`·`types`·`handoff`·`verification` 절을 따로 실어 실제 값을 전달하므로 기능상 문제는
+  없으나, `plan` 절 안의 그 마커는 이제 "이 절 혼자서는 모른다"는 뜻으로만 참이다.
 
 
 ### M0 라이브 세션 2차 — 테스트 쇼파일 확인 · 파괴적 측정 착수 전 기록 (2026-08-06)

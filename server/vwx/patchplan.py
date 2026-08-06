@@ -184,6 +184,58 @@ class AddressPlan:
         }
 
 
+@dataclass(frozen=True)
+class DesignedAttributes:
+    """1단계 도면이 후보 하나에 대해 준 값 — **콘솔에서 읽은 값이 아니다**.
+
+    `footprint`가 도면 점유폭이며, 콘솔의 `DMXChannels` 개수로 대체하면 안 된다
+    (M0 함정 7: 실측 14 vs 실제 stride 16).
+    """
+
+    gdtf_fixture: str | None = None
+    mode: str | None = None
+    footprint: int | None = None
+
+
+def designed_attributes_by_candidate(
+    report: Mapping[str, object], targets: Sequence[PatchCandidate]
+) -> dict[str, DesignedAttributes]:
+    """후보 식별자 -> 도면 값. `_address_basis_by_fixture`와 **같은 조인 키**를 쓴다.
+
+    조인 키는 `(unit_number, instrument_type, universe, address)`다 — 후보 자체가
+    그 네 값으로 만들어졌으므로(`_candidate_id`) 같은 키로 되짚을 수 있다.
+    도면 행을 찾지 못하면 빈 값을 돌려준다 — **추측하지 않는다**. 그 결과
+    폭 미확정 항목은 `plan_addresses`가 `footprint_unknown`으로 제외한다.
+    """
+    designed = report.get("designed_rig")
+    indexed: dict[tuple[str | None, str, int, int], DesignedAttributes] = {}
+    if isinstance(designed, Mapping):
+        for fixture in _mapping_rows(designed.get("fixtures")):
+            instrument_type = _optional_string(fixture.get("instrument_type"))
+            universe = _optional_int(fixture.get("universe"))
+            address = _optional_int(fixture.get("address"))
+            if instrument_type is None or universe is None or address is None:
+                continue
+            key = (
+                _optional_string(fixture.get("unit_number")),
+                instrument_type,
+                universe,
+                address,
+            )
+            indexed[key] = DesignedAttributes(
+                gdtf_fixture=_optional_string(fixture.get("gdtf_fixture")),
+                mode=_optional_string(fixture.get("mode")),
+                footprint=_optional_int(fixture.get("footprint")),
+            )
+    return {
+        target.id: indexed.get(
+            (target.unit_number, target.instrument_type, target.universe, target.address),
+            DesignedAttributes(),
+        )
+        for target in targets
+    }
+
+
 def plan_addresses(
     targets: Sequence[PatchCandidate],
     *,
