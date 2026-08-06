@@ -19,6 +19,10 @@ FID_ALREADY_IN_USE = "fid_already_in_use"
 FIXTURE_TYPE_NOT_IN_LIBRARY = "fixture_type_not_in_library"
 DMX_MODE_NOT_IN_LIBRARY = "dmx_mode_not_in_library"
 
+ADDRESS_ALREADY_OCCUPIED = "address_already_occupied"
+ADDRESS_OVERLAP_IN_PLAN = "address_overlap_in_plan"
+FOOTPRINT_UNKNOWN = "footprint_unknown"
+
 FID_CONFLICT_PRECHECK_DESCOPE = "fid_conflict_precheck_descope"
 FOOTPRINT_MATCH_DESCOPE = "footprint_match_descope"
 FIXTURE_TYPE_LIBRARY_TRUNCATED = "fixture_type_library_truncated"
@@ -50,6 +54,9 @@ TARGET_EXCLUSION_REASON = frozenset(
         FID_ALREADY_IN_USE,
         FIXTURE_TYPE_NOT_IN_LIBRARY,
         DMX_MODE_NOT_IN_LIBRARY,
+        ADDRESS_ALREADY_OCCUPIED,
+        ADDRESS_OVERLAP_IN_PLAN,
+        FOOTPRINT_UNKNOWN,
     }
 )
 SKIPPED_CHECK_KIND = frozenset(
@@ -118,6 +125,9 @@ _TARGET_EXCLUSION_LABELS = {
     FID_ALREADY_IN_USE: "기존 FID와 충돌",
     FIXTURE_TYPE_NOT_IN_LIBRARY: "콘솔 라이브러리에 대응 FixtureType 없음",
     DMX_MODE_NOT_IN_LIBRARY: "콘솔 라이브러리에 대응 DMXMode 없음",
+    ADDRESS_ALREADY_OCCUPIED: "도면 주소가 콘솔에서 이미 점유됨",
+    ADDRESS_OVERLAP_IN_PLAN: "같은 유니버스 안에서 다른 계획 항목과 점유 구간이 겹침",
+    FOOTPRINT_UNKNOWN: "점유폭 미확정 — 추측하지 않고 제외",
 }
 _SKIPPED_CHECK_LABELS = {
     FID_CONFLICT_PRECHECK_DESCOPE: "FID 충돌 사전검사 미수행",
