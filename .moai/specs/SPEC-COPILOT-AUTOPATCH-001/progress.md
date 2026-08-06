@@ -4,61 +4,146 @@
 > `file:line`은 코드·룰북·`console/lua/PROTOCOL.md`·**다른** SPEC의 아티팩트에만.
 > **증거 등급**: `[코드]` · `[문서]` · `[실측]` · `[미확정]`.
 
-## §0 인수인계 — 여기서 시작한다 (2026-08-05)
+## §0 인수인계 — 여기서 시작한다 (**2026-08-06 갱신** · 이전 판은 §0a)
 
-**상태**: **plan-phase 아티팩트 6종 작성 완료 · plan-audit 대기.**
-REQ **26건**(REQ-AUTOPATCH-001~026) · AC **27건** · ASSUMPTION 5건(71~75) · 마일스톤 9개(M0~M8) ·
-라이브 세션 **2회 계획** · clarification 마커 0건 · 설계 슬롯 5건 전부 종결.
+**상태**: **plan-audit PASS(round6 1.000) · run-phase 진행 중 · M0 종결 · M1·M2·M3 완료 ·
+M4~M8 착수 불가(전제 붕괴).**
+테스트 **4,943 passed / 7 skipped**(착수 4,898 → +45, 회귀 0) · 커밋 10건 ·
+PRESERVE 5경로 0-diff · 콘솔 세션 전 상태로 완전 원복.
 
-**이 SPEC이 1단계와 근본적으로 다른 점**: **콘솔에 쓴다.** 1단계는 읽고 비교만 했다.
+### 지금 이 SPEC은 막혀 있다 — 무엇에 막혔나
+
+`spec.md` §A **사전 확정 사실 1**("패치는 Lua `AddFixtures` 전용이며 정확히 2단계 —
+`deploy_plugin` → `run_commands([\"Plugin '<이름>'\"])`")이 **실기에서 성립하지 않았다.**
+실행 경로 **9가지**를 측정했고 픽스처는 **한 대도 생성되지 않았다**(§E.2 M0 1~4차 참조).
+`REQ-AUTOPATCH-016·018·020`과 마일스톤 **M4·M5·M6·M8**이 전부 그 전제 위에 있다.
+
+**M1·M2·M3는 영향받지 않는다** — 콘솔 쓰기와 무관한 순수 로직 계층이고 테스트 45건과 함께 유효하다.
+
+### [HARD] 다음 담당자가 반드시 알아야 할 인식론적 한계
+
+§E.2가 "근본 원인 = command destination"이라고 적었으나 **그것은 가설이지 증명이 아니다.**
+destination이 `TempCmdlines Cmdline 1`이 **아닌** 컨텍스트를 **한 번도 만들지 못했다** —
+즉 **양성 대조군이 없다.** "destination을 옮기면 성공한다"를 보인 적이 없으므로,
+상관은 확인됐고 인과는 미확정이다. **"이미 다 해봤다"고 믿고 넘어가지 마라.**
+
+### 미시험 항목 6건 — 이것부터 하라 (비용 대비 가능성 순)
+
+| # | 항목 | 왜 유망한가 | 필요 자원 |
+|---|---|---|---|
+| **L1** | **매크로 2줄로 실행**: line1 `ChangeDestination ShowData.LivePatch.Stages.'Stage 1'.Fixtures` · line2 `Plugin '<name>'` | 측정한 것은 **OSC 호출 2번**이고 각각 별도 임시 명령줄을 받았다. **매크로 줄들은 같은 명령줄에서 순차 실행**된다 — 구조가 다르다 | OSC만. 사용자 불필요 |
+| **L2** | **패치 편집 세션이 활성인 상태**에서 실행 (`Menu 'Patch'.'Edit'` 진입 후) | **`ShowData/Patch` childCount = 0, `ShowData/LivePatch` = 14**(2026-08-06 실측). MA3에 편집 버퍼와 라이브 패치가 **분리**되어 있고, `Patch()`는 LivePatch를 가리킨다. 편집 버퍼는 편집 세션 중에만 채워질 가능성이 있다 | 사용자가 편집 세션 진입 |
+| **L3** | `idtype`를 **객체 핸들**로: `Patch().IDTypes["Fixture"]` | 문자열 `"Fixture"`만 시험했다. `Patch/IDTypes`에 12개 객체가 실재한다. 룰북의 다른 주장들도 이미 틀린 것이 확인됐다 | OSC만 |
+| **L4** | `CreateUndo` 세션 안에서 **CD 없이** 호출 | undo를 쓴 시험은 **항상 CD와 동반**했다. undo만 있고 CD 없는 조합은 미시험이다 | OSC만 |
+| **L5** | **룰북 예제를 글자 그대로 재현**: `Robin MMX Spot` · `Mode 1` · 유니버스 1 · stride 42 (`30_plugin_patterns.md:40-53`) | 측정은 전부 `Robin LEDBeam 350` · 유니버스 10이었다. **"라이브 검증됨"이라 적힌 그 예제 자체**를 돌려야 G1이 닫힌다 | OSC만 |
+| **L6** | **양성 대조군 확보** — destination이 `TempCmdlines`가 아닌 컨텍스트를 하나라도 만들기 | 만들면 가설 증명, 못 만들면 **destination 가설 자체를 폐기**해야 한다 | OSC + 필요 시 사용자 |
+
+**L1·L3·L4·L5는 OSC만으로 단독 수행 가능하다.** 콘솔 조작 없이 약 20분.
+측정 절차·프로브 작성법은 §E.2 M0 3~4차 절이 그대로 재사용 가능하다
+(`tools/console_probe.py` + 플러그인 라벨을 출력 채널로 쓰는 기법).
+
+### 6건이 전부 실패하면 — 설계 대안 (사용자 결정 사항)
+
+**반자동 모델로의 전환**을 제안한다. 현 SPEC은 "서버가 콘솔에 쓴다"를 전제하나,
+제품의 명시적 비목표가 *"라이브 실시간 자율 운영 배제 — 실행 버튼은 항상 사람이 누른다"*
+(`.moai/project/product.md` §6)이다.
+
+```
+서버:  후보 정리 → FID 배정 → 타입 매칭 → Lua 소스 생성 → 드라이런 표 제시
+사람:  검토 → 콘솔에서 실행
+서버:  precheck_patch 재조회 → 건별 검증 → 리포트
+```
+
+- 앞쪽 절반은 **M1·M2·M3로 이미 완성**되어 있다.
+- 뒤쪽 검증은 `precheck_patch` 재사용이라 성립한다(결정 F).
+- 막힌 것은 **"서버가 직접 실행" 한 칸뿐**이다.
+- 조정 대상은 `REQ-AUTOPATCH-018` 하나이며, **M4(Lua 생성)·M6(검증 읽기)·M7(툴 배선)은 그대로 살아난다.**
+  M5만 "실행"에서 "실행 안내 + 검증"으로 축소된다.
+- 비가역 쓰기를 사람이 통제한다는 **SPEC 원래 정신에 오히려 더 부합**한다.
+
+이 전환은 plan-phase amendment이며 **재감사 대상**이다. 오케스트레이터가 임의로 승격하지 않는다.
+
+### 이 SPEC이 1단계와 근본적으로 다른 점
+
+**콘솔에 쓴다.** 1단계는 읽고 비교만 했다.
 패치는 픽스처를 **생성**하고, 이 앱에는 실행 취소·백업 복원 경로가 **없다**.
 그래서 요구사항의 절반 이상이 기능이 아니라 **되돌릴 수 없는 쓰기를 사람이 통제하게 만드는 장치**다.
+— 그리고 그 장치 중 하나(REQ-AUTOPATCH-023 검증 읽기)가 이번 M0에서 **실제로 값을 했다.**
+플러그인이 `OK`를 반환하고도 0건을 만든 상황을 그 요구가 거짓 성공으로부터 막았다.
 
 ### 읽는 순서
 
 | # | 무엇을 | 어디서 |
 |---|---|---|
 | 1 | 무엇을 만들기로 했나 | `spec.md` — REQ 26건 · §C `의존 범위 한정` · §C ASSUMPTION 71~75 · §C PRESERVE · §D Out of Scope 6건 |
-| 2 | 왜 M0가 먼저인가 | `plan.md` §A.2 — 쓰기에 필요한 값 둘(FID · DMXMode 핸들)이 **읽히는지조차 미확정**이다 |
+| 2 | M0가 무엇을 확정했나 | **`progress.md` §E.2 M0 1~4차** — 전제 5건 판정과 9경로 측정 전문. **`plan.md` §A.2의 "M0가 먼저"는 이미 이행됐다** |
 | 3 | 부정이면 어떻게 되나 | `plan.md` §A.3 — 가정 5건의 부정 처리표. 부정은 실패가 아니라 **기능 축소**다 |
 | 4 | 무엇을 통과해야 하나 | `acceptance.md` — AC 27건 · §C.0 역추적표(REQ 26/26) · §C.0a 마일스톤 배정 · §F DoD |
 | 5 | 어떻게 만들 것인가 | `design.md` — §3 흐름도 · §5 설계 슬롯 5건 · §6.3 비공허성 대조군 8건 · §7 안티패턴 10건 |
 | 6 | 근거는 무엇인가 | `research.md` — 패치 기법 · FID 난제 · 타입 핸들 · 비가역성 · 1단계 상속 |
 
-### 함정 6건 — 먼저 읽어라
+### 함정 8건 — 먼저 읽어라 (2026-08-06: 1번 정정 · 7·8번 신설)
 
-1. **`ChangeDestination`/`CD`를 어디에서도 보내지 마라.** 플러그인 안에서도, `run_commands`로도.
-   보내면 패치가 `nil`을 반환하고 **아무것도 생성되지 않는다**
-   (`server/rulebook/assets/v2.4.2/30_plugin_patterns.md:20-29`).
-2. **슬롯은 FID가 아니다.** `precheck_patch`는 FID를 읽지 못한다
-   (`server/prechk/inventory.py:57`, REQ-PRECHK-005). 슬롯을 FID로 쓰면
-   **MA3가 조용히 받아들이고 엉뚱한 픽스처를 덮는다**
-   (`server/rulebook/assets/v2.4.2/31_choreography_patterns.md:203-209`).
+1. **~~`ChangeDestination`을 어디에서도 보내지 마라~~ → [정정]** 룰북은 "CD를 보내면 패치가 `nil`을 반환한다"고
+   적었으나(`30_plugin_patterns.md:20-29`), 2026-08-06 실측 결과 **CD를 보내든 안 보내든 결과가 같다** —
+   CD는 플러그인의 앰비언트 목적지에 **아무 효과가 없다**(§E.2 M0 3차). 생성 산출물의 CD 금지
+   (REQ-AUTOPATCH-017)는 **그대로 유효**하나, "CD가 실패 원인"이라는 인과 설명은 **반증됐다.**
+2. **슬롯은 FID가 아니다.** 슬롯을 FID로 쓰면 **MA3가 조용히 받아들이고 엉뚱한 픽스처를 덮는다**
+   (`31_choreography_patterns.md:203-209`). **단 FID 자체는 읽힌다** — `Patch/Stages/1/Fixtures/<slot>`의
+   `FID` 프로퍼티(2026-08-06 실측, `ASSUMPTION-71` GO). `server/prechk/inventory.py:57`의
+   화이트리스트가 좁은 것과는 별개다(그쪽은 PRESERVE라 확장하지 않는다).
 3. **`FixtureType`·`Mode`는 표시 문자열이다.** 거기서 채널 수를 파싱하지 마라 —
-   `ASSUMPTION-27`이 이미 반증했다(`server/prechk/patch.py:14-22`).
+   `ASSUMPTION-27`이 이미 반증했다(`server/prechk/patch.py:14-22`). 실측 확인: 픽스처의 `Mode`가
+   `"2 Mode 2"` 형태로 온다 — 파싱 유혹이 실재한다.
 4. **플러그인이 오류 없이 끝난 것은 성공이 아니다.** `AddFixtures`는 실패 시 `nil`을 반환할 뿐이다.
-   **검증 읽기가 성공의 유일한 근거다**(REQ-AUTOPATCH-023).
+   **검증 읽기가 성공의 유일한 근거다**(REQ-AUTOPATCH-023). **2026-08-06 실물 재현**: `exec`가 `OK`를
+   반환하고 픽스처는 0건 생성됐다.
 5. **`run_commands` 배열 길이는 1이다.** 플러그인 실행 호출에 다른 명령을 함께 넣지 마라.
-   이름은 **작은따옴표**(큰따옴표는 거부됨).
+   이름은 **작은따옴표**(큰따옴표는 `server/bridge/protocol.py:109`가 거부).
 6. **역산된 주소로 패치할 수 있다.** 1단계가 `absolute_back_calculated` 등급을 붙여 넘긴다.
    금지하지 않되 **승인 화면에 등급과 전제를 노출**해야 한다(design.md §5 슬롯 D).
+7. **[신설] `DMXChannels` 개수는 DMX 점유폭이 아니다.** 실측 반증: `Robin LEDBeam 350` Mode 2의
+   `DMXChannels` childCount는 **14**인데 실제 주소 stride는 **16**이다. 14를 폭으로 쓰면 픽스처마다
+   2채널씩 겹친다. `DMXFootprint` 프로퍼티는 존재하나 responder 1.6.1이 `table: 0x…`로만 반환한다
+   (§E.2 M0 1차, `ASSUMPTION-72` GO(한정) → 폭 검증 descope).
+8. **[신설] `Patch()`는 `ShowData.Patch`가 아니라 `ShowData.LivePatch`다.**
+   `ShowData/Patch`는 childCount **0**, `ShowData/LivePatch`가 **14**로 픽스처를 담고 있다
+   (2026-08-06 실측). MA3에 편집 버퍼와 라이브 패치가 분리되어 있을 가능성이 있으며 이는
+   §0 미시험 항목 **L2**의 근거다.
 
 ### 기계 확인 커맨드
 
 ```bash
 W=/Users/studiox/orca/workspaces/AI-Lighting_Console/spec-vwx-001
-git -C "$W" rev-parse --abbrev-ref HEAD          # feature/SPEC-COPILOT-VWX-001 (1단계 위에 스택)
-uv run pytest server/tests -q                    # 착수 기준선: 4898 passed / 7 skipped
-uv run ruff check server/vwx server/tests/test_vwx_*.py
+git -C "$W" rev-parse --abbrev-ref HEAD   # feature/SPEC-COPILOT-VWX-001 (1단계 위에 스택)
+uv run pytest server/tests -q             # 현재 기준선: 4943 passed / 7 skipped (착수 4898)
+uv run ruff check        server/vwx server/tests/test_autopatch_*.py
+uv run ruff format --check server/vwx server/tests/test_autopatch_*.py   # [필수] check만으로는 부족
 git -C "$W" diff --stat ca00bc5..HEAD -- console/lua server/safety server/prechk server/paperwork server/looks
 ```
 
-### 다음 담당자가 먼저 결정할 것
+**라이브 콘솔 프로브**(onPC 기동 상태에서):
 
-- **M0 라이브 세션 일정**. 이것 없이 M2·M3·M6 설계가 확정되지 않는다.
-- **테스트 쇼파일 확보**. M0·M8 둘 다 파괴적 측정을 포함하므로 **운영 쇼파일에서 하지 않는다.**
-- `ASSUMPTION-71` 측정을 위해 **슬롯과 FID가 다른 픽스처**가 있는 쇼파일이 필요하다.
-  없으면 판정이 INCONCLUSIVE로 끝나고 충돌 사전검사가 descope된다.
+```bash
+uv run python -m server.tools.responder_roundtrip \
+  --host 127.0.0.1 --port 8000 --listen-port 9005 --skip-exec --wait 4
+.venv/bin/python tools/console_probe.py --listen-port 9005 "state:Patch/Stages/1/Fixtures"
+```
+
+세션 값: `console_host=127.0.0.1` · `console_port=8000` · `receive_port=9005` · `osc_slot=2` ·
+live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 최신이니 덮어쓰지 마라**).
+
+### 다음 담당자가 먼저 할 것
+
+1. **§0 미시험 항목 L1·L3·L4·L5를 돌린다** — OSC만으로 단독 가능, 약 20분. 결과에 따라 L2·L6.
+2. 6건이 전부 실패하면 **반자동 모델 전환**(§0)을 사용자에게 제안한다. amendment + 재감사 대상.
+3. **테스트 쇼파일은 확보되어 있다** — `NewShow_2026.07.15_05.44.02UTC`,
+   사용자가 2026-08-06에 테스트용으로 확인함(§E.2 M0 2차). 픽스처 39대 · FID 1~39 · 유니버스 1~3.
+   **슬롯≠FID 조건을 이미 만족**하므로 `ASSUMPTION-71` 재측정은 불필요하다.
+4. 프로브 작성 시 **플러그인 재임포트 캐싱 함정**에 주의 — 같은 이름으로 재임포트하면 소스가
+   갱신되지 않는다(`console/lua/README.md` §2.1). 매번 새 이름을 쓰거나 슬롯을 지우고 임포트하라.
+5. 프로브 결과 회수는 **플러그인 라벨**을 쓴다(`Cmd("Label Plugin 5 '<text>'")`). 라벨은 공백에서
+   잘리므로 작은따옴표로 감싸고, `.`·`/` 구분자는 MA3가 제거한다. 재실행 구분용 **난수 태그**를 붙여라.
 
 ---
 
@@ -1268,6 +1353,44 @@ OSC 발화 플러그인(편집기 닫힘/열림) · GUI 탭(프롬프트 미이�
 | 라이브러리 폴더 프로브 파일 | 0 | **동일** |
 
 `console/lua/**`(PRESERVE) 무접촉. 저장소 코드 변경 0. **M0 종결.**
+
+### §E.2z 자기정정 — "근본 원인 확정"은 과했다 (2026-08-06, 세션 종료 직전)
+
+본 §E.2의 M0 3·4차 절이 destination을 **"근본 원인 확정"** 이라고 적었다. **그 표현은 과하다.**
+
+**확인된 것**: 9개 실행 경로 전부에서 (a) 플러그인이 보는 목적지가 `TempCmdlines Cmdline 1`이었고
+(b) `AddFixtures`가 `nil`을 반환했다.
+
+**확인되지 않은 것**: 목적지가 `TempCmdlines`가 **아닌** 컨텍스트를 **한 번도 만들지 못했다.**
+따라서 "목적지를 옮기면 성공한다"는 **양성 대조군이 없다.** 상관은 있고 인과는 미확정이다.
+이 SPEC이 다른 곳에서는 "0건 주장에 반드시 비공허성 대조군을 붙인다"는 규율(§6.3)을 지켰으면서,
+정작 자신의 인과 주장에는 대조군 없이 "확정"을 붙였다 — 같은 잣대를 자기 판정에도 적용해야 한다.
+
+**세션 종료 직전 추가 실측 — 미시험 영역이 드러났다**:
+
+| 경로 | childCount |
+|---|---|
+| `ShowData/Patch` | **0** (비어 있음) |
+| `ShowData/LivePatch` | **14** (`FixtureTypes`·`Stages`·`Layers` 등, 픽스처 39대가 여기) |
+| `ShowData/Patch/Stages` | 조회 실패(경로 없음) |
+
+MA3에 **패치 편집 버퍼와 라이브 패치가 분리**되어 있고 `Patch()`는 **LivePatch**를 가리킨다.
+모든 측정이 LivePatch만 겨냥했다. 편집 버퍼가 편집 세션 중에만 채워진다면 `AddFixtures`의
+대상이 애초에 달랐을 수 있다. **이 축은 전혀 측정되지 않았다.**
+
+**정정된 판정 문구**:
+
+```
+MOST-LIKELY-HYPOTHESIS (미증명): AddFixtures 실패의 원인은 플러그인 실행 컨텍스트의
+  command destination이 patch fixtures 레이어가 아니기 때문이다.
+  근거 — 9경로 상관. 반증 미확보 — 양성 대조군 0.
+CONFIRMED: 측정한 9개 실행 경로 어디에서도 픽스처가 생성되지 않았다.
+CONFIRMED: 목적지를 옮길 Lua API가 이 빌드에 존재하지 않는다.
+REFUTED  : "CD를 보내면 실패한다"는 룰북의 인과 설명 — CD 유무와 무관하게 결과가 같다.
+```
+
+**다음 담당자는 §0의 미시험 항목 L1~L6부터 시작하라.** 특히 L1(매크로 2줄)과 L2(편집 세션)는
+구조적으로 다른 실행 컨텍스트이며 아직 측정되지 않았다. "이미 다 해봤다"는 결론은 **이르다.**
 
 ---
 
