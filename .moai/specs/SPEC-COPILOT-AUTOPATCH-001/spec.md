@@ -1,22 +1,22 @@
 ---
 id: SPEC-COPILOT-AUTOPATCH-001
-title: "Vectorworks 연계 2단계 — 차이 리포트 승인 기반 자동 패치 생성 (AddFixtures Lua 플러그인)"
-version: "0.1.2"
+title: "Vectorworks 연계 2단계 — 차이 리포트 승인 기반 반자동 패치 생성·검증 (AddFixtures Lua 생성 → 사람 실행 → 서버 검증)"
+version: "0.1.4"
 status: draft
 created: 2026-08-05
 updated: 2026-08-06
 author: orchestrator
 priority: P0
-phase: "Vectorworks 연계 2단계 — 자동 패치 생성 (1단계 대조 리포트의 후속, MVR/GDTF는 3단계)"
+phase: "Vectorworks 연계 2단계 — 반자동 패치 생성·검증 (1단계 대조 리포트의 후속, MVR/GDTF는 3단계). v0.1.3 이후: 서버가 Lua를 생성·전달하고 사람이 실행하며 서버가 검증한다"
 module: "server/vwx/ (확장), server/orchestrator/tools.py (신규 툴 1종), server/prechk/ (재사용·무변경)"
 lifecycle: spec-anchored
-tags: "vectorworks, autopatch, addfixtures, lua-plugin, fid, fixturetype, dmxmode, approval-gate, idempotency, irreversible"
+tags: "vectorworks, autopatch, addfixtures, lua-plugin, fid, fixturetype, dmxmode, approval-gate, idempotency, irreversible, semi-automatic, human-in-the-loop"
 tier: L
 depends_on: [SPEC-COPILOT-VWX-001]
 related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVERLAP-001, SPEC-COPILOT-MVP-001]
 ---
 
-# SPEC-COPILOT-AUTOPATCH-001 — Vectorworks 연계 2단계: 승인 기반 자동 패치
+# SPEC-COPILOT-AUTOPATCH-001 — Vectorworks 연계 2단계: 승인 기반 **반자동** 패치 (생성·전달·검증)
 
 > **본 SPEC은 `SPEC-COPILOT-VWX-001`(1단계)의 직접 후속이다.** 1단계가 내는 차이 리포트의
 > `missing_in_console`(도면에는 있으나 콘솔 실측에 없는 장비)을 입력으로 받아, **사람이 항목 단위로
@@ -39,28 +39,35 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 | 0.1.0 | 2026-08-05 | orchestrator | 최초 작성 (draft, Tier L). 출처는 `.moai/reports/ma3-copilot-overview.html` §7 P0 항목의 **2단계**와 `SPEC-COPILOT-VWX-001` §D `### Out of Scope — Lua AddFixtures 자동 패치`. **아티팩트 6종**(spec/plan/acceptance/design/research/progress). REQ **25건**(REQ-AUTOPATCH-001~025), AC **26건**, ASSUMPTION **5건**(71~75), 마일스톤 **9개**(M0~M8), 라이브 세션 **2회**(M0 프로브 · M8 종단), clarification 마커 **0건**. 위험 4건(FID 충돌 · FixtureType 핸들 해석 · 비가역성 · 멀티셀/액세서리)을 각각 요구·가정·마일스톤으로 구조화했다. |
 | 0.1.1 | 2026-08-05 | orchestrator | **독립 plan-audit 1회차 FAIL(0.80 / Tier L 임계 0.85) 지적 10건 반영.** REQ **25→26**(REQ-AUTOPATCH-026 신설 — `ASSUMPTION-71` 부정 시 구조화된 사용자 확인 강제, D2), AC **26→27**(AC-AUTOPATCH-027 신설). frontmatter `depends_on` 추가 + §C `의존 범위 한정` 신설(**D1 critical** — 1단계가 `partial-blocked`인데 게이트 없이 완료로 취급하던 것). REQ-AUTOPATCH-003에 `address_basis` 열 강제(D3), REQ-AUTOPATCH-022에 멱등 일치 튜플 명시(D7). AC-AUTOPATCH-014③ 구조 테스트 구체화(D4), AC-AUTOPATCH-025 계약 스냅샷 기법 정의(D5), AC-AUTOPATCH-001 `Where`→`When`(D8). `plan.md` M0 테스트 쇼파일 전제 승격(D6), `design.md` §4 잔여 위험 R8 추가(D10), `progress.md` 선례 인용 정정(D9). |
 | 0.1.2 | 2026-08-06 | orchestrator | **독립 plan-audit 2회차 PASS(0.857 ≥ Tier L 0.85).** 1회차 지적 10건 전량 CLOSED가 원문 대조로 확인됨. 2회차 신규 지적 4건도 전량 반영 — N1(major, D3와 같은 결함 패턴 재발): `design.md` §2.3 툴 스키마에 `fid_range_visually_confirmed_empty` 필드 신설하고 AC-AUTOPATCH-027이 그 필드명을 직접 인용하게 해 요구와 인터페이스 계약을 일치시킴. N2: `design.md` §6.2 테스트 매핑에 AC-AUTOPATCH-027 등재. N3: `research.md` §1의 "입력 확정" 문구를 §C `의존 범위 한정`으로 좁힘. N4: AC-AUTOPATCH-027을 AC-AUTOPATCH-008 직후로 이동(소속 마일스톤 그룹 배치 관례). **요구·AC 수 불변**(REQ 26 · AC 27). 코드 변경 0. |
+| 0.1.3 | 2026-08-06 | orchestrator | **반자동 실행 모델로의 amendment (M0 5차 실측 근거 · 사용자 승인 2026-08-06).** §A 사전 확정 사실 **1·2를 반증 확정으로 정정**하고 실측 사실 **7·8을 신설**(플러그인 Lua 컨텍스트는 명령줄 목적지를 물려받지 않는다 · `deploy` 동사로 소스가 써지지 않는다). **REQ-AUTOPATCH-018을 "서버가 플러그인을 실행한다"에서 "검토용 Lua를 사람에게 전달하고 사람이 실행한 뒤 서버가 검증한다"로 조정** — `AddFixtures` 자동 실행이 이 빌드에서 성립하지 않는다는 13경로 0건 실측(`progress.md` §E.2 M0 1~5차)에 따른다. REQ-AUTOPATCH-020에 배포 경로 비가용 실측을 반영. `ASSUMPTION-76`(플러그인 실행 컨텍스트의 목적지) 신설 후 **즉시 NEGATIVE 판정 기록**. **REQ 수 불변(26)** — 018의 내용만 바뀌고 신설·삭제 0건. M4·M6·M7 무영향, M5만 "실행"→"실행 안내 + 검증"으로 축소. 코드 변경 0. **재감사 대상.** |
+| 0.1.4 | 2026-08-06 | orchestrator | **독립 plan-audit round7 FAIL(0.7375) 18건 + round8 FAIL(0.805) 13건 + round9 FAIL(0.8025) 8건 = 지적 39건 전량 반영** (`progress.md` §E.1a 7·8·9회차). **N11(major, 인과 과잉주장 재발)**: "원인이 command destination이 아님은 확정"이라 적은 지점 전부를 **"처방의 반증 / 원인은 미확정"**으로 교정하고 §A 사실 7에 **재질의 금지의 범위**를 명시 — §E.2z가 교정한 오류의 재발이었고, round8이 서술 잔여 2곳(N29·N30)·round9가 §E.2z 자신의 후속 블록(N43)을 더 잡아 함께 교정했다. **N42(major, round9)**: round8 N38에 대응해 넣은 `AC-AUTOPATCH-019④`가 `REQ-AUTOPATCH-003`·`AC-AUTOPATCH-004②`(드라이런은 Lua 소스 전문을 낸다)와 **정면 충돌**하고 스키마에 없는 `승인 플래그`를 인용했다(D3·round2 N1 패턴 재발) → **철회하고 `REQ-AUTOPATCH-004`가 스스로 열거한 세 금지**(승격 경로·실행 기본값·함축 재시도)를 ③④⑤로 검증하도록 재작성. **검증가능성**: `AC-019`·`020` 비공허성 대조군을 산출물 수준으로 재작성(N16), `design.md` §6.3 **8→10건** 확장 + 표의 범위 명시, 대조군 없던 0건 주장 **6건**(AC-007③·013③·014③(a)·016③·017②·021②)에 대조군 부착(N37·N47). N28: REQ-018 **복합 태그**(신규 ID 미생성). 그 외 파생 지점 전파 누락 다수(§0 상태줄·서술·함정·읽는 순서·다음 담당자 항목·§E.1 yaml 머신 게이트·캡션·§F Justification·§F DoD·§B 시나리오·§7 안티패턴·§A.2·M0 전제수·§8 레지스트리·§2 제목·H1·프론트매터·6개 아티팩트 상태줄) 반영. **REQ 26 · AC 27 · §C.0a 합 27 불변.** 코드 변경 0. **round10 독립 감사 PASS(0.865 ≥ Tier L 0.85, round9 0.8025 대비 +0.0625) — 이 사이클의 첫 비-FAIL.** round10 지적 7건도 전량 반영: **N50**(가장 실질적 — "경로 13가지"가 실행 컨텍스트와 인자 변형을 섞어 세어 재구성 불가였다 → **실행 경로 10가지 · 인자 변형 8종 · 별도 생성 기법 1종**으로 계수 단위를 분리하고 의존 지점 12곳에 전파) · N53(대조군 추가 요약을 5건·N37 → **6건·N37+N47**로 통일) · N52(§E.1 헤드라인이 `plan_status`와 모순) · N51(§E.1 전문·캡션의 round9 누락) · N55(`커밋 10건` → run-phase 11건/총 15건, 계수 기준 명시) · N54(짝 없는 `**`) · N55b(§F 항목 7의 보증이 `"0건"` 토큰에만 걸려 있던 것을 **금지·부재 주장 전부**로 확장하고 문장형 부재 주장 6건에 대조군 부착 + 라이브 검증 AC 2건을 명시적 범위 예외로 기록). **plan_status: audit-ready** |
 
 ---
 
 ## A. 개요
 
 **한 줄**: 1단계 차이 리포트에서 사람이 고른 장비만, 콘솔 라이브러리에서 확정한 FixtureType·DMXMode
-핸들과 사용자가 명시한 빈 FID 범위를 써서, `deploy_plugin` 안전 파이프라인을 거친 Lua 플러그인으로
-콘솔에 패치하고, **패치 직후 다시 읽어 실제로 그렇게 되었는지 확인**한다.
+핸들과 사용자가 명시한 빈 FID 범위를 써서 **검토 가능한 `AddFixtures` Lua를 생성해 사람에게 전달하고,
+사람이 콘솔에서 실행한 뒤 서버가 다시 읽어 실제로 그렇게 되었는지 건별로 확인**한다.
 
 본 SPEC은 **생성만** 한다. 기존 픽스처의 수정·삭제·재주소는 §D가 배제한다.
+**서버는 패치를 직접 실행하지 않는다**(v0.1.3 amendment — 아래 사실 7·8).
 
 ### 사전 확정 사실 (조사 확정 — 재질의 금지)
 
-1. **커맨드라인으로는 픽스처를 만들 수 없다.** 패치는 Lua `AddFixtures` 전용이며 정확히 2단계다 —
-   ① `deploy_plugin(name, lua_source)` ② `run_commands(["Plugin 'YourName'"])`.
-   2번 호출에는 **그 명령 하나만** 들어가고 작은따옴표를 쓴다(큰따옴표는 거부됨)
-   (`server/rulebook/assets/v2.4.2/30_plugin_patterns.md:13-18`).
-2. **`ChangeDestination`/`CD`를 어디에서도 보내면 안 된다** — 플러그인 안에서도, `run_commands`로도.
-   `AddFixtures`는 콘솔의 **현재 command destination**(이미 patch fixtures 레이어)을 읽으며, CD를
-   보내면 패치가 `nil`을 반환하고 아무것도 만들지 않는다. 패치가 안 되면 사용자에게
-   **Patch > Fixtures 편집기를 먼저 열라고 안내**하는 것이 정답이다
-   (`server/rulebook/assets/v2.4.2/30_plugin_patterns.md:20-29`).
+1. **~~커맨드라인으로는 픽스처를 만들 수 없고, 패치는 `deploy_plugin` → `run_commands(["Plugin 'X'"])`
+   2단계다~~ → [반증 확정 · v0.1.3]** 앞 절은 룰북
+   (`server/rulebook/assets/v2.4.2/30_plugin_patterns.md:13-18`)의 주장이며 **이 환경에서 성립하지
+   않는다.** onPC 2.4.2.2 + responder 1.6.1에서 **실행 경로 10가지와 인자 변형 8종을 측정해
+   픽스처 생성 0건**이고,
+   룰북이 "라이브 검증됨"으로 적은 워크된 예제(`:40-53`)를 **글자 그대로 돌려도 0건**이다
+   (`progress.md` §E.2 M0 1~5차). **대체 사실은 아래 7번이다.**
+2. **~~`ChangeDestination`/`CD`를 어디에서도 보내면 안 된다 — CD를 보내면 패치가 `nil`을 반환한다~~
+   → [반증 확정 · v0.1.3]** **CD 유무와 무관하게 결과가 같다.** 나아가 M0 5차가 **양성 대조군**을
+   확보했다 — 매크로 명령줄의 CD는 **실제로 적용되고 듣지만**(목적지 미이동 시 같은 목적지-상대
+   명령은 `Illegal object`이거나 무효과) **플러그인 Lua는 그 목적지를 물려받지 않는다.**
+   생성 산출물의 CD 금지(REQ-AUTOPATCH-017)는 **그대로 유효**하다 — 근거가 "CD가 실패 원인"에서
+   **"CD는 아무 효과가 없으므로 생성 어휘에 둘 이유가 없다"**로 바뀔 뿐이다.
 3. **`AddFixtures{...}` 필드**: `mode`(필수, DMX 모드 핸들) · `amount`(필수, 정수) · `fid`(문자열) ·
    `idtype = "Fixture"` · `name`(문자열) · `patch`(선택, `{"universe.address"}`).
    **모드의 DMX footprint 만큼 간격을 두어야 겹치지 않는다**
@@ -72,6 +79,23 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 6. **1단계는 이미 멀티셀을 접고 액세서리를 분류한다.** 도면 8행짜리 멀티셀 바는 **1대**로,
    DMX를 소비하는 액세서리는 **별도 장비**로, 비DMX 액세서리는 **제외**로 나온다
    (`SPEC-COPILOT-VWX-001` REQ-VWX-013~017). 본 SPEC은 그 분류를 신뢰하고 다시 세지 않는다.
+7. **[신설 · v0.1.3 실측] `AddFixtures`는 이 환경에서 서버 자동화로 픽스처를 만들지 못하며,
+   명령줄 목적지 조작으로는 그 벽에 도달할 수 없다.** 플러그인 Lua 실행 컨텍스트의 목적지는 항상
+   `TempCmdlines Cmdline 1`이고, **명령줄 목적지를 patch fixtures 컨테이너로 옮겨도 물려받지 않는다**
+   (명령줄 목적지에 대한 양성 대조군 확보 · `progress.md` §E.2 M0 5차 L6). 객체 모델 생성 경로도
+   부정이다(`Fixtures:Append`는 실재 `function`이나 `nil` 반환 · 0건, 허구 키 비공허성 대조군 통과).
+   **단 객체 모델 프로퍼티 쓰기는 목적지와 무관하게 즉시 적용된다** — patch 레이어가 Lua로
+   읽고 쓸 수 없는 것이 아니라, `AddFixtures`의 **생성**만 성립하지 않는다.
+   **[재질의 금지의 범위]** 확정된 것은 위 **관측과 처방의 무효**까지다.
+   **"실패 원인이 무엇인가"는 확정 사실이 아니라 미확정**이며, 특히 "원인이 플러그인의
+   목적지다"라는 가설은 **반증되지 않았다**(그 전건이 실현된 컨텍스트를 10개 실행 경로 전부에서
+   한 번도 만들지 못했다 — `progress.md` §0 [HARD], round7 감사 N11). 원인 규명을 재질의
+   금지로 덮지 않는다.
+8. **[신설 · v0.1.3 실측] responder `deploy` 동사로는 이 빌드에 플러그인 소스가 써지지 않는다.**
+   `cannot confirm plugin source write`로 실패하면서 **플러그인 객체는 생성되고 소스는 빈 상태**가
+   되며, 그것을 실행하면 `OK`가 돌아오고 아무 일도 일어나지 않는다. 동작하는 배포 경로는
+   **콘솔 라이브러리 파일 + `Import Plugin '<파일명>'`** 하나뿐이다(`console/lua/**`가 본 SPEC의
+   PRESERVE라 응답기 수정은 범위 밖 — G3, 별건 SPEC). **따라서 서버가 배포·실행을 완결할 수 없다.**
 
 ### 조사가 확립한 제약 — 본 SPEC이 이 위에 선다
 
@@ -166,9 +190,22 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 - **REQ-AUTOPATCH-017** `[Unwanted]` The Lua 생성기와 명령 생성기 **shall not** `ChangeDestination`
   또는 `CD`를 **어떤 형태로도** 산출물에 포함한다 — 플러그인 소스 안, `run_commands` 배열 안,
   주석 안의 실행 가능 코드가 모두 금지된다.
-- **REQ-AUTOPATCH-018** `[Ubiquitous]` The 실행기 **shall** 플러그인 실행을
-  `run_commands(["Plugin '<이름>'"])` **단일 명령 호출**로 보낸다 — 그 배열에 다른 명령을 함께 넣지
-  않으며, 이름은 작은따옴표로 감싼다.
+- **REQ-AUTOPATCH-018** `[Ubiquitous + Unwanted — 복합]` **[v0.1.3 조정 — 반자동 실행 모델]**
+  두 극성을 한 요구에 담는다. **신규 ID를 만들지 않는 이유**: REQ 수 26을 유지해 §C.0 역추적표
+  26행과 1:1을 지키기 위함이며, 두 반쪽은 **AC-AUTOPATCH-015의 ①과 ②가 각각** 검증한다.
+  - `[Ubiquitous]` The 실행 계층 **shall** 승인된 패치를 **사람이 콘솔에서 실행하도록 전달**한다 —
+    검토 가능한 `AddFixtures` Lua 소스와 실행 절차를 사용자에게 제시한다. 실행 여부·시점은
+    사람이 결정하며, 서버의 다음 동작은 **REQ-AUTOPATCH-023의 검증 읽기**다. → AC-015①
+  - `[Unwanted]` The 실행 계층 **shall not** 패치 실행을 **서버 스스로 발화**한다 — 사용자 승인
+    여부와 무관하게 서버가 실행을 대행하는 경로를 두지 않는다. → AC-015②
+
+  근거: §A 사전 확정 사실 7·8(실행 경로 10가지·인자 변형 8종 0건 실측 · 배포 경로 비가용) 및 제품 비목표
+  *"라이브 실시간 자율 운영 배제 — 실행 버튼은 항상 사람이 누른다"*(`.moai/project/product.md` §6).
+  **이전 판(v0.1.2)의 "`run_commands(["Plugin '<이름>'"])` 단일 명령 호출" 요구는 폐기한다** —
+  그 경로가 픽스처를 만들지 못한다는 것이 실측으로 확정됐다. 단 서버가 어떤 이유로든 콘솔에
+  문장을 보낼 때는 **REQ-AUTOPATCH-021의 단일 통로 규율**이 그대로 적용된다.
+  **[가역성]** 미측정으로 남은 실행 컨텍스트가 **하나** 있다 — L2(패치 편집 세션 활성).
+  L2가 긍정으로 나오면 본 요구를 v0.1.2 형태로 **되돌릴 수 있다**(`progress.md` §E.2aa).
 - **REQ-AUTOPATCH-019** `[Ubiquitous]` The 주소 계획기 **shall** 각 장비를 **해당 모드의 점유폭만큼
   간격**을 두어 배치하고, 1단계 도면이 지정한 유니버스·주소를 우선 사용한다. 도면 주소가 이미
   콘솔에서 점유되어 있으면 그 항목을 패치 대상에서 제외하고 사유를 보고한다 —
@@ -176,8 +213,11 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 
 ### B.5 안전 · 멱등 · 검증
 
-- **REQ-AUTOPATCH-020** `[Ubiquitous]` The 배포기 **shall** 기존 `deploy_plugin` 파이프라인
-  (컴파일 검사 + 정적 스캔 + 사람 리뷰)을 그대로 경유한다 — 별도 배포 경로를 만들지 않는다.
+- **REQ-AUTOPATCH-020** `[Ubiquitous]` The 배포기 **shall** 콘솔로 나가는 플러그인 배포가 필요한
+  경우 기존 `deploy_plugin` 파이프라인(컴파일 검사 + 정적 스캔 + 사람 리뷰)을 그대로 경유한다 —
+  별도 배포 경로를 만들지 않는다. **[v0.1.3 실측 고지]** 이 빌드에서 `deploy` 동사는 소스를 쓰지
+  못하므로(§A 사실 8) **반자동 모델의 기본 전달물은 배포가 아니라 검토용 Lua 소스 자체**다.
+  본 요구는 "별도 배포 경로 신설 금지"라는 **금지 규율로서 유효**하며, 우회 배포 구현을 막는다.
 - **REQ-AUTOPATCH-021** `[Unwanted]` The 패치 모듈 **shall not** `execution_port`를 직접 호출한다 —
   콘솔로 나가는 모든 문장은 `run_commands` → `bundle_gate.screen()`을 통과한다
   (`server/tests/test_prechk_tool.py:330-343`의 AST 스캔 대상).
@@ -189,10 +229,14 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 - **REQ-AUTOPATCH-023** `[Ubiquitous]` The 패치 실행기 **shall** 실행 직후 `precheck_patch`로 **다시
   읽어**, 승인된 각 항목이 실제로 그 유니버스·주소에 그 타입으로 생성되었는지 확인하고 결과를
   건별로 보고한다 — 플러그인이 오류 없이 끝난 것을 성공의 근거로 삼지 않는다.
-- **REQ-AUTOPATCH-024** `[Event-driven]` **When** 검증 읽기가 승인 항목과 어긋나면, the 패치 실행기
+- **REQ-AUTOPATCH-024** `[Event-driven]` **When** 검증 읽기가 승인 항목과 어긋나면, the 패치 검증기
   **shall** 불일치를 구조화해 보고하고 **자동 재시도·자동 보정을 하지 않는다**. 생성된 픽스처가
-  0건이면 "Patch > Fixtures 편집기를 먼저 열라"는 안내를 함께 낸다
-  (`server/rulebook/assets/v2.4.2/30_plugin_patterns.md:28-29`).
+  0건이면 **실행 여부와 실행 절차를 재확인하도록 안내**한다.
+  **[v0.1.3 정정]** 이전 판은 룰북의 *"Patch > Fixtures 편집기를 먼저 열라"*
+  (`server/rulebook/assets/v2.4.2/30_plugin_patterns.md:28-29`)를 그대로 안내 문구로 못박았으나,
+  그 조언은 **근거를 잃었다** — 편집기를 연 상태에서도 0건이고(`ASSUMPTION-75` NEGATIVE),
+  목적지를 patch fixtures 레이어로 옮겨도 0건이다(`ASSUMPTION-76` NEGATIVE, 양성 대조군 포함 ·
+  `progress.md` §E.2 M0 2~5차). **틀린 원인을 사용자에게 안내하지 않는다.**
 
 ### B.6 경계와 보고
 
@@ -257,6 +301,16 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 - **ASSUMPTION-75** — Patch 편집기가 열려 있지 않은 상태를 **패치 전에 감지**할 수 있다.
   감지 가능하면 사전에 안내할 수 있고, 불가능하면 실패 후 안내만 가능하다(REQ-AUTOPATCH-024).
   **M0 라이브 프로브 대상.**
+- **ASSUMPTION-76** — `[신설 v0.1.3 · 즉시 판정]` 서버가 발화한 플러그인 실행이 **patch fixtures
+  레이어의 command destination을 갖는다.** plan-phase가 놓친 전제였다(룰북은 "`AddFixtures`가 현재
+  목적지를 읽는다"까지만 적었고, "서버가 발화한 실행이 그 목적지를 갖는가"는 아무도 묻지 않았다).
+  **판정: NEGATIVE** — 플러그인 Lua는 명령줄 목적지를 물려받지 않으며, 목적지를 옮겨도
+  `AddFixtures`는 0건이다(명령줄 목적지에 대한 양성 대조군 포함, `progress.md` §E.2 M0 5차).
+  **부정의 결과가 REQ-AUTOPATCH-018 조정(반자동 실행 모델)이다.**
+  **단 L2(패치 편집 세션 활성)는 미측정으로 남는다** — 긍정으로 나오면
+  REQ-AUTOPATCH-018을 v0.1.2 형태로 복원할 수 있다(`progress.md` §E.2aa).
+  또한 이 NEGATIVE는 **"원인이 목적지다"라는 가설의 반증이 아니다** — 그 전건이 실현된
+  컨텍스트를 만들지 못했으므로 원인은 미확정이다(§A 사실 7의 재질의 금지 범위 참조).
 
 ### PRESERVE — 무변경 대상
 
@@ -321,7 +375,7 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 
 | 참조 | 위치 | 무엇을 가져오는가 |
 |---|---|---|
-| `AddFixtures` 2단계 절차 · 필드 · CD 금지 | `server/rulebook/assets/v2.4.2/30_plugin_patterns.md:11-53` | 패치 기법 정본 |
+| `AddFixtures` 필드 집합 · `mode` 핸들 형식 · 점유폭 원칙 | `server/rulebook/assets/v2.4.2/30_plugin_patterns.md:11-53` | **[v0.1.3] 이 부분만 유효.** 같은 문서의 2단계 절차(`:13-18`) · CD 인과(`:25-27`) · 편집기 안내(`:28-29`) · 워크된 예제(`:40-53`)는 **반증됐다**(`research.md` §2 주석 · `progress.md` §E.2 M0 1~5차) |
 | `deploy_plugin` 안전 파이프라인 | `server/orchestrator/tools.py:1266` | 컴파일 + 정적 스캔 + 사람 리뷰 |
 | 콘솔 쓰기 단일 통로 | `server/orchestrator/tools.py` `run_commands` → `bundle_gate.screen()` | 게이트 경유 강제 |
 | AST 경계 스캔 | `server/tests/test_prechk_tool.py:330-343` | `execution_port` 직접 호출 금지 검증 |
