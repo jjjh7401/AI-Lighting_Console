@@ -120,8 +120,11 @@ from server.spatial.topology import TopologyResult
 from server.spatial.topology import classify as classify_topology
 from server.vwx.address import resolve_all as resolve_vwx_addresses
 from server.vwx.apply import (
+    CONSOLE_READ_INCOMPLETE,
     build_patch_handoff,
+    console_read_caveat,
     read_console_fixtures,
+    screen_console_read,
     screen_idempotent,
     verify_patch,
 )
@@ -2343,11 +2346,25 @@ def build_toolset(
         except InventoryReadError as error:
             return _error_result(call, f"fixture inventory unreadable: {error}")
         console_fixtures = read_console_fixtures(inventory, library=type_plan.library)
+        # 재조회가 무엇을 못 봤는지 먼저 말한다. 절단은 이 콘솔의 **기본 경로**이고
+        # (픽스처 19대에서 이미 절단됨 — progress.md §E.2 M0 1차), 그 상태의 "없음"은
+        # 관측이 아니라 미판독이다. 미판독이 남아 있으면 생성 대상을 전부 막는다 —
+        # 없다고 답했다가 중복을 만들면 되돌릴 방법이 없다.
+        caveat = console_read_caveat(inventory)
+        read_complete = caveat is None or caveat["kind"] != CONSOLE_READ_INCOMPLETE
+        payload["console_read"] = {
+            **inventory.to_dict(),
+            "complete_enough_to_judge_absence": read_complete,
+            "caveat": caveat,
+        }
 
         address_plan = plan_addresses(
             plan.targets,
             footprints={target.id: designed[target.id].footprint for target in plan.targets},
             occupied=_occupied_spans(console_fixtures, plan.targets),
+        )
+        address_plan = screen_console_read(
+            plan.targets, address_plan=address_plan, inventory=inventory
         )
         address_plan = screen_idempotent(
             plan.targets,
@@ -2364,7 +2381,11 @@ def build_toolset(
         )
         payload["handoff"] = handoff.to_dict()
         payload["verification"] = {
-            **verify_patch(handoff.entries, console_fixtures=console_fixtures).to_dict(),
+            **verify_patch(
+                handoff.entries,
+                console_fixtures=console_fixtures,
+                read_complete=read_complete,
+            ).to_dict(),
             "as_of": "이 호출이 방금 읽은 콘솔 상태",
             "note": (
                 "아직 사람이 플러그인을 실행하지 않았다면 '미관측'이 정상이다 — "
