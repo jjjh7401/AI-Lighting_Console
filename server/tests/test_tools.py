@@ -143,13 +143,19 @@ class TestRegistry:
         #   uploaded Vectorworks Instrument Data export plus THIS console's own
         #   fixture inventory and reports the difference; 0 exec verbs, never
         #   touches execution_port (spec.md §D).
+        # + SPEC-COPILOT-AUTOPATCH-001's apply_vectorworks_patch — turns that
+        #   report into reviewable AddFixtures Lua plus an execution procedure
+        #   the HUMAN runs, then re-reads to verify. Registered as ONE tool
+        #   with a dry_run flag (design slot A) rather than a read/write pair:
+        #   it has no write half to split off. The server never fires the
+        #   patch — measured, not cautious (REQ-AUTOPATCH-018 [v0.1.3]).
         # The count is asserted against the declared tuple's length so the set
         # stays CLOSED: adding a handler without declaring it, or declaring one
         # without a handler, still fails here.
         registry = _registry()
         names = [definition.name for definition in registry.definitions()]
         assert sorted(names) == sorted(TOOL_NAMES)
-        assert len(names) == len(TOOL_NAMES) == 23
+        assert len(names) == len(TOOL_NAMES) == 24
 
     def test_the_four_original_tools_are_still_registered(self):
         # The M5 addition must not have displaced any of them.
