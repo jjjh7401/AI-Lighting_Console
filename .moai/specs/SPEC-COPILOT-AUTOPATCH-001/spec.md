@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-AUTOPATCH-001
 title: "Vectorworks 연계 2단계 — 차이 리포트 승인 기반 자동 패치 생성 (AddFixtures Lua 플러그인)"
-version: "0.1.0"
+version: "0.1.1"
 status: draft
 created: 2026-08-05
 updated: 2026-08-05
@@ -12,6 +12,7 @@ module: "server/vwx/ (확장), server/orchestrator/tools.py (신규 툴 1종), s
 lifecycle: spec-anchored
 tags: "vectorworks, autopatch, addfixtures, lua-plugin, fid, fixturetype, dmxmode, approval-gate, idempotency, irreversible"
 tier: L
+depends_on: [SPEC-COPILOT-VWX-001]
 related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVERLAP-001, SPEC-COPILOT-MVP-001]
 ---
 
@@ -21,7 +22,13 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 > `missing_in_console`(도면에는 있으나 콘솔 실측에 없는 장비)을 입력으로 받아, **사람이 항목 단위로
 > 승인한 것만** 라이브 검증된 Lua `AddFixtures` 기법으로 콘솔에 실제 패치한다.
 >
-> **1단계와 결정적으로 다른 점: 이 SPEC은 콘솔에 쓴다.** 1단계는 읽고 비교만 했다. 패치는
+> **의존 상태 고지 (v0.1.1)**: 1단계는 이 문서 작성 시점에 `status: draft` ·
+> `run_status: partial-blocked`이며 **M8(라이브 종단)이 BLOCKED**, M0는 PARTIAL이다.
+> 따라서 frontmatter에 `depends_on: [SPEC-COPILOT-VWX-001]`을 두어 **run-phase 진입 전에
+> Phase 1 의존성 게이트가 1단계 완료를 강제**하게 한다. 본 SPEC의 plan-phase 작성은 1단계의
+> **설계 산출물**(차이 리포트 스키마 · 설계상 리그 모델 · 멀티셀/액세서리 분류 규약)에만 의존하며
+> 이들은 M1~M7에서 구현·검증이 끝났다 — 자세한 의존 범위 한정은 §C `의존 범위 한정`을 보라.
+>
 > 픽스처를 **생성**하며, 이 앱에는 아직 실행 취소·백업 복원 경로가 없다. 따라서 본 SPEC의 요구사항
 > 절반 이상은 기능이 아니라 **되돌릴 수 없는 쓰기를 사람이 통제하게 만드는 장치**다.
 
@@ -29,7 +36,8 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 
 | 버전 | 날짜 | 작성자 | 변경 |
 |---|---|---|---|
-| 0.1.0 | 2026-08-05 | orchestrator | 최초 작성 (draft, Tier L). 출처는 `.moai/reports/ma3-copilot-overview.html` §7 P0 항목의 **2단계**와 `SPEC-COPILOT-VWX-001` §D `### Out of Scope — Lua AddFixtures 자동 패치`. **아티팩트 6종**(spec/plan/acceptance/design/research/progress). REQ **25건**(REQ-AUTOPATCH-001~025), AC **26건**, ASSUMPTION **5건**(71~75), 마일스톤 **9개**(M0~M8), 라이브 세션 **2회**(M0 프로브 · M8 종단), clarification 마커 **0건**. 위험 4건(FID 충돌 · FixtureType 핸들 해석 · 비가역성 · 멀티셀/액세서리)을 각각 요구·가정·마일스톤으로 구조화했다. **사용자 결정 대기 1건** — FID 배정 전략(§C `ASSUMPTION-71` 판정에 따라 분기). |
+| 0.1.0 | 2026-08-05 | orchestrator | 최초 작성 (draft, Tier L). 출처는 `.moai/reports/ma3-copilot-overview.html` §7 P0 항목의 **2단계**와 `SPEC-COPILOT-VWX-001` §D `### Out of Scope — Lua AddFixtures 자동 패치`. **아티팩트 6종**(spec/plan/acceptance/design/research/progress). REQ **25건**(REQ-AUTOPATCH-001~025), AC **26건**, ASSUMPTION **5건**(71~75), 마일스톤 **9개**(M0~M8), 라이브 세션 **2회**(M0 프로브 · M8 종단), clarification 마커 **0건**. 위험 4건(FID 충돌 · FixtureType 핸들 해석 · 비가역성 · 멀티셀/액세서리)을 각각 요구·가정·마일스톤으로 구조화했다. |
+| 0.1.1 | 2026-08-05 | orchestrator | **독립 plan-audit 1회차 FAIL(0.80 / Tier L 임계 0.85) 지적 10건 반영.** REQ **25→26**(REQ-AUTOPATCH-026 신설 — `ASSUMPTION-71` 부정 시 구조화된 사용자 확인 강제, D2), AC **26→27**(AC-AUTOPATCH-027 신설). frontmatter `depends_on` 추가 + §C `의존 범위 한정` 신설(**D1 critical** — 1단계가 `partial-blocked`인데 게이트 없이 완료로 취급하던 것). REQ-AUTOPATCH-003에 `address_basis` 열 강제(D3), REQ-AUTOPATCH-022에 멱등 일치 튜플 명시(D7). AC-AUTOPATCH-014③ 구조 테스트 구체화(D4), AC-AUTOPATCH-025 계약 스냅샷 기법 정의(D5), AC-AUTOPATCH-001 `Where`→`When`(D8). `plan.md` M0 테스트 쇼파일 전제 승격(D6), `design.md` §4 잔여 위험 R8 추가(D10), `progress.md` 선례 인용 정정(D9). |
 
 ---
 
@@ -97,7 +105,10 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
   사용자가 **명시적으로 고른 항목만** 패치 대상에 넣는다. "전부 승인"은 항목 전수를 고른 것과
   같은 절차를 거치며, 기본 선택 상태는 **아무것도 선택되지 않음**이다.
 - **REQ-AUTOPATCH-003** `[Ubiquitous]` The 패치 계획기 **shall** **드라이런을 기본 동작**으로 하여,
-  생성될 Lua 소스 전문과 대상 장비 표(타입 · 모드 · FID · 유니버스 · 주소 · 점유폭)를 **먼저** 낸다.
+  생성될 Lua 소스 전문과 대상 장비 표를 **먼저** 낸다. 표의 열은 최소한
+  **타입 · 모드 · FID · 유니버스 · 주소 · 점유폭 · `address_basis`**를 포함한다 —
+  `address_basis`는 1단계가 붙인 주소 근거 등급(`universe_address_direct` |
+  `absolute_back_calculated`)이며, 역산 등급이 하나라도 섞이면 그 전제 문구를 함께 싣는다.
   드라이런 산출물은 콘솔에 아무것도 보내지 않고 얻을 수 있어야 한다.
 - **REQ-AUTOPATCH-004** `[Unwanted]` The 패치 실행기 **shall not** 사용자의 명시 승인 없이 콘솔에
   쓰기를 발생시킨다 — 드라이런 호출이 실행으로 승격되는 경로, 기본값이 실행인 인자,
@@ -122,6 +133,12 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
   그 **축소를 리포트에 명시**하며, 사용자가 준 범위의 정확성에 전적으로 의존함을 함께 알린다.
 - **REQ-AUTOPATCH-010** `[Ubiquitous]` The FID 배정기 **shall** 배정 결과를 드라이런 표에 **전수
   나열**한다 — 어느 장비가 어느 FID를 받는지 사용자가 승인 전에 볼 수 있어야 한다.
+- **REQ-AUTOPATCH-026** `[Where]` **Where** `ASSUMPTION-71`이 **부정 또는 INCONCLUSIVE**로
+  판정되면, the 패치 실행기 **shall** 실행 전에 **구조화된 사용자 확인**을 요구한다 —
+  "이 FID 범위가 콘솔에서 비어 있음을 눈으로 확인했다"는 사실이 일반 승인과 **구분되는 별도
+  페이로드 필드**로 캡처되어야 하며, 그 필드가 없으면 실행을 **거부**한다. 산문 경고만으로는
+  충족되지 않는다 — 실행 건별로 감사 가능해야 한다. **GO 분기에서는 이 확인을 요구하지 않는다**
+  (충돌 사전검사가 독립 탐지를 제공하므로).
 
 ### B.3 FixtureType · DMXMode 핸들 해석
 
@@ -164,8 +181,10 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
   콘솔로 나가는 모든 문장은 `run_commands` → `bundle_gate.screen()`을 통과한다
   (`server/tests/test_prechk_tool.py:330-343`의 AST 스캔 대상).
 - **REQ-AUTOPATCH-022** `[Ubiquitous]` The 패치 실행기 **shall** **멱등**하다 — 같은 승인 집합을 두 번
-  실행해도 중복 픽스처를 만들지 않는다. 실행 전에 대상 주소·이름의 기존 점유를 재조회해 이미 존재하는
-  항목을 건너뛰고, 건너뛴 사실을 보고한다.
+  실행해도 중복 픽스처를 만들지 않는다. 실행 전에 **(유니버스, 주소, FixtureType, DMXMode 이름)**
+  네 값이 모두 일치하는 기존 픽스처를 재조회해 그 항목만 건너뛰고, 건너뛴 사실을 보고한다.
+  **주소는 일치하지만 타입 또는 모드가 다르면 멱등이 아니라 충돌이며**, 건너뛰지 않고
+  충돌로 보고한다 — 무관한 픽스처가 그 주소를 점유한 것을 "이미 했음"으로 삼키지 않는다.
 - **REQ-AUTOPATCH-023** `[Ubiquitous]` The 패치 실행기 **shall** 실행 직후 `precheck_patch`로 **다시
   읽어**, 승인된 각 항목이 실제로 그 유니버스·주소에 그 타입으로 생성되었는지 확인하고 결과를
   건별로 보고한다 — 플러그인이 오류 없이 끝난 것을 성공의 근거로 삼지 않는다.
@@ -183,6 +202,33 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 ---
 
 ## C. 환경 및 전제
+
+### 의존 범위 한정 — 1단계의 무엇에 의존하는가 (v0.1.1)
+
+`depends_on: [SPEC-COPILOT-VWX-001]`은 **run-phase 진입 게이트**다. 다만 "1단계가 통째로 끝나야
+한다"는 주장은 과하므로, 무엇에 의존하고 무엇에 의존하지 않는지 좁혀서 적는다.
+
+**의존한다 (M1~M7에서 구현·검증 완료)**
+
+| 의존 대상 | 1단계 상태 |
+|---|---|
+| 차이 리포트 payload 스키마 (`diffs` · `designed_rig` · `read_failures` · `excluded_rows` · `skipped_checks`) | 구현·테스트 완료 |
+| `missing_in_console` 항목의 필드 집합 (유니버스 · 주소 · 타입 · 이름 · 유닛) | 구현·테스트 완료 |
+| 멀티셀 접기 · 액세서리 분류 · 미패치 제3분류 | 실물 4종으로 검증 완료 |
+| 주소 근거 등급(`address_basis`) | 구현·테스트 완료 |
+| `diffs.performed` 불변식과 `multi_system_mapping_absent` 사유 | 구현·테스트 완료 |
+
+**의존하지 않는다 (1단계에서 아직 열린 것)**
+
+| 1단계 미완 항목 | 본 SPEC에 미치는 영향 |
+|---|---|
+| `ASSUMPTION-70` — 제목행 선행형 워크시트 실물 미검증 | **없다.** 그 변형이 판독되면 후보 목록이 생기고, 판독 실패면 본 SPEC이 REQ-AUTOPATCH-025로 거부한다. 어느 쪽이든 본 SPEC의 계약은 불변이다 |
+| M8 — 1단계 라이브 종단 미수행 | 본 SPEC의 M0·M8이 **자체 라이브 세션**을 갖는다. 1단계 M8이 검증할 것(도면 판독 종단)과 본 SPEC이 검증할 것(패치 종단)은 다른 구간이다 |
+| 1단계 `status: draft` | run-phase 게이트가 강제한다. plan-phase 작성은 위 표의 확정 산출물만 참조한다 |
+
+**따라서**: 본 SPEC의 §A "사전 확정 사실"은 **위 표 상단(의존한다) 범위에 한정**된 주장이며,
+1단계 전체가 완료되었다는 뜻이 아니다.
+
 
 ### 측정된 기준선
 

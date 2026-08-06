@@ -27,7 +27,7 @@ M0 없이 M2 이후를 착수하지 않는다.
 
 | 가정 | 부정이면 |
 |---|---|
-| `ASSUMPTION-71` FID 가독 | REQ-AUTOPATCH-009의 충돌 사전검사 **descope**. 리포트에 축소 명시. 사용자 FID 범위 단독 의존을 승인 화면에 경고로 승격 |
+| `ASSUMPTION-71` FID 가독 | REQ-AUTOPATCH-009의 충돌 사전검사 **descope**. 리포트에 축소 명시. **추가로 REQ-AUTOPATCH-026이 발동한다** — 산문 경고로 끝내지 않고, "FID 범위가 콘솔에서 비어 있음을 눈으로 확인했다"를 **일반 승인과 구분되는 별도 페이로드 필드**로 요구하며 없으면 실행을 거부한다(건별 감사 가능). 이 분기에서는 그 확인이 유일한 독립 안전망이다 — 멱등 검사(주소·타입·모드)도 검증 읽기(유니버스·주소·타입)도 **FID 충돌은 탐지하지 못한다** |
 | `ASSUMPTION-72` DMXModes 드릴다운 | REQ-AUTOPATCH-014의 점유폭 일치 확인 **descope**. 모드 선택은 사용자 확인 단독. 드라이런 표에 "점유폭 미검증" 열 추가 |
 | `ASSUMPTION-73` 다중 유니버스 patch 배열 | 유니버스별로 플러그인을 **분할 실행**하는 것으로 대체. 분할 사실을 드라이런에 명시 |
 | `ASSUMPTION-74` 패치 후 즉시 관측 | REQ-AUTOPATCH-023의 검증 읽기에 **재시도 대기**를 넣되, 대기 후에도 미관측이면 "확인 불가"로 보고(성공으로 간주 금지) |
@@ -64,6 +64,12 @@ AC-AUTOPATCH-025가 지킨다 — `precheck_vectorworks_diff`의 payload 키 집
 ### M0 — 라이브 전제 측정 (cycle_type=none)
 
 **요구·설계 지시**: 실기 onPC 2.4.2에서 `ASSUMPTION-71`~`-75`를 **비파괴 우선**으로 측정한다.
+**진입 전제 (D6)**: **테스트 쇼파일이 확보되어 콘솔에서 열려 있어야 M0를 착수한다.**
+절차 4(파괴적 측정)가 그것을 요구하므로 이는 권고가 아니라 **차단 전제**다.
+테스트 쇼파일을 끝내 확보하지 못하면 `ASSUMPTION-73`·`-74`는 **INCONCLUSIVE**로 판정하고
+(`ASSUMPTION-71`의 "적합 픽스처 없음 → INCONCLUSIVE" 처리와 동일한 규율),
+그 결과 M8은 **BLOCKED로 남으며 SPEC은 완결되지 않는다.** 운영 쇼파일로 대체하지 않는다.
+
 71·72·75는 읽기만으로 판정 가능하다. 73·74는 **최소 1대 패치**가 필요하므로 사용자 승인을 받고
 테스트용 쇼파일에서 수행하며, 세션 종료 시 생성물을 사람이 제거한다.
 
@@ -93,7 +99,7 @@ AC-AUTOPATCH-025가 지킨다 — `precheck_vectorworks_diff`의 payload 키 집
 **요구·설계 지시**: 사용자 범위 안에서만 배정. 범위 미제공 시 거부. 슬롯 유래 값 사용 금지.
 M0의 `ASSUMPTION-71` 판정에 따라 충돌 사전검사를 켜거나 descope한다 — **어느 쪽이든 리포트에
 어떤 안전망이 작동 중인지 명시**한다.
-**AC**: AC-AUTOPATCH-005 · AC-AUTOPATCH-006 · AC-AUTOPATCH-007 · AC-AUTOPATCH-008
+**AC**: AC-AUTOPATCH-005 · AC-AUTOPATCH-006 · AC-AUTOPATCH-007 · AC-AUTOPATCH-008 · AC-AUTOPATCH-027
 
 ### M3 — FixtureType · DMXMode 해석 (cycle_type=tdd)
 
@@ -174,6 +180,7 @@ M0의 `ASSUMPTION-71` 판정에 따라 충돌 사전검사를 켜거나 descope�
 | `server/tests/test_autopatch_execute.py` | `deploy_plugin` 경유 · 단일 명령 · `execution_port` 직접 호출 0 · 드라이런 무쓰기 |
 | `server/tests/test_autopatch_verify.py` | 멱등 · 검증 읽기 건별 · 불일치 보고 · 자동 보정 0 |
 | `server/tests/test_autopatch_tool.py` | 5지점 등록을 **dispatch로** 검증 · 파라미터 스키마 |
+| `server/tests/test_autopatch_contract.py` | 1단계 공개 계약 골든 스냅샷(최상위 키 집합 + 키별 타입 시그니처) 비교 |
 
 테스트 더블은 `server/tests/test_prechk_tool.py:41-228`의 `RigPort` / `RecordingExecutionPort` /
 `_registry()` 관례를 복사한다. **"0건" 주장에는 전부 비공허성 대조군을 붙인다** —
