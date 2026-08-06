@@ -737,6 +737,84 @@ not readable, `ShowMetaData` childCount 0). **테스트 쇼파일임이 확인�
 | `git diff --stat -- console/lua server/safety server/prechk server/paperwork server/looks` | 빈 출력(PRESERVE 0-diff) |
 | 인메모리 planner driver | GO: 기존 FID 100 충돌 제외 후 101 배정. 부정: `fid_conflict_precheck_descope` 기록 후 200·201 배정 |
 
+### M3 — FixtureType · DMXMode 해석 (완료)
+
+**상태: COMPLETE — 타입·모드는 `Patch/FixtureTypes` 열거에서만 얻고, 퍼지 매칭 후보는 사람이
+확인해야 확정되며, 부재는 항목 단위 하드 스톱이다. 점유폭 일치 확인은 `ASSUMPTION-72` 런타임
+입력으로 갈라져 GO 분기는 불일치를 승인 전에 제시하고, 부정/INCONCLUSIVE 분기(= M0 실측이 만든
+현실 기본값)는 확인을 descope하고 축소를 건별로 명시한다.**
+
+**TDD RED 증거**: `uv run pytest server/tests/test_autopatch_types.py -q` →
+`ModuleNotFoundError: No module named 'server.vwx.typemap'`, `1 error in 0.08s`.
+
+**구현 산출**:
+
+- `server/vwx/typemap.py` — 신규. `Patch/FixtureTypes` → `<t>/DMXModes` → `<m>|Name` →
+  `<m>/DMXChannels` 열거·드릴다운, `rig.fuzzy_type_equal` 재사용 퍼지 매칭(새 헬퍼 신설 0건),
+  별칭 재사용, 항목 단위 하드 스톱, `ASSUMPTION_72_*` 런타임 분기, `점유폭 미검증` 열을 가진
+  `type_table`.
+- `server/vwx/verdicts.py` — 어휘 추가: 제외 사유 `fixture_type_not_in_library` ·
+  `dmx_mode_not_in_library`, skipped-check `footprint_match_descope` ·
+  `fixture_type_library_truncated` · `fixture_type_library_unreadable`, 신규 닫힌 어휘
+  `type_resolution_status`(4종) + 라벨.
+- `server/tests/test_autopatch_types.py` — 신규 23건. 전부 `RigPort` 관례 더블 기반 인메모리,
+  콘솔 접촉 0.
+
+**AC 판정**:
+
+| AC | 판정 근거 | 실측 명령 · 결과 |
+|---|---|---|
+| AC-AUTOPATCH-009 | ① `test_candidates_come_from_patch_fixture_types_enumeration_not_source_constants` — 첫 state 호출이 `Patch/FixtureTypes`이고 타입·모드 이름이 전부 열거 응답에서 나온다. ② `test_truncated_enumeration_is_reported_and_absence_is_not_asserted` — `truncated: true`면 `library_incomplete` + `fixture_type_library_truncated`이고 하드 스톱 0건, 같은 입력에서 `truncated: false`면 `library_absent` + `fixture_type_not_in_library`로 갈라진다. 열거 실패·모드 열거 실패·모드 열거 절단도 각각 부재 단정이 아님을 별도 3건이 확인 | `uv run pytest server/tests/test_autopatch_types.py -q` → `23 passed in 0.06s` |
+| AC-AUTOPATCH-010 | ① `test_string_equality_alone_never_confirms_a_mapping` — 이름이 완전히 같아도 `needs_confirmation`이고 `console_type`은 `None`. ② `test_observed_vw_and_gdtf_names_both_produce_candidates` — `Robe MegaPointe`(VW)와 `Robe Lighting@MegaPointe`(GDTF) 둘 다 콘솔 `MegaPointe` 후보를 만든다. ③ `test_stored_alias_is_reused_and_the_reuse_is_visible_in_the_payload` — 별칭이 있으면 `resolved` + `confirmation_source: type_alias` + `alias_reuse` 행이 남고, 없으면 같은 입력이 `needs_confirmation`. 별칭이 라이브러리에 없는 이름을 가리키면 신뢰하지 않고 하드 스톱(`test_alias_naming_a_type_outside_the_library_is_not_trusted`) | 동 |
+| AC-AUTOPATCH-011 | ① `test_only_the_unmatched_item_is_excluded_and_the_rest_proceed` — 2건 중 미대응 1건만 `hard_stops`에 실리고 나머지는 후보 제시로 진행, `ok`는 참(전체 실패 아님). ② `test_hard_stop_reason_names_the_gdtf_import_prerequisite` — 사유에 `GDTF`·`임포트` 포함. ③ `test_no_similar_name_substitute_assignment` — 미대응 항목의 `console_type`이 `None`. 모드 부재는 `dmx_mode_not_in_library`로 별도 하드 스톱 | 동 |
+| AC-AUTOPATCH-012 | ① `test_go_branch_presents_the_footprint_mismatch_before_approval` — GO 분기에서 도면 16 vs 콘솔 24 불일치가 `presented_before_approval: true` + `footprint_mismatches` 행으로 나오고 상태가 `resolved`에서 `needs_confirmation`으로 강등된다(승인 전 제시). ② `test_descoped_branch_states_the_reduction_and_adds_the_unverified_column`(negative·inconclusive·기본값 3분기) — `footprint_match_descope`가 `skipped_checks`에 실리고 사유에 `DMXFootprint`·`직렬화`·`DMXChannels`·`14`·`16`이 담기며 `type_table`에 `점유폭 미검증` 열이 생긴다. 채널 수를 못 읽으면 일치로 간주하지 않고 `match: null`로 보고. ③ `test_channel_count_is_never_parsed_out_of_a_display_string` — 표시문자열 `2 Mode 2`의 열거 인덱스는 **3**(선행 숫자 2와 일부러 어긋냄)이고 채널 수는 `DMXChannels` 자식 수 16이다. ④ `test_multicell_eight_cell_mode_is_the_one_selected` — 8셀 장비에서 `Standard`가 아니라 `8 Cell Mode`(인덱스 2, 96ch)가 선택되고 GO 분기 점유폭이 일치한다 | 동 |
+
+**비공허성 대조군 4건 — 전부 실제로 잡혔다**:
+
+| 심은 것 | 스캐너 | 결과 |
+|---|---|---|
+| 라이브러리 이름 상수 `LIBRARY = "Robin MMX Spot"` · `GDTF = "Robe Lighting@MegaPointe"` | `library_name_constants` (AST 문자열 상수) | 가짜 소스에서 검출됨 · `typemap.py` 실소스는 0건 |
+| 동등 확정 `designed.instrument_type == entry.name` · `type_name == "X"` · `any(key == entry.name ...)` | `equality_confirmation_locations` (AST Compare) | 3종 전부 검출됨 · 실소스 0건 |
+| 대체 배정 (하드 스톱 행에 `console_type` 주입) | `assert_no_substitute_assignment` | `AssertionError` 발생 확인 |
+| 표시문자열 파싱 `int(mode.name.split(' ')[0])` · `re.search(r"(\d+)", name)` | `display_string_parse_locations` | 2종 전부 검출됨 · 실소스 0건 |
+
+**추가 뮤테이션 검증 5건**(테스트가 구현을 실제로 붙잡는지 — 각각 `typemap.py`를 일시 변조 후 복원):
+
+| 뮤테이션 | 결과 |
+|---|---|
+| 별칭 없이 자동 확정 | 2건 RED |
+| 퍼지 매칭을 `==`로 교체 | 4건 RED (AST 스캐너 포함) |
+| 절단된 열거에서 부재 단정 | 1건 RED |
+| 점유폭 불일치를 조용히 통과 | 1건 RED |
+| descope 분기에서도 `DMXChannels` 읽기 | 3건 RED (`ExplodingChannelPort`가 잡음) |
+
+**M0 GO(한정) 판정을 어떻게 소비했는가**: `ASSUMPTION-72`의 드릴다운은 되지만 점유폭은 못 얻는다는
+실측을 그대로 반영해, `plan.md` §A.3의 **부정 처리를 현실 기본 분기로 삼았다** — `assumption_72`의
+기본값이 `negative`이고 GO는 명시 입력이어야 한다. descope 사유에 근거를 그대로 적는다:
+`DMXFootprint`는 responder 표면에서 table 포인터로만 돌아와 직렬화되지 않고, `DMXChannels` 자식
+수는 점유폭이 아니다(**실측 14 vs 실제 주소 stride 16**). 근본 해결은 `console/lua/**` 변경이라
+본 SPEC의 PRESERVE이며 범위 밖임을 축소 사유 문자열에 명시했다. GO 분기도 함께 구현·테스트했으므로
+판정은 컴파일 타임 상수가 아니라 런타임 입력이다(M2의 `ASSUMPTION_71_*`과 같은 패턴).
+
+**범위 경계**: `점유폭 미검증` 열은 M3 산출물인 `typemap`의 `type_table`에 있다. `patchplan`의
+`target_table`과의 병합은 주소 계획을 소유하는 **M4**의 일이다 — 본 마일스톤은 `patchplan.py` ·
+`server/orchestrator/tools.py`를 건드리지 않았고 `luagen.py`도 만들지 않았다.
+
+**실측 결과**:
+
+| command | result |
+|---|---|
+| `uv run pytest server/tests/test_autopatch_types.py -q` | `23 passed in 0.06s` |
+| `uv run pytest server/tests/test_autopatch_candidates.py server/tests/test_autopatch_fid.py -q` | `22 passed in 0.10s` (M1·M2 회귀 0) |
+| `uv run pytest server/tests -q` | `4943 passed, 7 skipped, 1 warning in 91.23s` (직전 baseline 4920 + 신규 23, 회귀 0) |
+| `uv run ruff check server/vwx server/tests/test_autopatch_*.py` | `All checks passed!` |
+| `git diff --stat -- console/lua server/safety server/prechk server/paperwork server/looks` | 빈 출력(PRESERVE 0-diff) |
+| `uv run pytest server/tests/test_architecture.py -q` | `4 passed` (`server.bridge`·`pythonosc` 미import 경계 유지) |
+
+**미검증 잔여**: 콘솔 접촉 0건이므로 본 마일스톤의 모든 판정은 **더블 기반**이다. 실기에서
+`Patch/FixtureTypes` 열거가 대형 쇼파일에서 절단되는 실제 임계, 별칭 표의 영속화 위치,
+GO 분기를 켤 수 있는 점유폭 출처(=responder 확장)는 전부 미해결이며 M8/별건 대상이다.
+
 ---
 
 ## §E.3 Run-phase Audit-Ready Signal
