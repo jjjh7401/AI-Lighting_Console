@@ -1,0 +1,622 @@
+"""M6 — 멱등 · 검증 읽기.
+
+AC-AUTOPATCH-020 (멱등) · AC-AUTOPATCH-021 (검증 읽기) ·
+AC-AUTOPATCH-022 (불일치 보고 · 자동 보정 0).
+
+**M0가 이 마일스톤에 남긴 제약** (`progress.md` §E.2 M0 1차, §0 함정 3):
+콘솔이 돌려주는 `FixtureType`·`Mode`는 **표시 문자열**이다 — 실측 형태는 `FixtureType 3` ·
+`2 Mode 2`이고, 라이브러리 쪽 이름은 `Robin LEDBeam 350` · `Mode 1`이다. 즉 네 값 일치
+판정(REQ-AUTOPATCH-022)은 **문자열 동등으로 성립하지 않는다.** 이 파일은 그 해석이
+**열거된 라이브러리에 대조해 모호하지 않을 때만** 성립하고, 모호하면 **확인 불가로 보고**하는지를
+검증한다 — 슬롯==FID 우연일치를 `fid_cid_identity_unreachable`로 남긴 1단계 선례와 같은 규율이다.
+
+비공허성 하네스(`server.bridge` 기록기 + 모듈 사본)는 `test_autopatch_execute.py`의 것을
+그대로 쓴다 — 같은 기록기·같은 적재 방식이어야 "같은 기록기가 잡는다"가 성립한다.
+"""
+
+from __future__ import annotations
+
+import inspect
+from pathlib import Path
+
+import pytest
+
+from server.prechk.inventory import COMPLETE, FIXTURE_ROOT, FixtureRecord, Inventory
+from server.tests.test_autopatch_execute import (
+    APPLY_SOURCE,
+    RecordingDeployPipeline,
+    RecordingExecutionPort,
+    _console_surface,
+    _load,
+)
+from server.vwx.apply import (
+    NO_AUTO_CORRECTION,
+    ZERO_CREATED_GUIDANCE,
+    HandoffEntry,
+    build_patch_handoff,
+    read_console_fixtures,
+    screen_idempotent,
+    verify_patch,
+)
+from server.vwx.patchplan import AddressPlan, AddressPlanEntry, PatchCandidate
+from server.vwx.typemap import (
+    FixtureTypeLibrary,
+    LibraryMode,
+    LibraryType,
+    TypeRequest,
+    TypeResolution,
+)
+from server.vwx.verdicts import (
+    ADDRESS_CONFLICTS_WITH_EXISTING,
+    ALREADY_PATCHED_IDENTICAL,
+    EXISTING_IDENTITY_UNCONFIRMED,
+    TARGET_EXCLUSION_REASON,
+    TYPE_RESOLVED,
+    VERIFICATION_IDENTITY_UNCONFIRMED,
+    VERIFICATION_MISMATCHED,
+    VERIFICATION_NOT_OBSERVED,
+    VERIFICATION_OBSERVED,
+    VERIFICATION_OUTCOME,
+    target_exclusion_label,
+    verification_outcome_label,
+)
+
+APPLY_PATH = Path("server/vwx/apply.py")
+
+LED = "Robin LEDBeam 350"
+MMX = "Robin MMX Spot"
+MODE_1 = "Mode 1"
+MODE_2 = "Mode 2"
+
+
+# --------------------------------------------------------------------------
+# 더블 — 콘솔 라이브러리와 `read_inventory` 산출물
+# --------------------------------------------------------------------------
+
+
+def _library(*types: LibraryType, available: bool = True) -> FixtureTypeLibrary:
+    if not types:
+        types = (
+            LibraryType(index=1, name=MMX, modes=(LibraryMode(index=1, name=MODE_1),)),
+            LibraryType(
+                index=3,
+                name=LED,
+                modes=(
+                    LibraryMode(index=1, name=MODE_1),
+                    LibraryMode(index=2, name=MODE_2),
+                ),
+            ),
+        )
+    return FixtureTypeLibrary(types=types, available=available)
+
+
+def _record(slot: int, patch: str | None, type_display: str | None, mode_display: str | None):
+    return FixtureRecord(
+        slot=slot,
+        name=f"fixture {slot}",
+        patch_raw=patch,
+        fixture_type=type_display,
+        mode=mode_display,
+    )
+
+
+def _inventory(*records: FixtureRecord) -> Inventory:
+    return Inventory(
+        path=FIXTURE_ROOT,
+        child_count=len(records),
+        enumerated_count=len(records),
+        recovered_count=0,
+        observed_count=len(records),
+        missing_count=0,
+        completeness=COMPLETE,
+        recovery_boundary=None,
+        index_domain_unknown=False,
+        fixtures=records,
+    )
+
+
+def _console(*records: FixtureRecord, library: FixtureTypeLibrary | None = None):
+    return read_console_fixtures(
+        _inventory(*records), library=library if library is not None else _library()
+    )
+
+
+# --------------------------------------------------------------------------
+# 더블 — 계획 측
+# --------------------------------------------------------------------------
+
+
+def _candidate(candidate_id: str, universe: int, address: int, fid: int) -> PatchCandidate:
+    return PatchCandidate(
+        id=candidate_id,
+        unit_number=None,
+        instrument_type=LED,
+        universe=universe,
+        address=address,
+        detail="",
+        address_basis="universe_address_direct",
+        source_index=0,
+        assigned_fid=fid,
+    )
+
+
+def _resolution(candidate_id: str, *, type_name: str = LED, mode_name: str = MODE_1):
+    return TypeResolution(
+        request=TypeRequest(candidate_id=candidate_id, instrument_type=LED),
+        status=TYPE_RESOLVED,
+        reason="",
+        console_type=LibraryType(index=3, name=type_name),
+        console_mode=LibraryMode(index=1, name=mode_name),
+    )
+
+
+def _planned(candidate_id: str, universe: int, address: int) -> AddressPlanEntry:
+    return AddressPlanEntry(
+        candidate_id=candidate_id,
+        universe=universe,
+        address=address,
+        footprint=16,
+        end_address=address + 15,
+    )
+
+
+def _entry(candidate_id: str, universe: int, address: int, *, mode: str = MODE_1):
+    return HandoffEntry(
+        candidate_id=candidate_id,
+        fid=101,
+        name=f"LEDBeam {candidate_id}",
+        console_type=LED,
+        console_mode=mode,
+        universe=universe,
+        address=address,
+        footprint=16,
+    )
+
+
+def _screen(*, console, targets=None, plan=None, resolutions=None) -> AddressPlan:
+    targets = targets or (_candidate("a", 1, 1, 101),)
+    plan = plan or AddressPlan(entries=(_planned("a", 1, 1),))
+    resolutions = resolutions or tuple(_resolution(target.id) for target in targets)
+    return screen_idempotent(
+        targets, address_plan=plan, resolutions=resolutions, console_fixtures=console
+    )
+
+
+# --------------------------------------------------------------------------
+# 표시 문자열 해석 — 모호하면 확인 불가로 남긴다
+# --------------------------------------------------------------------------
+
+
+def test_the_measured_display_forms_resolve_against_the_enumerated_library():
+    """실측 형태 `FixtureType 3` · `2 Mode 2`가 라이브러리 대조로 해석된다."""
+    (observed,) = _console(_record(1, "3.1", "FixtureType 3", "2 Mode 2"))
+    assert observed.universe == 3
+    assert observed.address == 1
+    assert observed.type_name == LED
+    assert observed.mode_name == MODE_2
+    assert observed.identity_resolved is True
+
+
+def test_a_display_string_that_is_also_a_literal_type_name_stays_unresolved():
+    """우연일치는 해석하지 않는다.
+
+    이름이 `FixtureType 2`인 타입이 index 2가 **아니면** 두 해석이 갈라진다 — 모호하다.
+    """
+    library = _library(
+        LibraryType(index=2, name=LED, modes=(LibraryMode(index=1, name=MODE_1),)),
+        LibraryType(index=5, name="FixtureType 2", modes=(LibraryMode(index=1, name=MODE_1),)),
+    )
+    (observed,) = _console(_record(1, "1.1", "FixtureType 2", "1 Mode 1"), library=library)
+    assert observed.type_name is None
+    assert observed.identity_resolved is False
+    assert observed.type_display == "FixtureType 2"
+
+
+def test_the_ambiguity_control_a_coinciding_index_and_name_is_not_ambiguous():
+    """비공허성 — 같은 답으로 수렴하는 우연일치까지 거부하지는 않는다."""
+    library = _library(
+        LibraryType(index=2, name="FixtureType 2", modes=(LibraryMode(index=1, name=MODE_1),)),
+    )
+    (observed,) = _console(_record(1, "1.1", "FixtureType 2", "1 Mode 1"), library=library)
+    assert observed.type_name == "FixtureType 2"
+    assert observed.identity_resolved is True
+
+
+def test_a_bare_mode_name_also_resolves():
+    (observed,) = _console(_record(1, "1.1", "FixtureType 3", MODE_2))
+    assert observed.mode_name == MODE_2
+
+
+def test_an_unreadable_library_leaves_every_identity_unresolved():
+    (observed,) = _console(
+        _record(1, "1.1", "FixtureType 3", "2 Mode 2"),
+        library=FixtureTypeLibrary(available=False),
+    )
+    assert observed.type_name is None
+    assert observed.mode_name is None
+    assert observed.identity_resolved is False
+
+
+def test_an_unparsable_patch_value_is_not_given_a_fabricated_address():
+    (observed,) = _console(_record(1, "not-an-address", "FixtureType 3", "2 Mode 2"))
+    assert observed.universe is None
+    assert observed.address is None
+
+
+def test_no_channel_count_is_parsed_out_of_a_display_string():
+    """함정 3 — 표시 문자열에서 채널 수를 파싱하지 않는다."""
+    (observed,) = _console(_record(1, "1.1", "FixtureType 3", "2 Mode 2"))
+    assert not hasattr(observed, "footprint")
+    assert not hasattr(observed, "channel_count")
+
+
+# --------------------------------------------------------------------------
+# AC-AUTOPATCH-020 — 멱등
+# --------------------------------------------------------------------------
+
+
+def test_an_identical_existing_fixture_is_skipped_with_a_reason():
+    """AC-020① — 네 값 전부 일치하면 산출물에서 제외되고 건너뛴 사실이 보고된다."""
+    plan = _screen(console=_console(_record(1, "1.1", "FixtureType 3", "1 Mode 1")))
+    assert plan.entries == ()
+    assert [exclusion.code for exclusion in plan.exclusions] == [ALREADY_PATCHED_IDENTICAL]
+
+
+def test_the_skip_removes_the_entry_from_the_delivered_lua():
+    """AC-020① [v0.1.3] — 판정 대상은 콘솔로 보낸 명령이 아니라 **생성된 Lua의 내용**이다."""
+    plan = _screen(console=_console(_record(1, "1.1", "FixtureType 3", "1 Mode 1")))
+    handoff = build_patch_handoff(
+        (_candidate("a", 1, 1, 101),),
+        address_plan=plan,
+        resolutions=(_resolution("a"),),
+        names={"a": "LEDBeam 101"},
+        dry_run=False,
+    )
+    assert handoff.lua_source is None
+    assert handoff.entries == ()
+    assert [exclusion.code for exclusion in handoff.exclusions] == [ALREADY_PATCHED_IDENTICAL]
+
+
+def test_the_first_pass_control_actually_produces_the_entry():
+    """AC-020② 비공허성 — 1회차(빈 콘솔)에서는 같은 경로가 그 항목을 실제로 산출물에 넣는다."""
+    plan = _screen(console=_console())
+    handoff = build_patch_handoff(
+        (_candidate("a", 1, 1, 101),),
+        address_plan=plan,
+        resolutions=(_resolution("a"),),
+        names={"a": "LEDBeam 101"},
+        dry_run=False,
+    )
+    assert [entry.candidate_id for entry in plan.entries] == ["a"]
+    assert plan.exclusions == ()
+    assert "AddFixtures({" in (handoff.lua_source or "")
+
+
+def test_a_partial_duplicate_leaves_the_remainder_intact():
+    """AC-020③ — 일부만 이미 존재하면 나머지만 생성된다."""
+    targets = (_candidate("a", 1, 1, 101), _candidate("b", 1, 17, 102))
+    plan = _screen(
+        console=_console(_record(1, "1.1", "FixtureType 3", "1 Mode 1")),
+        targets=targets,
+        plan=AddressPlan(entries=(_planned("a", 1, 1), _planned("b", 1, 17))),
+    )
+    assert [entry.candidate_id for entry in plan.entries] == ["b"]
+    assert [exclusion.candidate_id for exclusion in plan.exclusions] == ["a"]
+
+
+def test_the_same_address_with_a_different_mode_is_a_conflict_not_a_skip():
+    """AC-020④ — 주소는 같지만 모드가 다르면 건너뛰지 않고 충돌로 보고한다."""
+    plan = _screen(console=_console(_record(1, "1.1", "FixtureType 3", "2 Mode 2")))
+    assert plan.entries == ()
+    assert [exclusion.code for exclusion in plan.exclusions] == [ADDRESS_CONFLICTS_WITH_EXISTING]
+
+
+def test_the_same_address_with_a_different_type_is_a_conflict_not_a_skip():
+    plan = _screen(console=_console(_record(1, "1.1", "FixtureType 1", "1 Mode 1")))
+    assert [exclusion.code for exclusion in plan.exclusions] == [ADDRESS_CONFLICTS_WITH_EXISTING]
+
+
+def test_the_conflict_control_shows_the_two_paths_actually_diverge():
+    """AC-020④ 비공허성 — 네 값이 모두 같은 입력과 대조해 코드가 실제로 갈라진다."""
+    identical = _screen(console=_console(_record(1, "1.1", "FixtureType 3", "1 Mode 1")))
+    conflicting = _screen(console=_console(_record(1, "1.1", "FixtureType 3", "2 Mode 2")))
+    assert [x.code for x in identical.exclusions] != [x.code for x in conflicting.exclusions]
+    assert [x.code for x in identical.exclusions] == [ALREADY_PATCHED_IDENTICAL]
+
+
+def test_an_unconfirmable_existing_identity_is_neither_skipped_nor_called_a_conflict():
+    """확인 불가를 멱등으로도 충돌로도 뭉뚱그리지 않는다 — 셋을 구별해 보고한다."""
+    plan = _screen(
+        console=_console(
+            _record(1, "1.1", "FixtureType 9", "1 Mode 1")  # 라이브러리에 index 9 없음
+        )
+    )
+    assert plan.entries == ()
+    assert [exclusion.code for exclusion in plan.exclusions] == [EXISTING_IDENTITY_UNCONFIRMED]
+
+
+def test_an_unconfirmable_identity_is_never_promoted_to_idempotent():
+    """확인 불가가 조용히 '이미 했음'이 되면 필요한 픽스처가 생성되지 않는다."""
+    plan = _screen(console=_console(_record(1, "1.1", "FixtureType 9", "1 Mode 1")))
+    assert ALREADY_PATCHED_IDENTICAL not in {exclusion.code for exclusion in plan.exclusions}
+
+
+def test_a_fixture_at_another_address_does_not_interfere():
+    plan = _screen(console=_console(_record(1, "2.1", "FixtureType 3", "1 Mode 1")))
+    assert [entry.candidate_id for entry in plan.entries] == ["a"]
+
+
+def test_upstream_exclusions_survive_the_screen():
+    plan = _screen(
+        console=_console(),
+        plan=AddressPlan(entries=(_planned("a", 1, 1),), exclusions=()),
+    )
+    assert plan.exclusions == ()
+
+
+def test_screening_codes_are_registered_closed_vocabulary():
+    for code in (
+        ALREADY_PATCHED_IDENTICAL,
+        ADDRESS_CONFLICTS_WITH_EXISTING,
+        EXISTING_IDENTITY_UNCONFIRMED,
+    ):
+        assert code in TARGET_EXCLUSION_REASON
+        assert target_exclusion_label(code)
+
+
+# --------------------------------------------------------------------------
+# AC-AUTOPATCH-021 — 검증 읽기
+# --------------------------------------------------------------------------
+
+
+def test_every_approved_entry_gets_an_observed_or_not_observed_verdict():
+    """AC-021① — 승인 항목마다 확인 결과가 나온다."""
+    entries = (_entry("a", 1, 1), _entry("b", 1, 17))
+    report = verify_patch(
+        entries, console_fixtures=_console(_record(1, "1.1", "FixtureType 3", "1 Mode 1"))
+    )
+    outcomes = {result.candidate_id: result.outcome for result in report.results}
+    assert outcomes == {"a": VERIFICATION_OBSERVED, "b": VERIFICATION_NOT_OBSERVED}
+    assert report.observed_count == 1
+    assert report.created_count == 1
+
+
+def test_a_fixture_at_the_address_with_another_mode_is_reported_as_mismatched():
+    report = verify_patch(
+        (_entry("a", 1, 1),),
+        console_fixtures=_console(_record(1, "1.1", "FixtureType 3", "2 Mode 2")),
+    )
+    (result,) = report.results
+    assert result.outcome == VERIFICATION_MISMATCHED
+    assert result.observed_mode == MODE_2
+    assert report.created_count == 0
+
+
+def test_an_unconfirmable_identity_is_reported_as_such_not_as_success():
+    report = verify_patch(
+        (_entry("a", 1, 1),),
+        console_fixtures=_console(_record(1, "1.1", "FixtureType 9", "1 Mode 1")),
+    )
+    (result,) = report.results
+    assert result.outcome == VERIFICATION_IDENTITY_UNCONFIRMED
+    assert report.created_count == 0
+
+
+def test_verification_takes_no_plugin_outcome_argument():
+    """AC-021② — 플러그인 무오류 종료만으로 성공 판정하는 경로가 0건."""
+    parameters = set(inspect.signature(verify_patch).parameters)
+    assert parameters == {"entries", "console_fixtures"}
+
+
+def test_a_clean_plugin_exit_cannot_make_an_absent_fixture_observed():
+    """AC-021② — 성공의 근거는 재조회뿐이다. 빈 콘솔은 무조건 미관측이다."""
+    report = verify_patch((_entry("a", 1, 1),), console_fixtures=_console())
+    assert [result.outcome for result in report.results] == [VERIFICATION_NOT_OBSERVED]
+    assert report.all_observed is False
+
+
+_PLANT_CLEAN_EXIT_IS_SUCCESS = """
+
+_verify_by_requery = verify_patch
+
+
+def verify_patch(entries, *, console_fixtures, plugin_reported_ok=True):
+    if plugin_reported_ok:
+        results = tuple(
+            VerificationResult(
+                candidate_id=entry.candidate_id,
+                universe=entry.universe,
+                address=entry.address,
+                expected_type=entry.console_type,
+                expected_mode=entry.console_mode,
+                outcome=VERIFICATION_OBSERVED,
+                observed_type=entry.console_type,
+                observed_mode=entry.console_mode,
+                detail="플러그인이 오류 없이 끝났다",
+            )
+            for entry in entries
+        )
+        return PatchVerification(results=results, guidance=())
+    return _verify_by_requery(entries, console_fixtures=console_fixtures)
+"""
+
+
+def test_clean_exit_success_control_is_caught():
+    """AC-021② 비공허성.
+
+    무오류 종료를 성공으로 읽는 분기를 심은 사본에서 위 단정이 **실제로 실패한다**.
+    """
+    namespace = _load(APPLY_SOURCE + _PLANT_CLEAN_EXIT_IS_SUCCESS)
+    report = namespace["verify_patch"]((_entry("a", 1, 1),), console_fixtures=_console())
+    assert [result.outcome for result in report.results] == [VERIFICATION_OBSERVED]
+    assert report.all_observed is True
+
+
+def test_the_verification_consumes_the_prechk_entry_points():
+    """AC-021③ — `server/prechk/`의 기존 진입점을 쓴다(긍정 대조군)."""
+    assert "from server.prechk.inventory import" in APPLY_SOURCE
+    assert "from server.prechk.patch import" in APPLY_SOURCE
+
+
+def _console_query_calls(source: str) -> set[str]:
+    import ast
+
+    tree = ast.parse(source)
+    return {
+        node.func.attr
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr in {"query_state", "query_property"}
+    }
+
+
+def test_the_module_issues_no_console_read_of_its_own():
+    """AC-021③ — 자체 읽기 경로를 만들지 않는다. `Inventory`를 소비할 뿐이다."""
+    assert _console_query_calls(APPLY_SOURCE) == set()
+
+
+def test_own_read_path_control_is_caught():
+    """AC-021③ 비공허성 — 자체 읽기 경로를 심은 사본에서 스캐너가 실제로 잡는다."""
+    planted = (
+        APPLY_SOURCE
+        + "\n\ndef _planted(port):\n    return port.query_state('Patch/Stages/1/Fixtures')\n"
+    )
+    assert _console_query_calls(planted) == {"query_state"}
+
+
+# --------------------------------------------------------------------------
+# AC-AUTOPATCH-022 — 불일치 보고 · 자동 보정 0
+# --------------------------------------------------------------------------
+
+
+def test_a_mismatch_comes_out_structured():
+    """AC-022① — 불일치가 구조화되어 나온다."""
+    report = verify_patch(
+        (_entry("a", 1, 1),),
+        console_fixtures=_console(_record(1, "1.1", "FixtureType 3", "2 Mode 2")),
+    )
+    payload = report.to_dict()
+    assert payload["results"][0] == {
+        "candidate_id": "a",
+        "universe": 1,
+        "address": 1,
+        "expected_type": LED,
+        "expected_mode": MODE_1,
+        "observed_type": LED,
+        "observed_mode": MODE_2,
+        "outcome": VERIFICATION_MISMATCHED,
+        "label": verification_outcome_label(VERIFICATION_MISMATCHED),
+        "detail": payload["results"][0]["detail"],
+    }
+    assert payload["mismatch_count"] == 1
+
+
+def test_every_verification_outcome_is_registered_closed_vocabulary():
+    for code in (
+        VERIFICATION_OBSERVED,
+        VERIFICATION_NOT_OBSERVED,
+        VERIFICATION_MISMATCHED,
+        VERIFICATION_IDENTITY_UNCONFIRMED,
+    ):
+        assert code in VERIFICATION_OUTCOME
+        assert verification_outcome_label(code)
+
+
+def _run_verification(source: str, *, port, pipeline, entries, console_fixtures):
+    with _console_surface(port, pipeline):
+        namespace = _load(source)
+        return namespace["verify_patch"](entries, console_fixtures=console_fixtures)
+
+
+_PLANT_AUTO_CORRECTION = """
+
+_verify_without_repair = verify_patch
+
+
+def verify_patch(entries, *, console_fixtures):
+    from server.bridge import execution_port
+
+    report = _verify_without_repair(entries, console_fixtures=console_fixtures)
+    for result in report.results:
+        if result.outcome != VERIFICATION_OBSERVED:
+            execution_port.execute("Delete Fixture " + str(result.address))
+    return report
+"""
+
+
+@pytest.mark.parametrize(
+    "records",
+    [(), (("1.1", "FixtureType 3", "2 Mode 2"),)],
+    ids=["zero_created", "mismatched"],
+)
+def test_verification_never_repairs_or_retries(records):
+    """AC-022② — 재시도·보정 호출이 0건."""
+    port, pipeline = RecordingExecutionPort(), RecordingDeployPipeline()
+    console = _console(*(_record(i + 1, *row) for i, row in enumerate(records)))
+    _run_verification(
+        APPLY_SOURCE,
+        port=port,
+        pipeline=pipeline,
+        entries=(_entry("a", 1, 1),),
+        console_fixtures=console,
+    )
+    assert port.executed == []
+    assert pipeline.deployed == []
+
+
+def test_auto_correction_control_is_caught():
+    """AC-022② 비공허성 — 보정 호출을 심으면 같은 기록기가 잡는다."""
+    port, pipeline = RecordingExecutionPort(), RecordingDeployPipeline()
+    _run_verification(
+        APPLY_SOURCE + _PLANT_AUTO_CORRECTION,
+        port=port,
+        pipeline=pipeline,
+        entries=(_entry("a", 1, 1),),
+        console_fixtures=_console(),
+    )
+    assert port.executed == ["Delete Fixture 1"]
+
+
+def test_zero_created_asks_the_user_to_recheck_execution_and_procedure():
+    """AC-022③ — 생성 0건이면 실행 여부와 실행 절차를 재확인하도록 안내한다."""
+    report = verify_patch((_entry("a", 1, 1),), console_fixtures=_console())
+    assert report.created_count == 0
+    assert ZERO_CREATED_GUIDANCE in report.guidance
+    assert NO_AUTO_CORRECTION in report.guidance
+
+
+def test_the_zero_created_guidance_does_not_repeat_the_refuted_remedy():
+    """AC-022③ [v0.1.3] — 반증된 원인 설명을 안내하지 않는다."""
+    assert "편집기" not in ZERO_CREATED_GUIDANCE
+    assert "목적지" not in ZERO_CREATED_GUIDANCE
+    assert "실행" in ZERO_CREATED_GUIDANCE
+    assert "절차" in ZERO_CREATED_GUIDANCE
+
+
+def test_the_guidance_control_a_successful_verification_does_not_nag():
+    """비공허성 — 안내가 무조건 붙는 것이 아니다."""
+    report = verify_patch(
+        (_entry("a", 1, 1),),
+        console_fixtures=_console(_record(1, "1.1", "FixtureType 3", "1 Mode 1")),
+    )
+    assert report.created_count == 1
+    assert ZERO_CREATED_GUIDANCE not in report.guidance
+
+
+def test_a_partial_success_is_not_reported_as_a_whole_success():
+    """설계 슬롯 E — 부분 성공을 전체 성공으로 적지 않는다."""
+    report = verify_patch(
+        (_entry("a", 1, 1), _entry("b", 1, 17)),
+        console_fixtures=_console(_record(1, "1.1", "FixtureType 3", "1 Mode 1")),
+    )
+    assert report.all_observed is False
+    assert report.to_dict()["observed_count"] == 1
+    assert report.to_dict()["not_observed_count"] == 1
+
+
+def test_an_empty_approval_set_is_not_a_zero_creation_alarm():
+    report = verify_patch((), console_fixtures=_console())
+    assert report.results == ()
+    assert report.guidance == ()
+    assert report.all_observed is True

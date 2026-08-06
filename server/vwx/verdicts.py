@@ -28,6 +28,10 @@ FIXTURE_NAME_MISSING = "fixture_name_missing"
 TYPE_CONFIRMATION_PENDING = "type_confirmation_pending"
 LUA_GENERATION_REFUSED = "lua_generation_refused"
 
+ALREADY_PATCHED_IDENTICAL = "already_patched_identical"
+ADDRESS_CONFLICTS_WITH_EXISTING = "address_conflicts_with_existing_fixture"
+EXISTING_IDENTITY_UNCONFIRMED = "existing_fixture_identity_unconfirmed"
+
 FID_CONFLICT_PRECHECK_DESCOPE = "fid_conflict_precheck_descope"
 FOOTPRINT_MATCH_DESCOPE = "footprint_match_descope"
 FIXTURE_TYPE_LIBRARY_TRUNCATED = "fixture_type_library_truncated"
@@ -37,6 +41,11 @@ TYPE_RESOLVED = "resolved"
 TYPE_NEEDS_CONFIRMATION = "needs_confirmation"
 TYPE_LIBRARY_ABSENT = "library_absent"
 TYPE_LIBRARY_INCOMPLETE = "library_incomplete"
+
+VERIFICATION_OBSERVED = "observed"
+VERIFICATION_NOT_OBSERVED = "not_observed"
+VERIFICATION_MISMATCHED = "mismatched"
+VERIFICATION_IDENTITY_UNCONFIRMED = "identity_unconfirmed"
 
 CANDIDATE_REJECTION_REASON = frozenset(
     {
@@ -66,6 +75,9 @@ TARGET_EXCLUSION_REASON = frozenset(
         FIXTURE_NAME_MISSING,
         TYPE_CONFIRMATION_PENDING,
         LUA_GENERATION_REFUSED,
+        ALREADY_PATCHED_IDENTICAL,
+        ADDRESS_CONFLICTS_WITH_EXISTING,
+        EXISTING_IDENTITY_UNCONFIRMED,
     }
 )
 SKIPPED_CHECK_KIND = frozenset(
@@ -84,6 +96,14 @@ TYPE_RESOLUTION_STATUS = frozenset(
         TYPE_LIBRARY_INCOMPLETE,
     }
 )
+VERIFICATION_OUTCOME = frozenset(
+    {
+        VERIFICATION_OBSERVED,
+        VERIFICATION_NOT_OBSERVED,
+        VERIFICATION_MISMATCHED,
+        VERIFICATION_IDENTITY_UNCONFIRMED,
+    }
+)
 
 AUTOPATCH_CLOSED_VOCABULARIES = MappingProxyType(
     {
@@ -93,6 +113,7 @@ AUTOPATCH_CLOSED_VOCABULARIES = MappingProxyType(
         "skipped_check_kind": SKIPPED_CHECK_KIND,
         "target_exclusion_reason": TARGET_EXCLUSION_REASON,
         "type_resolution_status": TYPE_RESOLUTION_STATUS,
+        "verification_outcome": VERIFICATION_OUTCOME,
     }
 )
 
@@ -141,6 +162,11 @@ _TARGET_EXCLUSION_LABELS = {
     FIXTURE_NAME_MISSING: "픽스처 이름 미제공 — 이름을 지어내지 않고 제외",
     TYPE_CONFIRMATION_PENDING: "타입·모드 사용자 확인 대기 — 확인 전에는 전달하지 않음",
     LUA_GENERATION_REFUSED: "Lua 생성기가 이름을 거부 — 조용히 고치지 않고 제외",
+    ALREADY_PATCHED_IDENTICAL: "네 값이 모두 일치하는 픽스처가 이미 있음 — 멱등 건너뜀",
+    ADDRESS_CONFLICTS_WITH_EXISTING: "같은 주소를 타입 또는 모드가 다른 픽스처가 점유 — 충돌",
+    EXISTING_IDENTITY_UNCONFIRMED: (
+        "같은 주소의 기존 픽스처 정체를 확인할 수 없음 — 멱등으로 간주하지 않음"
+    ),
 }
 _SKIPPED_CHECK_LABELS = {
     FID_CONFLICT_PRECHECK_DESCOPE: "FID 충돌 사전검사 미수행",
@@ -154,6 +180,12 @@ _TYPE_RESOLUTION_STATUS_LABELS = {
     TYPE_LIBRARY_ABSENT: "콘솔 라이브러리 부재 — 하드 스톱",
     TYPE_LIBRARY_INCOMPLETE: "라이브러리 관측 불완전 — 부재를 단정하지 않음",
 }
+_VERIFICATION_OUTCOME_LABELS = {
+    VERIFICATION_OBSERVED: "재조회에서 관측됨",
+    VERIFICATION_NOT_OBSERVED: "재조회에서 관측되지 않음",
+    VERIFICATION_MISMATCHED: "그 주소에 다른 타입 또는 모드가 관측됨",
+    VERIFICATION_IDENTITY_UNCONFIRMED: "그 주소에 픽스처는 있으나 정체를 확인할 수 없음",
+}
 
 _AUTOPATCH_VOCABULARY_LABELS = MappingProxyType(
     {
@@ -163,6 +195,7 @@ _AUTOPATCH_VOCABULARY_LABELS = MappingProxyType(
         "skipped_check_kind": MappingProxyType(_SKIPPED_CHECK_LABELS),
         "target_exclusion_reason": MappingProxyType(_TARGET_EXCLUSION_LABELS),
         "type_resolution_status": MappingProxyType(_TYPE_RESOLUTION_STATUS_LABELS),
+        "verification_outcome": MappingProxyType(_VERIFICATION_OUTCOME_LABELS),
     }
 )
 
@@ -198,6 +231,10 @@ def fid_assignment_rejection_label(code: str) -> str:
 
 def target_exclusion_label(code: str) -> str:
     return autopatch_label("target_exclusion_reason", code)
+
+
+def verification_outcome_label(code: str) -> str:
+    return autopatch_label("verification_outcome", code)
 
 
 def skipped_check_label(code: str) -> str:
