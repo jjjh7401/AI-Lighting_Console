@@ -23,6 +23,11 @@ ADDRESS_ALREADY_OCCUPIED = "address_already_occupied"
 ADDRESS_OVERLAP_IN_PLAN = "address_overlap_in_plan"
 FOOTPRINT_UNKNOWN = "footprint_unknown"
 
+FID_NOT_ASSIGNED = "fid_not_assigned"
+FIXTURE_NAME_MISSING = "fixture_name_missing"
+TYPE_CONFIRMATION_PENDING = "type_confirmation_pending"
+LUA_GENERATION_REFUSED = "lua_generation_refused"
+
 FID_CONFLICT_PRECHECK_DESCOPE = "fid_conflict_precheck_descope"
 FOOTPRINT_MATCH_DESCOPE = "footprint_match_descope"
 FIXTURE_TYPE_LIBRARY_TRUNCATED = "fixture_type_library_truncated"
@@ -57,6 +62,10 @@ TARGET_EXCLUSION_REASON = frozenset(
         ADDRESS_ALREADY_OCCUPIED,
         ADDRESS_OVERLAP_IN_PLAN,
         FOOTPRINT_UNKNOWN,
+        FID_NOT_ASSIGNED,
+        FIXTURE_NAME_MISSING,
+        TYPE_CONFIRMATION_PENDING,
+        LUA_GENERATION_REFUSED,
     }
 )
 SKIPPED_CHECK_KIND = frozenset(
@@ -128,6 +137,10 @@ _TARGET_EXCLUSION_LABELS = {
     ADDRESS_ALREADY_OCCUPIED: "도면 주소가 콘솔에서 이미 점유됨",
     ADDRESS_OVERLAP_IN_PLAN: "같은 유니버스 안에서 다른 계획 항목과 점유 구간이 겹침",
     FOOTPRINT_UNKNOWN: "점유폭 미확정 — 추측하지 않고 제외",
+    FID_NOT_ASSIGNED: "FID 미배정 — 배정 없이 생성하지 않음",
+    FIXTURE_NAME_MISSING: "픽스처 이름 미제공 — 이름을 지어내지 않고 제외",
+    TYPE_CONFIRMATION_PENDING: "타입·모드 사용자 확인 대기 — 확인 전에는 전달하지 않음",
+    LUA_GENERATION_REFUSED: "Lua 생성기가 이름을 거부 — 조용히 고치지 않고 제외",
 }
 _SKIPPED_CHECK_LABELS = {
     FID_CONFLICT_PRECHECK_DESCOPE: "FID 충돌 사전검사 미수행",
