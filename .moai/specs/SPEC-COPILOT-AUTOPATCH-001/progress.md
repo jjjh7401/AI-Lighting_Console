@@ -11,9 +11,10 @@
 round7 18건 + round8 13건 + round9 8건 + round10 7건 반영. round6 PASS(1.000)는 v0.1.2에 대한
 판정이므로 승계하지 않고, **round10이 v0.1.4를 직접 감사해 PASS했다**.) ·
 run-phase 진행 중 ·
-M0 종결(5차까지) · **M1·M2·M3·M4 완료** · M5 축소 · M6·M7 착수 가능 · M8 재정의 필요.**
-테스트 **4,981 passed / 7 skipped**(착수 4,898 → +83, 회귀 0) ·
-커밋 **run-phase 13건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 17건 — 계수 기준을 명시한다,
+M0 종결(5차까지) · **M1·M2·M3·M4·M5 완료** · M6·M7 착수 가능 · M8 재정의 필요.**
+테스트 **5,044 passed / 7 skipped**(착수 4,898 → +146, 회귀 0) ·
+커밋 **run-phase 15건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 19건 — **본 갱신을 담은 커밋을
+포함한 계수**다. 이전 판은 자기 커밋을 빼고 세어 갱신 직후부터 1 어긋나 있었다,
 round10 감사 N55. §0을 갱신할 때마다 재계산하라) ·
 PRESERVE 5경로 0-diff · 콘솔 세션 전 상태로 완전 원복.
 **2026-08-06 5차**: §0 미시험 6건 중 **L1·L3·L4·L5 전부 NEGATIVE** ·
@@ -22,6 +23,8 @@ PRESERVE 5경로 0-diff · 콘솔 세션 전 상태로 완전 원복.
 **2026-08-06 amendment v0.1.4**: 반자동 실행 모델로 전환(§E.2aa, 사용자 승인) +
 독립 감사 round7·8·9 지적 39건 + round10 7건 반영(§E.1a 7·8·9·10회차).
 **2026-08-06 M4 완료**: Lua 생성기 + 주소 계획, 테스트 +38, AC-013·014·016(§E.2 M4 절).
+**2026-08-06 M5 완료**: 실행 전달(사람) · 검증 인계, 테스트 +63, AC-015·017·018·019.
+`RecordingExecutionPort` 도달 발화 **0건**을 **사본 대조군 9종**으로 비공허하게 닫았다(§E.2 M5 절).
 
 ### 지금 이 SPEC이 막혔던 것 — 무엇에 막혔고 어떻게 우회했나
 
@@ -180,7 +183,7 @@ round9도 FAIL(0.8025)로 8건을 지적해 반영했고, **round10이 v0.1.4를
 ```bash
 W=/Users/studiox/orca/workspaces/AI-Lighting_Console/spec-vwx-001
 git -C "$W" rev-parse --abbrev-ref HEAD   # feature/SPEC-COPILOT-VWX-001 (1단계 위에 스택)
-uv run pytest server/tests -q             # 현재 기준선: 4943 passed / 7 skipped (착수 4898)
+uv run pytest server/tests -q             # 현재 기준선: 5044 passed / 7 skipped (착수 4898)
 uv run ruff check        server/vwx server/tests/test_autopatch_*.py
 uv run ruff format --check server/vwx server/tests/test_autopatch_*.py   # [필수] check만으로는 부족
 git -C "$W" diff --stat ca00bc5..HEAD -- console/lua server/safety server/prechk server/paperwork server/looks
@@ -200,21 +203,35 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
 ### 다음 담당자가 먼저 할 것 (**2026-08-06 v0.1.4 기준으로 갱신**)
 
 1. **L1·L3·L4·L5·L6은 이미 측정됐다 — 다시 돌리지 마라.** §E.2 M0 5차에 원문 라벨까지 있다.
-2. **반자동 모델 전환도, 그 재감사도, M4도 이미 끝났다 — 되돌리거나 다시 제안하지 마라.**
+2. **반자동 모델 전환도, 그 재감사도, M4·M5도 이미 끝났다 — 되돌리거나 다시 제안하지 마라.**
    2026-08-06 사용자 승인으로 `v0.1.3` → round7·8·9 지적 39건 + round10 7건 반영 → **`v0.1.4`**,
    **round10 독립 감사 PASS(0.865)** 로 `plan_status: audit-ready`(§E.2aa · §E.1a 7·8·9·10회차).
-   **M4(Lua 생성기 + 주소 계획)도 완료**됐다(§E.2 M4 절, +38 테스트).
-   **다음 코드 마일스톤은 `M5`**(실행 전달 · 검증 인계 — 축소됨, AC-015·017·018·019),
-   이어 M6·M7. **M8은 사람 실행 단계를 포함하도록 재정의가 필요**하다.
-2a. **M5를 쓸 때 M4가 남긴 계약 3건을 지켜라**:
+   **M4(Lua 생성기 + 주소 계획, +38)·M5(실행 전달 · 검증 인계, +63)도 완료**됐다
+   (§E.2 M4·M5 절). **다음 코드 마일스톤은 `M6`**(멱등 · 검증 읽기, AC-020·021·022),
+   이어 M7. **M8은 사람 실행 단계를 포함하도록 재정의가 필요**하다.
+2a. **M4가 남긴 계약 3건은 M5에서 지켜졌다 — 되돌리지 마라**:
    ① `luagen.render_addfixtures_plugin(entries)`가 전달물의 본체다 —
       `LuaPatchEntry(console_type, console_mode, fid, name, universe, address)` 6필드뿐이고
       **자유 Lua 삽입 지점이 없다**(그런 파라미터를 추가하면 AC-014③(b) 테스트가 깨진다).
    ② 목적지 토큰을 담은 이름은 `LuaGenerationError`로 **거부**된다 —
-      M5가 그것을 잡아 **항목 제외 + 사유 보고**로 처리해야 한다(조용히 고치지 마라).
+      `apply.build_patch_handoff`이 그것을 잡아 `lua_generation_refused`로 제외한다.
    ③ `patchplan.plan_addresses(targets, footprints=..., occupied=...)`의 `footprints`는
       **1단계 도면이 준 폭**이다. 콘솔의 `DMXChannels` 개수를 넣지 마라 — 그것은 폭이 아니다
       (실측 14 vs stride 16). 폭을 모르면 `footprint_unknown`으로 제외된다.
+2b. **M6·M7을 쓸 때 M5가 남긴 계약 4건을 지켜라**:
+   ① `apply.build_patch_handoff(targets, address_plan=, resolutions=, names=, dry_run=True)`가
+      전달 진입점이다 — 파라미터 **5개가 전부**이고, 여기에 인자를 더하면
+      AC-017②(리뷰 우회 인자 0건) 테스트가 깨진다. **실행 포트·배포 파이프라인을 넘기지 마라.**
+   ② **드라이런과 전달의 `lua_source`는 동일해야 한다**(테스트가 직접 대조한다).
+      두 모드를 가르는 것은 `procedure`·`next_step`뿐이며, 그 경계선은 `delivered = not dry_run`
+      **한 줄**이다 — AC-019④의 승격 대조군이 그 줄을 문자열로 집는다.
+   ③ **`server/vwx/` 어느 모듈도 `server.bridge`·`pythonosc`를 import하지 마라.**
+      M6의 검증 읽기도 예외가 아니다 — 콘솔 읽기는 포트 프로토콜을 인자로 받아서 하고
+      (`patchplan.FidPropertyPort`·`typemap.LibraryPort` 선례), 그 표면을 import하지 않는다.
+      `test_autopatch_execute.py`의 스캐너가 `server/vwx/*.py` **전수**를 돈다.
+   ④ 제외 사유는 `verdicts.TARGET_EXCLUSION_REASON`에 **등재된 코드로만** 보고한다.
+      **거부된 입력을 사유 문구에 되싣지 마라** — 이름이 목적지 토큰을 담고 있으면
+      AC-014① 산출물 스캐너가 거짓 양성을 내 게이트가 강제력을 잃는다(M5에서 실제로 걸렸다).
 3. **L2를 돌리려면 사용자가 패치 편집 세션에 진입해야 한다.** 자동화로 대체 불가.
 4. **배포는 `deploy` 동사로 하지 마라 — 이 빌드에서 소스가 써지지 않는다**
    (`cannot confirm plugin source write`, 객체만 생기고 소스는 빈 상태로 조용히 실행됨).
@@ -372,7 +389,7 @@ known_gaps:
     (매치는 전부 다른 절 참조이거나 progress.md 자체 감사기록). plan.md §E 테스트 골격이
     §6.2와 독립적으로 이미 파일→주제 매핑을 제공하고 있어 온보딩 가독성도 유지됨. 잔여
     gap 아님 — round1 이후 최초로 4개 축 전부 잔여 결함 0건."
-next: "**M5 착수**(실행 전달·검증 인계 — 축소됨). **M4 완료**(Lua 생성기 + 주소 계획, +38 테스트, §E.2 M4 절). round10 독립 감사가 v0.1.4를 **PASS(0.865)** 했다 — plan-phase 관점의 착수 전제는 해소됐다. 지적 누계 N1~N55 **전량 반영**(round1~6 N1~N10 CLOSED 확정 · round7 N11~N28 · round8 N29~N41 · round9 N42~N49 · round10 N50~N55). M1·M2·M3는 완료 상태이므로 다음 코드 마일스톤은 **M4(Lua 생성기 + 주소 계획)**이고, 이어 **M5(실행 전달·검증 인계, 축소됨)** · **M6·M7**이다. **M8은 사람 실행 단계를 포함하도록 재정의가 필요**하다(미착수). 남은 사용자 접점 2건: ① **L2 측정**(패치 편집 세션 진입 — 선택. 긍정이면 REQ-AUTOPATCH-018을 v0.1.2 형태로 복원 가능) · ② M8 라이브 종단 세션 일정. 착수 전 `spec.md` §A 사실 7·8과 §0 함정 9·10·11을 읽어라 — 배포·회수 경로가 그 위에 서 있다."
+next: "**M6 착수**(멱등 · 검증 읽기, AC-020·021·022). **M5 완료**(실행 전달·검증 인계, +63 테스트, §E.2 M5 절) — `RecordingExecutionPort` 도달 발화 0건을 사본 대조군 9종으로 비공허하게 닫았고, 드라이런·전달 두 모드 모두 쓰기 0건이다. **M4 완료**(Lua 생성기 + 주소 계획, +38 테스트, §E.2 M4 절). round10 독립 감사가 v0.1.4를 **PASS(0.865)** 했다 — plan-phase 관점의 착수 전제는 해소됐다. 지적 누계 N1~N55 **전량 반영**(round1~6 N1~N10 CLOSED 확정 · round7 N11~N28 · round8 N29~N41 · round9 N42~N49 · round10 N50~N55). M1~M5가 완료 상태이므로 다음 코드 마일스톤은 **M6(멱등 · 검증 읽기)**이고, 이어 **M7(툴 배선 · 회귀 · PRESERVE)**이다. M7은 `PatchPlan.to_dict()`의 `deferred_to_m2·m3·m4` 마커 3종을 함께 해소해야 한다(§E.2 M5 절 미검증 잔여). **M8은 사람 실행 단계를 포함하도록 재정의가 필요**하다(미착수). 남은 사용자 접점 2건: ① **L2 측정**(패치 편집 세션 진입 — 선택. 긍정이면 REQ-AUTOPATCH-018을 v0.1.2 형태로 복원 가능) · ② M8 라이브 종단 세션 일정. 착수 전 `spec.md` §A 사실 7·8과 §0 함정 9·10·11을 읽어라 — 배포·회수 경로가 그 위에 서 있다. M5가 남긴 계약 4건은 §0 항목 2b."
 ```
 
 ---
@@ -1360,6 +1377,154 @@ return main
 생성된 Lua가 **실기에서 픽스처를 만드는지는 이 빌드에서 확인할 수 없다**(M0 NEGATIVE) —
 사람이 실행하는 경로의 종단 확인은 **M8**이며, 그 M8은 사람 실행 단계를 포함하도록 재정의가 필요하다.
 점유폭 출처(도면 값)의 정확성은 1단계 산출물 품질에 의존하며 본 SPEC이 재판독하지 않는다.
+
+### M5 — 실행 전달(사람) · 검증 인계 (완료)
+
+**상태: COMPLETE — 서버는 검토용 Lua 소스와 실행 절차를 사람에게 넘기는 데서 멈춘다.
+`RecordingExecutionPort`에 도달한 발화는 승인 여부와 무관하게 0건이며, 그 0건은
+발화·쓰기·우회 배포를 되살려 심은 사본이 같은 기록기에 실제로 잡히는 것으로 닫혔다.**
+M4 완료(`plan_status: audit-ready`, round10 PASS) 위에서 착수했다.
+
+**AC**: AC-AUTOPATCH-015 · 017 · 018 · 019 (`acceptance.md` §C.0a M5 = 4건)
+
+**테스트**: **4,981 → 5,044 passed / 7 skipped (+63, 회귀 0)** ·
+`ruff check` OK · `ruff format --check` 17 files already formatted.
+
+#### 산출물
+
+| 파일 | 신규/변경 | 역할 |
+|---|---|---|
+| `server/vwx/apply.py` | **신규** | 전달물 조립(`build_patch_handoff`). 공개 API는 `HandoffEntry`·`PatchHandoff`·진입점 1개 |
+| `server/vwx/verdicts.py` | 변경 | 제외 사유 4종 등재(`fid_not_assigned`·`fixture_name_missing`·`type_confirmation_pending`·`lua_generation_refused`) |
+| `server/tests/test_autopatch_execute.py` | **신규** | 63건 |
+
+#### [핵심] "발화 0건"을 어떻게 비공허하게 만들었나
+
+`apply.py`는 실행 포트를 **인자로 받지도 import하지도 않는다.** 그래서 "기록기에 0건"을 그냥
+주장하면 **기록기를 아무것도 볼 수 없는 자리에 놓았을 뿐**일 수 있다 — 그 공허함이 이 마일스톤의
+진짜 난점이었다. 다음 하네스로 닫았다:
+
+```
+① server.bridge 를 기록기(RecordingExecutionPort · RecordingDeployPipeline)를 담은
+   가짜 모듈로 sys.modules 에 꽂는다.
+   — 그 표면이 "콘솔로 나가는 유일한 문"임은 test_architecture.py 의
+     _FORBIDDEN_MODULE_PREFIXES = ("server.bridge", "pythonosc") 가 이미 강제한다.
+② 같은 하네스 · 같은 기록기 · 같은 진입점으로 두 소스를 돌린다 —
+   원본 소스, 그리고 발화/쓰기/우회 배포를 되살려 심은 사본.
+③ 사본에서 기록기가 실제로 잡는 것을 보인 뒤에만 원본의 0건을 인수한다.
+```
+
+대조군 실측(사본에서 **잡혔다**):
+
+| 심은 것 | 기록기가 잡은 것 | AC |
+|---|---|---|
+| 전달 후 플러그인 실행 발화 | `port.executed == ["Plugin 'VWX AddFixtures'"]` | 015② |
+| 전달 전 콘솔 쓰기 | `port.executed == ["Store Fixture 101"]` | 019② |
+| 우회 배포 호출 | `pipeline.deployed == [("VWX AddFixtures", …)]` | 017① |
+| `execution_port.execute` 직접 호출 | AST 스캐너가 속성 대상 `execution_port` 검출 | 018② |
+| `from server.bridge import …` | import 스캐너가 `server.bridge` 검출 | 018③ |
+| `dry_run` 기본값을 `False`로 | 기본값 단정이 실제로 뒤집힘 | 019③ |
+| `delivered = True`로 승격 | 드라이런 호출이 `delivered=True`가 됨 | 019④ |
+| 전달 후 자동 재시도 | 렌더 호출 계수 1 → **2** | 019⑤ |
+| 리뷰 우회 인자 `skip_review` | 시그니처 스캔이 검출 | 017② |
+
+원본에서는 **드라이런·전달 요청 두 모드 모두** `port.executed == []` · `pipeline.deployed == []`다.
+
+#### 설계 결정 — 승인이 있어도 실행 분기가 조립되지 않는다
+
+`luagen`이 목적지 명령을 **어휘에서 없앤** 것과 같은 기법이다(design.md §5 슬롯 C).
+`apply.py`에는 발화할 대상 자체가 없으므로 "승인이 있으면 서버가 실행한다"는 분기를
+**쓸 수가 없다** — 사후 검사로 막는 것이 아니다. AC-015③("승인 여부와 무관")이
+`dry_run` 두 값 모두에 대한 파라미터화 테스트로 닫힌 이유가 이것이다.
+
+**드라이런과 전달의 차이는 한 줄(`delivered = not dry_run`)이다.** 드라이런도 **Lua 소스 전문을
+낸다**(REQ-AUTOPATCH-003 · AC-004②, round9 N42가 철회시킨 그 요구를 지킨다) — 두 모드의
+`lua_source`가 **동일함을 테스트가 직접 대조**한다. 달라지는 것은 **실행 절차와 검증 인계**뿐이다.
+
+#### 실행 절차에 무엇을 적었고 무엇을 적지 않았나
+
+적은 것은 **실측으로 확정된 것뿐**이다(§0 항목 4·9, 함정 9·11):
+라이브러리 파일 저장 → `Import Plugin '<파일명>'`(**`deploy` 동사 금지** — 이 빌드에서 소스가
+써지지 않고 객체만 생긴다) → **재임포트 캐싱 주의**(새 이름 또는 슬롯 비우기) → 사람이 실행 →
+서버에 검증 읽기 요청.
+
+**적지 않은 것**: 룰북의 *"Patch > Fixtures 편집기를 먼저 열라"* 는 `ASSUMPTION-75` NEGATIVE로
+근거를 잃었고, 목적지 이동 처방은 5차에서 반증됐다. **틀린 원인을 사용자에게 안내하지 않는다**
+(REQ-AUTOPATCH-024 [v0.1.3]). 그 부재를 테스트가 직접 단정한다.
+
+경고 3종을 전달물에 싣는다: 비가역성(`IRREVERSIBLE_WARNING`) · **플러그인 무오류 종료는 성공이
+아니다**(함정 4) · **이 절차의 종단 성공은 이 빌드에서 미확인**(정직 고지 — M8).
+
+#### M4 계약 3건을 어떻게 지켰나 (§0 항목 2a)
+
+| 계약 | M5의 준수 |
+|---|---|
+| ① 자유 Lua 파라미터 추가 금지 | 진입점 파라미터는 `targets`·`address_plan`·`resolutions`·`names`·`dry_run` **5개뿐**이고 Lua 본문에 닿는 통로는 `LuaPatchEntry` 6필드가 전부다. 시그니처 전수 단정 테스트로 못박았다 |
+| ② `LuaGenerationError`는 항목 제외 + 사유 보고 | `render_addfixtures_call`로 **항목별 사전 검증**하고 예외를 잡아 `lua_generation_refused`로 제외한다. 조용히 고치지 않는다 |
+| ③ `footprints`는 도면 값만 | M5는 폭을 **계산하지도 읽지도 않는다** — `AddressPlanEntry.footprint`를 그대로 표에 옮길 뿐이다 |
+
+**②에서 실제로 걸린 것 하나**: 처음에 제외 사유에 `LuaGenerationError` 메시지를 그대로 실었더니
+**거부된 이름이 페이로드에 되실려** 산출물 스캐너가 목적지 토큰을 검출했다 — AC-014①이 거짓
+양성으로 강제력을 잃는 바로 그 경로다. 사유에서 **입력을 되싣지 않도록** 고쳤고, 그 부재를
+`test_the_refused_name_is_not_silently_repaired`가 지킨다.
+
+#### 제외 사유 4종 신설 — 왜 필요했나
+
+"항목 제외 + 사유 보고"는 닫힌 어휘로만 보고된다(design.md §5 슬롯 B). M5가 처음 만드는
+제외 사유 4종을 `server/vwx/verdicts.py`에 등재했다 — `fid_not_assigned` ·
+`fixture_name_missing`(**이름을 지어내지 않는다**) · `type_confirmation_pending`(R2 — 확인이
+남은 타입 매칭으로 되돌릴 수 없는 쓰기를 만들지 않는다) · `lua_generation_refused`.
+`server/prechk/verdicts.py`는 PRESERVE이므로 건드리지 않았다.
+
+#### 스모크 — 테스트가 아니라 실물 산출물로 확인했다
+
+도면 6대(U1 95~120 콘솔 점유 · 1건 폭 미확정 · 1건 계획 내 겹침 · 1건 이름에 목적지 토큰) 입력:
+
+```
+dry_run=True   delivered=False  next_step=review_dry_run                    procedure 0줄
+dry_run=False  delivered=True   next_step=human_execution_then_verification_read  procedure 5줄
+두 모드의 lua_source 동일
+
+전달: a(FID 101, U1.1) · b(FID 102, U1.17)
+제외: c 도면 주소가 콘솔에서 이미 점유됨
+      d 같은 유니버스 안에서 다른 계획 항목과 점유 구간이 겹침
+      e 점유폭 미확정 — 추측하지 않고 제외
+      f Lua 생성기가 이름을 거부 — 조용히 고치지 않고 제외
+페이로드 전문 목적지 토큰 0건
+```
+
+#### 범위 경계
+
+`server/orchestrator/tools.py` 무접촉(툴 배선은 M7) · 멱등 재조회·검증 읽기 0건(M6) ·
+콘솔 접촉 0건 · PRESERVE 5경로 무접촉.
+
+**실측 결과**:
+
+| command | result |
+|---|---|
+| `uv run pytest server/tests/test_autopatch_execute.py -q` | `63 passed in 0.08s` |
+| `uv run pytest server/tests -q` | `5044 passed, 7 skipped, 1 warning in 91.37s` (직전 baseline 4981 + 신규 63, **회귀 0**) |
+| `uv run ruff check server/vwx server/tests/test_autopatch_*.py` | `OK` |
+| `uv run ruff format --check server/vwx server/tests/test_autopatch_*.py` | `17 files already formatted` |
+| `git diff --stat ca00bc5..HEAD -- console/lua server/safety server/prechk server/paperwork server/looks` | 빈 출력(PRESERVE 0-diff) |
+| 스모크(실물 전달물) | 전달 2건 · 제외 4건(사유 4종) · 두 모드 소스 동일 · 목적지 토큰 0건 |
+
+**착수 시 실패 확인(TDD RED)**: `uv run pytest server/tests/test_autopatch_execute.py -q` →
+`ModuleNotFoundError: No module named 'server.vwx.apply'` · `1 error in 0.06s`.
+
+**미검증 잔여**:
+- 콘솔 접촉 0건이므로 본 마일스톤의 판정은 전부 **더블·AST·소스 사본 기반**이다.
+  **사람이 실행하는 경로가 실제로 픽스처를 만드는지는 여전히 미확인**이다 — 서버 자동 실행은
+  10경로 전부 0건이었고(M0), 사람 실행 종단 확인은 **M8**이다. 전달물의 경고 3번이 이 사실을
+  사용자에게 그대로 고지한다.
+- `RecordingExecutionPort` 하네스는 **`server.bridge`를 콘솔 도달의 유일한 문**으로 전제한다.
+  그 전제 자체는 `test_architecture.py`의 단일 초크포인트 경계가 강제하며, 본 마일스톤이
+  새로 증명한 것이 아니라 **승계한 것**이다.
+- **M7이 갚아야 할 빚**: `PatchPlan.to_dict()`가 아직 `lua_source: None` ·
+  `lua_source_unresolved_reason: deferred_to_m4`를 낸다(`patchplan.py:326-327`). M4·M5가 끝난
+  지금 그 마커는 "이 계층이 아직 배선되지 않았다"는 뜻으로만 참이다 —
+  `deferred_to_m2`·`deferred_to_m3`와 같은 처지이며, **셋을 함께 해소하는 것은 M7 배선의 일**이다.
+  M5가 단독으로 이름만 바꾸면 어휘가 세 벌로 어긋난다.
 
 
 ### M0 라이브 세션 2차 — 테스트 쇼파일 확인 · 파괴적 측정 착수 전 기록 (2026-08-06)
