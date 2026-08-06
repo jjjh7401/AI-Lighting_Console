@@ -1102,6 +1102,91 @@ CD는 그 임시 명령줄의 목적지를 바꾸고 함께 소멸한다 — 플
 결론이 되며, 그것은 REQ-AUTOPATCH-018과 M5 설계를 근본에서 바꾼다.
 실패하면 이 빌드에서 `AddFixtures` 경로 자체가 성립하지 않는다는 결론이다.
 
+#### 그 시나리오도 실패했다 — 최종 판정
+
+사용자가 콘솔 메인 명령줄에 CD를 입력해 프롬프트를 옮겼다. 스크린샷으로 확인된 상태:
+
+```
+Admin@ShowData/LivePatch/Stages/Stage 1/Fixtures>
+```
+
+**룰북이 기술한 바로 그 상태다.** 그 상태에서 두 경로를 모두 측정했다.
+측정 재현성을 위해 프로브에 **난수 태그**를 넣어 "실행되었는가"와 "결과가 무엇인가"를 분리했다
+(직전 회차에 센티넬을 리셋하지 않아 OSC 결과와 GUI 결과를 구별하지 못한 오류를 교정한 것이다).
+
+| 실행 경로 | 실행 확인 | 플러그인이 본 목적지 | 결과 |
+|---|---|---|---|
+| OSC `Plugin 'AM0FINAL'` (프롬프트 이동 상태) | — | `TempCmdlines Cmdline 1` | `T1 NIL · T2 NIL` |
+| **GUI 탭** (프롬프트 이동 상태) | **`R302`** 난수 확인 | **`TempCmdlines Cmdline 1`** | `T1 NIL · T2 NIL` |
+| **GUI/OSC, 정식 플러그인 구조** (`return Main, Cleanup, Execute`, `patch_proper.xml` 형태) | **`R463`**, `display_handle` 수신됨(`dhtrue`) | **`TempCmdlines Cmdline 1`** | `T1 NIL` |
+
+**메인 명령줄 프롬프트가 Fixtures 레이어에 있어도 플러그인의 Lua 실행 컨텍스트는
+`TempCmdlines Cmdline 1`이다.** 프롬프트와 플러그인 실행 컨텍스트는 별개의 명령줄이다.
+
+#### `NEGATIVE: AddFixtures 경로` — M0 최종 판정
+
+```
+GO:            ASSUMPTION-71  FID 가독 (슬롯≠FID 전수 확인, 고정점 0)
+GO(한정):      ASSUMPTION-72  드릴다운·모드명·핸들 해석 O / 점유폭 획득 X
+NEGATIVE:      ASSUMPTION-75  Patch 편집기 상태 감지 불가
+INCONCLUSIVE:  ASSUMPTION-73  배열 의미론을 관측할 기회가 없었음
+INCONCLUSIVE:  ASSUMPTION-74  생성 0건이라 관측 대상이 없었음
+```
+
+73·74가 INCONCLUSIVE인 이유는 측정 부족이 아니라 **선행 조건이 성립하지 않기 때문**이다.
+아래 8개 경로를 전부 측정했고 단 하나도 픽스처를 만들지 못했다:
+
+| # | 경로 | 결과 |
+|---|---|---|
+| 1 | OSC 발화 플러그인, 편집기 닫힘 | 목적지 `TempCmdlines` · 0건 |
+| 2 | OSC 발화 플러그인, 편집기 열림 | 0건 |
+| 3 | GUI 탭, 프롬프트 미이동 | `TempCmdlines` · 0건 |
+| 4 | **GUI 탭, 프롬프트 = `…/Stage 1/Fixtures>`** | **`TempCmdlines` · 0건** |
+| 5 | 정식 플러그인 구조(`Main, Cleanup, Execute`) | `TempCmdlines` · 0건 |
+| 6 | 플러그인 내부 `Cmd("ChangeDestination …", undo)` | 목적지 불변 · 0건 |
+| 7 | 플러그인 내부 `CmdIndirect("ChangeDestination …")` | 목적지 불변 · 0건 |
+| 8 | OSC 명령줄 CD 후 별도 호출로 플러그인 실행 | CD는 `OK`, 목적지 미지속 · 0건 |
+
+구조적 배제(전부 실측):
+`AddFixtures`는 컨테이너 메서드가 아니다(`Fixtures.AddFixtures` = nil, 단 `Fixtures:Count()` = 39) ·
+목적지 설정 Lua API 부재(`SetCmdObj`·`SetDestination`·`ChangeDestination` 전역 없음,
+`CurrentCommandLine()` 이 빌드 미제공) · `patch` 배열/유니버스/FID 충돌/예외/CD 오염 전부 배제.
+
+**결론**: onPC **2.4.2.2** + responder **1.6.1** 환경에서, 이 저장소가 접근 가능한 **어떤 경로로도**
+`AddFixtures`가 픽스처를 생성하지 못한다. 플러그인 Lua 실행 컨텍스트의 목적지가 항상
+`TempCmdlines Cmdline 1`이고 이를 바꿀 수단이 없기 때문이다.
+
+#### 이것이 무효화하는 것 — 본 SPEC의 근간
+
+`spec.md` §A **사전 확정 사실 1**("패치는 Lua `AddFixtures` 전용이며 정확히 2단계")은
+**이 환경에서 성립하지 않는다.** 사실 2(CD 금지)와의 충돌 문제가 아니라, **CD를 써도 안 된다.**
+본 SPEC의 REQ-AUTOPATCH-016·018·020, 마일스톤 M4·M5·M6·M8이 전부 이 전제 위에 있다.
+
+M1·M2·M3(후보 모델 · FID 배정 · 타입/모드 해석)은 **콘솔 쓰기와 무관한 계층**이므로
+이 판정에 영향받지 않는다 — 45건의 테스트와 함께 그대로 유효하다.
+
+#### 미해소로 남기는 것 (다음 담당자용)
+
+| # | 항목 | 왜 열려 있나 |
+|---|---|---|
+| G1 | 룰북 `30_plugin_patterns.md:11-53`이 이 경로를 "라이브 검증됨"으로 기술한 근거 | 어느 세션이 어떤 조건에서 성공했는지 저장소에 기록이 없다. 그 조건이 재현되면 판정이 뒤집힌다 |
+| G2 | Executor에 할당한 플러그인 · 매크로에서 호출 등 **다른 실행 트리거** | 측정하지 않았다. 트리거마다 실행 컨텍스트가 다를 가능성이 남아 있다 |
+| G3 | responder 확장으로 목적지를 세팅하는 경로 | `console/lua/**`는 본 SPEC의 PRESERVE라 범위 밖. 별건 SPEC 대상 |
+| G4 | `SendOSCMessage(slot, ...)`로 플러그인이 서버에 직접 보고하는 채널 | `patch_proper.xml`이 쓰던 기법. 본 세션은 플러그인 라벨로 대체했다 |
+
+#### 콘솔 최종 상태 — 세션 전과 동일
+
+| 항목 | 세션 전 | 세션 후 |
+|---|---|---|
+| `Patch/Stages/1/Fixtures` | 39 | **39** |
+| FID · 유니버스 | 1~39 · U1~3 | **동일** |
+| Plugins 풀 | 4 | **4** (프로브 14종 전량 삭제) |
+| Macros 풀 | 1 | **1** |
+| 라이브러리 폴더 | — | 프로브 파일 전량 삭제(`ls \| grep am0` → none) |
+| 명령줄 목적지 | — | `ChangeDestination Root`로 원복 |
+
+`console/lua/**`(PRESERVE) 무접촉. 저장소 코드 변경 0.
+
 ---
 
 ## §E.3 Run-phase Audit-Ready Signal
