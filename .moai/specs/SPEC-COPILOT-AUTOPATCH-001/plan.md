@@ -1,6 +1,6 @@
 # SPEC-COPILOT-AUTOPATCH-001 — 구현 계획 (plan)
 
-status: draft (v0.1.2, 2026-08-06) · Tier L · 마일스톤 M0~M8 · 라이브 세션 2회
+status: draft (v0.1.4, 2026-08-06) · Tier L · 마일스톤 M0~M8 · 라이브 세션 2회 · **M5 축소(반자동 실행 모델 amendment)**
 
 ---
 
@@ -20,7 +20,9 @@ status: draft (v0.1.2, 2026-08-06) · Tier L · 마일스톤 M0~M8 · 라이브 
 룰북이 두 번 경고한 그 실패다(`20_korean_terms.md:34-36`, `31_choreography_patterns.md:203-209`).
 
 따라서 `SPEC-COPILOT-PRECHK-001`의 **probe-before-authoring** 규율을 그대로 따른다:
-**M0에서 5개 전제를 실기로 측정하고, 그 판정이 M2·M3·M6의 설계를 확정한다.**
+**M0에서 6개 전제를 실기로 측정하고, 그 판정이 M2·M3·M5·M6의 설계를 확정한다.**
+(**[v0.1.3]** 5 → 6: `ASSUMPTION-76`이 M0 3~5차에서 사후 식별돼 편입됐고, 그 판정이 **M5**를
+반자동 실행 모델로 축소시켰다 — 그래서 영향 마일스톤에 M5가 추가된다. AC-AUTOPATCH-001과 일치.)
 M0 없이 M2 이후를 착수하지 않는다.
 
 ### §A.3 ASSUMPTION 부정 시 처리
@@ -32,6 +34,7 @@ M0 없이 M2 이후를 착수하지 않는다.
 | `ASSUMPTION-73` 다중 유니버스 patch 배열 | 유니버스별로 플러그인을 **분할 실행**하는 것으로 대체. 분할 사실을 드라이런에 명시 |
 | `ASSUMPTION-74` 패치 후 즉시 관측 | REQ-AUTOPATCH-023의 검증 읽기에 **재시도 대기**를 넣되, 대기 후에도 미관측이면 "확인 불가"로 보고(성공으로 간주 금지) |
 | `ASSUMPTION-75` Patch 편집기 상태 감지 | 사전 안내를 포기하고 **사후 안내만** 한다(REQ-AUTOPATCH-024가 이미 그 경로를 규정) |
+| **`ASSUMPTION-76`** 서버 발화 플러그인이 patch 목적지를 갖는가 **[v0.1.3 신설 · NEGATIVE 확정]** | **부정이 실측 확정됐다** — 서버가 패치를 실행하지 않는다. REQ-AUTOPATCH-018을 **반자동 실행 모델**로 조정하고(검토용 Lua 전달 → 사람 실행 → 서버 검증) M5를 "실행"에서 "실행 안내 + 검증 인계"로 축소한다. M4(Lua 생성)·M6(검증 읽기)·M7(툴 배선)은 **무영향**. **단 L2(패치 편집 세션 활성)는 미측정** — 긍정으로 나오면 REQ-AUTOPATCH-018을 v0.1.2 형태로 복원 가능(`progress.md` §E.2aa). 또 이 NEGATIVE는 "원인이 목적지다"의 반증이 **아니다**(전건 미실현 — 원인 미확정) |
 
 **부정을 실패로 취급하지 않는다.** 부정은 기능 축소이며, 축소는 리포트에 구조화되어 드러난다.
 
@@ -63,7 +66,9 @@ AC-AUTOPATCH-025가 지킨다 — `precheck_vectorworks_diff`의 payload 키 집
 
 ### M0 — 라이브 전제 측정 (cycle_type=none)
 
-**요구·설계 지시**: 실기 onPC 2.4.2에서 `ASSUMPTION-71`~`-75`를 **비파괴 우선**으로 측정한다.
+**요구·설계 지시**: 실기 onPC 2.4.2에서 `ASSUMPTION-71`~`-76`을 **비파괴 우선**으로 측정한다.
+(**[v0.1.3]** `ASSUMPTION-76`은 착수 시점에 목록에 없었고 **M0 3~5차 진행 중 사후 식별**되어
+편입됐다 — plan-phase가 놓친 전제였다. M0 5차에서 **NEGATIVE** 판정.)
 **진입 전제 (D6)**: **테스트 쇼파일이 확보되어 콘솔에서 열려 있어야 M0를 착수한다.**
 절차 4(파괴적 측정)가 그것을 요구하므로 이는 권고가 아니라 **차단 전제**다.
 테스트 쇼파일을 끝내 확보하지 못하면 `ASSUMPTION-73`·`-74`는 **INCONCLUSIVE**로 판정하고
@@ -83,6 +88,10 @@ AC-AUTOPATCH-025가 지킨다 — `precheck_vectorworks_diff`의 payload 키 집
    **읽기 전용.**
 4. `ASSUMPTION-73`·`-74` — 사용자 승인 후 테스트 쇼파일에 **1대**를 패치(단일 유니버스),
    재조회로 관측 확인. 이어서 **2개 유니버스에 걸친 2대**를 패치해 73을 판정.
+5. `ASSUMPTION-76` — 서버가 발화한 플러그인 실행의 command destination을 플러그인 안에서
+   직접 판독하고, 명령줄 목적지를 옮긴 컨텍스트(매크로 2줄)에서 재측정한다.
+   **목적지 이동이 실제로 일어났고 듣는다**는 것을 목적지-상대 명령으로 **짝지은 양성·음성
+   대조군**과 함께 독립 증명해야 판정이 성립한다(대조군 없는 판정은 §E.2z가 금지한 과잉주장이 된다).
 
 **baseline**: 착수 SHA에서 `uv run pytest server/tests -q`를 직접 실측해 `progress.md`에 적는다.
 **AC**: AC-AUTOPATCH-001
@@ -113,18 +122,26 @@ M0의 `ASSUMPTION-71` 판정에 따라 충돌 사전검사를 켜거나 descope�
 **요구·설계 지시**: `AddFixtures` 호출을 생성한다. **`ChangeDestination` 금지**를 생성기 차원에서
 구조적으로 보장하고(문자열 검사로 사후 확인하는 것이 아니라 생성 어휘에 애초에 없게 한다),
 점유폭 간격으로 배치하며, 이미 점유된 도면 주소는 제외한다.
-**AC**: AC-AUTOPATCH-013 · AC-AUTOPATCH-014 · AC-AUTOPATCH-015 · AC-AUTOPATCH-016
+**AC**: AC-AUTOPATCH-013 · AC-AUTOPATCH-014 · AC-AUTOPATCH-016
 
-### M5 — 배포 · 실행 경로 (cycle_type=tdd)
+### M5 — 실행 전달(사람) · 검증 인계 (cycle_type=tdd) **[v0.1.3 축소]**
 
-**요구·설계 지시**: `deploy_plugin` 파이프라인 경유. 실행은 `run_commands(["Plugin '<이름>'"])`
-단일 명령. `execution_port` 직접 호출 0. 드라이런에서는 이 경로를 **한 번도 타지 않는다.**
-**AC**: AC-AUTOPATCH-017 · AC-AUTOPATCH-018 · AC-AUTOPATCH-019
+**요구·설계 지시**: **서버는 패치를 실행하지 않는다**(`ASSUMPTION-76` NEGATIVE 확정 —
+`progress.md` §E.2 M0 5차). 검토 가능한 `AddFixtures` Lua 소스와 실행 절차를 사용자에게
+**제시**하고, 사람이 콘솔에서 실행한 뒤 **M6의 검증 읽기로 인계**한다.
+`RecordingExecutionPort`에 도달하는 패치 실행 발화가 **0건**임을 비공허하게 증명한다
+(실행 발화를 되살린 사본에서 단정이 깨지는지 확인). 별도 배포 경로 신설 금지는 유지하되,
+이 빌드에서 `deploy` 동사가 소스를 쓰지 못하므로(`spec.md` §A 사실 8) 기본 전달물은
+**Lua 소스 자체**다. `execution_port` 직접 호출 0. 드라이런에서는 콘솔에 **아무것도 쓰지 않는다.**
+**AC**: AC-AUTOPATCH-015 · AC-AUTOPATCH-017 · AC-AUTOPATCH-018 · AC-AUTOPATCH-019
 
 ### M6 — 멱등 · 검증 읽기 (cycle_type=tdd)
 
-**요구·설계 지시**: 실행 전 기존 점유 재조회로 중복 방지, 실행 후 `precheck_patch` 재조회로 건별 확인.
-불일치는 보고만 하고 자동 보정 금지. 0건 생성 시 Patch 편집기 안내.
+**요구·설계 지시**: 전달 전 기존 점유 재조회로 중복 방지(멱등은 **생성 산출물 수준**에서 성립),
+**사람이 실행한 뒤** `precheck_patch` 재조회로 건별 확인.
+불일치는 보고만 하고 자동 보정 금지. 0건 생성 시 **실행 여부·절차 재확인 안내**
+(**[v0.1.3]** "Patch 편집기 안내"는 철회됐다 — `ASSUMPTION-75`·`-76` 둘 다 NEGATIVE로
+그 원인 설명이 반증됐다. REQ-AUTOPATCH-024 참조).
 **AC**: AC-AUTOPATCH-020 · AC-AUTOPATCH-021 · AC-AUTOPATCH-022
 
 ### M7 — 툴 배선 · 회귀 · PRESERVE (cycle_type=tdd)
@@ -177,7 +194,7 @@ M0의 `ASSUMPTION-71` 판정에 따라 충돌 사전검사를 켜거나 descope�
 | `server/tests/test_autopatch_fid.py` | 범위 내 배정 · 범위 미제공 거부 · 슬롯 유래 값 금지 · 충돌 사전검사 on/off |
 | `server/tests/test_autopatch_types.py` | 라이브러리 열거 · 퍼지 매칭 · 부재 시 하드 스톱 · 점유폭 일치 |
 | `server/tests/test_autopatch_lua.py` | `AddFixtures` 형태 · **CD 0건(비공허)** · 점유폭 간격 · 점유 주소 제외 |
-| `server/tests/test_autopatch_execute.py` | `deploy_plugin` 경유 · 단일 명령 · `execution_port` 직접 호출 0 · 드라이런 무쓰기 |
+| `server/tests/test_autopatch_execute.py` | **사람 실행 전달 · 패치 실행 발화 0건(비공허)** · 별도 배포 경로 0 · `execution_port` 직접 호출 0 · 드라이런 무쓰기 |
 | `server/tests/test_autopatch_verify.py` | 멱등 · 검증 읽기 건별 · 불일치 보고 · 자동 보정 0 |
 | `server/tests/test_autopatch_tool.py` | 5지점 등록을 **dispatch로** 검증 · 파라미터 스키마 |
 | `server/tests/test_autopatch_contract.py` | 1단계 공개 계약 골든 스냅샷(최상위 키 집합 + 키별 타입 시그니처) 비교 |

@@ -1,6 +1,6 @@
 # SPEC-COPILOT-AUTOPATCH-001 — 설계 (design)
 
-status: draft (v0.1.3, 2026-08-06) · Tier L · 설계 슬롯 5건 전부 종결 · 미결 0 · plan-audit 1~5회차 지적 반영 · §6.2 폐지(acceptance.md 단일 출처화)
+status: draft (v0.1.4, 2026-08-06) · Tier L · 설계 슬롯 5건 전부 종결 · 미결 0 · plan-audit 1~9회차 지적 반영 · §6.2 폐지(acceptance.md 단일 출처화)
 
 ---
 
@@ -23,7 +23,7 @@ status: draft (v0.1.3, 2026-08-06) · Tier L · 설계 슬롯 5건 전부 종결
 | `server/vwx/patchplan.py` | 신규 | 후보 정규화 · 선택 · FID 배정 · 주소 계획 |
 | `server/vwx/typemap.py` | 신규 | 라이브러리 열거 · 퍼지 매칭 · 별칭 저장 |
 | `server/vwx/luagen.py` | 신규 | `AddFixtures` Lua 소스 생성 (CD 어휘 부재를 구조로 보장) |
-| `server/vwx/apply.py` | 신규 | 배포 · 실행 · 멱등 · 검증 읽기 오케스트레이션 |
+| `server/vwx/apply.py` | 신규 | **[v0.1.3]** 실행 전달(사람) · 멱등 · 검증 읽기 오케스트레이션. **패치 실행 발화 없음** |
 | `server/vwx/verdicts.py` | 신규 | 본 SPEC 판정 어휘 레지스트리 (`server/prechk/verdicts.py`는 PRESERVE) |
 | `server/vwx/report.py` | 변경 | 패치 결과 보고 절 추가 (1단계 출력 계약 무변경) |
 | `server/orchestrator/tools.py` | 변경 | 신규 툴 `apply_vectorworks_patch` 5지점 등록 |
@@ -104,21 +104,24 @@ Lua 생성 (luagen)          ── CD 어휘 없음
    │
    ├───────────── dry_run(기본) ──→ 소스 전문 + 대상 표 + 비가역 경고 ──→ 끝 [쓰기 0]
    │
-   ▼  명시 실행
+   ▼  명시 전달 요청 (dry_run=false)
 멱등 재조회 (apply)        ── 이미 존재하는 항목 건너뜀 [읽기]
    │
    ▼
-deploy_plugin              ── 컴파일 + 정적 스캔 + 사람 리뷰
+실행 전달 (apply)          ── 검토용 Lua 소스 + 실행 절차를 **사람에게 제시** [쓰기 0]
+   │                          ※ [v0.1.3] 서버는 패치를 실행하지 않는다 —
+   │                            ASSUMPTION-76 NEGATIVE (progress.md §E.2 M0 5차).
+   │                            deploy_plugin / run_commands(["Plugin 'X'"]) 자동 발화 **0건**.
    │
-   ▼
-run_commands(["Plugin 'X'"])   ── 단일 명령 · bundle_gate.screen()
+   ▼  사람이 콘솔에서 실행 (실행 버튼은 사람이 누른다)
    │
    ▼
 검증 읽기 (apply)          ── precheck_patch 재조회 · 건별 확인
    │
    ├─ 일치      → 성공 보고
    ├─ 불일치    → 구조화 보고 · 자동 보정 0
-   └─ 0건 생성  → "Patch > Fixtures 편집기를 먼저 열라" 안내
+   └─ 0건 생성  → 실행 여부·절차 재확인 안내 (편집기 안내는 v0.1.3에서 근거를 잃었다 —
+                  ASSUMPTION-75 NEGATIVE · ASSUMPTION-76 NEGATIVE)
 ```
 
 **드라이런과 실행의 유일한 차이**는 점선 아래 구간의 실행 여부다. 드라이런은 그 위 전부를 실제로
@@ -173,7 +176,7 @@ run_commands(["Plugin 'X'"])   ── 단일 명령 · bundle_gate.screen()
 출처는 `acceptance.md`의 각 AC 항목 자체의 "검증 방법" 줄이다.** 테스트 파일을 알아야 하면
 거기서 읽는다 — 이 표를 복원하지 않는다.
 
-### §6.3 비공허성 대조군 (필수 8건)
+### §6.3 비공허성 대조군 (필수 **10건** — v0.1.4 round7 반영에서 8 → 10)
 
 | 주장 | 심을 것 |
 |---|---|
@@ -183,17 +186,33 @@ run_commands(["Plugin 'X'"])   ── 단일 명령 · bundle_gate.screen()
 | 동등 확정 0건 | 문자열 `==` 확정 경로 |
 | 표시문자열 파싱 0건 | 모드명에서 숫자 추출 |
 | **CD 0건** | `ChangeDestination`을 담은 가짜 산출물 |
-| 드라이런 쓰기 0건 | 실행 경로에서 같은 기록기가 쓰기를 잡는지 |
+| **쓰기 0건(두 모드 모두)** | **`server/vwx/` 사본에 콘솔 쓰기를 되살려 심고 같은 기록기가 잡는지** (AC-AUTOPATCH-019②. v0.1.3 전에는 "실행 경로에서 잡는지"였으나 반자동 모델에서 실행 경로가 쓰기를 하지 않아 성립 불가 — round7 N16) |
+| **[신설 v0.1.4/round7] 패치 실행 발화 0건** | 실행 발화를 되살린 모듈 사본에서 `RecordingExecutionPort`가 잡는지 (AC-AUTOPATCH-015②③) |
+| **[신설 v0.1.4/round7] 별도 배포 호출 0건** | 우회 배포를 심은 모듈 사본에서 잡히는지 (AC-AUTOPATCH-017①) |
 | PRESERVE 0-diff | PRESERVE 대상에 변경을 심었다 되돌리기 |
 
-대조군 없는 "0건" 주장은 인수 불가다(acceptance.md §A).
+대조군 없는 "0건" 주장은 인수 불가다(acceptance.md §A · §F 항목 7).
+
+**이 표의 범위 (v0.1.4 명시)**: 위 10건은 **구조적·설계 수준**의 대조군 목록이다.
+`acceptance.md` §F 항목 7이 요구하는 것은 **모든 "0건" 주장 AC 항목에 대조군이 붙어 있을 것**이며,
+그 강제는 **각 AC 자신의 "기대 결과" 줄**에서 이뤄진다(단일 출처 — §6.2를 폐지한 것과 같은 이유로
+여기에 사본을 두지 않는다). v0.1.4에서 AC-007③·013③·**014③(a)**·016③·017②·021② **6건**에
+대조군을 추가해
+**§F 항목 7이 전수 성립**하도록 맞췄다(round8 감사 N37 + **round9 감사 N47** — N37의 5건만으로는
+부족했고 AC-014③(a)가 마지막 반례였다).
 
 ---
 
 ## §7. 안티패턴 — 하지 말 것
 
-1. **`ChangeDestination`을 "필요할 때만" 넣기** — 룰북이 무조건 금지한다. 조건부 예외 없음.
-2. **`run_commands`에 플러그인 실행과 다른 명령을 함께 보내기** — 그 배열은 길이 1이다.
+1. **`ChangeDestination`을 "필요할 때만" 넣기** — 조건부 예외 없음. **[v0.1.3 근거 교체]**
+   근거는 룰북의 "CD가 실패 원인"이 **아니다**(그 인과는 반증됐다 — research.md §2 주석).
+   실측 근거는 **CD가 플러그인의 목적지에 아무 효과가 없다**는 것이며, 따라서 생성 어휘에
+   둘 이유가 없다(REQ-AUTOPATCH-017의 새 근거).
+2. **서버가 패치 실행을 스스로 발화하기** — **[v0.1.3 교체]** 이전 판은 "`run_commands` 배열은
+   길이 1이다"였으나 그 요구는 폐기됐다(REQ-AUTOPATCH-018 · AC-AUTOPATCH-015④).
+   반자동 모델에서 서버는 패치를 실행하지 않는다. 서버가 어떤 이유로든 콘솔에 문장을 보낼 때는
+   **REQ-AUTOPATCH-021의 단일 통로**(`run_commands` → `bundle_gate.screen()`)를 지킨다.
 3. **표시 문자열에서 모드 채널 수 파싱** — `ASSUMPTION-27` 부정이 이미 반증했다.
 4. **슬롯을 FID로 쓰기** — 룰북이 두 번 경고했다.
 5. **플러그인 무오류 종료를 성공으로 간주** — `AddFixtures`는 실패 시 `nil`을 반환할 뿐이다.
