@@ -1,9 +1,8 @@
 // Paperwork panel (W3 — P0 UI exposure,
 // docs/reports/2026-08-06-workflow-coverage-review.html §5).
 //
-// Surfaces the read-only printable documents (patch sheet / cue sheet /
-// preset list / reduced magic sheet) that were previously reachable ONLY via
-// an LLM tool call —
+// Surfaces the three read-only printable documents (patch sheet / cue sheet
+// / preset list) that were previously reachable ONLY via an LLM tool call —
 // server/orchestrator/tools.py's own build_patch_sheet/build_cue_sheet/
 // build_preset_list handlers, now also reachable from server/web/
 // paperwork_api.py's GET/POST /api/paperwork(/:kind). Query-only: this panel
@@ -26,7 +25,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { apiUrl } from "../launchContext";
 
-export type PaperworkKind = "patch_sheet" | "cue_sheet" | "preset_list" | "magic_sheet";
+export type PaperworkKind = "patch_sheet" | "cue_sheet" | "preset_list";
 
 export interface PaperworkKindMeta {
   kind: PaperworkKind;
@@ -37,12 +36,11 @@ export const PAPERWORK_KINDS: readonly PaperworkKindMeta[] = [
   { kind: "patch_sheet", label: "패치시트" },
   { kind: "cue_sheet", label: "큐시트" },
   { kind: "preset_list", label: "프리셋 목록" },
-  { kind: "magic_sheet", label: "매직시트(축약형)" },
 ];
 
 // Mirrors the per-kind summary fields server/web/paperwork_api.py's
-// _patch_sheet/_cue_sheet/_preset_list/_magic_sheet return — a superset
-// across all kinds, each kind populating only the fields that apply to it.
+// _patch_sheet/_cue_sheet/_preset_list return — a superset across all three
+// kinds, each kind populating only the fields that apply to it.
 export interface PaperworkSummary {
   path: string;
   fixture_count?: number;
@@ -54,11 +52,6 @@ export interface PaperworkSummary {
   preset_count?: number;
   truncated?: boolean;
   drilldown_capped?: boolean;
-  group_count?: number;
-  preset_pool_count?: number;
-  placement_count?: number;
-  placements_complete?: boolean;
-  group_membership_readable?: boolean;
 }
 
 // -- pure logic (response parsing / badge derivation) ------------------------
@@ -82,16 +75,6 @@ export function paperworkBadges(kind: PaperworkKind, summary: PaperworkSummary):
     if (summary.completeness !== undefined && summary.completeness !== "complete") {
       badges.push("불완전");
     }
-  } else if (kind === "magic_sheet") {
-    if (summary.placements_complete === false) {
-      badges.push("배치 좌표 일부");
-    }
-    // ALWAYS shown, never conditional on a field being false: group
-    // membership is unreadable on grandMA3 as a matter of platform, so an
-    // operator glancing at the card must not have to notice an absent badge
-    // to learn it. A conditional badge would go quiet the day the field is
-    // dropped from the response.
-    badges.push("그룹 멤버십 판독 불가");
   } else {
     if (summary.truncated) badges.push("절단됨");
     if (summary.drilldown_capped) badges.push("드릴다운 상한");
@@ -161,30 +144,11 @@ export function parsePaperworkGenerateResponse(
   return { ok: false, message };
 }
 
-/** URL for the in-app iframe preview (GET /api/paperwork/:kind/content). */
-export function contentUrl(kind: PaperworkKind): string {
-  return apiUrl(`/api/paperwork/${kind}/content`);
-}
-
-/** URL for the file download (GET /api/paperwork/:kind/download). */
-export function downloadUrl(kind: PaperworkKind): string {
-  return apiUrl(`/api/paperwork/${kind}/download`);
-}
-
-/** Kind-specific stat line shown below the label after generation. */
-export function paperworkStatLine(kind: PaperworkKind, summary: PaperworkSummary): string {
-  if (kind === "patch_sheet") {
-    const n = summary.fixture_count ?? 0;
-    return `픽스처 ${n}대`;
-  }
-  if (kind === "cue_sheet") {
-    const seq = summary.sequence_count ?? 0;
-    const cue = summary.cue_count ?? 0;
-    return `시퀀스 ${seq}개 · 큐 ${cue}개`;
-  }
-  const pool = summary.pool_count ?? 0;
-  const preset = summary.preset_count ?? 0;
-  return `풀 ${pool}개 · 프리셋 ${preset}개`;
+/** Best-effort `file://` URL for the [브라우저에서 열기] button. The path is
+ * an OS-absolute filesystem path (server/paperwork/output.py never returns
+ * a relative one), so this is a plain URI-encode, not a path resolver. */
+export function fileUrlForPath(path: string): string {
+  return `file://${encodeURI(path)}`;
 }
 
 // -- fetch wrappers (thin — call + parse, no React) ---------------------------
@@ -207,38 +171,27 @@ export interface PaperworkCardProps {
   meta: PaperworkKindMeta;
   result: PaperworkSummary | null;
   busy: boolean;
-  previewing: boolean;
   onGenerate: (kind: PaperworkKind) => void;
-  onPreview: (kind: PaperworkKind) => void;
-  onDownload: (kind: PaperworkKind) => void;
+  onOpenInBrowser: (path: string) => void;
 }
 
-export function PaperworkCard({
-  meta,
-  result,
-  busy,
-  previewing,
-  onGenerate,
-  onPreview,
-  onDownload,
-}: PaperworkCardProps) {
+export function PaperworkCard({ meta, result, busy, onGenerate, onOpenInBrowser }: PaperworkCardProps) {
   const badges = result !== null ? paperworkBadges(meta.kind, result) : [];
-  const stat = result !== null ? paperworkStatLine(meta.kind, result) : null;
   return (
-    <div className={`paperwork-card${previewing ? " paperwork-card-active" : ""}`} data-kind={meta.kind}>
+    <div className="paperwork-card" data-kind={meta.kind}>
       <div className="paperwork-card-head">
         <span className="paperwork-card-label">{meta.label}</span>
-        {stat !== null && <span className="paperwork-card-stat">{stat}</span>}
         <button
           className="paperwork-card-generate"
           disabled={busy}
           onClick={() => onGenerate(meta.kind)}
         >
-          {busy ? "생성 중…" : result !== null ? "새로고침" : "생성"}
+          {busy ? "생성 중…" : "생성"}
         </button>
       </div>
       {result !== null && (
-        <div className="paperwork-card-actions">
+        <div className="paperwork-card-result">
+          <code className="paperwork-card-path">{result.path}</code>
           {badges.length > 0 && (
             <div className="paperwork-card-badges">
               {badges.map((badge) => (
@@ -248,17 +201,12 @@ export function PaperworkCard({
               ))}
             </div>
           )}
-          <div className="paperwork-card-buttons">
-            <button
-              className={`paperwork-card-preview${previewing ? " paperwork-card-preview-active" : ""}`}
-              onClick={() => onPreview(meta.kind)}
-            >
-              {previewing ? "닫기" : "미리보기"}
-            </button>
-            <button className="paperwork-card-download" onClick={() => onDownload(meta.kind)}>
-              ↓ 다운로드
-            </button>
-          </div>
+          <button
+            className="paperwork-card-open"
+            onClick={() => onOpenInBrowser(result.path)}
+          >
+            브라우저에서 열기
+          </button>
         </div>
       )}
     </div>
@@ -269,10 +217,8 @@ export interface PaperworkPanelViewProps {
   results: Record<string, PaperworkSummary | null>;
   busyKind: PaperworkKind | null;
   notice: string | null;
-  previewKind: PaperworkKind | null;
   onGenerate: (kind: PaperworkKind) => void;
-  onPreview: (kind: PaperworkKind) => void;
-  onDownload: (kind: PaperworkKind) => void;
+  onOpenInBrowser: (path: string) => void;
   onClose: () => void;
 }
 
@@ -280,50 +226,33 @@ export function PaperworkPanelView({
   results,
   busyKind,
   notice,
-  previewKind,
   onGenerate,
-  onPreview,
-  onDownload,
+  onOpenInBrowser,
   onClose,
 }: PaperworkPanelViewProps) {
   return (
     <section className="paperwork-panel" aria-label="페이퍼워크">
-      <div className="paperwork-sidebar">
-        <header className="paperwork-header">
-          <span className="paperwork-title">페이퍼워크</span>
-          <button className="paperwork-close" onClick={onClose} aria-label="닫기">
-            ✕
-          </button>
-        </header>
-        {notice !== null && <div className="paperwork-notice">{notice}</div>}
-        <div className="paperwork-cards">
-          {PAPERWORK_KINDS.map((meta) => (
-            <PaperworkCard
-              key={meta.kind}
-              meta={meta}
-              result={results[meta.kind] ?? null}
-              busy={busyKind === meta.kind}
-              previewing={previewKind === meta.kind}
-              onGenerate={onGenerate}
-              onPreview={onPreview}
-              onDownload={onDownload}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="paperwork-preview-area">
-        {previewKind !== null ? (
-          <iframe
-            className="paperwork-preview-frame"
-            src={contentUrl(previewKind)}
-            title={PAPERWORK_KINDS.find((m) => m.kind === previewKind)?.label ?? "미리보기"}
+      <header className="paperwork-header">
+        <span className="paperwork-title">페이퍼워크</span>
+        <button className="paperwork-close" onClick={onClose} aria-label="닫기">
+          ✕
+        </button>
+      </header>
+      <p className="paperwork-hint">
+        생성한 문서는 브라우저에서 열어 ⌘P → PDF로 저장할 수 있습니다.
+      </p>
+      {notice !== null && <div className="paperwork-notice">{notice}</div>}
+      <div className="paperwork-cards">
+        {PAPERWORK_KINDS.map((meta) => (
+          <PaperworkCard
+            key={meta.kind}
+            meta={meta}
+            result={results[meta.kind] ?? null}
+            busy={busyKind === meta.kind}
+            onGenerate={onGenerate}
+            onOpenInBrowser={onOpenInBrowser}
           />
-        ) : (
-          <div className="paperwork-preview-empty">
-            <span className="paperwork-preview-empty-icon">📄</span>
-            <span>문서를 생성하면 여기에 미리보기가 표시됩니다</span>
-          </div>
-        )}
+        ))}
       </div>
     </section>
   );
@@ -335,7 +264,6 @@ export function PaperworkPanel({ onClose }: { onClose: () => void }) {
   const [results, setResults] = useState<Record<string, PaperworkSummary | null>>({});
   const [busyKind, setBusyKind] = useState<PaperworkKind | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [previewKind, setPreviewKind] = useState<PaperworkKind | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -357,28 +285,14 @@ export function PaperworkPanel({ onClose }: { onClose: () => void }) {
       const outcome = await generatePaperworkDocument(kind);
       if (outcome.ok) {
         setResults((current) => ({ ...current, [kind]: outcome.summary }));
-        // Auto-open preview after successful generation
-        setPreviewKind(kind);
       } else {
         setNotice(outcome.message);
       }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "";
-      setNotice(`문서 생성 중 오류가 발생했습니다.${msg ? ` (${msg})` : ""}`);
+    } catch {
+      setNotice("문서 생성 중 오류가 발생했습니다.");
     } finally {
       setBusyKind(null);
     }
-  };
-
-  const togglePreview = (kind: PaperworkKind) => {
-    setPreviewKind((current) => (current === kind ? null : kind));
-  };
-
-  const triggerDownload = (kind: PaperworkKind) => {
-    const link = document.createElement("a");
-    link.href = downloadUrl(kind);
-    link.download = `${kind}.html`;
-    link.click();
   };
 
   return (
@@ -386,10 +300,10 @@ export function PaperworkPanel({ onClose }: { onClose: () => void }) {
       results={results}
       busyKind={busyKind}
       notice={notice}
-      previewKind={previewKind}
       onGenerate={(kind) => void generate(kind)}
-      onPreview={togglePreview}
-      onDownload={triggerDownload}
+      onOpenInBrowser={(path) => {
+        window.open(fileUrlForPath(path), "_blank");
+      }}
       onClose={onClose}
     />
   );

@@ -1174,8 +1174,6 @@ _EXPECTED_WEB_ROUTES = (
     ("app.py", "app.get", "/healthz"),
     ("app.py", "app.websocket", "/ws"),
     ("paperwork_api.py", "router.get", "/api/paperwork"),
-    ("paperwork_api.py", "router.get", "/api/paperwork/{kind}/content"),
-    ("paperwork_api.py", "router.get", "/api/paperwork/{kind}/download"),
     ("paperwork_api.py", "router.post", "/api/paperwork/{kind}"),
     ("provision_api.py", "router.get", "/api/provision/responder"),
     ("provision_api.py", "router.post", "/api/provision/responder"),

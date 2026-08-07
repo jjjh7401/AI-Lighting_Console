@@ -131,36 +131,15 @@ class TestRegistry:
         #   (SPEC-COPILOT-PAPERWORK-001, previously unregistered) and
         #   plan_executor_layout (server/looks/layout.py, previously
         #   unregistered).
-        # + SPEC-COPILOT-SPATIAL-001's get_spatial_context (READ) and
-        #   arrange_fixtures (WRITE) — kept as TWO tools by decision D-4, so a
-        #   showfile-mutating call never hides behind the tool a model uses to
-        #   look at the rig.
-        # + SPEC-COPILOT-GROUPGEN-001's classify_arrangement_topology (READ)
-        #   and create_arrangement_groups (WRITE) — same D-4 split: a group
-        #   write carries its own tool-layer approval gate (design.md §7) and
-        #   must never hide behind the read tool.
-        # + SPEC-COPILOT-VWX-001's precheck_vectorworks_diff — reads an
-        #   uploaded Vectorworks Instrument Data export plus THIS console's own
-        #   fixture inventory and reports the difference; 0 exec verbs, never
-        #   touches execution_port (spec.md §D).
-        # + SPEC-COPILOT-AUTOPATCH-001's apply_vectorworks_patch — turns that
-        #   report into reviewable AddFixtures Lua plus an execution procedure
-        #   the HUMAN runs, then re-reads to verify. Registered as ONE tool
-        #   with a dry_run flag (design slot A) rather than a read/write pair:
-        #   it has no write half to split off. The server never fires the
-        #   patch — measured, not cautious (REQ-AUTOPATCH-018 [v0.1.3]).
         # + build_handover_pack (server/paperwork/bundle.py, P0 W2 — the
         #   handover-pack index tying the three T-J sheets together).
-        # + build_magic_sheet (server/paperwork/data.py, P0-5 — the REDUCED
-        #   magic sheet: names + patch summary + placement coordinates. The
-        #   FULL form stays impossible; group membership is not readable.)
         # The count is asserted against the declared tuple's length so the set
         # stays CLOSED: adding a handler without declaring it, or declaring one
         # without a handler, still fails here.
         registry = _registry()
         names = [definition.name for definition in registry.definitions()]
         assert sorted(names) == sorted(TOOL_NAMES)
-        assert len(names) == len(TOOL_NAMES) == 31
+        assert len(names) == len(TOOL_NAMES) == 19
 
     def test_the_four_original_tools_are_still_registered(self):
         # The M5 addition must not have displaced any of them.
