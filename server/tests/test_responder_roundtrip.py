@@ -155,6 +155,71 @@ class TestRoundtrip:
         assert all("timeout" in step.detail for step in report.steps)
 
 
+class TestPropStep:
+    """The OPT-IN measurement step. Its job is to let a live session ASK a
+    property nobody has uttered yet and record the console's own answer — so
+    the two things that must hold are that it never fires unasked, and that
+    what it sends survives the trip unmangled."""
+
+    def test_it_does_not_run_unless_asked(self, loop):
+        _, config = loop
+        report = run_roundtrip(config, wait=_WAIT)
+        assert [step.name for step in report.steps] == ["ping", "state", "exec"]
+
+    def test_half_a_request_is_no_request(self, loop):
+        """Both arguments or neither — a path with no property name would
+        otherwise send a malformed `prop` and report the responder's parse
+        error as if it were a measurement."""
+        _, config = loop
+        only_path = run_roundtrip(config, wait=_WAIT, prop_path="DataPool/Sequences/1")
+        only_name = run_roundtrip(config, wait=_WAIT, prop_name="CueFade")
+        assert "prop" not in [step.name for step in only_path.steps]
+        assert "prop" not in [step.name for step in only_name.steps]
+
+    def test_it_runs_last_so_it_cannot_mask_liveness(self, loop):
+        _, config = loop
+        report = run_roundtrip(
+            config, wait=_WAIT, prop_path="DataPool/Sequences/1", prop_name="Name"
+        )
+        assert [step.name for step in report.steps] == ["ping", "state", "exec", "prop"]
+
+    def test_a_path_containing_a_space_reaches_the_responder_intact(self, loop):
+        """The structural claim the CueFade measurement rests on: the
+        responder matches `^(.-)%s+(%S+)%s*$`, non-greedy on the path, so only
+        the LAST token is taken as the property name. If the split were greedy
+        the path would arrive truncated at its first space and the measurement
+        would be answering about a different object."""
+        _, config = loop
+        report = run_roundtrip(
+            config,
+            wait=_WAIT,
+            skip_exec=True,
+            prop_path="DataPool/Sequences/1/Cue 1",
+            prop_name="CueFade",
+        )
+        prop = next(step for step in report.steps if step.name == "prop")
+        assert prop.payload is not None
+        assert prop.payload["path"] == "DataPool/Sequences/1/Cue 1"
+        assert prop.payload["property"] == "CueFade"
+
+    def test_a_refusal_is_reported_as_the_consoles_own_words(self, loop):
+        """A property that does not exist must come back as ok=False carrying
+        the responder's error — never as a tool-level exception and never
+        paraphrased. For a measurement run the refusal IS the finding."""
+        _, config = loop
+        report = run_roundtrip(
+            config,
+            wait=_WAIT,
+            skip_exec=True,
+            prop_path="DataPool/Sequences/1",
+            prop_name="NoSuchPropertyHere",
+        )
+        prop = next(step for step in report.steps if step.name == "prop")
+        assert prop.payload is not None
+        assert prop.payload["ok"] is False
+        assert prop.payload.get("error")
+
+
 class TestMainCli:
     def test_exit_zero_on_success(self, loop):
         console, config = loop
