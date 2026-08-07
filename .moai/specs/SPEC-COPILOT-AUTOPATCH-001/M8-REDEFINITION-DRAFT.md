@@ -101,8 +101,44 @@ the 시스템 **shall** 서버 책임 구간(G1·G3)을 통과하고, 사람 실
 | P2 | 테스트 쇼파일 재확인 | 기존 확인 유효(§E.2 M0 2차) — 세션 당일 재확인 필요 |
 | P3 | 사전 상태 기록 | 픽스처 수 · 사용 FID · 유니버스 · 주소 범위를 **파괴적 조작 전에** |
 | P4 | 테스트 자원 분리 | **[round16 정정 · 사용자 결정 대기]** 이전 판은 *"FID·유니버스를 기존과 완전히 분리(M0 2차 선례: FID 501~, 유니버스 10·11)"*라 적었으나 **유니버스·주소 분리는 이 툴로 실현 불가능**하다. `server/vwx/apply.py:132`가 `HandoffEntry.address`는 **"언제나 도면 주소 그대로"**라 못박고, `patchplan.plan_addresses`는 겹치면 **제외**할 뿐 *"빈 주소를 찾아 옮겨 붙이는 경로가 이 함수에 없다"*. **분리할 수 있는 것은 FID 대역(`fid_range`)뿐**이며, 유니버스·주소를 옮기려면 **1단계에 넣는 도면을 그렇게 만들어야** 한다. M0 2차의 `유니버스 10·11`은 **프로브가 직접 Lua를 쏜 것**이라 이 경로의 선례가 아니다. → 사용자가 ㉠ FID만 분리 / ㉡ 분리 유니버스로 도면 재작성 중 선택(`spec.md` §C 「사용자 결정 대기」) |
-| P5 | 원복 절차 합의 | **미정** — 생성물 제거 방법을 **세션 전에** 정한다. 실행 취소가 없다 |
+| P5 | 원복 절차 합의 | **미정 · 사용자 결정 대기** — **[round16 조사]** 이 저장소에 **픽스처를 지운 실측 기록은 0건**이다. 실측된 삭제 문법은 `Delete Macro <slot>` / `Delete Plugin <slot>` **둘뿐**(`console/lua/README.md:161-171` "Verified deletion syntax", M0 1·2·5차 반복 성공)이며 **픽스처에는 적용되지 않는다**. `Delete Fixture`는 저장소 전체에서 **콘솔로 나간 적 0회**이고, 룰북 `00_grammar.md:45`의 예시는 `Delete Sequence 9`뿐이다. 아래 4안 중 사용자가 선택한다 — 상세는 이 표 아래 「P5 선택지」 |
 | P6 | **[round15 #6 신설 · round16 #2 전면 정정] `names` 매핑 준비** | 후보 식별자 → 콘솔에 만들 픽스처 이름. 형식은 `{후보 식별자: 이름 문자열}` JSON 객체(`tools.py` 스키마: *"Candidate id -> the fixture name to create … this layer never invents a name."*). 이름이 없는 후보는 `fixture_name_missing`으로 **제외**된다(`design.md` §2.3 · `server/vwx/verdicts.py`). **[round16 #2] 이전 판의 "키는 1단계 리포트 `missing_in_console` 항목 식별자를 그대로 쓴다"는 거짓이다** — 키는 `patchplan._candidate_id`가 만드는 **sha256 해시**(`vwx-missing-<16자>`)라 손으로 만들 수 없다. 상세 절차·동결 계약은 `plan.md` §B M8 착수 전제 ⑥이 정본이다 |
+
+### P5 선택지 — 사용자 결정 대기 (round16 조사)
+
+> **증거 등급**: `[M]` M0 라이브 실측 · `[C]` 저장소 코드가 실제로 콘솔에 보내는 경로 ·
+> `[R]` 룰북 주장(이 SPEC에서 **4건 반증 전력**) · `[추정]` 미실측 추론.
+> **룰북에 적혀 있다는 것은 "실기에서 된다"의 근거가 아니다**(§0 함정 1·5·9).
+
+**P5-0 (공통·필수, 단독 옵션 아님) — 임포트한 플러그인 슬롯 제거**
+`Delete Plugin <slot>`, **높은 슬롯부터 역순**(`README.md:169-171`).
+**절대 responder 자신의 슬롯을 지우지 마라**(`README.md:173-176`).
+증거 **[M]+[C]** — 이 조사에서 가장 강한 등급이며 `server/safety/console.py:329`가 실제로 발화한다.
+G2가 만드는 **부산물**이므로 **어느 안을 고르든 반드시 수행**한다.
+G4 기록: `DataPools/Default/Plugins` childCount 사전=사후.
+
+| 안 | 절차 | 증거 | 실패하면 | 위험 |
+|---|---|---|---|---|
+| **P5-A** `Delete Fixture <fid>` | 재조회로 생성 FID 확정 → `Delete Fixture 501`(한 줄에 하나) 또는 `Thru` 범위 → 즉시 재조회 | **[R]+[추정]** — 픽스처 대상 실측 0건 | 두 갈래: 명시 실패(안전) 또는 **`OK`를 반환하고 아무것도 안 지움**(M0가 `Label`에서 실측한 현상) | **최상** — FID 오지정 시 기존 39대 중 하나가 영구 소실. 슬롯↔FID는 **회전 매핑**이라 직관이 통하지 않는다(슬롯 1→FID 20, 슬롯 21→FID 1, 고정점 0). `Delete`는 `blacklist.yaml:15`에 있어 승인 화면을 반드시 거친다 — **그 화면에서 FID를 눈으로 대조하라** |
+| **P5-B** 매크로 + CD → 목적지 상대 `Delete <slot>` | `Store Macro <id>.1` → CD `ShowData.LivePatch.Stages.1.Fixtures` → `.2` = `Delete <slot>` → `.3` = `ChangeDestination Root` → 실행 → 재조회 → 매크로 삭제 | 목적지 이동과 "그 컨텍스트에서 명령이 듣는다"는 **[M]**(Label 양성/음성 대조군 쌍). **`Delete` 동사 자체는 [추정]** | A와 동일 + 매크로 debris 1개 | **A보다 높다** — 슬롯 기준이라 회전 매핑을 사람이 환산해야 한다. 목적지를 `Root`로 복귀시키지 않고 세션이 끝나면 이후 명령이 엉뚱한 레이어에서 실행된다. **A 실패 시 2차 수단으로만** |
+| **P5-C** 객체 모델 삭제 메서드 (조사 → 조건부 사용) | 플러그인 1개로 `Patch().Stages[1].Fixtures`의 `Remove`/`Delete`/`Destroy` `type()`을 찍되 **허구 키(`ZZBogusNotAMethod`)가 `nil`임을 함께 확인**(M0가 `Append`에서 쓴 비공허성 기법) → `function`이면 호출 → 재조회 | 기법은 **[M] 확립**. **메서드 존재 여부는 완전 미지** | 메서드가 없거나 `nil` 반환(`Append`가 정확히 그랬다) — **무해** | 중간. 객체 모델 프로퍼티 쓰기는 **목적지와 무관하게 듣는 것이 실측**됐으므로 삭제도 즉시 적용될 수 있다. **조사만 하면 위험 0**이고 성공하면 후속 SPEC의 자산 — **A와 병행 권장(먼저 조사만)** |
+| **P5-D** 세션 전 쇼파일 스냅샷 → 세션 후 재로드 **(권고 기본값)** | (세션 **전**) 사람이 GUI에서 **Save As**로 별도 사본 → 파일명을 `progress.md`에 기록. (세션 **후**) 그 스냅샷 **Load** → responder 재배포·OSC 재설정 → 재조회 | **[추정]** — `LoadShow`/`SaveShow` 문법은 룰북·저장소에 **0건**(GUI 조작 필요). 관련 원문은 `README.md:188` *"MA3 autosaves the showfile … an unsaved deletion is restored on the next load"* — **이 문장이 근거이자 동시에 "그냥 재로드"가 안 된다는 반증**이다(자동저장이 있으므로 **사전 사본이 필수**) | 스냅샷이 없거나 로드 실패 → A/B/C로 폴백. **스냅샷을 미리 뜨는 비용은 0이므로 실패해도 손해가 없다** | **가장 낮음** — FID·슬롯 오지정으로 기존 픽스처를 날릴 위험이 **0**이다. 단 ① 재로드가 responder 슬롯·OSC 라우팅도 되돌린다 → G4 검증 전에 재배포·`Enable Input/Output` 토글이 필요할 수 있다 ② 세션 중 만든 다른 산물도 함께 사라진다 |
+
+**G4 기록 근거(A·B·C 공통)**: `apply_vectorworks_patch(report=…, dry_run=true)`를 **`names` 없이**
+다시 부른다(`tools.py`의 `_approved_entries`가 이름 없이도 `verification` 블록을 만든다).
+통과 조건은 **모든 `verification.results[*].outcome == "not_observed"`** 그리고
+**`console_read.complete_enough_to_judge_absence == true`** 둘 다다.
+후자는 `missing_count == 0` **그리고** `unreadable_address_count == 0`일 때만 참이다(위 round16 (c)).
+**P5-D의 기록 근거**는 그에 더해 `console_read.child_count == 39`(사전 기준선 복귀)다.
+
+**권고 조합**: **P5-D를 기본값으로 확정** + **P5-0 필수** + **P5-C를 무해한 조사로 병행** +
+P5-A는 D가 준비된 상태에서만 실측 획득 목적으로 시도.
+D를 기본값으로 두면 위 (b)의 "제거 불가" 상태가 **구조적으로 발생하지 않아** AC-026④ 개정이 불필요해진다(㉢).
+
+**[미확인]** ① `Delete Fixture`가 이 빌드에서 실제로 듣는지 ② **MA3가 픽스처 풀 삭제 후
+재번호하는지**(`README.md:169-171` 명시적 "unverified" — 재번호하지 않으면 생존 픽스처가
+복구 스윕 범위 `1..childCount` 밖에 남아 `missing_count > 0`이 되고 **G4가 영구히 미판독**이다)
+③ `Fixtures`에 삭제 메서드가 있는지 ④ Save As / Load의 콘솔 조작 절차와 재로드 후 OSC 상태.
 
 **[round15 #6] 대상 0건 세션은 아무것도 증명하지 못한다.** P6을 빠뜨리면 대상이 **구조적으로**
 0건이 되고, 그러면 G1의 전달물에 담길 것이 없으며 G2·G3는 검사할 대상이 없어 **공허하게 참**이
