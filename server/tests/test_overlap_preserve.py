@@ -28,6 +28,7 @@ the failure mode a one-off manual gate leaves open.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import subprocess
 from pathlib import Path
@@ -216,6 +217,38 @@ _DESCOPE_LINE = "DESCOPE: ASSUMPTION-27"
 _PRECHK_SPEC_DIR = ".moai/specs/SPEC-COPILOT-PRECHK-001/"
 _PRECHK_PROGRESS = f"{_PRECHK_SPEC_DIR}progress.md"
 
+#: 2026-08-07 granted exception — the spec-feasibility correction pass
+#: (PR #29, commit ``2d04125``, user-mandated: "완결 SPEC의 과거 판정은 사실이다.
+#: 뒤집혔으면 원문 보존 + 소급 정정 각주. 고쳐 쓰는 것은 미래를 가리키는 문장뿐이다").
+#:
+#: The pass rewrote TEN rows across the predecessor's two FORWARD-POINTING
+#: candidate tables (§E.3a "다음 후보" and the "후속 후보 순위" table) because five
+#: of them named work that had since SHIPPED and two named a wrong blocker. A
+#: stale "막혀 있다" row is not inert: it stops the next reader from starting work
+#: that is already possible. NOTHING measured was erased — no ASSUMPTION verdict,
+#: no evidence row, no DESCOPE line (that one keeps its own gate below).
+#:
+#: Pinned two ways, following ``_SAFETY_ALLOWED_DELETED_LINES``: the row keys are
+#: listed so a reader sees WHAT was granted, and the digest fixes the exact text
+#: of all ten so a reader cannot grow the grant. Deleting an eleventh line — or
+#: one different byte of these ten — still fails the gate. A future correction to
+#: this file needs its own grant; that re-review is the point.
+_PRECHK_GRANTED_DOC = _PRECHK_PROGRESS
+_PRECHK_GRANTED_DELETED_ROW_KEYS = (
+    "**FID 축**",
+    "**구간 겹침 재개**",
+    "**페이지·익스큐터 저작**",
+    "**프리셋 읽기**",
+    "SONGCUE 잔여 · P2-4 자동 페이퍼워크 · P2-5 볼런티어 런북",
+    "**1**",
+    "3",
+    "4",
+    "5",
+    "6",
+)
+#: sha256 of the ten deleted lines joined by "\n", in diff order.
+_PRECHK_GRANTED_DELETION_DIGEST = "3c0748d55a049581e2b9592762299177a02e227963072ddb44c013489a56b88a"
+
 
 def _git(*arguments: str) -> str:
     result = subprocess.run(  # noqa: S603
@@ -226,6 +259,12 @@ def _git(*arguments: str) -> str:
         text=True,
     )
     return result.stdout
+
+
+def _deleted_lines(base: str, path: str) -> list[str]:
+    """The `-` body lines of a diff, with the marker stripped and headers dropped."""
+    body = _git("diff", f"{base}..HEAD", "--", path).splitlines()
+    return [line[1:] for line in body if line.startswith("-") and not line.startswith("---")]
 
 
 def _preserve_diff_command() -> list[str]:
@@ -592,8 +631,35 @@ class TestPrecedentGateFileIsNotExtended:
 class TestPredecessorSpecDocuments:
     """AC-OVERLAP-019 ⑧ — the one assertion that uses THIS SPEC's base."""
 
-    def test_the_predecessor_spec_documents_are_untouched(self):
-        assert _git("diff", "--stat", f"{_OVERLAP_BASE}..HEAD", "--", _PRECHK_SPEC_DIR) == ""
+    def test_every_predecessor_document_but_the_granted_one_is_untouched(self):
+        others = _git(
+            "diff",
+            "--stat",
+            f"{_OVERLAP_BASE}..HEAD",
+            "--",
+            _PRECHK_SPEC_DIR,
+            f":(exclude){_PRECHK_GRANTED_DOC}",
+        )
+        assert others == ""
+
+    def test_the_exclusion_above_is_not_swallowing_the_whole_directory(self):
+        """Non-vacuity: `:(exclude)` on a mistyped path would empty the diff."""
+        assert _git("diff", "--stat", f"{_OVERLAP_BASE}..HEAD", "--", _PRECHK_SPEC_DIR) != ""
+
+    def test_the_granted_document_deleted_exactly_the_ten_granted_rows(self):
+        deleted = _deleted_lines(_OVERLAP_BASE, _PRECHK_GRANTED_DOC)
+        assert len(deleted) == len(_PRECHK_GRANTED_DELETED_ROW_KEYS)
+        keys = tuple(line.split("|")[1].strip() for line in deleted)
+        assert keys == _PRECHK_GRANTED_DELETED_ROW_KEYS
+        digest = hashlib.sha256("\n".join(deleted).encode("utf-8")).hexdigest()
+        assert digest == _PRECHK_GRANTED_DELETION_DIGEST
+
+    def test_the_digest_would_reject_an_eleventh_deletion(self):
+        """Non-vacuity: the pin is content-sensitive, not just count-sensitive."""
+        deleted = _deleted_lines(_OVERLAP_BASE, _PRECHK_GRANTED_DOC)
+        smuggled = [*deleted, "| 7 | 몰래 지운 행 | |"]
+        digest = hashlib.sha256("\n".join(smuggled).encode("utf-8")).hexdigest()
+        assert digest != _PRECHK_GRANTED_DELETION_DIGEST
 
     def test_the_predecessor_base_would_be_the_wrong_reference_here(self):
         """Why this single item uses a different base from the rest of the file.
