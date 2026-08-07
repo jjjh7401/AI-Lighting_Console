@@ -147,6 +147,7 @@ TOOL_NAMES = (
     "arrange_fixtures",
     "classify_arrangement_topology",
     "create_arrangement_groups",
+    "build_handover_pack",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -2954,6 +2955,66 @@ def build_toolset(
             result=ToolResult(tool_call_id=call.id, name=call.name, content=content, is_error=False)
         )
 
+    # -- build_handover_pack (T-J — server/paperwork/bundle.py wiring) --------
+    #
+    # The three sheets above plus one more file (index.html) that links them
+    # together and states, up front, how much of the rig each one actually
+    # saw — the last step of "인수인계 용이" (T-J's proposal payoff). No new
+    # console read: the walk wiring below is precheck_patch's own (:1563-1587
+    # above), reused verbatim rather than re-derived, so the two upper-bound
+    # verdicts a caller could get for the SAME rig never diverge.
+
+    def build_handover_pack(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        # Deferred import — see build_patch_sheet's comment above (a
+        # module-level import here would close the tools -> paperwork ->
+        # tools cycle).
+        from server.paperwork.bundle import build_handover_pack as build_handover_pack_query
+
+        missing_sections = [
+            section for section in PRECHK_FOOTPRINT_SECTIONS if section not in rig_paths
+        ]
+        if missing_sections:
+            walk = WalkOutcome(
+                complete=False,
+                failure=REASON_UNRESOLVED,
+                failure_detail=(
+                    f"리그 컨텍스트에 {missing_sections} 경로가 설정되지 않아 점유폭 상계를 "
+                    "계산하지 않았다 — 조회를 시도하지 않았으므로 판독 실패가 아니다."
+                ),
+            )
+        else:
+            walk = walk_mode_widths(
+                state_port,
+                root=rig_paths["fixture_types"],
+                budget=PRECHK_FOOTPRINT_QUERY_CAP,
+                sibling_answered=True,
+            )
+        try:
+            pack = build_handover_pack_query(
+                state_port, property_port, rig_paths=rig_paths, walk=walk
+            )
+        except OSError as error:
+            return _error_result(call, f"handover pack could not be written to disk: {error}")
+        content = json.dumps(
+            {
+                "index_path": str(pack.index_path),
+                "generated_at": pack.generated_at,
+                "documents": [
+                    {
+                        "kind": document.kind,
+                        "status": document.status,
+                        "path": str(document.path) if document.path is not None else None,
+                        "detail": document.detail,
+                    }
+                    for document in pack.documents
+                ],
+            },
+            ensure_ascii=False,
+        )
+        return ToolExecution(
+            result=ToolResult(tool_call_id=call.id, name=call.name, content=content, is_error=False)
+        )
+
     # -- plan_executor_layout (T-J — server/looks/layout.py wiring) ------------
     #
     # PLANS ONLY, NEVER SENDS: this handler never calls run_commands and never
@@ -4956,6 +5017,32 @@ def build_toolset(
             parameters={"type": "object", "properties": {}, "additionalProperties": False},
         ),
         ToolDefinition(
+            name="build_handover_pack",
+            description=(
+                "Build the FULL handover pack — patch sheet, cue sheet, "
+                "preset list, plus one more index page that links all "
+                "three — in a single folder, from the same rig reads "
+                "build_patch_sheet / build_cue_sheet / build_preset_list "
+                "each use on their own. READS ONLY, sends nothing.\n"
+                "\n"
+                "The index page shows its own incompleteness FIRST, before "
+                "the document list: how many fixtures/cues/presets were "
+                "actually observed versus how many the console claims to "
+                "hold. A person taking over a show from this pack must see "
+                "that up front, not discover it three clicks in.\n"
+                "\n"
+                "A single sheet failing (an unwired property read, an "
+                "unreachable pool) does NOT fail the whole pack — that one "
+                "document is recorded as unavailable, with why, and the "
+                "other two still generate. This tool does NOT return the "
+                "HTML itself; the result carries only the index file path "
+                "plus each document's path/status/detail. Tell the "
+                "operator the index path; do not try to quote or "
+                "summarize the HTML."
+            ),
+            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+        ),
+        ToolDefinition(
             name="plan_executor_layout",
             description=(
                 "Plan which executor each look of an already-chosen genre "
@@ -5384,6 +5471,7 @@ def build_toolset(
         "build_patch_sheet": build_patch_sheet,
         "build_cue_sheet": build_cue_sheet,
         "build_preset_list": build_preset_list,
+        "build_handover_pack": build_handover_pack,
         "plan_executor_layout": plan_executor_layout,
         "get_spatial_context": get_spatial_context,
         "arrange_fixtures": arrange_fixtures,

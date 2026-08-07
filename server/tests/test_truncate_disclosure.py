@@ -42,6 +42,7 @@ container answers ``childCount: 19`` while delivering 18 children.
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 
@@ -62,6 +63,11 @@ CREATE = "create_arrangement_groups"
 
 FIXTURES_PATH = DEFAULT_RIG_CONTEXT_PATHS["fixtures"]
 GROUPS_PATH = DEFAULT_RIG_CONTEXT_PATHS["groups"]
+
+#: Names an acknowledgement/confirmation handshake tool would plausibly carry.
+#: Used by the AC-TRUNCATE-009 boundary gate below, which is a DELTA assertion —
+#: see the comment there for why an absolute tool count does not belong here.
+_CONFIRMATION_ISH = re.compile(r"acknowledg|\back\b|ack_|confirm")
 
 #: The rig size at which this tool stops asking on its own: the property
 #: budget divided by the properties one fixture costs. Derived, never a
@@ -637,9 +643,29 @@ class TestPartialGroupsCannotBeWrittenUnacknowledged:
 class TestBoundariesDidNotMove:
     """AC-TRUNCATE-009 — a shape change, not a tool-surface change."""
 
-    def test_the_closed_tool_set_is_still_twenty_two(self):
+    def test_this_spec_added_no_confirmation_tool_to_the_closed_set(self):
         # The mechanical refusal of the "add a confirmation tool" design.
-        assert len(TOOL_NAMES) == 22
+        #
+        # This used to read `len(TOOL_NAMES) == 22`. That was a SECOND absolute
+        # count beside the one in test_tools.py, and an absolute count makes
+        # another SPEC's legitimate addition read as this SPEC's violation — the
+        # trap SPEC-COPILOT-INTROSPECT-001 named when it moved its own tool-count
+        # contract to a delta basis. It broke twice: 18 -> 22 (SPATIAL/GROUPGEN)
+        # and 22 -> 23 (PAPERWORK build_handover_pack). The absolute count is
+        # owned by `test_tools.py` against `main` and by nothing else.
+        #
+        # What THIS gate is actually about is the delta: TRUNCATE-001 changed the
+        # SHAPE of a reply, and must not have grown the tool surface to carry an
+        # acknowledgement handshake.
+        assert [name for name in TOOL_NAMES if _CONFIRMATION_ISH.search(name)] == []
+
+    def test_the_confirmation_pattern_would_catch_such_a_tool(self):
+        """Non-vacuity: a pattern matching nothing would pass this gate forever."""
+        assert [
+            name
+            for name in ("acknowledge_partial", "confirm_write", "ack_truncation")
+            if _CONFIRMATION_ISH.search(name)
+        ] == ["acknowledge_partial", "confirm_write", "ack_truncation"]
 
     def test_get_spatial_context_still_takes_no_arguments(self):
         # A required argument would make the FIRST call impossible: you would

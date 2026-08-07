@@ -139,13 +139,15 @@ class TestRegistry:
         #   and create_arrangement_groups (WRITE) — same D-4 split: a group
         #   write carries its own tool-layer approval gate (design.md §7) and
         #   must never hide behind the read tool.
+        # + build_handover_pack (server/paperwork/bundle.py, P0 W2 — the
+        #   handover-pack index tying the three T-J sheets together).
         # The count is asserted against the declared tuple's length so the set
         # stays CLOSED: adding a handler without declaring it, or declaring one
         # without a handler, still fails here.
         registry = _registry()
         names = [definition.name for definition in registry.definitions()]
         assert sorted(names) == sorted(TOOL_NAMES)
-        assert len(names) == len(TOOL_NAMES) == 22
+        assert len(names) == len(TOOL_NAMES) == 23
 
     def test_the_four_original_tools_are_still_registered(self):
         # The M5 addition must not have displaced any of them.

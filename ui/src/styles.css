@@ -1303,6 +1303,154 @@ body {
   color: var(--muted);
 }
 
+/* W3 — paperwork panel: patch sheet / cue sheet / preset list generation.
+   Header toggle + dedicated screen, same shape as .runbook-toggle/
+   .runbook-mode-frame above. */
+.paperwork-toggle {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid #2b2f36;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.paperwork-toggle-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.paperwork-mode-frame {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.paperwork-panel {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.paperwork-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.paperwork-title {
+  font-size: 20px;
+  font-weight: 700;
+  flex: 1;
+}
+
+.paperwork-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.paperwork-hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0 0 16px;
+}
+
+.paperwork-notice {
+  background: var(--panel);
+  border: 1px solid var(--warn);
+  color: var(--warn);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.paperwork-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.paperwork-card {
+  background: var(--panel);
+  border: 1px solid #2b2f36;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.paperwork-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.paperwork-card-label {
+  font-size: 16px;
+  font-weight: 700;
+  flex: 1;
+}
+
+.paperwork-card-generate {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.paperwork-card-generate:disabled {
+  background: #2b2f36;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.paperwork-card-result {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.paperwork-card-path {
+  color: var(--muted);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.paperwork-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.paperwork-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  background: #2b2417;
+  color: var(--warn);
+}
+
+.paperwork-card-open {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #2b2f36;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 /* T-H — executor status chip (CueMonitor.tsx). THREE grades, each carried by
    TEXT + icon glyph (never colour alone — colour-blind accessibility): the
    chip is never a claim that the console is playing something right now,

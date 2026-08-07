@@ -1161,9 +1161,20 @@ class TestTheOverlapAxisFiresNoCommand:
 # commit; they are NOT derived from the parse they are compared against, so a
 # route or a message type added by this axis moves the measured value away from
 # a fixed target instead of moving both sides of the comparison together.
+#
+# P0 W3 (coordinator directive, 2026-08-06) added the paperwork REST surface
+# (``server/web/paperwork_api.py`` — GET /api/paperwork and POST
+# /api/paperwork/{kind}). That is read-only document generation over the
+# ALREADY-SHIPPED ``server/paperwork`` builders, unrelated to the PRECHK/
+# OVERLAP axis this baseline exists to pin. The snapshot is updated to match,
+# per the same rule the client-message snapshot below already records: it is
+# frozen "at the axis's base commit", not frozen against all future web-layer
+# feature work.
 _EXPECTED_WEB_ROUTES = (
     ("app.py", "app.get", "/healthz"),
     ("app.py", "app.websocket", "/ws"),
+    ("paperwork_api.py", "router.get", "/api/paperwork"),
+    ("paperwork_api.py", "router.post", "/api/paperwork/{kind}"),
     ("provision_api.py", "router.get", "/api/provision/responder"),
     ("provision_api.py", "router.post", "/api/provision/responder"),
     ("settings_api.py", "router.delete", "/api/keys/{provider}"),

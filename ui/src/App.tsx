@@ -16,6 +16,7 @@ import { CueMonitor } from "./components/CueMonitor";
 import { DashBoard } from "./components/DashBoard";
 import { LockToggle } from "./components/LockToggle";
 import { OnboardingBanner } from "./components/OnboardingBanner";
+import { PaperworkPanel } from "./components/PaperworkPanel";
 import { ReviewCard } from "./components/ReviewCard";
 import { RunbookMode } from "./components/RunbookMode";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -288,6 +289,11 @@ export default function App() {
       return next;
     });
   };
+  // W3 — paperwork panel toggle. Session-volatile (no localStorage), same
+  // default every other App.tsx view preference besides runbookMode uses
+  // (design.md §6 / D5) — runbookMode's persistence is an explicit,
+  // deliberate exception this toggle does not need to repeat.
+  const [paperworkMode, setPaperworkMode] = useState(false);
   // Bumped when the settings panel closes so the onboarding banner re-checks
   // whether a key was just added (and hides itself if so).
   const [settingsRefresh, setSettingsRefresh] = useState(0);
@@ -402,6 +408,14 @@ export default function App() {
             {runbookMode ? "✓ 런북 모드" : "런북 모드"}
           </button>
           <button
+            className={`paperwork-toggle${paperworkMode ? " paperwork-toggle-active" : ""}`}
+            onClick={() => setPaperworkMode((active) => !active)}
+            aria-label={paperworkMode ? "페이퍼워크 닫기" : "페이퍼워크 열기"}
+            aria-pressed={paperworkMode}
+          >
+            {paperworkMode ? "✓ 페이퍼워크" : "페이퍼워크"}
+          </button>
+          <button
             className="chat-toggle"
             onClick={() => setChatCollapsed((collapsed) => !collapsed)}
             aria-label={chatCollapsed ? "채팅 펼치기" : "채팅 접기"}
@@ -436,6 +450,10 @@ export default function App() {
           {state.pendingReviews.map((review) => (
             <ReviewCard key={review.request_id} review={review} onDecision={sendReviewDecision} />
           ))}
+        </div>
+      ) : paperworkMode ? (
+        <div className="paperwork-mode-frame">
+          <PaperworkPanel onClose={() => setPaperworkMode(false)} />
         </div>
       ) : (
         <>

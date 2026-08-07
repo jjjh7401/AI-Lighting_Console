@@ -26,7 +26,12 @@ _STYLE = """
   .badge { display: inline-block; padding: 1px 6px; border-radius: 3px;
            font-size: 11px; margin-left: 6px; }
   .badge-truncated { background: #fff3cd; color: #7a5b00; }
-  @media print { body { margin: 0.5in; } }
+  @media print {
+    body { margin: 0.5in; box-shadow: none; }
+    thead { display: table-header-group; }
+    tr, .meta { break-inside: avoid; }
+    * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  }
 """
 
 
@@ -37,6 +42,31 @@ def _page(title: str, body: str) -> str:
         f"<title>{escape(title)}</title>\n"
         f"<style>{_STYLE}</style>\n</head>\n<body>\n{body}\n</body>\n</html>\n"
     )
+
+
+def _bound_meta(sheet: PatchSheet) -> str:
+    """The channel-width upper-bound line, or nothing.
+
+    ``bound is None and bound_unavailable is None`` (the ``walk=None``
+    default) renders NO line at all — an unasked question is not the same as
+    an unanswered one, and printing "none" there would misreport a bound that
+    was simply never sought. The asymmetric qualifier stays in the SAME
+    sentence as the value on purpose (OVERLAP-001 M5): a reader who reads
+    only the first clause must still see the "below is unsettled" half.
+    """
+    if sheet.bound is not None:
+        source = f" (source: {escape(sheet.bound_source)})" if sheet.bound_source else ""
+        return (
+            '<div class="meta">Channel-width upper bound: '
+            f"{sheet.bound}{source} — gaps at or above this bound cannot overlap; "
+            "gaps below it are unsettled, not confirmed clear.</div>\n"
+        )
+    if sheet.bound_unavailable is not None:
+        return (
+            '<div class="meta unavailable">Channel-width upper bound not established: '
+            f"{escape(sheet.bound_unavailable)}</div>\n"
+        )
+    return ""
 
 
 def render_patch_sheet(sheet: PatchSheet) -> str:
@@ -65,6 +95,7 @@ def render_patch_sheet(sheet: PatchSheet) -> str:
         f'<div class="meta">Root: {escape(sheet.root)} · '
         f"{sheet.observed_count} of {sheet.child_count} fixtures observed · "
         f"completeness: {escape(sheet.completeness)}</div>\n"
+        f"{_bound_meta(sheet)}"
         "<table>\n<thead><tr>"
         "<th>Slot</th><th>Name</th><th>Universe</th><th>Address</th>"
         "<th>Fixture Type</th><th>Mode</th>"

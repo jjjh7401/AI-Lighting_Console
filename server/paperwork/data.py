@@ -20,6 +20,8 @@ from server.orchestrator.tools import (
     RIG_DRILLDOWN_QUERY_CAP,
     collect_rig_sections,
 )
+from server.prechk import footprint as _footprint
+from server.prechk.footprint import WalkOutcome
 from server.prechk.inventory import (
     FIXTURE_ROOT,
     InventoryPolicy,
@@ -55,6 +57,13 @@ class PatchSheet:
     """The full patch sheet: every observed fixture plus the read's own
     completeness verdict (``server.prechk.inventory.Inventory``), so an
     incomplete enumeration prints as incomplete instead of as a finished rig.
+
+    ``bound``/``bound_source``/``bound_unavailable`` carry the channel-width
+    upper bound from ``server.prechk.footprint`` (the weaker proposition that
+    survived ``ASSUMPTION-27``'s refutation — see that module's docstring).
+    All three default to ``None``: a caller that never passes ``walk`` to
+    :func:`build_patch_sheet` gets a sheet that says nothing about a bound,
+    never a fabricated "none" verdict.
     """
 
     root: str
@@ -62,18 +71,29 @@ class PatchSheet:
     child_count: int
     observed_count: int
     completeness: str
+    bound: int | None = None
+    bound_source: str | None = None
+    bound_unavailable: str | None = None
 
 
 def build_patch_sheet(
     port: InventoryPort,
     *,
     policy: InventoryPolicy | None = None,
+    walk: WalkOutcome | None = None,
 ) -> PatchSheet:
     """Build a patch sheet from the fixture inventory reader.
 
     Raises :class:`server.prechk.inventory.InventoryReadError` when the
     fixture root itself is unreadable — the caller reports a query failure,
     never an empty (and misleading) sheet.
+
+    ``walk`` is the optional ``server.prechk.footprint.WalkOutcome`` from the
+    channel-width upper-bound walk. When omitted the sheet's three bound
+    fields stay ``None`` and the renderer emits no bound line at all. When
+    present, the bound is folded via ``footprint.upper_bound`` (never a raw
+    ``max`` here — an incomplete mode set would fold to a bound smaller than
+    the true one and clear gaps it must not clear).
     """
     inventory = read_inventory(port, policy)
     rows = tuple(
@@ -88,12 +108,24 @@ def build_patch_sheet(
         )
         for fixture in inventory.fixtures
     )
+    bound: int | None = None
+    bound_source_value: str | None = None
+    bound_unavailable: str | None = None
+    if walk is not None:
+        bound = _footprint.upper_bound(walk)
+        if bound is not None:
+            bound_source_value = _footprint.bound_source(walk) or None
+        else:
+            bound_unavailable = walk.failure_detail or None
     return PatchSheet(
         root=FIXTURE_ROOT,
         rows=rows,
         child_count=inventory.child_count,
         observed_count=inventory.observed_count,
         completeness=inventory.completeness,
+        bound=bound,
+        bound_source=bound_source_value,
+        bound_unavailable=bound_unavailable,
     )
 
 

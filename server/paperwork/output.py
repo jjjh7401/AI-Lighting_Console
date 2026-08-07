@@ -43,6 +43,17 @@ def resolve_paperwork_dir(*, frozen: bool | None = None) -> Path:
     return DEFAULT_PAPERWORK_DIR
 
 
+def resolve_handover_dir(*, frozen: bool | None = None) -> Path:
+    """Where the running app writes the handover pack (frozen-aware).
+
+    A ``handover/`` subdirectory of :func:`resolve_paperwork_dir` — same
+    frozen/dev split, one level deeper so the pack's four files (index +
+    three sheets) sit together instead of mixed in with paperwork any other
+    tool writes directly under the paperwork dir.
+    """
+    return resolve_paperwork_dir(frozen=frozen) / "handover"
+
+
 def write_paperwork_html(filename: str, html: str, *, directory: Path | None = None) -> Path:
     """Write ``html`` to ``filename`` under the resolved paperwork dir.
 
@@ -58,4 +69,9 @@ def write_paperwork_html(filename: str, html: str, *, directory: Path | None = N
     return path
 
 
-__all__ = ["DEFAULT_PAPERWORK_DIR", "resolve_paperwork_dir", "write_paperwork_html"]
+__all__ = [
+    "DEFAULT_PAPERWORK_DIR",
+    "resolve_paperwork_dir",
+    "resolve_handover_dir",
+    "write_paperwork_html",
+]
