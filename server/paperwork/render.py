@@ -10,12 +10,13 @@ from __future__ import annotations
 
 from html import escape
 
-from server.paperwork.data import PatchSheet, PoolListing
+from server.paperwork.data import MagicSheet, PatchSheet, PoolListing
 
 _STYLE = """
   body { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
          margin: 24px; color: #1a1a1a; }
   h1 { font-size: 20px; margin-bottom: 4px; }
+  h2 { font-size: 15px; margin: 20px 0 6px; }
   .meta { color: #555; font-size: 12px; margin-bottom: 16px; }
   table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
   th, td { border: 1px solid #ccc; padding: 4px 8px; font-size: 12px; text-align: left; }
@@ -23,13 +24,17 @@ _STYLE = """
   .pool-name { font-weight: bold; background: #fafafa; }
   .empty { color: #888; font-style: italic; }
   .unavailable { color: #a00; }
+  .tiles { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .tile { border: 1px solid #ccc; border-radius: 3px; padding: 3px 8px; font-size: 12px; }
+  .caveat { border-left: 3px solid #a00; background: #fff5f5; color: #7a0000;
+            padding: 8px 10px; font-size: 12px; margin-bottom: 16px; }
   .badge { display: inline-block; padding: 1px 6px; border-radius: 3px;
            font-size: 11px; margin-left: 6px; }
   .badge-truncated { background: #fff3cd; color: #7a5b00; }
   @media print {
     body { margin: 0.5in; box-shadow: none; }
     thead { display: table-header-group; }
-    tr, .meta { break-inside: avoid; }
+    tr, .meta, .caveat { break-inside: avoid; }
     * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   }
 """
@@ -179,4 +184,94 @@ def render_preset_list(listing: PoolListing) -> str:
     )
 
 
-__all__ = ["render_patch_sheet", "render_cue_sheet", "render_preset_list"]
+def render_magic_sheet(sheet: MagicSheet) -> str:
+    """Render the REDUCED magic sheet: names, patch summary, placement table.
+
+    The membership caveat is emitted BEFORE the group tiles and styled as a
+    caveat rather than as metadata. Group names sitting above a fixture
+    coordinate table is an open invitation to read membership off adjacency,
+    and the one thing this document cannot support is that reading — see
+    ``server.paperwork.data.GROUP_MEMBERSHIP_UNAVAILABLE``.
+    """
+    parts = ["<h1>Magic Sheet (reduced)</h1>\n"]
+
+    if sheet.patch is not None:
+        parts.append(
+            '<div class="meta">Patch: '
+            f"{sheet.patch.observed_count} of {sheet.patch.child_count} fixtures observed · "
+            f"completeness: {escape(sheet.patch.completeness)}</div>\n"
+        )
+    else:
+        parts.append(
+            '<div class="meta unavailable">Patch summary unavailable: '
+            f"{escape(sheet.patch_unavailable or '')}</div>\n"
+        )
+
+    parts.append("<h2>Groups</h2>\n")
+    parts.append(f'<div class="caveat">{escape(sheet.group_membership_unavailable)}</div>\n')
+    if sheet.groups_unavailable_reason is not None:
+        parts.append(
+            '<p class="unavailable">The group pool did not arrive: '
+            f"{escape(sheet.groups_unavailable_reason)}</p>\n"
+        )
+    elif not sheet.group_names:
+        parts.append('<p class="empty">No groups in this showfile.</p>\n')
+    else:
+        tiles = "".join(f'<span class="tile">{escape(name)}</span>' for name in sheet.group_names)
+        parts.append(f'<div class="tiles">{tiles}</div>\n')
+
+    parts.append("<h2>Preset pools</h2>\n")
+    if sheet.presets_unavailable_reason is not None:
+        parts.append(
+            '<p class="unavailable">The preset pools did not arrive: '
+            f"{escape(sheet.presets_unavailable_reason)}</p>\n"
+        )
+    elif not sheet.preset_names:
+        parts.append('<p class="empty">No preset pools in this showfile.</p>\n')
+    else:
+        tiles = "".join(f'<span class="tile">{escape(name)}</span>' for name in sheet.preset_names)
+        parts.append(f'<div class="tiles">{tiles}</div>\n')
+
+    parts.append("<h2>Placement</h2>\n")
+    expected, received, unseen = sheet.placements_missing
+    if not sheet.placements_complete:
+        # The shortfall as arithmetic, not as an adjective (TRUNCATE-001
+        # REQ-004): a plan view gives a reader no way to notice an absent
+        # fixture, so the count has to say how many are absent.
+        parts.append(
+            '<div class="caveat">배치 좌표가 전량이 아니다 — '
+            f"expected {expected if expected is not None else '?'}, "
+            f"received {received}, "
+            f"unseen {unseen if unseen is not None else '?'}. "
+            "아래 평면은 리그 전체가 아니다.</div>\n"
+        )
+    rows = "".join(
+        "<tr>"
+        f"<td>{row.fid if row.fid is not None else ''}</td>"
+        f"<td>{escape(row.name)}</td>"
+        f"<td>{row.x:g}</td><td>{row.y:g}</td><td>{row.z:g}</td>"
+        "</tr>\n"
+        for row in sheet.placements
+    )
+    if not rows:
+        rows = '<tr><td colspan="5" class="empty">No coordinates read.</td></tr>\n'
+    parts.append(
+        "<table>\n<thead><tr>"
+        "<th>FID</th><th>Name</th><th>X</th><th>Y</th><th>Z</th>"
+        "</tr></thead>\n<tbody>\n"
+        f"{rows}"
+        "</tbody>\n</table>\n"
+    )
+    if sheet.placements_unreadable:
+        items = "".join(f"<li>{escape(line)}</li>\n" for line in sheet.placements_unreadable)
+        parts.append(f'<h2>Unreadable</h2>\n<ul class="unavailable">\n{items}</ul>\n')
+
+    return _page("Magic Sheet", "".join(parts))
+
+
+__all__ = [
+    "render_patch_sheet",
+    "render_cue_sheet",
+    "render_preset_list",
+    "render_magic_sheet",
+]

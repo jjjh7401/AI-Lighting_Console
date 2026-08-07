@@ -148,6 +148,7 @@ TOOL_NAMES = (
     "classify_arrangement_topology",
     "create_arrangement_groups",
     "build_handover_pack",
+    "build_magic_sheet",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -2955,6 +2956,52 @@ def build_toolset(
             result=ToolResult(tool_call_id=call.id, name=call.name, content=content, is_error=False)
         )
 
+    def build_magic_sheet(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        # Deferred import — see build_patch_sheet's comment above.
+        from server.paperwork.data import build_magic_sheet as build_magic_sheet_query
+        from server.paperwork.output import write_paperwork_html
+        from server.paperwork.render import render_magic_sheet
+
+        if property_port is None:
+            # Coordinates live ONLY in properties (the container enumeration
+            # carries name/class/i and nothing else), so without a property
+            # port this sheet would render an empty plan view that looks like
+            # a rig with no fixtures. Same wording build_patch_sheet uses.
+            return _error_result(
+                call,
+                "property reads are not wired — build_toolset needs property_port "
+                "(or a state_port that also implements query_property)",
+            )
+        sheet = build_magic_sheet_query(
+            _InventoryPort(state_port, property_port),
+            groups_path=rig_paths.get("groups", DEFAULT_RIG_CONTEXT_PATHS["groups"]),
+            preset_pools_path=rig_paths.get(
+                "preset_pools", DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]
+            ),
+            fixtures_path=rig_paths.get("fixtures", DEFAULT_RIG_CONTEXT_PATHS["fixtures"]),
+        )
+        try:
+            path = write_paperwork_html("magic_sheet.html", render_magic_sheet(sheet))
+        except OSError as error:
+            return _error_result(call, f"magic sheet could not be written to disk: {error}")
+        content = json.dumps(
+            {
+                "path": str(path),
+                "group_count": len(sheet.group_names),
+                "preset_pool_count": len(sheet.preset_names),
+                "placement_count": len(sheet.placements),
+                "placements_complete": sheet.placements_complete,
+                # Surfaced in the RESULT, not only in the document: a model
+                # that only reads this JSON must not conclude the sheet
+                # answers "what is in this group".
+                "group_membership_readable": False,
+            },
+            ensure_ascii=False,
+        )
+        return ToolExecution(
+            result=ToolResult(tool_call_id=call.id, name=call.name, content=content, is_error=False)
+        )
+
     # -- build_handover_pack (T-J — server/paperwork/bundle.py wiring) --------
     #
     # The three sheets above plus one more file (index.html) that links them
@@ -5017,6 +5064,30 @@ def build_toolset(
             parameters={"type": "object", "properties": {}, "additionalProperties": False},
         ),
         ToolDefinition(
+            name="build_magic_sheet",
+            description=(
+                "Build a printable REDUCED magic sheet — group names, "
+                "preset-pool names, a patch summary, and every fixture's "
+                "stage coordinates (fid, name, x, y, z). READS ONLY, sends "
+                "nothing.\n"
+                "\n"
+                "REDUCED is not a shortcut, it is the whole truth available: "
+                "which fixtures a GROUP holds cannot be read on grandMA3 "
+                "(the prop ladder and the COUNT accessors are all closed), so "
+                "the sheet lists group NAMES and says on its face that "
+                "membership is unknown. Do not tell the operator this sheet "
+                "shows what is in a group, and never infer membership from a "
+                "fixture's coordinates being near a group's tile.\n"
+                "\n"
+                "Like build_patch_sheet this tool returns a file path plus a "
+                "small numeric summary (group_count, preset_pool_count, "
+                "placement_count, placements_complete), never the HTML "
+                "itself — the document is for a human to open, not for you "
+                "to read."
+            ),
+            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+        ),
+        ToolDefinition(
             name="build_handover_pack",
             description=(
                 "Build the FULL handover pack — patch sheet, cue sheet, "
@@ -5471,6 +5542,7 @@ def build_toolset(
         "build_patch_sheet": build_patch_sheet,
         "build_cue_sheet": build_cue_sheet,
         "build_preset_list": build_preset_list,
+        "build_magic_sheet": build_magic_sheet,
         "build_handover_pack": build_handover_pack,
         "plan_executor_layout": plan_executor_layout,
         "get_spatial_context": get_spatial_context,

@@ -1,8 +1,9 @@
 // Paperwork panel (W3 — P0 UI exposure,
 // docs/reports/2026-08-06-workflow-coverage-review.html §5).
 //
-// Surfaces the three read-only printable documents (patch sheet / cue sheet
-// / preset list) that were previously reachable ONLY via an LLM tool call —
+// Surfaces the read-only printable documents (patch sheet / cue sheet /
+// preset list / reduced magic sheet) that were previously reachable ONLY via
+// an LLM tool call —
 // server/orchestrator/tools.py's own build_patch_sheet/build_cue_sheet/
 // build_preset_list handlers, now also reachable from server/web/
 // paperwork_api.py's GET/POST /api/paperwork(/:kind). Query-only: this panel
@@ -25,7 +26,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { apiUrl } from "../launchContext";
 
-export type PaperworkKind = "patch_sheet" | "cue_sheet" | "preset_list";
+export type PaperworkKind = "patch_sheet" | "cue_sheet" | "preset_list" | "magic_sheet";
 
 export interface PaperworkKindMeta {
   kind: PaperworkKind;
@@ -36,11 +37,12 @@ export const PAPERWORK_KINDS: readonly PaperworkKindMeta[] = [
   { kind: "patch_sheet", label: "패치시트" },
   { kind: "cue_sheet", label: "큐시트" },
   { kind: "preset_list", label: "프리셋 목록" },
+  { kind: "magic_sheet", label: "매직시트(축약형)" },
 ];
 
 // Mirrors the per-kind summary fields server/web/paperwork_api.py's
-// _patch_sheet/_cue_sheet/_preset_list return — a superset across all three
-// kinds, each kind populating only the fields that apply to it.
+// _patch_sheet/_cue_sheet/_preset_list/_magic_sheet return — a superset
+// across all kinds, each kind populating only the fields that apply to it.
 export interface PaperworkSummary {
   path: string;
   fixture_count?: number;
@@ -52,6 +54,11 @@ export interface PaperworkSummary {
   preset_count?: number;
   truncated?: boolean;
   drilldown_capped?: boolean;
+  group_count?: number;
+  preset_pool_count?: number;
+  placement_count?: number;
+  placements_complete?: boolean;
+  group_membership_readable?: boolean;
 }
 
 // -- pure logic (response parsing / badge derivation) ------------------------
@@ -75,6 +82,16 @@ export function paperworkBadges(kind: PaperworkKind, summary: PaperworkSummary):
     if (summary.completeness !== undefined && summary.completeness !== "complete") {
       badges.push("불완전");
     }
+  } else if (kind === "magic_sheet") {
+    if (summary.placements_complete === false) {
+      badges.push("배치 좌표 일부");
+    }
+    // ALWAYS shown, never conditional on a field being false: group
+    // membership is unreadable on grandMA3 as a matter of platform, so an
+    // operator glancing at the card must not have to notice an absent badge
+    // to learn it. A conditional badge would go quiet the day the field is
+    // dropped from the response.
+    badges.push("그룹 멤버십 판독 불가");
   } else {
     if (summary.truncated) badges.push("절단됨");
     if (summary.drilldown_capped) badges.push("드릴다운 상한");
