@@ -727,9 +727,15 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
     children = _mapping_rows(state.get("children"))
     existing_fids: list[int] = []
     unread = 0
+    # [round12 R01] **행 수가 아니라 서로 다른 슬롯 수**를 센다. 중복 `i`가 섞여 오면
+    # `len(children)`이 부풀어 `childCount`와 맞아떨어지고, 실제로는 못 읽은 슬롯이 남았는데
+    # `complete`로 보고돼 이미 쓰이는 FID를 배정했다 — C1과 **같은 실패 양식**이다.
+    # 형제 리더가 같은 두 형태를 모두 방어한다(`server/prechk/inventory.py`의
+    # 슬롯 중복 건너뛰기 · `observed_count > child_count`에서의 `InventoryReadError`).
+    read_slots: set[int] = set()
     for child in children:
         child_index = _optional_int(child.get("i"))
-        if child_index is None:
+        if child_index is None or child_index in read_slots:
             unread += 1
             continue
         response = fid_property_port.query_property(
@@ -739,19 +745,19 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
         if fid is None:
             unread += 1
             continue
+        read_slots.add(child_index)
         existing_fids.append(fid)
 
-    # 열거가 짧았으면 그 차이만큼이 그대로 미판독이다.
-    # `childCount`를 읽지 못했으면 총계를 모르므로 완전하다고 말할 수 없다.
+    # 총계를 모르거나, 관측이 총계와 **어느 방향으로든** 어긋나면 완전하다고 말할 수 없다.
     if child_count is None:
         unread += 1
-    elif child_count > len(children):
-        unread += child_count - len(children)
+    elif child_count != len(read_slots):
+        unread += abs(child_count - len(read_slots))
 
     return ExistingFidRead(
         fids=tuple(existing_fids),
         child_count=child_count,
-        enumerated_count=len(children),
+        enumerated_count=len(read_slots),
         unread=unread,
     )
 

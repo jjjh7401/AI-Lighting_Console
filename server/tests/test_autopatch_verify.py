@@ -21,7 +21,13 @@ from pathlib import Path
 
 import pytest
 
-from server.prechk.inventory import COMPLETE, FIXTURE_ROOT, FixtureRecord, Inventory
+from server.prechk.inventory import (
+    COMPLETE,
+    FIXTURE_ROOT,
+    FixtureRecord,
+    Inventory,
+    ReadFailure,
+)
 from server.tests.test_autopatch_execute import (
     APPLY_SOURCE,
     REFUTED_REMEDY_TOKENS,
@@ -481,6 +487,7 @@ def verify_patch(entries, *, console_fixtures, plugin_reported_ok=True):
     if plugin_reported_ok:
         results = tuple(
             VerificationResult(
+                delivered=True,
                 candidate_id=entry.candidate_id,
                 universe=entry.universe,
                 address=entry.address,
@@ -555,6 +562,7 @@ def test_a_mismatch_comes_out_structured():
     )
     payload = report.to_dict()
     assert payload["results"][0] == {
+        "delivered": True,
         "candidate_id": "a",
         "universe": 1,
         "address": 1,
@@ -898,3 +906,104 @@ def test_the_unreadable_existing_footprint_is_reported_rather_than_guessed():
     check = existing_footprint_skipped_check()
     assert check["kind"] == EXISTING_FOOTPRINT_UNREADABLE
     assert "검출되지 않는다" in check["reason"]
+
+
+# --------------------------------------------------------------------------
+# round12 회귀 — round11 수정이 새로 만든 결함
+# --------------------------------------------------------------------------
+
+
+def test_an_unpatched_fixture_is_not_counted_as_an_unreadable_address():
+    """[R08] `Patch = "0.0"`은 판독 실패가 아니라 **패치되지 않았다는 관측**이다.
+
+    이전 판은 주소 파서의 성공 여부로 미판독을 정의해, 미패치 예비 픽스처가 한 대만 있어도
+    모든 대상을 막았다 — 툴의 유일한 기능이 정지했다.
+    """
+    unpatched = FixtureRecord(
+        slot=1, name="spare", patch_raw="0.0", fixture_type="FixtureType 3", mode="1 Mode 1"
+    )
+    assert console_read_caveat(_inventory(unpatched)) is None
+
+
+def test_a_genuinely_unread_patch_property_still_counts_as_unread():
+    """비공허성 — 진짜 읽기 실패는 그대로 미판독이다."""
+    failure = ReadFailure(
+        slot=1,
+        name="x",
+        property="Patch",
+        raw_value=None,
+        kind="read_failed",
+        detail="not readable",
+    )
+    unread = FixtureRecord(
+        slot=1,
+        name="x",
+        patch_raw=None,
+        fixture_type="FixtureType 3",
+        mode="1 Mode 1",
+        read_failures=(failure,),
+    )
+    caveat = console_read_caveat(_inventory(unread))
+    assert caveat is not None
+    assert caveat["unreadable_address_count"] == 1
+
+
+def test_two_fixtures_at_the_address_verify_as_unconfirmed_not_unobserved():
+    """[R02] '둘이라 모른다'를 '아무것도 없다'로 적으면 사용자가 다시 실행해 중복을 만든다."""
+    report = verify_patch(
+        (_entry("a", 1, 1),),
+        console_fixtures=_console(
+            _record(1, "1.1", "FixtureType 3", "1 Mode 1"),
+            _record(2, "1.1", "FixtureType 1", "1 Mode 1"),
+        ),
+    )
+    (result,) = report.results
+    assert result.outcome == VERIFICATION_IDENTITY_UNCONFIRMED
+    assert "2대 관측된다" in result.detail
+
+
+def test_nothing_delivered_means_no_run_the_plugin_guidance():
+    """[R04] 전달한 플러그인이 없으면 '실행했는지 확인하라'는 거짓말이다."""
+    report = verify_patch((_entry("a", 1, 1),), console_fixtures=_console(), delivered_ids=[])
+    assert report.delivered_count == 0
+    assert ZERO_CREATED_GUIDANCE not in report.guidance
+    assert NO_AUTO_CORRECTION in report.guidance
+
+
+def test_the_guidance_control_a_delivered_item_with_zero_observations_still_asks():
+    """비공허성 — 전달분이 있는데 관측이 0건이면 그때는 물어야 한다."""
+    report = verify_patch((_entry("a", 1, 1),), console_fixtures=_console(), delivered_ids=["a"])
+    assert ZERO_CREATED_GUIDANCE in report.guidance
+
+
+def test_created_count_excludes_items_that_were_never_delivered():
+    """[R06] 전달하지 않은 주소의 기존 픽스처는 이 호출이 만든 것이 아니다."""
+    report = verify_patch(
+        (_entry("a", 1, 1),),
+        console_fixtures=_console(_record(1, "1.1", "FixtureType 3", "1 Mode 1")),
+        delivered_ids=[],
+    )
+    assert report.observed_count == 1
+    assert report.created_count == 0
+
+
+def test_a_truncated_library_still_accepts_an_exact_name_match():
+    """[R07] 절단이 무효화하는 것은 부정 결론뿐 — 이름 일치는 절단과 무관한 긍정 증거다."""
+    truncated = FixtureTypeLibrary(
+        types=(LibraryType(index=7, name=LED, modes=(LibraryMode(index=1, name=MODE_1),)),),
+        available=True,
+        truncated=True,
+    )
+    (observed,) = _console(_record(1, "1.1", LED, MODE_1), library=truncated)
+    assert observed.type_name == LED
+
+
+def test_a_truncated_library_still_refuses_the_index_only_interpretation():
+    """비공허성 — 이름이 안 보이는 index 형태 단독 해석은 절단 아래에서 거부된다."""
+    truncated = FixtureTypeLibrary(
+        types=(LibraryType(index=2, name="Robin MMX", modes=(LibraryMode(index=1, name=MODE_1),)),),
+        available=True,
+        truncated=True,
+    )
+    (observed,) = _console(_record(1, "1.1", "FixtureType 2", "1 Mode 1"), library=truncated)
+    assert observed.type_name is None
