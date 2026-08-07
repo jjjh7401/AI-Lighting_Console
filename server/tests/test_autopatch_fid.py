@@ -1040,3 +1040,739 @@ def test_a_non_mapping_child_row_is_counted_rather_than_silently_dropped():
     assert [target.assigned_fid for target in plan.targets] == [None]
     assert plan.fid_safety["conflict_precheck"]["read"]["unparsable_row_count"] == 1
     assert "슬롯으로 해석되지 않는 행 1개가 섞여 있다" in plan.rejection.reason
+
+
+# --- round16 표 전단사·문장 전문 고정 (TableBijection) ---
+#
+# round16 A1: `R15_SOLE_AXIS_ROWS`에는 전단사 게이트가 **없었다**. 적대 감사 실측 —
+# 표에서 행 하나(`unreadable_fids == 1`)를 지우면 전체 스위트가 실패 0으로 조용히
+# 축소되고, 그 위에서 `complete`의 `self.unreadable_fids > 0`을 `> 1`로 되돌리면
+# **부분 관측 위에 FID 101이 실제로 배정**된다(round15 치명 #1의 재개방). 같은 방식으로
+# `unusable_rows` 행이 round15 치명 #2를 재개방한다.
+#
+# 그래서 표를 **프로덕션에서 파생한 집합과 전단사**로 묶는다. 기준 집합은 리터럴 목록이
+# 아니라 `ExistingFidRead.complete`의 소스를 파싱해 얻은 **차단 조항 전부**다.
+#   · 표에서 행을 빼면 → 어떤 조항도 그 행을 대신 발화시키지 못해 전사성이 깨진다.
+#   · 프로덕션에 조항을 더하면 → 덮지 못한 조항이 생겨 전사성이 깨진다.
+#   · 프로덕션에서 조항을 빼거나 경계를 옮기면(`> 0` → `> 1`) → 해당 행이 조항을
+#     하나도 발화시키지 못해 단독성 단정이 깨진다.
+
+
+def _round16_complete_clauses() -> tuple[tuple[str, bool], ...]:
+    """`ExistingFidRead.complete`의 **차단 조항을 프로덕션 소스에서 파생**한다.
+
+    각 원소는 `(조항 소스, 차단으로 세는 진리값)`이다. 선행 연언 `self.attempted`는
+    **거짓일 때** 차단이고, `not (...)` 안의 선택지들은 **참일 때** 차단이다.
+    리터럴 목록을 두지 않는 것이 요점 — 기준이 프로덕션과 함께 움직여야 한다.
+    """
+    import inspect
+    import textwrap
+
+    from server.vwx.patchplan import ExistingFidRead
+
+    tree = ast.parse(textwrap.dedent(inspect.getsource(ExistingFidRead.complete.fget)))
+    returns = [node for node in ast.walk(tree) if isinstance(node, ast.Return)]
+    assert len(returns) == 1, ast.dump(tree)
+    top = returns[0].value
+    assert isinstance(top, ast.BoolOp) and isinstance(top.op, ast.And), ast.dump(top)
+    assert len(top.values) == 2, ast.dump(top)
+    head, tail = top.values
+    assert isinstance(tail, ast.UnaryOp) and isinstance(tail.op, ast.Not), ast.dump(tail)
+    inner = tail.operand
+    assert isinstance(inner, ast.BoolOp) and isinstance(inner.op, ast.Or), ast.dump(inner)
+    clauses = [(ast.unparse(head), False)]
+    clauses.extend((ast.unparse(value), True) for value in inner.values)
+    return tuple(clauses)
+
+
+def _round16_blocking_clauses(axes: dict) -> frozenset[str]:
+    """축 벡터 하나를 **프로덕션 조항에 그대로 먹여** 어느 조항이 차단하는지 본다."""
+    from server.vwx.patchplan import ExistingFidRead
+
+    read = ExistingFidRead(**axes)
+    fired: set[str] = set()
+    for source, blocking in _round16_complete_clauses():
+        try:
+            value = bool(eval(source, {"self": read}))  # noqa: S307
+        except TypeError:
+            # `self.unseen is None`이 먼저 참이면 프로덕션은 `self.unseen > 0`을
+            # **평가하지 않는다**(or 단축 평가). 여기서도 발화하지 않은 것으로 센다.
+            continue
+        if value is blocking:
+            fired.add(source)
+    return frozenset(fired)
+
+
+def test_the_r15_sole_axis_table_is_a_bijection_with_the_production_blocking_clauses():
+    """`R15_SOLE_AXIS_ROWS` ↔ `ExistingFidRead.complete`의 차단 조항 **전단사**.
+
+    [round16 P1/P2/P3] 표에서 `unparsable_rows == 1` · `unreadable_fids == 1` ·
+      `unusable_rows == 1` 중 어느 행을 지워도 전사성 단정이 실패한다(이전에는 전체
+      스위트가 실패 0으로 조용히 축소됐다).
+    [round16 C1] 위 삭제에 더해 `patchplan.py` `complete`의 `self.unreadable_fids > 0`을
+      `> 1`로 바꿔도 실패한다 — 조항 `self.unreadable_fids > 1`을 덮는 행이 없다.
+    [round16 C2] `self.unusable_rows > 0` → `> 1`도 같은 이유로 실패한다.
+    [round16] `complete`에 조항을 **추가**해도 실패한다 — 덮지 않은 조항이 남는다.
+    """
+    from dataclasses import fields
+
+    from server.vwx.patchplan import ExistingFidRead
+
+    clauses = _round16_complete_clauses()
+    sources = {source for source, _ in clauses}
+    assert len(sources) == len(clauses), clauses
+
+    # 대조의 대조 — 깨끗한 축 벡터는 어느 조항도 발화시키지 않는다.
+    assert _round16_blocking_clauses(_r15_clean_axes()) == frozenset()
+    assert ExistingFidRead(**_r15_clean_axes()).complete is True
+
+    field_names = {field.name for field in fields(ExistingFidRead)}
+    fired_by_axis: dict[str, str] = {}
+    for axis, _port_kwargs, expected_axes, _phrase in R15_SOLE_AXIS_ROWS:
+        assert set(expected_axes) <= field_names, (axis, sorted(expected_axes))
+        fired = _round16_blocking_clauses(expected_axes)
+        # 단독성 — 그 행은 **정확히 한 조항**을 발화시킨다. 경계가 밀리면 0개가 된다.
+        assert len(fired) == 1, (axis, sorted(fired))
+        fired_by_axis[axis] = next(iter(fired))
+
+    # 단사 — 두 행이 같은 조항을 겹쳐 덮지 않는다.
+    assert len(set(fired_by_axis.values())) == len(fired_by_axis), fired_by_axis
+    # 전사 — 프로덕션 조항이 하나도 남김없이 덮인다.
+    assert set(fired_by_axis.values()) == sources, sorted(sources - set(fired_by_axis.values()))
+    assert len(R15_SOLE_AXIS_ROWS) == len(sources)
+    assert len({row[0] for row in R15_SOLE_AXIS_ROWS}) == len(R15_SOLE_AXIS_ROWS)
+
+
+# --- round16 형제 필드·형제 사이트 (SiblingFields) ---
+#
+# 처방을 한 사이트에만 붙이고 형제 사이트는 두는 것이 여섯 라운드 연속 FAIL의 기제다.
+# 이 절은 (a) `ExistingFidRead`가 payload로 나가는 **모든** 자리, (b) 부분 관측 고지의
+# **여덟 축 전부**, (c) bool 가드를 가진 **모든** 정수 판독기를 프로덕션에서 파생해 고정한다.
+
+
+def _r16_patchplan_source() -> str:
+    return Path("server/vwx/patchplan.py").read_text(encoding="utf-8")
+
+
+def _r16_in_source_order(nodes):
+    return sorted(nodes, key=lambda node: (node.lineno, node.col_offset))
+
+
+# ==========================================================================
+# S16-02 — `attempted` 정직성은 payload **사이트 전부**의 규약이다
+#
+# round15 N01/N02는 `ExistingFidRead()` 기본값을 "미수행"으로 뒤집었지만, 그 정직성을
+# 지키는 대조군은 비-GO **배정 진행** 사이트에만 붙었다. 형제 사이트 —
+# `FID_RANGE_CONFIRMATION_REQUIRED` 거부 payload — 에는 아무 대조군이 없어서
+# `ExistingFidRead()`를 `ExistingFidRead(attempted=True, child_count=0)`로 바꾸면
+# 조작자 화면이 "콘솔을 읽었고 픽스처 0대이며 읽기는 완전했다"고 말하는데도 전부 통과했다.
+# 포트는 만지면 터지는 대역인데도 그렇다 — round15가 닫은 fail-open과 같은 오류 양식이다.
+# ==========================================================================
+
+#: 손으로 쓴 사이트 표 — (사이트 이름, `existing_read=` 인자 원문). 소스 순서.
+_R16_FID_SAFETY_SITES = (
+    ("confirmation_required_rejection", "ExistingFidRead()"),
+    ("precheck_incomplete_rejection", "existing_read"),
+    ("planned", "existing_read"),
+)
+
+
+def _r16_production_fid_safety_sites():
+    """`patchplan.py`의 `_fid_safety_payload(...)` 호출에서 `existing_read=` 인자를 전수."""
+    import ast
+
+    source = _r16_patchplan_source()
+    tree = ast.parse(source)
+    calls = _r16_in_source_order(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "_fid_safety_payload"
+    )
+    return tuple(
+        ast.get_source_segment(source, keyword.value)
+        for call in calls
+        for keyword in call.keywords
+        if keyword.arg == "existing_read"
+    )
+
+
+def test_the_fid_safety_site_table_is_a_bijection_onto_production():
+    """[round16 S16-02] payload 사이트 표가 프로덕션 호출과 1:1이다.
+
+    사이트를 더하면 행 없이는 통과하지 못하고, 표에서 행을 지우면 실패한다.
+    `existing_read=ExistingFidRead()`를 다른 식으로 바꿔도 실패한다.
+    """
+    assert tuple(expr for _, expr in _R16_FID_SAFETY_SITES) == (_r16_production_fid_safety_sites())
+
+
+def test_the_default_existing_fid_read_means_not_attempted():
+    """[round16 S16-02] 아래 정직성 표가 딛는 프로덕션 사실 — 기본 인스턴스는 **미수행**이다.
+
+    [round15 N01] 기본값을 `attempted=True`로 되돌리면 이 단정이 먼저 실패한다.
+    """
+    from server.vwx.patchplan import ExistingFidRead
+
+    default = ExistingFidRead()
+    assert default.attempted is False
+    assert default.complete is False
+    assert default.fids == ()
+    assert "수행하지 않았다" in default.reason()
+
+
+def _r16_plan(*, assumption_71, confirmed, port):
+    """`build_patch_plan`을 후보 1건으로 돌린다 — 포트·판정·육안확인만 바꾼다."""
+    report = _one_candidate_report()
+    candidate = build_patch_plan(report).candidates[0].id
+    return build_patch_plan(
+        report,
+        selected=[candidate],
+        fid_range={"start": 101, "end": 110},
+        assumption_71=assumption_71,
+        fid_range_visually_confirmed_empty=confirmed,
+        fid_property_port=port,
+    )
+
+
+def _r16_clean_port():
+    return _R15RawPort(node={"childCount": 0}, children=[])
+
+
+def _r16_truncated_port():
+    return _R15RawPort(node={"childCount": 2}, children=[{"i": 1}], fids={1: 100})
+
+
+# (행 이름, 사이트, 판정, 육안확인, 포트 팩토리, 기대 attempted, 기대 complete,
+#  기대 performed, plan.ok)
+_R16_PAYLOAD_HONESTY_ROWS = (
+    (
+        "confirmation_required_rejection/negative_unconfirmed",
+        "confirmation_required_rejection",
+        ASSUMPTION_71_NEGATIVE,
+        None,
+        ExplodingFidRigPort,
+        False,
+        False,
+        False,
+        False,
+    ),
+    (
+        "confirmation_required_rejection/inconclusive_unconfirmed",
+        "confirmation_required_rejection",
+        ASSUMPTION_71_INCONCLUSIVE,
+        False,
+        ExplodingFidRigPort,
+        False,
+        False,
+        False,
+        False,
+    ),
+    (
+        "planned/negative_confirmed",
+        "planned",
+        ASSUMPTION_71_NEGATIVE,
+        True,
+        ExplodingFidRigPort,
+        False,
+        False,
+        False,
+        True,
+    ),
+    (
+        "precheck_incomplete_rejection/no_port",
+        "precheck_incomplete_rejection",
+        ASSUMPTION_71_GO,
+        None,
+        lambda: None,
+        False,
+        False,
+        False,
+        False,
+    ),
+    (
+        "precheck_incomplete_rejection/truncated_port",
+        "precheck_incomplete_rejection",
+        ASSUMPTION_71_GO,
+        None,
+        _r16_truncated_port,
+        True,
+        False,
+        False,
+        False,
+    ),
+    (
+        "planned/clean_read",
+        "planned",
+        ASSUMPTION_71_GO,
+        None,
+        _r16_clean_port,
+        True,
+        True,
+        True,
+        True,
+    ),
+)
+
+
+def test_the_payload_honesty_table_covers_every_site_and_both_attempted_values():
+    """[round16 S16-02] 전수 게이트 — 사이트마다 도달 가능한 `attempted` 값이 전부 표에 있다.
+
+    `ExistingFidRead()` **리터럴**을 싣는 사이트는 구조상 `attempted=False`만 낼 수 있고
+    (`ExistingFidRead().attempted is False` — 위 테스트가 그 사실을 따로 고정한다),
+    `existing_read` 변수를 싣는 사이트는 두 값 모두 낸다. 그래서 이 기대는 표가 아니라
+    **프로덕션 인자 원문**에서 파생된다. 어느 행을 지워도 이 단정이 실패한다.
+    """
+    covered: dict[str, set] = {}
+    for _, site, *_rest in _R16_PAYLOAD_HONESTY_ROWS:
+        covered.setdefault(site, set())
+    for row in _R16_PAYLOAD_HONESTY_ROWS:
+        covered[row[1]].add(row[5])
+
+    expected = {
+        site: ({False} if expr == "ExistingFidRead()" else {False, True})
+        for site, expr in _R16_FID_SAFETY_SITES
+    }
+    assert covered == expected
+
+
+@pytest.mark.parametrize(
+    "name,site,assumption_71,confirmed,port_factory,attempted,complete,performed,plan_ok",
+    _R16_PAYLOAD_HONESTY_ROWS,
+    ids=[row[0] for row in _R16_PAYLOAD_HONESTY_ROWS],
+)
+def test_every_fid_safety_payload_site_reports_the_read_it_actually_made(
+    name, site, assumption_71, confirmed, port_factory, attempted, complete, performed, plan_ok
+):
+    """[round16 S16-02] 어느 사이트든 payload는 **실제로 한 읽기만** 주장한다.
+
+    `attempted=False` 행은 포트로 `ExplodingFidRigPort`(만지면 `AssertionError`) 또는
+    `None`을 쓴다 — "정말 안 읽었다"가 구조적으로 보장된다.
+
+    [round16 S16-02] `patchplan.py`의 `existing_read=ExistingFidRead()`(확인요구 거부
+    사이트)를 `ExistingFidRead(attempted=True, child_count=0)`로 바꾸면
+    'confirmation_required_rejection/*' 두 행이 실패한다 — round15는 통과했다.
+    [round15 N4] `complete`에서 `self.attempted and`를 지우면 세 행이 실패한다.
+    """
+    plan = _r16_plan(assumption_71=assumption_71, confirmed=confirmed, port=port_factory())
+
+    assert plan.ok is plan_ok
+    precheck = plan.fid_safety["conflict_precheck"]
+    read = precheck["read"]
+
+    assert read["attempted"] is attempted
+    assert read["complete"] is complete
+    assert precheck["performed"] is performed
+    # 읽지 않았으면 "기존 FID 0개"라는 **관측 주장**도 하지 않는다. 읽었으면 실제로 읽은
+    # 것만 싣는다 — 기대값은 같은 포트 구성을 프로덕션 리더에 다시 태워 얻는다.
+    if attempted:
+        assert precheck["existing_fids"] == list(_existing_fids_from_console(port_factory()).fids)
+    else:
+        assert precheck["existing_fids"] == []
+    if not attempted:
+        # 미수행 사이트는 조회 대상 경로·프로퍼티조차 주장하지 않는다.
+        assert precheck["property"] is None
+        assert precheck["source_path"] is None
+        assert read["child_count"] is None
+        assert read["enumerated_count"] == 0
+
+    # 같은 사실이 payload 사전(조작자 화면으로 나가는 축)에도 그대로 실린다.
+    payload_read = plan.to_dict()["fid_safety"]["conflict_precheck"]["read"]
+    assert payload_read["attempted"] is attempted
+    assert payload_read["complete"] is complete
+
+
+def test_the_confirmation_required_rejection_never_touches_the_console():
+    """[round16 S16-02] 확인요구 거부 사이트는 콘솔을 **한 번도** 건드리지 않는다.
+
+    payload의 `attempted=False`가 사실인지를 포트 대역으로 구조적으로 확인한다 —
+    `ExplodingFidRigPort`는 `query_state`·`query_property` 어느 쪽이든 불리면 즉시
+    `AssertionError`를 던진다. 이 테스트가 통과한다는 것이 곧 "안 읽었다"의 증거다.
+    """
+    plan = _r16_plan(
+        assumption_71=ASSUMPTION_71_NEGATIVE, confirmed=None, port=ExplodingFidRigPort()
+    )
+    assert plan.rejection.code == FID_RANGE_CONFIRMATION_REQUIRED
+    assert plan.fid_safety["conflict_precheck"]["read"]["attempted"] is False
+    assert [target.assigned_fid for target in plan.targets] == [None]
+
+
+# ==========================================================================
+# S16-03 · M69 — 부분 관측 고지(`_fid_precheck_incomplete_check`)는 전수 단정된다
+#
+# GO 분기가 부분 관측으로 배정을 거부할 때 조작자에게 "무엇을 못 봤는지" 알리는 **유일한
+# 구조화 항목**인데 세 뮤테이션이 전부 SURVIVED였다:
+#   ① `**read.to_dict()`를 통째 삭제 → 여덟 축 계수 전부 소실
+#   ② 같은 자리에 `complete: True · attempted: True` → 거부 사유와 자기모순
+#   ③ `reason`을 "확인할 것은 없다." 안심 문구로 교체
+# ==========================================================================
+
+#: 고지에 실려야 하는 읽기 축 전부. 아래 전단사 단정이 프로덕션 `to_dict()`와 맞춘다.
+_R16_PRECHECK_READ_KEYS = (
+    "attempted",
+    "child_count",
+    "enumerated_count",
+    "unseen_count",
+    "unreadable_fid_count",
+    "unusable_row_count",
+    "unparsable_row_count",
+    "over_enumerated",
+    "root_unreadable",
+    "complete",
+)
+
+#: 고지가 **스스로** 내는 세 필드.
+_R16_PRECHECK_OWN_KEYS = ("kind", "label", "reason")
+
+#: 부분 관측 거부 고지가 절대 쓰면 안 되는 안심 문구. round16 뮤테이션 ③이 심은 문구를
+#: 포함한다 — 거부 payload가 "확인할 것은 없다"고 말하면 조작자는 사유를 무시한다.
+_R16_REASSURING_PHRASES = (
+    "확인할 것은 없다",
+    "문제 없다",
+    "문제없다",
+    "이상 없다",
+    "이상없다",
+    "안전하다",
+    "정상이다",
+    "전부 읽었다",
+)
+
+
+def test_the_precheck_read_key_table_is_a_bijection_onto_the_production_payload():
+    """[round16 S16-03] 축 목록이 `ExistingFidRead.to_dict()`와 1:1이다.
+
+    `to_dict()`에서 축을 지우거나 더하면 실패하고, 이 표에서 행을 지워도 실패한다 —
+    그래서 아래 전수 단정이 "열 축 중 여섯 축만" 상태로 조용히 축소될 수 없다.
+    """
+    from server.vwx.patchplan import ExistingFidRead
+
+    assert tuple(ExistingFidRead().to_dict()) == _R16_PRECHECK_READ_KEYS
+
+
+@pytest.mark.parametrize(
+    "axis,port_kwargs,expected_axes,expected_phrase",
+    R15_SOLE_AXIS_ROWS,
+    ids=[f"incomplete-check/{row[0]}" for row in R15_SOLE_AXIS_ROWS],
+)
+def test_the_incomplete_check_carries_every_read_axis_with_the_observed_value(
+    axis, port_kwargs, expected_axes, expected_phrase
+):
+    """[round16 S16-03 · M69] 고지가 **여덟 축 계수 전부**를 관측값 그대로 싣는다.
+
+    [round16 M69①] `patchplan.py` `_fid_precheck_incomplete_check`에서 `**read.to_dict()`를
+      지우면 키 집합 단정이 실패한다.
+    [round16 M69②] 같은 자리에 `"complete": True, "attempted": True`를 심으면 값 단정과
+      아래 자기모순 금지 단정이 실패한다.
+    [round16 M69③] `reason`을 "확인할 것은 없다."로 바꾸면 문구 단정이 실패한다.
+    """
+    from server.vwx.verdicts import FID_CONFLICT_PRECHECK_INCOMPLETE
+
+    port = None if port_kwargs is None else _R15RawPort(**port_kwargs)
+    read = _existing_fids_from_console(port)
+    plan = _plan_with(port)
+
+    assert plan.ok is False
+    (check,) = plan.skipped_checks
+
+    # ① 존재 — 고지 자신의 세 필드 + 읽기 축 전부. 그 밖의 키는 없다.
+    assert set(check) == set(_R16_PRECHECK_OWN_KEYS) | set(_R16_PRECHECK_READ_KEYS)
+
+    # ② 값 — 축마다 **관측된 값 그대로**. 계수를 상수로 갈아끼우면 여기서 걸린다.
+    observed = read.to_dict()
+    for key in _R16_PRECHECK_READ_KEYS:
+        assert check[key] == observed[key], key
+
+    # ③ 자기모순 금지 — 거부 payload 안의 `complete`는 반드시 거짓이다.
+    assert check["complete"] is False
+    assert check["kind"] == FID_CONFLICT_PRECHECK_INCOMPLETE
+    assert check["label"]
+
+    # ④ 사유 문구 — 왜 막았는지를 말하고, 안심시키지 않는다.
+    assert "부분 관측" in check["reason"]
+    assert "빈 FID를 단정할 수 없다" in check["reason"]
+    for phrase in _R16_REASSURING_PHRASES:
+        assert phrase not in check["reason"], phrase
+
+    # ⑤ 같은 고지가 조작자 화면 payload에도 그대로 나간다.
+    (payload_check,) = plan.to_dict()["skipped_checks"]
+    assert payload_check == dict(check)
+
+
+def test_the_incomplete_check_axes_are_not_all_default_in_at_least_one_row():
+    """[round16 S16-03] 비공허성 — 위 전수 단정이 "전부 0"만 보는 표가 아니다.
+
+    어느 행에서는 계수 축이 실제로 0이 아닌 값을 싣는다. 그 사실이 없으면 `**read.to_dict()`
+    삭제 대신 `**{k: 0 for k in ...}` 같은 뮤테이션이 값 단정을 빠져나간다.
+    """
+    port = _R15RawPort(
+        node={"childCount": 4},
+        children=[{"i": 1}, {"i": 2}, {"i": 2}, None],
+        fids={1: 100},
+    )
+    (check,) = _plan_with(port).skipped_checks
+
+    assert check["unseen_count"] == 2
+    assert check["unreadable_fid_count"] == 1
+    assert check["unusable_row_count"] == 1
+    assert check["unparsable_row_count"] == 1
+    assert check["enumerated_count"] == 2
+    assert check["child_count"] == 4
+    assert check["attempted"] is True
+    assert check["complete"] is False
+
+
+# ---- 안심 문구 금지 목록의 대조군 ------------------------------------------------
+#
+# 금지 목록은 **그 자체로는 게이트가 아니다** — 목록에서 항목을 지우면 그 항목의 검사도
+# 함께 사라져 아무것도 실패하지 않는다(round15가 같은 결함으로 지적받았다). 그래서
+# 목록과 **독립인 침해 표본 표**를 두고, 표본을 **프로덕션 사본에 심어** 프로덕션 함수의
+# 반환값을 검사한다. `test_autopatch_verify.py`의 `_PLUGIN_OUTCOME_PROBES` 선례와 같다.
+
+PATCHPLAN_PATH = Path("server/vwx/patchplan.py")
+PATCHPLAN_SOURCE = PATCHPLAN_PATH.read_text(encoding="utf-8")
+
+#: 사본에서 갈아끼울 **사유 문구 한 덩어리**. 앵커가 사라지면 아래 대조군이 즉시 실패한다.
+INCOMPLETE_REASON_ANCHOR = (
+    '            "기존 FID 열거가 부분 관측이라 빈 FID를 단정할 수 없다 — "\n'
+    '            "절단은 이 콘솔의 기본 경로이고 childCount가 진짜 총계다."'
+)
+
+_PATCHPLAN_UNDER_TEST = "server.vwx._patchplan_under_test"
+
+
+def _load_patchplan(source: str) -> dict:
+    """`patchplan.py` 소스를 **진짜 모듈로** 적재한다 — `test_autopatch_execute._load` 관례.
+
+    `dataclass`가 `sys.modules` 조회를 하므로 네임스페이스 dict만으로는 적재되지 않는다.
+    """
+    import sys
+    from types import ModuleType
+
+    module = ModuleType(_PATCHPLAN_UNDER_TEST)
+    module.__file__ = str(PATCHPLAN_PATH)
+    saved = sys.modules.get(_PATCHPLAN_UNDER_TEST)
+    sys.modules[_PATCHPLAN_UNDER_TEST] = module
+    try:
+        exec(compile(source, str(PATCHPLAN_PATH), "exec"), module.__dict__)
+    finally:
+        if saved is None:
+            del sys.modules[_PATCHPLAN_UNDER_TEST]
+        else:
+            sys.modules[_PATCHPLAN_UNDER_TEST] = saved
+    return module.__dict__
+
+
+def test_the_patchplan_copy_loader_reproduces_the_untouched_reason():
+    """사본 적재가 진짜임을 먼저 고정한다 — 원문 사본은 원본과 같은 사유를 낸다."""
+    namespace = _load_patchplan(PATCHPLAN_SOURCE)
+    check = namespace["_fid_precheck_incomplete_check"](namespace["ExistingFidRead"]())
+    (original,) = _plan_with(None).skipped_checks
+    assert check["reason"] == original["reason"]
+    assert PATCHPLAN_SOURCE.count(INCOMPLETE_REASON_ANCHOR) == 1, "사유 앵커가 유일하지 않다"
+
+
+#: 침해 표본 — (금지 문구, 그 문구에만 걸리는 사유 문장). 금지 목록에서 **파생하지 않는다**.
+_R16_REASSURING_PROBES = (
+    ("확인할 것은 없다", "확인할 것은 없다."),
+    ("문제 없다", "읽기에 문제 없다."),
+    ("문제없다", "읽기에 문제없다."),
+    ("이상 없다", "열거에 이상 없다."),
+    ("이상없다", "열거에 이상없다."),
+    ("안전하다", "이 배정은 안전하다."),
+    ("정상이다", "스냅샷이 정상이다."),
+    ("전부 읽었다", "기존 픽스처를 전부 읽었다."),
+)
+
+
+def test_the_reassuring_probe_table_is_a_bijection_onto_the_ban_list():
+    """[round16 S16-03] 표와 금지 목록이 1:1 — 목록에서 문구를 지우거나 더하면 실패한다."""
+    assert tuple(phrase for phrase, _ in _R16_REASSURING_PROBES) == _R16_REASSURING_PHRASES
+
+
+@pytest.mark.parametrize(
+    "phrase,sentence",
+    _R16_REASSURING_PROBES,
+    ids=[phrase for phrase, _ in _R16_REASSURING_PROBES],
+)
+def test_each_reassuring_probe_is_caught_by_exactly_one_banned_phrase(phrase, sentence):
+    """[round16 S16-03] 표본이 **겨냥한 문구에만** 걸린다 — 인과가 다른 문구에 가려지지 않는다.
+
+    `_R16_REASSURING_PHRASES`에서 `phrase`를 지우면 짝이 되는 아래 대조군이 빈 목록을 받아
+    실패한다. 이 단정은 그 인과를 고정한다.
+    """
+    assert [p for p in _R16_REASSURING_PHRASES if p in sentence] == [phrase]
+
+
+@pytest.mark.parametrize(
+    "phrase,sentence",
+    _R16_REASSURING_PROBES,
+    ids=[phrase for phrase, _ in _R16_REASSURING_PROBES],
+)
+def test_the_reassuring_ban_catches_each_probe_planted_in_the_production_reason(phrase, sentence):
+    """[round16 S16-03] 비공허성(전수) — 표본마다 **프로덕션 사본**에 심어 금지가 잡는지 본다.
+
+    금지 목록에서 이 표본이 겨냥한 문구를 지우면 `offenders`가 비어 이 단정이 실패한다 —
+    목록만 있고 대조군이 없던 상태에서는 문구를 지워도 아무것도 실패하지 않았다.
+    """
+    planted = PATCHPLAN_SOURCE.replace(INCOMPLETE_REASON_ANCHOR, f'            "{sentence}"', 1)
+    assert planted != PATCHPLAN_SOURCE
+    namespace = _load_patchplan(planted)
+    check = namespace["_fid_precheck_incomplete_check"](namespace["ExistingFidRead"]())
+
+    offenders = [p for p in _R16_REASSURING_PHRASES if p in check["reason"]]
+    assert offenders == [phrase]
+
+
+# ==========================================================================
+# S16-08 (informational) — 한 행이 두 축을 올리는 것은 **의도된 것**이다
+# ==========================================================================
+
+
+def test_a_single_unparsable_row_deliberately_raises_two_axes_at_once():
+    """[round16 S16-08] `unseen`과 `unparsable_rows`가 같은 행에서 함께 오르는 것은 버그가 아니다.
+
+    `children=[{'i': 1}, None]` · `childCount=2`에서 비매핑 행 하나가
+    `unparsable_rows=1`(해석 불가 행이 있었다)과 `unseen=1`(선언 2개 중 1개만 슬롯으로
+    확인됐다)을 **동시에** 올린다. 두 축은 서로 다른 명제이고, 둘 다 참이다:
+    "해석 못 한 행이 있다"와 "선언된 슬롯 하나를 끝내 확인하지 못했다".
+    산술적 불가능(`unseen > child_count`)이 아니며 — round13 S05 · round14 T01/T03이 막은
+    것은 그 쪽이다 — 방향도 **더 막는 쪽**이라 안전하다.
+
+    **고치지 마라.** 이 중복 계수를 "한 행은 한 축"으로 바꾸면 `unseen`이 0이 되고, 그러면
+    `childCount`와 열거 수의 대조라는 **가장 강한 축**이 이 스냅샷에서 침묵한다.
+    이 테스트는 다음 라운드가 그것을 버그로 오인해 축을 약화시키는 것을 막는다.
+    """
+    read = _existing_fids_from_console(
+        _R15RawPort(node={"childCount": 2}, children=[{"i": 1}, None], fids={1: 100})
+    )
+
+    assert read.unparsable_rows == 1
+    assert read.unseen == 1
+    assert read.enumerated_count == 1
+    assert read.child_count == 2
+    # 산술적으로 가능한 상태다 — 못 본 슬롯 수가 선언 총계를 넘지 않는다.
+    assert 0 <= read.unseen <= read.child_count
+    assert read.complete is False
+    # 두 축이 각자 자기 문장을 낸다 — 조작자는 두 사실을 따로 읽는다.
+    assert "선언 2개 중 1개를 열거하지 못했다" in read.reason()
+    assert "슬롯으로 해석되지 않는 행 1개가 섞여 있다" in read.reason()
+
+
+# ==========================================================================
+# M54 — bool 가드는 정수 판독기 **전부**의 규약이다
+#
+# `_optional_int`의 `and not isinstance(value, bool)`를 지우면 `True`가 `1`로 해석돼
+# 슬롯·주소·`childCount`가 오염되는데 SURVIVED였다. 형제 `_fid_int`는 전체 스위트에서
+# 잡혔지만 그 인과를 명시한 테스트는 없었다. 여기서 **네 판독기 전부**를 표로 연다.
+# ==========================================================================
+
+#: (함수 이름, bool 입력, 기대 반환) — `plan_addresses`는 반환이 아니라 갈래로 확인한다.
+_R16_BOOL_GUARD_ROWS = (
+    ("plan_addresses", True, None),
+    ("_fid_int", True, None),
+    ("_optional_int", True, None),
+    ("_required_int", True, 0),
+)
+
+
+def _r16_production_bool_guard_functions():
+    """`patchplan.py`에서 `isinstance(..., bool)` 가드를 가진 함수를 소스 순서로 전수."""
+    import ast
+
+    tree = ast.parse(_r16_patchplan_source())
+    names = []
+    for fn in _r16_in_source_order(
+        node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
+    ):
+        for node in ast.walk(fn):
+            if (
+                isinstance(node, ast.Call)
+                and getattr(node.func, "id", None) == "isinstance"
+                and getattr(node.args[1], "id", None) == "bool"
+            ):
+                names.append(fn.name)
+                break
+    return tuple(names)
+
+
+def test_the_bool_guard_table_is_a_bijection_onto_production():
+    """[round16 M54] bool 가드 표가 프로덕션 함수 목록과 1:1이다.
+
+    어느 판독기에서든 `isinstance(value, bool)` 가드를 지우면 이 단정이 실패한다 —
+    형제 판독기를 빠뜨린 채 한쪽만 지키는 상태가 구조적으로 불가능해진다.
+    표에서 행을 지워도 실패한다.
+    """
+    assert tuple(name for name, _, _ in _R16_BOOL_GUARD_ROWS) == (
+        _r16_production_bool_guard_functions()
+    )
+
+
+def test_every_int_reader_refuses_a_bool():
+    """[round16 M54] `True`는 `1`이 아니다 — 네 판독기가 전부 그렇게 판정한다.
+
+    `_optional_int`·`_required_int`·`_fid_int`의 `and not isinstance(value, bool)`를 지우거나
+    `plan_addresses`의 `or isinstance(footprint, bool)`를 지우면 해당 단정이 실패한다.
+    """
+    from server.vwx.patchplan import _fid_int, _optional_int, _required_int
+
+    assert _optional_int(True) is None
+    assert _optional_int(False) is None
+    assert _optional_int(1) == 1
+    assert _required_int(True) == 0
+    assert _required_int(False) == 0
+    assert _required_int(1) == 1
+    assert _fid_int(True) is None
+    assert _fid_int(False) is None
+    assert _fid_int(1) == 1
+
+    # `plan_addresses`는 반환값이 아니라 **갈래**로 답한다 — 폭이 `True`면 폭을 모르는 것이다.
+    from server.vwx.patchplan import plan_addresses
+    from server.vwx.verdicts import FOOTPRINT_UNKNOWN
+
+    report = _one_candidate_report()
+    target = build_patch_plan(report, selected=[]).candidates[0]
+    bool_width = plan_addresses([target], footprints={target.id: True}, occupied={})
+    assert bool_width.entries == ()
+    assert [exclusion.code for exclusion in bool_width.exclusions] == [FOOTPRINT_UNKNOWN]
+    # 비공허성 — 같은 호출에 진짜 정수 폭을 주면 계획이 선다.
+    int_width = plan_addresses([target], footprints={target.id: 1}, occupied={})
+    assert [entry.candidate_id for entry in int_width.entries] == [target.id]
+
+
+def test_a_boolean_child_count_is_not_read_as_one_declared_fixture():
+    """[round16 M54 · 프로덕션 경로] `childCount: True`가 "선언 1대"로 읽히면 배정이 열린다.
+
+    `_optional_int`의 bool 가드를 지우면 `child_count=1`·`enumerated_count=1`이 되어
+    `unseen=0`·`complete=True`가 되고, **조회한 적 없는 픽스처 위에 FID가 배정된다**.
+    가드가 있으면 총계를 모르는 것이므로 `unseen=None`으로 막힌다.
+    """
+    port = _R15RawPort(node={"childCount": True}, children=[{"i": 1}], fids={1: 100})
+    read = _existing_fids_from_console(port)
+
+    assert read.child_count is None
+    assert read.unseen is None
+    assert read.complete is False
+
+    plan = _plan_with(port)
+    assert plan.ok is False
+    assert plan.rejection.code == "fid_precheck_read_incomplete"
+    assert [target.assigned_fid for target in plan.targets] == [None]
+    assert "총계(childCount)를 읽지 못해" in plan.rejection.reason
+
+
+def test_a_boolean_fid_value_is_counted_as_unreadable_not_as_fid_one():
+    """[round16 M54 형제 축] `_fid_int`의 bool 가드 — FID 값 `True`는 FID 1이 아니다.
+
+    가드를 지우면 `existing_fids=(True,)`가 되어 부분 관측이 **완전한 읽기로** 등급되고,
+    FID 1을 "이미 쓰이는 번호"로 오판한다. 가드가 있으면 그 슬롯은 미판독으로 세어
+    배정 자체가 막힌다 — 모르면 하지 않는다.
+    """
+    port = _R15RawPort(node={"childCount": 1}, children=[{"i": 1}], fids={1: True})
+    read = _existing_fids_from_console(port)
+
+    assert read.fids == ()
+    assert read.unreadable_fids == 1
+    assert read.complete is False
+
+    plan = _plan_with(port)
+    assert plan.ok is False
+    assert plan.rejection.code == "fid_precheck_read_incomplete"
+    assert "열거된 슬롯 1개의 FID 값을 얻지 못했다" in plan.rejection.reason

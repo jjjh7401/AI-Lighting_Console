@@ -12,20 +12,24 @@ round7 18건 + round8 13건 + round9 8건 + round10 7건 반영. round6 PASS(1.0
 판정이므로 승계하지 않고, **round10이 v0.1.4를 직접 감사해 PASS했다**.) ·
 run-phase 진행 중 ·
 M0 종결(5차까지) · **M1~M7 완료 · M8 재정의 완료(v0.1.5, 사용자 승인)** ·
-**독립 코드 감사 round11·12·13·14·15 — 다섯 다 FAIL, 지적 59+24건 반영.
+**독립 코드 감사 round11·12·13·14·15·16 — 여섯 다 FAIL, 지적 누계 59+24건 + round16 분 반영.
 round14는 이 사이클 최초로 치명 0건·fail-open 0건이었고 두 감사자 모두
 "차단 문구만 고치면 코드 축 GO"로 판정했다. round15는 그 위에서 다시 FAIL했다 —
 *"프로덕션 동작은 대체로 옳으나 그것을 지키는 테스트가 게이트가 아니다"*(뮤테이션 48건
-KILL 68.8% · 치명 SURVIVED 2 · major SURVIVED 9)이며, 문서 축 major 6·minor 2가
-함께 나왔다(그 반영이 이번 커밋이다).**
-**round15 반영 후 재측정: 이전에 살아남았던 뮤테이션 20건 + 대조군 프로브 2건 = 22건 전부
-KILLED**(오케스트레이터 직접 실측, 매 실행 `PYTHONPYCACHEPREFIX` 격리 — §E.2 round15 절).
-**남은 것은 ① round15 반영에 대한 재감사(round16) ② 사용자의 라이브 세션 둘뿐이다.**
-테스트 **5,354 passed / 7 skipped**(착수 4,898 → +456, 회귀 0) ·
+KILL 68.8% · 치명 SURVIVED 2 · major SURVIVED 9)이며, 문서 축 major 6·minor 2가 함께 나왔다.
+**round16도 FAIL했다** — *"전단사 게이트를 네 표에 붙이고 형제 두 표(FID 여덟 축 ·
+caveat 네 갈래)에는 붙이지 않았다"*(뮤테이션 79건 KILL 81.0% · 치명 SURVIVED 1 ·
+안전 high 3·medium 2·low 3 · 문서 major 4·minor 6)이며, **여섯 라운드째 같은 기제**다 —
+*어떤 규율을 적용하고 형제 표면에는 적용하지 않는다.* 그 반영이 이번 커밋이다.**
+**round15 반영 후 재측정 22/22 KILLED · round16 반영 후 재측정 19/19 KILLED**
+(round16은 **치명 재개방 경로 C1·C2**까지 포함해 확인했다. 오케스트레이터 직접 실측,
+매 실행 `PYTHONPYCACHEPREFIX` 격리 — §E.2 round15·round16 절).
+**남은 것은 ① round16 반영에 대한 재감사(round17) ② 사용자의 라이브 세션 둘뿐이다.**
+테스트 **5,690 passed / 7 skipped**(착수 4,898 → +792, 회귀 0) ·
 **[round15 #4]** 이 계수는 반영마다 바뀐다 — **갱신할 자리는 세 곳**이다:
 이 줄 · §0 "기계 확인 커맨드"의 `현재 기준선` 주석 · §E.2 해당 라운드 절의 `A → B passed`.
 한 곳만 고치면 같은 결함이 재발한다(round12~14가 그렇게 stale을 남겼다) ·
-커밋 **run-phase 24건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 28건 — **본 갱신을 담은 커밋을
+커밋 **run-phase 25건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 29건 — **본 갱신을 담은 커밋을
 포함한 계수**다. 갱신마다 재계산하라. round10 감사 N55) ·
 **2026-08-06 5차**: §0 미시험 6건 중 **L1·L3·L4·L5 전부 NEGATIVE** ·
 **L6은 "명령줄 목적지는 옮겨지고 듣는다"의 양성 대조군을 확보**했다 →
@@ -134,7 +138,7 @@ M1~M7이 끝났다** — 이전 판은 여기에 "현재 `audit-ready` — Imple
 **M4 착수** 단계다"라고 적어, 같은 §0의 `M1~M7 완료`(§0 상태 줄 · "다음 담당자가 먼저 할 것" 2번)와
 정면으로 모순했다. Implementation Kickoff Approval은 통과했고 **M4는 물론 M7까지 완료**다.
 **현재 남은 것은 M8(라이브 종단) 하나이며, 그 착수 전제는 독립 코드 감사 재감사 PASS다**
-(round11~15 다섯 라운드 전부 FAIL). "audit-ready"는 `plan.md`/`acceptance.md`가 감사를 통과한
+(round11~16 **여섯** 라운드 전부 FAIL). "audit-ready"는 `plan.md`/`acceptance.md`가 감사를 통과한
 상태를 뜻할 뿐, 코드 마일스톤의 현재 위치가 아니다.
 
 ### 이 SPEC이 1단계와 근본적으로 다른 점
@@ -174,6 +178,12 @@ M1~M7이 끝났다** — 이전 판은 여기에 "현재 `audit-ready` — Imple
 3. **`FixtureType`·`Mode`는 표시 문자열이다.** 거기서 채널 수를 파싱하지 마라 —
    `ASSUMPTION-27`이 이미 반증했다(`server/prechk/patch.py:14-22`). 실측 확인: 픽스처의 `Mode`가
    `"2 Mode 2"` 형태로 온다 — 파싱 유혹이 실재한다.
+   **[round16 갱신 — 유혹의 표면이 하나 늘었다]** round15 D 이후 그 원문이 payload에
+   `observed_type_display`·`observed_mode_display`(`PatchTargetExclusion`·`VerificationResult`
+   각 2필드)로 **실려 나간다**. 조작자에게 보이라고 만든 표시용 필드이며(§0 2c①),
+   **거기서도 파싱하지 마라.** 확정된 라이브러리 이름은 `observed_type`·`observed_mode`이고
+   대조 실패 시 그쪽이 `None`이 된다 — `None`을 `_display`로 대체하는 순간 이 함정과
+   2c①을 동시에 밟는다. 원문을 **문장에** 넣는 것도 금지다(§0 2b④).
 4. **플러그인이 오류 없이 끝난 것은 성공이 아니다.** `AddFixtures`는 실패 시 `nil`을 반환할 뿐이다.
    **검증 읽기가 성공의 유일한 근거다**(REQ-AUTOPATCH-023). **2026-08-06 실물 재현**: `exec`가 `OK`를
    반환하고 픽스처는 0건 생성됐다.
@@ -213,7 +223,7 @@ M1~M7이 끝났다** — 이전 판은 여기에 "현재 `audit-ready` — Imple
 ```bash
 W=/Users/studiox/orca/workspaces/AI-Lighting_Console/spec-vwx-001
 git -C "$W" rev-parse --abbrev-ref HEAD   # feature/SPEC-COPILOT-VWX-001 (1단계 위에 스택)
-uv run pytest server/tests -q             # 현재 기준선: 5,354 passed / 7 skipped (착수 4,898)
+uv run pytest server/tests -q             # 현재 기준선: 5,690 passed / 7 skipped (착수 4,898)
 #   ↑ [round15 #4 — 이 숫자가 "갱신할 자리"다] 커밋마다 바뀐다. 테스트를 추가·변경했으면
 #     **세 곳을 함께** 갱신하라: ⓐ 이 줄 · ⓑ §0 헤드라인의 `테스트 N passed / 7 skipped
 #     (착수 4,898 → +M, 회귀 0)` · ⓒ §E.2 해당 라운드 절의 `A → B passed`. 한 곳만 고치면
@@ -222,16 +232,56 @@ uv run pytest server/tests -q             # 현재 기준선: 5,354 passed / 7 s
 uv run ruff check        server/vwx server/orchestrator/tools.py server/tests/test_autopatch_*.py
 uv run ruff format --check server/vwx server/tests/test_autopatch_*.py   # [필수] check만으로는 부족
 # PRESERVE 0-diff. `..HEAD` 없는 형태가 **미커밋 변경까지** 포함해 더 안전하다.
-# [금지] 대조군을 돌린다고 `git reset --hard`를 쓰지 마라 — 미커밋 작업이 날아간다(M7에서 실제로 겪음).
-#        되돌리기는 심은 파일 하나만 `git checkout -- <path>`.
-# [금지·round15 신설] 미커밋 변경이 있는 파일에는 `git checkout --`**도** 소실이다 —
-#        round15에서 두 감사자가 각각 그것으로 오케스트레이터의 미커밋 수정과 자기 편집분을
-#        날렸다(둘 다 복원). 뮤테이션 하네스는 git을 쓰지 말고 **원문을 메모리에 담아
-#        write로 되돌려라**. 그리고 매 실행 `PYTHONPYCACHEPREFIX=$(mktemp -d)`를 붙여라 —
-#        `0`↔`1` 치환은 파일 크기가 같고 pyc 무효화는 mtime을 **정수 초**로 저장하므로
-#        격리 없이는 직전 뮤테이션의 바이트코드가 재사용된다(round15 N13에서 실증).
+# [금지 · round16 #4로 두 줄을 하나로 통합] **대조군·뮤테이션을 되돌리는 데 git을 쓰지 마라.**
+#   `git reset --hard`도(M7에서 실제로 미커밋 작업 소실) `git checkout -- <path>`도(round15에서
+#   두 감사자가 각각 오케스트레이터의 미커밋 `apply.py` 수정과 자기 테스트 편집분을 날렸다)
+#   **미커밋 변경이 있는 파일에서는 똑같이 소실**이다. 이 저장소는 항상 여러 에이전트가
+#   동시에 편집하므로 "지금 이 파일은 clean하다"는 전제가 성립하지 않는다.
+#   이전 판은 이 블록 안에서 `git checkout --`를 한 줄에서 **권장**하고 바로 다음 줄에서
+#   **금지**해 서로 모순했다 — 그 모순을 여기서 없앤다.
+#   → 유일한 되돌리기 방법: **원문을 메모리에 담아 write로 되돌린다.** 아래 하네스를 그대로 써라.
+#   그리고 매 실행 `PYTHONPYCACHEPREFIX=$(mktemp -d)`를 붙여라 — `0`↔`1` 치환은 파일 크기가
+#   같고 pyc 무효화는 mtime을 **정수 초**로 저장하므로, 격리 없이는 직전 뮤테이션의
+#   바이트코드가 재사용된다(round15 N13에서 실증). 격리 없는 KILL/SURVIVED는 **무효**다.
 git -C "$W" diff --stat ca00bc5 -- console/lua server/safety server/prechk server/paperwork server/looks
 ```
+
+**뮤테이션 하네스 — 서술이 아니라 이대로 복사해 써라** (`[round16 #4]` 신설).
+round15에서 두 명, round16에서도 유사 사례가 나왔다. *"원문을 메모리에 담아 write로
+되돌려라"*는 **서술만으로는 불충분하다는 것이 두 라운드에 걸쳐 실증됐다.**
+
+```python
+# tools/ 아래 임시 파일로 저장해 `uv run python <파일>`. 6단계를 하나도 빼지 마라.
+import os, pathlib, subprocess, tempfile
+
+TARGET = pathlib.Path("server/vwx/patchplan.py")          # 심을 프로덕션 파일 하나
+TESTS  = ["server/tests/test_autopatch_fid.py"]           # 좁게 잡아라(전체 스위트는 오케스트레이터만)
+OLD, NEW = "self.unreadable_fids > 0", "self.unreadable_fids > 1"
+
+original = TARGET.read_text(encoding="utf-8")             # ① 백업 — git이 아니라 **메모리**에
+assert original.count(OLD) == 1, "앵커가 유일하지 않다 — 심기 전에 멈춰라"
+before = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
+try:
+    TARGET.write_text(original.replace(OLD, NEW), encoding="utf-8")   # ② 치환
+    env = {**os.environ, "PYTHONPYCACHEPREFIX": tempfile.mkdtemp()}   # ③ 실행마다 새 pycache
+    run = subprocess.run(["uv", "run", "pytest", *TESTS, "-q"],
+                         env=env, capture_output=True, text=True)
+    print("KILLED" if run.returncode else "SURVIVED  <-- 이 변조를 막는 게이트가 없다")
+    print(run.stdout[-800:])
+finally:
+    TARGET.write_text(original, encoding="utf-8")         # ④ 복원 — `finally`로 예외·중단에도 보장
+
+assert TARGET.read_text(encoding="utf-8") == original, "복원 실패 — 바이트가 다르다"
+after = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
+print("PORCELAIN 동일" if after == before else f"!! 달라졌다\n[전]{before}\n[후]{after}")
+#   ↑ ⑤ 바이트 동일 확인 · ⑥ `git status --porcelain`이 심기 **전과 같아야** 한다.
+#     달라졌으면 네 뮤테이션이 남았거나 **남의 미커밋 작업분을 건드린 것**이다. 멈추고 복구하라.
+```
+
+`OLD`가 파일에 2회 이상 나오면 `assert`가 먼저 멈춘다 — 앵커를 좁혀서 **정확히 한 곳**만
+심어라. 여러 파일을 동시에 심어야 하면 `original`을 `{경로: 원문}` 딕셔너리로 만들고
+`finally`에서 전부 write-back하라. **`try`/`finally` 없이 심지 마라** — 중간에 죽으면
+뮤테이션이 저장소에 남고, 그것을 다음 사람이 `git checkout --`로 지우다 또 사고가 난다.
 
 **라이브 콘솔 프로브**(onPC 기동 상태에서):
 
@@ -258,7 +308,7 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
    진단하고 `read_inventory` 경로를 막은 뒤 이 항목을 [해소]로 적었으나, **같은 핸들러에서
    그보다 먼저 실행되는 FID 사전검사**가 같은 콘솔 루트를 원시 `query_state`로 읽으며 같은
    오류를 저지르고 있었다 — round11이 잡았고 **이미 쓰이는 FID를 배정하는 것**까지 재현됐다.
-   지금은 셋이 막혀 있다(**단, FID 사전검사는 `assumption_71 == go` 분기에서만 돈다** —
+   지금도 막는 표면은 **셋**이다(**단, FID 사전검사는 `assumption_71 == go` 분기에서만 돈다** —
    NEGATIVE·INCONCLUSIVE + 시각 확인 분기에서는 아예 수행되지 않는다): 인벤토리(`screen_console_read`) · **FID 사전검사**
    (`ExistingFidRead`, 미판독이면 `fid_precheck_read_incomplete`로 배정 거부) ·
    주소 판독 실패(`console_read_caveat`의 `unreadable_address_count`). 되돌리지 마라.
@@ -267,6 +317,20 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
    **열거 절단 자체로는 막지 않는다** — 이 콘솔에서 절단은 상시이고 `childCount`는 진짜
    총계라 수량 비교가 정확하기 때문이다. 막는 기준은 절단이 아니라 **미판독**이다.
    이 구별을 없애면 툴이 영구히 아무것도 못 만들거나(너무 엄격) 중복을 만든다(너무 느슨).
+
+   **[round16 갱신 — 774023a 이후에도 표면은 셋이다. 넷째 관문은 생기지 않았다.]** `[코드]`
+   round15가 `ExistingFidRead`에 `attempted`·`unparsable_rows` 두 축을 더했지만 그것은
+   **새 관문이 아니라 둘째 관문(FID 사전검사)의 판정 기준이 넓어진 것**이다 —
+   `complete`가 보는 축은 **5개에서 8개로** 늘었다(`attempted` · `root_unreadable` ·
+   `over_enumerated` · `unseen is None` · `unseen > 0` · `unreadable_fids` · `unusable_rows` ·
+   `unparsable_rows`). 실질 변화 둘을 여기 적는다:
+   ⓐ **포트 부재**(`fid_property_port=None`)가 이제 `attempted=False → complete=False`라
+     배정이 거부된다. 이전에는 기본 인스턴스가 `complete=True`여서 **가드를 통과했다**(fail-open).
+   ⓑ 위 괄호의 "비-GO 분기에서는 수행되지 않는다"는 **여전히 사실이나**, 이제 그 분기의
+     payload가 `attempted=False`로 그 사실을 **말한다** — 이전 판은 수행하지 않은 읽기를
+     "완전 · 기존 FID 0개"로 실어 "읽었고 깨끗했다"와 구별 불가능했다(`patchplan.py:531`의
+     `ExistingFidRead()` 기본 인스턴스). **비-GO 분기는 지금도 배정을 막지 않는다** —
+     그 분기를 막는 것은 `fid_range_visually_confirmed_empty` 요구이지 이 축이 아니다.
    원래 기록은 아래에 남긴다:
    `read_inventory`는 **절단을 기본 경로로** 다루고 `completeness`·`missing_count`로 보고하는데,
    `apply_vectorworks_patch`는 그 값을 **읽지 않는다**. 그래서 절단된 인벤토리에서는
@@ -283,6 +347,11 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
    ③ `patchplan.plan_addresses(targets, footprints=..., occupied=...)`의 `footprints`는
       **1단계 도면이 준 폭**이다. 콘솔의 `DMXChannels` 개수를 넣지 마라 — 그것은 폭이 아니다
       (실측 14 vs stride 16). 폭을 모르면 `footprint_unknown`으로 제외된다.
+      **[round16 추가] 그리고 이 함수는 주소를 옮기지 않는다** — *"빈 주소를 찾아 옮겨 붙이는
+      경로가 이 함수에 없다"*(docstring). `apply.py:132`도 `HandoffEntry.address`를
+      **"언제나 도면 주소 그대로"**로 못박는다. 그래서 **M8 테스트 자원을 유니버스·주소로
+      분리하는 것은 이 툴로 불가능**하다 — 분리 가능한 축은 `fid_range` 하나뿐이다
+      (`spec.md` §C 「사용자 결정 대기」 · `plan.md` §B M8 착수 전제 ④).
 2b. **M7을 쓸 때 M5가 남긴 계약 4건을 지켜라**:
    ① `apply.build_patch_handoff(targets, address_plan=, resolutions=, names=, dry_run=True)`가
       전달 진입점이다 — 파라미터 **5개가 전부**이고, 여기에 인자를 더하면
@@ -297,12 +366,27 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
    ④ 제외 사유는 `verdicts.TARGET_EXCLUSION_REASON`에 **등재된 코드로만** 보고한다.
       **거부된 입력을 사유 문구에 되싣지 마라** — 이름이 목적지 토큰을 담고 있으면
       AC-014① 산출물 스캐너가 거짓 양성을 내 게이트가 강제력을 잃는다(M5에서 실제로 걸렸다).
+      **[round16 갱신] 이 규율은 `names`만의 것이 아니다.** round15 D가 형제 화면에서
+      같은 위반을 찾았다 — `screen_idempotent`·`verify_patch`가 **콘솔이 돌려준 표시 문자열
+      원문**을 사유·`detail` 문장에 되실었고, 점유 픽스처의 `FixtureType`이 `'CD 5'`인 것만으로
+      전달물 전체가 AC-014① 위반으로 찍혔다(실증). 이제 원문은 **문장이 아니라 구조화 필드**
+      (`PatchTargetExclusion.observed_type_display`·`observed_mode_display`,
+      `VerificationResult.observed_type_display`·`observed_mode_display`)로 나가고 문장은
+      **좌표와 필드 이름만** 적는다. **콘솔에서 읽어 온 문자열을 사람이 읽는 문장에 넣기 전에
+      이 항목을 다시 읽어라 — 사유 문구든 `detail`이든 `warnings`든 같은 규율이다.**
 2c. **M7을 쓸 때 M6이 남긴 계약 3건을 지켜라**:
    ① **콘솔 표시 문자열을 이름으로 믿지 마라.** 픽스처의 `FixtureType`/`Mode`는
       `FixtureType 3`·`2 Mode 2` 형태로 오고 라이브러리 이름(`Robin LEDBeam 350`·`Mode 2`)과
       **다른 어휘**다. 해석은 `apply.read_console_fixtures(inventory, library=...)` **한 곳**에만
       있고, 모호하면 `identity_resolved=False`로 남는다 — 그 값을 이름처럼 쓰지 마라.
       **이 문법은 표본 1종에서 온 가설이며 판별 실험은 미수행**이다(§E.2 M6 절 [HARD]).
+      **[round16 갱신] 그 원문이 이제 payload에 실린다.** round15 D가
+      `observed_type_display`·`observed_mode_display` 네 필드를 신설해, 라이브러리 대조에
+      실패했을 때 조작자가 **무엇을 봤는지** 볼 수 있게 했다(2c① 요구 그대로 — 버리지 않는다).
+      대신 **그 필드는 표시용이다** — 이름으로 쓰지도, 거기서 숫자를 파싱하지도 마라(함정 3).
+      확정된 라이브러리 이름은 `observed_type`·`observed_mode`이고, 대조 실패 시 그쪽은
+      `None`이 된다. **`None`을 보고 `_display`로 갈아타는 코드를 쓰지 마라** — 그것이
+      2c①이 금지하는 바로 그 편측 채택이다.
    ② **확인 불가를 멱등으로 올리지 마라.** `screen_idempotent`은 멱등 건너뜀 · 충돌 ·
       확인 불가를 **세 코드로 갈라** 보고한다. 셋을 하나로 뭉치면 필요한 픽스처가 조용히
       누락되거나 무관한 픽스처를 "이미 했음"으로 삼키게 된다.
@@ -412,7 +496,7 @@ AC-025 자신의 검증방법 필드가 이미 두 파일 모두 완전히 명�
 ```yaml
 plan_status: audit-ready   # round10 독립 감사 PASS(0.865 ≥ Tier L 0.85)로 v0.1.4가 audit-ready. round7 FAIL(0.7375)·round8 FAIL(0.805)·round9 FAIL(0.8025) 지적 39건 + round10 지적 7건 전량 반영(§E.1a 7·8·9·10회차). round6 PASS(1.000)는 v0.1.2에 대한 판정이므로 승계하지 않는다 — 이 신호는 round10에 근거한다
 plan_complete_at: "2026-08-06 — v0.1.4에 대한 round10 독립 감사 PASS (0.865 ≥ Tier L 0.85, round9 0.8025 대비 +0.0625 개선). round6 PASS(1.000)는 v0.1.2 기준의 이전 판정"
-spec_version: "0.1.5"     # v0.1.5 = v0.1.4 + M8 재정의 amendment(AC-026 4관문, 사용자 승인) + 독립 코드 감사 round11·12·13·14·15 지적 반영(round14까지 누계 59건 + round15 문서 축 major 6·minor 2). REQ 26 · AC 27 수 불변(§C.0 26행 · §C.0a 합 27 유지) — AC-026 내부만 정밀화(round15 #3이 ①에 전달물 원문 보존 의무를, ⑥에 5단계 판별 절차를 추가했으나 원문자 번호는 ①~⑦ 그대로다)
+spec_version: "0.1.5"     # v0.1.5 = v0.1.4 + M8 재정의 amendment(AC-026 4관문, 사용자 승인) + 독립 코드 감사 round11·12·13·14·15·16 지적 반영(round14까지 누계 59건 + round15 24건 + round16 분). REQ 26 · AC 27 수 불변(§C.0 26행 · §C.0a 합 27 유지) — AC-026 내부만 정밀화(round15 #3이 ①에 전달물 원문 보존 의무를, ⑥에 5단계 판별 절차를 추가했으나 원문자 번호는 ①~⑦ 그대로다)
 base_sha: ca00bc5c853bfe5d9391290f1b9db263610b4bfa
 baseline_measured: "uv run pytest server/tests -q → 4898 passed, 7 skipped, 1 warning in 92.28s"
 artifacts: [spec.md, plan.md, acceptance.md, design.md, research.md, progress.md]
@@ -468,7 +552,7 @@ known_gaps:
     (매치는 전부 다른 절 참조이거나 progress.md 자체 감사기록). plan.md §E 테스트 골격이
     §6.2와 독립적으로 이미 파일→주제 매핑을 제공하고 있어 온보딩 가독성도 유지됨. 잔여
     gap 아님 — round1 이후 최초로 4개 축 전부 잔여 결함 0건."
-next: "**M8만 남았고, 남은 것은 ① round15 지적 반영에 대한 재감사 ② 사용자의 라이브 세션 둘뿐이다.** 독립 코드 감사를 **다섯 번**(round11~15) 돌렸고 **다섯 다 FAIL**이었다. round14는 이 사이클 최초로 치명 0건·fail-open 0건이었고 두 감사자 모두 **\"차단 문구만 고치면 코드 축 GO\"**로 판정했다. **round15는 그 위에서 다시 FAIL했다** — 핵심 판정은 *\"HEAD의 프로덕션 동작은 대체로 옳으나 그것을 지키는 테스트가 게이트가 아니다\"*(뮤테이션 48건 KILL 68.8% · 치명 SURVIVED 2 · major SURVIVED 9)이며, 문서 축에서도 major 6·minor 2가 나왔다(#1 고지 블록 오배치 · #2 §B 시나리오 1 · #3 AC-026⑥ 판별 절차 공백 · #4 계수 stale · #5 M8 초안 stale · #6 `names` 준비물 누락 · #7 버전 전파 · #8 kickoff 모순). 그 반영이 이번 커밋이다(지적 누계 59+ 건, **5,234 passed / 7 skipped** — **[round15 #4] 이 수치는 반영 후 다시 실측해 §0 헤드라인·§0 기계 확인 커맨드 주석·§E.2 해당 절 세 곳을 함께 갱신할 자리다**). **M8 재정의는 완료**(v0.1.5, 사용자 승인 — 4관문 G1~G4 · REQ 26·AC 27 수 불변). 세션 준비물은 `M8-REDEFINITION-DRAFT.md` §3(**P1~P6**)이고 **미정은 두 건 — P5 원복 절차와 P6 `names` 매핑**이다(둘 다 사용자와 합의해야 한다). **[round15 #6] `names`를 준비하지 않으면 세션 당일 대상이 구조적으로 0건이 되고, 구 AC-026①(종단 생성 요구) 삭제와 곱해져 아무것도 증명하지 못한 세션이 PASS로 적힐 수 있다** — 대상 0건 세션은 `G1 미검증`으로 적는다(`acceptance.md` AC-026 아래 고지 블록). **[round15 #3]** 세션 중에는 G2 착수 전에 전달물 원문(`lua_source` 전문·실행 절차·대상 표)을 §E.2 M8 절에 보존하라 — 이것이 없으면 AC-026⑥ 면책을 원용할 수 없다. 세션에 **표시 문자열 판별 실험**(AC-026⑦)을 포함하고, **`unpatched` 미실측 가정**(`console_read.unpatched_count`)을 세션 전에 눈으로 대조하라. 코드 마일스톤 M1~M7 완료(**`audit-ready`는 plan-phase 신호일 뿐 \"M4 착수 단계\"가 아니다 — round15 #8**). 착수 전 §0 함정 9·10·11과 항목 2b·2c·2d, §E.2 round11~15 절의 [HARD] 패턴을 읽어라."
+next: "**M8만 남았고, 남은 것은 ① round16 지적 반영에 대한 재감사(round17) ② 사용자의 라이브 세션 둘뿐이다.** 독립 코드 감사를 **여섯 번**(round11~16) 돌렸고 **여섯 다 FAIL**이었다. round14는 이 사이클 최초로 치명 0건·fail-open 0건이었고 두 감사자 모두 **\"차단 문구만 고치면 코드 축 GO\"**로 판정했다. **round15는 그 위에서 다시 FAIL했다** — 핵심 판정은 *\"HEAD의 프로덕션 동작은 대체로 옳으나 그것을 지키는 테스트가 게이트가 아니다\"*(뮤테이션 48건 KILL 68.8% · 치명 SURVIVED 2 · major SURVIVED 9)이며, 문서 축에서도 major 6·minor 2가 나왔다(#1 고지 블록 오배치 · #2 §B 시나리오 1 · #3 AC-026⑥ 판별 절차 공백 · #4 계수 stale · #5 M8 초안 stale · #6 `names` 준비물 누락 · #7 버전 전파 · #8 kickoff 모순). **round16도 FAIL했다** — 뮤테이션 79건 KILL 81.0%(치명 SURVIVED 1) · 안전 high 3·medium 2·low 3 · 문서 major 4·minor 6이며, 기제는 **여섯 라운드째 동일**하다(*어떤 규율을 적용하고 형제 표면에는 적용하지 않는다*). 그 반영이 이번 커밋이다(지적 누계 59+ 건, **5,234 passed / 7 skipped** — **[round15 #4] 이 수치는 반영 후 다시 실측해 §0 헤드라인·§0 기계 확인 커맨드 주석·§E.2 해당 절 세 곳을 함께 갱신할 자리다**). **M8 재정의는 완료**(v0.1.5, 사용자 승인 — 4관문 G1~G4 · REQ 26·AC 27 수 불변). 세션 준비물은 `M8-REDEFINITION-DRAFT.md` §3(**P1~P6**)이고 **미정은 두 건 — P5 원복 절차와 P6 `names` 매핑**이고, **[round16] 사용자 결정 대기 두 건이 더 늘었다 — P4 테스트 자원 분리의 실현 방법(유니버스·주소 분리는 이 툴로 불가능하다)과 AC-026④(G4) '제거 불가' 판정 공백**이다(`spec.md` §C 「사용자 결정 대기」). **[round15 #6 · round16 #2] `names`의 키는 `patchplan._candidate_id`의 sha256 해시라 손으로 만들 수 없다 — 1단계 리포트 payload를 한 번 떠서 동결하고 드라이런의 `plan.candidates[].id`를 복사해야 한다(`plan.md` §B M8 착수 전제 ⑥). `names`를 준비하지 않으면 세션 당일 대상이 구조적으로 0건이 되고, 구 AC-026①(종단 생성 요구) 삭제와 곱해져 아무것도 증명하지 못한 세션이 PASS로 적힐 수 있다** — 대상 0건 세션은 `G1 미검증`으로 적는다(`acceptance.md` AC-026 아래 고지 블록). **[round15 #3]** 세션 중에는 G2 착수 전에 전달물 원문(`lua_source` 전문·실행 절차·대상 표)을 §E.2 M8 절에 보존하라 — 이것이 없으면 AC-026⑥ 면책을 원용할 수 없다. 세션에 **표시 문자열 판별 실험**(AC-026⑦)을 포함하고, **`unpatched` 미실측 가정**(`console_read.unpatched_count`)을 세션 전에 눈으로 대조하라. 코드 마일스톤 M1~M7 완료(**`audit-ready`는 plan-phase 신호일 뿐 \"M4 착수 단계\"가 아니다 — round15 #8**). 착수 전 §0 함정 9·10·11과 항목 2b·2c·2d, §E.2 round11~16 절의 [HARD] 패턴을 읽어라. 그리고 **뮤테이션·대조군 되돌리기에 git을 쓰지 마라** — §0 기계 확인 커맨드 아래 **뮤테이션 하네스**를 그대로 복사해 써라(round16 #4)."
 ```
 
 ---
@@ -1896,8 +1980,12 @@ AC-024 대조군을 "PRESERVE에 심고 → 커밋 → diff 확인 → `git rese
 
 **교훈 — 대조군에 `git reset --hard`를 쓰지 마라.** PRESERVE 게이트는 커밋 없이도 확인된다:
 작업트리에 심고 `git diff --stat <BASE> -- <PRESERVE>`(`..HEAD` 없이)로 보면 미커밋 변경까지
-포함해 잡히고, 되돌리기는 **해당 파일 하나만** `git checkout --`으로 한다. 위 대조군 표의
-마지막 실행은 그 안전한 절차로 다시 돌린 결과다.
+포함해 잡힌다. 위 대조군 표의 마지막 실행은 그 안전한 절차로 다시 돌린 결과다.
+**[round16 #4 정정]** 이전 판은 이 자리에서 *"되돌리기는 **해당 파일 하나만**
+`git checkout --`으로 한다"*고 적었다 — **그것도 소실이다.** round15에서 두 감사자가
+정확히 그 지시를 따르다 미커밋 작업분을 날렸다(§E.2 round15 절). 되돌리기는 git이 아니라
+**원문 메모리 백업 + write-back**이며, 절차는 §0 「기계 확인 커맨드」 아래
+**뮤테이션 하네스**에 그대로 실행 가능한 형태로 있다.
 
 #### 범위 경계
 
@@ -2386,6 +2474,12 @@ write → pytest → 원복 → write가 같은 초 안에 일어나면 **직전
 (오케스트레이터의 `apply.py` 수정 · 자기 `test_autopatch_verify.py` 편집분). 둘 다 복원됐다.
 §0의 기존 금지 문구는 `git reset --hard`만 다뤘고 `git checkout --`는 오히려 권장하고 있었다 —
 **미커밋 변경이 있는 파일에서는 그것도 소실이다.** 금지 문구를 확장했다.
+**[round16 #4 후속] 그 확장이 모순을 남겼다.** 새 금지 블록을 넣으면서 **바로 위의 권장 줄
+(`되돌리기는 심은 파일 하나만 git checkout -- <path>`)을 지우지 않아** 같은 코드블록의 두 줄이
+서로 반대를 지시했고, `§E.2 M7` 사고 기록의 형제 문장도 그대로 권장을 유지하고 있었다 —
+**규율 1(처방의 도달 범위 재도출) 위반을 금지 문구를 고치는 그 자리에서 저질렀다.**
+round16이 두 줄을 하나로 합치고, 서술 대신 **복사해 실행 가능한 뮤테이션 하네스**
+(백업 → 치환 → 격리 실행 → 복원 → `git status --porcelain` 대조)를 §0에 넣었다.
 
 #### 반영 후 재측정 — 오케스트레이터 직접 실측
 
@@ -2398,13 +2492,151 @@ write → pytest → 원복 → write가 같은 초 안에 일어나면 **직전
 `_rejected_field` 폴백 되돌리기 · 도달성 2필드 하드코딩 · `validate_assumption_71` 무력화 ·
 금지 목록에서 토큰 제거 2건.
 
+#### 미검증 잔여 — **[round16 #1] 이 절은 거짓을 적고 있었다 (정정)**
+
+이번 반영도 **작성자 자기 검증 상태**다 — round16이 필요하다.
+
+**[round16 #1] 정정.** 이전 판은 여기에 *"이번 반영은 앞선 넷과 달리 **프로덕션 동작을 거의
+바꾸지 않았다**(바꾼 것은 ① 기본 인스턴스의 의미 ② unpatched 고지 억제 제거 ③ 표시 문자열
+위치 ④ 도달성 필드 분리 **넷뿐**이고, 나머지는 전부 대조군 추가다). 그만큼 **새 치명을 만들
+표면은 작다**"*라고 적었다. **거짓이었다.** round16 문서 감사가 다섯째·여섯째를 찾았고,
+오케스트레이터가 `git show 774023a -- server/vwx server/orchestrator`를 **직접 재도출**해
+**일곱째**를 더 찾았다. 실제 개수는 **일곱 건**이며, 그중 하나(⑤)는 이 SPEC이 자기 손으로
+낳은 **round16 S16-01 결함의 발생 지점 그 자체**다 — 즉 "새 치명을 만들 표면은 작다"는
+주장은 같은 커밋 안에서 이미 반증되어 있었다.
+
+**재도출 결과 — 774023a가 바꾼 프로덕션 동작 전수** (코드 diff에서 직접 셈. 감사 숫자를
+베끼지 않았다. `[코드]`):
+
+| # | 파일 · 심볼 | 무엇이 관측 가능하게 바뀌었나 | 이전 판이 셌나 |
+|---|---|---|---|
+| ① | `patchplan.ExistingFidRead.attempted` | 기본 인스턴스가 `complete=True` → **`False`**. `to_dict`에 `attempted` 키 추가, `reason()`에 미수행 갈래 추가. 포트 부재(`fid_property_port=None`)가 배정 가드를 통과하던 fail-open이 닫힘 | ✅ |
+| ② | `apply.console_read_caveat` UNPATCHED_PRESENT 갈래 | `and not inventory.index_domain_unknown` 억제 가드 **제거** → 절단 상태에서도 미실측 가정 고지가 나감. 두 사실이 함께 참이면 `또한 <절단 절>` 병기. payload에 `index_domain_unknown` 키 추가 | ✅ |
+| ③ | `apply.screen_idempotent` · `apply.verify_patch` · `PatchTargetExclusion` · `VerificationResult` | 콘솔 표시 문자열 원문이 **사유/`detail` 문장에서 빠지고** `observed_type_display`·`observed_mode_display` **구조화 필드 4개**(2 dataclass × 2)로 이동. 두 `to_dict`에 각각 2키 추가 | ✅ |
+| ④ | `tools.build_toolset`의 `negative_branch_reachable` | 술어가 `_INJECTED != GO` → **`== NEGATIVE`**. `inconclusive` 주입에서 값이 갈린다. `confirmation_branch_reachable` 키 신설 | ✅ |
+| ⑤ | `apply.console_read_caveat` **INCOMPLETE 갈래의 `reason` 조립** | 고정 3항 문장 → **관측된 축만** `" · ".join(parts)`로 조립. 동시에 **미패치 절(`_unpatched_clause`)이 이 갈래에 처음 편입**됐다. 0인 축이 문장에서 빠지는 것 자체가 출력 변경이다 | ❌ **누락** |
+| ⑥ | `patchplan.unparsable_rows` + `_mapping_rows` → `_row_sequence` | **입력 해석 자체가 바뀌었다.** 이전 판은 비매핑 children 행을 세지 않고 버렸고, 이제 `_row_sequence`로 원행을 전부 받아 `len(raw) - len(mappings)`를 여섯째 실패 축으로 센다. `complete` 판정 축이 5 → **8**(`attempted` 포함), `reason()`·`to_dict` 각 1항 추가 | ❌ **누락** |
+| ⑦ | `patchplan.ExistingFidRead.reason()`의 `root_unreadable` 문장 | `"…확인하지 못했다."` → `"…확인하지 못했다"` (마침표 제거). 호출부가 `f"… — {reason()}. "`로 감싸므로 이전 판은 조작자에게 **`못했다.. 부분 관측으로…`** 라는 이중 마침표를 냈다 | ❌ **누락**(감사도 못 찾음) |
+
+**그래서 무엇이 틀렸나.** ⑤와 ⑥은 "대조군 추가"가 아니다 — ⑤는 **조작자가 읽는 문장의
+조립 방식**을 바꿨고 ⑥은 **콘솔 스냅샷을 해석하는 규칙**을 바꿨다. 특히 ⑤는 자체로
+마침표까지 끝나는 완결 문장(`_unpatched_clause()`)을 `" · "` 조인 안에 넣어
+`…눈으로 대조하라. — 이 상태의 '없음'은 … 미판독이다.`를 냈고, 그 결과 **미판독 판정이
+미패치 절에 오귀속**됐다(round16 S16-01, 별도 반영 완료). "표면이 작다"는 주장이
+**바로 그 표면에서** 결함을 낳았다.
+
+**이 SPEC은 같은 과잉주장을 반복하고 있다.** §E.2z(원인 확정 과잉) · round11 N07 ·
+round14 T16 · round15 #4에 이어 **다섯 번째**다. 기제는 매번 같다 — *반영의 규모를
+자기 기억으로 세고 코드로 재도출하지 않는다.* 다음 라운드부터 **"프로덕션 동작을 N개
+바꿨다"는 문장은 `git show <sha> -- <경로>` 재도출 표 없이 적지 않는다.**
+
+그리고 앞선 넷과의 비교 자체를 근거로 쓰지 마라 — round14도 "표면이 작다"고 적었고
+round15는 FAIL했으며, round15도 같은 말을 적었고 round16은 **치명 1건 + 안전 high 3건**으로
+FAIL했다. 그 말을 근거로 재감사를 건너뛰지 마라.
+
+
+### round16 — 여섯 번째 재감사 FAIL · 지적 반영 (완료)
+
+**테스트**: **5,354 → 5,690 passed / 7 skipped (+336, 회귀 0)**.
+전문: `.moai/reports/plan-audit/SPEC-COPILOT-AUTOPATCH-001-round16.md`.
+
+#### 이번에 깨진 것은 코드가 아니라 **게이트를 지키는 게이트**였다
+
+감사자 3명(안전 축 · 적대/뮤테이션 축 · 문서 축) 전원 FAIL.
+뮤테이션 **79건 KILL 81.0%**(round15 68.8% → 개선). 살아남은 15건 중 **치명 1건**.
+
+**치명 M61** — `screen_console_occupancy`의 중첩 판정
+`planned.address < fixture.address <= planned.end_address`에서 `<=`를 `<`로 바꿔도
+**전체 5,354건이 통과**한다. 그러면 **계획 구간의 마지막 채널에서 시작하는 기존 픽스처**를
+점유로 잡지 못한다. `screen_idempotent`는 시작 주소만 보므로 백스톱이 없다 —
+**겹치는 픽스처가 전달물로 나간다**(산출물 차이 실증: `kept=[]` → `kept=[('a',1,8)]`).
+round15 치명 2건과 **정확히 같은 형태**(경계 1 무대조군)의 **형제 함수**다.
+
+#### [HARD] 더 나쁜 것 — round15의 치명 2건을 되살리는 데 **테스트 6줄**이면 됐다
+
+```
+P2 = R15_SOLE_AXIS_ROWS에서 'unreadable_fids == 1' 행 삭제  → 조용한 축소, 실패 0
+C1 = P2 + complete의 `unreadable_fids > 0` → `> 1`         → 5,353 passed / 0 failed
+     그 상태에서 부분 관측 위에 FID 101 실제 배정 · payload가
+     `complete: True`와 `unreadable_fid_count: 1`을 **나란히** 싣는다
+C2 = 같은 형태(unusable_rows)                               → 동일
+```
+
+round15가 세운 경계 대조군은 **표(parametrize 행 목록)** 위에 있었고, **그 표에 행이
+빠지는 것을 막는 것이 없었다.** 게이트를 만들었으나 게이트를 지키는 게이트가 없었다.
+
+#### 규율 1이 **같은 커밋 안에서** 걸렸다
+
+round15 커밋은 전단사(bijection) 게이트를 **네 표에 붙였다** — 그 넷은 행을 지우면
+정상적으로 실패한다. 붙이지 않은 넷은 **가장 안전에 가까운 두 표를 포함**했다:
+`R15_SOLE_AXIS_ROWS`(FID 여덟 축) · `_ROUND15_CAVEAT_TABLE`(caveat 네 갈래).
+*어떤 규율을 적용하고 형제 표면에는 적용하지 않는다* — 여섯 라운드째 같은 기제다.
+
+#### 작성자(오케스트레이터)의 round15 반영이 만든 결함 — S16-01
+
+round15가 INCOMPLETE 사유를 부분 문장 조립으로 바꾸면서 `_unpatched_clause()`
+(**자체로 마침표까지 끝나는 완결 문장**)를 `" · ".join(parts)` **안에** 넣었다.
+
+```
+…server/prechk는 같은 값을 판독 실패로 등급한다. 세션 전에 눈으로 대조하라. — 이 상태의
+'없음'은 관측이 아니라 미판독이다.
+```
+
+① 문장 중간에 마침표+대시가 박히고 ② 꼬리의 **미판독** 판정이 바로 앞의 **미패치** 절에
+붙었다 — `classify_patch_value`가 `PATCH_UNPATCHED`와 `PATCH_UNREAD`를 의도적으로
+갈라놓은 것과 **정반대로 읽힌다**. 이 문자열은 `screen_console_read`가 차단한 **모든**
+대상의 `exclusion.reason`으로 사람에게 나갔다. 미판독 꼬리를 미판독 축에만 붙이고
+미패치 고지를 **독립 문장**(`… 미판독이다. 또한 …`)으로 잇도록 고쳤다.
+
+#### 안전 축이 찾은 형제 미적용 4건
+
+| # | 형제 표면 | 무엇이 |
+|---|---|---|
+| S16-02 | `patchplan.py:505` 확인요구 거부 payload | `attempted` 정직성 대조군이 **비-GO 분기 사이트에만** 있었다. 형제 사이트를 `ExistingFidRead(attempted=True, child_count=0)`로 위조하면 조작자 화면이 "콘솔을 읽었고 픽스처 0대이며 읽기는 완전했다"고 말하는데 전부 통과했다 |
+| S16-03 | `_fid_precheck_incomplete_check` | 차단 화면의 **여덟 축 계수 + 사유가 전부 무게이트**. 통째 삭제 · 거부 사유와 자기모순되는 `complete: True` 탑재 · 안심 문구 교체가 **셋 다** 통과 |
+| S16-04 | `ZERO_CREATED_GUIDANCE` | **사람이 콘솔에서 따라 실행할 절차 지시문**인데 `verification.guidance`로 나가며 **모든 CD 게이트 밖**에 있었다. round15의 "표면 전수 분류"는 `PatchHandoff.to_dict()` 안에서만 전수였다 |
+| S16-05 | `screen_idempotent`의 `ADDRESS_CONFLICTS_WITH_EXISTING` | 계약 2b④를 **같은 함수 20줄 위** 갈래에만 적용했다. 점유자 이름이 `CD 5`면 사유 문장에 `CD`가 들어간다 |
+
+#### 자기충족 대조군이 **또** 생겼다 — 지운 자리 20줄 아래에
+
+round15가 round14 T09의 항진명제 2건을 지우며 "그 유형을 없앴다"고 적었는데,
+**같은 커밋이 같은 구조를 20건 새로 만들었다** — `_ROUND15_REASSURING_TOKENS`(11)·
+`_ROUND15_CAUTION_TOKENS`(9)의 "load bearing" 테스트가 목록에서 만든 문자열을
+**같은 목록으로 다시 거른다**. 프로덕션 호출 0회.
+
+게다가 **어휘 목록 방식 자체가 반증됐다**(M44): `_INDEX_DOMAIN_CLAUSE`에
+`"주의할 것 없음, "`을 삽입하면 안심 목록 11개에 안 걸리고, **하필 caution 토큰
+`"주의"`를 부분 문자열로 포함**해 경고 게이트까지 만족시킨다.
+→ 항진명제 20건을 삭제하고 caveat label·reason을 **문장 전문 리터럴 동등**으로 고정했다.
+어휘 검사는 보조로만 남기고 **부분문자열 충돌 배제 단정**을 붙였다.
+
+#### 반영 요약
+
+| 축 | 무엇을 |
+|---|---|
+| 구간 경계 | 중첩 판정 **관계 전수 분류표**(계획×기존 구간 22행) + 형제 경계 전수 — `_spans_overlap` · FID 범위 양끝 · 멱등 주소 · 유니버스 512 · footprint 부호. 프로덕션 뮤테이션 13건 KILLED |
+| 표 | **여덟 표 전부에 전단사/전수 게이트**. `R15_SOLE_AXIS_ROWS`는 `complete`의 차단 조항을 **AST로 파싱해 파생**한 집합과 전단사 — 리터럴 기준이 아니라 프로덕션에서 나온다 |
+| 문장 | caveat 10갈래 label·reason **전문 리터럴 고정** · `HUMAN_EXECUTION_PROCEDURE` 5단계 전문 + **비모순 단정**(절차가 나가면 "오류 없이 끝난 것은 성공이 아니다" 경고가 반드시 동반) · `apply.py` 모듈 상수 19개 전수 리터럴 |
+| 형제 사이트 | `ExistingFidRead()` payload 사이트 3곳 · `_exclusion(...)` 호출 11자리 · `verify_patch` detail 6갈래 · `validate_autopatch` 14사이트 · 표시 문자열 4칸 — 전부 **AST 전단사** |
+| 게이트 범위 | `ZERO_CREATED_GUIDANCE`를 콘솔 절차 표면으로 등록해 CD 게이트 편입 · `verification` payload 키도 전수 분류 |
+| 계약 | `screen_idempotent` 단일 점유자 갈래 **넷 전부**에 2b④+2c① 통일(사유 문장에 관측 원문 금지 · 원문은 구조화 필드로) |
+
+#### 반영 후 재측정 — 오케스트레이터 직접 실측
+
+감사에서 살아남았던 뮤테이션 14건 + **치명 재개방 복합 프로브 5건(P2·P3·C1·C2·P4)**
+= **19건 전부 KILLED**. 매 실행 `PYTHONPYCACHEPREFIX` 격리, 원복은 git이 아니라 원문 write-back.
+
+#### 세션 사고 — 감사자 하나가 7시간 멈췄다
+
+문서 축 반영 에이전트가 서사 정정을 끝낸 뒤 **계수 3곳과 본 절을 남기고 정지**했다
+(문서 최종 수정 16:21, 발견 23:28). 오케스트레이터가 취소하고 직접 마무리했다.
+**진행 정지는 산출물 검사로만 잡힌다** — 에이전트 자기보고를 기다리지 마라.
+
 #### 미검증 잔여
 
-이번 반영도 **작성자 자기 검증 상태**다 — round16이 필요하다. 이번 반영은 앞선 넷과 달리
-**프로덕션 동작을 거의 바꾸지 않았다**(바꾼 것은 ① 기본 인스턴스의 의미 ② unpatched 고지 억제
-제거 ③ 표시 문자열 위치 ④ 도달성 필드 분리 넷뿐이고, 나머지는 전부 대조군 추가다).
-그만큼 **새 치명을 만들 표면은 작다** — 그러나 round14도 같은 말을 했고 round15는 FAIL했다.
-그 말을 근거로 재감사를 건너뛰지 마라.
+이번 반영도 **작성자 자기 검증 상태**다 — round17이 필요하다.
+**이번엔 "표면이 작다"는 말을 적지 않는다.** round14·round15가 연속으로 그렇게 적었고
+둘 다 다음 라운드에서 FAIL했다. 규모 주장은 `git show <sha> -- <경로>` 재도출 없이 적지 않는다.
 
 
 ### M0 라이브 세션 2차 — 테스트 쇼파일 확인 · 파괴적 측정 착수 전 기록 (2026-08-06)
