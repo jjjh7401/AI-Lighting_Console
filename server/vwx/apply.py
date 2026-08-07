@@ -350,12 +350,23 @@ def _rejects(field: str, entry: LuaPatchEntry, neutral: LuaPatchEntry) -> bool:
     return False
 
 
-def _exclusion(target: PatchCandidate, code: str, reason: str) -> PatchTargetExclusion:
+def _exclusion(
+    target: PatchCandidate,
+    code: str,
+    reason: str,
+    *,
+    observed_type_display: str | None = None,
+    observed_mode_display: str | None = None,
+) -> PatchTargetExclusion:
+    """[round15 D] 콘솔 표시 문자열 원문은 `reason` 문장이 아니라 **구조화 필드로** 받는다 —
+    `_rejected_field`가 값 대신 필드 이름을 적는 것과 같은 규율(§0 2b④)이다."""
     return PatchTargetExclusion(
         candidate_id=target.id,
         code=code,
         reason=reason,
         proposed_fid=target.assigned_fid,
+        observed_type_display=observed_type_display,
+        observed_mode_display=observed_mode_display,
     )
 
 
@@ -569,6 +580,17 @@ def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
     unpatched = classified.count(PATCH_UNPATCHED)
     unread = inventory.missing_count + unreadable_addresses
     if unread > 0:
+        # [round15 N12] 관측된 사실만 적는다 — 0인 축은 문장에 넣지 않는다.
+        # round14가 `ExistingFidRead.reason()`에 세운 규율의 형제 적용이다.
+        parts: list[str] = []
+        if inventory.missing_count:
+            parts.append(
+                f"선언된 {inventory.child_count}대 중 {inventory.missing_count}대를 열거하지 못했다"
+            )
+        if unreadable_addresses:
+            parts.append(f"{unreadable_addresses}대는 주소를 판독하지 못했다")
+        if unpatched:
+            parts.append(_unpatched_clause(unpatched))
         return {
             "kind": validate_autopatch("console_read_caveat_kind", CONSOLE_READ_INCOMPLETE),
             "label": console_read_caveat_label(CONSOLE_READ_INCOMPLETE),
@@ -580,13 +602,24 @@ def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
             "unpatched_count": unpatched,
             "unread_count": unread,
             "reason": (
-                f"콘솔 재조회에서 선언된 {inventory.child_count}대 중 "
-                f"{inventory.missing_count}대를 열거하지 못했고 {unreadable_addresses}대는 "
-                "주소를 판독하지 못했다 — 이 상태의 '없음'은 관측이 아니라 미판독이다."
+                "콘솔 재조회에서 "
+                + " · ".join(parts)
+                + " — 이 상태의 '없음'은 관측이 아니라 미판독이다."
             ),
         }
-    if unpatched and not inventory.index_domain_unknown:
+    if unpatched:
         # 막지는 않는다 — 다만 **미실측 가정 위에 있는 갈래**이므로 조작자가 볼 수 있어야 한다.
+        #
+        # **[round15 N03/N06] 절단 여부로 이 고지를 억제하지 않는다.** 이전 판은
+        # `and not inventory.index_domain_unknown` 가드를 달았는데, 절단은 이 콘솔의
+        # **기본 경로**다(실물 콘솔은 픽스처 19대에서 이미 절단 — §E.2 M0 1차).
+        # 그래서 미실측 가정 고지가 실제 세션에서는 거의 항상 사라지고, 대신
+        # "인덱스 도메인만 미상이다"라는 **안심 문구**가 나갔다. 숫자는 payload에 남지만
+        # 그 숫자가 무엇을 뜻하는지 말하는 문장이 없었다 — round14 T02가 명명한 기제
+        # 그대로다. 두 사실이 함께 참이면 **둘 다 적는다**.
+        reason = _unpatched_clause(unpatched)
+        if inventory.index_domain_unknown:
+            reason = f"{reason} 또한 {_INDEX_DOMAIN_CLAUSE}"
         return {
             "kind": validate_autopatch("console_read_caveat_kind", CONSOLE_READ_UNPATCHED_PRESENT),
             "label": console_read_caveat_label(CONSOLE_READ_UNPATCHED_PRESENT),
@@ -596,12 +629,9 @@ def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
             "missing_count": 0,
             "unreadable_address_count": 0,
             "unpatched_count": unpatched,
+            "index_domain_unknown": inventory.index_domain_unknown,
             "unread_count": 0,
-            "reason": (
-                f"콘솔 픽스처 {unpatched}대가 최소 인덱스 미만 Patch 값을 가진다 — "
-                "이 모듈은 그것을 '주소를 점유하지 않는다'로 읽지만 그 전제는 미실측이고 "
-                "server/prechk는 같은 값을 판독 실패로 등급한다. 세션 전에 눈으로 대조하라."
-            ),
+            "reason": reason,
         }
     if inventory.index_domain_unknown:
         return {
@@ -616,12 +646,25 @@ def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
             "unreadable_address_count": 0,
             "unpatched_count": unpatched,
             "unread_count": 0,
-            "reason": (
-                "열거가 절단됐으나 선언된 자식을 전부 관측했다 — 수량 비교는 정확하고, "
-                "인덱스 도메인만 미상이다."
-            ),
+            "reason": _INDEX_DOMAIN_CLAUSE,
         }
     return None
+
+
+#: 절단 고지 문장 — 두 갈래가 **같은 문자열**을 쓴다. 한쪽만 고치는 것을 막는다.
+_INDEX_DOMAIN_CLAUSE = (
+    "열거가 절단됐으나 선언된 자식을 전부 관측했다 — 수량 비교는 정확하고, "
+    "인덱스 도메인만 미상이다."
+)
+
+
+def _unpatched_clause(unpatched: int) -> str:
+    """미실측 가정 고지 문장 — 세 갈래가 **같은 문자열**을 쓴다."""
+    return (
+        f"콘솔 픽스처 {unpatched}대가 최소 인덱스 미만 Patch 값을 가진다 — "
+        "이 모듈은 그것을 '주소를 점유하지 않는다'로 읽지만 그 전제는 미실측이고 "
+        "server/prechk는 같은 값을 판독 실패로 등급한다. 세션 전에 눈으로 대조하라."
+    )
 
 
 def screen_console_read(
@@ -792,9 +835,15 @@ def screen_idempotent(
                 _exclusion(
                     target,
                     EXISTING_IDENTITY_UNCONFIRMED,
+                    # [round15 D] 문장은 **좌표와 필드 이름**만 적는다 — 콘솔이 돌려준 원문은
+                    # 아래 구조화 필드로 간다(§0 2b④). 원문을 문장에 되실으면 AC-014①
+                    # 산출물 스캐너가 거짓 양성을 내 게이트가 강제력을 잃는다.
                     f"유니버스 {planned.universe} 주소 {planned.address}에 픽스처가 있으나 "
-                    f"표시 문자열({occupant.type_display!r} · {occupant.mode_display!r})을 "
-                    "라이브러리에 대조해 확정할 수 없다 — 이미 했음으로 간주하지 않는다.",
+                    "그 픽스처의 FixtureType·Mode 표시 문자열을 라이브러리에 대조해 "
+                    "확정할 수 없다 — 이미 했음으로 간주하지 않는다. 관측된 원문은 "
+                    "observed_type_display · observed_mode_display 필드에 있다.",
+                    observed_type_display=occupant.type_display,
+                    observed_mode_display=occupant.mode_display,
                 )
             )
             continue
@@ -851,6 +900,11 @@ class VerificationResult:
     observed_type: str | None
     observed_mode: str | None
     detail: str
+    #: [round15 D] 라이브러리 대조에 실패했을 때 콘솔이 돌려준 **원문**. `observed_type`은
+    #: 확정된 라이브러리 이름이라 그 경우 `None`이 되므로, 원문을 여기서 따로 싣는다 —
+    #: 조작자는 무엇을 봤는지 알아야 하고(§0 2c①), `detail` **문장**에는 넣지 않는다(2b④).
+    observed_type_display: str | None = None
+    observed_mode_display: str | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -862,6 +916,8 @@ class VerificationResult:
             "expected_mode": self.expected_mode,
             "observed_type": self.observed_type,
             "observed_mode": self.observed_mode,
+            "observed_type_display": self.observed_type_display,
+            "observed_mode_display": self.observed_mode_display,
             "outcome": validate_autopatch("verification_outcome", self.outcome),
             "label": verification_outcome_label(self.outcome),
             "detail": self.detail,
@@ -976,9 +1032,11 @@ def verify_patch(
             detail = "그 유니버스·주소에서 픽스처가 관측되지 않았다."
         elif not occupant.identity_resolved:
             outcome = VERIFICATION_IDENTITY_UNCONFIRMED
+            # [round15 D] 원문은 `observed_*_display` 필드로 간다 — 문장에 되싣지 않는다(2b④).
             detail = (
-                f"픽스처는 있으나 표시 문자열({occupant.type_display!r} · "
-                f"{occupant.mode_display!r})을 라이브러리에 대조해 확정할 수 없다."
+                "픽스처는 있으나 그 픽스처의 FixtureType·Mode 표시 문자열을 라이브러리에 "
+                "대조해 확정할 수 없다 — 관측된 원문은 "
+                "observed_type_display · observed_mode_display 필드에 있다."
             )
         elif occupant.type_name == entry.console_type and occupant.mode_name == entry.console_mode:
             outcome = VERIFICATION_OBSERVED
@@ -999,6 +1057,8 @@ def verify_patch(
                 observed_type=occupant.type_name if occupant is not None else None,
                 observed_mode=occupant.mode_name if occupant is not None else None,
                 detail=detail,
+                observed_type_display=occupant.type_display if occupant is not None else None,
+                observed_mode_display=occupant.mode_display if occupant is not None else None,
             )
         )
 

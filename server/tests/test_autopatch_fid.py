@@ -488,11 +488,13 @@ def test_a_truncated_fid_enumeration_refuses_to_assign():
     assert [target.assigned_fid for target in plan.targets] == [None]
     read = plan.fid_safety["conflict_precheck"]["read"]
     assert read == {
+        "attempted": True,
         "child_count": 2,
         "enumerated_count": 1,
         "unseen_count": 1,
         "unreadable_fid_count": 0,
         "unusable_row_count": 0,
+        "unparsable_row_count": 0,
         "over_enumerated": False,
         "root_unreadable": False,
         "complete": False,
@@ -651,3 +653,390 @@ def test_the_message_reaches_the_user_facing_rejection():
     plan = _plan_with(_ShapedFidPort(child_count=2, rows=[], root_ok=False))
     assert plan.ok is False
     assert "루트 상태를 읽지 못했다" in plan.rejection.reason
+
+
+# --------------------------------------------------------------------------
+# --- round15 ExistingFidRead 축별 경계 게이트 ---
+#
+# `ExistingFidRead.complete`는 되돌릴 수 없는 FID 배정을 막는 **유일한 술어**다.
+# 그 부정 조건은 여덟 축이지만, round15 적대 감사가 뮤테이션 48건을 돌린 결과
+# **경계 1에 대조군이 있는 축은 `unseen > 0` 하나뿐**이었다:
+#   · `unreadable_fids > 0` → `> 1` 이 5,234건 전부 통과 — 기존 테스트가 두 슬롯을
+#     모두 실패시켜 `== 2`만 봤다. 실물 콘솔에서 가장 흔한 부분 실패는 **한 슬롯**이다.
+#   · `unusable_rows > 0` → `> 1` 도 전부 통과 — 기존 중복 슬롯 테스트는 `unseen`도
+#     동시에 1이 되어 **다른 축이 대신 막아준다**. 이 축 단독 검증은 한 번도 없었다.
+#   · `to_dict()`의 `over_enumerated`·`root_unreadable`을 리터럴 `False`로 바꿔도 무검출.
+#   · `max(child_count - len(read_slots), 0)`의 `max`를 제거해도 무검출(불변식이 단측).
+#   · 포트 부재 분기에 `attempted=True`를 붙여도(= fail-open 복원) 무검출.
+# 아래 표는 **여덟 축을 각각 단독으로 1** 발화시키고, 나머지 일곱 축이 전부 0임을
+# 같은 단정에서 고정한다. "다른 축이 대신 막지 않는다"가 없으면 경계를 집지 못한다.
+# --------------------------------------------------------------------------
+
+
+class _R15RawPort:
+    """루트 스냅샷의 `node`·`children`을 **가공 없이** 돌려주는 포트.
+
+    `_ShapedFidPort`는 행을 항상 `{"i": …}` 매핑으로 만들어 `i` 결손 행과 비매핑 행을
+    표현할 수 없다. `unusable_rows`·`unparsable_rows` 축을 **단독으로** 발화시키려면
+    그 두 형태가 필요하다(중복 슬롯을 쓰면 `unseen`이 함께 오르므로 단독이 아니다).
+    """
+
+    def __init__(self, *, node, children, fids=None, root_ok=True):
+        self.node = node
+        self.children = children
+        self.fids = fids or {}
+        self.root_ok = root_ok
+
+    def query_state(self, path: str) -> dict:
+        if not self.root_ok:
+            return {"ok": False, "path": path, "error": "unreadable"}
+        return {"ok": True, "path": path, "node": self.node, "children": self.children}
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        value = self.fids.get(int(path.rsplit("/", 1)[1]))
+        if value is None:
+            return {"ok": False, "path": path, "property": property_name, "error": "not readable"}
+        return {"ok": True, "path": path, "property": property_name, "value": value}
+
+
+def _r15_axes(read) -> dict:
+    """`complete`의 부정 조건이 읽는 **일곱 축 전부**를 한 사전으로 관측한다."""
+    return {
+        "attempted": read.attempted,
+        "root_unreadable": read.root_unreadable,
+        "over_enumerated": read.over_enumerated,
+        "unseen": read.unseen,
+        "unreadable_fids": read.unreadable_fids,
+        "unusable_rows": read.unusable_rows,
+        "unparsable_rows": read.unparsable_rows,
+    }
+
+
+def _r15_clean_axes(**overrides) -> dict:
+    """ "아무 문제 없는 읽기"의 축 벡터에서 **한 축만** 바꾼다."""
+    axes = {
+        "attempted": True,
+        "root_unreadable": False,
+        "over_enumerated": False,
+        "unseen": 0,
+        "unreadable_fids": 0,
+        "unusable_rows": 0,
+        "unparsable_rows": 0,
+    }
+    axes.update(overrides)
+    return axes
+
+
+# (축 이름, 그 축만 발화시키는 포트 구성, 기대 축 벡터, reason() 문구 조각)
+R15_SOLE_AXIS_ROWS = (
+    (
+        "attempted=False",
+        None,
+        # 포트가 없으면 조회 자체를 하지 않았다 — 다른 축은 전부 기본값 0이라
+        # `attempted`가 유일한 차단 신호다.
+        _r15_clean_axes(attempted=False),
+        "콘솔 FID 조회를 수행하지 않았다",
+    ),
+    (
+        "root_unreadable",
+        dict(node={"childCount": 2}, children=[], root_ok=False),
+        _r15_clean_axes(root_unreadable=True, unseen=0),
+        "루트 상태를 읽지 못했다",
+    ),
+    (
+        "over_enumerated",
+        dict(node={"childCount": 1}, children=[{"i": 1}, {"i": 2}], fids={1: 100, 2: 101}),
+        _r15_clean_axes(over_enumerated=True),
+        "열거된 슬롯 2개가 선언 총계 1개보다 많다",
+    ),
+    (
+        "unseen is None",
+        dict(node={}, children=[{"i": 1}], fids={1: 100}),
+        _r15_clean_axes(unseen=None),
+        "총계(childCount)를 읽지 못해",
+    ),
+    (
+        "unseen == 1",
+        dict(node={"childCount": 2}, children=[{"i": 1}], fids={1: 100}),
+        _r15_clean_axes(unseen=1),
+        "선언 2개 중 1개를 열거하지 못했다",
+    ),
+    (
+        "unreadable_fids == 1",
+        dict(node={"childCount": 2}, children=[{"i": 1}, {"i": 2}], fids={1: 100}),
+        _r15_clean_axes(unreadable_fids=1),
+        "열거된 슬롯 1개의 FID 값을 얻지 못했다",
+    ),
+    (
+        "unusable_rows == 1",
+        dict(
+            node={"childCount": 2},
+            children=[{"i": 1}, {"i": 2}, {"name": "슬롯 번호 없음"}],
+            fids={1: 100, 2: 101},
+        ),
+        _r15_clean_axes(unusable_rows=1),
+        "슬롯 번호가 없거나 중복인 행 1개를 쓰지 못했다",
+    ),
+    (
+        "unparsable_rows == 1",
+        dict(node={"childCount": 2}, children=[{"i": 1}, {"i": 2}, None], fids={1: 100, 2: 101}),
+        _r15_clean_axes(unparsable_rows=1),
+        "슬롯으로 해석되지 않는 행 1개가 섞여 있다",
+    ),
+)
+
+
+@pytest.mark.parametrize(
+    "axis,port_kwargs,expected_axes,expected_phrase",
+    R15_SOLE_AXIS_ROWS,
+    ids=[row[0] for row in R15_SOLE_AXIS_ROWS],
+)
+def test_each_incomplete_axis_alone_blocks_the_fid_assignment(
+    axis, port_kwargs, expected_axes, expected_phrase
+):
+    """여덟 축을 **각각 단독으로 1**만 발화시켜도 배정이 멈춘다.
+
+    기대 축 벡터를 통째로 단정하므로 "다른 축이 대신 막아준 것"이 아님이 같은
+    단정에서 고정된다 — 그 고정이 없으면 경계(`> 0` vs `> 1`)를 집지 못한다.
+
+    [round15 N1] `patchplan.py` `complete`의 `self.unreadable_fids > 0`을 `> 1`로 바꾸면
+      'unreadable_fids == 1' 행이 실패한다(기존 테스트는 두 슬롯 모두 실패시켜 `== 2`만 본다).
+    [round15 N2] 같은 곳 `self.unusable_rows > 0` → `> 1` 이면 'unusable_rows == 1' 행이 실패한다
+      (기존 중복 슬롯 테스트는 `unseen`도 1이 되어 다른 축이 대신 막아준다).
+    [round15 N3] 같은 곳 `self.unparsable_rows > 0` → `> 1` 이면
+      'unparsable_rows == 1' 행이 실패한다.
+    [round15 N4] 같은 곳 `self.attempted and`를 지우면 'attempted=False' 행이 실패한다.
+    [round15 N5] `max(child_count - len(read_slots), 0)`에서 `max`를 지우면
+      'over_enumerated' 행의 `unseen`이 -1이 되어 축 벡터 단정이 실패한다.
+    [round15 N6] `_existing_fids_from_console`의 포트 None 분기를
+      `ExistingFidRead(attempted=True)`로 되돌리면 'attempted=False' 행이 실패한다.
+    """
+    port = None if port_kwargs is None else _R15RawPort(**port_kwargs)
+    read = _existing_fids_from_console(port)
+
+    assert _r15_axes(read) == expected_axes
+    assert read.complete is False
+    assert expected_phrase in read.reason(), read.reason()
+
+    plan = _plan_with(port)
+    assert plan.ok is False
+    assert plan.rejection.code == "fid_precheck_read_incomplete"
+    assert [target.assigned_fid for target in plan.targets] == [None]
+    assert expected_phrase in plan.rejection.reason, plan.rejection.reason
+    # [round15 N11] `reason()`의 끝 마침표를 되살리면 호출부의 `. `와 겹쳐 이중 마침표가 된다.
+    assert ".." not in plan.rejection.reason
+
+    payload_read = plan.fid_safety["conflict_precheck"]["read"]
+    assert payload_read["complete"] is False
+    # payload boolean 2축 — 이 두 필드는 `complete`와 **별도로** 조작자 화면에 나간다.
+    assert payload_read["attempted"] is expected_axes["attempted"]
+    assert payload_read["over_enumerated"] is expected_axes["over_enumerated"]
+    assert payload_read["root_unreadable"] is expected_axes["root_unreadable"]
+    assert payload_read["unreadable_fid_count"] == expected_axes["unreadable_fids"]
+    assert payload_read["unusable_row_count"] == expected_axes["unusable_rows"]
+    assert payload_read["unparsable_row_count"] == expected_axes["unparsable_rows"]
+
+
+def test_the_sole_axis_table_control_a_clean_read_fires_no_axis_and_assigns():
+    """비공허성 대조군 — 같은 포트 계열이라도 축이 하나도 발화하지 않으면 배정이 진행된다.
+
+    이 대조군이 없으면 위 표는 "무엇을 해도 막는다"를 확인하는 공허한 테스트가 된다.
+    """
+    port = _R15RawPort(node={"childCount": 0}, children=[])
+    read = _existing_fids_from_console(port)
+
+    assert _r15_axes(read) == _r15_clean_axes()
+    assert read.complete is True
+
+    plan = _plan_with(port)
+    assert plan.ok is True
+    assert [target.assigned_fid for target in plan.targets] == [101]
+
+
+def test_a_missing_fid_property_port_fails_closed_in_the_go_branch():
+    """포트 부재 fail-open 회귀 — 조회하지 않았으면 배정하지 않는다.
+
+    `fid_property_port`는 시그니처상 기본값이 `None`이다. 이전 판은 그 분기에서
+    `complete=True`인 기본 인스턴스를 돌려줘 GO 분기 가드를 **통과**시켰고, 조회 없이
+    FID를 배정했다. 이 앱에는 실행 취소가 없다.
+
+    [round15 N6] `_existing_fids_from_console`의 포트 None 분기를
+    `ExistingFidRead(attempted=True)`로 바꾸면 이 테스트가 실패한다.
+    [round15 N4] `complete`에서 `self.attempted and`를 지우면 이 테스트가 실패한다.
+    """
+    report = _one_candidate_report()
+    candidate = build_patch_plan(report).candidates[0].id
+    plan = build_patch_plan(
+        report,
+        selected=[candidate],
+        fid_range={"start": 101, "end": 110},
+        assumption_71=ASSUMPTION_71_GO,
+        fid_property_port=None,
+    )
+
+    assert plan.ok is False
+    assert plan.rejection.code == "fid_precheck_read_incomplete"
+    assert [target.assigned_fid for target in plan.targets] == [None]
+    read = plan.fid_safety["conflict_precheck"]["read"]
+    assert read["attempted"] is False
+    assert read["complete"] is False
+    assert plan.fid_safety["conflict_precheck"]["existing_fids"] == []
+
+    # 비공허성 대조군 — **같은 호출에 유효한 포트만 주면** 배정이 진행된다.
+    # 막힌 원인이 포트 부재였음을 이 한 쌍이 증명한다.
+    with_port = build_patch_plan(
+        _one_candidate_report(),
+        selected=[candidate],
+        fid_range={"start": 101, "end": 110},
+        assumption_71=ASSUMPTION_71_GO,
+        fid_property_port=_R15RawPort(node={"childCount": 0}, children=[]),
+    )
+    assert with_port.ok is True
+    assert with_port.fid_safety["conflict_precheck"]["read"]["attempted"] is True
+    assert [target.assigned_fid for target in with_port.targets] == [101]
+
+
+def test_the_negative_branch_payload_never_claims_a_read_it_did_not_make():
+    """비-GO 분기 payload 정직성 — 수행하지 않은 읽기를 '완전 · 기존 FID 0개'로 싣지 않는다.
+
+    이전 판은 이 분기에서 기본 `ExistingFidRead()`를 payload에 실었고, 기본값이
+    `complete=True`·`fids=()`였다. 그러면 조작자 화면에서 **'읽었고 깨끗했다'와
+    구별되지 않는다**. 다만 이 분기에서 **배정 자체는 진행된다** — 사용자 육안 확인
+    (`fid_range_visually_confirmed_empty`)이 대체 안전장치이기 때문이다. 그 사실도
+    같은 테스트에서 고정해, payload 정직성을 고치다 배정을 막아버리는 회귀를 잡는다.
+
+    [round15 N4] `complete`에서 `self.attempted and`를 지우면 `read["complete"]`가
+    True가 되어 이 테스트가 실패한다.
+    """
+    report = _one_candidate_report()
+    candidate = build_patch_plan(report).candidates[0].id
+    plan = build_patch_plan(
+        report,
+        selected=[candidate],
+        fid_range={"start": 101, "end": 110},
+        assumption_71=ASSUMPTION_71_NEGATIVE,
+        fid_range_visually_confirmed_empty=True,
+        fid_property_port=ExplodingFidRigPort(),
+    )
+
+    read = plan.fid_safety["conflict_precheck"]["read"]
+    assert read["attempted"] is False
+    assert read["complete"] is False
+    assert plan.fid_safety["conflict_precheck"]["performed"] is False
+
+    # …그러나 배정은 진행된다. 육안 확인이 이 분기의 활성 안전장치다.
+    assert plan.ok is True
+    assert plan.fid_safety["active_safety"] == "visual_empty_range_confirmation"
+    assert plan.fid_safety["visual_confirmation"]["confirmed"] is True
+    assert [target.assigned_fid for target in plan.targets] == [101]
+
+
+def test_the_root_failure_payload_carries_its_boolean_as_the_only_signal():
+    """루트 실패 payload에서 `root_unreadable`은 **무해 판독을 막는 유일한 필드**다.
+
+    수치 축이 전부 0/None이라, 그 boolean 하나가 리터럴 `False`로 새어 나가면
+    조작자는 같은 payload를 '아무 문제 없음'으로 읽는다.
+
+    [round15 N7] `to_dict()`의 `"root_unreadable": self.root_unreadable`을 리터럴
+    `False`로 바꾸면 이 테스트가 실패한다.
+    """
+    plan = _plan_with(_R15RawPort(node={"childCount": 2}, children=[], root_ok=False))
+    read = plan.fid_safety["conflict_precheck"]["read"]
+
+    assert read["root_unreadable"] is True
+    # 다른 축은 전부 무해한 값이다 — 그래서 위 boolean이 유일한 신호다.
+    assert read["child_count"] is None
+    assert read["enumerated_count"] == 0
+    assert read["unseen_count"] == 0
+    assert read["unreadable_fid_count"] == 0
+    assert read["unusable_row_count"] == 0
+    assert read["unparsable_row_count"] == 0
+    assert read["over_enumerated"] is False
+
+
+def test_the_over_enumerated_payload_carries_its_boolean_as_the_only_signal():
+    """초과 열거 payload에서 `over_enumerated`가 유일한 수치 외 신호다.
+
+    `unseen`은 `max(…, 0)` 때문에 0이고 미판독·미해석 행도 0이라, 이 boolean이
+    리터럴 `False`로 새면 자기모순 스냅샷이 무해하게 읽힌다.
+
+    [round15 N8] `to_dict()`의 `"over_enumerated": self.over_enumerated`를 리터럴
+    `False`로 바꾸면 이 테스트가 실패한다.
+    """
+    plan = _plan_with(
+        _R15RawPort(node={"childCount": 1}, children=[{"i": 1}, {"i": 2}], fids={1: 100, 2: 101})
+    )
+    read = plan.fid_safety["conflict_precheck"]["read"]
+
+    assert read["over_enumerated"] is True
+    assert read["child_count"] == 1
+    assert read["enumerated_count"] == 2
+    assert read["unseen_count"] == 0
+    assert read["unreadable_fid_count"] == 0
+    assert read["unusable_row_count"] == 0
+    assert read["unparsable_row_count"] == 0
+    assert read["root_unreadable"] is False
+
+
+@pytest.mark.parametrize(
+    "label,kwargs,_p", FID_READ_SHAPES, ids=[row[0] for row in FID_READ_SHAPES]
+)
+def test_every_shape_reports_a_coherent_unseen_count(label, kwargs, _p):
+    """`unseen` 불변식을 **양측으로**, 그리고 **모든 형태에 실질 단정으로** 건다.
+
+    형제 테스트 `test_no_shape_reports_more_unseen_than_declared`는 `unseen <= child_count`
+    만 보고(단측), 게다가 `if child_count is not None and unseen is not None:` 가드 때문에
+    6형태 중 2형태('총계 부재'·'루트 실패')에서 **아무것도 단정하지 않는다**. 여기서는
+    분기를 전부 소진해 어떤 형태도 무단정으로 빠져나가지 못하게 한다.
+
+    [round15 N5] `_existing_fids_from_console`의 `max(child_count - len(read_slots), 0)`
+    에서 `max`를 제거하면 '초과 열거' 형태의 `unseen`이 -1이 되어 이 테스트가 실패한다.
+    """
+    read = _existing_fids_from_console(_ShapedFidPort(**kwargs))
+
+    if read.root_unreadable:
+        # 루트 실패: 수치는 아무것도 모른다 — 전용 문장이 그 사실을 말해야 한다.
+        assert read.child_count is None
+        assert read.unseen == 0
+        assert "루트 상태를 읽지 못했다" in read.reason()
+        assert read.complete is False
+        return
+    if read.child_count is None:
+        # 총계 부재: 무엇을 못 봤는지 셀 수 없다 — `unseen`은 0이 아니라 `None`이어야 한다.
+        assert read.unseen is None
+        assert "총계(childCount)를 읽지 못해" in read.reason()
+        assert read.complete is False
+        return
+    assert read.unseen is not None
+    assert 0 <= read.unseen <= read.child_count, read.to_dict()
+
+
+def test_a_non_mapping_child_row_is_counted_rather_than_silently_dropped():
+    """비매핑 행이 섞인 스냅샷을 프로덕션 경로가 **부분 관측으로 등급**한다.
+
+    이전 판은 `_mapping_rows`가 그 행을 조용히 버려 다섯 축 어디에도 걸리지 않는
+    여섯 번째 실패 형태를 만들었고 `complete=True`를 냈다 — 같은 스냅샷에서 형제 리더
+    `server/prechk/inventory.py`의 `read_inventory`는 `AttributeError`로 죽는다.
+    두 리더가 같은 스냅샷을 정반대로 등급하는 상태였다.
+
+    [round15 N3] `complete`의 `self.unparsable_rows > 0`을 `> 1`로 바꾸면 이 테스트가 실패한다.
+    """
+    port = _R15RawPort(
+        node={"childCount": 2}, children=[{"i": 1}, {"i": 2}, None], fids={1: 100, 2: 101}
+    )
+    read = _existing_fids_from_console(port)
+
+    assert read.unparsable_rows == 1
+    assert read.complete is False
+    # 다른 축은 이 스냅샷을 막지 못한다 — `unparsable_rows`가 유일한 차단 신호다.
+    assert read.unseen == 0
+    assert read.unusable_rows == 0
+    assert read.unreadable_fids == 0
+    assert read.over_enumerated is False
+
+    plan = _plan_with(port)
+    assert plan.ok is False
+    assert plan.rejection.code == "fid_precheck_read_incomplete"
+    assert [target.assigned_fid for target in plan.targets] == [None]
+    assert plan.fid_safety["conflict_precheck"]["read"]["unparsable_row_count"] == 1
+    assert "슬롯으로 해석되지 않는 행 1개가 섞여 있다" in plan.rejection.reason
