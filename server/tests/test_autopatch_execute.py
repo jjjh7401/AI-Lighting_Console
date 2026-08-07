@@ -1098,3 +1098,526 @@ def test_the_console_bound_cd_gate_is_clean_without_a_plant():
     namespace = _load(APPLY_SOURCE)
     handoff = namespace["build_patch_handoff"](**_handoff_kwargs(dry_run=False))
     assert CD_TOKEN.search(_console_bound_text(handoff)) is None
+
+
+# --------------------------------------------------------------------------
+# --- round16 사람이 읽는 문장 내용 고정 (TextContentGates) ---
+#
+# round16 적대 감사가 살려 보낸 뮤테이션의 공통 기제는 하나다: **게이트가 문자열의
+# "CD 토큰 없음"만 보고 내용은 보지 않는다.** 그래서 `HUMAN_EXECUTION_PROCEDURE` 5단계를
+#
+#     "실행이 끝나면 완료다 — 플러그인이 오류 없이 끝나면 생성된 것이다."
+#
+# 로 바꿔도 스위트 5,354건이 **전건 통과**했다(M53). `procedure`는 콘솔 표면이고 사람이
+# 그대로 따라 한다. 게다가 그 문장은 같은 payload의 `warnings`로 함께 나가는
+# `PLUGIN_EXIT_IS_NOT_SUCCESS`("플러그인이 오류 없이 끝난 것은 성공이 아니다")와 **정면
+# 모순**한다 — §0 함정 4가 직접 경고한 오독이고, 그 오독의 대가는 되돌릴 수 없는 중복 생성이다.
+#
+# 두 축으로 잠근다.
+#   축 1 — 5단계 **전문 동등**. 표는 프로덕션 상수에서 파생하지 않는다(파생하면 자기 비교라
+#          무엇으로 바꿔도 통과한다). 표에서 행을 지우면 튜플 동등이 깨진다(HARD 규율 3).
+#   축 2 — **비모순 단정**. 어떤 절차 문장도 "무오류 종료 = 성공/생성"으로 읽힐 수 없고,
+#          절차가 나가면 `PLUGIN_EXIT_IS_NOT_SUCCESS`가 **반드시 함께** 나간다(AC-021②).
+# 축 1만 두면 토큰을 피해 문구만 바꾼 형제 변조가 빠져나가고, 축 2만 두면 토큰을 피한
+# 재작성이 빠져나간다. 두 축 모두 **프로덕션 사본에 심어** 잡히는 것을 확인한다.
+# --------------------------------------------------------------------------
+
+#: 절차 5단계의 **전문**. 손으로 옮겨 적은 것이며 `HUMAN_EXECUTION_PROCEDURE`에서
+#: 파생하지 않는다 — 파생은 자기 비교이고, 자기 비교는 게이트가 아니다(round16 지적 3).
+_R16_PROCEDURE_STEPS = (
+    (1, "1. 아래 Lua 소스를 플러그인 라이브러리 파일로 저장한다."),
+    (
+        2,
+        "2. 콘솔에서 Import Plugin '<파일명>' 으로 임포트한다 — 이 빌드의 deploy 동사는 "
+        "플러그인 소스를 쓰지 못하므로"
+        "(객체만 생기고 소스는 빈 상태로 조용히 실행된다) 쓰지 않는다.",
+    ),
+    (
+        3,
+        "3. 같은 이름으로 재임포트하면 소스가 갱신되지 않는다 — 새 이름을 쓰거나 "
+        "슬롯을 비우고 임포트한다.",
+    ),
+    (4, "4. 임포트한 플러그인을 콘솔에서 사람이 실행한다. 서버는 이 실행을 대행하지 않는다."),
+    (5, "5. 실행이 끝나면 서버에 검증 읽기를 요청한다 — 생성 여부는 그 재조회로만 확정된다."),
+)
+
+_R16_PROCEDURE_TEXTS = tuple(text for _, text in _R16_PROCEDURE_STEPS)
+
+
+def test_the_execution_procedure_is_pinned_step_by_step_verbatim():
+    """[round16 M53] `apply.py:119`의 5단계를 다른 문장으로 바꾸면 이 단정이 실패한다.
+
+    표에서 행을 하나 지워도 실패한다 — 튜플 동등이 곧 전단사다(HARD 규율 3).
+    """
+    assert _R16_PROCEDURE_TEXTS == HUMAN_EXECUTION_PROCEDURE
+    assert tuple(number for number, _ in _R16_PROCEDURE_STEPS) == (1, 2, 3, 4, 5)
+
+
+@pytest.mark.parametrize(
+    "number,text", _R16_PROCEDURE_STEPS, ids=[f"step{n}" for n, _ in _R16_PROCEDURE_STEPS]
+)
+def test_each_procedure_step_ships_verbatim_in_the_delivered_payload(number, text):
+    """단계별 전문 동등을 **payload에서** 확인한다 — 상수가 아니라 나가는 값이 기준이다.
+
+    [round16 M53] 5단계를 바꾸면 `step5` 행이 실패한다.
+    """
+    payload = _handoff(dry_run=False).to_dict()
+    assert payload["procedure"][number - 1] == text
+    assert text.startswith(f"{number}. ")
+
+
+def test_the_procedure_payload_is_exactly_the_pinned_table_in_order():
+    """순서까지 고정한다 — 단계 순서가 바뀌면 사람이 캐싱된 소스를 실행하게 된다(§0 항목 9)."""
+    assert _handoff(dry_run=False).to_dict()["procedure"] == list(_R16_PROCEDURE_TEXTS)
+    assert _handoff(dry_run=True).to_dict()["procedure"] == []
+
+
+# --------------------------------------------------------------------------
+# 축 2 — 비모순. "무오류 종료 = 성공/생성"으로 읽히는 어휘는 절차에 들어갈 수 없다.
+#
+# 이 스캔의 대상은 **절차뿐**이다. `PLUGIN_EXIT_IS_NOT_SUCCESS`는 같은 어휘("오류 없이")를
+# **부정형으로** 쓰는 것이 임무이므로 경고 축에 이 스캔을 걸면 거짓 양성이 된다 —
+# 흔한 거짓 양성은 게이트의 강제력을 없앤다(round15 D가 CD 게이트에서 배운 것).
+# --------------------------------------------------------------------------
+
+_R16_SUCCESS_CLAIM_TOKENS = (
+    "오류 없이",
+    "완료다",
+    "성공이다",
+    "성공한 것이다",
+    "생성된 것이다",
+    "생성됐다",
+    "확인하지 않아도",
+    "생략해도",
+)
+
+#: 침해 표본 — (토큰, 그 토큰 **하나에만** 걸리는 절차 문장). 토큰 목록에서 파생하지 않는다.
+_R16_SUCCESS_CLAIM_PROBES = (
+    ("오류 없이", "6. 플러그인이 오류 없이 끝나면 다음 단계로 넘어간다."),
+    ("완료다", "6. 실행이 끝나면 완료다."),
+    ("성공이다", "6. 플러그인 실행은 그 자체로 성공이다."),
+    ("성공한 것이다", "6. 플러그인이 끝났다면 성공한 것이다."),
+    ("생성된 것이다", "6. 실행 뒤에는 픽스처가 생성된 것이다."),
+    ("생성됐다", "6. 실행했다면 픽스처가 생성됐다."),
+    ("확인하지 않아도", "6. 재조회는 확인하지 않아도 된다."),
+    ("생략해도", "6. 검증 읽기는 생략해도 된다."),
+)
+
+
+def _r16_success_claims(text: str) -> list[str]:
+    return [token for token in _R16_SUCCESS_CLAIM_TOKENS if token in text]
+
+
+def test_the_success_claim_probe_table_is_a_bijection_onto_the_token_list():
+    """[round16] 토큰을 지우거나 더하면 이 단정이 깨진다 — 목록과 표본이 1:1이다."""
+    assert tuple(token for token, _ in _R16_SUCCESS_CLAIM_PROBES) == _R16_SUCCESS_CLAIM_TOKENS
+
+
+@pytest.mark.parametrize(
+    "token,probe", _R16_SUCCESS_CLAIM_PROBES, ids=[t for t, _ in _R16_SUCCESS_CLAIM_PROBES]
+)
+def test_each_success_claim_probe_is_caught_by_exactly_one_token(token, probe):
+    """표본이 겨냥한 토큰에만 걸린다 — 인과가 다른 토큰에 가려지지 않는다."""
+    assert _r16_success_claims(probe) == [token]
+
+
+@pytest.mark.parametrize(
+    "token,probe", _R16_SUCCESS_CLAIM_PROBES, ids=[t for t, _ in _R16_SUCCESS_CLAIM_PROBES]
+)
+def test_the_non_contradiction_scan_catches_each_probe_planted_in_the_production_procedure(
+    token, probe
+):
+    """AC-021② 비공허성(전수) — 표본을 **프로덕션 절차에 심어** 프로덕션 산출물을 훑는다.
+
+    `HUMAN_EXECUTION_PROCEDURE`는 `build_patch_handoff`가 호출 시점에 읽는 모듈 전역이므로
+    사본에서 재바인딩하면 **적재된 프로덕션 함수의 반환값**에 그대로 실린다.
+    """
+    planted = APPLY_SOURCE + (
+        f'\n\nHUMAN_EXECUTION_PROCEDURE = (*HUMAN_EXECUTION_PROCEDURE, "{probe}")\n'
+    )
+    namespace = _load(planted)
+    handoff = namespace["build_patch_handoff"](**_handoff_kwargs(dry_run=False))
+    assert _r16_success_claims("\n".join(handoff.procedure)) == [token]
+
+
+def test_no_production_procedure_step_can_be_read_as_a_success_claim():
+    """대조군의 대조군 — 심지 않은 프로덕션 절차에서는 같은 훑기가 0건이다."""
+    handoff = _handoff(dry_run=False)
+    assert handoff.procedure
+    assert _r16_success_claims("\n".join(handoff.procedure)) == []
+
+
+_R16_M53_PLANTED_STEP_5 = "5. 실행이 끝나면 완료다 — 플러그인이 오류 없이 끝나면 생성된 것이다."
+
+
+def test_the_m53_procedure_mutation_is_caught_on_both_axes():
+    """[round16 M53] 감사가 심은 **바로 그 문장**을 프로덕션 사본에 심어 두 축을 확인한다.
+
+    축 1(전문 동등)과 축 2(비모순 스캔)가 **각각 독립으로** 잡는다. 한 축만 있으면
+    형제 변조가 빠져나간다 — 그것이 여섯 라운드 연속 실패의 기제였다.
+
+    같은 단정에서 **모순의 실체**도 고정한다: 이 사본은 `warnings`에
+    "오류 없이 끝난 것은 성공이 아니다"를 실은 채 절차에는 그 반대를 적어 내보낸다.
+    """
+    planted = APPLY_SOURCE + (
+        "\n\nHUMAN_EXECUTION_PROCEDURE = "
+        f'(*HUMAN_EXECUTION_PROCEDURE[:4], "{_R16_M53_PLANTED_STEP_5}")\n'
+    )
+    namespace = _load(planted)
+    handoff = namespace["build_patch_handoff"](**_handoff_kwargs(dry_run=False))
+
+    # 축 1 — 전문 동등이 깨진다.
+    assert tuple(handoff.procedure) != _R16_PROCEDURE_TEXTS
+    assert handoff.procedure[4] != _R16_PROCEDURE_STEPS[4][1]
+    # 축 2 — 비모순 스캔이 세 토큰을 잡는다.
+    assert _r16_success_claims("\n".join(handoff.procedure)) == [
+        "오류 없이",
+        "완료다",
+        "생성된 것이다",
+    ]
+    # 그리고 그 사본은 정반대 경고를 **같은 payload에** 실어 내보낸다.
+    assert PLUGIN_EXIT_IS_NOT_SUCCESS in handoff.warnings
+
+
+def _r16_procedure_warning_violations(payload: dict) -> list[str]:
+    """절차가 나가는데 무오류-종료 경고가 빠진 payload를 잡는다.
+
+    §0 함정 4 · AC-021② — 절차만 읽고 경고를 못 본 조작자는 플러그인 종료를 성공으로
+    읽는다. 그래서 둘은 **함께** 나가야 하고, 그 동반을 payload에서 확인한다.
+    """
+    if not payload["procedure"]:
+        return []
+    return [
+        warning
+        for warning in (PLUGIN_EXIT_IS_NOT_SUCCESS, IRREVERSIBLE_WARNING, END_TO_END_UNVERIFIED)
+        if warning not in payload["warnings"]
+    ]
+
+
+def test_the_procedure_never_ships_without_the_plugin_exit_warning():
+    """[round16 M53 형제] 절차가 나가는 payload는 세 경고를 **반드시** 함께 싣는다."""
+    delivered = _handoff(dry_run=False).to_dict()
+    assert delivered["procedure"], "절차가 비면 이 게이트는 공허하다"
+    assert _r16_procedure_warning_violations(delivered) == []
+    assert delivered["warnings"][1] == PLUGIN_EXIT_IS_NOT_SUCCESS
+
+
+def test_the_warning_coshipment_gate_is_not_vacuous():
+    """비공허성 — 경고를 뺀 프로덕션 사본에서는 같은 게이트가 발화한다.
+
+    `warnings`는 dataclass 필드 기본값이라 적재 후 재바인딩이 닿지 않는다 —
+    `_apply_source_with_cd_in_warnings`와 같은 이유로 **소스 치환**으로 심는다.
+    """
+    planted = APPLY_SOURCE.replace(
+        _ORIGINAL_DELIVERY_WARNINGS,
+        "DELIVERY_WARNINGS = (IRREVERSIBLE_WARNING, END_TO_END_UNVERIFIED)",
+        1,
+    )
+    assert planted != APPLY_SOURCE, "DELIVERY_WARNINGS 앵커가 사라졌다"
+    namespace = _load(planted)
+    payload = namespace["build_patch_handoff"](**_handoff_kwargs(dry_run=False)).to_dict()
+    assert payload["procedure"]
+    assert _r16_procedure_warning_violations(payload) == [PLUGIN_EXIT_IS_NOT_SUCCESS]
+
+
+# --------------------------------------------------------------------------
+# [round16 M72 · M79] payload 상태 문자열은 **리터럴로** 고정한다.
+#
+# `assert payload["status"] == HANDOFF_STATUS_DRY_RUN`는 프로덕션 상수를 프로덕션 값과
+# 비교하는 **자기 비교**라 상수를 무엇으로 바꿔도 통과한다. 실제로 `HANDOFF_STATUS_DRY_RUN`을
+# `"delivered"`로 바꿔도(드라이런 payload의 `status`가 `"delivered"`가 된다) 스위트 5,354건이
+# 전건 통과했다. 그래서 리터럴로 적고, **문자열이 실리는 payload 키를 전수 분류**한다.
+# --------------------------------------------------------------------------
+
+#: payload에 실리는 문자열 키의 전수 분류. 새 문자열 필드가 생기면 분류하지 않고는
+#: `test_every_string_valued_handoff_key_is_classified`가 통과하지 못한다.
+_R16_HANDOFF_STRING_KEYS = (
+    ("status", "status_token"),
+    ("next_step", "status_token"),
+    ("execution_performed_by", "status_token"),
+    # 생성물이라 리터럴로 고정하지 않는다 — M4 계약과 CD 게이트가 따로 지킨다.
+    ("lua_source", "generated_source"),
+)
+
+#: `status_token` 축이 실제로 갖는 값. (시나리오, dry_run, 키, **리터럴**)
+_R16_PAYLOAD_STATUS_ROWS = (
+    ("dry_run", True, "status", "dry_run"),
+    ("dry_run", True, "next_step", "review_dry_run"),
+    ("dry_run", True, "execution_performed_by", "human"),
+    ("delivered", False, "status", "delivered"),
+    ("delivered", False, "next_step", "human_execution_then_verification_read"),
+    ("delivered", False, "execution_performed_by", "human"),
+)
+
+#: 그 값을 만드는 모듈 상수 전수. `test_autopatch_verify.py`의 `_R16_APPLY_CONSTANTS`가
+#: 이 튜플과 전단사임을 따로 단정한다 — 두 표가 서로를 묶는다.
+_R16_PAYLOAD_TOKEN_CONSTANTS = (
+    "HANDOFF_STATUS_DRY_RUN",
+    "HANDOFF_STATUS_DELIVERED",
+    "NEXT_STEP_REVIEW",
+    "NEXT_STEP_HUMAN_EXECUTION",
+    "EXECUTION_PERFORMED_BY",
+)
+
+
+def _r16_string_payload_keys(payload: dict) -> tuple[str, ...]:
+    return tuple(sorted(key for key, value in payload.items() if isinstance(value, str)))
+
+
+def test_every_string_valued_handoff_key_is_classified():
+    """[round16 HARD 규율 1] 문자열 축이 하나 생기면 분류 없이는 통과하지 못한다."""
+    declared = tuple(sorted(key for key, _ in _R16_HANDOFF_STRING_KEYS))
+    assert len(_R16_HANDOFF_STRING_KEYS) == len(set(declared))
+    for dry_run in (True, False):
+        assert _r16_string_payload_keys(_handoff(dry_run=dry_run).to_dict()) == declared
+    tokens = {key for key, kind in _R16_HANDOFF_STRING_KEYS if kind == "status_token"}
+    # 두 시나리오 × 상태 토큰 전부가 표에 있어야 한다 — 키 집합만 비교하면 `dry_run` 행을
+    # 지워도 `delivered` 행이 같은 키를 대신 채워 삭제가 보이지 않는다(HARD 규율 3).
+    assert {(scenario, key) for scenario, _, key, _ in _R16_PAYLOAD_STATUS_ROWS} == {
+        (scenario, key) for scenario in ("dry_run", "delivered") for key in tokens
+    }
+    assert len(_R16_PAYLOAD_STATUS_ROWS) == 2 * len(tokens)
+    assert {scenario: dry_run for scenario, dry_run, _, _ in _R16_PAYLOAD_STATUS_ROWS} == {
+        "dry_run": True,
+        "delivered": False,
+    }
+
+
+@pytest.mark.parametrize(
+    "scenario,dry_run,key,literal",
+    _R16_PAYLOAD_STATUS_ROWS,
+    ids=[f"{scenario}.{key}" for scenario, _, key, _ in _R16_PAYLOAD_STATUS_ROWS],
+)
+def test_every_payload_status_token_is_pinned_to_its_literal(scenario, dry_run, key, literal):
+    """[round16 M72] `HANDOFF_STATUS_DRY_RUN`을 `"delivered"`로 바꾸면 `dry_run.status` 행이,
+    [round16 M79] `NEXT_STEP_HUMAN_EXECUTION`을 `"done"`으로 바꾸면 `delivered.next_step`
+    행이 실패한다. 리터럴이므로 상수를 무엇으로 바꿔도 따라가지 않는다.
+    """
+    assert _handoff(dry_run=dry_run).to_dict()[key] == literal
+
+
+#: (상수 이름, 심을 리터럴 소스, dry_run, payload 키, 프로덕션 리터럴)
+_R16_PAYLOAD_TOKEN_PLANTS = (
+    ("HANDOFF_STATUS_DRY_RUN", '"delivered"', True, "status", "dry_run"),
+    ("HANDOFF_STATUS_DELIVERED", '"dry_run"', False, "status", "delivered"),
+    ("NEXT_STEP_REVIEW", '"done"', True, "next_step", "review_dry_run"),
+    (
+        "NEXT_STEP_HUMAN_EXECUTION",
+        '"done"',
+        False,
+        "next_step",
+        "human_execution_then_verification_read",
+    ),
+    ("EXECUTION_PERFORMED_BY", '"server"', False, "execution_performed_by", "human"),
+)
+
+
+def test_the_payload_token_plant_table_covers_every_status_constant():
+    """[round16 HARD 규율 3] 상태 상수가 하나 늘면 심는 표도 함께 늘어야 한다."""
+    assert tuple(name for name, *_ in _R16_PAYLOAD_TOKEN_PLANTS) == _R16_PAYLOAD_TOKEN_CONSTANTS
+
+
+@pytest.mark.parametrize(
+    "name,planted_literal,dry_run,key,literal",
+    _R16_PAYLOAD_TOKEN_PLANTS,
+    ids=[name for name, *_ in _R16_PAYLOAD_TOKEN_PLANTS],
+)
+def test_the_literal_status_gate_catches_each_constant_plant(
+    name, planted_literal, dry_run, key, literal
+):
+    """비공허성(전수) — 상수를 **프로덕션 사본에서** 바꾸면 리터럴 단정이 실제로 깨진다.
+
+    자기 비교였다면 이 사본도 통과한다. 그것이 M72·M79가 살아남은 이유다.
+    """
+    namespace = _load(APPLY_SOURCE + f"\n\n{name} = {planted_literal}\n")
+    planted_payload = namespace["build_patch_handoff"](**_handoff_kwargs(dry_run=dry_run)).to_dict()
+    assert planted_payload[key] != literal
+
+    control = _load(APPLY_SOURCE)["build_patch_handoff"](
+        **_handoff_kwargs(dry_run=dry_run)
+    ).to_dict()
+    assert control[key] == literal
+
+
+# --- round16 표 전단사·문장 전문 고정 (TableBijection) ---
+#
+# 이 절이 닫는 두 구멍:
+#   ① `_CONSOLE_BOUND_HANDOFF_KEYS`/`_DIAGNOSTIC_HANDOFF_KEYS`는 **양분 게이트만** 있었다 —
+#      두 표가 서로 겹치지 않고 합쳐서 payload를 덮는지는 봤지만 **분류가 옳은지**는
+#      아무도 강제하지 않았다. 적대 감사 실측(P12): `procedure`를 진단 축으로 옮기고
+#      `_CD_SURFACE_PLANTS`의 짝 행을 함께 지우면 두 표가 여전히 정합해 **조용히 통과**한다.
+#      그 상태에서 절차문에 심긴 반증 처방·CD는 게이트 밖으로 나간다.
+#   ② `_CONSOLE_IMPORT_PLANTS`에 전단사 게이트가 없어 우회 형태 한 줄을 지워도 조용했다.
+
+
+def _round16_payload_texts(value: object) -> list[str]:
+    """payload 값에서 **길이 2 이상 문자열**을 전부 끄집어낸다(중첩 목록·사전 포함).
+
+    길이 1을 버리는 이유는 우연 일치 때문이다 — `candidate_id`의 `'a'`는 어떤 Lua
+    소스에도 부분문자열로 들어 있어 판정에 아무 정보도 주지 않는다.
+    """
+    if isinstance(value, str):
+        return [value] if len(value) >= 2 else []
+    if isinstance(value, dict):
+        return [text for item in value.values() for text in _round16_payload_texts(item)]
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return [text for item in value for text in _round16_payload_texts(item)]
+    return []
+
+
+def test_the_console_axis_classification_is_fixed_by_what_the_text_actually_is():
+    """분류가 **옳은지**를 표 대조가 아니라 값의 정체로 고정한다.
+
+    콘솔 축의 정의는 "사람이 콘솔에 입력하거나 그대로 따라 실행할 텍스트"다. 그 정의를
+    기계적으로 판정한다 — 축이 싣는 모든 문자열이 (a) 조작자가 임포트해 실행할 **Lua
+    소스 자체**이거나, (b) 그 Lua 소스 안에 **글자 그대로 박혀 있거나**, (c) 인간 실행
+    절차·경고·다음 단계를 정의하는 **프로덕션 상수**여야 한다. 진단 축은 셋 중 어디에도
+    해당하지 않는다.
+
+    표를 참조하지 않으므로 **행을 지워서 빠져나갈 수 없다**.
+
+    [round16 P12] `_CONSOLE_BOUND_HANDOFF_KEYS`에서 `procedure`를 빼
+      `_DIAGNOSTIC_HANDOFF_KEYS`로 옮기면 — `_CD_SURFACE_PLANTS`의 짝 행을 함께 지워
+      기존 게이트를 전부 만족시키더라도 — 진단 축 단정이 실패한다. `procedure`는
+      `HUMAN_EXECUTION_PROCEDURE` 그 자체이기 때문이다.
+    [round16] 반대로 `status`·`execution_performed_by` 같은 진단 축을 콘솔 축으로
+      옮겨도 콘솔 축 단정이 실패한다.
+    [round16] `apply.py`가 `procedure=HUMAN_EXECUTION_PROCEDURE`를 다른 문자열로
+      바꾸면 콘솔 축 단정이 실패한다 — 절차문이 프로덕션 상수에서 떨어져 나간 것이다.
+    """
+    from server.vwx.apply import (
+        DELIVERY_WARNINGS,
+        HUMAN_EXECUTION_PROCEDURE,
+        NEXT_STEP_HUMAN_EXECUTION,
+    )
+
+    payload = _handoff(dry_run=False).to_dict()
+    lua = str(payload["lua_source"])
+    assert "AddFixtures({" in lua, lua
+    console_constants = (
+        frozenset(HUMAN_EXECUTION_PROCEDURE)
+        | frozenset(DELIVERY_WARNINGS)
+        | {NEXT_STEP_HUMAN_EXECUTION, lua}
+    )
+
+    def console_destined(key: str) -> bool:
+        texts = _round16_payload_texts(payload[key])
+        return bool(texts) and all(text in console_constants or text in lua for text in texts)
+
+    for key in _CONSOLE_BOUND_HANDOFF_KEYS:
+        assert console_destined(key), (key, _round16_payload_texts(payload[key]))
+    for key in _DIAGNOSTIC_HANDOFF_KEYS:
+        assert not console_destined(key), (key, _round16_payload_texts(payload[key]))
+
+
+def test_the_console_axis_classification_probe_is_not_vacuous():
+    """대조의 대조 — 판정기가 **아무거나 콘솔 축이라고 하지는 않는다**.
+
+    Lua에도 없고 프로덕션 상수도 아닌 문자열을 콘솔 축 자리에 놓으면 판정이 뒤집힌다.
+    이것이 없으면 위 테스트는 "전부 참"으로 공허해질 수 있다.
+    """
+    from server.vwx.apply import DELIVERY_WARNINGS, HUMAN_EXECUTION_PROCEDURE
+
+    payload = _handoff(dry_run=False).to_dict()
+    lua = str(payload["lua_source"])
+    console_constants = frozenset(HUMAN_EXECUTION_PROCEDURE) | frozenset(DELIVERY_WARNINGS)
+    stranger = "이 문장은 Lua에도 없고 프로덕션 상수도 아니다"
+    assert stranger not in lua
+    assert stranger not in console_constants
+    texts = _round16_payload_texts({"reason": stranger, "count": 3})
+    assert texts == [stranger]
+    assert not all(text in console_constants or text in lua for text in texts)
+
+
+#: `_CONSOLE_IMPORT_PLANTS`의 **축소 트립와이어**. 우회 형태를 하나 지우면 어긋난다.
+_ROUND16_CONSOLE_IMPORT_PLANT_IDS = frozenset(
+    {
+        "absolute_bridge",
+        "absolute_safety_gate",
+        "absolute_pythonosc",
+        "relative_bridge",
+        "relative_safety_gate",
+        "alias_is_the_submodule",
+        "importlib_string_argument",
+        "dunder_import_string_argument",
+    }
+)
+
+
+def _round16_plant_mechanisms(plant: str) -> frozenset[tuple[str, str]]:
+    """심은 소스가 **어느 수집 기제로** 어느 봉인 모듈에 닿는지 태그해서 돌려준다.
+
+    `_imported_modules`와 같은 순회를 하되 이름만이 아니라 **그 이름을 만든 기제**를
+    함께 싣는다. 기제 어휘는 `_DYNAMIC_IMPORT_CALLEES`에서 파생하므로 스캐너가 동적
+    호출을 하나 더 보게 되면 이 어휘도 함께 늘어난다.
+    """
+    tagged: set[tuple[str, str]] = set()
+
+    def ward(name: str) -> str | None:
+        for module in _CONSOLE_WARD_MODULES:
+            if name.startswith(module):
+                return module
+        return None
+
+    for node in ast.walk(ast.parse(plant)):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                module = ward(alias.name)
+                if module:
+                    tagged.add(("import", module))
+        elif isinstance(node, ast.ImportFrom):
+            anchor = "server" if node.level else ""
+            base = ".".join(part for part in (anchor, node.module or "") if part)
+            module = ward(base)
+            if module:
+                tagged.add(("from_relative" if node.level else "from_absolute", module))
+                continue
+            for alias in node.names:
+                module = ward(f"{base}.{alias.name}" if base else alias.name)
+                if module:
+                    # 금지 이름이 `node.module`이 아니라 **alias**에 있는 형태.
+                    tagged.add(("from_alias", module))
+        elif isinstance(node, ast.Call):
+            callee = node.func
+            name = callee.attr if isinstance(callee, ast.Attribute) else getattr(callee, "id", None)
+            if name in _DYNAMIC_IMPORT_CALLEES:
+                for argument in node.args:
+                    if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
+                        module = ward(argument.value)
+                        if module:
+                            tagged.add((f"dynamic:{name}", module))
+    return frozenset(tagged)
+
+
+def test_the_console_import_plant_table_covers_every_bypass_mechanism_and_every_ward():
+    """`_CONSOLE_IMPORT_PLANTS` 전단사 — 행을 지우거나 기제를 놓치면 실패한다.
+
+    [round16 A1] 8행 중 어느 행을 지워도 id 집합 단정이 실패한다 — 이전에는 우회 형태
+      한 줄을 지워도 스위트가 조용히 축소됐다.
+    [round16] 두 행이 같은 (기제, 봉인 모듈) 쌍을 덮으면 단사성 단정이 실패한다 —
+      중복 행은 곧 "지워도 되는 행"이다.
+    [round16] `_CONSOLE_WARD_MODULES`에 모듈을 더하면 그 모듈을 심는 행이 없어 실패한다.
+    [round16] `_DYNAMIC_IMPORT_CALLEES`에 호출자를 더하면 그 기제를 심는 행이 없어 실패한다.
+    """
+    names = [name for name, _, _ in _CONSOLE_IMPORT_PLANTS]
+    assert len(names) == len(set(names)) == len(_ROUND16_CONSOLE_IMPORT_PLANT_IDS)
+    assert set(names) == _ROUND16_CONSOLE_IMPORT_PLANT_IDS
+
+    mechanisms = {"import", "from_absolute", "from_relative", "from_alias"} | {
+        f"dynamic:{callee}" for callee in _DYNAMIC_IMPORT_CALLEES
+    }
+    tagged_by_name: dict[str, tuple[str, str]] = {}
+    for name, plant, _expected in _CONSOLE_IMPORT_PLANTS:
+        tags = _round16_plant_mechanisms(plant)
+        # 한 행은 **정확히 한 가지 우회로**를 실증한다 — 섞으면 무엇이 잡혔는지 모른다.
+        assert len(tags) == 1, (name, sorted(tags))
+        tagged_by_name[name] = next(iter(tags))
+
+    assert len(set(tagged_by_name.values())) == len(tagged_by_name), tagged_by_name
+    assert {mechanism for mechanism, _ in tagged_by_name.values()} == mechanisms
+    assert {module for _, module in tagged_by_name.values()} == set(_CONSOLE_WARD_MODULES)
+
+
+def test_the_console_import_plant_mechanism_tagger_sees_nothing_in_clean_production():
+    """대조의 대조 — 심지 않은 프로덕션 소스에는 어떤 기제 태그도 붙지 않는다."""
+    assert _round16_plant_mechanisms(APPLY_SOURCE) == frozenset()

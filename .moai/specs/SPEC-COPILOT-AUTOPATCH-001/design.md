@@ -1,6 +1,6 @@
 # SPEC-COPILOT-AUTOPATCH-001 — 설계 (design)
 
-status: draft (v0.1.5, 2026-08-06) · Tier L · 설계 슬롯 5건 전부 종결 · 미결 0 · **plan-audit 1~10회차 + 독립 코드 감사 round11~15 지적 반영** · §6.2 폐지(acceptance.md 단일 출처화). **[round15 #7]** 이전 판은 'plan-audit 1~9회차'에 멈춰 있어 round10 PASS와 코드 감사 5라운드가 반영 이력에서 빠져 있었다 — T13 버전 전파의 형제 미처리.
+status: draft (v0.1.5, 2026-08-06) · Tier L · 설계 슬롯 5건 전부 종결 · 미결 0 · **plan-audit 1~10회차 + 독립 코드 감사 round11~16 지적 반영** · §6.2 폐지(acceptance.md 단일 출처화). **[round15 #7]** 이전 판은 'plan-audit 1~9회차'에 멈춰 있어 round10 PASS와 코드 감사 5라운드가 반영 이력에서 빠져 있었다 — T13 버전 전파의 형제 미처리.
 
 ---
 

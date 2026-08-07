@@ -835,3 +835,213 @@ def test_an_unregistered_injection_never_reaches_the_payload():
     """
     with pytest.raises(ValueError, match="assumption_71 must be one of"):
         _reachability("maybe")
+
+
+# --- round16 표 전단사·문장 전문 고정 (TableBijection) ---
+#
+# `_UNREGISTERED_ASSUMPTION_71_VALUES`는 자유 표본 목록이라 프로덕션에서 파생할 기준
+# 집합이 없다. 그래서 두 겹으로 막는다:
+#   ① 축소 트립와이어 — 표본을 하나 지우면 어긋나는 동결 집합,
+#   ② **프로덕션에서 파생한** 근사 오타 표 — 등재 어휘 전부 × 정규화 변형 전부를
+#      `itertools.product`로 만들어 프로덕션이 **하나도 받아들이지 않음**을 본다.
+#      ②는 표를 지워서 줄일 수 없다 — 행이 `ASSUMPTION_71_VALUES`에서 나오기 때문이다.
+
+#: 자유 표본의 동결 집합. 값을 더하거나 빼면 아래 단정이 깨진다.
+_ROUND16_UNREGISTERED_SAMPLE = frozenset(
+    {"GO", " go", "go ", "yes", "positive", "unknown", "", "maybe"}
+)
+
+#: 프로덕션이 **적용해서는 안 되는** 정규화. 이름은 실패 메시지에서 무엇이 새는지 읽히도록 둔다.
+_ROUND16_FORBIDDEN_NORMALISATIONS = (
+    ("upper", str.upper),
+    ("title", str.title),
+    ("leading_space", lambda value: f" {value}"),
+    ("trailing_space", lambda value: f"{value} "),
+    ("inner_space", lambda value: f"{value[:1]} {value[1:]}"),
+)
+
+
+def test_the_unregistered_assumption_71_sample_cannot_shrink_silently():
+    """[round16 A1] 미등재 표본에서 행을 하나 지우면 이 단정이 깨진다.
+
+    파라미터화 대조군은 목록에서 행을 만들기 때문에 **축소를 원리적으로 감지하지 못한다** —
+    round16 A1이 `test_autopatch_verify.py`에서 삭제한 항진명제 20건이 같은 구조였다.
+    """
+    assert len(_UNREGISTERED_ASSUMPTION_71_VALUES) == len(set(_UNREGISTERED_ASSUMPTION_71_VALUES))
+    assert set(_UNREGISTERED_ASSUMPTION_71_VALUES) == _ROUND16_UNREGISTERED_SAMPLE
+    # 표본은 등재 어휘와 **겹치지 않아야** 한다 — 겹치면 그 행은 공허하다.
+    assert set(_UNREGISTERED_ASSUMPTION_71_VALUES).isdisjoint(ASSUMPTION_71_VALUES)
+    assert len(_UNREGISTERED_ASSUMPTION_71_VALUES) >= 2 * len(ASSUMPTION_71_VALUES)
+
+
+def _round16_near_miss_probes() -> tuple[tuple[str, str, str], ...]:
+    """등재 어휘 × 금지 정규화의 **전수 곱** — 행 목록이 프로덕션 상수에서 나온다."""
+    import itertools
+
+    probes = []
+    for value, (label, transform) in itertools.product(
+        sorted(ASSUMPTION_71_VALUES), _ROUND16_FORBIDDEN_NORMALISATIONS
+    ):
+        probes.append((value, label, transform(value)))
+    return tuple(probes)
+
+
+_ROUND16_NEAR_MISS_PROBES = _round16_near_miss_probes()
+
+
+def test_the_near_miss_probe_table_is_the_full_product_of_production_vocabulary():
+    """[round16 A1] 이 표는 지워서 줄일 수 없다 — 행이 `ASSUMPTION_71_VALUES`에서 나온다.
+
+    등재 어휘가 하나 늘면 행도 함께 늘고, 금지 정규화를 하나 더 정의하면 그 축도 곧바로
+    전수에 들어온다. 만들어진 변형이 실수로 등재 어휘가 되어 공허해지지도 않는다.
+    """
+    assert len(_ROUND16_NEAR_MISS_PROBES) == len(ASSUMPTION_71_VALUES) * len(
+        _ROUND16_FORBIDDEN_NORMALISATIONS
+    )
+    variants = [variant for _, _, variant in _ROUND16_NEAR_MISS_PROBES]
+    assert len(set(variants)) == len(variants), variants
+    assert set(variants).isdisjoint(ASSUMPTION_71_VALUES)
+
+
+@pytest.mark.parametrize(
+    "variant",
+    [variant for _, _, variant in _ROUND16_NEAR_MISS_PROBES],
+    ids=[f"{value}__{label}" for value, label, _ in _ROUND16_NEAR_MISS_PROBES],
+)
+def test_validate_assumption_71_refuses_every_near_miss_of_a_registered_value(variant: str):
+    """[round16 A1] `validate_assumption_71`이 어떤 정규화도 하지 않음을 전수로 고정한다.
+
+    본문에 `value = value.strip()`이나 `value.lower()`를 끼우면 해당 변형 행이 실패한다 —
+    도달성 표기가 조용히 뒤집히면 사람은 되돌릴 수 없는 생성을 잘못된 전제로 승인한다.
+    """
+    with pytest.raises(ValueError, match="assumption_71 must be one of"):
+        validate_assumption_71(variant)
+
+
+# --- round16 형제 필드·형제 사이트 (SiblingFields) ---
+#
+# S16-07 — `assignment_requested=bool(selected)`가 **무게이트**였다.
+#
+# round11 M7 N03은 "실측 판정(`assumption_71`)을 요청 신호로 겸용하지 않는다"를 위해
+# 배정 분기 개방을 `assignment_requested`로 분리했다. 그런데 툴 경계에서 그 분리를 지키는
+# 대조군이 없어 `assignment_requested=True` 상수로 바꿔도 전부 통과했다. 그러면
+# **선택 없는 열람 호출**이 `fid_range_required` 거부로 돌아온다 — 조작자는 아직 아무것도
+# 고르지 않았는데 "FID 범위를 내놓으라"는 말을 듣고, 1단계 대조 결과를 볼 수 없다.
+#
+# 대조군은 이 파일의 확립된 방식을 그대로 쓴다: 한 줄만 갈아끼운 `tools.py` **사본을
+# 적재해 실제로 디스패치**한다(`_load_tools` · `TOOLS_SOURCE`).
+
+#: 사본에서 갈아끼울 **배정 신호 한 줄**. 앵커가 사라지면 아래 비공허성 대조군이 즉시 실패한다.
+ASSIGNMENT_SIGNAL_LINE = "            assignment_requested=bool(selected),"
+
+# (행 이름, `selected` 인자, 배정 분기가 열리는가)
+# 세 모양이 서로 다른 뮤테이션을 잡는다:
+#   `None`  — `assignment_requested=True` 상수화를 잡는다(열람 호출이 거부로 돌아온다).
+#   `[]`    — `assignment_requested=selected is not None`으로 바꾸는 것을 잡는다.
+#   `[cid]` — 신호를 `False`로 죽이는 것을 잡는다(선택했는데 배정 분기가 안 열린다).
+_R16_ASSIGNMENT_SIGNAL_ROWS = (
+    ("no_selected", None, False),
+    ("empty_selected", [], False),
+    ("one_selected", "candidate", True),
+)
+
+
+def test_the_assignment_signal_table_matches_the_production_expression():
+    """[round16 S16-07] 표의 세 모양이 프로덕션 식 `bool(selected)`를 **전부 가른다**.
+
+    앵커가 유일해야 아래 사본 심기가 정확히 그 한 줄만 바꾼다. 그리고 표의 기대값은
+    프로덕션 식을 그대로 적용한 결과와 같아야 한다 — 행을 지우면 `bool()`이 가르는 세
+    모양 중 하나가 표에서 사라져 이 단정이 실패한다.
+    """
+    assert TOOLS_SOURCE.count(ASSIGNMENT_SIGNAL_LINE) == 1, "배정 신호 앵커가 유일하지 않다"
+
+    shapes = {name: selected for name, selected, _ in _R16_ASSIGNMENT_SIGNAL_ROWS}
+    assert shapes == {"no_selected": None, "empty_selected": [], "one_selected": "candidate"}
+    for name, selected, opens in _R16_ASSIGNMENT_SIGNAL_ROWS:
+        probe = ["c"] if selected == "candidate" else selected
+        assert bool(probe) is opens, name
+
+
+def _r16_assignment_payload(registry, *, selected):
+    """`selected` 모양만 바꿔 툴을 부른다 — `fid_range`는 **주지 않는다**."""
+    report = _report()
+    first = _payload(_dispatch(registry, report=report))
+    if selected == "candidate":
+        selected = [_candidate_id(first)]
+    arguments = {"report": report}
+    if selected is not None:
+        arguments["selected"] = selected
+    return _payload(_dispatch(registry, **arguments))
+
+
+@pytest.mark.parametrize(
+    "name,selected,opens_assignment",
+    _R16_ASSIGNMENT_SIGNAL_ROWS,
+    ids=[row[0] for row in _R16_ASSIGNMENT_SIGNAL_ROWS],
+)
+def test_only_a_nonempty_selection_opens_the_fid_assignment_branch(
+    name, selected, opens_assignment
+):
+    """[round16 S16-07] 선택이 있어야만 배정 분기가 열린다 — 열람 호출은 거부되지 않는다.
+
+    `tools.py`의 `assignment_requested=bool(selected)`를 `True` 상수로 바꾸면
+    'no_selected'·'empty_selected' 두 행이 실패한다(둘 다 `fid_range_required`로 돌아온다).
+    `False` 상수로 바꾸면 'one_selected' 행이 실패한다.
+    """
+    payload = _r16_assignment_payload(_registry(), selected=selected)
+    plan = payload["plan"]
+
+    if opens_assignment:
+        assert plan["ok"] is False
+        assert plan["rejection"]["code"] == "fid_range_required"
+    else:
+        # 열람 호출 — 계획은 서고, FID 범위를 내놓으라는 요구는 나오지 않는다.
+        assert plan["ok"] is True
+        assert plan["status"] == "planned"
+        assert "rejection" not in plan
+        assert plan["candidates"], "열람 호출은 후보 목록을 그대로 보여준다"
+        # 배정 분기를 열지 않았으므로 FID 안전 payload 자체가 없다.
+        assert "fid_safety" not in plan
+
+
+@pytest.mark.parametrize(
+    "name,selected",
+    [(name, selected) for name, selected, opens in _R16_ASSIGNMENT_SIGNAL_ROWS if not opens],
+    ids=[name for name, _, opens in _R16_ASSIGNMENT_SIGNAL_ROWS if not opens],
+)
+def test_the_read_only_rows_actually_flip_when_the_signal_is_constant_true(name, selected):
+    """[round16 S16-07] 비공허성 — 프로덕션 **사본**에 상수를 심으면 그 행이 실제로 뒤집힌다.
+
+    이 대조군이 없으면 위 단정은 "지금도 그렇다"만 말하고, `bool(selected)`가 실제로
+    그 결과를 만든 것인지는 말하지 못한다. 여기서는 `assignment_requested=True`를 심은
+    사본을 적재해 **실제로 디스패치**하고, 두 열람 행이 `fid_range_required`로 돌아오는
+    것을 확인한다 — 그것이 이 한 줄이 지키고 있는 것이다.
+    """
+    planted = TOOLS_SOURCE.replace(
+        ASSIGNMENT_SIGNAL_LINE, "            assignment_requested=True,", 1
+    )
+    assert planted != TOOLS_SOURCE
+
+    rig = RigPort()
+    registry = _load_tools(planted)["build_toolset"](
+        execution_port=_NeverCalledExecutionPort(), state_port=rig, property_port=rig
+    )
+    payload = _r16_assignment_payload(registry, selected=selected)
+
+    assert payload["plan"]["ok"] is False
+    assert payload["plan"]["rejection"]["code"] == "fid_range_required"
+
+
+def test_a_selection_without_a_fid_range_stays_one_rejection_not_scattered_rows():
+    """[round16 S16-07 형제 축] 분리의 **다른 쪽 절반** — 선택이 있으면 거부가 하나로 올라온다.
+
+    `assignment_requested`를 떼면(`build_patch_plan`의 기본 추론에 맡기면) `fid_range`가
+    `None`이라 배정 분기가 열리지 않고, 누락이 항목별 `fid_not_assigned`로 흩어져
+    조작자가 원인을 한눈에 보지 못한다(REQ-AUTOPATCH-007).
+    """
+    payload = _r16_assignment_payload(_registry(), selected="candidate")
+    plan = payload["plan"]
+
+    assert plan["rejection"]["code"] == "fid_range_required"
+    assert plan["rejection"]["reason"]
+    assert [row["fid"] for row in plan["target_table"]["rows"]] == [None]

@@ -582,6 +582,15 @@ def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
     if unread > 0:
         # [round15 N12] 관측된 사실만 적는다 — 0인 축은 문장에 넣지 않는다.
         # round14가 `ExistingFidRead.reason()`에 세운 규율의 형제 적용이다.
+        #
+        # **[round16 S16-01] 미판독 절과 미패치 절을 한 문장에 섞지 않는다.** round15는
+        # `_unpatched_clause()`(자체로 마침표까지 끝나는 **완결 문장**)를 `" · ".join(parts)`
+        # 안에 넣었고, 그 결과 `…눈으로 대조하라. — 이 상태의 '없음'은 … 미판독이다.`가 되어
+        # ① 문장 중간에 마침표+대시가 박히고 ② 꼬리의 **미판독** 판정이 바로 앞의 **미패치**
+        # 절에 붙었다. `classify_patch_value`가 `PATCH_UNPATCHED`와 `PATCH_UNREAD`를
+        # 의도적으로 갈라놓은 것과 정반대로 읽힌다. 이 문자열은 `screen_console_read`가 차단한
+        # **모든** 대상의 `exclusion.reason`으로 사람에게 나간다.
+        # 미판독 꼬리는 **미판독 축에만** 붙이고, 미패치 고지는 뒤에 **독립 문장**으로 잇는다.
         parts: list[str] = []
         if inventory.missing_count:
             parts.append(
@@ -589,8 +598,13 @@ def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
             )
         if unreadable_addresses:
             parts.append(f"{unreadable_addresses}대는 주소를 판독하지 못했다")
+        reason = (
+            "콘솔 재조회에서 "
+            + " · ".join(parts)
+            + " — 이 상태의 '없음'은 관측이 아니라 미판독이다."
+        )
         if unpatched:
-            parts.append(_unpatched_clause(unpatched))
+            reason = f"{reason} 또한 {_unpatched_clause(unpatched)}"
         return {
             "kind": validate_autopatch("console_read_caveat_kind", CONSOLE_READ_INCOMPLETE),
             "label": console_read_caveat_label(CONSOLE_READ_INCOMPLETE),
@@ -601,11 +615,7 @@ def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
             "unreadable_address_count": unreadable_addresses,
             "unpatched_count": unpatched,
             "unread_count": unread,
-            "reason": (
-                "콘솔 재조회에서 "
-                + " · ".join(parts)
-                + " — 이 상태의 '없음'은 관측이 아니라 미판독이다."
-            ),
+            "reason": reason,
         }
     if unpatched:
         # 막지는 않는다 — 다만 **미실측 가정 위에 있는 갈래**이므로 조작자가 볼 수 있어야 한다.
@@ -818,14 +828,29 @@ def screen_idempotent(
 
         # [round11 N08] 우리 쪽 타입이 미확정이면 그것은 '남의 픽스처가 점유'가 아니라
         # '우리가 아직 확인을 못 받았다'이다. 둘을 같은 코드로 적으면 사용자가 원인을 오독한다.
+        #
+        # [round16 S16-05] 아래 **단일 점유자 갈래 넷 전부**가 같은 규약을 쓴다(§0 2b④ + 2c①):
+        #   ① 사유 **문장**에는 점유자에게서 읽은 문자열을 넣지 않는다 — 표시 원문
+        #      (`type_display`·`mode_display`)이든 라이브러리 확정 이름(`type_name`·`mode_name`)
+        #      이든 마찬가지다. 문장에 넣어도 되는 것은 좌표와 **우리가 승인한 값**뿐이다.
+        #   ② 관측된 원문은 버리지 않고 `observed_*_display` 구조화 필드로 옮긴다.
+        # round15 D는 ①②를 `EXISTING_IDENTITY_UNCONFIRMED` 갈래에만 적용하고 같은 함수의
+        # 형제 갈래 셋을 빠뜨렸다. 그 결과 `ADDRESS_CONFLICTS_WITH_EXISTING`이 점유자 이름을
+        # 문장에 f-string으로 박았고, 점유자 타입이 `'CD 5'`면 전달물 스캐너가 거짓 양성을 냈다
+        # (실측). 같은 payload 안에서 두 갈래가 정반대 규약을 쓰는 상태였다.
+        # 형제 표면 `verify_patch`는 이미 단일 점유자면 무조건 두 필드를 채운다 — 같은 규약이다.
         expected_type, expected_mode = _expected_identity(resolution)
         if expected_type is None or expected_mode is None:
             exclusions.append(
                 _exclusion(
                     target,
                     TYPE_CONFIRMATION_PENDING,
+                    f"유니버스 {planned.universe} 주소 {planned.address}에 픽스처가 있으나 "
                     "콘솔 타입·모드가 확정되지 않아 기존 픽스처와 대조할 수 없다 — "
-                    "확인 전에는 멱등 판정도 충돌 판정도 내리지 않는다.",
+                    "확인 전에는 멱등 판정도 충돌 판정도 내리지 않는다. 관측된 원문은 "
+                    "observed_type_display · observed_mode_display 필드에 있다.",
+                    observed_type_display=occupant.type_display,
+                    observed_mode_display=occupant.mode_display,
                 )
             )
             continue
@@ -853,8 +878,14 @@ def screen_idempotent(
                 _exclusion(
                     target,
                     ALREADY_PATCHED_IDENTICAL,
+                    # 여기 문장에 실리는 이름은 **우리가 승인한 값**(`expected_*`)이지 점유자에게서
+                    # 읽은 문자열이 아니다 — 이 갈래는 둘이 같다고 판정한 갈래이므로 조작자가
+                    # "무엇과 같은가"를 보려면 그 값이 문장에 있어야 한다. 점유자 쪽 관측 원문은
+                    # 그래도 구조화 필드로 함께 나간다.
                     f"유니버스 {planned.universe} 주소 {planned.address}에 "
                     f"{expected_type} · {expected_mode} 픽스처가 이미 있다 — 중복 생성하지 않는다.",
+                    observed_type_display=occupant.type_display,
+                    observed_mode_display=occupant.mode_display,
                 )
             )
             continue
@@ -863,9 +894,13 @@ def screen_idempotent(
             _exclusion(
                 target,
                 ADDRESS_CONFLICTS_WITH_EXISTING,
-                f"유니버스 {planned.universe} 주소 {planned.address}를 "
-                f"{occupant.type_name} · {occupant.mode_name} 픽스처가 점유하고 있다 — "
-                "무관한 픽스처를 '이미 했음'으로 삼키지 않는다.",
+                # [round16 S16-05] 이전 판은 여기에 `occupant.type_name · occupant.mode_name`을
+                # f-string으로 박았다 — 형제 갈래가 이미 금지한 바로 그것이다.
+                f"유니버스 {planned.universe} 주소 {planned.address}를 승인한 타입·모드와 "
+                "다른 픽스처가 점유하고 있다 — 무관한 픽스처를 '이미 했음'으로 삼키지 않는다. "
+                "관측된 원문은 observed_type_display · observed_mode_display 필드에 있다.",
+                observed_type_display=occupant.type_display,
+                observed_mode_display=occupant.mode_display,
             )
         )
 

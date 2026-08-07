@@ -161,16 +161,57 @@ G2 사람 실행(받은 것을 그대로) · G3 서버 검증(건별·자동 보
 REQ-AUTOPATCH-018을 다시 열어야 한다는 새 실측이다.
 **표시 문자열 판별 실험**(이름 `FixtureType k`인 타입을 index `j≠k`에)을 같은 세션에서 수행한다.
 
-**착수 전제**: ① 독립 코드 감사 PASS — **round11·12·13·14 넷 다 FAIL이었다**.
-round14는 처음으로 치명 0건·fail-open 0건이었고 두 감사자 모두 "차단 문구 결함만 고치면
-코드 축은 GO"로 판정했다. 그 반영에 대한 재감사가 통과해야 한다 · ② 세션 전 쇼파일 테스트용 재확인 · ③ 파괴적 조작 전 사전 상태 기록 ·
-④ 테스트 자원 분리(기존과 겹치지 않는 FID·유니버스) · ⑤ **원복 절차 사전 합의** ·
-⑥ **[round15 #6] 후보→픽스처 이름 매핑(`names` 인자) 사전 작성**. `design.md` §2.3이
-"이름 없는 후보는 `fixture_name_missing`으로 **제외**하고 이 계층은 이름을 지어내지 않는다"고
-못박고 있으므로, `names` 없이 세션에 들어가면 **대상이 구조적으로 0건**이 된다. 형식은
-`{후보 식별자: 콘솔에 만들 픽스처 이름}` JSON 객체이며, **1단계 리포트의 `missing_in_console`
-식별자를 그대로 키로** 쓰고 값은 세션에서 실제로 쓸 이름 문자열이다. 세션 전에 사용자와
-합의해 `progress.md` §E.2 M8 절에 **표로 붙여 두고**, 세션 당일 그대로 인자로 넘긴다.
+**착수 전제**: ① 독립 코드 감사 PASS — **[round16 #3 정정] round11·12·13·14·15·16
+여섯 라운드 전부 FAIL이었다.** 이전 판은 *"round11·12·13·14 넷 다 FAIL이었다"*에 멈춰
+**round15를 누락한 stale**이었고, 그 옆의 `M8-REDEFINITION-DRAFT.md` P1은 같은 시점에
+이미 "다섯 라운드"라 적고 있었다 — **반례가 형제 문서에 있었다.** round14는 처음으로
+치명 0건·fail-open 0건이었고 두 감사자 모두 "차단 문구 결함만 고치면 코드 축은 GO"로
+판정했으나, round15는 *"코드는 옳은데 그것을 지키는 테스트가 게이트가 아니다"*로,
+round16은 *"게이트를 네 표에 붙이고 형제 두 표에는 붙이지 않았다"*(뮤테이션 79건 KILL
+81.0% · 치명 SURVIVED 1 · 안전 high 3)로 다시 FAIL했다. **round16 지적 반영에 대한
+재감사가 통과해야 한다** · ② 세션 전 쇼파일 테스트용 재확인 · ③ 파괴적 조작 전 사전 상태 기록 ·
+④ 테스트 자원 분리 — **[round16 추가 · 사용자 결정 대기] 분리는 FID 대역(`fid_range`)으로만
+가능하다.** `server/vwx/apply.py:132`가 `HandoffEntry`의 `address`는 **"언제나 도면 주소
+그대로"**라고 못박고 있고 `patchplan.plan_addresses`는 겹치는 항목을 **제외**할 뿐
+**옮기지 않는다**(*"빈 주소를 찾아 옮겨 붙이는 경로가 이 함수에 없다"*). 따라서 유니버스·주소를
+기존과 분리하려면 **1단계에 넣는 도면을 그렇게 만드는 수밖에** 없다 — 툴 인자로는 불가능하다.
+세션 전에 사용자가 **㉠ FID 대역만 분리하고 주소는 도면대로 간다** / **㉡ 분리된 유니버스로
+도면을 다시 만든다** 중 하나를 골라야 한다(`spec.md` §C 「사용자 결정 대기」 등록) ·
+⑤ **원복 절차 사전 합의** ·
+⑥ **[round15 #6 신설 · round16 #2 전면 정정] 후보→픽스처 이름 매핑(`names` 인자) 사전 작성.**
+`design.md` §2.3이 "이름 없는 후보는 `fixture_name_missing`으로 **제외**하고 이 계층은 이름을
+지어내지 않는다"고 못박고 있으므로, `names` 없이 세션에 들어가면 **대상이 구조적으로 0건**이 된다.
+형식은 `{후보 식별자: 콘솔에 만들 픽스처 이름}` JSON 객체다
+(`tools.py` 스키마: *"Candidate id -> the fixture name to create. A candidate with no name here
+is excluded with a reason; this layer never invents a name."*).
+
+  **[round16 #2] 이전 판은 "1단계 리포트의 `missing_in_console` 식별자를 그대로 키로 쓴다"고
+  적었다 — 거짓이다. 그대로 준비하면 세션 당일 전 항목이 `fixture_name_missing`으로 제외된다.**
+  키는 리포트에 존재하지 않는다. `server/vwx/patchplan.py`의 `_candidate_id`(약 1005-1021)가
+  **여섯 값의 sha256 해시**로 만든다 — **사람이 손으로 만들 수 없다**:
+
+  ```python
+  identity = {"address": address, "detail": detail, "instrument_type": instrument_type,
+              "source_index": index, "unit_number": unit_number, "universe": universe}
+  encoded = json.dumps(identity, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+  return "vwx-missing-" + sha256(encoded.encode("utf-8")).hexdigest()[:16]
+  ```
+
+  **얻는 방법은 하나뿐이다** — 1단계 리포트를 넣고 `apply_vectorworks_patch(report=…,
+  dry_run=true)`를 **한 번 호출**해 payload의 `plan.candidates[].id`를 **그대로 복사**한다.
+
+  **[HARD] 그리고 그 1단계 리포트 payload를 동결한다 — 재생성하지 않는다.** 이것이 ⑥의
+  실질 계약이다. `source_index`가 해시 입력이고 그 값은 `missing_in_console`의
+  **행 순서**(`enumerate`)에서 온다(`_candidates_from_report`, 약 951-960행). 도면을 다시
+  export하거나 1단계 대조를 다시 뜨면 행 순서가 바뀔 수 있고, 그러면 **준비한 `names`의 키가
+  전부 무효**가 되어 세션 당일 모든 후보가 `fixture_name_missing`으로 제외된다 —
+  **대상 0건**, round15 #6이 경고한 바로 그 상태다. 그래서 세션 준비는
+  ⓐ 1단계 리포트 payload를 **한 번** 뜬다 → ⓑ 그 payload를 파일로 동결해
+  `progress.md` §E.2 M8 절에 붙인다 → ⓒ 그 payload로 드라이런을 한 번 돌려 나온
+  `plan.candidates[].id`를 키로 `names` 표를 만들어 함께 붙인다 → ⓓ **세션 당일에는 ⓑ의
+  동결본을 그대로 `report=` 인자로 넘긴다**(새로 뜨지 않는다) 순서로 한다.
+  ⓑ를 다시 떠야 할 사정이 생기면 **`names` 표 전체를 ⓒ부터 다시 만든다.**
+
 **대상 0건 세션은 G1을 검증하지 못하며 M8 PASS로 적지 않는다**(`acceptance.md`
 AC-AUTOPATCH-026 아래 고지 블록).
 
