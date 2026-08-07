@@ -552,3 +552,44 @@ def test_the_payload_discloses_that_tail_overlap_is_undetectable():
     payload = _deliver(RigPort(), [(1, 1)])
     kinds = [c["kind"] for c in payload["plan"]["skipped_checks"]]
     assert "existing_footprint_unreadable" in kinds
+
+
+def _fixture(patch: str, name: str) -> dict:
+    return {"Patch": patch, "FixtureType": "FixtureType 3", "Mode": "1 Mode 1", "Name": name}
+
+
+def test_a_re_call_reads_as_already_patched_even_with_an_intruder_in_the_span():
+    """[round12 R05] 멱등이 점유보다 **먼저** 판정돼야 2회차가 '이미 했음'으로 읽힌다.
+
+    우리 자리(1.1)에 우리와 동일한 픽스처가 있고 구간 안(1.5)에 무관한 픽스처가 하나 더
+    있으면, 점유 선별이 앞서면 항목이 `address_already_occupied`로 먼저 빠져
+    `already_patched_identical`이 영영 나오지 않는다 — REQ-AUTOPATCH-022가 금지하는 뭉갬이다.
+    """
+    rig = RigPort(fixtures={1: _fixture("1.001", "ours"), 2: _fixture("1.005", "other")})
+    payload = _deliver(rig, [(1, 1)])
+    assert [x["code"] for x in payload["handoff"]["exclusions"]] == [ALREADY_PATCHED_IDENTICAL]
+
+
+def test_a_call_that_delivered_nothing_does_not_ask_about_plugin_execution():
+    """[round12 R04] 전달분 0건인 거부 분기에서 실행 재확인 안내가 나가면 거짓말이다."""
+    payload = _deliver(RigPort(fixtures=_INTRUDER), [(1, 1)])
+    assert payload["handoff"]["lua_source"] is None
+    guidance = " ".join(payload["verification"]["guidance"])
+    assert "플러그인을 실제로 실행했는지" not in guidance
+
+
+def test_a_call_that_delivered_nothing_reports_zero_created():
+    """[round12 R06] Lua를 한 줄도 내지 않은 호출이 '1건 생성'을 보고하면 거짓 성공이다."""
+    rig = RigPort(fixtures={1: _fixture("1.001", "ours")})
+    payload = _deliver(rig, [(1, 1)])
+    assert payload["handoff"]["lua_source"] is None
+    assert payload["verification"]["created_count"] == 0
+    assert payload["verification"]["observed_count"] == 1  # 있긴 하다 — 우리가 만든 게 아닐 뿐
+
+
+def test_an_unpatched_console_fixture_does_not_halt_the_tool():
+    """[round12 R08] 미패치 예비 픽스처 1대가 리그에 있다고 툴이 멈추면 안 된다."""
+    rig = RigPort(fixtures={1: _fixture("0.0", "spare")})
+    payload = _deliver(rig, [(1, 1)])
+    assert payload["console_read"]["complete_enough_to_judge_absence"] is True
+    assert "AddFixtures({" in payload["handoff"]["lua_source"]

@@ -709,3 +709,35 @@ def test_the_refusal_reason_still_does_not_echo_the_rejected_value():
         _handoff(resolutions=(_resolution(candidate_id="a", console_type="Acme CD 700"),)),
     ):
         assert CD_TOKEN.search(repr(handoff.to_dict())) is None
+
+
+@pytest.mark.parametrize(
+    "kwargs,expected",
+    [
+        ({"names": {"a": "CD spare"}}, "name"),
+        (
+            {"resolutions": (_resolution(candidate_id="a", console_type="Acme CD 700"),)},
+            "console_type",
+        ),
+    ],
+)
+def test_the_rejected_field_is_named_for_a_single_offender(kwargs, expected):
+    handoff = _handoff(dry_run=False, **kwargs)
+    assert f"{expected} 필드를 거부" in handoff.exclusions[0].reason
+
+
+def test_two_offending_fields_are_both_named_rather_than_blaming_the_integers():
+    """[round12 R09] 둘이 동시에 거부되면 이전 판은 전부 무죄로 보고 정수 필드를 지목했다.
+
+    사용자는 멀쩡한 필드를 고치게 되고 재시도는 영원히 실패한다 — round11 N14가
+    없애려던 바로 그 실패 양식의 재발이었다.
+    """
+    handoff = _handoff(
+        names={"a": "CD spare"},
+        resolutions=(_resolution(candidate_id="a", console_type="Acme CD 700"),),
+        dry_run=False,
+    )
+    reason = handoff.exclusions[0].reason
+    assert "name" in reason
+    assert "console_type" in reason
+    assert "정수" not in reason

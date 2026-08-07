@@ -38,7 +38,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from server.prechk.inventory import Inventory
 from server.prechk.patch import normalize_address
@@ -297,29 +297,31 @@ def build_patch_handoff(
     )
 
 
+_STRING_FIELDS = ("name", "console_type", "console_mode")
+
+
 def _rejected_field(entry: LuaPatchEntry) -> str:
-    """생성기가 거부한 필드 이름 — **값은 싣지 않는다**."""
-    rejected = [
-        field
-        for field, value in (
-            ("name", entry.name),
-            ("console_type", entry.console_type),
-            ("console_mode", entry.console_mode),
-        )
-        if _rejects(field, value, entry)
-    ]
+    """생성기가 거부한 필드 이름 — **값은 싣지 않는다**.
+
+    [round12 R09] 이전 판은 한 필드씩 중립값으로 바꿔 보고 그때 통과하면 유죄로 봤다.
+    **둘 이상이 동시에 거부되면 어느 프로브도 통과하지 못해 전부 무죄가 되고**, 사유가
+    엉뚱하게 정수 필드를 지목했다 — N14가 없애려던 바로 그 "고칠 수 없는 재시도"다.
+    그래서 반대로 판정한다: **그 필드만 중립으로 두고 나머지를 전부 중립화**했을 때도
+    여전히 거부되면 그 필드가 원인이다.
+    """
+    neutral = replace(entry, **dict.fromkeys(_STRING_FIELDS, "ok"))
+    rejected = [field for field in _STRING_FIELDS if _rejects(field, entry, neutral)]
     return " · ".join(rejected) if rejected else "정수(fid/universe/address)"
 
 
-def _rejects(field: str, value: object, entry: LuaPatchEntry) -> bool:
-    from dataclasses import replace
-
-    probe = replace(entry, **{field: "ok"}) if isinstance(value, str) else entry
+def _rejects(field: str, entry: LuaPatchEntry, neutral: LuaPatchEntry) -> bool:
+    """그 필드 하나만 원래 값으로 되돌렸을 때 거부되면 그 필드가 원인이다."""
+    probe = replace(neutral, **{field: getattr(entry, field)})
     try:
         render_addfixtures_call(probe)
     except LuaGenerationError:
-        return False  # 이 필드를 중립값으로 바꿔도 여전히 거부 -> 원인이 아니다
-    return True
+        return True
+    return False
 
 
 def _exclusion(target: PatchCandidate, code: str, reason: str) -> PatchTargetExclusion:
@@ -422,10 +424,7 @@ def _resolve_library_type(display: str | None, library: FixtureTypeLibrary) -> L
     `PROTOCOL.md`의 슬롯==FID 우연일치와 같은 구조이고, 우연일치를 판별하는 실험은
     이 저장소에서 아직 수행되지 않았다. 추측 대신 거부한다.
     """
-    # [round11 N01] 열거가 절단됐으면 "그 이름의 타입이 없다"를 단정할 수 없다 —
-    # `by_name`이 비었다는 사실이 증거가 되지 못하므로 모호성 가드가 바로 그때 공허해진다.
-    # `typemap.LIBRARY_TRUNCATED_REASON`이 같은 라이브러리 객체에 대해 이미 같은 규율을 정했다.
-    if display is None or not library.available or library.truncated:
+    if display is None or not library.available:
         return None
     by_name = [entry for entry in library.types if entry.name == display]
     index_match = _TYPE_DISPLAY_INDEX.match(display)
@@ -434,6 +433,13 @@ def _resolve_library_type(display: str | None, library: FixtureTypeLibrary) -> L
         if index_match is not None
         else []
     )
+    # [round11 N01 · round12 R07] 절단이 무효화하는 것은 **부정 결론**뿐이다 —
+    # "그 이름의 타입이 열거에 없다"는 절단 아래에서 증거가 되지 못하므로, `by_name`이 비었다는
+    # 사실에 기대는 **index 형태 단독 해석은 거부**한다. 반면 이름이 정확히 일치한 것은
+    # 절단과 무관한 **긍정 증거**이므로 그대로 채택한다 — 둘을 함께 버리면 이 콘솔에서
+    # 멱등 판정 자체가 영영 성립하지 않는다(절단이 기본 경로다).
+    if library.truncated and not by_name:
+        return None
     return _single_unambiguous(by_name, by_index)
 
 
@@ -472,8 +478,19 @@ def _single_unambiguous(by_name: list, by_index: list):
 
 
 def _address_readable(fixture) -> bool:
-    """그 픽스처의 `Patch` 값이 주소로 판독됐는가 — 판독 실패는 **미판독**이다."""
-    return normalize_address(fixture.patch_raw).ok
+    """그 픽스처의 `Patch` **프로퍼티를 읽었는가** — 못 읽은 것만 미판독이다.
+
+    [round12 R08] 이전 판은 `normalize_address(...).ok`를 썼다. 그러면 **읽기는 성공했는데
+    주소가 없는 정상 상태**(미패치 예비 픽스처의 `Patch = "0.0"` · 절대주소 미지정)까지
+    미판독으로 세어, 그런 픽스처가 리그에 **한 대만 있어도** 모든 대상이
+    `console_read_incomplete`로 제외되고 툴이 아무것도 만들지 못했다.
+    `normalize_address` 자신이 `0.0`을 "주소를 지칭하지 않는 값"으로 전제한다 —
+    그것은 판독 실패가 아니라 **패치되지 않았다는 관측**이다.
+
+    구별의 정본은 `read_inventory`가 이미 들고 있다: 프로퍼티가 read/shape 게이트를
+    통과하지 못하면 `read_failures`에 남는다. 그것만 미판독으로 센다.
+    """
+    return fixture.failure_for("Patch") is None
 
 
 def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
@@ -760,6 +777,7 @@ def _fixture_at(
 
 @dataclass(frozen=True)
 class VerificationResult:
+    delivered: bool
     candidate_id: str
     universe: int
     address: int
@@ -772,6 +790,7 @@ class VerificationResult:
 
     def to_dict(self) -> dict[str, object]:
         return {
+            "delivered": self.delivered,
             "candidate_id": self.candidate_id,
             "universe": self.universe,
             "address": self.address,
@@ -799,8 +818,22 @@ class PatchVerification:
 
     @property
     def created_count(self) -> int:
-        """관측으로 **확정된** 생성 건수. 불일치·확인 불가는 여기에 들어오지 않는다."""
-        return self.observed_count
+        """이 호출이 **전달한** 항목 중 관측으로 확정된 건수.
+
+        [round12 R06] 이전 판은 `observed_count`의 별칭이었다. 검증 범위가 승인 항목 전체로
+        넓어진 뒤로는 **전달한 적 없는 주소의 기존 픽스처**까지 "생성됨"으로 세어,
+        Lua를 한 줄도 내지 않은 호출이 `created_count=1 · all_observed=True`를 보고했다.
+        전달하지 않은 것은 이 호출이 만든 것이 아니다.
+        """
+        return sum(
+            1
+            for result in self.results
+            if result.delivered and result.outcome == VERIFICATION_OBSERVED
+        )
+
+    @property
+    def delivered_count(self) -> int:
+        return sum(1 for result in self.results if result.delivered)
 
     @property
     def mismatch_count(self) -> int:
@@ -818,6 +851,7 @@ class PatchVerification:
             "not_observed_count": self._count(VERIFICATION_NOT_OBSERVED),
             "mismatch_count": self.mismatch_count,
             "identity_unconfirmed_count": self._count(VERIFICATION_IDENTITY_UNCONFIRMED),
+            "delivered_count": self.delivered_count,
             "created_count": self.created_count,
             "results": [result.to_dict() for result in self.results],
             "guidance": list(self.guidance),
@@ -829,6 +863,7 @@ def verify_patch(
     *,
     console_fixtures: Sequence[ConsoleFixture],
     read_complete: bool = True,
+    delivered_ids: Sequence[str] | None = None,
 ) -> PatchVerification:
     """전달한 항목이 실제로 그 주소에 그 타입으로 생겼는지 **재조회로만** 판정한다.
 
@@ -837,9 +872,36 @@ def verify_patch(
     막는다: 재조회가 불완전하면 **미판독을 미관측으로 적지 않는다**.
     불일치는 구조화해 보고하고 **자동 보정도 재시도도 하지 않는다**(AC-AUTOPATCH-022).
     """
+    # `delivered_ids`가 없으면 넘어온 항목 전부를 전달분으로 본다(단독 호출의 기본).
+    delivered = (
+        set(delivered_ids)
+        if delivered_ids is not None
+        else {entry.candidate_id for entry in entries}
+    )
     results: list[VerificationResult] = []
     for entry in entries:
-        occupant = _fixture_at(console_fixtures, entry.universe, entry.address)
+        found = _fixtures_at(console_fixtures, entry.universe, entry.address)
+        occupant = found[0] if len(found) == 1 else None
+        if len(found) > 1:
+            # [round12 R02] "둘이라 어느 것인지 모른다"는 "아무것도 없다"가 아니다.
+            # 없다고 적으면 사용자는 실행이 안 된 줄 알고 다시 실행해 **중복을 만든다**.
+            results.append(
+                VerificationResult(
+                    delivered=entry.candidate_id in delivered,
+                    candidate_id=entry.candidate_id,
+                    universe=entry.universe,
+                    address=entry.address,
+                    expected_type=entry.console_type,
+                    expected_mode=entry.console_mode,
+                    outcome=VERIFICATION_IDENTITY_UNCONFIRMED,
+                    observed_type=None,
+                    observed_mode=None,
+                    detail=(
+                        f"그 주소에 픽스처가 {len(found)}대 관측된다 — 어느 것인지 확정할 수 없다."
+                    ),
+                )
+            )
+            continue
         if occupant is None and not read_complete:
             # 못 읽은 픽스처가 남아 있으면 "없다"고 단정할 수 없다 — 미판독을 미관측으로
             # 적으면 사용자가 "실행이 안 됐다"고 읽고 다시 실행해 중복을 만든다.
@@ -863,6 +925,7 @@ def verify_patch(
 
         results.append(
             VerificationResult(
+                delivered=entry.candidate_id in delivered,
                 candidate_id=entry.candidate_id,
                 universe=entry.universe,
                 address=entry.address,
@@ -876,10 +939,13 @@ def verify_patch(
         )
 
     verification = PatchVerification(results=tuple(results))
-    if results and verification.created_count == 0:
+    # [round12 R04] 전달한 것이 하나도 없으면 "플러그인을 실행했는지 확인하라"는 안내는
+    # **거짓말**이다 — 실행할 플러그인이 애초에 나가지 않았다. 그 안내는 전달분이 있는데
+    # 관측이 0건일 때만 의미가 있다.
+    if verification.delivered_count and verification.created_count == 0:
         verification = PatchVerification(
             results=tuple(results), guidance=(ZERO_CREATED_GUIDANCE, NO_AUTO_CORRECTION)
         )
-    elif not verification.all_observed:
+    elif results and not verification.all_observed:
         verification = PatchVerification(results=tuple(results), guidance=(NO_AUTO_CORRECTION,))
     return verification

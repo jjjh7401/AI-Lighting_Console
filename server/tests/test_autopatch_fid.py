@@ -506,7 +506,42 @@ def test_an_unreadable_fid_property_also_blocks_assignment():
     """열거는 완전해도 FID 값을 못 읽으면 빈 FID를 단정할 수 없다."""
     plan = _plan_with(_CountingFidPort(enumerated=2, child_count=2, fid_readable=False))
     assert plan.ok is False
-    assert plan.fid_safety["conflict_precheck"]["read"]["unread_count"] == 2
+    read = plan.fid_safety["conflict_precheck"]["read"]
+    # 2대를 못 읽었고, 그래서 관측 슬롯이 0이라 선언 총계(2)와도 어긋난다 — 둘 다 미판독이다.
+    assert read["unread_count"] == 4
+    assert read["enumerated_count"] == 0
+    assert read["complete"] is False
+
+
+def test_a_duplicate_slot_index_is_not_counted_as_a_read_slot():
+    """[round12 R01] 중복 `i`가 섞이면 행 수는 총계와 맞아도 못 읽은 슬롯이 남는다."""
+
+    class _Duplicated(_CountingFidPort):
+        def query_state(self, path: str) -> dict:
+            payload = super().query_state(path)
+            payload["children"] = [{"i": 1, "name": "a"}, {"i": 1, "name": "a-again"}]
+            return payload
+
+    plan = _plan_with(_Duplicated(enumerated=2, child_count=2))
+    assert plan.ok is False
+    read = plan.fid_safety["conflict_precheck"]["read"]
+    assert read["enumerated_count"] == 1  # 행은 2개지만 **서로 다른 슬롯은 1개**
+    assert read["complete"] is False
+
+
+def test_more_rows_than_the_declared_total_is_also_unread():
+    """`childCount`보다 행이 **많아도** 총계와 어긋난 것이므로 완전하다고 말할 수 없다."""
+
+    class _Overflowing(_CountingFidPort):
+        def query_state(self, path: str) -> dict:
+            payload = super().query_state(path)
+            payload["node"] = {"childCount": 1}
+            payload["children"] = [{"i": 1}, {"i": 2}, {"i": 3}]
+            return payload
+
+    plan = _plan_with(_Overflowing(enumerated=3, child_count=1))
+    assert plan.ok is False
+    assert plan.fid_safety["conflict_precheck"]["read"]["complete"] is False
 
 
 def test_an_unknown_child_count_is_treated_as_unread_rather_than_complete():

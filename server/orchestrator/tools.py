@@ -135,6 +135,7 @@ from server.vwx.apply import (
 from server.vwx.columns import resolve_columns as resolve_vwx_columns
 from server.vwx.diff import compare as compare_vectorworks_rig
 from server.vwx.patchplan import (
+    ASSUMPTION_71_GO,
     build_patch_plan,
     designed_attributes_by_candidate,
     plan_addresses,
@@ -2475,6 +2476,11 @@ def build_toolset(
             # `fid_range_visually_confirmed_empty`가 죽은 필드가 된다. 둘을 분리했고,
             # `assumption_71`은 여기서 **주입하지 않는다**(모듈 기본값 = 실측 GO).
             assignment_requested=bool(selected),
+            # [round12 R03] 실측 판정을 **명시적으로** 넘긴다 — 기본값에 기대면 payload만
+            # 보고는 어느 분기로 갔는지 알 수 없다. 값 `go`의 근거는 progress.md §E.2 M0 1차
+            # (FID 프로퍼티가 읽히고 슬롯≠FID 쇼파일에서 확인됨)이며, 재측정으로 뒤집히면
+            # **여기 한 줄**만 바꾸면 NEGATIVE 분기가 열린다.
+            assumption_71=ASSUMPTION_71_GO,
             fid_range_visually_confirmed_empty=call.arguments.get(
                 "fid_range_visually_confirmed_empty"
             ),
@@ -2509,19 +2515,23 @@ def build_toolset(
             footprints={target.id: designed[target.id].footprint for target in plan.targets},
             occupied={},
         )
-        # 콘솔 점유는 **대상별로** 본다 — 자기 자리는 멱등 판정에 넘기고 나머지는 여기서 잡는다
-        # (round11 M7 N01: 전역 면제는 무관한 후보 하나로 겹침 가드를 없앴다).
-        address_plan = screen_console_occupancy(
-            plan.targets, address_plan=address_plan, console_fixtures=console_fixtures
-        )
         address_plan = screen_console_read(
             plan.targets, address_plan=address_plan, inventory=inventory
         )
+        # **멱등을 먼저 판정한다.** [round12 R05] 점유 선별을 앞에 두면, 우리 자리에 우리와
+        # 동일한 픽스처가 있고 구간 안에 무관한 픽스처가 하나 더 있을 때 항목이
+        # `address_already_occupied`로 먼저 빠져 `already_patched_identical`이 영영 나오지
+        # 않는다 — 2회차 재호출이 "이미 했음" 대신 "점유됨"으로 보고되는, REQ-AUTOPATCH-022가
+        # 금지하는 바로 그 뭉갬이다(round11 M7 N01이 다른 방향에서 잡았던 것과 같은 결함).
         address_plan = screen_idempotent(
             plan.targets,
             address_plan=address_plan,
             resolutions=type_plan.resolutions,
             console_fixtures=console_fixtures,
+        )
+        # 남은 항목(= 우리 자리는 비어 있다고 판정된 것)에 대해서만 구간 침입을 본다.
+        address_plan = screen_console_occupancy(
+            plan.targets, address_plan=address_plan, console_fixtures=console_fixtures
         )
         handoff = build_patch_handoff(
             plan.targets,
@@ -2544,6 +2554,7 @@ def build_toolset(
                 _approved_entries(plan.targets, type_plan.resolutions, designed, handoff),
                 console_fixtures=console_fixtures,
                 read_complete=read_complete,
+                delivered_ids=[entry.candidate_id for entry in handoff.entries],
             ).to_dict(),
             "scope": "승인 항목 전체(전달분 + 이미 있다고 판정된 것)",
             "as_of": "이 호출이 방금 읽은 콘솔 상태",
