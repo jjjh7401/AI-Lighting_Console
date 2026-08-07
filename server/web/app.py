@@ -60,6 +60,7 @@ from server.web.panel import (
     PanelStore,
     PinStore,
 )
+from server.web.paperwork_api import PaperworkDeps, build_paperwork_router
 from server.web.provision_api import ProvisionDeps, build_provision_router
 from server.web.session import ChatSession
 from server.web.settings_api import SettingsDeps, build_settings_router
@@ -90,6 +91,11 @@ class WebDeps:
     backup_poll_seconds: float | None = None
     settings: SettingsDeps | None = None
     provision: ProvisionDeps | None = None
+    # W3 (P0 paperwork UI exposure): the read-only patch-sheet/cue-sheet/
+    # preset-list generation surface. ``None`` = not wired (pre-W3 behaviour
+    # — no /api/paperwork routes are mounted), matching the settings/provision
+    # optional-Deps convention above.
+    paperwork: PaperworkDeps | None = None
     # M7.1 (REQ-DEPLOY-002a): the /ws Origin+token gate. ``None`` = no gate,
     # which is the pre-M7.1 behaviour dev runs and unit tests compose.
     handshake: HandshakePolicy | None = None
@@ -529,6 +535,11 @@ def create_app(deps: WebDeps) -> FastAPI:
 
     if deps.provision is not None:
         app.include_router(build_provision_router(deps.provision))
+
+    # W3: paperwork generation surface (/api/paperwork). Registered BEFORE
+    # the catch-all static mount, same reasoning as settings/provision above.
+    if deps.paperwork is not None:
+        app.include_router(build_paperwork_router(deps.paperwork))
 
     if deps.ui_dist is not None and Path(deps.ui_dist).is_dir():
         app.mount("/", StaticFiles(directory=str(deps.ui_dist), html=True), name="ui")
