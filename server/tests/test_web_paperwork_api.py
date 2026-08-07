@@ -109,17 +109,18 @@ def _isolate_output_dir(monkeypatch, tmp_path: Path) -> None:
 
 
 class TestListEndpoint:
-    def test_reports_the_three_kinds_with_no_last_result_before_any_generation(
+    def test_reports_the_four_kinds_with_no_last_result_before_any_generation(
         self, tmp_path, monkeypatch
     ):
         _isolate_output_dir(monkeypatch, tmp_path)
         deps = PaperworkDeps(state_port=FakeInventoryPort(_full_states(), _full_properties()))
         body = _client(deps).get("/api/paperwork").json()
-        assert body["kinds"] == ["patch_sheet", "cue_sheet", "preset_list"]
+        assert body["kinds"] == ["patch_sheet", "cue_sheet", "preset_list", "magic_sheet"]
         assert body["last_results"] == {
             "patch_sheet": None,
             "cue_sheet": None,
             "preset_list": None,
+            "magic_sheet": None,
         }
 
     def test_a_last_result_appears_after_a_successful_generation(self, tmp_path, monkeypatch):

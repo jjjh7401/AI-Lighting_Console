@@ -107,6 +107,39 @@ describe("paperworkBadges — ③ 불완전성 배지가 응답 플래그에 따
     });
     expect(badges).toEqual(["드릴다운 상한"]);
   });
+
+  it("magic_sheet: the membership badge is unconditional — a complete read still carries it", () => {
+    // Group membership is unreadable as a matter of platform, not as an
+    // outcome of this call, so an operator must not have to notice an ABSENT
+    // badge to learn it (server/paperwork/data.py GROUP_MEMBERSHIP_UNAVAILABLE).
+    const badges = paperworkBadges("magic_sheet", {
+      path: "x",
+      group_count: 4,
+      preset_pool_count: 6,
+      placement_count: 19,
+      placements_complete: true,
+    });
+    expect(badges).toEqual(["그룹 멤버십 판독 불가"]);
+  });
+
+  it("magic_sheet: a partial placement read adds its own badge beside it", () => {
+    const badges = paperworkBadges("magic_sheet", {
+      path: "x",
+      placement_count: 18,
+      placements_complete: false,
+    });
+    expect(badges).toEqual(["배치 좌표 일부", "그룹 멤버십 판독 불가"]);
+  });
+
+  it("magic_sheet: truncated/drilldown_capped do not leak in from the pool kinds", () => {
+    const badges = paperworkBadges("magic_sheet", {
+      path: "x",
+      truncated: true,
+      drilldown_capped: true,
+      placements_complete: true,
+    });
+    expect(badges).toEqual(["그룹 멤버십 판독 불가"]);
+  });
 });
 
 describe("PaperworkCard — hook-free structural render", () => {
@@ -229,7 +262,7 @@ describe("PaperworkCard — hook-free structural render", () => {
   });
 });
 
-describe("PaperworkPanelView — ① 3종 렌더", () => {
+describe("PaperworkPanelView — ① 4종 렌더", () => {
   it("renders exactly one card per PAPERWORK_KINDS entry, in order", () => {
     const element = PaperworkPanelView({
       results: {},
@@ -244,11 +277,12 @@ describe("PaperworkPanelView — ① 3종 렌더", () => {
       isElementWithClassName(child, "paperwork-cards"),
     ) as ReactElement;
     const cards = childArray(cardsBox) as ReactElement[];
-    expect(cards).toHaveLength(3);
+    expect(cards).toHaveLength(4);
     expect(cards.map((card) => card.props.meta.kind)).toEqual([
       "patch_sheet",
       "cue_sheet",
       "preset_list",
+      "magic_sheet",
     ]);
   });
 
@@ -268,6 +302,7 @@ describe("PaperworkPanelView — ① 3종 렌더", () => {
     expect(cards[0].props.result).toBeNull(); // patch_sheet: no last_result
     expect(cards[1].props.result).toBe(CUE_SHEET_TRUNCATED); // cue_sheet
     expect(cards[2].props.result).toBeNull(); // preset_list
+    expect(cards[3].props.result).toBeNull(); // magic_sheet
   });
 
   it("marks only the busy kind's card as busy", () => {
@@ -283,7 +318,7 @@ describe("PaperworkPanelView — ① 3종 렌더", () => {
       isElementWithClassName(child, "paperwork-cards"),
     ) as ReactElement;
     const cards = childArray(cardsBox) as ReactElement[];
-    expect(cards.map((card) => card.props.busy)).toEqual([false, false, true]);
+    expect(cards.map((card) => card.props.busy)).toEqual([false, false, true, false]);
   });
 
   it("renders a notice line only when one is present", () => {

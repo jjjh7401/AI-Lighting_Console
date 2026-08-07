@@ -141,13 +141,16 @@ class TestRegistry:
         #   must never hide behind the read tool.
         # + build_handover_pack (server/paperwork/bundle.py, P0 W2 — the
         #   handover-pack index tying the three T-J sheets together).
+        # + build_magic_sheet (server/paperwork/data.py, P0-5 — the REDUCED
+        #   magic sheet: names + patch summary + placement coordinates. The
+        #   FULL form stays impossible; group membership is not readable.)
         # The count is asserted against the declared tuple's length so the set
         # stays CLOSED: adding a handler without declaring it, or declaring one
         # without a handler, still fails here.
         registry = _registry()
         names = [definition.name for definition in registry.definitions()]
         assert sorted(names) == sorted(TOOL_NAMES)
-        assert len(names) == len(TOOL_NAMES) == 23
+        assert len(names) == len(TOOL_NAMES) == 24
 
     def test_the_four_original_tools_are_still_registered(self):
         # The M5 addition must not have displaced any of them.

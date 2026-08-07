@@ -52,13 +52,21 @@ from server.paperwork.data import (
     build_cue_sheet as _build_cue_sheet_query,
 )
 from server.paperwork.data import (
+    build_magic_sheet as _build_magic_sheet_query,
+)
+from server.paperwork.data import (
     build_patch_sheet as _build_patch_sheet_query,
 )
 from server.paperwork.data import (
     build_preset_list as _build_preset_list_query,
 )
 from server.paperwork.output import write_paperwork_html
-from server.paperwork.render import render_cue_sheet, render_patch_sheet, render_preset_list
+from server.paperwork.render import (
+    render_cue_sheet,
+    render_magic_sheet,
+    render_patch_sheet,
+    render_preset_list,
+)
 from server.prechk.inventory import InventoryReadError
 
 
@@ -203,6 +211,44 @@ def _preset_list(deps: PaperworkDeps) -> tuple[str, str, dict]:
     return "preset_list.html", render_preset_list(listing), summary
 
 
+def _magic_sheet(deps: PaperworkDeps) -> tuple[str, str, dict]:
+    property_port = _resolve_property_port(deps)
+    if property_port is None:
+        # Coordinates live ONLY in properties, so an unwired property port
+        # would render an empty plan view that reads like a rig with no
+        # fixtures. Same capability_unavailable shape _patch_sheet raises.
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "capability_unavailable",
+                "message": (
+                    "property reads are not wired — the paperwork API needs a "
+                    "property_port (or a state_port that also implements "
+                    "query_property)"
+                ),
+            },
+        )
+    rig_paths = deps.rig_paths or DEFAULT_RIG_CONTEXT_PATHS
+    # No query_failed branch: build_magic_sheet degrades per SECTION rather
+    # than raising, so a dead group pool still yields a sheet carrying the
+    # placements and saying why the groups are absent. Failing the whole
+    # request here would throw away the sections that DID answer.
+    sheet = _build_magic_sheet_query(
+        _InventoryPort(deps.state_port, property_port),
+        groups_path=rig_paths.get("groups", DEFAULT_RIG_CONTEXT_PATHS["groups"]),
+        preset_pools_path=rig_paths.get("preset_pools", DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]),
+        fixtures_path=rig_paths.get("fixtures", DEFAULT_RIG_CONTEXT_PATHS["fixtures"]),
+    )
+    summary = {
+        "group_count": len(sheet.group_names),
+        "preset_pool_count": len(sheet.preset_names),
+        "placement_count": len(sheet.placements),
+        "placements_complete": sheet.placements_complete,
+        "group_membership_readable": False,
+    }
+    return "magic_sheet.html", render_magic_sheet(sheet), summary
+
+
 # The closed routing table (REQ per the brief §① "kind는 닫힌 테이블로 라우팅
 # 한다"). Deliberately does NOT carry a "handover" entry — the handover
 # package button is W2's scope, out of this SPEC slice; a new kind is added
@@ -211,6 +257,7 @@ _KIND_TABLE: dict[str, Callable[[PaperworkDeps], tuple[str, str, dict]]] = {
     "patch_sheet": _patch_sheet,
     "cue_sheet": _cue_sheet,
     "preset_list": _preset_list,
+    "magic_sheet": _magic_sheet,
 }
 
 

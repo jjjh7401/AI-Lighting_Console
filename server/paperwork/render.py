@@ -16,6 +16,7 @@ _STYLE = """
   body { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
          margin: 24px; color: #1a1a1a; }
   h1 { font-size: 20px; margin-bottom: 4px; }
+  h2 { font-size: 15px; margin: 20px 0 6px; }
   .meta { color: #555; font-size: 12px; margin-bottom: 16px; }
   table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
   th, td { border: 1px solid #ccc; padding: 4px 8px; font-size: 12px; text-align: left; }
@@ -23,13 +24,17 @@ _STYLE = """
   .pool-name { font-weight: bold; background: #fafafa; }
   .empty { color: #888; font-style: italic; }
   .unavailable { color: #a00; }
+  .tiles { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .tile { border: 1px solid #ccc; border-radius: 3px; padding: 3px 8px; font-size: 12px; }
+  .caveat { border-left: 3px solid #a00; background: #fff5f5; color: #7a0000;
+            padding: 8px 10px; font-size: 12px; margin-bottom: 16px; }
   .badge { display: inline-block; padding: 1px 6px; border-radius: 3px;
            font-size: 11px; margin-left: 6px; }
   .badge-truncated { background: #fff3cd; color: #7a5b00; }
   @media print {
     body { margin: 0.5in; box-shadow: none; }
     thead { display: table-header-group; }
-    tr, .meta { break-inside: avoid; }
+    tr, .meta, .caveat { break-inside: avoid; }
     * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   }
 """

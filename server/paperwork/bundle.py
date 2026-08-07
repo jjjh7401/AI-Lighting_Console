@@ -1,12 +1,13 @@
-"""Handover pack: patch sheet + cue sheet + preset list + index, one folder.
+"""Handover pack: patch sheet + cue sheet + preset list + magic sheet + index,
+one folder.
 
-The proposal's payoff ("인수인계 용이") was never in the three sheets
-themselves — those already existed (T-J) — it was the LAST step: today they
-land as three unrelated files and the person taking over a show has no way to
-know which to open first, or that one of them only saw HALF the rig. This
-module adds no new observation axis; it calls the three existing builders and
-writes one more file (``index.html``) that links to them and states, up
-front, how much of the console each one actually saw.
+The proposal's payoff ("인수인계 용이") was never in the sheets themselves —
+those already existed (T-J) — it was the LAST step: today they land as
+unrelated files and the person taking over a show has no way to know which to
+open first, or that one of them only saw HALF the rig. This module adds no new
+observation axis; it calls the existing builders and writes one more file
+(``index.html``) that links to them and states, up front, how much of the
+console each one actually saw.
 
 **Partial failure is not total failure.** A missing ``property_port`` or an
 unreadable fixture inventory only takes down the patch sheet; a sequences or
@@ -30,14 +31,21 @@ from pathlib import Path
 
 from server.orchestrator.tools import DEFAULT_RIG_CONTEXT_PATHS
 from server.paperwork.data import (
+    MagicSheet,
     PatchSheet,
     PoolListing,
     build_cue_sheet,
+    build_magic_sheet,
     build_patch_sheet,
     build_preset_list,
 )
 from server.paperwork.output import resolve_handover_dir, write_paperwork_html
-from server.paperwork.render import render_cue_sheet, render_patch_sheet, render_preset_list
+from server.paperwork.render import (
+    render_cue_sheet,
+    render_magic_sheet,
+    render_patch_sheet,
+    render_preset_list,
+)
 from server.prechk.footprint import WalkOutcome
 from server.prechk.inventory import InventoryReadError
 
@@ -53,6 +61,7 @@ _INDEX_FILENAME = "index.html"
 _PATCH_SHEET_FILENAME = "patch_sheet.html"
 _CUE_SHEET_FILENAME = "cue_sheet.html"
 _PRESET_LIST_FILENAME = "preset_list.html"
+_MAGIC_SHEET_FILENAME = "magic_sheet.html"
 
 
 @dataclass(frozen=True)
@@ -159,28 +168,73 @@ def _pool_listing_document(
     )
 
 
+def _magic_sheet_document(
+    state_port, property_port, paths: dict
+) -> tuple[HandoverDocument, MagicSheet | None]:
+    doc = HandoverDocument(
+        kind="magic_sheet",
+        title="Magic Sheet (reduced)",
+        filename=_MAGIC_SHEET_FILENAME,
+        path=None,
+        status=STATUS_UNWIRED,
+        detail=None,
+    )
+    if property_port is None:
+        # Coordinates live ONLY in properties, so an unwired property port
+        # would produce a plan view that reads like a rig with no fixtures.
+        # Recorded as unwired rather than generated-and-empty.
+        return (
+            replace(
+                doc,
+                detail=(
+                    "property reads are not wired — build_toolset needs property_port "
+                    "(or a state_port that also implements query_property)"
+                ),
+            ),
+            None,
+        )
+    # No STATUS_QUERY_FAILED branch: build_magic_sheet degrades per SECTION,
+    # so a dead group pool still yields a sheet. The per-section reasons ride
+    # inside the document itself and the shortfall reaches the index through
+    # _incompleteness_lines below.
+    sheet = build_magic_sheet(
+        _InventoryAdapter(state_port, property_port),
+        groups_path=paths.get("groups", DEFAULT_RIG_CONTEXT_PATHS["groups"]),
+        preset_pools_path=paths.get("preset_pools", DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]),
+        fixtures_path=paths.get("fixtures", DEFAULT_RIG_CONTEXT_PATHS["fixtures"]),
+    )
+    return replace(doc, status=STATUS_GENERATED), sheet
+
+
 def _incompleteness_lines(
-    patch_sheet: PatchSheet | None, cue_listing: PoolListing, preset_listing: PoolListing
+    patch_sheet: PatchSheet | None,
+    cue_listing: PoolListing,
+    preset_listing: PoolListing,
+    magic_sheet: MagicSheet | None = None,
 ) -> tuple[str, ...]:
     """The facts that must reach the index's FIRST screen (§2.1): a reader
     who only skims the top must still learn that a listing is partial before
     mistaking it for the whole rig.
 
-    NOT unified with SPEC-COPILOT-TRUNCATE-001's structural disclosure, and the
-    reason is recorded here so it is not re-raised as an inconsistency. That SPEC
-    moves the KEY (``fixtures`` -> ``partial_fixtures`` + ``missing`` +
-    ``analysis_withheld``) so a machine reading JSON cannot consume a partial read
-    without noticing. It applies to ``read_spatial_fixtures``, whose consumer is
-    the model. Paperwork does not call it — ``grep partial_fixtures
-    server/paperwork/`` is 0 — and reaches completeness through the older
-    ``server.prechk.inventory`` channel instead.
+    NOT unified in WORDING with SPEC-COPILOT-TRUNCATE-001's structural
+    disclosure, and the reason is recorded here so it is not re-raised as an
+    inconsistency. That SPEC moves the KEY (``fixtures`` ->
+    ``partial_fixtures`` + ``missing``) so a machine reading JSON cannot
+    consume a partial read without noticing. ``build_magic_sheet`` DOES consume
+    that reply and branches on exactly that key — the contract is honoured at
+    the data layer, not paraphrased away.
 
-    So these are two producers, two consumers, two media, not two vocabularies
-    for one fact. The shared DISCIPLINE is "an incomplete read must not be
-    skimmable as a complete one"; its HTML form is placement (first screen), not
-    a moved key, because a human reader has no key to miss. Unifying the wording
-    would make the index claim a structural guarantee its data channel does not
-    carry.
+    What is not carried over is the MECHANISM, because an index is read by a
+    person and a person has no key to miss. The HTML form of "an incomplete
+    read must not be skimmable as a complete one" is PLACEMENT: first screen,
+    above the document list. What IS carried over is the part that survives the
+    change of medium — REQ-TRUNCATE-004's rule that the shortfall is stated as
+    arithmetic, never as an adjective. Hence the magic-sheet line below prints
+    expected/received/unseen rather than the word "incomplete".
+
+    The two remaining sheets predate that reply shape and reach completeness
+    through the older ``server.prechk.inventory`` channel, so their lines keep
+    that channel's vocabulary rather than borrowing one they cannot back.
     """
     lines: list[str] = []
     if patch_sheet is not None:
@@ -214,6 +268,13 @@ def _incompleteness_lines(
         f"Preset List — truncated={preset_listing.truncated}, "
         f"drilldown_capped={preset_listing.drilldown_capped}"
     )
+    if magic_sheet is not None and not magic_sheet.placements_complete:
+        expected, received, unseen = magic_sheet.placements_missing
+        lines.append(
+            "Magic Sheet — 배치 좌표가 전량이 아니다: "
+            f"expected {expected if expected is not None else '?'}, "
+            f"received {received}, unseen {unseen if unseen is not None else '?'}"
+        )
     return tuple(lines)
 
 
@@ -280,7 +341,7 @@ def build_handover_pack(
     walk: WalkOutcome | None = None,
     directory: Path | None = None,
 ) -> HandoverPack:
-    """Build all three paperwork documents plus an index, in one folder.
+    """Build all four paperwork documents plus an index, in one folder.
 
     Never raises on a single document's failure: a missing ``property_port``,
     an unreadable fixture inventory, or a pool the console never answered
@@ -333,10 +394,19 @@ def build_handover_pack(
         )
         preset_doc = replace(preset_doc, path=preset_path)
 
+    magic_doc, magic_sheet = _magic_sheet_document(state_port, property_port, paths)
+    if magic_sheet is not None:
+        magic_path = write_paperwork_html(
+            _MAGIC_SHEET_FILENAME, render_magic_sheet(magic_sheet), directory=target_dir
+        )
+        magic_doc = replace(magic_doc, path=magic_path)
+
     generated_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    documents = (patch_doc, cue_doc, preset_doc)
+    documents = (patch_doc, cue_doc, preset_doc, magic_doc)
     index_html = _render_index_html(
-        generated_at, documents, _incompleteness_lines(patch_sheet, cue_listing, preset_listing)
+        generated_at,
+        documents,
+        _incompleteness_lines(patch_sheet, cue_listing, preset_listing, magic_sheet),
     )
     index_path = write_paperwork_html(_INDEX_FILENAME, index_html, directory=target_dir)
 
