@@ -632,13 +632,20 @@ Status Transition Ownership Matrix는 `draft → in-progress` 전이를 manager-
 델리게이션 프롬프트에 frontmatter 전이 의무가 없다. 근본 원인 소유자는 워크플로 스킬 쪽이며 본 sync
 범위 밖이다. **두 번 관측됐다는 사실 자체를 여기 남긴다.**
 
-### 남은 `[DEFERRED]` 3건 — 후속 SPEC 소유
+### 남은 `[DEFERRED]` 1건 — 후속 SPEC 소유 (2026-08-07 정정: 3건 → 1건)
 
 1. **Layout 기록**(REQ-SPATIAL-003 · AC-SPATIAL-003) — ASSUMPTION-55 실측 근거. v1은 3D-only.
-2. **AC-SPATIAL-031 risky 분류** — `server/safety/` PRESERVE 경계(§E.2.14). **라이브 대가가 이미 실현됐다**(§E.2.20 결함 2, 무승인 54건) — 후속 SPEC 우선순위 근거.
-3. **REQ-SPATIAL-024 승인 흐름** — 2에 종속. 감사 의미로는 충족, 승인 의미로는 미충족.
+   **이것이 유일하게 살아 있는 SPATIAL 잔여다.** `.moai/specs/SPEC-COPILOT-WRITEGATE-001/spec.md:148-150`이
+   `Set Layout <l>.<e> 'PositionX' <v>`가 **오늘도 `safe`**임을 실측 기록했으므로, Layout 축을 열 때는
+   **좌표 기록의 두 경로(3D `Set Fixture` · Layout 요소)를 함께** 다뤄야 한다.
+2. ~~**AC-SPATIAL-031 risky 분류**~~ — **해소됨(`SPEC-COPILOT-WRITEGATE-001`, 2026-08-05).**
+3. ~~**REQ-SPATIAL-024 승인 흐름**~~ — **해소됨(동상).**
 
-②③은 `server/safety/`를 함께 소유하는 후속 SPEC이 한 몸으로 처리해야 한다.
+> **※ 2026-08-07 정정** — ②③은 `WRITEGATE-001`이 닫았다(`blacklist.yaml` v1→v2, 엔트리 정확히 1건
+> `"Set Fixture"`). **정본 기록은 이 SPEC 자신의 `acceptance.md:254-259`와 `spec.md:33` HISTORY v0.3.1에
+> 이미 있었는데 이 `progress.md`만 갱신되지 않아** 두 문서가 서로 모순인 채로 남아 있었다 —
+> 그래서 후속이 이 표를 읽으면 **이미 열린 문을 닫힌 문으로** 본다. 같은 계열의 드리프트가
+> `SPEC-COPILOT-GROUPGEN-001/progress.md`에도 있었고 함께 정정했다.
 
 ### 후속 과제 2건 (이 sync가 새로 등록)
 
