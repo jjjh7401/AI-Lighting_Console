@@ -35,7 +35,7 @@ from types import ModuleType
 
 import pytest
 
-from server.vwx.apply import (
+from server.vwx.apply import (  # noqa: I001
     END_TO_END_UNVERIFIED,
     HANDOFF_STATUS_DELIVERED,
     HANDOFF_STATUS_DRY_RUN,
@@ -43,8 +43,10 @@ from server.vwx.apply import (
     NEXT_STEP_HUMAN_EXECUTION,
     NEXT_STEP_REVIEW,
     PLUGIN_EXIT_IS_NOT_SUCCESS,
+    _rejected_field,
     build_patch_handoff,
 )
+from server.vwx.luagen import LuaPatchEntry
 from server.vwx.patchplan import (
     IRREVERSIBLE_WARNING,
     AddressPlan,
@@ -741,3 +743,48 @@ def test_two_offending_fields_are_both_named_rather_than_blaming_the_integers():
     assert "name" in reason
     assert "console_type" in reason
     assert "정수" not in reason
+
+
+def test_an_integer_field_rejection_names_the_integer_field():
+    """[round13 S02] 정수 축을 중립화에서 빼면 정수 결함이 문자열 필드로 오귀속된다.
+
+    round11은 한 필드씩 중립화해 둘 이상 거부 시 전부 무죄로 봤고(→ 정수 지목),
+    round12는 방향을 뒤집었으나 문자열만 중립화해 정수 결함이 무고한 문자열 셋을 지목했다.
+    두 번 다 원인은 "축을 하나 빼놓았다"이다 — 이제 6필드 전부를 중립화한다.
+    """
+    entry = LuaPatchEntry(
+        console_type="Robin LEDBeam 350",
+        console_mode="Mode 1",
+        fid="7",  # 문자열 — 생성기는 정수를 요구한다
+        name="LEDBeam 7",
+        universe=1,
+        address=1,
+    )
+    assert _rejected_field(entry) == "fid"
+
+
+@pytest.mark.parametrize("field", ["fid", "universe", "address"])
+def test_each_integer_axis_is_named_individually(field):
+    base = {
+        "console_type": "Robin LEDBeam 350",
+        "console_mode": "Mode 1",
+        "fid": 101,
+        "name": "LEDBeam 101",
+        "universe": 1,
+        "address": 1,
+    }
+    assert _rejected_field(LuaPatchEntry(**{**base, field: "not-an-int"})) == field
+
+
+def test_a_mixed_string_and_integer_rejection_names_both_axes():
+    entry = LuaPatchEntry(
+        console_type="Robin LEDBeam 350",
+        console_mode="Mode 1",
+        fid="7",
+        name="CD spare",
+        universe=1,
+        address=1,
+    )
+    named = _rejected_field(entry)
+    assert "name" in named
+    assert "fid" in named

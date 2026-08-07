@@ -1,6 +1,6 @@
 # SPEC-COPILOT-AUTOPATCH-001 — 설계 (design)
 
-status: draft (v0.1.4, 2026-08-06) · Tier L · 설계 슬롯 5건 전부 종결 · 미결 0 · plan-audit 1~9회차 지적 반영 · §6.2 폐지(acceptance.md 단일 출처화)
+status: draft (v0.1.5, 2026-08-06) · Tier L · 설계 슬롯 5건 전부 종결 · 미결 0 · plan-audit 1~9회차 지적 반영 · §6.2 폐지(acceptance.md 단일 출처화)
 
 ---
 
@@ -118,7 +118,9 @@ Lua 생성 (luagen)          ── CD 어휘 없음
    │                            ASSUMPTION-76 NEGATIVE (progress.md §E.2 M0 5차).
    │                            deploy_plugin / run_commands(["Plugin 'X'"]) 자동 발화 **0건**.
    │
-   ▼  사람이 콘솔에서 실행 (실행 버튼은 사람이 누른다)
+   ▼  **G2** 사람이 콘솔에서 실행 (실행 버튼은 사람이 누른다)
+   │     ※ 위까지가 **G1**(서버 전달, 콘솔 쓰기 0건) · 아래가 **G3**(서버 검증)
+   │       M8은 이 셋을 **관문별로 나눠 판정**한다(AC-AUTOPATCH-026 v0.1.5)
    │
    ▼
 검증 읽기 (apply)          ── precheck_patch 재조회 · 건별 확인

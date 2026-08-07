@@ -2474,19 +2474,34 @@ def build_toolset(
             # [round11 M7 N03] 이전 판은 `assumption_71`을 그 신호로 겸용했다 — 실측 판정을
             # 제어 신호로 쓰면 툴 경계에서 NEGATIVE·INCONCLUSIVE 분기에 도달할 수 없게 되고
             # `fid_range_visually_confirmed_empty`가 죽은 필드가 된다. 둘을 분리했고,
-            # `assumption_71`은 여기서 **주입하지 않는다**(모듈 기본값 = 실측 GO).
             assignment_requested=bool(selected),
-            # [round12 R03] 실측 판정을 **명시적으로** 넘긴다 — 기본값에 기대면 payload만
-            # 보고는 어느 분기로 갔는지 알 수 없다. 값 `go`의 근거는 progress.md §E.2 M0 1차
-            # (FID 프로퍼티가 읽히고 슬롯≠FID 쇼파일에서 확인됨)이며, 재측정으로 뒤집히면
-            # **여기 한 줄**만 바꾸면 NEGATIVE 분기가 열린다.
+            # 실측 판정을 **명시적으로** 넘긴다. 값 `go`의 근거는 progress.md §E.2 M0 1차다
+            # (FID 프로퍼티가 읽히고 슬롯≠FID 쇼파일에서 확인됨).
+            # **[round13 S04 고지] 이 주입은 현재 관측 가능한 변화를 만들지 않는다** —
+            # 모듈 기본값도 GO이고 분기 개방은 `assignment_requested`가 전담한다. 그래서
+            # `ASSUMPTION-71` NEGATIVE·INCONCLUSIVE 분기와 `fid_range_visually_confirmed_empty`
+            # 요구는 **툴 경계에서 도달 불가**이며, 그 사실을 payload가 스스로 밝힌다(아래
+            # `assumption_71_reachability`). 재측정으로 GO가 뒤집히면 여기 한 줄만 바꾼다.
             assumption_71=ASSUMPTION_71_GO,
             fid_range_visually_confirmed_empty=call.arguments.get(
                 "fid_range_visually_confirmed_empty"
             ),
             fid_property_port=inventory_port,
         )
-        payload: dict[str, object] = {"plan": plan.to_dict(), "console_read": console_read}
+        payload: dict[str, object] = {
+            "plan": plan.to_dict(),
+            "console_read": console_read,
+            # 도달 불가 분기를 숨기지 않고 밝힌다(round13 S04).
+            "assumption_71_reachability": {
+                "injected": ASSUMPTION_71_GO,
+                "source": "progress.md §E.2 M0 1차 실측",
+                "negative_branch_reachable": False,
+                "note": (
+                    "이 툴은 GO 분기만 노출한다 — 재측정으로 뒤집히기 전까지 "
+                    "fid_range_visually_confirmed_empty 는 요구되지 않는다(REQ-AUTOPATCH-026)."
+                ),
+            },
+        }
         if not plan.ok or not plan.targets:
             return _patch_payload(call, payload)
 
@@ -2554,7 +2569,14 @@ def build_toolset(
                 _approved_entries(plan.targets, type_plan.resolutions, designed, handoff),
                 console_fixtures=console_fixtures,
                 read_complete=read_complete,
-                delivered_ids=[entry.candidate_id for entry in handoff.entries],
+                # [round13 S03] **드라이런은 전달분 0건이다.** `handoff.entries`는 드라이런에도
+                # 채워지므로(REQ-AUTOPATCH-003이 소스 전문을 요구한다) 그대로 넘기면 같은 payload가
+                # `handoff.delivered=false`와 `delivered_count=1`을 동시에 실었고, 기본 경로인
+                # 드라이런에서 "플러그인을 실제로 실행했는지 확인하라"가 나갔다 — 검토만 받으려던
+                # Lua를 실행하게 만드는 안내다.
+                delivered_ids=(
+                    [entry.candidate_id for entry in handoff.entries] if handoff.delivered else []
+                ),
             ).to_dict(),
             "scope": "승인 항목 전체(전달분 + 이미 있다고 판정된 것)",
             "as_of": "이 호출이 방금 읽은 콘솔 상태",

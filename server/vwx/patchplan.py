@@ -536,8 +536,9 @@ def build_patch_plan(
             rejection=PatchPlanRejection(
                 code=FID_PRECHECK_READ_INCOMPLETE,
                 reason=(
-                    f"기존 FID 사전검사가 불완전하다 — 선언 "
-                    f"{existing_read.child_count}대 중 {existing_read.unread}대를 읽지 못했다. "
+                    f"기존 FID 사전검사가 불완전하다 — 선언 {existing_read.child_count}대 중 "
+                    f"{existing_read.enumerated_count}대만 열거했고 "
+                    f"{existing_read.unreadable_fids}대는 FID 값을 얻지 못했다. "
                     "부분 관측으로 빈 FID를 단정하면 이미 쓰이는 번호를 배정하게 된다."
                 ),
                 vocabulary="target_exclusion_reason",
@@ -693,6 +694,8 @@ class ExistingFidRead:
     child_count: int | None = None
     enumerated_count: int = 0
     unread: int = 0
+    #: 슬롯은 봤으나 FID 값을 얻지 못한 건수 — 열거 축과 **다른 축**이라 따로 센다.
+    unreadable_fids: int = 0
 
     @property
     def complete(self) -> bool:
@@ -703,6 +706,7 @@ class ExistingFidRead:
             "child_count": self.child_count,
             "enumerated_count": self.enumerated_count,
             "unread_count": self.unread,
+            "unreadable_fid_count": self.unreadable_fids,
             "complete": self.complete,
         }
 
@@ -733,6 +737,7 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
     # 형제 리더가 같은 두 형태를 모두 방어한다(`server/prechk/inventory.py`의
     # 슬롯 중복 건너뛰기 · `observed_count > child_count`에서의 `InventoryReadError`).
     read_slots: set[int] = set()
+    unreadable_fids = 0
     for child in children:
         child_index = _optional_int(child.get("i"))
         if child_index is None or child_index in read_slots:
@@ -741,11 +746,15 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
         response = fid_property_port.query_property(
             f"{FID_FIXTURE_ROOT}/{child_index}", FID_PROPERTY_NAME
         )
+        # 조회를 시도해 **결말이 난** 슬롯은 모두 관측 슬롯이다 — 값을 못 읽었어도
+        # "그 슬롯을 봤다"는 사실은 총계 대조에 쓰인다. [round13 S05] 이전 판은 실패 슬롯을
+        # 관측에서 빼면서 `unread`도 올려 **같은 슬롯을 두 번** 셌고, 그 결과 사용자에게
+        # "선언 2대 중 4대를 읽지 못했다"는 산술적으로 불가능한 문구가 나갔다.
+        read_slots.add(child_index)
         fid = _fid_int(response.get("value")) if response.get("ok") is True else None
         if fid is None:
-            unread += 1
+            unreadable_fids += 1
             continue
-        read_slots.add(child_index)
         existing_fids.append(fid)
 
     # 총계를 모르거나, 관측이 총계와 **어느 방향으로든** 어긋나면 완전하다고 말할 수 없다.
@@ -758,7 +767,8 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
         fids=tuple(existing_fids),
         child_count=child_count,
         enumerated_count=len(read_slots),
-        unread=unread,
+        unread=unread + unreadable_fids,
+        unreadable_fids=unreadable_fids,
     )
 
 
