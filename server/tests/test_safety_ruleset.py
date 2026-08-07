@@ -39,6 +39,10 @@ EXPECTED_BLACKLIST = {
     "Shutdown",
     "Format",
     "Set Fixture",
+    # v3 — showfile replacement. Unrecoverable by this application (no restore
+    # SEND path), so approval is the only barrier that exists for them.
+    "LoadShow",
+    "NewShow",
 }
 EXPECTED_INVOKING_VERBS = (
     "Go", "Go+", "Go-", "Goto", "On", "Off", "Toggle", "Temp", "Flash", "Call"
@@ -136,7 +140,7 @@ class TestShippedRuleset:
         # REQ-MVP-013 (6 initial) + the ratified v2 addition — no open-ended list.
         ruleset = load_ruleset()
         assert set(ruleset.blacklist) == EXPECTED_BLACKLIST
-        assert len(ruleset.blacklist) == 7
+        assert len(ruleset.blacklist) == 9
 
     def test_every_shipped_revision_is_documented_in_the_file(self):
         """A version bump with no recorded reason is a silent widening.
@@ -162,7 +166,7 @@ class TestShippedRuleset:
         "every shipped revision" generality is made REAL by driving the same
         checker over a synthetic v4 file in `TestRevisionJustification`.
         """
-        assert load_ruleset().version == 2
+        assert load_ruleset().version == 3
         _assert_every_revision_is_justified(DEFAULT_RULESET_PATH)
 
     def test_invoking_verbs_are_exactly_the_ten_initial_verbs(self):

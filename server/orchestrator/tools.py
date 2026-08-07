@@ -51,6 +51,7 @@ from server.looks.songcue import (
     SectionTimeError,
     SequenceNumberError,
     SongCueBundleError,
+    SongCueTimingAxes,
     build_songcue_bundle,
     build_songcue_timing,
     map_sections_to_looks,
@@ -203,6 +204,27 @@ DEFAULT_RIG_CONTEXT_PATHS = {
     "matricks": "DataPool/MAtricks",
     "worlds": "DataPool/Worlds",
 }
+
+# The timecode pool, kept OUT of the table above on purpose.
+#
+# ``DEFAULT_RIG_CONTEXT_PATHS`` carries two contracts this path cannot honour:
+# every entry is LIVE-CALIBRATED (``test_tools.py`` pins the set against the
+# measured object tree) and every entry is NAMED to the model in the
+# ``get_rig_context`` description. This path is neither — it is UNVERIFIED, and
+# the model has no business browsing timecodes.
+#
+# It exists for exactly one caller: ``_timecode_slot_verdict``, the occupancy
+# check that stops ``prepare_songcue`` from storing over an existing timecode
+# track. Overridable through ``rig_paths["timecodes"]`` for a showfile that
+# keeps it elsewhere.
+#
+# UNVERIFIED is stated rather than assumed because this file's own history is
+# the reason to state it: "Patch/Fixtures" and "DataPool/Presets" were guessed,
+# shipped dead, and reached the model as "unavailable" on every call for the
+# whole of Stage 1. If this spelling is wrong the occupancy check cannot be
+# made, and the timecode axis degrades to its designed DESCOPE branch — the
+# write is withheld, never sent unchecked.
+TIMECODE_POOL_PATH = "DataPool/Timecodes"
 
 # Sections whose children are CONTAINERS worth opening. A depth-1 snapshot of
 # these answers "does it exist"; the show-readiness question is "is anything IN
@@ -1820,7 +1842,21 @@ def build_toolset(
                 sequences_section=rig_sections["sequences"],  # type: ignore[arg-type]
                 groups_section=rig_sections["groups"],  # type: ignore[arg-type]
             )
-            timing = build_songcue_timing(bundle, timecode_number=timecode_number)
+            occupied, axes = _timecode_slot_verdict(
+                state_port,
+                rig_paths.get("timecodes", TIMECODE_POOL_PATH),
+                timecode_number,
+            )
+            if occupied is not None:
+                return _error_result(
+                    call,
+                    f"Timecode {timecode_number} is already in use "
+                    f"({occupied}) — storing over it would discard an existing "
+                    "timecode track, and this application has no restore path. "
+                    "Pass a free 'timecode_number' or ask the operator which "
+                    "one to replace.",
+                )
+            timing = build_songcue_timing(bundle, timecode_number=timecode_number, axes=axes)
         except (SequenceNumberError, SongCueBundleError, ValueError) as error:
             return _error_result(call, f"song cue list cannot be built: {error}")
         if not bundle.commands:
@@ -1898,6 +1934,79 @@ def build_toolset(
     #   handler READS the rig and, when it has to speak, calls ``run_commands``
     #   above rather than ``execution_port`` — the gate screens the whole macro
     #   bundle before a single line reaches the console.
+
+    def _timecode_slot_verdict(
+        port: StateQueryPort, path: str, wanted: int
+    ) -> tuple[str | None, SongCueTimingAxes]:
+        """Is ``Timecode <wanted>`` free? Returns ``(occupant_or_None, axes)``.
+
+        ``prepare_songcue`` emits ``Store Timecode <n>`` with a MODEL-SUPPLIED
+        number. Nothing checked it, so a showfile already using that slot lost
+        its timecode track silently — the same defect ``_free_macro_slot``
+        exists to prevent for macros (``REQ-PRECHK-004``'s count-vs-flag
+        discipline, applied to the other path that writes into a pool).
+
+        THREE outcomes, and the third is why this returns axes rather than just
+        a boolean:
+
+        * **free** — ``(None, default axes)``. The write proceeds.
+        * **occupied** — ``(occupant name, …)``. The caller refuses. Unlike the
+          macro helper this does NOT silently pick another slot: the number is
+          part of this tool's schema and the operator asked for a specific one,
+          so substituting it would answer a question nobody asked.
+        * **unknown** — ``(None, axes with timecode_go=False)``. The pool did
+          not answer, the enumeration was short, or it reported zero children
+          (which ``M.safe_children`` also returns when the read FAILS, so an
+          empty pool and a dead pool are one payload — the same trap
+          ``_free_macro_slot`` refuses to walk into). The timecode axis is
+          suppressed and its reason is reported through the EXISTING
+          ``skipped_axes`` channel, which is the designed DESCOPE branch this
+          bundle already ships and tests.
+
+        The unknown branch is not a corner case: ``rig_paths["timecodes"]`` is
+        the one UNVERIFIED path in ``DEFAULT_RIG_CONTEXT_PATHS``. If it is
+        wrong, every call lands here — and the result is that the app stops
+        writing timecode rather than writing it blind. Degrading a feature
+        beats overwriting an operator's show.
+        """
+
+        def _suppressed(reason: str) -> tuple[None, SongCueTimingAxes]:
+            return None, SongCueTimingAxes(
+                timecode_go=False,
+                timecode_skip_reason=(
+                    f"timecode pool occupancy could not be established ({reason}) — "
+                    "the timecode write is withheld rather than sent unchecked"
+                ),
+            )
+
+        try:
+            payload = port.query_state(path)
+        except Exception as error:  # noqa: BLE001 - any read failure is "unknown"
+            return _suppressed(f"{path} did not answer: {error}")
+        if not isinstance(payload, dict):
+            return _suppressed(f"{path} returned a non-mapping payload")
+        if payload.get("truncated"):
+            return _suppressed(f"{path} enumeration was truncated")
+        children = [c for c in (payload.get("children") or ()) if isinstance(c, dict)]
+        node = payload.get("node")
+        child_count = node.get("childCount") if isinstance(node, dict) else None
+        if not isinstance(child_count, int) or isinstance(child_count, bool):
+            return _suppressed(f"{path} reported no childCount")
+        if child_count > len(children):
+            return _suppressed(
+                f"{path} enumeration is short: childCount {child_count} "
+                f"but {len(children)} children returned"
+            )
+        if child_count == 0:
+            return _suppressed(
+                f"{path} reported zero children — a failed enumeration and an "
+                "empty pool are indistinguishable here"
+            )
+        for child in children:
+            if child.get("i") == wanted:
+                name = child.get("name")
+                return (str(name) if name else f"slot {wanted}"), SongCueTimingAxes()
+        return None, SongCueTimingAxes()
 
     class _InventoryPort:
         """The two reads the inventory needs, joined from the wired ports."""
