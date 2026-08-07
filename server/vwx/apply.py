@@ -39,6 +39,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
+from types import MappingProxyType
 
 from server.prechk.inventory import Inventory
 from server.prechk.patch import normalize_address
@@ -78,6 +79,10 @@ from server.vwx.verdicts import (
     validate_autopatch,
     verification_outcome_label,
 )
+
+#: `normalize_address`가 최소 인덱스 미만(0.0 · 1.0 · 0.1)에 붙이는 오류 문구.
+#: 그 값들은 판독 실패가 아니라 **주소를 지칭하지 않는다**는 뜻이다.
+BELOW_MINIMUM_INDEX_ERROR = normalize_address("0.0").error
 
 HANDOFF_STATUS_DRY_RUN = "dry_run"
 HANDOFF_STATUS_DELIVERED = "delivered"
@@ -297,21 +302,36 @@ def build_patch_handoff(
     )
 
 
-_STRING_FIELDS = ("name", "console_type", "console_mode")
+#: 중립값 — **모든 필드**를 덮는다. 정수 축을 빼면 정수 결함이 문자열 필드로 오귀속된다.
+_NEUTRAL_FIELDS = MappingProxyType(
+    {
+        "name": "ok",
+        "console_type": "ok",
+        "console_mode": "ok",
+        "fid": 1,
+        "universe": 1,
+        "address": 1,
+    }
+)
 
 
 def _rejected_field(entry: LuaPatchEntry) -> str:
     """생성기가 거부한 필드 이름 — **값은 싣지 않는다**.
 
-    [round12 R09] 이전 판은 한 필드씩 중립값으로 바꿔 보고 그때 통과하면 유죄로 봤다.
-    **둘 이상이 동시에 거부되면 어느 프로브도 통과하지 못해 전부 무죄가 되고**, 사유가
-    엉뚱하게 정수 필드를 지목했다 — N14가 없애려던 바로 그 "고칠 수 없는 재시도"다.
-    그래서 반대로 판정한다: **그 필드만 중립으로 두고 나머지를 전부 중립화**했을 때도
-    여전히 거부되면 그 필드가 원인이다.
+    이 자리도 **두 라운드 연속으로 틀렸다**. 두 번 다 원인은 "일부 필드만 프로브했다"이다.
+
+    - round11: 한 필드씩 중립화해 통과하면 유죄 → **둘 이상이 동시에 거부되면 전부 무죄**가
+      되어 사유가 정수 필드를 지목했다(round12 R09).
+    - round12: 방향을 뒤집었으나 **문자열 필드만 중립화**해서, 정수 필드가 원인이면
+      중립 기준선 자체가 항상 거부되어 **무고한 문자열 세 개를 전부 지목**했고
+      "정수(...)" 폴백은 도달 불가가 됐다(round13 S02).
+
+    그래서 **6필드 전부**를 중립화한 기준선에서 한 필드씩 되돌린다. 되돌렸을 때 거부되면
+    그 필드가 원인이다 — 축을 빼놓지 않으므로 오귀속이 구조적으로 불가능하다.
     """
-    neutral = replace(entry, **dict.fromkeys(_STRING_FIELDS, "ok"))
-    rejected = [field for field in _STRING_FIELDS if _rejects(field, entry, neutral)]
-    return " · ".join(rejected) if rejected else "정수(fid/universe/address)"
+    neutral = replace(entry, **dict(_NEUTRAL_FIELDS))
+    rejected = [field for field in _NEUTRAL_FIELDS if _rejects(field, entry, neutral)]
+    return " · ".join(rejected) if rejected else "확정 불가(중립 입력도 거부됨)"
 
 
 def _rejects(field: str, entry: LuaPatchEntry, neutral: LuaPatchEntry) -> bool:
@@ -477,20 +497,41 @@ def _single_unambiguous(by_name: list, by_index: list):
     return candidates[0] if len(candidates) == 1 else None
 
 
-def _address_readable(fixture) -> bool:
-    """그 픽스처의 `Patch` **프로퍼티를 읽었는가** — 못 읽은 것만 미판독이다.
+#: `Patch` 값 하나가 가질 수 있는 상태 — **전수 분류**다. 이 세 갈래 밖은 없다.
+PATCH_UNREAD = "unread"  # 못 읽었거나, 읽었으나 주소로 판독되지 않는다
+PATCH_UNPATCHED = "unpatched"  # 읽혔고 판독됐고 "주소 없음"을 뜻한다(0.0 류)
+PATCH_ADDRESSED = "addressed"  # 유효한 (유니버스, 주소)
 
-    [round12 R08] 이전 판은 `normalize_address(...).ok`를 썼다. 그러면 **읽기는 성공했는데
-    주소가 없는 정상 상태**(미패치 예비 픽스처의 `Patch = "0.0"` · 절대주소 미지정)까지
-    미판독으로 세어, 그런 픽스처가 리그에 **한 대만 있어도** 모든 대상이
-    `console_read_incomplete`로 제외되고 툴이 아무것도 만들지 못했다.
-    `normalize_address` 자신이 `0.0`을 "주소를 지칭하지 않는 값"으로 전제한다 —
-    그것은 판독 실패가 아니라 **패치되지 않았다는 관측**이다.
 
-    구별의 정본은 `read_inventory`가 이미 들고 있다: 프로퍼티가 read/shape 게이트를
-    통과하지 못하면 `read_failures`에 남는다. 그것만 미판독으로 센다.
+def classify_patch_value(fixture) -> str:
+    """`Patch` 값을 **세 갈래로 전수 분류**한다 — 이 함수가 미판독의 유일한 정의다.
+
+    이 자리에서 **연속 두 라운드가 결함을 냈다.** 매번 원인은 같았다:
+    입력 도메인을 열거하지 않고 **한 갈래만 보는 술어**를 썼다.
+
+    - round11: `normalize_address(...).ok` → 미패치 예비 픽스처(`0.0`)를 미판독으로 세어
+      리그에 그런 픽스처가 한 대만 있어도 툴 전체가 정지했다(round12 R08).
+    - round12: `failure_for("Patch") is None` → `read_inventory`의 shape 게이트는
+      **주소 형태를 보지 않으므로**(그 판정을 `server/prechk/patch.py`에 위임한다)
+      `'abc'`·`'1-5'`·`'1.5.7'` 같은 값이 "읽기 성공"으로 통과하고, 그 픽스처는
+      `universe/address = None`이 되어 **점유·멱등·검증 어디에서도 보이지 않는데**
+      재조회는 "완전"으로 등급됐다 — 이미 픽스처가 있는 주소에 생성이 진행된다(round13 S01).
+
+    그래서 이번에는 갈래를 **열거해** 닫는다. 판정 근거는 두 출처를 **함께** 본다:
+    `read_inventory`의 `read_failures`(읽기·shape 게이트)와 `normalize_address`의
+    오류 종류(형태 불일치 vs 최소 인덱스 미만). 후자를 나누는 것이 핵심이다 —
+    **형태가 어긋난 값은 미판독**이고, **`0.0` 류는 "패치되지 않았다"는 관측**이다.
+    이 저장소는 그 둘을 이미 다른 결함 종류로 등재하고 있다(`address_parse_failed`
+    vs `shape_invalid`, AC-PRECHK-008②).
     """
-    return fixture.failure_for("Patch") is None
+    if fixture.failure_for("Patch") is not None:
+        return PATCH_UNREAD
+    parse = normalize_address(fixture.patch_raw)
+    if parse.ok:
+        return PATCH_ADDRESSED
+    if parse.error == BELOW_MINIMUM_INDEX_ERROR:
+        return PATCH_UNPATCHED
+    return PATCH_UNREAD
 
 
 def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
@@ -509,7 +550,7 @@ def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
     # `Patch` 프로퍼티를 못 읽었으면 주소가 `None`이 되어 점유·멱등·검증 어디에서도 보이지
     # 않는다 — 그것도 미판독이다. `read_inventory`가 그 사실을 `read_failures`로 이미 들고 있다.
     unreadable_addresses = sum(
-        1 for fixture in inventory.fixtures if not _address_readable(fixture)
+        1 for fixture in inventory.fixtures if classify_patch_value(fixture) == PATCH_UNREAD
     )
     unread = inventory.missing_count + unreadable_addresses
     if unread > 0:
@@ -761,18 +802,6 @@ def _fixtures_at(
         for fixture in console_fixtures
         if fixture.universe == universe and fixture.address == address
     )
-
-
-def _fixture_at(
-    console_fixtures: Sequence[ConsoleFixture], universe: int, address: int
-) -> ConsoleFixture | None:
-    """그 주소의 픽스처. **둘 이상이면 `None`이 아니라 모호**이므로 호출자가 갈라 처리한다.
-
-    [round11 N10] 이전 판은 첫 일치만 돌려줘서, 콘솔에 이미 중복이 있고 첫 일치가 우리와
-    동일하면 두 번째 충돌 점유자를 보지 못한 채 `already_patched_identical`을 냈다.
-    """
-    found = _fixtures_at(console_fixtures, universe, address)
-    return found[0] if len(found) == 1 else None
 
 
 @dataclass(frozen=True)

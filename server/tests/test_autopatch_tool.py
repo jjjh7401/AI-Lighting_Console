@@ -593,3 +593,41 @@ def test_an_unpatched_console_fixture_does_not_halt_the_tool():
     payload = _deliver(rig, [(1, 1)])
     assert payload["console_read"]["complete_enough_to_judge_absence"] is True
     assert "AddFixtures({" in payload["handoff"]["lua_source"]
+
+
+def test_a_dry_run_reports_zero_delivered_and_does_not_ask_about_execution():
+    """[round13 S03] 드라이런은 전달분 0건이다 — `delivered`가 두 계층에서 같은 것을 뜻해야 한다.
+
+    이전 판은 같은 payload에 `handoff.delivered=false`와 `delivered_count=1`을 함께 싣고,
+    기본 경로인 드라이런에서 "플러그인을 실제로 실행했는지 확인하라"를 냈다 —
+    검토만 받으려던 Lua를 라이브 콘솔에서 실행하게 만드는 안내다.
+    """
+    payload, _ = _full_call(_registry(), dry_run=True)
+    assert payload["handoff"]["delivered"] is False
+    assert payload["verification"]["delivered_count"] == 0
+    assert [r["delivered"] for r in payload["verification"]["results"]] == [False]
+    assert "플러그인을 실제로 실행했는지" not in " ".join(payload["verification"]["guidance"])
+
+
+def test_the_dry_run_control_a_delivery_does_report_delivered():
+    """비공허성 — 전달 요청에서는 같은 필드가 참이 된다."""
+    payload, _ = _full_call(_registry(), dry_run=False)
+    assert payload["handoff"]["delivered"] is True
+    assert payload["verification"]["delivered_count"] == 1
+    assert "플러그인을 실제로 실행했는지" in " ".join(payload["verification"]["guidance"])
+
+
+def test_a_fixture_whose_patch_value_is_unparsable_blocks_the_tool():
+    """[round13 S01] 읽히긴 했으나 주소가 아닌 값이 있으면 '비어 있다'고 판단하지 않는다."""
+    rig = RigPort(fixtures={1: _fixture("1-5", "weird")})
+    payload = _deliver(rig, [(1, 1)])
+    assert payload["console_read"]["complete_enough_to_judge_absence"] is False
+    assert payload["handoff"]["lua_source"] is None
+
+
+def test_the_payload_discloses_that_the_negative_assumption_branch_is_unreachable():
+    """[round13 S04] 도달 불가 분기를 숨기지 않는다."""
+    payload, _ = _full_call(_registry(), dry_run=True)
+    reach = payload["assumption_71_reachability"]
+    assert reach["injected"] == "go"
+    assert reach["negative_branch_reachable"] is False

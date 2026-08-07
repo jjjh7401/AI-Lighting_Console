@@ -490,6 +490,7 @@ def test_a_truncated_fid_enumeration_refuses_to_assign():
         "child_count": 2,
         "enumerated_count": 1,
         "unread_count": 1,
+        "unreadable_fid_count": 0,
         "complete": False,
     }
 
@@ -507,10 +508,13 @@ def test_an_unreadable_fid_property_also_blocks_assignment():
     plan = _plan_with(_CountingFidPort(enumerated=2, child_count=2, fid_readable=False))
     assert plan.ok is False
     read = plan.fid_safety["conflict_precheck"]["read"]
-    # 2대를 못 읽었고, 그래서 관측 슬롯이 0이라 선언 총계(2)와도 어긋난다 — 둘 다 미판독이다.
-    assert read["unread_count"] == 4
-    assert read["enumerated_count"] == 0
+    # [round13 S05] 슬롯 2개는 **봤고**(enumerated 2), 그중 2개의 FID 값을 못 얻었다.
+    # 이전 판은 같은 슬롯을 두 번 세어 "선언 2대 중 4대를 읽지 못했다"는 불가능한 수를 냈다.
+    assert read["enumerated_count"] == 2
+    assert read["unreadable_fid_count"] == 2
+    assert read["unread_count"] == 2
     assert read["complete"] is False
+    assert read["unread_count"] <= read["child_count"]  # 구조적으로 깨지지 않아야 한다
 
 
 def test_a_duplicate_slot_index_is_not_counted_as_a_read_slot():

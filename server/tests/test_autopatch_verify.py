@@ -40,9 +40,13 @@ from server.vwx.apply import (
     CONSOLE_READ_INCOMPLETE,
     CONSOLE_READ_INDEX_DOMAIN_UNKNOWN,
     NO_AUTO_CORRECTION,
+    PATCH_ADDRESSED,
+    PATCH_UNPATCHED,
+    PATCH_UNREAD,
     ZERO_CREATED_GUIDANCE,
     HandoffEntry,
     build_patch_handoff,
+    classify_patch_value,
     console_read_caveat,
     existing_footprint_skipped_check,
     read_console_fixtures,
@@ -1007,3 +1011,83 @@ def test_a_truncated_library_still_refuses_the_index_only_interpretation():
     )
     (observed,) = _console(_record(1, "1.1", "FixtureType 2", "1 Mode 1"), library=truncated)
     assert observed.type_name is None
+
+
+# --------------------------------------------------------------------------
+# round13 회귀 — Patch 값 도메인 **전수 분류**
+#
+# 이 자리에서 두 라운드 연속으로 결함이 났다. 두 번 다 원인은 같다: 입력 도메인을
+# 열거하지 않고 한 갈래만 보는 술어를 썼다. 그래서 이번엔 도메인을 **표로** 못박는다 —
+# 새 값 형태가 생기면 이 표에 행을 더해야 하고, 더하지 않으면 마지막 테스트가 잡는다.
+# --------------------------------------------------------------------------
+
+PATCH_VALUE_DOMAIN = (
+    ("1.1", PATCH_ADDRESSED, "정상 주소"),
+    ("3.209", PATCH_ADDRESSED, "정상 주소(다른 유니버스)"),
+    ("0.0", PATCH_UNPATCHED, "미패치 예비 픽스처 — 판독 실패가 아니라 관측이다"),
+    ("1.0", PATCH_UNPATCHED, "주소 축만 0"),
+    ("0.1", PATCH_UNPATCHED, "유니버스 축만 0"),
+    ("abc", PATCH_UNREAD, "형태 불일치 — shape 게이트는 통과하지만 주소가 아니다"),
+    ("1-5", PATCH_UNREAD, "구분자가 다르다"),
+    ("1.5.7", PATCH_UNREAD, "토큰이 셋"),
+    ("-1.5", PATCH_UNREAD, "음수"),
+    ("Universe 1 Addr 5", PATCH_UNREAD, "산문"),
+    ("None", PATCH_UNREAD, "콘솔이 부재를 문자열로 준 형태"),
+    ("", PATCH_UNREAD, "빈 문자열"),
+    (None, PATCH_UNREAD, "값 없음"),
+    ("table: 0x105b0f048", PATCH_UNREAD, "Lua 포인터"),
+)
+
+
+@pytest.mark.parametrize(
+    "raw,expected,why", PATCH_VALUE_DOMAIN, ids=[row[2] for row in PATCH_VALUE_DOMAIN]
+)
+def test_every_patch_value_shape_lands_in_exactly_one_class(raw, expected, why):
+    assert classify_patch_value(_record(1, raw, "FixtureType 3", "1 Mode 1")) == expected, why
+
+
+def test_a_read_failure_is_unread_regardless_of_the_value():
+    failure = ReadFailure(
+        slot=1,
+        name="x",
+        property="Patch",
+        raw_value="1.1",
+        kind="read_failed",
+        detail="not readable",
+    )
+    fixture = FixtureRecord(
+        slot=1,
+        name="x",
+        patch_raw="1.1",
+        fixture_type="FixtureType 3",
+        mode="1 Mode 1",
+        read_failures=(failure,),
+    )
+    assert classify_patch_value(fixture) == PATCH_UNREAD
+
+
+def test_the_classification_is_total_no_value_falls_through():
+    """세 갈래 밖으로 나가는 값이 없다 — 도메인 표 밖의 형태도 반드시 하나로 떨어진다."""
+    exotic = ["1.1 ", " 1.1", "1,1", "١.١", "1.1\n", "٩", "1.", ".1", "1..1", "999999.999999"]
+    for raw in exotic:
+        assert classify_patch_value(_record(1, raw, "FixtureType 3", "1 Mode 1")) in {
+            PATCH_UNREAD,
+            PATCH_UNPATCHED,
+            PATCH_ADDRESSED,
+        }
+
+
+def test_a_shape_ok_but_unparsable_address_blocks_creation():
+    """[round13 S01] 읽히긴 했으나 주소가 아닌 값 — 그 픽스처는 어디에서도 보이지 않는다.
+
+    보이지 않는 채로 재조회를 "완전"으로 등급하면, 이미 픽스처가 있는 주소에 생성이
+    진행되고 M8에서 사람이 그것을 실행한다. 실행 취소는 없다.
+    """
+    caveat = console_read_caveat(_inventory(_record(1, "1-5", "FixtureType 3", "1 Mode 1")))
+    assert caveat is not None
+    assert caveat["kind"] == CONSOLE_READ_INCOMPLETE
+    assert caveat["unreadable_address_count"] == 1
+
+
+def test_the_unparsable_control_a_valid_address_does_not_block():
+    assert console_read_caveat(_inventory(_record(1, "1.5", "FixtureType 3", "1 Mode 1"))) is None
