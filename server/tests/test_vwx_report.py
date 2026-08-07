@@ -5,7 +5,11 @@
 from __future__ import annotations
 
 import ast
+import dataclasses
 from pathlib import Path
+from typing import NamedTuple
+
+import pytest
 
 from server.prechk.inventory import COMPLETE, FixtureRecord, Inventory
 from server.vwx.address import PATCHED, ResolvedRecord
@@ -18,7 +22,7 @@ from server.vwx.report import (
     diff_kind_label,
     skipped_check_kind_label,
 )
-from server.vwx.rig import build_designed_rig
+from server.vwx.rig import JoinKeyConflict, build_designed_rig
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -305,3 +309,101 @@ class TestZeroFixturesInvariantCoversNonReadFailureTriggers:
         assert payload["diffs"]["performed"] is True
         assert payload["diffs"]["missing_in_console"] == []
         assert "차이 없음" in payload["summary_ko"]
+
+
+# --- round17 리포트 수치 경계 전수 (AddressGates) ---
+#
+# round17 HARD 규율 1 — `server/vwx/` 전 모듈 수치 경계 자리를 격리 사본 뮤테이션으로
+# 훑었고(레지스트리는 `test_vwx_address.py::_R17_VWX_BOUNDARY_SITES`), `report.py`에서
+# 무대조군 3자리가 나왔다: `_no_fixtures_reason`의 열거 상한 `join_conflicts[:3]`과
+# 꼬리 조건 `len(join_conflicts) > 3`, 그리고 `_drop_ratio`의 0 나눗셈 가드
+# `candidate_row_count <= 0`.
+
+
+class _ConflictCountRow(NamedTuple):
+    count: int
+    listed: int
+    tail: str
+
+
+#: 열거 상한 3의 **양끝**과 그 위. `listed`는 문장에 실제로 나열되는 상세 개수,
+#: `tail`은 그 뒤에 붙는 요약 꼬리(없으면 빈 문자열)다.
+_R17_JOIN_CONFLICT_ROWS: tuple[_ConflictCountRow, ...] = (
+    _ConflictCountRow(1, 1, ""),
+    _ConflictCountRow(2, 2, ""),
+    _ConflictCountRow(3, 3, ""),
+    _ConflictCountRow(4, 3, " 외 1건"),
+    _ConflictCountRow(5, 3, " 외 2건"),
+)
+
+
+def _r17_report_with_join_conflicts(count: int) -> dict:
+    conflicts = tuple(
+        JoinKeyConflict(key=f"k{index}", detail=f"충돌{index}", rows=(index,))
+        for index in range(count)
+    )
+    rig = dataclasses.replace(build_designed_rig([]), join_key_conflicts=conflicts)
+    return build_vwx_report(
+        compare(rig, make_inventory([])), read_failures=(), excluded_rows=()
+    ).to_dict()
+
+
+class TestRound17JoinConflictEnumerationBoundary:
+    """[round17] 조인 키 충돌 열거 상한(3)의 양끝."""
+
+    def test_the_table_covers_both_sides_of_the_enumeration_cap(self):
+        """[round17 표 전수] 행을 지우면 실패한다."""
+        assert len(_R17_JOIN_CONFLICT_ROWS) == 5, "행수 리터럴 — 행 삭제/추가 감지"
+        assert {row.count for row in _R17_JOIN_CONFLICT_ROWS} == {1, 2, 3, 4, 5}
+        # 상한 정확히(3) · 상한 초과(4) 두 칸이 모두 있어야 `> 3`이 고정된다.
+        assert {"", " 외 1건"} <= {row.tail for row in _R17_JOIN_CONFLICT_ROWS}
+
+    @pytest.mark.parametrize("row", _R17_JOIN_CONFLICT_ROWS, ids=lambda r: f"conflicts{r.count}")
+    def test_the_summary_lists_at_most_three_and_counts_the_rest(self, row):
+        """[round17] `report.py`의 `len(join_conflicts) > 3`을 `> 4`로 바꾸면 4건 행이
+        "외 1건"을 잃고 실패한다. 열거 슬라이스 `join_conflicts[:3]`을 `[:2]`로 바꾸면
+        3건 이상 행이 상세 하나를 잃고 실패한다. 두 자리는 **같은 문장의 짝**이라
+        한쪽만 옮겨도 문장이 사실과 어긋난다(3건 나열 + 남은 건수)."""
+        summary = _r17_report_with_join_conflicts(row.count)["summary_ko"]
+        assert f"조인 키 충돌 {row.count}건" in summary
+        listed = [index for index in range(row.count) if f"충돌{index}" in summary]
+        assert listed == list(range(row.listed)), summary
+        if row.tail:
+            assert row.tail in summary, summary
+        else:
+            assert " 외 " not in summary, summary
+
+
+class TestRound17DropRatioZeroDivisionGuard:
+    """[round17] `_drop_ratio`의 `candidate_row_count <= 0` 가드."""
+
+    def _scoped_report(self, candidate: int, dropped: int):
+        rig = dataclasses.replace(
+            build_designed_rig([]),
+            candidate_row_count=candidate,
+            dropped_row_count=dropped,
+            scope_qualified=True,
+            scope_note="관측 범위 한정",
+        )
+        return build_vwx_report(
+            compare(rig, make_inventory([])), read_failures=(), excluded_rows=()
+        )
+
+    def test_a_zero_candidate_count_never_divides_by_zero(self):
+        """[round17] `report.py`의 `if rig.candidate_row_count <= 0:`을 `< 0`으로 바꾸면
+        여기서 `ZeroDivisionError`가 터진다.
+
+        `DesignedRig`는 공개 frozen dataclass라 호출자가 `candidate_row_count=0`인
+        인스턴스를 만들 수 있고, `scope_qualified`가 True면 `summary_ko` 조립이
+        `_drop_ratio()`를 실제로 부른다 — 즉 이 가드는 죽은 방어가 아니다.
+        """
+        payload = self._scoped_report(0, 1).to_dict()
+        assert payload["designed_rig"]["candidate_row_count"] == 0
+        assert payload["summary_ko"]
+
+    def test_the_guard_is_not_vacuous_a_positive_denominator_still_divides(self):
+        """[round17 비공허성] 분모가 양수면 실제로 나눗셈이 일어난다 — 위 테스트가
+        "언제나 0.0을 돌려준다"는 공허한 검사가 아님을 보인다. `/`를 `//`로 바꾸면
+        비율이 0으로 뭉개져 여기서 실패한다."""
+        assert self._scoped_report(4, 1)._drop_ratio() == 0.25
+        assert self._scoped_report(0, 1)._drop_ratio() == 0.0

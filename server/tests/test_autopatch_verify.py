@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import inspect
 from pathlib import Path
+from typing import NamedTuple
 
 import pytest
 
@@ -38,6 +39,8 @@ from server.tests.test_autopatch_execute import (
     _console_surface,
     _load,
 )
+from server.tests.test_autopatch_types import LibraryRigPort
+from server.tests.test_autopatch_types import request as _r17_type_request
 from server.vwx.apply import (
     _NEUTRAL_FIELDS,
     CONSOLE_READ_INCOMPLETE,
@@ -67,6 +70,7 @@ from server.vwx.typemap import (
     LibraryType,
     TypeRequest,
     TypeResolution,
+    resolve_fixture_types,
 )
 from server.vwx.verdicts import (
     ADDRESS_ALREADY_OCCUPIED,
@@ -579,10 +583,22 @@ def test_a_mismatch_comes_out_structured():
         "expected_mode": MODE_1,
         "observed_type": LED,
         "observed_mode": MODE_2,
-        # [round15 D] 라이브러리 확정 이름과 **콘솔 원문**을 함께 싣는다 — 원문은 사유·detail
-        # 문장에서 빠졌고(2b④) 대신 여기 구조화 필드로 온다(2c①).
-        "observed_type_display": "FixtureType 3",
-        "observed_mode_display": "2 Mode 2",
+        # [round15 D · round17 S17-03a] 라이브러리 확정 이름과 **콘솔 원문**을 함께 싣는다 —
+        # 원문은 사유·detail 문장에서 빠졌고(2b④) 대신 여기 구조화 필드로 온다(2c①).
+        # 단수 두 칸이 아니라 **점유자 리스트**다: 단수 쌍은 N>=2를 표현할 수 없어
+        # 다중 점유 갈래를 영구 면제로 남긴다(S17-03a).
+        "observed_occupants": [
+            {
+                "slot": 1,
+                "universe": 1,
+                "address": 1,
+                "type_display": "FixtureType 3",
+                "mode_display": "2 Mode 2",
+                "type_name": LED,
+                "mode_name": MODE_2,
+                "identity_resolved": True,
+            }
+        ],
         "outcome": VERIFICATION_MISMATCHED,
         "label": verification_outcome_label(VERIFICATION_MISMATCHED),
         "detail": payload["results"][0]["detail"],
@@ -1766,7 +1782,7 @@ def test_a_console_display_string_carrying_cd_is_not_a_gate_violation():
 
 
 def test_the_observed_display_strings_travel_in_structured_fields_not_in_the_reason_sentence():
-    """[round15 D 축 2] 문장은 좌표·필드 이름만, 원문은 구조화 필드로(§0 2b④ + 2c①).
+    """[round15 D 축 2 · round17 S17-03a] 문장은 좌표만, 관측된 것은 구조화 필드로.
 
     `screen_idempotent`의 사유 문장에 `occupant.type_display`를 되싣도록 되돌리면 이 단정이
     실패한다 — 그리고 그 회귀가 곧 위 거짓 양성의 원인이다.
@@ -1776,9 +1792,11 @@ def test_the_observed_display_strings_travel_in_structured_fields_not_in_the_rea
     assert "9 Mode 9" not in exclusion.reason
     assert CD_TOKEN.search(exclusion.reason) is None
     assert "유니버스 1 주소 1" in exclusion.reason
-    assert exclusion.observed_type_display == "CD 5"
-    assert exclusion.observed_mode_display == "9 Mode 9"
-    assert exclusion.to_dict()["observed_type_display"] == "CD 5"
+    assert [occupant["type_display"] for occupant in exclusion.observed_occupants] == ["CD 5"]
+    assert [occupant["mode_display"] for occupant in exclusion.observed_occupants] == ["9 Mode 9"]
+    assert exclusion.to_dict()["observed_occupants"] == [
+        dict(occupant) for occupant in exclusion.observed_occupants
+    ]
 
 
 def test_the_verification_detail_also_keeps_the_display_strings_out_of_the_sentence():
@@ -1795,9 +1813,11 @@ def test_the_verification_detail_also_keeps_the_display_strings_out_of_the_sente
     assert result.outcome == VERIFICATION_IDENTITY_UNCONFIRMED
     assert "CD 5" not in result.detail
     assert CD_TOKEN.search(result.detail) is None
-    assert result.observed_type_display == "CD 5"
-    assert result.observed_mode_display == "9 Mode 9"
-    assert result.to_dict()["observed_mode_display"] == "9 Mode 9"
+    assert [occupant["type_display"] for occupant in result.observed_occupants] == ["CD 5"]
+    assert [occupant["mode_display"] for occupant in result.observed_occupants] == ["9 Mode 9"]
+    assert result.to_dict()["observed_occupants"] == [
+        dict(occupant) for occupant in result.observed_occupants
+    ]
 
 
 def test_no_exclusion_reason_leaks_onto_a_console_bound_surface():
@@ -2122,8 +2142,7 @@ _R16_VERIFICATION_RESULT_KEYS = (
     "expected_mode",
     "observed_type",
     "observed_mode",
-    "observed_type_display",
-    "observed_mode_display",
+    "observed_occupants",
     "outcome",
     "label",
     "detail",
@@ -3061,21 +3080,41 @@ def _r16_apply_constant(name: str):
 
 
 # ==========================================================================
-# M35 — 표시 문자열 구조화 필드는 **2객체 × 2필드 = 4칸**이다
+# M35 → [round17 S17-03a] 관측 원문은 **2객체 × 단수 2칸**이 아니라
+#        **2객체 × 점유자 리스트 1칸**이다
 #
-# round15 D는 네 칸을 만들고 두 칸만 단정했다(`observed_type_display`는 제외 객체에서만,
-# `observed_mode_display`는 검증 객체에서만). 그래서 `patchplan.py`의
-# `"observed_mode_display": self.observed_mode_display`를 `None`으로 바꿔도 전부 통과했다.
-# 여기서는 네 칸을 표로 열거하고, 그 표가 **두 dataclass의 실제 필드 목록과 전단사**임을
-# 따로 단정한다 — 필드를 더하면 표 없이는 통과하지 못하고, 표에서 칸을 지우면 실패한다.
+# round15 D는 단수 네 칸을 만들고 두 칸만 단정했다. round16 M35가 네 칸을 표로 고정해
+# 그 구멍을 닫았지만, **표가 고정한 대상 자체가 틀렸다** — 단수 쌍은 N>=2를 구조적으로
+# 표현할 수 없으므로 다중 점유 갈래는 "채우지 않는다"가 정답인 **영구 면제**로 남았고,
+# 그 갈래의 payload에는 무엇이 점유했는지가 없었다. 리스트 한 칸으로 바꾸면 0·1·N이
+# 전부 값이라 면제가 사라진다.
+#
+# 표는 지우지 않고 **교체**한다. 아래 전단사가 "두 dataclass에서 `observed_`로 시작하는
+# 필드 전수"를 프로덕션에서 뽑아 표와 맞추므로 ① 단수 필드를 되살리면 실패하고
+# ② 표에서 칸을 지우면 실패한다.
 # ==========================================================================
 
-#: (객체 이름, 필드 이름) — 손으로 열거한다. 아래 전단사 단정이 프로덕션과 맞춘다.
+#: (객체 이름, 필드 이름, 칸 종류) — 손으로 열거한다. 아래 전단사 단정이 프로덕션과 맞춘다.
+#: 두 종류가 있고 **둘 다 단정한다** — round15가 네 칸 중 둘만 단정해 통과시킨 게 이 SPEC의
+#: 선례다. `resolved_name`은 라이브러리로 **확정된 이름**이라 대조 실패 시 `None`이어야 하고
+#: (미확정을 이름처럼 흘려보내지 않는다), `occupants`는 콘솔이 실제로 준 것을 전부 싣는다.
 _R16_DISPLAY_CELLS = (
-    ("PatchTargetExclusion", "observed_type_display"),
-    ("PatchTargetExclusion", "observed_mode_display"),
-    ("VerificationResult", "observed_type_display"),
-    ("VerificationResult", "observed_mode_display"),
+    ("PatchTargetExclusion", "observed_occupants", "occupants"),
+    ("VerificationResult", "observed_type", "resolved_name"),
+    ("VerificationResult", "observed_mode", "resolved_name"),
+    ("VerificationResult", "observed_occupants", "occupants"),
+)
+
+#: 점유자 한 명이 payload로 나갈 때의 **키 전수**. `ConsoleFixture.to_dict()`와 전단사다.
+_R17_OCCUPANT_KEYS = (
+    "slot",
+    "universe",
+    "address",
+    "type_display",
+    "mode_display",
+    "type_name",
+    "mode_name",
+    "identity_resolved",
 )
 
 
@@ -3087,28 +3126,52 @@ def _r16_display_carrying_classes():
 
 
 def test_the_display_cell_table_is_a_bijection_onto_the_production_dataclass_fields():
-    """[round16 M35] 표시 문자열 칸 표가 **프로덕션 필드 목록**과 1:1이다.
+    """[round16 M35 · round17 S17-03a] 관측 칸 표가 **프로덕션 필드 목록**과 1:1이다.
 
-    `PatchTargetExclusion`·`VerificationResult` 어느 쪽에서든 `observed_*_display` 필드를
-    지우거나 더하면 이 단정이 깨진다. 표에서 칸을 지워도 깨진다 — 그래서 아래 네 칸짜리
-    parametrize가 "넷 중 둘만" 상태로 조용히 되돌아갈 수 없다.
+    `observed_`로 시작하는 필드를 어느 쪽에서든 지우거나 더하면 깨진다 — 단수
+    `observed_type_display`/`observed_mode_display`를 되살리는 것도 '더하기'라 깨진다.
+    표에서 칸을 지워도 깨진다.
     """
     import dataclasses
 
     produced = tuple(
-        (cls.__name__, field.name)
+        (
+            cls.__name__,
+            field.name,
+            "occupants" if field.name.endswith("occupants") else "resolved_name",
+        )
         for cls in _r16_display_carrying_classes()
         for field in dataclasses.fields(cls)
-        if field.name.startswith("observed_") and field.name.endswith("_display")
+        if field.name.startswith("observed_")
     )
     assert produced == _R16_DISPLAY_CELLS
 
 
-def test_every_display_cell_is_also_a_key_of_its_objects_payload():
-    """[round16 M35] 네 칸 전부가 `to_dict()` **키로** 나간다 — 객체 필드만으로는 부족하다.
+def test_the_occupant_key_table_is_a_bijection_onto_console_fixture_to_dict():
+    """[round17 S17-03a] 점유자 payload의 키 표가 `ConsoleFixture.to_dict()`와 1:1이다.
 
-    `patchplan.py`의 `"observed_mode_display": self.observed_mode_display` 줄을 지우면
-    (필드는 남아 있으므로 위 전단사는 통과하는데) 이 단정이 실패한다.
+    [round17 #S17-03a] `ConsoleFixture.to_dict()`에서 키를 하나(예: `slot`) 지우면 실패한다.
+    표에서 행을 지워도 실패한다 — 어느 방향으로도 조용히 줄어들지 않는다.
+    """
+    from server.vwx.apply import ConsoleFixture
+
+    produced = ConsoleFixture(
+        slot=1,
+        universe=1,
+        address=1,
+        type_display="CD 5",
+        mode_display="9 Mode 9",
+        type_name=None,
+        mode_name=None,
+    ).to_dict()
+    assert tuple(produced) == _R17_OCCUPANT_KEYS
+
+
+def test_every_display_cell_is_also_a_key_of_its_objects_payload():
+    """[round16 M35] 두 칸 전부가 `to_dict()` **키로** 나간다 — 객체 필드만으로는 부족하다.
+
+    `patchplan.py`의 `"observed_occupants": …` 줄을 지우면 (필드는 남아 있으므로 위 전단사는
+    통과하는데) 이 단정이 실패한다.
     """
     payload_keys = {
         "PatchTargetExclusion": set(_cd_occupied_handoff().exclusions[0].to_dict()),
@@ -3121,12 +3184,12 @@ def test_every_display_cell_is_also_a_key_of_its_objects_payload():
             .to_dict()
         ),
     }
-    for class_name, field_name in _R16_DISPLAY_CELLS:
+    for class_name, field_name, _kind in _R16_DISPLAY_CELLS:
         assert field_name in payload_keys[class_name], (class_name, field_name)
 
 
 def _r16_display_cell_objects():
-    """네 칸을 **같은 관측**(`'CD 5'` · `'9 Mode 9'`)으로 채우는 두 프로덕션 산출물."""
+    """두 칸을 **같은 관측**(`'CD 5'` · `'9 Mode 9'`)으로 채우는 두 프로덕션 산출물."""
     exclusion = _cd_occupied_handoff().exclusions[0]
     result = verify_patch(
         (_entry("a", 1, 1),),
@@ -3136,28 +3199,41 @@ def _r16_display_cell_objects():
 
 
 @pytest.mark.parametrize(
-    "class_name,field_name",
+    "class_name,field_name,kind",
     _R16_DISPLAY_CELLS,
-    ids=[f"{cls}.{field}" for cls, field in _R16_DISPLAY_CELLS],
+    ids=[f"{cls}.{field}" for cls, field, _ in _R16_DISPLAY_CELLS],
 )
 def test_each_display_cell_carries_the_observed_string_in_object_and_in_payload(
-    class_name: str, field_name: str
+    class_name: str, field_name: str, kind: str
 ):
-    """[round16 M35] 네 칸 **전부**가 관측 원문을 싣는다 — 객체에서도, payload에서도.
+    """[round16 M35 · round17 S17-03a] **네 칸 전부**를 단정한다 — 종류별로 다른 규약이다.
 
-    `patchplan.py`의 `"observed_mode_display": self.observed_mode_display`를 `None`으로
-    바꾸면 `PatchTargetExclusion.observed_mode_display` 행이 실패한다(round15는 통과했다).
-    `apply.py`의 `"observed_type_display": self.observed_type_display`를 `None`으로 바꾸면
-    `VerificationResult.observed_type_display` 행이 실패한다.
+    round15는 네 칸을 만들고 둘만 단정했다. 여기서는 표가 프로덕션 필드와 전단사이고
+    표의 모든 행이 이 parametrize를 통과하므로 조용한 면제 칸이 남지 않는다.
+
+    [round17 #S17-03a] `patchplan.py`/`apply.py`의 `"observed_occupants": …` payload 줄을
+      지우거나 `[]`로 고정하면 `occupants` 두 행이 실패한다.
+    [round17 #S17-03a] `ConsoleFixture.to_dict()`에서 키를 하나 지우면 같은 두 행이 실패한다.
     """
-    expected = {"observed_type_display": "CD 5", "observed_mode_display": "9 Mode 9"}[field_name]
     obj = _r16_display_cell_objects()[class_name]
-
-    assert getattr(obj, field_name) == expected
-    assert obj.to_dict()[field_name] == expected
-    # 그리고 그 원문은 사람이 읽는 **문장**에는 없다 — 구조화 필드로만 나간다(§0 2b④).
+    value = getattr(obj, field_name)
     sentence = getattr(obj, "reason", None) or obj.detail
-    assert expected not in sentence
+
+    if kind == "occupants":
+        assert [occupant["type_display"] for occupant in value] == ["CD 5"]
+        assert [occupant["mode_display"] for occupant in value] == ["9 Mode 9"]
+        assert [tuple(occupant) for occupant in value] == [_R17_OCCUPANT_KEYS]
+        assert obj.to_dict()[field_name] == [dict(occupant) for occupant in value]
+    else:
+        # 라이브러리 대조에 실패한 관측이다 — **확정 이름 칸은 비어 있어야** 한다.
+        # 여기에 표시 문자열을 흘려 넣으면 미확정이 이름으로 둔갑한다.
+        assert value is None
+        assert obj.to_dict()[field_name] is None
+
+    assert "CD 5" not in sentence
+    assert "9 Mode 9" not in sentence
+    # [round17 S17-03b] 포인터 문장도 없다 — payload의 키 이름이 곧 포인터다.
+    assert "필드에 있다" not in sentence
 
 
 # ==========================================================================
@@ -3200,10 +3276,15 @@ def _r16_screen(records, *, resolutions=None):
     )
 
 
-# (행 이름, 기대 코드 또는 None, 점유 기록, 해석 override, 구조화 필드를 채우는가,
+# (행 이름, 기대 코드 또는 None, 점유 기록, 해석 override, **기대 점유자 수**,
 #  문장에 **우리가 승인한** 이름이 실리는가)
+#
+# [round17 S17-03a] 다섯째 열은 round16의 `fills_display`를 **교체한 것**이다. 그 열은
+# `multiple_occupants` 행에 `False`를 정답으로 고정했다 — 단수 필드 `observed_type_display`
+# 한 칸에 2대를 넣을 수 없으니 당시엔 사실이었지만, 동시에 **가장 위험한 갈래가 점유자를
+# 하나도 싣지 않는 것을 규약이 승인**하는 열이었다. 계수 열에는 그런 면제가 없다.
 _R16_SCREEN_BRANCH_ROWS = (
-    ("no_occupant", None, (), None, False, False),
+    ("no_occupant", None, (), None, 0, False),
     (
         "multiple_occupants",
         EXISTING_IDENTITY_UNCONFIRMED,
@@ -3212,7 +3293,7 @@ _R16_SCREEN_BRANCH_ROWS = (
             (2, "1.1", _R16_LED_DISPLAY, _R16_MODE1_DISPLAY),
         ),
         None,
-        False,
+        2,
         False,
     ),
     (
@@ -3220,7 +3301,7 @@ _R16_SCREEN_BRANCH_ROWS = (
         TYPE_CONFIRMATION_PENDING,
         ((1, "1.1", _R16_LED_DISPLAY, _R16_MODE1_DISPLAY),),
         "unresolved",
-        True,
+        1,
         False,
     ),
     (
@@ -3228,7 +3309,7 @@ _R16_SCREEN_BRANCH_ROWS = (
         EXISTING_IDENTITY_UNCONFIRMED,
         ((1, "1.1", "CD 5", "9 Mode 9"),),
         None,
-        True,
+        1,
         False,
     ),
     (
@@ -3236,7 +3317,7 @@ _R16_SCREEN_BRANCH_ROWS = (
         ALREADY_PATCHED_IDENTICAL,
         ((1, "1.1", _R16_LED_DISPLAY, _R16_MODE1_DISPLAY),),
         None,
-        True,
+        1,
         True,
     ),
     (
@@ -3244,7 +3325,7 @@ _R16_SCREEN_BRANCH_ROWS = (
         ADDRESS_CONFLICTS_WITH_EXISTING,
         ((1, "1.1", _R16_LED_DISPLAY, _R16_MODE2_DISPLAY),),
         None,
-        True,
+        1,
         False,
     ),
 )
@@ -3253,7 +3334,7 @@ _R16_SCREEN_BRANCH_ROWS = (
 def _r16_production_exclusion_sites():
     """`screen_idempotent` 본문의 `_exclusion(...)` 호출을 **소스 순서대로** 뽑는다.
 
-    각 사이트에서 (제외 코드, 구조화 표시 필드를 넘기는가)를 읽는다 — 표와 맞춰야 하는
+    각 사이트에서 (제외 코드, 점유자를 구조화 필드로 넘기는가)를 읽는다 — 표와 맞춰야 하는
     프로덕션 쪽 사실이 바로 이것이다.
     """
     import ast
@@ -3269,23 +3350,26 @@ def _r16_production_exclusion_sites():
             # 이름이 아니라 **값**으로 환원한다 — 상수 이름만 바꾼 뮤테이션이 표를
             # 통과하지 못하게 하려면 프로덕션 모듈에서 실제 값을 꺼내야 한다.
             _r16_apply_constant(call.args[1].id),
-            any(kw.arg == "observed_type_display" for kw in call.keywords)
-            and any(kw.arg == "observed_mode_display" for kw in call.keywords),
+            any(keyword.arg == "observed_occupants" for keyword in call.keywords),
         )
         for call in calls
     )
 
 
 def test_the_screen_branch_table_is_a_bijection_onto_the_production_exclusion_sites():
-    """[round16 S16-05] 갈래 표가 `screen_idempotent`의 **실제 제외 사이트**와 1:1이다.
+    """[round16 S16-05 · round17 S17-03a] 갈래 표가 **실제 제외 사이트**와 1:1이다.
 
     ① 표에서 갈래 행을 지우면 실패한다. ② 프로덕션에 갈래를 더하면 행 없이는 통과하지
-    못한다. ③ `ADDRESS_CONFLICTS_WITH_EXISTING`(또는 형제 갈래 어느 쪽이든)에서
-    `observed_type_display=` · `observed_mode_display=`를 떼면 두 번째 열이 어긋나 실패한다 —
-    round15가 그 상태로 통과했다.
+    못한다. ③ **어느 갈래에서든** `observed_occupants=`를 떼면 두 번째 열이 어긋나 실패한다.
+
+    round16 판은 `fills_display`를 그대로 두 번째 열로 썼고 `multiple_occupants` 행이
+    `False`였다 — 그래서 그 갈래는 애초에 필드를 넘기지 않는 것이 정답이었다. 제외 사이트는
+    **전부** 점유자를 관측한 자리이므로 예외가 없다.
     """
     table = tuple(
-        (code, fills) for _, code, _, _, fills, _ in _R16_SCREEN_BRANCH_ROWS if code is not None
+        (code, count >= 1)
+        for _, code, _, _, count, _ in _R16_SCREEN_BRANCH_ROWS
+        if code is not None
     )
     assert table == _r16_production_exclusion_sites()
 
@@ -3311,23 +3395,34 @@ def test_the_screen_branch_table_covers_the_single_kept_branch_too():
 
 
 @pytest.mark.parametrize(
-    "name,code,records,resolution_kind,fills_display,approved_names_in_sentence",
+    "name,code,records,resolution_kind,expected_occupant_count,approved_names_in_sentence",
     _R16_SCREEN_BRANCH_ROWS,
     ids=[row[0] for row in _R16_SCREEN_BRANCH_ROWS],
 )
 def test_every_screen_idempotent_branch_obeys_the_same_display_contract(
-    name, code, records, resolution_kind, fills_display, approved_names_in_sentence
+    name, code, records, resolution_kind, expected_occupant_count, approved_names_in_sentence
 ):
-    """[round16 S16-05] 여섯 갈래 **전부**가 같은 규약을 지킨다.
+    """[round16 S16-05 · round17 S17-03a] 여섯 갈래 **전부**가 같은 규약을 지킨다.
 
-    이전 판의 `ADDRESS_CONFLICTS_WITH_EXISTING`을 되돌리면
-    (`f"{occupant.type_name} · {occupant.mode_name} 픽스처가 점유하고 있다"` +
-    구조화 필드 `None`) 'address_conflicts_with_existing' 행이 **두 군데서** 실패한다:
-    문장에 점유자 이름이 들어가고, `observed_*_display`가 비어 있다.
+    ① 사유 문장에는 점유자에게서 읽은 문자열이 없다.
+    ② **관측된 점유자 전원**이 구조화 필드로 나간다 — 1대든 2대든 면제가 없다.
+
+    [round17 #S17-03a] 다중 점유 갈래의 `observed_occupants=occupants`를 `()`로 바꾸거나
+      지우면 'multiple_occupants' 행이 실패한다. round16 표는 그 갈래에 `False`를 정답으로
+      고정하고 있었으므로 **그 상태가 통과였다** — 조작자는 무엇이 점유했는지 모른 채
+      되돌릴 수 없는 쓰기를 판단했다.
+    [round17 #S17-03a] 단일 점유 네 갈래 어디서든 `observed_occupants=`를 지우면 그 행이
+      실패한다.
+    [round17 #S17-03a] `ConsoleFixture.to_dict()`에서 키를 하나라도(예: `slot`) 지우면
+      점유자가 있는 다섯 행 전부가 실패한다.
     """
     console_records = tuple(_record(*row) for row in records)
     resolutions = (_r16_unresolved_resolution(),) if resolution_kind == "unresolved" else None
     screened = _r16_screen(console_records, resolutions=resolutions)
+
+    occupants = _console(*console_records)
+    expected_occupants = tuple(occupant.to_dict() for occupant in occupants)
+    assert len(expected_occupants) == expected_occupant_count
 
     if code is None:
         assert screened.exclusions == ()
@@ -3338,18 +3433,9 @@ def test_every_screen_idempotent_branch_obeys_the_same_display_contract(
     (exclusion,) = screened.exclusions
     assert exclusion.code == code
 
-    occupants = _console(*console_records)
-    if fills_display:
-        # ② 단일 점유자를 특정한 갈래는 관측 원문을 구조화 필드로 싣는다.
-        (occupant,) = occupants
-        assert exclusion.observed_type_display == occupant.type_display
-        assert exclusion.observed_mode_display == occupant.mode_display
-        assert exclusion.to_dict()["observed_type_display"] == occupant.type_display
-        assert exclusion.to_dict()["observed_mode_display"] == occupant.mode_display
-    else:
-        # 점유자를 특정하지 못한 갈래는 **아무 원문도 주장하지 않는다**.
-        assert exclusion.observed_type_display is None
-        assert exclusion.observed_mode_display is None
+    # ② 점유자 전원이 객체에서도 payload에서도 나온다.
+    assert exclusion.observed_occupants == expected_occupants
+    assert exclusion.to_dict()["observed_occupants"] == [dict(row) for row in expected_occupants]
 
     # ① 문장에는 점유자에게서 읽은 문자열이 없다 — 표시 원문도, 확정 이름도.
     for occupant in occupants:
@@ -3370,7 +3456,12 @@ def test_every_screen_idempotent_branch_obeys_the_same_display_contract(
 
 # ---- 형제 표면 `verify_patch`의 갈래 전수 -------------------------------------
 
-# (행 이름, 기대 outcome, 점유 기록, read_complete, 구조화 필드를 채우는가)
+# (행 이름, 기대 outcome, 점유 기록, read_complete, **기대 점유자 수**)
+#
+# [round17 S17-03a] 마지막 열은 round16의 `fills_display`(단수 필드를 채우는가)를 **교체한
+# 것**이다. 그 열은 `multiple_found`에 `False`를 정답으로 고정하고 있었다 — 단수 필드로는
+# 2대를 표현할 수 없으니 그것이 그 시점의 사실이었지만, 동시에 **점유자를 못 싣는 갈래를
+# 규약이 승인**하는 열이기도 했다. 계수 열에는 그런 면제가 없다: 0·1·N이 전부 값이다.
 _R16_VERIFY_BRANCH_ROWS = (
     (
         "multiple_found",
@@ -3380,30 +3471,30 @@ _R16_VERIFY_BRANCH_ROWS = (
             (2, "1.1", _R16_LED_DISPLAY, _R16_MODE1_DISPLAY),
         ),
         True,
-        False,
+        2,
     ),
-    ("absent_but_read_incomplete", VERIFICATION_IDENTITY_UNCONFIRMED, (), False, False),
-    ("absent_and_read_complete", VERIFICATION_NOT_OBSERVED, (), True, False),
+    ("absent_but_read_incomplete", VERIFICATION_IDENTITY_UNCONFIRMED, (), False, 0),
+    ("absent_and_read_complete", VERIFICATION_NOT_OBSERVED, (), True, 0),
     (
         "identity_unconfirmed",
         VERIFICATION_IDENTITY_UNCONFIRMED,
         ((1, "1.1", "CD 5", "9 Mode 9"),),
         True,
-        True,
+        1,
     ),
     (
         "observed",
         VERIFICATION_OBSERVED,
         ((1, "1.1", _R16_LED_DISPLAY, _R16_MODE1_DISPLAY),),
         True,
-        True,
+        1,
     ),
     (
         "mismatched",
         VERIFICATION_MISMATCHED,
         ((1, "1.1", _R16_LED_DISPLAY, _R16_MODE2_DISPLAY),),
         True,
-        True,
+        1,
     ),
 )
 
@@ -3434,19 +3525,57 @@ def test_the_verify_branch_table_is_a_bijection_onto_the_production_outcomes():
     )
 
 
+def _r17_production_verification_result_sites():
+    """`verify_patch`가 짓는 `VerificationResult(...)` **전 사이트**를 소스 순서대로 뽑아,
+    각 사이트가 `observed_occupants=`를 넘기는지 돌려준다.
+
+    [round17 S17-03a] round16의 형제 게이트는 **결과 객체의 값**만 봤고 생성 자리 자체는
+    세지 않았다. 갈래를 하나 더 만들면서 필드를 빼먹으면 그 갈래의 행이 없는 한 아무도
+    실패하지 않는다 — `screen_idempotent` 쪽 전단사와 같은 종류의 자리를 여기에도 세운다.
+    """
+    import ast
+
+    fn = _r16_function_def(_r16_apply_tree(), "verify_patch")
+    calls = _r16_in_source_order(
+        node
+        for node in ast.walk(fn)
+        if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "VerificationResult"
+    )
+    return tuple(
+        any(keyword.arg == "observed_occupants" for keyword in call.keywords) for call in calls
+    )
+
+
+def test_every_verification_result_construction_site_carries_the_occupants():
+    """[round17 S17-03a] `verify_patch`의 **모든** 생성 자리가 점유자를 싣는다.
+
+    [round17 #S17-03a] `apply.py`의 다중 점유 갈래(또는 꼬리 갈래) `VerificationResult(...)`
+    에서 `observed_occupants=`를 지우면 실패한다. 자리 수도 함께 고정하므로, 갈래를 더하고
+    필드를 빼먹어도 실패한다.
+    """
+    sites = _r17_production_verification_result_sites()
+    assert sites, "verify_patch에서 VerificationResult 생성 자리를 하나도 찾지 못했다"
+    assert sites == (True,) * len(sites)
+    # 생성 자리는 **둘**이다 — 다중 점유 갈래와 나머지 전 갈래의 공통 꼬리.
+    assert len(sites) == 2
+
+
 @pytest.mark.parametrize(
-    "name,outcome,records,read_complete,fills_display",
+    "name,outcome,records,read_complete,expected_occupant_count",
     _R16_VERIFY_BRANCH_ROWS,
     ids=[row[0] for row in _R16_VERIFY_BRANCH_ROWS],
 )
 def test_every_verify_patch_branch_obeys_the_same_display_contract(
-    name, outcome, records, read_complete, fills_display
+    name, outcome, records, read_complete, expected_occupant_count
 ):
-    """[round16 S16-05 형제 표면] `detail` 문장에도 관측 원문이 없고, 단일 점유자면 필드가 찬다.
+    """[round16 S16-05 형제 표면 · round17 S17-03a] `detail` 문장에 관측 원문이 없고,
+    **관측된 점유자 전원**이 구조화 필드로 나간다 — 0대든 1대든 2대든.
 
-    `apply.py`의 꼬리
-    `observed_type_display=occupant.type_display if occupant is not None else None`을
-    `None`으로 바꾸면 'identity_unconfirmed'·'observed'·'mismatched' 세 행이 실패한다.
+    [round17 #S17-03a] `apply.py`의 꼬리 `observed_occupants=tuple(...)`을 `()`로 바꾸면
+    'identity_unconfirmed'·'observed'·'mismatched' 세 행이 실패한다.
+    [round17 #S17-03a] 다중 점유 갈래의 `observed_occupants=`를 `()`로 바꾸면
+    'multiple_found' 행이 실패한다 — round16 표는 그 갈래에 `False`가 정답이라 못 잡았다.
+    [round17 #S17-03a] `ConsoleFixture.to_dict()`에서 키를 하나라도 지우면 전 행이 실패한다.
     """
     console_records = tuple(_record(*row) for row in records)
     report = verify_patch(
@@ -3458,15 +3587,10 @@ def test_every_verify_patch_branch_obeys_the_same_display_contract(
     assert result.outcome == outcome
 
     occupants = _console(*console_records)
-    if fills_display:
-        (occupant,) = occupants
-        assert result.observed_type_display == occupant.type_display
-        assert result.observed_mode_display == occupant.mode_display
-        assert result.to_dict()["observed_type_display"] == occupant.type_display
-        assert result.to_dict()["observed_mode_display"] == occupant.mode_display
-    else:
-        assert result.observed_type_display is None
-        assert result.observed_mode_display is None
+    expected_occupants = tuple(occupant.to_dict() for occupant in occupants)
+    assert len(expected_occupants) == expected_occupant_count
+    assert result.observed_occupants == expected_occupants
+    assert result.to_dict()["observed_occupants"] == [dict(row) for row in expected_occupants]
 
     for occupant in occupants:
         for observed in (occupant.type_display, occupant.mode_display):
@@ -3487,12 +3611,21 @@ def test_every_verify_patch_branch_obeys_the_same_display_contract(
 # 값이 모듈 상수인 사이트에는 그 상수가 그 어휘에 등재돼 있는지를 단정한다.
 # ==========================================================================
 
-_R16_VWX_MODULES = ("apply.py", "patchplan.py", "typemap.py", "verdicts.py")
+#: [round17 #7] 이 표는 round16까지 **네 모듈**만 담았는데 파서 독스트링은 `server/vwx/*.py`라
+#: 적었다 — `_R16_BOOL_GUARD_ROWS`와 **같은 스코프 거짓말**이다. 이제 목록을 손으로 쓰지 않고
+#: 디렉터리에서 파생한다. 모듈이 하나 생기면 스캔 범위가 자동으로 따라간다.
+_R16_VWX_MODULES = tuple(sorted(path.name for path in Path("server/vwx").glob("*.py")))
 _R16_UNREGISTERED_CODE = "존재하지 않는 판정 코드"
 
 
 def _r16_validate_autopatch_sites():
-    """`server/vwx/*.py`의 `validate_autopatch(...)` 호출을 (모듈, 어휘식, 값식)으로 전수."""
+    """`server/vwx/*.py` **전 모듈**의 `validate_autopatch(...)` 호출을
+    (모듈, 어휘식, 값식)으로 전수한다.
+
+    [round17 #7] 스캔 범위를 다시 손으로 쓴 목록으로 좁히면 `test_autopatch_contract.py`의
+    `_R17_AST_SCANNER_SCOPES` 등기부가 어긋나 실패한다 — 선언과 스코프가 갈라지는 것을
+    그쪽에서 막는다.
+    """
     import ast
 
     sites = []
@@ -4506,3 +4639,1586 @@ def test_every_fid_read_count_clause_reports_a_count_other_than_one(expression, 
     read = ExistingFidRead(**kwargs)
     assert read.complete is False
     assert fragment in read.reason(), read.reason()
+
+
+# --- round17 결함 R17-A · 주소 바닥 게이트 (AddressGates) ---
+#
+# 실증(이 섹션 마지막 종단 테스트가 그대로 재현한다): 1단계가 준 유니버스 0 / 음수
+# 주소가 `precheck_vectorworks_diff` payload → `_candidates_from_report` →
+# `plan_addresses` → `render_addfixtures_plugin`까지 **아무 게이트 없이** 흘러
+# `patch = { "0.507" }` · `patch = { "1.-3" }` 인 Lua가 사람 손에 갔다. 되돌릴 수
+# 없는 쓰기 경로이므로 round17에서 `plan_addresses`에 `address_below_minimum`
+# 배제를 넣었다(자동 보정 0건 — 값을 고쳐 통과시키지 않는다).
+#
+# **바닥만** 검사한다. 상한을 두지 않는 것은 누락이 아니라 판정이다:
+# `server/prechk/patch.py`의 `normalize_address` 독스트링이 "per-universe channel
+# capacity is unmeasured(ASSUMPTION-33) — inventing a ceiling would reject addresses
+# the console accepts"라고 못박았고, 그 판정이 PRESERVE 경로의 원전이다. 아래
+# `test_r17_no_ceiling_is_fabricated_above_the_universe_width`가 그 결정을 고정한다.
+
+
+class _R17FloorRow(NamedTuple):
+    universe: int
+    address: int
+    excluded: bool
+    note: str
+
+
+#: 콘솔 최소 인덱스 — 프로덕션 상수를 참조하지 않는 독립 리터럴.
+_R17_MIN_INDEX_LITERAL = 1
+#: 절대주소 역산 전제 폭 — **천장이 아니다**. 천장 없음을 단정하는 데만 쓴다.
+_R17_WIDTH_LITERAL_FOR_CEILING_PROBE = 512
+
+#: 유니버스·주소 바닥 경계 전수. 두 축을 각각 최소 인덱스 앞뒤 한 칸씩 훑고,
+#: 폭 경계(512·513)는 **통과해야 한다**(천장 날조 금지)는 쪽으로 넣는다.
+_R17_ADDRESS_FLOOR_ROWS: tuple[_R17FloorRow, ...] = (
+    _R17FloorRow(-1, 1, True, "유니버스 음수"),
+    _R17FloorRow(0, 1, True, "유니버스 0 — 콘솔 번호 체계에 없다"),
+    _R17FloorRow(0, 507, True, "abs=-5 역산 실측값 — 전달물에 실렸던 바로 그 좌표"),
+    _R17FloorRow(1, -3, True, "주소 음수 — DMX Address 직접 읽기 실측값"),
+    _R17FloorRow(1, 0, True, "주소 0 — 미패치 sentinel 값이 좌표로 새어 나온 경우"),
+    _R17FloorRow(0, 0, True, "두 축 동시 위반"),
+    _R17FloorRow(-1, -1, True, "두 축 동시 음수"),
+    _R17FloorRow(1, 1, False, "양쪽 바닥 정확히 — 통과해야 한다"),
+    _R17FloorRow(1, 2, False, "바닥 바로 위"),
+    _R17FloorRow(2, 1, False, "유니버스 바닥 바로 위"),
+    _R17FloorRow(1, 512, False, "유니버스 폭 끝 — 천장 아님"),
+    _R17FloorRow(1, 513, False, "폭 초과 — 천장을 날조하지 않으므로 통과한다"),
+    _R17FloorRow(9, 1024, False, "큰 유니버스·큰 주소 — 상한 없음"),
+)
+
+#: 표에서 파생하지 않은 **독립** 커버리지 요구 — 두 축 각각 바닥 앞뒤 한 칸.
+_R17_REQUIRED_FLOOR_COORDS = frozenset(
+    {(_R17_MIN_INDEX_LITERAL + delta, 1) for delta in (-2, -1, 0, 1)}
+    | {(1, _R17_MIN_INDEX_LITERAL + delta) for delta in (-4, -1, 0, 1)}
+    | {
+        (0, 507),
+        (0, 0),
+        (-1, -1),
+        (1, _R17_WIDTH_LITERAL_FOR_CEILING_PROBE),
+        (1, _R17_WIDTH_LITERAL_FOR_CEILING_PROBE + 1),
+        (9, 2 * _R17_WIDTH_LITERAL_FOR_CEILING_PROBE),
+    }
+)
+
+
+def test_r17_minimum_index_matches_the_preserve_path():
+    """[round17 R17-A] `patchplan._MINIMUM_ADDRESS_INDEX`를 1에서 옮기거나
+    PRESERVE 경로의 `_MINIMUM_INDEX`와 어긋나게 두면 실패한다.
+
+    바닥값 사본을 두 계층에 두는 대신 **어긋남을 대조군으로 잡는다** — 비공개
+    이름을 계층 넘어 import하지 않으면서 단일 진실을 유지하는 방법이다.
+    """
+    from server.prechk.patch import _MINIMUM_INDEX
+    from server.vwx.patchplan import _MINIMUM_ADDRESS_INDEX
+
+    assert _MINIMUM_ADDRESS_INDEX == _R17_MIN_INDEX_LITERAL
+    assert _MINIMUM_ADDRESS_INDEX == _MINIMUM_INDEX
+
+
+def test_r17_address_floor_table_covers_exactly_the_required_coordinates():
+    """[round17 표 전수] 행을 하나라도 지우거나 중복시키면 실패한다."""
+    coords = tuple((row.universe, row.address) for row in _R17_ADDRESS_FLOOR_ROWS)
+    assert len(coords) == 13, "행수 리터럴 — 행 삭제/추가 감지"
+    assert len(set(coords)) == len(coords), "같은 좌표가 두 번 들어갔다"
+    assert set(coords) == _R17_REQUIRED_FLOOR_COORDS
+    # 비공허성 — 배제·통과 두 결론이 모두 표에 있다(한쪽만 남기면 게이트가 공허해진다).
+    assert {row.excluded for row in _R17_ADDRESS_FLOOR_ROWS} == {True, False}
+
+
+@pytest.mark.parametrize("row", _R17_ADDRESS_FLOOR_ROWS, ids=lambda r: f"u{r.universe}a{r.address}")
+def test_r17_plan_addresses_excludes_only_coordinates_below_the_console_minimum(row):
+    """[round17 R17-A] `plan_addresses`의 바닥 검사를 지우면 배제 행이 계획으로
+    남아 실패한다. 바닥을 `<=`로 한 칸 넓히면 `(1, 1)`·`(2, 1)` 행이 배제되어
+    실패한다. 유니버스 축만 검사하도록 줄이면 `(1, -3)`·`(1, 0)` 행이,
+    주소 축만 검사하도록 줄이면 `(0, 1)`·`(-1, 1)` 행이 실패한다.
+
+    자동 보정 0건 — 살아남은 항목의 좌표는 **입력 그대로**여야 한다(값을 1로
+    끌어올려 통과시키는 구현은 이 단정에서 잡힌다).
+    """
+    from server.vwx.patchplan import plan_addresses
+    from server.vwx.verdicts import ADDRESS_BELOW_MINIMUM
+
+    target = _candidate("a", row.universe, row.address, 101)
+    plan = plan_addresses((target,), footprints={"a": 4}, occupied={})
+
+    if row.excluded:
+        assert plan.entries == (), row.note
+        assert [exclusion.code for exclusion in plan.exclusions] == [ADDRESS_BELOW_MINIMUM]
+        payload = plan.exclusions[0].to_dict()
+        # 좌표는 관측된 사실이므로 싣는다 — 판독 실패 원문을 되싣는 것과 다르다.
+        assert f"유니버스 {row.universe} 주소 {row.address}" in payload["reason"]
+        assert payload["label"], "닫힌 어휘에 라벨이 등재되어야 한다"
+    else:
+        assert plan.exclusions == (), row.note
+        (entry,) = plan.entries
+        assert (entry.universe, entry.address) == (row.universe, row.address)
+        assert entry.end_address == row.address + 4 - 1
+
+
+def test_r17_no_ceiling_is_fabricated_above_the_universe_width():
+    """[round17 R17-A 부작용 방지] 바닥 게이트를 넣으면서 512를 천장으로 삼으면 실패한다.
+
+    **근거를 여기 남긴다 — 근거 없이 남으면 다음 사람이 "왜 상한이 없지"라며 넣는다.**
+
+    원전은 PRESERVE 경로인 `server/prechk/patch.py:128-133`
+    (:func:`server.prechk.patch.normalize_address` 독스트링)이고 원문은 이렇다:
+
+        "There is deliberately NO upper bound. The per-universe channel capacity
+        is unmeasured (``ASSUMPTION-33``), and inventing a ceiling would reject
+        addresses the console accepts -- turning a working rig into a read
+        failure. So this validation is definite about the FORM and the FLOOR
+        only, and a large address parses."
+
+    즉 무상한은 누락이 아니라 **판정**이다. 미실측(ASSUMPTION-33) 위에 천장을 지어내면
+    ① PRESERVE 판정과 모순되고 ② 이미 고정된 "512 초과 구간이 그대로 계획되어 전달물로
+    나간다"(이 파일 B절 뒤 `test_a_plan_span_may_cross_the_universe_boundary_unguarded`
+    계열)를 깨며 ③ 이 SPEC이 여섯 번 자기정정한 과잉주장 유형을 반복한다.
+
+    `server/vwx/address.py`의 `_UNIVERSE_WIDTH`(512)는 **절대주소 역산의 전제**이지
+    채널 수용량 천장이 아니므로 여기 상한으로 재사용하지 않는다.
+    """
+    from server.vwx.patchplan import plan_addresses
+
+    over = _R17_WIDTH_LITERAL_FOR_CEILING_PROBE + 1
+    plan = plan_addresses((_candidate("a", 1, over, 101),), footprints={"a": 4}, occupied={})
+    assert plan.exclusions == ()
+    assert plan.entries[0].address == over
+    # 훨씬 큰 주소·유니버스도 마찬가지 — 임의의 큰 값에서 천장이 생기지 않았음을 확인한다.
+    far = plan_addresses(
+        (_candidate("b", 99, 40 * _R17_WIDTH_LITERAL_FOR_CEILING_PROBE, 102),),
+        footprints={"b": 4},
+        occupied={},
+    )
+    assert far.exclusions == ()
+
+
+#: (라벨, 유니버스, 주소, 폭, 기대 배제코드 또는 None) — 바닥 검사와 기존 `footprint <= 0`
+#: 가드의 **상호작용 전수**. 바닥 검사가 루프 맨 앞이므로 `span` 산술이 아예 돌지 않는다.
+_R17_FLOOR_FOOTPRINT_ROWS = (
+    ("정상 좌표 · 폭 0", 1, 10, 0, "footprint_unknown"),
+    ("정상 좌표 · 폭 음수", 1, 10, -4, "footprint_unknown"),
+    ("정상 좌표 · 폭 1", 1, 10, 1, None),
+    ("바닥 위반 · 폭 0", 0, 507, 0, "address_below_minimum"),
+    ("바닥 위반 · 폭 정상", 0, 507, 4, "address_below_minimum"),
+    ("주소 음수 · 폭 정상", 1, -3, 4, "address_below_minimum"),
+)
+
+
+@pytest.mark.parametrize(
+    ("label", "universe", "address", "footprint", "expected_code"),
+    _R17_FLOOR_FOOTPRINT_ROWS,
+    ids=[row[0] for row in _R17_FLOOR_FOOTPRINT_ROWS],
+)
+def test_r17_floor_gate_and_footprint_guard_never_produce_a_backwards_span(
+    label, universe, address, footprint, expected_code
+):
+    """[round17 R17-A · `end_address` 상호작용] 두 가드의 우선순위와 `end < start`
+    불가능성을 함께 고정한다.
+
+    · 바닥 위반은 폭과 무관하게 `address_below_minimum`이 먼저다 — 좌표가 성립하지
+      않는 대상의 구간 산술은 애초에 의미가 없으므로 `span`을 계산하기 전에 끊는다.
+    · 폭 0·음수는 기존 `footprint <= 0` 가드가 잡으므로 `end_address < address`인
+      계획 항목은 **어느 경로로도 만들어지지 않는다**(round16 구간 경계 표의 전제).
+    바닥 검사를 `footprint` 가드 뒤로 옮기면 "바닥 위반 · 폭 0" 행이 실패한다.
+    `footprint <= 0`을 `< 0`으로 바꾸면 "정상 좌표 · 폭 0" 행이 실패한다.
+    """
+    from server.vwx.patchplan import plan_addresses
+
+    plan = plan_addresses(
+        (_candidate("a", universe, address, 101),), footprints={"a": footprint}, occupied={}
+    )
+    if expected_code is None:
+        (entry,) = plan.entries
+        assert entry.end_address >= entry.address, label
+    else:
+        assert plan.entries == (), label
+        assert [exclusion.code for exclusion in plan.exclusions] == [expected_code]
+
+
+def test_r17_floor_footprint_interaction_table_is_complete():
+    """[round17 표 전수] 행 삭제 감지 — 두 가드의 조합이 모두 남아 있어야 한다."""
+    assert len(_R17_FLOOR_FOOTPRINT_ROWS) == 6
+    assert {row[4] for row in _R17_FLOOR_FOOTPRINT_ROWS} == {
+        None,
+        "footprint_unknown",
+        "address_below_minimum",
+    }
+    # 바닥 위반 × (폭 정상 · 폭 0) 두 칸이 모두 있어야 우선순위가 확인된다.
+    below = {row[3] for row in _R17_FLOOR_FOOTPRINT_ROWS if row[4] == "address_below_minimum"}
+    assert below == {0, 4}
+
+
+def test_r17_below_minimum_survives_alongside_normal_targets():
+    """[round17 R17-A 비공허성] 같은 계획에 정상 대상과 바닥 위반 대상을 함께 넣으면
+    위반만 빠지고 정상 대상은 좌표 그대로 남는다 — 배제가 계획 전체를 무너뜨리지 않는다.
+    바닥 검사를 `continue` 없이 넣어 위반 대상까지 계획에 남기면 실패한다."""
+    from server.vwx.patchplan import plan_addresses
+    from server.vwx.verdicts import ADDRESS_BELOW_MINIMUM
+
+    targets = (
+        _candidate("bad", 0, 507, 101),
+        _candidate("good", 1, 100, 102),
+    )
+    plan = plan_addresses(targets, footprints={"bad": 4, "good": 4}, occupied={})
+    assert [entry.candidate_id for entry in plan.entries] == ["good"]
+    assert plan.entries[0].address == 100
+    assert [(x.candidate_id, x.code) for x in plan.exclusions] == [("bad", ADDRESS_BELOW_MINIMUM)]
+
+
+def _r17_empty_console_inventory():
+    from server.prechk.inventory import COMPLETE, Inventory
+
+    return Inventory(
+        path="Patch/Stages/1/Fixtures",
+        child_count=0,
+        enumerated_count=0,
+        recovered_count=0,
+        observed_count=0,
+        missing_count=0,
+        completeness=COMPLETE,
+        recovery_boundary=None,
+        index_domain_unknown=False,
+        fixtures=(),
+    )
+
+
+def _r17_pipeline(csv_bytes: bytes):
+    """1단계 판독부터 Lua 렌더까지 **툴이 실제로 밟는 순서 그대로** 돌린다.
+
+    로컬 사본이나 헬퍼 재구현이 아니라 프로덕션 함수만 부른다 —
+    `server/orchestrator/tools.py`의 `precheck_vectorworks_diff` ·
+    `apply_vectorworks_patch`가 같은 순서로 이 함수들을 호출한다.
+    """
+    from server.vwx.address import resolve_all
+    from server.vwx.columns import resolve_columns
+    from server.vwx.diff import compare
+    from server.vwx.luagen import LuaPatchEntry, render_addfixtures_plugin
+    from server.vwx.patchplan import _candidates_from_report, plan_addresses
+    from server.vwx.reader import read as read_vwx
+    from server.vwx.report import build_vwx_report
+    from server.vwx.rig import build_designed_rig
+
+    read_result = read_vwx(csv_bytes)
+    column_records, _column_failures, excluded = resolve_columns(list(read_result.records))
+    resolved, address_failures = resolve_all(column_records)
+    rig = build_designed_rig(resolved, candidate_count=len(column_records))
+    payload = build_vwx_report(
+        compare(rig, _r17_empty_console_inventory()),
+        read_failures=tuple(address_failures),
+        excluded_rows=tuple(excluded),
+    ).to_dict()
+    candidates = _candidates_from_report(payload)
+    plan = plan_addresses(
+        candidates, footprints={candidate.id: 4 for candidate in candidates}, occupied={}
+    )
+    lua = render_addfixtures_plugin(
+        [
+            LuaPatchEntry(
+                console_type="Robe Robin MMX Spot",
+                console_mode="Mode 1",
+                fid=index + 1,
+                name=f"MMX_{index + 1}",
+                universe=entry.universe,
+                address=entry.address,
+            )
+            for index, entry in enumerate(plan.entries)
+        ]
+    )
+    return payload, plan, lua
+
+
+#: (라벨, CSV 바이트, 1단계가 리포트에 싣는 좌표) — 좌표는 1단계 **현행 동작 기록**이며
+#: 옳다는 판정이 아니다. 1단계 공개 계약은 이 SPEC의 §D Out of Scope다
+#: (AC-AUTOPATCH-025) — 우리 책임은 "그 값으로 패치를 만들지 않는 것"이다.
+_R17_REACHABILITY_CASES = (
+    (
+        "absolute_negative",
+        b"Instrument Type,Absolute Address,Unit Number\nMMX,-5,101\n",
+        (0, 507),
+        "0.507",
+    ),
+    (
+        "dmx_address_negative",
+        b"Instrument Type,Universe,DMX Address,Unit Number\nMMX,1,-3,101\n",
+        (1, -3),
+        "1.-3",
+    ),
+)
+
+
+def test_r17_reachability_case_table_is_complete():
+    """[round17 표 전수] 도달성 사례 행을 지우면 실패한다."""
+    assert len(_R17_REACHABILITY_CASES) == 2
+    assert len({case[0] for case in _R17_REACHABILITY_CASES}) == 2
+    # 두 사례는 **서로 다른 1단계 경로**여야 한다(절대주소 역산 · 직접 읽기).
+    assert {case[2][0] for case in _R17_REACHABILITY_CASES} == {0, 1}
+
+
+@pytest.mark.parametrize(
+    ("label", "csv_bytes", "stage_one_coord", "forbidden_patch_token"),
+    _R17_REACHABILITY_CASES,
+    ids=[case[0] for case in _R17_REACHABILITY_CASES],
+)
+def test_r17_below_minimum_coordinates_never_reach_the_lua_deliverable(
+    label, csv_bytes, stage_one_coord, forbidden_patch_token
+):
+    """[round17 R17-A 도달성 감지기] `plan_addresses`의 바닥 검사를 지우면 이 테스트가
+    `patch = { "0.507" }`(또는 `"1.-3"`)를 렌더된 Lua에서 다시 발견해 실패한다.
+
+    세 층을 한 번에 못박는다:
+      1. **1단계는 여전히 그 좌표를 리포트에 싣는다** — 그게 §D 밖의 현행 동작이고,
+         조용히 사라지면 조작자가 "왜 후보에 없지"를 알 수 없다(§0 2c② 정신).
+      2. **패치 계층이 등재된 코드로 배제한다** — round17 이전에는 exclusions가
+         0건이었다. 그 뒤집힘 자체를 여기서 단정한다.
+      3. **전달물에는 그 좌표가 없다** — 사람이 콘솔에 임포트하는 Lua가 검사 대상이다.
+    """
+    from server.vwx.verdicts import ADDRESS_BELOW_MINIMUM
+
+    payload, plan, lua = _r17_pipeline(csv_bytes)
+
+    (row,) = payload["diffs"]["missing_in_console"]
+    assert (row["universe"], row["address"]) == stage_one_coord, "1단계 동작이 바뀌었다"
+
+    assert plan.entries == ()
+    assert [exclusion.code for exclusion in plan.exclusions] == [ADDRESS_BELOW_MINIMUM]
+
+    assert forbidden_patch_token not in lua, label
+    assert "patch = {" not in lua, "계획이 비었으므로 렌더된 Lua에 patch 항목이 없어야 한다"
+
+
+def test_r17_reachability_detector_is_not_vacuous_on_a_valid_address():
+    """[round17 R17-A 비공허성] 같은 파이프라인에 정상 좌표를 넣으면 Lua에
+    `patch = { "1.7" }`가 **실제로 나온다** — 위 테스트가 "언제나 비어 있다"를
+    확인하는 공허한 검사가 아님을 같은 경로로 증명한다."""
+    payload, plan, lua = _r17_pipeline(
+        b"Instrument Type,Universe,DMX Address,Unit Number\nMMX,1,7,101\n"
+    )
+    (row,) = payload["diffs"]["missing_in_console"]
+    assert (row["universe"], row["address"]) == (1, 7)
+    assert plan.exclusions == ()
+    assert [(entry.universe, entry.address) for entry in plan.entries] == [(1, 7)]
+    assert 'patch = { "1.7" }' in lua
+
+
+# ==========================================================================
+# --- round17 점유자 전수 · 문장 형태 불변식 (SiblingOccupants) ---
+#
+# round17의 교훈은 **"게이트가 모듈 경계에서 멈춘다"**이다. 치명 5건 전부가 round15·16이
+# 한 번도 뮤테이션하지 않은 모듈에 있었고, round16 게이트는 자기 도달 범위 안에서는
+# 견고했다. 그래서 아래 두 축은 **`server/vwx/` 디렉터리를 훑어** 자리를 뽑는다 — 손으로
+# 모듈 이름을 적지 않으므로 모듈이 늘어도 범위가 따라 늘어난다.
+#
+#   축 A (S17-03a·b) — **점유자를 보는 함수 전수**가 점유자를 구조화해 싣는다.
+#   축 B (S17-04)    — **사람이 읽는 문자열을 조립하는 자리 전수**가 문장 형태를 지킨다.
+# ==========================================================================
+
+_R17_VWX_DIR = Path("server/vwx")
+
+#: 점유자를 보는 함수의 표식 — 이 이름의 매개변수를 받으면 콘솔 점유 관측을 손에 쥔 것이다.
+_R17_OCCUPANCY_INPUT = "console_fixtures"
+#: 조작자에게 점유 판정을 내보내는 **보고 객체** 전수.
+_R17_OCCUPANT_REPORT_CLASSES = ("PatchTargetExclusion", "VerificationResult")
+
+
+def _r17_vwx_trees(overrides=None):
+    """`server/vwx/` 전 모듈의 AST — 목록을 손으로 적지 않고 **디렉터리에서** 뽑는다.
+
+    `overrides`가 있으면 그 모듈만 심어진 소스로 갈아끼운다(비공허성 대조군용).
+    """
+    import ast
+
+    modules = tuple(sorted(_R17_VWX_DIR.glob("*.py")))
+    assert modules, "server/vwx/ 모듈을 하나도 찾지 못했다 — 스캐너가 공허하다"
+    overrides = overrides or {}
+    return tuple(
+        (
+            path.name,
+            ast.parse(overrides.get(path.name, path.read_text(encoding="utf-8"))),
+        )
+        for path in modules
+    )
+
+
+def _r17_report_builder_names(tree) -> set[str]:
+    """보고 객체를 짓는 이름 전수 — 두 dataclass + **그것을 반환한다고 선언한** 헬퍼.
+
+    헬퍼 이름(`_exclusion`)을 손으로 적지 않는다. 헬퍼를 새로 만들어 그쪽으로 우회해도
+    반환 타입 선언이 남는 한 스캐너가 따라간다.
+    """
+    import ast
+
+    names = set(_R17_OCCUPANT_REPORT_CLASSES)
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.FunctionDef)
+            and isinstance(node.returns, ast.Name)
+            and node.returns.id in _R17_OCCUPANT_REPORT_CLASSES
+        ):
+            names.add(node.name)
+    return names
+
+
+def _r17_occupant_carrier_sites(overrides=None):
+    """점유자를 **보는** 함수 안의 보고 생성 자리 전수와, 각각이 점유자를 싣는지.
+
+    범위를 `apply.py`로 못 박지 않는다 — 다른 모듈이 `console_fixtures`를 받아 판정을
+    내리기 시작하면 그 자리도 자동으로 이 표에 들어온다(모듈 경계에서 멈추지 않는다).
+    """
+    import ast
+
+    rows = []
+    for module_name, tree in _r17_vwx_trees(overrides):
+        builders = _r17_report_builder_names(tree)
+        for function in _r16_in_source_order(
+            node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
+        ):
+            arguments = function.args
+            parameters = [
+                argument.arg
+                for argument in (
+                    *arguments.posonlyargs,
+                    *arguments.args,
+                    *arguments.kwonlyargs,
+                )
+            ]
+            if _R17_OCCUPANCY_INPUT not in parameters:
+                continue
+            for call in _r16_in_source_order(
+                node
+                for node in ast.walk(function)
+                if isinstance(node, ast.Call) and getattr(node.func, "id", None) in builders
+            ):
+                rows.append(
+                    (
+                        module_name,
+                        function.name,
+                        call.func.id,
+                        any(keyword.arg == "observed_occupants" for keyword in call.keywords),
+                    )
+                )
+    return tuple(rows)
+
+
+#: (모듈, 함수, 보고 생성자, 점유자를 싣는가) — 손으로 열거한다. 아래 전단사가 프로덕션과 맞춘다.
+#: **네 번째 열은 전부 `True`여야 한다.** round16까지는 `screen_idempotent`의 다중 점유
+#: 갈래가 `False`였고(단수 필드로 2대를 표현할 수 없었다) `screen_console_occupancy`는
+#: 아예 필드를 넘기지 않았다 — 그 둘이 이 SPEC이 반복한 형제-갈래 면제였다.
+_R17_OCCUPANT_CARRIER_SITES = (
+    ("apply.py", "screen_console_occupancy", "_exclusion", True),
+    ("apply.py", "screen_idempotent", "_exclusion", True),
+    ("apply.py", "screen_idempotent", "_exclusion", True),
+    ("apply.py", "screen_idempotent", "_exclusion", True),
+    ("apply.py", "screen_idempotent", "_exclusion", True),
+    ("apply.py", "screen_idempotent", "_exclusion", True),
+    ("apply.py", "verify_patch", "VerificationResult", True),
+    ("apply.py", "verify_patch", "VerificationResult", True),
+)
+
+
+def test_the_occupant_carrier_registry_is_a_bijection_onto_production():
+    """[round17 S17-03a] 점유자 보고 자리 표가 `server/vwx/` **전 모듈**과 1:1이다.
+
+    [round17 #S17-03a] 어느 갈래에서든 `observed_occupants=`를 지우면 네 번째 열이 어긋나
+      실패한다 — 다중 점유 갈래도 예외가 아니다.
+    [round17 #S17-03a] 점유자를 보는 함수에 갈래를 더하면 표에 행이 없어 실패한다.
+    [round17 #S17-03a] 표에서 행을 지우면 실패한다(아래 행삭제 프로브가 전 행에 대해 확인).
+    """
+    produced = _r17_occupant_carrier_sites()
+    assert produced == _R17_OCCUPANT_CARRIER_SITES, (
+        "점유자 보고 자리가 표와 다르다 — 등록할 행:\n"
+        + "\n".join(f"    {row!r}," for row in produced)
+    )
+
+
+def test_every_occupant_viewing_site_actually_carries_the_occupants():
+    """[round17 S17-03a] **면제가 하나도 없다** — 네 번째 열이 전부 참이다.
+
+    이 단정을 표와 따로 두는 이유: 표만 있으면 `False`를 정답으로 적어 면제를 규약으로
+    승격시킬 수 있다. round16의 `fills_display` 열이 정확히 그 상태였다.
+    """
+    sites = _r17_occupant_carrier_sites()
+    assert sites, "점유자를 보는 자리를 하나도 찾지 못했다 — 스캐너가 공허하다"
+    offenders = [row for row in sites if row[3] is not True]
+    assert offenders == [], offenders
+
+
+def test_the_occupant_carrier_scanner_is_not_vacuous():
+    """비공허성 — `observed_occupants=`를 지운 **프로덕션 사본**에서 스캐너가 실제로 잡는다.
+
+    사본 적재 선례(`_load`/`_load_patchplan`/`_load_tools`)의 AST판이다. 스캐너가 늘 참을
+    돌려주는 항진식이면 위 두 단정은 아무것도 막지 못한다.
+    """
+    # 앵커는 **유일**해야 한다 — 여러 곳에 맞으면 어디를 심었는지 모른 채 판정하게 된다.
+    # 그래서 다중 점유 갈래의 사유 문장 끝줄에 붙여 유일하게 만든다. 그 갈래가 하필
+    # round16까지 **면제**였던 자리다.
+    anchor = (
+        '                    " — 어느 것과 대조할지 확정할 수 없다.",\n'
+        "                    observed_occupants=occupants,\n"
+    )
+    assert APPLY_SOURCE.count(anchor) == 1, "주입 앵커가 유일하지 않다"
+    planted = APPLY_SOURCE.replace(
+        anchor, '                    " — 어느 것과 대조할지 확정할 수 없다.",\n', 1
+    )
+    assert planted != APPLY_SOURCE
+
+    sites = _r17_occupant_carrier_sites({"apply.py": planted})
+    assert [row for row in sites if row[3] is not True], "심었는데도 스캐너가 잡지 못했다"
+    assert sites != _R17_OCCUPANT_CARRIER_SITES
+
+
+@pytest.mark.parametrize("index", range(len(_R17_OCCUPANT_CARRIER_SITES)))
+def test_deleting_any_occupant_carrier_row_breaks_the_bijection(index: int):
+    """행삭제 프로브 — 표에서 **어느 행을 지워도** 전단사가 깨진다."""
+    shrunk = _R17_OCCUPANT_CARRIER_SITES[:index] + _R17_OCCUPANT_CARRIER_SITES[index + 1 :]
+    assert shrunk != _r17_occupant_carrier_sites()
+
+
+@pytest.mark.parametrize("index", range(len(_R16_DISPLAY_CELLS)))
+def test_deleting_any_display_cell_row_breaks_the_bijection(index: int):
+    """행삭제 프로브 — 관측 칸 표에서 어느 칸을 지워도 프로덕션 필드 목록과 어긋난다."""
+    import dataclasses
+
+    shrunk = _R16_DISPLAY_CELLS[:index] + _R16_DISPLAY_CELLS[index + 1 :]
+    produced = tuple(
+        (
+            cls.__name__,
+            field.name,
+            "occupants" if field.name.endswith("occupants") else "resolved_name",
+        )
+        for cls in _r16_display_carrying_classes()
+        for field in dataclasses.fields(cls)
+        if field.name.startswith("observed_")
+    )
+    assert shrunk != produced
+
+
+@pytest.mark.parametrize("index", range(len(_R17_OCCUPANT_KEYS)))
+def test_deleting_any_occupant_key_row_breaks_the_bijection(index: int):
+    """행삭제 프로브 — 점유자 키 표에서 어느 키를 지워도 `ConsoleFixture.to_dict()`와 어긋난다."""
+    from server.vwx.apply import ConsoleFixture
+
+    shrunk = _R17_OCCUPANT_KEYS[:index] + _R17_OCCUPANT_KEYS[index + 1 :]
+    produced = tuple(
+        ConsoleFixture(
+            slot=1,
+            universe=1,
+            address=1,
+            type_display="CD 5",
+            mode_display="9 Mode 9",
+            type_name=None,
+            mode_name=None,
+        ).to_dict()
+    )
+    assert shrunk != produced
+
+
+@pytest.mark.parametrize("index", range(len(_R16_SCREEN_BRANCH_ROWS)))
+def test_deleting_any_screen_branch_row_breaks_a_gate(index: int):
+    """행삭제 프로브 — 갈래 표에서 어느 행을 지워도 **둘 중 한 게이트**가 깨진다.
+
+    제외 갈래 행은 제외 사이트 전단사가, `no_occupant` 행은 `kept.append` 계수 게이트가 잡는다.
+    한쪽만 보면 `no_occupant` 행이 조용히 사라질 수 있다.
+    """
+    import ast
+
+    shrunk = _R16_SCREEN_BRANCH_ROWS[:index] + _R16_SCREEN_BRANCH_ROWS[index + 1 :]
+    exclusion_table = tuple(
+        (code, count >= 1) for _, code, _, _, count, _ in shrunk if code is not None
+    )
+    function = _r16_function_def(_r16_apply_tree(), "screen_idempotent")
+    kept_appends = [
+        node
+        for node in ast.walk(function)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "append"
+        and getattr(node.func.value, "id", None) == "kept"
+    ]
+    broken_exclusions = exclusion_table != _r16_production_exclusion_sites()
+    broken_kept = len(kept_appends) != len([row for row in shrunk if row[1] is None])
+    assert broken_exclusions or broken_kept
+
+
+@pytest.mark.parametrize("index", range(len(_R16_VERIFY_BRANCH_ROWS)))
+def test_deleting_any_verify_branch_row_breaks_the_bijection(index: int):
+    """행삭제 프로브 — 검증 갈래 표에서 어느 행을 지워도 outcome 전단사가 깨진다."""
+    shrunk = _R16_VERIFY_BRANCH_ROWS[:index] + _R16_VERIFY_BRANCH_ROWS[index + 1 :]
+    assert (
+        tuple(outcome for _, outcome, _, _, _ in shrunk) != _r16_production_verification_outcomes()
+    )
+
+
+# ---- S17-03a 형제 표면: 점유 구간 침입자도 구조화해 싣는다 -----------------------
+
+
+def test_the_occupancy_intruder_travels_as_a_structured_occupant():
+    """[round17 S17-03a] `screen_console_occupancy`도 점유자를 구조화해 싣는다.
+
+    이 갈래는 문장에 슬롯·주소를 주므로 **정보가 가장 많은** 갈래였는데, 정작 타입·모드
+    표시 원문은 문장에 담을 수 없어(§0 2b④) 어디에도 없었다.
+
+    [round17 #S17-03a] `apply.py`의 `observed_occupants=(intruder,)`를 지우면 실패한다.
+    """
+    console = _console(_record(2, "1.3", "CD 5", "9 Mode 9"))
+    targets = (_candidate("a", 1, 1, 101),)
+    screened = screen_console_occupancy(
+        targets,
+        address_plan=AddressPlan(
+            entries=(
+                AddressPlanEntry(
+                    candidate_id="a", universe=1, address=1, footprint=4, end_address=4
+                ),
+            )
+        ),
+        console_fixtures=console,
+    )
+    (exclusion,) = screened.exclusions
+    assert exclusion.code == ADDRESS_ALREADY_OCCUPIED
+    assert exclusion.observed_occupants == tuple(fixture.to_dict() for fixture in console)
+    assert [occupant["type_display"] for occupant in exclusion.observed_occupants] == ["CD 5"]
+    # 문장에는 좌표만 — 표시 원문은 구조화 칸에만 있다.
+    assert "CD 5" not in exclusion.reason
+    assert CD_TOKEN.search(exclusion.reason) is None
+
+
+# ---- S17-03b 두 상태는 payload에서 구별된다 -----------------------------------
+
+
+def _r17_two_occupants_exclusion():
+    return _r16_screen(
+        (
+            _record(1, "1.1", _R16_LED_DISPLAY, _R16_MODE1_DISPLAY),
+            _record(2, "1.1", _R16_LED_DISPLAY, _R16_MODE1_DISPLAY),
+        )
+    ).exclusions[0]
+
+
+def _r17_unread_display_exclusion():
+    return _r16_screen((_record(1, "1.1", None, None),)).exclusions[0]
+
+
+def test_two_occupants_and_one_unreadable_occupant_are_distinguishable():
+    """[round17 S17-03b] 같은 코드를 내는 두 상태가 **payload에서 갈린다**.
+
+    round16까지 두 상태는 `(existing_fixture_identity_unconfirmed, None, None)`으로 **동일**한
+    삼중항을 냈다 — 단수 표시 필드가 2대에서도 비고 미판독에서도 비기 때문이다. 조작자는
+    "점유자가 둘이라 확정 못 한다"와 "하나인데 그 하나를 못 읽었다"를 구별할 수 없었다.
+    이제 `len(observed_occupants)`가 가른다.
+
+    [round17 #S17-03a] 다중 점유 갈래의 `observed_occupants=`를 `()`로 되돌리면 실패한다.
+    """
+    two = _r17_two_occupants_exclusion()
+    unread = _r17_unread_display_exclusion()
+
+    assert two.code == unread.code == EXISTING_IDENTITY_UNCONFIRMED
+    assert len(two.observed_occupants) == 2
+    assert len(unread.observed_occupants) == 1
+    assert two.to_dict() != unread.to_dict()
+    # 그리고 2대 쪽 payload는 **무엇이** 점유했는지 말한다 — 슬롯이 둘 다 들어 있다.
+    assert [occupant["slot"] for occupant in two.observed_occupants] == [1, 2]
+    assert "슬롯 1 · 2" in two.reason
+
+
+def test_no_occupancy_sentence_points_at_a_field_by_name():
+    """[round17 S17-03b] 포인터 문장을 **전 갈래에서** 지웠다 — 키 이름이 곧 포인터다.
+
+    무조건 붙는 포인터는 값이 빈 상태에서도 "원문은 저 필드에 있다"고 말한다. 그 문장이
+    두 상태를 같은 문장으로 만들었다.
+
+    [round17 #S17-03b] 어느 갈래에든 `"관측된 원문은 … 필드에 있다"`를 되살리면 실패한다.
+    """
+    sentences = [exclusion.reason for exclusion in _r17_all_occupancy_exclusions()]
+    sentences += [result.detail for result in _r17_all_verification_results()]
+    assert sentences
+    for sentence in sentences:
+        assert "필드에 있다" not in sentence, sentence
+        assert "observed_" not in sentence, sentence
+
+
+def _r17_all_occupancy_exclusions():
+    """갈래 표가 여는 **제외 갈래 전부**를 실제로 돌려 모은다."""
+    collected = []
+    for _, code, records, resolution_kind, _, _ in _R16_SCREEN_BRANCH_ROWS:
+        if code is None:
+            continue
+        resolutions = (_r16_unresolved_resolution(),) if resolution_kind == "unresolved" else None
+        collected.extend(
+            _r16_screen(tuple(_record(*row) for row in records), resolutions=resolutions).exclusions
+        )
+    return collected
+
+
+def _r17_all_verification_results():
+    collected = []
+    for _, _, records, read_complete, _ in _R16_VERIFY_BRANCH_ROWS:
+        collected.extend(
+            verify_patch(
+                (_entry("a", 1, 1),),
+                console_fixtures=_console(*(_record(*row) for row in records)),
+                read_complete=read_complete,
+            ).results
+        )
+    return collected
+
+
+# ==========================================================================
+# 축 B (S17-04) — 사람이 읽는 문자열을 **조립하는 자리 전수**
+#
+# 이 SPEC은 같은 형태 결함을 세 번 냈다(round15 N11 `..` · round16 S16-01 `. —` ·
+# round17 S17-04 한 문장 대시 둘). 셋 다 **조각은 멀쩡하고 조립 결과가 깨진** 형태이고,
+# 셋 다 한 자리씩만 고쳤다. 지금까지 형태 단정은 `test_autopatch_fid.py`의 `'..'` 하나뿐이었다.
+# 여기서는 `server/vwx/` 전 모듈에서 문장을 조립하는 자리를 AST로 뽑아 전수에 건다.
+# ==========================================================================
+
+
+def _r17_text_skeleton(node):
+    """문자열 조립 노드의 **정적 뼈대** — 보간 자리는 `{}`로 남긴다. 조립이 아니면 `None`."""
+    import ast
+
+    if isinstance(node, ast.Constant):
+        return node.value if isinstance(node.value, str) else None
+    if isinstance(node, ast.JoinedStr):
+        return "".join(
+            part.value if isinstance(part, ast.Constant) else "{}" for part in node.values
+        )
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = _r17_text_skeleton(node.left)
+        right = _r17_text_skeleton(node.right)
+        return None if left is None or right is None else left + right
+    if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "assemble_sentences":
+        return " ".join(_r17_text_skeleton(arg) or "{}" for arg in node.args)
+    return None
+
+
+def _r17_is_human_sentence(text) -> bool:
+    """사람이 읽는 문장인가 — 공백이 있고, 마침표로 끝나거나 문장 구두점을 품는다."""
+    if text is None or " " not in text:
+        return False
+    return text.rstrip().endswith(".") or " — " in text or ". " in text
+
+
+def _r17_sentence_sites(overrides=None):
+    """`server/vwx/` 전 모듈에서 문장을 조립해 **이름 붙여 내보내는** 자리 전수.
+
+    세 형태를 본다: dict 리터럴의 값 · 호출의 키워드 인자 · 이름에 대입. 어느 쪽이든
+    "이 문자열이 어떤 이름으로 사람에게 나가는가"가 남는다.
+    """
+    import ast
+
+    sites = []
+    for module_name, tree in _r17_vwx_trees(overrides):
+        for node in _r16_in_source_order(
+            item for item in ast.walk(tree) if isinstance(item, (ast.Dict, ast.Call, ast.Assign))
+        ):
+            if isinstance(node, ast.Dict):
+                pairs = [
+                    (key.value, value)
+                    for key, value in zip(node.keys, node.values, strict=True)
+                    if isinstance(key, ast.Constant) and isinstance(key.value, str)
+                ]
+            elif isinstance(node, ast.Call):
+                pairs = [(keyword.arg, keyword.value) for keyword in node.keywords if keyword.arg]
+            else:
+                pairs = [
+                    (getattr(target, "id", None) or getattr(target, "attr", None), node.value)
+                    for target in node.targets
+                ]
+            for name, value in pairs:
+                if name is None:
+                    continue
+                skeleton = _r17_text_skeleton(value)
+                if _r17_is_human_sentence(skeleton):
+                    sites.append((module_name, name, skeleton))
+    return tuple(sites)
+
+
+#: (모듈, 이름) — 사람이 읽는 문장이 나가는 **표면** 전수. 손으로 열거하고 아래가 맞춘다.
+#: 자리 **개수**는 고정하지 않는다 — 개수는 아래 형태 게이트가 자리마다 직접 검사하므로,
+#: 표는 "어느 모듈의 어느 이름으로 문장이 나가는가"만 고정한다.
+_R17_SENTENCE_SURFACES = (
+    ("address.py", "ABSOLUTE_BACK_CALCULATED_PREMISE_NOTE"),
+    ("address.py", "warning_detail"),
+    ("apply.py", "END_TO_END_UNVERIFIED"),
+    ("apply.py", "NO_AUTO_CORRECTION"),
+    ("apply.py", "PLUGIN_EXIT_IS_NOT_SUCCESS"),
+    ("apply.py", "ZERO_CREATED_GUIDANCE"),
+    ("apply.py", "_INDEX_DOMAIN_CLAUSE"),
+    ("apply.py", "detail"),
+    ("apply.py", "reason"),
+    ("columns.py", "detail"),
+    ("diff.py", "FID_CID_UNREACHABLE_REASON"),
+    ("diff.py", "reason"),
+    ("patchplan.py", "IRREVERSIBLE_WARNING"),
+    ("patchplan.py", "reason"),
+    ("reader.py", "detail"),
+    ("report.py", "address_collision"),
+    ("report.py", "missing_in_console"),
+    ("report.py", "quantity_mismatch"),
+    ("rig.py", "detail"),
+    ("typemap.py", "FOOTPRINT_DESCOPE_REASON"),
+    ("typemap.py", "LIBRARY_TRUNCATED_REASON"),
+    ("typemap.py", "LIBRARY_UNREADABLE_REASON"),
+    ("typemap.py", "VACUOUS_TYPE_KEY_REASON"),
+    ("typemap.py", "reason"),
+)
+
+
+def test_the_sentence_surface_registry_is_a_bijection_onto_production():
+    """[round17 S17-04] 문장 표면 표가 `server/vwx/` **전 모듈**과 1:1이다.
+
+    새 모듈이나 새 표면으로 사람이 읽는 문장을 내보내면 표 없이는 통과하지 못한다 —
+    round17이 명명한 "게이트가 모듈 경계에서 멈춘다"를 이 축에서 닫는 장치다.
+    표에서 행을 지워도 실패한다(아래 행삭제 프로브가 전 행 확인).
+    """
+    produced = tuple(sorted({(module, name) for module, name, _ in _r17_sentence_sites()}))
+    assert produced == tuple(sorted(_R17_SENTENCE_SURFACES)), (
+        "문장 표면이 표와 다르다 — 등록할 행:\n"
+        + "\n".join(f'    ("{module}", "{name}"),' for module, name in produced)
+    )
+
+
+@pytest.mark.parametrize("index", range(len(_R17_SENTENCE_SURFACES)))
+def test_deleting_any_sentence_surface_row_breaks_the_bijection(index: int):
+    """행삭제 프로브 — 문장 표면 표에서 어느 행을 지워도 프로덕션과 어긋난다."""
+    shrunk = _R17_SENTENCE_SURFACES[:index] + _R17_SENTENCE_SURFACES[index + 1 :]
+    produced = tuple(sorted({(module, name) for module, name, _ in _r17_sentence_sites()}))
+    assert tuple(sorted(shrunk)) != produced
+
+
+def test_every_assembled_sentence_in_vwx_keeps_its_shape():
+    """[round17 S17-04] 조립 자리 **전수**가 형태 불변식을 지킨다 — 프로덕션 판정자로 잰다.
+
+    판정은 `patchplan.sentence_shape_violation`이 한다. 테스트가 규칙 사본을 들고 있으면
+    프로덕션 규칙을 느슨하게 바꿔도 아무도 실패하지 않는다.
+
+    보간 자리는 중립 토큰으로 채운다 — 값에 무엇이 오든 **뼈대가** 만드는 형태 결함
+    (`..` · `. —` · 이중공백 · 한 문장 대시 둘)을 잡는 것이 목적이다.
+    """
+    from server.vwx.patchplan import sentence_shape_violation
+
+    sites = _r17_sentence_sites()
+    assert len(sites) >= len(_R17_SENTENCE_SURFACES), "조립 자리를 표면 수보다 적게 찾았다"
+    offenders = [
+        (module, name, _r17_skeleton_violation(skeleton), skeleton)
+        for module, name, skeleton in sites
+        if _r17_skeleton_violation(skeleton) is not None
+    ]
+    assert offenders == [], offenders
+    # 판정자가 프로덕션 것임을 같은 테스트에서 고정한다 — 사본 규칙이면 이 단정이 깨진다.
+    assert _r17_skeleton_violation("가 — 나 — 다.") == sentence_shape_violation(
+        "가 — 나 — 다.", require_terminal=False
+    )
+
+
+def _r17_skeleton_violation(skeleton: str):
+    """정적 뼈대의 형태 위반 — **프로덕션 판정자**로 잰다.
+
+    뼈대는 아직 이어 붙기 전 조각이라 종결 규칙만 면제한다. 나머지(`..` · `. —` ·
+    이중공백 · 한 문장 대시 둘)는 조각에도 그대로 성립해야 한다.
+    """
+    from server.vwx.patchplan import sentence_shape_violation
+
+    return sentence_shape_violation(skeleton.replace("{}", "1"), require_terminal=False)
+
+
+def test_the_sentence_shape_gate_is_not_vacuous():
+    """비공허성 — 대시 둘을 심은 **프로덕션 사본**에서 게이트가 실제로 잡는다.
+
+    심는 대상은 round17 S17-04가 실제로 낸 형태다: 대시를 품은 조각을 대시 있는 문장에
+    끼워 넣은 조립. 심는 자리는 `build_patch_plan`의 사유 조립부 — 실제로 사람에게
+    나가는 문자열을 짓는 자리다.
+    """
+    patchplan_source = Path("server/vwx/patchplan.py").read_text(encoding="utf-8")
+    anchor = 'f"기존 FID 사전검사가 불완전하다 — {existing_read.reason()}.",'
+    assert patchplan_source.count(anchor) == 1, "주입 앵커가 유일하지 않다"
+    planted = patchplan_source.replace(
+        anchor,
+        'f"기존 FID 사전검사가 불완전하다 — 스냅샷이 자기모순이다 — {existing_read.reason()}.",',
+        1,
+    )
+    assert planted != patchplan_source
+
+    clean = [skeleton for module, _, skeleton in _r17_sentence_sites() if module == "patchplan.py"]
+    infected = [
+        skeleton
+        for module, _, skeleton in _r17_sentence_sites({"patchplan.py": planted})
+        if module == "patchplan.py"
+    ]
+    assert all(_r17_skeleton_violation(text) is None for text in clean)
+    assert any(_r17_skeleton_violation(text) is not None for text in infected), (
+        "심었는데도 형태 게이트가 잡지 못했다"
+    )
+
+
+def test_assemble_sentences_refuses_a_broken_shape():
+    """[round17 S17-04] 조립기는 깨진 문장을 **사람에게 내보내지 않고 즉시 실패한다**.
+
+    조용히 나가면 이 SPEC이 일곱 라운드 반복한 대로 다음 감사에서야 발견된다.
+    """
+    import pytest as _pytest
+
+    from server.vwx.patchplan import assemble_sentences
+
+    assert assemble_sentences("앞 문장이다.", "", "뒤 문장이다.") == "앞 문장이다. 뒤 문장이다."
+    with _pytest.raises(ValueError):
+        assemble_sentences("끝난 문장이다.", "— 대시로 시작한다.")
+    with _pytest.raises(ValueError):
+        assemble_sentences("한 문장에 — 대시가 — 둘이다.")
+    with _pytest.raises(ValueError):
+        assemble_sentences("종결되지 않았다")
+
+
+def test_every_human_sentence_produced_by_the_apply_surface_keeps_its_shape():
+    """[round17 S17-04] 정적 뼈대만이 아니라 **실제로 나간 문자열**도 형태를 지킨다.
+
+    보간 값이 붙어야 드러나는 결함(round15 N11의 `..`가 그랬다)은 뼈대만 봐서는 안 보인다.
+    """
+    from server.vwx.patchplan import sentence_shape_violation
+
+    produced = [exclusion.reason for exclusion in _r17_all_occupancy_exclusions()]
+    produced += [result.detail for result in _r17_all_verification_results()]
+    produced += [
+        str(guidance)
+        for report in (
+            verify_patch(
+                (_entry("a", 1, 1),),
+                console_fixtures=_console(),
+            ),
+        )
+        for guidance in report.guidance
+    ]
+    assert len(produced) >= 10, "표본이 너무 적어 공허하다"
+    offenders = [
+        (sentence_shape_violation(text), text)
+        for text in produced
+        if sentence_shape_violation(text) is not None
+    ]
+    assert offenders == [], offenders
+
+
+# --- round17 _single_unambiguous 순서 의존성 (AmbiguityGates) ---
+#
+# [round17 치명 #3 = round11 N06 재개방] `apply._single_unambiguous`의 폴스루
+# `candidates[0] if len(candidates) == 1 else None`을 `>= 1`로 바꿔도 5,690건이 전부
+# 통과했다. 같은 함수 20줄 위 `len(by_name) != 1 or len(by_index) != 1`은 KILLED였다 —
+# **한 함수 안에서 갈래 하나만 게이트**였다. 이 절은 그 함수의 (by_name, by_index) 격자를
+# 전수로 채우고, 후보 2건 갈래에는 **열거 순서 역전 불변**을 단정한다.
+
+_R17_INDEX_FORM = "FixtureType 3"
+
+
+class _SingleUnambiguousRow(NamedTuple):
+    by_name: int
+    by_index: int
+    #: `by_name[0] is by_index[0]`인가 — 두 목록이 **둘 다 비어 있지 않은** 칸에서만 의미가
+    #: 있다(그 밖에는 `None`). 이 축이 없으면 `len(by_index) != 1` → `< 1` 뮤테이션이
+    #: 살아남는다: 그 뮤턴트는 교차 점검(`is`)까지 내려가야 관측이 갈리기 때문이다.
+    same_target: bool | None
+    types: tuple
+    display: str
+    #: 확정된 타입 이름 · 모호하면 `None`.
+    expected: str | None
+
+
+def _r17_type(index: int, name: str) -> LibraryType:
+    return LibraryType(index=index, name=name, modes=(LibraryMode(index=1, name=MODE_1),))
+
+
+#: `_single_unambiguous`의 (by_name, by_index, same_target) **전수 격자**. `by_name`은 표시
+#: 문자열과 이름이 정확히 같은 타입 수, `by_index`는 `FixtureType <n>` 형태가 지목하는 인덱스를
+#: 가진 타입 수다. 둘이 동시에 성립하려면 라이브러리에 `"FixtureType 3"`이라는 **이름**이
+#: 있어야 한다 — `_X`가 그 역할(이름도 맞고 인덱스도 맞다)이다.
+_X = _r17_type(3, _R17_INDEX_FORM)  # 이름 일치 + 인덱스 일치 (교차 점검이 True가 되는 유일한 대상)
+_N2 = _r17_type(7, _R17_INDEX_FORM)  # 이름만 일치
+_N3 = _r17_type(8, _R17_INDEX_FORM)  # 이름만 일치
+_I2 = _r17_type(3, "Alpha")  # 인덱스만 일치
+_I3 = _r17_type(3, "Beta")  # 인덱스만 일치
+
+_R17_SINGLE_UNAMBIGUOUS_ROWS = (
+    _SingleUnambiguousRow(0, 0, None, (_r17_type(1, MMX),), "Nonexistent Type", None),
+    _SingleUnambiguousRow(1, 0, None, (_r17_type(1, MMX), _r17_type(3, LED)), LED, LED),
+    _SingleUnambiguousRow(2, 0, None, (_r17_type(3, LED), _r17_type(9, LED)), LED, None),
+    _SingleUnambiguousRow(0, 1, None, (_I2,), _R17_INDEX_FORM, "Alpha"),
+    _SingleUnambiguousRow(0, 2, None, (_I2, _I3), _R17_INDEX_FORM, None),
+    _SingleUnambiguousRow(1, 1, True, (_X,), _R17_INDEX_FORM, _R17_INDEX_FORM),
+    _SingleUnambiguousRow(1, 1, False, (_N2, _I2), _R17_INDEX_FORM, None),
+    # 이 행이 `len(by_index) != 1` → `< 1` 뮤턴트를 죽인다: 그 뮤턴트는 교차 점검까지
+    # 내려가 `by_index[0]`(= `_X`)를 확정하지만, 라이브러리 순서를 뒤집으면 다른 것을 고른다.
+    _SingleUnambiguousRow(1, 2, True, (_X, _I2), _R17_INDEX_FORM, None),
+    _SingleUnambiguousRow(1, 2, False, (_N2, _I2, _I3), _R17_INDEX_FORM, None),
+    # 이 행이 `len(by_name) != 1` → `< 1` 뮤턴트를 죽인다(같은 구조의 형제 갈래).
+    _SingleUnambiguousRow(2, 1, True, (_X, _N2), _R17_INDEX_FORM, None),
+    _SingleUnambiguousRow(2, 1, False, (_N2, _N3, _I2), _R17_INDEX_FORM, None),
+    _SingleUnambiguousRow(2, 2, True, (_X, _N2, _I2), _R17_INDEX_FORM, None),
+    _SingleUnambiguousRow(2, 2, False, (_N2, _N3, _I2, _I3), _R17_INDEX_FORM, None),
+)
+
+
+def _r17_assert_su_table_shape(rows: tuple[_SingleUnambiguousRow, ...]) -> None:
+    """행 삭제 프로브 — (by_name, by_index) **격자가 빠짐없이** 채워져 있어야 한다.
+
+    리터럴 행 수를 세지 않는다: 두 축의 최댓값이 2(모호)까지 닿고 그 곱집합이 전부 등장해야
+    하며, **두 목록이 모두 비어 있지 않은 모든 칸**은 교차 점검이 성립하는 갈래와 성립하지
+    않는 갈래를 다 가져야 한다. 어느 행을 지워도 이 중 하나가 깨진다.
+    """
+    cells = {(row.by_name, row.by_index) for row in rows}
+    highest_name = max(row.by_name for row in rows)
+    highest_index = max(row.by_index for row in rows)
+    assert highest_name >= 2
+    assert highest_index >= 2
+    assert cells == {
+        (name_count, index_count)
+        for name_count in range(highest_name + 1)
+        for index_count in range(highest_index + 1)
+    }
+    for cell in cells:
+        targets = {row.same_target for row in rows if (row.by_name, row.by_index) == cell}
+        if min(cell) >= 1:
+            assert targets == {True, False}, cell
+        else:
+            assert targets == {None}, cell
+    assert {row.expected is None for row in rows} == {False, True}
+    assert len(rows) == len(cells) + len([cell for cell in cells if min(cell) >= 1])
+
+
+def _r17_resolved_type_name(row: _SingleUnambiguousRow, *, reverse: bool = False) -> str | None:
+    """표시 문자열을 **프로덕션 경로**(`read_console_fixtures`)로 확정해 이름만 꺼낸다."""
+    types = tuple(reversed(row.types)) if reverse else row.types
+    observed = read_console_fixtures(
+        _inventory(_record(1, "1.5", row.display, None)),
+        library=FixtureTypeLibrary(types=types, available=True),
+    )
+    return observed[0].type_name
+
+
+class TestRound17SingleUnambiguous:
+    """[round17 #3] `apply._single_unambiguous` 격자 전수 + 순서 역전 불변."""
+
+    def test_r17_single_unambiguous_candidate_count_table_holds(self):
+        """[round17 #3] `apply.py`의 `len(by_name) != 1` · `len(by_index) != 1` ·
+        `len(candidates) == 1`을 각각 `>= 1` · `< 1` · `== 2`로 바꾸면 실패한다.
+
+        `by_index` 갈래는 round17 감사에서 SURVIVED였다 — 한 줄 안에서도 갈래가 갈렸다.
+        `!= 1` → `< 1` 뮤턴트는 교차 점검(`by_name[0] is by_index[0]`)까지 내려가야 관측이
+        갈리므로, 표는 **두 목록이 모두 비어 있지 않은 칸마다** 교차 점검 성립/불성립 두
+        갈래를 다 갖는다.
+        """
+        for row in _R17_SINGLE_UNAMBIGUOUS_ROWS:
+            assert _r17_resolved_type_name(row) == row.expected, row
+            # 열거 순서를 뒤집어도 같은 판정이다 — 모호성 판정의 정의이자, 첫 원소를 집는
+            # 모든 뮤턴트가 통과할 수 없는 단정이다.
+            assert _r17_resolved_type_name(row, reverse=True) == row.expected, row
+
+            # 표의 `same_target` 열이 실제 라이브러리 구성과 일치함을 프로덕션 규칙으로 확인한다.
+            by_name = [entry for entry in row.types if entry.name == row.display]
+            by_index = (
+                [entry for entry in row.types if entry.index == 3]
+                if row.display == _R17_INDEX_FORM
+                else []
+            )
+            assert (len(by_name), len(by_index)) == (row.by_name, row.by_index), row
+            if by_name and by_index:
+                assert (by_name[0] is by_index[0]) is row.same_target, row
+            else:
+                assert row.same_target is None, row
+
+    def test_r17_single_unambiguous_table_row_deletion_is_detected(self):
+        _r17_assert_su_table_shape(_R17_SINGLE_UNAMBIGUOUS_ROWS)
+        for index in range(len(_R17_SINGLE_UNAMBIGUOUS_ROWS)):
+            pruned = tuple(
+                row
+                for position, row in enumerate(_R17_SINGLE_UNAMBIGUOUS_ROWS)
+                if position != index
+            )
+            with pytest.raises(AssertionError):
+                _r17_assert_su_table_shape(pruned)
+
+    def test_r17_two_fallthrough_candidates_are_order_invariant(self):
+        """[round17 #3] `apply.py`의 `candidates[0] if len(candidates) == 1 else None`을
+        `>= 1`로 바꾸면 실패한다.
+
+        이름이 같은 타입이 둘 있고 **모드 구성이 다르면**, `>= 1` 뮤턴트는 열거 순서상 첫
+        타입을 확정한다 — 순서를 뒤집으면 모드 확정이 갈리고 배제 코드가
+        `already_patched_identical`(대상이 사라진다)과 `existing_fixture_identity_unconfirmed`
+        사이에서 뒤집힌다. round11 N06: *모호성 판정이 순서에 의존하면 그것은 판정이 아니다.*
+        """
+        first = LibraryType(index=3, name=LED, modes=(LibraryMode(index=1, name=MODE_1),))
+        second = LibraryType(index=9, name=LED, modes=(LibraryMode(index=1, name=MODE_2),))
+        plan = AddressPlan(entries=(_planned("c1", 1, 5),))
+
+        verdicts = []
+        for types in ((first, second), (second, first)):
+            observed = read_console_fixtures(
+                _inventory(_record(1, "1.5", LED, MODE_1)),
+                library=FixtureTypeLibrary(types=types, available=True),
+            )
+            assert observed[0].type_name is None, types
+            assert observed[0].identity_resolved is False, types
+
+            screened = screen_idempotent(
+                [_candidate("c1", 1, 5, 101)],
+                address_plan=plan,
+                resolutions=[_resolution("c1")],
+                console_fixtures=observed,
+            )
+            assert screened.entries == ()
+            codes = [exclusion.code for exclusion in screened.exclusions]
+            assert codes == [EXISTING_IDENTITY_UNCONFIRMED], types
+
+            verified = verify_patch([_entry("c1", 1, 5)], console_fixtures=observed)
+            assert [result.outcome for result in verified.results] == [
+                VERIFICATION_IDENTITY_UNCONFIRMED
+            ], types
+            verdicts.append((codes, [result.outcome for result in verified.results]))
+
+        # 순서를 뒤집어도 **같은 판정**이다 — 이것이 모호성 판정의 정의다.
+        assert verdicts[0] == verdicts[1]
+
+    def test_r17_two_occupants_are_never_reduced_to_the_first(self):
+        """[round17 HARD 1] `apply.py` `screen_idempotent`의 `len(occupants) > 1` 갈래를 없애고
+        `occupants[0]`으로 바로 가면 실패한다 — 첫 점유자가 우리와 같으면 `이미 했음`으로
+        삼켜 두 번째 점유자를 못 본 채 넘긴다(round11 N10).
+        """
+        matching = _record(1, "1.5", LED, MODE_1)
+        other = _record(2, "1.5", MMX, MODE_1)
+        plan = AddressPlan(entries=(_planned("c1", 1, 5),))
+
+        codes = []
+        for records in ((matching, other), (other, matching)):
+            screened = screen_idempotent(
+                [_candidate("c1", 1, 5, 101)],
+                address_plan=plan,
+                resolutions=[_resolution("c1")],
+                console_fixtures=_console(*records),
+            )
+            assert screened.entries == ()
+            codes.append([exclusion.code for exclusion in screened.exclusions])
+
+        assert codes[0] == [EXISTING_IDENTITY_UNCONFIRMED]
+        assert codes[0] == codes[1]
+        assert ALREADY_PATCHED_IDENTICAL not in codes[0]
+
+        # 비공허성 — 점유자가 **그 한 대**뿐이면 정상적으로 멱등 판정이 나온다.
+        alone = screen_idempotent(
+            [_candidate("c1", 1, 5, 101)],
+            address_plan=plan,
+            resolutions=[_resolution("c1")],
+            console_fixtures=_console(matching),
+        )
+        assert [exclusion.code for exclusion in alone.exclusions] == [ALREADY_PATCHED_IDENTICAL]
+
+    def test_r17_verify_with_two_occupants_is_order_invariant(self):
+        """[round17 HARD 1] `apply.py` `verify_patch`의 `len(found) > 1` 갈래를 없애면 실패한다.
+
+        같은 줄의 `found[0] if len(found) == 1 else None`을 `>= 1`로 바꾸는 것은 위 `> 1`
+        갈래가 먼저 `continue`하므로 **의미상 동등 뮤턴트**다(`occupant`가 쓰이지 않는다).
+        그래서 이 테스트는 그 술어가 아니라 **판정과 순서 불변**을 고정한다.
+        """
+        matching = _record(11, "1.5", LED, MODE_1)
+        other = _record(22, "1.5", MMX, MODE_1)
+
+        shapes = []
+        for records in ((matching, other), (other, matching)):
+            verified = verify_patch([_entry("c1", 1, 5)], console_fixtures=_console(*records))
+            result = verified.results[0]
+
+            assert result.outcome == VERIFICATION_IDENTITY_UNCONFIRMED, records
+            assert result.observed_type is None, records
+            assert result.observed_mode is None, records
+            assert verified.created_count == 0, records
+            # 사유는 관측된 **두 슬롯 전부**를 지목한다 — 열거 순서와 무관한 집합 성질이다.
+            assert "11" in result.detail, records
+            assert "22" in result.detail, records
+            shapes.append((result.outcome, result.observed_type, result.observed_mode))
+
+        assert shapes[0] == shapes[1]
+
+        # 비공허성 — 한 대면 관측으로 확정된다.
+        alone = verify_patch([_entry("c1", 1, 5)], console_fixtures=_console(matching))
+        assert alone.results[0].outcome == VERIFICATION_OBSERVED
+
+    def test_r17_two_intruders_yield_an_observed_one_and_an_order_invariant_verdict(self):
+        """[round17 HARD 1] `apply.py` `screen_console_occupancy`의
+        `next((fixture ... if planned.address < fixture.address <= planned.end_address), None)`에서
+        구간 술어를 지우면 실패한다 — 구간 **밖** 픽스처가 사유에 지목된다.
+
+        점유 판정 자체는 순서에 무관해야 하고, 사유가 지목하는 픽스처는 **실제로 구간 안에
+        있는 것**이어야 한다(둘 중 어느 것이든 무방하다 — 하나라도 있으면 제외가 맞다).
+        """
+        inside_low = _record(1, "1.8", LED, MODE_1)
+        inside_high = _record(2, "1.12", LED, MODE_1)
+        outside = _record(3, "1.777", LED, MODE_1)
+        plan = AddressPlan(
+            entries=(
+                AddressPlanEntry(
+                    candidate_id="c1", universe=1, address=5, footprint=16, end_address=20
+                ),
+            )
+        )
+
+        reasons = []
+        for records in (
+            (inside_low, inside_high, outside),
+            (outside, inside_high, inside_low),
+        ):
+            screened = screen_console_occupancy(
+                [_candidate("c1", 1, 5, 101)],
+                address_plan=plan,
+                console_fixtures=_console(*records),
+            )
+            assert screened.entries == (), records
+            assert [exclusion.code for exclusion in screened.exclusions] == [
+                ADDRESS_ALREADY_OCCUPIED
+            ], records
+            reason = screened.exclusions[0].reason
+            # 구간 안에서 시작한 픽스처의 주소가 지목돼야 한다.
+            assert any(str(address) in reason for address in (8, 12)), reason
+            # 구간 밖 픽스처는 절대 지목되지 않는다.
+            assert "777" not in reason, reason
+            reasons.append(reason)
+
+        # 비공허성 — 구간 밖 픽스처 하나만 있으면 제외되지 않는다.
+        clean = screen_console_occupancy(
+            [_candidate("c1", 1, 5, 101)],
+            address_plan=plan,
+            console_fixtures=_console(outside),
+        )
+        assert len(clean.entries) == 1
+        assert clean.exclusions == ()
+
+
+class TestRound17VacuousTypeKeyReachability:
+    """[round17 · 공허 일치 차단 ⓒ] 게이트가 없으면 잘못된 타입이 **전달 Lua까지** 나온다."""
+
+    def test_r17_a_vacuous_type_name_never_reaches_the_delivered_lua(self):
+        """[round17 · 공허 일치 차단] `typemap._comparable_key` 필터나 `_resolve_one`의 공허 키
+        갈래를 지우면 실패한다.
+
+        도면 타입 이름이 `'---'`이면 `rig._norm_type` 후 빈 문자열이 되고 빈 문자열은 모든
+        이름에 포함되므로 라이브러리 항목이 하나뿐일 때 그것이 **유일 후보**가 된다. 저장된
+        별칭 값까지 공허하면 그대로 `resolved`가 되어 도면이 이름조차 준 적 없는 FixtureType이
+        `Patch().FixtureTypes[...]`로 전달 Lua에 박힌다 — 되돌릴 수 없는 생성이다(실증됨).
+        """
+        plan = resolve_fixture_types(
+            [_r17_type_request("ph", instrument_type="---", mode=MODE_1, footprint=16)],
+            library_port=LibraryRigPort([(LED, [(MODE_1, 16)])]),
+            type_aliases={"---": {"type": "---", "mode": "--"}},
+        )
+        handoff = build_patch_handoff(
+            [_candidate("ph", 1, 5, 101)],
+            address_plan=AddressPlan(entries=(_planned("ph", 1, 5),)),
+            resolutions=plan.resolutions,
+            names={"ph": "placeholder row"},
+            dry_run=False,
+        )
+
+        assert handoff.entries == ()
+        assert [exclusion.code for exclusion in handoff.exclusions] == [TYPE_CONFIRMATION_PENDING]
+        assert handoff.lua_source is None
+
+        # 비공허성 — 정상 이름은 같은 라이브러리에서 전달물까지 나간다.
+        good_plan = resolve_fixture_types(
+            [_r17_type_request("ok", instrument_type=LED, mode=MODE_1, footprint=16)],
+            library_port=LibraryRigPort([(LED, [(MODE_1, 16)])]),
+            type_aliases={LED: {"type": LED, "mode": MODE_1}},
+        )
+        good = build_patch_handoff(
+            [_candidate("ok", 1, 5, 101)],
+            address_plan=AddressPlan(entries=(_planned("ok", 1, 5),)),
+            resolutions=good_plan.resolutions,
+            names={"ok": "real row"},
+            dry_run=False,
+        )
+        assert [entry.console_type for entry in good.entries] == [LED]
+        assert good.lua_source is not None
+        assert f'FixtureTypes["{LED}"]' in good.lua_source
+
+
+# --- round17 표 행삭제·제외 사유 전 모듈 (ScopeAndTables) ---
+#
+#   [round17 #9] `_R16_CONSTANT_SITES`는 `_R16_VALIDATE_SITES`의 넷째 칸이 `"constant"`인
+#     행만 골라낸 파생표다. 형제 `_R16_VARIABLE_SITES`에는 대조군 전단사가 붙었지만 상수
+#     쪽에는 계수 단정이 없었다. 구멍의 정체는 **넷째 칸의 어휘가 닫혀 있지 않다**는 것이다 —
+#     `"constant"`를 제3의 문자열로 바꾸면 그 행이 두 파생표 어디에도 들지 않아 대조군을
+#     통째로 잃는데, `_R16_VALIDATE_SITES` 전단사는 (모듈, 어휘식, 값식) 셋만 보므로 통과한다.
+#     여기서 넷째 칸을 **프로덕션에서 파생**하고 분할이 전수임을 단정한다.
+#
+#   [round17 #10] `_R16_INCOMPLETE_AXES`는 dict라 항목을 줄여도 아무것도 실패하지 않았다.
+#     축 목록을 `console_read_caveat`의 **실제 갈래**에서 파생해 묶는다.
+#
+#   [round17 S17-05] `_R16_EXCLUSION_SITES`는 `apply.py`의 `_exclusion(...)` 자리만 봤다.
+#     `patchplan.py`가 **직접** 짓는 `PatchTargetExclusion`(현재 여섯 자리)은 "빈 사유 금지"도
+#     "사유 구별성"도 받지 않았다. 표를 두 모듈로 넓힌다.
+
+
+#: [round17 S17-05] 제외 사유를 **짓는** 두 자리. `apply.py`는 `_exclusion(...)` 헬퍼로,
+#: `patchplan.py`는 `PatchTargetExclusion(...)`를 **직접** 짓는다. round16 표는 앞쪽만 봤고
+#: 뒤쪽 여섯 자리는 "빈 사유 금지"·"사유 구별성" 어느 단정도 받지 않았다.
+_R17_EXCLUSION_BUILDERS = (
+    ("apply.py", "_exclusion"),
+    ("patchplan.py", "PatchTargetExclusion"),
+)
+
+
+def _r17_exclusion_call_sites() -> tuple[tuple[str, str, str], ...]:
+    """`apply.py`와 `patchplan.py`의 제외 생성 자리를 (모듈, 함수, 사유 코드)로 전수.
+
+    `apply.py`는 `_exclusion(target, CODE, reason)`, `patchplan.py`는
+    `PatchTargetExclusion(candidate_id=..., code=CODE, reason=...)` 꼴이다.
+    `_exclusion` 헬퍼 **자신**의 생성자 호출은 사이트가 아니라 공장이므로 제외한다.
+    """
+    import ast
+
+    sites: list[tuple[str, str, str]] = []
+    for module_name, builder in _R17_EXCLUSION_BUILDERS:
+        source = (Path("server/vwx") / module_name).read_text(encoding="utf-8")
+        module = ast.parse(source)
+        for node in module.body:
+            if not isinstance(node, ast.FunctionDef) or node.name == builder:
+                continue
+            for call in ast.walk(node):
+                if not (
+                    isinstance(call, ast.Call)
+                    and isinstance(call.func, ast.Name)
+                    and call.func.id == builder
+                ):
+                    continue
+                if len(call.args) > 1:
+                    code = ast.unparse(call.args[1])
+                else:
+                    code = next(
+                        ast.unparse(keyword.value)
+                        for keyword in call.keywords
+                        if keyword.arg == "code"
+                    )
+                sites.append((module_name, node.name, code))
+    return tuple(sorted(sites))
+
+
+def _r17_validate_site_kind(module_name: str, value_expression: str) -> str:
+    """사이트의 종류를 **프로덕션에서** 판정한다 — 값식이 그 모듈의 문자열 상수면 `constant`.
+
+    `_R16_VALIDATE_SITES`의 넷째 칸이 손으로 쓴 라벨이라 제3의 값으로 바꿔 두 파생표
+    어디에도 안 들게 만들 수 있었다. 라벨을 프로덕션 사실에 묶어 그 우회를 없앤다.
+    """
+    import ast
+    import importlib
+
+    node = ast.parse(value_expression, mode="eval").body
+    if not isinstance(node, ast.Name):
+        return "variable"
+    module = importlib.import_module(f"server.vwx.{module_name[: -len('.py')]}")
+    return "constant" if isinstance(getattr(module, node.id, None), str) else "variable"
+
+
+def test_the_validate_site_kind_column_is_derived_from_production_not_declared():
+    """[round17 #9] 넷째 칸이 프로덕션 사실과 일치한다 — 라벨을 바꿔치기할 수 없다.
+
+    [round17 #9] 어느 행의 넷째 칸을 `"constant"`↔`"variable"`로 뒤집으면 실패한다.
+    [round17 #9] 제3의 문자열(예: `"skip"`)로 바꿔 두 파생표에서 빠지게 해도 실패한다 —
+      round16까지 그 조작은 어떤 단정도 건드리지 않고 상수 사이트 다섯을 무대조군으로 만들었다.
+    """
+    derived = tuple(
+        _r17_validate_site_kind(module, value) for module, _, value, _ in _R16_VALIDATE_SITES
+    )
+    assert tuple(kind for _, _, _, kind in _R16_VALIDATE_SITES) == derived
+
+
+def test_the_constant_and_variable_site_partition_is_total():
+    """[round17 #9] 상수·변수 두 파생표의 합이 원표와 같다 — 행이 조용히 증발하지 못한다.
+
+    [round17 #9] `_R16_CONSTANT_SITES`가 비면(넷째 칸을 전부 바꾸면) 계수 단정이 실패한다.
+    [round17 #9] `_R16_VALIDATE_SITES`에서 상수 행을 지우면 하한과 전단사가 함께 실패한다.
+    """
+    assert {kind for _, _, _, kind in _R16_VALIDATE_SITES} == {"constant", "variable"}
+    assert len(_R16_CONSTANT_SITES) + len(_R16_VARIABLE_SITES) == len(_R16_VALIDATE_SITES)
+    assert set(_R16_CONSTANT_SITES).isdisjoint(_R16_VARIABLE_SITES)
+    # 두 갈래 **모두** 비어 있지 않다 — 한쪽이 비면 그쪽 대조군이 통째로 사라진 상태다.
+    assert len(_R16_CONSTANT_SITES) >= 5, _R16_CONSTANT_SITES
+    assert len(_R16_VARIABLE_SITES) >= 5, _R16_VARIABLE_SITES
+
+
+def _r17_incomplete_axis_names() -> tuple[str, ...]:
+    """`_round15_inventory`의 정수 축 중 **단독으로** 재조회 미판독을 만드는 축을 전수.
+
+    프로덕션 `console_read_caveat`를 실제로 불러 갈래를 본다 — 리터럴 목록이 아니다.
+    """
+    import inspect
+
+    names: list[str] = []
+    for name, parameter in inspect.signature(_round15_inventory).parameters.items():
+        if parameter.annotation not in (int, "int"):
+            continue
+        caveat = console_read_caveat(_round15_inventory(**{name: 2}))
+        if caveat is not None and caveat["kind"] == CONSOLE_READ_INCOMPLETE:
+            names.append(name)
+    return tuple(sorted(names))
+
+
+def test_the_incomplete_axis_table_is_a_bijection_onto_the_production_axes():
+    """[round17 #10] 미판독 표본의 축이 프로덕션 갈래와 1:1이다.
+
+    [round17 #10] `_R16_INCOMPLETE_AXES`에서 항목을 지우면 실패한다 — round16까지 dict를
+      줄여도 아무것도 실패하지 않았고, 그러면 계수 하드코딩 대조군이 한 축만 남는다.
+    [round17 #10] 두 값을 같게 만들면(둘 다 `2`) 실패한다 — 두 계수 절을 서로 바꿔치는
+      뮤테이션이 같은 값에서는 보이지 않기 때문이다.
+    [round17 #10] 값 중 하나를 `1`로 되돌리면 실패한다(M50이 잡은 하드코딩이 되살아난다).
+    """
+    assert tuple(sorted(_R16_INCOMPLETE_AXES)) == _r17_incomplete_axis_names()
+    assert all(value != 1 for value in _R16_INCOMPLETE_AXES.values()), _R16_INCOMPLETE_AXES
+    assert len(set(_R16_INCOMPLETE_AXES.values())) == len(_R16_INCOMPLETE_AXES)
+
+    # 그리고 그 계수들이 **실제로 사유 문장에 나타난다** — 표본이 닿지 않는 축이 없다.
+    caveat = console_read_caveat(_round15_inventory(**_R16_INCOMPLETE_AXES))
+    assert caveat is not None
+    reason = str(caveat["reason"])
+    for value in _R16_INCOMPLETE_AXES.values():
+        assert str(value) in reason, (value, reason)
+
+
+# ---- [round17 S17-05] 제외 사유는 **두 모듈** 전수다 --------------------------------
+
+
+def _r17_plan_address_exclusions(*targets, footprints=None, occupied=None):
+    """`patchplan.plan_addresses`를 **프로덕션 그대로** 돌려 제외를 받는다."""
+    from server.vwx.patchplan import plan_addresses
+
+    rows = targets or (_candidate("a", 1, 1, 101),)
+    widths = {target.id: 16 for target in rows} if footprints is None else footprints
+    return list(plan_addresses(rows, footprints=widths, occupied=occupied or {}).exclusions)
+
+
+def _r17_fid_assignment_exclusions(*, fid_range, existing_fids=frozenset(), count=1):
+    """`patchplan._assign_fids`를 **프로덕션 그대로** 돌려 제외를 받는다.
+
+    상위 `build_patch_plan`을 거치지 않는 이유는 이 두 갈래가 배정 루프 안에서만 나오고,
+    상위 경로는 그 앞의 사전검사에서 먼저 막혀 갈래에 도달하지 못하는 조합이 있기 때문이다.
+    호출하는 것은 프로덕션 함수 자신이고, 단정 대상도 프로덕션이 만든 객체다.
+    """
+    from server.vwx.patchplan import FIDRange, _assign_fids
+
+    targets = tuple(_candidate(f"c{index}", 1, 1 + index * 16, 0) for index in range(count))
+    _kept, exclusions = _assign_fids(
+        targets,
+        FIDRange(*fid_range),
+        existing_fids=frozenset(existing_fids),
+        fid_range_visually_confirmed_empty=True,
+    )
+    return list(exclusions)
+
+
+#: [round17 S17-05] 제외 생성 자리 **두 모듈 전수 표**.
+#: (모듈, 사이트 이름, 함수, 사유 코드, 산출 호출, 필수 문구).
+#: 앞 열한 행은 round16 `_R16_EXCLUSION_SITES`와 같은 자리(=`apply.py`)이고,
+#: 뒤 여섯 행이 round17에서 처음 대조군을 받는 `patchplan.py` 자리다.
+_R17_EXCLUSION_SITES = tuple(
+    ("apply.py", label, func, code, produce, fragment)
+    for label, func, code, produce, fragment in _R16_EXCLUSION_SITES
+) + (
+    (
+        "patchplan.py",
+        "plan_addresses.below_minimum",
+        "plan_addresses",
+        "ADDRESS_BELOW_MINIMUM",
+        lambda: _r17_plan_address_exclusions(_candidate("a", 1, 0, 101)),
+        "콘솔 최소 인덱스",
+    ),
+    (
+        "patchplan.py",
+        "plan_addresses.footprint_unknown",
+        "plan_addresses",
+        "FOOTPRINT_UNKNOWN",
+        lambda: _r17_plan_address_exclusions(footprints={"a": None}),
+        "점유폭이 확정되지 않아",
+    ),
+    (
+        "patchplan.py",
+        "plan_addresses.console_occupied",
+        "plan_addresses",
+        "ADDRESS_ALREADY_OCCUPIED",
+        lambda: _r17_plan_address_exclusions(occupied={1: [(1, 16)]}),
+        "콘솔에서 이미 점유되어 있다",
+    ),
+    (
+        "patchplan.py",
+        "plan_addresses.overlap_in_plan",
+        "plan_addresses",
+        "ADDRESS_OVERLAP_IN_PLAN",
+        lambda: _r17_plan_address_exclusions(
+            _candidate("a", 1, 1, 101), _candidate("b", 1, 8, 102)
+        ),
+        "같은 계획의 다른 항목과 겹친다",
+    ),
+    (
+        "patchplan.py",
+        "assign_fids.range_exhausted",
+        "_assign_fids",
+        "FID_RANGE_EXHAUSTED",
+        lambda: _r17_fid_assignment_exclusions(fid_range=(101, 101), count=2),
+        "초과해 이 장비에는 FID를 배정하지 않았다",
+    ),
+    (
+        "patchplan.py",
+        "assign_fids.already_in_use",
+        "_assign_fids",
+        "FID_ALREADY_IN_USE",
+        lambda: _r17_fid_assignment_exclusions(fid_range=(101, 110), existing_fids={101}),
+        "콘솔 기존 픽스처가 이미 사용 중이다",
+    ),
+)
+
+
+def test_the_exclusion_site_table_covers_both_modules_not_just_apply():
+    """[round17 S17-05] 제외 생성 자리 표가 `apply.py`·`patchplan.py` **양쪽**과 1:1이다.
+
+    [round17 S17-05] `patchplan.py`에 `PatchTargetExclusion(...)` 자리를 더하거나 지우면
+      실패한다 — round16까지 그 다섯(현재 여섯) 자리는 어떤 사유 단정도 받지 않았다.
+    [round17 S17-05] 표에서 행을 지워도 실패한다.
+    [round17 S17-05] `apply.py` 쪽 열한 행은 `_R16_EXCLUSION_SITES`에서 파생하므로
+      그 표가 줄면 여기서도 함께 어긋난다.
+    """
+    declared = tuple(
+        sorted((module, func, code) for module, _, func, code, _, _ in _R17_EXCLUSION_SITES)
+    )
+    assert declared == _r17_exclusion_call_sites()
+    labels = [label for _, label, _, _, _, _ in _R17_EXCLUSION_SITES]
+    assert len(labels) == len(set(labels))
+    # `patchplan.py` 쪽이 실제로 표에 들어왔다 — 넓히지 않으면 이 단정이 공허해진다.
+    assert len([row for row in _R17_EXCLUSION_SITES if row[0] == "patchplan.py"]) >= 6
+
+
+@pytest.mark.parametrize(
+    "module_name,label,func,code,produce,fragment",
+    [row for row in _R17_EXCLUSION_SITES if row[0] == "patchplan.py"],
+    ids=[row[1] for row in _R17_EXCLUSION_SITES if row[0] == "patchplan.py"],
+)
+def test_every_patchplan_exclusion_site_ships_a_non_empty_reason(
+    module_name, label, func, code, produce, fragment
+):
+    """[round17 S17-05] `patchplan.py`의 여섯 자리도 빈 사유를 낼 수 없다.
+
+    [round17 S17-05] 어느 자리의 `reason=`을 `""`로 바꾸면 그 행이 실패한다 — round16까지는
+      전부 통과했다. 조작자는 무엇이 왜 빠졌는지 이 문장으로만 안다(§0 2c①).
+    """
+    from server.vwx import verdicts
+
+    produced = produce()
+    expected_code = getattr(verdicts, code)
+    assert [exclusion.code for exclusion in produced] == [expected_code], produced
+    reason = produced[0].reason
+    assert reason.strip() != ""
+    assert len(reason) >= 20, reason
+    assert fragment in reason, reason
+    assert produced[0].to_dict()["reason"] == reason
+
+
+def test_no_two_exclusion_sites_across_both_modules_share_the_same_sentence():
+    """[round17 S17-05] 열일곱 자리의 사유가 서로 구별된다 — 한 자리를 다른 문구로 바꾸면 깨진다.
+
+    round16 판은 `apply.py` 열한 자리만 비교했다. `patchplan.py`의
+    `ADDRESS_ALREADY_OCCUPIED`는 `apply.py`의 같은 코드와 **다른 문장**이어야 한다 —
+    한쪽은 계획 단계 점유, 다른 쪽은 재조회 점유이고 조작자가 할 일이 다르다.
+    """
+    reasons = [produce()[0].reason for _, _, _, _, produce, _ in _R17_EXCLUSION_SITES]
+    assert len(reasons) == len(set(reasons)), [r for r in reasons if reasons.count(r) > 1]

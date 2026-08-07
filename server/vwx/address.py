@@ -128,9 +128,17 @@ def classify_and_resolve(
     Universe 재사용은 더 이상 모호하지 않다 — 콘솔에는 System 개념이 없어
     콘솔 대조(``diff.py``)만 별도로 미수행 처리한다(REQ-VWX-010 재해석).
     ``contiguous_512_confirmed``는 그 파일의 Universes 창이 연속 기본
-    512블록이라는 전제가 외부에서 검증됐는지 여부다 — 기본값 False로,
-    검증되지 않은 한 ``Absolute Address`` 역산을 절대 수행하지 않는다
-    (추측 금지, REQ-VWX-009).
+    512블록이라는 전제가 외부에서 검증됐는지 여부다 — 기본값 False다.
+    **False여도 ``Absolute Address`` 역산은 수행한다**(v0.1.7 재설계,
+    ASSUMPTION-69 재정의): 판정을 거부하는 대신 ``server/prechk/patch.py``
+    ``OverlapBasis``와 같은 규약으로 **가장 약한 근거 등급**
+    (``ADDRESS_BASIS_ABS_BACK_CALCULATED``)을 선언하고 ``detail``에 전제
+    미확인을 명시한다. True면 등급만 ``ADDRESS_BASIS_ABS_CONFIRMED``로
+    올라가고 역산 결과 ``(universe, address)`` 자체는 동일하다. 즉 이
+    플래그는 **역산 수행 여부가 아니라 근거 등급**을 가른다(날조 금지이지
+    파생 금지가 아니다 — REQ-VWX-009). 하드 거부가 남는 자리는 Universe/
+    DMX Address 쌍과 Absolute가 **둘 다 있는데 어긋나는** 경우뿐이다
+    (``READ_FAILURE_ADDRESS_TRIPLE_MISMATCH``).
     """
     universe_raw = fields.get("universe")
     dmx_raw = fields.get("address")

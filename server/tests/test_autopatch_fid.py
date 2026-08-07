@@ -617,9 +617,12 @@ def test_every_incomplete_shape_reports_an_observed_fact(label, kwargs, expected
     """어떤 불완전 형태든 **관측된 사실**을 말한다 — 전부 0인 문장을 내지 않는다."""
     read = _existing_fids_from_console(_ShapedFidPort(**kwargs))
     assert read.complete is False
-    reason = read.reason()
+    # [round17 S17-04] 조작자가 보는 것은 `reason()` **조각**과 `notes()` 완결 문장의 합이다.
+    # 꼬리 판정(`자기모순`)을 조각에서 빼 독립 문장으로 옮겼으므로 — 조각 안에 두면 조립된
+    # 사유 한 문장에 ` — `가 둘이 된다(S17-04) — 사실 존재 확인도 그 합 위에서 한다.
+    reason = " ".join((read.reason(), *read.notes()))
     assert expected_phrase in reason, reason
-    assert reason != "부분 관측이다"
+    assert read.reason() != "부분 관측이다"
 
 
 @pytest.mark.parametrize(
@@ -1657,14 +1660,21 @@ def test_a_single_unparsable_row_deliberately_raises_two_axes_at_once():
 
 
 # ==========================================================================
-# M54 — bool 가드는 정수 판독기 **전부**의 규약이다
+# M54 — bool 가드는 `patchplan.py` 정수 판독기 **전부**의 규약이다
 #
 # `_optional_int`의 `and not isinstance(value, bool)`를 지우면 `True`가 `1`로 해석돼
 # 슬롯·주소·`childCount`가 오염되는데 SURVIVED였다. 형제 `_fid_int`는 전체 스위트에서
-# 잡혔지만 그 인과를 명시한 테스트는 없었다. 여기서 **네 판독기 전부**를 표로 연다.
+# 잡혔지만 그 인과를 명시한 테스트는 없었다. 여기서 `patchplan.py`의 **네 판독기**를 표로 연다.
+#
+# **[round17 #7 정정] 이 절의 선언을 사실대로 좁혔다.** round16은 이 표를 "정수 판독기
+# **전부**의 규약"이라 선언했는데 아래 파서는 `patchplan.py` 한 모듈만 읽는다. 실제 가드는
+# 여섯 곳이고, `typemap._optional_int`와 `luagen._lua_int`의 가드를 지워도 스위트
+# 5,690건이 전건 통과했다 — `luagen._lua_int`는 **전달물 `fid`를 만드는** 자리다.
+# `server/vwx` 전 모듈을 덮는 표는 이 파일 끝 round17 절(`_R17_BOOL_GUARD_SITES`)에 있다.
 # ==========================================================================
 
 #: (함수 이름, bool 입력, 기대 반환) — `plan_addresses`는 반환이 아니라 갈래로 확인한다.
+#: **`patchplan.py`에 한정된 표다**(round17 #7). 전 모듈 표는 `_R17_BOOL_GUARD_SITES`.
 _R16_BOOL_GUARD_ROWS = (
     ("plan_addresses", True, None),
     ("_fid_int", True, None),
@@ -1694,11 +1704,11 @@ def _r16_production_bool_guard_functions():
 
 
 def test_the_bool_guard_table_is_a_bijection_onto_production():
-    """[round16 M54] bool 가드 표가 프로덕션 함수 목록과 1:1이다.
+    """[round16 M54] bool 가드 표가 `patchplan.py` 함수 목록과 1:1이다.
 
-    어느 판독기에서든 `isinstance(value, bool)` 가드를 지우면 이 단정이 실패한다 —
-    형제 판독기를 빠뜨린 채 한쪽만 지키는 상태가 구조적으로 불가능해진다.
-    표에서 행을 지워도 실패한다.
+    `patchplan.py`의 어느 판독기에서든 `isinstance(value, bool)` 가드를 지우면 이 단정이
+    실패한다 — 형제 판독기를 빠뜨린 채 한쪽만 지키는 상태가 구조적으로 불가능해진다.
+    표에서 행을 지워도 실패한다. **[round17 #7] 다른 모듈은 이 표의 범위 밖이다.**
     """
     assert tuple(name for name, _, _ in _R16_BOOL_GUARD_ROWS) == (
         _r16_production_bool_guard_functions()
@@ -1706,10 +1716,13 @@ def test_the_bool_guard_table_is_a_bijection_onto_production():
 
 
 def test_every_int_reader_refuses_a_bool():
-    """[round16 M54] `True`는 `1`이 아니다 — 네 판독기가 전부 그렇게 판정한다.
+    """[round16 M54] `True`는 `1`이 아니다 — `patchplan.py`의 네 판독기가 그렇게 판정한다.
 
     `_optional_int`·`_required_int`·`_fid_int`의 `and not isinstance(value, bool)`를 지우거나
     `plan_addresses`의 `or isinstance(footprint, bool)`를 지우면 해당 단정이 실패한다.
+
+    **[round17 #7] 형제 모듈은 여기 없다** — `typemap._optional_int`·`luagen._lua_int`는
+    이 파일 끝 round17 절이 덮는다.
     """
     from server.vwx.patchplan import _fid_int, _optional_int, _required_int
 
@@ -1776,3 +1789,339 @@ def test_a_boolean_fid_value_is_counted_as_unreadable_not_as_fid_one():
     assert plan.ok is False
     assert plan.rejection.code == "fid_precheck_read_incomplete"
     assert "열거된 슬롯 1개의 FID 값을 얻지 못했다" in plan.rejection.reason
+
+
+# --- round17 스코프 확장·문장 전문 동등 (ScopeAndTables) ---
+#
+#   [round17 #7] `_R16_BOOL_GUARD_ROWS`가 "정수 판독기 **전부**의 규약"이라 선언하면서
+#     파서는 `patchplan.py` 한 모듈만 읽었다. 실제 가드는 **여섯 곳**이고 두 곳
+#     (`typemap._optional_int` · `luagen._lua_int`)은 무게이트였다 — 지워도 5,690건이
+#     전건 통과했다. `luagen._lua_int`가 만드는 것은 **사람이 콘솔에서 실행할 Lua의 `fid`**다.
+#     여기서 스캔을 `server/vwx` **전 모듈**로 넓히고, 각 가드마다 프로덕션 호출로 짚는다.
+#
+#   [round17 #6] `_fid_precheck_incomplete_check` 사유가 어휘목록(금지 문구 8개)과
+#     부분문자열 조각 2개로만 지켜졌다. 사유 **뒤에** 안심 문장을 붙이면 셋 다 통과한다.
+#     같은 커밋이 caveat 사유에는 **문장 전문 리터럴 고정**을 줬다 — 형제에게 다른 등급을
+#     준 전형이다. 여기서 같은 등급으로 맞춘다.
+
+
+def _r17_vwx_bool_guard_sites() -> tuple[tuple[str, str], ...]:
+    """`server/vwx` **전 모듈**에서 `isinstance(..., bool)` 가드를 가진 함수를 (모듈, 함수)로 전수.
+
+    round16 판(`_r16_production_bool_guard_functions`)은 `patchplan.py`만 읽었다.
+    스캔 대상은 디렉터리에서 파생하므로 모듈이 하나 생기면 범위가 자동으로 따라간다.
+    """
+    import ast
+
+    sites: list[tuple[str, str]] = []
+    for path in sorted(Path("server/vwx").glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for fn in _r16_in_source_order(
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        ):
+            for node in ast.walk(fn):
+                if (
+                    isinstance(node, ast.Call)
+                    and getattr(node.func, "id", None) == "isinstance"
+                    and len(node.args) > 1
+                    and getattr(node.args[1], "id", None) == "bool"
+                ):
+                    sites.append((path.name, fn.name))
+                    break
+    return tuple(sites)
+
+
+#: bool 가드 **전 모듈 전수 표**. (모듈, 함수). 소스 순서 · 모듈 이름 순.
+#: round16 표는 위 네 행(`patchplan.py`)뿐이었고, 아래 두 행이 **무게이트**였다.
+_R17_BOOL_GUARD_SITES = (
+    ("luagen.py", "_lua_int"),
+    ("patchplan.py", "plan_addresses"),
+    ("patchplan.py", "_fid_int"),
+    ("patchplan.py", "_optional_int"),
+    ("patchplan.py", "_required_int"),
+    ("typemap.py", "_optional_int"),
+)
+
+
+def test_the_bool_guard_table_covers_every_vwx_module_not_just_patchplan():
+    """[round17 #7] bool 가드 표가 `server/vwx` **전 모듈**과 1:1이다.
+
+    [round17 #7] `typemap.py:654`의 `isinstance(value, bool)`를 지우면 실패한다.
+    [round17 #7] `luagen.py:129`의 `isinstance(value, bool)`를 지우면 실패한다.
+    [round17 #7] 어느 모듈에서든 가드를 더해도 행 없이는 통과하지 못한다.
+    [round17 #7] 표에서 행을 지워도 실패한다.
+    round16 표(`_R16_BOOL_GUARD_ROWS`)는 `patchplan.py` 네 행뿐이라 두 뮤테이션 모두
+    SURVIVED였다 — 그 표는 이제 스스로를 `patchplan.py`로 선언한다.
+    """
+    assert _r17_vwx_bool_guard_sites() == _R17_BOOL_GUARD_SITES
+    # 표가 round16 범위를 **진짜로** 넘는다 — 두 모듈이 새로 들어왔다.
+    assert {module for module, _ in _R17_BOOL_GUARD_SITES} == {
+        "luagen.py",
+        "patchplan.py",
+        "typemap.py",
+    }
+    patchplan_rows = tuple(fn for module, fn in _R17_BOOL_GUARD_SITES if module == "patchplan.py")
+    assert patchplan_rows == tuple(name for name, _, _ in _R16_BOOL_GUARD_ROWS)
+
+
+def test_the_typemap_int_reader_refuses_a_bool_on_the_production_path():
+    """[round17 #7] `typemap._optional_int`의 bool 가드 — `childCount: True`는 "1대"가 아니다.
+
+    [round17 #7] `typemap.py:654`의 `and not isinstance(value, bool)`를 지우면 실패한다.
+    가드를 지우면 FixtureType 라이브러리의 `i: True`가 **인덱스 1**로 읽혀,
+    조회한 적 없는 라이브러리 항목을 가리키는 경로(`Patch/FixtureTypes/1/DMXModes`)가 선다.
+    반환값이 아니라 **라이브러리 판독 결과**로 확인한다 — 프로덕션 산출 경로다.
+    """
+    from server.vwx.typemap import FIXTURE_TYPE_LIBRARY_ROOT, read_fixture_type_library
+
+    class _BoolIndexPort:
+        def query_state(self, path: str) -> dict:
+            if path == FIXTURE_TYPE_LIBRARY_ROOT:
+                return {
+                    "ok": True,
+                    "path": path,
+                    "node": {"childCount": True},
+                    "children": [{"i": True, "name": "LEDBeam"}, {"i": 3, "name": "Robin"}],
+                    "truncated": False,
+                }
+            return {"ok": False, "path": path, "error": "not readable"}
+
+        def query_property(self, path: str, property_name: str) -> dict:
+            return {"ok": False, "path": path, "property": property_name, "error": "not readable"}
+
+    library = read_fixture_type_library(_BoolIndexPort())
+
+    # `i: True`인 행은 인덱스를 얻지 못해 **빠진다** — 인덱스 1로 승격되지 않는다.
+    assert [entry.index for entry in library.types] == [3]
+    assert [entry.name for entry in library.types] == ["Robin"]
+
+
+def test_the_luagen_int_reader_refuses_a_bool_on_the_deliverable_path():
+    """[round17 #7] `luagen._lua_int`의 bool 가드 — `True`인 FID는 Lua에 `1`로 나가지 않는다.
+
+    [round17 #7] `luagen.py:129`의 `isinstance(value, bool)`를 지우면 실패한다.
+    이 가드가 만드는 것은 **사람이 콘솔에서 실행할 플러그인의 `fid` 인자**다. `True`가 `1`로
+    조용히 통과하면 조작자가 지정하지 않은 FID 1로 픽스처가 생성되고, 이 앱에는 되돌리기가 없다.
+    """
+    from server.vwx.luagen import LuaGenerationError, LuaPatchEntry, render_addfixtures_plugin
+
+    entry = LuaPatchEntry(
+        console_type="Robin LEDBeam 350",
+        console_mode="Mode 1",
+        fid=True,
+        name="LEDBeam 101",
+        universe=1,
+        address=1,
+    )
+    with pytest.raises(LuaGenerationError) as raised:
+        render_addfixtures_plugin([entry])
+    assert "정수 필드에 정수가 아닌 값이 왔다" in str(raised.value)
+
+    # 비공허성 — 같은 호출에 진짜 정수를 주면 플러그인이 만들어지고 `fid = "101"`이 박힌다.
+    ok = render_addfixtures_plugin([LuaPatchEntry(**{**entry.__dict__, "fid": 101})])
+    assert 'fid = "101"' in ok
+
+
+# ---- [round17 #6] 부분 관측 고지 사유는 **문장 전문**으로 고정된다 ---------------------
+
+#: 프로덕션 사유 **전문**. caveat 사유가 이미 받는 등급을 형제 사유에도 준다.
+#: 이 문자열은 되돌릴 수 없는 배정 앞의 **유일한 고지**다 — 리터럴 고정이 곧 그 변경을
+#: 사람 눈에 띄게 하는 장치다(round16 A1 ②가 caveat에 세운 것과 같은 논거).
+_R17_INCOMPLETE_REASON = (
+    "기존 FID 열거가 부분 관측이라 빈 FID를 단정할 수 없다 — "
+    "절단은 이 콘솔의 기본 경로이고 childCount가 진짜 총계다."
+)
+
+
+def test_the_incomplete_check_reason_is_fixed_verbatim():
+    """[round17 #6] 사유가 **문장 전문 동등**이다 — 앞뒤로 무엇을 붙여도 실패한다.
+
+    [round17 #6] 사유 뒤에 `"그 밖에 우려할 것은 없으므로 그대로 진행해도 좋다."`를
+      **덧붙이면** 여기서 실패한다. round16까지 그 조작은 안심 문구 금지 8개를 전부 피하고
+      필수 조각 두 개(`부분 관측`·`빈 FID를 단정할 수 없다`)를 남기고 앵커 부분문자열도
+      온전해서 **5,690건을 전건 통과했다**.
+    [round17 #6] 사유를 다른 문장으로 갈아도 실패한다 — 어휘목록 방식과 달리 우회로가 없다.
+
+    같은 등급이 형제 caveat 사유에 이미 걸려 있다(round16 A1 ②). 두 사유는 같은 커밋이
+    만들었는데 한쪽만 전문 고정을 받았다 — 그 비대칭이 round17 #6의 기제다.
+    """
+    from server.vwx.patchplan import ExistingFidRead
+
+    (check,) = _plan_with(None).skipped_checks
+    assert check["reason"] == _R17_INCOMPLETE_REASON
+
+    # 같은 문장이 **함수 단위**에서도 그대로다 — 계획 조립이 뒤에 무엇을 덧대지 않는다.
+    from server.vwx.patchplan import _fid_precheck_incomplete_check
+
+    assert _fid_precheck_incomplete_check(ExistingFidRead())["reason"] == _R17_INCOMPLETE_REASON
+
+    # 그리고 조작자 화면 payload에도 같은 전문이 나간다.
+    (payload_check,) = _plan_with(None).to_dict()["skipped_checks"]
+    assert payload_check["reason"] == _R17_INCOMPLETE_REASON
+
+
+def test_the_verbatim_reason_gate_is_not_vacuous():
+    """대조의 대조 — 사유 뒤에 한 절을 덧붙인 **프로덕션 사본**에서 위 단정이 실제로 깨진다.
+
+    어휘목록 검사는 이 사본을 통과한다는 것까지 함께 보인다 — 그것이 round17 #6이 실증한
+    바로 그 상태이고, 전문 동등만이 그것을 잡는다.
+    """
+    appended = "그 밖에 우려할 것은 없으므로 그대로 진행해도 좋다."
+    planted = PATCHPLAN_SOURCE.replace(
+        INCOMPLETE_REASON_ANCHOR,
+        INCOMPLETE_REASON_ANCHOR + f'\n            "{appended}"',
+        1,
+    )
+    assert planted != PATCHPLAN_SOURCE
+    namespace = _load_patchplan(planted)
+    reason = namespace["_fid_precheck_incomplete_check"](namespace["ExistingFidRead"]())["reason"]
+
+    # ① 전문 동등은 깨진다 — 이것이 round17이 새로 세운 등급이다.
+    assert reason != _R17_INCOMPLETE_REASON
+    # ② 그런데 round16의 세 검사는 **전부 통과한다** — 어휘목록 방식이 반증되는 자리다.
+    assert "부분 관측" in reason
+    assert "빈 FID를 단정할 수 없다" in reason
+    assert [phrase for phrase in _R16_REASSURING_PHRASES if phrase in reason] == []
+    assert INCOMPLETE_REASON_ANCHOR in planted
+
+
+# ==========================================================================
+# --- round17 S17-04 FID 사전검사 사유의 문장 형태 (SiblingOccupants) ---
+#
+# `build_patch_plan`의 사전검사 거부 사유는 **조각 + 독립 문장들**로 조립된다.
+# round16까지 조각(`ExistingFidRead.reason()`)이 자체에 ` — `를 품고 있었고, 호출부가 그
+# 조각을 대시 있는 문장 **안에** 끼워 넣어 한 문장에 대시가 둘이 됐다(S17-04, 48조합 중 24건).
+# 꼬리는 `notes()`가 독립 문장으로 돌려주고, `assemble_sentences`가 결과 형태를 강제한다.
+#
+# 아래 두 축을 함께 건다 — 한 축만 걸면 다른 축이 곧 같은 결함을 다시 만든다(HARD 규율 1):
+#   축 1 — 꼬리 문장이 **조작자에게 실제로 도달한다**(옮기면서 잃어버리지 않았다).
+#   축 2 — 조립된 사유가 **여덟 축 전부**에서 형태 불변식을 지킨다.
+# ==========================================================================
+
+
+def _r17_read_for(axis: str):
+    """`R15_SOLE_AXIS_ROWS`의 포트 구성을 축 이름으로 되찾아 그 축만 발화시킨다."""
+    (row,) = [candidate for candidate in R15_SOLE_AXIS_ROWS if candidate[0] == axis]
+    port_kwargs = row[1]
+    return _existing_fids_from_console(None if port_kwargs is None else _R15RawPort(**port_kwargs))
+
+
+def _r17_production_read_notes() -> tuple[str, ...]:
+    """`patchplan.py`의 `ExistingFidRead.notes()`가 돌려줄 수 있는 **문장 리터럴 전수**를 뽑는다.
+
+    테스트가 문장을 자기 리터럴로 들고 비교하면 프로덕션에서 문장을 지워도 아무도 실패하지
+    않는다(자기 비교). 그래서 프로덕션 소스에서 뽑아 표와 맞춘다.
+    """
+    import ast
+
+    tree = ast.parse(PATCHPLAN_SOURCE)
+    function = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == "notes"
+    )
+    return tuple(
+        element.value
+        for node in ast.walk(function)
+        if isinstance(node, ast.Return) and isinstance(node.value, ast.Tuple)
+        for element in node.value.elts
+        if isinstance(element, ast.Constant) and isinstance(element.value, str)
+    )
+
+
+#: (축 이름, 그 축에서 조작자에게 나가야 하는 **독립 문장**)
+#: 축 이름은 `R15_SOLE_AXIS_ROWS`의 것을 그대로 쓴다 — 포트 구성을 두 벌 들고 있지 않는다.
+_R17_FID_READ_NOTE_ROWS = (
+    ("attempted=False", "기존 FID를 하나도 확인하지 못했다."),
+    ("root_unreadable", "기존 FID를 하나도 확인하지 못했다."),
+    ("over_enumerated", "열거가 선언 총계를 넘었으므로 이 스냅샷은 자기모순이다."),
+)
+
+
+def test_the_fid_read_note_table_is_a_bijection_onto_the_noted_axes():
+    """[round17 S17-04] 꼬리 문장 표가 **실제로 꼬리를 내는 축 전수**와 1:1이다.
+
+    ① 표에서 행을 지우면 축 집합이 어긋나 실패한다.
+    ② 프로덕션이 새 축에 꼬리를 붙이면 행 없이는 통과하지 못한다.
+    ③ 프로덕션에서 꼬리 문장을 지우면(`notes()`가 `()`를 돌려주면) 그 축이 사라져 실패한다.
+    """
+    noted_axes = {axis for axis, *_ in R15_SOLE_AXIS_ROWS if _r17_read_for(axis).notes()}
+    assert noted_axes == {axis for axis, _ in _R17_FID_READ_NOTE_ROWS}
+
+
+def test_the_fid_read_note_table_is_a_bijection_onto_the_production_sentences():
+    """[round17 S17-04] 표의 문장이 프로덕션 `notes()`의 **리터럴 전수**와 1:1이다.
+
+    [round17 #S17-04] `notes()`의 어느 갈래든 `return ()`으로 바꾸면 실패한다 —
+    옮기면서 문장을 잃어버리는 것이 이 처방의 가장 그럴듯한 회귀다.
+    """
+    assert {note for _, note in _R17_FID_READ_NOTE_ROWS} == set(_r17_production_read_notes())
+
+
+@pytest.mark.parametrize(
+    "axis,expected_note",
+    _R17_FID_READ_NOTE_ROWS,
+    ids=[row[0] for row in _R17_FID_READ_NOTE_ROWS],
+)
+def test_each_note_axis_reaches_the_operator_as_an_independent_sentence(axis, expected_note):
+    """[round17 S17-04] 꼬리 문장이 **조립된 거부 사유에 실제로 실린다** — 독립 문장으로.
+
+    조각에서 빼내기만 하고 조립부에 잇지 않으면 조작자는 판정 근거를 잃는다. 그것은
+    형태를 고치면서 내용을 버리는 것이고, 이 SPEC이 반복한 "한 축만 고쳤다"의 변형이다.
+
+    [round17 #S17-04] `ExistingFidRead.notes()`를 `()`로 무력화하면 실패한다.
+    [round17 #S17-04] `build_patch_plan`의 조립부에서 `*existing_read.notes()`를 빼면 실패한다.
+    """
+    read = _r17_read_for(axis)
+    assert read.notes() == (expected_note,)
+    assert " — " not in expected_note, "꼬리는 독립 문장이다 — 대시를 다시 품으면 무의미하다"
+
+    plan = _plan_with(None if axis == "attempted=False" else _R15RawPort(**_r17_port_kwargs(axis)))
+    assert plan.ok is False
+    assert expected_note in plan.rejection.reason, plan.rejection.reason
+
+
+def _r17_port_kwargs(axis: str):
+    (row,) = [candidate for candidate in R15_SOLE_AXIS_ROWS if candidate[0] == axis]
+    return row[1]
+
+
+@pytest.mark.parametrize(
+    "axis,port_kwargs,_axes,_phrase",
+    R15_SOLE_AXIS_ROWS,
+    ids=[row[0] for row in R15_SOLE_AXIS_ROWS],
+)
+def test_the_assembled_precheck_reason_keeps_its_sentence_shape(axis, port_kwargs, _axes, _phrase):
+    """[round17 S17-04] 조립된 사유가 **여덟 축 전부**에서 형태 불변식을 지킨다.
+
+    판정은 프로덕션 `sentence_shape_violation`이 한다 — 테스트가 규칙 사본을 들고 있으면
+    프로덕션 규칙을 느슨하게 바꿔도 아무도 실패하지 않는다.
+
+    [round17 #S17-04] `ExistingFidRead.reason()`의 over_enumerated 절에 `" — 스냅샷이
+      자기모순이다"` 꼬리를 되살리면 'over_enumerated' 행이 **한 문장 대시 둘**로 실패한다.
+    [round15 N11] `reason()` 끝에 마침표를 되살리면 조립부의 `. `와 겹쳐 `..`로 실패한다.
+    """
+    from server.vwx.patchplan import sentence_shape_violation
+
+    port = None if port_kwargs is None else _R15RawPort(**port_kwargs)
+    plan = _plan_with(port)
+    assert plan.ok is False
+    reason = plan.rejection.reason
+    assert sentence_shape_violation(reason) is None, (axis, reason)
+
+
+def test_the_precheck_reason_shape_gate_is_not_vacuous():
+    """비공허성 — 대시 둘을 심은 문자열에서 같은 판정자가 실제로 잡는다.
+
+    심는 대상은 round17 S17-04가 실제로 낸 문자열 그대로다(감사 실증 문구).
+    """
+    from server.vwx.patchplan import sentence_shape_violation
+
+    planted = (
+        "기존 FID 사전검사가 불완전하다 — 열거된 슬롯 2개가 선언 총계 1개보다 많다 — "
+        "스냅샷이 자기모순이다. 부분 관측으로 빈 FID를 단정하면 이미 쓰이는 번호를 배정하게 된다."
+    )
+    assert sentence_shape_violation(planted) is not None
+    assert sentence_shape_violation(_plan_with(None).rejection.reason) is None

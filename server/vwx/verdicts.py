@@ -22,6 +22,12 @@ DMX_MODE_NOT_IN_LIBRARY = "dmx_mode_not_in_library"
 ADDRESS_ALREADY_OCCUPIED = "address_already_occupied"
 ADDRESS_OVERLAP_IN_PLAN = "address_overlap_in_plan"
 FOOTPRINT_UNKNOWN = "footprint_unknown"
+#: round17 결함 R17-A — 1단계가 준 유니버스·주소가 콘솔 최소 인덱스(1) 미만이다.
+#: 절대주소 역산(``server/vwx/address.py``)은 음수 입력에서 유니버스 0·음수를
+#: 산출하고, Universe+DMX Address 직접 읽기는 음수 주소를 그대로 통과시킨다 —
+#: 그 값이 그대로 ``patch = { "0.507" }`` 같은 Lua 전달물이 되어 사람 손에 갔다.
+#: 값을 고쳐 통과시키지 않고(자동 보정 0건) **등재된 코드로 배제**한다.
+ADDRESS_BELOW_MINIMUM = "address_below_minimum"
 
 FID_NOT_ASSIGNED = "fid_not_assigned"
 FIXTURE_NAME_MISSING = "fixture_name_missing"
@@ -80,6 +86,7 @@ TARGET_EXCLUSION_REASON = frozenset(
         ADDRESS_ALREADY_OCCUPIED,
         ADDRESS_OVERLAP_IN_PLAN,
         FOOTPRINT_UNKNOWN,
+        ADDRESS_BELOW_MINIMUM,
         FID_NOT_ASSIGNED,
         FIXTURE_NAME_MISSING,
         TYPE_CONFIRMATION_PENDING,
@@ -179,6 +186,7 @@ _TARGET_EXCLUSION_LABELS = {
     ADDRESS_ALREADY_OCCUPIED: "도면 주소가 콘솔에서 이미 점유됨",
     ADDRESS_OVERLAP_IN_PLAN: "같은 유니버스 안에서 다른 계획 항목과 점유 구간이 겹침",
     FOOTPRINT_UNKNOWN: "점유폭 미확정 — 추측하지 않고 제외",
+    ADDRESS_BELOW_MINIMUM: "유니버스 또는 주소가 콘솔 최소 인덱스 미만 — 값을 고치지 않고 제외",
     FID_NOT_ASSIGNED: "FID 미배정 — 배정 없이 생성하지 않음",
     FIXTURE_NAME_MISSING: "픽스처 이름 미제공 — 이름을 지어내지 않고 제외",
     TYPE_CONFIRMATION_PENDING: "타입·모드 사용자 확인 대기 — 확인 전에는 전달하지 않음",

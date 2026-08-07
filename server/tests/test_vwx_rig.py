@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+from typing import NamedTuple
+
+import pytest
+
 from server.vwx.address import PATCHED, UNPATCHED_DESIGNED, ResolvedRecord
 from server.vwx.rig import (
     STATIC_ACCESSORY,
     VW_PATCH_CONFLICT,
     VW_PATCH_OVERLAP,
+    _parse_footprint,
     build_designed_rig,
     fuzzy_type_equal,
 )
@@ -413,3 +418,73 @@ class TestDesignSideOverlapDetection:
         rig = build_designed_rig(records)
         assert rig.footprint_data_present is False
         assert rig.design_overlaps == ()
+
+
+# --- round17 리그 수치 경계 전수 (AddressGates) ---
+#
+# round17 HARD 규율 1 — `server/vwx/` 전 모듈 수치 경계 자리를 격리 사본 뮤테이션으로
+# 훑었고(레지스트리는 `test_vwx_address.py::_R17_VWX_BOUNDARY_SITES`), `rig.py`에서
+# 무대조군 1자리가 나왔다: `_parse_footprint`의 양수 판정 `value > 0`.
+#
+# 기존 대조군은 "footprint 컬럼 없음"과 "footprint='1'" 두 점뿐이었다 — **문자열로
+# 존재하지만 양수가 아닌** 값(`"0"` · 음수)이 표 밖이었고, 그 한 칸(`> 0` → `>= 0`)이
+# 5,690건을 통과했다. `"0"`이 양수로 통과하면 **DMX를 먹지 않는 액세서리가 대조 계수에
+# 들어가** 콘솔 대비 수량 불일치를 만든다(REQ-VWX-014).
+
+
+class _FootprintRow(NamedTuple):
+    raw: str | None
+    parsed: int | None
+    dmx_consuming: bool
+    note: str
+
+
+#: `DMX Footprint` 원문 → 파싱 결과 → 그 값이 "DMX를 먹는다"로 읽히는지.
+#: 양수 판정의 **양끝**(0 · 1)과 음수·비파싱·공란·없음을 전부 덮는다.
+_R17_FOOTPRINT_ROWS: tuple[_FootprintRow, ...] = (
+    _FootprintRow(None, None, False, "컬럼 값 없음"),
+    _FootprintRow("", None, False, "공란"),
+    _FootprintRow("   ", None, False, "공백만"),
+    _FootprintRow("-1", None, False, "음수 — 점유폭이 될 수 없다"),
+    _FootprintRow("0", None, False, "0 — 양수 판정의 바로 아래 칸(비-DMX)"),
+    _FootprintRow("1", 1, True, "1 — 양수 판정의 바로 위 칸(DMX 소비)"),
+    _FootprintRow("38", 38, True, "M0 실물 샘플 폭"),
+    _FootprintRow("abc", None, False, "비파싱"),
+)
+
+
+class TestRound17FootprintPositivityBoundary:
+    """[round17] `_parse_footprint`의 `value > 0` 양끝."""
+
+    def test_the_table_covers_both_sides_of_the_positivity_test(self):
+        """[round17 표 전수] 행을 지우면 실패한다."""
+        assert len(_R17_FOOTPRINT_ROWS) == 8, "행수 리터럴 — 행 삭제/추가 감지"
+        assert len({row.raw for row in _R17_FOOTPRINT_ROWS}) == 8, "같은 입력이 두 번 들어갔다"
+        # 경계 양끝(0 · 1)이 둘 다 있어야 `> 0`이 고정된다.
+        assert {"0", "1"} <= {row.raw for row in _R17_FOOTPRINT_ROWS if row.raw is not None}
+        # 비공허성 — 두 결론이 모두 표에 있다.
+        assert {row.dmx_consuming for row in _R17_FOOTPRINT_ROWS} == {True, False}
+
+    @pytest.mark.parametrize("row", _R17_FOOTPRINT_ROWS, ids=lambda r: f"fp{r.raw!r}")
+    def test_parse_footprint_accepts_only_positive_widths(self, row):
+        """[round17] `rig.py`의 `return value if value > 0 else None`을 `>= 0`으로
+        바꾸면 `"0"` 행이 0을 돌려주며 실패한다. `> 1`로 바꾸면 `"1"` 행이 실패한다."""
+        assert _parse_footprint(row.raw) == row.parsed, row.note
+
+    @pytest.mark.parametrize("row", _R17_FOOTPRINT_ROWS, ids=lambda r: f"fp{r.raw!r}")
+    def test_only_a_positive_footprint_keeps_an_accessory_in_the_designed_rig(self, row):
+        """[round17 종단] 같은 경계가 **공개 진입점**에서 어떤 판정이 되는지 고정한다 —
+        액세서리 계열 행은 양수 점유폭이 있을 때만 대조 계수에 남는다(REQ-VWX-014).
+        `> 0`을 `>= 0`으로 바꾸면 footprint `"0"`인 액세서리가 리그에 들어와 실패한다."""
+        records = [rr(0, unit_number="1", device_type="Accessory", footprint=row.raw)]
+        rig = build_designed_rig(records)
+        assert (len(rig.fixtures) == 1) is row.dmx_consuming, row.note
+
+    @pytest.mark.parametrize("row", _R17_FOOTPRINT_ROWS, ids=lambda r: f"fp{r.raw!r}")
+    def test_a_non_accessory_row_is_never_dropped_for_its_footprint(self, row):
+        """[round17 비공허성] 위 배제가 **액세서리 갈래에 한정**됨을 같은 표로 보인다 —
+        액세서리가 아닌 행은 점유폭이 0이든 없든 리그에 남는다. 배제 조건에서
+        `_is_accessory_row` 검사를 빼면 여기서 전 행이 실패한다."""
+        records = [rr(0, unit_number="1", device_type="Light Fixture", footprint=row.raw)]
+        rig = build_designed_rig(records)
+        assert len(rig.fixtures) == 1, row.note

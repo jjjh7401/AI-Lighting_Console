@@ -504,7 +504,9 @@ def _module_package(path: Path) -> str:
 
 # 모듈명을 **문자열로** 받는 동적 import 호출. `importlib.import_module(...)` 같은 점 표기와
 # `from importlib import import_module` 뒤의 bare 호출을 모두 잡는다.
-_DYNAMIC_IMPORT_CALLEES = frozenset({"import_module", "__import__"})
+#: [round17 S17-01] `find_spec`을 더했다 — `importlib.util.find_spec("server.bridge")`는
+#: 모듈을 해석해 봉인 대상 패키지를 실제로 임포트한다(런타임 확인). 어휘 밖이면 무게이트였다.
+_DYNAMIC_IMPORT_CALLEES = frozenset({"import_module", "__import__", "find_spec"})
 
 
 def _imported_modules(source: str, *, package: str = "server.vwx") -> set[str]:
@@ -520,9 +522,21 @@ def _imported_modules(source: str, *, package: str = "server.vwx") -> set[str]:
       4. `importlib.import_module("server.bridge")` — 모듈명이 **상수 문자열 인자**다
       5. `__import__("server.safety")`              — 같은 이유
 
+    [round17 S17-01] 그 판도 **`node.args`만** 봤다. 적대 감사가 통과하는 8형태를 더 실증했다:
+
+      6. `importlib.import_module(name="server.bridge")`     — 모듈명이 **키워드 인자**다
+      7. `__import__(name="server.safety")`                  — 같은 이유
+      8. `importlib.import_module(".gate", package="server.safety")` — 앵커가 키워드에
+      9. `importlib.util.find_spec("server.bridge")`         — 호출자 어휘 밖이었다
+     10. `importlib.import_module("server" + ".bridge")`     — 인자가 **상수가 아니다**
+     11. `importlib.import_module(_NAME)`                    — 이름 바인드 상수
+     12. `importlib.import_module(f"server.{_LEAF}")`        — f-string
+     13. `importlib.import_module(*_ARGS)`                   — 스타드 인자
+
     그래서 (a) `node.level > 0`이면 `package`를 기준으로 절대명을 **복원**하고,
     (b) `ImportFrom`의 alias 이름을 모듈명에 **이어 붙인 형태도 함께** 싣고,
-    (c) 동적 import 호출의 **상수 문자열 인자**를 수집한다.
+    (c) 동적 import 호출의 상수 문자열을 **위치 인자와 키워드 인자 양쪽에서** 수집하며,
+    (d) 상수가 아닌 인자는 `_UNREADABLE_DYNAMIC_IMPORT` 표식으로 **그 자체를 위반**으로 올린다.
     """
     tree = ast.parse(source)
     names: set[str] = set()
@@ -546,11 +560,17 @@ def _imported_modules(source: str, *, package: str = "server.vwx") -> set[str]:
             else:
                 callee_name = None
             if callee_name in _DYNAMIC_IMPORT_CALLEES:
-                names.update(
-                    argument.value
-                    for argument in node.args
-                    if isinstance(argument, ast.Constant) and isinstance(argument.value, str)
-                )
+                # [round17 S17-01] **위치 인자와 키워드 인자를 함께** 본다. round16 판은
+                # `node.args`만 봤고, 적대 감사가 `import_module(name="server.bridge")` 등
+                # 키워드 형태 2종과 `package="server.safety"` 상대 동적 import를 실증했다
+                # (런타임 동등성 확인됨).
+                arguments = [*node.args, *(keyword.value for keyword in node.keywords)]
+                for argument in arguments:
+                    if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
+                        names.add(argument.value)
+                    else:
+                        # 문자열을 정적으로 못 읽으면 **봉인할 수 없다** — 그 자체가 위반이다.
+                        names.add(f"{_UNREADABLE_DYNAMIC_IMPORT}:{type(argument).__name__}")
     return names
 
 
@@ -561,14 +581,29 @@ def _imported_modules(source: str, *, package: str = "server.vwx") -> set[str]:
 # (`patchplan.FidPropertyPort`·`typemap.LibraryPort` 선례).
 _CONSOLE_WARD_MODULES = ("server.bridge", "pythonosc", "server.safety")
 
+#: [round17 S17-01] 동적 import 인자를 **정적으로 읽을 수 없을 때** 붙는 표식.
+#: `importlib.import_module(_NAME)`·`import_module("server" + ".bridge")`·f-string·`*args`는
+#: 문자열이 소스에 없으므로 접두사 대조가 원리적으로 불가능하다. 그것 **자체가 위반**이다 —
+#: 읽을 수 없는 것은 봉인할 수 없고, 봉인이 성립하지 않는 코드를 통과시키면 게이트가 장식이 된다.
+_UNREADABLE_DYNAMIC_IMPORT = "<unreadable-dynamic-import>"
+
+#: 정적으로 읽을 수 없는 인자의 AST 노드 종류 — 적대 감사가 실증한 네 형태.
+_UNREADABLE_DYNAMIC_ARGUMENT_KINDS = ("BinOp", "JoinedStr", "Name", "Starred")
+
+_CONSOLE_WARD_OFFENDER_PREFIXES = (*_CONSOLE_WARD_MODULES, _UNREADABLE_DYNAMIC_IMPORT)
+
 
 def _console_ward_offenders(source: str, *, package: str = "server.vwx") -> list[str]:
-    """봉인에 걸리는 import 이름을 **정렬·중복제거해** 돌려준다."""
+    """봉인에 걸리는 import 이름을 **정렬·중복제거해** 돌려준다.
+
+    [round17 S17-01] `_UNREADABLE_DYNAMIC_IMPORT` 표식도 위반으로 센다 — 동적 import의
+    모듈명을 정적으로 읽을 수 없으면 **봉인이 성립하지 않기** 때문이다.
+    """
     return sorted(
         {
             name
             for name in _imported_modules(source, package=package)
-            if name.startswith(_CONSOLE_WARD_MODULES)
+            if name.startswith(_CONSOLE_WARD_OFFENDER_PREFIXES)
         }
     )
 
@@ -601,9 +636,12 @@ def test_the_seal_scan_discovery_is_recursive(tmp_path: Path):
 
 
 # 심는 대조군 — **봉인을 우회하는 형태를 표로 열거**한다(HARD 규율 1: 형제 축을 표로).
-# 앞 3형태는 이전 판(절대 import)이고, 뒤 5형태는 적대 감사가 실측한 우회로다.
-# `expected`는 그 소스에서 스캐너가 내야 하는 **정렬된 위반 이름 전부**다 — 앞 3형태의
-# 기대값이 넓어진 것은 alias 이어붙이기가 추가됐기 때문이며, 약화가 아니라 강화다.
+# 1~3행은 round14 판(절대 import), 4~8행은 round15 적대 감사가 실측한 우회로,
+# **9~16행은 round17 S17-01이 실측한 우회로**다 — 키워드 인자 2종 · 상대 동적 import의
+# 앵커 키워드 · `find_spec` · 그리고 **정적으로 읽을 수 없는 인자 4형태**.
+# `expected`는 그 소스에서 스캐너가 내야 하는 **정렬된 위반 이름 전부**다.
+# 9~12행의 런타임 동등성은 실행으로 확인했다(`import_module(name=...)`·`__import__(name=...)`·
+# `import_module(".util", package=...)`·`util.find_spec(...)` 모두 실제로 모듈을 해석한다).
 _CONSOLE_IMPORT_PLANTS = (
     (
         "absolute_bridge",
@@ -637,6 +675,46 @@ _CONSOLE_IMPORT_PLANTS = (
         '_gate = getattr(__import__("server.safety"), "gate")',
         ("server.safety",),
     ),
+    (
+        "importlib_keyword_argument",
+        'import importlib\n\n_gate = importlib.import_module(name="server.bridge")',
+        ("server.bridge",),
+    ),
+    (
+        "dunder_import_keyword_argument",
+        '_gate = __import__(name="server.safety")',
+        ("server.safety",),
+    ),
+    (
+        "relative_dynamic_import_anchor_keyword",
+        'import importlib\n\n_gate = importlib.import_module(".gate", package="server.safety")',
+        ("server.safety",),
+    ),
+    (
+        "find_spec_resolves_the_module",
+        'import importlib.util\n\n_spec = importlib.util.find_spec("server.bridge")',
+        ("server.bridge",),
+    ),
+    (
+        "concatenated_constant",
+        'import importlib\n\n_gate = importlib.import_module("server" + ".bridge")',
+        ("<unreadable-dynamic-import>:BinOp",),
+    ),
+    (
+        "name_bound_constant",
+        'import importlib\n\n_NAME = "server.bridge"\n_gate = importlib.import_module(_NAME)',
+        ("<unreadable-dynamic-import>:Name",),
+    ),
+    (
+        "f_string_constant",
+        'import importlib\n\n_LEAF = "bridge"\n_gate = importlib.import_module(f"server.{_LEAF}")',
+        ("<unreadable-dynamic-import>:JoinedStr",),
+    ),
+    (
+        "starred_argument",
+        'import importlib\n\n_ARGS = ("server.bridge",)\n_gate = importlib.import_module(*_ARGS)',
+        ("<unreadable-dynamic-import>:Starred",),
+    ),
 )
 
 
@@ -646,10 +724,11 @@ _CONSOLE_IMPORT_PLANTS = (
     ids=[name for name, _, _ in _CONSOLE_IMPORT_PLANTS],
 )
 def test_console_import_scanner_control_is_caught(plant, expected):
-    """AC-018③ 비공허성 — **8형태 전부** 심은 사본에서 스캐너가 실제로 잡는다.
+    """AC-018③ 비공허성 — **16형태 전부** 심은 사본에서 스캐너가 실제로 잡는다.
 
-    [round15 B] 뒤 5형태는 이전 스캐너를 **그대로 통과했다**(실측). 어느 형태의 수집을
-    되돌려도 그 행이 빈 목록을 받아 실패한다.
+    [round15 B] 4~8행은 round14 스캐너를 **그대로 통과했다**(실측).
+    [round17 S17-01] 9~16행은 round16 스캐너를 **그대로 통과했다**(실측, 런타임 동등성 확인).
+    어느 형태의 수집을 되돌려도 그 행이 빈 목록을 받아 실패한다.
     """
     assert _console_ward_offenders(APPLY_SOURCE + "\n\n" + plant + "\n") == sorted(expected)
 
@@ -1530,6 +1609,7 @@ def test_the_console_axis_classification_probe_is_not_vacuous():
 
 
 #: `_CONSOLE_IMPORT_PLANTS`의 **축소 트립와이어**. 우회 형태를 하나 지우면 어긋난다.
+#: [round17 S17-01] 8행 → **16행**. 뒤 8행은 round16 스캐너를 그대로 통과한 우회로다.
 _ROUND16_CONSOLE_IMPORT_PLANT_IDS = frozenset(
     {
         "absolute_bridge",
@@ -1540,6 +1620,14 @@ _ROUND16_CONSOLE_IMPORT_PLANT_IDS = frozenset(
         "alias_is_the_submodule",
         "importlib_string_argument",
         "dunder_import_string_argument",
+        "importlib_keyword_argument",
+        "dunder_import_keyword_argument",
+        "relative_dynamic_import_anchor_keyword",
+        "find_spec_resolves_the_module",
+        "concatenated_constant",
+        "name_bound_constant",
+        "f_string_constant",
+        "starred_argument",
     }
 )
 
@@ -1581,31 +1669,54 @@ def _round16_plant_mechanisms(plant: str) -> frozenset[tuple[str, str]]:
             callee = node.func
             name = callee.attr if isinstance(callee, ast.Attribute) else getattr(callee, "id", None)
             if name in _DYNAMIC_IMPORT_CALLEES:
+                # [round17 S17-01] 위치 인자·키워드 인자·**읽을 수 없는 인자**를 서로 다른
+                # 기제로 태그한다. 셋을 뭉치면 한 형태만 잡혀도 다른 형태가 가려진다.
                 for argument in node.args:
                     if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
                         module = ward(argument.value)
                         if module:
                             tagged.add((f"dynamic:{name}", module))
+                    else:
+                        tagged.add(
+                            (
+                                f"dynamic_unreadable:{name}",
+                                f"{_UNREADABLE_DYNAMIC_IMPORT}:{type(argument).__name__}",
+                            )
+                        )
+                for keyword in node.keywords:
+                    argument = keyword.value
+                    if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
+                        module = ward(argument.value)
+                        if module:
+                            tagged.add((f"dynamic_kw:{name}", module))
+                    else:
+                        tagged.add(
+                            (
+                                f"dynamic_unreadable:{name}",
+                                f"{_UNREADABLE_DYNAMIC_IMPORT}:{type(argument).__name__}",
+                            )
+                        )
     return frozenset(tagged)
 
 
 def test_the_console_import_plant_table_covers_every_bypass_mechanism_and_every_ward():
     """`_CONSOLE_IMPORT_PLANTS` 전단사 — 행을 지우거나 기제를 놓치면 실패한다.
 
-    [round16 A1] 8행 중 어느 행을 지워도 id 집합 단정이 실패한다 — 이전에는 우회 형태
+    [round16 A1] 16행 중 어느 행을 지워도 id 집합 단정이 실패한다 — 이전에는 우회 형태
       한 줄을 지워도 스위트가 조용히 축소됐다.
-    [round16] 두 행이 같은 (기제, 봉인 모듈) 쌍을 덮으면 단사성 단정이 실패한다 —
+    [round16] 두 행이 같은 (기제, 표적) 쌍을 덮으면 단사성 단정이 실패한다 —
       중복 행은 곧 "지워도 되는 행"이다.
     [round16] `_CONSOLE_WARD_MODULES`에 모듈을 더하면 그 모듈을 심는 행이 없어 실패한다.
-    [round16] `_DYNAMIC_IMPORT_CALLEES`에 호출자를 더하면 그 기제를 심는 행이 없어 실패한다.
+    [round16] `_DYNAMIC_IMPORT_CALLEES`에 호출자를 더하면 그 호출자를 심는 행이 없어 실패한다.
+    [round17 S17-01] 수집 **계열**(`dynamic` · `dynamic_kw` · `dynamic_unreadable`) 중
+      하나를 스캐너에서 되돌리면 그 계열을 덮는 행이 사라져 실패한다.
+    [round17 S17-01] `_UNREADABLE_DYNAMIC_ARGUMENT_KINDS`에 종류를 더하면 그 종류를 심는
+      행이 없어 실패한다.
     """
     names = [name for name, _, _ in _CONSOLE_IMPORT_PLANTS]
     assert len(names) == len(set(names)) == len(_ROUND16_CONSOLE_IMPORT_PLANT_IDS)
     assert set(names) == _ROUND16_CONSOLE_IMPORT_PLANT_IDS
 
-    mechanisms = {"import", "from_absolute", "from_relative", "from_alias"} | {
-        f"dynamic:{callee}" for callee in _DYNAMIC_IMPORT_CALLEES
-    }
     tagged_by_name: dict[str, tuple[str, str]] = {}
     for name, plant, _expected in _CONSOLE_IMPORT_PLANTS:
         tags = _round16_plant_mechanisms(plant)
@@ -1614,8 +1725,20 @@ def test_the_console_import_plant_table_covers_every_bypass_mechanism_and_every_
         tagged_by_name[name] = next(iter(tags))
 
     assert len(set(tagged_by_name.values())) == len(tagged_by_name), tagged_by_name
-    assert {mechanism for mechanism, _ in tagged_by_name.values()} == mechanisms
-    assert {module for _, module in tagged_by_name.values()} == set(_CONSOLE_WARD_MODULES)
+
+    observed = {mechanism for mechanism, _ in tagged_by_name.values()}
+    # ① 정적 기제 넷 + 동적 계열 셋이 **전부** 덮인다.
+    families = {"import", "from_absolute", "from_relative", "from_alias"}
+    families |= {"dynamic", "dynamic_kw", "dynamic_unreadable"}
+    assert {mechanism.split(":", 1)[0] for mechanism in observed} == families
+    # ② 동적 호출자 어휘가 **전부** 덮인다 — 어휘에 더하면 심는 행이 있어야 한다.
+    assert {mechanism.split(":", 1)[1] for mechanism in observed if ":" in mechanism} == set(
+        _DYNAMIC_IMPORT_CALLEES
+    )
+    # ③ 표적 전수 — 봉인 모듈 셋 + 읽을 수 없는 인자 종류 넷.
+    assert {target for _, target in tagged_by_name.values()} == set(_CONSOLE_WARD_MODULES) | {
+        f"{_UNREADABLE_DYNAMIC_IMPORT}:{kind}" for kind in _UNREADABLE_DYNAMIC_ARGUMENT_KINDS
+    }
 
 
 def test_the_console_import_plant_mechanism_tagger_sees_nothing_in_clean_production():
