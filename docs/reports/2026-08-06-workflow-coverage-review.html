@@ -97,7 +97,7 @@
   <div class="docmeta">
     <b>대상</b> AI-Lighting_Console (grandMA3 onPC 코파일럿) ·
     <b>작성일</b> 2026-08-06 ·
-    <b>기준 커밋</b> <code>5a64475</code> (origin/main 계열) ·
+    <b>기준 커밋</b> <code>d845ca0</code> (<code>jjjh7401/paperwork-p0</code>) ·
     <b>관점</b> 공연기획 → 조명연출/감독 → 콘솔 오퍼레이터 → 조명세팅/운영
   </div>
   <div class="docmeta" style="margin-top:6px">
@@ -116,13 +116,20 @@
   그래서 다음 착수 항목은 기능 코딩이 아니라 <b>벽의 높이를 재는 라이브 측정 3건</b>이다(§6 P1).
 </p>
 
+<div class="note warn">
+  <b>정정 이력 (2026-08-07)</b> — 이 리포트의 초판은 <code>origin/main</code>보다 <b>40커밋 뒤</b>인 로컬 브랜치에서 작성돼
+  머지된 SPEC 5건(SPATIAL·GROUPGEN·WRITEGATE·TRUNCATE·AXISCORE)을 몰랐다. <b>정정 15건을 반영했다</b> —
+  툴 개수 · 완결 SPEC 수 · 관측 벽 6번째(그룹 멤버십) 누락 · 인수인계 패키지 상태 · 플롯 선행조건 ·
+  P0-4/P1-6 항목 소멸. 정정된 항목에는 <span class="b b-wall">정정</span> 배지가 붙어 있다.
+</div>
+
 <div class="kpis">
-  <div class="kpi"><div class="n">18</div><div class="l">모델 호출 가능 툴 (<code>TOOL_NAMES</code>)</div></div>
-  <div class="kpi"><div class="n">4,251</div><div class="l">자동 테스트 (pytest 수집)</div></div>
-  <div class="kpi"><div class="n">12</div><div class="l">완결 SPEC (<code>status: completed</code>)</div></div>
+  <div class="kpi"><div class="n">22 <span style="font-size:13px;font-weight:600;color:#5b6472">/ 19</span></div><div class="l">모델 호출 가능 툴 — <code>origin/main</code> 22 / 이 브랜치 19</div></div>
+  <div class="kpi"><div class="n">4,300</div><div class="l">자동 테스트 (이 브랜치 실측. <code>main</code> 계열은 미측정)</div></div>
+  <div class="kpi"><div class="n">14</div><div class="l">완결 SPEC (<code>origin/main</code> frontmatter 실측)</div></div>
   <div class="kpi"><div class="n">32 / 12 / 5</div><div class="l">룩 / 이펙트 / 씬 자산</div></div>
   <div class="kpi"><div class="n">0.40%</div><div class="l">측정된 문법 오류율 (1/248)</div></div>
-  <div class="kpi"><div class="n">5</div><div class="l">구조적 관측 벽 (§4)</div></div>
+  <div class="kpi"><div class="n">6</div><div class="l">구조적 관측 벽 (§4)</div></div>
 </div>
 <p class="src">
   근거 — <code>server/orchestrator/tools.py:89-108</code> ·
@@ -156,9 +163,9 @@
       <rect x="258" y="24" width="234" height="112" rx="6" fill="#fdf3dc" stroke="#dcc48a"/>
       <text x="272" y="46" font-size="12.5" font-weight="700">② 조명연출 · 감독 (LD)</text>
       <text x="272" y="64" font-size="10.5" fill="#5b6472">디자인 · 페이퍼워크</text>
-      <text x="272" y="86" font-size="11" fill="#9a6b00" font-weight="700">커버리지 ≈ 55%</text>
-      <text x="272" y="104" font-size="10.5" fill="#5b6472">룩·이펙트·씬 어휘 / 큐 초안</text>
-      <text x="272" y="120" font-size="10.5" fill="#5b6472">시트 3종 (매직시트 없음)</text>
+      <text x="272" y="86" font-size="11" fill="#9a6b00" font-weight="700">커버리지 ≈ 70%</text>
+      <text x="272" y="104" font-size="10.5" fill="#5b6472">룩·fx·씬·공간 어휘 / 큐 초안</text>
+      <text x="272" y="120" font-size="10.5" fill="#5b6472">시트 4종 (매직시트 완전형 불가)</text>
     </g>
     <g>
       <rect x="508" y="24" width="234" height="112" rx="6" fill="#e8f6ee" stroke="#a7d6ba"/>
@@ -174,7 +181,7 @@
       <text x="772" y="64" font-size="10.5" fill="#5b6472">크루 · 볼런티어 오퍼레이터</text>
       <text x="772" y="86" font-size="11" fill="#1b7f4b" font-weight="700">커버리지 ≈ 75%</text>
       <text x="772" y="104" font-size="10.5" fill="#5b6472">패치 점검 / 프리쇼 / 런북</text>
-      <text x="772" y="120" font-size="10.5" fill="#5b6472">큐 진행 모니터</text>
+      <text x="772" y="120" font-size="10.5" fill="#5b6472">큐 진행 모니터 / 배치 그룹 생성</text>
     </g>
     <!-- arrows -->
     <line x1="244" y1="80" x2="256" y2="80" stroke="#8b95a5" stroke-width="1.6" marker-end="url(#ar)"/>
@@ -186,7 +193,7 @@
       <rect x="8" y="186" width="234" height="14" rx="3" fill="#eceff3"/>
       <rect x="8" y="186" width="23" height="14" rx="3" fill="#a52222"/>
       <rect x="258" y="186" width="234" height="14" rx="3" fill="#eceff3"/>
-      <rect x="258" y="186" width="129" height="14" rx="3" fill="#c99422"/>
+      <rect x="258" y="186" width="164" height="14" rx="3" fill="#c99422"/>
       <rect x="508" y="186" width="234" height="14" rx="3" fill="#eceff3"/>
       <rect x="508" y="186" width="211" height="14" rx="3" fill="#1b7f4b"/>
       <rect x="758" y="186" width="254" height="14" rx="3" fill="#eceff3"/>
@@ -195,7 +202,7 @@
     <!-- wall band -->
     <rect x="8" y="216" width="1004" height="36" rx="5" fill="#eeeef8" stroke="#c3c3e0"/>
     <text x="22" y="239" font-size="11" fill="#3f3f6e">
-      전 단계를 관통하는 제약 — 쇼파일 파서 0건 · 큐 시간/트리거 판독 불가 · 픽스처 하드웨어 피드백 0건 · 픽스처↔채널폭 조인 0건 · 페이로드 예산 1900B(픽스처 19개에서 절단)
+      전 단계를 관통하는 제약 6건 — 그룹 멤버십 판독 불가(MA3 플랫폼 한계) · 쇼파일 파서 0건 · CueFade·큐 내용 판독 불가 · 픽스처 하드웨어 피드백 0건 · 픽스처↔채널폭 조인 0건 · 페이로드 1900B(39대 리그에서 18/39 절단)
     </text>
   </g>
 </svg>
@@ -278,7 +285,7 @@
             <span class="src">BUSKWIZ-001, <code>prepare_busking</code></span></li>
           <li><span class="b b-ok">완료</span> <b>실행기 레이아웃 자동 배치 계획</b>(계획만, 발신 없음).
             <span class="src"><code>plan_executor_layout</code>, <code>server/looks/layout.py</code></span></li>
-          <li><span class="b b-ok">완료</span> <b>페이퍼워크 3종 HTML</b> — 패치시트(=훅업 차트) · 큐시트 · 프리셋 목록.
+          <li><span class="b b-ok">완료</span> <span class="b b-wall">정정</span> <b>페이퍼워크 4종 HTML</b> — 패치시트(≈훅업 차트) · 큐시트 · 프리셋 목록 · <b>인수인계 팩 인덱스</b>.
             자체완결 HTML(외부 리소스 0, <code>@media print</code> 포함).
             <span class="src">PAPERWORK-001, <code>server/paperwork/{data,render,output}.py</code>,
             <code>build_patch_sheet</code>·<code>build_cue_sheet</code>·<code>build_preset_list</code></span></li>
@@ -288,14 +295,22 @@
       <dt>없는 것 (갭)</dt>
       <dd>
         <ul class="tight">
-          <li><span class="b b-no">미구현</span> <b>매직시트</b> — 코드·테스트 <b>0건</b>. 필요한 조인이 “그룹 → 어느 픽스처”인데
-            오브젝트 트리 자식에서 꺼내는 필드가 <code>name</code> 하나뿐이라(<code>server/safety/console.py:471-484</code>)
-            <b>그룹 멤버십 관측 경로가 미확정</b>이다. → §6 P1-②의 측정 대상.</li>
-          <li><span class="b b-wall">관측 벽</span> <b>큐시트에 “언제 얼마나 밝나”가 없다</b> — 큐 <b>번호·이름만</b> 나온다.
-            <code>CueFade</code>·<code>TrigType</code>·<code>TrigTime</code>은 재조회 자료구조에 자리가 없다.
+          <li><span class="b b-no">완전형 불가</span> <span class="b b-wall">정정</span> <b>매직시트</b> — 필요한 조인이 “그룹 → 어느 픽스처”인데
+            <b>그 판독은 MA3 플랫폼 한계로 확정 NEGATIVE다</b>. 미확정이 아니라 <b>측정이 끝났고 답이 “불가”</b>다 —
+            <code>prop</code> 사다리 9종 + 접근자 <code>COUNT</code>가 전량 닫혔고, 실사용 그룹 4개 전부 <code>0</code>인데
+            날조 대조군은 <code>ok:false</code>였다(→ 그 <code>0</code>은 실제 판독값이며 응답기 결함이 아니다).
+            <span class="src"><code>.moai/specs/SPEC-COPILOT-GROUPGEN-001/spec.md:361-363</code>, <code>progress.md:387-389</code></span>
+            → 실현형은 <b>이름·좌표 기반 축약 시트</b>이며 <b>측정 없이 지금 착수 가능</b>하다(§5 P0-5).</li>
+          <li><span class="b b-wall">관측 벽</span> <span class="b b-wall">정정</span> <b>큐시트에 “얼마나 밝나”가 없다</b> — 큐 <b>번호·이름만</b> 나온다.
+            <b>단 벽이 부분적으로 무너졌다</b>: 응답기 v1.5.0이 <code>prop</code> 동사를 추가해
+            <b><code>TrigType</code>·<code>TrigTime</code>은 판독 가능</b>하다(<code>SPEC-COPILOT-SCENE-001/spec.md:230</code>).
+            여전히 못 읽는 것은 <b><code>CueFade</code>와 큐의 내용(저장된 값)</b> 둘뿐이다(<code>:231-232</code>).
             추정으로 채우는 것은 <b>금지</b>(“관측하지 않은 것을 보고하지 않는다”).
             <span class="src"><code>.moai/specs/SPEC-COPILOT-SONGCUE-001/research.md:130,136-137</code></span></li>
-          <li><span class="b b-no">미구현</span> <b>플롯 · 포커스 차트</b> — 픽스처의 무대 좌표/포커스 정보 판독 경로 없음. previz·MVR 연동 0건.</li>
+          <li><span class="b b-part">절반 해소</span> <span class="b b-wall">정정</span> <b>플롯 · 포커스 차트</b> —
+            <b>무대 좌표는 읽힌다.</b> <code>get_spatial_context</code>가 픽스처별 <code>(fid, name, x, y, z)</code>를 판독한다
+            (<code>SPEC-COPILOT-SPATIAL-001/spec.md:52</code>, <code>status: completed</code>). 남은 미판독은 <b>포커스</b>뿐이며
+            플롯 축의 선행 조건은 이미 충족됐다. previz·MVR <b>쓰기</b>는 여전히 0건.</li>
           <li><span class="b b-part">부분</span> <b>훅업 차트에 채널 “폭”이 없다</b> — 시작 주소(<code>Patch</code> = <code>'1.001'</code>)만 읽히고
             폭은 조인 불가(<code>ASSUMPTION-27</code> 부정, 후보 12경로 전부 반증). 대신 <b>열거 가능한 모드 중 최대폭</b>이라는
             상계가 별도 모듈에 있으나 <b>시트에는 아직 안 실렸다</b>.
@@ -412,8 +427,11 @@
             <b>대형 리그에서 “전량”을 볼 수 없다</b>.
             <span class="src"><code>PRECHK-001/research.md:112-123</code>, <code>copilot_responder.lua:33-39,610,634-639</code></span></li>
           <li><span class="b b-no">미구현</span> <b>포커싱 지원</b>(어디를 비추는지) — 관측 경로 자체가 미조사.</li>
-          <li><span class="b b-no">미구현</span> <b>인수인계 패키지</b> — 시트 3종은 개별 파일이고,
-            “이 쇼를 넘겨받는 사람이 열어보는 한 묶음”은 없다. 제안서가 든 기대효과(“인수인계 용이”)의 마지막 한 걸음.</li>
+          <li><span class="b b-ok">완료</span> <span class="b b-wall">정정</span> <b>인수인계 패키지</b> —
+            <code>build_handover_pack</code>이 시트 3종 + <code>index.html</code>을 한 폴더로 묶고,
+            인덱스 첫 화면에 <b>각 시트가 리그를 얼마나 봤는지</b>를 먼저 싣는다.
+            <span class="src"><code>server/paperwork/bundle.py</code>, <code>server/orchestrator/tools.py</code> 툴 등록</span>
+            남은 것은 <b>UI 버튼뿐</b>이며 그건 §5 P0-1에 흡수된다.</li>
         </ul>
       </dd>
     </dl>
@@ -448,10 +466,20 @@
         <td>이펙트 어휘 12종 · 씬 컴파일러(룩+fx+타이밍→큐 1개)</td><td class="c">②</td></tr>
     <tr><td>PRECHK-001 · OVERLAP-001</td><td class="c"><span class="b b-ok">완료</span></td>
         <td>패치 정합성 점검 · 응답 확인 매크로 · 구간 겹침 상계 판정</td><td class="c">④</td></tr>
-    <tr><td>PAPERWORK-001</td><td class="c"><span class="b b-ok">완료</span></td>
-        <td>패치시트 · 큐시트 · 프리셋 목록 (조회 전용 HTML)</td><td class="c">②</td></tr>
-    <tr><td>PRESHOW-001</td><td class="c"><span class="b b-ok">완료</span></td>
-        <td>프리쇼 점검 4종 + 함정 진단 3종</td><td class="c">④</td></tr>
+    <tr><td>SPATIAL-001</td><td class="c"><span class="b b-ok">완료</span></td>
+        <td><span class="b b-wall">정정 — 초판 누락</span> 픽스처 3D 좌표 판독 <code>(fid,name,x,y,z)</code> + 공간 배치 인식·생성</td><td class="c">②④</td></tr>
+    <tr><td>GROUPGEN-001</td><td class="c"><span class="b b-ok">완료</span></td>
+        <td><span class="b b-wall">정정 — 초판 누락</span> 위상 분류 6종 + 배치 인식 그룹 자동 생성(승인 강제). 게이트 A에서 <b>멤버십 판독 불가 = 플랫폼 한계</b>를 확정</td><td class="c">②④</td></tr>
+    <tr><td>WRITEGATE-001</td><td class="c"><span class="b b-part">in-progress</span></td>
+        <td><span class="b b-wall">정정 — 초판 누락</span> 좌표 기록의 게이트 risky 분류 + 승인 흐름(<code>blacklist.yaml</code> v2)</td><td class="c">③</td></tr>
+    <tr><td>TRUNCATE-001</td><td class="c"><span class="b b-no">draft</span></td>
+        <td><span class="b b-wall">정정 — 초판 누락</span> 절단 고지의 <b>구조적</b> 강제 — 부분 판독은 완전형 키를 아예 내주지 않는다</td><td class="c">③④</td></tr>
+    <tr><td>AXISCORE-001</td><td class="c"><span class="b b-no">draft</span></td>
+        <td><span class="b b-wall">정정 — 초판 누락</span> 축 점수 정규화 + 배제 규칙 삭제(판정 변경 33건)</td><td class="c">②</td></tr>
+    <tr><td>PAPERWORK · PRESHOW</td><td class="c"><span class="b b-ok">완료</span></td>
+        <td><span class="b b-wall">정정</span> 패치·큐·프리셋 시트 + 인수인계 팩 / 프리쇼 점검 4종 + 함정 진단 3종.
+        <b>둘 다 <code>.moai/specs/</code>에 SPEC 디렉터리가 없다</b> — 경량 진행으로 구현된 <b>작업 묶음</b>이며
+        위 KPI의 “완결 SPEC 14건” 분모에 포함되지 않는다</td><td class="c">②④</td></tr>
     <tr><td>T-B / T-C / T-E / T-F / T-H</td><td class="c"><span class="b b-ok">완료</span></td>
         <td>쇼파일 스냅샷 보관 · 큐 진행 모니터 · 런북 모드 · 실행기 레이아웃 계획 · 실행 상태 시각화</td><td class="c">③④</td></tr>
     <tr><td>VWX-001</td><td class="c"><span class="b b-part">plan</span></td>
@@ -479,10 +507,23 @@
         <span class="src"><code>PRECHK-001/research.md:44-49,347</code></span></td>
       <td>모든 페이퍼워크가 <b>라이브 OSC 응답기 하나</b>에만 의존 → 콘솔이 꺼져 있으면 아무 문서도 못 만든다</td></tr>
 
-    <tr><td class="c">2</td><td><b>큐 시간·트리거 판독 불가</b></td>
-      <td>재조회 자식에서 꺼내는 필드가 <code>name</code> 하나. <code>CueFade</code>·<code>TrigType</code>·<code>TrigTime</code>을
-        담을 자리가 없다. <span class="src"><code>server/safety/console.py:471-484</code>, <code>SONGCUE-001/research.md:130,136-137</code></span></td>
-      <td>큐시트의 “언제 얼마나 밝나” 열 · 자동 진행 검증 · 타임코드</td></tr>
+    <tr><td class="c">2</td><td><b><code>CueFade</code>·큐 내용 판독 불가</b><br><span class="b b-wall">정정</span></td>
+      <td><b>초판이 이 벽을 과하게 넓게 적었다.</b> 응답기 v1.5.0이 <code>prop</code> 동사와 Cue 자식 <code>cueNo</code>를 추가해
+        <b><code>TrigType</code>·<code>TrigTime</code>은 판독 가능</b>하다 — 그 개정은 SONGCUE-001의 M0가 직접 집행했다.
+        여전히 판독 불가인 것은 <b><code>CueFade</code></b>와 <b>큐의 내용(저장된 값)</b> 둘이다.
+        <span class="src"><code>SPEC-COPILOT-SCENE-001/spec.md:230</code>(YES) · <code>:231-232</code>(NO) ·
+        <code>console/lua/copilot_responder.lua:55-57,593-594</code></span></td>
+      <td>큐시트의 “얼마나 밝나” 열 · 볼런티어 런북의 “무슨 일이 일어나는지”</td></tr>
+
+    <tr><td class="c">6</td><td><b>그룹 멤버십 판독 불가</b><br><span class="b b-wall">정정 — 신규</span></td>
+      <td><b>초판이 통째로 누락한 벽이며, 여섯 중 가장 강하다.</b> 그룹의 멤버 픽스처를 어떤 채널로도 읽을 수 없다.
+        <code>Group 13 'All'</code>은 <code>exec</code>가 <code>OK</code>인 실사용 그룹인데 <code>query_state</code>가
+        <code>childCount: 0</code>을 낸다. <code>prop</code> 사다리 9종 + 접근자 <code>COUNT</code> 전량 닫힘,
+        실사용 그룹 4개 전부 <code>0</code>, 날조 대조군은 <code>ok:false</code> —
+        <b>응답기 한계가 아니라 MA3 플랫폼 성질</b>이다(사다리 전부를 타 본 뒤의 결론).
+        <span class="src"><code>SPEC-COPILOT-GROUPGEN-001/spec.md:361-363</code>, <code>progress.md:387-389</code>,
+        교훈 <code>grandma3-group-membership-not-readable</code></span></td>
+      <td>매직시트 완전형 · 생성한 그룹의 멤버 재조회 검증 · 그룹 백업·복구(→ 점유 슬롯 덮어쓰기가 <b>복구 불가</b>)</td></tr>
 
     <tr><td class="c">3</td><td><b>픽스처 하드웨어 피드백 0건</b></td>
       <td>응답기는 <code>pcall(Cmd, …)</code> 결과 문자열만 분류한다. 동사 5종으로 닫혀 텔레메트리 자리가 없다.
@@ -530,10 +571,15 @@
       <td><code>server/prechk/footprint.py</code>가 이미 상계를 산출하는데 <b>시트에 안 실려 있다</b>.
         단, <b>비대칭 한정 문구를 같은 칸에</b> 실어야 한다(“이 폭 이상 간격이면 겹칠 수 없음. 미만은 미확정”).</td>
       <td class="c">②④</td><td class="c">소</td></tr>
-    <tr><td class="c">4</td><td><b>인수인계 패키지 1버튼</b></td>
-      <td>패치시트+큐시트+프리셋 목록+프리쇼 결과+최근 감사 요약을 <b>한 폴더/한 인덱스 HTML</b>로 묶는다.
-        제안서의 기대효과(“인수인계 용이”)에 직결되고 새 관측을 요구하지 않는다.</td>
-      <td class="c">②③④</td><td class="c">중</td></tr>
+    <tr><td class="c">4</td><td><s>인수인계 패키지 1버튼</s><br><span class="b b-wall">정정 — 구현 완료</span></td>
+      <td><code>build_handover_pack</code>이 이미 시트 3종 + 인덱스를 한 폴더로 묶는다(<code>server/paperwork/bundle.py</code>).
+        <b>남은 것은 UI 버튼뿐이며 P0-1에 흡수된다</b> — 별도 항목이 아니다.</td>
+      <td class="c">②③④</td><td class="c">—</td></tr>
+    <tr><td class="c">5</td><td><b>매직시트 축약형</b><br><span class="b b-wall">정정 — P1에서 승격</span></td>
+      <td><b>완전형은 죽었다</b>(벽 6: 멤버십 = 플랫폼 한계). 그러나 <b>축약형은 선행 측정이 0건이라 지금 착수 가능</b>하다 —
+        그룹·프리셋 <b>이름</b> + 패치 요약 + <b>배치 좌표</b>(<code>get_spatial_context</code>)로 한 장을 만든다.
+        SPATIAL이 좌표를 열었으므로 <b>평면 배치도 매직시트</b>가 초판 작성 시점보다 오히려 가능해졌다.</td>
+      <td class="c">②</td><td class="c">중</td></tr>
   </tbody>
 </table>
 
@@ -555,10 +601,10 @@
         <b>GO</b> → 큐시트가 진짜 큐시트가 된다(“언제 얼마나 밝나”).
         <b>NO-GO</b> → 명시적 DESCOPE로 확정하고 <b>추정 열은 만들지 않는다</b>.</td>
       <td class="c">②④</td></tr>
-    <tr><td class="c">6</td><td><b>그룹 멤버십</b> → 매직시트</td>
-      <td><code>state &lt;id&gt; DataPool/Groups/&lt;n&gt;</code> — 자식으로 픽스처가 나오는가.<br>
-        <b>GO</b> → “역할 → 픽스처 → 프리셋” 한 장 압축이 성립.
-        <b>NO-GO</b> → <b>이름 기반 축약 시트</b>로 재범위(그룹·프리셋 이름 + 패치 요약).</td>
+    <tr><td class="c">6</td><td><s>그룹 멤버십 → 매직시트</s><br><span class="b b-wall">정정 — 측정 소멸</span></td>
+      <td><b>그 발화는 이미 실행됐고 <code>childCount: 0</code>이었다.</b> 측정할 것이 남아 있지 않다 —
+        <code>GROUPGEN-001</code>이 사다리 전량을 타고 <b>플랫폼 한계</b>로 확정했다(<code>progress.md:387-389</code>).
+        NO-GO 분기(이름·좌표 기반 축약 시트)가 <b>유일한 실재 경로</b>이므로 <b>P0-5로 승격</b>했다.</td>
       <td class="c">②</td></tr>
     <tr><td class="c">7</td><td><b>채널 폭 직접 경로 재확인</b> → 확정 충돌 판정</td>
       <td><code>ASSUMPTION-27</code> 부정 시 <b>미측정으로 등재된 후보 2건</b>이 남아 있다
@@ -589,7 +635,12 @@
       <td class="c">①②</td></tr>
     <tr><td class="c">11</td><td><b>VWX-001 완주</b></td>
       <td>Vectorworks Instrument Data(CSV) → 설계 리그 → <code>precheck_patch</code> 대조.
-        <b>단계 ①→④를 잇는 유일한 상류 데이터 유입 경로</b>이며 쇼파일 파서 부재(벽 1)를 옆으로 우회한다.
+        <b>단계 ①→④를 잇는 유일한 상류 데이터 유입 경로</b>다. <span class="b b-wall">정정</span> 초판은 이것이
+        “쇼파일 파서 부재를 우회한다”고 적었으나 <b>거짓이다</b> — 대조의 <b>실측</b> 축은 여전히 라이브 OSC 하나뿐이고
+        콘솔이 꺼져 있으면 VWX 대조 리포트도 못 만든다. VWX가 실제로 여는 것은 오프라인 생성이 아니라
+        <b>설계 의도라는 제2 진리원</b>이다 — 콘솔 단독으로는 “패치가 틀렸다”를 말할 비교 대상이 없었다.
+        덤으로 VW의 <code>DMX Footprint</code> 컬럼은 <b>벽 5(채널폭)의 상계를 외부에서 공급할 유일한 경로</b>이나,
+        VW 모드명은 MA3 모드명과 문자열 일치하지 않으므로 <b>“설계상 폭”이라는 제3 근거값</b>으로만 실어야 한다.
         ⚠️ <b>같은 렌더 계층(<code>server/paperwork/</code>)을 건드리므로 매직시트보다 먼저 머지</b>해야 충돌이 적다
         (<code>VWX-001-brief.md:182-189</code>가 <code>render_patch_diff()</code> 자리를 이미 지목).</td>
       <td class="c">②④</td></tr>
@@ -604,8 +655,9 @@
 <table>
   <thead><tr><th class="c" style="width:34px">#</th><th style="width:220px">항목</th><th>판단</th></tr></thead>
   <tbody>
-    <tr><td class="c">13</td><td><b>플롯 · 포커스 차트</b></td>
-      <td>무대 좌표·포커스 판독 경로 미조사. MVR/GDTF 또는 VWX 경로가 선행. <b>P2-11 이후</b>.</td></tr>
+    <tr><td class="c">13</td><td><b>플롯 · 포커스 차트</b><br><span class="b b-wall">정정</span></td>
+      <td><b>“미조사”가 아니라 조사 완료·판독 성립.</b> <code>get_spatial_context</code>가 좌표를 읽는다(SPATIAL-001, <code>completed</code>).
+        VWX 선행 조건이 소멸했으므로 <b>플롯 축은 P1로 승격 가능</b>하며 <b>포커스 축만 P3 잔류</b>한다.</td></tr>
     <tr><td class="c">14</td><td><b>타임코드 쇼 빌드</b></td>
       <td>DESCOPE 유지 권장 — 벽 2·3에 정면으로 걸린다. 섹션 마커의 실체는 큐 이름 문자열이며 그건 이미 된다.</td></tr>
     <tr><td class="c">15</td><td><b>레퍼런스 이미지 → 룩</b>(P3-7)</td>
@@ -622,7 +674,8 @@
 <table>
   <thead><tr><th class="c" style="width:60px">순서</th><th>작업</th><th style="width:250px">완료 판정</th></tr></thead>
   <tbody>
-    <tr><td class="c">1</td><td><b>라이브 측정 3건</b>(P1-5·6·7) — 비파괴 읽기 전용, 판정만 기록</td>
+    <tr><td class="c">1</td><td><b>라이브 측정 2건</b>(P1-5 큐 프로퍼티 · P1-7 채널폭 후보 2건) — 비파괴 읽기 전용, 판정만 기록.
+      <span class="b b-wall">정정</span> P1-6은 이미 답이 나와 <b>측정 항목에서 소멸</b>했다</td>
       <td>각 항목이 GO / NO-GO / 재범위 중 하나로 <b>닫힌 어휘</b>로 기록됨</td></tr>
     <tr><td class="c">2</td><td><b>P0 4건</b> — UI 버튼 · PDF 경로 · 폭 상계 열 · 인수인계 패키지</td>
       <td>사람이 버튼 한 번으로 4종 문서를 손에 쥔다</td></tr>
