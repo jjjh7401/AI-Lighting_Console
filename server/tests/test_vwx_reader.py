@@ -6,6 +6,9 @@ fixture 이름은 ``design.md`` §6.1을 따른다.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import NamedTuple
+
+import pytest
 
 from server.vwx import reader
 from server.vwx.reader import (
@@ -17,6 +20,7 @@ from server.vwx.reader import (
     READ_FAILURE_NOT_PATCH_SOURCE,
     READ_FAILURE_UNAPPROVED_DEPENDENCY,
     READ_FAILURE_WORKSHEET_SUBTOTAL,
+    _looks_binary,
     read,
 )
 
@@ -384,3 +388,137 @@ class TestRealWorldNonPatchSourceIsRejectedStructurally:
         # 픽스처 0대 자체는 정상일 수 있으나(빈 도면), 이 경우는 판독 실패가
         # 동반되어야 "차이 없음"으로 오독되지 않는다 — 비공허성 핵심 assert.
         assert len(all_failures) >= 1
+
+
+# --- round17 판독 수치 경계 전수 (AddressGates) ---
+#
+# round17 HARD 규율 1 — 게이트가 모듈 경계에서 멈추지 않게 `server/vwx/` **전 모듈**의
+# 수치 경계 자리를 격리 사본 뮤테이션으로 훑었고(레지스트리는
+# `test_vwx_address.py::_R17_VWX_BOUNDARY_SITES`), `reader.py`에서 무대조군 3자리가
+# 나왔다: `_looks_binary`의 제어문자 임계 `ord(ch) < 32` · 비율 임계 `> 0.1` ·
+# `_extract_data_block`의 폭 일치 `len(row) == width`.
+
+
+class _BinarySniffRow(NamedTuple):
+    control_ord: int
+    control_count: int
+    filler_count: int
+    looks_binary: bool
+    note: str
+
+
+#: 제어문자 임계(32)·비율 임계(0.1)·제외 화이트스페이스(`\t\n\r`)·NUL 단락의 **양끝**.
+#: 비율은 `control_count / (control_count + filler_count)`로 손계산한 값이다.
+_R17_BINARY_SNIFF_ROWS: tuple[_BinarySniffRow, ...] = (
+    _BinarySniffRow(0x00, 1, 19, True, "NUL 한 개면 비율과 무관하게 이진(단락 분기)"),
+    _BinarySniffRow(0x01, 1, 9, False, "비율 정확히 0.1 — 임계는 초과여야 한다"),
+    _BinarySniffRow(0x01, 3, 17, True, "비율 0.15 — 임계 바로 위"),
+    _BinarySniffRow(0x09, 10, 10, False, "탭은 제어문자에서 제외된다"),
+    _BinarySniffRow(0x0A, 10, 10, False, "LF는 제어문자에서 제외된다"),
+    _BinarySniffRow(0x0D, 10, 10, False, "CR은 제어문자에서 제외된다"),
+    _BinarySniffRow(0x1F, 1, 9, False, "0x1F는 제어문자지만 비율이 임계 이하"),
+    _BinarySniffRow(0x1F, 3, 17, True, "0x1F는 제어문자다 — 임계 32의 바로 아래 칸"),
+    _BinarySniffRow(0x1F, 5, 20, True, "0x1F 비율 0.2"),
+    _BinarySniffRow(0x20, 10, 10, False, "공백(0x20)은 제어문자가 아니다 — 임계 32의 바로 위 칸"),
+)
+
+#: 표에서 파생하지 **않은** 독립 커버리지 요구.
+_R17_REQUIRED_SNIFF_ORDS = frozenset({0x00, 0x01, 0x09, 0x0A, 0x0D, 0x1F, 0x20})
+
+
+def _r17_sniff_text(row: _BinarySniffRow) -> str:
+    return chr(row.control_ord) * row.control_count + "A" * row.filler_count
+
+
+class TestRound17BinarySniffBoundaries:
+    """[round17] `_looks_binary`의 두 임계(제어문자 코드 32 · 비율 0.1) 경계 전수."""
+
+    def test_the_table_covers_both_thresholds_at_both_ends(self):
+        """[round17 표 전수] 행을 지우면 행수·코드 커버리지·비율 커버리지 중 하나가 깨진다."""
+        assert len(_R17_BINARY_SNIFF_ROWS) == 10, "행수 리터럴 — 행 삭제/추가 감지"
+        assert {row.control_ord for row in _R17_BINARY_SNIFF_ROWS} == _R17_REQUIRED_SNIFF_ORDS
+        # 제어문자 임계의 **양끝**(0x1F·0x20)이 둘 다 있어야 `< 32`가 고정된다.
+        assert {0x1F, 0x20} <= {row.control_ord for row in _R17_BINARY_SNIFF_ROWS}
+        # 비율 임계의 **양끝**(정확히 0.1 · 0.1 초과)이 둘 다 있어야 `> 0.1`이 고정된다.
+        ratios = {
+            row.control_count / (row.control_count + row.filler_count)
+            for row in _R17_BINARY_SNIFF_ROWS
+        }
+        assert 0.1 in ratios, "비율 정확히 0.1인 행이 사라졌다 — `>=`로 바꿔도 안 잡힌다"
+        assert any(0.1 < ratio < 0.2 for ratio in ratios), "0.1과 0.2 사이 행이 사라졌다"
+        # 비공허성 — 두 결론이 모두 표에 있다.
+        assert {row.looks_binary for row in _R17_BINARY_SNIFF_ROWS} == {True, False}
+
+    @pytest.mark.parametrize(
+        "row", _R17_BINARY_SNIFF_ROWS, ids=lambda r: f"x{r.control_ord:02X}n{r.control_count}"
+    )
+    def test_each_boundary_decides_as_declared(self, row):
+        """[round17] `reader.py`의 `ord(ch) < 32`를 `< 31`로 바꾸면 0x1F 행 둘이 실패한다.
+        `< 33`으로 바꾸면 0x20 행이 실패한다. `> 0.1`을 `> 0.2`로 바꾸면 비율 0.15 행
+        둘이 실패한다. `>= 0.1`로 바꾸면 비율 0.1 행 둘이 실패한다. 제외 목록
+        `"\\t\\n\\r"`에서 한 글자라도 빼면 해당 행이 실패한다. `"\\x00" in text` 단락
+        분기를 지우면 NUL 행(비율 0.05)이 실패한다."""
+        assert _looks_binary(_r17_sniff_text(row)) is row.looks_binary, row.note
+
+    def test_the_threshold_is_reachable_through_the_public_read_entrypoint(self):
+        """[round17 도달성] `_looks_binary`가 죽은 코드가 아님을 공개 진입점에서 보인다.
+
+        길이를 **홀수**로 잡는다 — 짝수 길이면 인코딩 체인의 `utf-16`이 두 바이트씩
+        묶어 제어문자 없는 CJK 모지바케를 만들어 이진 판정을 우회한다(그 자체는
+        의도된 폴백이다). 홀수 길이에서는 `utf-16`이 탈락해 임계가 실제로 판정한다.
+        """
+        binary_side = read((chr(0x1F) * 3 + "A" * 18).encode())
+        assert [f.kind for f in binary_side.read_failures] == [READ_FAILURE_ENCODING]
+        # 비공허성 — 같은 길이에서 비율만 낮추면 정상 판독된다.
+        text_side = read((chr(0x1F) * 1 + "A" * 20).encode())
+        assert READ_FAILURE_ENCODING not in {f.kind for f in text_side.read_failures}
+
+
+class _WidthRow(NamedTuple):
+    label: str
+    field_count: int
+    accepted: bool
+
+
+#: 헤더 폭 대비 데이터 행의 필드 수 — **양쪽 한 칸씩**. `len(row) == width`의 등호를
+#: `>=`로 넓히면 넘치는 행이 조용히 레코드가 되고(zip이 잘라내므로 데이터가 사라진다),
+#: `<=`로 넓히면 모자란 행이 빈 값으로 채워진 레코드가 된다.
+_R17_ROW_WIDTH_ROWS: tuple[_WidthRow, ...] = (
+    _WidthRow("헤더보다 한 칸 적다", -1, False),
+    _WidthRow("헤더와 같다", 0, True),
+    _WidthRow("헤더보다 한 칸 많다", +1, False),
+)
+
+
+class TestRound17DataBlockWidthBoundary:
+    """[round17] `_extract_data_block`의 `len(row) == width` 양끝."""
+
+    def test_the_table_covers_both_sides_of_the_exact_width(self):
+        """[round17 표 전수] 행을 지우면 실패한다."""
+        assert len(_R17_ROW_WIDTH_ROWS) == 3, "행수 리터럴 — 행 삭제/추가 감지"
+        assert {row.field_count for row in _R17_ROW_WIDTH_ROWS} == {-1, 0, +1}
+        assert {row.accepted for row in _R17_ROW_WIDTH_ROWS} == {True, False}
+
+    @pytest.mark.parametrize("row", _R17_ROW_WIDTH_ROWS, ids=lambda r: r.label)
+    def test_only_an_exact_width_row_becomes_a_record(self, row):
+        """[round17] `reader.py`의 `len(row) == width`를 `>= width`로 바꾸면 "한 칸 많다"
+        행이 레코드가 되어 실패한다. `<= width`로 바꾸면 "한 칸 적다" 행이 레코드가 되어
+        실패한다. 채택되지 않은 행은 **조용히 버려지지 않고** 구조화된 판독 실패가 된다.
+        """
+        header = ["Instrument Type", "Universe", "DMX Address"]
+        good = ["Robe Robin MMX Spot", "1", "1"]
+        odd = ["Robe Robin MMX Spot", "1", "2"]
+        if row.field_count < 0:
+            odd = odd[:-1]
+        elif row.field_count > 0:
+            odd = [*odd, "extra"]
+        data = "\n".join(",".join(cells) for cells in (header, good, odd)).encode()
+
+        result = read(data)
+        kinds = {failure.kind for failure in result.read_failures}
+        if row.accepted:
+            assert len(result.records) == 2, row.label
+            assert READ_FAILURE_WORKSHEET_SUBTOTAL not in kinds
+        else:
+            assert len(result.records) == 1, row.label
+            assert READ_FAILURE_WORKSHEET_SUBTOTAL in kinds, "버려진 행이 기록되지 않았다"

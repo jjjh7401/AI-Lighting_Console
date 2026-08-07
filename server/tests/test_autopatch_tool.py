@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from functools import cache
 from pathlib import Path
@@ -1045,3 +1046,338 @@ def test_a_selection_without_a_fid_range_stays_one_rejection_not_scattered_rows(
     assert plan["rejection"]["code"] == "fid_range_required"
     assert plan["rejection"]["reason"]
     assert [row["fid"] for row in plan["target_table"]["rows"]] == [None]
+
+
+# --- round17 항진식 전단사·payload CD 표면 (ScopeAndTables) ---
+#
+# 이 절이 닫는 두 구멍:
+#   [round17 #8] `_ROUND16_FORBIDDEN_NORMALISATIONS`의 "전수 곱" 게이트가 **항진식**이었다.
+#     `len(probes) == len(ASSUMPTION_71_VALUES) * len(_ROUND16_FORBIDDEN_NORMALISATIONS)`에서
+#     `probes`가 바로 그 두 목록의 `itertools.product`이므로 좌변과 우변이 같은 것을 두 번
+#     세고 있었다. 정규화 축을 한 행 지우면 **양변이 함께 줄어** 아무것도 실패하지 않는다.
+#     같은 60줄 블록 안 형제(`_ROUND16_UNREGISTERED_SAMPLE`)에는 동결집합+하한 2겹이 이미
+#     있었다 — 한 커밋이 형제 둘에 서로 다른 등급을 준 전형이다.
+#   [round17 S17-02] 계약 2b④의 **다섯째 사이트**. `typemap.py`가 콘솔 판독 이름을 사유
+#     문장에 f-string 보간했고 그 문장은 `payload["types"]["hard_stops"][].reason` ·
+#     `payload["types"]["type_table"]["rows"][].reason`으로 나갔다. 기존 CD 게이트는
+#     `PatchHandoff`·`verification` 두 블록만 훑었으므로 **`types` 블록은 전부 게이트 밖**이었다.
+#     여기서 payload의 **여섯 블록 전부**를 표로 열거하고, 문장 칸과 구조화 칸을 전수 분류한 뒤
+#     문장 칸 전체에 CD 게이트를 건다.
+
+#: 금지 정규화 축의 **동결 집합** — 축을 지우거나 더하면 아래 단정이 깨진다.
+#: 형제 `_ROUND16_UNREGISTERED_SAMPLE`이 이미 쓰던 방식이고, 항진식이 아닌 이유는
+#: 이 집합이 `_ROUND16_FORBIDDEN_NORMALISATIONS`에서 **파생되지 않기 때문**이다.
+_R17_FORBIDDEN_NORMALISATION_LABELS = frozenset(
+    {"upper", "title", "leading_space", "trailing_space", "inner_space"}
+)
+
+
+def test_the_forbidden_normalisation_axis_table_cannot_shrink_silently():
+    """[round17 #8] 정규화 축을 하나 지우면 여기서 깨진다.
+
+    round16의 `test_the_near_miss_probe_table_is_the_full_product_of_production_vocabulary`는
+    `len(probes) == len(어휘) * len(정규화)`를 단정했는데 `probes`가 그 곱 자체라 **항진식**이었다.
+    축 목록은 프로덕션에서 파생할 수 없는 **자유 목록**이므로 동결집합으로 고정하고,
+    하한을 함께 둔다 — 그래야 "동결집합도 같이 줄이는" 편집이 하한에서 걸린다.
+
+    [round17 #8] `_ROUND16_FORBIDDEN_NORMALISATIONS`에서 어느 행이든 지우면 실패한다.
+    """
+    labels = [label for label, _ in _ROUND16_FORBIDDEN_NORMALISATIONS]
+    assert len(labels) == len(set(labels)) == len(_R17_FORBIDDEN_NORMALISATION_LABELS)
+    assert set(labels) == _R17_FORBIDDEN_NORMALISATION_LABELS
+    # 하한 — 대소문자 축 2 · 공백 축 3. 동결집합째 줄이는 편집을 여기서 막는다.
+    assert len(_ROUND16_FORBIDDEN_NORMALISATIONS) >= 5
+
+
+def test_every_forbidden_normalisation_actually_changes_every_registered_value():
+    """[round17 #8] 축 하나를 항등 함수로 바꿔치면 여기서 깨진다 — 비공허성.
+
+    변형이 원값과 같으면 그 행의 근사 오타 대조군은 "등재 값이 거부되는가"를 묻게 되어
+    **의미가 뒤집힌다**. 등재 어휘와의 비교만으로는 그 상태를 잡지 못한다.
+    """
+    for label, transform in _ROUND16_FORBIDDEN_NORMALISATIONS:
+        for value in sorted(ASSUMPTION_71_VALUES):
+            assert transform(value) != value, (label, value)
+
+
+# ---- S17-02 · payload 블록 전수와 CD 게이트 표면 -----------------------------------
+
+#: `test_autopatch_execute.py`·`test_autopatch_lua.py`와 **같은 토큰**. 콘솔에서 `CD`는
+#: `ChangeDestination`이고, 그 한 토큰이 사람이 따라 치는 문장에 섞이면 목적지가 바뀐다.
+_R17_CD_TOKEN = re.compile(r"ChangeDestination|(?<![A-Za-z])CD(?![A-Za-z])")
+
+#: payload로 나가는 **최상위 블록 전수**와 CD 게이트 등급.
+#: `console_bound` — 사람이 콘솔에서 실행하는 텍스트를 품는다. 문장이든 칸이든 CD 금지.
+#: `sentence_gated` — 진단·표 블록. **문장 칸**에만 CD 금지, 구조화 관측 칸은 면제(round15 D).
+_R17_PAYLOAD_BLOCKS = (
+    ("plan", "sentence_gated"),
+    ("console_read", "sentence_gated"),
+    ("assumption_71_reachability", "sentence_gated"),
+    ("types", "sentence_gated"),
+    ("handoff", "console_bound"),
+    ("verification", "sentence_gated"),
+)
+
+#: 사람이 읽는 **문장**을 담는 잎 키 전수. 여기에 콘솔 판독 원문이 보간되면 §0 2b④ 위반이다.
+_R17_SENTENCE_LEAF_KEYS = frozenset(
+    {
+        "reason",
+        "detail",
+        "note",
+        "scope",
+        "as_of",
+        "label",
+        "status_label",
+        "warnings",
+        "procedure",
+        "guidance",
+        "next_step",
+        "execution_performed_by",
+        "lua_source_unresolved_reason",
+        "source",
+        "columns",
+    }
+)
+
+#: 구조화 관측·식별 칸 전수 — 콘솔 원문이 **여기로** 간다(§0 2c①). CD 게이트 면제.
+_R17_STRUCTURED_LEAF_KEYS = frozenset(
+    {
+        "active_safety",
+        "address_basis",
+        "alias_key",
+        "assumption_71",
+        "assumption_72",
+        "candidate_id",
+        "code",
+        "completeness",
+        "confirmation_source",
+        "console_channel_count",
+        "console_mode",
+        "console_type",
+        "designed_footprint",
+        "designed_mode",
+        "designed_type",
+        "expected_mode",
+        "expected_type",
+        "field",
+        "footprint",
+        "footprint_unverified",
+        "id",
+        "injected",
+        "instrument_type",
+        "kind",
+        "lua_source",
+        "mode",
+        "mode_candidates",
+        "name",
+        "outcome",
+        "path",
+        "presented_console_type",
+        "property",
+        "searched_mode_key",
+        "searched_type_key",
+        "selected",
+        "source_path",
+        "status",
+        "type",
+        "type_candidates",
+        "unit_number",
+    }
+)
+
+_R17_CD_LIBRARY_TYPE = "CD 5"
+
+
+class _R17CdLibraryPort(RigPort):
+    """콘솔 FixtureType 라이브러리에 `'CD 5'`가 있고 도면이 요구한 모드는 **없는** 콘솔.
+
+    이 구성이 `typemap._resolve_one`의 `DMX_MODE_NOT_IN_LIBRARY` 갈래에 도달한다 —
+    round17 S17-02가 실증한 바로 그 자리다.
+    """
+
+    def query_state(self, path: str) -> dict:
+        state = super().query_state(path)
+        if path == FIXTURE_TYPE_LIBRARY_ROOT:
+            return {**state, "children": [{"i": 3, "name": _R17_CD_LIBRARY_TYPE}]}
+        if path == f"{FIXTURE_TYPE_LIBRARY_ROOT}/3/DMXModes":
+            return {**state, "children": [{"i": 1, "name": "Mode 9"}]}
+        return state
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        result = super().query_property(path, property_name)
+        if path.startswith(FIXTURE_TYPE_LIBRARY_ROOT) and property_name == "Name":
+            return {**result, "value": "Mode 9"}
+        return result
+
+
+def _r17_cd_library_payload() -> dict:
+    """콘솔 라이브러리 타입 이름이 `'CD 5'`인 상태에서 만든 **전체 payload**."""
+    report = _report()
+    report["designed_rig"]["fixtures"][0]["instrument_type"] = _R17_CD_LIBRARY_TYPE
+    report["diffs"]["missing_in_console"][0]["instrument_type"] = _R17_CD_LIBRARY_TYPE
+    payload, _ = _full_call(_registry(rig=_R17CdLibraryPort()), rig_report=report)
+    return payload
+
+
+def _r17_cd_alias_payload() -> dict:
+    """저장된 **별칭 값**이 `'CD 5'`인데 콘솔 라이브러리에 그 타입이 없는 payload.
+
+    `typemap._resolve_one`의 `TYPE_LIBRARY_ABSENT` 갈래에 도달한다 — 위 시나리오가
+    닿지 못하는 형제 갈래이고, 그 사유가 `alias_type`을 문장에 보간하던 자리다.
+    """
+    payload, _ = _full_call(
+        _registry(), type_aliases={LED: {"type": _R17_CD_LIBRARY_TYPE, "mode": "Mode 1"}}
+    )
+    return payload
+
+
+def _r17_delivered_payload() -> dict:
+    """정상 전달 payload — `handoff.lua_source`·`procedure`·`verification.guidance`가 있는 쪽."""
+    payload, _ = _full_call(
+        _registry(),
+        dry_run=False,
+        type_aliases={LED: {"type": LED, "mode": "Mode 1"}},
+    )
+    return payload
+
+
+def _r17_string_leaves(node, path: str = ""):
+    """payload의 문자열 잎을 `(경로, 잎 키, 값)`으로 전수 산출한다."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield from _r17_string_leaves(value, f"{path}.{key}" if path else str(key))
+    elif isinstance(node, (list, tuple)):
+        for value in node:
+            yield from _r17_string_leaves(value, f"{path}[]")
+    elif isinstance(node, str):
+        yield path, path.rsplit(".", 1)[-1].replace("[]", ""), node
+
+
+def _r17_leaf_keys(*payloads) -> frozenset[str]:
+    return frozenset(key for payload in payloads for _, key, _ in _r17_string_leaves(payload))
+
+
+def test_the_payload_block_table_is_a_bijection_onto_the_produced_payload():
+    """[round17 S17-02] payload 최상위 블록 표가 실제 payload와 1:1이다.
+
+    표에서 블록 행을 지우면 실패하고, 프로덕션이 블록을 하나 더 실으면 행 없이는 통과하지
+    못한다 — round16까지 `types` 블록은 어떤 CD 게이트에도 등재되지 않은 채 payload로 나갔다.
+    두 시나리오 **모두**에서 같은 여섯 블록이 나오는 것까지 본다.
+    """
+    declared = tuple(sorted(block for block, _ in _R17_PAYLOAD_BLOCKS))
+    assert declared == tuple(sorted(_r17_delivered_payload()))
+    assert declared == tuple(sorted(_r17_cd_library_payload()))
+    assert declared == tuple(sorted(_r17_cd_alias_payload()))
+    classes = {gate for _, gate in _R17_PAYLOAD_BLOCKS}
+    assert classes == {"sentence_gated", "console_bound"}
+
+
+def test_the_payload_leaf_key_partition_is_total_and_disjoint():
+    """[round17 S17-02] 문자열 잎 키가 **전부** 문장/구조화 중 하나로 분류돼 있다.
+
+    프로덕션이 문자열 키를 하나 더 실으면 여기서 먼저 실패한다 — 분류되지 않은 키는
+    CD 게이트의 사각이 된다. 두 표 어느 쪽에서 행을 지워도 실패한다.
+    """
+    observed = _r17_leaf_keys(
+        _r17_cd_library_payload(), _r17_cd_alias_payload(), _r17_delivered_payload()
+    )
+    assert _R17_SENTENCE_LEAF_KEYS.isdisjoint(_R17_STRUCTURED_LEAF_KEYS)
+    unclassified = observed - _R17_SENTENCE_LEAF_KEYS - _R17_STRUCTURED_LEAF_KEYS
+    assert unclassified == frozenset(), sorted(unclassified)
+    stale = (_R17_SENTENCE_LEAF_KEYS | _R17_STRUCTURED_LEAF_KEYS) - observed
+    assert stale == frozenset(), sorted(stale)
+
+
+def test_the_cd_library_scenario_actually_reaches_the_typemap_hard_stop():
+    """재현 구성이 겨냥한 갈래에 실제로 도달한다 — 아니면 아래 게이트가 공허하다."""
+    payload = _r17_cd_library_payload()
+    (hard_stop,) = payload["types"]["hard_stops"]
+    assert hard_stop["code"] == "dmx_mode_not_in_library"
+    (row,) = payload["types"]["type_table"]["rows"]
+    # 콘솔 판독 원문은 **구조화 칸**으로 나간다(§0 2c①) — 값이 버려지지 않았다.
+    assert row["presented_console_type"] == _R17_CD_LIBRARY_TYPE
+    assert row["type_candidates"] == [_R17_CD_LIBRARY_TYPE]
+
+
+#: CD 게이트를 거는 **시나리오 전수**. 두 시나리오가 `typemap._resolve_one`의 **서로 다른**
+#: 하드 스톱 갈래에 도달한다 — 한 갈래만 재현하면 형제 갈래의 보간이 무게이트로 남는다.
+#: round17 실측: `_r17_cd_library_payload` 하나만으로는 `TYPE_LIBRARY_ABSENT` 사유의
+#: `'{alias_type or designed_type}'` 재보간이 **SURVIVED**였다.
+_R17_CD_SCENARIOS = (
+    ("dmx_mode_not_in_library", lambda: _r17_cd_library_payload()),
+    ("fixture_type_not_in_library", lambda: _r17_cd_alias_payload()),
+)
+
+
+def test_the_cd_scenario_table_covers_every_typemap_hard_stop_branch():
+    """[round17 S17-02] 시나리오 표가 `typemap`의 하드 스톱 코드 **전수**와 1:1이다.
+
+    [round17 S17-02] 시나리오 행을 지우면 실패한다 — 그 갈래의 사유가 무게이트로 돌아간다.
+    [round17 S17-02] `typemap.py`에 하드 스톱 코드를 더하면 시나리오 없이는 통과하지 못한다.
+    """
+    from server.vwx.verdicts import DMX_MODE_NOT_IN_LIBRARY, FIXTURE_TYPE_NOT_IN_LIBRARY
+
+    declared = tuple(sorted(code for code, _ in _R17_CD_SCENARIOS))
+    assert declared == tuple(sorted({DMX_MODE_NOT_IN_LIBRARY, FIXTURE_TYPE_NOT_IN_LIBRARY}))
+    for code, build in _R17_CD_SCENARIOS:
+        payload = build()
+        assert [stop["code"] for stop in payload["types"]["hard_stops"]] == [code], code
+
+
+@pytest.mark.parametrize(
+    "scenario,build", _R17_CD_SCENARIOS, ids=[code for code, _ in _R17_CD_SCENARIOS]
+)
+def test_no_sentence_anywhere_in_the_payload_echoes_the_console_read_name(scenario, build):
+    """[round17 S17-02] payload **전 블록**의 문장 칸에 콘솔 판독 원문이 없다.
+
+    [round17 S17-02] `typemap.py`의 `DMX_MODE_NOT_IN_LIBRARY` 사유를
+      `f"콘솔 FixtureType '{presented_type.name}'에 …"`으로 되돌리면
+      `types.hard_stops[].reason`과 `types.type_table.rows[].reason` 두 경로가 잡힌다.
+    [round17 S17-02] `TYPE_LIBRARY_ABSENT` 사유를
+      `f"콘솔 라이브러리에 '{alias_type or request.designed_type}'에 …"`으로 되돌리면
+      `fixture_type_not_in_library` 행이 잡힌다 — 별칭 값은 사람이 콘솔에서 확인해 저장한
+      **콘솔 쪽 이름**이라 도면 값과 같은 등급이 아니다.
+    round16까지 이 두 경로는 **어떤 CD 게이트에도 닿지 않았다**.
+    """
+    payload = build()
+    offenders = [
+        (path, value)
+        for path, key, value in _r17_string_leaves(payload)
+        if key in _R17_SENTENCE_LEAF_KEYS and _R17_CD_TOKEN.search(value)
+    ]
+    assert offenders == [], (scenario, offenders)
+
+
+def test_the_payload_cd_gate_is_not_vacuous():
+    """대조의 대조 — 같은 payload의 **구조화 칸**에는 그 원문이 실제로 들어 있다.
+
+    이것이 없으면 위 게이트는 "CD가 애초에 아무 데도 없었다"로 공허해질 수 있다.
+    """
+    payload = _r17_cd_library_payload()
+    carriers = sorted(
+        {
+            path
+            for path, key, value in _r17_string_leaves(payload)
+            if key in _R17_STRUCTURED_LEAF_KEYS and _R17_CD_TOKEN.search(value)
+        }
+    )
+    assert "types.type_table.rows[].presented_console_type" in carriers
+    assert "types.library.types[].name" in carriers
+
+
+def test_the_delivered_payload_carries_no_cd_token_at_all():
+    """[round17 S17-02 형제 축] `console_bound` 블록은 문장·칸을 가리지 않고 CD가 0건이다.
+
+    `handoff`는 `lua_source`·`procedure`가 들어 있는 블록이라 구조화 칸 면제가 없다 —
+    그 텍스트는 사람이 콘솔에 그대로 친다.
+    """
+    payload = _r17_delivered_payload()
+    console_bound = [block for block, gate in _R17_PAYLOAD_BLOCKS if gate == "console_bound"]
+    assert console_bound == ["handoff"]
+    for block in console_bound:
+        hits = [
+            (path, value)
+            for path, _, value in _r17_string_leaves(payload[block])
+            if _R17_CD_TOKEN.search(value)
+        ]
+        assert hits == [], hits

@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Protocol
 
-from server.vwx.rig import fuzzy_type_equal
+from server.vwx.rig import _norm_type, fuzzy_type_equal
 from server.vwx.verdicts import (
     DMX_MODE_NOT_IN_LIBRARY,
     FIXTURE_TYPE_LIBRARY_TRUNCATED,
@@ -54,6 +54,13 @@ LIBRARY_TRUNCATED_REASON = (
 )
 LIBRARY_UNREADABLE_REASON = (
     "FixtureType 열거를 읽지 못했다 — 대응 항목이 후보에 없음을 단정하지 않는다."
+)
+#: [round17 · 공허 일치 차단] 정규화 후 영숫자가 남지 않는 이름은 라이브러리 대조 기준이
+#: 되지 못한다 — `_comparable_key` 참조. 그 이름으로 "일치"를 주장하면 라이브러리 전 항목이
+#: 후보가 되고, 항목이 하나뿐인 라이브러리에서는 그것이 유일 후보가 되어 확정까지 간다.
+VACUOUS_TYPE_KEY_REASON = (
+    "타입 이름에 영숫자가 하나도 없어 라이브러리 대조 기준이 되지 못한다 — 공허한 일치로 "
+    "후보를 세지 않고 사용자 확인으로 넘긴다. 조회에 쓰려던 이름은 구조화 칸에 그대로 남긴다."
 )
 
 TYPE_TABLE_COLUMNS = (
@@ -172,6 +179,14 @@ class TypeResolution:
     footprint_check: Mapping[str, object] = field(default_factory=dict)
     hard_stop_code: str | None = None
     incompleteness_kind: str | None = None
+    #: [round17 S17-02] 사유 **문장**에 콘솔 판독 원문을 보간하지 않기 위한 구조화 칸(§0 2b④).
+    #: `console_type`은 **확정된** 타입만 담으므로(별칭 없이 후보 1건이면 `None`), 사람에게
+    #: 제시된 이름을 담을 자리가 없었다. 그 자리가 없으면 문장이 그 역할을 떠맡는다 —
+    #: 그렇게 들어간 `'CD 5'`가 `payload["types"]`에서 CD 게이트 밖으로 새어 나갔다.
+    presented_type: LibraryType | None = None
+    #: 라이브러리 조회에 실제로 쓴 이름(별칭이 있으면 별칭 값, 없으면 도면 값).
+    searched_type_key: str | None = None
+    searched_mode_key: str | None = None
 
     @property
     def hard_stop(self) -> TypeHardStop | None:
@@ -202,6 +217,16 @@ class TypeResolution:
             "console_mode_index": (
                 self.console_mode.index if self.console_mode is not None else None
             ),
+            # [round17 S17-02] 사람에게 **제시된** 콘솔 이름 — 확정 여부와 무관하다.
+            # 사유 문장은 이 칸을 대신 말하지 않는다(§0 2b④ · 2c①).
+            "presented_console_type": (
+                self.presented_type.name if self.presented_type is not None else None
+            ),
+            "presented_console_type_index": (
+                self.presented_type.index if self.presented_type is not None else None
+            ),
+            "searched_type_key": self.searched_type_key,
+            "searched_mode_key": self.searched_mode_key,
             "type_candidates": [entry.name for entry in self.type_candidates],
             "mode_candidates": [entry.name for entry in self.mode_candidates],
             "confirmation_source": self.confirmation_source,
@@ -340,6 +365,24 @@ def _resolve_one(
     footprint_enabled: bool,
 ) -> TypeResolution:
     alias_key, alias_type, alias_mode = _alias_for(request, aliases)
+    # [round17 S17-02] 조회에 실제로 쓴 이름을 **문장이 아니라 칸으로** 들고 다닌다.
+    # 별칭 값은 사람이 콘솔에서 확인해 저장한 **콘솔 쪽 이름**이라 도면 값과 같은 등급이
+    # 아니다 — 사유 문장에 보간되면 `payload["types"]`가 CD 게이트 밖으로 원문을 흘린다.
+    searched_type_key = alias_type or request.designed_type
+    searched_mode_key = alias_mode or request.mode
+    if not _type_search_keys(request, alias_type):
+        # [round17 · 공허 일치 차단] 대조 기준이 될 이름이 없다. "라이브러리에 없다"고
+        # 적으면 **찾아보지도 않은 것을 부재로 단정**하는 것이므로 확인으로 넘긴다.
+        return TypeResolution(
+            request=request,
+            status=TYPE_NEEDS_CONFIRMATION,
+            reason=VACUOUS_TYPE_KEY_REASON,
+            searched_type_key=searched_type_key,
+            searched_mode_key=searched_mode_key,
+            footprint_check=_footprint_check(
+                None, None, request, footprint_enabled=footprint_enabled
+            ),
+        )
     type_candidates = _type_candidates(request, library, alias_type)
     if not type_candidates:
         incomplete = _library_incompleteness(library, None)
@@ -349,6 +392,8 @@ def _resolve_one(
                 status=TYPE_LIBRARY_INCOMPLETE,
                 reason=_incompleteness_reason(incomplete),
                 incompleteness_kind=incomplete,
+                searched_type_key=searched_type_key,
+                searched_mode_key=searched_mode_key,
                 footprint_check=_footprint_check(
                     None, None, request, footprint_enabled=footprint_enabled
                 ),
@@ -357,10 +402,12 @@ def _resolve_one(
             request=request,
             status=TYPE_LIBRARY_ABSENT,
             reason=(
-                f"콘솔 라이브러리에 '{alias_type or request.designed_type}'에 대응하는 "
-                "FixtureType이 없다. 콘솔에서 GDTF 라이브러리 임포트를 먼저 수행해야 이 항목을 "
+                "콘솔 라이브러리에 도면 타입에 대응하는 FixtureType이 없다. "
+                "콘솔에서 GDTF 라이브러리 임포트를 먼저 수행해야 이 항목을 "
                 "패치할 수 있다 — 유사한 이름으로 대체 배정하지 않는다."
             ),
+            searched_type_key=searched_type_key,
+            searched_mode_key=searched_mode_key,
             hard_stop_code=FIXTURE_TYPE_NOT_IN_LIBRARY,
             footprint_check=_footprint_check(
                 None, None, request, footprint_enabled=footprint_enabled
@@ -380,6 +427,9 @@ def _resolve_one(
             type_candidates=type_candidates,
             confirmation_source=ALIAS_CONFIRMATION_SOURCE if confirmed_type else None,
             alias_key=alias_key if confirmed_type else None,
+            presented_type=presented_type,
+            searched_type_key=searched_type_key,
+            searched_mode_key=searched_mode_key,
             incompleteness_kind=FIXTURE_TYPE_LIBRARY_UNREADABLE,
             footprint_check=_footprint_check(
                 confirmed_type, None, request, footprint_enabled=footprint_enabled
@@ -398,6 +448,9 @@ def _resolve_one(
                 type_candidates=type_candidates,
                 confirmation_source=ALIAS_CONFIRMATION_SOURCE if confirmed_type else None,
                 alias_key=alias_key if confirmed_type else None,
+                presented_type=presented_type,
+                searched_type_key=searched_type_key,
+                searched_mode_key=searched_mode_key,
                 incompleteness_kind=incomplete,
                 footprint_check=_footprint_check(
                     confirmed_type, None, request, footprint_enabled=footprint_enabled
@@ -407,12 +460,14 @@ def _resolve_one(
             request=request,
             status=TYPE_LIBRARY_ABSENT,
             reason=(
-                f"콘솔 FixtureType '{presented_type.name}'에 "
-                f"'{alias_mode or request.mode}'에 대응하는 DMXMode가 없다. "
+                "콘솔에서 확인된 FixtureType에, 도면이 요구한 DMXMode에 대응하는 모드가 없다. "
                 "해당 모드를 담은 GDTF 라이브러리 임포트가 선행되어야 한다 — "
                 "유사한 이름의 다른 모드로 대체 배정하지 않는다."
             ),
             console_type=confirmed_type,
+            presented_type=presented_type,
+            searched_type_key=searched_type_key,
+            searched_mode_key=searched_mode_key,
             type_candidates=type_candidates,
             confirmation_source=ALIAS_CONFIRMATION_SOURCE if confirmed_type else None,
             alias_key=alias_key if confirmed_type else None,
@@ -444,6 +499,9 @@ def _resolve_one(
             mode_candidates=mode_candidates,
             confirmation_source=ALIAS_CONFIRMATION_SOURCE,
             alias_key=alias_key,
+            presented_type=presented_type,
+            searched_type_key=searched_type_key,
+            searched_mode_key=searched_mode_key,
             footprint_check=footprint_check,
         )
     return TypeResolution(
@@ -460,8 +518,29 @@ def _resolve_one(
         mode_candidates=mode_candidates,
         confirmation_source=ALIAS_CONFIRMATION_SOURCE if resolved else None,
         alias_key=alias_key if resolved else None,
+        presented_type=presented_type,
+        searched_type_key=searched_type_key,
+        searched_mode_key=searched_mode_key,
         footprint_check=footprint_check,
     )
+
+
+def _comparable_key(value: object) -> str | None:
+    """대조 기준이 되는 이름만 통과시킨다 — **정규화 후 영숫자가 남아야** 한다.
+
+    [round17 · 공허 일치 차단] `rig.fuzzy_type_equal`은 `rig._norm_type`으로 비영숫자를
+    전부 제거한 뒤 포함관계를 본다. 그래서 `'---'`·`'--'`처럼 영숫자가 없는 이름은 정규화
+    결과가 빈 문자열이 되고, 빈 문자열은 **모든** 이름에 포함되므로 그 이름은 라이브러리
+    전 항목과 "일치"한다. 라이브러리 항목이 하나뿐이면 그것이 **유일 후보**가 되어 별칭과
+    함께 `resolved`까지 가고, 도면이 이름조차 준 적 없는 FixtureType이 전달 Lua의
+    `Patch().FixtureTypes[...]`에 박힌다(실증됨).
+
+    막는 층은 여기다 — `rig.py`는 1단계 공개 계약(AC-AUTOPATCH-025)이라 바꾸지 않는다.
+    판정 술어를 재구현하지도 않는다: 같은 `_norm_type`을 호출해 **공허함만** 본다.
+    """
+    if not isinstance(value, str) or not value:
+        return None
+    return value if _norm_type(value) else None
 
 
 def _alias_for(
@@ -472,19 +551,26 @@ def _alias_for(
             continue
         entry = aliases.get(key)
         if isinstance(entry, Mapping):
-            return key, _optional_string(entry.get("type")), _optional_string(entry.get("mode"))
+            # 공허한 별칭 값은 **저장된 확인**이 아니다 — 없는 것으로 취급해 확정 경로를 막는다.
+            return key, _comparable_key(entry.get("type")), _comparable_key(entry.get("mode"))
         if isinstance(entry, str) and entry:
-            return key, entry, None
+            return key, _comparable_key(entry), None
     return None, None, None
+
+
+def _type_search_keys(request: TypeRequest, alias_type: str | None) -> tuple[str, ...]:
+    """라이브러리 대조에 쓸 이름 — 공허한 이름은 기준이 되지 못하므로 제외한다."""
+    raw: tuple[object, ...] = (
+        (alias_type,) if alias_type else (request.instrument_type, request.gdtf_fixture)
+    )
+    keys = (_comparable_key(value) for value in raw)
+    return tuple(key for key in keys if key is not None)
 
 
 def _type_candidates(
     request: TypeRequest, library: FixtureTypeLibrary, alias_type: str | None
 ) -> tuple[LibraryType, ...]:
-    if alias_type:
-        keys: tuple[str | None, ...] = (alias_type,)
-    else:
-        keys = (request.instrument_type, request.gdtf_fixture)
+    keys = _type_search_keys(request, alias_type)
     return tuple(
         entry for entry in library.types if any(fuzzy_type_equal(key, entry.name) for key in keys)
     )
@@ -495,7 +581,8 @@ def _mode_candidates(
 ) -> tuple[LibraryMode, ...]:
     if console_type is None:
         return ()
-    wanted = alias_mode or request.mode
+    # 공허한 모드 이름은 "모드 미지정"과 같다 — 전 모드를 후보로 제시하고 확정은 하지 않는다.
+    wanted = _comparable_key(alias_mode) or _comparable_key(request.mode)
     if not wanted:
         return console_type.modes
     return tuple(entry for entry in console_type.modes if fuzzy_type_equal(wanted, entry.name))

@@ -355,18 +355,23 @@ def _exclusion(
     code: str,
     reason: str,
     *,
-    observed_type_display: str | None = None,
-    observed_mode_display: str | None = None,
+    observed_occupants: Sequence[ConsoleFixture] = (),
 ) -> PatchTargetExclusion:
-    """[round15 D] 콘솔 표시 문자열 원문은 `reason` 문장이 아니라 **구조화 필드로** 받는다 —
-    `_rejected_field`가 값 대신 필드 이름을 적는 것과 같은 규율(§0 2b④)이다."""
+    """[round15 D · round17 S17-03a] 콘솔에서 읽은 것은 `reason` 문장이 아니라 **구조화
+    필드로** 받는다 — `_rejected_field`가 값 대신 필드 이름을 적는 것과 같은 규율(§0 2b④).
+
+    받는 것은 표시 문자열 **두 칸**이 아니라 **점유자 전원**이다. 단수 쌍
+    (`observed_type_display`/`observed_mode_display`)은 N>=2를 구조적으로 표현할 수 없어
+    다중 점유 갈래가 영구 면제로 남았고, 그 갈래의 payload에는 **무엇이 점유했는지가
+    어디에도 없었다** — 조작자는 그 상태로 되돌릴 수 없는 쓰기를 판단했다. 리스트는
+    0·1·N을 전부 표현하므로 면제가 없다(`PatchTargetExclusion.observed_occupants` 주석).
+    """
     return PatchTargetExclusion(
         candidate_id=target.id,
         code=code,
         reason=reason,
         proposed_fid=target.assigned_fid,
-        observed_type_display=observed_type_display,
-        observed_mode_display=observed_mode_display,
+        observed_occupants=tuple(occupant.to_dict() for occupant in observed_occupants),
     )
 
 
@@ -755,6 +760,12 @@ def screen_console_occupancy(
                 f"유니버스 {planned.universe} 주소 {planned.address}~{planned.end_address} 구간 "
                 f"안에서 기존 픽스처(슬롯 {intruder.slot}, 주소 {intruder.address})가 시작한다 — "
                 "빈 주소로 옮겨 붙이지 않고 제외한다.",
+                # [round17 S17-03a] **점유자를 본 자리는 전부** 점유자를 구조화해 싣는다.
+                # 이 갈래는 문장에 슬롯·주소를 주므로 형제 갈래보다 정보가 많았지만, 문장은
+                # 좌표만 담고 타입·모드 표시 원문은 담을 수 없다(§0 2b④). 규약을 "점유자를
+                # 보는 함수 전수"로 세운 이상 여기에도 예외가 없다 — 예외를 하나 남기면
+                # 그 예외가 다음 라운드의 형제-갈래 위반이 된다.
+                observed_occupants=(intruder,),
             )
         )
 
@@ -813,13 +824,24 @@ def screen_idempotent(
 
         # [round11 N10] 그 주소에 둘 이상이 있으면 어느 것과 대조해야 하는지 알 수 없다 —
         # 첫 일치가 우리와 같다고 '이미 했음'으로 삼키면 두 번째 점유자를 못 본 채 넘긴다.
+        #
+        # [round17 S17-03a] 이 갈래는 **단수 필드 규약의 영구 면제**였다. `observed_type_display`
+        # 한 칸에 2대를 넣을 수 없으니 비워 두었고, 그래서 조작자에게 나간 것은 "2대다"라는
+        # 계수뿐이었다 — **무엇이 점유했는지**가 payload 어디에도 없었다(`console_fixtures`는
+        # 여기까지 따라오지 않고 `Inventory.to_dict`은 계수만 낸다). 형제 갈래
+        # `address_already_occupied`는 슬롯·주소를 준다 — 한 payload 안에서 정보 밀도가
+        # 갈렸고, 정보가 없는 쪽이 하필 **가장 위험한 갈래**였다. 이제 문장에도 슬롯을 적고
+        # 점유자 전원을 구조화 필드로 싣는다.
         if len(occupants) > 1:
             exclusions.append(
                 _exclusion(
                     target,
                     EXISTING_IDENTITY_UNCONFIRMED,
                     f"유니버스 {planned.universe} 주소 {planned.address}에 "
-                    f"픽스처가 {len(occupants)}대 관측된다 — 어느 것과 대조할지 확정할 수 없다.",
+                    f"픽스처가 {len(occupants)}대 관측된다"
+                    f"(슬롯 {' · '.join(str(item.slot) for item in occupants)})"
+                    " — 어느 것과 대조할지 확정할 수 없다.",
+                    observed_occupants=occupants,
                 )
             )
             continue
@@ -833,12 +855,17 @@ def screen_idempotent(
         #   ① 사유 **문장**에는 점유자에게서 읽은 문자열을 넣지 않는다 — 표시 원문
         #      (`type_display`·`mode_display`)이든 라이브러리 확정 이름(`type_name`·`mode_name`)
         #      이든 마찬가지다. 문장에 넣어도 되는 것은 좌표와 **우리가 승인한 값**뿐이다.
-        #   ② 관측된 원문은 버리지 않고 `observed_*_display` 구조화 필드로 옮긴다.
+        #   ② 관측된 것은 버리지 않고 `observed_occupants` 구조화 필드로 옮긴다.
         # round15 D는 ①②를 `EXISTING_IDENTITY_UNCONFIRMED` 갈래에만 적용하고 같은 함수의
         # 형제 갈래 셋을 빠뜨렸다. 그 결과 `ADDRESS_CONFLICTS_WITH_EXISTING`이 점유자 이름을
         # 문장에 f-string으로 박았고, 점유자 타입이 `'CD 5'`면 전달물 스캐너가 거짓 양성을 냈다
         # (실측). 같은 payload 안에서 두 갈래가 정반대 규약을 쓰는 상태였다.
-        # 형제 표면 `verify_patch`는 이미 단일 점유자면 무조건 두 필드를 채운다 — 같은 규약이다.
+        #
+        # [round17 S17-03b] ②의 **포인터 문장**("관측된 원문은 … 필드에 있다")은 지웠다.
+        # 세 갈래가 그것을 무조건 붙였는데 값이 `None`일 때도 붙었고, 그 결과
+        # `(code, null, null)` 삼중항이 "점유자 2대"와 "점유자 1대인데 표시 문자열 미판독"
+        # **두 상태에서 동일**해졌다. payload의 키 이름이 곧 포인터다.
+        # 형제 표면 `verify_patch`도 같은 규약을 쓴다 — 갈래 전부가 점유자를 싣는다.
         expected_type, expected_mode = _expected_identity(resolution)
         if expected_type is None or expected_mode is None:
             exclusions.append(
@@ -847,10 +874,8 @@ def screen_idempotent(
                     TYPE_CONFIRMATION_PENDING,
                     f"유니버스 {planned.universe} 주소 {planned.address}에 픽스처가 있으나 "
                     "콘솔 타입·모드가 확정되지 않아 기존 픽스처와 대조할 수 없다 — "
-                    "확인 전에는 멱등 판정도 충돌 판정도 내리지 않는다. 관측된 원문은 "
-                    "observed_type_display · observed_mode_display 필드에 있다.",
-                    observed_type_display=occupant.type_display,
-                    observed_mode_display=occupant.mode_display,
+                    "확인 전에는 멱등 판정도 충돌 판정도 내리지 않는다.",
+                    observed_occupants=occupants,
                 )
             )
             continue
@@ -860,15 +885,13 @@ def screen_idempotent(
                 _exclusion(
                     target,
                     EXISTING_IDENTITY_UNCONFIRMED,
-                    # [round15 D] 문장은 **좌표와 필드 이름**만 적는다 — 콘솔이 돌려준 원문은
-                    # 아래 구조화 필드로 간다(§0 2b④). 원문을 문장에 되실으면 AC-014①
-                    # 산출물 스캐너가 거짓 양성을 내 게이트가 강제력을 잃는다.
+                    # [round15 D] 문장은 **좌표**만 적는다 — 콘솔이 돌려준 것은 구조화 필드로
+                    # 간다(§0 2b④). 원문을 문장에 되실으면 AC-014① 산출물 스캐너가 거짓
+                    # 양성을 내 게이트가 강제력을 잃는다.
                     f"유니버스 {planned.universe} 주소 {planned.address}에 픽스처가 있으나 "
                     "그 픽스처의 FixtureType·Mode 표시 문자열을 라이브러리에 대조해 "
-                    "확정할 수 없다 — 이미 했음으로 간주하지 않는다. 관측된 원문은 "
-                    "observed_type_display · observed_mode_display 필드에 있다.",
-                    observed_type_display=occupant.type_display,
-                    observed_mode_display=occupant.mode_display,
+                    "확정할 수 없다 — 이미 했음으로 간주하지 않는다.",
+                    observed_occupants=occupants,
                 )
             )
             continue
@@ -884,8 +907,7 @@ def screen_idempotent(
                     # 그래도 구조화 필드로 함께 나간다.
                     f"유니버스 {planned.universe} 주소 {planned.address}에 "
                     f"{expected_type} · {expected_mode} 픽스처가 이미 있다 — 중복 생성하지 않는다.",
-                    observed_type_display=occupant.type_display,
-                    observed_mode_display=occupant.mode_display,
+                    observed_occupants=occupants,
                 )
             )
             continue
@@ -897,10 +919,8 @@ def screen_idempotent(
                 # [round16 S16-05] 이전 판은 여기에 `occupant.type_name · occupant.mode_name`을
                 # f-string으로 박았다 — 형제 갈래가 이미 금지한 바로 그것이다.
                 f"유니버스 {planned.universe} 주소 {planned.address}를 승인한 타입·모드와 "
-                "다른 픽스처가 점유하고 있다 — 무관한 픽스처를 '이미 했음'으로 삼키지 않는다. "
-                "관측된 원문은 observed_type_display · observed_mode_display 필드에 있다.",
-                observed_type_display=occupant.type_display,
-                observed_mode_display=occupant.mode_display,
+                "다른 픽스처가 점유하고 있다 — 무관한 픽스처를 '이미 했음'으로 삼키지 않는다.",
+                observed_occupants=occupants,
             )
         )
 
@@ -935,11 +955,16 @@ class VerificationResult:
     observed_type: str | None
     observed_mode: str | None
     detail: str
-    #: [round15 D] 라이브러리 대조에 실패했을 때 콘솔이 돌려준 **원문**. `observed_type`은
-    #: 확정된 라이브러리 이름이라 그 경우 `None`이 되므로, 원문을 여기서 따로 싣는다 —
-    #: 조작자는 무엇을 봤는지 알아야 하고(§0 2c①), `detail` **문장**에는 넣지 않는다(2b④).
-    observed_type_display: str | None = None
-    observed_mode_display: str | None = None
+    #: [round15 D · round17 S17-03a] 그 주소에서 관측된 **점유자 전원**. 원소는
+    #: `ConsoleFixture.to_dict()` 모양이다. `observed_type`/`observed_mode`는 **라이브러리로
+    #: 확정된 이름**이라 대조에 실패하면 `None`이 되므로, 콘솔이 실제로 돌려준 것은 여기서
+    #: 따로 싣는다 — 조작자는 무엇을 봤는지 알아야 하고(§0 2c①) `detail` **문장**에는
+    #: 넣지 않는다(2b④).
+    #:
+    #: 단수 쌍이 아니라 리스트인 이유는 형제 표면 `PatchTargetExclusion.observed_occupants`
+    #: 주석과 같다: 단수 쌍은 N>=2를 표현할 수 없어 다중 점유 갈래가 **영구 면제**로 남고,
+    #: 그 면제가 이 SPEC이 일곱 라운드 반복한 형제-갈래 위반의 기제다. `len()`이 곧 상태다.
+    observed_occupants: tuple[Mapping[str, object], ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -951,8 +976,7 @@ class VerificationResult:
             "expected_mode": self.expected_mode,
             "observed_type": self.observed_type,
             "observed_mode": self.observed_mode,
-            "observed_type_display": self.observed_type_display,
-            "observed_mode_display": self.observed_mode_display,
+            "observed_occupants": [dict(occupant) for occupant in self.observed_occupants],
             "outcome": validate_autopatch("verification_outcome", self.outcome),
             "label": verification_outcome_label(self.outcome),
             "detail": self.detail,
@@ -1052,8 +1076,13 @@ def verify_patch(
                     observed_type=None,
                     observed_mode=None,
                     detail=(
-                        f"그 주소에 픽스처가 {len(found)}대 관측된다 — 어느 것인지 확정할 수 없다."
+                        f"그 주소에 픽스처가 {len(found)}대 관측된다"
+                        f"(슬롯 {' · '.join(str(item.slot) for item in found)})"
+                        " — 어느 것인지 확정할 수 없다."
                     ),
+                    # [round17 S17-03a] 형제 표면 `screen_idempotent`와 같은 규약 —
+                    # 다중 점유는 단수 필드로 표현할 수 없어 **영구 면제**였던 자리다.
+                    observed_occupants=tuple(item.to_dict() for item in found),
                 )
             )
             continue
@@ -1067,11 +1096,12 @@ def verify_patch(
             detail = "그 유니버스·주소에서 픽스처가 관측되지 않았다."
         elif not occupant.identity_resolved:
             outcome = VERIFICATION_IDENTITY_UNCONFIRMED
-            # [round15 D] 원문은 `observed_*_display` 필드로 간다 — 문장에 되싣지 않는다(2b④).
+            # [round15 D] 콘솔이 돌려준 것은 `observed_occupants`로 간다 — 문장에 되싣지
+            # 않는다(2b④). [round17 S17-03b] "필드에 있다"는 포인터 문장도 붙이지 않는다:
+            # 무조건 붙이면 값이 빈 상태에서도 있다고 말하게 되어 두 상태가 구별 불가능해진다.
             detail = (
                 "픽스처는 있으나 그 픽스처의 FixtureType·Mode 표시 문자열을 라이브러리에 "
-                "대조해 확정할 수 없다 — 관측된 원문은 "
-                "observed_type_display · observed_mode_display 필드에 있다."
+                "대조해 확정할 수 없다."
             )
         elif occupant.type_name == entry.console_type and occupant.mode_name == entry.console_mode:
             outcome = VERIFICATION_OBSERVED
@@ -1092,8 +1122,7 @@ def verify_patch(
                 observed_type=occupant.type_name if occupant is not None else None,
                 observed_mode=occupant.mode_name if occupant is not None else None,
                 detail=detail,
-                observed_type_display=occupant.type_display if occupant is not None else None,
-                observed_mode_display=occupant.mode_display if occupant is not None else None,
+                observed_occupants=tuple(item.to_dict() for item in found),
             )
         )
 

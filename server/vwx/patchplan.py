@@ -11,6 +11,7 @@ from server.vwx.address import ADDRESS_BASIS_ABS_BACK_CALCULATED
 from server.vwx.diff import MULTI_SYSTEM_MAPPING_ABSENT
 from server.vwx.verdicts import (
     ADDRESS_ALREADY_OCCUPIED,
+    ADDRESS_BELOW_MINIMUM,
     ADDRESS_OVERLAP_IN_PLAN,
     COMPARISON_NOT_PERFORMED,
     FID_ALREADY_IN_USE,
@@ -36,6 +37,79 @@ IRREVERSIBLE_WARNING = (
 SOURCE_PATH_MISSING_IN_CONSOLE = "diffs.missing_in_console"
 FID_FIXTURE_ROOT = "Patch/Stages/1/Fixtures"
 FID_PROPERTY_NAME = "FID"
+#: 콘솔 번호 체계가 시작하는 최소 인덱스 — 유니버스·주소 **양쪽**의 바닥이다.
+#: 두 축에 같은 바닥을 쓰는 근거는 별도 추정이 아니라 PRESERVE 경로의 원전이다:
+#: `server/prechk/patch.py`의 `normalize_address`가 "Both halves must be at least
+#: `_MINIMUM_INDEX`. The console's own numbering starts at one, so `0.0` · `1.0` ·
+#: `0.1` name no addressable channel"이라고 못박고 `universe < _MINIMUM_INDEX or
+#: address < _MINIMUM_INDEX`를 한 조건으로 검사한다(patch.py:121-123·141). 여기도
+#: 같은 형태로 둔다 — 유니버스만 막고 주소를 통과시키거나 그 반대면 반쪽이다.
+#: 상한은 두지 않는다(같은 독스트링의 "deliberately NO upper bound", ASSUMPTION-33)
+#: — `plan_addresses` 안 주석과 `test_r17_no_ceiling_is_fabricated_above_the_universe_width`
+#: 참조. 사본을 두는 이유는 비공개 이름을 계층 넘어 import하지 않기 위해서이고,
+#: 두 값이 어긋나면 대조군이 잡는다
+#: (`test_autopatch_verify.py::test_r17_minimum_index_matches_the_preserve_path`).
+_MINIMUM_ADDRESS_INDEX = 1
+
+# ==========================================================================
+# [round17 S17-04] 사람이 읽는 문장의 **형태 불변식**
+#
+# 이 SPEC은 같은 결함을 세 번 냈다. 셋 다 **조각은 멀쩡한데 조립한 결과가 깨진** 형태다:
+#   round15 N11 — `reason()`의 끝 마침표와 호출부의 `. `가 겹쳐 `..`
+#   round16 S16-01 — 완결 문장을 `" · "` 목록에 넣어 `…대조하라. — 이 상태의…`
+#   round17 S17-04 — 대시를 품은 조각을 대시 있는 문장에 끼워 **한 문장 안 대시 둘**
+# 조각만 보면 셋 다 보이지 않으므로 **조립부에서 조립 결과를** 검사한다. 검사는 테스트가
+# 아니라 프로덕션에 둔다 — 이 문자열은 되돌릴 수 없는 쓰기를 판단하는 사람에게 나가고,
+# 절 경계를 잃은 문장은 판정을 뒤집어 읽힌다(S16-01은 미판독 판정이 미패치 절에 붙었다).
+#: (부분문자열, 무엇이 잘못됐는지) — 한 문장 안에서 발견되면 조립을 거부한다.
+_SENTENCE_SHAPE_DEFECTS: tuple[tuple[str, str], ...] = (
+    ("..", "마침표가 겹쳤다"),
+    (". —", "문장이 대시로 시작한다"),
+    ("  ", "공백이 겹쳤다"),
+    # `" ."`는 넣지 않는다 — `reader.py`의 `"openpyxl 없이는 .xlsx를 판독할 수 없다"`처럼
+    # 확장자·파일명 앞 공백에서 거짓 양성을 낸다. 흔한 거짓 양성은 게이트를 무력화한다(§0 2b④).
+    ("· ·", "빈 절이 목록에 있다"),
+    (" · —", "대시 절이 목록 항목 자리에 있다"),
+)
+#: 한 문장이 품어도 되는 ` — `의 최대 개수. 둘 이상이면 어디까지가 어느 절인지 사라진다.
+_MAX_DASHES_PER_SENTENCE = 1
+
+
+def sentence_shape_violation(text: str, *, require_terminal: bool = True) -> str | None:
+    """사람이 읽는 문자열의 형태 위반을 돌려준다 — 없으면 `None`.
+
+    조각이 아니라 **조립 결과**에 거는 것이 원칙이다. 조각 단위 검사는 이 SPEC이 세 번
+    통과시킨 바로 그 검사다(위 주석).
+
+    `require_terminal=False`는 **정적 뼈대**를 잴 때만 쓴다 — 소스에서 뽑은 조각은 아직
+    이어 붙기 전이라 마침표로 끝나지 않는 것이 정상이다. 나머지 규칙은 조각에도 그대로
+    적용된다: 조각이 이미 `..`·`. —`·이중공백·한 문장 대시 둘을 품고 있으면 어떻게
+    이어 붙여도 깨진 문장이 된다.
+    """
+    for needle, label in _SENTENCE_SHAPE_DEFECTS:
+        if needle in text:
+            return f"{label}: {needle!r}"
+    if require_terminal and not text.endswith("."):
+        return "문장이 종결되지 않았다"
+    for sentence in text.split(". "):
+        if sentence.count(" — ") > _MAX_DASHES_PER_SENTENCE:
+            return f"한 문장에 ' — '가 {sentence.count(' — ')}개다: {sentence!r}"
+    return None
+
+
+def assemble_sentences(*sentences: str) -> str:
+    """완결 문장 여럿을 한 문단으로 잇고 **형태 불변식을 강제한다**.
+
+    빈 조각은 버린다 — 관측되지 않은 축을 빈 문장으로 남기면 `..`·`  `가 생긴다.
+    위반이면 사람에게 내보내지 않고 **즉시 실패한다**: 조용히 나가면 이 SPEC이
+    일곱 라운드 반복한 대로 다음 감사에서야 발견된다.
+    """
+    text = " ".join(sentence for sentence in sentences if sentence)
+    violation = sentence_shape_violation(text)
+    if violation is not None:
+        raise ValueError(f"조립된 문장의 형태가 깨졌다({violation}): {text!r}")
+    return text
+
 
 ASSUMPTION_71_GO = "go"
 ASSUMPTION_71_NEGATIVE = "negative"
@@ -143,13 +217,30 @@ class PatchTargetExclusion:
     code: str
     reason: str
     proposed_fid: int | None = None
-    #: [round15 D] 콘솔이 돌려준 **표시 문자열 원문**. 사유 **문장**에는 되싣지 않고 여기에
-    #: 구조화해 싣는다(§0 2b④ · `apply._rejected_field` 선례). 문장에 원문을 넣으면
-    #: AC-014① 산출물 스캐너가 거짓 양성을 내 게이트가 강제력을 잃는다 — 계획 주소를 점유한
-    #: 픽스처의 `FixtureType`이 `'CD 5'`인 것만으로 전달물 전체가 위반으로 찍혔다(실측).
-    #: 관측값 자체는 조작자에게 그대로 보여야 하므로(§0 2c①) 버리지 않고 **필드로** 옮긴다.
-    observed_type_display: str | None = None
-    observed_mode_display: str | None = None
+    #: [round17 S17-03a] 이 제외를 낳은 **점유자 전원**. 원소는 `ConsoleFixture.to_dict()`
+    #: 모양이다(slot·universe·address·type_display·mode_display·type_name·mode_name·
+    #: identity_resolved).
+    #:
+    #: round15 D가 세운 단수 쌍 `observed_type_display`/`observed_mode_display`를
+    #: **대체한다**. 단수 쌍은 N>=2를 구조적으로 표현할 수 없으므로 "단수 필드를 채운다"는
+    #: 규약에는 **면제 갈래가 영원히 남는다** — 실제로 `screen_idempotent`의 다중 점유
+    #: 갈래가 그 면제였고, 그 갈래의 payload에는 점유자가 몇 대인지 말하는 문장만 있을 뿐
+    #: **무엇이 점유했는지**가 어디에도 없었다(형제 갈래 `address_already_occupied`는
+    #: 슬롯·주소를 준다 — 한 payload 안에서 정보 밀도가 갈렸다). 조작자는 되돌릴 수 없는
+    #: 쓰기를 그 상태로 판단했다. 그 면제가 이 SPEC이 일곱 라운드 반복한 형제-갈래 위반의
+    #: 기제다. 리스트는 0·1·N을 전부 표현하므로 면제가 없다 — `len()`이 곧 상태다.
+    #:
+    #: 콘솔이 돌려준 **표시 문자열 원문**을 사유 **문장**에는 되싣지 않는 규율(§0 2b④ ·
+    #: `apply._rejected_field` 선례)은 그대로다. 문장에 원문을 넣으면 AC-014① 산출물
+    #: 스캐너가 거짓 양성을 내 게이트가 강제력을 잃는다 — 계획 주소를 점유한 픽스처의
+    #: `FixtureType`이 `'CD 5'`인 것만으로 전달물 전체가 위반으로 찍혔다(실측).
+    #: 관측값 자체는 조작자에게 그대로 보여야 하므로(§0 2c①) 버리지 않고 **여기로** 옮긴다.
+    #:
+    #: [round17 S17-03b] 사유 문장에 "원문은 이 필드에 있다"는 **포인터도 넣지 않는다.**
+    #: 포인터를 무조건 붙이면 값이 비었을 때도 있다고 말하게 되어, 점유자 2대인 상태와
+    #: 점유자 1대인데 표시 문자열을 못 읽은 상태가 같은 문장으로 나갔다. payload의 키
+    #: 이름이 곧 포인터이고, 두 상태는 `len(observed_occupants)`가 가른다.
+    observed_occupants: tuple[Mapping[str, object], ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -158,8 +249,7 @@ class PatchTargetExclusion:
             "label": target_exclusion_label(self.code),
             "reason": self.reason,
             "proposed_fid": self.proposed_fid,
-            "observed_type_display": self.observed_type_display,
-            "observed_mode_display": self.observed_mode_display,
+            "observed_occupants": [dict(occupant) for occupant in self.observed_occupants],
         }
 
 
@@ -261,6 +351,9 @@ def plan_addresses(
 
     `occupied`는 유니버스별 기존 점유 구간 `(시작, 끝)` 목록이다.
 
+    유니버스·주소가 콘솔 최소 인덱스 미만인 항목은 ``address_below_minimum``으로
+    제외한다(round17 결함 R17-A) — 아래 :data:`_MINIMUM_ADDRESS_INDEX` 주석 참조.
+
     **재배치는 하지 않는다** — 빈 주소를 찾아 옮겨 붙이는 경로가 이 함수에 없다.
     그것은 사람이 결정할 일이다(design.md §7 안티패턴 7).
     """
@@ -269,6 +362,36 @@ def plan_addresses(
     planned_spans: dict[int, list[tuple[int, int]]] = {}
 
     for target in targets:
+        # round17 결함 R17-A — **바닥만** 검사한다. 1단계(`server/vwx/address.py`)는
+        # 절대주소 음수 입력을 유니버스 0·음수로 역산하고 Universe+DMX Address 직접
+        # 읽기는 음수 주소를 그대로 통과시킨다. 그 값이 `plan_addresses`를 지나면
+        # `span` 산술과 점유 대조가 존재하지 않는 채널 위에서 이뤄지고, 최종적으로
+        # `patch = { "0.507" }` 같은 Lua가 사람 손에 간다(되돌릴 수 없다). 값을 고쳐
+        # 통과시키지 않고 등재된 코드로 배제한다 — 자동 보정 0건(AC-AUTOPATCH-021②).
+        #
+        # 왜 상한은 두지 않는가: `server/prechk/patch.py`의 `normalize_address`가
+        # "per-universe channel capacity is unmeasured(ASSUMPTION-33) — inventing a
+        # ceiling would reject addresses the console accepts"라며 **의도적으로 상한을
+        # 두지 않는다**. 여기서 512를 천장으로 삼으면 콘솔이 받아들이는 주소를 이
+        # 계층이 날조로 거부하게 되고, PRESERVE 경로의 판정과도 어긋난다.
+        # `server/vwx/address.py`의 `_UNIVERSE_WIDTH`(512)는 **절대주소 역산의 전제**
+        # 이지 채널 수용량 천장이 아니므로 여기 상한으로 재사용하지 않는다.
+        # 유니버스 끝을 넘는 `end_address`(꼬리 넘침)도 같은 이유로 이 함수의 판정
+        # 대상이 아니다 — `server/prechk/patch.py`가 "out of scope"로 명시한 축이다.
+        if target.universe < _MINIMUM_ADDRESS_INDEX or target.address < _MINIMUM_ADDRESS_INDEX:
+            exclusions.append(
+                PatchTargetExclusion(
+                    candidate_id=target.id,
+                    code=ADDRESS_BELOW_MINIMUM,
+                    reason=(
+                        f"계획 대상 좌표(유니버스 {target.universe} 주소 "
+                        f"{target.address})가 콘솔 최소 인덱스 {_MINIMUM_ADDRESS_INDEX} "
+                        "미만이다 — 값을 고쳐 통과시키지 않고 제외한다."
+                    ),
+                )
+            )
+            continue
+
         footprint = footprints.get(target.id)
         if not isinstance(footprint, int) or isinstance(footprint, bool) or footprint <= 0:
             exclusions.append(
@@ -544,9 +667,13 @@ def build_patch_plan(
             targets=targets,
             rejection=PatchPlanRejection(
                 code=FID_PRECHECK_READ_INCOMPLETE,
-                reason=(
-                    f"기존 FID 사전검사가 불완전하다 — {existing_read.reason()}. "
-                    "부분 관측으로 빈 FID를 단정하면 이미 쓰이는 번호를 배정하게 된다."
+                # [round17 S17-04] 조각을 문장 안에 끼우던 조립을 **문장 단위 조립**으로
+                # 바꾼다. `reason()`은 조각(대시·마침표 없음), `notes()`는 완결 문장이고,
+                # `assemble_sentences`가 결과의 형태 불변식을 강제한다.
+                reason=assemble_sentences(
+                    f"기존 FID 사전검사가 불완전하다 — {existing_read.reason()}.",
+                    *existing_read.notes(),
+                    "부분 관측으로 빈 FID를 단정하면 이미 쓰이는 번호를 배정하게 된다.",
                 ),
                 vocabulary="target_exclusion_reason",
             ),
@@ -745,16 +872,24 @@ class ExistingFidRead:
         )
 
     def reason(self) -> str:
-        """왜 불완전한가 — **관측된 사실만** 적는다. 전부 0인 문장을 내지 않는다."""
+        """왜 불완전한가 — **관측된 사실만** 적는다. 전부 0인 문장을 내지 않는다.
+
+        **[round17 S17-04] 반환값은 문장 *조각*이다 — 자체에 ` — `도 마침표도 넣지 않는다.**
+        호출부(`build_patch_plan`)가 이 조각을 자기 문장 **안에** 끼워 넣으므로, 조각이
+        대시를 품으면 완성된 문장에 대시가 둘이 되어 어디까지가 어느 절인지 사라진다 —
+        `— 기존 FID 사전검사가 불완전하다 — 열거된 슬롯 3개가 … 많다 — 스냅샷이
+        자기모순이다.`가 실제로 나갔다(48조합 중 24건). round16 S16-01이 같은 기제를
+        `console_read_caveat`에서 이미 한 번 닫았다: 꼬리 판정은 **독립 문장**으로 잇는다.
+        여기서는 그 꼬리를 `notes()`가 완결 문장으로 돌려준다.
+        """
         if not self.attempted:
-            return "콘솔 FID 조회를 수행하지 않았다 — 기존 FID를 하나도 확인하지 못했다"
+            return "콘솔 FID 조회를 수행하지 않았다"
         if self.root_unreadable:
-            return "콘솔의 픽스처 루트 상태를 읽지 못했다 — 기존 FID를 하나도 확인하지 못했다"
+            return "콘솔의 픽스처 루트 상태를 읽지 못했다"
         parts: list[str] = []
         if self.over_enumerated:
             parts.append(
                 f"열거된 슬롯 {self.enumerated_count}개가 선언 총계 {self.child_count}개보다 많다"
-                " — 스냅샷이 자기모순이다"
             )
         if self.unseen is None:
             parts.append("선언 총계(childCount)를 읽지 못해 무엇을 못 봤는지 셀 수 없다")
@@ -767,6 +902,18 @@ class ExistingFidRead:
         if self.unreadable_fids:
             parts.append(f"열거된 슬롯 {self.unreadable_fids}개의 FID 값을 얻지 못했다")
         return " · ".join(parts) if parts else "부분 관측이다"
+
+    def notes(self) -> tuple[str, ...]:
+        """`reason()` 조각에 이어 붙는 **독립 완결 문장들**(각각 마침표로 끝난다).
+
+        [round17 S17-04] 조각 안에 섞으면 한 문장에 대시가 둘이 되거나(위) `" · "` 목록
+        중간에 판정 꼬리가 박혀 바로 앞 절에만 붙은 것처럼 읽힌다(S16-01이 명명한 기제).
+        """
+        if not self.attempted or self.root_unreadable:
+            return ("기존 FID를 하나도 확인하지 못했다.",)
+        if self.over_enumerated:
+            return ("열거가 선언 총계를 넘었으므로 이 스냅샷은 자기모순이다.",)
+        return ()
 
     def to_dict(self) -> dict[str, object]:
         return {
