@@ -10,13 +10,23 @@
 from __future__ import annotations
 
 import json
+import sys
+from functools import cache
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
 from server.llm.types import ToolCall
 from server.orchestrator.tools import TOOL_NAMES, build_toolset
 from server.prechk.inventory import FIXTURE_ROOT
+from server.vwx.patchplan import (
+    ASSUMPTION_71_GO,
+    ASSUMPTION_71_INCONCLUSIVE,
+    ASSUMPTION_71_NEGATIVE,
+    ASSUMPTION_71_VALUES,
+    validate_assumption_71,
+)
 from server.vwx.typemap import FIXTURE_TYPE_LIBRARY_ROOT
 from server.vwx.verdicts import ALREADY_PATCHED_IDENTICAL
 
@@ -631,3 +641,197 @@ def test_the_payload_discloses_that_the_negative_assumption_branch_is_unreachabl
     reach = payload["assumption_71_reachability"]
     assert reach["injected"] == "go"
     assert reach["negative_branch_reachable"] is False
+
+
+# --------------------------------------------------------------------------
+# --- round15 T08 대조군 (ASSUMPTION-71 도달성 표기) ---
+#
+# round14 T08은 `assumption_71_reachability`를 (a) 닫힌 어휘 검증을 거치게 하고
+# (b) 하드코딩 자기주장이 아니라 **주입값에서 파생**하게 고쳤다. 그런데 저장소 전체
+# 테스트에서 `validate_assumption_71` 참조가 **0건**이었다 — 그 수정을 되돌리는 뮤테이션이
+# 전부 통과한다는 뜻이다. 여기서 그 구멍을 닫는다.
+#
+# 방법은 이 저장소의 선례를 따른다(`test_autopatch_verify.py` 약 463행 · `APPLY_SOURCE`):
+# **프로덕션 소스의 사본에 주입 한 줄만 바꿔 심고, 그 사본을 적재해 실제로 디스패치**한 뒤
+# payload를 본다. `_INJECTED_ASSUMPTION_71`은 `build_toolset` 안의 지역 이름이라
+# monkeypatch로 닿지 않는다 — 사본 적재가 유일하게 정직한 경로다.
+# --------------------------------------------------------------------------
+
+TOOLS_PATH = PROJECT_ROOT / "server" / "orchestrator" / "tools.py"
+TOOLS_SOURCE = TOOLS_PATH.read_text(encoding="utf-8")
+
+#: 사본에서 갈아끼울 **주입 한 줄**. 이 앵커가 사라지면 아래 대조군이 전부 즉시 실패한다.
+INJECTION_LINE = "    _INJECTED_ASSUMPTION_71 = ASSUMPTION_71_GO"
+
+_TOOLS_UNDER_TEST = "server.orchestrator._tools_under_test"
+
+
+def _load_tools(source: str) -> dict[str, object]:
+    """`tools.py` 소스를 **진짜 모듈로** 적재한다 — `test_autopatch_execute._load` 관례."""
+    module = ModuleType(_TOOLS_UNDER_TEST)
+    module.__file__ = str(TOOLS_PATH)
+    saved = sys.modules.get(_TOOLS_UNDER_TEST)
+    sys.modules[_TOOLS_UNDER_TEST] = module
+    try:
+        exec(compile(source, str(TOOLS_PATH), "exec"), module.__dict__)
+    finally:
+        if saved is None:
+            del sys.modules[_TOOLS_UNDER_TEST]
+        else:
+            sys.modules[_TOOLS_UNDER_TEST] = saved
+    return module.__dict__
+
+
+@cache
+def _tools_with_injection(value: str) -> dict[str, object]:
+    """주입값만 `value`로 바꾼 `tools.py` 사본을 적재해 돌려준다.
+
+    상수 이름이 아니라 **값 리터럴**로 심는다 — `ASSUMPTION_71_INCONCLUSIVE`는 `tools.py`가
+    import하지 않으므로 이름으로 심으면 `NameError`가 나고, 그러면 대조군이 "도달성 파생"이
+    아니라 "이름 존재"를 시험하게 된다. 값은 프로덕션 상수에서 가져온다(복사 금지).
+    """
+    assert TOOLS_SOURCE.count(INJECTION_LINE) == 1, "주입 앵커가 유일하지 않다"
+    return _load_tools(
+        TOOLS_SOURCE.replace(INJECTION_LINE, f"    _INJECTED_ASSUMPTION_71 = {value!r}", 1)
+    )
+
+
+def _reachability(value: str) -> dict:
+    """`value`를 주입한 사본을 **실제로 디스패치**해 도달성 payload를 돌려준다."""
+    rig = RigPort()
+    registry = _tools_with_injection(value)["build_toolset"](
+        execution_port=_NeverCalledExecutionPort(), state_port=rig, property_port=rig
+    )
+    return _payload(_dispatch(registry, report=_report()))["assumption_71_reachability"]
+
+
+# ---- ① 닫힌 어휘 검증 자체에 대조군 -------------------------------------------
+
+
+def test_the_registered_vocabulary_is_exactly_the_three_named_constants():
+    """[round15 C1] `ASSUMPTION_71_VALUES`에 값을 더하거나 빼면 이 단정이 깨진다."""
+    assert (
+        frozenset({ASSUMPTION_71_GO, ASSUMPTION_71_NEGATIVE, ASSUMPTION_71_INCONCLUSIVE})
+        == ASSUMPTION_71_VALUES
+    )
+
+
+@pytest.mark.parametrize("value", sorted(ASSUMPTION_71_VALUES))
+def test_validate_assumption_71_passes_every_registered_value_through_unchanged(value: str):
+    """등재된 3값은 그대로 통과한다 — 목록은 **프로덕션 상수에서** 받는다(복사 금지)."""
+    assert validate_assumption_71(value) == value
+
+
+# 미등재 표본 — 등재 3값의 형제 축을 표로 연다: 대소문자 변형 · 공백 · 그럴듯한 유의어 ·
+# 빈 문자열 · 실측 판정처럼 보이는 문자열.
+_UNREGISTERED_ASSUMPTION_71_VALUES = (
+    "GO",
+    " go",
+    "go ",
+    "yes",
+    "positive",
+    "unknown",
+    "",
+    "maybe",
+)
+
+
+@pytest.mark.parametrize("value", _UNREGISTERED_ASSUMPTION_71_VALUES)
+def test_validate_assumption_71_refuses_every_unregistered_value(value: str):
+    """[round15 C1] `validate_assumption_71` 본문을 `return value`로 바꾸면 전부 실패한다.
+
+    payload로 나가는 판정 문자열은 닫힌 어휘여야 한다 — 오타 하나가 도달성 표기를
+    조용히 뒤집으면 사람은 되돌릴 수 없는 생성을 잘못된 전제로 승인한다.
+    """
+    with pytest.raises(ValueError, match="assumption_71 must be one of"):
+        validate_assumption_71(value)
+
+
+# ---- ② payload가 주입값에서 파생된다 -------------------------------------------
+
+# 세 값 전부에 대한 **기대 표**. 두 열이 `inconclusive`에서 갈린다 — 이전 판은 둘을
+# 한 술어(`!= go`)로 묶어 "NEGATIVE 분기 도달 가능"이라는 거짓을 참으로 만들었다.
+#
+#   주입값          negative_branch_reachable   confirmation_branch_reachable
+#   go              False                       False
+#   negative        True                        True
+#   inconclusive    False                       True     <- 여기서 갈린다
+_REACHABILITY_TABLE = (
+    (ASSUMPTION_71_GO, False, False),
+    (ASSUMPTION_71_NEGATIVE, True, True),
+    (ASSUMPTION_71_INCONCLUSIVE, False, True),
+)
+
+
+@pytest.mark.parametrize(
+    "value,negative_reachable,confirmation_reachable",
+    _REACHABILITY_TABLE,
+    ids=[value for value, _, _ in _REACHABILITY_TABLE],
+)
+def test_the_reachability_payload_follows_the_injected_value(
+    value: str, negative_reachable: bool, confirmation_reachable: bool
+):
+    """[round14 T08 · round15 C2] 도달성은 **주입값에서 파생**한다 — 자기주장이 아니다.
+
+    어느 필드든 상수로 되돌리는 뮤테이션(예: `"negative_branch_reachable": False`)은
+    이 표의 한 행 이상에서 실패한다. 사본에 심은 주입 한 줄만 다르고 나머지는
+    프로덕션 소스 그대로이며, payload는 **실제 디스패치**로 얻는다.
+    """
+    reach = _reachability(value)
+    assert reach["injected"] == value
+    assert reach["negative_branch_reachable"] is negative_reachable
+    assert reach["confirmation_branch_reachable"] is confirmation_reachable
+
+
+def test_the_two_reachability_fields_are_not_the_same_proposition():
+    """[round15 C3] 두 필드를 한 술어로 다시 묶으면 이 단정이 깨진다.
+
+    `inconclusive` 주입에서 "NEGATIVE 값이 주입됐는가"(거짓)와 "확인 요구 분기가 열리는가"
+    (참)가 갈린다. 필드 이름이 주장하는 것보다 넓은 술어를 쓰지 않는다는 규율의 본체다.
+    """
+    observed = {
+        value: (reach["negative_branch_reachable"], reach["confirmation_branch_reachable"])
+        for value, reach in ((v, _reachability(v)) for v, _, _ in _REACHABILITY_TABLE)
+    }
+    assert observed[ASSUMPTION_71_INCONCLUSIVE][0] != observed[ASSUMPTION_71_INCONCLUSIVE][1]
+    assert [pair[0] for pair in observed.values()] != [pair[1] for pair in observed.values()]
+
+
+def test_the_injected_value_reaches_the_payload_through_the_closed_vocabulary_validator():
+    """[round15 C2] `"injected": validate_assumption_71(...)`에서 검증 호출을 빼면 실패한다.
+
+    사본의 모듈 전역 `validate_assumption_71`을 감시자로 갈아끼운다 — `build_toolset`은
+    그 이름을 **호출 시점에 모듈 전역에서** 찾으므로, payload가 검증을 거치지 않으면
+    감시자가 호출되지 않고 표식도 실리지 않는다.
+    """
+    namespace = _tools_with_injection(ASSUMPTION_71_GO)
+    original = namespace["validate_assumption_71"]
+    seen: list[str] = []
+
+    def _spy(value: str) -> str:
+        seen.append(value)
+        return f"{original(value)}/검증됨"
+
+    namespace["validate_assumption_71"] = _spy
+    try:
+        rig = RigPort()
+        registry = namespace["build_toolset"](
+            execution_port=_NeverCalledExecutionPort(), state_port=rig, property_port=rig
+        )
+        reach = _payload(_dispatch(registry, report=_report()))["assumption_71_reachability"]
+    finally:
+        namespace["validate_assumption_71"] = original
+
+    assert seen == [ASSUMPTION_71_GO]
+    assert reach["injected"] == f"{ASSUMPTION_71_GO}/검증됨"
+
+
+def test_an_unregistered_injection_never_reaches_the_payload():
+    """[round15 C1] 툴 경계에서도 닫힌 어휘가 강제된다 — 미등재 주입은 payload를 못 만든다.
+
+    `validate_assumption_71`과 `build_patch_plan`의 어휘 검증 **둘 다** 무력화해야만
+    미등재 값이 payload로 나간다. 어느 하나만 되돌려도 이 단정은 여전히 통과하지만,
+    위 `test_validate_assumption_71_refuses_every_unregistered_value`가 전자를 따로 잡는다.
+    """
+    with pytest.raises(ValueError, match="assumption_71 must be one of"):
+        _reachability("maybe")

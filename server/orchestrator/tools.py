@@ -135,6 +135,7 @@ from server.vwx.columns import resolve_columns as resolve_vwx_columns
 from server.vwx.diff import compare as compare_vectorworks_rig
 from server.vwx.patchplan import (
     ASSUMPTION_71_GO,
+    ASSUMPTION_71_NEGATIVE,
     build_patch_plan,
     designed_attributes_by_candidate,
     plan_addresses,
@@ -2362,7 +2363,11 @@ def build_toolset(
             "assumption_71_reachability": {
                 "injected": validate_assumption_71(_INJECTED_ASSUMPTION_71),
                 "source": "progress.md §E.2 M0 1차 실측",
-                "negative_branch_reachable": _INJECTED_ASSUMPTION_71 != ASSUMPTION_71_GO,
+                # [round15 N08] 필드 이름이 주장하는 명제보다 넓은 술어를 쓰지 않는다.
+                # `!= go`는 **확인 요구 분기**의 도달성이지 NEGATIVE 값의 도달성이 아니다 —
+                # `inconclusive` 주입에서 둘이 갈린다. 두 명제를 따로 싣는다.
+                "negative_branch_reachable": (_INJECTED_ASSUMPTION_71 == ASSUMPTION_71_NEGATIVE),
+                "confirmation_branch_reachable": (_INJECTED_ASSUMPTION_71 != ASSUMPTION_71_GO),
                 "note": (
                     "이 툴은 주입된 분기만 노출한다 — GO인 동안 "
                     "fid_range_visually_confirmed_empty 는 요구되지 않는다(REQ-AUTOPATCH-026)."

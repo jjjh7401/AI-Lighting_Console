@@ -30,9 +30,11 @@ from server.prechk.inventory import (
 )
 from server.tests.test_autopatch_execute import (
     APPLY_SOURCE,
+    CD_TOKEN,
     REFUTED_REMEDY_TOKENS,
     RecordingDeployPipeline,
     RecordingExecutionPort,
+    _console_bound_text,
     _console_surface,
     _load,
 )
@@ -577,6 +579,10 @@ def test_a_mismatch_comes_out_structured():
         "expected_mode": MODE_1,
         "observed_type": LED,
         "observed_mode": MODE_2,
+        # [round15 D] 라이브러리 확정 이름과 **콘솔 원문**을 함께 싣는다 — 원문은 사유·detail
+        # 문장에서 빠졌고(2b④) 대신 여기 구조화 필드로 온다(2c①).
+        "observed_type_display": "FixtureType 3",
+        "observed_mode_display": "2 Mode 2",
         "outcome": VERIFICATION_MISMATCHED,
         "label": verification_outcome_label(VERIFICATION_MISMATCHED),
         "detail": payload["results"][0]["detail"],
@@ -1125,13 +1131,664 @@ def test_the_neutral_field_map_covers_every_entry_field():
     assert set(_NEUTRAL_FIELDS) == set(LuaPatchEntry.__dataclass_fields__)
 
 
-@pytest.mark.parametrize("word", _PLUGIN_OUTCOME_WORDS)
-def test_every_banned_plugin_outcome_word_is_load_bearing(word):
-    """[round14 T09] **단어마다** 대조군 — 지우면 잡히지 않는 단어는 장식이다."""
-    assert _plugin_outcome_parameters({f"probe_{word}_arg"}) == [f"probe_{word}_arg"]
+# [round15 A] 여기 있던 `test_every_banned_plugin_outcome_word_is_load_bearing` ·
+# `test_every_refuted_remedy_token_is_load_bearing` 둘을 **삭제**했다. 둘 다 항진명제였다 —
+# 전자는 테스트 로컬 목록으로 테스트 로컬 함수를 부를 뿐 `verify_patch`를 건드리지 않았고,
+# 후자는 목록에서 만든 문자열을 **같은 목록으로 다시 걸러** 비어있지 않음을 단정했다.
+# 실측: 목록에서 토큰을 지우면 케이스가 조용히 사라질 뿐(336 → 335 passed, 실패 0)이라
+# "지우면 잡히지 않는 단어는 장식이다"라는 주장이 성립하지 않았다.
+# 대체물은 아래 `--- round15 금지 어휘 대조군 ---` 절에 있다 — 목록과 **독립인** 침해 표본
+# 표를 두고, 그 표본을 **프로덕션 사본에 심어 프로덕션 함수의 반환값**을 검사한다.
+# 그래서 목록에서 토큰을 하나 지우면 그 표본이 빠져나가 테스트가 **실패한다**.
 
 
-@pytest.mark.parametrize("token", REFUTED_REMEDY_TOKENS)
-def test_every_refuted_remedy_token_is_load_bearing(token):
-    planted = f"실행 전에 {token}을(를) 먼저 확인하라."
-    assert [t for t in REFUTED_REMEDY_TOKENS if t in planted] != []
+# --------------------------------------------------------------------------
+# --- round15 금지 어휘 대조군 ---
+#
+# 금지 목록은 **그 자체로는 게이트가 아니다.** 목록으로 목록을 검사하면 항상 참이고,
+# 목록에서 항목을 지우면 그 항목의 케이스도 함께 사라져 아무것도 실패하지 않는다.
+# 그래서 여기서는 목록과 **독립인 침해 표본 표**를 둔다:
+#
+#   1. 표본은 손으로 열거한다 — 금지 목록에서 파생하지 않는다.
+#   2. 표본 하나는 금지 항목 **정확히 하나**에만 걸리도록 고른다(형제 축 표 열거).
+#   3. 표본을 **프로덕션 사본에 심어** 프로덕션 함수를 부르고 **그 반환값**을 검사한다.
+#   4. 표와 목록이 전단사임을 따로 단정한다.
+#
+# 결과: 목록에서 항목을 하나 지우면 (2)의 표본이 게이트를 빠져나가 해당 케이스가 실패하고,
+# 동시에 (4)가 실패한다. 항목을 이름만 바꿔도 (4)가 잡는다.
+# --------------------------------------------------------------------------
+
+
+# 침해 표본 — (금지 단어, 그 단어에만 걸리는 파라미터 이름). `_PLUGIN_OUTCOME_WORDS`에서
+# 파생하지 않는다. 각 이름은 다른 11개 단어 어디에도 걸리지 않도록 골랐다(아래 전단사·유일성
+# 단정이 그것을 강제한다).
+_PLUGIN_OUTCOME_PROBES = (
+    ("plugin", "plugin_hint"),
+    ("exec", "exec_finished"),
+    ("reported", "reported_clean"),
+    ("success", "success_flag"),
+    ("outcome", "outcome_note"),
+    ("status", "status_code"),
+    ("result", "result_seen"),
+    ("verified", "verified_by_caller"),
+    ("claimed", "claimed_done"),
+    ("assumed", "assumed_present"),
+    ("_ok", "console_ok"),
+    ("ok_", "ok_from_console"),
+)
+
+
+def test_the_plugin_outcome_probe_table_is_a_bijection_onto_the_ban_list():
+    """표와 금지 목록이 1:1이다 — 목록에 단어를 더하면 표본 없이는 통과하지 못한다.
+
+    [round15 A1] `_PLUGIN_OUTCOME_WORDS`에서 어느 단어든 지우거나 추가하면 이 단정이 깨진다.
+    """
+    assert tuple(word for word, _ in _PLUGIN_OUTCOME_PROBES) == _PLUGIN_OUTCOME_WORDS
+
+
+@pytest.mark.parametrize(
+    "word,probe", _PLUGIN_OUTCOME_PROBES, ids=[probe for _, probe in _PLUGIN_OUTCOME_PROBES]
+)
+def test_each_plugin_outcome_probe_is_caught_by_exactly_one_banned_word(word, probe):
+    """표본이 **겨냥한 단어에만** 걸린다 — 그래야 그 단어를 지웠을 때 아래 대조군이 실패한다.
+
+    [round15 A1] `_PLUGIN_OUTCOME_WORDS`에서 `word`를 지우면 짝이 되는 아래 대조군이
+    빈 목록을 받아 실패한다. 이 단정은 그 인과가 **다른 단어에 가려지지 않음**을 고정한다.
+    """
+    assert [w for w in _PLUGIN_OUTCOME_WORDS if w in probe.lower()] == [word]
+
+
+@pytest.mark.parametrize("probe", [probe for _, probe in _PLUGIN_OUTCOME_PROBES])
+def test_the_plugin_outcome_ban_catches_each_probe_planted_in_the_production_signature(probe):
+    """AC-021② 비공허성(전수) — 표본마다 **프로덕션 사본**에 인자를 심어 금지가 잡는지 본다.
+
+    `test_the_plugin_outcome_parameter_ban_is_not_vacuous`(약 463행)와 같은 방식이다:
+    `APPLY_SOURCE`를 고쳐 진짜 모듈로 적재하고, 적재된 `verify_patch`의 **실제 시그니처**를
+    금지 목록으로 훑는다. 테스트가 조립한 기대값이 아니라 프로덕션 산출물을 본다.
+
+    [round15 A1] `_PLUGIN_OUTCOME_WORDS`에서 이 표본이 겨냥한 단어를 지우면
+    `offenders`가 비어 이 단정이 실패한다 — 삭제된 구판은 케이스가 사라질 뿐이었다.
+    """
+    planted = APPLY_SOURCE.replace(
+        "    read_complete: bool = True,",
+        f"    read_complete: bool = True,\n    {probe}: bool = False,",
+        1,
+    )
+    assert planted != APPLY_SOURCE
+    namespace = _load(planted)
+    offenders = _plugin_outcome_parameters(inspect.signature(namespace["verify_patch"]).parameters)
+    assert offenders == [probe]
+
+
+# 반증된 처방 표본 — (금지 토큰, 그 토큰에만 걸리는 안내 문장). `REFUTED_REMEDY_TOKENS`에서
+# 파생하지 않는다.
+_REFUTED_REMEDY_PROBES = (
+    ("편집기", "패치 편집기를 먼저 열어라."),
+    ("편집 세션", "편집 세션을 유지한 채 다시 실행하라."),
+    ("Patch 화면", "Patch 화면으로 이동한 뒤 다시 실행하라."),
+    ("Fixtures 뷰", "Fixtures 뷰에서 결과를 확인하라."),
+    ("목적지", "목적지를 먼저 지정하고 다시 실행하라."),
+)
+
+
+def test_the_refuted_remedy_probe_table_is_a_bijection_onto_the_token_list():
+    """[round15 A2] `REFUTED_REMEDY_TOKENS`에서 토큰을 지우거나 더하면 이 단정이 깨진다."""
+    assert tuple(token for token, _ in _REFUTED_REMEDY_PROBES) == REFUTED_REMEDY_TOKENS
+
+
+@pytest.mark.parametrize(
+    "token,phrase", _REFUTED_REMEDY_PROBES, ids=[token for token, _ in _REFUTED_REMEDY_PROBES]
+)
+def test_each_refuted_remedy_probe_is_caught_by_exactly_one_token(token, phrase):
+    """[round15 A2] 표본이 겨냥한 토큰에만 걸린다 — 인과가 다른 토큰에 가려지지 않는다."""
+    assert [t for t in REFUTED_REMEDY_TOKENS if t in phrase] == [token]
+
+
+@pytest.mark.parametrize(
+    "token,phrase", _REFUTED_REMEDY_PROBES, ids=[token for token, _ in _REFUTED_REMEDY_PROBES]
+)
+def test_the_refuted_remedy_guard_catches_each_probe_planted_in_the_production_guidance(
+    token, phrase
+):
+    """AC-022③ 비공허성(전수) — 표본을 **프로덕션 안내 문구에 심어** 게이트가 잡는지 본다.
+
+    `ZERO_CREATED_GUIDANCE`는 `verify_patch`가 호출 시점에 읽는 모듈 전역이다. 사본에서
+    그 전역에 표본 문장을 덧붙이고 **프로덕션 `verify_patch`의 반환값**(`report.guidance`)을
+    훑는다 — 테스트가 만든 문자열을 테스트가 다시 거르는 구판과 다른 점이 이것이다.
+
+    [round15 A2] `REFUTED_REMEDY_TOKENS`에서 `token`을 지우면 `caught`가 비어 실패한다.
+    """
+    planted = APPLY_SOURCE + f'\n\nZERO_CREATED_GUIDANCE = ZERO_CREATED_GUIDANCE + " {phrase}"\n'
+    namespace = _load(planted)
+    report = namespace["verify_patch"]((_entry("a", 1, 1),), console_fixtures=_console())
+    assert report.created_count == 0
+    caught = [t for t in REFUTED_REMEDY_TOKENS if t in "\n".join(report.guidance)]
+    assert caught == [token]
+
+
+def test_the_refuted_remedy_production_guidance_control_is_clean_without_a_plant():
+    """대조군의 대조군 — 심지 않은 사본에서는 같은 훑기가 **아무것도** 잡지 않는다.
+
+    이것이 없으면 위 단정이 "원래부터 걸려 있던 것"을 보고 통과할 수 있다.
+    """
+    namespace = _load(APPLY_SOURCE)
+    report = namespace["verify_patch"]((_entry("a", 1, 1),), console_fixtures=_console())
+    assert report.created_count == 0
+    assert [t for t in REFUTED_REMEDY_TOKENS if t in "\n".join(report.guidance)] == []
+
+
+# --------------------------------------------------------------------------
+# --- round15 조작자가 읽는 문장 게이트 (CaveatGates) ---
+#
+# round14가 진단한 발생 기제를 그대로 옮긴다: **숫자 축은 검증했는데 그 숫자를 소비하는
+# 문장은 검증하지 않았다.** round14가 신설한 `console_read_unpatched_fixtures_present`
+# 갈래에서 그 기제가 그대로 재생산됐다 — 적대 감사는 라벨을 "예비 픽스처가 있다 — 문제 없다"로,
+# caveat 사유를 "확인할 것은 없다"로 바꿔도 스위트 전건이 통과하는 것을 실측했다.
+#
+# 이 caveat은 **막지 않는** 갈래다. 세션은 되돌릴 수 없는 픽스처 생성으로 진행하고,
+# 조작자가 사전에 눈으로 대조할 근거는 **그 문장뿐**이다. 그래서 문장을 잠근다.
+# --------------------------------------------------------------------------
+
+
+def _round15_inventory(
+    *,
+    missing: int = 0,
+    unreadable: int = 0,
+    unpatched: int = 0,
+    addressed: int = 1,
+    index_domain_unknown: bool = False,
+) -> Inventory:
+    """세 입력 축(미판독 열거 · 미판독 주소 · 미패치 · 인덱스 도메인 미상)을 독립으로 세운다."""
+    records: list[FixtureRecord] = [
+        _record(slot, f"1.{slot}", "FixtureType 3", "1 Mode 1") for slot in range(1, addressed + 1)
+    ]
+    for offset in range(unreadable):
+        slot = addressed + offset + 1
+        records.append(
+            FixtureRecord(
+                slot=slot,
+                name=f"unreadable {slot}",
+                patch_raw=None,
+                fixture_type="FixtureType 3",
+                mode="1 Mode 1",
+                read_failures=(
+                    ReadFailure(
+                        slot=slot,
+                        name=f"unreadable {slot}",
+                        property="Patch",
+                        raw_value=None,
+                        kind="read_failed",
+                        detail="not readable",
+                    ),
+                ),
+            )
+        )
+    for offset in range(unpatched):
+        slot = addressed + unreadable + offset + 1
+        records.append(
+            FixtureRecord(
+                slot=slot,
+                name=f"spare {slot}",
+                patch_raw="0.0",
+                fixture_type="FixtureType 3",
+                mode="1 Mode 1",
+            )
+        )
+    return Inventory(
+        path=FIXTURE_ROOT,
+        child_count=len(records) + missing,
+        enumerated_count=len(records),
+        recovered_count=0,
+        observed_count=len(records),
+        missing_count=missing,
+        completeness=INCOMPLETE if missing or index_domain_unknown else COMPLETE,
+        recovery_boundary=len(records) if index_domain_unknown else None,
+        index_domain_unknown=index_domain_unknown,
+        fixtures=tuple(records),
+    )
+
+
+#: 조작자를 **안심시키는** 어휘. caveat 라벨·사유에 들어가면 그 자체가 결함이다 —
+#: 이 갈래는 막지 않으므로 안심 문구는 곧 "대조하지 않고 진행하라"는 지시가 된다.
+_ROUND15_REASSURING_TOKENS = (
+    "문제 없다",
+    "문제없다",
+    "이상 없다",
+    "이상없다",
+    "정상이다",
+    "안전하다",
+    "안심",
+    "확인할 것은 없다",
+    "확인할 필요 없다",
+    "그대로 진행",
+    "무시해도",
+)
+
+#: 경고성 어휘. caveat 라벨·사유는 적어도 하나를 담아야 한다.
+_ROUND15_CAUTION_TOKENS = (
+    "미판독",
+    "미실측",
+    "미상",
+    "절단",
+    "단정할 수 없다",
+    "단정 불가",
+    "대조하라",
+    "확인 불가",
+    "주의",
+)
+
+
+def _round15_reassurances(text: str) -> list[str]:
+    return [token for token in _ROUND15_REASSURING_TOKENS if token in text]
+
+
+def _round15_cautions(text: str) -> list[str]:
+    return [token for token in _ROUND15_CAUTION_TOKENS if token in text]
+
+
+@pytest.mark.parametrize("token", _ROUND15_REASSURING_TOKENS)
+def test_every_reassuring_token_is_load_bearing(token):
+    """단어마다 대조군 — 지워도 잡히지 않는 단어는 장식이다(round14 T09와 같은 규율)."""
+    assert _round15_reassurances(f"예비 픽스처가 있다 — {token}") == [token]
+
+
+@pytest.mark.parametrize("token", _ROUND15_CAUTION_TOKENS)
+def test_every_caution_token_is_load_bearing(token):
+    assert _round15_cautions(f"이 갈래는 {token}") == [token]
+
+
+# `console_read_caveat`의 갈래 전수 표. 입력 축은 셋(미판독 · 미패치 · 인덱스 도메인 미상)이고
+# 여덟 조합을 전부 행으로 놓는다. 열은 (입력, 기대 kind, 기대 `unpatched_count`,
+# 반드시 들어가야 할 문구, 반드시 들어가서는 안 되는 문구)이다.
+_ROUND15_CAVEAT_TABLE = (
+    pytest.param({}, None, 0, (), (), id="none__clean_read_has_no_caveat"),
+    pytest.param(
+        {"index_domain_unknown": True},
+        CONSOLE_READ_INDEX_DOMAIN_UNKNOWN,
+        0,
+        ("열거가 절단됐으나", "인덱스 도메인만 미상이다"),
+        ("최소 인덱스 미만", "열거하지 못했다", "주소를 판독하지 못했다"),
+        id="idu__truncated_but_fully_observed",
+    ),
+    pytest.param(
+        {"unpatched": 1},
+        CONSOLE_READ_UNPATCHED_PRESENT,
+        1,
+        ("콘솔 픽스처 1대가 최소 인덱스 미만", "세션 전에 눈으로 대조하라"),
+        ("인덱스 도메인만 미상이다", "열거하지 못했다", "주소를 판독하지 못했다"),
+        id="unpatched__spare_fixture_only",
+    ),
+    pytest.param(
+        {"unpatched": 19, "index_domain_unknown": True},
+        CONSOLE_READ_UNPATCHED_PRESENT,
+        19,
+        (
+            "콘솔 픽스처 19대가 최소 인덱스 미만",
+            "세션 전에 눈으로 대조하라",
+            "또한",
+            "인덱스 도메인만 미상이다",
+        ),
+        (),
+        id="unpatched_and_idu__both_sentences_must_ship",
+    ),
+    pytest.param(
+        {"unreadable": 1},
+        CONSOLE_READ_INCOMPLETE,
+        0,
+        ("1대는 주소를 판독하지 못했다", "미판독이다"),
+        ("열거하지 못했다", "최소 인덱스 미만"),
+        id="unread__unreadable_address_only",
+    ),
+    pytest.param(
+        {"missing": 1, "index_domain_unknown": True},
+        CONSOLE_READ_INCOMPLETE,
+        0,
+        ("선언된 2대 중 1대를 열거하지 못했다", "미판독이다"),
+        ("주소를 판독하지 못했다", "최소 인덱스 미만"),
+        id="unread_and_idu__enumeration_short_only",
+    ),
+    pytest.param(
+        {"missing": 1, "unreadable": 1},
+        CONSOLE_READ_INCOMPLETE,
+        0,
+        ("선언된 3대 중 1대를 열거하지 못했다", "1대는 주소를 판독하지 못했다"),
+        ("최소 인덱스 미만",),
+        id="unread__both_unread_axes",
+    ),
+    pytest.param(
+        {"unreadable": 1, "unpatched": 1},
+        CONSOLE_READ_INCOMPLETE,
+        1,
+        ("1대는 주소를 판독하지 못했다", "콘솔 픽스처 1대가 최소 인덱스 미만"),
+        ("열거하지 못했다",),
+        id="unread_and_unpatched__count_still_ships",
+    ),
+    pytest.param(
+        {"missing": 1, "unpatched": 2, "index_domain_unknown": True},
+        CONSOLE_READ_INCOMPLETE,
+        2,
+        ("선언된 4대 중 1대를 열거하지 못했다", "콘솔 픽스처 2대가 최소 인덱스 미만"),
+        ("주소를 판독하지 못했다",),
+        id="all_three_axes__blocking_branch_carries_the_count",
+    ),
+)
+
+
+@pytest.mark.parametrize(
+    ("axes", "kind", "unpatched_count", "must_say", "must_not_say"), _ROUND15_CAVEAT_TABLE
+)
+def test_the_console_read_caveat_branches_say_exactly_what_was_observed(
+    axes, kind, unpatched_count, must_say, must_not_say
+):
+    """네 갈래 · 세 입력 축의 **전수 표** — 숫자와 그 숫자를 소비하는 문장을 함께 잠근다.
+
+    round11·12·13이 세 번 연속 같은 기제로 실패했다: 고친 축만 보고 형제 축은 안 봤다.
+    그래서 한 갈래에 대조군을 붙이는 대신 **여덟 조합을 표로 열거**한다.
+
+    [round15] 이 표가 죽이는 뮤테이션:
+    - `apply.py` `_unpatched_clause` 반환 문장을 `"확인할 것은 없다"`로 → 필수 문구 소실 +
+      안심 어휘 검출(세 갈래 전부에서 깨진다).
+    - `apply.py` UNPATCHED 갈래의 `"unpatched_count": unpatched`를 `0`으로 →
+      `unpatched__*` 행이 깨진다.
+    - `apply.py` INCOMPLETE 갈래의 `"unpatched_count": unpatched`를 `0`으로 →
+      `unread_and_unpatched__*` · `all_three_axes__*` 행이 깨진다.
+    - `apply.py`의 `if unpatched:` 갈래를 INDEX_DOMAIN 갈래 뒤로 이동(우선순위 반전) →
+      `unpatched_and_idu__*` 행의 kind가 뒤집힌다.
+    - `apply.py` `reason = f"{reason} 또한 {_INDEX_DOMAIN_CLAUSE}"` 줄 삭제 →
+      `unpatched_and_idu__*` 행의 절단 고지가 사라진다.
+    - `verdicts.py`의 caveat 라벨 변조 → 라벨 동등 단정과 어휘 단정이 깨진다.
+    - INCOMPLETE 사유가 0인 축을 문장에 넣으면(`missing_count=0`인데 "0대를 열거하지
+      못했다") `unread__unreadable_address_only` 행이 깨진다.
+    """
+    from server.vwx.verdicts import console_read_caveat_label
+
+    caveat = console_read_caveat(_round15_inventory(**axes))
+    if kind is None:
+        assert caveat is None
+        return
+    assert caveat is not None
+    assert caveat["kind"] == kind
+    # 라벨은 리터럴 복사가 아니라 **프로덕션 함수**에서 받는다.
+    assert caveat["label"] == console_read_caveat_label(kind)
+
+    missing = axes.get("missing", 0)
+    unreadable = axes.get("unreadable", 0)
+    # 세 갈래 전부가 **관측값**을 싣는다 — 어느 갈래도 0으로 굳히지 않는다.
+    assert caveat["unpatched_count"] == unpatched_count
+    assert caveat["missing_count"] == missing
+    assert caveat["unreadable_address_count"] == unreadable
+    assert caveat["unread_count"] == missing + unreadable
+
+    reason = str(caveat["reason"])
+    for fragment in must_say:
+        assert fragment in reason, reason
+    for fragment in must_not_say:
+        assert fragment not in reason, reason
+
+    # 관측된 사실만 적는다 — 0인 축은 문장에 넣지 않는다(round15 N12).
+    if not missing:
+        assert "열거하지 못했다" not in reason, reason
+    if not unreadable:
+        assert "주소를 판독하지 못했다" not in reason, reason
+    if not axes.get("unpatched", 0):
+        assert "최소 인덱스 미만" not in reason, reason
+
+    for text in (reason, str(caveat["label"])):
+        assert _round15_reassurances(text) == [], text
+        assert _round15_cautions(text) != [], text
+
+
+_ROUND15_CAVEAT_KINDS = (
+    CONSOLE_READ_INCOMPLETE,
+    CONSOLE_READ_INDEX_DOMAIN_UNKNOWN,
+    CONSOLE_READ_UNPATCHED_PRESENT,
+)
+
+
+def test_the_round15_label_gate_covers_every_caveat_kind():
+    """형제 경로 누락 방지 — caveat 종류가 하나 늘면 이 단정이 **먼저** 깨진다."""
+    from server.vwx.verdicts import CONSOLE_READ_CAVEAT_KIND
+
+    assert set(_ROUND15_CAVEAT_KINDS) == set(CONSOLE_READ_CAVEAT_KIND)
+
+
+@pytest.mark.parametrize("code", _ROUND15_CAVEAT_KINDS)
+def test_every_console_read_caveat_label_warns_rather_than_reassures(code):
+    """라벨은 조작자가 보는 첫 문장이다 — 안심 어휘가 들어가면 실패한다.
+
+    [round15] `verdicts.py`의 UNPATCHED_PRESENT 라벨을 `"예비 픽스처가 있다 — 문제 없다"`로
+    바꾸면 이 테스트가 실패한다. 리터럴을 복사하지 않고 **프로덕션 함수**에서 받으며,
+    같은 검사를 형제 두 종류의 라벨에도 적용한다.
+    """
+    from server.vwx.verdicts import console_read_caveat_label
+
+    label = console_read_caveat_label(code)
+    assert _round15_reassurances(label) == [], label
+    assert _round15_cautions(label) != [], label
+
+
+@pytest.mark.parametrize("truncated", [True, False], ids=["truncated", "not_truncated"])
+def test_the_unpatched_caveat_reports_the_truncation_flag_truthfully(truncated):
+    """절단 여부를 **삼키지 않고 실어 보낸다** — 억제 가드가 되살아나면 여기서도 갈린다."""
+    caveat = console_read_caveat(_round15_inventory(unpatched=1, index_domain_unknown=truncated))
+    assert caveat is not None
+    assert caveat["kind"] == CONSOLE_READ_UNPATCHED_PRESENT
+    assert caveat["index_domain_unknown"] is truncated
+
+
+def test_the_unpatched_disclosure_outranks_the_index_domain_notice():
+    """핵심 행 — 절단은 이 콘솔의 **기본 경로**다(실물 콘솔은 픽스처 19대에서 이미 절단).
+
+    이전 판은 `and not inventory.index_domain_unknown` 가드를 달아, 절단이 참이면
+    미실측 가정 고지를 통째로 삼키고 "인덱스 도메인만 미상이다"라는 **안심 문구**만 냈다.
+    절단이 기본 경로이므로 그 억제는 실제 세션에서 거의 항상 발동했다.
+    두 문장이 **모두** 나가야 한다.
+
+    [round15] `apply.py`의 `if unpatched:` 갈래를 INDEX_DOMAIN 갈래 뒤로 옮기거나
+    `reason = f"{reason} 또한 {_INDEX_DOMAIN_CLAUSE}"` 줄을 지우면 이 테스트가 실패한다.
+    """
+    caveat = console_read_caveat(_round15_inventory(unpatched=19, index_domain_unknown=True))
+    assert caveat is not None
+    assert caveat["kind"] == CONSOLE_READ_UNPATCHED_PRESENT
+    reason = str(caveat["reason"])
+    assert "콘솔 픽스처 19대가 최소 인덱스 미만" in reason
+    assert "세션 전에 눈으로 대조하라" in reason
+    assert "인덱스 도메인만 미상이다" in reason
+
+
+_ROUND15_UNPATCHED_COUNT_FIELD = '"unpatched_count": unpatched'
+
+
+def _round15_unpatched_count_gate(source: str) -> tuple[int, int]:
+    """(관측값에서 유도한 자리 수, `unpatched_count` 키가 나오는 전체 자리 수)."""
+    return source.count(_ROUND15_UNPATCHED_COUNT_FIELD), source.count('"unpatched_count":')
+
+
+def test_every_caveat_branch_derives_the_unpatched_count_from_the_observation():
+    """세 갈래 전부가 **관측값**을 싣는다 — 리터럴로 굳힌 자리가 없다.
+
+    행동으로 잡히는 갈래는 둘이다(위 표의 `unpatched__*` · `unread_and_unpatched__*`).
+    INDEX_DOMAIN 갈래는 `unpatched == 0`일 때만 도달하므로 그 자리를 `0`으로 굳혀도
+    행동 차이가 없다 — 등가 뮤턴트다. 그래서 그 갈래만은 **구조로** 잠그고,
+    아래 대조군이 이 게이트가 실제로 잡는다는 것을 프로덕션 사본으로 확인한다.
+
+    [round15] 세 갈래 중 어느 하나라도 `"unpatched_count": 0`으로 바꾸면 실패한다.
+    """
+    derived, total = _round15_unpatched_count_gate(APPLY_SOURCE)
+    assert derived == total
+    assert derived >= len(_ROUND15_CAVEAT_KINDS)
+
+
+def test_the_unpatched_count_source_gate_catches_a_literal_in_the_last_branch():
+    """비공허성 — **마지막** 갈래(INDEX_DOMAIN)에 리터럴을 심으면 게이트가 깨진다.
+
+    같은 사본을 실행해 **행동으로는 구별되지 않는다**는 것까지 보인다 —
+    구조 게이트가 왜 필요한지가 그 대비에서 나온다.
+    """
+    cut = APPLY_SOURCE.rfind(_ROUND15_UNPATCHED_COUNT_FIELD)
+    assert cut != -1
+    planted = (
+        APPLY_SOURCE[:cut]
+        + '"unpatched_count": 0'
+        + APPLY_SOURCE[cut + len(_ROUND15_UNPATCHED_COUNT_FIELD) :]
+    )
+    assert planted != APPLY_SOURCE
+    derived, total = _round15_unpatched_count_gate(planted)
+    assert derived != total
+
+    namespace = _load(planted)
+    caveat = namespace["console_read_caveat"](_round15_inventory(index_domain_unknown=True))
+    assert caveat["kind"] == CONSOLE_READ_INDEX_DOMAIN_UNKNOWN
+    assert caveat["unpatched_count"] == 0
+
+
+def _round15_valid_lua_entry() -> LuaPatchEntry:
+    """생성기가 **받아들이는** 항목 — 어떤 프로브도 거부되지 않으므로 폴백에 도달한다."""
+    return LuaPatchEntry(
+        console_type=LED,
+        console_mode=MODE_1,
+        fid=101,
+        name="LEDBeam 101",
+        universe=1,
+        address=1,
+    )
+
+
+#: 예날 폴백 문구가 주장했던 것. 도달 조건은 그 **반대**다 — 프로브가 전부 통과했다는 뜻이다.
+_ROUND15_SELF_CONTRADICTING_FALLBACK = "중립 입력도 거부"
+
+
+def test_the_rejected_field_fallback_does_not_claim_the_opposite_of_its_condition():
+    """폴백은 "단일 필드로 환원되지 않는다"까지만 말한다 — 관측하지 않은 것을 주장하지 않는다.
+
+    이 자리는 도달 가능하다: 모든 프로브가 통과하면(= 중립 기준선이 거부되지 **않았다**는 뜻)
+    폴백이 나온다. 예날 문구는 하필 그 조건의 반대("중립 입력도 거부됨")를 적어, 사용자가
+    무엇을 고쳐야 하는지를 거짓으로 알렸다.
+
+    [round15] `apply.py` 폴백 문구를 `"확정 불가(중립 입력도 거부됨)"`로 되돌리면 실패한다.
+    """
+    from server.vwx.apply import _rejected_field
+
+    fallback = _rejected_field(_round15_valid_lua_entry())
+    assert "확정 불가" in fallback
+    assert _ROUND15_SELF_CONTRADICTING_FALLBACK not in fallback
+    assert _round15_reassurances(fallback) == [], fallback
+
+
+def test_no_apply_text_claims_the_neutral_baseline_was_rejected():
+    """같은 자기모순 문구가 다른 자리로 옮겨가는 것까지 막는다."""
+    assert _ROUND15_SELF_CONTRADICTING_FALLBACK not in APPLY_SOURCE
+
+
+def test_the_self_contradicting_fallback_gate_is_not_vacuous():
+    """비공허성 — 예날 문구를 심은 **프로덕션 사본**에서 위 두 단정이 실제로 깨진다."""
+    planted = APPLY_SOURCE.replace(
+        "확정 불가(거부 사유가 단일 필드로 환원되지 않는다)",
+        "확정 불가(중립 입력도 거부됨)",
+        1,
+    )
+    assert planted != APPLY_SOURCE
+    assert _ROUND15_SELF_CONTRADICTING_FALLBACK in planted
+    namespace = _load(planted)
+    assert _ROUND15_SELF_CONTRADICTING_FALLBACK in namespace["_rejected_field"](
+        _round15_valid_lua_entry()
+    )
+
+
+# --------------------------------------------------------------------------
+# --- round15 D 콘솔 표시 문자열은 관측 데이터다 ---
+#
+# 안전 감사 실측: 계획 주소를 점유한 콘솔 픽스처의 `type_display`가 `'CD 5'`이고
+# `identity_resolved=False`이면 `CD_TOKEN.search(repr(handoff.to_dict()))`가 **매치**했다.
+# 그것은 위반이 아니라 **관측 데이터**다 — 거짓 양성이고, 흔한 거짓 양성은 게이트의
+# 강제력을 없앤다(§0 2b④가 정확히 그것을 금한다).
+#
+# 두 축을 함께 고쳤다:
+#   축 1 (게이트) — 훑는 표면을 콘솔로 나가는 축으로 좁혔다(`_console_bound_text`).
+#   축 2 (문장)   — 표시 문자열 원문을 사유·detail **문장**에서 빼고 구조화 필드로 옮겼다
+#                   (`observed_type_display` · `observed_mode_display`). 값은 버리지 않는다 —
+#                   조작자는 무엇을 봤는지 알아야 한다(§0 2c①).
+# 한 축만 고치면 다른 축이 곧 같은 결함을 다시 만든다(HARD 규율 1).
+# --------------------------------------------------------------------------
+
+
+def _cd_occupied_handoff():
+    """감사자 구성 그대로 — 계획 주소를 `'CD 5'` 표시 문자열 픽스처가 점유한 전달물."""
+    console = _console(_record(1, "1.1", "CD 5", "9 Mode 9"))
+    targets = (_candidate("a", 1, 1, 101),)
+    resolutions = (_resolution("a"),)
+    screened = screen_idempotent(
+        targets,
+        address_plan=AddressPlan(entries=(_planned("a", 1, 1),)),
+        resolutions=resolutions,
+        console_fixtures=console,
+    )
+    return build_patch_handoff(
+        targets,
+        address_plan=screened,
+        resolutions=resolutions,
+        names={"a": "LEDBeam 101"},
+        dry_run=False,
+    )
+
+
+def test_the_cd_occupancy_fixture_actually_reaches_the_identity_unconfirmed_branch():
+    """재현 구성이 겨냥한 분기에 실제로 도달한다 — 아니면 아래 두 단정이 공허하다."""
+    handoff = _cd_occupied_handoff()
+    assert [exclusion.code for exclusion in handoff.exclusions] == [EXISTING_IDENTITY_UNCONFIRMED]
+
+
+def test_a_console_display_string_carrying_cd_is_not_a_gate_violation():
+    """[round15 D 축 1] 관측 데이터의 `CD`는 위반이 아니다 — 좁힌 게이트가 발화하지 않는다.
+
+    좁히기 전(`repr(handoff.to_dict())` 전수 훑기)에는 여기서 게이트가 **잘못** 발화했다.
+    """
+    assert CD_TOKEN.search(_console_bound_text(_cd_occupied_handoff())) is None
+
+
+def test_the_observed_display_strings_travel_in_structured_fields_not_in_the_reason_sentence():
+    """[round15 D 축 2] 문장은 좌표·필드 이름만, 원문은 구조화 필드로(§0 2b④ + 2c①).
+
+    `screen_idempotent`의 사유 문장에 `occupant.type_display`를 되싣도록 되돌리면 이 단정이
+    실패한다 — 그리고 그 회귀가 곧 위 거짓 양성의 원인이다.
+    """
+    exclusion = _cd_occupied_handoff().exclusions[0]
+    assert "CD 5" not in exclusion.reason
+    assert "9 Mode 9" not in exclusion.reason
+    assert CD_TOKEN.search(exclusion.reason) is None
+    assert "유니버스 1 주소 1" in exclusion.reason
+    assert exclusion.observed_type_display == "CD 5"
+    assert exclusion.observed_mode_display == "9 Mode 9"
+    assert exclusion.to_dict()["observed_type_display"] == "CD 5"
+
+
+def test_the_verification_detail_also_keeps_the_display_strings_out_of_the_sentence():
+    """[round15 D 축 2 — 형제 축] `verify_patch`의 `detail`도 같은 규율을 받는다.
+
+    round11·12·13이 세 번 연속으로 놓친 기제가 "고친 축만 보고 형제 축은 안 봤다"이다.
+    `screen_idempotent`만 고치고 `verify_patch`를 두면 같은 결함이 그대로 남는다.
+    """
+    report = verify_patch(
+        (_entry("a", 1, 1),),
+        console_fixtures=_console(_record(1, "1.1", "CD 5", "9 Mode 9")),
+    )
+    result = report.results[0]
+    assert result.outcome == VERIFICATION_IDENTITY_UNCONFIRMED
+    assert "CD 5" not in result.detail
+    assert CD_TOKEN.search(result.detail) is None
+    assert result.observed_type_display == "CD 5"
+    assert result.observed_mode_display == "9 Mode 9"
+    assert result.to_dict()["observed_mode_display"] == "9 Mode 9"
+
+
+def test_no_exclusion_reason_leaks_onto_a_console_bound_surface():
+    """[round15 D] 제외 진단문이 게이트 밖인 **근거**를 구조로 확인한다.
+
+    사유에 실린 문자열이 `lua_source`·절차·경고·`next_step`·`entries`로 새어 나가면 좁힌
+    게이트가 곧 구멍이 된다. 표시 문자열이든 라이브러리 확정 이름이든 마찬가지다.
+    """
+    handoff = _cd_occupied_handoff()
+    console_bound = _console_bound_text(handoff)
+    assert handoff.exclusions
+    for exclusion in handoff.exclusions:
+        assert exclusion.reason not in console_bound

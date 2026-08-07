@@ -143,6 +143,13 @@ class PatchTargetExclusion:
     code: str
     reason: str
     proposed_fid: int | None = None
+    #: [round15 D] 콘솔이 돌려준 **표시 문자열 원문**. 사유 **문장**에는 되싣지 않고 여기에
+    #: 구조화해 싣는다(§0 2b④ · `apply._rejected_field` 선례). 문장에 원문을 넣으면
+    #: AC-014① 산출물 스캐너가 거짓 양성을 내 게이트가 강제력을 잃는다 — 계획 주소를 점유한
+    #: 픽스처의 `FixtureType`이 `'CD 5'`인 것만으로 전달물 전체가 위반으로 찍혔다(실측).
+    #: 관측값 자체는 조작자에게 그대로 보여야 하므로(§0 2c①) 버리지 않고 **필드로** 옮긴다.
+    observed_type_display: str | None = None
+    observed_mode_display: str | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -151,6 +158,8 @@ class PatchTargetExclusion:
             "label": target_exclusion_label(self.code),
             "reason": self.reason,
             "proposed_fid": self.proposed_fid,
+            "observed_type_display": self.observed_type_display,
+            "observed_mode_display": self.observed_mode_display,
         }
 
 
@@ -691,10 +700,17 @@ def _assign_fids(
 class ExistingFidRead:
     """콘솔에서 읽은 기존 FID와 **못 읽은 것의 수**.
 
-    `unread`가 0이 아니면 `fids`는 기존 FID의 **부분 집합**이다 — 그것을
+    어느 축이든 0이 아니면 `fids`는 기존 FID의 **부분 집합**이다 — 그것을
     전체로 읽고 "빈 FID"를 고르면 **이미 쓰이는 번호를 배정**하게 되고,
     §0 함정 2가 적은 대로 MA3는 그것을 조용히 받아들여 엉뚱한 픽스처를 덮는다.
     이 앱에는 실행 취소가 없다.
+
+    **[round15 N01/N02] 기본 인스턴스는 "조회하지 않았다"를 뜻한다.** 이전 판은
+    기본값이 `complete=True`여서 ① 포트가 없을 때(`fid_property_port=None`,
+    시그니처상 기본값) GO 분기 가드가 발화하지 않은 채 FID가 배정되고
+    ② 비-GO 분기 payload가 **수행하지 않은 읽기**를 "완전 · 기존 FID 0개"로 보고했다.
+    round14 T02가 루트 실패 갈래에만 처방을 적용하고 같은 함수 6줄 위의 형제 갈래를
+    빠뜨린 결과다. 조회를 실제로 시도한 경로만 `attempted=True`를 붙인다.
     """
 
     fids: tuple[int, ...] = ()
@@ -706,26 +722,34 @@ class ExistingFidRead:
     unreadable_fids: int = 0
     #: 슬롯 번호가 없거나 중복이라 쓸 수 없던 행 수.
     unusable_rows: int = 0
+    #: 매핑이 아니라 슬롯 번호조차 물어볼 수 없던 행 수 — [round15 N06] 이전 판은
+    #: 이 행을 계수 없이 버려 다섯 축 어디에도 걸리지 않는 여섯 번째 실패 형태를 남겼다.
+    unparsable_rows: int = 0
     #: 열거 행이 선언 총계보다 많다 — 형제 리더는 이 스냅샷을 거부한다.
     over_enumerated: bool = False
     #: 루트 상태 자체를 못 읽었다 — 아무 것도 모른다.
     root_unreadable: bool = False
+    #: 콘솔 조회를 **시도했는가**. 기본은 거짓 — 미수행과 "읽었고 깨끗했다"는 다르다.
+    attempted: bool = False
 
     @property
     def complete(self) -> bool:
-        return not (
+        return self.attempted and not (
             self.root_unreadable
             or self.over_enumerated
             or self.unseen is None
             or self.unseen > 0
             or self.unreadable_fids > 0
             or self.unusable_rows > 0
+            or self.unparsable_rows > 0
         )
 
     def reason(self) -> str:
         """왜 불완전한가 — **관측된 사실만** 적는다. 전부 0인 문장을 내지 않는다."""
+        if not self.attempted:
+            return "콘솔 FID 조회를 수행하지 않았다 — 기존 FID를 하나도 확인하지 못했다"
         if self.root_unreadable:
-            return "콘솔의 픽스처 루트 상태를 읽지 못했다 — 기존 FID를 하나도 확인하지 못했다."
+            return "콘솔의 픽스처 루트 상태를 읽지 못했다 — 기존 FID를 하나도 확인하지 못했다"
         parts: list[str] = []
         if self.over_enumerated:
             parts.append(
@@ -738,17 +762,21 @@ class ExistingFidRead:
             parts.append(f"선언 {self.child_count}개 중 {self.unseen}개를 열거하지 못했다")
         if self.unusable_rows:
             parts.append(f"슬롯 번호가 없거나 중복인 행 {self.unusable_rows}개를 쓰지 못했다")
+        if self.unparsable_rows:
+            parts.append(f"슬롯으로 해석되지 않는 행 {self.unparsable_rows}개가 섞여 있다")
         if self.unreadable_fids:
             parts.append(f"열거된 슬롯 {self.unreadable_fids}개의 FID 값을 얻지 못했다")
         return " · ".join(parts) if parts else "부분 관측이다"
 
     def to_dict(self) -> dict[str, object]:
         return {
+            "attempted": self.attempted,
             "child_count": self.child_count,
             "enumerated_count": self.enumerated_count,
             "unseen_count": self.unseen,
             "unreadable_fid_count": self.unreadable_fids,
             "unusable_row_count": self.unusable_rows,
+            "unparsable_row_count": self.unparsable_rows,
             "over_enumerated": self.over_enumerated,
             "root_unreadable": self.root_unreadable,
             "complete": self.complete,
@@ -765,17 +793,25 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
     (round11 N01 — 이전 판은 둘 다 삼켜 이미 쓰이는 FID를 배정했다).
     """
     if fid_property_port is None:
+        # [round15 N01] 포트가 없으면 **조회 자체를 하지 않았다**. 이전 판은 여기서
+        # `complete=True`인 기본 인스턴스를 돌려줘 GO 분기 가드를 통과시켰고, payload는
+        # 그것을 "읽었고 기존 FID가 0개였다"와 구별 불가능하게 실었다.
         return ExistingFidRead()
     state = fid_property_port.query_state(FID_FIXTURE_ROOT)
     if state.get("ok") is not True:
         # [round14 T02] 루트를 못 읽으면 **아무 것도 모른다**. 이전 판은 이 경우에도
         # 계수만 0으로 채워 "선언 None대 중 0대만 열거했고 0대는 FID를 얻지 못했다"는,
         # 조작자에게 **아무 문제 없음으로 읽히는** 문장을 냈다.
-        return ExistingFidRead(root_unreadable=True)
+        return ExistingFidRead(attempted=True, root_unreadable=True)
 
     node = state.get("node")
     child_count = _optional_int(node.get("childCount")) if isinstance(node, Mapping) else None
-    children = _mapping_rows(state.get("children"))
+    raw_rows = _row_sequence(state.get("children"))
+    children = [row for row in raw_rows if isinstance(row, Mapping)]
+    # [round15 N06] 매핑이 아닌 행은 슬롯 번호조차 물어볼 수 없다. 이전 판은 그것을
+    # 계수 없이 버려 다섯 축 어디에도 걸리지 않는 여섯 번째 실패 형태를 만들었고,
+    # 같은 스냅샷에서 형제 리더(`read_inventory`)는 `AttributeError`로 죽는다.
+    unparsable_rows = len(raw_rows) - len(children)
     existing_fids: list[int] = []
     unread = 0
     # [round12 R01] **행 수가 아니라 서로 다른 슬롯 수**를 센다. 중복 `i`가 섞여 오면
@@ -818,8 +854,10 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
         unseen=unseen,
         unreadable_fids=unreadable_fids,
         unusable_rows=unread,
+        unparsable_rows=unparsable_rows,
         over_enumerated=over_enumerated,
         root_unreadable=False,
+        attempted=True,
     )
 
 
@@ -988,6 +1026,17 @@ def _mapping_rows(value: object) -> tuple[Mapping[str, object], ...]:
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
         return ()
     return tuple(row for row in value if isinstance(row, Mapping))
+
+
+def _row_sequence(value: object) -> tuple[object, ...]:
+    """행을 **거르지 않고** 그대로 돌려준다 — 버려진 행의 수를 세야 하는 자리에서 쓴다.
+
+    `_mapping_rows`는 비매핑 행을 조용히 버린다. 그 침묵이 round15 N06이다:
+    버려진 행은 어느 축에도 걸리지 않아 부분 관측이 "완전"으로 등급됐다.
+    """
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+        return ()
+    return tuple(value)
 
 
 def _optional_string(value: object) -> str | None:

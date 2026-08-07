@@ -69,7 +69,21 @@ from server.vwx.verdicts import (
 
 APPLY_PATH = Path("server/vwx/apply.py")
 APPLY_SOURCE = APPLY_PATH.read_text(encoding="utf-8")
-VWX_MODULES = tuple(sorted(Path("server/vwx").glob("*.py")))
+
+
+def _discover_modules(root: Path) -> tuple[Path, ...]:
+    """봉인 스캔 대상을 **재귀로** 모은다.
+
+    [round15 B] 이전 판은 평면 `glob('*.py')`이라 `server/vwx/` **바로 아래**만 봤다.
+    하위 패키지(`server/vwx/console/…`)가 하나 생기는 순간 그 파일들이 스캔에서 조용히
+    빠져나가고, 아래 AC-018 전수 주장이 "스캔한 것 중에는 없다"로 축소된다.
+    함수로 뽑아 둔 것은 재귀성 자체에 대조군을 붙이기 위해서다
+    (`test_the_seal_scan_discovery_is_recursive`).
+    """
+    return tuple(sorted(root.rglob("*.py")))
+
+
+VWX_MODULES = _discover_modules(Path("server/vwx"))
 
 # `CD`/`ChangeDestination` 스캐너 — M4(`test_autopatch_lua.py:47`)와 같은 정규식.
 # 전달물(Lua 소스 + 실행 절차 문구)도 콘솔로 갈 산출물이므로 같은 규율을 받는다.
@@ -226,6 +240,54 @@ def _handoff(**overrides):
 
 
 # --------------------------------------------------------------------------
+# [round15 D] AC-014① CD 게이트의 **겨냥 지점**
+#
+# 이전 판은 `repr(handoff.to_dict())` **전체**를 훑었다. 그래서 계획 주소를 점유한 콘솔
+# 픽스처의 `FixtureType` 표시 문자열이 `'CD 5'`이기만 해도 전달물 전체가 위반으로 찍혔다
+# (안전 감사 실측 · 재현은 `test_autopatch_verify.py`의
+# `test_a_console_display_string_carrying_cd_is_not_a_gate_violation`). 절단·미확정은 이
+# 콘솔의 기본 경로라 그런 거짓 양성이 흔하고, 흔한 거짓 양성은 게이트의 강제력을 없앤다.
+#
+# CD 금지의 실제 대상은 **사람이 콘솔에 입력하거나 그대로 따라 실행할 텍스트**다. 그래서
+# payload 키를 두 축으로 **표로 분류**하고, 게이트는 콘솔로 나가는 축만 훑는다. 제외
+# 진단문은 콘솔에서 실행되지 않으므로 게이트 밖이며, 그쪽은 §0 2b④(거부된 입력을 사유
+# 문장에 되싣지 않는다)가 별도 단정으로 지킨다.
+# --------------------------------------------------------------------------
+
+#: 콘솔로 나가는 축. `entries`가 여기 있는 이유는 이름·타입·모드가 **그대로 Lua에 박히기**
+#: 때문이다 — 그래서 `lua_source`와 같은 규율을 받는다.
+_CONSOLE_BOUND_HANDOFF_KEYS = ("lua_source", "next_step", "procedure", "warnings", "entries")
+
+#: 콘솔에서 실행되지 않는 축 — 상태·진단 보고. 새 키가 생기면 어느 쪽인지 **정해야** 하고,
+#: 정하지 않으면 `test_every_handoff_payload_key_is_classified_console_bound_or_diagnostic`이
+#: 실패한다(HARD 규율 1 — 형제 축을 표로 열거).
+_DIAGNOSTIC_HANDOFF_KEYS = (
+    "ok",
+    "dry_run",
+    "delivered",
+    "status",
+    "execution_performed_by",
+    "exclusions",
+)
+
+
+def _console_bound_text(handoff) -> str:
+    """전달물에서 **콘솔로 나가는 축만** 문자열로 모은다 — CD 게이트가 훑는 표면."""
+    payload = handoff.to_dict()
+    return repr({key: payload[key] for key in _CONSOLE_BOUND_HANDOFF_KEYS})
+
+
+def test_every_handoff_payload_key_is_classified_console_bound_or_diagnostic():
+    """[round15 D] `to_dict()`에 키가 하나 생기면 분류를 **정하지 않고는** 통과하지 못한다.
+
+    좁힌 게이트가 조용히 새는 방식은 하나뿐이다 — 콘솔로 나가는 새 축이 어느 표에도 없는 것.
+    """
+    payload = _handoff(dry_run=False).to_dict()
+    assert set(_CONSOLE_BOUND_HANDOFF_KEYS).isdisjoint(_DIAGNOSTIC_HANDOFF_KEYS)
+    assert set(_CONSOLE_BOUND_HANDOFF_KEYS) | set(_DIAGNOSTIC_HANDOFF_KEYS) == set(payload)
+
+
+# --------------------------------------------------------------------------
 # AC-AUTOPATCH-015① — 검토 가능한 Lua 소스와 실행 절차가 전달물에 담긴다
 # --------------------------------------------------------------------------
 
@@ -271,9 +333,14 @@ def test_the_refuted_remedy_guard_is_not_vacuous():
     assert [token for token in REFUTED_REMEDY_TOKENS if token in planted] == ["편집기"]
 
 
-def test_the_generated_delivery_payload_carries_no_destination_token():
-    payload = repr(_handoff(dry_run=False).to_dict())
-    assert CD_TOKEN.search(payload) is None
+def test_the_console_bound_surface_carries_no_destination_token():
+    """AC-014① — 사람이 콘솔에 입력할 텍스트에 반증된 `CD` 어휘가 0건.
+
+    [round15 D] 이전 이름은 `..._payload_...`였고 `repr(to_dict())` 전체를 훑었다. 그 훑기는
+    관측 데이터(점유 픽스처의 표시 문자열)에도 반응해 거짓 양성을 냈다 — 좁힌 이유가 그것이다.
+    좁힌 것이 약화가 아님은 아래 표면별 대조군 5건이 보증한다.
+    """
+    assert CD_TOKEN.search(_console_bound_text(_handoff(dry_run=False))) is None
 
 
 # --------------------------------------------------------------------------
@@ -430,14 +497,60 @@ def test_execution_port_scanner_control_is_caught(plant):
     assert _CONSOLE_WARD_NAMES & _attribute_names(APPLY_SOURCE + "\n\n" + plant)
 
 
-def _imported_modules(source: str) -> set[str]:
+def _module_package(path: Path) -> str:
+    """파일 경로에서 그 모듈이 속한 **패키지 점 표기**를 만든다 — 상대 import 복원에 쓴다."""
+    return ".".join(path.parent.parts)
+
+
+# 모듈명을 **문자열로** 받는 동적 import 호출. `importlib.import_module(...)` 같은 점 표기와
+# `from importlib import import_module` 뒤의 bare 호출을 모두 잡는다.
+_DYNAMIC_IMPORT_CALLEES = frozenset({"import_module", "__import__"})
+
+
+def _imported_modules(source: str, *, package: str = "server.vwx") -> set[str]:
+    """소스가 **import로 도달하는 모듈 이름**을 전부 모은다.
+
+    [round15 B] 이전 판은 `ast.Import`의 `alias.name`과 `ast.ImportFrom`의 `node.module`
+    **문자열만** 보고 접두사 대조했다. 적대 감사가 그 두 가드를 모두 통과하는 5형태를
+    실측했다 — 아래 표가 그 형태고, `_CONSOLE_IMPORT_PLANTS`가 전부에 대조군을 붙인다:
+
+      1. `from ..bridge import osc`         — `node.module`이 `'bridge'`(접두사 불일치)
+      2. `from ..safety.gate import Gate`   — `node.module`이 `'safety.gate'`
+      3. `from server import safety`        — 금지 이름이 `node.module`이 아니라 **alias**에
+      4. `importlib.import_module("server.bridge")` — 모듈명이 **상수 문자열 인자**다
+      5. `__import__("server.safety")`              — 같은 이유
+
+    그래서 (a) `node.level > 0`이면 `package`를 기준으로 절대명을 **복원**하고,
+    (b) `ImportFrom`의 alias 이름을 모듈명에 **이어 붙인 형태도 함께** 싣고,
+    (c) 동적 import 호출의 **상수 문자열 인자**를 수집한다.
+    """
     tree = ast.parse(source)
     names: set[str] = set()
+    parts = package.split(".") if package else []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             names.update(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom) and node.module:
-            names.add(node.module)
+        elif isinstance(node, ast.ImportFrom):
+            # `from . import x`는 자기 패키지, `from .. import x`는 그 부모를 기준으로 한다.
+            anchor = ".".join(parts[: len(parts) - (node.level - 1)]) if node.level else ""
+            base = ".".join(part for part in (anchor, node.module or "") if part)
+            if base:
+                names.add(base)
+                names.update(f"{base}.{alias.name}" for alias in node.names)
+        elif isinstance(node, ast.Call):
+            callee = node.func
+            if isinstance(callee, ast.Attribute):
+                callee_name = callee.attr
+            elif isinstance(callee, ast.Name):
+                callee_name = callee.id
+            else:
+                callee_name = None
+            if callee_name in _DYNAMIC_IMPORT_CALLEES:
+                names.update(
+                    argument.value
+                    for argument in node.args
+                    if isinstance(argument, ast.Constant) and isinstance(argument.value, str)
+                )
     return names
 
 
@@ -449,35 +562,104 @@ def _imported_modules(source: str) -> set[str]:
 _CONSOLE_WARD_MODULES = ("server.bridge", "pythonosc", "server.safety")
 
 
-@pytest.mark.parametrize("module", VWX_MODULES, ids=lambda path: path.name)
+def _console_ward_offenders(source: str, *, package: str = "server.vwx") -> list[str]:
+    """봉인에 걸리는 import 이름을 **정렬·중복제거해** 돌려준다."""
+    return sorted(
+        {
+            name
+            for name in _imported_modules(source, package=package)
+            if name.startswith(_CONSOLE_WARD_MODULES)
+        }
+    )
+
+
+@pytest.mark.parametrize("module", VWX_MODULES, ids=lambda path: str(path))
 def test_no_vwx_module_imports_the_console_send_surface(module: Path):
-    """AC-018③ — 콘솔 발화로 이어지는 모듈 import 0건(게이트 포함)."""
+    """AC-018③ — 콘솔 발화로 이어지는 모듈 import 0건.
+
+    게이트 경유·상대 import·`from server import safety`·동적 import까지 전부 본다
+    (`_imported_modules` 독스트링의 5형태). 스캔 대상은 재귀로 모은다.
+    """
     assert VWX_MODULES, "스캔 대상이 0개면 이 확인은 공허하다"
-    offenders = [
-        name
-        for name in _imported_modules(module.read_text(encoding="utf-8"))
-        if name.startswith(_CONSOLE_WARD_MODULES)
-    ]
+    offenders = _console_ward_offenders(
+        module.read_text(encoding="utf-8"), package=_module_package(module)
+    )
     assert offenders == []
+
+
+def test_the_seal_scan_discovery_is_recursive(tmp_path: Path):
+    """[round15 B] `rglob`을 평면 `glob('*.py')`으로 되돌리면 이 단정이 실패한다.
+
+    같은 발견 표현식을 합성 트리에 적용해 **재귀성 자체**를 본다 — 저장소에 아직 하위
+    패키지가 없어서 실물로는 그 회귀가 보이지 않기 때문이다.
+    """
+    (tmp_path / "console").mkdir()
+    (tmp_path / "top.py").write_text("", encoding="utf-8")
+    nested = tmp_path / "console" / "link.py"
+    nested.write_text("", encoding="utf-8")
+    assert set(_discover_modules(tmp_path)) == {tmp_path / "top.py", nested}
+
+
+# 심는 대조군 — **봉인을 우회하는 형태를 표로 열거**한다(HARD 규율 1: 형제 축을 표로).
+# 앞 3형태는 이전 판(절대 import)이고, 뒤 5형태는 적대 감사가 실측한 우회로다.
+# `expected`는 그 소스에서 스캐너가 내야 하는 **정렬된 위반 이름 전부**다 — 앞 3형태의
+# 기대값이 넓어진 것은 alias 이어붙이기가 추가됐기 때문이며, 약화가 아니라 강화다.
+_CONSOLE_IMPORT_PLANTS = (
+    (
+        "absolute_bridge",
+        "from server.bridge import osc  # noqa: F401",
+        ("server.bridge", "server.bridge.osc"),
+    ),
+    (
+        "absolute_safety_gate",
+        "from server.safety.gate import SafetyGate  # noqa: F401",
+        ("server.safety.gate", "server.safety.gate.SafetyGate"),
+    ),
+    ("absolute_pythonosc", "import pythonosc  # noqa: F401", ("pythonosc",)),
+    (
+        "relative_bridge",
+        "from ..bridge import osc  # noqa: F401",
+        ("server.bridge", "server.bridge.osc"),
+    ),
+    (
+        "relative_safety_gate",
+        "from ..safety.gate import SafetyGate  # noqa: F401",
+        ("server.safety.gate", "server.safety.gate.SafetyGate"),
+    ),
+    ("alias_is_the_submodule", "from server import safety  # noqa: F401", ("server.safety",)),
+    (
+        "importlib_string_argument",
+        'import importlib\n\n_gate = importlib.import_module("server.bridge")',
+        ("server.bridge",),
+    ),
+    (
+        "dunder_import_string_argument",
+        '_gate = getattr(__import__("server.safety"), "gate")',
+        ("server.safety",),
+    ),
+)
 
 
 @pytest.mark.parametrize(
     "plant,expected",
-    [
-        ("from server.bridge import osc  # noqa: F401", "server.bridge"),
-        ("from server.safety.gate import SafetyGate  # noqa: F401", "server.safety.gate"),
-        ("import pythonosc  # noqa: F401", "pythonosc"),
-    ],
-    ids=["bridge", "safety_gate", "pythonosc"],
+    [(plant, expected) for _, plant, expected in _CONSOLE_IMPORT_PLANTS],
+    ids=[name for name, _, _ in _CONSOLE_IMPORT_PLANTS],
 )
 def test_console_import_scanner_control_is_caught(plant, expected):
-    """AC-018③ 비공허성 — **게이트 경유 포함** 심은 사본에서 스캐너가 실제로 잡는다."""
-    offenders = [
-        name
-        for name in _imported_modules(APPLY_SOURCE + "\n\n" + plant + "\n")
-        if name.startswith(_CONSOLE_WARD_MODULES)
-    ]
-    assert offenders == [expected]
+    """AC-018③ 비공허성 — **8형태 전부** 심은 사본에서 스캐너가 실제로 잡는다.
+
+    [round15 B] 뒤 5형태는 이전 스캐너를 **그대로 통과했다**(실측). 어느 형태의 수집을
+    되돌려도 그 행이 빈 목록을 받아 실패한다.
+    """
+    assert _console_ward_offenders(APPLY_SOURCE + "\n\n" + plant + "\n") == sorted(expected)
+
+
+def test_the_console_import_scanner_reports_nothing_without_a_plant():
+    """대조군의 대조군 — 심지 않은 프로덕션 소스에서는 같은 스캐너가 0건이다.
+
+    이것이 없으면 위 8행이 "원래부터 걸려 있던 것"을 보고 통과할 수 있다.
+    """
+    assert _console_ward_offenders(APPLY_SOURCE, package=_module_package(APPLY_PATH)) == []
 
 
 # --------------------------------------------------------------------------
@@ -595,9 +777,15 @@ def test_a_name_carrying_the_destination_token_is_excluded_with_a_reason(hostile
 
 
 def test_the_refused_name_is_not_silently_repaired():
-    """조용히 고치지 않는다 — 산출물에 그 항목이 어떤 형태로도 남지 않는다."""
+    """조용히 고치지 않는다 — 콘솔로 나가는 축에 그 항목이 어떤 형태로도 남지 않는다.
+
+    [round15 D] 훑는 표면을 `_console_bound_text`로 좁혔다. 거부된 **값**이 진단문에도
+    남지 않는다는 §0 2b④ 규율은 `test_the_refusal_reason_still_does_not_echo_the_rejected_value`
+    가 따로 지킨다 — 한 단정에 두 규율을 겹쳐 놓으면 어느 쪽이 깨졌는지 알 수 없다.
+    """
     handoff = _handoff(names={"a": "CD spare"}, dry_run=False)
-    assert CD_TOKEN.search(repr(handoff.to_dict())) is None
+    assert CD_TOKEN.search(_console_bound_text(handoff)) is None
+    assert "CD spare" not in _console_bound_text(handoff)
     assert "a" not in {entry.candidate_id for entry in handoff.entries}
 
 
@@ -704,13 +892,38 @@ def test_the_refusal_reason_names_the_field_that_was_actually_rejected():
     assert "console_type 필드를 거부" in by_type.exclusions[0].reason
 
 
-def test_the_refusal_reason_still_does_not_echo_the_rejected_value():
-    """필드 이름은 말하되 **값은 싣지 않는다** — 값을 되싣으면 산출물 스캐너가 거짓 양성을 낸다."""
-    for handoff in (
-        _handoff(names={"a": "CD spare"}, dry_run=False),
-        _handoff(resolutions=(_resolution(candidate_id="a", console_type="Acme CD 700"),)),
-    ):
-        assert CD_TOKEN.search(repr(handoff.to_dict())) is None
+# §0 2b④ 표 — (호출, 거부된 **값**, 사유가 지목해야 할 필드 이름).
+_REJECTED_INPUT_CASES = (
+    ("name", {"names": {"a": "CD spare"}}, "CD spare", "name"),
+    (
+        "console_type",
+        {"resolutions": (_resolution(candidate_id="a", console_type="Acme CD 700"),)},
+        "Acme CD 700",
+        "console_type",
+    ),
+)
+
+
+@pytest.mark.parametrize(
+    "kwargs,rejected_value,expected_field",
+    [(kwargs, value, field) for _, kwargs, value, field in _REJECTED_INPUT_CASES],
+    ids=[name for name, _, _, _ in _REJECTED_INPUT_CASES],
+)
+def test_the_refusal_reason_still_does_not_echo_the_rejected_value(
+    kwargs, rejected_value, expected_field
+):
+    """§0 2b④ — 필드 이름은 말하되 **거부된 값은 문장에 싣지 않는다**(`_rejected_field` 선례).
+
+    [round15 D] 게이트를 콘솔 표면으로 좁힌 뒤 이 규율은 **여기서만** 지켜진다. 그래서
+    `repr(to_dict())`에 정규식을 거는 간접 훑기를 버리고 **사유 문장 자체**를 직접 본다 —
+    그 간접 훑기는 거부된 값이 아니라 관측 데이터에도 반응하는 것이 실측으로 확인됐다.
+    """
+    handoff = _handoff(dry_run=False, **kwargs)
+    reasons = [exclusion.reason for exclusion in handoff.exclusions]
+    assert reasons, "제외가 없으면 이 확인은 공허하다"
+    assert [reason for reason in reasons if rejected_value in reason] == []
+    assert [reason for reason in reasons if CD_TOKEN.search(reason)] == []
+    assert [reason for reason in reasons if f"{expected_field} 필드를 거부" in reason] == reasons
 
 
 @pytest.mark.parametrize(
@@ -788,3 +1001,100 @@ def test_a_mixed_string_and_integer_rejection_names_both_axes():
     named = _rejected_field(entry)
     assert "name" in named
     assert "fid" in named
+
+
+# --------------------------------------------------------------------------
+# --- round15 D 콘솔 표면 CD 게이트 비공허성 ---
+#
+# 게이트를 좁혔으면 **좁힌 자리마다** 심어서 잡히는지 보여야 한다. 대조군 없이 좁히면
+# 게이트를 약화시킨 것과 구별되지 않는다. 표면 5개 전부에 프로덕션 사본으로 심는다
+# (`test_autopatch_verify.py` 약 463행 · `APPLY_SOURCE` 선례).
+# --------------------------------------------------------------------------
+
+_PLANT_CD_IN_LUA_SOURCE = """
+
+_handoff_before_lua_cd_plant = build_patch_handoff
+
+
+def build_patch_handoff(*args, **kwargs):
+    handoff = _handoff_before_lua_cd_plant(*args, **kwargs)
+    return replace(handoff, lua_source=(handoff.lua_source or "") + "\\n-- ChangeDestination")
+"""
+
+_PLANT_CD_IN_ENTRY_NAME = """
+
+_handoff_before_entry_cd_plant = build_patch_handoff
+
+
+def build_patch_handoff(*args, **kwargs):
+    handoff = _handoff_before_entry_cd_plant(*args, **kwargs)
+    return replace(
+        handoff, entries=tuple(replace(entry, name="CD spare") for entry in handoff.entries)
+    )
+"""
+
+_PLANT_CD_IN_NEXT_STEP = """
+
+NEXT_STEP_HUMAN_EXECUTION = NEXT_STEP_HUMAN_EXECUTION + " CD"
+"""
+
+_PLANT_CD_IN_PROCEDURE = """
+
+HUMAN_EXECUTION_PROCEDURE = (*HUMAN_EXECUTION_PROCEDURE, "6. CD 로 이동한 뒤 실행한다.")
+"""
+
+_ORIGINAL_DELIVERY_WARNINGS = (
+    "DELIVERY_WARNINGS = (IRREVERSIBLE_WARNING, PLUGIN_EXIT_IS_NOT_SUCCESS, END_TO_END_UNVERIFIED)"
+)
+
+
+def _apply_source_with_cd_in_warnings() -> str:
+    """`warnings`는 dataclass 필드 기본값이라 적재 후 재바인딩이 닿지 않는다 —
+    그래서 **소스 치환**으로 심는다."""
+    planted = APPLY_SOURCE.replace(
+        _ORIGINAL_DELIVERY_WARNINGS,
+        _ORIGINAL_DELIVERY_WARNINGS[:-1] + ', "CD 로 옮겨라")',
+        1,
+    )
+    assert planted != APPLY_SOURCE, "DELIVERY_WARNINGS 앵커가 사라졌다"
+    return planted
+
+
+# (표면 이름, 그 표면에만 CD를 심은 프로덕션 사본 소스)
+_CD_SURFACE_PLANTS = (
+    ("lua_source", APPLY_SOURCE + _PLANT_CD_IN_LUA_SOURCE),
+    ("entries", APPLY_SOURCE + _PLANT_CD_IN_ENTRY_NAME),
+    ("next_step", APPLY_SOURCE + _PLANT_CD_IN_NEXT_STEP),
+    ("procedure", APPLY_SOURCE + _PLANT_CD_IN_PROCEDURE),
+    ("warnings", _apply_source_with_cd_in_warnings()),
+)
+
+
+def test_the_cd_surface_plant_table_covers_every_console_bound_key():
+    """[round15 D] 콘솔 표면 표에 축을 더하거나 빼면 대조군 표와 어긋나 여기서 걸린다."""
+    surfaces = [surface for surface, _ in _CD_SURFACE_PLANTS]
+    assert len(surfaces) == len(set(surfaces)) == len(_CONSOLE_BOUND_HANDOFF_KEYS)
+    assert set(surfaces) == set(_CONSOLE_BOUND_HANDOFF_KEYS)
+
+
+@pytest.mark.parametrize(
+    "planted",
+    [planted for _, planted in _CD_SURFACE_PLANTS],
+    ids=[surface for surface, _ in _CD_SURFACE_PLANTS],
+)
+def test_the_console_bound_cd_gate_catches_a_plant_on_every_surface(planted):
+    """AC-014① 비공허성 — 콘솔 표면 **다섯 축 전부**에 심으면 좁힌 게이트가 실제로 잡는다.
+
+    [round15 D] `_CONSOLE_BOUND_HANDOFF_KEYS`에서 축을 하나 빼면 그 행이 잡지 못해 실패한다.
+    게이트를 좁힌 것이 약화가 아님을 보증하는 것이 이 표다.
+    """
+    namespace = _load(planted)
+    handoff = namespace["build_patch_handoff"](**_handoff_kwargs(dry_run=False))
+    assert CD_TOKEN.search(_console_bound_text(handoff)) is not None
+
+
+def test_the_console_bound_cd_gate_is_clean_without_a_plant():
+    """대조군의 대조군 — 심지 않은 프로덕션 사본에서는 같은 게이트가 0건이다."""
+    namespace = _load(APPLY_SOURCE)
+    handoff = namespace["build_patch_handoff"](**_handoff_kwargs(dry_run=False))
+    assert CD_TOKEN.search(_console_bound_text(handoff)) is None
