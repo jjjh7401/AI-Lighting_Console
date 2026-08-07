@@ -1,4 +1,4 @@
-# 라이브 측정 절차 — M1(`CueFade`) · M2(I-14 반환 타입)
+# 라이브 측정 절차 — M1(`CueFade`) · M2(I-14) · M3(`rot*`) · M4(풀 절단)
 
 > **이 문서는 콘솔이 붙는 세션이 그대로 집행하도록 썼다.** 읽는 순서: §0 → §1 → 해당 측정.
 >
@@ -149,6 +149,83 @@ I-14는 그 한계를 우회하는 유일한 후보지만 쓰기를 요구한다
 
 ---
 
+## §3a. M3 — `rot*`가 읽히는가 (비파괴, 5분)
+
+### 무엇이 걸려 있나
+
+`Pos*`(x/y/z)는 `prop`으로 읽히는 것이 실측 확정이고 매직시트 좌표표가 그것을 쓴다.
+`rot*`(x/y/z)는 **같은 오브젝트의 형제 패치 프로퍼티**다 — `blacklist.yaml`의 `Set Fixture`
+주석이 `Posx/Posy/Posz/Rotx/...`를 한 묶음으로 다루고, `SPATIAL-001/design.md:113`이
+`P3 | READ 전축 | x/y/z(+rot* 판독만)`을 **후보로 이미 등재**했다(`ASSUMPTION-53`).
+
+⚠️ **기대치를 정확히 잡을 것.** GO여도 얻는 것은 **설치 지향**(픽스처 몸통이 어느 방향으로
+걸렸나)이지 **조사 방향**(빔이 어디를 향하나)이 아니다. 후자는 Pan/Tilt 실시간 값이고
+텔레메트리 벽(W3) 뒤에 있다. 무빙 라이트는 어차피 돌아가므로 몸통 방향이 거의 의미 없고,
+고정 기구(PAR·프레넬·프로파일)에서만 유효하다. **GO여도 "포커스 차트"라 부르지 마라.**
+
+### 발화
+
+`<slot>`은 실재하는 픽스처 슬롯. `Posx`가 양성 대조군 역할을 한다.
+
+```bash
+# ① 양성 대조군 — 반드시 먼저. 실패하면 경로가 틀린 것이다
+uv run python -m server.tools.responder_roundtrip --skip-exec \
+    --prop-path "Patch/Stages/1/Fixtures/<slot>" --prop-name Posx
+
+# ② 본 측정 (3축 각각)
+uv run python -m server.tools.responder_roundtrip --skip-exec \
+    --prop-path "Patch/Stages/1/Fixtures/<slot>" --prop-name Rotx
+#   Roty · Rotz 도 같은 방식으로
+
+# ③ 날조 대조군
+uv run python -m server.tools.responder_roundtrip --skip-exec \
+    --prop-path "Patch/Stages/1/Fixtures/<slot>" --prop-name RotxXyzzy
+```
+
+### 판정
+
+①이 `ok=true`인데 ②가 `ok=false`이고 ③도 `ok=false`면 **NO-GO**(프로퍼티가 없다).
+②가 `ok=true`이고 ③이 `ok=false`면 **GO** — 매직시트 좌표표에 방향 3열을 더한다.
+②③이 **둘 다** `ok=true`면 **측정 무효**(§1-3).
+
+⚠️ **쓰기는 금지 유지.** `AC-SPATIAL-022`가 `rot*` 기록 0건을 요구한다. 판독 GO가
+기록 허가로 번지지 않게 하라 — 읽기와 쓰기는 별개 결정이다.
+
+---
+
+## §3b. M4 — 풀 열거가 실제로 잘리는가 (비파괴, 1분)
+
+### 왜 이걸 먼저 재는가
+
+`read_inventory`는 슬롯 단위 회수(`slot_path`, `recover_truncated=True`)를 하는데
+`read_spatial_fixtures`와 풀 열거(`collect_rig_sections`)는 **같은 절단을 보고만 하고
+회수하지 않는다.** 그 비대칭을 없애자는 제안이 있으나 — **풀이 실제로 잘리는지는 한 번도
+관측된 적이 없다.** 픽스처 컨테이너의 절단만 실측돼 있다(39대 리그 18/39, 19대 컨테이너 18/19).
+
+작은 쇼파일이면 **아무것도 잘리지 않고 그 작업의 효과는 0이다.** 그러니 고치기 전에 잰다.
+
+### 발화
+
+```bash
+for p in "DataPool/Sequences" "DataPool/PresetPools" "DataPool/Groups" "DataPool/Macros"; do
+  uv run python -m server.tools.responder_roundtrip --skip-exec --path "$p"
+done
+```
+
+출력의 `node=... children=N`에서 **`node.childCount` vs `N`**을 비교한다.
+
+| 관측 | 판정 |
+|---|---|
+| 모든 풀에서 `childCount == N` | **회수 이식 불필요.** 이 쇼파일에서는 효과 0이다 — 하지 마라 |
+| 어느 풀이든 `childCount > N` | **이식할 가치 있음.** 그 풀 이름과 두 수치를 기록 |
+| `truncated: true` | 같음 — 절단 신호가 이미 서 있다 |
+
+응답기 상한은 `max_children = 24`와 payload 1900B이고 **후자가 먼저 터진다**
+(`copilot_responder.lua:31-39`). 그러니 24개 미만에서도 잘릴 수 있다 — 개수만 보고
+"24 미만이니 괜찮다"고 판단하지 마라.
+
+---
+
 ## §4. 결과 기록처 — 이 문서가 아니다
 
 측정값은 해당 SPEC의 `progress.md`에 **원문 보존 + 소급 정정 각주** 형식으로 넣는다.
@@ -158,6 +235,8 @@ I-14는 그 한계를 우회하는 유일한 후보지만 쓰기를 요구한다
 |---|---|---|
 | M1 `CueFade` | `.moai/specs/SPEC-COPILOT-SCENE-001/progress.md` | `:230`/`:232`의 YES/NO 판정 옆에 각주. GO면 `spec.md`의 NO 행에 소급 정정 각주 |
 | M2 I-14 | `.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md` | §「`ASSUMPTION-27` 주장 범위 정정」의 후보표 I-14 행 |
+| M3 `rot*` | `.moai/specs/SPEC-COPILOT-SPATIAL-001/progress.md` | `design.md:113`이 등재한 `ASSUMPTION-53` READ 축의 판정. GO면 `SPATIAL_FIXTURE_PROPERTIES` 확장 근거가 된다 |
+| M4 풀 절단 | `docs/reports/2026-08-06-workflow-coverage-review.html` | 단계④ “대형 리그 전량 열거” 행. **잘리지 않았다면 그것도 기록하라** — 안 고친 이유가 된다 |
 
 기록에 **반드시** 포함할 것: 발화한 정확한 문자열 3건(①②③) · 각 응답의 `ok`/`value`/
 `error` **원문** · 응답기 버전 · 측정 일시 · 쇼파일 식별. 그중 하나라도 없으면
