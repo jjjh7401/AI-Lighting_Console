@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>무대공연 업무 프로세스 대비 구현 커버리지 리포트 — AI-Lighting_Console</title>
+<style>
+  :root {
+    --ink: #16181d; --sub: #5b6472; --line: #d8dde5; --bg: #fbfcfd;
+    --ok: #1b7f4b; --okbg: #e8f6ee;
+    --part: #9a6b00; --partbg: #fdf3dc;
+    --no: #a52222; --nobg: #fbeaea;
+    --wall: #3f3f6e; --wallbg: #eeeef8;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic",
+         "Segoe UI", Helvetica, Arial, sans-serif;
+         color: var(--ink); background: var(--bg);
+         margin: 0; padding: 32px 28px 72px; line-height: 1.62;
+         -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1060px; margin: 0 auto; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 26px; }
+  h1 { font-size: 25px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .docmeta { color: var(--sub); font-size: 12.5px; }
+  .docmeta b { color: var(--ink); font-weight: 600; }
+  h2 { font-size: 18px; margin: 40px 0 12px; padding-bottom: 6px;
+       border-bottom: 1px solid var(--line); }
+  h3 { font-size: 14.5px; margin: 22px 0 8px; }
+  p, li { font-size: 13.5px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+         font-size: 11.8px; background: #eef1f5; border-radius: 3px; padding: 1px 4px; }
+  .lead { font-size: 14.5px; background: #fff; border: 1px solid var(--line);
+          border-left: 4px solid var(--ink); padding: 14px 16px; border-radius: 4px; }
+
+  /* KPI */
+  .kpis { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 4px; }
+  .kpi { flex: 1 1 152px; background: #fff; border: 1px solid var(--line);
+         border-radius: 5px; padding: 11px 13px; }
+  .kpi .n { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .kpi .l { font-size: 11px; color: var(--sub); margin-top: 2px; }
+
+  /* badges */
+  .b { display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 3px;
+       padding: 1px 6px; white-space: nowrap; vertical-align: 1px; }
+  .b-ok { background: var(--okbg); color: var(--ok); }
+  .b-part { background: var(--partbg); color: var(--part); }
+  .b-no { background: var(--nobg); color: var(--no); }
+  .b-wall { background: var(--wallbg); color: var(--wall); }
+
+  table { border-collapse: collapse; width: 100%; background: #fff;
+          margin: 12px 0 6px; font-size: 12.6px; }
+  th, td { border: 1px solid var(--line); padding: 7px 9px; text-align: left;
+           vertical-align: top; }
+  th { background: #f1f4f8; font-size: 11.8px; letter-spacing: 0.01em; }
+  td.c, th.c { text-align: center; white-space: nowrap; }
+  tbody tr:nth-child(even) { background: #fcfdfe; }
+
+  .stage { background: #fff; border: 1px solid var(--line); border-radius: 6px;
+           padding: 0 0 12px; margin: 16px 0 22px; overflow: hidden; }
+  .stage > .head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+                   background: #f1f4f8; border-bottom: 1px solid var(--line);
+                   padding: 10px 14px; }
+  .stage > .head .num { font-size: 11px; font-weight: 700; color: #fff;
+                        background: var(--ink); border-radius: 3px; padding: 2px 7px; }
+  .stage > .head .who { font-size: 15px; font-weight: 700; }
+  .stage > .head .role { font-size: 11.5px; color: var(--sub); }
+  .stage .body { padding: 4px 14px 0; }
+  dl.kv { margin: 10px 0 0; }
+  dl.kv dt { font-size: 11px; font-weight: 700; color: var(--sub);
+             letter-spacing: 0.03em; margin-top: 10px; }
+  dl.kv dd { margin: 3px 0 0; font-size: 13.2px; }
+  ul.tight { margin: 4px 0 0; padding-left: 19px; }
+  ul.tight li { margin: 2px 0; }
+  .src { color: var(--sub); font-size: 11.5px; }
+
+  .note { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--wall);
+          padding: 11px 14px; border-radius: 4px; margin: 12px 0; font-size: 13px; }
+  .warn { border-left-color: var(--no); }
+  .good { border-left-color: var(--ok); }
+
+  figure { margin: 16px 0 8px; background: #fff; border: 1px solid var(--line);
+           border-radius: 6px; padding: 10px 6px 4px; }
+  figcaption { font-size: 11.5px; color: var(--sub); padding: 2px 10px 6px; }
+  footer.doc { margin-top: 44px; border-top: 1px solid var(--line); padding-top: 12px;
+               color: var(--sub); font-size: 11.5px; }
+  @media print {
+    body { background: #fff; padding: 0.45in; font-size: 11pt; }
+    .stage, table, figure { break-inside: avoid; }
+    h2 { break-after: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <h1>무대공연 업무 프로세스 대비 구현 커버리지 리포트</h1>
+  <div class="docmeta">
+    <b>대상</b> AI-Lighting_Console (grandMA3 onPC 코파일럿) ·
+    <b>작성일</b> 2026-08-06 ·
+    <b>기준 커밋</b> <code>5a64475</code> (origin/main 계열) ·
+    <b>관점</b> 공연기획 → 조명연출/감독 → 콘솔 오퍼레이터 → 조명세팅/운영
+  </div>
+  <div class="docmeta" style="margin-top:6px">
+    본 문서의 모든 판정은 저장소 코드·테스트·SPEC 아티팩트에서 직접 확인한 것이며,
+    각 항목에 근거 좌표를 병기한다. 추정은 <span class="b b-wall">추정</span>으로 표시한다.
+  </div>
+</header>
+
+<p class="lead">
+  <b>한 줄 결론 —</b> 이 앱은 업무 사슬의 <b>3단계(콘솔 오퍼레이터)를 거의 완성</b>하고,
+  <b>4단계(세팅·운영)를 안전 계층까지 포함해 실전 수준으로 채웠으며</b>,
+  <b>2단계(조명연출/감독)를 어휘·초안 생성까지 절반쯤 올라섰고</b>,
+  <b>1단계(공연 기획)는 사실상 비어 있다.</b>
+  남은 격차의 대부분은 “구현하지 않았다”가 아니라
+  <b>콘솔에서 읽을 수 없는 정보라서 정직하게 비워둔 것</b>이며(§4의 관측 벽 5건),
+  그래서 다음 착수 항목은 기능 코딩이 아니라 <b>벽의 높이를 재는 라이브 측정 3건</b>이다(§6 P1).
+</p>
+
+<div class="kpis">
+  <div class="kpi"><div class="n">18</div><div class="l">모델 호출 가능 툴 (<code>TOOL_NAMES</code>)</div></div>
+  <div class="kpi"><div class="n">4,251</div><div class="l">자동 테스트 (pytest 수집)</div></div>
+  <div class="kpi"><div class="n">12</div><div class="l">완결 SPEC (<code>status: completed</code>)</div></div>
+  <div class="kpi"><div class="n">32 / 12 / 5</div><div class="l">룩 / 이펙트 / 씬 자산</div></div>
+  <div class="kpi"><div class="n">0.40%</div><div class="l">측정된 문법 오류율 (1/248)</div></div>
+  <div class="kpi"><div class="n">5</div><div class="l">구조적 관측 벽 (§4)</div></div>
+</div>
+<p class="src">
+  근거 — <code>server/orchestrator/tools.py:89-108</code> ·
+  <code>uv run pytest server/tests -q -k paperwork</code> 출력(36 selected + 4215 deselected) ·
+  <code>.moai/specs/*/spec.md</code> frontmatter ·
+  <code>server/looks/library/*.yaml</code>(7+9+8+8) · <code>server/fx/library/*.yaml</code>(2+2+8) ·
+  <code>server/scene/library/core.yaml</code>(5) · CHANGELOG M6b-1r2 측정 기록.
+</p>
+
+<h2>1. 업무 사슬 한 장 요약</h2>
+
+<figure>
+<svg viewBox="0 0 1020 262" width="100%" height="262" role="img"
+     aria-label="4단계 업무 프로세스별 구현 커버리지 도표">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b95a5"/>
+    </marker>
+  </defs>
+  <g font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif">
+    <!-- stage boxes -->
+    <g>
+      <rect x="8" y="24" width="234" height="112" rx="6" fill="#fbeaea" stroke="#e0b4b4"/>
+      <text x="22" y="46" font-size="12.5" font-weight="700" fill="#16181d">① 공연 기획 · 제작</text>
+      <text x="22" y="64" font-size="10.5" fill="#5b6472">기획자 · 연출</text>
+      <text x="22" y="86" font-size="11" fill="#a52222" font-weight="700">커버리지 ≈ 10%</text>
+      <text x="22" y="104" font-size="10.5" fill="#5b6472">대본·음악 분석 / 콘셉트</text>
+      <text x="22" y="120" font-size="10.5" fill="#5b6472">큐 시놉시스</text>
+    </g>
+    <g>
+      <rect x="258" y="24" width="234" height="112" rx="6" fill="#fdf3dc" stroke="#dcc48a"/>
+      <text x="272" y="46" font-size="12.5" font-weight="700">② 조명연출 · 감독 (LD)</text>
+      <text x="272" y="64" font-size="10.5" fill="#5b6472">디자인 · 페이퍼워크</text>
+      <text x="272" y="86" font-size="11" fill="#9a6b00" font-weight="700">커버리지 ≈ 55%</text>
+      <text x="272" y="104" font-size="10.5" fill="#5b6472">룩·이펙트·씬 어휘 / 큐 초안</text>
+      <text x="272" y="120" font-size="10.5" fill="#5b6472">시트 3종 (매직시트 없음)</text>
+    </g>
+    <g>
+      <rect x="508" y="24" width="234" height="112" rx="6" fill="#e8f6ee" stroke="#a7d6ba"/>
+      <text x="522" y="46" font-size="12.5" font-weight="700">③ 콘솔 오퍼레이터</text>
+      <text x="522" y="64" font-size="10.5" fill="#5b6472">프로그래밍 · 저장</text>
+      <text x="522" y="86" font-size="11" fill="#1b7f4b" font-weight="700">커버리지 ≈ 90%</text>
+      <text x="522" y="104" font-size="10.5" fill="#5b6472">자연어→커맨드 / 매크로 / Lua</text>
+      <text x="522" y="120" font-size="10.5" fill="#5b6472">안전게이트 · 감사 · 백업</text>
+    </g>
+    <g>
+      <rect x="758" y="24" width="254" height="112" rx="6" fill="#e8f6ee" stroke="#a7d6ba"/>
+      <text x="772" y="46" font-size="12.5" font-weight="700">④ 조명세팅 · 운영</text>
+      <text x="772" y="64" font-size="10.5" fill="#5b6472">크루 · 볼런티어 오퍼레이터</text>
+      <text x="772" y="86" font-size="11" fill="#1b7f4b" font-weight="700">커버리지 ≈ 75%</text>
+      <text x="772" y="104" font-size="10.5" fill="#5b6472">패치 점검 / 프리쇼 / 런북</text>
+      <text x="772" y="120" font-size="10.5" fill="#5b6472">큐 진행 모니터</text>
+    </g>
+    <!-- arrows -->
+    <line x1="244" y1="80" x2="256" y2="80" stroke="#8b95a5" stroke-width="1.6" marker-end="url(#ar)"/>
+    <line x1="494" y1="80" x2="506" y2="80" stroke="#8b95a5" stroke-width="1.6" marker-end="url(#ar)"/>
+    <line x1="744" y1="80" x2="756" y2="80" stroke="#8b95a5" stroke-width="1.6" marker-end="url(#ar)"/>
+    <!-- coverage bars -->
+    <text x="8" y="176" font-size="11" font-weight="700" fill="#5b6472">구현 커버리지</text>
+    <g>
+      <rect x="8" y="186" width="234" height="14" rx="3" fill="#eceff3"/>
+      <rect x="8" y="186" width="23" height="14" rx="3" fill="#a52222"/>
+      <rect x="258" y="186" width="234" height="14" rx="3" fill="#eceff3"/>
+      <rect x="258" y="186" width="129" height="14" rx="3" fill="#c99422"/>
+      <rect x="508" y="186" width="234" height="14" rx="3" fill="#eceff3"/>
+      <rect x="508" y="186" width="211" height="14" rx="3" fill="#1b7f4b"/>
+      <rect x="758" y="186" width="254" height="14" rx="3" fill="#eceff3"/>
+      <rect x="758" y="186" width="190" height="14" rx="3" fill="#1b7f4b"/>
+    </g>
+    <!-- wall band -->
+    <rect x="8" y="216" width="1004" height="36" rx="5" fill="#eeeef8" stroke="#c3c3e0"/>
+    <text x="22" y="239" font-size="11" fill="#3f3f6e">
+      전 단계를 관통하는 제약 — 쇼파일 파서 0건 · 큐 시간/트리거 판독 불가 · 픽스처 하드웨어 피드백 0건 · 픽스처↔채널폭 조인 0건 · 페이로드 예산 1900B(픽스처 19개에서 절단)
+    </text>
+  </g>
+</svg>
+<figcaption>
+  커버리지 수치는 각 단계의 실무 과업 목록 대비 “앱이 도구를 제공하는가”를 센 것이며,
+  아래 §2의 항목별 판정을 요약한 <span class="b b-wall">추정</span> 지표다. 정확한 근거는 항목별 표에 있다.
+</figcaption>
+</figure>
+
+<h2>2. 단계별 현황 — 무엇이 되어 있고 무엇이 없는가</h2>
+
+<!-- STAGE 1 -->
+<section class="stage">
+  <div class="head">
+    <span class="num">단계 ①</span>
+    <span class="who">공연 기획 · 제작</span>
+    <span class="role">주 사용자: 공연 기획자 · 연출 · 음악감독</span>
+    <span class="b b-no">거의 비어 있음</span>
+  </div>
+  <div class="body">
+    <dl class="kv">
+      <dt>실무가 하는 일</dt>
+      <dd>대본/음악 분석 → 콘셉트·무드보드 → <b>큐 시놉시스</b>(어느 장면에서 무엇이 변하는지) → 일정·예산 확정.
+        <span class="src">제안서 <code>docs/proposals/2026-07-26-…-proposal.md:17-20</code></span></dd>
+
+      <dt>지금 앱이 주는 것</dt>
+      <dd>
+        <ul class="tight">
+          <li><b>연출 어휘의 입구</b> — 장르 4종(rock·ballad·worship·edm) <b>룩 32개</b>가 “웅장한 금색 코러스” 류의 한국어 지시를 받는다.
+            <span class="src"><code>server/looks/library/*.yaml</code>, <code>find_looks</code></span></li>
+          <li><b>섹션 목록 → 큐리스트 초안</b> — 곡 1개 = 시퀀스 1개 + 섹션별 큐.
+            <span class="src"><code>prepare_songcue</code>, <code>server/looks/songcue.py</code></span></li>
+        </ul>
+      </dd>
+
+      <dt>없는 것 (갭)</dt>
+      <dd>
+        <ul class="tight">
+          <li><span class="b b-no">미구현</span> <b>음원 파일 분석</b>. <code>prepare_songcue</code>는 섹션을 <b>텍스트로 받는다</b>
+            (<code>_NAME_KEYS = ("name","section","label")</code> / <code>_START_KEYS = ("start","start_time","time")</code>,
+            <code>server/looks/songcue.py:22-23</code>). 오디오 라이브러리 의존성 <b>0건</b>(<code>pyproject.toml:7-19</code>).
+            즉 <b>구간 분할·BPM·에너지 곡선은 사람이 먼저 만들어 넣어야 한다</b> — 제안서 P1-1의 전반부가 비어 있다.</li>
+          <li><span class="b b-no">미구현</span> <b>큐 시놉시스 문서</b>(장면별 변화 초안) 산출물 없음.</li>
+          <li><span class="b b-no">미구현</span> <b>레퍼런스 이미지 → 룩 변환</b>(제안서 P3-7).</li>
+          <li><span class="b b-part">부분</span> <b>어휘 밖 표현이 매칭 실패</b>한다 — <code>"파란 백라이트가 천천히 웨이브하는 씬"</code>이
+            양 축 <code>no_match</code>였고 원인은 <code>하는</code>(용언 관형형)·<code>파란</code>(별칭 부재)이다.
+            상류 어휘 확장 제안서가 이미 작성되어 있다.
+            <span class="src">CHANGELOG SCENE 항목 · <code>docs/proposals/2026-08-02-upstream-vocabulary-extension-proposal.md</code></span></li>
+        </ul>
+      </dd>
+    </dl>
+  </div>
+</section>
+
+<!-- STAGE 2 -->
+<section class="stage">
+  <div class="head">
+    <span class="num">단계 ②</span>
+    <span class="who">조명연출 · 감독 (LD)</span>
+    <span class="role">주 사용자: 조명디자이너 · 조명감독</span>
+    <span class="b b-part">어휘·초안은 강함 / 문서는 절반</span>
+  </div>
+  <div class="body">
+    <dl class="kv">
+      <dt>실무가 하는 일</dt>
+      <dd>4대 문서 작성 — <b>플롯</b>(어디 걸었나) · <b>포커스 차트</b>(어디 비추나) · <b>훅업 차트</b>(어느 채널인가) ·
+        <b>큐시트</b>(언제 얼마나 밝나). 그리고 이를 한 장에 압축한 <b>매직시트</b>.
+        <span class="src">제안서 <code>:19-20</code></span></dd>
+
+      <dt>지금 앱이 주는 것</dt>
+      <dd>
+        <ul class="tight">
+          <li><span class="b b-ok">완료</span> <b>룩 어휘 계층</b> — 역할(백라이트·키·워시…)→리그 그룹 해석 + 자연어 매칭.
+            <span class="src">LOOKLIB-001, <code>find_looks</code>·<code>instantiate_look</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>이펙트 어휘 12종</b>(dimmer 2·color 2·movement 8).
+            <span class="src">FXLIB-001, <code>find_fx</code>·<code>instantiate_fx</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>씬 컴파일러</b> — 룩 + 이펙트 + 타이밍을 <b>큐 하나</b>로 합성(씬 5종).
+            <span class="src">SCENE-001, <code>find_scene</code>·<code>compile_scene</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>버스킹 준비</b> — 장르별 팔레트/룩 번들 + 슬롯 원장.
+            <span class="src">BUSKWIZ-001, <code>prepare_busking</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>실행기 레이아웃 자동 배치 계획</b>(계획만, 발신 없음).
+            <span class="src"><code>plan_executor_layout</code>, <code>server/looks/layout.py</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>페이퍼워크 3종 HTML</b> — 패치시트(=훅업 차트) · 큐시트 · 프리셋 목록.
+            자체완결 HTML(외부 리소스 0, <code>@media print</code> 포함).
+            <span class="src">PAPERWORK-001, <code>server/paperwork/{data,render,output}.py</code>,
+            <code>build_patch_sheet</code>·<code>build_cue_sheet</code>·<code>build_preset_list</code></span></li>
+        </ul>
+      </dd>
+
+      <dt>없는 것 (갭)</dt>
+      <dd>
+        <ul class="tight">
+          <li><span class="b b-no">미구현</span> <b>매직시트</b> — 코드·테스트 <b>0건</b>. 필요한 조인이 “그룹 → 어느 픽스처”인데
+            오브젝트 트리 자식에서 꺼내는 필드가 <code>name</code> 하나뿐이라(<code>server/safety/console.py:471-484</code>)
+            <b>그룹 멤버십 관측 경로가 미확정</b>이다. → §6 P1-②의 측정 대상.</li>
+          <li><span class="b b-wall">관측 벽</span> <b>큐시트에 “언제 얼마나 밝나”가 없다</b> — 큐 <b>번호·이름만</b> 나온다.
+            <code>CueFade</code>·<code>TrigType</code>·<code>TrigTime</code>은 재조회 자료구조에 자리가 없다.
+            추정으로 채우는 것은 <b>금지</b>(“관측하지 않은 것을 보고하지 않는다”).
+            <span class="src"><code>.moai/specs/SPEC-COPILOT-SONGCUE-001/research.md:130,136-137</code></span></li>
+          <li><span class="b b-no">미구현</span> <b>플롯 · 포커스 차트</b> — 픽스처의 무대 좌표/포커스 정보 판독 경로 없음. previz·MVR 연동 0건.</li>
+          <li><span class="b b-part">부분</span> <b>훅업 차트에 채널 “폭”이 없다</b> — 시작 주소(<code>Patch</code> = <code>'1.001'</code>)만 읽히고
+            폭은 조인 불가(<code>ASSUMPTION-27</code> 부정, 후보 12경로 전부 반증). 대신 <b>열거 가능한 모드 중 최대폭</b>이라는
+            상계가 별도 모듈에 있으나 <b>시트에는 아직 안 실렸다</b>.
+            <span class="src"><code>server/prechk/patch.py:14-20</code>, <code>server/prechk/footprint.py:1-15</code></span></li>
+          <li><span class="b b-no">미구현</span> <b>PDF</b> — 의존성 0건. 현재는 브라우저 인쇄가 유일 경로.</li>
+          <li><span class="b b-no">미구현</span> <b>UI 노출</b> — 시트 3종은 <b>LLM 툴 호출로만</b> 도달한다.
+            <code>ui/</code>·<code>src/</code>에 <code>paperwork</code>/<code>patch_sheet</code> 참조 <b>0건</b>. 버튼이 없다.</li>
+          <li><span class="b b-part">진행중</span> <b>Vectorworks 연계</b>(설계 리그 CSV → 실제 패치 대조)는 plan 단계.
+            <span class="src"><code>.moai/state/handoff/SPEC-COPILOT-VWX-001-brief.md</code></span></li>
+        </ul>
+      </dd>
+    </dl>
+  </div>
+</section>
+
+<!-- STAGE 3 -->
+<section class="stage">
+  <div class="head">
+    <span class="num">단계 ③</span>
+    <span class="who">콘솔 오퍼레이터 (프로그래머)</span>
+    <span class="role">주 사용자: MA3 오퍼레이터 · 프로그래머</span>
+    <span class="b b-ok">이 앱의 핵심 역량 — 거의 완성</span>
+  </div>
+  <div class="body">
+    <dl class="kv">
+      <dt>실무가 하는 일</dt>
+      <dd>커맨드 입력, 패치, 그룹·프리셋 생성, 큐 저장, 매크로·플러그인 작성, 실수 복구.</dd>
+
+      <dt>지금 앱이 주는 것</dt>
+      <dd>
+        <ul class="tight">
+          <li><span class="b b-ok">완료</span> <b>자연어 → MA3 커맨드 실행</b> + 상태 조회 + <b>Lua 플러그인 배포</b>.
+            <span class="src"><code>run_commands</code>·<code>query_state</code>·<code>deploy_plugin</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>안전 계층 전량</b> — 문법 검증 · 블랙리스트 · 승인 카드 · <b>라이브 잠금</b>(read-only 강등) ·
+            <b>실행 전 쇼파일 백업</b> · <b>감사 로그</b>(직렬화 실패에도 기록 보존).
+            <span class="src"><code>server/safety/{grammar,blacklist.yaml,approval,lock,backup,audit,gate}.py</code>, 커밋 <code>865f77a</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>실행 미리보기 + 리뷰 카드</b>.
+            <span class="src"><code>ui/src/components/{ExecutionPreviewCard,ReviewCard,ApprovalCard}.tsx</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>onPC식 대시보드</b> — 풀 윈도, 정사각 셀, 드래그 리사이즈, 프리셋 필터.
+            <span class="src">DASHUI-001, <code>ui/src/components/{DashBoard,PoolSection,PoolTile}.tsx</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>리그 컨텍스트 자동 수집</b> — 10개 풀 경로, 드릴다운,
+            “검증된 빈 풀”과 “도달 실패”를 구분(<code>contents: []</code> vs <code>contents_unavailable</code>).
+            <span class="src"><code>get_rig_context</code>, <code>server/orchestrator/tools.py:150-171,461-492</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>품질 측정 체계</b> — 문법 오류율 <b>0.40%</b>(1/248)까지 내린 측정·룰북 개선 루프.
+            <span class="src">EVAL-001, <code>server/measurement/</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>배포·설치</b> — Tauri 셸 + PyInstaller 번들 + <code>.dmg</code> + 한국어 설치 가이드 + 응답기 자동 설치.
+            <span class="src">DEPLOY-001, <code>packaging/</code>, <code>INSTALL.ko.md</code></span></li>
+        </ul>
+      </dd>
+
+      <dt>없는 것 (갭)</dt>
+      <dd>
+        <ul class="tight">
+          <li><span class="b b-no">의도적 제외</span> <b>되돌리기(복원) 발신부</b> — 스냅샷은 보관·조회·감사연결까지 되는데
+            <b>스냅샷을 콘솔에 되돌려 올리는 경로가 없다</b>. 자리(<code>@MX:NOTE</code>)만 <code>server/safety/gate.py</code>에 비워뒀고
+            “자체 SPEC + 라이브 캘리브레이션이 먼저 필요”라고 적혀 있다.
+            <span class="src"><code>server/safety/backup.py:24-28</code>, 커밋 <code>f628715</code></span>
+            → <b>오퍼레이터 체감상 가장 아픈 구멍</b>이다(백업이 있는데 되돌릴 수 없다).</li>
+          <li><span class="b b-part">부분</span> <b>타임코드</b> — DESCOPE 유지. 섹션 마커의 물리적 실체는 <b>큐 이름 문자열</b>뿐이다.
+            <span class="src"><code>SONGCUE-001/research.md:117-118</code></span></li>
+          <li><span class="b b-part">draft</span> <b>MCP 연계</b>(외부 에이전트/에디터에서 이 툴셋 사용)는 plan-audit FAIL 0.78 상태.
+            <span class="src"><code>.moai/specs/SPEC-COPILOT-MCP-001/</code>, 커밋 <code>5a64475</code></span></li>
+        </ul>
+      </dd>
+    </dl>
+  </div>
+</section>
+
+<!-- STAGE 4 -->
+<section class="stage">
+  <div class="head">
+    <span class="num">단계 ④</span>
+    <span class="who">조명세팅 · 현장 운영</span>
+    <span class="role">주 사용자: 조명 크루 · 볼런티어 오퍼레이터</span>
+    <span class="b b-ok">점검·진행 보조는 실전 수준</span>
+  </div>
+  <div class="body">
+    <dl class="kv">
+      <dt>실무가 하는 일</dt>
+      <dd>리깅·주소 세팅 → 포커싱 → 프리쇼 체크 → 쇼 진행(Go) → 이상 대응 → 인수인계.</dd>
+
+      <dt>지금 앱이 주는 것</dt>
+      <dd>
+        <ul class="tight">
+          <li><span class="b b-ok">완료</span> <b>패치 정합성 점검</b> — 관측 픽스처 전량 + 2단 집계, 주소 중복 · 판독 실패 ·
+            <b>열거 완전성</b> · <b>수행하지 않은 판정</b>까지 한국어로 실토.
+            <span class="src">PRECHK-001, <code>precheck_patch</code>, <code>server/prechk/*.py</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>구간 겹침 판정</b> — 정확폭이 없어도 <b>모드 최대폭 상계</b>로 “겹침 없음”을 증명.
+            증명 못 하면 <b>충돌이 아니라 미확정</b>으로 보고(비대칭이 설계의 핵심).
+            <span class="src">OVERLAP-001, <code>server/prechk/footprint.py</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>픽스처 응답 확인 매크로 생성</b> — 사람이 콘솔에서 돌려 <b>눈으로</b> 확인하는 보조 도구.</li>
+          <li><span class="b b-ok">완료</span> <b>프리쇼 체크리스트</b> — 점검 4종(시퀀스 존재 · 프리셋 풀 존재 · 룩 라이브러리 정합 · OSC 왕복)
+            + 함정 진단 3종(스테일 소켓 · OSC 슬롯 송신행 · 피드백 포트 드리프트).
+            <span class="src">PRESHOW-001, <code>preshow_check</code>, <code>server/preshow/{checks,pitfalls,osc_check}.py</code>, 커밋 <code>519b3d9</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>쇼컨트롤 패널</b> — “정직하게 발화할 수 있는 타일만” 제공.
+            <span class="src">SHOWUI-001 · EXECBODY-001 · EXECREF-001, <code>server/web/panel.py</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>라이브 큐 진행 모니터</b> — 실행기별 큐 진행 + 최근 실행 이력.
+            <span class="src"><code>ui/src/components/CueMonitor.tsx</code>, <code>server/web/cue_monitor.py</code>, 커밋 <code>abec91c</code>·<code>33f0ff9</code></span></li>
+          <li><span class="b b-ok">완료</span> <b>볼런티어 런북 모드</b> — 헤더 토글로 대시보드/채팅을 감추고 곡·큐 순서만 단순 목록으로,
+            승인·리뷰 카드는 그대로 노출해 안전 게이트를 우회하지 않는다.
+            <span class="src"><code>ui/src/components/RunbookMode.tsx</code>, 커밋 <code>60bcf07</code> (제안서 P2-5)</span></li>
+        </ul>
+      </dd>
+
+      <dt>없는 것 (갭)</dt>
+      <dd>
+        <ul class="tight">
+          <li><span class="b b-wall">DESCOPE</span> <b>무응답 픽스처 자동 탐지</b> — 응답기가 하드웨어 피드백을 수집하지 않고,
+            동사 디스패치가 <code>ping·state·prop·exec·deploy</code> <b>5종으로 닫혀</b> 텔레메트리 동사를 넣을 자리가 없다.
+            “일정 시간 무반응이면 죽은 것으로 간주” 류의 우회는 <b>금지</b>.
+            <span class="src"><code>PRECHK-001/research.md:51-62</code>, <code>console/lua/copilot_responder.lua:884-946</code></span></li>
+          <li><span class="b b-part">부분</span> <b>픽스처 열거가 19개에서 절단</b>된다 — 페이로드 예산 1900B가 원인
+            (자식 수 상한 24보다 먼저 터진다). 복구 시도 + <code>completeness</code> 실토는 되어 있으나
+            <b>대형 리그에서 “전량”을 볼 수 없다</b>.
+            <span class="src"><code>PRECHK-001/research.md:112-123</code>, <code>copilot_responder.lua:33-39,610,634-639</code></span></li>
+          <li><span class="b b-no">미구현</span> <b>포커싱 지원</b>(어디를 비추는지) — 관측 경로 자체가 미조사.</li>
+          <li><span class="b b-no">미구현</span> <b>인수인계 패키지</b> — 시트 3종은 개별 파일이고,
+            “이 쇼를 넘겨받는 사람이 열어보는 한 묶음”은 없다. 제안서가 든 기대효과(“인수인계 용이”)의 마지막 한 걸음.</li>
+        </ul>
+      </dd>
+    </dl>
+  </div>
+</section>
+
+<h2>3. 완결된 SPEC 목록 (근거 대장)</h2>
+
+<table>
+  <thead>
+    <tr><th style="width:170px">SPEC</th><th class="c" style="width:74px">상태</th>
+        <th>산출물</th><th class="c" style="width:96px">담당 단계</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>MVP-001</td><td class="c"><span class="b b-part">in-progress</span></td>
+        <td>OSC 브리지 · Lua 응답기 · 툴 3종 · 안전 게이트 v1 · 한국어 채팅 UI</td><td class="c">③</td></tr>
+    <tr><td>DEPLOY-001</td><td class="c"><span class="b b-part">in-progress</span></td>
+        <td>Tauri+PyInstaller 배포, <code>.dmg</code>, 키 보관(keyring), 응답기 자동 설치, 설정 UI</td><td class="c">③</td></tr>
+    <tr><td>EVAL-001</td><td class="c"><span class="b b-ok">완료</span></td>
+        <td>문법 오류율 측정 체계 (0.40%까지 개선)</td><td class="c">③</td></tr>
+    <tr><td>SHOWUI-001 · EXECBODY-001 · EXECREF-001</td><td class="c"><span class="b b-ok">완료</span></td>
+        <td>쇼컨트롤 패널 · 실행기 본체 식별 · 실행기 참조 타입</td><td class="c">④</td></tr>
+    <tr><td>DASHUI-001</td><td class="c"><span class="b b-ok">완료</span></td>
+        <td>onPC식 풀 윈도 대시보드</td><td class="c">③</td></tr>
+    <tr><td>LOOKLIB-001</td><td class="c"><span class="b b-ok">완료</span></td>
+        <td>룩 라이브러리 32종 · 역할→그룹 해석 · 자연어 매칭</td><td class="c">②</td></tr>
+    <tr><td>BUSKWIZ-001</td><td class="c"><span class="b b-ok">완료</span></td>
+        <td>버스킹 준비(팔레트·번들·슬롯 원장)</td><td class="c">②</td></tr>
+    <tr><td>SONGCUE-001</td><td class="c"><span class="b b-ok">완료</span></td>
+        <td>섹션 목록 → 큐리스트 초안 (곡1=시퀀스1)</td><td class="c">①②</td></tr>
+    <tr><td>FXLIB-001 · SCENE-001</td><td class="c"><span class="b b-ok">완료</span></td>
+        <td>이펙트 어휘 12종 · 씬 컴파일러(룩+fx+타이밍→큐 1개)</td><td class="c">②</td></tr>
+    <tr><td>PRECHK-001 · OVERLAP-001</td><td class="c"><span class="b b-ok">완료</span></td>
+        <td>패치 정합성 점검 · 응답 확인 매크로 · 구간 겹침 상계 판정</td><td class="c">④</td></tr>
+    <tr><td>PAPERWORK-001</td><td class="c"><span class="b b-ok">완료</span></td>
+        <td>패치시트 · 큐시트 · 프리셋 목록 (조회 전용 HTML)</td><td class="c">②</td></tr>
+    <tr><td>PRESHOW-001</td><td class="c"><span class="b b-ok">완료</span></td>
+        <td>프리쇼 점검 4종 + 함정 진단 3종</td><td class="c">④</td></tr>
+    <tr><td>T-B / T-C / T-E / T-F / T-H</td><td class="c"><span class="b b-ok">완료</span></td>
+        <td>쇼파일 스냅샷 보관 · 큐 진행 모니터 · 런북 모드 · 실행기 레이아웃 계획 · 실행 상태 시각화</td><td class="c">③④</td></tr>
+    <tr><td>VWX-001</td><td class="c"><span class="b b-part">plan</span></td>
+        <td>Vectorworks Instrument Data → 설계 리그 → 실제 패치 대조 리포트</td><td class="c">②④</td></tr>
+    <tr><td>MCP-001</td><td class="c"><span class="b b-no">draft</span></td>
+        <td>MCP 서버화 (plan-audit FAIL 0.78)</td><td class="c">③</td></tr>
+  </tbody>
+</table>
+
+<h2>4. 전 단계를 제약하는 관측 벽 5건 — “못 만든 것”이 아니라 “읽을 수 없는 것”</h2>
+
+<p>이 5건이 남은 격차의 대부분을 설명한다. 우회하면 <b>관측하지 않은 것을 보고하는 것</b>이 되므로
+저장소 규율이 명문으로 금지한다. 개선 계획은 반드시 이 벽을 <b>먼저 측정</b>하는 순서로 짜야 한다.</p>
+
+<table>
+  <thead>
+    <tr><th class="c" style="width:34px">#</th><th style="width:200px">벽</th><th>내용과 근거</th>
+        <th style="width:210px">막히는 기능</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="c">1</td><td><b>쇼파일 파서 0건</b></td>
+      <td><code>server/showfile/</code> 없음. XML 파싱은 배포 패키징·안전 계층용뿐이고 MA3 쇼파일 구조를 읽지 않는다.
+        <b>제안서가 “파서가 이미 있어 구현 부담이 낮다”고 쓴 것은 거짓으로 판정</b>됐다.
+        디스크 export 스냅샷 파싱 우회도 기각(라이브 상태가 아니다).
+        <span class="src"><code>PRECHK-001/research.md:44-49,347</code></span></td>
+      <td>모든 페이퍼워크가 <b>라이브 OSC 응답기 하나</b>에만 의존 → 콘솔이 꺼져 있으면 아무 문서도 못 만든다</td></tr>
+
+    <tr><td class="c">2</td><td><b>큐 시간·트리거 판독 불가</b></td>
+      <td>재조회 자식에서 꺼내는 필드가 <code>name</code> 하나. <code>CueFade</code>·<code>TrigType</code>·<code>TrigTime</code>을
+        담을 자리가 없다. <span class="src"><code>server/safety/console.py:471-484</code>, <code>SONGCUE-001/research.md:130,136-137</code></span></td>
+      <td>큐시트의 “언제 얼마나 밝나” 열 · 자동 진행 검증 · 타임코드</td></tr>
+
+    <tr><td class="c">3</td><td><b>픽스처 하드웨어 피드백 0건</b></td>
+      <td>응답기는 <code>pcall(Cmd, …)</code> 결과 문자열만 분류한다. 동사 5종으로 닫혀 텔레메트리 자리가 없다.
+        DMX 출력값도 읽히지 않는다. <span class="src"><code>copilot_responder.lua:690-706,884-946</code></span></td>
+      <td>무응답 픽스처 자동 탐지(DESCOPE) · 포커싱 검증</td></tr>
+
+    <tr><td class="c">4</td><td><b>픽스처↔채널폭 조인 0건</b></td>
+      <td><code>FixtureType</code>·<code>Mode</code>가 <b>표시 문자열</b>이라 후보 12경로 전부 반증(<code>ASSUMPTION-27</code> 부정).
+        상계로만 우회하며 <b>“겹침 없음”은 증명하고 “겹침 있음”은 증명하지 못한다</b>.
+        <span class="src"><code>server/prechk/{patch,footprint}.py</code></span></td>
+      <td>훅업 차트의 정확한 채널 범위 열 · 확정 충돌 판정</td></tr>
+
+    <tr><td class="c">5</td><td><b>페이로드 예산 1900B</b></td>
+      <td>MA3 커맨드라인이 ~2048B 초과 회신을 <b>조용히 드롭</b>한다는 실측에서 나온 상한.
+        픽스처는 이름이 길어 <b>19개</b>에서 이미 절단된다(자식 수 상한 24에 닿기 전).
+        <span class="src"><code>copilot_responder.lua:33-39,634-639</code>, <code>PRECHK-001/research.md:112-123</code></span></td>
+      <td>대형 리그 전량 열거 → 모든 시트·점검의 완전성</td></tr>
+  </tbody>
+</table>
+
+<div class="note good">
+  <b>평가 —</b> 이 저장소의 강점은 벽의 존재를 숨기지 않는다는 것이다.
+  <code>completeness</code>·<code>truncated</code>·<code>contents_unavailable</code>·<code>overlap_basis</code>·
+  <code>미확정</code> 표기가 모두 <b>“얼마나 못 봤는지”를 산출물에 실어 보낸다</b>.
+  개선 작업이 이 규율을 깨는 방향(추정으로 빈 칸 채우기)으로 가면 안 된다.
+</div>
+
+<h2>5. 추가 · 개선 항목 (우선순위)</h2>
+
+<h3>P0 — 지금 바로 가능, 차단 없음</h3>
+<table>
+  <thead><tr><th class="c" style="width:34px">#</th><th style="width:220px">항목</th><th>내용 / 근거</th>
+    <th class="c" style="width:82px">단계</th><th class="c" style="width:70px">규모</th></tr></thead>
+  <tbody>
+    <tr><td class="c">1</td><td><b>페이퍼워크 UI 버튼 노출</b></td>
+      <td>시트 3종이 LLM 툴 호출로만 도달한다(<code>ui/</code> 참조 0건). <code>RunbookMode</code>가 만든
+        “헤더 토글 + 전용 화면” 패턴을 그대로 재사용해 버튼 3~4개를 붙인다.
+        <b>가장 값싼 체감 개선</b>이다.</td>
+      <td class="c">②④</td><td class="c">소</td></tr>
+    <tr><td class="c">2</td><td><b>PDF 경로 확정</b></td>
+      <td>의존성을 늘리지 않고 <b>브라우저/Tauri 인쇄 → PDF</b>로 종결. <code>render.py:29</code>에 이미
+        <code>@media print { margin: 0.5in }</code>가 있다. weasyprint 류는 PyInstaller 번들 비용이 커서 비권장.</td>
+      <td class="c">②</td><td class="c">소</td></tr>
+    <tr><td class="c">3</td><td><b>훅업 차트에 “채널 폭 상계” 열 추가</b></td>
+      <td><code>server/prechk/footprint.py</code>가 이미 상계를 산출하는데 <b>시트에 안 실려 있다</b>.
+        단, <b>비대칭 한정 문구를 같은 칸에</b> 실어야 한다(“이 폭 이상 간격이면 겹칠 수 없음. 미만은 미확정”).</td>
+      <td class="c">②④</td><td class="c">소</td></tr>
+    <tr><td class="c">4</td><td><b>인수인계 패키지 1버튼</b></td>
+      <td>패치시트+큐시트+프리셋 목록+프리쇼 결과+최근 감사 요약을 <b>한 폴더/한 인덱스 HTML</b>로 묶는다.
+        제안서의 기대효과(“인수인계 용이”)에 직결되고 새 관측을 요구하지 않는다.</td>
+      <td class="c">②③④</td><td class="c">중</td></tr>
+  </tbody>
+</table>
+
+<h3>P1 — 라이브 측정이 선행 조건 (비파괴 읽기, 예상 30분)</h3>
+<div class="note">
+  <b>왜 측정이 먼저인가.</b> 아래 세 기능의 성립 여부가 “콘솔이 그 값을 주는가” 하나에 걸려 있다.
+  측정 없이 착수하면 6문서를 쓴 뒤 전제가 거짓으로 드러난다 — <b>PRECHK가 실제로 그 비용을 아껴</b>
+  plan 단계에서 5분 프로브를 돌린 선례가 있다(<code>PRECHK-001/research.md:34</code>).
+  참고로 <code>prop</code>은 임의 오브젝트 경로 + 단일 토큰 프로퍼티를 받고 응답기가 경로에 공백을 허용하므로
+  <b>구조적으로는 발화 가능</b>하다(<code>server/bridge/protocol.py:136-142</code>,
+  <code>copilot_responder.lua:901</code>) — 성립 여부만 미측정이다.
+</div>
+<table>
+  <thead><tr><th class="c" style="width:34px">#</th><th style="width:220px">측정 → 해금되는 기능</th><th>측정 발화 / 판정</th>
+    <th class="c" style="width:82px">단계</th></tr></thead>
+  <tbody>
+    <tr><td class="c">5</td><td><b>큐 프로퍼티</b> → 큐시트 시간·트리거 열</td>
+      <td><code>prop &lt;id&gt; DataPool/Sequences/&lt;n&gt;/Cue &lt;m&gt; CueFade</code> (+ <code>TrigType</code>·<code>TrigTime</code>).<br>
+        <b>GO</b> → 큐시트가 진짜 큐시트가 된다(“언제 얼마나 밝나”).
+        <b>NO-GO</b> → 명시적 DESCOPE로 확정하고 <b>추정 열은 만들지 않는다</b>.</td>
+      <td class="c">②④</td></tr>
+    <tr><td class="c">6</td><td><b>그룹 멤버십</b> → 매직시트</td>
+      <td><code>state &lt;id&gt; DataPool/Groups/&lt;n&gt;</code> — 자식으로 픽스처가 나오는가.<br>
+        <b>GO</b> → “역할 → 픽스처 → 프리셋” 한 장 압축이 성립.
+        <b>NO-GO</b> → <b>이름 기반 축약 시트</b>로 재범위(그룹·프리셋 이름 + 패치 요약).</td>
+      <td class="c">②</td></tr>
+    <tr><td class="c">7</td><td><b>채널 폭 직접 경로 재확인</b> → 확정 충돌 판정</td>
+      <td><code>ASSUMPTION-27</code> 부정 시 <b>미측정으로 등재된 후보 2건</b>이 남아 있다
+        (<code>PRECHK-001/progress.md:631</code>). 둘 중 하나가 읽히면 상계가 정확폭으로 승격된다.</td>
+      <td class="c">④</td></tr>
+    <tr><td class="c">8</td><td><b>쇼파일 복원 발신부</b> (측정+SPEC 필요)</td>
+      <td>스냅샷 보관·조회·감사연결은 완료, <b>되돌려 올리는 발신부만 비어 있다</b>. 자리는
+        <code>server/safety/gate.py</code>의 <code>@MX:NOTE</code>에 예약됨.
+        <b>오퍼레이터 신뢰에 가장 직접적</b>이며, 되돌리기 없는 백업은 절반이다.</td>
+      <td class="c">③</td></tr>
+  </tbody>
+</table>
+
+<h3>P2 — 상류(기획) 채우기</h3>
+<table>
+  <thead><tr><th class="c" style="width:34px">#</th><th style="width:220px">항목</th><th>내용 / 근거</th>
+    <th class="c" style="width:82px">단계</th></tr></thead>
+  <tbody>
+    <tr><td class="c">9</td><td><b>음원 분석 → 섹션 자동 분할</b></td>
+      <td>제안서 P1-1의 전반부. 현재 <code>prepare_songcue</code>는 섹션을 텍스트로 받으므로
+        <b>사람이 DAW에서 먼저 만들어야 한다</b>. 오디오 라이브러리 도입은 PyInstaller 번들 크기에 영향 →
+        “파일 분석”과 “섹션 입력”을 분리한 지금 구조를 유지하고 <b>분석기를 앞단 어댑터로</b> 붙이는 편이 안전.</td>
+      <td class="c">①</td></tr>
+    <tr><td class="c">10</td><td><b>상류 어휘 확장</b></td>
+      <td>이미 제안서가 있다(<code>docs/proposals/2026-08-02-upstream-vocabulary-extension-proposal.md</code>).
+        <code>하는</code> 류 용언 관형형·<code>파란</code> 류 색 별칭이 없어 실제 문장이 <code>no_match</code>였다 —
+        <b>어휘 격차는 기능 격차로 보인다</b>.</td>
+      <td class="c">①②</td></tr>
+    <tr><td class="c">11</td><td><b>VWX-001 완주</b></td>
+      <td>Vectorworks Instrument Data(CSV) → 설계 리그 → <code>precheck_patch</code> 대조.
+        <b>단계 ①→④를 잇는 유일한 상류 데이터 유입 경로</b>이며 쇼파일 파서 부재(벽 1)를 옆으로 우회한다.
+        ⚠️ <b>같은 렌더 계층(<code>server/paperwork/</code>)을 건드리므로 매직시트보다 먼저 머지</b>해야 충돌이 적다
+        (<code>VWX-001-brief.md:182-189</code>가 <code>render_patch_diff()</code> 자리를 이미 지목).</td>
+      <td class="c">②④</td></tr>
+    <tr><td class="c">12</td><td><b>큐 시놉시스 문서 산출</b></td>
+      <td>씬·룩·섹션 정보를 이미 갖고 있으므로 <b>새 관측 없이</b> “장면별 무엇이 변하는지” 초안 문서를 만들 수 있다.
+        페이퍼워크 렌더 계층 재사용.</td>
+      <td class="c">①②</td></tr>
+  </tbody>
+</table>
+
+<h3>P3 — 장기 / 비목표 유지</h3>
+<table>
+  <thead><tr><th class="c" style="width:34px">#</th><th style="width:220px">항목</th><th>판단</th></tr></thead>
+  <tbody>
+    <tr><td class="c">13</td><td><b>플롯 · 포커스 차트</b></td>
+      <td>무대 좌표·포커스 판독 경로 미조사. MVR/GDTF 또는 VWX 경로가 선행. <b>P2-11 이후</b>.</td></tr>
+    <tr><td class="c">14</td><td><b>타임코드 쇼 빌드</b></td>
+      <td>DESCOPE 유지 권장 — 벽 2·3에 정면으로 걸린다. 섹션 마커의 실체는 큐 이름 문자열이며 그건 이미 된다.</td></tr>
+    <tr><td class="c">15</td><td><b>레퍼런스 이미지 → 룩</b>(P3-7)</td>
+      <td>룩 스키마가 이미 앵글·컬러·강도·무브먼트로 정규화되어 있어 <b>착지점은 준비됨</b>. 우선순위는 낮다.</td></tr>
+    <tr><td class="c">16</td><td><b>라이브 자율 운영</b></td>
+      <td><b>비목표 유지</b>. 라이브 잠금 모드의 read-only 제안 카드까지가 경계이며,
+        이 포지션은 자동화 경계선 연구(Skip-BART)와 정합하는 <b>의도된 차별점</b>이다.</td></tr>
+    <tr><td class="c">17</td><td><b>MCP 서버화</b></td>
+      <td>plan-audit FAIL 0.78 상태. 업무 사슬 커버리지를 늘리지 않으므로 P0~P2 이후.</td></tr>
+  </tbody>
+</table>
+
+<h2>6. 권고 실행 순서</h2>
+<table>
+  <thead><tr><th class="c" style="width:60px">순서</th><th>작업</th><th style="width:250px">완료 판정</th></tr></thead>
+  <tbody>
+    <tr><td class="c">1</td><td><b>라이브 측정 3건</b>(P1-5·6·7) — 비파괴 읽기 전용, 판정만 기록</td>
+      <td>각 항목이 GO / NO-GO / 재범위 중 하나로 <b>닫힌 어휘</b>로 기록됨</td></tr>
+    <tr><td class="c">2</td><td><b>P0 4건</b> — UI 버튼 · PDF 경로 · 폭 상계 열 · 인수인계 패키지</td>
+      <td>사람이 버튼 한 번으로 4종 문서를 손에 쥔다</td></tr>
+    <tr><td class="c">3</td><td><b>VWX-001 완주</b> → 그 위에 <b>매직시트</b>(측정 결과에 따라 완전형/축약형)</td>
+      <td><code>server/paperwork/</code> 렌더 계층 충돌 없이 두 기능 공존</td></tr>
+    <tr><td class="c">4</td><td><b>쇼파일 복원 발신부</b>(P1-8) — 자체 SPEC + 라이브 캘리브레이션</td>
+      <td>백업 → 복원 왕복이 감사 로그에 1:1로 남는다</td></tr>
+    <tr><td class="c">5</td><td><b>상류 어휘 확장 + 음원 분석 어댑터</b>(P2-9·10)</td>
+      <td>단계 ①의 커버리지가 처음으로 유의미하게 오른다</td></tr>
+  </tbody>
+</table>
+
+<div class="note warn">
+  <b>착수 전 반드시 지킬 규율 2건</b> —
+  ① <b>추정으로 빈 칸을 채우지 않는다.</b> 큐 시간 열, 무응답 판정, 채널 폭은 모두
+  “관측하지 않은 것을 보고하는” 형태가 되기 쉽다. 못 읽으면 <b>못 읽었다고 시트에 쓴다</b>.
+  ② <b><code>server/paperwork/data.py</code>는 <code>server/orchestrator/tools.py</code>를 import</b>하므로
+  역방향 import는 <b>함수 지역 지연 import</b>여야 한다(<code>tools.py:2344-2346</code>). 신규 시트도 동일.
+</div>
+
+<footer class="doc">
+  자체완결 문서 — 외부 CSS·스크립트·폰트·이미지 참조 0건. 브라우저에서 그대로 인쇄하면 PDF가 된다.<br>
+  생성 경로: <code>docs/reports/2026-08-06-workflow-coverage-review.html</code>
+</footer>
+
+</div>
+</body>
+</html>
