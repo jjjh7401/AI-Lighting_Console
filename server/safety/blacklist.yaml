@@ -21,7 +21,43 @@
 #     showfile snapshot, because `Set Fixture <fid> Pos* '<v>'` classified
 #     "safe". The same turn's `Go+ Page 1.202` DID raise a card -- the gate was
 #     healthy and only writes slipped the net.
-version: 2
+#   v2 -> v3  SPEC-COPILOT-RESTORE-001 (preparatory) adds "LoadShow" and
+#     "NewShow". SHOWFILE REPLACEMENT had zero coverage: the six v1 entries are
+#     object/system scoped and v2's is a patch write, so a command that
+#     discards the entire live show classified "safe" and executed with no
+#     approval card. This is the SAME false-negative shape v2 was ratified for
+#     -- writes slipping a healthy gate -- and it is strictly worse here,
+#     because there is no way back: `backup.py` retains snapshots but there is
+#     no restore SEND path (`gate.py` @MX:NOTE), and `BACKUP_COMMAND` is a bare
+#     `SaveShow` that overwrites one file, so N snapshots address 1 showfile.
+#     A wrongly-loaded show is unrecoverable by this application today.
+#
+#     MEASURED cost (the `_would_be_held` over `load_corpus()` procedure v2
+#     established): 35 command lines across 17 scenarios, and BOTH entries add
+#     **0 newly-blacklisted lines and 0 scenarios**. The repository contains no
+#     MA3 `Load`/`New` command line at all -- rulebook, corpus and tests are
+#     0 hits -- so no canonical SAFE fixture collides the way `Store Group 3`
+#     did for DEPLOY.
+#
+#     KNOWN FUTURE COLLATERAL, stated because 0 measured is not 0 forever:
+#     `_keyword_match` is abbreviation-aware in the direction
+#     command-token -> entry-keyword, so entry "LoadShow" also matches a bare
+#     `Load ...` verb and "NewShow" a bare `New ...`. MA3's `Load Cue <n>`
+#     (load a cue into the programmer) is benign and WILL raise a card once
+#     this application starts using it. That is the designed direction
+#     (over-match, see the `Set Fixture` note below) and the cost is one
+#     approval, not a refusal.
+#
+#     SCOPE, stated precisely: the exact MA3 keyword for a show reload is
+#     UNVERIFIED (`gate.py` @MX:NOTE says so). These two literals mirror
+#     `SaveShow`, which IS verified -- production backup sends it and reads a
+#     confirmed outcome. Blacklisting under that uncertainty is safe in the
+#     only direction that matters: if the real keyword differs, this entry
+#     costs nothing and the hole stays open, so a live calibration must still
+#     confirm the vocabulary. It is a floor, not a proof of closure.
+#     `Import` is deliberately NOT here -- it is pool data import, not showfile
+#     replacement, and the plugin deploy path depends on it.
+version: 3
 
 blacklist:
   - "Delete"
@@ -67,6 +103,20 @@ blacklist:
   # Descoped by user decision 2026-08-05; a follow-up SPEC owns it and inherits
   # the procedure this revision establishes.
   - "Set Fixture"
+  # SHOWFILE REPLACEMENT (v3). Both discard the console's entire live show, and
+  # unlike every other entry here that loss is UNRECOVERABLE by this
+  # application: snapshots are retained but no restore SEND path exists
+  # (`gate.py` @MX:NOTE), and `BACKUP_COMMAND` is a bare `SaveShow`, so N
+  # snapshots address exactly 1 file. Approval is the only barrier there is.
+  #
+  # Two literals rather than one because the shape is unverified and they do
+  # NOT cover for each other: `_keyword_match` matches command-token ->
+  # entry-keyword, so entry "LoadShow" catches `LoadShow`/`Load`, and entry
+  # "Load Show" would catch the two-token form but NOT the single token. The
+  # single-token spelling is the strong prior — `SaveShow`, the one member of
+  # this family this repository has actually executed, is one token.
+  - "LoadShow"
+  - "NewShow"
 
 invoking_verbs:
   verbs:

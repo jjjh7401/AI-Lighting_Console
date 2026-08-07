@@ -265,7 +265,7 @@
     <tr><td>안전장치 (승인·잠금·백업·감사)</td><td class="c"><span class="b b-ok">있음</span></td><td>문법 검증 · 블랙리스트 · 승인 카드 · 라이브 잠금 · 실행 전 백업 · 감사 로그</td></tr>
     <tr><td>되돌리기 (복원)</td><td class="c"><span class="b b-no">없음</span></td>
       <td><b>백업은 되는데 되돌릴 수 없다.</b> 스냅샷 보관·조회·감사연결까지만 — <b>③의 최대 구멍</b></td></tr>
-    <tr><td>타임코드 쇼 빌드</td><td class="c"><span class="b b-part">부분</span></td><td>섹션 마커의 실체는 큐 이름 문자열이며 그것은 된다</td></tr>
+    <tr><td>타임코드 쇼 빌드</td><td class="c"><span class="b b-part">부분</span></td><td>오브젝트 생성·명명·시퀀스 할당은 <b>발화한다</b>. 이벤트 기록이 0건이라 진행은 큐 <code>TrigTime</code>이 한다 (2026-08-07 정정, §9 v2-1)</td></tr>
 
     <tr><td class="role" rowspan="6">④ 세팅<br>운영</td><td>패치 정합성 점검</td><td class="c"><span class="b b-ok">있음</span></td>
       <td>주소 중복 · 판독 실패 · <b>열거 완전성</b> · 수행하지 않은 판정까지 실토</td></tr>
@@ -361,8 +361,31 @@
     <dd><ul class="tight">
       <li><span class="b b-no">의도적 제외</span> <b>되돌리기(복원) 발신부</b> — 스냅샷 보관·조회·감사연결은 되는데
         <b>콘솔에 되돌려 올리는 경로가 없다</b>. 자리(<code>@MX:NOTE</code>)만 비워뒀고 “자체 SPEC + 라이브 캘리브레이션이 먼저”라고 적혀 있다.
-        <b>오퍼레이터 체감상 가장 아픈 구멍이며, WRITEGATE가 쓰기 게이트를 깔아 선행의 절반을 이미 치렀다.</b></li>
-      <li><span class="b b-part">부분</span> <b>타임코드</b> — 섹션 마커의 물리적 실체는 큐 이름 문자열이고 그것은 된다.</li>
+        <b>오퍼레이터 체감상 가장 아픈 구멍이며, WRITEGATE가 쓰기 게이트를 깔아 선행의 절반을 이미 치렀다.</b>
+        <br><b>2026-08-07 추가 실측 — 갭이 발신부 하나가 아니다(§9 v2-2):</b>
+        <code>BACKUP_COMMAND</code>는 인자 없는 <code>SaveShow</code>라 매번 <b>같은 쇼파일을 덮어쓰고</b>,
+        <code>Snapshot</code>은 콘솔측 식별자를 <b>하나도 갖지 않는다</b>(<code>backup.py:62-70</code>).
+        즉 <b>스냅샷 N개 : 파일 1개</b>이므로, <code>@MX:NOTE</code>가 적은 대로
+        “<code>find_snapshot</code>으로 검증된 대상에 reload를 보내는” 발신부를 그대로 만들면
+        <b>어느 스냅샷을 골라도 최신 저장본을 복원한다</b> — 선택했다는 착각을 주므로 없느니만 못하다.
+        착수 순서는 ① 블랙리스트 ② 이름 있는 백업 ③ 발신부다.</li>
+      <li><span class="b b-ok">2026-08-07 해소</span> <b>쇼파일 교체 명령의 승인 게이트</b> —
+        블랙리스트 7종에 쇼파일 로드 계열이 <b>0건</b>이어서
+        라이브 상태를 통째로 버리는 명령이 <code>safe</code>로 분류돼 <b>승인 카드 없이 실행</b>됐다.
+        v2의 <code>Set Fixture</code>와 같은 false-negative 형태이고,
+        <b>복원 발신부가 없어 되돌릴 수도 없다</b>는 점에서 더 나빴다.
+        <code>blacklist.yaml</code> v3가 <code>LoadShow</code>·<code>NewShow</code>를 등재했다 —
+        코퍼스 비용 실측 <b>0 라인 / 0 시나리오</b>.
+        ⚠️ MA3의 실제 키워드는 <b>미검증</b>이라 이것은 바닥이지 봉쇄 증명이 아니다.</li>
+      <li><span class="b b-part">부분</span> <b>타임코드</b> — <b>2026-08-07 정정(v2가 틀렸다, §9 v2-1):</b>
+        “DESCOPE 유지”가 아니다. <code>ASSUMPTION-20</code>은 <b>M0(2026-07-29)에서 GO</b>였고
+        (<code>SONGCUE-001/progress.md:297</code> — “다섯 건 전부 GO, DESCOPE 0건”),
+        앱은 오늘 <code>Store Timecode &lt;n&gt;</code> · <code>Set Timecode … 'Name'</code> ·
+        <code>Assign Sequence … At Timecode</code>를 <b>실제로 발화한다</b>.
+        실제 남은 갭은 둘이다 — ① <b>이벤트가 0건</b>이다. 만들어진 타임코드는 비어 있고 진행은
+        큐의 <code>TrigType</code>/<code>TrigTime</code>이 한다(재생해도 아무 일도 없다).
+        ② 섹션 마커의 물리적 실체는 여전히 큐 이름 문자열이다.
+        <b>DESCOPE인 것은 “타임코드 쇼 빌드”(이벤트 기록·재생 검증)이지 타임코드 축 전체가 아니다.</b></li>
       <li><span class="b b-no">draft</span> <b>MCP 연계</b> — plan-audit FAIL 0.78. 목적(읽기 전용 노출)은 벽에 걸리지 않으나
         증명 방법(3중 방벽)이 걸렸다 — <b>살릴 수 있다</b>.</li>
     </ul></dd>
@@ -576,8 +599,14 @@
 <table>
   <thead><tr><th class="c" style="width:36px">#</th><th style="width:200px">항목</th><th>판단</th></tr></thead>
   <tbody>
-    <tr><td class="c">13</td><td><b>포커스 차트</b></td><td>포커스 판독 경로 미조사. MVR/GDTF 또는 VWX 경로가 선행.</td></tr>
-    <tr><td class="c">14</td><td><b>타임코드 쇼 빌드</b></td><td>DESCOPE 유지 — W2·W3에 걸린다. 섹션 마커의 실체는 큐 이름 문자열이며 그건 된다.</td></tr>
+    <tr><td class="c">13</td><td><b>포커스 차트</b></td><td><b>2026-08-07 정정(§9 v2-3)</b> — “미조사”가 아니다.
+      <code>rot*</code> <b>판독</b>은 <code>SPATIAL-001/design.md:113</code>에 <b>P3 READ 축으로 이미 등재</b>돼 있고(<code>ASSUMPTION-53</code>),
+      <code>blacklist.yaml</code> 주석이 <code>Rotx</code>를 <code>Posx</code>의 형제 패치 프로퍼티로 취급한다.
+      <code>Pos*</code>가 <code>prop</code>으로 읽히는 것은 실측 확정이므로 프로브는 <b>한 줄</b>이다(절차서 M3).
+      ⚠️ 단 <code>rot*</code>가 주는 것은 <b>설치 지향</b>이지 <b>조사 방향</b>이 아니다 — 후자는 Pan/Tilt 실시간 값이고 W3 뒤에 있다.
+      무빙 라이트에서는 거의 의미가 없고 고정 기구에서만 유효하다. GO여도 “포커스 차트”라 부르면 안 된다.
+      <b>쓰기는 금지 유지</b>(<code>AC-SPATIAL-022</code>가 <code>rot*</code> 기록 0건을 요구).</td></tr>
+    <tr><td class="c">14</td><td><b>타임코드 쇼 빌드</b></td><td><b>2026-08-07 정정(§9 v2-1)</b> — “DESCOPE 유지”는 틀렸다. <code>ASSUMPTION-20</code>은 M0에서 GO였고 앱은 타임코드 오브젝트를 실제로 만든다. P3로 남는 것은 <b>이벤트 기록·재생 검증</b>뿐이며 그것이 W2·W3에 걸린다. 별건으로 <b>슬롯 점유 검사</b>는 2026-08-07에 출하됐다(그 전에는 모델이 준 번호로 기존 타임코드를 승인 없이 덮어썼다).</td></tr>
     <tr><td class="c">15</td><td><b>previz 연계</b></td><td>선행 2/3 충족(좌표·타입 판독). MVR <b>쓰기</b>가 0건이라 실현형은 <b>좌표+타입 내보내기</b>이며
       <b>절단 산술을 반드시 동봉</b>한다 — 18대짜리 파일은 <b>존재하지 않는 리그를 previz에 검증시킨다</b>.</td></tr>
     <tr><td class="c">16</td><td><b>라이브 자율 운영</b></td><td><b>비목표 유지.</b> 라이브 잠금의 read-only 제안 카드까지가 경계이며,
@@ -656,6 +685,44 @@
   ② <b>목차</b>와 절 앵커 ③ <b>§0 기준 계열 표</b>(수치 혼동 방지) ④ <b>§2 직무별 과업 매트릭스</b> — 커버리지 수치의 근거를 표로 노출
   ⑤ 벽을 <b>성격별 3분류</b>(MA3가 닫은 것 / 부분 개방 / 우리가 안 연 것)
   ⑥ <b>§8 규율 4항</b> 확장 ⑦ 인쇄 품질(머리행 반복 · 페이지 분할 방지 · 색 보존).
+</div>
+
+<h3>v2(2026-08-07 초판)가 틀린 것 3건 — 코드 대조로 발견</h3>
+
+<div class="note">
+  v2는 v1의 오류 15건을 잡았지만 <b>같은 종류의 실수를 세 번 더 했다</b>: plan-phase 문서를
+  근거로 판정하고 <b>출하 코드를 확인하지 않았다</b>. v1이 스테일 브랜치를 봐서 틀렸다면 v2는
+  스테일 <i>문서</i>를 봐서 틀렸다. 원문은 위에 보존하고 본문에 소급 정정 각주를 달았다.
+</div>
+
+<table>
+  <thead><tr><th class="c" style="width:52px">#</th><th style="width:210px">v2가 적은 것</th><th>실제 (코드 실측)</th></tr></thead>
+  <tbody>
+    <tr><td class="c">v2-1</td><td>타임코드 “DESCOPE 유지”</td>
+      <td><b><code>ASSUMPTION-20</code>은 M0(2026-07-29)에서 GO다</b> —
+        <code>SONGCUE-001/progress.md:297</code> “다섯 건 전부 GO, DESCOPE 0건”.
+        근거로 인용된 <code>research.md:117-118</code>은 <b>그 측정보다 앞선 plan-phase 문서</b>다.
+        앱은 오늘 <code>Store Timecode</code>를 발화한다(<code>songcue.py:477-485</code>,
+        <code>timecode_go: bool = True</code>). DESCOPE인 것은 <b>이벤트 기록·재생 검증</b>뿐이다.
+        <b>그 간극에 결함이 있었다</b>: 슬롯 번호를 모델이 주는데 점유 검사가 0건이라
+        기존 타임코드를 승인 없이 덮어썼다 — 2026-08-07 해소.</td></tr>
+    <tr><td class="c">v2-2</td><td>되돌리기 “발신부만 없다”</td>
+      <td><b>되돌릴 대상이 없다.</b> <code>BACKUP_COMMAND</code>는 인자 없는 <code>SaveShow</code>(<code>gate.py:59</code>)라
+        매번 같은 파일을 덮어쓰고, <code>Snapshot</code>은 콘솔측 식별자를 하나도 갖지 않는다(<code>backup.py:62-70</code>).
+        <b>스냅샷 N개 : 파일 1개</b>이므로 <code>@MX:NOTE</code>대로 발신부만 만들면
+        선택을 무시하고 최신본을 복원한다. 함께 발견: 쇼파일 교체 명령이 블랙리스트에 <b>0건</b>이었다(v3에서 해소).</td></tr>
+    <tr><td class="c">v2-3</td><td>포커스 “판독 경로 미조사”</td>
+      <td><code>rot*</code> <b>판독</b>은 <code>SPATIAL-001/design.md:113</code>에 <b>P3 READ 축으로 등재</b>돼 있다.
+        미조사가 아니라 <b>미측정</b>이고, 프로브는 한 줄이다.
+        단 얻는 것은 <b>설치 지향</b>이지 조사 방향이 아니다 — 그 한정은 v2도 적지 않았다.</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <b>교훈 — 이 문서가 두 판 연속 같은 곳에서 미끄러졌다.</b>
+  갭 목록을 SPEC 문서만 읽고 쓰면 <b>측정이 뒤집은 판정</b>과 <b>출하된 코드</b>를 놓친다.
+  v3를 쓴다면 항목마다 <b>근거를 코드 좌표로</b> 달고, plan-phase 문서를 인용할 때는
+  그 뒤의 M0/M4 실측을 반드시 대조하라.
 </div>
 
 <footer class="doc">
