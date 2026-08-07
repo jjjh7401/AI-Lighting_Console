@@ -4,19 +4,31 @@ This is a DEV TOOL, not a production execution path — exempt from the
 REQ-MVP-029 single-chokepoint rule (the M4 import-boundary test whitelists
 ``server.tools`` explicitly).
 
-Runs the three responder protocol steps against a live console (or the test
+Runs the responder protocol steps against a live console (or the test
 fake console) and reports PASS/FAIL per step:
 
 1. ``ping``  — plugin liveness (reply on ``/copilot/feedback``, kind=pong)
 2. ``state`` — object-tree snapshot query (reply on ``/copilot/state``)
 3. ``exec``  — wrapped command execution with result capture
    (reply on ``/copilot/feedback``, kind=result)
+4. ``prop``  — OPT-IN single-property read (reply kind=prop). Runs last and
+   only when both ``--prop-path`` and ``--prop-name`` are given.
 
 Usage (from the project root)::
 
     uv run python -m server.tools.responder_roundtrip \
         --host 127.0.0.1 --port 8000 --listen-port 9000 \
         --path "DataPool/Sequences" --exec-command "List" --wait 5
+
+MEASURING an unknown property (non-destructive — ``prop`` reads, and
+``--skip-exec`` removes the only step that runs a command)::
+
+    uv run python -m server.tools.responder_roundtrip --skip-exec \
+        --prop-path "DataPool/Sequences/1/Cue 1" --prop-name CueFade
+
+The reply's ``ok``/``value``/``error`` are printed VERBATIM. A refusal is a
+result, not an error of this tool: what the console says it cannot do is the
+finding, and this tool must not paraphrase it into something nobody observed.
 
 Prerequisites (see console/lua/README.md for the full onPC 2.4.2 setup):
   * onPC running with OSC enabled: input port = ``--port``, an OSC output row
@@ -46,6 +58,7 @@ from server.bridge.protocol import (
     ProtocolError,
     build_exec_request,
     build_ping,
+    build_prop_query,
     build_state_query,
     decode_payload,
 )
@@ -155,6 +168,8 @@ def run_roundtrip(
     wait: float = 5.0,
     skip_exec: bool = False,
     expect_version: str | None = None,
+    prop_path: str | None = None,
+    prop_name: str | None = None,
 ) -> RoundtripReport:
     """Execute the ping -> state -> exec protocol steps; never raises on step failure.
 
@@ -201,6 +216,30 @@ def run_roundtrip(
                     command_line=build_exec_request(f"{run_id}-3", exec_command),
                     reply_kind="result",
                     request_id=f"{run_id}-3",
+                    wait=wait,
+                )
+            )
+        # The prop step is OPT-IN (both --prop-path and --prop-name given) and
+        # runs LAST so a failure here cannot mask the three steps that
+        # establish the responder is alive at all.
+        #
+        # Its reason for existing is measurement, not regression: a property
+        # this project has never uttered has an UNKNOWN answer, and the only
+        # way to learn it is to ask a live console. `prop` accepts an object
+        # path containing SPACES (the responder matches
+        # `^(.-)%s+(%S+)%s*$`, non-greedy on the path) while the property name
+        # must be one token — so `DataPool/Sequences/1/Cue 1` + `CueFade` is
+        # structurally utterable. Whether it ANSWERS is what the measurement
+        # settles; do not pre-judge it here.
+        if prop_path and prop_name:
+            steps.append(
+                _run_step(
+                    bridge,
+                    consumer,
+                    name="prop",
+                    command_line=build_prop_query(f"{run_id}-4", prop_path, prop_name),
+                    reply_kind="prop",
+                    request_id=f"{run_id}-4",
                     wait=wait,
                 )
             )
@@ -265,6 +304,24 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--prop-path",
+        default=None,
+        help=(
+            "object path for an OPT-IN prop step, spaces allowed "
+            "(e.g. 'DataPool/Sequences/1/Cue 1'); needs --prop-name"
+        ),
+    )
+    parser.add_argument(
+        "--prop-name",
+        default=None,
+        help=(
+            "single-token property name for the prop step (e.g. 'CueFade'); "
+            "needs --prop-path. Use this to MEASURE whether a property this "
+            "project has never uttered answers at all — the reply's raw value "
+            "is printed verbatim, never interpreted"
+        ),
+    )
+    parser.add_argument(
         "--diagnose",
         action="store_true",
         help="listen-only: print every OSC message on --listen-port for --wait seconds",
@@ -285,6 +342,8 @@ def main(argv: list[str] | None = None) -> int:
         wait=args.wait,
         skip_exec=args.skip_exec,
         expect_version=args.expect_version,
+        prop_path=args.prop_path,
+        prop_name=args.prop_name,
     )
     for step in report.steps:
         marker = "PASS" if step.ok else "FAIL"
@@ -297,6 +356,17 @@ def main(argv: list[str] | None = None) -> int:
         if step.payload is not None and step.name == "state" and step.ok:
             children = step.payload.get("children", [])
             print(f"         node={step.payload.get('node')} children={len(children)}")
+        if step.payload is not None and step.name == "prop":
+            # Printed VERBATIM including on failure: for a measurement run the
+            # console's own refusal wording IS the finding, and paraphrasing it
+            # would report something nobody observed.
+            print(
+                f"         path={step.payload.get('path')!r} "
+                f"property={step.payload.get('property')!r} "
+                f"ok={step.payload.get('ok')} "
+                f"value={step.payload.get('value')!r} "
+                f"error={step.payload.get('error')!r}"
+            )
     print(f"result: {'PASS' if report.ok else 'FAIL'}")
     return 0 if report.ok else 1
 

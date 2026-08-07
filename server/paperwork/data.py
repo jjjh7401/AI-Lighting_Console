@@ -1,7 +1,7 @@
 """Read-only paperwork data builders (SPEC-COPILOT-PAPERWORK-001).
 
-Three printable documents — patch sheet, cue sheet, preset list — built
-entirely from the SAME gate-audited query ports every other rig-context
+Four printable documents — patch sheet, cue sheet, preset list, magic sheet —
+built entirely from the SAME gate-audited query ports every other rig-context
 consumer uses (``server/orchestrator/tools.py``'s ``collect_rig_sections``
 for the pool/drilldown shape, ``server/prechk/inventory.py``'s
 ``read_inventory`` for per-fixture addresses). This module never imports the
@@ -18,7 +18,9 @@ from server.orchestrator.ports import StateQueryPort
 from server.orchestrator.tools import (
     DEFAULT_RIG_CONTEXT_PATHS,
     RIG_DRILLDOWN_QUERY_CAP,
+    SPATIAL_PROPERTY_QUERY_CAP,
     collect_rig_sections,
+    read_spatial_fixtures,
 )
 from server.prechk import footprint as _footprint
 from server.prechk.footprint import WalkOutcome
@@ -238,14 +240,194 @@ def build_preset_list(
     return _build_pool_listing(state_port, "preset_pools", preset_pools_path, query_cap)
 
 
+# -- magic sheet (REDUCED form) --------------------------------------------------
+#
+# The FULL magic sheet — a group tile showing which fixtures it holds — is not
+# buildable and will not become buildable by fixing this module. Group
+# membership is not readable on grandMA3: the `prop` ladder was walked in full
+# (nine variants plus the `COUNT` accessors) and every one closed, and the four
+# real groups all read `0` while a FABRICATED control group answered
+# `ok:false` — which is what proves the `0` is a real read rather than a miss
+# (SPEC-COPILOT-GROUPGEN-001/spec.md:361-364, progress.md:387-389).
+#
+# So this builder makes the REDUCED sheet: the three things that ARE readable.
+#
+#   1. group and preset NAMES — an operator recognises a rig by its own
+#      vocabulary, and the names arrive with the pool enumeration.
+#   2. a patch SUMMARY — counts and completeness, not the full row table; the
+#      patch sheet already prints that and duplicating it here would give a
+#      reader two places to check for one fact.
+#   3. placement COORDINATES — `(fid, name, x, y, z)` per fixture. This axis
+#      did NOT exist when the reduced sheet was first proposed as a
+#      consolation prize; SPEC-COPILOT-SPATIAL-001 opened it afterwards, so a
+#      plan-view seating chart is now MORE possible than the proposal assumed.
+#
+# What this sheet must never do is let a reader infer membership from
+# adjacency. Group names and fixture coordinates on one page invite exactly
+# that inference, so `GROUP_MEMBERSHIP_UNAVAILABLE` is not optional metadata:
+# it is a required field of the dataclass, it always carries a value, and the
+# renderer prints it beside the group tiles rather than in a footnote.
+
+#: Why the group tiles carry no members. A CONSTANT, not a computed string: it
+#: is a platform fact, so a build that "found nothing" and a build that never
+#: could look must not be distinguishable by their wording.
+GROUP_MEMBERSHIP_UNAVAILABLE = (
+    "그룹 멤버십은 grandMA3에서 판독되지 않는다 — `prop` 사다리 9종과 `COUNT` 접근자가"
+    " 전량 닫혔고, 실사용 그룹 4개가 모두 0을 반환하는 동안 날조 대조군은 ok:false를"
+    " 반환했다(SPEC-COPILOT-GROUPGEN-001). 아래 그룹은 이름만이며, 좌표표의 픽스처가"
+    " 어느 그룹에 속하는지는 이 문서로 알 수 없다."
+)
+
+
+@dataclass(frozen=True)
+class Placement:
+    """One fixture's stage position, as read off ``Patch/Stages/.../Fixtures``."""
+
+    fid: int | None
+    name: str
+    x: float
+    y: float
+    z: float
+
+
+@dataclass(frozen=True)
+class MagicSheet:
+    """The reduced magic sheet (names + patch summary + placement).
+
+    ``placements_complete`` is the SPATIAL/TRUNCATE coverage verdict carried
+    through unchanged, and ``placements_missing`` is its arithmetic
+    (``expected``/``received``/``unseen_count``) — never an adjective. A reader
+    of a plan view has no way to notice an absent fixture, which is precisely
+    why the shortfall has to be stated as a number on the page.
+    """
+
+    group_names: tuple[str, ...]
+    group_membership_unavailable: str
+    groups_unavailable_reason: str | None
+    preset_names: tuple[str, ...]
+    presets_unavailable_reason: str | None
+    patch: PatchSheet | None
+    patch_unavailable: str | None
+    placements: tuple[Placement, ...]
+    placements_complete: bool
+    placements_missing: tuple[int | None, int, int | None]
+    placements_unreadable: tuple[str, ...]
+
+
+def _names_only(
+    state_port: StateQueryPort, section: str, path: str
+) -> tuple[tuple[str, ...], str | None]:
+    """Enumerate one pool WITHOUT drilling into it.
+
+    Empty ``drilldown`` on purpose. Drilling ``DataPool/Groups`` returns an
+    empty child list for every group — that is the unreadable-membership wall,
+    not an empty group — and a listing that carried those empties would render
+    as "group X holds nothing", which is a claim this project cannot make.
+    """
+    summary, _resolved, _failed = collect_rig_sections(
+        state_port, {section: path}, frozenset(), RIG_DRILLDOWN_QUERY_CAP
+    )
+    entry = summary[section]
+    if entry is None or "reason" in entry:
+        reason = entry.get("reason") if isinstance(entry, dict) else None
+        return (), reason
+    names = tuple(str(obj.get("name", "")) for obj in entry["objects"])
+    return names, None
+
+
+def build_magic_sheet(
+    port: InventoryPort,
+    *,
+    groups_path: str = DEFAULT_RIG_CONTEXT_PATHS["groups"],
+    preset_pools_path: str = DEFAULT_RIG_CONTEXT_PATHS["preset_pools"],
+    fixtures_path: str = DEFAULT_RIG_CONTEXT_PATHS["fixtures"],
+    policy: InventoryPolicy | None = None,
+    budget: int = SPATIAL_PROPERTY_QUERY_CAP,
+) -> MagicSheet:
+    """Build the reduced magic sheet from one inventory-capable port.
+
+    Degrades per SECTION rather than raising: an unreadable patch leaves
+    ``patch=None`` with ``patch_unavailable`` saying why while the group names
+    and placements still render, mirroring the per-document isolation
+    :func:`server.paperwork.bundle.build_handover_pack` applies one level up.
+    A page that omits one section silently is the failure this splits to avoid.
+    """
+    group_names, groups_reason = _names_only(port, "groups", groups_path)
+    preset_names, presets_reason = _names_only(port, "preset_pools", preset_pools_path)
+
+    patch: PatchSheet | None = None
+    patch_unavailable: str | None = None
+    try:
+        patch = build_patch_sheet(port, policy=policy)
+    except InventoryReadError as error:
+        patch_unavailable = str(error)
+
+    reply = read_spatial_fixtures(port, port, fixtures_path, budget)
+    # TRUNCATE-001: a partial read arrives under a DIFFERENT key and carries no
+    # ``fixtures`` at all, so reading ``reply["fixtures"]`` would raise rather
+    # than quietly hand back a short list. Both shapes are handled here, and
+    # the branch is the same predicate the reply itself used.
+    complete = "fixtures" in reply
+    records = reply["fixtures"] if complete else reply["partial_fixtures"]
+    placements = tuple(
+        Placement(
+            fid=record.get("fid") if isinstance(record.get("fid"), int) else None,
+            name=str(record.get("name", "")),
+            x=float(record["x"]),
+            y=float(record["y"]),
+            z=float(record["z"]),
+        )
+        for record in records  # type: ignore[union-attr]
+    )
+    missing = reply.get("missing") if isinstance(reply.get("missing"), dict) else None
+    if missing is None:
+        # The complete shape carries no ``missing`` block, and inventing one
+        # here would be reporting an unobserved number. Received is the only
+        # figure this branch actually knows.
+        placements_missing: tuple[int | None, int, int | None] = (
+            len(placements),
+            len(placements),
+            0,
+        )
+    else:
+        placements_missing = (
+            missing.get("expected"),
+            int(missing.get("received", len(placements))),
+            missing.get("unseen_count"),
+        )
+    unreadable = tuple(
+        f"{item.get('name', '')}: {item.get('reason', '')}"
+        for item in reply.get("unreadable", [])  # type: ignore[union-attr]
+        if isinstance(item, dict)
+    )
+
+    return MagicSheet(
+        group_names=group_names,
+        group_membership_unavailable=GROUP_MEMBERSHIP_UNAVAILABLE,
+        groups_unavailable_reason=groups_reason,
+        preset_names=preset_names,
+        presets_unavailable_reason=presets_reason,
+        patch=patch,
+        patch_unavailable=patch_unavailable,
+        placements=placements,
+        placements_complete=complete,
+        placements_missing=placements_missing,
+        placements_unreadable=unreadable,
+    )
+
+
 __all__ = [
     "PatchRow",
     "PatchSheet",
     "PoolEntry",
     "Pool",
     "PoolListing",
+    "Placement",
+    "MagicSheet",
+    "GROUP_MEMBERSHIP_UNAVAILABLE",
     "build_patch_sheet",
     "build_cue_sheet",
     "build_preset_list",
+    "build_magic_sheet",
     "InventoryReadError",
 ]

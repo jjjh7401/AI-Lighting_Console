@@ -86,20 +86,27 @@ def _complete_properties(fixture_name: str = "Spot 1") -> dict[tuple[str, str], 
 
 
 class TestBuildHandoverPackHappyPath:
-    def test_writes_four_files(self, tmp_path):
+    def test_writes_five_files(self, tmp_path):
         port = FakeConsolePort(_complete_states(), _complete_properties())
         pack = build_handover_pack(port, port, directory=tmp_path)
         assert isinstance(pack, HandoverPack)
-        for name in ("index.html", "patch_sheet.html", "cue_sheet.html", "preset_list.html"):
+        for name in (
+            "index.html",
+            "patch_sheet.html",
+            "cue_sheet.html",
+            "preset_list.html",
+            "magic_sheet.html",
+        ):
             assert (tmp_path / name).is_file()
 
-    def test_index_links_all_three_documents_by_relative_path(self, tmp_path):
+    def test_index_links_all_four_documents_by_relative_path(self, tmp_path):
         port = FakeConsolePort(_complete_states(), _complete_properties())
         pack = build_handover_pack(port, port, directory=tmp_path)
         index_html = pack.index_path.read_text(encoding="utf-8")
         assert 'href="patch_sheet.html"' in index_html
         assert 'href="cue_sheet.html"' in index_html
         assert 'href="preset_list.html"' in index_html
+        assert 'href="magic_sheet.html"' in index_html
         # Relative, never absolute: the pack must open correctly from any
         # location it is copied/moved to as one folder.
         assert str(tmp_path) not in index_html
@@ -111,6 +118,7 @@ class TestBuildHandoverPackHappyPath:
             "patch_sheet": STATUS_GENERATED,
             "cue_sheet": STATUS_GENERATED,
             "preset_list": STATUS_GENERATED,
+            "magic_sheet": STATUS_GENERATED,
         }
         assert all(doc.path is not None and doc.path.is_file() for doc in pack.documents)
 
@@ -242,7 +250,13 @@ class TestBuildHandoverPackDeterministicFilenames:
         assert (
             first
             == second
-            == ["cue_sheet.html", "index.html", "patch_sheet.html", "preset_list.html"]
+            == [
+                "cue_sheet.html",
+                "index.html",
+                "magic_sheet.html",
+                "patch_sheet.html",
+                "preset_list.html",
+            ]
         )
 
 
@@ -284,6 +298,7 @@ class TestBuildHandoverPackToolRegistration:
             "patch_sheet": STATUS_GENERATED,
             "cue_sheet": STATUS_GENERATED,
             "preset_list": STATUS_GENERATED,
+            "magic_sheet": STATUS_GENERATED,
         }
 
     def test_dispatch_never_calls_execution_port(self, tmp_path, monkeypatch):
