@@ -536,9 +536,7 @@ def build_patch_plan(
             rejection=PatchPlanRejection(
                 code=FID_PRECHECK_READ_INCOMPLETE,
                 reason=(
-                    f"기존 FID 사전검사가 불완전하다 — 선언 {existing_read.child_count}대 중 "
-                    f"{existing_read.enumerated_count}대만 열거했고 "
-                    f"{existing_read.unreadable_fids}대는 FID 값을 얻지 못했다. "
+                    f"기존 FID 사전검사가 불완전하다 — {existing_read.reason()}. "
                     "부분 관측으로 빈 FID를 단정하면 이미 쓰이는 번호를 배정하게 된다."
                 ),
                 vocabulary="target_exclusion_reason",
@@ -614,6 +612,15 @@ def _fid_assignment_requested(
         or assumption_71 is not None
         or fid_range_visually_confirmed_empty is not None
     )
+
+
+def validate_assumption_71(value: str) -> str:
+    """`ASSUMPTION-71` 판정값을 닫힌 집합에 대해 검증한다 — payload로 나가기 전에 쓴다."""
+    if value not in ASSUMPTION_71_VALUES:
+        raise ValueError(
+            f"assumption_71 must be one of {sorted(ASSUMPTION_71_VALUES)}, got {value!r}"
+        )
+    return value
 
 
 def _assumption_71_or_default(value: str | None) -> str:
@@ -693,20 +700,57 @@ class ExistingFidRead:
     fids: tuple[int, ...] = ()
     child_count: int | None = None
     enumerated_count: int = 0
-    unread: int = 0
+    #: 선언됐으나 열거에 나오지 않은 슬롯 수. 총계를 모르면 `None`.
+    unseen: int | None = 0
     #: 슬롯은 봤으나 FID 값을 얻지 못한 건수 — 열거 축과 **다른 축**이라 따로 센다.
     unreadable_fids: int = 0
+    #: 슬롯 번호가 없거나 중복이라 쓸 수 없던 행 수.
+    unusable_rows: int = 0
+    #: 열거 행이 선언 총계보다 많다 — 형제 리더는 이 스냅샷을 거부한다.
+    over_enumerated: bool = False
+    #: 루트 상태 자체를 못 읽었다 — 아무 것도 모른다.
+    root_unreadable: bool = False
 
     @property
     def complete(self) -> bool:
-        return self.unread == 0
+        return not (
+            self.root_unreadable
+            or self.over_enumerated
+            or self.unseen is None
+            or self.unseen > 0
+            or self.unreadable_fids > 0
+            or self.unusable_rows > 0
+        )
+
+    def reason(self) -> str:
+        """왜 불완전한가 — **관측된 사실만** 적는다. 전부 0인 문장을 내지 않는다."""
+        if self.root_unreadable:
+            return "콘솔의 픽스처 루트 상태를 읽지 못했다 — 기존 FID를 하나도 확인하지 못했다."
+        parts: list[str] = []
+        if self.over_enumerated:
+            parts.append(
+                f"열거된 슬롯 {self.enumerated_count}개가 선언 총계 {self.child_count}개보다 많다"
+                " — 스냅샷이 자기모순이다"
+            )
+        if self.unseen is None:
+            parts.append("선언 총계(childCount)를 읽지 못해 무엇을 못 봤는지 셀 수 없다")
+        elif self.unseen > 0:
+            parts.append(f"선언 {self.child_count}개 중 {self.unseen}개를 열거하지 못했다")
+        if self.unusable_rows:
+            parts.append(f"슬롯 번호가 없거나 중복인 행 {self.unusable_rows}개를 쓰지 못했다")
+        if self.unreadable_fids:
+            parts.append(f"열거된 슬롯 {self.unreadable_fids}개의 FID 값을 얻지 못했다")
+        return " · ".join(parts) if parts else "부분 관측이다"
 
     def to_dict(self) -> dict[str, object]:
         return {
             "child_count": self.child_count,
             "enumerated_count": self.enumerated_count,
-            "unread_count": self.unread,
+            "unseen_count": self.unseen,
             "unreadable_fid_count": self.unreadable_fids,
+            "unusable_row_count": self.unusable_rows,
+            "over_enumerated": self.over_enumerated,
+            "root_unreadable": self.root_unreadable,
             "complete": self.complete,
         }
 
@@ -724,7 +768,10 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
         return ExistingFidRead()
     state = fid_property_port.query_state(FID_FIXTURE_ROOT)
     if state.get("ok") is not True:
-        return ExistingFidRead(child_count=None, enumerated_count=0, unread=1)
+        # [round14 T02] 루트를 못 읽으면 **아무 것도 모른다**. 이전 판은 이 경우에도
+        # 계수만 0으로 채워 "선언 None대 중 0대만 열거했고 0대는 FID를 얻지 못했다"는,
+        # 조작자에게 **아무 문제 없음으로 읽히는** 문장을 냈다.
+        return ExistingFidRead(root_unreadable=True)
 
     node = state.get("node")
     child_count = _optional_int(node.get("childCount")) if isinstance(node, Mapping) else None
@@ -758,17 +805,21 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
         existing_fids.append(fid)
 
     # 총계를 모르거나, 관측이 총계와 **어느 방향으로든** 어긋나면 완전하다고 말할 수 없다.
-    if child_count is None:
-        unread += 1
-    elif child_count != len(read_slots):
-        unread += abs(child_count - len(read_slots))
+    # [round14 T01/T03] 같은 슬롯을 두 축으로 세지 않는다 — 루프에서 이미 센 못 쓴 행은
+    # 총계 대조가 다시 세면 `unread > child_count`가 되어 "선언 2대 중 4대를 읽지 못했다"는
+    # 산술적으로 불가능한 문구가 나갔다. 못 본 슬롯 수는 **한 번만** 센다.
+    over_enumerated = child_count is not None and len(read_slots) > child_count
+    unseen = None if child_count is None else max(child_count - len(read_slots), 0)
 
     return ExistingFidRead(
         fids=tuple(existing_fids),
         child_count=child_count,
         enumerated_count=len(read_slots),
-        unread=unread + unreadable_fids,
+        unseen=unseen,
         unreadable_fids=unreadable_fids,
+        unusable_rows=unread,
+        over_enumerated=over_enumerated,
+        root_unreadable=False,
     )
 
 

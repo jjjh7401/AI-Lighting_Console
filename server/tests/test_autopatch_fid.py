@@ -10,10 +10,11 @@ import pytest
 from server.prechk.inventory import COMPLETE, FIXTURE_ROOT, FixtureRecord, Inventory
 from server.vwx.address import ADDRESS_BASIS_DIRECT, PATCHED, ResolvedRecord
 from server.vwx.diff import compare
-from server.vwx.patchplan import (
+from server.vwx.patchplan import (  # noqa: I001
     ASSUMPTION_71_GO,
     ASSUMPTION_71_INCONCLUSIVE,
     ASSUMPTION_71_NEGATIVE,
+    _existing_fids_from_console,
     build_patch_plan,
 )
 from server.vwx.report import build_vwx_report
@@ -489,8 +490,11 @@ def test_a_truncated_fid_enumeration_refuses_to_assign():
     assert read == {
         "child_count": 2,
         "enumerated_count": 1,
-        "unread_count": 1,
+        "unseen_count": 1,
         "unreadable_fid_count": 0,
+        "unusable_row_count": 0,
+        "over_enumerated": False,
+        "root_unreadable": False,
         "complete": False,
     }
 
@@ -508,13 +512,12 @@ def test_an_unreadable_fid_property_also_blocks_assignment():
     plan = _plan_with(_CountingFidPort(enumerated=2, child_count=2, fid_readable=False))
     assert plan.ok is False
     read = plan.fid_safety["conflict_precheck"]["read"]
-    # [round13 S05] 슬롯 2개는 **봤고**(enumerated 2), 그중 2개의 FID 값을 못 얻었다.
-    # 이전 판은 같은 슬롯을 두 번 세어 "선언 2대 중 4대를 읽지 못했다"는 불가능한 수를 냈다.
+    # 슬롯 2개는 **봤고**(enumerated 2), 그중 2개의 FID 값을 못 얻었다. 못 본 슬롯은 0이다 —
+    # [round13 S05 · round14 T01] 같은 슬롯을 두 축으로 세면 "선언 2대 중 4대" 가 나온다.
     assert read["enumerated_count"] == 2
+    assert read["unseen_count"] == 0
     assert read["unreadable_fid_count"] == 2
-    assert read["unread_count"] == 2
     assert read["complete"] is False
-    assert read["unread_count"] <= read["child_count"]  # 구조적으로 깨지지 않아야 한다
 
 
 def test_a_duplicate_slot_index_is_not_counted_as_a_read_slot():
@@ -560,3 +563,91 @@ def test_an_unknown_child_count_is_treated_as_unread_rather_than_complete():
     plan = _plan_with(_NoCount(enumerated=2, child_count=2))
     assert plan.ok is False
     assert plan.fid_safety["conflict_precheck"]["read"]["child_count"] is None
+
+
+# --------------------------------------------------------------------------
+# round14 회귀 — 차단 사유 **문구**에 대조군을 붙인다
+#
+# round13 S05는 계수 축을 분리했으나 **그 숫자를 소비하는 문장**은 검증하지 않았다.
+# 그래서 "선언 2대 중 4대를 읽지 못했다"(산술 불가)와 "선언 None대 중 0대만 열거했고
+# 0대는 FID 값을 얻지 못했다"(전부 0 = 아무 문제 없음으로 읽힌다)가 통과했다.
+# 이 문장은 **되돌릴 수 없는 FID 배정을 막는 화면**에 나간다 — 조작자가 그것을 무해하다고
+# 읽으면 사전검사를 무시하고 이미 쓰이는 FID를 덮는다.
+# --------------------------------------------------------------------------
+
+
+class _ShapedFidPort:
+    """루트 스냅샷 형태를 자유롭게 만드는 포트."""
+
+    def __init__(self, *, child_count, rows, fids=None, root_ok=True):
+        self.child_count = child_count
+        self.rows = rows
+        self.fids = fids or {}
+        self.root_ok = root_ok
+
+    def query_state(self, path: str) -> dict:
+        if not self.root_ok:
+            return {"ok": False, "path": path, "error": "unreadable"}
+        node = {} if self.child_count is None else {"childCount": self.child_count}
+        return {"ok": True, "path": path, "node": node, "children": [{"i": i} for i in self.rows]}
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        value = self.fids.get(int(path.rsplit("/", 1)[1]))
+        if value is None:
+            return {"ok": False, "path": path, "property": property_name, "error": "not readable"}
+        return {"ok": True, "path": path, "property": property_name, "value": value}
+
+
+FID_READ_SHAPES = (
+    ("절단", dict(child_count=2, rows=[1], fids={1: 100}), "열거하지 못했다"),
+    ("중복 슬롯", dict(child_count=2, rows=[1, 1], fids={1: 100}), "중복인 행"),
+    ("초과 열거", dict(child_count=2, rows=[1, 2, 3], fids={}), "자기모순"),
+    ("총계 부재", dict(child_count=None, rows=[1], fids={1: 100}), "총계(childCount)를 읽지 못해"),
+    ("루트 실패", dict(child_count=2, rows=[], root_ok=False), "루트 상태를 읽지 못했다"),
+    ("FID 미판독", dict(child_count=2, rows=[1, 2], fids={}), "FID 값을 얻지 못했다"),
+)
+
+
+@pytest.mark.parametrize(
+    "label,kwargs,expected_phrase", FID_READ_SHAPES, ids=[row[0] for row in FID_READ_SHAPES]
+)
+def test_every_incomplete_shape_reports_an_observed_fact(label, kwargs, expected_phrase):
+    """어떤 불완전 형태든 **관측된 사실**을 말한다 — 전부 0인 문장을 내지 않는다."""
+    read = _existing_fids_from_console(_ShapedFidPort(**kwargs))
+    assert read.complete is False
+    reason = read.reason()
+    assert expected_phrase in reason, reason
+    assert reason != "부분 관측이다"
+
+
+@pytest.mark.parametrize(
+    "label,kwargs,_p", FID_READ_SHAPES, ids=[row[0] for row in FID_READ_SHAPES]
+)
+def test_no_shape_reports_more_unseen_than_declared(label, kwargs, _p):
+    """`unseen <= child_count`가 **모든 형태에서** 성립한다 — 한 형태만 고정하지 않는다."""
+    read = _existing_fids_from_console(_ShapedFidPort(**kwargs))
+    if read.child_count is not None and read.unseen is not None:
+        assert read.unseen <= read.child_count, read.to_dict()
+
+
+def test_a_complete_read_says_so_and_the_reason_is_not_consulted():
+    read = _existing_fids_from_console(
+        _ShapedFidPort(child_count=2, rows=[1, 2], fids={1: 100, 2: 101})
+    )
+    assert read.complete is True
+    assert read.fids == (100, 101)
+
+
+def test_the_root_failure_message_carries_a_nonzero_signal():
+    """[round14 T02] 전부 0인 문장은 조작자에게 '아무 문제 없음'으로 읽힌다."""
+    read = _existing_fids_from_console(_ShapedFidPort(child_count=2, rows=[], root_ok=False))
+    reason = read.reason()
+    assert "0" not in reason
+    assert "None" not in reason
+
+
+def test_the_message_reaches_the_user_facing_rejection():
+    """문구가 실제 거부 사유에 실린다 — 함수만 고쳐 놓고 쓰지 않으면 의미가 없다."""
+    plan = _plan_with(_ShapedFidPort(child_count=2, rows=[], root_ok=False))
+    assert plan.ok is False
+    assert "루트 상태를 읽지 못했다" in plan.rejection.reason

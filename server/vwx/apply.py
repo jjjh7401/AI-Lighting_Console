@@ -63,6 +63,7 @@ from server.vwx.verdicts import (
     ALREADY_PATCHED_IDENTICAL,
     CONSOLE_READ_INCOMPLETE,
     CONSOLE_READ_INDEX_DOMAIN_UNKNOWN,
+    CONSOLE_READ_UNPATCHED_PRESENT,
     EXISTING_FOOTPRINT_UNREADABLE,
     EXISTING_IDENTITY_UNCONFIRMED,
     FID_NOT_ASSIGNED,
@@ -331,7 +332,12 @@ def _rejected_field(entry: LuaPatchEntry) -> str:
     """
     neutral = replace(entry, **dict(_NEUTRAL_FIELDS))
     rejected = [field for field in _NEUTRAL_FIELDS if _rejects(field, entry, neutral)]
-    return " · ".join(rejected) if rejected else "확정 불가(중립 입력도 거부됨)"
+    if not rejected:
+        # [round14 T02] 도달 불가여야 정상이다 — 생성기 검증이 전부 필드 단위이므로
+        # 거부된 항목이라면 어느 한 필드는 반드시 되돌렸을 때 다시 거부된다.
+        # 그래도 문구는 **조건의 반대를 주장하지 않도록** 사실만 적는다.
+        return "확정 불가(거부 사유가 단일 필드로 환원되지 않는다)"
+    return " · ".join(rejected)
 
 
 def _rejects(field: str, entry: LuaPatchEntry, neutral: LuaPatchEntry) -> bool:
@@ -519,10 +525,19 @@ def classify_patch_value(fixture) -> str:
 
     그래서 이번에는 갈래를 **열거해** 닫는다. 판정 근거는 두 출처를 **함께** 본다:
     `read_inventory`의 `read_failures`(읽기·shape 게이트)와 `normalize_address`의
-    오류 종류(형태 불일치 vs 최소 인덱스 미만). 후자를 나누는 것이 핵심이다 —
-    **형태가 어긋난 값은 미판독**이고, **`0.0` 류는 "패치되지 않았다"는 관측**이다.
-    이 저장소는 그 둘을 이미 다른 결함 종류로 등재하고 있다(`address_parse_failed`
-    vs `shape_invalid`, AC-PRECHK-008②).
+    오류 종류(형태 불일치 vs 최소 인덱스 미만).
+
+    **[미실측 가정 · round14 T01] `unpatched` 갈래는 이 SPEC이 새로 세운 전제 위에 있다.**
+    전제: *최소 인덱스 미만 `Patch` 값(`0.0`·`1.0`·`0.1`)은 그 픽스처가 DMX 채널을
+    점유하지 않는다는 뜻이다.* 이 전제가 참이면 그 픽스처를 점유·멱등·검증에서 빼는 것이
+    옳고, 거짓이면 실주소를 가진 픽스처가 보이지 않는 채 그 주소에 생성이 진행된다.
+
+    **이것을 기존 등재로 정당화하지 않는다.** 이전 판은 `address_parse_failed` vs
+    `shape_invalid` 구분(AC-PRECHK-008②)을 근거로 들었으나 **그 인용은 이 분할을 지지하지
+    않는다** — `server/prechk/patch.py`는 `not parse.ok`를 **전부** `address_parse_failed`로
+    등급하므로 prechk는 `0.0`을 판독 실패로 보고 이 모듈은 관측으로 본다. **두 모듈이 같은
+    값을 반대로 판정한다.** 그 사실을 숨기지 않고, 계수를 payload에 실어
+    (`console_read.unpatched_count`) 조작자가 **세션 전에 눈으로 대조**하게 한다.
     """
     if fixture.failure_for("Patch") is not None:
         return PATCH_UNREAD
@@ -549,9 +564,9 @@ def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
     # [round11 N02] `missing_count`는 **열거·복구** 축만 센다. 열거는 됐는데 그 픽스처의
     # `Patch` 프로퍼티를 못 읽었으면 주소가 `None`이 되어 점유·멱등·검증 어디에서도 보이지
     # 않는다 — 그것도 미판독이다. `read_inventory`가 그 사실을 `read_failures`로 이미 들고 있다.
-    unreadable_addresses = sum(
-        1 for fixture in inventory.fixtures if classify_patch_value(fixture) == PATCH_UNREAD
-    )
+    classified = [classify_patch_value(fixture) for fixture in inventory.fixtures]
+    unreadable_addresses = classified.count(PATCH_UNREAD)
+    unpatched = classified.count(PATCH_UNPATCHED)
     unread = inventory.missing_count + unreadable_addresses
     if unread > 0:
         return {
@@ -562,11 +577,30 @@ def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
             "observed_count": inventory.observed_count,
             "missing_count": inventory.missing_count,
             "unreadable_address_count": unreadable_addresses,
+            "unpatched_count": unpatched,
             "unread_count": unread,
             "reason": (
                 f"콘솔 재조회에서 선언된 {inventory.child_count}대 중 "
                 f"{inventory.missing_count}대를 열거하지 못했고 {unreadable_addresses}대는 "
                 "주소를 판독하지 못했다 — 이 상태의 '없음'은 관측이 아니라 미판독이다."
+            ),
+        }
+    if unpatched and not inventory.index_domain_unknown:
+        # 막지는 않는다 — 다만 **미실측 가정 위에 있는 갈래**이므로 조작자가 볼 수 있어야 한다.
+        return {
+            "kind": validate_autopatch("console_read_caveat_kind", CONSOLE_READ_UNPATCHED_PRESENT),
+            "label": console_read_caveat_label(CONSOLE_READ_UNPATCHED_PRESENT),
+            "completeness": inventory.completeness,
+            "child_count": inventory.child_count,
+            "observed_count": inventory.observed_count,
+            "missing_count": 0,
+            "unreadable_address_count": 0,
+            "unpatched_count": unpatched,
+            "unread_count": 0,
+            "reason": (
+                f"콘솔 픽스처 {unpatched}대가 최소 인덱스 미만 Patch 값을 가진다 — "
+                "이 모듈은 그것을 '주소를 점유하지 않는다'로 읽지만 그 전제는 미실측이고 "
+                "server/prechk는 같은 값을 판독 실패로 등급한다. 세션 전에 눈으로 대조하라."
             ),
         }
     if inventory.index_domain_unknown:
@@ -580,6 +614,7 @@ def console_read_caveat(inventory: Inventory) -> dict[str, object] | None:
             "observed_count": inventory.observed_count,
             "missing_count": 0,
             "unreadable_address_count": 0,
+            "unpatched_count": unpatched,
             "unread_count": 0,
             "reason": (
                 "열거가 절단됐으나 선언된 자식을 전부 관측했다 — 수량 비교는 정확하고, "
