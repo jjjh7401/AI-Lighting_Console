@@ -810,11 +810,13 @@ OSC: send 8000 / receive 9005 (기본 9000 아님) · 응답기 v1.5.0
 
 | 후보 | 상태 | 벽 |
 |---|---|---|
-| **FID 축** | 착수 가능하나 **사용자 GUI 작업이 선행** | 슬롯 ≠ FID로 패치된 쇼파일이 필요하다(`console/lua/PROTOCOL.md:322-324`). 현재 쇼파일은 슬롯과 FID가 같아 어떤 라이브 세션도 닫을 수 없다 |
-| **구간 겹침 재개** | `ASSUMPTION-27` 부정으로 축소된 기능 | 후보 12건 전건 부정을 §E.2가 기록했다. 다른 쇼파일·다른 응답기 버전에서 재측정할 때 **무엇을 이미 시도했는지** 그 표를 먼저 읽을 것 |
-| **페이지·익스큐터 저작** | `ASSUMPTION-28`·`ASSUMPTION-29` GO · `ASSUMPTION-30` 부정 | 저작은 되지만 `Assign … At Executor <N>`이 **page 성분을 page 1 인덱스 공간으로 누출**한다(비단사 사상). 안전 설계가 선행 조건이다 |
-| **프리셋 읽기** | 살아 있는 경로 실측 완료 | `DataPool/PresetPools/<풀>`이 정답이고 `DataPool/Presets`는 사망이다. 추측으로 경로를 고르지 말 것 |
-| SONGCUE 잔여 · P2-4 자동 페이퍼워크 · P2-5 볼런티어 런북 | 미착수 | 뒤 둘은 **큐 내용 관측 벽**에 막혀 있다(`research.md` §3.2). 착수 전 그 벽을 먼저 재는 산정이 필요하다 |
+| **FID 축** | 착수 가능하나 **사용자 GUI 작업이 선행** | 슬롯 ≠ FID로 패치된 쇼파일이 필요하다(`console/lua/PROTOCOL.md:322-324`). 현재 쇼파일은 슬롯과 FID가 같아 어떤 라이브 세션도 닫을 수 없다. **※ 2026-08-07 정정 — 선행 조건이 이미 충족됐을 가능성**: GROUPGEN M6가 슬롯 ≠ fid 리그를 실측했다(`SPEC-COPILOT-GROUPGEN-001/progress.md:424-426` — 슬롯 1..20 → fid 20..39). **착수 전 현 쇼파일 상태를 재확인할 것** |
+| ~~구간 겹침 재개~~ | **출하 완료(2026-08-07 정정) — `SPEC-COPILOT-OVERLAP-001`(`spec.md:5` `status: completed`)** | 상계 형태로 출하됐다 — 모드 최대폭 `W`로 *"갭 ≥ W이면 겹칠 수 없다"* 만 증명한다. **정확폭 조인은 여전히 0건**이며(후보 12건 전건 부정, §E.2) 그 비대칭이 설계의 핵심이다(`server/prechk/footprint.py:1-15`). 다른 쇼파일·다른 응답기 버전에서 재측정할 때 **무엇을 이미 시도했는지** §E.2의 표를 먼저 읽을 것 |
+| **페이지·익스큐터 저작** | `ASSUMPTION-28`·`ASSUMPTION-29` GO · `ASSUMPTION-30` 부정 | 저작은 되지만 `Assign … At Executor <N>`이 **page 성분을 page 1 인덱스 공간으로 누출**한다(비단사 사상). **선행 조건 정정(2026-08-07): 막는 것은 안전 설계가 아니라 빈 익스큐터 식별이다** — `SPEC-COPILOT-BUSKWIZ-001/progress.md:306`이 *"비어 있음"과 "존재하지 않음"이 구별되지 않음*을 부정 실측으로 확정했다. 안전 설계는 그 다음 문제다. **자동 배치는 불가**이며, 사용자가 번호를 명시 지정하는 축소형은 `SPEC-COPILOT-FXLIB-001/spec.md:98`(REQ-FXLIB-013)이 **이미 출하했다** |
+| ~~프리셋 읽기~~ | **소비자 출하 완료(2026-08-07 정정)** — `server/paperwork/data.py:196-206` `build_preset_list` | `DataPool/PresetPools/<풀>`이 정답이고 `DataPool/Presets`는 사망이다. 추측으로 경로를 고르지 말 것 |
+| SONGCUE 잔여 | 미착수 | 벽에 걸리지 않는다 |
+| ~~P2-4 자동 페이퍼워크~~ | **출하 완료(2026-08-07 정정) — `SPEC-COPILOT-PAPERWORK-001`**(`server/paperwork/`) | **이 행의 원래 판정이 틀렸다.** 페이퍼워크는 큐 내용 벽에 막혀 있지 않았고, **쇼파일 파서 없이 라이브 질의 포트만으로** 출하됐다(`server/paperwork/data.py:1-11`). 출하 3종은 patch sheet · cue sheet · preset list. **미포함 3건과 그 사유**: ① **매직시트** — 그룹 멤버십이 MA3 플랫폼상 판독 불가(`SPEC-COPILOT-GROUPGEN-001/spec.md:361-363`) ② **훅업 차트의 채널 범위** — 정확 채널폭 조인 0건, 상계 표기까지만 ③ **큐시트의 "얼마나 밝나"** — `CueFade`와 큐 내용은 반환 경로가 없다(`SPEC-COPILOT-SCENE-001/spec.md:231-232`) |
+| P2-5 볼런티어 런북 | 미착수 | **불가-축소.** 큐의 **내용(저장된 값)** 은 반환 경로가 존재하지 않는다(`SPEC-COPILOT-SCENE-001/spec.md:232`). 단 **벽이 부분적으로 무너졌다** — 응답기 v1.5.0의 `prop` 동사로 `TrigType`/`TrigTime`은 읽힌다(`:230`). 실현형은 큐 **이름 + `cueNo` + `TrigType`/`TrigTime`**까지의 진행표이며, *"다음 Go가 무엇을 하는가"* 는 **앱이 직접 만든 큐에 한해서만** 답할 수 있다(생성 시점 지식 보관) |
 
 ### 이 세션에서 확립되어 반복할 규율
 
@@ -909,12 +911,13 @@ CI                         -> **체크 0건** (`gh pr checks 7` -> no checks rep
 
 | 순위 | 후보 | 왜 이 순위인가 | 선행 조건 |
 |---|---|---|---|
-| **1** | **구간 겹침 재개 (후보 I-15)** | run-audit가 열거한 **보수적 점유폭 상계** — 폭 ∈ {29, 31}이고 실측 최소 주소 간격이 42이므로 **42 > 31로 겹침 0건이 연결 없이 증명된다.** `ASSUMPTION-27` 부정을 우회하지 않고 **라이브 측정 없이** 기능을 되살릴 여지가 있는 유일한 후보다 | **없음** — 기존 실측만으로 착수 가능. 구조적 장애는 `FootprintPolicy`가 `enabled` 이진 게이트라 "경계 있는 폭"을 표현하지 못하는 것과 `SKIPPED_CHECK_KIND`에 대응 부류가 없는 것 |
+| **1** | ~~구간 겹침 재개 (후보 I-15)~~ — **출하 완료, `SPEC-COPILOT-OVERLAP-001`(2026-08-07 정정)** | run-audit가 열거한 **보수적 점유폭 상계** — 폭 ∈ {29, 31}이고 실측 최소 주소 간격이 42이므로 **42 > 31로 겹침 0건이 연결 없이 증명된다.** `ASSUMPTION-27` 부정을 우회하지 않고 **라이브 측정 없이** 기능을 되살릴 여지가 있는 유일한 후보다 | **없음** — 기존 실측만으로 착수 가능. 구조적 장애는 `FootprintPolicy`가 `enabled` 이진 게이트라 "경계 있는 폭"을 표현하지 못하는 것과 `SKIPPED_CHECK_KIND`에 대응 부류가 없는 것 |
 | **2** | `AC-PRECHK-015` PRESERVE 게이트 상시화 | CI가 0건인 저장소에서 PRESERVE를 지키는 유일한 수단이 상시 테스트다. 선행 SPEC에 선례가 있다(`server/tests/test_songcue_bundle.py`의 `test_preserve_look_files_are_unchanged_from_run_phase_base`) | 없음 — 다음 SPEC의 M7에 흡수하는 편이 자연스럽다 |
-| 3 | 페이지·익스큐터 저작 | `ASSUMPTION-28`·`ASSUMPTION-29` GO로 저작은 가능하다. 그러나 `Assign … At Executor <N>`이 **page 성분을 page 1 인덱스 공간으로 누출**한다(비단사 사상 — `Executor 201`이 page 1 인덱스 101을 조용히 덮었다) | **안전 설계 선행.** 주소형을 그대로 쓰면 사용자 익스큐터를 덮는다 |
-| 4 | FID 축 | `REQ-PRECHK-005`가 배제한 것을 되살리면 픽스처 개별 선택이 열린다 | **사용자 GUI 작업** — 슬롯 ≠ FID로 패치된 쇼파일이 필요하다(`console/lua/PROTOCOL.md:322-324`) |
-| 5 | 프리셋 읽기 | 살아 있는 경로가 `DataPool/PresetPools/<풀>`로 실측 확정됐다 | 없음 — 다만 본 SPEC 범위 밖이라 요구가 먼저 필요하다 |
-| 6 | P2-4 자동 페이퍼워크 · P2-5 볼런티어 런북 | 제안서의 남은 항목 | **큐 내용 관측 벽**에 막혀 있다(`research.md` §3.2). 착수 전 그 벽을 먼저 재는 산정이 필요하다 |
+| 3 | 페이지·익스큐터 저작 | `ASSUMPTION-28`·`ASSUMPTION-29` GO로 저작은 가능하다. 그러나 `Assign … At Executor <N>`이 **page 성분을 page 1 인덱스 공간으로 누출**한다(비단사 사상 — `Executor 201`이 page 1 인덱스 101을 조용히 덮었다) | **선행 조건 정정(2026-08-07): 빈 익스큐터 식별이 먼저다** — `SPEC-COPILOT-BUSKWIZ-001/progress.md:306`이 식별 불가를 부정 실측으로 확정했다. 안전 설계는 그 다음이다. 자동 배치는 불가이며 사용자 명시 지정 축소형은 `SPEC-COPILOT-FXLIB-001/spec.md:98`이 이미 출하했다 |
+| 4 | FID 축 | `REQ-PRECHK-005`가 배제한 것을 되살리면 픽스처 개별 선택이 열린다 | **사용자 GUI 작업** — 슬롯 ≠ FID로 패치된 쇼파일이 필요하다(`console/lua/PROTOCOL.md:322-324`). **※ 2026-08-07 — GROUPGEN M6가 슬롯 ≠ fid 리그를 실측했다(`SPEC-COPILOT-GROUPGEN-001/progress.md:424-426`). 충족 여부 재확인 필요** |
+| 5 | ~~프리셋 읽기~~ | 살아 있는 경로가 `DataPool/PresetPools/<풀>`로 실측 확정됐다 | **소비자 출하 완료(2026-08-07 정정)** — `server/paperwork/data.py:196-206` `build_preset_list` |
+| 6 | ~~P2-4 자동 페이퍼워크~~ | 제안서의 남은 항목 | **출하 완료(2026-08-07 정정) — `SPEC-COPILOT-PAPERWORK-001`.** 큐 내용 벽에 막혀 있지 않았고 라이브 질의 포트로 출하됐다. 미포함: 매직시트(멤버십 판독 불가) · 훅업 채널 범위(정확폭 0건) · 큐시트의 "얼마나 밝나"(`CueFade`·큐 내용). 상세는 §E.3a 후보표 |
+| 7 | P2-5 볼런티어 런북 | 제안서의 남은 항목 | **불가-축소.** 큐 내용은 반환 경로가 없다(`SPEC-COPILOT-SCENE-001/spec.md:232`). `TrigType`/`TrigTime`은 v1.5.0 `prop`으로 읽힌다(`:230`) — 실현형은 이름 + `cueNo` + 트리거까지의 진행표 |
 
 ### 규율 — §E.3a의 11건에 이번 사이클이 더한 4건
 

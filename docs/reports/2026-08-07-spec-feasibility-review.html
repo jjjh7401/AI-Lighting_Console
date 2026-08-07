@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>스펙 실현가능성 전수 검토 — AI-Lighting_Console</title>
+<style>
+  :root {
+    --ink:#16181d; --sub:#5b6472; --line:#d8dde5; --bg:#fbfcfd;
+    --ok:#1b7f4b; --okbg:#e8f6ee;
+    --part:#9a6b00; --partbg:#fdf3dc;
+    --no:#a52222; --nobg:#fbeaea;
+    --wall:#3f3f6e; --wallbg:#eeeef8;
+    --new:#1d5fa8; --newbg:#e8f1fb;
+  }
+  * { box-sizing:border-box; }
+  body { font-family:-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Segoe UI",Helvetica,Arial,sans-serif;
+         color:var(--ink); background:var(--bg); margin:0; padding:32px 28px 72px; line-height:1.62;
+         -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1080px; margin:0 auto; }
+  header.doc { border-bottom:2px solid var(--ink); padding-bottom:14px; margin-bottom:24px; }
+  h1 { font-size:25px; margin:0 0 6px; letter-spacing:-0.01em; }
+  .docmeta { color:var(--sub); font-size:12.5px; }
+  .docmeta b { color:var(--ink); font-weight:600; }
+  h2 { font-size:18px; margin:40px 0 12px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  h3 { font-size:14.5px; margin:24px 0 8px; }
+  p,li { font-size:13.5px; }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:11.8px;
+         background:#eef1f5; border-radius:3px; padding:1px 4px; }
+  .lead { font-size:14.5px; background:#fff; border:1px solid var(--line); border-left:4px solid var(--ink);
+          padding:14px 16px; border-radius:4px; }
+  .kpis { display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 4px; }
+  .kpi { flex:1 1 150px; background:#fff; border:1px solid var(--line); border-radius:5px; padding:11px 13px; }
+  .kpi .n { font-size:22px; font-weight:700; letter-spacing:-0.02em; }
+  .kpi .l { font-size:11px; color:var(--sub); margin-top:2px; }
+  .b { display:inline-block; font-size:10.5px; font-weight:700; border-radius:3px; padding:1px 6px;
+       white-space:nowrap; vertical-align:1px; }
+  .b-ok{background:var(--okbg);color:var(--ok)} .b-part{background:var(--partbg);color:var(--part)}
+  .b-no{background:var(--nobg);color:var(--no)} .b-wall{background:var(--wallbg);color:var(--wall)}
+  .b-new{background:var(--newbg);color:var(--new)}
+  table { border-collapse:collapse; width:100%; background:#fff; margin:12px 0 6px; font-size:12.5px; }
+  th,td { border:1px solid var(--line); padding:7px 9px; text-align:left; vertical-align:top; }
+  th { background:#f1f4f8; font-size:11.8px; }
+  td.c,th.c { text-align:center; white-space:nowrap; }
+  tbody tr:nth-child(even) { background:#fcfdfe; }
+  .src { color:var(--sub); font-size:11.4px; }
+  .note { background:#fff; border:1px solid var(--line); border-left:4px solid var(--wall);
+          padding:11px 14px; border-radius:4px; margin:12px 0; font-size:13px; }
+  .warn { border-left-color:var(--no); } .good { border-left-color:var(--ok); }
+  figure { margin:16px 0 8px; background:#fff; border:1px solid var(--line); border-radius:6px; padding:10px 6px 4px; }
+  figcaption { font-size:11.5px; color:var(--sub); padding:2px 10px 6px; }
+  ul.tight { margin:4px 0 0; padding-left:19px; } ul.tight li { margin:3px 0; }
+  .quote { background:#f7f8fa; border-left:3px solid var(--line); padding:6px 10px; margin:6px 0;
+           font-size:12.5px; color:#333; }
+  footer.doc { margin-top:44px; border-top:1px solid var(--line); padding-top:12px; color:var(--sub); font-size:11.5px; }
+  @media print {
+    body{background:#fff;padding:0.45in;font-size:11pt}
+    table,figure,.note{break-inside:avoid} h2{break-after:avoid}
+    thead{display:table-header-group} tr{break-inside:avoid}
+    *{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <h1>스펙 실현가능성 전수 검토 — 무엇이 이미 죽었고 무엇이 이미 열렸나</h1>
+  <div class="docmeta">
+    <b>대상</b> AI-Lighting_Console · SPEC 19건 + 제안서 2건 + 커버리지 리포트 1건 ·
+    <b>기준</b> <code>origin/main</code> <code>c6be036</code> ·
+    <b>작성일</b> 2026-08-07 ·
+    <b>브랜치</b> <code>jjjh7401/spec-feasibility</code> (<code>2d04125</code>)
+  </div>
+  <div class="docmeta" style="margin-top:6px">
+    조사 방법 — 읽기 전용 정찰 4개 병렬(벽 대장 · 제안서 감사 · 잔여 항목 감사 · 초안 감사).
+    모든 판정에 <code>파일:줄</code> 근거를 달았고, 관측하지 않은 것은 <span class="b b-wall">추정</span>으로 표기했다.
+  </div>
+</header>
+
+<p class="lead">
+  <b>한 줄 결론 —</b> 이 저장소의 인계 표들이 세 방향으로 틀려 있었다.
+  <b>① 원리적으로 불가능한 것을 "후속 후보"로</b>, <b>② 이미 출하된 것을 "미착수"로</b>,
+  <b>③ 이미 열린 문을 "blocker"로</b> 적고 있었다. ③이 가장 위험하다 — 열려 있는 문을 닫힌 문으로 적어 두면
+  아무도 착수하지 않는다. <b>29곳을 정정했고 과거 측정 판정은 한 글자도 바꾸지 않았다</b>(뒤집힌 서술은 원문 보존 + 소급 정정 각주).
+</p>
+
+<div class="kpis">
+  <div class="kpi"><div class="n">29</div><div class="l">SPEC 정정 (13 files, +227/−56)</div></div>
+  <div class="kpi"><div class="n">9</div><div class="l">제안서 항목 판정 (§5 신설)</div></div>
+  <div class="kpi"><div class="n">15</div><div class="l">커버리지 리포트 정정</div></div>
+  <div class="kpi"><div class="n">8</div><div class="l">확정 벽 (운용 대장)</div></div>
+  <div class="kpi"><div class="n">11</div><div class="l">문서 간 모순</div></div>
+  <div class="kpi"><div class="n">0</div><div class="l">코드 변경 · 판정 어휘 계수 변화</div></div>
+</div>
+
+<h2>1. 판정 어휘 — 닫힌 4값</h2>
+
+<table>
+  <thead><tr><th class="c" style="width:110px">판정</th><th style="width:300px">정의</th><th>이 검토에서의 처분</th></tr></thead>
+  <tbody>
+    <tr><td class="c"><span class="b b-no">불가-폐기</span></td>
+      <td>어떤 우회도 없다. MA3가 그 데이터를 주지 않는다.</td>
+      <td><b>항목을 지우되 사유를 남긴다.</b> 지우기만 하면 다음 사람이 다시 제안한다.</td></tr>
+    <tr><td class="c"><span class="b b-part">불가-축소</span></td>
+      <td>원문 그대로는 성립하지 않으나 <b>약한 형태로는 성립</b>한다.</td>
+      <td>그 약한 형태를 <b>명시</b>한다. 대부분 "사람의 눈과 손을 설계에 포함"하는 형태다.</td></tr>
+    <tr><td class="c"><span class="b b-ok">스테일</span></td>
+      <td>이미 출하됐거나 사실이 바뀌었다.</td>
+      <td>취소선 + <b>출하 좌표</b>를 단다.</td></tr>
+    <tr><td class="c"><span class="b b-new">미개통</span></td>
+      <td>막힌 것이 MA3가 아니라 <b>우리 앱 인프라</b>다.</td>
+      <td><b>벽 목록과 섞지 않는다</b> — 섞으면 열 수 있는 것을 못 여는 것으로 오분류한다.</td></tr>
+  </tbody>
+</table>
+
+<h2>2. 벽 대장 — 판정의 기준이 된 8건</h2>
+
+<figure>
+<svg viewBox="0 0 1040 210" width="100%" height="210" role="img" aria-label="벽 8건의 성격 분류">
+ <g font-family="-apple-system,'Apple SD Gothic Neo',sans-serif">
+  <rect x="6" y="8" width="500" height="92" rx="6" fill="#fbeaea" stroke="#e0b4b4"/>
+  <text x="20" y="30" font-size="12.5" font-weight="700">MA3 플랫폼이 닫은 것 — 열 수 없다</text>
+  <text x="20" y="50" font-size="10.5" fill="#5b6472">W1 그룹 멤버십 · W3 픽스처 텔레메트리 · W4 채널폭 조인</text>
+  <text x="20" y="68" font-size="10.5" fill="#5b6472">W5 쇼파일 파서 · W6 페이로드 1900B · W7 빈 익스큐터 식별</text>
+  <text x="20" y="88" font-size="10.5" fill="#a52222" font-weight="700">응답기를 고쳐도 안 열린다 — 사다리 전량을 탄 뒤의 결론</text>
+
+  <rect x="518" y="8" width="252" height="92" rx="6" fill="#fdf3dc" stroke="#dcc48a"/>
+  <text x="532" y="30" font-size="12.5" font-weight="700">부분적으로 무너진 벽</text>
+  <text x="532" y="50" font-size="10.5" fill="#5b6472">W2 큐 판독 — TrigType·TrigTime은</text>
+  <text x="532" y="66" font-size="10.5" fill="#5b6472">v1.5.0 prop으로 <tspan font-weight="700">읽힌다</tspan></text>
+  <text x="532" y="88" font-size="10.5" fill="#9a6b00" font-weight="700">남은 것: CueFade · 큐 내용</text>
+
+  <rect x="782" y="8" width="252" height="92" rx="6" fill="#e8f1fb" stroke="#a8c8e8"/>
+  <text x="796" y="30" font-size="12.5" font-weight="700">우리가 안 연 것</text>
+  <text x="796" y="50" font-size="10.5" fill="#5b6472">W8 비텍스트 입력 채널</text>
+  <text x="796" y="66" font-size="10.5" fill="#5b6472">의존성 0 · 업로드 0 · Tauri 거부</text>
+  <text x="796" y="88" font-size="10.5" fill="#1d5fa8" font-weight="700">벽이 아니다 — 열 수 있다</text>
+
+  <rect x="6" y="112" width="1028" height="88" rx="6" fill="#eeeef8" stroke="#c3c3e0"/>
+  <text x="20" y="134" font-size="12" font-weight="700" fill="#3f3f6e">반대 방향 — 이미 열렸는데 문서가 모르던 것 6건</text>
+  <text x="20" y="154" font-size="10.5" fill="#3f3f6e">R1 무승인 좌표 쓰기 → WRITEGATE 해소 · R2 픽스처타입 2종 리그 확보 · R3 페이퍼워크 출하</text>
+  <text x="20" y="172" font-size="10.5" fill="#3f3f6e">R4 구간 겹침·프리셋 읽기 출하 · R5 폐쇄집합 개정 절차 선례화 · R6 응답기 개정은 절차(2회 집행)</text>
+  <text x="20" y="192" font-size="10.5" fill="#3f3f6e" font-weight="700">이 6건이 "blocker"로 적혀 있어 후속이 착수하지 않았다 — 이번 정정의 절반이 여기다</text>
+ </g>
+</svg>
+<figcaption>운용 대장 8건. 전수 정찰이 수집한 벽은 22건이며, 그중 미래 제안에 실제로 걸리는 것을 8건으로 추린 것이다.</figcaption>
+</figure>
+
+<h2>3. 유형 ① — 원리적 불가인데 "나중에 하자"로 살아 있던 것</h2>
+
+<table>
+  <thead><tr><th style="width:190px">항목</th><th>왜 불가능한가</th><th class="c" style="width:88px">처분</th></tr></thead>
+  <tbody>
+    <tr><td><b>무응답 픽스처 탐지</b><br><span class="src">제안서 P2-6</span></td>
+      <td>응답기가 하드웨어 피드백을 수집하지 않고 동사표가 <code>ping·state·prop·exec·deploy</code> <b>5종으로 닫혀</b> 텔레메트리를 넣을 자리가 없다. 코드가 스스로 선언한다 —
+        <div class="quote">“can <b>NEVER</b> answer ‘did that fixture actually light up?’ — the responder collects no hardware feedback and its verb table is closed at five.”</div>
+        원문이 이것을 <i>“기존 OSC 상태 조회의 자연스러운 확장”</i>이라 적은 것은 <b>거짓 전제</b>다. 확장이 아니라 <b>채널 부재</b>다.
+        <span class="src"><code>server/prechk/macro.py:3-7</code>, <code>console/lua/copilot_responder.lua:884-946</code></span></td>
+      <td class="c"><span class="b b-no">폐기</span><br>육안 확인<br>매크로가<br><b>최종 형태</b></td></tr>
+
+    <tr><td><b>라이브 이상 감지</b><br><span class="src">제안서 P3-8</span></td>
+      <td>감지할 신호가 프로토콜에 존재하지 않는다. 위와 <b>같은 벽</b>이다.
+        <b>삭제 사유를 문서에 남겼다</b> — 지우기만 하면 다음 사람이 다시 제안한다.</td>
+      <td class="c"><span class="b b-no">폐기</span></td></tr>
+
+    <tr><td><b>매직시트 완전형</b><br><span class="src">제안서 P2-4</span></td>
+      <td>“그룹 → 어느 픽스처” 조인이 필요한데 <b>그룹 멤버십은 어떤 채널로도 읽히지 않는다.</b>
+        <code>Group 13 'All'</code>은 <code>exec</code>가 <code>OK</code>인 실사용 그룹인데 <code>query_state</code>는 <code>childCount: 0</code>을 낸다.
+        <code>prop</code> 사다리 9종 + 접근자 <code>COUNT</code> 전량이 닫혔고, 실사용 그룹 4개 전부 <code>0</code>인데
+        <b>날조 대조군은 <code>ok:false</code></b>였다 — 즉 그 <code>0</code>은 <b>실제 판독값</b>이며 응답기 결함이 아니다.
+        <span class="src"><code>GROUPGEN-001/spec.md:361-363</code>, <code>progress.md:387-389</code></span></td>
+      <td class="c"><span class="b b-part">축소</span><br>이름·좌표<br>기반 축약형</td></tr>
+
+    <tr><td><b><code>SaveShow</code> 디스크 판독으로<br>효과 검증</b><br><span class="src">FXLIB 이관 표</span></td>
+      <td>이 SPEC이 원한 것은 <b>라이브 효과의 기계 검증</b>인데 <code>SaveShow</code> 산출물은 <b>정의상 라이브가 아니다</b> —
+        가설이 목적을 달성할 수 없다. BUSKWIZ가 디스크 export XML을 근거로 삼아 오진한 실측 선례도 있다.
+        원문은 <i>“이 경로는 배제된 적이 없다”</i>고 적어 후속 SPEC 후보로 살려 뒀다.</td>
+      <td class="c"><span class="b b-no">폐기</span></td></tr>
+
+    <tr><td><b>큐시트의 “언제 얼마나 밝나”</b><br><span class="src">제안서 P2-4 · P2-5</span></td>
+      <td><code>CueFade</code>와 큐의 <b>내용(저장된 값)</b>은 반환 경로가 없다. 단 <b>벽이 부분적으로 무너졌다</b> —
+        <code>TrigType</code>·<code>TrigTime</code>은 응답기 v1.5.0의 <code>prop</code>으로 <b>읽힌다</b>.
+        <span class="src"><code>SCENE-001/spec.md:230</code>(YES) · <code>:231-232</code>(NO)</span></td>
+      <td class="c"><span class="b b-part">축소</span><br>이름+<code>cueNo</code><br>+트리거</td></tr>
+  </tbody>
+</table>
+
+<h2>4. 유형 ② — 문서가 자기 문단 안에서 모순되던 것</h2>
+
+<div class="note warn">
+  <b>GROUPGEN 복원 조건 (b)</b> — <i>“<code>props</code>에 멤버 열거 후보 접근자 경로를 <b>이름으로 실측</b>하면 복원한다”</i>.
+  그런데 <b>같은 문단의 두 줄 뒤</b>가 이렇게 적는다:
+  <div class="quote">“후보 이름 무한 추측은 본 SPEC의 범위 밖이며 <b>성공 근거가 아니라 희망에 기반</b>하므로 채택하지 않는다.”</div>
+  <b>앞줄이 제시한 것을 뒷줄이 금지한다.</b> 앞줄만 읽은 후속은 금지된 행위에 착수한다 → <b>(b) 삭제 + 삭제 사유 각주.</b>
+</div>
+
+<div class="note warn">
+  <b>같은 조건의 (a)</b> — <i>“<code>introspect</code>에 페이지네이션(offset)을 추가하면”</i>.
+  그런데 <b><code>introspect</code> 동사가 현 응답기에 없다.</b> <code>VERSION = "1.5.0"</code>이고 디스패치는 5분기이며
+  <code>console/</code> 전체 <code>introspect</code> grep <b>0건</b>(직접 확인). 문서가 인용한 “1.6.1 접근자 경로”는
+  <b>프로브 시점 응답기이고 머지되지 않았다.</b> → <b>선행 단계(응답기에 그 동사를 먼저 추가) 명시.</b>
+  응답기 개정 자체는 blocker가 아니라 <b>절차</b>이며 이미 2회 집행됐다.
+</div>
+
+<div class="note warn">
+  <b>TRUNCATE — 상한 인상은 “비용”이 아니다</b>. 원문이 <i>“상한 인상은 라운드트립 비용(66.7 ms/read)과 맞바꿈이다”</i>라고 적었다.
+  <b>거짓이다.</b> MA3 커맨드라인이 ~2048B 초과 회신을 <b>조용히 드롭</b>하고 <code>Cmd()</code>는 그때도 성공을 보고한다
+  (라이브 스윕 <b>2000 배달 / 2100 유실</b>). 트레이드오프가 아니라 <b>봉쇄</b>이며 유일한 완화는 페이지네이션(응답기 개정)이다.
+  이 문면을 두면 후속이 <i>“돈만 내면 올릴 수 있다”</i>고 오해한다.
+</div>
+
+<h2>5. 유형 ③ — 이미 열렸는데 “막혔다”로 적혀 있던 것 <span class="b b-wall">가장 위험</span></h2>
+
+<table>
+  <thead><tr><th style="width:210px">문서가 적은 것</th><th>실제</th><th class="c" style="width:74px">처분</th></tr></thead>
+  <tbody>
+    <tr><td><b>SPATIAL</b> — 남은 <code>[DEFERRED]</code> 3건</td>
+      <td>②③(AC-031 risky 분류 · REQ-024 승인 흐름)은 <b>WRITEGATE-001이 2026-08-05 닫았다</b>.
+        <b>정본은 같은 SPEC의 <code>acceptance.md:254-259</code>에 이미 있었는데 <code>progress.md</code>만 갱신되지 않아</b>
+        두 문서가 서로 모순인 채였다. 후속이 이 표를 읽으면 <b>이미 열린 문을 닫힌 문으로</b> 본다.</td>
+      <td class="c">3건 → <b>1건</b></td></tr>
+    <tr><td><b>GROUPGEN</b> — 무승인 좌표 쓰기는<br>“SPATIAL 후속 SPEC 소관”</td>
+      <td>같은 WRITEGATE 개정(<code>blacklist.yaml</code> v2, 엔트리 정확히 1건 <code>"Set Fixture"</code>)이 해소했다.
+        2곳에 같은 계열 드리프트.</td>
+      <td class="c">취소선<br>+ 해소 근거</td></tr>
+    <tr><td><b>OVERLAP</b> — “현 쇼파일은 픽스처타입 1종이라<br>원리적으로 발동하지 않는다”</td>
+      <td><b>2026-08-04에 뒤집혔다.</b> 라이브 리그가 2타입이 됐다(<code>Patch/FixtureTypes</code> 3슬롯,
+        Robin MMX Spot 19대 / LEDBeam 350 20대). “1종”은 2026-07-31 시점 사실이다.</td>
+      <td class="c">즉시 착수<br>가능으로<br>승격</td></tr>
+    <tr><td><b>PRECHK</b> — “P2-4 자동 페이퍼워크 · P2-5 런북 —<br>뒤 둘은 큐 내용 관측 벽에 막혀 있다”</td>
+      <td><b>한 줄에 뭉쳐 둘 다 막힌 것으로 적은 오분류.</b> P2-4는 <b>출하됐고</b>, 그것도
+        <b>쇼파일 파서 없이 라이브 질의 포트로</b> 나왔다. P2-5만 벽에 걸린다.
+        구간 겹침 재개·프리셋 읽기도 이미 출하.</td>
+      <td class="c">1행 → 3행<br>분리</td></tr>
+    <tr><td><b>BUSKWIZ</b> — 익스큐터 축 G1을<br>“후속 최우선 측정 항목”으로</td>
+      <td>G1(문법 존부)은 <b>PRECHK M0가 닫았고</b>(<code>Store Page 2</code> 재조회 확인) <b>효과도 확인됐다</b>.
+        남은 blocker는 G2 하나이며 <i>“미검증”</i>이 아니라 <b>대상 식별 부정 실측</b>이다.</td>
+      <td class="c">문면<br>격상</td></tr>
+    <tr><td><b>PRECHK</b> — 페이지·익스큐터 저작의<br>선행 조건 = “안전 설계”</td>
+      <td><b>잘못 지목했다.</b> 막는 것은 <b>빈 익스큐터 식별</b>이다. 안전 설계는 그 다음 문제다.
+        사용자 명시 지정 축소형은 FXLIB이 <b>이미 출하</b>했다.</td>
+      <td class="c">선행 조건<br>교체</td></tr>
+    <tr><td><b>SCENE</b> — <code>Goto Cue</code>는<br>“게이트 어휘 확장을 요구하므로 보류”</td>
+      <td>폐쇄집합 개정 <b>절차가 선례화됐다</b> — WRITEGATE가 엔트리 추가 + version 범프 +
+        REVISION HISTORY + 코퍼스 갈래 결정을 첫 실행했고 비용도 실측해 뒀다.</td>
+      <td class="c">보류 →<br>산정 가능</td></tr>
+    <tr><td><b>SPATIAL</b> — 회전축 연출은<br>“M0가 회전 판독까지 확인한 경우에만”</td>
+      <td>M0 P4b가 <code>rot*</code> 1:1 대응을 이미 확인했고, WRITEGATE가 <code>Set Fixture … Rot*</code>를
+        risky로 분류해 <b>승인 흐름까지 확보</b>했다.</td>
+      <td class="c">착수 가능</td></tr>
+  </tbody>
+</table>
+
+<h2>6. 벽이 스스로 무너진 사례 — SONGCUE의 <code>TrigType</code></h2>
+
+<p>SONGCUE는 4개 문서 9곳에 이렇게 적었다:</p>
+<div class="quote">“돌아오지 않는 것: 커맨드 · <code>CueFade</code> · <code>TrigType</code> — <b>어떤 형태로도</b>”</div>
+
+<p>
+  <b>그 서술은 그 시점 사실이었고, 같은 SPEC의 M0가 응답기를 v1.5.0으로 올려 <code>prop</code> 동사를 추가하면서
+  스스로 그것을 뒤집었다.</b> 지금 <code>TrigType</code>·<code>TrigTime</code>은 읽힌다. 판독 불가로 남은 것은
+  <code>CueFade</code>와 큐의 내용 둘뿐이다.
+</p>
+
+<div class="note good">
+  <b>처분 — 원문을 고치지 않았다.</b> 과거 판정은 사실이므로 보존하고, 9곳 전부에 <b>소급 정정 각주</b>를 달았다:
+  <div class="quote">※ 소급 정정(2026-08-07) — 응답기 v1.5.0이 <code>prop</code> 동사를 추가해 <code>TrigType</code>·<code>TrigTime</code>은
+  판독 가능해졌다. 그 개정은 <b>본 SPEC의 M0가 직접 집행</b>했다. 위 서술은 v1.5.0 이전 사실이며 판정 시점 기록으로 보존한다.</div>
+  ASCII 다이어그램 1곳은 그림을 깨지 않도록 <b>코드 펜스 바깥</b>에 각주를 붙였다.
+  <b>SCENE의 <code>CueFade</code> 항목(AP-12)은 무변경</b>이다 — 벽 2 중 유일하게 온전히 유효한 항목이라 손대면
+  <b>없는 능력을 약속</b>하게 된다.
+</div>
+
+<h2>7. 제안서 2건 — 원문 보존 + 판정 계층 신설</h2>
+
+<p>
+  <code>2026-07-26</code> 제안서는 작성 후 <b>SPEC 9건이 그 위를 지나갔는데 갱신되지 않아</b>
+  완료된 기능을 미래형으로 약속하고 있었다. <b>본문은 한 글자도 바꾸지 않고</b>
+  ① 상단 배너 ② 항목 9개에 판정 앵커(<code>▶ §5-N</code>) ③ 말미 <b>§5 판정표 9소절</b> ④ 결론 정정을 얹었다.
+  형식은 같은 폴더 <code>2026-08-02</code> 문서가 §6으로 세운 선례를 따랐다.
+</p>
+
+<table>
+  <thead><tr><th class="c" style="width:60px">항목</th><th style="width:220px">제안</th><th class="c" style="width:130px">판정</th><th>실현 가능한 형태</th></tr></thead>
+  <tbody>
+    <tr><td class="c">P1-1</td><td>음원 분석 → 큐리스트</td>
+      <td class="c"><span class="b b-ok">후반 출하</span> <span class="b b-new">전반 미개통</span></td>
+      <td>섹션 목록을 <b>텍스트로</b> 받는 경로는 출하됨. 오디오 자동 분석은 3중 잠금(의존성·업로드 라우트·Tauri <code>no upload</code>) — <b>MA3와 무관하며 열 수 있다</b></td></tr>
+    <tr><td class="c">P1-2</td><td>버스킹 준비 마법사</td>
+      <td class="c"><span class="b b-ok">팔레트 출하</span> <span class="b b-part">익스큐터 축소</span></td>
+      <td>배치 <b>계획(제안 목록)</b>까지 산출, 배선은 사람이. 사용자 명시 번호 지정 축소형은 이미 출하</td></tr>
+    <tr><td class="c">P1-3</td><td>연출 어휘 계층</td>
+      <td class="c"><span class="b b-ok">출하 완료</span></td>
+      <td>제안 시점 예상보다 <b>3계층 더</b> 쌓였다(fx · scene · spatial)</td></tr>
+    <tr><td class="c">P2-4</td><td>자동 페이퍼워크</td>
+      <td class="c"><span class="b b-part">부분 출하</span></td>
+      <td><b>거짓 전제 2건 폐기.</b> 매직시트는 이름·좌표 축약형 / 훅업은 폭 상계 + 비대칭 한정 / PDF는 브라우저 인쇄</td></tr>
+    <tr><td class="c">P2-5</td><td>볼런티어 런북</td>
+      <td class="c"><span class="b b-part">불가-축소</span></td>
+      <td><b>두 경우를 갈라야 한다</b> — 앱이 만든 큐는 생성 시점 지식으로 대본 가능 / 남의 쇼파일은 이름+트리거가 천장</td></tr>
+    <tr><td class="c">P2-6</td><td>프리쇼 체크</td>
+      <td class="c"><span class="b b-ok">출하</span> <span class="b b-no">탐지 폐기</span></td>
+      <td>육안 확인 매크로가 <b>최종 형태</b>. “탐지”는 이 항목에서 성립하지 않는다</td></tr>
+    <tr><td class="c">P3-7</td><td>레퍼런스 이미지 → 룩</td>
+      <td class="c"><span class="b b-part">불가-축소</span></td>
+      <td><b>선행 조건을 잘못 지목했던 항목</b> — 막힌 것은 룩 어휘가 아니라 <b>이미지 입력 채널</b></td></tr>
+    <tr><td class="c">P3-8</td><td>다음 큐 제안 · 이상 감지</td>
+      <td class="c"><span class="b b-part">축소</span> <span class="b b-no">감지 폐기</span></td>
+      <td>앱 자신이 만든 큐리스트에 한해 제안 카드 가능. 이상 감지는 신호 부재로 삭제(사유 기록)</td></tr>
+    <tr><td class="c">P3-9</td><td>previz 연계 (MVR)</td>
+      <td class="c"><span class="b b-part">불가-축소</span></td>
+      <td>선행 2/3 충족(좌표·타입 판독). MVR 대신 <b>좌표+타입 내보내기</b> + <b>절단 산술 필수 동봉</b> —
+        18대짜리 파일은 <b>존재하지 않는 리그를 previz에 검증시킨다</b></td></tr>
+  </tbody>
+</table>
+
+<div class="note warn">
+  <b>거짓 전제 3건을 명시 폐기했다</b> —
+  ① <i>“쇼파일 파서가 이미 있어 구현 부담이 낮다”</i>(<code>server/showfile/</code>는 지금도 없다. 페이퍼워크는 <b>라이브 OSC 질의</b>로 나왔고,
+  그래서 <b>콘솔이 켜져 있어야 문서가 나온다</b>) ·
+  ② 페이퍼워크 산출물 3종의 정체(실제는 patch sheet · cue sheet · preset list — 일치는 큐시트 1종) ·
+  ③ 무응답 탐지가 <i>“자연스러운 확장”</i>(확장이 아니라 채널 부재).
+</div>
+
+<h2>8. 규율 준수 — 무엇을 지켰는지 기계로 확인</h2>
+
+<table>
+  <thead><tr><th style="width:230px">규율</th><th>검증 방법</th><th class="c" style="width:80px">결과</th></tr></thead>
+  <tbody>
+    <tr><td>과거 판정을 위조하지 않는다</td>
+      <td>변경 파일 전수에서 <code>GO:</code>/<code>DESCOPE:</code>/<code>NEGATIVE</code> 토큰 계수를 <code>HEAD</code>와 대조.
+        유일한 +1은 <b>내가 추가한</b> “NEGATIVE 판정 자체는 흔들리지 않는다” 문장</td>
+      <td class="c"><span class="b b-ok">무변경</span></td></tr>
+    <tr><td>실측 수치를 바꾸지 않는다</td>
+      <td>삭제 47줄 전수 검토 — 전부 <b>in-place 교체</b>이며 원문이 취소선·인용으로 새 텍스트 안에 남아 있다</td>
+      <td class="c"><span class="b b-ok">보존</span></td></tr>
+    <tr><td>모든 정정에 근거 좌표</td>
+      <td>정정문마다 <code>파일:줄</code> 병기. 인용 좌표는 직접 열어 확인</td>
+      <td class="c"><span class="b b-ok">전건</span></td></tr>
+    <tr><td>문서 렌더가 깨지지 않는다</td>
+      <td>코드 펜스 짝 검사 · 표 열 정합 검사</td>
+      <td class="c"><span class="b b-ok">0 문제</span></td></tr>
+    <tr><td>코드·테스트 무관</td>
+      <td>변경 13파일 전부 <code>.md</code></td>
+      <td class="c"><span class="b b-ok">0 변경</span></td></tr>
+  </tbody>
+</table>
+
+<h2>9. 오케스트레이션 실패 기록 — 재발 방지</h2>
+
+<div class="note warn">
+  <b>병렬 워커 4개로 약 1시간을 잃었다.</b> Claude Code의 <b>경로 샌드박스</b>가 프로젝트 루트 밖 쓰기를 거부했다
+  (<code>Error: Path traversal detected: file is outside project directory</code>). 2개는 <code>API Error: Connection closed mid-response</code>로 멈췄다.
+  <br><br>
+  <b>원인은 설계 실수다</b> — 워커를 메인 리포에서 띄우고 <code>cd</code>로 다른 워크트리를 쓰게 했는데,
+  그 워크트리를 <code>git worktree</code>로만 만들어 Orca가 모르는 상태였다.
+  <b>다음엔 <code>orca worktree create</code>로 만들어 워커의 프로젝트 루트 자체를 대상 워크트리로 잡아야 한다.</b>
+  <br><br>
+  <b>손실은 시간뿐이다</b> — 양쪽 워크트리 <code>git status</code>로 파일 오염 0건을 확인했고,
+  <b>읽기 전용 정찰 4개의 결과는 그대로 활용</b>해 편집을 완주했다. 워커는 세우고 코디네이터가 직접 편집했다.
+</div>
+
+<h2>10. 현재 브랜치 상태와 다음</h2>
+
+<table>
+  <thead><tr><th style="width:230px">브랜치</th><th class="c" style="width:90px">커밋</th><th>내용 / 다음 조치</th></tr></thead>
+  <tbody>
+    <tr><td><code>jjjh7401/spec-feasibility</code><br><span class="src">← <code>origin/main</code> <code>c6be036</code></span></td>
+      <td class="c"><code>2d04125</code></td>
+      <td>SPEC 정정 29건 + 제안서 판정 계층. <b>main 기반이라 바로 PR 가능.</b></td></tr>
+    <tr><td><code>jjjh7401/paperwork-p0</code><br><span class="src">← MCP 브랜치(스테일)</span></td>
+      <td class="c"><code>0b03e3c</code><br><code>d845ca0</code></td>
+      <td>P0 4건 구현 + 리포트 정정. <b>리베이스가 선행</b> — <code>TOOL_NAMES</code> 19 vs 22 충돌 2파일
+        (<code>tools.py</code>·<code>test_tools.py</code>). 나머지 파일은 main에서 무변경 실측 확인.</td></tr>
+  </tbody>
+</table>
+
+<h3>권고 순서</h3>
+<table>
+  <thead><tr><th class="c" style="width:56px">순서</th><th>작업</th><th style="width:250px">이유</th></tr></thead>
+  <tbody>
+    <tr><td class="c">1</td><td><code>spec-feasibility</code> PR → 머지</td><td>충돌 0. 다른 모든 판단의 근거 문서다</td></tr>
+    <tr><td class="c">2</td><td><code>paperwork-p0</code> 리베이스 → 회귀 재측정 → PR</td><td>현재 4,300 green은 <b>스테일 기반</b>에서 잰 값이라 근거가 아니다</td></tr>
+    <tr><td class="c">3</td><td>라이브 측정 <b>2건</b>(큐 프로퍼티 · 채널폭 후보 2건)</td><td>3건이었으나 <b>그룹 멤버십은 이미 답이 나와 소멸</b>했다</td></tr>
+    <tr><td class="c">4</td><td>매직시트 <b>축약형</b> 착수</td><td>완전형은 죽었고 축약형은 <b>선행 측정이 0건</b>이라 지금 가능하다</td></tr>
+    <tr><td class="c">5</td><td>쇼파일 복원 발신부</td><td>WRITEGATE가 쓰기 게이트를 깔아 <b>선행의 절반을 이미 치렀다</b></td></tr>
+  </tbody>
+</table>
+
+<div class="note good">
+  <b>이 검토가 남기는 규율 한 줄</b> — 완결 SPEC의 <b>과거 판정</b>은 사실이고 보존한다.
+  그러나 그 문서가 남긴 <b>미래를 가리키는 문장</b>은 시간이 지나면 셋 중 하나가 된다:
+  이미 이뤄졌거나, 이미 불가능으로 밝혀졌거나, 이미 다른 SPEC이 닫았다.
+  <b>그 셋을 갱신하지 않으면 인계 표가 후속을 잘못된 곳으로 보낸다</b> — 이번에 정정한 29건 중 <b>절반이 그 유형</b>이었다.
+</div>
+
+<footer class="doc">
+  자체완결 문서 — 외부 CSS·스크립트·폰트·이미지 참조 0건. 브라우저에서 그대로 인쇄하면 PDF가 된다.<br>
+  생성 경로: <code>docs/reports/2026-08-07-spec-feasibility-review.html</code> ·
+  자매 문서: <code>docs/reports/2026-08-06-workflow-coverage-review.html</code>(업무 프로세스 커버리지)
+</footer>
+
+</div>
+</body>
+</html>

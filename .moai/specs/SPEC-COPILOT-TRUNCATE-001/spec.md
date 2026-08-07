@@ -151,7 +151,7 @@ GROUPGEN-001의 REQ-GROUPGEN-024 amendment는 **한 SPEC 앞서 정확히 그 �
 - **단 좁은 한 조각은 범위 안이다**(REQ-TRUNCATE-008): `create_arrangement_groups`가 `topology_partial`을 **전혀 읽지 않는다**는 것은 오진이 아니라 실측 누락이다.
 
 ### Out of Scope — 절단 자체의 완화 (재조회·페이지네이션)
-- 미판독 픽스처를 **추가 판독으로 메우는** 일(1..childCount 스윕, 페이지네이션, 상한 인상)은 범위 밖이다. `prechk/inventory.py:400-404`에 이미 `recover_truncated` 슬롯이 있으나 그 축은 별건이며, 본 SPEC은 *"메우지 못했을 때 어떻게 말하는가"*만 책임진다. 상한 인상은 라운드트립 비용(측정 66.7 ms/read, `tools.py:755-757`)과 맞바꿈이다.
+- 미판독 픽스처를 **추가 판독으로 메우는** 일(1..childCount 스윕, 페이지네이션, 상한 인상)은 범위 밖이다. `prechk/inventory.py:400-404`에 이미 `recover_truncated` 슬롯이 있으나 그 축은 별건이며, 본 SPEC은 *"메우지 못했을 때 어떻게 말하는가"*만 책임진다. 상한 인상은 라운드트립 비용(측정 66.7 ms/read, `tools.py:755-757`)과 맞바꿈이다. **※ 2026-08-07 정정 — 이 문면이 후속을 잘못 유도한다. 상한 인상은 트레이드오프가 아니라 봉쇄다.** MA3 커맨드라인이 **~2048바이트를 넘는 회신을 조용히 드롭**하고 `Cmd()`는 그때도 성공을 보고한다(`console/lua/copilot_responder.lua:33`, `:36-39` — 라이브 스윕 **2000 배달 / 2100 유실**; `.moai/specs/SPEC-COPILOT-DASHUI-001/progress.md:213`). `max_payload = 1900`은 그 **하드 한계의 마진**이며 올릴 여지가 없다. **실현 가능한 완화는 페이지네이션(offset 인자) 하나이고 응답기 개정을 요구한다** — 그 자리가 위에 적힌 `prechk/inventory.py:400-404`의 `recover_truncated` 슬롯이다. 라운드트립 비용은 **페이지네이션을 택했을 때의 부수 고려사항**이지 상한 인상의 대가가 아니다.
 
 ### Out of Scope — 정렬 어휘 개명 · 축 점수 비교
 - SPATIAL `progress.md:646`의 후속 과제 2(`left_to_right` → house 기준 명시)와 `SPEC-COPILOT-AXISCORE-001`. 본 SPEC과 파일 교차는 `tools.py` 한 파일이나 **표적 심볼이 분리**되어 병렬 가능하다.
