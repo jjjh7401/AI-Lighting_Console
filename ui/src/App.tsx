@@ -16,7 +16,7 @@ import { CueMonitor } from "./components/CueMonitor";
 import { DashBoard } from "./components/DashBoard";
 import { LockToggle } from "./components/LockToggle";
 import { OnboardingBanner } from "./components/OnboardingBanner";
-import { QuestionCard } from "./components/QuestionCard";
+import { PaperworkPanel } from "./components/PaperworkPanel";
 import { ReviewCard } from "./components/ReviewCard";
 import { RunbookMode } from "./components/RunbookMode";
 import { SettingsPanel } from "./components/SettingsPanel";

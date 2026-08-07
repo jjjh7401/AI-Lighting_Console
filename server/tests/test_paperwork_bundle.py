@@ -316,7 +316,6 @@ class TestCountsAgreeingIsNotWholeness:
 
     def _lines(self, sheet) -> tuple[str, ...]:
         from server.paperwork.bundle import _incompleteness_lines
-
         from server.paperwork.data import PoolListing
 
         empty = PoolListing(path="x", pools=(), truncated=False, drilldown_capped=False)

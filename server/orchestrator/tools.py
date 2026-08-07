@@ -234,6 +234,7 @@ TOOL_NAMES = (
     "arrange_fixtures",
     "classify_arrangement_topology",
     "create_arrangement_groups",
+    "build_handover_pack",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED

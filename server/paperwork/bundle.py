@@ -164,7 +164,24 @@ def _incompleteness_lines(
 ) -> tuple[str, ...]:
     """The facts that must reach the index's FIRST screen (§2.1): a reader
     who only skims the top must still learn that a listing is partial before
-    mistaking it for the whole rig."""
+    mistaking it for the whole rig.
+
+    NOT unified with SPEC-COPILOT-TRUNCATE-001's structural disclosure, and the
+    reason is recorded here so it is not re-raised as an inconsistency. That SPEC
+    moves the KEY (``fixtures`` -> ``partial_fixtures`` + ``missing`` +
+    ``analysis_withheld``) so a machine reading JSON cannot consume a partial read
+    without noticing. It applies to ``read_spatial_fixtures``, whose consumer is
+    the model. Paperwork does not call it — ``grep partial_fixtures
+    server/paperwork/`` is 0 — and reaches completeness through the older
+    ``server.prechk.inventory`` channel instead.
+
+    So these are two producers, two consumers, two media, not two vocabularies
+    for one fact. The shared DISCIPLINE is "an incomplete read must not be
+    skimmable as a complete one"; its HTML form is placement (first screen), not
+    a moved key, because a human reader has no key to miss. Unifying the wording
+    would make the index claim a structural guarantee its data channel does not
+    carry.
+    """
     lines: list[str] = []
     if patch_sheet is not None:
         line = (
