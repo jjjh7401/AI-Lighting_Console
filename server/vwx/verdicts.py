@@ -54,6 +54,7 @@ VERIFICATION_IDENTITY_UNCONFIRMED = "identity_unconfirmed"
 # 재조회가 무엇을 못 봤는지 — caveat으로 payload에 실리므로 닫힌 어휘여야 한다
 # (round11 N03: 이전 판은 apply.py의 맨 문자열이라 라벨도 검증도 없이 나갔다).
 CONSOLE_READ_INDEX_DOMAIN_UNKNOWN = "console_read_index_domain_unknown"
+CONSOLE_READ_UNPATCHED_PRESENT = "console_read_unpatched_fixtures_present"
 
 CANDIDATE_REJECTION_REASON = frozenset(
     {
@@ -112,6 +113,7 @@ CONSOLE_READ_CAVEAT_KIND = frozenset(
     {
         CONSOLE_READ_INCOMPLETE,
         CONSOLE_READ_INDEX_DOMAIN_UNKNOWN,
+        CONSOLE_READ_UNPATCHED_PRESENT,
     }
 )
 VERIFICATION_OUTCOME = frozenset(
@@ -211,6 +213,9 @@ _CONSOLE_READ_CAVEAT_LABELS = {
     CONSOLE_READ_INCOMPLETE: "재조회에 미판독이 남았다 — 없음을 단정할 수 없다",
     CONSOLE_READ_INDEX_DOMAIN_UNKNOWN: (
         "열거는 절단됐으나 선언된 자식을 전부 관측했다 — 인덱스 도메인만 미상"
+    ),
+    CONSOLE_READ_UNPATCHED_PRESENT: (
+        "최소 인덱스 미만 Patch 값을 가진 픽스처가 있다 — 미실측 가정 위의 판정이니 대조하라"
     ),
 }
 _VERIFICATION_OUTCOME_LABELS = {

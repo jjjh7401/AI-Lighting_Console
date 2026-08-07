@@ -138,6 +138,7 @@ from server.vwx.patchplan import (
     build_patch_plan,
     designed_attributes_by_candidate,
     plan_addresses,
+    validate_assumption_71,
 )
 from server.vwx.reader import read as read_vwx_export
 from server.vwx.report import build_vwx_report
@@ -2287,6 +2288,10 @@ def build_toolset(
     #   this app has no undo and no backup restore path, so the default has to
     #   be the harmless one (REQ-AUTOPATCH-003 · AC-AUTOPATCH-019③).
 
+    #: 이 콘솔에서 FID 프로퍼티가 읽힌다는 **실측 판정**(progress.md §E.2 M0 1차).
+    #: 재측정으로 뒤집히면 여기 한 줄만 바꾼다 — payload의 도달성 표기가 함께 따라간다.
+    _INJECTED_ASSUMPTION_71 = ASSUMPTION_71_GO
+
     def apply_vectorworks_patch(call: ToolCall, context: ExecutionContext) -> ToolExecution:
         if property_port is None:
             return _error_result(
@@ -2341,7 +2346,7 @@ def build_toolset(
             # `ASSUMPTION-71` NEGATIVE·INCONCLUSIVE 분기와 `fid_range_visually_confirmed_empty`
             # 요구는 **툴 경계에서 도달 불가**이며, 그 사실을 payload가 스스로 밝힌다(아래
             # `assumption_71_reachability`). 재측정으로 GO가 뒤집히면 여기 한 줄만 바꾼다.
-            assumption_71=ASSUMPTION_71_GO,
+            assumption_71=_INJECTED_ASSUMPTION_71,
             fid_range_visually_confirmed_empty=call.arguments.get(
                 "fid_range_visually_confirmed_empty"
             ),
@@ -2351,12 +2356,15 @@ def build_toolset(
             "plan": plan.to_dict(),
             "console_read": console_read,
             # 도달 불가 분기를 숨기지 않고 밝힌다(round13 S04).
+            # [round14 T08] ① 값은 닫힌 어휘 검증을 거쳐 나간다 — payload로 나가는 판정
+            # 문자열에 대한 규칙이 여기에도 적용된다. ② 도달성은 **하드코딩 자기주장이
+            # 아니라 주입값에서 파생**한다 — 주입이 바뀌면 이 필드가 따라간다.
             "assumption_71_reachability": {
-                "injected": ASSUMPTION_71_GO,
+                "injected": validate_assumption_71(_INJECTED_ASSUMPTION_71),
                 "source": "progress.md §E.2 M0 1차 실측",
-                "negative_branch_reachable": False,
+                "negative_branch_reachable": _INJECTED_ASSUMPTION_71 != ASSUMPTION_71_GO,
                 "note": (
-                    "이 툴은 GO 분기만 노출한다 — 재측정으로 뒤집히기 전까지 "
+                    "이 툴은 주입된 분기만 노출한다 — GO인 동안 "
                     "fid_range_visually_confirmed_empty 는 요구되지 않는다(REQ-AUTOPATCH-026)."
                 ),
             },

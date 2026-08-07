@@ -37,8 +37,10 @@ from server.tests.test_autopatch_execute import (
     _load,
 )
 from server.vwx.apply import (
+    _NEUTRAL_FIELDS,
     CONSOLE_READ_INCOMPLETE,
     CONSOLE_READ_INDEX_DOMAIN_UNKNOWN,
+    CONSOLE_READ_UNPATCHED_PRESENT,
     NO_AUTO_CORRECTION,
     PATCH_ADDRESSED,
     PATCH_UNPATCHED,
@@ -55,6 +57,7 @@ from server.vwx.apply import (
     screen_idempotent,
     verify_patch,
 )
+from server.vwx.luagen import LuaPatchEntry
 from server.vwx.patchplan import AddressPlan, AddressPlanEntry, PatchCandidate
 from server.vwx.typemap import (
     FixtureTypeLibrary,
@@ -918,15 +921,35 @@ def test_the_unreadable_existing_footprint_is_reported_rather_than_guessed():
 
 
 def test_an_unpatched_fixture_is_not_counted_as_an_unreadable_address():
-    """[R08] `Patch = "0.0"`은 판독 실패가 아니라 **패치되지 않았다는 관측**이다.
+    """[R08] `Patch = "0.0"`은 판독 실패가 아니라 **패치되지 않았다는 관측**이다 — 막지 않는다.
 
     이전 판은 주소 파서의 성공 여부로 미판독을 정의해, 미패치 예비 픽스처가 한 대만 있어도
     모든 대상을 막았다 — 툴의 유일한 기능이 정지했다.
+
+    **다만 그 갈래는 미실측 가정 위에 있으므로 계수를 payload에 싣는다**(round14 T01) —
+    막지는 않되 조작자가 세션 전에 눈으로 대조할 수 있어야 한다.
     """
     unpatched = FixtureRecord(
         slot=1, name="spare", patch_raw="0.0", fixture_type="FixtureType 3", mode="1 Mode 1"
     )
-    assert console_read_caveat(_inventory(unpatched)) is None
+    caveat = console_read_caveat(_inventory(unpatched))
+    assert caveat is not None
+    assert caveat["kind"] == CONSOLE_READ_UNPATCHED_PRESENT
+    assert caveat["unpatched_count"] == 1
+    assert caveat["unread_count"] == 0  # 막는 축은 0이다
+
+
+def test_the_unpatched_disclosure_does_not_block_creation():
+    """비공허성 — 고지일 뿐 차단이 아니다."""
+    unpatched = FixtureRecord(
+        slot=1, name="spare", patch_raw="0.0", fixture_type="FixtureType 3", mode="1 Mode 1"
+    )
+    plan = screen_console_read(
+        (_candidate("a", 1, 1, 101),),
+        address_plan=AddressPlan(entries=(_planned("a", 1, 1),)),
+        inventory=_inventory(unpatched),
+    )
+    assert [entry.candidate_id for entry in plan.entries] == ["a"]
 
 
 def test_a_genuinely_unread_patch_property_still_counts_as_unread():
@@ -1091,3 +1114,24 @@ def test_a_shape_ok_but_unparsable_address_blocks_creation():
 
 def test_the_unparsable_control_a_valid_address_does_not_block():
     assert console_read_caveat(_inventory(_record(1, "1.5", "FixtureType 3", "1 Mode 1"))) is None
+
+
+def test_the_neutral_field_map_covers_every_entry_field():
+    """[round14 T06] "축을 빼놓는 것이 구조적으로 불가능"을 **구조로** 확인한다.
+
+    `_NEUTRAL_FIELDS`는 손으로 유지하는 리터럴이다. `LuaPatchEntry`에 필드가 하나 더 생기면
+    그 축이 중립화에서 빠지고 round12 R09가 정확히 재발한다 — 그 재발을 이 단정이 막는다.
+    """
+    assert set(_NEUTRAL_FIELDS) == set(LuaPatchEntry.__dataclass_fields__)
+
+
+@pytest.mark.parametrize("word", _PLUGIN_OUTCOME_WORDS)
+def test_every_banned_plugin_outcome_word_is_load_bearing(word):
+    """[round14 T09] **단어마다** 대조군 — 지우면 잡히지 않는 단어는 장식이다."""
+    assert _plugin_outcome_parameters({f"probe_{word}_arg"}) == [f"probe_{word}_arg"]
+
+
+@pytest.mark.parametrize("token", REFUTED_REMEDY_TOKENS)
+def test_every_refuted_remedy_token_is_load_bearing(token):
+    planted = f"실행 전에 {token}을(를) 먼저 확인하라."
+    assert [t for t in REFUTED_REMEDY_TOKENS if t in planted] != []
