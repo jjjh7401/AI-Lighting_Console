@@ -2731,10 +2731,14 @@ def test_the_fid_range_parser_accepts_a_single_slot_and_refuses_only_an_inverted
 
     [round16] `patchplan.py`의 `end < start`를 `end <= start`로 바꾸면 `end_equals_start`
     행이 실패한다.
+
+    [round18 R18-A] `_parse_fid_range`가 `FIDRange | None` 대신 `_FidRangeParse`를
+    돌려주도록 바뀌었다 — 결함 사유를 축별로 갈라 싣기 위해서다. 이 행이 재는
+    **순서 경계**는 그대로이므로 값 접근만 `.parsed`로 옮긴다.
     """
     from server.vwx.patchplan import _parse_fid_range
 
-    parsed = _parse_fid_range({"start": 100, "end": 100 + offset})
+    parsed = _parse_fid_range({"start": 100, "end": 100 + offset}).parsed
     if valid:
         assert parsed is not None
         assert (parsed.start, parsed.end) == (100, 100 + offset)
@@ -3661,6 +3665,8 @@ _R16_VALIDATE_SITES = (
     ("patchplan.py", '"selection_error_reason"', "UNKNOWN_CANDIDATE_ID", "constant"),
     ("patchplan.py", '"skipped_check_kind"', "FID_CONFLICT_PRECHECK_INCOMPLETE", "constant"),
     ("patchplan.py", '"skipped_check_kind"', "FID_CONFLICT_PRECHECK_DESCOPE", "constant"),
+    # [round18 R18-J] 2단계가 1단계 대조의 공허명 소멸을 고지하는 자리.
+    ("patchplan.py", '"skipped_check_kind"', "DESIGNED_TYPE_NAME_VACUOUS", "constant"),
     ("typemap.py", '"target_exclusion_reason"', "self.code", "variable"),
     ("typemap.py", '"type_resolution_status"', "self.status", "variable"),
     ("typemap.py", '"skipped_check_kind"', "kind", "variable"),
@@ -5386,7 +5392,10 @@ def _r17_text_skeleton(node):
         left = _r17_text_skeleton(node.left)
         right = _r17_text_skeleton(node.right)
         return None if left is None or right is None else left + right
-    if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "assemble_sentences":
+    # [round18 R18-D] 조립기는 하나가 아니다 — 강등 조립기(`assemble_sentences_or_defect`)도
+    # 같은 문장을 짓는다. 이름을 여기 손으로 적지 않고 **등기부**를 본다. 등기부 자체는
+    # `test_r18_the_sentence_assembler_registry_is_a_bijection_onto_production`이 프로덕션과 맞춘다.
+    if isinstance(node, ast.Call) and getattr(node.func, "id", None) in _R18_SENTENCE_ASSEMBLERS:
         return " ".join(_r17_text_skeleton(arg) or "{}" for arg in node.args)
     return None
 
@@ -5450,6 +5459,9 @@ _R17_SENTENCE_SURFACES = (
     ("diff.py", "FID_CID_UNREACHABLE_REASON"),
     ("diff.py", "reason"),
     ("patchplan.py", "IRREVERSIBLE_WARNING"),
+    # [round18 R18-A] `_FidRangeParse.defect` — `fid_range` 입력의 결함 사유가
+    # 조작자에게 나가는 표면. 형식·바닥·순서 세 갈래가 서로 다른 문장을 낸다.
+    ("patchplan.py", "defect"),
     ("patchplan.py", "reason"),
     ("reader.py", "detail"),
     ("report.py", "address_collision"),
@@ -6111,7 +6123,7 @@ def _r17_fid_assignment_exclusions(*, fid_range, existing_fids=frozenset(), coun
 #: [round17 S17-05] 제외 생성 자리 **두 모듈 전수 표**.
 #: (모듈, 사이트 이름, 함수, 사유 코드, 산출 호출, 필수 문구).
 #: 앞 열한 행은 round16 `_R16_EXCLUSION_SITES`와 같은 자리(=`apply.py`)이고,
-#: 뒤 여섯 행이 round17에서 처음 대조군을 받는 `patchplan.py` 자리다.
+#: 뒤 일곱 행이 `patchplan.py` 자리다 — 여섯은 round17에서, 마지막 하나는 round18 R18-A에서.
 _R17_EXCLUSION_SITES = tuple(
     ("apply.py", label, func, code, produce, fragment)
     for label, func, code, produce, fragment in _R16_EXCLUSION_SITES
@@ -6165,6 +6177,17 @@ _R17_EXCLUSION_SITES = tuple(
         "FID_ALREADY_IN_USE",
         lambda: _r17_fid_assignment_exclusions(fid_range=(101, 110), existing_fids={101}),
         "콘솔 기존 픽스처가 이미 사용 중이다",
+    ),
+    (
+        # [round18 R18-A] `_assign_fids`의 **개별 값 바닥** 갈래. 이 표는 자리를
+        # 더하면 실패하도록 설계돼 있어(위 `_r17_exclusion_call_sites()` 대조),
+        # 새 배제 자리는 반드시 여기 등재되고 사유 문구 대조군을 받는다.
+        "patchplan.py",
+        "assign_fids.below_minimum",
+        "_assign_fids",
+        "FID_BELOW_MINIMUM",
+        lambda: _r17_fid_assignment_exclusions(fid_range=(-10, -8), count=1),
+        "콘솔 최소 FID",
     ),
 )
 
@@ -6222,3 +6245,618 @@ def test_no_two_exclusion_sites_across_both_modules_share_the_same_sentence():
     """
     reasons = [produce()[0].reason for _, _, _, _, produce, _ in _R17_EXCLUSION_SITES]
     assert len(reasons) == len(set(reasons)), [r for r in reasons if reasons.count(r) > 1]
+
+
+# ==========================================================================
+# --- round18 문장 형태 불변식의 표·범위·실패모드 (SentenceScope) ---
+#
+# round18 감사 셋이 같은 자리에서 세 가지를 지적했다:
+#
+#   R18-B  프로덕션 형태판정 표 `_SENTENCE_SHAPE_DEFECTS` **5행 중 4행이 무대조군**이다.
+#          round16이 테스트 표에서 닫은 결함 클래스가 round17이 새로 만든 **프로덕션 표**에서
+#          그대로 재발했다 — 표를 만들면서 표와 행동의 전단사를 세우지 않았다.
+#   R18-C  형태 불변식의 **프로덕션 강제는 한 자리**뿐이다. 나머지 55자리는 정적 뼈대만
+#          검사한다(= 소스 AST에서 보이는 리터럴 형태만 보고, 실제로 나가는 값은 보지 않는다).
+#   R18-D  그 유일한 강제 자리가 하필 **차단 화면을 짓는 자리**이고 `ValueError`가
+#          `ToolRegistry.dispatch`·runner·session 어디에도 가드 없이 툴 경계를 탈출한다 —
+#          조립이 실패하면 **차단 자체가 사라진다**. fail-closed가 아니라 fail-crash다.
+#
+# **강제를 55자리로 확대하는 것은 처방이 아니다.** 정상 도면 값 `MAC — Aura — XB` 같은
+# 이름이 프로덕션 뼈대에 들어가면 판정자가 발화한다 — 확대하면 정상 입력이 차단 화면을
+# 죽인다. 아래 `_R18_DRAWING_VALUE_FALSE_POSITIVES`가 그 거짓 양성을 **고정**한다.
+# 진짜 처방은 **출처로 강제 대상을 가르는 것**이다: 조립기에 들어가는 조각은 리터럴이거나
+# 등기된 내부 생산자(`.reason()`·`.notes()`)의 산물만 허용하고, 그 분류를 AST로 전수 게이트한다.
+# 그러면 외부값은 강제 자리에 **닿을 수 없고**, 강등까지 더하면 fail-crash 경로가 닫힌다.
+# ==========================================================================
+
+
+# --------------------------------------------------------------------------
+# R18-B — 프로덕션 형태판정 표의 행마다 행동 대조군
+# --------------------------------------------------------------------------
+
+#: (부분문자열, **조작자가 읽는 라벨**, 그 결함 하나만 품은 프로브 문장).
+#: 프로브는 자기 행이 아닌 어느 행에도 걸리지 않고 종결·대시 규칙도 지킨다 —
+#: 그래야 "그 행을 지우면 통과한다"가 그 행 하나의 성질이 된다.
+#: 라벨을 **여기에 동결**하는 이유: 라벨은 되돌릴 수 없는 쓰기를 판단하는 사람이 읽는
+#: 것이다. 프로덕션에서 읽어 오면 라벨을 전부 `"형태가 깨졌다"`로 뭉개도 아무도 실패하지
+#: 않는다(round18 실측 — 그 뮤턴트가 살아남았다).
+_R18_SHAPE_DEFECT_PROBES = (
+    ("..", "마침표가 겹쳤다", "콘솔 관측이 없다.. 사람이 확인하라."),
+    (". —", "문장이 대시로 시작한다", "콘솔 관측이 없다. — 이 상태의 없음은 미판독이다."),
+    ("  ", "공백이 겹쳤다", "콘솔  관측이 없다."),
+    ("· ·", "빈 절이 목록에 있다", "미판독 · · 미배정이다."),
+    (" · —", "대시 절이 목록 항목 자리에 있다", "미판독 · — 대시 절이 목록 항목 자리에 있다."),
+)
+
+
+def test_r18_the_shape_defect_table_is_a_bijection_onto_the_probe_table():
+    """[round18 R18-B] 프로덕션 표의 행 전수가 프로브 표와 **순서까지** 1:1이다.
+
+    round17은 프로덕션 표를 만들면서 행별 대조군을 만들지 않았다 — 5행 중 4행을 지워도
+    아무도 실패하지 않았다. 표를 늘리면 프로브도 늘려야 하고, 그때 "이 행이 무엇을
+    잡는가"를 한 번은 실제로 재게 된다. 순서까지 고정하는 이유는 판정자가 **첫 일치**를
+    돌려주기 때문이다 — 순서가 바뀌면 조작자가 읽는 라벨이 바뀐다.
+
+    [round18 #R18-B] `_SENTENCE_SHAPE_DEFECTS`에서 어느 행을 지워도 실패한다.
+    [round18 #R18-B] 행을 하나 더 넣어도(예: `(" .", ...)`) 실패한다.
+    [round18 #R18-B] 라벨을 바꾸거나 전부 같게 만들어도 실패한다.
+    """
+    from server.vwx.patchplan import _SENTENCE_SHAPE_DEFECTS
+
+    assert tuple(_SENTENCE_SHAPE_DEFECTS) == tuple(
+        (needle, label) for needle, label, _ in _R18_SHAPE_DEFECT_PROBES
+    )
+    labels = [label for _, label, _ in _R18_SHAPE_DEFECT_PROBES]
+    assert len(set(labels)) == len(labels), labels
+
+
+@pytest.mark.parametrize(
+    ("needle", "label", "probe"),
+    _R18_SHAPE_DEFECT_PROBES,
+    ids=[f"row{index}" for index in range(len(_R18_SHAPE_DEFECT_PROBES))],
+)
+def test_r18_every_shape_defect_row_has_a_behavioural_control(needle, label, probe, monkeypatch):
+    """[round18 R18-B] 표의 **각 행**이 실제로 무언가를 잡고, 그 행이 없으면 놓친다.
+
+    세 방향을 함께 잰다:
+      ① 프로덕션 판정자에 프로브를 넣으면 **그 행의 부분문자열을 지목한** 위반이 나온다.
+      ② 그 위반이 **동결된 라벨**로 무엇이 잘못됐는지 말한다.
+      ③ 그 행 하나만 표에서 빼면 같은 프로브가 **통과한다** — 곧 그 행이 유일한 방어선이다.
+
+    [round18 #R18-B] `_SENTENCE_SHAPE_DEFECTS`에서 이 행을 지우면 ③이 실패한다.
+    [round18 #R18-B] `sentence_shape_violation`의 `if needle in text`를 무력화하면 ①이 실패한다.
+    [round18 #R18-B] 위반 문자열에서 `{label}`을 빼거나 라벨을 뭉개면 ②가 실패한다.
+    """
+    from server.vwx import patchplan as _patchplan
+    from server.vwx.patchplan import _SENTENCE_SHAPE_DEFECTS, sentence_shape_violation
+
+    violation = sentence_shape_violation(probe)
+    assert violation is not None, probe
+    assert repr(needle) in violation, (needle, violation)
+    # 위반 문자열은 **무엇이 잘못됐는지**도 말해야 한다 — 부분문자열만 던지면 조작자는
+    # `'· ·'`를 보고도 그것이 "빈 절이 목록에 있다"는 뜻임을 알 수 없다.
+    assert label in violation, (label, violation)
+
+    shrunk = tuple(row for row in _SENTENCE_SHAPE_DEFECTS if row[0] != needle)
+    assert len(shrunk) == len(_SENTENCE_SHAPE_DEFECTS) - 1, needle
+    monkeypatch.setattr(_patchplan, "_SENTENCE_SHAPE_DEFECTS", shrunk)
+    assert sentence_shape_violation(probe) is None, (
+        f"{needle!r} 행 없이도 프로브가 걸렸다 — 이 프로브는 그 행의 대조군이 아니다"
+    )
+
+
+def test_r18_the_deliberately_absent_row_stays_absent():
+    """[round18 R18-B] 표에 **없어야 하는** 행이 없다 — `" ."`는 거짓 양성을 낸다.
+
+    `reader.py`의 `"openpyxl 없이는 .xlsx를 판독할 수 없다"`처럼 확장자·파일명 앞 공백이
+    정상적으로 나온다. 흔한 거짓 양성은 게이트를 무력화한다(§0 2b④). 표를 "더 촘촘하게"
+    만들려는 다음 라운드가 이 행을 넣으면 여기서 멈춘다.
+
+    [round18 #R18-B] `_SENTENCE_SHAPE_DEFECTS`에 `(" .", ...)`를 넣으면 실패한다.
+    """
+    from server.vwx.patchplan import sentence_shape_violation
+
+    assert sentence_shape_violation("openpyxl 없이는 .xlsx를 판독할 수 없다.") is None
+
+
+def test_r18_the_dash_budget_and_the_terminal_rule_are_both_load_bearing():
+    """[round18 R18-B 형제 축] 표 밖의 두 규칙에도 양방향 대조군을 건다.
+
+    표만 대조군을 받고 같은 함수의 나머지 두 규칙이 무대조군이면 같은 결함 클래스다 —
+    round18이 "형제 표면"이라고 부른 것이 정확히 이것이다.
+
+    [round18 #R18-B] `_MAX_DASHES_PER_SENTENCE`를 2로 올리면 첫 단정이 실패한다.
+    [round18 #R18-B] `count(...) > _MAX...`를 `>=`로 바꾸면 둘째 단정이 실패한다.
+    [round18 #R18-B] `require_terminal and ...` 절을 지우면 셋째 단정이 실패한다.
+    [round18 #R18-B] `require_terminal` 인자를 무시하면 넷째 단정이 실패한다.
+    """
+    from server.vwx.patchplan import sentence_shape_violation
+
+    assert sentence_shape_violation("가 — 나 — 다.") is not None
+    assert sentence_shape_violation("가 — 나.") is None
+    assert sentence_shape_violation("종결되지 않았다") is not None
+    assert sentence_shape_violation("종결되지 않았다", require_terminal=False) is None
+    # 문장 경계를 넘으면 대시 예산은 문장마다 새로 센다 — 문단 전체로 세면 정상이 걸린다.
+    assert sentence_shape_violation("가 — 나. 다 — 라.") is None
+
+
+# --------------------------------------------------------------------------
+# R18-C(a) — **확대 금지** 고정: 정상 도면 값이 판정자를 발화시킨다
+# --------------------------------------------------------------------------
+
+#: (정상 도면 값, 그 값이 **어느 규칙**을 발화시키는가). 실제 조명 도면에 나오는 값이고
+#: 셋이 프로덕션 판정자의 **서로 다른 세 규칙**을 건드린다 —
+#: 대시 둘(제조사 — 제품 — 변형) · 생략부호 · 이중공백. 셋 다 도면 입력에서 흔하다.
+#: 규칙 축을 함께 적는 이유는 행삭제 프로브를 세우기 위해서다: 행을 지우면
+#: 아래 "덮는 규칙 전수" 단정이 어긋난다.
+_R18_DRAWING_VALUE_FALSE_POSITIVES = (
+    ("MAC — Aura — XB", "' — '"),
+    ("MAC Aura .. XB", "'..'"),
+    ("MAC  Aura", "'  '"),
+)
+
+
+@pytest.mark.parametrize(
+    ("value", "rule"),
+    _R18_DRAWING_VALUE_FALSE_POSITIVES,
+    ids=[value for value, _ in _R18_DRAWING_VALUE_FALSE_POSITIVES],
+)
+def test_r18_normal_drawing_values_trip_the_shape_judge_on_their_own(value, rule):
+    """[round18 R18-C(a)] 정상 도면 값 자체가 형태 위반으로 판정된다 — 규칙까지 지목한다.
+
+    이 사실이 **확대 금지**의 근거다. 판정자는 "우리가 지은 문장"에만 옳고, 도면에서
+    들어온 값에는 옳지 않다.
+
+    [round18 #R18-C] 이 표본을 지우면 그 규칙의 거짓 양성 근거가 사라진다 —
+      아래 `..._covers_three_distinct_rules`가 실패한다.
+    """
+    from server.vwx.patchplan import sentence_shape_violation
+
+    violation = sentence_shape_violation(value, require_terminal=False)
+    assert violation is not None, value
+    assert rule in violation, (value, rule, violation)
+
+
+def test_r18_the_false_positive_samples_cover_three_distinct_rules():
+    """행삭제 프로브 — 거짓 양성 표본에서 어느 행을 지워도 덮는 규칙 전수가 줄어든다.
+
+    표본이 한 규칙에 몰리면 "그 규칙만 완화하면 된다"는 오독이 열린다. 셋은 서로 다른
+    규칙을 건드리므로 **판정자를 조금 느슨하게 해서 확대한다**는 길이 없다.
+    """
+    rules = [rule for _, rule in _R18_DRAWING_VALUE_FALSE_POSITIVES]
+    assert sorted(rules) == sorted({"' — '", "'..'", "'  '"}), rules
+
+
+def test_r18_widening_the_shape_gate_to_every_site_would_block_normal_input():
+    """[round18 R18-C(a)] 강제를 55자리로 넓히면 **정상 입력이 차단 화면을 죽인다**.
+
+    프로덕션 뼈대(소스 AST에서 그대로 뽑은 것)의 보간 자리에 정상 도면 값을 넣으면
+    여러 표면이 형태 위반을 낸다. 지금 그 자리들이 강제를 받지 않기 때문에 조작자는
+    그 값을 그대로 본다 — 강제를 넓히는 순간 그 자리들이 `ValueError`를 던진다.
+
+    다음 라운드가 "강제를 전 자리로 넓혀라"로 오독하지 않도록 **수치로** 남긴다.
+
+    [round18 #R18-C] `_R18_DRAWING_VALUE_FALSE_POSITIVES`를 비우면 실패한다.
+    [round18 #R18-C] 강제 자리를 늘리면 아래 `enforced` 단정이 실패한다 — 늘리려면
+      그 자리의 인자 출처가 등기돼 있음을 함께 보여야 한다(다음 절).
+    """
+    from server.vwx.patchplan import sentence_shape_violation
+
+    interpolating = [
+        (module, name, skeleton)
+        for module, name, skeleton in _r17_sentence_sites()
+        if "{}" in skeleton
+    ]
+    assert interpolating, "보간 자리를 하나도 찾지 못했다 — 스캐너가 공허하다"
+    tripped = {
+        (module, name)
+        for value, _rule in _R18_DRAWING_VALUE_FALSE_POSITIVES
+        for module, name, skeleton in interpolating
+        if sentence_shape_violation(skeleton.replace("{}", value), require_terminal=False)
+        is not None
+    }
+    assert len(tripped) >= 5, (
+        "정상 도면 값이 거짓 양성을 내는 표면이 이렇게 적을 리 없다 — 표본이 무력해졌다",
+        sorted(tripped),
+    )
+    # 강제 자리는 여전히 하나다 — 그 하나가 아래에서 출처 제한을 받는다.
+    enforced = _r18_assembler_call_sites()
+    assert len(enforced) == 1, enforced
+
+
+# --------------------------------------------------------------------------
+# R18-C(b) — 출처 기반 분류: 조립기 인자는 리터럴 또는 등기된 내부 생산자의 산물만
+# --------------------------------------------------------------------------
+
+#: 문장 조립기 **전수**. 이름을 손으로 적되 아래 전단사가 프로덕션과 맞춘다.
+_R18_SENTENCE_ASSEMBLERS = ("assemble_sentences", "assemble_sentences_or_defect")
+
+#: 조립기 인자의 보간 자리에 올 수 있는 **등기된 내부 생산자** 전수 — 인자 없는 메서드다.
+#: 이 집합은 **동결**이다. 늘리려면 그 생산자가 도면 값을 그대로 흘리지 않음을 먼저 보여야 한다.
+_R18_REGISTERED_SENTENCE_PRODUCERS = ("notes", "reason")
+
+
+def _r18_assembler_definitions(overrides=None) -> tuple[str, ...]:
+    """`server/vwx/`에서 문장 조각 가변인자를 받는 **모듈 최상위 조립기** 전수.
+
+    이름으로 찾지 않는다 — `*sentences` 가변인자라는 **형태**로 찾으므로, 다른 이름으로
+    조립기를 하나 더 만들어도 등기부 전단사가 그것을 끌어온다.
+    """
+    import ast
+
+    found: list[str] = []
+    for _, tree in _r17_vwx_trees(overrides):
+        for node in tree.body:
+            if (
+                isinstance(node, ast.FunctionDef)
+                and getattr(node.args.vararg, "arg", None) == "sentences"
+            ):
+                found.append(node.name)
+    return tuple(sorted(found))
+
+
+def _r18_assembler_call_sites(overrides=None):
+    """조립기를 **호출하는** 자리 전수 — 조립기 자신의 정의 안은 세지 않는다."""
+    import ast
+
+    sites = []
+    for module_name, tree in _r17_vwx_trees(overrides):
+        inside = {
+            id(child)
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef) and node.name in _R18_SENTENCE_ASSEMBLERS
+            for child in ast.walk(node)
+        }
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and getattr(node.func, "id", None) in _R18_SENTENCE_ASSEMBLERS
+                and id(node) not in inside
+            ):
+                sites.append((module_name, node.lineno, node))
+    return tuple(sites)
+
+
+def _r18_is_registered_producer_call(node) -> bool:
+    """등기된 내부 생산자 호출인가 — `<무언가>.reason()` 처럼 **인자 없는** 메서드 호출."""
+    import ast
+
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr in _R18_REGISTERED_SENTENCE_PRODUCERS
+        and not node.args
+        and not node.keywords
+    )
+
+
+def _r18_argument_origin_defect(arg) -> str | None:
+    """조립기 인자의 출처가 허용되지 않으면 그 서술 — 허용이면 `None`.
+
+    허용은 셋뿐이다: ① 문자열 리터럴 ② 모든 보간 자리가 등기 생산자 호출인 f-string
+    ③ 등기 생산자 호출의 `*` 전개. 그 밖은 **외부값이 섞였을 수 있다**는 뜻이고,
+    외부값이 강제 자리에 닿으면 정상 입력이 차단 화면을 죽인다(위 거짓 양성 절).
+    """
+    import ast
+
+    if isinstance(arg, ast.Constant):
+        return None if isinstance(arg.value, str) else f"const:{arg.value!r}"
+    if isinstance(arg, ast.JoinedStr):
+        for part in arg.values:
+            if isinstance(part, ast.Constant):
+                continue
+            if not isinstance(part, ast.FormattedValue):
+                return f"interp:{ast.unparse(part)}"
+            if not _r18_is_registered_producer_call(part.value):
+                return f"interp:{ast.unparse(part.value)}"
+        return None
+    if isinstance(arg, ast.Starred):
+        if _r18_is_registered_producer_call(arg.value):
+            return None
+        return f"starred:{ast.unparse(arg.value)}"
+    return f"expr:{ast.unparse(arg)}"
+
+
+def _r18_origin_defects(overrides=None) -> tuple[tuple[str, int, str], ...]:
+    """조립기 호출 인자 중 **출처가 등기되지 않은** 것 전수."""
+    return tuple(
+        (module_name, lineno, defect)
+        for module_name, lineno, call in _r18_assembler_call_sites(overrides)
+        for defect in (
+            [_r18_argument_origin_defect(arg) for arg in call.args]
+            + [f"kw:{kw.arg}" for kw in call.keywords]
+        )
+        if defect is not None
+    )
+
+
+def test_r18_the_sentence_assembler_registry_is_a_bijection_onto_production():
+    """[round18 R18-C] 조립기 등기부가 프로덕션과 1:1이다.
+
+    조립기를 하나 더 만들어 출처 게이트를 우회하면 여기서 걸린다 — 등기되지 않은
+    조립기는 아래 출처 게이트의 도달 범위 밖이고, 그것이 round18이 여덟 라운드째
+    지적한 "형제 표면" 기제다.
+
+    [round18 #R18-C] `_R18_SENTENCE_ASSEMBLERS`에서 행을 지우면 실패한다.
+    [round18 #R18-C] `patchplan.py`에 `*sentences` 조립기를 하나 더 만들면 실패한다.
+    """
+    assert _r18_assembler_definitions() == tuple(sorted(_R18_SENTENCE_ASSEMBLERS))
+
+
+@pytest.mark.parametrize("index", range(len(_R18_SENTENCE_ASSEMBLERS)))
+def test_r18_deleting_any_assembler_row_breaks_the_bijection(index: int):
+    """행삭제 프로브 — 조립기 등기부에서 어느 행을 지워도 프로덕션과 어긋난다."""
+    shrunk = _R18_SENTENCE_ASSEMBLERS[:index] + _R18_SENTENCE_ASSEMBLERS[index + 1 :]
+    assert tuple(sorted(shrunk)) != _r18_assembler_definitions()
+
+
+def test_r18_the_registered_producer_set_is_a_bijection_onto_production():
+    """[round18 R18-C] 등기된 생산자 집합이 **실제로 쓰이는 것** 전수와 1:1이다 — 동결.
+
+    집합을 늘리면(= 새 생산자를 조립기에 물리면) 여기서 멈춘다. 그때 그 생산자가
+    도면 값을 그대로 흘리지 않음을 먼저 보여야 한다.
+
+    [round18 #R18-C] `_R18_REGISTERED_SENTENCE_PRODUCERS`에서 `"notes"`나 `"reason"`을
+      지우면 이 전단사와 아래 출처 게이트가 함께 실패한다.
+    [round18 #R18-C] 집합에 쓰이지 않는 이름을 더해도 실패한다.
+    """
+    import ast
+
+    used: set[str] = set()
+    for _, _, call in _r18_assembler_call_sites():
+        for arg in call.args:
+            nodes = [arg.value] if isinstance(arg, ast.Starred) else []
+            if isinstance(arg, ast.JoinedStr):
+                nodes = [part.value for part in arg.values if isinstance(part, ast.FormattedValue)]
+            for node in nodes:
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                    used.add(node.func.attr)
+    assert tuple(sorted(used)) == tuple(sorted(_R18_REGISTERED_SENTENCE_PRODUCERS)), sorted(used)
+
+
+@pytest.mark.parametrize("index", range(len(_R18_REGISTERED_SENTENCE_PRODUCERS)))
+def test_r18_deleting_any_registered_producer_row_is_caught(index: int):
+    """행삭제 프로브 — 등기 생산자 표에서 행을 지우면 출처 게이트가 위반을 낸다.
+
+    등기부를 줄이면 지금 통과하는 프로덕션 자리가 **위반으로 바뀐다**. 곧 이 표의
+    각 행은 실제로 무언가를 허용하고 있다(공허하지 않다).
+    """
+    import server.tests.test_autopatch_verify as _self
+
+    shrunk = (
+        _R18_REGISTERED_SENTENCE_PRODUCERS[:index] + _R18_REGISTERED_SENTENCE_PRODUCERS[index + 1 :]
+    )
+    saved = _self._R18_REGISTERED_SENTENCE_PRODUCERS
+    try:
+        _self._R18_REGISTERED_SENTENCE_PRODUCERS = shrunk
+        assert _r18_origin_defects() != (), shrunk
+    finally:
+        _self._R18_REGISTERED_SENTENCE_PRODUCERS = saved
+
+
+def test_r18_every_assembler_argument_comes_from_a_registered_origin():
+    """[round18 R18-C·R18-D] 강제 자리에 **외부값이 닿을 수 없다** — 출처로 가른다.
+
+    이것이 "강제를 55자리로 넓혀라"의 대안이다. 넓히면 정상 도면 값이 차단 화면을
+    죽인다(위 절). 대신 **강제 자리의 입력 출처를 닫는다** — 리터럴이거나 등기된
+    내부 생산자의 산물만 들어간다. 그러면 형태 불변식은 우리가 지은 문장에만 걸리고,
+    도면 값은 애초에 그 자리에 오지 못한다.
+
+    [round18 #R18-C] 조립기 인자에 `f"… {targets[0].instrument_type} …"`를 심으면 실패한다
+      (아래 비공허성 대조군이 실제로 심어 확인한다).
+    """
+    assert _r18_origin_defects() == ()
+
+
+def test_r18_the_origin_gate_catches_an_external_value_planted_into_the_assembler():
+    """[round18 R18-C 비공허성] 외부값을 실제로 심어 출처 게이트가 잡는 것을 확인한다.
+
+    심는 값은 `PatchCandidate.instrument_type` — 도면에서 그대로 올라온 값이고,
+    위 거짓 양성 표본이 바로 그 축의 값이다.
+    """
+    patchplan_source = Path("server/vwx/patchplan.py").read_text(encoding="utf-8")
+    anchor = '"부분 관측으로 빈 FID를 단정하면 이미 쓰이는 번호를 배정하게 된다.",'
+    assert patchplan_source.count(anchor) == 1, patchplan_source.count(anchor)
+    planted = patchplan_source.replace(
+        anchor,
+        'f"도면 값 {targets[0].instrument_type}을 그대로 싣는다.",',
+        1,
+    )
+    assert planted != patchplan_source
+    assert _r18_origin_defects() == ()
+    defects = _r18_origin_defects({"patchplan.py": planted})
+    assert defects != (), "외부값을 심었는데도 출처 게이트가 잡지 못했다"
+    assert any("targets[0].instrument_type" in defect for _, _, defect in defects), defects
+
+
+def test_r18_the_origin_gate_rejects_a_bare_name_and_a_starred_non_producer():
+    """[round18 R18-C 비공허성 형제 축] 세 허용 형태 **밖**의 것이 전부 걸린다.
+
+    f-string 보간뿐 아니라 ① 이름 그대로 넘기기 ② 등기되지 않은 호출의 `*` 전개
+    ③ 인자를 받는 생산자 호출도 막는다 — 인자를 받으면 그 인자로 외부값이 들어온다.
+    """
+    import ast
+
+    def origin(expression: str):
+        return _r18_argument_origin_defect(ast.parse(expression, mode="eval").body)
+
+    assert origin('"리터럴 문장이다."') is None
+    assert origin('f"조각 {read.reason()}."') is None
+    assert origin("detail") == "expr:detail"
+    assert origin('f"{candidate.instrument_type}"') == "interp:candidate.instrument_type"
+    assert origin('f"{read.reason(verbose)}"') == "interp:read.reason(verbose)"
+    assert origin('f"{read.summary()}"') == "interp:read.summary()"
+    starred = ast.parse("f(*read.notes())", mode="eval").body.args[0]
+    assert _r18_argument_origin_defect(starred) is None
+    bad_starred = ast.parse("f(*fragments)", mode="eval").body.args[0]
+    assert _r18_argument_origin_defect(bad_starred) == "starred:fragments"
+
+
+# --------------------------------------------------------------------------
+# R18-D — fail-crash → fail-closed 강등
+# --------------------------------------------------------------------------
+
+#: 조립기에 넣는 시험 입력 — 성공 갈래와 실패 갈래를 모두 덮는다.
+_R18_ASSEMBLY_BATTERY = (
+    ("앞 문장이다.", "", "뒤 문장이다."),
+    ("한 문장이다.",),
+    ("끝난 문장이다.", "— 대시로 시작한다."),
+    ("한 문장에 — 대시가 — 둘이다.",),
+    ("종결되지 않았다",),
+    ("겹친 마침표다..",),
+    ("이중  공백이다.",),
+    (),
+)
+
+
+def test_r18_the_demoted_assembler_never_raises():
+    """[round18 R18-D] 강등 조립기는 **어떤 입력에도 던지지 않는다**.
+
+    유일한 프로덕션 강제 자리가 차단 화면을 짓는 자리다. 거기서 던지면 차단이 사라진다.
+
+    [round18 #R18-D] `assemble_sentences_or_defect`가 `assemble_sentences`를 호출하도록
+      되돌리면(= 예외 재탈출) 실패한다.
+    """
+    from server.vwx.patchplan import (
+        REASON_PLACEHOLDER_CODES,
+        REASON_UNAVAILABLE,
+        SENTENCE_SHAPE_VIOLATION,
+        assemble_sentences_or_defect,
+    )
+
+    broken = 0
+    for fragments in _R18_ASSEMBLY_BATTERY:
+        assembled = assemble_sentences_or_defect(*fragments)
+        if assembled.defect is None:
+            continue
+        broken += 1
+        assert assembled.text == REASON_UNAVAILABLE
+        assert assembled.text in REASON_PLACEHOLDER_CODES
+        assert assembled.defect["code"] == SENTENCE_SHAPE_VIOLATION
+        assert assembled.defect["violation"], assembled.defect
+        assert assembled.defect["fragments"] == tuple(f for f in fragments if f)
+    # 행삭제 프로브 — 배터리에서 어느 행을 지워도 성공/실패 갈래 수가 어긋난다.
+    healthy = len(_R18_ASSEMBLY_BATTERY) - broken
+    assert (healthy, broken) == (2, 6), (healthy, broken)
+
+
+def test_r18_the_two_assemblers_agree_on_every_input():
+    """[round18 R18-D] 강등 조립기와 강제 조립기의 **판정이 갈리지 않는다**.
+
+    갈리면 강등 경로가 조용한 우회로가 된다 — 강제 자리를 강등 조립기로 바꾸는 것만으로
+    형태 불변식을 끌 수 있게 된다.
+
+    [round18 #R18-D] `assemble_sentences_or_defect`의 판정을 완화하면 실패한다.
+    [round18 #R18-D] `_join_sentences`를 한쪽만 바꿔도 실패한다.
+    """
+    import pytest as _pytest
+
+    from server.vwx.patchplan import assemble_sentences, assemble_sentences_or_defect
+
+    for fragments in _R18_ASSEMBLY_BATTERY:
+        assembled = assemble_sentences_or_defect(*fragments)
+        if assembled.defect is None:
+            assert assemble_sentences(*fragments) == assembled.text
+            continue
+        with _pytest.raises(ValueError):
+            assemble_sentences(*fragments)
+
+
+def _r18_incomplete_plan(monkeypatch, *, fragment: str | None):
+    """FID 사전검사 **불완전** 갈래를 실제로 돌린다 — `reason()` 조각만 갈아끼운다.
+
+    `fragment`가 있으면 그 조각을 생산자가 돌려주게 한다. round17 S17-04가 실제로 낸
+    결함(조각이 대시를 품어 한 문장에 대시가 둘)을 그대로 재현하는 자리다.
+    """
+    from server.vwx.patchplan import ExistingFidRead, build_patch_plan
+
+    if fragment is not None:
+        monkeypatch.setattr(ExistingFidRead, "reason", lambda self: fragment)
+
+    class _BlindPort:
+        def query_state(self, path: str):
+            return {"ok": False, "path": path, "error": "not readable"}
+
+        def query_property(self, path: str, property_name: str):
+            return {"ok": False, "path": path, "property": property_name, "error": "no"}
+
+    return build_patch_plan(
+        {"diffs": {"missing_in_console": []}},
+        selected=[],
+        dry_run=True,
+        fid_range={"start": 101, "end": 120},
+        assignment_requested=True,
+        fid_property_port=_BlindPort(),
+    )
+
+
+def test_r18_a_healthy_assembly_carries_a_sentence_and_no_defect_cell(monkeypatch):
+    """[round18 R18-D 대조군] 정상 갈래에서는 사유가 **문장**이고 구조화 칸이 없다.
+
+    강등이 늘 켜져 있으면 "강등됐다"는 관측이 아무것도 말하지 않는다.
+    """
+    from server.vwx.patchplan import REASON_UNAVAILABLE, sentence_shape_violation
+
+    plan = _r18_incomplete_plan(monkeypatch, fragment=None)
+    assert plan.ok is False
+    assert plan.rejection.code == "fid_precheck_read_incomplete"
+    assert plan.rejection.reason != REASON_UNAVAILABLE
+    assert sentence_shape_violation(plan.rejection.reason) is None, plan.rejection.reason
+    assert plan.rejection.reason_defect is None
+    assert "reason_defect" not in plan.to_dict()["rejection"]
+
+
+def test_r18_a_broken_assembly_is_demoted_to_a_payload_field_not_an_exception(monkeypatch):
+    """[round18 R18-D] 조립이 깨져도 **예외가 나가지 않고 거부가 그대로 남는다**.
+
+    세 가지를 함께 단정한다:
+      ① 예외가 `build_patch_plan` 밖으로 나오지 않는다.
+      ② 거부 판정(`ok=False` · `fid_precheck_read_incomplete` · 건너뛴 검사)이 **그대로**다.
+      ③ 조작자가 무엇이 손상됐는지 **구조화 칸**으로 본다 — 사유 자리에는 등재 코드가 간다.
+
+    [round18 #R18-D] 조립부를 `assemble_sentences`로 되돌리면 ①이 `ValueError`로 실패한다.
+    [round18 #R18-D] `reason_defect=` 인자를 빼면 ③이 실패한다.
+    [round18 #R18-D] `PatchPlanRejection.to_dict`의 `reason_defect` 방출을 빼면 ③이 실패한다.
+    """
+    from server.vwx.patchplan import (
+        REASON_PLACEHOLDER_CODES,
+        REASON_UNAVAILABLE,
+        SENTENCE_SHAPE_VIOLATION,
+    )
+
+    # round17 S17-04가 실제로 낸 형태 — 조각이 대시를 품어 완성 문장에 대시가 둘이 된다.
+    plan = _r18_incomplete_plan(
+        monkeypatch, fragment="열거가 총계보다 많다 — 스냅샷이 자기모순이다"
+    )
+
+    assert plan.ok is False
+    assert plan.rejection.code == "fid_precheck_read_incomplete"
+    assert [check["kind"] for check in plan.skipped_checks] == ["fid_conflict_precheck_incomplete"]
+    assert plan.targets == () or plan.rejection is not None
+
+    assert plan.rejection.reason == REASON_UNAVAILABLE
+    assert plan.rejection.reason in REASON_PLACEHOLDER_CODES
+    defect = plan.rejection.reason_defect
+    assert defect is not None
+    assert defect["code"] == SENTENCE_SHAPE_VIOLATION
+    assert "' — '" in defect["violation"], defect["violation"]
+    assert "스냅샷이 자기모순이다" in defect["assembled"]
+
+    payload = plan.to_dict()["rejection"]
+    assert payload["code"] == "fid_precheck_read_incomplete"
+    assert payload["label"], payload
+    assert payload["reason"] == REASON_UNAVAILABLE
+    assert payload["reason_defect"]["violation"] == defect["violation"]
+
+
+def test_r18_the_placeholder_code_is_not_a_human_sentence():
+    """[round18 R18-D] 사유 자리에 들어가는 등재 코드가 **문장으로 오독되지 않는다**.
+
+    코드 자리에 문장을 넣으면 조작자는 그것을 사유로 읽고 "조립이 깨졌다"는 사실을 놓친다.
+    """
+    from server.vwx.patchplan import REASON_PLACEHOLDER_CODES, REASON_UNAVAILABLE
+
+    assert frozenset({REASON_UNAVAILABLE}) == REASON_PLACEHOLDER_CODES
+    for code in REASON_PLACEHOLDER_CODES:
+        assert " " not in code, code
+        assert not _r17_is_human_sentence(code), code

@@ -1381,3 +1381,196 @@ def test_the_delivered_payload_carries_no_cd_token_at_all():
             if _R17_CD_TOKEN.search(value)
         ]
         assert hits == [], hits
+
+
+# --- round18 전달물 도달성 감지기 (VacuityAndData) ---
+#
+# [round18 R18-G · R18-H · R18-E · R18-J] 앞선 섹션들의 판정이 **배선 끝까지** 살아 있는지를
+# 툴 dispatch로 확인한다. 단위 대조군만 있으면 "그 판정이 전달물에 영향을 주는가"가 열려
+# 있고, 여덟 라운드째 지적된 "규율이 모듈 경계에서 멈춘다"가 정확히 그 형태다.
+
+_R18_TYPE_A = "MegaPointe"
+_R18_TYPE_B = "LEDWash 600"
+_R18_MODE = "Mode 1"
+
+
+class _R18TwoTypeRigPort(RigPort):
+    """FixtureType 라이브러리에 **두 이름**을 담은 대역 — 어느 쪽이 확정되는지가 관측점이다."""
+
+    _LIBRARY = ((7, _R18_TYPE_A), (8, _R18_TYPE_B))
+
+    def query_state(self, path: str) -> dict:
+        self.state_calls.append(path)
+        if path == FIXTURE_TYPE_LIBRARY_ROOT:
+            return {
+                "ok": True,
+                "path": path,
+                "node": {"childCount": len(self._LIBRARY)},
+                "children": [{"i": index, "name": name} for index, name in self._LIBRARY],
+                "truncated": False,
+            }
+        for index, _name in self._LIBRARY:
+            if path == f"{FIXTURE_TYPE_LIBRARY_ROOT}/{index}/DMXModes":
+                return {
+                    "ok": True,
+                    "path": path,
+                    "node": {"childCount": 1},
+                    "children": [{"i": 1, "name": _R18_MODE}],
+                    "truncated": False,
+                }
+        return super().query_state(path)
+
+
+def _r18_report(instrument_type: str, *, universe: int = 1, address: int = 1) -> dict:
+    """`_report()`와 같은 최소 형태 — 타입 이름만 파라미터로 뺀다."""
+    fixture = {
+        "unit_number": "1",
+        "instrument_type": instrument_type,
+        "gdtf_fixture": None,
+        "mode": _R18_MODE,
+        "footprint": 16,
+        "system": None,
+        "universe": universe,
+        "address": address,
+        "classification": "patched",
+        "address_basis": "universe_address_direct",
+    }
+    return {
+        "designed_rig": {"fixture_count": 1, "fixtures": [fixture]},
+        "diffs": {
+            "performed": True,
+            "missing_in_console": [
+                {
+                    "unit_number": "1",
+                    "instrument_type": instrument_type,
+                    "universe": universe,
+                    "address": address,
+                    "detail": "",
+                }
+            ],
+            "address_collision": [],
+            "quantity_mismatch": [],
+        },
+        "skipped_checks": [],
+    }
+
+
+def _r18_call(registry, report, *, names=None, aliases=None, dry_run=False) -> dict:
+    first = _payload(_dispatch(registry, report=report))
+    candidate = _candidate_id(first)
+    return _payload(
+        _dispatch(
+            registry,
+            report=report,
+            selected=[candidate],
+            fid_range={"start": 501, "end": 599},
+            names={candidate: "LEDBeam 501"} if names is None else {candidate: names},
+            type_aliases=aliases if aliases is not None else {},
+            dry_run=dry_run,
+        )
+    )
+
+
+class TestRound18DeliverableReachability:
+    """[round18] 판정이 전달물(`handoff.lua_source`)까지 도달하는지 — 툴 dispatch 전 구간."""
+
+    def test_the_confirmed_type_name_that_reaches_the_lua_is_the_one_the_report_carried(self):
+        """[round18 R18-G 도달성] 1단계 리포트의 `instrument_type`이 그대로
+        `Patch().FixtureTypes[...]`가 된다 — `columns.py`의 우선순위 규약이 이 값을 정하므로
+        `fields.setdefault`를 대입으로 바꾸면 여기 박히는 이름이 바뀐다.
+
+        라이브러리에 **두 이름이 모두** 있으므로 확정 결과는 리포트 값의 함수다.
+        """
+        rig = _R18TwoTypeRigPort()
+        for designed in (_R18_TYPE_A, _R18_TYPE_B):
+            other = _R18_TYPE_B if designed == _R18_TYPE_A else _R18_TYPE_A
+            payload = _r18_call(
+                _registry(rig=rig),
+                _r18_report(designed),
+                aliases={designed: {"type": designed, "mode": _R18_MODE}},
+            )
+            rendered = payload["handoff"]["lua_source"] or ""
+            assert f'Patch().FixtureTypes["{designed}"]' in rendered, designed
+            assert other not in rendered, designed
+            assert payload["handoff"]["entries"], designed
+
+    def test_a_blank_fixture_name_never_reaches_the_lua_through_the_wired_tool(self):
+        """[round18 R18-H 도달성] 배선 끝까지 — 공백만 이름은 `AddFixtures({`를 만들지 않고
+        `fixture_name_missing`으로 제외된다. `apply.py`의 `.strip()`을 떼면 실패한다.
+        """
+        rig = _R18TwoTypeRigPort()
+        for blank in ("   ", "\t\n", "\u00a0"):
+            payload = _r18_call(
+                _registry(rig=rig),
+                _r18_report(_R18_TYPE_A),
+                names=blank,
+                aliases={_R18_TYPE_A: {"type": _R18_TYPE_A, "mode": _R18_MODE}},
+            )
+            handoff = payload["handoff"]
+            assert handoff["lua_source"] is None, repr(blank)
+            assert [entry["code"] for entry in handoff["exclusions"]] == ["fixture_name_missing"], (
+                repr(blank)
+            )
+            # `delivered`는 "인계가 나갔는가"라 항목 0건에서도 True다
+            # (`test_an_empty_delivery_reports_no_lua_source` 관례) — 관측점은 항목 수다.
+            assert handoff["entries"] == [], repr(blank)
+
+    def test_a_vacuous_designed_type_hard_stops_and_delivers_nothing(self):
+        """[round18 R18-E 도달성] 공허명 후보는 배선 끝에서 **하드 스톱으로 보고되고**
+        아무것도 전달되지 않는다.
+
+        `typemap.py`의 하드스톱을 `None`으로 되돌리면 `types.hard_stops`가 비어 실패한다 —
+        전달물은 어느 쪽이든 비므로(`status != resolved`는 fail-closed) 깨진 것은
+        **조작자에게 가는 신호**다. 그 신호가 여기서 관측된다.
+        """
+        rig = _R18TwoTypeRigPort()
+        payload = _r18_call(_registry(rig=rig), _r18_report("---"))
+        hard_stops = payload["types"]["hard_stops"]
+
+        assert [stop["code"] for stop in hard_stops] == ["fixture_type_name_unusable"]
+        assert payload["types"]["type_table"]["rows"][0]["status"] == (
+            "designed_type_name_unusable"
+        )
+        assert payload["types"]["type_table"]["rows"][0]["confirmation_required"] is False
+        # fail-closed 확인 — 잘못된 Lua는 애초에 나가지 않는다.
+        assert payload["handoff"]["lua_source"] is None
+        assert payload["handoff"]["entries"] == []
+
+    def test_the_vacuous_type_disclosure_rides_the_wired_payload(self):
+        """[round18 R18-J 도달성] 1단계 대조가 삼켰을 수 있다는 고지가 **툴 payload**에
+        실린다 — `plan.skipped_checks`에 등재 어휘로 나간다.
+        """
+        report = _r18_report(_R18_TYPE_A)
+        report["designed_rig"]["fixture_count"] = 2
+        report["designed_rig"]["fixtures"].append(
+            {
+                "unit_number": "2",
+                "instrument_type": "---",
+                "gdtf_fixture": None,
+                "mode": _R18_MODE,
+                "footprint": 16,
+                "system": None,
+                "universe": 1,
+                "address": 40,
+                "classification": "patched",
+                "address_basis": "universe_address_direct",
+            }
+        )
+        payload = _payload(_dispatch(_registry(rig=_R18TwoTypeRigPort()), report=report))
+        kinds = {check["kind"] for check in payload["plan"]["skipped_checks"]}
+        assert "designed_type_name_vacuous" in kinds
+        (check,) = [
+            check
+            for check in payload["plan"]["skipped_checks"]
+            if check["kind"] == "designed_type_name_vacuous"
+        ]
+        assert tuple(check["affected_designed_addresses"]) == ("1.40",)
+        assert "---" not in check["reason"]
+
+    def test_the_disclosure_control_a_clean_report_carries_no_vacuity_notice(self):
+        """비공허성 — 정상 리포트에서는 고지가 나오지 않는다(항상 켜져 있으면 무시된다)."""
+        payload = _payload(
+            _dispatch(_registry(rig=_R18TwoTypeRigPort()), report=_r18_report(_R18_TYPE_A))
+        )
+        kinds = {check["kind"] for check in payload["plan"]["skipped_checks"]}
+        assert "designed_type_name_vacuous" not in kinds

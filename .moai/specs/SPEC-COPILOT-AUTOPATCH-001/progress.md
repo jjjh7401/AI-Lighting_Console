@@ -22,7 +22,11 @@ FAIL했다. **round17이 이 사이클 최악이다 — 치명 5건 + 신규 치
 그 반영이 이번 커밋이다.**
 **[HARD] round17이 실제로 막은 것 둘**: ① 이스케이프 표 한 칸으로 **실행 가능한 Lua 주입**
 (`os.execute` 발화 실증) ② **음수·0 주소가 전달물 Lua까지 도달**(`patch = { "0.507" }`) —
-후자는 감사 중 새로 발견돼 `address_below_minimum` 배제 게이트를 **이번 라운드에 넣었다**.
+후자는 감사 중 새로 발견돼 `address_below_minimum` 배제 게이트를 **round17에 넣었다**.
+**[round18 R18-A] 그때 세우지 않은 형제 축이 FID였다** — `_parse_fid_range`가 `end < start`만
+검사해 **음수·0 FID가 전달물에 실렸다**(충돌 사전검사는 음수 대역에서 언제나 "깨끗함"을
+내므로 무력했다). round18에 `_MINIMUM_FID = 1`과 `invalid_fid_range` 거부로 막았다 —
+**상한은 좌표 축과 같은 이유로 짓지 않았다**(§0 2d · §E.2 round18 절 — 반영 커밋에서 신설).
 **반영 후 재측정: round15 22/22 · round16 19/19 · round17 8/8 KILLED**
 (round17은 **AST·소스텍스트 게이트를 제외한 행동 대조군만으로** 셌다 — 아래 위양성 기제 3번).
 **[2026-08-07 사용자 결정 — 세션 준비물 4건 확정]** P4=**㉠ FID 대역만 분리**(501~503, 주소는
@@ -34,14 +38,18 @@ Save As/Load 콘솔 절차는 전면 미실측이고, P5-D의 강점은 문법 �
 오지정 위험이 0이라는 구조적 성질**이다. ㉢도 "제거 불가"를 배제하지 않는다.
 **이제 세션 착수를 막고 있는 것은 P1(독립 감사 PASS) 하나다.**
 **남은 것은 ① round17 반영에 대한 재감사(round18) ② 사용자의 라이브 세션 둘뿐이다.**
-테스트 **6,438 passed / 7 skipped**(착수 4,898 → +1,540, 회귀 0) ·
+테스트 **6,611 passed / 7 skipped**(착수 4,898 → +1,713, 회귀 0) ·
 **[round15 #4]** 이 계수는 반영마다 바뀐다 — **갱신할 자리는 네 곳**이다:
 이 줄 · §0 "기계 확인 커맨드"의 `현재 기준선` 주석 · §E.2 해당 라운드 절의 `A → B passed` ·
 **프론트매터 `next:` 필드 안의 계수**(**[round17]** 이 네 번째 자리를 규칙이 빠뜨려
 `next:`가 두 라운드 stale로 남았다 — 규칙 자체가 결함이었다).
 한 곳만 고치면 같은 결함이 재발한다(round12~14가 그렇게 stale을 남겼다) ·
-커밋 **run-phase 27건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 31건 — **본 갱신을 담은 커밋을
-포함한 계수**다. 갱신마다 재계산하라. round10 감사 N55) ·
+커밋 **run-phase 29건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 **33건** — **본 갱신을 담은 커밋을
+포함한 계수**다. 갱신마다 재계산하라. round10 감사 N55).
+**[round18 D-11] 명령줄을 함께 남긴다** — `git rev-list --count 9f7516c..HEAD` ·
+`git rev-list --count ca00bc5..HEAD`. 이전 판은 27/31로 한 커밋(`d1cd4a9`) stale이었다.
+**자기참조 계수가 반복 stale의 뿌리다**: "본 갱신을 담은 커밋을 포함"이라 규정해 두면 커밋을
+찍는 순간 값이 바뀌므로, **커밋 직전에 위 두 명령을 다시 돌려 이 줄을 고치는 것**이 규칙이다 ·
 **2026-08-06 5차**: §0 미시험 6건 중 **L1·L3·L4·L5 전부 NEGATIVE** ·
 **L6은 "명령줄 목적지는 옮겨지고 듣는다"의 양성 대조군을 확보**했다 →
 **목적지 조작 처방이 반증**됐다(§E.2 M0 5차). 남은 미시험은 **L2 1건**(사용자 자원 필요).
@@ -241,7 +249,7 @@ M1~M7이 끝났다** — 이전 판은 여기에 "현재 `audit-ready` — Imple
 ```bash
 W=/Users/studiox/orca/workspaces/AI-Lighting_Console/spec-vwx-001
 git -C "$W" rev-parse --abbrev-ref HEAD   # feature/SPEC-COPILOT-VWX-001 (1단계 위에 스택)
-uv run pytest server/tests -q             # 현재 기준선: 6,438 passed / 7 skipped (착수 4,898)
+uv run pytest server/tests -q             # 현재 기준선: 6,611 passed / 7 skipped (착수 4,898)
 #   ↑ [round15 #4 — 이 숫자가 "갱신할 자리"다] 커밋마다 바뀐다. 테스트를 추가·변경했으면
 #     **네 곳을 함께** 갱신하라: ⓐ 이 줄 · ⓑ §0 헤드라인의 `테스트 N passed / 7 skipped
 #     (착수 4,898 → +M, 회귀 0)` · ⓒ §E.2 해당 라운드 절의 `A → B passed` ·
@@ -278,11 +286,13 @@ git -C "$W" diff --stat ca00bc5 -- console/lua server/safety server/prechk serve
 |---|---|---|
 | round15 | `git checkout -- <path>` **금지**, 원문 write-back 권장 | `git`으로 되돌리다 **남의 미커밋 작업분**을 두 번 날렸다 |
 | round16 | 원문 메모리 백업 + `try`/`finally` write-back **강제**, 매 실행 `PYTHONPYCACHEPREFIX` | 서술만으로 부족해 하네스를 코드로 박았다 |
-| **round17** | **격리 사본에서만 심고 돌린다 — 워킹트리에 쓰기 0건** | write-back도 안전하지 않다는 것이 실증됐다(아래 두 기제) |
+| **round17** | **격리 사본에서만 심고 돌린다 — 워킹트리에 쓰기 0건** | write-back도 안전하지 않다는 것이 실증됐다(아래 기제 1·2) |
+| **round18** | **에이전트별 격리 경로** + `-rfE` 수집오류 포착 + **수집량 검사** + 고정 포트 노드 `--deselect` | 고정 경로 `/tmp/r17_iso_repo`를 공유하면 `rmtree`가 **남의 스윕을 지운다**(D-14). 그리고 격리만으로는 **가짜 SURVIVED**(기제 4)와 **없는 KILL**(기제 5)을 막지 못한다 |
 
-**[round17] 판정을 망가뜨리는 기제가 셋 확인됐다. 1·2는 "없는 결함을 있다고", 3은 "없는
-방어를 있다고" 보고한다 — **방향이 반대라 서로를 가린다.** 셋 다 점검하지 않은 KILL rate는
-증거가 아니다.
+**[round17 셋 → round18 다섯] 판정을 망가뜨리는 기제가 다섯 확인됐다.** 1·2·4·5는 "없는
+결함을 있다고"(또는 "없는 KILL을 있다고"), 3은 "없는 방어를 있다고" 보고한다 —
+**방향이 반대라 서로를 가린다.** 다섯 다 점검하지 않은 KILL rate는 증거가 아니다.
+4·5는 **round18에서 새로 나왔다**(D-19 · 하네스 규율 보강).
 
 1. **바이트코드 재사용.** `.pyc` 유효성 검사는 `(mtime 초 단위, 소스 크기)` **두 값뿐**이다.
    따라서 **크기 불변 뮤테이션 + 같은 초 안의 재기록 → 낡은 바이트코드가 그대로 실행된다.**
@@ -309,6 +319,22 @@ git -C "$W" diff --stat ca00bc5 -- console/lua server/safety server/prechk serve
    **진짜 공백**(행동 대조군을 추가) · **AST 게이트로만 방어되는 자리**(그렇다고 명시하라 —
    소스 텍스트 방어는 리팩터에 취약하므로 그 사실 자체가 다음 라운드의 입력이다).
 
+4. **[round18 신설] 수집오류 미포착 — 가짜 SURVIVED.** 뮤테이션이 **임포트 시점**에 터지면
+   (`SyntaxError` · 상수 이름 소멸 · 데코레이터 인자 깨짐) pytest는 그 파일을 **수집 단계에서**
+   버린다. `-q --tb=no`만 쓰면 요약에 `FAILED <노드>` 줄이 **한 줄도 안 나오므로** 실패 노드
+   집합 차분이 **공집합**이 되고, 하네스는 그것을 **SURVIVED**로 보고한다 — 실제로는 그 파일의
+   테스트가 **한 개도 돌지 않은** 상태다. → **`-rfE`를 붙여 실패(f)와 오류(E)를 함께 읽어라.**
+   그리고 **수집된 테스트 수가 BASELINE과 같은지**를 함께 확인하라(줄었으면 무효 판정이다).
+   방향: **없는 결함을 있다고** — SURVIVED는 *"이 변조를 막는 게이트가 없다"*는 주장인데,
+   실제로는 게이트가 있고 **재판이 열리지 않았을** 뿐이다.
+
+5. **[round18 신설] 고정 포트 테스트 — 없는 KILL을 만든다.** `server/tests/test_deploy_tauri_seams.py`가
+   **포트 29005·28001을 고정으로** 잡는다. 여러 에이전트가 동시에 스윕을 돌리면 그 노드가
+   **산발적으로 실패**하고, 그 실패는 뮤테이션과 **무관한데도** 실패 노드 집합 차분에 들어와
+   **KILL로 오판**된다(2와 방향이 같지만 원인이 다르다 — 2는 남의 *편집*, 5는 남의 *프로세스*다).
+   → 스윕 대상에서 **그 노드를 `--deselect`하거나** 그 파일만 **직렬로** 돌려라.
+   더 일반적으로: **좁게 잡은 TESTS 목록에 고정 포트·고정 경로·고정 소켓을 쓰는 파일을 넣지 마라.**
+
 **[round17 · 가장 중요] 뮤테이션 대상을 "이번에 바꾼 파일"로 한정하지 마라.**
 round17의 **치명 5건 전부**가 round15·16이 **한 번도 뮤테이션하지 않은 모듈**에 있었다 —
 `luagen.py`(Lua 문자열 탈출) · `address.py`(유니버스 경계·주소 파싱) · `typemap.py`(후보 유일성).
@@ -316,14 +342,26 @@ round17의 **치명 5건 전부**가 round15·16이 **한 번도 뮤테이션하
 매 라운드 `server/vwx/` **전 모듈**을 대상으로 잡아라.
 
 ```python
-# tools/ 아래 임시 파일로 저장해 `uv run python <파일>`. 한 단계도 빼지 마라.
+# **[round18 D-18]** 이 스크립트를 **워킹트리 아래(`tools/` 포함)에 저장하지 마라** — 바로 위
+# 주석 ①의 "원본 워킹트리에 쓰기 0건"과 모순한다(이전 판이 정확히 그렇게 적어 자기모순이었다).
+# **격리 사본 안이나 `$(mktemp -d)`에 저장해 거기서 `uv run python <파일>`.** 한 단계도 빼지 마라.
 import os, pathlib, re, shutil, subprocess
 
+AGENT = os.environ.get("OMP_AGENT", "anon")     # **[round18 D-14]** 에이전트별 경로 — 아래 참조
 SRC = pathlib.Path.cwd()
-ISO = pathlib.Path("/tmp/r17_iso_repo")        # ① 격리 사본 — 원본 워킹트리에 **쓰기 0건**
+ISO = pathlib.Path(f"/tmp/{AGENT}_iso")        # ① 격리 사본 — 원본 워킹트리에 **쓰기 0건**
+# **[round18 D-14] 고정 경로(`/tmp/r17_iso_repo`)를 쓰지 마라.** `sync()`가 그 경로를
+# `rmtree`하므로, 동시 감사자 둘이 같은 상수를 쓰면 **한쪽이 다른 쪽의 사본을 스윕 도중 지운다**
+# — 그 결과는 무작위 수집오류(기제 4)와 무작위 실패(기제 2)로 나타나 판정 전체를 오염시킨다.
 TESTS = ["server/tests/test_autopatch_fid.py"] # 좁게 잡아라(전체 스위트는 오케스트레이터만)
+# **[round18 · 기제 5]** 고정 포트를 잡는 노드는 스윕에서 뺀다 — 병렬에서 산발 실패해 **없는 KILL**을 만든다.
+DESELECT = ["--ignore=server/tests/test_deploy_tauri_seams.py"]   # 29005 · 28001 고정
+# **[round18 D-19 · 기제 3] 위양성 기제 3을 코드에 넣는다** — 자기 AST·소스텍스트 게이트를
+# 끈 **행동 대조군만**의 수치를 함께 내야 한다. 서술로만 두면 아무도 켜지 않는다(이전 판이 그랬다).
+AST_GATES = ["-k", "not (bijection or _ast_ or source_text or registry_scope or anchor_tail)"]
 ENV = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}   # ② pyc를 아예 만들지 않는다
-FAILED = re.compile(r"^FAILED (\S+)")
+FAILED = re.compile(r"^(?:FAILED|ERROR) (\S+)")       # **[round18 · 기제 4]** 수집오류(E)도 센다
+COLLECTED = re.compile(r"(\d+) (?:passed|failed|error)")
 
 def sync():
     shutil.rmtree(ISO, ignore_errors=True)
@@ -337,14 +375,19 @@ def sync():
         else:
             shutil.copy2(source, ISO / item)
 
-def run():
-    done = subprocess.run(["uv", "run", "pytest", *TESTS, "-q", "--tb=no"],
-                          capture_output=True, text=True, env=ENV, cwd=ISO)   # ④ 사본에서만 실행
-    return {m.group(1) for line in done.stdout.splitlines() if (m := FAILED.match(line))}, done.stdout
+def run(behaviour_only=False):
+    argv = ["uv", "run", "pytest", *TESTS, *DESELECT, "-q", "--tb=no", "-rfE"]  # **[round18] -rfE 필수**
+    if behaviour_only:
+        argv += AST_GATES
+    done = subprocess.run(argv, capture_output=True, text=True, env=ENV, cwd=ISO)   # ④ 사본에서만 실행
+    tail = done.stdout.strip().splitlines()[-1] if done.stdout.strip() else ""
+    total = sum(int(n) for n in COLLECTED.findall(tail))         # ⑧ 수집량 — 줄면 판정 무효
+    return {m.group(1) for line in done.stdout.splitlines() if (m := FAILED.match(line))}, tail, total
 
 sync()
-BASELINE, summary = run()                       # ⑤ baseline 먼저 — 0건이 아니면 그 목록을 적어 둔다
-print("BASELINE:", summary.strip().splitlines()[-1], f"(failing nodes: {len(BASELINE)})")
+BASELINE, summary, BASE_N = run()               # ⑤ baseline 먼저 — 0건이 아니면 그 목록을 적어 둔다
+assert not BASELINE, f"BASELINE-OK 실패 — 무변조 실패 {len(BASELINE)}건. 판정하지 마라: {sorted(BASELINE)[:5]}"
+print("BASELINE:", summary, f"(failing nodes: {len(BASELINE)} / collected {BASE_N})")
 
 TARGET, OLD, NEW = "server/vwx/patchplan.py", "self.unreadable_fids > 0", "self.unreadable_fids > 1"
 path = ISO / TARGET
@@ -352,14 +395,24 @@ original = path.read_text(encoding="utf-8")
 assert original.count(OLD) == 1, "앵커가 유일하지 않다 — 심기 전에 멈춰라"
 try:
     path.write_text(original.replace(OLD, NEW, 1), encoding="utf-8")
-    fails, summary = run()
+    fails, summary, n_all = run()                    # 전체 게이트 포함
+    b_fails, b_summary, n_beh = run(behaviour_only=True)   # **행동 대조군만** — 이쪽이 진짜 수치다
 finally:
     path.write_text(original, encoding="utf-8")  # ⑥ 사본 안에서도 try/finally로 되돌린다
 assert path.read_text(encoding="utf-8") == original, "복원 실패 — 바이트가 다르다"
 
+# **[round18 · 기제 4]** 수집량이 줄었으면 그 판정은 **무효**다 — 임포트 시점에 터진 뮤테이션은
+# `FAILED` 줄을 한 줄도 내지 않아 차분이 공집합이 되고, 그것이 **가짜 SURVIVED**다.
+assert n_all >= BASE_N, f"수집량 감소({BASE_N} -> {n_all}) — 수집오류다. SURVIVED로 적지 마라."
+
 new_fails = sorted(fails - BASELINE)             # ⑦ **집합 차분**으로 판정한다 — pass/fail이 아니라
-print("KILLED" if new_fails else "SURVIVED  <-- 이 변조를 막는 게이트가 없다", new_fails[:5])
+print("전체 게이트 포함:", "KILLED" if new_fails else "SURVIVED", new_fails[:5])
+print("행동 대조군만  :", "KILLED" if sorted(b_fails - BASELINE) else
+      "SURVIVED  <-- 이 변조를 막는 **행동** 게이트가 없다", sorted(b_fails - BASELINE)[:5])
 ```
+
+**[round18 D-14] `AGENT`는 반드시 자기 이름으로 잡아라.** 고정 경로를 공유하면 `sync()`의
+`rmtree`가 **남의 스윕을 도중에 삭제**한다 — round18 세션은 네 에이전트가 동시에 스윕을 돌렸다.
 
 `OLD`가 파일에 2회 이상 나오면 `assert`가 먼저 멈춘다 — 앵커를 좁혀서 **정확히 한 곳**만
 심어라. 여러 자리를 연속으로 심을 때도 `sync()`는 한 번이면 되고, 자리마다
@@ -426,6 +479,96 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
    못 보고 **중복 생성 대상으로 올릴 수 있다**. 되돌릴 수 없는 쓰기 앞에서 둘 다 위험하다.
    실물 콘솔은 `Patch/Stages/1/Fixtures`가 **19대에서 이미 절단됐다**(§E.2 M0 1차) —
    가상의 위험이 아니었다. (§E.2 M7 후속 절에서 해소)
+
+   **[round17 재확인 · round18 D-21]** round17 감사가 이 항목을 **코드와 다시 대조해
+   그대로 유효함을 확인**했다 — `attempted`·`unparsable_rows` 두 축의 처리, 표면 **셋**,
+   비-GO 분기의 `attempted=False` 서술까지 실측 일치다. **이 라벨을 지우지 마라**:
+   라벨이 없으면 다음 감사자가 "언제 마지막으로 확인된 서술인가"를 알 수 없어 같은 대조를
+   처음부터 다시 한다.
+
+   **[round18 D-16 · 신설 경고 — R18-A] 좌표 축은 막았고 FID 축은 막지 않았다.**
+   round17이 `address_below_minimum`으로 **주소 양축(유니버스·주소)의 바닥**을 세울 때,
+   **바로 옆 수치 축인 FID**에는 같은 게이트를 세우지 않았다. `patchplan._parse_fid_range`가
+   검사하는 것은 **`end < start` 하나뿐**이다:
+
+   ```
+   fid_range={'start': -10, 'end': -8}  → ok=True · 배정=[-10] · 제외 0건 · delivered=true
+   → 전달물 AddFixtures({ … fid = "-10", … })          (start=0 → fid="0", 10^18 → 그대로)
+   → 같은 payload가 fid_safety.conflict_precheck.performed=true 로 "검사했고 깨끗하다"고 보고
+   ```
+
+   **충돌 사전검사가 무력화된다는 점이 특히 나쁘다** — 음수 대역은 `existing_fids`와 절대
+   겹치지 않으므로 검사는 언제나 "깨끗함"을 낸다. 즉 payload가 *"검사했다"*고 말하는 그 순간이
+   가장 위험하다. 근거는 좌표 축과 **같다**: PRESERVE `server/prechk/patch.py:121-123`이
+   *"console numbering starts at one"*이라 적고, 그 명제는 **FID에도 그대로 성립**한다.
+   `verdicts.py`에 `INVALID_FID_RANGE` 어휘는 이미 있으나 **발화 0건**이었다.
+   **[round18 반영]** `patchplan._MINIMUM_FID = 1`(근거 인용: PRESERVE `prechk/patch.py:121-123`
+   *"The console's own numbering starts at one"*)을 세우고, `_parse_fid_range`가
+   `FIDRange | None` 대신 **`_FidRangeParse(parsed, defect)`**를 돌려주게 했다
+   (PRESERVE `AddressParse`와 같은 형태). 세 갈래를 **서로 다른 사유 문장**으로 가른다 —
+   **형식**(정수 start·end 부재) · **바닥**(1 미만) · **순서**(end < start)이며 **바닥을 순서보다
+   먼저** 본다. 한 문장에 뭉치면 ① 조작자가 어느 축을 고쳐야 하는지 모르고 ② 축 하나를 지워도
+   사유가 같아 대조군이 삭제를 못 잡는다.
+   상위 `build_patch_plan`은 그 사유를 **기존 어휘 `invalid_fid_range`**로 거부에 싣는다
+   (신설이 아니다 — `verdicts.py:13`에 있었으나 **발화 0회**이던 것을 이제 발화시킨다).
+   개별 값 배제는 **신설 어휘 `fid_below_minimum`**이며 `FIDRange`를 직접 조립하는 형제
+   진입점을 위해 `_assign_fids`에도 뒀다.
+   **거부는 `_fid_safety_payload`를 만들기 전에 끝난다** — 거부된 호출의 payload에는
+   `fid_safety` 키가 **아예 없다**. 이전에는 같은 payload가
+   `conflict_precheck.performed=true`로 *"검사했고 깨끗하다"*고 보고했다.
+   **이 정직성이 R18-A의 나머지 절반이다**: 바닥만 막고 payload를 그대로 실었다면
+   "검사했다"는 거짓말은 남았을 것이다.
+   **상한(천장)은 좌표 축과 같은 이유로 짓지 않았다** — MA3의 FID 수용 상한은 이 SPEC에서
+   **실측된 적이 없고** 룰북·PROTOCOL 어디에도 최대값이 없다. 미실측 위에 천장을 지어내면
+   *콘솔이 받아들이는 값을 이 계층이 날조로 거부한다*(PRESERVE `patch.py:128-133`의 같은 판정).
+   그 판정 자체를 `test_r18_no_fid_ceiling_is_fabricated`가 고정한다 —
+   **근거 없이 상한을 넣으면 그 대조군이 실패한다.** 막는 것은 **바닥과 형식**뿐이다.
+
+   **[round18 D-15 · R18-D] `assemble_sentences`의 `ValueError`가 비가역 쓰기 경로에서 무엇을
+   하는지 — round17까지 이 문서가 한 번도 적지 않았다.** round17이 문장 형태 불변식을
+   **프로덕션**으로 옮기면서 위반 시 `ValueError`를 던지게 했는데, 유일한 프로덕션 강제 자리
+   (`patchplan.py` · `fid_precheck_read_incomplete` **거부 사유**를 조립하는 자리 —
+   등록 자리가 몇이든 **프로덕션 강제는 언제나 이 1자리뿐**이다)는 **차단 화면을 짓는 자리**였다. `ToolRegistry.dispatch`(`tools.py`)·
+   runner·session 어디에도 이 예외를 잡는 가드가 없었다 — 즉 **조립이 실패하면 차단 문구가
+   아니라 차단 자체가 사라진다.** fail-closed가 아니라 **fail-crash**였다(외부 입력으로는 도달
+   불가였으나 **기제**가 그랬다).
+
+   **[round18 반영] 강제 자리를 강등 조립기로 바꿔 fail-closed로 만들었다.** `ValueError`는
+   **강제 조립기 `assemble_sentences`에만** 남고, **차단 화면을 짓는 자리는
+   `assemble_sentences_or_defect`(강등판)**를 쓴다. 그 결과 형태가 깨져도
+   **거부는 유지된다**(`ok=False` · `fid_precheck_read_incomplete`) — 사유 자리에는 등재 코드
+   `reason_unavailable`이 들어가고 위반 내용은 `rejection.reason_defect` **구조화 칸**으로 나간다.
+   **[HARD] 이 배치를 되돌리지 마라**: 차단을 짓는 코드가 던지면 그 예외는 차단을 지운다.
+   *조립 실패는 문장을 잃는 사고여야 하고 결코 판정을 잃는 사고여서는 안 된다.*
+
+   **[round18 R18-F · 상시 의무] `server/vwx/` 모듈에 import를 추가하면 등기부에 한 줄 적어라.**
+   **import 봉인은 이제 화이트리스트다 — 새 의존을 더하면 등기가 필수다. 이것은 마찰이 아니라
+   설계다: round16이 8형태, round17이 16형태, round18이 22형태를 세었고 열거는 끝나지 않았다.**
+   round18이 실증한 **17~22번째 우회 6형태**: 별칭 `import_module as _imp` ·
+   `spec_from_file_location` · `builtins.__import__` · `exec("import …")` · `runpy.run_module` ·
+   `SourceFileLoader`.
+
+   **[HARD] 그중 하나만 구 게이트가 잡았고 그것도 우연이었다.** `builtins_module_dunder_import`는
+   `__import__`라는 문자열이 구 블랙리스트 어휘에 들어 있었기 때문에 걸렸을 뿐이다 —
+   **구 게이트의 실측 통과율은 6 중 5**다. *블랙리스트가 왜 끝나지 않는지의 증거가 이것이다*:
+   막힌 것도 그 형태를 예견해서가 아니라 **다른 이유로 적어 둔 단어에 우연히 걸린 것**이었다.
+
+   현행 규칙은 넷이다: **① 22항목 동결 화이트리스트**(`_REGISTERED_VWX_IMPORTS`,
+   `test_autopatch_execute.py` round18 섹션) **② 상대 import 금지 ③ bare-call
+   `{exec, eval, __import__, compile}` 금지 ④ Name `{__builtins__, __import__, __loader__,
+   __spec__}` 참조 금지.**
+   실측: 완전 모듈명 **22** / 최상위 루트 **12** · 상대 import **0** ·
+   동적 import·exec·runpy·SourceFileLoader **프로덕션 사용 0** ·
+   **22형태 전부 CAUGHT**(구 표 16 + 신규 6) · 클린 대조군 **2/2 BYPASS** · 프로덕션 위반 **0건** ·
+   뮤테이션 47건 = 전체 게이트 **47/47**, **행동 대조군만 43/47(91.5%)** — 행동 SURVIVED 4건은
+   전부 **등가 뮤턴트 / 구조전용방어**이고 **진짜 공백 0건**이다.
+   **프로덕션은 0줄 수정**(테스트만 `test_autopatch_execute.py` +447줄)이며
+   **구 열거 게이트는 한 줄도 지우지 않고 병존**한다.
+   **[HARD] 등기부를 프로덕션에서 파생시키지 마라** — 파생하면 자기충족이 되어 봉인이
+   무의미해진다(round18 minor로 지적된 `_R17_CONTAINMENT_FAMILY` 자기충족 표와 같은 함정).
+   새 import가 정말 필요하면 **테스트 실패 메시지가 찍어 주는 그 한 줄을 손으로 등기하고
+   등기 사유를 커밋 메시지에 남겨라.**
+
 2a. **M4가 남긴 계약 3건은 M5에서 지켜졌다 — 되돌리지 마라**:
    ① `luagen.render_addfixtures_plugin(entries)`가 전달물의 본체다 —
       `LuaPatchEntry(console_type, console_mode, fid, name, universe, address)` 6필드뿐이고
@@ -439,7 +582,7 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
       경로가 이 함수에 없다"*(docstring). `apply.py:127`도 `HandoffEntry.address`를
       **"언제나 도면 주소 그대로"**로 못박는다. 그래서 **M8 테스트 자원을 유니버스·주소로
       분리하는 것은 이 툴로 불가능**하다 — 분리 가능한 축은 `fid_range` 하나뿐이다
-      (`spec.md` §C 「사용자 결정 대기」 · `plan.md` §B M8 착수 전제 ④).
+      (`spec.md` §C 「사용자 결정 대기 → 결정 완료」 · `plan.md` §B M8 착수 전제 ④ — 2026-08-07 ㉠ 확정).
 2b. **M7을 쓸 때 M5가 남긴 계약 4건을 지켜라**:
    ① `apply.build_patch_handoff(targets, address_plan=, resolutions=, names=, dry_run=True)`가
       전달 진입점이다 — 파라미터 **5개가 전부**이고, 여기에 인자를 더하면
@@ -452,8 +595,11 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
       (`patchplan.FidPropertyPort`·`typemap.LibraryPort` 선례), 그 표면을 import하지 않는다.
       `test_autopatch_execute.py`의 스캐너가 `server/vwx/*.py` **전수**를 돈다.
    ④ 제외 사유는 `verdicts.TARGET_EXCLUSION_REASON`에 **등재된 코드로만** 보고한다.
-      **[round17] 현재 등재 수는 17종**이며 round17에서 `address_below_minimum` 1종이
-      늘었다(R17-A 주소 바닥 게이트 · `verdicts.py`). 이 수를 문서에 적는 자리는 여기 하나이고,
+      **[round18 갱신] 현재 등재 수는 19종**이다 — round17에서 `address_below_minimum`
+      (R17-A 주소 바닥 게이트)이, **round18에서 `fid_below_minimum`(R18-A FID 바닥 게이트)과
+      `fixture_type_name_unusable`(R18-E 공허 타입명 하드스톱)이** 늘었다(`verdicts.py`).
+      **[HARD] 이 수는 커밋 직전에 다시 세라** —
+      `uv run python -c "from server.vwx.verdicts import TARGET_EXCLUSION_REASON as T; print(len(T))"`. 이 수를 문서에 적는 자리는 여기 하나이고,
       실제 개수는 `verdicts.py`의 `TARGET_EXCLUSION_REASON`이 정본이다 — 어휘를 더하면
       **여기도 함께 갱신하라**. 어휘가 늘면 `test_autopatch_verify.py`의
       `_R17_EXCLUSION_SITES` 전단사가 그 사유를 짓는 자리를 요구한다.
@@ -671,7 +817,7 @@ known_gaps:
     (매치는 전부 다른 절 참조이거나 progress.md 자체 감사기록). plan.md §E 테스트 골격이
     §6.2와 독립적으로 이미 파일→주제 매핑을 제공하고 있어 온보딩 가독성도 유지됨. 잔여
     gap 아님 — round1 이후 최초로 4개 축 전부 잔여 결함 0건."
-next: "**M8만 남았고, 남은 것은 ① round17 지적 반영에 대한 재감사(round18) ② 사용자의 라이브 세션 둘뿐이다.** 독립 코드 감사를 **일곱 번**(round11~17) 돌렸고 **일곱 다 FAIL**이었다. **round17이 최악이다 — 치명 5건 + 신규 치명 1건**이고, 치명 5건 **전부가 round15·16이 한 번도 뮤테이션하지 않은 모듈**(luagen.py·address.py·typemap.py)에 있었다. 일곱 라운드째 같은 기제이며 이번엔 형제가 **모듈 전체**였다. 실제로 막은 것 둘: 이스케이프 표 한 칸으로 성립하던 **실행 가능한 Lua 주입**, 그리고 **음수·0 주소가 전달물 Lua까지 도달**하던 경로(감사 중 신규 발견, `address_below_minimum` 게이트 신설). 테스트 **6,438 passed / 7 skipped** (착수 4,898 → +1,540, 회귀 0). 반영 후 재측정 **8/8 KILLED**(AST·소스텍스트 게이트를 제외한 **행동 대조군만**). **사용자 결정 대기 4건**(P5 원복 절차 · P6 names 매핑 · P4 테스트 자원 분리 · AC-026④와 spec.md §D 구조적 충돌)은 `spec.md` §C에 등기돼 있다. **[2026-08-07 사용자 결정] 세션 준비물 4건 확정** — P4=㉠ FID 대역만 분리 · P5=P5-D(사전 스냅샷→재로드)+P5-0 필수 · P6=ZZAP<n> · AC-026④=㉢(P5를 착수 차단 조건으로 승격, acceptance.md 무개정). 정본 등기 spec.md §C, 강제 plan.md §B ④⑤⑥⑦. **세션 착수를 막는 것은 이제 P1(독립 감사 PASS) 하나다.**"
+next: "**M8만 남았고, 남은 것은 ① round18 반영에 대한 축소 감사 1회(사용자 결정: 전체 재감사가 아니라 round18 변경분만 좁게 겨냥) ② 사용자의 라이브 세션 둘뿐이다.** 독립 코드 감사를 **여덟 번**(round11~18) 돌렸고 **여덟 다 FAIL**이었다. **round18은 치명 1건(R18-A — `_parse_fid_range`가 `end < start`만 검사해 음수·0 FID가 전달 Lua까지 나갔다) · 뮤테이션 152건 KILL 91.4% / 행동 대조군만 83.6%**이며, round17이 좌표 양축에 세운 바닥 게이트의 **형제 축(FID)**을 빠뜨린 것이 원인이다. **round17 치명 5건은 round18에서 전부 CLOSED로 확인**됐고, 치명 수확은 5→1로 줄었다. round18은 처방의 방향도 둘 바꿨다: 형태 불변식은 **확대가 오답**(정상 도면 값이 판정자를 발화시킨다)이라 출처 기반 AST 분류로, import 봉인은 열거가 끝나지 않아(8→16→22형태) **화이트리스트 역전**으로 갔다. 계수 규율도 고쳤다 — round15·16·17의 동작 변경 수치가 셋 다 틀린 원인은 **셈법을 정의하지 않은 것**이었다. 라이브 세션은 사용자 결정에 따라 **테스트 쇼파일 사양·체크리스트를 먼저 문서로 만든 뒤** 잡는다."
 ```
 
 ---
@@ -1493,6 +1639,22 @@ not readable, `ShowMetaData` childCount 0). **테스트 쇼파일임이 확인�
   `dmx_mode_not_in_library`, skipped-check `footprint_match_descope` ·
   `fixture_type_library_truncated` · `fixture_type_library_unreadable`, 신규 닫힌 어휘
   `type_resolution_status`(4종) + 라벨.
+
+  **[round18 어휘 추가 — 이 자리가 라운드별 어휘 열거의 정본이다]** `[코드 재확인]`
+  round17이 `address_below_minimum` 1종을 더한 데 이어 round18이 셋을 더했다:
+  - 제외 사유(`TARGET_EXCLUSION_REASON`, 17 → **19**): `fid_below_minimum`(R18-A FID 바닥) ·
+    `fixture_type_name_unusable`(R18-E 공허 타입명 하드스톱)
+  - `TYPE_RESOLUTION_STATUS`(4 → **5**): `designed_type_name_unusable`
+  - `SKIPPED_CHECK_KIND`(6 → **7**): `designed_type_name_vacuous`(R18-J 고지 — 1단계 `diff.py`가
+    공허 이름 후보를 소멸시키는 것을 **우리 층에서 고지**한다. `diff.py`는 AC-AUTOPATCH-025
+    대상이라 **무변경**이다)
+  - **신설이 아닌 것**: `invalid_fid_range`는 `verdicts.py:13`에 이미 있었고 **발화 0회**이던
+    것이 이제 발화한다 — *"어휘가 있다"와 "그 어휘가 발화한다"는 다르다*가 R18-A의 부수 교훈이다.
+
+  **어휘 총수는 AC·REQ 불변식이 아니다** — SPEC 문서 어디도 verdict 어휘 총수를 단정하지
+  않는다(전수 grep 0건). 그래도 **여기와 §0 2b④ 두 자리는 함께 갱신하라.** 재확인:
+  `uv run python -c "from server.vwx import verdicts as v; print(len(v.TARGET_EXCLUSION_REASON), len(v.SKIPPED_CHECK_KIND), len(v.TYPE_RESOLUTION_STATUS))"`
+  → 현재 **`19 7 5`**.
 - `server/tests/test_autopatch_types.py` — 신규 23건. 전부 `RigPort` 관례 더블 기반 인메모리,
   콘솔 접촉 0.
 
@@ -2768,8 +2930,16 @@ round15가 round14 T09의 항진명제 2건을 지우며 "그 유형을 없앴�
 치명 **5건**. 그리고 **다섯 전부가 round15·16이 한 번도 뮤테이션하지 않은 모듈**에 있었다:
 `luagen.py` · `address.py` · `typemap.py`.
 
-round16이 만든 게이트는 **자기 도달 범위 안에서는 견고했다** — AST 앵커 무력화 5건 전부 KILLED,
-표 46개 중 43개가 행삭제를 감지했다. **결함은 도달 범위 밖에 있었다.**
+round16이 만든 게이트는 **자기 도달 범위 안에서는 견고했다** — AST 앵커 무력화 5건 전부 KILLED.
+**결함은 도달 범위 밖에 있었다.**
+
+> **[round18 D-12 정정] 여기 있던 *"표 46개 중 43개가 행삭제를 감지했다"*는 근거가 없다.**
+> 그 수치는 round17 감사 보고서 `:16`에서 옮겨왔는데 **보고서에도 46행·43행을 열거한 표가
+> 0건**이고, 어느 표가 46개에 들어갔는지·감지하지 못한 3개가 무엇인지 재도출할 방법이 없다.
+> **그래서 수치를 지운다** — 재현 절차가 없는 수치는 다음 감사에서 반드시 틀린 것으로 잡힌다.
+> 살릴 값이라면 **표 목록과 행삭제 프로브의 노드 ID를 함께** 적어야 한다.
+> (같은 유형: 아래 「반영 후 재측정」의 "416" — D-13.)
+
 일곱 라운드째 같은 기제이고, 이번엔 그 "형제"가 **모듈 전체**였다.
 
 > **규율**: 뮤테이션 대상을 *"이번에 바꾼 파일"*로 한정하지 마라.
@@ -2806,7 +2976,13 @@ the console accepts"* 로 **의도적 무상한**을 못박았다. 512를 천장
 이미 고정된 테스트를 둘 다 깬다 — **미실측 위에 상한을 지어내는 것은 이 SPEC이 여섯 번
 자기정정한 과잉주장 유형이다.** 그 판정 자체를 테스트로 고정했다.
 
-#### 감사 방법론 — 위양성 기제가 **셋** 나왔다
+#### 감사 방법론 — 위양성 기제가 **셋** 나왔다 (**round18에 둘이 더 나와 다섯이 됐다**)
+
+> **[round18 D-19]** 아래 셋은 round17 시점의 기록이다. round18이 **④ 수집오류 미포착**
+> (`-rfE` 없이 돌리면 임포트 시점에 터진 뮤테이션이 `FAILED` 줄을 내지 않아 **가짜 SURVIVED**)과
+> **⑤ 고정 포트 테스트**(`test_deploy_tauri_seams.py` 29005·28001이 병렬에서 산발 실패해
+> **없는 KILL**을 만든다)를 더했다. **정본은 §0 하네스 절의 다섯 기제**이며 그 절의 코드가
+> 다섯을 전부 반영한다(에이전트별 ISO 경로 · `-rfE` · 수집량 검사 · `DESELECT` · `AST_GATES`).
 
 | # | 기제 | 발견 | 방향 |
 |---|---|---|---|
@@ -2823,27 +2999,186 @@ the console accepts"* 로 **의도적 무상한**을 못박았다. 512를 천장
 **BASELINE-OK**(무변조 실패 0건) 강제 · 판정은 pass/fail이 아니라 **실패 노드 집합 차분** ·
 **KILL rate는 두 수치 병기**(전체 게이트 포함 / **행동 대조군만**) ·
 행동 SURVIVED는 **등가 뮤턴트 / 진짜 공백 / AST전용방어** 셋으로 분류하고 근거를 코드로 남긴다.
+**[round18 추가]** `-rfE`로 수집오류까지 읽고 **수집량이 BASELINE보다 줄면 그 판정은 무효**이며,
+**고정 포트를 잡는 노드는 스윕에서 뺀다**(`--ignore`) 또는 직렬로 돌린다.
+그리고 **ISO 경로는 에이전트별로** 잡는다 — 고정 경로는 `rmtree`로 남의 스윕을 지운다(D-14).
 
-경위: round15 `git checkout` 금지 → round16 원문 write-back → **round17 격리 사본**.
+경위: round15 `git checkout` 금지 → round16 원문 write-back → **round17 격리 사본**
+→ **round18 에이전트별 격리 경로 + 수집오류·고정포트 가드**.
 디스크 원복 방식은 다인 세션에서 근본적으로 안전하지 않다(pre==post hash는 *남의 편집을 삼켰는지*를 못 잡는다).
+
+#### [round18 D-02] **프로덕션 동작 변경 재도출 — 셈법을 먼저 고정한다**
+
+round16 #1은 *"프로덕션 동작을 N개 바꿨다는 문장은 `git show <sha> -- <경로>` 재도출 표 없이
+적지 않는다"*를 규율로 세웠다. **round17 절은 그 재도출을 하지 않았다** — 해당 문장이 0건이다.
+그리고 round18 감사가 재도출한 결과 요약 표가 **4건 이상을 누락**하고 있었다.
+
+**[HARD] 세 라운드 오보의 실체는 수치가 아니라 셈법이었다.** round17이 적은 "5건"은 실은
+**신설 게이트 수**였는데 그것을 *"동작 변경"*이라 라벨했다. 둘은 다른 것이다. round15의 "넷",
+round16의 "두 곳"도 같은 혼동으로 보인다. **틀린 것은 숫자가 아니라 "무엇을 세는지 정의하지
+않은 것"이다.** 그래서 이번에는 **세 수를 각각 다른 이름으로 병기**한다.
+
+**재도출 명령줄**(그대로 다시 돌릴 수 있다):
+
+```bash
+git show b276555 -U0 -- server/vwx server/orchestrator/tools.py | grep -c '^@@'
+git show b276555 -U0 -- server/vwx server/orchestrator/tools.py \
+  | awk '/^\+\+\+ /{f=$2} /^@@/{c[f]++} END{for(k in c) print k, c[k]}'
+```
+
+| 셈 단위 | 수 | 정의 |
+|---|---|---|
+| **실행 줄 변경 헝크** | **51** | **상한.** 전체 헝크 56 − 주석/독스트링만인 헝크 5. 실행 줄이 하나라도 달라진 헝크를 센다 — **등가 리팩터도 포함되므로 과대**다 |
+| **관측된 동작 변경** | **≥16** | **하한.** 같은 입력에 대해 payload·반환값·발화 사유·예외 중 하나가 실제로 달라짐을 **보인** 건수(round18 감사 재도출) |
+| **신설 게이트** | **5** | round17이 추가한 **차단 자리** 수 — round17이 *"동작 변경 5건"*이라 잘못 라벨한 그 수다 |
+
+헝크 분포(**실행 줄 변경 51**): `typemap.py` 20 · `apply.py` **15** · `patchplan.py` 12 ·
+`verdicts.py` 3 · `address.py` 1.
+
+**[주의] 위 `awk`가 찍는 것은 파일별 *전체* 헝크 수라 `apply.py`가 20으로 나온다** —
+그중 **5개가 주석/독스트링만인 헝크**라서 실행 줄 변경은 15다(다른 네 파일은 전체=실행 줄 변경).
+그 5를 다시 세는 명령:
+
+```bash
+git show b276555 -U0 -- server/vwx/apply.py | python3 -c "
+import sys
+hunks=[];cur=None
+for l in sys.stdin:
+    if l.startswith('@@'): cur=[]; hunks.append(cur)
+    elif cur is not None and l[:1] in '+-' and not l.startswith(('+++','---')): cur.append(l.rstrip())
+def comment_only(h):
+    for l in h:
+        b=l[1:].strip()
+        if not b or b.startswith('#'): continue
+        if b.startswith(('\"\"\"',\"'''\")) or b.endswith(('\"\"\"',\"'''\")): continue
+        return False
+    return True
+c=sum(1 for h in hunks if comment_only(h))
+print('total',len(hunks),'comment-only',c,'executable',len(hunks)-c)"
+# -> total 20 comment-only 5 executable 15
+```
+
+> **[커밋 SHA 주의]** 위 명령의 `b276555`가 **HEAD 계보 위의 round17 커밋**이다.
+> 세션 중 인용되던 `d37ff05`는 그 커밋의 **amend 이전본**이라 HEAD에서 도달하지 않는다
+> (`git merge-base --is-ancestor d37ff05 HEAD` 거짓). **코드 diff는 두 커밋이 동일**하고
+> 차이는 `progress.md` 1줄뿐이지만, **재도출 명령에는 도달 가능한 SHA를 적어라.**
+
+> **[HARD · 규율 승격 — round16 #1의 빠진 절반]**
+> **동작 변경 건수를 적을 때는 ① 셈 단위를 먼저 정의하고 ② 명령줄을 같이 남긴다.**
+> 정의 없는 수치는 다음 감사에서 **반드시** 틀린 것으로 잡힌다 — round15·16·17이 연속으로
+> 그렇게 잡혔다. round16 #1은 *"재도출하라"*까지만 세웠고 *"무엇을 세는지 정의하라"*를
+> 빠뜨렸다. 재도출을 해도 셈 단위가 다르면 두 사람이 다른 수를 얻는다.
+
+#### [round18 R18-E] **미신고 동작 변경 — 한 축을 조이면서 옆 축을 풀었다**
+
+round17 커밋은 공허 일치 차단을 *"더 엄격해졌다"*로만 신고했다. **그 변경은 같은 함수에서
+반대 방향의 변경을 함께 냈고, 그것이 신고되지 않았다.**
+
+`typemap._resolve_one` — **이름 없는(공허) 후보의 하드스톱이 강등됐다**:
+
+```
+OLD  status=library_absent          hard_stop 있음   → hard_stops=[1건]
+NEW  status=needs_confirmation      hard_stop=None   → hard_stops=[]     (round17)
+```
+
+사유 문장은 *"사용자 확인으로 넘긴다"*고 말하는데 **그 경로가 없다.** `_alias_for`가
+`(gdtf_fixture, instrument_type)`을 키로 쓰는데 공허 후보는 **둘 다 비어 있어 어떤 별칭으로도
+해결되지 않는다**(4종 실측) — **막다른 길**이다. 즉 되돌릴 수 없는 쓰기 앞에서 **멈춰 세우던
+자리가 "확인 대기"로 바뀌었고 그 확인은 영원히 오지 않는다.**
+오케스트레이터 재현: 정상 이름 `hard_stops=1` vs 이름 없음 `hard_stops=0`.
+
+**round18 처방(VacuityAndData 반영)** — 별칭 경로를 신설하지 **않았다**. 없는 확인을 기다리게
+하는 대신 **판정을 하드스톱으로 정정**했다(고칠 곳은 도면이며, 사유 문장이 그렇게 말한다):
+
+- status `designed_type_name_unusable`(신설 `verdicts.TYPE_NAME_UNUSABLE`)
+- hard_stop code `fixture_type_name_unusable`(신설 `verdicts.FIXTURE_TYPE_NAME_UNUSABLE`,
+  `TARGET_EXCLUSION_REASON` 등재) → `payload["types"]["hard_stops"]`에 1건,
+  `row["confirmation_required"]`는 `False`
+- `fixture_type_not_in_library`는 **쓰지 않았다** — 찾아보지도 않은 것을 "부재"로 단정하는
+  코드이기 때문이다(이 SPEC이 반복 정정한 미판독↔부정 혼동)
+- 부수: R18-J 고지로 `patchplan.build_patch_plan`이 `skipped_checks`에 신설
+  `designed_type_name_vacuous`를 낸다(**1단계 `diff.py`는 무변경** — AC-AUTOPATCH-025)
+
+**교훈**: *"게이트를 신설했다"*는 신고는 **같은 커밋이 완화한 것**을 가리지 못한다.
+**한 방향(더 엄격)만 신고하면 반대 방향은 다음 감사까지 보이지 않는다** — 위 D-02 재도출 표를
+쓰는 이유가 정확히 이것이다.
 
 #### 반영 요약
 
 | 축 | 무엇을 |
 |---|---|
 | **전달물 본체** | `_LUA_ESCAPES` 전단사 의무표(기대값은 Lua 규격에서 **독립 저작**) · **왕복 단정**(순수 파이썬 디코더, 267 표본) · **진짜 Lua 5.4 실행 게이트**(저장소의 `lupa`로 컴파일·실행하고 `os.execute`/`io.popen`/`Cmd` 트랩) · 6필드 렌더 3층 전수(텍스트·Lua 런타임 값·AST 표현) with **u≠a 표본**(12·349) |
-| **주소** | 절대주소 역산 경계 17행 · split 토큰 전수 17행 · 왕복 16쌍 · **`server/vwx` 전 모듈 수치경계 레지스트리 66행**(키가 줄번호가 아니라 `(모듈, 축, 표현식)`) |
-| **모호성** | 후보수×판정 표(타입 8 · 모드 8 · `_single_unambiguous` 13행) + **열거 순서 역전 불변** 단정 · `fuzzy_type_equal` 경계 30행 · **전 모듈 모호성 자리 29 AST 전단사** |
+| **주소** | 절대주소 역산 경계 17행 · split 토큰 전수 **20행**(**[round18 D-17]** "17행"은 실측 오기 — `_R17_SPLIT_ROWS`는 20행이다) · 왕복 16쌍 · **`server/vwx` 전 모듈 수치경계 레지스트리 66행**(키가 줄번호가 아니라 `(모듈, 축, 표현식)`) |
+| **모호성** | 후보수×판정 표(타입 8 · 모드 8 · `_single_unambiguous` 13행) + **열거 순서 역전 불변** 단정 · `fuzzy_type_equal` 경계 **31행**(**[round18 D-17]** "30행"은 실측 오기 — `_R17_FUZZY_ROWS`는 31행이다) · **전 모듈 모호성 자리 29 AST 전단사** · **[round18 D-01 복원] 공허 일치 차단** — `_norm_type` 결과가 **빈 문자열이면 대조 기준으로 인정하지 않는다**(`typemap._comparable_key` · `VACUOUS_TYPE_KEY_REASON` · `_type_search_keys`). `'---'` 같은 이름이 정규화 후 빈 문자열이 되어 **라이브러리 전 항목과 일치**하고 그대로 `resolved`까지 가던 경로를 닫았다 — **도달성 실증 후** 넣었다: 그 경로로 가면 *도면이 이름조차 준 적 없는 FixtureType이 전달 Lua에 박힌다.* **round17이 실제로 막은 여섯 번째 치명이며, 옮겨 적는 과정에서 이 절이 통째로 누락돼 `.moai/specs` 전체에 흔적이 0건이었다**(`typemap.py` 독스트링만이 유일한 기록이었다 — 코드가 문서보다 정확한 상태였다) |
 | **점유자** | 단수 `observed_*_display` **삭제** → 복수 `observed_occupants`(8키) 신설, 점유자를 보는 **3함수 8자리 전부**에 채움. 포인터 문장 4곳 삭제. 근거: *단수 쌍은 N>=2를 표현할 수 없어 면제 갈래가 영원히 남고, 그 면제가 일곱 라운드 반복한 형제-갈래 위반의 기제였다* |
-| **문장 형태** | 프로덕션 `sentence_shape_violation`·`assemble_sentences` 신설(위반 시 `ValueError`) + **8모듈 24표면 54자리** 전수 레지스트리 |
-| **스코프** | bool 가드 표를 `patchplan.py` 한정 → **전 모듈 6행** · import 봉인 8→**16형태**(키워드 인자·`find_spec`·비상수 인자를 그 자체로 위반 등급) · 제외 사유 전단사 11→**17자리**(2모듈) · **"전체성을 주장하는 스캐너는 자기 스코프를 명시해야 한다"**를 AST로 강제 |
+| **문장 형태** | 프로덕션 `sentence_shape_violation`·`assemble_sentences` 신설(위반 시 `ValueError`) + 전수 레지스트리. **[round18 D-07 수치 정정]** *"8모듈 24표면 54자리"*는 오기다 — **round17 시점 실측은 9모듈 · 24표면 · 56자리**이고 **round18 반영 후 현재값은 9모듈 · 25표면 · 60자리**다(강등 조립기 신설분). **그리고 자리 수와 무관하게 프로덕션이 형태를 판정하는 자리는 계속 1자리다** — 나머지는 **정적 뼈대만** 검사한다. 이전 판의 *"전수 레지스트리"*는 이 사실을 가려 **"전수 강제"로 읽혔다**. **[HARD] 이 세 수는 커밋 직전에 다시 세라** — 아래 「왜 1자리인가」 절에 명령줄이 있다 |
+| **스코프** | bool 가드 표를 `patchplan.py` 한정 → **전 모듈 6행** · import 봉인 8→**16형태**(키워드 인자·`find_spec`·비상수 인자를 그 자체로 위반 등급 — **[round18 R18-F] 그 16형태도 6형태를 더 놓쳤고, 열거를 그만두고 22항목 동결 화이트리스트로 역전했다. §0 2d 참조**) · 제외 사유 전단사 11→**17자리**(2모듈) · **"전체성을 주장하는 스캐너는 자기 스코프를 명시해야 한다"**를 AST로 강제 |
 | **계약** | 2b④ 다섯째 사이트(`typemap.py` 사유 문장 de-보간) · payload **6블록 전수** CD 게이트(`payload["types"]`가 게이트 밖이었다) |
+
+#### [round18 D-07] 왜 프로덕션 판정 자리가 **1자리**인가 — **확대하지 마라**
+
+**재도출 명령줄**(수치를 베끼지 말고 이걸 돌려라):
+
+```bash
+uv run python -c "
+import importlib.util, sys
+s = importlib.util.spec_from_file_location('tv', 'server/tests/test_autopatch_verify.py')
+m = importlib.util.module_from_spec(s); sys.modules['tv'] = m; s.loader.exec_module(m)
+print('표면', len(m._R17_SENTENCE_SURFACES),
+      '모듈', len({r[0] for r in m._R17_SENTENCE_SURFACES}),
+      '자리', len(m._r17_sentence_sites()))"
+# round17 시점 24 / 9 / 56 · round18 반영 후 25 / 9 / 60
+
+grep -rnE 'assemble_sentences(_or_defect)?\(' server/vwx/ server/orchestrator/ --include='*.py' | grep -v 'def '
+# -> server/vwx/patchplan.py:804 **한 줄**(fid_precheck_read_incomplete 거부 사유 조립).
+#    강제판 `assemble_sentences`의 프로덕션 호출은 **0자리**다 — 그 자리는 강등판을 쓴다(R18-D).
+```
+
+**이유는 "게이트가 모자란다"가 아니다.** 문장 형태 판정자(`sentence_shape_violation`)는
+**정상 도면 값에서 거짓 양성을 낸다** — 실증된 세 형태:
+
+```
+"MAC — Aura — XB"   → 한 문장에 ' — '가 2개다        (제조사 표기에 대시가 둘)
+"MAC Aura .. XB"    → 마침표가 겹쳤다: '..'          (도면 표기 그대로)
+"MAC  Aura"         → 공백이 겹쳤다: '  '            (CSV 셀의 이중 공백)
+```
+
+이 값들은 **후보의 타입 이름**으로 들어와 제외 사유·경고 문장에 **그대로 인용**된다.
+실측: 보간 자리를 가진 프로덕션 뼈대에 위 세 값을 넣으면 **최소 5개 표면**이
+`sentence_shape_violation`을 발화한다(테스트로 고정 —
+`test_r18_widening_the_shape_gate_to_every_site_would_block_normal_input`).
+따라서 강제를 55자리로 넓히면 **정상 입력이 차단 판정 자체를 죽인다**(§0 2d의 D-15/R18-D 항목).
+**게이트를 넓히는 것이 곧 실패 표면을 넓히는 것**이다.
+
+**"나머지 55자리는 정적 뼈대만 검사한다"의 정확한 뜻**: 소스 AST에서 뽑은 **리터럴 형태**에만
+불변식을 걸고(보간 자리는 `{}` 중립 토큰으로 치환), **런타임에 실제로 나가는 값은 판정하지
+않는다.** 그래서 뼈대가 만드는 결함(`..` · `. —` · 이중공백 · 한 문장 대시 둘)은 잡지만
+**보간값이 만드는 결함은 못 잡는다** — 그 격차는 알고 남긴 것이지 빠뜨린 것이 아니다.
+
+**진짜 처방은 "조각의 출처로 강제 대상을 가르고 그 분류를 AST로 전수 게이트하는 것"이며,
+round18에 구현했다.** 조립기 인자를 ① 문자열 리터럴 ② 모든 보간이 **등기 생산자 무인자 호출**
+(`.reason()` · `.notes()`)인 f-string ③ 그 호출의 `*` 전개 — **셋으로만** 제한한다.
+등기 생산자 집합은 **2개로 동결**하고 조립기 등기부도 **2개**
+(`assemble_sentences` 강제판 / `assemble_sentences_or_defect` 강등판)다.
+현행 프로덕션 **위반 0건**이고, 외부값(도면에서 온 문자열)을 끼워 넣으면 잡힌다. 즉
+**외부 문자열이 흘러드는 자리에는 형태 불변식을 걸지 않고 내부 생산자만으로 조립되는 자리에만
+건다** — 그 경계를 사람 판단이 아니라 **AST가 전수로** 긋는다.
+
+**[HARD] 다음 담당자에게**: 이 수치를 보고 "강제 자리를 늘리자"로 가지 마라. 그 방향은
+**정상 도면을 거부하는 방향**이다. 늘릴 것은 강제 자리가 아니라 **분류의 전수성**이다.
 
 #### 반영 후 재측정 — 오케스트레이터 직접 실측
 
 격리 사본 · `PYTHONDONTWRITEBYTECODE=1` · BASELINE-OK(실패 0) ·
-**소스텍스트/AST 게이트 416개를 분류해 제외**하고 **행동 대조군만으로** 판정:
-**치명 5건 + R17-A + 형제 2건 = 8/8 KILLED.**
+**소스텍스트/AST 게이트를 분류해 제외**하고 **행동 대조군만으로** 판정:
+**치명 5건 + R17-A + 형제 2건 = 8/8 KILLED**(8행 전수는 round17 보고서 §7에 있다).
+
+> **[round18 D-13 정정] 여기 있던 "416개"는 재현 불가라 지운다.** 그 수를 만든 분류 기준
+> (무엇을 "소스텍스트/AST 게이트"로 세었는가)도, 제외한 노드 목록도, 명령줄도 남아 있지 않다.
+> **분류 기준·명령줄·노드 목록 없는 제외 계수는 증거가 아니다** — 제외 계수는 곧 *"이만큼을
+> 판정에서 뺐다"*는 주장이고, 그 목록이 없으면 무엇을 뺐는지 아무도 검증할 수 없다.
+> **다음 라운드부터 제외 계수를 적을 때는 `--deselect`/`-k` 표현식을 그대로 함께 적는다**
+> (§0 하네스 코드의 `AST_GATES` 상수가 그 자리다).
 
 #### 다음 라운드로 남기는 두 결함 (프로덕션 무수정 · 특성화만)
 
@@ -2858,6 +3193,99 @@ the console accepts"* 로 **의도적 무상한**을 못박았다. 512를 천장
 이번 반영도 **작성자 자기 검증 상태**다 — round18이 필요하다.
 **규모·안전성 주장은 적지 않는다.** round14·15·16이 연속으로 "표면이 작다"를 적었고 셋 다
 다음 라운드에서 FAIL했으며, round17은 그중 최악이었다.
+
+
+### round18 — 여덟 번째 재감사 FAIL · 지적 반영 (완료)
+
+**감사 3축 전원 FAIL/NO-GO** (대상 `d37ff05` = 현 계보 `b276555`, 코드 동일).
+
+| 축 | 규모 | KILL rate (전체 / **행동 대조군만**) | 판정 |
+|---|---|---|---|
+| 적대(뮤테이션) | 152건 | 91.4% / **83.6%** | FAIL |
+| 안전(코드) | 35건 | 88.6% / **88.6%** | NO-GO |
+| 문서 | 21건 지적 | — | FAIL |
+
+**round17 치명 5건 + R17-A는 전부 CLOSED로 독립 확인됐다** — 이번 결함은 새 것이다.
+
+#### 치명 1건 — 두 감사자가 독립 발견, 오케스트레이터가 재현
+
+**R18-A** `patchplan.py` `_parse_fid_range` — `end < start`만 검사했다.
+```
+fid_range={'start':-10,'end':-8} → ok=True · 배정 -10 · 제외 0건 · delivered=true
+→ 전달물: AddFixtures({ … fid = "-10", … })      (start=0 → "0", 10^18 → 그대로)
+→ 같은 payload가 conflict_precheck.performed=true 로 "검사했고 깨끗하다"고 보고
+→ 음수 대역은 existing_fids와 절대 충돌하지 않아 충돌검사도 구조적으로 무력
+```
+round17이 좌표 양축에 세운 `_MINIMUM_ADDRESS_INDEX`의 **형제 축**이고, 그 근거
+(PRESERVE `prechk/patch.py:121-123` *"console numbering starts at one"*)가 FID에도 성립한다.
+**반영**: 2층 게이트(`_parse_fid_range` 거부 + `_assign_fids` 개별값 배제) · 신설 어휘
+`fid_below_minimum` 1건(상위 거부는 기존 `invalid_fid_range` 재사용) · 상한은 **근거가 없어
+짓지 않고 그 판정 자체를 테스트로 고정**했다.
+
+#### 이번 라운드의 서사 — 고친 축만 보고 옆 축을 안 봤다
+
+**R18-E(미신고 여섯 번째 동작 변경)**: round17의 공허 일치 차단이 같은 함수의 다른 축을
+**느슨하게** 만들었다. 이름 없는 후보가 `library_absent`+하드스톱 → `needs_confirmation`+
+`hard_stops=[]`로 강등됐고, `_alias_for` 키가 `(gdtf_fixture, instrument_type)`이라
+**어떤 별칭으로도 해결 불가한 막다른 길**이었다. 사유는 *"사용자 확인으로 넘긴다"*고 말하는데
+**그 경로가 없었다.** 커밋은 이를 *"더 엄격해졌다"*로만 신고했다.
+여덟 라운드 연속 같은 기제이며, 이번엔 그 형제가 **같은 함수 안**에 있었다.
+
+#### 처방 방향을 바꾼 두 건 — "게이트를 더 넣는다"가 오답이었다
+
+- **R18-C 형태 불변식**: 강제 범위가 56자리 중 1자리라는 것은 *게이트가 모자란* 것이 아니다.
+  정상 도면 값(`MAC — Aura — XB` · `MAC Aura .. XB` · `MAC  Aura`)이 판정자를 발화시키므로
+  **확대하면 정상 입력이 차단 화면을 죽인다**(≥5개 표면 실측, 테스트로 고정). 진짜 처방은
+  **출처 기반 AST 분류** — 조립기 인자를 `Constant` / 등기된 내부 생산자 호출의 `JoinedStr` /
+  그 `Starred`로 제한해 외부 입력 유입 자체를 닫았다.
+- **R18-F import 봉인**: round16 8형태 → round17 16형태 → round18 22형태. **열거는 끝나지 않는다.**
+  화이트리스트 역전(22항목 동결 + 상대 import 금지 + bare-call 금지 + 위험 Name 참조 금지)으로
+  바꿨다. 22형태 전부 CAUGHT · 클린 대조군 BYPASS · 프로덕션 위반 0건 · **프로덕션 0줄 수정**.
+  신규 6형태 중 구 게이트가 잡은 1건은 **우연**이었다(`__import__`가 어휘에 있어서).
+
+#### R18-D — fail-closed가 아니라 fail-crash였다
+
+형태 불변식의 유일한 프로덕션 강제 자리가 하필 **차단 화면을 짓는 자리**였고
+(`FID_PRECHECK_READ_INCOMPLETE` 거부 payload), `ToolRegistry.dispatch`·runner·session
+어디에도 가드가 없어 조립이 깨지면 **차단 자체가 사라졌다**. 현재 외부 입력으로는 도달 불가
+(191조합 전수 위반 0건)이나 기제가 그랬다. **반영**: `assemble_sentences_or_defect`로 강등 —
+사유 문장은 잃되 **거부 판정(code·label)과 진단은 남는다**. `except Exception` 뭉개기는 쓰지 않았다.
+
+#### 나머지 반영
+
+`typemap` 공허 입력 12형태 × 6축 전수 · **확인 경로 존재 게이트**(사유가 "확인으로 넘긴다"고
+말하는 모든 갈래에 그 확인을 수행할 인자가 실제로 있는지 단정) · `columns` 우선순위와
+`apply` 이름 가드는 **현행 동작이 이미 옳았고 대조군만 없었다**(대조군 추가) ·
+R18-J는 `diff.py` 무변경으로 **우리 층에서 `designed_type_name_vacuous` 고지 신설** ·
+`_R17_CONTAINMENT_FAMILY` 자기충족 표 봉합 · 1단계 이관 3건 특성화.
+
+#### 계수 규율 — 세 라운드 연속 오보의 실체
+
+round15 "넷" · round16 "두 곳" · round17 "5건"이 전부 틀렸다. **틀린 것은 수치가 아니라
+셈법을 정의하지 않은 것이다.** round17의 "5건"은 실은 **신설 게이트 수**였고 그것을
+*동작 변경*이라 오라벨했다. 같은 커밋을 셋으로 세면: 실행 줄 변경 헝크 **51**(상한) /
+관측된 동작 변경 **≥16**(하한) / 신설 게이트 **5**. 이후 모든 반영은 **셈 단위를 먼저 정의하고
+명령줄을 함께 남긴다** — round16 #1 규율의 빠진 절반이다.
+
+#### 하네스 위양성 기제 — 셋에서 다섯으로
+
+④ **수집오류 미포착**(`-rfE` 없으면 가짜 SURVIVED) ⑤ **고정 포트 테스트**
+(`test_deploy_tauri_seams.py` 29005/28001)가 병렬에서 산발 실패해 **없는 KILL을 만든다**.
+격리 경로도 고정 `/tmp/r17_iso_repo`에서 **에이전트별 경로**로 바꿨다 — 동시 감사자의
+`rmtree`가 남의 사본을 스윕 도중 지웠다.
+
+#### 결과
+
+**6,438 → 6,611 passed / 7 skipped (+173, 회귀 0)** · ruff clean · PRESERVE 0-diff ·
+불변식 유지(AC 27 · REQ 26 · §C.0 26행 · §C.0a 합 27 · AC-026 ①~⑦ · 새 AC 0건).
+신설 어휘 4건(`fid_below_minimum` · `fixture_type_name_unusable` ·
+`designed_type_name_unusable` · `designed_type_name_vacuous`).
+
+#### 미검증 잔여
+
+이번 반영도 **작성자 자기 검증 상태**다. 사용자 결정에 따라 **round18 변경분만 좁게 겨냥한
+축소 감사 1회**를 돌린다(전체 재감사 아님). **규모·안전성 주장은 적지 않는다** —
+round14·15·16·17이 연속으로 그것을 적었고 넷 다 다음 라운드에서 FAIL했다.
 
 
 ### M0 라이브 세션 2차 — 테스트 쇼파일 확인 · 파괴적 측정 착수 전 기록 (2026-08-06)

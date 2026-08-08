@@ -775,6 +775,9 @@ _R17_TOKEN_JOIN_SITES = (
     ("address.py", "f'{universe}.{address}'"),
     ("luagen.py", "f'{_lua_int(entry.universe)}.{_lua_int(entry.address)}'"),
     ("patchplan.py", "f'{FID_FIXTURE_ROOT}/{child_index}'"),
+    # [round18 R18-J] 2단계 고지가 가리키는 도면 좌표 — `address.py`와 **같은 순서 규약**
+    # (유니버스 먼저, 그다음 주소)이다. 뒤집으면 조작자가 다른 픽스처를 찾아간다.
+    ("patchplan.py", "f'{universe}.{address}'"),
     (
         "typemap.py",
         "f'{FIXTURE_TYPE_LIBRARY_ROOT}/{console_type.index}/{DMX_MODES_SEGMENT}"
