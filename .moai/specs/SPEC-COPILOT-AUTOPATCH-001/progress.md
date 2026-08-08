@@ -81,7 +81,7 @@ Save As/Load 콘솔 절차는 전면 미실측이고, P5-D의 강점은 문법 �
 **프론트매터 `next:` 필드 안의 계수**(**[round17]** 이 네 번째 자리를 규칙이 빠뜨려
 `next:`가 두 라운드 stale로 남았다 — 규칙 자체가 결함이었다).
 한 곳만 고치면 같은 결함이 재발한다(round12~14가 그렇게 stale을 남겼다) ·
-커밋 **run-phase 30건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 **34건** — **본 갱신을 담은 커밋을
+커밋 **run-phase 32건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 **36건** — **본 갱신을 담은 커밋을
 포함한 계수**다. 갱신마다 재계산하라. round10 감사 N55).
 **[round18 D-11] 명령줄을 함께 남긴다** — `git rev-list --count 9f7516c..HEAD` ·
 `git rev-list --count ca00bc5..HEAD`. 이전 판은 27/31로 한 커밋(`d1cd4a9`) stale이었다.
