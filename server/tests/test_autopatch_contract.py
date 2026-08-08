@@ -623,3 +623,174 @@ def test_an_anchor_that_cannot_be_registered_must_check_its_own_uniqueness():
     unresolvable = _r17_unresolvable_anchor_sites()
     expected = tuple(sorted({f"{name}:{owner}" for name, _, _, owner in unresolvable}))
     assert _r17_self_checked_anchor_owners() == expected, unresolvable
+
+
+# ==========================================================================
+# --- round18 조립 실패의 **툴 경계** 거동 (SentenceScope) ---
+#
+# [round18 R18-D] 형태 불변식의 유일한 프로덕션 강제 자리는 `patchplan.build_patch_plan`의
+# FID 사전검사 거부 사유를 짓는 자리다 — **차단 화면을 짓는 자리**다. round17 판은 거기서
+# `ValueError`를 던졌고, `ToolRegistry.dispatch`(`tools.py`)·runner·session 어디에도 가드가
+# 없다. 곧 조립이 실패하는 순간 **차단 자체가 사라진다**: fail-closed가 아니라 fail-crash다.
+#
+# 이 절은 그 경계에서 직접 잰다 — 툴을 실제로 디스패치해서 ① 예외가 나오지 않고
+# ② 거부가 그대로 남고 ③ 무엇이 손상됐는지 구조화 칸으로 보이는지를 본다.
+# 계약 파일에 두는 이유는 이것이 **툴 경계의 계약**이기 때문이다.
+# ==========================================================================
+
+_R18_PATCH_TOOL = "apply_vectorworks_patch"
+
+#: round17 S17-04가 실제로 낸 결함 그대로 — 조각이 ` — `를 품어 완성 문장에 대시가 둘이 된다.
+_R18_BROKEN_FRAGMENT = "열거된 슬롯이 선언 총계보다 많다 — 스냅샷이 자기모순이다"
+
+
+class _R18TruncatingRigPort(_RigPort):
+    """`childCount`는 총계인데 자식 목록이 짧게 오는 콘솔 — 이 빌드의 **기본 경로**.
+
+    이 상태에서 FID 사전검사가 불완전이 되고, 강제 자리가 실제로 실행된다.
+    """
+
+    def query_state(self, path: str) -> dict:
+        payload = super().query_state(path)
+        if path == FIXTURE_ROOT:
+            payload["node"]["childCount"] = 5
+            payload["truncated"] = True
+        return payload
+
+
+_R18_LED = "Robin LEDBeam 350"
+
+#: 후보 1건짜리 1단계 payload — 강제 자리에 도달하려면 실제 후보가 있어야 한다.
+_R18_REPORT = {
+    "designed_rig": {
+        "fixture_count": 1,
+        "fixtures": [
+            {
+                "unit_number": "1",
+                "instrument_type": _R18_LED,
+                "gdtf_fixture": None,
+                "mode": "Mode 1",
+                "footprint": 16,
+                "system": None,
+                "universe": 1,
+                "address": 1,
+                "classification": "patched",
+                "address_basis": "universe_address_direct",
+            }
+        ],
+    },
+    "diffs": {
+        "performed": True,
+        "missing_in_console": [
+            {
+                "unit_number": "1",
+                "instrument_type": _R18_LED,
+                "universe": 1,
+                "address": 1,
+                "detail": "",
+            }
+        ],
+        "address_collision": [],
+        "quantity_mismatch": [],
+    },
+    "skipped_checks": [],
+}
+
+
+def _r18_dispatch_patch_tool():
+    """절단된 콘솔에서 패치 툴을 실제로 디스패치한다 — 두 단계(식별자 확보 → 선택).
+
+    절단이면 FID 사전검사가 불완전이 되고, 형태 불변식의 **유일한 프로덕션 강제 자리**가
+    그 거부 사유를 짓는다. 곧 이 호출이 그 자리를 툴 경계에서 실제로 통과한다.
+    """
+    rig = _R18TruncatingRigPort()
+    registry = build_toolset(
+        execution_port=_NeverCalledExecutionPort(), state_port=rig, property_port=rig
+    )
+
+    def dispatch(**arguments):
+        return registry.dispatch(ToolCall(id="r18", name=_R18_PATCH_TOOL, arguments=arguments))
+
+    first = json.loads(dispatch(report=_R18_REPORT).result.content)
+    candidate = first["plan"]["candidates"][0]["id"]
+    return dispatch(
+        report=_R18_REPORT,
+        selected=[candidate],
+        fid_range={"start": 501, "end": 599},
+        names={candidate: "LEDBeam 501"},
+        type_aliases={_R18_LED: {"type": _R18_LED, "mode": "Mode 1"}},
+        dry_run=True,
+    )
+
+
+def test_r18_the_blocking_verdict_reaches_the_tool_boundary_intact():
+    """[round18 R18-D 대조군] 정상 갈래 — 툴 경계에서 사유가 **문장**으로 나간다.
+
+    강등이 늘 켜져 있으면 아래 테스트의 관측이 아무것도 말하지 않는다.
+    """
+    from server.vwx.patchplan import REASON_UNAVAILABLE, sentence_shape_violation
+
+    execution = _r18_dispatch_patch_tool()
+    assert execution.result.is_error is False, execution.result.content
+    rejection = json.loads(execution.result.content)["plan"]["rejection"]
+    assert rejection["code"] == "fid_precheck_read_incomplete"
+    assert rejection["reason"] != REASON_UNAVAILABLE
+    assert sentence_shape_violation(rejection["reason"]) is None, rejection["reason"]
+    assert "reason_defect" not in rejection
+
+
+def test_r18_a_broken_sentence_does_not_take_the_blocking_screen_down_with_it(monkeypatch):
+    """[round18 R18-D] 조립이 깨져도 **툴 경계를 예외가 탈출하지 않고 차단이 남는다**.
+
+    `ToolRegistry.dispatch`는 핸들러를 감싸지 않는다(`tools.py`) — 여기서 던지면 그대로
+    올라가고, 되돌릴 수 없는 쓰기를 막던 화면이 통째로 사라진다. 그래서 조립 실패는
+    **payload 필드로 강등**한다: 사유 자리에는 등재 코드, 위반 내용은 구조화 칸.
+
+    [round18 #R18-D] `build_patch_plan`의 조립부를 `assemble_sentences`로 되돌리면
+      디스패치가 `ValueError`로 터진다 — 이 테스트가 그 순간 실패한다.
+    [round18 #R18-D] `PatchPlanRejection.reason_defect` 방출을 빼면 ③이 실패한다.
+    """
+    from server.vwx.patchplan import REASON_UNAVAILABLE, ExistingFidRead
+
+    monkeypatch.setattr(ExistingFidRead, "reason", lambda self: _R18_BROKEN_FRAGMENT)
+
+    execution = _r18_dispatch_patch_tool()  # ① 예외가 여기서 나오지 않는다
+
+    assert execution.result.is_error is False, execution.result.content
+    payload = json.loads(execution.result.content)
+    plan = payload["plan"]
+    # ② 거부 판정이 그대로다 — 차단은 남는다.
+    assert plan["ok"] is False
+    assert plan["status"] == "rejected"
+    assert plan["rejection"]["code"] == "fid_precheck_read_incomplete"
+    assert plan["rejection"]["label"]
+    assert "handoff" not in payload, "차단된 호출이 전달물을 내보냈다"
+    # ③ 조작자가 무엇이 손상됐는지 구조화 칸으로 본다.
+    assert plan["rejection"]["reason"] == REASON_UNAVAILABLE
+    defect = plan["rejection"]["reason_defect"]
+    assert defect["code"] == "sentence_shape_violation"
+    assert "' — '" in defect["violation"], defect
+    assert _R18_BROKEN_FRAGMENT in defect["assembled"]
+    assert any(_R18_BROKEN_FRAGMENT in fragment for fragment in defect["fragments"]), defect
+
+
+def test_r18_the_dispatch_boundary_has_no_blanket_exception_guard():
+    """[round18 R18-D] `ToolRegistry.dispatch`가 예외를 **뭉개지 않는다**는 사실을 고정한다.
+
+    강등이 필요한 이유가 바로 이것이다. 반대 처방(`except Exception`으로 감싸기)은
+    금지다 — 그러면 모든 핸들러의 진짜 결함이 조용한 오류 문자열로 바뀌고, 이 SPEC이
+    여덟 라운드 반복한 "조용히 나가서 다음 감사에서야 발견된다"가 다시 열린다.
+    실패는 **호출부에서 값으로** 다루고, 경계는 투명하게 둔다.
+
+    [round18 #R18-D] `dispatch`에 `try/except Exception`을 두르면 실패한다.
+    """
+    source = (PROJECT_ROOT / "server" / "orchestrator" / "tools.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    dispatches = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "dispatch"
+    ]
+    assert len(dispatches) == 1, dispatches
+    handlers = [node for node in ast.walk(dispatches[0]) if isinstance(node, ast.ExceptHandler)]
+    assert handlers == [], "dispatch가 예외를 삼킨다 — 강등은 호출부에서 값으로 해야 한다"

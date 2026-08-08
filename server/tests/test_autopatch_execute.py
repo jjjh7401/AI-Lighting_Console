@@ -1744,3 +1744,607 @@ def test_the_console_import_plant_table_covers_every_bypass_mechanism_and_every_
 def test_the_console_import_plant_mechanism_tagger_sees_nothing_in_clean_production():
     """대조의 대조 — 심지 않은 프로덕션 소스에는 어떤 기제 태그도 붙지 않는다."""
     assert _round16_plant_mechanisms(APPLY_SOURCE) == frozenset()
+
+
+# --- round18 import 봉인 화이트리스트 역전 (SealWhitelist) ---
+#
+# **열거 전략은 졌다.** round14가 3형태, round15가 8형태, round17이 16형태를 막았고
+# round18 적대 감사가 **17~22번째 6형태**를 또 실증했다:
+#
+#   17. `from importlib import import_module as _imp` 뒤 `_imp("server.bridge")`
+#   18. `importlib.util.spec_from_file_location(...)` — 파일 경로로 직접 로드
+#   19. `builtins.__import__("server.safety")`
+#   20. `exec("import server.bridge")`
+#   21. `runpy.run_module("server.bridge")`
+#   22. `SourceFileLoader("gate", "server/safety/gate.py").load_module()`
+#
+# 실측(아래 `test_the_enumerating_gate_blind_spots_are_exactly_the_registered_set`):
+# `_console_ward_offenders`(열거 게이트)는 이 여섯 중 **다섯을 그대로 통과시킨다**.
+# 23번째 형태는 다음 라운드에 나온다 — 파이썬이 모듈을 실어 오는 방법은 유한하지 않다.
+#
+# **그래서 방향을 뒤집는다.** "무엇이 금지인가"를 세는 대신 "무엇이 허용인가"를 동결한다.
+# `server/vwx/**`의 실측 import는 **완전 모듈명 22개 / 최상위 루트 12개**이고 상대 import는
+# 0건이며 동적 import·`exec`·`runpy`·`SourceFileLoader`는 프로덕션에서 **한 번도 쓰이지 않는다**.
+# 그 사실 위에 네 규칙을 세운다:
+#
+#   ① 아래 **동결 화이트리스트 22항목** 밖의 import는 전부 위반
+#   ② 상대 import 금지(`node.level > 0`) — 접두사 대조를 원리적으로 우회하는 형태다
+#   ③ bare 호출 금지: `exec` · `eval` · `__import__` · `compile`
+#      (`re.compile`은 `Attribute` 호출이라 걸리지 않는다 — 프로덕션 6곳 확인)
+#   ④ 모듈 기계장치 이름 참조 금지: `__builtins__` · `__import__` · `__loader__` · `__spec__`
+#      (import 없이 로더에 닿는 유일한 통로다)
+#
+# **트레이드오프(의도된 것)**: `server/vwx/`에 새 의존을 더하려면 아래 등기부에 **손으로 한 줄**
+# 더해야 하고, 더하기 전까지 `test_no_vwx_module_imports_outside_the_frozen_registry`가 실패한다.
+# 등기부를 프로덕션에서 파생하면 편하지만 그것은 **자기충족**이다 — 새 import가 조용히 통과한다.
+# 등기부는 손으로 동결하고, 벗어나면 **반드시 실패해야** 한다. 그게 이 게이트의 전부다.
+#
+# 구 열거 게이트(`_console_ward_offenders`)는 **지우지 않는다** — 봉인 대상 세 모듈에 대한
+# 명시적 진술로 남기고, 아래 대조가 22형태 전부를 **두 게이트에 함께** 통과시킨다.
+
+#: `server/vwx/**` 전 모듈이 import해도 되는 **완전 모듈명 전수**. 손으로 동결했다.
+#: 파생 금지 — 프로덕션에서 계산하면 새 import가 스스로를 승인한다.
+_REGISTERED_VWX_IMPORTS = frozenset(
+    {
+        # 표준 라이브러리 — 순수 계산·직렬화·해시. 어느 것도 모듈을 동적으로 싣지 않는다.
+        "__future__",
+        "collections.abc",
+        "csv",
+        "dataclasses",
+        "hashlib",
+        "io",
+        "json",
+        "re",
+        "types",
+        "typing",
+        # 서드파티 — xlsx 판독 한 곳.
+        "openpyxl",
+        # 1단계 계층 — 읽기 전용 데이터 계약. 콘솔 발화 표면이 아니다.
+        "server.prechk.inventory",
+        "server.prechk.patch",
+        # 자기 패키지 내부 — 절대 경로로만 쓴다(상대 import는 규칙 ②가 금지한다).
+        "server.vwx.address",
+        "server.vwx.columns",
+        "server.vwx.diff",
+        "server.vwx.luagen",
+        "server.vwx.patchplan",
+        "server.vwx.reader",
+        "server.vwx.rig",
+        "server.vwx.typemap",
+        "server.vwx.verdicts",
+    }
+)
+
+#: 규칙 ③ — bare 호출로 임의 코드/모듈을 실어 오는 내장 넷.
+_R18_SEAL_FORBIDDEN_BARE_CALLEES = frozenset({"exec", "eval", "__import__", "compile"})
+
+#: 규칙 ④ — import 문 없이 로더·내장 네임스페이스에 닿는 이름 넷.
+_R18_SEAL_FORBIDDEN_NAMES = frozenset({"__builtins__", "__import__", "__loader__", "__spec__"})
+
+
+def _import_seal_violations(
+    source: str, *, registry: frozenset[str] = _REGISTERED_VWX_IMPORTS
+) -> list[str]:
+    """화이트리스트 역전 봉인 — 네 규칙 위반을 **정렬·중복제거해** 돌려준다.
+
+    `registry`를 인자로 뺀 것은 등기부 자체에 대조군을 붙이기 위해서다
+    (`test_shrinking_the_frozen_registry_makes_production_fail`).
+    """
+    tree = ast.parse(source)
+    violations: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name not in registry:
+                    violations.add(f"unregistered-import:{alias.name}")
+        elif isinstance(node, ast.ImportFrom):
+            if node.level > 0:
+                # 상대 import는 절대명이 소스에 없다 — 접두사 대조가 원리적으로 성립하지 않는다.
+                violations.add(f"relative-import:{'.' * node.level}{node.module or ''}")
+            elif (node.module or "") not in registry:
+                violations.add(f"unregistered-import:{node.module or ''}")
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id in _R18_SEAL_FORBIDDEN_BARE_CALLEES
+        ):
+            violations.add(f"forbidden-call:{node.func.id}")
+        if isinstance(node, ast.Name) and node.id in _R18_SEAL_FORBIDDEN_NAMES:
+            violations.add(f"forbidden-name:{node.id}")
+    return sorted(violations)
+
+
+def _r18_unregistered_names(violations: list[str]) -> list[str]:
+    """실패 메시지가 **등기할 정확한 항목**을 찍도록 위반 목록에서 모듈명만 뽑는다."""
+    prefix = "unregistered-import:"
+    return [name.removeprefix(prefix) for name in violations if name.startswith(prefix)]
+
+
+@pytest.mark.parametrize("module", VWX_MODULES, ids=lambda path: str(path))
+def test_no_vwx_module_imports_outside_the_frozen_registry(module: Path):
+    """R18-F — 화이트리스트 역전 봉인: 등기부 밖 import·상대 import·로더 접근 0건.
+
+    죽이는 뮤테이션:
+      · `server/vwx/*.py`에 **어떤** 새 import를 심어도(봉인 모듈이든 아니든) 실패한다 —
+        열거 게이트가 어휘 밖이라 놓치던 `runpy`·`importlib.machinery`·`builtins`가 여기서 걸린다.
+      · `from ..bridge import osc` 같은 상대 import를 심으면 규칙 ②가 잡는다.
+      · `exec("import server.bridge")`를 심으면 규칙 ③이 잡는다.
+      · `__builtins__["__import__"]("server.safety")`를 심으면 규칙 ④가 잡는다.
+      · `_REGISTERED_VWX_IMPORTS`에서 항목을 지우면 그 항목을 쓰는 모듈이 실패한다.
+    """
+    assert VWX_MODULES, "스캔 대상이 0개면 이 확인은 공허하다"
+    violations = _import_seal_violations(module.read_text(encoding="utf-8"))
+    assert violations == [], (
+        f"{module}: 봉인 화이트리스트 밖이다. 정당한 의존이면 `_REGISTERED_VWX_IMPORTS`에 "
+        f"다음 항목을 **손으로** 등기하라 → {_r18_unregistered_names(violations)} "
+        f"(전체 위반: {violations}). 등기 편집 한 줄이 이 게이트의 비용이고, 그게 의도다."
+    )
+
+
+def _r18_production_import_names() -> set[str]:
+    """`server/vwx/**`가 실제로 쓰는 완전 모듈명 전수 — **등기부와 대조하기 위해서만** 쓴다."""
+    observed: set[str] = set()
+    for module in VWX_MODULES:
+        tree = ast.parse(module.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                observed.update(alias.name for alias in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.level == 0:
+                observed.add(node.module or "")
+    return observed
+
+
+def test_the_frozen_import_registry_is_exactly_what_production_imports():
+    """등기부 전단사 — **더해도 지워도** 실패한다.
+
+    죽이는 뮤테이션:
+      · `_REGISTERED_VWX_IMPORTS`에서 한 항목을 지우면 `missing`이 비지 않아 실패한다.
+      · 쓰지도 않는 항목을 **미리** 등기해 두면(예: `"importlib"`) `stale`이 비지 않아 실패한다 —
+        선제 등기는 봉인을 미리 열어 두는 것이고, 그것이 화이트리스트를 무력화하는 유일한 길이다.
+      · 프로덕션에 새 import가 생기면 등기 전까지 실패한다(위 전수 테스트와 같은 방향).
+    """
+    observed = _r18_production_import_names()
+    missing = sorted(observed - _REGISTERED_VWX_IMPORTS)
+    stale = sorted(_REGISTERED_VWX_IMPORTS - observed)
+    assert missing == [], f"등기되지 않은 프로덕션 import: {missing}"
+    assert stale == [], (
+        f"등기부에만 있고 프로덕션이 쓰지 않는 항목: {stale}. "
+        "쓰지 않는 등기는 **미리 열어 둔 문**이다 — 지워라."
+    )
+    # 실측 고정 — 규모가 조용히 부풀지 않는다(round18 실측: 완전 모듈명 22 / 최상위 루트 12).
+    assert len(_REGISTERED_VWX_IMPORTS) == 22
+    assert len({name.split(".", 1)[0] for name in _REGISTERED_VWX_IMPORTS}) == 12
+
+
+def test_production_has_no_relative_import_and_no_loader_machinery():
+    """규칙 ②③④의 **전제**를 실측으로 고정한다 — 전제가 무너지면 규칙이 거짓 양성이 된다.
+
+    죽이는 뮤테이션: 프로덕션에 상대 import나 bare `exec`/`eval`/`compile`/`__import__`,
+    또는 `__builtins__`·`__loader__`·`__spec__` 참조를 심으면 실패한다.
+    """
+    kinds: set[str] = set()
+    for module in VWX_MODULES:
+        for violation in _import_seal_violations(module.read_text(encoding="utf-8")):
+            kinds.add(violation.split(":", 1)[0])
+    assert kinds == set()
+
+
+#: round18 적대 감사가 실증한 **17~22번째** 우회 형태. `caught_by_the_enumerating_gate`는
+#: 구 게이트(`_console_ward_offenders`)가 그 형태를 잡는지의 **실측 특성화**다.
+#: 구 게이트를 늘려 이 값이 바뀌면 이 표를 갱신해야 한다 — 그 갱신 부담이 열거 전략의 비용이고,
+#: 화이트리스트 역전이 그 부담을 지지 않는다는 증거다.
+_ROUND18_SEAL_BYPASS_PLANTS = (
+    (
+        "aliased_import_module",
+        'from importlib import import_module as _imp\n\n_gate = _imp("server.bridge")',
+        ("unregistered-import:importlib",),
+        False,
+    ),
+    (
+        "spec_from_file_location",
+        "from importlib.util import spec_from_file_location\n\n"
+        '_spec = spec_from_file_location("gate", "server/safety/gate.py")',
+        ("unregistered-import:importlib.util",),
+        False,
+    ),
+    (
+        "builtins_module_dunder_import",
+        'import builtins\n\n_gate = builtins.__import__("server.safety")',
+        ("unregistered-import:builtins",),
+        True,
+    ),
+    (
+        "exec_of_an_import_statement",
+        '_ns: dict = {}\nexec("import server.bridge", _ns)',
+        ("forbidden-call:exec",),
+        False,
+    ),
+    (
+        "runpy_run_module",
+        'import runpy\n\n_ns = runpy.run_module("server.bridge")',
+        ("unregistered-import:runpy",),
+        False,
+    ),
+    (
+        "source_file_loader",
+        "from importlib.machinery import SourceFileLoader\n\n"
+        '_m = SourceFileLoader("gate", "server/safety/gate.py").load_module()',
+        ("unregistered-import:importlib.machinery",),
+        False,
+    ),
+)
+
+#: 규칙 ②③④ 중 위 22형태가 **덮지 못하는 갈래**를 채우는 심기. 규칙에 대조군이 없으면
+#: 그 규칙을 지워도 조용하다 — round16이 형태판정 표에서 당한 것과 같은 결함 클래스다.
+_ROUND18_SEAL_RULE_PLANTS = (
+    (
+        # 규칙 ②의 **독립 살상력**. 규칙 ②를 되돌리면 이 행은 조용해지지 않고
+        # `unregistered-import:patchplan`으로 **라벨이 바뀌어** 실패한다 — 규칙 ①이
+        # 우연히 덮는 것과 규칙 ②가 의도적으로 막는 것을 구분한다.
+        "relative_sibling_module",
+        "from .patchplan import PatchCandidate  # noqa: F401",
+        ("relative-import:.patchplan",),
+    ),
+    (
+        "relative_parent_package",
+        "from ..safety.gate import SafetyGate  # noqa: F401",
+        ("relative-import:..safety.gate",),
+    ),
+    (
+        "builtins_namespace_subscript",
+        '_gate = __builtins__["__import__"]("server.safety")',
+        ("forbidden-name:__builtins__",),
+    ),
+    (
+        "module_loader_attribute",
+        '_m = __loader__.load_module("server.bridge")',
+        ("forbidden-name:__loader__",),
+    ),
+    (
+        "module_spec_loader",
+        '_m = __spec__.loader.load_module("server.safety")',
+        ("forbidden-name:__spec__",),
+    ),
+    (
+        "eval_of_a_dunder_import",
+        "_gate = eval(\"__import__('server.bridge')\")",
+        ("forbidden-call:eval",),
+    ),
+    (
+        "compile_of_an_import_statement",
+        '_code = compile("import server.safety", "<seal>", "exec")',
+        ("forbidden-call:compile",),
+    ),
+)
+
+#: 두 표의 **축소 트립와이어**. 우회 형태를 한 줄 지우면 어긋난다.
+_ROUND18_SEAL_BYPASS_PLANT_IDS = frozenset(
+    {
+        "aliased_import_module",
+        "spec_from_file_location",
+        "builtins_module_dunder_import",
+        "exec_of_an_import_statement",
+        "runpy_run_module",
+        "source_file_loader",
+    }
+)
+
+_ROUND18_SEAL_RULE_PLANT_IDS = frozenset(
+    {
+        "relative_sibling_module",
+        "relative_parent_package",
+        "builtins_namespace_subscript",
+        "module_loader_attribute",
+        "module_spec_loader",
+        "eval_of_a_dunder_import",
+        "compile_of_an_import_statement",
+    }
+)
+
+
+@pytest.mark.parametrize(
+    "plant,expected",
+    [(plant, expected) for _, plant, expected, _ in _ROUND18_SEAL_BYPASS_PLANTS],
+    ids=[name for name, _, _, _ in _ROUND18_SEAL_BYPASS_PLANTS],
+)
+def test_the_whitelist_seal_catches_the_six_forms_the_enumerating_gate_missed(plant, expected):
+    """R18-F 비공허성 — 17~22번째 우회 형태를 화이트리스트 게이트가 **실제로** 잡는다.
+
+    죽이는 뮤테이션: 규칙 ①(등기부 대조)이나 규칙 ③(bare 호출)을 되돌리면 해당 행이
+    빈 목록을 받아 실패한다.
+    """
+    assert _import_seal_violations(APPLY_SOURCE + "\n\n" + plant + "\n") == sorted(expected)
+
+
+@pytest.mark.parametrize(
+    "plant,expected",
+    [(plant, expected) for _, plant, expected in _ROUND18_SEAL_RULE_PLANTS],
+    ids=[name for name, _, _ in _ROUND18_SEAL_RULE_PLANTS],
+)
+def test_the_whitelist_seal_catches_loader_machinery_and_bare_builtin_calls(plant, expected):
+    """규칙 ③④ 비공허성 — import 문 **없이** 로더에 닿는 다섯 형태를 잡는다.
+
+    죽이는 뮤테이션: `_R18_SEAL_FORBIDDEN_NAMES`나 `_R18_SEAL_FORBIDDEN_BARE_CALLEES`에서
+    항목을 지우면 그 항목을 심는 행이 빈 목록을 받아 실패한다.
+    """
+    assert _import_seal_violations(APPLY_SOURCE + "\n\n" + plant + "\n") == sorted(expected)
+
+
+@pytest.mark.parametrize(
+    "plant",
+    [plant for _, plant, _ in _CONSOLE_IMPORT_PLANTS],
+    ids=[f"legacy:{name}" for name, _, _ in _CONSOLE_IMPORT_PLANTS],
+)
+def test_the_whitelist_seal_also_catches_every_legacy_enumerated_bypass(plant):
+    """22형태 대조 — 구 표 16행이 **새 게이트에도** 전부 걸린다.
+
+    두 게이트를 병존시키는 근거다. 새 게이트가 구 게이트의 도달 범위를 **덮지 못하면**
+    구 표를 지울 수 없고, 여기서 그 포함관계를 실측한다.
+
+    죽이는 뮤테이션: 규칙 ①②③ 중 하나를 되돌리면 그 규칙이 유일하게 잡던 행이 실패한다
+    (①: 절대 import 6행 · ②: 상대 import 2행 · ③: `__import__` bare 호출 2행).
+    """
+    assert _import_seal_violations(APPLY_SOURCE + "\n\n" + plant + "\n") != []
+
+
+def test_the_enumerating_gate_blind_spots_are_exactly_the_registered_set():
+    """**왜 역전했는가**를 실측으로 남긴다 — 구 게이트가 놓치는 형태의 전수.
+
+    round18 실측: 17~22번째 6형태 중 **다섯**을 구 게이트가 그대로 통과시킨다
+    (`builtins.__import__`만 `__import__`가 어휘에 있어 우연히 걸린다).
+    구 게이트를 늘려 이 집합이 바뀌면 이 단정이 실패한다 — **그 갱신 부담 자체가
+    열거 전략의 비용**이고, 아래 화이트리스트 단정에는 그 부담이 없다.
+
+    죽이는 뮤테이션: 새 게이트가 이 다섯 중 하나라도 놓치면 두 번째 단정이 실패한다.
+    """
+    missed = {
+        name
+        for name, plant, _expected, _caught in _ROUND18_SEAL_BYPASS_PLANTS
+        if not _console_ward_offenders(APPLY_SOURCE + "\n\n" + plant + "\n")
+    }
+    declared = {name for name, _, _, caught in _ROUND18_SEAL_BYPASS_PLANTS if not caught}
+    assert missed == declared, sorted(missed ^ declared)
+    assert len(missed) == 5
+    # …그리고 화이트리스트 게이트는 그 다섯을 **전부** 잡는다.
+    for name, plant, _expected, _caught in _ROUND18_SEAL_BYPASS_PLANTS:
+        assert _import_seal_violations(APPLY_SOURCE + "\n\n" + plant + "\n") != [], name
+
+
+def test_the_whitelist_seal_reports_nothing_without_a_plant():
+    """클린 대조군 — 심지 않은 **프로덕션 12모듈 전수**에서 같은 게이트가 0건이다.
+
+    이것이 없으면 위 행들이 "원래부터 걸려 있던 것"을 보고 통과할 수 있다.
+    """
+    assert VWX_MODULES, "스캔 대상이 0개면 이 확인은 공허하다"
+    clean = {
+        str(module): _import_seal_violations(module.read_text(encoding="utf-8"))
+        for module in VWX_MODULES
+    }
+    assert {path: found for path, found in clean.items() if found} == {}
+
+
+def test_shrinking_the_frozen_registry_makes_production_fail():
+    """등기부 자체의 비공허성 — 항목을 하나 빼면 프로덕션이 **실제로** 걸린다.
+
+    등기부를 프로덕션에서 파생했다면 이 단정은 원리적으로 성립하지 않는다
+    (파생 등기부는 무엇을 빼도 자기를 다시 채운다). 손으로 동결했기에 성립한다.
+
+    죽이는 뮤테이션: `_import_seal_violations`가 `registry`를 무시하고 전역을 보게 하면 실패한다.
+    """
+    for dropped in ("server.vwx.verdicts", "dataclasses", "__future__"):
+        shrunk = _REGISTERED_VWX_IMPORTS - {dropped}
+        offenders = {
+            str(module)
+            for module in VWX_MODULES
+            if f"unregistered-import:{dropped}"
+            in _import_seal_violations(module.read_text(encoding="utf-8"), registry=shrunk)
+        }
+        assert offenders, dropped
+
+
+def test_the_round18_seal_plant_tables_are_a_bijection_onto_all_four_rules():
+    """새 두 표의 **행삭제 프로브** + 네 규칙 전수 — 행을 지우거나 규칙을 놓치면 실패한다.
+
+    죽이는 뮤테이션:
+      · 두 표 중 어느 행을 지워도 id 집합 단정이 실패한다.
+      · `_R18_SEAL_FORBIDDEN_BARE_CALLEES`나 `_R18_SEAL_FORBIDDEN_NAMES`에 항목을 **더하면**
+        그 항목을 심는 행이 없어 실패한다(무대조군 어휘 금지).
+      · 규칙 넷 중 하나를 스캐너에서 되돌리면 그 규칙만 덮던 행이 사라져 실패한다.
+    """
+    bypass_ids = [name for name, _, _, _ in _ROUND18_SEAL_BYPASS_PLANTS]
+    rule_ids = [name for name, _, _ in _ROUND18_SEAL_RULE_PLANTS]
+    assert len(bypass_ids) == len(set(bypass_ids)) == len(_ROUND18_SEAL_BYPASS_PLANT_IDS)
+    assert set(bypass_ids) == _ROUND18_SEAL_BYPASS_PLANT_IDS
+    assert len(rule_ids) == len(set(rule_ids)) == len(_ROUND18_SEAL_RULE_PLANT_IDS)
+    assert set(rule_ids) == _ROUND18_SEAL_RULE_PLANT_IDS
+    assert set(bypass_ids) & set(rule_ids) == set()
+
+    # 한 행은 **정확히 한 가지 위반**을 실증한다 — 섞으면 무엇이 잡혔는지 모른다.
+    observed: set[str] = set()
+    rows = [(n, p, e) for n, p, e, _ in _ROUND18_SEAL_BYPASS_PLANTS]
+    rows += list(_ROUND18_SEAL_RULE_PLANTS)
+    for name, _plant, expected in rows:
+        assert len(expected) == 1, name
+        observed.add(expected[0])
+    assert len(observed) == len(rows), "같은 위반을 두 행이 덮으면 한 행은 지워도 되는 행이다"
+
+    # 네 규칙이 전부 덮인다 — 구 표 16행이 ①②③을, 새 표가 ①③④를 덮는다.
+    legacy_kinds = {
+        violation.split(":", 1)[0]
+        for _name, plant, _expected in _CONSOLE_IMPORT_PLANTS
+        for violation in _import_seal_violations(APPLY_SOURCE + "\n\n" + plant + "\n")
+    }
+    kinds = {name.split(":", 1)[0] for name in observed} | legacy_kinds
+    assert kinds == {"unregistered-import", "relative-import", "forbidden-call", "forbidden-name"}
+
+    # 어휘 전수 — 금지 호출자 넷·금지 이름 넷이 **각각** 심는 행을 갖는다.
+    # `__import__`는 새 표가 아니라 구 표 2행(`__import__("server.safety")` 계열)이 덮는다.
+    dunder = _import_seal_violations(APPLY_SOURCE + '\n\n_g = __import__("server.safety")\n')
+    assert dunder == ["forbidden-call:__import__", "forbidden-name:__import__"]
+    planted = observed | set(dunder)
+    assert {
+        name.removeprefix("forbidden-call:")
+        for name in planted
+        if name.startswith("forbidden-call:")
+    } == set(_R18_SEAL_FORBIDDEN_BARE_CALLEES)
+    assert {
+        name.removeprefix("forbidden-name:")
+        for name in planted
+        if name.startswith("forbidden-name:")
+    } == set(_R18_SEAL_FORBIDDEN_NAMES)
+
+
+# --- round18 이름 가드 경계 전수 (VacuityAndData) ---
+#
+# [round18 R18-H] `apply.py:241`의 `if not isinstance(name, str) or not name.strip():`는
+# 두 절이다. `.strip()`을 떼는 뮤테이션(`or not name`)이 SURVIVED였고, 그 뮤턴트는
+# **공백만 이름을 전달물에 그대로 싣는다**(round18 실측:
+# `AddFixtures({ … name = "   ", … })`). 사용자 결정 P6이 이름 없는 항목에 `ZZAP<n>`을
+# 쓰기로 정했으므로 공백 이름은 더욱 불허다 — 지어내지 않고 **제외**한다.
+#
+# 아래 표는 값의 축을 **값에서 계산**한다(자유 라벨 금지) — 한 행을 지우면 축이 사라진다.
+
+_R18_NAME_AXES = (
+    "not_a_string_none",
+    "not_a_string_int",
+    "not_a_string_list",
+    "empty",
+    "blank_ascii_spaces",
+    "blank_ascii_control",
+    "blank_unicode",
+    "substantive_digit",
+    "substantive_letter",
+    "substantive_padded",
+)
+
+
+def _r18_name_axis(value: object) -> str:
+    """이름 값의 축을 값에서 계산한다 — 표가 자기충족이 되지 않게 한다."""
+    if value is None:
+        return "not_a_string_none"
+    if not isinstance(value, str):
+        return f"not_a_string_{type(value).__name__}"
+    if value == "":
+        return "empty"
+    if value.strip() == "":
+        if not value.isascii():
+            return "blank_unicode"
+        return "blank_ascii_spaces" if value.isprintable() else "blank_ascii_control"
+    if value != value.strip():
+        return "substantive_padded"
+    return "substantive_digit" if value.isdecimal() else "substantive_letter"
+
+
+#: 이름 경계 전수. `delivered`는 그 이름으로 항목이 전달물에 실리는가다.
+_R18_NAME_ROWS = (
+    (None, False),
+    (123, False),
+    (["LEDBeam"], False),
+    ("", False),
+    ("   ", False),
+    ("\t\n\r", False),
+    ("\u00a0\u2003", False),
+    ("0", True),
+    ("LEDBeam 101", True),
+    ("  LEDBeam 101  ", True),
+)
+
+
+def _r18_assert_name_table_shape(rows: tuple[tuple[object, bool], ...]) -> None:
+    """행 삭제 프로브 — 축 하나에 행 하나다."""
+    axes = tuple(_r18_name_axis(value) for value, _delivered in rows)
+    assert len(axes) == len(set(axes)), axes
+    assert set(axes) == set(_R18_NAME_AXES), sorted(axes)
+    assert len(rows) == len(_R18_NAME_AXES)
+    # 양쪽 판정이 다 있어야 게이트가 의미를 갖는다.
+    assert {delivered for _value, delivered in rows} == {False, True}
+
+
+class TestRound18FixtureNameGuardBoundary:
+    """[round18 R18-H] 이름 가드의 두 절 전수 — 공백만 이름은 전달물에 닿지 않는다."""
+
+    def test_the_name_table_shape_detects_row_deletion(self):
+        _r18_assert_name_table_shape(_R18_NAME_ROWS)
+        for index in range(len(_R18_NAME_ROWS)):
+            pruned = tuple(row for position, row in enumerate(_R18_NAME_ROWS) if position != index)
+            with pytest.raises(AssertionError):
+                _r18_assert_name_table_shape(pruned)
+
+    def test_every_blank_name_is_excluded_and_every_substantive_name_is_delivered(self):
+        """[round18 R18-H] `apply.py`의 이름 가드에서 다음 중 하나를 바꾸면 실패한다:
+
+        · `not name.strip()` -> `not name` — 공백만·제어문자만·유니코드 공백만 이름 네 행이
+          전달로 뒤집히고 `name = "   "`가 산출물에 실린다(실증).
+        · `not isinstance(name, str)` 절 제거 — `None`·`123`·`list` 세 행이
+          `AttributeError`로 죽거나 통과한다.
+        · 가드 전체 제거 — 위 일곱 행 전부가 전달로 뒤집힌다.
+        · 가드를 `not name.strip()`만 남기고 `isinstance`를 버려도 `123`에서 죽는다.
+        """
+        for value, delivered in _R18_NAME_ROWS:
+            handoff = _handoff(names={"a": value})
+            context = (_r18_name_axis(value), repr(value))
+            if delivered:
+                assert [entry.candidate_id for entry in handoff.entries] == ["a"], context
+                assert handoff.exclusions == (), context
+            else:
+                assert handoff.entries == (), context
+                assert [exclusion.code for exclusion in handoff.exclusions] == [
+                    FIXTURE_NAME_MISSING
+                ], context
+
+    def test_a_blank_name_never_reaches_the_rendered_lua(self):
+        """[round18 R18-H 도달성] 공백만 이름이 **전달물까지** 가지 않는다.
+
+        `.strip()`을 떼면 이 단정이 정확히 잡는다: 뮤턴트의 `lua_source`에
+        `name = "   "`이 실리고 `AddFixtures({`가 1건 생긴다(round18 실증).
+        """
+        for value in ("   ", "\t\n\r", "\u00a0\u2003"):
+            handoff = _handoff(names={"a": value}, dry_run=False)
+            rendered = handoff.lua_source or ""
+            assert "AddFixtures({" not in rendered, repr(value)
+            assert "name =" not in rendered, repr(value)
+            assert value not in rendered, repr(value)
+            assert handoff.lua_source is None, repr(value)
+
+    def test_the_control_a_substantive_name_does_reach_the_rendered_lua(self):
+        """비공허성 — 같은 하네스로 정상 이름은 전달물에 실린다. 이 대조군이 없으면 위
+        테스트는 전달 경로가 통째로 막혀도 통과한다.
+        """
+        handoff = _handoff(names={"a": "LEDBeam 101"}, dry_run=False)
+        rendered = handoff.lua_source or ""
+        assert rendered.count("AddFixtures({") == 1
+        assert 'name = "LEDBeam 101"' in rendered
+
+    def test_a_padded_substantive_name_is_delivered_verbatim_not_trimmed(self):
+        """[round18 R18-H 경계] 가드는 **공백 제거기가 아니다** — 양끝 공백이 있는 정상
+        이름은 도면 값 그대로 전달된다(값을 조용히 고치지 않는다).
+
+        가드를 `names[...] = name.strip()`처럼 값을 고치는 형태로 바꾸면 실패한다 —
+        이 앱은 사용자 값을 조용히 손대지 않는다.
+        """
+        handoff = _handoff(names={"a": "  LEDBeam 101  "}, dry_run=False)
+        assert 'name = "  LEDBeam 101  "' in (handoff.lua_source or "")
+
+    def test_the_exclusion_code_is_registered_and_labelled(self):
+        """제외 사유는 등재 어휘로만 나간다(AC-AUTOPATCH-026④)."""
+        assert FIXTURE_NAME_MISSING in TARGET_EXCLUSION_REASON
+        assert target_exclusion_label(FIXTURE_NAME_MISSING)
+        handoff = _handoff(names={"a": "   "})
+        (exclusion,) = handoff.exclusions
+        payload = exclusion.to_dict()
+        assert payload["code"] == FIXTURE_NAME_MISSING
+        assert payload["label"] == target_exclusion_label(FIXTURE_NAME_MISSING)
+        # 거부된 값을 사유에 되싣지 않는다 — 공백은 눈에 보이지 않아 더 위험하다.
+        assert "   " not in payload["reason"]
+
+    def test_a_missing_name_key_is_the_same_verdict_as_a_blank_one(self):
+        """[round18 R18-H 형제] `names`에 키가 아예 없는 경우도 같은 갈래다 —
+        `names.get(...)`이 `None`을 내고 같은 가드에 걸린다. 두 입력이 갈리면 조작자가
+        같은 사건에 다른 사유를 보게 된다.
+        """
+        absent = _handoff(names={})
+        blank = _handoff(names={"a": "   "})
+        assert [exclusion.code for exclusion in absent.exclusions] == [
+            exclusion.code for exclusion in blank.exclusions
+        ]
+        assert absent.entries == blank.entries == ()

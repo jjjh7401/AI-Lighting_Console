@@ -9,12 +9,15 @@ from typing import Protocol
 
 from server.vwx.address import ADDRESS_BASIS_ABS_BACK_CALCULATED
 from server.vwx.diff import MULTI_SYSTEM_MAPPING_ABSENT
+from server.vwx.typemap import is_vacuous_type_name
 from server.vwx.verdicts import (
     ADDRESS_ALREADY_OCCUPIED,
     ADDRESS_BELOW_MINIMUM,
     ADDRESS_OVERLAP_IN_PLAN,
     COMPARISON_NOT_PERFORMED,
+    DESIGNED_TYPE_NAME_VACUOUS,
     FID_ALREADY_IN_USE,
+    FID_BELOW_MINIMUM,
     FID_CONFLICT_PRECHECK_DESCOPE,
     FID_CONFLICT_PRECHECK_INCOMPLETE,
     FID_PRECHECK_READ_INCOMPLETE,
@@ -50,6 +53,28 @@ FID_PROPERTY_NAME = "FID"
 #: 두 값이 어긋나면 대조군이 잡는다
 #: (`test_autopatch_verify.py::test_r17_minimum_index_matches_the_preserve_path`).
 _MINIMUM_ADDRESS_INDEX = 1
+
+#: 콘솔 FID 번호 체계가 시작하는 최소값 — `_MINIMUM_ADDRESS_INDEX`의 **형제 축**이다
+#: (round18 결함 R18-A). 근거는 같은 원전이다: `server/prechk/patch.py`의
+#: `normalize_address`가 "The console's own numbering starts at one, so `0.0` ·
+#: `1.0` · `0.1` name no addressable channel"이라고 못박는다(patch.py:121-123).
+#: **콘솔 번호 체계가 1에서 시작한다**는 그 사실은 좌표에만 걸리는 성질이 아니다 —
+#: 룰북의 `AddFixtures` 예제도 `for fid = 2, 10`으로 1 이상만 쓴다
+#: (`server/rulebook/assets/v2.4.2/30_plugin_patterns.md:46`).
+#:
+#: **FID 축에만 있는 추가 근거**: 음수 FID는 콘솔에서 읽은 `existing_fids`와
+#: **절대 충돌하지 않는다**. 즉 바닥이 없으면 충돌 사전검사가 구조적으로 무력해지고,
+#: 그런데도 같은 payload가 `conflict_precheck.performed=true`로 "검사했고 깨끗하다"고
+#: 보고한다 — 안전망이 없는 값에 안전망이 있다는 **거짓 보고**가 함께 나간다.
+#:
+#: **상한은 두지 않는다.** 좌표 축과 같은 판정이고 근거도 같은 종류다: MA3의 FID
+#: 수용 상한은 이 SPEC에서 **실측된 적이 없고**(§B.2 · research.md §3 — 콘솔의 기존
+#: FID를 읽는 것 자체가 최대 난제였다), 룰북·PROTOCOL 어디에도 최대값이 없다.
+#: 미실측 위에 천장을 지어내면 콘솔이 받아들이는 FID를 이 계층이 날조로 거부한다
+#: ("inventing a ceiling would reject addresses the console accepts", patch.py:128-133).
+#: 그 판정을 `test_r18_no_fid_ceiling_is_fabricated`가 고정한다 — 근거 없이 상한을
+#: 넣으면 그 대조군이 실패한다.
+_MINIMUM_FID = 1
 
 # ==========================================================================
 # [round17 S17-04] 사람이 읽는 문장의 **형태 불변식**
@@ -97,14 +122,79 @@ def sentence_shape_violation(text: str, *, require_terminal: bool = True) -> str
     return None
 
 
+#: 조립이 실패했을 때 `reason` 자리에 싣는 **등재 코드**. 사람이 읽는 문장 대신 이 코드가
+#: 나가고, 무엇이 깨졌는지는 구조화 칸(`reason_defect`)이 진다.
+REASON_UNAVAILABLE = "reason_unavailable"
+#: 구조화 칸의 결함 코드 — 지금은 형태 불변식 위반 하나다.
+SENTENCE_SHAPE_VIOLATION = "sentence_shape_violation"
+#: `reason` 자리에 문장 대신 올 수 있는 코드 **전수**. 자유 문자열이 이 자리로 새면
+#: 조작자는 그것이 사유인지 코드인지 구별할 수 없다.
+REASON_PLACEHOLDER_CODES: frozenset[str] = frozenset({REASON_UNAVAILABLE})
+
+
+def _join_sentences(sentences: Sequence[str]) -> str:
+    """완결 문장 조각을 한 문단으로 잇는다 — 빈 조각은 버린다.
+
+    관측되지 않은 축을 빈 문장으로 남기면 `..`·`  `가 생긴다. 두 조립기가 **같은**
+    이 함수를 쓴다 — 둘이 다르게 이으면 강등 경로와 강제 경로의 판정이 갈린다.
+    """
+    return " ".join(sentence for sentence in sentences if sentence)
+
+
+@dataclass(frozen=True)
+class AssembledSentences:
+    """조립 결과. 성공이면 `text`가 문장이고 `defect`는 `None`.
+
+    실패면 `text`는 **등재 코드**(`REASON_UNAVAILABLE`)이고 `defect`가 무엇이 깨졌는지를
+    구조화해 담는다 — 문장은 잃되 판정과 진단은 남는다.
+    """
+
+    text: str
+    defect: Mapping[str, object] | None = None
+
+
+def assemble_sentences_or_defect(*sentences: str) -> AssembledSentences:
+    """조립 실패를 **예외가 아니라 값으로** 돌려준다 — 차단 화면을 짓는 자리에서 쓴다.
+
+    **[round18 R18-D]** 형태 불변식의 유일한 프로덕션 강제 자리가 하필 되돌릴 수 없는
+    쓰기를 **막는** 거부를 짓는 자리였고, `assemble_sentences`의 `ValueError`는
+    `ToolRegistry.dispatch`·runner·session 어디에도 가드가 없어 툴 경계를 그대로 탈출했다.
+    그러면 조립이 실패하는 순간 **차단 자체가 사라진다** — 게이트가 자기가 지키려던 것을
+    죽인다. 그래서 이 자리에서는 실패를 payload 필드로 **강등한다**: 사유 문장 자리에는
+    등재 코드가 가고, 위반 내용은 구조화 칸으로 조작자에게 그대로 보인다. 거부 판정
+    (`ok=False` · 차단 코드)은 **그대로 남는다**.
+
+    `except Exception`으로 뭉개지 않는다 — 예외를 잡는 것이 아니라 애초에 던지지 않고,
+    판정은 `assemble_sentences`와 **같은** `sentence_shape_violation`이 한다.
+    """
+    text = _join_sentences(sentences)
+    violation = sentence_shape_violation(text)
+    if violation is None:
+        return AssembledSentences(text=text)
+    return AssembledSentences(
+        text=REASON_UNAVAILABLE,
+        defect=MappingProxyType(
+            {
+                "code": SENTENCE_SHAPE_VIOLATION,
+                "violation": violation,
+                "assembled": text,
+                "fragments": tuple(sentence for sentence in sentences if sentence),
+            }
+        ),
+    )
+
+
 def assemble_sentences(*sentences: str) -> str:
     """완결 문장 여럿을 한 문단으로 잇고 **형태 불변식을 강제한다**.
 
     빈 조각은 버린다 — 관측되지 않은 축을 빈 문장으로 남기면 `..`·`  `가 생긴다.
     위반이면 사람에게 내보내지 않고 **즉시 실패한다**: 조용히 나가면 이 SPEC이
     일곱 라운드 반복한 대로 다음 감사에서야 발견된다.
+
+    **사람에게 나가는 판정을 짓는 자리에서는 이것을 쓰지 마라** — 거기서 던지면 판정이
+    통째로 사라진다(R18-D). 그런 자리는 `assemble_sentences_or_defect`로 강등한다.
     """
-    text = " ".join(sentence for sentence in sentences if sentence)
+    text = _join_sentences(sentences)
     violation = sentence_shape_violation(text)
     if violation is not None:
         raise ValueError(f"조립된 문장의 형태가 깨졌다({violation}): {text!r}")
@@ -460,6 +550,11 @@ class PatchPlanRejection:
     reason: str
     quoted_report_reason: str | None = None
     vocabulary: str = "candidate_rejection_reason"
+    #: [round18 R18-D] 사유 문장 **조립이 실패했을 때** 무엇이 깨졌는지. 이 칸이 차 있으면
+    #: `reason`은 사람이 읽는 문장이 아니라 `REASON_PLACEHOLDER_CODES`의 등재 코드다.
+    #: 거부 판정 자체(`code`·`label`)는 이 칸과 무관하게 그대로 나간다 — 문장을 짓다
+    #: 죽어서 차단이 사라지는 일이 없어야 한다.
+    reason_defect: Mapping[str, object] | None = None
 
     def to_dict(self) -> dict[str, object]:
         payload: dict[str, object] = {
@@ -469,6 +564,8 @@ class PatchPlanRejection:
         }
         if self.quoted_report_reason is not None:
             payload["quoted_report_reason"] = self.quoted_report_reason
+        if self.reason_defect is not None:
+            payload["reason_defect"] = dict(self.reason_defect)
         return payload
 
 
@@ -524,6 +621,40 @@ class PatchPlan:
 
 
 def build_patch_plan(
+    report: Mapping[str, object],
+    *,
+    selected: Sequence[str] | None = None,
+    dry_run: bool = True,
+    fid_range: Mapping[str, object] | None = None,
+    assumption_71: str | None = None,
+    fid_range_visually_confirmed_empty: bool | None = None,
+    fid_property_port: FidPropertyPort | None = None,
+    assignment_requested: bool | None = None,
+) -> PatchPlan:
+    """계획을 세우고 **1단계 대조가 삼켰을 수 있는 것을 고지한다**(round18 R18-J).
+
+    고지는 `_plan_from_report`가 어느 갈래로 나가든 붙는다 — 계획 갈래에만 붙이면
+    거부 화면을 본 조작자는 같은 사실을 보지 못하고, 그것이 이 SPEC이 여덟 라운드
+    연속 지적받은 **형제 표면 미적용**이다. 붙이는 자리를 갈래마다 두지 않고 여기
+    한 곳에 두는 이유도 같다: 갈래가 늘어날 때 새 갈래만 고지를 잃는 일이 없다.
+    """
+    plan = _plan_from_report(
+        report,
+        selected=selected,
+        dry_run=dry_run,
+        fid_range=fid_range,
+        assumption_71=assumption_71,
+        fid_range_visually_confirmed_empty=fid_range_visually_confirmed_empty,
+        fid_property_port=fid_property_port,
+        assignment_requested=assignment_requested,
+    )
+    notices = _vacuous_designed_type_checks(report)
+    if not notices:
+        return plan
+    return replace(plan, skipped_checks=notices + plan.skipped_checks)
+
+
+def _plan_from_report(
     report: Mapping[str, object],
     *,
     selected: Sequence[str] | None = None,
@@ -600,7 +731,16 @@ def build_patch_plan(
                 vocabulary="fid_assignment_rejection_reason",
             ),
         )
-    if parsed_fid_range is None:
+    valid_fid_range = parsed_fid_range.parsed
+    if valid_fid_range is None:
+        # [round18 R18-A] 사유는 `_parse_fid_range`가 **어느 축이 왜 틀렸는지**로
+        # 만든 것을 그대로 싣는다. 이전 판은 세 결함을 한 문장에 뭉쳐 두어
+        # ① 조작자가 어느 축을 고쳐야 하는지 알 수 없었고 ② 축 하나를 지워도
+        # 사유가 같아 대조군이 삭제를 잡지 못했다.
+        #
+        # **거부는 `_fid_safety_payload` 앞에서 끝난다** — 거부된 호출의 payload에는
+        # `fid_safety`가 아예 실리지 않으므로 `conflict_precheck.performed=true`가
+        # "검사했고 깨끗하다"고 주장할 자리가 없다. 이 정직성이 R18-A의 나머지 절반이다.
         return PatchPlan(
             ok=False,
             status="rejected",
@@ -610,9 +750,7 @@ def build_patch_plan(
             targets=targets,
             rejection=PatchPlanRejection(
                 code=INVALID_FID_RANGE,
-                reason=(
-                    "fid_range는 정수 start와 end를 포함해야 하며 end는 start보다 작을 수 없다."
-                ),
+                reason=parsed_fid_range.defect,
                 vocabulary="fid_assignment_rejection_reason",
             ),
         )
@@ -658,6 +796,16 @@ def build_patch_plan(
     # "빈" FID를 고르면 이미 쓰이는 번호를 배정하게 되고, MA3는 그것을 조용히 받아들여
     # 엉뚱한 픽스처를 덮는다(§0 함정 2). 이 앱에는 실행 취소가 없으므로 모르면 하지 않는다.
     if precheck_enabled and not existing_read.complete:
+        # [round17 S17-04] 조각을 문장 안에 끼우던 조립을 **문장 단위 조립**으로 바꾼다.
+        # `reason()`은 조각(대시·마침표 없음), `notes()`는 완결 문장이다.
+        # [round18 R18-D] 조립 실패는 **던지지 않는다** — 여기는 되돌릴 수 없는 쓰기를
+        # 막는 거부를 짓는 자리이고, 여기서 예외가 나가면 `ToolRegistry.dispatch`에
+        # 가드가 없어 차단 자체가 사라진다. 문장만 잃고 판정은 남긴다.
+        reason = assemble_sentences_or_defect(
+            f"기존 FID 사전검사가 불완전하다 — {existing_read.reason()}.",
+            *existing_read.notes(),
+            "부분 관측으로 빈 FID를 단정하면 이미 쓰이는 번호를 배정하게 된다.",
+        )
         return PatchPlan(
             ok=False,
             status="rejected",
@@ -667,15 +815,9 @@ def build_patch_plan(
             targets=targets,
             rejection=PatchPlanRejection(
                 code=FID_PRECHECK_READ_INCOMPLETE,
-                # [round17 S17-04] 조각을 문장 안에 끼우던 조립을 **문장 단위 조립**으로
-                # 바꾼다. `reason()`은 조각(대시·마침표 없음), `notes()`는 완결 문장이고,
-                # `assemble_sentences`가 결과의 형태 불변식을 강제한다.
-                reason=assemble_sentences(
-                    f"기존 FID 사전검사가 불완전하다 — {existing_read.reason()}.",
-                    *existing_read.notes(),
-                    "부분 관측으로 빈 FID를 단정하면 이미 쓰이는 번호를 배정하게 된다.",
-                ),
+                reason=reason.text,
                 vocabulary="target_exclusion_reason",
+                reason_defect=reason.defect,
             ),
             skipped_checks=(_fid_precheck_incomplete_check(existing_read),),
             fid_safety=_fid_safety_payload(
@@ -690,7 +832,7 @@ def build_patch_plan(
 
     planned_targets, target_exclusions = _assign_fids(
         targets,
-        parsed_fid_range,
+        valid_fid_range,
         existing_fids=frozenset(existing_read.fids),
         fid_range_visually_confirmed_empty=confirmation_recorded,
     )
@@ -769,14 +911,59 @@ def _assumption_71_or_default(value: str | None) -> str:
     return value
 
 
-def _parse_fid_range(value: Mapping[str, object] | None) -> FIDRange | None:
+@dataclass(frozen=True)
+class _FidRangeParse:
+    """사용자가 준 `fid_range` 하나를 정수 쌍으로 바꾼 결과, 또는 **왜 아닌지**.
+
+    PRESERVE 경로의 :class:`server.prechk.patch.AddressParse`와 같은 형태다 — 실패하면
+    값이 `None`이고 **기본값을 지어내지 않는다**("a fabricated ``0`` or ``1`` would enter
+    collision detection as a real address", `server/prechk/patch.py:104-106`).
+
+    사유를 값과 **함께** 싣는 이유는 두 가지다. ① 세 결함(형식·바닥·순서)은 조작자에게
+    서로 다른 고칠 것을 가리킨다 — 하나로 뭉치면 어느 축을 고쳐야 하는지 알 수 없다
+    (round11 M5 N3가 `lua_generation_refused`에서 배운 것과 같다). ② 축을 하나 지워도
+    "거부됨"이라는 결과는 그대로라 **대조군이 축 삭제를 못 잡는다** — 사유가 갈라져
+    있어야 잡힌다(round18 R18-A).
+
+    `parsed`가 `None`인 것과 `defect`가 비지 않은 것은 **같은 사건**이다
+    (`test_r18_fid_range_parse_is_exactly_one_of_value_or_defect`가 고정한다).
+    """
+
+    parsed: FIDRange | None = None
+    defect: str = ""
+
+
+def _parse_fid_range(value: Mapping[str, object] | None) -> _FidRangeParse:
     if value is None:
-        return None
+        return _FidRangeParse()
     start = _optional_int(value.get("start"))
     end = _optional_int(value.get("end"))
-    if start is None or end is None or end < start:
-        return None
-    return FIDRange(start=start, end=end)
+    if start is None or end is None:
+        return _FidRangeParse(defect="fid_range는 정수 start와 end를 포함해야 한다.")
+    # [round18 결함 R18-A] **바닥을 순서보다 먼저 본다.** 이전 판은 `end < start`만
+    # 검사했고, 그래서 `{'start': -10, 'end': -8}`이 통과해 `fid = "-10"`인 Lua가
+    # 사람 손에 갔다. 게다가 같은 payload가 `conflict_precheck.performed=true`로
+    # "검사했고 깨끗하다"고 보고했다 — 음수 FID는 콘솔에서 읽은 기존 FID와 절대
+    # 충돌하지 않으므로 충돌검사가 구조적으로 무력한데도 그렇다.
+    #
+    # 순서 검사를 먼저 두면 음수 쌍이 `end < start`에 흡수되지 않는 한 그대로 새고,
+    # 흡수되는 경우에도 두 축 중 어느 검사가 살아 있는지 구별할 수 없다. 바닥을
+    # 먼저 두면 `{'start': 5, 'end': -1}`이 **바닥 사유**로 거부되므로 `end` 축
+    # 검사를 지우면 사유가 순서 사유로 바뀌어 대조군이 잡는다.
+    #
+    # 두 축을 `or` 한 조건으로 묶는 형태는 PRESERVE 경로가 좌표에서 쓰는 형태
+    # 그대로다(`patch.py:141`) — 한쪽만 막으면 반쪽이다.
+    if start < _MINIMUM_FID or end < _MINIMUM_FID:
+        return _FidRangeParse(
+            defect=(
+                f"fid_range의 start·end는 콘솔 최소 FID {_MINIMUM_FID} 이상이어야 한다 — "
+                f"입력은 start={start} end={end}다."
+            )
+        )
+    if end < start:
+        return _FidRangeParse(defect="fid_range의 end는 start보다 작을 수 없다.")
+    # 상한은 두지 않는다 — `_MINIMUM_FID` 주석의 근거 참조. 거대값은 그대로 통과한다.
+    return _FidRangeParse(parsed=FIDRange(start=start, end=end))
 
 
 def _assign_fids(
@@ -804,6 +991,29 @@ def _assign_fids(
             continue
         proposed_fid = next_fid
         next_fid += 1
+        # [round18 결함 R18-A · 개별 값 축] **범위가 아니라 배정될 값 자체를** 본다.
+        # `_parse_fid_range`를 거쳐 온 호출에서는 여기 걸릴 값이 없지만, `_assign_fids`는
+        # `FIDRange`를 직접 조립한 호출자에게도 열려 있는 **두 번째 진입점**이다.
+        # round17이 좌표 축에서 배운 그대로 — 게이트를 한 함수 경계에만 두면 형제
+        # 진입점이 그대로 새어 나가고, 그 값이 `with_fid`를 타고 `LuaPatchEntry.fid`가
+        # 되어 `fid = "-10"`인 전달물이 된다. 값을 1로 끌어올려 통과시키지 않고
+        # 등재된 코드로 배제한다 — 자동 보정 0건(AC-AUTOPATCH-021②).
+        #
+        # 기존 FID 대조보다 **먼저** 둔다: 성립하지 않는 번호를 "이미 사용 중"으로
+        # 보고하면 조작자가 원인이 아닌 것을 고치러 간다.
+        if proposed_fid < _MINIMUM_FID:
+            exclusions.append(
+                PatchTargetExclusion(
+                    candidate_id=target.id,
+                    code=FID_BELOW_MINIMUM,
+                    reason=(
+                        f"배정하려던 FID {proposed_fid}는 콘솔 최소 FID {_MINIMUM_FID} "
+                        "미만이다 — 값을 고쳐 통과시키지 않고 제외한다."
+                    ),
+                    proposed_fid=proposed_fid,
+                )
+            )
+            continue
         if proposed_fid in existing_fids:
             exclusions.append(
                 PatchTargetExclusion(
@@ -1087,6 +1297,64 @@ def _rejection_for_report(report: Mapping[str, object]) -> PatchPlanRejection | 
             quoted_report_reason=report_reason,
         )
     return None
+
+
+def _vacuous_designed_type_checks(
+    report: Mapping[str, object],
+) -> tuple[Mapping[str, object], ...]:
+    """도면 타입 이름이 공허한 픽스처를 세어 **미수행 판정으로 고지한다**(round18 R18-J).
+
+    이것은 1단계 동작의 **기록**이 아니라 2단계의 **고지**다. 1단계
+    `diff.compare`는 `rig.fuzzy_type_equal`로 (유니버스, 주소) 후보와 도면 타입을
+    조인하는데, 정규화 후 영숫자가 남지 않는 이름은 **모든** 콘솔 타입과 일치한다.
+    그래서 그 주소에 콘솔 픽스처가 하나라도 있으면 `found`가 참이 되어 그 도면
+    픽스처는 `missing_in_console`에서 사라지고, `quantity_mismatch`에서도 첫
+    콘솔 타입의 수량과 대조되어 사라진다(round18 실측: 도면 2대 중 1대 소멸,
+    `skipped_checks` 0건, `summary_ko`는 "콘솔 미확인 1건"만 말한다).
+
+    고칠 권한은 1단계에 있다(AC-AUTOPATCH-025 「1단계 공개 계약 무변경」) — 그래서
+    여기서 후보를 되살리지 않는다. **되살리면 1단계 판정을 2단계가 재계산하는 것**이고
+    그것은 이 SPEC이 금지한다. 대신 조작자에게 "이 판정을 믿지 말라"를 등재 어휘로 낸다.
+
+    판정 술어는 `typemap.is_vacuous_type_name` 하나만 쓴다 — 재구현하면 두 층의
+    공허 판정이 갈려 고지가 대상과 어긋난다. 대조 값은 1단계 `rig.match_type`과 같은
+    `gdtf_fixture or instrument_type`이다.
+    """
+    designed = report.get("designed_rig")
+    if not isinstance(designed, Mapping):
+        return ()
+    affected: list[str] = []
+    for fixture in _mapping_rows(designed.get("fixtures")):
+        if fixture.get("classification") != "patched":
+            continue
+        match_type = fixture.get("gdtf_fixture") or fixture.get("instrument_type")
+        if not is_vacuous_type_name(match_type):
+            continue
+        # 도면 원문 이름을 사유에 보간하지 않는다(§0 2b④) — 세기만 하고 좌표로 가리킨다.
+        universe = _optional_int(fixture.get("universe"))
+        address = _optional_int(fixture.get("address"))
+        if universe is None or address is None:
+            continue
+        affected.append(f"{universe}.{address}")
+    if not affected:
+        return ()
+    return (
+        MappingProxyType(
+            {
+                "kind": validate_autopatch("skipped_check_kind", DESIGNED_TYPE_NAME_VACUOUS),
+                "label": skipped_check_label(DESIGNED_TYPE_NAME_VACUOUS),
+                "reason": (
+                    "도면 타입 이름에 영숫자가 하나도 없는 패치 픽스처가 있다 — 1단계 콘솔 "
+                    "대조는 그 이름을 모든 콘솔 타입과 일치로 보므로 이 항목이 "
+                    "missing_in_console과 quantity_mismatch 양쪽에서 소멸했을 수 있다. "
+                    "2단계는 1단계 판정을 재계산하지 않으므로 되살리지 않고 고지만 한다 — "
+                    "콘솔 부재도 수량 차이도 단정할 수 없다."
+                ),
+                "affected_designed_addresses": tuple(affected),
+                "affected_count": len(affected),
+            }
+        ),
+    )
 
 
 def _candidates_from_report(report: Mapping[str, object]) -> tuple[PatchCandidate, ...]:

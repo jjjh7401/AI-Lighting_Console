@@ -18,6 +18,15 @@ FID_ALREADY_IN_USE = "fid_already_in_use"
 
 FIXTURE_TYPE_NOT_IN_LIBRARY = "fixture_type_not_in_library"
 DMX_MODE_NOT_IN_LIBRARY = "dmx_mode_not_in_library"
+#: round18 결함 R18-E — 도면 타입 이름이 **공허**(정규화 후 영숫자 0개)해서 라이브러리
+#: 대조 기준이 되지 못한다. round17은 이 갈래를 `needs_confirmation`으로 넘겼는데
+#: **제시된 후보가 0건**이다 — 확인할 것이 없는 상태를 "확인 대기"라 부르면 조작자는
+#: 화면에 없는 것을 고르려 기다린다. 그래서 하드 스톱이다.
+#: 이름이 `None`·`''`면 `typemap._alias_for`의 `if not key: continue`에 걸려 별칭 탈출구도
+#: 없다(실측). truthy 공허 이름은 그 이름을 키로 한 별칭에 실재 콘솔 이름을 저장하면
+#: 해결되며, 그때는 이 갈래에 오지 않는다 — 이 코드는 그 탈출구를 막지 않는다.
+#: `fixture_type_not_in_library`로 적을 수 없다: 찾아보지도 않았으므로 부재 단정이 된다.
+FIXTURE_TYPE_NAME_UNUSABLE = "fixture_type_name_unusable"
 
 ADDRESS_ALREADY_OCCUPIED = "address_already_occupied"
 ADDRESS_OVERLAP_IN_PLAN = "address_overlap_in_plan"
@@ -28,6 +37,20 @@ FOOTPRINT_UNKNOWN = "footprint_unknown"
 #: 그 값이 그대로 ``patch = { "0.507" }`` 같은 Lua 전달물이 되어 사람 손에 갔다.
 #: 값을 고쳐 통과시키지 않고(자동 보정 0건) **등재된 코드로 배제**한다.
 ADDRESS_BELOW_MINIMUM = "address_below_minimum"
+
+#: round18 결함 R18-A — 배정하려던 FID가 콘솔 최소 FID(1) 미만이다.
+#:
+#: **왜 `address_below_minimum`을 재사용하지 않는가**: 그 코드의 등재 라벨은
+#: "유니버스 또는 주소"를 가리키고, 조작자는 배제 사유를 보고 **무엇을 고칠지**
+#: 결정한다. FID 위반에 주소 코드를 붙이면 사용자는 도면 좌표를 고치러 가고
+#: 재시도는 영원히 실패한다(`lua_generation_refused`가 어느 필드가 거부됐는지
+#: 말하도록 고쳐진 round11 M5 N3와 같은 이유다).
+#:
+#: **왜 `invalid_fid_range`로 갈음하지 않는가**: 그 코드는 사용자 입력 `fid_range`
+#: 전체를 되돌려보내는 **거부**(`fid_assignment_rejection_reason`) 어휘이고, 이 코드는
+#: 대상 하나를 계획에서 빼는 **배제**(`target_exclusion_reason`) 어휘다. 두 어휘는
+#: payload의 다른 자리에 실리므로 서로 대체할 수 없다.
+FID_BELOW_MINIMUM = "fid_below_minimum"
 
 FID_NOT_ASSIGNED = "fid_not_assigned"
 FIXTURE_NAME_MISSING = "fixture_name_missing"
@@ -46,11 +69,20 @@ FIXTURE_TYPE_LIBRARY_TRUNCATED = "fixture_type_library_truncated"
 FIXTURE_TYPE_LIBRARY_UNREADABLE = "fixture_type_library_unreadable"
 FID_CONFLICT_PRECHECK_INCOMPLETE = "fid_conflict_precheck_incomplete"
 EXISTING_FOOTPRINT_UNREADABLE = "existing_footprint_unreadable"
+#: round18 결함 R18-J — 1단계(`server/vwx/diff.py`, AC-AUTOPATCH-025 무변경 계층)의
+#: 콘솔 대조는 `rig.fuzzy_type_equal`을 쓴다. 정규화 후 영숫자가 남지 않는 도면 타입 이름은
+#: **모든** 콘솔 타입과 일치하므로 그 픽스처는 `missing_in_console`·`quantity_mismatch`
+#: 양쪽에서 조용히 사라진다(실증). 1단계는 그 소멸을 `skipped_checks`에 적지 않는다 —
+#: 고칠 권한은 1단계에 있지만 **고지할 자리는 2단계에도 있다**. 여기서 고지한다.
+DESIGNED_TYPE_NAME_VACUOUS = "designed_type_name_vacuous"
 
 TYPE_RESOLVED = "resolved"
 TYPE_NEEDS_CONFIRMATION = "needs_confirmation"
 TYPE_LIBRARY_ABSENT = "library_absent"
 TYPE_LIBRARY_INCOMPLETE = "library_incomplete"
+#: round18 결함 R18-E — 도면 타입 이름이 공허해 대조 기준도, 별칭 확인 경로도 없다.
+#: `needs_confirmation`(확인 대기)도 `library_absent`(부재 단정)도 참이 아니다.
+TYPE_NAME_UNUSABLE = "designed_type_name_unusable"
 
 VERIFICATION_OBSERVED = "observed"
 VERIFICATION_NOT_OBSERVED = "not_observed"
@@ -83,10 +115,12 @@ TARGET_EXCLUSION_REASON = frozenset(
         FID_ALREADY_IN_USE,
         FIXTURE_TYPE_NOT_IN_LIBRARY,
         DMX_MODE_NOT_IN_LIBRARY,
+        FIXTURE_TYPE_NAME_UNUSABLE,
         ADDRESS_ALREADY_OCCUPIED,
         ADDRESS_OVERLAP_IN_PLAN,
         FOOTPRINT_UNKNOWN,
         ADDRESS_BELOW_MINIMUM,
+        FID_BELOW_MINIMUM,
         FID_NOT_ASSIGNED,
         FIXTURE_NAME_MISSING,
         TYPE_CONFIRMATION_PENDING,
@@ -106,6 +140,7 @@ SKIPPED_CHECK_KIND = frozenset(
         FIXTURE_TYPE_LIBRARY_UNREADABLE,
         FID_CONFLICT_PRECHECK_INCOMPLETE,
         EXISTING_FOOTPRINT_UNREADABLE,
+        DESIGNED_TYPE_NAME_VACUOUS,
     }
 )
 TYPE_RESOLUTION_STATUS = frozenset(
@@ -114,6 +149,7 @@ TYPE_RESOLUTION_STATUS = frozenset(
         TYPE_NEEDS_CONFIRMATION,
         TYPE_LIBRARY_ABSENT,
         TYPE_LIBRARY_INCOMPLETE,
+        TYPE_NAME_UNUSABLE,
     }
 )
 CONSOLE_READ_CAVEAT_KIND = frozenset(
@@ -183,10 +219,14 @@ _TARGET_EXCLUSION_LABELS = {
     FID_ALREADY_IN_USE: "기존 FID와 충돌",
     FIXTURE_TYPE_NOT_IN_LIBRARY: "콘솔 라이브러리에 대응 FixtureType 없음",
     DMX_MODE_NOT_IN_LIBRARY: "콘솔 라이브러리에 대응 DMXMode 없음",
+    FIXTURE_TYPE_NAME_UNUSABLE: (
+        "도면 타입 이름이 공허 — 대조 기준도 별칭 확인 경로도 없어 제외, 도면을 고쳐야 함"
+    ),
     ADDRESS_ALREADY_OCCUPIED: "도면 주소가 콘솔에서 이미 점유됨",
     ADDRESS_OVERLAP_IN_PLAN: "같은 유니버스 안에서 다른 계획 항목과 점유 구간이 겹침",
     FOOTPRINT_UNKNOWN: "점유폭 미확정 — 추측하지 않고 제외",
     ADDRESS_BELOW_MINIMUM: "유니버스 또는 주소가 콘솔 최소 인덱스 미만 — 값을 고치지 않고 제외",
+    FID_BELOW_MINIMUM: "배정 FID가 콘솔 최소 FID 미만 — 값을 고치지 않고 제외",
     FID_NOT_ASSIGNED: "FID 미배정 — 배정 없이 생성하지 않음",
     FIXTURE_NAME_MISSING: "픽스처 이름 미제공 — 이름을 지어내지 않고 제외",
     TYPE_CONFIRMATION_PENDING: "타입·모드 사용자 확인 대기 — 확인 전에는 전달하지 않음",
@@ -210,12 +250,17 @@ _SKIPPED_CHECK_LABELS = {
     FIXTURE_TYPE_LIBRARY_UNREADABLE: "FixtureType 열거 실패 — 부재 단정 불가",
     FID_CONFLICT_PRECHECK_INCOMPLETE: "FID 충돌 사전검사 부분 관측 — 빈 FID 단정 불가",
     EXISTING_FOOTPRINT_UNREADABLE: ("기존 픽스처 점유폭 미판독 — 꼬리 구간 겹침은 검출되지 않는다"),
+    DESIGNED_TYPE_NAME_VACUOUS: (
+        "도면 타입 이름이 공허한 픽스처가 있음 — 1단계 콘솔 대조가 그 항목을 삼켰을 수 있어 "
+        "부재도 수량 차이도 단정 불가"
+    ),
 }
 _TYPE_RESOLUTION_STATUS_LABELS = {
     TYPE_RESOLVED: "타입·모드 확정",
     TYPE_NEEDS_CONFIRMATION: "후보 제시 — 사용자 확인 대기",
     TYPE_LIBRARY_ABSENT: "콘솔 라이브러리 부재 — 하드 스톱",
     TYPE_LIBRARY_INCOMPLETE: "라이브러리 관측 불완전 — 부재를 단정하지 않음",
+    TYPE_NAME_UNUSABLE: "도면 타입 이름이 공허 — 확인 경로 없음, 하드 스톱",
 }
 _CONSOLE_READ_CAVEAT_LABELS = {
     CONSOLE_READ_INCOMPLETE: "재조회에 미판독이 남았다 — 없음을 단정할 수 없다",

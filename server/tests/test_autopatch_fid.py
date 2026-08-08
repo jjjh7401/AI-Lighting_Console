@@ -2125,3 +2125,694 @@ def test_the_precheck_reason_shape_gate_is_not_vacuous():
     )
     assert sentence_shape_violation(planted) is not None
     assert sentence_shape_violation(_plan_with(None).rejection.reason) is None
+
+
+# ==========================================================================
+# --- round18 FID 수치축 바닥 게이트 · 전 축 레지스트리 (FidFloorGate) ---
+#
+# 실증(아래 종단 테스트가 그대로 재현한다): `fid_range={'start': -10, 'end': -8}`이
+# `_parse_fid_range`의 `end < start` 검사를 그대로 통과해 `ok=True` · 배정 `[-10,-9,-8]` ·
+# 제외 0건 · `delivered=true`가 되고, 전달물에 `fid = "-10"`인 `AddFixtures` 호출이 실렸다.
+# 게다가 **같은 payload가 `fid_safety.conflict_precheck.performed=true`로 "검사했고
+# 깨끗하다"고 보고했다** — 음수 FID는 콘솔에서 읽은 `existing_fids`와 절대 충돌하지 않아
+# 충돌검사가 구조적으로 무력한데도 그렇다. 결함의 절반은 값이고 절반은 그 거짓 보고다.
+#
+# round17이 좌표 양축(`universe`·`address`)에 세운 `_MINIMUM_ADDRESS_INDEX` 게이트의
+# **형제 축**이며, 그 근거(PRESERVE `server/prechk/patch.py:121-123` "The console's own
+# numbering starts at one")가 FID에도 그대로 성립한다.
+#
+# **상한은 두지 않는다** — 좌표 축과 같은 판정이고, 그 판정 자체를
+# `test_r18_no_fid_ceiling_is_fabricated`가 고정한다(다음 라운드가 근거 없이 넣지 못하게).
+# ==========================================================================
+
+_R18_MIN_FID_LITERAL = 1  #: 프로덕션 상수를 참조하지 않는 **독립 리터럴**.
+_R18_HUGE_FID = 10**18  #: 상한 날조 감지용 — 어떤 근거 있는 천장보다도 크다.
+
+
+def _r18_parse(start, end):
+    from server.vwx.patchplan import _parse_fid_range
+
+    return _parse_fid_range({"start": start, "end": end})
+
+
+#: (라벨, start, end, 기대 결함 갈래) — `None`이면 **유효**하다.
+#: 갈래는 셋뿐이다: `form`(정수가 아니다) · `floor`(콘솔 최소 FID 미만) · `order`(end<start).
+#: 갈래를 값이 아니라 **사유 문장**으로 가르는 이유: 축을 하나 지워도 "거부됨"이라는
+#: 결과는 그대로라 통과/거부만 재는 대조군은 축 삭제를 잡지 못한다.
+_R18_FID_RANGE_ROWS: tuple[tuple[str, object, object, str | None], ...] = (
+    ("minus_ten", -10, -8, "floor"),
+    ("minus_one", -1, -1, "floor"),
+    ("zero_both", 0, 0, "floor"),
+    ("zero_start_positive_end", 0, 2, "floor"),
+    ("start_ok_end_below", 5, -1, "floor"),
+    ("floor_exact", 1, 1, None),
+    ("floor_plus_one", 1, 2, None),
+    ("two_three", 2, 3, None),
+    ("live_range", 501, 503, None),
+    ("huge", _R18_HUGE_FID, _R18_HUGE_FID + 2, "no ceiling"),
+    ("inverted", 5, 1, "order"),
+    ("bool_true", True, True, "form"),
+    ("bool_false", False, False, "form"),
+    ("string_start", "1", 3, "form"),
+    ("none_end", 1, None, "form"),
+)
+
+#: 표에서 파생하지 않은 **독립** 커버리지 요구 — 바닥 앞뒤·순서·형식·상한.
+#: `True == 1` · `False == 0`이라 값만으로 된 집합은 bool 행을 정수 행에 삼켜버린다.
+#: 그러면 bool 행을 지워도 이 대조군이 통과한다 — 그래서 **형 이름을 함께** 넣는다.
+_R18_REQUIRED_RANGE_PROBES = frozenset(
+    {
+        ("int", _R18_MIN_FID_LITERAL - 11, "int", _R18_MIN_FID_LITERAL - 9),
+        ("int", _R18_MIN_FID_LITERAL - 2, "int", _R18_MIN_FID_LITERAL - 2),
+        ("int", _R18_MIN_FID_LITERAL - 1, "int", _R18_MIN_FID_LITERAL - 1),
+        ("int", _R18_MIN_FID_LITERAL - 1, "int", _R18_MIN_FID_LITERAL + 1),
+        ("int", _R18_MIN_FID_LITERAL + 4, "int", _R18_MIN_FID_LITERAL - 2),
+        ("int", _R18_MIN_FID_LITERAL, "int", _R18_MIN_FID_LITERAL),
+        ("int", _R18_MIN_FID_LITERAL, "int", _R18_MIN_FID_LITERAL + 1),
+        ("int", _R18_MIN_FID_LITERAL + 1, "int", _R18_MIN_FID_LITERAL + 2),
+        ("int", 501, "int", 503),
+        ("int", _R18_HUGE_FID, "int", _R18_HUGE_FID + 2),
+        ("int", 5, "int", 1),
+        ("bool", True, "bool", True),
+        ("bool", False, "bool", False),
+        ("str", "1", "int", 3),
+        ("int", 1, "NoneType", None),
+    }
+)
+
+
+def test_r18_fid_range_boundary_table_covers_exactly_the_required_probes():
+    """[round18 표 전수] 행을 하나라도 지우거나 중복시키면 실패한다.
+
+    통과·거부 두 결론과 세 결함 갈래가 **모두** 표에 있어야 한다 — 한쪽만 남기면
+    게이트가 공허해진다(round18 minor `_R17_CONTAINMENT_FAMILY` 자기충족 표의 교훈).
+    """
+    probes = tuple((row[1], row[2]) for row in _R18_FID_RANGE_ROWS)
+    assert len(probes) == 15, "행수 리터럴 — 행 삭제/추가 감지"
+    # `True == 1` · `False == 0`이라 set 비교가 bool 행을 삼킨다 — 형까지 함께 센다.
+    typed = {(type(start).__name__, start, type(end).__name__, end) for start, end in probes}
+    assert len(typed) == len(probes), "같은 (형, 값) 쌍이 두 번 들어갔다"
+    required = _R18_REQUIRED_RANGE_PROBES
+    assert typed == required
+    labels = [row[0] for row in _R18_FID_RANGE_ROWS]
+    assert len(labels) == len(set(labels))
+    assert {row[3] for row in _R18_FID_RANGE_ROWS} == {None, "floor", "order", "form", "no ceiling"}
+
+
+@pytest.mark.parametrize(
+    ("label", "start", "end", "defect_kind"),
+    _R18_FID_RANGE_ROWS,
+    ids=[row[0] for row in _R18_FID_RANGE_ROWS],
+)
+def test_r18_parse_fid_range_classifies_every_boundary_row(label, start, end, defect_kind):
+    """[round18 R18-A 경계 전수] 각 행이 **거부되는지 통과하는지 + 그때 어느 사유인지**.
+
+    죽이는 뮤테이션:
+      · 바닥 게이트 삭제 → `minus_ten`·`zero_both`·`zero_start_positive_end`가 통과해 실패.
+      · 바닥 `<`를 `<=`로 → `floor_exact`(1,1) 행이 거부되어 실패.
+      · 기준값 `_MINIMUM_FID` 1→2 → 같은 `floor_exact` 행이 실패.
+      · **start 축만** 검사(`start < _MINIMUM_FID`만) → `start_ok_end_below`(5,-1)가
+        `floor`가 아니라 `order` 사유로 거부되어 실패.
+      · **end 축만** 검사(`end < _MINIMUM_FID`만) → `zero_start_positive_end`(0,2)가
+        통과해 실패.
+      · 바닥 검사를 순서 검사 **뒤로** 옮김 → `start_ok_end_below`가 `order`로 바뀌어 실패.
+      · `end < start`를 `<=`로 → 표에 (1,1)·(501,503) 같은 유효 행이 있어 실패.
+      · 근거 없는 상한 날조 → `huge` 행이 거부되어 실패.
+    """
+    parse = _r18_parse(start, end)
+    if defect_kind in (None, "no ceiling"):
+        assert parse.parsed is not None, f"{label}: 통과해야 하는 입력이 거부됐다"
+        assert (parse.parsed.start, parse.parsed.end) == (start, end), "값을 고쳐 통과시켰다"
+        assert parse.defect == ""
+        return
+
+    assert parse.parsed is None, f"{label}: 거부돼야 하는 입력이 통과했다"
+    assert parse.defect, "거부는 사유 없이 나갈 수 없다"
+    if defect_kind == "floor":
+        assert "콘솔 최소 FID" in parse.defect
+        assert f"start={start}" in parse.defect and f"end={end}" in parse.defect
+    elif defect_kind == "order":
+        assert "end는 start보다 작을 수 없다" in parse.defect
+        assert "콘솔 최소 FID" not in parse.defect, "순서 결함을 바닥 사유로 보고했다"
+    else:
+        assert "정수 start와 end를 포함해야 한다" in parse.defect
+
+
+def test_r18_fid_range_parse_is_exactly_one_of_value_or_defect():
+    """[round18 불변식] `parsed`가 있음 ⇔ `defect`가 비어 있음. 표 전 행에서 확인한다.
+
+    이 단정이 없으면 "값도 있고 사유도 있는" 상태나 "둘 다 없는" 상태가 조용히 생겨
+    호출부가 사유 없는 거부를 내보낼 수 있다(빈 문자열 `reason`).
+    """
+    from server.vwx.patchplan import _parse_fid_range
+
+    seen = set()
+    for _label, start, end, _kind in _R18_FID_RANGE_ROWS:
+        parse = _r18_parse(start, end)
+        assert (parse.parsed is None) == bool(parse.defect)
+        seen.add(parse.parsed is None)
+    assert seen == {True, False}, "표에 통과·거부가 모두 있어야 이 단정이 비공허하다"
+    # `fid_range=None`(미제공)은 값도 사유도 없는 **유일한** 예외 — 상위가 별도 코드로 거부한다.
+    absent = _parse_fid_range(None)
+    assert absent.parsed is None and absent.defect == ""
+
+
+def test_r18_minimum_fid_matches_the_preserve_path():
+    """[round18 R18-A] `_MINIMUM_FID`를 1에서 옮기면 실패한다.
+
+    근거는 좌표 축과 **같은 원전**이다: PRESERVE 경로 `server/prechk/patch.py:121-123`의
+    `normalize_address` 독스트링 — "Both halves must be at least ``_MINIMUM_INDEX``.
+    The console's own numbering starts at one, so ``0.0`` · ``1.0`` · ``0.1`` name no
+    addressable channel". 콘솔 번호 체계가 1에서 시작한다는 그 사실은 좌표에만 걸리는
+    성질이 아니다. 세 값이 어긋나면 여기서 잡힌다 — 비공개 이름을 계층 넘어 import하지
+    않으면서 단일 진실을 유지하는 방법이다(round17 선례).
+    """
+    from server.prechk.patch import _MINIMUM_INDEX
+    from server.vwx.patchplan import _MINIMUM_ADDRESS_INDEX, _MINIMUM_FID
+
+    assert _MINIMUM_FID == _R18_MIN_FID_LITERAL
+    assert _MINIMUM_FID == _MINIMUM_INDEX
+    assert _MINIMUM_FID == _MINIMUM_ADDRESS_INDEX
+
+
+def test_r18_no_fid_ceiling_is_fabricated():
+    """[round18 R18-A 부작용 방지] 바닥을 넣으면서 **근거 없는 상한**을 함께 넣으면 실패한다.
+
+    **근거를 여기 남긴다 — 근거 없이 남으면 다음 사람이 "왜 상한이 없지"라며 넣는다.**
+
+    조사 결과 이 저장소에 FID 상한의 근거는 **없다**:
+      · 룰북 `server/rulebook/assets/v2.4.2/30_plugin_patterns.md:35·46`은 `fid`를
+        "(string)"으로만 규정하고 예제는 `for fid = 2, 10`이다 — 최대값 언급이 없다.
+      · `console/lua/PROTOCOL.md`에도 FID 최대값 규정이 없다.
+      · 애초에 이 SPEC은 **콘솔의 기존 FID를 읽는 것 자체**가 최대 난제였고
+        (`research.md` §3 · `spec.md` §B.2), 수용 상한은 실측된 적이 없다.
+    미실측 위에 천장을 지어내면 PRESERVE 경로가 좌표에서 내린 판정과 정확히 같은 이유로
+    틀린다 — "inventing a ceiling would reject addresses the console accepts"
+    (`server/prechk/patch.py:128-133`).
+
+    그러므로 **거대값은 그대로 통과한다.** 상한을 넣으면 이 테스트가 실패한다.
+    """
+    from server.vwx.patchplan import FIDRange, _assign_fids
+
+    parse = _r18_parse(_R18_HUGE_FID, _R18_HUGE_FID + 2)
+    assert parse.parsed == FIDRange(start=_R18_HUGE_FID, end=_R18_HUGE_FID + 2)
+
+    planned, exclusions = _assign_fids(
+        (_r18_candidate("a"),),
+        FIDRange(start=_R18_HUGE_FID, end=_R18_HUGE_FID),
+        existing_fids=frozenset(),
+        fid_range_visually_confirmed_empty=None,
+    )
+    assert exclusions == ()
+    assert [target.assigned_fid for target in planned] == [_R18_HUGE_FID]
+
+    # 근거: 닫힌 어휘에 "FID 상한" 을 뜻하는 코드가 **아예 없다**(형제 표면 전수 확인).
+    from server.vwx.verdicts import AUTOPATCH_CLOSED_VOCABULARIES
+
+    every_code = {code for codes in AUTOPATCH_CLOSED_VOCABULARIES.values() for code in codes}
+    assert every_code
+    assert not [
+        code
+        for code in every_code
+        if "fid" in code and ("above" in code or "maximum" in code or "ceiling" in code)
+    ]
+
+
+def _r18_candidate(candidate_id: str, *, universe: int = 1, address: int = 1):
+    from server.vwx.patchplan import PatchCandidate
+
+    return PatchCandidate(
+        id=candidate_id,
+        unit_number=None,
+        instrument_type="Robe MegaPointe",
+        universe=universe,
+        address=address,
+        detail="",
+        address_basis=ADDRESS_BASIS_DIRECT,
+        source_index=0,
+    )
+
+
+#: (라벨, FIDRange 인자, 기대 배제 코드 또는 None) — `_assign_fids`의 **두 번째 진입점**.
+#: `FIDRange`는 공개 dataclass라 `_parse_fid_range`를 거치지 않고 조립할 수 있다.
+#: round17의 교훈: 게이트를 한 함수 경계에만 두면 형제 진입점이 그대로 새어 나간다.
+_R18_ASSIGN_DIRECT_ROWS = (
+    ("negative_range", (-10, -8), "FID_BELOW_MINIMUM"),
+    ("zero_range", (0, 0), "FID_BELOW_MINIMUM"),
+    ("straddling_zero", (0, 1), "FID_BELOW_MINIMUM"),
+    ("floor_exact", (1, 1), None),
+    ("live_range", (501, 503), None),
+)
+
+
+def test_r18_assign_direct_row_table_is_complete():
+    """[round18 표 전수] 행 삭제 감지 — 배제·통과 두 결론이 모두 남아 있어야 한다."""
+    labels = [row[0] for row in _R18_ASSIGN_DIRECT_ROWS]
+    assert len(labels) == len(set(labels)) == 5
+    assert {row[2] for row in _R18_ASSIGN_DIRECT_ROWS} == {None, "FID_BELOW_MINIMUM"}
+    assert {row[1] for row in _R18_ASSIGN_DIRECT_ROWS} == {
+        (-10, -8),
+        (0, 0),
+        (0, 1),
+        (1, 1),
+        (501, 503),
+    }
+
+
+@pytest.mark.parametrize(
+    ("label", "bounds", "expected_code"),
+    _R18_ASSIGN_DIRECT_ROWS,
+    ids=[row[0] for row in _R18_ASSIGN_DIRECT_ROWS],
+)
+def test_r18_assign_fids_excludes_individual_values_below_the_minimum(label, bounds, expected_code):
+    """[round18 R18-A 개별값 축] `_assign_fids`의 개별값 검사를 지우면 실패한다.
+
+    `FIDRange`를 직접 조립한 호출자는 `_parse_fid_range`의 바닥 게이트를 지나지 않는다.
+    그 값이 `with_fid`를 타면 `PatchCandidate.assigned_fid`가 되고, `apply.py`가 그것을
+    `LuaPatchEntry.fid`로 넘겨 `fid = "-10"`인 전달물이 만들어진다.
+
+    죽이는 뮤테이션:
+      · `_assign_fids`의 `proposed_fid < _MINIMUM_FID` 갈래 삭제 → 세 배제 행이 통과해 실패.
+      · `<`를 `<=`로 → `floor_exact` 행이 배제되어 실패.
+      · 개별값 대신 `fid_range.start`만 검사 → `straddling_zero`(0,1)에서 두 번째 값 1이
+        배제되어 실패한다(배제는 첫 값만이어야 한다).
+      · 배제 대신 값을 1로 끌어올려 통과 → `assigned_fid` 단정에서 실패(자동 보정 0건).
+    """
+    from server.vwx import verdicts
+    from server.vwx.patchplan import FIDRange, _assign_fids
+
+    start, end = bounds
+    count = end - start + 1
+    targets = tuple(_r18_candidate(f"c{i}", address=1 + i * 16) for i in range(count))
+    planned, exclusions = _assign_fids(
+        targets,
+        FIDRange(start=start, end=end),
+        existing_fids=frozenset(),
+        fid_range_visually_confirmed_empty=None,
+    )
+    below = [value for value in range(start, end + 1) if value < _R18_MIN_FID_LITERAL]
+    kept = [value for value in range(start, end + 1) if value >= _R18_MIN_FID_LITERAL]
+
+    if expected_code is None:
+        assert exclusions == (), label
+    else:
+        code = getattr(verdicts, expected_code)
+        assert [x.code for x in exclusions] == [code] * len(below), label
+        assert [x.proposed_fid for x in exclusions] == below
+        for exclusion in exclusions:
+            assert "콘솔 최소 FID" in exclusion.reason
+            assert exclusion.to_dict()["label"], "닫힌 어휘에 라벨이 등재되어야 한다"
+    # 자동 보정 0건 — 살아남은 항목의 FID는 **범위 값 그대로**여야 한다.
+    assert [target.assigned_fid for target in planned] == kept
+
+
+def test_r18_below_minimum_fid_is_not_reported_as_already_in_use():
+    """[round18 R18-A] 성립하지 않는 번호를 "이미 사용 중"으로 보고하면 실패한다.
+
+    바닥 검사를 기존 FID 대조 **뒤로** 옮겨도 음수는 `existing_fids`와 만나지 않아
+    결과가 같아 보인다 — 그래서 0을 기존 FID에 넣은 이 행으로 순서를 고정한다.
+    조작자는 배제 사유를 보고 무엇을 고칠지 정한다: 잘못된 사유는 잘못된 수정을 부른다.
+    """
+    from server.vwx.patchplan import FIDRange, _assign_fids
+    from server.vwx.verdicts import FID_ALREADY_IN_USE, FID_BELOW_MINIMUM
+
+    _planned, exclusions = _assign_fids(
+        (_r18_candidate("a"),),
+        FIDRange(start=0, end=0),
+        existing_fids=frozenset({0}),
+        fid_range_visually_confirmed_empty=None,
+    )
+    assert [x.code for x in exclusions] == [FID_BELOW_MINIMUM]
+    assert FID_ALREADY_IN_USE not in {x.code for x in exclusions}
+
+
+# --------------------------------------------------------------------------
+# payload 정직성 — 거부된 호출은 "검사했다"를 주장하지 않는다
+# --------------------------------------------------------------------------
+
+#: (라벨, fid_range, 거부되는가) — 거부 행에서 `fid_safety`가 payload에 **없어야** 한다.
+_R18_PAYLOAD_HONESTY_ROWS = (
+    ("below_minimum", {"start": -10, "end": -8}, True),
+    ("zero", {"start": 0, "end": 2}, True),
+    ("inverted", {"start": 5, "end": 1}, True),
+    ("valid", {"start": 501, "end": 503}, False),
+)
+
+
+def test_r18_payload_honesty_row_table_is_complete():
+    """[round18 표 전수] 행 삭제 감지 — 거부·통과 두 결론이 모두 있어야 한다."""
+    labels = [row[0] for row in _R18_PAYLOAD_HONESTY_ROWS]
+    assert len(labels) == len(set(labels)) == 4
+    assert {row[2] for row in _R18_PAYLOAD_HONESTY_ROWS} == {True, False}
+    assert sum(1 for row in _R18_PAYLOAD_HONESTY_ROWS if row[2]) == 3
+
+
+@pytest.mark.parametrize(
+    ("label", "fid_range", "rejected"),
+    _R18_PAYLOAD_HONESTY_ROWS,
+    ids=[row[0] for row in _R18_PAYLOAD_HONESTY_ROWS],
+)
+def test_r18_a_rejected_fid_range_never_claims_a_conflict_precheck(label, fid_range, rejected):
+    """[round18 R18-A 나머지 절반] 거부된 호출의 payload가 "검사했고 깨끗하다"고
+    주장하면 실패한다.
+
+    round18 실측: `{'start': -10, 'end': -8}`이 `ok=True`로 통과하면서
+    `fid_safety.conflict_precheck.performed=true` · `existing_fids: []`를 함께 실었다.
+    음수 대역은 콘솔 FID와 **절대** 충돌하지 않으므로 그 "깨끗함"은 검사의 결과가 아니라
+    검사가 무의미했다는 뜻인데, payload는 둘을 구별해 주지 않았다.
+
+    거부 갈래를 `_fid_safety_payload` **뒤로** 옮기면 이 테스트가 실패한다 —
+    거부된 호출에는 실릴 `fid_safety`가 애초에 없어야 한다.
+    """
+    payload_report = report_payload([rr(0), rr(1), rr(2)])
+    ids = candidate_ids(payload_report)
+    plan = build_patch_plan(
+        payload_report,
+        selected=ids,
+        fid_range=fid_range,
+        assumption_71=ASSUMPTION_71_GO,
+        fid_property_port=FidRigPort(()),
+        assignment_requested=True,
+    )
+    payload = plan.to_dict()
+    if rejected:
+        assert plan.ok is False and plan.status == "rejected", label
+        assert "fid_safety" not in payload, "거부된 호출이 사전검사 payload를 실었다"
+        assert payload["rejection"]["code"] == "invalid_fid_range"
+        assert payload["rejection"]["reason"], "사유 없는 거부"
+        assert [target["fid"] for target in payload["targets"]] == [None, None, None]
+    else:
+        assert plan.ok is True, label
+        assert payload["fid_safety"]["conflict_precheck"]["performed"] is True
+        assert [target["fid"] for target in payload["targets"]] == [501, 502, 503]
+
+
+# --------------------------------------------------------------------------
+# 도달성 감지기 — 게이트를 지우면 `fid = "-10"`이 전달물 Lua에 다시 나온다
+# --------------------------------------------------------------------------
+
+
+def _r18_deliverable(fid_range, *, direct_range=None):
+    """리포트 → 계획 → 주소 계획 → **전달물 Lua**까지 프로덕션 함수만 밟는다.
+
+    `direct_range`가 주어지면 `build_patch_plan`을 우회해 `_assign_fids`를 직접 부른다 —
+    `FIDRange`를 조립하는 형제 진입점이 전달물에 닿는 경로를 같은 파이프라인으로 잰다.
+    """
+    from server.vwx.apply import build_patch_handoff
+    from server.vwx.patchplan import FIDRange, _assign_fids, plan_addresses
+    from server.vwx.typemap import LibraryMode, LibraryType, TypeRequest, TypeResolution
+    from server.vwx.verdicts import TYPE_RESOLVED
+
+    # 주소는 폭 4가 겹치지 않게 벌려 둔다 — 겹치면 `plan_addresses`가 뒤 항목을
+    # `address_overlap_in_plan`으로 빼서 전달물이 한 줄로 줄고, 비공허성 단정이
+    # "FID 게이트 때문에" 비었는지 "주소가 겹쳐서" 비었는지 구별할 수 없게 된다.
+    payload_report = report_payload([rr(0, address=1), rr(1, address=17), rr(2, address=33)])
+    ids = candidate_ids(payload_report)
+    plan = build_patch_plan(
+        payload_report,
+        selected=ids,
+        fid_range=fid_range,
+        assumption_71=ASSUMPTION_71_GO,
+        fid_property_port=FidRigPort(()),
+        assignment_requested=True,
+    )
+    targets = plan.targets
+    if direct_range is not None:
+        targets, _exclusions = _assign_fids(
+            plan.targets,
+            FIDRange(*direct_range),
+            existing_fids=frozenset(),
+            fid_range_visually_confirmed_empty=None,
+        )
+    address_plan = plan_addresses(
+        targets, footprints={target.id: 4 for target in targets}, occupied={}
+    )
+    resolutions = tuple(
+        TypeResolution(
+            request=TypeRequest(candidate_id=target.id, instrument_type=target.instrument_type),
+            status=TYPE_RESOLVED,
+            reason="",
+            console_type=LibraryType(index=1, name="Robe MegaPointe"),
+            console_mode=LibraryMode(index=1, name="Mode 1"),
+        )
+        for target in targets
+    )
+    handoff = build_patch_handoff(
+        targets,
+        address_plan=address_plan,
+        resolutions=resolutions,
+        names={target.id: f"MP_{index}" for index, target in enumerate(targets, start=1)},
+        dry_run=False,
+    )
+    return plan, handoff
+
+
+#: (라벨, 상위 호출 fid_range, `_assign_fids` 직결 범위, 전달물에 나오면 안 되는 토큰)
+_R18_REACHABILITY_CASES = (
+    ("plan_entry_negative", {"start": -10, "end": -8}, None, 'fid = "-10"'),
+    ("plan_entry_zero", {"start": 0, "end": 2}, None, 'fid = "0"'),
+    ("assign_entry_negative", {"start": 501, "end": 503}, (-10, -8), 'fid = "-10"'),
+)
+
+
+def test_r18_reachability_case_table_is_complete():
+    """[round18 표 전수] 도달성 사례 행을 지우면 실패한다.
+
+    두 **서로 다른 진입점**(상위 `build_patch_plan` · `_assign_fids` 직결)이 모두 있어야
+    한다 — 한쪽만 남기면 형제 진입점이 다시 무방비가 된다.
+    """
+    labels = [case[0] for case in _R18_REACHABILITY_CASES]
+    assert len(labels) == len(set(labels)) == 3
+    assert {case[2] is None for case in _R18_REACHABILITY_CASES} == {True, False}
+    assert {case[3] for case in _R18_REACHABILITY_CASES} == {'fid = "-10"', 'fid = "0"'}
+
+
+@pytest.mark.parametrize(
+    ("label", "fid_range", "direct_range", "forbidden_token"),
+    _R18_REACHABILITY_CASES,
+    ids=[case[0] for case in _R18_REACHABILITY_CASES],
+)
+def test_r18_below_minimum_fid_never_reaches_the_lua_deliverable(
+    label, fid_range, direct_range, forbidden_token
+):
+    """[round18 R18-A 도달성 감지기] 사람이 콘솔에 임포트하는 **산출물**이 검사
+    대상이다 — 중간 자료구조가 아니라.
+
+    **실측(정확히 재현한 것만 적는다)**: `_parse_fid_range`의 바닥 게이트와
+    `_assign_fids`의 개별값 게이트를 **둘 다** 지우면 이 파이프라인이 다시
+    `AddFixtures({ … fid = "-10" … })` · `fid = "0"`을 렌더한다(세 행 전부 재현 확인).
+    한 층만 지우면 남은 층이 잡으므로 Lua는 비고, 그때는 아래 `plan.ok`·`entries`
+    단정이 실패한다 — 즉 **어느 한 층만 지워도 이 테스트는 실패한다.**
+    두 층을 둔 이유가 그것이다: `_parse_fid_range`는 사용자 입력을 거부하고,
+    `_assign_fids`는 `FIDRange`를 직접 조립하는 형제 진입점을 막는다.
+    """
+    plan, handoff = _r18_deliverable(fid_range, direct_range=direct_range)
+
+    lua = handoff.lua_source or ""
+    assert forbidden_token not in lua, label
+    assert "AddFixtures(" not in lua, "배정된 항목이 없으므로 전달물에 호출이 없어야 한다"
+    assert handoff.entries == ()
+    if direct_range is None:
+        assert plan.ok is False and plan.status == "rejected"
+
+
+def test_r18_reachability_detector_is_not_vacuous_on_a_valid_range():
+    """[round18 R18-A 비공허성] 같은 파이프라인에 정상 범위(501~503)를 넣으면
+    Lua에 `fid = "501"`이 **실제로 나온다** — 위 테스트가 "언제나 비어 있다"를 확인하는
+    공허한 검사가 아님을 같은 경로로 증명한다."""
+    plan, handoff = _r18_deliverable({"start": 501, "end": 503})
+
+    assert plan.ok is True
+    lua = handoff.lua_source or ""
+    assert 'fid = "501"' in lua
+    assert 'fid = "502"' in lua and 'fid = "503"' in lua
+    assert [entry.fid for entry in handoff.entries] == [501, 502, 503]
+
+
+# --------------------------------------------------------------------------
+# 전달물에 닿는 **정수 축 전수 레지스트리**
+#
+# 바닥만 또 막고 끝내면 다음 라운드가 형제 축에서 같은 것을 찾는다. 그래서 축을 손으로
+# 세지 않고 **전달물 자료형의 int 필드를 AST로 뽑아** 표와 1:1로 맞춘다 — 새 정수 축을
+# 추가하면 등재 없이는 통과하지 못한다.
+# --------------------------------------------------------------------------
+
+_R18_DELIVERABLE_INT_SOURCES = (
+    ("luagen.py", "LuaPatchEntry"),
+    ("apply.py", "HandoffEntry"),
+)
+
+
+def _r18_deliverable_int_fields() -> tuple[tuple[str, str], ...]:
+    """전달물 자료형의 `int` 필드 전수 — (자료형, 필드).
+
+    **읽는 것은 두 파일뿐이다**: `luagen.py`의 `LuaPatchEntry`와 `apply.py`의
+    `HandoffEntry`. 그 둘이 사람 손에 가는 값의 **유일한** 통로이기 때문이다 —
+    Lua 본문에 닿는 길은 `LuaPatchEntry`의 6필드뿐이고(`apply.py` 모듈 독스트링),
+    payload에 실리는 항목은 `HandoffEntry.to_dict()`다. `server/vwx`의 나머지
+    모듈이 다루는 정수는 이 둘을 거치지 않으면 조작자에게 도달하지 않는다.
+    """
+    found: list[tuple[str, str]] = []
+    for module_name, class_name in _R18_DELIVERABLE_INT_SOURCES:
+        tree = ast.parse(Path("server/vwx", module_name).read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef) or node.name != class_name:
+                continue
+            for item in node.body:
+                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                    annotation = ast.unparse(item.annotation)
+                    if annotation == "int" or annotation.startswith("int "):
+                        found.append((class_name, item.target.id))
+    return tuple(sorted(found))
+
+
+#: (자료형, 필드, 바닥 게이트 자리, 상한) — 상한은 전 축이 **무상한**이고 그것이 판정이다.
+#: 각 행은 아래에서 **실제 프로덕션 호출로** 바닥 거부·상한 통과를 함께 확인받는다.
+_R18_INT_AXIS_REGISTRY: tuple[tuple[str, str, str, None], ...] = (
+    ("HandoffEntry", "address", "plan_addresses · _MINIMUM_ADDRESS_INDEX", None),
+    ("HandoffEntry", "fid", "_parse_fid_range · _assign_fids · _MINIMUM_FID", None),
+    ("HandoffEntry", "footprint", "plan_addresses · footprint <= 0", None),
+    ("HandoffEntry", "universe", "plan_addresses · _MINIMUM_ADDRESS_INDEX", None),
+    ("LuaPatchEntry", "address", "plan_addresses · _MINIMUM_ADDRESS_INDEX", None),
+    ("LuaPatchEntry", "fid", "_parse_fid_range · _assign_fids · _MINIMUM_FID", None),
+    ("LuaPatchEntry", "universe", "plan_addresses · _MINIMUM_ADDRESS_INDEX", None),
+)
+
+
+def test_r18_int_axis_registry_is_a_bijection_onto_the_deliverable_types():
+    """[round18 형제 축 전수] 전달물 자료형에 `int` 필드를 더하거나 지우면 실패한다.
+
+    round15~18이 여덟 라운드 연속 같은 기제로 실패했다 — 어떤 규율을 적용하고 형제
+    표면에는 적용하지 않는다. 이 표는 "어느 정수가 사람 손에 가는가"를 **AST로** 세어
+    손 열거의 누락 가능성을 없앤다.
+
+    표에서 행을 지우면 실패하고, 프로덕션에 새 정수 축을 추가해도 실패한다 —
+    그때 **의식적으로** 바닥·상한을 결정하고 등재해야 한다.
+    """
+    declared = tuple(sorted((cls, field) for cls, field, _gate, _ceiling in _R18_INT_AXIS_REGISTRY))
+    assert declared == _r18_deliverable_int_fields()
+    assert len(declared) == 7, "행수 리터럴 — 행 삭제/추가 감지"
+    assert len(set(declared)) == len(declared)
+    # 전 축의 상한 칸이 `None`(무상한)이다 — 하나라도 천장을 넣으면 근거를 함께 적어야 한다.
+    assert {row[3] for row in _R18_INT_AXIS_REGISTRY} == {None}
+    # 바닥 게이트 자리는 세 종류뿐이고, 셋 다 실재하는 프로덕션 이름을 가리킨다.
+    gates = {row[2] for row in _R18_INT_AXIS_REGISTRY}
+    assert len(gates) == 3
+    source = Path("server/vwx/patchplan.py").read_text(encoding="utf-8")
+    for token in ("_MINIMUM_ADDRESS_INDEX", "_MINIMUM_FID", "footprint <= 0"):
+        assert token in source, token
+
+
+#: (축 이름, 바닥 미만 입력으로 배제되는가를 재는 호출, 거대값이 통과하는가를 재는 호출)
+#: 레지스트리의 **행동 대조군** — 구조 단정만 두면 게이트를 지워도 표가 통과한다.
+_R18_AXIS_BEHAVIOUR_ROWS = ("universe", "address", "footprint", "fid")
+
+
+def test_r18_axis_behaviour_row_table_covers_every_registered_axis():
+    """[round18 표 전수] 행동 대조군이 레지스트리의 **모든 축 이름**을 덮는다."""
+    registered = {field for _cls, field, _gate, _ceiling in _R18_INT_AXIS_REGISTRY}
+    assert set(_R18_AXIS_BEHAVIOUR_ROWS) == registered
+    assert len(_R18_AXIS_BEHAVIOUR_ROWS) == len(set(_R18_AXIS_BEHAVIOUR_ROWS)) == 4
+
+
+@pytest.mark.parametrize("axis", _R18_AXIS_BEHAVIOUR_ROWS)
+def test_r18_every_deliverable_int_axis_has_a_floor_and_no_ceiling(axis):
+    """[round18 형제 축 전수 · 행동] 네 축 각각에서 **바닥 미만은 배제되고 거대값은 통과**한다.
+
+    어느 축의 바닥 게이트를 지워도 그 행이 실패한다. 어느 축에 근거 없는 천장을 넣어도
+    그 행이 실패한다 — 여덟 라운드 연속 실패한 "형제 표면 누락"을 한 표에서 닫는다.
+    """
+    from server.vwx.patchplan import FIDRange, _assign_fids, plan_addresses
+
+    if axis == "fid":
+        _planned, low = _assign_fids(
+            (_r18_candidate("a"),),
+            FIDRange(start=0, end=0),
+            existing_fids=frozenset(),
+            fid_range_visually_confirmed_empty=None,
+        )
+        high_planned, high = _assign_fids(
+            (_r18_candidate("a"),),
+            FIDRange(start=_R18_HUGE_FID, end=_R18_HUGE_FID),
+            existing_fids=frozenset(),
+            fid_range_visually_confirmed_empty=None,
+        )
+        assert [x.code for x in low] == ["fid_below_minimum"]
+        assert high == () and high_planned[0].assigned_fid == _R18_HUGE_FID
+        return
+
+    if axis == "footprint":
+        low_plan = plan_addresses((_r18_candidate("a"),), footprints={"a": 0}, occupied={})
+        high_plan = plan_addresses((_r18_candidate("a"),), footprints={"a": 10**6}, occupied={})
+        assert [x.code for x in low_plan.exclusions] == ["footprint_unknown"]
+        assert high_plan.exclusions == () and high_plan.entries[0].footprint == 10**6
+        return
+
+    below = {"universe": _r18_candidate("a", universe=0), "address": _r18_candidate("a", address=0)}
+    above = {
+        "universe": _r18_candidate("a", universe=_R18_HUGE_FID),
+        "address": _r18_candidate("a", address=_R18_HUGE_FID),
+    }
+    low_plan = plan_addresses((below[axis],), footprints={"a": 4}, occupied={})
+    high_plan = plan_addresses((above[axis],), footprints={"a": 4}, occupied={})
+    assert [x.code for x in low_plan.exclusions] == ["address_below_minimum"]
+    assert high_plan.exclusions == ()
+    assert getattr(high_plan.entries[0], axis) == _R18_HUGE_FID
+
+
+# --------------------------------------------------------------------------
+# 축 독립성 — **표에 기대지 않는** 단독 대조군 3개
+#
+# 교차 실측(행삭제 × 프로덕션 뮤테이션)에서 두 사각지대가 나왔다: `_R18_FID_RANGE_ROWS`의
+# `start_ok_end_below` 행을 지우면 **start 축만 검사**하는 뮤턴트가, `straddling_zero`
+# 행을 지우면 **범위 시작값만 검사**하는 뮤턴트가 행동 대조군에서 SURVIVED였다.
+# 표의 행삭제는 표 자신의 전단사가 잡지만, 그건 구조 게이트다. 아래 셋은 같은 축을
+# **표 밖에서** 한 번 더 잰다 — 표 한 행에 걸린 유일 방어를 없앤다.
+# --------------------------------------------------------------------------
+
+
+def test_r18_the_end_axis_of_the_floor_gate_is_checked_independently():
+    """[round18 R18-A] 바닥 검사를 `start < _MINIMUM_FID`로 좁히면 실패한다.
+
+    `start=5`는 바닥 위이고 `end=-1`만 아래다. 순서 검사(`end < start`)가 이 입력을
+    흡수해 **거부 자체는 유지되므로**, 통과/거부만 재는 단정으로는 이 축 축소를 잡을 수
+    없다 — 어느 **사유**가 나오는지까지 재야 잡힌다.
+    """
+    parse = _r18_parse(5, -1)
+    assert parse.parsed is None
+    assert "콘솔 최소 FID" in parse.defect, "end 축이 검사되지 않아 순서 사유로 떨어졌다"
+    assert "end=-1" in parse.defect
+
+
+def test_r18_the_start_axis_of_the_floor_gate_is_checked_independently():
+    """[round18 R18-A] 바닥 검사를 `end < _MINIMUM_FID`로 좁히면 실패한다.
+
+    `start=0`은 바닥 아래이고 `end=2`는 위다. 순서도 정상이라 축소하면 **그대로 통과**해
+    `fid = "0"`이 전달물에 실린다.
+    """
+    parse = _r18_parse(0, 2)
+    assert parse.parsed is None, "start 축이 검사되지 않아 바닥 미만 범위가 통과했다"
+    assert "콘솔 최소 FID" in parse.defect
+    assert "start=0" in parse.defect
+
+
+def test_r18_the_individual_value_check_is_per_value_not_per_range():
+    """[round18 R18-A] `_assign_fids`의 개별값 검사를 `fid_range.start` 검사로 바꾸면 실패한다.
+
+    범위 `(0, 1)`은 바닥을 **걸친다**: 첫 값 0은 배제되고 둘째 값 1은 배정돼야 한다.
+    범위 시작값만 보면 두 대상 모두 배제되고, 범위 전체를 보면 1까지 잃는다 —
+    어느 쪽이든 여기서 잡힌다. 반대로 검사를 지우면 0이 배정돼 역시 잡힌다.
+    """
+    from server.vwx.patchplan import FIDRange, _assign_fids
+    from server.vwx.verdicts import FID_BELOW_MINIMUM
+
+    planned, exclusions = _assign_fids(
+        (_r18_candidate("a"), _r18_candidate("b", address=17)),
+        FIDRange(start=0, end=1),
+        existing_fids=frozenset(),
+        fid_range_visually_confirmed_empty=None,
+    )
+    assert [(x.candidate_id, x.code, x.proposed_fid) for x in exclusions] == [
+        ("a", FID_BELOW_MINIMUM, 0)
+    ]
+    assert [(t.id, t.assigned_fid) for t in planned] == [("b", 1)]

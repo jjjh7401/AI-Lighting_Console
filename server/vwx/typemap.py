@@ -10,10 +10,12 @@ from server.vwx.verdicts import (
     DMX_MODE_NOT_IN_LIBRARY,
     FIXTURE_TYPE_LIBRARY_TRUNCATED,
     FIXTURE_TYPE_LIBRARY_UNREADABLE,
+    FIXTURE_TYPE_NAME_UNUSABLE,
     FIXTURE_TYPE_NOT_IN_LIBRARY,
     FOOTPRINT_MATCH_DESCOPE,
     TYPE_LIBRARY_ABSENT,
     TYPE_LIBRARY_INCOMPLETE,
+    TYPE_NAME_UNUSABLE,
     TYPE_NEEDS_CONFIRMATION,
     TYPE_RESOLVED,
     skipped_check_label,
@@ -58,9 +60,25 @@ LIBRARY_UNREADABLE_REASON = (
 #: [round17 · 공허 일치 차단] 정규화 후 영숫자가 남지 않는 이름은 라이브러리 대조 기준이
 #: 되지 못한다 — `_comparable_key` 참조. 그 이름으로 "일치"를 주장하면 라이브러리 전 항목이
 #: 후보가 되고, 항목이 하나뿐인 라이브러리에서는 그것이 유일 후보가 되어 확정까지 간다.
+#:
+#: [round18 R18-E] round17은 이 갈래를 `needs_confirmation`으로 넘겼다 — **그것이 결함이었다.**
+#: 이 갈래는 `type_candidates`가 **0건**이다. 확인할 후보를 하나도 제시하지 않은 상태를
+#: "사용자 확인 대기"라 적으면 `hard_stops`가 비고 `confirmation_required`가 참이 되어,
+#: 조작자는 화면에 없는 것을 고르려 기다린다. 그래서 하드 스톱으로 낸다.
+#:
+#: **탈출구는 실측으로 구분된다**(`_alias_for`의 `if not key: continue`):
+#:   · 이름이 `None`·`''`(falsy)면 별칭 **키 자체가 없어** 어떤 입력으로도 해결 불가 —
+#:     진짜 막다른 길이다. 고칠 곳은 도면뿐이다.
+#:   · 이름이 `'---'`·`'   '`처럼 truthy면 그 이름을 키로 한 별칭에 **실재 콘솔 이름**을
+#:     저장해 두면 `alias_type`이 대조 기준이 되어 `resolved`까지 간다(실측). 그래서 이
+#:     하드 스톱은 그 탈출구를 막지 않는다 — 별칭이 있으면 이 갈래에 오지 않는다.
+#: 두 경우 모두 사유는 **도면 이름을 고쳐라**를 말한다: 공허한 이름은 별칭을 걸어도
+#: 도면 쪽 식별이 사람에게 읽히지 않는다.
 VACUOUS_TYPE_KEY_REASON = (
     "타입 이름에 영숫자가 하나도 없어 라이브러리 대조 기준이 되지 못한다 — 공허한 일치로 "
-    "후보를 세지 않고 사용자 확인으로 넘긴다. 조회에 쓰려던 이름은 구조화 칸에 그대로 남긴다."
+    "후보를 세지 않으므로 제시할 후보가 0건이다. 확인할 것이 없는 상태는 확인 대기가 아니라 "
+    "하드 스톱이다 — 도면의 타입 이름을 고쳐야 한다. 이름이 아예 비어 있으면 별칭 등록조차 "
+    "키가 없어 불가능하다. 조회에 쓰려던 이름은 구조화 칸에 그대로 남긴다."
 )
 
 TYPE_TABLE_COLUMNS = (
@@ -372,11 +390,20 @@ def _resolve_one(
     searched_mode_key = alias_mode or request.mode
     if not _type_search_keys(request, alias_type):
         # [round17 · 공허 일치 차단] 대조 기준이 될 이름이 없다. "라이브러리에 없다"고
-        # 적으면 **찾아보지도 않은 것을 부재로 단정**하는 것이므로 확인으로 넘긴다.
+        # 적으면 **찾아보지도 않은 것을 부재로 단정**하는 것이다 — 그래서 코드도 사유도
+        # `fixture_type_not_in_library`가 아니다.
+        # [round18 R18-E] 그러나 `needs_confirmation`도 아니다: 이 갈래는 `type_candidates`가
+        # **0건**이라 제시된 후보가 없다. 확인할 것이 없는 상태를 "확인 대기"로 적으면
+        # `hard_stops`가 비고 `confirmation_required`가 참이 되어, 조작자는 화면에 없는 것을
+        # 고르려 기다린다. 하드 스톱으로 낸다 — 고칠 곳은 도면이다.
+        # (별칭 탈출구는 남아 있다: 이름이 truthy면 그 이름을 키로 한 별칭에 실재 콘솔 이름을
+        #  저장해 두면 `alias_type`이 기준이 되어 이 갈래에 오지 않는다. 이름이 `None`·`''`면
+        #  `_alias_for`의 `if not key: continue`에 걸려 그 탈출구조차 없다 — 실측 확인.)
         return TypeResolution(
             request=request,
-            status=TYPE_NEEDS_CONFIRMATION,
+            status=TYPE_NAME_UNUSABLE,
             reason=VACUOUS_TYPE_KEY_REASON,
+            hard_stop_code=FIXTURE_TYPE_NAME_UNUSABLE,
             searched_type_key=searched_type_key,
             searched_mode_key=searched_mode_key,
             footprint_check=_footprint_check(
@@ -541,6 +568,18 @@ def _comparable_key(value: object) -> str | None:
     if not isinstance(value, str) or not value:
         return None
     return value if _norm_type(value) else None
+
+
+def is_vacuous_type_name(value: object) -> bool:
+    """`_comparable_key`의 **공개 술어** — 이 이름은 타입 대조 기준이 되지 못한다.
+
+    [round18 R18-J] 같은 판정을 `patchplan`이 필요로 한다: 1단계 `diff.compare`가
+    `fuzzy_type_equal`로 조인하므로 공허한 도면 타입 이름은 콘솔 전 항목과 "일치"하고
+    그 픽스처는 `missing_in_console`·`quantity_mismatch` 양쪽에서 사라진다. 2단계는
+    그 소멸을 **고칠** 수 없지만(1단계 소관) **고지**해야 한다. 술어를 재구현하지 않고
+    이 하나를 쓴다 — 두 층의 공허 판정이 갈리면 고지가 대상과 어긋난다.
+    """
+    return _comparable_key(value) is None
 
 
 def _alias_for(

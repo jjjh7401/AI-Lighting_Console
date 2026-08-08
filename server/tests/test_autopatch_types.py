@@ -9,6 +9,18 @@ from pathlib import Path
 import pytest
 
 from server.prechk.inventory import COMPLETE, FIXTURE_ROOT, FixtureRecord, Inventory
+from server.vwx import columns as columns_module
+from server.vwx.address import ResolvedRecord, resolve_all
+from server.vwx.columns import (
+    ADDRESS_FAMILY_FIELDS,
+    ALIAS_LOOKUP,
+    ALIAS_TABLE,
+    READ_FAILURE_MIN_RECORD,
+    has_address_family,
+    normalize_header,
+    resolve_columns,
+    resolve_header,
+)
 from server.vwx.diff import WORKSHEET_BLOCK_UNDETECTED, compare
 from server.vwx.reader import (
     PATH_A,
@@ -27,6 +39,8 @@ from server.vwx.rig import (
     DesignedFixture,
     DesignedRig,
     _classify_vw_conflicts,
+    _norm_type,
+    build_designed_rig,
     fuzzy_type_equal,
 )
 from server.vwx.typemap import (
@@ -38,7 +52,12 @@ from server.vwx.typemap import (
     FIXTURE_TYPE_LIBRARY_ROOT,
     FOOTPRINT_UNVERIFIED_COLUMN,
     VACUOUS_TYPE_KEY_REASON,
+    LibraryMode,
+    LibraryType,
     TypeRequest,
+    _alias_for,
+    _mode_candidates,
+    is_vacuous_type_name,
     read_fixture_type_library,
     resolve_fixture_types,
 )
@@ -46,10 +65,12 @@ from server.vwx.verdicts import (
     DMX_MODE_NOT_IN_LIBRARY,
     FIXTURE_TYPE_LIBRARY_TRUNCATED,
     FIXTURE_TYPE_LIBRARY_UNREADABLE,
+    FIXTURE_TYPE_NAME_UNUSABLE,
     FIXTURE_TYPE_NOT_IN_LIBRARY,
     FOOTPRINT_MATCH_DESCOPE,
     TYPE_LIBRARY_ABSENT,
     TYPE_LIBRARY_INCOMPLETE,
+    TYPE_NAME_UNUSABLE,
     TYPE_NEEDS_CONFIRMATION,
     TYPE_RESOLUTION_STATUS,
     TYPE_RESOLVED,
@@ -1167,6 +1188,12 @@ class TestRound17FuzzyTypeEqualBoundary:
         `rig.fuzzy_type_equal`은 `_norm_type`으로 비영숫자를 전부 제거한 뒤 포함관계를 보므로
         `'---'`은 정규화 후 빈 문자열이 되고 빈 문자열은 **모든** 이름에 포함된다. 즉 rig 층은
         여전히 True를 낸다(1단계 공개 계약이라 바꾸지 않는다) — 막는 층은 `typemap`이다.
+
+        **[round18 R18-E 판정 변경]** round17판은 이 갈래를 `needs_confirmation` ·
+        하드스톱 0건으로 고정했다. 그것이 결함이었다: 이 상태에는 **수행할 확인이 없다**
+        (아래 `test_r18_...dead_end` 참조). 판정은 `designed_type_name_unusable` ·
+        `fixture_type_name_unusable` 하드스톱이다. 하드스톱을 `None`으로 되돌리거나
+        상태를 `needs_confirmation`으로 되돌리면 실패한다.
         """
         # rig 층의 동작은 그대로다 — 이 테스트가 막는 것은 typemap의 **후보 계수**다.
         assert fuzzy_type_equal("---", "MegaPointe") is True
@@ -1189,13 +1216,16 @@ class TestRound17FuzzyTypeEqualBoundary:
                 row = row_by_id(payload, "punct")
 
                 assert row["type_candidates"] == [], (library, aliases)
-                assert row["status"] == TYPE_NEEDS_CONFIRMATION, (library, aliases)
+                assert row["status"] == TYPE_NAME_UNUSABLE, (library, aliases)
                 assert row["console_type"] is None, (library, aliases)
                 assert row["console_mode"] is None, (library, aliases)
                 assert row["confirmation_source"] is None, (library, aliases)
                 assert row["reason"] == VACUOUS_TYPE_KEY_REASON, (library, aliases)
-                # 찾아보지도 않은 것을 **부재로 단정하지 않는다** — 하드스톱을 내지 않는다.
-                assert hard_stop_codes(payload) == [], (library, aliases)
+                # "라이브러리에 없다"고 적지 않는다 — 찾아보지도 않았으므로 부재 단정이 된다.
+                assert hard_stop_codes(payload) == [FIXTURE_TYPE_NAME_UNUSABLE], (library, aliases)
+                assert FIXTURE_TYPE_NOT_IN_LIBRARY not in hard_stop_codes(payload)
+                # 확인 경로가 없으므로 "확인 대기"라 적지 않는다(round18 R18-E).
+                assert row["confirmation_required"] is False, (library, aliases)
 
     def test_the_vacuous_key_gate_does_not_swallow_ordinary_names(self):
         """[round17 · 공허 일치 차단 ⓑ 비공허성] 정상 이름은 여전히 확정까지 간다 —
@@ -1906,3 +1936,1253 @@ class TestRound17OtherModuleAmbiguityGates:
             for entry in second_hit.missing_in_console
         ]
         assert len(first_hit.missing_in_console) == 2
+
+
+# --- round18 공허 입력 전수 · 확인 경로 존재 · 컬럼 우선순위 (VacuityAndData) ---
+#
+# [round18 R18-E · R18-H · R18-I · R18-G · R18-J]
+#
+# round18 감사 지적의 공통 기제는 여덟 라운드째 같다: **어떤 규율을 적용하고 형제 표면에는
+# 적용하지 않는다.** round17은 공허 일치를 `typemap`에서 닫았으나
+#   · 그 닫음이 **같은 함수 안에서** 하드스톱을 강등시킨 것을 신고하지 않았고(R18-E),
+#   · 공허 입력 대조군을 `'---'` 하나에만 걸었고(R18-I),
+#   · 형제 축(`_mode_candidates`·별칭 값)과 형제 모듈(`columns`·`apply`)에는 걸지 않았다.
+# 그래서 이 섹션은 **값 축(공허 형태) × 적용 축(타입·GDTF·모드·별칭타입·별칭모드)** 전수를
+# 하나의 표로 만들고, 표에서 한 행이 사라지면 축 하나가 사라지도록 축 라벨을 **값에서 계산**
+# 한다(자유 라벨이면 표가 자기충족이 된다 — round18 minor 지적).
+
+_R18_VACUITY_CATEGORIES = (
+    "none",
+    "not_a_string",
+    "empty",
+    "blank_ascii",
+    "blank_unicode",
+    "control",
+    "punct_43",
+    "punct_45",
+    "punct_46",
+    "punct_47",
+    "punct_95",
+    "punct_mixed",
+)
+
+
+def _r18_vacuity_category(value: object) -> str:
+    """공허 값의 축 라벨을 **값에서 계산한다** — 자유 라벨 금지(자기충족 방지).
+
+    표의 각 행이 서로 다른 축을 차지해야 행 삭제가 축 결손으로 드러난다. 라벨을 손으로
+    적으면 같은 축에 두 행을 놓을 수 있고, 그러면 한 행을 지워도 축 집합이 그대로다 —
+    round18이 `_R17_CONTAINMENT_FAMILY`에서 지적한 자기충족 표가 바로 그 형태다.
+    """
+    if value is None:
+        return "none"
+    if not isinstance(value, str):
+        return "not_a_string"
+    if value == "":
+        return "empty"
+    if value.strip() == "":
+        return "blank_unicode" if not value.isascii() else "blank_ascii"
+    if not value.isprintable():
+        return "control"
+    distinct = set(value)
+    if len(distinct) == 1:
+        return f"punct_{ord(next(iter(distinct)))}"
+    return "punct_mixed"
+
+
+#: 공허 입력 전수 — `None` · 비문자열 · `''` · ASCII 공백 · 유니코드 공백 · 제어문자 ·
+#: 구두점 다섯 종 · 혼합 구두점. 각 행의 축은 위 함수가 계산한다.
+_R18_VACUOUS_VALUES = (
+    None,
+    123,
+    "",
+    "   ",
+    "\u00a0\u2003\u3000",
+    "\x00\x01\x02",
+    "+++",
+    "---",
+    "...",
+    "///",
+    "__",
+    "-.-",
+)
+
+#: 비공허 대조군 — 이 값들이 함께 떨어지면 게이트가 정상 입력까지 삼킨 것이다.
+#: `'--MegaPointe--'`는 **구두점에 싸인 정상 이름**이라 경계 바로 안쪽이다.
+_R18_SUBSTANTIVE_VALUES = ("1", "a", "MegaPointe", "--MegaPointe--", " MegaPointe ")
+
+
+def _r18_assert_vacuity_table_shape(values: tuple[object, ...]) -> None:
+    """행 삭제 프로브 — 축은 값에서 계산되므로 한 행을 지우면 축 하나가 사라진다."""
+    axes = [_r18_vacuity_category(value) for value in values]
+    assert len(axes) == len(set(axes)), axes
+    assert set(axes) == set(_R18_VACUITY_CATEGORIES)
+    assert len(values) == len(_R18_VACUITY_CATEGORIES)
+
+
+class TestRound18VacuityAxisTable:
+    """[round18 R18-I] 공허 판정의 **값 축** 전수 — round17은 `'---'` 한 형태만 걸었다."""
+
+    def test_the_vacuity_table_covers_every_axis_and_row_deletion_is_detected(self):
+        _r18_assert_vacuity_table_shape(_R18_VACUOUS_VALUES)
+        for index in range(len(_R18_VACUOUS_VALUES)):
+            pruned = tuple(
+                value for position, value in enumerate(_R18_VACUOUS_VALUES) if position != index
+            )
+            with pytest.raises(AssertionError):
+                _r18_assert_vacuity_table_shape(pruned)
+
+    def test_the_empty_string_fast_path_is_redundant_with_the_normalisation_check(self):
+        """[round18 · 등가 뮤턴트 기록] `_comparable_key`의 `or not value` 절을 지우는
+        뮤테이션은 **SURVIVED이고 그것이 옳다** — 등가 뮤턴트다.
+
+        근거: `rig._norm_type("")`는 `""`이고 그것은 거짓이므로, 빈 문자열은 `not value`가
+        없어도 다음 줄에서 `None`이 된다. 즉 그 절은 의미 게이트가 아니라 **빠른 경로**다.
+        이 테스트는 그 등가성을 코드로 남긴다 — 뮤테이션 보고서에서 "대조군 공백"과
+        "등가 뮤턴트"를 구별할 수 있도록.
+        """
+        assert _norm_type("") == ""
+        assert not _norm_type("")
+        assert is_vacuous_type_name("") is True
+        # 빠른 경로가 가리는 것이 없음도 확인한다 — 비문자열은 앞 절이 잡는다.
+        assert is_vacuous_type_name(None) is True
+        assert is_vacuous_type_name(0) is True
+
+    def test_the_public_vacuity_predicate_agrees_with_the_table_on_every_axis(self):
+        """[round18] `typemap.is_vacuous_type_name`에서 `_norm_type` 호출을 떼거나
+        `not value` 검사만 남기면(즉 `'---'`을 통과시키면) 실패한다.
+        """
+        for value in _R18_VACUOUS_VALUES:
+            assert is_vacuous_type_name(value) is True, repr(value)
+        for value in _R18_SUBSTANTIVE_VALUES:
+            assert is_vacuous_type_name(value) is False, repr(value)
+
+
+# --------------------------------------------------------------------------
+# [round18 R18-E · R18-I] 적용 축 — 공허 값이 **어느 칸에** 들어갔는지로 판정이 갈린다.
+# --------------------------------------------------------------------------
+
+_R18_AXIS_BOTH_TYPE = "both_type_names_vacuous"
+_R18_AXIS_GDTF_ONLY = "gdtf_only_vacuous"
+_R18_AXIS_ALIAS_TYPE = "alias_type_value_vacuous"
+_R18_AXIS_MODE = "designed_mode_vacuous"
+_R18_AXIS_ALIAS_MODE = "alias_mode_value_vacuous"
+#: [round18 실측] 별칭 항목은 **Mapping 형태와 문자열 형태 둘 다** 받는다
+#: (`_alias_for`의 `isinstance(entry, str) and entry` 갈래). 문자열 형태만 축에서
+#: 빠뜨리면 그 갈래의 공허 필터 제거가 SURVIVED다 — 형제 축 미적용의 교과서적 형태.
+_R18_AXIS_ALIAS_STRING = "alias_string_value_vacuous"
+
+_R18_AXES = (
+    _R18_AXIS_BOTH_TYPE,
+    _R18_AXIS_GDTF_ONLY,
+    _R18_AXIS_ALIAS_TYPE,
+    _R18_AXIS_MODE,
+    _R18_AXIS_ALIAS_MODE,
+    _R18_AXIS_ALIAS_STRING,
+)
+
+_R18_LIB_TYPE = "MegaPointe"
+_R18_LIB_MODE = "Mode 1"
+_R18_LIBRARY = [(_R18_LIB_TYPE, [(_R18_LIB_MODE, 24)])]
+_R18_GOOD_ALIAS = {"type": _R18_LIB_TYPE, "mode": _R18_LIB_MODE}
+
+
+@dataclass(frozen=True)
+class _R18AxisRow:
+    """축 하나의 기대 판정. `confirmation_path`는 **그 확인을 수행할 입력이 존재하는가**다."""
+
+    axis: str
+    status: str
+    hard_stops: tuple[str, ...]
+    console_type: str | None
+    console_mode: str | None
+    type_candidate_count: int
+    confirmation_path: bool
+
+
+#: 실측 고정(round18). `both_type`은 후보 0건이므로 하드 스톱이고, 나머지 넷은 후보를
+#: 제시하므로 확인 대기다 — 그 확인을 수행할 입력이 실제로 존재함을 아래에서 실행해 본다.
+_R18_AXIS_ROWS = (
+    _R18AxisRow(
+        _R18_AXIS_BOTH_TYPE,
+        TYPE_NAME_UNUSABLE,
+        (FIXTURE_TYPE_NAME_UNUSABLE,),
+        None,
+        None,
+        0,
+        # truthy 공허 이름은 별칭 키가 되므로 탈출구가 있다(falsy는 없다 — 별도 게이트).
+        True,
+    ),
+    _R18AxisRow(_R18_AXIS_GDTF_ONLY, TYPE_NEEDS_CONFIRMATION, (), None, None, 1, True),
+    _R18AxisRow(_R18_AXIS_ALIAS_TYPE, TYPE_NEEDS_CONFIRMATION, (), None, _R18_LIB_MODE, 1, True),
+    _R18AxisRow(_R18_AXIS_MODE, TYPE_RESOLVED, (), _R18_LIB_TYPE, _R18_LIB_MODE, 1, False),
+    _R18AxisRow(_R18_AXIS_ALIAS_MODE, TYPE_NEEDS_CONFIRMATION, (), _R18_LIB_TYPE, None, 1, True),
+    _R18AxisRow(_R18_AXIS_ALIAS_STRING, TYPE_NEEDS_CONFIRMATION, (), None, None, 1, True),
+)
+
+
+def _r18_axis_request(axis: str, value: object) -> tuple[TypeRequest, dict]:
+    """축 하나에 공허 값을 심은 (요청, 별칭). 다른 칸은 전부 정상 값이다."""
+    if axis == _R18_AXIS_BOTH_TYPE:
+        return (
+            TypeRequest(
+                candidate_id="r18",
+                instrument_type=value,
+                gdtf_fixture=value,
+                mode=_R18_LIB_MODE,
+            ),
+            {},
+        )
+    if axis == _R18_AXIS_GDTF_ONLY:
+        return (
+            TypeRequest(
+                candidate_id="r18",
+                instrument_type=_R18_LIB_TYPE,
+                gdtf_fixture=value,
+                mode=_R18_LIB_MODE,
+            ),
+            {},
+        )
+    base = TypeRequest(candidate_id="r18", instrument_type=_R18_LIB_TYPE, mode=_R18_LIB_MODE)
+    if axis == _R18_AXIS_ALIAS_TYPE:
+        return base, {_R18_LIB_TYPE: {"type": value, "mode": _R18_LIB_MODE}}
+    if axis == _R18_AXIS_MODE:
+        return (
+            TypeRequest(candidate_id="r18", instrument_type=_R18_LIB_TYPE, mode=value),
+            {_R18_LIB_TYPE: dict(_R18_GOOD_ALIAS)},
+        )
+    if axis == _R18_AXIS_ALIAS_MODE:
+        return base, {_R18_LIB_TYPE: {"type": _R18_LIB_TYPE, "mode": value}}
+    if axis == _R18_AXIS_ALIAS_STRING:
+        # 문자열 형태 별칭 — 값 하나가 곧 콘솔 타입 이름이다(모드는 담기지 않는다).
+        return base, {_R18_LIB_TYPE: value}
+    raise AssertionError(f"unknown axis: {axis}")
+
+
+def _r18_resolve(request: TypeRequest, aliases: dict) -> dict:
+    return resolve_fixture_types(
+        [request], library_port=LibraryRigPort(_R18_LIBRARY), type_aliases=aliases
+    ).to_dict()
+
+
+def _r18_assert_axis_table_shape(rows: tuple[_R18AxisRow, ...]) -> None:
+    """행 삭제 프로브 — 축 하나에 행 하나이므로 삭제는 축 결손으로 드러난다."""
+    axes = tuple(row.axis for row in rows)
+    assert len(axes) == len(set(axes)), axes
+    assert set(axes) == set(_R18_AXES)
+    assert len(rows) == len(_R18_AXES)
+    # 표가 한 판정으로 뭉개지면(전부 하드스톱 또는 전부 확인 대기) 축 구분이 무의미하다.
+    assert len({row.status for row in rows}) >= 3, axes
+    assert {row.confirmation_path for row in rows} == {False, True}
+
+
+class TestRound18VacuityApplicationAxes:
+    """[round18 R18-E · R18-I] 공허 값이 들어간 **칸**마다 판정이 다르다 — 전수."""
+
+    def test_the_axis_table_shape_detects_row_deletion(self):
+        _r18_assert_axis_table_shape(_R18_AXIS_ROWS)
+        for index in range(len(_R18_AXIS_ROWS)):
+            pruned = tuple(row for position, row in enumerate(_R18_AXIS_ROWS) if position != index)
+            with pytest.raises(AssertionError):
+                _r18_assert_axis_table_shape(pruned)
+
+    def test_every_axis_holds_for_every_vacuous_form(self):
+        """[round18 R18-E · R18-I] 다음 뮤테이션에서 실패한다:
+
+        · `typemap.py` 공허 갈래의 `hard_stop_code=FIXTURE_TYPE_NAME_UNUSABLE`를 `None`으로 —
+          `both_type` 축이 하드스톱을 잃는다(R18-E 강등 복귀).
+        · 같은 갈래의 `status=TYPE_NAME_UNUSABLE`를 `TYPE_NEEDS_CONFIRMATION`으로 —
+          같은 축의 상태와 `confirmation_required`가 뒤집힌다.
+        · `_comparable_key`의 `_norm_type(value)` 검사를 지워 `not value`만 남기면 —
+          `'---'`·`'   '`·제어문자·유니코드 공백 행에서 대조 기준이 되살아나 판정이 갈린다.
+        · `_mode_candidates`에서 `_comparable_key`를 지우면 — `designed_mode` 축의
+          공허 모드가 전 모드 제시 대신 공허 일치로 좁혀진다.
+        · `_alias_for`에서 `_comparable_key`를 지우면 — `alias_type`/`alias_mode` 축이
+          공허한 별칭 값으로 `resolved`까지 간다.
+        """
+        for row in _R18_AXIS_ROWS:
+            for value in _R18_VACUOUS_VALUES:
+                request, aliases = _r18_axis_request(row.axis, value)
+                payload = _r18_resolve(request, aliases)
+                observed = row_by_id(payload, "r18")
+                context = (row.axis, repr(value))
+                assert observed["status"] == row.status, context
+                assert tuple(hard_stop_codes(payload)) == row.hard_stops, context
+                assert observed["console_type"] == row.console_type, context
+                assert observed["console_mode"] == row.console_mode, context
+                assert len(observed["type_candidates"]) == row.type_candidate_count, context
+                assert observed["confirmation_required"] is (
+                    row.status == TYPE_NEEDS_CONFIRMATION
+                ), context
+
+    def test_no_vacuous_form_on_any_axis_ever_reaches_a_substitute_assignment(self):
+        """[round18 R18-E] 공허 값이 어느 칸에 들어가도 도면이 준 적 없는 콘솔 타입이
+        확정되지 않는다 — `assert_no_substitute_assignment`로 전 축 재확인.
+        """
+        for row in _R18_AXIS_ROWS:
+            for value in _R18_VACUOUS_VALUES:
+                request, aliases = _r18_axis_request(row.axis, value)
+                assert_no_substitute_assignment(_r18_resolve(request, aliases))
+
+    def test_substantive_names_are_not_swallowed_on_any_axis(self):
+        """[round18 R18-I 비공허성] 정상 이름은 어느 축에서도 공허 판정에 걸리지 않는다.
+
+        `_comparable_key`가 모든 값을 떨구도록 바꾸면(항상 `None` 반환) 실패한다 —
+        `' MegaPointe '`·`'--MegaPointe--'`처럼 **구두점·공백에 싸인 정상 이름**은
+        경계 바로 안쪽이라 과잉 차단을 여기서 잡는다.
+        """
+        for name in _R18_SUBSTANTIVE_VALUES:
+            payload = _r18_resolve(
+                TypeRequest(candidate_id="r18", instrument_type=name, mode=_R18_LIB_MODE),
+                {name: dict(_R18_GOOD_ALIAS)},
+            )
+            row = row_by_id(payload, "r18")
+            assert row["status"] != TYPE_NAME_UNUSABLE, name
+            assert hard_stop_codes(payload) == [], name
+            assert row["reason"] != VACUOUS_TYPE_KEY_REASON, name
+
+
+# --------------------------------------------------------------------------
+# [round18 R18-E ②] "확인 경로가 존재하는가"를 게이트로
+#
+# 사유가 *사용자 확인으로 넘긴다*고 말하는 **모든 갈래**에 대해, 그 확인을 수행할 입력이
+# 실제로 존재하는지 **실행해서** 단정한다. 존재하지 않으면 그 갈래는 확인 대기라 불릴 자격이
+# 없다 — round18 R18-E가 정확히 그 형태였다.
+# --------------------------------------------------------------------------
+
+#: 축 -> 그 축의 판정을 `resolved`로 바꾸는 입력의 설명.
+_R18_CONFIRMATION_INPUTS = {
+    _R18_AXIS_BOTH_TYPE: "truthy 공허 이름을 키로 한 별칭에 실재 콘솔 이름을 저장",
+    _R18_AXIS_GDTF_ONLY: "instrument_type을 키로 한 별칭 저장",
+    _R18_AXIS_ALIAS_TYPE: "별칭 type 값을 실재 콘솔 이름으로 교체",
+    _R18_AXIS_ALIAS_MODE: "별칭 mode 값을 실재 콘솔 모드로 교체",
+    _R18_AXIS_ALIAS_STRING: "문자열 별칭을 Mapping 형태로 바꿔 mode까지 저장",
+}
+
+
+def _r18_confirmed(axis: str, value: object) -> dict:
+    """그 축에서 **확인을 수행한** 입력 — 별칭 값이 전부 실재 콘솔 이름이다."""
+    if axis == _R18_AXIS_BOTH_TYPE:
+        return _r18_resolve(
+            TypeRequest(
+                candidate_id="r18", instrument_type=value, gdtf_fixture=value, mode=_R18_LIB_MODE
+            ),
+            {value: dict(_R18_GOOD_ALIAS)},
+        )
+    if axis == _R18_AXIS_GDTF_ONLY:
+        return _r18_resolve(
+            TypeRequest(
+                candidate_id="r18",
+                instrument_type=_R18_LIB_TYPE,
+                gdtf_fixture=value,
+                mode=_R18_LIB_MODE,
+            ),
+            {_R18_LIB_TYPE: dict(_R18_GOOD_ALIAS)},
+        )
+    return _r18_resolve(
+        TypeRequest(candidate_id="r18", instrument_type=_R18_LIB_TYPE, mode=_R18_LIB_MODE),
+        {_R18_LIB_TYPE: dict(_R18_GOOD_ALIAS)},
+    )
+
+
+class TestRound18ConfirmationPathExists:
+    """[round18 R18-E ②] 확인을 말하는 갈래에는 확인을 수행할 인자가 **실제로** 있어야 한다."""
+
+    def test_every_confirmation_branch_has_an_input_that_actually_confirms(self):
+        """[round18 R18-E] `confirmation_path=True`인 축마다 그 확인을 수행한 입력이
+        `resolved`를 낸다 — 확정 경로를 막는 뮤테이션(예: `confirmed_type = None`)에서 실패한다.
+        """
+        for row in _R18_AXIS_ROWS:
+            if not row.confirmation_path:
+                continue
+            for value in _R18_VACUOUS_VALUES:
+                if row.axis == _R18_AXIS_BOTH_TYPE and not (isinstance(value, str) and value):
+                    continue  # falsy 이름은 별칭 키가 없다 — 아래 막다른 길 게이트가 다룬다.
+                payload = _r18_confirmed(row.axis, value)
+                observed = row_by_id(payload, "r18")
+                assert observed["status"] == TYPE_RESOLVED, (row.axis, repr(value))
+                assert observed["console_type"] == _R18_LIB_TYPE, (row.axis, repr(value))
+                assert observed["confirmation_source"] == ALIAS_CONFIRMATION_SOURCE
+
+    def test_a_falsy_designed_type_name_is_a_dead_end_and_is_never_called_pending(self):
+        """[round18 R18-E] 진짜 막다른 길 — `None`·`''`은 `_alias_for`의
+        `if not key: continue`에 걸려 **어떤 별칭으로도** 해결되지 않는다.
+
+        `typemap.py` 공허 갈래를 `TYPE_NEEDS_CONFIRMATION` · `hard_stop_code=None`으로
+        되돌리면 실패한다: 해결 불가능한 상태가 "확인 대기"로 보고된다.
+        """
+        for value in (None, ""):
+            for aliases in (
+                {},
+                {"": dict(_R18_GOOD_ALIAS)},
+                {_R18_LIB_TYPE: dict(_R18_GOOD_ALIAS)},
+                {"": dict(_R18_GOOD_ALIAS), _R18_LIB_TYPE: dict(_R18_GOOD_ALIAS)},
+            ):
+                request = TypeRequest(
+                    candidate_id="r18",
+                    instrument_type=value,
+                    gdtf_fixture=value,
+                    mode=_R18_LIB_MODE,
+                )
+                assert _alias_for(request, aliases) == (None, None, None), (repr(value), aliases)
+                payload = _r18_resolve(request, aliases)
+                row = row_by_id(payload, "r18")
+                assert row["status"] == TYPE_NAME_UNUSABLE, (repr(value), aliases)
+                assert row["confirmation_required"] is False, (repr(value), aliases)
+                assert hard_stop_codes(payload) == [FIXTURE_TYPE_NAME_UNUSABLE]
+
+    def test_the_hard_stop_reason_does_not_promise_a_confirmation_it_cannot_deliver(self):
+        """[round18 R18-E] 사유 문장이 "사용자 확인으로 넘긴다"고 말하면 실패한다 —
+        하드 스톱 갈래의 사유가 확인을 약속하면 조작자는 오지 않는 화면을 기다린다.
+        """
+        payload = _r18_resolve(
+            TypeRequest(candidate_id="r18", instrument_type=None, mode=_R18_LIB_MODE), {}
+        )
+        reason = row_by_id(payload, "r18")["reason"]
+        assert reason == VACUOUS_TYPE_KEY_REASON
+        assert "사용자 확인으로 넘긴다" not in reason
+        assert "확인 대기가 아니라" in reason
+        # 무엇을 고쳐야 하는지 말한다 — 고칠 대상이 콘솔이 아니라 도면임을 지목한다.
+        assert "도면" in reason
+
+    def test_the_confirmation_input_registry_covers_every_pending_axis(self):
+        """[round18 R18-E ②] 확인 대기 축이 새로 생기면 이 표에 등기해야 한다 —
+        등기 없이 축이 늘면 "확인 경로가 있다"는 주장이 검증 없이 통과한다.
+        """
+        pending = {row.axis for row in _R18_AXIS_ROWS if row.confirmation_path}
+        assert set(_R18_CONFIRMATION_INPUTS) == pending
+        for axis, description in _R18_CONFIRMATION_INPUTS.items():
+            assert description.strip(), axis
+
+
+# --------------------------------------------------------------------------
+# [round18 R18-E ③] `_alias_for` 키의 **형제** — 저장된 사람 확인을 이름으로 조회하는 자리 전수
+#
+# `_alias_for`가 막다른 길을 만든 원인은 "확인 저장소의 키가 곧 확인해야 할 값"이라는 구조다.
+# 같은 구조가 다른 자리에도 있으면 같은 막다른 길이 생긴다. 그래서 `server/vwx/` 전 모듈에서
+# **매핑 조회(`.get(...)`)** 를 AST로 전수 열거하고 키 출처를 **식에서 계산**해 분류한다.
+# --------------------------------------------------------------------------
+
+_R18_KEY_DESIGN_STRING = "design_string"
+_R18_KEY_SYNTHETIC_ID = "synthetic_id"
+_R18_KEY_INTERNAL = "internal"
+
+_R18_KEY_ORIGINS = (_R18_KEY_DESIGN_STRING, _R18_KEY_SYNTHETIC_ID, _R18_KEY_INTERNAL)
+
+
+def _r18_scan_mapping_lookups() -> set[tuple[str, str, str]]:
+    """`server/vwx/` 전 모듈에서 `<expr>.get(<key>[, default])` 호출을 전수 열거한다."""
+    found: set[tuple[str, str, str]] = set()
+    for path in sorted(Path("server/vwx").rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+
+        def walk(node: ast.AST, stack: tuple[str, ...], name: str = path.name) -> None:
+            named = isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            here = stack + (node.name,) if named else stack
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "get"
+                and node.args
+            ):
+                found.add((name, ".".join(here) or "<module>", ast.unparse(node)))
+            for child in ast.iter_child_nodes(node):
+                walk(child, here, name)
+
+        walk(tree, ())
+    return found
+
+
+def _r18_classify_lookup(call: str) -> str:
+    """키 식에서 출처를 **계산한다** — 자유 라벨이면 등기부가 자기충족이 된다."""
+    key = call.split(".get(", 1)[1]
+    if "candidate_id" in key or "target.id" in key or "planned." in key:
+        return _R18_KEY_SYNTHETIC_ID
+    if any(token in key for token in ("instrument_type", "key", "name", "match_type")):
+        return _R18_KEY_DESIGN_STRING
+    return _R18_KEY_INTERNAL
+
+
+class TestRound18ConfirmationKeySiblings:
+    """[round18 R18-E ③] 확인 저장소를 도면 문자열로 조회하는 자리 전수."""
+
+    def test_the_mapping_lookup_scan_finds_the_alias_site_it_is_meant_to_cover(self):
+        """스캐너 비공허성 — `_alias_for`의 `aliases.get(key)`가 실제로 잡힌다.
+
+        이 단정이 없으면 스캐너가 아무것도 못 찾아도 아래 분류가 공허하게 통과한다.
+        """
+        sites = _r18_scan_mapping_lookups()
+        alias_sites = [
+            site for site in sites if site[0] == "typemap.py" and site[1] == "_alias_for"
+        ]
+        assert alias_sites, sorted(sites)[:5]
+        assert any(site[2] == "aliases.get(key)" for site in alias_sites), alias_sites
+
+    def test_every_key_origin_is_actually_produced_and_the_alias_site_is_design_keyed(self):
+        """[round18 R18-E ③] 분류가 세 출처를 모두 산출하고, `_alias_for`가
+        `design_string` 갈래에 든다 — 분류를 한 갈래로 뭉개면(예: 항상 `internal`) 실패한다.
+        """
+        sites = _r18_scan_mapping_lookups()
+        observed = {_r18_classify_lookup(site[2]) for site in sites}
+        assert observed == set(_R18_KEY_ORIGINS), sorted(observed)
+        design_keyed = sorted(
+            site for site in sites if _r18_classify_lookup(site[2]) == _R18_KEY_DESIGN_STRING
+        )
+        assert any(site[1] == "_alias_for" for site in design_keyed), design_keyed
+
+    def test_every_design_string_keyed_lookup_refuses_a_vacuous_key_without_a_dead_end(self):
+        """[round18 R18-E ③] 도면 문자열을 키로 쓰는 조회 자리마다 공허한 키가
+        **조용한 막다른 길**이 되지 않음을 프로덕션 산출물로 확인한다.
+
+        `typemap._alias_for` — 공허 키는 하드 스톱으로 나간다.
+        `apply` 이름 조회 — 공백만 이름은 `fixture_name_missing`으로 제외된다
+        (대조군은 `test_autopatch_execute.py`의 round18 이름 가드 섹션).
+        두 자리 중 하나라도 조용히 통과하면 아래 단정이 깨진다.
+        """
+        for value in (None, "", "   ", "---"):
+            payload = _r18_resolve(
+                TypeRequest(
+                    candidate_id="r18",
+                    instrument_type=value,
+                    gdtf_fixture=value,
+                    mode=_R18_LIB_MODE,
+                ),
+                {},
+            )
+            row = row_by_id(payload, "r18")
+            # 조용한 통과가 아니다 — 상태·하드스톱·사유 셋 모두가 사건을 보고한다.
+            assert row["status"] == TYPE_NAME_UNUSABLE, repr(value)
+            assert hard_stop_codes(payload) == [FIXTURE_TYPE_NAME_UNUSABLE], repr(value)
+            assert row["reason"] == VACUOUS_TYPE_KEY_REASON, repr(value)
+
+
+# --- round18 컬럼 우선순위 · 주소 계열 · 1단계 특성화 (VacuityAndData) ---
+#
+# [round18 R18-G] `columns.py:200`의 `fields.setdefault(canonical, value)`는 주석이 명시로
+# "나중 값으로 조용히 덮어쓰지 않는다"고 적은 **우선순위 규약**인데 대조군이 없었다. Vectorworks
+# 내보내기에는 `Type`과 `Fixture Type`이 **동시에** 들어오는 파일이 흔하고, 둘 다
+# `instrument_type`으로 해석되므로 규약이 깨지면 `instrument_type`이 바뀐다 — 그 값은
+# 1단계 리포트를 타고 2단계 타입 확정으로 흘러 **전달 Lua의 `FixtureTypes[...]`가 바뀐다**.
+#
+# [round18 minor] `columns.py:52` `ADDRESS_FAMILY_FIELDS`는 행 삭제 무검출이었다
+# (형제 `ALIAS_TABLE`은 KILLED — **형제 미적용**이 여덟 라운드째 같은 기제다).
+
+
+def _r18_stage_one_report(
+    raw_records: list[dict[str, str]], console_records: tuple[FixtureRecord, ...] = ()
+) -> dict:
+    """1단계 전 구간을 **실제로** 통과시킨다 — 컬럼 해석부터 리포트 payload까지.
+
+    `columns.resolve_columns` -> `address.resolve_all` -> `rig.build_designed_rig` ->
+    `diff.compare` -> `report.build_vwx_report`. 컬럼 해석 결과가 2단계 입력에 실제로
+    닿는지를 중간 단계를 건너뛰지 않고 확인하기 위한 배선이다.
+    """
+    records, _failures, _excluded = resolve_columns(raw_records)
+    resolved, _address_failures = resolve_all(records)
+    designed = build_designed_rig(resolved, candidate_count=len(records))
+    return build_vwx_report(compare(designed, _r17_inventory(*console_records))).to_dict()
+
+
+#: 같은 행에서 `instrument_type`으로 중복 해석되는 두 헤더. 첫 값이 이긴다(규약).
+_R18_TYPE_HEADER_FIRST = "Type"
+_R18_TYPE_HEADER_SECOND = "Fixture Type"
+_R18_TYPE_VALUE_FIRST = "MegaPointe"
+_R18_TYPE_VALUE_SECOND = "LEDWash 600"
+
+
+def _r18_duplicate_type_row(*, reversed_order: bool = False) -> dict[str, str]:
+    pair = (
+        (_R18_TYPE_HEADER_SECOND, _R18_TYPE_VALUE_SECOND),
+        (_R18_TYPE_HEADER_FIRST, _R18_TYPE_VALUE_FIRST),
+    )
+    if not reversed_order:
+        pair = tuple(reversed(pair))
+    row = dict(pair)
+    row["Universe"] = "1"
+    row["DMX Address"] = "1"
+    row["Unit Number"] = "1"
+    return row
+
+
+class TestRound18ColumnPriorityConvention:
+    """[round18 R18-G] 같은 행에서 별칭이 중복 매칭될 때의 **우선순위 규약** 대조군."""
+
+    def test_the_duplicate_alias_headers_really_do_collide_on_one_canonical_field(self):
+        """비공허성 — 두 헤더가 같은 정규 필드로 해석되지 않으면 아래 규약 검사가 공허하다."""
+        assert resolve_header(_R18_TYPE_HEADER_FIRST) == "instrument_type"
+        assert resolve_header(_R18_TYPE_HEADER_SECOND) == "instrument_type"
+        assert normalize_header(_R18_TYPE_HEADER_FIRST) != normalize_header(_R18_TYPE_HEADER_SECOND)
+
+    def test_the_first_matching_header_wins_in_source_order(self):
+        """[round18 R18-G] `columns.py`의 `fields.setdefault(canonical, value)`를
+        `fields[canonical] = value`로 바꾸면 실패한다 — last-write-wins가 되어 두 방향에서
+        서로 다른 `instrument_type`이 나온다.
+
+        방향을 둘 다 검사하는 것이 핵심이다: 한 방향만 보면 `setdefault`와 대입이 같은 답을
+        내는 입력이 존재해 뮤턴트가 살아남는다(round18 실측).
+        """
+        forward, _f, _e = resolve_columns([_r18_duplicate_type_row()])
+        backward, _f2, _e2 = resolve_columns([_r18_duplicate_type_row(reversed_order=True)])
+
+        assert forward[0].fields["instrument_type"] == _R18_TYPE_VALUE_FIRST
+        assert backward[0].fields["instrument_type"] == _R18_TYPE_VALUE_SECOND
+        # 덮어쓰지 않으므로 **버려진 값은 extra에도 남지 않는다**(정규 필드로 해석됐으므로).
+        assert _R18_TYPE_VALUE_SECOND not in forward[0].extra.values()
+        assert _R18_TYPE_HEADER_SECOND not in forward[0].extra
+
+    def test_breaking_the_priority_convention_changes_the_type_that_reaches_stage_two(self):
+        """[round18 R18-G 도달성] 규약이 깨지면 **2단계 타입 확정 결과가 바뀐다**.
+
+        컬럼 해석 -> 주소 해석 -> 리그 -> 대조 -> 리포트까지 실제로 통과시킨 뒤, 그 리포트의
+        `instrument_type`으로 `resolve_fixture_types`를 돌린다. 라이브러리에는 **두 이름이
+        모두** 있으므로 확정되는 `console_type`이 곧 컬럼 우선순위의 함수다 —
+        그 이름이 그대로 전달 Lua의 `Patch().FixtureTypes[...]`에 박힌다.
+        """
+        library = [
+            (_R18_TYPE_VALUE_FIRST, [(_R18_LIB_MODE, 24)]),
+            (_R18_TYPE_VALUE_SECOND, [(_R18_LIB_MODE, 24)]),
+        ]
+        for reversed_order, expected in (
+            (False, _R18_TYPE_VALUE_FIRST),
+            (True, _R18_TYPE_VALUE_SECOND),
+        ):
+            report = _r18_stage_one_report([_r18_duplicate_type_row(reversed_order=reversed_order)])
+            designed = report["designed_rig"]["fixtures"][0]
+            missing = report["diffs"]["missing_in_console"][0]
+            assert designed["instrument_type"] == expected, reversed_order
+            assert missing["instrument_type"] == expected, reversed_order
+
+            payload = resolve_fixture_types(
+                [
+                    request(
+                        "r18-col",
+                        instrument_type=missing["instrument_type"],
+                        mode=_R18_LIB_MODE,
+                    )
+                ],
+                library_port=LibraryRigPort(library),
+                type_aliases={
+                    missing["instrument_type"]: {
+                        "type": missing["instrument_type"],
+                        "mode": _R18_LIB_MODE,
+                    }
+                },
+            ).to_dict()
+            row = row_by_id(payload, "r18-col")
+            assert row["status"] == TYPE_RESOLVED, reversed_order
+            # 전달 Lua의 `FixtureTypes[...]`가 되는 값 — 규약을 깨면 여기가 갈린다.
+            assert row["console_type"] == expected, reversed_order
+
+    def test_the_alias_lookup_is_injective_so_no_field_silently_shadows_another(self):
+        """[round18 R18-G 형제] `_build_alias_lookup`은 `lookup[key] = field` 대입이다 —
+        두 정규 필드가 같은 정규화 키를 주장하면 뒤에 온 필드가 앞을 **조용히** 덮는다.
+
+        표를 늘리다 그런 충돌이 생기면 여기서 걸린다(현재는 충돌 0건).
+        """
+        seen: dict[str, str] = {}
+        collisions: list[tuple[str, str, str]] = []
+        for field_name, aliases in ALIAS_TABLE.items():
+            for alias in aliases:
+                key = normalize_header(alias)
+                if key in seen and seen[key] != field_name:
+                    collisions.append((key, seen[key], field_name))
+                seen[key] = field_name
+        assert collisions == []
+        assert len(ALIAS_LOOKUP) == len(seen)
+
+
+def _r18_address_family_row(field_name: str) -> dict[str, str]:
+    """그 주소 계열 필드 **하나만** 담은 최소 유효 레코드 후보."""
+    return {"Type": _R18_TYPE_VALUE_FIRST, ALIAS_TABLE[field_name][0]: "1/1"}
+
+
+#: **독립 등기부** — `ADDRESS_FAMILY_FIELDS`의 원소를 테스트 안에 리터럴로 적는다.
+#: [round18 실측] 프로덕션 상수를 순회하는 형태로만 쓰면 원소를 지운 뮤테이션이 SURVIVED다
+#: (지워진 원소는 순회에서도 사라지므로) — 그것이 round18이 지적한 자기충족 표의 형태다.
+#: 그래서 기대 집합은 여기 리터럴이고 프로덕션과 **전단사**를 요구한다.
+_R18_ADDRESS_FAMILY_EXPECTED = (
+    "absolute_address",
+    "address",
+    "universe",
+    "universe_address",
+)
+
+
+def _r18_assert_address_family_registry(fields: frozenset[str]) -> None:
+    """등기부 <-> 프로덕션 전단사 — 어느 쪽에서 원소를 지워도 깨진다."""
+    assert set(fields) == set(_R18_ADDRESS_FAMILY_EXPECTED), sorted(fields)
+    assert len(_R18_ADDRESS_FAMILY_EXPECTED) == len(set(_R18_ADDRESS_FAMILY_EXPECTED))
+
+
+def _r18_assert_address_family_shape(fields: frozenset[str]) -> None:
+    """행 삭제 프로브 — 집합의 원소마다 **프로덕션 판정이 달라진다**는 성질로 결손을 잡는다.
+
+    `has_address_family`와 최소 유효 레코드 판정 둘 다 이 집합을 읽으므로, 원소 하나를
+    지우면 그 별칭만 담은 행이 "주소 표현 없음"으로 뒤집힌다. 자기 자신과 비교하지 않고
+    프로덕션 산출물로 확인하므로 항진식이 아니다.
+    """
+    assert fields, "빈 집합이면 아래 순회가 공허하다"
+    for field_name in sorted(fields):
+        assert field_name in ALIAS_TABLE, field_name
+        headers = list(_r18_address_family_row(field_name))
+        assert has_address_family(headers), field_name
+        records, failures, _excluded = resolve_columns([_r18_address_family_row(field_name)])
+        assert len(records) == 1, field_name
+        assert failures == [], field_name
+    # 주소 계열이 **아닌** 필드는 이 집합에 들어 있지 않다 — 집합이 전체로 부풀면 걸린다.
+    for outsider in ("instrument_type", "mode", "footprint", "unit_number"):
+        assert outsider not in fields, outsider
+
+
+class TestRound18AddressFamilyMembership:
+    """[round18 minor] `ADDRESS_FAMILY_FIELDS` 행 삭제 검출 — 형제 `ALIAS_TABLE`과 같은 강도로."""
+
+    def test_the_address_family_registry_is_a_bijection_onto_production(self):
+        """[round18 minor] `columns.py`의 `ADDRESS_FAMILY_FIELDS`에서 원소를 지우거나
+        더하면 실패한다 — 순회형 검사만으로는 삭제가 잡히지 않아(실측 SURVIVED)
+        독립 등기부와 전단사를 요구한다.
+        """
+        _r18_assert_address_family_registry(ADDRESS_FAMILY_FIELDS)
+        for index in range(len(_R18_ADDRESS_FAMILY_EXPECTED)):
+            pruned = frozenset(
+                name
+                for position, name in enumerate(_R18_ADDRESS_FAMILY_EXPECTED)
+                if position != index
+            )
+            with pytest.raises(AssertionError):
+                _r18_assert_address_family_registry(pruned)
+        with pytest.raises(AssertionError):
+            _r18_assert_address_family_registry(
+                frozenset(_R18_ADDRESS_FAMILY_EXPECTED) | {"instrument_type"}
+            )
+
+    def test_every_address_family_member_alone_makes_a_valid_minimum_record(self):
+        _r18_assert_address_family_shape(frozenset(_R18_ADDRESS_FAMILY_EXPECTED))
+
+    def test_removing_any_address_family_member_is_detected(self, monkeypatch):
+        """[round18 minor] `columns.py`의 `ADDRESS_FAMILY_FIELDS`에서 어느 원소를 지워도
+        실패한다 — 프로덕션 상수를 **실제로 그 값으로 바꿔** 판정이 뒤집히는 것을 본다.
+
+        `resolve_columns`와 `has_address_family` 둘 다 이 상수를 읽으므로, 원소 하나를
+        지우면 그 별칭만 담은 행이 `min_record_incomplete`로 뒤집힌다. 상수를 손대지 않고
+        "지웠다면 이랬을 것"을 테스트 안에서 재계산하면 프로덕션이 그 상수를 실제로 읽는지는
+        확인되지 않는다 — 그래서 monkeypatch로 프로덕션 경로를 그대로 태운다.
+        """
+        for dropped in _R18_ADDRESS_FAMILY_EXPECTED:
+            pruned = frozenset(set(_R18_ADDRESS_FAMILY_EXPECTED) - {dropped})
+            monkeypatch.setattr(columns_module, "ADDRESS_FAMILY_FIELDS", pruned)
+            row = _r18_address_family_row(dropped)
+            assert columns_module.has_address_family(list(row)) is False, dropped
+            records, failures, _excluded = columns_module.resolve_columns([row])
+            assert records == [], dropped
+            assert [failure.kind for failure in failures] == [READ_FAILURE_MIN_RECORD], dropped
+            monkeypatch.undo()
+        # 되돌린 뒤에는 원래대로 통과한다 — monkeypatch가 새는지 여기서 걸린다.
+        _r18_assert_address_family_registry(ADDRESS_FAMILY_FIELDS)
+
+    def test_an_unresolvable_address_header_is_still_a_read_failure(self):
+        """비공허성 — 주소 계열이 전혀 없으면 최소 유효 레코드 미달로 보고된다.
+        (위 게이트가 모든 행을 통과시키도록 깨지면 이 단정이 남는다.)
+        """
+        records, failures, _excluded = resolve_columns([{"Type": _R18_TYPE_VALUE_FIRST}])
+        assert records == []
+        assert [failure.kind for failure in failures] == [READ_FAILURE_MIN_RECORD]
+
+
+# --------------------------------------------------------------------------
+# [round18 R18-J] 1단계 `diff.py` 공허명 후보 소멸 — **특성화 + 이관**
+#
+# 아래 세 테스트는 **현행 동작의 기록이며 그 동작이 옳다는 판정이 아니다.**
+# 소유는 1단계 SPEC(`SPEC-COPILOT-VWX-*`)이고, `server/vwx/diff.py`는 AC-AUTOPATCH-025
+# 「1단계 공개 계약 무변경」 계층이므로 이 SPEC은 동작을 바꾸지 않는다. 우리 층이 할 수 있고
+# 해야 하는 일은 **고지**이며, 그 고지의 대조군은 아래 `TestRound18OurLayerDiscloses...`다.
+# --------------------------------------------------------------------------
+
+
+class TestRound18Stage1VacuousJoinCharacterisation:
+    """[round18 R18-J] 1단계 대조가 공허명 후보를 삼키는 현행 동작의 기록(이관 대상)."""
+
+    def test_a_vacuous_designed_type_vanishes_from_both_console_join_verdicts(self):
+        """**현행 동작 기록 · 옳다는 판정이 아니다 · 소유는 1단계 SPEC.**
+
+        `rig.fuzzy_type_equal`이 정규화 후 빈 문자열을 모든 이름에 포함으로 보므로,
+        공허명 도면 픽스처는 그 주소에 콘솔 픽스처가 있으면 `missing_in_console`에서
+        `found`로 사라지고, `quantity_mismatch`에서도 첫 콘솔 타입 수량과 대조되어 사라진다.
+        `skipped_checks`에는 그 소멸이 적히지 않는다.
+        """
+        designed = _r17_rig(
+            _r17_designed_fixture("U1", _R18_LIB_TYPE, 1, 1),
+            _r17_designed_fixture("U2", "---", 1, 5),
+        )
+        console = _r17_inventory(_r17_console_record(1, "1.5", "LEDWash 600"))
+        result = compare(designed, console)
+
+        assert [entry.instrument_type for entry in result.missing_in_console] == [_R18_LIB_TYPE]
+        assert [entry.instrument_type for entry in result.quantity_mismatches] == [_R18_LIB_TYPE]
+        # 소멸이 미수행 판정으로 적히지 않는다 — 여기가 이관 사유다.
+        assert "---" not in {entry.kind for entry in result.skipped_checks}
+        assert all("공허" not in entry.reason for entry in result.skipped_checks)
+
+    def test_a_substantive_designed_type_at_the_same_address_is_reported(self):
+        """비공허성 대조군 — 이름만 정상으로 바꾸면 같은 입력이 **양쪽에서 보고된다**.
+        (위 테스트가 주소·인벤토리 실수로 공허하게 통과하는 것을 막는다.)
+        """
+        designed = _r17_rig(
+            _r17_designed_fixture("U1", _R18_LIB_TYPE, 1, 1),
+            _r17_designed_fixture("U2", "Mac Aura", 1, 5),
+        )
+        console = _r17_inventory(_r17_console_record(1, "1.5", "LEDWash 600"))
+        result = compare(designed, console)
+
+        assert sorted(entry.instrument_type for entry in result.missing_in_console) == [
+            "Mac Aura",
+            _R18_LIB_TYPE,
+        ]
+        assert sorted(entry.instrument_type for entry in result.quantity_mismatches) == [
+            "Mac Aura",
+            _R18_LIB_TYPE,
+        ]
+
+    def test_the_quantity_mismatch_direction_is_symmetric_not_console_excess_only(self):
+        """**현행 동작 기록 · 옳다는 판정이 아니다 · 소유는 1단계 SPEC**(round18 minor).
+
+        `diff.py`의 수량 비교는 `designed_count != console_count`다 — 콘솔이 도면보다
+        **많은** 방향도 불일치로 보고된다. `>`로 좁히면 콘솔 초과가 조용해진다. 어느 쪽이
+        옳은지는 1단계가 정한다; 여기서는 현행 방향을 고정만 한다.
+        """
+        designed = _r17_rig(_r17_designed_fixture("U1", _R18_LIB_TYPE, 1, 1))
+        console = _r17_inventory(
+            _r17_console_record(1, "1.1", _R18_LIB_TYPE),
+            _r17_console_record(2, "1.20", _R18_LIB_TYPE),
+        )
+        result = compare(designed, console)
+
+        assert [
+            (entry.instrument_type, entry.designed_count, entry.console_count)
+            for entry in result.quantity_mismatches
+        ] == [(_R18_LIB_TYPE, 1, 2)]
+
+    def test_a_one_channel_span_overlap_is_still_an_overlap(self):
+        """**현행 동작 기록 · 옳다는 판정이 아니다 · 소유는 1단계 SPEC**(round18 minor).
+
+        `rig.py`의 `if s2 > e1: break` 경계 — 1채널만 겹쳐도 겹침이다. `>=`로 바꾸면
+        정확히 1채널 겹침이 조용해지고, 인접(겹치지 않음)은 그대로 통과한다.
+        """
+        overlapping = build_designed_rig(
+            [
+                _r18_resolved_record(0, "U1", 1, 1, footprint="2"),
+                _r18_resolved_record(1, "U2", 1, 2, footprint="2"),
+            ]
+        )
+        adjacent = build_designed_rig(
+            [
+                _r18_resolved_record(0, "U1", 1, 1, footprint="1"),
+                _r18_resolved_record(1, "U2", 1, 2, footprint="1"),
+            ]
+        )
+        assert len(overlapping.design_overlaps) == 1
+        assert adjacent.design_overlaps == ()
+
+
+def _r18_resolved_record(row_index: int, unit: str, universe: int, address: int, *, footprint: str):
+    """`build_designed_rig`가 소비하는 `ResolvedRecord` 하나 — 폭 컬럼을 실제로 담는다."""
+    return ResolvedRecord(
+        fields={
+            "instrument_type": _R18_LIB_TYPE,
+            "unit_number": unit,
+            "position": "FOH",
+            "footprint": footprint,
+        },
+        extra={},
+        row_index=row_index,
+        universe=universe,
+        address=address,
+        classification="patched",
+        address_basis="universe_address_direct",
+    )
+
+
+def _r18_designed_only_report(*, classification: str, coordinates: bool = True) -> dict:
+    """도면 픽스처 두 대(정상 1 · 공허 1)를 담은 최소 리포트 payload.
+
+    공허명 픽스처에 **좌표를 준다** — `classification`이 미패치인데 좌표가 있는 payload는
+    `diff.compare`가 조인에서 제외하는 항목이므로 고지 대상이 아니다. 좌표 유무로 판정하면
+    이 경계가 흐려진다(round18 실측: `classification` 필터만 지운 뮤턴트가 SURVIVED였다).
+    """
+    return {
+        "designed_rig": {
+            "fixture_count": 2,
+            "fixtures": [
+                {
+                    "unit_number": "U1",
+                    "instrument_type": _R18_LIB_TYPE,
+                    "gdtf_fixture": None,
+                    "mode": _R18_LIB_MODE,
+                    "footprint": 16,
+                    "system": None,
+                    "universe": 1,
+                    "address": 1,
+                    "classification": "patched",
+                    "address_basis": "universe_address_direct",
+                },
+                {
+                    "unit_number": "U9",
+                    "instrument_type": "---",
+                    "gdtf_fixture": None,
+                    "mode": _R18_LIB_MODE,
+                    "footprint": 16,
+                    "system": None,
+                    "universe": 1 if coordinates else None,
+                    "address": 30 if coordinates else None,
+                    "classification": classification,
+                    "address_basis": "universe_address_direct",
+                },
+            ],
+        },
+        "diffs": {
+            "performed": True,
+            "missing_in_console": [
+                {
+                    "unit_number": "U1",
+                    "instrument_type": _R18_LIB_TYPE,
+                    "universe": 1,
+                    "address": 1,
+                    "detail": "",
+                }
+            ],
+            "address_collision": [],
+            "quantity_mismatch": [],
+        },
+        "skipped_checks": [],
+    }
+
+
+class TestRound18OurLayerDisclosesTheVacuousJoin:
+    """[round18 R18-J] 고칠 수는 없지만 **고지할 자리는 우리 층에 있다** — 그 고지의 대조군."""
+
+    def test_the_patch_plan_discloses_the_vacuous_designed_type_as_a_skipped_check(self):
+        """[round18 R18-J] `patchplan._vacuous_designed_type_checks`를 지우거나 빈 튜플만
+        돌려주게 바꾸면 실패한다 — 조작자는 소멸했을 수 있는 항목을 모른 채 계획을 승인한다.
+        """
+        from server.vwx.patchplan import build_patch_plan
+        from server.vwx.verdicts import DESIGNED_TYPE_NAME_VACUOUS, skipped_check_label
+
+        designed = _r17_rig(
+            _r17_designed_fixture("U1", _R18_LIB_TYPE, 1, 1),
+            _r17_designed_fixture("U2", "---", 1, 5),
+        )
+        console = _r17_inventory(_r17_console_record(1, "1.5", "LEDWash 600"))
+        report = build_vwx_report(compare(designed, console)).to_dict()
+
+        payload = build_patch_plan(report).to_dict()
+        checks = [
+            check
+            for check in payload["skipped_checks"]
+            if check["kind"] == DESIGNED_TYPE_NAME_VACUOUS
+        ]
+        assert len(checks) == 1
+        (check,) = checks
+        assert check["label"] == skipped_check_label(DESIGNED_TYPE_NAME_VACUOUS)
+        # 좌표로 가리킨다 — 도면 원문 이름을 사유에 되싣지 않는다(§0 2b④).
+        assert tuple(check["affected_designed_addresses"]) == ("1.5",)
+        assert check["affected_count"] == 1
+        assert "---" not in check["reason"]
+        # 되살리지 않는다 — 1단계 판정을 재계산하지 않는다.
+        assert [candidate["type"] for candidate in payload["candidates"]] == [_R18_LIB_TYPE]
+
+    def test_an_unpatched_vacuous_fixture_is_not_disclosed_because_nothing_was_joined(self):
+        """[round18 R18-J 형제 경계] 미패치("설계됨·미배정") 픽스처는 `diff.compare`가
+        콘솔 조인에서 **애초에 제외**한다(`classification != "patched"` -> continue).
+        조인되지 않은 것은 삼켜질 수도 없으므로 고지 대상이 아니다.
+
+        `patchplan._vacuous_designed_type_checks`의 `classification` 필터를 지우면
+        실패한다 — 있지도 않은 소멸을 고지하면 조작자는 경고를 무시하게 되고,
+        무시되는 경고는 게이트가 아니다.
+        """
+        from server.vwx.patchplan import build_patch_plan
+        from server.vwx.verdicts import DESIGNED_TYPE_NAME_VACUOUS
+
+        # 2단계는 리포트 **payload**를 입력으로 받는다 — `classification`과 좌표의 정합성을
+        # 보장하는 것은 payload 생산자이고, 우리 층은 payload가 말하는 것을 그대로 읽는다.
+        # `diff.compare`는 `classification != "patched"`면 좌표가 있어도 조인하지 않으므로
+        # (diff.py:147) 그런 항목은 삼켜질 수 없다 — 좌표 유무가 아니라 `classification`이
+        # 경계다. 그래서 **좌표가 있는 미패치**로 그 경계를 정확히 겨눈다.
+        for classification, disclosed in (("unpatched_designed", False), ("patched", True)):
+            payload = build_patch_plan(
+                _r18_designed_only_report(classification=classification)
+            ).to_dict()
+            kinds = {check["kind"] for check in payload["skipped_checks"]}
+            assert (DESIGNED_TYPE_NAME_VACUOUS in kinds) is disclosed, classification
+
+    def test_the_disclosure_is_silent_when_no_designed_type_name_is_vacuous(self):
+        """비공허성 — 정상 이름만 있는 리포트에서는 고지가 나오지 않는다.
+        (항상 고지하도록 깨지면 조작자가 경고를 무시하게 되고 게이트가 힘을 잃는다.)
+        """
+        from server.vwx.patchplan import build_patch_plan
+        from server.vwx.verdicts import DESIGNED_TYPE_NAME_VACUOUS
+
+        designed = _r17_rig(_r17_designed_fixture("U1", _R18_LIB_TYPE, 1, 1))
+        console = _r17_inventory()
+        report = build_vwx_report(compare(designed, console)).to_dict()
+
+        payload = build_patch_plan(report).to_dict()
+        assert DESIGNED_TYPE_NAME_VACUOUS not in {
+            check["kind"] for check in payload["skipped_checks"]
+        }
+
+    def test_a_patched_fixture_without_coordinates_is_not_disclosed_either(self):
+        """[round18 R18-J 형제 경계 ②] `diff.compare`는 좌표가 미해석이면
+        (`fixture.universe is None or fixture.address is None`) 그 픽스처도 조인에서
+        제외한다(diff.py:146-148). 조인되지 않은 것은 삼켜질 수 없으므로 고지 대상이 아니고,
+        고지에 실을 좌표도 없다.
+
+        `patchplan._vacuous_designed_type_checks`의 좌표 가드를 지우면 실패한다 —
+        `affected_designed_addresses`에 `'None.None'`이 실려 조작자가 없는 주소를 찾아간다.
+        """
+        from server.vwx.patchplan import build_patch_plan
+        from server.vwx.verdicts import DESIGNED_TYPE_NAME_VACUOUS
+
+        payload = build_patch_plan(
+            _r18_designed_only_report(classification="patched", coordinates=False)
+        ).to_dict()
+        checks = [
+            check
+            for check in payload["skipped_checks"]
+            if check["kind"] == DESIGNED_TYPE_NAME_VACUOUS
+        ]
+        assert checks == []
+        # 좌표가 있으면 같은 입력이 고지된다 — 경계가 좌표임을 고정한다.
+        with_coordinates = build_patch_plan(
+            _r18_designed_only_report(classification="patched", coordinates=True)
+        ).to_dict()
+        (disclosed,) = [
+            check
+            for check in with_coordinates["skipped_checks"]
+            if check["kind"] == DESIGNED_TYPE_NAME_VACUOUS
+        ]
+        assert tuple(disclosed["affected_designed_addresses"]) == ("1.30",)
+        assert "None" not in " ".join(disclosed["affected_designed_addresses"])
+
+    def test_the_disclosure_uses_the_same_match_type_precedence_as_stage_one(self):
+        """[round18 R18-J 형제 축] 1단계 조인은 `rig.match_type`
+        (= `gdtf_fixture or instrument_type`)을 쓴다 — 그래서 **GDTF 칸이 공허하면**
+        `instrument_type`이 정상이어도 그 픽스처는 삼켜진다.
+
+        `patchplan._vacuous_designed_type_checks`가 `instrument_type`만 보도록 바꾸면
+        실패한다: 우선순위가 1단계와 어긋나면 고지가 대상과 어긋난다(형제 축 미적용).
+        """
+        from server.vwx.patchplan import build_patch_plan
+        from server.vwx.verdicts import DESIGNED_TYPE_NAME_VACUOUS
+
+        # 1단계가 실제로 그 우선순위로 삼키는지 먼저 확인한다 — 전제를 가정하지 않는다.
+        swallowed = DesignedFixture(
+            unit_number="U9",
+            instrument_type=_R18_LIB_TYPE,
+            mode=None,
+            channel=None,
+            universe=1,
+            address=30,
+            classification="patched",
+            part_indices=(),
+            device_type=None,
+            gdtf_fixture="---",
+        )
+        designed = _r17_rig(_r17_designed_fixture("U1", _R18_LIB_TYPE, 1, 1), swallowed)
+        console = _r17_inventory(_r17_console_record(1, "1.30", "LEDWash 600"))
+        result = compare(designed, console)
+        assert [entry.unit_number for entry in result.missing_in_console] == ["U1"]
+
+        report = build_vwx_report(result).to_dict()
+        assert report["designed_rig"]["fixtures"][1]["gdtf_fixture"] == "---"
+        assert report["designed_rig"]["fixtures"][1]["instrument_type"] == _R18_LIB_TYPE
+
+        (check,) = [
+            check
+            for check in build_patch_plan(report).to_dict()["skipped_checks"]
+            if check["kind"] == DESIGNED_TYPE_NAME_VACUOUS
+        ]
+        assert tuple(check["affected_designed_addresses"]) == ("1.30",)
+
+    def test_the_disclosure_survives_every_plan_branch_not_just_the_planned_one(self):
+        """[round18 R18-J · 형제 표면] 고지는 거부 갈래에서도 나온다 — 계획 갈래에만 붙이면
+        거부 화면을 본 조작자는 같은 사실을 보지 못한다(여덟 라운드째 지적된 형제 미적용).
+
+        `build_patch_plan`의 고지 부착을 `_plan_from_report`의 특정 갈래로 옮기면 실패한다.
+        """
+        from server.vwx.patchplan import build_patch_plan
+        from server.vwx.verdicts import DESIGNED_TYPE_NAME_VACUOUS
+
+        designed = _r17_rig(
+            _r17_designed_fixture("U1", _R18_LIB_TYPE, 1, 1),
+            _r17_designed_fixture("U2", "---", 1, 5),
+        )
+        report = build_vwx_report(
+            compare(designed, _r17_inventory(_r17_console_record(1, "1.5", "LEDWash 600")))
+        ).to_dict()
+        candidate_id = build_patch_plan(report).to_dict()["candidates"][0]["id"]
+
+        branches = {
+            "planned_without_assignment": {},
+            "selection_error": {"selected": ["nope"]},
+            "fid_range_required": {"selected": [candidate_id], "assignment_requested": True},
+            "invalid_fid_range": {
+                "selected": [candidate_id],
+                "fid_range": {"start": 9, "end": 1},
+            },
+            "planned_with_assignment": {
+                "selected": [candidate_id],
+                "fid_range": {"start": 501, "end": 599},
+                "assumption_71": "go",
+            },
+        }
+        observed_statuses = set()
+        for name, arguments in branches.items():
+            payload = build_patch_plan(report, **arguments).to_dict()
+            observed_statuses.add(payload["status"])
+            kinds = {check["kind"] for check in payload["skipped_checks"]}
+            assert DESIGNED_TYPE_NAME_VACUOUS in kinds, name
+        # 갈래가 한 상태로 뭉개지면 위 순회가 공허하다.
+        assert len(observed_statuses) >= 3, observed_statuses
+
+
+# --------------------------------------------------------------------------
+# [round18 minor] `_R17_CONTAINMENT_FAMILY` 자기충족 표 봉합
+#
+# round17판은 입력(`_R17_CONTAINMENT_FAMILY`)과 기대값(`matched == list(그 표)`)이 **같은
+# 자유 목록**에서 나와, 행 삭제 48건 중 유일하게 SURVIVED였다. 여기서는
+#   ① 각 행의 축을 **이름에서 계산**해(자유 라벨 금지) 축 하나에 행 하나를 강제하고,
+#   ② 그 표와 `_R17_CONTAINMENT_FAMILY`를 **전단사**로 묶고,
+#   ③ 표에서 파생되지 않은 **독립 침해 표본**(후보가 되어서는 안 되는 콘솔 이름)을 둔다.
+# 어느 쪽 표에서 한 행을 지워도 ①이나 ②가 깨진다.
+# --------------------------------------------------------------------------
+
+_R18_CONTAINMENT_AXES = (
+    "suffix_len_2",
+    "suffix_len_3",
+    "suffix_len_4",
+    "suffix_repeated_letter",
+)
+
+#: 표에서 파생되지 않은 **독립 침해 표본** — 후보가 되어서는 안 되는 콘솔 이름들.
+#: 하나는 무관한 제조사명, 하나는 숫자만 다른 형제(포함관계가 성립하지 않는다).
+_R18_CONTAINMENT_NON_MEMBERS = ("Mac Aura XIP", "LEDBeam 25")
+
+
+def _r18_containment_axis(designed: str, name: str) -> str:
+    """축을 **이름에서 계산한다** — 자유 라벨이면 표가 자기충족이 된다(round18 minor)."""
+    norm_designed = "".join(ch.lower() for ch in designed if ch.isalnum())
+    norm_name = "".join(ch.lower() for ch in name if ch.isalnum())
+    if norm_name == norm_designed:
+        return "identical"
+    if not norm_name.startswith(norm_designed):
+        return "not_a_suffix_extension"
+    suffix = norm_name[len(norm_designed) :]
+    if len(set(suffix)) == 1 and len(suffix) > 1:
+        return "suffix_repeated_letter"
+    return f"suffix_len_{len(suffix)}"
+
+
+def _r18_assert_containment_family_shape(family: tuple[str, ...]) -> None:
+    """행 삭제 프로브 — 축 하나에 행 하나이므로 삭제는 축 결손으로 드러난다."""
+    axes = tuple(_r18_containment_axis(_R17_CONTAINMENT_DESIGNED, name) for name in family)
+    assert len(axes) == len(set(axes)), axes
+    assert set(axes) == set(_R18_CONTAINMENT_AXES), sorted(axes)
+    assert len(family) == len(_R18_CONTAINMENT_AXES)
+    assert len(family) >= 2, family
+    assert _R17_CONTAINMENT_DESIGNED not in family
+    # 독립 침해 표본은 이 표에서 파생되지 않는다 — 겹치면 침해 표본이 아니다.
+    assert not set(family) & set(_R18_CONTAINMENT_NON_MEMBERS)
+    for outsider in _R18_CONTAINMENT_NON_MEMBERS:
+        assert _r18_containment_axis(_R17_CONTAINMENT_DESIGNED, outsider) not in (
+            _R18_CONTAINMENT_AXES
+        ), outsider
+
+
+class TestRound18ContainmentFamilyIsNotSelfSatisfying:
+    """[round18 minor] round17의 자기충족 표를 축 계산 + 전단사 + 독립 침해 표본으로 봉합."""
+
+    def test_the_containment_family_shape_detects_row_deletion(self):
+        _r18_assert_containment_family_shape(_R17_CONTAINMENT_FAMILY)
+        for index in range(len(_R17_CONTAINMENT_FAMILY)):
+            pruned = tuple(
+                name for position, name in enumerate(_R17_CONTAINMENT_FAMILY) if position != index
+            )
+            with pytest.raises(AssertionError):
+                _r18_assert_containment_family_shape(pruned)
+
+    def test_the_independent_violation_samples_are_never_candidates(self):
+        """[round18 minor] 표에서 파생되지 않은 표본으로 **비공허성**을 세운다.
+
+        `_type_candidates`가 라이브러리 전체를 후보로 내도록 깨지면(예: 퍼지 판정을
+        무조건 True로) 이 침해 표본이 후보에 섞여 실패한다.
+        """
+        library = [
+            (name, [(_R18_LIB_MODE, 16)])
+            for name in _R17_CONTAINMENT_FAMILY + _R18_CONTAINMENT_NON_MEMBERS
+        ]
+        payload = resolve_fixture_types(
+            [request("r18-family", instrument_type=_R17_CONTAINMENT_DESIGNED, mode=_R18_LIB_MODE)],
+            library_port=LibraryRigPort(library),
+            type_aliases={},
+        ).to_dict()
+        candidates = row_by_id(payload, "r18-family")["type_candidates"]
+
+        assert sorted(candidates) == sorted(_R17_CONTAINMENT_FAMILY)
+        for outsider in _R18_CONTAINMENT_NON_MEMBERS:
+            assert outsider not in candidates, outsider
+            assert fuzzy_type_equal(_R17_CONTAINMENT_DESIGNED, outsider) is False, outsider
+
+
+class TestRound18ModeCandidateVacuityIsLiveNotDeadCode:
+    """[round18 R18-I] `_mode_candidates`의 `_comparable_key(alias_mode)`는 `_alias_for`가
+    이미 걸러 주는 값을 다시 거르는 **방어 코드**다. 그래서 상위 필터가 살아 있는 동안
+    이 자리만 떼어내는 뮤테이션은 등가가 된다(round18 실측: SURVIVED).
+
+    등가라고 방치하면 상위 필터를 나중에 옮기는 순간 조용히 되살아나는 결함이 된다 —
+    그래서 이 함수를 **직접 호출**해 그 자리를 살아 있는 코드로 만든다.
+    """
+
+    def test_a_vacuous_alias_mode_argument_presents_every_mode_and_confirms_none(self):
+        """[round18 R18-I] `_mode_candidates`의 `_comparable_key(alias_mode)`를
+        `alias_mode`로 바꾸면 실패한다 — 공허한 모드 이름이 전 모드와 "일치"해
+        후보가 좁혀지고, 모드가 하나뿐인 타입에서는 확정까지 간다.
+        """
+        console_type = LibraryType(
+            index=1,
+            name=_R18_LIB_TYPE,
+            modes=(
+                LibraryMode(index=1, name="Mode 1", channel_count=24),
+                LibraryMode(index=2, name="Extended", channel_count=48),
+            ),
+            modes_available=True,
+        )
+        substantive = TypeRequest(candidate_id="r18", instrument_type=_R18_LIB_TYPE, mode="Mode 1")
+        for vacuous in ("---", "   ", "\u00a0", "\x00\x01"):
+            presented = _mode_candidates(substantive, console_type, vacuous)
+            # 공허한 별칭 모드는 **저장된 확인이 아니다** — 도면 모드로 좁히지도,
+            # 전 모드와 공허 일치하지도 않는다: 도면 모드가 기준이 된다.
+            assert [mode.name for mode in presented] == ["Mode 1"], repr(vacuous)
+        # 도면 모드까지 공허하면 좁힐 기준이 없다 — 전 모드를 제시한다.
+        both_vacuous = TypeRequest(candidate_id="r18", instrument_type=_R18_LIB_TYPE, mode="---")
+        assert [mode.name for mode in _mode_candidates(both_vacuous, console_type, "---")] == [
+            "Mode 1",
+            "Extended",
+        ]
+
+    def test_the_control_a_substantive_alias_mode_narrows_to_that_mode(self):
+        """비공허성 — 정상 별칭 모드는 그 모드로 좁힌다(위 테스트가 전 모드 제시로
+        뭉개져도 통과하지 않게 한다).
+        """
+        console_type = LibraryType(
+            index=1,
+            name=_R18_LIB_TYPE,
+            modes=(
+                LibraryMode(index=1, name="Mode 1", channel_count=24),
+                LibraryMode(index=2, name="Extended", channel_count=48),
+            ),
+            modes_available=True,
+        )
+        request_ = TypeRequest(candidate_id="r18", instrument_type=_R18_LIB_TYPE, mode="Mode 1")
+        assert [mode.name for mode in _mode_candidates(request_, console_type, "Extended")] == [
+            "Extended"
+        ]

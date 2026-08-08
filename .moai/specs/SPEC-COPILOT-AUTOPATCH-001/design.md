@@ -51,7 +51,15 @@ status: draft (v0.1.5, 2026-08-06) · Tier L · 설계 슬롯 5건 전부 종결
 {
   "report": object,            # 1단계 리포트 payload (필수)
   "selected": array[string],   # 항목 식별자. 생략 시 빈 배열 = 대상 0건
-  "fid_range": {"start": int, "end": int},   # 생략 시 실행 거부
+  "fid_range": {"start": int, "end": int},   # 생략 시 실행 거부.
+                               # [round18 R18-A] start·end 는 **콘솔 최소 FID 1 이상**이어야
+                               # 하고 end >= start 여야 한다. 위반이면 `invalid_fid_range` 로
+                               # 거부하며 **거부 payload 에는 `fid_safety` 키가 실리지 않는다**
+                               # (이전 판은 음수 대역을 통과시키고 같은 payload 로
+                               # `conflict_precheck.performed=true` 를 실어 "검사했고 깨끗하다"고
+                               # 보고했다). **상한은 두지 않는다** — MA3 의 FID 수용 상한은
+                               # 미실측이고, 미실측 위에 천장을 지어내면 콘솔이 받아들이는 값을
+                               # 이 계층이 날조로 거부한다(PRESERVE prechk/patch.py:128-133).
   "fid_range_visually_confirmed_empty": boolean,
                                # REQ-AUTOPATCH-026 / AC-AUTOPATCH-027.
                                # ASSUMPTION-71 부정·INCONCLUSIVE 분기에서 **필수**,
@@ -98,11 +106,20 @@ FID 배정 (patchplan)
    │
    ▼
 타입·모드 해석 (typemap)   ── Patch/FixtureTypes 열거 [읽기]
-   ├─ 부재 → 항목 하드 스톱 (GDTF 임포트 선행 필요)
+   ├─ 부재 → 항목 하드 스톱 (GDTF 임포트 선행 필요) ── fixture_type_not_in_library
+   ├─ [round18 R18-E] 도면 이름이 **정규화하면 빈 문자열**(`---` 등) → 항목 하드 스톱
+   │    ── designed_type_name_unusable / fixture_type_name_unusable.
+   │    부재와 **다른 코드**를 쓴다: 찾아보지도 않은 것을 "라이브러리에 없다"로 적으면
+   │    미판독을 부정으로 바꾸는 것이고, 고칠 곳은 라이브러리가 아니라 **도면**이다.
+   │    별칭으로 해결되지 않는다 — 별칭 키가 (gdtf_fixture, instrument_type)인데 둘 다 비어
+   │    있어 구조적 막다른 길이다. 그래서 "사용자 확인 대기"가 아니라 **하드 스톱**이다.
    └─ ASSUMPTION-72 GO → 점유폭 대조 / 부정 → descope
    │
    ▼
 주소 계획 (patchplan)      ── 도면 주소 우선 · 점유폭 간격 · 점유 주소 제외 [읽기]
+                              [round18 R18-A] FID 범위 바닥·형식 위반은 여기서 거부
+                              [round18 R18-J] 1단계 diff가 공허 이름 후보를 소멸시킨 사실을
+                              skipped_checks(designed_type_name_vacuous)로 **고지**한다
    │
    ▼
 Lua 생성 (luagen)          ── CD 어휘 없음
