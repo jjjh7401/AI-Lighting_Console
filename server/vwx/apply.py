@@ -217,14 +217,7 @@ def build_patch_handoff(
             or resolution.console_type is None
             or resolution.console_mode is None
         ):
-            exclusions.append(
-                _exclusion(
-                    target,
-                    TYPE_CONFIRMATION_PENDING,
-                    "콘솔 타입·모드가 확정되지 않았다 — "
-                    "확인 전에 되돌릴 수 없는 생성을 전달하지 않는다.",
-                )
-            )
+            exclusions.append(_unresolved_type_exclusion(target, resolution))
             continue
 
         if target.assigned_fid is None:
@@ -348,6 +341,60 @@ def _rejects(field: str, entry: LuaPatchEntry, neutral: LuaPatchEntry) -> bool:
     except LuaGenerationError:
         return True
     return False
+
+
+#: 확정되지 않은 타입·모드에 붙는 **기본** 배제 사유 — 해소 경로가 실제로 사용자 확인일 때만.
+TYPE_CONFIRMATION_PENDING_REASON = (
+    "콘솔 타입·모드가 확정되지 않았다 — 확인 전에 되돌릴 수 없는 생성을 전달하지 않는다."
+)
+
+
+def _unresolved_type_verdict(resolution: TypeResolution | None) -> tuple[str, str]:
+    """미확정 타입·모드를 **해소되지 않은 사유 그대로** 배제 어휘로 옮긴다.
+
+    [round19 major#4] 이전 판은 `status != TYPE_RESOLVED`를 전부
+    `type_confirmation_pending`으로 뭉갰다 — `TypeResolution.hard_stop_code`를 보지 않았다.
+    그래서 확인 경로가 **없는** 하드 스톱(`designed_type_name_unusable` ·
+    `fixture_type_not_in_library` · `dmx_mode_not_in_library` ·
+    `designed_footprint_unmatchable`)이 `handoff.exclusions`에서는 "타입·모드 사용자 확인
+    대기"로 나갔다. 같은 payload의 `types.hard_stops`는 같은 후보를 두고 "확인 경로 없음,
+    하드 스톱"이라 말했다 — **한 payload가 같은 후보에 모순된 말을 했다.** 조작자는 오지
+    않는 확인 화면을 기다린다.
+
+    R18-E가 `payload["types"]`에서 고친 것이 바로 그 거짓이었고, 이 자리는 **조작자가
+    마지막에 읽는 표면**인데 고쳐지지 않았다. 기제는 "상태를 거부 사유로 번역하는 자리가
+    상태의 세부를 버린다"이다 — 그래서 어휘를 새로 짓지 않고 상위 상태가 이미 들고 있는
+    `hard_stop_code`·`reason`을 **그대로** 옮긴다. `hard_stop_code`는 전부
+    `target_exclusion_reason`에 등재된 코드이므로 배제 자리에 그대로 실린다.
+
+    [round19 major#4 형제 필드] `hard_stop_code`만 보면 **같은 기제가 한 칸 옆에 남는다.**
+    `TypeResolution`이 판정 세부를 담는 칸은 `status` · `hard_stop_code` ·
+    `incompleteness_kind` 셋이다. `library_incomplete`(라이브러리 열거 절단·미판독)는
+    하드 스톱이 아니지만 **확인 대기도 아니다** — 조작자가 payload로 수행할 수 있는 선택이
+    없고, 할 일은 라이브러리를 다시 읽는 것이다. 그래서 그 칸도 그대로 옮긴다.
+    두 코드(`fixture_type_library_truncated` · `fixture_type_library_unreadable`)는
+    `skipped_check_kind`와 `target_exclusion_reason` 두 어휘에 함께 등재돼 있다 —
+    `console_read_incomplete`가 배제 어휘와 caveat 어휘 양쪽에 있는 것과 같은 선례다.
+
+    기본 사유는 **실제로 확인 대기인 둘**만 쓴다: 해상 결과 자체가 없거나
+    (`resolution is None`), 후보를 제시했고 사람이 고르면 되는 경우.
+    """
+    if resolution is not None:
+        # 사유 문장은 `typemap`의 **모듈 상수**다(구조 게이트가 강제). 콘솔 판독 원문을
+        # 보간하지 않으므로 AC-AUTOPATCH-014① 산출물 스캐너에 거짓 양성을 내지 않는다.
+        if resolution.hard_stop_code is not None:
+            return resolution.hard_stop_code, resolution.reason
+        if resolution.incompleteness_kind is not None:
+            return resolution.incompleteness_kind, resolution.reason
+    return TYPE_CONFIRMATION_PENDING, TYPE_CONFIRMATION_PENDING_REASON
+
+
+def _unresolved_type_exclusion(
+    target: PatchCandidate, resolution: TypeResolution | None
+) -> PatchTargetExclusion:
+    """전달물에서 미확정 타입·모드를 배제할 때의 코드·사유."""
+    code, reason = _unresolved_type_verdict(resolution)
+    return _exclusion(target, code, reason)
 
 
 def _exclusion(
@@ -868,13 +915,23 @@ def screen_idempotent(
         # 형제 표면 `verify_patch`도 같은 규약을 쓴다 — 갈래 전부가 점유자를 싣는다.
         expected_type, expected_mode = _expected_identity(resolution)
         if expected_type is None or expected_mode is None:
+            # [round19 major#4 형제 표면] 이 자리도 `TYPE_CONFIRMATION_PENDING`을 못 박고
+            # 있었다 — `_expected_identity`가 `console_type`·`console_mode`만 보므로
+            # 해상 결과가 하드 스톱이든(고를 후보 0건) 라이브러리 관측이 불완전하든
+            # 전부 "타입·모드 사용자 확인 대기"로 나갔다. `build_patch_handoff`와 **같은
+            # 기제, 같은 payload, 다른 표면**이다. 코드는 같은 번역기에서 받는다.
+            #
+            # 문장은 이 자리의 맥락(점유자와 대조할 수 없다)을 유지하되 "확인 전에는"이라는
+            # **오지 않을 확인의 약속**을 빼고, 해소되지 않은 사유는 코드·라벨과
+            # `types` 표가 말하게 둔다.
+            unresolved_code, _unresolved_reason = _unresolved_type_verdict(resolution)
             exclusions.append(
                 _exclusion(
                     target,
-                    TYPE_CONFIRMATION_PENDING,
+                    unresolved_code,
                     f"유니버스 {planned.universe} 주소 {planned.address}에 픽스처가 있으나 "
-                    "콘솔 타입·모드가 확정되지 않아 기존 픽스처와 대조할 수 없다 — "
-                    "확인 전에는 멱등 판정도 충돌 판정도 내리지 않는다.",
+                    "이 항목의 콘솔 타입·모드가 확정되지 않아 기존 픽스처와 대조할 수 없다 — "
+                    "멱등 판정도 충돌 판정도 내리지 않는다.",
                     observed_occupants=occupants,
                 )
             )
@@ -928,7 +985,21 @@ def screen_idempotent(
 
 
 def _expected_identity(resolution: TypeResolution | None) -> tuple[str | None, str | None]:
-    if resolution is None or resolution.console_type is None or resolution.console_mode is None:
+    """멱등·충돌 대조에 쓸 **우리 쪽 확정 정체** — 확정되지 않았으면 없다.
+
+    [round19 major#4 형제 필드] 이전 판은 `console_type`·`console_mode` 두 칸만 봤다.
+    그런데 그 두 칸은 **확정되지 않은 해상 결과에도 차 있을 수 있다** — 점유폭 불일치
+    갈래(`typemap`)는 별칭으로 좁힌 타입·모드를 그대로 싣고도 상태는 하드 스톱이거나
+    확인 대기다. 그 상태로 점유자와 대조하면 `already_patched_identical`(이미 있음,
+    멱등 건너뜀)이 나갈 수 있고, 같은 payload의 `types.hard_stops`는 같은 후보를 두고
+    "하드 스톱"이라 말한다 — major#4와 **같은 모순**이다.
+
+    그래서 `status`를 본다. `resolved`가 아니면 정체가 없는 것으로 다루고, 호출자는
+    미확정 갈래로 가 `_unresolved_type_verdict`가 준 코드를 그대로 낸다.
+    """
+    if resolution is None or resolution.status != TYPE_RESOLVED:
+        return None, None
+    if resolution.console_type is None or resolution.console_mode is None:
         return None, None
     return resolution.console_type.name, resolution.console_mode.name
 

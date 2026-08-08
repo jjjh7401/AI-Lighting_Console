@@ -1,6 +1,6 @@
 # SPEC-COPILOT-AUTOPATCH-001 — 설계 (design)
 
-status: draft (v0.1.5, 2026-08-06) · Tier L · 설계 슬롯 5건 전부 종결 · 미결 0 · **plan-audit 1~10회차 + 독립 코드 감사 round11~16 지적 반영** · §6.2 폐지(acceptance.md 단일 출처화). **[round15 #7]** 이전 판은 'plan-audit 1~9회차'에 멈춰 있어 round10 PASS와 코드 감사 5라운드가 반영 이력에서 빠져 있었다 — T13 버전 전파의 형제 미처리.
+status: draft (v0.1.5, 2026-08-06) · Tier L · 설계 슬롯 5건 전부 종결 · 미결 0 · **plan-audit 1~10회차 + 독립 코드 감사 round11~19 지적 반영** `[라운드계수셀=19]`(**[round19 #1 정정]** 이전 판은 `round11~16`으로 **세 라운드 stale**이었다 — round15 #7이 같은 줄을 고치고도 형제 전파를 다시 놓친 것이며, 이 줄은 라운드 계수 셀 **여덟** 중 하나다) · §6.2 폐지(acceptance.md 단일 출처화). **[round15 #7]** 이전 판은 'plan-audit 1~9회차'에 멈춰 있어 round10 PASS와 코드 감사 5라운드가 반영 이력에서 빠져 있었다 — T13 버전 전파의 형제 미처리.
 
 ---
 
@@ -256,7 +256,7 @@ Lua 생성 (luagen)          ── CD 어휘 없음
 - 패치 기법: `server/rulebook/assets/v2.4.2/30_plugin_patterns.md:11-53`
 - FID 금지 근거: `server/prechk/inventory.py:33-37,57` · `console/lua/PROTOCOL.md:305-324`
 - 표시문자열 반증: `server/prechk/patch.py:14-22`
-- 배포 파이프라인: `server/orchestrator/tools.py:1266`
+- 배포 파이프라인: `server/orchestrator/tools.py` `deploy_plugin`(**[round19 #1 정정]** 이전 판은 `:1266`이었는데 그 행은 무관한 닫는 괄호였다 — `d03597b`의 `deploy_plugin`은 `:1288`이다)
 - 경계 스캔: `server/tests/test_prechk_tool.py:330-343` · `server/tests/test_architecture.py:33,49`
 - 툴 등록: `server/preshow/TOOLS_REGISTRATION.md`
 - 보고 교리: `.moai/specs/SPEC-COPILOT-OVERLAP-001/design.md:148`

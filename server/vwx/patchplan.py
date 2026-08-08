@@ -16,6 +16,8 @@ from server.vwx.verdicts import (
     ADDRESS_OVERLAP_IN_PLAN,
     COMPARISON_NOT_PERFORMED,
     DESIGNED_TYPE_NAME_VACUOUS,
+    DESIGNED_TYPE_NAME_VACUOUS_JOIN_ABSENT,
+    DESIGNED_TYPE_NAME_VACUOUS_QUANTITY_AXIS,
     FID_ALREADY_IN_USE,
     FID_BELOW_MINIMUM,
     FID_CONFLICT_PRECHECK_DESCOPE,
@@ -730,6 +732,11 @@ def _plan_from_report(
                 ),
                 vocabulary="fid_assignment_rejection_reason",
             ),
+            # [round19 minor#9] 입력 거부도 **콘솔이 무엇을 못 보여줬는지**를 싣는다.
+            # `server/orchestrator/tools.py`가 못박은 원칙이고, round18의 갈래 순서
+            # 변경이 이 고지를 payload에서 지웠다. `fid_safety`는 여전히 싣지 않는다 —
+            # 고지(무엇을 못 봤다)와 주장(검사했고 깨끗하다)은 다른 것이다.
+            skipped_checks=_fid_precheck_notices(assumption_71_value, fid_property_port),
         )
     valid_fid_range = parsed_fid_range.parsed
     if valid_fid_range is None:
@@ -753,6 +760,8 @@ def _plan_from_report(
                 reason=parsed_fid_range.defect,
                 vocabulary="fid_assignment_rejection_reason",
             ),
+            # [round19 minor#9] 고지만 복원한다 — 위 `fid_range_required`와 같은 규율.
+            skipped_checks=_fid_precheck_notices(assumption_71_value, fid_property_port),
         )
 
     confirmation_required = assumption_71_value != ASSUMPTION_71_GO
@@ -783,6 +792,9 @@ def _plan_from_report(
                 ),
                 vocabulary="fid_assignment_rejection_reason",
             ),
+            # [round19 minor#9] 이 갈래는 비-GO뿐이므로 고지는 사전검사 **미수행**
+            # 강등이고, 콘솔을 건드리지 않는다(round16 S16-02가 고정한 성질).
+            skipped_checks=_fid_precheck_notices(assumption_71_value, fid_property_port),
             fid_safety=fid_safety,
             fid_range_visually_confirmed_empty=False,
         )
@@ -1068,6 +1080,23 @@ class ExistingFidRead:
     root_unreadable: bool = False
     #: 콘솔 조회를 **시도했는가**. 기본은 거짓 — 미수행과 "읽었고 깨끗했다"는 다르다.
     attempted: bool = False
+    #: 절단 복구 스윕이 **추가로** 관측한 슬롯 수 — 열거가 아니라 스윕이 근거인 슬롯이다.
+    #: 이 계수는 `complete`가 읽지 않는다: 스윕은 **detail을 올릴 뿐**이고 완전성은
+    #: 여전히 `unseen`·`unreadable_fids` 같은 자기 근거로만 판정된다(형제 리더
+    #: `server/prechk/inventory.py:401-404`가 못박은 규율). 이 계수를 `complete`의
+    #: 근거로 쓰면 "스윕을 돌렸으니 다 읽었다"는 R18-A식 거짓 보고가 된다.
+    recovered_count: int = 0
+    #: 스윕의 상한(= `child_count`). 스윕하지 않았으면 `None` — "0까지 훑었다"와
+    #: "훑지 않았다"는 다르다.
+    recovery_boundary: int | None = None
+    #: 스윕 프로브가 **결말을 내지 못한** 건수 — 응답 자체를 받지 못했거나(전송 결함),
+    #: 응답은 왔지만 값이 FID로 해석되지 않았다(형제 리더 독스트링 3번의 포인터 문자열).
+    #: `ok=false`는 여기 세지 않는다: 그것은 희소 풀의 **부재**일 수 있어 결함이라 부를 수
+    #: 없고, 이미 `unseen`이 그 슬롯을 들고 있다. 진단 전용이고 완전성 축이 아니다 —
+    #: 프로브가 실패한 슬롯은 이미 `unseen`에 남아 판정을 막으므로 여기서 또 세면
+    #: round14 T01/T03이 만든 "선언 2대 중 4대를 읽지 못했다"는 산술 불가능 문구가
+    #: 되살아난다. 같은 슬롯을 두 판정 축으로 세지 않는다.
+    probe_failures: int = 0
 
     @property
     def complete(self) -> bool:
@@ -1130,10 +1159,13 @@ class ExistingFidRead:
             "attempted": self.attempted,
             "child_count": self.child_count,
             "enumerated_count": self.enumerated_count,
+            "recovered_count": self.recovered_count,
+            "recovery_boundary": self.recovery_boundary,
             "unseen_count": self.unseen,
             "unreadable_fid_count": self.unreadable_fids,
             "unusable_row_count": self.unusable_rows,
             "unparsable_row_count": self.unparsable_rows,
+            "probe_failure_count": self.probe_failures,
             "over_enumerated": self.over_enumerated,
             "root_unreadable": self.root_unreadable,
             "complete": self.complete,
@@ -1148,6 +1180,45 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
     **진짜 총계**며, `len(children)`를 총계로 읽은 조사가 이 저장소에서 실제로 틀렸다.
     그래서 열거 수와 `childCount`를 대조하고, 프로퍼티 읽기 실패도 미판독으로 센다
     (round11 N01 — 이전 판은 둘 다 삼켜 이미 쓰이는 FID를 배정했다).
+
+    **[round19] 절단 복구 스윕을 붙였다.** 이전 판은 단일 `query_state`만 해서, 위 규율의
+    나머지 절반 — 형제 리더 `server/prechk/inventory.py:391-417`의 `1..childCount` 유계
+    스윕 — 이 없었다. 절단이 기본 경로인 콘솔에서 스윕이 없으면 열거는 **영원히**
+    `childCount`에 못 미치고 `unseen>0`이 상시 성립한다. 실물 39대 쇼파일은 19대에서
+    잘리므로 GO 분기가 **한 대도** 배정하지 못했다(M8 대상 0건). 스윕은 원전의 규율을
+    그대로 가져온다:
+
+    * **전제**: 열거에서 쓸 수 있는 슬롯이 **하나라도** 있어야 스윕한다. 원전 주석이
+      과거 사고를 명시한다 — *"A numeric path segment degrades to a LIST POSITION when
+      not one child of the node has an established slot … sweeping then would adopt
+      positions as slots -- the promotion this function forbids above, and the defect
+      that issued commands against pools 1/5/7 once before."* responder의
+      `copilot_responder.lua:434-447`이 `any_slot_known`이 거짓일 때만
+      `children[wanted_slot]`을 돌려주므로, 빈 열거에서 스윕하면 **위치를 슬롯으로
+      오인**한 값을 기존 FID로 적재한다.
+    * **경계**: `1..childCount` 유계. 상한은 지어낸 수가 아니라 콘솔이 선언한 총계다.
+      조기 중단은 두지 않는다. 다만 그것이 **차단을 지키기 때문이 아니다** — 아래
+      인덱스 도메인 전제 때문에 관측 슬롯은 `1..childCount` 안에만 있고, 관측 수가
+      총계에 닿는 순간 남은 슬롯은 전부 이미 관측된 것이라 루프가 건너뛴다. 즉
+      `len(read_slots) == child_count`에서 끊는 변형은 **관측 가능한 차이가 없는 등가**
+      변형이다. 그래서 굳이 두지 않았을 뿐이고, 이 자리에 대조군은 없다(무대조군이
+      아니라 등가 뮤턴트다 — 그 판정 근거를 여기 남긴다).
+    * **완전성은 스윕으로 승격되지 않는다.** 스윕은 `read_slots`·`fids`라는 **관측**을
+      늘릴 뿐이고, `complete`는 여전히 `unseen`·`unreadable_fids` 대조로만 판정된다.
+      "스윕을 돌렸으니 다 읽었다"는 플래그를 두면 그것이 R18-A와 같은 거짓 보고다.
+    * **인덱스 도메인 일치**: 열거 슬롯이 `1..childCount` **밖**에 있으면 스윕하지
+      않는다. 그 스냅샷의 인덱스 도메인은 스윕 도메인이 아니므로(희소 풀), 범위 안을
+      훑어 관측을 채우면 총계는 맞아떨어지고 정작 범위 밖 픽스처의 FID는 못 읽은 채
+      `complete`가 된다. 원전이 `index_domain_unknown`으로 따로 표시하는 상태다.
+
+    **비용**: 스윕은 슬롯당 `query_property` **1회**다. 최악 `childCount`회이며 절단이
+    있을 때만 발화한다(실물 39대 → 최대 20회). 원전은 슬롯당 `query_state` + 프로퍼티
+    읽기를 하는데 우리는 프로퍼티 1회로 줄였다 — 원전은 스냅샷에서 **이름**을 얻어야
+    하고 희소/단선을 구분해 보고하지만, 이 층이 필요한 것은 FID 값 하나뿐이고 그
+    구분은 이 층의 어떤 계수도 바꾸지 못한다(둘 다 슬롯을 미관측으로 남긴다). 정책
+    스위치(원전의 `recover_truncated`)는 두지 않는다: 원전은 리포트용 빠른 부분 판독도
+    정당한 산출물이라 스위치가 필요하지만, 이 사전검사의 산출물은 하나뿐이고 스윕을
+    끄면 GO 분기가 상시 거부로 되돌아가는 것 말고는 아무 효과가 없다.
     """
     if fid_property_port is None:
         # [round15 N01] 포트가 없으면 **조회 자체를 하지 않았다**. 이전 판은 여기서
@@ -1197,17 +1268,72 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
             continue
         existing_fids.append(fid)
 
+    # 여기까지가 **열거**의 결말이다. 스윕이 관측을 늘리기 전에 계수를 못박아 둔다 —
+    # `enumerated_count`는 열거가 근거인 슬롯 수여야 하고, 스윕이 찾은 슬롯을 여기에
+    # 섞으면 `reason()`의 "열거된 슬롯 N개…" 문장이 스윕 결과를 열거라고 말하게 된다.
+    enumerated_count = len(read_slots)
+    recovered_count = 0
+    recovery_boundary: int | None = None
+    probe_failures = 0
+    if (
+        child_count is not None
+        # 원전의 `slots_established` — 하나라도 확립된 슬롯이 있어야 responder의
+        # 슬롯 해석기가 위치가 아닌 슬롯으로 답한다(위 독스트링의 인용).
+        and read_slots
+        # 절단 판정은 **계수 대조**로 한다(`truncated` 플래그가 아니다 — 원전 독스트링 2번).
+        and enumerated_count < child_count
+        # 인덱스 도메인이 스윕 도메인과 어긋나면 스윕하지 않는다.
+        and all(1 <= slot <= child_count for slot in read_slots)
+    ):
+        recovery_boundary = child_count
+        for slot in range(1, recovery_boundary + 1):
+            if slot in read_slots:
+                continue
+            try:
+                probe = fid_property_port.query_property(
+                    f"{FID_FIXTURE_ROOT}/{slot}", FID_PROPERTY_NAME
+                )
+            except Exception:  # noqa: BLE001 — 프로브는 **투기적**이다(아래 주석)
+                # 없을 수도 있는 슬롯을 찔러 보는 조회다. 여기서 예외가 나가면
+                # `build_patch_plan`이 그대로 터지고, `ToolRegistry.dispatch`에 가드가
+                # 없어 **구조화된 거부 자체가 사라진다**(round18 R18-D가 명명한 기제).
+                # 열거된 슬롯의 읽기는 감싸지 않는다 — 그쪽은 콘솔이 스스로 목록에 올린
+                # 슬롯에 대한 전송 결함이고, 투기적 프로브와 성질이 다르다.
+                probe_failures += 1
+                continue
+            fid = _fid_int(probe.get("value")) if probe.get("ok") is True else None
+            if fid is None:
+                # `ok=false`는 **부재**일 수도 있고(희소 풀 — 정보다) 프로퍼티 판독
+                # 실패일 수도 있어 구별할 수 없다. 열거된 슬롯과 달리 이 슬롯의 **실재
+                # 자체가 미증명**이므로, `unreadable_fids`로 세면 "그 슬롯은 있다"를
+                # 단정하게 된다. 관측으로 올리지 않고 `unseen`에 남긴다 — fail-closed다.
+                # 응답은 왔지만 값이 FID로 해석되지 않은 경우(원전 독스트링 3번의
+                # 포인터 문자열)도 같은 자리에 남기고, 진단으로만 센다.
+                if probe.get("ok") is True:
+                    probe_failures += 1
+                continue
+            read_slots.add(slot)
+            recovered_count += 1
+            existing_fids.append(fid)
+
     # 총계를 모르거나, 관측이 총계와 **어느 방향으로든** 어긋나면 완전하다고 말할 수 없다.
     # [round14 T01/T03] 같은 슬롯을 두 축으로 세지 않는다 — 루프에서 이미 센 못 쓴 행은
     # 총계 대조가 다시 세면 `unread > child_count`가 되어 "선언 2대 중 4대를 읽지 못했다"는
     # 산술적으로 불가능한 문구가 나갔다. 못 본 슬롯 수는 **한 번만** 센다.
+    #
+    # **[round19] 이 두 줄이 완전성의 유일한 근거로 남는다.** 스윕은 `read_slots`를
+    # 늘렸을 뿐 판정을 건드리지 않는다 — 스윕이 아무 것도 회수하지 못하면 `unseen`은
+    # 그대로 남아 배정이 거부된다.
     over_enumerated = child_count is not None and len(read_slots) > child_count
     unseen = None if child_count is None else max(child_count - len(read_slots), 0)
 
     return ExistingFidRead(
         fids=tuple(existing_fids),
         child_count=child_count,
-        enumerated_count=len(read_slots),
+        enumerated_count=enumerated_count,
+        recovered_count=recovered_count,
+        recovery_boundary=recovery_boundary,
+        probe_failures=probe_failures,
         unseen=unseen,
         unreadable_fids=unreadable_fids,
         unusable_rows=unread,
@@ -1240,6 +1366,38 @@ def _fid_skipped_checks(assumption_71: str) -> tuple[Mapping[str, object], ...]:
             "assumption_71": assumption_71,
         },
     )
+
+
+def _fid_precheck_notices(
+    assumption_71: str, fid_property_port: FidPropertyPort | None
+) -> tuple[Mapping[str, object], ...]:
+    """FID 배정 요청 갈래의 **입력 거부**가 지고 나가는 사전검사 고지.
+
+    [round19 minor#9] round18이 `fid_range` 검증을 사전검사 **앞으로** 옮긴 것은 옳다 —
+    거부된 호출에 `fid_safety`가 실려 `conflict_precheck.performed=true`로 "검사했고
+    깨끗하다"고 주장한 것이 R18-A의 치명이었다. 그런데 그 이동이 `skipped_checks`
+    고지까지 함께 지웠다: 바닥 위반 범위 **동시에** 콘솔 판독이 불완전한 호출에서
+    조작자는 "범위를 고쳐라"만 듣고, 범위를 고친 다음 또 거부당한다. `tools.py`가
+    못박은 원칙은 *콘솔이 무엇을 보여줬고 무엇을 못 봤는지를 **어느 분기에서든** 먼저
+    싣는다*이므로 고지를 복원한다.
+
+    **고지와 주장을 구분한다.** 돌려주는 것은 `skipped_checks` 한 항목 — "이 검사를
+    수행하지 못했다/불완전하다"는 **부정** 진술뿐이다. `fid_safety`는 여전히 거부
+    payload에 실리지 않으므로 "검사했다"는 주장이 되살아날 자리가 없다.
+
+    **비용**: GO 분기에서는 콘솔 판독을 실제로 수행한다. 거부될 호출에 읽기를 한 번
+    쓰는 값이지만, 고지의 내용이 곧 **관측된 사실**이어야 하고(수행하지 않고 "불완전
+    하다"고 적으면 그것이 또 거짓 문장이다) 조작자가 다음에 무엇을 고쳐야 하는지가
+    이 판독에 달려 있다. 판독은 읽기 전용이며 성공 경로가 어차피 하는 같은 판독이다.
+    비-GO 분기는 콘솔을 건드리지 않는다(round16 S16-02).
+    """
+    if assumption_71 != ASSUMPTION_71_GO:
+        return _fid_skipped_checks(assumption_71)
+    existing_read = _existing_fids_from_console(fid_property_port)
+    if existing_read.complete:
+        # 판독이 완전하면 건너뛴 검사가 없다 — 빈 고지를 지어내지 않는다.
+        return ()
+    return (_fid_precheck_incomplete_check(existing_read),)
 
 
 def _fid_safety_payload(
@@ -1299,62 +1457,219 @@ def _rejection_for_report(report: Mapping[str, object]) -> PatchPlanRejection | 
     return None
 
 
+#: [round19 major#1] 이 코드로 거부되는 리포트에서는 1단계 **콘솔 조인이 수행되지 않았다**.
+#: 세 갈래 전부 조인 산출이 존재하지 않는다: `MULTI_SYSTEM_MAPPING_ABSENT`는
+#: `diff.compare`의 `if not multi_system:` 가드가 두 축 루프를 통째로 건너뛴 상태이고,
+#: `COMPARISON_NOT_PERFORMED`(`diffs.performed=False`)는 `report._diffs_payload`가 세 키를
+#: 아예 생략한 상태이며, `INVALID_REPORT_PAYLOAD`는 `diffs` 객체 자체가 없는 상태다.
+#: 그 갈래에서 "1단계가 그 이름을 콘솔 타입 전부와 일치로 봤다"고 쓰면 **하지 않은 일을
+#: 했다고 단정**하는 거짓 문장이 되고, round18판이 무조건 부착으로 정확히 그렇게 했다.
+#:
+#: 손으로 베낀 목록이 아니다 — `test_autopatch_types.py`의 round19 대조군이
+#: `_rejection_for_report`가 낼 수 있는 코드를 AST로 재도출해 이 집합과 맞춘다. 조인
+#: 미수행이 **아닌** 거부 갈래가 생기면 그 대조군이 먼저 실패해 분류를 강제한다.
+_JOIN_NOT_PERFORMED_REJECTIONS: frozenset[str] = frozenset(
+    {COMPARISON_NOT_PERFORMED, INVALID_REPORT_PAYLOAD, MULTI_SYSTEM_MAPPING_ABSENT}
+)
+
+
+@dataclass(frozen=True)
+class _VacuousAxis:
+    """1단계 콘솔 조인의 한 축 — 그 축이 **실제로 적용하는 필터**를 그대로 들고 있다.
+
+    [round19 major#3] round18판은 축 하나의 필터로 두 축을 말했다. `diff.compare`에서
+    `missing_in_console` 루프는 `classification != "patched"`와 좌표 미해석을 `continue`로
+    거르지만, `designed_counts` 루프는 **아무 `if` 없이** 전 도면 픽스처를 센다. 그래서
+    미패치 픽스처와 좌표가 `None`인 패치 픽스처는 수량 축에서 실제로 소멸하는데 round18
+    고지는 0건이었다. 축마다 필터가 다르므로 축마다 코드·문장·대상 집합이 다르다.
+    """
+
+    kind: str
+    axis_key: str
+    requires_patched: bool
+    requires_coordinates: bool
+    reason: str
+
+
+_VACUOUS_AXES: tuple[_VacuousAxis, ...] = (
+    _VacuousAxis(
+        kind=validate_autopatch("skipped_check_kind", DESIGNED_TYPE_NAME_VACUOUS),
+        axis_key="missing_in_console",
+        requires_patched=True,
+        requires_coordinates=True,
+        reason=(
+            "도면 타입 이름에 영숫자가 하나도 없는 패치 픽스처가 있다 — 1단계 콘솔 부재 "
+            "판정은 그런 이름을 이름이 빈 칸이 아닌 콘솔 타입 전부와 일치로 보므로 이 "
+            "항목이 missing_in_console에서 소멸했을 수 있다. 2단계는 1단계 판정을 "
+            "재계산하지 않으므로 되살리지 않고 고지만 한다. 콘솔 부재를 단정할 수 없다."
+        ),
+    ),
+    _VacuousAxis(
+        kind=validate_autopatch("skipped_check_kind", DESIGNED_TYPE_NAME_VACUOUS_QUANTITY_AXIS),
+        axis_key="quantity_mismatch",
+        requires_patched=False,
+        requires_coordinates=False,
+        reason=(
+            "도면 타입 이름에 영숫자가 하나도 없는 도면 픽스처가 있다 — 1단계 수량 대조는 "
+            "미패치와 좌표 미해석을 가리지 않고 전 도면 픽스처를 세면서 그런 이름을 이름이 "
+            "빈 칸이 아닌 콘솔 타입과 일치로 보므로 이 항목이 quantity_mismatch에서 "
+            "소멸했을 수 있다. 2단계는 1단계 판정을 재계산하지 않으므로 되살리지 않고 "
+            "고지만 한다. 수량 차이를 단정할 수 없다."
+        ),
+    ),
+)
+_VACUOUS_JOIN_ABSENT_KIND = validate_autopatch(
+    "skipped_check_kind", DESIGNED_TYPE_NAME_VACUOUS_JOIN_ABSENT
+)
+
+
+def _designed_coordinates(fixture: Mapping[str, object]) -> str | None:
+    """`유니버스.주소` — 어느 한쪽이라도 미해석이면 `None`(없는 주소를 지어내지 않는다)."""
+    universe = _optional_int(fixture.get("universe"))
+    address = _optional_int(fixture.get("address"))
+    if universe is None or address is None:
+        return None
+    return f"{universe}.{address}"
+
+
+def _vacuous_axis_targets(
+    fixtures: Sequence[Mapping[str, object]], axis: _VacuousAxis
+) -> tuple[int, ...]:
+    """그 축에서 **1단계가 삼킬 수 있는** 도면 픽스처의 인덱스 — 축의 필터를 그대로 적용한다.
+
+    [round19 major#2] 술어는 `is_vacuous_type_name` **하나만으로는 1단계와 맞지 않는다**.
+    1단계 삼킴은 `rig.fuzzy_type_equal`이 하고 그것은 `if not a or not b: return False`라
+    **falsy 이름은 아무것도 삼키지 않는다**. 공허 판정만 보면 `instrument_type=""`처럼
+    양쪽에 정상 등장하는 항목까지 고지되고, 빈 타입명은 도면에서 흔하므로 상시 발화하는
+    거짓 양성이 된다 — 흔한 거짓 양성은 게이트를 무력화한다(`_SENTENCE_SHAPE_DEFECTS`
+    주석의 같은 원칙). 그래서 **truthy와의 결합**이 1단계 술어의 대응물이다. 술어를
+    공유했다는 사실만으로 정렬이 보장되지 않았다는 것이 round19의 교훈이고, 정렬 자체를
+    `test_autopatch_types.py`의 round19 대조군이 1단계 실측과 맞춘다.
+    """
+    targets: list[int] = []
+    for index, fixture in enumerate(fixtures):
+        if axis.requires_patched and fixture.get("classification") != "patched":
+            continue
+        match_type = fixture.get("gdtf_fixture") or fixture.get("instrument_type")
+        if not (match_type and is_vacuous_type_name(match_type)):
+            continue
+        if axis.requires_coordinates and _designed_coordinates(fixture) is None:
+            continue
+        targets.append(index)
+    return tuple(targets)
+
+
+def _stage_one_axis_output_present(report: Mapping[str, object], axis_key: str) -> bool:
+    """그 축의 1단계 산출이 이 리포트에 **실제로 있는가**(round19 major#1).
+
+    갈래를 열거해 판정하지 않는다 — 열거는 목록에 없는 새 갈래에서 반드시 새고, 이
+    저장소는 이미 그것으로 한 번 샜다(`report.VwxReport.comparison_performed`의 v0.1.3
+    재설계 주석). 여기서는 두 가지를 **결과로** 본다: ① 조인 미수행을 뜻하는 거부가
+    걸리는가 ② 그 축의 배열이 리포트에 실려 있는가. 둘 중 하나라도 아니면 우리 층은
+    그 축에 대해 1단계가 무엇을 했는지 말할 근거가 없다.
+    """
+    rejection = _rejection_for_report(report)
+    if rejection is not None and rejection.code in _JOIN_NOT_PERFORMED_REJECTIONS:
+        return False
+    diffs = report.get("diffs")
+    if not isinstance(diffs, Mapping):
+        return False
+    return isinstance(diffs.get(axis_key), (list, tuple))
+
+
+def _vacuous_notice(
+    *,
+    kind: str,
+    reason: str,
+    axes: Sequence[str],
+    fixtures: Sequence[Mapping[str, object]],
+    targets: Sequence[int],
+) -> Mapping[str, object]:
+    """고지 한 건 — 좌표로만 가리키고 도면 원문 이름은 싣지 않는다(§0 2b④).
+
+    좌표가 없는 대상은 주소 목록에 실릴 수 없으므로 **개수로 따로 싣는다**. 그러지 않으면
+    `affected_count`와 주소 개수가 조용히 갈라져 조작자가 목록을 전수로 읽는다.
+    """
+    coordinates = tuple(
+        coordinate
+        for coordinate in (_designed_coordinates(fixtures[index]) for index in targets)
+        if coordinate is not None
+    )
+    return MappingProxyType(
+        {
+            "kind": kind,
+            "label": skipped_check_label(kind),
+            "reason": reason,
+            "stage_one_axes": tuple(axes),
+            "affected_designed_addresses": coordinates,
+            "affected_count": len(targets),
+            "affected_without_coordinates": len(targets) - len(coordinates),
+        }
+    )
+
+
 def _vacuous_designed_type_checks(
     report: Mapping[str, object],
 ) -> tuple[Mapping[str, object], ...]:
-    """도면 타입 이름이 공허한 픽스처를 세어 **미수행 판정으로 고지한다**(round18 R18-J).
+    """도면 타입 이름이 공허한 픽스처를 **축별로** 세어 미수행 판정으로 고지한다.
 
-    이것은 1단계 동작의 **기록**이 아니라 2단계의 **고지**다. 1단계
-    `diff.compare`는 `rig.fuzzy_type_equal`로 (유니버스, 주소) 후보와 도면 타입을
-    조인하는데, 정규화 후 영숫자가 남지 않는 이름은 **모든** 콘솔 타입과 일치한다.
-    그래서 그 주소에 콘솔 픽스처가 하나라도 있으면 `found`가 참이 되어 그 도면
-    픽스처는 `missing_in_console`에서 사라지고, `quantity_mismatch`에서도 첫
-    콘솔 타입의 수량과 대조되어 사라진다(round18 실측: 도면 2대 중 1대 소멸,
-    `skipped_checks` 0건, `summary_ko`는 "콘솔 미확인 1건"만 말한다).
+    이것은 1단계 동작의 **기록**이 아니라 2단계의 **고지**다. 1단계 `diff.compare`는
+    `rig.fuzzy_type_equal`로 조인하는데, 정규화 후 영숫자가 남지 않는 truthy 이름은 이름이
+    빈 칸이 아닌 콘솔 타입 전부와 일치한다. 그래서 그 픽스처는 `missing_in_console`에서
+    사라지고, `quantity_mismatch`에서도 콘솔 수량과 대조되어 사라진다(실측: 도면 2대 중
+    1대 소멸, 1단계 `skipped_checks` 0건).
 
-    고칠 권한은 1단계에 있다(AC-AUTOPATCH-025 「1단계 공개 계약 무변경」) — 그래서
-    여기서 후보를 되살리지 않는다. **되살리면 1단계 판정을 2단계가 재계산하는 것**이고
-    그것은 이 SPEC이 금지한다. 대신 조작자에게 "이 판정을 믿지 말라"를 등재 어휘로 낸다.
+    고칠 권한은 1단계에 있다(AC-AUTOPATCH-025 「1단계 공개 계약 무변경」) — 그래서 여기서
+    후보를 되살리지 않는다. **되살리면 1단계 판정을 2단계가 재계산하는 것**이고 그것은 이
+    SPEC이 금지한다. 대신 조작자에게 "이 판정을 믿지 말라"를 등재 어휘로 낸다.
 
-    판정 술어는 `typemap.is_vacuous_type_name` 하나만 쓴다 — 재구현하면 두 층의
-    공허 판정이 갈려 고지가 대상과 어긋난다. 대조 값은 1단계 `rig.match_type`과 같은
-    `gdtf_fixture or instrument_type`이다.
+    [round19] 나가는 문장은 **전부 참이어야 한다**. 그래서 세 가지가 갈린다.
+
+    · 축마다 대상 집합이 다르다(major#3) — 축의 필터를 축의 코드에만 적용한다.
+    · 삼킴 술어는 공허 판정과 truthy의 **결합**이다(major#2) — falsy는 삼켜지지 않는다.
+    · 그 축의 1단계 산출이 없으면 소멸을 말하지 않는다(major#1) — 존재만 고지한다.
+      정보를 지우지도(고지 생략) 지어내지도(소멸 단정) 않는 유일한 선택이다.
     """
     designed = report.get("designed_rig")
     if not isinstance(designed, Mapping):
         return ()
-    affected: list[str] = []
-    for fixture in _mapping_rows(designed.get("fixtures")):
-        if fixture.get("classification") != "patched":
+    fixtures = _mapping_rows(designed.get("fixtures"))
+    notices: list[Mapping[str, object]] = []
+    unjoined_axes: list[str] = []
+    unjoined_targets: set[int] = set()
+    for axis in _VACUOUS_AXES:
+        targets = _vacuous_axis_targets(fixtures, axis)
+        if not targets:
             continue
-        match_type = fixture.get("gdtf_fixture") or fixture.get("instrument_type")
-        if not is_vacuous_type_name(match_type):
+        if _stage_one_axis_output_present(report, axis.axis_key):
+            notices.append(
+                _vacuous_notice(
+                    kind=axis.kind,
+                    reason=axis.reason,
+                    axes=(axis.axis_key,),
+                    fixtures=fixtures,
+                    targets=targets,
+                )
+            )
             continue
-        # 도면 원문 이름을 사유에 보간하지 않는다(§0 2b④) — 세기만 하고 좌표로 가리킨다.
-        universe = _optional_int(fixture.get("universe"))
-        address = _optional_int(fixture.get("address"))
-        if universe is None or address is None:
-            continue
-        affected.append(f"{universe}.{address}")
-    if not affected:
-        return ()
-    return (
-        MappingProxyType(
-            {
-                "kind": validate_autopatch("skipped_check_kind", DESIGNED_TYPE_NAME_VACUOUS),
-                "label": skipped_check_label(DESIGNED_TYPE_NAME_VACUOUS),
-                "reason": (
-                    "도면 타입 이름에 영숫자가 하나도 없는 패치 픽스처가 있다 — 1단계 콘솔 "
-                    "대조는 그 이름을 모든 콘솔 타입과 일치로 보므로 이 항목이 "
-                    "missing_in_console과 quantity_mismatch 양쪽에서 소멸했을 수 있다. "
-                    "2단계는 1단계 판정을 재계산하지 않으므로 되살리지 않고 고지만 한다 — "
-                    "콘솔 부재도 수량 차이도 단정할 수 없다."
+        unjoined_axes.append(axis.axis_key)
+        unjoined_targets.update(targets)
+    if unjoined_axes:
+        notices.append(
+            _vacuous_notice(
+                kind=_VACUOUS_JOIN_ABSENT_KIND,
+                reason=(
+                    "도면 타입 이름에 영숫자가 하나도 없는 도면 픽스처가 있다 — 1단계 콘솔 "
+                    "조인이 이 리포트에서 수행되지 않아 그 축의 산출이 없으므로 소멸 여부를 "
+                    "말할 수 없다. 1단계가 그 이름을 무엇과 대조했는지도 이 리포트로는 알 "
+                    "수 없다."
                 ),
-                "affected_designed_addresses": tuple(affected),
-                "affected_count": len(affected),
-            }
-        ),
-    )
+                axes=tuple(unjoined_axes),
+                fixtures=fixtures,
+                targets=tuple(sorted(unjoined_targets)),
+            )
+        )
+    return tuple(notices)
 
 
 def _candidates_from_report(report: Mapping[str, object]) -> tuple[PatchCandidate, ...]:

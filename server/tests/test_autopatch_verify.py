@@ -78,6 +78,7 @@ from server.vwx.verdicts import (
     ALREADY_PATCHED_IDENTICAL,
     EXISTING_FOOTPRINT_UNREADABLE,
     EXISTING_IDENTITY_UNCONFIRMED,
+    FIXTURE_TYPE_NAME_UNUSABLE,
     TARGET_EXCLUSION_REASON,
     TYPE_CONFIRMATION_PENDING,
     TYPE_NEEDS_CONFIRMATION,
@@ -1906,6 +1907,10 @@ _R16_INDEX_DOMAIN_CLAUSE = (
     "열거가 절단됐으나 선언된 자식을 전부 관측했다 — 수량 비교는 정확하고, "
     "인덱스 도메인만 미상이다."
 )
+#: [round19 major#4] 확인 경로가 실제로 있는 경우에만 쓰이는 **기본** 배제 사유.
+_R19_TYPE_CONFIRMATION_PENDING_REASON = (
+    "콘솔 타입·모드가 확정되지 않았다 — 확인 전에 되돌릴 수 없는 생성을 전달하지 않는다."
+)
 
 #: `apply.py` 모듈 상수 **전수** — (이름, 종류, 고정 리터럴). 프로덕션에서 파생하지 않는다.
 #: 종류는 그 상수가 어디로 나가는지를 정한다:
@@ -1953,6 +1958,11 @@ _R16_APPLY_CONSTANTS = (
     ("PATCH_UNPATCHED", "classification_token", "unpatched"),
     ("PATCH_ADDRESSED", "classification_token", "addressed"),
     ("_INDEX_DOMAIN_CLAUSE", "human_text", _R16_INDEX_DOMAIN_CLAUSE),
+    (
+        "TYPE_CONFIRMATION_PENDING_REASON",
+        "human_text",
+        _R19_TYPE_CONFIRMATION_PENDING_REASON,
+    ),
 )
 
 
@@ -2065,6 +2075,16 @@ def _r16_index_domain_caveat_reason() -> tuple[str, ...]:
     return (str(caveat["reason"]),)
 
 
+def _r19_type_pending_exclusion_reasons() -> tuple[str, ...]:
+    """[round19 major#4] 기본 사유가 실제로 `handoff.exclusions`까지 나가는지 — 프로덕션 경로로.
+
+    해상 결과가 아예 없는 후보다(`resolutions=()`). 그 상태는 하드 스톱이 아니라 **진짜
+    확인 대기**이므로 이 문장을 쓴다. 하드 스톱 자리는 이 문장을 쓰지 않는다 —
+    `handoff.type_hard_stop` 행이 그것을 따로 고정한다.
+    """
+    return tuple(exclusion.reason for exclusion in _r16_handoff_exclusions(resolutions=()))
+
+
 #: (상수 이름, 표면 이름, 그 표면을 프로덕션에서 만들어 오는 호출)
 _R16_HUMAN_SURFACE_PROBES = (
     ("PLUGIN_EXIT_IS_NOT_SUCCESS", "handoff.warnings", _r16_delivered_warnings),
@@ -2073,6 +2093,11 @@ _R16_HUMAN_SURFACE_PROBES = (
     ("DELIVERY_WARNINGS", "handoff.warnings", _r16_delivered_warnings),
     ("ZERO_CREATED_GUIDANCE", "verification.guidance", _r16_verification_guidance),
     ("NO_AUTO_CORRECTION", "verification.guidance", _r16_verification_guidance),
+    (
+        "TYPE_CONFIRMATION_PENDING_REASON",
+        "handoff.exclusions.reason",
+        _r19_type_pending_exclusion_reasons,
+    ),
     ("_INDEX_DOMAIN_CLAUSE", "console_read_caveat.reason", _r16_index_domain_caveat_reason),
 )
 
@@ -3334,6 +3359,10 @@ _R16_SCREEN_BRANCH_ROWS = (
     ),
 )
 
+#: [round19 major#4] `screen_idempotent`의 미확정 갈래가 코드를 담는 지역 이름 -> 그 갈래의
+#: 표 시나리오(해상 결과가 `needs_confirmation`)가 내는 코드. **리터럴**이라 자기 비교가 아니다.
+_R19_SCREEN_DERIVED_CODE_VALUES = {"unresolved_code": "type_confirmation_pending"}
+
 
 def _r16_production_exclusion_sites():
     """`screen_idempotent` 본문의 `_exclusion(...)` 호출을 **소스 순서대로** 뽑는다.
@@ -3353,7 +3382,10 @@ def _r16_production_exclusion_sites():
         (
             # 이름이 아니라 **값**으로 환원한다 — 상수 이름만 바꾼 뮤테이션이 표를
             # 통과하지 못하게 하려면 프로덕션 모듈에서 실제 값을 꺼내야 한다.
-            _r16_apply_constant(call.args[1].id),
+            # [round19 major#4] 미확정 갈래는 코드를 모듈 상수가 아니라 공유 번역기
+            # `_unresolved_type_verdict`에서 받는다 — 그 지역 이름은 리터럴 표로 환원한다.
+            _R19_SCREEN_DERIVED_CODE_VALUES.get(call.args[1].id)
+            or _r16_apply_constant(call.args[1].id),
             any(keyword.arg == "observed_occupants" for keyword in call.keywords),
         )
         for call in calls
@@ -3666,7 +3698,21 @@ _R16_VALIDATE_SITES = (
     ("patchplan.py", '"skipped_check_kind"', "FID_CONFLICT_PRECHECK_INCOMPLETE", "constant"),
     ("patchplan.py", '"skipped_check_kind"', "FID_CONFLICT_PRECHECK_DESCOPE", "constant"),
     # [round18 R18-J] 2단계가 1단계 대조의 공허명 소멸을 고지하는 자리.
+    # [round19 major#3·#1] 축마다·조인 미수행 갈래마다 다른 코드로 갈렸다 — 세 자리 전부
+    # 모듈 상수라 미등재 값이 흐를 수 없고, 어휘 검증은 표 조립 시점(import)에 일어난다.
     ("patchplan.py", '"skipped_check_kind"', "DESIGNED_TYPE_NAME_VACUOUS", "constant"),
+    (
+        "patchplan.py",
+        '"skipped_check_kind"',
+        "DESIGNED_TYPE_NAME_VACUOUS_QUANTITY_AXIS",
+        "constant",
+    ),
+    (
+        "patchplan.py",
+        '"skipped_check_kind"',
+        "DESIGNED_TYPE_NAME_VACUOUS_JOIN_ABSENT",
+        "constant",
+    ),
     ("typemap.py", '"target_exclusion_reason"', "self.code", "variable"),
     ("typemap.py", '"type_resolution_status"', "self.status", "variable"),
     ("typemap.py", '"skipped_check_kind"', "kind", "variable"),
@@ -4191,14 +4237,71 @@ def _r16_idempotent_exclusions(*records, resolutions=None):
     )
 
 
+def _r19_hard_stop_resolution(code=None, reason=None):
+    """확인 경로가 **없는** 해상 결과 — `hard_stop_code`가 채워져 있다.
+
+    [round19 major#4] 기본값은 R18-E가 만든 공허 이름 갈래다: 도면 타입 이름이 공허해
+    후보가 0건이고, `types.hard_stops`는 그 상태를 "확인 경로 없음"이라 말한다.
+    """
+    from server.vwx.typemap import VACUOUS_TYPE_KEY_REASON
+    from server.vwx.verdicts import FIXTURE_TYPE_NAME_UNUSABLE, TYPE_NAME_UNUSABLE
+
+    return TypeResolution(
+        request=TypeRequest(candidate_id="a", instrument_type="---"),
+        status=TYPE_NAME_UNUSABLE,
+        reason=reason if reason is not None else VACUOUS_TYPE_KEY_REASON,
+        hard_stop_code=code if code is not None else FIXTURE_TYPE_NAME_UNUSABLE,
+    )
+
+
+def _r19_incomplete_resolution():
+    """확인 경로가 **없는** 또 하나의 상태 — 라이브러리 관측이 불완전하다.
+
+    [round19 major#4 형제 필드] 하드 스톱은 아니지만 확인 대기도 아니다: 제시할 수 있는
+    선택지 자체를 다 보지 못했다. `hard_stop_code`만 보던 번역은 이 상태를
+    `type_confirmation_pending`으로 뭉갰다 — 한 칸 옆에 남아 있던 같은 기제다.
+    """
+    from server.vwx.typemap import LIBRARY_TRUNCATED_REASON
+    from server.vwx.verdicts import FIXTURE_TYPE_LIBRARY_TRUNCATED, TYPE_LIBRARY_INCOMPLETE
+
+    return TypeResolution(
+        request=TypeRequest(candidate_id="a", instrument_type="MegaPointe"),
+        status=TYPE_LIBRARY_INCOMPLETE,
+        reason=LIBRARY_TRUNCATED_REASON,
+        incompleteness_kind=FIXTURE_TYPE_LIBRARY_TRUNCATED,
+    )
+
+
+#: [round19 major#4] 코드를 **상위 상태에서 받는** 자리 — 사이트 이름 -> 그 시나리오가
+#: 실제로 내야 하는 코드. 값은 **리터럴**이다: `verdicts` 상수를 참조하면 상수를 바꿔도
+#: 기대값이 따라가 자기 비교가 된다(round16 `_R16_APPLY_CONSTANTS`와 같은 규율).
+#: 두 자리 모두 시나리오가 "진짜 확인 대기"(해상 결과 없음 · 후보 제시)이므로 기본 코드다.
+_R19_DERIVED_EXCLUSION_CODES = {
+    "handoff.type_pending": "type_confirmation_pending",
+    "idempotent.own_type_pending": "type_confirmation_pending",
+}
+
+
+def _r19_derived_exclusion_codes():
+    return dict(_R19_DERIVED_EXCLUSION_CODES)
+
+
 #: `_exclusion` 호출 사이트 **전수 표** — (사이트 이름, 함수, 사유 코드, 산출 호출, 필수 문구).
 #: 같은 (함수, 코드) 쌍이 두 번 나오는 자리가 있다(`screen_idempotent`의 확인 불가 두 갈래).
 #: 그것을 뭉치지 않는 것이 요점이다 — 뭉치면 한 갈래가 비어도 다른 갈래가 가려준다.
+#:
+#: [round19 major#4] 셋째 열은 이제 **verdicts 상수 이름이거나 파생 식**이다.
+#: `_unresolved_type_exclusion`과 `screen_idempotent`의 미확정 갈래는 코드를 상수로 박지 않고
+#: 공유 번역기 `_unresolved_type_verdict`에서 받는다(그것이 major#4의 처방이다) — 소스 스캔에
+#: 지역 이름(`code` · `unresolved_code`)으로 잡히고, 그 자리의 기대 코드는
+#: `_r19_derived_exclusion_codes()`가 사이트 이름으로 **리터럴 고정**한다.
+#: 상위 상태 세 갈래(하드 스톱 · 관측 불완전 · 진짜 확인 대기)를 그 번역기가 구별하는지는
+#: `# --- round19 막다른 길 어휘 (DeadEndVocab) ---` 섹션이 별도로 단정한다.
 _R16_EXCLUSION_SITES = (
     (
         "handoff.type_pending",
-        "build_patch_handoff",
-        "TYPE_CONFIRMATION_PENDING",
+        "_unresolved_type_exclusion",
+        "code",
         lambda: _r16_handoff_exclusions(resolutions=()),
         "콘솔 타입·모드가 확정되지 않았다",
     ),
@@ -4250,7 +4353,7 @@ _R16_EXCLUSION_SITES = (
     (
         "idempotent.own_type_pending",
         "screen_idempotent",
-        "TYPE_CONFIRMATION_PENDING",
+        "unresolved_code",
         lambda: _r16_idempotent_exclusions(
             _record(1, "1.1", "FixtureType 3", "1 Mode 1"),
             resolutions=(_r16_unconfirmed_resolution(),),
@@ -4306,7 +4409,10 @@ def test_every_exclusion_site_ships_a_non_empty_reason(label, func, code, produc
     from server.vwx import verdicts
 
     produced = produce()
-    expected_code = getattr(verdicts, code)
+    # [round19 major#4] 셋째 열이 verdicts 상수 이름이 아니면 파생 자리다 —
+    # 그 자리의 기대 코드는 사이트 이름으로 고정한다(자기 비교가 되지 않는다).
+    derived = _r19_derived_exclusion_codes()
+    expected_code = derived[label] if label in derived else getattr(verdicts, code)
     assert [exclusion.code for exclusion in produced] == [expected_code], produced
     reason = produced[0].reason
     assert reason.strip() != ""
@@ -5451,6 +5557,10 @@ _R17_SENTENCE_SURFACES = (
     ("apply.py", "END_TO_END_UNVERIFIED"),
     ("apply.py", "NO_AUTO_CORRECTION"),
     ("apply.py", "PLUGIN_EXIT_IS_NOT_SUCCESS"),
+    # [round19 major#4] `_unresolved_type_exclusion`의 **기본** 사유. 하드 스톱은 이 문장을
+    # 쓰지 않고 `TypeResolution.reason`을 그대로 옮긴다 — 확인 경로가 없는 상태를
+    # "확인 대기"로 적지 않기 위해서다.
+    ("apply.py", "TYPE_CONFIRMATION_PENDING_REASON"),
     ("apply.py", "ZERO_CREATED_GUIDANCE"),
     ("apply.py", "_INDEX_DOMAIN_CLAUSE"),
     ("apply.py", "detail"),
@@ -5468,11 +5578,21 @@ _R17_SENTENCE_SURFACES = (
     ("report.py", "missing_in_console"),
     ("report.py", "quantity_mismatch"),
     ("rig.py", "detail"),
+    # [round19 major#5] `typemap._resolve_one`의 사유는 전부 **모듈 상수**가 됐다 —
+    # 그래서 이전 판의 `("typemap.py", "reason")`(= 갈래 안에 박힌 리터럴 조립) 행이
+    # 프로덕션에서 사라졌다. 사유가 상수라야 "확인 대기를 말하는 갈래"를 소스에서
+    # 기계적으로 셀 수 있고, 그 전수 없이는 새 갈래가 게이트를 조용히 빠져나간다.
+    ("typemap.py", "ALIAS_RESOLVED_REASON"),
+    ("typemap.py", "CANDIDATES_PRESENTED_REASON"),
     ("typemap.py", "FOOTPRINT_DESCOPE_REASON"),
+    ("typemap.py", "FOOTPRINT_MISMATCH_CHOOSABLE_REASON"),
+    ("typemap.py", "FOOTPRINT_MISMATCH_UNVERIFIED_REASON"),
+    ("typemap.py", "FOOTPRINT_UNMATCHABLE_REASON"),
     ("typemap.py", "LIBRARY_TRUNCATED_REASON"),
     ("typemap.py", "LIBRARY_UNREADABLE_REASON"),
+    ("typemap.py", "MODE_ABSENT_REASON"),
+    ("typemap.py", "TYPE_ABSENT_REASON"),
     ("typemap.py", "VACUOUS_TYPE_KEY_REASON"),
-    ("typemap.py", "reason"),
 )
 
 
@@ -5926,7 +6046,12 @@ class TestRound17VacuousTypeKeyReachability:
         )
 
         assert handoff.entries == ()
-        assert [exclusion.code for exclusion in handoff.exclusions] == [TYPE_CONFIRMATION_PENDING]
+        # [round19 major#4] round17 판은 여기서 `type_confirmation_pending`을 기대했다 —
+        # 그게 **거짓 문장이었다**. 같은 payload의 `types.hard_stops`는 같은 후보를 두고
+        # "확인 경로 없음, 하드 스톱"이라 말하는데 전달물 배제는 "확인 대기"라 적었다.
+        # 배제 어휘는 이제 해소되지 않은 사유를 그대로 반영한다.
+        assert [exclusion.code for exclusion in handoff.exclusions] == [FIXTURE_TYPE_NAME_UNUSABLE]
+        assert [row["code"] for row in plan.to_dict()["hard_stops"]] == [FIXTURE_TYPE_NAME_UNUSABLE]
         assert handoff.lua_source is None
 
         # 비공허성 — 정상 이름은 같은 라이브러리에서 전달물까지 나간다.
@@ -6860,3 +6985,480 @@ def test_r18_the_placeholder_code_is_not_a_human_sentence():
     for code in REASON_PLACEHOLDER_CODES:
         assert " " not in code, code
         assert not _r17_is_human_sentence(code), code
+
+
+# --------------------------------------------------------------------------
+# round19 R18-C 출처 게이트 바인딩화 (GateHoles19)
+# --------------------------------------------------------------------------
+#
+# round18이 세운 출처 게이트에는 구멍이 셋 있었다. 원인은 하나다 — **이름으로 봤다.**
+#   ① 호출 자리를 `node.func.id`로만 찾았다 → 별칭 import·속성 호출이 통째로 밖이다.
+#   ② 등기 생산자를 **메서드 이름**으로만 판정했다 → 아무 클래스에 인자 없는
+#      `reason()`/`notes()`를 달면 그 순간 게이트가 오인한다.
+#
+# 감사가 실증한 세 형태(전부 `_r18_origin_defects()`가 `()`를 돌려준다):
+#   (a) `from server.vwx.patchplan import assemble_sentences_or_defect as _A` 뒤 `_A(f"{…}")`
+#   (b) `import server.vwx.patchplan` 뒤 `server.vwx.patchplan.assemble_sentences_or_defect(…)`
+#   (c) 아무 클래스에 `reason()`을 달아 `f"{target.reason()}"` — **가짜 생산자**
+# (a)·(b)는 **R18-F 봉인도 통과한다** — 둘 다 등기된 모듈명이다. 커밋이 말한 "두 게이트에
+# 함께 통과"가 이 형태들에는 성립하지 않았다.
+#
+# **실해가 낮지 않다.** round18이 신설한 `reason_defect.assembled`·`fragments`가 조립기
+# 입력을 **원문 그대로 payload에 재방출**한다. 그래서 도면 원문 비보간 규율(§0 2b④ ·
+# round17 S17-02)이 이 게이트에 **새로 의존하게 됐다** — 여기가 뚫리면 도면 원문이
+# 조작자에게 나가는 payload로 흘러간다.
+#
+# **처방: 이름 기반 → 바인딩 기반.**
+#   · 호출 식별: 같은 모듈의 `def` · `from … import … as …` 별칭 · `import a.b.c` 속성 경로를
+#     전부 조립기 호출로 인식한다. 속성 호출의 수신자가 **바인딩된 모듈이 아니면** 그것
+#     자체가 결함이다(`assembler-via-unbound-receiver`).
+#   · 생산자 판정: 이름이 아니라 **(클래스, 메서드) 쌍**을 동결한다. 현행은
+#     `ExistingFidRead.reason` · `ExistingFidRead.notes` 둘뿐이고, 다른 클래스에 같은 이름
+#     메서드를 하나 더 달면 `unfrozen-producer:`로 걸린다.
+#
+# 구 게이트(`_r18_origin_defects`)는 **지우지 않는다** — 새 게이트가 그 위에 얹히고,
+# 아래 `test_r19_the_binding_gate_contains_the_round18_origin_gate`가 포함관계를 실측한다.
+
+#: 조립기가 사는 모듈 — 속성 호출(형태 b)의 수신자 대조에 쓴다.
+_R19_ASSEMBLER_HOME = "server.vwx.patchplan"
+
+#: 등기 생산자의 **(클래스, 메서드) 쌍** 전수 — 동결. 이름만 동결하면 형태 (c)가 뚫는다.
+_R19_REGISTERED_PRODUCER_METHODS = (
+    ("ExistingFidRead", "notes"),
+    ("ExistingFidRead", "reason"),
+)
+
+
+def _r19_assembler_bindings(tree):
+    """모듈 하나에서 조립기에 닿는 **바인딩** 전수 — (지역 이름 집합, 모듈 경로 집합).
+
+    이름이 아니라 바인딩을 본다: 같은 모듈의 정의, `from … import … as _A` 별칭,
+    `import a.b.c [as x]`가 만드는 속성 경로.
+    """
+    import ast
+
+    local: set[str] = set()
+    modules: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name in _R18_SENTENCE_ASSEMBLERS:
+            local.add(node.name)
+        elif isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                if alias.name in _R18_SENTENCE_ASSEMBLERS:
+                    local.add(alias.asname or alias.name)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                modules.add(alias.asname or alias.name)
+    return local, modules
+
+
+def _r19_assembler_call_sites(overrides=None):
+    """조립기 호출 자리 전수 — **이름이 아니라 바인딩**으로 찾는다.
+
+    돌려주는 각 항목은 `(모듈명, 줄번호, 호출 노드, 수신자 결함 또는 None)`이다.
+    """
+    import ast
+
+    sites = []
+    for module_name, tree in _r17_vwx_trees(overrides):
+        local, modules = _r19_assembler_bindings(tree)
+        inside = {
+            id(child)
+            for node in tree.body
+            if isinstance(node, ast.FunctionDef) and node.name in _R18_SENTENCE_ASSEMBLERS
+            for child in ast.walk(node)
+        }
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or id(node) in inside:
+                continue
+            receiver_defect = None
+            if isinstance(node.func, ast.Name):
+                if node.func.id not in local:
+                    continue
+            elif isinstance(node.func, ast.Attribute):
+                if node.func.attr not in _R18_SENTENCE_ASSEMBLERS:
+                    continue
+                receiver = ast.unparse(node.func.value)
+                if receiver not in modules and receiver != _R19_ASSEMBLER_HOME:
+                    # 수신자가 무엇인지 정적으로 모르면 **닫는다** — 임의 객체에 조립기
+                    # 이름의 메서드를 달아 게이트를 우회하는 형태를 여기서 막는다.
+                    receiver_defect = f"assembler-via-unbound-receiver:{receiver}"
+            else:
+                continue
+            sites.append((module_name, node.lineno, node, receiver_defect))
+    return tuple(sites)
+
+
+def _r19_producer_definitions(overrides=None) -> tuple[tuple[str, str], ...]:
+    """등기 생산자 **이름**을 쓰는 메서드의 (클래스, 메서드) 전수 — 중첩 클래스도 본다."""
+    import ast
+
+    found: list[tuple[str, str]] = []
+    for _, tree in _r17_vwx_trees(overrides):
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            for member in node.body:
+                if (
+                    isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and member.name in _R18_REGISTERED_SENTENCE_PRODUCERS
+                ):
+                    found.append((node.name, member.name))
+    return tuple(sorted(found))
+
+
+def _r19_origin_defects(overrides=None) -> tuple[tuple[str, int, str], ...]:
+    """바인딩 기반 출처 결함 전수 — 호출 자리 결함 **+ 생산자 정의 결함**.
+
+    두 갈래를 한 함수로 합친 이유: 형태 (c)는 호출 자리만 보면 **정상으로 보인다**
+    (`f"{x.reason()}"`는 등기된 이름이다). 그 형태는 **정의 쪽**에서만 드러난다.
+    출처 규율은 "이 호출이 안전한가"가 아니라 "이 이름이 여전히 그 클래스만 가리키는가"다.
+    """
+    defects: list[tuple[str, int, str]] = []
+    for module_name, lineno, call, receiver_defect in _r19_assembler_call_sites(overrides):
+        if receiver_defect is not None:
+            defects.append((module_name, lineno, receiver_defect))
+        for arg in call.args:
+            defect = _r18_argument_origin_defect(arg)
+            if defect is not None:
+                defects.append((module_name, lineno, defect))
+        defects.extend((module_name, lineno, f"kw:{kw.arg}") for kw in call.keywords)
+    frozen = set(_R19_REGISTERED_PRODUCER_METHODS)
+    defects.extend(
+        ("<producer-definition>", 0, f"unfrozen-producer:{owner}.{method}")
+        for owner, method in _r19_producer_definitions(overrides)
+        if (owner, method) not in frozen
+    )
+    return tuple(defects)
+
+
+#: 감사 대조군을 **그대로 옮긴 표** — caught 4 / MISSED 3.
+#: 열: (id, 심는 모듈, 심기 방식, 페이로드, 구 게이트가 잡는가, 새 게이트가 내야 하는 결함).
+#: `anchor`는 프로덕션 유일 호출 자리의 한 인자를 갈아끼우고, `append`는 새 호출 자리를 만든다.
+_R19_ORIGIN_ANCHOR = '"부분 관측으로 빈 FID를 단정하면 이미 쓰이는 번호를 배정하게 된다.",'
+
+_R19_ORIGIN_PLANTS = (
+    (
+        "caught:external_value_interpolation",
+        "patchplan.py",
+        "anchor",
+        'f"도면 값 {targets[0].instrument_type}을 그대로 싣는다.",',
+        True,
+        "interp:targets[0].instrument_type",
+    ),
+    (
+        "caught:bare_name_argument",
+        "patchplan.py",
+        "anchor",
+        "detail,",
+        True,
+        "expr:detail",
+    ),
+    (
+        "caught:unregistered_starred",
+        "patchplan.py",
+        "anchor",
+        "*fragments,",
+        True,
+        "starred:fragments",
+    ),
+    (
+        "caught:producer_taking_an_argument",
+        "patchplan.py",
+        "anchor",
+        'f"조각 {existing_read.reason(verbose)}.",',
+        True,
+        "interp:existing_read.reason(verbose)",
+    ),
+    (
+        # 형태 (a) — 별칭 import. 구 게이트는 `node.func.id`가 `_A19`라 **호출 자리로도** 안 본다.
+        "missed:aliased_import_of_the_assembler",
+        "apply.py",
+        "append",
+        "from server.vwx.patchplan import assemble_sentences_or_defect as _A19\n\n"
+        '_leak19 = _A19(f"도면 값 {_target.instrument_type}을 그대로 싣는다.")\n',
+        False,
+        "interp:_target.instrument_type",
+    ),
+    (
+        # 형태 (b) — 모듈 속성 호출. 등기된 모듈명이라 R18-F 봉인도 함께 통과한다.
+        "missed:module_attribute_call",
+        "apply.py",
+        "append",
+        "import server.vwx.patchplan\n\n"
+        "_leak19 = server.vwx.patchplan.assemble_sentences_or_defect(\n"
+        '    f"도면 값 {_target.instrument_type}을 그대로 싣는다."\n)\n',
+        False,
+        "interp:_target.instrument_type",
+    ),
+    (
+        # 형태 (c) — 가짜 생산자. 호출 자리만 보면 등기된 이름이라 **정상으로 보인다**.
+        "missed:counterfeit_producer_class",
+        "patchplan.py",
+        "append",
+        "class _Counterfeit19:\n"
+        "    def reason(self) -> str:\n"
+        '        return "무엇이든 흘릴 수 있다"\n\n\n'
+        '_leak19 = assemble_sentences_or_defect(f"조각 {_Counterfeit19().reason()}.")\n',
+        False,
+        "unfrozen-producer:_Counterfeit19.reason",
+    ),
+)
+
+#: 표 축소 트립와이어.
+_R19_ORIGIN_PLANT_IDS = frozenset(
+    {
+        "caught:external_value_interpolation",
+        "caught:bare_name_argument",
+        "caught:unregistered_starred",
+        "caught:producer_taking_an_argument",
+        "missed:aliased_import_of_the_assembler",
+        "missed:module_attribute_call",
+        "missed:counterfeit_producer_class",
+    }
+)
+
+
+def _r19_origin_overrides(filename: str, kind: str, payload: str) -> dict[str, str]:
+    """심은 소스를 만든다 — 앵커 교체 1회 또는 파일 끝 덧붙이기."""
+    source = (_R17_VWX_DIR / filename).read_text(encoding="utf-8")
+    if kind == "anchor":
+        assert source.count(_R19_ORIGIN_ANCHOR) == 1, source.count(_R19_ORIGIN_ANCHOR)
+        planted = source.replace(_R19_ORIGIN_ANCHOR, payload, 1)
+    else:
+        planted = source + "\n\n" + payload
+    assert planted != source
+    return {filename: planted}
+
+
+def test_r19_the_binding_origin_gate_is_clean_on_production():
+    """클린 대조군 BYPASS — 심지 않은 프로덕션에서 새 게이트가 0건이다.
+
+    새 규칙이 현행 프로덕션을 깨면 규칙이 틀린 것이다. 여기가 그 판정 자리다.
+    """
+    assert _r18_origin_defects() == ()
+    assert _r19_origin_defects() == ()
+    assert _r19_assembler_call_sites(), "호출 자리가 0개면 이 확인은 공허하다"
+
+
+@pytest.mark.parametrize(
+    "filename,kind,payload,old_catches,expected",
+    [(f, k, p, old, exp) for _, f, k, p, old, exp in _R19_ORIGIN_PLANTS],
+    ids=[name for name, _, _, _, _, _ in _R19_ORIGIN_PLANTS],
+)
+def test_r19_every_audited_origin_bypass_is_caught(filename, kind, payload, old_catches, expected):
+    """감사 대조군 7행(caught 4 / MISSED 3) — **일곱 전부** 새 게이트에 걸린다.
+
+    같은 행에서 구 게이트의 실측도 고정한다: MISSED 3행에서 구 게이트는 `()`다.
+
+    죽이는 뮤테이션:
+      · 호출 식별을 `node.func.id`로 되돌리면 형태 (a)(b)가 빈 결과를 받아 실패한다.
+      · 생산자 판정을 이름만으로 되돌리면(= 정의 스캔 제거) 형태 (c)가 실패한다.
+      · `_R19_REGISTERED_PRODUCER_METHODS`의 클래스명을 `ExistingFidRead` 밖으로 넓히면
+        형태 (c)가 통과해 실패한다.
+    """
+    overrides = _r19_origin_overrides(filename, kind, payload)
+    old = _r18_origin_defects(overrides)
+    new = _r19_origin_defects(overrides)
+    assert bool(old) is old_catches, (old_catches, old)
+    assert new != (), "새 게이트가 놓쳤다"
+    assert any(expected == defect for _, _, defect in new), (expected, new)
+    assert {defect for _, _, defect in old} <= {defect for _, _, defect in new}
+
+
+def test_r19_the_origin_control_table_is_four_caught_and_three_missed():
+    """표 행삭제 프로브 + 감사 진술 대조 — caught 4 / MISSED 3이 **실측과 일치**한다.
+
+    죽이는 뮤테이션: 어느 행을 지워도 id 집합 단정이 실패한다. 구 게이트를 넓혀
+    MISSED 행이 걸리게 되면 4/3이 깨져 실패한다(그때는 표를 갱신해야 한다).
+    """
+    ids = [name for name, _, _, _, _, _ in _R19_ORIGIN_PLANTS]
+    assert len(ids) == len(set(ids)) == len(_R19_ORIGIN_PLANT_IDS) == 7
+    assert set(ids) == _R19_ORIGIN_PLANT_IDS
+    measured = {
+        name: bool(_r18_origin_defects(_r19_origin_overrides(filename, kind, payload)))
+        for name, filename, kind, payload, _old, _exp in _R19_ORIGIN_PLANTS
+    }
+    assert {name for name, caught in measured.items() if caught} == {
+        name for name in ids if name.startswith("caught:")
+    }
+    assert sum(measured.values()) == 4
+    assert len(ids) - sum(measured.values()) == 3
+    for name, _f, _k, _p, old_catches, _exp in _R19_ORIGIN_PLANTS:
+        assert old_catches is name.startswith("caught:"), name
+
+    # 기대 열에 **행 단위 독립 핀**을 박는다 — 행별 단정이 느슨해지거나 기대 문자열이
+    # 틀려도 여기서 걸린다. 결함 문자열 전수가 아니라 "그 행이 노린 결함이 실제로 나오는가"를
+    # 행마다 잰다(결함 전수는 게이트가 자라면 늘 수 있으므로 포함으로 잰다).
+    measured_defects = {
+        name: {
+            defect
+            for _, _, defect in _r19_origin_defects(_r19_origin_overrides(filename, kind, payload))
+        }
+        for name, filename, kind, payload, _old, _exp in _R19_ORIGIN_PLANTS
+    }
+    assert {
+        name: expected in measured_defects[name]
+        for name, _f, _k, _p, _old, expected in _R19_ORIGIN_PLANTS
+    } == dict.fromkeys(_R19_ORIGIN_PLANT_IDS, True)
+    # 일곱 행이 **서로 다른 것**을 실증한다 — 같은 결함을 두 행이 덮으면 한 행은 잉여다.
+    assert len({expected for _n, _f, _k, _p, _o, expected in _R19_ORIGIN_PLANTS}) == 6, (
+        "형태 (a)와 (b)는 같은 결함 문자열을 노린다 — 다른 것은 **호출 식별 경로**다"
+    )
+
+
+def test_r19_the_binding_gate_contains_the_round18_origin_gate():
+    """포함관계 실측 — 구 게이트가 잡는 것은 새 게이트도 전부 잡는다(병존의 근거).
+
+    구 게이트의 비공허성 심기(round18 `test_r18_the_origin_gate_catches_...`)와 새 표
+    7행 전수에서 확인한다.
+
+    죽이는 뮤테이션: 새 게이트가 인자 출처 검사를 빼고 정의 스캔만 하면 caught 4행에서
+    포함관계가 깨져 실패한다.
+    """
+    for _name, filename, kind, payload, _old, _exp in _R19_ORIGIN_PLANTS:
+        overrides = _r19_origin_overrides(filename, kind, payload)
+        old = {defect for _, _, defect in _r18_origin_defects(overrides)}
+        new = {defect for _, _, defect in _r19_origin_defects(overrides)}
+        assert old <= new, sorted(old - new)
+
+
+def test_r19_the_producer_class_method_pairs_are_a_bijection_onto_production():
+    """(클래스, 메서드) 쌍 동결 — **더해도 지워도** 실패한다.
+
+    round18은 메서드 **이름**만 동결했다. 이름만으로는 "다른 클래스에 같은 이름을 하나 더"
+    라는 한 줄 편집이 게이트를 오인시킨다(형태 c). 쌍으로 동결하면 그 편집이 여기서 멈춘다.
+
+    죽이는 뮤테이션:
+      · `_R19_REGISTERED_PRODUCER_METHODS`에서 행을 지우면 프로덕션 정의가 남아 실패한다.
+      · 쓰이지 않는 쌍을 미리 등기하면 `stale`이 비지 않아 실패한다 — 선제 등기는
+        가짜 생산자 클래스를 **미리 승인해 두는 것**이다.
+    """
+    observed = _r19_producer_definitions()
+    assert observed == tuple(sorted(_R19_REGISTERED_PRODUCER_METHODS)), observed
+    # 이름 집합은 구 등기부(`_R18_REGISTERED_SENTENCE_PRODUCERS`)와 정확히 일치한다 —
+    # 두 표가 어긋나면 한쪽이 거짓말을 하고 있는 것이다.
+    assert {method for _owner, method in observed} == set(_R18_REGISTERED_SENTENCE_PRODUCERS)
+    assert {owner for owner, _method in observed} == {"ExistingFidRead"}
+
+
+@pytest.mark.parametrize("index", range(len(_R19_REGISTERED_PRODUCER_METHODS)))
+def test_r19_deleting_any_producer_pair_row_is_caught(index: int):
+    """행삭제 프로브 — 쌍 등기부에서 어느 행을 지워도 프로덕션이 결함을 낸다(공허한 행 0).
+
+    `sys.modules[__name__]`으로 **지금 돌고 있는 모듈**을 집는다 — 이름을 손으로 적으면
+    이 파일을 다른 이름으로 실은 하네스(뮤테이션 대조군이 그렇다)에서 **엉뚱한 모듈**을
+    갈아끼우고, 그러면 프로브가 자기 심기를 못 본다.
+    """
+    import sys as _sys
+
+    _self = _sys.modules[__name__]
+
+    shrunk = (
+        _R19_REGISTERED_PRODUCER_METHODS[:index] + _R19_REGISTERED_PRODUCER_METHODS[index + 1 :]
+    )
+    saved = _self._R19_REGISTERED_PRODUCER_METHODS
+    try:
+        _self._R19_REGISTERED_PRODUCER_METHODS = shrunk
+        defects = _r19_origin_defects()
+        assert defects != (), shrunk
+        assert all(defect.startswith("unfrozen-producer:") for _, _, defect in defects), defects
+    finally:
+        _self._R19_REGISTERED_PRODUCER_METHODS = saved
+
+
+def test_r19_an_unbound_receiver_on_an_assembler_named_method_is_a_defect():
+    """형제 축 — 조립기 **이름의 메서드**를 임의 객체에 달아도 걸린다.
+
+    형태 (b)의 일반화다: 수신자가 바인딩된 모듈이 아니면 우리는 그것이 무엇인지 모르고,
+    모르는 것은 통과시키지 않는다.
+
+    죽이는 뮤테이션: `receiver_defect` 갈래를 지우면 첫 단정이 실패한다.
+    """
+    overrides = _r19_origin_overrides(
+        "apply.py",
+        "append",
+        '_leak19 = _whatever.assemble_sentences(f"조각 {_target.instrument_type}.")\n',
+    )
+    defects = {defect for _, _, defect in _r19_origin_defects(overrides)}
+    assert "assembler-via-unbound-receiver:_whatever" in defects, defects
+    assert "interp:_target.instrument_type" in defects, defects
+    assert _r18_origin_defects(overrides) == (), "구 게이트가 이미 잡았다면 이 행은 공허하다"
+
+
+def test_r19_the_assembler_binding_vectors_are_swept_across_every_vwx_module():
+    """[HARD 4 형제 표면 전수 · 규율 A] 조립기에 닿는 **세 바인딩 경로**를 vwx 전 모듈에서 전수.
+
+    round19 실측:
+      · 조립기 호출 자리 **1건**(`patchplan.py`) — 지역 `def` 바인딩 경로.
+      · 조립기를 별칭으로 들여오는 자리 **0건**, 모듈 속성으로 부르는 자리 **0건**.
+      · 그러나 **별칭 import 자체는 프로덕션에 실재한다**
+        (`address.py`: `normalize_address as console_normalize_address`).
+        곧 형태 (a)는 가설이 아니라 이 저장소가 이미 쓰는 문법이다 — 그것이 이 규율의 근거다.
+
+    죽이는 뮤테이션:
+      · `server/vwx/`에 조립기 별칭 import나 모듈 속성 호출이 생기면 두 번째·세 번째 단정이
+        실패한다(그때는 그 자리가 출처 게이트를 받는지 함께 보여야 한다).
+      · 프로덕션에서 별칭 import가 모두 사라지면 네 번째 단정이 실패한다 — 그러면 이 규율의
+        비공허성 근거가 사라진 것이고, 표를 갱신해야 한다.
+    """
+    import ast
+
+    aliased: list[tuple[str, str, str]] = []
+    module_attribute_assembler: list[tuple[str, int]] = []
+    for module_name, tree in _r17_vwx_trees():
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                aliased.extend(
+                    (module_name, alias.name, alias.asname) for alias in node.names if alias.asname
+                )
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr in _R18_SENTENCE_ASSEMBLERS
+            ):
+                module_attribute_assembler.append((module_name, node.lineno))
+
+    sites = _r19_assembler_call_sites()
+    assert len(sites) == 1, sites
+    assert sites[0][0] == "patchplan.py" and sites[0][3] is None, sites
+    assert [row for row in aliased if row[1] in _R18_SENTENCE_ASSEMBLERS] == []
+    assert module_attribute_assembler == []
+    assert aliased, "별칭 import가 프로덕션에 하나도 없으면 형태 (a)의 실재 근거가 사라진다"
+
+
+def test_r19_the_producer_method_names_are_unique_to_one_class_across_vwx():
+    """[HARD 4 형제 표면 전수 · 규율 B] 인자 없는 메서드 이름의 **클래스 다중성**을 전수.
+
+    형태 (c)의 일반형은 "같은 이름의 인자 없는 메서드가 두 클래스에 있다"다. round19 실측:
+    `server/vwx/`에는 그런 이름이 **실제로 있다**(`to_dict`가 17개 클래스,
+    `_skipped_checks`가 2개 클래스). 곧 이름만으로 생산자를 판정하는 것은 이 저장소에서
+    이미 안전하지 않다 — 등기 생산자 두 이름이 지금 1:1인 것은 **우연**이고, 그 우연을
+    쌍 동결로 고정하는 것이 처방이다.
+
+    죽이는 뮤테이션:
+      · `notes`나 `reason`을 다른 클래스에 하나 더 달면 첫 단정이 실패한다.
+      · 중복 이름이 하나도 없어지면 마지막 단정이 실패한다 — 그러면 이 위험의 실재 근거가
+        사라진 것이고, 그때는 쌍 동결의 비용을 다시 따져야 한다.
+    """
+    import ast
+    from collections import defaultdict
+
+    owners: dict[str, set[str]] = defaultdict(set)
+    for _module_name, tree in _r17_vwx_trees():
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            for member in node.body:
+                if (
+                    isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and len(member.args.args) == 1
+                    and not member.args.kwonlyargs
+                ):
+                    owners[member.name].add(node.name)
+
+    for method in _R18_REGISTERED_SENTENCE_PRODUCERS:
+        assert owners[method] == {"ExistingFidRead"}, (method, sorted(owners[method]))
+    shared = {name: sorted(classes) for name, classes in owners.items() if len(classes) > 1}
+    assert shared, "인자 없는 동명 메서드가 하나도 없으면 형태 (c)의 실재 근거가 사라진다"
+    assert set(_R18_REGISTERED_SENTENCE_PRODUCERS) & set(shared) == set(), sorted(shared)

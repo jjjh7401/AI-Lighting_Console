@@ -775,6 +775,11 @@ _R17_TOKEN_JOIN_SITES = (
     ("address.py", "f'{universe}.{address}'"),
     ("luagen.py", "f'{_lua_int(entry.universe)}.{_lua_int(entry.address)}'"),
     ("patchplan.py", "f'{FID_FIXTURE_ROOT}/{child_index}'"),
+    # --- round19 절단 복구 스윕 (TruncationSweep) — 스윕 프로브의 슬롯 경로.
+    # 위 열거 경로와 **같은 규약**이다(루트 + `/` + 슬롯 번호). 여기서 슬롯 번호 대신
+    # 열거 리스트의 위치를 넣으면 responder가 `children[wanted_slot]`로 답해 엉뚱한
+    # 픽스처의 FID를 기존 FID로 적재한다 — `slots_established` 전제가 막는 사고다.
+    ("patchplan.py", "f'{FID_FIXTURE_ROOT}/{slot}'"),
     # [round18 R18-J] 2단계 고지가 가리키는 도면 좌표 — `address.py`와 **같은 순서 규약**
     # (유니버스 먼저, 그다음 주소)이다. 뒤집으면 조작자가 다른 픽스처를 찾아간다.
     ("patchplan.py", "f'{universe}.{address}'"),

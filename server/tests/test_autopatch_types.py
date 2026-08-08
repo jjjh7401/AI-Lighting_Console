@@ -62,12 +62,15 @@ from server.vwx.typemap import (
     resolve_fixture_types,
 )
 from server.vwx.verdicts import (
+    COMPARISON_NOT_PERFORMED,
     DMX_MODE_NOT_IN_LIBRARY,
     FIXTURE_TYPE_LIBRARY_TRUNCATED,
     FIXTURE_TYPE_LIBRARY_UNREADABLE,
     FIXTURE_TYPE_NAME_UNUSABLE,
     FIXTURE_TYPE_NOT_IN_LIBRARY,
     FOOTPRINT_MATCH_DESCOPE,
+    INVALID_REPORT_PAYLOAD,
+    MULTI_SYSTEM_MAPPING_ABSENT,
     TYPE_LIBRARY_ABSENT,
     TYPE_LIBRARY_INCOMPLETE,
     TYPE_NAME_UNUSABLE,
@@ -3186,3 +3189,1386 @@ class TestRound18ModeCandidateVacuityIsLiveNotDeadCode:
         assert [mode.name for mode in _mode_candidates(request_, console_type, "Extended")] == [
             "Extended"
         ]
+
+
+# --- round19 고지 참·거짓 (NoticeTruth) ---
+#
+# [round19 major#1·#2·#3] R18-J 고지는 세 갈래로 거짓을 냈다. 셋 다 **우리 층의 문장이
+# 1단계의 동작을 단정한다**는 한 기제다.
+#
+#   #1 거짓 귀속 — 1단계 조인이 아예 수행되지 않은 갈래에서도 "일치로 보므로 소멸했을 수
+#      있다"를 붙였다. 하지 않은 일을 했다고 단정한 것이고 round18 이전에는 없던 문장이다.
+#   #2 오발화 — 고지 술어는 공허 판정 하나였는데 1단계 삼킴은 `rig.fuzzy_type_equal`이
+#      하고 그것은 falsy를 아무것도 삼키지 않는다. `instrument_type=""`은 양쪽에 정상
+#      등장하는데 고지가 붙었다 — 흔한 거짓 양성은 게이트를 무력화한다.
+#   #3 미발화 — 두 축을 묶어 말하면서 부재 축의 필터만 베껴 왔다. 1단계 수량 대조는
+#      classification도 좌표도 가리지 않으므로 미패치·좌표부재 픽스처가 그 축에서 실제로
+#      소멸하는데 고지는 0건이었다.
+#
+# 여기서 고정하는 명제는 하나다: **나가는 모든 문장이 참이어야 한다**. 그래서 정렬을
+# 대조군으로 고정하고(술어 공유는 정렬을 보장하지 않았다), 축 필터를 `diff.py`에서 AST로
+# 재도출하고(손으로 베끼면 또 어긋난다), 근거 없는 단정을 갈래별로 억제한다.
+
+_R19_CONSOLE_TYPE = "LEDWash 600"
+#: 콘솔에 **없는** 비공허 이름 — 정렬 대조군의 기준선이다. 콘솔 타입과 퍼지 일치하면
+#: 대조군 자체가 오염되므로 아래 `test_r19_the_alignment_baseline_is_not_contaminated`가 실측한다.
+_R19_CONTROL_NAME = "ZZ Absent Control Fixture"
+
+
+def _r19_target_fixture(
+    type_name: object, *, classification: str, coordinates: bool
+) -> DesignedFixture:
+    return DesignedFixture(
+        unit_number="U2",
+        instrument_type=type_name,  # type: ignore[arg-type]
+        mode=None,
+        channel=None,
+        universe=1 if coordinates else None,
+        address=30 if coordinates else None,
+        classification=classification,
+        part_indices=(),
+        device_type=None,
+    )
+
+
+def _r19_rig(type_name: object, *, classification: str, coordinates: bool) -> DesignedRig:
+    """정상 픽스처 1대 + 대상 1대 — 정상 1대가 있어야 1단계 콘솔 대조가 성립한다."""
+    return _r17_rig(
+        _r17_designed_fixture("U1", _R19_CONSOLE_TYPE, 1, 1),
+        _r19_target_fixture(type_name, classification=classification, coordinates=coordinates),
+    )
+
+
+def _r19_console() -> Inventory:
+    """대상 주소(1.30)에 콘솔 픽스처가 하나 있다 — 공허명 조인이 성립할 조건이다."""
+    return _r17_inventory(_r17_console_record(1, "1.30", _R19_CONSOLE_TYPE))
+
+
+def _r19_stage_one_axes(
+    type_name: object, *, classification: str, coordinates: bool
+) -> dict[str, bool]:
+    """1단계 두 축의 산출에 대상 픽스처가 **남아 있는가** — `diff.compare` 실측이다."""
+    result = compare(
+        _r19_rig(type_name, classification=classification, coordinates=coordinates), _r19_console()
+    )
+    return {
+        "missing_in_console": any(entry.unit_number == "U2" for entry in result.missing_in_console),
+        "quantity_mismatch": any(
+            entry.instrument_type == type_name for entry in result.quantity_mismatches
+        ),
+    }
+
+
+def _r19_stage_one_swallow(
+    type_name: object, *, classification: str, coordinates: bool
+) -> dict[str, bool]:
+    """축별 **1단계 삼킴** — 같은 자리의 비공허 대조군과의 차분으로만 판정한다.
+
+    "축 산출에 없다"만 보면 애초에 조인되지 않은 자리(미패치·좌표부재)까지 삼킴으로
+    읽힌다. 대조군을 같은 자리에 두고 차분을 보면 **이름 때문에** 사라진 것만 남는다.
+    """
+    actual = _r19_stage_one_axes(type_name, classification=classification, coordinates=coordinates)
+    control = _r19_stage_one_axes(
+        _R19_CONTROL_NAME, classification=classification, coordinates=coordinates
+    )
+    return {axis: control[axis] and not actual[axis] for axis in actual}
+
+
+def _r19_vacuous_kinds() -> frozenset[str]:
+    """고지 kind 전수를 **프로덕션에서** 가져온다 — 테스트가 사본을 들면 새 kind를 놓친다."""
+    from server.vwx.patchplan import _VACUOUS_AXES, _VACUOUS_JOIN_ABSENT_KIND
+
+    return frozenset({axis.kind for axis in _VACUOUS_AXES} | {_VACUOUS_JOIN_ABSENT_KIND})
+
+
+def _r19_notices(report: dict) -> dict[str, dict]:
+    from server.vwx.patchplan import build_patch_plan
+
+    payload = build_patch_plan(report).to_dict()
+    kinds = _r19_vacuous_kinds()
+    return {check["kind"]: check for check in payload["skipped_checks"] if check["kind"] in kinds}
+
+
+#: (라벨, 도면 타입 이름) — 공허/비공허 × truthy/falsy 축을 덮는 입력 전수.
+_R19_TYPE_NAME_INPUTS = (
+    ("vacuous_dashes", "---"),
+    ("vacuous_dash_pair", "--"),
+    ("vacuous_spaces", "   "),
+    ("vacuous_dots", "..."),
+    ("vacuous_ideographic_space", "\u3000"),
+    ("falsy_empty", ""),
+    ("substantive_absent", "Nonexistent Type"),
+    ("substantive_other", "MegaPointe"),
+)
+#: 위 표의 각 행이 어느 부류인지를 **독립 표**로 둔다. 어느 쪽 표에서 행을 지워도
+#: `test_r19_the_type_name_input_table_partitions_into_three_classes`가 어긋난다.
+_R19_INPUT_CLASSES = {
+    "vacuous_truthy": (
+        "vacuous_dashes",
+        "vacuous_dash_pair",
+        "vacuous_spaces",
+        "vacuous_dots",
+        "vacuous_ideographic_space",
+    ),
+    "falsy": ("falsy_empty",),
+    "substantive": ("substantive_absent", "substantive_other"),
+}
+
+
+def _r19_input_class(type_name: object) -> str:
+    """부류를 **값에서 계산**한다 — 자유 라벨을 믿지 않는다."""
+    if not type_name:
+        return "falsy"
+    return "vacuous_truthy" if is_vacuous_type_name(type_name) else "substantive"
+
+
+def test_r19_the_type_name_input_table_partitions_into_three_classes():
+    """[round19 · 행삭제 프로브] 입력 표와 부류 표가 전단사다.
+
+    죽이는 뮤테이션: 어느 표에서 행을 지우거나 다른 부류로 옮기면 실패한다.
+    """
+    computed: dict[str, list[str]] = {}
+    for label, type_name in _R19_TYPE_NAME_INPUTS:
+        computed.setdefault(_r19_input_class(type_name), []).append(label)
+    assert {key: tuple(value) for key, value in computed.items()} == {
+        key: tuple(value) for key, value in _R19_INPUT_CLASSES.items()
+    }
+    # 어느 부류든 비면 아래 정렬 순회가 그 축에서 공허하다.
+    assert all(_R19_INPUT_CLASSES.values())
+
+
+def test_r19_the_alignment_baseline_is_not_contaminated():
+    """[round19 major#2 · 대조군 건전성] 정렬 대조군의 전제를 실측으로 고정한다.
+
+    ① 대조군 이름은 비공허이고 콘솔 타입과 퍼지 일치하지 않는다 — 일치하면 "대조군은
+       축에 남는다"가 깨져 차분이 전부 거짓이 된다.
+    ② 프로브 이름이 콘솔 타입과 1단계에서 일치로 판정되는 것은 **truthy 공허** 행뿐이다 —
+       비공허 프로브가 우연히 일치하면 그 행의 삼킴 실측이 공허명 때문이 아니게 된다.
+    """
+    assert is_vacuous_type_name(_R19_CONTROL_NAME) is False
+    assert fuzzy_type_equal(_R19_CONTROL_NAME, _R19_CONSOLE_TYPE) is False
+    for label, type_name in _R19_TYPE_NAME_INPUTS:
+        expected = _r19_input_class(type_name) == "vacuous_truthy"
+        assert fuzzy_type_equal(type_name, _R19_CONSOLE_TYPE) is expected, label
+
+
+@pytest.mark.parametrize("coordinates", (True, False), ids=["coords", "no_coords"])
+@pytest.mark.parametrize("classification", ("patched", "unpatched_designed"))
+@pytest.mark.parametrize(
+    "label,type_name", _R19_TYPE_NAME_INPUTS, ids=[row[0] for row in _R19_TYPE_NAME_INPUTS]
+)
+def test_r19_the_notice_fires_exactly_when_stage_one_swallows(
+    label: str, type_name: str, classification: str, coordinates: bool
+):
+    """[round19 major#2·#3 · 정렬 대조군] 축마다 **고지 발화 == 1단계 삼킴**이다.
+
+    round18은 술어(`is_vacuous_type_name`)를 공유하면 정렬된다고 적었다. 그것이 틀렸다 —
+    1단계 삼킴은 `rig.fuzzy_type_equal`이 하고 그것은 `if not a or not b: return False`라
+    falsy를 아무것도 삼키지 않는다. 술어 공유는 정렬을 보장하지 않았으므로 정렬 **자체**를
+    여기서 1단계 실측에 묶는다. 그러면 1단계 술어가 바뀌어도 잡힌다.
+
+    죽이는 뮤테이션(전부 실측 KILLED):
+      · `_vacuous_axis_targets`의 `match_type and` 결합을 지우면 `falsy_empty` 행이
+        고지되는데 1단계는 삼키지 않아 실패한다.
+      · `is_vacuous_type_name(...)` 호출을 지우면 비공허 행이 고지돼 실패한다.
+      · 두 축의 `requires_patched`/`requires_coordinates`를 서로 바꾸면 미패치·좌표부재
+        행에서 실패한다.
+      · `rig.fuzzy_type_equal`의 `if not a or not b` 절을 지우면 **실측 삼킴이 뒤집혀**
+        고지 없는 삼킴이 생겨 실패한다 — 1단계 술어 변조를 잡는 자리다.
+    """
+    from server.vwx.patchplan import _VACUOUS_AXES, _VACUOUS_JOIN_ABSENT_KIND
+
+    swallow = _r19_stage_one_swallow(
+        type_name, classification=classification, coordinates=coordinates
+    )
+    report = build_vwx_report(
+        compare(
+            _r19_rig(type_name, classification=classification, coordinates=coordinates),
+            _r19_console(),
+        )
+    ).to_dict()
+    fired = _r19_notices(report)
+    for axis in _VACUOUS_AXES:
+        assert (axis.kind in fired) is swallow[axis.axis_key], (
+            label,
+            axis.axis_key,
+            swallow,
+            sorted(fired),
+        )
+    # 조인이 수행된 리포트에서 "말할 수 없다"를 내면 그 문장이 거짓이다.
+    assert _VACUOUS_JOIN_ABSENT_KIND not in fired
+
+
+def test_r19_the_alignment_control_is_not_vacuous():
+    """[round19] 위 순회가 **양쪽 값을 모두 관측**하는지 — 전부 False면 정렬 단정이 공허하다."""
+    observed = set()
+    for _, type_name in _R19_TYPE_NAME_INPUTS:
+        for classification in ("patched", "unpatched_designed"):
+            for coordinates in (True, False):
+                swallow = _r19_stage_one_swallow(
+                    type_name, classification=classification, coordinates=coordinates
+                )
+                observed.update(swallow.items())
+    # 두 축 각각에서 삼킴 True와 False가 모두 관측돼야 한다.
+    assert observed == {
+        ("missing_in_console", True),
+        ("missing_in_console", False),
+        ("quantity_mismatch", True),
+        ("quantity_mismatch", False),
+    }, observed
+
+
+# --------------------------------------------------------------------------
+# major#3 — 축별 1단계 필터를 `diff.py`에서 **AST로 재도출**한다.
+# 손으로 베낀 필터가 어긋난 것이 이번 결함이므로, 표를 손으로 쓰지 않고 코드에서 뽑는다.
+# --------------------------------------------------------------------------
+
+
+def _r19_loop_axis(loop: ast.For) -> str:
+    """루프가 **무엇을 쓰는가**로 축을 정한다 — 주석·순서·이름에 기대지 않는다."""
+    constructed = {
+        node.func.id
+        for node in ast.walk(loop)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    if "MissingInConsoleEntry" in constructed:
+        return "missing_in_console"
+    counters = {
+        ast.unparse(node.targets[0].value)
+        for node in ast.walk(loop)
+        if isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Subscript)
+    }
+    if "designed_counts" in counters:
+        return "quantity_mismatch"
+    raise AssertionError(f"축을 판정할 수 없는 도면 픽스처 루프: {ast.unparse(loop)[:80]!r}")
+
+
+def _r19_diff_axis_filters() -> dict[str, dict[str, bool]]:
+    """`diff.compare`의 축별 루프에서 필터의 **존재 여부**를 재도출한다.
+
+    가드가 지역 이름을 경유하는 것도 따라간다 — `missing_in_console` 루프는 좌표 검사를
+    `unresolved_address`에 담아 두고 `if`에서 그 이름만 쓴다. 이름만 보면 좌표 필터가
+    없는 것으로 읽히고, 그 오독이 곧 이번 결함의 재발 경로다.
+    """
+    source = Path("server/vwx/diff.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    compare_fn = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == "compare"
+    )
+    filters: dict[str, dict[str, bool]] = {}
+    for loop in ast.walk(compare_fn):
+        if not isinstance(loop, ast.For) or ast.unparse(loop.iter) != "designed_rig.fixtures":
+            continue
+        branches = [node for node in ast.walk(loop) if isinstance(node, ast.If)]
+        guard_locals = {
+            node.id
+            for branch in branches
+            for node in ast.walk(branch.test)
+            if isinstance(node, ast.Name)
+        }
+        attributes = {
+            node.attr
+            for branch in branches
+            for node in ast.walk(branch.test)
+            if isinstance(node, ast.Attribute)
+        }
+        for node in ast.walk(loop):
+            if isinstance(node, ast.Assign) and any(
+                getattr(target, "id", None) in guard_locals for target in node.targets
+            ):
+                attributes |= {
+                    inner.attr for inner in ast.walk(node.value) if isinstance(inner, ast.Attribute)
+                }
+        filters[_r19_loop_axis(loop)] = {
+            "classification": "classification" in attributes,
+            "coordinates": {"universe", "address"} <= attributes,
+            "unguarded": not branches,
+        }
+    return filters
+
+
+def test_r19_the_axis_table_re_derives_stage_one_filters_from_diff_py():
+    """[round19 major#3] 우리 축 표의 필터가 `diff.py`에서 재도출한 것과 같다.
+
+    죽이는 뮤테이션:
+      · `_VACUOUS_AXES`에서 `requires_patched`나 `requires_coordinates`를 뒤집으면 실패한다.
+      · 축 행을 지우면 축 키 집합이 어긋나 실패한다.
+      · `diff.py`의 수량 루프에 `classification` 가드가 생기면(1단계 변경) 실패해 우리 표의
+        재도출을 강제한다 — 그것이 이 단정의 목적이다.
+    """
+    from server.vwx.patchplan import _VACUOUS_AXES
+
+    derived = _r19_diff_axis_filters()
+    assert set(derived) == {axis.axis_key for axis in _VACUOUS_AXES}, derived
+    for axis in _VACUOUS_AXES:
+        assert axis.requires_patched == derived[axis.axis_key]["classification"], axis.axis_key
+        assert axis.requires_coordinates == derived[axis.axis_key]["coordinates"], axis.axis_key
+    # 두 축의 필터가 같으면 축을 나눌 이유가 증명되지 않는다 — 실측: 부재 축은 가드가 있고
+    # 수량 축은 `if`가 하나도 없다.
+    assert derived["missing_in_console"]["unguarded"] is False
+    assert derived["quantity_mismatch"]["unguarded"] is True
+    assert derived["missing_in_console"] != derived["quantity_mismatch"]
+
+
+def test_r19_the_quantity_axis_notice_covers_what_the_missing_axis_filter_excluded():
+    """[round19 major#3] 미패치·좌표부재 픽스처가 **수량 축에서만** 고지된다.
+
+    round18판은 이 둘을 0건으로 셌다 — 부재 축의 필터를 수량 축에 적용했기 때문이다.
+
+    죽이는 뮤테이션: 수량 축의 `requires_patched`/`requires_coordinates`를 `True`로
+    바꾸면(즉 부재 축 필터를 다시 베끼면) 두 행 전부 실패한다.
+    """
+    from server.vwx.patchplan import _VACUOUS_AXES, DESIGNED_TYPE_NAME_VACUOUS
+
+    quantity_kind = next(
+        axis.kind for axis in _VACUOUS_AXES if axis.axis_key == "quantity_mismatch"
+    )
+    for classification, coordinates in (("unpatched_designed", True), ("patched", False)):
+        swallow = _r19_stage_one_swallow(
+            "---", classification=classification, coordinates=coordinates
+        )
+        # 전제를 가정하지 않는다 — 1단계가 수량 축에서만 삼키는 자리임을 먼저 실측한다.
+        assert swallow == {"missing_in_console": False, "quantity_mismatch": True}, (
+            classification,
+            coordinates,
+        )
+        report = build_vwx_report(
+            compare(
+                _r19_rig("---", classification=classification, coordinates=coordinates),
+                _r19_console(),
+            )
+        ).to_dict()
+        fired = _r19_notices(report)
+        assert quantity_kind in fired, (classification, coordinates)
+        assert DESIGNED_TYPE_NAME_VACUOUS not in fired, (classification, coordinates)
+        notice = fired[quantity_kind]
+        assert notice["affected_count"] == 1
+        # 좌표가 없으면 주소로 가리킬 수 없다 — 개수로 따로 싣고 없는 주소를 지어내지 않는다.
+        expected_addresses = ("1.30",) if coordinates else ()
+        assert tuple(notice["affected_designed_addresses"]) == expected_addresses
+        assert notice["affected_without_coordinates"] == (0 if coordinates else 1)
+        assert "None" not in " ".join(notice["affected_designed_addresses"])
+
+
+# --------------------------------------------------------------------------
+# major#1 — 1단계 조인이 수행되지 않은 갈래에서 그 동작을 단정하지 않는다.
+# --------------------------------------------------------------------------
+
+
+def _r19_vacuous_designed_payload() -> dict:
+    """공허명 패치 픽스처 1대를 담은 `designed_rig` payload — 갈래마다 재사용한다."""
+    return {
+        "fixture_count": 2,
+        "fixtures": [
+            {
+                "unit_number": "U1",
+                "instrument_type": _R19_CONSOLE_TYPE,
+                "gdtf_fixture": None,
+                "universe": 1,
+                "address": 1,
+                "classification": "patched",
+                "address_basis": None,
+            },
+            {
+                "unit_number": "U2",
+                "instrument_type": "---",
+                "gdtf_fixture": None,
+                "universe": 1,
+                "address": 30,
+                "classification": "patched",
+                "address_basis": None,
+            },
+        ],
+    }
+
+
+def _r19_multi_system_report() -> dict:
+    """멀티시스템 갈래는 **1단계 프로덕션 경로로** 만든다 — payload를 손으로 짓지 않는다."""
+    from dataclasses import replace as _replace
+
+    rig = _replace(
+        _r19_rig("---", classification="patched", coordinates=True),
+        observed_systems=frozenset({"A", "B"}),
+    )
+    return build_vwx_report(compare(rig, _r19_console())).to_dict()
+
+
+def _r19_join_absent_reports() -> dict[str, dict]:
+    """1단계 조인 산출이 없는 갈래 전수 — 갈래 이름은 그 갈래가 내는 **거부 코드**다."""
+    from server.vwx.verdicts import (
+        COMPARISON_NOT_PERFORMED,
+        INVALID_REPORT_PAYLOAD,
+        MULTI_SYSTEM_MAPPING_ABSENT,
+    )
+
+    not_performed = {
+        "designed_rig": _r19_vacuous_designed_payload(),
+        "diffs": {"performed": False, "reason": "설계상 리그에 유효한 픽스처가 0대다"},
+        "skipped_checks": [],
+    }
+    no_diffs = {"designed_rig": _r19_vacuous_designed_payload(), "skipped_checks": []}
+    return {
+        COMPARISON_NOT_PERFORMED: not_performed,
+        INVALID_REPORT_PAYLOAD: no_diffs,
+        MULTI_SYSTEM_MAPPING_ABSENT: _r19_multi_system_report(),
+    }
+
+
+def _r19_rejection_codes_in_production() -> frozenset[str]:
+    """`_rejection_for_report`가 낼 수 있는 코드를 **AST로 재도출**한다."""
+    from server.vwx import patchplan as patchplan_module
+
+    source = Path("server/vwx/patchplan.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    function = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == "_rejection_for_report"
+    )
+    names = {
+        keyword.value.id
+        for call in ast.walk(function)
+        if isinstance(call, ast.Call) and getattr(call.func, "id", None) == "PatchPlanRejection"
+        for keyword in call.keywords
+        if keyword.arg == "code" and isinstance(keyword.value, ast.Name)
+    }
+    assert names, "거부 코드를 하나도 못 뽑았다 — 스캐너가 프로덕션과 어긋났다"
+    return frozenset(getattr(patchplan_module, name) for name in names)
+
+
+def test_r19_the_join_absence_set_is_re_derived_from_the_rejection_branches():
+    """[round19 major#1] 조인 미수행 집합이 `_rejection_for_report`의 갈래 전수와 같다.
+
+    손으로 열거한 집합이 아니다. 조인 미수행이 **아닌** 거부 갈래가 새로 생기면 여기서
+    먼저 실패해 분류를 강제한다 — 그것이 "갈래를 손으로 적으면 새 갈래에서 샌다"를 막는
+    유일한 장치다(`report.VwxReport.comparison_performed`가 같은 이유로 재설계됐다).
+
+    죽이는 뮤테이션:
+      · `_JOIN_NOT_PERFORMED_REJECTIONS`에서 코드 하나를 지우면 실패한다.
+      · 등재되지 않은 코드를 넣어도 실패한다.
+      · 갈래 표(`_r19_join_absent_reports`)에서 행을 지우면 아래 전단사가 실패한다.
+    """
+    from server.vwx.patchplan import _JOIN_NOT_PERFORMED_REJECTIONS
+
+    assert _r19_rejection_codes_in_production() == _JOIN_NOT_PERFORMED_REJECTIONS
+    # 갈래 표가 그 집합과 1:1 — 갈래 하나를 빼놓고 "전수"라 쓰지 못한다.
+    assert frozenset(_r19_join_absent_reports()) == _JOIN_NOT_PERFORMED_REJECTIONS
+
+
+#: 1단계가 조인을 **수행했음을 단정**하는 어구 — 근거 없이 나가면 그것이 R18-A와 같은
+#: 거짓 보고다. 조인 산출이 없는 갈래의 payload 어디에도 이 어구가 없어야 한다.
+_R19_JOIN_PERFORMED_CLAIM_PHRASES = ("일치로 보", "소멸했을 수 있다", "삼켰")
+
+
+def _r19_all_strings(value: object) -> list[str]:
+    """payload에 실린 **모든 문자열**을 재귀로 모은다 — 라벨·사유·요약을 빠뜨리지 않는다."""
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [
+            text
+            for item in list(value.keys()) + list(value.values())
+            for text in _r19_all_strings(item)
+        ]
+    if isinstance(value, (list, tuple)):
+        return [text for item in value for text in _r19_all_strings(item)]
+    return []
+
+
+@pytest.mark.parametrize("code", sorted(_r19_join_absent_reports()))
+def test_r19_no_sentence_claims_a_join_that_never_happened(code: str):
+    """[round19 major#1] 조인이 수행되지 않은 갈래에서 그 동작을 단정하는 문장이 **나가지 않는다**.
+
+    round18판은 고지를 무조건 붙였고 그 문장은 "1단계 콘솔 대조는 그 이름을 모든 콘솔
+    타입과 일치로 보므로 … 소멸했을 수 있다"였다. `diff.compare`의 `if not multi_system:`
+    가드가 두 축 루프를 건너뛴 갈래·`diffs.performed=false`로 세 키가 생략된 갈래·`diffs`
+    자체가 없는 갈래에서는 **일치로 본 적도, 소멸한 적도 없다**. 하지 않은 일을 했다고
+    단정하는 것이 이 SPEC의 기준 결함(R18-A 치명)과 같은 부류다.
+
+    정보를 지우지도 않는다 — 공허한 이름이 **있다**는 사실은 그대로 고지하고, 소멸 여부만
+    "말할 수 없다"로 낸다.
+
+    죽이는 뮤테이션:
+      · `_stage_one_axis_output_present`가 항상 `True`를 돌려주게 하면(갈래별 억제 제거)
+        세 갈래 전부 실패한다.
+      · 거부 코드 검사(`rejection.code in _JOIN_NOT_PERFORMED_REJECTIONS`)를 지우면
+        멀티시스템 갈래가 실패한다 — 그 갈래는 `diffs`에 두 축 키가 실려 있다.
+      · 조인 미수행 고지를 아예 내지 않게 하면 "존재 고지"가 사라져 실패한다.
+    """
+    from server.vwx.patchplan import (
+        _VACUOUS_AXES,
+        _VACUOUS_JOIN_ABSENT_KIND,
+        build_patch_plan,
+    )
+
+    report = _r19_join_absent_reports()[code]
+    payload = build_patch_plan(report).to_dict()
+    # 갈래를 실제로 밟았음을 먼저 고정한다 — 밟지 않으면 아래 단정이 공허하다.
+    assert payload["rejection"]["code"] == code, payload["rejection"]
+
+    fired = _r19_notices(report)
+    assert sorted(fired) == [_VACUOUS_JOIN_ABSENT_KIND], sorted(fired)
+    for axis in _VACUOUS_AXES:
+        assert axis.kind not in fired, axis.axis_key
+    # 공허명의 **존재**는 여전히 고지된다 — 사라진 정보를 만들지 않는다.
+    notice = fired[_VACUOUS_JOIN_ABSENT_KIND]
+    assert notice["affected_count"] == 1
+    assert tuple(notice["affected_designed_addresses"]) == ("1.30",)
+    assert tuple(notice["stage_one_axes"]) == tuple(axis.axis_key for axis in _VACUOUS_AXES)
+    # payload 어디에도 조인 수행을 단정하는 어구가 없다 — 라벨·사유·요약 전부 본다.
+    offenders = [
+        (phrase, text)
+        for text in _r19_all_strings(payload)
+        for phrase in _R19_JOIN_PERFORMED_CLAIM_PHRASES
+        if phrase in text
+    ]
+    assert offenders == [], offenders
+
+
+def test_r19_the_join_performed_claim_gate_is_not_vacuous():
+    """[round19] 위 단정의 비공허성 — 조인이 수행된 갈래에서는 그 어구가 **실제로 나온다**.
+
+    나오지 않으면 위 테스트는 아무것도 지키지 않는다.
+    """
+    from server.vwx.patchplan import build_patch_plan
+
+    report = build_vwx_report(
+        compare(_r19_rig("---", classification="patched", coordinates=True), _r19_console())
+    ).to_dict()
+    texts = _r19_all_strings(build_patch_plan(report).to_dict())
+    for phrase in _R19_JOIN_PERFORMED_CLAIM_PHRASES:
+        assert any(phrase in text for text in texts), phrase
+
+
+#: 어구 → 그 어구를 품는 **프로덕션 표면** 전수. 위 어구 표와 이 표는 서로의 행삭제
+#: 프로브다 — 한쪽에서 행을 지우면 아래 전단사가 어긋난다. 어구를 손으로만 적어 두면
+#: 어구 하나를 지워도 아무도 실패하지 않고, 그러면 억제 단정이 조용히 좁아진다.
+_R19_CLAIM_PHRASE_SURFACES = {
+    "일치로 보": ("missing_in_console:reason", "quantity_mismatch:reason"),
+    "소멸했을 수 있다": ("missing_in_console:reason", "quantity_mismatch:reason"),
+    "삼켰": ("missing_in_console:label", "quantity_mismatch:label"),
+}
+
+
+def _r19_claim_phrase_surfaces() -> dict[str, tuple[str, ...]]:
+    """각 어구가 실제로 어느 축 고지의 어느 칸에 있는지 **프로덕션에서** 뽑는다."""
+    from server.vwx.patchplan import _VACUOUS_AXES
+    from server.vwx.verdicts import skipped_check_label
+
+    found: dict[str, tuple[str, ...]] = {}
+    for phrase in _R19_JOIN_PERFORMED_CLAIM_PHRASES:
+        surfaces = tuple(
+            f"{axis.axis_key}:{field}"
+            for axis in _VACUOUS_AXES
+            for field, text in (("reason", axis.reason), ("label", skipped_check_label(axis.kind)))
+            if phrase in text
+        )
+        if surfaces:
+            found[phrase] = surfaces
+    return found
+
+
+def test_r19_every_claim_phrase_is_anchored_to_a_production_surface():
+    """[round19 · 행삭제 프로브] 억제 어구 표가 프로덕션 표면과 전단사다.
+
+    죽이는 뮤테이션:
+      · `_R19_JOIN_PERFORMED_CLAIM_PHRASES`에서 어구를 지우면 계산 결과에서 그 키가 사라져
+        실패한다 — 억제 단정이 조용히 좁아지는 것을 여기서 막는다.
+      · `_R19_CLAIM_PHRASE_SURFACES`에서 행을 지워도 실패한다.
+      · 축 고지 문장에서 그 어구를 빼면(예: "소멸했을 수 있다"를 지우면) 표면이 줄어 실패한다.
+    """
+    computed = _r19_claim_phrase_surfaces()
+    assert computed == {key: tuple(value) for key, value in _R19_CLAIM_PHRASE_SURFACES.items()}
+    # 어구 표에 프로덕션 어디에도 없는 어구가 있으면 그 어구는 아무것도 막지 못한다.
+    assert set(computed) == set(_R19_JOIN_PERFORMED_CLAIM_PHRASES)
+
+
+def test_r19_a_missing_axis_key_alone_splits_the_two_notices():
+    """[round19 major#1 · 축 단위 근거] 축 산출은 **축마다** 있거나 없다.
+
+    한 축의 배열만 리포트에서 빠지면 그 축은 "말할 수 없다"로, 남은 축은 그대로 단정한다.
+    갈래(거부 코드) 단위로만 억제하면 이 자리를 놓친다.
+
+    죽이는 뮤테이션: `_stage_one_axis_output_present`에서 `diffs.get(axis_key)` 검사를
+    지우면(거부 코드만 보면) 두 행 전부 실패한다.
+    """
+    from server.vwx.patchplan import _VACUOUS_AXES, _VACUOUS_JOIN_ABSENT_KIND
+
+    base = build_vwx_report(
+        compare(_r19_rig("---", classification="patched", coordinates=True), _r19_console())
+    ).to_dict()
+    for dropped in (axis.axis_key for axis in _VACUOUS_AXES):
+        report = deepcopy(base)
+        del report["diffs"][dropped]
+        fired = _r19_notices(report)
+        assert _VACUOUS_JOIN_ABSENT_KIND in fired, dropped
+        assert tuple(fired[_VACUOUS_JOIN_ABSENT_KIND]["stage_one_axes"]) == (dropped,)
+        survivors = [axis.kind for axis in _VACUOUS_AXES if axis.axis_key != dropped]
+        for kind in survivors:
+            assert kind in fired, (dropped, kind)
+        dropped_kind = next(axis.kind for axis in _VACUOUS_AXES if axis.axis_key == dropped)
+        assert dropped_kind not in fired, dropped
+
+
+#: (라벨, 리포트 변형자) — 1단계가 "조인을 수행하지 않았다"고 **선언했는데도** 축 배열이
+#: 리포트에 남아 있는 payload 형태 전수. 축 키만 보는 판정은 이 형태에서 반드시 샌다.
+_R19_DECLARED_SKIP_WITH_LEFTOVER_ARRAYS = (
+    ("multi_system_skipped_check", MULTI_SYSTEM_MAPPING_ABSENT),
+    ("performed_false_flag", COMPARISON_NOT_PERFORMED),
+)
+
+#: 축 배열을 남긴 채 미수행을 선언할 **수 없는** 갈래 — `diffs` 객체 자체가 없어 남길
+#: 배열이 없다. 위 표와 이 집합의 합이 조인 미수행 갈래 전수여야 한다.
+_R19_NO_LEFTOVER_ARRAYS_POSSIBLE = frozenset({INVALID_REPORT_PAYLOAD})
+
+
+def test_r19_the_leftover_array_table_covers_every_join_absent_branch():
+    """[round19 major#1 · 행삭제 프로브] 잔여 배열 표와 "남길 수 없는 갈래"의 합이 전수다.
+
+    죽이는 뮤테이션:
+      · `_R19_DECLARED_SKIP_WITH_LEFTOVER_ARRAYS`에서 행을 지우면 합집합이 모자라 실패한다.
+      · `_R19_NO_LEFTOVER_ARRAYS_POSSIBLE`에서 코드를 빼도 실패한다.
+      · 조인 미수행 갈래가 새로 생기면 어느 쪽에 속하는지 판정하기 전까지 실패한다.
+    """
+    from server.vwx.patchplan import _JOIN_NOT_PERFORMED_REJECTIONS
+
+    covered = {code for _, code in _R19_DECLARED_SKIP_WITH_LEFTOVER_ARRAYS}
+    assert covered.isdisjoint(_R19_NO_LEFTOVER_ARRAYS_POSSIBLE)
+    assert covered | _R19_NO_LEFTOVER_ARRAYS_POSSIBLE == _JOIN_NOT_PERFORMED_REJECTIONS
+    # "남길 수 없다"는 판정을 실측으로 고정한다 — 그 갈래의 리포트에는 `diffs`가 없다.
+    for code in _R19_NO_LEFTOVER_ARRAYS_POSSIBLE:
+        assert "diffs" not in _r19_join_absent_reports()[code], code
+
+
+def _r19_declared_skip_report(label: str) -> dict:
+    """조인 산출이 남아 있는 상태로 1단계가 미수행을 선언한 리포트를 만든다."""
+    report = build_vwx_report(
+        compare(_r19_rig("---", classification="patched", coordinates=True), _r19_console())
+    ).to_dict()
+    # 전제 — 두 축 배열이 실려 있다. 실려 있지 않으면 이 프로브가 겨누는 자리가 없다.
+    assert "missing_in_console" in report["diffs"]
+    assert "quantity_mismatch" in report["diffs"]
+    if label == "multi_system_skipped_check":
+        report["skipped_checks"] = [
+            *report["skipped_checks"],
+            {
+                "kind": MULTI_SYSTEM_MAPPING_ABSENT,
+                "reason": "System A B 관측 — 매핑이 없어 콘솔 대조를 수행하지 않았다.",
+            },
+        ]
+    else:
+        report["diffs"]["performed"] = False
+        report["diffs"]["reason"] = "설계상 리그에 유효한 픽스처가 0대다"
+    return report
+
+
+@pytest.mark.parametrize(
+    "label,code",
+    _R19_DECLARED_SKIP_WITH_LEFTOVER_ARRAYS,
+    ids=[row[0] for row in _R19_DECLARED_SKIP_WITH_LEFTOVER_ARRAYS],
+)
+def test_r19_stage_one_s_own_declaration_outranks_leftover_axis_arrays(label: str, code: str):
+    """[round19 major#1] 1단계가 미수행을 **선언**하면 남아 있는 축 배열은 산출이 아니다.
+
+    `_rejection_for_report`는 `skipped_checks`의 멀티시스템 고지를 `diffs`보다 **먼저** 보고,
+    `performed=false`도 축 배열 유무와 무관하게 거부다. 그 갈래에서 남은 배열을 근거로
+    삼으면 같은 payload 안에서 두 문장이 모순된다: 거부 사유는 "조인하지 않았다"인데 고지는
+    "조인이 그 이름을 일치로 봤다"가 된다. 모순된 두 문장 중 하나는 반드시 거짓이다.
+
+    죽이는 뮤테이션(round19 실측으로 이 자리가 SURVIVED였다 — 그래서 이 대조군이 있다):
+      · `_stage_one_axis_output_present`에서 거부 코드 검사를 지우고 축 키 검사만 남기면
+        두 행 전부 실패한다. 실물 1단계는 미수행이면 세 키를 생략하므로 축 키 검사만으로도
+        대개 막히지만, **1단계 선언을 무시해도 되는 이유는 되지 못한다** — payload 생산자가
+        키를 남기는 순간 우리 문장이 거짓이 된다.
+    """
+    from server.vwx.patchplan import (
+        _VACUOUS_AXES,
+        _VACUOUS_JOIN_ABSENT_KIND,
+        build_patch_plan,
+    )
+
+    report = _r19_declared_skip_report(label)
+    payload = build_patch_plan(report).to_dict()
+    assert payload["rejection"]["code"] == code, payload["rejection"]
+
+    fired = _r19_notices(report)
+    assert sorted(fired) == [_VACUOUS_JOIN_ABSENT_KIND], sorted(fired)
+    for axis in _VACUOUS_AXES:
+        assert axis.kind not in fired, axis.axis_key
+    offenders = [
+        (phrase, text)
+        for text in _r19_all_strings(payload)
+        for phrase in _R19_JOIN_PERFORMED_CLAIM_PHRASES
+        if phrase in text
+    ]
+    assert offenders == [], offenders
+
+
+def test_r19_every_notice_is_internally_consistent_and_registered():
+    """[round19] 고지 payload의 불변식 — 개수와 주소 목록이 조용히 갈라지지 않는다.
+
+    죽이는 뮤테이션: `affected_without_coordinates`를 `0` 고정으로 바꾸면 좌표부재 행에서
+    실패한다 — 그러면 조작자는 주소 목록을 전수로 읽는다.
+    """
+    from server.vwx.patchplan import _VACUOUS_AXES, sentence_shape_violation
+    from server.vwx.verdicts import skipped_check_label
+
+    collected: list[dict] = []
+    for classification in ("patched", "unpatched_designed"):
+        for coordinates in (True, False):
+            report = build_vwx_report(
+                compare(
+                    _r19_rig("---", classification=classification, coordinates=coordinates),
+                    _r19_console(),
+                )
+            ).to_dict()
+            collected.extend(_r19_notices(report).values())
+    for code in _r19_join_absent_reports():
+        collected.extend(_r19_notices(_r19_join_absent_reports()[code]).values())
+    assert collected, "고지를 하나도 모으지 못했다 — 아래 단정이 공허하다"
+
+    axis_kinds = {axis.kind: axis.axis_key for axis in _VACUOUS_AXES}
+    for notice in collected:
+        assert notice["label"] == skipped_check_label(notice["kind"]), notice["kind"]
+        assert sentence_shape_violation(notice["reason"]) is None, notice["reason"]
+        assert (
+            len(notice["affected_designed_addresses"]) + notice["affected_without_coordinates"]
+            == notice["affected_count"]
+        ), notice
+        assert notice["stage_one_axes"], notice["kind"]
+        if notice["kind"] in axis_kinds:
+            assert tuple(notice["stage_one_axes"]) == (axis_kinds[notice["kind"]],)
+
+
+# --------------------------------------------------------------------------
+# [HARD] 형제 표면 전수 — "우리 층의 문장이 1단계·콘솔의 동작을 서술한다"는 자리 전부.
+#
+# 이번 세 건은 전부 이 한 기제다. 그래서 `server/vwx/` 전 모듈에서 그런 문장을 AST로
+# 전수하고, 각각이 **그 서술이 참임을 보장하는 근거**를 갖는지 판정해 등기부로 고정한다.
+# 등기부는 프로덕션과 전단사이므로 새 문장은 판정 없이 통과하지 못하고, 행을 지워도 깨진다.
+# --------------------------------------------------------------------------
+
+#: 문장이 1단계·콘솔의 **동작·상태**를 서술한다고 볼 표지. 단순 언급(예: "콘솔에서 사람이
+#: 지워야 한다")은 동작 서술이 아니므로 표지에 넣지 않는다 — 흔한 거짓 양성은 게이트를
+#: 무력화한다(§0 2b④).
+_R19_CLAIM_MARKERS = (
+    "1단계",
+    "콘솔 대조",
+    "콘솔 실측",
+    "콘솔 부재 판정",
+    "콘솔 조인",
+    "일치로 보",
+    "삼켰",
+    "재계산",
+    "이미 점유",
+    "판정 재사용",
+    "콘솔 라이브러리에",
+    "콘솔에서 확인된",
+)
+#: 근거 부류 **전수**. 자유 문자열이 이 자리에 들어오면 판정이 아니라 낙서가 된다.
+_R19_CLAIM_BASIS_KINDS = frozenset(
+    {
+        # 1단계 모듈이 **자기 행위**를 적는다 — 그 코드가 곧 그 행위이므로 자기충족이다.
+        "stage_one_states_its_own_act",
+        # 1단계가 "수행하지 않았다"고 선언한 것을 우리 층이 받아 적는다(기본 문구 포함).
+        "stage_one_declared_the_skip",
+        # 우리 층의 단정이지만 **그 축의 1단계 산출이 있을 때만** 나간다.
+        "gated_on_stage_one_axis_output",
+        # 산출의 **부재**만 말한다 — 1단계가 무엇을 했는지 단정하지 않는다.
+        "asserts_only_absence_of_output",
+        # 콘솔 관측이 그 코드 경로의 **입력**이다 — 남의 판정을 대신 말하지 않는다.
+        "console_observation_is_the_input",
+    }
+)
+
+
+def _r19_claim_skeleton(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Constant):
+        return node.value if isinstance(node.value, str) else None
+    if isinstance(node, ast.JoinedStr):
+        return "".join(
+            part.value if isinstance(part, ast.Constant) else "{}" for part in node.values
+        )
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = _r19_claim_skeleton(node.left)
+        right = _r19_claim_skeleton(node.right)
+        return None if left is None or right is None else left + right
+    return None
+
+
+def _r19_docstring_ids(tree: ast.AST) -> set[int]:
+    """독스트링은 조작자에게 나가지 않는다 — 개발자용 서술은 스코프 밖이다."""
+    found: set[int] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        body = getattr(node, "body", None)
+        if not body:
+            continue
+        first = body[0]
+        if (
+            isinstance(first, ast.Expr)
+            and isinstance(first.value, ast.Constant)
+            and isinstance(first.value.value, str)
+        ):
+            found.add(id(first.value))
+    return found
+
+
+def _r19_claim_sites() -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """`server/vwx` 전 모듈에서 1단계·콘솔의 동작을 서술하는 **운영 문자열 전수**를
+    (모듈, 표지)로 낸다 — 읽는 스코프는 `server/vwx/*.py` 글롭이고 그 밖은 읽지 않는다.
+
+    키에 변수·키워드 **이름을 넣지 않는다**. 같은 문장을 인라인 리터럴로 두든 모듈 상수로
+    빼든 그것은 리팩터링이고, 리팩터링이 판정 등기부를 깨면 등기부는 판정이 아니라 이름
+    사본이 된다. 판정의 단위는 **어떤 주장을 하는가**(표지)이고 키가 그것이다. 같은 모듈에서
+    두 문장이 같은 표지로 뭉치면 아래 전수 단정이 그 자리를 드러낸다.
+
+    네 형태를 본다: dict 값 · 호출 키워드 · 호출 위치인자 · 이름 대입. 위치인자를 빼면
+    `_string_or_default(...)`의 기본 문구가 스캔 밖으로 새고, 그 문구도 1단계의 행위를
+    말한다 — 스코프가 형태 경계에서 멈추는 것이 round17이 명명한 결함이다.
+    """
+    modules = tuple(sorted(Path("server/vwx").glob("*.py")))
+    assert modules, "스캔 대상이 0개면 이 전수는 공허하다"
+    sites: set[tuple[str, tuple[str, ...]]] = set()
+    for path in modules:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        skip = _r19_docstring_ids(tree)
+        for node in ast.walk(tree):
+            pairs: list[tuple[str | None, ast.AST]] = []
+            if isinstance(node, ast.Dict):
+                pairs = [
+                    (key.value, value)
+                    for key, value in zip(node.keys, node.values, strict=True)
+                    if isinstance(key, ast.Constant) and isinstance(key.value, str)
+                ]
+            elif isinstance(node, ast.Call):
+                callee = (
+                    getattr(node.func, "id", None) or getattr(node.func, "attr", None) or "call"
+                )
+                pairs = [(keyword.arg, keyword.value) for keyword in node.keywords if keyword.arg]
+                pairs += [
+                    (f"{callee}#{index}", argument) for index, argument in enumerate(node.args)
+                ]
+            elif isinstance(node, ast.Assign):
+                pairs = [
+                    (getattr(target, "id", None) or getattr(target, "attr", None), node.value)
+                    for target in node.targets
+                ]
+            for name, value in pairs:
+                if name is None or id(value) in skip:
+                    continue
+                text = _r19_claim_skeleton(value)
+                if text is None or " " not in text:
+                    continue
+                markers = tuple(marker for marker in _R19_CLAIM_MARKERS if marker in text)
+                if markers:
+                    sites.add((path.name, markers))
+    return tuple(sorted(sites))
+
+
+#: (모듈, 표지) → 그 서술이 참임을 보장하는 **근거 부류**. 손으로 판정하고
+#: 아래 전단사가 프로덕션 스캔과 맞춘다.
+_R19_CLAIM_BASIS = {
+    ("diff.py", ("콘솔 대조",)): "stage_one_states_its_own_act",
+    ("diff.py", ("콘솔 실측",)): "stage_one_states_its_own_act",
+    ("patchplan.py", ("1단계",)): "stage_one_declared_the_skip",
+    ("patchplan.py", ("1단계", "일치로 보", "재계산")): "gated_on_stage_one_axis_output",
+    ("patchplan.py", ("1단계", "콘솔 대조")): "stage_one_declared_the_skip",
+    ("patchplan.py", ("1단계", "콘솔 부재 판정", "일치로 보", "재계산")): (
+        "gated_on_stage_one_axis_output"
+    ),
+    ("patchplan.py", ("1단계", "콘솔 조인")): "asserts_only_absence_of_output",
+    ("patchplan.py", ("이미 점유",)): "console_observation_is_the_input",
+    ("patchplan.py", ("콘솔 대조",)): "stage_one_declared_the_skip",
+    ("report.py", ("콘솔 실측",)): "stage_one_states_its_own_act",
+    ("report.py", ("콘솔 실측", "판정 재사용")): "stage_one_states_its_own_act",
+    ("typemap.py", ("콘솔 라이브러리에",)): "console_observation_is_the_input",
+    ("typemap.py", ("콘솔에서 확인된",)): "console_observation_is_the_input",
+}
+
+
+def test_r19_the_stage_one_claim_registry_is_a_bijection_onto_production():
+    """[round19 HARD · 형제 표면 전수] 등기부가 `server/vwx/` 전 모듈 스캔과 1:1이다.
+
+    죽이는 뮤테이션:
+      · 새 문장이 1단계·콘솔의 동작을 서술하면 등기 전까지 실패한다.
+      · 등기부에서 행을 지우면 실패한다(아래 행삭제 프로브가 전 행 확인).
+      · 스캔에서 위치인자 형태를 빼면 `_string_or_default(...)` 기본 문구 두 행이 사라져
+        실패한다 — 스코프가 형태 경계에서 멈추는 것이 round17이 명명한 결함이다.
+    """
+    produced = _r19_claim_sites()
+    assert produced == tuple(sorted(_R19_CLAIM_BASIS)), (
+        "1단계·콘솔 동작 서술이 등기부와 다르다 — 등록할 행:\n"
+        + "\n".join(f"    {row}: ???," for row in produced)
+    )
+
+
+@pytest.mark.parametrize("index", range(len(_R19_CLAIM_BASIS)))
+def test_r19_deleting_any_claim_registry_row_breaks_the_bijection(index: int):
+    """행삭제 프로브 — 등기부에서 어느 행을 지워도 프로덕션 스캔과 어긋난다."""
+    rows = tuple(sorted(_R19_CLAIM_BASIS))
+    shrunk = rows[:index] + rows[index + 1 :]
+    assert shrunk != _r19_claim_sites()
+
+
+def test_r19_every_claim_has_a_registered_basis_and_no_basis_is_dead():
+    """[round19 HARD] 근거 부류가 닫힌 어휘이고, 어느 부류도 빈 채로 남지 않는다.
+
+    빈 부류는 판정처럼 보이는 장식이다 — 쓰이지 않는 부류를 남기면 다음 라운드에 아무
+    문장이나 그 부류로 밀어 넣게 된다.
+    """
+    assert set(_R19_CLAIM_BASIS.values()) == _R19_CLAIM_BASIS_KINDS
+    for row, basis in _R19_CLAIM_BASIS.items():
+        assert basis in _R19_CLAIM_BASIS_KINDS, row
+
+
+def test_r19_the_gated_basis_rows_are_the_ones_the_branch_gate_actually_suppresses():
+    """[round19 HARD] `gated_on_stage_one_axis_output` 판정이 **행동으로** 참이다.
+
+    등기부가 "이 문장은 축 산출이 있을 때만 나간다"고 적었으므로, 축 산출이 없는 갈래에서
+    그 문장이 실제로 나가지 않아야 한다. 판정을 글로만 적고 확인하지 않는 것이 R18-B가
+    명명한 무대조군 표다.
+
+    죽이는 뮤테이션: 등기부에서 어느 행의 부류를 `gated_on_stage_one_axis_output`으로
+    바꾸면(예: `asserts_only_absence_of_output` 행) 그 문장이 조인 미수행 갈래에서 나오므로
+    실패한다.
+    """
+    from server.vwx.patchplan import _VACUOUS_AXES, build_patch_plan
+
+    gated = {
+        row for row, basis in _R19_CLAIM_BASIS.items() if basis == "gated_on_stage_one_axis_output"
+    }
+    assert gated, "게이트 부류가 비면 이 단정이 공허하다"
+    # 등기된 게이트 행은 축 고지 문장이다 — 축 수와 같아야 한다.
+    assert len(gated) == len(_VACUOUS_AXES)
+    gated_markers = {marker for _, markers in gated for marker in markers}
+    for code, report in _r19_join_absent_reports().items():
+        texts = _r19_all_strings(build_patch_plan(report).to_dict())
+        for marker in gated_markers & {"일치로 보", "삼켰", "콘솔 부재 판정"}:
+            assert not any(marker in text for text in texts), (code, marker)
+
+
+# ==========================================================================
+# --- round19 막다른 길 어휘 (DeadEndVocab) ---
+#
+# [round19 major#5] `typemap._resolve_one`의 점유폭 불일치 갈래는 **R18-E와 동형인 막다른
+# 길**이었다. 도달 조건이 "별칭에 모드가 지정돼 있다"이고 `_mode_candidates`가 그 `alias_mode`로
+# 후보를 걸러내므로 `mode_candidates`에는 실패한 그 모드 하나만 남는데, 문장은 "모드를 다시
+# 확인해야 한다"고 말했다. 조작자 화면에는 고를 것이 없거나(모드가 하나뿐 · 전부 불일치),
+# 맞는 모드가 실제로 있어도 payload가 그것을 보여주지 않았다. 실제 조치가 "도면 DMX Footprint를
+# 고쳐라"인 경우에도 문장은 모드 확인을 가리켜 **거짓 안내**였다.
+#
+# 처방은 **탈출구를 드러내는 쪽**이다:
+#   ① 라이브러리의 전 모드를 채널 수와 함께 노출한다(`mode_options`).
+#   ② 맞는 모드가 하나도 없으면(전 모드 실측 · 절단 없음) 하드 스톱이고, 사유는 도면 점유폭을
+#      가리킨다. ③ 부재를 단정할 수 없으면 확인 대기라 부르지 않는다 — 관측 불완전이다.
+#   ④ **확인 대기를 말하는 모든 갈래**에 "조작자가 실제로 고를 수 있는 선택지가 payload에
+#      있는가"를 단정하는 게이트를 건다. 갈래 목록은 `server/vwx/typemap.py` 소스에서
+#      기계적으로 뽑으므로 새 갈래가 생기면 등기 없이는 통과하지 못한다(열거 금지).
+# ==========================================================================
+
+from server.vwx.typemap import (  # noqa: E402
+    FOOTPRINT_MISMATCH_CHOOSABLE_REASON,
+    FOOTPRINT_MISMATCH_UNVERIFIED_REASON,
+    FOOTPRINT_UNMATCHABLE_REASON,
+)
+from server.vwx.verdicts import (  # noqa: E402
+    DESIGNED_FOOTPRINT_MATCHES_NO_MODE,
+    TYPE_FOOTPRINT_UNMATCHABLE,
+)
+
+_R19_TYPE = "MegaPointe"
+_R19_MODE_A = "Mode 1"
+_R19_MODE_B = "Mode 2"
+#: Mode 1 = 24채널 · Mode 2 = 16채널. 두 모드의 채널 수가 달라야 "맞는 모드"가 의미를 가진다.
+_R19_LIBRARY = [(_R19_TYPE, [(_R19_MODE_A, 24), (_R19_MODE_B, 16)])]
+_R19_SOLO_LIBRARY = [(_R19_TYPE, [(_R19_MODE_A, 24)])]
+
+
+def _r19_alias(mode: str = _R19_MODE_A) -> dict:
+    return {_R19_TYPE: {"type": _R19_TYPE, "mode": mode}}
+
+
+class _R19PartialChannelPort(LibraryRigPort):
+    """모드 하나만 채널 수를 못 읽는 포트 — 맞는 모드의 **부재를 단정할 수 없는** 상태."""
+
+    def _channels(self, type_index: int, mode_index: int, path: str) -> dict:
+        if mode_index == 2:
+            return {"ok": False, "path": path, "error": "path segment not found"}
+        return super()._channels(type_index, mode_index, path)
+
+
+def _r19_resolve_footprint(
+    *,
+    library=None,
+    footprint: int | None = 16,
+    mode: str = _R19_MODE_A,
+    aliases=None,
+    assumption_72: str = "go",
+    port_class=LibraryRigPort,
+    **port_kwargs,
+) -> dict:
+    port = port_class(library if library is not None else _R19_LIBRARY, **port_kwargs)
+    return resolve_fixture_types(
+        [request("c1", instrument_type=_R19_TYPE, mode=mode, footprint=footprint)],
+        library_port=port,
+        type_aliases=_r19_alias() if aliases is None else aliases,
+        assumption_72=assumption_72,
+    ).to_dict()
+
+
+#: 점유폭 대조가 **수행된** 뒤의 갈래 전수. (이름, 시나리오 kwargs, 기대 판정, 기대 하드스톱,
+#: 노출돼야 하는 모드 채널 수, 확인 대기인가).
+_R19_FOOTPRINT_BRANCHES = (
+    ("matching_mode_exists", {"footprint": 16}, TYPE_NEEDS_CONFIRMATION, (), (24, 16), True),
+    (
+        "no_mode_matches",
+        {"footprint": 99},
+        "designed_footprint_unmatchable",
+        ("designed_footprint_matches_no_console_mode",),
+        (24, 16),
+        False,
+    ),
+    (
+        "sole_mode_does_not_match",
+        {"footprint": 99, "library": _R19_SOLO_LIBRARY},
+        "designed_footprint_unmatchable",
+        ("designed_footprint_matches_no_console_mode",),
+        (24,),
+        False,
+    ),
+    (
+        "absence_not_assertable_truncated",
+        {"footprint": 99, "modes_truncated": True},
+        TYPE_LIBRARY_INCOMPLETE,
+        (),
+        (24, 16),
+        False,
+    ),
+    (
+        "absence_not_assertable_unread",
+        {"footprint": 99, "port_class": _R19PartialChannelPort},
+        TYPE_LIBRARY_INCOMPLETE,
+        (),
+        (24, None),
+        False,
+    ),
+    ("footprint_matches", {"footprint": 24}, TYPE_RESOLVED, (), (24,), False),
+)
+
+
+def _r19_assert_footprint_table_shape(rows) -> None:
+    """행 삭제 프로브 — 네 판정(확인 대기 · 하드 스톱 · 관측 불완전 · 확정)이 모두 있어야 한다."""
+    names = tuple(row[0] for row in rows)
+    assert len(names) == len(set(names)), names
+    assert len(rows) == len(_R19_FOOTPRINT_BRANCHES)
+    assert len({row[2] for row in rows}) == 4, names
+    assert {row[5] for row in rows} == {False, True}
+    # 하드 스톱 갈래가 둘이다(모드 여럿 전부 불일치 · 모드 하나뿐) — 하나만 남으면 표가 얇아진다.
+    assert len([row for row in rows if row[3]]) == 2, names
+
+
+def test_r19_the_footprint_branch_table_detects_row_deletion():
+    _r19_assert_footprint_table_shape(_R19_FOOTPRINT_BRANCHES)
+    for index in range(len(_R19_FOOTPRINT_BRANCHES)):
+        pruned = tuple(
+            row for position, row in enumerate(_R19_FOOTPRINT_BRANCHES) if position != index
+        )
+        with pytest.raises(AssertionError):
+            _r19_assert_footprint_table_shape(pruned)
+
+
+@pytest.mark.parametrize(
+    "name,kwargs,status,stops,channel_counts,pending",
+    _R19_FOOTPRINT_BRANCHES,
+    ids=[row[0] for row in _R19_FOOTPRINT_BRANCHES],
+)
+def test_r19_every_footprint_branch_exposes_what_the_operator_can_choose(
+    name, kwargs, status, stops, channel_counts, pending
+):
+    """[round19 major#5] 점유폭 갈래마다 판정 · 하드스톱 · **노출된 모드와 채널 수**를 고정한다.
+
+    죽이는 뮤테이션:
+      · `typemap`의 `mode_candidates=library_modes`를 `mode_candidates`(별칭으로 좁힌 한 건)로
+        되돌리면 `matching_mode_exists`·`no_mode_matches` 행의 노출 채널 수가 어긋난다
+        (= 모드 노출 제거).
+      · `absence_assertable` 갈래를 지워 항상 하드 스톱을 내면 절단·미판독 두 행이 실패한다
+        (= 찾아보지 않은 것을 부재로 단정).
+      · `hard_stop_code=DESIGNED_FOOTPRINT_MATCHES_NO_MODE`를 지우면 하드 스톱 두 행이 실패한다
+        (= 불일치 전수에서 하드스톱 미생성).
+      · `row()`의 `mode_options`를 지우면 전 행이 KeyError로 실패한다.
+    """
+    payload = _r19_resolve_footprint(**kwargs)
+    row = row_by_id(payload, "c1")
+    assert row["status"] == status, name
+    assert tuple(hard_stop_codes(payload)) == stops, name
+    options = row["mode_options"]
+    assert tuple(option["channel_count"] for option in options) == channel_counts, name
+    # 이름 목록과 **같은 원소**여야 한다 — 한쪽만 늘면 조작자가 보는 두 목록이 갈린다.
+    assert [option["name"] for option in options] == row["mode_candidates"], name
+    assert row["confirmation_required"] is pending, name
+
+
+def test_r19_the_hard_stop_reason_points_at_the_drawing_not_at_the_mode_choice():
+    """[round19 major#5] 벗어날 수 없는 갈래의 사유가 **실제 조치**를 가리킨다.
+
+    "모드를 다시 확인하라"가 거짓이었던 이유가 그것이다 — 고를 모드가 없는데 모드 확인을
+    시켰다. 사유를 `FOOTPRINT_MISMATCH_CHOOSABLE_REASON`으로 되돌리면 실패한다.
+    """
+    payload = _r19_resolve_footprint(footprint=99)
+    reason = row_by_id(payload, "c1")["reason"]
+    assert reason == FOOTPRINT_UNMATCHABLE_REASON
+    assert "도면의 DMX Footprint" in reason
+    assert "승인 전에 모드를 다시" not in reason
+    # 하드 스톱 사유가 전달물 배제 사유로도 그대로 나간다(형제 표면 일치).
+    assert payload["hard_stops"][0]["reason"] == reason
+
+
+def test_r19_a_descoped_footprint_check_never_reaches_the_mismatch_branch():
+    """[round19 major#5 · 주의사항] `assumption_72`가 `go`가 아니면 대조 자체가 없다.
+
+    미수행을 불일치와 **같은 문장으로 다루면** #1과 같은 유형의 거짓이 된다. 여기서는 그
+    갈래에 애초에 도달하지 않음을 실측으로 고정한다 — 도달하게 만드는 뮤테이션
+    (`_footprint_check`의 `if not footprint_enabled` 조기 반환 제거)에서 실패한다.
+    """
+    for branch in ("negative", "inconclusive"):
+        payload = _r19_resolve_footprint(footprint=99, assumption_72=branch)
+        row = row_by_id(payload, "c1")
+        assert row["footprint_check"]["match"] is None, branch
+        assert row["footprint_check"]["performed"] is False, branch
+        assert row["status"] == TYPE_RESOLVED, branch
+        assert hard_stop_codes(payload) == [], branch
+        assert row["reason"] != FOOTPRINT_UNMATCHABLE_REASON, branch
+        assert row["reason"] != FOOTPRINT_MISMATCH_CHOOSABLE_REASON, branch
+        assert row["reason"] != FOOTPRINT_MISMATCH_UNVERIFIED_REASON, branch
+
+
+# ---- ④ "확인 대기"를 말하는 갈래 전수 게이트 (열거 금지) -------------------
+#
+# `VacuityAndData`가 round18에 세운 확인 경로 게이트는 **공허성 6축만 등기**했다 —
+# 점유폭 갈래는 그 표 밖에 있어서 덮이지 않았다. 여기서는 표를 손으로 늘리는 대신
+# **`server/vwx/typemap.py` 소스에서 확인 대기 갈래를 기계적으로 뽑는다.** 갈래가 새로
+# 생기면 등기 없이는 통과하지 못하고, 등기하면 곧바로 "고를 수 있는 것이 payload에 있는가"를
+# 실행으로 확인받는다.
+
+_R19_TYPEMAP_SOURCE = Path("server/vwx/typemap.py").read_text(encoding="utf-8")
+
+
+def _r19_status_reason_pairs(call: ast.Call):
+    """`TypeResolution(...)` 한 자리의 (status 식, reason 식) 짝. 조건식은 가지끼리 짝짓는다."""
+    keywords = {keyword.arg: keyword.value for keyword in call.keywords}
+    status = keywords.get("status")
+    reason = keywords.get("reason")
+    if status is None or reason is None:
+        return ()
+    if isinstance(status, ast.IfExp):
+        branches = (status.body, status.orelse)
+        reasons = (
+            (reason.body, reason.orelse) if isinstance(reason, ast.IfExp) else (reason, reason)
+        )
+        return tuple(zip(branches, reasons, strict=True))
+    return ((status, reason),)
+
+
+def _r19_typeresolution_calls():
+    tree = ast.parse(_R19_TYPEMAP_SOURCE)
+    return [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "TypeResolution"
+    ]
+
+
+#: 사유를 **모듈 상수로 환원해 돌려주는** 헬퍼. 갈래마다 리터럴을 박는 것과 달리 전수를
+#: 방해하지 않는다 — 아래 게이트가 이 헬퍼의 반환이 전부 모듈 상수 이름임을 직접 확인한다.
+_R19_REASON_RESOLVERS = ("_incompleteness_reason",)
+
+
+def _r19_reason_is_module_constant(reason: ast.expr) -> bool:
+    if isinstance(reason, ast.Name):
+        return True
+    return (
+        isinstance(reason, ast.Call) and getattr(reason.func, "id", None) in _R19_REASON_RESOLVERS
+    )
+
+
+def test_r19_every_type_resolution_reason_is_a_module_constant():
+    """구조 게이트 — `server/vwx/typemap.py`의 판정 사유는 전부 **모듈 상수로 환원된다**.
+
+    이것이 아래 갈래 전수를 가능하게 하는 전제다. 사유를 갈래 안에 리터럴로 박으면 소스에서
+    갈래를 셀 수 없고, 셀 수 없으면 새 갈래가 확인 경로 게이트를 조용히 빠져나간다 —
+    R18-E가 정확히 그 형태였다.
+
+    ㉠ 모든 `TypeResolution(...)`의 사유는 모듈 상수 이름이거나 등기된 환원 헬퍼 호출이다.
+    ㉡ 환원 헬퍼가 돌려주는 것도 전부 모듈 상수 이름이다 — 헬퍼 안에 리터럴을 숨기면 실패한다.
+    ㉢ **확인 대기** 갈래는 헬퍼도 허용하지 않는다: 그 갈래는 이름으로 등기돼야 아래 전단사가
+       갈래 하나하나를 시나리오와 묶을 수 있다.
+
+    죽이는 뮤테이션: 어느 갈래의 `reason=`을 리터럴 문자열로 되돌리면 실패한다.
+    """
+    offenders = []
+    for call in _r19_typeresolution_calls():
+        for status, reason in _r19_status_reason_pairs(call):
+            pending = getattr(status, "id", None) == "TYPE_NEEDS_CONFIRMATION"
+            allowed = (
+                isinstance(reason, ast.Name) if pending else _r19_reason_is_module_constant(reason)
+            )
+            if not allowed:
+                offenders.append((call.lineno, ast.unparse(reason)[:60]))
+    assert offenders == [], offenders
+
+    tree = ast.parse(_R19_TYPEMAP_SOURCE)
+    resolvers = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name in _R19_REASON_RESOLVERS
+    ]
+    assert len(resolvers) == len(_R19_REASON_RESOLVERS), [node.name for node in resolvers]
+    for resolver in resolvers:
+        returns = [node for node in ast.walk(resolver) if isinstance(node, ast.Return)]
+        assert returns, resolver.name
+        for node in returns:
+            assert isinstance(node.value, ast.Name), (resolver.name, ast.unparse(node))
+
+
+def _r19_pending_reason_constants() -> tuple[str, ...]:
+    """`server/vwx/typemap.py`에서 판정이 `needs_confirmation`이 되는 갈래의 사유 상수 이름 전수."""
+    found: list[str] = []
+    for call in _r19_typeresolution_calls():
+        for status, reason in _r19_status_reason_pairs(call):
+            if getattr(status, "id", None) != "TYPE_NEEDS_CONFIRMATION":
+                continue
+            if isinstance(reason, ast.Name):
+                found.append(reason.id)
+    return tuple(sorted(set(found)))
+
+
+#: 확인 대기 갈래 -> 그 갈래에 **실제로 닿는** 시나리오 kwargs(`_r19_resolve_footprint` 인자).
+#: 키는 소스에서 뽑은 사유 상수 이름이라, 갈래가 늘면 이 표 없이는 전단사가 깨진다.
+_R19_PENDING_BRANCH_SCENARIOS = {
+    # 별칭이 없어 타입을 확정하지 않았다 — 후보를 제시하고 사람이 고른다.
+    "CANDIDATES_PRESENTED_REASON": {"footprint": 24, "aliases": {}},
+    # 점유폭이 다르지만 **맞는 모드가 라이브러리에 있다** — 고를 것을 보여주고 기다린다.
+    "FOOTPRINT_MISMATCH_CHOOSABLE_REASON": {"footprint": 16},
+}
+
+
+def test_r19_the_pending_branch_registry_is_a_bijection_onto_typemap():
+    """[round19 major#5 ④] 확인 대기 갈래가 늘면 등기 없이는 통과하지 못한다.
+
+    표를 손으로 열거하지 않는다 — 갈래 목록은 `server/vwx/typemap.py` 소스에서 나온다.
+    죽이는 뮤테이션: 점유폭 관측 불완전 갈래를 `TYPE_NEEDS_CONFIRMATION`으로 되돌리면
+    (round19가 그것을 `library_incomplete`로 고친 이유가 "고를 것이 없어서"다) 새 사유 상수가
+    전수에 나타나 등기와 어긋난다.
+    """
+    assert _r19_pending_reason_constants() == tuple(sorted(_R19_PENDING_BRANCH_SCENARIOS))
+
+
+@pytest.mark.parametrize("index", range(len(_R19_PENDING_BRANCH_SCENARIOS)))
+def test_r19_deleting_any_pending_branch_row_breaks_the_bijection(index: int):
+    """행 삭제 프로브 — 등기부에서 어느 행을 지워도 소스 전수와 어긋난다."""
+    names = sorted(_R19_PENDING_BRANCH_SCENARIOS)
+    shrunk = tuple(name for position, name in enumerate(names) if position != index)
+    assert shrunk != _r19_pending_reason_constants()
+
+
+def _r19_escapes_by_choosing_a_listed_option(kwargs, row) -> list[tuple[str, str, str]]:
+    """payload가 제시한 선택지를 **실제로 골라** 다시 돌린다 — 확인 대기를 벗어난 조합들.
+
+    조작자가 할 수 있는 것은 "제시된 타입·모드를 별칭으로 확정한다"뿐이다. 그래서 선택지는
+    `type_candidates` × `mode_options`이고, 그중 하나라도 확인 대기를 벗어나면 그 갈래에는
+    실제로 수행 가능한 확인 경로가 있다.
+    """
+    escaped: list[tuple[str, str, str]] = []
+    type_names = row["type_candidates"] or [row["presented_console_type"]]
+    for type_name in type_names:
+        for option in row["mode_options"]:
+            chosen = dict(kwargs)
+            chosen["aliases"] = {_R19_TYPE: {"type": type_name, "mode": option["name"]}}
+            after = row_by_id(_r19_resolve_footprint(**chosen), "c1")
+            # **벗어났다** = 확정에 도달했다. "확인 대기가 아니게 됐다"로는 부족하다 —
+            # 하드 스톱도 확인 대기가 아니므로 그 술어는 막다른 길을 탈출로 세어 버린다.
+            if after["status"] == TYPE_RESOLVED:
+                escaped.append((type_name, option["name"], after["status"]))
+    return escaped
+
+
+@pytest.mark.parametrize("reason_name", sorted(_R19_PENDING_BRANCH_SCENARIOS))
+def test_r19_every_pending_branch_ships_an_option_the_operator_can_actually_choose(reason_name):
+    """[round19 major#5 ④] "확인 대기"를 말하는 갈래마다 **고를 수 있는 것**이 payload에 있다.
+
+    ㉠ 시나리오가 실제로 그 갈래에 닿는다(사유 상수 일치) — 닿지 않으면 게이트가 공허하다.
+    ㉡ 제시된 선택지가 0건이 아니다.
+    ㉢ 그 선택지 중 **하나 이상을 실제로 고르면** 확인 대기를 벗어난다 — 실행으로 확인한다.
+
+    죽이는 뮤테이션:
+      · 점유폭 갈래의 `mode_candidates=library_modes`를 별칭으로 좁힌 한 건으로 되돌리면
+        `FOOTPRINT_MISMATCH_CHOOSABLE_REASON` 행에서 ㉢이 실패한다 — 제시된 유일한 모드가
+        **점유폭이 안 맞은 그 모드**라 골라도 같은 자리로 돌아온다(= R18-E와 동형인 막다른 길).
+      · 점유폭 하드 스톱을 확인 대기로 되돌리면 그 갈래가 전수에 추가돼 앞의 전단사가 깨지고,
+        등기하면 여기서 ㉢이 실패한다.
+    """
+    import server.vwx.typemap as typemap_module
+
+    kwargs = _R19_PENDING_BRANCH_SCENARIOS[reason_name]
+    row = row_by_id(_r19_resolve_footprint(**kwargs), "c1")
+    assert row["reason"] == getattr(typemap_module, reason_name), reason_name
+    assert row["confirmation_required"] is True, reason_name
+    assert row["type_candidates"] or row["presented_console_type"], reason_name
+    assert row["mode_options"], reason_name
+    escaped = _r19_escapes_by_choosing_a_listed_option(kwargs, row)
+    assert escaped, (reason_name, row["mode_options"])
+
+
+def test_r19_the_pending_branch_gate_is_not_vacuous_about_dead_ends():
+    """대조군 건전성 — 게이트가 **막다른 길을 실제로 구별한다**.
+
+    확인 대기가 아닌 갈래(점유폭 전수 불일치)에서는 어떤 선택지를 골라도 벗어나지 못한다.
+    이 단정이 없으면 위 게이트의 ㉢은 "무엇이든 통과"일 수 있다.
+    """
+    kwargs = {"footprint": 99}
+    row = row_by_id(_r19_resolve_footprint(**kwargs), "c1")
+    assert row["status"] == "designed_footprint_unmatchable"
+    assert row["mode_options"], "하드 스톱이어도 라이브러리가 무엇을 제공하는지는 보여준다"
+    assert _r19_escapes_by_choosing_a_listed_option(kwargs, row) == []
+
+
+def test_r19_the_new_footprint_vocabulary_is_registered_in_both_closed_sets():
+    """[round19 major#5] 신설 어휘 둘이 닫힌 어휘에 등재되고 라벨을 갖는다.
+
+    배제 코드는 `target_exclusion_reason`에, 판정은 `type_resolution_status`에 들어간다 —
+    등재를 지우면 `validate_autopatch`가 던지고, 라벨을 지우면 `verdicts` 임포트 자체가
+    실패한다(모듈 최상위 전단사 검사).
+
+    두 어휘 **모두**가 필요한 이유: 배제 코드만 있으면 `types` 표가 이 상태를
+    `needs_confirmation`으로 적어야 하고, 판정만 있으면 전달물 배제가 다시
+    `type_confirmation_pending`으로 뭉개진다 — 어느 쪽이든 한 payload가 모순된 말을 한다.
+    """
+    from server.vwx.verdicts import (
+        TARGET_EXCLUSION_REASON,
+        TYPE_RESOLUTION_STATUS,
+        target_exclusion_label,
+        type_resolution_status_label,
+        validate_autopatch,
+    )
+
+    assert DESIGNED_FOOTPRINT_MATCHES_NO_MODE in TARGET_EXCLUSION_REASON
+    assert TYPE_FOOTPRINT_UNMATCHABLE in TYPE_RESOLUTION_STATUS
+    assert (
+        validate_autopatch("target_exclusion_reason", DESIGNED_FOOTPRINT_MATCHES_NO_MODE)
+        == DESIGNED_FOOTPRINT_MATCHES_NO_MODE
+    )
+    assert (
+        validate_autopatch("type_resolution_status", TYPE_FOOTPRINT_UNMATCHABLE)
+        == TYPE_FOOTPRINT_UNMATCHABLE
+    )
+    # 라벨은 조작자가 축을 짚는 근거다 — 두 라벨 모두 도면 점유폭을 가리킨다.
+    assert "점유폭" in target_exclusion_label(DESIGNED_FOOTPRINT_MATCHES_NO_MODE)
+    assert "점유폭" in type_resolution_status_label(TYPE_FOOTPRINT_UNMATCHABLE)
+    # 프로덕션이 실제로 두 자리에 같은 판정을 싣는다.
+    payload = _r19_resolve_footprint(footprint=99)
+    assert row_by_id(payload, "c1")["status"] == TYPE_FOOTPRINT_UNMATCHABLE
+    assert hard_stop_codes(payload) == [DESIGNED_FOOTPRINT_MATCHES_NO_MODE]

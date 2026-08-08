@@ -7,12 +7,14 @@ from typing import Protocol
 
 from server.vwx.rig import _norm_type, fuzzy_type_equal
 from server.vwx.verdicts import (
+    DESIGNED_FOOTPRINT_MATCHES_NO_MODE,
     DMX_MODE_NOT_IN_LIBRARY,
     FIXTURE_TYPE_LIBRARY_TRUNCATED,
     FIXTURE_TYPE_LIBRARY_UNREADABLE,
     FIXTURE_TYPE_NAME_UNUSABLE,
     FIXTURE_TYPE_NOT_IN_LIBRARY,
     FOOTPRINT_MATCH_DESCOPE,
+    TYPE_FOOTPRINT_UNMATCHABLE,
     TYPE_LIBRARY_ABSENT,
     TYPE_LIBRARY_INCOMPLETE,
     TYPE_NAME_UNUSABLE,
@@ -79,6 +81,54 @@ VACUOUS_TYPE_KEY_REASON = (
     "후보를 세지 않으므로 제시할 후보가 0건이다. 확인할 것이 없는 상태는 확인 대기가 아니라 "
     "하드 스톱이다 — 도면의 타입 이름을 고쳐야 한다. 이름이 아예 비어 있으면 별칭 등록조차 "
     "키가 없어 불가능하다. 조회에 쓰려던 이름은 구조화 칸에 그대로 남긴다."
+)
+
+#: [round19 major#5] 판정 사유는 **모듈 상수**여야 한다 — 갈래마다 사유가 리터럴로 박히면
+#: "확인 대기를 말하는 갈래 전수"를 소스에서 기계적으로 셀 수 없고, 그 전수가 없으면
+#: 새 갈래가 게이트를 조용히 빠져나간다(R18-E가 그 형태였다). `_resolve_one`의 모든
+#: `TypeResolution(...)`은 `reason=<이 구역의 상수>`만 쓴다 — 구조 게이트가 강제한다.
+TYPE_ABSENT_REASON = (
+    "콘솔 라이브러리에 도면 타입에 대응하는 FixtureType이 없다. "
+    "콘솔에서 GDTF 라이브러리 임포트를 먼저 수행해야 이 항목을 "
+    "패치할 수 있다 — 유사한 이름으로 대체 배정하지 않는다."
+)
+MODE_ABSENT_REASON = (
+    "콘솔에서 확인된 FixtureType에, 도면이 요구한 DMXMode에 대응하는 모드가 없다. "
+    "해당 모드를 담은 GDTF 라이브러리 임포트가 선행되어야 한다 — "
+    "유사한 이름의 다른 모드로 대체 배정하지 않는다."
+)
+ALIAS_RESOLVED_REASON = (
+    "저장된 별칭으로 타입·모드를 확정했다 — 첫 확정은 사람이 했고 그 재사용을 표에 남긴다."
+)
+CANDIDATES_PRESENTED_REASON = "라이브러리 후보를 제시했다 — 사용자 확인 없이 확정하지 않는다."
+
+#: [round19 major#5] 점유폭 불일치 — **고를 수 있는 모드가 라이브러리에 있다.**
+#: 이전 판은 이 갈래 하나로 세 상태를 뭉갰고, `mode_candidates`에는 별칭으로 좁혀진
+#: **실패한 그 모드 하나**만 실려 있었다. "모드를 다시 확인하라"고 말하면서 고를 것을
+#: 보여주지 않은 것이다. 이제 라이브러리의 전 모드를 채널 수와 함께 싣는다.
+FOOTPRINT_MISMATCH_CHOOSABLE_REASON = (
+    "콘솔 DMXChannels 자식 수가 도면 DMX Footprint와 다르다 — 승인 전에 모드를 다시 "
+    "확인해야 한다. 도면 점유폭과 채널 수가 맞는 모드가 이 FixtureType에 있으니 "
+    "제시된 모드 목록에서 고르면 된다. 셀 수가 다른 모드를 고르면 주소 계획 전체가 어긋난다."
+)
+#: [round19 major#5] 점유폭 불일치 — **어느 모드도 맞지 않는다(전 모드 실측).**
+#: 모드 선택으로는 벗어날 수 없으므로 확인 대기가 아니라 하드 스톱이고, 사유는
+#: 실제 조치를 가리킨다: 고칠 것은 콘솔 라이브러리가 아니라 **도면의 점유폭 값**이다.
+FOOTPRINT_UNMATCHABLE_REASON = (
+    "콘솔 DMXChannels 자식 수가 도면 DMX Footprint와 다르고, 이 FixtureType의 "
+    "어느 모드도 도면 점유폭과 채널 수가 맞지 않는다 — 모드 열거를 전부 읽었고 절단도 "
+    "없었다. 모드를 다시 고르는 것으로는 벗어날 수 없다: 고칠 것은 도면의 DMX Footprint "
+    "값이다. 라이브러리가 실제로 제공하는 모드와 그 채널 수는 제시된 모드 목록에 그대로 있다."
+)
+#: [round19 major#5] 점유폭 불일치 — **맞는 모드의 부재를 단정할 수 없다.**
+#: 모드 열거가 절단됐거나 채널 수를 읽지 못한 모드가 있다. 이 상태를 하드 스톱으로
+#: 적으면 찾아보지도 않은 것을 부재로 단정하는 것이 된다(`fixture_type_not_in_library`를
+#: 공허 이름 갈래에 쓰지 않는 것과 같은 규율).
+FOOTPRINT_MISMATCH_UNVERIFIED_REASON = (
+    "콘솔 DMXChannels 자식 수가 도면 DMX Footprint와 다르다 — 승인 전에 모드를 다시 "
+    "확인해야 한다. 맞는 모드가 있는지는 단정하지 않는다: 이 FixtureType의 모드 열거가 "
+    "절단됐거나 채널 수를 읽지 못한 모드가 있다. 관측된 모드와 채널 수는 제시된 모드 "
+    "목록에 그대로 있다."
 )
 
 TYPE_TABLE_COLUMNS = (
@@ -247,6 +297,13 @@ class TypeResolution:
             "searched_mode_key": self.searched_mode_key,
             "type_candidates": [entry.name for entry in self.type_candidates],
             "mode_candidates": [entry.name for entry in self.mode_candidates],
+            # [round19 major#5] 이름만 적으면 조작자는 **무엇을 고를지** 판단할 근거가 없다.
+            # 점유폭 불일치에서 실제로 필요한 것은 각 모드의 채널 수다 — 이름 목록과 같은
+            # 원소를 채널 수까지 붙여 싣는다(모든 갈래에 자동 적용된다).
+            "mode_options": [
+                {"index": entry.index, "name": entry.name, "channel_count": entry.channel_count}
+                for entry in self.mode_candidates
+            ],
             "confirmation_source": self.confirmation_source,
             "confirmation_required": self.status == TYPE_NEEDS_CONFIRMATION,
             "designed_footprint": self.request.footprint,
@@ -428,11 +485,7 @@ def _resolve_one(
         return TypeResolution(
             request=request,
             status=TYPE_LIBRARY_ABSENT,
-            reason=(
-                "콘솔 라이브러리에 도면 타입에 대응하는 FixtureType이 없다. "
-                "콘솔에서 GDTF 라이브러리 임포트를 먼저 수행해야 이 항목을 "
-                "패치할 수 있다 — 유사한 이름으로 대체 배정하지 않는다."
-            ),
+            reason=TYPE_ABSENT_REASON,
             searched_type_key=searched_type_key,
             searched_mode_key=searched_mode_key,
             hard_stop_code=FIXTURE_TYPE_NOT_IN_LIBRARY,
@@ -486,11 +539,7 @@ def _resolve_one(
         return TypeResolution(
             request=request,
             status=TYPE_LIBRARY_ABSENT,
-            reason=(
-                "콘솔에서 확인된 FixtureType에, 도면이 요구한 DMXMode에 대응하는 모드가 없다. "
-                "해당 모드를 담은 GDTF 라이브러리 임포트가 선행되어야 한다 — "
-                "유사한 이름의 다른 모드로 대체 배정하지 않는다."
-            ),
+            reason=MODE_ABSENT_REASON,
             console_type=confirmed_type,
             presented_type=presented_type,
             searched_type_key=searched_type_key,
@@ -513,19 +562,72 @@ def _resolve_one(
         footprint_enabled=footprint_enabled,
     )
     if resolved and footprint_check.get("match") is False:
+        # [round19 major#5] 이 갈래는 **막다른 길이었다.** 도달 조건이 "별칭에 모드가
+        # 지정돼 있다"이고 `_mode_candidates`가 그 `alias_mode`로 후보를 걸러내므로,
+        # `mode_candidates`에는 **점유폭이 안 맞은 바로 그 모드 하나**만 실려 있었다.
+        # 그런데 문장은 "모드를 다시 확인해야 한다"고 말했다 — 조작자 화면에는 고를 것이
+        # 없거나(모드가 하나뿐 · 전부 불일치), 맞는 모드가 실제로 있어도 payload가 그것을
+        # 보여주지 않았다. 실제 조치가 "도면 DMX Footprint를 고쳐라"인 경우에도 문장은
+        # 모드 확인을 가리켜 **거짓 안내**였다.
+        #
+        # 그래서 여기서는 **라이브러리의 전 모드를 채널 수와 함께** 후보로 싣는다 —
+        # 고를 수 있는 것을 보여주는 것이 "확인 대기"의 전제다. 그리고 맞는 모드가 하나도
+        # 없으면 모드 선택으로 못 벗어나므로 **하드 스톱**이고, 사유는 실제 조치를 가리킨다.
+        #
+        # `assumption_72`가 `go`가 아니면 대조 자체가 수행되지 않아 `match`는 `None`이다 —
+        # 이 갈래에 오지 않는다. 미수행을 불일치와 같은 문장으로 다루지 않는다.
+        #
+        # `resolved`이므로 `confirmed_type`은 `None`이 아니고 `presented_type`과 같다 —
+        # 그래도 단언을 심지 않고 좁힌다(런타임 단언은 실패 경로를 예외로 바꾼다).
+        library_modes = confirmed_type.modes if confirmed_type is not None else ()
+        matching = tuple(mode for mode in library_modes if mode.channel_count == request.footprint)
+        # 맞는 모드의 **부재를 단정할 수 있는가**. 모드 열거가 절단됐거나 채널 수를 읽지
+        # 못한 모드가 있으면 못 한다 — 찾아보지 않은 것을 부재로 단정하지 않는다.
+        modes_truncated = confirmed_type is None or confirmed_type.modes_truncated
+        absence_assertable = not modes_truncated and all(
+            mode.channel_count is not None for mode in library_modes
+        )
+        footprint_branch: dict[str, object] = {
+            "request": request,
+            "console_type": confirmed_type,
+            "console_mode": confirmed_mode,
+            "type_candidates": type_candidates,
+            # 별칭으로 좁혀진 한 건이 아니라 **라이브러리 전 모드**를 싣는다.
+            "mode_candidates": library_modes,
+            "confirmation_source": ALIAS_CONFIRMATION_SOURCE,
+            "alias_key": alias_key,
+            "presented_type": presented_type,
+            "searched_type_key": searched_type_key,
+            "searched_mode_key": searched_mode_key,
+            "footprint_check": footprint_check,
+        }
+        if matching:
+            return TypeResolution(
+                status=TYPE_NEEDS_CONFIRMATION,
+                reason=FOOTPRINT_MISMATCH_CHOOSABLE_REASON,
+                **footprint_branch,  # type: ignore[arg-type]
+            )
+        if absence_assertable:
+            return TypeResolution(
+                status=TYPE_FOOTPRINT_UNMATCHABLE,
+                reason=FOOTPRINT_UNMATCHABLE_REASON,
+                hard_stop_code=DESIGNED_FOOTPRINT_MATCHES_NO_MODE,
+                **footprint_branch,  # type: ignore[arg-type]
+            )
+        # 맞는 모드가 목록에 없지만 **부재를 단정할 수 없다** — 이 상태는 확인 대기가
+        # 아니다: 제시된 모드 중 어느 것을 골라도 점유폭이 안 맞으므로 조작자가 payload로
+        # 수행할 수 있는 선택이 없다. "후보 제시 — 사용자 확인 대기"라 적으면 R18-E와
+        # 같은 거짓이 된다. 관측 불완전으로 낸다(`skipped_checks`에 그 사유가 함께 나간다).
+        # 확정 타입도 비운다: 관측이 불완전한 상태에서 콘솔 타입을 확정으로 내보내지 않는다.
         return TypeResolution(
             request=request,
-            status=TYPE_NEEDS_CONFIRMATION,
-            reason=(
-                "점유폭이 도면과 다르다 — 승인 전에 모드를 다시 확인해야 한다. "
-                "셀 수가 다른 모드를 고르면 주소 계획 전체가 어긋난다."
+            status=TYPE_LIBRARY_INCOMPLETE,
+            reason=FOOTPRINT_MISMATCH_UNVERIFIED_REASON,
+            incompleteness_kind=(
+                _library_incompleteness(library, confirmed_type) or FIXTURE_TYPE_LIBRARY_UNREADABLE
             ),
-            console_type=confirmed_type,
-            console_mode=confirmed_mode,
             type_candidates=type_candidates,
-            mode_candidates=mode_candidates,
-            confirmation_source=ALIAS_CONFIRMATION_SOURCE,
-            alias_key=alias_key,
+            mode_candidates=library_modes,
             presented_type=presented_type,
             searched_type_key=searched_type_key,
             searched_mode_key=searched_mode_key,
@@ -534,11 +636,7 @@ def _resolve_one(
     return TypeResolution(
         request=request,
         status=TYPE_RESOLVED if resolved else TYPE_NEEDS_CONFIRMATION,
-        reason=(
-            "저장된 별칭으로 타입·모드를 확정했다 — 첫 확정은 사람이 했고 그 재사용을 표에 남긴다."
-            if resolved
-            else "라이브러리 후보를 제시했다 — 사용자 확인 없이 확정하지 않는다."
-        ),
+        reason=ALIAS_RESOLVED_REASON if resolved else CANDIDATES_PRESENTED_REASON,
         console_type=confirmed_type,
         console_mode=confirmed_mode,
         type_candidates=type_candidates,

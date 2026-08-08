@@ -41,7 +41,7 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 | 0.1.2 | 2026-08-06 | orchestrator | **독립 plan-audit 2회차 PASS(0.857 ≥ Tier L 0.85).** 1회차 지적 10건 전량 CLOSED가 원문 대조로 확인됨. 2회차 신규 지적 4건도 전량 반영 — N1(major, D3와 같은 결함 패턴 재발): `design.md` §2.3 툴 스키마에 `fid_range_visually_confirmed_empty` 필드 신설하고 AC-AUTOPATCH-027이 그 필드명을 직접 인용하게 해 요구와 인터페이스 계약을 일치시킴. N2: `design.md` §6.2 테스트 매핑에 AC-AUTOPATCH-027 등재. N3: `research.md` §1의 "입력 확정" 문구를 §C `의존 범위 한정`으로 좁힘. N4: AC-AUTOPATCH-027을 AC-AUTOPATCH-008 직후로 이동(소속 마일스톤 그룹 배치 관례). **요구·AC 수 불변**(REQ 26 · AC 27). 코드 변경 0. |
 | 0.1.3 | 2026-08-06 | orchestrator | **반자동 실행 모델로의 amendment (M0 5차 실측 근거 · 사용자 승인 2026-08-06).** §A 사전 확정 사실 **1·2를 반증 확정으로 정정**하고 실측 사실 **7·8을 신설**(플러그인 Lua 컨텍스트는 명령줄 목적지를 물려받지 않는다 · `deploy` 동사로 소스가 써지지 않는다). **REQ-AUTOPATCH-018을 "서버가 플러그인을 실행한다"에서 "검토용 Lua를 사람에게 전달하고 사람이 실행한 뒤 서버가 검증한다"로 조정** — `AddFixtures` 자동 실행이 이 빌드에서 성립하지 않는다는 13경로 0건 실측(`progress.md` §E.2 M0 1~5차)에 따른다. REQ-AUTOPATCH-020에 배포 경로 비가용 실측을 반영. `ASSUMPTION-76`(플러그인 실행 컨텍스트의 목적지) 신설 후 **즉시 NEGATIVE 판정 기록**. **REQ 수 불변(26)** — 018의 내용만 바뀌고 신설·삭제 0건. M4·M6·M7 무영향, M5만 "실행"→"실행 안내 + 검증"으로 축소. 코드 변경 0. **재감사 대상.** |
 | 0.1.4 | 2026-08-06 | orchestrator | **독립 plan-audit round7 FAIL(0.7375) 18건 + round8 FAIL(0.805) 13건 + round9 FAIL(0.8025) 8건 = 지적 39건 전량 반영** (`progress.md` §E.1a 7·8·9회차). **N11(major, 인과 과잉주장 재발)**: "원인이 command destination이 아님은 확정"이라 적은 지점 전부를 **"처방의 반증 / 원인은 미확정"**으로 교정하고 §A 사실 7에 **재질의 금지의 범위**를 명시 — §E.2z가 교정한 오류의 재발이었고, round8이 서술 잔여 2곳(N29·N30)·round9가 §E.2z 자신의 후속 블록(N43)을 더 잡아 함께 교정했다. **N42(major, round9)**: round8 N38에 대응해 넣은 `AC-AUTOPATCH-019④`가 `REQ-AUTOPATCH-003`·`AC-AUTOPATCH-004②`(드라이런은 Lua 소스 전문을 낸다)와 **정면 충돌**하고 스키마에 없는 `승인 플래그`를 인용했다(D3·round2 N1 패턴 재발) → **철회하고 `REQ-AUTOPATCH-004`가 스스로 열거한 세 금지**(승격 경로·실행 기본값·함축 재시도)를 ③④⑤로 검증하도록 재작성. **검증가능성**: `AC-019`·`020` 비공허성 대조군을 산출물 수준으로 재작성(N16), `design.md` §6.3 **8→10건** 확장 + 표의 범위 명시, 대조군 없던 0건 주장 **6건**(AC-007③·013③·014③(a)·016③·017②·021②)에 대조군 부착(N37·N47). N28: REQ-018 **복합 태그**(신규 ID 미생성). 그 외 파생 지점 전파 누락 다수(§0 상태줄·서술·함정·읽는 순서·다음 담당자 항목·§E.1 yaml 머신 게이트·캡션·§F Justification·§F DoD·§B 시나리오·§7 안티패턴·§A.2·M0 전제수·§8 레지스트리·§2 제목·H1·프론트매터·6개 아티팩트 상태줄) 반영. **REQ 26 · AC 27 · §C.0a 합 27 불변.** 코드 변경 0. **round10 독립 감사 PASS(0.865 ≥ Tier L 0.85, round9 0.8025 대비 +0.0625) — 이 사이클의 첫 비-FAIL.** round10 지적 7건도 전량 반영: **N50**(가장 실질적 — "경로 13가지"가 실행 컨텍스트와 인자 변형을 섞어 세어 재구성 불가였다 → **실행 경로 10가지 · 인자 변형 8종 · 별도 생성 기법 1종**으로 계수 단위를 분리하고 의존 지점 12곳에 전파) · N53(대조군 추가 요약을 5건·N37 → **6건·N37+N47**로 통일) · N52(§E.1 헤드라인이 `plan_status`와 모순) · N51(§E.1 전문·캡션의 round9 누락) · N55(`커밋 10건` → run-phase 11건/총 15건, 계수 기준 명시) · N54(짝 없는 `**`) · N55b(§F 항목 7의 보증이 `"0건"` 토큰에만 걸려 있던 것을 **금지·부재 주장 전부**로 확장하고 문장형 부재 주장 6건에 대조군 부착 + 라이브 검증 AC 2건을 명시적 범위 예외로 기록). **plan_status: audit-ready** |
-| 0.1.5 | 2026-08-06 | orchestrator | **M8 재정의 amendment (사용자 승인 2026-08-06) + 독립 코드 감사 round13·round14 반영.** `AC-AUTOPATCH-026`이 v0.1.2 자동 실행 모델의 문장("실행"을 왕복의 한 칸으로 두고 "시스템이 1회 통과")을 그대로 이고 있었다 — v0.1.3이 REQ-AUTOPATCH-018을 반자동으로 조정할 때 함께 고쳐지지 않은 누락이다. **4관문(G1 서버 전달 · G2 사람 실행 · G3 서버 검증 · G4 원복)으로 분리**해 책임과 실패 모드를 갈랐고, **G1 통과 + G2 실패를 유효한 결과로 명시**했다(사람 실행 경로는 한 번도 시험된 적이 없으므로 그 실패는 새 실측이지 코드 결함이 아니다). **표시 문자열 판별 실험**을 세션 항목으로 편입(⑦). **REQ 26건·AC 27건 수 불변** — AC-026 내부만 정밀화했다. 함께: **독립 코드 감사 round11·12·13·14 — 넷 다 FAIL, 지적 누계 59건 반영.** round11(4명 전원 FAIL, 치명 2건)·round12(round11 수정이 만든 치명 2건)·round13(round12 수정이 만든 치명 1건)·round14(**처음으로 치명 0건·fail-open 0건**, 두 감사자 모두 "차단 문구만 고치면 코드 축 GO") — 네 건 모두 작성자 테스트를 전부 통과한 채 살아 있었다(`progress.md` §E.2 round11·round12 절, `.moai/reports/plan-audit/…-round11.md`·`-round12.md`). **[round16 #3 정정 · round18 D-20 재정정]** 이 행은 *"독립 코드 감사 round11·12·13·14 — 넷 다 FAIL"*에 멈춘 stale이었다 — v0.1.5는 이후 **round15·16·17·18 지적 반영까지** 담았고 **독립 감사는 round11~18 여덟 라운드 전부 FAIL**이다(round15: 뮤테이션 48건 KILL 68.8% · 치명 2 · 문서 major 6/minor 2 · round16: 뮤테이션 79건 KILL 81.0% · 치명 1 · 안전 high 3 · 문서 major 4/minor 6 · round17: 치명 5 + 신규 치명 R17-A · round18: 뮤테이션 152건 KILL 91.4%/**행동 대조군만 83.6%** · 치명 R18-A 1건 · 문서 major 7/medium 9/minor 5). **[round18 D-20 · 규칙] 이 셀은 매 라운드 바뀐다 — 라운드 계수를 담은 셀은 이 행 · `plan.md` §B 착수 전제 ① · `M8-REDEFINITION-DRAFT.md` §3 P1 · `progress.md` 프론트매터 `next:` **넷이며 항상 함께 고친다**. round16 #3이 이 셋 중 둘을 고친 뒤 round18에서 **같은 셀이 다시 stale**로 잡혔다(여덟 번째 동형 재발). 한 곳만 고치면 형제가 반례로 남는다. **REQ 26·AC 27 수는 그대로다.** 또 위 문장의 *"그 실패는 새 실측이지 코드 결함이 아니다"*는 **round14 T12가 폐기**했다 — 정본은 `acceptance.md` AC-AUTOPATCH-026⑥이며, 배제되는 것은 "전달물이 옳았는데도 실패했다"는 경우뿐이고 기본 분류는 `판별 불가`다. |
+| 0.1.5 | 2026-08-06 | orchestrator | **M8 재정의 amendment (사용자 승인 2026-08-06) + 독립 코드 감사 round13·round14 반영.** `AC-AUTOPATCH-026`이 v0.1.2 자동 실행 모델의 문장("실행"을 왕복의 한 칸으로 두고 "시스템이 1회 통과")을 그대로 이고 있었다 — v0.1.3이 REQ-AUTOPATCH-018을 반자동으로 조정할 때 함께 고쳐지지 않은 누락이다. **4관문(G1 서버 전달 · G2 사람 실행 · G3 서버 검증 · G4 원복)으로 분리**해 책임과 실패 모드를 갈랐고, **G1 통과 + G2 실패를 유효한 결과로 명시**했다(사람 실행 경로는 한 번도 시험된 적이 없으므로 그 실패는 새 실측이지 코드 결함이 아니다). **표시 문자열 판별 실험**을 세션 항목으로 편입(⑦). **REQ 26건·AC 27건 수 불변** — AC-026 내부만 정밀화했다. 함께: **독립 코드 감사 round11·12·13·14 — 넷 다 FAIL, 지적 누계 59건 반영.** round11(4명 전원 FAIL, 치명 2건)·round12(round11 수정이 만든 치명 2건)·round13(round12 수정이 만든 치명 1건)·round14(**처음으로 치명 0건·fail-open 0건**, 두 감사자 모두 "차단 문구만 고치면 코드 축 GO") — 네 건 모두 작성자 테스트를 전부 통과한 채 살아 있었다(`progress.md` §E.2 round11·round12 절, `.moai/reports/plan-audit/…-round11.md`·`-round12.md`). **[round16 #3 정정 · round18 D-20 재정정]** 이 행은 *"독립 코드 감사 round11·12·13·14 — 넷 다 FAIL"*에 멈춘 stale이었다 — v0.1.5는 이후 **round15·16·17·18 지적 반영까지** 담았고 **독립 감사는 round11~19 아홉 라운드 전부 FAIL**이다 `[라운드계수셀=19]` **[round19 #1 재정정]**(round15: 뮤테이션 48건 KILL 68.8% · 치명 2 · 문서 major 6/minor 2 · round16: 뮤테이션 79건 KILL 81.0% · 치명 1 · 안전 high 3 · 문서 major 4/minor 6 · round17: 치명 5 + 신규 치명 R17-A · round18: 뮤테이션 152건 KILL 91.4%/**행동 대조군만 83.6%** · 치명 R18-A 1건 · 문서 major 7/medium 9/minor 5; round19 — 사용자 결정에 따른 **축소 감사 1회**, 뮤테이션 23건 KILL **95.7%/행동 대조군만 95.7%**, 치명 0·major 5·minor 4, 아홉 건 전부 fail-closed지만 **거짓 문장 4건**). **[round18 D-20 · round19 #1 확대 · 규칙] 이 셀은 매 라운드 바뀐다 — 라운드 계수를 담은 셀은 **여덟**이며 항상 함께 고친다: 이 행 · `plan.md` §B 착수 전제 ① · `M8-REDEFINITION-DRAFT.md` §3 P1 · `progress.md` 프론트매터 `next:` · `progress.md` §0 헤드라인 「독립 코드 감사 round11~N」 · `progress.md` §0 「착수 전제는 독립 코드 감사 재감사 PASS다(round11~N …)」 문단 · `design.md:3` status 줄 · `M0-SHOWFILE-SPEC.md` §5.1 P1 행. 정본 열거는 `plan.md` §B 착수 전제 ① 아래 [HARD] 블록이다. round16 #3이 셋 중 둘을 고친 뒤 round18에서 **같은 셀이 다시 stale**로 잡혔고(여덟 번째 동형 재발), **round19는 이 규칙의 열거 자체가 형제 넷(`progress.md` §0 헤드라인 — `round11~`**`17`** 두 라운드 stale · `progress.md` §0 착수 전제 문단 — `round11~`**`16`** 세 라운드 stale · `design.md:3` status 줄 — `round11~`**`16`** 세 라운드 stale · `M0-SHOWFILE-SPEC.md` P1 행)을 빠뜨리고 있었음을 전수 grep으로 찾았다 — 규칙이 **넷**을 셀 때 실제로는 **여덟**이었다. 아홉 번째 동형 재발이며 이번엔 규칙을 적는 문장 자체였다.** 한 곳만 고치면 형제가 반례로 남는다. **REQ 26·AC 27 수는 그대로다.** 또 위 문장의 *"그 실패는 새 실측이지 코드 결함이 아니다"*는 **round14 T12가 폐기**했다 — 정본은 `acceptance.md` AC-AUTOPATCH-026⑥이며, 배제되는 것은 "전달물이 옳았는데도 실패했다"는 경우뿐이고 기본 분류는 `판별 불가`다. |
 
 ---
 
@@ -74,7 +74,7 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
    **모드의 DMX footprint 만큼 간격을 두어야 겹치지 않는다**
    (`server/rulebook/assets/v2.4.2/30_plugin_patterns.md:31-38`, 워크된 예제 `:40-53`, stride 42).
 4. **`deploy_plugin`은 이미 컴파일 검사 + 정적 스캔 + 사람 리뷰 파이프라인을 태운다**
-   (`server/orchestrator/tools.py:1266`). 새 배포 경로를 만들지 않는다.
+   (`server/orchestrator/tools.py` `deploy_plugin`(**[round19 #1 정정]** 이전 판은 `:1266`이었는데 그 행은 무관한 닫는 괄호였다 — `d03597b`의 `deploy_plugin`은 `:1288`이다)). 새 배포 경로를 만들지 않는다.
 5. **콘솔로 나가는 유일한 통로는 `run_commands` → `bundle_gate.screen()`이다.**
    `server/tests/test_prechk_tool.py:330-343`의 AST 스캔이 `execution_port` 직접 호출을 금지한다.
 6. **1단계는 이미 멀티셀을 접고 액세서리를 분류한다.** 도면 8행짜리 멀티셀 바는 **1대**로,
@@ -169,7 +169,7 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 ### B.3 FixtureType · DMXMode 핸들 해석
 
 - **REQ-AUTOPATCH-011** `[Ubiquitous]` The 타입 해석기 **shall** 콘솔 쇼파일의 픽스처 라이브러리를
-  `Patch/FixtureTypes` 열거로 얻어 후보 집합을 만든다(`server/orchestrator/tools.py:202`) —
+  `Patch/FixtureTypes` 열거로 얻어 후보 집합을 만든다(`server/orchestrator/tools.py` `DEFAULT_RIG_CONTEXT_PATHS["fixture_types"] = "Patch/FixtureTypes"`(**[round19 #1 정정]** 이전 판은 `:202`였는데 그 행은 preset pool 설명 주석이었다 — `d03597b`에서 `:224`다)) —
   라이브러리 이름을 코드에 상수로 박지 않는다.
 - **REQ-AUTOPATCH-012** `[Ubiquitous]` The 타입 해석기 **shall** Vectorworks의 `Fixture Type`·
   `GDTF Fixture` 값을 콘솔 라이브러리 이름과 **퍼지 매칭**하고 **사용자 확인을 거쳐** 확정한다.
@@ -356,7 +356,7 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 
 - **[round16 추가 · P4] M8 테스트 자원 분리의 실현 방법** — `plan.md` §B M8 착수 전제 ④(구 P4)는
   "FID·유니버스를 기존과 완전히 분리"를 요구하지만 **유니버스·주소 분리는 이 툴로 불가능**하다.
-  `server/vwx/apply.py:127`이 `HandoffEntry.address`를 **"언제나 도면 주소 그대로"**로 못박고
+  `server/vwx/apply.py` `HandoffEntry` 독스트링(**[round19 #1]** 이전 판은 `:127`)이 `HandoffEntry.address`를 **"언제나 도면 주소 그대로"**로 못박고
   `patchplan.plan_addresses`는 겹치는 항목을 **제외**할 뿐 옮기지 않는다. **분리 가능한 축은
   `fid_range` 하나뿐**이며, 유니버스·주소를 옮기려면 **1단계에 넣는 도면을 그렇게 만들어야**
   한다. **[round18 D-03 정정 · 2026-08-07 ㉠ 확정]** 이 항목은 **결정이 끝났다** — 위 결정 표가 정본이다.
@@ -382,7 +382,7 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
   **권고 조합은 P5-D 기본값 + P5-0(플러그인 슬롯 제거) 필수 + P5-C 병행 조사**이며,
   **P5-D의 강점은 문법 증거가 아니라 FID·슬롯 오지정 위험이 0이라는 구조적 성질에서 온다** —
   Save As / Load 콘솔 절차 자체는 **전면 미실측**이다(`LoadShow`는 저장소 0건이고
-  `server/safety/gate.py:286-293`이 restore 미구현 사유를 명시한다).
+  `server/safety/gate.py:283-292`가 restore 미구현 사유를 명시한다 — **[round19 #3 정정]** 이전 판은 `:286-293`으로 3줄 어긋나게 인용했다; 283행이 `@MX:NOTE` 시작, 292행이 마지막 줄, **293행은 빈 줄**이다. 같은 오기가 `plan.md` §B ⑤·`acceptance.md` AC-026 round17 블록에도 있었고 셋 다 고쳤다).
   **[round18 D-03 정정 · 2026-08-07 P5-D 확정]** 사용자가 **P5-D + P5-0 필수**로 확정했다 —
   위 결정 표가 정본이다. 4안과 각 안의 증거 등급은 **근거 보존을 위해 그대로 둔다**(A·B·C는
   P5-D의 로드가 실패했을 때의 폴백이며, 폴백 3안이 전부 `[추정]`이라는 사실이 아래 AC-026④
@@ -472,12 +472,12 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVER
 | 참조 | 위치 | 무엇을 가져오는가 |
 |---|---|---|
 | `AddFixtures` 필드 집합 · `mode` 핸들 형식 · 점유폭 원칙 | `server/rulebook/assets/v2.4.2/30_plugin_patterns.md:11-53` | **[v0.1.3] 이 부분만 유효.** 같은 문서의 2단계 절차(`:13-18`) · CD 인과(`:25-27`) · 편집기 안내(`:28-29`) · 워크된 예제(`:40-53`)는 **반증됐다**(`research.md` §2 주석 · `progress.md` §E.2 M0 1~5차) |
-| `deploy_plugin` 안전 파이프라인 | `server/orchestrator/tools.py:1266` | 컴파일 + 정적 스캔 + 사람 리뷰 |
+| `deploy_plugin` 안전 파이프라인 | `server/orchestrator/tools.py` `deploy_plugin`(**[round19 #1 정정]** 이전 판은 `:1266`이었는데 그 행은 무관한 닫는 괄호였다 — `d03597b`의 `deploy_plugin`은 `:1288`이다) | 컴파일 + 정적 스캔 + 사람 리뷰 |
 | 콘솔 쓰기 단일 통로 | `server/orchestrator/tools.py` `run_commands` → `bundle_gate.screen()` | 게이트 경유 강제 |
 | AST 경계 스캔 | `server/tests/test_prechk_tool.py:330-343` | `execution_port` 직접 호출 금지 검증 |
 | 인벤토리 재조회 | `server/prechk/inventory.py:348` `read_inventory` | 패치 후 검증 읽기 |
 | 주소 정규화 | `server/prechk/patch.py:100-147` `normalize_address` | 주소 비교 계약 |
 | 1단계 차이 리포트 | `server/vwx/diff.py` · `server/vwx/report.py` | 패치 후보 입력 |
-| FixtureTypes 열거 경로 | `server/orchestrator/tools.py:202` | 라이브러리 후보 집합 |
+| FixtureTypes 열거 경로 | `server/orchestrator/tools.py` `DEFAULT_RIG_CONTEXT_PATHS["fixture_types"] = "Patch/FixtureTypes"`(**[round19 #1 정정]** 이전 판은 `:202`였는데 그 행은 preset pool 설명 주석이었다 — `d03597b`에서 `:224`다) | 라이브러리 후보 집합 |
 | 슬롯≠FID 경고 | `server/rulebook/assets/v2.4.2/20_korean_terms.md:34-36` · `31_choreography_patterns.md:203-209` | FID 오용 금지 근거 |
 | 툴 등록 5지점 | `server/preshow/TOOLS_REGISTRATION.md` | 신규 툴 배선 절차 |
