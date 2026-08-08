@@ -702,6 +702,11 @@ _R17_VWX_BOUNDARY_SITES: tuple[_Site, ...] = (
     _Site("patchplan.py", "numcmp", "self.unreadable_fids > 0"),
     _Site("patchplan.py", "numcmp", "self.unseen > 0"),
     _Site("patchplan.py", "numcmp", "self.unusable_rows > 0"),
+    # --- round19 절단 복구 스윕 (TruncationSweep) — 스윕 상한. `range(1, boundary + 1)`의
+    # `+ 1`을 지우면 마지막 슬롯을 프로브하지 않아 `unseen`이 1 남고 배정이 상시 거부된다.
+    # 반대로 `+ 2`면 선언 총계 밖을 프로브한다. 양방향 대조군은
+    # `test_autopatch_fid.py`의 `test_r19_the_sweep_probes_exactly_the_declared_range`.
+    _Site("patchplan.py", "offby", "recovery_boundary + 1"),
     _Site("patchplan.py", "offby", "target.address + footprint - 1"),
     _Site("patchplan.py", "slice", "sha256(encoded.encode('utf-8')).hexdigest()[:16]"),
     _Site("reader.py", "arith", "control / len(text)"),

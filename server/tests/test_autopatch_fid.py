@@ -481,8 +481,18 @@ def _plan_with(port):
 
 
 def test_a_truncated_fid_enumeration_refuses_to_assign():
-    """부분 관측으로 '빈 FID'를 단정하면 이미 쓰이는 번호를 배정하게 된다."""
-    plan = _plan_with(_CountingFidPort(enumerated=1, child_count=2))
+    """부분 관측으로 '빈 FID'를 단정하면 이미 쓰이는 번호를 배정하게 된다.
+
+    **[round19 재조준]** 포트를 `_CountingFidPort`에서 `_ShapedFidPort`로 바꿨다.
+    round19가 붙인 절단 복구 스윕은 숨은 슬롯을 프로브해 **회수**하므로,
+    `_CountingFidPort`(어떤 슬롯이든 `ok=True`로 답한다)에서는 절단이 회수되고
+    배정이 정당하게 진행된다 — 그 경로는 아래
+    `test_r19_a_truncated_enumeration_is_recovered_by_the_sweep`가 잡는다.
+    이 테스트가 지키는 명제는 **회수하지 못한 절단은 여전히 배정을 거부한다**이고,
+    그것을 재려면 숨은 슬롯이 값을 내놓지 않는 포트가 필요하다. 명제를 약화한 것이
+    아니라 스윕이 도달할 수 없는 자리로 옮긴 것이다.
+    """
+    plan = _plan_with(_ShapedFidPort(child_count=2, rows=[1], fids={1: 100}))
     assert plan.ok is False
     assert plan.rejection.code == "fid_precheck_read_incomplete"
     assert [target.assigned_fid for target in plan.targets] == [None]
@@ -491,10 +501,13 @@ def test_a_truncated_fid_enumeration_refuses_to_assign():
         "attempted": True,
         "child_count": 2,
         "enumerated_count": 1,
+        "recovered_count": 0,
+        "recovery_boundary": 2,
         "unseen_count": 1,
         "unreadable_fid_count": 0,
         "unusable_row_count": 0,
         "unparsable_row_count": 0,
+        "probe_failure_count": 0,
         "over_enumerated": False,
         "root_unreadable": False,
         "complete": False,
@@ -1413,10 +1426,17 @@ _R16_PRECHECK_READ_KEYS = (
     "attempted",
     "child_count",
     "enumerated_count",
+    # --- round19 절단 복구 스윕 (TruncationSweep) — 스윕의 detail 축 3개.
+    # 고지가 "스윕을 돌렸는가 · 어디까지 · 몇 개를 회수했는가 · 프로브가 몇 건
+    # 결말을 못 냈는가"를 싣지 않으면, 조작자는 판독이 열거만으로 이뤄졌는지
+    # 스윕까지 갔는지 구별할 수 없다.
+    "recovered_count",
+    "recovery_boundary",
     "unseen_count",
     "unreadable_fid_count",
     "unusable_row_count",
     "unparsable_row_count",
+    "probe_failure_count",
     "over_enumerated",
     "root_unreadable",
     "complete",
@@ -2816,3 +2836,757 @@ def test_r18_the_individual_value_check_is_per_value_not_per_range():
         ("a", FID_BELOW_MINIMUM, 0)
     ]
     assert [(t.id, t.assigned_fid) for t in planned] == [("b", 1)]
+
+
+# --------------------------------------------------------------------------
+# --- round19 절단 복구 스윕 · 미판독 고지 복원 · 라벨 축 (TruncationSweep) ---
+#
+# 실물 콘솔은 `Patch/Stages/1/Fixtures`를 **19대에서 절단**한다(1900바이트 예산,
+# 페이징 없음). round18까지 `_existing_fids_from_console`은 단일 `query_state`만 했고
+# 형제 리더 PRESERVE `server/prechk/inventory.py:391-417`의 `1..childCount` 유계
+# 스윕이 없었다. 그래서 39대 쇼파일에서 열거는 영원히 총계에 못 미치고
+# `unseen>=15`가 상시 성립 → GO 분기가 **한 대도** 배정하지 못한다(M8 대상 0건).
+# 아래 대조군은 ① 스윕이 그 절단을 회수한다 ② 회수하지 못한 절단은 여전히 거부한다
+# ③ 스윕이 완전성을 **승격시키지 않는다** ④ 스윕 전제·경계·인덱스 도메인을 재는 것이다.
+# --------------------------------------------------------------------------
+
+
+class _R19SweepPort:
+    """선언 총계는 진짜, 열거는 앞부분만 — 실물 절단을 재현하는 포트.
+
+    `present`에 있는 슬롯만 FID를 내놓는다. 그 밖의 슬롯은 `hidden_mode`에 따라
+    부재(`ok=false`) · 무응답(예외) · 포인터 문자열(`ok=true`인데 값이 쓰레기,
+    형제 리더 독스트링 3번의 실측 형태) 중 하나로 답한다.
+    """
+
+    def __init__(self, *, total, rows, present=None, hidden_mode="absent"):
+        self.total = total
+        self.rows = list(rows)
+        self.present = dict(present or {})
+        self.hidden_mode = hidden_mode
+        self.state_calls: list[str] = []
+        self.property_calls: list[int] = []
+
+    @property
+    def probe_slots(self) -> list[int]:
+        """스윕이 찔러 본 슬롯 — 열거된 슬롯의 정규 판독과 구별한다."""
+        return [slot for slot in self.property_calls if slot not in self.rows]
+
+    def query_state(self, path: str) -> dict:
+        self.state_calls.append(path)
+        return {
+            "ok": True,
+            "path": path,
+            "node": {"name": "Fixtures", "class": "Fixtures", "childCount": self.total},
+            "children": [{"i": slot, "name": f"f{slot}"} for slot in self.rows],
+            "truncated": len(self.rows) < self.total,
+        }
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        slot = int(path.rsplit("/", 1)[1])
+        self.property_calls.append(slot)
+        if slot in self.present:
+            return {
+                "ok": True,
+                "path": path,
+                "property": property_name,
+                "value": str(self.present[slot]),
+            }
+        if self.hidden_mode == "raise":
+            raise TimeoutError(f"no answer for {path}")
+        if self.hidden_mode == "pointer":
+            # `safe_property`가 `tostring(handle[name])`로 떨어질 때 실측된 형태.
+            return {
+                "ok": True,
+                "path": path,
+                "property": property_name,
+                "value": "function: 0x105b0f048",
+            }
+        return {"ok": False, "path": path, "property": property_name, "error": "no such object"}
+
+
+def _r19_plan(port, *, fid_range, count=1, assumption_71=ASSUMPTION_71_GO, confirmed=None):
+    """리포트 → 계획까지 **프로덕션 함수만** 밟는다."""
+    payload_report = report_payload([rr(index, address=1 + 16 * index) for index in range(count)])
+    ids = candidate_ids(payload_report)
+    return build_patch_plan(
+        payload_report,
+        selected=ids,
+        fid_range=fid_range,
+        assumption_71=assumption_71,
+        fid_range_visually_confirmed_empty=confirmed,
+        fid_property_port=port,
+        assignment_requested=True,
+    )
+
+
+def test_r19_a_truncated_enumeration_is_recovered_by_the_sweep():
+    """[round19 ①] 절단된 열거를 스윕이 회수해 `complete=True`에 도달한다 — 그리고
+    **숨어 있던 FID를 배정하지 않는다**.
+
+    선언 3대 중 1대만 열거되고 숨은 슬롯 2·3의 FID가 102·103이다. 대상 4개에 범위
+    101-110을 주면, **스윕이 회수한 102·103까지 이미 쓰이는 번호로 배제**되고 네 번째
+    대상이 104를 받는다.
+
+    스윕을 지우면 `unseen=2`로 배정 전체가 거부돼 `ok is True` 단정이 실패한다.
+    스윕이 슬롯만 관측으로 올리고 FID 수집을 빠뜨리면(`read_slots.add`만 남기고
+    `existing_fids.append`를 지우면) `complete=True`인데 102·103이 빈 번호로 보여
+    **이미 쓰이는 번호가 배정**되고 배제 목록 단정이 실패한다.
+    """
+    from server.vwx.verdicts import FID_ALREADY_IN_USE as ALREADY
+
+    port = _R19SweepPort(total=3, rows=[1], present={1: 101, 2: 102, 3: 103})
+    plan = _r19_plan(port, fid_range={"start": 101, "end": 110}, count=4)
+
+    read = plan.fid_safety["conflict_precheck"]["read"]
+    assert read["child_count"] == 3
+    assert read["enumerated_count"] == 1, "열거 계수에 스윕 결과가 섞였다"
+    assert read["recovered_count"] == 2
+    assert read["recovery_boundary"] == 3
+    assert read["unseen_count"] == 0
+    assert read["complete"] is True
+    assert plan.ok is True
+    assert plan.fid_safety["conflict_precheck"]["existing_fids"] == [101, 102, 103]
+    assert [(x.code, x.proposed_fid) for x in plan.target_exclusions] == [
+        (ALREADY, 101),
+        (ALREADY, 102),
+        (ALREADY, 103),
+    ]
+    assert [target.assigned_fid for target in plan.targets] == [104]
+
+
+def test_r19_an_unrecoverable_truncation_still_refuses():
+    """[round19 ①] 대조의 대조 — 스윕이 회수하지 못하면 배정은 여전히 거부된다.
+
+    같은 절단인데 숨은 슬롯이 값을 내놓지 않는다. 스윕이 회수 실패를 삼키고
+    `complete`를 올리면(예: 프로브 결과와 무관하게 `read_slots.add(slot)`) 여기서 걸린다.
+    """
+    port = _R19SweepPort(total=3, rows=[1], present={1: 101})
+    plan = _r19_plan(port, fid_range={"start": 101, "end": 110})
+
+    read = plan.fid_safety["conflict_precheck"]["read"]
+    assert port.probe_slots == [2, 3], "스윕이 돌지 않았다"
+    assert read["recovered_count"] == 0
+    assert read["unseen_count"] == 2
+    assert read["complete"] is False
+    assert plan.ok is False
+    assert plan.rejection.code == "fid_precheck_read_incomplete"
+    assert [target.assigned_fid for target in plan.targets] == [None]
+
+
+def test_r19_the_sweep_does_not_run_on_an_empty_enumeration():
+    """[round19 ① 전제] 열거에 확립된 슬롯이 **하나도** 없으면 스윕하지 않는다.
+
+    PRESERVE 원전(`server/prechk/inventory.py:393-400`)이 명시한 사고 그대로다:
+    `copilot_responder.lua:434-447`은 `any_slot_known`이 거짓일 때만
+    `children[wanted_slot]`을 돌려주므로, 빈 열거에서 슬롯 경로를 찌르면 responder가
+    **열거 위치**로 답한다 — 그것을 기존 FID로 적재하면 엉뚱한 픽스처의 번호를
+    "이미 쓰인다"고 믿거나, 더 나쁘게 빈 번호로 믿는다.
+
+    `slots_established` 전제(`and read_slots`)를 지우면 프로브 2회가 나가고 숨은 슬롯이
+    답을 주므로 `complete=True`로 배정까지 열린다 — 두 단정이 함께 실패한다.
+    """
+    port = _R19SweepPort(total=2, rows=[], present={1: 101, 2: 102})
+    plan = _r19_plan(port, fid_range={"start": 501, "end": 510})
+
+    assert port.probe_slots == [], "빈 열거에서 스윕이 돌았다 — 위치를 슬롯으로 오인한다"
+    read = plan.fid_safety["conflict_precheck"]["read"]
+    assert read["recovery_boundary"] is None
+    assert read["recovered_count"] == 0
+    assert read["unseen_count"] == 2
+    assert plan.ok is False
+
+
+def test_r19_the_sweep_probes_exactly_the_declared_range():
+    """[round19 ① 경계] 스윕은 `1..childCount`를 유계로 훑는다 — 양방향 ±1 대조군.
+
+    `range(1, recovery_boundary + 1)`에서 `+ 1`을 지우면 마지막 슬롯(4)을 프로브하지
+    않아 프로브 목록이 `[2, 3]`이 되고, `+ 2`로 늘리면 선언 총계 **밖**인 5를 찔러
+    `[2, 3, 4, 5]`가 된다. 상한을 `childCount`가 아닌 상수로 바꾸면 역시 어긋난다.
+    """
+    port = _R19SweepPort(total=4, rows=[1], present={1: 101})
+    _r19_plan(port, fid_range={"start": 501, "end": 510})
+
+    assert port.probe_slots == [2, 3, 4]
+    assert port.state_calls == [FIXTURE_ROOT], "스윕이 루트를 다시 열거했다"
+
+
+def test_r19_the_sweep_never_promotes_the_completeness_verdict_by_itself():
+    """[round19 ①] 완전성은 **자기 근거로만** 판정된다 — 스윕은 detail을 올릴 뿐이다.
+
+    스윕이 실제로 한 대를 회수했지만 한 대가 남았다. `complete`가 `recovered_count`나
+    `recovery_boundary`를 읽으면(예: `or self.recovered_count > 0`을 완화 조건으로
+    넣으면) 여기서 걸린다. 이 승격이 곧 R18-A의 거짓 보고 — "검사했고 깨끗하다" —와
+    같은 형태다.
+    """
+    from server.vwx.patchplan import ExistingFidRead
+
+    port = _R19SweepPort(total=3, rows=[1], present={1: 101, 2: 102})
+    plan = _r19_plan(port, fid_range={"start": 501, "end": 510})
+    read = plan.fid_safety["conflict_precheck"]["read"]
+
+    assert read["recovered_count"] == 1, "스윕이 아무 것도 회수하지 못해 비공허하지 않다"
+    assert read["unseen_count"] == 1
+    assert read["complete"] is False
+    assert plan.ok is False
+
+    # 구조 단정 — 회수 계수가 완전성 판정에 **들어갈 자리가 없다**.
+    swept_but_short = ExistingFidRead(
+        attempted=True, child_count=2, enumerated_count=1, recovered_count=1, unseen=1
+    )
+    assert swept_but_short.complete is False
+
+
+def test_r19_a_probe_that_gets_no_answer_keeps_the_structured_refusal():
+    """[round19 ①] 프로브 무응답은 **거짓 승격도, 예외 폭발도** 만들지 않는다.
+
+    투기적 프로브의 `try/except`를 지우면 `TimeoutError`가 `build_patch_plan` 밖으로
+    나가고, `ToolRegistry.dispatch`에 가드가 없어 **구조화된 거부 자체가 사라진다**
+    (round18 R18-D가 명명한 기제). 그러면 이 테스트는 예외로 실패한다.
+    프로브 실패를 관측으로 세면 `unseen`이 0이 되어 배정이 열린다 — 그것도 실패한다.
+    """
+    port = _R19SweepPort(total=3, rows=[1], present={1: 101}, hidden_mode="raise")
+    plan = _r19_plan(port, fid_range={"start": 501, "end": 510})
+    read = plan.fid_safety["conflict_precheck"]["read"]
+
+    assert read["probe_failure_count"] == 2
+    assert read["recovered_count"] == 0
+    assert read["unseen_count"] == 2
+    assert read["complete"] is False
+    assert plan.ok is False
+    assert plan.rejection.code == "fid_precheck_read_incomplete"
+
+
+def test_r19_a_pointer_string_from_a_probe_is_never_adopted_as_a_fid():
+    """[round19 ①] `ok=true`라도 값이 FID로 해석되지 않으면 채택하지 않는다.
+
+    형제 리더 독스트링 3번의 실측: `safe_property`가 `tostring(handle[name])`로 떨어져
+    `'function: 0x105b0f048'`이 `ok=true`와 함께 온다. 스윕 프로브에서 `_fid_int`를
+    빼고 값을 그대로 담으면 `existing_fids`에 문자열이 들어가 `complete=True`가 되고,
+    그 뒤 `proposed_fid in existing_fids` 대조는 **정수와 문자열을 비교해 영원히 거짓**
+    이라 이미 쓰이는 번호가 배정된다.
+    """
+    port = _R19SweepPort(total=3, rows=[1], present={1: 101}, hidden_mode="pointer")
+    read = _existing_fids_from_console(port)
+
+    assert all(isinstance(fid, int) for fid in read.fids)
+    assert read.fids == (101,)
+    assert read.probe_failures == 2
+    assert read.recovered_count == 0
+    assert read.unseen == 2
+    assert read.complete is False
+
+
+def test_r19_the_sweep_stays_out_when_an_enumerated_slot_is_outside_its_domain():
+    """[round19 ① 인덱스 도메인] 열거 슬롯이 `1..childCount` **밖**이면 스윕하지 않는다.
+
+    선언 3대인데 열거된 슬롯이 57번이다 — 이 풀의 인덱스 도메인은 스윕 도메인이
+    아니다(희소 풀). 그런 스냅샷에서 범위 안을 훑으면 관측 수가 총계에 닿아
+    `unseen=0`이 되는데, 정작 범위 **밖** 픽스처의 FID는 못 읽은 채로 남는다.
+
+    게이트(`all(1 <= slot <= child_count ...)`)를 지우면 프로브 1·2·3이 모두 답해
+    관측 4개 > 선언 3개가 되어 `over_enumerated`가 참이 되고, 그때 `reason()`은
+    **"열거된 슬롯 1개가 선언 총계 3개보다 많다"**는 산술적으로 거짓인 문장을 낸다.
+    아래 두 단정이 각각 그 두 결과를 잡는다.
+    """
+    port = _R19SweepPort(total=3, rows=[57], present={57: 157, 1: 101, 2: 102, 3: 103})
+    read = _existing_fids_from_console(port)
+
+    assert port.probe_slots == []
+    assert read.recovery_boundary is None
+    assert read.over_enumerated is False
+    assert read.unseen == 2
+    assert read.complete is False
+
+
+_R19_ARITHMETIC_ROWS = (
+    ("절단·회수됨", dict(total=3, rows=[1], present={1: 101, 2: 102, 3: 103})),
+    ("절단·회수 실패", dict(total=3, rows=[1], present={1: 101})),
+    ("절단·부분 회수", dict(total=3, rows=[1], present={1: 101, 2: 102})),
+    ("빈 열거", dict(total=2, rows=[], present={1: 101, 2: 102})),
+    ("도메인 밖 슬롯", dict(total=3, rows=[57], present={57: 157, 1: 101})),
+    ("초과 열거", dict(total=1, rows=[1, 2], present={1: 101, 2: 102})),
+    ("프로브 무응답", dict(total=3, rows=[1], present={1: 101}, hidden_mode="raise")),
+)
+
+
+def test_r19_the_arithmetic_row_table_is_complete():
+    """행 삭제 감지 — 일곱 형태가 다 있어야 하고, 라벨은 서로 달라야 한다."""
+    labels = [row[0] for row in _R19_ARITHMETIC_ROWS]
+    assert len(labels) == len(set(labels)) == 7
+    # 스윕이 도는 형태와 돌지 않는 형태가 **둘 다** 있어야 표가 한쪽만 보지 않는다.
+    swept = [row for row in _R19_ARITHMETIC_ROWS if row[1]["rows"] and row[1]["total"] > 1]
+    assert 0 < len(swept) < len(_R19_ARITHMETIC_ROWS)
+
+
+@pytest.mark.parametrize(
+    "label,kwargs", _R19_ARITHMETIC_ROWS, ids=[row[0] for row in _R19_ARITHMETIC_ROWS]
+)
+def test_r19_the_census_sentence_is_arithmetically_true_in_every_shape(label, kwargs):
+    """[round19 ①] 스윕이 붙은 뒤에도 조작자에게 나가는 **계수 문장이 참**이다.
+
+    두 불변식을 건다.
+    ① `over_enumerated`를 말하면 그 문장이 인용하는 두 수(`enumerated_count`,
+       `child_count`)가 실제로 그 관계여야 한다 — 인덱스 도메인 게이트를 지우면
+       회수분이 총계를 넘겨 놓고 문장은 열거 수를 인용해 **거짓**이 된다.
+    ② 관측 = 열거 + 회수이고, 못 본 슬롯 수는 총계 - 관측이다. 어느 슬롯도 두 축으로
+       세지 않는다(round14 T01/T03).
+    """
+    read = _existing_fids_from_console(_R19SweepPort(**kwargs))
+
+    if read.over_enumerated:
+        assert read.enumerated_count > (read.child_count or 0), read.reason()
+    observed = read.enumerated_count + read.recovered_count
+    if read.child_count is not None:
+        assert read.unseen == max(read.child_count - observed, 0)
+        assert read.unseen <= read.child_count
+    assert read.recovered_count <= (read.recovery_boundary or 0)
+
+
+def test_r19_the_real_scale_truncation_reaches_a_verdict_at_all():
+    """[round19 ① 실물 규모] 39대 선언 · 19대 열거 — M8을 막던 그 형태다.
+
+    교정 쇼파일은 슬롯과 FID가 일치하므로(`console/lua/PROTOCOL.md:305-324`) 슬롯 s의
+    FID를 s로 둔다. 스윕 없이는 `unseen=20`으로 **한 대도** 배정되지 않았다(M8 대상
+    0건). 스윕 뒤에는 프로브 20회로 총계가 닫히고 배정이 진행되며, 기존 FID 1..39는
+    전부 회피된다.
+    """
+    port = _R19SweepPort(
+        total=39, rows=list(range(1, 20)), present={slot: slot for slot in range(1, 40)}
+    )
+    plan = _r19_plan(port, fid_range={"start": 40, "end": 50}, count=3)
+    read = plan.fid_safety["conflict_precheck"]["read"]
+
+    assert port.probe_slots == list(range(20, 40)), "실물 절단 구간을 훑지 않았다"
+    assert (read["enumerated_count"], read["recovered_count"]) == (19, 20)
+    assert read["recovery_boundary"] == 39
+    assert read["unseen_count"] == 0
+    assert read["complete"] is True
+    assert plan.ok is True
+    assert plan.fid_safety["conflict_precheck"]["existing_fids"] == list(range(1, 40))
+    assert [target.assigned_fid for target in plan.targets] == [40, 41, 42]
+
+
+# --------------------------------------------------------------------------
+# [round19 HARD 규율 4] 형제 표면 전수 — `server/vwx/` 전 모듈의 **열거 판독 자리**
+#
+# "절단은 기본 경로다"는 이 콘솔 전체의 성질이므로, 열거를 읽는 자리는 모두 절단
+# 처방을 **결정한 자리**여야 한다. 스윕을 붙였는지 여부와 그 근거를 등기부로 고정한다 —
+# 게이트가 요구하는 것은 "스윕이 있다"가 아니라 **"그 자리가 보이고 판단이 적혀 있다"**다.
+# --------------------------------------------------------------------------
+
+#: (모듈, 함수, 스윕 여부, 판단 근거)
+_R19_ENUMERATION_READERS = (
+    (
+        "patchplan.py",
+        "_existing_fids_from_console",
+        True,
+        "전수 관측이 아니면 아무 것도 배정하지 못하는 구조라 절단이 곧 영구 정지였다 — "
+        "실물 39대에서 GO 분기가 한 대도 배정하지 못했다(M8 대상 0건).",
+    ),
+    (
+        "typemap.py",
+        "read_fixture_type_library",
+        False,
+        "절단이 판정을 영구히 막지 않는다: 열거 안에 있는 타입은 정상 확정되고, 없는 "
+        "타입은 `fixture_type_library_truncated` 고지와 함께 **부재를 단정하지 않는다**"
+        "(등재 라벨 자체가 '부재 단정 불가'다). 라이브러리 루트는 콘솔의 전체 타입이라 "
+        "슬롯당 프로브 비용이 수백 회다. **관측 사실**: 이 자리는 절단을 `truncated` "
+        "플래그로 받는다 — 형제 리더 독스트링 2번이 '완전성은 계수 대조로, 플래그로는 "
+        "절대'라고 못박은 것과 다른 방식이며, 여기서는 고치지 않고 보이게만 둔다.",
+    ),
+    (
+        "typemap.py",
+        "_read_type",
+        False,
+        "모드 열거 — 위 라이브러리 열거와 같은 성질이고 같은 근거로 스윕하지 않는다"
+        "(`modes_truncated` 고지).",
+    ),
+    (
+        "typemap.py",
+        "_read_channel_count",
+        False,
+        "열거가 아니다: `childCount`를 **채널 수라는 값**으로 읽고 자식 목록을 쓰지 "
+        "않는다. 절단은 항목 목록만 자르고 `childCount`는 진짜 총계이므로(형제 리더 "
+        "독스트링 2번) 이 판독에는 절단 처방이 필요하지 않다.",
+    ),
+)
+
+
+def _r19_scan_enumeration_readers() -> set[tuple[str, str]]:
+    """`server/vwx/` 전 모듈에서 `*.query_state(...)`를 호출하는 함수를 AST로 전수한다."""
+    found: set[tuple[str, str]] = set()
+    for path in sorted(Path("server/vwx").glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            for inner in ast.walk(node):
+                if (
+                    isinstance(inner, ast.Call)
+                    and isinstance(inner.func, ast.Attribute)
+                    and inner.func.attr == "query_state"
+                ):
+                    found.add((path.name, node.name))
+    return found
+
+
+def test_r19_the_enumeration_reader_registry_is_a_bijection_onto_server_vwx():
+    """[round19 HARD 4] 열거 판독 자리가 전부 등기돼 있고, 유령 행이 없다.
+
+    새 모듈이나 새 함수가 `query_state`로 열거를 읽으면 이 게이트가 먼저 막는다 —
+    아홉 라운드 연속 FAIL의 기제는 나쁜 판정이 아니라 **표 밖에 있던 형제 자리**였다.
+    """
+    scanned = _r19_scan_enumeration_readers()
+    registered = {(row[0], row[1]) for row in _R19_ENUMERATION_READERS}
+    assert scanned == registered, (
+        "열거 판독 자리가 등기부와 다르다 — 미등록:"
+        f" {sorted(scanned - registered)} / 유령: {sorted(registered - scanned)}"
+    )
+
+
+@pytest.mark.parametrize("index", range(len(_R19_ENUMERATION_READERS)))
+def test_r19_deleting_any_enumeration_reader_row_breaks_the_registry(index: int):
+    """행 삭제 프로브 — 어느 행을 지워도 프로덕션 전수와 어긋난다. 근거 문장도 요구한다."""
+    shrunk = _R19_ENUMERATION_READERS[:index] + _R19_ENUMERATION_READERS[index + 1 :]
+    assert {(row[0], row[1]) for row in shrunk} != _r19_scan_enumeration_readers()
+    module, function, sweeps, rationale = _R19_ENUMERATION_READERS[index]
+    assert isinstance(sweeps, bool)
+    assert len(rationale) > 40, f"{module}:{function}의 판단 근거가 비어 있다"
+
+
+def test_r19_the_enumeration_registry_records_both_decisions():
+    """비공허성 — 등기부에 스윕한 자리와 스윕하지 않은 자리가 **둘 다** 있다.
+
+    전부 `True`거나 전부 `False`인 표는 "판단했다"를 증명하지 못한다.
+    """
+    decisions = {row[2] for row in _R19_ENUMERATION_READERS}
+    assert decisions == {True, False}
+
+
+# --------------------------------------------------------------------------
+# [round19 minor#9] 입력 거부도 **콘솔이 무엇을 못 보여줬는지**를 싣는다
+#
+# round18이 `fid_range` 검증을 사전검사 앞으로 옮긴 것은 옳다(거부 payload가
+# "검사했고 깨끗하다"고 주장하던 R18-A 치명). 그런데 그 이동이 `skipped_checks`
+# 고지까지 지워, 바닥 위반 **동시에** 판독 불완전인 호출에서 조작자는 범위만 고치고
+# 다시 거부당한다. 고지(부정 진술)는 복원하고 주장(`fid_safety`)은 복원하지 않는다.
+# --------------------------------------------------------------------------
+
+
+def _r19_notice_ports():
+    """행마다 새 포트를 만든다 — 포트는 호출 기록을 들고 있어 공유하면 안 된다."""
+    return {
+        # 숨은 슬롯이 값을 내놓지 않아 스윕으로도 회수되지 않는 절단.
+        "truncated": lambda: _R19SweepPort(total=3, rows=[1], present={1: 101}),
+        "clean": lambda: _R19SweepPort(total=0, rows=[]),
+        "exploding": ExplodingFidRigPort,
+    }
+
+
+#: (행 이름, 판정, 육안확인, fid_range, 포트, 기대 거부 코드, 기대 고지 kind들, fid_safety 여부)
+_R19_NOTICE_ROWS = (
+    ("범위 미제공", ASSUMPTION_71_GO, None, None, "truncated", FID_RANGE_REQUIRED, True, False),
+    (
+        "바닥 위반 범위",
+        ASSUMPTION_71_GO,
+        None,
+        {"start": -10, "end": -8},
+        "truncated",
+        "invalid_fid_range",
+        True,
+        False,
+    ),
+    (
+        "육안확인 미제공",
+        ASSUMPTION_71_NEGATIVE,
+        None,
+        {"start": 501, "end": 510},
+        "exploding",
+        FID_RANGE_CONFIRMATION_REQUIRED,
+        False,
+        True,
+    ),
+    (
+        "판독 불완전",
+        ASSUMPTION_71_GO,
+        None,
+        {"start": 501, "end": 510},
+        "truncated",
+        "fid_precheck_read_incomplete",
+        True,
+        True,
+    ),
+    ("통과", ASSUMPTION_71_GO, None, {"start": 501, "end": 510}, "clean", None, None, True),
+)
+
+
+def test_r19_the_notice_row_table_covers_every_assignment_path_return():
+    """행 삭제 감지 · `patchplan.py` 전수 — 이 스캐너가 읽는 것은 `server/vwx/patchplan.py`
+    **한 모듈뿐**이고, 그 안에서 FID 배정 갈래의 `return PatchPlan(...)` **다섯 자리**를 센다.
+
+    셈 단위는 **"`_fid_assignment_requested` 조기 반환문(`if not …: return`) 이후에
+    있는 `return PatchPlan(...)` 문장"**이다. 그 `if` 블록 자체의 반환은 배정을 요청하지
+    않은 열람 호출이라 사전검사 빚이 없으므로 단위에서 뺀다. round18까지 다섯 중 둘만
+    고지를 실었고 round19가 다섯 전부로 늘렸다. 프로덕션에 여섯 번째 반환이 생기면
+    이 개수 단정이 먼저 실패한다.
+
+    같은 셈을 명령줄로도 재현할 수 있다(진행 보고에 남긴 명령):
+        python - <<'PY' … ast.walk로 `_plan_from_report`의 If/Return을 센다 … PY
+    """
+    source = Path("server/vwx/patchplan.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    (build,) = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == "_plan_from_report"
+    ]
+    (gate,) = [
+        node
+        for node in ast.walk(build)
+        if isinstance(node, ast.If)
+        and any(
+            isinstance(inner, ast.Call)
+            and isinstance(inner.func, ast.Name)
+            and inner.func.id == "_fid_assignment_requested"
+            for inner in ast.walk(node.test)
+        )
+    ]
+    returns = [
+        node
+        for node in ast.walk(build)
+        if isinstance(node, ast.Return)
+        and isinstance(node.value, ast.Call)
+        and isinstance(node.value.func, ast.Name)
+        and node.value.func.id == "PatchPlan"
+        and node.lineno > gate.end_lineno
+    ]
+    assert len(returns) == 5, "배정 갈래의 반환 수가 바뀌었다 — 고지 표를 다시 맞춰라"
+    carriers = [
+        node
+        for node in returns
+        if any(keyword.arg == "skipped_checks" for keyword in node.value.keywords)
+    ]
+    assert len(carriers) == 5, "고지를 싣지 않는 반환이 남았다"
+
+    labels = [row[0] for row in _R19_NOTICE_ROWS]
+    assert len(labels) == len(set(labels)) == 5
+    assert {row[6] for row in _R19_NOTICE_ROWS} == {True, False, None}
+
+
+@pytest.mark.parametrize(
+    "label,assumption,confirmed,fid_range,port_key,code,notice,carries_safety",
+    _R19_NOTICE_ROWS,
+    ids=[row[0] for row in _R19_NOTICE_ROWS],
+)
+def test_r19_every_assignment_path_return_says_what_the_console_did_not_show(
+    label, assumption, confirmed, fid_range, port_key, code, notice, carries_safety
+):
+    """[round19 minor#9] 어느 분기에서든 사전검사 고지가 payload에 있다.
+
+    `_fid_precheck_notices` 호출을 어느 반환에서 지워도(=round18 상태로 되돌려도)
+    해당 행의 `kind` 단정이 실패한다. 반대로 거부 갈래에 `fid_safety`를 되싣으면
+    마지막 단정이 실패한다 — 고지는 복원하고 **주장은 복원하지 않는다**.
+    """
+    from server.vwx.verdicts import FID_CONFLICT_PRECHECK_INCOMPLETE
+
+    port = _r19_notice_ports()[port_key]()
+    plan = _r19_plan(port, fid_range=fid_range, assumption_71=assumption, confirmed=confirmed)
+    payload = plan.to_dict()
+
+    if code is None:
+        assert plan.ok is True, label
+    else:
+        assert plan.ok is False and payload["rejection"]["code"] == code, label
+
+    kinds = [check["kind"] for check in payload["skipped_checks"]]
+    if notice is True:
+        assert kinds == [FID_CONFLICT_PRECHECK_INCOMPLETE], label
+    elif notice is False:
+        assert kinds == [FID_CONFLICT_PRECHECK_DESCOPE], label
+    else:
+        assert kinds == [], label
+
+    assert ("fid_safety" in payload) is carries_safety, label
+
+
+def test_r19_the_restored_notice_states_only_what_was_observed():
+    """[round19 minor#9] 복원한 고지는 **부정 진술**뿐이다 — "검사했다"가 없다.
+
+    바닥 위반 범위 + 회수 불가 절단이라는, 감사가 지적한 그 조합이다. 고지는
+    무엇을 못 봤는지를 계수로 싣고, payload 어디에도 `performed`(검사 수행 주장)은
+    없다. 거부 갈래에 `_fid_safety_payload`를 되싣으면 두 번째 단정이 실패한다.
+    """
+    port = _R19SweepPort(total=3, rows=[1], present={1: 101})
+    plan = _r19_plan(port, fid_range={"start": -10, "end": -8})
+    payload = plan.to_dict()
+
+    (check,) = payload["skipped_checks"]
+    assert check["complete"] is False
+    assert (check["child_count"], check["enumerated_count"], check["unseen_count"]) == (3, 1, 2)
+    assert check["recovery_boundary"] == 3, "고지가 스윕 사실을 싣지 않았다"
+    assert "fid_safety" not in payload
+    assert "performed" not in str(payload), "거부 payload가 검사 수행을 주장한다"
+    for phrase in _R16_REASSURING_PHRASES:
+        assert phrase not in check["reason"], phrase
+
+
+def test_r19_the_notice_does_not_appear_when_no_assignment_was_requested():
+    """경계 — 배정을 요청하지 않은 열람 호출에는 사전검사 고지가 없다.
+
+    사전검사는 배정이 요청됐을 때 **비로소 갚아야 하는 빚**이다. 고지를 요청 여부와
+    무관하게 달면 조작자는 아무 것도 고르지 않았는데 "사전검사가 불완전하다"는 말을
+    듣는다. `_fid_precheck_notices`를 함수 머리로 끌어올리는 변형을 이 단정이 막는다.
+    """
+    payload_report = report_payload([rr(0)])
+    plan = build_patch_plan(
+        payload_report,
+        selected=candidate_ids(payload_report),
+        fid_property_port=_R19SweepPort(total=3, rows=[1], present={1: 101}),
+    )
+    assert plan.ok is True
+    assert plan.to_dict()["skipped_checks"] == []
+
+
+# --------------------------------------------------------------------------
+# [round19 minor#8] 별도 코드를 만든 근거 = **라벨이 고칠 축을 가리킨다**
+#
+# `verdicts.py`의 `FID_BELOW_MINIMUM` 주석은 `address_below_minimum`을 재사용하지 않는
+# 이유를 **오직 라벨 내용**으로 설명한다. 그런데 감사가 심은 M24 — FID 라벨을 정확히
+# 주소축 문구로 교체 — 는 1,480건 전부를 통과했다(진짜 공백). 문자열 리터럴 비교가
+# 아니라 **축 특정 가능성**을 잰다: 각 라벨은 자기 축을 명명하고 형제 축은 명명하지
+# 않는다. 전 어휘 라벨 유일성 게이트가 같은 성질의 형제 자리를 함께 닫는다.
+#
+# 형태는 `DeadEndVocab`과 합의한 것이다(축 어휘 공유, 전 어휘 fix_axis 전단사 표는
+# 그쪽 단독 소유 — 여기서는 쌍 범위로만 붙인다).
+# --------------------------------------------------------------------------
+
+#: 축 → 그 축을 조작자에게 명명하는 토큰들. 리터럴 라벨이 아니라 **축 이름**이다.
+_R19_AXIS_PAIR_TOKENS = {
+    "design_fid": ("FID",),
+    "design_address": ("주소", "유니버스"),
+    "design_type_name": ("FixtureType",),
+    "design_mode": ("DMXMode",),
+}
+
+#: (등재 코드, 조작자가 고쳐야 할 축). 아래 접미 전수 게이트가 이 표의 완전성을 강제한다.
+_R19_AXIS_PAIR_ROWS = (
+    ("address_below_minimum", "design_address"),
+    ("fid_below_minimum", "design_fid"),
+    ("fixture_type_not_in_library", "design_type_name"),
+    ("dmx_mode_not_in_library", "design_mode"),
+)
+
+
+def _r19_identified_axis(text: str) -> str | None:
+    """이 문장이 **어느 축을 고치라고** 말하는가. 모호하면 `None`."""
+    named = {
+        axis
+        for axis, tokens in _R19_AXIS_PAIR_TOKENS.items()
+        if any(token in text for token in tokens)
+    }
+    return next(iter(named)) if len(named) == 1 else None
+
+
+def test_r19_the_axis_pair_table_covers_every_registered_member_of_both_families():
+    """[round19 minor#8 · 형제 전수] 축만 다른 **같은 형태의 코드**를 접미로 전수한다.
+
+    `*_below_minimum`(바닥 위반)과 `*_not_in_library`(라이브러리 부재)는 각각 형태가
+    같고 축만 다른 코드 가족이다. 가족에 코드가 하나 추가되면 이 게이트가 먼저 실패해
+    새 코드도 축 대조군을 갖게 된다.
+    """
+    from server.vwx.verdicts import TARGET_EXCLUSION_REASON
+
+    registered = {row[0] for row in _R19_AXIS_PAIR_ROWS}
+    families = {
+        code
+        for code in TARGET_EXCLUSION_REASON
+        if code.endswith("_below_minimum") or code.endswith("_not_in_library")
+    }
+    assert families == registered
+    assert len(_R19_AXIS_PAIR_ROWS) == len(registered) == 4
+    assert {row[1] for row in _R19_AXIS_PAIR_ROWS} == set(_R19_AXIS_PAIR_TOKENS)
+
+
+@pytest.mark.parametrize(
+    "code,axis", _R19_AXIS_PAIR_ROWS, ids=[row[0] for row in _R19_AXIS_PAIR_ROWS]
+)
+def test_r19_each_registered_label_names_its_own_axis_and_not_a_siblings(code, axis):
+    """[round19 minor#8] 라벨 하나만 읽어도 **고칠 축**이 특정된다.
+
+    이 단정이 M24를 죽인다: FID 라벨을 주소축 문구로 바꾸면 `design_address`가
+    식별돼 기대 축과 어긋난다. 리터럴 비교가 아니라 축 토큰의 **유일 출현**을 재므로,
+    같은 축을 다르게 표현한 라벨은 통과하고 형제 축으로 넘어간 라벨만 걸린다.
+    """
+    from server.vwx.verdicts import target_exclusion_label
+
+    assert _r19_identified_axis(target_exclusion_label(code)) == axis
+
+
+def test_r19_the_axis_predicate_actually_discriminates_when_labels_are_swapped():
+    """[round19 minor#8] 위 단정이 공허하지 않다 — 라벨을 교차 교체하면 축 신호가 뒤집힌다.
+
+    감사가 심은 M24를 **여기서 실제로 심어** 판별식이 그것을 잡는다는 것을 보인다.
+    두 방향 모두 확인한다(FID←주소, 주소←FID). 판별식이 라벨이 아닌 다른 근거를
+    보고 있었다면 교체 후에도 기대 축이 나와 이 테스트가 실패한다 — 그때는
+    `FID_BELOW_MINIMUM`의 존재 근거를 라벨이 아닌 것으로 다시 적어야 한다.
+    """
+    from server.vwx import verdicts
+
+    fid_label = verdicts._TARGET_EXCLUSION_LABELS[verdicts.FID_BELOW_MINIMUM]
+    address_label = verdicts._TARGET_EXCLUSION_LABELS[verdicts.ADDRESS_BELOW_MINIMUM]
+
+    assert _r19_identified_axis(address_label) != "design_fid"
+    assert _r19_identified_axis(fid_label) != "design_address"
+
+
+def test_r19_a_swapped_label_reaches_the_operator_payload_and_loses_the_axis():
+    """[round19 minor#8 · 프로덕션 경로] 배제행의 `label`은 등재 표에서 온다.
+
+    `_assign_fids`로 실제 배제행을 만들고, 그 payload의 라벨이 축을 특정하는 것을
+    확인한다. 그 다음 등재 표를 주소축 문구로 monkeypatch하면 **같은 payload**가
+    축을 잃는다 — 라벨이 조작자에게 축을 알리는 유일한 구조화 근거임을 실증한다.
+    """
+    from server.vwx import verdicts
+    from server.vwx.patchplan import FIDRange, _assign_fids
+
+    def exclusion_label() -> str:
+        _, exclusions = _assign_fids(
+            (_r18_candidate("a"),),
+            FIDRange(start=0, end=1),
+            existing_fids=frozenset(),
+            fid_range_visually_confirmed_empty=None,
+        )
+        (row,) = exclusions
+        assert row.code == verdicts.FID_BELOW_MINIMUM
+        return row.to_dict()["label"]
+
+    assert _r19_identified_axis(exclusion_label()) == "design_fid"
+
+    original = dict(verdicts._TARGET_EXCLUSION_LABELS)
+    try:
+        verdicts._TARGET_EXCLUSION_LABELS[verdicts.FID_BELOW_MINIMUM] = original[
+            verdicts.ADDRESS_BELOW_MINIMUM
+        ]
+        assert _r19_identified_axis(exclusion_label()) != "design_fid"
+    finally:
+        verdicts._TARGET_EXCLUSION_LABELS.clear()
+        verdicts._TARGET_EXCLUSION_LABELS.update(original)
+
+    assert _r19_identified_axis(exclusion_label()) == "design_fid", "복원 실패"
+
+
+def test_r19_every_registered_label_is_unique_within_its_vocabulary():
+    """[round19 minor#8 · 형제 전수] 라벨이 유일 구분 근거라면 **유일해야** 한다.
+
+    등재 어휘 여덟 개 전부에 건다. 어느 코드의 라벨을 형제 코드의 라벨로 통째 교체하는
+    변형(M24가 한 일)은 그 순간 같은 어휘 안에 라벨이 둘 겹치므로 여기서 걸린다.
+    새 코드를 기존 라벨 재사용으로 추가하는 것도 막힌다.
+    """
+    from server.vwx.verdicts import _AUTOPATCH_VOCABULARY_LABELS
+
+    assert len(_AUTOPATCH_VOCABULARY_LABELS) == 8
+    for vocabulary, labels in _AUTOPATCH_VOCABULARY_LABELS.items():
+        assert len(set(labels.values())) == len(labels), f"{vocabulary}에 중복 라벨이 있다"
+        for code, label in labels.items():
+            assert label.strip(), f"{vocabulary}/{code}의 라벨이 비어 있다"

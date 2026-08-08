@@ -1760,7 +1760,11 @@ def test_the_console_import_plant_mechanism_tagger_sees_nothing_in_clean_product
 #
 # 실측(아래 `test_the_enumerating_gate_blind_spots_are_exactly_the_registered_set`):
 # `_console_ward_offenders`(열거 게이트)는 이 여섯 중 **다섯을 그대로 통과시킨다**.
-# 23번째 형태는 다음 라운드에 나온다 — 파이썬이 모듈을 실어 오는 방법은 유한하지 않다.
+# ~~23번째 형태는 다음 라운드에 나온다~~ — **[round19 정정] 23번째는 이번 라운드에 나왔다.**
+# 그것도 넷이(형태 23~26), 그리고 그 넷은 아래 규칙 ①②가 아니라 **여전히 열거로 남아 있던
+# 규칙 ③④**를 통과했다. 이 주석은 "화이트리스트 역전"을 표방했지만 실제로 역전한 것은
+# 규칙 ①②뿐이었다 — 그 자기 진단이 틀렸다. 이어지는 정정과 규칙 ⑤~⑨는 이 파일 끝
+# `round19 봉인 규칙 ③④ 화이트리스트 역전 (GateHoles19)` 절에 있다.
 #
 # **그래서 방향을 뒤집는다.** "무엇이 금지인가"를 세는 대신 "무엇이 허용인가"를 동결한다.
 # `server/vwx/**`의 실측 import는 **완전 모듈명 22개 / 최상위 루트 12개**이고 상대 import는
@@ -2348,3 +2352,1070 @@ class TestRound18FixtureNameGuardBoundary:
             exclusion.code for exclusion in blank.exclusions
         ]
         assert absent.entries == blank.entries == ()
+
+
+# --- round19 봉인 규칙 ③④ 화이트리스트 역전 (GateHoles19) ---
+#
+# **round18 봉인 주석의 자기 진단이 틀렸다.** 주석은 "열거가 끝나지 않는다 → 화이트리스트
+# 역전"을 표방했지만 실제로 역전된 것은 규칙 ①②(import 문)뿐이고, **규칙 ③(bare 호출 넷)과
+# 규칙 ④(이름 넷)는 여전히 금지 열거**다. 그리고 주석이 적어 둔 "23번째 형태는 **다음**
+# 라운드에 나온다"는 **정정한다 — 23번째는 이번 라운드에 나왔다. 그것도 넷이:**
+#
+#   23. `globals()["__bui" + "ltins__"]["__imp" + "ort__"]("server.bridge")`
+#       `globals`는 금지 호출자 넷에 없고 이름이 **문자열 리터럴**이라 `ast.Name` 검사에도
+#       걸리지 않는다.
+#   24. 같은 형태의 `vars()` 변형.
+#   25. `().__class__.__base__.__subclasses__()` — **봉인 주석 자신이 22번째로 적어 둔**
+#       `SourceFileLoader`에 import 문 하나 없이 닿는다.
+#   26. 등기된 `server.prechk.patch`에서 가져온 이름의 `__init__.__globals__` —
+#       규칙 ①을 정면으로 **통과하면서** 모듈 네임스페이스 전체에 닿는다.
+#
+# **그래서 규칙 ③④도 역전한다.** round19 실측(`server/vwx/**` 12모듈 전수):
+#   · bare 호출되는 **내장** 이름 24개  · 어떤 위치로든 참조되는 내장 이름 35개
+#   · 던더 **속성** 접근 1종(`__init__` — `reader.py:74·88`의 `super().__init__(detail)`)
+#   · 던더 **이름** 참조 1종(`__all__` — `server/vwx/__init__.py`)
+#   · 던더꼴 문자열 리터럴 **0건**
+# 그 다섯을 손으로 동결하고 **그 밖은 전부 위반**으로 센다(규칙 ⑤~⑨). 금지 목록이 아니다.
+#
+# **던더 속성 전면 금지는 불가능했다 — 이유를 적는다.** 처방 기준이 "먼저 재라, 0건이면
+# 전면 금지"였는데 실측이 0건이 아니다: `reader.py`가 예외 두 클래스에서
+# `super().__init__(detail)`를 쓴다. 이것을 없애려면 프로덕션을 고쳐야 하고 이번 라운드는
+# **테스트만** 고친다. 그래서 전면 금지 대신 `__init__` **한 항목만** 화이트리스트에 남겼다.
+# 형태 26이 노리는 `__globals__`는 그 다음 홉에서 걸린다 — `__init__`을 허용해도 형태 26은
+# 잡힌다는 뜻이고, 아래 표가 그 정확도를 실측한다.
+#
+# **잔여 구멍 하나를 정직하게 적는다.** `apply.py:345`의 `getattr(entry, field)`는 속성
+# 이름이 **런타임 변수**다. 그래서 `getattr`를 호출 화이트리스트에서 뺄 수 없고
+# `getattr(x, 런타임에_조립한_던더)` 경로는 이 게이트가 정적으로 막지 못한다. 리터럴 경로는
+# 규칙 ⑨(던더꼴 문자열 리터럴 금지)가 막는다 — `"__cla" + "ss__"` 같은 상수 접합도 접어서
+# 본다. 남는 것은 런타임 조립뿐이고, 그것을 막으려면 `apply.py`의 필드 순회를 바꿔야 하므로
+# **프로덕션 변경 없이는 불가능**하다.
+#
+# **열거가 남은 규칙이 어느 것인지.** 새 규칙 ⑤~⑨는 전부 허용 목록이다. 열거가 남은 곳은
+# 구 규칙 ③④(`_R18_SEAL_FORBIDDEN_BARE_CALLEES`·`_R18_SEAL_FORBIDDEN_NAMES`)이고, 그것은
+# **지우지 않고 병존**시킨다 — 새 게이트가 구 게이트의 합집합이며 아래 포함관계 테스트가
+# 그것을 실측한다. 구 규칙 ①(등기부)은 **모듈명 단위**라는 한계가 남는다: 등기된 모듈 안의
+# 무엇이든 쓸 수 있고, 형태 26이 정확히 그 틈으로 들어왔다(그래서 규칙 ⑧이 필요했다).
+
+#: 규칙 ⑤ — `server/vwx/**`가 **bare 호출하는 내장** 전수. 손으로 동결했다(round19 실측 24).
+_R19_ALLOWED_BUILTIN_CALLEES = frozenset(
+    {
+        "ValueError",
+        "all",
+        "any",
+        "bool",
+        "dict",
+        "enumerate",
+        "frozenset",
+        "getattr",
+        "int",
+        "isinstance",
+        "len",
+        "list",
+        "max",
+        "min",
+        "next",
+        "ord",
+        "range",
+        "set",
+        "sorted",
+        "str",
+        "sum",
+        "super",
+        "tuple",
+        "zip",
+    }
+)
+
+#: 규칙 ⑥ — 호출이 아니어도(주석·`except` 절·타입 표기 포함) 참조되는 내장 전수(실측 35).
+#: 호출 화이트리스트의 진부분집합이 아니라 **초집합**이다 — 이름으로만 쓰이는 11개가 더 있다.
+#: 두 표를 나눈 이유: `_f = exec` 뒤 `_f(...)`처럼 **호출 자리에 이름이 안 보이는** 형태를
+#: 규칙 ⑤ 혼자서는 못 잡는다.
+_R19_ALLOWED_BUILTIN_NAMES = _R19_ALLOWED_BUILTIN_CALLEES | frozenset(
+    {
+        "AttributeError",
+        "Exception",
+        "ImportError",
+        "KeyError",
+        "LookupError",
+        "UnicodeDecodeError",
+        "bytearray",
+        "bytes",
+        "float",
+        "object",
+        "property",
+    }
+)
+
+#: 규칙 ⑦ — 던더 **이름** 화이트리스트. 실측 1종. `ctx`를 가리지 않는다 —
+#: `__builtins__ = {...}` 같은 **대입**도 로더 도달 통로이므로 Store도 센다.
+_R19_ALLOWED_DUNDER_NAMES = frozenset({"__all__"})
+
+#: 규칙 ⑧ — 던더 **속성** 화이트리스트. 실측 1종(`super().__init__`). 위 주석 참조.
+_R19_ALLOWED_DUNDER_ATTRIBUTES = frozenset({"__init__"})
+
+
+def _r19_is_dunder(name: str) -> bool:
+    return len(name) > 4 and name.startswith("__") and name.endswith("__")
+
+
+def _r19_folded_string(node) -> str | None:
+    """상수 문자열을 **접어서** 돌려준다 — `"__cla" + "ss__"`도 한 값으로 본다.
+
+    쪼갠 조각(`"__cla"`·`"ss__"`)은 각각으로는 던더꼴이 아니다. 접지 않으면 규칙 ⑨가
+    쪼개기 한 번에 무력해진다(형태 23·24가 정확히 그 수법이다).
+    """
+    if isinstance(node, ast.Constant):
+        return node.value if isinstance(node.value, str) else None
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = _r19_folded_string(node.left)
+        right = _r19_folded_string(node.right)
+        return None if left is None or right is None else left + right
+    return None
+
+
+def _r19_import_seal_violations(
+    source: str,
+    *,
+    registry: frozenset[str] = _REGISTERED_VWX_IMPORTS,
+    builtin_callees: frozenset[str] = _R19_ALLOWED_BUILTIN_CALLEES,
+    builtin_names: frozenset[str] = _R19_ALLOWED_BUILTIN_NAMES,
+    dunder_names: frozenset[str] = _R19_ALLOWED_DUNDER_NAMES,
+    dunder_attributes: frozenset[str] = _R19_ALLOWED_DUNDER_ATTRIBUTES,
+) -> list[str]:
+    """구 봉인 ∪ 역전된 규칙 ⑤~⑨. 구 게이트를 **감싼다** — 포함관계가 정의상 성립하고
+    아래 `test_r19_the_new_seal_contains_the_round18_seal`이 표 위에서 그것을 실측한다.
+
+    네 화이트리스트를 인자로 뺀 것은 표 자체에 대조군을 붙이기 위해서다
+    (`test_r19_shrinking_any_whitelist_makes_production_fail`).
+    """
+    import builtins
+
+    violations = set(_import_seal_violations(source, registry=registry))
+    for node in ast.walk(ast.parse(source)):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and hasattr(builtins, node.func.id)
+            and node.func.id not in builtin_callees
+        ):
+            violations.add(f"unregistered-builtin-call:{node.func.id}")
+        if isinstance(node, ast.Name):
+            if _r19_is_dunder(node.id):
+                if node.id not in dunder_names:
+                    violations.add(f"unregistered-dunder-name:{node.id}")
+            elif (
+                isinstance(node.ctx, ast.Load)
+                and hasattr(builtins, node.id)
+                and node.id not in builtin_names
+            ):
+                violations.add(f"unregistered-builtin-name:{node.id}")
+        if (
+            isinstance(node, ast.Attribute)
+            and _r19_is_dunder(node.attr)
+            and node.attr not in dunder_attributes
+        ):
+            violations.add(f"unregistered-dunder-attribute:{node.attr}")
+        if isinstance(node, (ast.Constant, ast.BinOp)):
+            folded = _r19_folded_string(node)
+            if folded is not None and _r19_is_dunder(folded):
+                violations.add(f"dunder-literal:{folded}")
+    return sorted(violations)
+
+
+def _r19_production_builtin_usage() -> dict[str, set[str]]:
+    """프로덕션 실측 — **화이트리스트와 대조하기 위해서만** 쓴다(파생 금지).
+
+    스코프를 문장에 적는다(round17 #7 규율): `VWX_MODULES`가 재귀로 모은
+    `server/vwx/**` **전 모듈**을 읽는다. 좁히면 이 문장부터 고쳐야 한다.
+    """
+    import builtins
+
+    found: dict[str, set[str]] = {
+        "callees": set(),
+        "names": set(),
+        "dunder_names": set(),
+        "dunder_attributes": set(),
+    }
+    for module in VWX_MODULES:
+        for node in ast.walk(ast.parse(module.read_text(encoding="utf-8"))):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and hasattr(builtins, node.func.id)
+            ):
+                found["callees"].add(node.func.id)
+            if isinstance(node, ast.Name):
+                if _r19_is_dunder(node.id):
+                    found["dunder_names"].add(node.id)
+                elif isinstance(node.ctx, ast.Load) and hasattr(builtins, node.id):
+                    found["names"].add(node.id)
+            if isinstance(node, ast.Attribute) and _r19_is_dunder(node.attr):
+                found["dunder_attributes"].add(node.attr)
+    return found
+
+
+#: 규칙 ⑤~⑧의 화이트리스트 넷 — 전단사·행삭제 프로브가 이 표를 순회한다.
+_R19_WHITELISTS = (
+    ("callees", "unregistered-builtin-call", _R19_ALLOWED_BUILTIN_CALLEES),
+    ("names", "unregistered-builtin-name", _R19_ALLOWED_BUILTIN_NAMES),
+    ("dunder_names", "unregistered-dunder-name", _R19_ALLOWED_DUNDER_NAMES),
+    ("dunder_attributes", "unregistered-dunder-attribute", _R19_ALLOWED_DUNDER_ATTRIBUTES),
+)
+
+_R19_WHITELIST_KINDS = frozenset({"callees", "names", "dunder_names", "dunder_attributes"})
+
+#: **감사가 준 대조군을 그대로 옮긴 표** — caught 4 / MISSED 4.
+#: 열: (id, 심는 소스, 구 봉인이 내는 것, 새 봉인이 내는 것 전수).
+#: `caught` 여부는 세 번째 열이 비었는지로 **파생**한다 — 손으로 적으면 어긋날 수 있다.
+_R19_SEAL_PLANTS = (
+    (
+        "caught:aliased_import_module",
+        'from importlib import import_module as _imp\n\n_gate = _imp("server.bridge")',
+        ("unregistered-import:importlib",),
+        ("unregistered-import:importlib",),
+    ),
+    (
+        "caught:relative_parent_package",
+        "from ..safety.gate import SafetyGate  # noqa: F401",
+        ("relative-import:..safety.gate",),
+        ("relative-import:..safety.gate",),
+    ),
+    (
+        "caught:bare_exec",
+        '_ns: dict = {}\nexec("import server.bridge", _ns)',
+        ("forbidden-call:exec",),
+        (
+            "forbidden-call:exec",
+            "unregistered-builtin-call:exec",
+            "unregistered-builtin-name:exec",
+        ),
+    ),
+    (
+        "caught:builtins_namespace_subscript",
+        '_gate = __builtins__["__import__"]("server.safety")',
+        ("forbidden-name:__builtins__",),
+        (
+            "dunder-literal:__import__",
+            "forbidden-name:__builtins__",
+            "unregistered-dunder-name:__builtins__",
+        ),
+    ),
+    (
+        # 형태 23 — `globals`는 금지 호출자 넷에 없고 이름은 리터럴 접합이다.
+        "missed:globals_builtins_subscript",
+        '_gate = globals()["__bui" + "ltins__"]["__imp" + "ort__"]("server.bridge")',
+        (),
+        (
+            "dunder-literal:__builtins__",
+            "dunder-literal:__import__",
+            "unregistered-builtin-call:globals",
+            "unregistered-builtin-name:globals",
+        ),
+    ),
+    (
+        # 형태 24 — `vars()` 변형. 한 홉 더 거쳐 호출 자리에서 이름이 사라진다.
+        "missed:vars_builtins_subscript",
+        '_ns = vars()\n_gate = _ns["__bui" + "ltins__"]["__imp" + "ort__"]("server.safety")',
+        (),
+        (
+            "dunder-literal:__builtins__",
+            "dunder-literal:__import__",
+            "unregistered-builtin-call:vars",
+            "unregistered-builtin-name:vars",
+        ),
+    ),
+    (
+        # 형태 25 — import 문 0개로 `SourceFileLoader`(22번째 형태)에 닿는다.
+        "missed:subclasses_walk_to_loader",
+        "_loaders = ().__class__.__base__.__subclasses__()",
+        (),
+        (
+            "unregistered-dunder-attribute:__base__",
+            "unregistered-dunder-attribute:__class__",
+            "unregistered-dunder-attribute:__subclasses__",
+        ),
+    ),
+    (
+        # 형태 26 — 규칙 ①을 **통과하는** 등기 모듈로 네임스페이스 전체에 닿는다.
+        # `__init__`은 화이트리스트에 있으므로 걸리는 것은 `__globals__` 한 홉뿐이다.
+        "missed:registered_module_globals",
+        "from server.prechk.patch import classify_patch_value\n\n"
+        "_ns = classify_patch_value.__init__.__globals__",
+        (),
+        ("unregistered-dunder-attribute:__globals__",),
+    ),
+)
+
+#: 표의 축소 트립와이어 — 행을 하나 지우면 어긋난다.
+_R19_SEAL_PLANT_IDS = frozenset(
+    {
+        "caught:aliased_import_module",
+        "caught:relative_parent_package",
+        "caught:bare_exec",
+        "caught:builtins_namespace_subscript",
+        "missed:globals_builtins_subscript",
+        "missed:vars_builtins_subscript",
+        "missed:subclasses_walk_to_loader",
+        "missed:registered_module_globals",
+    }
+)
+
+
+@pytest.mark.parametrize(
+    "plant,r18_expected,r19_expected",
+    [(plant, old, new) for _, plant, old, new in _R19_SEAL_PLANTS],
+    ids=[name for name, _, _, _ in _R19_SEAL_PLANTS],
+)
+def test_r19_every_audited_bypass_form_is_caught_by_the_inverted_seal(
+    plant, r18_expected, r19_expected
+):
+    """감사 대조군 8행(caught 4 / MISSED 4) — **여덟 전부** 새 봉인에 걸린다.
+
+    구 봉인이 내는 것도 같은 행에서 함께 고정한다: MISSED 4행은 구 봉인이 **빈 목록**이고
+    (그것이 "놓쳤다"의 실측 정의다) 새 봉인은 비지 않는다.
+
+    죽이는 뮤테이션:
+      · 규칙 ⑤(내장 호출 화이트리스트)를 되돌리면 형태 23·24가 빈 목록을 받아 실패한다.
+      · 규칙 ⑧(던더 속성 화이트리스트)을 되돌리면 형태 25·26이 실패한다.
+      · 규칙 ⑨(던더꼴 리터럴)의 **접기**를 빼면 형태 23·24의 두 리터럴 행이 사라져 실패한다.
+      · `_R19_ALLOWED_DUNDER_ATTRIBUTES`에서 `"__init__"`을 빼면 형태 26의 기대값이
+        한 항목 늘어 실패한다 — 화이트리스트의 **정확도**까지 이 행이 고정한다.
+    """
+    source = APPLY_SOURCE + "\n\n" + plant + "\n"
+    assert _import_seal_violations(source) == sorted(r18_expected)
+    assert _r19_import_seal_violations(source) == sorted(r19_expected)
+    assert _r19_import_seal_violations(source) != [], "새 봉인이 놓쳤다"
+
+
+def test_r19_the_audit_control_table_is_four_caught_and_four_missed():
+    """표 행삭제 프로브 + 감사 진술 대조 — caught 4 / MISSED 4가 **실측과 일치**한다.
+
+    죽이는 뮤테이션:
+      · 어느 행을 지워도 id 집합 단정이 실패한다.
+      · 구 봉인을 늘려 MISSED 행 하나가 걸리게 되면 4/4가 깨져 실패한다(그때는 감사 표를
+        갱신해야 하고, 그 갱신 부담이 열거 전략의 비용이다).
+    """
+    ids = [name for name, _, _, _ in _R19_SEAL_PLANTS]
+    assert len(ids) == len(set(ids)) == len(_R19_SEAL_PLANT_IDS) == 8
+    assert set(ids) == _R19_SEAL_PLANT_IDS
+
+    caught = {
+        name
+        for name, plant, _old, _new in _R19_SEAL_PLANTS
+        if _import_seal_violations(APPLY_SOURCE + "\n\n" + plant + "\n")
+    }
+    assert caught == {name for name in ids if name.startswith("caught:")}
+    assert len(caught) == 4 and len(ids) - len(caught) == 4
+    # 라벨과 실측이 어긋나면 표가 거짓말을 하고 있는 것이다.
+    for name, _plant, old, _new in _R19_SEAL_PLANTS:
+        assert bool(old) is name.startswith("caught:"), name
+
+    # 표의 **기대 열** 자체에 독립 핀을 박는다 — 행별 등식 단정이 느슨해져도 이것이 남는다.
+    # ① 선언된 위반 어휘가 아홉 종(구 규칙 넷 + 새 규칙 다섯)을 **전수** 덮는다.
+    declared = {violation for _n, _p, _o, new in _R19_SEAL_PLANTS for violation in new}
+    assert {violation.split(":", 1)[0] for violation in declared} == {
+        "unregistered-import",
+        "relative-import",
+        "forbidden-call",
+        "forbidden-name",
+        "unregistered-builtin-call",
+        "unregistered-builtin-name",
+        "unregistered-dunder-name",
+        "unregistered-dunder-attribute",
+        "dunder-literal",
+    }
+    # ② 선언 열과 실측이 **행 단위로** 일치한다 — 어느 행의 기대값이 느슨해지거나 틀려도
+    #    여기서 걸린다(행별 등식 단정을 지우는 편집에 대한 독립 핀).
+    assert {name: sorted(new) for name, _p, _o, new in _R19_SEAL_PLANTS} == {
+        name: _r19_import_seal_violations(APPLY_SOURCE + "\n\n" + plant + "\n")
+        for name, plant, _o, _new in _R19_SEAL_PLANTS
+    }
+    # ③ 구 봉인이 내는 것도 행 단위로 고정한다 — caught/MISSED 라벨의 근거다.
+    assert {name: sorted(old) for name, _p, old, _n in _R19_SEAL_PLANTS} == {
+        name: _import_seal_violations(APPLY_SOURCE + "\n\n" + plant + "\n")
+        for name, plant, _o, _new in _R19_SEAL_PLANTS
+    }
+
+
+def test_r19_the_new_seal_contains_the_round18_seal():
+    """포함관계 실측 — 구 게이트가 잡는 것은 새 게이트도 **전부** 잡는다(병존의 근거).
+
+    구 표 16행 + round18 표 13행 + round19 표 8행 전수에서 확인한다.
+
+    죽이는 뮤테이션: `_r19_import_seal_violations`가 구 게이트를 합집합하지 않으면 실패한다.
+    """
+    plants = (
+        [plant for _, plant, _ in _CONSOLE_IMPORT_PLANTS]
+        + [plant for _, plant, _, _ in _ROUND18_SEAL_BYPASS_PLANTS]
+        + [plant for _, plant, _ in _ROUND18_SEAL_RULE_PLANTS]
+        + [plant for _, plant, _, _ in _R19_SEAL_PLANTS]
+    )
+    assert len(plants) == 16 + 6 + 7 + 8, len(plants)
+    for plant in plants:
+        source = APPLY_SOURCE + "\n\n" + plant + "\n"
+        old = set(_import_seal_violations(source))
+        new = set(_r19_import_seal_violations(source))
+        assert old <= new, sorted(old - new)
+        assert new != set(), plant
+
+
+def test_r19_the_inverted_seal_reports_nothing_on_clean_production():
+    """클린 대조군 BYPASS — 심지 않은 프로덕션 12모듈 전수에서 새 봉인이 0건이다.
+
+    새 규칙이 현행 프로덕션을 깨면 **규칙이 틀린 것**이다. 여기가 그 판정 자리다.
+    """
+    assert VWX_MODULES, "스캔 대상이 0개면 이 확인은 공허하다"
+    dirty = {
+        str(module): _r19_import_seal_violations(module.read_text(encoding="utf-8"))
+        for module in VWX_MODULES
+    }
+    assert {path: found for path, found in dirty.items() if found} == {}
+
+
+def test_r19_the_four_whitelists_are_a_bijection_onto_production():
+    """화이트리스트 넷 전단사 — **더해도 지워도** 실패한다.
+
+    `stale`(쓰지 않는데 등기된 항목)을 금지하는 것이 핵심이다 — 선제 등기는 문을 미리
+    열어 두는 것이고 화이트리스트를 무력화하는 유일한 길이다(round18 등기부와 같은 규율).
+
+    죽이는 뮤테이션: 어느 화이트리스트에 `"globals"`나 `"__class__"`를 미리 넣어 두면
+    `stale`이 비지 않아 실패한다 — 형태 23·25를 조용히 통과시키는 유일한 편집이 막힌다.
+    """
+    observed = _r19_production_builtin_usage()
+    assert set(observed) == _R19_WHITELIST_KINDS
+    for kind, _label, whitelist in _R19_WHITELISTS:
+        missing = sorted(observed[kind] - whitelist)
+        stale = sorted(whitelist - observed[kind])
+        assert missing == [], f"{kind}: 화이트리스트 밖의 프로덕션 사용 {missing}"
+        assert stale == [], f"{kind}: 프로덕션이 쓰지 않는 등기 {stale} — 미리 열어 둔 문이다"
+    # 규모 고정 — 조용히 부풀지 않는다(round19 실측).
+    assert len(_R19_ALLOWED_BUILTIN_CALLEES) == 24
+    assert len(_R19_ALLOWED_BUILTIN_NAMES) == 35
+    assert len(_R19_ALLOWED_DUNDER_NAMES) == 1
+    assert len(_R19_ALLOWED_DUNDER_ATTRIBUTES) == 1
+    # 두 내장 표는 **다르다** — 이름으로만 쓰이는 11개가 호출 화이트리스트에는 없다.
+    assert _R19_ALLOWED_BUILTIN_CALLEES < _R19_ALLOWED_BUILTIN_NAMES
+    assert len(_R19_ALLOWED_BUILTIN_NAMES - _R19_ALLOWED_BUILTIN_CALLEES) == 11
+
+
+@pytest.mark.parametrize(
+    "kind,label,dropped",
+    [
+        (kind, label, dropped)
+        for kind, label, whitelist in _R19_WHITELISTS
+        for dropped in sorted(whitelist)
+    ],
+)
+def test_r19_shrinking_any_whitelist_makes_production_fail(kind, label, dropped):
+    """행삭제 프로브 61행 — 어느 화이트리스트에서 **어느 한 항목**을 빼도 프로덕션이 걸린다.
+
+    곧 이 표들에 공허한 행은 하나도 없다. 각 행은 실제로 무언가를 허용하고 있다.
+
+    죽이는 뮤테이션: 화이트리스트를 프로덕션에서 파생하면(자기충족) 이 단정이 원리적으로
+    성립하지 않는다 — 파생 표는 무엇을 빼도 스스로를 다시 채운다.
+    """
+    overrides = {
+        "builtin_callees": _R19_ALLOWED_BUILTIN_CALLEES,
+        "builtin_names": _R19_ALLOWED_BUILTIN_NAMES,
+        "dunder_names": _R19_ALLOWED_DUNDER_NAMES,
+        "dunder_attributes": _R19_ALLOWED_DUNDER_ATTRIBUTES,
+    }
+    key = {
+        "callees": "builtin_callees",
+        "names": "builtin_names",
+        "dunder_names": "dunder_names",
+        "dunder_attributes": "dunder_attributes",
+    }[kind]
+    overrides[key] = overrides[key] - {dropped}
+    offenders = [
+        str(module)
+        for module in VWX_MODULES
+        if f"{label}:{dropped}"
+        in _r19_import_seal_violations(module.read_text(encoding="utf-8"), **overrides)
+    ]
+    assert offenders, f"{kind}/{dropped}: 이 행은 아무것도 허용하지 않는다 — 공허하다"
+
+
+def test_r19_the_folding_literal_rule_is_not_defeated_by_splitting():
+    """규칙 ⑨ 경계 — 쪼개기·중첩 접합·비던더는 각각 제대로 갈린다.
+
+    죽이는 뮤테이션: `_r19_folded_string`이 `BinOp`를 접지 않으면 첫 두 단정이 실패하고,
+    던더 판정이 `startswith("__")`만 보면 마지막 단정이 거짓 양성을 낸다.
+    """
+
+    def folded(expression: str):
+        return _r19_folded_string(ast.parse(expression, mode="eval").body)
+
+    assert folded('"__cla" + "ss__"') == "__class__"
+    assert folded('"__" + "sub" + "classes" + "__"') == "__subclasses__"
+    assert folded('"plain"') == "plain"
+    assert folded('prefix + "ss__"') is None
+    assert _r19_is_dunder("__class__") is True
+    assert _r19_is_dunder("__cla") is False
+    assert _r19_is_dunder("ss__") is False
+    assert _r19_is_dunder("____") is False
+    # 쪼갠 조각만으로는 위반이 아니고, 접은 값이 던더일 때만 걸린다.
+    assert _r19_import_seal_violations(APPLY_SOURCE + '\n\n_x = "__cla" + "ss__"\n') == [
+        "dunder-literal:__class__"
+    ]
+    assert _r19_import_seal_violations(APPLY_SOURCE + '\n\n_x = "__cla" + "ss"\n') == []
+
+
+# ==========================================================================
+# --- round19 막다른 길 어휘 (DeadEndVocab) ---
+#
+# [round19 major#4] 기제는 **상태를 거부 사유로 번역하는 자리가 상태의 세부를 버린다**이다.
+# R18-E는 `payload["types"]`에서 "확인할 후보 0건인데 확인 대기라 적는 것"을 고쳤지만,
+# **조작자가 마지막에 읽는 표면**인 `handoff.exclusions`는 고치지 않았다. 그 자리는
+# `status != resolved`를 전부 `type_confirmation_pending` 한 코드로 뭉갰고
+# `TypeResolution.hard_stop_code`를 보지 않았다 — 한 payload가 같은 후보를 두고
+# "확인 경로 없음, 하드 스톱"과 "확인 대기"를 **동시에** 말했다.
+#
+# 이 섹션이 세우는 것 셋:
+#   ① 번역 자리 **등기부 + 전단사** — `server/vwx/` 전 모듈에서 상위 판정 상태를 닫힌 어휘
+#      코드로 옮기는 자리를 AST로 전수하고, 새 자리가 생기면 등기 없이는 통과하지 못한다.
+#   ② **모순 불변식 대조군** — 같은 payload의 두 표면이 같은 후보에 모순된 말을 하지 않는다.
+#      이것이 진짜 처방이다: 자리를 하나 고치는 것이 아니라 표면 사이의 일관성을 단정한다.
+#   ③ **고칠 축(fix axis) 구별성** — 신설·재등재 코드가 "있어야 조작자가 무엇을 고칠지 옳게
+#      판단한다"는 근거를, 리터럴 비교가 아니라 **축 특정 가능성**으로 단정한다.
+#      ③의 쌍 범위(`fid_below_minimum`·`address_below_minimum`)는
+#      `server/tests/test_autopatch_fid.py`의 round19 섹션이 따로 단정한다.
+# ==========================================================================
+
+_R19_LIBRARY = [("MegaPointe", [("Mode 1", 24), ("Mode 2", 16)])]
+_R19_ALIAS_MODE_1 = {"MegaPointe": {"type": "MegaPointe", "mode": "Mode 1"}}
+_R19_ALIAS_MODE_9 = {"MegaPointe": {"type": "MegaPointe", "mode": "Mode 9"}}
+
+
+#: 판정 세부를 담는 칸을 이름 규약으로 고른다 — `status` · `*_code` · `*_kind`.
+#: 표가 아니라 **규약**이라, 새 칸이 생기면 아래 등기부 전단사가 자동으로 그것을 요구한다.
+def _r19_is_verdict_detail(field_name: str) -> bool:
+    return field_name == "status" or field_name.endswith(("_code", "_kind"))
+
+
+def _r19_verdict_detail_fields() -> dict[str, tuple[str, ...]]:
+    """판정 세부 칸을 가진 dataclass를 `server/vwx/` 전 모듈에서 모은다.
+
+    읽는 범위는 `_discover_modules(Path("server/vwx"))`가 재귀로 낸 `server/vwx` 아래
+    모든 `.py`다 — 하위 패키지가 생겨도 스코프가 줄지 않는다.
+    """
+    import dataclasses
+    import importlib
+
+    found: dict[str, tuple[str, ...]] = {}
+    for path in _discover_modules(Path("server/vwx")):
+        if path.stem == "__init__":
+            continue
+        module = importlib.import_module(f"server.vwx.{path.stem}")
+        for name in dir(module):
+            obj = getattr(module, name)
+            if not (isinstance(obj, type) and dataclasses.is_dataclass(obj)):
+                continue
+            if not obj.__module__.startswith("server.vwx."):
+                continue
+            fields = tuple(
+                f.name for f in dataclasses.fields(obj) if _r19_is_verdict_detail(f.name)
+            )
+            if fields:
+                found[obj.__name__] = fields
+    return found
+
+
+#: 닫힌 어휘 판정을 **짓는** 호출 — 이 이름이 함수 본문에 있으면 그 함수는 판정을 낸다.
+_R19_VERDICT_BUILDERS = (
+    "_exclusion",
+    "PatchTargetExclusion",
+    "_skipped_check",
+    "PatchPlanRejection",
+    "TypeHardStop",
+)
+
+
+def _r19_translation_sites() -> tuple[tuple[str, str, str, tuple[str, ...]], ...]:
+    """상태를 닫힌 어휘 코드로 번역하는 자리를 `server/vwx/` 전 모듈에서 전수로 뽑는다.
+
+    읽는 범위는 `_discover_modules(Path("server/vwx"))`가 재귀로 낸 `server/vwx` 아래
+    모든 `.py`다. 한 자리는 (모듈, 함수, 상위 상태 dataclass, 그 함수가 **읽는** 판정 세부 칸)
+    이고, 자리로 치는 조건은 둘 다다:
+      · 파라미터 주석에 판정 세부 칸을 가진 dataclass 이름이 있다(= 상위 상태를 받는다), **그리고**
+      · 본문이 판정을 짓거나(`_R19_VERDICT_BUILDERS`) 판정 세부 칸을 읽는다.
+    """
+    detail = _r19_verdict_detail_fields()
+    sites: list[tuple[str, str, str, tuple[str, ...]]] = []
+    for path in _discover_modules(Path("server/vwx")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            called = {
+                getattr(call.func, "id", None)
+                for call in ast.walk(node)
+                if isinstance(call, ast.Call)
+            }
+            read = {item.attr for item in ast.walk(node) if isinstance(item, ast.Attribute)}
+            annotations = " ".join(
+                ast.unparse(arg.annotation)
+                for arg in list(node.args.args) + list(node.args.kwonlyargs)
+                if arg.annotation is not None
+            )
+            for cls, fields in sorted(detail.items()):
+                if cls not in annotations:
+                    continue
+                if not (called.intersection(_R19_VERDICT_BUILDERS) or read.intersection(fields)):
+                    continue
+                sites.append((path.name, node.name, cls, tuple(f for f in fields if f in read)))
+    return tuple(sorted(sites))
+
+
+#: 번역 자리 **등기부**. (모듈, 함수, 상위 상태, 읽는 판정 세부 칸, 위임처, 근거).
+#: 마지막 칸은 **행동 게이트 이름**이다 — 문장이 아니라 이 파일에 실재하는 테스트를 가리킨다.
+#: 자리가 읽는 칸이 전부가 아니어도 되는 이유는 그 자리가 세부를 **위임**하거나, 남은 칸이
+#: 낼 수 있는 코드를 바꾸지 않기 때문이며, 그 주장은 근거 칸의 게이트가 실행으로 확인한다.
+_R19_TRANSLATION_SITES = (
+    (
+        "apply.py",
+        "_unresolved_type_verdict",
+        "TypeResolution",
+        ("hard_stop_code", "incompleteness_kind"),
+        None,
+        # `status`는 읽지 않는다: 세 상태(하드 스톱 · 관측 불완전 · 진짜 확인 대기)의 구별은
+        # 나머지 두 칸으로 전부 재현된다. 그 주장은 아래 게이트가 **전 상태 코퍼스**로 잰다.
+        "test_r19_no_two_surfaces_contradict_each_other_about_one_candidate",
+    ),
+    (
+        "apply.py",
+        "_unresolved_type_exclusion",
+        "TypeResolution",
+        (),
+        "_unresolved_type_verdict",
+        "test_r19_no_two_surfaces_contradict_each_other_about_one_candidate",
+    ),
+    (
+        "apply.py",
+        "build_patch_handoff",
+        "TypeResolution",
+        ("status",),
+        "_unresolved_type_verdict",
+        "test_r19_no_two_surfaces_contradict_each_other_about_one_candidate",
+    ),
+    (
+        "apply.py",
+        "screen_idempotent",
+        "TypeResolution",
+        (),
+        "_unresolved_type_verdict",
+        "test_r19_the_idempotency_screen_says_the_same_thing_as_the_type_table",
+    ),
+    (
+        # [round19 major#4 형제 필드] 판정을 **짓지는** 않지만 판정 세부를 읽어 상위 갈래를
+        # 가른다. `status`를 안 보던 이전 판은 확정되지 않은 해상 결과의 타입·모드로
+        # 점유자와 대조해 `already_patched_identical`까지 갈 수 있었다.
+        "apply.py",
+        "_expected_identity",
+        "TypeResolution",
+        ("status",),
+        None,
+        "test_r19_the_idempotency_screen_says_the_same_thing_as_the_type_table",
+    ),
+)
+
+
+def _r19_translation_registry_keys() -> tuple[tuple[str, str, str, tuple[str, ...]], ...]:
+    return tuple(
+        sorted(
+            (module, func, cls, reads) for module, func, cls, reads, _, _ in _R19_TRANSLATION_SITES
+        )
+    )
+
+
+def test_r19_the_translation_site_registry_is_a_bijection_onto_production():
+    """[round19 major#4] 상태를 사유로 번역하는 자리가 늘거나 줄면 여기서 먼저 깨진다.
+
+    죽이는 뮤테이션:
+      · `apply._unresolved_type_verdict`에서 `resolution.hard_stop_code` 갈래를 지우면
+        그 자리의 읽는 칸이 줄어 등기부와 어긋난다(= R18-E 무시 복귀가 여기서 잡힌다).
+      · 같은 함수에서 `resolution.incompleteness_kind` 갈래를 지워도 같다.
+      · `screen_idempotent`에 미확정 갈래를 하나 더 만들어도, 새 자리는 등기 없이 통과하지 못한다.
+    """
+    assert _r19_translation_sites() == _r19_translation_registry_keys()
+    labels = [(module, func, cls) for module, func, cls, _, _, _ in _R19_TRANSLATION_SITES]
+    assert len(labels) == len(set(labels))
+
+
+@pytest.mark.parametrize("index", range(len(_R19_TRANSLATION_SITES)))
+def test_r19_deleting_any_translation_registry_row_breaks_the_bijection(index: int):
+    """행 삭제 프로브 — 등기부에서 어느 행을 지워도 프로덕션 전수와 어긋난다."""
+    shrunk = _R19_TRANSLATION_SITES[:index] + _R19_TRANSLATION_SITES[index + 1 :]
+    keys = tuple(sorted((module, func, cls, reads) for module, func, cls, reads, _, _ in shrunk))
+    assert keys != _r19_translation_sites()
+
+
+def test_r19_every_translation_row_names_a_gate_that_actually_exists():
+    """근거 칸이 **실재하는 테스트**를 가리킨다 — 문장으로 때우면 다음 라운드에 또 뚫린다.
+
+    죽이는 뮤테이션: 근거 칸을 산문으로 바꾸면 이름 조회가 실패한다.
+    """
+    for module, func, _cls, _reads, delegate, gate in _R19_TRANSLATION_SITES:
+        assert gate.startswith("test_r19_"), (module, func, gate)
+        assert callable(globals().get(gate)), (module, func, gate)
+        if delegate is not None:
+            # 위임처도 프로덕션에 실재해야 한다 — 없는 이름을 적어 두면 등기가 거짓이 된다.
+            from server.vwx import apply as apply_module
+
+            assert hasattr(apply_module, delegate), (module, func, delegate)
+
+
+# ---- ② 모순 불변식 대조군 -------------------------------------------------
+#
+# 같은 payload 안에서 `types` 표와 `handoff.exclusions`가 **같은 후보**에 대해 서로 다른
+# 말을 하지 않는다. 자리 하나를 고치는 것으로는 이 불변식을 세울 수 없다 — 그래서 이것이
+# major#4의 진짜 처방이다.
+
+#: (시나리오, 도면 타입, 도면 모드, 도면 점유폭, 별칭, 포트 kwargs) — `assumption_72="go"` 고정.
+#: 아래 게이트가 이 코퍼스가 `TYPE_RESOLUTION_STATUS` **전 상태**에 닿음을 단정하므로
+#: 상태가 하나 늘면 코퍼스 없이는 통과하지 못한다.
+_R19_STATE_CORPUS = (
+    ("resolved", "MegaPointe", "Mode 1", 24, _R19_ALIAS_MODE_1, {}),
+    ("candidates_presented", "MegaPointe", "Mode 1", 24, None, {}),
+    ("footprint_choosable", "MegaPointe", "Mode 1", 16, _R19_ALIAS_MODE_1, {}),
+    ("footprint_unmatchable", "MegaPointe", "Mode 1", 99, _R19_ALIAS_MODE_1, {}),
+    (
+        "footprint_unverified",
+        "MegaPointe",
+        "Mode 1",
+        99,
+        _R19_ALIAS_MODE_1,
+        {"modes_truncated": True},
+    ),
+    ("type_absent", "Nope", "Mode 1", 24, None, {}),
+    ("mode_absent", "MegaPointe", "Mode 9", 24, _R19_ALIAS_MODE_9, {}),
+    ("library_truncated", "MegaPointe", "Mode 9", 24, None, {"modes_truncated": True}),
+    ("name_unusable", "---", "Mode 1", 24, None, {}),
+)
+
+
+def _r19_library_port(port_kwargs):
+    """시나리오의 포트. `partial_channels`는 **모드 하나만** 채널 수를 못 읽는 실측 형태다.
+
+    `LibraryRigPort(channels_readable=False)`는 전부를 못 읽어 점유폭 대조 자체가 수행되지
+    않는다 — 그 상태는 이 게이트가 재려는 것(맞는 모드의 **부재를 단정할 수 없다**)이 아니다.
+    """
+    from server.tests.test_autopatch_types import LibraryRigPort
+
+    kwargs = dict(port_kwargs)
+    if not kwargs.pop("partial_channels", False):
+        return LibraryRigPort(_R19_LIBRARY, **kwargs)
+
+    class _PartialChannelPort(LibraryRigPort):
+        def _channels(self, type_index: int, mode_index: int, path: str) -> dict:
+            if mode_index == 2:
+                return {"ok": False, "path": path, "error": "path segment not found"}
+            return super()._channels(type_index, mode_index, path)
+
+    return _PartialChannelPort(_R19_LIBRARY, **kwargs)
+
+
+def _r19_resolve(scenario) -> object:
+    from server.vwx.typemap import resolve_fixture_types
+
+    _name, designed_type, mode, footprint, aliases, port_kwargs = scenario
+    return resolve_fixture_types(
+        [
+            TypeRequest(
+                candidate_id="a", instrument_type=designed_type, mode=mode, footprint=footprint
+            )
+        ],
+        library_port=_r19_library_port(port_kwargs),
+        type_aliases=aliases,
+        assumption_72="go",
+    )
+
+
+def _r19_surfaces(scenario):
+    """한 시나리오의 **두 표면**을 같은 해상 결과에서 만든다 — 조작자가 한 payload로 보는 것."""
+    plan = _r19_resolve(scenario)
+    payload = plan.to_dict()
+    handoff = _handoff(resolutions=plan.resolutions, dry_run=False)
+    return payload, payload["type_table"]["rows"][0], handoff
+
+
+def test_r19_the_state_corpus_reaches_every_type_resolution_status():
+    """대조군 건전성 — 코퍼스가 닫힌 상태 어휘 **전부**에 닿는다.
+
+    `server/vwx/verdicts.py`의 `TYPE_RESOLUTION_STATUS`가 기준이다. 상태를 하나 더하면
+    (예: round19가 더한 `designed_footprint_unmatchable`) 코퍼스 없이는 실패한다 —
+    닿지 않는 상태가 있으면 아래 불변식이 그 상태에서 공허해진다.
+    """
+    from server.vwx.verdicts import TYPE_RESOLUTION_STATUS
+
+    reached = {_r19_surfaces(scenario)[1]["status"] for scenario in _R19_STATE_CORPUS}
+    assert reached == set(TYPE_RESOLUTION_STATUS)
+
+
+def test_r19_no_two_surfaces_contradict_each_other_about_one_candidate():
+    """[round19 major#4 · 불변식] 한 payload가 같은 후보에 모순된 말을 하지 않는다.
+
+    세 절 전부가 **프로덕션 두 표면**을 실제로 만들어 비교한다:
+      ㉠ `types.hard_stops`에 있는 후보의 전달물 배제 코드는 **그 하드 스톱 코드와 같다**.
+      ㉡ `confirmation_required`가 거짓이면 배제 코드가 `type_confirmation_pending`이 **아니다**.
+      ㉢ `confirmation_required`가 참이면 배제 코드가 `type_confirmation_pending`이다.
+
+    죽이는 뮤테이션:
+      · `apply._unresolved_type_verdict`의 `hard_stop_code` 갈래 제거 → ㉠·㉡이 하드 스톱
+        시나리오 넷에서 실패한다(= R18-E 무시 복귀).
+      · 같은 함수의 `incompleteness_kind` 갈래 제거 → ㉡이 관측 불완전 시나리오 둘에서 실패한다.
+      · `typemap`의 점유폭 하드 스톱을 `TYPE_NEEDS_CONFIRMATION`으로 되돌림 → ㉠이 실패한다.
+    """
+    from server.vwx.verdicts import TYPE_CONFIRMATION_PENDING as PENDING
+
+    for scenario in _R19_STATE_CORPUS:
+        payload, row, handoff = _r19_surfaces(scenario)
+        name = scenario[0]
+        codes = [exclusion.code for exclusion in handoff.exclusions]
+        stops = [stop["code"] for stop in payload["hard_stops"]]
+        if row["status"] == TYPE_RESOLVED:
+            assert codes == [], name
+            assert stops == [], name
+            continue
+        assert len(codes) == 1, (name, codes)
+        if stops:
+            assert codes == stops, name
+        if row["confirmation_required"]:
+            assert codes == [PENDING], name
+        else:
+            assert codes != [PENDING], name
+
+
+def test_r19_the_idempotency_screen_says_the_same_thing_as_the_type_table():
+    """[round19 major#4 형제 표면] `screen_idempotent`도 같은 불변식을 진다.
+
+    같은 주소에 픽스처가 이미 있는 상태에서 타입·모드가 미확정이면 이 자리가 배제를 짓는다.
+    이전 판은 `_expected_identity`만 보고 `type_confirmation_pending`을 못 박아, 하드 스톱과
+    관측 불완전 상태에서도 "확인 대기"라 적었다 — `build_patch_handoff`와 **같은 기제, 같은
+    payload, 다른 표면**이다.
+
+    죽이는 뮤테이션: `screen_idempotent`의 `unresolved_code`를 `TYPE_CONFIRMATION_PENDING`
+    리터럴로 되돌리면 하드 스톱·관측 불완전 시나리오 여섯에서 실패한다.
+    """
+    from server.tests.test_autopatch_verify import _console, _record
+    from server.vwx.apply import screen_idempotent
+    from server.vwx.verdicts import TYPE_CONFIRMATION_PENDING as PENDING
+
+    occupied = _console(_record(1, "1.1", "FixtureType 3", "1 Mode 1"))
+    for scenario in _R19_STATE_CORPUS:
+        plan = _r19_resolve(scenario)
+        row = plan.to_dict()["type_table"]["rows"][0]
+        if row["status"] == TYPE_RESOLVED:
+            continue
+        screened = screen_idempotent(
+            (_candidate(candidate_id="a"),),
+            address_plan=AddressPlan(entries=(_planned(candidate_id="a"),)),
+            resolutions=plan.resolutions,
+            console_fixtures=occupied,
+        )
+        codes = [exclusion.code for exclusion in screened.exclusions]
+        assert len(codes) == 1, (scenario[0], codes)
+        assert (codes == [PENDING]) is bool(row["confirmation_required"]), (scenario[0], codes)
+        # 두 표면이 같은 후보에 **같은 코드**를 낸다 — 밀도가 갈리면 조작자가 둘 중 하나를 믿는다.
+        handoff = _handoff(resolutions=plan.resolutions, dry_run=False)
+        assert codes == [exclusion.code for exclusion in handoff.exclusions], scenario[0]
+
+
+# ---- ③ 고칠 축(fix axis) 구별성 -------------------------------------------
+#
+# round18은 `fid_below_minimum`을 신설하면서 **유일한 근거를 "라벨이 가리키는 축"**으로 삼았다.
+# 그런데 라벨을 주소축 문구로 통째로 바꿔도 1,480건이 전부 통과했다 — 근거를 단정하는 자리가
+# 어디에도 없었다(round19 감사 M24 = 진짜 공백). round19가 신설·재등재한 코드도 같은 성질이라
+# 여기서 **축 특정 가능성**을 단정한다. 리터럴 문자열 비교가 아니다.
+#
+# 게이트 둘:
+#   A(완전성) — `verdicts.TARGET_EXCLUSION_REASON` 전 코드가 축 표에 1:1로 등기돼 있다.
+#   B(구별성) — round19가 손댄 코드마다, 라벨을 **형제 축 라벨로 통째 교체**하면 프로덕션
+#              payload에서 축이 더 이상 특정되지 않는다. 통과하면 라벨이 유일 근거가
+#              아니라는 뜻이고, 그때는 그 코드의 존재 근거를 다시 적어야 한다.
+#
+# B의 쌍 범위 두 행(`fid_below_minimum` · `address_below_minimum`)은
+# `server/tests/test_autopatch_fid.py`의 round19 섹션이 같은 형태로 단정한다 — 여기서는
+# 축 표에만 등기한다(표가 둘이 되면 다음 라운드에 어긋난다).
+
+#: 조작자가 **무엇을 고쳐야 하는가**의 닫힌 어휘. 코드가 늘면 이 중 하나에 배정돼야 한다.
+_R19_FIX_AXES = (
+    "design_address",
+    "design_fid",
+    "design_type_name",
+    "design_footprint",
+    "fixture_name",
+    "user_input_range",
+    "type_confirmation",
+    "console_library",
+    "console_patch",
+    "console_read",
+    "deliverable_field",
+    "no_action",
+)
+
+#: 축을 **지목하는 토큰** — 라벨에서 그 축을 특정하는 어구. 게이트 B의 판별식이 쓴다.
+#: 토큰은 축마다 배타적이어야 한다(아래 게이트가 그 배타성을 직접 단정한다).
+_R19_AXIS_TOKENS = {
+    "design_footprint": ("도면 DMX Footprint", "도면 점유폭", "점유폭 미확정"),
+    "console_library": ("라이브러리",),
+    "type_confirmation": ("사용자 확인",),
+    "design_type_name": ("도면 타입 이름",),
+}
+
+#: 배제 코드 -> 조작자가 고쳐야 할 축. `TARGET_EXCLUSION_REASON` 전수와 1:1이다.
+_R19_FIX_AXIS = {
+    "fid_range_exhausted": "user_input_range",
+    "fid_already_in_use": "user_input_range",
+    "fid_not_assigned": "user_input_range",
+    "fid_below_minimum": "design_fid",
+    "fid_precheck_read_incomplete": "console_read",
+    "address_already_occupied": "design_address",
+    "address_overlap_in_plan": "design_address",
+    "address_below_minimum": "design_address",
+    "address_conflicts_with_existing_fixture": "console_patch",
+    "existing_fixture_identity_unconfirmed": "console_patch",
+    "already_patched_identical": "no_action",
+    "console_read_incomplete": "console_read",
+    "fixture_name_missing": "fixture_name",
+    "lua_generation_refused": "deliverable_field",
+    "type_confirmation_pending": "type_confirmation",
+    "fixture_type_not_in_library": "console_library",
+    "dmx_mode_not_in_library": "console_library",
+    "fixture_type_library_truncated": "console_library",
+    "fixture_type_library_unreadable": "console_library",
+    "fixture_type_name_unusable": "design_type_name",
+    "footprint_unknown": "design_footprint",
+    "designed_footprint_matches_no_console_mode": "design_footprint",
+}
+
+
+def test_r19_the_fix_axis_table_is_a_bijection_onto_the_exclusion_vocabulary():
+    """게이트 A — `server/vwx/verdicts.py`의 배제 어휘 전 코드가 축 표에 등기돼 있다.
+
+    코드를 신설하면(round19가 `designed_footprint_matches_no_console_mode`를 더했듯이)
+    등기 없이는 통과하지 못하고, 등기하는 순간 "조작자가 무엇을 고치는가"를 적게 된다.
+    """
+    from server.vwx.verdicts import TARGET_EXCLUSION_REASON
+
+    assert set(_R19_FIX_AXIS) == set(TARGET_EXCLUSION_REASON)
+    assert set(_R19_FIX_AXIS.values()) <= set(_R19_FIX_AXES)
+    # 축 어휘가 비어 있는 항목을 들고 있으면 표가 느슨해진다 — 전 축이 실제로 쓰인다.
+    assert set(_R19_FIX_AXIS.values()) == set(_R19_FIX_AXES)
+
+
+@pytest.mark.parametrize("code", sorted(_R19_FIX_AXIS))
+def test_r19_deleting_any_fix_axis_row_breaks_the_bijection(code: str):
+    """행 삭제 프로브 — 축 표에서 어느 행을 지워도 배제 어휘 전수와 어긋난다."""
+    from server.vwx.verdicts import TARGET_EXCLUSION_REASON
+
+    shrunk = {key: value for key, value in _R19_FIX_AXIS.items() if key != code}
+    assert set(shrunk) != set(TARGET_EXCLUSION_REASON)
+
+
+def _r19_identified_axis(text: str) -> str | None:
+    """이 문장이 **정확히 한 축**을 지목하면 그 축, 모호하면 `None`.
+
+    형제 `TruncationSweep`의 쌍 범위 판별식과 같은 형태다 — 축별 토큰 집합 중 정확히 하나만
+    나타나야 한다. 두 축이 함께 나타나면 조작자는 무엇을 고칠지 고를 수 없다.
+    """
+    hit = {
+        axis for axis, tokens in _R19_AXIS_TOKENS.items() if any(token in text for token in tokens)
+    }
+    return next(iter(hit)) if len(hit) == 1 else None
+
+
+def test_r19_the_axis_tokens_are_mutually_exclusive_on_their_own_labels():
+    """판별식 건전성 — 토큰 집합이 서로 겹치면 게이트 B가 공허해진다.
+
+    각 축의 토큰이 **그 축 코드의 라벨에서만** 축을 특정하는지 실측한다. 어느 축의 토큰을
+    다른 축의 토큰으로 바꾸면(예: `console_library`에 `"도면 점유폭"` 추가) 실패한다.
+    """
+    from server.vwx.verdicts import target_exclusion_label
+
+    for code, axis in sorted(_R19_FIX_AXIS.items()):
+        if axis not in _R19_AXIS_TOKENS:
+            continue
+        assert _r19_identified_axis(target_exclusion_label(code)) == axis, code
+
+
+#: round19가 신설하거나 배제 어휘에 재등재한 코드 -> (그 코드를 내는 시나리오, 형제 축의 코드).
+#: 형제 축 코드는 **구현자가 재사용했을 법한 이웃**이다 — 그것으로 갈음했을 때 조작자가 축을
+#: 잘못 짚는다는 것이 이 코드들의 존재 근거다.
+_R19_NEW_CODE_AXIS_PROBES = (
+    (
+        "designed_footprint_matches_no_console_mode",
+        "footprint_unmatchable",
+        "dmx_mode_not_in_library",
+    ),
+    ("fixture_type_library_truncated", "library_truncated", "type_confirmation_pending"),
+    ("fixture_type_library_unreadable", "library_unreadable", "type_confirmation_pending"),
+)
+
+
+def _r19_scenario_named(name: str):
+    if name == "library_unreadable":
+        # 모드 하나만 채널 수를 못 읽는다 — 맞는 모드가 있는지 **단정할 수 없는** 상태다.
+        return (
+            "library_unreadable",
+            "MegaPointe",
+            "Mode 1",
+            99,
+            _R19_ALIAS_MODE_1,
+            {"partial_channels": True},
+        )
+    return next(row for row in _R19_STATE_CORPUS if row[0] == name)
+
+
+def test_r19_every_new_code_probe_names_a_reachable_production_scenario():
+    """대조군 건전성 — 프로브가 가리키는 시나리오가 실제로 그 코드를 낸다.
+
+    시나리오가 그 코드에 닿지 않으면 아래 구별성 게이트는 아무것도 재지 않는다.
+    """
+    for code, scenario_name, sibling in _R19_NEW_CODE_AXIS_PROBES:
+        scenario = _r19_scenario_named(scenario_name)
+        plan = _r19_resolve(scenario)
+        handoff = _handoff(resolutions=plan.resolutions, dry_run=False)
+        assert [item.code for item in handoff.exclusions] == [code], scenario_name
+        assert _R19_FIX_AXIS[sibling] != _R19_FIX_AXIS[code], code
+
+
+@pytest.mark.parametrize(
+    "code,scenario_name,sibling",
+    _R19_NEW_CODE_AXIS_PROBES,
+    ids=[row[0] for row in _R19_NEW_CODE_AXIS_PROBES],
+)
+def test_r19_the_label_is_load_bearing_evidence_for_the_fix_axis(code, scenario_name, sibling):
+    """게이트 B — 라벨을 형제 축 라벨로 통째 교체하면 프로덕션 payload가 축을 잘못 짚는다.
+
+    ㉠ 실제 payload: 배제 라벨이 그 코드의 축을 **정확히 하나로** 지목한다.
+    ㉡ 뮤턴트 payload: 라벨을 형제 축 코드의 라벨로 바꾸면 지목되는 축이 달라진다.
+
+    ㉡이 통과하지 못하면(= 라벨을 바꿔도 축이 그대로면) 라벨은 축 특정의 근거가 아니고,
+    그 코드의 존재 근거를 다시 적어야 한다 — round18 `fid_below_minimum`이 정확히 그 상태였다.
+    교체는 `verdicts`의 라벨 표를 직접 바꾸고, payload는 **프로덕션 경로**로 다시 만든다.
+    """
+    from server.vwx import verdicts
+
+    scenario = _r19_scenario_named(scenario_name)
+    axis = _R19_FIX_AXIS[code]
+    sibling_axis = _R19_FIX_AXIS[sibling]
+
+    plan = _r19_resolve(scenario)
+    produced = _handoff(resolutions=plan.resolutions, dry_run=False).exclusions[0].to_dict()
+    assert produced["code"] == code
+    assert _r19_identified_axis(produced["label"]) == axis
+
+    original = verdicts._TARGET_EXCLUSION_LABELS[code]
+    verdicts._TARGET_EXCLUSION_LABELS[code] = verdicts._TARGET_EXCLUSION_LABELS[sibling]
+    try:
+        mutant = _handoff(resolutions=plan.resolutions, dry_run=False).exclusions[0].to_dict()
+        assert mutant["code"] == code
+        assert _r19_identified_axis(mutant["label"]) != axis, mutant["label"]
+        assert _r19_identified_axis(mutant["label"]) in (sibling_axis, None)
+    finally:
+        verdicts._TARGET_EXCLUSION_LABELS[code] = original
+
+    restored = _handoff(resolutions=plan.resolutions, dry_run=False).exclusions[0].to_dict()
+    assert restored["label"] == original

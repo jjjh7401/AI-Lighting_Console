@@ -28,6 +28,24 @@ DMX_MODE_NOT_IN_LIBRARY = "dmx_mode_not_in_library"
 #: `fixture_type_not_in_library`로 적을 수 없다: 찾아보지도 않았으므로 부재 단정이 된다.
 FIXTURE_TYPE_NAME_UNUSABLE = "fixture_type_name_unusable"
 
+#: round19 결함 major#5 — 콘솔에서 확정된 FixtureType의 **어느 DMXMode도** 도면
+#: DMX Footprint와 채널 수가 맞지 않는다(전 모드 실측 · 열거 절단 없음 · 미판독 없음).
+#:
+#: **왜 `dmx_mode_not_in_library`를 재사용하지 않는가**: 그 코드의 등재 라벨은 "대응
+#: DMXMode 없음"이고 그것이 가리키는 조치는 **콘솔에서 GDTF 라이브러리를 임포트하라**다.
+#: 그런데 이 갈래에서 모드는 라이브러리에 **있다** — 도면이 적은 점유폭이 그 모드들 중
+#: 어느 것과도 맞지 않을 뿐이다. 임포트를 다시 해도 상태는 그대로이므로 조작자는 원인이
+#: 아닌 곳을 고치고 재시도는 영원히 실패한다(`lua_generation_refused`가 어느 필드가
+#: 거부됐는지 말하도록 고쳐진 round11 M5 N3와 같은 이유다).
+#:
+#: **왜 `type_confirmation_pending`이 아닌가**: 고를 선택지가 없다. 라이브러리의 전 모드를
+#: 채널 수와 함께 노출해도 도면 점유폭과 맞는 것이 하나도 없으므로, 모드 선택으로는
+#: 벗어날 수 없는 막다른 길이다 — 확인 대기라 적으면 조작자는 오지 않는 화면을 기다린다.
+#:
+#: **왜 `footprint_unknown`이 아닌가**: 그 코드는 도면 점유폭을 **모르는** 상태다.
+#: 여기서는 알고 있고, 안 맞는다 — 고칠 대상이 다르다(도면 값 자체).
+DESIGNED_FOOTPRINT_MATCHES_NO_MODE = "designed_footprint_matches_no_console_mode"
+
 ADDRESS_ALREADY_OCCUPIED = "address_already_occupied"
 ADDRESS_OVERLAP_IN_PLAN = "address_overlap_in_plan"
 FOOTPRINT_UNKNOWN = "footprint_unknown"
@@ -70,11 +88,26 @@ FIXTURE_TYPE_LIBRARY_UNREADABLE = "fixture_type_library_unreadable"
 FID_CONFLICT_PRECHECK_INCOMPLETE = "fid_conflict_precheck_incomplete"
 EXISTING_FOOTPRINT_UNREADABLE = "existing_footprint_unreadable"
 #: round18 결함 R18-J — 1단계(`server/vwx/diff.py`, AC-AUTOPATCH-025 무변경 계층)의
-#: 콘솔 대조는 `rig.fuzzy_type_equal`을 쓴다. 정규화 후 영숫자가 남지 않는 도면 타입 이름은
-#: **모든** 콘솔 타입과 일치하므로 그 픽스처는 `missing_in_console`·`quantity_mismatch`
-#: 양쪽에서 조용히 사라진다(실증). 1단계는 그 소멸을 `skipped_checks`에 적지 않는다 —
-#: 고칠 권한은 1단계에 있지만 **고지할 자리는 2단계에도 있다**. 여기서 고지한다.
+#: 콘솔 부재 판정은 `rig.fuzzy_type_equal`로 조인한다. 정규화 후 영숫자가 남지 않는 도면
+#: 타입 이름은 **이름이 빈 칸이 아닌 콘솔 타입 전부**와 일치하므로 그 픽스처는
+#: `missing_in_console`에서 조용히 사라진다(실증). 1단계는 그 소멸을 `skipped_checks`에
+#: 적지 않는다 — 고칠 권한은 1단계에 있지만 **고지할 자리는 2단계에도 있다**.
+#:
+#: [round19 major#3] 이 코드는 **`missing_in_console` 축 전용**이다. round18판은 한 코드로
+#: 두 축을 말하면서 부재 축의 필터(`classification == "patched"` · 좌표 존재)만 베껴 왔고,
+#: 그래서 수량 축에서 실제로 소멸하는 미패치·좌표부재 픽스처를 0건으로 셌다. 축마다 1단계
+#: 필터가 다르므로 축마다 코드가 다르다.
 DESIGNED_TYPE_NAME_VACUOUS = "designed_type_name_vacuous"
+#: [round19 major#3] 1단계 수량 대조(`diff.py`의 `designed_counts` 루프)는 `classification`도
+#: 좌표도 가리지 않고 **전 도면 픽스처**를 센다 — 그 루프에는 `if`가 하나도 없다. 그래서
+#: 미패치 픽스처와 좌표가 `None`인 패치 픽스처도 이 축에서는 소멸한다(실측 확인).
+DESIGNED_TYPE_NAME_VACUOUS_QUANTITY_AXIS = "designed_type_name_vacuous_quantity_axis"
+#: [round19 major#1] 1단계 콘솔 조인이 **아예 수행되지 않은** 리포트에서는 위 두 코드의
+#: 문장이 거짓이다: 일치로 본 적도, 소멸한 적도 없다. `diff.compare`의
+#: `if not multi_system:` 가드가 두 축 루프를 통째로 건너뛰고, `diffs.performed=False`는
+#: 세 키가 생략된 상태이며, `diffs`가 없는 payload에는 축 산출이라 할 것이 없다. 그 갈래에서는
+#: 공허한 이름의 **존재**만 고지하고 소멸 여부는 말하지 않는다.
+DESIGNED_TYPE_NAME_VACUOUS_JOIN_ABSENT = "designed_type_name_vacuous_join_absent"
 
 TYPE_RESOLVED = "resolved"
 TYPE_NEEDS_CONFIRMATION = "needs_confirmation"
@@ -83,6 +116,11 @@ TYPE_LIBRARY_INCOMPLETE = "library_incomplete"
 #: round18 결함 R18-E — 도면 타입 이름이 공허해 대조 기준도, 별칭 확인 경로도 없다.
 #: `needs_confirmation`(확인 대기)도 `library_absent`(부재 단정)도 참이 아니다.
 TYPE_NAME_UNUSABLE = "designed_type_name_unusable"
+#: round19 결함 major#5 — 콘솔 라이브러리의 **전 모드를 실측**했고 도면 DMX Footprint와
+#: 채널 수가 맞는 모드가 하나도 없다. `needs_confirmation`(확인 대기)이 아니다: 고를 수
+#: 있는 모드가 없다. `library_absent`(부재 단정)도 아니다: 모드는 라이브러리에 있고
+#: 점유폭만 안 맞는다 — 임포트가 아니라 도면 값이 고칠 대상이다.
+TYPE_FOOTPRINT_UNMATCHABLE = "designed_footprint_unmatchable"
 
 VERIFICATION_OBSERVED = "observed"
 VERIFICATION_NOT_OBSERVED = "not_observed"
@@ -116,6 +154,15 @@ TARGET_EXCLUSION_REASON = frozenset(
         FIXTURE_TYPE_NOT_IN_LIBRARY,
         DMX_MODE_NOT_IN_LIBRARY,
         FIXTURE_TYPE_NAME_UNUSABLE,
+        DESIGNED_FOOTPRINT_MATCHES_NO_MODE,
+        # [round19 major#4 형제 필드] 두 어휘에 함께 사는 코드다. `skipped_check_kind`로는
+        # "이 확인을 못 했다"를, `target_exclusion_reason`으로는 "그래서 이 대상을 뺐다"를
+        # 말한다 — `console_read_incomplete`가 배제 어휘와 caveat 어휘 양쪽에 있는 선례와
+        # 같다. 이 둘이 배제 어휘에 없으면 `TypeResolution.incompleteness_kind`가
+        # `type_confirmation_pending`으로 뭉개지고, 조작자는 **고를 것이 없는 상태**에서
+        # 확인 화면을 기다린다(R18-E와 같은 거짓).
+        FIXTURE_TYPE_LIBRARY_TRUNCATED,
+        FIXTURE_TYPE_LIBRARY_UNREADABLE,
         ADDRESS_ALREADY_OCCUPIED,
         ADDRESS_OVERLAP_IN_PLAN,
         FOOTPRINT_UNKNOWN,
@@ -141,6 +188,8 @@ SKIPPED_CHECK_KIND = frozenset(
         FID_CONFLICT_PRECHECK_INCOMPLETE,
         EXISTING_FOOTPRINT_UNREADABLE,
         DESIGNED_TYPE_NAME_VACUOUS,
+        DESIGNED_TYPE_NAME_VACUOUS_QUANTITY_AXIS,
+        DESIGNED_TYPE_NAME_VACUOUS_JOIN_ABSENT,
     }
 )
 TYPE_RESOLUTION_STATUS = frozenset(
@@ -150,6 +199,7 @@ TYPE_RESOLUTION_STATUS = frozenset(
         TYPE_LIBRARY_ABSENT,
         TYPE_LIBRARY_INCOMPLETE,
         TYPE_NAME_UNUSABLE,
+        TYPE_FOOTPRINT_UNMATCHABLE,
     }
 )
 CONSOLE_READ_CAVEAT_KIND = frozenset(
@@ -222,6 +272,20 @@ _TARGET_EXCLUSION_LABELS = {
     FIXTURE_TYPE_NAME_UNUSABLE: (
         "도면 타입 이름이 공허 — 대조 기준도 별칭 확인 경로도 없어 제외, 도면을 고쳐야 함"
     ),
+    DESIGNED_FOOTPRINT_MATCHES_NO_MODE: (
+        "도면 DMX Footprint와 채널 수가 맞는 콘솔 DMXMode가 하나도 없음 — "
+        "모드 선택으로 벗어날 수 없어 제외, 도면 점유폭을 고쳐야 함"
+    ),
+    # [round19 major#4 형제 필드] 같은 코드가 `skipped_check_kind`에서는 "부재 단정 불가"를
+    # 말한다. 배제 자리의 라벨은 **그래서 이 대상을 어떻게 했는가**와 조작자가 할 일을 적는다.
+    FIXTURE_TYPE_LIBRARY_TRUNCATED: (
+        "FixtureType·DMXMode 열거가 절단돼 라이브러리를 전수로 보지 못함 — "
+        "고를 수 있는 것을 다 보여줄 수 없어 제외, 라이브러리를 다시 읽어야 함"
+    ),
+    FIXTURE_TYPE_LIBRARY_UNREADABLE: (
+        "FixtureType·DMXMode 또는 채널 수를 읽지 못함 — "
+        "고를 수 있는 것을 다 보여줄 수 없어 제외, 라이브러리를 다시 읽어야 함"
+    ),
     ADDRESS_ALREADY_OCCUPIED: "도면 주소가 콘솔에서 이미 점유됨",
     ADDRESS_OVERLAP_IN_PLAN: "같은 유니버스 안에서 다른 계획 항목과 점유 구간이 겹침",
     FOOTPRINT_UNKNOWN: "점유폭 미확정 — 추측하지 않고 제외",
@@ -251,8 +315,16 @@ _SKIPPED_CHECK_LABELS = {
     FID_CONFLICT_PRECHECK_INCOMPLETE: "FID 충돌 사전검사 부분 관측 — 빈 FID 단정 불가",
     EXISTING_FOOTPRINT_UNREADABLE: ("기존 픽스처 점유폭 미판독 — 꼬리 구간 겹침은 검출되지 않는다"),
     DESIGNED_TYPE_NAME_VACUOUS: (
-        "도면 타입 이름이 공허한 픽스처가 있음 — 1단계 콘솔 대조가 그 항목을 삼켰을 수 있어 "
-        "부재도 수량 차이도 단정 불가"
+        "도면 타입 이름이 공허한 픽스처가 있음 — 1단계 콘솔 부재 판정이 그 항목을 삼켰을 수 "
+        "있어 콘솔 부재 단정 불가"
+    ),
+    DESIGNED_TYPE_NAME_VACUOUS_QUANTITY_AXIS: (
+        "도면 타입 이름이 공허한 픽스처가 있음 — 1단계 수량 대조가 그 항목을 삼켰을 수 있어 "
+        "수량 차이 단정 불가"
+    ),
+    DESIGNED_TYPE_NAME_VACUOUS_JOIN_ABSENT: (
+        "도면 타입 이름이 공허한 픽스처가 있음 — 1단계 콘솔 조인 미수행이라 소멸 여부 자체를 "
+        "말할 수 없음"
     ),
 }
 _TYPE_RESOLUTION_STATUS_LABELS = {
@@ -261,6 +333,7 @@ _TYPE_RESOLUTION_STATUS_LABELS = {
     TYPE_LIBRARY_ABSENT: "콘솔 라이브러리 부재 — 하드 스톱",
     TYPE_LIBRARY_INCOMPLETE: "라이브러리 관측 불완전 — 부재를 단정하지 않음",
     TYPE_NAME_UNUSABLE: "도면 타입 이름이 공허 — 확인 경로 없음, 하드 스톱",
+    TYPE_FOOTPRINT_UNMATCHABLE: "도면 점유폭과 맞는 DMXMode 없음 — 선택 경로 없음, 하드 스톱",
 }
 _CONSOLE_READ_CAVEAT_LABELS = {
     CONSOLE_READ_INCOMPLETE: "재조회에 미판독이 남았다 — 없음을 단정할 수 없다",

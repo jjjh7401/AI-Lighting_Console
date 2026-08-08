@@ -113,7 +113,7 @@ status: draft (v0.1.5, 2026-08-06) · Tier L · 읽기 전용 조사. 코드 변
 
 ### 4.2 우리가 가진 것 `[코드]`
 
-- 열거 경로는 존재한다: `server/orchestrator/tools.py:202` `"fixture_types": "Patch/FixtureTypes"`.
+- 열거 경로는 존재한다: `server/orchestrator/tools.py` `DEFAULT_RIG_CONTEXT_PATHS`의 `"fixture_types": "Patch/FixtureTypes"`(**[round19 #1 정정]** 이전 판은 `:202` — 그 행은 preset pool 설명 주석이고 실제는 `d03597b`에서 `:224`다).
 - 모드까지의 경로도 언급되어 있다: `server/prechk/patch.py:22` —
   `Patch/FixtureTypes/<t>/DMXModes/<m>/DMXChannels`. 다만 **실측되지 않았다** `[미확정]`
   → `ASSUMPTION-72`.
@@ -184,12 +184,12 @@ Vectorworks라면 `Robe Robin MMX Spot` 계열로 나올 것이다 `[미확정]`
 
 | 재사용 | 진입점 | 계약 |
 |---|---|---|
-| 배포 안전 파이프라인 | `server/orchestrator/tools.py:1266` `deploy_plugin` | 컴파일 + 정적 스캔 + 사람 리뷰 |
+| 배포 안전 파이프라인 | `server/orchestrator/tools.py` `deploy_plugin`(**[round19 #1 정정]** 이전 판은 `:1266` — 무관한 닫는 괄호. 실제는 `d03597b`에서 `:1288`) | 컴파일 + 정적 스캔 + 사람 리뷰 |
 | 콘솔 쓰기 단일 통로 | `run_commands` → `bundle_gate.screen()` | AST 스캔이 우회를 금지(`server/tests/test_prechk_tool.py:330-343`) |
 | 인벤토리 읽기 | `server/prechk/inventory.py:348` `read_inventory` | 검증 읽기에 재사용. **변경 금지** |
 | 주소 정규화 | `server/prechk/patch.py:100-147` `normalize_address` | 두 정수 아니면 없음. 기본값 날조 금지 |
 | 판정 평가 | `server/prechk/patch.py:684` `evaluate_patch` | 검증 읽기 판정에 재사용 |
-| 타입 라이브러리 열거 | `server/orchestrator/tools.py:202` | 후보 집합 |
+| 타입 라이브러리 열거 | `server/orchestrator/tools.py` `DEFAULT_RIG_CONTEXT_PATHS["fixture_types"]` `[round19 #1 정정]` | 후보 집합 |
 | 툴 등록 절차 | `server/preshow/TOOLS_REGISTRATION.md` | 5지점 + dispatch 검증 |
 | 아키텍처 경계 | `server/tests/test_architecture.py:33,49` | `server.bridge`·`pythonosc` import 금지 |
 
