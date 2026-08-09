@@ -742,6 +742,13 @@ _R17_VWX_BOUNDARY_SITES: tuple[_Site, ...] = (
     _Site("rig.py", "slice", "raw.strip().upper()[:1]"),
     _Site("typemap.py", "lencmp", "len(mode_candidates) == 1"),
     _Site("typemap.py", "lencmp", "len(type_candidates) == 1"),
+    # --- round23 R22-B 초과 열거 (CompletenessGate) — 계수 대조의 **반대 방향**을
+    # **루트 축과 모드 축 둘 다**에서 본다(한쪽만 고치면 "형제 절반만 고침"이 남는다).
+    # `>`를 `>=`로 밀면 선언과 정확히 같은 관측이 초과로 읽혀 깨끗한 스냅샷이 상시
+    # 불완전이 되고, `<`로 밀면 초과 열거가 영영 안 걸린다. 대조군은
+    # `test_autopatch_types.py`의 round23 완전성 게이트 절.
+    _Site("typemap.py", "lencmp", "len(self.types) > self.child_count"),
+    _Site("typemap.py", "lencmp", "len(self.modes) > self.mode_child_count"),
     # --- round21 폐기 축 (SlotDiscard) — 목록 완전성 union의 세 번째 갈래. `> 0`을
     # `> 1`로 밀면 폐기 행 **한 개**가 union에 걸리지 않아 부분 목록이 전수로 읽히고,
     # `>= 0`(항상 참)으로 밀면 깨끗한 스냅샷도 상시 불완전이 된다. 양방향 대조군은
@@ -756,14 +763,13 @@ _R17_VWX_BOUNDARY_SITES: tuple[_Site, ...] = (
     # `test_r21_the_sweep_boundary_is_exactly_one_to_child_count`가 프로브된 인덱스
     # 목록을 값으로 고정해 잡는다.
     _Site("typemap.py", "offby", "child_count + 1"),
-    # 같은 함수의 "이 이름이 요청 키에 걸렸는가" 판정. 길이 비교로 쓰는 이유는
-    # **첫 일치를 고르지 않기 위해서**다(round17 모호성 규율 — `next(...)`를 쓰면
-    # 같은 콘솔 이름에 두 요청 키가 걸릴 때 순서가 왕복 수를 갈랐다).
-    # `!=`로 밀면 일치를 못 찾고도 회수를 시도하고, 항상 참으로 밀면 스윕이 첫 인덱스에서
-    # 멈춘다 — `test_r21_the_sweep_stops_at_the_first_match_and_never_reads_`
-    # `unrequested_types`가 프로브 인덱스 목록과 DMXModes 판독 목록을 함께 고정해
-    # 양쪽을 잡는다.
-    _Site("typemap.py", "lencmp", "len(remaining) == len(pending)"),
+    # --- round23 R22-C (SweepCorrectness) — **`len(remaining) == len(pending)` 자리를
+    # 지웠다.** 그 표현식은 "요청 키가 걸렸으면 그 슬롯에서 멈춘다"는 조기 종료의
+    # 코드 형태였고, 포함관계 퍼지 매칭에서 **엉뚱한 타입을 확정**시켰다(R22-C). 이제
+    # 스윕은 전 미열거 슬롯의 이름을 프로브해 일치를 전수로 모으고, 걸렸는지 여부만
+    # 묻는 `any(...)`는 수치 경계가 아니라 등기 대상이 아니다. 모호성 확정 규율은
+    # 열거 경로의 `len(type_candidates) == 1`(위 행)이 단독으로 진다 — 같은 판단을
+    # 두 자리가 나눠 갖던 것이 결함의 기제였다.
 )
 
 #: 자리별 판정 메모 — 등가 뮤턴트임을 근거와 함께 남긴다(무대조군 오분류 방지).
