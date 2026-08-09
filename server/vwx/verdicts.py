@@ -85,6 +85,27 @@ FID_CONFLICT_PRECHECK_DESCOPE = "fid_conflict_precheck_descope"
 FOOTPRINT_MATCH_DESCOPE = "footprint_match_descope"
 FIXTURE_TYPE_LIBRARY_TRUNCATED = "fixture_type_library_truncated"
 FIXTURE_TYPE_LIBRARY_UNREADABLE = "fixture_type_library_unreadable"
+#: round20 결함 R20-D — FixtureType·DMXMode **열거 응답은 정상으로 받았는데**(`ok=true`),
+#: 그 안의 행 일부가 슬롯 번호(`i`)를 갖고 있지 않거나 매핑조차 아니어서 쓰지 못했다.
+#: `typemap`은 그런 행을 **계수 없이 버렸고**, 그래서 "슬롯이 확립되지 않았다"가
+#: `library_absent`("라이브러리에 없다")로 바뀌어 나갔다. responder `safe_children`의
+#: `probe_slots` 통째 nil / per-child `slot_confirms` 폴백이 이 스냅샷을 실제로 만든다 —
+#: PRESERVE `server/prechk/inventory.py` 독스트링이 슬롯 부재를 "documented responder
+#: behaviour rather than a hypothesis"라 못박은 그 형태다.
+#:
+#: **왜 `fixture_type_library_truncated`를 재사용하지 않는가**: 절단은 **목록이 잘려 뒤가
+#: 안 온 것**이고 조치는 더 좁은 재판독·표적 스윕이다. 여기서는 목록이 끝까지 왔고 그
+#: 안의 행이 못 쓸 상태다 — 같은 범위를 다시 읽어도 같은 행이 온다. 절단으로 적으면
+#: 조작자는 효과 없는 재판독을 반복한다. 형제 `patchplan.ExistingFidRead`가 이미 두 축을
+#: `unseen_count`와 `unusable_row_count`로 **따로** 센다 — 그 구별을 그대로 가져온다.
+#:
+#: **왜 `fixture_type_library_unreadable`이 아닌가**: 그 코드의 사유는 "열거를 읽지
+#: 못했다"이고 조치는 재시도다. 여기서는 열거를 **읽었다** — 그렇게 적으면 payload가
+#: 관측 사실을 거짓으로 말한다(R18-A "검사했고 깨끗하다"와 같은 형태의 반대편).
+#:
+#: **왜 `fixture_type_not_in_library`가 아닌가**: 그것이 R20-D가 낸 거짓 그 자체다.
+#: 라이브러리는 온전히 있는데 "콘솔에서 GDTF 라이브러리 임포트를 먼저 하라"고 말했다.
+FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED = "fixture_type_library_rows_discarded"
 FID_CONFLICT_PRECHECK_INCOMPLETE = "fid_conflict_precheck_incomplete"
 EXISTING_FOOTPRINT_UNREADABLE = "existing_footprint_unreadable"
 #: round18 결함 R18-J — 1단계(`server/vwx/diff.py`, AC-AUTOPATCH-025 무변경 계층)의
@@ -163,6 +184,7 @@ TARGET_EXCLUSION_REASON = frozenset(
         # 확인 화면을 기다린다(R18-E와 같은 거짓).
         FIXTURE_TYPE_LIBRARY_TRUNCATED,
         FIXTURE_TYPE_LIBRARY_UNREADABLE,
+        FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED,
         ADDRESS_ALREADY_OCCUPIED,
         ADDRESS_OVERLAP_IN_PLAN,
         FOOTPRINT_UNKNOWN,
@@ -185,6 +207,7 @@ SKIPPED_CHECK_KIND = frozenset(
         FOOTPRINT_MATCH_DESCOPE,
         FIXTURE_TYPE_LIBRARY_TRUNCATED,
         FIXTURE_TYPE_LIBRARY_UNREADABLE,
+        FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED,
         FID_CONFLICT_PRECHECK_INCOMPLETE,
         EXISTING_FOOTPRINT_UNREADABLE,
         DESIGNED_TYPE_NAME_VACUOUS,
@@ -278,13 +301,25 @@ _TARGET_EXCLUSION_LABELS = {
     ),
     # [round19 major#4 형제 필드] 같은 코드가 `skipped_check_kind`에서는 "부재 단정 불가"를
     # 말한다. 배제 자리의 라벨은 **그래서 이 대상을 어떻게 했는가**와 조작자가 할 일을 적는다.
+    # [round21 R20-A ⓒ] "라이브러리를 다시 읽어야 함"은 **수행 불가능한 지시**였다.
+    # 열거 상한이 하드 캡이고 payload 예산이 그보다 먼저 물기 때문에, 재판독은 결정적으로
+    # 같은 앞부분을 다시 준다. 표적 스윕(`typemap.recover_requested_types`)까지 실패한
+    # 뒤에야 이 자리에 오므로, 라벨은 조작자가 **실제로 할 수 있는 것**을 가리킨다.
     FIXTURE_TYPE_LIBRARY_TRUNCATED: (
-        "FixtureType·DMXMode 열거가 절단돼 라이브러리를 전수로 보지 못함 — "
-        "고를 수 있는 것을 다 보여줄 수 없어 제외, 라이브러리를 다시 읽어야 함"
+        "FixtureType·DMXMode 열거에 미관측분이 남음 — 고를 수 있는 것을 다 보여줄 수 없어 제외. "
+        "재판독은 같은 앞부분을 다시 준다(열거 상한이 하드 캡) — 도면 타입명을 콘솔 표기와 "
+        "맞추거나, 그 GDTF를 콘솔 라이브러리에 임포트해야 함"
     ),
     FIXTURE_TYPE_LIBRARY_UNREADABLE: (
-        "FixtureType·DMXMode 또는 채널 수를 읽지 못함 — "
-        "고를 수 있는 것을 다 보여줄 수 없어 제외, 라이브러리를 다시 읽어야 함"
+        "FixtureType·DMXMode 또는 채널 수를 읽지 못함 — 고를 수 있는 것을 다 보여줄 수 없어 제외. "
+        "콘솔 응답을 먼저 확인하고, 그 뒤 도면 타입명을 콘솔 표기와 맞추거나 그 GDTF를 "
+        "콘솔 라이브러리에 임포트해야 함"
+    ),
+    # [round20 R20-D 형제 필드] 절단·판독실패와 **다른 축**이므로 조치도 다르게 적는다.
+    # 재판독을 시키지 않는다 — 같은 범위를 다시 읽어도 같은 행이 온다.
+    FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED: (
+        "FixtureType·DMXMode 열거 행 일부에 슬롯 번호가 없어 쓰지 못함 — "
+        "라이브러리 목록을 전수로 세울 수 없어 제외, 콘솔 열거 응답이 슬롯 번호를 주지 않았다"
     ),
     ADDRESS_ALREADY_OCCUPIED: "도면 주소가 콘솔에서 이미 점유됨",
     ADDRESS_OVERLAP_IN_PLAN: "같은 유니버스 안에서 다른 계획 항목과 점유 구간이 겹침",
@@ -310,8 +345,11 @@ _TARGET_EXCLUSION_LABELS = {
 _SKIPPED_CHECK_LABELS = {
     FID_CONFLICT_PRECHECK_DESCOPE: "FID 충돌 사전검사 미수행",
     FOOTPRINT_MATCH_DESCOPE: "점유폭 일치 확인 미수행",
-    FIXTURE_TYPE_LIBRARY_TRUNCATED: "FixtureType 열거 절단 — 부재 단정 불가",
+    # [round21 R20-A ⓐ] "절단"만 적으면 계수만 어긋난 스냅샷(플래그는 거짓)에서 라벨이
+    # 일어나지 않은 원인을 단정한다. 관측 축의 사실은 **미관측분이 남았다**는 것 하나다.
+    FIXTURE_TYPE_LIBRARY_TRUNCATED: "FixtureType 열거 미관측분 — 부재 단정 불가",
     FIXTURE_TYPE_LIBRARY_UNREADABLE: "FixtureType 열거 실패 — 부재 단정 불가",
+    FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED: "FixtureType 열거 행 폐기 — 부재 단정 불가",
     FID_CONFLICT_PRECHECK_INCOMPLETE: "FID 충돌 사전검사 부분 관측 — 빈 FID 단정 불가",
     EXISTING_FOOTPRINT_UNREADABLE: ("기존 픽스처 점유폭 미판독 — 꼬리 구간 겹침은 검출되지 않는다"),
     DESIGNED_TYPE_NAME_VACUOUS: (
