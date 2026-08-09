@@ -81,7 +81,7 @@ Save As/Load 콘솔 절차는 전면 미실측이고, P5-D의 강점은 문법 �
 **프론트매터 `next:` 필드 안의 계수**(**[round17]** 이 네 번째 자리를 규칙이 빠뜨려
 `next:`가 두 라운드 stale로 남았다 — 규칙 자체가 결함이었다).
 한 곳만 고치면 같은 결함이 재발한다(round12~14가 그렇게 stale을 남겼다) ·
-커밋 **run-phase 34건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 **38건** — **본 갱신을 담은 커밋을
+커밋 **run-phase 36건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 **40건** — **본 갱신을 담은 커밋을
 포함한 계수**다. 갱신마다 재계산하라. round10 감사 N55).
 **[round18 D-11] 명령줄을 함께 남긴다** — `git rev-list --count 9f7516c..HEAD` ·
 `git rev-list --count ca00bc5..HEAD`. 이전 판은 27/31로 한 커밋(`d1cd4a9`) stale이었다.
@@ -5414,7 +5414,7 @@ round19가 남긴 음성 결과(*"표지를 안 박은 새 stale 셀은 못 잡�
 
 | 항목 | 값 |
 |---|---|
-| 테스트 | **6,870 → 7,070 passed / 7 skipped (+200, 회귀 0)** · ruff clean · PRESERVE·`diff.py`·`rig.py` 0-diff · 커밋 **run-phase 34건 / 총 38건**(본 커밋 포함) |
+| 테스트 | **6,870 → 7,070 passed / 7 skipped (+200, 회귀 0)** · ruff clean · PRESERVE·`diff.py`·`rig.py` 0-diff · 커밋 **run-phase 36건 / 총 40건**(본 갱신 포함) |
 | ruff | `<반영 후>` `[동]` |
 | PRESERVE 5경로 | **0-diff** — `git diff --stat -- console/lua server/safety server/prechk server/paperwork server/looks` 빈 출력 `[동]` |
 | `diff.py`·`rig.py` | **0-diff**(1단계 계층 · 동작 변경 금지) `[동]` |
