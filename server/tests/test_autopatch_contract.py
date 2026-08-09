@@ -21,6 +21,8 @@ import ast
 import base64
 import importlib
 import json
+import sys
+from functools import lru_cache
 from pathlib import Path
 
 import pytest
@@ -172,7 +174,51 @@ def test_the_added_columns_did_not_displace_the_stage_one_columns():
 AUTOPATCH_TEST_DIR = PROJECT_ROOT / "server" / "tests"
 AUTOPATCH_TEST_FILES = tuple(sorted(p.name for p in AUTOPATCH_TEST_DIR.glob("test_autopatch_*.py")))
 VWX_DIR = PROJECT_ROOT / "server" / "vwx"
-VWX_MODULE_FILES = frozenset(p.name for p in VWX_DIR.glob("*.py"))
+
+#: `server/vwx` 순회에서 빼는 디렉터리 이름. **제외 규칙은 이 한 자리에만 있다** —
+#: 같은 제외를 열 군데에 복사하면 그 사본들이 다음 라운드의 형제 불일치가 된다.
+#: (round15 B가 `_discover_modules`에서 재귀성을 고쳤는데 형제 아홉 자리로 전파되지
+#: 않은 것이 이 SPEC의 서명 형태다 — 순회의 정의를 나눠 갖는 순간 같은 일이 반복된다.)
+_VWX_SCAN_EXCLUDED_DIRS = frozenset({"__pycache__", ".venv", "venv", ".tox", ".mypy_cache"})
+
+
+def iter_vwx_modules(root: Path | str = VWX_DIR) -> tuple[Path, ...]:
+    """`root`(기본 `server/vwx`) 아래 파이썬 모듈 **전수**. 「전 모듈」의 **유일한** 정의다.
+
+    `rglob`이라 하위 패키지까지 내려간다. 평면 `glob("*.py")`은 `server/vwx/` **바로
+    아래**만 보므로 하위 패키지가 하나 생기는 순간 그 파일들이 「전 모듈」 정의에서
+    조용히 빠진다. 오늘은 `server/vwx`에 하위 패키지가 없어 두 표현의 결과가 **같다** —
+    그래서 실물만으로는 그 축소가 보이지 않고, 아래 (다) 절이 합성 트리와 주입
+    대조군으로 그 사각을 대신 잰다.
+    """
+    return tuple(
+        sorted(
+            path
+            for path in Path(root).rglob("*.py")
+            if _VWX_SCAN_EXCLUDED_DIRS.isdisjoint(path.parts)
+        )
+    )
+
+
+def vwx_module_label(path: Path | str) -> str:
+    """스캔한 경로 → 등기부가 쓰는 모듈 표지. `server/vwx` 기준 상대 posix 경로다.
+
+    `path.name`으로 줄이면 `console/report.py`와 `report.py`가 **같은 표지로 뭉쳐**
+    하위 패키지가 생기는 날 두 자리가 하나로 붕괴한다 — 순회만 넓히고 표지를 그대로
+    두면 재귀가 반만 된 것이다. 오늘은 전 모듈이 최상위라 `path.name`과 값이 같다.
+    """
+    _head, separator, tail = Path(path).as_posix().rpartition("server/vwx/")
+    return tail if separator else Path(path).name
+
+
+#: 「전 모듈」의 **분모**. 재귀 순회에서 파생한다 — 분모가 틀리면 그 위의 판정이 전부
+#: 같이 틀린다(아래 round17 등기부 전체가 이 집합을 딛는다).
+VWX_MODULE_FILES = frozenset(vwx_module_label(path) for path in iter_vwx_modules())
+
+#: **결속에서 빼는** 이름. 분모는 대조용 **이름 집합**이지 "읽을 파일"이 아니다 —
+#: 넣으면 등기부를 대조하는 함수(`_r17_ast_scanners`)가 분모를 참조한다는 이유만으로
+#: 자기 자신을 「전 모듈을 읽는 스캐너」로 세고, 비공허성 단정이 항진식이 된다.
+_R17_NON_READING_NAMES = ("VWX_MODULE_FILES",)
 
 #: 전체성을 주장하는 어휘. 이 중 하나가 스캐너 독스트링에 있으면 스코프를 명시해야 한다.
 #: `전체`는 제외한다 — "점 표기 체인 전체"처럼 **스코프가 아닌 것**을 가리키는 용례가 흔해
@@ -183,15 +229,27 @@ _R17_TOTALITY_WORDS = ("전부", "전수", "모든")
 _R17_CALLER_SCOPE_MARKERS = ("소스", "인자", "심은", "사본", "지정한", "plant")
 
 
-def _r17_globs_the_vwx_directory(node: ast.AST) -> bool:
-    """`Path("server/vwx").glob(...)`처럼 **디렉터리를 훑는** 표현인가.
+def _r17_reads_every_vwx_module(node: ast.AST) -> bool:
+    """`server/vwx` **전 모듈**을 손에 넣는 표현인가 — 디렉터리 순회이거나 공용 순회 호출.
 
-    `Path("server/vwx") / name`처럼 경로를 **조인**하는 것과 구별한다 — 전자는 스코프가
-    "그 시점의 전 모듈"이지만 후자는 조인되는 이름이 정한다. 이 구별이 없으면
+    `Path("server/vwx") / name`처럼 경로를 **조인**하는 것과 구별한다 — 순회는 스코프가
+    "그 시점의 전 모듈"이지만 조인은 조인되는 이름이 정한다. 이 구별이 없으면
     두 모듈만 읽는 스캐너가 전 모듈 스캐너로 오분류되어 규율이 거짓 양성을 낸다.
+
+    [round24] `iter_vwx_modules(...)` **호출**도 같은 값으로 본다. round17 판정기는
+    리터럴 글롭만 봤고, 그래서 순회를 공용 함수로 모으는 순간 여덟 스캐너가 등기부에서
+    `self_bound`(전 모듈) → `synthetic`으로 조용히 강등됐다 — 등기에서 소리 없이
+    사라지는 것이 이 SPEC의 반복 실패 형태다. 리터럴만 보는 판정기는 「어느 파일을
+    읽는가」를 **이름 한 다리 건너** 적으면 못 보고, 그 축이 곧 R23-3의 축(심볼 해석)이다.
     """
-    if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+    if not isinstance(node, ast.Call):
         return False
+    if isinstance(node.func, ast.Name) and node.func.id == iter_vwx_modules.__name__:
+        return True
+    if not isinstance(node.func, ast.Attribute):
+        return False
+    if node.func.attr == iter_vwx_modules.__name__:
+        return True
     if node.func.attr not in ("glob", "rglob", "iterdir"):
         return False
     return any(
@@ -228,9 +286,9 @@ def _r17_module_bindings(source: str) -> dict[str, frozenset[str]]:
                     found.add(text[len("server/vwx/") :])
                 elif text in VWX_MODULE_FILES:
                     found.add(text)
-            elif _r17_globs_the_vwx_directory(child):
-                # 디렉터리를 **훑는다** — 스코프는 그 시점의 전 모듈이다. 단순히
-                # `Path("server/vwx") / name`으로 **조인**하는 것은 전 모듈이 아니다.
+            elif _r17_reads_every_vwx_module(child):
+                # 디렉터리를 **훑거나** 공용 순회를 부른다 — 스코프는 그 시점의 전 모듈이다.
+                # 단순히 `Path("server/vwx") / name`으로 **조인**하는 것은 전 모듈이 아니다.
                 found |= VWX_MODULE_FILES
             elif isinstance(child, ast.Name):
                 found |= bindings.get(child.id, frozenset())
@@ -240,7 +298,7 @@ def _r17_module_bindings(source: str) -> dict[str, frozenset[str]]:
     for node in tree.body:
         if isinstance(node, ast.Assign):
             for target in node.targets:
-                if isinstance(target, ast.Name):
+                if isinstance(target, ast.Name) and target.id not in _R17_NON_READING_NAMES:
                     targets.append((target.id, node.value))
         elif isinstance(node, ast.FunctionDef) and not node.args.args:
             targets.append((node.name, node))
@@ -294,7 +352,7 @@ def _r17_ast_scanners() -> tuple[tuple[str, str, str, tuple[str, ...]], ...]:
                         leaf = text[len("server/vwx/") :]
                         if leaf in VWX_MODULE_FILES:
                             reached.add(leaf)
-                elif _r17_globs_the_vwx_directory(node):
+                elif _r17_reads_every_vwx_module(node):
                     reached |= VWX_MODULE_FILES
             kind = "self_bound" if reached else "synthetic"
             scanners.append((name, fn.name, kind, tuple(sorted(reached))))
@@ -304,6 +362,31 @@ def _r17_ast_scanners() -> tuple[tuple[str, str, str, tuple[str, ...]], ...]:
 #: 이 절은 **손으로 쓴 등기부를 두지 않는다.** 스코프 대조는 소스에서 전부 파생하므로
 #: 새 스캐너는 자동으로 규율에 들어오고, 지울 행 자체가 없어 조용한 축소가 불가능하다.
 #: (round17 #8·#9·#10이 전부 "표는 있는데 행삭제 게이트가 없다"였다 — 표를 없애는 쪽이 낫다.)
+#
+# [round24] **이 등기부가 재는 축과 재지 않는 축.** 여기가 재는 것은 「어느 **파일**을
+# 읽는가」뿐이다. R23-3은 *넓은 파일 범위 위의 **좁은 이름 해석***이었고 — 형제 모듈에서
+# 임포트한 dataclass를 못 알아보는 해석기 — 그래서 `self_bound`(전 모듈)로 등기된 채 두
+# 라운드를 살아남았다. 그 축의 일부를 round24에서 닫았다:
+#
+#   닫은 것 ㉠ **경로 심볼 해석** — 순회 수신자를 이름·조인·`Path(...)`까지 환원한다
+#            (`_r24_dir_tail`). 리터럴만 보던 판정기는 `VWX_DIR.glob(...)`를 못 봤다.
+#   닫은 것 ㉡ **모듈 경계를 넘는 심볼** — `iter_vwx_modules(...)` 호출을 순회로 본다.
+#            없으면 순회를 공용 함수로 모으는 순간 여덟 스캐너가 등기에서 조용히 빠진다
+#            (`test_r24_the_scope_registry_follows_the_shared_traversal_through_an_import`).
+#   닫은 것 ㉢ **분모** — 「전 모듈」이 재귀 순회에서 나온다. 분모가 틀리면 이 등기부 위의
+#            판정이 전부 같이 틀린다.
+#
+#   **닫지 않은 것** — 스캐너 **안에서** 식별자를 좁게 해석하는 것(R23-3의 정확한 모양).
+#   근거: 그 좁음에는 건전한 구문 서명이 없다. 「파싱한 트리에서 만든 이름 집합과 대조하면
+#   의심」 같은 발견법은 `_r17_report_builder_names`처럼 **그렇게 하는 것이 옳은** 스캐너에
+#   그대로 발화한다. 흔한 거짓 양성은 게이트의 강제력을 없앤다(§0 2b④) — 열세 라운드 동안
+#   이 SPEC을 무너뜨린 것은 게이트의 부재만이 아니라 아무도 믿지 않는 게이트이기도 했다.
+#   그 축의 올바른 도구는 등기부가 아니라 **스캐너별 주입 대조군**이다(R23-3이 실제로
+#   그렇게 닫았다: 형제 모듈이 선언한 타입을 합성 트리에 심어 해석기가 그것을 보는지 잰다).
+#   남은 범위: `_r19_typeresolution_calls`·`_r19_rejection_codes_in_production`·
+#   `_r21_notice_axis_table` — 「그 타입/코드는 한 모듈에서만 만들어진다」는 오늘의 사실에
+#   기대는 세 자리다(round23 감사 목록 D). 형제 모듈이 그것을 만들기 시작하는 날 사각이
+#   되며, 그때 필요한 것은 각 자리의 주입 대조군이지 여기 표 한 줄이 아니다.
 
 
 def test_at_least_one_scanner_reads_every_vwx_module():
@@ -405,6 +488,448 @@ def test_the_scope_declaration_rule_is_not_vacuous():
 
     assert verdict(honest, "self_bound", ("patchplan.py",)) is True
     assert verdict(dishonest, "self_bound", ("patchplan.py",)) is False
+
+
+# ---- (다) [round24] 「전 모듈」 순회는 재귀이고, 그 정의는 한 자리다 -------------------
+#
+# **무증상 결함이다.** `server/vwx`에 오늘 하위 패키지가 없어서 평면 `glob("*.py")`과
+# 재귀 `rglob("*.py")`은 **같은 답**을 낸다. 그래서 열 자리가 「전 모듈」을 자처하면서
+# 평면 글롭인 채로 열세 라운드를 살아남았고, 하위 패키지가 하나 생기는 날 전부 **동시에**
+# 사각이 된다. 실물로 대조군을 만들 수 없다는 것이 이 결함의 성질이고, 그래서 이 절은
+# 순회를 고치는 대신 **순회가 고쳐진 채로 남는 것**을 강제한다.
+#
+#   ① 새 평면 글롭이 들어오면 실패한다 — 합성 소스 주입 대조군이 판정기를 직접 잰다.
+#   ② 순회의 정의는 `iter_vwx_modules` 하나다 — 제외 규칙이 두 벌이 되는 순간
+#      두 벌은 갈라지고, 갈라진 사본이 곧 다음 라운드의 형제 불일치다.
+#   ③ 예외를 허용하되 예외는 **부담을 진다** — 등기가 실재·독립·재귀임을 청구하고,
+#      줄이는 것은 통과한다(규율 3).
+#   ④ 하위 패키지가 생기면 재귀 순회가 그것을 본다 — 임시 트리로 실증한다.
+#
+# round15 B가 `_discover_modules`에서 정확히 이 결함을 진단·수정했는데 형제 아홉 자리로
+# 전파되지 않았다. 「고쳤다」가 「고쳐진 채로 남는다」를 뜻하지 않은 것이 이 SPEC의
+# 서명 형태이고, 위 네 항목이 그 간극을 메운다.
+
+#: 디렉터리를 훑는 메서드. `iterdir`는 재귀가 될 수 없어 언제나 평면이다.
+_R24_SWEEP_METHODS = ("glob", "rglob", "iterdir")
+_R24_RECURSIVE_METHODS = ("rglob",)
+
+#: 순회의 **유일한 정의** 자리. (저장소 상대 경로, 함수 이름).
+_R24_CANONICAL_SWEEP = ("server/tests/test_autopatch_contract.py", iter_vwx_modules.__name__)
+
+#: 공용 순회를 쓰지 **않는 것이 옳은** 자리와 사유. 예외는 부담을 진다 — 아래 세 시험이
+#: (실재 · 진짜 독립 · 재귀)를 청구하고, 줄이는 것은 통과한다.
+_R24_INDEPENDENT_SWEEPS = {
+    (
+        "server/tests/test_autopatch_types.py",
+        "test_r23_the_reconstruction_gate_reads_every_file_in_its_tree",
+    ): (
+        "게이트의 기대값을 **독립으로** 계산하는 대조군이다. 공용 순회를 쓰면 스캐너와 "
+        "기대값이 같은 함수를 딛게 되어, 그 함수가 좁아지는 순간 둘이 같이 좁아진다 — "
+        "대조군이 대조군이 아니게 된다."
+    ),
+    (
+        "server/tests/test_autopatch_contract.py",
+        "test_r24_shrinking_the_independent_sweep_registry_keeps_the_gate_green",
+    ): (
+        "공용 순회와 독립 계산이 **같은 답을 내는지**를 재는 자리다. 여기서 공용 순회를 "
+        "양변에 쓰면 항진식이 되어, 규율 3(예외를 줄여도 통과한다)의 근거가 사라진다."
+    ),
+}
+
+
+def _r24_dir_tail(node: ast.AST, aliases: dict[str, str]) -> str | None:
+    """경로식을 **끝 세그먼트들**로 환원한다 — 리터럴 · 이름 결속 · `/` 조인 · `Path(...)`.
+
+    round17 판정기(`_r17_reads_every_vwx_module`)는 수신자 안의 **리터럴**만 봤다. 그래서
+    `VWX_DIR.glob(...)`·`package.glob(...)`처럼 경로를 이름에 한 번 담아 두면 순회가
+    구조적으로 보이지 않는다. 「어느 파일을 읽는가」를 이름 한 다리 건너 적으면 등기 밖으로
+    나가는 것 — 그것이 R23-3이 두 라운드를 살아남은 축(심볼 해석)이다. 여기서 그 축을
+    순회에 한해 닫는다.
+
+    환원할 수 없는 뿌리는 `…`로 둔다. 우리가 묻는 것은 "끝이 `vwx`인가"뿐이므로 앞쪽이
+    무엇인지는 필요 없다. 인자로 받은 뿌리는 `None`이다 — 그 스코프는 호출자의 것이다.
+    """
+    if isinstance(node, ast.Constant):
+        return node.value.rstrip("/") if isinstance(node.value, str) else None
+    if isinstance(node, ast.Name):
+        return aliases.get(node.id)
+    if isinstance(node, ast.Subscript):  # `parents[1]`
+        return _r24_dir_tail(node.value, aliases)
+    if isinstance(node, ast.Attribute):
+        return "…" if node.attr in ("parent", "parents") else None
+    if isinstance(node, ast.Call):
+        if isinstance(node.func, ast.Name) and node.func.id == "Path" and node.args:
+            return _r24_dir_tail(node.args[0], aliases)
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "resolve":
+            return _r24_dir_tail(node.func.value, aliases)
+        return None
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+        right = _r24_dir_tail(node.right, aliases)
+        if right is None:
+            return None
+        return f"{_r24_dir_tail(node.left, aliases) or '…'}/{right}"
+    return None
+
+
+def _r24_path_aliases(nodes, seed: dict[str, str]) -> dict[str, str]:
+    """대입에서 **이름 → 경로 꼬리** 결속을 뽑는다(한 다리 건넌 결속까지 고정점)."""
+    aliases = dict(seed)
+    for _ in range(3):
+        for node in nodes:
+            if not isinstance(node, ast.Assign):
+                continue
+            tail = _r24_dir_tail(node.value, aliases)
+            if not tail:
+                continue
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    aliases[target.id] = tail
+    return aliases
+
+
+def _r24_default_aliases(fn: ast.AST, seed: dict[str, str]) -> dict[str, str]:
+    """매개변수 **기본값**에서 결속을 뽑는다 — `def f(root=VWX_DIR)`의 스코프는 자기 것이다.
+
+    기본값이 없는 매개변수는 결속하지 않는다. 그 스코프는 호출자가 정하고, 그것을 순회
+    자리로 세면 `_r23_reconstruction_files(root)` 같은 정당한 매개변수 순회가 전부
+    거짓 양성이 된다.
+    """
+    args = fn.args
+    positional = [*args.posonlyargs, *args.args]
+    bound = positional[len(positional) - len(args.defaults) :]
+    pairs = list(zip(bound, args.defaults, strict=True))
+    pairs += [
+        (arg, default)
+        for arg, default in zip(args.kwonlyargs, args.kw_defaults, strict=True)
+        if default is not None
+    ]
+    aliases: dict[str, str] = {}
+    for arg, default in pairs:
+        tail = _r24_dir_tail(default, seed)
+        if tail:
+            aliases[arg.arg] = tail
+    return aliases
+
+
+def _r24_sweep_method(node: ast.AST, aliases: dict[str, str]) -> str | None:
+    """이 표현이 **`vwx` 디렉터리를 훑는** 호출이면 그 메서드 이름, 아니면 `None`.
+
+    `Path("server/vwx") / name` 같은 **조인**은 순회가 아니다 — 스코프를 조인되는 이름이
+    정하므로 두 모듈만 읽는 자리가 전 모듈 순회로 오분류되면 규율이 거짓 양성을 낸다.
+    """
+    if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+        return None
+    if node.func.attr not in _R24_SWEEP_METHODS:
+        return None
+    tail = _r24_dir_tail(node.func.value, aliases)
+    if tail is None or tail.rsplit("/", 1)[-1] != "vwx":
+        return None
+    return node.func.attr
+
+
+def _r24_sweeps_in_source(source: str) -> tuple[tuple[str, str, int], ...]:
+    """**인자로 받은 소스**에서 `vwx` 디렉터리 순회를 (함수, 메서드, 행)으로 전수한다.
+
+    스코프는 호출자가 준 소스다 — 이 함수는 무엇을 읽을지 스스로 고르지 않는다.
+    """
+    tree = ast.parse(source)
+    module_aliases = _r24_path_aliases(tree.body, {})
+    scopes: list[tuple[str, ast.AST, dict[str, str]]] = [("<module>", tree, module_aliases)]
+    for fn in ast.walk(tree):
+        if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            inner = _r24_path_aliases(list(ast.walk(fn)), module_aliases)
+            inner.update(_r24_default_aliases(fn, module_aliases))
+            scopes.append((fn.name, fn, inner))
+
+    found: list[tuple[str, str, int]] = []
+    seen: set[int] = set()
+    for name, node, aliases in reversed(scopes):  # 안쪽 스코프가 바깥 결속을 이긴다
+        for child in ast.walk(node):
+            if id(child) in seen:
+                continue
+            method = _r24_sweep_method(child, aliases)
+            if method is None:
+                continue
+            seen.add(id(child))
+            found.append((name, method, child.lineno))
+    return tuple(sorted(found, key=lambda row: (row[2], row[0])))
+
+
+def _r24_flat_sweeps(rows):
+    """재귀가 아닌 순회만 남긴다 — 실물 게이트와 주입 대조군이 **같은 판정식**을 딛는다.
+
+    판정식을 두 벌 두면 대조군은 초록인데 실물은 아무것도 안 잡는 상태가 성립한다.
+    (행은 실물 4칸 `(파일, 함수, 메서드, 행)` · 합성 3칸 `(함수, 메서드, 행)` 양쪽을 받는다.)
+    """
+    return [row for row in rows if row[-2] not in _R24_RECURSIVE_METHODS]
+
+
+def _r24_scan_sources() -> tuple[Path, ...]:
+    """규율의 사정권 — `server/tests` 아래 파이썬 소스 전수.
+
+    `test_autopatch_*.py`로 좁히지 않는다. 같은 결함이 `test_vwx_address.py`에도 있었고,
+    사정권을 파일 이름으로 좁히면 그 밖에 새 스캐너를 두는 것이 곧 우회로가 된다.
+    """
+    return tuple(
+        sorted(
+            path
+            for path in AUTOPATCH_TEST_DIR.rglob("*.py")
+            if _VWX_SCAN_EXCLUDED_DIRS.isdisjoint(path.parts)
+        )
+    )
+
+
+@lru_cache(maxsize=1)
+def _r24_vwx_sweeps() -> tuple[tuple[str, str, str, int], ...]:
+    """`server/tests` **전 파일**의 `vwx` 디렉터리 순회를 (파일, 함수, 메서드, 행)으로 전수.
+
+    (소스는 한 세션 안에서 바뀌지 않으므로 캐시가 stale이 될 수 없다 — 파일 100여 개를
+    매 단정마다 다시 파싱하는 비용만 없앤다.)
+    """
+    found: list[tuple[str, str, str, int]] = []
+    for path in _r24_scan_sources():
+        rel = path.relative_to(PROJECT_ROOT).as_posix()
+        source = path.read_text(encoding="utf-8")
+        found += [(rel, fn, method, line) for fn, method, line in _r24_sweeps_in_source(source)]
+    return tuple(sorted(found))
+
+
+def test_r24_every_vwx_directory_sweep_is_recursive():
+    """[round24] `server/vwx`를 훑는 자리는 **전부 재귀**다 — 평면 글롭이 0건이다.
+
+    평면 `glob("*.py")`은 `server/vwx/` 바로 아래만 본다. 오늘은 하위 패키지가 없어
+    결과가 같고, 그래서 이 축소는 **실물로는 보이지 않는다**. 하위 패키지가 하나 생기는
+    순간 그 모듈들이 「전 모듈」 정의에서 조용히 빠지고, 그 위에 쌓인 전수 주장이 전부
+    "스캔한 것 중에는 없다"로 축소된다.
+    """
+    sweeps = _r24_vwx_sweeps()
+    assert sweeps, "순회 자리를 하나도 못 찾았다 — 판정기가 공허하다"
+    assert _r24_flat_sweeps(sweeps) == [], (
+        f"평면 순회가 「전 모듈」을 자처한다: {_r24_flat_sweeps(sweeps)}"
+    )
+
+
+def test_r24_the_sweep_census_catches_a_flat_glob_however_it_is_spelled():
+    """[round24 주입 대조군] 판정기가 **새 평면 글롭을 실제로 잡는다**.
+
+    저장소가 이미 규율을 지키면 위 단정은 "0건 == 0건"이라 판정기가 늘 거짓을 내도
+    통과한다. 그래서 합성 소스를 직접 먹인다. 네 가지 표기를 섞는 것이 요점이다 —
+    리터럴만 보는 판정기는 ②③④를 놓치고, 놓친 자리가 곧 다음 라운드의 사각이다.
+    거짓 양성 두 가지(⑤ 조인 · ⑥ 인자 스코프)도 같은 소스에서 함께 고정한다.
+    """
+    planted = (
+        "from pathlib import Path\n"
+        'VWX = Path("server/vwx")\n'
+        'FROM_ROOT = Path(__file__).resolve().parents[2] / "server" / "vwx"\n'
+        "def alpha():\n"
+        '    return sorted(Path("server/vwx").glob("*.py"))\n'
+        "def beta():\n"
+        '    return sorted(VWX.glob("*.py"))\n'
+        "def gamma():\n"
+        "    return sorted(FROM_ROOT.iterdir())\n"
+        "def delta():\n"
+        '    package = Path(__file__).resolve().parents[1] / "vwx"\n'
+        '    return sorted(package.glob("*.py"))\n'
+        "def epsilon():\n"
+        '    return (Path("server/vwx") / "apply.py").read_text()\n'
+        "def zeta(root):\n"
+        '    return sorted(root.glob("*.py"))\n'
+        "def eta():\n"
+        '    return sorted(Path("server/vwx").rglob("*.py"))\n'
+    )
+    measured = _r24_sweeps_in_source(planted)
+    assert [(fn, method) for fn, method, _line in measured] == [
+        ("alpha", "glob"),  # ① 리터럴
+        ("beta", "glob"),  # ② 모듈 상수에 담긴 경로
+        ("gamma", "iterdir"),  # ③ 조인으로 지은 경로 + 재귀가 될 수 없는 메서드
+        ("delta", "glob"),  # ④ 함수 안에서 지은 경로
+        # ⑤ epsilon: 조인은 순회가 아니다  ⑥ zeta: 인자 뿌리는 호출자 스코프다
+        ("eta", "rglob"),  # 재귀는 잡되 위반이 아니다
+    ]
+    # 실물 게이트와 **같은 판정식**을 먹인다 — `rglob`만 재귀로 세는지까지 여기서 고정한다.
+    assert [fn for fn, _method, _line in _r24_flat_sweeps(measured)] == [
+        "alpha",
+        "beta",
+        "gamma",
+        "delta",
+    ]
+
+
+def test_r24_the_vwx_traversal_has_exactly_one_definition():
+    """[round24] 순회의 정의가 **하나**다 — 제외 규칙이 두 벌이 될 수 없다.
+
+    열 자리가 각자 `rglob`을 적으면 오늘은 맞지만, 그 열 벌은 다음 제외 규칙 하나에서
+    갈라진다. round15 B의 수정이 형제 아홉 자리로 전파되지 않은 것이 정확히 그 형태다.
+    사본을 금지하는 것이 사본을 맞추는 것보다 싸다.
+    """
+    sweeps = _r24_vwx_sweeps()
+    canonical = [row for row in sweeps if (row[0], row[1]) == _R24_CANONICAL_SWEEP]
+    assert len(canonical) == 1, canonical
+    strays = [
+        row
+        for row in sweeps
+        if (row[0], row[1]) != _R24_CANONICAL_SWEEP
+        and (row[0], row[1]) not in _R24_INDEPENDENT_SWEEPS
+    ]
+    assert strays == [], (
+        f"공용 순회를 쓰지 않는 자리다 — `iter_vwx_modules`를 쓰거나 "
+        f"`_R24_INDEPENDENT_SWEEPS`에 사유와 함께 등기하라: {strays}"
+    )
+
+
+def test_r24_the_independent_sweep_registry_carries_weight():
+    """[round24] 예외가 **부담을 진다** — 실재하고, 진짜 독립이며, 재귀다.
+
+    ① 등기 키가 실측 순회 목록에 있다. 없으면 죽은 행이고, 죽은 행은 다음 사람에게
+       "여기는 예외 구역"이라는 거짓 신호를 준다.
+    ② 그 함수가 **대조군**이다(`test_` 함수) — 독립 재계산은 대조군으로서만 값이 있다.
+       스캐너가 예외로 등기하는 길을 여기서 막는다: 스캐너는 공용 순회를 써야 한다.
+    ③ 그 순회가 재귀다 — 예외가 평면 글롭을 밀수하는 통로가 되어서는 안 된다.
+    """
+    assert _R24_INDEPENDENT_SWEEPS, "예외가 0건이면 아래 대조군이 공허하다"
+    measured = {(row[0], row[1]): row[2] for row in _r24_vwx_sweeps()}
+    for key, reason in _R24_INDEPENDENT_SWEEPS.items():
+        assert key in measured, f"죽은 예외 등기: {key}"
+        assert measured[key] in _R24_RECURSIVE_METHODS, (key, measured[key])
+        assert len(reason) >= 40, (key, reason)
+        assert key[1].startswith("test_"), f"스캐너는 예외가 될 수 없다 — 공용 순회를 써라: {key}"
+
+
+def test_r24_shrinking_the_independent_sweep_registry_keeps_the_gate_green():
+    """[round24] 규율 3 — 예외를 **줄이는 것은 개선**이므로 줄여도 통과해야 한다.
+
+    등기된 독립 계산이 오늘 공용 순회와 **같은 답**을 냄을 실제로 잰다. 같다면 그 자리를
+    공용 순회로 옮겨도 게이트는 초록이다(=예외를 줄여도 된다). 같지 않다면 그것은
+    "혹시 몰라서" 남은 보호막이 아니라 **다른 답을 내는 자리**이고, 그때는 예외가 아니라
+    결함이다 — 어느 쪽이든 이 단정이 그 사실을 말한다.
+    """
+    independent = sorted(Path("server/vwx").rglob("*.py"))
+    shared = [path.relative_to(PROJECT_ROOT) for path in iter_vwx_modules()]
+    assert independent == shared, (independent, shared)
+    assert len(shared) >= 10, shared  # 트리가 비면 위 등식은 공허하다
+
+
+def test_r24_the_shared_traversal_descends_into_a_new_subpackage(tmp_path):
+    """[round24] 하위 패키지가 생기면 **따라 내려간다** — 오늘 실물로는 잴 수 없는 축이다.
+
+    `server/vwx`에 하위 디렉터리가 없어 실물에서는 `glob`과 `rglob`이 같은 답을 낸다.
+    그래서 합성 트리로 잰다: 같은 트리에 평면 글롭을 함께 걸어 **무엇이 빠지는지**를
+    같은 단정 안에서 고정한다. 제외 규칙(`__pycache__`)도 여기서 함께 잰다.
+    """
+    (tmp_path / "top.py").write_text("A = 1\n", encoding="utf-8")
+    nested = tmp_path / "console" / "deep"
+    nested.mkdir(parents=True)
+    (nested / "buried.py").write_text("B = 2\n", encoding="utf-8")
+    (tmp_path / "__pycache__").mkdir()
+    (tmp_path / "__pycache__" / "ghost.py").write_text("C = 3\n", encoding="utf-8")
+
+    found = [path.relative_to(tmp_path).as_posix() for path in iter_vwx_modules(tmp_path)]
+    assert found == ["console/deep/buried.py", "top.py"]
+    # 평면 글롭이면 하위 패키지가 통째로 빠진다 — 이것이 열 자리가 안고 있던 사각이다.
+    assert sorted(path.name for path in tmp_path.glob("*.py")) == ["top.py"]
+
+
+def test_r24_the_module_label_keeps_subpackages_distinct():
+    """[round24] 표지가 하위 패키지를 **구별**한다 — 순회만 넓히면 재귀가 반만 된다.
+
+    `path.name`으로 줄이면 `console/report.py`와 `report.py`가 같은 표지로 뭉쳐, 재귀로
+    새로 보이게 된 자리가 등기부 안에서 다시 하나로 붕괴한다. 오늘은 전 모듈이 최상위라
+    값이 `path.name`과 같아 실물로는 이 축소가 보이지 않는다.
+    """
+    assert vwx_module_label("server/vwx/report.py") == "report.py"
+    assert vwx_module_label("server/vwx/console/report.py") == "console/report.py"
+    assert vwx_module_label(PROJECT_ROOT / "server" / "vwx" / "apply.py") == "apply.py"
+    assert {vwx_module_label(path) for path in iter_vwx_modules()} == VWX_MODULE_FILES
+
+
+def test_r24_the_exclusion_rule_is_named_in_exactly_one_file():
+    """[round24] 제외 규칙이 **한 자리**에만 적혀 있다.
+
+    같은 제외를 열 군데에 복사하면 그 사본들이 다음 라운드의 형제 불일치다. 사본을
+    맞추는 규율보다 사본을 금지하는 규율이 싸고, 위 「정의는 하나」와 짝을 이룬다.
+    """
+    holders = [
+        path.relative_to(PROJECT_ROOT).as_posix()
+        for path in _r24_scan_sources()
+        if "_VWX_SCAN_EXCLUDED_DIRS" in path.read_text(encoding="utf-8")
+    ]
+    assert holders == [_R24_CANONICAL_SWEEP[0]], holders
+
+
+def test_r24_the_sweep_census_reads_every_python_file_under_server_tests():
+    """[round24] 사정권이 **`server/tests` 트리 전부**다 — 파일 이름으로 좁히지 않는다.
+
+    기대값을 이 시험이 **독립으로** 계산한다. 사정권을 `test_autopatch_*.py`로 좁히면
+    오늘은 결과가 같지만(그 밖에 순회가 남아 있지 않다) 그 순간부터 파일 하나를 새로
+    만드는 것이 규율의 우회로가 된다 — 「오늘 결과가 같은 축소」가 이 SPEC이 반복해서
+    맞은 형태이므로, 범위 자체를 디스크와 등식으로 묶는다.
+    """
+    expected = sorted(
+        path
+        for path in (PROJECT_ROOT / "server" / "tests").rglob("*.py")
+        if "__pycache__" not in path.parts
+    )
+    assert list(_r24_scan_sources()) == expected
+    assert len(expected) >= 100, len(expected)  # 트리가 비면 위 등식은 공허하다
+    assert any(path.name == "test_vwx_address.py" for path in expected)
+
+
+def test_r24_referencing_the_denominator_does_not_make_a_scanner_a_reader():
+    """[round24] 분모를 **참조**하는 것과 전 모듈을 **읽는** 것은 다르다.
+
+    `VWX_MODULE_FILES`는 대조용 이름 집합이다. 이것을 결속에 넣으면 등기부를 대조하는
+    함수(`_r17_ast_scanners`)가 분모를 참조한다는 이유만으로 자기를 「전 모듈을 읽는
+    스캐너」로 세고, 비공허성 단정(`test_at_least_one_scanner_reads_every_vwx_module`)이
+    **자기 자신으로** 충족되는 항진식이 된다 — 게이트가 자기를 증인으로 삼는 형태다.
+    분모가 재귀 순회에서 파생되면서 처음 성립한 구멍이라 여기서 함께 닫는다.
+    """
+    planted = (
+        "import ast\n"
+        "from pathlib import Path\n"
+        'VWX_MODULE_FILES = frozenset(p.name for p in Path("server/vwx").rglob("*.py"))\n'
+        "def compares_only():\n"
+        "    tree = ast.parse('')\n"
+        "    return VWX_MODULE_FILES, tree\n"
+    )
+    assert "VWX_MODULE_FILES" not in _r17_module_bindings(planted)
+    readers = {(name, fn) for name, fn, kind, _m in _r17_ast_scanners() if kind == "self_bound"}
+    assert ("test_autopatch_contract.py", "_r17_ast_scanners") not in readers, sorted(readers)
+
+
+def test_r24_the_scope_registry_follows_the_shared_traversal_through_an_import(monkeypatch):
+    """[round24] 등기부가 **이름 한 다리 건넌** 순회를 따라간다 — R23-3의 축(심볼 해석).
+
+    round17 판정기는 수신자 안의 리터럴만 봤다. 순회를 공용 함수로 모으는 순간, 그
+    판정기로는 「전 모듈을 읽는 스캐너」가 등기에서 **소리 없이** 빠진다. 몇 개나 빠지는지를
+    여기서 실측으로 고정한다 — 등기에서 조용히 사라지는 것이 이 SPEC이 열세 라운드 맞은
+    형태이고, `_r17_reads_every_vwx_module`을 리터럴 전용으로 되돌리면 여기서 실패한다.
+    """
+
+    def literal_only(node: ast.AST) -> bool:
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+            return False
+        if node.func.attr not in _R24_SWEEP_METHODS:
+            return False
+        return any(
+            isinstance(child, ast.Constant)
+            and isinstance(child.value, str)
+            and child.value.rstrip("/").endswith("server/vwx")
+            for child in ast.walk(node.func.value)
+        )
+
+    def every_module_readers():
+        return {
+            (name, function)
+            for name, function, kind, modules in _r17_ast_scanners()
+            if kind == "self_bound" and set(modules) == VWX_MODULE_FILES
+        }
+
+    wide = every_module_readers()
+    monkeypatch.setattr(sys.modules[__name__], "_r17_reads_every_vwx_module", literal_only)
+    narrow = every_module_readers()
+    lost = wide - narrow
+    assert narrow <= wide
+    assert len(lost) >= 6, sorted(lost)
 
 
 # ---- (나) 심기 앵커는 앞뒤가 닫혀 있어야 한다 --------------------------------------

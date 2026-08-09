@@ -10,6 +10,7 @@ from typing import NamedTuple
 import pytest
 
 from server.prechk.patch import normalize_address
+from server.tests.test_autopatch_contract import iter_vwx_modules, vwx_module_label
 from server.vwx.address import (
     _UNIVERSE_ADDRESS_SPLIT,
     _UNIVERSE_WIDTH,
@@ -660,11 +661,11 @@ def _r17_scan_vwx_boundary_sites() -> set[_Site]:
     """
     package = Path(__file__).resolve().parents[1] / "vwx"
     found: set[_Site] = set()
-    for path in sorted(package.glob("*.py")):
+    for path in iter_vwx_modules(package):
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             axis = _r17_boundary_axis(node)
             if axis is not None:
-                found.add(_Site(path.name, axis, ast.unparse(node)))
+                found.add(_Site(vwx_module_label(path), axis, ast.unparse(node)))
     return found
 
 
@@ -740,6 +741,15 @@ _R17_VWX_BOUNDARY_SITES: tuple[_Site, ...] = (
     _Site("rig.py", "offby", "i + 1"),
     _Site("rig.py", "slice", "intervals[i + 1:]"),
     _Site("rig.py", "slice", "raw.strip().upper()[:1]"),
+    # --- round23 R23-2 (CostBasis) — 회수 비용 고지의 `c·m` 항. 비용표
+    # `U + k(1 + c·m)`에서 `c`는 모드 한 종당 왕복 수이고 **사후에 알 수 없다**
+    # (`read_channel_counts`가 스윕 호출 인자라 라이브러리에 남지 않는다). 그래서
+    # 상수가 아니라 **상한**을 곱하며, 이름이 그 사실을 말한다. `*`를 `+`로 밀거나
+    # 상한을 1로 낮추면 고지가 **과소보고**로 돌아가 `False`(= "쟀는데 범위 안"이라는
+    # 긍정 주장)가 거짓이 된다 — R23-2가 정확히 그 상태였다. 반대로 상한을 키우면
+    # 깨끗한 스냅샷이 상시 고지를 세운다(과차단). 양방향 대조군은
+    # `test_autopatch_types.py`의 round23 비용 절 — 상한·불변식·단조성·경계 등식.
+    _Site("typemap.py", "arith", "RECOVERY_COST_MODE_ROUNDTRIPS_CEILING * len(entry.modes)"),
     _Site("typemap.py", "lencmp", "len(mode_candidates) == 1"),
     _Site("typemap.py", "lencmp", "len(type_candidates) == 1"),
     # --- round23 R22-B 초과 열거 (CompletenessGate) — 계수 대조의 **반대 방향**을

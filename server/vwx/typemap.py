@@ -80,8 +80,15 @@ LIBRARY_TRUNCATED_REASON = (
     "FixtureType 열거에 미관측분이 남아 라이브러리 전수를 보지 못했다 — 대응 항목이 후보에 "
     "없음을 단정하지 않는다."
 )
+#: [round24 R23-1] 문장이 **응답 미수신 하나만** 말하고 있었다. 이 축은 폴백으로도
+#: 쓰인다 — 열거 응답은 정상으로 받았는데 **선언 총계(`childCount`)를 읽지 못해** 전수인지
+#: 대조할 기준이 없는 스냅샷이 여기로 온다(부재 단정 가드 셋과 확정 게이트가 그 폴백을
+#: 공유한다). 그때 *"열거를 읽지 못했다"*는 관측 사실을 거짓으로 말한다 — R20-D가
+#: 고발한 것과 같은 형태다. 두 원인을 **함께** 적되 유보절은 하나로 둔다(' — ' 두 번은
+#: 문장 형태 위반이다: `patchplan.sentence_shape_violation`).
 LIBRARY_UNREADABLE_REASON = (
-    "FixtureType 열거를 읽지 못했다 — 대응 항목이 후보에 없음을 단정하지 않는다."
+    "FixtureType 열거를 전수로 읽지 못했다(응답을 받지 못했거나, 선언된 총계를 읽지 못해 "
+    "전수인지 대조할 기준이 없다) — 대응 항목이 후보에 없음을 단정하지 않는다."
 )
 #: [round21 R20-D] 열거 응답의 **행 일부를 쓰지 못했다**. 절단(목록이 잘려 뒤가 안 옴)도
 #: 판독 실패(응답을 못 받음)도 아니다 — 세 축은 조치가 다르므로 사유도 따로 적는다.
@@ -153,11 +160,16 @@ FOOTPRINT_MISMATCH_CHOOSABLE_REASON = (
 #: [round19 major#5] 점유폭 불일치 — **어느 모드도 맞지 않는다(전 모드 실측).**
 #: 모드 선택으로는 벗어날 수 없으므로 확인 대기가 아니라 하드 스톱이고, 사유는
 #: 실제 조치를 가리킨다: 고칠 것은 콘솔 라이브러리가 아니라 **도면의 점유폭 값**이다.
+#: [round24 R23-1] *"모드 열거를 전부 읽었다"*의 **근거를 문장이 말한다.** 구판은 이
+#: 주장을 근거 없이 했고, 실제로 선언 총계를 못 읽은 스냅샷에서 그대로 나갔다
+#: (그 갈래를 `_absence_assertable`이 이제 막는다). 문장이 근거를 적으면 전제가
+#: 빠졌을 때 문장 자체가 거짓이 되어 사람이 읽고 알아챈다.
 FOOTPRINT_UNMATCHABLE_REASON = (
     "콘솔 DMXChannels 자식 수가 도면 DMX Footprint와 다르고, 이 FixtureType의 "
-    "어느 모드도 도면 점유폭과 채널 수가 맞지 않는다 — 모드 열거를 전부 읽었고 절단도 "
-    "없었다. 모드를 다시 고르는 것으로는 벗어날 수 없다: 고칠 것은 도면의 DMX Footprint "
-    "값이다. 라이브러리가 실제로 제공하는 모드와 그 채널 수는 제시된 모드 목록에 그대로 있다."
+    "어느 모드도 도면 점유폭과 채널 수가 맞지 않는다 — 선언된 모드 총계와 대조해 열거가 "
+    "전수임을 확인했고 절단도 없었다. 모드를 다시 고르는 것으로는 벗어날 수 없다: 고칠 "
+    "것은 도면의 DMX Footprint 값이다. 라이브러리가 실제로 제공하는 모드와 그 채널 수는 "
+    "제시된 모드 목록에 그대로 있다."
 )
 #: [round19 major#5] 점유폭 불일치 — **맞는 모드의 부재를 단정할 수 없다.**
 #: 이 상태를 하드 스톱으로 적으면 찾아보지도 않은 것을 부재로 단정하는 것이 된다
@@ -167,12 +179,16 @@ FOOTPRINT_UNMATCHABLE_REASON = (
 #: 전제는 셋이므로(미관측 · **폐기** · 채널 수 미판독) 폐기로 여기 온 갈래에서 이 문장은
 #: 거짓이 된다 — R20-D가 고발한 것이 정확히 "사유가 관측 사실을 거짓으로 말한다"였다.
 #: 어느 축이 발화했는지는 `skipped_checks`의 kind가 특정한다.
+#:
+#: [round24 R23-1] 열거가 **네 갈래**인데 문장은 셋만 적고 있었다 — 네 번째(선언 모드
+#: 총계 미판독)로 여기 온 갈래에서 문장이 다시 거짓이 된다. 구판은 그 갈래가 아예
+#: 여기 오지 않고 **하드 스톱으로** 나갔다(R23-1 고발). 갈래를 막으면서 문장도 함께 연다.
 FOOTPRINT_MISMATCH_UNVERIFIED_REASON = (
     "콘솔 DMXChannels 자식 수가 도면 DMX Footprint와 다르다 — 승인 전에 모드를 다시 "
     "확인해야 한다. 맞는 모드가 있는지는 단정하지 않는다: 이 FixtureType의 모드 목록을 "
     "전수로 보지 못했다(열거에 미관측분이 남았거나, 슬롯 번호가 없어 쓰지 못한 행이 "
-    "있거나, 채널 수를 읽지 못한 모드가 있다). 관측된 모드와 채널 수는 제시된 모드 "
-    "목록에 그대로 있다."
+    "있거나, 선언된 모드 총계를 읽지 못해 전수인지 대조할 기준이 없거나, 채널 수를 읽지 "
+    "못한 모드가 있다). 관측된 모드와 채널 수는 제시된 모드 목록에 그대로 있다."
 )
 
 TYPE_TABLE_COLUMNS = (
@@ -323,9 +339,11 @@ class LibraryType:
 #:
 #: 채택된 표적 스윕의 비용은 ``U + k·(1 + c·m)``이라 전수보다 **차수가 낮을 뿐 유계가
 #: 아니다**: `child_count`는 콘솔이 선언한 총계이고 `_optional_int`만 통과하므로, U가
-#: 커지면 채택 설계도 같은 기각선을 넘는다. 그때 "전수는 비싸서 안 한다"는 문장은
-#: **이 설계에 대해서도 참**이 되므로, 근거가 유효 범위를 벗어났다는 사실을 payload가
-#: 말해야 한다(`FixtureTypeLibrary.recovery_cost_basis_exceeded`).
+#: 커지면 채택 설계도 같은 기각선을 넘는다. [round23 R23-2] **두 항 모두 유계가 아니다.**
+#: R22-C가 조기 종료를 없애면서 ``k``도 ``0..U``로 풀렸으므로(일치가 여럿이면 전부
+#: 회수한다) ``k(1 + c·m)`` 항 **하나만으로도** 기각선을 넘는다. 그때 "전수는 비싸서
+#: 안 한다"는 문장은 **이 설계에 대해서도 참**이 되므로, 근거가 유효 범위를 벗어났다는
+#: 사실을 payload가 말해야 한다(`FixtureTypeLibrary.recovery_cost_basis_exceeded`).
 #:
 #: **상한이 아니다 — 스윕을 거부하지 않는다.** 거부하면 느리지만 옳은 답이 임의의
 #: 수치 때문에 `fixture_type_not_in_library` 배제로 바뀌어, 이 스윕이 없애려던 바로 그
@@ -334,6 +352,23 @@ class LibraryType:
 #: PRESERVE `server/prechk/inventory.py`의 회수 스윕도 `1..child_count`를 상한 없이
 #: 훑는다. 근거 없는 상한을 짓지 않는 판단은 round18이 FID 상한에서 이미 내렸다.
 RECOVERY_COST_EVIDENCE_ROUNDTRIPS = 3_872
+
+
+#: [round23 R23-2] `_read_type` 한 건이 **모드 수와 무관하게** 던지는 왕복 수 —
+#: DMXModes 상태 조회 1회(`_read_type` 첫 줄). 분기가 바꾸지 않는 상수라 이 항은
+#: 상한이 아니라 **실측**이고, 그래서 이름에 `CEILING`이 없다.
+RECOVERY_COST_TYPE_STATE_ROUNDTRIPS = 1
+
+#: [round23 R23-2] 모드 하나당 왕복 수 ``c``의 **상한**. 이름이 상한이라 말하는 이유는
+#: 이 값이 관측이 아니기 때문이다: 실제 ``c``는 `read_channel_counts`가 정하는데
+#: (negative 1 · GO 2 — `recover_requested_types` 비용표) 그 인자는 스윕 호출 시점에만
+#: 있고 `FixtureTypeLibrary`에는 남지 않는다. `LibraryMode.channel_count`로 되짚는 것은
+#: **틀린다** — 점유폭을 읽고도 응답이 실패하면 그 칸은 `None`이라, 비싸게 읽어 놓고
+#: 싸게 셌다고 보고하게 된다. 모르는 값을 아는 척하는 대신 **비싼 쪽을 쓴다**: 그래야
+#: `recovery_roundtrip_ceiling`이 실제 왕복 수를 **과소보고하지 않고**, 고지의 `False`가
+#: ("쟀는데 범위 안이다"라는 긍정 주장이다) 방어된다. 반대 방향의 대가는 보수적 과다
+#: 고지인데, 이 칸은 거부가 아니라 고지이므로 과다 고지가 스윕을 막지 않는다.
+RECOVERY_COST_MODE_ROUNDTRIPS_CEILING = 2
 
 
 @dataclass(frozen=True)
@@ -474,20 +509,55 @@ class FixtureTypeLibrary:
         return self.unusable_row_count + self.unparsable_row_count
 
     @property
+    def recovery_roundtrip_ceiling(self) -> int:
+        """이 라이브러리에 실린 스윕이 쓴 왕복 수의 **상한**. 안 훑었으면 0.
+
+        `recover_requested_types` 비용표의 ``U + k·(1 + c·m)``을 **항마다** 센다.
+
+        * ``U`` = `recovery_probe_count` — 이름 프로브. 실측 기록이다.
+        * ``k·(1 + c·m)`` = 회수분(`recovered=True`) 각각의 `_read_type` 비용.
+          [round23 R23-2] 구판은 이 항을 **아예 세지 않았다**. R22-C가 조기 종료를
+          없애면서 ``k``가 ``0..U``로 풀렸는데도(일치가 여럿이면 전부 회수한다) 계수는
+          ``U``만 봤다 — 선언 300 · U=299 · k=299 · m=20이면 실제 왕복은 6,578회로
+          기각선 3,872를 한참 넘는데, ``U``만 세면 299라 **"범위 안"이라고 말했다**.
+        * ``m``은 관측이다: `len(entry.modes)`가 곧 이름 프로퍼티를 실제로 던진 행 수다
+          (`i` 없는 폐기 행은 조회 전에 버려지므로 왕복을 쓰지 않는다).
+        * ``c``만 사후에 알 수 없어 **상한**을 쓴다 —
+          `RECOVERY_COST_MODE_ROUNDTRIPS_CEILING` 독스트링이 이유를 적는다.
+
+        그래서 이 수는 실측이 아니라 **상한**이고, 이름이 그렇게 말한다. 방향은
+        의도적이다: 과소보고하지 않으므로 `recovery_cost_basis_exceeded`의 `False`가
+        방어된다. 반대로 이 수가 크다고 회수가 줄지는 않는다(고지지 거부가 아니다).
+        """
+        return self.recovery_probe_count + sum(
+            RECOVERY_COST_TYPE_STATE_ROUNDTRIPS
+            + RECOVERY_COST_MODE_ROUNDTRIPS_CEILING * len(entry.modes)
+            for entry in self.types
+            if entry.recovered
+        )
+
+    @property
     def recovery_cost_basis_exceeded(self) -> bool | None:
         """이 스윕이 **자기 설계 근거의 유효 범위를 벗어났는가**. 안 훑었으면 `None`.
 
         `recover_requested_types`는 전수 스윕을 ``3,872`` 왕복(≈4분)이라는 실측 비용으로
-        기각했다. 채택된 표적 스윕은 차수가 낮을 뿐 **유계가 아니다** — `child_count`가
-        크면 이름 프로브만으로 같은 왕복 수에 도달하고, 그 순간 기각 문장은 이 설계에도
-        그대로 적용된다. 그것을 조작자에게 말하지 않으면 payload는 "비용을 재서 골랐다"는
-        근거를 **범위 밖에서도 유효한 것처럼** 들고 있는 셈이다.
+        기각했다. 채택된 표적 스윕은 차수가 낮을 뿐 **유계가 아니다** — 이름 프로브(``U``)
+        로도, 회수분의 `_read_type`(``k(1 + c·m)``)으로도 같은 왕복 수에 도달하고, 그
+        순간 기각 문장은 이 설계에도 그대로 적용된다. 그것을 조작자에게 말하지 않으면
+        payload는 "비용을 재서 골랐다"는 근거를 **범위 밖에서도 유효한 것처럼** 들고 있는
+        셈이다. 재는 값은 `recovery_roundtrip_ceiling`이다 — [round23 R23-2] 구판이
+        ``U``만 보고 6,578왕복(≈436초)짜리 스윕을 "범위 안"이라 적은 자리다.
+
+        **경계는 등식을 포함한다**(`>=`). ``3,872``는 "여기까지는 괜찮다"가 아니라
+        **기각당한 그 수**다 — 정확히 그 값이면 이 스윕은 기각된 것과 같은 값을 치른
+        것이므로 기각 문장이 그대로 적용된다. `>`로 두면 그 한 점에서만 "범위 안"이라는
+        긍정 주장이 서는데, 그 점이야말로 근거가 무효인 지점이다.
 
         이 칸은 **거부가 아니라 고지**다: 참이어도 회수분은 그대로 실려 나간다.
         """
         if self.recovery_boundary is None:
             return None
-        return self.recovery_probe_count >= RECOVERY_COST_EVIDENCE_ROUNDTRIPS
+        return self.recovery_roundtrip_ceiling >= RECOVERY_COST_EVIDENCE_ROUNDTRIPS
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -507,7 +577,12 @@ class FixtureTypeLibrary:
             "probe_failure_count": self.probe_failures,
             # [round23 R22-F] 비용 근거의 **유효 범위**를 payload가 직접 말한다. 왕복
             # 수를 싣지 않으면 고지가 참인 이유를 조작자가 확인할 수 없다.
+            # [round23 R23-2] 이름 프로브 수 **하나만으로는** 고지를 검산할 수 없다 —
+            # 고지가 재는 값은 회수분의 `_read_type`까지 더한 상한이므로 그 수도 싣는다.
+            # 두 칸이 갈라져 있어야 조작자가 어느 항이 자랐는지(스윕 폭인가 일치 수인가)
+            # 읽고 조치를 고를 수 있다.
             "recovery_probe_count": self.recovery_probe_count,
+            "recovery_roundtrip_ceiling": self.recovery_roundtrip_ceiling,
             "recovery_cost_basis_exceeded": self.recovery_cost_basis_exceeded,
             "enumeration_short": self.enumeration_short,
             "enumeration_incomplete": self.enumeration_incomplete,
@@ -1069,10 +1144,13 @@ def recover_requested_types(
     이름만 부재를 말할 자격이 있고, 그 밖에는 미관측을 미관측이라 적는다.
 
     **[round23 R22-F] 그 비용 근거의 유효 범위.** 위 기각은 ``3,872`` 왕복(≈4분)에서
-    내려졌는데, 채택 설계의 비용도 ``U``에 **선형**이고 `child_count`는 콘솔이 선언한
-    정수라 이 함수가 묶지 않는다. 즉 ``U``가 ``3,872 − k(1 + c·m)``(위 예시 값으로
-    약 3,850)을 넘으면 **"전수는 비싸서 안 한다"는 문장이 이 설계에도 그대로 참**이
-    된다 — 근거가 자기 유효 범위를 벗어난다.
+    내려졌는데, 채택 설계의 비용 ``U + k(1 + c·m)``은 **두 항 모두** 이 함수가 묶지
+    않는다: ``U``는 콘솔이 선언한 `child_count`에서 오고, ``k``는 [round23 R22-C]가
+    조기 종료를 없앤 뒤 ``0..U``로 풀렸다(포함관계 퍼지에 걸리는 이름이 여럿이면 전부
+    회수한다). 즉 **어느 한 항만으로도** 합이 ``3,872``에 도달할 수 있고, 그러면
+    **"전수는 비싸서 안 한다"는 문장이 이 설계에도 그대로 참**이 된다 — 근거가 자기
+    유효 범위를 벗어난다. [round23 R23-2] 구판 계수는 ``U``만 봤고, 그래서 선언 300 ·
+    U=299 · k=299 · m=20에서 실제 6,578왕복(≈436초)을 쓴 스윕이 "범위 안"으로 나갔다.
 
     그때 **스윕을 거부하지는 않는다**. 거부하면 느리지만 옳은 답이 임의의 수치 때문에
     `fixture_type_not_in_library` 배제로 바뀌어, 이 스윕이 없애려던 거짓 부재가
@@ -1080,6 +1158,7 @@ def recover_requested_types(
     걸린 것이지 선언 총계에 걸린 것이 아니고, 형제 PRESERVE 스윕도 상한 없이 훑는다) —
     근거 없는 상한을 짓지 않는 판단은 round18이 FID 상한에서 이미 내렸다. 대신
     **왕복 수와 범위 이탈 사실을 payload에 싣는다**: `recovery_probe_count` ·
+    `FixtureTypeLibrary.recovery_roundtrip_ceiling` ·
     `FixtureTypeLibrary.recovery_cost_basis_exceeded` · `RECOVERY_COST_EVIDENCE_ROUNDTRIPS`.
     진행 보고와 중단 수단은 포트 계약 밖이라 여기서 만들 수 없고, 만들 수 없는 것을
     만든 척하는 대신 **비용이 얼마였는지 말한다**.
@@ -1233,7 +1312,15 @@ def _resolve_one(
         )
     type_candidates = _type_candidates(request, library, alias_type)
     if not type_candidates:
-        incomplete = _library_incompleteness(library, None)
+        # [round24 R23-1 형제 표면] `fixture_type_not_in_library`는 *"콘솔 라이브러리에
+        # 그 타입이 없다"*는 **부재 단정**이다. 구판은 `_library_incompleteness`만 물어
+        # 선언 총계를 못 읽은 스냅샷(축은 서지 않는다)에서 그대로 단정했다 — 같은 행의
+        # `type_candidates_completeness`가 `complete:null`인 채로. 확정 게이트와 같은
+        # 질문을 같은 엄격도로 묻는다.
+        #
+        # **정상 부재는 그대로 나간다** — 선언 총계를 읽었고 목록이 온전하면 이 가드는
+        # `None`이고 아래 하드 스톱이 발화한다. 그것이 이 갈래의 정상 경로다.
+        incomplete = _absence_unverifiable(library, None)
         if incomplete is not None:
             return TypeResolution(
                 request=request,
@@ -1282,7 +1369,17 @@ def _resolve_one(
 
     mode_candidates = _mode_candidates(request, presented_type, alias_mode)
     if presented_type is not None and not mode_candidates:
-        incomplete = _library_incompleteness(library, presented_type)
+        # [round24 R23-1 형제 표면] `dmx_mode_not_in_library`도 **부재 단정**이다 —
+        # *"확인된 FixtureType에 그 모드가 없다"*. 위 타입 축과 **같은 자리에 같은
+        # 질문**을 건다: 모드 열거의 선언 총계를 못 읽었으면 미관측 구간에 그 모드가
+        # 있을 수 있고, 그때 "그 GDTF를 임포트하라"는 거짓 안내다.
+        #
+        # 타입 축까지 함께 묻는 이유는 **정체**다. 루트 열거가 전수가 아니면 이
+        # `presented_type`이 요청 이름을 부분 포함하는 다른 제품일 수 있고
+        # (`fuzzy_type_equal`이 포함관계다), 그러면 "이 타입에 그 모드가 없다"의 주어가
+        # 틀린다. 그 갈래는 `_library_incompleteness`가 이미 먼저 잡고 있었고, 미판독
+        # 갈래만 새어 있었다 — 같은 근거로 닫는다.
+        incomplete = _absence_unverifiable(library, presented_type)
         if incomplete is not None:
             return TypeResolution(
                 request=request,
@@ -1350,16 +1447,24 @@ def _resolve_one(
         # 위 조기 반환에 있었으며 또 하나(**폐기된 행이 없음**)는 어디에도 없었다
         # (round20 R20-D). 20줄·80줄 거리로 흩어진 전제는 다음 라운드에 또 하나가 빠진다.
         #
-        # [round23 R22-E 형제 표면] **타입 정체가 확실해야** 이 부재를 말할 수 있다.
-        # `_absence_assertable`이 재는 것은 *이 타입의* 모드 목록이 전수인가이고, 하드
-        # 스톱이 주장하는 것은 *맞는 모드가 없다*이므로 그 사이에 전제가 하나 더 있다:
-        # **이 타입이 맞는 타입인가.** 루트 열거가 부분이면 요청 이름을 부분 포함하는
-        # 다른 제품이 미관측 구간에 있을 수 있고, 그때 "도면 점유폭을 고쳐라"는 거짓
-        # 안내다. 확정을 막는 것과 같은 근거(행에 실리는 완전성 진술)를 본다 —
-        # 막지 않으면 `resolved`는 아니지만 **확정 등급의 부재 단정**이 나간다.
-        absence_assertable = _absence_assertable(confirmed_type) and _confirmable_from(
-            _library_list_completeness(library)
-        )
+        # [round23 R22-E 형제 표면 · round24 R23-1] **타입 정체가 확실해야** 이 부재를
+        # 말할 수 있다. `_absence_assertable`이 재는 것은 *이 타입의* 모드 목록이
+        # 전수인가이고, 하드 스톱이 주장하는 것은 *맞는 모드가 없다*이므로 그 사이에
+        # 전제가 하나 더 있다: **이 타입이 맞는 타입인가.** 루트 열거가 부분이면 요청
+        # 이름을 부분 포함하는 다른 제품이 미관측 구간에 있을 수 있고, 그때 "도면
+        # 점유폭을 고쳐라"는 거짓 안내다.
+        #
+        # R22-E는 그 전제를 **타입 축에만** 걸었고(`_confirmable_from(_library_...)`),
+        # 모드 축은 옛 술어에 남겼다. 그래서 선언 모드 총계를 못 읽은 한 스냅샷이
+        # 점유폭 일치에서는 확정을 막히고 불일치에서는 하드 스톱을 냈다 — 같은 행이
+        # 갈래에 따라 반대로 말한 것이 R23-1이다. 이제 형제 부재 단정 둘과 **같은
+        # 게이트**를 쓴다: 두 축을 한 자리에서 같은 근거로 묻는다.
+        #
+        # `_absence_assertable`은 그 위에 이 갈래만의 전제를 얹는다 — 부재가 *채널 수*
+        # 위의 술어이므로 모드마다 채널 수를 실제로 읽었어야 한다. 게이트가 공유
+        # 하위질문이고, 술어가 갈래 고유분이다.
+        blocking_axis = _absence_unverifiable(library, confirmed_type)
+        absence_assertable = blocking_axis is None and _absence_assertable(confirmed_type)
         footprint_branch: dict[str, object] = {
             "request": request,
             "console_type": confirmed_type,
@@ -1396,8 +1501,11 @@ def _resolve_one(
             request=request,
             status=TYPE_LIBRARY_INCOMPLETE,
             reason=FOOTPRINT_MISMATCH_UNVERIFIED_REASON,
+            # [round24 R23-1] 축 선택도 부재 단정 가드와 **같은 자리**에서 난다. 값은
+            # 구판과 같다(`_absence_unverifiable`은 `_library_incompleteness`를 먼저
+            # 묻는다) — 갈리지 못하게 식을 하나로 둔다.
             incompleteness_kind=(
-                _library_incompleteness(library, confirmed_type) or FIXTURE_TYPE_LIBRARY_UNREADABLE
+                _absence_unverifiable(library, confirmed_type) or FIXTURE_TYPE_LIBRARY_UNREADABLE
             ),
             type_candidates=type_candidates,
             mode_candidates=library_modes,
@@ -1426,7 +1534,7 @@ def _resolve_one(
         #
         # 확정 칸(`console_type`·`console_mode`)은 비운다. 관측이 불완전한 상태에서
         # 확정을 내보내지 않는다 — 위 갈래와 같은 규율이다.
-        blocking = _library_incompleteness(library, presented_type) or (
+        blocking = _absence_unverifiable(library, presented_type) or (
             FIXTURE_TYPE_LIBRARY_UNREADABLE
         )
         return TypeResolution(
@@ -1662,6 +1770,40 @@ def _library_incompleteness(
     return _mode_axis(console_type)
 
 
+def _absence_unverifiable(
+    library: FixtureTypeLibrary, console_type: LibraryType | None
+) -> str | None:
+    """**부재를 단정할 수 없게 만든 축.** 단정해도 되면 `None`.
+
+    [round24 R23-1] `_library_incompleteness`는 *"어느 축이 목록을 불완전하게 만들었나"*에
+    답한다. 그 답이 `None`인 상태는 **둘**이다 — 전수임을 확인했거나, **전수인지 말할
+    근거가 없거나**(선언 총계 `childCount`를 못 읽어 대조 기준이 없다). 부재 단정 가드가
+    그 둘을 같은 것으로 읽은 것이 R23-1이고, 같은 스냅샷이 갈래에 따라 반대로 말했다:
+    확정 게이트(`_confirmable_lists`)는 `complete is True`를 요구해 **막았고**, 부재
+    단정은 축만 보고 **통과시켰다**. 확정보다 강한 주장이 더 느슨한 술어로 나간 것이다.
+
+    그래서 여기서는 **행에 실리는 그 진술 그대로** 묻는다 — 확정 게이트와 같은
+    `_confirmable_from` · 같은 두 완전성 함수다. 표시·확정·부재 단정이 한 근거에서 난다.
+
+    **처분 어휘는 넓히지 않는다**(round19 major#4). 축이 서지 않은 미판독 상태의 폴백은
+    형제 두 갈래(점유폭 미검증 · `_confirmable_lists` 게이트)가 이미 쓰는
+    `FIXTURE_TYPE_LIBRARY_UNREADABLE` 그대로다 — 자리마다 다른 축을 말하면 같은 스냅샷이
+    payload 안에서 갈린다. 그 사유 문장은 두 원인을 함께 적는다(`LIBRARY_UNREADABLE_REASON`).
+
+    `console_type`이 `None`이면 **모드 축은 묻지 않는다**. 제시된 타입이 없는 갈래
+    (타입 후보 0건)에서 모드 목록은 존재하지 않고, 없는 목록의 완전성을 요구하면
+    "라이브러리에 그 타입이 없다"는 **정상 응답이 영영 나가지 못한다** — 과차단이다.
+    """
+    axis = _library_incompleteness(library, console_type)
+    if axis is not None:
+        return axis
+    if not _confirmable_from(_library_list_completeness(library)):
+        return FIXTURE_TYPE_LIBRARY_UNREADABLE
+    if console_type is not None and not _confirmable_from(_mode_list_completeness(console_type)):
+        return FIXTURE_TYPE_LIBRARY_UNREADABLE
+    return None
+
+
 def _incompleteness_reason(kind: str) -> str:
     if kind == FIXTURE_TYPE_LIBRARY_UNREADABLE:
         return LIBRARY_UNREADABLE_REASON
@@ -1719,6 +1861,20 @@ def _absence_assertable(console_type: LibraryType | None) -> bool:
     union을 부르지 않고 갈래를 펼치는 이유는 등기부다: 갈래마다 지워 보는 뮤테이션이
     성립해야 하고, `modes_incomplete`에 갈래가 늘면 등기 전수와 어긋나 그 자리에서 먼저
     실패한다. 두 층이 조용히 갈라지는 길을 막는다.
+
+    [round24 R23-1] **선언 총계 미판독이 여섯 번째 전제다.** 위 다섯은 전부 *"어긋난
+    것이 관측됐는가"*를 묻는데, 대조할 기준(`mode_child_count`)이 없으면 그 다섯은 전부
+    거짓이 되고 술어가 참을 낸다 — *"모른다"*가 *"전수다"*로 읽히는 이 SPEC의 반복 형태다.
+    그래서 형제 `_mode_list_completeness`는 그 상태를 `complete=None`으로 적고
+    `_confirmable_from`이 확정을 막는데, 이 술어만 통과시켰다: **확정보다 강한 주장인
+    부재 단정이 더 느슨한 술어로 나갔다**(R23-1). 두 층이 같은 질문에 같은 답을 내도록
+    전제를 여기 세우고, 그 동치를 시험이 값으로 고정한다
+    (`test_r24_the_absence_predicate_answers_the_shared_question_identically`).
+
+    **두 층이 같은 질문을 하는 것은 아니다.** 부재 단정은 *채널 수* 위의 술어라
+    모드마다 채널 수를 실제로 읽었어야 하고(마지막 전제), 확정 게이트는 그것을 묻지
+    않는다. 공유되는 것은 **"이 모드 목록이 전수인가"** 하나이고, 갈리면 안 되는 것도
+    그 하나다.
     """
     if console_type is None:
         return False
@@ -1733,6 +1889,10 @@ def _absence_assertable(console_type: LibraryType | None) -> bool:
         # `== 0`이 아니라 `not`이다 — 이 저장소의 구조 게이트가 이름 토큰이 실린 항등
         # 비교를 전부 막는다(`equality_confirmation_locations`). 의미는 같다.
         and not console_type.mode_rows_discarded
+        # [round24 R23-1] 대조 기준 자체. `is not None`이지 truthiness가 아니다 —
+        # `0`을 선언한 스냅샷은 **총계를 읽은** 것이고, 그 위에서는 위 계수 갈래가
+        # 판정한다(선언 0에 행이 오면 `modes_over_enumerated`가 선다).
+        and console_type.mode_child_count is not None
         and all(mode.channel_count is not None for mode in console_type.modes)
     )
 

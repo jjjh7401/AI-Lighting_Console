@@ -29,6 +29,7 @@ from server.prechk.inventory import (
     Inventory,
     ReadFailure,
 )
+from server.tests.test_autopatch_contract import iter_vwx_modules, vwx_module_label
 from server.tests.test_autopatch_execute import (
     APPLY_SOURCE,
     CD_TOKEN,
@@ -3650,7 +3651,7 @@ def test_every_verify_patch_branch_obeys_the_same_display_contract(
 #: [round17 #7] 이 표는 round16까지 **네 모듈**만 담았는데 파서 독스트링은 `server/vwx/*.py`라
 #: 적었다 — `_R16_BOOL_GUARD_ROWS`와 **같은 스코프 거짓말**이다. 이제 목록을 손으로 쓰지 않고
 #: 디렉터리에서 파생한다. 모듈이 하나 생기면 스캔 범위가 자동으로 따라간다.
-_R16_VWX_MODULES = tuple(sorted(path.name for path in Path("server/vwx").glob("*.py")))
+_R16_VWX_MODULES = tuple(sorted(vwx_module_label(path) for path in iter_vwx_modules()))
 _R16_UNREGISTERED_CODE = "존재하지 않는 판정 코드"
 
 
@@ -5143,13 +5144,13 @@ def _r17_vwx_trees(overrides=None):
     """
     import ast
 
-    modules = tuple(sorted(_R17_VWX_DIR.glob("*.py")))
+    modules = iter_vwx_modules(_R17_VWX_DIR)
     assert modules, "server/vwx/ 모듈을 하나도 찾지 못했다 — 스캐너가 공허하다"
     overrides = overrides or {}
     return tuple(
         (
-            path.name,
-            ast.parse(overrides.get(path.name, path.read_text(encoding="utf-8"))),
+            vwx_module_label(path),
+            ast.parse(overrides.get(vwx_module_label(path), path.read_text(encoding="utf-8"))),
         )
         for path in modules
     )

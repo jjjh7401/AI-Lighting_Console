@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from server.prechk.inventory import COMPLETE, FIXTURE_ROOT, FixtureRecord, Inventory
+from server.tests.test_autopatch_contract import iter_vwx_modules, vwx_module_label
 from server.vwx.address import ADDRESS_BASIS_DIRECT, PATCHED, ResolvedRecord
 from server.vwx.diff import compare
 from server.vwx.patchplan import (  # noqa: I001
@@ -82,8 +83,22 @@ def candidate_ids(payload: dict) -> list[str]:
 
 
 class FidRigPort:
-    def __init__(self, existing_fids: tuple[int, ...] = ()):
+    #: [round23 R21-A] 이 대역의 기본 픽스처는 **어느 후보의 도면 자리도 아닌 곳**에 있다.
+    #: `rr()`가 내는 후보는 전부 유니버스 1이므로 유니버스 9는 "남의 픽스처"다. 기본값을
+    #: `ok=False`(주소 미판독)로 두지 않은 이유가 중요하다 — 그러면 기존 FID 충돌 대조군이
+    #: *"정말 다른 자리라서"*가 아니라 *"주소를 못 읽어서"* 통과하게 되어, 승격 규칙을
+    #: 아무렇게나 고쳐도 그 대조군이 잡지 못한다.
+    FOREIGN_UNIVERSE = 9
+
+    def __init__(
+        self,
+        existing_fids: tuple[int, ...] = (),
+        *,
+        addresses: dict[int, str] | None = None,
+    ):
         self.existing_fids = existing_fids
+        #: 슬롯 -> `Patch` 원문. 주지 않은 슬롯은 남의 자리에 있다.
+        self.addresses = dict(addresses or {})
         self.state_calls: list[str] = []
         self.property_calls: list[tuple[str, str]] = []
 
@@ -105,14 +120,21 @@ class FidRigPort:
 
     def query_property(self, path: str, property_name: str) -> dict:
         self.property_calls.append((path, property_name))
+        slot = int(path.rsplit("/", 1)[1])
+        if property_name == "Patch":
+            return {
+                "ok": True,
+                "path": path,
+                "property": property_name,
+                "value": self.addresses.get(slot, f"{self.FOREIGN_UNIVERSE}.{slot}"),
+            }
         if property_name != "FID":
             raise RuntimeError(f"unexpected property name: {property_name}")
-        index = int(path.rsplit("/", 1)[1]) - 1
         return {
             "ok": True,
             "path": path,
             "property": property_name,
-            "value": str(self.existing_fids[index]),
+            "value": str(self.existing_fids[slot - 1]),
         }
 
 
@@ -283,7 +305,12 @@ class TestFidConflictPrecheckBranches:
 
         assert result["ok"] is True
         assert rig.state_calls == [FIXTURE_ROOT]
-        assert rig.property_calls == [(f"{FIXTURE_ROOT}/1", "FID")]
+        # FID 축은 그대로 **전문 고정**이다 — 열거 슬롯마다 정확히 한 번.
+        assert [c for c in rig.property_calls if c[1] == "FID"] == [(f"{FIXTURE_ROOT}/1", "FID")]
+        # [round23 R21-A] 점유자 좌표 프로브는 **상한**으로만 적는다. 충돌한 제안이 1건이니
+        # 1회를 넘지 못한다. 수열 동등으로 적으면 "왕복 없이 같은 판정을 내는 개선"까지
+        # 실패시키는 역방향 대조군이 된다(round22가 명명한 형태) — 넘지 않는 것만 지킨다.
+        assert len([c for c in rig.property_calls if c[1] == "Patch"]) <= 1
         assert assigned_fids(result) == [101]
         assert [
             {
@@ -1834,7 +1861,7 @@ def _r17_vwx_bool_guard_sites() -> tuple[tuple[str, str], ...]:
     import ast
 
     sites: list[tuple[str, str]] = []
-    for path in sorted(Path("server/vwx").glob("*.py")):
+    for path in iter_vwx_modules():
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for fn in _r16_in_source_order(
             node
@@ -1848,7 +1875,7 @@ def _r17_vwx_bool_guard_sites() -> tuple[tuple[str, str], ...]:
                     and len(node.args) > 1
                     and getattr(node.args[1], "id", None) == "bool"
                 ):
-                    sites.append((path.name, fn.name))
+                    sites.append((vwx_module_label(path), fn.name))
                     break
     return tuple(sites)
 
@@ -3228,7 +3255,7 @@ _R19_ENUMERATION_READERS = (
 def _r19_scan_enumeration_readers() -> set[tuple[str, str]]:
     """`server/vwx/` 전 모듈에서 `*.query_state(...)`를 호출하는 함수를 AST로 전수한다."""
     found: set[tuple[str, str]] = set()
-    for path in sorted(Path("server/vwx").glob("*.py")):
+    for path in iter_vwx_modules():
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
@@ -3239,7 +3266,7 @@ def _r19_scan_enumeration_readers() -> set[tuple[str, str]]:
                     and isinstance(inner.func, ast.Attribute)
                     and inner.func.attr == "query_state"
                 ):
-                    found.add((path.name, node.name))
+                    found.add((vwx_module_label(path), node.name))
     return found
 
 
@@ -3602,3 +3629,175 @@ def test_r19_every_registered_label_is_unique_within_its_vocabulary():
         assert len(set(labels.values())) == len(labels), f"{vocabulary}에 중복 라벨이 있다"
         for code, label in labels.items():
             assert label.strip(), f"{vocabulary}/{code}의 라벨이 비어 있다"
+
+
+# ==========================================================================
+# [round23 R21-A] 승격 **분류 규칙**과 그 비용 상한
+#
+# 처방 3: 순서를 바꾸면 순서를 대조군으로 고정하고, **바꾸지 않고 재분류하면 분류
+# 규칙을 대조군으로** 고정하라. 여기서 고친 것은 분류다 — `_assign_fids`는 여전히
+# 주소 계층보다 위에 있고, 달라진 것은 "그 FID를 든 픽스처가 누구인가"를 묻는다는
+# 점뿐이다. 아래 표가 그 규칙 전체다.
+# ==========================================================================
+
+#: 승격 규칙 `holders == ((u, a),)`의 입력 도메인 **닫힌 분할**. 등식이 성립하거나,
+#: 아래 여섯 가지 이유 중 하나로 성립하지 않는다 — 그 밖의 이유는 없다.
+#: (길이 0) · (길이 1 × 원소가 우리 것 / 유니버스 상이 / 주소 상이 / 미판독) ·
+#: (길이 ≥2 × 전부 우리 것 / 섞임)
+_R21_HOLDER_MODES = frozenset(
+    {
+        "promoted",
+        "no_holder",
+        "single_other_universe",
+        "single_other_address",
+        "single_unreadable",
+        "duplicate_all_ours",
+        "duplicate_mixed",
+    }
+)
+
+#: (분할 이름, 그 FID를 든 슬롯들의 좌표, 배제되는가) — 대상의 도면 자리는 언제나 `(1, 1)`이다.
+#: `None` 원소는 "그 슬롯의 주소를 판독하지 못했다"를 뜻한다.
+_R21_HOLDER_ROWS = (
+    ("no_holder", (), True),
+    ("promoted", ((1, 1),), False),
+    ("single_other_universe", ((2, 1),), True),
+    ("single_other_address", ((1, 2),), True),
+    ("single_unreadable", (None,), True),
+    ("duplicate_all_ours", ((1, 1), (1, 1)), True),
+    ("duplicate_mixed", ((1, 1), (2, 9)), True),
+)
+
+_R21_TARGET_UNIVERSE = 1
+_R21_TARGET_ADDRESS = 1
+
+
+def _r21_assign_with_holders(holders):
+    """대상 하나 · 충돌하는 FID 하나 — 판독기만 갈아 끼워 분류 규칙만 잰다."""
+    from server.vwx.patchplan import FIDRange, _assign_fids
+
+    target = _r18_candidate("a", universe=_R21_TARGET_UNIVERSE, address=_R21_TARGET_ADDRESS)
+    return _assign_fids(
+        (target,),
+        FIDRange(start=100, end=100),
+        existing_fids=frozenset({100}),
+        fid_range_visually_confirmed_empty=None,
+        fid_holders=lambda _fid: holders,
+    )
+
+
+@pytest.mark.parametrize("label, holders, excluded", _R21_HOLDER_ROWS)
+def test_r21_the_promotion_rule_reads_exactly_this_table(label, holders, excluded):
+    """승격 규칙 전문 — 좌표가 **정확히 우리 자리 한 대**일 때만 배제를 면제한다.
+
+    죽이는 뮤테이션:
+      · `_fid_holder_is_this_target`을 `return False`로 → `promoted` 행이 실패한다.
+      · `return True`로 → 나머지 여섯 행이 전부 실패한다.
+      · 등식을 `holders and holders[0] == …`(= 첫 원소만 보기)로 바꾸면
+        `duplicate_mixed`·`duplicate_all_ours`가 통과해버려 실패한다 — 중복 FID를
+        우리 것으로 삼킨다.
+      · 좌표 비교를 주소만으로 좁히면 `single_other_universe`가 실패한다.
+      · 길이만 보고(`len(...) == 1`) 좌표를 안 보면 세 `single_*` 행이 실패한다.
+    """
+    planned, exclusions = _r21_assign_with_holders(holders)
+
+    assert [x.code for x in exclusions] == ([FID_ALREADY_IN_USE] if excluded else []), label
+    assert [t.assigned_fid for t in planned] == ([] if excluded else [100]), label
+
+
+def test_r21_the_holder_table_is_a_bijection_with_the_closed_partition():
+    """**표 행삭제 프로브** — 한 행을 지우면 분할이 덮이지 않아 실패한다.
+
+    라벨은 장식이 아니라 승격 규칙 입력 도메인의 **분할 이름**이다. 행을 지우면
+    전사성이 깨지고, 행을 늘리려면 분할에 이름을 먼저 등재해야 한다. 편측 프로브도
+    함께 본다 — 승격되는 행과 배제되는 행이 **둘 다** 있어야 규칙을 상수로 바꿔도
+    걸린다. 같은 좌표 조합을 두 행이 쓰지 않는 것까지 본다(중복 행은 덮지 않는다).
+    """
+    names = [name for name, _holders, _excluded in _R21_HOLDER_ROWS]
+    assert set(names) == _R21_HOLDER_MODES
+    assert len(names) == len(_R21_HOLDER_MODES)
+
+    holders = [holder for _name, holder, _excluded in _R21_HOLDER_ROWS]
+    assert len(set(holders)) == len(holders)
+
+    assert {excluded for _n, _h, excluded in _R21_HOLDER_ROWS} == {True, False}
+    # 승격 행은 정확히 하나다 — "우리 자리의 그 한 대"라는 규칙이 곧 유일성이다.
+    assert sum(1 for _n, _h, excluded in _R21_HOLDER_ROWS if not excluded) == 1
+
+
+# --- 비용: 상한·불변식·단조성으로만 적는다(round22 규율 3①) -----------------
+
+
+def _r21_probe_paths(rig: FidRigPort, property_name: str) -> list[str]:
+    return [path for path, name in rig.property_calls if name == property_name]
+
+
+def _r21_plan_with_range(range_end: int, *, existing: tuple[int, ...], targets: int):
+    payload = report_payload([rr(index) for index in range(targets)])
+    ids = candidate_ids(payload)
+    rig = FidRigPort(existing_fids=existing)
+    build_patch_plan(
+        payload,
+        selected=ids,
+        fid_range={"start": 100, "end": range_end},
+        assumption_71=ASSUMPTION_71_GO,
+        fid_property_port=rig,
+    )
+    return rig
+
+
+_R21_EXISTING = tuple(range(100, 120))  # 콘솔 슬롯 20개가 100~119를 전부 쓰고 있다.
+
+
+@pytest.mark.parametrize("range_end", (102, 199, 100_000))
+def test_r21_holder_probes_are_bounded_and_do_not_grow_with_the_fid_range(range_end):
+    """**상한**: 점유자 프로브는 ① 이미 낸 FID 읽기 수와 ② 대상 수를 둘 다 넘지 않는다.
+
+    대역을 100~102에서 100~100000으로 넓혀도 프로브 수는 같다 — 넓은 대역은 제안되는
+    FID의 **값**을 바꿀 뿐 콘솔 슬롯 수도 대상 수도 늘리지 못한다. 승격 근거를 미리
+    전 슬롯에서 긁어 오는 형태로 되돌리면 ②가 먼저 깨진다(대상 3건에 프로브 20회).
+
+    수열 동등으로 적지 않는다: 왕복 없이 같은 판정을 내는 개선은 이 단정을 **통과**해야
+    한다(round22가 명명한 역방향 대조군을 만들지 않는다).
+    """
+    targets = 3
+    rig = _r21_plan_with_range(range_end, existing=_R21_EXISTING, targets=targets)
+
+    probes = _r21_probe_paths(rig, "Patch")
+    assert len(probes) <= len(_r21_probe_paths(rig, "FID"))
+    assert len(probes) <= targets
+    # 같은 슬롯을 두 번 읽지 않는다 — 상한이 호출자의 성질이 아니라 구조로 성립한다.
+    assert len(probes) == len(set(probes))
+
+
+def test_r21_the_probe_bound_is_not_vacuous():
+    """비공허성 — 위 상한이 "프로브가 0회라서" 성립하는 것이 아님을 못박는다.
+
+    충돌이 실제로 일어나는 대역에서는 프로브가 난다. 이 단정이 없으면 승격 근거를
+    통째로 지워도 상한 테스트가 조용히 통과한다.
+    """
+    rig = _r21_plan_with_range(102, existing=_R21_EXISTING, targets=3)
+
+    assert _r21_probe_paths(rig, "Patch")
+
+
+def test_r21_asking_the_same_fid_twice_does_not_reach_the_console_twice():
+    """**단조성**: 같은 FID를 다시 물어도 왕복이 늘지 않는다.
+
+    상한을 `_assign_fids`의 `next_fid` 단조 증가에 맡기면 그것은 호출자를 고쳐야
+    유지되는 약속이고, 이 SPEC이 반복해 배운 대로 그런 약속은 형제 진입점에서 깨진다.
+    판독기가 스스로 진다.
+    """
+    from server.vwx.patchplan import _existing_fids_from_console, _fid_holder_reader
+
+    rig = FidRigPort(existing_fids=(100,))
+    reader = _fid_holder_reader(rig, _existing_fids_from_console(rig))
+
+    first = reader(100)
+    after_first = len(_r21_probe_paths(rig, "Patch"))
+    second = reader(100)
+    after_second = len(_r21_probe_paths(rig, "Patch"))
+
+    assert first  # 물어본 FID의 점유자를 실제로 알아냈다
+    assert second == first
+    assert after_second == after_first
