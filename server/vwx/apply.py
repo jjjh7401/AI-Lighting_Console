@@ -527,7 +527,10 @@ def _resolve_library_type(display: str | None, library: FixtureTypeLibrary) -> L
     # 사실에 기대는 **index 형태 단독 해석은 거부**한다. 반면 이름이 정확히 일치한 것은
     # 절단과 무관한 **긍정 증거**이므로 그대로 채택한다 — 둘을 함께 버리면 이 콘솔에서
     # 멱등 판정 자체가 영영 성립하지 않는다(절단이 기본 경로다).
-    if library.truncated and not by_name:
+    # [round21 R20-A · 형제 표면] `library.truncated` 플래그 단독이었다. 부정 결론을
+    # 무효화하는 조건은 "목록이 전수가 아니다"이지 "플래그가 섰다"가 아니므로,
+    # 계수 대조까지 포함한 `enumeration_incomplete`를 본다(typemap의 같은 판정과 일치).
+    if library.enumeration_incomplete and not by_name:
         return None
     return _single_unambiguous(by_name, by_index)
 

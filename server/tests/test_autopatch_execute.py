@@ -3104,6 +3104,11 @@ def _r19_library_port(port_kwargs):
     from server.tests.test_autopatch_types import LibraryRigPort
 
     kwargs = dict(port_kwargs)
+    # [round21 R20-D] 폐기 행 스냅샷 — 열거는 `ok=true`로 끝까지 왔고 그 안의 행이
+    # 슬롯 번호를 갖고 있지 않다. 절단(`modes_truncated`)과도 판독 실패
+    # (`partial_channels`)와도 다른 세 번째 축이라 포트도 따로 둔다.
+    if kwargs.pop("slotless_modes", False):
+        return _r19_slotless_mode_port(kwargs)
     if not kwargs.pop("partial_channels", False):
         return LibraryRigPort(_R19_LIBRARY, **kwargs)
 
@@ -3114,6 +3119,29 @@ def _r19_library_port(port_kwargs):
             return super()._channels(type_index, mode_index, path)
 
     return _PartialChannelPort(_R19_LIBRARY, **kwargs)
+
+
+def _r19_slotless_mode_port(port_kwargs):
+    """[round21 R20-D] DMXModes 행 하나가 슬롯 번호(`i`)를 갖고 있지 않은 포트.
+
+    responder `safe_children`의 `probe_slots` nil / per-child `slot_confirms` 폴백이
+    실제로 만드는 스냅샷이다(PRESERVE `server/prechk/inventory.py` 독스트링). 열거 응답은
+    `ok=true`이고 목록도 끝까지 왔다 — **절단도 판독 실패도 아니다.**
+    """
+    from server.tests.test_autopatch_types import LibraryRigPort
+
+    class _SlotlessModePort(LibraryRigPort):
+        def query_state(self, path: str) -> dict:
+            state = super().query_state(path)
+            if not path.endswith("/DMXModes") or state.get("ok") is not True:
+                return state
+            children = [dict(row) for row in state["children"]]
+            for row in children:
+                if row.get("i") == 2:
+                    row.pop("i")
+            return {**state, "children": children}
+
+    return _SlotlessModePort(_R19_LIBRARY, **dict(port_kwargs))
 
 
 def _r19_resolve(scenario) -> object:
@@ -3288,6 +3316,9 @@ _R19_FIX_AXIS = {
     "fixture_type_name_unusable": "design_type_name",
     "footprint_unknown": "design_footprint",
     "designed_footprint_matches_no_console_mode": "design_footprint",
+    # [round21 R20-D] 폐기 축 — 라이브러리는 온전히 있고 목록도 끝까지 왔다. 고칠 곳은
+    # 도면도 사용자 입력도 아니라 콘솔 열거 응답이므로 `console_library` 축이다.
+    "fixture_type_library_rows_discarded": "console_library",
 }
 
 
@@ -3351,6 +3382,11 @@ _R19_NEW_CODE_AXIS_PROBES = (
     ),
     ("fixture_type_library_truncated", "library_truncated", "type_confirmation_pending"),
     ("fixture_type_library_unreadable", "library_unreadable", "type_confirmation_pending"),
+    (
+        "fixture_type_library_rows_discarded",
+        "library_rows_discarded",
+        "type_confirmation_pending",
+    ),
 )
 
 
@@ -3364,6 +3400,17 @@ def _r19_scenario_named(name: str):
             99,
             _R19_ALIAS_MODE_1,
             {"partial_channels": True},
+        )
+    if name == "library_rows_discarded":
+        # [round21 R20-D] DMXModes 행 하나에 슬롯 번호가 없다 — 목록은 끝까지 왔고
+        # 응답도 정상이다. 절단·판독실패 어느 어휘로 적어도 관측 사실이 거짓이 된다.
+        return (
+            "library_rows_discarded",
+            "MegaPointe",
+            "Mode 1",
+            99,
+            _R19_ALIAS_MODE_1,
+            {"slotless_modes": True},
         )
     return next(row for row in _R19_STATE_CORPUS if row[0] == name)
 

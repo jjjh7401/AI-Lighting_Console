@@ -788,6 +788,9 @@ _R17_TOKEN_JOIN_SITES = (
         "f'{FIXTURE_TYPE_LIBRARY_ROOT}/{console_type.index}/{DMX_MODES_SEGMENT}"
         "/{console_mode.index}/{DMX_CHANNELS_SEGMENT}'",
     ),
+    # [round21 R20-A ⓑ] 표적 회수 스윕의 프로브 경로 — `recover_requested_types`.
+    # 인덱스는 `1..childCount` 유계 루프의 정수라 사용자 문자열이 섞이지 않는다.
+    ("typemap.py", "f'{FIXTURE_TYPE_LIBRARY_ROOT}/{index}'"),
     ("typemap.py", "f'{FIXTURE_TYPE_LIBRARY_ROOT}/{index}/{DMX_MODES_SEGMENT}'"),
     ("typemap.py", "f'{modes_path}/{mode_index}'"),
     ("typemap.py", "f'{mode_path}/{DMX_CHANNELS_SEGMENT}'"),

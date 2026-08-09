@@ -40,7 +40,7 @@ round7 18건 + round8 13건 + round9 8건 + round10 7건 반영. round6 PASS(1.0
 판정이므로 승계하지 않고, **round10이 v0.1.4를 직접 감사해 PASS했다**.) ·
 run-phase 진행 중 ·
 M0 종결(5차까지) · **M1~M7 완료 · M8 재정의 완료(v0.1.5, 사용자 승인)** ·
-**독립 코드 감사 round11~19 — 아홉 다 FAIL.** `[라운드계수셀=19]`
+**독립 코드 감사 round11~20 — 열 라운드 전부 감사 FAIL**(round20은 **감사 FAIL · 세션 GO 조건 3**). `[라운드계수셀=20]`
 round14는 이 사이클 최초로 치명 0건이었고, round15는 *"프로덕션 동작은 옳으나 그것을 지키는
 테스트가 게이트가 아니다"*, round16은 *"게이트를 네 표에 붙이고 형제 두 표에는 붙이지 않았다"*로
 FAIL했다. **round17이 이 사이클 최악이다 — 치명 5건 + 신규 치명 1건.**
@@ -75,13 +75,13 @@ Save As/Load 콘솔 절차는 전면 미실측이고, P5-D의 강점은 문법 �
 오지정 위험이 0이라는 구조적 성질**이다. ㉢도 "제거 불가"를 배제하지 않는다.
 **이제 세션 착수를 막고 있는 것은 P1(독립 감사 PASS) 하나다.**
 **남은 것은 ① round19 반영에 대한 재감사(round20 — **[2026-08-08 사용자 결정]** M8 세션 직전 1회로 시점 확정) ② 사용자의 라이브 세션 둘뿐이다.**
-테스트 **6,870 passed / 7 skipped**(착수 4,898 → +1,972, 회귀 0) ·
+테스트 **7,070 passed / 7 skipped**(착수 4,898 → +2,172, 회귀 0) ·
 **[round15 #4]** 이 계수는 반영마다 바뀐다 — **갱신할 자리는 네 곳**이다:
 이 줄 · §0 "기계 확인 커맨드"의 `현재 기준선` 주석 · §E.2 해당 라운드 절의 `A → B passed` ·
 **프론트매터 `next:` 필드 안의 계수**(**[round17]** 이 네 번째 자리를 규칙이 빠뜨려
 `next:`가 두 라운드 stale로 남았다 — 규칙 자체가 결함이었다).
 한 곳만 고치면 같은 결함이 재발한다(round12~14가 그렇게 stale을 남겼다) ·
-커밋 **run-phase 33건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 **37건** — **본 갱신을 담은 커밋을
+커밋 **run-phase 34건**(`9f7516c..HEAD` · `ca00bc5..HEAD` 총 **38건** — **본 갱신을 담은 커밋을
 포함한 계수**다. 갱신마다 재계산하라. round10 감사 N55).
 **[round18 D-11] 명령줄을 함께 남긴다** — `git rev-list --count 9f7516c..HEAD` ·
 `git rev-list --count ca00bc5..HEAD`. 이전 판은 27/31로 한 커밋(`d1cd4a9`) stale이었다.
@@ -194,7 +194,7 @@ M1~M7이 끝났다** — 이전 판은 여기에 "현재 `audit-ready` — Imple
 **M4 착수** 단계다"라고 적어, 같은 §0의 `M1~M7 완료`(§0 상태 줄 · "다음 담당자가 먼저 할 것" 2번)와
 정면으로 모순했다. Implementation Kickoff Approval은 통과했고 **M4는 물론 M7까지 완료**다.
 **현재 남은 것은 M8(라이브 종단) 하나이며, 그 착수 전제는 독립 코드 감사 재감사 PASS다**
-(**[round19 #1 정정]** round11~**19** **아홉** 라운드 전부 FAIL `[라운드계수셀=19]` — 이전 판은 `round11~16`으로 **세 라운드 stale**이었다. 이 줄은 라운드 계수 셀 **여덟** 중 하나다). "audit-ready"는 `plan.md`/`acceptance.md`가 감사를 통과한
+(**[round21 갱신]** round11~**20** **열** 라운드 전부 감사 FAIL `[라운드계수셀=20]` — round20은 **감사 FAIL이면서 세션 GO(조건 3)**였고 그 갈라짐이 정확하다(§E.2ab). 이전 판은 `round11~19`로 **한 라운드 stale**이었고 **표지 토큰 하나는 아예 소실돼 있었다**(§E.2ac `R21-B`). **`=21`로 올리지 않는다 — round21은 반영이지 감사가 아니다.** 이 줄은 라운드 계수 셀 **여덟** 중 하나다). "audit-ready"는 `plan.md`/`acceptance.md`가 감사를 통과한
 상태를 뜻할 뿐, 코드 마일스톤의 현재 위치가 아니다.
 
 ### 이 SPEC이 1단계와 근본적으로 다른 점
@@ -216,7 +216,7 @@ M1~M7이 끝났다** — 이전 판은 여기에 "현재 `audit-ready` — Imple
 | 4 | 무엇을 통과해야 하나 | `acceptance.md` — AC 27건 · §C.0 역추적표(REQ 26/26) · §C.0a 마일스톤 배정 · §F DoD |
 | 5 | 어떻게 만들 것인가 | `design.md` — §3 흐름도 · §5 설계 슬롯 5건 · §6.3 비공허성 대조군 **10건** · §7 안티패턴 10건 |
 | 6 | 근거는 무엇인가 | `research.md` — 패치 기법(**룰북 주장 4건은 반증됨**) · FID 난제 · 타입 핸들 · 비가역성 · 1단계 상속 |
-| 7 | **M8 세션을 무엇으로 도나** | **`M0-SHOWFILE-SPEC.md`** — 테스트 쇼파일 사양 · 제작 절차 · 세션 체크리스트 · 미확인 18건. **§1.3이 "`d03597b`의 39대 쇼파일로는 M8이 구조적 0 대상"을 도출했고 round19가 절단 복구 스윕으로 해소했다 — 잔여 셋은 그대로 fail-closed다**(§0 2d 경고 참조) `[round19 #3]` |
+| 7 | **M8 세션을 무엇으로 도나** | **`M0-SHOWFILE-SPEC.md`** — 테스트 쇼파일 사양 · 제작 절차 · 세션 체크리스트 · 미확인 18건(U-01~U-18 · **세션이 낳은 `U-19`~`U-23`은 그 표 밖이며 정본은 §E.2ab** `[round21]`). **§1.3이 "`d03597b`의 39대 쇼파일로는 M8이 구조적 0 대상"을 도출했고 round19가 절단 복구 스윕으로 해소했다 — 잔여 셋은 그대로 fail-closed다**(§0 2d 경고 참조) `[round19 #3]`. **[round21] 그 짝은 §1.3a**(타입 라이브러리 절단 축 · 표적 스윕의 조건부 잔여 열 · **세션 GO 조건 3건의 현재 상태**)이며 §0 2d의 `[round21]` 블록과 쌍이다 |
 
 ### 함정 11건 — 먼저 읽어라 (2026-08-06: 1번 재정정 · 7·8번 신설 · **9·10·11번 신설(5차)**)
 
@@ -287,7 +287,7 @@ M1~M7이 끝났다** — 이전 판은 여기에 "현재 `audit-ready` — Imple
 ```bash
 W=/Users/studiox/orca/workspaces/AI-Lighting_Console/spec-vwx-001
 git -C "$W" rev-parse --abbrev-ref HEAD   # feature/SPEC-COPILOT-VWX-001 (1단계 위에 스택)
-uv run pytest server/tests -q             # 현재 기준선: 6,870 passed / 7 skipped (착수 4,898)
+uv run pytest server/tests -q             # 현재 기준선: 7,070 passed / 7 skipped (착수 4,898)
 #   ↑ [round15 #4 — 이 숫자가 "갱신할 자리"다] 커밋마다 바뀐다. 테스트를 추가·변경했으면
 #     **네 곳을 함께** 갱신하라: ⓐ 이 줄 · ⓑ §0 헤드라인의 `테스트 N passed / 7 skipped
 #     (착수 4,898 → +M, 회귀 0)` · ⓒ §E.2 해당 라운드 절의 `A → B passed` ·
@@ -523,6 +523,9 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
    NEGATIVE·INCONCLUSIVE + 시각 확인 분기에서는 아예 수행되지 않는다): 인벤토리(`screen_console_read`) · **FID 사전검사**
    (`ExistingFidRead`, 미판독이면 `fid_precheck_read_incomplete`로 배정 거부) ·
    주소 판독 실패(`console_read_caveat`의 `unreadable_address_count`). 되돌리지 마라.
+   **[round21 R20-A] 이 "셋"은 틀린 열거다** — **넷째(타입 라이브러리 절단 축)**는 M3부터
+   실재했고 이 항목 끝 `[round21]` 블록에 등재됐다. 아래 round16·round17 라벨은 **FID 축에
+   대한 서술이라 그대로 유효**하며, 넷째는 그 축이 아니라 **다른 리더**(`typemap`)의 표면이다.
    미판독(`missing_count > 0`)이 남으면 `screen_console_read`가 **생성 대상을 전부 막고**,
    `verify_patch(read_complete=False)`가 미관측을 `identity_unconfirmed`로 바꾼다.
    **열거 절단 자체로는 막지 않는다** — 이 콘솔에서 절단은 상시이고 `childCount`는 진짜
@@ -688,6 +691,72 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
    S2가 금지인 이유는 변하지 않았다: M0가 **GO로 판정한 것**을 읽기 한계 때문에 부정으로
    신고하는 것이고, 그것이 이 SPEC이 아홉 라운드 자기정정한 유형과 **동형**이다.
 
+   **[round21 신설 · `[round21 R20-A·R20-B·R20-D]`] 넷째 표면이 있었다 — 이 목록이 세지 않고 있었다:
+   타입 라이브러리 절단 축.**
+   **[HARD] 위 "막는 표면은 셋"은 틀린 열거였다.** round16이 *"넷째 관문은 생기지 않았다"*라 적은 것은
+   **FID 사전검사의 판정 기준이 넓어진 것을 새 관문으로 세지 말라**는 뜻이고 그것은 지금도 맞다.
+   그러나 **M3부터 넷째 표면이 실재했다**: 타입·모드 해석이 불완전하면 `apply`가 그 대상을
+   **배제한다**(`apply._unresolved_type_verdict` → `_unresolved_type_exclusion` — `hard_stop_code` →
+   `incompleteness_kind` → `type_confirmation_pending`). **콘솔 판독의 불완전을 근거로 생성을 막는
+   표면**이라는 점에서 위 셋과 같은 종류이며, 이 목록이 그것을 **한 번도 열거하지 않았다.**
+   *"어떤 규율을 한 표면에 적용하고 형제 표면에는 적용하지 않는다"*의 **문서 버전**이 이것이다 —
+   목록이 표면을 빠뜨리면 다음 담당자는 그 표면에 규율이 필요한지조차 묻지 않는다.
+
+   **round20이 그 표면에서 찾은 결함 3건**(전문은 §E.2ab 「round20 판정」 · 처방 정본은
+   §E.2 「round21」 절 · 세션 운용 정본은 `M0-SHOWFILE-SPEC.md` **§1.3a**):
+   ⓧ **R20-A**(high) 절단 판정을 `state["truncated"]` **플래그 단독**으로 했다 —
+     PRESERVE 원전이 *"Completeness therefore comes from the COUNT COMPARISON, never from the
+     `truncated` flag"*라 못박은 그것이고(`server/prechk/inventory.py:10-18`),
+     **round19 스윕 주석이 스스로 인용한 규율**이다. `node.childCount`를 **읽지 않아** 못 본 수를
+     세지 못했고 복구 스윕도 없었다. ⓨ **R20-B**(high) `_mode_candidates`가 요청 모드 부재 시
+     **절단된 튜플을 '전 모드'로** 제시해 `incompleteness_kind=None` → `skipped_checks=[]` →
+     **고지 0건**. ⓩ **R20-D**(major) 슬롯 번호(`i`) 없는 행을 **세지 않고 버려**
+     *"슬롯이 확립되지 않았다"*가 *"라이브러리에 없다"*로 바뀌었다.
+
+   **[HARD] 세 축은 서로 다르다 — 한 칸으로 뭉개지 마라.** `patchplan`이 이미 셋을 구별하고
+   있었고 `typemap`은 그 구별을 복사했다(신설 어휘 최소화의 실제 형태다):
+
+   | 축 | 뜻 | `patchplan`의 이름 | `typemap`의 이름 | 조치 |
+   |---|---|---|---|---|
+   | **절단** | 목록이 예산에 잘려 뒤가 안 왔다 | `unseen_count` | `FixtureTypeLibrary.unseen`(payload `unseen_count`) · `LibraryType.modes_unseen` | **표적 스윕** |
+   | **폐기** | 행은 왔는데 슬롯 번호가 없거나 중복이다 | `unusable_row_count`·`unparsable_row_count` | `FixtureTypeLibrary.unusable_row_count`·`unparsable_row_count` · `LibraryType.unusable_mode_row_count`·`unparsable_mode_row_count` | **responder 쪽 문제** — 스윕으로 회수되지 않는다 |
+   | **판독 실패** | 값을 못 읽었다 | `unreadable_fids`·`probe_failures` | `FixtureTypeLibrary.probe_failures`(payload `probe_failure_count`) | **재시도** |
+
+   **셋이 동시에 참일 수 있다.** 하나로 뭉개면 조작자가 조치를 고를 수 없다.
+   *"이 목록을 완전하다고 말할 수 있는가"* 하나만 묻는 자리는 **union 프로퍼티 둘**이며
+   (`FixtureTypeLibrary.enumeration_incomplete` · `LibraryType.modes_incomplete` =
+   `truncated ∪ 계수 부족 ∪ 폐기>0`), **계수 칸은 축별로 분리 유지**된다 — union은 *"완전한가"*,
+   축별 계수는 *"무엇을 해야 하는가"*이고 **둘은 다른 층이다.**
+
+   **[round21 반영 — 형제 에이전트 `LibraryTruncation`·`ModeSilence`·`SlotDiscard`]** 처방 셋:
+   ⓐ **정직한 계수 보고**(비용 0) — `node.childCount`를 읽어 「선언 N · 본 M · 미관측 N−M」을 싣고
+     절단 판정을 **계수 대조**로 바꿨다. **추가 질의 0회**다: 절단된 payload에도 `childCount`가
+     이미 들어 있고(`console/lua/PROTOCOL.md:164-171`), **같은 파일의 `typemap._read_channel_count`가
+     이미 `node.childCount`를 정상적으로 읽고 있었다** — 30줄 거리에서 규율이 갈렸을 뿐이다.
+   ⓑ **표적 회수 스윕**(`typemap.recover_requested_types`) — **요청된 타입 이름만** 유계로 찾고
+     찾으면 멈춘다. **전수 스윕은 비용을 재서 기각했다**: `U = child_count − enumerated_count` ·
+     `m` = 모드 수 · `c` = 1(`negative` 기본)/2(GO)일 때 전수는 `U·(2 + c·m)`,
+     표적은 `U + M·(1 + c·m)`이다. 200종·열거 24·`m`=20에서 **전수 7,392회(GO) ≈ 8분 10초**
+     대 **표적 217회 ≈ 14.4초**(왕복 단가는 오늘 실측 40왕복 2.65s = **66.25 ms**) — **34.1배**.
+     **전수 스윕의 부재는 결함이 아니라 비용 판정의 결과다.**
+   ⓒ **막다른 길 라벨 정정** — 배제 라벨의 *"라이브러리를 다시 읽어야 함"*은
+     `max_children=24`가 하드 캡이라 **결정적으로 같은 24종을 주는 수행 불가능한 지시**였다
+     (round19가 고쳤다고 한 R18-E 유형 그 자체). 실제 조치(**도면 타입명을 콘솔 표기와 맞추거나
+     그 GDTF를 콘솔에 임포트**)를 가리키게 바꿨다.
+
+   **[HARD] 이 해소도 조건부다 — `M0-SHOWFILE-SPEC.md` §1.3a가 열 가지를 열거한다.**
+   스윕이 **아예 안 도는** 다섯(`available=False` · `child_count` 판독 실패 · 열거가 빔
+   (`slots_established` 위반 — responder가 슬롯 대신 **위치**를 돌려준다) · `enumerated_count >=
+   child_count` · 열거 인덱스가 `1..child_count` 밖) · **돌아도 못 찾는** 셋(프로브 예외 ·
+   `ok=true`인데 이름 없음 · 퍼지 매칭 불가) · **다른 축이라 회수 대상이 아닌** 둘
+   (**폐기 행** · 타입은 찾았으나 그 타입의 **`DMXModes` 절단** — 표적 스윕은 **타입 축만** 돈다).
+   **부재는 그 열을 통과한 이름에만 말한다. 그 밖에는 미관측을 미관측이라 말한다.**
+   **[HARD] 관측을 늘리는 것이 판정을 승격하지 않는다** — 스윕·회수·재판독을 무엇을 하든
+   `enumeration_incomplete`·`modes_incomplete`·`absence_assertable`은 **자기 근거로만** 난다.
+   회수해 놓고 *"전수를 봤다"*고 적는 것이 R18-A식 거짓 보고이고,
+   `recover_requested_types`가 `truncated`·`child_count`·`enumerated_count`·`returned_row_count`를
+   **손대지 않는 것**이 그 규율의 코드 형태다.
+
 2a. **M4가 남긴 계약 3건은 M5에서 지켜졌다 — 되돌리지 마라**:
    ① `luagen.render_addfixtures_plugin(entries)`가 전달물의 본체다 —
       `LuaPatchEntry(console_type, console_mode, fid, name, universe, address)` 6필드뿐이고
@@ -714,7 +783,7 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
       (`patchplan.FidPropertyPort`·`typemap.LibraryPort` 선례), 그 표면을 import하지 않는다.
       `test_autopatch_execute.py`의 스캐너가 `server/vwx/*.py` **전수**를 돈다.
    ④ 제외 사유는 `verdicts.TARGET_EXCLUSION_REASON`에 **등재된 코드로만** 보고한다.
-      **[round19 갱신] 현재 등재 수는 22종**이다 `[문서 작성자 직접 계수 — 전달값 아님]` —
+      **[round21 갱신] 현재 등재 수는 23종**이다 `[문서 작성자 직접 계수 — 전달값 아님]` —
       round17에서 `address_below_minimum`(R17-A 주소 바닥 게이트)이, round18에서
       `fid_below_minimum`(R18-A FID 바닥 게이트)과 `fixture_type_name_unusable`
       (R18-E 공허 타입명 하드스톱)이, **round19에서
@@ -722,8 +791,13 @@ live responder **1.6.1**(저장소 `console/lua`는 1.5.0 — **콘솔 쪽이 �
       `fixture_type_library_truncated` · `fixture_type_library_unreadable`
       (뒤 둘은 `SKIPPED_CHECK_KIND`에만 있던 어휘를 제외 사유 축에도 등재한 것)**이
       늘었다(`verdicts.py`). 라운드별 열거의 정본은 §E.2 M3 절 어휘 등기다.
+      **[round21 R20-D] 여기서 하나 더 늘었다(22 → 23)**: `fixture_type_library_rows_discarded`
+      (슬롯 번호 없는/중복 행을 **세지 않고 버리던** 축. 절단·판독불가 어느 어휘로 적어도
+      거짓이 되고 조치도 다르므로 신설했다 — 근거 전문은 §E.2ac). `SKIPPED_CHECK_KIND`에도
+      함께 등재해 **9 → 10**이 됐다. **[HARD] 이 절과 §E.2ac·§E.2 M3 절 어휘 등기 셋을
+      함께 갱신하라** — 세 자리 중 하나만 고치면 그것이 다음 라운드의 형제 불일치다.
       **[HARD] 이 수는 커밋 직전에 다시 세라** —
-      `uv run python -c "from server.vwx.verdicts import TARGET_EXCLUSION_REASON as T; print(len(T))"`. 이 수를 문서에 적는 자리는 여기 하나이고,
+      `uv run python -c "from server.vwx.verdicts import TARGET_EXCLUSION_REASON as T; print(len(T))"`. **[round21 정정]** 이전 판은 *"이 수를 문서에 적는 자리는 여기 하나"*라 적었으나 **실측 세 자리**다(위 블록 열거) —
       실제 개수는 `verdicts.py`의 `TARGET_EXCLUSION_REASON`이 정본이다 — 어휘를 더하면
       **여기도 함께 갱신하라**. 어휘가 늘면 `test_autopatch_verify.py`의
       `_R17_EXCLUSION_SITES` 전단사가 그 사유를 짓는 자리를 요구한다.
@@ -941,7 +1015,7 @@ known_gaps:
     (매치는 전부 다른 절 참조이거나 progress.md 자체 감사기록). plan.md §E 테스트 골격이
     §6.2와 독립적으로 이미 파일→주제 매핑을 제공하고 있어 온보딩 가독성도 유지됨. 잔여
     gap 아님 — round1 이후 최초로 4개 축 전부 잔여 결함 0건."
-next: "**M8 라이브 종단 검증이 2026-08-08 세션에서 성립했다 — 네 관문(G1 전달 · G2 사람 실행 · G3 서버 검증 · G4 원복) 전부 통과**(§E.2ab). **가장 큰 결과: `AddFixtures`가 작동한다.** 필요 조건은 **①사람이 실행 ②Patch 편집기가 열려 목적지가 자연스럽게 놓임 ③`ChangeDestination` 미사용**의 결합이며, M0가 이 조합을 시험하지 않은 채 내린 `NEGATIVE: AddFixtures 경로` 판정과 `§E.2aa` v0.1.3의 REQ-AUTOPATCH-024 안내 철회가 **둘 다 반증됐다**(룰북 `30_plugin_patterns.md:22-29`가 옳았다). 독립 코드 감사는 **열 번**(round11~20) 돌렸고 round20은 **치명 0 · 감사 FAIL · 세션 GO(조건부)**로 P1을 통과시켰다(조건 2건 실측 충족). **남은 것은 amendment 다섯 갈래**다: ⓐREQ-AUTOPATCH-024 안내 복원 + 「편집기 열림」 착수 전제 승격 ⓑ**R21-A**(2회차 재호출이 `already_patched_identical` 대신 `fid_already_in_use` — FID 배정이 `screen_idempotent`보다 위에서 round12가 한 층 아래에서 고친 것과 같은 뭉갬, **실물 실행이 아니었으면 못 잡았다**) ⓒR20-A·R20-B·R20-D 타입 라이브러리 절단 축 3건(오늘 미발화) ⓓP5-D 취약점(서버가 스냅샷 생존을 확인 못 한다 — 세션 중 사용자 저장으로 실제 소실됐다. 최소 처방은 착수 시 mtime·크기 기록 후 G4 직전 재확인이며 오늘 실제로 통했다) ⓔ미확인 신규 5건(U-19~U-23, **U-21 「편집기 열림의 관측 표지」가 최우선** — 확정되면 서버가 착수 전에 조건을 스스로 검증할 수 있다). `ASSUMPTION-74`에 사상 최초의 관측이 생겼으나 §5.7 RV-2대로 재판정하지 않았다."
+next: "**round21 반영 완료 — 사용자 지시(R20-A·R20-B·R20-D 우선 수정)** `[라운드계수셀=20]`. M8 라이브 종단은 2026-08-08 세션에서 네 관문 전부 통과했고(§E.2ab) `AddFixtures` 작동 조건은 **①사람이 실행 ②Patch 편집기 열림 ③`ChangeDestination` 미사용**의 결합이다. 사용자가 *\"이제 원하는 장비를 추가·패치할 수 있느냐\"*고 물어 **\"현실 규모 쇼파일에서는 아직\"**이라 답했고, 그 첫 번째 이유였던 타입 라이브러리 절단 축 3건을 이번에 닫았다(§E.2ac): **ⓐ계수 대조**(`childCount`가 payload에 이미 있어 추가 질의 0회) **ⓑ표적 회수 스윕**(전수는 200종에서 7,392왕복 8분 → 표적 217왕복 14초, **34배**) **ⓒ막다른 길 라벨 정정**(`max_children` 하드 캡이라 *\"다시 읽어라\"*는 수행 불가 지시였다) + **목록 완전성 삼치 마커**(`row()`가 완전성 인자를 **필수**로 요구해 침묵이 구조적으로 불가능) + **폐기 행 계수**(절단·폐기·판독실패 **세 축 분리**, 상보식 `returned == enumerated + unusable + unparsable`). **남은 것**: ⓐ**round22 독립 감사**(round21 반영분 미감사 — round11~20 열 번 전부 FAIL이었다) ⓑ**R21-A** 2회차 재호출이 `already_patched_identical` 대신 `fid_already_in_use`(실물 실행으로만 드러났다) ⓒ**R21-B** 문서 규율에 강제가 없다(셀 검사기가 7/8을 잡았으나 아무도 안 돌렸다 — 오케스트레이터가 M8 커밋에서 토큰을 지웠다. 처방 후보는 테스트 신설이고 코드 축이라 미착수) ⓓGDTF 임포트 경로 ⓔ미확인 U-19~U-23(**U-21 「편집기 열림의 관측 표지」 최우선** — 확정되면 서버가 착수 전에 조건을 스스로 검증한다) ⓕ`ASSUMPTION-73`·`74` 재판정(amendment 사안, §5.7 RV 규율로 보류)."
 ```
 
 ---
@@ -1794,12 +1868,32 @@ not readable, `ShowMetaData` childCount 0). **테스트 쇼파일임이 확인�
     바꿨다: 수행한 대조에서 소멸한 것 · 수행하지 않은 대조 · 수량 축에서만 소멸한 것이
     **각각 다른 코드**를 받는다.
 
+  **[round21 어휘 추가]** `[코드 재확인 — 형제 에이전트 셋이 전달한 수치가 아니라 문서 작성자가
+  `verdicts.py`에서 **직접 다시 센 값**이다]` round21은 **하나만** 더했다:
+  - 제외 사유(`TARGET_EXCLUSION_REASON`, 22 → **23**) **및** `SKIPPED_CHECK_KIND`(9 → **10**)에
+    **같은 코드를 양쪽 등재**: `fixture_type_library_rows_discarded`(R20-D — 슬롯 번호 없는/중복
+    행을 **세지 않고 버리던** 축). 양쪽 등재는 `console_read_incomplete` 선례와 같고,
+    `skipped_check_kind`가 *"이 확인을 못 했다"*를 · `target_exclusion_reason`이
+    *"그래서 이 대상을 뺐다"*를 말한다.
+  - `TYPE_RESOLUTION_STATUS`(**6 불변**) — 폐기는 기존 `library_incomplete`로 귀속되고
+    **부재 단정으로 넘어가지 않는다.** *어휘 신설을 최소화한다*는 규율의 실제 적용이다.
+  - **왜 기존 어휘를 재사용하지 않았는가**(신설 시 필수 주석): `..._truncated`로 적으면
+    *"목록이 잘렸다"*가 되어 거짓(**행은 왔다**)이고, `..._unreadable`로 적으면 *"값을 못 읽었다"*가
+    되어 역시 거짓이다. **어느 쪽으로 적어도 거짓이고 조치도 다르다** — 절단은 표적 스윕,
+    판독 실패는 재시도, 폐기는 **responder 쪽 문제**다.
+  - **라벨 정정 3건**(신설 아님): 배제 라벨 `FIXTURE_TYPE_LIBRARY_TRUNCATED`·`_UNREADABLE`의
+    *"라이브러리를 다시 읽어야 함"*은 `max_children=24` 하드 캡 아래 **수행 불가능한 지시**였다 →
+    실제 조치로 교체. `SKIPPED_CHECK` 쪽 `TRUNCATED` 라벨도 미관측 계수를 말하게 바꿨다.
+  - **신설 어휘에 라벨 축 구별성 대조군을 처음부터 붙였다** — round18 M24(라벨을 형제 축
+    문구로 바꿔도 안 죽는 공백)가 이 SPEC에 이미 한 번 있었다.
+
   **어휘 총수는 AC·REQ 불변식이 아니다** — SPEC 문서 어디도 verdict 어휘 총수를 단정하지
-  않는다(전수 grep 0건). 그래도 **여기와 §0 2b④ 두 자리는 함께 갱신하라.** 재확인:
+  않는다(전수 grep 0건). 그래도 **여기 · §0 2b④ · §E.2ac 결과 표 세 자리는 함께 갱신하라**
+  (**[round21 정정]** 이전 판은 *"두 자리"*였다 — round21이 §E.2ac를 신설해 셋이 됐다). 재확인:
   `uv run python -c "from server.vwx import verdicts as v; print(len(v.TARGET_EXCLUSION_REASON), len(v.SKIPPED_CHECK_KIND), len(v.TYPE_RESOLUTION_STATUS))"`
-  → 현재 **`22 9 6`** `[round19 실측 · 문서 작성자 직접 계수]`.
-  **[HARD] 커밋 직전에 이 명령을 다시 돌려라** — round19 세션은 네 에이전트가 동시에
-  `verdicts.py`에 어휘를 더했고, 이 줄은 그 사이 어느 시점의 값이다.
+  → **round19 시점 `22 9 6`** · **round21 반영 중 실측 `23 10 6`** `[문서 작성자 직접 계수]`.
+  **[HARD] 커밋 직전에 이 명령을 다시 돌려라** — round19는 네 에이전트가, **round21은 세
+  에이전트가** 동시에 `verdicts.py`에 어휘를 더했고 이 줄은 그 사이 어느 시점의 값이다.
 - `server/tests/test_autopatch_types.py` — 신규 23건. 전부 `RigPort` 관례 더블 기반 인메모리,
   콘솔 접촉 0.
 
@@ -4573,6 +4667,11 @@ fids = {1..39}
 | ② | 시작 시 `Patch/FixtureTypes`·각 `DMXModes`에서 `childCount == len(children)` **및 전 자식 `i` 존재** | **확인 완료**(위 실측 3) — 3종·모드 4/1/3 전부 일치, `i` 전원 존재, `truncated=false` |
 | ③ | R20-A·R20-B(·R20-D)는 **다음 쇼파일 전에** 수정 | 미착수 — 세션 후 과제 |
 
+> **[round21 후속 · 위 표는 2026-08-08 스냅샷이라 소급 수정하지 않는다]** 조건 **③은 집행됐다** —
+> 사용자 지시로 R20-A·R20-B·R20-D를 반영했다(**§E.2ac**). **②는 완화되고 ①은 근거가 교체되며
+> 금지 자체는 유지된다** — 세 조건의 현재 상태는 `M0-SHOWFILE-SPEC.md` **§1.3a**
+> 「세션 GO 조건 3건 — round21 반영 후의 상태」가 정본이다. **R20-C는 미착수다.**
+
 **두 감사자 모두 "감사 FAIL"과 "세션 GO"를 갈라서 냈고 그것이 정확하다.** 결함은 실재하지만
 오늘 스냅샷에서 발화 불가이고 콘솔 쓰기는 전부 fail-closed다. `plan.md` §B 착수 전제 ①의
 관문은 **"감사가 무결함"이 아니라 "감사가 세션 착수를 승인하는가"**이며, 그 판정이 GO다.
@@ -5003,6 +5102,13 @@ REQ-AUTOPATCH-024의 *"편집기를 먼저 열라"* 안내를 **철회한 것이
 **`U-21`이 가장 중요하다** — 그것이 확정되면 서버가 *"편집기가 열려 있는가"*를 **착수 전에
 스스로 확인**할 수 있다. 지금은 안내만 하고 검증하지 못한다.
 
+> **[round21] 위 다섯 중 `C`가 처리됐다 — 나머지 넷은 그대로다.** 사용자가 *"이제 원하는
+> 장비를 추가·패치할 수 있느냐"*고 물었을 때 답을 **"현실 규모 쇼파일에서는 아직"**으로 만든
+> 첫 번째 이유가 `C`였고, 사용자가 **그것부터** 고치라고 결정했다 — 반영 전문은 **§E.2ac**다.
+> **`A`(REQ-024 안내 복원) · `B`(R21-A) · `D`(P5-D) · `E`(U-19~U-23)는 round21 대상이 아니며
+> 상태 변경 0건이다.** `E` 안에서는 위 문장대로 **`U-21`이 최우선**이고, `M0-SHOWFILE-SPEC.md`
+> §7 아래 `[round21]` 블록이 그 우선순위와 `U-08`과의 관계를 등재했다.
+
 ### 재판정하지 않은 것 (§5.7 RV 규율)
 
 - **`ASSUMPTION-74`** INCONCLUSIVE → **사상 최초의 관측이 생겼다.** 기록만 하고 재판정하지 않는다.
@@ -5011,6 +5117,306 @@ REQ-AUTOPATCH-024의 *"편집기를 먼저 열라"* 안내를 **철회한 것이
 
 **2·3은 round20과 무관하게 진행할 수 있다** — 읽기이거나 responder 설치이고, 감사 대상은
 서버 코드다. **4는 파괴적 단계 이전이면 언제든 좋다.** **5가 G1의 관문이다.**
+
+---
+
+## §E.2ac round21 — **사용자가 지시한 기능 수정**: 타입 라이브러리 절단 축 3건 (R20-A·R20-B·R20-D)
+
+### [HARD] 이것은 감사 반영이 아니다 — **사용자 지시**다
+
+2026-08-08 M8 세션에서 `AddFixtures` 작동이 증명된 뒤(§E.2ab), 사용자가
+*"이제 원하는 장비를 추가·패치할 수 있느냐"*고 물었고 답은 **"현실 규모 쇼파일에서는 아직"**이었다.
+**그 첫 번째 이유가 R20-A·R20-B·R20-D였고, 사용자가 그것부터 고치라고 결정했다.**
+round11~19가 전부 *"감사가 지적한 것을 반영한다"*였던 것과 달리 이번 착수 근거는
+**사용자의 기능 요구**이며, 그 차이를 지우면 다음 감사자가 *"round20 반영"*이라는 잘못된
+전제로 시작한다. **round20 지적 중 이번에 든 것은 이 3건이고 나머지(R20-C 등)는 미착수다.**
+**이것을 고치면 "현실 규모 쇼파일에서 신뢰할 수 있다"로 한 칸 올라간다** — 그 이상은 아니다.
+
+### 세 결함의 기제 — 그리고 **오늘 실측이 왜 무해했는지**
+
+| 축 | 기제 | 조작자가 보는 것 | 등급 |
+|---|---|---|---|
+| **R20-A** | `typemap.read_fixture_type_library`·`_read_type`이 절단 판정을 `state["truncated"]` **플래그 단독**으로 했다. `node.childCount`를 **읽지 않아** 못 본 수를 세지 못하고, 복구 스윕이 없고, `to_dict()`의 `type_count`·`mode_count`가 **본 수를 총계로** 냈다 | 사유는 나간다(`fixture_type_library_truncated`) — 다만 *"라이브러리를 다시 읽어야 함"*이라는 **수행 불가능한 지시**를 낸다 | high |
+| **R20-B** | `_mode_candidates`가 요청 모드 부재 시 `return console_type.modes` — **절단된 튜플을 '전 모드'로** 제시한다. 후보가 비지 않으므로 절단 가드를 건너뛰어 `status=needs_confirmation` · `incompleteness_kind=None` → `TypeResolutionPlan._skipped_checks()`가 **`[]`** | **아무것도 안 보인다.** 선언 5모드 중 2모드만 실린 상태에서 도면이 요구한 96ch 모드가 목록에 없는데 **고지 0건** | high |
+| **R20-D** | `read_fixture_type_library`의 `if index is None or not listed: continue` · `_read_type`의 `if mode_index is None: continue` — **슬롯 번호 없는 행을 세지 않고 버린다.** 목록이 잘린 것이 아니므로 `truncated`는 서지 않는다 | *"라이브러리에 없다 → GDTF를 임포트하라"* — **라이브러리는 온전히 있다.** 또는 round19 신설 하드스톱이 *"모드 열거를 전부 읽었고 절단도 없었다"*(**거짓**) + *"도면 DMX Footprint를 고쳐라"*(**틀린 지시**) | major |
+
+**R20-A는 사유가 나가지만 R20-B는 조용하다** — R18-A(*"검사했고 깨끗하다"*)와 같은 형태이고,
+**round19 자신의 기준**(*"고를 수 있는 것을 보여주는 것이 확인 대기의 전제"* — R18-E의 근거)이
+**round19가 그 라운드에 새로 만든 필드 `mode_options`에서 깨졌다.**
+
+**R20-D는 같은 스냅샷을 두 층이 반대로 처리한다는 점이 결정적이다**: `patchplan`에 먹이면
+`complete=False` + *"슬롯 번호가 없거나 중복인 행 3개를 쓰지 못했다"*가 나오고, `typemap`에
+먹이면 `library_absent` + *"콘솔에서 GDTF 라이브러리 임포트를 먼저 수행해야"*가 나온다.
+**같은 형태, 반대 처리.** 도달성은 가설이 아니라 **문서화된 responder 동작**이다 —
+`console/lua/copilot_responder.lua` `safe_children`(`:382-397`)의 *"`slot` is the real pool slot
+or nil when it could not be established. Callers MUST NOT substitute the array position for a
+nil slot"* 이고, `probe_slots` 통째 nil과 per-child `slot_confirms` 폴백이 **혼합·전무 둘 다**
+산출한다. PRESERVE `prechk` 독스트링이 슬롯 부재를
+*"documented responder behaviour rather than a hypothesis"*라 못박는다.
+그리고 **round19가 자기 표현식 안에서 형제를 빠뜨렸다**:
+`absence_assertable = not modes_truncated and all(mode.channel_count is not None …)` —
+**세 번째 조건(폐기된 행이 없음)이 20줄 거리에서 빠졌다.** 열 번째 동형 재발이다.
+
+#### 절단 개시 대역 — **오늘 무사했던 이유는 라이브러리가 3종이었기 때문이다**
+
+`children`은 `CONFIG.max_children`(24)이 하드 캡이나 **`max_payload` 1900바이트가 항상 먼저 문다**
+(`console/lua/PROTOCOL.md:164-171`). 감사 실측 모델(responder `json_encode`/`percent_encode`
+정확 복제 + 실물 교정)로 타입명 **8자→19종 · 12자→18 · 16자→17 · 20~25자→16 · 30자→15 ·
+40자→13**이고, **실물 GDTF 표본 20종(평균 18자)에서 16종까지 통과 · 17종부터 `truncated=True`**다.
+`DMXModes`는 모드명 **8자→20 · 12자→19 · 16자→18 · 24자→16 · 30자→15**.
+**⇒ 현실 대역 16~17종 · 25종 이상이면 절단 확정.**
+
+오늘 실측(§E.2ab 「실측 3」)은 `Patch/FixtureTypes` **childCount 3 · children 3 · truncated false** ·
+모드 4/1/3 · `i` 전원 존재였다. **임계에 한참 못 미쳤다.** 실제 공연 쇼파일은 넘는다.
+
+**[정정 등기]** 오케스트레이터의 초기 진술 *"적격 0건"*은 과장이었다. 정확한 진술은
+**"세션 커버리지가 라이브러리 열거 순서에 의존한다"**이며, 영구 배제되는 몫은
+**`(선언 − 24)/선언`**이고 **앞 24종에 든 도면 타입은 정상 진행한다.**
+
+### 처방의 근거 — 셋 다 코드에서 나왔다
+
+**ⓐ [비용 0] 정직한 계수 보고.** 절단된 payload에도 `node.childCount`가 **이미 들어 있다**
+(감사 60종 실증에서 60). typemap이 안 읽을 뿐이었다. 그래서 **추가 질의 0회로**
+「선언 N · 본 M · 미관측 N−M」을 계수·라벨·payload에 실을 수 있고, `truncated` 플래그 단독
+판정을 **계수 대조**로 교체할 수 있다. **근거는 같은 파일 안에 있었다** —
+`typemap._read_channel_count`가 **`node.childCount`를 정상적으로 읽는다.**
+**30줄 거리에서 규율이 갈렸다.** 상위 근거는 PRESERVE `server/prechk/inventory.py:10-18`:
+*"Completeness therefore comes from the COUNT COMPARISON, never from the `truncated` flag."*
+
+**ⓑ [표적 한정] 회수 스윕 — 전수 스윕은 비용을 재서 기각했다.**
+`U = child_count − enumerated_count`(미관측 인덱스) · `M`(회수 대상 타입) · `m`(그 타입 모드 수) ·
+`c` = 1(`negative` 기본) / 2(GO 분기)일 때:
+
+| 스윕 | 왕복 공식 | 200종·열거 24·`m`=5 | 200종·열거 24·`m`=20 |
+|---|---|---|---|
+| **표적**(채택 · `M`=1) | `U + M·(1 + c·m)` | 182 / **187**회 · 12.1 / **12.4**s | 197 / **217**회 · 13.1 / **14.4**s |
+| **전수**(기각) | `U·(2 + c·m)` | 1,232 / **2,112**회 · 1분 22초 / **2분 20초** | 3,872 / **7,392**회 · 4분 17초 / **8분 10초** |
+
+(각 칸 `negative` / **GO**. 배율 6.8x · 11.3x · 19.7x · **34.1x**. 왕복 단가는 §E.2ab 「실측 4」의
+**40왕복 2.65s = 66.25 ms**.) **문서 작성자가 `typemap.recover_requested_types`·`_read_type`을
+직접 읽어 재도출했다 — 전달값을 베끼지 않았다.** 확인 명령:
+
+```
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python - <<'PY'
+U, M, ms = 176, 1, 2.65 / 40 * 1000
+for c in (1, 2):
+    for m in (5, 20):
+        tgt, full = U + M * (1 + c * m), U * (2 + c * m)
+        print(c, m, tgt, round(tgt * ms / 1000, 1), full, round(full * ms / 1000, 1), round(full / tgt, 1))
+PY
+```
+
+**`_read_type`이 모드당 2회인 것은 GO 분기에서만이다** — `read_channel_counts=footprint_enabled`
+이고 `assumption_72` 기본값이 `negative`이므로 **현실 기본은 모드당 1회**다. 과제문의
+*"타입당 `1+2×|modes|` → 200종에서 2,200~8,200"*은 `_read_type` 성분만 센 수이고, 위 표는
+이름 확인 프로브(인덱스당 `query_state` 1회)를 더하고 **이미 열거된 인덱스를 건너뛴** 값이다.
+**어느 셈법으로도 결론은 같다**: 전수는 세션을 분 단위로 멈추고, 표적은 **형제 FID 스윕과 같은
+차수**(오늘 39슬롯 40왕복 2.65s)다. **전수 스윕의 부재는 결함이 아니라 비용 판정의 결과다.**
+
+**ⓒ 막다른 길 라벨 정정.** *"라이브러리를 다시 읽어야 함"*은 `max_children=24`가 하드 캡이라
+**결정적으로 같은 24종을 주는 수행 불가능한 지시**였다 — round19가 고쳤다고 한 R18-E 유형
+그 자체다. 실제 조치(**도면 타입명을 콘솔 표기와 맞추거나 그 GDTF를 콘솔에 임포트**)를
+가리키게 바꿨고, **표적 스윕이 실패했을 때에만 부재를 말한다.**
+**바뀐 라벨은 재판독이 무의미한 이유까지 스스로 적는다** `[코드 재확인 · 원문]`:
+*"FixtureType·DMXMode 열거에 미관측분이 남음 — 고를 수 있는 것을 다 보여줄 수 없어 제외.
+**재판독은 같은 앞부분을 다시 준다(열거 상한이 하드 캡)** — 도면 타입명을 콘솔 표기와
+맞추거나, 그 GDTF를 콘솔 라이브러리에 임포트해야 함."* 조작자가 **왜** 재시도가 소용없는지를
+payload 안에서 알게 되는 것이 이 정정의 요점이다 — *"하지 마라"*가 아니라 *"이래서 안 된다"*다.
+
+### [HARD] 세 축을 한 칸으로 뭉개지 않았다
+
+`patchplan`이 이미 셋을 구별하고 있었고 `typemap`은 **그 이름을 그대로 복사**했다 —
+두 층이 같은 개념을 다른 이름으로 부르면 그것이 다음 라운드의 형제 불일치가 된다.
+정본 표는 §0 2d의 `[round21]` 블록이며, 요지는 **절단(`unseen`) · 폐기(`unusable_row`·
+`unparsable_row`) · 판독 실패(`probe_failures`)는 조치가 다르므로 어휘도 다르다**는 것이다.
+*"이 목록을 완전하다고 말할 수 있는가"* 하나만 묻는 자리는 **union 프로퍼티 둘**
+(`FixtureTypeLibrary.enumeration_incomplete` · `LibraryType.modes_incomplete`)이고
+**계수 칸은 축별로 분리 유지**된다. **셋이 동시에 참일 수 있다.**
+
+### 반영 산출 — 형제 에이전트 셋 (`typemap.py` 동시 편집 · 삭제·개명 0)
+
+**아래 심볼은 문서 작성자가 `server/vwx/` 코드에서 직접 재확인한 것이다** — 형제가 `hub`로
+전달한 목록을 그대로 베끼지 않았다(그것이 D-01류 오기의 경로다).
+
+| 에이전트 | 소유한 축 | 신설 심볼 |
+|---|---|---|
+| **`LibraryTruncation`** | **계수 기반**(childCount 판독 · 선언/본/미관측 · 계수 대조) · **표적 스윕** | `FixtureTypeLibrary`: `child_count`·`enumerated_count`·`returned_row_count`·`recovered_count`·`recovery_boundary`·`probe_failures` + property `observed_type_count`·`unseen`·`enumeration_short`·**`enumeration_incomplete`** · `LibraryType`: `mode_child_count`·`modes_enumerated_count`·`returned_mode_row_count`·`recovered` + property `observed_mode_count`·`modes_unseen`·`modes_enumeration_short`·**`modes_incomplete`** · 신설 함수 **`recover_requested_types(port, library, wanted, *, read_channel_counts)`** · 형제 표면 `apply._resolve_library_type`의 플래그 단독 가드 교체 · **verdicts 신설 0 · 라벨 3건 교체** |
+| **`ModeSilence`** | **완전성을 말하는 자리**(계수는 위 둘에서 읽고 **따로 세지 않는다**) | 신설 dataclass **`ListCompleteness`**(`complete: bool\|None` **삼치** · `incompleteness_kind` · `declared_count` · `observed_count` · `presented_count` · `unseen_count`) + `.presenting(n)` · `.to_dict()` · 상수 `TYPE_CANDIDATES_COMPLETENESS_COLUMN`·`MODE_OPTIONS_COMPLETENESS_COLUMN`·`LIST_COMPLETENESS_COLUMNS` · 함수 `_library_list_completeness`·`_mode_list_completeness`·`_library_axis`·`_mode_axis` · property `TypeResolution.mode_options_completeness` · **서명 변경 `TypeResolution.row(*, type_candidates_completeness: ListCompleteness)` — 필수 키워드** · `TypeResolutionPlan._observed_incompleteness_kinds()` · `TYPE_TABLE_COLUMNS`/`_LABELS` **+2행** · **verdicts 신설 0** |
+| **`SlotDiscard`** | **폐기 행 계수**(절단과 **다른 축**) | `FixtureTypeLibrary.unusable_row_count`·`unparsable_row_count` + property `rows_discarded` · `LibraryType.unusable_mode_row_count`·`unparsable_mode_row_count` + property `mode_rows_discarded` · 신설 함수 **`_absence_assertable(console_type)`**(인라인 표현식 호이스팅) · `_library_rows_discarded`·`_library_observed_axes`·`_row_sequence` · 상수 `LIBRARY_ROWS_DISCARDED_REASON` · **신설 어휘 1건 `FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED`**(양쪽 등재 + 라벨 2) · **기존 문장 1건 교정** `FOOTPRINT_MISMATCH_UNVERIFIED_REASON`(구판은 *"절단됐거나 채널 수를 읽지 못한"* 둘만 열거해 **폐기 갈래에서 거짓**이 됐다 → 세 축을 다 적는다) |
+
+**세 축의 실측** — KILL rate는 각 에이전트가 자기 축에서 낸 수치이고, **payload 칸 수와 왕복
+비용은 문서 작성자가 코드에서 직접 재확인했다**:
+
+| 축 | KILL rate (전체 / **행동 대조군만**) | 행동 SURVIVED 분류 | 추가 왕복 |
+|---|---|---|---|
+| **R20-A** `LibraryTruncation` | 24/24 · **17/17** | **0건** (등가 뮤턴트 1건은 스윕 상한 40→39 — onset이 같아 관측 가능한 차이가 없고, 30/48/lower+1 세 변형은 전부 KILLED로 그 자리에 대조군이 있음을 증명) | **0회**(계수 판독) + 표적 스윕만 |
+| **R20-B** `ModeSilence` | 21/22 · **17/18** (구조 4/4) | **1건 = 등가 뮤턴트** — `complete is False and kind is not None` ≡ `complete is not True and kind is not None`임이 `complete is False ⟺ kind is not None` 불변식으로 고정돼 있다 | **0회** — 게이트가 실측한다(`plan.to_dict()`를 두 번 불러도 포트 호출 수가 늘지 않는다) |
+| **R20-D** `SlotDiscard` | 28/28 · **27/28** | **1건 = 구조전용방어**(형제 전수 등기부 **행삭제** — 표 삭제는 정의상 소스 스캔 게이트만 잡는다). 등가 0 · **진짜 공백 0**(1차 실측의 진짜 공백 3건은 대조군을 추가해 닫았다) | **0회 · 오히려 감소** — 폐기 행의 자식은 조회하지 않으므로 3종 라이브러리 실측에서 20왕복 → **17왕복** |
+
+**payload 칸 수는 늘었고 기존 칸의 뜻은 바뀌지 않았다** `[문서 작성자 직접 계수]`:
+`FixtureTypeLibrary.to_dict()` 루트 **5 → 17칸**, 타입별 **5 → 15칸**. `type_count`·`mode_count`는
+**여전히 본 수**이고(`len(self.types)`), R20-A ④가 지적한 *"선언 총계 칸이 없다"*는
+`child_count`·`mode_child_count`와 `unseen_count`·`mode_unseen_count`로 채웠다 —
+**기존 칸의 의미를 바꾸지 않고 칸을 늘린 것**이 하위 호환의 형태다.
+
+**설계 판단 넷을 여기 등기한다** — 근거가 없으면 다음 라운드가 이것을 결함으로 오독한다:
+
+1. **`row()`의 완전성 인자를 필수 키워드로 만든 것이 진짜 처방이다.** round19가 `mode_options`를
+   추가하면서 **완전성을 말할 자리를 만들지 않은 것**이 R20-B의 원인이었으므로,
+   *"목록을 내면서 완전성을 안 말하는 것"*을 **구조적으로 불가능**하게 했다. API 변경이지만
+   외부 호출자가 1곳뿐이라 비용이 맞는다.
+2. **`complete: bool | None` 삼치** — `None`(열거 근거 없음 = 완전 주장 아님)을
+   `False`(못 본 것 있음)와 가른다. 이 SPEC이 반복해서 뭉갠 것이 정확히 *"모른다"*와 *"없다"*의
+   구별이다.
+3. **[HARD] 처분 축(`incompleteness_kind`)은 넓히지 않았다 — 넓히면 옆이 깨진다.**
+   그 칸을 넓히면 `apply._unresolved_type_verdict`가 배제 코드를 `type_confirmation_pending`에서
+   바꿔 **round19 불변식 ㉢**(`confirmation_required` 참 ⇒ 코드 pending)이 깨진다. 그래서
+   **고지는 관측 축에서 내고 처분 축은 건드리지 않았다.** *고치려다 옆을 깨는 것이 이 SPEC이
+   열한 번 한 일이다* — 넓히지 않은 이유를 적지 않으면 다음 라운드가 이것을 **누락으로 오독한다.**
+4. **폐기 검사를 union 앞에 둔 순서.** union이 폐기를 흡수하면 **폐기 전용 kind에 영영 못 닿는다**
+   (R18-C·R18-E와 같은 **도달 불가가 된 분류** 계열). 순서는
+   `unreadable → rows_discarded → enumeration_incomplete → modes_available → mode_rows_discarded
+   → modes_incomplete`이며, **순서가 규율이면 대조군이 있어야 하므로** 순서를 뒤집는 뮤턴트를
+   함께 걸었다. 그리고 상보식 **`returned == enumerated + unusable + unparsable`**(분모는
+   `len(raw_rows)`)이 이번 반영의 핵심 불변식이다 — **계수가 서로를 검산하므로 어느 한 축이
+   조용히 새면 즉시 깨진다.**
+
+**[HARD] 관측을 늘리는 것이 판정을 승격하지 않는다.** `recover_requested_types`는
+`types`·`recovered_count`·`probe_failures`만 늘리고 `truncated`·`child_count`·`enumerated_count`·
+`returned_row_count`를 **손대지 않는다** — 그래서 `enumeration_short`·`enumeration_incomplete`가
+**정의상 변하지 않는다.** 회수해 놓고 *"전수를 봤다"*고 적는 것이 R18-A식 거짓 보고다.
+
+### 어휘 등기 — **`verdicts.py`에서 직접 다시 셌다**
+
+`[코드 재확인 · 형제 전달값 아님]` **신설 1건 · 삭제·개명 0 · 라벨 정정 3건**:
+- 제외 사유(`TARGET_EXCLUSION_REASON`, 22 → **23**): `fixture_type_library_rows_discarded`
+  (**왜 기존 어휘를 재사용하지 않는가**: `fixture_type_library_truncated`로 적으면
+  *"목록이 잘렸다"*가 되어 거짓이고 — 행은 왔다 —, `fixture_type_library_unreadable`로 적으면
+  *"값을 못 읽었다"*가 되어 역시 거짓이다. **절단·판독불가 어느 쪽으로 적어도 거짓이 된다.**
+  조치도 다르다: 절단은 표적 스윕, 판독 실패는 재시도, 폐기는 **responder 쪽 문제**다)
+- `SKIPPED_CHECK_KIND`(9 → **10**): 같은 코드를 **양쪽에 등재**했다 —
+  `console_read_incomplete`가 배제 어휘와 caveat 어휘 양쪽에 사는 선례와 같다.
+  `skipped_check_kind`로는 *"이 확인을 못 했다"*, `target_exclusion_reason`으로는
+  *"그래서 이 대상을 뺐다"*를 말한다.
+- `TYPE_RESOLUTION_STATUS`(**6 불변**): 신설 상태 없음. 폐기는 기존
+  `library_incomplete`(관측 불완전)로 귀속되고 **부재 단정으로 넘어가지 않는다.**
+- **라벨 정정 3건**(ⓒ): 배제 라벨 `FIXTURE_TYPE_LIBRARY_TRUNCATED`·`_UNREADABLE`에서
+  *"라이브러리를 다시 읽어야 함"* 제거 → 실제 조치. `SKIPPED_CHECK` 쪽 `TRUNCATED` 라벨은
+  *"FixtureType 열거 미관측분 — 부재 단정 불가"*로.
+- **신설 어휘에는 라벨 축 구별성 대조군을 처음부터 붙였다**(`_R19_NEW_CODE_AXIS_PROBES` ·
+  `_R19_FIX_AXIS`에 `console_library` 행) — round18 M24가 생존했던 형태(**라벨을 형제 축 문구로
+  바꿔도 안 죽는 공백**)를 되풀이하지 않는다.
+
+**[HARD] 이 수는 커밋 직전에 다시 세라** — 이번 세션은 **세 에이전트가 동시에** `verdicts.py`를
+건드렸고 아래 값은 그 사이 어느 시점의 것이다. **최종값은 오케스트레이터가 갱신한다.**
+
+```
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -c "from server.vwx import verdicts as v; print(len(v.TARGET_EXCLUSION_REASON), len(v.SKIPPED_CHECK_KIND), len(v.TYPE_RESOLUTION_STATUS))"
+# 문서 작성자 직접 계수(반영 중 시점): 23 10 6      ← 커밋 직전 재확인 대상
+```
+
+**갱신할 자리는 셋이다** — 이 절 · **§0 2b④**(제외 사유 등재 수) · **§E.2 M3 절 어휘 등기**
+(라운드별 열거의 정본).
+
+### 형제 표면 전수 — **모든 부재가 결함은 아니다**
+
+`server/vwx/` 전 모듈에서 **콘솔 열거를 소비하는 지점은 정확히 셋**이며 각각의 판정은 다르다:
+
+| 지점 | 규율 | 판정 |
+|---|---|---|
+| `patchplan._existing_fids_from_console` | round19가 유계 복구 스윕 + 계수 대조를 넣었다 | **정상** — 이번 처방의 원본이다 |
+| `typemap.read_fixture_type_library`·`_read_type` | 없었다 | **결함(R20-A·R20-D)** — 이번에 고쳤다 |
+| `apply.read_console_fixtures` | **콘솔에 질의하지 않는다** — PRESERVE `prechk.Inventory`를 소비할 뿐이고 절단 방어는 그 원전이 한다(독스트링 명문) | **결함 아님 — 이미 방어됨** |
+
+**`apply._resolve_library_mode`에 `modes_truncated` 가드가 없는 것도 정당하다** —
+`by_index`가 `mode.index == <n>` **그리고** `mode.name == <name>` 동시 일치를 요구하므로
+그것은 **긍정 증거**이지 부정 추론이 아니다. 절단은 **부정 결론만** 무효화한다.
+**형제 표면 하나는 실제로 고쳤다**: `apply._resolve_library_type`의 부정 결론 가드가
+`library.truncated` **플래그 단독**이었고 `library.enumeration_incomplete`(계수 대조 포함)로
+바꿨다 — *"부정 결론을 무효화하는 조건은 «목록이 전수가 아니다»이지 «플래그가 섰다»가 아니다."*
+**이 구별을 유지하라**: 열한 라운드 연속 형제 표면으로 FAIL한 SPEC에서
+*"가드가 없으면 결함"*이라는 반사는 **거짓 양성을 만든다.**
+
+### **R21-B** — 문서 규율에 **강제가 없다** `[신규 결함 · 문서 축]`
+
+**증상**: `plan.md` §B ①의 검사 명령을 형제 전수 grep으로 그대로 돌렸더니
+`grep -rno '\[라운드계수셀=[0-9]*\]' | wc -l` → **7**이었다(규칙은 **8**).
+**누가 언제 어떻게**: **오케스트레이터**가 **HEAD `f05e47f`(M8 라이브 종단 세션 커밋)**에서
+`progress.md` 프론트매터 **`next:` 줄을 통째로 다시 쓰면서 `` `[라운드계수셀=N]` `` 표지를 함께
+지웠다.** 값도 stale이었다 — 남은 7개 전부 `=19`인데 **round20 감사는 §E.2ab에 이미 기록됐고**
+같은 파일이 다른 곳에서는 *"round11~20 감사 열 번"*이라 적어 **자기 문서 안에서 갈렸다.**
+**round19가 프로브로 예측한 실패 형태 ⓐ**(*"셀 하나를 통째로 지우면 8 → 7로 떨어져 잡힌다"*)가
+**실제로 발생했고, 검사기는 작동했으나 아무도 돌리지 않았다.**
+
+**진단 — 이것이 계수 하나보다 큰 문제다**:
+> 이 SPEC은 코드 축에서 *"규율을 세우면 대조군을 붙인다"*를 스무 번 반복했다.
+> **문서 축에는 같은 원칙을 적용하지 않았다.** 라운드 계수 셀 · 심볼 인용 규율 ·
+> 형제 인용 전수 grep — 전부 **명령은 문서에 있고 실행은 사람에게 있다.**
+> 코드 축이었으면 진작 테스트가 됐을 것이다.
+
+**처방(문서 축에서 한 것)**: 여덟 셀 전부 **`` `[라운드계수셀=N]` `` 의 `N`을 `20`으로** ·
+*"round11~20 열 라운드 전부 감사 FAIL(round20은 감사 FAIL · 세션 GO 조건 3)"*으로 갱신하고
+**`next:`에 토큰을 복원**했다. **`=21`로 올리지 않는다 — round21은 반영이지 감사가 아니다**
+(그 판단 근거를 정본 열거 옆에 한 줄 남겨 다음 담당자가 다시 묻지 않게 했다).
+**[HARD] 이 절을 쓰면서 round19가 명시한 함정 ②를 실제로 밟았다** — 설명 산문에 토큰
+**완성형**을 써서 검사기 계수가 **8 → 11**로 부풀었다. 산문에서는 숫자 자리를 비운
+`` `[라운드계수셀=N]` `` 형태만 쓴다(이 문장도 그 형태다).
+**갱신 6파일**: `progress.md` · `plan.md` · `spec.md` · `design.md` ·
+`M8-REDEFINITION-DRAFT.md` · `M0-SHOWFILE-SPEC.md`. **반영 후 검사기 실측**:
+
+```
+S=.moai/specs/SPEC-COPILOT-AUTOPATCH-001
+grep -rno '\[라운드계수셀=[0-9]*\]' $S | wc -l          # → 8
+grep -rho '\[라운드계수셀=[0-9]*\]' $S | sort | uniq -c  # → "8 [라운드계수셀=<N>]" 한 줄
+```
+
+**문서 축 프로브 4건 — 임시 사본에서 수행, 워킹트리 무변경** `[실측 · 문서 작성자 직접 수행]`.
+*"규율을 세웠다"*를 자기보고로 남기지 않기 위해 **검사기가 실제로 무엇을 잡고 무엇을
+못 잡는지**를 심어서 확인했다:
+
+| # | 심은 것 | 검사기 출력 | 판정 |
+|---|---|---|---|
+| ⓐ | 무변조 대조군 | `8` · `8 [<셀토큰>=20]` 한 줄 | **기준선** |
+| ⓑ | 셀 하나의 토큰 삭제(`design.md`) | `7` | **CAUGHT** — 계수 축이 잡는다 |
+| ⓒ | 셀 하나만 `19`로 되돌림(`spec.md`) | `8`이지만 값이 **두 줄**(`1×19` + `7×20`) | **CAUGHT** — 값 축이 잡는다 |
+| ⓓ | **§0 2d 세 축 표에서 「폐기」 행을 통째로 삭제** | `8` · 한 줄 — **변화 없음** | **NOT CAUGHT** |
+
+**ⓓ가 이 결함의 본체다.** 이번 라운드가 새로 만든 표·규율·인용은 **어떤 기계 검사도 받지
+않는다** — 라운드 계수 셀만 검사기를 가졌고 그것도 우연히 round19가 만든 것이다.
+round19가 남긴 음성 결과(*"표지를 안 박은 새 stale 셀은 못 잡는다"*)와 **같은 형태의 음성
+결과**이며, 그때는 그 한계를 [HARD]로 적는 데 그쳤다. **적는 것으로는 막히지 않았다** —
+그 증거가 이번 `next:` 토큰 소실이다.
+
+**처방 후보(코드 축 — 문서 작성자가 결정하지 않는다)**: `.moai/specs/SPEC-COPILOT-AUTOPATCH-001/**`
+를 읽어 ① 셀 **8개** ② 값 **한 줄로 일치** ③ **활성 파일**(`server/vwx/**` ·
+`server/orchestrator/tools.py` · `server/tests/test_autopatch_*.py`)에 대한 `파일:행` 인용
+**0건**을 단정하는 테스트. `test_autopatch_contract.py`의 전체성 규율 게이트와 **같은 계열**이다.
+**오케스트레이터가 별도로 판단한다.**
+
+### 결과 — **계수는 자리만 잡았다. 최종값은 오케스트레이터가 갱신한다**
+
+| 항목 | 값 |
+|---|---|
+| 테스트 | **6,870 → 7,070 passed / 7 skipped (+200, 회귀 0)** · ruff clean · PRESERVE·`diff.py`·`rig.py` 0-diff · 커밋 **run-phase 34건 / 총 38건**(본 커밋 포함) |
+| ruff | `<반영 후>` `[동]` |
+| PRESERVE 5경로 | **0-diff** — `git diff --stat -- console/lua server/safety server/prechk server/paperwork server/looks` 빈 출력 `[동]` |
+| `diff.py`·`rig.py` | **0-diff**(1단계 계층 · 동작 변경 금지) `[동]` |
+| 프로덕션 변경 | `typemap.py`(주) · `verdicts.py`(어휘·라벨) · `apply.py`(형제 표면 1곳) |
+| 어휘 | 신설 **1** · 삭제·개명 **0** · 라벨 정정 **3** + 기존 사유 문장 교정 **1**(`FOOTPRINT_MISMATCH_UNVERIFIED_REASON`) — `target_exclusion_reason` 22→**23** · `skipped_check_kind` 9→**10** · `type_resolution_status` **6 불변**. **세 에이전트 yield 후 재계수 실측 `23 10 6`** `[문서 작성자 직접 계수 · 커밋 직전 재확인]` |
+| 불변식 | **AC 27 · REQ 26 · §C.0 26행 · §C.0a 합 27 · AC-026 ①~⑦ · 새 AC 0건 · `acceptance.md` 무개정** — 문서 축 반영 후 유지 확인 |
+| 문서 축 산출 | `progress.md` §0 2d `[round21]` 블록(**넷째 표면 등재**) · 본 절 · §0 2b④ 계수 · §E.2 M3 어휘 등기 · `M0-SHOWFILE-SPEC.md` **§1.3a** 신설 + 형제 인용 4곳 · **R21-B 8셀 6파일** |
+
+### 미검증 잔여
+
+**이 절은 작성자 자기 기록이다.** round21 반영은 프로덕션 3파일(`typemap`·`verdicts`·`apply`)을
+바꿨고 **아직 독립 감사를 받지 않았다** — 재감사는 **round22**이며 `plan.md` §B M8 착수 전제 ①은
+그대로 유효하다. **규모·안전성 주장은 적지 않는다**: round14·15·16·17·18이 연속으로 그것을
+적었고 다섯 다 다음 라운드에서 FAIL했다.
+**그리고 문서 축이 닫은 결함은 3건 중 0건이다** — 셋은 전부 코드 축이고, 문서 축이 닫은 것은
+**넷째 표면 등재 · GO 조건 재판단 · R21-B** 세 건으로 **전부 별건**이다.
+그 구별을 지워 *"round21이 R20-A·B·D를 반영했다"*로 뭉치면 다음 감사자가 잘못된 전제로 시작한다.
+**표적 스윕의 조건부 잔여 열 가지**(`M0-SHOWFILE-SPEC.md` §1.3a)와 **`DMXModes` 축 미회수**는
+설계상 남긴 것이며 *"해소됐다"*로 읽지 마라. **R20-C는 미착수다.**
 
 ---
 

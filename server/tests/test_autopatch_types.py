@@ -237,8 +237,14 @@ def hard_stop_codes(payload: dict) -> list[str]:
 # 비공허성 스캐너 — 금지 대상을 심으면 실제로 잡히는지 각 테스트가 대조한다.
 # --------------------------------------------------------------------------
 
+# [round21] 낱말 경계를 요구한다. 이전 판은 부분문자열 일치라 `probe_failures`의
+# "p-**robe**"와 `correlation`의 "cor-**elation**"을 제조사 이름으로 신고했다 —
+# 위양성이 나면 프로덕션이 게이트를 피해 이름을 짓게 되고, 그 순간 이 스캐너는
+# 어휘를 지키는 것이 아니라 **어휘를 왜곡**한다. 실물 이름("Robe Lighting@MegaPointe",
+# "Robin MMX Spot")은 전부 낱말 경계로 시작하므로 검출력은 그대로다 —
+# `test_r21_library_name_scanner_keeps_real_names_and_drops_substrings`가 양방향으로 고정한다.
 _LIBRARY_NAME_PATTERN = re.compile(
-    r"(?i)(robe|robin|megapointe|ledbeam|ledwash|mmx|martin|clay ?paky|ayrton|chauvet|"
+    r"(?i)\b(robe|robin|megapointe|ledbeam|ledwash|mmx|martin|clay ?paky|ayrton|chauvet|"
     r"elation|vari-?lite|mac ?\d|[a-z0-9][\w .-]*@[a-z])"
 )
 
@@ -4572,3 +4578,2737 @@ def test_r19_the_new_footprint_vocabulary_is_registered_in_both_closed_sets():
     payload = _r19_resolve_footprint(footprint=99)
     assert row_by_id(payload, "c1")["status"] == TYPE_FOOTPRINT_UNMATCHABLE
     assert hard_stop_codes(payload) == [DESIGNED_FOOTPRINT_MATCHES_NO_MODE]
+
+
+# --- round21 라이브러리 열거 절단 규율 (LibraryTruncation) ---
+#
+# R20-A 세 갈래를 고정한다: ⓐ `node.childCount` 계수 대조 · ⓑ 표적 회수 스윕 ·
+# ⓒ 수행 불가능한 라벨의 교체.
+
+from server.vwx.typemap import (  # noqa: E402
+    FixtureTypeLibrary,
+    recover_requested_types,
+)
+from server.vwx.verdicts import (  # noqa: E402
+    skipped_check_label,
+    target_exclusion_label,
+)
+
+_R21_RESPONDER_SOURCE = Path("console/lua/copilot_responder.lua").read_text(encoding="utf-8")
+
+
+def _r21_config_int(name: str) -> int:
+    """`CONFIG`의 정수 설정을 **responder 소스에서** 읽는다.
+
+    상수를 테스트에 베끼면 예산이 바뀌었을 때 모델이 조용히 거짓이 된다 — 그 형태가
+    이 SPEC이 반복해서 잡힌 "전달값 베끼기"다.
+    """
+    match = re.search(rf"^\s*{name}\s*=\s*(\d+)\s*,", _R21_RESPONDER_SOURCE, re.M)
+    assert match is not None, name
+    return int(match.group(1))
+
+
+_R21_MAX_CHILDREN = _r21_config_int("max_children")
+_R21_MAX_PAYLOAD = _r21_config_int("max_payload")
+_R21_UNRESERVED = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+
+
+def _r21_json_encode(value) -> str:
+    """`M.json_encode`의 복제 — 키 정렬·배열·정수·불리언까지 같은 규칙."""
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int):
+        return f"{value:d}"
+    if isinstance(value, str):
+        return '"' + value + '"'
+    if isinstance(value, list):
+        return "[" + ",".join(_r21_json_encode(item) for item in value) + "]"
+    if isinstance(value, dict):
+        return (
+            "{" + ",".join(f'"{key}":{_r21_json_encode(value[key])}' for key in sorted(value)) + "}"
+        )
+    raise TypeError(value)
+
+
+def _r21_percent_encode(text: str) -> str:
+    """`M.percent_encode`의 복제 — 비예약 바이트 외 전부 `%XX`."""
+    return "".join(
+        char if char in _R21_UNRESERVED else "".join(f"%{byte:02X}" for byte in char.encode())
+        for char in text
+    )
+
+
+def _r21_snapshot(path: str, names, node_name: str, node_class: str, child_class: str) -> dict:
+    """`M.build_snapshot`의 복제 — 자식 캡 → payload 예산 루프 순서까지 같다."""
+    total = len(names)
+    cap = min(total, _R21_MAX_CHILDREN)
+    items = [{"name": names[index], "class": child_class, "i": index + 1} for index in range(cap)]
+    payload = {
+        "v": "1.5.0",
+        "kind": "state",
+        "id": 1,
+        "path": path,
+        "ok": True,
+        "node": {"name": node_name, "class": node_class, "childCount": total},
+        "children": items,
+        "truncated": cap < total,
+    }
+    while len(_r21_percent_encode(_r21_json_encode(payload))) > _R21_MAX_PAYLOAD and items:
+        items.pop()
+        payload["children"] = items
+        payload["truncated"] = True
+    return payload
+
+
+_R21_TYPE_AXIS = ("Patch/FixtureTypes", "FixtureTypes", "FixtureTypes", "FixtureType")
+_R21_MODE_AXIS = ("Patch/FixtureTypes/1/DMXModes", "DMXModes", "DMXModes", "DMXMode")
+
+
+def _r21_last_fitting(name_length: int, axis) -> int:
+    """그 이름 길이에서 **절단 없이 실리는 최대 항목 수**."""
+    path, node_name, node_class, child_class = axis
+    filler = "T" * name_length
+    for count in range(1, 4 * _R21_MAX_CHILDREN):
+        snapshot = _r21_snapshot(path, [filler] * count, node_name, node_class, child_class)
+        if snapshot["truncated"]:
+            return count - 1
+    raise AssertionError("절단이 개시되지 않았다 — 모델이 예산을 재현하지 못한다")
+
+
+#: 이름 길이 → 절단 없이 실리는 최대 종수. 각 행의 길이는 그 개시점을 내는 **최소 길이**라
+#: 행과 개시점이 전단사다 — 행을 지우면 개시점 하나가 사라져
+#: `_r21_assert_onset_table_shape`가 즉시 잡는다.
+#:
+#: 감사 실측(별도 모델)과 대조: 타입 축 8자→19 · 12자→18 · 16자→17 · 20~24자→16 ·
+#: 30자→15 · 40자→13이 이 표에서 그대로 재현된다(아래 대조 시험이 값으로 확인한다).
+#: 모드 축에서 감사는 8자→20 · 12자→19로 하나씩 높은데, 그것은 감사 모델이 더 짧은
+#: 경로를 썼기 때문이고 `test_r21_the_onset_moves_with_the_encoded_byte_weight`가
+#: 경로 한 글자가 개시점을 옮긴다는 것을 실측으로 보인다.
+_R21_TYPE_ONSETS = ((4, 19), (9, 18), (13, 17), (19, 16), (25, 15), (31, 14), (39, 13))
+_R21_MODE_ONSETS = ((4, 20), (8, 19), (12, 18), (17, 17), (22, 16), (28, 15), (35, 14))
+
+#: 재계산 스윕의 **고정 구간**. 표에서 유도하면(= `min..max`) 끝 행을 지웠을 때 구간도
+#: 함께 줄어들어 전단사가 그대로 성립한다 — 자기충족이다. 구간을 표 밖에 못박아야
+#: 끝 행 삭제가 개시점 하나의 결손으로 드러난다(round18 M24와 같은 형태의 공백).
+#: 상한 40자는 감사가 실측한 이름 길이 대역의 끝이다(GDTF 제조사명+모델명 최장 표본).
+_R21_ONSET_SWEEP = (4, 40)
+
+#: 오늘(2026-08-08 M8) 실물 콘솔이 실제로 준 타입 이름 3종. 비공허성 대조군의 근거다.
+_R21_TODAYS_LIBRARY = ("Robin MMX Spot", "FixtureType 2", "Robin LEDBeam 350")
+
+
+def _r21_assert_onset_table_shape(rows, axis) -> None:
+    """행 삭제 프로브 — 표의 행과 **개시점 값**이 전단사임을 재계산으로 강제한다.
+
+    행마다 자유 라벨이 아니라 계산된 개시점이 붙어 있고, 각 행의 길이는 그 개시점을
+    내는 최소 길이여야 한다. 그래서 한 행을 지우면 그 개시점 값이 선언 집합에서
+    사라지고, 스윕으로 다시 계산한 집합과 어긋난다.
+    """
+    lengths = [length for length, _ in rows]
+    assert lengths == sorted(set(lengths)), lengths
+    low, high = _R21_ONSET_SWEEP
+    assert lengths[0] == low, lengths
+    swept: dict[int, int] = {}
+    for length in range(low, high + 1):
+        swept.setdefault(_r21_last_fitting(length, axis), length)
+    # 선언 ↔ 재계산 전단사. 어느 쪽에서 행을 지워도 깨진다.
+    assert dict(rows) == {length: onset for onset, length in swept.items()}
+    onsets = [onset for _, onset in rows]
+    # 개시점은 단조 감소하고 **연속 값**을 이룬다 — 중간 행을 지우면 구멍이 난다.
+    assert onsets == sorted(onsets, reverse=True), onsets
+    assert set(onsets) == set(range(min(onsets), max(onsets) + 1)), onsets
+
+
+def test_r21_truncation_onset_table_reproduces_the_responder_arithmetic():
+    """이름 길이 × 종수 절단 개시점 — responder 인코더 복제로 값까지 대조한다."""
+    _r21_assert_onset_table_shape(_R21_TYPE_ONSETS, _R21_TYPE_AXIS)
+    _r21_assert_onset_table_shape(_R21_MODE_ONSETS, _R21_MODE_AXIS)
+    for length, onset in _R21_TYPE_ONSETS:
+        assert _r21_last_fitting(length, _R21_TYPE_AXIS) == onset, length
+    for length, onset in _R21_MODE_ONSETS:
+        assert _r21_last_fitting(length, _R21_MODE_AXIS) == onset, length
+    # 감사가 보고한 타입 축 수치를 값으로 재현한다.
+    assert [
+        _r21_last_fitting(length, _R21_TYPE_AXIS) for length in (8, 12, 16, 20, 24, 30, 40)
+    ] == [19, 18, 17, 16, 16, 15, 13]
+
+
+def test_r21_the_payload_budget_bites_before_the_child_cap():
+    """`max_children`은 하드 캡이지만 **예산이 항상 먼저 문다** — 처방 ⓑ의 전제다.
+
+    이름을 한 글자로 줄여도 개시점이 캡에 닿지 못한다. 그래서 "재판독하면 더 온다"는
+    지시가 수행 불가능하고(ⓒ), 회수는 스윕으로만 가능하다.
+    """
+    assert _R21_MAX_CHILDREN == 24
+    for _length, onset in _R21_TYPE_ONSETS + _R21_MODE_ONSETS:
+        assert onset < _R21_MAX_CHILDREN, onset
+    assert _r21_last_fitting(1, _R21_TYPE_AXIS) < _R21_MAX_CHILDREN
+
+
+def test_r21_the_onset_moves_with_the_encoded_byte_weight():
+    """개시점을 정하는 것은 **글자 수가 아니라 인코딩 바이트 수**다.
+
+    ① 같은 18자라도 공백이 든 이름은 `%20`으로 3바이트가 되어 한 종 일찍 절단된다 —
+       감사의 실물 GDTF 표본(평균 18자) 16종 통과가 그 값이다.
+    ② 경로 한 조각이 길어져도 개시점이 옮겨간다 — 감사의 모드 축 수치가 이 표보다
+       하나 높았던 이유이고, 두 모델이 어긋난 것이 아니라 입력이 달랐다는 증거다.
+    """
+    path, node_name, node_class, child_class = _R21_TYPE_AXIS
+    spaced = ("ab cde" * 4)[:18]
+    assert len(spaced) == 18 and " " in spaced
+    plain_onset = _r21_last_fitting(18, _R21_TYPE_AXIS)
+    spaced_onset = next(
+        count - 1
+        for count in range(1, 40)
+        if _r21_snapshot(path, [spaced] * count, node_name, node_class, child_class)["truncated"]
+    )
+    assert spaced_onset == plain_onset - 1 == 16
+
+    short_path = "Patch/FixtureTypes/1"
+    shifted = next(
+        count - 1
+        for count in range(1, 40)
+        if _r21_snapshot(short_path, ["T" * 8] * count, "DMXModes", "DMXModes", "DMXMode")[
+            "truncated"
+        ]
+    )
+    assert shifted == _r21_last_fitting(8, _R21_MODE_AXIS) + 1 == 20
+
+
+def test_r21_todays_three_type_library_is_not_truncated():
+    """비공허성 대조군 — 오늘 실물 3종은 무해하다. 모델이 아무거나 절단이라 하지 않는다."""
+    path, node_name, node_class, child_class = _R21_TYPE_AXIS
+    snapshot = _r21_snapshot(path, list(_R21_TODAYS_LIBRARY), node_name, node_class, child_class)
+    assert snapshot["truncated"] is False
+    assert snapshot["node"]["childCount"] == len(snapshot["children"]) == 3
+
+    # 그 스냅샷을 프로덕션 리더에 그대로 먹이면 미관측이 0이다.
+    library = read_fixture_type_library(LibraryRigPort(_r21_types(_R21_TODAYS_LIBRARY)))
+    assert library.child_count == 3
+    assert library.enumerated_count == 3
+    assert library.unseen == 0
+    assert library.enumeration_short is False
+    assert library.enumeration_incomplete is False
+
+
+def _r21_types(names, modes=(("Mode 1", 16),)):
+    return [(name, list(modes)) for name in names]
+
+
+class _R21ShortPort(LibraryRigPort):
+    """선언 총계가 반환 행 수보다 큰 포트 — 절단의 **실물 형태**를 그대로 흉내낸다.
+
+    `declared_types`는 루트 `node.childCount`, `hidden`은 열거에 실리지 않았지만
+    `Patch/FixtureTypes/<i>`로는 답하는 타입이다(= 표적 스윕이 회수할 수 있는 것).
+    `flag`가 거짓이면 **`truncated` 플래그 없이 계수만 어긋난** 스냅샷이 된다.
+    """
+
+    def __init__(self, types, *, declared_types, hidden=(), flag=False, dead=(), **kwargs):
+        super().__init__(types, truncated=flag, **kwargs)
+        self.declared_types = declared_types
+        self.hidden = dict(hidden)
+        self.dead = frozenset(dead)
+        self.probe_paths: list[str] = []
+
+    def _modes_of(self, type_index: int):
+        if type_index in self.hidden:
+            return self.hidden[type_index][1]
+        return super()._modes_of(type_index)
+
+    def query_state(self, path: str) -> dict:
+        if path == FIXTURE_TYPE_LIBRARY_ROOT:
+            payload = super().query_state(path)
+            payload["node"]["childCount"] = self.declared_types
+            return payload
+        probe = re.fullmatch(rf"{FIXTURE_TYPE_LIBRARY_ROOT}/(\d+)", path)
+        if probe is not None:
+            index = int(probe.group(1))
+            self.state_calls.append(path)
+            self.probe_paths.append(path)
+            if index in self.dead:
+                raise RuntimeError("no reply within 3.0s")
+            if index not in self.hidden:
+                return {"ok": False, "path": path, "error": "path segment not found"}
+            return {
+                "ok": True,
+                "path": path,
+                "node": {"name": self.hidden[index][0], "class": "FixtureType"},
+                "children": [],
+                "truncated": False,
+            }
+        return super().query_state(path)
+
+
+def test_r21_a_count_mismatch_without_the_flag_is_still_incomplete():
+    """계수 대조 대조군 — **플래그만 보는 구판은 통과하고 신판은 잡는다**.
+
+    `truncated=false`인데 선언 총계가 반환 행 수보다 크다. 플래그 단독 판정은 이
+    입력을 전수로 읽고 부재까지 단정했다.
+    """
+    port = _R21ShortPort(_r21_types(["LEDWash 600"]), declared_types=30, flag=False)
+    library = read_fixture_type_library(port)
+
+    # 구판이 본 것: 플래그는 거짓이다.
+    assert library.truncated is False
+    # 신판이 보는 것: 계수가 어긋난다.
+    assert library.child_count == 30
+    assert library.returned_row_count == 1
+    assert library.enumerated_count == 1
+    assert library.unseen == 29
+    assert library.enumeration_short is True
+    assert library.enumeration_incomplete is True
+
+    payload = resolve_fixture_types([request()], library_port=port).to_dict()
+    assert row_by_id(payload, "vwx-missing-0001")["status"] == TYPE_LIBRARY_INCOMPLETE
+    assert FIXTURE_TYPE_LIBRARY_TRUNCATED in skipped_kinds(payload)
+    # 부재를 단정하지 않는다 — 이것이 구판이 어겼던 것이다.
+    assert FIXTURE_TYPE_NOT_IN_LIBRARY not in hard_stop_codes(payload)
+
+
+def test_r21_the_flag_alone_still_counts_when_the_totals_agree():
+    """병존 대조군 — 계수는 맞는데 **플래그만** 참인 입력도 불완전이다.
+
+    두 근거 중 하나를 지우는 뮤턴트가 각각 다른 시험에서 죽어야 축이 갈린다.
+    """
+    port = LibraryRigPort(_r21_types(["LEDWash 600"]), truncated=True)
+    library = read_fixture_type_library(port)
+
+    assert library.enumeration_short is False
+    assert library.unseen == 0
+    assert library.truncated is True
+    assert library.enumeration_incomplete is True
+
+
+def test_r21_declared_totals_and_unobserved_counts_are_in_the_payload():
+    """조용한 부분집합 금지 — 미관측이 있으면 **payload에 보여야** 한다.
+
+    기존 `type_count`·`mode_count`의 뜻은 바꾸지 않았다(= 본 수). 칸을 늘렸다.
+    """
+    port = _R21ShortPort(
+        _r21_types(["LEDWash 600"], modes=(("Mode 1", 16),)), declared_types=30, flag=False
+    )
+    library = read_fixture_type_library(port).to_dict()
+
+    assert library["type_count"] == 1  # 뜻 불변 — 본 수
+    assert library["child_count"] == 30
+    assert library["unseen_count"] == 29
+    assert library["enumeration_short"] is True
+    assert library["enumeration_incomplete"] is True
+    entry = library["types"][0]
+    assert entry["mode_count"] == 1  # 뜻 불변 — 본 수
+    assert entry["mode_child_count"] == 1
+    assert entry["mode_unseen_count"] == 0
+    assert entry["modes_incomplete"] is False
+    # 표시가 없으면 완전하다는 뜻이 되도록, 키는 **항상** 실린다.
+    clean = read_fixture_type_library(LibraryRigPort(_r21_types(["LEDWash 600"]))).to_dict()
+    assert clean["unseen_count"] == 0 and clean["child_count"] == 1
+    assert clean["types"][0]["mode_unseen_count"] == 0
+
+
+def test_r21_mode_enumeration_gets_the_same_count_comparison():
+    """모드 축도 계수 대조를 받는다 — 플래그 없이 짧은 DMXModes 스냅샷."""
+
+    class _ShortModes(LibraryRigPort):
+        def query_state(self, path: str) -> dict:
+            payload = super().query_state(path)
+            if path.endswith(DMX_MODES_SEGMENT):
+                payload["node"]["childCount"] = 5
+            return payload
+
+    port = _ShortModes(_r21_types(["MegaPointe"], modes=(("Mode 1", 16), ("Mode 2", 24))))
+    entry = read_fixture_type_library(port).types[0]
+
+    assert entry.modes_truncated is False
+    assert entry.mode_child_count == 5
+    assert entry.returned_mode_row_count == 2
+    assert entry.observed_mode_count == 2
+    assert entry.modes_unseen == 3
+    assert entry.modes_enumeration_short is True
+    assert entry.modes_incomplete is True
+
+
+def _r21_sweep_port(**kwargs):
+    """열거 1종 · 선언 30종 · 20번 슬롯에 요청된 타입이 숨어 있는 포트."""
+    return _R21ShortPort(
+        _r21_types(["LEDWash 600"]),
+        declared_types=30,
+        hidden={20: ("MegaPointe", [("Mode 1", 16), ("Mode 2", 24)])},
+        **kwargs,
+    )
+
+
+_R21_SWEEP_REQUEST = TypeRequest(
+    candidate_id="s1", instrument_type="MegaPointe", gdtf_fixture="MegaPointe", mode="Mode 1"
+)
+
+
+def test_r21_the_targeted_sweep_recovers_the_requested_name():
+    """스윕 도달성 — **스윕이 있을 때와 없을 때 같은 입력의 산출물이 갈린다**."""
+    without_sweep = read_fixture_type_library(_r21_sweep_port())
+    assert [entry.name for entry in without_sweep.types] == ["LEDWash 600"]
+    assert without_sweep.recovery_boundary is None
+
+    port = _r21_sweep_port()
+    with_sweep = recover_requested_types(port, read_fixture_type_library(port), ["MegaPointe"])
+    assert [entry.name for entry in with_sweep.types] == ["LEDWash 600", "MegaPointe"]
+    assert with_sweep.recovered_count == 1
+    assert with_sweep.recovery_boundary == 30
+    recovered = with_sweep.types[1]
+    assert recovered.recovered is True and recovered.index == 20
+    # 회수분은 관측이므로 미관측 수가 줄어든다 — 그러나 아래 시험대로 판정은 안 오른다.
+    assert with_sweep.unseen == 28
+
+    # 프로덕션 경로(`resolve_fixture_types`)가 실제로 스윕을 건다.
+    payload = resolve_fixture_types([_R21_SWEEP_REQUEST], library_port=_r21_sweep_port()).to_dict()
+    assert payload["library"]["recovered_count"] == 1
+    assert "MegaPointe" in [entry["name"] for entry in payload["library"]["types"]]
+    assert FIXTURE_TYPE_NOT_IN_LIBRARY not in hard_stop_codes(payload)
+
+
+def test_r21_the_sweep_does_not_promote_the_completeness_verdict():
+    """스윕 비승격 — 회수해도 완전성 판정은 자기 근거로만 난다(R18-A 방지)."""
+    port = _r21_sweep_port()
+    before = read_fixture_type_library(port)
+    after = recover_requested_types(port, before, ["MegaPointe"])
+
+    for library in (before, after):
+        assert library.child_count == 30
+        assert library.enumerated_count == 1
+        assert library.returned_row_count == 1
+        assert library.enumeration_short is True
+        assert library.enumeration_incomplete is True
+    assert after.recovered_count == 1  # 관측만 올랐다
+
+    payload = resolve_fixture_types([_R21_SWEEP_REQUEST], library_port=_r21_sweep_port()).to_dict()
+    # 회수해서 후보를 냈지만 고지는 그대로 나간다.
+    assert FIXTURE_TYPE_LIBRARY_TRUNCATED in skipped_kinds(payload)
+    assert payload["library"]["enumeration_incomplete"] is True
+    assert payload["library"]["unseen_count"] == 28
+
+
+def test_r21_the_sweep_requires_an_established_slot():
+    """스윕 전제 — 열거가 **비면** 인덱스가 위치로 강등되므로 훑지 않는다."""
+    port = _R21ShortPort(
+        [], declared_types=30, hidden={20: ("MegaPointe", [("Mode 1", 16)])}, flag=True
+    )
+    library = read_fixture_type_library(port)
+    assert library.types == ()
+
+    swept = recover_requested_types(port, library, ["MegaPointe"])
+    assert swept.probe_paths_seen == [] if hasattr(swept, "probe_paths_seen") else True
+    assert port.probe_paths == []
+    assert swept.recovery_boundary is None
+    assert swept.recovered_count == 0
+
+
+def test_r21_the_sweep_boundary_is_exactly_one_to_child_count():
+    """경계 ±1 대조군 — 0도 `child_count+1`도 프로브하지 않는다."""
+    port = _R21ShortPort(
+        _r21_types(["LEDWash 600"]), declared_types=6, hidden={9: ("MegaPointe", [("M", 16)])}
+    )
+    swept = recover_requested_types(port, read_fixture_type_library(port), ["MegaPointe"])
+
+    probed = sorted(int(path.rsplit("/", 1)[1]) for path in port.probe_paths)
+    assert probed == [2, 3, 4, 5, 6]  # 1은 열거로 이미 관측, 0·7은 범위 밖
+    assert swept.recovery_boundary == 6
+    assert swept.recovered_count == 0  # 경계 밖의 9번은 회수되지 않는다
+
+
+def test_r21_the_sweep_stops_at_the_first_match_and_never_reads_unrequested_types():
+    """비용 대조군 — **전수 스윕으로 확대하면 죽는다**.
+
+    표적 스윕은 인덱스당 `query_state` 1회로 이름만 보고, `_read_type`(DMXModes +
+    모드당 이름 프로퍼티)은 **일치한 타입에만** 딸려온다. 요청되지 않은 인덱스의
+    DMXModes를 한 번이라도 읽으면 그것이 전수 스윕이고 비용이 차수만큼 뛴다.
+    """
+    port = _R21ShortPort(
+        _r21_types(["LEDWash 600"]),
+        declared_types=30,
+        hidden={
+            5: ("Sharpy Plus", [("Mode 1", 16), ("Mode 2", 24)]),
+            8: ("MegaPointe", [("Mode 1", 16), ("Mode 2", 24)]),
+        },
+    )
+    swept = recover_requested_types(port, read_fixture_type_library(port), ["MegaPointe"])
+
+    probed = sorted(int(path.rsplit("/", 1)[1]) for path in port.probe_paths)
+    # 8번에서 멈춘다 — 9..30은 훑지 않는다.
+    assert probed == [2, 3, 4, 5, 6, 7, 8]
+    # 5번(요청되지 않은 실재 타입)의 이름은 봤지만 **모드는 읽지 않았다**.
+    mode_reads = [
+        call
+        for call in port.state_calls
+        if call.endswith(DMX_MODES_SEGMENT)
+        and not call.startswith(f"{FIXTURE_TYPE_LIBRARY_ROOT}/1/")
+    ]
+    assert mode_reads == [f"{FIXTURE_TYPE_LIBRARY_ROOT}/8/{DMX_MODES_SEGMENT}"]
+    assert [entry.name for entry in swept.types] == ["LEDWash 600", "MegaPointe"]
+
+    # 비용 수식: U(=29) 이내의 프로브 + 일치 1건의 `_read_type`(1 + 1·m).
+    modes = len(swept.types[1].modes)
+    assert len(port.probe_paths) + (1 + modes) <= (30 - 1) + (1 + modes)
+
+
+def test_r21_probe_failures_are_diagnostics_and_never_observations():
+    """프로브 실패는 **진단 계수**로 남고 관측으로 올라가지 않는다.
+
+    `ok=false`는 실패가 아니다 — 유계 범위 안의 빈 인덱스는 희소 풀의 정보다.
+    """
+    port = _R21ShortPort(
+        _r21_types(["LEDWash 600"]),
+        declared_types=6,
+        hidden={},
+        dead=(3, 4),
+    )
+    swept = recover_requested_types(port, read_fixture_type_library(port), ["MegaPointe"])
+
+    assert swept.probe_failures == 2  # 3·4번만 — 2·5·6번의 ok=false는 세지 않는다
+    assert swept.recovered_count == 0
+    assert [entry.name for entry in swept.types] == ["LEDWash 600"]
+    assert swept.unseen == 5  # 실패가 관측을 늘리지 않았다
+    assert swept.to_dict()["probe_failure_count"] == 2
+
+
+def test_r21_a_recovered_type_gets_the_same_count_discipline_as_an_enumerated_one():
+    """경로별로 규율이 갈리지 않는다 — 회수 경로와 열거 경로의 계수 산식이 같다."""
+    modes = [("Mode 1", 16), ("Mode 2", 24)]
+    enumerated = read_fixture_type_library(
+        LibraryRigPort([("LEDWash 600", list(modes)), ("MegaPointe", list(modes))])
+    ).types[1]
+
+    port = _r21_sweep_port()
+    recovered = recover_requested_types(
+        port, read_fixture_type_library(port), ["MegaPointe"]
+    ).types[1]
+
+    assert recovered.name == enumerated.name == "MegaPointe"
+    for field_name in (
+        "mode_child_count",
+        "modes_enumerated_count",
+        "returned_mode_row_count",
+        "observed_mode_count",
+        "modes_unseen",
+        "modes_enumeration_short",
+        "modes_incomplete",
+        "modes_available",
+        "modes_truncated",
+    ):
+        assert getattr(recovered, field_name) == getattr(enumerated, field_name), field_name
+    # 다른 것은 **출처 표시 하나**뿐이다.
+    assert recovered.recovered is True and enumerated.recovered is False
+
+
+def test_r21_the_sweep_declines_when_the_index_domain_does_not_match():
+    """열거 인덱스가 경계 밖이면 스윕 도메인이 어긋난 것이므로 훑지 않는다."""
+    port = _R21ShortPort(
+        _r21_types(["LEDWash 600"]), declared_types=30, hidden={20: ("MegaPointe", [("M", 16)])}
+    )
+    library = read_fixture_type_library(port)
+    outside = FixtureTypeLibrary(
+        types=(LibraryType(index=99, name="LEDWash 600"),),
+        available=True,
+        child_count=library.child_count,
+        enumerated_count=1,
+        returned_row_count=1,
+    )
+    port.probe_paths.clear()
+
+    swept = recover_requested_types(port, outside, ["MegaPointe"])
+
+    assert port.probe_paths == []
+    assert swept.recovery_boundary is None
+
+
+def test_r21_the_dead_end_labels_name_an_action_the_operator_can_perform():
+    """ⓒ — "라이브러리를 다시 읽어야 함"은 **수행 불가능한 지시**였다.
+
+    재판독이 같은 앞부분을 준다는 것은 위 예산 시험이 값으로 보였다. 라벨은 이제
+    도면 타입명 확인 또는 GDTF 임포트를 가리킨다.
+    """
+    for code in (FIXTURE_TYPE_LIBRARY_TRUNCATED, FIXTURE_TYPE_LIBRARY_UNREADABLE):
+        label = target_exclusion_label(code)
+        assert "다시 읽" not in label, code
+        assert "타입명" in label and "임포트" in label, code
+    # 미관측을 부재라 적지 않는다 — 건너뛴 검사 라벨은 여전히 부재 단정 불가를 말한다.
+    assert "부재 단정 불가" in skipped_check_label(FIXTURE_TYPE_LIBRARY_TRUNCATED)
+    assert "부재 단정 불가" in skipped_check_label(FIXTURE_TYPE_LIBRARY_UNREADABLE)
+
+
+def test_r21_the_two_library_axis_labels_are_distinguishable():
+    """라벨 축 구별성 대조군 — 두 코드의 라벨을 맞바꾸면 잡힌다.
+
+    각 라벨은 **자기 축의 판별자**를 담아야 한다: 절단 축은 미관측, 판독 실패 축은
+    응답을 못 받았다는 사실. 문구를 형제 축의 것으로 바꾸면 이 시험이 죽는다.
+    """
+    truncated = target_exclusion_label(FIXTURE_TYPE_LIBRARY_TRUNCATED)
+    unreadable = target_exclusion_label(FIXTURE_TYPE_LIBRARY_UNREADABLE)
+    assert truncated != unreadable
+    assert "미관측" in truncated and "미관측" not in unreadable
+    assert "읽지 못함" in unreadable and "읽지 못함" not in truncated
+    assert "콘솔 응답" in unreadable and "콘솔 응답" not in truncated
+
+    skipped_truncated = skipped_check_label(FIXTURE_TYPE_LIBRARY_TRUNCATED)
+    skipped_unreadable = skipped_check_label(FIXTURE_TYPE_LIBRARY_UNREADABLE)
+    assert skipped_truncated != skipped_unreadable
+    # 같은 코드의 두 자리도 서로 다른 것을 말한다(배제 라벨 = 조치, 고지 라벨 = 인식 한계).
+    assert skipped_truncated != truncated
+
+
+def test_r21_library_name_scanner_keeps_real_names_and_drops_substrings():
+    """소스텍스트 게이트의 위양성 교정을 **양방향으로** 고정한다."""
+    # 실물 이름은 여전히 잡힌다.
+    for planted in ("Robe Lighting@MegaPointe", "Robin MMX Spot", "LEDBeam 350", "Mac 2000"):
+        assert library_name_constants(f'X = "{planted}"\n'), planted
+    # 영어 낱말 속 부분문자열은 더 이상 제조사가 아니다.
+    for benign in ("probe_failures", "correlation", "wardrobe_count", "microbe"):
+        assert library_name_constants(f'X = "{benign}"\n') == [], benign
+    # 프로덕션은 깨끗하다.
+    assert library_name_constants(TYPEMAP_SOURCE) == []
+
+
+def test_r21_the_apply_sibling_refuses_an_index_reading_on_a_count_short_library():
+    """형제 표면 대조군 — `apply._resolve_library_type`도 **계수 대조**를 본다.
+
+    그 자리의 규율은 "목록이 전수가 아니면 **부정 결론**(= 이름이 열거에 없다)을
+    증거로 쓰지 않는다"이다. 근거를 `truncated` 플래그로 좁히면, 계수만 어긋난
+    스냅샷에서 `FixtureType <n>` 표시 하나로 다른 타입을 확정해 버린다 —
+    멱등 판정과 검증이 그 확정 위에 선다.
+    """
+    from server.vwx.apply import _resolve_library_type
+
+    listed = LibraryType(index=2, name="LEDWash 600")
+    short = FixtureTypeLibrary(
+        types=(listed,),
+        available=True,
+        truncated=False,  # 플래그만 보는 구판은 이 입력을 전수로 읽는다
+        child_count=30,
+        enumerated_count=1,
+        returned_row_count=1,
+    )
+    assert short.truncated is False and short.enumeration_incomplete is True
+    # 이름 일치가 없는데 인덱스 형태만 맞는 표시 — 부정 결론에 기댄 해석이라 거부한다.
+    assert _resolve_library_type("FixtureType 2", short) is None
+
+    # 긍정 증거(이름 정확 일치)는 절단과 무관하게 그대로 채택된다 — 과잉 거부가 아니다.
+    assert _resolve_library_type("LEDWash 600", short) is listed
+
+    # 계수가 맞으면 인덱스 형태 해석도 살아난다 — 위 거부가 공허하지 않다는 대조군.
+    whole = FixtureTypeLibrary(
+        types=(listed,), available=True, child_count=1, enumerated_count=1, returned_row_count=1
+    )
+    assert whole.enumeration_incomplete is False
+    assert _resolve_library_type("FixtureType 2", whole) is listed
+
+
+# --------------------------------------------------------------------------
+# --- round21 목록 완전성 침묵 차단 (ModeSilence) ---
+#
+# R20-B: `_mode_candidates`가 요청 모드를 못 찾으면 `console_type.modes`를 그대로
+# 돌려주는데, 그 튜플은 **절단될 수 있는 열거 결과**다. 목록이 비지 않으므로 호출자의
+# 절단 가드를 지나가고, `incompleteness_kind`가 서지 않아 `skipped_checks`가 **0건**이
+# 됐다. 조작자는 부분 목록을 "고를 것 전부"로 봤다. round19가 신설한
+# `mode_options`(index·name·channel_count)가 정확히 그 부분 목록을 실었으므로,
+# round19 자신의 기준(*"고를 수 있는 것을 보여주는 것이 확인 대기의 전제"*)이 자기
+# 새 필드에서 깨진 것이다.
+#
+# 처방은 **침묵을 구조적으로 불가능하게** 만드는 것이다:
+#   ① 목록 옆에 완전성 진술을 **항상** 싣는다(`row()`가 그것을 필수 키워드로 받는다).
+#   ② 완전성이 "불완전"이라 말하면 고지가 **같은 근거에서** 난다.
+#   ③ 목록 칸 ↔ 완전성 칸 짝을 등기부·전단사로 고정해 새 목록 칸이 짝 없이 못 들어온다.
+# --------------------------------------------------------------------------
+
+from dataclasses import replace  # noqa: E402
+
+from server.vwx.typemap import (  # noqa: E402  (섹션 지역 임포트 — 공용 헤더를 건드리지 않는다)
+    CANDIDATES_PRESENTED_REASON,
+    LIST_COMPLETENESS_COLUMNS,
+    MODE_OPTIONS_COMPLETENESS_COLUMN,
+    TYPE_CANDIDATES_COMPLETENESS_COLUMN,
+    TYPE_TABLE_COLUMN_LABELS,
+    TYPE_TABLE_COLUMNS,
+    ListCompleteness,
+    TypeResolution,
+    TypeResolutionPlan,
+    _incompleteness_reason,
+    _library_axis,
+    _library_list_completeness,
+    _library_observed_axes,
+    _mode_axis,
+    _mode_list_completeness,
+)
+from server.vwx.verdicts import FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED  # noqa: E402
+
+#: 감사 실측 형태의 라이브러리 — **선언 5모드**, 96ch 모드는 4번이다.
+_R21_FIVE_MODE_LIBRARY = [
+    (
+        "MegaPointe",
+        [("Mode 1", 24), ("Mode 2", 20), ("Mode 3", 48), ("Mode 4", 96), ("Mode 5", 64)],
+    )
+]
+
+
+class _R21ShortModePort(LibraryRigPort):
+    """DMXModes가 **선언 N · 실린 M**(M<N)인 콘솔. 감사 실측 모델 그대로.
+
+    두 형태를 모두 만든다 — 처방이 어느 한쪽에만 걸리면 나머지가 사각으로 남는다:
+      · `flag=True`  — responder 예산 절단(`truncated`가 선다).
+      · `flag=False` — 플래그 없이 **계수만** 어긋난다. 구판이 전수로 읽던 형태다.
+    `_channels`·`query_property`는 원본 `types`를 인덱스로 보므로 실린 행만 잘라도
+    남은 인덱스의 판독은 실측과 같다.
+    """
+
+    def __init__(self, types, *, declared: int, carried: int, flag: bool, **kwargs):
+        super().__init__(types, **kwargs)
+        self._declared = declared
+        self._carried = carried
+        self._flag = flag
+
+    def query_state(self, path: str) -> dict:
+        state = super().query_state(path)
+        if re.fullmatch(rf"{FIXTURE_TYPE_LIBRARY_ROOT}/\d+/{DMX_MODES_SEGMENT}", path):
+            return {
+                **state,
+                "node": {**state["node"], "childCount": self._declared},
+                "children": state["children"][: self._carried],
+                "truncated": self._flag,
+            }
+        return state
+
+
+def _r21_plan(port, *, mode: str | None, footprint: int | None = None, aliases=None):
+    return resolve_fixture_types(
+        [request("c1", mode=mode, footprint=footprint)],
+        library_port=port,
+        type_aliases=aliases or {},
+        assumption_72=ASSUMPTION_72_GO,
+    )
+
+
+def _r21_short_mode_plan(*, flag: bool, mode: str | None = "Mode 1", footprint: int | None = 96):
+    port = _R21ShortModePort(_R21_FIVE_MODE_LIBRARY, declared=5, carried=2, flag=flag)
+    return _r21_plan(port, mode=mode, footprint=footprint)
+
+
+@pytest.mark.parametrize("flag", [True, False])
+def test_r21_a_partial_mode_list_is_never_presented_as_the_whole_choice(flag: bool):
+    """[round21 R20-B 재현] **선언 5모드 중 2모드만 실린** 콘솔에서 도면이 96ch 모드를
+    요구한다. 그 모드는 실린 2개에 **없다**(96ch는 미관측인 4번이다).
+
+    구판: `mode_candidates`가 비지 않아 절단 가드를 지나가고 `incompleteness_kind`가
+    서지 않아 `skipped_checks`가 **0건**이었다 — 조작자는 24ch 하나를 "고를 것 전부"로
+    보고 96ch가 라이브러리에 있는 줄 모른다.
+
+    죽이는 뮤테이션:
+      · `row()`에서 `MODE_OPTIONS_COMPLETENESS_COLUMN` 행 제거 → ①이 실패한다.
+      · `_mode_list_completeness`가 `complete=True`를 돌려주게 되돌림 → ②가 실패한다.
+      · `_skipped_checks`의 관측 축 절(`_observed_incompleteness_kinds`) 제거 →
+        ④가 실패한다(처분 축은 이 갈래에서 `None`이므로 구판 조건만으로는 안 난다).
+      · `_mode_candidates`가 요청 이름 대신 `console_type.modes`를 그대로 돌려주게
+        해도 ③이 실패한다(제시 수가 관측 수와 갈린다).
+    """
+    plan = _r21_short_mode_plan(flag=flag)
+    payload = plan.to_dict()
+    row = row_by_id(payload, "c1")
+
+    # ① 목록 옆에 완전성 진술이 **항상** 있다.
+    marker = row[MODE_OPTIONS_COMPLETENESS_COLUMN]
+    assert MODE_OPTIONS_COMPLETENESS_COLUMN in TYPE_TABLE_COLUMNS
+
+    # ② 부분 목록을 완전하다고 말하지 않는다 — 축까지 말한다.
+    assert marker["complete"] is False
+    assert marker["incompleteness_kind"] == FIXTURE_TYPE_LIBRARY_TRUNCATED
+    assert marker["label"] == skipped_check_label(FIXTURE_TYPE_LIBRARY_TRUNCATED)
+
+    # ③ 몇 개를 못 봤는지 **수로** 말한다. 계수는 R20-A의 것을 옮긴 것이다.
+    assert (marker["declared_count"], marker["observed_count"]) == (5, 2)
+    assert marker["unseen_count"] == 3
+    assert marker["presented_count"] == len(row["mode_options"]) == 1
+
+    # ④ **고지가 나간다** — 구판은 여기가 0건이었다.
+    assert FIXTURE_TYPE_LIBRARY_TRUNCATED in skipped_kinds(payload)
+
+    # ⑤ 도면이 요구한 96ch는 제시 목록에 **없다**. 그 사실이 ②·③과 함께 읽혀야
+    #    조작자가 "목록에 없다"를 "라이브러리에 없다"로 오독하지 않는다.
+    assert [option["channel_count"] for option in row["mode_options"]] == [24]
+    assert row["designed_footprint"] == 96
+
+    # ⑥ **처분 축은 건드리지 않았다.** 이 갈래는 여전히 확인 대기이고 배제 코드도
+    #    `type_confirmation_pending`으로 남는다 — `incompleteness_kind`를 여기서
+    #    세우면 `apply._unresolved_type_verdict`가 코드를 바꿔 round19 불변식
+    #    (`confirmation_required` 참 ⇒ pending)이 깨진다.
+    assert row["status"] == TYPE_NEEDS_CONFIRMATION
+    assert row["confirmation_required"] is True
+    assert plan.resolutions[0].incompleteness_kind is None
+
+
+def test_r21_the_disposition_axis_stays_pending_on_a_truncated_option_list():
+    """[round21 R20-B 형제 표면] 고지를 관측 축에서 낸 대가로 **배제 코드가 변하지 않는다.**
+
+    round19 불변식 ㉢(`confirmation_required`가 참이면 배제 코드는
+    `type_confirmation_pending`)을 이 새 갈래에서 실제로 재확인한다 — 처분 축을 넓혀
+    고쳤다면 여기서 깨졌을 것이고, 그것이 이 SPEC이 열한 번 한 "고치려다 옆을 깨는" 형태다.
+
+    죽이는 뮤테이션: `_resolve_one`의 마지막 반환에 `incompleteness_kind=...`를 더하면
+    (= 처분 축을 넓히는 구현) 이 게이트가 실패한다.
+    """
+    from server.vwx.apply import _unresolved_type_verdict
+    from server.vwx.verdicts import TYPE_CONFIRMATION_PENDING
+
+    resolution = _r21_short_mode_plan(flag=True).resolutions[0]
+    code, _reason = _unresolved_type_verdict(resolution)
+    assert code == TYPE_CONFIRMATION_PENDING
+
+
+# --------------------------------------------------------------------------
+# 불변식 대조군 — "완전성이 불완전이라 말했는데 고지가 빈다"가 **구조적으로 불가능**하다.
+# 코퍼스는 세 축(절단 · 판독 실패 · 행 폐기)과 두 절단 형태(플래그 · 계수)를 모두 밟는다.
+# --------------------------------------------------------------------------
+
+
+def _r21_discard_port():
+    """모드 행 하나에 `i`가 없는 콘솔 — **폐기 축**. 절단이 아니다(목록은 안 잘렸다)."""
+
+    class _Port(LibraryRigPort):
+        def query_state(self, path: str) -> dict:
+            state = super().query_state(path)
+            if re.fullmatch(rf"{FIXTURE_TYPE_LIBRARY_ROOT}/\d+/{DMX_MODES_SEGMENT}", path):
+                children = [dict(child) for child in state["children"]]
+                children[-1].pop("i", None)
+                return {**state, "children": children}
+            return state
+
+    return _Port(_R21_FIVE_MODE_LIBRARY)
+
+
+#: (이름, 계획을 만드는 무인자 호출, 기대 축) — 축이 `None`이면 완전성을 주장할 수 있는 쪽.
+_R21_COMPLETENESS_CORPUS = (
+    ("clean", lambda: _r21_plan(LibraryRigPort(_R21_FIVE_MODE_LIBRARY), mode="Mode 1"), None),
+    (
+        "modes_truncated_flag",
+        lambda: _r21_short_mode_plan(flag=True),
+        FIXTURE_TYPE_LIBRARY_TRUNCATED,
+    ),
+    (
+        "modes_count_short",
+        lambda: _r21_short_mode_plan(flag=False),
+        FIXTURE_TYPE_LIBRARY_TRUNCATED,
+    ),
+    # 요청 모드가 **없는** 갈래 — `_mode_candidates`가 절단된 튜플을 그대로 "전 모드"로
+    # 돌려주던 자리다. 이 행이 없으면 부분집합 불변식 게이트가 그 갈래에서 공허해진다.
+    (
+        "no_requested_mode",
+        lambda: _r21_short_mode_plan(flag=True, mode=None, footprint=None),
+        FIXTURE_TYPE_LIBRARY_TRUNCATED,
+    ),
+    (
+        "modes_unreadable",
+        lambda: _r21_plan(
+            LibraryRigPort(_R21_FIVE_MODE_LIBRARY, modes_readable=False), mode="Mode 1"
+        ),
+        FIXTURE_TYPE_LIBRARY_UNREADABLE,
+    ),
+    (
+        "mode_rows_discarded",
+        lambda: _r21_plan(_r21_discard_port(), mode="Mode 1"),
+        FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED,
+    ),
+    (
+        "library_truncated_flag",
+        lambda: _r21_plan(LibraryRigPort(_R21_FIVE_MODE_LIBRARY, truncated=True), mode="Mode 1"),
+        FIXTURE_TYPE_LIBRARY_TRUNCATED,
+    ),
+)
+
+
+def test_r21_the_completeness_corpus_reaches_every_axis():
+    """대조군 건전성 — 코퍼스가 축 어휘 **전부**와 "완전" 쪽에 모두 닿는다.
+
+    닿지 않는 축이 있으면 아래 불변식이 그 축에서 공허해진다. 축을 하나 더하면
+    (`FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED`가 round21에 그랬듯) 코퍼스 없이는 실패한다.
+    """
+    axes = {axis for _name, _build, axis in _R21_COMPLETENESS_CORPUS}
+    assert axes == {
+        None,
+        FIXTURE_TYPE_LIBRARY_TRUNCATED,
+        FIXTURE_TYPE_LIBRARY_UNREADABLE,
+        FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED,
+    }
+    import server.vwx.typemap as typemap_module
+
+    declared = {
+        getattr(typemap_module, kind_expr)
+        for kind_expr, _reason, _extra in _r21_notice_axis_table()
+    }
+    assert axes - {None} <= declared, "고지 축 표가 코퍼스보다 좁다"
+
+
+def _r21_notice_axis_table():
+    """`_skipped_checks`의 고지 축 튜플을 **소스에서** 뽑는다 — 표를 베끼지 않는다."""
+    tree = ast.parse(TYPEMAP_SOURCE)
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.FunctionDef) and node.name == "_skipped_checks"):
+            continue
+        for loop in ast.walk(node):
+            if isinstance(loop, ast.For) and isinstance(loop.iter, ast.Tuple):
+                rows_out = []
+                for element in loop.iter.elts:
+                    assert isinstance(element, ast.Tuple), ast.unparse(element)
+                    kind, reason, extra = element.elts
+                    rows_out.append((ast.unparse(kind), ast.unparse(reason), ast.unparse(extra)))
+                return tuple(rows_out)
+    raise AssertionError("_skipped_checks의 고지 축 루프를 찾지 못했다")
+
+
+@pytest.mark.parametrize("name,build,axis", _R21_COMPLETENESS_CORPUS, ids=lambda v: str(v)[:24])
+def test_r21_an_incomplete_marker_always_carries_a_notice(name: str, build, axis):
+    """[round21 R20-B 불변식] 마커가 **불완전**이라 말하면 같은 payload에 고지가 있다.
+
+    마커와 고지가 **한 근거**(`_library_axis`·`_mode_axis`)에서 나므로 둘이 갈릴 수 없다.
+    반대 방향(완전하다고 말하면 그 축의 고지가 없다)도 함께 잰다 — 그것이 없으면
+    "항상 고지한다"는 공허한 통과가 된다.
+
+    죽이는 뮤테이션:
+      · `_skipped_checks`의 `kind in self._observed_incompleteness_kinds()` 절 제거.
+      · `_observed_incompleteness_kinds`가 `complete is None`까지 세게 바꿈(clean·
+        근거 없음 갈래에서 없는 사실을 고지한다).
+      · `_library_axis`·`_mode_axis`의 폐기 검사를 union **뒤로** 옮김(축이 절단으로
+        뭉개져 `mode_rows_discarded` 행이 기대 축과 어긋난다).
+    """
+    payload = build().to_dict()
+    kinds = set(skipped_kinds(payload))
+    markers = [
+        row[column]
+        for row in rows(payload)
+        for column in (TYPE_CANDIDATES_COMPLETENESS_COLUMN, MODE_OPTIONS_COMPLETENESS_COLUMN)
+    ]
+    incomplete = {
+        marker["incompleteness_kind"] for marker in markers if marker["complete"] is False
+    }
+    assert incomplete <= kinds, (name, incomplete, kinds)
+    if axis is None:
+        assert incomplete == set(), name
+        assert (
+            kinds
+            & {
+                FIXTURE_TYPE_LIBRARY_TRUNCATED,
+                FIXTURE_TYPE_LIBRARY_UNREADABLE,
+                FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED,
+            }
+            == set()
+        ), name
+    else:
+        assert axis in incomplete, name
+        assert axis in kinds, name
+
+
+def test_r21_the_notice_axis_table_and_the_reason_helper_do_not_diverge():
+    """고지 축 표의 사유가 `_incompleteness_reason`이 내는 사유와 **같다**.
+
+    같은 축의 사유를 두 자리에서 쓰면 한쪽만 고쳐져 마커와 고지가 다른 문장을 말한다.
+
+    죽이는 뮤테이션: 표의 사유 상수 하나를 형제 상수로 바꾸면 실패한다.
+    """
+    import server.vwx.typemap as typemap_module
+
+    for kind_expr, reason_expr, _extra in _r21_notice_axis_table():
+        kind = getattr(typemap_module, kind_expr)
+        reason = getattr(typemap_module, reason_expr)
+        assert _incompleteness_reason(kind) == reason, kind_expr
+
+
+def test_r21_the_three_axes_have_distinct_labels_and_reasons():
+    """[round18 M24 형태] 축 라벨·사유를 **형제 축 문구로 바꿔도 안 죽는 공백**을 막는다.
+
+    마커의 `label`은 `skipped_check_label(kind)`에서 오므로, 세 축이 서로 구별되는
+    라벨·사유를 갖지 않으면 조작자는 절단·판독실패·폐기를 구별할 수 없고 조치를 고를 수
+    없다(표적 스윕 / 재시도 / responder 확인 — 셋이 다르다).
+
+    죽이는 뮤테이션: 어느 두 축의 라벨이나 사유를 같게 만들면 실패한다.
+    """
+    axes = (
+        FIXTURE_TYPE_LIBRARY_TRUNCATED,
+        FIXTURE_TYPE_LIBRARY_UNREADABLE,
+        FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED,
+    )
+    labels = [skipped_check_label(kind) for kind in axes]
+    reasons = [_incompleteness_reason(kind) for kind in axes]
+    assert len(set(labels)) == len(axes), labels
+    assert len(set(reasons)) == len(axes), reasons
+    assert all(label.strip() for label in labels)
+
+
+# --------------------------------------------------------------------------
+# [HARD] 형제 표면 전수 — "목록을 제시하는데 그 목록이 완전한지 말하지 않는 자리"를
+# `server/vwx/` **전 모듈**에서 뽑아 등기부와 전단사로 고정한다.
+#
+# 이것이 없으면 다음 라운드가 목록 칸을 하나 더 더할 때 완전성 칸을 또 빠뜨린다 —
+# round19가 `mode_options`에서 한 일이 정확히 그것이다. 등기 분류는 둘뿐이다:
+#   · `stated`  — 같은 산출물에 그 목록의 완전성을 말하는 칸이 있다(그 칸 이름을 적는다).
+#   · `derived` — 콘솔 열거가 아니라 **이 산출물이 스스로 만든 것의 전수**다. 완전성은
+#                 그 재료의 완전성이고, 재료 쪽 칸이 그것을 말한다(그 출처를 적는다).
+# **모든 부재가 결함은 아니다** — 그 구별을 등기부가 진다.
+
+
+# --------------------------------------------------------------------------
+
+
+def _r21_list_sites() -> tuple[tuple[str, str, str], ...]:
+    """dict 리터럴에 **리스트를 싣는** 자리를 `server/vwx/` 전 모듈에서 전수로 뽑는다."""
+    found: set[tuple[str, str, str]] = set()
+    for path in sorted(Path("server/vwx").rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for function in ast.walk(tree):
+            if not isinstance(function, ast.FunctionDef):
+                continue
+            for node in ast.walk(function):
+                if not isinstance(node, ast.Dict):
+                    continue
+                for key, value in zip(node.keys, node.values, strict=True):
+                    if not (isinstance(key, ast.Constant) and isinstance(key.value, str)):
+                        continue
+                    listish = isinstance(value, (ast.ListComp, ast.List)) or (
+                        isinstance(value, ast.Call)
+                        and getattr(value.func, "id", None) in {"list", "sorted", "tuple"}
+                    )
+                    if listish:
+                        found.add((path.name, function.name, key.value))
+    return tuple(sorted(found))
+
+
+#: 증인의 **범위**까지 분류에 넣는다. 범위를 뭉개면 "같은 dict에 완전성 칸이 있다"와
+#: "같은 모듈 어딘가에 그 말을 하는 생산자가 있다"가 구별되지 않고, 앞쪽이 요구하는
+#: 강한 검사(형제 키 실재)를 뒤쪽 행이 통째로 면제받는다.
+_R21_STATED = "stated_sibling_key"
+_R21_STATED_PRODUCER = "stated_named_producer"
+_R21_DERIVED = "derived"
+
+#: (모듈, 함수, 목록 키, 분류, 완전성을 말하는 칸 이름 또는 그 목록의 출처).
+_R21_LIST_SITES = (
+    ("apply.py", "to_dict", "entries", _R21_DERIVED, "address_plan 자신이 만든 배정 전수"),
+    ("apply.py", "to_dict", "exclusions", _R21_DERIVED, "이 계획이 배제한 대상 전수"),
+    ("apply.py", "to_dict", "guidance", _R21_DERIVED, "고정 문장 목록 — 관측이 아니다"),
+    # 점유자 목록은 콘솔 판독이다. 완전성은 `console_read_caveat`가 같은 payload에
+    # `completeness`·`child_count`·`observed_count`·`missing_count`로 말한다 —
+    # PRESERVE `prechk.Inventory`가 그 계수를 지므로 이 자리는 결함이 아니다.
+    (
+        "apply.py",
+        "to_dict",
+        "observed_occupants",
+        _R21_STATED_PRODUCER,
+        "apply.console_read_caveat",
+    ),
+    ("apply.py", "to_dict", "procedure", _R21_DERIVED, "이 계획이 만든 절차 전수"),
+    ("apply.py", "to_dict", "results", _R21_DERIVED, "검증한 대상 전수"),
+    ("apply.py", "to_dict", "warnings", _R21_DERIVED, "이 계획이 낸 경고 전수"),
+    # FID 열거는 절단될 수 있다. 완전성은 같은 함수의 `read` 블록이
+    # `complete`·`child_count`·`enumerated_count`·`unseen_count`·`recovery_boundary`로 말한다.
+    ("patchplan.py", "_fid_safety_payload", "existing_fids", _R21_STATED, "read"),
+    ("patchplan.py", "_vacuous_notice", "stage_one_axes", _R21_DERIVED, "닫힌 축 이름 목록"),
+    (
+        "patchplan.py",
+        "assemble_sentences_or_defect",
+        "fragments",
+        _R21_DERIVED,
+        "입력 문장 조각 전수",
+    ),
+    ("patchplan.py", "to_dict", "address_basis_notes", _R21_DERIVED, "이 계획이 낸 주석 전수"),
+    ("patchplan.py", "to_dict", "candidates", _R21_DERIVED, "1단계 대조 산출의 전수"),
+    ("patchplan.py", "to_dict", "columns", _R21_DERIVED, "표 열 이름 — 관측이 아니다"),
+    ("patchplan.py", "to_dict", "entries", _R21_DERIVED, "이 계획이 만든 배정 전수"),
+    ("patchplan.py", "to_dict", "exclusions", _R21_DERIVED, "이 계획이 배제한 대상 전수"),
+    (
+        "patchplan.py",
+        "to_dict",
+        "observed_occupants",
+        _R21_STATED_PRODUCER,
+        "apply.console_read_caveat",
+    ),
+    ("patchplan.py", "to_dict", "rows", _R21_DERIVED, "후보 하나에 한 행 — 후보 전수를 따른다"),
+    ("patchplan.py", "to_dict", "selected", _R21_DERIVED, "이 계획이 고른 대상 전수"),
+    ("patchplan.py", "to_dict", "skipped_checks", _R21_DERIVED, "미수행 판정 전수 — 고지 자체다"),
+    ("patchplan.py", "to_dict", "target_exclusions", _R21_DERIVED, "이 계획이 배제한 대상 전수"),
+    ("patchplan.py", "to_dict", "targets", _R21_DERIVED, "이 계획이 고른 대상 전수"),
+    ("patchplan.py", "to_dict", "warnings", _R21_DERIVED, "이 계획이 낸 경고 전수"),
+    ("report.py", "_design_overlaps", "members", _R21_DERIVED, "설계 픽스처 대조 산출"),
+    ("report.py", "_diffs", "address_collision", _R21_DERIVED, "1단계 대조 산출"),
+    ("report.py", "_diffs", "members", _R21_DERIVED, "1단계 대조 산출"),
+    ("report.py", "_diffs", "missing_in_console", _R21_DERIVED, "1단계 대조 산출"),
+    ("report.py", "_diffs", "quantity_mismatch", _R21_DERIVED, "1단계 대조 산출"),
+    ("report.py", "_join_key_conflicts", "rows", _R21_DERIVED, "설계 행 대조 산출"),
+    # 설계 측 관측이다(콘솔 열거가 아니다). 완전성은 같은 dict의
+    # `candidate_row_count`·`dropped_row_count`·`scope_qualified`가 말한다.
+    ("report.py", "to_dict", "observed_systems", _R21_STATED, "dropped_row_count"),
+    # [round21 R20-B] 내가 소유하는 셋 — 완전성 칸을 같은 행에 싣는다.
+    (
+        "typemap.py",
+        "row",
+        "mode_candidates",
+        _R21_STATED,
+        MODE_OPTIONS_COMPLETENESS_COLUMN,
+    ),
+    ("typemap.py", "row", "mode_options", _R21_STATED, MODE_OPTIONS_COMPLETENESS_COLUMN),
+    (
+        "typemap.py",
+        "row",
+        "type_candidates",
+        _R21_STATED,
+        TYPE_CANDIDATES_COMPLETENESS_COLUMN,
+    ),
+    ("typemap.py", "to_dict", "columns", _R21_DERIVED, "표 열 이름 — 관측이 아니다"),
+    ("typemap.py", "to_dict", "hard_stops", _R21_DERIVED, "해상 결과 전수를 따른다"),
+    # 라이브러리 열거 자체. 완전성은 같은 dict의 `enumeration_incomplete`·`unseen_count`.
+    ("typemap.py", "to_dict", "types", _R21_STATED, "enumeration_incomplete"),
+)
+
+
+def test_r21_the_list_site_registry_is_a_bijection_onto_server_vwx():
+    """[round21 R20-B · HARD] 목록을 싣는 자리 표가 `server/vwx/` 전 모듈과 1:1이다.
+
+    죽이는 뮤테이션:
+      · `row()`에 목록 칸을 하나 더 더하면 등기 없이는 통과하지 못한다(= round19가
+        `mode_options`를 무등기로 더한 형태가 여기서 잡힌다).
+      · 등기부에서 어느 행을 지워도 아래 행삭제 프로브가 실패한다.
+    """
+    produced = _r21_list_sites()
+    declared = tuple(sorted((module, func, key) for module, func, key, _c, _w in _R21_LIST_SITES))
+    assert produced == declared, "목록 자리가 표와 다르다 — 등록할 행:\n" + "\n".join(
+        f'    ("{m}", "{f}", "{k}", ..., ...),' for m, f, k in produced
+    )
+    assert {cls for _m, _f, _k, cls, _w in _R21_LIST_SITES} == {
+        _R21_STATED,
+        _R21_STATED_PRODUCER,
+        _R21_DERIVED,
+    }
+    assert all(witness.strip() for *_head, witness in _R21_LIST_SITES)
+
+
+@pytest.mark.parametrize("index", range(len(_R21_LIST_SITES)))
+def test_r21_deleting_any_list_site_row_breaks_the_bijection(index: int):
+    """행 삭제 프로브 — 등기부에서 어느 행을 지워도 프로덕션 전수와 어긋난다."""
+    shrunk = _R21_LIST_SITES[:index] + _R21_LIST_SITES[index + 1 :]
+    declared = tuple(sorted((module, func, key) for module, func, key, _c, _w in shrunk))
+    assert declared != _r21_list_sites()
+
+
+def _r21_dict_key_name(item: ast.expr, namespace: object) -> str | None:
+    """dict 키의 **값**. 리터럴이 아니라 모듈 상수로 적힌 키까지 해석한다.
+
+    이 저장소는 열 이름을 상수로 두는 것이 규율이다(`FOOTPRINT_UNVERIFIED_COLUMN`이
+    선례). 리터럴만 세는 스캐너는 그 규율을 따른 칸을 **못 보고**, 그 사각이 곧
+    "게이트가 있는데 통과한다"가 된다.
+    """
+    if isinstance(item, ast.Constant) and isinstance(item.value, str):
+        return item.value
+    if isinstance(item, ast.Name):
+        value = getattr(namespace, item.id, None)
+        return value if isinstance(value, str) else None
+    return None
+
+
+def _r21_sibling_keys(module: str, func: str, key: str) -> set[str]:
+    """`func` 안에서 `key`를 싣는 **그 dict 리터럴**의 형제 키 전부."""
+    import importlib
+
+    namespace = importlib.import_module(f"server.vwx.{module[:-3]}")
+    tree = ast.parse(Path("server/vwx", module).read_text(encoding="utf-8"))
+    keys: set[str] = set()
+    for function in ast.walk(tree):
+        if not (isinstance(function, ast.FunctionDef) and function.name == func):
+            continue
+        for node in ast.walk(function):
+            if not isinstance(node, ast.Dict):
+                continue
+            names = {
+                name
+                for name in (_r21_dict_key_name(item, namespace) for item in node.keys)
+                if name is not None
+            }
+            if key in names:
+                keys |= names
+    return keys
+
+
+def test_r21_every_stated_row_names_a_witness_that_actually_exists():
+    """등기부의 증인이 **실재한다** — 산문으로 때우면 다음 라운드에 또 뚫린다.
+
+    두 범위를 각각 다르게 잰다(뭉개면 강한 검사가 면제된다):
+      · `stated_sibling_key`   — 증인이 그 목록을 싣는 **dict 리터럴의 형제 키**다.
+      · `stated_named_producer` — 증인이 `<모듈>.<심볼>`로 **실재하는 생산자**다. 이
+        범위가 따로 있는 이유: `patchplan`의 점유자 목록은 `apply`가 관측해 넘긴 것이라
+        완전성을 말하는 생산자가 **다른 모듈**에 있다. 그 사실을 등기부가 말한다.
+
+    죽이는 뮤테이션:
+      · 어느 `stated_sibling_key` 행의 증인을 형제 키가 아닌 이름으로 바꾸면 실패한다.
+      · `row()`에서 완전성 칸을 지우면 그 행 셋이 형제 키를 잃어 실패한다.
+      · `apply.console_read_caveat`를 개명하면 모듈 증인 행 둘이 실패한다.
+    """
+    import importlib
+
+    for module, func, key, cls, witness in _R21_LIST_SITES:
+        if cls == _R21_STATED:
+            siblings = _r21_sibling_keys(module, func, key)
+            assert witness in siblings, (module, func, key, witness, sorted(siblings))
+        elif cls == _R21_STATED_PRODUCER:
+            producer_module, _, symbol = witness.rpartition(".")
+            imported = importlib.import_module(f"server.vwx.{producer_module}")
+            assert hasattr(imported, symbol), witness
+
+
+def test_r21_every_list_key_in_a_produced_row_has_a_completeness_column():
+    """[round21 R20-B · 처방③] `row()`에 목록 칸을 더하면 **완전성 칸도 함께** 넣게 된다.
+
+    round19가 `mode_options`를 더하면서 그 완전성을 말할 자리를 만들지 않은 것이 R20-B의
+    원인이었다. 그 규율을 표가 아니라 **산출물에서** 잰다: 실제로 만든 행의 리스트 값
+    칸 전부가 `LIST_COMPLETENESS_COLUMNS`에 짝을 갖고, 그 짝이 표 열·라벨·행에 모두 있다.
+
+    죽이는 뮤테이션:
+      · `LIST_COMPLETENESS_COLUMNS`에서 `mode_options` 행 제거 → ①이 실패한다.
+      · `TYPE_TABLE_COLUMNS`에서 완전성 열 제거 → ②가 실패한다.
+      · `row()`에서 완전성 칸 제거 → ③이 실패한다.
+    """
+    payload = _r21_short_mode_plan(flag=True).to_dict()
+    row = row_by_id(payload, "c1")
+    list_keys = {key for key, value in row.items() if isinstance(value, list)}
+
+    # ① 목록 칸 전부가 완전성 칸과 짝이다.
+    assert list_keys == set(LIST_COMPLETENESS_COLUMNS), sorted(list_keys)
+
+    for list_key, completeness_key in LIST_COMPLETENESS_COLUMNS.items():
+        # ② 짝은 조작자 화면 표에 등재돼 있다(payload에만 있으면 사람은 못 본다).
+        assert completeness_key in TYPE_TABLE_COLUMNS, list_key
+        assert TYPE_TABLE_COLUMN_LABELS[completeness_key].strip()
+        # ③ 그리고 행에 실제로 실린다 — 세 축을 말할 칸까지 함께.
+        assert set(row[completeness_key]) == {
+            "complete",
+            "incompleteness_kind",
+            "label",
+            "declared_count",
+            "observed_count",
+            "presented_count",
+            "unseen_count",
+        }
+
+
+def test_r21_row_cannot_be_assembled_without_a_completeness_statement():
+    """[round21 R20-B · 처방①] `row()`은 완전성 진술을 **필수 키워드**로 받는다.
+
+    이것이 처방의 핵심이다 — round19는 목록 칸을 더하면서 완전성 칸을 만들지 않을 수
+    있었다. 이제 그 조립은 `TypeError`다. 계산 자리도 하나뿐이라는 것까지 소스에서 잰다.
+
+    죽이는 뮤테이션:
+      · 인자에 기본값(`= None` 등)을 주면 ①이 실패한다(= 빠뜨릴 수 있는 상태로 복귀).
+      · 인자를 위치 인자로 바꾸면 ②가 실패한다(호출자가 순서로 넘기면 오배치가 조용하다).
+      · 라이브러리 축을 행마다 만들게 흩으면 ③이 실패한다.
+    """
+    import inspect
+
+    signature = inspect.signature(TypeResolution.row)
+    parameter = signature.parameters["type_candidates_completeness"]
+
+    # ① 기본값이 없다 — 빼면 조립이 실패한다.
+    assert parameter.default is inspect.Parameter.empty
+    # ② 키워드 전용이다.
+    assert parameter.kind is inspect.Parameter.KEYWORD_ONLY
+    with pytest.raises(TypeError):
+        TypeResolution(request=request("c1"), status=TYPE_NEEDS_CONFIRMATION, reason="").row()
+
+    # ③ 라이브러리 축을 만드는 자리는 프로덕션에 **하나**다.
+    assert TYPEMAP_SOURCE.count("_library_list_completeness(") == 3, (
+        "정의 1 + 사용 2(to_dict · _observed_incompleteness_kinds)가 아니면 계산 자리가 흩어졌다"
+    )
+    tree = ast.parse(TYPEMAP_SOURCE)
+    callers = {
+        function.name
+        for function in ast.walk(tree)
+        if isinstance(function, ast.FunctionDef)
+        and any(
+            isinstance(node, ast.Call) and getattr(node.func, "attr", None) == "row"
+            for node in ast.walk(function)
+        )
+    }
+    assert callers == {"to_dict"}, callers
+
+
+@pytest.mark.parametrize("name,build,axis", _R21_COMPLETENESS_CORPUS, ids=lambda v: str(v)[:24])
+def test_r21_the_presented_mode_list_is_a_subset_of_the_enumerated_modes(name: str, build, axis):
+    """[round21 R20-B · 파생 건전성] `mode_candidates ⊆ presented_type.modes`.
+
+    `mode_options_completeness`는 `presented_type`에서 파생하므로, 제시된 목록에
+    그 열거 밖의 원소가 섞이면 완전성 진술이 그 원소를 **덮지 못한다** — 마커가 있는데
+    거짓인 상태가 된다. `_mode_candidates`가 지는 불변식을 여기서 실행으로 잰다.
+
+    죽이는 뮤테이션: `_mode_candidates`가 `console_type.modes` 밖의 `LibraryMode`를
+    만들어 넣게 하면(예: 요청 모드 이름으로 합성) 실패한다.
+    """
+    for resolution in build().resolutions:
+        presented = resolution.presented_type
+        if presented is None:
+            # 열거를 거치지 않았다면 목록도 비어 있어야 한다 — 완전성이 `None`인 것과 짝이다.
+            assert resolution.mode_candidates == (), name
+            assert resolution.mode_options_completeness.complete is None, name
+            continue
+        assert set(resolution.mode_candidates) <= set(presented.modes), name
+
+
+def test_r21_no_basis_is_not_the_same_as_nothing_missing():
+    """[round21 R20-B] `complete is None`(모른다)과 `False`(못 본 것이 있다)를 가른다.
+
+    선언 총계를 못 읽은 스냅샷에서 `True`를 내면 **플래그 단독 전수 주장**이 되고
+    (PRESERVE `prechk.inventory` 독스트링 2번이 금지한 형태), `False`를 내면 없는
+    미관측을 단정한다. 그래서 `None`이고, `None`에서는 **고지도 나가지 않는다** —
+    모른다를 "열거를 못 봤다"로 적으면 없는 사실을 말하는 것이다.
+
+    죽이는 뮤테이션:
+      · `_mode_list_completeness`/`_library_list_completeness`의 `child_count is None`
+        갈래를 `True`로 되돌리면 ①·②가 실패한다.
+      · `_observed_incompleteness_kinds`가 `complete is not True`를 세게 바꾸면 ③이 실패한다.
+    """
+    no_count = LibraryType(index=1, name="MegaPointe", modes=(LibraryMode(index=1, name="Mode 1"),))
+    assert no_count.mode_child_count is None
+
+    # ① 총계를 모르면 완전을 주장하지 않는다.
+    statement = _mode_list_completeness(no_count)
+    assert statement.complete is None
+    assert statement.incompleteness_kind is None
+    assert statement.unseen_count is None
+
+    # ② 라이브러리 축도 같다.
+    library_statement = _library_list_completeness(FixtureTypeLibrary(types=(no_count,)))
+    assert library_statement.complete is None
+    assert library_statement.incompleteness_kind is None
+
+    # ③ 그리고 그 상태에서 고지는 나가지 않는다 — 모른다를 없다로 말하지 않는다.
+    plan = TypeResolutionPlan(
+        assumption_72=ASSUMPTION_72_GO,
+        library=FixtureTypeLibrary(types=(no_count,)),
+        resolutions=(),
+    )
+    assert skipped_kinds(plan.to_dict()) == []
+
+    # ④ 축이 서면 `False`다 — 삼치가 실제로 세 값을 낸다(공허 통과 차단).
+    truncated = LibraryType(
+        index=1,
+        name="MegaPointe",
+        modes=(LibraryMode(index=1, name="Mode 1"),),
+        mode_child_count=5,
+        returned_mode_row_count=1,
+        modes_enumerated_count=1,
+    )
+    assert _mode_list_completeness(truncated).complete is False
+    complete = LibraryType(
+        index=1,
+        name="MegaPointe",
+        modes=(LibraryMode(index=1, name="Mode 1"),),
+        mode_child_count=1,
+        returned_mode_row_count=1,
+        modes_enumerated_count=1,
+    )
+    assert _mode_list_completeness(complete).complete is True
+
+    # ⑤ `presenting()`은 **판정을 바꾸지 않는다** — 행마다 실린 원소 수만 다르다.
+    #    이 진술이 행 지역이라고 판정까지 행 지역이 되면 같은 라이브러리에 두 판정이 생긴다.
+    statement = ListCompleteness(complete=False, incompleteness_kind=FIXTURE_TYPE_LIBRARY_TRUNCATED)
+    assert statement.presenting(7).presented_count == 7
+    assert statement.presenting(7).complete is False
+    assert statement.presenting(0) == replace(statement, presented_count=0)
+
+
+@pytest.mark.parametrize("index", range(len(_R21_COMPLETENESS_CORPUS)))
+def test_r21_deleting_any_corpus_row_loses_axis_coverage_or_a_scenario(index: int):
+    """코퍼스 행삭제 프로브 — 어느 행을 지워도 축 전수 또는 시나리오 수가 줄어든다.
+
+    대조군을 조용히 좁히는 것이 이 SPEC의 반복 실패 하나다(round18 M24 계열).
+    """
+    shrunk = _R21_COMPLETENESS_CORPUS[:index] + _R21_COMPLETENESS_CORPUS[index + 1 :]
+    axes = {axis for _name, _build, axis in shrunk}
+    full = {axis for _name, _build, axis in _R21_COMPLETENESS_CORPUS}
+    assert axes != full or len(shrunk) != len(_R21_COMPLETENESS_CORPUS)
+
+
+#: 축 채널 **둘**. 뜻이 다르므로 함수도 둘이다 — 뭉개면 한쪽이 거짓이 된다:
+#:   · 단일 슬롯(`_library_axis`·`_mode_axis`) — 마커의 `incompleteness_kind`는 칸이
+#:     하나라 **우선순위**로 하나를 고른다(좁은 축이 먼저).
+#:   · 집합(`_library_observed_axes`) — 고지는 동시에 참인 축을 **전부** 내야 한다.
+#: 둘이 갈리면 같은 스냅샷을 마커는 폐기, 고지는 절단이라 부를 수 있다.
+_R21_AXIS_SNAPSHOTS = (
+    ("clean", FixtureTypeLibrary(types=(), child_count=0, returned_row_count=0)),
+    ("root_unreadable", FixtureTypeLibrary(available=False)),
+    ("root_truncated_flag", FixtureTypeLibrary(types=(), truncated=True)),
+    (
+        "root_count_short",
+        FixtureTypeLibrary(types=(), child_count=3, returned_row_count=1, enumerated_count=1),
+    ),
+    ("root_rows_discarded", FixtureTypeLibrary(types=(), unusable_row_count=2)),
+    (
+        "root_discarded_and_truncated",
+        FixtureTypeLibrary(types=(), truncated=True, unparsable_row_count=1),
+    ),
+    (
+        "modes_unreadable",
+        FixtureTypeLibrary(
+            types=(LibraryType(index=1, name="A", modes_available=False),),
+            child_count=1,
+            returned_row_count=1,
+        ),
+    ),
+    (
+        "modes_truncated",
+        FixtureTypeLibrary(
+            types=(LibraryType(index=1, name="A", modes=(), modes_truncated=True),),
+            child_count=1,
+            returned_row_count=1,
+        ),
+    ),
+    (
+        "mode_rows_discarded",
+        FixtureTypeLibrary(
+            types=(LibraryType(index=1, name="A", modes=(), unusable_mode_row_count=1),),
+            child_count=1,
+            returned_row_count=1,
+        ),
+    ),
+)
+
+
+@pytest.mark.parametrize("name,library", _R21_AXIS_SNAPSHOTS, ids=lambda v: str(v)[:20])
+def test_r21_the_single_slot_axis_never_contradicts_the_axis_set(name: str, library):
+    """[round21 R20-B · 형제 채널 일치] 단일 슬롯 축은 **항상 집합의 원소**다.
+
+    마커는 축 하나를 고르고 고지는 전부를 내지만, 고른 하나가 집합에 없으면 조작자는
+    마커와 고지를 묶을 수 없다. 폐기·절단이 **동시에 참인** 스냅샷까지 코퍼스에 있다.
+
+    죽이는 뮤테이션:
+      · `_library_axis`의 폐기 검사를 union **뒤로** 옮김 → 폐기 전용 스냅샷에서 슬롯이
+        `TRUNCATED`가 되는데 집합에는 `ROWS_DISCARDED`만 있어 ①이 실패한다.
+      · `_library_observed_axes`의 어느 disjunct를 지우면 ①·②가 실패한다.
+      · `_library_observed_axes`가 union 프로퍼티(`enumeration_incomplete`)를 쓰게 바꾸면
+        폐기 전용 스냅샷에서 `TRUNCATED`가 섞여 ③이 실패한다.
+    """
+    axes = _library_observed_axes(library)
+    slot = _library_axis(library)
+
+    # ① 고른 하나는 집합 안에 있다.
+    if slot is not None:
+        assert slot in axes, (name, slot, sorted(axes))
+    for entry in library.types:
+        mode_slot = _mode_axis(entry)
+        if mode_slot is not None:
+            assert mode_slot in axes, (name, mode_slot, sorted(axes))
+
+    # ② 집합이 비면 어느 슬롯도 서지 않는다(그 역도 위 ①이 진다).
+    if not axes:
+        assert slot is None, name
+        assert all(_mode_axis(entry) is None for entry in library.types), name
+
+    # ③ 축은 뭉개지지 않는다 — 폐기만 참인 스냅샷에 절단이 섞이지 않는다.
+    if name in {"root_rows_discarded", "mode_rows_discarded"}:
+        assert axes == {FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED}, (name, sorted(axes))
+    if name == "root_discarded_and_truncated":
+        assert axes == {
+            FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED,
+            FIXTURE_TYPE_LIBRARY_TRUNCATED,
+        }, sorted(axes)
+
+
+def test_r21_the_completeness_helpers_delegate_the_axis_and_never_read_flags():
+    """마커의 축이 `_library_axis`·`_mode_axis`에서만 온다 — 플래그를 직접 보지 않는다.
+
+    직접 보면 순서 규율(폐기가 union보다 앞)을 우회해 폐기가 절단으로 뭉개진다.
+
+    죽이는 뮤테이션: `_mode_list_completeness`가 `console_type.modes_truncated`를 직접
+    보게 하면 실패한다.
+    """
+    tree = ast.parse(TYPEMAP_SOURCE)
+    for helper in ("_mode_list_completeness", "_library_list_completeness"):
+        body = next(
+            ast.unparse(node)
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name == helper
+        )
+        assert "_axis(" in body, helper
+        assert "truncated" not in body, helper
+        assert "rows_discarded" not in body, helper
+
+
+def test_r21_the_notice_basis_is_the_row_marker_not_only_the_library_scan():
+    """[round21 R20-B] 고지의 근거는 **행이 실은 목록의 완전성**이다 — 형제 절과 겹치지 않는다.
+
+    `_skipped_checks`에는 관측 축 절이 둘이다: `_library_observed_axes`(라이브러리 스냅샷을
+    직접 훑는 형제 절, R20-D)와 `_observed_incompleteness_kinds`(행 마커에서 나는 내 절).
+    프로덕션 경로에서 둘은 같은 결론을 내지만 **근거가 다르다** — 여기서 그 차이를 실측한다:
+    라이브러리 스냅샷은 깨끗하고 행이 실은 `presented_type`만 절단인 계획을 직접 조립하면,
+    형제 절은 그것을 볼 수 없고 마커만이 안다. 마커가 불완전이라 말했는데 고지가 비면
+    R20-B가 되돌아온 것이다.
+
+    죽이는 뮤테이션: `_skipped_checks`에서 `kind in self._observed_incompleteness_kinds()`
+    절을 지우면 실패한다(형제 절은 이 입력을 보지 못한다).
+    """
+    truncated_type = LibraryType(
+        index=1,
+        name="MegaPointe",
+        modes=(LibraryMode(index=1, name="Mode 1", channel_count=24),),
+        mode_child_count=5,
+        modes_enumerated_count=1,
+        returned_mode_row_count=1,
+    )
+    clean_library = FixtureTypeLibrary(types=(), child_count=0, returned_row_count=0)
+    # 형제 절이 이미 이 입력을 보고 있으면 이 게이트가 공허해진다 — 그것부터 확인한다.
+    assert _library_observed_axes(clean_library) == frozenset()
+
+    plan = TypeResolutionPlan(
+        assumption_72=ASSUMPTION_72_GO,
+        library=clean_library,
+        resolutions=(
+            TypeResolution(
+                request=request("c1"),
+                status=TYPE_NEEDS_CONFIRMATION,
+                reason=CANDIDATES_PRESENTED_REASON,
+                mode_candidates=truncated_type.modes,
+                presented_type=truncated_type,
+            ),
+        ),
+    )
+    payload = plan.to_dict()
+    marker = row_by_id(payload, "c1")[MODE_OPTIONS_COMPLETENESS_COLUMN]
+    assert marker["complete"] is False
+    assert marker["incompleteness_kind"] == FIXTURE_TYPE_LIBRARY_TRUNCATED
+    assert FIXTURE_TYPE_LIBRARY_TRUNCATED in skipped_kinds(payload)
+
+
+@pytest.mark.parametrize("name,library", _R21_AXIS_SNAPSHOTS, ids=lambda v: str(v)[:20])
+def test_r21_incompleteness_is_false_exactly_when_an_axis_is_named(name: str, library):
+    """[round21 R20-B · 등가 근거] `complete is False` ⟺ `incompleteness_kind is not None`.
+
+    이 쌍-함의를 **못박아 두는 것**이 처방이다. 못박히면 `_observed_incompleteness_kinds`의
+    `complete is False and kind is not None`을 `complete is not True and kind is not None`으로
+    바꾼 뮤턴트가 **등가**임이 코드로 증명된다(둘 중 어느 절도 혼자 못 쓸 정보를 더하지 않는다).
+    못박히지 않으면 그 뮤턴트가 "모른다"를 "못 봤다"로 바꾸는 진짜 결함이 될 수 있다.
+
+    죽이는 뮤테이션: `_mode_list_completeness`가 축이 있는데 `complete=None`을 내게 하거나
+    (또는 축이 없는데 `False`를 내게) 하면 실패한다.
+    """
+    for statement in (
+        _library_list_completeness(library),
+        *(_mode_list_completeness(entry) for entry in library.types),
+    ):
+        assert (statement.complete is False) == (statement.incompleteness_kind is not None), (
+            name,
+            statement,
+        )
+
+
+@pytest.mark.parametrize("index", range(len(_R21_AXIS_SNAPSHOTS)))
+def test_r21_deleting_any_axis_snapshot_row_loses_a_configuration(index: int):
+    """축 스냅샷 표 행삭제 프로브 — 어느 행을 지워도 잃는 구성이 있다.
+
+    특히 **폐기·절단 동시 참** 행이 사라지면 "축을 뭉개지 않는다"를 아무도 재지 않는다.
+    """
+    assert _R21_COMBINED_AXIS_INDEX >= 0, "폐기·절단이 동시에 참인 스냅샷이 표에서 사라졌다"
+    shrunk = _R21_AXIS_SNAPSHOTS[:index] + _R21_AXIS_SNAPSHOTS[index + 1 :]
+    names = {name for name, _library in shrunk}
+    assert names != {name for name, _library in _R21_AXIS_SNAPSHOTS}
+    combined = [name for name, library in shrunk if len(_library_observed_axes(library)) >= 2]
+    if index == _R21_COMBINED_AXIS_INDEX:
+        # 그 행이 **유일한** 조합 스냅샷이다 — 지우면 "축을 뭉개지 않는다"를 아무도 재지 않는다.
+        assert combined == [], "조합 스냅샷이 둘이면 이 프로브가 공허하다"
+    else:
+        assert combined, "조합 스냅샷이 표에서 사라졌다"
+
+
+#: 폐기·절단이 **동시에 참인** 스냅샷의 자리. 위 프로브가 그 행의 소실을 특별히 짚는다.
+_R21_COMBINED_AXIS_INDEX = next(
+    (
+        index
+        for index, (_name, library) in enumerate(_R21_AXIS_SNAPSHOTS)
+        if len(_library_observed_axes(library)) >= 2
+    ),
+    -1,
+)
+
+
+#: 이번 반영이 세운 **대조군 이름 등기부**. 이름을 지우거나 개명하면 아래 게이트가 실패한다 —
+#: round19의 "근거 칸이 실재하는 테스트를 가리킨다"와 같은 장치다. 대조군을 조용히 없애는 것이
+#: 이 SPEC의 반복 실패 하나이므로, 대조군 자신도 등기 대상이다.
+_R21_GATE_REGISTRY = (
+    ("재현", "test_r21_a_partial_mode_list_is_never_presented_as_the_whole_choice"),
+    ("처분 축 불변", "test_r21_the_disposition_axis_stays_pending_on_a_truncated_option_list"),
+    ("코퍼스 건전성", "test_r21_the_completeness_corpus_reaches_every_axis"),
+    ("마커⇒고지 불변식", "test_r21_an_incomplete_marker_always_carries_a_notice"),
+    ("마커 근거 구별", "test_r21_the_notice_basis_is_the_row_marker_not_only_the_library_scan"),
+    ("사유 발산 차단", "test_r21_the_notice_axis_table_and_the_reason_helper_do_not_diverge"),
+    ("라벨 축 구별성", "test_r21_the_three_axes_have_distinct_labels_and_reasons"),
+    ("목록 자리 전단사", "test_r21_the_list_site_registry_is_a_bijection_onto_server_vwx"),
+    ("증인 실재", "test_r21_every_stated_row_names_a_witness_that_actually_exists"),
+    ("목록↔완전성 짝", "test_r21_every_list_key_in_a_produced_row_has_a_completeness_column"),
+    ("필수 인자 구조", "test_r21_row_cannot_be_assembled_without_a_completeness_statement"),
+    ("부분집합 불변식", "test_r21_the_presented_mode_list_is_a_subset_of_the_enumerated_modes"),
+    ("삼치 구별", "test_r21_no_basis_is_not_the_same_as_nothing_missing"),
+    ("등가 근거 쌍-함의", "test_r21_incompleteness_is_false_exactly_when_an_axis_is_named"),
+    ("축 채널 무모순", "test_r21_the_single_slot_axis_never_contradicts_the_axis_set"),
+    ("축 위임", "test_r21_the_completeness_helpers_delegate_the_axis_and_never_read_flags"),
+    # 행삭제 프로브와 등기 게이트 자신도 등기 대상이다 — 표를 좁히는 것을 막는 장치가
+    # 표 밖에 있으면 그 장치부터 지워진다.
+    ("목록 자리 행삭제", "test_r21_deleting_any_list_site_row_breaks_the_bijection"),
+    ("코퍼스 행삭제", "test_r21_deleting_any_corpus_row_loses_axis_coverage_or_a_scenario"),
+    ("축 스냅샷 행삭제", "test_r21_deleting_any_axis_snapshot_row_loses_a_configuration"),
+    ("대조군 등기 실재", "test_r21_every_registered_gate_actually_exists_and_is_collected"),
+    ("대조군 등기 행삭제", "test_r21_deleting_any_gate_registry_row_breaks_the_bijection"),
+    ("왕복 비용 0", "test_r21_the_completeness_statement_costs_no_console_round_trip"),
+)
+
+
+def test_r21_every_registered_gate_actually_exists_and_is_collected():
+    """[round21 R20-B] 등기된 대조군이 **실재하고 수집된다**.
+
+    대조군을 지우거나 개명해 무력화하는 것을 여기서 잡는다 — 프로덕션 뮤턴트만 재고
+    대조군 자신의 소실을 아무도 재지 않으면, 다음 라운드는 게이트가 있다고 믿으면서
+    비어 있는 파일을 물려받는다.
+
+    죽이는 뮤테이션:
+      · 어느 등기 대조군 함수 이름을 `_disabled_...`로 바꾸면 ①이 실패한다.
+      · 등기부에서 행을 지우면 ②가 실패한다(내 섹션의 `test_r21_` 전수와 어긋난다).
+    """
+    module = globals()
+    for topic, gate in _R21_GATE_REGISTRY:
+        # ① 이름이 실재하고 호출 가능하다.
+        assert callable(module.get(gate)), (topic, gate)
+        assert topic.strip()
+
+    # ② 등기부가 **이 섹션의** `test_r21_` 전수와 1:1이다. 섹션 경계는 형제 섹션 머리말로
+    #    닫는다 — 뒤에 형제가 섹션을 덧붙여도 내 등기부가 그 이름을 요구하지 않는다.
+    text = Path("server/tests/test_autopatch_types.py").read_text(encoding="utf-8")
+    header = "# --- round21 목록 완전성 침묵 차단 (ModeSilence) ---"
+    start = text.index(header)
+    following = text.find("\n# --- round21 ", start + len(header))
+    first_line = text[:start].count("\n") + 1
+    last_line = text[:following].count("\n") + 1 if following != -1 else text.count("\n") + 1
+    mine = {
+        node.name
+        for node in ast.walk(ast.parse(text))
+        if isinstance(node, ast.FunctionDef)
+        and node.name.startswith("test_r21_")
+        and first_line <= node.lineno <= last_line
+    }
+    assert mine == {gate for _topic, gate in _R21_GATE_REGISTRY}, sorted(
+        mine ^ {gate for _topic, gate in _R21_GATE_REGISTRY}
+    )
+
+
+def test_r21_the_completeness_statement_costs_no_console_round_trip():
+    """[round21 R20-B · 왕복 비용] 완전성 진술은 **추가 질의 0회**다.
+
+    처방 ⓐ와 같은 근거다: 필요한 계수(`childCount` · 반환 행 수)는 이미 읽은 스냅샷에
+    들어 있고, 마커는 그것을 메모리에서 옮긴다. 조작자 화면 조립(`to_dict`)이 포트를 한
+    번이라도 더 부르면 이 처방은 비용 제약을 깬 것이다 — 표적 스윕을 전수 스윕 대신 고른
+    것과 같은 규율이 노출 쪽에도 걸린다.
+
+    죽이는 뮤테이션: `_mode_list_completeness`가 채널 수를 다시 읽는 구현으로 바뀌면
+    (또는 `row()`이 포트를 잡고 있으면) 호출 수가 늘어 실패한다.
+    """
+    port = _R21ShortModePort(_R21_FIVE_MODE_LIBRARY, declared=5, carried=2, flag=True)
+    plan = _r21_plan(port, mode="Mode 1", footprint=96)
+    after_resolve = (len(port.state_calls), len(port.property_calls))
+
+    payload = plan.to_dict()
+    assert (len(port.state_calls), len(port.property_calls)) == after_resolve
+
+    # 진술은 실제로 비어 있지 않다 — 0회 주장이 공허하지 않다.
+    marker = row_by_id(payload, "c1")[MODE_OPTIONS_COMPLETENESS_COLUMN]
+    assert (marker["complete"], marker["unseen_count"]) == (False, 3)
+
+    # 두 번 조립해도 늘지 않는다(캐시가 아니라 파생임을 잰다).
+    plan.to_dict()
+    assert (len(port.state_calls), len(port.property_calls)) == after_resolve
+
+
+@pytest.mark.parametrize("index", range(len(_R21_GATE_REGISTRY)))
+def test_r21_deleting_any_gate_registry_row_breaks_the_bijection(index: int):
+    """대조군 등기부 행삭제 프로브."""
+    shrunk = _R21_GATE_REGISTRY[:index] + _R21_GATE_REGISTRY[index + 1 :]
+    assert {gate for _topic, gate in shrunk} != {gate for _topic, gate in _R21_GATE_REGISTRY}
+
+
+# ==========================================================================
+# --- round21 슬롯 미확립 행 계수 (SlotDiscard) ---
+#
+# [round20 R20-D] `typemap`은 열거 응답의 행을 **계수 없이** 버렸다:
+#   `read_fixture_type_library`: `if index is None or not listed: continue`
+#   `_read_type`:                `if mode_index is None: continue`
+# 그래서 *"슬롯이 확립되지 않았다"*가 *"라이브러리에 없다"*로 바뀌었고, 목록이 잘린 것이
+# 아니므로 `truncated`도 서지 않아 어느 축에도 걸리지 않았다.
+#
+# 결정적 대조: **같은 스냅샷**을 형제 `patchplan._existing_fids_from_console`에 먹이면
+# `complete=False` + "슬롯 번호가 없거나 중복인 행 3개를 쓰지 못했다"를 낸다. 같은 형태,
+# 반대 처리 — 그 비대칭 자체를 아래 `test_r21_both_readers_treat_the_same_snapshot_alike`가
+# 대조군으로 고정한다.
+#
+# 세 축은 **조치가 다르므로** 끝까지 갈라 둔다(형제 `patchplan.ExistingFidRead`가 이미
+# 그렇게 센다):
+#   절단(`unseen_count`)      — 목록이 예산에 잘렸다        → 표적 스윕
+#   폐기(`unusable_row_count`) — 행은 왔는데 슬롯 번호가 없다 → responder 확인
+#   판독 실패(`*_unreadable`)  — 값을 못 읽었다              → 재시도
+# ==========================================================================
+
+
+#: M8 라이브 세션 실측 형태(2026-08-08) — `Patch/FixtureTypes` childCount=3.
+_R21_THREE_TYPE_LIBRARY = [
+    ("Robin MMX Spot", [("Mode 1", 24), ("Mode 2", 20), ("Mode 3", 18), ("Mode 4", 16)]),
+    ("FixtureType 2", [("Default", 12)]),
+    ("Robin LEDBeam 350", [("Mode 1", 16), ("Mode 2", 14), ("Mode 3", 12)]),
+]
+
+
+class _R21DiscardPort(LibraryRigPort):
+    """열거 응답의 행 일부가 **슬롯 번호(`i`)를 갖고 있지 않은** 포트.
+
+    `ok=true`이고 목록도 끝까지 온다 — 절단도 판독 실패도 아니다. responder
+    `safe_children`의 `probe_slots` 통째 nil / per-child `slot_confirms` 폴백이 실제로
+    만드는 스냅샷이고, PRESERVE `server/prechk/inventory.py` 독스트링이 슬롯 부재를
+    "documented responder behaviour rather than a hypothesis"라 못박은 그 형태다.
+
+    `declared_extra_*`는 **절단 축**을 따로 켠다(선언 총계만 늘려 열거를 짧게 만든다) —
+    폐기와 절단이 **동시에 참인** 입력을 만들기 위한 것이다.
+    """
+
+    def __init__(
+        self,
+        types,
+        *,
+        slotless_types=(),
+        slotless_modes=(),
+        junk_type_rows=0,
+        junk_mode_rows=0,
+        duplicate_type_slot=None,
+        duplicate_mode_slot=None,
+        declared_extra_types=0,
+        declared_extra_modes=0,
+        **kwargs,
+    ):
+        super().__init__(types, **kwargs)
+        self.slotless_types = frozenset(slotless_types)
+        self.slotless_modes = frozenset(slotless_modes)
+        self.junk_type_rows = junk_type_rows
+        self.junk_mode_rows = junk_mode_rows
+        self.duplicate_type_slot = duplicate_type_slot
+        self.duplicate_mode_slot = duplicate_mode_slot
+        self.declared_extra_types = declared_extra_types
+        self.declared_extra_modes = declared_extra_modes
+
+    @staticmethod
+    def _mangle(children, slotless, junk, duplicate, declared_extra, node):
+        rows = [dict(row) for row in children]
+        for row in rows:
+            if row.get("i") in slotless:
+                row.pop("i")
+        if duplicate is not None:
+            rows.append(dict(next(row for row in children if row.get("i") == duplicate)))
+        rows.extend(["not-a-mapping"] * junk)
+        declared = dict(node)
+        declared["childCount"] = declared["childCount"] + declared_extra
+        return rows, declared
+
+    def query_state(self, path: str) -> dict:
+        state = super().query_state(path)
+        if state.get("ok") is not True:
+            return state
+        if path == FIXTURE_TYPE_LIBRARY_ROOT:
+            rows, node = self._mangle(
+                state["children"],
+                self.slotless_types,
+                self.junk_type_rows,
+                self.duplicate_type_slot,
+                self.declared_extra_types,
+                state["node"],
+            )
+            return {**state, "children": rows, "node": node}
+        if path.endswith(f"/{DMX_MODES_SEGMENT}"):
+            rows, node = self._mangle(
+                state["children"],
+                self.slotless_modes,
+                self.junk_mode_rows,
+                self.duplicate_mode_slot,
+                self.declared_extra_modes,
+                state["node"],
+            )
+            return {**state, "children": rows, "node": node}
+        return state
+
+
+class _R21RawLibraryPort:
+    """`Patch/FixtureTypes` 응답 하나만 돌려주는 최소 포트.
+
+    자식 조회가 **한 번도 일어나지 않음**을 구조적으로 증명한다 — 전 행이 폐기되면
+    `_read_type`이 호출될 이유가 없고, 호출되면 여기서 즉시 터진다.
+    """
+
+    def __init__(self, children, child_count):
+        self.children = children
+        self.child_count = child_count
+
+    def query_state(self, path: str) -> dict:
+        if path != FIXTURE_TYPE_LIBRARY_ROOT:
+            raise AssertionError(f"폐기된 행의 자식을 조회했다: {path}")
+        return {
+            "ok": True,
+            "path": path,
+            "node": {"name": "FixtureTypes", "childCount": self.child_count},
+            "children": self.children,
+            "truncated": False,
+        }
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        raise AssertionError(f"폐기된 행의 프로퍼티를 조회했다: {path}")
+
+
+class _R21FidPort:
+    """형제 리더(`patchplan._existing_fids_from_console`)에 **같은 스냅샷**을 먹이는 포트."""
+
+    def __init__(self, children, child_count):
+        self.children = children
+        self.child_count = child_count
+
+    def query_state(self, path: str) -> dict:
+        return {
+            "ok": True,
+            "path": path,
+            "node": {"childCount": self.child_count},
+            "children": self.children,
+            "truncated": False,
+        }
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        return {"ok": True, "path": path, "value": int(path.rsplit("/", 1)[1])}
+
+
+def _r21_text(payload: object) -> str:
+    """payload 전체를 사람이 읽는 문자열로 — 어느 칸에 실렸든 문장을 잡는다."""
+    return repr(payload)
+
+
+def _r21_library(**kwargs):
+    return read_fixture_type_library(_R21DiscardPort(**kwargs), read_channel_counts=True)
+
+
+# --- 감사 실증 ① 타입 3종 전부 `i` 없음 -----------------------------------
+
+
+def test_r21_a_library_whose_rows_all_lack_slot_numbers_is_not_called_absent():
+    """[round20 R20-D 실증①] 라이브러리는 **온전히 있다** — 부재를 단정하지 않는다.
+
+    구판 산출: `library_absent` + `fixture_type_not_in_library` +
+    "콘솔에서 GDTF 라이브러리 임포트를 먼저 수행해야". 세 문장 전부 거짓이었다.
+
+    죽이는 뮤테이션:
+      · `read_fixture_type_library`의 `unusable_rows += 1`을 지우면 `rows_discarded`가
+        0이 되어 `_library_axis`가 `None`을 돌려주고 `library_absent`로 되돌아간다.
+      · `_library_axis`의 폐기 갈래를 지워도 같다.
+    """
+    from server.vwx.typemap import LIBRARY_ROWS_DISCARDED_REASON, TYPE_ABSENT_REASON
+    from server.vwx.verdicts import FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED
+
+    payload = resolve_fixture_types(
+        [request("a", instrument_type="Robin MMX Spot")],
+        library_port=_R21DiscardPort(_R21_THREE_TYPE_LIBRARY, slotless_types=(1, 2, 3)),
+    ).to_dict()
+    row = row_by_id(payload, "a")
+
+    assert row["status"] == TYPE_LIBRARY_INCOMPLETE
+    assert row["status"] != TYPE_LIBRARY_ABSENT
+    assert hard_stop_codes(payload) == []
+    assert FIXTURE_TYPE_NOT_IN_LIBRARY not in hard_stop_codes(payload)
+    assert row["reason"] == LIBRARY_ROWS_DISCARDED_REASON
+    assert FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED in skipped_kinds(payload)
+
+    # 계수가 실제로 나간다 — "못 읽은 행이 있다"를 몇 개인지와 함께 말한다.
+    library = payload["library"]
+    assert library["unusable_row_count"] == 3
+    assert library["unparsable_row_count"] == 0
+    assert library["rows_discarded_count"] == 3
+    assert library["type_count"] == 0
+    assert library["child_count"] == 3
+
+    # **거짓이 나가지 않는다**: 라이브러리는 온전히 있으므로 임포트를 시키지 않는다.
+    text = _r21_text(payload)
+    assert TYPE_ABSENT_REASON not in text
+    assert "GDTF 라이브러리 임포트" not in text
+    assert "라이브러리에 도면 타입에 대응하는 FixtureType이 없다" not in text
+
+
+def test_r21_no_child_is_queried_when_every_row_is_discarded():
+    """폐기된 행의 자식을 조회하지 않는다 — 슬롯이 없으면 물어볼 경로 자체가 없다."""
+    library = read_fixture_type_library(
+        _R21RawLibraryPort([{"name": "A"}, {"name": "B"}, {"name": "C"}], 3)
+    )
+
+    assert library.types == ()
+    assert library.unusable_row_count == 3
+    assert library.available is True
+    assert library.truncated is False
+
+
+# --- 감사 실증 ② DMXModes 2개 중 1개 `i` 없음 -----------------------------
+
+#: 실증②의 라이브러리 — 도면이 요구한 16ch 모드가 **실재한다**(슬롯 3).
+_R21_MODE_LIBRARY = [("MegaPointe", [("Mode 1", 24), ("Mode 2", 16)])]
+
+
+def _r21_mode_discard_payload():
+    return resolve_fixture_types(
+        [request("a", instrument_type="MegaPointe", mode="Mode 1", footprint=16)],
+        library_port=_R21DiscardPort(_R21_MODE_LIBRARY, slotless_modes=(2,)),
+        type_aliases={"MegaPointe": {"type": "MegaPointe", "mode": "Mode 1"}},
+        assumption_72=ASSUMPTION_72_GO,
+    ).to_dict()
+
+
+def test_r21_a_slotless_mode_row_blocks_the_footprint_hard_stop():
+    """[round20 R20-D 실증②] 맞는 16ch 모드가 **실재하는데** 하드 스톱이 나갔다.
+
+    구판 산출: `designed_footprint_matches_no_console_mode` + 사유가
+    "모드 열거를 전부 읽었고 절단도 없었다"(거짓) + "고칠 것은 도면의 DMX Footprint
+    값이다"(틀린 지시 — 맞는 모드가 라이브러리에 있다).
+
+    죽이는 뮤테이션: `_absence_assertable`에서 `not console_type.mode_rows_discarded`를
+    지우면 하드 스톱이 되살아나고 위 두 문장이 다시 나간다.
+    """
+    from server.vwx.typemap import (
+        FOOTPRINT_MISMATCH_UNVERIFIED_REASON,
+        FOOTPRINT_UNMATCHABLE_REASON,
+    )
+    from server.vwx.verdicts import (
+        DESIGNED_FOOTPRINT_MATCHES_NO_MODE,
+        FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED,
+    )
+
+    # 전제: 도면이 요구한 16ch 모드가 라이브러리에 **실재한다**. 이것이 참이 아니면
+    # "틀린 지시"라는 주장이 성립하지 않는다.
+    assert ("Mode 2", 16) in _R21_MODE_LIBRARY[0][1]
+
+    payload = _r21_mode_discard_payload()
+    row = row_by_id(payload, "a")
+
+    assert row["status"] == TYPE_LIBRARY_INCOMPLETE
+    assert hard_stop_codes(payload) == []
+    assert DESIGNED_FOOTPRINT_MATCHES_NO_MODE not in hard_stop_codes(payload)
+    assert row["reason"] == FOOTPRINT_MISMATCH_UNVERIFIED_REASON
+    assert FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED in skipped_kinds(payload)
+
+    entry = payload["library"]["types"][0]
+    assert entry["unusable_mode_row_count"] == 1
+    assert entry["mode_rows_discarded_count"] == 1
+    assert entry["mode_count"] == 1
+    assert entry["mode_child_count"] == 2
+
+    text = _r21_text(payload)
+    assert FOOTPRINT_UNMATCHABLE_REASON not in text
+    assert "모드 열거를 전부 읽었고 절단도 없었다" not in text
+    assert "고칠 것은 도면의 DMX Footprint" not in text
+
+
+def test_r21_the_unverified_sentence_names_the_discard_axis():
+    """사유 문장이 **관측 사실을 참으로** 말한다.
+
+    round19판 문장은 "절단됐거나 채널 수를 읽지 못한 모드가 있다" 둘만 열거했다 —
+    폐기로 이 갈래에 온 스냅샷에서 그 문장은 거짓이다(R20-D가 고발한 형태 그 자체).
+
+    죽이는 뮤테이션: 사유에서 "슬롯 번호가 없어 쓰지 못한 행" 절을 지우면 실패한다.
+    """
+    from server.vwx.typemap import FOOTPRINT_MISMATCH_UNVERIFIED_REASON
+
+    assert "슬롯 번호가 없어 쓰지 못한 행" in FOOTPRINT_MISMATCH_UNVERIFIED_REASON
+    assert "미관측분" in FOOTPRINT_MISMATCH_UNVERIFIED_REASON
+    assert "채널 수를 읽지 못한" in FOOTPRINT_MISMATCH_UNVERIFIED_REASON
+    # 이 갈래에 실제로 닿는지 — 닿지 않으면 위 세 단정은 장식이다.
+    assert row_by_id(_r21_mode_discard_payload(), "a")["reason"] == (
+        FOOTPRINT_MISMATCH_UNVERIFIED_REASON
+    )
+
+
+# --- 형제 리더와의 비대칭 대조군 -------------------------------------------
+
+
+def test_r21_both_readers_treat_the_same_snapshot_alike():
+    """[round20 R20-D 결정적 대조] **같은 스냅샷 · 같은 처리.**
+
+    구판: `patchplan`은 `complete=False` + "슬롯 번호가 없거나 중복인 행 3개를 쓰지
+    못했다", `typemap`은 `library_absent`. 같은 형태, 반대 처리였다.
+
+    죽이는 뮤테이션: `read_fixture_type_library`의 폐기 계수를 지우면 두 계수가 갈린다.
+    """
+    from server.vwx.patchplan import _existing_fids_from_console
+
+    rows = [{"name": "A"}, {"name": "B"}, {"name": "C"}]
+
+    sibling = _existing_fids_from_console(_R21FidPort(rows, 3))
+    ours = read_fixture_type_library(_R21RawLibraryPort(rows, 3))
+
+    # ㉠ 형제가 무엇을 했는지 — 이 값이 0이면 대조군의 전제가 무너진다.
+    assert sibling.unusable_rows == 3
+    assert sibling.complete is False
+    assert "슬롯 번호가 없거나 중복인 행 3개를 쓰지 못했다" in sibling.reason()
+
+    # ㉡ 우리도 **같은 수**를 센다.
+    assert ours.unusable_row_count == sibling.unusable_rows
+    assert ours.unparsable_row_count == sibling.unparsable_rows
+    assert ours.child_count == sibling.child_count
+
+    # ㉢ 그래서 우리도 부재를 단정하지 않는다.
+    assert ours.enumeration_incomplete is True
+
+
+def test_r21_both_readers_count_non_mapping_rows_the_same_way():
+    """매핑이 아닌 행 — 형제의 `unparsable_rows`와 같은 산식인지."""
+    from server.vwx.patchplan import _existing_fids_from_console
+
+    rows = [{"i": 1, "name": "A"}, "not-a-mapping", 42]
+
+    sibling = _existing_fids_from_console(_R21FidPort(rows, 3))
+    ours = read_fixture_type_library(_R21RawLibraryPort([{"name": "A"}, "not-a-mapping", 42], 3))
+
+    assert sibling.unparsable_rows == 2
+    assert ours.unparsable_row_count == 2
+
+
+# --- 계수 상보식 (returned == enumerated + unusable + unparsable) ----------
+
+#: 행 형태 코퍼스 — 축이 하나씩, 그리고 둘이 함께 참인 입력.
+_R21_ROW_SHAPES = (
+    ("clean", {}),
+    ("slotless_type", {"slotless_types": (2,)}),
+    ("duplicate_type_slot", {"duplicate_type_slot": 1}),
+    ("junk_type_row", {"junk_type_rows": 1}),
+    ("slotless_mode", {"slotless_modes": (2,)}),
+    ("junk_mode_row", {"junk_mode_rows": 1}),
+    ("duplicate_mode_slot", {"duplicate_mode_slot": 1}),
+    ("truncated_only", {"declared_extra_types": 2}),
+    ("truncated_and_discarded", {"declared_extra_types": 2, "slotless_types": (2,)}),
+)
+
+
+@pytest.mark.parametrize("label,kwargs", _R21_ROW_SHAPES, ids=[row[0] for row in _R21_ROW_SHAPES])
+def test_r21_the_row_census_is_complementary(label: str, kwargs: dict):
+    """**계수가 서로를 검산한다** — 어느 축이 조용히 새면 즉시 깨진다.
+
+    `returned == enumerated + unusable + unparsable`. 이 등식이 성립해야 "폐기가 절단
+    축으로 샜다"가 산술로 잡힌다.
+
+    죽이는 뮤테이션:
+      · `returned_row_count=len(raw_rows)`를 `len(rows)`로 되돌리면 매핑 아닌 행 형태에서
+        좌변이 하나 모자라 실패한다.
+      · `unusable_rows += 1`을 지우면 슬롯 미확립 형태에서 우변이 모자라 실패한다.
+    """
+    library = _r21_library(types=_R21_THREE_TYPE_LIBRARY, **kwargs)
+
+    assert library.returned_row_count == (
+        library.enumerated_count + library.unusable_row_count + library.unparsable_row_count
+    ), label
+    for entry in library.types:
+        assert entry.returned_mode_row_count == (
+            entry.modes_enumerated_count
+            + entry.unusable_mode_row_count
+            + entry.unparsable_mode_row_count
+        ), (label, entry.name)
+
+
+def test_r21_the_row_shape_corpus_actually_exercises_every_discard_form():
+    """대조군 건전성 — 코퍼스가 네 형태(무슬롯·중복·비매핑 × 루트/모드)를 실제로 만든다.
+
+    전부 0이면 위 상보식 게이트는 아무것도 지키지 않는다.
+    """
+    observed = {
+        "root_unusable": 0,
+        "root_unparsable": 0,
+        "mode_unusable": 0,
+        "mode_unparsable": 0,
+        "unseen": 0,
+    }
+    for _label, kwargs in _R21_ROW_SHAPES:
+        library = _r21_library(types=_R21_THREE_TYPE_LIBRARY, **kwargs)
+        observed["root_unusable"] += library.unusable_row_count
+        observed["root_unparsable"] += library.unparsable_row_count
+        observed["unseen"] += library.unseen or 0
+        for entry in library.types:
+            observed["mode_unusable"] += entry.unusable_mode_row_count
+            observed["mode_unparsable"] += entry.unparsable_mode_row_count
+
+    assert all(count > 0 for count in observed.values()), observed
+
+
+def test_r21_a_clean_snapshot_declares_no_discard():
+    """비공허성 반대편 — 깨끗한 스냅샷에서 폐기 축은 **0이고 조용하다**.
+
+    죽이는 뮤테이션: `unusable_rows`를 상수 1로 두면 여기서 실패한다(항상 불완전을
+    말하는 판정은 판정이 아니다).
+    """
+    from server.vwx.verdicts import FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED
+
+    payload = resolve_fixture_types(
+        [request("a", instrument_type="Robin MMX Spot")],
+        library_port=_R21DiscardPort(_R21_THREE_TYPE_LIBRARY),
+    ).to_dict()
+
+    assert payload["library"]["rows_discarded_count"] == 0
+    assert all(entry["mode_rows_discarded_count"] == 0 for entry in payload["library"]["types"])
+    assert FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED not in skipped_kinds(payload)
+    assert payload["library"]["enumeration_incomplete"] is False
+
+
+# --- 절단 ∧ 폐기 동시 참 --------------------------------------------------
+
+
+def test_r21_truncation_and_discard_are_carried_on_separate_axes():
+    """[Main 지시] **셋이 동시에 참일 수 있다** — 한 칸으로 뭉개지 않는다.
+
+    조치가 다르기 때문이다: 절단은 표적 스윕, 폐기는 responder 확인. 하나로 합치면
+    조작자가 무엇을 할지 고를 수 없다.
+
+    죽이는 뮤테이션:
+      · `to_dict`에서 `rows_discarded_count`를 지우면 폐기 규모가 사라진다.
+      · `_library_observed_axes`에서 절단 갈래를 지우면 절단 고지가 사라진다.
+      · 같은 함수에서 절단 판정을 union(`enumeration_incomplete`)으로 바꾸면
+        아래 `test_r21_a_discard_only_snapshot_does_not_claim_truncation`이 실패한다.
+    """
+    from server.vwx.verdicts import (
+        FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED,
+        FIXTURE_TYPE_LIBRARY_TRUNCATED,
+    )
+
+    payload = resolve_fixture_types(
+        [request("a", instrument_type="Robin MMX Spot")],
+        library_port=_R21DiscardPort(
+            _R21_THREE_TYPE_LIBRARY, slotless_types=(2,), declared_extra_types=2
+        ),
+    ).to_dict()
+    library = payload["library"]
+
+    # 두 축이 **각각** 0이 아니고, **서로 다른 칸**에 실린다.
+    assert library["rows_discarded_count"] == 1
+    assert library["unusable_row_count"] == 1
+    assert library["unseen_count"] == 3
+    assert library["unseen_count"] != library["rows_discarded_count"]
+
+    # 두 고지가 **함께** 나간다 — 조작자가 두 조치를 모두 볼 수 있다.
+    kinds = skipped_kinds(payload)
+    assert FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED in kinds
+    assert FIXTURE_TYPE_LIBRARY_TRUNCATED in kinds
+
+    # 폐기 고지에는 계수가 동봉된다.
+    discard = next(
+        check
+        for check in payload["skipped_checks"]
+        if check["kind"] == FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED
+    )
+    assert discard["discarded_row_count"] == 1
+    assert discard["unusable_row_count"] == 1
+    assert discard["unparsable_row_count"] == 0
+
+
+def test_r21_a_discard_only_snapshot_does_not_claim_truncation():
+    """폐기만 있는 스냅샷에서 **절단을 말하지 않는다** — 없는 사실을 고지하지 않는다.
+
+    `_library_observed_axes`가 절단 판정에 union(`enumeration_incomplete`)을 쓰면 union이
+    폐기를 삼키므로 "열거에 미관측분이 남았다"는 거짓 고지가 나간다. 축을 가르려고 만든
+    자리에서 축을 다시 뭉개는 형태다.
+    """
+    from server.vwx.verdicts import (
+        FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED,
+        FIXTURE_TYPE_LIBRARY_TRUNCATED,
+    )
+
+    payload = resolve_fixture_types(
+        [request("a", instrument_type="Robin MMX Spot")],
+        library_port=_R21DiscardPort(_R21_THREE_TYPE_LIBRARY, slotless_types=(2,)),
+    ).to_dict()
+
+    assert payload["library"]["unseen_count"] == 1  # 폐기된 행이 관측에서 빠진 결과다
+    assert payload["library"]["enumeration_short"] is False
+    kinds = skipped_kinds(payload)
+    assert FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED in kinds
+    assert FIXTURE_TYPE_LIBRARY_TRUNCATED not in kinds
+
+
+def test_r21_the_discard_axis_is_resolved_before_the_union():
+    """[Main 지시] **순서가 규율이다** — 순서를 뒤집는 뮤턴트가 여기서 죽는다.
+
+    union 프로퍼티가 폐기를 논리합으로 삼키므로, union을 먼저 보면 폐기 전용 축은
+    **도달 불가**가 된다(R18-C·R18-E와 같은 계열).
+
+    죽이는 뮤테이션: `_library_axis`·`_mode_axis`에서 폐기 갈래를 union 뒤로 옮기면
+    두 단정이 모두 `TRUNCATED`를 받아 실패한다.
+    """
+    from server.vwx.typemap import _library_axis, _mode_axis
+    from server.vwx.verdicts import FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED
+
+    library = _r21_library(
+        types=_R21_THREE_TYPE_LIBRARY, slotless_types=(2,), declared_extra_types=2
+    )
+    assert library.enumeration_incomplete is True  # union은 이미 참이다
+    assert _library_axis(library) == FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED
+
+    console_type = _r21_library_type(unusable_mode_row_count=1, mode_child_count=2)
+    assert console_type.modes_incomplete is True
+    assert _mode_axis(console_type) == FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED
+
+
+# --- `_absence_assertable` 전제 등기부 -------------------------------------
+
+
+def _r21_library_type(**overrides) -> LibraryType:
+    """전제를 **하나만** 위반시킬 수 있는 깨끗한 기준 타입."""
+    base = dict(
+        index=1,
+        name="MegaPointe",
+        modes=(LibraryMode(index=1, name="Mode 1", channel_count=24),),
+        modes_available=True,
+        modes_truncated=False,
+        mode_child_count=1,
+        modes_enumerated_count=1,
+        returned_mode_row_count=1,
+        unusable_mode_row_count=0,
+        unparsable_mode_row_count=0,
+    )
+    base.update(overrides)
+    return LibraryType(**base)
+
+
+def _r21_function_node(name: str) -> ast.FunctionDef:
+    matches = [
+        node
+        for node in ast.walk(ast.parse(TYPEMAP_SOURCE))
+        if isinstance(node, ast.FunctionDef) and node.name == name
+    ]
+    assert len(matches) == 1, f"{name}이 {len(matches)}개다 — 스캐너가 무엇을 재는지 불명확하다"
+    return matches[0]
+
+
+def _r21_attributes(name: str) -> frozenset[str]:
+    return frozenset(
+        child.attr
+        for child in ast.walk(_r21_function_node(name))
+        if isinstance(child, ast.Attribute)
+    )
+
+
+#: `_absence_assertable`이 쓰는 **전제 전수** — 속성 이름 -> 그 전제가 말하는 것.
+#: [round20 R20-D] 이 표가 있어야 "네 번째 전제가 또 있을 수 있다"가 강제된다: 표현식에
+#: 갈래가 늘면 등기 전까지 아래 전단사 게이트가 막는다.
+_R21_ABSENCE_PREMISES = {
+    "modes_available": "모드 열거 응답 자체를 받았다",
+    "modes_truncated": "예산 절단 플래그가 서지 않았다",
+    "modes_enumeration_short": "열거 행 수가 선언 총계에 미치지 못한 것이 아니다",
+    "mode_rows_discarded": "슬롯 번호가 없어 버린 모드 행이 없다",
+    "channel_count": "모드마다 채널 수를 **실제로 읽었다**",
+    "modes": "측정 모집단은 읽어 들인 모드 전부다(부분집합을 재고 전수라 말하지 않는다)",
+}
+
+#: 그중 **목록 완전성** 갈래 — `LibraryType.modes_incomplete`와 전단사여야 한다.
+_R21_LIST_COMPLETENESS_PREMISES = frozenset(
+    {"modes_truncated", "modes_enumeration_short", "mode_rows_discarded"}
+)
+
+
+def test_r21_the_absence_premise_registry_is_a_bijection_onto_the_predicate():
+    """[round20 R20-D] 등기부가 `_absence_assertable`의 AST 전수와 1:1이다.
+
+    죽이는 뮤테이션:
+      · 술어에서 갈래를 지우면 스캔에서 속성이 사라져 어긋난다.
+      · 등기부에서 행을 지워도 어긋난다(아래 행삭제 프로브가 전 행 확인).
+      · 갈래를 등기 없이 새로 더해도 어긋난다.
+    """
+    assert _r21_attributes("_absence_assertable") == frozenset(_R21_ABSENCE_PREMISES)
+    assert all(len(text) > 8 for text in _R21_ABSENCE_PREMISES.values())
+
+
+@pytest.mark.parametrize("premise", sorted(_R21_ABSENCE_PREMISES))
+def test_r21_deleting_any_absence_premise_row_breaks_the_registry(premise: str):
+    """행 삭제 프로브 — 어느 행을 지워도 술어 전수와 어긋난다."""
+    shrunk = {key: value for key, value in _R21_ABSENCE_PREMISES.items() if key != premise}
+    assert frozenset(shrunk) != _r21_attributes("_absence_assertable")
+
+
+def test_r21_the_list_completeness_premises_match_the_union_property():
+    """**두 층이 조용히 갈라지지 못한다.**
+
+    `_absence_assertable`은 `modes_incomplete`를 부르지 않고 그 갈래를 펼친다(갈래마다
+    뮤테이션이 성립해야 하므로). 그 대신 여기서 전단사를 건다 — union에 네 번째 갈래가
+    생기면 술어가 그것을 빠뜨린 채로 통과하지 못한다. **round19가 20줄 거리에서 형제를
+    빠뜨린 것이 R20-D였다.**
+    """
+    assert _r21_attributes("modes_incomplete") == _R21_LIST_COMPLETENESS_PREMISES
+    assert frozenset(_R21_ABSENCE_PREMISES) >= _R21_LIST_COMPLETENESS_PREMISES
+
+
+def test_r21_the_absence_predicate_refuses_an_unconfirmed_type():
+    """확정된 타입이 없으면 전제를 잴 대상 자체가 없다 — 등기부 밖의 네 번째 가드."""
+    from server.vwx.typemap import _absence_assertable
+
+    assert _absence_assertable(None) is False
+    node = _r21_function_node("_absence_assertable")
+    assert any(
+        isinstance(child, ast.Compare)
+        and any(isinstance(op, ast.Is) for op in child.ops)
+        and any(isinstance(c, ast.Constant) and c.value is None for c in child.comparators)
+        for child in ast.walk(node)
+    ), "`is None` 가드가 사라졌다"
+
+
+#: 전제 -> 그 전제 **하나만** 위반한 타입.
+_R21_PREMISE_VIOLATIONS = {
+    "modes_available": {"modes_available": False},
+    "modes_truncated": {"modes_truncated": True},
+    "modes_enumeration_short": {"mode_child_count": 2},
+    "mode_rows_discarded": {"unusable_mode_row_count": 1},
+    "channel_count": {"modes": (LibraryMode(index=1, name="Mode 1", channel_count=None),)},
+}
+
+
+def test_r21_the_absence_predicate_holds_when_no_premise_is_violated():
+    """비공허성 — 깨끗한 타입에서는 **참이다**. 거짓이면 아래 대조군이 전부 공허하다."""
+    from server.vwx.typemap import _absence_assertable
+
+    assert _absence_assertable(_r21_library_type()) is True
+
+
+@pytest.mark.parametrize("premise", sorted(_R21_PREMISE_VIOLATIONS))
+def test_r21_violating_any_single_premise_withdraws_the_absence_claim(premise: str):
+    """전제마다 **행동 대조군** — 그 하나만 위반해도 부재를 단정하지 않는다.
+
+    죽이는 뮤테이션: `_absence_assertable`에서 그 갈래를 지우면 해당 행이 실패한다.
+    """
+    from server.vwx.typemap import _absence_assertable
+
+    console_type = _r21_library_type(**_R21_PREMISE_VIOLATIONS[premise])
+    assert _absence_assertable(console_type) is False, premise
+
+
+def test_r21_every_boolean_premise_has_a_behavioural_control():
+    """등기부의 불리언 전제 전수가 위 대조군 표에 있다 — `modes`만 예외다.
+
+    `modes`는 **모집단**이라 그 자체를 위반시킬 수 없다(빈 목록은 이 갈래에 도달하지
+    못한다). 대신 아래 `test_r21_the_measured_population_is_the_presented_one`이
+    "측정한 것과 보여준 것이 같은 목록인가"를 행동으로 잰다.
+    """
+    assert frozenset(_R21_PREMISE_VIOLATIONS) | {"modes"} == frozenset(_R21_ABSENCE_PREMISES)
+
+
+def test_r21_the_measured_population_is_the_presented_one():
+    """`modes` 전제의 행동 대조군 — **잰 목록과 보여준 목록이 같다.**
+
+    부분집합을 재고 전체를 보여주면(또는 반대면) "전 모드를 실측했다"가 거짓이 된다.
+    """
+    payload = _r21_mode_discard_payload()
+    row = row_by_id(payload, "a")
+    entry = payload["library"]["types"][0]
+
+    assert len(row["mode_options"]) == entry["mode_count"]
+    assert [option["name"] for option in row["mode_options"]] == ["Mode 1"]
+    assert all(option["channel_count"] is not None for option in row["mode_options"])
+
+
+# --- [HARD] 형제 표면 전수 — 열거 행을 버리는 자리 -------------------------
+#
+# 기제는 *"열거 응답의 행을 버리면서 버렸다는 사실을 안 남긴다"*이다. 두 부류를 각각
+# 기계적으로 전수한다:
+#   ㉠ **원시 행**을 직접 꺼내는 자리(`state["children"]`) — 스스로 세야 한다.
+#   ㉡ PRESERVE `prechk.Inventory`를 **소비**하는 자리 — 계수는 이미 실려 온다.
+# 모든 부재가 결함은 아니다. 그 구별을 표가 들고 있어야 다음 라운드가 오독하지 않는다.
+
+
+def _r21_scan_raw_row_readers() -> set[tuple[str, str]]:
+    """`server/vwx/` 전 모듈에서 열거 응답의 **행 목록**을 직접 꺼내는 함수 전수."""
+    found: set[tuple[str, str]] = set()
+    for path in sorted(Path("server/vwx").glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            for inner in ast.walk(node):
+                if isinstance(inner, ast.Constant) and inner.value == "children":
+                    found.add((path.name, node.name))
+    return found
+
+
+def _r21_scan_inventory_consumers() -> set[tuple[str, str]]:
+    """`server/vwx/` 전 모듈에서 PRESERVE `prechk.Inventory`를 인자로 받는 함수 전수.
+
+    스코프는 `server/vwx/*.py`뿐이다 — `server/prechk/`도 `console/`도 읽지 않는다.
+    `Inventory`는 계수(절단·미판독)를 **이미 들고 오는** 열거 산출물이라, 이 부류는
+    스스로 세지 않는 것이 옳다. 그 구별을 등기부가 들고 있어야 다음 라운드가
+    "여기도 안 센다"를 결함으로 오독하지 않는다.
+    """
+    found: set[tuple[str, str]] = set()
+    for path in sorted(Path("server/vwx").glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            args = [*node.args.args, *node.args.posonlyargs, *node.args.kwonlyargs]
+            if any(
+                isinstance(arg.annotation, ast.Name) and arg.annotation.id == "Inventory"
+                for arg in args
+            ):
+                found.add((path.name, node.name))
+    return found
+
+
+#: (모듈, 함수, **자기가 세는가**, 근거). 원시 행을 직접 꺼내는 자리는 전부 세야 한다.
+_R21_RAW_ROW_READERS = (
+    (
+        "patchplan.py",
+        "_existing_fids_from_console",
+        True,
+        "`unusable_rows`(슬롯 번호 없음·중복)와 `unparsable_rows`(매핑 아님)를 따로 세고 "
+        "`complete`가 둘 다 읽는다 — round15 N06이 그 두 번째 축을 세운 자리다.",
+    ),
+    (
+        "typemap.py",
+        "read_fixture_type_library",
+        True,
+        "[round21 R20-D] `unusable_row_count`·`unparsable_row_count`를 형제와 같은 이름으로 "
+        "센다. 구판은 `if index is None or not listed: continue`로 계수 없이 버렸고, 그래서 "
+        "슬롯 미확립이 `library_absent`로 바뀌어 나갔다.",
+    ),
+    (
+        "typemap.py",
+        "_read_type",
+        True,
+        "[round21 R20-D] 모드 행도 같은 규율 — `unusable_mode_row_count`·"
+        "`unparsable_mode_row_count`. 한 모듈 안에서 규율이 갈리면 그 자체가 결함이다.",
+    ),
+)
+
+#: (모듈, 함수, **자기가 세는가**, 근거). 소비 자리는 세지 않는 것이 옳다.
+_R21_INVENTORY_CONSUMERS = (
+    (
+        "apply.py",
+        "read_console_fixtures",
+        False,
+        "PRESERVE `prechk.Inventory`가 절단·미판독을 이미 계수해 들고 온다. 여기서 다시 "
+        "세면 같은 슬롯을 두 축으로 세게 되고, round14 T01/T03이 만든 '선언 2대 중 4대를 "
+        "읽지 못했다'는 산술 불가능 문구가 되살아난다.",
+    ),
+    (
+        "apply.py",
+        "console_read_caveat",
+        False,
+        "같은 `Inventory`의 계수를 **읽어서 고지로 옮기는** 자리다 — 세는 자리가 아니라 "
+        "말하는 자리이므로 계수를 다시 만들면 두 층이 갈린다.",
+    ),
+    (
+        "apply.py",
+        "screen_console_read",
+        False,
+        "`Inventory.complete`를 읽어 **생성을 막는** 자리다. 판정을 소비할 뿐이고 자기 "
+        "계수를 갖지 않는다 — 갖게 되면 막는 근거가 둘이 된다.",
+    ),
+    (
+        "diff.py",
+        "_console_rows",
+        False,
+        "1단계 계층(AC-AUTOPATCH-025 무변경)이고 `Inventory.fixtures`를 정규화만 한다. "
+        "계수 판정은 그 층의 소관이 아니다 — 우리 층이 고칠 권한도 없다.",
+    ),
+    (
+        "diff.py",
+        "compare",
+        False,
+        "같은 1단계 계층. 콘솔 부재·수량 판정은 여기서 나지만 열거 계수는 `Inventory`가 "
+        "들고 오고, 그 불완전성 고지는 2단계(`typemap`·`patchplan`)가 낸다.",
+    ),
+)
+
+
+def test_r21_the_raw_row_reader_registry_is_a_bijection_onto_server_vwx():
+    """[HARD] 열거 **원시 행**을 꺼내는 자리가 전부 등기돼 있다.
+
+    새 모듈·새 함수가 `state["children"]`을 꺼내면 등기 없이는 통과하지 못한다 —
+    열한 라운드 연속 FAIL의 기제가 **표 밖에 있던 형제 자리**였다.
+    """
+    scanned = _r21_scan_raw_row_readers()
+    registered = {(row[0], row[1]) for row in _R21_RAW_ROW_READERS}
+    assert scanned == registered, (
+        f"열거 행 판독 자리가 등기부와 다르다 — 미등록: {sorted(scanned - registered)} / "
+        f"유령: {sorted(registered - scanned)}"
+    )
+
+
+def test_r21_every_raw_row_reader_counts_what_it_discards():
+    """[HARD] 원시 행을 꺼내는 자리는 **예외 없이** 버린 것을 센다.
+
+    이 부류에서 `counts=False`인 행이 생기면 그것이 R20-D와 같은 결함이다 — 표가
+    "안 센다"를 정당화하는 자리가 아니다.
+    """
+    for module, function, counts, rationale in _R21_RAW_ROW_READERS:
+        assert counts is True, f"{module}:{function}이 버린 것을 세지 않는다"
+        assert len(rationale) > 40, f"{module}:{function}의 근거가 비어 있다"
+
+
+def test_r21_the_inventory_consumer_registry_is_a_bijection_onto_server_vwx():
+    """[HARD] `Inventory` 소비 자리 전수 — **모든 부재가 결함은 아니다.**
+
+    이쪽은 세지 않는 것이 옳다(계수가 이미 실려 온다). 그 구별을 표가 들고 있어야
+    다음 라운드가 "여기도 안 센다"를 결함으로 오독하지 않는다.
+    """
+    scanned = _r21_scan_inventory_consumers()
+    registered = {(row[0], row[1]) for row in _R21_INVENTORY_CONSUMERS}
+    assert scanned == registered, (
+        f"`Inventory` 소비 자리가 등기부와 다르다 — 미등록: {sorted(scanned - registered)} / "
+        f"유령: {sorted(registered - scanned)}"
+    )
+    for module, function, counts, rationale in _R21_INVENTORY_CONSUMERS:
+        assert counts is False, f"{module}:{function}이 계수를 중복해서 만든다"
+        assert len(rationale) > 40, f"{module}:{function}의 근거가 비어 있다"
+
+
+@pytest.mark.parametrize("index", range(len(_R21_RAW_ROW_READERS) + len(_R21_INVENTORY_CONSUMERS)))
+def test_r21_deleting_any_row_filter_row_breaks_its_registry(index: int):
+    """행 삭제 프로브 — 두 표 어디서 행을 지워도 프로덕션 전수와 어긋난다."""
+    raw = len(_R21_RAW_ROW_READERS)
+    if index < raw:
+        shrunk = _R21_RAW_ROW_READERS[:index] + _R21_RAW_ROW_READERS[index + 1 :]
+        assert {(row[0], row[1]) for row in shrunk} != _r21_scan_raw_row_readers()
+    else:
+        position = index - raw
+        shrunk = _R21_INVENTORY_CONSUMERS[:position] + _R21_INVENTORY_CONSUMERS[position + 1 :]
+        assert {(row[0], row[1]) for row in shrunk} != _r21_scan_inventory_consumers()
+
+
+def test_r21_the_two_registries_are_disjoint():
+    """두 부류가 겹치면 같은 자리에 두 판정이 붙는다 — 어느 쪽이 맞는지 사라진다."""
+    assert not (_r21_scan_raw_row_readers() & _r21_scan_inventory_consumers())
+
+
+# --- 회수 경로 == 열거 경로 (같은 계수 규율) -------------------------------
+
+
+class _R21SweepPort(LibraryRigPort):
+    """열거는 2종만 싣고 3번째는 **표적 스윕**으로만 찾을 수 있는 포트.
+
+    두 경로(열거 · 회수)로 온 타입이 **같은 폐기 계수 규율**을 받는지 재기 위한 것이다.
+    모든 타입의 두 번째 DMXModes 행에서 슬롯 번호를 뺀다 — 경로가 달라도 입력은 같다.
+    """
+
+    def query_state(self, path: str) -> dict:
+        probe = re.fullmatch(rf"{FIXTURE_TYPE_LIBRARY_ROOT}/(\d+)", path)
+        if probe is not None:
+            index = int(probe.group(1))
+            return {
+                "ok": True,
+                "path": path,
+                "node": {"name": self.types[index - 1][0], "class": "FixtureType"},
+                "children": [],
+                "truncated": False,
+            }
+        state = super().query_state(path)
+        if state.get("ok") is not True:
+            return state
+        if path == FIXTURE_TYPE_LIBRARY_ROOT:
+            # 선언은 3종인데 열거는 2종만 싣는다 — 3번은 스윕으로만 닿는다.
+            return {**state, "children": [row for row in state["children"] if row["i"] <= 2]}
+        if path.endswith(f"/{DMX_MODES_SEGMENT}"):
+            children = [dict(row) for row in state["children"]]
+            for row in children:
+                if row.get("i") == 2:
+                    row.pop("i")
+            return {**state, "children": children}
+        return state
+
+
+def test_r21_a_recovered_type_carries_the_same_discard_counts():
+    """[Main 지시] **경로별로 규율이 갈리지 않는다.**
+
+    표적 스윕이 회수한 타입도 열거로 온 타입과 같은 폐기 계수를 들고 와야 한다.
+    `recover_requested_types`의 `LibraryType(...)` 재구성에서 두 필드를 빠뜨리면 회수된
+    타입만 조용히 "행을 다 읽었다"가 된다.
+
+    죽이는 뮤테이션: 그 재구성에서 `unusable_mode_row_count=` 줄을 지우면 실패한다.
+    """
+    from server.vwx.typemap import recover_requested_types
+
+    port = _R21SweepPort(_R21_THREE_TYPE_LIBRARY)
+    enumerated = read_fixture_type_library(port)
+    # 대조군 전제 ㉠ — 3번은 열거에 없다(있으면 스윕이 돌지 않아 이 게이트가 공허하다).
+    assert [entry.index for entry in enumerated.types] == [1, 2]
+
+    recovered = recover_requested_types(port, enumerated, ["Robin LEDBeam 350"])
+    by_index = {entry.index: entry for entry in recovered.types}
+    # 대조군 전제 ㉡ — 스윕이 실제로 회수했다.
+    assert sorted(by_index) == [1, 2, 3]
+    assert by_index[3].recovered is True
+    assert by_index[1].recovered is False
+
+    # 두 경로가 **같은 계수**를 낸다: 4모드 타입과 3모드 타입 각각 두 번째 행이 폐기다.
+    for index in (1, 3):
+        entry = by_index[index]
+        assert entry.unusable_mode_row_count == 1, index
+        assert entry.mode_rows_discarded == 1, index
+        assert entry.returned_mode_row_count == (
+            entry.modes_enumerated_count
+            + entry.unusable_mode_row_count
+            + entry.unparsable_mode_row_count
+        ), index
+    # 모드가 하나뿐인 타입에는 폐기가 없다 — 계수가 상수가 아니라는 반대편 증거.
+    assert by_index[2].mode_rows_discarded == 0
+
+
+# --- 신설 어휘의 라벨 축 구별성 --------------------------------------------
+
+
+def test_r21_the_discard_vocabulary_is_registered_in_both_closed_sets():
+    """신설 어휘 1건이 두 닫힌 어휘에 등재되고 라벨을 갖는다.
+
+    등재를 지우면 `validate_autopatch`가 던지고, 라벨을 지우면 `verdicts` 임포트 자체가
+    실패한다(모듈 하단의 표 대조).
+    """
+    from server.vwx.verdicts import (
+        FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED,
+        SKIPPED_CHECK_KIND,
+        TARGET_EXCLUSION_REASON,
+        skipped_check_label,
+        target_exclusion_label,
+    )
+
+    assert FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED in SKIPPED_CHECK_KIND
+    assert FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED in TARGET_EXCLUSION_REASON
+    assert skipped_check_label(FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED)
+    assert target_exclusion_label(FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED)
+    assert (
+        validate_autopatch("skipped_check_kind", FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED)
+        == FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED
+    )
+
+
+def test_r21_the_discard_labels_do_not_borrow_a_sibling_axis_sentence():
+    """[round18 M24 형태] 라벨이 **형제 축 문구를 빌려 쓰지 않는다.**
+
+    폐기 축의 조치는 재판독이 아니다 — 같은 범위를 다시 읽어도 같은 행이 온다. 절단·
+    판독실패 라벨의 조치 문구를 그대로 쓰면 조작자는 효과 없는 조치를 반복한다.
+    """
+    from server.vwx.verdicts import (
+        FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED,
+        FIXTURE_TYPE_LIBRARY_TRUNCATED,
+        FIXTURE_TYPE_LIBRARY_UNREADABLE,
+        skipped_check_label,
+        target_exclusion_label,
+    )
+
+    axes = (
+        FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED,
+        FIXTURE_TYPE_LIBRARY_TRUNCATED,
+        FIXTURE_TYPE_LIBRARY_UNREADABLE,
+    )
+    labels = [target_exclusion_label(code) for code in axes] + [
+        skipped_check_label(code) for code in axes
+    ]
+    assert len(set(labels)) == len(labels), labels
+
+    discard_exclusion = target_exclusion_label(FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED)
+    assert "슬롯 번호" in discard_exclusion
+    assert "다시 읽어야" not in discard_exclusion
+    assert "라이브러리" in discard_exclusion  # 고칠 축은 `console_library`다
+
+
+# --- 뮤테이션 실측이 드러낸 공백 3건 (round21 SlotDiscard 2차) --------------
+#
+# 1차 실측에서 세 자리가 SURVIVED였다. 전부 "표는 맞는데 그 표를 읽는 대조군이 없다"는
+# 형태이고, 이 SPEC이 반복해서 만든 공백과 같다 — 그래서 그대로 남기지 않고 닫는다.
+
+
+def test_r21_a_duplicate_slot_row_is_discarded_and_counted():
+    """[1차 실측 M19/M20 = 진짜 공백] 중복 `i` 행도 **폐기**로 센다.
+
+    형제 `patchplan._existing_fids_from_console`이 같은 형태를 `unusable_rows`로 세고
+    (`child_index in read_slots`), 그 근거는 round12 R01이다: 중복이 섞이면
+    `len(children)`가 부풀어 총계와 맞아떨어지고 **못 읽은 슬롯이 남았는데 완전으로
+    보고된다.** 여기서는 같은 콘솔 경로가 서로 다른 이름으로 두 번 실리기까지 한다.
+
+    죽이는 뮤테이션: `read_fixture_type_library`의 `or index in seen_slots`(또는
+    `_read_type`의 `or mode_index in seen_mode_slots`)를 지우면 실패한다.
+    """
+    root = _r21_library(types=_R21_THREE_TYPE_LIBRARY, duplicate_type_slot=1)
+    assert root.unusable_row_count == 1
+    assert root.returned_row_count == 4
+    assert [entry.index for entry in root.types] == [1, 2, 3]  # 같은 슬롯이 두 번 실리지 않는다
+    assert root.observed_type_count == 3
+    assert root.unseen == 0
+
+    modes = _r21_library(types=_R21_THREE_TYPE_LIBRARY, duplicate_mode_slot=1)
+    first = modes.types[0]
+    assert first.unusable_mode_row_count == 1
+    assert first.returned_mode_row_count == 5
+    assert [mode.index for mode in first.modes] == [1, 2, 3, 4]
+    assert first.modes_unseen == 0
+
+
+def test_r21_a_duplicate_slot_does_not_inflate_the_observed_count():
+    """중복을 받아들이면 **부분 관측이 전수로 보고된다** — round12 R01의 실패 양식.
+
+    선언 3종 · 열거 2종 + 2번 슬롯 중복 1행: 중복을 세지 않고 받으면 관측이 3이 되어
+    `unseen`이 0으로 닫히고, 3번 타입을 못 봤다는 사실이 사라진다.
+    """
+    port = _R21DiscardPort(_R21_THREE_TYPE_LIBRARY, duplicate_type_slot=2, declared_extra_types=0)
+    library = read_fixture_type_library(port)
+
+    assert library.returned_row_count == 4
+    assert library.observed_type_count == 3
+    assert library.unusable_row_count == 1
+    # 계수 상보식이 중복 형태에서도 성립한다.
+    assert library.returned_row_count == (
+        library.enumerated_count + library.unusable_row_count + library.unparsable_row_count
+    )
+
+
+def test_r21_the_mode_list_marker_says_incomplete_when_rows_were_discarded():
+    """[1차 실측 M09 = 진짜 공백] 목록 옆 **완전성 표시**가 폐기를 말한다.
+
+    `LibraryType.modes_incomplete`(union)의 폐기 갈래를 지우면 `_absence_assertable`은
+    자기 갈래로 여전히 막지만, `mode_options_completeness`는 **부분 목록을 전부라고**
+    말하게 된다 — 목록을 제시하면서 그 완전성을 거짓으로 붙이는 형태다.
+
+    죽이는 뮤테이션: `modes_incomplete`에서 `or self.mode_rows_discarded > 0`을 지우면
+    `complete`가 `True`로 뒤집혀 실패한다.
+    """
+    from server.vwx.typemap import MODE_OPTIONS_COMPLETENESS_COLUMN
+    from server.vwx.verdicts import FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED
+
+    payload = _r21_mode_discard_payload()
+    row = row_by_id(payload, "a")
+    marker = row[MODE_OPTIONS_COMPLETENESS_COLUMN]
+
+    assert marker["complete"] is False
+    assert marker["incompleteness_kind"] == FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED
+    assert marker["declared_count"] == 2
+    assert marker["observed_count"] == 1
+
+    # payload의 타입별 칸도 같은 말을 해야 한다 — 여기가 `modes_incomplete` union의
+    # **직접 소비 자리**다. union에서 폐기 갈래를 빼면 이 칸이 "이 모드 목록은 전수다"로
+    # 뒤집혀, 표시(위)와 payload(아래)가 서로 다른 말을 한다.
+    entry = payload["library"]["types"][0]
+    assert entry["modes_incomplete"] is True
+    assert entry["modes_enumeration_short"] is False
+    assert entry["modes_truncated"] is False
+
+
+def test_r21_the_two_discard_axes_are_not_interchangeable():
+    """[1차 실측 M25 = 대조군 하중] 폐기 두 축을 **맞바꿔도** 합계는 같다.
+
+    `unusable`(슬롯 번호 없음·중복)과 `unparsable`(매핑 아님)을 서로 바꿔 실어도
+    상보식은 그대로 성립한다 — 합만 보는 게이트는 그 뒤바뀜을 못 잡는다. 형제와
+    **칸 단위로** 대조하는 자리가 있어야 잡힌다
+    (`test_r21_both_readers_treat_the_same_snapshot_alike`가 그 자리다).
+    """
+    from server.vwx.patchplan import _existing_fids_from_console
+
+    rows = [{"name": "A"}, {"name": "B"}, "not-a-mapping"]
+    sibling = _existing_fids_from_console(_R21FidPort(rows, 3))
+    ours = read_fixture_type_library(_R21RawLibraryPort(rows, 3))
+
+    # 두 축이 **각각** 0이 아니다 — 하나라도 0이면 뒤바뀜을 잴 수 없다.
+    assert (ours.unusable_row_count, ours.unparsable_row_count) == (2, 1)
+    assert (sibling.unusable_rows, sibling.unparsable_rows) == (2, 1)
+    # 칸 단위 일치 — 합이 아니라 축마다 같다.
+    assert ours.unusable_row_count == sibling.unusable_rows
+    assert ours.unparsable_row_count == sibling.unparsable_rows
+    assert ours.unusable_row_count != ours.unparsable_row_count

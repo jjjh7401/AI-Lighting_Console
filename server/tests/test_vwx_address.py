@@ -742,6 +742,28 @@ _R17_VWX_BOUNDARY_SITES: tuple[_Site, ...] = (
     _Site("rig.py", "slice", "raw.strip().upper()[:1]"),
     _Site("typemap.py", "lencmp", "len(mode_candidates) == 1"),
     _Site("typemap.py", "lencmp", "len(type_candidates) == 1"),
+    # --- round21 폐기 축 (SlotDiscard) — 목록 완전성 union의 세 번째 갈래. `> 0`을
+    # `> 1`로 밀면 폐기 행 **한 개**가 union에 걸리지 않아 부분 목록이 전수로 읽히고,
+    # `>= 0`(항상 참)으로 밀면 깨끗한 스냅샷도 상시 불완전이 된다. 양방향 대조군은
+    # `test_autopatch_types.py`의 round21 절(`_R21_ROW_SHAPES` 계수 대조 + 폐기 0건
+    # 스냅샷이 `enumeration_incomplete`를 세우지 않음).
+    _Site("typemap.py", "numcmp", "self.mode_rows_discarded > 0"),
+    _Site("typemap.py", "numcmp", "self.rows_discarded > 0"),
+    # --- round21 표적 회수 스윕 (LibraryTruncation) — `recover_requested_types`.
+    # `child_count + 1`은 `range(1, child_count + 1)`의 상한이라 **경계 그 자체**다:
+    # `+2`로 밀면 선언 총계를 넘는 인덱스를 프로브하고(존재하지 않는 슬롯을 물어본다),
+    # `+0`으로 밀면 마지막 슬롯을 영영 회수하지 못한다. 양방향 대조군은
+    # `test_r21_the_sweep_boundary_is_exactly_one_to_child_count`가 프로브된 인덱스
+    # 목록을 값으로 고정해 잡는다.
+    _Site("typemap.py", "offby", "child_count + 1"),
+    # 같은 함수의 "이 이름이 요청 키에 걸렸는가" 판정. 길이 비교로 쓰는 이유는
+    # **첫 일치를 고르지 않기 위해서**다(round17 모호성 규율 — `next(...)`를 쓰면
+    # 같은 콘솔 이름에 두 요청 키가 걸릴 때 순서가 왕복 수를 갈랐다).
+    # `!=`로 밀면 일치를 못 찾고도 회수를 시도하고, 항상 참으로 밀면 스윕이 첫 인덱스에서
+    # 멈춘다 — `test_r21_the_sweep_stops_at_the_first_match_and_never_reads_`
+    # `unrequested_types`가 프로브 인덱스 목록과 DMXModes 판독 목록을 함께 고정해
+    # 양쪽을 잡는다.
+    _Site("typemap.py", "lencmp", "len(remaining) == len(pending)"),
 )
 
 #: 자리별 판정 메모 — 등가 뮤턴트임을 근거와 함께 남긴다(무대조군 오분류 방지).

@@ -1168,6 +1168,10 @@ _R17_STRUCTURED_LEAF_KEYS = frozenset(
         "kind",
         "lua_source",
         "mode",
+        # [round21 R20-B] 목록 완전성 칸 — `column_labels`의 키로 잎에 나타난다
+        # (`footprint_unverified`·`console_channel_count`와 같은 기제). 콘솔 판독 원문을
+        # 담지 않는 구조화 칸이므로 형제 열 이름들과 같은 분류다.
+        "mode_options_completeness",
         "mode_candidates",
         "name",
         "outcome",
@@ -1181,6 +1185,7 @@ _R17_STRUCTURED_LEAF_KEYS = frozenset(
         "status",
         "type",
         "type_candidates",
+        "type_candidates_completeness",
         "unit_number",
     }
 )

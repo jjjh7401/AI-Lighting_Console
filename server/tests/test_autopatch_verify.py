@@ -3737,7 +3737,7 @@ def _r16_variable_site_probes():
     """값이 변수인 사이트마다 **미등재 값을 실제로 흘려보내는** 프로덕션 호출."""
     from server.vwx.apply import VerificationResult
     from server.vwx.patchplan import PatchPlanRejection, PatchTargetExclusion
-    from server.vwx.typemap import TypeHardStop, _skipped_check
+    from server.vwx.typemap import ListCompleteness, TypeHardStop, _skipped_check
     from server.vwx.verdicts import autopatch_label
 
     bad = _R16_UNREGISTERED_CODE
@@ -3771,7 +3771,10 @@ def _r16_variable_site_probes():
             request=TypeRequest(candidate_id="a", instrument_type=LED),
             status=bad,
             reason="",
-        ).row(),
+            # [round21 R20-B] `row()`은 목록 완전성 진술을 **필수 키워드**로 받는다 —
+            # 목록을 내면서 완전성을 말하지 않는 조립을 구조적으로 막는다. 여기서 재는
+            # 것은 상태 어휘 검증이라 완전성 값 자체는 무관하다: 근거 없음(`None`)을 준다.
+        ).row(type_candidates_completeness=ListCompleteness(complete=None)),
         ("typemap.py", '"skipped_check_kind"', "kind"): lambda: _skipped_check(bad, ""),
         ("verdicts.py", "vocabulary", "code"): lambda: autopatch_label(
             "target_exclusion_reason", bad
@@ -5588,6 +5591,9 @@ _R17_SENTENCE_SURFACES = (
     ("typemap.py", "FOOTPRINT_MISMATCH_CHOOSABLE_REASON"),
     ("typemap.py", "FOOTPRINT_MISMATCH_UNVERIFIED_REASON"),
     ("typemap.py", "FOOTPRINT_UNMATCHABLE_REASON"),
+    # [round21 R20-D] 폐기 축 사유 — 절단·판독실패와 **다른 조치**를 가리키므로 문장도
+    # 따로다. 어느 쪽 문장을 빌려 써도 payload가 관측 사실을 거짓으로 말한다.
+    ("typemap.py", "LIBRARY_ROWS_DISCARDED_REASON"),
     ("typemap.py", "LIBRARY_TRUNCATED_REASON"),
     ("typemap.py", "LIBRARY_UNREADABLE_REASON"),
     ("typemap.py", "MODE_ABSENT_REASON"),
