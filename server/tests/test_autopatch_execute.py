@@ -35,6 +35,7 @@ from types import ModuleType
 
 import pytest
 
+from server.tests.test_autopatch_contract import iter_vwx_modules
 from server.vwx.apply import (  # noqa: I001
     END_TO_END_UNVERIFIED,
     HANDOFF_STATUS_DELIVERED,
@@ -79,8 +80,11 @@ def _discover_modules(root: Path) -> tuple[Path, ...]:
     빠져나가고, 아래 AC-018 전수 주장이 "스캔한 것 중에는 없다"로 축소된다.
     함수로 뽑아 둔 것은 재귀성 자체에 대조군을 붙이기 위해서다
     (`test_the_seal_scan_discovery_is_recursive`).
+    [round24] 재귀성과 제외 규칙의 정의는 `iter_vwx_modules` 한 자리로 모았다 —
+    round15 B의 수정이 형제 아홉 자리로 전파되지 않은 것이 이 SPEC의 서명 형태라,
+    같은 표현을 두 벌 두지 않는다.
     """
-    return tuple(sorted(root.rglob("*.py")))
+    return iter_vwx_modules(root)
 
 
 VWX_MODULES = _discover_modules(Path("server/vwx"))

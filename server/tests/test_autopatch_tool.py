@@ -1579,3 +1579,192 @@ class TestRound18DeliverableReachability:
         )
         kinds = {check["kind"] for check in payload["plan"]["skipped_checks"]}
         assert "designed_type_name_vacuous" not in kinds
+
+
+# --------------------------------------------------------------------------
+# [round23 R21-A] 2회차 재호출이 "이미 했음"을 말하는가 — 실물 M8 세션 재현
+#
+# 2026-08-08 세션: ZZAP1~3을 FID 501~503으로 만든 뒤 **같은 인자로 재호출**하면
+#   targets 0 · exclusions 3 · fid_already_in_use ×3
+#   최상위 키에 handoff·types·verification 자체가 없다
+# 가 나왔다. FID 배정이 `screen_idempotent`보다 위에 있어 배제해버리므로 멱등 판정에
+# 도달하지 못한다 — round12 R05가 닫은 뭉갬과 **같은 것**이고, 그때 고친 순서보다
+# 한 층 위에서 다시 났다.
+#
+# **기존 멱등 대조군을 대체하지 않는다.** round11 M7 N01
+# (`test_an_unrelated_second_candidate_does_not_disable_the_overlap_guard`)과 round12 R05
+# (`test_a_re_call_reads_as_already_patched_even_with_an_intruder_in_the_span`)는 FID가
+# 충돌하지 않는 리그를 쓰므로 이 절과 서로 다른 축을 지킨다. 둘 다 살아 있어야 한다.
+# --------------------------------------------------------------------------
+
+_R21_FID = 501  # `_deliver`·`_r18_call`이 쓰는 fid_range의 첫 값 — 1회차가 배정한 그 FID다.
+_ADDRESS_CONFLICT = "address_conflicts_with_existing_fixture"
+_FID_ALREADY_IN_USE = "fid_already_in_use"
+
+
+class _R21FidRigPort(RigPort):
+    """슬롯별 FID를 지정하는 대역 — 1회차가 만든 픽스처가 **그 FID를 들고 있는** 상태.
+
+    기본 `RigPort`는 FID를 `19 + slot`으로 내므로 501~599 대역과 절대 겹치지 않는다.
+    그래서 기존 멱등 대조군은 FID 충돌을 **한 번도 겪지 않은 채** 통과해 왔고, 실물
+    세션의 결함이 스위트에 보이지 않았다. 이 대역이 그 사각을 연다.
+    """
+
+    def __init__(self, fixtures: dict[int, dict[str, str]], *, fids: dict[int, int]):
+        super().__init__(fixtures)
+        self.fids = fids
+        self.patch_probes: list[str] = []
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        if not path.startswith(FIXTURE_TYPE_LIBRARY_ROOT):
+            slot = int(path.rsplit("/", 1)[1])
+            if property_name == "FID":
+                return {
+                    "ok": True,
+                    "path": path,
+                    "property": property_name,
+                    "value": self.fids.get(slot, 19 + slot),
+                }
+            if property_name == "Patch":
+                self.patch_probes.append(path)
+        return super().query_property(path, property_name)
+
+
+class _R21TwoTypeFidRigPort(_R21FidRigPort, _R18TwoTypeRigPort):
+    """위 대역 + 라이브러리에 타입 **둘** — 부분 일치(좌표는 같고 타입이 다름)를 만든다."""
+
+
+def _r21_ours(slot_fid: int = _R21_FID) -> _R21FidRigPort:
+    """1회차가 우리 도면 자리(1.1)에 만들어 둔 픽스처가 그 FID를 든 리그."""
+    return _R21FidRigPort(fixtures={1: _fixture("1.001", "ZZAP1")}, fids={1: slot_fid})
+
+
+def _r21_partial_match() -> _R21TwoTypeFidRigPort:
+    """좌표는 우리 자리, **타입은 다른** 픽스처가 그 FID를 든 리그."""
+    return _R21TwoTypeFidRigPort(
+        fixtures={
+            1: {
+                "Patch": "1.001",
+                "FixtureType": _R18_TYPE_B,
+                "Mode": f"1 {_R18_MODE}",
+                "Name": "other",
+            }
+        },
+        fids={1: _R21_FID},
+    )
+
+
+def _r21_partial_match_call(rig) -> dict:
+    return _r18_call(
+        _registry(rig=rig),
+        _r18_report(_R18_TYPE_A),
+        aliases={_R18_TYPE_A: {"type": _R18_TYPE_A, "mode": _R18_MODE}},
+    )
+
+
+def test_r21_a_second_pass_with_the_same_arguments_says_already_patched():
+    """세션 실증 재현 — 우리가 만든 픽스처가 그 FID를 들고 있어도 "이미 했음"이 나온다.
+
+    죽이는 뮤테이션:
+      · `_fid_holder_is_this_target`을 `return False`로(= 재분류 전으로 되돌리기) →
+        `fid_already_in_use`가 돌아오고 `handoff` 키가 사라져 실패한다.
+      · `_assign_fids`의 승격 갈래를 지워도 같다.
+      · `_slot_address`가 좌표 대신 `None`을 돌려주게 해도 승격이 죽어 실패한다.
+    """
+    payload = _deliver(_r21_ours(), [(1, 1)])
+
+    assert [x["code"] for x in payload["plan"]["target_exclusions"]] == []
+    assert [x["code"] for x in payload["handoff"]["exclusions"]] == [ALREADY_PATCHED_IDENTICAL]
+    # 재실행이 사실을 말한다 — 배정된 FID는 콘솔에 실재하는 그 FID다.
+    assert [row["fid"] for row in payload["plan"]["targets"]] == [_R21_FID]
+
+
+def test_r21_the_second_pass_produces_the_verification_block():
+    """세션에서 AC-026③ 검증을 가로막은 것은 **키 자체의 부재**였다.
+
+    `handoff`·`types`·`verification`이 최상위에 없으면 조작자는 "만들어졌는가"를 물을
+    수단이 없다. 승격이 죽으면 대상이 0건이 되어 툴이 그 세 키 앞에서 반환하므로,
+    이 단정은 승격 규칙이 살아 있을 때만 성립한다.
+    """
+    payload = _deliver(_r21_ours(), [(1, 1)])
+
+    assert {"types", "handoff", "verification"} <= set(payload)
+    # 승인 항목 전체가 검증 대상이다 — 2회차라고 결과가 비지 않는다(round11 M6 N04).
+    assert len(payload["verification"]["results"]) == 1
+    assert payload["verification"]["observed_count"] == 1
+    assert payload["verification"]["created_count"] == 0
+
+
+def test_r21_a_foreign_fixture_holding_that_fid_is_still_a_real_conflict():
+    """**둘을 가르는 것이 핵심이다.** 남의 픽스처가 그 FID를 쓰면 여전히 점유 보고다.
+
+    같은 FID·같은 대역·같은 호출인데 점유자가 **다른 자리**(1.100)에 있다는 것만 다르다.
+    승격 규칙을 "FID가 겹치면 통과"로 넓히면 이 행이 통과해버려 실패한다 — 그러면
+    남이 쓰는 FID로 픽스처를 만드는 Lua가 나가고, 이 앱에는 실행 취소가 없다.
+    """
+    rig = _R21FidRigPort(fixtures={1: _fixture("1.100", "someone else")}, fids={1: _R21_FID})
+    payload = _deliver(rig, [(1, 1)])
+
+    exclusions = payload["plan"]["target_exclusions"]
+    assert [x["code"] for x in exclusions] == [_FID_ALREADY_IN_USE]
+    assert [x["proposed_fid"] for x in exclusions] == [_R21_FID]
+
+
+def test_r21_a_partial_match_is_not_promoted_to_idempotent():
+    """부분 일치 — 좌표는 같고 **타입이 다르다**. `already_patched_identical`이 아니다.
+
+    승격은 FID 배제만 면제할 뿐 멱등을 단정하지 않는다. 정체 판정은 `screen_idempotent`
+    한 곳에만 있고(기존 규율 재사용), 그것이 여기서 충돌로 답해야 한다. 승격 규칙에
+    타입 비교를 복제해 넣고 "일치하면 멱등"이라 쓰면 두 규약이 갈라진다.
+    """
+    payload = _r21_partial_match_call(_r21_partial_match())
+    codes = [x["code"] for x in payload["handoff"]["exclusions"]]
+
+    assert codes == [_ADDRESS_CONFLICT]
+    assert ALREADY_PATCHED_IDENTICAL not in codes
+
+
+#: (라벨, 대역, 호출, 승격 뒤 주소 계층이 내는 배제 코드) — 승격이 **실제로 일어나는**
+#: 갈래 전수다. 좌표가 우리 자리가 아니면 승격 자체가 없으므로 이 표에 없고, 우리
+#: 자리이면 `screen_idempotent`가 정체 일치(멱등)나 불일치(충돌) 중 하나로 답한다.
+_R21_PROMOTION_CASES = (
+    (
+        "identical",
+        _r21_ours,
+        lambda rig: _deliver(rig, [(1, 1)]),
+        ALREADY_PATCHED_IDENTICAL,
+    ),
+    ("type_differs", _r21_partial_match, _r21_partial_match_call, _ADDRESS_CONFLICT),
+)
+
+
+def test_r21_the_promotion_case_table_covers_both_downstream_verdicts():
+    """**표 행삭제 프로브** — 두 행이 서로 다른 하류 판정을 덮어야 한다.
+
+    한 행을 지우면 남은 코드 집합이 둘을 채우지 못해 실패한다. 두 행을 같은 판정으로
+    바꿔도 같다 — 그러면 아래 안전 조건이 갈래 하나에서만 확인된 것이 된다.
+    """
+    codes = [expected for _label, _rig, _call, expected in _R21_PROMOTION_CASES]
+
+    assert set(codes) == {ALREADY_PATCHED_IDENTICAL, _ADDRESS_CONFLICT}
+    assert len(codes) == len(set(codes))
+
+
+@pytest.mark.parametrize("label, build_rig, call, expected_code", _R21_PROMOTION_CASES)
+def test_r21_a_promoted_target_never_reaches_the_lua(label, build_rig, call, expected_code):
+    """**승격의 안전 조건** — FID 배제를 면제받은 대상은 전달물에 실리지 않는다.
+
+    승격이 안전한 이유는 그 대상의 도면 자리에 픽스처가 실재해 `screen_idempotent`의
+    갈래가 **전부 배제**이기 때문이다. 그 성질이 깨지면 이미 쓰이는 FID로 `AddFixtures`가
+    나간다 — 승격 규칙을 넓히는 어떤 수정도 여기서 먼저 걸린다.
+
+    승격이 정말 일어났는지도 함께 본다: FID 계층이 배제했다면 대상이 0건이 되어
+    `handoff` 키가 없고, 그때는 아래 첫 단정이 `KeyError`로 죽는다.
+    """
+    payload = call(build_rig())
+
+    assert [x["code"] for x in payload["plan"]["target_exclusions"]] == [], label
+    assert [x["code"] for x in payload["handoff"]["exclusions"]] == [expected_code], label
+    assert payload["handoff"]["lua_source"] is None, label
+    assert payload["handoff"]["entries"] == [], label
+    assert payload["verification"]["created_count"] == 0, label

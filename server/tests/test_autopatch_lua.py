@@ -22,6 +22,7 @@ from types import MappingProxyType, ModuleType
 import lupa.lua54 as lua54
 import pytest
 
+from server.tests.test_autopatch_contract import iter_vwx_modules, vwx_module_label
 from server.vwx import luagen
 from server.vwx.address import to_console_form
 from server.vwx.luagen import (
@@ -780,6 +781,11 @@ _R17_TOKEN_JOIN_SITES = (
     # 열거 리스트의 위치를 넣으면 responder가 `children[wanted_slot]`로 답해 엉뚱한
     # 픽스처의 FID를 기존 FID로 적재한다 — `slots_established` 전제가 막는 사고다.
     ("patchplan.py", "f'{FID_FIXTURE_ROOT}/{slot}'"),
+    # [round23 R21-A] FID 점유자의 좌표를 묻는 프로브(`_slot_address`) — 위 두 자리와
+    # **같은 규약**(루트 + `/` + 슬롯 번호)이고 같은 슬롯 번호를 쓴다. 여기에 슬롯이 아닌
+    # 값(열거 위치 등)이 들어가면 엉뚱한 픽스처의 주소를 그 FID의 소유자 좌표로 읽어,
+    # 남의 픽스처를 "내가 만든 것"으로 승격시킨다 — R21-A 승격 규칙의 입력이 오염된다.
+    ("patchplan.py", "f'{FID_FIXTURE_ROOT}/{slot}'"),
     # [round18 R18-J] 2단계 고지가 가리키는 도면 좌표 — `address.py`와 **같은 순서 규약**
     # (유니버스 먼저, 그다음 주소)이다. 뒤집으면 조작자가 다른 픽스처를 찾아간다.
     ("patchplan.py", "f'{universe}.{address}'"),
@@ -815,7 +821,8 @@ _R17_SOURCE_ANCHORS = MappingProxyType(
 
 
 def _r17_vwx_modules() -> list[Path]:
-    return sorted(Path("server/vwx").glob("*.py"))
+    """`server/vwx` 아래 모듈 경로 — 재귀성·제외는 공용 순회 한 자리가 정한다."""
+    return list(iter_vwx_modules())
 
 
 def _r17_scan_escape_tables() -> list[tuple[str, str]]:
@@ -842,13 +849,13 @@ def _r17_scan_escape_tables() -> list[tuple[str, str]]:
             ):
                 continue
             targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-            found.extend((path.name, ast.unparse(target)) for target in targets)
+            found.extend((vwx_module_label(path), ast.unparse(target)) for target in targets)
     return sorted(found)
 
 
 def _r17_scan_token_joins() -> list[tuple[str, str]]:
     """`server/vwx` **전 모듈**에서 `{a}<sep>{b}` 꼴로 **오직 스칼라와 구분자만**으로
-    이루어진 f-string을 전수 열거한다(스코프: `server/vwx/*.py` 디렉터리 전체)."""
+    이루어진 f-string을 전수 열거한다(스코프: `server/vwx/**/*.py` 디렉터리 전체)."""
     found: list[tuple[str, str]] = []
     for path in _r17_vwx_modules():
         tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -864,7 +871,7 @@ def _r17_scan_token_joins() -> list[tuple[str, str]]:
                 for part in node.values[1::2]
             ):
                 continue
-            found.append((path.name, ast.unparse(node)))
+            found.append((vwx_module_label(path), ast.unparse(node)))
     return sorted(found)
 
 

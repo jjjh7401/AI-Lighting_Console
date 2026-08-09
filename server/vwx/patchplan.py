@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from hashlib import sha256
 from types import MappingProxyType
 from typing import Protocol
 
+from server.prechk.patch import normalize_address
 from server.vwx.address import ADDRESS_BASIS_ABS_BACK_CALCULATED
 from server.vwx.diff import MULTI_SYSTEM_MAPPING_ABSENT
 from server.vwx.typemap import is_vacuous_type_name
@@ -240,6 +241,28 @@ class FidPropertyPort(Protocol):
     def query_state(self, path: str) -> Mapping[str, object]: ...
 
     def query_property(self, path: str, property_name: str) -> Mapping[str, object]: ...
+
+
+#: 콘솔 슬롯 하나의 `Patch` 프로퍼티 이름 — `FID_PROPERTY_NAME`의 형제 축이다.
+#: 이 계층은 이 값을 **좌표로만** 쓴다(누가 그 FID를 들고 있나). 판독은 짓지 않고
+#: PRESERVE 경로의 `normalize_address`에 그대로 넘긴다 — 형제 표면
+#: `apply.read_console_fixtures`와 같은 파서다. 좌표를 두 번 정의하지 않는다.
+PATCH_PROPERTY_NAME = "Patch"
+
+#: FID 하나를 든 콘솔 슬롯 **전원**의 좌표. 원소가 `None`이면 그 슬롯의 주소를 판독하지
+#: 못했다는 뜻이고, 빈 튜플은 그 FID를 든 슬롯을 하나도 모른다는 뜻이다 — 두 상태 모두
+#: 승격을 거부하지만 서로 다른 사실이라 뭉치지 않는다.
+FidHolderAddresses = tuple[tuple[int, int] | None, ...]
+
+
+def _no_fid_holders(_fid: int) -> FidHolderAddresses:
+    """근거 없음 — `_assign_fids`의 기본 판독기.
+
+    이 판독기를 쓰는 호출은 **모든 FID 점유를 진짜 충돌로** 본다. 즉 R21-A 이전과
+    글자 그대로 같은 판정이다. 기본값을 fail-closed로 두는 이유는 `_assign_fids`가
+    `FIDRange`를 직접 조립하는 형제 진입점에도 열려 있기 때문이다(round18 R18-A).
+    """
+    return ()
 
 
 @dataclass(frozen=True)
@@ -847,6 +870,10 @@ def _plan_from_report(
         valid_fid_range,
         existing_fids=frozenset(existing_read.fids),
         fid_range_visually_confirmed_empty=confirmation_recorded,
+        # [round23 R21-A] 판독기는 **제안된 FID를 물을 때만** 콘솔에 간다. 포트가 없는
+        # 호출(사전검사 미수행)에는 `_no_fid_holders`가 가고, 그 호출은 이전과 글자
+        # 그대로 같은 판정을 받는다 — 모든 점유가 진짜 충돌이다.
+        fid_holders=_fid_holder_reader(fid_property_port, existing_read),
     )
     skipped_checks = _fid_skipped_checks(assumption_71_value)
     return PatchPlan(
@@ -978,12 +1005,116 @@ def _parse_fid_range(value: Mapping[str, object] | None) -> _FidRangeParse:
     return _FidRangeParse(parsed=FIDRange(start=start, end=end))
 
 
+def _slot_address(port: FidPropertyPort, slot: int) -> tuple[int, int] | None:
+    """콘솔 슬롯 하나의 `(유니버스, 주소)` — 못 읽었거나 주소가 아니면 `None`.
+
+    **예외를 감싸지 않는다.** 이 슬롯은 이미 `query_property`에 성공적으로 답해
+    FID를 내놓은 슬롯이다(그래서 `fid_slots`에 있다) — 열거로 왔든 절단 복구
+    스윕으로 왔든 **실재가 증명된** 슬롯이라 투기적 프로브가 아니다. 스윕 프로브를
+    감싸는 `_existing_fids_from_console`의 규약과 같은 기준이고, 감싸면 전송 결함이
+    "주소를 못 읽었다"로 바뀌어 조작자가 원인이 아닌 것을 고치러 간다.
+    """
+    response = port.query_property(f"{FID_FIXTURE_ROOT}/{slot}", PATCH_PROPERTY_NAME)
+    if response.get("ok") is not True:
+        return None
+    raw = response.get("value")
+    parse = normalize_address(raw if isinstance(raw, str) else None)
+    universe, address = parse.universe, parse.address
+    if universe is None or address is None:
+        return None
+    return (universe, address)
+
+
+def _fid_holder_reader(
+    port: FidPropertyPort | None, read: ExistingFidRead
+) -> Callable[[int], FidHolderAddresses]:
+    """FID -> 그 값을 든 슬롯 전원의 좌표. **물어본 FID만** 콘솔에서 읽는다.
+
+    **비용 상한 — 구조적이고, `fid_range`의 크기와 무관하다.**
+
+    * 슬롯 하나는 FID 하나를 든다. 아래 `answered` 기억 때문에 **한 슬롯을 두 번 읽지
+      않는다**. 따라서 이 판독기가 내는 `query_property` 총 횟수는
+      **`len(read.fid_slots)`를 넘지 못한다** — 즉 사전검사가 FID를 읽어낸 슬롯 수이고,
+      이미 수행한 읽기 횟수를 넘지 않는다(최악의 경우 FID 사전검사 비용의 2배).
+    * 사용자가 `fid_range`를 아무리 넓게 줘도 이 상한은 움직이지 않는다. 넓은 대역은
+      제안되는 FID의 **값**을 바꿀 뿐 콘솔에 있는 슬롯 수를 늘리지 못한다.
+    * 실제 횟수는 보통 그보다 훨씬 작다: `_assign_fids`는 대상 하나에 FID 하나를
+      제안하므로 프로브는 **충돌한 제안 수**만큼만 난다(실물 M8 2회차는 3회).
+
+    기억을 caller의 성질(`next_fid` 단조 증가)에 맡기지 않고 **여기서 진다**. 맡기면
+    상한이 호출자를 고쳐야 유지되는 약속이 되고, 이 SPEC이 반복해 배운 대로 그런 약속은
+    형제 진입점에서 깨진다. 미리 전 슬롯의 주소를 읽어 표를 짓는 형태를 쓰지 않은 이유도
+    같은 셈이다 — 그 표는 39대 리그에서 39회를 쓰면서 그중 3행만 쓰인다.
+
+    범위를 미리 좁히지 않는 이유는 다른 규율이다 — 어느 FID가 제안되는지는
+    `_assign_fids`의 산술이 정하고, 그 산술을 여기서 다시 쓰면 두 벌이 갈라진다.
+    물어보는 쪽이 정하고 이 함수는 답만 한다.
+    """
+    if port is None:
+        return _no_fid_holders
+    slots_by_fid: dict[int, list[int]] = {}
+    for slot, fid in read.fid_slots:
+        slots_by_fid.setdefault(fid, []).append(slot)
+    answered: dict[int, FidHolderAddresses] = {}
+
+    def holders(fid: int) -> FidHolderAddresses:
+        if fid not in answered:
+            answered[fid] = tuple(_slot_address(port, slot) for slot in slots_by_fid.get(fid, ()))
+        return answered[fid]
+
+    return holders
+
+
+def _fid_holder_is_this_target(
+    proposed_fid: int,
+    target: PatchCandidate,
+    fid_holders: Callable[[int], FidHolderAddresses],
+) -> bool:
+    """그 FID를 든 콘솔 픽스처가 **이 대상의 도면 자리에 있는 바로 그 픽스처**인가.
+
+    [round23 R21-A] 이것이 "내가 만든 것"과 "남이 쓰는 것"을 가르는 **유일한 규칙**이다.
+    참이면 `_assign_fids`는 배제하지 않고 대상을 주소 계층으로 넘긴다 — 거기서
+    `screen_idempotent`가 타입·모드까지 보고 멱등/충돌/확인 불가를 가른다. 이 함수가
+    타입·모드를 **보지 않는 것은 의도**다: 그 판정은 이미 형제 표면에 있고, 여기서 한 번 더
+    정의하면 두 규약이 갈라진다(이 SPEC이 일곱 라운드 반복한 기제).
+
+    판정은 **관측된 점유자 집합 전체에 대한 등식 하나**다 — 후보 중 하나를 고르지 않는다.
+
+    **[감사자에게 · round23] 이 형태는 round17 모호성 census(`ambiguity_candidate_sites`,
+    `len(x) == 1` · `x[0]` · `next(...)` 세 축)의 등재를 피하려고 고른 것이 아니다.**
+    census가 잡는 것은 *"후보 여럿에서 하나를 고르는"* 자리이고, 그런 자리는 열거 순서에
+    판정이 의존할 수 있어 등재와 순서 불변 대조군을 요구한다. 여기에는 **고를 후보가
+    없다**: 점유자 전원이 우리 자리의 그 한 대와 같아야만 참이고, 원소를 하나 집어
+    비교하는 단계가 존재하지 않는다. 즉 모호성이 **숨겨진 것이 아니라 사라졌다** —
+    순서를 뒤집어도(`holders`의 원소 순서를 바꿔도) 길이가 1이 아닌 순간 이미 거짓이라
+    순서가 결과를 바꿀 수 없다. 초안은 `len(holders) != 1` + `holders[0]`이었고 그것은
+    census가 정확히 옳게 잡았다. 쪼갠 형태를 되살리면 등재 대상이 되고, 그때는
+    `test_autopatch_types.py`의 레지스트리에 두 행을 넣어야 한다.
+
+    세 상태가 자동으로 fail-closed다.
+
+    * 든 슬롯이 0이면 근거가 없다(판독기가 기본값이거나 그 FID를 든 슬롯을 하나도 모른다).
+    * 2 이상이면 콘솔에 같은 FID가 중복이라 "그 픽스처"가 성립하지 않는다.
+    * 좌표를 판독하지 못한 슬롯은 `None`이라 어떤 대상 좌표와도 같지 않다.
+
+    셋 다 진짜 충돌로 다룬다 — 등식이 성립하지 않으므로 거짓이다.
+
+    **승격이 안전한 근거**: 승격된 대상의 도면 자리에는 그 픽스처가 실재하므로
+    `screen_idempotent`의 `occupants`가 반드시 비지 않고, 그 함수의 갈래 넷은 **전부 배제**다
+    (`apply.screen_idempotent`). 즉 승격된 대상은 Lua 항목이 되지 못한다 — 중복 FID가
+    전달물로 나가는 경로는 열리지 않는다. 그 성질을
+    `test_r21_a_promoted_target_never_reaches_the_lua`가 파이프라인 전체로 고정한다.
+    """
+    return fid_holders(proposed_fid) == ((target.universe, target.address),)
+
+
 def _assign_fids(
     targets: tuple[PatchCandidate, ...],
     fid_range: FIDRange,
     *,
     existing_fids: frozenset[int],
     fid_range_visually_confirmed_empty: bool | None,
+    fid_holders: Callable[[int], FidHolderAddresses] = _no_fid_holders,
 ) -> tuple[tuple[PatchCandidate, ...], tuple[PatchTargetExclusion, ...]]:
     planned: list[PatchCandidate] = []
     exclusions: list[PatchTargetExclusion] = []
@@ -1026,7 +1157,25 @@ def _assign_fids(
                 )
             )
             continue
-        if proposed_fid in existing_fids:
+        # [round23 R21-A] **점유는 두 가지다 — 남이 쓰는 것과 내가 만든 것.**
+        # 실물 M8 세션에서 ZZAP1~3을 FID 501~503으로 만든 뒤 **같은 인자로 재호출**하면
+        # 세 대상이 전부 여기서 `fid_already_in_use`로 빠졌다. 대상이 0건이 되니
+        # `screen_idempotent`까지 가지 못하고, payload에서 `handoff`·`types`·`verification`
+        # 키가 통째로 사라졌다 — 2회차 재호출이 "이미 했음" 대신 "점유됨"으로 보고되는,
+        # REQ-AUTOPATCH-022가 금지하는 바로 그 뭉갬이다. round12 R05가 `screen_idempotent`와
+        # `screen_console_occupancy`의 **순서**로 같은 뭉갬을 닫았는데, FID 배정이 그 둘보다
+        # 위에서 같은 것을 다시 했다.
+        #
+        # **순서는 바꾸지 않는다** — round12 R05가 순서를 고치다 다른 것을 깨뜨렸고, 여기서
+        # 배정을 주소 계층 뒤로 옮기면 `plan.targets`가 FID 없이 그 계층에 들어간다.
+        # 고치는 것은 **분류**다: 그 FID를 든 픽스처가 이 대상의 도면 자리에 있는 그 픽스처면
+        # 배제하지 않고 주소 계층에 넘긴다. 판정은 거기 한 곳에만 있다.
+        #
+        # `fid_already_in_use`는 지우지 않는다. 남이 그 FID를 쓰는 경우는 실재하고
+        # (M0 쇼파일의 C-CONFLICT 미끼 A13·A14가 그것이다) 그건 진짜 충돌이다.
+        if proposed_fid in existing_fids and not _fid_holder_is_this_target(
+            proposed_fid, target, fid_holders
+        ):
             exclusions.append(
                 PatchTargetExclusion(
                     candidate_id=target.id,
@@ -1097,6 +1246,15 @@ class ExistingFidRead:
     #: round14 T01/T03이 만든 "선언 2대 중 4대를 읽지 못했다"는 산술 불가능 문구가
     #: 되살아난다. 같은 슬롯을 두 판정 축으로 세지 않는다.
     probe_failures: int = 0
+    #: 관측된 `(슬롯, FID)` 쌍 전원 — 열거와 스윕 **양쪽**이 여기 들어온다.
+    #: [round23 R21-A] `fids`만으로는 "그 FID를 누가 들고 있나"를 물을 수 없어, FID 배정이
+    #: 자기가 만든 픽스처와 남의 픽스처를 구별하지 못했다. 슬롯은 인벤토리와의 조인 키다
+    #: (`read_console_slot_addresses` 참조).
+    #:
+    #: `to_dict()`에 싣지 않는다 — 그 payload는 **완전성 계수**를 보고하는 자리이고 이 값은
+    #: 판정 축이 아니라 조인 입력이다. 버려지는 관측도 아니다: 이 쌍이 낳은 판정은
+    #: `target_exclusions`가 `fid_already_in_use`를 내는지로 그대로 드러난다.
+    fid_slots: tuple[tuple[int, int], ...] = ()
 
     @property
     def complete(self) -> bool:
@@ -1240,7 +1398,10 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
     # 계수 없이 버려 다섯 축 어디에도 걸리지 않는 여섯 번째 실패 형태를 만들었고,
     # 같은 스냅샷에서 형제 리더(`read_inventory`)는 `AttributeError`로 죽는다.
     unparsable_rows = len(raw_rows) - len(children)
-    existing_fids: list[int] = []
+    # [round23 R21-A] 값과 **슬롯을 함께** 든다 — `fids`는 여기서 파생한다. 두 목록을
+    # 나란히 채우면 한쪽만 갱신하는 갈래가 생기고, 그 어긋남은 "그 FID를 누가 들고
+    # 있나"를 조용히 틀리게 만든다.
+    fid_slots: list[tuple[int, int]] = []
     unread = 0
     # [round12 R01] **행 수가 아니라 서로 다른 슬롯 수**를 센다. 중복 `i`가 섞여 오면
     # `len(children)`이 부풀어 `childCount`와 맞아떨어지고, 실제로는 못 읽은 슬롯이 남았는데
@@ -1266,7 +1427,7 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
         if fid is None:
             unreadable_fids += 1
             continue
-        existing_fids.append(fid)
+        fid_slots.append((child_index, fid))
 
     # 여기까지가 **열거**의 결말이다. 스윕이 관측을 늘리기 전에 계수를 못박아 둔다 —
     # `enumerated_count`는 열거가 근거인 슬롯 수여야 하고, 스윕이 찾은 슬롯을 여기에
@@ -1314,7 +1475,7 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
                 continue
             read_slots.add(slot)
             recovered_count += 1
-            existing_fids.append(fid)
+            fid_slots.append((slot, fid))
 
     # 총계를 모르거나, 관측이 총계와 **어느 방향으로든** 어긋나면 완전하다고 말할 수 없다.
     # [round14 T01/T03] 같은 슬롯을 두 축으로 세지 않는다 — 루프에서 이미 센 못 쓴 행은
@@ -1328,7 +1489,8 @@ def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> Ex
     unseen = None if child_count is None else max(child_count - len(read_slots), 0)
 
     return ExistingFidRead(
-        fids=tuple(existing_fids),
+        fids=tuple(fid for _slot, fid in fid_slots),
+        fid_slots=tuple(fid_slots),
         child_count=child_count,
         enumerated_count=enumerated_count,
         recovered_count=recovered_count,
