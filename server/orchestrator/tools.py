@@ -163,10 +163,14 @@ ANSWER_CANCEL = "그만두겠다"
 # 사용자가 콘솔 앞에서 실제로 고르는 데 걸리는 시간. 얕은 판독 1왕복 ≈ 66 ms이므로
 # 관측 자체는 무시할 수 있고, 사실상 전부 대기다.
 SELECTION_WATCH_INTERVAL_SECONDS = 2.0
-SELECTION_WATCH_ATTEMPTS = 60  # 약 2분
+# [round24 후속] 처음에 60번(2분) 잡았다가 실물에서 무너졌다. 도구가 턴을 붙잡고
+# 있는 동안 UI로 프레임이 **하나도** 나가지 않아 129초간 화면이 죽은 듯 보였고,
+# 무엇보다 턴 예산을 태워 `status=loop_limit` · 본문 0자로 끝났다 — 사용자는 답을
+# 한 글자도 못 받았다. 빨리 고르는 경우만 잡고 나머지는 다음 메시지로 넘긴다.
+SELECTION_WATCH_ATTEMPTS = 10  # 약 20초
 
 #: 카드에 적어 사용자에게 알리는 대기 시간 — 침묵이 고장으로 보이지 않게 한다.
-_SELECTION_WATCH_MINUTES = round(SELECTION_WATCH_ATTEMPTS * SELECTION_WATCH_INTERVAL_SECONDS / 60)
+_SELECTION_WATCH_SECONDS = round(SELECTION_WATCH_ATTEMPTS * SELECTION_WATCH_INTERVAL_SECONDS)
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
     from server.deploy.pipeline import DeployOutcome
@@ -2854,6 +2858,11 @@ def build_toolset(
             prompt = fixture_type_selection_prompt(requested)
             payload["status"] = "absent"
             payload["can_the_server_add_it"] = False
+            payload["provisioning_plan"] = [
+                {"source": step.source, "action": step.action}
+                for step in steps
+                if not step.available_now
+            ]
             payload["why_not"] = (
                 "명령줄로 픽스처 타입을 추가할 수 없다 — 실측 결과 "
                 "Import FixtureType Library는 Object locked/Failed, "
@@ -2884,19 +2893,21 @@ def build_toolset(
                             QuestionOption(
                                 label=ANSWER_PICK_ON_CONSOLE,
                                 description=(
-                                    "위 절차대로 고르시면 제가 감지해서 바로 "
-                                    "이어갑니다. 고르실 때까지 "
-                                    f"약 {_SELECTION_WATCH_MINUTES}분간 콘솔을 "
-                                    "지켜보며 기다립니다 — 그동안 답이 없어 보여도 "
-                                    "멈춘 것이 아닙니다."
+                                    f"바로 고르시면 {_SELECTION_WATCH_SECONDS}초 안에 "
+                                    "감지해 이어갑니다. 더 걸리시면 다 하신 뒤 "
+                                    "«됐어»라고만 알려 주세요."
                                 ),
                             ),
                             QuestionOption(
                                 label=ANSWER_SUPPLY_FILE,
+                                # 버튼 문구다 — `plan_missing_fixture_type`의 문단을
+                                # 이어 붙이면 내부 표기(SPEC 조건 번호)까지 흘러나온다.
+                                # 실물 화면에서 그렇게 새어 나왔다. 계획 전문은
+                                # payload로만 보낸다.
                                 description=(
-                                    " ".join(s.action for s in steps if not s.available_now)
-                                    or f"GDTF/MVR을 {FIXTURE_TYPE_HINT}에 두시면 "
-                                    "콘솔 Library 탭에 나타납니다."
+                                    f".gdtf 파일을 {FIXTURE_TYPE_HINT}에 "
+                                    "두시면 콘솔 Library 탭의 Internal 소스에 "
+                                    "나타납니다."
                                 ),
                             ),
                             QuestionOption(
@@ -2935,9 +2946,14 @@ def build_toolset(
                             "수량·주소의 패치를 이어서 진행하라."
                         )
                     else:
+                        # 여기서 더 붙잡으면 턴 예산이 말라 본문 0자로 끝난다
+                        # (실측: 2분 감시 -> status=loop_limit). 짧게 끊고 사용자의
+                        # 다음 한 마디로 잇는 편이 낫다 — 그때는 타입이 이미 있으니
+                        # 이 도구가 곧바로 present를 낸다.
                         payload["guidance"] = (
-                            f"{watch.detail} 아직 라이브러리가 그대로다 — 사용자에게 "
-                            "확인을 청하고, 명령은 보내지 마라."
+                            f"{watch.detail} 아직 안 들어왔다 — **여기서 턴을 끝내라.** "
+                            "콘솔에서 고르신 뒤 알려 주시면 그때 이어서 패치하겠다고 "
+                            "짧게 전하고, 명령은 보내지 마라. 계속 기다리지 마라."
                         )
                 elif answer == ANSWER_SUPPLY_FILE:
                     # 파일을 두는 것만으로는 쇼에 안 들어온다 — 콘솔에서 한 번
