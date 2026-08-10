@@ -692,6 +692,43 @@ _R17_VWX_BOUNDARY_SITES: tuple[_Site, ...] = (
     _Site("apply.py", "lencmp", "len(occupants) > 1"),
     _Site("apply.py", "numcmp", "unread > 0"),
     _Site("apply.py", "numcmp", "verification.created_count == 0"),
+    # --- 실물 워크시트 계수 요약행 판별 (columns.py `_column_count_row_indices`) —
+    # Vectorworks `Create Report` 워크시트는 헤더 아래에 컬럼별 레코드 수 행을 둔다.
+    # 그 행은 헤더와 **폭이 같아** reader의 소계 감지를 통과하고 값이 전부 정수라
+    # 최소 레코드 조건도 통과했다(실물 화면 근거로 재현 — 조명 11대가 12대로 읽혔다).
+    # 판별은 휴리스틱이 아니라 **등식**이다: 후보행의 각 값 == 그 컬럼 아래 비어있지
+    # 않은 셀 수. 아래 네 자리가 그 등식의 경계다.
+    #   `>= 2`를 `>= 1`로 밀면 한 칸짜리 정수 행(합계 하나만 남은 꼬리행)이 후보가 되고,
+    #   `>= 3`으로 밀면 두 컬럼짜리 워크시트에서 요약행을 놓쳐 유령이 되살아난다.
+    #   `counts.get(header, 0) + 1`은 계수 그 자체라 ±1이 곧 오판이다.
+    #   `index + 1`(블록 시작)과 슬라이스 끝을 밀면 요약행 자신이 자기 계수에 포함되거나
+    #   다음 블록 첫 행을 잃는다 — 어느 쪽이든 등식이 깨져 요약행이 데이터로 산다.
+    # 양방향 대조군은 `test_vwx_worksheet_grid.py`.
+    _Site("columns.py", "lencmp", "len(nonempty) >= 2"),
+    _Site("columns.py", "offby", "counts.get(header, 0) + 1"),
+    _Site("columns.py", "offby", "index + 1"),
+    _Site("columns.py", "slice", "raw_records[index + 1:end]"),
+    # --- MVR 절대주소 -> `universe.address` 분해 (mvr.py `_split_absolute`) —
+    # MVR `Address`는 break 기준 **절대** DMX(실물 실측 1~1834)이고, MA3 Patch 표기는
+    # `universe.address`다(`patch_add_fixtures.html`). 이 산술이 이 SPEC에서 가장
+    # 고전적인 off-by-one 지대다 — 512/513 경계가 어긋나면 **유니버스 하나가 통째로**
+    # 밀려 176대 전부가 엉뚱한 주소에 선다.
+    #   `absolute - 1`을 빼면 512가 유니버스 2로 넘어가고,
+    #   `// + 1`을 지우면 유니버스가 0부터 세어져 전 픽스처가 한 칸 아래로,
+    #   `% + 1`을 지우면 주소가 0..511이 되어 각 유니버스 첫 칸이 사라진다.
+    # 양방향 대조군은 `test_vwx_mvr.py`의 경계 파라미터 6행(1·512·513·1024·1025·1834).
+    _Site("mvr.py", "arith", "zero_based % UNIVERSE_WIDTH"),
+    _Site("mvr.py", "arith", "zero_based // UNIVERSE_WIDTH"),
+    _Site("mvr.py", "offby", "absolute - 1"),
+    _Site("mvr.py", "offby", "zero_based % UNIVERSE_WIDTH + 1"),
+    _Site("mvr.py", "offby", "zero_based // UNIVERSE_WIDTH + 1"),
+    # GDTF에서 읽은 채널 수를 실을지 판정하는 자리. `> 0`을 `>= 0`으로 밀면 채널 수를
+    # 못 읽은 모드가 `"0"`을 싣고, 그 0이 하류에서 「0채널 픽스처」로 읽힌다.
+    # 못 읽었으면 **비운다** — 추측한 숫자를 싣지 않는다.
+    _Site("mvr.py", "numcmp", "entry.modes[mode] > 0"),
+    # `.gdtf` 확장자를 벗겨 `GDTFSpec` 키를 만드는 자리. 길이가 어긋나면 컨테이너의
+    # 타입 파일과 장면 XML의 참조가 안 맞아 채널 수를 통째로 잃는다.
+    _Site("mvr.py", "slice", "name[:-len('.gdtf')]"),
     _Site("diff.py", "lencmp", "len(designed_rig.observed_systems) >= 2"),
     _Site("diff.py", "offby", "console_counts.get(fixture_type, 0) + 1"),
     _Site("diff.py", "offby", "designed_counts.get(itype, 0) + 1"),
@@ -741,15 +778,18 @@ _R17_VWX_BOUNDARY_SITES: tuple[_Site, ...] = (
     _Site("rig.py", "offby", "i + 1"),
     _Site("rig.py", "slice", "intervals[i + 1:]"),
     _Site("rig.py", "slice", "raw.strip().upper()[:1]"),
-    # --- round23 R23-2 (CostBasis) — 회수 비용 고지의 `c·m` 항. 비용표
-    # `U + k(1 + c·m)`에서 `c`는 모드 한 종당 왕복 수이고 **사후에 알 수 없다**
-    # (`read_channel_counts`가 스윕 호출 인자라 라이브러리에 남지 않는다). 그래서
-    # 상수가 아니라 **상한**을 곱하며, 이름이 그 사실을 말한다. `*`를 `+`로 밀거나
-    # 상한을 1로 낮추면 고지가 **과소보고**로 돌아가 `False`(= "쟀는데 범위 안"이라는
-    # 긍정 주장)가 거짓이 된다 — R23-2가 정확히 그 상태였다. 반대로 상한을 키우면
-    # 깨끗한 스냅샷이 상시 고지를 세운다(과차단). 양방향 대조군은
-    # `test_autopatch_types.py`의 round23 비용 절 — 상한·불변식·단조성·경계 등식.
-    _Site("typemap.py", "arith", "RECOVERY_COST_MODE_ROUNDTRIPS_CEILING * len(entry.modes)"),
+    # --- round23 R23-2 · round24 R24-5 (CostBasis · EquivDisclosure) — 회수 비용 고지의
+    # `c·m` 항. 비용표 `U + k(1 + c·m)`에서 `c`는 모드 한 종당 왕복 수다. round23은
+    # 이 자리에 **상한 상수**를 곱했고(호출 인자를 사후에 못 읽는다는 이유), 그래서
+    # 기각선 3,872(= `c=1` negative 단가로 유도된 수)와 **단위가 어긋났다** — negative
+    # 분기가 약 1.9배 엄하게 판정됐다(R24-5). 이제 스윕이 자기 단가를 기록하고
+    # (`FixtureTypeLibrary.recovery_mode_roundtrips`) 이 자리는 그 값을 곱한다.
+    # `*`를 `+`로 밀거나 단가를 낮추면 고지가 **과소보고**로 돌아가 `False`(= "쟀는데
+    # 범위 안"이라는 긍정 주장)가 거짓이 된다. 반대로 단가를 키우면 negative 분기가
+    # 다시 과다 고지로 돌아간다. **양방향 대조군**은 `test_autopatch_types.py`의
+    # round23 비용 절(상한·불변식·단조성·경계 등식)과 round24 단위 절(분기 간 판정
+    # 일관성 · 감사 오탐 입력).
+    _Site("typemap.py", "arith", "mode_roundtrips * len(entry.modes)"),
     _Site("typemap.py", "lencmp", "len(mode_candidates) == 1"),
     _Site("typemap.py", "lencmp", "len(type_candidates) == 1"),
     # --- round23 R22-B 초과 열거 (CompletenessGate) — 계수 대조의 **반대 방향**을

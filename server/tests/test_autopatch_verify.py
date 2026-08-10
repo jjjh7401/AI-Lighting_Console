@@ -109,6 +109,21 @@ MODE_2 = "Mode 2"
 
 
 def _library(*types: LibraryType, available: bool = True) -> FixtureTypeLibrary:
+    """**전수로 읽힌** 라이브러리 스냅샷 — 선언 총계까지 채운다.
+
+    [round25 R24-2] 이전 판은 `child_count`를 비워 두었다. 그래서 이 파일 **34건**이
+    *"선언 총계를 못 읽었다"*는 상태 위에서 돌았고, 그 상태에서 index 형태 단독 해석이
+    확정되는 것이 R24-2의 결함이다. 예외 하나가 아니라 **공용 픽스처의 기본값**이
+    결함 상태였다는 것이 그 결함이 상용으로 남은 이유다.
+
+    총계·열거 계수·반환 행 수를 **함께** 채운다. 하나만 채우면 `enumeration_short`가
+    서서 스냅샷이 자기모순이 된다. 셋을 함께 주는 것이 실물이 준 형태다 —
+    `childCount == len(children)` · `truncated=false`(2026-08-08 M8 실측).
+
+    총계를 **비운** 상태를 시험해야 하는 자리는 이 헬퍼를 쓰지 않고
+    `_r25_unread_total()`을 쓴다. 그 쌍(채운 것/비운 것)을 의도적으로 남긴다 —
+    전부 채우면 `None` 경로가 무방비로 남고, 그것이 지금 상황을 만든 원인이다.
+    """
     if not types:
         types = (
             LibraryType(index=1, name=MMX, modes=(LibraryMode(index=1, name=MODE_1),)),
@@ -121,7 +136,13 @@ def _library(*types: LibraryType, available: bool = True) -> FixtureTypeLibrary:
                 ),
             ),
         )
-    return FixtureTypeLibrary(types=types, available=available)
+    return FixtureTypeLibrary(
+        types=types,
+        available=available,
+        child_count=len(types),
+        enumerated_count=len(types),
+        returned_row_count=len(types),
+    )
 
 
 def _record(slot: int, patch: str | None, type_display: str | None, mode_display: str | None):
@@ -282,6 +303,242 @@ def test_no_channel_count_is_parsed_out_of_a_display_string():
     (observed,) = _console(_record(1, "1.1", "FixtureType 3", "2 Mode 2"))
     assert not hasattr(observed, "footprint")
     assert not hasattr(observed, "channel_count")
+
+
+# --------------------------------------------------------------------------
+# [round25 R24-2] 선언 총계 미판독 — 부정 증거를 쓸 **자격**
+# --------------------------------------------------------------------------
+#
+# round24가 `typemap`에서 명명한 근본 원인(**`None`이 두 뜻**: *"전수 확인함"* /
+# *"말할 근거 없음"*)이 형제 표면 `apply._resolve_library_type`에 그대로 남아 있었다.
+# 그 자리는 index 형태 해석을 *"그 이름이 열거에 없다"*는 **부정 증거** 위에 세우고,
+# 그 증거의 자격을 `library.enumeration_incomplete` 하나로 쟀다 — 그런데 그 union의
+# 계수 갈래는 전부 `child_count is None`에서 **거짓**이다. 총계를 못 읽은 스냅샷이
+# "전수를 봤다"로 읽혔고, 그 위에서 `FixtureType 2`가 라이브러리 타입으로 **확정**돼
+# `screen_idempotent`의 멱등/충돌 판정과 `verify_patch`로 갔다.
+#
+# 아래 세 시험이 **의도적으로 남긴 한 쌍**이다: `_r25_unread_total()`(비운 것) ·
+# `_r25_declared_total()`(채운 것). 공용 픽스처 `_library()`는 이제 총계를 채우므로,
+# 이 쌍이 없으면 `None` 경로가 무방비로 남는다 — 그것이 지금 상황을 만든 원인이다.
+
+_R25_TYPES = (
+    LibraryType(index=1, name=MMX, modes=(LibraryMode(index=1, name=MODE_1),)),
+    LibraryType(
+        index=3,
+        name=LED,
+        modes=(LibraryMode(index=1, name=MODE_1), LibraryMode(index=2, name=MODE_2)),
+    ),
+)
+
+
+def _r25_unread_total() -> FixtureTypeLibrary:
+    """선언 총계를 **못 읽은** 라이브러리 — 어느 축도 서지 않는다.
+
+    이것이 round24까지 `_library()`의 기본값이었다. 예외가 아니라 **기본값**이었다.
+    """
+    return FixtureTypeLibrary(types=_R25_TYPES, available=True)
+
+
+def _r25_declared_total() -> FixtureTypeLibrary:
+    """선언 총계를 읽었고 열거가 그것과 일치하는 라이브러리 — 실물 M8이 준 형태다."""
+    return FixtureTypeLibrary(
+        types=_R25_TYPES,
+        available=True,
+        child_count=len(_R25_TYPES),
+        enumerated_count=len(_R25_TYPES),
+        returned_row_count=len(_R25_TYPES),
+    )
+
+
+def test_r25_an_unread_declared_total_refuses_the_index_only_reading():
+    """[R24-2 결함 재현] 총계를 못 읽었으면 *"열거에 없다"*를 근거로 쓸 수 없다.
+
+    죽이는 뮤테이션:
+      · `_resolve_library_type`의 가드를 `library.enumeration_incomplete`로 되돌리면
+        ③이 실패한다(①이 그 값을 거짓으로 못박으므로 가드가 발화하지 못한다).
+      · 가드를 통째로 지워도 ③이 실패한다.
+      · `_confirmable_from`을 `is not False`로 바꾸면 ②는 살아남고 ③이 실패한다 —
+        `None`을 참으로 취급하는 방향이 정확히 이 결함이다.
+    """
+    from server.vwx.typemap import _confirmable_from, _library_list_completeness
+
+    library = _r25_unread_total()
+
+    # ① 구판 가드가 보던 값은 **전부 거짓**이다 — 축이 하나도 서지 않는다.
+    assert library.truncated is False
+    assert library.enumeration_short is False
+    assert library.over_enumerated is False
+    assert library.rows_discarded == 0
+    assert library.enumeration_incomplete is False
+    # ② 그런데 이 목록을 전수라고 **주장하지도 못한다** — 삼치의 `None`이다.
+    assert _library_list_completeness(library).complete is None
+    assert _confirmable_from(_library_list_completeness(library)) is False
+    # ③ 그래서 index 단독 해석은 확정되지 않는다. 확정보다 약한 근거로 확정이 나갈 수 없다.
+    (observed,) = _console(_record(1, "3.1", "FixtureType 3", "2 Mode 2"), library=library)
+    assert observed.type_name is None
+    assert observed.mode_name is None
+    assert observed.identity_resolved is False
+    assert observed.type_display == "FixtureType 3"
+
+
+def test_r25_a_declared_total_that_matches_the_enumeration_still_confirms():
+    """[짝 — 정상 확정 무회귀] 총계를 읽었고 열거가 그것과 같으면 여전히 확정된다.
+
+    앞 시험과 **한 칸만** 다르다(`child_count` 계열). 그 한 칸이 판정을 가른다는 것이
+    이 쌍의 전부이고, 이 쪽이 없으면 앞 시험은 과차단을 결함으로 오인한 것이 된다.
+
+    죽이는 뮤테이션: 가드를 `not by_name`과 무관하게 발화시키거나 완전성 술어를 항상
+    거짓으로 만들면 이 시험이 실패한다(과차단 방향).
+    """
+    from server.vwx.typemap import _confirmable_from, _library_list_completeness
+
+    library = _r25_declared_total()
+    assert _library_list_completeness(library).complete is True
+    assert _confirmable_from(_library_list_completeness(library)) is True
+
+    (observed,) = _console(_record(1, "3.1", "FixtureType 3", "2 Mode 2"), library=library)
+    assert observed.type_name == LED
+    assert observed.mode_name == MODE_2
+    assert observed.identity_resolved is True
+
+
+def test_r25_positive_name_evidence_survives_an_unread_declared_total():
+    """[과차단 경계] 가드가 막는 것은 **부정 증거**뿐이다.
+
+    이름이 정확히 일치한 것은 총계를 못 읽었는지와 무관한 **긍정 증거**다. 이것까지
+    막으면 총계를 못 읽는 콘솔에서 멱등 판정이 영영 성립하지 않는다 — round11 N01이
+    같은 자리에서 이미 내린 판단이고, 그 판단은 이번에도 유효하다.
+
+    죽이는 뮤테이션: 가드에서 `not by_name` 절을 지우면 이 시험이 실패한다.
+    """
+    library = _r25_unread_total()
+    (observed,) = _console(_record(1, "3.1", LED, "2 Mode 2"), library=library)
+    assert observed.type_name == LED
+    assert observed.mode_name == MODE_2
+    assert observed.identity_resolved is True
+
+
+def test_r25_the_live_m8_library_confirms_every_index_form_display():
+    """[HARD 과차단 금지] 실물 M8 라이브러리에서 index 형태 표시가 **8모드 전부** 확정된다.
+
+    이 자리는 **정상 확정 경로**다 — 콘솔이 픽스처에 실어 주는 타입 표시는 실측 형태가
+    `FixtureType 3`이라(§E.2 M0 1차) 대개 `by_name`이 비어 있고, 확정은 index 해석에
+    달려 있다. 여기를 조이면 멀쩡한 리그에서 정체가 확정되지 않고 멱등 판정이 통째로
+    `identity_unconfirmed`로 내려앉는다. 그래서 새 가드가 실물에서 **한 번도 발화하지
+    않는다**는 것을 값으로 못박는다.
+
+    실물이 준 형태(`childCount == len(children)` · `truncated=false`)를 그대로 쓰는
+    `LibraryRigPort`로 읽고, 3종 × 전 8모드를 index 형태로 대조한다.
+
+    죽이는 뮤테이션: 완전성 술어를 항상 거짓으로 만들거나 가드에서 `not by_name`을
+    지우면 8건이 전부 실패한다.
+    """
+    from server.tests.test_autopatch_types import _R21_THREE_TYPE_LIBRARY
+    from server.vwx.typemap import read_fixture_type_library
+
+    library = read_fixture_type_library(LibraryRigPort(_R21_THREE_TYPE_LIBRARY))
+    # ① 실물 스냅샷의 형태 전제 — 이것이 깨지면 아래는 M8을 재는 것이 아니다.
+    assert library.truncated is False
+    assert library.child_count == len(library.types) == 3
+    assert library.enumeration_incomplete is False
+
+    cases = [
+        (type_index, mode_index, type_name, mode_name)
+        for type_index, (type_name, modes) in enumerate(_R21_THREE_TYPE_LIBRARY, start=1)
+        for mode_index, (mode_name, _channels) in enumerate(modes, start=1)
+    ]
+    assert len(cases) == 8, cases  # 4 + 1 + 3 — 실물 3종의 전 모드
+
+    observed = read_console_fixtures(
+        _inventory(
+            *(
+                _record(slot, f"1.{slot}", f"FixtureType {t}", f"{m} {mode_name}")
+                for slot, (t, m, _type_name, mode_name) in enumerate(cases, start=1)
+            )
+        ),
+        library=library,
+    )
+    # ② 8모드 전부 확정 — 미확정이 하나도 없다.
+    assert [fixture.identity_resolved for fixture in observed] == [True] * 8
+    assert [(fixture.type_name, fixture.mode_name) for fixture in observed] == [
+        (type_name, mode_name) for _t, _m, type_name, mode_name in cases
+    ]
+    # ③ **비공허성** — 이 확정들이 실제로 새 가드를 지나왔다는 증거. 8건 중 7건은
+    #    이름 일치가 0건이라 index 해석 **단독**이고, 그것을 허가하는 것이 완전성
+    #    술어다(허가가 없으면 ②가 7건 무너진다). 나머지 1건은 실물 M8의
+    #    `FixtureType 2` — 이름이 곧 index 형태인 타입이라(U-04 · AC-026⑦) 긍정
+    #    증거로도 확정되고, 가드와 무관하다. 그 1건을 7건과 같이 세면 이 대조군이
+    #    "가드를 지났다"를 재지 못한다.
+    index_only = [
+        fixture
+        for fixture in observed
+        if not [entry for entry in library.types if entry.name == fixture.type_display]
+    ]
+    assert len(index_only) == 7
+    coincident = [fixture for fixture in observed if fixture not in index_only]
+    assert {fixture.type_display for fixture in coincident} == {"FixtureType 2"}
+
+
+#: [round25 R24-2 · 형제 전수] `apply.py`가 **부재를 근거로 결론을 내는 자리** 전수와,
+#: 그 결론이 기대는 열거 · 그 열거의 **선언 총계 필드 타입**.
+#:
+#: 넷 모두 *"열거에 없으니 없다"*를 쓴다. 갈리는 것은 총계를 **못 읽을 수 있는가**다:
+#: `prechk.read_inventory`는 `childCount`를 못 읽으면 `InventoryReadError`로 거부하므로
+#: 아래 셋에는 *"말할 근거 없음"* 상태가 도착하지 않는다. `FixtureTypeLibrary`만
+#: `int | None`이고, 그 비대칭이 R24-2의 뿌리다.
+_R25_NEGATIVE_EVIDENCE_SITES = (
+    ("_resolve_library_type", "FixtureTypeLibrary", "int | None"),
+    ("screen_console_occupancy", "Inventory", "int"),
+    ("screen_idempotent", "Inventory", "int"),
+    ("verify_patch", "Inventory", "int"),
+)
+
+
+def test_r25_only_one_negative_evidence_surface_reads_an_optional_declared_total():
+    """형제 전수 — 부재를 근거로 쓰는 자리 넷 중 **셋은 총계가 필수**다.
+
+    R24-2를 한 자리만 고치고 끝내지 않기 위한 등기다. 다음 라운드가 이 파일에서 같은
+    병을 찾으면 이 표부터 본다.
+
+    죽이는 뮤테이션:
+      · 표에서 어느 행을 지워도 ①이 실패한다(넷 전부 `apply.py`에 실재해야 한다).
+      · `prechk.inventory`가 총계 미판독을 허용하게 바뀌면 ②·④가 실패한다 — 그 순간
+        형제 셋이 같은 병에 걸린다는 사실이 여기서 먼저 발화한다.
+      · `_resolve_library_type` 행의 타입을 `int`로 적으면 ③이 실패한다.
+    """
+    import server.vwx.apply as apply_module
+    from server.prechk.inventory import FIXTURE_ROOT as _ROOT
+    from server.prechk.inventory import Inventory as _Inventory
+    from server.prechk.inventory import InventoryReadError, read_inventory
+
+    # ① 표의 자리가 전부 실재한다 — 이름만 남고 함수가 사라지는 등기를 막는다.
+    for name, _owner, _annotation in _R25_NEGATIVE_EVIDENCE_SITES:
+        assert hasattr(apply_module, name), name
+
+    # ② 선언 총계 타입은 표가 적은 그대로다.
+    owners = {"FixtureTypeLibrary": FixtureTypeLibrary, "Inventory": _Inventory}
+    for name, owner, annotation in _R25_NEGATIVE_EVIDENCE_SITES:
+        assert owners[owner].__dataclass_fields__["child_count"].type == annotation, name
+
+    # ③ 그중 총계를 못 읽을 수 있는 자리는 **하나뿐**이고, 그 자리가 이번에 닫혔다.
+    optional = {
+        name
+        for name, _owner, annotation in _R25_NEGATIVE_EVIDENCE_SITES
+        if annotation == "int | None"
+    }
+    assert optional == {"_resolve_library_type"}
+
+    # ④ 나머지 셋의 근거 — 리더가 총계 미판독을 **거부한다**(단정하지 않는다).
+    class _NoTotalPort:
+        def query_state(self, path: str) -> dict:
+            return {"ok": True, "path": path, "node": {"name": "Fixtures"}, "children": []}
+
+        def query_property(self, path: str, property_name: str) -> dict:  # pragma: no cover
+            raise AssertionError("총계를 못 읽으면 프로퍼티까지 가지 않는다")
+
+    with pytest.raises(InventoryReadError, match="childCount"):
+        read_inventory(_NoTotalPort())
+    assert _ROOT  # 경로 상수가 살아 있어야 위 포트가 그 경로로 불린다
 
 
 # --------------------------------------------------------------------------
@@ -846,21 +1103,39 @@ def test_a_short_read_does_not_downgrade_an_actual_observation():
 
 
 def test_a_truncated_type_library_refuses_to_resolve_a_display_string():
-    """[N01] 열거가 절단되면 '그 이름의 타입이 없다'를 단정할 수 없다 — 모호성 가드가 공허해진다."""
+    """[N01] 열거가 절단되면 '그 이름의 타입이 없다'를 단정할 수 없다 — 모호성 가드가 공허해진다.
+
+    [round25 R24-2] 총계를 **선언한다**. 비워 두면 이 시험은 절단 플래그와 총계 미판독
+    **둘 다**에 걸려 어느 쪽이 막았는지 말하지 못한다 — 플래그 갈래를 지우는 뮤턴트가
+    미판독 갈래에 걸려 살아남는다. 재는 축 하나만 위반시킨다.
+    """
     truncated = FixtureTypeLibrary(
-        types=(LibraryType(index=2, name="Robin MMX"),), available=True, truncated=True
+        types=(LibraryType(index=2, name="Robin MMX"),),
+        available=True,
+        truncated=True,
+        child_count=1,
+        enumerated_count=1,
+        returned_row_count=1,
     )
+    assert truncated.enumeration_short is False  # 막는 것은 **플래그**다.
     (observed,) = _console(_record(1, "1.1", "FixtureType 2", "1 Mode 1"), library=truncated)
     assert observed.type_name is None
     assert observed.identity_resolved is False
 
 
 def test_the_truncation_refusal_control_a_complete_library_still_resolves():
-    """비공허성 — 같은 입력이 완전한 열거에서는 해석된다."""
+    """비공허성 — 같은 입력이 완전한 열거에서는 해석된다.
+
+    [round25 R24-2] *"완전한 열거"*라 이름 붙은 대조군이 **선언 총계를 읽지 않은**
+    스냅샷이었다. 이름이 코드보다 앞서 나간 자리다 — 이제 이름이 말하는 것을 값이 준다.
+    """
     complete = FixtureTypeLibrary(
         types=(LibraryType(index=2, name="Robin MMX", modes=(LibraryMode(index=1, name=MODE_1),)),),
         available=True,
         truncated=False,
+        child_count=1,
+        enumerated_count=1,
+        returned_row_count=1,
     )
     (observed,) = _console(_record(1, "1.1", "FixtureType 2", "1 Mode 1"), library=complete)
     assert observed.type_name == "Robin MMX"
@@ -873,7 +1148,14 @@ def test_ambiguity_is_refused_regardless_of_enumeration_order(order):
         i: LibraryType(index=i, name="FixtureType 3", modes=(LibraryMode(index=1, name=MODE_1),))
         for i in (3, 9)
     }
-    library = FixtureTypeLibrary(types=tuple(by_index[i] for i in order))
+    # [round25 R24-2] 재는 축은 **모호성**이다 — 총계를 비우면 완전성 가드가 먼저 막아
+    # 같은 `None`이 나오고, 이 시험은 순서 불변을 재지 못한 채 초록으로 남는다.
+    library = FixtureTypeLibrary(
+        types=tuple(by_index[i] for i in order),
+        child_count=2,
+        enumerated_count=2,
+        returned_row_count=2,
+    )
     (observed,) = _console(_record(1, "1.1", "FixtureType 3", "1 Mode 1"), library=library)
     assert observed.type_name is None
 
@@ -5572,6 +5854,10 @@ _R17_SENTENCE_SURFACES = (
     ("columns.py", "detail"),
     ("diff.py", "FID_CID_UNREACHABLE_REASON"),
     ("diff.py", "reason"),
+    # [round24 후속] MVR 판독 실패 사유. 컨테이너 아님 · 장면 XML 부재/파손 ·
+    # GDTF 미동봉 · 주소 비정수 다섯 갈래가 서로 다른 문장을 내고, 넷은 조작자가
+    # **파일을 고쳐야** 하는 사건이라 무엇이 없는지 정확히 말해야 한다.
+    ("mvr.py", "detail"),
     ("patchplan.py", "IRREVERSIBLE_WARNING"),
     # [round18 R18-A] `_FidRangeParse.defect` — `fid_range` 입력의 결함 사유가
     # 조작자에게 나가는 표면. 형식·바닥·순서 세 갈래가 서로 다른 문장을 낸다.
@@ -5589,7 +5875,11 @@ _R17_SENTENCE_SURFACES = (
     ("typemap.py", "ALIAS_RESOLVED_REASON"),
     ("typemap.py", "CANDIDATES_PRESENTED_REASON"),
     ("typemap.py", "FOOTPRINT_DESCOPE_REASON"),
+    # [round25 R24-1 · SentenceReach] 점유폭 불일치 사유가 **원인별로** 갈렸다 —
+    # 타입 미검증과 채널 계수 미판독은 조작자의 조치가 다르므로 문장도 따로다.
+    ("typemap.py", "FOOTPRINT_MISMATCH_CHANNEL_COUNTS_UNREAD_REASON"),
     ("typemap.py", "FOOTPRINT_MISMATCH_CHOOSABLE_REASON"),
+    ("typemap.py", "FOOTPRINT_MISMATCH_TYPE_UNVERIFIED_REASON"),
     ("typemap.py", "FOOTPRINT_MISMATCH_UNVERIFIED_REASON"),
     ("typemap.py", "FOOTPRINT_UNMATCHABLE_REASON"),
     # [round21 R20-D] 폐기 축 사유 — 절단·판독실패와 **다른 조치**를 가리키므로 문장도
@@ -5822,11 +6112,22 @@ def _r17_assert_su_table_shape(rows: tuple[_SingleUnambiguousRow, ...]) -> None:
 
 
 def _r17_resolved_type_name(row: _SingleUnambiguousRow, *, reverse: bool = False) -> str | None:
-    """표시 문자열을 **프로덕션 경로**(`read_console_fixtures`)로 확정해 이름만 꺼낸다."""
+    """표시 문자열을 **프로덕션 경로**(`read_console_fixtures`)로 확정해 이름만 꺼낸다.
+
+    [round25 R24-2] 선언 총계를 채운다. 이 격자가 재는 축은 **후보 계수**(by_name ×
+    by_index)이지 목록 완전성이 아니다 — 총계를 비우면 `(0, 1)` 칸이 완전성 가드에
+    먼저 걸려 `None`이 되고, 격자는 계수 판정을 재지 못한 채 그 칸만 색이 바뀐다.
+    """
     types = tuple(reversed(row.types)) if reverse else row.types
     observed = read_console_fixtures(
         _inventory(_record(1, "1.5", row.display, None)),
-        library=FixtureTypeLibrary(types=types, available=True),
+        library=FixtureTypeLibrary(
+            types=types,
+            available=True,
+            child_count=len(types),
+            enumerated_count=len(types),
+            returned_row_count=len(types),
+        ),
     )
     return observed[0].type_name
 

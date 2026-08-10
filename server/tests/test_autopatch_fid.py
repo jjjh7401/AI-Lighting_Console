@@ -1439,7 +1439,7 @@ def test_the_confirmation_required_rejection_never_touches_the_console():
 
 
 # ==========================================================================
-# S16-03 · M69 — 부분 관측 고지(`_fid_precheck_incomplete_check`)는 전수 단정된다
+# S16-03 · M69 — 부분 관측 고지(`_fid_precheck_incomplete_checks`)는 전수 단정된다
 #
 # GO 분기가 부분 관측으로 배정을 거부할 때 조작자에게 "무엇을 못 봤는지" 알리는 **유일한
 # 구조화 항목**인데 세 뮤테이션이 전부 SURVIVED였다:
@@ -1507,7 +1507,7 @@ def test_the_incomplete_check_carries_every_read_axis_with_the_observed_value(
 ):
     """[round16 S16-03 · M69] 고지가 **여덟 축 계수 전부**를 관측값 그대로 싣는다.
 
-    [round16 M69①] `patchplan.py` `_fid_precheck_incomplete_check`에서 `**read.to_dict()`를
+    [round16 M69①] `patchplan.py` `_fid_precheck_incomplete_checks`에서 `**read.to_dict()`를
       지우면 키 집합 단정이 실패한다.
     [round16 M69②] 같은 자리에 `"complete": True, "attempted": True`를 심으면 값 단정과
       아래 자기모순 금지 단정이 실패한다.
@@ -1613,7 +1613,7 @@ def _load_patchplan(source: str) -> dict:
 def test_the_patchplan_copy_loader_reproduces_the_untouched_reason():
     """사본 적재가 진짜임을 먼저 고정한다 — 원문 사본은 원본과 같은 사유를 낸다."""
     namespace = _load_patchplan(PATCHPLAN_SOURCE)
-    check = namespace["_fid_precheck_incomplete_check"](namespace["ExistingFidRead"]())
+    (check,) = namespace["_fid_precheck_incomplete_checks"](namespace["ExistingFidRead"]())
     (original,) = _plan_with(None).skipped_checks
     assert check["reason"] == original["reason"]
     assert PATCHPLAN_SOURCE.count(INCOMPLETE_REASON_ANCHOR) == 1, "사유 앵커가 유일하지 않다"
@@ -1665,7 +1665,7 @@ def test_the_reassuring_ban_catches_each_probe_planted_in_the_production_reason(
     planted = PATCHPLAN_SOURCE.replace(INCOMPLETE_REASON_ANCHOR, f'            "{sentence}"', 1)
     assert planted != PATCHPLAN_SOURCE
     namespace = _load_patchplan(planted)
-    check = namespace["_fid_precheck_incomplete_check"](namespace["ExistingFidRead"]())
+    (check,) = namespace["_fid_precheck_incomplete_checks"](namespace["ExistingFidRead"]())
 
     offenders = [p for p in _R16_REASSURING_PHRASES if p in check["reason"]]
     assert offenders == [phrase]
@@ -1846,7 +1846,7 @@ def test_a_boolean_fid_value_is_counted_as_unreadable_not_as_fid_one():
 #     전건 통과했다. `luagen._lua_int`가 만드는 것은 **사람이 콘솔에서 실행할 Lua의 `fid`**다.
 #     여기서 스캔을 `server/vwx` **전 모듈**로 넓히고, 각 가드마다 프로덕션 호출로 짚는다.
 #
-#   [round17 #6] `_fid_precheck_incomplete_check` 사유가 어휘목록(금지 문구 8개)과
+#   [round17 #6] `_fid_precheck_incomplete_checks` 사유가 어휘목록(금지 문구 8개)과
 #     부분문자열 조각 2개로만 지켜졌다. 사유 **뒤에** 안심 문장을 붙이면 셋 다 통과한다.
 #     같은 커밋이 caveat 사유에는 **문장 전문 리터럴 고정**을 줬다 — 형제에게 다른 등급을
 #     준 전형이다. 여기서 같은 등급으로 맞춘다.
@@ -2000,9 +2000,10 @@ def test_the_incomplete_check_reason_is_fixed_verbatim():
     assert check["reason"] == _R17_INCOMPLETE_REASON
 
     # 같은 문장이 **함수 단위**에서도 그대로다 — 계획 조립이 뒤에 무엇을 덧대지 않는다.
-    from server.vwx.patchplan import _fid_precheck_incomplete_check
+    from server.vwx.patchplan import _fid_precheck_incomplete_checks
 
-    assert _fid_precheck_incomplete_check(ExistingFidRead())["reason"] == _R17_INCOMPLETE_REASON
+    (function_check,) = _fid_precheck_incomplete_checks(ExistingFidRead())
+    assert function_check["reason"] == _R17_INCOMPLETE_REASON
 
     # 그리고 조작자 화면 payload에도 같은 전문이 나간다.
     (payload_check,) = _plan_with(None).to_dict()["skipped_checks"]
@@ -2023,7 +2024,8 @@ def test_the_verbatim_reason_gate_is_not_vacuous():
     )
     assert planted != PATCHPLAN_SOURCE
     namespace = _load_patchplan(planted)
-    reason = namespace["_fid_precheck_incomplete_check"](namespace["ExistingFidRead"]())["reason"]
+    (planted_check,) = namespace["_fid_precheck_incomplete_checks"](namespace["ExistingFidRead"]())
+    reason = planted_check["reason"]
 
     # ① 전문 동등은 깨진다 — 이것이 round17이 새로 세운 등급이다.
     assert reason != _R17_INCOMPLETE_REASON
@@ -3801,3 +3803,479 @@ def test_r21_asking_the_same_fid_twice_does_not_reach_the_console_twice():
     assert first  # 물어본 FID의 점유자를 실제로 알아냈다
     assert second == first
     assert after_second == after_first
+
+
+# ==========================================================================
+# round24 R20-C — `reason()`은 **어느 호출에서든** 참을 말한다
+#
+# round20 부수 발견: 같은 반환값에서 `complete=True`인데 `reason()`이 `"부분 관측이다"`를
+# 냈다. `not complete`이면 여섯 축 중 하나는 반드시 참이라 `parts`가 비지 않으므로
+# **그 폴백의 유일한 도달 입력이 `complete=True`였다** — 죽은 코드가 아니라 거짓말할 때만
+# 살아나는 코드다. 유일 프로덕션 호출부가 `if precheck_enabled and not existing_read.complete:`
+# 안이라 프로덕션에서는 그 거짓이 도달하지 않았지만, 그 가드는 **호출부의 성질**이었다.
+#
+# 처방은 R18-D와 **같은 모양**이다: 문장 생산자를 총함수로 만든다. R18-D는 형태 불변식의
+# 유일한 프로덕션 강제 자리가 차단 화면을 짓는 자리였음을 발견하고 `assemble_sentences`의
+# `ValueError`를 `assemble_sentences_or_defect` 강등으로 바꿨다 — *던지지 않는다*. 여기서
+# 잘못된 문맥에 예외를 새로 심으면 그 기제를 이 자리에 다시 만드는 것이고, round18이 함께
+# 못박은 대로 **강제를 넓히는 것이 곧 실패 표면을 넓히는 것**이다.
+#
+# 이 절의 스코프는 `patchplan.py` **한 파일**이다 — 「전 모듈」을 보는 게이트가 아니므로
+# `iter_vwx_modules`를 쓰지 않는다(그 어휘를 쓰면 스코프 주장이 거짓이 된다).
+# ==========================================================================
+
+#: 판정 축의 **작은 전수 격자**. 계수 축에 음수를 넣는 이유는 아래 두 번째 대조군이 밝힌다.
+_R20C_AXIS_GRID = {
+    "attempted": (False, True),
+    "root_unreadable": (False, True),
+    "over_enumerated": (False, True),
+    "unseen": (None, -1, 0, 1),
+    "unreadable_fids": (-1, 0, 1),
+    "unusable_rows": (-1, 0, 1),
+    "unparsable_rows": (-1, 0, 1),
+}
+
+
+def _r20c_axis_reads():
+    """`_R20C_AXIS_GRID`의 데카르트 곱 전수를 `ExistingFidRead`로 짓는다."""
+    import itertools
+
+    from server.vwx.patchplan import ExistingFidRead
+
+    names = tuple(_R20C_AXIS_GRID)
+    for values in itertools.product(*(_R20C_AXIS_GRID[name] for name in names)):
+        kwargs = dict(zip(names, values, strict=True))
+        yield kwargs, ExistingFidRead(child_count=2, enumerated_count=3, **kwargs)
+
+
+def _r20c_completeness_axes() -> frozenset[str]:
+    """`patchplan.py`에서 `ExistingFidRead.complete`가 읽는 `self.X` 전수 (AST).
+
+    이 한 모듈만 읽는다 — 판정 축의 유일한 정의다.
+    """
+    import ast
+
+    module = ast.parse(PATCHPLAN_SOURCE)
+    cls = next(
+        node
+        for node in module.body
+        if isinstance(node, ast.ClassDef) and node.name == "ExistingFidRead"
+    )
+    complete = next(
+        node for node in cls.body if isinstance(node, ast.FunctionDef) and node.name == "complete"
+    )
+    return frozenset(
+        node.attr
+        for node in ast.walk(complete)
+        if isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "self"
+    )
+
+
+def test_r20c_the_axis_grid_is_a_bijection_onto_the_completeness_predicate():
+    """격자에서 축을 지우면 실패하고, `complete`에 축을 더하면 격자 없이는 통과하지 못한다.
+
+    이 단정이 없으면 격자는 장식이다 — 축 하나를 지워도 아래 전수 대조군들이 **조용히
+    좁아진 채로** 통과한다(뮤테이션 M14가 실제로 살아남았다). 축을 늘리는 쪽도 같이 막는다:
+    `complete`에 새 축이 생기면 `reason()`도 그 축을 말해야 하고, 그 사실을 재려면
+    격자에 표본이 있어야 한다.
+    """
+    assert frozenset(_R20C_AXIS_GRID) == _r20c_completeness_axes()
+
+
+def test_r20c_every_axis_sample_set_exercises_its_own_pivot():
+    """축 이름만 남기고 **표본을 줄이는** 조작을 막는다 — 전단사는 그것을 못 잡는다.
+
+    뮤테이션 M17이 `"unusable_rows": (-1, 0, 1)`을 `(0,)`으로 줄여도 위 전단사와 아래
+    전수 대조군이 전부 통과했다: 축은 남았고 격자만 조용히 좁아졌다. 그래서 표본이
+    **판정을 실제로 뒤집는지**를 따로 잰다. 그리고 `complete`가 `> 0`으로 묻는 축은
+    음수 표본을 반드시 갖는다 — 그 값이 R20-C의 두 번째 발산(같은 질문에 두 술어)을
+    재는 유일한 입력이다.
+    """
+    from server.vwx.patchplan import ExistingFidRead
+
+    clean = {
+        "attempted": True,
+        "root_unreadable": False,
+        "over_enumerated": False,
+        "unseen": 0,
+        "unreadable_fids": 0,
+        "unusable_rows": 0,
+        "unparsable_rows": 0,
+    }
+    assert ExistingFidRead(child_count=2, **clean).complete is True
+
+    for axis, values in _R20C_AXIS_GRID.items():
+        outcomes = {
+            ExistingFidRead(child_count=2, **{**clean, axis: value}).complete for value in values
+        }
+        assert outcomes == {False, True}, (axis, values)
+
+    for axis in _r20c_axes_compared_with_zero():
+        assert any(
+            isinstance(value, int) and not isinstance(value, bool) and value < 0
+            for value in _R20C_AXIS_GRID[axis]
+        ), axis
+
+
+def test_r20c_the_reason_is_the_complete_sentence_exactly_when_the_read_is_complete():
+    """**동치** — `reason() == FID_READ_COMPLETE_REASON` ⟺ `complete`. 축 전수에서.
+
+    이 단정이 죽는 조작 전부:
+    * `reason()`의 `if self.complete:` 갈래를 지운다 → `complete=True`가 축 문장이나
+      빈 문자열을 낸다.
+    * `"부분 관측이다"` 폴백을 되살린다 → 같은 자리에서 완전 문장이 아닌 것이 나온다.
+    * `complete`와 `reason()`의 술어를 갈라놓는다(`> 0` ↔ 참값) → 음수 축 행에서 갈린다.
+    * `complete`의 축 하나를 `> 1`로 되돌린다(round15 치명 #1의 재개방 형태) → 그 축의
+      값 1 행에서 `complete=True`인데 `reason()`이 그 축 문장을 든다.
+
+    문장 형태도 함께 잰다 — 조각이 대시나 이중 마침표를 품으면 호출부 조립이 깨진다
+    (S17-04). `require_terminal=False`는 조각이라서다.
+    """
+    from server.vwx.patchplan import FID_READ_COMPLETE_REASON, sentence_shape_violation
+
+    diverged: list[tuple[dict, bool, str]] = []
+    complete_rows = 0
+    for kwargs, read in _r20c_axis_reads():
+        reason = read.reason()
+        complete_rows += read.complete
+        if (reason == FID_READ_COMPLETE_REASON) is not read.complete:
+            diverged.append((kwargs, read.complete, reason))
+        if not reason or sentence_shape_violation(reason, require_terminal=False) is not None:
+            diverged.append((kwargs, read.complete, reason))
+
+    assert diverged == []
+    # 비공허성 — 격자가 두 판정을 **양쪽 다** 실제로 실현한다.
+    assert 0 < complete_rows < len(tuple(_r20c_axis_reads()))
+
+
+def test_r20c_no_reason_clause_reports_a_negative_count():
+    """음수 계수로 **거짓 절**이 나오지 않는다 — `complete`와 같은 `> 0` 술어를 쓴다.
+
+    이전 판은 `if self.unusable_rows:`(참값)로 물었고 `complete`는 `> 0`으로 물어서,
+    `unusable_rows=-1`인 판독이 `complete=True`인 채 *"…행 -1개를 쓰지 못했다"*를 냈다.
+    R20-C의 폴백과 **같은 종류의 발산**이고 같은 뿌리(한 질문에 두 술어)에서 나온다.
+    """
+    for kwargs, read in _r20c_axis_reads():
+        assert "-1" not in read.reason(), (kwargs, read.reason())
+
+
+def test_r20c_production_never_builds_a_negative_count_axis():
+    """그 발산이 **프로덕션에 도달하지 않는 근거**를 기계에 맡긴다.
+
+    도달 불가는 `unseen = max(child_count - len(read_slots), 0)` **클램프 한 줄**과
+    "나머지 계수는 0에서 `+= 1`만 한다"에 걸려 있다. 클램프를 지우거나 뺄셈의 방향을
+    뒤집으면 위 두 대조군이 잡는 발산이 **실제 콘솔 입력으로** 열린다 — 그것을 여기서
+    막는다. 적대적 스냅샷은 음수·bool·문자열 `childCount`, 비매핑 node, 비시퀀스 children,
+    범위 밖·중복·비정수 슬롯을 전부 준다.
+    """
+    import itertools
+
+    from server.vwx.patchplan import _existing_fids_from_console
+
+    nodes = (
+        {},
+        {"childCount": -3},
+        {"childCount": 0},
+        {"childCount": 5},
+        {"childCount": True},
+        {"childCount": "2"},
+        {"childCount": "-4"},
+        {"childCount": None},
+        "비매핑",
+    )
+    row_sets = (
+        [],
+        [{"i": 1}],
+        [{"i": 1}, {"i": 1}],
+        [{"i": 1}, {"i": 2}, {"i": 3}],
+        [None, {"i": 1}],
+        [{"i": -1}],
+        [{"i": 0}],
+        [{}],
+        "비시퀀스",
+        [{"i": 9}],
+        [{"i": 1}, None, 7, {"i": 2}, {"i": 2}],
+    )
+    properties = (
+        {"ok": True, "value": 100},
+        {"ok": False},
+        {"ok": True, "value": "x"},
+        {},
+        {"ok": True, "value": True},
+    )
+
+    class _Snapshot:
+        def __init__(self, node, rows, prop):
+            self._node, self._rows, self._prop = node, rows, prop
+
+        def query_state(self, path):
+            return {"ok": True, "path": path, "node": self._node, "children": self._rows}
+
+        def query_property(self, path, property_name):
+            return self._prop
+
+    # 어느 축을 재는지도 **프로덕션에서 파생한다** — `complete`가 `> 0`으로 묻는 축이
+    # 정확히 `reason()`과 술어를 공유해야 하는 축이다. 손으로 적으면 축이 늘 때 조용히 빠진다.
+    # `child_count`·`recovery_boundary`는 우리 계수가 아니라 콘솔이 선언한 값이라 여기 없다 —
+    # 음수 선언 총계는 아래 `over_enumerated` 단정이 따로 막는다.
+    guarded_axes = _r20c_axes_compared_with_zero()
+    assert len(guarded_axes) >= 4, guarded_axes
+
+    counted = 0
+    for node, rows, prop in itertools.product(nodes, row_sets, properties):
+        read = _existing_fids_from_console(_Snapshot(node, rows, prop))
+        negative = {
+            axis: getattr(read, axis)
+            for axis in guarded_axes
+            if getattr(read, axis) is not None and getattr(read, axis) < 0
+        }
+        assert negative == {}, (node, rows, prop, negative)
+        if read.child_count is not None and read.child_count < 0:
+            # 음수 선언 총계는 "완전"으로 등급되지 않는다 — 관측이 총계를 넘기 때문이다.
+            assert read.over_enumerated is True, (node, rows)
+            assert read.complete is False, (node, rows)
+        counted += 1
+
+    # 비공허성 — 격자가 실제로 돌았고 판독이 계수를 싣는다.
+    assert counted == len(nodes) * len(row_sets) * len(properties)
+
+
+def _r20c_axes_compared_with_zero() -> tuple[str, ...]:
+    """`patchplan.py`에서 `ExistingFidRead.complete`가 `self.X > 0`으로 묻는 축 전수 (AST).
+
+    이 한 모듈만 읽는다.
+    """
+    import ast
+
+    module = ast.parse(PATCHPLAN_SOURCE)
+    cls = next(
+        node
+        for node in module.body
+        if isinstance(node, ast.ClassDef) and node.name == "ExistingFidRead"
+    )
+    complete = next(
+        node for node in cls.body if isinstance(node, ast.FunctionDef) and node.name == "complete"
+    )
+    axes: set[str] = set()
+    for node in ast.walk(complete):
+        if (
+            isinstance(node, ast.Compare)
+            and len(node.ops) == 1
+            and isinstance(node.ops[0], ast.Gt)
+            and isinstance(node.left, ast.Attribute)
+            and isinstance(node.comparators[0], ast.Constant)
+            and node.comparators[0].value == 0
+        ):
+            axes.add(node.left.attr)
+    return tuple(sorted(axes))
+
+
+def _r20c_incomplete_sentences() -> frozenset[str]:
+    """불완전 판독이 **실제로 내는** 사유 문장 전수 — 소스 리터럴이 아니라 **행동**에서 뽑는다.
+
+    소스에서 뽑으면 문장을 모듈 상수로 모으는 리팩터(`typemap.py`가 round19 major#5로 이미
+    한 것)에 이 대조군이 **개선을 보고 실패한다**. 행동에서 뽑으면 문장이 어디 살든 무관하다.
+    """
+    return frozenset(read.reason() for _, read in _r20c_axis_reads() if not read.complete)
+
+
+def test_r20c_the_complete_fragment_makes_no_incompleteness_claim():
+    """완전 갈래 조각이 **불완전 판독의 문장 중 어느 것도 아니고, 그 어느 것도 품지 않는다**.
+
+    금지 어휘를 테스트가 자기 리터럴로 들면 프로덕션 문장을 갈아도 아무도 실패하지 않는다
+    (round16이 반증한 어휘목록 방식). 그래서 프로덕션 산출에서 파생한다. 폴백
+    `"부분 관측이다"`를 되살리면 그 문장이 불완전 집합에 들어오고 완전 갈래와 충돌한다.
+    """
+    from server.vwx.patchplan import FID_READ_COMPLETE_REASON
+
+    sentences = _r20c_incomplete_sentences()
+
+    assert len(sentences) >= 6, sorted(sentences)
+    assert FID_READ_COMPLETE_REASON not in sentences
+    # 역사적 거짓 문장이 완전 갈래로 되돌아오지 못한다.
+    assert "부분 관측" not in FID_READ_COMPLETE_REASON
+    for sentence in sentences:
+        assert sentence not in FID_READ_COMPLETE_REASON, sentence
+
+
+# ---- 형제 전수 — `ExistingFidRead`를 문장·payload로 바꾸는 자리 -----------------------
+#
+# R20-C 하나만 고치면 이 SPEC이 열세 라운드 반복한 방식이다. `patchplan.py` 안에서 그
+# 판독을 소비하는 자리를 **AST로 파생**해 표와 전단사로 묶는다 — 자리를 새로 만들면 행
+# 없이는 통과하지 못하고, 표에서 행을 지우면 실패한다(HARD 규율 3). 열거 대상이 호출
+# **자리의 문법**이 아니라 **정의**라서 R18-F의 "열거는 끝나지 않는다"에 걸리지 않는다.
+
+#: (이름, 분류, 호출). `sentence` = 사람이 읽는 문장을 만든다. `observation` = 관측을 그대로
+#: 싣는다(주장을 만들지 않는다). `predicate` = 판정 자체다.
+#:
+#: **분류는 장식이 아니다** — 아래 두 대조군이 분류를 프로덕션 **행동**과 맞춘다. 처음 판은
+#: 분류를 아무도 읽지 않아 `reason` 행을 `observation`으로 격하하는 뮤턴트가 살아남았다.
+#: `호출`은 판독 하나를 받아 그 자리를 실제로 부른다 — 이름만 등기하면 자리가 무엇을 내는지
+#: 아무도 재지 않는다.
+_R20C_READ_CONSUMERS = (
+    ("ExistingFidRead.complete", "predicate", lambda read: read.complete),
+    ("ExistingFidRead.notes", "sentence", lambda read: read.notes()),
+    ("ExistingFidRead.reason", "sentence", lambda read: read.reason()),
+    ("ExistingFidRead.to_dict", "observation", lambda read: read.to_dict()),
+    ("_fid_holder_reader", "observation", lambda read: _r20c_call("_fid_holder_reader", read)),
+    (
+        "_fid_precheck_incomplete_checks",
+        "sentence",
+        lambda read: _r20c_call("_fid_precheck_incomplete_checks", read),
+    ),
+    ("_fid_safety_payload", "observation", lambda read: _r20c_call("_fid_safety_payload", read)),
+)
+
+
+def _r20c_call(name: str, read):
+    """등기된 최상위 소비자를 **프로덕션 인자 모양대로** 부른다."""
+    from server.vwx.patchplan import (
+        ASSUMPTION_71_GO,
+        _fid_holder_reader,
+        _fid_precheck_incomplete_checks,
+        _fid_safety_payload,
+    )
+
+    if name == "_fid_holder_reader":
+        return _fid_holder_reader(None, read)
+    if name == "_fid_precheck_incomplete_checks":
+        return _fid_precheck_incomplete_checks(read)
+    return _fid_safety_payload(
+        ASSUMPTION_71_GO,
+        confirmation_required=False,
+        confirmation_recorded=None,
+        existing_read=read,
+        precheck_performed=True,
+    )
+
+
+def _r20c_incomplete_claims() -> frozenset[str]:
+    """불완전 판독에 대해 등기된 자리들이 **실제로 내는** 불완전 주장 문장 전수."""
+    claims = set(_r20c_incomplete_sentences())
+    for _kwargs, read in _r20c_axis_reads():
+        if read.complete:
+            continue
+        claims |= set(read.notes())
+        claims |= {
+            str(notice["reason"]) for notice in _r20c_call("_fid_precheck_incomplete_checks", read)
+        }
+    return frozenset(claims)
+
+
+def _r20c_production_read_consumers() -> tuple[str, ...]:
+    """`patchplan.py`에서 `ExistingFidRead`를 소비하는 자리 전수 — 이 파일 하나의 스코프다.
+
+    `ExistingFidRead`의 메서드 전부 + 인자를 `ExistingFidRead`로 **주석한** 최상위 함수 전부.
+    """
+    import ast
+
+    module = ast.parse(PATCHPLAN_SOURCE)
+    found: list[str] = []
+    for node in module.body:
+        if isinstance(node, ast.ClassDef) and node.name == "ExistingFidRead":
+            found += [
+                f"ExistingFidRead.{member.name}"
+                for member in node.body
+                if isinstance(member, ast.FunctionDef) and not member.name.startswith("__")
+            ]
+        elif isinstance(node, ast.FunctionDef):
+            arguments = node.args.posonlyargs + node.args.args + node.args.kwonlyargs
+            if any(
+                argument.annotation is not None
+                and ast.unparse(argument.annotation) == "ExistingFidRead"
+                for argument in arguments
+            ):
+                found.append(node.name)
+    return tuple(sorted(found))
+
+
+def test_r20c_the_read_consumer_table_is_a_bijection_onto_production():
+    """자리를 더하면 행 없이는 통과하지 못하고, 행을 지우면 실패한다."""
+    assert tuple(sorted(name for name, _kind, _call in _R20C_READ_CONSUMERS)) == (
+        _r20c_production_read_consumers()
+    )
+
+
+def test_r20c_the_consumer_classification_matches_what_each_site_actually_emits():
+    """분류가 **행동과 일치**한다 — `sentence`인 자리만이 불완전 주장을 낸다.
+
+    이 단정이 없으면 분류는 장식이고, `reason` 행을 `observation`으로 격하하는 뮤턴트가
+    아래 대조군을 그대로 빠져나간다(실제로 살아남았다). 판정은 **불완전 판독에 대해 그 자리가
+    불완전 주장 문장을 내는가**로 하고, 그 문장 집합은 프로덕션 산출에서 파생한다.
+    """
+    claims = _r20c_incomplete_claims()
+    assert len(claims) >= 9, sorted(claims)
+
+    incomplete = [read for _kwargs, read in _r20c_axis_reads() if not read.complete]
+    observed: dict[str, str] = {}
+    for name, kind, call in _R20C_READ_CONSUMERS:
+        speaks = any(any(claim in str(call(read)) for claim in claims) for read in incomplete)
+        observed[name] = "sentence" if speaks else ("silent" if kind == "sentence" else kind)
+    assert observed == {name: kind for name, kind, _call in _R20C_READ_CONSUMERS}
+
+
+def test_r20c_no_consumer_makes_an_incompleteness_claim_for_a_complete_read():
+    """등기된 **모든** 자리 — 완전한 판독에 불완전 주장을 내지 않는다.
+
+    분류에 의존하지 않는다: 방어가 라벨에 달려 있으면 라벨을 갈아 빠져나갈 수 있다.
+    `_fid_precheck_incomplete_check`(단수·무가드)로 되돌리면 완전한 판독에 대해
+    `"기존 FID 열거가 부분 관측이라 …"`를 `complete: true`와 나란히 실어 여기서 죽는다 —
+    round16 뮤테이션 M69②가 심었던 자기모순과 **같은 문장**이다.
+    """
+    from server.vwx.patchplan import FID_READ_COMPLETE_REASON, ExistingFidRead
+
+    claims = _r20c_incomplete_claims()
+    assert len(claims) >= 9, sorted(claims)
+
+    complete = ExistingFidRead(attempted=True, child_count=1, enumerated_count=1, fids=(100,))
+    assert complete.complete is True
+
+    for name, _kind, call in _R20C_READ_CONSUMERS:
+        emitted = str(call(complete))
+        for claim in claims:
+            assert claim not in emitted, (name, claim)
+
+    assert complete.reason() == FID_READ_COMPLETE_REASON
+    assert complete.notes() == ()
+
+
+def test_r20c_dropping_the_notice_guard_produces_a_self_contradicting_payload():
+    """대조의 대조 — 가드를 지운 **프로덕션 사본**에서 그 자기모순이 실제로 재현된다.
+
+    이것이 없으면 위 단정은 "오늘은 결과가 같다"에 기대는 상태다.
+    """
+    guard = "    if read.complete:\n        return ()\n"
+    assert PATCHPLAN_SOURCE.count(guard) == 1, "가드 앵커가 유일하지 않다"
+    namespace = _load_patchplan(PATCHPLAN_SOURCE.replace(guard, "", 1))
+
+    complete = namespace["ExistingFidRead"](attempted=True, child_count=0)
+    assert complete.complete is True
+
+    (contradiction,) = namespace["_fid_precheck_incomplete_checks"](complete)
+    assert contradiction["complete"] is True
+    assert "부분 관측" in contradiction["reason"]
+
+    # 진짜 모듈은 그 payload를 만들 수 없다.
+    from server.vwx.patchplan import ExistingFidRead, _fid_precheck_incomplete_checks
+
+    assert _fid_precheck_incomplete_checks(ExistingFidRead(attempted=True, child_count=0)) == ()
+
+
+def test_r20c_the_production_rejection_sentence_is_unchanged():
+    """프로덕션 경로 무회귀 — 거부 사유 **전문**을 못박는다.
+
+    `reason()`의 완전 갈래가 이 문장에 새는지, 조각 정렬이 문장을 갈았는지를 함께 잡는다.
+    """
+    from server.vwx.patchplan import FID_READ_COMPLETE_REASON
+
+    plan = _plan_with(_ShapedFidPort(child_count=2, rows=[1], fids={1: 100}))
+
+    assert plan.ok is False
+    assert plan.rejection.reason == (
+        "기존 FID 사전검사가 불완전하다 — 선언 2개 중 1개를 열거하지 못했다. "
+        "부분 관측으로 빈 FID를 단정하면 이미 쓰이는 번호를 배정하게 된다."
+    )
+    assert FID_READ_COMPLETE_REASON not in plan.rejection.reason
+    assert plan.rejection.reason_defect is None

@@ -141,65 +141,20 @@ def read_fixture_types(archive: zipfile.ZipFile) -> dict[str, FixtureTypeEntry]:
     return entries
 
 
-def bundled_fixture_type_bytes(data: bytes, spec: str) -> bytes | None:
-    """MVR이 동봉한 ``spec``의 GDTF 원본 바이트 — 없으면 ``None``.
-
-    **이것이 「라이브러리에 없는 타입」의 첫 번째 답이다.** MVR은 참조만 담는 것이
-    아니라 GDTF 파일 자체를 싣는다(실물 확인: ``Demoshow_grandMA3.mvr``에 5종).
-    도면이 쓴 **바로 그 버전**이므로 이름으로 검색해 받는 것보다 정확하다.
-
-    바이트를 그대로 돌려준다 — 여기서 디스크에 쓰지 않는다. 어디에 놓을지는
-    호출부가 정하고, 콘솔 라이브러리에 놓는 것은 **세션 밖에서** 해야 한다
-    (round20 세션 GO 조건 ①: 세션 중 GDTF 임포트 금지).
-    """
-    try:
-        archive = zipfile.ZipFile(io.BytesIO(data))
-    except zipfile.BadZipFile:
-        return None
-    name = spec if spec.lower().endswith(".gdtf") else f"{spec}.gdtf"
-    if name not in archive.namelist():
-        return None
-    return archive.read(name)
-
-
 def _child_text(element: ET.Element, tag: str) -> str:
     child = element.find(tag)
     return (child.text or "").strip() if child is not None else ""
 
 
-def split_absolute(absolute: int) -> tuple[int, int]:
+def _split_absolute(absolute: int) -> tuple[int, int]:
     """절대 DMX 주소를 ``(universe, address)``로 가른다.
 
     MVR의 ``Address``는 break 기준 **절대** 주소다(실물 확인: 1~1834). MA3의 Patch
     표기는 ``universe.address``이므로(``patch_add_fixtures.html`` — *"Type the DMX
     universe and address separated by a dot (for example, 2.1)"*) 여기서 가른다.
-
-    **이 산술은 저장소에 한 자리뿐이다.** 절대주소를 다루는 모듈이 각자 나누기·
-    나머지를 쓰면 그것이 곧 형제 표면이고, 이 SPEC이 열네 라운드 맞은 형태다.
     """
     zero_based = absolute - 1
     return zero_based // UNIVERSE_WIDTH + 1, zero_based % UNIVERSE_WIDTH + 1
-
-
-def join_absolute(universe: int, address: int) -> int:
-    """``universe.address``를 절대 DMX 주소로 되돌린다 — :func:`split_absolute`의 역."""
-    return (universe - 1) * UNIVERSE_WIDTH + address
-
-
-def fits_in_one_universe(absolute: int, width: int) -> bool:
-    """``width`` 채널이 유니버스를 **걸치지 않는가**.
-
-    MA3 Patch는 유니버스 안의 주소다 — 걸친 픽스처는 설 자리가 없다.
-    """
-    first, _ = split_absolute(absolute)
-    last, _ = split_absolute(absolute + max(width, 1) - 1)
-    return first == last
-
-
-def next_universe_start(absolute: int) -> int:
-    """``absolute``가 속한 유니버스의 **다음** 유니버스 첫 채널."""
-    universe, _ = split_absolute(absolute)
-    return join_absolute(universe + 1, 1)
 
 
 def _instrument_type_of(spec: str, entry: FixtureTypeEntry | None) -> str:
@@ -291,7 +246,7 @@ def read(data: bytes) -> ReadResult:
             absolute_text = ""
             if raw_address.isdigit():
                 absolute = int(raw_address)
-                universe, address = split_absolute(absolute)
+                universe, address = _split_absolute(absolute)
                 universe_text = str(universe)
                 address_text = str(address)
                 absolute_text = str(absolute)
