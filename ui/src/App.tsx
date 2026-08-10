@@ -341,7 +341,12 @@ export default function App() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [state.entries.length, state.pendingApprovals.length, state.pendingReviews.length]);
+  }, [
+    state.entries.length,
+    state.pendingApprovals.length,
+    state.pendingReviews.length,
+    state.pendingQuestions.length,
+  ]);
 
   const submit = () => {
     if (!composer.canSubmit) return;
@@ -485,6 +490,13 @@ export default function App() {
                     key={approval.request_id}
                     approval={approval}
                     onDecision={sendDecision}
+                  />
+                ))}
+                {state.pendingQuestions.map((question) => (
+                  <QuestionCard
+                    key={question.request_id}
+                    question={question}
+                    onAnswer={sendQuestionAnswer}
                   />
                 ))}
                 {state.pendingReviews.map((review) => (
