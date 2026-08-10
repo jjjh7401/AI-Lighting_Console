@@ -51,7 +51,7 @@ from server.web.messages import (
     status_event,
 )
 from server.web.preview import build_execution_preview
-from server.web.question import QuestionChannel, QuestionRequest
+from server.web.question import QuestionRequest
 from server.web.reply_discovery import ReplyPortMismatch
 
 # The gate's unconfirmed-execution marker (REQ-MVP-032). String contract pinned
@@ -238,7 +238,7 @@ class ChatSession:
         recorder: RoundTripRecorder | None = None,
         rig_paths: dict[str, str] | None = None,
         review_channel: ApprovalChannel | None = None,
-        question_channel: QuestionChannel | None = None,
+        question_channel: ApprovalChannel | None = None,
         deploy_pipeline: DeployPipelinePort | None = None,
         console_input_probe: Callable[[], str] | None = None,
         reply_port_probe: Callable[[], ReplyPortMismatch | None] | None = None,
@@ -279,7 +279,6 @@ class ChatSession:
             rig_paths=rig_paths,
             deploy_pipeline=deploy_pipeline,
             question_port=question_channel,
-            vectorworks_upload=self._vectorworks_upload,
             # SPEC-COPILOT-PRESHOW-001 T-G2: reuse the gate's own audited
             # heartbeat as the pre-show OSC checks' liveness probe — no
             # second console link, no new socket. Gated on preshow_receive_port

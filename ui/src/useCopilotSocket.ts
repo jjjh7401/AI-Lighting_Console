@@ -164,7 +164,6 @@ export interface CopilotSocket {
   sendDecision: (requestId: string, approved: boolean) => void;
   sendReviewDecision: (requestId: string, approved: boolean) => void;
   sendQuestionAnswer: (requestId: string, answer: string) => void;
-  sendVectorworksExportUpload: (fileName: string, contentBase64: string) => boolean;
   sendLock: (active: boolean) => void;
   sendPanelExecute: (targetKind: PanelTargetKind, target: number) => void;
   sendPanelStop: (targetKind: PanelTargetKind, target: number) => void;

@@ -351,10 +351,11 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         review_port=review_channel,
     )
 
-    # [round24 후속] 모델이 사용자에게 되묻는 통로. 승인 브리지를 재사용하려다
-    # 실패했다 — 그쪽은 **불리언 결정**을 나르므로 도구가 답 대신 True를 받았다.
-    # 답이 글인 통로는 따로다. 실패는 거부가 아니라 **미응답**이다.
-    question_channel = QuestionChannel(timeout_seconds=args.approval_timeout)
+    # [round24 후속] 세 번째 채널 — 모델이 사용자에게 되묻는 통로. payload만 다르고
+    # 같은 브리지다. 승인·검토와 달리 실패는 거부가 아니라 **미응답**이다.
+    question_channel = ApprovalChannel(
+        timeout_seconds=args.approval_timeout, recorder=recorder, id_prefix="question"
+    )
 
     ui_dist = Path(args.ui_dist)
     # M10 Part D: compose the M3/M4 deploy-shell REST routers into WebDeps — the
