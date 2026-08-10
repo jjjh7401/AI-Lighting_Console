@@ -1821,6 +1821,10 @@ _REGISTERED_VWX_IMPORTS = frozenset(
         "server.prechk.patch",
         # 자기 패키지 내부 — 절대 경로로만 쓴다(상대 import는 규칙 ②가 금지한다).
         "server.vwx.address",
+        # [round24 후속] 단계형 패치(`stagedpatch.py`)가 자리 판정 결과
+        # (`Placement`)를 그대로 받아 Lua로 굳힌다 — 좌표를 두 곳에서 각자
+        # 조립하면 그것이 형제 표면이고, 어긋나면 엉뚱한 자리에 장비가 생긴다.
+        "server.vwx.addressfit",
         "server.vwx.columns",
         "server.vwx.diff",
         "server.vwx.luagen",
@@ -1934,7 +1938,7 @@ def test_the_frozen_import_registry_is_exactly_what_production_imports():
         "쓰지 않는 등기는 **미리 열어 둔 문**이다 — 지워라."
     )
     # 실측 고정 — 규모가 조용히 부풀지 않는다(round18 실측: 완전 모듈명 22 / 최상위 루트 12).
-    assert len(_REGISTERED_VWX_IMPORTS) == 27
+    assert len(_REGISTERED_VWX_IMPORTS) == 28
     assert len({name.split(".", 1)[0] for name in _REGISTERED_VWX_IMPORTS}) == 15
 
 

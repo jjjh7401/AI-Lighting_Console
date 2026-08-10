@@ -5725,6 +5725,17 @@ _R21_LIST_SITES = (
     ("apply.py", "to_dict", "warnings", _R21_DERIVED, "이 계획이 낸 경고 전수"),
     # FID 열거는 절단될 수 있다. 완전성은 같은 함수의 `read` 블록이
     # `complete`·`child_count`·`enumerated_count`·`unseen_count`·`recovery_boundary`로 말한다.
+    # [round24 후속] 단계형 패치가 낸 두 목록. `fixtures`는 이 계획이 스스로 만든
+    # 배정 전수이고, `observed_addresses`는 **콘솔 재조회**에서 온 관측이라
+    # 완전성을 같은 payload의 `read_complete`가 말한다.
+    ("stagedpatch.py", "to_dict", "fixtures", _R21_DERIVED, "이 계획이 만든 배정 전수"),
+    (
+        "stagedpatch.py",
+        "to_dict",
+        "observed_addresses",
+        _R21_STATED,
+        "read_complete",
+    ),
     ("patchplan.py", "_fid_safety_payload", "existing_fids", _R21_STATED, "read"),
     ("patchplan.py", "_vacuous_notice", "stage_one_axes", _R21_DERIVED, "닫힌 축 이름 목록"),
     (

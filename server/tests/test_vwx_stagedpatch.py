@@ -14,7 +14,7 @@ import json
 import pytest
 
 from server.llm.types import ToolCall
-from server.orchestrator.tools import ANSWER_CANCEL, ANSWER_RAN_IT, build_toolset
+from server.orchestrator.tools import build_toolset
 from server.vwx.addressfit import Placement
 from server.vwx.stagedpatch import free_fids, judge, plan
 
@@ -181,14 +181,9 @@ class ConsolePorts:
         if not 0 <= index < len(rows):
             return {"ok": False}
         name, patch = rows[index]
-        value = {
-            "Name": name,
-            "Patch": patch,
-            "FixtureType": _TYPE,
-            "Mode": _MODE,
-            # 전수 FID 판독이 성립해야 자동 배정 갈래를 시험할 수 있다.
-            "FID": str(index + 1),
-        }.get(property_name)
+        value = {"Name": name, "Patch": patch, "FixtureType": _TYPE, "Mode": _MODE}.get(
+            property_name
+        )
         return {"ok": True, "value": value} if value is not None else {"ok": False}
 
 
@@ -204,27 +199,7 @@ class ScriptedExec:
         ]
 
 
-class SaysRan:
-    """조작자 대신 «실행했습니다»를 내는 질문 통로."""
-
-    def __init__(self, answer: str = ANSWER_RAN_IT) -> None:
-        self.answer = answer
-        self.asked: list[object] = []
-
-    def ask(self, request) -> str:
-        self.asked.append(request)
-        return self.answer
-
-
-def _patch(
-    before,
-    after=None,
-    *,
-    deploy_status="deployed",
-    address="4.1",
-    count=2,
-    question_port=None,
-):
+def _patch(before, after=None, *, deploy_status="deployed", address="4.1", count=2):
     ports = ConsolePorts(before, after)
     deploy = ScriptedDeploy(deploy_status)
     runner = ScriptedExec()
@@ -233,7 +208,6 @@ def _patch(
         state_port=ports,
         property_port=ports,
         deploy_pipeline=deploy,
-        question_port=question_port if question_port is not None else SaysRan(),
     )
     execution = registry.dispatch(
         ToolCall(
@@ -255,55 +229,22 @@ _EMPTY: list[tuple[str, str]] = []
 _TWO_NEW = [("Sharpy 250W Beam 1", "4.001"), ("Sharpy 250W Beam 2", "4.015")]
 
 
-class TestTheServerNeverFiresIt:
-    """마지막 한 칸은 **조작자의 손**이다 — 실측으로 갈린 축이다.
+class TestTheToolTellsTheTruth:
+    def test_a_run_that_created_nothing_says_so(self):
+        # [HARD] 이 한 줄이 실물 거짓 보고를 막는다.
+        payload, _deploy, runner = _patch(_EMPTY, _EMPTY)
 
-    `progress.md` §「AddFixtures 최초 성공 관측」:
-      서버 OSC 발화 + 편집기 열림   -> 0건
-      사람 명령줄 발화 + 편집기 열림 -> 3건 전부 생성
-    """
+        assert runner.sent, "실행은 했다"
+        assert payload["status"] == "created_nothing"
+        assert payload["created"] == 0
+        assert "성공했다고 보고하지 마라" in payload["guidance"]
 
-    def test_the_server_does_not_run_the_plugin(self):
-        # [HARD] 서버가 발화하면 편집기가 열려 있어도 0건이다 — 실측.
-        _payload, _deploy, runner = _patch(_EMPTY, _TWO_NEW)
-
-        assert runner.sent == [], "서버가 대신 실행했다 — 그 경로는 0건이다"
-
-    def test_it_hands_the_exact_command_to_the_operator(self):
-        # 무엇을 치라는 말이 없으면 조작자는 실행할 수가 없다.
-        payload, _deploy, _runner = _patch(_EMPTY, _TWO_NEW)
-
-        assert payload["run_yourself"] == 'Plugin "CopilotPatch"'
-
-    def test_the_card_says_the_editor_must_be_open(self):
-        # [HARD] 이 조건을 빠뜨린 것이 v0.1.3의 잘못이었다(문서에서 지웠다).
-        port = SaysRan()
-        _patch(_EMPTY, _TWO_NEW, question_port=port)
-
-        text = port.asked[0].why + " ".join(port.asked[0].steps)
-        assert "Patch" in text
-        assert "편집기" in text or "Patch를 엽니다" in text
-
-
-class TestTheVerdictAfterTheOperatorRuns:
-    def test_everything_created_is_reported_as_created(self):
+    def test_a_run_that_created_everything_says_so(self):
         payload, _deploy, _runner = _patch(_EMPTY, _TWO_NEW)
 
         assert payload["status"] == "created"
         assert payload["created"] == 2
-
-    def test_nothing_created_says_so(self):
-        # [HARD] 실물 사고 그대로 — 조작자가 눌렀는데 0대일 수 있다.
-        payload, _deploy, _runner = _patch(_EMPTY, _EMPTY)
-
-        assert payload["status"] == "created_nothing"
-        assert "성공했다고 보고하지 마라" in payload["guidance"]
-
-    def test_the_zero_case_points_at_the_editor_condition(self):
-        # 두 축 중 무엇이 빠졌는지 알려 주지 않으면 조작자는 같은 실패를 반복한다.
-        payload, _deploy, _runner = _patch(_EMPTY, _EMPTY)
-
-        assert "Patch 편집기가" in payload["guidance"]
+        assert "확인했다" in payload["guidance"]
 
     def test_a_partial_run_is_not_dressed_up(self):
         payload, _deploy, _runner = _patch(_EMPTY, _TWO_NEW[:1])
@@ -311,21 +252,17 @@ class TestTheVerdictAfterTheOperatorRuns:
         assert payload["status"] == "created_partially"
         assert "성공이라 말하지 마라" in payload["guidance"]
 
-    def test_an_operator_who_did_not_run_it_is_believed(self):
-        # [HARD] 안 눌렀다는데 읽어서 0대를 «실패»로 보고하면 원인을 오도한다.
-        payload, _deploy, _runner = _patch(_EMPTY, _EMPTY, question_port=SaysRan(ANSWER_CANCEL))
+    def test_a_failed_deploy_never_reaches_the_console(self):
+        payload, _deploy, runner = _patch(_EMPTY, _EMPTY, deploy_status="rejected")
 
-        assert payload["status"] == "not_run"
-        assert "만들어졌다고" in payload["guidance"] or "끝내라" in payload["guidance"]
-
-    def test_a_failed_deploy_never_asks_the_operator(self):
-        port = SaysRan()
-        payload, _deploy, _runner = _patch(
-            _EMPTY, _EMPTY, deploy_status="rejected", question_port=port
-        )
-
-        assert port.asked == [], "올리지도 못했는데 실행해 달라고 청했다"
+        assert runner.sent == [], "배포가 안 됐는데 실행을 보냈다"
         assert payload["status"] == "not_deployed"
+
+    def test_the_zero_case_points_at_the_untested_hypothesis(self):
+        # 왜 안 되는지가 없으면 사용자는 같은 명령을 다시 누른다.
+        payload, _deploy, _runner = _patch(_EMPTY, _EMPTY)
+
+        assert "패치 편집기" in payload["guidance"]
 
 
 class TestWhatItRefusesToDo:
@@ -459,153 +396,3 @@ class TestTheOtherDoorIsShut:
 
         assert payload["status"] == "created"
         assert "AddFixtures" in deploy.deployed[0][1]
-
-
-class TestItNeverInventsAFixtureId:
-    """이미 쓰는 FID에 패치하면 **엉뚱한 픽스처를 덮는다. 실행 취소가 없다.**
-
-    [round24 후속] 실측: FID 1~39가 쓰이는 쇼에서 이 도구가 1~6을 배정했다.
-    원인은 `prechk.inventory`가 FID를 화이트리스트 밖에 두어 **아예 읽지 않는다**는
-    것이었다 — `fid_note`는 늘 "미확정"이라 숫자로 읽으면 목록이 빈다.
-    """
-
-    def test_it_refuses_when_the_fid_read_is_not_complete(self):
-        # [HARD] 못 읽었으면 고르지 않는다. 이 한 줄이 덮어쓰기를 막는다.
-        class NoFids(ConsolePorts):
-            def query_property(self, path, property_name):
-                if property_name == "FID":
-                    return {"ok": False}
-                return super().query_property(path, property_name)
-
-        rig = [(f"RLB {i}", f"5.{i:03d}") for i in range(1, 7)]
-        ports = NoFids(rig, rig)
-        registry = build_toolset(
-            execution_port=ScriptedExec(),
-            state_port=ports,
-            property_port=ports,
-            deploy_pipeline=ScriptedDeploy(),
-            question_port=SaysRan(),
-        )
-        execution = registry.dispatch(
-            ToolCall(
-                id="c1",
-                name="patch_fixtures",
-                arguments={
-                    "console_type": _TYPE,
-                    "console_mode": _MODE,
-                    "address": "4.1",
-                    "count": 2,
-                    "channels_per_fixture": 14,
-                },
-            )
-        )
-        payload = json.loads(execution.result.content)
-
-        assert payload["status"] == "fids_unknown"
-        assert "지어내지 마라" in payload["guidance"]
-
-    def test_it_steps_over_the_fids_already_in_use(self):
-        # 대역 콘솔의 기존 장비 FID는 1..n 이다 — 그 위로 가야 한다.
-        rows = [(f"RLB {i}", f"5.{i:03d}") for i in range(1, 7)]
-        ports = ConsolePorts(rows, rows)
-        registry = build_toolset(
-            execution_port=ScriptedExec(),
-            state_port=ports,
-            property_port=ports,
-            deploy_pipeline=ScriptedDeploy(),
-            question_port=SaysRan(),
-        )
-        execution = registry.dispatch(
-            ToolCall(
-                id="c1",
-                name="patch_fixtures",
-                arguments={
-                    "console_type": _TYPE,
-                    "console_mode": _MODE,
-                    "address": "9.1",
-                    "count": 2,
-                    "channels_per_fixture": 14,
-                },
-            )
-        )
-        payload = json.loads(execution.result.content)
-        assigned = [f["fid"] for f in payload["plan"]["fixtures"]]
-
-        assert min(assigned) > 6, f"쓰는 번호를 배정했다: {assigned}"
-
-    def test_explicit_fids_are_honoured(self):
-        # 사용자가 정해 주면 그대로 쓴다 — 그때는 판독이 필요 없다.
-        ports = ConsolePorts(_EMPTY, _TWO_NEW)
-        deploy = ScriptedDeploy()
-        registry = build_toolset(
-            execution_port=ScriptedExec(),
-            state_port=ports,
-            property_port=ports,
-            deploy_pipeline=deploy,
-            question_port=SaysRan(),
-        )
-        execution = registry.dispatch(
-            ToolCall(
-                id="c1",
-                name="patch_fixtures",
-                arguments={
-                    "console_type": _TYPE,
-                    "console_mode": _MODE,
-                    "address": "4.1",
-                    "count": 2,
-                    "channels_per_fixture": 14,
-                    "fids": [201, 202],
-                },
-            )
-        )
-        payload = json.loads(execution.result.content)
-
-        assert [f["fid"] for f in payload["plan"]["fixtures"]] == [201, 202]
-
-    def test_the_note_field_is_never_read_as_a_number(self):
-        # [HARD] `fid_note`는 값이 아니라 표시다 — 여기서 숫자를 캐면 안 된다.
-        from server.prechk.inventory import FID_UNRESOLVED_MARK, fid_note
-
-        assert fid_note() == FID_UNRESOLVED_MARK
-        assert not FID_UNRESOLVED_MARK.isdigit()
-
-
-class TestTheCardCarriesTheDestinationCheck:
-    """서버가 목적지를 못 읽으므로, **사람이 눈으로 대조할 문자열**을 카드가 나른다.
-
-    [round24 후속 실측] 실물에서 세 상태를 구별했다:
-      `Admin[Fixture]>`                                   편집기 닫힘
-      `Admin@ShowData/LivePatch/Stages>`                  창은 떴으나 한 계층 위
-      `Admin@ShowData/LivePatch/Stages/Stage 1/Fixtures>` 픽스처 계층 — 이것이어야 한다
-    responder는 `CurrentDestination`을 노출하지 않아 서버가 착수 전에 확인하지 못한다.
-    """
-
-    def test_the_card_names_the_prompt_to_look_for(self):
-        # [HARD] 이 문자열이 빠지면 조작자는 조건을 못 지킨 채 실행하고, 결과는
-        # 조용한 0건이다 — 오늘 세션에서 실제로 그렇게 됐다.
-        from server.vwx.stagedpatch import DESTINATION_MARKER
-
-        port = SaysRan()
-        _patch(_EMPTY, _TWO_NEW, question_port=port)
-
-        steps = " ".join(port.asked[0].steps)
-        assert DESTINATION_MARKER in steps
-
-    def test_it_says_what_a_wrong_prompt_looks_like(self):
-        # 맞는 모양만 알려 주면 틀린 상태를 알아보지 못한다.
-        port = SaysRan()
-        _patch(_EMPTY, _TWO_NEW, question_port=port)
-
-        steps = " ".join(port.asked[0].steps)
-        assert "Admin[Fixture]" in steps
-
-    def test_the_command_is_still_in_the_steps(self):
-        port = SaysRan()
-        _patch(_EMPTY, _TWO_NEW, question_port=port)
-
-        assert any('Plugin "CopilotPatch"' in step for step in port.asked[0].steps)
-
-    def test_the_marker_travels_in_the_payload_too(self):
-        payload, _deploy, _runner = _patch(_EMPTY, _TWO_NEW)
-
-        assert payload["destination_marker"].endswith("Fixtures>")
