@@ -127,6 +127,13 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # i.e. ZERO pre-existing lines were deleted or modified.
 # Protected-range overlap re-verified: ZERO — recomputed against
 # _TOOLS_PROTECTED_OLD_RANGES ((234,238), (524,569)) with the assertion below.
+# VWX round24 후속 (SPEC-COPILOT-VWX-001, 되묻기 통로) — 모델이 값을 지어내는
+# 대신 사용자에게 묻는 경로를 넣었다. 새 시작줄은 **하나뿐**이다:
+#   184 — 질문 갈래 상수와 라이브러리 감시 눈금(파일 상단 상수 구역)
+# 나머지 변경(`resolve_fixture_type`이 직접 묻고 기다리는 본문, `ask_user`의
+# 실행 지시, `ToolExecution.awaited_human`)은 앞선 SPEC들이 이미 연 훅 안에서
+# 넓어졌을 뿐 새 자리를 만들지 않았다. 47훅 (46 + 184).
+# 보호 구간 겹침 재계산: ZERO — ((234,238), (524,569)) 어느 쪽도 건드리지 않는다.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -137,6 +144,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     49,
     104,
     125,
+    184,
     425,
     436,
     463,
