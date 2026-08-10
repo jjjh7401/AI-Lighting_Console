@@ -112,6 +112,39 @@ class TestTheShallowRead:
         console = FakeConsole(M8_TYPES, declared=9)
         assert read_snapshot(console).complete is False
 
+    def test_a_port_that_raises_is_a_failed_read_not_a_crash(self):
+        """[HARD] 이 모듈은 예외를 밖으로 내지 않는다 — `reader.py`와 같은 규약.
+
+        포트는 런타임에 무엇이든 될 수 있다. 던지는 포트에 터지면 대화 한 턴이
+        통째로 죽는다. 대신 `readable=False`로 내고, `compare`가 그것을
+        `unreadable`로 **보고**한다 — 조용히 「변화 없음」으로 읽지 않는 것이 핵심이다.
+        """
+
+        class Angry:
+            def query_state(self, path: str):
+                raise LookupError(f"unknown object path: {path}")
+
+            def query_property(self, path: str, property_name: str):
+                raise LookupError(path)
+
+        snapshot = read_snapshot(Angry())
+        assert snapshot.readable is False
+        assert snapshot.complete is False
+        assert snapshot.names == ()
+
+    def test_that_failure_is_reported_and_not_read_as_no_change(self, console: FakeConsole):
+        """[비공허] 위 판독이 「그대로다」로 읽히면 서버가 영영 기다린다."""
+
+        class Angry:
+            def query_state(self, path: str):
+                raise RuntimeError("boom")
+
+            def query_property(self, path: str, property_name: str):
+                raise RuntimeError("boom")
+
+        base = read_snapshot(console)
+        assert compare(base, read_snapshot(Angry())).state == WATCH_UNREADABLE
+
     def test_rows_it_cannot_use_are_counted_not_dropped(self):
         """[HARD] 버린 것을 세지 않으면 선언 총계와의 차이를 절단으로 오인한다."""
 

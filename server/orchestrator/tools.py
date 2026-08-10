@@ -133,6 +133,8 @@ from server.vwx.apply import (
 )
 from server.vwx.columns import resolve_columns as resolve_vwx_columns
 from server.vwx.diff import compare as compare_vectorworks_rig
+from server.vwx.librarywatch import read_snapshot as read_library_snapshot
+from server.vwx.librarywatch import selection_prompt as fixture_type_selection_prompt
 from server.vwx.patchplan import (
     ASSUMPTION_71_GO,
     ASSUMPTION_71_NEGATIVE,
@@ -145,6 +147,7 @@ from server.vwx.reader import read as read_vwx_export
 from server.vwx.report import build_vwx_report
 from server.vwx.rig import build_designed_rig
 from server.vwx.typemap import TypeRequest, resolve_fixture_types
+from server.vwx.typesource import plan_for_missing_type as plan_missing_fixture_type
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
     from server.deploy.pipeline import DeployOutcome
@@ -166,6 +169,7 @@ TOOL_NAMES = (
     "precheck_vectorworks_diff",
     "apply_vectorworks_patch",
     "preshow_check",
+    "resolve_fixture_type",
     "find_fx",
     "instantiate_fx",
     "find_scene",
@@ -2531,6 +2535,108 @@ def build_toolset(
             ),
         )
 
+    def resolve_fixture_type(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        """요청한 타입이 콘솔 라이브러리에 있는가 — 없으면 **물을 거리**를 낸다.
+
+        [round24 후속] 이 도구가 없던 동안 모델은 없는 타입을 만나면 ``Import``
+        문법과 GDTF **파일명을 추측**했다(실측: 한 요청에 5회 추측 후
+        ``retries_exhausted``, 60초 소모). 그 명령들은 원리적으로 성공할 수 없다 —
+        실물 실측으로 ``Import FixtureType Library`` = ``Object locked``/``Failed``,
+        ``ChangeDestination Patch/FixtureTypes`` = ``Failed``이고, 플러그인 Lua
+        컨텍스트는 패치 계층에 명령줄로 닿지 못한다(M8 세션 확정).
+
+        그래서 이 도구는 **못 한다는 사실과 사람이 할 수 있는 일**을 함께 낸다.
+        """
+        requested = str(call.arguments.get("instrument_type") or "").strip()
+        snapshot = read_library_snapshot(state_port)
+        payload: dict[str, object] = {
+            "requested": requested,
+            "console_types": list(snapshot.names),
+            "library_readable": snapshot.readable,
+            "library_complete": snapshot.complete,
+        }
+
+        if not snapshot.readable:
+            payload["status"] = "library_unreadable"
+            payload["guidance"] = (
+                "콘솔 라이브러리를 읽지 못했다 — 없다고 단정하지 마라. 연결을 확인하고 다시 물어라."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=True,
+                )
+            )
+
+        def _key(text: str) -> str:
+            return "".join(ch for ch in text.lower() if ch.isalnum())
+
+        wanted = _key(requested)
+        exact = [name for name in snapshot.names if name == requested]
+        near = [
+            name
+            for name in snapshot.names
+            if wanted and (wanted in _key(name) or _key(name) in wanted)
+        ]
+
+        if len(exact) == 1:
+            payload["status"] = "present"
+            payload["resolved"] = exact[0]
+            payload["guidance"] = "라이브러리에 있다 — 평소 패치 절차로 진행하라."
+        elif len(near) == 1:
+            payload["status"] = "present"
+            payload["resolved"] = near[0]
+            payload["guidance"] = (
+                f"'{near[0]}' 하나로 좁혀졌다 — 그 이름으로 진행하되 사용자에게 확인받아라."
+            )
+        elif near:
+            payload["status"] = "ambiguous"
+            payload["candidates"] = near
+            payload["guidance"] = (
+                "후보가 여럿이다. **고르지 마라** — 사용자에게 어느 것인지 물어라. "
+                "먼저 걸린 것을 집으면 엉뚱한 타입으로 패치된다."
+            )
+        else:
+            steps = plan_missing_fixture_type(requested)
+            prompt = fixture_type_selection_prompt(requested)
+            payload["status"] = "absent"
+            payload["can_the_server_add_it"] = False
+            payload["why_not"] = (
+                "명령줄로 픽스처 타입을 추가할 수 없다 — 실측 결과 "
+                "Import FixtureType Library는 Object locked/Failed, "
+                "ChangeDestination Patch/FixtureTypes도 Failed다. "
+                "Import 명령이나 GDTF 파일명을 추측하지 마라 — 반드시 실패한다."
+            )
+            payload["ask_the_user"] = {
+                "question": f"'{requested}'이(가) 콘솔 라이브러리에 없습니다. 어떻게 할까요?",
+                "options": [
+                    {
+                        "label": "콘솔에서 직접 고르겠다",
+                        "steps": list(prompt.steps),
+                        "note": prompt.poll_note,
+                    },
+                    {
+                        "label": "MVR 또는 GDTF 파일을 주겠다",
+                        "steps": [s.action for s in steps if not s.available_now][:2],
+                    },
+                ],
+            }
+            payload["guidance"] = (
+                "사용자에게 위 두 갈래를 한국어로 물어라. 답을 받기 전에는 "
+                "플러그인을 만들지도, 명령을 보내지도 마라."
+            )
+
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            )
+        )
+
     # -- find_fx (REQ-FXLIB-015 — lookup only, sends nothing) ------------------
     #
     # @MX:ANCHOR: [AUTO] the only model-reachable entry to the fx MATCHER
@@ -4868,6 +4974,43 @@ def build_toolset(
             },
         ),
         ToolDefinition(
+            name="resolve_fixture_type",
+            description=(
+                "Check whether a fixture type name exists in THIS console's "
+                "library, and when it does not, return what to ASK the operator. "
+                "READS ONLY, sends nothing.\n"
+                "\n"
+                "Call this BEFORE writing any patch plugin or any Import "
+                "command whenever the requested fixture type may not be in the "
+                "show. The console CANNOT be made to add a fixture type from "
+                "the command line — measured on real hardware: "
+                "'Import FixtureType Library ...' answers Object locked or "
+                "Failed, and 'ChangeDestination Patch/FixtureTypes' answers "
+                "Failed, because the plugin Lua context does not reach the "
+                "patch layer. NEVER guess an Import syntax or a GDTF file "
+                "name: every such attempt fails and burns the self-correction "
+                "budget.\n"
+                "\n"
+                "status='present' means proceed. status='ambiguous' means "
+                "several library names match — ASK which one, never take the "
+                "first. status='absent' carries an 'ask_the_user' block with "
+                "two concrete options (pick it on the console yourself / hand "
+                "over an MVR or GDTF file); relay those to the operator in "
+                "Korean and STOP until answered."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "instrument_type": {
+                        "type": "string",
+                        "description": "The fixture type name the drawing or the operator used.",
+                    }
+                },
+                "required": ["instrument_type"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
             name="find_fx",
             description=(
                 "Ask the built-in effect library BEFORE hand-writing any "
@@ -5643,6 +5786,7 @@ def build_toolset(
         "precheck_vectorworks_diff": precheck_vectorworks_diff,
         "apply_vectorworks_patch": apply_vectorworks_patch,
         "preshow_check": preshow_check,
+        "resolve_fixture_type": resolve_fixture_type,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,
         "find_scene": find_scene,
