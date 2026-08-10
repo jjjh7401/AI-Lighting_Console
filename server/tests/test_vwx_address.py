@@ -708,6 +708,16 @@ _R17_VWX_BOUNDARY_SITES: tuple[_Site, ...] = (
     _Site("columns.py", "offby", "counts.get(header, 0) + 1"),
     _Site("columns.py", "offby", "index + 1"),
     _Site("columns.py", "slice", "raw_records[index + 1:end]"),
+    # --- 라이브러리 관측 (librarywatch.py) — 사용자가 콘솔에서 고른 것을 감지하는 자리.
+    # `declared_count == len(names)`가 **전수 여부**를 정한다. `<=`로 밀면 절단된
+    # 스냅샷이 전수로 읽혀 그 기준선으로 차이를 판정하고, 그러면 「사용자가 추가」와
+    # 「가려져 있다가 보임」을 구별하지 못한 채 없는 선택을 있다고 보고한다.
+    # `>=`로 밀면 정상 스냅샷이 늘 불완전으로 읽혀 감지가 영영 성립하지 않는다.
+    # 양방향 대조군은 `test_vwx_librarywatch.py`.
+    _Site("librarywatch.py", "lencmp", "self.declared_count == len(self.names)"),
+    # 폐기 계수 — 왔지만 쓸 수 없던 행(매핑 아님·이름 빈칸). `> 0`으로 밀면 폐기가
+    # 있어도 전수로 읽히고, 그러면 선언 총계와의 차이를 절단으로 오인한다.
+    _Site("librarywatch.py", "numcmp", "self.unusable_row_count == 0"),
     # --- 타입 조달 안내 (typesource.py) — 콘솔 라이브러리 경로를 만드는 자리.
     # 수치 경계가 아니라 **경로 조립**이지만 스캐너가 `/` 연산을 산술로 센다.
     # 실물 디스크로 확인한 값이다: `~/MALightingTechnology/gma3_library/` 아래

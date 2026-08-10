@@ -5863,6 +5863,11 @@ _R17_SENTENCE_SURFACES = (
     ("intake.py", "detail"),
     ("intake.py", "prompt"),
     ("intake.py", "why"),
+    # [round24 후속] 콘솔에서 직접 고르게 할 때의 안내와 관측 사유.
+    # `detail`은 무엇이 바뀌었는지(또는 왜 판정할 수 없는지), `poll_note`는 서버가
+    # 얼마나 자주 보는지 — 둘 다 사람이 읽고 다음 행동을 정하는 표면이다.
+    ("librarywatch.py", "detail"),
+    ("librarywatch.py", "poll_note"),
     ("mvr.py", "detail"),
     # [round24 후속] 「세션 착수 전에 끝내라」 — 조달 단계 전부에 붙는 고지다.
     # 이 문장이 빠지면 조작자가 세션 중에 라이브러리를 늘려 그 세션의 판정을 깨뜨린다

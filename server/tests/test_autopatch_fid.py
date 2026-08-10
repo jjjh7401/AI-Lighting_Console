@@ -3207,6 +3207,15 @@ def test_r19_the_real_scale_truncation_reaches_a_verdict_at_all():
 #: (모듈, 함수, 스윕 여부, 판단 근거)
 _R19_ENUMERATION_READERS = (
     (
+        "librarywatch.py",
+        "read_snapshot",
+        False,
+        "폴링용 **얕은** 판독이라 절단이 정지로 이어지지 않는다 — 전수 여부를 "
+        "`LibrarySnapshot.complete`로 내고, 절단 기준선에서 잰 차이는 `compare`가 "
+        "`truncated_baseline`으로 **판정을 거부**한다(「사용자가 추가」와 「가려졌다 "
+        "보임」을 구별할 수 없기 때문이다).",
+    ),
+    (
         "patchplan.py",
         "_existing_fids_from_console",
         True,
