@@ -134,6 +134,11 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # 실행 지시, `ToolExecution.awaited_human`)은 앞선 SPEC들이 이미 연 훅 안에서
 # 넓어졌을 뿐 새 자리를 만들지 않았다. 47훅 (46 + 184).
 # 보호 구간 겹침 재계산: ZERO — ((234,238), (524,569)) 어느 쪽도 건드리지 않는다.
+# VWX round24 후속 2 (단계형 패치 · 실측 판정) — 두 자리가 더 열렸다:
+#   620  — `deploy_plugin`이 손으로 짠 AddFixtures를 **거절**하는 자리. 지시로는
+#          막히지 않아(모델이 실물에서 여섯 번 우회) 구조로 옮긴 금지다.
+#   1048 — `patch_fixtures` 본문(자리 재확인 · 생성 · 실행 · **재조회 판정**).
+# 49훅 (47 + 620 + 1048). 보호 구간 겹침 재계산: ZERO.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -156,6 +161,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     971,
     989,
     1007,
+    1048,
     1061,
     1067,
     1070,
