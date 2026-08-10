@@ -151,7 +151,7 @@ class TestTheAddressSplit:
     )
     def test_the_boundaries(self, absolute: int, universe: int, address: int):
         """경계가 이 산술의 전부다 — 512/513이 어긋나면 유니버스 하나가 통째로 밀린다."""
-        assert mvr._split_absolute(absolute) == (universe, address)
+        assert mvr.split_absolute(absolute) == (universe, address)
 
     def test_every_fixture_lands_inside_a_universe(self, demoshow):
         for record in demoshow.records:

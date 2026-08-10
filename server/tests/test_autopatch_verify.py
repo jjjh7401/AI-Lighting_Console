@@ -5857,6 +5857,12 @@ _R17_SENTENCE_SURFACES = (
     # [round24 후속] MVR 판독 실패 사유. 컨테이너 아님 · 장면 XML 부재/파손 ·
     # GDTF 미동봉 · 주소 비정수 다섯 갈래가 서로 다른 문장을 내고, 넷은 조작자가
     # **파일을 고쳐야** 하는 사건이라 무엇이 없는지 정확히 말해야 한다.
+    # [round24 후속] 인테이크는 **질문**을 낸다 — 오류 문구가 아니라 사용자가 답할 수
+    # 있는 물음이다. `prompt`는 묻는 말, `why`는 왜 필요한지, `detail`은 자동으로 채운
+    # 값의 근거다. 셋 다 사람이 읽고 판단하는 표면이라 같은 규율을 받는다.
+    ("intake.py", "detail"),
+    ("intake.py", "prompt"),
+    ("intake.py", "why"),
     ("mvr.py", "detail"),
     ("patchplan.py", "IRREVERSIBLE_WARNING"),
     # [round18 R18-A] `_FidRangeParse.defect` — `fid_range` 입력의 결함 사유가
