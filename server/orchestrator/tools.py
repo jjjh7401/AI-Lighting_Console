@@ -147,13 +147,15 @@ from server.vwx.patchplan import (
     build_patch_plan,
     designed_attributes_by_candidate,
     plan_addresses,
+    read_existing_fids,
     validate_assumption_71,
 )
 from server.vwx.reader import read as read_vwx_export
 from server.vwx.report import build_vwx_report
 from server.vwx.rig import build_designed_rig
 from server.vwx.stagedpatch import (
-    PATCH_EDITOR_HINT,
+    HANDOVER_STEPS,
+    HANDOVER_WHY,
     ZERO_CREATED,
     free_fids,
 )
@@ -173,6 +175,9 @@ ANSWER_CANCEL = "그만두겠다"
 # 주소가 겹쳤을 때 내는 갈래.
 ANSWER_USE_SUGGESTED = "제안한 자리에 놓겠다"
 ANSWER_TYPE_ADDRESS = "다른 주소를 직접 넣겠다"
+
+# 마지막 한 칸 — 조작자가 콘솔에서 직접 실행했는가.
+ANSWER_RAN_IT = "콘솔에서 실행했습니다"
 
 # 사용자가 콘솔 앞에서 실제로 고르는 데 걸리는 시간. 얕은 판독 1왕복 ≈ 66 ms이므로
 # 관측 자체는 무시할 수 있고, 사실상 전부 대기다.
@@ -3263,13 +3268,46 @@ def build_toolset(
                 )
             )
 
-        taken = [
-            int(record.fid_note) for record in before.fixtures if (record.fid_note or "").isdigit()
-        ]
         requested_fids = call.arguments.get("fids")
         if isinstance(requested_fids, Sequence) and not isinstance(requested_fids, str):
             fids = tuple(int(value) for value in requested_fids)
         else:
+            # **FID는 인벤토리에서 못 얻는다.** `prechk.inventory`는 FID를 화이트리스트
+            # 밖으로 두어 아예 읽지 않고 `fid_note`는 늘 "미확정"이다. 그것을 숫자로
+            # 읽으려 하면 목록이 비어 1번부터 배정된다 — 실측에서 FID 1~39가 쓰이는
+            # 쇼에 1~6이 나왔다. `patchplan.ExistingFidRead`의 독스트링이 그 사고를
+            # 그대로 적었다: "이미 쓰이는 번호를 배정하게 되고 … MA3는 조용히 받아들여
+            # 엉뚱한 픽스처를 덮는다. 이 앱에는 실행 취소가 없다."
+            # 그래서 정식 판독기를 쓰고, **전수가 아니면 배정하지 않는다.**
+            fid_read = read_existing_fids(_InventoryPort(state_port, property_port))
+            gaps = (
+                (fid_read.unseen or 0)
+                + fid_read.unreadable_fids
+                + fid_read.unusable_rows
+                + fid_read.unparsable_rows
+            )
+            payload["existing_fid_read"] = {
+                "attempted": fid_read.attempted,
+                "known": len(fid_read.fids),
+                "child_count": fid_read.child_count,
+                "unresolved": gaps,
+            }
+            if not fid_read.attempted or fid_read.root_unreadable or gaps:
+                payload["status"] = "fids_unknown"
+                payload["guidance"] = (
+                    "기존 FID를 전수로 읽지 못했다 — 빈 번호를 고를 수 없다. 이미 쓰는 "
+                    "번호에 패치하면 엉뚱한 픽스처를 덮고, 이 앱에는 실행 취소가 없다. "
+                    "사용자에게 쓸 FID 범위를 물어 'fids'로 넘겨라. 지어내지 마라."
+                )
+                return ToolExecution(
+                    result=ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=json.dumps(payload, ensure_ascii=False),
+                        is_error=False,
+                    )
+                )
+            taken = list(fid_read.fids)
             fids = free_fids(taken, count=count, start=max(taken, default=0) + 1)
 
         staged = staged_plan(
@@ -3307,8 +3345,65 @@ def build_toolset(
                 ),
             )
 
-        run = execution_port.run([f"Plugin '{plugin_name}'"])
-        payload["run_detail"] = [item.detail for item in run]
+        # ── 서버가 발화하지 않는다. ──
+        # 실측으로 갈린 축이다(`progress.md` §「AddFixtures 최초 성공 관측」):
+        #   서버 OSC 발화 + 편집기 열림  -> 0건
+        #   사람 명령줄 발화 + 편집기 열림 -> 3건 전부 생성
+        # 그래서 마지막 한 칸은 조작자에게 넘기고, 끝났다는 답을 받은 뒤 읽는다.
+        run_line = f'Plugin "{plugin_name}"'
+        payload["run_yourself"] = run_line
+        payload["handover_steps"] = [*HANDOVER_STEPS[:1], run_line, *HANDOVER_STEPS[2:]]
+        if question_port is None:
+            payload["status"] = "awaiting_operator"
+            payload["guidance"] = (
+                f"플러그인을 올려 두었다. 조작자에게 **Patch 편집기를 연 채로** 콘솔 "
+                f"명령줄에서 {run_line} 을(를) 실행해 달라고 전하고, 끝나면 알려 달라고 "
+                "청하라. 서버가 대신 실행하면 만들어지지 않는다."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+
+        answer = question_port.ask(
+            QuestionRequest(
+                prompt=(
+                    f"콘솔에서 패치를 실행해 주세요 — {staged.console_type} "
+                    f"{len(staged.fixtures)}대."
+                ),
+                why=HANDOVER_WHY,
+                steps=(HANDOVER_STEPS[0], f"{HANDOVER_STEPS[1]}  →  {run_line}", HANDOVER_STEPS[2]),
+                options=(
+                    QuestionOption(
+                        label=ANSWER_RAN_IT,
+                        description="실행을 마쳤습니다. 콘솔을 읽어 확인해 주세요.",
+                    ),
+                    QuestionOption(label=ANSWER_CANCEL, description="이 요청을 여기서 멈춥니다."),
+                ),
+            )
+        )
+        payload["answer"] = None if answer == UNANSWERED else answer
+        if answer != ANSWER_RAN_IT:
+            payload["status"] = "not_run"
+            payload["guidance"] = (
+                "조작자가 아직 실행하지 않았다. 픽스처는 생기지 않았다 — 만들어졌다고 "
+                f"말하지 마라. 필요하면 {run_line} 을(를) 다시 안내하라."
+                if answer == UNANSWERED
+                else "사용자가 멈추기를 골랐다. 여기서 끝내라."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                ),
+                awaited_human=bool(payload.get("answer")),
+            )
 
         # ── 여기서부터가 이 도구의 존재 이유다: **콘솔을 다시 읽는다.** ──
         try:
@@ -3359,7 +3454,10 @@ def build_toolset(
                 "모른다고 그대로 알려라."
             )
         else:
-            payload["guidance"] = f"{ZERO_CREATED} {PATCH_EDITOR_HINT}"
+            payload["guidance"] = (
+                f"{ZERO_CREATED} 조작자가 {run_line} 을(를) 실행할 때 Patch 편집기가 "
+                "열려 있었는지 확인하고, 아니었다면 그 상태로 다시 실행해 달라고 청하라."
+            )
 
         return ToolExecution(
             result=ToolResult(

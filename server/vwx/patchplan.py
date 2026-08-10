@@ -1390,6 +1390,19 @@ class ExistingFidRead:
         }
 
 
+def read_existing_fids(fid_property_port: FidPropertyPort | None) -> ExistingFidRead:
+    """기존 FID 판독의 **공개 진입점**.
+
+    [round24 후속] 단계형 패치(`server/orchestrator/tools.py`의 `patch_fixtures`)가
+    빈 FID를 고르려면 이 판독이 필요하다. 인벤토리로는 얻을 수 없다 —
+    `prechk.inventory`는 FID를 화이트리스트 밖에 두어 아예 읽지 않는다. 그것을
+    모르고 `fid_note`를 숫자로 읽으려 하면 목록이 비어 1번부터 배정되고, 실측에서
+    FID 1~39가 쓰이는 쇼에 1~6이 나왔다. 호출부는 `ExistingFidRead`의 미판독 축을
+    **반드시** 보고 하나라도 0이 아니면 배정을 포기해야 한다(이 클래스 독스트링).
+    """
+    return _existing_fids_from_console(fid_property_port)
+
+
 def _existing_fids_from_console(fid_property_port: FidPropertyPort | None) -> ExistingFidRead:
     """기존 FID를 읽되 **못 읽은 것을 세서 함께 돌려준다**.
 
