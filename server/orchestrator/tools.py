@@ -403,6 +403,12 @@ class ToolExecution:
 
     result: ToolResult
     command_outcomes: tuple[CommandOutcome, ...] = ()
+    #: 이 호출이 **사람의 답을 받아 왔는가.** 폭주 루프 가드
+    #: (:data:`~server.orchestrator.runner.DEFAULT_MAX_MODEL_CALLS`)는 모델이
+    #: 혼자 도는 것을 막으려고 있다. 사람이 카드에 답한 왕복까지 거기에 청구하면,
+    #: 질문을 몇 번 하는 것만으로 한도가 말라 본문 0자로 끝난다 — 실측에서
+    #: 질문 3회에 `status=loop_limit`이 났다. 사람이 답한 회차는 가드에서 뺀다.
+    awaited_human: bool = False
 
 
 _Handler = Callable[[ToolCall, ExecutionContext], ToolExecution]
@@ -2649,7 +2655,8 @@ def build_toolset(
                 name=call.name,
                 content=json.dumps(payload, ensure_ascii=False),
                 is_error=False,
-            )
+            ),
+            awaited_human=bool(answered),
         )
 
     def resolve_fixture_type(call: ToolCall, context: ExecutionContext) -> ToolExecution:
@@ -2841,7 +2848,8 @@ def build_toolset(
                 name=call.name,
                 content=json.dumps(payload, ensure_ascii=False),
                 is_error=False,
-            )
+            ),
+            awaited_human=bool(payload.get("answer")),
         )
 
     # -- find_fx (REQ-FXLIB-015 — lookup only, sends nothing) ------------------

@@ -153,6 +153,31 @@ class Orchestrator:
 
     # @MX:NOTE: [AUTO] self-correction loop — retry accounting (<=3 per instruction,
     #   REQ-MVP-010) and the executed-command dedupe set both live ONLY here
+    #: 한도에 걸렸을 때 마지막으로 한 번만 더 부른다 — **도구 없이.** 도구를 주면
+    #: 그 자리에서 또 루프가 시작되므로 가드가 무의미해진다.
+    _WRAP_UP = (
+        "여기까지의 진행을 한국어로 짧게 정리하라. 새 도구를 부르지 말고, "
+        "지금까지 확인한 것과 남은 것, 사용자가 다음에 해야 할 일을 알려라. "
+        "하지 않은 일을 했다고 말하지 마라."
+    )
+
+    def _closing_words(self, conversation: list[ConversationItem]) -> str:
+        """한도에 걸려도 사용자에게 **말은 남긴다.**
+
+        정확히 한 번만 더 부른다 — 비용은 1회로 묶이고, 도구를 주지 않으므로
+        여기서 루프가 되살아날 수 없다. 이 호출이 실패하면 조용히 빈 글을 내되,
+        예외가 턴을 죽이지는 않게 한다.
+        """
+        try:
+            closing = self._provider.complete(
+                system_prefix=self._system_prefix,
+                conversation=[*conversation, UserMessage(text=self._WRAP_UP)],
+                tools=(),
+            )
+        except Exception:
+            return ""
+        return closing.text or ""
+
     def handle_instruction(
         self, instruction: str, session_context: str | None = None
     ) -> InstructionResult:
@@ -175,12 +200,18 @@ class Orchestrator:
         retries_used = 0
         last_run_failed = False
         model_calls = 0
+        #: 사람이 답을 준 횟수 — 폭주 가드에서 제외한다(아래 dispatch 루프 참조).
+        human_turns = 0
         final_text = ""
         status = "ok"
 
         while True:
-            if model_calls >= self._max_model_calls:
+            if model_calls - human_turns >= self._max_model_calls:
                 status = "loop_limit"
+                # 가드는 **도구 루프**를 끊는 것이지 답을 삼키는 것이 아니다.
+                # 실측: 사용자가 질문 카드 셋에 답하며 끝까지 따라왔는데
+                # `text=0자`로 끝나 화면에 아무것도 안 남았다.
+                final_text = final_text or self._closing_words(conversation)
                 break
             turn = self._provider.complete(
                 system_prefix=self._system_prefix,
@@ -216,6 +247,12 @@ class Orchestrator:
                     call, ExecutionContext(executed_ok=frozenset(executed_ok))
                 )
                 results.append(execution.result)
+                if execution.awaited_human:
+                    # 사람이 카드에 답한 회차는 폭주가 아니다 — 가드에서 뺀다.
+                    # 실측: 질문 3회를 거치면 12회 한도가 말라 `loop_limit` ·
+                    # 본문 0자로 끝났고, 사용자는 답을 한 글자도 못 받았다.
+                    # 사람 왕복은 사람이 스스로 멈추므로 폭주할 수 없다.
+                    human_turns += 1
                 if execution.command_outcomes:
                     all_outcomes.extend(execution.command_outcomes)
                     for outcome in execution.command_outcomes:
