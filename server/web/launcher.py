@@ -54,6 +54,7 @@ def generate_launch_token() -> str:
     """
     return secrets.token_urlsafe(_LAUNCH_TOKEN_BYTES)
 
+
 # ------------------------------------------------------------------ keyring (B.3)
 
 KEYRING_BACKEND_ENV = "PYTHON_KEYRING_BACKEND"
@@ -156,9 +157,7 @@ class PortInUseError(RuntimeError):
     (REQ-DEPLOY-026 / AC-DEPLOY-015 ②).
     """
 
-    def __init__(
-        self, host: str, port: int, label: str, *, guidance: str | None = None
-    ) -> None:
+    def __init__(self, host: str, port: int, label: str, *, guidance: str | None = None) -> None:
         self.host = host
         self.port = port
         self.label = label
@@ -172,9 +171,7 @@ class PortInUseError(RuntimeError):
             f"(Port {port} for '{label}' is in use — free it or reconfigure the "
             f"port in Settings, then restart. No automatic port fallback.)"
         )
-        super().__init__(
-            f"port {port} for {label!r} on {host} is already in use"
-        )
+        super().__init__(f"port {port} for {label!r} on {host} is already in use")
 
 
 # @MX:ANCHOR: [AUTO] protocol-aware port probe — TCP and UDP are SEPARATE port
@@ -539,9 +536,7 @@ class ParentLivenessWatchdog:
 
     def start(self) -> None:
         """Run the watch loop on a daemon thread (never blocks shutdown)."""
-        thread = threading.Thread(
-            target=self.run, name="parent-liveness-watchdog", daemon=True
-        )
+        thread = threading.Thread(target=self.run, name="parent-liveness-watchdog", daemon=True)
         self._thread = thread
         thread.start()
 

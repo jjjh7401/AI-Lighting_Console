@@ -62,6 +62,7 @@ from server.web.panel import (
     PinStore,
 )
 from server.web.provision_api import ProvisionDeps, build_provision_router
+from server.web.question import QuestionChannel
 from server.web.session import ChatSession
 from server.web.settings_api import SettingsDeps, build_settings_router
 
@@ -84,7 +85,7 @@ class WebDeps:
     approval_channel: ApprovalChannel
     review_channel: ApprovalChannel | None = None
     # [round24 후속] 모델이 되묻는 통로. `None`이면 되묻기 없이 종전대로 동작한다.
-    question_channel: ApprovalChannel | None = None
+    question_channel: QuestionChannel | None = None
     deploy_pipeline: DeployPipelinePort | None = None
     recorder: RoundTripRecorder | None = None
     rig_paths: dict[str, str] | None = None
@@ -366,7 +367,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                 elif message_type == "question_answer":
                     resolved = deps.question_channel is not None and (
                         deps.question_channel.resolve(
-                            message["request_id"], approved=message["answer"]
+                            message["request_id"], answer=message["answer"]
                         )
                     )
                     if resolved:

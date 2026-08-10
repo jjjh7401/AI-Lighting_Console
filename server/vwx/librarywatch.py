@@ -239,3 +239,34 @@ def watch_until_change(
         if latest.state != WATCH_IDLE:
             return latest
     return latest
+
+
+def wait_for_addition(
+    port: LibraryPort,
+    baseline: LibrarySnapshot,
+    *,
+    attempts: int,
+    sleep: Callable[[], None] | None = None,
+) -> WatchResult:
+    """**타입이 들어올 때까지** 기다린다 — 다른 어떤 상태로도 멈추지 않는다.
+
+    :func:`watch_until_change`와 가르는 지점이 하나 있다. 그쪽은 「무엇이든 달라졌나」를
+    묻고 :data:`WATCH_IDLE`이 아니면 곧바로 낸다. 사람을 기다리는 자리에서는 그게 틀렸다 —
+    한 번 못 읽었다고(:data:`WATCH_UNREADABLE`), 기준선이 절단됐다고
+    (:data:`WATCH_TRUNCATED_BASELINE`), 또는 무언가 **지워졌다**고 해서 사용자가 고르기를
+    그만둔 것은 아니다. 실측에서 바로 이것에 걸렸다: 감시가 7.6초 만에 끝나 「아직
+    그대로다」로 보고했고, 모델은 사용자가 방금 답한 것을 못 본 채 산문으로 다시 물었다.
+
+    그래서 여기서는 **추가만이 멈출 이유다.** 소진되면 마지막으로 본 것을 그대로 낸다 —
+    그것이 판독 실패였다면 그 사실이 호출부에 남아야 하기 때문에 IDLE로 덮지 않는다.
+    """
+    latest = compare(baseline, baseline)
+    for index in range(max(attempts, 1)):
+        if index and sleep is not None:
+            sleep()
+        observed = compare(baseline, read_snapshot(port))
+        if observed.added:
+            return observed
+        # 판독 실패는 「변화 없음」이 아니다 — 마지막 관측으로 남기되 계속 본다.
+        latest = observed
+    return latest

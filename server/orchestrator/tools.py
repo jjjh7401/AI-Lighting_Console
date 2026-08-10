@@ -14,6 +14,7 @@ import binascii
 import json
 import math
 import re
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
@@ -135,6 +136,7 @@ from server.vwx.columns import resolve_columns as resolve_vwx_columns
 from server.vwx.diff import compare as compare_vectorworks_rig
 from server.vwx.librarywatch import read_snapshot as read_library_snapshot
 from server.vwx.librarywatch import selection_prompt as fixture_type_selection_prompt
+from server.vwx.librarywatch import wait_for_addition as wait_for_library_addition
 from server.vwx.patchplan import (
     ASSUMPTION_71_GO,
     ASSUMPTION_71_NEGATIVE,
@@ -147,8 +149,23 @@ from server.vwx.reader import read as read_vwx_export
 from server.vwx.report import build_vwx_report
 from server.vwx.rig import build_designed_rig
 from server.vwx.typemap import TypeRequest, resolve_fixture_types
+from server.vwx.typesource import FIXTURE_TYPE_HINT
 from server.vwx.typesource import plan_for_missing_type as plan_missing_fixture_type
 from server.web.question import UNANSWERED, QuestionOption, QuestionRequest
+
+# [round24 후속] 라이브러리에 없는 타입을 만났을 때 도구가 **직접** 내는 갈래.
+# 분기가 이 문자열에 걸려 있으므로 한 자리에 모은다 — 표시 문구와 판정을 같은 값으로.
+ANSWER_PICK_ON_CONSOLE = "콘솔에서 직접 고르겠다"
+ANSWER_SUPPLY_FILE = "MVR 또는 GDTF 파일을 주겠다"
+ANSWER_CANCEL = "그만두겠다"
+
+# 사용자가 콘솔 앞에서 실제로 고르는 데 걸리는 시간. 얕은 판독 1왕복 ≈ 66 ms이므로
+# 관측 자체는 무시할 수 있고, 사실상 전부 대기다.
+SELECTION_WATCH_INTERVAL_SECONDS = 2.0
+SELECTION_WATCH_ATTEMPTS = 60  # 약 2분
+
+#: 카드에 적어 사용자에게 알리는 대기 시간 — 침묵이 고장으로 보이지 않게 한다.
+_SELECTION_WATCH_MINUTES = round(SELECTION_WATCH_ATTEMPTS * SELECTION_WATCH_INTERVAL_SECONDS / 60)
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
     from server.deploy.pipeline import DeployOutcome
@@ -2599,7 +2616,7 @@ def build_toolset(
             steps=steps,
             options=options,
         )
-        answer = question_port.request_approval(request)
+        answer = question_port.ask(request)
         answered = isinstance(answer, str) and answer not in ("", UNANSWERED)
         payload = {
             "answered": bool(answered),
@@ -2607,6 +2624,20 @@ def build_toolset(
             "reason": None
             if answered
             else "사용자가 아직 답하지 않았다(시간 초과 또는 연결 없음).",
+            # [round24 후속] 답만 돌려주면 모델이 그것을 **참고 사항**으로 읽고
+            # 산문으로 다시 물었다(실측: 카드로 'Sharpy 250W Beam 사용'을 받고도
+            # 최종 본문이 "이 채팅에 「…으로 진행해줘」라고 답변해 주세요"였다).
+            # 답은 참고가 아니라 **결정**이다 — 그 사실을 결과에 적는다.
+            "guidance": (
+                f"사용자가 {answer!r}(으)로 정했다. **이것이 결정이다** — 같은 것을 "
+                "산문으로 다시 묻지 마라. 이 답을 그대로 적용해 원래 하던 일을 "
+                "이어서 끝내라. 더 필요한 값이 있으면 그 값만 새로 물어라."
+            )
+            if answered
+            else (
+                "답을 받지 못했다. 값을 지어내지 말고, 답이 없었다는 사실을 그대로 "
+                "알려라. 명령을 보내지 마라."
+            ),
         }
         return ToolExecution(
             result=ToolResult(
@@ -2692,26 +2723,101 @@ def build_toolset(
                 "ChangeDestination Patch/FixtureTypes도 Failed다. "
                 "Import 명령이나 GDTF 파일명을 추측하지 마라 — 반드시 실패한다."
             )
-            payload["ask_the_user"] = {
-                "question": f"'{requested}'이(가) 콘솔 라이브러리에 없습니다. 어떻게 할까요?",
-                "options": [
-                    {
-                        "label": "콘솔에서 직접 고르겠다",
-                        "steps": list(prompt.steps),
-                        "note": prompt.poll_note,
-                    },
-                    {
-                        "label": "MVR 또는 GDTF 파일을 주겠다",
-                        "steps": [s.action for s in steps if not s.available_now][:2],
-                    },
-                ],
-            }
-            payload["guidance"] = (
-                "지금 바로 ask_user 도구를 불러라 — prompt에 위 question을, "
-                "options에 위 두 갈래의 label을, steps에 콘솔 절차를 그대로 넣는다. "
-                "채팅으로 설명만 하고 끝내지 마라. 답을 받기 전에는 플러그인을 "
-                "만들지도, 명령을 보내지도 마라."
-            )
+
+            # [round24 후속] **모델에게 「물어라」고 시키지 않는다.**
+            # 시켰더니 산문으로 옮겨 적고 턴을 끝냈다(실측 전사) — 카드는 안 뜨고,
+            # 사용자가 나중에 "선택했어"라고 하면 그때는 원래 과제를 잊은 뒤였다.
+            # 구멍을 발견한 자리가 **직접 묻고 답까지 받아** 한 턴 안에서 잇는다.
+            if question_port is None:
+                payload["asked"] = False
+                payload["guidance"] = (
+                    "이 실행 경로에는 질문 통로가 없다 — 위 두 갈래를 한국어로 전하고 "
+                    "답을 기다려라. 명령을 보내지 마라."
+                )
+            else:
+                answer = question_port.ask(
+                    QuestionRequest(
+                        prompt=(f"'{requested}'이(가) 콘솔 라이브러리에 없습니다. 어떻게 할까요?"),
+                        why=(
+                            "콘솔은 명령줄로 픽스처 타입을 추가하지 못합니다. "
+                            "타입이 쇼에 들어와야 패치를 이어갈 수 있습니다."
+                        ),
+                        steps=prompt.steps,
+                        options=(
+                            QuestionOption(
+                                label=ANSWER_PICK_ON_CONSOLE,
+                                description=(
+                                    "위 절차대로 고르시면 제가 감지해서 바로 "
+                                    "이어갑니다. 고르실 때까지 "
+                                    f"약 {_SELECTION_WATCH_MINUTES}분간 콘솔을 "
+                                    "지켜보며 기다립니다 — 그동안 답이 없어 보여도 "
+                                    "멈춘 것이 아닙니다."
+                                ),
+                            ),
+                            QuestionOption(
+                                label=ANSWER_SUPPLY_FILE,
+                                description=(
+                                    " ".join(s.action for s in steps if not s.available_now)
+                                    or f"GDTF/MVR을 {FIXTURE_TYPE_HINT}에 두시면 "
+                                    "콘솔 Library 탭에 나타납니다."
+                                ),
+                            ),
+                            QuestionOption(
+                                label=ANSWER_CANCEL,
+                                description="이 요청을 여기서 멈춥니다.",
+                            ),
+                        ),
+                    )
+                )
+                payload["asked"] = True
+                payload["answer"] = None if answer == UNANSWERED else answer
+
+                if answer == UNANSWERED:
+                    payload["guidance"] = (
+                        "사용자가 아직 답하지 않았다. 답을 지어내지 말고 그대로 알려라."
+                    )
+                elif answer == ANSWER_CANCEL:
+                    payload["guidance"] = "사용자가 멈추기를 골랐다. 여기서 끝내라."
+                elif answer == ANSWER_PICK_ON_CONSOLE:
+                    # 사용자가 콘솔에서 고르는 동안 **여기서 기다린다.** 그래야 다음
+                    # 메시지를 기다릴 필요가 없고, 원래 과제를 잃지 않는다.
+                    watch = wait_for_library_addition(
+                        state_port,
+                        snapshot,
+                        attempts=SELECTION_WATCH_ATTEMPTS,
+                        sleep=lambda: time.sleep(SELECTION_WATCH_INTERVAL_SECONDS),
+                    )
+                    payload["watch_state"] = watch.state
+                    payload["added"] = list(watch.added)
+                    if watch.added:
+                        payload["status"] = "present"
+                        payload["resolved"] = watch.added[0]
+                        payload["guidance"] = (
+                            f"사용자가 '{watch.added[0]}'을(를) 넣었다. **이름으로 되묻지 "
+                            "마라** — 실물을 아는 쪽은 사용자다. 그 타입으로 원래 요청한 "
+                            "수량·주소의 패치를 이어서 진행하라."
+                        )
+                    else:
+                        payload["guidance"] = (
+                            f"{watch.detail} 아직 라이브러리가 그대로다 — 사용자에게 "
+                            "확인을 청하고, 명령은 보내지 마라."
+                        )
+                elif answer == ANSWER_SUPPLY_FILE:
+                    # 파일을 두는 것만으로는 쇼에 안 들어온다 — 콘솔에서 한 번
+                    # 골라야 한다. 여기서 기다리지 않는 이유: 파일을 받아 오는 데
+                    # 걸리는 시간은 2분으로 가늠할 수 없다.
+                    payload["file_destination"] = FIXTURE_TYPE_HINT
+                    payload["guidance"] = (
+                        f"사용자가 파일을 주기로 했다. {FIXTURE_TYPE_HINT}에 .gdtf를 "
+                        "두고 콘솔 Patch > Insert New Fixture > Library의 Internal "
+                        "소스에서 고르면 된다고 전하라. 다 되면 알려 달라고 청하고, "
+                        "그 전에는 명령을 보내지 마라."
+                    )
+                else:
+                    payload["guidance"] = (
+                        f"사용자 답: {answer!r}. 그 답을 따르되 라이브러리에 타입이 "
+                        "들어온 것을 확인하기 전에는 패치 명령을 보내지 마라."
+                    )
 
         return ToolExecution(
             result=ToolResult(

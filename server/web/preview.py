@@ -35,11 +35,7 @@ _RISK_ORDER = {"info": 0, "caution": 1, "danger": 2}
 
 def build_execution_preview(*, preview_id: str, commands: Sequence[str]) -> dict:
     command_views = [_command_view(command) for command in commands]
-    warnings = [
-        warning
-        for command in commands
-        for warning in _warnings_for_command(command)
-    ]
+    warnings = [warning for command in commands for warning in _warnings_for_command(command)]
     risk_level = _risk_level(warnings)
     return {
         "preview_id": preview_id,
