@@ -4393,7 +4393,11 @@ def _r19_typeresolution_calls():
 
 #: 사유를 **모듈 상수로 환원해 돌려주는** 헬퍼. 갈래마다 리터럴을 박는 것과 달리 전수를
 #: 방해하지 않는다 — 아래 게이트가 이 헬퍼의 반환이 전부 모듈 상수 이름임을 직접 확인한다.
-_R19_REASON_RESOLVERS = ("_incompleteness_reason",)
+#: [round25 R24-1] 점유폭 미검증 갈래의 사유가 **막은 축에 따라 셋으로** 갈렸다. 갈래를
+#: `_resolve_one` 안에 펼치는 대신 환원 헬퍼로 둔 이유는 이 등기다: 헬퍼 안이라야 반환이
+#: 전부 모듈 상수임을 게이트가 강제하고, `_resolve_one`의 `TypeResolution` 전수 계수도
+#: 흔들리지 않는다.
+_R19_REASON_RESOLVERS = ("_incompleteness_reason", "_footprint_unverified_reason")
 
 
 def _r19_reason_is_module_constant(reason: ast.expr) -> bool:
@@ -5883,11 +5887,16 @@ def test_r21_row_cannot_be_assembled_without_a_completeness_statement():
             for node in ast.walk(function)
         )
     }
+    # [round25 R24-1] `_absence_unverifiable`이 빠지고 `_library_unverifiable`이 들어왔다.
+    #    루트 절반을 이름 있는 함수로 **분해**한 결과이고(복사가 아니다 — 합성이 이 함수를
+    #    부른다), 축 계산 자리는 여전히 하나다. 사유 문장이 "루트가 막았나"를 물어야 하는데
+    #    `incompleteness_kind`로는 물을 수 없어서(세 축 이름을 루트와 모드가 공유한다)
+    #    질문할 자리를 만든 것이다.
     assert axis_callers == {
         "to_dict",
         "_observed_incompleteness_kinds",
         "_confirmable_lists",
-        "_absence_unverifiable",
+        "_library_unverifiable",
     }, axis_callers
     callers = {
         function.name
@@ -6583,14 +6592,25 @@ def test_r21_the_unverified_sentence_names_the_discard_axis():
     round19판 문장은 "절단됐거나 채널 수를 읽지 못한 모드가 있다" 둘만 열거했다 —
     폐기로 이 갈래에 온 스냅샷에서 그 문장은 거짓이다(R20-D가 고발한 형태 그 자체).
 
+    [round25 R24-1] 채널 수 절이 **이 문장에서 빠졌다.** 그 원인은 목록의 결함이 아니라
+    원소의 한 칸이 빈 것이라 조치도 다르고(목록 재열거가 아니라 그 모드의 채널 수
+    재판독), 두 완전성 마커가 `complete:true`인 채로 "목록을 전수로 보지 못했다"를 실어
+    자기모순이었다. 절을 지운 것이 아니라 **자기 문장으로 옮겼다** — 그 사실을 여기서
+    잰다(옮긴 곳에 없으면 이 시험이 운다).
+
     죽이는 뮤테이션: 사유에서 "슬롯 번호가 없어 쓰지 못한 행" 절을 지우면 실패한다.
     """
-    from server.vwx.typemap import FOOTPRINT_MISMATCH_UNVERIFIED_REASON
+    from server.vwx.typemap import (
+        FOOTPRINT_MISMATCH_CHANNEL_COUNTS_UNREAD_REASON,
+        FOOTPRINT_MISMATCH_UNVERIFIED_REASON,
+    )
 
     assert "슬롯 번호가 없어 쓰지 못한 행" in FOOTPRINT_MISMATCH_UNVERIFIED_REASON
     assert "미관측분" in FOOTPRINT_MISMATCH_UNVERIFIED_REASON
-    assert "채널 수를 읽지 못한" in FOOTPRINT_MISMATCH_UNVERIFIED_REASON
-    # 이 갈래에 실제로 닿는지 — 닿지 않으면 위 세 단정은 장식이다.
+    assert "채널 수를 읽지 못한" in FOOTPRINT_MISMATCH_CHANNEL_COUNTS_UNREAD_REASON
+    # 목록 축 문장은 채널 수를 **탓하지 않는다** — 그 갈래는 여기 오지 않는다.
+    assert "채널 수를 읽지 못한" not in FOOTPRINT_MISMATCH_UNVERIFIED_REASON
+    # 이 갈래에 실제로 닿는지 — 닿지 않으면 위 단정들은 장식이다.
     assert row_by_id(_r21_mode_discard_payload(), "a")["reason"] == (
         FOOTPRINT_MISMATCH_UNVERIFIED_REASON
     )
@@ -7470,8 +7490,18 @@ def _r23_carry_over_pair():
 
 
 #: 스윕이 **바꿔도 되는** 칸. 나머지는 입력 그대로 실려 나가야 한다.
+#: [round24 R24-5] `recovery_mode_roundtrips`가 여섯 번째다 — 스윕이 자기 단가를 적는
+#: 칸이라 소유가 스윕에 있다. 아래 형제 시험이 "면제 목록에 밀어넣기"를 막는다:
+#: 이 목록의 원소는 전부 입력과도 기본값과도 **다른 값**으로 움직여야 한다.
 _R23_SWEEP_MUTATED_FIELDS = frozenset(
-    {"types", "recovered_count", "recovery_boundary", "probe_failures", "recovery_probe_count"}
+    {
+        "types",
+        "recovered_count",
+        "recovery_boundary",
+        "probe_failures",
+        "recovery_probe_count",
+        "recovery_mode_roundtrips",
+    }
 )
 #: 스윕이 도달하는 지점에서 **증명 가능하게 상수**라 기본값이 아닌 값을 만들 수 없는 칸.
 #: `available=False`면 함수 첫 줄이 입력을 그대로 돌려주므로 재구성이 실행되지 않는다 —
@@ -8373,9 +8403,11 @@ def test_r23_the_cost_ceiling_never_understates_the_negative_branch_sweep():
 def test_r23_the_cost_ceiling_never_understates_the_occupancy_branch_sweep():
     """[R23-2] 같은 불변식을 **점유폭 GO 분기**에서 잰다 — `c = 2`인 쪽이다.
 
-    `c`는 스윕 호출 인자라 `FixtureTypeLibrary`에 남지 않으므로 계수는 상한(2)을 쓴다.
-    상한을 1로 되돌리면(= negative 분기를 아는 척하면) 이 분기에서 **과소보고**가 되고
-    고지의 `False`가 방어되지 않는다.
+    [round24 R24-5] 이제 스윕이 자기 단가를 기록하므로 이 분기의 계수는 상한이 아니라
+    **실측 단가**다. 그래도 단정은 등식이 아니라 `>=`로 남긴다(round22 규율 ①): 등식으로
+    못박으면 `_read_type`이 모드당 왕복을 하나 더 쓰게 되는 정당한 수정이 실패로
+    나타난다. 단가를 1로 낮추면(= GO 분기를 negative로 아는 척하면) 이 자리에서
+    **과소보고**가 되어 고지의 `False`가 방어되지 않는다 — 그 방향을 이 시험이 잡는다.
     """
     swept, spent = _r23_cost_sweep_and_spend(
         _r23_cost_port(declared=30, matching=29, modes=5), read_channel_counts=True
@@ -8386,14 +8418,21 @@ def test_r23_the_cost_ceiling_never_understates_the_occupancy_branch_sweep():
     assert swept.recovery_roundtrip_ceiling >= spent
 
 
-#: `U`(= 799)와 `m`(= 2)을 고정하고 `k`만 키우는 지점들. 마지막 둘은 기각선을 넘는다.
+#: `U`(= 799)와 `m`(= 5)을 고정하고 `k`만 키우는 지점들. 마지막 둘은 기각선을 넘는다.
+#: [round24 R24-5] `m`이 2에서 5로 올랐다. **수치를 맞추려 고친 것이 아니라 단위가
+#: 바뀌어서다**: 이 계열은 negative 분기라 단가가 `c=1`이고, `m=2`이면 회수 한 건이
+#: 3왕복이라 `U=799`를 다 채워도 3,196으로 기각선에 닿지 못한다. 그때 이 계열은
+#: **전 구간 `False`**가 되어 아래 두 시험이 공허해진다(단조성은 자명하게 참, 비공허성
+#: 단정은 실패). `m=5`면 회수 한 건이 6왕복이라 `k` 항 단독으로 선을 넘는다 —
+#: round23판이 `m=2`로도 넘긴 것은 negative 스윕을 GO 단가로 쟀기 때문이고, 그것이
+#: R24-5가 고발한 바로 그 과다 판정이다.
 _R23_COST_MONOTONE_MATCHES = (0, 300, 620, 799)
 
 
 def _r23_cost_notices_as_k_grows() -> list[bool | None]:
     return [
         _r23_cost_sweep(
-            _r23_cost_port(declared=800, matching=matching, modes=2)
+            _r23_cost_port(declared=800, matching=matching, modes=5)
         ).recovery_cost_basis_exceeded
         for matching in _R23_COST_MONOTONE_MATCHES
     ]
@@ -8499,6 +8538,476 @@ def test_r23_the_cost_notice_measures_the_sweep_and_not_the_enumeration():
     assert (small.recovery_probe_count, large.recovery_probe_count) == (3, 3)
 
     assert large.recovery_roundtrip_ceiling == small.recovery_roundtrip_ceiling
+
+
+# ==========================================================================
+# --- round24 R24-5 비용 상한의 **단위** (EquivDisclosure) ---
+#
+# 기각선 `RECOVERY_COST_EVIDENCE_ROUNDTRIPS = 3_872`은 `176 × 22`이고 `22`는
+# 프로브 1 + DMXModes 상태 1 + 모드 이름 20이다 — 즉 **`c=1`(negative) 단가로 유도된
+# 수**다. 그런데 round23판 계수는 늘 `c=2`(GO 단가)로 쟀다. 같은 실제 왕복 수가
+# 분기에 따라 다른 판정을 받았고, negative 쪽만 약 1.9배 엄했다.
+#
+# 감사 실측 오탐: `U=100` · `k=100` · `m=19` · negative → **실제 2,100 왕복**인데
+# 상한 4,000으로 `recovery_cost_basis_exceeded=True`. 기각선 아래인데 "근거 범위를
+# 벗어났다"고 말한 것이다.
+#
+# 고친 것은 **기각선이 아니라 계수의 단가**다. 기각선은 벽시계(66.25 ms/왕복 × 3,872
+# ≈ 4분)라 분기가 바꾸지 않으므로 하나로 남기고, 스윕이 자기 단가를 기록한다
+# (`FixtureTypeLibrary.recovery_mode_roundtrips`). 기록이 없으면 상한으로 떨어진다 —
+# **과소보고 금지 방향은 유지한다**: `False`는 "쟀는데 범위 안이다"라는 긍정 주장이다.
+#
+# **이 수정 자신의 등가 공시**(round24 ⓑ를 자기에게 적용한다). 이 반영은
+# **negative 분기에서만 행동이 갈린다**. GO 분기에서는 기록한 단가가 곧 옛 상한과
+# 같은 값이라(`RECOVERY_COST_MODE_ROUNDTRIPS_CEILING == RECOVERY_COST_MODE_ROUNDTRIPS_GO`
+# — 아래 폴백 시험이 그 등식을 든다) 판정이 한 건도 바뀌지 않고, 단가를 기록하지 못한
+# 라이브러리도 폴백이 옛 상한 그대로라 마찬가지다. 실물 M8은 스윕 자체가 돌지 않아
+# (`recovery_boundary is None`) **양 분기 전부 무변화**다. 즉 오늘 갈리는 것은 스윕이
+# 도는 negative 경로 하나이고, 그 하나가 감사가 든 오탐이다.
+#
+# 아래 대조군도 round22 규율 ①을 지킨다 — 비용 단정은 상한·불변식·단조성·경계
+# 등식뿐이고, 성질 하나에 시험 하나다.
+# ==========================================================================
+
+from server.vwx.typemap import (  # noqa: E402  (섹션 지역 임포트 — 공용 헤더를 건드리지 않는다)
+    DMX_CHANNELS_SEGMENT,
+    RECOVERY_COST_MODE_ROUNDTRIPS_CEILING,
+    RECOVERY_COST_MODE_ROUNDTRIPS_GO,
+    RECOVERY_COST_MODE_ROUNDTRIPS_NEGATIVE,
+)
+
+
+def test_r24_the_audited_false_notice_is_gone_and_the_recovery_is_not():
+    """[R24-5] 감사가 든 오탐 입력에서 고지가 **`False`**다 — 그리고 회수는 그대로다.
+
+    `U=100` · `k=100` · `m=19` · negative 분기: 실제 왕복은 ``100 + 100×20 = 2,100``
+    으로 기각선 3,872 아래인데, GO 단가로 재던 구판은 4,000을 보고 고지를 세웠다.
+
+    회수 계수를 함께 단정하는 이유는 **R22-F의 성격**이다: 고지는 상한이 아니므로
+    고지가 내려갔다고 회수가 늘거나 줄면 안 된다. 이 칸이 판정에 개입하기 시작하면
+    그 순간 "느리지만 옳은 답"이 수치 때문에 배제로 바뀐다.
+    """
+    swept, spent = _r23_cost_sweep_and_spend(_r23_cost_port(declared=101, matching=100, modes=19))
+    # 대조군 전제 — 감사가 든 그 형상에 실제로 닿았고, 실제 비용도 그 수다.
+    assert (swept.recovery_probe_count, swept.recovered_count) == (100, 100)
+    assert spent == 2_100
+    assert spent < RECOVERY_COST_EVIDENCE_ROUNDTRIPS
+
+    assert swept.recovery_cost_basis_exceeded is False
+    # 고지가 무엇을 재든 회수분은 그대로 실려 나간다.
+    assert len([entry for entry in swept.types if entry.recovered]) == 100
+
+
+#: 같은 **실제 왕복 수**를 두 분기가 각각 만들어 내는 형상. negative는 모드당 1왕복,
+#: GO는 2왕복이므로 모드 수를 반으로 줄이면 `U + k(1 + c·m)`이 정확히 같아진다.
+#: 아래는 기각선을 사이에 두고 하나씩 — 둘 다 같은 답이면 "둘 다 False"라는 공허한
+#: 일치가 아니라는 근거가 된다.
+_R24_COST_PARITY_SHAPES = ((101, 100), (351, 350))
+
+
+def _r24_cost_parity(declared: int, matching: int):
+    """같은 실제 비용을 negative(m=10)와 GO(m=5)로 각각 낸 뒤 (실측, 고지) 쌍을 돌려준다."""
+    negative, negative_spent = _r23_cost_sweep_and_spend(
+        _r23_cost_port(declared=declared, matching=matching, modes=10)
+    )
+    occupancy, occupancy_spent = _r23_cost_sweep_and_spend(
+        _r23_cost_port(declared=declared, matching=matching, modes=5),
+        read_channel_counts=True,
+    )
+    return (negative_spent, negative.recovery_cost_basis_exceeded), (
+        occupancy_spent,
+        occupancy.recovery_cost_basis_exceeded,
+    )
+
+
+@pytest.mark.parametrize(("declared", "matching"), _R24_COST_PARITY_SHAPES)
+def test_r24_the_same_real_cost_gets_the_same_verdict_in_either_branch(declared, matching):
+    """[R24-5] **단위 일치** — 같은 실제 왕복 수면 분기가 달라도 같은 판정이다.
+
+    이것이 이번 수정의 기준이다. 수치를 맞춘 것이 아니라 단위를 맞춘 것이라, 검사도
+    "상한이 얼마인가"가 아니라 **"같은 비용이 같은 답을 받는가"**를 묻는다. 구판은
+    negative 쪽만 GO 단가로 재서 이 등식이 깨져 있었다.
+    """
+    (negative_spent, negative_notice), (occupancy_spent, occupancy_notice) = _r24_cost_parity(
+        declared, matching
+    )
+    # 대조군 전제 — 두 분기가 실제로 같은 왕복 수를 썼다(다르면 비교가 성립하지 않는다).
+    assert negative_spent == occupancy_spent
+
+    assert negative_notice == occupancy_notice
+
+
+def test_r24_the_branch_parity_control_straddles_the_rejection_line():
+    """[R24-5] 위 일치가 **공허하지 않다** — 두 형상이 기각선 양쪽에 있다.
+
+    두 형상이 모두 `False`면 "판정이 같다"는 단정은 아무것도 구별하지 않는다. 그래서
+    선 아래와 위를 하나씩 잡고, 그 판정이 실제로 갈리는 것을 여기서 값으로 고정한다.
+    """
+    notices = [_r24_cost_parity(*shape)[0][1] for shape in _R24_COST_PARITY_SHAPES]
+
+    assert notices == [False, True]
+
+
+def test_r24_a_library_that_never_recorded_its_unit_still_never_understates():
+    """[R24-5] **과소보고 금지 유지** — 단가 기록이 없으면 상한으로 떨어진다.
+
+    기록을 지우는 것은 계수를 싸게 만드는 가장 쉬운 길이다. 그 길이 열리면 고지의
+    `False`("쟀는데 범위 안이다"라는 긍정 주장)가 가장 비싼 분기에서 거짓이 된다.
+    가장 비싼 분기(GO)에서 기록만 지우고 같은 불변식을 다시 잰다.
+    """
+    swept, spent = _r23_cost_sweep_and_spend(
+        _r23_cost_port(declared=30, matching=29, modes=5), read_channel_counts=True
+    )
+    forgotten = replace(swept, recovery_mode_roundtrips=None)
+    # 대조군 전제 — 기록이 실제로 지워졌고, 원래 스윕은 GO 분기였다.
+    assert (swept.recovery_mode_roundtrips, forgotten.recovery_mode_roundtrips) == (2, None)
+
+    assert forgotten.recovery_roundtrip_ceiling >= spent
+
+
+def test_r24_the_recorded_unit_is_the_branch_and_not_an_observation():
+    """[R24-5] 기록은 **분기 그 자체**다 — 점유폭 응답이 실패해도 비싼 쪽으로 남는다.
+
+    `LibraryMode.channel_count`로 단가를 되짚는 길이 왜 틀리는지를 값으로 고정한다:
+    GO 분기에서 DMXChannels 응답이 전부 실패하면 채널 수 칸은 전부 `None`이 되지만
+    **왕복은 이미 나갔다.** 관측으로 되짚으면 그 스윕을 negative로 세어 과소보고한다.
+    """
+
+    class _NoChannelPort(_R21ShortPort):
+        def query_state(self, path: str) -> dict:
+            if path.endswith(f"/{DMX_CHANNELS_SEGMENT}"):
+                return {"ok": False, "path": path}
+            return super().query_state(path)
+
+    port = _NoChannelPort(
+        _r21_types(["LEDWash 600"]),
+        declared_types=4,
+        hidden={2: ("Filler 2", []), 3: ("Filler 3", []), 4: ("MegaPointe", [("Mode 1", 16)])},
+    )
+    swept, spent = _r23_cost_sweep_and_spend(port, read_channel_counts=True)
+    # 대조군 전제 — 점유폭을 못 읽었는데도 그 왕복은 실제로 나갔다.
+    assert [mode.channel_count for mode in swept.types[-1].modes] == [None]
+
+    assert swept.recovery_mode_roundtrips == RECOVERY_COST_MODE_ROUNDTRIPS_GO
+    assert swept.recovery_roundtrip_ceiling >= spent
+
+
+def test_r24_the_cost_payload_says_which_unit_judged_this_sweep():
+    """[R24-5] payload가 **어느 단가로 판정됐는지** 말한다.
+
+    상한과 프로브 수만 실으면 조작자는 둘의 차이가 `k`에서 났는지 `c`에서 났는지 모르고,
+    기각선이 negative 단가로 유도된 수라는 것도 검산할 수 없다.
+    """
+    negative = _r23_cost_sweep(_r23_cost_port(declared=6, matching=2, modes=3)).to_dict()
+    occupancy = _r23_cost_sweep(
+        _r23_cost_port(declared=6, matching=2, modes=3), read_channel_counts=True
+    ).to_dict()
+
+    assert negative["recovery_mode_roundtrips"] == RECOVERY_COST_MODE_ROUNDTRIPS_NEGATIVE
+    assert occupancy["recovery_mode_roundtrips"] == RECOVERY_COST_MODE_ROUNDTRIPS_GO
+    assert occupancy["recovery_roundtrip_ceiling"] > negative["recovery_roundtrip_ceiling"]
+
+
+def test_r24_a_library_that_was_never_swept_records_no_unit():
+    """[R24-5] 안 훑었으면 단가도 `None`이다 — `recovery_boundary`와 같은 규율.
+
+    `1`이나 `2`를 적으면 "이 단가로 쟀다"가 되어, 훑지 않은 것과 싸게 훑은 것이 한 칸에
+    뭉개진다. 그리고 그 상태에서도 계수는 0이라 고지는 `None`으로 남아야 한다.
+    """
+    library = read_fixture_type_library(LibraryRigPort(_r21_types(["LEDWash 600"])))
+
+    assert library.recovery_mode_roundtrips is None
+    assert library.recovery_roundtrip_ceiling == 0
+    assert library.recovery_cost_basis_exceeded is None
+
+
+def test_r24_the_unrecorded_fallback_is_the_most_expensive_branch():
+    """[R24-5] 폴백 단가가 **가장 비싼 분기**와 같다 — 그 등식이 과소보고 금지의 형태다.
+
+    폴백을 negative로 내리면 기록 없는 라이브러리에서 GO 스윕이 싸게 세어진다. 이
+    단정이 없으면 그 변조가 위 불변식 시험 하나에만 걸리고, 왜 걸리는지가 어디에도
+    적히지 않는다.
+    """
+    assert RECOVERY_COST_MODE_ROUNDTRIPS_CEILING == RECOVERY_COST_MODE_ROUNDTRIPS_GO
+    assert RECOVERY_COST_MODE_ROUNDTRIPS_NEGATIVE < RECOVERY_COST_MODE_ROUNDTRIPS_GO
+
+
+# ==========================================================================
+# --- round24 R24-4 점유폭 부재 게이트의 **등가 공시** (EquivDisclosure) ---
+#
+# round23은 이 갈래의 부재 단정 가드를 「복사가 아니라 분해」했다.
+#   구판(round22) `_r24_absence_assertable(ct) and _confirmable_from(`
+#                 `_library_list_completeness(library))`
+#   현행(round23) `_r24_absence_unverifiable(library, ct) is None and _r24_absence_assertable(ct)`
+#
+# round24 감사가 구판 형태로 되돌리는 뮤턴트(M07)를 심었더니 **2,036건 전부 통과**했고,
+# 2,048 상태 진리표로 차이 0을 증명했다. 아래 열거로 **독립 재현**한다(대표원 3,840
+# 상태, 차이 0). 즉 오늘 이 갈래에서 그 분해는 **행동상 no-op**이고, 실제로 방어하는
+# 것은 같은 반영이 `_absence_assertable`에 넣은 `mode_child_count is not None` 전제다.
+#
+# **문제는 no-op이 아니다** — 구조를 정리하는 등가 변경은 정당하다. 공시하지 않은 것이
+# 문제였다. round23은 바로 그 반영에서 형제 자리(`incompleteness_kind`)에는 *"값은
+# 구판과 같다"*를 적었고 이 자리에는 적지 않았다. 같은 라운드에 스스로 올린 규율
+# (*"「오늘은 결과가 같다」는 사각지대의 서명이다"*)을 자기 처방에 적용하지 않은 것이다.
+#
+# **등가 자체를 등식으로 잠그지는 않는다.** 잠그면 나중에 `_absence_unverifiable`을
+# 정당하게 좁히는 수정이 실패로 나타난다 — round22 규율 ③(*이 단정이 거짓이 되는
+# 수정은 결함인가 개선인가*)의 답이 "개선일 수 있다"이므로 그것은 역방향 대조군이다.
+# 그래서 셋으로 나눈다.
+#   ① **결함 방향만** 불변식으로 — 현행이 구판보다 **느슨해지지 않는다**. 느슨해지는
+#      수정에서만 실패하므로 방향이 안전하다.
+#   ② **등가의 원인**을 잠근다 — `_absence_assertable`이 게이트의 모드 축을 이미
+#      함의한다는 것. 그 전제(M04)가 빠지면 여기서도 죽는다.
+#   ③ **차이집합을 등기**한다(오늘 공집합). 갈라지면 실패하지만 처방은 되돌리기가
+#      아니라 **등재**다 — `test_vwx_address.py`의 경계 등기부와 같은 성격이고, 실패
+#      메시지가 등재할 상태를 찍어 준다. ①이 결함 방향을 따로 지고 있으므로 ③의 실패는
+#      "게이트가 일하기 시작했다"는 개선 신호로만 남는다.
+#
+# **이 절 자신의 등가 공시.** 이 반영은 `server/vwx/` 코드를 한 줄도 바꾸지 않는다 —
+# 런타임 행동상 **완전한 no-op**이고, 바뀌는 것은 "무엇이 왜 등가인지"를 기계가 들고
+# 있느냐뿐이다. 그것이 R24-4의 요구 그대로다: 문제는 no-op이 아니라 공시하지 않은
+# 것이었다. 주석이 아니라 시험으로 적는 이유는 round24 ⓔ다 — 주석은 코드보다 앞서
+# 나가지만, 위 셋은 원인이 죽으면 함께 죽는다.
+#
+# **감사 뮤턴트 M07의 현재 판정도 여기 적는다.** 구판 형태로 되돌리면 오늘은
+# **행동 시험 0건 · 구조 시험 1건**이 실패한다
+# (`test_r21_row_cannot_be_assembled_without_a_completeness_statement` — `_resolve_one`이
+# `_library_list_completeness`를 직접 부르게 되므로 호출자 등기와 어긋난다). 감사가
+# SURVIVED로 관측한 것은 행동 쪽이고, 그 관측은 아래 열거가 다시 확인한다. 즉 M07은
+# **등가 뮤턴트이며 구조 게이트가 별개 이유로 잡고 있다** — 두 사실을 한 칸에 뭉개면
+# "행동 대조군이 있다"는 거짓이 된다.
+# ==========================================================================
+
+from itertools import product  # noqa: E402
+
+# 이 절만 쓰는 **별칭 임포트**다. 같은 이름을 뒤 절들이 다시 임포트하고 있어(완전성
+# 게이트 절 · R24-1 사유 절) 이름을 그대로 들이면 재정의가 된다 — 두 절의 임포트를
+# 하나로 합치는 것은 이번 반영의 범위가 아니라 별칭으로 비켜 간다.
+from server.vwx.typemap import _absence_assertable as _r24_absence_assertable  # noqa: E402
+from server.vwx.typemap import _absence_unverifiable as _r24_absence_unverifiable  # noqa: E402
+from server.vwx.typemap import _confirmable_from as _r24_confirmable_from  # noqa: E402
+
+#: 모드 행 형상 — **채널 수 판독 여부**가 `_absence_assertable`의 마지막 전제다.
+_R24_MODE_SHAPES = (
+    (),
+    (LibraryMode(index=1, name="Mode 1", channel_count=16),),
+    (LibraryMode(index=1, name="Mode 1", channel_count=None),),
+    (
+        LibraryMode(index=1, name="Mode 1", channel_count=16),
+        LibraryMode(index=2, name="Mode 2", channel_count=None),
+    ),
+)
+
+
+def _r24_type_states() -> dict[tuple, LibraryType]:
+    """`LibraryType`의 **파생 상태**마다 대표원 하나.
+
+    밑에 깐 필드 조합(4,608건)을 게이트가 실제로 보는 파생 서명으로 접는다 — 두 술어가
+    읽는 것은 필드가 아니라 그 서명이므로, 대표원 하나면 그 상태를 전부 대표한다.
+    """
+    states: dict[tuple, LibraryType] = {}
+    for (
+        available,
+        declared,
+        returned,
+        enumerated,
+        unusable,
+        unparsable,
+        truncated,
+        modes,
+    ) in product(
+        (True, False),
+        (None, 0, 1, 2),
+        (0, 1, 2),
+        (0, 1, 2),
+        (0, 1),
+        (0, 1),
+        (True, False),
+        _R24_MODE_SHAPES,
+    ):
+        entry = LibraryType(
+            index=1,
+            name="MegaPointe",
+            modes=modes,
+            modes_available=available,
+            modes_truncated=truncated,
+            mode_child_count=declared,
+            modes_enumerated_count=enumerated,
+            returned_mode_row_count=returned,
+            unusable_mode_row_count=unusable,
+            unparsable_mode_row_count=unparsable,
+        )
+        signature = (
+            entry.modes_available,
+            entry.modes_truncated,
+            entry.modes_enumeration_short,
+            entry.modes_over_enumerated,
+            bool(entry.mode_rows_discarded),
+            entry.mode_child_count is None,
+            all(mode.channel_count is not None for mode in entry.modes),
+        )
+        states.setdefault(signature, entry)
+    return states
+
+
+def _r24_library_states(entry: LibraryType) -> dict[tuple, FixtureTypeLibrary]:
+    """`FixtureTypeLibrary`의 파생 상태마다 대표원 하나 — 위 함수의 루트 축 형제."""
+    states: dict[tuple, FixtureTypeLibrary] = {}
+    for available, declared, returned, enumerated, unusable, unparsable, truncated in product(
+        (True, False), (None, 0, 1, 2), (0, 1, 2), (0, 1, 2), (0, 1), (0, 1), (True, False)
+    ):
+        library = FixtureTypeLibrary(
+            types=(entry,),
+            available=available,
+            truncated=truncated,
+            child_count=declared,
+            enumerated_count=enumerated,
+            returned_row_count=returned,
+            unusable_row_count=unusable,
+            unparsable_row_count=unparsable,
+        )
+        signature = (
+            library.available,
+            library.truncated,
+            library.enumeration_short,
+            library.over_enumerated,
+            bool(library.rows_discarded),
+            library.child_count is None,
+            library.index_domain_violated,
+        )
+        states.setdefault(signature, library)
+    return states
+
+
+def _r24_gate_verdicts():
+    """상태마다 `(서명, 현행 판정, 구판 판정)`.
+
+    두 판정은 `_resolve_one`의 점유폭 갈래가 `absence_assertable`에 넣는 값 그 자체다 —
+    한쪽은 현행 소스에서, 한쪽은 `git show fbfac93`의 구판 표현식에서 왔다. 구판을 손으로
+    다시 적는 것이 이 절의 유일한 위험이라, 표현식을 **부품 단위로** 부른다(구판이 실제로
+    부르던 두 함수를 그대로 부른다 — 그 함수들의 의미가 바뀌면 이 재현도 함께 움직인다).
+    """
+    for type_signature, entry in _r24_type_states().items():
+        for library_signature, library in _r24_library_states(entry).items():
+            current = _r24_absence_unverifiable(library, entry) is None and (
+                _r24_absence_assertable(entry)
+            )
+            replaced = _r24_absence_assertable(entry) and _r24_confirmable_from(
+                _library_list_completeness(library)
+            )
+            yield (library_signature, type_signature), current, replaced
+
+
+def test_r24_the_shared_gate_is_never_looser_than_the_form_it_replaced():
+    """[R24-4 ①] **결함 방향** — 현행 가드가 구판보다 부재를 더 쉽게 단정하지 않는다.
+
+    이 갈래의 단정은 *"도면 점유폭에 맞는 모드가 이 FixtureType에 없다"*이고 처분은
+    하드 스톱이다. 가드가 느슨해지면 미관측 구간을 부재로 바꿔 조작자를 "도면을 고쳐라"로
+    보낸다 — R23-1이 고발한 그 형태다. 반대 방향(더 엄해짐)은 여기서 실패하지 않는다:
+    그것은 결함이 아니라 게이트가 일하기 시작한 것이고, 아래 등기부가 그것을 알린다.
+    """
+    looser = [
+        signature
+        for signature, current, replaced in _r24_gate_verdicts()
+        if current and not replaced
+    ]
+
+    assert not looser, looser
+
+
+def test_r24_the_absence_predicate_already_answers_the_gate_mode_side():
+    """[R24-4 ②] **등가의 원인** — 술어가 게이트의 모드 축을 이미 함의한다.
+
+    `_absence_assertable`이 참이면 그 타입의 모드 축(`_mode_axis`)은 서지 않고 모드 목록
+    완전성 진술도 `complete=True`다. 그래서 게이트에 남는 항이 루트 절반 하나뿐이고,
+    구판이 그 절반을 따로 적고 있었으므로 둘이 같은 답을 낸다. 이 함의가 오늘 등가의
+    **이유**이고, 그것을 세우는 것이 round23이 같은 반영에 넣은 여섯 번째 전제
+    (`mode_child_count is not None`)다 — 그 전제를 빼면 여기서 함의가 깨진다.
+    """
+    states = _r24_type_states()
+    broken = [
+        signature
+        for signature, entry in states.items()
+        if _r24_absence_assertable(entry)
+        and not (
+            _mode_axis(entry) is None and _r24_confirmable_from(_mode_list_completeness(entry))
+        )
+    ]
+
+    assert not broken, broken
+
+
+def test_r24_the_recorded_cause_is_the_premise_that_actually_defends():
+    """[R24-4 ②] 위 함의가 **공허하지 않다** — 그 전제 하나가 판정을 실제로 뒤집는다.
+
+    전제를 세우는 조건만 지운 짝을 만든다: 다른 다섯 갈래는 전부 깨끗한데 선언 모드
+    총계만 못 읽은 상태다. 술어가 여기서 갈리지 않으면 위 함의는 "참인 전건이 없어서"
+    성립하는 항진식이 되고, 등가 공시는 아무것도 말하지 않게 된다.
+    """
+    verified = LibraryType(
+        index=1,
+        name="MegaPointe",
+        modes=(LibraryMode(index=1, name="Mode 1", channel_count=16),),
+        mode_child_count=1,
+        modes_enumerated_count=1,
+        returned_mode_row_count=1,
+    )
+    unread = replace(verified, mode_child_count=None)
+    library = FixtureTypeLibrary(
+        types=(unread,), child_count=1, enumerated_count=1, returned_row_count=1
+    )
+
+    assert _r24_absence_assertable(verified) is True
+    assert _r24_absence_assertable(unread) is False
+    # 두 층이 같은 답을 낸다 — 그 일치가 R23-1의 처방이었고, 그래서 게이트가 남는다.
+    assert _r24_absence_unverifiable(library, unread) is not None
+
+
+#: [R24-4 ③] 현행 가드와 구판 가드가 **실제로 갈리는** 상태의 등기부.
+#:
+#: **오늘 비어 있고, 비어 있다는 것이 공시다**: 이 갈래에서 `_absence_unverifiable`은
+#: `_absence_assertable`과 구판의 루트 완전성 항이 이미 막은 것만 막는다. 감사 뮤턴트
+#: M07(구판 형태로 되돌리기)이 SURVIVED인 이유가 이것이고, 그것은 대조군 누락이 아니라
+#: **등가 뮤턴트**다.
+#:
+#: 갈래가 늘어 실제로 갈라지면 아래 게이트가 **등재할 상태를 찍어 주며** 실패한다.
+#: 그때의 처방은 분해를 되돌리는 것이 아니라 **여기에 적는 것**이다 — 갈라졌다는 것은
+#: 게이트가 독립적으로 일하기 시작했다는 뜻이고, 그것은 개선이다. 결함 방향(현행이
+#: 느슨해짐)은 이 표가 아니라 위 ① 불변식이 진다.
+_R24_ABSENCE_GATE_DIVERGENCES: tuple[tuple, ...] = ()
+
+
+def test_r24_the_gate_adds_nothing_this_branch_does_not_already_block():
+    """[R24-4 ③] 등가 **기록**과 실측이 일치한다 — 「오늘은 결과가 같다」를 기계가 든다."""
+    diverged = tuple(
+        signature for signature, current, replaced in _r24_gate_verdicts() if current != replaced
+    )
+
+    assert diverged == _R24_ABSENCE_GATE_DIVERGENCES, (
+        "게이트와 구판 형태가 갈리는 상태가 생겼다 — 되돌리지 말고 "
+        "`_R24_ABSENCE_GATE_DIVERGENCES`에 등재하라(등가 공시의 갱신이다):\n"
+        + "\n".join(f"    {signature}," for signature in diverged)
+    )
+
+
+def test_r24_the_equivalence_disclosure_is_not_vacuous():
+    """[R24-4 ③] 등기가 **공허하지 않다** — 열거가 실재하고 두 답을 모두 낸다.
+
+    차이집합이 비었다는 공시는 열거가 아무것도 세지 않으면 자동으로 참이 된다. 그래서
+    세 가지를 함께 못박는다: 상태 수가 실제로 많고, 현행 가드가 참·거짓을 모두 내며,
+    구판이 따로 들고 있던 루트 항이 **실제로 어떤 상태를 막는다**(막지 않으면 두 표현의
+    비교가 술어 하나의 비교로 붕괴한다).
+    """
+    verdicts = list(_r24_gate_verdicts())
+    assert len(verdicts) > 3_000
+    assert {current for _signature, current, _replaced in verdicts} == {True, False}
+
+    predicate_only = [
+        signature
+        for signature, _current, replaced in verdicts
+        if not replaced and _r24_absence_assertable(_r24_type_states()[signature[1]])
+    ]
+    assert predicate_only, "구판의 루트 완전성 항이 아무 상태도 막지 않는다 — 비교가 공허하다"
 
 
 # ==========================================================================
@@ -9815,29 +10324,54 @@ def test_r24_the_live_m8_snapshot_still_resolves(assumption, type_name, mode_nam
 
 
 def test_r24_the_sibling_mode_resolver_is_reconfirmed_harmless():
-    """[R23-1 ④ 등기] `apply._resolve_library_mode`를 **다시 확인했고 동의한다.**
+    """[R23-1 ④ 등기 · round25 R24-2 재판정] `apply._resolve_library_mode` — **여전히 무해다.**
 
-    감사가 무해로 판정한 자리다. 다음 감사가 같은 자리를 다시 볼 것이므로 판단을 코드로
-    남긴다 — 무해의 **근거는 부정 결론에 기대지 않는다**는 것 하나다:
+    **등기를 갱신하는 이유**: round24 판에서 이 시험은 형제 `_resolve_library_type`을
+    *"`enumeration_incomplete` 가드가 있으니 닫혀 있다"*고 인용하며 무해를 판정했다.
+    그 인용이 틀렸다 — 그 가드의 계수 갈래는 `child_count is None`에서 전부 거짓이라,
+    **선언 총계를 못 읽은 스냅샷에서는 가드가 발화하지 않았다**(R24-2). 무해 판정 자체는
+    형제의 상태에 기대지 않으므로 결론은 그대로지만, **근거로 든 문장이 거짓이었으므로**
+    그 문장을 고친다. 형제는 이제 완전성 술어
+    (`typemap._confirmable_from(_library_list_completeness(...))`)로 닫힌다.
 
-      · 형제 `_resolve_library_type`은 index 형태 해석이 *"그 이름이 열거에 없다"*는
-        **부정 증거**에 기대므로 `enumeration_incomplete` 가드가 필요하다.
+    무해의 근거는 하나다 — **이 함수는 부재를 근거로 쓰지 않는다**:
+
+      · 형제 `_resolve_library_type`의 index 형태 해석은 *"그 이름이 열거에 없다"*는
+        **부정 증거** 위에 서므로 완전성 술어가 필요하다.
       · `_resolve_library_mode`의 index 해석은 인덱스와 **이름을 동시에** 요구한다 —
         두 해석 모두 긍정 증거이고, `by_name`이 비었다는 사실을 근거로 쓰지 않는다.
+        그래서 모드 열거의 선언 총계(`mode_child_count`)를 못 읽어도 판정이 변하지 않는다.
       · 반환값도 부재 **단정**이 아니다: `None`은 "확정하지 못했다"이고 호출자는 그것을
         하드 스톱으로 바꾸지 않는다.
 
-    죽이는 뮤테이션: `by_index`에서 `mode.name == index_match.group(2)` 절을 지우면
-    ②가 실패한다 — 그 순간 이 자리도 부정 증거에 기대게 되어 무해 판정이 무너진다.
+    **남는 노출은 등기한다**(round24 ⓔ — 주석이 코드보다 앞서 나가지 않게): 두 함수 모두
+    `_single_unambiguous`의 `len(...) == 1`을 확정 근거로 쓰는데, *"관측 범위 안에서
+    유일하다"*는 절단 아래에서 *"유일하다"*를 뜻하지 않는다. 그 잔여는 round11 N01이
+    **의도적으로 받은 대가**다 — 긍정 증거까지 버리면 절단이 기본 경로인 이 콘솔에서
+    멱등 판정이 영영 성립하지 않는다. 두 표면이 **같은 대가**를 받으므로 갈리지 않는다.
+
+    죽이는 뮤테이션:
+      · `by_index`에서 `mode.name == index_match.group(2)` 절을 지우면 ②가 실패한다 —
+        그 순간 이 자리도 부정 증거에 기대게 되어 무해 판정이 무너진다.
+      · 형제의 가드를 `enumeration_incomplete`로 되돌리면 ①-ⓑ가 실패한다(round24 판은
+        이 칸이 없어서 그 뮤턴트를 놓쳤다).
     """
     import ast as _ast
     import inspect as _inspect
 
     from server.vwx.apply import _resolve_library_mode, _resolve_library_type
 
-    # ① 형제는 미완전 열거에서 index 단독 해석을 거부한다(부정 증거 가드).
+    # ①-ⓐ 형제는 미완전 열거에서 index 단독 해석을 거부한다(부정 증거 가드).
     short = read_fixture_type_library(_R21ShortPort(_r21_types(["LEDWash 600"]), declared_types=30))
     assert _resolve_library_type("FixtureType 2", short) is None
+
+    # ①-ⓑ [round25 R24-2] **round24 판이 못 보던 칸.** 축은 하나도 서지 않는데 선언
+    #      총계를 못 읽은 스냅샷 — 구판 가드는 여기서 조용히 통과시켰다.
+    unread_total = FixtureTypeLibrary(
+        types=(LibraryType(index=2, name="LEDWash 600", modes=()),), available=True
+    )
+    assert unread_total.enumeration_incomplete is False
+    assert _resolve_library_type("FixtureType 2", unread_total) is None
 
     # ② 이쪽은 그 가드가 필요 없다 — index 해석이 **이름까지** 요구한다.
     source = _ast.parse(_inspect.getsource(_resolve_library_mode))
@@ -9851,3 +10385,534 @@ def test_r24_the_sibling_mode_resolver_is_reconfirmed_harmless():
     assert _resolve_library_mode("Mode 1", partial) is partial.modes[0]
     # ④ 없는 이름은 `None`이지 하드 스톱이 아니다.
     assert _resolve_library_mode("Mode 99", partial) is None
+    # ⑤ [round25 R24-2] 모드 축의 **선언 총계 미판독**에서도 판정이 그대로다 —
+    #    형제를 무너뜨린 상태가 이 자리에는 도달하지 않는다는 직접 증거다.
+    unread_modes = LibraryType(
+        index=1,
+        name="LEDWash 600",
+        modes=(LibraryMode(index=1, name="Mode 1"), LibraryMode(index=2, name="Mode 2")),
+    )
+    assert unread_modes.mode_child_count is None
+    assert unread_modes.modes_incomplete is False
+    assert _resolve_library_mode("Mode 1", unread_modes) is unread_modes.modes[0]
+    assert _resolve_library_mode("2 Mode 2", unread_modes) is unread_modes.modes[1]
+
+
+# ==========================================================================
+# [round25 R24-1] 사유문 도달집합 — **기계가 센다**
+#
+# round23은 점유폭 미검증 문장의 도달집합을 손으로 "셋"이라 셌고, round24는 "넷"이라
+# 셌다. 둘 다 틀렸다: round24가 그 표현식에 **새로 끌어들인**
+# `_absence_unverifiable(library, ...)`가 루트 축을 도달집합에 넣었는데 문장은 모드
+# 목록만 탓했고(루트로 온 행은 `mode_options_completeness{complete:true}`와 *"모드
+# 목록을 전수로 보지 못했다"*를 같은 payload에 실었다 — R20-D가 고발한 자기모순),
+# 채널 수 미판독은 목록이 아니라 **원소의 한 칸**이 빈 것이라 세 번째 갈래였다.
+#
+# **형제도 같은 병이었다.** `_incompleteness_reason`이 고르는 세 문장 중 둘
+# (`LIBRARY_TRUNCATED_REASON` · `LIBRARY_UNREADABLE_REASON`)이 *"FixtureType 열거"*라고
+# 루트 목록을 지목하고 있었는데, 그 축 이름은 `_library_axis`와 `_mode_axis`가 **공유**
+# 한다. 모드 열거만 어긋난 스냅샷 11행이 그 문장을 냈고 같은 행의
+# `type_candidates_completeness`는 `complete:true`였다(실측). round23이 이 문장의 괄호
+# 안 원인만 늘리고 주어를 그대로 둔 자리다 — *"셋을 고쳤다"*가 완전하지 않았다.
+#
+# 손으로 세는 것을 그만둔다. 이 절의 구조:
+#   · **요청 형태 × 루트 축 × 모드 축**의 곱집합을 전수 탐색한다(센서스). 요청 형태를
+#     축에 넣은 이유가 형제 전수다 — 점유폭 갈래만 돌면 형제 세 자리를 못 본다.
+#   · 문장이 하는 **주장**을 등기하고(문장 단위가 아니라 **절 단위**다), 상태마다
+#     "그 절이 문장에 있으면 그 행이 그 주장을 지지하는가"를 단정한다. 조건이 **행의
+#     칸**이라 이 등기가 곧 자기모순 금지다.
+#   · 코퍼스가 축의 **치역 전수**를 밟는지를 프로덕션 AST와 맞대고 잰다 — 축이 늘면
+#     코퍼스가 먼저 운다.
+# ==========================================================================
+
+from server.vwx.typemap import (  # noqa: E402  (섹션 지역 임포트 — 공용 헤더를 건드리지 않는다)
+    FOOTPRINT_MISMATCH_CHANNEL_COUNTS_UNREAD_REASON,
+    FOOTPRINT_MISMATCH_TYPE_UNVERIFIED_REASON,
+    LIBRARY_TRUNCATED_REASON,
+    LIBRARY_UNREADABLE_REASON,
+    _absence_unverifiable,
+    _footprint_unverified_reason,
+    _library_incompleteness,
+    _library_unverifiable,
+    _mode_unverifiable,
+    _resolve_one,
+)
+
+#: **루트 축** 관측 형태 — 축 하나씩만 세운다. 계수는 상보식
+#: (`returned == enumerated + unusable + unparsable`)을 지킨다: 깨진 스냅샷을 코퍼스로
+#: 쓰면 무엇이 축을 세웠는지가 흐려진다.
+_R25_ROOT_SHAPES = {
+    "whole": {},
+    "unavailable": {"available": False},
+    "truncated": {"truncated": True},
+    "enumeration_short": {"child_count": 2},
+    "over_enumerated": {"child_count": 0},
+    "rows_discarded": {"unusable_row_count": 1, "child_count": 2, "returned_row_count": 2},
+    "declared_unreadable": {"child_count": None},
+}
+
+#: **요청 형태** — 같은 스냅샷을 사유가 나는 **네 자리**로 각각 밀어 넣는다.
+#: 점유폭 갈래 하나만 돌면 형제 세 자리(확정 게이트 · 모드 부재 가드 · 타입 부재 가드)가
+#: 검사받지 않고, 이번 라운드가 형제에서 결함을 찾은 것이 정확히 그 사각지대다.
+_R25_REQUEST_SHAPES = {
+    "footprint_mismatch": dict(instrument_type="MegaPointe", mode="Mode 1", footprint=99),
+    "footprint_match": dict(instrument_type="MegaPointe", mode="Mode 1", footprint=24),
+    "mode_absent": dict(instrument_type="MegaPointe", mode="Gamma", footprint=None),
+    "type_absent": dict(instrument_type="Wholly Unrelated Fixture", mode="Mode 1", footprint=None),
+}
+
+
+def _r25_mode_shapes() -> dict[str, dict]:
+    """**모드 축** 관측 형태. 손으로 두 번째 표를 들지 않는다 — 등기부
+    `_R21_PREMISE_VIOLATIONS`에서 파생시킨다(round24가 같은 자리에서 배운 것: 자기참조
+    행삭제 프로브는 축소된 표를 축소된 자기 자신과 비교해 아무것도 막지 못한다).
+
+    등기부가 표현하지 못하는 형태 하나를 더한다. 등기부의 `channel_count` 행은 **유일한
+    모드**의 채널 수를 지우는데, 그러면 점유폭 대조 자체가 수행되지 않아(`match`가
+    `None`) 점유폭 갈래가 열리지 않는다 — 실측으로 확인했다. 채널 수 미판독이 그 갈래에
+    닿으려면 확정된 모드는 채널 수를 갖고 **형제 모드**가 비어 있어야 한다. 그 형태는
+    모집단(`modes`) 위의 성질이라 "전제 하나만 위반" 등기부에 담기지 않는다.
+    """
+    shapes = {"whole": {}}
+    shapes.update(_R21_PREMISE_VIOLATIONS)
+    shapes["sibling_channel_count"] = {
+        "modes": (
+            LibraryMode(index=1, name="Mode 1", channel_count=24),
+            LibraryMode(index=2, name="Zebra", channel_count=None),
+        ),
+        "mode_child_count": 2,
+        "modes_enumerated_count": 2,
+        "returned_mode_row_count": 2,
+    }
+    return shapes
+
+
+def _r25_library(root_shape: str, mode_shape: str) -> FixtureTypeLibrary:
+    base = dict(
+        types=(_r21_library_type(**_r25_mode_shapes()[mode_shape]),),
+        available=True,
+        truncated=False,
+        child_count=1,
+        enumerated_count=1,
+        returned_row_count=1,
+    )
+    base.update(_R25_ROOT_SHAPES[root_shape])
+    return FixtureTypeLibrary(**base)
+
+
+def _r25_resolve(
+    library: FixtureTypeLibrary, request_shape: str = "footprint_mismatch"
+) -> tuple[object, dict]:
+    """이 스냅샷 하나짜리 계획의 **판정과 조작자 행** — 행 조립까지 프로덕션 자리를 탄다.
+
+    처분(`incompleteness_kind`)은 행 칸이 아니라 판정에 실려 `apply`에서 배제 코드가
+    되므로, 문장만이 아니라 처분까지 무회귀임을 보이려면 판정 객체가 필요하다.
+    """
+    resolution = _resolve_one(
+        request("c1", **_R25_REQUEST_SHAPES[request_shape]),
+        library,
+        {"MegaPointe": {"type": "MegaPointe", "mode": "Mode 1"}},
+        footprint_enabled=True,
+    )
+    payload = TypeResolutionPlan(
+        assumption_72=ASSUMPTION_72_GO, library=library, resolutions=(resolution,)
+    ).to_dict()
+    return resolution, row_by_id(payload, "c1")
+
+
+def _r25_row(library: FixtureTypeLibrary, request_shape: str = "footprint_mismatch") -> dict:
+    return _r25_resolve(library, request_shape)[1]
+
+
+#: 점유폭 미검증 갈래가 낼 수 있는 **사유 전수**. 센서스가 이 집합과 전단사임을 아래가
+#: 단정한다 — 갈래가 하나 더 열리면(= 등기 없는 문장이 나가면) 그 자리에서 운다.
+_R25_FOOTPRINT_REASONS = frozenset(
+    {
+        FOOTPRINT_MISMATCH_TYPE_UNVERIFIED_REASON,
+        FOOTPRINT_MISMATCH_UNVERIFIED_REASON,
+        FOOTPRINT_MISMATCH_CHANNEL_COUNTS_UNREAD_REASON,
+    }
+)
+
+#: 센서스는 결정적이라 한 번만 돈다 — 여러 시험이 같은 표를 본다.
+_R25_CENSUS_MEMO: dict[str, tuple] = {}
+
+
+def _r25_census() -> tuple[tuple[str, str, str, FixtureTypeLibrary, dict], ...]:
+    """곱집합 **전수** — (요청 형태, 루트 형태, 모드 형태, 스냅샷, 행)."""
+    if "all" not in _R25_CENSUS_MEMO:
+        _R25_CENSUS_MEMO["all"] = tuple(
+            (req, root, mode, library, _r25_row(library, req))
+            for req in _R25_REQUEST_SHAPES
+            for root in _R25_ROOT_SHAPES
+            for mode in _r25_mode_shapes()
+            for library in (_r25_library(root, mode),)
+        )
+    return _R25_CENSUS_MEMO["all"]
+
+
+def _r25_reached() -> tuple[tuple[str, str, str, FixtureTypeLibrary, dict], ...]:
+    """그중 **점유폭 미검증 갈래에 닿은** 상태만."""
+    return tuple(entry for entry in _r25_census() if entry[4]["reason"] in _R25_FOOTPRINT_REASONS)
+
+
+#: 문장이 하는 **주장** 등기 — (이름, 그 주장을 지고 있는 절, 행이 그 주장을 지지하는가).
+#:
+#: 문장 단위가 아니라 **절 단위**인 것이 요점이다. 한 문장이 여러 주장을 지고, 같은
+#: 주장이 두 문장에 나올 수 있다. 문장 단위로 등기하면 "이 문장은 이 갈래에서 참이다"만
+#: 재게 되고, 문장 본문을 고쳐 남의 목록을 탓하게 만드는 뮤테이션이 살아남는다 —
+#: 그것이 정확히 R24-1이 고발한 형태다(문장이 자기 도달 경로를 모른 채 남의 목록을 탓함).
+#:
+#: 조건이 **그 행에 실제로 실려 나간 칸**이라는 것이 두 번째 요점이다. 그래서 이 등기가
+#: 곧 자기모순 금지다: 같은 payload가 `complete:true`를 싣고 그 목록을 "전수가 아니다"라
+#: 말하면 여기서 죽는다. 프로덕션 완전성 함수를 다시 부르지 않는 이유도 같다 — 조작자가
+#: 보는 것은 함수가 아니라 행이다.
+_R25_SENTENCE_CLAIMS = (
+    (
+        "root_list_partial",
+        "루트 열거가 전수라고 말할 근거가 없어",
+        lambda row: row[TYPE_CANDIDATES_COMPLETENESS_COLUMN]["complete"] is not True,
+    ),
+    (
+        "mode_list_partial",
+        "이 FixtureType의 모드 목록이 전수라고 말할 근거가 없다",
+        lambda row: row[MODE_OPTIONS_COMPLETENESS_COLUMN]["complete"] is not True,
+    ),
+    (
+        "mode_list_whole",
+        "모드 목록은 선언 총계와 대조해 전수임을 확인했지만",
+        lambda row: row[MODE_OPTIONS_COMPLETENESS_COLUMN]["complete"] is True,
+    ),
+    (
+        "channel_counts_unread",
+        "채널 수를 읽지 못한 모드가 있어",
+        lambda row: any(option["channel_count"] is None for option in row["mode_options"]),
+    ),
+    # 형제 셋(`_incompleteness_reason`)은 축 이름을 두 목록이 공유하므로 목록을 지목하지
+    # 않는다 — 주장도 그만큼 약하다: **둘 중 하나가** 전수가 아니다.
+    (
+        "either_list_partial",
+        "FixtureType·DMXMode 열거",
+        lambda row: (
+            not (
+                row[TYPE_CANDIDATES_COMPLETENESS_COLUMN]["complete"] is True
+                and row[MODE_OPTIONS_COMPLETENESS_COLUMN]["complete"] is True
+            )
+        ),
+    ),
+)
+
+
+def _r25_returned_names(function_name: str) -> frozenset[str]:
+    """그 함수가 **이름으로** 돌려주는 상수 전수 — 손으로 적은 기대 집합을 쓰지 않는다."""
+    return frozenset(
+        node.value.id
+        for node in ast.walk(_r21_function_node(function_name))
+        if isinstance(node, ast.Return) and isinstance(node.value, ast.Name)
+    )
+
+
+def test_r25_no_sentence_contradicts_the_row_it_rides_on():
+    """[R24-1 처방③ · 대조군②] **곱집합 전수에서 자기모순 0건.**
+
+    round23·round24는 도달집합을 손으로 셌고 두 번 다 틀렸다. 여기서는 요청 형태 ×
+    루트 축 × 모드 축을 전부 돌려 사유가 나는 **네 자리**를 함께 밟고, 상태마다 문장이
+    지고 있는 절의 주장을 **그 행의 칸**과 맞댄다. 도달집합이 다음에 또 넓어지면 새
+    경로가 자동으로 이 검사를 받는다.
+
+    죽이는 뮤테이션:
+      · 정정을 되돌려 점유폭 사유를 하나로 합치면 루트 축 경로에서
+        `mode_list_partial`이 `complete:true`와 부딪혀 실패한다.
+      · 루트 축 경로만 되돌려도 같다.
+      · 채널 수 갈래를 모드 목록 문장으로 되돌리면 그 경로에서 실패한다.
+      · 형제 둘을 *"FixtureType 열거"* 주어로 되돌리면 `either_list_partial`이 그 절을
+        못 찾아 아래 ③이 실패하고, 모드 축 11경로가 검사에서 새는 것이 드러난다.
+    """
+    census = _r25_census()
+    offenders = [
+        (req, root, mode, name)
+        for req, root, mode, _library, row in census
+        for name, clause, holds in _R25_SENTENCE_CLAIMS
+        if clause in row["reason"] and not holds(row)
+    ]
+    # ① 문장은 자기가 탄 행과 어긋나지 않는다.
+    assert offenders == [], offenders
+    # ② 비공허성 — 곱집합의 일부만 점유폭 갈래에 닿는다.
+    assert 0 < len(_r25_reached()) < len(census)
+    # ③ 사유마다 등기된 절을 **최소 하나** 진다 — 아니면 ①이 그 문장을 비껴간다.
+    for reason in _R25_FOOTPRINT_REASONS | {LIBRARY_TRUNCATED_REASON, LIBRARY_UNREADABLE_REASON}:
+        assert any(clause in reason for _name, clause, _holds in _R25_SENTENCE_CLAIMS), reason
+
+
+def test_r25_the_census_reaches_every_registered_sentence_and_no_other():
+    """센서스 ↔ 사유 전단사 — **등기 없는 문장이 점유폭 갈래로 나가지 못한다.**
+
+    한쪽 방향은 과소등기를 막고(새 갈래가 문장을 하나 더 내면 집합이 커진다), 다른
+    방향은 공허를 막는다(등기만 해 놓고 아무 상태도 닿지 않는 문장은 검사받지 않는다).
+
+    죽이는 뮤테이션:
+      · `_footprint_unverified_reason`에 갈래를 등기 없이 더하면 ①이 실패한다.
+      · 갈래 하나를 지우면 그 문장이 닿지 않아 ②가 실패한다.
+    """
+    observed = {row["reason"] for _req, _root, _mode, _library, row in _r25_reached()}
+    assert observed == _R25_FOOTPRINT_REASONS
+
+
+def test_r25_the_request_corpus_opens_every_reason_site():
+    """코퍼스 건전성 — 요청 형태 넷이 **서로 다른 자리**를 실제로 연다.
+
+    형제 전수를 요청 축으로 산 것이 이번 처방의 절반이다. 형제 자리가 한 번도 열리지
+    않으면 위 자기모순 게이트는 점유폭 갈래만 재고, 그것이 round23이 *"셋을 고쳤다"*고
+    적으면서 형제의 주어를 놓친 사각지대다.
+    """
+    census = _r25_census()
+    sites = {
+        req: {row["reason"] for entry in census if entry[0] == req for row in (entry[4],)}
+        for req in _R25_REQUEST_SHAPES
+    }
+    # ① 점유폭 갈래 셋은 불일치 요청에서만 난다.
+    assert sites["footprint_mismatch"] >= _R25_FOOTPRINT_REASONS
+    for req in ("footprint_match", "mode_absent", "type_absent"):
+        assert not (_R25_FOOTPRINT_REASONS & sites[req]), req
+    # ② 형제 셋의 자리가 나머지 세 요청에서 실제로 열린다.
+    for req in ("footprint_match", "mode_absent", "type_absent"):
+        assert {LIBRARY_TRUNCATED_REASON, LIBRARY_UNREADABLE_REASON} & sites[req], req
+
+
+@pytest.mark.parametrize(
+    "name", [row[0] for row in _R25_SENTENCE_CLAIMS], ids=[row[0] for row in _R25_SENTENCE_CLAIMS]
+)
+def test_r25_every_registered_claim_is_exercised_in_both_directions(name: str):
+    """[공허화 차단] 등기된 절마다 **그 절을 진 경로와 조건이 거짓인 경로가 둘 다 있다.**
+
+    한쪽만 있으면 위 센서스는 그 절에 대해 공허하다: 절이 아무 문장에도 없으면 함의의
+    전건이 늘 거짓이고, 조건이 늘 참이면 후건이 늘 참이라 어느 쪽도 뮤테이션을 잡지
+    못한다. round23이 남긴 규율 — *"오늘은 결과가 같다"는 사각지대의 서명* — 을 절마다
+    행동으로 확인하는 자리다.
+
+    죽이는 뮤테이션: 조건을 `lambda _row: True`로 공허화하면 그 행이 실패한다.
+    """
+    clause, holds = next((row[1], row[2]) for row in _R25_SENTENCE_CLAIMS if row[0] == name)
+    census = _r25_census()
+    carried = [entry[:3] for entry in census if clause in entry[4]["reason"]]
+    refuted = [entry[:3] for entry in census if not holds(entry[4])]
+    # ① 그 절을 실제로 지고 나가는 경로가 있다.
+    assert carried, name
+    # ② 조건이 거짓인 경로도 있다 — 그 경로에서 절이 빠지는 것이 센서스의 내용이다.
+    assert refuted, name
+
+
+def test_r25_the_audit_reproduction_paths_name_the_root_axis():
+    """[R24-1 감사 재현] 고발된 **3경로**에서 문장이 루트 축을 말한다.
+
+    감사가 든 재현: 루트 `unusable_row_count=1` + 모드 목록 완전(선언 총계 판독 · 채널
+    수 판독) + 별칭 확정 + 점유폭 불일치. 구판은 `library_incomplete` /
+    kind=`rows_discarded`를 내면서 사유로 *"모드 목록을 전수로 보지 못했다"*를 실었다 —
+    조작자는 무효한 모드 재판독으로 유도되고 실제 조치(루트 재열거 · responder 슬롯
+    재확립)를 못 찾는다.
+
+    처분 어휘는 **그대로**다: `status`도 `incompleteness_kind`도 구판과 같은 값이고,
+    갈린 것은 사람이 읽는 문장뿐이다. 그 사실을 여기서 값으로 못박는다.
+
+    죽이는 뮤테이션:
+      · 사유를 다시 하나로 합치면 ②·③이 실패한다.
+      · 처분 어휘를 새로 만들어 갈래를 가르면 ④가 실패한다.
+    """
+    #: 재현 경로 -> 구판이 내던 **처분 축**. 값으로 못박는다 — "셋 중 하나"라 적으면
+    #: 축이 바뀌어도 통과해 무회귀 주장이 공허해진다.
+    expected_kinds = {
+        "rows_discarded": FIXTURE_TYPE_LIBRARY_ROWS_DISCARDED,
+        "truncated": FIXTURE_TYPE_LIBRARY_TRUNCATED,
+        "declared_unreadable": FIXTURE_TYPE_LIBRARY_UNREADABLE,
+    }
+    for root, kind in expected_kinds.items():
+        library = _r25_library(root, "whole")
+        resolution, row = _r25_resolve(library)
+        # ① 전제 — 모드 목록은 **온전하다**. 이것이 참이 아니면 아래 고발이 성립하지 않는다.
+        assert row[MODE_OPTIONS_COMPLETENESS_COLUMN]["complete"] is True, root
+        assert row[MODE_OPTIONS_COMPLETENESS_COLUMN]["unseen_count"] == 0, root
+        # ② 문장은 루트 축을 말한다.
+        assert row["reason"] == FOOTPRINT_MISMATCH_TYPE_UNVERIFIED_REASON, root
+        # ③ 그리고 모드 목록을 탓하지 않는다 — 구판이 여기서 거짓말을 했다.
+        assert "이 FixtureType의 모드 목록이 전수라고 말할 근거가 없다" not in row["reason"], root
+        assert "모드를 다시 읽어도 이 상태는 풀리지 않는다" in row["reason"], root
+        # ④ 처분 어휘는 구판 그대로다 — 갈린 것은 문장뿐이다.
+        assert row["status"] == TYPE_LIBRARY_INCOMPLETE, root
+        assert resolution.incompleteness_kind == kind, root
+
+
+def test_r25_the_mode_axis_paths_are_unchanged():
+    """[R24-1 대조군③] **기존 모드 축 경로 무회귀** — 진짜 모드 미판독은 그대로다.
+
+    갈래를 가르면서 원래 참이던 자리까지 옮기면 그것도 회귀다. 모드 축으로 온 경로는
+    문장도 처분도 구판과 같아야 한다.
+    """
+    for mode in (
+        "modes_truncated",
+        "modes_enumeration_short",
+        "modes_over_enumerated",
+        "mode_rows_discarded",
+        "mode_child_count",
+    ):
+        row = _r25_row(_r25_library("whole", mode))
+        assert row["reason"] == FOOTPRINT_MISMATCH_UNVERIFIED_REASON, mode
+        assert row[TYPE_CANDIDATES_COMPLETENESS_COLUMN]["complete"] is True, mode
+        assert row[MODE_OPTIONS_COMPLETENESS_COLUMN]["complete"] is not True, mode
+
+
+def test_r25_the_channel_count_path_does_not_blame_the_list():
+    """[R24-1 셋째 갈래] **두 목록은 전수인데 원소의 한 칸이 비었다.**
+
+    round24판은 이 상태에서도 *"모드 목록을 전수로 보지 못했다"*를 냈다 — 두 완전성
+    마커가 `complete:true`인 채로. 목록은 전수로 봤고, 못 읽은 것은 형제 모드의 채널
+    수다. 조치도 목록 재열거가 아니라 그 모드의 DMXChannels 자식 수 재판독이다.
+    """
+    library = _r25_library("whole", "sibling_channel_count")
+    row = _r25_row(library)
+
+    # ① 두 목록 다 전수다 — 목록을 탓할 근거가 없다.
+    assert row[TYPE_CANDIDATES_COMPLETENESS_COLUMN]["complete"] is True
+    assert row[MODE_OPTIONS_COMPLETENESS_COLUMN]["complete"] is True
+    assert row[MODE_OPTIONS_COMPLETENESS_COLUMN]["unseen_count"] == 0
+    # ② 문장이 그 사실을 말하고, 못 읽은 것을 특정한다.
+    assert row["reason"] == FOOTPRINT_MISMATCH_CHANNEL_COUNTS_UNREAD_REASON
+    assert "채널 수를 읽지 못한 모드가 있어" in row["reason"]
+    assert "이 FixtureType의 모드 목록이 전수라고 말할 근거가 없다" not in row["reason"]
+    # ③ 원인이 payload에 실제로 있다 — 문장만의 주장이 아니다.
+    assert any(option["channel_count"] is None for option in row["mode_options"])
+    # ④ 등기부 행으로는 닿지 않는다는 사실 자체를 못박는다(코퍼스 설계 근거).
+    assert _r25_row(_r25_library("whole", "channel_count"))["status"] == TYPE_RESOLVED
+
+
+def test_r25_the_shared_axis_reasons_do_not_name_one_list():
+    """[R24-1 형제 전수] 축 이름을 **두 목록이 공유**하므로 그 사유문은 목록을 지목하지 않는다.
+
+    `_incompleteness_reason`은 축 **이름**만 받는다. 그 이름을 `_library_axis`와
+    `_mode_axis`가 같이 쓰므로, 그 함수가 고르는 문장은 원리적으로 어느 목록이 어긋났는지
+    모른다 — 그런데 둘이 *"FixtureType 열거"*라고 루트를 지목하고 있었다. 전제(축 이름
+    공유)를 먼저 값으로 확인하고, 그 위에서 문장 형태를 강제한다.
+
+    죽이는 뮤테이션:
+      · 어느 한 문장의 주어를 *"FixtureType 열거"*로 되돌리면 ②가 실패한다.
+      · 문장을 하나 더 늘려 등기 없이 내보내도 ①의 계수에서 어긋난다.
+    """
+    import server.vwx.typemap as typemap_module
+
+    # ① 전제 — 두 축 함수가 **같은 상수**를 돌려준다. 이것이 거짓이면 위 논증이 무너진다.
+    assert _r25_returned_names("_mode_axis") <= _r25_returned_names("_library_axis")
+    shared = _r25_returned_names("_incompleteness_reason")
+    assert len(shared) == 3, shared
+    # ② 셋 다 목록을 지목하지 않는다 — 형제 `LIBRARY_ROWS_DISCARDED_REASON`의 규약이다.
+    for name in sorted(shared):
+        text = getattr(typemap_module, name)
+        assert "FixtureType·DMXMode 열거" in text, name
+        assert "FixtureType 열거" not in text, name
+
+
+def test_r25_the_root_corpus_walks_the_whole_axis_codomain():
+    """코퍼스 건전성 — 루트 형태가 `_library_axis`의 **치역 전수**를 밟는다.
+
+    프로덕션 AST에서 축 이름을 뽑아 맞댄다. 손으로 적은 기대 집합이면 축이 늘어도
+    코퍼스가 조용히 좁아진다 — round24가 도달집합을 손으로 세다 틀린 것과 같은 형태다.
+    """
+    expected = {None} | {globals()[name] for name in _r25_returned_names("_library_axis")}
+    produced = {_library_unverifiable(_r25_library(root, "whole")) for root in _R25_ROOT_SHAPES}
+    assert produced == expected, (produced, expected)
+    # 완전성 삼치도 전부 밟는다 — `None`(근거 없음)이 빠지면 R23-1 형태가 다시 샌다.
+    tri = {
+        _library_list_completeness(_r25_library(root, "whole")).complete
+        for root in _R25_ROOT_SHAPES
+    }
+    assert tri == {True, False, None}
+
+
+def test_r25_the_mode_corpus_is_derived_from_the_premise_registry():
+    """코퍼스 건전성 — 모드 형태가 **등기부에서 파생**되고, 추가분은 하나뿐이다.
+
+    [round24가 남긴 규율] 손으로 든 두 번째 표는 행삭제 뮤테이션에 살아남는다. 등기부에
+    전제가 늘면 이 코퍼스가 자동으로 따라오고, 등기부를 줄이려면 술어 AST 전단사가 막는다.
+    """
+    shapes = _r25_mode_shapes()
+    assert frozenset(shapes) == frozenset(_R21_PREMISE_VIOLATIONS) | {
+        "whole",
+        "sibling_channel_count",
+    }
+    for premise, overrides in _R21_PREMISE_VIOLATIONS.items():
+        assert shapes[premise] == overrides, premise
+    # 모드 축 치역도 전수로 밟는다.
+    produced = {_mode_unverifiable(_r25_library("whole", mode).types[0]) for mode in shapes}
+    assert produced == {None} | {globals()[name] for name in _r25_returned_names("_mode_axis")}
+
+
+def test_r25_the_axis_decomposition_is_behaviourally_a_no_op():
+    """[자기 변경 등가 공시] `_absence_unverifiable`의 **분해는 오늘 행동 no-op이다.**
+
+    round23이 남긴 규율 — *"오늘은 결과가 같다"는 사각지대의 서명* — 을 자기 변경에
+    적용한다. 루트 절반을 `_library_unverifiable`로 뽑아낸 것은 사유 문장이 "루트가
+    막았나"를 물을 자리를 만들기 위해서이고, **돌려주는 축 값은 한 상태도 바뀌지
+    않는다**(= `incompleteness_kind` → 배제 코드가 그대로라는 뜻이다). 등가를 주장만
+    하지 않고 곱집합 전수에서 값으로 고정한다.
+
+    등가의 내용은 **계약**이지 구판 표현식의 사본이 아니다:
+      ㉠ 관측된 축이 있으면 **그 축**을 돌려준다(`_library_incompleteness` 우선).
+      ㉡ 없으면 두 미판독 폴백이 판정하고, 값은 판독 실패 하나다.
+      ㉢ `None`인 것과 두 축 함수가 모두 `None`인 것은 같은 조건이다.
+
+    죽이는 뮤테이션: 합성 순서를 "루트 전부 → 모드 전부"로 바꾸면 ㉠이 깨진다
+    (루트 총계 미판독 × 모드 폐기에서 폐기가 판독 실패로 바뀐다).
+    """
+    seen = set()
+    for _req, _root, _mode, library, _row in _r25_census():
+        console_type = library.types[0]
+        axis = _absence_unverifiable(library, console_type)
+        observed = _library_incompleteness(library, console_type)
+        if observed is not None:
+            assert axis == observed  # ㉠
+        elif axis is not None:
+            assert axis == FIXTURE_TYPE_LIBRARY_UNREADABLE  # ㉡
+        assert (axis is None) == (  # ㉢
+            _library_unverifiable(library) is None and _mode_unverifiable(console_type) is None
+        )
+        seen.add((observed is None, axis is None))
+    # 비공허성 — 세 갈래(㉠·㉡·`None`)가 전부 밟혔다.
+    assert seen == {(False, False), (True, False), (True, True)}
+
+
+def test_r25_the_reason_resolver_reads_the_same_axes_as_the_guard():
+    """구조 게이트 — 문장 선택과 축 선택이 **같은 두 함수**를 같은 순서로 본다.
+
+    두 자리가 각자 식을 들면 같은 행의 `incompleteness_kind`와 사유가 다른 원인을 말할
+    수 있고, 그 갈림이 이번 라운드가 고발당한 형태다(표시와 처분의 분리).
+
+    죽이는 뮤테이션: 리졸버가 `_library_axis`만 보게 바꾸면 루트 총계 미판독 경로가
+    모드 목록 문장으로 새고 ①·③이 실패한다.
+    """
+    called = [
+        node.func.id
+        for node in ast.walk(_r21_function_node("_footprint_unverified_reason"))
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    ]
+    # ① 두 축 함수를 그 순서로 부른다.
+    assert called == ["_library_unverifiable", "_mode_unverifiable"], called
+    # ② 형제 합성도 같은 둘을 부른다 — 자리마다 다른 식을 들지 않는다.
+    composed = [
+        node.func.id
+        for node in ast.walk(_r21_function_node("_absence_unverifiable"))
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    ]
+    assert set(composed) >= {"_library_unverifiable", "_mode_unverifiable"}, composed
+    # ③ 구조만 재고 값을 안 재면 게이트가 뜬다 — 리졸버가 그 행의 사유를 실제로 낸다.
+    for _req, _root, _mode, library, row in _r25_reached():
+        assert _footprint_unverified_reason(library, library.types[0]) == row["reason"]
+
+
+def test_r25_the_three_sentences_keep_their_shape():
+    """문장 형태 불변식 — 신설 둘과 개정된 형제 둘이 프로덕션 판정자를 통과한다."""
+    from server.vwx.patchplan import sentence_shape_violation
+
+    for text in sorted(
+        _R25_FOOTPRINT_REASONS | {LIBRARY_TRUNCATED_REASON, LIBRARY_UNREADABLE_REASON}
+    ):
+        assert sentence_shape_violation(text) is None, text
+    # 세 문장은 서로 다르다 — 같은 문장을 두 이름으로 두면 갈래가 갈리지 않은 것이다.
+    assert len(_R25_FOOTPRINT_REASONS) == 3

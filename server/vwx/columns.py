@@ -13,7 +13,11 @@ from dataclasses import dataclass, field
 
 #: 정규 필드 -> 별칭(원문 표기, 비교 시 정규화된다). ``research.md`` §3이 정본.
 ALIAS_TABLE: dict[str, tuple[str, ...]] = {
-    "instrument_type": ("Instrument Type", "InstrumentType", "Type", "Fixture Type"),
+    # ``Inst Type``은 Vectorworks ``Create Report`` 대화상자의 ``Possible Columns``에
+    # 실제로 표시되는 이름이다(사용자 제공 실물 화면, 2026-08-08). 별칭표에 없어
+    # ``resolve_header`` 가 ``None``을 내면 조명 종류를 잃고 최소 유효 레코드 조건에서
+    # 전 행이 탈락한다 — 패치가 통째로 불가능해진다.
+    "instrument_type": ("Instrument Type", "InstrumentType", "Inst Type", "Type", "Fixture Type"),
     # M0 실물 샘플(2026-08-05, vectorworks_export_sample_with_data.csv)이 ASSUMPTION-68을
     # NEGATIVE로 닫으며 승격시킨 2개 필드. `fixture_name`은 콘솔에서 실제로 읽을 수 있는
     # 4개 화이트리스트 속성 중 하나(FixtureRecord.name)와 대응하는 몇 안 되는 축이라
@@ -150,6 +154,69 @@ def _is_synthetic_placeholder_header(headers: list[str]) -> bool:
     return bool(headers) and all(_SYNTHETIC_HEADER_RE.match(header) for header in headers)
 
 
+def _all_cells_are_counts(raw: dict[str, str]) -> bool:
+    """이 행의 비어있지 않은 셀이 전부 맨 정수인가 — 요약행 **후보** 선별용."""
+    nonempty = [str(value).strip() for value in raw.values() if str(value).strip()]
+    return len(nonempty) >= 2 and all(cell.isdigit() for cell in nonempty)
+
+
+def _nonempty_counts(rows: list[dict[str, str]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        for header, value in row.items():
+            if str(value).strip():
+                counts[header] = counts.get(header, 0) + 1
+    return counts
+
+
+def _column_count_row_indices(raw_records: list[dict[str, str]]) -> frozenset[int]:
+    """Vectorworks 데이터베이스 워크시트의 **컬럼별 레코드 수 요약행** 위치.
+
+    ``Create Report``가 만든 워크시트는 헤더 바로 아래에 컬럼마다 "이 컬럼에
+    값이 있는 레코드 수"를 담은 행을 둔다(실물 화면 근거: 헤더 아래 행이
+    ``11 11 11 11 6 8 11``이고 ``Unit Number``는 6행만, ``Color``는 8행만 채워져
+    있었다). 그 행은 **헤더와 폭이 같아** ``reader.py``의 소계 감지(폭 불일치)를
+    통과하고, 값이 전부 정수라 최소 유효 레코드 조건도 통과한다 — 걸러내지
+    않으면 ``instrument_type``이 ``"11"``인 조명 한 대로 패치 후보에 오른다.
+
+    **판별은 휴리스틱이 아니라 등식이다.** 후보행의 각 값이 그 컬럼에서 뒤따르는
+    데이터 블록의 비어있지 않은 셀 수와 **정확히 같을 때만** 요약행으로 본다.
+    이름이 든 컬럼(``instrument_type`` 등)이 하나라도 있으면 후보 단계에서 이미
+    탈락하므로, 실제 조명 행이 여기 걸리려면 전 컬럼이 정수이면서 그 값이 동시에
+    자기 아래 계수와 일치해야 한다.
+
+    ``Summarize items with the same``를 켜면 요약행이 여럿 나올 수 있어 블록을
+    다음 후보행 앞에서 끊는다. 계수가 맞지 않는 후보는 **건드리지 않는다** —
+    조용히 버리지 않고 통상 경로로 보낸다.
+    """
+    total = len(raw_records)
+    found: set[int] = set()
+    index = 0
+    while index < total:
+        if not _all_cells_are_counts(raw_records[index]):
+            index += 1
+            continue
+        end = index + 1
+        while end < total and not _all_cells_are_counts(raw_records[end]):
+            end += 1
+        block = raw_records[index + 1 : end]
+        if not block:
+            index += 1
+            continue
+        counts = _nonempty_counts(block)
+        declared = {
+            header: int(str(value).strip())
+            for header, value in raw_records[index].items()
+            if str(value).strip()
+        }
+        if all(counts.get(header, 0) == value for header, value in declared.items()):
+            found.add(index)
+            index = end
+            continue
+        index += 1
+    return frozenset(found)
+
+
 def resolve_columns(
     raw_records: list[dict[str, str]],
 ) -> tuple[list[ColumnRecord], list[ColumnReadFailure], list[ExcludedRow]]:
@@ -187,7 +254,20 @@ def resolve_columns(
     records: list[ColumnRecord] = []
     failures: list[ColumnReadFailure] = []
     excluded: list[ExcludedRow] = []
+    count_rows = _column_count_row_indices(raw_records)
     for row_index, raw in enumerate(raw_records):
+        if row_index in count_rows:
+            excluded.append(
+                ExcludedRow(
+                    row=row_index,
+                    kind=EXCLUDED_ROW_AGGREGATE,
+                    detail=(
+                        "워크시트 컬럼 계수 요약행(각 값이 그 컬럼 아래 데이터행의 "
+                        "비어있지 않은 셀 수와 일치) — 판독 실패가 아니라 의도적 제외"
+                    ),
+                )
+            )
+            continue
         fields: dict[str, str] = {}
         extra: dict[str, str] = {}
         for header, value in raw.items():

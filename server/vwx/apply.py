@@ -56,7 +56,18 @@ from server.vwx.patchplan import (
     PatchCandidate,
     PatchTargetExclusion,
 )
-from server.vwx.typemap import FixtureTypeLibrary, LibraryMode, LibraryType, TypeResolution
+from server.vwx.typemap import (
+    FixtureTypeLibrary,
+    LibraryMode,
+    LibraryType,
+    TypeResolution,
+    # [round25 R24-2] 완전성 술어는 **빌리지 않고 공유한다.** 같은 질문(이 열거를 전수라
+    # 말할 수 있는가)을 두 모듈이 각자 적으면 한쪽만 고쳐지고, 그 갈림이 바로 이번
+    # 라운드가 고발당한 형태다(round23 R22-B). 비공개 이름을 넘어오는 대가로 얻는 것은
+    # **조용한 분기 불가능성**이다 — typemap이 이름을 바꾸면 여기는 import에서 죽는다.
+    _confirmable_from,
+    _library_list_completeness,
+)
 from server.vwx.verdicts import (
     ADDRESS_ALREADY_OCCUPIED,
     ADDRESS_CONFLICTS_WITH_EXISTING,
@@ -525,12 +536,55 @@ def _resolve_library_type(display: str | None, library: FixtureTypeLibrary) -> L
     # [round11 N01 · round12 R07] 절단이 무효화하는 것은 **부정 결론**뿐이다 —
     # "그 이름의 타입이 열거에 없다"는 절단 아래에서 증거가 되지 못하므로, `by_name`이 비었다는
     # 사실에 기대는 **index 형태 단독 해석은 거부**한다. 반면 이름이 정확히 일치한 것은
-    # 절단과 무관한 **긍정 증거**이므로 그대로 채택한다 — 둘을 함께 버리면 이 콘솔에서
-    # 멱등 판정 자체가 영영 성립하지 않는다(절단이 기본 경로다).
+    # **긍정 증거**이므로 그대로 채택한다 — 둘을 함께 버리면 이 콘솔에서 멱등 판정
+    # 자체가 영영 성립하지 않는다(절단이 기본 경로다).
+    #
+    # **[round25 R24-2 · 주석 정정]** 구판은 그 긍정 증거를 *"절단과 무관하다"*고 적었다.
+    # 절단과 무관한 것은 **존재**뿐이다: 아래 `_single_unambiguous`는 `len(by_name) == 1`을
+    # 확정 근거로 쓰는데, *"관측 범위 안에서 유일하다"*는 절단 아래에서 *"유일하다"*를
+    # 뜻하지 않는다(미관측 구간에 같은 이름이 하나 더 있으면 우리는 본 것을 고른다).
+    # 그 잔여는 위 문장이 말한 대가로 **의도적으로 받은 것**이고, 형제
+    # `_resolve_library_mode`도 같은 대가를 받는다 — 두 표면이 갈리지 않도록 여기 적는다.
+    # 주석이 코드보다 넓게 말하면 그것도 선언과 실제의 분리다(round24 ⓔ).
     # [round21 R20-A · 형제 표면] `library.truncated` 플래그 단독이었다. 부정 결론을
     # 무효화하는 조건은 "목록이 전수가 아니다"이지 "플래그가 섰다"가 아니므로,
-    # 계수 대조까지 포함한 `enumeration_incomplete`를 본다(typemap의 같은 판정과 일치).
-    if library.enumeration_incomplete and not by_name:
+    # 계수 대조까지 포함한 판정을 본다.
+    #
+    # **[round25 R24-2] 그 판정이 `enumeration_incomplete`였고, 그것으로는 부족했다.**
+    # union이지만 **삼치가 아니다**: 계수 갈래(`enumeration_short`·`over_enumerated`)가
+    # 전부 `child_count is None`에서 거짓이라, **선언 총계를 못 읽은 스냅샷이 "전수를
+    # 봤다"로 읽혔다.** round24가 `typemap`에서 이 `None`의 두 뜻(*"전수 확인함"* /
+    # *"말할 근거 없음"*)을 갈라 놓으면서 같은 커밋에서 이 파일의 형제
+    # `_resolve_library_mode`를 무해로 재감사했는데, 바로 옆의 이 함수는 보지 않았다.
+    # 그 사이 공용 픽스처가 총계를 안 채워 34건이 이 상태 위에서 돌았다 — 예외가 아니라
+    # **기본값**이었다.
+    #
+    # **복사가 아니라 분해다.** 형제 `typemap._absence_unverifiable`을 그대로 옮기지
+    # 않는다: 그 함수는 **모드 축까지** 묻고 **처분 어휘**를 돌려주는데, 이 자리에는
+    # 확정된 타입이 아직 없고(지금 고르는 중이다) 어휘를 실을 payload 칸도 없다 —
+    # 없는 목록의 완전성을 요구하면 과차단이다(그 함수의 독스트링이 같은 이유로 모드
+    # 축을 건너뛴다). 필요한 것은 그 함수의 **라이브러리 목록 절반**뿐이므로, 그 절반을
+    # 같은 함수 호출로 공유한다. 확정 게이트(`_confirmable_lists`)·부재 단정과 같은
+    # 술어이고, 그래서 세 자리가 같은 스냅샷에 같은 답을 낸다.
+    #
+    # 두 연언의 순서는 **긍정 증거가 먼저**다: 이름이 일치했으면 완전성을 물을 필요가
+    # 없고, 물으면 픽스처마다 `ListCompleteness`를 하나씩 짓는다(이 함수는 재조회
+    # 픽스처 수만큼 불린다). 순서를 뒤집은 판과 **행동은 같다**(실측 등가 — 뮤테이션
+    # M12 SURVIVED). 싼 쪽을 앞에 두고, 등가라는 사실을 여기 적는다.
+    #
+    # **넓힌 것은 거부이므로 도달집합을 센다**(round24 ⓓ). 새로 `None`이 되는 입력은
+    # `child_count`가 미판독이면서 이름 일치가 0건인 표시 하나뿐이고, 그것이 닿는
+    # 하류는 **둘**이다 — 둘 다 이미 등재된 fail-closed 갈래이며 새 어휘를 만들지 않는다:
+    #   ① `screen_idempotent`의 `not occupant.identity_resolved`
+    #      → `existing_identity_unconfirmed`. 그 주소에 **아무것도 만들지 않는다**.
+    #      점유자가 없는 주소는 이 갈래에 오지 않으므로 정상 생성은 그대로다.
+    #   ② `verify_patch`의 같은 갈래 → `verification_identity_unconfirmed`.
+    #      전달분이 있고 관측 확정이 0건이면 `ZERO_CREATED_GUIDANCE`가 함께 나가는데,
+    #      그 문장은 "실행했는지 확인하라"이지 "생성되지 않았다"가 아니다(round12 R04) —
+    #      같은 행의 `detail`이 "픽스처는 있으나 확정할 수 없다"를 함께 말한다.
+    # 반대 방향(확정을 유지하는 쪽)의 대가는 **부분 열거 위에서 내린 멱등 판정**이고,
+    # 그 오판은 되돌릴 수 없는 쓰기로 간다. 그래서 이 방향을 고른다.
+    if not by_name and not _confirmable_from(_library_list_completeness(library)):
         return None
     return _single_unambiguous(by_name, by_index)
 

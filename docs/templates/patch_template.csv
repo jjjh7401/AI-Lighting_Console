@@ -1,0 +1,4 @@
+﻿Channel,Fixture ID,Instrument Type,GDTF Fixture Mode,Universe,U Address,Absolute Address,GDTF Fixture,DMX Footprint,Fixture Name,Device Type,Position,Unit Number,Layer,Color,UID
+1,1,MAC Encore Performance CLD,Basic,1,1,,Martin Professional@MAC Encore Performance CLD,38,Spot 1,Light,Backtruss,1,,,
+2,2,MAC Encore Performance CLD,Basic,1,39,,Martin Professional@MAC Encore Performance CLD,38,Spot 2,Light,Backtruss,2,,,
+35,35,Mac Aura XB,Standard (14 ch),2,169,,Martin@Mac Aura XB,14,Wash 33,Light,Backtruss,33,,,

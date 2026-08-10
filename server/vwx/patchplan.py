@@ -854,7 +854,7 @@ def _plan_from_report(
                 vocabulary="target_exclusion_reason",
                 reason_defect=reason.defect,
             ),
-            skipped_checks=(_fid_precheck_incomplete_check(existing_read),),
+            skipped_checks=_fid_precheck_incomplete_checks(existing_read),
             fid_safety=_fid_safety_payload(
                 assumption_71_value,
                 confirmation_required=confirmation_required,
@@ -897,8 +897,29 @@ def _plan_from_report(
     )
 
 
-def _fid_precheck_incomplete_check(read: ExistingFidRead) -> Mapping[str, object]:
-    return {
+def _fid_precheck_incomplete_checks(read: ExistingFidRead) -> tuple[Mapping[str, object], ...]:
+    """부분 관측 고지 — **판독이 불완전할 때만** 낸다. 완전하면 고지가 없다.
+
+    **[round20 R20-C 형제]** 이전 판(`_fid_precheck_incomplete_check`)은 단수 Mapping을
+    무조건 돌려줬다: `reason` 칸에 "기존 FID 열거가 부분 관측이라…"를 무조건 적으면서
+    `**read.to_dict()`로 그 read의 `complete`를 그대로 실었으므로, `complete=True`인
+    read를 주면 payload 하나가 `complete: true`와 "부분 관측이라"를 **동시에** 말했다.
+    그 자기모순은 round16 뮤테이션 M69②가 심었던 결함과 **같은 문장**이다 — 그때는
+    호출부 가드가 그것을 막아 SURVIVED가 아니었지만, 가드는 호출부의 성질이었다.
+
+    `kind`가 `FID_CONFLICT_PRECHECK_INCOMPLETE`이므로 완전한 판독에 **참인 고지는 없다** —
+    문장을 고쳐 참으로 만들 수 없고, 참인 답은 "고지 없음"뿐이다. 그래서 총함수의 치역을
+    0개 또는 1개로 넓혔다. 던지지 않는다(R18-D).
+
+    가드를 여기 둔 것은 복사가 아니라 **분해**다: `_fid_precheck_notices`가 같은 판정을
+    자기 몸에서 한 번 더 하고 있었고(`if existing_read.complete: return ()`), 그 둘은
+    정말 같은 질문이라 한 자리에 있어야 한다. 다른 호출부(GO 거부 갈래)는 이미
+    `not existing_read.complete` 안에 있으므로 튜플 길이가 늘 1이고, 그 갈래의 payload는
+    글자 그대로 이전과 같다.
+    """
+    if read.complete:
+        return ()
+    notice: Mapping[str, object] = {
         "kind": validate_autopatch("skipped_check_kind", FID_CONFLICT_PRECHECK_INCOMPLETE),
         "label": skipped_check_label(FID_CONFLICT_PRECHECK_INCOMPLETE),
         "reason": (
@@ -907,6 +928,7 @@ def _fid_precheck_incomplete_check(read: ExistingFidRead) -> Mapping[str, object
         ),
         **read.to_dict(),
     }
+    return (notice,)
 
 
 def _fid_assignment_requested(
@@ -1194,6 +1216,14 @@ def _assign_fids(
     return tuple(planned), tuple(exclusions)
 
 
+#: `complete`가 참인 판독에 `reason()`이 내는 조각. **프로덕션은 이 조각에 닿지 않는다** —
+#: 유일 호출부가 `not existing_read.complete` 가드 안에 있다. 그것이 정확히 round20 R20-C의
+#: 내용이었다: 가드는 **호출부의 성질**이고 함수의 성질이 아니었고, 그래서 분기 밖 호출이
+#: `complete=True`인 판독을 두고 `"부분 관측이다"`라고 말했다. 그 폴백의 도달 입력은
+#: `complete=True` **하나뿐**이었다 — 죽은 코드가 아니라 거짓말할 때만 살아나는 코드다.
+FID_READ_COMPLETE_REASON = "콘솔 FID 판독이 완전하다"
+
+
 @dataclass(frozen=True)
 class ExistingFidRead:
     """콘솔에서 읽은 기존 FID와 **못 읽은 것의 수**.
@@ -1278,7 +1308,24 @@ class ExistingFidRead:
         자기모순이다.`가 실제로 나갔다(48조합 중 24건). round16 S16-01이 같은 기제를
         `console_read_caveat`에서 이미 한 번 닫았다: 꼬리 판정은 **독립 문장**으로 잇는다.
         여기서는 그 꼬리를 `notes()`가 완결 문장으로 돌려준다.
+
+        **[round20 R20-C] 어느 호출에서든 참을 말한다.** 이전 판은 `parts`가 비면
+        `"부분 관측이다"`를 냈는데, `attempted`이고 루트를 읽었고 여섯 축이 전부 0인 판독은
+        정의상 `complete`다 — 그 폴백은 **완전한 판독에만 도달**했고 거기서 거짓이었다.
+        처방은 R18-D와 **같은 모양**이다: 문장 생산자를 **총함수로** 만든다. 잘못된 문맥에서
+        던지지 않는다 — R18-D가 명명한 기제(사유 조립이 터지면 되돌릴 수 없는 쓰기를 막던
+        **차단 자체가 사라진다**)를 이 자리에 새로 만드는 것이고, round18이 함께 못박은 대로
+        **강제를 넓히는 것이 곧 실패 표면을 넓히는 것**이다. 대신 `complete`와 같은 술어를
+        읽어 첫 줄에서 갈린다.
+
+        그래서 `unusable_rows`·`unparsable_rows`·`unreadable_fids`도 `> 0`으로 묻는다.
+        `complete`는 `> 0`으로 묻는데 여기서 참값으로 물으면 음수 계수에서 두 자리가
+        갈린다: `complete=True`인 채로 `"…행 -1개를 쓰지 못했다"`가 나간다. **같은 질문에는
+        같은 술어를 쓴다** — 이 두 메서드는 "불완전한 축이 있는가"와 "그 축이 무엇인가"라서
+        같은 질문의 두 형태다(`notes()`는 다르다 — 아래).
         """
+        if self.complete:
+            return FID_READ_COMPLETE_REASON
         if not self.attempted:
             return "콘솔 FID 조회를 수행하지 않았다"
         if self.root_unreadable:
@@ -1292,19 +1339,32 @@ class ExistingFidRead:
             parts.append("선언 총계(childCount)를 읽지 못해 무엇을 못 봤는지 셀 수 없다")
         elif self.unseen > 0:
             parts.append(f"선언 {self.child_count}개 중 {self.unseen}개를 열거하지 못했다")
-        if self.unusable_rows:
+        if self.unusable_rows > 0:
             parts.append(f"슬롯 번호가 없거나 중복인 행 {self.unusable_rows}개를 쓰지 못했다")
-        if self.unparsable_rows:
+        if self.unparsable_rows > 0:
             parts.append(f"슬롯으로 해석되지 않는 행 {self.unparsable_rows}개가 섞여 있다")
-        if self.unreadable_fids:
+        if self.unreadable_fids > 0:
             parts.append(f"열거된 슬롯 {self.unreadable_fids}개의 FID 값을 얻지 못했다")
-        return " · ".join(parts) if parts else "부분 관측이다"
+        # 폴백을 두지 않는다. `complete`가 거짓이고 `attempted`이며 루트를 읽었다면 위 여섯
+        # 축 중 **적어도 하나**가 참이다(`complete`와 술어가 같으므로 동어반복이다). 폴백을
+        # 되살리면 그 자리는 다시 `complete=True`에서만 도달하는 거짓 문장이 된다.
+        return " · ".join(parts)
 
     def notes(self) -> tuple[str, ...]:
         """`reason()` 조각에 이어 붙는 **독립 완결 문장들**(각각 마침표로 끝난다).
 
         [round17 S17-04] 조각 안에 섞으면 한 문장에 대시가 둘이 되거나(위) `" · "` 목록
         중간에 판정 꼬리가 박혀 바로 앞 절에만 붙은 것처럼 읽힌다(S16-01이 명명한 기제).
+
+        **[round20 R20-C 형제 판정] 이 메서드는 고치지 않았다 — 이미 총함수다.**
+        `reason()`의 폴백과 달리 여기 세 갈래는 전부 **자기 인자에서 조건을 다시 판정**한다:
+        미시도·루트 미판독·초과 열거가 아니면 `()`를 돌려주고, `complete`가 참인 판독은
+        정의상 그 셋 다 아니므로 문장을 하나도 내지 않는다. 그리고 이 문장들은 `reason()`의
+        축 열거와 **같은 질문이 아니다** — 축이 무엇인지가 아니라 그 축이 스냅샷 전체에
+        무엇을 뜻하는지를 말하는 꼬리 판정이다(`complete`와 술어를 공유할 이유가 없고,
+        공유하면 "하나도 확인하지 못했다"가 초과 열거에도 붙는다). 그래서 `reason()`처럼
+        `complete` 분기를 앞에 달지 않았다: 달면 오늘은 결과가 같지만 두 질문을 한 술어로
+        묶는 것이 된다.
         """
         if not self.attempted or self.root_unreadable:
             return ("기존 FID를 하나도 확인하지 못했다.",)
@@ -1555,11 +1615,9 @@ def _fid_precheck_notices(
     """
     if assumption_71 != ASSUMPTION_71_GO:
         return _fid_skipped_checks(assumption_71)
-    existing_read = _existing_fids_from_console(fid_property_port)
-    if existing_read.complete:
-        # 판독이 완전하면 건너뛴 검사가 없다 — 빈 고지를 지어내지 않는다.
-        return ()
-    return (_fid_precheck_incomplete_check(existing_read),)
+    # [round20 R20-C 형제] "판독이 완전하면 고지가 없다"는 판정은 고지 생산자가 자기 몸에서
+    # 한다 — 여기서 한 번 더 하면 같은 질문이 두 자리에 살고, 그 둘이 갈릴 수 있다.
+    return _fid_precheck_incomplete_checks(_existing_fids_from_console(fid_property_port))
 
 
 def _fid_safety_payload(

@@ -1,0 +1,14 @@
+MA3 Patch Data
+Device Type,Instrument Type,GDTF Fixture Mode,Channel,Universe,U Address,DMX Footprint,Unit Number,Position,Purpose,Color
+,11,11,11,11,11,11,6,11,11,8
+Light,Robin MMX Spot,Mode 1,101,1,1,32,1,LX1,Cool Cover,L117
+Light,Robin MMX Spot,Mode 1,102,1,33,32,2,LX1,Cool Cover,L117
+Light,Robin MMX Spot,Mode 1,103,1,65,32,3,LX1,Cool Cover,L117
+Light,Robin LEDBeam 350,Mode 1,104,1,97,16,6,LX1,Warm Cover,
+Light,Robin LEDBeam 350,Mode 1,105,1,113,16,5,LX1,Warm Cover,
+Light,Robin LEDBeam 350,Mode 1,106,1,129,16,4,LX1,Warm Cover,
+Light,Selecon Acclaim F 650W,Mode 1,201,2,1,1,,LX3,Lav Back,L136
+Light,Selecon Acclaim F 650W,Mode 1,202,2,2,1,,LX3,Lav Back,L136
+Light,Selecon Acclaim F 650W,Mode 1,203,2,3,1,,LX3,Lav Back,L136
+Light,Selecon Acclaim F 650W,Mode 1,204,2,4,1,,LX3,Lav Back,L136
+Light,Selecon Acclaim F 650W,Mode 1,205,2,5,1,,LX3,Lav Back,L136

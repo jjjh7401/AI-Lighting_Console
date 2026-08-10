@@ -21,9 +21,11 @@ import ast
 import base64
 import importlib
 import json
+import re
 import sys
 from functools import lru_cache
 from pathlib import Path
+from typing import NamedTuple
 
 import pytest
 
@@ -165,7 +167,7 @@ def test_the_added_columns_did_not_displace_the_stage_one_columns():
 #        자기 스코프를 문장 안에 **명시**하도록 강제한다.
 #
 #   (나) [round17 #6] **앵커 검사가 부분문자열이라 뒤에 붙이면 통과한다.**
-#        `_fid_precheck_incomplete_check` 사유 뒤에 안심 문장을 **덧붙여도** 통과했다 —
+#        `_fid_precheck_incomplete_checks` 사유 뒤에 안심 문장을 **덧붙여도** 통과했다 —
 #        금지 8문구 회피 + 필수 조각 2개 유지 + 앵커 부분문자열 온전. 심기 앵커는
 #        `.replace(anchor, ...)`로만 쓰이므로 앵커가 **소스의 어디까지인지**를 아무도
 #        단정하지 않았다. 여기서 앵커마다 **바로 뒤에 와야 하는 리터럴**을 함께 등기해
@@ -225,38 +227,71 @@ _R17_NON_READING_NAMES = ("VWX_MODULE_FILES",)
 #: 거짓 양성이 잦고, 흔한 거짓 양성은 게이트의 강제력을 없앤다(§0 2b④가 금하는 바로 그것).
 _R17_TOTALITY_WORDS = ("전부", "전수", "모든")
 
-#: 인자로 소스를 받는 스캐너는 스코프가 **호출자에게** 있다. 그 사실을 문장이 밝혀야 한다.
-_R17_CALLER_SCOPE_MARKERS = ("소스", "인자", "심은", "사본", "지정한", "plant")
+#: 「`server/vwx` **트리 전체**를 읽는다」는 주장으로 세는 어휘. 위 전체성 어휘보다 좁다 —
+#: 트리 주장은 `server/vwx` 표기 **바로 뒤**에 붙어야 하고(아래 창), `server/vwx/apply.py`
+#: 처럼 잎을 가리키는 표기는 트리 주장이 아니다.
+_R24_TREE_CLAIM_WORDS = ("전 모듈", "전부", "전수", "모든")
+
+#: 트리 주장을 세는 창(정규화 후 글자 수). 넓히면 "`server/vwx`의 나머지 … 전부"처럼
+#: 자기 스코프가 아닌 문장이 걸리고, 좁히면 "`server/vwx/` **전 모듈**"을 놓친다.
+_R24_TREE_CLAIM_WINDOW = 12
+
+#: 「이름을 **임포트 그래프**로 푼다」는 주장으로 세는 어휘. `해석`과 **함께** 나와야 한다 —
+#: `임포트`만 보면 임포트 봉인 스캐너들처럼 임포트를 **소재로** 다루는 자리가 전부 걸린다.
+_R24_RESOLUTION_CLAIM_WORDS = ("임포트", "재수출", "모듈 속성", "모듈 **속성**", "형제 모듈")
+
+#: 규율의 **정의**를 담은 함수. 그 독스트링에 나오는 위 어휘는 주장이 아니라 뜻풀이다.
+#: 빼지 않으면 판정기가 자기 어휘를 자기 주장으로 세어 등기부가 **자기를** 위반자로
+#: 신고한다(실측으로 그렇게 됐다) — `_R17_NON_READING_NAMES`가 분모에서 막는 것과 같은
+#: 자기참조다. 아래 `test_r24_the_claim_vocabulary_exclusion_is_alive`가 죽은 행을 막는다.
+_R24_CLAIM_VOCABULARY_DEFINERS = ("_r24_resolution_kind",)
+
+#: 이 파일 자신의 표지. 등기부가 자기 모듈을 가리킬 때 이름을 손으로 적지 않는다.
+_R24_CONTRACT_FILE = Path(__file__).name
+
+_R24_RESOLUTION_IMPORT = "import_bound"
+_R24_RESOLUTION_SYNTACTIC = "syntactic"
 
 
-def _r17_reads_every_vwx_module(node: ast.AST) -> bool:
-    """`server/vwx` **전 모듈**을 손에 넣는 표현인가 — 디렉터리 순회이거나 공용 순회 호출.
+def _r17_reads_every_vwx_module(node: ast.AST, aliases: dict[str, str]) -> bool:
+    """`server/vwx` **전 모듈**을 손에 넣는 표현인가 — 그 디렉터리를 훑거나, 그 디렉터리를
+    **자기가 이름 지어** 함수에 넘기거나.
 
     `Path("server/vwx") / name`처럼 경로를 **조인**하는 것과 구별한다 — 순회는 스코프가
     "그 시점의 전 모듈"이지만 조인은 조인되는 이름이 정한다. 이 구별이 없으면
     두 모듈만 읽는 스캐너가 전 모듈 스캐너로 오분류되어 규율이 거짓 양성을 낸다.
 
-    [round24] `iter_vwx_modules(...)` **호출**도 같은 값으로 본다. round17 판정기는
-    리터럴 글롭만 봤고, 그래서 순회를 공용 함수로 모으는 순간 여덟 스캐너가 등기부에서
-    `self_bound`(전 모듈) → `synthetic`으로 조용히 강등됐다 — 등기에서 소리 없이
-    사라지는 것이 이 SPEC의 반복 실패 형태다. 리터럴만 보는 판정기는 「어느 파일을
-    읽는가」를 **이름 한 다리 건너** 적으면 못 보고, 그 축이 곧 R23-3의 축(심볼 해석)이다.
+    [round24] 판정을 (다)절의 `_r24_sweep_method`·`_r24_dir_tail`에 **위임**한다. 여기에
+    환원기를 다시 적으면 사본이 두 벌이 되고, 갈라진 사본이 곧 다음 라운드의 형제
+    불일치다((다)절이 순회의 정의를 하나로 묶는 것과 같은 이유). 리터럴만 보던 구판은
+    `VWX_DIR.glob(...)`처럼 경로를 이름에 **한 다리 건너** 담은 순회를 보지 못했다.
+
+    디렉터리를 **인자로 넘기는** 호출도 같은 값으로 본다 —
+    `_discover_modules(Path("server/vwx"))`처럼 순회를 함수 뒤로 옮기면 메서드 호출
+    형태가 사라진다. 실측: 그 사각에 오늘 스캐너 셋이 들어 있었다. 뿌리가 매개변수면
+    `_r24_dir_tail`이 환원하지 못하므로 `iter_vwx_modules(root)`는 여전히 호출자 스코프다.
+
+    인자가 **맨 문자열 리터럴**이면 세지 않는다. `text.startswith("server/vwx/")`처럼
+    경로 **접두사**를 다루는 자리가 순회로 오분류되어 실측 거짓 양성 둘을 냈다 —
+    디렉터리를 건네는 자리는 `Path(...)`이거나 경로에 결속된 이름이다.
     """
+    if _r24_sweep_method(node, aliases) is not None:
+        return True
     if not isinstance(node, ast.Call):
         return False
-    if isinstance(node.func, ast.Name) and node.func.id == iter_vwx_modules.__name__:
-        return True
-    if not isinstance(node.func, ast.Attribute):
-        return False
-    if node.func.attr == iter_vwx_modules.__name__:
-        return True
-    if node.func.attr not in ("glob", "rglob", "iterdir"):
-        return False
+    if _r24_dir_tail(node, aliases) is not None:
+        return False  # 경로를 **짓는** 표현이다(`Path(...)`·`.resolve()`) — 훑는 것이 아니다
+    if (
+        isinstance(node.func, ast.Name)
+        and node.func.id == iter_vwx_modules.__name__
+        and not node.args
+        and not node.keywords
+    ):
+        return True  # 공용 순회의 **기본 뿌리**가 `server/vwx`다
     return any(
-        isinstance(child, ast.Constant)
-        and isinstance(child.value, str)
-        and child.value.rstrip("/").endswith("server/vwx")
-        for child in ast.walk(node.func.value)
+        not isinstance(argument, ast.Constant)
+        and (_r24_dir_tail(argument, aliases) or "").rsplit("/", 1)[-1] == "vwx"
+        for argument in [*node.args, *(keyword.value for keyword in node.keywords)]
     )
 
 
@@ -272,6 +307,7 @@ def _r17_module_bindings(source: str) -> dict[str, frozenset[str]]:
     `_R16_VWX_MODULES = ("apply.py", ...)` 같은 파일명 튜플까지 고정점까지 전파한다.
     """
     tree = ast.parse(source)
+    aliases = _r24_path_aliases(tree.body, {})
     bindings: dict[str, frozenset[str]] = {}
 
     def modules_in(node: ast.AST) -> frozenset[str]:
@@ -286,8 +322,8 @@ def _r17_module_bindings(source: str) -> dict[str, frozenset[str]]:
                     found.add(text[len("server/vwx/") :])
                 elif text in VWX_MODULE_FILES:
                     found.add(text)
-            elif _r17_reads_every_vwx_module(child):
-                # 디렉터리를 **훑거나** 공용 순회를 부른다 — 스코프는 그 시점의 전 모듈이다.
+            elif _r17_reads_every_vwx_module(child, aliases):
+                # 디렉터리를 **훑거나** 그 디렉터리를 함수에 넘긴다 — 스코프는 전 모듈이다.
                 # 단순히 `Path("server/vwx") / name`으로 **조인**하는 것은 전 모듈이 아니다.
                 found |= VWX_MODULE_FILES
             elif isinstance(child, ast.Name):
@@ -315,78 +351,238 @@ def _r17_module_bindings(source: str) -> dict[str, frozenset[str]]:
     return bindings
 
 
-def _r17_ast_scanners() -> tuple[tuple[str, str, str, tuple[str, ...]], ...]:
-    """`test_autopatch_*.py`에서 **직접 `ast.parse`를 부르는** 함수를 전수로, 스코프와 함께.
+def _r24_calls_ast_parse(fn: ast.AST) -> bool:
+    """이 함수가 **직접** `ast.parse`를 부르는가 — 등기부의 모집단 정의다."""
+    return any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "parse"
+        and getattr(node.func.value, "id", None) == "ast"
+        for node in ast.walk(fn)
+    )
 
-    스코프는 `server/vwx` 모듈 파일 목록과 대조해 세 값 중 하나로 정한다 —
-    `caller`(소스를 인자로 받는다) · `self_bound`(자기가 읽을 모듈을 스스로 고른다) ·
-    `synthetic`(프로덕션 모듈을 읽지 않는다).
+
+def _r24_referenced_names(node: ast.AST) -> set[str]:
+    """이 노드가 **이름으로** 언급하는 것 전수 — 호출뿐 아니라 값으로 넘기는 참조까지.
+
+    호출만 세면 `resolve_for = _r23_module_resolver if ... else ...`처럼 헬퍼를 **값으로**
+    건네는 자리가 통째로 사각이 된다. R23-3의 해석기가 정확히 그렇게 건네진다.
     """
-    scanners: list[tuple[str, str, str, tuple[str, ...]]] = []
-    for name in AUTOPATCH_TEST_FILES:
-        source = _autopatch_test_source(name)
-        tree = ast.parse(source)
-        bindings = _r17_module_bindings(source)
-        for fn in ast.walk(tree):
-            if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+    names: set[str] = set()
+    for child in ast.walk(node):
+        if isinstance(child, ast.Name):
+            names.add(child.id)
+        elif isinstance(child, ast.Attribute):
+            names.add(child.attr)
+    return names
+
+
+def _r24_reachable_helpers(fn: ast.AST, helpers: dict[str, ast.AST]) -> tuple[ast.AST, ...]:
+    """스캐너에서 이름으로 닿는 **같은 모듈 최상위 함수** 전수(자기 포함, 고정점까지)."""
+    closure: dict[int, ast.AST] = {id(fn): fn}
+    pending = [fn]
+    while pending:
+        for name in _r24_referenced_names(pending.pop()):
+            target = helpers.get(name)
+            if target is not None and id(target) not in closure:
+                closure[id(target)] = target
+                pending.append(target)
+    return tuple(closure.values())
+
+
+def _r24_resolution_kind(closure: tuple[ast.AST, ...]) -> str:
+    """이 스캐너가 이름을 **임포트 그래프**로 푸는가, 파싱한 글자로만 푸는가.
+
+    `import_bound`의 서명은 둘이다 — `importlib.import_module(...)`이거나, 두 번째 인자가
+    상수가 **아닌** `getattr(...)`(=런타임 객체에서 이름을 꺼낸다). 그 외는 전부
+    `syntactic`이다: 이름의 뜻을 자기가 읽은 글자 안에서만 정한다.
+
+    이 값은 「해석이 옳은가」가 아니라 「무엇으로 푸는가」다. 파일별 해석이 **옳은**
+    스캐너가 많으므로(`_r17_report_builder_names` 계열) `syntactic`은 결함이 아니다 —
+    아래 규율이 거는 것은 값 자체가 아니라 **선언과 값의 일치**다.
+    """
+    for node in closure:
+        for call in ast.walk(node):
+            if not isinstance(call, ast.Call):
                 continue
-            parses = any(
-                isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Attribute)
-                and node.func.attr == "parse"
-                and getattr(node.func.value, "id", None) == "ast"
-                for node in ast.walk(fn)
+            func = call.func
+            if isinstance(func, ast.Attribute):
+                name = func.attr
+            elif isinstance(func, ast.Name):
+                name = func.id
+            else:
+                continue
+            if name == "import_module":
+                return _R24_RESOLUTION_IMPORT
+            if (
+                name == "getattr"
+                and len(call.args) >= 2
+                and not isinstance(call.args[1], ast.Constant)
+            ):
+                return _R24_RESOLUTION_IMPORT
+    return _R24_RESOLUTION_SYNTACTIC
+
+
+def _r24_claims_cross_module_resolution(docs: tuple[str, ...]) -> bool:
+    """이 스캐너(와 그것이 닿는 헬퍼)가 **모듈 경계를 넘는 이름 해석**을 주장하는가."""
+    return any(
+        "해석" in doc and any(word in doc for word in _R24_RESOLUTION_CLAIM_WORDS) for doc in docs
+    )
+
+
+def _r24_claims_the_whole_tree(doc: str) -> bool:
+    """이 문장이 「`server/vwx` **트리 전체**를 읽는다」고 주장하는가.
+
+    `server/vwx` 표기 **바로 뒤**의 좁은 창만 본다. 문서 어디에든 `server/vwx`와 전체성
+    어휘가 함께 있으면 걸리게 하면 "`server/vwx`의 나머지 모듈은 …" 같은 참인 문장이
+    전부 위반이 되고, 흔한 거짓 양성은 게이트의 강제력을 없앤다(§0 2b④).
+    `server/vwx/apply.py`처럼 **잎**을 가리키는 표기는 트리 주장이 아니므로 건너뛴다.
+    """
+    for match in re.finditer("server/vwx", doc):
+        rest = doc[match.end() :]
+        if re.match(r"/\w+\.py", rest):
+            continue
+        window = re.sub(r"[\s`*_—·]", "", rest)[:_R24_TREE_CLAIM_WINDOW]
+        if any(word.replace(" ", "") in window for word in _R24_TREE_CLAIM_WORDS):
+            return True
+    return False
+
+
+class _R17Scanner(NamedTuple):
+    """등기부 한 행. **두 축**을 싣는다 — 어느 파일을 읽는가 · 이름을 무엇으로 푸는가."""
+
+    file: str
+    function: str
+    kind: str
+    modules: tuple[str, ...]
+    doc: str
+    resolution: str
+    resolution_claim: bool
+
+
+def _r17_scanners_in_source(name: str, source: str) -> tuple[_R17Scanner, ...]:
+    """**인자로 받은 소스** 한 벌에서 스캐너 등기 행을 전수로 낸다.
+
+    스코프는 호출자가 준 소스다 — 이 함수는 무엇을 읽을지 스스로 고르지 않는다.
+    실물 등기부(`_r17_ast_scanners`)와 주입 대조군이 **같은 판정식**을 딛게 하려고
+    소스를 인자로 뺐다. 판정식을 두 벌 두면 대조군은 초록인데 실물은 아무것도 안
+    잡는 상태가 성립한다((다)절이 같은 이유로 같은 모양을 취한다).
+    """
+    tree = ast.parse(source)
+    bindings = _r17_module_bindings(source)
+    module_aliases = _r24_path_aliases(tree.body, {})
+    helpers = {
+        node.name: node
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    scanners: list[_R17Scanner] = []
+    for fn in ast.walk(tree):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if not _r24_calls_ast_parse(fn):
+            continue
+        aliases = dict(module_aliases)
+        aliases.update(_r24_path_aliases(list(ast.walk(fn)), module_aliases))
+        aliases.update(_r24_default_aliases(fn, module_aliases))
+        reached: set[str] = set()
+        for node in ast.walk(fn):
+            if isinstance(node, ast.Name):
+                reached |= bindings.get(node.id, frozenset())
+            elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+                text = node.value.rstrip("/")
+                if text.startswith("server/vwx/"):
+                    leaf = text[len("server/vwx/") :]
+                    if leaf in VWX_MODULE_FILES:
+                        reached.add(leaf)
+            elif _r17_reads_every_vwx_module(node, aliases):
+                reached |= VWX_MODULE_FILES
+        if reached:
+            kind = "self_bound"
+        elif fn.args.args or fn.args.posonlyargs or fn.args.kwonlyargs:
+            kind = "caller"
+        else:
+            kind = "synthetic"
+        closure = _r24_reachable_helpers(fn, helpers)
+        docs = tuple(
+            (ast.get_docstring(node) or "").strip()
+            for node in closure
+            if getattr(node, "name", None) not in _R24_CLAIM_VOCABULARY_DEFINERS
+        )
+        scanners.append(
+            _R17Scanner(
+                name,
+                fn.name,
+                kind,
+                tuple(sorted(reached)),
+                (ast.get_docstring(fn) or "").strip(),
+                _r24_resolution_kind(closure),
+                _r24_claims_cross_module_resolution(docs),
             )
-            if not parses:
-                continue
-            if fn.args.args or fn.args.posonlyargs or fn.args.kwonlyargs:
-                scanners.append((name, fn.name, "caller", ()))
-                continue
-            reached: set[str] = set()
-            for node in ast.walk(fn):
-                if isinstance(node, ast.Name):
-                    reached |= bindings.get(node.id, frozenset())
-                elif isinstance(node, ast.Constant) and isinstance(node.value, str):
-                    text = node.value.rstrip("/")
-                    if text.startswith("server/vwx/"):
-                        leaf = text[len("server/vwx/") :]
-                        if leaf in VWX_MODULE_FILES:
-                            reached.add(leaf)
-                elif _r17_reads_every_vwx_module(node):
-                    reached |= VWX_MODULE_FILES
-            kind = "self_bound" if reached else "synthetic"
-            scanners.append((name, fn.name, kind, tuple(sorted(reached))))
+        )
     return tuple(sorted(scanners))
 
 
-#: 이 절은 **손으로 쓴 등기부를 두지 않는다.** 스코프 대조는 소스에서 전부 파생하므로
-#: 새 스캐너는 자동으로 규율에 들어오고, 지울 행 자체가 없어 조용한 축소가 불가능하다.
+def _r17_ast_scanners() -> tuple[_R17Scanner, ...]:
+    """`test_autopatch_*.py`에서 **직접 `ast.parse`를 부르는** 함수를 전수로, 두 축과 함께.
+
+    ㉠ **파일 범위** — `server/vwx` 모듈 파일 목록과 대조해 세 값 중 하나로 정한다:
+       `caller`(스코프를 호출자가 정한다) · `self_bound`(자기가 읽을 모듈을 스스로 고른다) ·
+       `synthetic`(프로덕션 모듈을 읽지 않는다).
+    ㉡ **심볼 해석** — 이름을 임포트 그래프로 푸는가(`import_bound`) 파싱한 글자로만
+       푸는가(`syntactic`), 그리고 그 스캐너가 **전자를 주장하는가**.
+
+    [round24] 인자를 받는다는 이유만으로 `caller`로 접지 않는다. `_r17_vwx_trees(overrides)`
+    처럼 **대조군용 덧인자**를 가진 스캐너가 실제로는 자기가 고른 트리를 읽는데도 등기에서
+    `caller`로 빠져 있었다 — 서명이 아니라 **실제로 닿는 스코프**가 분류를 정한다. 뿌리가
+    매개변수인 자리(`iter_vwx_modules(root)`)는 여전히 `caller`다: `_r24_dir_tail`이
+    매개변수를 환원하지 않으므로 「자기가 상수를 넘긴다」와 「호출자가 정한다」가 갈린다.
+    """
+    return tuple(
+        sorted(
+            row
+            for name in AUTOPATCH_TEST_FILES
+            for row in _r17_scanners_in_source(name, _autopatch_test_source(name))
+        )
+    )
+
+
+#: 이 절은 **손으로 쓴 등기부를 두지 않는다.** 두 축 모두 소스에서 파생하므로 새 스캐너는
+#: 자동으로 규율에 들어오고, 지울 행 자체가 없어 조용한 축소가 불가능하다.
 #: (round17 #8·#9·#10이 전부 "표는 있는데 행삭제 게이트가 없다"였다 — 표를 없애는 쪽이 낫다.)
 #
-# [round24] **이 등기부가 재는 축과 재지 않는 축.** 여기가 재는 것은 「어느 **파일**을
-# 읽는가」뿐이다. R23-3은 *넓은 파일 범위 위의 **좁은 이름 해석***이었고 — 형제 모듈에서
-# 임포트한 dataclass를 못 알아보는 해석기 — 그래서 `self_bound`(전 모듈)로 등기된 채 두
-# 라운드를 살아남았다. 그 축의 일부를 round24에서 닫았다:
+# [round24] **이 등기부가 재는 두 축.**
 #
-#   닫은 것 ㉠ **경로 심볼 해석** — 순회 수신자를 이름·조인·`Path(...)`까지 환원한다
-#            (`_r24_dir_tail`). 리터럴만 보던 판정기는 `VWX_DIR.glob(...)`를 못 봤다.
-#   닫은 것 ㉡ **모듈 경계를 넘는 심볼** — `iter_vwx_modules(...)` 호출을 순회로 본다.
-#            없으면 순회를 공용 함수로 모으는 순간 여덟 스캐너가 등기에서 조용히 빠진다
-#            (`test_r24_the_scope_registry_follows_the_shared_traversal_through_an_import`).
-#   닫은 것 ㉢ **분모** — 「전 모듈」이 재귀 순회에서 나온다. 분모가 틀리면 이 등기부 위의
-#            판정이 전부 같이 틀린다.
+#   축 ㉠ **파일 범위** — 어느 파일을 읽는가. 여기서 닫은 것:
+#        · **경로 심볼 해석** — 순회 수신자를 이름·조인·`Path(...)`까지 환원한다.
+#          판정을 (다)절 `_r24_dir_tail`에 **위임**해서 닫았다. round23까지 이 주석은
+#          이미 "환원한다"고 적고 있었으나 `_r17_reads_every_vwx_module`은 리터럴만 봤다 —
+#          **주석이 코드보다 앞서 나간 상태**였고, 그것이 이 SPEC이 열세 라운드 맞은
+#          형태(선언과 실제의 분리)의 문서판이다. round24에서 코드를 주석에 맞췄다.
+#        · **함수 뒤로 옮긴 순회** — `_discover_modules(Path("server/vwx"))`처럼 디렉터리를
+#          **인자로 넘기는** 호출도 순회로 본다. 이 사각에 스캐너 셋이 들어 있었다.
+#        · **덧인자 오분류** — 인자가 있다는 이유만으로 `caller`로 접지 않는다.
+#          `_r17_vwx_trees(overrides)`가 그 사각이었다. 뿌리가 **매개변수**면 환원되지
+#          않으므로 「자기가 상수를 넘긴다」와 「호출자가 정한다」는 여전히 갈린다.
+#        · **분모** — 「전 모듈」이 재귀 순회에서 나온다. 분모가 틀리면 전부 같이 틀린다.
 #
-#   **닫지 않은 것** — 스캐너 **안에서** 식별자를 좁게 해석하는 것(R23-3의 정확한 모양).
-#   근거: 그 좁음에는 건전한 구문 서명이 없다. 「파싱한 트리에서 만든 이름 집합과 대조하면
-#   의심」 같은 발견법은 `_r17_report_builder_names`처럼 **그렇게 하는 것이 옳은** 스캐너에
-#   그대로 발화한다. 흔한 거짓 양성은 게이트의 강제력을 없앤다(§0 2b④) — 열세 라운드 동안
-#   이 SPEC을 무너뜨린 것은 게이트의 부재만이 아니라 아무도 믿지 않는 게이트이기도 했다.
-#   그 축의 올바른 도구는 등기부가 아니라 **스캐너별 주입 대조군**이다(R23-3이 실제로
-#   그렇게 닫았다: 형제 모듈이 선언한 타입을 합성 트리에 심어 해석기가 그것을 보는지 잰다).
-#   남은 범위: `_r19_typeresolution_calls`·`_r19_rejection_codes_in_production`·
-#   `_r21_notice_axis_table` — 「그 타입/코드는 한 모듈에서만 만들어진다」는 오늘의 사실에
-#   기대는 세 자리다(round23 감사 목록 D). 형제 모듈이 그것을 만들기 시작하는 날 사각이
-#   되며, 그때 필요한 것은 각 자리의 주입 대조군이지 여기 표 한 줄이 아니다.
+#   축 ㉡ **심볼 해석** — 읽은 글자에서 이름을 **무엇으로** 푸는가(`import_bound`/`syntactic`).
+#        R23-3은 *넓은 파일 범위 위의 **좁은 이름 해석***이었다 — 형제 모듈에서 임포트한
+#        dataclass를 못 알아보는 해석기. 파일 범위는 이미 전 모듈이었으므로 등기부에는
+#        `ALL`로 올라 있었고, 그래서 두 라운드를 살아남았다. 축 ㉠만으로는 못 본다.
+#
+# **왜 「전 스캐너 강제 선언」이 아닌가.** 해석 범위의 *진위*는 기계로 잴 수 없다(아래
+# `test_r24_...is_not_vacuous`의 근거를 보라). 그래서 남는 길은 선언인데, 스캐너마다
+# 선언을 **의무화**하면 새 스캐너를 쓰는 비용이 올라 사람들이 등기를 피해 다니게 되고
+# 그것이 더 나쁜 결과다. 대신 **기본값을 여기 한 자리에 선언한다**:
+#
+#     달리 적지 않으면 스캐너의 이름 해석은 **파일별**이다(`syntactic`).
+#
+# 부담은 **주장하는 쪽**에 붙는다 — 아무 말도 하지 않으면 비용 0이고, 「임포트·재수출된
+# 이름도 본다」처럼 기본을 넘는 주장을 하면 기계가 **증거를 청구**한다. 「축소는 조용히,
+# 확대는 부담」과 같은 형태다. 그리고 주장을 거두는 것(=강등)은 문장을 **지우는** 일이라
+# diff에 남는다 — 등기에서 소리 없이 사라지는 것이 이 SPEC의 반복 실패 형태이므로,
+# 그것을 「보이는 삭제」로 바꾸는 것이 여기서 살 수 있는 최선이다.
 
 
 def test_at_least_one_scanner_reads_every_vwx_module():
@@ -398,96 +594,402 @@ def test_at_least_one_scanner_reads_every_vwx_module():
     """
     assert AUTOPATCH_TEST_FILES, "스캔 대상이 0개면 이 확인은 공허하다"
     assert VWX_MODULE_FILES
-    widest = {
-        frozenset(modules) for _, _, kind, modules in _r17_ast_scanners() if kind == "self_bound"
-    }
+    widest = {frozenset(row.modules) for row in _r17_ast_scanners() if row.kind == "self_bound"}
     assert VWX_MODULE_FILES in widest, sorted(sorted(scope) for scope in widest)
 
 
 def test_the_scanner_scope_classification_is_exhaustive():
-    """스캐너 분류가 닫힌 세 값이고, 각 값의 뜻이 실제 모양과 일치한다.
+    """두 축이 **닫힌 값**을 갖고, 각 값의 뜻이 실제 모양과 일치한다.
 
     `self_bound`는 읽는 모듈이 **비어 있지 않아야** 하고 `caller`·`synthetic`은 비어야 한다.
     """
     scanners = _r17_ast_scanners()
     assert scanners, "AST 스캐너가 0개면 아래 규율이 공허하다"
-    assert {kind for _, _, kind, _ in scanners} <= {"caller", "self_bound", "synthetic"}
-    for name, function, kind, modules in scanners:
-        if kind == "self_bound":
-            assert modules, (name, function)
+    assert {row.kind for row in scanners} <= {"caller", "self_bound", "synthetic"}
+    assert {row.resolution for row in scanners} <= {
+        _R24_RESOLUTION_IMPORT,
+        _R24_RESOLUTION_SYNTACTIC,
+    }
+    for row in scanners:
+        if row.kind == "self_bound":
+            assert row.modules, (row.file, row.function)
         else:
-            assert modules == (), (name, function, modules)
+            assert row.modules == (), (row.file, row.function, row.modules)
 
 
-def _r17_scope_declaration_offenders() -> list[tuple[str, str, str]]:
-    """전체성을 주장하면서 **자기 스코프를 밝히지 않는** `self_bound` 스캐너를 전수로.
+def _r17_scope_verdict(doc: str, kind: str, modules: tuple[str, ...]) -> bool:
+    """선언과 실제 파일 범위가 맞는가 — **양방향**. 실물 게이트와 대조군의 유일한 판정식.
 
-    규율은 `self_bound`에만 건다. 스코프 거짓말이 성립하는 자리가 거기뿐이기 때문이다 —
-    `caller`·`synthetic` 스캐너는 무엇을 읽을지 **스스로 고르지 않으므로** 그 독스트링의
-    "전수"는 "받은 것 전수"라는 참인 문장이다. 그쪽까지 문구를 단속하면 거짓 양성이
-    잦아지고, 흔한 거짓 양성은 게이트의 강제력을 없앤다(round15 D가 같은 판단을 했다).
-    `caller` 스캐너를 딛는 **표**가 넓게 선언하는 것은 그 표 자신의 전단사가 막는다.
+    ① (round17 #7) 전체성 어휘(`전부`·`전수`·`모든`)를 쓰는 `self_bound` 스캐너는 읽는
+       모듈 이름을 전부 적거나, 전 모듈을 읽으면 `server/vwx`를 적어야 한다.
+    ② [round24] **역방향** — 문장이 「`server/vwx` 트리 전체를 읽는다」고 주장하는데 실제
+       스코프가 전 모듈이 아니면 위반이다. 이것이 **분류 강등의 공시**다: 항목이 명단에서
+       빠지는 것은 삭제와 같은 효과인데 diff에는 삭제로 보이지 않는다(round23 `GateScope`가
+       자기 강등을 손으로 공시했고, `RecursiveScan`이 8개 동시 강등을 손으로 막았다).
+       역방향을 걸면 강등한 사람이 **문장부터 고쳐야** 하고, 그 수정이 diff에 남는다.
 
-    판정: 독스트링에 `전부`·`전수`·`모든` 중 하나가 있으면 읽는 모듈 이름을 **전부** 적거나,
-    전 모듈을 읽으면 `server/vwx`를 적어야 한다.
+    규율 ①은 `self_bound`에만 건다 — `caller`·`synthetic`은 무엇을 읽을지 스스로 고르지
+    않으므로 그 독스트링의 "전수"는 "받은 것 전수"라는 참인 문장이다. 규율 ②는 **모든**
+    분류에 건다: 강등은 분류가 바뀌는 일이므로 바뀐 뒤의 분류에서도 걸려야 한다.
     """
-    offenders: list[tuple[str, str, str]] = []
-    for name, function, kind, modules in _r17_ast_scanners():
-        if kind != "self_bound":
-            continue
-        module = importlib.import_module(f"server.tests.{name.removesuffix('.py')}")
-        target = getattr(module, function, None)
-        doc = (getattr(target, "__doc__", None) or "").strip()
-        if not any(word in doc for word in _R17_TOTALITY_WORDS):
-            continue
-        if set(modules) == VWX_MODULE_FILES:
-            ok = "server/vwx" in doc
-        else:
-            ok = all(item in doc for item in modules)
-        if not ok:
-            offenders.append((name, function, doc.splitlines()[0]))
-    return offenders
+    reads_the_tree = kind == "self_bound" and set(modules) == VWX_MODULE_FILES
+    if _r24_claims_the_whole_tree(doc) and not reads_the_tree:
+        return False
+    if not any(word in doc for word in _R17_TOTALITY_WORDS):
+        return True
+    if kind != "self_bound":
+        return True
+    if reads_the_tree:
+        return "server/vwx" in doc
+    return all(item in doc for item in modules)
+
+
+def _r17_scope_declaration_offenders(
+    scanners: tuple[_R17Scanner, ...] | None = None,
+) -> list[tuple[str, str, str, str]]:
+    """선언과 파일 범위가 갈라진 스캐너를 전수로. 소스를 주면 그 소스에 대해 잰다."""
+    return [
+        (row.file, row.function, row.kind, row.doc.splitlines()[0] if row.doc else "")
+        for row in (_r17_ast_scanners() if scanners is None else scanners)
+        if not _r17_scope_verdict(row.doc, row.kind, row.modules)
+    ]
 
 
 def test_no_scanner_claims_totality_without_naming_its_own_scope():
-    """[round17 #7] "전부"라고 적은 스캐너는 자기가 **무엇을** 읽는지 문장에 적어야 한다.
+    """[round17 #7 / round24] 스캐너의 **문장과 실제 파일 범위가 일치**한다 — 양방향.
 
-    round17의 두 실증이 정확히 이 규율의 위반이었다:
+    round17의 두 실증이 정방향 위반이었다:
       · `_R16_BOOL_GUARD_ROWS`가 "정수 판독기 **전부**의 규약"이라 선언하고 파서는
         `patchplan.py`만 읽었다 — 여섯 가드 중 둘(`typemap._optional_int`·`luagen._lua_int`)이
         무게이트였고 지워도 5,690건이 전건 통과했다.
       · `_r16_validate_autopatch_sites`가 `server/vwx/*.py`라 적고 네 모듈만 읽었다.
 
-    [round17 #7] 어느 스캐너의 파싱 대상을 좁히면서 독스트링의 "전부"를 그대로 두면
-    여기서 실패한다 — 선언과 스코프가 갈라지는 순간이 곧 실패 지점이 된다.
+    [round24] 역방향이 실물에서 넷을 잡았다 — 문장은 「`server/vwx` 전 모듈」인데 등기는
+    `synthetic`/`caller`였던 자리들(`_r18_production_import_names`·`_r19_production_builtin_usage`·
+    `_r19_translation_sites`·`_r17_vwx_trees`). 넷 다 판정기가 순회를 못 알아본 것이었고,
+    round24에서 판정기를 고쳐 등기가 문장을 따라잡았다. 앞으로 스코프를 좁히면서 문장을
+    그대로 두면 여기서 실패한다 — 어느 방향이든 갈라지는 순간이 곧 실패 지점이다.
     """
     assert _r17_scope_declaration_offenders() == []
 
 
-def test_the_scope_declaration_rule_is_not_vacuous():
-    """대조의 대조 — 규율 판정기가 **거짓 선언을 실제로 거짓이라고 한다**.
+def _r24_resolution_offenders(
+    scanners: tuple[_R17Scanner, ...] | None = None,
+) -> list[tuple[str, str, str]]:
+    """**모듈 경계를 넘는 해석**을 주장하면서 임포트 그래프를 쓰지 않는 스캐너를 전수로."""
+    return [
+        (row.file, row.function, row.resolution)
+        for row in (_r17_ast_scanners() if scanners is None else scanners)
+        if row.resolution_claim and row.resolution != _R24_RESOLUTION_IMPORT
+    ]
 
-    합성 스캐너를 하나 만들어 규율을 그대로 적용한다. 판정기가 늘 참이면 위 단정은 공허하다.
+
+def test_r24_a_cross_module_resolution_claim_is_backed_by_the_import_graph():
+    """[round24 / R23-3의 축] 「임포트·재수출된 이름도 본다」는 주장에 **증거를 청구**한다.
+
+    R23-3의 구판 해석기는 `if name not in <이 트리가 선언한 이름>: return None`이었다.
+    파일 범위는 전 모듈이라 등기부에는 `ALL`로 올라 있었고, 좁았던 것은 **이름 해석**이다.
+    처방은 해석을 **모듈 속성 조회**로 바꾼 것이었다 — 임포트 그래프를 타므로 형제 모듈이
+    선언한 타입도 같은 규율에 들어온다. 그 처방이 **되돌려지면** 여기서 실패한다:
+    `importlib.import_module`/비상수 `getattr`이 사라지는 순간 파생값이 `syntactic`이 되고
+    주장만 남기 때문이다. 주장을 지워 침묵시킬 수는 있으나 그 삭제는 **diff에 남는다** —
+    조용한 강등을 보이는 삭제로 바꾸는 것이 이 규율의 값이다.
+
+    **이 게이트가 보지 않는 것**(round25 결정사항): *아무 주장도 하지 않는* 새 다중모듈
+    스캐너가 파일별 해석을 해도 여기서는 조용하다. 그것까지 닫으려면 스캐너마다 해석
+    범위를 **의무 선언**시켜야 하는데, ⓐ 그 의무는 새 스캐너를 쓰는 비용을 올려 사람들이
+    등기를 피해 다니게 만들고 ⓑ 해석 범위의 진위는 어차피 기계로 확인할 수 없어 의무
+    선언은 「검증되지 않은 문장」을 늘릴 뿐이다. 그 축의 올바른 도구는 등기부가 아니라
+    **스캐너별 주입 대조군**이다(R23-3이 실제로 그렇게 닫았다: 형제 모듈이 선언한 타입을
+    합성 트리에 심어 해석기가 그것을 보는지 잰다). 아직 그 대조군이 없는 자리는
+    `_r19_typeresolution_calls`·`_r19_rejection_codes_in_production`·`_r21_notice_axis_table`
+    셋 — 「그 타입/코드는 한 모듈에서만 만들어진다」는 **오늘의 사실**에 기대는 자리들이다
+    (round23 감사 목록 D).
     """
+    assert _r24_resolution_offenders() == []
 
-    def honest():
-        """`patchplan.py`에서 무언가를 전수로 뽑는다."""
 
-    def dishonest():
-        """정수 판독기 **전부**의 규약을 확인한다."""
+def test_r24_the_registry_publishes_a_live_symbol_resolution_axis():
+    """[round24] 해석 축이 **실재한다** — 두 값이 다 나오고, 주장하는 자리가 남아 있다.
 
-    def verdict(target, kind, modules):
+    ① 축이 상수면(늘 `syntactic`이거나 늘 `import_bound`) 위 규율은 공허하다.
+    ② 주장하는 스캐너가 하나도 없으면 위 규율은 지킬 것이 없는 규율이다 — 마지막 주장을
+       지우는 것으로 게이트를 끄는 길을 여기서 막는다. 늘리는 것은 조용히 통과한다.
+    """
+    scanners = _r17_ast_scanners()
+    values = {row.resolution for row in scanners}
+    assert values == {_R24_RESOLUTION_IMPORT, _R24_RESOLUTION_SYNTACTIC}, sorted(values)
+    claimants = [(row.file, row.function) for row in scanners if row.resolution_claim]
+    assert claimants, "해석 범위를 주장하는 스캐너가 0건이면 위 규율이 공허하다"
+    assert all(
+        row.resolution == _R24_RESOLUTION_IMPORT for row in scanners if row.resolution_claim
+    ), claimants
+
+
+def test_r24_the_claim_vocabulary_exclusion_is_alive(monkeypatch):
+    """[round24] 어휘 **뜻풀이** 면제가 살아 있고, 딱 그만큼만 면제한다.
+
+    ① 죽은 행이 없다 — 면제된 이름이 실제로 이 모듈에 있다. 죽은 면제는 다음 사람에게
+       "여기는 예외 구역"이라는 거짓 신호를 준다((다)절 독립 순회 등기와 같은 규율).
+    ② 면제가 **부담을 진다** — 그 독스트링에 실제로 어휘가 들어 있어야 한다. 어휘가 없는
+       이름을 면제 목록에 얹는 것은 아무 근거 없이 규율 밖으로 나가는 길이다.
+    ③ 면제된 함수는 **스캐너가 아니다** — 스캐너가 자기를 면제 목록에 얹어 규율을 빠져
+       나가는 길을 막는다.
+    ④ 면제가 **실제로 필요하다** — 걷어내면 등기부가 자기를 위반자로 신고한다. 필요 없는
+       면제는 지우는 편이 낫고, 필요하다는 사실은 실측으로 고정해 둔다.
+    """
+    module = sys.modules[__name__]
+    scanners = {row.function for row in _r17_ast_scanners() if row.file == _R24_CONTRACT_FILE}
+    assert _R24_CLAIM_VOCABULARY_DEFINERS
+    for name in _R24_CLAIM_VOCABULARY_DEFINERS:
+        target = getattr(module, name, None)
+        assert target is not None, f"죽은 면제 행: {name}"
         doc = (target.__doc__ or "").strip()
-        if not any(word in doc for word in _R17_TOTALITY_WORDS):
-            return True
-        if kind == "self_bound":
-            if set(modules) == VWX_MODULE_FILES:
-                return "server/vwx" in doc
-            return all(item in doc for item in modules)
-        return any(marker in doc for marker in _R17_CALLER_SCOPE_MARKERS)
+        assert "해석" in doc and any(word in doc for word in _R24_RESOLUTION_CLAIM_WORDS), name
+        assert name not in scanners, f"스캐너는 자기를 면제할 수 없다: {name}"
 
-    assert verdict(honest, "self_bound", ("patchplan.py",)) is True
-    assert verdict(dishonest, "self_bound", ("patchplan.py",)) is False
+    monkeypatch.setattr(module, "_R24_CLAIM_VOCABULARY_DEFINERS", ())
+    unmasked = _r24_resolution_offenders()
+    assert unmasked, "면제를 걷어냈는데 아무 일도 없다면 그 면제는 지워야 한다"
+    assert {row[0] for row in unmasked} == {_R24_CONTRACT_FILE}, unmasked
+
+
+#: 주입 대조군용 합성 테스트 모듈. 실물 등기부와 **같은 판정식**(`_r17_scanners_in_source`)에
+#: 먹인다. 판정식을 두 벌 두면 대조군은 초록인데 실물은 아무것도 안 잡는 상태가 성립한다.
+_R24_PLANTED_HEAD = (
+    'import ast\nimport importlib\nfrom pathlib import Path\nVWX = Path("server/vwx")\n'
+)
+
+_R24_PLANTED_WIDE = (
+    "def wide():\n"
+    '    """`server/vwx` **전 모듈**에서 무언가를 전수로 뽑는다."""\n'
+    '    return [ast.parse(p.read_text()) for p in VWX.rglob("*.py")]\n'
+)
+
+_R24_PLANTED_NARROW = (
+    "def narrow():\n"
+    '    """`patchplan.py` 하나만 읽는다."""\n'
+    '    return ast.parse(Path("server/vwx/patchplan.py").read_text())\n'
+)
+
+
+def _r24_planted_rows(*blocks: str) -> tuple[_R17Scanner, ...]:
+    return _r17_scanners_in_source("planted.py", _R24_PLANTED_HEAD + "".join(blocks))
+
+
+def test_the_scope_declaration_rule_is_not_vacuous():
+    """대조의 대조 — 판정기가 **거짓 선언을 실제로 거짓이라고 한다**(양방향).
+
+    실물 저장소가 규율을 지키면 위 두 단정은 "0건 == 0건"이라 판정기가 늘 참을 내도
+    통과한다. 그래서 합성 소스를 실물과 **같은 판정식**에 직접 먹인다.
+    """
+    honest_narrow = _r24_planted_rows(_R24_PLANTED_NARROW)
+    assert [row.kind for row in honest_narrow] == ["self_bound"]
+    assert _r17_scope_declaration_offenders(honest_narrow) == []
+
+    # ① 정방향 — "전부"라 적고 자기 스코프를 밝히지 않는다.
+    vague = _r24_planted_rows(
+        "def vague():\n"
+        '    """정수 판독기 **전부**의 규약을 확인한다."""\n'
+        '    return ast.parse(Path("server/vwx/patchplan.py").read_text())\n'
+    )
+    assert [row[1] for row in _r17_scope_declaration_offenders(vague)] == ["vague"]
+
+    # ② 역방향(강등 공시) — 문장은 「전 모듈」인데 실제로는 한 모듈만 읽는다.
+    demoted = _r24_planted_rows(
+        "def demoted():\n"
+        '    """`server/vwx` **전 모듈**에서 무언가를 전수로 뽑는다."""\n'
+        '    return ast.parse(Path("server/vwx/patchplan.py").read_text())\n'
+    )
+    assert [row.kind for row in demoted] == ["self_bound"]
+    assert [row[1] for row in _r17_scope_declaration_offenders(demoted)] == ["demoted"]
+
+    # ③ 같은 강등이 `caller`로 빠지는 형태 — 스코프가 호출자에게 갔는데 문장은 그대로다.
+    handed_off = _r24_planted_rows(
+        "def handed_off(root):\n"
+        '    """`server/vwx` **전 모듈**에서 무언가를 전수로 뽑는다."""\n'
+        '    return [ast.parse(p.read_text()) for p in root.rglob("*.py")]\n'
+    )
+    assert [row.kind for row in handed_off] == ["caller"]
+    assert [row[1] for row in _r17_scope_declaration_offenders(handed_off)] == ["handed_off"]
+
+
+def test_r24_the_resolution_rule_is_not_vacuous():
+    """대조의 대조 — 해석 축 판정기가 **주장과 실제를 실제로 가른다**.
+
+    ① 같은 주장, 임포트 그래프로 해석 → 통과. ② 같은 주장, 파싱한 글자로만 해석 → 위반.
+    ③ 주장 없이 파일별 해석 → 통과(그것이 **기본값**이다. 여기서 실패하게 만들면 새
+       스캐너마다 선언 의무가 생기고, 그 비용이 사람들을 등기 밖으로 내몬다).
+    ④ 해석기를 **값으로 건네도** 따라간다 — R23-3의 해석기가 정확히 그렇게 건네졌다.
+    ⑤ `importlib` 없이 **모듈 속성 조회만** 해도 임포트 그래프로 센다 — 이미 임포트된
+       모듈을 받아 `getattr`로 이름을 꺼내는 것이 R23-3 처방의 핵심 동작이고, 그 갈래를
+       빼도 위 ①이 통과해 버리므로(실측 SURVIVED) 여기서 따로 심는다.
+    """
+    claim = '    """이름을 모듈 **속성**으로 해석한다 — 임포트·재수출된 이름도 본다."""\n'
+    by_import = _r24_planted_rows(
+        "def resolver(path):\n"
+        + claim
+        + '    module = importlib.import_module("server.vwx.apply")\n'
+        + "    return lambda name: getattr(module, name, None)\n"
+        + "def scan():\n"
+        + '    """`server/vwx` **전 모듈**을 훑는다."""\n'
+        + "    resolve = resolver\n"
+        + '    return [ast.parse(p.read_text()) for p in VWX.rglob("*.py")], resolve\n'
+    )
+    scan = next(row for row in by_import if row.function == "scan")
+    assert (scan.resolution_claim, scan.resolution) == (True, _R24_RESOLUTION_IMPORT)
+    assert _r24_resolution_offenders(by_import) == []
+
+    by_attribute = _r24_planted_rows(
+        "def resolver(module):\n"
+        + claim
+        + "    return lambda name: getattr(module, name, None)\n"
+        + "def scan():\n"
+        + '    """`server/vwx` **전 모듈**을 훑는다."""\n'
+        + "    resolve = resolver\n"
+        + '    return [ast.parse(p.read_text()) for p in VWX.rglob("*.py")], resolve\n'
+    )
+    attribute_scan = next(row for row in by_attribute if row.function == "scan")
+    assert attribute_scan.resolution == _R24_RESOLUTION_IMPORT
+    assert _r24_resolution_offenders(by_attribute) == []
+
+    by_source = _r24_planted_rows(
+        "def resolver(tree):\n"
+        + claim
+        + "    declared = {n.name for n in ast.walk(tree)}\n"
+        + "    return lambda name: name if name in declared else None\n"
+        + "def scan():\n"
+        + '    """`server/vwx` **전 모듈**을 훑는다."""\n'
+        + "    resolve = resolver\n"
+        + '    return [ast.parse(p.read_text()) for p in VWX.rglob("*.py")], resolve\n'
+    )
+    # `resolver`는 `ast.parse`를 부르지 않아 등기 대상이 아니다 — 주장은 **닿는 쪽**에 붙는다.
+    assert [row[1] for row in _r24_resolution_offenders(by_source)] == ["scan"]
+
+    silent = _r24_planted_rows(_R24_PLANTED_WIDE)
+    assert [row.resolution for row in silent] == [_R24_RESOLUTION_SYNTACTIC]
+    assert [row.resolution_claim for row in silent] == [False]
+    assert _r24_resolution_offenders(silent) == []
+
+
+def test_r24_a_legitimate_change_to_the_scanner_population_stays_green():
+    """[round24, HARD] **정당한 변경은 통과한다** — 새 스캐너 · 삭제 · 범위 확대.
+
+    이것이 없으면 위 규율들이 역방향 대조군이 된다: 정상 작동하면서 **틀린 것을 지키는**
+    게이트. round22의 치명 2건이 그 형태였다. 세 변경 모두 등기부를 손댈 필요가 없고
+    (파생이라 지울 행이 없다) 문장을 고칠 필요도 없다는 것까지 여기서 고정한다.
+    """
+    base = _r24_planted_rows(_R24_PLANTED_WIDE, _R24_PLANTED_NARROW)
+    assert [row.function for row in base] == ["narrow", "wide"]
+    assert _r17_scope_declaration_offenders(base) == []
+    assert _r24_resolution_offenders(base) == []
+
+    # ① 새 스캐너 추가 — 등기에 자동으로 들어오고, 손으로 등기할 행이 없다.
+    added = _r24_planted_rows(
+        _R24_PLANTED_WIDE,
+        _R24_PLANTED_NARROW,
+        "def fresh(source):\n"
+        '    """받은 소스에서 무언가를 뽑는다."""\n'
+        "    return ast.parse(source)\n",
+    )
+    assert [row.function for row in added] == ["fresh", "narrow", "wide"]
+    assert _r17_scope_declaration_offenders(added) == []
+    assert _r24_resolution_offenders(added) == []
+
+    # ② 스캐너 삭제 — 죽은 행이 남지 않으므로 아무것도 고칠 필요가 없다.
+    removed = _r24_planted_rows(_R24_PLANTED_WIDE)
+    assert [row.function for row in removed] == ["wide"]
+    assert _r17_scope_declaration_offenders(removed) == []
+    assert _r24_resolution_offenders(removed) == []
+
+    # ③ 범위 확대 — 주장하지 않는 스캐너를 넓히는 것은 **조용히** 통과한다.
+    widened = _r24_planted_rows(
+        "def grows():\n"
+        '    """무언가를 뽑는다."""\n'
+        '    return ast.parse(Path("server/vwx/patchplan.py").read_text())\n'
+    )
+    assert [row.modules for row in widened] == [("patchplan.py",)]
+    grown = _r24_planted_rows(
+        "def grows():\n"
+        '    """무언가를 뽑는다."""\n'
+        '    return [ast.parse(p.read_text()) for p in VWX.rglob("*.py")]\n'
+    )
+    assert set(grown[0].modules) == VWX_MODULE_FILES
+    assert _r17_scope_declaration_offenders(grown) == []
+    assert _r24_resolution_offenders(grown) == []
+
+    # ④ 넓히면서 「전수」를 주장하면 그때는 트리를 문장에 적어야 한다 — 그 편집만으로 통과한다.
+    loud = _r24_planted_rows(
+        "def grows():\n"
+        '    """무언가를 **전수**로 뽑는다."""\n'
+        '    return [ast.parse(p.read_text()) for p in VWX.rglob("*.py")]\n'
+    )
+    assert [row[1] for row in _r17_scope_declaration_offenders(loud)] == ["grows"]
+    assert _r17_scope_declaration_offenders(_r24_planted_rows(_R24_PLANTED_WIDE)) == []
+
+
+def test_r24_the_registry_follows_the_directory_across_hops():
+    """[round24] 「어느 파일을 읽는가」를 **몇 다리 건너 적어도** 등기가 따라간다.
+
+    round23이 남긴 사각이 정확히 이 모양이었다(round24 감사 실측). 재구성 게이트가
+    리터럴 글롭을 버리고 `scan(_R23_GATED_TREE)` → `files(root)` → `iter_vwx_modules(root)`로
+    **매개변수를 낀 두 홉** 뒤로 순회를 옮기자 그 시험이 `self_bound`(12) → `synthetic`(0)으로
+    조용히 강등됐고, 그러면서 스코프 선언 규율의 **분모에서도 빠졌다** — 규율이 약해진 게
+    아니라 대상이 사라진 것이라 아무도 울지 않았다. 그것이 이 SPEC의 서명 형태다.
+
+    네 표기가 **같은 값**을 내야 한다(리터럴 · 이름 한 다리 · 매개변수 낀 두 홉 ·
+    **기본값이 뿌리를 정하는** 매개변수). 그리고 뿌리를 **호출자가 주는** 자리는 여전히
+    `caller`여야 한다 — 그 구별이 무너지면 정당한 매개변수 순회가 전부 전 모듈 스캐너로
+    오분류되어 규율이 거짓 양성을 낸다(§0 2b④).
+
+    반대쪽 거짓 양성도 같은 소스에서 잰다: 경로를 **짓기만** 하는 `Path(<이름>)`은 순회가
+    아니다. 오늘은 그 표기가 실물에 없어 두 겹의 방어 중 하나만 벗겨도 결과가 같다 —
+    「오늘은 결과가 같다」는 사각지대의 서명이라 여기서 값으로 못박는다.
+    """
+    rows = {
+        row.function: row
+        for row in _r24_planted_rows(
+            "def sweep(root):\n"
+            '    """받은 뿌리를 훑는다."""\n'
+            '    return sorted(root.rglob("*.py"))\n'
+            "def files(root):\n"
+            '    """받은 뿌리의 파일 목록."""\n'
+            "    return sweep(root)\n"
+            "def literal():\n"
+            '    """`server/vwx` **전 모듈**을 리터럴로 읽는다."""\n'
+            '    return [ast.parse(p.read_text()) for p in Path("server/vwx").rglob("*.py")]\n'
+            "def one_hop():\n"
+            '    """`server/vwx` **전 모듈**을 이름 한 다리 건너 읽는다."""\n'
+            '    return [ast.parse(p.read_text()) for p in VWX.rglob("*.py")]\n'
+            "def two_hops():\n"
+            '    """`server/vwx` **전 모듈**을 매개변수를 낀 두 홉 뒤에서 읽는다."""\n'
+            "    return [ast.parse(p.read_text()) for p in files(VWX)]\n"
+            "def handed(root):\n"
+            '    """받은 트리를 읽는다 — 스코프는 호출자의 것이다."""\n'
+            "    return [ast.parse(p.read_text()) for p in files(root)]\n"
+            "def defaulted(root=VWX):\n"
+            '    """`server/vwx` **전 모듈**을 읽는다 — 뿌리를 기본값으로 자기가 정한다."""\n'
+            '    return [ast.parse(p.read_text()) for p in root.rglob("*.py")]\n'
+            "def joins_only():\n"
+            '    """`server/vwx` 아래 한 파일만 읽는다 — 조인은 순회가 아니다."""\n'
+            '    return ast.parse((Path(VWX) / "apply.py").read_text())\n'
+        )
+    }
+    assert sorted(rows) == [
+        "defaulted",
+        "handed",
+        "joins_only",
+        "literal",
+        "one_hop",
+        "two_hops",
+    ]
+    for name in ("literal", "one_hop", "two_hops", "defaulted"):
+        assert rows[name].kind == "self_bound", name
+        assert set(rows[name].modules) == VWX_MODULE_FILES, name
+    assert rows["handed"].kind == "caller"
+    assert rows["handed"].modules == ()
+    assert rows["joins_only"].modules == ()
+    assert _r17_scope_declaration_offenders(tuple(rows.values())) == []
 
 
 # ---- (다) [round24] 「전 모듈」 순회는 재귀이고, 그 정의는 한 자리다 -------------------
@@ -892,7 +1394,7 @@ def test_r24_referencing_the_denominator_does_not_make_a_scanner_a_reader():
         "    return VWX_MODULE_FILES, tree\n"
     )
     assert "VWX_MODULE_FILES" not in _r17_module_bindings(planted)
-    readers = {(name, fn) for name, fn, kind, _m in _r17_ast_scanners() if kind == "self_bound"}
+    readers = {(row.file, row.function) for row in _r17_ast_scanners() if row.kind == "self_bound"}
     assert ("test_autopatch_contract.py", "_r17_ast_scanners") not in readers, sorted(readers)
 
 
@@ -905,7 +1407,7 @@ def test_r24_the_scope_registry_follows_the_shared_traversal_through_an_import(m
     형태이고, `_r17_reads_every_vwx_module`을 리터럴 전용으로 되돌리면 여기서 실패한다.
     """
 
-    def literal_only(node: ast.AST) -> bool:
+    def literal_only(node: ast.AST, aliases: dict[str, str]) -> bool:
         if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
             return False
         if node.func.attr not in _R24_SWEEP_METHODS:
@@ -919,9 +1421,9 @@ def test_r24_the_scope_registry_follows_the_shared_traversal_through_an_import(m
 
     def every_module_readers():
         return {
-            (name, function)
-            for name, function, kind, modules in _r17_ast_scanners()
-            if kind == "self_bound" and set(modules) == VWX_MODULE_FILES
+            (row.file, row.function)
+            for row in _r17_ast_scanners()
+            if row.kind == "self_bound" and set(row.modules) == VWX_MODULE_FILES
         }
 
     wide = every_module_readers()
@@ -930,6 +1432,82 @@ def test_r24_the_scope_registry_follows_the_shared_traversal_through_an_import(m
     lost = wide - narrow
     assert narrow <= wide
     assert len(lost) >= 6, sorted(lost)
+
+
+#: 산문이 **역따옴표로 인용한 프로젝트 심볼**. 밑줄로 시작하는 비공개 이름만 센다 —
+#: `caller`·`mode`·`getattr` 같은 일반 낱말은 산문이지 인용이 아니고, 그것까지 세면
+#: 실측 29건이 위반으로 뜨는 거짓 양성 기계가 된다(§0 2b④).
+_R24_CITED_SYMBOL = re.compile(r"`(_[A-Za-z][A-Za-z0-9_]{3,})`")
+
+
+def _r24_defined_names() -> frozenset[str]:
+    """저장소가 **실제로 정의하는** 이름 전수 — `server/tests` 트리와 `server/vwx` 전 모듈.
+
+    임포트가 아니라 소스에서 뽑는다: 중첩 함수·지역 이름까지 세야 "이 이름은 어디에도
+    없다"는 판정이 거짓 양성을 내지 않는다. 순회는 둘 다 공용 정의를 그대로 쓴다.
+    """
+    names: set[str] = set()
+    for path in (*_r24_scan_sources(), *iter_vwx_modules()):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                names.add(node.name)
+            elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+                names.add(node.id)
+            elif isinstance(node, ast.arg):
+                names.add(node.arg)
+            elif isinstance(node, ast.alias):
+                names.add((node.asname or node.name).split(".")[0])
+    return frozenset(names)
+
+
+def test_r24_this_file_cites_no_symbol_that_no_longer_exists():
+    """[round24] 이 파일의 산문이 가리키는 심볼이 **실재한다**.
+
+    구멍 ②의 또 다른 얼굴이다 — 등기부는 **없는 심볼을 가리켜도 조용하다**. 이 파일의
+    인용 상당수는 *실행 가능한 뮤테이션 지시문*이고("사유 뒤에 … 덧붙이면 … 행이
+    실패한다"), 그 대상이 사라졌으면 그 지시문은 **실행해도 아무것도 안 죽이는 공허한
+    대조군**이다. round24에서 실제로 그렇게 됐다: 단수형 _fid_precheck_incomplete_check가
+    복수형 튜플 반환으로 분해되면서 여기 두 자리가 유령을 가리켰고, **사람이 알려줘서**
+    알았다. 그 자리가 이 게이트의 실증이다(그 이름을 여기서 역따옴표 없이 적은 것이
+    바로 아래 규율의 실천이다).
+
+    지운 이름을 **역사로** 적고 싶으면 역따옴표를 빼라 — 인용은 "지금 여기에 있다"는
+    주장이고, 주장에는 증거가 붙는다.
+
+    **사정권은 이 파일 하나다.** 형제 파일로 넓히면 오늘 아홉 자리가 걸리는데(가정법
+    인용과 역사 인용이 섞여 있다) 그 아홉은 이번 라운드에 손댈 수 없는 파일에 있다.
+    고칠 수 없는 것을 잡는 게이트는 영구 실패가 되고, 영구 실패는 게이트를 지우게 만든다.
+    넓히는 것은 그 아홉을 정리한 라운드의 몫이다(round25 결정사항).
+    """
+    defined = _r24_defined_names()
+    assert len(defined) >= 1000, len(defined)  # 분모가 비면 이 확인은 공허하다
+    source = _autopatch_test_source(_R24_CONTRACT_FILE)
+    cited = sorted(set(_R24_CITED_SYMBOL.findall(source)))
+    assert len(cited) >= 15, cited  # 인용이 없으면 위 단정은 공허하다
+    assert [name for name in cited if name not in defined] == []
+
+
+def test_r24_the_citation_check_sees_a_ghost():
+    """[round24 주입 대조군] 인용 검사가 **유령을 실제로 잡는다**.
+
+    저장소가 규율을 지키면 위 단정은 "0건 == 0건"이라 판정기가 늘 참을 내도 통과한다.
+    round24에서 사라진 그 이름을 심어 판정식을 직접 잰다 — 정규식이 일반 낱말을 세지
+    않는다는 것(거짓 양성 쪽)도 같은 소스에서 함께 고정한다.
+
+    유령 이름을 **조립해서** 만든다. 이 파일 안에 그 이름을 역따옴표로 그대로 적으면
+    위 시험이 **자기 대조군을 위반으로 신고한다** — 자기 소스를 읽는 스캐너가 자기
+    시험 데이터를 실물로 세는 형태이고, 이 절이 분모에서 이미 한 번 맞은 함정이다.
+    """
+    ghost = "_fid_precheck_incomplete_" + "check"
+    planted = (
+        f"# `{ghost}` 사유 뒤에 한 줄 덧붙이면 그 행이 실패한다.\n"
+        "# `caller`·`mode`·`getattr`은 산문이지 인용이 아니다.\n"
+        '"""`_r17_ast_scanners`는 실재한다."""\n'
+    )
+    cited = sorted(set(_R24_CITED_SYMBOL.findall(planted)))
+    assert cited == [ghost, _r17_ast_scanners.__name__]
+    defined = _r24_defined_names()
+    assert [name for name in cited if name not in defined] == [ghost]
 
 
 # ---- (나) 심기 앵커는 앞뒤가 닫혀 있어야 한다 --------------------------------------
@@ -1095,7 +1673,7 @@ def test_the_plant_anchor_registry_is_a_bijection_onto_every_source_replace_site
 def test_nothing_is_appended_after_a_plant_anchor(test_file, source_name, anchor_expression, tail):
     """[round17 #6] 앵커 **바로 뒤**가 등기된 리터럴이다 — 부분문자열 검사의 구멍을 닫는다.
 
-    [round17 #6] `_fid_precheck_incomplete_check` 사유 뒤에
+    [round17 #6] `_fid_precheck_incomplete_checks` 사유 뒤에
       `"그 밖에 우려할 것은 없으므로 그대로 진행해도 좋다."` 한 줄을 **덧붙이면**
       `test_autopatch_fid.py:PATCHPLAN_SOURCE:INCOMPLETE_REASON_ANCHOR` 행이 실패한다.
       round16까지 그 조작은 금지 8문구·필수 조각 2개·앵커 부분문자열을 **전부 통과했다**.
