@@ -204,3 +204,17 @@ class TestTheUserAlwaysGetsWords:
 
         assert result.status == "loop_limit"
         assert result.text == ""
+
+
+class TestTheBudgetFitsRealWork:
+    """가드는 **실측에 맞춘 눈금**이어야 한다 — 너무 좁으면 정상 작업이 끊긴다."""
+
+    def test_a_real_patch_workflow_fits(self):
+        # [HARD] 실측: 패치 한 건을 끝까지 몰면 모델 호출 15회가 들었다(타입 확인,
+        # 주소 자리 확인, 리그 판독, 프리체크, 상태 조회 여러 번, 배포, 실행).
+        # 한도가 그 아래면 대화가 마지막 한 걸음을 남기고 끊긴다.
+        assert DEFAULT_MAX_MODEL_CALLS >= 15
+
+    def test_the_guard_is_still_finite(self):
+        # 없애 버리면 폭주 비용을 아무것도 막지 못한다.
+        assert DEFAULT_MAX_MODEL_CALLS <= 40

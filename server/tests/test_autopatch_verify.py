@@ -5840,6 +5840,9 @@ def _r17_sentence_sites(overrides=None):
 _R17_SENTENCE_SURFACES = (
     ("address.py", "ABSOLUTE_BACK_CALCULATED_PREMISE_NOTE"),
     ("address.py", "warning_detail"),
+    # [round24 후속] 자리 판정이 요청을 읽지 못했을 때의 사유 한 줄 —
+    # 이 문장이 사라지면 "왜 못 놓는지"가 사용자에게 안 간다.
+    ("addressfit.py", "error"),
     ("apply.py", "END_TO_END_UNVERIFIED"),
     ("apply.py", "NO_AUTO_CORRECTION"),
     ("apply.py", "PLUGIN_EXIT_IS_NOT_SUCCESS"),

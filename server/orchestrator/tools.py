@@ -121,6 +121,9 @@ from server.spatial.presets import (
 from server.spatial.topology import TopologyResult
 from server.spatial.topology import classify as classify_topology
 from server.vwx.address import resolve_all as resolve_vwx_addresses
+from server.vwx.addressfit import Fit, occupants_from_patch_values
+from server.vwx.addressfit import evaluate as evaluate_address_fit
+from server.vwx.addressfit import first_free as first_free_address
 from server.vwx.apply import (
     CONSOLE_READ_INCOMPLETE,
     HandoffEntry,
@@ -160,6 +163,10 @@ ANSWER_PICK_ON_CONSOLE = "콘솔에서 직접 고르겠다"
 ANSWER_SUPPLY_FILE = "MVR 또는 GDTF 파일을 주겠다"
 ANSWER_CANCEL = "그만두겠다"
 
+# 주소가 겹쳤을 때 내는 갈래.
+ANSWER_USE_SUGGESTED = "제안한 자리에 놓겠다"
+ANSWER_TYPE_ADDRESS = "다른 주소를 직접 넣겠다"
+
 # 사용자가 콘솔 앞에서 실제로 고르는 데 걸리는 시간. 얕은 판독 1왕복 ≈ 66 ms이므로
 # 관측 자체는 무시할 수 있고, 사실상 전부 대기다.
 SELECTION_WATCH_INTERVAL_SECONDS = 2.0
@@ -194,6 +201,7 @@ TOOL_NAMES = (
     "preshow_check",
     "ask_user",
     "resolve_fixture_type",
+    "resolve_patch_address",
     "find_fx",
     "instantiate_fx",
     "find_scene",
@@ -2983,6 +2991,196 @@ def build_toolset(
             awaited_human=bool(payload.get("answer")),
         )
 
+    def resolve_patch_address(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        """요청한 DMX 주소에 자리가 있는가 — 없으면 **그 자리에서 묻고 새 주소를 받는다.**
+
+        [round24 후속] 실측: `claypaky sharpy 250 6대를 3.001부터 패치해줘`에 앱은
+        3.001이 이미 찬 것을 정확히 찾아냈다. 그러고는 산문으로 "결정해 주세요"라고
+        쓰고 턴을 끝냈다 — 사용자는 처음부터 다시 쳐야 했고, 그때는 앱이 원래 과제를
+        잊은 뒤였다. **찾은 자리가 물어야 한다**(`resolve_fixture_type`과 같은 규약).
+
+        판정은 한 축만 쓴다: 내가 차지할 구간 **안에서 시작하는** 기존 장비.
+        기존 장비의 채널 폭은 콘솔 연결이 반증되어(ASSUMPTION-27 NEGATIVE) 믿을 수
+        없고, 그 위에 폭 기반 겹침을 세우면 없는 근거로 거절하게 된다. 못 보는 축은
+        payload의 `blind_spot`에 적어 내보낸다 — 조용히 "깨끗하다"고 하지 않는다.
+        """
+        requested = str(call.arguments.get("address") or "").strip()
+        count = _positive_int(call.arguments.get("count"))
+        width = _positive_int(call.arguments.get("channels_per_fixture"))
+        if count is None:
+            return _error_result(call, "'count' must be a positive integer — 몇 대를 놓는가")
+        if width is None:
+            return _error_result(
+                call,
+                "'channels_per_fixture' must be a positive integer — 모드의 채널 수. "
+                "모르면 먼저 resolve_fixture_type으로 모드를 확정하라. 추측하지 마라.",
+            )
+        if property_port is None:
+            return _error_result(
+                call,
+                "property reads are not wired — 주소를 읽을 수 없으면 빈 자리라고 말할 수 없다",
+            )
+        try:
+            inventory = read_inventory(_InventoryPort(state_port, property_port))
+        except InventoryReadError as error:
+            return _error_result(call, f"fixture inventory unreadable: {error}")
+
+        occupants = occupants_from_patch_values(
+            (record.patch_raw, record.name, record.fixture_type) for record in inventory.fixtures
+        )
+        caveat = console_read_caveat(inventory)
+        fit = evaluate_address_fit(requested, count=count, width=width, occupants=occupants)
+
+        payload: dict[str, object] = {
+            "requested": requested,
+            "count": count,
+            "channels_per_fixture": width,
+            "occupied_addresses_read": len(occupants),
+            "console_read_caveat": caveat,
+            "blind_spot": fit.blind_spot,
+        }
+
+        if fit.error:
+            payload["status"] = "unreadable_request"
+            payload["guidance"] = f"{fit.error} — 사용자에게 주소를 다시 물어라."
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=True,
+                )
+            )
+
+        def _settle(chosen: Fit) -> None:
+            payload["status"] = "free"
+            payload["address"] = chosen.requested
+            payload["span"] = chosen.span_text
+            payload["placements"] = [spot.text for spot in chosen.placements]
+            payload["guidance"] = (
+                f"{chosen.span_text}에 자리가 있다. **이 주소로 패치를 이어서 진행하라** — "
+                "같은 것을 다시 묻지 마라. 다만 이 판정은 위 blind_spot을 못 본다."
+            )
+
+        if fit.ok:
+            _settle(fit)
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+
+        clash = [
+            {
+                "address": f"{occupant.universe}.{occupant.address}",
+                "name": occupant.name,
+                "fixture_type": occupant.fixture_type,
+            }
+            for occupant in fit.collisions
+        ]
+        payload["status"] = "occupied"
+        payload["collisions"] = clash
+        payload["would_have_occupied"] = fit.span_text
+        suggestion = first_free_address(count=count, width=width, occupants=occupants)
+        payload["suggestion"] = suggestion.requested if suggestion else None
+
+        if question_port is None:
+            payload["guidance"] = (
+                f"{requested}에 이미 {len(clash)}대가 있다. 자리가 겹치면 출력이 틀린다 — "
+                "덮어쓰지 말고 사용자에게 새 주소를 물어라. 명령을 보내지 마라."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+
+        options = []
+        if suggestion is not None:
+            options.append(
+                QuestionOption(
+                    label=ANSWER_USE_SUGGESTED,
+                    description=f"{suggestion.span_text} — 비어 있는 자리입니다.",
+                )
+            )
+        options.append(
+            QuestionOption(
+                label=ANSWER_TYPE_ADDRESS,
+                description="원하시는 시작 주소를 «4.001» 형태로 적어 주세요.",
+            )
+        )
+        options.append(
+            QuestionOption(label=ANSWER_CANCEL, description="이 요청을 여기서 멈춥니다.")
+        )
+
+        first = clash[0]["address"]
+        answer = question_port.ask(
+            QuestionRequest(
+                prompt=(
+                    f"{requested}부터 {count}대를 놓으면 이미 있는 장비 "
+                    f"{len(clash)}대와 겹칩니다. 어디에 놓을까요?"
+                ),
+                why=(
+                    f"{fit.span_text} 구간에 {first}을(를) 비롯한 장비가 이미 있습니다. "
+                    "주소가 겹치면 두 장비가 같은 채널을 받아 출력이 어긋납니다."
+                ),
+                steps=(
+                    f"놓으려는 것: {count}대 × {width}채널 = {count * width}채널",
+                    f"요청한 자리: {fit.span_text}",
+                    f"겹치는 장비: {', '.join(item['address'] for item in clash[:6])}"
+                    + (" 외" if len(clash) > 6 else ""),
+                ),
+                options=tuple(options),
+            )
+        )
+        payload["answer"] = None if answer == UNANSWERED else answer
+
+        if answer == UNANSWERED:
+            payload["guidance"] = "답을 받지 못했다. 주소를 지어내지 말고 그대로 알려라."
+        elif answer == ANSWER_CANCEL:
+            payload["guidance"] = "사용자가 멈추기를 골랐다. 여기서 끝내라."
+        else:
+            # 「제안한 자리」면 제안을, 아니면 사용자가 적은 글을 주소로 읽는다.
+            # 어느 쪽이든 **다시 판정한다** — 사용자가 적은 자리도 겹칠 수 있고,
+            # 확인 없이 받아들이면 이 도구가 있는 이유가 사라진다.
+            picked = (
+                suggestion.requested
+                if answer == ANSWER_USE_SUGGESTED and suggestion is not None
+                else answer
+            )
+            rechecked = evaluate_address_fit(picked, count=count, width=width, occupants=occupants)
+            payload["answered_address"] = picked
+            if rechecked.ok:
+                _settle(rechecked)
+            elif rechecked.error:
+                payload["status"] = "unreadable_answer"
+                payload["guidance"] = (
+                    f"사용자가 준 {picked!r}을(를) 주소로 읽지 못했다({rechecked.error}). "
+                    "«4.001» 형태로 다시 물어라 — 임의로 고쳐 쓰지 마라."
+                )
+            else:
+                payload["status"] = "still_occupied"
+                payload["guidance"] = (
+                    f"사용자가 고른 {picked}도 {len(rechecked.collisions)}대와 겹친다. "
+                    "그 사실을 알리고 다시 물어라 — 겹친 채로 진행하지 마라."
+                )
+
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            ),
+            awaited_human=bool(payload.get("answer")),
+        )
+
     # -- find_fx (REQ-FXLIB-015 — lookup only, sends nothing) ------------------
     #
     # @MX:ANCHOR: [AUTO] the only model-reachable entry to the fx MATCHER
@@ -5657,10 +5855,12 @@ def build_toolset(
                 "\n"
                 "status='present' means proceed. status='ambiguous' means "
                 "several library names match — ASK which one, never take the "
-                "first. status='absent' carries an 'ask_the_user' block with "
-                "two concrete options (pick it on the console yourself / hand "
-                "over an MVR or GDTF file). Feed that block straight into the "
-                "ask_user tool — do NOT merely describe it in chat text."
+                "first. status='absent' means this tool ALREADY ASKED the "
+                "operator through the question card and the answer is in the "
+                "payload — do not ask the same thing again in chat text. When "
+                "it flipped back to 'present' the operator added the type while "
+                "you waited: continue the ORIGINAL patch request with the "
+                "'resolved' name, and do not re-ask about the name."
             ),
             parameters={
                 "type": "object",
@@ -5671,6 +5871,55 @@ def build_toolset(
                     }
                 },
                 "required": ["instrument_type"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="resolve_patch_address",
+            description=(
+                "Check whether a DMX start address has room for N new fixtures "
+                "on THIS console, and when it does not, ASK the operator where "
+                "to put them instead. READS ONLY, sends nothing.\n"
+                "\n"
+                "Call this BEFORE writing any patch plugin whenever the "
+                "operator named a start address. Two fixtures on the same "
+                "channels output the wrong thing, and a patch is not something "
+                "the operator can casually undo.\n"
+                "\n"
+                "'channels_per_fixture' is the mode's channel count. Do NOT "
+                "guess it — resolve the mode first; a wrong width makes this "
+                "whole check meaningless.\n"
+                "\n"
+                "status='free' means proceed with 'address'. status='occupied' "
+                "means this tool ALREADY ASKED and the answer is in the "
+                "payload; when it settled to 'free', patch at the address it "
+                "returns and do NOT re-ask. status='still_occupied' means even "
+                "the operator's own choice collides — tell them and ask again. "
+                "Every verdict carries 'blind_spot': this check sees fixtures "
+                "whose START falls inside the new span, not ones that begin "
+                "earlier and reach into it, because existing channel widths are "
+                "not reliably readable on this build. Never report 'no "
+                "collision' as proof of safety."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "address": {
+                        "type": "string",
+                        "description": (
+                            "Requested start address, '<universe>.<address>' (e.g. '3.001')."
+                        ),
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "How many fixtures to place.",
+                    },
+                    "channels_per_fixture": {
+                        "type": "integer",
+                        "description": "Channel count of the chosen DMX mode. Never a guess.",
+                    },
+                },
+                "required": ["address", "count", "channels_per_fixture"],
                 "additionalProperties": False,
             },
         ),
@@ -6478,6 +6727,7 @@ def build_toolset(
         "preshow_check": preshow_check,
         "ask_user": ask_user,
         "resolve_fixture_type": resolve_fixture_type,
+        "resolve_patch_address": resolve_patch_address,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,
         "find_scene": find_scene,

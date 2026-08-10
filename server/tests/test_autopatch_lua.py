@@ -774,6 +774,12 @@ _R17_ESCAPE_TABLE_SITES = (("luagen.py", "_LUA_ESCAPES"),)
 # 치명 #2와 **같은 성질**의 자리를 모듈 경계 밖까지 덮는다.
 _R17_TOKEN_JOIN_SITES = (
     ("address.py", "f'{universe}.{address}'"),
+    # [round24 후속] 자리 판정이 쓰는 좌표 — `address.py`와 **같은 순서 규약**
+    # (유니버스 먼저, 그다음 주소)이다. 뒤집으면 3.001을 1.003으로 읽어 엉뚱한
+    # 유니버스의 점유를 보고 "비었다"고 답한다. 앞의 것은 요청을 정규화해 되돌려
+    # 주는 자리, 뒤의 것은 배치된 자리 하나를 사람에게 보여 주는 자리다.
+    ("addressfit.py", "f'{parsed.universe}.{parsed.address}'"),
+    ("addressfit.py", "f'{self.universe}.{self.address}'"),
     # [round24 후속] 인테이크가 자동 배정 결과를 사용자에게 보여 줄 때의 미리보기.
     # 판정이 아니라 **표시**다 — 실제 행의 주소는 `Universe`/`U Address` 칸이 나른다.
     ("intake.py", "f'{u}.{a}'"),

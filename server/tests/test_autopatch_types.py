@@ -1411,6 +1411,11 @@ _J_POSITIONAL_TOKEN = (
     "아니다. 토큰 수 게이트는 round17 #5(`address.py` 소관)."
 )
 _J_FIRST_BY_DEFINITION = "정의상 **최초** 항목이 답이다(NUL 바이트 최초 오프셋) — 고를 여지가 없다."
+#: [round24 후속] 자기가 주소 순으로 **만들어 낸** 수열의 머리를 도로 꺼내는 자리.
+_J_SELF_ORDERED_SPAN = (
+    "같은 함수가 시작 주소부터 폭만큼 더해 가며 **순서대로 만든** 수열이다 — "
+    "`[0]`은 그 구간의 시작이지 후보들 중 하나가 아니다. 고를 여지가 없다."
+)
 _J_SHARED_HEADER = (
     "`csv.DictReader` 산출물의 모든 레코드는 **같은 키 집합**을 가지므로 첫 레코드의 키 "
     "집합은 곧 파일 헤더다 — 후보들 중 하나를 고르는 것이 아니다."
@@ -1480,6 +1485,14 @@ _R17_AMBIGUITY_SITES = (
         "parts[0]",
         False,
         justification=_J_POSITIONAL_TOKEN,
+    ),
+    _AmbiguitySite(
+        "addressfit.py",
+        "Fit.span_text",
+        _R17_FIRST_ELEMENT,
+        "self.placements[0]",
+        False,
+        justification=_J_SELF_ORDERED_SPAN,
     ),
     _AmbiguitySite(
         "apply.py",
