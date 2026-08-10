@@ -48,6 +48,7 @@ from server.web.messages import (
     busy_event,
     error_event,
     parse_client_message,
+    question_resolved_event,
     review_resolved_event,
 )
 from server.web.panel import (
@@ -67,6 +68,7 @@ from server.web.settings_api import SettingsDeps, build_settings_router
 _PROTOCOL_ERROR_MESSAGE = "잘못된 메시지 형식입니다. 프로토콜 v1 스키마를 확인해 주세요."
 _STALE_APPROVAL_MESSAGE = "만료되었거나 알 수 없는 승인 요청입니다."
 _STALE_REVIEW_MESSAGE = "만료되었거나 알 수 없는 리뷰 요청입니다."
+_STALE_QUESTION_MESSAGE = "만료되었거나 알 수 없는 질문입니다."
 _BUSY_MESSAGE = "이전 지시를 처리 중입니다 — 완료된 뒤 다시 시도해 주세요."
 _PANEL_TASK_ERROR_MESSAGE = "패널 요청을 처리하지 못했습니다."
 
@@ -81,6 +83,8 @@ class WebDeps:
     audit: AuditLog
     approval_channel: ApprovalChannel
     review_channel: ApprovalChannel | None = None
+    # [round24 후속] 모델이 되묻는 통로. `None`이면 되묻기 없이 종전대로 동작한다.
+    question_channel: ApprovalChannel | None = None
     deploy_pipeline: DeployPipelinePort | None = None
     recorder: RoundTripRecorder | None = None
     rig_paths: dict[str, str] | None = None
@@ -253,6 +257,7 @@ def create_app(deps: WebDeps) -> FastAPI:
             recorder=deps.recorder,
             rig_paths=deps.rig_paths,
             review_channel=deps.review_channel,
+            question_channel=deps.question_channel,
             deploy_pipeline=deps.deploy_pipeline,
             console_input_probe=deps.console_input_probe,
             reply_port_probe=deps.reply_port_probe,
@@ -357,6 +362,25 @@ def create_app(deps: WebDeps) -> FastAPI:
                         await _safe_send(
                             websocket,
                             error_event(message=_STALE_APPROVAL_MESSAGE, kind="protocol"),
+                        )
+                elif message_type == "question_answer":
+                    resolved = deps.question_channel is not None and (
+                        deps.question_channel.resolve(
+                            message["request_id"], approved=message["answer"]
+                        )
+                    )
+                    if resolved:
+                        await _safe_send(
+                            websocket,
+                            question_resolved_event(
+                                request_id=message["request_id"],
+                                answer=message["answer"],
+                            ),
+                        )
+                    else:
+                        await _safe_send(
+                            websocket,
+                            error_event(message=_STALE_QUESTION_MESSAGE, kind="protocol"),
                         )
                 elif message_type == "review_decision":
                     resolved = deps.review_channel is not None and deps.review_channel.resolve(

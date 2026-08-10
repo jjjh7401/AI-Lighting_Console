@@ -45,10 +45,12 @@ from server.web.messages import (
     execution_preview_event,
     notice_event,
     proposal_event,
+    question_request_event,
     review_request_event,
     status_event,
 )
 from server.web.preview import build_execution_preview
+from server.web.question import QuestionRequest
 from server.web.reply_discovery import ReplyPortMismatch
 
 # The gate's unconfirmed-execution marker (REQ-MVP-032). String contract pinned
@@ -208,6 +210,7 @@ class ChatSession:
         recorder: RoundTripRecorder | None = None,
         rig_paths: dict[str, str] | None = None,
         review_channel: ApprovalChannel | None = None,
+        question_channel: ApprovalChannel | None = None,
         deploy_pipeline: DeployPipelinePort | None = None,
         console_input_probe: Callable[[], str] | None = None,
         reply_port_probe: Callable[[], ReplyPortMismatch | None] | None = None,
@@ -223,6 +226,7 @@ class ChatSession:
         self._send = send_event
         self._channel = approval_channel
         self._review_channel = review_channel
+        self._question_channel = question_channel
         self._recorder = recorder
         self._turn_decisions: list[ScreenDecision] = []
         self._preview_counter = 0
@@ -237,12 +241,15 @@ class ChatSession:
         approval_channel.bind(self._notify_approval, session_key=self._session_key)
         if review_channel is not None:
             review_channel.bind(self._notify_review, session_key=self._session_key)
+        if question_channel is not None:
+            question_channel.bind(self._notify_question, session_key=self._session_key)
         registry = build_toolset(
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
             bundle_gate=_ObservingBundleGate(gate, self._on_preview, self._on_decision),
             rig_paths=rig_paths,
             deploy_pipeline=deploy_pipeline,
+            question_port=question_channel,
             # SPEC-COPILOT-PRESHOW-001 T-G2: reuse the gate's own audited
             # heartbeat as the pre-show OSC checks' liveness probe — no
             # second console link, no new socket. Gated on preshow_receive_port
@@ -283,6 +290,9 @@ class ChatSession:
 
     def _notify_review(self, request_id: str, request: ReviewRequest) -> None:
         self._send(review_request_event(request_id=request_id, request=request))
+
+    def _notify_question(self, request_id: str, request: QuestionRequest) -> None:
+        self._send(question_request_event(request_id=request_id, request=request))
 
     def _on_preview(self, commands: Sequence[str]) -> None:
         if not commands:

@@ -14,6 +14,7 @@ import {
   buildPanelExecute,
   buildPanelGoto,
   buildPanelStop,
+  buildQuestionAnswer,
   buildReviewDecision,
   buildStatusRequest,
   clearPendingRequests,
@@ -129,6 +130,7 @@ export interface CopilotSocket {
   sendChat: (text: string) => void;
   sendDecision: (requestId: string, approved: boolean) => void;
   sendReviewDecision: (requestId: string, approved: boolean) => void;
+  sendQuestionAnswer: (requestId: string, answer: string) => void;
   sendLock: (active: boolean) => void;
   sendPanelExecute: (targetKind: PanelTargetKind, target: number) => void;
   sendPanelStop: (targetKind: PanelTargetKind, target: number) => void;
@@ -229,6 +231,10 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     (requestId: string, approved: boolean) => send(buildReviewDecision(requestId, approved)),
     [send],
   );
+  const sendQuestionAnswer = useCallback(
+    (requestId: string, answer: string) => send(buildQuestionAnswer(requestId, answer)),
+    [send],
+  );
   const sendLock = useCallback((active: boolean) => send(buildLock(active)), [send]);
   const sendPanelExecute = useCallback(
     (targetKind: PanelTargetKind, target: number) => send(buildPanelExecute(targetKind, target)),
@@ -256,6 +262,7 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendChat,
     sendDecision,
     sendReviewDecision,
+    sendQuestionAnswer,
     sendLock,
     sendPanelExecute,
     sendPanelStop,

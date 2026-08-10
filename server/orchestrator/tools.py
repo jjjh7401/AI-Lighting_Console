@@ -148,6 +148,7 @@ from server.vwx.report import build_vwx_report
 from server.vwx.rig import build_designed_rig
 from server.vwx.typemap import TypeRequest, resolve_fixture_types
 from server.vwx.typesource import plan_for_missing_type as plan_missing_fixture_type
+from server.web.question import UNANSWERED, QuestionOption, QuestionRequest
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
     from server.deploy.pipeline import DeployOutcome
@@ -169,6 +170,7 @@ TOOL_NAMES = (
     "precheck_vectorworks_diff",
     "apply_vectorworks_patch",
     "preshow_check",
+    "ask_user",
     "resolve_fixture_type",
     "find_fx",
     "instantiate_fx",
@@ -1104,6 +1106,7 @@ def build_toolset(
     preshow_receive_port: int | None = None,
     preshow_osc_slot: int | None = None,
     group_approval_port: ApprovalPort | None = None,
+    question_port: object | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
 
@@ -2535,6 +2538,85 @@ def build_toolset(
             ),
         )
 
+    def ask_user(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        r"""사용자에게 **되묻는다** — 추측하지 않기 위한 유일한 통로.
+
+        [round24 후속] 이 도구가 없던 동안 모델은 모르는 것을 만나면 값을 **지어냈다**
+        (실측: 없는 픽스처 타입에 GDTF 파일명을 다섯 번 추측, 플러그인 배포·실행,
+        장비 0대, 59.6초). 모르면 물어야 한다.
+
+        **답을 못 받는 것은 거부가 아니다.** 승인·검토는 실패 시 거부가 안전하지만
+        (되돌릴 수 없는 쓰기를 막는다), 질문은 답이 없을 뿐이다. 그때는
+        ``answered=false``\ 를 내고, 모델은 그 사실을 그대로 받는다.
+        """
+        prompt = str(call.arguments.get("prompt") or "").strip()
+        if not prompt:
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(
+                        {"answered": False, "reason": "prompt가 비어 있다"},
+                        ensure_ascii=False,
+                    ),
+                    is_error=True,
+                )
+            )
+        if question_port is None:
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(
+                        {
+                            "answered": False,
+                            "reason": (
+                                "이 실행 경로에는 질문 통로가 없다 — 사용자에게 물을 수 "
+                                "없으니 답을 지어내지 말고 그대로 알려라."
+                            ),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    is_error=False,
+                )
+            )
+
+        raw_options = call.arguments.get("options") or []
+        options = tuple(
+            QuestionOption(
+                label=str(item.get("label", "")).strip(),
+                description=str(item.get("description", "")).strip(),
+            )
+            for item in raw_options
+            if isinstance(item, Mapping) and str(item.get("label", "")).strip()
+        )
+        raw_steps = call.arguments.get("steps") or []
+        steps = tuple(str(step).strip() for step in raw_steps if str(step).strip())
+
+        request = QuestionRequest(
+            prompt=prompt,
+            why=str(call.arguments.get("why") or "").strip(),
+            steps=steps,
+            options=options,
+        )
+        answer = question_port.request_approval(request)
+        answered = isinstance(answer, str) and answer not in ("", UNANSWERED)
+        payload = {
+            "answered": bool(answered),
+            "answer": answer if answered else None,
+            "reason": None
+            if answered
+            else "사용자가 아직 답하지 않았다(시간 초과 또는 연결 없음).",
+        }
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            )
+        )
+
     def resolve_fixture_type(call: ToolCall, context: ExecutionContext) -> ToolExecution:
         """요청한 타입이 콘솔 라이브러리에 있는가 — 없으면 **물을 거리**를 낸다.
 
@@ -2595,8 +2677,9 @@ def build_toolset(
             payload["status"] = "ambiguous"
             payload["candidates"] = near
             payload["guidance"] = (
-                "후보가 여럿이다. **고르지 마라** — 사용자에게 어느 것인지 물어라. "
-                "먼저 걸린 것을 집으면 엉뚱한 타입으로 패치된다."
+                "후보가 여럿이다. 고르지 마라 — ask_user 도구로 어느 것인지 물어라. "
+                "options에 candidates를 그대로 넣는다. 먼저 걸린 것을 집으면 "
+                "엉뚱한 타입으로 패치된다."
             )
         else:
             steps = plan_missing_fixture_type(requested)
@@ -2624,8 +2707,10 @@ def build_toolset(
                 ],
             }
             payload["guidance"] = (
-                "사용자에게 위 두 갈래를 한국어로 물어라. 답을 받기 전에는 "
-                "플러그인을 만들지도, 명령을 보내지도 마라."
+                "지금 바로 ask_user 도구를 불러라 — prompt에 위 question을, "
+                "options에 위 두 갈래의 label을, steps에 콘솔 절차를 그대로 넣는다. "
+                "채팅으로 설명만 하고 끝내지 마라. 답을 받기 전에는 플러그인을 "
+                "만들지도, 명령을 보내지도 마라."
             )
 
         return ToolExecution(
@@ -4974,6 +5059,57 @@ def build_toolset(
             },
         ),
         ToolDefinition(
+            name="ask_user",
+            description=(
+                "Ask the operator a question and WAIT for the answer. Use this "
+                "instead of guessing whenever a required value is missing or "
+                "ambiguous — a fixture type that is not in the library, two "
+                "library names that both match, a quantity or a DMX address "
+                "the operator never gave.\n"
+                "\n"
+                "Measured consequence of guessing: asked for a fixture type "
+                "the console did not have, the model invented five Import "
+                "syntaxes and GDTF file names, deployed and ran a plugin, "
+                "created ZERO fixtures and burned 59.6 seconds. Ask instead.\n"
+                "\n"
+                "'options' renders as buttons and 'steps' as a numbered "
+                "procedure the operator can follow on the console; the "
+                "operator may always type a free-form answer instead. "
+                "'answered': false means the question timed out or no UI was "
+                "attached — report that plainly, never fabricate the answer."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "prompt": {"type": "string", "description": "The question, in Korean."},
+                    "why": {
+                        "type": "string",
+                        "description": "Why the value is needed, in Korean.",
+                    },
+                    "steps": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Console procedure the operator can follow, in Korean.",
+                    },
+                    "options": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "label": {"type": "string"},
+                                "description": {"type": "string"},
+                            },
+                            "required": ["label"],
+                            "additionalProperties": False,
+                        },
+                        "description": "Selectable answers. Free-form input stays available.",
+                    },
+                },
+                "required": ["prompt"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
             name="resolve_fixture_type",
             description=(
                 "Check whether a fixture type name exists in THIS console's "
@@ -4995,8 +5131,8 @@ def build_toolset(
                 "several library names match — ASK which one, never take the "
                 "first. status='absent' carries an 'ask_the_user' block with "
                 "two concrete options (pick it on the console yourself / hand "
-                "over an MVR or GDTF file); relay those to the operator in "
-                "Korean and STOP until answered."
+                "over an MVR or GDTF file). Feed that block straight into the "
+                "ask_user tool — do NOT merely describe it in chat text."
             ),
             parameters={
                 "type": "object",
@@ -5786,6 +5922,7 @@ def build_toolset(
         "precheck_vectorworks_diff": precheck_vectorworks_diff,
         "apply_vectorworks_patch": apply_vectorworks_patch,
         "preshow_check": preshow_check,
+        "ask_user": ask_user,
         "resolve_fixture_type": resolve_fixture_type,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,

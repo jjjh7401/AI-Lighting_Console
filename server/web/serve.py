@@ -344,6 +344,12 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         review_port=review_channel,
     )
 
+    # [round24 후속] 세 번째 채널 — 모델이 사용자에게 되묻는 통로. payload만 다르고
+    # 같은 브리지다. 승인·검토와 달리 실패는 거부가 아니라 **미응답**이다.
+    question_channel = ApprovalChannel(
+        timeout_seconds=args.approval_timeout, recorder=recorder, id_prefix="question"
+    )
+
     ui_dist = Path(args.ui_dist)
     # M10 Part D: compose the M3/M4 deploy-shell REST routers into WebDeps — the
     # M6 "serve.py composition" obligation (settings_api/provision_api docstrings)
@@ -358,6 +364,7 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         audit=stack.audit,
         approval_channel=channel,
         review_channel=review_channel,
+        question_channel=question_channel,
         deploy_pipeline=deploy_pipeline,
         recorder=recorder,
         ui_dist=ui_dist if ui_dist.is_dir() else None,

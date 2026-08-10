@@ -16,6 +16,7 @@ import { CueMonitor } from "./components/CueMonitor";
 import { DashBoard } from "./components/DashBoard";
 import { LockToggle } from "./components/LockToggle";
 import { OnboardingBanner } from "./components/OnboardingBanner";
+import { QuestionCard } from "./components/QuestionCard";
 import { ReviewCard } from "./components/ReviewCard";
 import { RunbookMode } from "./components/RunbookMode";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -267,6 +268,7 @@ export default function App() {
     sendChat,
     sendDecision,
     sendReviewDecision,
+    sendQuestionAnswer,
     sendLock,
     sendPanelExecute,
     sendPanelStop,
@@ -432,6 +434,13 @@ export default function App() {
               is hidden (contract item 4). */}
           {state.pendingApprovals.map((approval) => (
             <ApprovalCard key={approval.request_id} approval={approval} onDecision={sendDecision} />
+          ))}
+          {state.pendingQuestions.map((question) => (
+            <QuestionCard
+              key={question.request_id}
+              question={question}
+              onAnswer={sendQuestionAnswer}
+            />
           ))}
           {state.pendingReviews.map((review) => (
             <ReviewCard key={review.request_id} review={review} onDecision={sendReviewDecision} />
