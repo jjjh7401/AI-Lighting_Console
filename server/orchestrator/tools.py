@@ -2786,7 +2786,8 @@ def build_toolset(
                 name=call.name,
                 content=json.dumps(payload, ensure_ascii=False),
                 is_error=False,
-            )
+            ),
+            awaited_human=bool(answered),
         )
 
     def resolve_fixture_type(call: ToolCall, context: ExecutionContext) -> ToolExecution:
@@ -2978,7 +2979,8 @@ def build_toolset(
                 name=call.name,
                 content=json.dumps(payload, ensure_ascii=False),
                 is_error=False,
-            )
+            ),
+            awaited_human=bool(payload.get("answer")),
         )
 
     # -- find_fx (REQ-FXLIB-015 — lookup only, sends nothing) ------------------
