@@ -1283,9 +1283,14 @@ class TestRound17FuzzyTypeEqualBoundary:
 # 다른 에이전트의 편집으로 줄이 밀려도 유지된다.
 
 _VWX_SOURCE_DIR = Path("server/vwx")
+#: 모호성 등기부가 **대조군을 찾는 곳**. 여기 없는 파일에 대조군을 두면 등기가
+#: 그것을 못 보고, 자리 하나가 게이트 없이 통과한다 — round23 R23-3이 그 형태였다
+#: (「넓은 파일 범위 위의 좁은 해석」). 새 축의 대조군이 새 파일에 생기면 여기 더한다.
 _R17_TEST_SOURCES = (
     Path("server/tests/test_autopatch_types.py"),
     Path("server/tests/test_autopatch_verify.py"),
+    # [round24 후속] 인테이크 층의 모호성 대조군 소재지.
+    Path("server/tests/test_vwx_intake.py"),
 )
 
 _R17_LEN_IS_ONE = "len_is_one"
@@ -1355,8 +1360,10 @@ def vwx_ambiguity_census() -> set[tuple[str, str, str, str]]:
 
 
 def declared_test_names() -> set[str]:
-    """`server/tests/test_autopatch_types.py`·`test_autopatch_verify.py` 두 파일이 선언한
-    `test_*` 함수 이름을 전부 모은다 — 그 두 파일이 이 레지스트리의 대조군 소재지다.
+    """:data:`_R17_TEST_SOURCES`가 선언한 `test_*` 함수 이름을 전부 모은다.
+
+    그 목록이 이 레지스트리의 **대조군 소재지**다. 목록 밖에 대조군을 두면 등기가
+    그것을 못 보므로, 새 축이 새 파일에 대조군을 두면 목록을 함께 넓힌다.
     """
     names: set[str] = set()
     for path in _R17_TEST_SOURCES:
@@ -1408,9 +1415,51 @@ _J_SHARED_HEADER = (
     "`csv.DictReader` 산출물의 모든 레코드는 **같은 키 집합**을 가지므로 첫 레코드의 키 "
     "집합은 곧 파일 헤더다 — 후보들 중 하나를 고르는 것이 아니다."
 )
+_J_BLOCK_START = (
+    "자동 배정이 잡은 FID 블록의 **시작 번호**다 — 사용자에게 「N번부터 M개」라고 "
+    "알리는 데 쓴다. 후보 여럿에서 고르는 것이 아니라 이미 정해진 수열의 첫 값이다."
+)
 
 #: `server/vwx/` 전 모듈 모호성 판정 자리 — 스캐너 결과와 **양방향 일치**해야 한다.
 _R17_AMBIGUITY_SITES = (
+    # --- [round24 후속] 인테이크 — 부분 정보를 질문으로 바꾸는 층.
+    # 여기 `len_is_one` 셋은 **결함이 아니라 처방**이다. 「하나로 좁혀질 때만 확정하고
+    # 아니면 묻는다」가 이 층의 규율이고, 그것을 코드로 적으면 정확히 이 모양이 된다.
+    # `>= 1`로 밀면 후보 여럿에서 첫 것을 집는 R22-C의 붕괴가 여기서 재현된다.
+    # 확정 갈래는 전부 튜플 언팩(`(only,) = exact`)이라 `[0]` 자리가 생기지 않는다 —
+    # 언팩 자체가 「정확히 하나」를 단정하기 때문이다.
+    _AmbiguitySite(
+        "intake.py",
+        "_resolve_option",
+        _R17_LEN_IS_ONE,
+        "len(exact) == 1",
+        True,
+        gate="test_a_prefix_that_matches_two_types_is_asked",
+    ),
+    _AmbiguitySite(
+        "intake.py",
+        "_resolve_option",
+        _R17_LEN_IS_ONE,
+        "len(near) == 1",
+        True,
+        gate="test_a_prefix_that_matches_one_type_resolves",
+    ),
+    _AmbiguitySite(
+        "intake.py",
+        "assess",
+        _R17_LEN_IS_ONE,
+        "len(modes) == 1",
+        True,
+        gate="test_two_modes_are_never_taken_silently",
+    ),
+    _AmbiguitySite(
+        "intake.py",
+        "assess",
+        _R17_FIRST_ELEMENT,
+        "fids[0]",
+        False,
+        justification=_J_BLOCK_START,
+    ),
     _AmbiguitySite(
         "address.py",
         "split_universe_address",
@@ -4083,6 +4132,10 @@ def _r19_claim_sites() -> tuple[tuple[str, tuple[str, ...]], ...]:
 _R19_CLAIM_BASIS = {
     ("diff.py", ("콘솔 대조",)): "stage_one_states_its_own_act",
     ("diff.py", ("콘솔 실측",)): "stage_one_states_its_own_act",
+    # [round24 후속] 인테이크의 두 문장. 라이브러리 목록은 호출자가 넘기는 **입력**이고,
+    # 조인 키 문장은 그 칸의 쓰임을 적을 뿐 1단계가 무엇을 했는지 단정하지 않는다.
+    ("intake.py", ("콘솔 라이브러리에",)): "console_observation_is_the_input",
+    ("intake.py", ("콘솔 조인",)): "asserts_only_absence_of_output",
     ("patchplan.py", ("1단계",)): "stage_one_declared_the_skip",
     ("patchplan.py", ("1단계", "일치로 보", "재계산")): "gated_on_stage_one_axis_output",
     ("patchplan.py", ("1단계", "콘솔 대조")): "stage_one_declared_the_skip",

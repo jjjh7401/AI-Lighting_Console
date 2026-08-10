@@ -35,7 +35,6 @@ from server.vwx.mvr import (
     next_universe_start,
     split_absolute,
 )
-from server.vwx.typesource import ProvisioningStep, plan_for_missing_type
 
 #: 질문 종류. 화면이 무엇을 띄울지 정한다.
 QUESTION_CHOICE = "choice"
@@ -138,8 +137,6 @@ class IntakeResult:
     derivations: tuple[Derivation, ...]
     rows: tuple[dict[str, str], ...]
     ready: bool
-    #: 라이브러리에 없는 타입을 올리는 방법 — **막다른 길 대신** 다음 행동을 낸다.
-    provisioning: tuple[ProvisioningStep, ...] = ()
 
     @property
     def blocking_questions(self) -> tuple[Question, ...]:
@@ -157,10 +154,6 @@ def _resolve_option(request: FixtureRequest, library: Sequence[LibraryOption]):
 
     **정확히 하나로 좁혀질 때만** 확정한다. 0건이면 「없음」, 2건 이상이면
     **고르라고 묻는다** — 첫 일치를 집지 않는다(그 붕괴가 이 SPEC의 반복 결함이다).
-
-    돌려주는 후보는 **실제 근접 일치만**이다. 비어 있다는 것은 「라이브러리에 없다」는
-    뜻이고, 그 구별이 있어야 「고르지 못한 타입」과 「없는 타입」을 가른다 — 전자는
-    질문이고 후자는 **조달**이다. 전체 목록으로 채워 돌려주면 그 구별이 사라진다.
     """
     if not request.instrument_type:
         return None, tuple(library)
@@ -172,7 +165,7 @@ def _resolve_option(request: FixtureRequest, library: Sequence[LibraryOption]):
     if len(near) == 1:
         (only,) = near
         return only, ()
-    return None, near
+    return None, near or tuple(library)
 
 
 def _next_free_block(size: int, count: int, occupancy: Occupancy) -> list[int]:
@@ -211,9 +204,7 @@ def _next_free_fids(count: int, occupancy: Occupancy) -> list[int]:
     return out
 
 
-def _type_question(
-    candidates: Sequence[LibraryOption], asked: str, library: Sequence[LibraryOption]
-) -> Question:
+def _type_question(candidates: Sequence[LibraryOption], asked: str) -> Question:
     if asked and candidates:
         prompt = f"'{asked}'에 해당하는 픽스처 타입을 골라 주세요."
         why = (
@@ -226,7 +217,6 @@ def _type_question(
     else:
         prompt = "어떤 픽스처 타입인가요?"
         why = "grandMA3는 픽스처 타입을 먼저 고릅니다 — 모드와 채널 수가 여기서 정해집니다."
-        candidates = tuple(library)
     return Question(
         field="instrument_type",
         kind=QUESTION_CHOICE if candidates else QUESTION_TEXT,
@@ -248,8 +238,6 @@ def assess(
     request: FixtureRequest,
     library: Sequence[LibraryOption] = (),
     occupancy: Occupancy | None = None,
-    *,
-    mvr_bytes: bytes | None = None,
 ) -> IntakeResult:
     """지금까지 받은 것으로 평가한다 — 남은 질문과, 채워진 만큼의 행을 낸다.
 
@@ -260,17 +248,8 @@ def assess(
     derivations: list[Derivation] = []
 
     option, candidates = _resolve_option(request, library)
-    provisioning: tuple[ProvisioningStep, ...] = ()
     if option is None:
-        questions.append(_type_question(candidates, request.instrument_type, library))
-        # 이름은 줬는데 라이브러리에 후보가 하나도 없다 = 「없는 타입」이다.
-        # 여기서 끝내지 않는다 — 올리는 방법을 함께 낸다.
-        if request.instrument_type and not candidates:
-            provisioning = plan_for_missing_type(
-                request.instrument_type,
-                gdtf_spec=request.gdtf_fixture,
-                mvr_bytes=mvr_bytes,
-            )
+        questions.append(_type_question(candidates, request.instrument_type))
 
     # --- 모드 -------------------------------------------------------------
     mode = request.mode
@@ -413,7 +392,6 @@ def assess(
             derivations=tuple(derivations),
             rows=(),
             ready=False,
-            provisioning=provisioning,
         )
 
     # --- 펼치기 -----------------------------------------------------------
@@ -490,7 +468,6 @@ def assess(
         derivations=tuple(derivations),
         rows=tuple(rows),
         ready=True,
-        provisioning=provisioning,
     )
 
 

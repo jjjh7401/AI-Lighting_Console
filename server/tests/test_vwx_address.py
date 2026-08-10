@@ -708,18 +708,49 @@ _R17_VWX_BOUNDARY_SITES: tuple[_Site, ...] = (
     _Site("columns.py", "offby", "counts.get(header, 0) + 1"),
     _Site("columns.py", "offby", "index + 1"),
     _Site("columns.py", "slice", "raw_records[index + 1:end]"),
-    # --- MVR 절대주소 -> `universe.address` 분해 (mvr.py `_split_absolute`) —
-    # MVR `Address`는 break 기준 **절대** DMX(실물 실측 1~1834)이고, MA3 Patch 표기는
-    # `universe.address`다(`patch_add_fixtures.html`). 이 산술이 이 SPEC에서 가장
-    # 고전적인 off-by-one 지대다 — 512/513 경계가 어긋나면 **유니버스 하나가 통째로**
-    # 밀려 176대 전부가 엉뚱한 주소에 선다.
-    #   `absolute - 1`을 빼면 512가 유니버스 2로 넘어가고,
-    #   `// + 1`을 지우면 유니버스가 0부터 세어져 전 픽스처가 한 칸 아래로,
-    #   `% + 1`을 지우면 주소가 0..511이 되어 각 유니버스 첫 칸이 사라진다.
+    # --- 인테이크 (intake.py) — 부분 정보를 질문으로 바꾸는 자리. 수치 경계는 셋뿐이다:
+    #   `len(exact)/len(near) == 1`  이름이 **하나로 좁혀질 때만** 확정한다. 밀면
+    #      후보 여럿에서 첫 것을 집어 엉뚱한 타입으로 패치된다 — R22-C와 같은 붕괴다.
+    #   `len(modes) == 1`            모드가 하나뿐일 때만 자동 선택.
+    #      밀면 둘 중 하나를 조용히 고른다.
+    #   `quantity < 1`               0대·음수는 질문으로 되돌린다.
+    #   `len(starts)/len(out) < count`  자동 배정 루프의 종료 조건. 어긋나면 요청한 수와
+    #      만든 행 수가 갈라진다(모자라거나 남는다).
+    #   `starts[:_PREVIEW_LIMIT]` / `len(starts) > len(preview)`  사용자에게 보여 줄 미리보기.
+    #      값이 아니라 **표시**라 판정에 영향이 없다 — 그래서 여기 등기하고 대조군은 얕다.
+    #   `index * (footprint or 1)`   수동 지정 시 다음 픽스처까지의 간격. MA3가 첫 주소를
+    #      받아 채널 수만큼 띄우는 것과 같다.
+    # 양방향 대조군은 `test_vwx_intake.py`.
+    _Site("intake.py", "arith", "index * (footprint or 1)"),
+    _Site("intake.py", "lencmp", "len(exact) == 1"),
+    _Site("intake.py", "lencmp", "len(modes) == 1"),
+    _Site("intake.py", "lencmp", "len(near) == 1"),
+    _Site("intake.py", "lencmp", "len(out) < count"),
+    _Site("intake.py", "lencmp", "len(starts) < count"),
+    _Site("intake.py", "lencmp", "len(starts) > len(preview)"),
+    _Site("intake.py", "numcmp", "quantity < 1"),
+    _Site("intake.py", "slice", "starts[:_PREVIEW_LIMIT]"),
+    # --- DMX 절대주소 산술 (mvr.py) — **저장소에 이 한 자리뿐이다.**
+    # MVR `Address`는 break 기준 절대 DMX(실물 실측 1~1834)이고 MA3 Patch 표기는
+    # `universe.address`다(`patch_add_fixtures.html`). 이 SPEC에서 가장 고전적인
+    # off-by-one 지대라, 512/513이 어긋나면 **유니버스 하나가 통째로** 밀려 176대가
+    # 전부 엉뚱한 주소에 선다.
+    #   `absolute - 1` / `// + 1` / `% + 1`  split_absolute — 512가 유니버스 2로 넘어가거나
+    #      유니버스가 0부터 세어지거나 각 유니버스 첫 칸이 사라진다.
+    #   `(universe - 1) * UNIVERSE_WIDTH`    join_absolute — split의 역. 왕복이 깨진다.
+    #   `absolute + max(width, 1) - 1`       fits_in_one_universe — 마지막 채널. `-1`을 빼면
+    #      경계에 딱 맞는 픽스처를 걸친다고 오판해 유니버스 하나를 통째로 버린다.
+    #   `universe + 1`                       next_universe_start — 안 밀면 무한 루프다.
+    # **처음엔 이 산술이 intake.py에도 있었다.** 형제 표면이 되기 전에 여기로 모았고,
+    # 그 결과 intake의 경계 자리가 23 -> 8로 줄었다(round24 교훈 ⓐ: 복사가 아니라 분해).
     # 양방향 대조군은 `test_vwx_mvr.py`의 경계 파라미터 6행(1·512·513·1024·1025·1834).
     _Site("mvr.py", "arith", "zero_based % UNIVERSE_WIDTH"),
     _Site("mvr.py", "arith", "zero_based // UNIVERSE_WIDTH"),
+    _Site("mvr.py", "arith", "(universe - 1) * UNIVERSE_WIDTH"),
     _Site("mvr.py", "offby", "absolute - 1"),
+    _Site("mvr.py", "offby", "absolute + max(width, 1) - 1"),
+    _Site("mvr.py", "offby", "universe + 1"),
+    _Site("mvr.py", "offby", "universe - 1"),
     _Site("mvr.py", "offby", "zero_based % UNIVERSE_WIDTH + 1"),
     _Site("mvr.py", "offby", "zero_based // UNIVERSE_WIDTH + 1"),
     # GDTF에서 읽은 채널 수를 실을지 판정하는 자리. `> 0`을 `>= 0`으로 밀면 채널 수를

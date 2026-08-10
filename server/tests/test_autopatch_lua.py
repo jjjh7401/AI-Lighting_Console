@@ -774,6 +774,9 @@ _R17_ESCAPE_TABLE_SITES = (("luagen.py", "_LUA_ESCAPES"),)
 # 치명 #2와 **같은 성질**의 자리를 모듈 경계 밖까지 덮는다.
 _R17_TOKEN_JOIN_SITES = (
     ("address.py", "f'{universe}.{address}'"),
+    # [round24 후속] 인테이크가 자동 배정 결과를 사용자에게 보여 줄 때의 미리보기.
+    # 판정이 아니라 **표시**다 — 실제 행의 주소는 `Universe`/`U Address` 칸이 나른다.
+    ("intake.py", "f'{u}.{a}'"),
     ("luagen.py", "f'{_lua_int(entry.universe)}.{_lua_int(entry.address)}'"),
     ("patchplan.py", "f'{FID_FIXTURE_ROOT}/{child_index}'"),
     # --- round19 절단 복구 스윕 (TruncationSweep) — 스윕 프로브의 슬롯 경로.
