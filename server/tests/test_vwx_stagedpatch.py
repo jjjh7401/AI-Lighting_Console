@@ -258,11 +258,19 @@ class TestTheToolTellsTheTruth:
         assert runner.sent == [], "배포가 안 됐는데 실행을 보냈다"
         assert payload["status"] == "not_deployed"
 
-    def test_the_zero_case_points_at_the_untested_hypothesis(self):
+    def test_the_zero_case_says_what_the_operator_must_do(self):
         # 왜 안 되는지가 없으면 사용자는 같은 명령을 다시 누른다.
         payload, _deploy, _runner = _patch(_EMPTY, _EMPTY)
 
-        assert "패치 편집기" in payload["guidance"]
+        assert "조작자가 콘솔에서 직접 패치" in payload["guidance"]
+
+    def test_it_does_not_send_the_operator_on_a_closed_errand(self):
+        # [HARD] round24 후속 실측으로 L2(편집기 열린 상태)는 NEGATIVE로 닫혔다.
+        # 그래도 "편집기를 열어 보시라"고 청하면 사용자는 열어 준 뒤 같은 실패를
+        # 다시 본다 — 닫힌 가설을 살아 있는 것처럼 말하지 않는다.
+        payload, _deploy, _runner = _patch(_EMPTY, _EMPTY)
+
+        assert "열어 달라고 청하지 마라" in payload["guidance"]
 
 
 class TestWhatItRefusesToDo:
