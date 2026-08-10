@@ -1771,11 +1771,11 @@ def test_the_console_import_plant_mechanism_tagger_sees_nothing_in_clean_product
 # `round19 봉인 규칙 ③④ 화이트리스트 역전 (GateHoles19)` 절에 있다.
 #
 # **그래서 방향을 뒤집는다.** "무엇이 금지인가"를 세는 대신 "무엇이 허용인가"를 동결한다.
-# `server/vwx/**`의 실측 import는 **완전 모듈명 25개 / 최상위 루트 14개**이고 상대 import는
+# `server/vwx/**`의 실측 import는 **완전 모듈명 27개 / 최상위 루트 15개**이고 상대 import는
 # 0건이며 동적 import·`exec`·`runpy`·`SourceFileLoader`는 프로덕션에서 **한 번도 쓰이지 않는다**.
 # 그 사실 위에 네 규칙을 세운다:
 #
-#   ① 아래 **동결 화이트리스트 25항목** 밖의 import는 전부 위반
+#   ① 아래 **동결 화이트리스트 27항목** 밖의 import는 전부 위반
 #   ② 상대 import 금지(`node.level > 0`) — 접두사 대조를 원리적으로 우회하는 형태다
 #   ③ bare 호출 금지: `exec` · `eval` · `__import__` · `compile`
 #      (`re.compile`은 `Attribute` 호출이라 걸리지 않는다 — 프로덕션 6곳 확인)
@@ -1788,7 +1788,7 @@ def test_the_console_import_plant_mechanism_tagger_sees_nothing_in_clean_product
 # 등기부는 손으로 동결하고, 벗어나면 **반드시 실패해야** 한다. 그게 이 게이트의 전부다.
 #
 # 구 열거 게이트(`_console_ward_offenders`)는 **지우지 않는다** — 봉인 대상 세 모듈에 대한
-# 명시적 진술로 남기고, 아래 대조가 25형태 전부를 **두 게이트에 함께** 통과시킨다.
+# 명시적 진술로 남기고, 아래 대조가 27형태 전부를 **두 게이트에 함께** 통과시킨다.
 
 #: `server/vwx/**` 전 모듈이 import해도 되는 **완전 모듈명 전수**. 손으로 동결했다.
 #: 파생 금지 — 프로덕션에서 계산하면 새 import가 스스로를 승인한다.
@@ -1802,6 +1802,8 @@ _REGISTERED_VWX_IMPORTS = frozenset(
         "hashlib",
         "io",
         "json",
+        # [round24 후속] 타입 조달 안내가 콘솔 라이브러리 경로를 만든다(문자열 조립만).
+        "pathlib",
         "re",
         "types",
         "typing",
@@ -1827,6 +1829,8 @@ _REGISTERED_VWX_IMPORTS = frozenset(
         "server.vwx.mvr",
         "server.vwx.patchplan",
         "server.vwx.reader",
+        # [round24 후속] 인테이크가 「없는 타입」을 막다른 길 대신 조달 단계로 바꾼다.
+        "server.vwx.typesource",
         "server.vwx.rig",
         "server.vwx.typemap",
         "server.vwx.verdicts",
@@ -1930,8 +1934,8 @@ def test_the_frozen_import_registry_is_exactly_what_production_imports():
         "쓰지 않는 등기는 **미리 열어 둔 문**이다 — 지워라."
     )
     # 실측 고정 — 규모가 조용히 부풀지 않는다(round18 실측: 완전 모듈명 22 / 최상위 루트 12).
-    assert len(_REGISTERED_VWX_IMPORTS) == 25
-    assert len({name.split(".", 1)[0] for name in _REGISTERED_VWX_IMPORTS}) == 14
+    assert len(_REGISTERED_VWX_IMPORTS) == 27
+    assert len({name.split(".", 1)[0] for name in _REGISTERED_VWX_IMPORTS}) == 15
 
 
 def test_production_has_no_relative_import_and_no_loader_machinery():
@@ -1992,7 +1996,7 @@ _ROUND18_SEAL_BYPASS_PLANTS = (
     ),
 )
 
-#: 규칙 ②③④ 중 위 25형태가 **덮지 못하는 갈래**를 채우는 심기. 규칙에 대조군이 없으면
+#: 규칙 ②③④ 중 위 27형태가 **덮지 못하는 갈래**를 채우는 심기. 규칙에 대조군이 없으면
 #: 그 규칙을 지워도 조용하다 — round16이 형태판정 표에서 당한 것과 같은 결함 클래스다.
 _ROUND18_SEAL_RULE_PLANTS = (
     (
@@ -2094,7 +2098,7 @@ def test_the_whitelist_seal_catches_loader_machinery_and_bare_builtin_calls(plan
     ids=[f"legacy:{name}" for name, _, _ in _CONSOLE_IMPORT_PLANTS],
 )
 def test_the_whitelist_seal_also_catches_every_legacy_enumerated_bypass(plant):
-    """25형태 대조 — 구 표 16행이 **새 게이트에도** 전부 걸린다.
+    """27형태 대조 — 구 표 16행이 **새 게이트에도** 전부 걸린다.
 
     두 게이트를 병존시키는 근거다. 새 게이트가 구 게이트의 도달 범위를 **덮지 못하면**
     구 표를 지울 수 없고, 여기서 그 포함관계를 실측한다.
