@@ -151,6 +151,13 @@ from server.vwx.patchplan import (
 from server.vwx.reader import read as read_vwx_export
 from server.vwx.report import build_vwx_report
 from server.vwx.rig import build_designed_rig
+from server.vwx.stagedpatch import (
+    PATCH_EDITOR_HINT,
+    ZERO_CREATED,
+    free_fids,
+)
+from server.vwx.stagedpatch import judge as judge_staged_patch
+from server.vwx.stagedpatch import plan as staged_plan
 from server.vwx.typemap import TypeRequest, resolve_fixture_types
 from server.vwx.typesource import FIXTURE_TYPE_HINT
 from server.vwx.typesource import plan_for_missing_type as plan_missing_fixture_type
@@ -201,6 +208,7 @@ TOOL_NAMES = (
     "ask_user",
     "resolve_fixture_type",
     "resolve_patch_address",
+    "patch_fixtures",
     "find_fx",
     "instantiate_fx",
     "find_scene",
@@ -1342,6 +1350,20 @@ def build_toolset(
             return _error_result(call, "'name' must be a non-empty plugin name string")
         if not isinstance(lua_source, str) or not lua_source.strip():
             return _error_result(call, "'lua_source' must be non-empty Lua 5.4 source code")
+        if "AddFixtures" in lua_source:
+            # [round24 후속] **패치는 이 문으로 못 나간다.** 지시로는 막히지 않았다 —
+            # 도구 설명에 "손으로 짜지 마라"를 적어 두었는데도 모델은 실측에서 매번
+            # 자기 플러그인을 지어 배포했고, 콘솔이 명령을 받았다는 뜻인 ok=true를
+            # 작업 성공으로 읽어 "성공적으로 패치하였습니다"라고 보고했다(콘솔은 40대
+            # 그대로였다). 금지를 검사가 아니라 **구조**로 둔다: 이 문으로 들어온
+            # AddFixtures는 거절되고, 재조회로 판정하는 patch_fixtures만 남는다.
+            return _error_result(
+                call,
+                "AddFixtures는 이 도구로 배포할 수 없다 — patch_fixtures를 써라. "
+                "그 도구는 자리를 다시 확인하고, 감사된 생성기로 Lua를 만들고, "
+                "실행한 뒤 **콘솔을 다시 읽어 몇 대가 생겼는지 판정한다**. "
+                "직접 짠 패치 Lua는 실행돼도 몇 대가 생겼는지 아무도 확인하지 않는다.",
+            )
         outcome = deploy_pipeline.deploy(name, lua_source)
         status = _DEPLOY_OUTCOME_STATUS.get(outcome.status, "failed")
         command_label = f'deploy_plugin "{name}"'
@@ -3048,6 +3070,195 @@ def build_toolset(
                 is_error=False,
             ),
             awaited_human=bool(payload.get("answer")),
+        )
+
+    def patch_fixtures(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        """장비를 실제로 패치하고 **콘솔을 다시 읽어 몇 대가 생겼는지 판정한다.**
+
+        [round24 후속] 실측에서 모델은 이 일을 매번 손으로 짠 Lua로 새로 지어냈고,
+        콘솔이 명령을 받았다는 뜻인 ``ok=true``를 작업 성공으로 읽어 "성공적으로
+        패치하였습니다"라고 보고했다. 콘솔은 40대 그대로였다. 이 도구는 그 길을
+        고정하고 **마지막에 반드시 재조회한다** — 성공은 관측에서만 나온다.
+
+        Lua는 `luagen`이 만든다. 손으로 짜면 목적지 변경 문장을 만들 수 없게 해 둔
+        구조적 금지가 그대로 사라진다.
+        """
+        console_type = str(call.arguments.get("console_type") or "").strip()
+        console_mode = str(call.arguments.get("console_mode") or "").strip()
+        address = str(call.arguments.get("address") or "").strip()
+        count = _positive_int(call.arguments.get("count"))
+        width = _positive_int(call.arguments.get("channels_per_fixture"))
+        if not console_type or not console_mode:
+            return _error_result(
+                call,
+                "'console_type'과 'console_mode'는 콘솔 라이브러리에 있는 이름 그대로여야 "
+                "한다 — resolve_fixture_type이 확정한 값을 쓰고 추측하지 마라",
+            )
+        if count is None or width is None:
+            return _error_result(
+                call,
+                "'count'와 'channels_per_fixture'는 양의 정수여야 한다 — 폭을 모르면 "
+                "resolve_patch_address보다 먼저 모드를 확정하라",
+            )
+        if deploy_pipeline is None:
+            return _error_result(
+                call, "deploy_plugin is not wired in this session — 패치를 실행할 수 없다"
+            )
+        if property_port is None:
+            return _error_result(
+                call,
+                "property reads are not wired — 실행 결과를 읽을 수 없으면 패치하지 "
+                "않는다. 확인할 수 없는 쓰기는 하지 않는다",
+            )
+
+        try:
+            before = read_inventory(_InventoryPort(state_port, property_port))
+        except InventoryReadError as error:
+            return _error_result(call, f"fixture inventory unreadable: {error}")
+
+        occupants = occupants_from_patch_values(
+            (record.patch_raw, record.name, record.fixture_type) for record in before.fixtures
+        )
+        fit = evaluate_address_fit(address, count=count, width=width, occupants=occupants)
+        payload: dict[str, object] = {
+            "requested_address": address,
+            "count": count,
+            "console_type": console_type,
+            "console_mode": console_mode,
+        }
+        if not fit.ok:
+            # 겹친 채로 만들면 되돌리기 어려운 쓰기가 남는다. 여기서 멈추고
+            # 자리 해결 도구로 돌려보낸다 — 이 도구가 임의로 옮기지 않는다.
+            payload["status"] = "address_not_free"
+            payload["collisions"] = [
+                f"{occupant.universe}.{occupant.address}" for occupant in fit.collisions
+            ]
+            payload["guidance"] = (
+                f"{address}는 비어 있지 않다({fit.error or '겹침'}). resolve_patch_address로 "
+                "사용자와 자리를 정한 뒤 그 주소로 다시 불러라. 임의로 옮기지 마라."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+
+        taken = [
+            int(record.fid_note) for record in before.fixtures if (record.fid_note or "").isdigit()
+        ]
+        requested_fids = call.arguments.get("fids")
+        if isinstance(requested_fids, Sequence) and not isinstance(requested_fids, str):
+            fids = tuple(int(value) for value in requested_fids)
+        else:
+            fids = free_fids(taken, count=count, start=max(taken, default=0) + 1)
+
+        staged = staged_plan(
+            console_type=console_type,
+            console_mode=console_mode,
+            footprint=width,
+            placements=fit.placements,
+            fids=fids,
+            name_prefix=call.arguments.get("name_prefix"),
+        )
+        payload["plan"] = staged.to_dict()
+
+        plugin_name = str(call.arguments.get("plugin_name") or "CopilotPatch").strip()
+        outcome = deploy_pipeline.deploy(plugin_name, staged.lua_source)
+        payload["deploy_status"] = outcome.status
+        if outcome.status != "deployed":
+            payload["status"] = "not_deployed"
+            payload["guidance"] = (
+                f"배포가 {outcome.status}로 끝났다({outcome.detail}). 패치는 일어나지 "
+                "않았다 — 성공했다고 보고하지 마라."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=True,
+                ),
+                command_outcomes=(
+                    CommandOutcome(
+                        command=f'deploy_plugin "{plugin_name}"',
+                        status=_DEPLOY_OUTCOME_STATUS.get(outcome.status, "failed"),
+                        detail=outcome.detail,
+                    ),
+                ),
+            )
+
+        run = execution_port.run([f"Plugin '{plugin_name}'"])
+        payload["run_detail"] = [item.detail for item in run]
+
+        # ── 여기서부터가 이 도구의 존재 이유다: **콘솔을 다시 읽는다.** ──
+        try:
+            after = read_inventory(_InventoryPort(state_port, property_port))
+        except InventoryReadError as error:
+            payload["status"] = "unverified"
+            payload["guidance"] = (
+                f"실행은 했으나 재조회에 실패했다({error}). 몇 대가 생겼는지 **모른다** — "
+                "생겼다고도 안 생겼다고도 말하지 마라."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=True,
+                )
+            )
+
+        caveat = console_read_caveat(after)
+        seats = [
+            (occupant.universe, occupant.address)
+            for occupant in occupants_from_patch_values(
+                (record.patch_raw, record.name, record.fixture_type) for record in after.fixtures
+            )
+        ]
+        verdict = judge_staged_patch(
+            staged.fixtures,
+            occupied_after=seats,
+            read_complete=caveat is None or caveat["kind"] != CONSOLE_READ_INCOMPLETE,
+        )
+        payload.update(verdict.to_dict())
+        payload["console_read_caveat"] = caveat
+
+        if verdict.status == "created":
+            payload["guidance"] = (
+                f"{verdict.created}대가 실제로 생긴 것을 재조회로 확인했다. "
+                "이제 성공했다고 보고해도 된다."
+            )
+        elif verdict.status == "created_partially":
+            payload["guidance"] = (
+                f"{verdict.requested}대 중 {verdict.created}대만 생겼다. **부분 성공을 "
+                "성공이라 말하지 마라.** 자동으로 다시 시도하지도 마라 — 중복이 생긴다."
+            )
+        elif verdict.status == "unverified":
+            payload["guidance"] = (
+                "재조회가 전수가 아니라 없다고 단정할 수 없다. 몇 대가 생겼는지 "
+                "모른다고 그대로 알려라."
+            )
+        else:
+            payload["guidance"] = f"{ZERO_CREATED} {PATCH_EDITOR_HINT}"
+
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            ),
+            command_outcomes=tuple(
+                CommandOutcome(
+                    command=f"Plugin '{plugin_name}'",
+                    status="executed_ok" if verdict.created else "failed",
+                    detail=f"created {verdict.created}/{verdict.requested}",
+                )
+                for _ in (0,)
+            ),
         )
 
     # -- find_fx (REQ-FXLIB-015 — lookup only, sends nothing) ------------------
@@ -5526,6 +5737,77 @@ def build_toolset(
             },
         ),
         ToolDefinition(
+            name="patch_fixtures",
+            description=(
+                "Create fixtures on the console AND verify by re-reading. This "
+                "is the ONLY way you may patch — never hand-write patch Lua and "
+                "push it through deploy_plugin.\n"
+                "\n"
+                "It runs the whole staged flow: address re-check, FID "
+                "assignment, audited AddFixtures Lua from the generator, "
+                "deploy, execute, THEN read the console back and count what "
+                "actually appeared.\n"
+                "\n"
+                "Prerequisites you must settle FIRST: resolve_fixture_type for "
+                "'console_type'/'console_mode' (library names, never guesses) "
+                "and resolve_patch_address for a free 'address'. This tool "
+                "refuses an occupied address rather than moving it for you.\n"
+                "\n"
+                "Report ONLY what 'status' says. 'created' means the fixtures "
+                "were observed on the console. 'created_nothing' means the "
+                "plugin ran and NOTHING was made — on this build AddFixtures "
+                "returns nil on failure and was measured creating zero fixtures "
+                "across every reachable path, so a clean plugin exit is NOT "
+                "success. 'created_partially' is not success either, and you "
+                "must not silently retry: a second run duplicates whatever did "
+                "land. 'unverified' means the re-read was incomplete — say you "
+                "do not know, never that it worked."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "console_type": {
+                        "type": "string",
+                        "description": "Library type name exactly as the console spells it.",
+                    },
+                    "console_mode": {
+                        "type": "string",
+                        "description": "DMX mode name exactly as the console spells it.",
+                    },
+                    "address": {
+                        "type": "string",
+                        "description": "Free start address '<universe>.<address>'.",
+                    },
+                    "count": {"type": "integer", "description": "How many fixtures."},
+                    "channels_per_fixture": {
+                        "type": "integer",
+                        "description": "Channel count of that mode. Never a guess.",
+                    },
+                    "fids": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": "Optional explicit fixture IDs; omitted picks a free block.",
+                    },
+                    "name_prefix": {
+                        "type": "string",
+                        "description": "Optional fixture-name prefix; defaults to the type name.",
+                    },
+                    "plugin_name": {
+                        "type": "string",
+                        "description": "Optional plugin name; defaults to CopilotPatch.",
+                    },
+                },
+                "required": [
+                    "console_type",
+                    "console_mode",
+                    "address",
+                    "count",
+                    "channels_per_fixture",
+                ],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
             name="find_fx",
             description=(
                 "Ask the built-in effect library BEFORE hand-writing any "
@@ -6304,6 +6586,7 @@ def build_toolset(
         "ask_user": ask_user,
         "resolve_fixture_type": resolve_fixture_type,
         "resolve_patch_address": resolve_patch_address,
+        "patch_fixtures": patch_fixtures,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,
         "find_scene": find_scene,

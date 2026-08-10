@@ -5843,6 +5843,11 @@ _R17_SENTENCE_SURFACES = (
     # [round24 후속] 자리 판정이 요청을 읽지 못했을 때의 사유 한 줄 —
     # 이 문장이 사라지면 "왜 못 놓는지"가 사용자에게 안 간다.
     ("addressfit.py", "error"),
+    # [round24 후속] 실행했는데 0대일 때 사람에게 넘길 사실과, 아직 미시험으로
+    # 남은 단 하나의 가설(패치 편집기 활성 상태). 둘 다 사라지면 사용자는 같은
+    # 명령을 다시 눌러 본다.
+    ("stagedpatch.py", "PATCH_EDITOR_HINT"),
+    ("stagedpatch.py", "ZERO_CREATED"),
     ("apply.py", "END_TO_END_UNVERIFIED"),
     ("apply.py", "NO_AUTO_CORRECTION"),
     ("apply.py", "PLUGIN_EXIT_IS_NOT_SUCCESS"),

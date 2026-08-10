@@ -694,6 +694,12 @@ _R17_VWX_BOUNDARY_SITES: tuple[_Site, ...] = (
     _Site("addressfit.py", "offby", "current_address + width - 1"),
     _Site("addressfit.py", "offby", "last.address + self.width - 1"),
     _Site("addressfit.py", "offby", "spot.address + width - 1"),
+    # --- 단계형 패치 (stagedpatch.py) — 자리 수와 FID 수가 어긋나면 **거기서
+    # 멈춘다.** 짧은 쪽에 맞춰 조용히 자르면 요청한 대수보다 적게 만들어 놓고
+    # 성공이라 보고한다. `created == 0`은 판정의 갈림길이다 — 이 비교가 무너지면
+    # 한 대도 안 생긴 실행이 성공으로 올라간다.
+    _Site("stagedpatch.py", "lencmp", "len(placements) != len(fids)"),
+    _Site("stagedpatch.py", "numcmp", "self.created == 0"),
     _Site("apply.py", "lencmp", "len(by_index) != 1"),
     _Site("apply.py", "lencmp", "len(by_name) != 1"),
     _Site("apply.py", "lencmp", "len(candidates) == 1"),

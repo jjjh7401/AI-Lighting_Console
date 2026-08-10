@@ -801,6 +801,9 @@ _R17_TOKEN_JOIN_SITES = (
     # [round18 R18-J] 2단계 고지가 가리키는 도면 좌표 — `address.py`와 **같은 순서 규약**
     # (유니버스 먼저, 그다음 주소)이다. 뒤집으면 조작자가 다른 픽스처를 찾아간다.
     ("patchplan.py", "f'{universe}.{address}'"),
+    # [round24 후속] 단계형 패치가 계획한 자리 하나를 사람에게 보여 주는 좌표 —
+    # `addressfit.py`·`address.py`와 **같은 순서 규약**(유니버스 먼저)이다.
+    ("stagedpatch.py", "f'{self.universe}.{self.address}'"),
     (
         "typemap.py",
         "f'{FIXTURE_TYPE_LIBRARY_ROOT}/{console_type.index}/{DMX_MODES_SEGMENT}"
