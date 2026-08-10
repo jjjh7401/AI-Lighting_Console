@@ -7132,6 +7132,14 @@ def _r21_scan_inventory_consumers() -> set[tuple[str, str]]:
 #: (모듈, 함수, **자기가 세는가**, 근거). 원시 행을 직접 꺼내는 자리는 전부 세야 한다.
 _R21_RAW_ROW_READERS = (
     (
+        "librarywatch.py",
+        "read_snapshot",
+        True,
+        "매핑이 아니거나 이름이 빈 행을 `unusable_row_count`로 센다. 처음엔 조용히 "
+        "버렸는데 이 게이트가 잡았다 — 세지 않으면 `declared_count`와 관측 수의 차이를 "
+        "**절단으로 오인**하고, 그 기준선으로 사용자의 선택을 판정하게 된다.",
+    ),
+    (
         "patchplan.py",
         "_existing_fids_from_console",
         True,

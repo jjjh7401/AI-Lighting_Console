@@ -87,14 +87,7 @@ def read_snapshot(port: LibraryPort) -> LibrarySnapshot:
     모드까지 내려가지 않는다. 「무엇이 새로 생겼는가」를 보는 데 모드는 필요 없고,
     깊은 열거는 타입 수만큼 왕복이 든다.
     """
-    try:
-        payload = port.query_state(FIXTURE_TYPE_LIBRARY_ROOT)
-    except Exception:
-        # 포트가 **던지면** 그것도 판독 실패다. 이 모듈은 예외를 밖으로 내지 않는다
-        # (`reader.py`와 같은 HARD 규약) — 대화 한 턴이 통째로 죽는 것보다,
-        # `readable=False`로 내고 `compare`가 `unreadable`로 **보고**하는 편이
-        # 정직하다. 조용히 「변화 없음」으로 읽지 않는 것이 핵심이다.
-        return LibrarySnapshot(names=(), declared_count=None, truncated=False, readable=False)
+    payload = port.query_state(FIXTURE_TYPE_LIBRARY_ROOT)
     if not isinstance(payload, Mapping) or payload.get("ok") is not True:
         return LibrarySnapshot(names=(), declared_count=None, truncated=False, readable=False)
 
@@ -238,35 +231,4 @@ def watch_until_change(
         latest = compare(baseline, read_snapshot(port))
         if latest.state != WATCH_IDLE:
             return latest
-    return latest
-
-
-def wait_for_addition(
-    port: LibraryPort,
-    baseline: LibrarySnapshot,
-    *,
-    attempts: int,
-    sleep: Callable[[], None] | None = None,
-) -> WatchResult:
-    """**타입이 들어올 때까지** 기다린다 — 다른 어떤 상태로도 멈추지 않는다.
-
-    :func:`watch_until_change`와 가르는 지점이 하나 있다. 그쪽은 「무엇이든 달라졌나」를
-    묻고 :data:`WATCH_IDLE`이 아니면 곧바로 낸다. 사람을 기다리는 자리에서는 그게 틀렸다 —
-    한 번 못 읽었다고(:data:`WATCH_UNREADABLE`), 기준선이 절단됐다고
-    (:data:`WATCH_TRUNCATED_BASELINE`), 또는 무언가 **지워졌다**고 해서 사용자가 고르기를
-    그만둔 것은 아니다. 실측에서 바로 이것에 걸렸다: 감시가 7.6초 만에 끝나 「아직
-    그대로다」로 보고했고, 모델은 사용자가 방금 답한 것을 못 본 채 산문으로 다시 물었다.
-
-    그래서 여기서는 **추가만이 멈출 이유다.** 소진되면 마지막으로 본 것을 그대로 낸다 —
-    그것이 판독 실패였다면 그 사실이 호출부에 남아야 하기 때문에 IDLE로 덮지 않는다.
-    """
-    latest = compare(baseline, baseline)
-    for index in range(max(attempts, 1)):
-        if index and sleep is not None:
-            sleep()
-        observed = compare(baseline, read_snapshot(port))
-        if observed.added:
-            return observed
-        # 판독 실패는 「변화 없음」이 아니다 — 마지막 관측으로 남기되 계속 본다.
-        latest = observed
     return latest

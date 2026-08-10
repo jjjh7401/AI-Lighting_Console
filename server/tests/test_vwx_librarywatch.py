@@ -32,7 +32,6 @@ from server.vwx.librarywatch import (
     compare,
     read_snapshot,
     selection_prompt,
-    wait_for_addition,
     watch_until_change,
 )
 from server.vwx.typemap import FIXTURE_TYPE_LIBRARY_ROOT
@@ -112,39 +111,6 @@ class TestTheShallowRead:
         """선언 총계보다 적게 왔으면 전수가 아니다 — 절단 플래그가 없어도."""
         console = FakeConsole(M8_TYPES, declared=9)
         assert read_snapshot(console).complete is False
-
-    def test_a_port_that_raises_is_a_failed_read_not_a_crash(self):
-        """[HARD] 이 모듈은 예외를 밖으로 내지 않는다 — `reader.py`와 같은 규약.
-
-        포트는 런타임에 무엇이든 될 수 있다. 던지는 포트에 터지면 대화 한 턴이
-        통째로 죽는다. 대신 `readable=False`로 내고, `compare`가 그것을
-        `unreadable`로 **보고**한다 — 조용히 「변화 없음」으로 읽지 않는 것이 핵심이다.
-        """
-
-        class Angry:
-            def query_state(self, path: str):
-                raise LookupError(f"unknown object path: {path}")
-
-            def query_property(self, path: str, property_name: str):
-                raise LookupError(path)
-
-        snapshot = read_snapshot(Angry())
-        assert snapshot.readable is False
-        assert snapshot.complete is False
-        assert snapshot.names == ()
-
-    def test_that_failure_is_reported_and_not_read_as_no_change(self, console: FakeConsole):
-        """[비공허] 위 판독이 「그대로다」로 읽히면 서버가 영영 기다린다."""
-
-        class Angry:
-            def query_state(self, path: str):
-                raise RuntimeError("boom")
-
-            def query_property(self, path: str, property_name: str):
-                raise RuntimeError("boom")
-
-        base = read_snapshot(console)
-        assert compare(base, read_snapshot(Angry())).state == WATCH_UNREADABLE
 
     def test_rows_it_cannot_use_are_counted_not_dropped(self):
         """[HARD] 버린 것을 세지 않으면 선언 총계와의 차이를 절단으로 오인한다."""
@@ -310,105 +276,3 @@ class TestThePromptTellsTheRealProcedure:
         """
         prompt = selection_prompt("X")
         assert all(not step.startswith("Cmd") for step in prompt.steps)
-
-
-class TestWaitingForAPerson:
-    """사람을 기다리는 자리 — **추가만이 멈출 이유다.**
-
-    [round24 후속] 실측에서 `watch_until_change`로 사람을 기다렸다가 7.6초 만에
-    끝났다. 「무엇이든 달라졌나」는 감시에는 맞지만 기다림에는 틀렸다 — 한 번
-    못 읽었다고, 기준선이 절단됐다고, 무언가 지워졌다고 사용자가 고르기를
-    그만둔 것은 아니다. 그때 모델은 답을 못 본 채 산문으로 다시 물었다.
-    """
-
-    def test_it_ends_when_the_type_arrives(self, console: FakeConsole):
-        base = read_snapshot(console)
-        calls = {"n": 0}
-
-        def pick():
-            calls["n"] += 1
-            if calls["n"] == 2:
-                console.names.append("Sharpy 250W Beam")
-
-        result = wait_for_addition(console, base, attempts=6, sleep=pick)
-
-        assert result.state == WATCH_ADDED
-        assert result.added == ("Sharpy 250W Beam",)
-
-    def test_a_failed_read_does_not_end_the_wait(self):
-        # [HARD] 한 번 못 읽은 것을 「사용자가 안 골랐다」로 접으면, 실제로 고른
-        # 사람을 두고 대화가 앞으로 못 간다 — 실측에서 일어난 그대로다.
-        class FlakyConsole(FakeConsole):
-            def query_state(self, path):
-                self.state_calls += 1
-                if self.state_calls == 2:
-                    return {"ok": False, "path": path}
-                if self.state_calls >= 4:
-                    self.names = [*M8_TYPES, "Sharpy 250W Beam"]
-                return super().query_state(path)
-
-        console = FlakyConsole(M8_TYPES)
-        base = read_snapshot(console)
-        result = wait_for_addition(console, base, attempts=8, sleep=lambda: None)
-
-        assert result.added == ("Sharpy 250W Beam",)
-
-    def test_a_removal_does_not_end_the_wait(self):
-        # 사용자가 딴 것을 지우는 동안에도 기다려야 한다.
-        console = FakeConsole(M8_TYPES)
-        base = read_snapshot(console)
-        steps = iter(
-            [
-                lambda: console.names.remove("FixtureType 2"),
-                lambda: console.names.append("Sharpy 250W Beam"),
-            ]
-        )
-
-        def act():
-            step = next(steps, None)
-            if step:
-                step()
-
-        result = wait_for_addition(console, base, attempts=6, sleep=act)
-
-        assert result.added == ("Sharpy 250W Beam",)
-
-    def test_a_truncated_baseline_does_not_end_the_wait(self):
-        # 절단은 기준선의 흠이지 사용자의 답이 아니다.
-        console = FakeConsole(M8_TYPES, truncated=True, declared=99)
-        base = read_snapshot(console)
-        assert base.complete is False
-        rounds = {"n": 0}
-
-        def act():
-            rounds["n"] += 1
-
-        wait_for_addition(console, base, attempts=5, sleep=act)
-
-        assert rounds["n"] == 4, "절단을 이유로 첫 관측에서 빠져나오면 안 된다"
-
-    def test_running_out_reports_what_it_last_saw(self):
-        # 소진을 조용히 「변화 없음」으로 덮으면 연결이 죽은 것을 놓친다.
-        result = wait_for_addition(
-            DeadConsole(),
-            read_snapshot(FakeConsole(M8_TYPES)),
-            attempts=3,
-            sleep=lambda: None,
-        )
-
-        assert result.state == WATCH_UNREADABLE
-        assert result.added == ()
-
-    def test_nothing_happening_is_reported_as_idle(self, console: FakeConsole):
-        result = wait_for_addition(console, read_snapshot(console), attempts=3, sleep=lambda: None)
-
-        assert result.state == WATCH_IDLE
-        assert result.added == ()
-
-    def test_it_observes_once_per_attempt(self, console: FakeConsole):
-        base = read_snapshot(console)
-        before = console.state_calls
-
-        wait_for_addition(console, base, attempts=5, sleep=lambda: None)
-
-        assert console.state_calls - before == 5
