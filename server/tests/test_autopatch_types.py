@@ -1415,6 +1415,11 @@ _J_SHARED_HEADER = (
     "`csv.DictReader` 산출물의 모든 레코드는 **같은 키 집합**을 가지므로 첫 레코드의 키 "
     "집합은 곧 파일 헤더다 — 후보들 중 하나를 고르는 것이 아니다."
 )
+_J_BEST_OF_RANKED = (
+    "선호 **순서가 정해진** 목록의 첫 항목이다 — `plan_for_missing_type`이 늘 같은 "
+    "순서(동봉 -> 사용자 제출 -> Share -> 편집기)로 내므로 후보 집합에서의 선택이 아니다. "
+    "다른 갈래가 필요하면 그 함수를 직접 불러 전체 목록을 받는다."
+)
 _J_BLOCK_START = (
     "자동 배정이 잡은 FID 블록의 **시작 번호**다 — 사용자에게 「N번부터 M개」라고 "
     "알리는 데 쓴다. 후보 여럿에서 고르는 것이 아니라 이미 정해진 수열의 첫 값이다."
@@ -1459,6 +1464,14 @@ _R17_AMBIGUITY_SITES = (
         "fids[0]",
         False,
         justification=_J_BLOCK_START,
+    ),
+    _AmbiguitySite(
+        "typesource.py",
+        "plan_for_rows",
+        _R17_FIRST_ELEMENT,
+        "steps[0]",
+        False,
+        justification=_J_BEST_OF_RANKED,
     ),
     _AmbiguitySite(
         "address.py",

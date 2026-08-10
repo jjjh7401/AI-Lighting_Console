@@ -141,6 +141,27 @@ def read_fixture_types(archive: zipfile.ZipFile) -> dict[str, FixtureTypeEntry]:
     return entries
 
 
+def bundled_fixture_type_bytes(data: bytes, spec: str) -> bytes | None:
+    """MVR이 동봉한 ``spec``의 GDTF 원본 바이트 — 없으면 ``None``.
+
+    **이것이 「라이브러리에 없는 타입」의 첫 번째 답이다.** MVR은 참조만 담는 것이
+    아니라 GDTF 파일 자체를 싣는다(실물 확인: ``Demoshow_grandMA3.mvr``에 5종).
+    도면이 쓴 **바로 그 버전**이므로 이름으로 검색해 받는 것보다 정확하다.
+
+    바이트를 그대로 돌려준다 — 여기서 디스크에 쓰지 않는다. 어디에 놓을지는
+    호출부가 정하고, 콘솔 라이브러리에 놓는 것은 **세션 밖에서** 해야 한다
+    (round20 세션 GO 조건 ①: 세션 중 GDTF 임포트 금지).
+    """
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(data))
+    except zipfile.BadZipFile:
+        return None
+    name = spec if spec.lower().endswith(".gdtf") else f"{spec}.gdtf"
+    if name not in archive.namelist():
+        return None
+    return archive.read(name)
+
+
 def _child_text(element: ET.Element, tag: str) -> str:
     child = element.find(tag)
     return (child.text or "").strip() if child is not None else ""

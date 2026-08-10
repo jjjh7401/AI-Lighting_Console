@@ -708,6 +708,18 @@ _R17_VWX_BOUNDARY_SITES: tuple[_Site, ...] = (
     _Site("columns.py", "offby", "counts.get(header, 0) + 1"),
     _Site("columns.py", "offby", "index + 1"),
     _Site("columns.py", "slice", "raw_records[index + 1:end]"),
+    # --- 타입 조달 안내 (typesource.py) — 콘솔 라이브러리 경로를 만드는 자리.
+    # 수치 경계가 아니라 **경로 조립**이지만 스캐너가 `/` 연산을 산술로 센다.
+    # 실물 디스크로 확인한 값이다: `~/MALightingTechnology/gma3_library/` 아래
+    # `fixturetypes`(GDTF)와 `mvr`(MVR — `patch_mvr.html`이 명시). 어긋나면 조작자가
+    # 파일을 **없는 자리에 놓고** 콘솔 Library 탭에서 못 찾는다.
+    # 문자열은 `FIXTURE_TYPE_HINT`/`MVR_HINT` 두 상수가 한 번만 만든다 — 문장마다
+    # 다시 조립하면 한 곳만 고쳤을 때 안내가 갈라진다.
+    _Site("typesource.py", "arith", "LIBRARY_ROOT / 'fixturetypes'"),
+    _Site("typesource.py", "arith", "LIBRARY_ROOT / 'mvr'"),
+    _Site("typesource.py", "arith", "Path('MALightingTechnology') / 'gma3_library'"),
+    _Site("typesource.py", "arith", "Path('~') / FIXTURE_TYPE_DIR"),
+    _Site("typesource.py", "arith", "Path('~') / MVR_DIR"),
     # --- 인테이크 (intake.py) — 부분 정보를 질문으로 바꾸는 자리. 수치 경계는 셋뿐이다:
     #   `len(exact)/len(near) == 1`  이름이 **하나로 좁혀질 때만** 확정한다. 밀면
     #      후보 여럿에서 첫 것을 집어 엉뚱한 타입으로 패치된다 — R22-C와 같은 붕괴다.

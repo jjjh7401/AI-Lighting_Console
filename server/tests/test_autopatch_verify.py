@@ -5864,6 +5864,10 @@ _R17_SENTENCE_SURFACES = (
     ("intake.py", "prompt"),
     ("intake.py", "why"),
     ("mvr.py", "detail"),
+    # [round24 후속] 「세션 착수 전에 끝내라」 — 조달 단계 전부에 붙는 고지다.
+    # 이 문장이 빠지면 조작자가 세션 중에 라이브러리를 늘려 그 세션의 판정을 깨뜨린다
+    # (round20 세션 GO 조건 ①).
+    ("typesource.py", "BEFORE_SESSION_NOTE"),
     ("patchplan.py", "IRREVERSIBLE_WARNING"),
     # [round18 R18-A] `_FidRangeParse.defect` — `fid_range` 입력의 결함 사유가
     # 조작자에게 나가는 표면. 형식·바닥·순서 세 갈래가 서로 다른 문장을 낸다.

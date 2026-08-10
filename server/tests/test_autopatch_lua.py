@@ -777,6 +777,9 @@ _R17_TOKEN_JOIN_SITES = (
     # [round24 후속] 인테이크가 자동 배정 결과를 사용자에게 보여 줄 때의 미리보기.
     # 판정이 아니라 **표시**다 — 실제 행의 주소는 `Universe`/`U Address` 칸이 나른다.
     ("intake.py", "f'{u}.{a}'"),
+    # [round24 후속] 조달 안내가 보여 주는 설치 경로. 콘솔에 보내는 값이 아니라
+    # 사람이 읽고 파일을 놓을 자리다 — 어긋나면 Library 탭에서 못 찾는다.
+    ("typesource.py", "f\"{FIXTURE_TYPE_HINT}/{self.suggested_filename or '<이름>.gdtf'}\""),
     ("luagen.py", "f'{_lua_int(entry.universe)}.{_lua_int(entry.address)}'"),
     ("patchplan.py", "f'{FID_FIXTURE_ROOT}/{child_index}'"),
     # --- round19 절단 복구 스윕 (TruncationSweep) — 스윕 프로브의 슬롯 경로.
