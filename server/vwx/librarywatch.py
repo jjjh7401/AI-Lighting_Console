@@ -87,7 +87,14 @@ def read_snapshot(port: LibraryPort) -> LibrarySnapshot:
     모드까지 내려가지 않는다. 「무엇이 새로 생겼는가」를 보는 데 모드는 필요 없고,
     깊은 열거는 타입 수만큼 왕복이 든다.
     """
-    payload = port.query_state(FIXTURE_TYPE_LIBRARY_ROOT)
+    try:
+        payload = port.query_state(FIXTURE_TYPE_LIBRARY_ROOT)
+    except Exception:
+        # 포트가 **던지면** 그것도 판독 실패다. 이 모듈은 예외를 밖으로 내지 않는다
+        # (`reader.py`와 같은 HARD 규약) — 대화 한 턴이 통째로 죽는 것보다,
+        # `readable=False`로 내고 `compare`가 `unreadable`로 **보고**하는 편이
+        # 정직하다. 조용히 「변화 없음」으로 읽지 않는 것이 핵심이다.
+        return LibrarySnapshot(names=(), declared_count=None, truncated=False, readable=False)
     if not isinstance(payload, Mapping) or payload.get("ok") is not True:
         return LibrarySnapshot(names=(), declared_count=None, truncated=False, readable=False)
 
