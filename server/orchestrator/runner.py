@@ -40,7 +40,14 @@ from server.orchestrator.tools import CommandOutcome, ExecutionContext, ToolRegi
 MAX_RETRIES = 3
 
 # Cost guard for runaway tool loops (constraint: bounded token spend per turn).
-DEFAULT_MAX_MODEL_CALLS = 12
+#
+# [round24 후속] 12에서 24로. 12는 「명령 한 줄 -> 실행 한 번」 시절의 눈금이었다.
+# 실물 패치 한 건을 끝까지 몰아 재 보니 **15회**가 들었다 — 타입 확인, 주소 자리
+# 확인, 리그 판독, 프리체크, 상태 조회 여러 번, 플러그인 배포와 실행. 여기에
+# 사람 왕복 3회가 더 얹혀 한도를 넘겼고, 대화는 마지막 한 걸음을 남기고 끊겼다.
+# 가드를 없애는 것이 아니라 **실측에 맞춘다**: 24는 그 15회에 검증 읽기와 정정
+# 여유를 더한 값이고, 폭주는 여전히 유한한 자리에서 끊긴다.
+DEFAULT_MAX_MODEL_CALLS = 24
 
 
 @dataclass(frozen=True)
@@ -156,9 +163,10 @@ class Orchestrator:
     #: 한도에 걸렸을 때 마지막으로 한 번만 더 부른다 — **도구 없이.** 도구를 주면
     #: 그 자리에서 또 루프가 시작되므로 가드가 무의미해진다.
     _WRAP_UP = (
-        "여기까지의 진행을 한국어로 짧게 정리하라. 새 도구를 부르지 말고, "
-        "지금까지 확인한 것과 남은 것, 사용자가 다음에 해야 할 일을 알려라. "
-        "하지 않은 일을 했다고 말하지 마라."
+        "여기까지의 진행을 한국어로 짧게 정리하라. 새 도구를 부르지 말라. "
+        "**이미 사용자가 답한 것은 결정된 것이다** — 같은 것을 다시 묻지 말고 "
+        "그 결정을 확정 사항으로 적어라. 아직 못 한 일과 사용자가 다음에 해야 할 "
+        "일만 남은 것으로 적고, 하지 않은 일을 했다고 말하지 마라."
     )
 
     def _closing_words(self, conversation: list[ConversationItem]) -> str:

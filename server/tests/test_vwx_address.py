@@ -684,6 +684,16 @@ _R17_VWX_BOUNDARY_SITES: tuple[_Site, ...] = (
     _Site("address.py", "offby", "universe - 1"),
     _Site("address.py", "offby", "value - 1"),
     _Site("address.py", "slice", "system.strip().upper()[:1]"),
+    # --- 주소 자리 판정 (addressfit.py) — 요청한 DMX 주소에 새 장비가 들어갈
+    # 자리가 있는가. `count`·`width`의 1 미만은 판정 자체를 무의미하게 만들므로
+    # 계산 전에 끊는다. 나머지 셋은 **구간의 마지막 채널**을 세는 같은 등식이다
+    # (시작 + 폭 - 1). 이 -1이 빠지면 한 채널을 더 먹는 것으로 읽혀 멀쩡한
+    # 자리를 충돌로 거절하고, 사용자는 쓸 수 있는 주소를 못 쓰게 된다.
+    _Site("addressfit.py", "numcmp", "count < 1"),
+    _Site("addressfit.py", "numcmp", "width < 1"),
+    _Site("addressfit.py", "offby", "current_address + width - 1"),
+    _Site("addressfit.py", "offby", "last.address + self.width - 1"),
+    _Site("addressfit.py", "offby", "spot.address + width - 1"),
     _Site("apply.py", "lencmp", "len(by_index) != 1"),
     _Site("apply.py", "lencmp", "len(by_name) != 1"),
     _Site("apply.py", "lencmp", "len(candidates) == 1"),
