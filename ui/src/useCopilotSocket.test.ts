@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { initialState, type ReviewRequestView, type UiState } from "./protocol";
 import {
+  awaitingOperatorAction,
   BASE_SUBPROTOCOL,
   TOKEN_SUBPROTOCOL_PREFIX,
   connectProtocols,
@@ -165,5 +166,38 @@ describe("dashResyncFrame", () => {
     expect(dashResyncFrame(blockedOnly)).toBeNull();
     expect(dashResyncFrame(JSON.stringify({ v: 1, type: "status" }))).toBeNull();
     expect(dashResyncFrame("not json")).toBeNull();
+  });
+});
+
+
+describe("조작자를 기다리는 동안 콘솔을 방해하지 않는다", () => {
+  // [round24 후속] 큐 모니터 폴링은 콘솔 Command Line History에 왕복마다 두 줄을
+  // 남긴다. 카드가 "콘솔 명령줄에서 이것을 실행하라"고 청해 놓고 그 이력을 초당
+  // 수십 줄로 밀어내면, 조작자는 자기가 친 명령조차 확인할 수 없다 — 실측에서
+  // 실행 여부를 끝내 가리지 못했다.
+
+  it("물음이 하나라도 떠 있으면 멈춘다", () => {
+    const state: UiState = {
+      ...initialState,
+      pendingQuestions: [
+        { request_id: "q1", prompt: "콘솔에서 실행해 주세요", why: "", steps: [], options: [] },
+      ],
+    };
+
+    expect(awaitingOperatorAction(state)).toBe(true);
+  });
+
+  it("물음이 없으면 평소대로 돈다", () => {
+    expect(awaitingOperatorAction(initialState)).toBe(false);
+  });
+
+  it("승인 카드만 떠 있는 것으로는 멈추지 않는다", () => {
+    // 승인은 화면에서 누르는 것이라 콘솔 이력과 겨루지 않는다.
+    const state: UiState = {
+      ...initialState,
+      pendingApprovals: [{ request_id: "a1", items: [] }],
+    };
+
+    expect(awaitingOperatorAction(state)).toBe(false);
   });
 });

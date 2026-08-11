@@ -107,6 +107,17 @@ export function connectResyncFrames(): string[] {
 export const CUE_MONITOR_POLL_INTERVAL_MS = 5_000;
 
 /**
+ * 조작자가 콘솔 앞에서 무언가를 하기를 기다리는 중인가.
+ *
+ * [round24 후속] 폴링은 콘솔의 Command Line History에 왕복마다 두 줄을 남긴다.
+ * 카드가 "콘솔 명령줄에서 이것을 실행하라"고 청해 놓고 그 이력을 초당 수십 줄로
+ * 밀어내면, 조작자는 자기가 친 명령조차 확인할 수 없다 — 실측에서 실제로 그랬다.
+ */
+export function awaitingOperatorAction(state: UiState): boolean {
+  return state.pendingQuestions.length > 0;
+}
+
+/**
  * The dash resync frame one incoming server event earns, or null.
  *
  * M6-UX v2 (user finding): a chat-side mutation ("Delete Group 20") left the
@@ -201,7 +212,15 @@ export function useCopilotSocket(url?: string): CopilotSocket {
   // CUE_MONITOR_POLL_INTERVAL_MS). Only sends while the socket is actually
   // open; a tick during a reconnect backoff is silently skipped rather than
   // queued, since the next successful connect's resync frame already covers it.
+  //
+  // [round24 후속] **물음이 떠 있는 동안은 멈춘다.** 이 폴링은 콘솔의 Command Line
+  // History에 왕복마다 두 줄을 남긴다. 조작자가 카드의 지시대로 콘솔 명령줄에서
+  // 무언가를 실행해야 하는 그 순간에, 앱이 초당 수십 줄로 이력을 밀어내면 자기가
+  // 친 명령이 화면 밖으로 사라진다 — 실측에서 그 때문에 실행 여부조차 확인할 수
+  // 없었다. 기다리는 동안 리그 상태가 굳는 대가는 작고, 답이 오면 곧 재개된다.
+  const awaitingOperator = awaitingOperatorAction(state);
   useEffect(() => {
+    if (awaitingOperator) return;
     const poll = window.setInterval(() => {
       const socket = socketRef.current;
       if (socket !== null && socket.readyState === WebSocket.OPEN) {
@@ -209,7 +228,7 @@ export function useCopilotSocket(url?: string): CopilotSocket {
       }
     }, CUE_MONITOR_POLL_INTERVAL_MS);
     return () => window.clearInterval(poll);
-  }, []);
+  }, [awaitingOperator]);
 
   const send = useCallback((frame: string) => {
     const socket = socketRef.current;
