@@ -41,10 +41,21 @@ ZERO_CREATED = (
 #: — 룰북 `30_plugin_patterns.md:22-29`가 적은 그대로이고, 그 안내를 문서에서 지운 것이
 #: v0.1.3의 잘못이었다.
 HANDOVER_STEPS: tuple[str, ...] = (
-    "콘솔에서 Menu 키를 누르고 Patch를 엽니다 (Fixtures 탭).",
-    "그 화면을 **열어 둔 채로** 콘솔 명령줄에 아래를 입력합니다.",
+    "콘솔에서 Menu 키를 누르고 Patch를 엽니다 — **Fixtures 목록이 보이는 화면**까지.",
+    # [round24 후속 실측] 표지는 프롬프트 문자열이다. 세 상태를 실물에서 구별했다:
+    #   Admin[Fixture]>                                  편집기 닫힘
+    #   Admin@ShowData/LivePatch/Stages>                 창은 떴으나 한 계층 위
+    #   Admin@ShowData/LivePatch/Stages/Stage 1/Fixtures>  ← 이것이어야 한다
+    # 서버는 이 값을 읽지 못한다(responder 화이트리스트에 없음) — 그래서 **부탁**한다.
+    "명령줄 프롬프트가 «…/Stage 1/Fixtures>»로 끝나는지 확인합니다. "
+    "«Admin[Fixture]>»나 «…/Stages>»면 목적지가 아직 픽스처 계층이 아닙니다 — "
+    "Patch 창의 픽스처 목록을 한 번 누르면 들어갑니다.",
+    "그 상태 그대로 콘솔 명령줄에 아래를 입력합니다.",
     "실행이 끝나면 이 카드의 버튼을 눌러 주세요 — 제가 콘솔을 읽어 확인합니다.",
 )
+
+#: 목적지가 맞는지 사람이 눈으로 대조할 문자열 — 서버가 못 읽으므로 이것이 유일한 검사다.
+DESTINATION_MARKER = "/Stage 1/Fixtures>"
 
 HANDOVER_WHY = (
     "AddFixtures는 콘솔의 **현재 명령 목적지**를 읽습니다. 그 목적지는 조작자가 Patch "
