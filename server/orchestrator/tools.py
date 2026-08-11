@@ -154,6 +154,7 @@ from server.vwx.reader import read as read_vwx_export
 from server.vwx.report import build_vwx_report
 from server.vwx.rig import build_designed_rig
 from server.vwx.stagedpatch import (
+    DESTINATION_MARKER,
     HANDOVER_STEPS,
     HANDOVER_WHY,
     ZERO_CREATED,
@@ -3352,7 +3353,8 @@ def build_toolset(
         # 그래서 마지막 한 칸은 조작자에게 넘기고, 끝났다는 답을 받은 뒤 읽는다.
         run_line = f'Plugin "{plugin_name}"'
         payload["run_yourself"] = run_line
-        payload["handover_steps"] = [*HANDOVER_STEPS[:1], run_line, *HANDOVER_STEPS[2:]]
+        payload["handover_steps"] = [*HANDOVER_STEPS[:3], run_line, HANDOVER_STEPS[3]]
+        payload["destination_marker"] = DESTINATION_MARKER
         if question_port is None:
             payload["status"] = "awaiting_operator"
             payload["guidance"] = (
@@ -3376,7 +3378,12 @@ def build_toolset(
                     f"{len(staged.fixtures)}대."
                 ),
                 why=HANDOVER_WHY,
-                steps=(HANDOVER_STEPS[0], f"{HANDOVER_STEPS[1]}  →  {run_line}", HANDOVER_STEPS[2]),
+                steps=(
+                    HANDOVER_STEPS[0],
+                    HANDOVER_STEPS[1],
+                    f"{HANDOVER_STEPS[2]}  →  {run_line}",
+                    HANDOVER_STEPS[3],
+                ),
                 options=(
                     QuestionOption(
                         label=ANSWER_RAN_IT,

@@ -568,3 +568,44 @@ class TestItNeverInventsAFixtureId:
 
         assert fid_note() == FID_UNRESOLVED_MARK
         assert not FID_UNRESOLVED_MARK.isdigit()
+
+
+class TestTheCardCarriesTheDestinationCheck:
+    """서버가 목적지를 못 읽으므로, **사람이 눈으로 대조할 문자열**을 카드가 나른다.
+
+    [round24 후속 실측] 실물에서 세 상태를 구별했다:
+      `Admin[Fixture]>`                                   편집기 닫힘
+      `Admin@ShowData/LivePatch/Stages>`                  창은 떴으나 한 계층 위
+      `Admin@ShowData/LivePatch/Stages/Stage 1/Fixtures>` 픽스처 계층 — 이것이어야 한다
+    responder는 `CurrentDestination`을 노출하지 않아 서버가 착수 전에 확인하지 못한다.
+    """
+
+    def test_the_card_names_the_prompt_to_look_for(self):
+        # [HARD] 이 문자열이 빠지면 조작자는 조건을 못 지킨 채 실행하고, 결과는
+        # 조용한 0건이다 — 오늘 세션에서 실제로 그렇게 됐다.
+        from server.vwx.stagedpatch import DESTINATION_MARKER
+
+        port = SaysRan()
+        _patch(_EMPTY, _TWO_NEW, question_port=port)
+
+        steps = " ".join(port.asked[0].steps)
+        assert DESTINATION_MARKER in steps
+
+    def test_it_says_what_a_wrong_prompt_looks_like(self):
+        # 맞는 모양만 알려 주면 틀린 상태를 알아보지 못한다.
+        port = SaysRan()
+        _patch(_EMPTY, _TWO_NEW, question_port=port)
+
+        steps = " ".join(port.asked[0].steps)
+        assert "Admin[Fixture]" in steps
+
+    def test_the_command_is_still_in_the_steps(self):
+        port = SaysRan()
+        _patch(_EMPTY, _TWO_NEW, question_port=port)
+
+        assert any('Plugin "CopilotPatch"' in step for step in port.asked[0].steps)
+
+    def test_the_marker_travels_in_the_payload_too(self):
+        payload, _deploy, _runner = _patch(_EMPTY, _TWO_NEW)
+
+        assert payload["destination_marker"].endswith("Fixtures>")
