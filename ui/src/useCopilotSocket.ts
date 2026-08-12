@@ -17,6 +17,7 @@ import {
   buildQuestionAnswer,
   buildReviewDecision,
   buildStatusRequest,
+  buildVectorworksExportUpload,
   clearPendingRequests,
   initialState,
   parseServerEvent,
@@ -142,6 +143,7 @@ export interface CopilotSocket {
   sendDecision: (requestId: string, approved: boolean) => void;
   sendReviewDecision: (requestId: string, approved: boolean) => void;
   sendQuestionAnswer: (requestId: string, answer: string) => void;
+  sendVectorworksExportUpload: (fileName: string, contentBase64: string) => boolean;
   sendLock: (active: boolean) => void;
   sendPanelExecute: (targetKind: PanelTargetKind, target: number) => void;
   sendPanelStop: (targetKind: PanelTargetKind, target: number) => void;
@@ -242,6 +244,16 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     },
     [send],
   );
+  const sendVectorworksExportUpload = useCallback(
+    (fileName: string, contentBase64: string) => {
+      const socket = socketRef.current;
+      if (socket === null || socket.readyState !== WebSocket.OPEN) return false;
+      dispatch({ kind: "user", text: `Vectorworks 파일 업로드: ${fileName}` });
+      socket.send(buildVectorworksExportUpload(fileName, contentBase64));
+      return true;
+    },
+    [],
+  );
   const sendDecision = useCallback(
     (requestId: string, approved: boolean) => send(buildApprovalDecision(requestId, approved)),
     [send],
@@ -279,6 +291,7 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     state,
     connected,
     sendChat,
+    sendVectorworksExportUpload,
     sendDecision,
     sendReviewDecision,
     sendQuestionAnswer,

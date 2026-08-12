@@ -1201,6 +1201,9 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "question_answer",
     "review_decision",
     "status_request",
+    # vectorworks_autopatch 대화형 축 (2026-08-12) — 업로드 파일이 세션에
+    # 머물게 하는 채널. PRECHK/OVERLAP 축과 무관한 정당한 확장.
+    "vectorworks_export_upload",
 )
 
 # server -> client: every literal stamped into the outbound ``"type"`` field by

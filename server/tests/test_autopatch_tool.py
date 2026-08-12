@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 import sys
@@ -99,10 +100,19 @@ class RigPort:
         return {"ok": True, "path": path, "property": property_name, "value": value}
 
 
-def _registry(*, rig: RigPort | None = None):
+class _UploadedExport:
+    def __init__(self, content_base64: str | None = None, report: dict | None = None):
+        self.content_base64 = content_base64
+        self.report = report
+
+
+def _registry(*, rig: RigPort | None = None, upload: _UploadedExport | None = None):
     rig = rig or RigPort()
     return build_toolset(
-        execution_port=_NeverCalledExecutionPort(), state_port=rig, property_port=rig
+        execution_port=_NeverCalledExecutionPort(),
+        state_port=rig,
+        property_port=rig,
+        vectorworks_upload=upload,
     )
 
 
@@ -150,6 +160,74 @@ def _payload(execution) -> dict:
 
 def _candidate_id(payload: dict) -> str:
     return payload["plan"]["candidates"][0]["id"]
+
+
+class TestUploadedVectorworksAutopatch:
+    def test_analyse_decodes_and_caches_the_session_export(self):
+        content_base64 = base64.b64encode(
+            b"Fixture Type,Universe,DMX Address,Unit Number,Fixture Name\n"
+            b"Robin LEDBeam 350,1,1,1,VWX Beam 01\n"
+        ).decode("ascii")
+        upload = _UploadedExport(content_base64)
+        execution = _registry(upload=upload).dispatch(
+            ToolCall(id="uploaded-0", name="vectorworks_autopatch", arguments={"action": "analyse"})
+        )
+
+        payload = _payload(execution)
+        assert execution.result.is_error is False
+        assert payload["designed_rig"]["fixture_count"] == 1
+        assert upload.report == payload
+
+    def test_analyse_decodes_and_caches_the_session_mvr_export(self):
+        source = PROJECT_ROOT / "server" / "tests" / "fixtures" / "vwx" / "demoshow_grandma3.mvr"
+        upload = _UploadedExport(
+            content_base64=base64.b64encode(source.read_bytes()).decode("ascii")
+        )
+        execution = _registry(upload=upload).dispatch(
+            ToolCall(
+                id="uploaded-mvr",
+                name="vectorworks_autopatch",
+                arguments={"action": "analyse"},
+            )
+        )
+
+        payload = _payload(execution)
+        assert execution.result.is_error is False
+        assert payload["designed_rig"]["fixture_count"] == 176
+        assert payload["read_failures"] == []
+        assert upload.report == payload
+
+    def test_prepare_uses_the_cached_report_and_the_drawing_fixture_name(self):
+        report = _report()
+        report["designed_rig"]["fixtures"][0]["fixture_name"] = "VWX Beam 01"
+        preview = _payload(_dispatch(_registry(), report=report))
+        candidate = _candidate_id(preview)
+        registry = _registry(upload=_UploadedExport(content_base64="c2FmZQ==", report=report))
+
+        execution = registry.dispatch(
+            ToolCall(
+                id="uploaded-1",
+                name="vectorworks_autopatch",
+                arguments={
+                    "action": "prepare",
+                    "selected": [candidate],
+                    "fid_range": {"start": 101, "end": 101},
+                    "type_aliases": {LED: {"type": LED, "mode": "Mode 1"}},
+                },
+            )
+        )
+
+        payload = _payload(execution)
+        assert execution.result.is_error is False
+        assert execution.result.name == "vectorworks_autopatch"
+        assert payload["handoff"]["entries"][0]["name"] == "VWX Beam 01"
+
+    def test_prepare_refuses_without_a_session_report(self):
+        execution = _registry().dispatch(
+            ToolCall(id="uploaded-2", name="vectorworks_autopatch", arguments={"action": "prepare"})
+        )
+        assert execution.result.is_error is True
+        assert "대조 결과" in execution.result.content
 
 
 def _full_call(registry, *, rig_report=None, dry_run=True, **overrides):

@@ -4,6 +4,7 @@ import {
   addUserMessage,
   buildApprovalDecision,
   buildChat,
+  buildVectorworksExportUpload,
   buildCueMonitorRequest,
   buildDashCatalogRequest,
   buildLock,
@@ -54,6 +55,12 @@ describe("builders", () => {
       v: 1,
       type: "chat",
       text: "보컬 그룹 만들어줘",
+    });
+    expect(JSON.parse(buildVectorworksExportUpload("design.xlsx", "c2FmZQ=="))).toEqual({
+      v: 1,
+      type: "vectorworks_export_upload",
+      file_name: "design.xlsx",
+      content_base64: "c2FmZQ==",
     });
     expect(JSON.parse(buildApprovalDecision("req-1", true))).toEqual({
       v: 1,

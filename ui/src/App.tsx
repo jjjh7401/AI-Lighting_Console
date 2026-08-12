@@ -8,7 +8,7 @@
 // collapsing it leaves a thin rail with a re-open affordance. The global
 // header/status/settings live ABOVE the split so they stay reachable in
 // both states.
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, type ReactNode, useEffect, useRef, useState } from "react";
 
 import { ApprovalCard } from "./components/ApprovalCard";
 import { ChatView } from "./components/ChatView";
@@ -73,6 +73,8 @@ export function dashPressTargetNo(sectionName: string, item: DashItem): number |
 // other App.tsx view preference (chat-collapsed, tile sizes) stays
 // session-volatile by design (design.md §6 / D5) and is left alone.
 const RUNBOOK_MODE_STORAGE_KEY = "ma3-copilot.runbook-mode";
+const MAX_VECTORWORKS_UPLOAD_BYTES = 8 * 1024 * 1024;
+
 
 export function readRunbookModeFromStorage(): boolean {
   try {
@@ -276,8 +278,11 @@ export default function App() {
     sendPanelGoto,
     sendDashRefresh,
     sendCueMonitorRefresh,
+    sendVectorworksExportUpload,
   } = useCopilotSocket();
   const [draft, setDraft] = useState("");
+  const vectorworksInputRef = useRef<HTMLInputElement>(null);
+  const [vectorworksUploadError, setVectorworksUploadError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   // T-E — volunteer runbook mode. localStorage-backed (see
   // readRunbookModeFromStorage above) so it survives a refresh; the lazy
@@ -353,6 +358,40 @@ export default function App() {
     const text = draft.trim();
     sendChat(text);
     setDraft("");
+  };
+
+  const uploadVectorworksExport = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (file === undefined) return;
+    if (![".csv", ".txt", ".xlsx", ".mvr"].some((extension) => file.name.toLowerCase().endsWith(extension))) {
+      setVectorworksUploadError("Vectorworks export는 CSV, TXT, XLSX 또는 MVR 파일만 올릴 수 있습니다.");
+      return;
+    }
+    if (file.size === 0 || file.size > MAX_VECTORWORKS_UPLOAD_BYTES) {
+      setVectorworksUploadError("Vectorworks export는 비어 있지 않은 8 MiB 이하 파일이어야 합니다.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => setVectorworksUploadError("Vectorworks 파일을 읽지 못했습니다.");
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") {
+        setVectorworksUploadError("파일을 텍스트 프레임으로 변환하지 못했습니다.");
+        return;
+      }
+      const separator = result.indexOf(",");
+      if (separator < 0) {
+        setVectorworksUploadError("파일을 텍스트 프레임으로 변환하지 못했습니다.");
+        return;
+      }
+      if (!sendVectorworksExportUpload(file.name, result.slice(separator + 1))) {
+        setVectorworksUploadError("서버 연결이 끊겨 파일을 올릴 수 없습니다.");
+        return;
+      }
+      setVectorworksUploadError(null);
+    };
+    reader.readAsDataURL(file);
   };
 
   // M5 (design.md §4, REQ-DASHUI-017): the dash pool grid's fireable sections
@@ -506,6 +545,25 @@ export default function App() {
               </main>
               <footer className="composer">
                 {composer.helperText && <div className="composer-status">{composer.helperText}</div>}
+                {vectorworksUploadError && (
+                  <div className="composer-status composer-upload-error">{vectorworksUploadError}</div>
+                )}
+                <input
+                  ref={vectorworksInputRef}
+                  className="composer-file-input"
+                  type="file"
+                  accept=".csv,.txt,.xlsx,.mvr"
+                  onChange={uploadVectorworksExport}
+                  disabled={composer.inputDisabled}
+                />
+                <button
+                  type="button"
+                  className="composer-upload"
+                  onClick={() => vectorworksInputRef.current?.click()}
+                  disabled={composer.inputDisabled}
+                >
+                  VWX 파일
+                </button>
                 <input
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}

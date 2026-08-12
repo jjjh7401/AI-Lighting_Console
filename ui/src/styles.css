@@ -693,6 +693,14 @@ body {
   font-size: 12px;
 }
 
+.composer-upload-error {
+  color: #ff9f43;
+}
+
+.composer-file-input {
+  display: none;
+}
+
 .composer input {
   flex: 1;
   padding: 10px 12px;
@@ -710,6 +718,12 @@ body {
   background: var(--accent);
   color: #fff;
   cursor: pointer;
+}
+
+.composer button.composer-upload {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
 }
 
 .composer button:disabled {

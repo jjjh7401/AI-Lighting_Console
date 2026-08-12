@@ -74,6 +74,21 @@ class TestWebSocketBasics:
             assert event["text"] == "만들었습니다"
         assert console.executed == ["Store Group 3"]
 
+    def test_vectorworks_upload_starts_a_guided_chat_turn(self, tmp_path):
+        provider = ScriptedProvider([_final("도면과 콘솔을 비교하겠습니다")])
+        deps, _console, _gate = _deps(tmp_path, provider)
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            ws.receive_json()
+            _send(
+                ws,
+                type="vectorworks_export_upload",
+                file_name="design.xlsx",
+                content_base64="c2FmZQ==",
+            )
+            event = _receive_until(ws, "chat_response")
+        assert event["text"] == "도면과 콘솔을 비교하겠습니다"
+        assert "c2FmZQ==" not in json.dumps(event, ensure_ascii=False)
+
     def test_malformed_message_yields_a_korean_protocol_error(self, tmp_path):
         deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:

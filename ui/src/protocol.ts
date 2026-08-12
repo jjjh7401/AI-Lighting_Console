@@ -392,6 +392,15 @@ export function buildChat(text: string): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "chat", text });
 }
 
+export function buildVectorworksExportUpload(fileName: string, contentBase64: string): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "vectorworks_export_upload",
+    file_name: fileName,
+    content_base64: contentBase64,
+  });
+}
+
 export function buildApprovalDecision(requestId: string, approved: boolean): string {
   return JSON.stringify({
     v: PROTOCOL_VERSION,

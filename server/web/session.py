@@ -20,6 +20,7 @@ thread-safe (the app wraps the WebSocket send accordingly).
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 
 from server.deploy.review import ReviewRequest
 from server.llm.types import LLMProvider, ToolCall
@@ -87,6 +88,33 @@ _TURN_STATUS_SUMMARY: dict[str, str] = {
     "retries_exhausted": "자가 수정 3회 한도에 도달하여 실행에 실패했습니다.",
     "loop_limit": "모델 호출 한도를 초과하여 중단했습니다.",
 }
+
+
+@dataclass
+class _UploadedVectorworksExport:
+    """Ephemeral source/report pair for one WebSocket conversation."""
+
+    content_base64: str | None = None
+    file_name: str | None = None
+    report: dict[str, object] | None = None
+
+    def replace(self, file_name: str, content_base64: str) -> None:
+        self.content_base64 = content_base64
+        self.file_name = file_name
+        self.report = None
+
+    def clear(self) -> None:
+        self.content_base64 = None
+        self.file_name = None
+        self.report = None
+
+
+_VECTORWORKS_UPLOAD_INSTRUCTION = (
+    "Vectorworks Instrument Data export를 업로드했습니다. "
+    "vectorworks_autopatch로 먼저 도면과 현재 콘솔을 대조하고, 자동 패치 가능한 항목을 "
+    "정리해 주세요. 반드시 대조 결과에 없는 값은 추측하지 말고 필요한 값만 질문 카드로 "
+    "물어보세요."
+)
 
 
 def outcome_view(outcome: CommandOutcome) -> dict:
@@ -234,6 +262,7 @@ class ChatSession:
         # ACROSS turns (unlike _turn_decisions, this is NOT reset per turn) so a
         # bare follow-up modification can anchor to the real target.
         self._last_created: LastCreated | None = None
+        self._vectorworks_upload = _UploadedVectorworksExport()
         # M6c-1 Finding 1/2: a unique identity for THIS connection, scoping the
         # shared approval_channel/review_channel/gate's per-session state so a
         # sibling ChatSession's disconnect or screening never leaks in.
@@ -250,6 +279,7 @@ class ChatSession:
             rig_paths=rig_paths,
             deploy_pipeline=deploy_pipeline,
             question_port=question_channel,
+            vectorworks_upload=self._vectorworks_upload,
             # SPEC-COPILOT-PRESHOW-001 T-G2: reuse the gate's own audited
             # heartbeat as the pre-show OSC checks' liveness probe — no
             # second console link, no new socket. Gated on preshow_receive_port
@@ -282,6 +312,9 @@ class ChatSession:
         self._channel.unbind(session_key=self._session_key)
         if self._review_channel is not None:
             self._review_channel.unbind(session_key=self._session_key)
+        if self._question_channel is not None:
+            self._question_channel.unbind(session_key=self._session_key)
+        self._vectorworks_upload.clear()
 
     # -- event plumbing ----------------------------------------------------------
 
@@ -480,6 +513,11 @@ class ChatSession:
         finally:
             reset_session_key(token)
 
+    def upload_vectorworks_export(self, file_name: str, content_base64: str) -> dict:
+        """Replace this session's export and immediately start its guided analysis."""
+        self._vectorworks_upload.replace(file_name, content_base64)
+        return self.run_instruction(_VECTORWORKS_UPLOAD_INSTRUCTION)
+
     # -- internals ------------------------------------------------------------------
 
     def _capture_last_created(self, result: InstructionResult) -> None:
@@ -498,26 +536,29 @@ class ChatSession:
             self._last_created = captured
 
     def _session_context_note(self) -> str | None:
-        """The cross-turn note injected before the next instruction (REQ-DEPLOY-030).
-
-        Carries the last-created look's identity AND a regenerate-don't-blind-
-        edit steer. Written as an instruction to the model (English, matching
-        the rulebook system-prefix convention) with the Korean operator phrase
-        as a grounded example. Returns ``None`` when no look has been created."""
+        """Cross-turn grounding for the last look and an uploaded design file."""
+        notes: list[str] = []
         last = self._last_created
-        if last is None or last.sequence is None:
-            return None
-        target = f"Sequence {last.sequence}"
-        if last.executor is not None:
-            target += f" / Executor {last.executor}"
-        return (
-            f"Session context — the last look you created is on {target}. "
-            f'When the user asks to modify that look (e.g. "더 느리게" / make it '
-            f"slower), apply the change to {target} — do NOT target an arbitrary "
-            f"Sequence or Executor (such as Sequence 1 / Executor 1). Prefer "
-            f"regenerating the look on {target} over blind-editing a different "
-            f"target."
-        )
+        if last is not None and last.sequence is not None:
+            target = f"Sequence {last.sequence}"
+            if last.executor is not None:
+                target += f" / Executor {last.executor}"
+            notes.append(
+                f"Session context — the last look you created is on {target}. "
+                f'When the user asks to modify that look (e.g. "더 느리게" / make it '
+                f"slower), apply the change to {target} — do NOT target an arbitrary "
+                f"Sequence or Executor (such as Sequence 1 / Executor 1). Prefer "
+                f"regenerating the look on {target} over blind-editing a different "
+                f"target."
+            )
+        if self._vectorworks_upload.content_base64 is not None:
+            notes.append(
+                "Session context — one Vectorworks export is uploaded for this "
+                "conversation. Its bytes and any completed report are available only "
+                "through vectorworks_autopatch; never request them in chat or infer "
+                "details that tool did not report."
+            )
+        return "\n\n".join(notes) or None
 
     def _report_error(self, exc: Exception) -> dict:
         kind, message = classify_exception(exc)

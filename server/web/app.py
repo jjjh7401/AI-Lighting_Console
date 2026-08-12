@@ -347,6 +347,17 @@ def create_app(deps: WebDeps) -> FastAPI:
                     current_task = asyncio.create_task(
                         asyncio.to_thread(session.run_instruction, message["text"])
                     )
+                elif message_type == "vectorworks_export_upload":
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    current_task = asyncio.create_task(
+                        asyncio.to_thread(
+                            session.upload_vectorworks_export,
+                            message["file_name"],
+                            message["content_base64"],
+                        )
+                    )
                 elif message_type == "approval_decision":
                     resolved = deps.approval_channel.resolve(
                         message["request_id"], approved=message["approved"]
