@@ -80,6 +80,7 @@ _HOST_KEYS = ("console_host", "web_host")
 # Recognised non-sensitive keys — the UI<->backend config schema contract (F2).
 _RECOGNISED_KEYS = (
     "active_provider",
+    "claude_code_model",
     *_HOST_KEYS,
     *_PORT_KEYS,
     "plugin_import_dir",
@@ -120,6 +121,7 @@ class UserSettings:
     plugin_import_dir: str
     osc_slot: int = DEFAULT_OSC_SLOT
     osc_import_dir: str = DEFAULT_OSC_IMPORT_DIR
+    claude_code_model: str = "sonnet"
 
 
 def _resolve_config_dir(
@@ -241,6 +243,14 @@ def _require_provider(value: object) -> str:
     return value
 
 
+def _require_claude_code_model(value: object) -> str:
+    if not isinstance(value, str) or value not in ("opus", "sonnet", "fable"):
+        raise SettingsError(
+            f"claude_code_model must be one of ('opus', 'sonnet', 'fable'), got {value!r}"
+        )
+    return value
+
+
 def _require_str(key: str, value: object) -> str:
     if not isinstance(value, str) or not value:
         raise SettingsError(f"{key} must be a non-empty string, got {value!r}")
@@ -298,6 +308,8 @@ def _validate_field(key: str, value: object) -> object:
         return _require_host(key, value)
     if key == "active_provider":
         return _require_provider(value)
+    if key == "claude_code_model":
+        return _require_claude_code_model(value)
     return _require_str(key, value)  # plugin_import_dir
 
 
@@ -339,6 +351,7 @@ def resolve_effective_settings(
     #   port drift prevention); the user file wins over the shipped seed.
     values: dict[str, object] = {
         "active_provider": DEFAULT_ACTIVE_PROVIDER,
+        "claude_code_model": "sonnet",
         "console_host": DEFAULT_CONSOLE_HOST,
         "console_port": DEFAULT_CONSOLE_PORT,
         "receive_port": DEFAULT_RECEIVE_PORT,
@@ -378,6 +391,7 @@ def _dump_settings_toml(settings: UserSettings) -> str:
             "",
             "[settings]",
             f'active_provider = "{_toml_escape(settings.active_provider)}"',
+            f'claude_code_model = "{_toml_escape(settings.claude_code_model)}"',
             f'console_host = "{_toml_escape(settings.console_host)}"',
             f"console_port = {settings.console_port}",
             f"receive_port = {settings.receive_port}",

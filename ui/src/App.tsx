@@ -640,9 +640,11 @@ export default function App() {
                 <div className="composer-model" aria-live="polite">
                   {activeModel === null
                     ? "AI 모델 확인 중…"
-                    : activeModel.settings.active_provider === "claude_code"
-                      ? `사용 모델 · Claude 구독 ${activeModel.settings.claude_code_model}`
-                      : `사용 모델 · ${providerLabel(activeModel.settings.active_provider)}`}
+                    : `사용 모델 · ${
+                        activeModel.settings.active_provider === "claude_code"
+                          ? "Claude 구독"
+                          : providerLabel(activeModel.settings.active_provider)
+                      }${activeModel.active_model ? ` · ${activeModel.active_model}` : ""}`}
                 </div>
               </footer>
             </div>

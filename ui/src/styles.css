@@ -722,6 +722,13 @@ body {
   display: none;
 }
 
+.composer-model {
+  width: 100%;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
 .composer input {
   flex: 1;
   padding: 10px 12px;

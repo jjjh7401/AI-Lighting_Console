@@ -18,7 +18,7 @@ from pathlib import Path
 
 from server.resources import resource_base
 
-SUPPORTED_PROVIDERS = ("anthropic", "gemini")
+SUPPORTED_PROVIDERS = ("anthropic", "claude_code", "gemini")
 
 
 def default_config_path() -> Path:
@@ -58,6 +58,12 @@ class AnthropicSettings:
     # requires the production inference configuration to be pinned in config.
 
 
+
+@dataclass(frozen=True)
+class ClaudeCodeSettings:
+    """Claude Code subscription settings; its OAuth session stays in Keychain."""
+
+    model: str
 @dataclass(frozen=True)
 class GeminiSettings:
     """Gemini adapter settings — model pin is config-changeable (REQ-MVP-039)."""
@@ -88,6 +94,7 @@ class ProviderConfig:
 
     active: str
     anthropic: AnthropicSettings
+    claude_code: ClaudeCodeSettings
     gemini: GeminiSettings
     fallback: FallbackSettings
 
@@ -147,6 +154,12 @@ def load_provider_config(path: Path | str = DEFAULT_CONFIG_PATH) -> ProviderConf
         raise ConfigError(f"provider.active must be one of {SUPPORTED_PROVIDERS}, got {active!r}")
 
     anthropic_table = _provider_table(data, "anthropic")
+    claude_code_table = provider.get("claude_code", {"model": "sonnet"})
+    if not isinstance(claude_code_table, dict):
+        raise ConfigError("provider.claude_code must be a table")
+    claude_code_model = claude_code_table.get("model", "sonnet")
+    if claude_code_model not in ("opus", "sonnet", "fable"):
+        raise ConfigError(f"provider.claude_code.model is unsupported: {claude_code_model!r}")
     gemini_table = _provider_table(data, "gemini")
     fallback_table = data.get("fallback", {})
     if not isinstance(fallback_table, dict):
@@ -181,6 +194,7 @@ def load_provider_config(path: Path | str = DEFAULT_CONFIG_PATH) -> ProviderConf
             thinking=str(anthropic_table.get("thinking", "adaptive")),
             effort=str(anthropic_table.get("effort", "high")),
         ),
+        claude_code=ClaudeCodeSettings(model=claude_code_model),
         gemini=GeminiSettings(
             model=gemini_table["model"],
             context_caching=bool(gemini_table.get("context_caching", True)),

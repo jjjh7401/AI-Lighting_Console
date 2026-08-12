@@ -110,6 +110,20 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const loginClaudeCode = async () => {
+    setBusy(true);
+    setErrors([]);
+    try {
+      const response = await fetch(apiUrl("/api/claude-code/login"), { method: "POST" });
+      if (!response.ok) throw new Error((await response.text()) || "로그인을 시작하지 못했습니다.");
+      setNotice("브라우저에서 Claude 로그인을 완료한 뒤 설정을 다시 열어 상태를 확인해 주세요.");
+    } catch (error) {
+      setErrors([error instanceof Error ? error.message : "Claude 로그인을 시작하지 못했습니다."]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const deleteKey = async (provider: string) => {
     setBusy(true);
     setNotice(null);
@@ -201,6 +215,28 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             </section>
 
             <section className="settings-section">
+              <h3>Claude 구독 로그인</h3>
+              <p className="settings-hint">
+                Claude Code가 macOS Keychain의 구독 OAuth 세션을 사용합니다. 토큰은 이 앱에
+                저장하거나 표시하지 않습니다.
+              </p>
+              {loaded.claude_code.available ? (
+                <>
+                  <p className={loaded.claude_code.logged_in ? "key-set" : "key-unset"}>
+                    {loaded.claude_code.logged_in
+                      ? `${loaded.claude_code.email ?? "Claude"} · ${loaded.claude_code.subscription_type ?? "구독"} 연결됨`
+                      : "Claude 구독 로그인 필요"}
+                  </p>
+                  <button className="settings-btn" disabled={busy} onClick={loginClaudeCode}>
+                    {loaded.claude_code.logged_in ? "다시 로그인" : "Claude로 로그인"}
+                  </button>
+                </>
+              ) : (
+                <p className="settings-warn">Claude Code가 설치되어 있지 않습니다.</p>
+              )}
+            </section>
+
+            <section className="settings-section">
               <h3>연결 · 프로바이더</h3>
               <label className="settings-field">
                 활성 프로바이더
@@ -211,6 +247,20 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                   {loaded.providers.map((provider) => (
                     <option key={provider} value={provider}>
                       {providerLabel(provider)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="settings-field">
+                Claude 구독 모델
+                <select
+                  value={form.claude_code_model}
+                  onChange={(event) => patch({ claude_code_model: event.target.value })}
+                  disabled={!loaded.claude_code.available}
+                >
+                  {loaded.claude_code.model_options.map((model) => (
+                    <option key={model} value={model}>
+                      {model === "opus" ? "Opus" : model === "sonnet" ? "Sonnet" : "Fable"}
                     </option>
                   ))}
                 </select>

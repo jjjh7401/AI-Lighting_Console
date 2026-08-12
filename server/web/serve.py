@@ -28,6 +28,7 @@ from server.deploy.pipeline import DeployPipeline
 from server.deploy.settings import resolve_effective_settings
 from server.llm.config import DEFAULT_CONFIG_PATH, load_provider_config
 from server.llm.factory import build_provider
+from server.llm.runtime import ProviderSlot
 from server.llm.types import LLMProvider
 from server.orchestrator.fallback import FallbackDetector
 from server.orchestrator.runner import SwitchableProvider
@@ -271,24 +272,28 @@ def _announce_when_serving(url: str, host: str, port: int) -> None:  # pragma: n
 
 def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
     """Compose the FastAPI app + console stack from parsed arguments."""
-    config = load_provider_config(args.config)
     config_path = Path(args.config)
+    settings = resolve_effective_settings(seed_path=config_path)
+    config = load_provider_config(config_path)
+    config = replace(
+        config,
+        active=settings.active_provider,
+        claude_code=replace(config.claude_code, model=settings.claude_code_model),
+    )
 
-    # @MX:NOTE: [AUTO] REQ-DEPLOY-028 startup active-provider key injection — the
-    #   packaged app has no terminal to export env vars, so the active provider's
-    #   stored key must cross into the process env BEFORE build_provider() builds
-    #   the client (which reads its key from env). overwrite=False so an operator's
-    #   already-set env key wins; a locked/denied store degrades to the REQ-DEPLOY-
-    #   006a settings-UI session path without aborting start-up (never writes disk).
-    try:
-        inject_active_provider_key(seed_path=config_path, overwrite=False)
-    except KeystoreUnavailableError as error:
-        print(
-            f"[startup] OS credential store unavailable ({error}); no API key "
-            "injected — enter one in the settings UI (session-only fallback).",
-            file=sys.stderr,
-        )
+    # API-key injection only applies to direct API providers. Claude Code owns
+    # its subscription OAuth session in the macOS Keychain.
+    if config.active != "claude_code":
+        try:
+            inject_active_provider_key(seed_path=config_path, overwrite=False)
+        except KeystoreUnavailableError as error:
+            print(
+                f"[startup] OS credential store unavailable ({error}); no API key "
+                "injected — enter one in the settings UI (session-only fallback).",
+                file=sys.stderr,
+            )
     provider = build_provider(config)
+    provider_slot = ProviderSlot(provider)
     system_prefix = assemble_prefix()
 
     recorder = RoundTripRecorder()
@@ -309,7 +314,7 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
     # a human must apply by restarting the process. Absent a target (today's
     # shipped default — the target is a still-pending M6b-3 human decision),
     # wiring is byte-identical to before: one adapter, decision-only audit.
-    active_provider: LLMProvider = provider
+    active_provider: LLMProvider = provider_slot
     on_fallback = None
     if config.fallback.target_provider is not None:
         target_adapter = build_provider(replace(config, active=config.fallback.target_provider))
@@ -372,7 +377,12 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         backup_manager=stack.backup,
         heartbeat_interval_seconds=args.heartbeat_interval,
         backup_poll_seconds=args.backup_poll,
-        settings=SettingsDeps(seed_path=config_path, session=SessionKeyStore()),
+        settings=SettingsDeps(
+            seed_path=config_path,
+            session=SessionKeyStore(),
+            provider_slot=provider_slot,
+            provider_config_path=config_path,
+        ),
         provision=ProvisionDeps(seed_path=config_path),
         # W3: paperwork generation surface — the gate's state_port implements
         # both StateQueryPort and PropertyQueryPort, so one object serves both
