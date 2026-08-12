@@ -166,7 +166,7 @@ class TestRenderPatchSheet:
         }
         sheet = build_patch_sheet(FakeInventoryPort(states, {}))
         html = render_patch_sheet(sheet)
-        assert "관측된 픽스처 없음" in html
+        assert "No fixtures observed." in html
 
 
 class TestChannelWidthUpperBound:
@@ -222,10 +222,10 @@ class TestChannelWidthUpperBound:
         # splitting the qualifier into its own sentence loses it on a partial
         # read (OVERLAP-001 M5).
         assert (
-            "채널폭 상계: 23 "
+            "Channel-width upper bound: 23 "
             "(source: Patch/FixtureTypes/1/DMXModes/1/DMXChannels childCount) — "
-            "이 값 이상의 간격은 겹침 없음 확인; "
-            "이하는 미확정." in html
+            "gaps at or above this bound cannot overlap; "
+            "gaps below it are unsettled, not confirmed clear." in html
         )
 
     def test_incomplete_walk_has_no_bound(self):
@@ -255,7 +255,7 @@ class TestChannelWidthUpperBound:
         )
         sheet = build_patch_sheet(_two_fixture_port(), walk=walk)
         html = render_patch_sheet(sheet)
-        assert "채널폭 상계 미확인" in html
+        assert "Channel-width upper bound not established" in html
         assert "경로 Patch/FixtureTypes를 이 쇼파일에서 찾지 못했다." in html
 
     def test_partial_mode_set_does_not_leak_a_smaller_bound(self):

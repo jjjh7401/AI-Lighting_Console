@@ -228,6 +228,7 @@ TOOL_NAMES = (
     "build_patch_sheet",
     "build_cue_sheet",
     "build_preset_list",
+    "build_handover_pack",
     "plan_executor_layout",
     "get_spatial_context",
     "arrange_fixtures",

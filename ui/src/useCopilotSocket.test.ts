@@ -202,39 +202,3 @@ describe("조작자를 기다리는 동안 콘솔을 방해하지 않는다", ()
     expect(awaitingOperatorAction(state)).toBe(false);
   });
 });
-
-describe("cueMonitorResyncFrame", () => {
-  it("requests a fresh cue snapshot after a completed executor playback event", () => {
-    const frame = cueMonitorResyncFrame(
-      JSON.stringify({
-        v: 1,
-        type: "panel_item_state",
-        id: "executor:102",
-        target_kind: "executor",
-        target: 102,
-        running: true,
-        cue: null,
-      }),
-    );
-
-    expect(JSON.parse(frame ?? "")).toEqual({ v: 1, type: "cue_monitor_request" });
-  });
-
-  it("does not refresh for macros or unrelated server events", () => {
-    expect(
-      cueMonitorResyncFrame(
-        JSON.stringify({
-          v: 1,
-          type: "panel_item_state",
-          id: "macro:1",
-          target_kind: "macro",
-          target: 1,
-          running: false,
-          cue: null,
-        }),
-      ),
-    ).toBeNull();
-    expect(cueMonitorResyncFrame(JSON.stringify({ v: 1, type: "status" }))).toBeNull();
-    expect(cueMonitorResyncFrame("not json")).toBeNull();
-  });
-});

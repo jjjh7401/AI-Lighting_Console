@@ -13,65 +13,28 @@ from html import escape
 from server.paperwork.data import MagicSheet, PatchSheet, PoolListing
 
 _STYLE = """
-  :root {
-    --ink: #1a1a1a; --sub: #64696f; --line: #d4d8dd; --bg: #fff;
-    --head-bg: #f5f6f8; --row-alt: #fafbfc;
-    --badge-bg: #fff3cd; --badge-color: #7a5b00;
-    --err: #a00; --empty: #888;
-  }
-  * { box-sizing: border-box; }
-  body {
-    font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic",
-                 "Segoe UI", Helvetica, Arial, sans-serif;
-    margin: 0; padding: 32px 24px 48px;
-    color: var(--ink); background: var(--bg);
-    -webkit-font-smoothing: antialiased;
-  }
-  .sheet { max-width: 860px; margin: 0 auto; }
-  h1 { font-size: 18px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em; }
-  .title-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-  .meta { color: var(--sub); font-size: 11.5px; margin-bottom: 20px; line-height: 1.5; }
-  .badge { display: inline-block; padding: 1px 7px; border-radius: 3px;
-           font-size: 10px; font-weight: 600; vertical-align: 2px; }
-  .badge-truncated { background: var(--badge-bg); color: var(--badge-color); }
-  .badge-err { background: #fbeaea; color: var(--err); }
-  .caveat { border-left: 3px solid var(--err); background: #fff5f5; color: #7a0000;
+  body { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+         margin: 24px; color: #1a1a1a; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  h2 { font-size: 15px; margin: 20px 0 6px; }
+  .meta { color: #555; font-size: 12px; margin-bottom: 16px; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+  th, td { border: 1px solid #ccc; padding: 4px 8px; font-size: 12px; text-align: left; }
+  th { background: #f0f0f0; }
+  .pool-name { font-weight: bold; background: #fafafa; }
+  .empty { color: #888; font-style: italic; }
+  .unavailable { color: #a00; }
+  .tiles { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .tile { border: 1px solid #ccc; border-radius: 3px; padding: 3px 8px; font-size: 12px; }
+  .caveat { border-left: 3px solid #a00; background: #fff5f5; color: #7a0000;
             padding: 8px 10px; font-size: 12px; margin-bottom: 16px; }
-
-  /* Tables */
-  table { border-collapse: collapse; width: 100%; margin-bottom: 24px;
-          font-size: 12.5px; }
-  th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left;
-           vertical-align: top; }
-  th { background: var(--head-bg); font-weight: 600; font-size: 11.5px;
-       white-space: nowrap; }
-  tbody tr:nth-child(even) { background: var(--row-alt); }
-  .pool-name { font-weight: 700; font-size: 12.5px; background: #eef0f3;
-               letter-spacing: 0.01em; }
-  .empty { color: var(--empty); font-style: italic; font-size: 12px; padding: 10px; }
-  .unavailable { color: var(--err); }
-
-  /* Patch sheet: fixed column proportions */
-  .patch-table col.col-slot { width: 52px; }
-  .patch-table col.col-name { width: 28%; }
-  .patch-table col.col-univ { width: 72px; }
-  .patch-table col.col-addr { width: 72px; }
-  .patch-table col.col-type { width: 24%; }
-  .patch-table col.col-mode { width: 18%; }
-  .patch-table td:nth-child(1),
-  .patch-table td:nth-child(3),
-  .patch-table td:nth-child(4) { text-align: center; font-variant-numeric: tabular-nums; }
-
-  /* Pool listing (cue sheet / preset list): fixed column proportions */
-  .pool-table col.col-no { width: 56px; }
-  .pool-table col.col-val { }
-  .pool-table td:first-child { text-align: center; font-variant-numeric: tabular-nums; }
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 3px;
+           font-size: 11px; margin-left: 6px; }
+  .badge-truncated { background: #fff3cd; color: #7a5b00; }
   @media print {
-    body { margin: 0.4in; padding: 0; }
-    .sheet { max-width: none; }
+    body { margin: 0.5in; box-shadow: none; }
     thead { display: table-header-group; }
     tr, .meta, .caveat { break-inside: avoid; }
-    table { break-inside: auto; }
     * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   }
 """
@@ -89,17 +52,25 @@ def _page(title: str, body: str) -> str:
 
 
 def _bound_meta(sheet: PatchSheet) -> str:
-    """The channel-width upper-bound line, or nothing."""
+    """The channel-width upper-bound line, or nothing.
+
+    ``bound is None and bound_unavailable is None`` (the ``walk=None``
+    default) renders NO line at all — an unasked question is not the same as
+    an unanswered one, and printing "none" there would misreport a bound that
+    was simply never sought. The asymmetric qualifier stays in the SAME
+    sentence as the value on purpose (OVERLAP-001 M5): a reader who reads
+    only the first clause must still see the "below is unsettled" half.
+    """
     if sheet.bound is not None:
         source = f" (source: {escape(sheet.bound_source)})" if sheet.bound_source else ""
         return (
-            '<div class="meta">채널폭 상계: '
-            f"{sheet.bound}{source} — 이 값 이상의 간격은 겹침 없음 확인; "
-            "이하는 미확정.</div>\n"
+            '<div class="meta">Channel-width upper bound: '
+            f"{sheet.bound}{source} — gaps at or above this bound cannot overlap; "
+            "gaps below it are unsettled, not confirmed clear.</div>\n"
         )
     if sheet.bound_unavailable is not None:
         return (
-            '<div class="meta unavailable">채널폭 상계 미확인: '
+            '<div class="meta unavailable">Channel-width upper bound not established: '
             f"{escape(sheet.bound_unavailable)}</div>\n"
         )
     return ""
@@ -126,20 +97,14 @@ def render_patch_sheet(sheet: PatchSheet) -> str:
         else ""
     )
     body = (
-        '<div class="title-row">'
-        f"<h1>Patch Sheet</h1>{incomplete_badge}</div>\n"
-        f'<div class="meta">{escape(sheet.root)} · '
-        f"관측 {sheet.observed_count} / 선언 {sheet.child_count}대 · "
-        f"{escape(sheet.completeness)}</div>\n"
+        f"<h1>Patch Sheet{incomplete_badge}</h1>\n"
+        f'<div class="meta">Root: {escape(sheet.root)} · '
+        f"{sheet.observed_count} of {sheet.child_count} fixtures observed · "
+        f"completeness: {escape(sheet.completeness)}</div>\n"
         f"{_bound_meta(sheet)}"
-        '<table class="patch-table">\n'
-        "<colgroup>"
-        '<col class="col-slot"><col class="col-name"><col class="col-univ">'
-        '<col class="col-addr"><col class="col-type"><col class="col-mode">'
-        "</colgroup>\n"
-        "<thead><tr>"
-        "<th>Slot</th><th>Name</th><th>Univ</th>"
-        "<th>Addr</th><th>Fixture Type</th><th>Mode</th>"
+        "<table>\n<thead><tr>"
+        "<th>Slot</th><th>Name</th><th>Universe</th><th>Address</th>"
+        "<th>Fixture Type</th><th>Mode</th>"
         "</tr></thead>\n<tbody>\n"
         f"{rows_html}"
         "</tbody>\n</table>\n"
