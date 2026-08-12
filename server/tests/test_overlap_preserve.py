@@ -85,6 +85,25 @@ _RULEBOOK_LOCKED_ASSETS = (
 )
 _RULEBOOK_GRANTED_ADDITION = "server/rulebook/assets/v2.4.2/32_spatial_design.md"
 
+#: 2026-08-12 granted exception — SPEC-COPILOT-DEPLOY-001's OSC zero-touch
+#: bootstrap section (``console/lua/README.md`` § 1.-1) documents a
+#: live-verified onPC 2.4.2 platform limitation (the OSC ``Interface`` field
+#: has no command-line or file-import path — ``Set 'ShowData'.'OSCBase'
+#: 'Interface' "lo0"`` returns ``Illegal value``) and the template-showfile
+#: workaround discovered in that same live session. ``console/lua/`` stays a
+#: locked boundary for the responder's SOURCE and WIRE CONTRACT — those three
+#: files are named here and still fail the gate on any byte of drift — but
+#: README.md is operator-facing prose, not code or protocol, and freezing it
+#: forever would make it actively misleading as the app's setup requirements
+#: keep being discovered live. Swapped out of the directory sweep the same
+#: way ``server/looks/library/`` and the rulebook directory are.
+_CONSOLE_LUA_DIR = "console/lua/"
+_CONSOLE_LUA_LOCKED_ASSETS = (
+    "console/lua/copilot_responder.lua",
+    "console/lua/copilot_responder.xml",
+    "console/lua/PROTOCOL.md",
+)
+
 #: 2026-08-02 granted exception — the upstream vocabulary extension
 #: (docs/proposals/2026-08-02-upstream-vocabulary-extension-proposal.md §6,
 #: user-approved, lightweight track). ``server/looks/library/`` stays a locked
@@ -198,12 +217,15 @@ def _git(*arguments: str) -> str:
 
 
 def _preserve_diff_command() -> list[str]:
-    # Two granted extensions are checked by their own narrower gates below: the
-    # looks-library one by exact line text, the rulebook one by named added path
-    # plus zero deletions. Every OTHER preserved path must still diff empty, and
-    # the rulebook's five EXISTING assets are named here so they keep doing so.
+    # Three granted extensions are checked by their own narrower gates below:
+    # the looks-library one by exact line text, the rulebook and console-lua
+    # ones by named locked assets (added path / untouched assets
+    # respectively). Every OTHER preserved path must still diff empty, and
+    # each grant's named assets are listed here so they keep doing so.
     paths = tuple(
-        path for path in _PRESERVE_PATHS if path not in (_LOOKS_LIBRARY_DIR, _RULEBOOK_DIR)
+        path
+        for path in _PRESERVE_PATHS
+        if path not in (_LOOKS_LIBRARY_DIR, _RULEBOOK_DIR, _CONSOLE_LUA_DIR)
     )
     return [
         "git",
@@ -213,6 +235,7 @@ def _preserve_diff_command() -> list[str]:
         "--",
         *paths,
         *_RULEBOOK_LOCKED_ASSETS,
+        *_CONSOLE_LUA_LOCKED_ASSETS,
     ]
 
 
@@ -272,17 +295,26 @@ class TestPreserveDiffIsEmpty:
         command = _preserve_diff_command()
         assert command[:4] == ["git", "diff", "--stat", f"{_PRECHK_BASE}..HEAD"]
         assert command[4] == "--"
-        # Both granted extensions are swapped out of the directory sweep and
+        # Three granted extensions are swapped out of the directory sweep and
         # re-entered as the narrower thing that IS still locked: the looks
         # library by its own exact-text gate, the rulebook by its five named
-        # existing assets.
+        # existing assets, console/lua by its three named source/protocol
+        # assets.
         assert tuple(command[5:]) == (
-            *(path for path in _PRESERVE_PATHS if path not in (_LOOKS_LIBRARY_DIR, _RULEBOOK_DIR)),
+            *(
+                path
+                for path in _PRESERVE_PATHS
+                if path not in (_LOOKS_LIBRARY_DIR, _RULEBOOK_DIR, _CONSOLE_LUA_DIR)
+            ),
             *_RULEBOOK_LOCKED_ASSETS,
+            *_CONSOLE_LUA_LOCKED_ASSETS,
         )
-        # The swap must not silently drop the rulebook from the gate entirely.
+        # The swap must not silently drop the rulebook/console-lua boundary
+        # from the gate entirely.
         assert _RULEBOOK_DIR not in command
+        assert _CONSOLE_LUA_DIR not in command
         assert all(asset in command for asset in _RULEBOOK_LOCKED_ASSETS)
+        assert all(asset in command for asset in _CONSOLE_LUA_LOCKED_ASSETS)
         # Explicitly NOT this SPEC's base: that range is empty right after the
         # work is committed, which disables the gate while keeping it green.
         assert _PRECHK_BASE != _OVERLAP_BASE
@@ -333,6 +365,35 @@ class TestRulebookGrantedAddition:
         # Stated directly as well as via the emptiness gate: this is the claim
         # the whole grant rests on, and it should be readable on its own.
         assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", *_RULEBOOK_LOCKED_ASSETS) == ""
+
+
+class TestConsoleLuaReadmeGrantedException:
+    """The 2026-08-12 grant — README.md only, the responder source/wire untouched.
+
+    Not a weakening: the three locked assets are named in
+    :func:`_preserve_diff_command`, so touching the Lua source, its plugin
+    wrapper, or the wire protocol still fails the emptiness gate above. This
+    class bounds the other side — the directory-level diff may show ONLY
+    README.md, nothing else.
+    """
+
+    def test_the_locked_console_lua_assets_are_byte_identical(self):
+        # Stated directly as well as via the emptiness gate: this is the claim
+        # the whole grant rests on, and it should be readable on its own.
+        assert (
+            _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", *_CONSOLE_LUA_LOCKED_ASSETS) == ""
+        )
+
+    def test_the_only_console_lua_change_is_the_readme(self):
+        rows = _numstat(_PRECHK_BASE, _CONSOLE_LUA_DIR)
+        assert set(rows) == {"console/lua/README.md"}
+
+    def test_the_grant_is_not_an_empty_exemption(self):
+        # Non-vacuity, this module's own standard: both assertions above are
+        # satisfied by an untouched directory too, since `console/lua/` is
+        # filtered out of `_preserve_diff_command()`. Pin that the directory
+        # really did change.
+        assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", _CONSOLE_LUA_DIR) != ""
 
 
 class TestLooksLibraryGrantedExtension:
