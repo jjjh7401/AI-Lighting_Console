@@ -288,9 +288,11 @@ describe("PaperworkPanelView — ① 4종 렌더", () => {
     results: {} as Record<string, PaperworkSummary | null>,
     busyKind: null as PaperworkKind | null,
     previewKind: null as PaperworkKind | null,
+    notice: null,
     onGenerate: vi.fn(),
     onPreview: vi.fn(),
     onDownload: vi.fn(),
+    onClose: vi.fn(),
     ...overrides,
   });
 

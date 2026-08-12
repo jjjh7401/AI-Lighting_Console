@@ -85,6 +85,7 @@ class SettingsDeps:
     provider_slot: ProviderSlot | None = None
     provider_config_path: Path | None = None
 
+
 # @MX:NOTE: [AUTO] keys are read transiently only to derive a boolean presence
 #   flag — the key VALUE is never returned to the caller (and thus never to the
 #   client). Preserving this "boolean, not value" contract is what keeps GET
@@ -120,6 +121,7 @@ def _provider_key_status(deps: SettingsDeps) -> tuple[dict[str, bool], bool]:
 #   gate would open an ungated console-command path (a safety regression); the
 #   source-scan guard in test_web_settings_api.py enforces the boundary.
 # @MX:SPEC: SPEC-COPILOT-DEPLOY-001
+
 
 def _claude_code_auth_status() -> dict:
     """Return public subscription-login state; never return a credential."""
@@ -165,6 +167,7 @@ def _active_model_id(deps: SettingsDeps, settings) -> str | None:
         return None
     config = load_provider_config(deps.provider_config_path)
     return getattr(config, settings.active_provider).model
+
 
 def build_settings_router(deps: SettingsDeps) -> APIRouter:
     """Build the settings/key REST router around one composed dependency set."""

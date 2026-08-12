@@ -165,9 +165,7 @@ class TestReceivePortFailureReachesTheOperator:
         # bridge-local ReceivePortInUseError, which nothing in server/web,
         # ui/src or src-tauri has ever referenced — so it escaped uncaught.
         with _occupy_osc_receive_port() as port:
-            args = parse_args(
-                ["--receive-port", str(port), "--no-session-backup", "--port", "0"]
-            )
+            args = parse_args(["--receive-port", str(port), "--no-session-backup", "--port", "0"])
             with pytest.raises(PortInUseError) as excinfo:
                 build_runtime(args)
         err = excinfo.value
@@ -311,9 +309,13 @@ class TestFallbackTargetProviderWiring:
         finally:
             stack.stop()
 
-    def test_target_provider_configured_wires_a_switchable_provider(self, tmp_path):
+    def test_target_provider_configured_wires_a_switchable_provider(self, monkeypatch, tmp_path):
         from server.orchestrator.runner import SwitchableProvider
 
+        monkeypatch.setattr(
+            "server.deploy.settings.user_settings_path",
+            lambda *a, **k: tmp_path / "absent.toml",
+        )
         config_path = tmp_path / "provider.toml"
         config_path.write_text(
             '[provider]\nactive = "anthropic"\n\n'

@@ -1181,6 +1181,7 @@ _EXPECTED_WEB_ROUTES = (
     ("provision_api.py", "router.post", "/api/provision/responder"),
     ("settings_api.py", "router.delete", "/api/keys/{provider}"),
     ("settings_api.py", "router.get", "/api/settings"),
+    ("settings_api.py", "router.post", "/api/claude-code/login"),
     ("settings_api.py", "router.post", "/api/keys"),
     ("settings_api.py", "router.post", "/api/settings"),
 )

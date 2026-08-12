@@ -139,9 +139,7 @@ class ClaudeCodeAdapter:
             _conversation_text(conversation),
         ]
         try:
-            result = self._runner(
-                command, capture_output=True, text=True, timeout=120, check=False
-            )
+            result = self._runner(command, capture_output=True, text=True, timeout=120, check=False)
         except subprocess.TimeoutExpired as exc:
             raise ProviderError(
                 kind="connection",
@@ -158,11 +156,7 @@ class ClaudeCodeAdapter:
             ) from exc
         if result.returncode != 0:
             detail = (result.stderr or result.stdout or "Claude Code failed").strip()
-            kind = (
-                "auth"
-                if "login" in detail.lower() or "auth" in detail.lower()
-                else "server"
-            )
+            kind = "auth" if "login" in detail.lower() or "auth" in detail.lower() else "server"
             raise ProviderError(
                 kind=kind,
                 provider=PROVIDER_NAME,
