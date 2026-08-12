@@ -161,11 +161,30 @@ export function parsePaperworkGenerateResponse(
   return { ok: false, message };
 }
 
-/** Best-effort `file://` URL for the [브라우저에서 열기] button. The path is
- * an OS-absolute filesystem path (server/paperwork/output.py never returns
- * a relative one), so this is a plain URI-encode, not a path resolver. */
-export function fileUrlForPath(path: string): string {
-  return `file://${encodeURI(path)}`;
+/** URL for the in-app iframe preview (GET /api/paperwork/:kind/content). */
+export function contentUrl(kind: PaperworkKind): string {
+  return apiUrl(`/api/paperwork/${kind}/content`);
+}
+
+/** URL for the file download (GET /api/paperwork/:kind/download). */
+export function downloadUrl(kind: PaperworkKind): string {
+  return apiUrl(`/api/paperwork/${kind}/download`);
+}
+
+/** Kind-specific stat line shown below the label after generation. */
+export function paperworkStatLine(kind: PaperworkKind, summary: PaperworkSummary): string {
+  if (kind === "patch_sheet") {
+    const n = summary.fixture_count ?? 0;
+    return `픽스처 ${n}대`;
+  }
+  if (kind === "cue_sheet") {
+    const seq = summary.sequence_count ?? 0;
+    const cue = summary.cue_count ?? 0;
+    return `시퀀스 ${seq}개 · 큐 ${cue}개`;
+  }
+  const pool = summary.pool_count ?? 0;
+  const preset = summary.preset_count ?? 0;
+  return `풀 ${pool}개 · 프리셋 ${preset}개`;
 }
 
 // -- fetch wrappers (thin — call + parse, no React) ---------------------------
@@ -188,27 +207,38 @@ export interface PaperworkCardProps {
   meta: PaperworkKindMeta;
   result: PaperworkSummary | null;
   busy: boolean;
+  previewing: boolean;
   onGenerate: (kind: PaperworkKind) => void;
-  onOpenInBrowser: (path: string) => void;
+  onPreview: (kind: PaperworkKind) => void;
+  onDownload: (kind: PaperworkKind) => void;
 }
 
-export function PaperworkCard({ meta, result, busy, onGenerate, onOpenInBrowser }: PaperworkCardProps) {
+export function PaperworkCard({
+  meta,
+  result,
+  busy,
+  previewing,
+  onGenerate,
+  onPreview,
+  onDownload,
+}: PaperworkCardProps) {
   const badges = result !== null ? paperworkBadges(meta.kind, result) : [];
+  const stat = result !== null ? paperworkStatLine(meta.kind, result) : null;
   return (
-    <div className="paperwork-card" data-kind={meta.kind}>
+    <div className={`paperwork-card${previewing ? " paperwork-card-active" : ""}`} data-kind={meta.kind}>
       <div className="paperwork-card-head">
         <span className="paperwork-card-label">{meta.label}</span>
+        {stat !== null && <span className="paperwork-card-stat">{stat}</span>}
         <button
           className="paperwork-card-generate"
           disabled={busy}
           onClick={() => onGenerate(meta.kind)}
         >
-          {busy ? "생성 중…" : "생성"}
+          {busy ? "생성 중…" : result !== null ? "새로고침" : "생성"}
         </button>
       </div>
       {result !== null && (
-        <div className="paperwork-card-result">
-          <code className="paperwork-card-path">{result.path}</code>
+        <div className="paperwork-card-actions">
           {badges.length > 0 && (
             <div className="paperwork-card-badges">
               {badges.map((badge) => (
@@ -218,12 +248,17 @@ export function PaperworkCard({ meta, result, busy, onGenerate, onOpenInBrowser 
               ))}
             </div>
           )}
-          <button
-            className="paperwork-card-open"
-            onClick={() => onOpenInBrowser(result.path)}
-          >
-            브라우저에서 열기
-          </button>
+          <div className="paperwork-card-buttons">
+            <button
+              className={`paperwork-card-preview${previewing ? " paperwork-card-preview-active" : ""}`}
+              onClick={() => onPreview(meta.kind)}
+            >
+              {previewing ? "닫기" : "미리보기"}
+            </button>
+            <button className="paperwork-card-download" onClick={() => onDownload(meta.kind)}>
+              ↓ 다운로드
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -234,8 +269,10 @@ export interface PaperworkPanelViewProps {
   results: Record<string, PaperworkSummary | null>;
   busyKind: PaperworkKind | null;
   notice: string | null;
+  previewKind: PaperworkKind | null;
   onGenerate: (kind: PaperworkKind) => void;
-  onOpenInBrowser: (path: string) => void;
+  onPreview: (kind: PaperworkKind) => void;
+  onDownload: (kind: PaperworkKind) => void;
   onClose: () => void;
 }
 
@@ -243,8 +280,10 @@ export function PaperworkPanelView({
   results,
   busyKind,
   notice,
+  previewKind,
   onGenerate,
-  onOpenInBrowser,
+  onPreview,
+  onDownload,
   onClose,
 }: PaperworkPanelViewProps) {
   return (
@@ -255,9 +294,6 @@ export function PaperworkPanelView({
           ✕
         </button>
       </header>
-      <p className="paperwork-hint">
-        생성한 문서는 브라우저에서 열어 ⌘P → PDF로 저장할 수 있습니다.
-      </p>
       {notice !== null && <div className="paperwork-notice">{notice}</div>}
       <div className="paperwork-cards">
         {PAPERWORK_KINDS.map((meta) => (
@@ -266,11 +302,22 @@ export function PaperworkPanelView({
             meta={meta}
             result={results[meta.kind] ?? null}
             busy={busyKind === meta.kind}
+            previewing={previewKind === meta.kind}
             onGenerate={onGenerate}
-            onOpenInBrowser={onOpenInBrowser}
+            onPreview={onPreview}
+            onDownload={onDownload}
           />
         ))}
       </div>
+      {previewKind !== null && (
+        <div className="paperwork-preview">
+          <iframe
+            className="paperwork-preview-frame"
+            src={contentUrl(previewKind)}
+            title={PAPERWORK_KINDS.find((m) => m.kind === previewKind)?.label ?? "미리보기"}
+          />
+        </div>
+      )}
     </section>
   );
 }
@@ -281,6 +328,7 @@ export function PaperworkPanel({ onClose }: { onClose: () => void }) {
   const [results, setResults] = useState<Record<string, PaperworkSummary | null>>({});
   const [busyKind, setBusyKind] = useState<PaperworkKind | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [previewKind, setPreviewKind] = useState<PaperworkKind | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -302,6 +350,8 @@ export function PaperworkPanel({ onClose }: { onClose: () => void }) {
       const outcome = await generatePaperworkDocument(kind);
       if (outcome.ok) {
         setResults((current) => ({ ...current, [kind]: outcome.summary }));
+        // Auto-open preview after successful generation
+        setPreviewKind(kind);
       } else {
         setNotice(outcome.message);
       }
@@ -313,15 +363,26 @@ export function PaperworkPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const togglePreview = (kind: PaperworkKind) => {
+    setPreviewKind((current) => (current === kind ? null : kind));
+  };
+
+  const triggerDownload = (kind: PaperworkKind) => {
+    const link = document.createElement("a");
+    link.href = downloadUrl(kind);
+    link.download = `${kind}.html`;
+    link.click();
+  };
+
   return (
     <PaperworkPanelView
       results={results}
       busyKind={busyKind}
       notice={notice}
+      previewKind={previewKind}
       onGenerate={(kind) => void generate(kind)}
-      onOpenInBrowser={(path) => {
-        window.open(fileUrlForPath(path), "_blank");
-      }}
+      onPreview={togglePreview}
+      onDownload={triggerDownload}
       onClose={onClose}
     />
   );
