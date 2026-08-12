@@ -17,6 +17,7 @@ client (`ui/`), and the M6 measurement harness. Executable half:
 | type | fields | meaning |
 |---|---|---|
 | `chat` | `text: string` (non-empty) | One Korean instruction. The server processes ONE instruction at a time; a second `chat` while busy gets a `busy` event. |
+| `vectorworks_export_upload` | `file_name: string`, `content_base64: string` | Vectorworks Instrument Data export (`.csv`, `.txt`, `.xlsx`, or `.mvr`, non-empty and ≤8 MiB). Replaces this connection's source and immediately starts guided comparison. Raw bytes stay session-local; the model calls `vectorworks_autopatch` rather than receiving base64 or asking the operator to paste it. |
 | `approval_decision` | `request_id: string`, `approved: bool` | The human decision for a pending `approval_request`. Unknown/expired ids get an `error` (kind `protocol`). |
 | `review_decision` | `request_id: string`, `approved: bool` | (M7, additive) The human decision for a pending `review_request` (deploy review). Unknown/expired ids get an `error` (kind `protocol`). |
 | `lock` | `active: bool` | Live-lock toggle (REQ-MVP-016). Effective immediately — including while an approval is pending (lock-first, REQ-MVP-035). |

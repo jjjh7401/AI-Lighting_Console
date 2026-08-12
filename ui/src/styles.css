@@ -693,6 +693,14 @@ body {
   font-size: 12px;
 }
 
+.composer-upload-error {
+  color: #ff9f43;
+}
+
+.composer-file-input {
+  display: none;
+}
+
 .composer input {
   flex: 1;
   padding: 10px 12px;
@@ -710,6 +718,12 @@ body {
   background: var(--accent);
   color: #fff;
   cursor: pointer;
+}
+
+.composer button.composer-upload {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
 }
 
 .composer button:disabled {
@@ -1834,4 +1848,54 @@ body {
 .cue-monitor-history-empty {
   color: var(--muted);
   font-size: 13px;
+}
+
+/* [round24] 질문 카드 — 모델이 추측 대신 되묻는 자리. */
+.question-card {
+  border-left: 3px solid #f0b400;
+}
+.question-prompt {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.question-why {
+  margin: 0 0 10px;
+  font-size: 13px;
+  opacity: 0.75;
+}
+.question-steps {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.question-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.question-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.question-option-label {
+  font-weight: 600;
+}
+.question-option-desc {
+  font-size: 12px;
+  opacity: 0.7;
+}
+.question-freeform {
+  display: flex;
+  gap: 6px;
+}
+.question-freeform input {
+  flex: 1;
+  padding: 8px 10px;
 }

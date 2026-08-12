@@ -13,11 +13,16 @@ from pathlib import Path
 import pytest
 
 from server.deploy.provisioning import (
+    OSC_TEMPLATE_ASSETS,
     RESPONDER_ASSETS,
     InstallResult,
     ProvisioningError,
+    bundled_osc_template_dir,
     bundled_responder_dir,
+    install_osc_templates,
     install_responder,
+    osc_bootstrap_guide,
+    osc_template_status,
     read_installed_osc_slot,
     responder_guide,
     responder_status,
@@ -106,18 +111,14 @@ class TestOscSlotIsRenderedFromSettings:
     def test_the_configured_slot_lands_in_the_installed_lua(self, tmp_path):
         import_dir = tmp_path / "plugins"
         install_responder(import_dir, osc_slot=2)
-        assert self._slot_line(import_dir / "copilot_responder.lua").startswith(
-            "osc_slot = 2,"
-        )
+        assert self._slot_line(import_dir / "copilot_responder.lua").startswith("osc_slot = 2,")
 
     def test_reinstall_does_not_revert_the_site_slot(self, tmp_path):
         # The actual reported defect, as a regression test.
         import_dir = tmp_path / "plugins"
         install_responder(import_dir, osc_slot=2)
         install_responder(import_dir, osc_slot=2)
-        assert self._slot_line(import_dir / "copilot_responder.lua").startswith(
-            "osc_slot = 2,"
-        )
+        assert self._slot_line(import_dir / "copilot_responder.lua").startswith("osc_slot = 2,")
 
     def test_omitting_the_slot_keeps_the_bundled_default(self, tmp_path):
         # Callers that do not care must get byte-identical behaviour.
@@ -168,9 +169,7 @@ class TestOscSlotIsRenderedFromSettings:
         source = tmp_path / "src"
         source.mkdir()
         (source / "copilot_responder.xml").write_text("<xml/>", encoding="utf-8")
-        (source / "copilot_responder.lua").write_text(
-            "local CONFIG = {}\n", encoding="utf-8"
-        )
+        (source / "copilot_responder.lua").write_text("local CONFIG = {}\n", encoding="utf-8")
         with pytest.raises(ProvisioningError):
             install_responder(tmp_path / "plugins", osc_slot=2, source_dir=source)
 
@@ -225,6 +224,139 @@ class TestResponderGuide:
         guide = responder_guide(9123)
         assert guide["receive_port"] == 9123
         assert "9123" in " ".join(guide["steps"])
+
+
+class TestBundledOscTemplates:
+    def test_bundled_dir_contains_the_osc_template_assets(self):
+        bundle = bundled_osc_template_dir()
+        assert bundle.is_dir()
+        for name in OSC_TEMPLATE_ASSETS:
+            assert (bundle / name).is_file(), f"missing bundled OSC template: {name}"
+
+    def test_asset_set_is_the_receive_and_send_row_pair(self):
+        assert set(OSC_TEMPLATE_ASSETS) == {
+            "copilot_osc_row1_receive.xml",
+            "copilot_osc_row2_send.xml",
+        }
+
+    def test_frozen_bundle_dir_resolves_under_meipass(self, monkeypatch):
+        import sys
+
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", "/frozen/app", raising=False)
+        resolved = bundled_osc_template_dir()
+        assert resolved == Path("/frozen/app") / "console" / "osc"
+
+
+class TestInstallOscTemplates:
+    def test_install_copies_every_template_into_the_import_dir(self, tmp_path):
+        import_dir = tmp_path / "osc"
+        result = install_osc_templates(import_dir)
+        assert set(result.installed) == set(OSC_TEMPLATE_ASSETS)
+        assert result.import_dir == str(import_dir)
+        for name in OSC_TEMPLATE_ASSETS:
+            assert (import_dir / name).is_file()
+
+    def test_install_raises_when_a_bundled_template_is_missing(self, tmp_path):
+        empty_source = tmp_path / "empty"
+        empty_source.mkdir()
+        with pytest.raises(ProvisioningError):
+            install_osc_templates(tmp_path / "osc", source_dir=empty_source)
+
+    def test_install_from_an_explicit_source_dir(self, tmp_path):
+        source = tmp_path / "src"
+        source.mkdir()
+        for name in OSC_TEMPLATE_ASSETS:
+            (source / name).write_text('Port="1"', encoding="utf-8")
+        import_dir = tmp_path / "osc"
+
+        result = install_osc_templates(import_dir, source_dir=source)
+
+        assert set(result.installed) == set(OSC_TEMPLATE_ASSETS)
+        for name in OSC_TEMPLATE_ASSETS:
+            assert (import_dir / name).read_text(encoding="utf-8") == 'Port="1"'
+
+
+class TestOscTemplatePortsAreRenderedFromSettings:
+    """Row 1 must track console_port (the send target OscBridge uses) and row 2
+    must track receive_port (this app's bound feedback listener) — both are
+    per-site settings, exactly like osc_slot is for the responder Lua."""
+
+    def test_row1_port_renders_from_console_port(self, tmp_path):
+        import_dir = tmp_path / "osc"
+        install_osc_templates(import_dir, console_port=8123)
+        text = (import_dir / "copilot_osc_row1_receive.xml").read_text(encoding="utf-8")
+        assert 'Port="8123"' in text
+        assert 'Prefix="copilot"' in text  # untouched by the substitution
+
+    def test_row2_port_renders_from_receive_port(self, tmp_path):
+        import_dir = tmp_path / "osc"
+        install_osc_templates(import_dir, receive_port=9456)
+        text = (import_dir / "copilot_osc_row2_send.xml").read_text(encoding="utf-8")
+        assert 'Port="9456"' in text
+
+    def test_reinstall_re_renders_to_the_new_ports(self, tmp_path):
+        import_dir = tmp_path / "osc"
+        install_osc_templates(import_dir, console_port=8000, receive_port=9000)
+        install_osc_templates(import_dir, console_port=8001, receive_port=9001)
+        row1 = (import_dir / "copilot_osc_row1_receive.xml").read_text(encoding="utf-8")
+        row2 = (import_dir / "copilot_osc_row2_send.xml").read_text(encoding="utf-8")
+        assert 'Port="8001"' in row1
+        assert 'Port="9001"' in row2
+
+    def test_omitting_a_port_keeps_the_bundled_default_byte_identical(self, tmp_path):
+        import_dir = tmp_path / "osc"
+        install_osc_templates(import_dir)
+        row1 = (import_dir / "copilot_osc_row1_receive.xml").read_bytes()
+        row2 = (import_dir / "copilot_osc_row2_send.xml").read_bytes()
+        bundle = bundled_osc_template_dir()
+        assert row1 == (bundle / "copilot_osc_row1_receive.xml").read_bytes()
+        assert row2 == (bundle / "copilot_osc_row2_send.xml").read_bytes()
+
+    def test_a_template_without_a_port_attribute_fails_loudly(self, tmp_path):
+        source = tmp_path / "src"
+        source.mkdir()
+        (source / "copilot_osc_row1_receive.xml").write_text(
+            "<GMA3><OSCData/></GMA3>", encoding="utf-8"
+        )
+        (source / "copilot_osc_row2_send.xml").write_text(
+            "<GMA3><OSCData/></GMA3>", encoding="utf-8"
+        )
+        with pytest.raises(ProvisioningError):
+            install_osc_templates(tmp_path / "osc", source_dir=source, console_port=8000)
+
+
+class TestOscTemplateStatus:
+    def test_status_is_false_before_install_true_after(self, tmp_path):
+        import_dir = tmp_path / "osc"
+        before = osc_template_status(import_dir)
+        assert before == {name: False for name in OSC_TEMPLATE_ASSETS}
+
+        install_osc_templates(import_dir)
+        after = osc_template_status(import_dir)
+        assert after == {name: True for name in OSC_TEMPLATE_ASSETS}
+
+
+class TestOscBootstrapGuide:
+    def test_guide_carries_both_ports_and_the_manual_interface_step(self):
+        # The Interface/Enable toggles have no export/import path in onPC
+        # 2.4.2 (AC-DEPLOY-011a lineage) — the guide must still name them so
+        # the operator does not silently skip the step that actually broke
+        # connectivity in the 2026-08-12 live session (en0 vs lo0).
+        guide = osc_bootstrap_guide(8000, 9005)
+        assert guide["console_port"] == 8000
+        assert guide["receive_port"] == 9005
+        joined = " ".join(guide["steps"])
+        assert "8000" in joined
+        assert "9005" in joined
+        assert "lo0" in joined
+        assert "Enable Output" in joined and "Enable Input" in joined
+
+    def test_guide_reflects_custom_ports(self):
+        guide = osc_bootstrap_guide(8100, 9200)
+        joined = " ".join(guide["steps"])
+        assert "8100" in joined
+        assert "9200" in joined
 
 
 # ------------------------------------------------------------------ SAFETY: no OSC surface

@@ -20,6 +20,7 @@ thread-safe (the app wraps the WebSocket send accordingly).
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 
 from server.deploy.review import ReviewRequest
 from server.llm.types import LLMProvider, ToolCall
@@ -45,10 +46,12 @@ from server.web.messages import (
     execution_preview_event,
     notice_event,
     proposal_event,
+    question_request_event,
     review_request_event,
     status_event,
 )
 from server.web.preview import build_execution_preview
+from server.web.question import QuestionChannel, QuestionRequest
 from server.web.reply_discovery import ReplyPortMismatch
 
 # The gate's unconfirmed-execution marker (REQ-MVP-032). String contract pinned
@@ -85,6 +88,33 @@ _TURN_STATUS_SUMMARY: dict[str, str] = {
     "retries_exhausted": "자가 수정 3회 한도에 도달하여 실행에 실패했습니다.",
     "loop_limit": "모델 호출 한도를 초과하여 중단했습니다.",
 }
+
+
+@dataclass
+class _UploadedVectorworksExport:
+    """Ephemeral source/report pair for one WebSocket conversation."""
+
+    content_base64: str | None = None
+    file_name: str | None = None
+    report: dict[str, object] | None = None
+
+    def replace(self, file_name: str, content_base64: str) -> None:
+        self.content_base64 = content_base64
+        self.file_name = file_name
+        self.report = None
+
+    def clear(self) -> None:
+        self.content_base64 = None
+        self.file_name = None
+        self.report = None
+
+
+_VECTORWORKS_UPLOAD_INSTRUCTION = (
+    "Vectorworks Instrument Data export를 업로드했습니다. "
+    "vectorworks_autopatch로 먼저 도면과 현재 콘솔을 대조하고, 자동 패치 가능한 항목을 "
+    "정리해 주세요. 반드시 대조 결과에 없는 값은 추측하지 말고 필요한 값만 질문 카드로 "
+    "물어보세요."
+)
 
 
 def outcome_view(outcome: CommandOutcome) -> dict:
@@ -208,6 +238,7 @@ class ChatSession:
         recorder: RoundTripRecorder | None = None,
         rig_paths: dict[str, str] | None = None,
         review_channel: ApprovalChannel | None = None,
+        question_channel: QuestionChannel | None = None,
         deploy_pipeline: DeployPipelinePort | None = None,
         console_input_probe: Callable[[], str] | None = None,
         reply_port_probe: Callable[[], ReplyPortMismatch | None] | None = None,
@@ -223,6 +254,7 @@ class ChatSession:
         self._send = send_event
         self._channel = approval_channel
         self._review_channel = review_channel
+        self._question_channel = question_channel
         self._recorder = recorder
         self._turn_decisions: list[ScreenDecision] = []
         self._preview_counter = 0
@@ -230,6 +262,7 @@ class ChatSession:
         # ACROSS turns (unlike _turn_decisions, this is NOT reset per turn) so a
         # bare follow-up modification can anchor to the real target.
         self._last_created: LastCreated | None = None
+        self._vectorworks_upload = _UploadedVectorworksExport()
         # M6c-1 Finding 1/2: a unique identity for THIS connection, scoping the
         # shared approval_channel/review_channel/gate's per-session state so a
         # sibling ChatSession's disconnect or screening never leaks in.
@@ -237,12 +270,16 @@ class ChatSession:
         approval_channel.bind(self._notify_approval, session_key=self._session_key)
         if review_channel is not None:
             review_channel.bind(self._notify_review, session_key=self._session_key)
+        if question_channel is not None:
+            question_channel.bind(self._notify_question, session_key=self._session_key)
         registry = build_toolset(
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
             bundle_gate=_ObservingBundleGate(gate, self._on_preview, self._on_decision),
             rig_paths=rig_paths,
             deploy_pipeline=deploy_pipeline,
+            question_port=question_channel,
+            vectorworks_upload=self._vectorworks_upload,
             # SPEC-COPILOT-PRESHOW-001 T-G2: reuse the gate's own audited
             # heartbeat as the pre-show OSC checks' liveness probe — no
             # second console link, no new socket. Gated on preshow_receive_port
@@ -275,6 +312,9 @@ class ChatSession:
         self._channel.unbind(session_key=self._session_key)
         if self._review_channel is not None:
             self._review_channel.unbind(session_key=self._session_key)
+        if self._question_channel is not None:
+            self._question_channel.unbind(session_key=self._session_key)
+        self._vectorworks_upload.clear()
 
     # -- event plumbing ----------------------------------------------------------
 
@@ -283,6 +323,9 @@ class ChatSession:
 
     def _notify_review(self, request_id: str, request: ReviewRequest) -> None:
         self._send(review_request_event(request_id=request_id, request=request))
+
+    def _notify_question(self, request_id: str, request: QuestionRequest) -> None:
+        self._send(question_request_event(request_id=request_id, request=request))
 
     def _on_preview(self, commands: Sequence[str]) -> None:
         if not commands:
@@ -470,6 +513,11 @@ class ChatSession:
         finally:
             reset_session_key(token)
 
+    def upload_vectorworks_export(self, file_name: str, content_base64: str) -> dict:
+        """Replace this session's export and immediately start its guided analysis."""
+        self._vectorworks_upload.replace(file_name, content_base64)
+        return self.run_instruction(_VECTORWORKS_UPLOAD_INSTRUCTION)
+
     # -- internals ------------------------------------------------------------------
 
     def _capture_last_created(self, result: InstructionResult) -> None:
@@ -488,26 +536,29 @@ class ChatSession:
             self._last_created = captured
 
     def _session_context_note(self) -> str | None:
-        """The cross-turn note injected before the next instruction (REQ-DEPLOY-030).
-
-        Carries the last-created look's identity AND a regenerate-don't-blind-
-        edit steer. Written as an instruction to the model (English, matching
-        the rulebook system-prefix convention) with the Korean operator phrase
-        as a grounded example. Returns ``None`` when no look has been created."""
+        """Cross-turn grounding for the last look and an uploaded design file."""
+        notes: list[str] = []
         last = self._last_created
-        if last is None or last.sequence is None:
-            return None
-        target = f"Sequence {last.sequence}"
-        if last.executor is not None:
-            target += f" / Executor {last.executor}"
-        return (
-            f"Session context — the last look you created is on {target}. "
-            f'When the user asks to modify that look (e.g. "더 느리게" / make it '
-            f"slower), apply the change to {target} — do NOT target an arbitrary "
-            f"Sequence or Executor (such as Sequence 1 / Executor 1). Prefer "
-            f"regenerating the look on {target} over blind-editing a different "
-            f"target."
-        )
+        if last is not None and last.sequence is not None:
+            target = f"Sequence {last.sequence}"
+            if last.executor is not None:
+                target += f" / Executor {last.executor}"
+            notes.append(
+                f"Session context — the last look you created is on {target}. "
+                f'When the user asks to modify that look (e.g. "더 느리게" / make it '
+                f"slower), apply the change to {target} — do NOT target an arbitrary "
+                f"Sequence or Executor (such as Sequence 1 / Executor 1). Prefer "
+                f"regenerating the look on {target} over blind-editing a different "
+                f"target."
+            )
+        if self._vectorworks_upload.content_base64 is not None:
+            notes.append(
+                "Session context — one Vectorworks export is uploaded for this "
+                "conversation. Its bytes and any completed report are available only "
+                "through vectorworks_autopatch; never request them in chat or infer "
+                "details that tool did not report."
+            )
+        return "\n\n".join(notes) or None
 
     def _report_error(self, exc: Exception) -> dict:
         kind, message = classify_exception(exc)

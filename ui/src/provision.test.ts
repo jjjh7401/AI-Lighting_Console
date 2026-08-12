@@ -6,8 +6,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  OSC_TEMPLATE_ASSETS,
   RESPONDER_ASSETS,
   allInstalled,
+  allOscTemplatesInstalled,
   installSummary,
   parseInstalledList,
   oscSlotWarning,
@@ -72,6 +74,76 @@ describe("allInstalled", () => {
       installed_all: true,
     };
     expect(allInstalled(done)).toBe(true);
+  });
+});
+
+describe("OSC_TEMPLATE_ASSETS", () => {
+  it("is the receive + send row template pair", () => {
+    expect([...OSC_TEMPLATE_ASSETS]).toEqual([
+      "copilot_osc_row1_receive.xml",
+      "copilot_osc_row2_send.xml",
+    ]);
+  });
+});
+
+describe("allOscTemplatesInstalled", () => {
+  it("is false when the field is absent (older backend)", () => {
+    expect(allOscTemplatesInstalled(STATUS)).toBe(false);
+  });
+
+  it("is false when any template is missing", () => {
+    const partial: ResponderStatusResponse = {
+      ...STATUS,
+      osc_templates_installed: {
+        "copilot_osc_row1_receive.xml": true,
+        "copilot_osc_row2_send.xml": false,
+      },
+    };
+    expect(allOscTemplatesInstalled(partial)).toBe(false);
+  });
+
+  it("is true when the server reports osc_templates_installed_all", () => {
+    const done: ResponderStatusResponse = {
+      ...STATUS,
+      osc_templates_installed: {
+        "copilot_osc_row1_receive.xml": true,
+        "copilot_osc_row2_send.xml": true,
+      },
+      osc_templates_installed_all: true,
+    };
+    expect(allOscTemplatesInstalled(done)).toBe(true);
+  });
+});
+
+describe("parseResponderStatus with the OSC bootstrap guide", () => {
+  it("parses osc_bootstrap_guide when present", () => {
+    const withOsc = {
+      ...STATUS,
+      osc_import_dir: "/home/op/osc",
+      osc_template_assets: [...OSC_TEMPLATE_ASSETS],
+      osc_templates_installed: {
+        "copilot_osc_row1_receive.xml": false,
+        "copilot_osc_row2_send.xml": false,
+      },
+      osc_templates_installed_all: false,
+      osc_bootstrap_guide: {
+        console_port: 8000,
+        receive_port: 9000,
+        steps: ["Interface를 lo0 (127.0.0.1)로 설정한다."],
+      },
+    };
+    const parsed = parseResponderStatus(JSON.stringify(withOsc));
+    expect(parsed?.osc_import_dir).toBe("/home/op/osc");
+    expect(parsed?.osc_bootstrap_guide?.console_port).toBe(8000);
+    expect(parsed?.osc_bootstrap_guide?.steps).toContain(
+      "Interface를 lo0 (127.0.0.1)로 설정한다.",
+    );
+  });
+
+  it("still parses when the OSC fields are absent (older backend)", () => {
+    const parsed = parseResponderStatus(JSON.stringify(STATUS));
+    expect(parsed).not.toBeNull();
+    expect(parsed?.osc_bootstrap_guide).toBeUndefined();
   });
 });
 

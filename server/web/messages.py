@@ -11,12 +11,19 @@ reach the orchestrator or the safety gate.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 
 from server.deploy.review import ReviewRequest
 from server.safety.approval import ApprovalRequest
+from server.web.question import QuestionRequest
 
 PROTOCOL_VERSION = 1
+
+VECTORWORKS_UPLOAD_EXTENSIONS = (".csv", ".txt", ".xlsx", ".mvr")
+MAX_VECTORWORKS_UPLOAD_BYTES = 8 * 1024 * 1024
+MAX_VECTORWORKS_UPLOAD_BASE64_LENGTH = ((MAX_VECTORWORKS_UPLOAD_BYTES + 2) // 3) * 4
 
 # The show-control panel's client messages (SPEC-COPILOT-SHOWUI-001 M1). Like
 # the M7 "review_decision" extension before it this is ADDITIVE: the protocol
@@ -56,8 +63,12 @@ CUE_MONITOR_CLIENT_MESSAGE_TYPES = ("cue_monitor_request",)
 # additive extension (deploy review) — protocol version stays 1.
 CLIENT_MESSAGE_TYPES = (
     "chat",
+    "vectorworks_export_upload",
     "approval_decision",
     "review_decision",
+    # [round24 후속] 모델이 되묻고 사용자가 답하는 통로. 승인·검토와 달리
+    # 실패가 「거부」가 아니라 **미응답**이다 — 없는 답을 지어내지 않게 하는 것이 목적.
+    "question_answer",
     "lock",
     "status_request",
     *PANEL_CLIENT_MESSAGE_TYPES,
@@ -147,6 +158,53 @@ def parse_client_message(raw: str) -> dict:
         if not isinstance(text, str) or not text.strip():
             raise ProtocolError("chat.text must be a non-empty string")
         return {"v": PROTOCOL_VERSION, "type": "chat", "text": text}
+
+    if message_type == "vectorworks_export_upload":
+        file_name = message.get("file_name")
+        content_base64 = message.get("content_base64")
+        if not isinstance(file_name, str) or not file_name.strip():
+            raise ProtocolError("vectorworks_export_upload.file_name must be a non-empty string")
+        if not file_name.lower().endswith(VECTORWORKS_UPLOAD_EXTENSIONS):
+            extensions = ", ".join(VECTORWORKS_UPLOAD_EXTENSIONS)
+            raise ProtocolError(
+                f"vectorworks_export_upload.file_name must end with one of: {extensions}"
+            )
+        if not isinstance(content_base64, str) or not content_base64:
+            raise ProtocolError(
+                "vectorworks_export_upload.content_base64 must be a non-empty base64 string"
+            )
+        if len(content_base64) > MAX_VECTORWORKS_UPLOAD_BASE64_LENGTH:
+            raise ProtocolError("vectorworks_export_upload exceeds the 8 MiB limit")
+        try:
+            payload = base64.b64decode(content_base64, validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise ProtocolError(
+                f"vectorworks_export_upload.content_base64 is not valid base64: {error}"
+            ) from error
+        if not payload:
+            raise ProtocolError("vectorworks_export_upload.content_base64 must not decode to empty")
+        if len(payload) > MAX_VECTORWORKS_UPLOAD_BYTES:
+            raise ProtocolError("vectorworks_export_upload exceeds the 8 MiB limit")
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "vectorworks_export_upload",
+            "file_name": file_name.strip(),
+            "content_base64": content_base64,
+        }
+
+    if message_type == "question_answer":
+        request_id = message.get("request_id")
+        answer = message.get("answer")
+        if not isinstance(request_id, str) or not request_id:
+            raise ProtocolError("question_answer.request_id must be a non-empty string")
+        if not isinstance(answer, str) or not answer.strip():
+            raise ProtocolError("question_answer.answer must be a non-empty string")
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "question_answer",
+            "request_id": request_id,
+            "answer": answer,
+        }
 
     if message_type in ("approval_decision", "review_decision"):
         request_id = message.get("request_id")
@@ -304,6 +362,20 @@ def review_request_event(*, request_id: str, request: ReviewRequest) -> dict:
         },
         actions=["approve", "reject"],
     )
+
+
+def question_request_event(*, request_id: str, request: QuestionRequest) -> dict:
+    """모델이 사용자에게 던지는 물음 하나 — 추측 대신 질문.
+
+    ``options``가 비면 자유 입력, 차 있으면 선택지 + 자유 입력이다. 선택지가
+    사용자의 실제 사정을 다 담지 못하는 경우가 실물에서 흔해 자유 입력을 항상 연다.
+    """
+    return _event("question_request", request_id=request_id, **request.to_dict())
+
+
+def question_resolved_event(*, request_id: str, answer: str) -> dict:
+    """답 반향 — UI가 질문 카드를 내린다."""
+    return _event("question_resolved", request_id=request_id, answer=answer)
 
 
 def review_resolved_event(*, request_id: str, approved: bool) -> dict:

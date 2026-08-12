@@ -289,6 +289,18 @@ export type ServerEvent =
       actions: string[];
     } & ReviewRequestView)
   | { v: 1; type: "review_resolved"; request_id: string; approved: boolean }
+  // [round24] 모델이 되묻는 질문 카드. 추측 대신 물으라는 통로 — 답이 없으면
+  // 모델은 "아직 답하지 않았다"를 사실 그대로 받는다(거부가 아니다).
+  | {
+      v: 1;
+      type: "question_request";
+      request_id: string;
+      prompt: string;
+      why: string;
+      steps: string[];
+      options: { label: string; description: string }[];
+    }
+  | { v: 1; type: "question_resolved"; request_id: string; answer: string }
   | {
       v: 1;
       type: "status";
@@ -342,6 +354,8 @@ const SERVER_EVENT_TYPES = new Set([
   "approval_resolved",
   "review_request",
   "review_resolved",
+  "question_request",
+  "question_resolved",
   "status",
   "proposal",
   "error",
@@ -378,6 +392,15 @@ export function buildChat(text: string): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "chat", text });
 }
 
+export function buildVectorworksExportUpload(fileName: string, contentBase64: string): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "vectorworks_export_upload",
+    file_name: fileName,
+    content_base64: contentBase64,
+  });
+}
+
 export function buildApprovalDecision(requestId: string, approved: boolean): string {
   return JSON.stringify({
     v: PROTOCOL_VERSION,
@@ -393,6 +416,15 @@ export function buildReviewDecision(requestId: string, approved: boolean): strin
     type: "review_decision",
     request_id: requestId,
     approved,
+  });
+}
+
+export function buildQuestionAnswer(requestId: string, answer: string): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "question_answer",
+    request_id: requestId,
+    answer,
   });
 }
 
@@ -589,11 +621,20 @@ export interface CueMonitorState {
   stale: boolean;
 }
 
+export interface PendingQuestion {
+  request_id: string;
+  prompt: string;
+  why: string;
+  steps: string[];
+  options: { label: string; description: string }[];
+}
+
 export interface UiState {
   entries: ChatEntry[];
   status: StatusState | null;
   pendingApprovals: PendingApproval[];
   pendingReviews: ReviewRequestView[];
+  pendingQuestions: PendingQuestion[];
   panel: PanelState;
   dash: DashState;
   cueMonitor: CueMonitorState;
@@ -604,6 +645,7 @@ export const initialState: UiState = {
   status: null,
   pendingApprovals: [],
   pendingReviews: [],
+  pendingQuestions: [],
   panel: { items: [], sections: [], running: {}, busy: null },
   dash: { sections: [], lastSyncAt: null, stale: false },
   cueMonitor: { executors: [], history: [], lastSyncAt: null, stale: false },
@@ -652,6 +694,27 @@ export function reduceServerEvent(
       return {
         ...state,
         pendingApprovals: state.pendingApprovals.filter(
+          (pending) => pending.request_id !== event.request_id,
+        ),
+      };
+    case "question_request":
+      return {
+        ...state,
+        pendingQuestions: [
+          ...state.pendingQuestions,
+          {
+            request_id: event.request_id,
+            prompt: event.prompt,
+            why: event.why,
+            steps: event.steps ?? [],
+            options: event.options ?? [],
+          },
+        ],
+      };
+    case "question_resolved":
+      return {
+        ...state,
+        pendingQuestions: state.pendingQuestions.filter(
           (pending) => pending.request_id !== event.request_id,
         ),
       };

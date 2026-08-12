@@ -1206,8 +1206,15 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "panel_pin",
     "panel_stop",
     "panel_unpin",
+    # [round24 후속] 모델이 되묻고 사용자가 답하는 통로. VWX 축이 더한 것이다 —
+    # 이 목록은 「웹 표면이 늘었는지」를 재는 동결 등기라, 정당한 추가도 손으로
+    # 올려야 통과한다(그게 이 게이트의 전부다).
+    "question_answer",
     "review_decision",
     "status_request",
+    # vectorworks_autopatch 대화형 축 (2026-08-12) — 업로드 파일이 세션에
+    # 머물게 하는 채널. PRECHK/OVERLAP 축과 무관한 정당한 확장.
+    "vectorworks_export_upload",
 )
 
 # server -> client: every literal stamped into the outbound ``"type"`` field by
@@ -1226,6 +1233,9 @@ _EXPECTED_SERVER_MESSAGE_TYPES = (
     "panel_catalog",
     "panel_item_state",
     "proposal",
+    # [round24 후속] 질문 카드와 답 반향 — 위 client 쪽과 같은 사유.
+    "question_request",
+    "question_resolved",
     "review_request",
     "review_resolved",
     "status",

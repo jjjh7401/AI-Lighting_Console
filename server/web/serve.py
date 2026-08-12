@@ -58,6 +58,7 @@ from server.web.launcher import (
 )
 from server.web.measure import RoundTripRecorder
 from server.web.provision_api import ProvisionDeps
+from server.web.question import QuestionChannel
 from server.web.reply_discovery import make_reply_port_diagnostic
 from server.web.settings_api import SettingsDeps
 
@@ -344,6 +345,11 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         review_port=review_channel,
     )
 
+    # [round24 후속] 모델이 사용자에게 되묻는 통로. 승인 브리지를 재사용하려다
+    # 실패했다 — 그쪽은 **불리언 결정**을 나르므로 도구가 답 대신 True를 받았다.
+    # 답이 글인 통로는 따로다. 실패는 거부가 아니라 **미응답**이다.
+    question_channel = QuestionChannel(timeout_seconds=args.approval_timeout)
+
     ui_dist = Path(args.ui_dist)
     # M10 Part D: compose the M3/M4 deploy-shell REST routers into WebDeps — the
     # M6 "serve.py composition" obligation (settings_api/provision_api docstrings)
@@ -358,6 +364,7 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         audit=stack.audit,
         approval_channel=channel,
         review_channel=review_channel,
+        question_channel=question_channel,
         deploy_pipeline=deploy_pipeline,
         recorder=recorder,
         ui_dist=ui_dist if ui_dist.is_dir() else None,

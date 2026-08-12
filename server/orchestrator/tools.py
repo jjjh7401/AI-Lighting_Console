@@ -9,9 +9,14 @@ never sends anything.
 
 from __future__ import annotations
 
+import base64
+import binascii
+import io
 import json
 import math
 import re
+import time
+import zipfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
@@ -117,6 +122,79 @@ from server.spatial.presets import (
 )
 from server.spatial.topology import TopologyResult
 from server.spatial.topology import classify as classify_topology
+from server.vwx.address import resolve_all as resolve_vwx_addresses
+from server.vwx.addressfit import Fit, occupants_from_patch_values
+from server.vwx.addressfit import evaluate as evaluate_address_fit
+from server.vwx.addressfit import first_free as first_free_address
+from server.vwx.apply import (
+    CONSOLE_READ_INCOMPLETE,
+    HandoffEntry,
+    build_patch_handoff,
+    console_read_caveat,
+    existing_footprint_skipped_check,
+    read_console_fixtures,
+    screen_console_occupancy,
+    screen_console_read,
+    screen_idempotent,
+    verify_patch,
+)
+from server.vwx.columns import resolve_columns as resolve_vwx_columns
+from server.vwx.diff import compare as compare_vectorworks_rig
+from server.vwx.librarywatch import read_snapshot as read_library_snapshot
+from server.vwx.librarywatch import selection_prompt as fixture_type_selection_prompt
+from server.vwx.librarywatch import wait_for_addition as wait_for_library_addition
+from server.vwx.mvr import SCENE_ENTRY
+from server.vwx.mvr import read as read_mvr
+from server.vwx.patchplan import (
+    ASSUMPTION_71_GO,
+    ASSUMPTION_71_NEGATIVE,
+    build_patch_plan,
+    designed_attributes_by_candidate,
+    plan_addresses,
+    read_existing_fids,
+    validate_assumption_71,
+)
+from server.vwx.reader import read as read_vwx_export
+from server.vwx.report import build_vwx_report
+from server.vwx.rig import build_designed_rig
+from server.vwx.stagedpatch import (
+    DESTINATION_MARKER,
+    HANDOVER_STEPS,
+    HANDOVER_WHY,
+    ZERO_CREATED,
+    free_fids,
+)
+from server.vwx.stagedpatch import judge as judge_staged_patch
+from server.vwx.stagedpatch import plan as staged_plan
+from server.vwx.typemap import TypeRequest, resolve_fixture_types
+from server.vwx.typesource import FIXTURE_TYPE_HINT
+from server.vwx.typesource import plan_for_missing_type as plan_missing_fixture_type
+from server.web.question import UNANSWERED, QuestionOption, QuestionRequest
+
+# [round24 후속] 라이브러리에 없는 타입을 만났을 때 도구가 **직접** 내는 갈래.
+# 분기가 이 문자열에 걸려 있으므로 한 자리에 모은다 — 표시 문구와 판정을 같은 값으로.
+ANSWER_PICK_ON_CONSOLE = "콘솔에서 직접 고르겠다"
+ANSWER_SUPPLY_FILE = "MVR 또는 GDTF 파일을 주겠다"
+ANSWER_CANCEL = "그만두겠다"
+
+# 주소가 겹쳤을 때 내는 갈래.
+ANSWER_USE_SUGGESTED = "제안한 자리에 놓겠다"
+ANSWER_TYPE_ADDRESS = "다른 주소를 직접 넣겠다"
+
+# 마지막 한 칸 — 조작자가 콘솔에서 직접 실행했는가.
+ANSWER_RAN_IT = "콘솔에서 실행했습니다"
+
+# 사용자가 콘솔 앞에서 실제로 고르는 데 걸리는 시간. 얕은 판독 1왕복 ≈ 66 ms이므로
+# 관측 자체는 무시할 수 있고, 사실상 전부 대기다.
+SELECTION_WATCH_INTERVAL_SECONDS = 2.0
+# [round24 후속] 처음에 60번(2분) 잡았다가 실물에서 무너졌다. 도구가 턴을 붙잡고
+# 있는 동안 UI로 프레임이 **하나도** 나가지 않아 129초간 화면이 죽은 듯 보였고,
+# 무엇보다 턴 예산을 태워 `status=loop_limit` · 본문 0자로 끝났다 — 사용자는 답을
+# 한 글자도 못 받았다. 빨리 고르는 경우만 잡고 나머지는 다음 메시지로 넘긴다.
+SELECTION_WATCH_ATTEMPTS = 10  # 약 20초
+
+#: 카드에 적어 사용자에게 알리는 대기 시간 — 침묵이 고장으로 보이지 않게 한다.
+_SELECTION_WATCH_SECONDS = round(SELECTION_WATCH_ATTEMPTS * SELECTION_WATCH_INTERVAL_SECONDS)
 
 if TYPE_CHECKING:  # policy types only — no runtime import cycle
     from server.deploy.pipeline import DeployOutcome
@@ -135,7 +213,14 @@ TOOL_NAMES = (
     "prepare_busking",
     "prepare_songcue",
     "precheck_patch",
+    "precheck_vectorworks_diff",
+    "apply_vectorworks_patch",
+    "vectorworks_autopatch",
     "preshow_check",
+    "ask_user",
+    "resolve_fixture_type",
+    "resolve_patch_address",
+    "patch_fixtures",
     "find_fx",
     "instantiate_fx",
     "find_scene",
@@ -349,6 +434,13 @@ class ExecutionContext:
     executed_ok: frozenset[str] = frozenset()
 
 
+class VectorworksUploadPort(Protocol):
+    """Session-local source/report storage for the Vectorworks guided workflow."""
+
+    content_base64: str | None
+    report: Mapping[str, object] | None
+
+
 @dataclass(frozen=True)
 class CommandOutcome:
     """Per-command execution status within one run_commands bundle.
@@ -369,6 +461,12 @@ class ToolExecution:
 
     result: ToolResult
     command_outcomes: tuple[CommandOutcome, ...] = ()
+    #: 이 호출이 **사람의 답을 받아 왔는가.** 폭주 루프 가드
+    #: (:data:`~server.orchestrator.runner.DEFAULT_MAX_MODEL_CALLS`)는 모델이
+    #: 혼자 도는 것을 막으려고 있다. 사람이 카드에 답한 왕복까지 거기에 청구하면,
+    #: 질문을 몇 번 하는 것만으로 한도가 말라 본문 0자로 끝난다 — 실측에서
+    #: 질문 3회에 `status=loop_limit`이 났다. 사람이 답한 회차는 가드에서 뺀다.
+    awaited_human: bool = False
 
 
 _Handler = Callable[[ToolCall, ExecutionContext], ToolExecution]
@@ -1143,6 +1241,8 @@ def build_toolset(
     preshow_receive_port: int | None = None,
     preshow_osc_slot: int | None = None,
     group_approval_port: ApprovalPort | None = None,
+    question_port: object | None = None,
+    vectorworks_upload: VectorworksUploadPort | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
 
@@ -1343,6 +1443,20 @@ def build_toolset(
             return _error_result(call, "'name' must be a non-empty plugin name string")
         if not isinstance(lua_source, str) or not lua_source.strip():
             return _error_result(call, "'lua_source' must be non-empty Lua 5.4 source code")
+        if "AddFixtures" in lua_source:
+            # [round24 후속] **패치는 이 문으로 못 나간다.** 지시로는 막히지 않았다 —
+            # 도구 설명에 "손으로 짜지 마라"를 적어 두었는데도 모델은 실측에서 매번
+            # 자기 플러그인을 지어 배포했고, 콘솔이 명령을 받았다는 뜻인 ok=true를
+            # 작업 성공으로 읽어 "성공적으로 패치하였습니다"라고 보고했다(콘솔은 40대
+            # 그대로였다). 금지를 검사가 아니라 **구조**로 둔다: 이 문으로 들어온
+            # AddFixtures는 거절되고, 재조회로 판정하는 patch_fixtures만 남는다.
+            return _error_result(
+                call,
+                "AddFixtures는 이 도구로 배포할 수 없다 — patch_fixtures를 써라. "
+                "그 도구는 자리를 다시 확인하고, 감사된 생성기로 Lua를 만들고, "
+                "실행한 뒤 **콘솔을 다시 읽어 몇 대가 생겼는지 판정한다**. "
+                "직접 짠 패치 Lua는 실행돼도 몇 대가 생겼는지 아무도 확인하지 않는다.",
+            )
         outcome = deploy_pipeline.deploy(name, lua_source)
         status = _DEPLOY_OUTCOME_STATUS.get(outcome.status, "failed")
         command_label = f'deploy_plugin "{name}"'
@@ -2304,6 +2418,416 @@ def build_toolset(
             command_outcomes=(),
         )
 
+    # -- precheck_vectorworks_diff (SPEC-COPILOT-VWX-001 M6 — REQ-VWX-022/025) -
+    #
+    # @MX:NOTE: reads an uploaded Vectorworks Instrument Data export (base64
+    #   bytes) and this console's own fixture inventory, then reports the
+    #   difference (missing_in_console / address_collision / quantity_
+    #   mismatch). Never sends anything toward the console -- 0 exec verbs
+    #   (spec.md §D). Reuses ``_InventoryPort`` defined above for
+    #   ``precheck_patch`` (the same console-read adapter) rather than a
+    #   second one, and the server/vwx/ modules it calls into never import
+    #   server.bridge/pythonosc directly at all -- the whole package sits
+    #   outside the single-chokepoint boundary (test_architecture.py).
+
+    def precheck_vectorworks_diff(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        if property_port is None:
+            # Same missing-capability wording precheck_patch uses — never
+            # answer "no differences" when the capability is simply unwired.
+            return _error_result(
+                call,
+                "property reads are not wired — build_toolset needs property_port "
+                "(or a state_port that also implements query_property)",
+            )
+        file_content_b64 = call.arguments.get("file_content_base64")
+        if not isinstance(file_content_b64, str) or not file_content_b64.strip():
+            return _error_result(call, "'file_content_base64' must be a non-empty base64 string")
+        try:
+            raw_bytes = base64.b64decode(file_content_b64, validate=True)
+        except (binascii.Error, ValueError) as error:
+            return _error_result(call, f"'file_content_base64' is not valid base64: {error}")
+
+        try:
+            with zipfile.ZipFile(io.BytesIO(raw_bytes)) as archive:
+                is_mvr = SCENE_ENTRY in archive.namelist()
+        except zipfile.BadZipFile:
+            is_mvr = False
+
+        try:
+            inventory = read_inventory(_InventoryPort(state_port, property_port))
+        except InventoryReadError as error:
+            return _error_result(call, f"fixture inventory unreadable: {error}")
+
+        # @MX:WARN: 결함 1(P0, SPEC-COPILOT-VWX-001 실물 파일 투입 재현) —
+        #   server/vwx/reader.py는 자체적으로 csv 계층 예외를 흡수하지만,
+        #   이 try/except는 그 위 계층(columns/address/rig/diff)에서 예상치
+        #   못한 예외가 나더라도 툴 경계를 절대 넘지 않게 하는 방어선이다.
+        #   비협상 원칙(server/prechk/patch.py:15-21) — 읽기 실패는 예외
+        #   산문이 아니라 정상 페이로드의 구조화된 부류다.
+        # @MX:REASON: 실물 파일(리깅 하중 CSV) 투입에서 예외가 오케스트레이터
+        #   까지 탈출한 결함이 발견됐다 — 리더 계층 수정만으로는 미래의
+        #   유사 입력(다른 예외를 던지는 파서 계층)을 방어하지 못한다.
+        try:
+            read_result = read_mvr(raw_bytes) if is_mvr else read_vwx_export(raw_bytes)
+            column_records, column_failures, excluded_rows = resolve_vwx_columns(
+                list(read_result.records)
+            )
+            resolved_records, address_failures = resolve_vwx_addresses(column_records)
+            designed_rig = build_designed_rig(resolved_records, candidate_count=len(column_records))
+            diff = compare_vectorworks_rig(designed_rig, inventory)
+            all_read_failures = (
+                *read_result.read_failures,
+                *column_failures,
+                *address_failures,
+            )
+            payload = build_vwx_report(
+                diff, read_failures=all_read_failures, excluded_rows=tuple(excluded_rows)
+            ).to_dict()
+        except Exception as error:  # noqa: BLE001 — 툴 경계 최종 방어선(설계상 의도적)
+            payload = {
+                "designed_rig": {
+                    "fixture_count": 0,
+                    "device_type_column_present": False,
+                    "join_key_conflicts": [],
+                    "vw_patch_conflicts": [],
+                },
+                "console_rig": {"inventory": inventory.to_dict()},
+                "diffs": {
+                    "missing_in_console": [],
+                    "address_collision": [],
+                    "quantity_mismatch": [],
+                },
+                "skipped_checks": [],
+                "read_failures": [
+                    {
+                        "row": None,
+                        "kind": "unexpected_parse_exception",
+                        "detail": (
+                            f"판독-대조 파이프라인에서 예상치 못한 예외 발생"
+                            f"({type(error).__name__}): {error}"
+                        ),
+                    }
+                ],
+                "summary_ko": (
+                    "판독 실패 1건. 예상치 못한 예외로 대조를 완료하지 못했다 — "
+                    "정상 결과가 아니라 구조화된 판독 실패로 보고한다."
+                ),
+            }
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            ),
+            command_outcomes=(),
+        )
+
+    # -- vectorworks_autopatch (single conversational entry over VWX-001 M6 +
+    #    AUTOPATCH-001 M7) ----------------------------------------------------
+    #
+    # @MX:NOTE: wraps `precheck_vectorworks_diff` (analyse) and
+    #   `apply_vectorworks_patch` (prepare) behind one tool so the model never
+    #   asks the operator to re-paste a report or a base64 blob mid-conversation.
+    #   The uploaded export stays in this WebSocket session. Keeping its bytes
+    #   and report behind this handler avoids spending model context on base64
+    #   or asking the operator to paste a report back into chat.
+    def vectorworks_autopatch(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        action = call.arguments.get("action", "analyse")
+        if action not in ("analyse", "prepare"):
+            return _error_result(call, "'action' must be 'analyse' or 'prepare'")
+
+        if action == "analyse":
+            content = vectorworks_upload.content_base64 if vectorworks_upload is not None else None
+            if not isinstance(content, str) or not content:
+                return _error_result(
+                    call,
+                    "이번 대화에 업로드된 Vectorworks 파일이 없다 — 먼저 파일을 업로드해 달라고 "
+                    "안내하고 내용을 채팅에 붙여 넣으라고 요구하지 마라",
+                )
+            execution = precheck_vectorworks_diff(
+                ToolCall(
+                    id=call.id,
+                    name="precheck_vectorworks_diff",
+                    arguments={"file_content_base64": content},
+                ),
+                context,
+            )
+            if not execution.result.is_error:
+                try:
+                    report = json.loads(execution.result.content)
+                except json.JSONDecodeError:
+                    report = None
+                if isinstance(report, Mapping):
+                    vectorworks_upload.report = report
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=execution.result.content,
+                    is_error=execution.result.is_error,
+                ),
+                command_outcomes=execution.command_outcomes,
+            )
+
+        report = vectorworks_upload.report if vectorworks_upload is not None else None
+        if not isinstance(report, Mapping):
+            return _error_result(
+                call,
+                "아직 이 업로드 파일의 대조 결과가 없다 — 먼저 action='analyse'로 대조를 수행하라",
+            )
+        arguments = dict(call.arguments)
+        arguments.pop("action", None)
+        arguments["report"] = report
+        execution = apply_vectorworks_patch(
+            ToolCall(id=call.id, name="apply_vectorworks_patch", arguments=arguments), context
+        )
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=execution.result.content,
+                is_error=execution.result.is_error,
+            ),
+            command_outcomes=execution.command_outcomes,
+        )
+
+    # -- apply_vectorworks_patch (SPEC-COPILOT-AUTOPATCH-001 M7) ---------------
+    #
+    # @MX:ANCHOR: [AUTO] the only model-reachable entry to the patch layer.
+    # @MX:NOTE: THIS TOOL NEVER EXECUTES THE PATCH. It plans, renders reviewable
+    #   `AddFixtures` Lua, hands the human an execution procedure, and re-reads
+    #   the console to verify. `execution_port` and `deploy_pipeline` are not
+    #   named anywhere in it — that is not caution, it is measurement: server-
+    #   driven `AddFixtures` created ZERO fixtures across 10 execution paths and
+    #   8 argument variants (REQ-AUTOPATCH-018 [v0.1.3],
+    #   `.moai/specs/SPEC-COPILOT-AUTOPATCH-001/progress.md` §E.2 M0 1~5차).
+    #   Every console touch below is a READ, through the same `_InventoryPort`
+    #   `precheck_patch`/`precheck_vectorworks_diff` already use.
+    # @MX:WARN: `dry_run` omitted means TRUE. Do not "helpfully" flip that —
+    #   this app has no undo and no backup restore path, so the default has to
+    #   be the harmless one (REQ-AUTOPATCH-003 · AC-AUTOPATCH-019③).
+
+    #: 이 콘솔에서 FID 프로퍼티가 읽힌다는 **실측 판정**(progress.md §E.2 M0 1차).
+    #: 재측정으로 뒤집히면 여기 한 줄만 바꾼다 — payload의 도달성 표기가 함께 따라간다.
+    _INJECTED_ASSUMPTION_71 = ASSUMPTION_71_GO
+
+    def apply_vectorworks_patch(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        if property_port is None:
+            return _error_result(
+                call,
+                "property reads are not wired — build_toolset needs property_port "
+                "(or a state_port that also implements query_property)",
+            )
+        report = call.arguments.get("report")
+        if not isinstance(report, Mapping):
+            return _error_result(call, "'report' must be the precheck_vectorworks_diff payload")
+        dry_run = call.arguments.get("dry_run", True)
+        if not isinstance(dry_run, bool):
+            return _error_result(call, "'dry_run' must be a boolean (omitted means true)")
+        names = call.arguments.get("names")
+        if names is not None and not isinstance(names, Mapping):
+            return _error_result(call, "'names' must be an object mapping candidate id -> name")
+
+        selected = call.arguments.get("selected")
+        inventory_port = _InventoryPort(state_port, property_port)
+
+        # 콘솔이 무엇을 보여줬고 무엇을 못 봤는지를 **어느 분기에서든** 먼저 싣는다.
+        # 절단은 이 콘솔의 기본 경로이고(픽스처 19대에서 이미 절단 — §E.2 M0 1차) 그 상태의
+        # "없음"은 관측이 아니라 미판독이다. 거부로 끝나는 호출에서도 사용자는 그 이유를 봐야 한다.
+        try:
+            inventory = read_inventory(inventory_port)
+        except InventoryReadError as error:
+            return _error_result(call, f"fixture inventory unreadable: {error}")
+        caveat = console_read_caveat(inventory)
+        read_complete = caveat is None or caveat["kind"] != CONSOLE_READ_INCOMPLETE
+        console_read = {
+            **inventory.to_dict(),
+            "complete_enough_to_judge_absence": read_complete,
+            "caveat": caveat,
+        }
+
+        plan = build_patch_plan(
+            report,
+            selected=selected,
+            dry_run=dry_run,
+            fid_range=call.arguments.get("fid_range"),
+            # 선택이 있으면 곧 FID를 배정하겠다는 뜻이므로 배정 분기를 **명시 신호로** 켠다 —
+            # 그래야 `fid_range` 누락이 항목별 `fid_not_assigned`로 흩어지지 않고
+            # `fid_range_required` 거부 하나로 올라온다(REQ-AUTOPATCH-007).
+            # [round11 M7 N03] 이전 판은 `assumption_71`을 그 신호로 겸용했다 — 실측 판정을
+            # 제어 신호로 쓰면 툴 경계에서 NEGATIVE·INCONCLUSIVE 분기에 도달할 수 없게 되고
+            # `fid_range_visually_confirmed_empty`가 죽은 필드가 된다. 둘을 분리했고,
+            assignment_requested=bool(selected),
+            # 실측 판정을 **명시적으로** 넘긴다. 값 `go`의 근거는 progress.md §E.2 M0 1차다
+            # (FID 프로퍼티가 읽히고 슬롯≠FID 쇼파일에서 확인됨).
+            # **[round13 S04 고지] 이 주입은 현재 관측 가능한 변화를 만들지 않는다** —
+            # 모듈 기본값도 GO이고 분기 개방은 `assignment_requested`가 전담한다. 그래서
+            # `ASSUMPTION-71` NEGATIVE·INCONCLUSIVE 분기와 `fid_range_visually_confirmed_empty`
+            # 요구는 **툴 경계에서 도달 불가**이며, 그 사실을 payload가 스스로 밝힌다(아래
+            # `assumption_71_reachability`). 재측정으로 GO가 뒤집히면 여기 한 줄만 바꾼다.
+            assumption_71=_INJECTED_ASSUMPTION_71,
+            fid_range_visually_confirmed_empty=call.arguments.get(
+                "fid_range_visually_confirmed_empty"
+            ),
+            fid_property_port=inventory_port,
+        )
+        payload: dict[str, object] = {
+            "plan": plan.to_dict(),
+            "console_read": console_read,
+            # 도달 불가 분기를 숨기지 않고 밝힌다(round13 S04).
+            # [round14 T08] ① 값은 닫힌 어휘 검증을 거쳐 나간다 — payload로 나가는 판정
+            # 문자열에 대한 규칙이 여기에도 적용된다. ② 도달성은 **하드코딩 자기주장이
+            # 아니라 주입값에서 파생**한다 — 주입이 바뀌면 이 필드가 따라간다.
+            "assumption_71_reachability": {
+                "injected": validate_assumption_71(_INJECTED_ASSUMPTION_71),
+                "source": "progress.md §E.2 M0 1차 실측",
+                # [round15 N08] 필드 이름이 주장하는 명제보다 넓은 술어를 쓰지 않는다.
+                # `!= go`는 **확인 요구 분기**의 도달성이지 NEGATIVE 값의 도달성이 아니다 —
+                # `inconclusive` 주입에서 둘이 갈린다. 두 명제를 따로 싣는다.
+                "negative_branch_reachable": (_INJECTED_ASSUMPTION_71 == ASSUMPTION_71_NEGATIVE),
+                "confirmation_branch_reachable": (_INJECTED_ASSUMPTION_71 != ASSUMPTION_71_GO),
+                "note": (
+                    "이 툴은 주입된 분기만 노출한다 — GO인 동안 "
+                    "fid_range_visually_confirmed_empty 는 요구되지 않는다(REQ-AUTOPATCH-026)."
+                ),
+            },
+        }
+        if not plan.ok or not plan.targets:
+            return _patch_payload(call, payload)
+
+        designed = designed_attributes_by_candidate(report, plan.targets)
+        type_plan = resolve_fixture_types(
+            tuple(
+                TypeRequest(
+                    candidate_id=target.id,
+                    instrument_type=target.instrument_type,
+                    gdtf_fixture=designed[target.id].gdtf_fixture,
+                    mode=designed[target.id].mode,
+                    footprint=designed[target.id].footprint,
+                )
+                for target in plan.targets
+            ),
+            library_port=inventory_port,
+            type_aliases=call.arguments.get("type_aliases"),
+        )
+        payload["types"] = type_plan.to_dict()
+
+        console_fixtures = read_console_fixtures(inventory, library=type_plan.library)
+
+        # 계획 내 겹침·폭 미확정은 계획 전체를 보고 판정한다(occupied는 여기서 비운다).
+        address_plan = plan_addresses(
+            plan.targets,
+            footprints={target.id: designed[target.id].footprint for target in plan.targets},
+            occupied={},
+        )
+        address_plan = screen_console_read(
+            plan.targets, address_plan=address_plan, inventory=inventory
+        )
+        # **멱등을 먼저 판정한다.** [round12 R05] 점유 선별을 앞에 두면, 우리 자리에 우리와
+        # 동일한 픽스처가 있고 구간 안에 무관한 픽스처가 하나 더 있을 때 항목이
+        # `address_already_occupied`로 먼저 빠져 `already_patched_identical`이 영영 나오지
+        # 않는다 — 2회차 재호출이 "이미 했음" 대신 "점유됨"으로 보고되는, REQ-AUTOPATCH-022가
+        # 금지하는 바로 그 뭉갬이다(round11 M7 N01이 다른 방향에서 잡았던 것과 같은 결함).
+        address_plan = screen_idempotent(
+            plan.targets,
+            address_plan=address_plan,
+            resolutions=type_plan.resolutions,
+            console_fixtures=console_fixtures,
+        )
+        # 남은 항목(= 우리 자리는 비어 있다고 판정된 것)에 대해서만 구간 침입을 본다.
+        address_plan = screen_console_occupancy(
+            plan.targets, address_plan=address_plan, console_fixtures=console_fixtures
+        )
+        effective_names = dict(names or {})
+        for target in plan.targets:
+            design_name = designed[target.id].fixture_name
+            if design_name and target.id not in effective_names:
+                effective_names[target.id] = design_name
+        handoff = build_patch_handoff(
+            plan.targets,
+            address_plan=address_plan,
+            resolutions=type_plan.resolutions,
+            names=effective_names,
+            dry_run=dry_run,
+        )
+        payload["handoff"] = handoff.to_dict()
+        payload["plan"]["skipped_checks"] = [
+            *payload["plan"]["skipped_checks"],
+            existing_footprint_skipped_check(),
+        ]
+
+        # 검증은 **승인 항목 전체**를 본다 — 방금 전달한 것만 보면 2회차(이미 만들어진 뒤)와
+        # 재조회 불완전 분기에서 결과가 통째로 비고, AC-AUTOPATCH-021①("승인 항목마다 확인
+        # 결과")이 성립하지 않는다. round11 M6 N04가 그 사각을 짚었다.
+        payload["verification"] = {
+            **verify_patch(
+                _approved_entries(plan.targets, type_plan.resolutions, designed, handoff),
+                console_fixtures=console_fixtures,
+                read_complete=read_complete,
+                # [round13 S03] **드라이런은 전달분 0건이다.** `handoff.entries`는 드라이런에도
+                # 채워지므로(REQ-AUTOPATCH-003이 소스 전문을 요구한다) 그대로 넘기면 같은 payload가
+                # `handoff.delivered=false`와 `delivered_count=1`을 동시에 실었고, 기본 경로인
+                # 드라이런에서 "플러그인을 실제로 실행했는지 확인하라"가 나갔다 — 검토만 받으려던
+                # Lua를 실행하게 만드는 안내다.
+                delivered_ids=(
+                    [entry.candidate_id for entry in handoff.entries] if handoff.delivered else []
+                ),
+            ).to_dict(),
+            "scope": "승인 항목 전체(전달분 + 이미 있다고 판정된 것)",
+            "as_of": "이 호출이 방금 읽은 콘솔 상태",
+            "note": (
+                "아직 사람이 플러그인을 실행하지 않았다면 '미관측'이 정상이다 — "
+                "실행한 뒤 같은 인자로 다시 호출하면 그때의 관측이 성공의 근거가 된다."
+            ),
+        }
+        return _patch_payload(call, payload)
+
+    def _approved_entries(targets, resolutions, designed, handoff):
+        """검증 대상 = **승인 항목 전체**. 전달분은 그대로, 나머지는 도면 의도로 채운다.
+
+        전달분(`handoff.entries`)에는 이미 확정된 이름·FID가 있다. 전달되지 않은 승인 항목은
+        타입·모드가 확정된 것에 한해 도면 주소로 확인 결과를 낸다 — 이름이 없어 빠진 항목까지
+        "그 주소에 뭐가 있나"는 답할 수 있고, 2회차에서 그것이 곧 검증이다.
+        """
+        entries = list(handoff.entries)
+        delivered = {entry.candidate_id for entry in entries}
+        by_id = {r.request.candidate_id: r for r in resolutions}
+        for target in targets:
+            if target.id in delivered:
+                continue
+            resolution = by_id.get(target.id)
+            if (
+                resolution is None
+                or resolution.console_type is None
+                or resolution.console_mode is None
+            ):
+                continue
+            entries.append(
+                HandoffEntry(
+                    candidate_id=target.id,
+                    fid=target.assigned_fid or 0,
+                    name="",
+                    console_type=resolution.console_type.name,
+                    console_mode=resolution.console_mode.name,
+                    universe=target.universe,
+                    address=target.address,
+                    footprint=designed[target.id].footprint or 0,
+                )
+            )
+        return tuple(entries)
+
+    def _patch_payload(call: ToolCall, payload: Mapping[str, object]) -> ToolExecution:
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            ),
+            command_outcomes=(),
+        )
+
     # -- preshow_check (SPEC-COPILOT-PRESHOW-001 — the pre-show checklist) ----
     #
     # @MX:NOTE: read-only diagnostic; reuses the same state_port precheck_patch
@@ -2328,6 +2852,771 @@ def build_toolset(
                 name=call.name,
                 content=content,
                 is_error=report.signal == "red",
+            ),
+        )
+
+    def ask_user(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        r"""사용자에게 **되묻는다** — 추측하지 않기 위한 유일한 통로.
+
+        [round24 후속] 이 도구가 없던 동안 모델은 모르는 것을 만나면 값을 **지어냈다**
+        (실측: 없는 픽스처 타입에 GDTF 파일명을 다섯 번 추측, 플러그인 배포·실행,
+        장비 0대, 59.6초). 모르면 물어야 한다.
+
+        **답을 못 받는 것은 거부가 아니다.** 승인·검토는 실패 시 거부가 안전하지만
+        (되돌릴 수 없는 쓰기를 막는다), 질문은 답이 없을 뿐이다. 그때는
+        ``answered=false``\ 를 내고, 모델은 그 사실을 그대로 받는다.
+        """
+        prompt = str(call.arguments.get("prompt") or "").strip()
+        if not prompt:
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(
+                        {"answered": False, "reason": "prompt가 비어 있다"},
+                        ensure_ascii=False,
+                    ),
+                    is_error=True,
+                )
+            )
+        if question_port is None:
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(
+                        {
+                            "answered": False,
+                            "reason": (
+                                "이 실행 경로에는 질문 통로가 없다 — 사용자에게 물을 수 "
+                                "없으니 답을 지어내지 말고 그대로 알려라."
+                            ),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    is_error=False,
+                )
+            )
+
+        raw_options = call.arguments.get("options") or []
+        options = tuple(
+            QuestionOption(
+                label=str(item.get("label", "")).strip(),
+                description=str(item.get("description", "")).strip(),
+            )
+            for item in raw_options
+            if isinstance(item, Mapping) and str(item.get("label", "")).strip()
+        )
+        raw_steps = call.arguments.get("steps") or []
+        steps = tuple(str(step).strip() for step in raw_steps if str(step).strip())
+
+        request = QuestionRequest(
+            prompt=prompt,
+            why=str(call.arguments.get("why") or "").strip(),
+            steps=steps,
+            options=options,
+        )
+        answer = question_port.ask(request)
+        answered = isinstance(answer, str) and answer not in ("", UNANSWERED)
+        payload = {
+            "answered": bool(answered),
+            "answer": answer if answered else None,
+            "reason": None
+            if answered
+            else "사용자가 아직 답하지 않았다(시간 초과 또는 연결 없음).",
+            # [round24 후속] 답만 돌려주면 모델이 그것을 **참고 사항**으로 읽고
+            # 산문으로 다시 물었다(실측: 카드로 'Sharpy 250W Beam 사용'을 받고도
+            # 최종 본문이 "이 채팅에 「…으로 진행해줘」라고 답변해 주세요"였다).
+            # 답은 참고가 아니라 **결정**이다 — 그 사실을 결과에 적는다.
+            "guidance": (
+                f"사용자가 {answer!r}(으)로 정했다. **이것이 결정이다** — 같은 것을 "
+                "산문으로 다시 묻지 마라. 이 답을 그대로 적용해 원래 하던 일을 "
+                "이어서 끝내라. 더 필요한 값이 있으면 그 값만 새로 물어라."
+            )
+            if answered
+            else (
+                "답을 받지 못했다. 값을 지어내지 말고, 답이 없었다는 사실을 그대로 "
+                "알려라. 명령을 보내지 마라."
+            ),
+        }
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            ),
+            awaited_human=bool(answered),
+        )
+
+    def resolve_fixture_type(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        """요청한 타입이 콘솔 라이브러리에 있는가 — 없으면 **물을 거리**를 낸다.
+
+        [round24 후속] 이 도구가 없던 동안 모델은 없는 타입을 만나면 ``Import``
+        문법과 GDTF **파일명을 추측**했다(실측: 한 요청에 5회 추측 후
+        ``retries_exhausted``, 60초 소모). 그 명령들은 원리적으로 성공할 수 없다 —
+        실물 실측으로 ``Import FixtureType Library`` = ``Object locked``/``Failed``,
+        ``ChangeDestination Patch/FixtureTypes`` = ``Failed``이고, 플러그인 Lua
+        컨텍스트는 패치 계층에 명령줄로 닿지 못한다(M8 세션 확정).
+
+        그래서 이 도구는 **못 한다는 사실과 사람이 할 수 있는 일**을 함께 낸다.
+        """
+        requested = str(call.arguments.get("instrument_type") or "").strip()
+        snapshot = read_library_snapshot(state_port)
+        payload: dict[str, object] = {
+            "requested": requested,
+            "console_types": list(snapshot.names),
+            "library_readable": snapshot.readable,
+            "library_complete": snapshot.complete,
+        }
+
+        if not snapshot.readable:
+            payload["status"] = "library_unreadable"
+            payload["guidance"] = (
+                "콘솔 라이브러리를 읽지 못했다 — 없다고 단정하지 마라. 연결을 확인하고 다시 물어라."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=True,
+                )
+            )
+
+        def _key(text: str) -> str:
+            return "".join(ch for ch in text.lower() if ch.isalnum())
+
+        wanted = _key(requested)
+        exact = [name for name in snapshot.names if name == requested]
+        near = [
+            name
+            for name in snapshot.names
+            if wanted and (wanted in _key(name) or _key(name) in wanted)
+        ]
+
+        if len(exact) == 1:
+            payload["status"] = "present"
+            payload["resolved"] = exact[0]
+            payload["guidance"] = "라이브러리에 있다 — 평소 패치 절차로 진행하라."
+        elif len(near) == 1:
+            payload["status"] = "present"
+            payload["resolved"] = near[0]
+            payload["guidance"] = (
+                f"'{near[0]}' 하나로 좁혀졌다 — 그 이름으로 진행하되 사용자에게 확인받아라."
+            )
+        elif near:
+            payload["status"] = "ambiguous"
+            payload["candidates"] = near
+            payload["guidance"] = (
+                "후보가 여럿이다. 고르지 마라 — ask_user 도구로 어느 것인지 물어라. "
+                "options에 candidates를 그대로 넣는다. 먼저 걸린 것을 집으면 "
+                "엉뚱한 타입으로 패치된다."
+            )
+        else:
+            steps = plan_missing_fixture_type(requested)
+            prompt = fixture_type_selection_prompt(requested)
+            payload["status"] = "absent"
+            payload["can_the_server_add_it"] = False
+            payload["provisioning_plan"] = [
+                {"source": step.source, "action": step.action}
+                for step in steps
+                if not step.available_now
+            ]
+            payload["why_not"] = (
+                "명령줄로 픽스처 타입을 추가할 수 없다 — 실측 결과 "
+                "Import FixtureType Library는 Object locked/Failed, "
+                "ChangeDestination Patch/FixtureTypes도 Failed다. "
+                "Import 명령이나 GDTF 파일명을 추측하지 마라 — 반드시 실패한다."
+            )
+
+            # [round24 후속] **모델에게 「물어라」고 시키지 않는다.**
+            # 시켰더니 산문으로 옮겨 적고 턴을 끝냈다(실측 전사) — 카드는 안 뜨고,
+            # 사용자가 나중에 "선택했어"라고 하면 그때는 원래 과제를 잊은 뒤였다.
+            # 구멍을 발견한 자리가 **직접 묻고 답까지 받아** 한 턴 안에서 잇는다.
+            if question_port is None:
+                payload["asked"] = False
+                payload["guidance"] = (
+                    "이 실행 경로에는 질문 통로가 없다 — 위 두 갈래를 한국어로 전하고 "
+                    "답을 기다려라. 명령을 보내지 마라."
+                )
+            else:
+                answer = question_port.ask(
+                    QuestionRequest(
+                        prompt=(f"'{requested}'이(가) 콘솔 라이브러리에 없습니다. 어떻게 할까요?"),
+                        why=(
+                            "콘솔은 명령줄로 픽스처 타입을 추가하지 못합니다. "
+                            "타입이 쇼에 들어와야 패치를 이어갈 수 있습니다."
+                        ),
+                        steps=prompt.steps,
+                        options=(
+                            QuestionOption(
+                                label=ANSWER_PICK_ON_CONSOLE,
+                                description=(
+                                    f"바로 고르시면 {_SELECTION_WATCH_SECONDS}초 안에 "
+                                    "감지해 이어갑니다. 더 걸리시면 다 하신 뒤 "
+                                    "«됐어»라고만 알려 주세요."
+                                ),
+                            ),
+                            QuestionOption(
+                                label=ANSWER_SUPPLY_FILE,
+                                # 버튼 문구다 — `plan_missing_fixture_type`의 문단을
+                                # 이어 붙이면 내부 표기(SPEC 조건 번호)까지 흘러나온다.
+                                # 실물 화면에서 그렇게 새어 나왔다. 계획 전문은
+                                # payload로만 보낸다.
+                                description=(
+                                    f".gdtf 파일을 {FIXTURE_TYPE_HINT}에 "
+                                    "두시면 콘솔 Library 탭의 Internal 소스에 "
+                                    "나타납니다."
+                                ),
+                            ),
+                            QuestionOption(
+                                label=ANSWER_CANCEL,
+                                description="이 요청을 여기서 멈춥니다.",
+                            ),
+                        ),
+                    )
+                )
+                payload["asked"] = True
+                payload["answer"] = None if answer == UNANSWERED else answer
+
+                if answer == UNANSWERED:
+                    payload["guidance"] = (
+                        "사용자가 아직 답하지 않았다. 답을 지어내지 말고 그대로 알려라."
+                    )
+                elif answer == ANSWER_CANCEL:
+                    payload["guidance"] = "사용자가 멈추기를 골랐다. 여기서 끝내라."
+                elif answer == ANSWER_PICK_ON_CONSOLE:
+                    # 사용자가 콘솔에서 고르는 동안 **여기서 기다린다.** 그래야 다음
+                    # 메시지를 기다릴 필요가 없고, 원래 과제를 잃지 않는다.
+                    watch = wait_for_library_addition(
+                        state_port,
+                        snapshot,
+                        attempts=SELECTION_WATCH_ATTEMPTS,
+                        sleep=lambda: time.sleep(SELECTION_WATCH_INTERVAL_SECONDS),
+                    )
+                    payload["watch_state"] = watch.state
+                    payload["added"] = list(watch.added)
+                    if watch.added:
+                        payload["status"] = "present"
+                        payload["resolved"] = watch.added[0]
+                        payload["guidance"] = (
+                            f"사용자가 '{watch.added[0]}'을(를) 넣었다. **이름으로 되묻지 "
+                            "마라** — 실물을 아는 쪽은 사용자다. 그 타입으로 원래 요청한 "
+                            "수량·주소의 패치를 이어서 진행하라."
+                        )
+                    else:
+                        # 여기서 더 붙잡으면 턴 예산이 말라 본문 0자로 끝난다
+                        # (실측: 2분 감시 -> status=loop_limit). 짧게 끊고 사용자의
+                        # 다음 한 마디로 잇는 편이 낫다 — 그때는 타입이 이미 있으니
+                        # 이 도구가 곧바로 present를 낸다.
+                        payload["guidance"] = (
+                            f"{watch.detail} 아직 안 들어왔다 — **여기서 턴을 끝내라.** "
+                            "콘솔에서 고르신 뒤 알려 주시면 그때 이어서 패치하겠다고 "
+                            "짧게 전하고, 명령은 보내지 마라. 계속 기다리지 마라."
+                        )
+                elif answer == ANSWER_SUPPLY_FILE:
+                    # 파일을 두는 것만으로는 쇼에 안 들어온다 — 콘솔에서 한 번
+                    # 골라야 한다. 여기서 기다리지 않는 이유: 파일을 받아 오는 데
+                    # 걸리는 시간은 2분으로 가늠할 수 없다.
+                    payload["file_destination"] = FIXTURE_TYPE_HINT
+                    payload["guidance"] = (
+                        f"사용자가 파일을 주기로 했다. {FIXTURE_TYPE_HINT}에 .gdtf를 "
+                        "두고 콘솔 Patch > Insert New Fixture > Library의 Internal "
+                        "소스에서 고르면 된다고 전하라. 다 되면 알려 달라고 청하고, "
+                        "그 전에는 명령을 보내지 마라."
+                    )
+                else:
+                    payload["guidance"] = (
+                        f"사용자 답: {answer!r}. 그 답을 따르되 라이브러리에 타입이 "
+                        "들어온 것을 확인하기 전에는 패치 명령을 보내지 마라."
+                    )
+
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            ),
+            awaited_human=bool(payload.get("answer")),
+        )
+
+    def resolve_patch_address(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        """요청한 DMX 주소에 자리가 있는가 — 없으면 **그 자리에서 묻고 새 주소를 받는다.**
+
+        [round24 후속] 실측: `claypaky sharpy 250 6대를 3.001부터 패치해줘`에 앱은
+        3.001이 이미 찬 것을 정확히 찾아냈다. 그러고는 산문으로 "결정해 주세요"라고
+        쓰고 턴을 끝냈다 — 사용자는 처음부터 다시 쳐야 했고, 그때는 앱이 원래 과제를
+        잊은 뒤였다. **찾은 자리가 물어야 한다**(`resolve_fixture_type`과 같은 규약).
+
+        판정은 한 축만 쓴다: 내가 차지할 구간 **안에서 시작하는** 기존 장비.
+        기존 장비의 채널 폭은 콘솔 연결이 반증되어(ASSUMPTION-27 NEGATIVE) 믿을 수
+        없고, 그 위에 폭 기반 겹침을 세우면 없는 근거로 거절하게 된다. 못 보는 축은
+        payload의 `blind_spot`에 적어 내보낸다 — 조용히 "깨끗하다"고 하지 않는다.
+        """
+        requested = str(call.arguments.get("address") or "").strip()
+        count = _positive_int(call.arguments.get("count"))
+        width = _positive_int(call.arguments.get("channels_per_fixture"))
+        if count is None:
+            return _error_result(call, "'count' must be a positive integer — 몇 대를 놓는가")
+        if width is None:
+            return _error_result(
+                call,
+                "'channels_per_fixture' must be a positive integer — 모드의 채널 수. "
+                "모르면 먼저 resolve_fixture_type으로 모드를 확정하라. 추측하지 마라.",
+            )
+        if property_port is None:
+            return _error_result(
+                call,
+                "property reads are not wired — 주소를 읽을 수 없으면 빈 자리라고 말할 수 없다",
+            )
+        try:
+            inventory = read_inventory(_InventoryPort(state_port, property_port))
+        except InventoryReadError as error:
+            return _error_result(call, f"fixture inventory unreadable: {error}")
+
+        occupants = occupants_from_patch_values(
+            (record.patch_raw, record.name, record.fixture_type) for record in inventory.fixtures
+        )
+        caveat = console_read_caveat(inventory)
+        fit = evaluate_address_fit(requested, count=count, width=width, occupants=occupants)
+
+        payload: dict[str, object] = {
+            "requested": requested,
+            "count": count,
+            "channels_per_fixture": width,
+            "occupied_addresses_read": len(occupants),
+            "console_read_caveat": caveat,
+            "blind_spot": fit.blind_spot,
+        }
+
+        if fit.error:
+            payload["status"] = "unreadable_request"
+            payload["guidance"] = f"{fit.error} — 사용자에게 주소를 다시 물어라."
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=True,
+                )
+            )
+
+        def _settle(chosen: Fit) -> None:
+            payload["status"] = "free"
+            payload["address"] = chosen.requested
+            payload["span"] = chosen.span_text
+            payload["placements"] = [spot.text for spot in chosen.placements]
+            payload["guidance"] = (
+                f"{chosen.span_text}에 자리가 있다. **이 주소로 패치를 이어서 진행하라** — "
+                "같은 것을 다시 묻지 마라. 다만 이 판정은 위 blind_spot을 못 본다."
+            )
+
+        if fit.ok:
+            _settle(fit)
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+
+        clash = [
+            {
+                "address": f"{occupant.universe}.{occupant.address}",
+                "name": occupant.name,
+                "fixture_type": occupant.fixture_type,
+            }
+            for occupant in fit.collisions
+        ]
+        payload["status"] = "occupied"
+        payload["collisions"] = clash
+        payload["would_have_occupied"] = fit.span_text
+        suggestion = first_free_address(count=count, width=width, occupants=occupants)
+        payload["suggestion"] = suggestion.requested if suggestion else None
+
+        if question_port is None:
+            payload["guidance"] = (
+                f"{requested}에 이미 {len(clash)}대가 있다. 자리가 겹치면 출력이 틀린다 — "
+                "덮어쓰지 말고 사용자에게 새 주소를 물어라. 명령을 보내지 마라."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+
+        options = []
+        if suggestion is not None:
+            options.append(
+                QuestionOption(
+                    label=ANSWER_USE_SUGGESTED,
+                    description=f"{suggestion.span_text} — 비어 있는 자리입니다.",
+                )
+            )
+        options.append(
+            QuestionOption(
+                label=ANSWER_TYPE_ADDRESS,
+                description="원하시는 시작 주소를 «4.001» 형태로 적어 주세요.",
+            )
+        )
+        options.append(
+            QuestionOption(label=ANSWER_CANCEL, description="이 요청을 여기서 멈춥니다.")
+        )
+
+        first = clash[0]["address"]
+        answer = question_port.ask(
+            QuestionRequest(
+                prompt=(
+                    f"{requested}부터 {count}대를 놓으면 이미 있는 장비 "
+                    f"{len(clash)}대와 겹칩니다. 어디에 놓을까요?"
+                ),
+                why=(
+                    f"{fit.span_text} 구간에 {first}을(를) 비롯한 장비가 이미 있습니다. "
+                    "주소가 겹치면 두 장비가 같은 채널을 받아 출력이 어긋납니다."
+                ),
+                steps=(
+                    f"놓으려는 것: {count}대 × {width}채널 = {count * width}채널",
+                    f"요청한 자리: {fit.span_text}",
+                    f"겹치는 장비: {', '.join(item['address'] for item in clash[:6])}"
+                    + (" 외" if len(clash) > 6 else ""),
+                ),
+                options=tuple(options),
+            )
+        )
+        payload["answer"] = None if answer == UNANSWERED else answer
+
+        if answer == UNANSWERED:
+            payload["guidance"] = "답을 받지 못했다. 주소를 지어내지 말고 그대로 알려라."
+        elif answer == ANSWER_CANCEL:
+            payload["guidance"] = "사용자가 멈추기를 골랐다. 여기서 끝내라."
+        else:
+            # 「제안한 자리」면 제안을, 아니면 사용자가 적은 글을 주소로 읽는다.
+            # 어느 쪽이든 **다시 판정한다** — 사용자가 적은 자리도 겹칠 수 있고,
+            # 확인 없이 받아들이면 이 도구가 있는 이유가 사라진다.
+            picked = (
+                suggestion.requested
+                if answer == ANSWER_USE_SUGGESTED and suggestion is not None
+                else answer
+            )
+            rechecked = evaluate_address_fit(picked, count=count, width=width, occupants=occupants)
+            payload["answered_address"] = picked
+            if rechecked.ok:
+                _settle(rechecked)
+            elif rechecked.error:
+                payload["status"] = "unreadable_answer"
+                payload["guidance"] = (
+                    f"사용자가 준 {picked!r}을(를) 주소로 읽지 못했다({rechecked.error}). "
+                    "«4.001» 형태로 다시 물어라 — 임의로 고쳐 쓰지 마라."
+                )
+            else:
+                payload["status"] = "still_occupied"
+                payload["guidance"] = (
+                    f"사용자가 고른 {picked}도 {len(rechecked.collisions)}대와 겹친다. "
+                    "그 사실을 알리고 다시 물어라 — 겹친 채로 진행하지 마라."
+                )
+
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            ),
+            awaited_human=bool(payload.get("answer")),
+        )
+
+    def patch_fixtures(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        """장비를 실제로 패치하고 **콘솔을 다시 읽어 몇 대가 생겼는지 판정한다.**
+
+        [round24 후속] 실측에서 모델은 이 일을 매번 손으로 짠 Lua로 새로 지어냈고,
+        콘솔이 명령을 받았다는 뜻인 ``ok=true``를 작업 성공으로 읽어 "성공적으로
+        패치하였습니다"라고 보고했다. 콘솔은 40대 그대로였다. 이 도구는 그 길을
+        고정하고 **마지막에 반드시 재조회한다** — 성공은 관측에서만 나온다.
+
+        Lua는 `luagen`이 만든다. 손으로 짜면 목적지 변경 문장을 만들 수 없게 해 둔
+        구조적 금지가 그대로 사라진다.
+        """
+        console_type = str(call.arguments.get("console_type") or "").strip()
+        console_mode = str(call.arguments.get("console_mode") or "").strip()
+        address = str(call.arguments.get("address") or "").strip()
+        count = _positive_int(call.arguments.get("count"))
+        width = _positive_int(call.arguments.get("channels_per_fixture"))
+        if not console_type or not console_mode:
+            return _error_result(
+                call,
+                "'console_type'과 'console_mode'는 콘솔 라이브러리에 있는 이름 그대로여야 "
+                "한다 — resolve_fixture_type이 확정한 값을 쓰고 추측하지 마라",
+            )
+        if count is None or width is None:
+            return _error_result(
+                call,
+                "'count'와 'channels_per_fixture'는 양의 정수여야 한다 — 폭을 모르면 "
+                "resolve_patch_address보다 먼저 모드를 확정하라",
+            )
+        if deploy_pipeline is None:
+            return _error_result(
+                call, "deploy_plugin is not wired in this session — 패치를 실행할 수 없다"
+            )
+        if property_port is None:
+            return _error_result(
+                call,
+                "property reads are not wired — 실행 결과를 읽을 수 없으면 패치하지 "
+                "않는다. 확인할 수 없는 쓰기는 하지 않는다",
+            )
+
+        try:
+            before = read_inventory(_InventoryPort(state_port, property_port))
+        except InventoryReadError as error:
+            return _error_result(call, f"fixture inventory unreadable: {error}")
+
+        occupants = occupants_from_patch_values(
+            (record.patch_raw, record.name, record.fixture_type) for record in before.fixtures
+        )
+        fit = evaluate_address_fit(address, count=count, width=width, occupants=occupants)
+        payload: dict[str, object] = {
+            "requested_address": address,
+            "count": count,
+            "console_type": console_type,
+            "console_mode": console_mode,
+        }
+        if not fit.ok:
+            # 겹친 채로 만들면 되돌리기 어려운 쓰기가 남는다. 여기서 멈추고
+            # 자리 해결 도구로 돌려보낸다 — 이 도구가 임의로 옮기지 않는다.
+            payload["status"] = "address_not_free"
+            payload["collisions"] = [
+                f"{occupant.universe}.{occupant.address}" for occupant in fit.collisions
+            ]
+            payload["guidance"] = (
+                f"{address}는 비어 있지 않다({fit.error or '겹침'}). resolve_patch_address로 "
+                "사용자와 자리를 정한 뒤 그 주소로 다시 불러라. 임의로 옮기지 마라."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+
+        requested_fids = call.arguments.get("fids")
+        if isinstance(requested_fids, Sequence) and not isinstance(requested_fids, str):
+            fids = tuple(int(value) for value in requested_fids)
+        else:
+            # **FID는 인벤토리에서 못 얻는다.** `prechk.inventory`는 FID를 화이트리스트
+            # 밖으로 두어 아예 읽지 않고 `fid_note`는 늘 "미확정"이다. 그것을 숫자로
+            # 읽으려 하면 목록이 비어 1번부터 배정된다 — 실측에서 FID 1~39가 쓰이는
+            # 쇼에 1~6이 나왔다. `patchplan.ExistingFidRead`의 독스트링이 그 사고를
+            # 그대로 적었다: "이미 쓰이는 번호를 배정하게 되고 … MA3는 조용히 받아들여
+            # 엉뚱한 픽스처를 덮는다. 이 앱에는 실행 취소가 없다."
+            # 그래서 정식 판독기를 쓰고, **전수가 아니면 배정하지 않는다.**
+            fid_read = read_existing_fids(_InventoryPort(state_port, property_port))
+            gaps = (
+                (fid_read.unseen or 0)
+                + fid_read.unreadable_fids
+                + fid_read.unusable_rows
+                + fid_read.unparsable_rows
+            )
+            payload["existing_fid_read"] = {
+                "attempted": fid_read.attempted,
+                "known": len(fid_read.fids),
+                "child_count": fid_read.child_count,
+                "unresolved": gaps,
+            }
+            if not fid_read.attempted or fid_read.root_unreadable or gaps:
+                payload["status"] = "fids_unknown"
+                payload["guidance"] = (
+                    "기존 FID를 전수로 읽지 못했다 — 빈 번호를 고를 수 없다. 이미 쓰는 "
+                    "번호에 패치하면 엉뚱한 픽스처를 덮고, 이 앱에는 실행 취소가 없다. "
+                    "사용자에게 쓸 FID 범위를 물어 'fids'로 넘겨라. 지어내지 마라."
+                )
+                return ToolExecution(
+                    result=ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=json.dumps(payload, ensure_ascii=False),
+                        is_error=False,
+                    )
+                )
+            taken = list(fid_read.fids)
+            fids = free_fids(taken, count=count, start=max(taken, default=0) + 1)
+
+        staged = staged_plan(
+            console_type=console_type,
+            console_mode=console_mode,
+            footprint=width,
+            placements=fit.placements,
+            fids=fids,
+            name_prefix=call.arguments.get("name_prefix"),
+        )
+        payload["plan"] = staged.to_dict()
+
+        plugin_name = str(call.arguments.get("plugin_name") or "CopilotPatch").strip()
+        outcome = deploy_pipeline.deploy(plugin_name, staged.lua_source)
+        payload["deploy_status"] = outcome.status
+        if outcome.status != "deployed":
+            payload["status"] = "not_deployed"
+            payload["guidance"] = (
+                f"배포가 {outcome.status}로 끝났다({outcome.detail}). 패치는 일어나지 "
+                "않았다 — 성공했다고 보고하지 마라."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=True,
+                ),
+                command_outcomes=(
+                    CommandOutcome(
+                        command=f'deploy_plugin "{plugin_name}"',
+                        status=_DEPLOY_OUTCOME_STATUS.get(outcome.status, "failed"),
+                        detail=outcome.detail,
+                    ),
+                ),
+            )
+
+        # ── 서버가 발화하지 않는다. ──
+        # 실측으로 갈린 축이다(`progress.md` §「AddFixtures 최초 성공 관측」):
+        #   서버 OSC 발화 + 편집기 열림  -> 0건
+        #   사람 명령줄 발화 + 편집기 열림 -> 3건 전부 생성
+        # 그래서 마지막 한 칸은 조작자에게 넘기고, 끝났다는 답을 받은 뒤 읽는다.
+        run_line = f'Plugin "{plugin_name}"'
+        payload["run_yourself"] = run_line
+        payload["handover_steps"] = [*HANDOVER_STEPS[:3], run_line, HANDOVER_STEPS[3]]
+        payload["destination_marker"] = DESTINATION_MARKER
+        if question_port is None:
+            payload["status"] = "awaiting_operator"
+            payload["guidance"] = (
+                f"플러그인을 올려 두었다. 조작자에게 **Patch 편집기를 연 채로** 콘솔 "
+                f"명령줄에서 {run_line} 을(를) 실행해 달라고 전하고, 끝나면 알려 달라고 "
+                "청하라. 서버가 대신 실행하면 만들어지지 않는다."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                )
+            )
+
+        answer = question_port.ask(
+            QuestionRequest(
+                prompt=(
+                    f"콘솔에서 패치를 실행해 주세요 — {staged.console_type} "
+                    f"{len(staged.fixtures)}대."
+                ),
+                why=HANDOVER_WHY,
+                steps=(
+                    HANDOVER_STEPS[0],
+                    HANDOVER_STEPS[1],
+                    f"{HANDOVER_STEPS[2]}  →  {run_line}",
+                    HANDOVER_STEPS[3],
+                ),
+                options=(
+                    QuestionOption(
+                        label=ANSWER_RAN_IT,
+                        description="실행을 마쳤습니다. 콘솔을 읽어 확인해 주세요.",
+                    ),
+                    QuestionOption(label=ANSWER_CANCEL, description="이 요청을 여기서 멈춥니다."),
+                ),
+            )
+        )
+        payload["answer"] = None if answer == UNANSWERED else answer
+        if answer != ANSWER_RAN_IT:
+            payload["status"] = "not_run"
+            payload["guidance"] = (
+                "조작자가 아직 실행하지 않았다. 픽스처는 생기지 않았다 — 만들어졌다고 "
+                f"말하지 마라. 필요하면 {run_line} 을(를) 다시 안내하라."
+                if answer == UNANSWERED
+                else "사용자가 멈추기를 골랐다. 여기서 끝내라."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=False,
+                ),
+                awaited_human=bool(payload.get("answer")),
+            )
+
+        # ── 여기서부터가 이 도구의 존재 이유다: **콘솔을 다시 읽는다.** ──
+        try:
+            after = read_inventory(_InventoryPort(state_port, property_port))
+        except InventoryReadError as error:
+            payload["status"] = "unverified"
+            payload["guidance"] = (
+                f"실행은 했으나 재조회에 실패했다({error}). 몇 대가 생겼는지 **모른다** — "
+                "생겼다고도 안 생겼다고도 말하지 마라."
+            )
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(payload, ensure_ascii=False),
+                    is_error=True,
+                )
+            )
+
+        caveat = console_read_caveat(after)
+        seats = [
+            (occupant.universe, occupant.address)
+            for occupant in occupants_from_patch_values(
+                (record.patch_raw, record.name, record.fixture_type) for record in after.fixtures
+            )
+        ]
+        verdict = judge_staged_patch(
+            staged.fixtures,
+            occupied_after=seats,
+            read_complete=caveat is None or caveat["kind"] != CONSOLE_READ_INCOMPLETE,
+        )
+        payload.update(verdict.to_dict())
+        payload["console_read_caveat"] = caveat
+
+        if verdict.status == "created":
+            payload["guidance"] = (
+                f"{verdict.created}대가 실제로 생긴 것을 재조회로 확인했다. "
+                "이제 성공했다고 보고해도 된다."
+            )
+        elif verdict.status == "created_partially":
+            payload["guidance"] = (
+                f"{verdict.requested}대 중 {verdict.created}대만 생겼다. **부분 성공을 "
+                "성공이라 말하지 마라.** 자동으로 다시 시도하지도 마라 — 중복이 생긴다."
+            )
+        elif verdict.status == "unverified":
+            payload["guidance"] = (
+                "재조회가 전수가 아니라 없다고 단정할 수 없다. 몇 대가 생겼는지 "
+                "모른다고 그대로 알려라."
+            )
+        else:
+            payload["guidance"] = (
+                f"{ZERO_CREATED} 조작자가 {run_line} 을(를) 실행할 때 Patch 편집기가 "
+                "열려 있었는지 확인하고, 아니었다면 그 상태로 다시 실행해 달라고 청하라."
+            )
+
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            ),
+            command_outcomes=tuple(
+                CommandOutcome(
+                    command=f"Plugin '{plugin_name}'",
+                    status="executed_ok" if verdict.created else "failed",
+                    detail=f"created {verdict.created}/{verdict.requested}",
+                )
+                for _ in (0,)
             ),
         )
 
@@ -4754,7 +6043,214 @@ def build_toolset(
                         ),
                     },
                 },
-                "required": [],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="precheck_vectorworks_diff",
+            description=(
+                "Compare a Vectorworks Instrument Data export (Export Instrument "
+                "Data tab-text, Export Worksheet .xls/.xlsx/.txt/.csv/.dif/.slk, or "
+                "an MVR containing GeneralSceneDescription.xml) against THIS console's "
+                "actual patch. Reads the file content and the console's own fixture "
+                "inventory itself and reports three difference classes: "
+                "fixtures in the drawing that are not in the console "
+                "(missing_in_console), address collisions the console "
+                "inventory already knows about (address_collision, reused from "
+                "precheck_patch — never recomputed), and per-type quantity "
+                "mismatches between drawing and console (quantity_mismatch). The "
+                "join key is (universe, address) plus fixture type — never a "
+                "fixture id or custom id: a show file where console slot and "
+                "fixture id coincide makes that comparison structurally "
+                "unverifiable, and that gap is reported under skipped_checks "
+                "rather than silently attempted. A fixture the drawing marks "
+                "unpatched (DMX Address/Absolute Address is 0 or blank) is a "
+                "third state, never counted as missing_in_console. Do not pass "
+                "rig numbers: none are accepted — the console side is read "
+                "directly, and the parsed file never reaches the console."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "file_content_base64": {
+                        "type": "string",
+                        "description": (
+                            "The Vectorworks export file's raw bytes, base64-"
+                            "encoded. Text or binary — encoding and file "
+                            "structure are detected from content, never from a "
+                            "file name or extension."
+                        ),
+                    },
+                },
+                "required": ["file_content_base64"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="vectorworks_autopatch",
+            description=(
+                "Run the uploaded Vectorworks Instrument Data export through the "
+                "guided patch workflow. The upload and its report stay in this "
+                "conversation: never request base64, a pasted report, or a rig "
+                "number. First call action='analyse' to compare the drawing with "
+                "the live console. Then explain only the concrete missing or "
+                "ambiguous items and use action='prepare' after the operator has "
+                "selected candidates and a fixture-id range. Drawing fixture "
+                "names are used automatically when present; ask only for names "
+                "that the drawing omitted and type aliases that the console "
+                "cannot resolve. A prepared plugin still needs the operator to "
+                "run it from the console because server-triggered AddFixtures was "
+                "measured creating zero fixtures; after that, call prepare again "
+                "with the same arguments to re-read and verify. Never claim a "
+                "plugin exit means the fixtures were created."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["analyse", "prepare"],
+                        "description": (
+                            "Omit or use 'analyse' first; use 'prepare' only after analysis."
+                        ),
+                    },
+                    "selected": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Drawing candidates the operator approved for patching.",
+                    },
+                    "fid_range": {
+                        "type": "object",
+                        "properties": {
+                            "start": {"type": "integer"},
+                            "end": {"type": "integer"},
+                        },
+                        "required": ["start", "end"],
+                        "additionalProperties": False,
+                        "description": "The empty fixture-id range confirmed by the operator.",
+                    },
+                    "fid_range_visually_confirmed_empty": {
+                        "type": "boolean",
+                        "description": (
+                            "Needed only when the console cannot read fixture IDs completely."
+                        ),
+                    },
+                    "names": {
+                        "type": "object",
+                        "description": (
+                            "Candidate-id overrides for rows without a Vectorworks fixture name."
+                        ),
+                    },
+                    "type_aliases": {
+                        "type": "object",
+                        "description": "Drawing type to confirmed console-library type mapping.",
+                    },
+                    "dry_run": {
+                        "type": "boolean",
+                        "description": (
+                            "Defaults to true. False produces the operator execution handoff."
+                        ),
+                    },
+                },
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="apply_vectorworks_patch",
+            description=(
+                "Turn a precheck_vectorworks_diff report into fixtures the human "
+                "creates on the console. THE SERVER NEVER EXECUTES THE PATCH: "
+                "server-driven AddFixtures was measured creating ZERO fixtures on "
+                "this build across every reachable path, so this tool plans the "
+                "work, renders reviewable AddFixtures Lua, hands over the exact "
+                "execution procedure, and then re-reads the console to say what "
+                "actually got created. The human presses the button.\n"
+                "\n"
+                "dry_run defaults to TRUE and a dry run already returns the full "
+                "Lua source and the target table — this app has no undo and no "
+                "backup restore, so review first and pass dry_run=false only "
+                "after the user approved the listed targets. Setting dry_run="
+                "false does NOT make the server execute anything; it adds the "
+                "execution procedure and the verification hand-off.\n"
+                "\n"
+                "Call it AGAIN with the same arguments after the human ran the "
+                "plugin: the second call re-reads the console, skips fixtures "
+                "that already exist with the same (universe, address, type, "
+                "mode), reports address conflicts and unconfirmable identities "
+                "separately, and verifies each approved item. It never retries "
+                "or repairs anything by itself.\n"
+                "\n"
+                "Items are DROPPED with a reason rather than guessed at: no "
+                "designed footprint, no fixture name supplied, an unconfirmed "
+                "type match, an occupied address. A type match needs the user's "
+                "confirmation once — pass it back through type_aliases. Do not "
+                "pass rig numbers: none are accepted; the console is read here."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "report": {
+                        "type": "object",
+                        "description": (
+                            "The precheck_vectorworks_diff payload, verbatim. Patch "
+                            "candidates are read from its diffs.missing_in_console "
+                            "rows and the designed footprint/mode from its "
+                            "designed_rig.fixtures rows."
+                        ),
+                    },
+                    "selected": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "Candidate ids the user approved. Omitted means NONE — "
+                            "nothing is patched by default."
+                        ),
+                    },
+                    "fid_range": {
+                        "type": "object",
+                        "properties": {
+                            "start": {"type": "integer"},
+                            "end": {"type": "integer"},
+                        },
+                        "required": ["start", "end"],
+                        "additionalProperties": False,
+                        "description": (
+                            "The empty fixture-id range the user confirmed. Omitted "
+                            "means refuse — ids are never invented."
+                        ),
+                    },
+                    "fid_range_visually_confirmed_empty": {
+                        "type": "boolean",
+                        "description": (
+                            "The user visually confirmed that range is empty. "
+                            "Required only when the console cannot pre-check id "
+                            "conflicts; approving targets does not imply it."
+                        ),
+                    },
+                    "names": {
+                        "type": "object",
+                        "description": (
+                            "Candidate id -> the fixture name to create. A candidate "
+                            "with no name here is excluded with a reason; this layer "
+                            "never invents a name."
+                        ),
+                    },
+                    "type_aliases": {
+                        "type": "object",
+                        "description": (
+                            "Drawing type name -> console library type name, for "
+                            "matches the user already confirmed once. Without it a "
+                            "candidate stays unconfirmed and is not delivered."
+                        ),
+                    },
+                    "dry_run": {
+                        "type": "boolean",
+                        "description": (
+                            "Omitted means true. False = hand over for human execution."
+                        ),
+                    },
+                },
+                "required": ["report"],
                 "additionalProperties": False,
             },
         ),
@@ -4777,6 +6273,216 @@ def build_toolset(
                 "type": "object",
                 "properties": {},
                 "required": [],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="ask_user",
+            description=(
+                "Ask the operator a question and WAIT for the answer. Use this "
+                "instead of guessing whenever a required value is missing or "
+                "ambiguous — a fixture type that is not in the library, two "
+                "library names that both match, a quantity or a DMX address "
+                "the operator never gave.\n"
+                "\n"
+                "Measured consequence of guessing: asked for a fixture type "
+                "the console did not have, the model invented five Import "
+                "syntaxes and GDTF file names, deployed and ran a plugin, "
+                "created ZERO fixtures and burned 59.6 seconds. Ask instead.\n"
+                "\n"
+                "'options' renders as buttons and 'steps' as a numbered "
+                "procedure the operator can follow on the console; the "
+                "operator may always type a free-form answer instead. "
+                "'answered': false means the question timed out or no UI was "
+                "attached — report that plainly, never fabricate the answer."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "prompt": {"type": "string", "description": "The question, in Korean."},
+                    "why": {
+                        "type": "string",
+                        "description": "Why the value is needed, in Korean.",
+                    },
+                    "steps": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Console procedure the operator can follow, in Korean.",
+                    },
+                    "options": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "label": {"type": "string"},
+                                "description": {"type": "string"},
+                            },
+                            "required": ["label"],
+                            "additionalProperties": False,
+                        },
+                        "description": "Selectable answers. Free-form input stays available.",
+                    },
+                },
+                "required": ["prompt"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="resolve_fixture_type",
+            description=(
+                "Check whether a fixture type name exists in THIS console's "
+                "library, and when it does not, return what to ASK the operator. "
+                "READS ONLY, sends nothing.\n"
+                "\n"
+                "Call this BEFORE writing any patch plugin or any Import "
+                "command whenever the requested fixture type may not be in the "
+                "show. The console CANNOT be made to add a fixture type from "
+                "the command line — measured on real hardware: "
+                "'Import FixtureType Library ...' answers Object locked or "
+                "Failed, and 'ChangeDestination Patch/FixtureTypes' answers "
+                "Failed, because the plugin Lua context does not reach the "
+                "patch layer. NEVER guess an Import syntax or a GDTF file "
+                "name: every such attempt fails and burns the self-correction "
+                "budget.\n"
+                "\n"
+                "status='present' means proceed. status='ambiguous' means "
+                "several library names match — ASK which one, never take the "
+                "first. status='absent' means this tool ALREADY ASKED the "
+                "operator through the question card and the answer is in the "
+                "payload — do not ask the same thing again in chat text. When "
+                "it flipped back to 'present' the operator added the type while "
+                "you waited: continue the ORIGINAL patch request with the "
+                "'resolved' name, and do not re-ask about the name."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "instrument_type": {
+                        "type": "string",
+                        "description": "The fixture type name the drawing or the operator used.",
+                    }
+                },
+                "required": ["instrument_type"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="resolve_patch_address",
+            description=(
+                "Check whether a DMX start address has room for N new fixtures "
+                "on THIS console, and when it does not, ASK the operator where "
+                "to put them instead. READS ONLY, sends nothing.\n"
+                "\n"
+                "Call this BEFORE writing any patch plugin whenever the "
+                "operator named a start address. Two fixtures on the same "
+                "channels output the wrong thing, and a patch is not something "
+                "the operator can casually undo.\n"
+                "\n"
+                "'channels_per_fixture' is the mode's channel count. Do NOT "
+                "guess it — resolve the mode first; a wrong width makes this "
+                "whole check meaningless.\n"
+                "\n"
+                "status='free' means proceed with 'address'. status='occupied' "
+                "means this tool ALREADY ASKED and the answer is in the "
+                "payload; when it settled to 'free', patch at the address it "
+                "returns and do NOT re-ask. status='still_occupied' means even "
+                "the operator's own choice collides — tell them and ask again. "
+                "Every verdict carries 'blind_spot': this check sees fixtures "
+                "whose START falls inside the new span, not ones that begin "
+                "earlier and reach into it, because existing channel widths are "
+                "not reliably readable on this build. Never report 'no "
+                "collision' as proof of safety."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "address": {
+                        "type": "string",
+                        "description": (
+                            "Requested start address, '<universe>.<address>' (e.g. '3.001')."
+                        ),
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "How many fixtures to place.",
+                    },
+                    "channels_per_fixture": {
+                        "type": "integer",
+                        "description": "Channel count of the chosen DMX mode. Never a guess.",
+                    },
+                },
+                "required": ["address", "count", "channels_per_fixture"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="patch_fixtures",
+            description=(
+                "Create fixtures on the console AND verify by re-reading. This "
+                "is the ONLY way you may patch — never hand-write patch Lua and "
+                "push it through deploy_plugin.\n"
+                "\n"
+                "It runs the whole staged flow: address re-check, FID "
+                "assignment, audited AddFixtures Lua from the generator, "
+                "deploy, execute, THEN read the console back and count what "
+                "actually appeared.\n"
+                "\n"
+                "Prerequisites you must settle FIRST: resolve_fixture_type for "
+                "'console_type'/'console_mode' (library names, never guesses) "
+                "and resolve_patch_address for a free 'address'. This tool "
+                "refuses an occupied address rather than moving it for you.\n"
+                "\n"
+                "Report ONLY what 'status' says. 'created' means the fixtures "
+                "were observed on the console. 'created_nothing' means the "
+                "plugin ran and NOTHING was made — on this build AddFixtures "
+                "returns nil on failure and was measured creating zero fixtures "
+                "across every reachable path, so a clean plugin exit is NOT "
+                "success. 'created_partially' is not success either, and you "
+                "must not silently retry: a second run duplicates whatever did "
+                "land. 'unverified' means the re-read was incomplete — say you "
+                "do not know, never that it worked."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "console_type": {
+                        "type": "string",
+                        "description": "Library type name exactly as the console spells it.",
+                    },
+                    "console_mode": {
+                        "type": "string",
+                        "description": "DMX mode name exactly as the console spells it.",
+                    },
+                    "address": {
+                        "type": "string",
+                        "description": "Free start address '<universe>.<address>'.",
+                    },
+                    "count": {"type": "integer", "description": "How many fixtures."},
+                    "channels_per_fixture": {
+                        "type": "integer",
+                        "description": "Channel count of that mode. Never a guess.",
+                    },
+                    "fids": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": "Optional explicit fixture IDs; omitted picks a free block.",
+                    },
+                    "name_prefix": {
+                        "type": "string",
+                        "description": "Optional fixture-name prefix; defaults to the type name.",
+                    },
+                    "plugin_name": {
+                        "type": "string",
+                        "description": "Optional plugin name; defaults to CopilotPatch.",
+                    },
+                },
+                "required": [
+                    "console_type",
+                    "console_mode",
+                    "address",
+                    "count",
+                    "channels_per_fixture",
+                ],
                 "additionalProperties": False,
             },
         ),
@@ -5643,7 +7349,14 @@ def build_toolset(
         "prepare_busking": prepare_busking,
         "prepare_songcue": prepare_songcue,
         "precheck_patch": precheck_patch,
+        "precheck_vectorworks_diff": precheck_vectorworks_diff,
+        "apply_vectorworks_patch": apply_vectorworks_patch,
+        "vectorworks_autopatch": vectorworks_autopatch,
         "preshow_check": preshow_check,
+        "ask_user": ask_user,
+        "resolve_fixture_type": resolve_fixture_type,
+        "resolve_patch_address": resolve_patch_address,
+        "patch_fixtures": patch_fixtures,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,
         "find_scene": find_scene,

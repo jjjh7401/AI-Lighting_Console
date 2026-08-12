@@ -10,26 +10,79 @@ responder follows onPC's supported platform range per REQ-MVP-043).
 
 ## 1. Configure OSC in onPC
 
-In grandMA3: `Menu → Settings → ... → OSC` (the OSC settings table):
+**Every brand-new show starts with NO usable OSC config** — onPC does not
+carry OSC settings forward from a previous show. Skipping this section is the
+#1 cause of "the plugin is installed and running but the console never
+replies" on a fresh show.
 
-1. Add (or reuse) an OSC configuration row. Note its **row index** — the
-   responder's `CONFIG.osc_slot` (default `1`) must match it. Set it in the
-   app's Settings ("OSC 응답 행") rather than by hand: the app renders that
-   value into the Lua as it installs, so a re-install keeps it. A hand-edit of
-   the installed file is reverted the next time you install.
-   The row's destination must actually reach the app — a row pointing at a
-   broadcast address (e.g. `192.168.0.255`) never arrives at `127.0.0.1`, and
-   the only symptom is a console that appears offline while its own command
-   history shows the requests arriving.
-2. **Destination IP**: the machine running the copilot server (`127.0.0.1`
-   when server and onPC share the host).
-3. **Port (send)**: the server's listen port (default `9000` — the
-   `--listen-port` of the server tools).
-4. **Port (receive)**: the console's OSC input port (default `8000` — the
-   `--port` of the server tools).
-5. **Prefix**: `copilot` — so incoming `/copilot/cmd` command lines execute.
-6. Enable the row and its command input/output flags (`CMD` / enabled toggles
-   as exposed by the 2.4.2 settings UI).
+### 1.-1 Zero-touch path (BEST — no computer-use, no per-show clicks)
+
+Interface selection has NO command-line or file-import equivalent — verified
+2026-08-12 live: `Set 'ShowData'.'OSCBase' 'Interface' "lo0"` and the numeric
+form `Set 'ShowData'.'OSCBase' 'Interface' 1` both fail with `Illegal value`.
+It is GUI-dialog-only in onPC 2.4.2, which means the app (or any agent acting
+for it) can never fully self-bootstrap OSC on a truly blank show.
+
+But OSC config — Interface, Enable Output/Input, both OSCData rows, AND the
+imported plugin — all live **inside the .show file itself**. A show created
+via `File > New` starts blank; a show created via **Save As from an
+already-configured show** inherits all of it. This turns the entire manual
+bootstrap into a one-time cost:
+
+1. Once, by hand: configure OSC per §1.1 below on any show, then
+   `Menu > Backup > Save As` it under a dedicated name (this project's copy:
+   `CopilotOscTemplate.show`).
+2. Every future session: start new work with **`Backup > Save As` from
+   `CopilotOscTemplate.show`**, never `New Show`. The saved copy already has
+   Interface=lo0, both OSCData rows, Enable Output/Input, and the imported
+   plugin — the console replies before the operator does anything else.
+
+This is the only path with truly zero manual steps per show. Sections 1.0/1.1
+below exist for the one-time template setup and for recovering a show that
+was started from `New Show` anyway.
+
+### 1.0 Automated path (recommended)
+
+`POST /api/provision/responder` stages two import-ready OSCData files —
+`copilot_osc_row1_receive.xml` / `copilot_osc_row2_send.xml` — into the site's
+configured OSC import directory (default
+`~/MALightingTechnology/gma3_library/inout/osc/`), with the console/receive
+ports rendered from the app's settings. This turns steps 3-4 below into an
+`Import` + file pick instead of re-typing every field. See
+`server/deploy/provisioning.py` `OSC_TEMPLATE_ASSETS` /
+`install_osc_templates` / `osc_bootstrap_guide` for the implementation — it is
+filesystem-only, same safety boundary as the plugin install (AC-DEPLOY-014 ③).
+
+### 1.1 Verified recipe (2026-08-12, live onPC 2.4.2.2)
+
+Captured by reading a known-working show's `Menu → Settings → In & Out → OSC`
+screen and exporting both rows via onPC's native `Export`. Reproduce this
+exactly — a plausible-looking row is not the same as this one:
+
+1. **Interface**: set to **`lo0 (127.0.0.1)`**, not the machine's Wi-Fi/
+   Ethernet adapter (`en0` or similar). This is the single most-missed step:
+   a console left on `en0` silently never delivers 127.0.0.1 traffic even
+   after every port and destination field is otherwise correct — no error is
+   ever shown, the console just never replies (see Troubleshooting).
+2. **Enable Output** and **Enable Input**: both ON (shown in yellow when
+   enabled).
+3. **Row 1 — receive** (`copilot_osc_row1_receive.xml`): `Prefix=copilot`,
+   `Port=8000` (must equal the app's `console_port` setting), `Receive=Yes`,
+   `ReceiveCommand=Yes` (native "execute an incoming OSC string as a command
+   line" — this is how `server.bridge.osc.OscBridge.send_command` reaches the
+   console; no plugin round trip needed for the send direction), `Send=No`.
+   Destination IP is irrelevant for a receive-only row.
+4. **Row 2 — send** (`copilot_osc_row2_send.xml`): `DestinationIP=127.0.0.1`,
+   `Port=9005` (must equal the app's `receive_port` setting), `Send=Yes`,
+   `SendCommand=Yes`, `Receive=No`. This is the row `CONFIG.osc_slot` in the
+   Lua must index — the responder's `SendOSCMessage(CONFIG.osc_slot, ...)`
+   reply channel.
+5. Confirm with a round trip: run `Plugin "CopilotResponder" "ping <id>"` on
+   the console command line and check the app's `/healthz` — `health` flips
+   from `console_offline` to `online`.
+
+Both templates omit the `Guid` attribute so onPC assigns a fresh one on
+Import; re-importing the same file into two different shows never collides.
 
 ## 2. Install the plugin
 
@@ -145,6 +198,7 @@ Expected output: `[PASS] ping`, `[PASS] state` (with a node/children summary),
 | `exec` reports failure for a command that clearly worked | `Cmd()` success-token mismatch (ASSUMPTION-3): note the raw `result` string in the reply and extend `SUCCESS_RESULTS` in the Lua file. |
 | A second responder-looking plugin sits in the pool and you fear double replies | It cannot reply. Requests name the plugin (`Plugin "CopilotResponder" "..."`), so a copy under any other name — `CopilotResponder#2`, the name an in-console duplicate gets — is never invoked (§6, 2026-07-25 finding). Confirm rather than assume: one `ping` returns exactly one `pong`. |
 | A `state` listing is short and `truncated:true`, and re-querying returns the same children | Expected — there is no paging. Enumerate slot by slot against `node.childCount` (PROTOCOL.md §4.2). |
+| App reports `console_offline` forever on a NEW show even though every OSC row's IP/port/prefix is verified correct by eye | Check **Interface** at the top of `In & Out > OSC` — if it is bound to the machine's Wi-Fi/Ethernet adapter (`en0` or similar) instead of `lo0 (127.0.0.1)`, 127.0.0.1 traffic is silently dropped with no error surfaced anywhere. Verified 2026-08-12: a show with an otherwise-identical OSC table connected the instant Interface was set to `lo0`. |
 
 Record the outcome of this live round-trip (pass or deviations found) in the
 SPEC progress log — it is the semi-automatic half of AC-MVP-012.

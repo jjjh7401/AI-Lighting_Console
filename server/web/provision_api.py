@@ -1,10 +1,13 @@
 """Responder provisioning REST API (M4 — REQ-DEPLOY-010/011, AC-DEPLOY-006/007).
 
 Two endpoints let the packaged UI install the bundled CopilotResponder plugin
-into the M1-configured onPC plugin-import directory and read the onPC-load guide:
+into the M1-configured onPC plugin-import directory, stage the per-show OSC
+connectivity templates (2026-08-12 recipe — see
+``server/deploy/provisioning.py`` ``OSC_TEMPLATE_ASSETS``), and read the
+combined onPC-load guide:
 
     GET  /api/provision/responder   install status + guide (import dir + port)
-    POST /api/provision/responder   copy the bundled plugin into the import dir
+    POST /api/provision/responder   copy the bundled plugin + OSC templates
 
 Safety boundary (this module is deliberately narrow):
 
@@ -27,9 +30,13 @@ from fastapi import APIRouter, HTTPException
 
 # FILESYSTEM-ONLY provisioning layer — the only "install" path. No OSC imports.
 from server.deploy.provisioning import (
+    OSC_TEMPLATE_ASSETS,
     RESPONDER_ASSETS,
     ProvisioningError,
+    install_osc_templates,
     install_responder,
+    osc_bootstrap_guide,
+    osc_template_status,
     read_installed_osc_slot,
     responder_guide,
     responder_status,
@@ -44,6 +51,10 @@ from server.deploy.settings import resolve_effective_settings
 _INSTALL_FAILED_MESSAGE = (
     "responder 플러그인 설치에 실패했습니다 — "
     "플러그인 임포트 디렉터리 경로와 쓰기 권한을 확인해 주세요."
+)
+
+_OSC_TEMPLATE_INSTALL_FAILED_MESSAGE = (
+    "OSC 연결 템플릿 설치에 실패했습니다 — OSC 임포트 디렉터리 경로와 쓰기 권한을 확인해 주세요."
 )
 
 # Rendering the OSC reply row from settings keeps a re-install from reverting
@@ -84,11 +95,17 @@ def build_provision_router(deps: ProvisionDeps) -> APIRouter:
     """Build the responder-provisioning REST router around one dependency set."""
     router = APIRouter()
 
-    def _resolve() -> tuple[str, int, int]:
+    def _resolve() -> tuple[str, int, int, int, str]:
         settings = resolve_effective_settings(
             user_path=deps.settings_path, seed_path=deps.seed_path
         )
-        return settings.plugin_import_dir, settings.receive_port, settings.osc_slot
+        return (
+            settings.plugin_import_dir,
+            settings.receive_port,
+            settings.osc_slot,
+            settings.console_port,
+            settings.osc_import_dir,
+        )
 
     def _slot_conflict(import_dir: str, configured: int) -> tuple[bool, int | None]:
         """``(conflict?, installed slot)`` — the slot is None when unreadable.
@@ -108,9 +125,10 @@ def build_provision_router(deps: ProvisionDeps) -> APIRouter:
 
     @router.get("/api/provision/responder")
     def get_status() -> dict:
-        import_dir, receive_port, osc_slot = _resolve()
+        import_dir, receive_port, osc_slot, console_port, osc_import_dir = _resolve()
         installed = responder_status(import_dir)
         mismatch, installed_slot = _slot_conflict(import_dir, osc_slot)
+        osc_installed = osc_template_status(osc_import_dir)
         return {
             "import_dir": import_dir,
             "assets": list(RESPONDER_ASSETS),
@@ -120,11 +138,16 @@ def build_provision_router(deps: ProvisionDeps) -> APIRouter:
             "configured_osc_slot": osc_slot,
             "installed_osc_slot": installed_slot,
             "osc_slot_mismatch": mismatch,
+            "osc_import_dir": osc_import_dir,
+            "osc_template_assets": list(OSC_TEMPLATE_ASSETS),
+            "osc_templates_installed": osc_installed,
+            "osc_templates_installed_all": all(osc_installed.values()),
+            "osc_bootstrap_guide": osc_bootstrap_guide(console_port, receive_port),
         }
 
     @router.post("/api/provision/responder")
     def install(confirm_osc_slot: bool = False) -> dict:
-        import_dir, receive_port, osc_slot = _resolve()
+        import_dir, receive_port, osc_slot, console_port, osc_import_dir = _resolve()
 
         mismatch, installed_slot = _slot_conflict(import_dir, osc_slot)
         if mismatch and not confirm_osc_slot:
@@ -148,11 +171,29 @@ def build_provision_router(deps: ProvisionDeps) -> APIRouter:
                 status_code=500,
                 detail={"error": "install_failed", "message": _INSTALL_FAILED_MESSAGE},
             ) from error
+        try:
+            # Staged for onPC's native In & Out > OSC > Import — see
+            # osc_bootstrap_guide() for the remaining manual steps (Interface +
+            # Enable Output/Input have no export/import path in onPC 2.4.2).
+            osc_result = install_osc_templates(
+                osc_import_dir, console_port=console_port, receive_port=receive_port
+            )
+        except (ProvisioningError, OSError) as error:
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "osc_template_install_failed",
+                    "message": _OSC_TEMPLATE_INSTALL_FAILED_MESSAGE,
+                },
+            ) from error
         return {
             "ok": True,
             "installed": list(result.installed),
             "import_dir": result.import_dir,
             "guide": responder_guide(receive_port),
+            "osc_templates_installed": list(osc_result.installed),
+            "osc_import_dir": osc_result.import_dir,
+            "osc_bootstrap_guide": osc_bootstrap_guide(console_port, receive_port),
         }
 
     return router

@@ -1,0 +1,4 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<GMA3 DataVersion="2.4.2.2">
+    <OSCData DestinationIP="127.0.0.1" Mode="UDP" Port="9005" Receive="No" EchoOutput="No"/>
+</GMA3>

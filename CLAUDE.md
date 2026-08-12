@@ -329,4 +329,42 @@ For detailed patterns (plugins, sandboxing, headless mode, version management), 
 
 ## MOAI:LEARNED-WORKFLOW
 <!-- moai:learned-start -->
+
+### 미반영 개선 항목 — 2026-08-12 세션 기록 (feature/SPEC-COPILOT-VWX-001 브랜치)
+
+아래 항목은 구현 가능성을 분류한 뒤 "지금 반영 불가"로 판정된 것들이다.
+조건이 충족되면 후속 세션에서 반영한다.
+
+#### 🔴 독립 감사 (별도 세션/감사자 필요)
+- **AUTOPATCH-001 round24 독립 감사 미착수**: round23이 FAIL/릴리스 NO-GO(결함 4건: high 1·medium 1·low 2)로 남긴 상태. M8 세션 자체는 GO이므로 기능은 동작하지만 "릴리스 가능" 판정에는 이 라운드를 닫아야 한다. 자기 감사는 의미 없으므로 독립 감사자가 수행해야 함.
+  - 근거: `.moai/specs/SPEC-COPILOT-AUTOPATCH-001/progress.md` §E.2ae (round23)
+
+#### 🟡 사용자 제공 데이터 대기
+- **VWX-001 M8 차단 해소 — 실물 경로B 워크시트 샘플**: ASSUMPTION-70 미해소. 제목행 선행형 또는 헤더 반복형 실물 Vectorworks 워크시트 export 1건만 있으면 M8 종단 검증을 시작할 수 있다. 합성 픽스처로 코드 경로는 확인됐으나 실물 마커·서식을 대변하지 않아 GO 판정 불가.
+  - 근거: `.moai/specs/SPEC-COPILOT-VWX-001/progress.md` §E.3 milestones_blocked_reason
+  - 조건: 사용자가 Vectorworks에서 "Export Worksheet" 기능으로 내보낸 실물 파일 1건 제공
+
+#### 🟡 라이브 콘솔 환경 필요
+- **DEPLOY-001 M18.1 실 하드웨어 연속 시나리오 검증**: force-quit → onPC 포트 점유 → 재기동 → 셸 "포트 사용 중" 안내의 전체 사슬을 실제 onPC 2.4.2에서 한 번도 실행하지 않았다. debug 빌드(v1.1.0 구 responder 잔존)로 수행하면 M17.1 슬롯 결함의 재현 조건도 같이 확인 가능.
+  - 근거: `.moai/specs/SPEC-COPILOT-DEPLOY-001/progress.md` M18.1 마지막 행
+- **AUTOPATCH-001 멱등 재실행(R21-A) 보고 정확성 미검증**: 같은 계획을 두 번 실행했을 때 두 번째가 "이미 있음"을 정확히 보고하는지 라이브로 확인된 적 없음. M8 세션의 관측 3건은 전부 최초 실행이었다.
+  - 근거: `.moai/specs/SPEC-COPILOT-AUTOPATCH-001/progress.md` §E.2ab R21-A
+
+#### 🟡 별도 피처 작업 (이 세션 범위 밖)
+- **AUTOPATCH-001 타입 라이브러리 절단 처리**: round20 지적 R20-A~D 중 미반영분. 대형 타입 라이브러리에서 잘린 응답(truncated)을 다루는 경로가 불완전하다. round21에서 일부만 반영됐고 나머지는 사용자 지시로 명시적 이월.
+  - 근거: `.moai/specs/SPEC-COPILOT-AUTOPATCH-001/progress.md` §E.2ae 열린 항목
+- **AUTOPATCH-001 Patch 편집기 열림 사전조건 코드 강제**: AddFixtures는 Patch 편집기가 열려 있어야 동작하지만 이 조건이 코드로 강제되지 않는다(사람이 절차를 잊으면 조용히 실패). U-19~23이 "편집기 열림 표지 자동 판별"을 오픈 아이템으로 남겨둠.
+  - 근거: `.moai/specs/SPEC-COPILOT-AUTOPATCH-001/progress.md` M8 사전조건, U-19~23
+
+#### 🔵 환경/인프라 확보 시 재개
+- **Windows/universal2 빌드**: 코드는 `PYI_TARGET_ARCH=universal2` 환경변수 1개로 활성화 준비 완료. 알려진 블로커 3건만 남음(handshake.py Windows origin 미포함, sidecar.rs Job Object 미배선, tauri.conf.json windows 키 부재). arm64 전용 빌드 호스트라 현재 불가.
+  - 근거: `.moai/specs/SPEC-COPILOT-DEPLOY-001/spec.md` §A, plan.md §C PENDING-WINDOWS
+- **flaky 테스트 근본 원인**: `test_orphaned_sidecar_reaps_the_group_without_a_pipe` 1회 실패 후 통과 이력. 타이밍 레이스 추정이나 재현 조건 불안정. 재발 시 디버깅 우선순위 상향.
+  - 근거: `.moai/specs/SPEC-COPILOT-DEPLOY-001/progress.md` M19 배치
+
+#### ✅ 이번 세션에서 이미 해결
+- **부분 테스트만 돌리고 커밋**: 2건 재발 → fix 커밋 2건(184a7e8, 721a067)으로 교정 완료. 교훈: "git 상태에 의존하는 테스트는 커밋 후 한 번 더 돌린다"(CHANGELOG 기존 기록과 동일).
+- **CHANGELOG.md 미기록**: 커밋 c608dee로 VWX-001/AUTOPATCH-001 항목 + DEPLOY-001 OSC 부트스트랩 추가.
+- **README.md VWX/AUTOPATCH 섹션 없음**: 같은 커밋(c608dee)으로 "Vectorworks auto-patch" 절 신설.
+
 <!-- moai:learned-end -->

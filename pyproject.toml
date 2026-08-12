@@ -12,6 +12,9 @@ dependencies = [
     # (REQ-MVP-019) — promoted from the dev group (ratification item).
     "keyring>=25,<26",
     "lupa>=2.8",
+    # SPEC-COPILOT-VWX-001 M1: Vectorworks Export Worksheet .xlsx binary
+    # format parsing (Kickoff Approval — openpyxl adopted, v0.1.1).
+    "openpyxl>=3.1",
     "python-osc>=1.9.3,<2",
     "pyyaml>=6.0.3",
     "uvicorn>=0.34",

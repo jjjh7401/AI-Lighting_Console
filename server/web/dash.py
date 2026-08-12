@@ -126,9 +126,7 @@ def _count_only_items(entry: dict, objects: list[dict]) -> list[dict]:
     return [dash_item(no=1, name="", meta={"count": count})]
 
 
-def _confirm_executor_no(
-    state_port: StateQueryPort, candidate_no: int, expected_name: str
-) -> bool:
+def _confirm_executor_no(state_port: StateQueryPort, candidate_no: int, expected_name: str) -> bool:
     """One name-verified probe of the console's "Executor <n>" address form —
     the SAME form ``server/safety/console.py::StateBodyFetcher.
     _fetch_executor_body`` and the EXECBODY-001 responder

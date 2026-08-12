@@ -1,0 +1,14 @@
+All LX Patch Data
+Device Type,Instrument Type,GDTF Fixture Mode,Universe,U Address,Fixture ID,Unit Number,Position,Purpose
+,11,11,11,11,11,6,11,11
+Light,Robin MMX Spot,Mode 1,1,1,101,1,LX1,Cool Cover
+Light,Robin MMX Spot,Mode 1,1,33,102,2,LX1,Cool Cover
+Light,Robin MMX Spot,Mode 1,1,65,103,3,LX1,Cool Cover
+Light,Robin LEDBeam 350,Mode 1,1,97,104,6,LX1,Warm Cover
+Light,Robin LEDBeam 350,Mode 1,1,113,105,5,LX1,Warm Cover
+Light,Robin LEDBeam 350,Mode 1,1,129,106,4,LX1,Warm Cover
+Light,Selecon Acclaim F 650W,Mode 1,2,1,201,,LX3,Lav Back
+Light,Selecon Acclaim F 650W,Mode 1,2,2,202,,LX3,Lav Back
+Light,Selecon Acclaim F 650W,Mode 1,2,3,203,,LX3,Lav Back
+Light,Selecon Acclaim F 650W,Mode 1,2,4,204,,LX3,Lav Back
+Light,Selecon Acclaim F 650W,Mode 1,2,5,205,,LX3,Lav Back

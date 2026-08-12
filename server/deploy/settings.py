@@ -67,6 +67,13 @@ DEFAULT_PLUGIN_IMPORT_DIR = str(
 # Must equal the literal in console/lua/copilot_responder.lua CONFIG, so that
 # installing without an explicit slot renders byte-identical bundled content.
 DEFAULT_OSC_SLOT = 1
+# The onPC OSC-object import folder (In & Out > OSC > Import reads here).
+# Verified 2026-08-12 against a live onPC 2.4.2.2 install — see
+# server/deploy/provisioning.py OSC_TEMPLATE_ASSETS for the two row templates
+# staged into this directory.
+DEFAULT_OSC_IMPORT_DIR = str(
+    Path.home() / "MALightingTechnology" / "gma3_library" / "inout" / "osc"
+)
 
 _PORT_KEYS = ("console_port", "receive_port", "web_port")
 _HOST_KEYS = ("console_host", "web_host")
@@ -77,6 +84,7 @@ _RECOGNISED_KEYS = (
     *_PORT_KEYS,
     "plugin_import_dir",
     "osc_slot",
+    "osc_import_dir",
 )
 
 _MIN_PORT = 1
@@ -111,6 +119,7 @@ class UserSettings:
     web_port: int
     plugin_import_dir: str
     osc_slot: int = DEFAULT_OSC_SLOT
+    osc_import_dir: str = DEFAULT_OSC_IMPORT_DIR
 
 
 def _resolve_config_dir(
@@ -337,6 +346,7 @@ def resolve_effective_settings(
         "web_port": DEFAULT_WEB_PORT,
         "plugin_import_dir": DEFAULT_PLUGIN_IMPORT_DIR,
         "osc_slot": DEFAULT_OSC_SLOT,
+        "osc_import_dir": DEFAULT_OSC_IMPORT_DIR,
     }
 
     seed_active = _seed_active_provider(seed_path)
@@ -375,6 +385,7 @@ def _dump_settings_toml(settings: UserSettings) -> str:
             f"web_port = {settings.web_port}",
             f'plugin_import_dir = "{_toml_escape(settings.plugin_import_dir)}"',
             f"osc_slot = {settings.osc_slot}",
+            f'osc_import_dir = "{_toml_escape(settings.osc_import_dir)}"',
             "",
         )
     )

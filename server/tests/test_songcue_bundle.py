@@ -102,6 +102,48 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # widened 1220 hunk, not because anything there was reverted.
 # Protected-range overlap re-verified: ZERO (the assertion below is what actually
 # carries the PRESERVE claim; this positional list is bookkeeping).
+# SPEC-COPILOT-VWX-001 M6 registered precheck_vectorworks_diff the same way: one
+# import block (server.vwx.address/columns/diff/reader/report/rig, widening the
+# 33 hunk), two stdlib imports (base64, binascii — one genuinely new start at 11,
+# immediately above the existing 12 hunk since unified=0 does not merge adjacent-
+# but-distinct insertion points), one TOOL_NAMES entry (widening 49), one handler
+# + ToolDefinition + one handlers-dict entry (all widening hunks the earlier
+# SPECs already opened, inside the same build_toolset body). 45 hunks total (44
+# + the new 11 start); every other start is unchanged from GROUPGEN's snapshot.
+# Evidence this is additive-only:
+#   git diff --unified=0 e40c4d0~1..HEAD -- server/orchestrator/tools.py \
+#     | grep -cE '^-[^-]'   ->  0  (zero pre-existing lines deleted or modified)
+# Protected-range overlap re-verified: ZERO.
+# SPEC-COPILOT-AUTOPATCH-001 M7 registered apply_vectorworks_patch the same way:
+# three import blocks (server.vwx.apply / .patchplan / .typemap, widening the 33
+# hunk), one TOOL_NAMES entry (widening 49), one handler plus two nested helpers,
+# one ToolDefinition and one handlers-dict entry — all inside the same
+# build_toolset body the earlier SPECs already opened. ONE genuinely new start
+# (1061, the handler insertion point); 46 hunks total (45 + 1061). Every other
+# start is unchanged from the VWX snapshot.
+# Evidence this is additive-only, not a rewrite of anyone else's code:
+#   git diff --stat     664060d~1..HEAD -- server/orchestrator/tools.py  ->  +262 -0
+#   git diff --unified=0 664060d~1..HEAD -- ... | grep -cE '^-[^-]'      ->  0
+# i.e. ZERO pre-existing lines were deleted or modified.
+# Protected-range overlap re-verified: ZERO — recomputed against
+# _TOOLS_PROTECTED_OLD_RANGES ((234,238), (524,569)) with the assertion below.
+# VWX round24 후속 (SPEC-COPILOT-VWX-001, 되묻기 통로) — 모델이 값을 지어내는
+# 대신 사용자에게 묻는 경로를 넣었다. 새 시작줄은 **하나뿐**이다:
+#   184 — 질문 갈래 상수와 라이브러리 감시 눈금(파일 상단 상수 구역)
+# 나머지 변경(`resolve_fixture_type`이 직접 묻고 기다리는 본문, `ask_user`의
+# 실행 지시, `ToolExecution.awaited_human`)은 앞선 SPEC들이 이미 연 훅 안에서
+# 넓어졌을 뿐 새 자리를 만들지 않았다. 47훅 (46 + 184).
+# 보호 구간 겹침 재계산: ZERO — ((234,238), (524,569)) 어느 쪽도 건드리지 않는다.
+# VWX round24 후속 2 (단계형 패치 · 실측 판정) — 두 자리가 더 열렸다:
+#   620  — `deploy_plugin`이 손으로 짠 AddFixtures를 **거절**하는 자리. 지시로는
+#          막히지 않아(모델이 실물에서 여섯 번 우회) 구조로 옮긴 금지다.
+#   1048 — `patch_fixtures` 본문(자리 재확인 · 생성 · 실행 · **재조회 판정**).
+# 49훅 (47 + 620 + 1048). 보호 구간 겹침 재계산: ZERO.
+# 커밋 진행 후속 (SPEC-COPILOT-AUTOPATCH-001, vectorworks_autopatch 문서화) —
+# 자리가 하나 더 열렸다: 164 — `VectorworksUploadPort` 뒤 `vectorworks_autopatch`
+# 정의 앞에 다른 툴들과 같은 `# -- toolname (SPEC-ID) --` + `@MX:NOTE:` 앵커
+# 주석을 더한 자리(순수 주석, 실행 코드 0줄). 50훅(49 + 164). 보호 구간 겹침
+# 재계산: ZERO — 164는 (234,238)·(524,569) 어느 쪽에도 닿지 않는다.
 # SPEC-COPILOT-TRUNCATE-001 (2026-08-05, user-approved) — granted exception,
 # re-walked per the same SPATIAL §E.2.19 precedent. The partial-read reply shape
 # diverges (`fixtures`/`analysis` withheld, `partial_fixtures`/`missing`/
@@ -154,6 +196,7 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # only after the commit — which is how it reached `main` in PR #33. Run the
 # suite ONCE MORE after committing, before merging.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
+    11,
     12,
     14,
     17,
@@ -162,16 +205,22 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     49,
     104,
     125,
+    164,
+    184,
     425,
     436,
     463,
     475,
     477,
     479,
+    620,
     952,
     971,
     989,
     1007,
+    1048,
+    1061,
+    1067,
     1070,
     1072,
     1081,

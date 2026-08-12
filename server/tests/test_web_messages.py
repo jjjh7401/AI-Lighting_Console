@@ -57,6 +57,31 @@ class TestClientMessageParsing:
         assert message["type"] == "chat"
         assert message["text"] == "보컬 그룹 만들어줘"
 
+    def test_vectorworks_export_upload_parses(self):
+        message = parse_client_message(
+            _raw(
+                type="vectorworks_export_upload",
+                file_name="design.xlsx",
+                content_base64="c2FmZQ==",
+            )
+        )
+        assert message == {
+            "v": PROTOCOL_VERSION,
+            "type": "vectorworks_export_upload",
+            "file_name": "design.xlsx",
+            "content_base64": "c2FmZQ==",
+        }
+
+    def test_vectorworks_mvr_upload_parses(self):
+        message = parse_client_message(
+            _raw(
+                type="vectorworks_export_upload",
+                file_name="Demoshow_grandMA3.mvr",
+                content_base64="c2FmZQ==",
+            )
+        )
+        assert message["file_name"] == "Demoshow_grandMA3.mvr"
+
     def test_approval_decision_parses(self):
         message = parse_client_message(
             _raw(type="approval_decision", request_id="req-1", approved=True)
@@ -89,6 +114,22 @@ class TestClientMessageParsing:
             json.dumps({"v": 1, "type": "approval_decision", "request_id": "r", "approved": "yes"}),
             json.dumps({"v": 1, "type": "lock"}),  # missing active
             json.dumps({"v": 1, "type": "lock", "active": 1}),  # non-bool active
+            json.dumps(
+                {
+                    "v": 1,
+                    "type": "vectorworks_export_upload",
+                    "file_name": "design.pdf",
+                    "content_base64": "c2FmZQ==",
+                }
+            ),
+            json.dumps(
+                {
+                    "v": 1,
+                    "type": "vectorworks_export_upload",
+                    "file_name": "design.xlsx",
+                    "content_base64": "not base64",
+                }
+            ),
         ],
     )
     def test_malformed_client_messages_are_rejected(self, raw):

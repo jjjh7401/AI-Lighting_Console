@@ -168,6 +168,43 @@ Pipeline ([`server/deploy/`](server/deploy/)):
    on **every** invocation (REQ-MVP-028 — the M4 invocation gate enforces it
    with no extra wiring).
 
+
+## Vectorworks auto-patch (VWX + AUTOPATCH)
+
+Upload a Vectorworks Instrument Data export (`.csv`, `.txt`, `.xlsx`) or an MVR
+file (`.mvr`) through the chat UI and the copilot will:
+
+1. **Read the design** — parse columns, resolve addresses (3-way cross-check),
+   build a designed-rig model.
+2. **Diff against the live console** — report missing fixtures, address
+   collisions, and quantity mismatches.
+3. **Plan the patch** — assign fixture IDs (within a range you confirm),
+   resolve fixture types against the console's library, generate an
+   `AddFixtures` Lua script, and plan DMX addresses from the drawing.
+4. **Hand off for execution** — the generated Lua is shown for review; **you
+   run it from the console** (Patch editor must be open). The server never
+   executes the patch itself.
+5. **Verify** — after you execute, the server re-reads the console and
+   confirms what was actually created. Already-patched fixtures are
+   automatically excluded (idempotent).
+
+The upload, diff report, and patch plan all stay within your WebSocket session
+— the model never asks you to paste base64 or a report back into chat.
+
+When information is missing (ambiguous fixture types, unnamed fixtures, empty
+FID range), the copilot asks through a question card instead of guessing.
+
+**Why not fully automatic?** MA3's `AddFixtures` requires the Patch editor to
+be open and a human to trigger execution — server-only automation was tested
+across 10 execution paths and produced zero fixtures in every case (measured
+live, AUTOPATCH-001 M0). The semi-automatic model matches the original request:
+*"if auto-patch fails, ask the user for manual steps."*
+
+Implementation: `server/vwx/` (7 modules) + `server/orchestrator/tools.py`
+(`vectorworks_autopatch` tool). Specifications:
+[SPEC-COPILOT-VWX-001](.moai/specs/SPEC-COPILOT-VWX-001/spec.md),
+[SPEC-COPILOT-AUTOPATCH-001](.moai/specs/SPEC-COPILOT-AUTOPATCH-001/spec.md).
+
 ## Packaged app — build & run (SPEC-COPILOT-DEPLOY-001 Stage 1, M6)
 
 A self-contained PyInstaller **onedir** build lets an operator run the app
