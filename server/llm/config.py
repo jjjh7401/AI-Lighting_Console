@@ -58,6 +58,12 @@ class AnthropicSettings:
     # requires the production inference configuration to be pinned in config.
 
 
+
+@dataclass(frozen=True)
+class ClaudeCodeSettings:
+    """Claude Code subscription settings; its OAuth session stays in Keychain."""
+
+    model: str
 @dataclass(frozen=True)
 class ClaudeCodeSettings:
     """Claude Code subscription settings; its OAuth session stays in Keychain."""

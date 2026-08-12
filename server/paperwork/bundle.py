@@ -279,27 +279,47 @@ def _incompleteness_lines(
 
 
 _INDEX_STYLE = """
-  body { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
-         margin: 24px; color: #1a1a1a; }
-  h1 { font-size: 20px; margin-bottom: 4px; }
-  h2 { font-size: 15px; margin: 20px 0 6px; }
-  .meta { color: #555; font-size: 12px; margin-bottom: 16px; }
-  table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-  th, td { border: 1px solid #ccc; padding: 4px 8px; font-size: 12px; text-align: left; }
-  th { background: #f0f0f0; }
-  ul.incompleteness { margin: 0 0 20px; padding-left: 20px; font-size: 12px; }
-  .status-생성됨 { color: #1a7a1a; }
-  .status-조회 실패, .status-미배선 { color: #a00; }
+  :root {
+    --ink: #1a1a1a; --sub: #64696f; --line: #d4d8dd; --bg: #fff;
+    --head-bg: #f5f6f8; --row-alt: #fafbfc;
+    --ok: #1a7a1a; --err: #a00;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic",
+                 "Segoe UI", Helvetica, Arial, sans-serif;
+    margin: 0; padding: 32px 24px 48px;
+    color: var(--ink); background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+  h2 { font-size: 14px; margin: 20px 0 6px; }
+  .meta { color: var(--sub); font-size: 11.5px; margin-bottom: 20px; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 20px;
+          font-size: 12.5px; }
+  th, td { border: 1px solid var(--line); padding: 6px 10px;
+           text-align: left; vertical-align: top; }
+  th { background: var(--head-bg); font-weight: 600; font-size: 11.5px; }
+  tbody tr:nth-child(even) { background: var(--row-alt); }
+  ul.incompleteness { margin: 0 0 20px; padding-left: 20px;
+                      font-size: 12.5px; line-height: 1.6; }
+  .status-생성됨 { color: var(--ok); font-weight: 600; }
+  .status-조회\\ 실패, .status-미배선 { color: var(--err); font-weight: 600; }
   @media print {
-    body { margin: 0.5in; }
+    body { margin: 0.4in; padding: 0; }
+    .sheet { max-width: none; }
     thead { display: table-header-group; }
     tr, .meta { break-inside: avoid; }
+    * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   }
 """
 
 
 def _render_index_html(
-    generated_at: str, documents: tuple[HandoverDocument, ...], incompleteness: tuple[str, ...]
+    generated_at: str,
+    documents: tuple[HandoverDocument, ...],
+    incompleteness: tuple[str, ...],
 ) -> str:
     incompleteness_html = "".join(f"<li>{escape(line)}</li>\n" for line in incompleteness)
     row_parts: list[str] = []
@@ -311,25 +331,30 @@ def _render_index_html(
         row_parts.append(
             "<tr>"
             f"<td>{link_html}</td>"
-            f'<td class="status-{escape(doc.status)}">{escape(doc.status)}</td>'
+            f'<td class="status-{escape(doc.status)}">'
+            f"{escape(doc.status)}</td>"
             f"<td>{escape(doc.detail or '')}</td>"
             "</tr>\n"
         )
     rows_html = "".join(row_parts)
     body = (
-        "<h1>Handover Pack</h1>\n"
-        f'<div class="meta">Generated: {escape(generated_at)}</div>\n'
-        "<h2>Incompleteness summary</h2>\n"
+        "<h1>인수인계 패키지</h1>\n"
+        f'<div class="meta">생성: {escape(generated_at)}</div>\n'
+        "<h2>불완전성 요약</h2>\n"
         f'<ul class="incompleteness">\n{incompleteness_html}</ul>\n'
-        "<h2>Documents</h2>\n"
-        "<table>\n<thead><tr><th>Document</th><th>Status</th><th>Detail</th></tr></thead>\n"
+        "<h2>문서 목록</h2>\n"
+        "<table>\n<thead><tr>"
+        "<th>문서</th><th>상태</th><th>상세</th>"
+        "</tr></thead>\n"
         f"<tbody>\n{rows_html}</tbody>\n</table>\n"
     )
     return (
         "<!doctype html>\n"
-        '<html lang="en">\n<head>\n<meta charset="utf-8">\n'
-        "<title>Handover Pack</title>\n"
-        f"<style>{_INDEX_STYLE}</style>\n</head>\n<body>\n{body}\n</body>\n</html>\n"
+        '<html lang="ko">\n<head>\n<meta charset="utf-8">\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        "<title>인수인계 패키지</title>\n"
+        f"<style>{_INDEX_STYLE}</style>\n</head>\n<body>\n"
+        f'<div class="sheet">\n{body}\n</div>\n</body>\n</html>\n'
     )
 
 
