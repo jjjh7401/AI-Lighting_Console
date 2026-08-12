@@ -47,6 +47,44 @@ function render(element: ReactElement): ReactElement {
   return (element.type as (props: unknown) => ReactElement)(element.props);
 }
 
+/** Depth-first search for the first ReactElement with the given className
+ * in the shallow tree (no component rendering, just props traversal). */
+function findByClass(root: ReactElement, className: string): ReactElement | undefined {
+  for (const child of childArray(root)) {
+    const el = child as ReactElement;
+    if (el?.props?.className === className) return el;
+    if (el?.props) {
+      const found = findByClass(el, className);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+/** Depth-first search for the first ReactElement whose `type` matches. */
+function findByType(root: ReactElement, type: unknown): ReactElement | undefined {
+  for (const child of childArray(root)) {
+    const el = child as ReactElement;
+    if (el?.type === type) return el;
+    if (el?.props) {
+      const found = findByType(el, type);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+/** Depth-first collect ALL ReactElements whose `type` matches. */
+function findAllByType(root: ReactElement, type: unknown): ReactElement[] {
+  const results: ReactElement[] = [];
+  for (const child of childArray(root)) {
+    const el = child as ReactElement;
+    if (el?.type === type) results.push(el);
+    if (el?.props) results.push(...findAllByType(el, type));
+  }
+  return results;
+}
+
 const OK_ENTRY: CueExecutorEntry = {
   executor_no: 101,
   status: "ok",
@@ -154,16 +192,14 @@ describe("formatHistoryTime — local HH:MM:SS (T-H4 defect 2)", () => {
 describe("CueMonitor — history row (T-H4 defect 2: format + separation)", () => {
   it("renders the timestamp and command as SEPARATE elements, never one glued string", () => {
     const element = CueMonitor({ cueMonitor: POPULATED_STATE }) as ReactElement;
-    const body = childArray(element).find(
-      (child) => (child as ReactElement).props?.className === "cue-monitor-body",
-    ) as ReactElement;
-    const historyBlock = childArray(body).find(
-      (child) => (child as ReactElement).props?.className === "cue-monitor-history",
-    ) as ReactElement;
+    // History is a direct child of the <section>, not inside .cue-monitor-body.
+    const historyBlock = findByClass(element, "cue-monitor-history") as ReactElement;
     const list = childArray(historyBlock)[1] as ReactElement;
-    const firstRowElement = childArray(list)[0] as ReactElement;
-    const firstRow = render(firstRowElement); // CueHistoryRow is a component, not a rendered <li>
-    const [tsSpan, commandSpan] = childArray(firstRow) as ReactElement[];
+    // Reversed order: newest first — the second POPULATED_STATE entry
+    // ("Delete Group 1", ts 00:00:05) is now [0].
+    const secondRowElement = childArray(list)[1] as ReactElement;
+    const secondRow = render(secondRowElement); // CueHistoryRow is a component, not a rendered <li>
+    const [tsSpan, commandSpan] = childArray(secondRow) as ReactElement[];
     // Two distinct child elements — never a single concatenated text node.
     expect(tsSpan.props.className).toBe("cue-monitor-history-ts");
     expect(commandSpan.props.className).toBe("cue-monitor-history-command");
@@ -181,10 +217,8 @@ describe("CueMonitor", () => {
     const element = CueMonitor({ cueMonitor: POPULATED_STATE }) as ReactElement;
     expect(element.props["aria-label"]).toBe("라이브 큐 진행 모니터");
 
-    const body = childArray(element).find(
-      (child) => (child as ReactElement).props?.className === "cue-monitor-body",
-    ) as ReactElement;
-    const [grid, historyBlock] = childArray(body) as ReactElement[];
+    const body = findByClass(element, "cue-monitor-body") as ReactElement;
+    const grid = findByClass(body, "cue-monitor-grid") as ReactElement;
     expect(grid.props.className).toBe("cue-monitor-grid");
     const tiles = childArray(grid).filter(
       (child) => (child as ReactElement)?.props?.entry !== undefined,
@@ -192,18 +226,21 @@ describe("CueMonitor", () => {
     expect(tiles).toHaveLength(3);
     expect(tiles.map((tile) => tile.props.entry.executor_no)).toEqual([101, 201, 301]);
 
-    const historyItems = childArray(childArray(historyBlock)[1] as ReactElement);
+    const historyBlock = findByClass(element, "cue-monitor-history") as ReactElement;
+    const historyList = findByClass(historyBlock, "cue-monitor-history-list") as ReactElement;
+    const historyItems = childArray(historyList);
     expect(historyItems).toHaveLength(2);
   });
 
   it("shows an empty-state placeholder for both the grid and history when nothing has synced", () => {
     const element = CueMonitor({ cueMonitor: EMPTY_STATE }) as ReactElement;
-    const body = childArray(element).find(
-      (child) => (child as ReactElement).props?.className === "cue-monitor-body",
-    ) as ReactElement;
-    const [grid, historyBlock] = childArray(body) as ReactElement[];
+    const body = findByClass(element, "cue-monitor-body") as ReactElement;
+    const grid = findByClass(body, "cue-monitor-grid") as ReactElement;
     expect(childArray(grid)).toHaveLength(1); // the "확인된 익스큐터 없음" placeholder
-    const historyItems = childArray(childArray(historyBlock)[1] as ReactElement);
+
+    const historyBlock = findByClass(element, "cue-monitor-history") as ReactElement;
+    const historyList = findByClass(historyBlock, "cue-monitor-history-list") as ReactElement;
+    const historyItems = childArray(historyList);
     expect(historyItems).toHaveLength(1); // the "실행 이력 없음" row
   });
 
@@ -754,10 +791,7 @@ describe("CueSheet — clicking a row jumps to that cue (T-H5)", () => {
 describe("CueMonitor — cue sheet open/close (T-H4)", () => {
   it("renders no sheet when openExecutorNo is omitted", () => {
     const element = CueMonitor({ cueMonitor: POPULATED_STATE }) as ReactElement;
-    const body = childArray(element).find(
-      (child) => (child as ReactElement).props?.className === "cue-monitor-body",
-    ) as ReactElement;
-    const sheet = childArray(body).find((child) => (child as ReactElement)?.type === CueSheet);
+    const sheet = findByType(element, CueSheet);
     expect(sheet).toBeUndefined();
   });
 
@@ -766,12 +800,7 @@ describe("CueMonitor — cue sheet open/close (T-H4)", () => {
       cueMonitor: POPULATED_STATE,
       openExecutorNo: 101,
     }) as ReactElement;
-    const body = childArray(element).find(
-      (child) => (child as ReactElement).props?.className === "cue-monitor-body",
-    ) as ReactElement;
-    const sheets = childArray(body).filter(
-      (child) => (child as ReactElement)?.type === CueSheet,
-    ) as ReactElement[];
+    const sheets = findAllByType(element, CueSheet);
     expect(sheets).toHaveLength(1);
     expect(sheets[0].props.entry.executor_no).toBe(101);
     const rendered = render(sheets[0]);
@@ -783,10 +812,7 @@ describe("CueMonitor — cue sheet open/close (T-H4)", () => {
       cueMonitor: POPULATED_STATE,
       openExecutorNo: 101,
     }) as ReactElement;
-    const body = childArray(element).find(
-      (child) => (child as ReactElement).props?.className === "cue-monitor-body",
-    ) as ReactElement;
-    const grid = childArray(body)[0] as ReactElement;
+    const grid = findByClass(element, "cue-monitor-grid") as ReactElement;
     const tiles = childArray(grid).filter(
       (child) => (child as ReactElement)?.props?.entry !== undefined,
     ) as ReactElement[];
@@ -803,12 +829,7 @@ describe("CueMonitor — cue sheet open/close (T-H4)", () => {
       openExecutorNo: 101,
       onToggleExecutor,
     }) as ReactElement;
-    const body = childArray(element).find(
-      (child) => (child as ReactElement).props?.className === "cue-monitor-body",
-    ) as ReactElement;
-    const sheet = childArray(body).find(
-      (child) => (child as ReactElement)?.type === CueSheet,
-    ) as ReactElement;
+    const sheet = findByType(element, CueSheet) as ReactElement;
     const rendered = render(sheet);
     const header = childArray(rendered)[0] as ReactElement;
     const closeButton = childArray(header).find(
@@ -825,22 +846,14 @@ describe("CueMonitor — cue sheet open/close (T-H4)", () => {
       openExecutorNo: 101,
       onGoto,
     }) as ReactElement;
-    const body = childArray(element).find(
-      (child) => (child as ReactElement).props?.className === "cue-monitor-body",
-    ) as ReactElement;
-    const sheet = childArray(body).find(
-      (child) => (child as ReactElement)?.type === CueSheet,
-    ) as ReactElement;
+    const sheet = findByType(element, CueSheet) as ReactElement;
     expect(sheet.props.onGoto).toBe(onGoto);
   });
 
   it("T-H5: onBack passed to CueMonitor reaches every tile's onBack prop", () => {
     const onBack = vi.fn();
     const element = CueMonitor({ cueMonitor: POPULATED_STATE, onBack }) as ReactElement;
-    const body = childArray(element).find(
-      (child) => (child as ReactElement).props?.className === "cue-monitor-body",
-    ) as ReactElement;
-    const grid = childArray(body)[0] as ReactElement;
+    const grid = findByClass(element, "cue-monitor-grid") as ReactElement;
     const tiles = childArray(grid).filter(
       (child) => (child as ReactElement)?.props?.entry !== undefined,
     ) as ReactElement[];
@@ -1031,10 +1044,7 @@ describe("CueMonitor — panel-level banner rendering (T-H2)", () => {
     }) as ReactElement;
     expect(renderedBanner(element)).toBeNull();
     // ...and the tile with a value shows it, never the long sentence.
-    const body = childArray(element).find(
-      (child) => (child as ReactElement).props?.className === "cue-monitor-body",
-    ) as ReactElement;
-    const grid = childArray(body)[0] as ReactElement;
+    const grid = findByClass(element, "cue-monitor-grid") as ReactElement;
     const tiles = childArray(grid).filter(
       (child) => (child as ReactElement)?.props?.entry !== undefined,
     ) as ReactElement[];

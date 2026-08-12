@@ -83,6 +83,27 @@ body {
   cursor: pointer;
 }
 
+.dashboard-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pane-divider {
+  width: 5px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  border-left: 1px solid #2b2f36;
+  transition: background 0.15s;
+}
+
+.pane-divider:hover,
+.pane-divider:active {
+  background: var(--accent);
+}
+
 .dashboard {
   flex: 1;
   min-width: 0;
@@ -1194,17 +1215,19 @@ body {
   color: #201a08;
 }
 
-/* T-E — volunteer runbook mode: a large-type, single-column list for a
-   non-expert operator. Deliberately much bigger than every other view's
-   type scale (design intent: "이 버튼만 누르세요"). */
+/* Runbook is a performance score: the horizontal rail gives musical context,
+   while the cue sheet stays legible at show-call distance. */
 .runbook-mode-frame {
-  padding: 16px;
+  padding: 24px;
   overflow-y: auto;
   flex: 1;
+  background:
+    linear-gradient(90deg, rgba(96, 118, 144, .07) 1px, transparent 1px) 0 0 / 64px 64px,
+    #11151d;
 }
 
 .runbook-mode {
-  max-width: 720px;
+  max-width: 1180px;
   margin: 0 auto;
 }
 
@@ -1212,26 +1235,30 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin: 0 0 22px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #303946;
 }
 
 .runbook-title {
-  font-size: 24px;
-  font-weight: 700;
+  font-family: "Arial Narrow", "Noto Sans KR", sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -.04em;
 }
 
 .runbook-syncline {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
   flex: 1;
 }
 
 .runbook-refresh {
-  background: var(--panel);
+  background: #1d2430;
   color: var(--text);
-  border: 1px solid #2b2f36;
-  border-radius: 6px;
-  padding: 6px 10px;
+  border: 1px solid #3b4656;
+  border-radius: 4px;
+  padding: 7px 10px;
   cursor: pointer;
 }
 
@@ -1247,74 +1274,188 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.runbook-item {
-  background: var(--panel);
-  border: 1px solid #2b2f36;
-  border-radius: 10px;
-  padding: 16px;
-}
-
-.runbook-item-main {
-  display: flex;
-  align-items: center;
   gap: 16px;
 }
 
+.runbook-item {
+  --track: #7d8ea6;
+  background: #181e28;
+  border: 1px solid #354050;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .16);
+}
+
+.runbook-item-live {
+  border-color: #f4bb4f;
+  box-shadow: 0 0 0 1px rgba(244, 187, 79, .18), 0 12px 30px rgba(0, 0, 0, .16);
+}
+
+.runbook-track-header {
+  min-height: 76px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(90deg, #202938, #1a202b 70%);
+  border-bottom: 1px solid #354050;
+}
+
 .runbook-item-no {
-  font-size: 22px;
+  font-family: ui-monospace, monospace;
+  font-size: 20px;
   font-weight: 700;
-  color: var(--muted);
+  color: #91a0b4;
   min-width: 32px;
 }
 
-.runbook-item-name {
-  font-size: 22px;
-  font-weight: 700;
+.runbook-track-title {
+  min-width: 0;
   flex: 1;
+  display: grid;
+  gap: 3px;
 }
 
-.runbook-item-run {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 14px 22px;
-  font-size: 18px;
+.runbook-track-kicker,
+.runbook-sheet-heading,
+.runbook-cue-section {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
   font-weight: 700;
+  letter-spacing: .1em;
+}
+
+.runbook-track-kicker { color: #8492a6; }
+
+.runbook-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 21px;
+  font-weight: 750;
+}
+
+.runbook-track-status {
+  min-width: 104px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #b7c3d3;
+  font: 700 11px ui-monospace, monospace;
+  letter-spacing: .08em;
+}
+
+.runbook-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #7f8ca0;
+}
+
+.runbook-status-dot.is-live { background: #f4bb4f; box-shadow: 0 0 10px #f4bb4f; }
+
+.runbook-item-run {
+  background: #5289ff;
+  color: #fff;
+  border: 0;
+  border-radius: 4px;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 750;
   cursor: pointer;
 }
 
-.runbook-item-run:disabled {
-  background: #2b2f36;
-  color: var(--muted);
-  cursor: not-allowed;
+.runbook-item-run:disabled { background: #2b3442; color: var(--muted); cursor: not-allowed; }
+.runbook-item-run-active { background: var(--warn); color: #201a08; }
+
+.runbook-timeline {
+  position: relative;
+  min-height: 96px;
+  margin: 18px 24px 8px;
 }
 
-.runbook-item-run-active {
-  background: var(--warn);
-  color: #201a08;
+.runbook-timeline-rail {
+  position: absolute;
+  height: 2px;
+  left: 0;
+  right: 0;
+  top: 32px;
+  background: linear-gradient(90deg, #63758c, #4f8cff, #63758c);
 }
 
-.runbook-item-current-cue {
-  margin-top: 8px;
-  font-size: 16px;
-  color: var(--muted);
+.runbook-cue {
+  position: absolute;
+  left: var(--cue-position);
+  top: 0;
+  width: min(160px, 16vw);
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  color: #aeb9c8;
+  text-align: center;
 }
 
-.runbook-item-caution {
-  margin-top: 8px;
-  font-size: 16px;
-  color: var(--warn);
+.runbook-cue-marker {
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+  margin-top: 27px;
+  border: 2px solid #91a3b7;
+  border-radius: 50%;
+  background: #181e28;
+  z-index: 1;
 }
 
-.runbook-item-cues {
-  margin: 8px 0 0;
-  padding-left: 20px;
-  font-size: 15px;
-  color: var(--muted);
+.runbook-cue.is-current { color: #fff; }
+.runbook-cue.is-current .runbook-cue-marker { background: #5289ff; border-color: #b7d0ff; box-shadow: 0 0 12px #5289ff; }
+.runbook-cue-section { color: #75a5ff; white-space: nowrap; }
+.runbook-cue-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.runbook-cue-label b { font-family: ui-monospace, monospace; color: #f0f4fa; }
+
+.runbook-cue-sheet { margin-top: 6px; border-top: 1px solid #303a48; }
+
+.runbook-sheet-heading,
+.runbook-sheet-row {
+  display: grid;
+  grid-template-columns: 84px 92px 130px minmax(0, 1fr);
+  align-items: center;
+}
+
+.runbook-sheet-heading {
+  min-height: 32px;
+  padding: 0 24px;
+  color: #8391a5;
+  background: #151a22;
+}
+
+.runbook-sheet-row {
+  min-height: 38px;
+  padding: 0 24px;
+  border-top: 1px solid rgba(67, 79, 96, .56);
+  color: #cbd4df;
+  font-size: 13px;
+}
+
+.runbook-sheet-row.is-current { background: rgba(82, 137, 255, .12); box-shadow: inset 3px 0 #5289ff; }
+.runbook-sheet-cue { font: 700 13px ui-monospace, monospace; color: #fff; }
+.runbook-sheet-trigger { font: 700 11px ui-monospace, monospace; color: #aebed1; }
+.runbook-sheet-section { font: 700 11px ui-monospace, monospace; color: #9baec5; }
+.runbook-sheet-section.section-intro { color: #75b9ff; }
+.runbook-sheet-section.section-chorus { color: #f5bd5d; }
+.runbook-sheet-section.section-bridge { color: #d89eff; }
+.runbook-sheet-section.section-outro { color: #ff9898; }
+.runbook-sheet-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.runbook-item-caution { margin: 12px 24px 16px; font-size: 13px; color: var(--warn); }
+
+@media (max-width: 700px) {
+  .runbook-mode-frame { padding: 14px; }
+  .runbook-track-header { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+  .runbook-track-status { margin-left: 48px; }
+  .runbook-item-run { margin-left: auto; }
+  .runbook-timeline { display: none; }
+  .runbook-sheet-heading, .runbook-sheet-row { grid-template-columns: 52px 66px 96px minmax(0, 1fr); padding: 0 12px; }
+  .runbook-sheet-heading { font-size: 8px; }
 }
 
 /* W3 — paperwork panel: patch sheet / cue sheet / preset list generation.
@@ -1664,19 +1805,24 @@ body {
   font-size: 13px;
 }
 
-/* Top-level cue-monitor: flex column. The upper region (grid + detail)
-   takes ~2/3 and the history takes ~1/3 via flex ratios. */
+/* Top-level cue-monitor: flex column. Three zones stacked vertically:
+   1. Upper (executor grid) — takes most of the space (flex: 1 + overflow)
+   2. ExecutorDetail — fixed-height, sits directly above history
+   3. History — small, scrollable */
 .cue-monitor {
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  flex: 1;
+  min-width: 360px;
 }
 
-/* Upper zone — executor grid on top, detail view below, together flex: 2
-   against history's flex: 1 for the 2:1 space split. */
+/* Upper zone — the executor grid fills most of the panel and scrolls
+   independently. flex: 1 gives it all remaining space after the
+   fixed-height detail and compact history below. */
 .cue-monitor-upper {
-  flex: 2;
+  flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -1898,9 +2044,8 @@ body {
 }
 
 /* -- ExecutorDetail: MA3-style executor detail view -------------------------
-   Title bar (sequence name + executor number), scrollable cue list with
-   current cue highlighted in yellow, a fader-bar placeholder, and three
-   console-vocabulary action buttons (Pause / Go- / Go+). */
+   Sits between the executor grid and the history. Fixed height so it does
+   not steal space from the grid above. The cue list inside scrolls. */
 .executor-detail {
   display: flex;
   flex-direction: column;
@@ -1908,8 +2053,8 @@ body {
   border: 1px solid #3a3d44;
   border-radius: 2px;
   background: #1a1c20;
-  min-height: 180px;
-  max-height: 320px;
+  height: 200px;
+  flex-shrink: 0;
 }
 
 .executor-detail-titlebar {
@@ -2044,16 +2189,15 @@ body {
   background: #6a6d18;
 }
 
-/* Recent-execution history — now a visually separated, independently
-   scrollable section below the executor grid.  A 1px border-top + small
-   margin gap replaces the previous inline gap that made the two regions
-   indistinguishable. The list is reversed in TSX (newest first) and scrolls
-   via overflow-y on the inner <ul>. */
+/* Recent-execution history — compact section at the bottom. Fixed max-height
+   keeps it small; the list scrolls internally. */
 .cue-monitor-history {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  max-height: 140px;
+  flex-shrink: 0;
   min-height: 0;
+  overflow: hidden;
   border-top: 1px solid #2b2f36;
 }
 
