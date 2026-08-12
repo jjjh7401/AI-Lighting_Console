@@ -7,13 +7,13 @@
 > **재개 첫 명령** (기대와 다르면 §0 표를 갱신하고 진행):
 >
 > ```bash
-> git fetch origin && git log --oneline -1 origin/main   # 86b570d 이상
+> git fetch origin && git log --oneline -1 origin/main   # 2eb3b28 이상
 > gh pr list --state open                                 # 우리 것 0건
 > git worktree list                                       # 3개
 > ```
 >
-> `origin/main`이 전진했으면 `spec/introspect-001`(PR #23)이나 VWX가 들어온 것이다 —
-> §3-6의 `BASE..HEAD` 게이트를 먼저 확인하라.
+> `origin/main`이 전진했으면 `spec/introspect-001`(PR #23)이 들어온 것이다 —
+> §3-6의 `BASE..HEAD` 게이트를 먼저 확인하라. **VWX는 이미 들어왔다**(`63083a6`).
 
 ---
 
@@ -27,10 +27,18 @@
 | #32 | **P0-5 매직시트 축약형** + `prop` 측정 스텝 + 절차서 | | ✅ 머지 `8eb5d56` |
 | #33 | **블랙리스트 v3** + **타임코드 슬롯 점유 검사** + 리포트 v2 정정 3건 | §1a | ✅ 머지 `4db227e` |
 | #34 | SONGCUE 훅 게이트 재보행 | **#33이 깬 main 복구** (§3-6) | ✅ 머지 `86b570d` |
+| #35 | 이 문서를 세션 종료 시점으로 갱신 | | ✅ 머지 `039bec8` |
+| #36 | "메인" → `Main` 워크트리(루트) 용어 정리 | §3-9 | ✅ 머지 `2eb3b28` |
 
 **열린 PR 0건. 우리 작업은 전부 `origin/main`에 있다.**
 
-`origin/main` = **`86b570d`**.
+`origin/main` = **`2eb3b28`** (세션 종료 시점).
+
+⚠️ **우리 뒤에 VWX가 들어왔다** — `63083a6 Merge feature/SPEC-COPILOT-VWX-001`.
+그쪽이 `main`을 자기 브랜치에 먼저 머지해 정리하고 들어왔고, **우리 계약은 전부
+살아남았다**(실측: 툴에 `build_magic_sheet` 존재 · 블랙리스트 `version: 3` +
+`LoadShow`/`NewShow` · `_timecode_slot_verdict` 3곳 · 신규 테스트 2종 · 문서 2종).
+**단 툴 개수는 24 → 31로 바뀌었다** — 24를 인용한 곳은 재실측 대상이다.
 
 ### 워크트리 — **3개다** (선행 문서의 4개에서 줄었다)
 
@@ -48,13 +56,23 @@
 `spec-feasibility` 워크트리는 **세션 종료 시 외부에서 제거됐다.** 유실 0 — 그 시점 내용은
 `origin/main`과 동일했다. 새 세션은 작업 워크트리를 새로 만들어야 한다.
 
-### 검증 수치 — `origin/main` `86b570d`에서 실측 (2026-08-07 세션 종료 시점)
+### 검증 수치 — 두 지점에서 실측 (2026-08-07)
+
+**우리 작업 직후** `86b570d` — 이 수치가 우리 변경분의 근거다:
 
 ```
 uv run pytest server/tests -q   → 5,391 passed / 7 skipped / 0 failed
 cd ui && npm test               → 382 passed (16 files)
 npx tsc --noEmit                → clean
 ```
+
+**VWX 머지 후** `63083a6` — 세션 종료 시 다시 쟀다(우리 계약 생존 확인 포함):
+
+```
+uv run pytest server/tests -q   → 8,275 passed / 8 skipped / 0 failed
+```
+
+VWX가 ~2,900건을 더했다. **레드 없이 합류했다.**
 
 선행 문서의 `4,300 green`은 스테일 기반 수치였다 — 폐기됐다.
 
@@ -272,6 +290,16 @@ uv run python -m server.tools.responder_roundtrip --skip-exec \
    v1은 스테일 브랜치를, v2는 **측정이 뒤집은 plan-phase 문서**를 근거로 삼았다.
    plan-phase(`research.md`·`plan.md`)를 인용할 때는 **그 뒤의 M0/M4 실측을 반드시
    대조하고**, 판정마다 근거를 **코드 좌표**로 달아라.
+9. **⚠️ 한국어 문자열 일괄 치환은 부분문자열에서 터진다.** *"'메인'을 'Main'으로
+   바꿔 달라"*는 요청을 실측했더니 리포 전체 `메인` 매치 **150건 중 133건이
+   `도메인` 안**이었다 — 치환하면 `도Main` 133건이 깨진다. 남은 순수 17건 중에도
+   **다른 뜻이 10건** 섞여 있었다(LLM **메인 모델** `DESIGN.md:66`·
+   `.moai/project/tech.md:43-44` / MA3 **콘솔 메인 명령줄**
+   `AUTOPATCH-001/progress.md:4155~4189`). 실제로 바꿀 것은 **7건**뿐이었고
+   그중 활성 문서 3곳만 고쳤다(#36).
+   **규율: 치환 전에 `git grep -o <토큰> | wc -l`로 총량을 재고, 감싸는 단어와
+   다른 의미를 먼저 분리하라.** 이름만 바꾸는 것으로는 모호성이 사라지지 않아
+   §0에 용어 범례를 함께 뒀다 — `Main` 워크트리(루트) ≠ 브랜치 `main`.
 
 ---
 
@@ -296,8 +324,10 @@ uv run python -m server.tools.responder_roundtrip --skip-exec \
 | `docs/runbooks/2026-08-07-live-measurement-m1-m2.md` | 라이브 측정 절차서 M1~M4. 좌표 6건 실측 대조 완료 |
 | `docs/handoff/2026-08-07-session-handoff-2.md` | 이 문서 |
 
-변경된 계약: 툴 **22 → 24** · 페이퍼워크 문서 **3 → 4종** · 블랙리스트 **7 → 9** ·
-ruleset version **2 → 3**.
+변경된 계약(**우리 델타 기준**): 툴 **22 → 24** · 페이퍼워크 문서 **3 → 4종** ·
+블랙리스트 **7 → 9** · ruleset version **2 → 3**.
+⚠️ 툴 **절대 개수는 그 뒤 VWX 머지로 31**이 됐다 — 우리 델타는 +2이고, 절대값을
+인용할 때는 `TOOL_NAMES`를 다시 세라(§3-3).
 
 ---
 
