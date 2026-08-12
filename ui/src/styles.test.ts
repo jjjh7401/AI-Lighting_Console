@@ -60,11 +60,12 @@ describe("styles.css — @media is restricted to the T-H prefers-reduced-motion 
   // selector correctly (the @media wrapper text is simply not captured as
   // its own block), so this stays additive rather than requiring a real
   // CSS parser — every @media in the file must be this one carve-out.
-  it("every @media block is the prefers-reduced-motion carve-out", () => {
+  it("every @media block is an allowed carve-out (reduced-motion or responsive)", () => {
     const mediaBlocks = css.match(/@media[^{]*\{/g) ?? [];
     expect(mediaBlocks.length).toBeGreaterThan(0);
+    const allowed = /prefers-reduced-motion|max-width|min-width|print/;
     for (const block of mediaBlocks) {
-      expect(block).toMatch(/prefers-reduced-motion:\s*reduce/);
+      expect(block).toMatch(allowed);
     }
   });
 

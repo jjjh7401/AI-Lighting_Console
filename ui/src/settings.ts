@@ -7,11 +7,12 @@
 // SECURITY: a key value NEVER rides the settings payload and is NEVER returned by
 // GET /api/settings — the server exposes only a per-provider "key set" boolean.
 
-export const PROVIDERS = ["anthropic", "gemini"] as const;
+export const PROVIDERS = ["anthropic", "claude_code", "gemini"] as const;
 export type ProviderId = (typeof PROVIDERS)[number];
 
 export const PROVIDER_LABELS: Record<string, string> = {
-  anthropic: "Anthropic",
+  anthropic: "Anthropic API",
+  claude_code: "Claude 구독",
   gemini: "Gemini",
 };
 
@@ -32,6 +33,7 @@ export const MAX_OSC_SLOT = 32;
 
 export interface EffectiveSettings {
   active_provider: string;
+  claude_code_model: string;
   console_host: string;
   console_port: number;
   receive_port: number;
@@ -41,11 +43,20 @@ export interface EffectiveSettings {
   osc_slot: number;
 }
 
+export interface ClaudeCodeStatus {
+  available: boolean;
+  logged_in: boolean;
+  email?: string | null;
+  subscription_type?: string | null;
+  model_options: string[];
+}
 export interface SettingsResponse {
   settings: EffectiveSettings;
   providers: string[];
   keys: Record<string, boolean>;
   keystore_available: boolean;
+  claude_code: ClaudeCodeStatus;
+  active_model: string | null;
 }
 
 /** Parse a GET /api/settings response; a shape mismatch returns null so the
@@ -63,10 +74,14 @@ export function parseSettingsResponse(raw: string): SettingsResponse | null {
     providers?: unknown;
     keys?: unknown;
     keystore_available?: unknown;
+    claude_code?: unknown;
+    active_model?: unknown;
   };
   if (typeof record.settings !== "object" || record.settings === null) return null;
   if (!Array.isArray(record.providers)) return null;
   if (typeof record.keys !== "object" || record.keys === null) return null;
+  if (typeof record.claude_code !== "object" || record.claude_code === null) return null;
+  if (typeof record.active_model !== "string" && record.active_model !== null) return null;
   return data as SettingsResponse;
 }
 
@@ -76,6 +91,7 @@ export function parseSettingsResponse(raw: string): SettingsResponse | null {
 // so they are not part of the editable form.
 export interface SettingsForm {
   active_provider: string;
+  claude_code_model: string;
   console_port: number;
   receive_port: number;
   plugin_import_dir: string;
@@ -85,6 +101,7 @@ export interface SettingsForm {
 export function formFromSettings(settings: EffectiveSettings): SettingsForm {
   return {
     active_provider: settings.active_provider,
+    claude_code_model: settings.claude_code_model,
     console_port: settings.console_port,
     receive_port: settings.receive_port,
     plugin_import_dir: settings.plugin_import_dir,
@@ -122,6 +139,9 @@ export function validateSettingsForm(form: SettingsForm): string[] {
   if (!(PROVIDERS as readonly string[]).includes(form.active_provider)) {
     errors.push(`활성 프로바이더는 ${PROVIDERS.join(" / ")} 중 하나여야 합니다.`);
   }
+  if (!["opus", "sonnet", "fable"].includes(form.claude_code_model)) {
+    errors.push("Claude 모델은 Opus / Sonnet / Fable 중 하나여야 합니다.");
+  }
   return errors;
 }
 
@@ -132,6 +152,7 @@ export function validateSettingsForm(form: SettingsForm): string[] {
 export function buildSettingsPayload(form: SettingsForm): string {
   return JSON.stringify({
     active_provider: form.active_provider,
+    claude_code_model: form.claude_code_model,
     console_port: form.console_port,
     receive_port: form.receive_port,
     plugin_import_dir: form.plugin_import_dir,
@@ -147,17 +168,19 @@ export function buildKeyPayload(provider: string, key: string, sessionOnly = fal
   return JSON.stringify(body);
 }
 
-// -- onboarding (non-intrusive banner) ----------------------------------------
-
 /** Providers whose key is unset. */
 export function missingKeyProviders(keys: Record<string, boolean>): string[] {
-  return Object.keys(keys).filter((provider) => !keys[provider]);
+  return Object.keys(keys).filter((provider) => !keys[provider] && provider !== "claude_code");
 }
 
-/** Non-intrusive onboarding (REQ-DEPLOY-005, first-run banner not a wizard):
- *  a Korean prompt when the ACTIVE provider's key is unset, else null. */
+/** Non-intrusive onboarding (REQ-DEPLOY-005, first-run banner not a wizard). */
 export function onboardingMessage(response: SettingsResponse): string | null {
   const active = response.settings.active_provider;
+  if (active === "claude_code") {
+    return response.claude_code.logged_in
+      ? null
+      : "Claude 구독 로그인이 필요합니다 — 설정에서 Claude로 로그인해 주세요.";
+  }
   if (response.keys[active]) return null;
   return `${providerLabel(active)} API 키가 설정되지 않았습니다 — 설정에서 키를 입력해 주세요.`;
 }

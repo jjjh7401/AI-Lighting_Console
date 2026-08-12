@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from server.llm.anthropic_adapter import AnthropicAdapter
+from server.llm.claude_code_adapter import ClaudeCodeAdapter
 from server.llm.config import ConfigError, ProviderConfig
 from server.llm.gemini_adapter import GeminiAdapter
 from server.llm.types import LLMProvider
@@ -23,6 +24,8 @@ def build_provider(config: ProviderConfig, *, client: Any | None = None) -> LLMP
     """
     if config.active == "anthropic":
         return AnthropicAdapter(config.anthropic, client=client)
+    if config.active == "claude_code":
+        return ClaudeCodeAdapter(config.claude_code.model)
     if config.active == "gemini":
         return GeminiAdapter(config.gemini, client=client)
     raise ConfigError(f"unsupported active provider: {config.active!r}")  # pragma: no cover

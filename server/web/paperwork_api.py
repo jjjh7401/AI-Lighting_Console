@@ -45,6 +45,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import HTMLResponse, Response
 
 from server.orchestrator.ports import PropertyQueryPort, StateQueryPort
 from server.orchestrator.tools import DEFAULT_RIG_CONTEXT_PATHS
@@ -60,7 +61,7 @@ from server.paperwork.data import (
 from server.paperwork.data import (
     build_preset_list as _build_preset_list_query,
 )
-from server.paperwork.output import write_paperwork_html
+from server.paperwork.output import resolve_paperwork_dir, write_paperwork_html
 from server.paperwork.render import (
     render_cue_sheet,
     render_magic_sheet,
@@ -296,7 +297,20 @@ def build_paperwork_router(deps: PaperworkDeps) -> APIRouter:
                     "message": f"unknown paperwork kind: {kind!r}",
                 },
             )
-        filename, html, summary = builder(deps)
+        try:
+            filename, html, summary = builder(deps)
+        except HTTPException:
+            raise  # 빌더 자체가 던진 HTTPException은 그대로 전달
+        except Exception as error:
+            # 콘솔 타임아웃(StateQueryError) 등 빌더 내부 예외 →
+            # 500 대신 502 + 구조화된 에러로 변환해 UI가 한국어 메시지를 표시.
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "error": "query_failed",
+                    "message": f"{kind} 생성 중 콘솔 통신 오류: {error}",
+                },
+            ) from error
         try:
             path = write_paperwork_html(filename, html)
         except OSError as error:
@@ -310,5 +324,41 @@ def build_paperwork_router(deps: PaperworkDeps) -> APIRouter:
         result = {"path": str(path), **summary}
         last_results[kind] = result
         return {"ok": True, "kind": kind, **result}
+
+    @router.get("/api/paperwork/{kind}/content")
+    def content(kind: str) -> Response:
+        """Serve the last-generated HTML for in-app iframe preview."""
+        if kind not in _KIND_TABLE:
+            raise HTTPException(status_code=400, detail="unknown kind")
+        directory = resolve_paperwork_dir()
+        # The filename is the kind with .html — same basename the POST writes.
+        path = directory / f"{kind}.html"
+        if not path.is_file():
+            msg = "아직 생성되지 않았습니다. 먼저 '생성' 버튼을 눌러 주세요."
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "not_generated", "message": msg},
+            )
+        html = path.read_text(encoding="utf-8")
+        return HTMLResponse(content=html)
+
+    @router.get("/api/paperwork/{kind}/download")
+    def download(kind: str) -> Response:
+        """Download the last-generated HTML as a file attachment."""
+        if kind not in _KIND_TABLE:
+            raise HTTPException(status_code=400, detail="unknown kind")
+        directory = resolve_paperwork_dir()
+        path = directory / f"{kind}.html"
+        if not path.is_file():
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "not_generated", "message": "아직 생성되지 않았습니다."},
+            )
+        html = path.read_text(encoding="utf-8")
+        return Response(
+            content=html,
+            media_type="text/html",
+            headers={"Content-Disposition": f'attachment; filename="{kind}.html"'},
+        )
 
     return router

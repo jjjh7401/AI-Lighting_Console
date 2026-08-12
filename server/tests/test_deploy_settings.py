@@ -330,7 +330,7 @@ class TestPrecedence:
         # config/provider.toml seed (read-only). Assert shape, not exact values,
         # so a real user settings file on the host cannot make this flaky.
         settings = resolve_effective_settings()
-        assert settings.active_provider in ("gemini", "anthropic")
+        assert settings.active_provider in ("gemini", "anthropic", "claude_code")
         assert 1 <= settings.web_port <= 65535
         assert 1 <= settings.console_port <= 65535
 

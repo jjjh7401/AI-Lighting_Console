@@ -1,0 +1,145 @@
+<!-- @dsCard group="Foundations" -->
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Layout — 슬라이드 프레임 · 간격 · 모듈 레일</title>
+<style>
+:root{--bg:#000;--sf-1:#1C1C1E;--sf-2:#2C2C2E;--sep:rgba(84,84,88,.65);--sep-o:rgba(84,84,88,.35);
+--lb:#fff;--lb-2:rgba(235,235,245,.60);--lb-3:rgba(235,235,245,.30);
+--red:#FF453A;--orange:#FF9F0A;--green:#30D158;--cyan:#64D2FF;--blue:#0A84FF;--purple:#BF5AF2;
+--sf:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Apple SD Gothic Neo","Pretendard","Noto Sans KR",system-ui,sans-serif;
+--sfm:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--lb);font-family:var(--sf);-webkit-font-smoothing:antialiased;
+word-break:keep-all;line-break:strict;padding:44px 40px 72px;line-height:1.6;max-width:1040px}
+h1{font-size:30px;font-weight:750;letter-spacing:-.024em;margin:0 0 8px}
+h2{font-size:19px;font-weight:650;letter-spacing:-.01em;margin:40px 0 6px}
+.eyebrow{font-family:var(--sfm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);margin:0 0 12px;font-weight:600}
+.sub{font-size:15px;color:var(--lb-2);margin:0 0 8px;max-width:62ch}
+.sub b{color:var(--lb);font-weight:600}
+.mono{font-family:var(--sfm)}
+pre{font-family:var(--sfm);font-size:12.5px;line-height:1.8;background:var(--sf-1);border-radius:12px;padding:16px 18px;overflow-x:auto;margin-top:12px;color:var(--lb)}
+pre .c{color:var(--lb-3)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin-top:12px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--sep-o);vertical-align:top}
+thead th{font-family:var(--sfm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--lb-3);font-weight:500;background:var(--sf-1)}
+td:first-child{font-weight:600;white-space:nowrap}
+.note{background:var(--sf-1);border-left:3px solid var(--cyan);border-radius:0 10px 10px 0;padding:14px 18px;font-size:13.5px;color:var(--lb-2);margin-top:18px}
+.note b{color:var(--lb)}
+.figwrap{margin-top:16px;background:var(--sf-1);border-radius:14px;padding:22px;overflow-x:auto}
+.figwrap svg{display:block;width:100%;min-width:600px;max-width:860px;margin:0 auto;height:auto}
+.fl{stroke:var(--cyan);stroke-width:1;fill:none}
+.fd{stroke:var(--lb-3);stroke-width:1;stroke-dasharray:3 3;fill:none}
+.ft{fill:var(--lb-2);font-family:var(--sfm);font-size:10px;letter-spacing:.06em}
+.fk{fill:var(--cyan);font-family:var(--sfm);font-size:10px;letter-spacing:.06em}
+.rails{display:flex;gap:0;margin-top:14px;border-radius:12px;overflow:hidden}
+.rails div{flex:1;height:44px;display:flex;align-items:center;justify-content:center;font-family:var(--sfm);font-size:10px;letter-spacing:.08em;color:#000;font-weight:700}
+</style></head><body>
+
+<p class="eyebrow">Foundations · Layout</p>
+<h1>16:9 프레임과 그 안의 규칙</h1>
+<p class="sub">모든 슬라이드는 <b>1280 × 720</b> 비율 고정입니다. 실제 픽셀은 화면에 따라 달라지지만 <b>비율과 내부 간격 비는 절대 안 변합니다</b> — 컨테이너 쿼리 기반이기 때문입니다.</p>
+
+<div class="figwrap">
+  <svg viewBox="0 0 860 470" role="img" aria-label="슬라이드 프레임 규격도. 왼쪽 세로 모듈 레일 폭 0.3em, 상단 패딩 3.2em, 좌우 패딩 3.6em, 하단 패딩 2.8em, 블록 간 간격 1.1em, 우측 하단에 슬라이드 번호.">
+    <rect x="60" y="60" width="740" height="416" rx="14" fill="#000" stroke="var(--sep)" stroke-width="1"/>
+    <rect x="60" y="60" width="7" height="416" rx="0" fill="var(--cyan)"/>
+
+    <!-- padding guides -->
+    <line class="fd" x1="60" y1="124" x2="800" y2="124"/>
+    <line class="fd" x1="150" y1="60" x2="150" y2="476"/>
+    <line class="fd" x1="710" y1="60" x2="710" y2="476"/>
+    <line class="fd" x1="60" y1="420" x2="800" y2="420"/>
+
+    <text class="fk" x="76" y="52">모듈 레일 · width .3em (6px)</text>
+    <line class="fl" x1="63" y1="44" x2="63" y2="56"/>
+
+    <text class="ft" x="160" y="118">padding-top 3.2em · 64px</text>
+    <text class="ft" x="72" y="300" transform="rotate(-90 72 300)">padding-left 3.6em · 72px</text>
+    <text class="ft" x="722" y="300" transform="rotate(-90 722 300)">padding-right 3.6em</text>
+    <text class="ft" x="160" y="440">padding-bottom 2.8em · 56px</text>
+
+    <!-- content blocks -->
+    <rect x="150" y="140" width="180" height="14" rx="4" fill="var(--cyan)" opacity=".55"/>
+    <text class="ft" x="340" y="151">eyebrow · .62em</text>
+
+    <rect x="150" y="176" width="440" height="30" rx="6" fill="rgba(235,235,245,.85)"/>
+    <text class="ft" x="600" y="196">head · 2.15em</text>
+
+    <line class="fl" x1="150" y1="216" x2="150" y2="238" stroke-dasharray="2 2"/>
+    <line class="fl" x1="146" y1="216" x2="154" y2="216"/>
+    <line class="fl" x1="146" y1="238" x2="154" y2="238"/>
+    <text class="fk" x="162" y="232">gap 1.1em · 22px</text>
+
+    <rect x="150" y="248" width="176" height="150" rx="10" fill="#1C1C1E"/>
+    <rect x="342" y="248" width="176" height="150" rx="10" fill="#1C1C1E"/>
+    <rect x="534" y="248" width="176" height="150" rx="10" fill="#1C1C1E"/>
+    <text class="ft" x="150" y="414">카드 그리드 · gap .7em · radius 1.1em (22px)</text>
+
+    <text class="ft" x="700" y="452" text-anchor="end">28</text>
+    <text class="fk" x="700" y="466" text-anchor="end">num · right 2.2em / bottom 1.5em</text>
+  </svg>
+</div>
+
+<h2>프레임 코드</h2>
+<pre>.slide {
+  container-type: inline-size;      <span class="c">/* 이 한 줄이 전체 스케일의 기준 */</span>
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  font-size: 1.5625cqw;             <span class="c">/* 1280px → base 20px */</span>
+  background: #000;
+  padding: 3.2em 3.6em 2.8em;
+  display: flex; flex-direction: column; gap: 1.1em;
+  border-radius: .75rem; overflow: hidden; position: relative;
+}
+.slide::before {                    <span class="c">/* 모듈 레일 */</span>
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+  width: .3em; background: var(--hue);
+}</pre>
+
+<h2>간격 · 형태 토큰</h2>
+<table>
+  <thead><tr><th>항목</th><th>값</th><th>1280px 환산</th><th>비고</th></tr></thead>
+  <tbody>
+    <tr><td>슬라이드 패딩</td><td class="mono">3.2em 3.6em 2.8em</td><td class="mono">64 / 72 / 56 px</td><td>상 · 좌우 · 하</td></tr>
+    <tr><td>블록 간 간격</td><td class="mono">1.1em</td><td class="mono">22px</td><td><span class="mono">.slide</span>의 flex gap</td></tr>
+    <tr><td>카드 모서리 <span class="mono">--r</span></td><td class="mono">1.1em</td><td class="mono">22px</td><td>카드 · 패널 · 다이어그램 노드</td></tr>
+    <tr><td>작은 모서리 <span class="mono">--r-s</span></td><td class="mono">.55em</td><td class="mono">11px</td><td>타일 · 스텝 · 코드 블록</td></tr>
+    <tr><td>카드 내부 패딩</td><td class="mono">1.15em 1.2em 1.25em</td><td class="mono">23 / 24 / 25 px</td><td>하단을 살짝 더 준다</td></tr>
+    <tr><td>그리드 간격</td><td class="mono">.5em ~ .7em</td><td class="mono">10 ~ 14px</td><td>타일 .5 / 카드 .7</td></tr>
+    <tr><td>모듈 레일</td><td class="mono">width .3em</td><td class="mono">6px</td><td>슬라이드 높이 전체</td></tr>
+    <tr><td>페이지 번호</td><td class="mono">right 2.2em · bottom 1.5em</td><td class="mono">44 / 30 px</td><td>모노 · <span class="mono">--lb-3</span></td></tr>
+  </tbody>
+</table>
+
+<h2>모듈 레일 — 34장의 색 흐름</h2>
+<p class="sub">덱을 통째로 스크롤하면 왼쪽 레일이 이 순서로 흐릅니다. <b>색이 바뀌는 지점이 곧 파트가 바뀌는 지점</b>입니다.</p>
+<div class="rails">
+  <div style="background:#0A84FF;flex:4">01–04</div>
+  <div style="background:#FF9F0A;flex:2">05–06</div>
+  <div style="background:#64D2FF;flex:1">07</div>
+  <div style="background:#30D158;flex:1">08</div>
+  <div style="background:#FF453A;flex:6">09–14</div>
+  <div style="background:#64D2FF;flex:4">15–18</div>
+  <div style="background:#30D158;flex:2">19–20</div>
+  <div style="background:#BF5AF2;flex:1">21</div>
+  <div style="background:#64D2FF;flex:2">22–23</div>
+  <div style="background:#0A84FF;flex:3">24–26</div>
+  <div style="background:#30D158;flex:1">27</div>
+  <div style="background:#FF453A;flex:2">28–29</div>
+  <div style="background:#FF9F0A;flex:1">30</div>
+  <div style="background:#FFD60A;flex:1">31</div>
+  <div style="background:#0A84FF;flex:1">32</div>
+  <div style="background:#BF5AF2;flex:1">33</div>
+  <div style="background:#0A84FF;flex:1">34</div>
+</div>
+
+<h2>인쇄 · 배포</h2>
+<pre>@media print {
+  .slide { border-radius: 0; box-shadow: none; break-after: page }
+  @page  { size: landscape; margin: 0 }
+  .note, .deckbar, .framehead { display: none !important }   <span class="c">/* 발표자 노트는 인쇄 제외 */</span>
+}</pre>
+
+<div class="note"><b>넘침 금지가 이 덱의 1차 품질 기준입니다.</b> 슬라이드는 스크롤되지 않는 고정 프레임이라 내용이 넘치면 <b>잘려서 사라집니다.</b><br>
+검수할 때 모든 슬라이드에 대해 <span class="mono">scrollHeight &gt; clientHeight</span>가 <b>0건</b>인지 확인합니다. 넘치면 카드 개수를 줄이거나 <span class="mono">.head</span>를 <span class="mono">.head.sm</span>으로 내립니다.</div>
+
+</body></html>

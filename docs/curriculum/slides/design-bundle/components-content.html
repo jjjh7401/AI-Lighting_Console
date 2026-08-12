@@ -1,0 +1,201 @@
+<!-- @dsCard group="Components" -->
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Components — 카드 · 숫자판 · 타일 · 칩 · 스텝 · 콜아웃</title>
+<style>
+:root{--bg:#000;--sf-1:#1C1C1E;--sf-2:#2C2C2E;--sep:rgba(84,84,88,.65);--sep-o:rgba(84,84,88,.35);
+--lb:#fff;--lb-2:rgba(235,235,245,.60);--lb-3:rgba(235,235,245,.30);
+--red:#FF453A;--orange:#FF9F0A;--yellow:#FFD60A;--green:#30D158;--cyan:#64D2FF;--blue:#0A84FF;--purple:#BF5AF2;
+--sf:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Apple SD Gothic Neo","Pretendard","Noto Sans KR",system-ui,sans-serif;
+--sfm:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;--r:1.1em;--r-s:.55em}
+*{box-sizing:border-box}
+body{margin:0;background:#0B0B0D;color:var(--lb);font-family:var(--sf);-webkit-font-smoothing:antialiased;
+word-break:keep-all;line-break:strict;padding:44px 40px 72px;line-height:1.6;max-width:1040px}
+h1{font-size:30px;font-weight:750;letter-spacing:-.024em;margin:0 0 8px}
+h2{font-size:18px;font-weight:650;letter-spacing:-.01em;margin:36px 0 4px}
+.eyebrow{font-family:var(--sfm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);margin:0 0 12px;font-weight:600}
+.sub{font-size:15px;color:var(--lb-2);margin:0 0 6px;max-width:62ch}
+.sub b{color:var(--lb);font-weight:600}
+.mono{font-family:var(--sfm)}
+.spec{font-family:var(--sfm);font-size:11.5px;color:var(--lb-3);margin:6px 0 0;line-height:1.7}
+.spec b{color:var(--cyan);font-weight:400}
+
+.slide{container-type:inline-size;aspect-ratio:16/9;width:100%;background:#000;border-radius:12px;overflow:hidden;
+position:relative;font-size:1.5625cqw;line-height:1.4;padding:3.2em 3.6em 2.8em;display:flex;flex-direction:column;gap:1.1em;
+margin-top:12px;box-shadow:0 12px 32px -22px #000}
+.slide::before{content:"";position:absolute;left:0;top:0;bottom:0;width:.3em;background:var(--hue)}
+.slide .num{position:absolute;right:2.2em;bottom:1.5em;font-family:var(--sfm);font-size:.62em;color:var(--lb-3);letter-spacing:.08em}
+.eb{font-family:var(--sfm);font-size:.62em;letter-spacing:.14em;text-transform:uppercase;color:var(--hue);font-weight:600;margin:0}
+.head{margin:0;font-size:1.75em;line-height:1.14;letter-spacing:-.022em;font-weight:700;text-wrap:balance}
+.lede{margin:0;font-size:1.05em;line-height:1.55;color:var(--lb-2);max-width:40em}
+.lede b{color:var(--lb);font-weight:600}
+.grow{flex:1 1 auto;min-height:0}
+
+/* 카드 */
+.cards{display:grid;gap:.7em;grid-template-columns:repeat(var(--n,3),1fr);align-content:center}
+.card{background:var(--sf-1);border-radius:var(--r);padding:1.15em 1.2em 1.25em;display:flex;flex-direction:column;gap:.45em;min-width:0}
+.card.tint{background:color-mix(in srgb,var(--hue) 14%,var(--sf-1))}
+.card .ct{font-size:1em;font-weight:600;line-height:1.35;letter-spacing:-.008em}
+.card .cd{font-size:.85em;line-height:1.55;color:var(--lb-2)}
+.card .cd b{color:var(--lb);font-weight:650}
+.card .cn{font-family:var(--sfm);font-size:.66em;color:var(--hue);letter-spacing:.1em}
+.icon{width:1.9em;height:1.9em;color:var(--hue);flex:none}
+.icon svg{width:100%;height:100%;display:block}
+
+/* 숫자판 */
+.facts{display:grid;grid-template-columns:repeat(6,1fr);gap:.55em}
+.fact{background:var(--sf-1);border-radius:var(--r);padding:1.1em .9em 1.2em;display:flex;flex-direction:column;gap:.15em}
+.fact .fn{font-family:var(--sfm);font-size:2.15em;font-weight:600;line-height:1;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.fact .fn .u{font-size:.42em;color:var(--lb-3);margin-left:.15em;letter-spacing:0}
+.fact .fl{font-size:.75em;line-height:1.4;color:var(--lb-2)}
+
+/* 타일 */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:.5em}
+.tile{background:var(--sf-1);border-radius:var(--r-s);padding:.8em .85em .9em;display:flex;flex-direction:column;gap:.3em}
+.tile .tk{display:flex;align-items:center;gap:.4em;font-size:.62em;font-family:var(--sfm);letter-spacing:.06em;color:var(--green)}
+.tile .tk svg{width:.85em;height:.85em}
+.tile .tt{font-size:.86em;font-weight:500;line-height:1.4}
+
+/* 칩 */
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:.6em}
+.chip{background:var(--sf-1);border-radius:var(--r);padding:.95em 1.05em 1.05em;display:flex;flex-direction:column;gap:.28em;border-left:.22em solid var(--h)}
+.chip .k{font-size:.98em;font-weight:600;letter-spacing:-.008em}
+.chip .v{font-size:.82em;line-height:1.5;color:var(--lb-2)}
+.chip .v b{color:var(--lb);font-weight:650}
+
+/* 스텝 */
+.steps{display:flex;flex-direction:column;gap:.42em;justify-content:center}
+.step{display:grid;grid-template-columns:1.9em 1fr;gap:.8em;align-items:start;background:var(--sf-1);border-radius:var(--r-s);padding:.65em .95em .7em}
+.step.mark{background:color-mix(in srgb,var(--hue) 18%,var(--sf-1))}
+.step .sn{font-family:var(--sfm);font-size:.75em;color:var(--lb-3);padding-top:.15em;font-variant-numeric:tabular-nums}
+.step.mark .sn{color:var(--hue);font-weight:600}
+.step .st{font-size:.9em;font-weight:600;line-height:1.4}
+.step .sd{font-size:.8em;line-height:1.5;color:var(--lb-2);margin-top:.1em}
+.step .sd b{color:var(--lb);font-weight:650}
+.step code{font-family:var(--sfm);font-size:.92em;color:var(--cyan);background:rgba(100,210,255,.1);padding:.1em .35em;border-radius:.25em}
+
+/* 콜아웃 */
+.callout{background:color-mix(in srgb,var(--hue) 16%,var(--sf-1));border-radius:var(--r);padding:1em 1.2em;display:flex;gap:.85em;align-items:flex-start}
+.callout .icon{width:1.5em;height:1.5em;margin-top:.05em}
+.callout p{margin:0;font-size:.95em;line-height:1.55;color:var(--lb)}
+.callout p b{font-weight:700;color:var(--hue)}
+
+.note{background:var(--sf-1);border-left:3px solid var(--cyan);border-radius:0 10px 10px 0;padding:14px 18px;font-size:13.5px;color:var(--lb-2);margin-top:20px}
+.note b{color:var(--lb)}
+</style></head><body>
+
+<p class="eyebrow">Components · Content</p>
+<h1>내용을 담는 6종</h1>
+<p class="sub">이 6종과 <span class="mono">components-compare</span>의 2종, 합쳐 <b>8종이 34장의 본문을 전부 만듭니다.</b></p>
+
+<h2>① 카드 그리드 <span class="mono" style="font-size:12px;color:var(--lb-3)">.cards --n:3</span> — 08 · 10 · 17 · 30</h2>
+<p class="spec">구조 &nbsp;<b>아이콘(1.9em) → 번호 라벨(모노 · 모듈색) → 제목(1em/600) → 설명(.85em/lb-2)</b> &nbsp;·&nbsp; <span class="mono">.tint</span>는 모듈색 14% 섞은 배경 &nbsp;·&nbsp; <b>최대 3열</b>, 4열 이상은 타일로</p>
+<section class="slide" style="--hue:var(--green)">
+  <p class="eb">용어 ④⑤⑥ · 하네스 · 훅 · 루프</p>
+  <h2 class="head">셋 다 “사람 주의력에 안 맡긴다”는 뜻입니다</h2>
+  <div class="cards grow" style="--n:3">
+    <div class="card tint" style="--hue:var(--green)">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h16M6 8V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/><path d="M7 8v9a3 3 0 0 0 3 3h4a3 3 0 0 0 3-3V8"/><path d="M10 12h4"/></svg></span>
+      <span class="cn">하네스</span><span class="ct">규칙 + 자동 검사</span>
+      <span class="cd">원래 뜻은 <b>말에 씌우는 마구</b>. 힘이 세다고 아무 데나 뛰게 두지 않고 <b>원하는 방향으로 몬다</b>.</span>
+    </div>
+    <div class="card tint" style="--hue:var(--yellow)">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v9a4.5 4.5 0 0 0 9 0V9"/><circle cx="14" cy="7" r="2.2"/><path d="M18 15.5h3M19.5 14v3"/></svg></span>
+      <span class="cn">훅</span><span class="ct">자동으로 켜지는 검사</span>
+      <span class="cd"><b>리밋 스위치</b>와 같습니다. 오퍼레이터가 깜빡해도 무빙이 벽을 안 칩니다.</span>
+    </div>
+    <div class="card tint" style="--hue:var(--purple)">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.5h-4.5"/></svg></span>
+      <span class="cn">루프</span><span class="ct">될 때까지 스스로 반복</span>
+      <span class="cd">단, <b>그만둘 조건을 반드시 같이</b> 겁니다. 탈출 조건 없는 루프 = <b>무한 체이스 걸어놓고 퇴근하기</b>.</span>
+    </div>
+  </div>
+  <span class="num">08</span>
+</section>
+
+<h2>② 숫자 판 <span class="mono" style="font-size:12px;color:var(--lb-3)">.facts</span> — 04</h2>
+<p class="spec">6칸 고정 &nbsp;·&nbsp; 수치는 <b>모노 2.15em / 600 / tabular-nums</b>, 단위는 <b>.42em</b>으로 줄여 붙인다 &nbsp;·&nbsp; 강조할 한 칸만 <span class="mono">#0F1A22</span> 배경 + 모듈색 수치</p>
+<section class="slide" style="--hue:var(--blue)">
+  <p class="eb">오늘 이야기의 근거</p>
+  <h2 class="head">조명 전문가 <span style="color:var(--blue)">한 명</span>이 3주 만에 만든 것</h2>
+  <div class="facts">
+    <div class="fact"><span class="fn">3<span class="u">주</span></span><span class="fl">기획 → 작동하는 앱</span></div>
+    <div class="fact"><span class="fn">443</span><span class="fl">저장 횟수</span></div>
+    <div class="fact"><span class="fn">17</span><span class="fl">프로그램 부품</span></div>
+    <div class="fact"><span class="fn">131</span><span class="fl">자동 점검표</span></div>
+    <div class="fact"><span class="fn">10</span><span class="fl">AI 역할</span></div>
+    <div class="fact" style="background:#0F1A22"><span class="fn" style="color:var(--blue)">1<span class="u">명</span></span><span class="fl">만든 사람</span></div>
+  </div>
+  <div class="callout" style="--hue:var(--blue)">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.1"/></svg></span>
+    <p>이 숫자는 전부 <b>저장소에서 직접 센 값</b>입니다. 광고 문구가 아니라 세어본 결과입니다.</p>
+  </div>
+  <span class="num">04</span>
+</section>
+
+<h2>③ 타일 그리드 <span class="mono" style="font-size:12px;color:var(--lb-3)">.tiles</span> — 17 · 27</h2>
+<p class="spec">항목이 <b>10개 이상</b>일 때 카드 대신 &nbsp;·&nbsp; 상태 라벨(<span class="mono">LIVE</span>/<span class="mono">CHECK</span>) + 항목명 2줄 구조 &nbsp;·&nbsp; 라벨 색으로 분류를 표시 — 초록 = 확인됨, 빨강 = 검사 전담</p>
+<section class="slide" style="--hue:var(--green)">
+  <p class="eb">M6-1 · 실제 콘솔에서 확인된 것</p>
+  <h2 class="head">지금 되는 것 <span style="color:var(--green)">12</span>가지</h2>
+  <div class="tiles grow" style="align-content:center">
+    <div class="tile"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>LIVE</span><span class="tt">한국어 → 콘솔 명령</span></div>
+    <div class="tile"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>LIVE</span><span class="tt">장비 등록 자동화 <span class="mono" style="color:var(--lb-3);font-size:.9em">9대 성공</span></span></div>
+    <div class="tile"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>LIVE</span><span class="tt">콘솔용 프로그램 만들어 심기</span></div>
+    <div class="tile"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>LIVE</span><span class="tt">룩 만들기 — “따뜻한 저녁 느낌”</span></div>
+    <div class="tile"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>LIVE</span><span class="tt">이펙트 · 반복 움직임</span></div>
+    <div class="tile"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>LIVE</span><span class="tt">장면 · 큐 구성</span></div>
+    <div class="tile"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>LIVE</span><span class="tt">배치 인식 — 어디 있는지 읽고 연출</span></div>
+    <div class="tile"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>LIVE</span><span class="tt">콘솔 상태 보기 화면</span></div>
+  </div>
+  <span class="num">27</span>
+</section>
+
+<h2>④ 용어 칩 <span class="mono" style="font-size:12px;color:var(--lb-3)">.chips</span> — 05</h2>
+<p class="spec">좌측 <b>.22em 컬러 바</b>로 개념 갈래를 표시 &nbsp;·&nbsp; <b>용어(.98em) → 일상어 뜻(.82em)</b> 순서 고정 — 절대 뒤집지 않는다 &nbsp;·&nbsp; 3열 × 2행 = 6개</p>
+<section class="slide" style="--hue:var(--orange)">
+  <p class="eb">먼저 단어부터</p>
+  <h2 class="head">오늘 나올 말은 이 <span style="color:var(--orange)">여섯 개</span>가 전부입니다</h2>
+  <div class="chips grow" style="align-content:center">
+    <div class="chip" style="--h:var(--orange)"><span class="k">바이브 코딩</span><span class="v">코드를 안 치고 <b>원하는 걸 말로 설명해서</b> AI가 만들게 하는 방식</span></div>
+    <div class="chip" style="--h:var(--cyan)"><span class="k">에이전트</span><span class="v">역할과 권한이 정해진 <b>AI 한 명</b> · 조별과제 팀원</span></div>
+    <div class="chip" style="--h:var(--cyan)"><span class="k">오케스트레이션</span><span class="v">여러 AI에게 <b>일을 나눠 주고 결과를 모으는 것</b> · 조별과제 조장</span></div>
+    <div class="chip" style="--h:var(--green)"><span class="k">하네스</span><span class="v">AI가 지킬 <b>규칙 + 자동 검사 장치</b> · 원래 뜻은 말에 씌우는 마구</span></div>
+    <div class="chip" style="--h:var(--green)"><span class="k">훅</span><span class="v"><b>특정 순간에 자동으로 켜지는 검사</b> · 리밋 스위치</span></div>
+    <div class="chip" style="--h:var(--purple)"><span class="k">루프</span><span class="v">조건이 될 때까지 <b>AI가 스스로 반복</b>하게 하는 것</span></div>
+  </div>
+  <span class="num">05</span>
+</section>
+
+<h2>⑤ 스텝 리스트 <span class="mono" style="font-size:12px;color:var(--lb-3)">.steps</span> — 22 · 25 · 28</h2>
+<p class="spec"><b>순서가 정보일 때만</b> 쓴다 — 단순 목록에는 쓰지 않는다 &nbsp;·&nbsp; <span class="mono">.step.mark</span>로 <b>핵심 단계 1~2개만</b> 모듈색 18% 틴트 &nbsp;·&nbsp; 번호는 모노 · tabular-nums</p>
+<section class="slide" style="--hue:var(--blue)">
+  <p class="eb">M6 · 시연 전에 알아둘 것</p>
+  <h2 class="head">“무빙 앞줄을 파랗게” 한마디가 조명이 되기까지</h2>
+  <div class="steps grow">
+    <div class="step"><span class="sn">01</span><span><span class="st">사람</span><span class="sd">“무빙 앞줄을 파랗게 해줘”</span></span></div>
+    <div class="step"><span class="sn">02</span><span><span class="st">AI 모델 — 어떤 도구를 쓸지 고른다</span><span class="sd">AI는 <b>미리 정해둔 도구 20개</b> 중에서만 고릅니다</span></span></div>
+    <div class="step mark" style="--hue:var(--blue)"><span class="sn">03</span><span><span class="st">안전 게이트 — 문법 검사 · 위험도 분류 · 사람 승인 · 백업 · <b>통행권 발급</b></span><span class="sd">통행권이 없으면 <b>한 글자도 못 나갑니다</b></span></span></div>
+    <div class="step"><span class="sn">04</span><span><span class="st">네트워크로 명령 한 줄을 콘솔에 던진다</span><span class="sd"><code>/copilot/cmd</code></span></span></div>
+    <div class="step"><span class="sn">05</span><span><span class="st">콘솔 안 작은 프로그램이 실행하고 결과를 되돌려 준다</span><span class="sd"><code>/copilot/feedback</code></span></span></div>
+    <div class="step mark" style="--hue:var(--green)"><span class="sn">06</span><span><span class="st">★ 다시 조회해서 진짜 바뀌었는지 확인한다</span><span class="sd">이게 <b>증거</b>입니다. 없으면 05의 “성공”은 주장일 뿐입니다</span></span></div>
+  </div>
+  <span class="num">25</span>
+</section>
+
+<h2>⑥ 콜아웃 <span class="mono" style="font-size:12px;color:var(--lb-3)">.callout</span> — 다수</h2>
+<p class="spec"><b>아이콘(1.5em) + 한 문장</b> &nbsp;·&nbsp; 배경은 모듈색 16% &nbsp;·&nbsp; 슬라이드 <b>맨 아래에 한 개만</b> — 두 개 이상 쌓지 않는다 &nbsp;·&nbsp; 그 장에서 청중이 꼭 가져가야 할 문장에만 쓴다</p>
+<div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;font-size:20px">
+  <div class="callout" style="--hue:var(--red)">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 4.3 2.6 17.5A1.9 1.9 0 0 0 4.3 20.4h15.4a1.9 1.9 0 0 0 1.7-2.9L13.7 4.3a1.9 1.9 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17v.1"/></svg></span>
+    <p>가짜를 안 쏴봤으면 <b>아무 일도 안 하는 기능 위에 전부를 세웠을 것입니다.</b></p>
+  </div>
+  <div class="callout" style="--hue:var(--green)">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5 4.5 6.5v5.2c0 4.4 3 7.9 7.5 9.3 4.5-1.4 7.5-4.9 7.5-9.3V6.5Z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg></span>
+    <p><b>규칙을 잘 깔면 같은 AI라도 결과가 좋아집니다.</b> 도구를 바꾸기 전에 규칙을 먼저 고치세요.</p>
+  </div>
+</div>
+
+<div class="note"><b>한 슬라이드에 컴포넌트를 3종 이상 쌓지 않습니다.</b> 전형 조합은 <span class="mono">제목 + 본문 1종 + 콜아웃</span>입니다.<br>
+카드가 4장 이상 필요해지면 <b>슬라이드를 나누는 게 맞습니다</b> — 고정 프레임이라 넘치면 잘려서 사라집니다.</div>
+
+</body></html>

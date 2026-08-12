@@ -30,6 +30,11 @@ max_tokens = 16000
 thinking = "adaptive"
 effort = "high"
 
+[provider.claude_code]
+# Claude Pro/Max/Teams 구독 OAuth는 로컬 Claude Code가 macOS Keychain에서 관리합니다.
+# 이 파일에는 OAuth 토큰이나 API 키를 기록하지 않습니다.
+model = "sonnet"
+
 [provider.gemini]
 model = "gemini-3.5-flash"
 context_caching = true

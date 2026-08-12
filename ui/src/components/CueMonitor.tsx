@@ -612,6 +612,127 @@ export function CueSheet({
   );
 }
 
+/**
+ * MA3-style executor detail view — shows the selected (or most-recently-
+ * active) executor's cue list with the current cue highlighted in yellow,
+ * adjacent cues dimmed, a fader bar placeholder, and Pause / Go- / Go+
+ * action buttons at the bottom. Mirrors the reference MA3 executor view.
+ *
+ * This replaces the old CueSheet as the primary detail view — the CueSheet
+ * was a flat table; this reads as a console surface.
+ */
+export function ExecutorDetail({
+  entry,
+  running,
+  onExecute,
+  onBack,
+  onStop,
+  onGoto,
+}: {
+  entry: CueExecutorEntry;
+  running?: boolean;
+  onExecute?: (executorNo: number) => void;
+  onBack?: (executorNo: number) => void;
+  onStop?: (executorNo: number) => void;
+  onGoto?: (executorNo: number, cue: number) => void;
+}) {
+  const match = currentCueMatch(entry);
+  const blockedReason = gotoDisabledReason(entry);
+  const currentIdx = match
+    ? entry.cues.findIndex((cue) => isCueRowCurrent(match, cue))
+    : -1;
+  return (
+    <div className="executor-detail" aria-label={`Executor ${entry.executor_no} 상세`}>
+      <div className="executor-detail-titlebar">
+        <span className="executor-detail-seqname">{sequenceLabel(entry)}</span>
+        <span className="executor-detail-no">{entry.executor_no}</span>
+      </div>
+      <div className="executor-detail-cuelist">
+        {entry.cues.length === 0 && (
+          <div className="executor-detail-empty">큐 없음</div>
+        )}
+        {entry.cues.map((cue, idx) => {
+          const current = isCueRowCurrent(match, cue);
+          const adjacent = !current && currentIdx >= 0 && Math.abs(idx - currentIdx) === 1;
+          const gotoable = blockedReason === null && cueRowIsGotoable(cue);
+          const handleActivate = () => {
+            if (gotoable && cue.cue_no !== undefined) onGoto?.(entry.executor_no, cue.cue_no);
+          };
+          return (
+            <div
+              key={cue.no}
+              className={[
+                "executor-detail-cue",
+                current ? "executor-detail-cue-current" : null,
+                adjacent ? "executor-detail-cue-adjacent" : null,
+                gotoable ? "executor-detail-cue-gotoable" : null,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              role={gotoable ? "button" : undefined}
+              tabIndex={gotoable ? 0 : undefined}
+              onClick={gotoable ? handleActivate : undefined}
+              onKeyDown={
+                gotoable
+                  ? (event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        handleActivate();
+                      }
+                    }
+                  : undefined
+              }
+              title={
+                gotoable
+                  ? `클릭하면 큐 ${cue.cue_no}로 이동합니다 (Goto)`
+                  : undefined
+              }
+            >
+              <span className="executor-detail-cue-no">
+                {cue.cue_no !== undefined ? cue.cue_no : `#${cue.no}`}
+              </span>
+              <span className="executor-detail-cue-name">{cue.name}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="executor-detail-fader">
+        <div className="executor-detail-fader-fill" />
+      </div>
+      <div className="executor-detail-actions">
+        <button
+          type="button"
+          className="executor-detail-btn executor-detail-btn-pause"
+          disabled={blockedReason !== null}
+          onClick={() => onStop?.(entry.executor_no)}
+          title="정지 (Off)"
+        >
+          Pause
+        </button>
+        <button
+          type="button"
+          className="executor-detail-btn executor-detail-btn-back"
+          disabled={blockedReason !== null}
+          onClick={() => onBack?.(entry.executor_no)}
+          title="이전 큐 (Go-)"
+        >
+          Go-
+        </button>
+        <button
+          type="button"
+          className="executor-detail-btn executor-detail-btn-go"
+          disabled={blockedReason !== null}
+          onClick={() => onExecute?.(entry.executor_no)}
+          aria-pressed={running}
+          title="다음 큐 (Go+)"
+        >
+          Go+
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** T-H2 — renders the shared-fact banner ONLY in the "uniform" branch; `null`
  * (no DOM node at all) for "mixed"/"none", per `currentCueBannerState`. */
 function CurrentCueBanner({ executors }: { executors: CueExecutorEntry[] }) {
@@ -659,6 +780,20 @@ export function CueMonitor({
       ? null
       : (cueMonitor.executors.find((entry) => entry.executor_no === openExecutorNo) ?? null);
 
+  // Reverse history so the most recent entry is first.
+  const reversedHistory = [...cueMonitor.history].reverse();
+
+  // Determine the detail-view entry: the explicitly opened executor, or fall
+  // back to the most-recently-active (has a last_app_action) for a useful
+  // default even when no tile has been clicked.
+  const detailEntry =
+    openEntry ??
+    [...cueMonitor.executors]
+      .filter((e) => e.last_app_action?.ts)
+      .sort((a, b) => (b.last_app_action!.ts > a.last_app_action!.ts ? 1 : -1))[0] ??
+    cueMonitor.executors[0] ??
+    null;
+
   return (
     <section className="cue-monitor" aria-label="라이브 큐 진행 모니터">
       <header className="cue-monitor-header">
@@ -676,42 +811,54 @@ export function CueMonitor({
         </button>
       </header>
       <CurrentCueBanner executors={cueMonitor.executors} />
-      <div className="cue-monitor-body">
-        <div className="cue-monitor-grid">
-          {cueMonitor.executors.map((entry) => (
-            <ExecutorTile
-              key={entry.executor_no}
-              entry={entry}
-              running={isExecutorRunning?.(entry.executor_no) ?? false}
-              isOpen={openExecutorNo === entry.executor_no}
-              onToggleOpen={onToggleExecutor}
-              onExecute={onExecute}
-              onBack={onBack}
-              onStop={onStop}
+      <div className="cue-monitor-upper">
+        <div className="cue-monitor-body">
+          <div className="cue-monitor-grid">
+            {cueMonitor.executors.map((entry) => (
+              <ExecutorTile
+                key={entry.executor_no}
+                entry={entry}
+                running={isExecutorRunning?.(entry.executor_no) ?? false}
+                isOpen={openExecutorNo === entry.executor_no}
+                onToggleOpen={onToggleExecutor}
+                onExecute={onExecute}
+                onBack={onBack}
+                onStop={onStop}
+              />
+            ))}
+            {cueMonitor.executors.length === 0 && (
+              <div className="cue-monitor-empty">확인된 익스큐터 없음</div>
+            )}
+          </div>
+          {openEntry && (
+            <CueSheet
+              entry={openEntry}
+              onClose={() => onToggleExecutor?.(openEntry.executor_no)}
+              onGoto={onGoto}
             />
-          ))}
-          {cueMonitor.executors.length === 0 && (
-            <div className="cue-monitor-empty">확인된 익스큐터 없음</div>
           )}
         </div>
-        {openEntry && (
-          <CueSheet
-            entry={openEntry}
-            onClose={() => onToggleExecutor?.(openEntry.executor_no)}
-            onGoto={onGoto}
-          />
-        )}
-        <div className="cue-monitor-history">
-          <span className="cue-monitor-history-title">최근 실행 이력</span>
-          <ul>
-            {cueMonitor.history.map((entry, index) => (
-              <CueHistoryRow key={`${entry.ts}-${index}`} entry={entry} />
-            ))}
-            {cueMonitor.history.length === 0 && (
-              <li className="cue-monitor-history-empty">실행 이력 없음</li>
-            )}
-          </ul>
-        </div>
+      </div>
+      {detailEntry && (
+        <ExecutorDetail
+          entry={detailEntry}
+          running={isExecutorRunning?.(detailEntry.executor_no) ?? false}
+          onExecute={onExecute}
+          onBack={onBack}
+          onStop={onStop}
+          onGoto={onGoto}
+        />
+      )}
+      <div className="cue-monitor-history">
+        <span className="cue-monitor-history-title">최근 실행 이력</span>
+        <ul className="cue-monitor-history-list">
+          {reversedHistory.map((entry, index) => (
+            <CueHistoryRow key={`${entry.ts}-${index}`} entry={entry} />
+          ))}
+          {cueMonitor.history.length === 0 && (
+            <li className="cue-monitor-history-empty">실행 이력 없음</li>
+          )}
+        </ul>
       </div>
     </section>
   );

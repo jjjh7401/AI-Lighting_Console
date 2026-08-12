@@ -36,6 +36,8 @@ import {
   type StatusState,
 } from "./protocol";
 import { useCopilotSocket } from "./useCopilotSocket";
+import { apiUrl } from "./launchContext";
+import { parseSettingsResponse, providerLabel, type SettingsResponse } from "./settings";
 
 /**
  * The dash section names that carry live-fire semantics (M5, design.md §4)
@@ -190,35 +192,25 @@ export function AppShell({
   onSectionTileSizeChange,
   sectionArea,
   onSectionAreaResizeStart,
+  dashWidth,
+  onDashDividerDown,
   children,
 }: {
   chatCollapsed: boolean;
   dash: DashState;
-  /** T-C, wave 2 — the live cue-progress monitor's slice of state. */
   cueMonitor: CueMonitorState;
   onToggleChat: () => void;
-  /** M5 — manual [새로고침] dispatch; see DashBoard.tsx. */
   onRefresh?: () => void;
-  /** T-C — manual cue-monitor [새로고침] dispatch; see CueMonitor.tsx. */
   onCueMonitorRefresh?: () => void;
-  /** M5 — per-item running lookup; see DashBoard.tsx. */
   isItemRunning?: (sectionName: string, item: DashItem) => boolean;
-  /** M5 — fires panel_execute/panel_stop; see DashBoard.tsx. */
   onItemPress?: (sectionName: string, item: DashItem) => void;
-  /** T-H — CueMonitor's own run/stop affordance; see CueMonitor.tsx. */
   isExecutorRunning?: (executorNo: number) => boolean;
   onExecutorExecute?: (executorNo: number) => void;
-  /** T-H5 — step back (Go-). */
   onExecutorBack?: (executorNo: number) => void;
   onExecutorStop?: (executorNo: number) => void;
-  /** T-H5 — jump to a specific cue (Goto). */
   onExecutorGoto?: (executorNo: number, cue: number) => void;
-  /** T-H4 — which executor's cue sheet is open (controlled, one at a time);
-   * see CueMonitor.tsx's own module header for why this is lifted here
-   * rather than internal component state. */
   openCueExecutorNo?: number | null;
   onToggleCueExecutor?: (executorNo: number) => void;
-  /** M6-UX v3 — square cells (−/+) + pool-window area corner drag. */
   sectionTileSize?: (sectionName: string) => number | undefined;
   onSectionTileSizeChange?: (sectionName: string, next: number) => void;
   sectionArea?: (sectionName: string) => PoolArea | undefined;
@@ -226,20 +218,33 @@ export function AppShell({
     sectionName: string,
     event: { clientX: number; clientY: number },
   ) => void;
+  /** Pixel width of the dashboard pane; undefined = flex default. */
+  dashWidth?: number;
+  /** Start a divider drag between dashboard and cue monitor. */
+  onDashDividerDown?: (startX: number) => void;
   children: ReactNode;
 }) {
+  const dashStyle = dashWidth !== undefined ? { width: dashWidth, flexShrink: 0 } : undefined;
   return (
     <div className={`app-shell ${chatCollapsed ? "chat-collapsed" : "chat-split"}`}>
-      <DashBoard
-        dash={dash}
-        onRefresh={onRefresh}
-        isItemRunning={isItemRunning}
-        onItemPress={onItemPress}
-        sectionTileSize={sectionTileSize}
-        onSectionTileSizeChange={onSectionTileSizeChange}
-        sectionArea={sectionArea}
-        onSectionAreaResizeStart={onSectionAreaResizeStart}
-      />
+      <div className="dashboard-wrap" style={dashStyle}>
+        <DashBoard
+          dash={dash}
+          onRefresh={onRefresh}
+          isItemRunning={isItemRunning}
+          onItemPress={onItemPress}
+          sectionTileSize={sectionTileSize}
+          onSectionTileSizeChange={onSectionTileSizeChange}
+          sectionArea={sectionArea}
+          onSectionAreaResizeStart={onSectionAreaResizeStart}
+        />
+      </div>
+      {onDashDividerDown && (
+        <div
+          className="pane-divider"
+          onMouseDown={(e) => { e.preventDefault(); onDashDividerDown(e.clientX); }}
+        />
+      )}
       <CueMonitor
         cueMonitor={cueMonitor}
         onRefresh={onCueMonitorRefresh}
@@ -304,6 +309,7 @@ export default function App() {
   // Bumped when the settings panel closes so the onboarding banner re-checks
   // whether a key was just added (and hides itself if so).
   const [settingsRefresh, setSettingsRefresh] = useState(0);
+  const [activeModel, setActiveModel] = useState<SettingsResponse | null>(null);
   // Session-volatile (design.md §6 / D5 — no client persistence). The chat
   // column starts OPEN alongside the always-visible console pane; the
   // operator may collapse it to give the console pane the full width.
@@ -315,6 +321,24 @@ export default function App() {
   // because the pool components are hook-free by design.
   const [sectionTileSizes, setSectionTileSizes] = useState<Record<string, number>>({});
   const [sectionAreas, setSectionAreas] = useState<Record<string, PoolArea>>({});
+  // Dashboard-CueMonitor divider drag: adjusts the dashboard pane width.
+  // Session-volatile, same pattern as sectionAreas above.
+  const [dashWidth, setDashWidth] = useState<number | undefined>(undefined);
+  const startDashDividerDrag = (startX: number) => {
+    // On first drag, snapshot the dashboard's current rendered width.
+    const dashEl = document.querySelector(".dashboard-wrap") as HTMLElement | null;
+    const baseWidth = dashWidth ?? dashEl?.offsetWidth ?? 400;
+    const onMove = (e: MouseEvent) => {
+      const next = Math.max(200, baseWidth + (e.clientX - startX));
+      setDashWidth(next);
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
   // T-H4 — CueMonitor's cue sheet opens ONE executor at a time (MA3 console
   // convention); this is the SAME name toggling off as re-closing (see
   // CueMonitor.tsx's own module header on why this is controlled here
@@ -348,6 +372,23 @@ export default function App() {
     setSettingsOpen(false);
     setSettingsRefresh((count) => count + 1);
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadActiveModel = async () => {
+      try {
+        const response = await fetch(apiUrl("/api/settings"));
+        const settings = parseSettingsResponse(await response.text());
+        if (!cancelled) setActiveModel(settings);
+      } catch {
+        if (!cancelled) setActiveModel(null);
+      }
+    };
+    void loadActiveModel();
+    return () => {
+      cancelled = true;
+    };
+  }, [settingsRefresh]);
   const composer = composerViewState({ connected, status: state.status, draft });
 
   useEffect(() => {
@@ -538,6 +579,8 @@ export default function App() {
             }
             sectionArea={(sectionName) => sectionAreas[sectionName]}
             onSectionAreaResizeStart={startSectionAreaResize}
+            dashWidth={dashWidth}
+            onDashDividerDown={startDashDividerDrag}
           >
             <div className="app">
               <main className="main">
@@ -594,6 +637,15 @@ export default function App() {
                 <button onClick={submit} disabled={composer.submitDisabled}>
                   {composer.buttonLabel}
                 </button>
+                <div className="composer-model" aria-live="polite">
+                  {activeModel === null
+                    ? "AI 모델 확인 중…"
+                    : `사용 모델 · ${
+                        activeModel.settings.active_provider === "claude_code"
+                          ? "Claude 구독"
+                          : providerLabel(activeModel.settings.active_provider)
+                      }${activeModel.active_model ? ` · ${activeModel.active_model}` : ""}`}
+                </div>
               </footer>
             </div>
           </AppShell>

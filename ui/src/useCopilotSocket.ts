@@ -136,6 +136,27 @@ export function dashResyncFrame(raw: string): string | null {
   return executed ? buildDashCatalogRequest() : null;
 }
 
+/**
+ * The cue-monitor refresh earned by a completed executor playback request.
+ *
+ * `panel_item_state` is emitted only after the server has finished the gate /
+ * console-result path for the press. The monitor otherwise polls at 5 seconds,
+ * which left the highlighted cue visibly stale after Go+ / Go- even when the
+ * console had already advanced. Restrict this to executor state events:
+ * macro state has no cue to read, and catalog/state-query events must never
+ * cause a refresh loop.
+ *
+ * An execution that the console refuses may also emit a state event. Refreshing
+ * then is deliberate: it replaces any old cue claim with a fresh console read,
+ * rather than optimistically moving the highlight client-side.
+ */
+export function cueMonitorResyncFrame(raw: string): string | null {
+  const event = parseServerEvent(raw);
+  return event?.type === "panel_item_state" && event.target_kind === "executor"
+    ? buildCueMonitorRequest()
+    : null;
+}
+
 export interface CopilotSocket {
   state: UiState;
   connected: boolean;
@@ -181,9 +202,10 @@ export function useCopilotSocket(url?: string): CopilotSocket {
       socket.onmessage = (message) => {
         const raw = String(message.data);
         dispatch({ kind: "server", raw });
-        // Event-driven console-pane resync after an executed chat command
-        // (see dashResyncFrame) — never timer-driven (REQ-DASHUI-021).
-        const resync = dashResyncFrame(raw);
+        // A chat mutation refreshes the catalog; a completed executor press
+        // refreshes the separate current-cue snapshot immediately. Both are
+        // event-driven, never additional timers.
+        const resync = dashResyncFrame(raw) ?? cueMonitorResyncFrame(raw);
         if (resync !== null && socket.readyState === WebSocket.OPEN) {
           socket.send(resync);
         }

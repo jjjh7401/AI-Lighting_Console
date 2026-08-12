@@ -83,6 +83,27 @@ body {
   cursor: pointer;
 }
 
+.dashboard-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pane-divider {
+  width: 5px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  border-left: 1px solid #2b2f36;
+  transition: background 0.15s;
+}
+
+.pane-divider:hover,
+.pane-divider:active {
+  background: var(--accent);
+}
+
 .dashboard {
   flex: 1;
   min-width: 0;
@@ -701,6 +722,13 @@ body {
   display: none;
 }
 
+.composer-model {
+  width: 100%;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
 .composer input {
   flex: 1;
   padding: 10px 12px;
@@ -1194,17 +1222,19 @@ body {
   color: #201a08;
 }
 
-/* T-E — volunteer runbook mode: a large-type, single-column list for a
-   non-expert operator. Deliberately much bigger than every other view's
-   type scale (design intent: "이 버튼만 누르세요"). */
+/* Runbook is a performance score: the horizontal rail gives musical context,
+   while the cue sheet stays legible at show-call distance. */
 .runbook-mode-frame {
-  padding: 16px;
+  padding: 24px;
   overflow-y: auto;
   flex: 1;
+  background:
+    linear-gradient(90deg, rgba(96, 118, 144, .07) 1px, transparent 1px) 0 0 / 64px 64px,
+    #11151d;
 }
 
 .runbook-mode {
-  max-width: 720px;
+  max-width: 1180px;
   margin: 0 auto;
 }
 
@@ -1212,26 +1242,30 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin: 0 0 22px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #303946;
 }
 
 .runbook-title {
-  font-size: 24px;
-  font-weight: 700;
+  font-family: "Arial Narrow", "Noto Sans KR", sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -.04em;
 }
 
 .runbook-syncline {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
   flex: 1;
 }
 
 .runbook-refresh {
-  background: var(--panel);
+  background: #1d2430;
   color: var(--text);
-  border: 1px solid #2b2f36;
-  border-radius: 6px;
-  padding: 6px 10px;
+  border: 1px solid #3b4656;
+  border-radius: 4px;
+  padding: 7px 10px;
   cursor: pointer;
 }
 
@@ -1247,74 +1281,145 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.runbook-item {
-  background: var(--panel);
-  border: 1px solid #2b2f36;
-  border-radius: 10px;
-  padding: 16px;
-}
-
-.runbook-item-main {
-  display: flex;
-  align-items: center;
   gap: 16px;
 }
 
+.runbook-item {
+  --track: #7d8ea6;
+  background: #181e28;
+  border: 1px solid #354050;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .16);
+}
+
+.runbook-item-live {
+  border-color: #f4bb4f;
+  box-shadow: 0 0 0 1px rgba(244, 187, 79, .18), 0 12px 30px rgba(0, 0, 0, .16);
+}
+
+.runbook-track-header {
+  min-height: 76px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(90deg, #202938, #1a202b 70%);
+  border-bottom: 1px solid #354050;
+}
+
 .runbook-item-no {
-  font-size: 22px;
+  font-family: ui-monospace, monospace;
+  font-size: 20px;
   font-weight: 700;
-  color: var(--muted);
+  color: #91a0b4;
   min-width: 32px;
 }
 
-.runbook-item-name {
-  font-size: 22px;
-  font-weight: 700;
+.runbook-track-title {
+  min-width: 0;
   flex: 1;
+  display: grid;
+  gap: 3px;
 }
 
-.runbook-item-run {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 14px 22px;
-  font-size: 18px;
+.runbook-track-kicker,
+.runbook-sheet-heading {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
   font-weight: 700;
+  letter-spacing: .1em;
+}
+
+.runbook-track-kicker { color: #aab8ca; font-size: 12px; }
+
+.runbook-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 30px;
+  line-height: 1.06;
+  font-weight: 800;
+  letter-spacing: -.035em;
+}
+
+.runbook-track-status {
+  min-width: 104px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #b7c3d3;
+  font: 700 11px ui-monospace, monospace;
+  letter-spacing: .08em;
+}
+
+.runbook-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #7f8ca0;
+}
+
+.runbook-status-dot.is-live { background: #f4bb4f; box-shadow: 0 0 10px #f4bb4f; }
+
+.runbook-item-run {
+  background: #5289ff;
+  color: #fff;
+  border: 0;
+  border-radius: 4px;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 750;
   cursor: pointer;
 }
 
-.runbook-item-run:disabled {
-  background: #2b2f36;
-  color: var(--muted);
-  cursor: not-allowed;
+.runbook-item-run:disabled { background: #2b3442; color: var(--muted); cursor: not-allowed; }
+.runbook-item-run-active { background: var(--warn); color: #201a08; }
+
+
+.runbook-cue-sheet { border-top: 1px solid #303a48; }
+
+.runbook-sheet-heading,
+.runbook-sheet-row {
+  display: grid;
+  grid-template-columns: 112px 180px minmax(0, 1fr);
+  align-items: center;
 }
 
-.runbook-item-run-active {
-  background: var(--warn);
-  color: #201a08;
+.runbook-sheet-heading {
+  min-height: 32px;
+  padding: 0 24px;
+  color: #8391a5;
+  background: #151a22;
 }
 
-.runbook-item-current-cue {
-  margin-top: 8px;
-  font-size: 16px;
-  color: var(--muted);
-}
-
-.runbook-item-caution {
-  margin-top: 8px;
-  font-size: 16px;
-  color: var(--warn);
-}
-
-.runbook-item-cues {
-  margin: 8px 0 0;
-  padding-left: 20px;
+.runbook-sheet-row {
+  min-height: 44px;
+  padding: 0 24px;
+  border-top: 1px solid rgba(67, 79, 96, .56);
+  color: #cbd4df;
   font-size: 15px;
-  color: var(--muted);
+}
+
+.runbook-sheet-row.is-current { background: rgba(82, 137, 255, .12); box-shadow: inset 3px 0 #5289ff; }
+.runbook-sheet-cue { display: flex; align-items: center; gap: 9px; font: 700 14px ui-monospace, monospace; color: #fff; }
+.runbook-sheet-cue em { color: #8fb5ff; font: 700 9px ui-monospace, monospace; font-style: normal; letter-spacing: .08em; }
+.runbook-sheet-section { min-height: 16px; font: 700 12px ui-monospace, monospace; color: #9baec5; }
+.runbook-sheet-section.section-intro { color: #75b9ff; }
+.runbook-sheet-section.section-chorus { color: #f5bd5d; }
+.runbook-sheet-section.section-bridge { color: #d89eff; }
+.runbook-sheet-section.section-outro { color: #ff9898; }
+.runbook-sheet-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.runbook-item-caution { margin: 12px 24px 16px; font-size: 13px; color: var(--warn); }
+
+@media (max-width: 700px) {
+  .runbook-mode-frame { padding: 14px; }
+  .runbook-track-header { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+  .runbook-item-name { font-size: 24px; }
+  .runbook-track-status { margin-left: 48px; }
+  .runbook-item-run { margin-left: auto; }
+  .runbook-sheet-heading, .runbook-sheet-row { grid-template-columns: 70px 110px minmax(0, 1fr); padding: 0 12px; }
+  .runbook-sheet-heading { font-size: 8px; }
 }
 
 /* W3 — paperwork panel: patch sheet / cue sheet / preset list generation.
@@ -1337,25 +1442,34 @@ body {
 }
 
 .paperwork-mode-frame {
-  padding: 16px;
-  overflow-y: auto;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .paperwork-panel {
-  max-width: 720px;
-  margin: 0 auto;
+  display: flex;
+  height: 100%;
+}
+
+/* Left sidebar — menu cards */
+.paperwork-sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  padding: 16px;
+  overflow-y: auto;
+  border-right: 1px solid #2b2f36;
 }
 
 .paperwork-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .paperwork-title {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   flex: 1;
 }
@@ -1368,56 +1482,68 @@ body {
   cursor: pointer;
 }
 
-.paperwork-hint {
-  color: var(--muted);
-  font-size: 13px;
-  margin: 0 0 16px;
-}
-
 .paperwork-notice {
   background: var(--panel);
   border: 1px solid var(--warn);
   color: var(--warn);
   border-radius: 8px;
   padding: 8px 12px;
-  font-size: 13px;
-  margin-bottom: 16px;
+  font-size: 12px;
+  margin-bottom: 12px;
 }
 
 .paperwork-cards {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .paperwork-card {
   background: var(--panel);
   border: 1px solid #2b2f36;
   border-radius: 10px;
-  padding: 14px 16px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.paperwork-card:hover {
+  border-color: #444;
+}
+
+.paperwork-card-active {
+  border-color: var(--accent);
+  background: #1a2236;
 }
 
 .paperwork-card-head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .paperwork-card-label {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   flex: 1;
+}
+
+.paperwork-card-stat {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .paperwork-card-generate {
   background: var(--accent);
   color: #fff;
   border: none;
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 13px;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .paperwork-card-generate:disabled {
@@ -1426,43 +1552,92 @@ body {
   cursor: not-allowed;
 }
 
-.paperwork-card-result {
-  margin-top: 10px;
+.paperwork-card-actions {
+  margin-top: 8px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 6px;
-}
-
-.paperwork-card-path {
-  color: var(--muted);
-  font-size: 12px;
-  word-break: break-all;
 }
 
 .paperwork-card-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
 
 .paperwork-badge {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
   background: #2b2417;
   color: var(--warn);
 }
 
-.paperwork-card-open {
-  background: var(--panel);
+.paperwork-card-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.paperwork-card-preview,
+.paperwork-card-download {
+  background: var(--bg);
   color: var(--text);
   border: 1px solid #2b2f36;
-  border-radius: 8px;
-  padding: 5px 12px;
-  font-size: 12px;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 11px;
   cursor: pointer;
+  white-space: nowrap;
+}
+
+.paperwork-card-preview:hover,
+.paperwork-card-download:hover {
+  border-color: #555;
+}
+
+.paperwork-card-preview-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.paperwork-card-download {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+/* Right preview area */
+.paperwork-preview-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.paperwork-preview-frame {
+  flex: 1;
+  width: 100%;
+  border: none;
+  display: block;
+  background: #fff;
+}
+
+.paperwork-preview-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.paperwork-preview-empty-icon {
+  font-size: 48px;
+  opacity: 0.3;
 }
 
 /* T-H — executor status chip (CueMonitor.tsx). THREE grades, each carried by
@@ -1592,6 +1767,30 @@ body {
   background: rgba(210, 153, 34, 0.12);
   color: var(--warn);
   font-size: 13px;
+}
+
+/* Top-level cue-monitor: flex column. Three zones stacked vertically:
+   1. Upper (executor grid) — takes most of the space (flex: 1 + overflow)
+   2. ExecutorDetail — fixed-height, sits directly above history
+   3. History — small, scrollable */
+.cue-monitor {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  flex: 1;
+  min-width: 360px;
+}
+
+/* Upper zone — the executor grid fills most of the panel and scrolls
+   independently. flex: 1 gives it all remaining space after the
+   fixed-height detail and compact history below. */
+.cue-monitor-upper {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
 }
 
 /* T-H4 (user feedback, 2026-08-02) — console-style redesign. Executors
@@ -1808,19 +2007,178 @@ body {
   color: var(--muted);
 }
 
-/* Recent-execution history — a real layout gap (T-H4 defect 2) plus local
-   HH:MM:SS formatting (CueMonitor.tsx's formatHistoryTime) instead of the
-   raw ISO timestamp glued to the command. */
+/* -- ExecutorDetail: MA3-style executor detail view -------------------------
+   Sits between the executor grid and the history. Fixed height so it does
+   not steal space from the grid above. The cue list inside scrolls. */
+.executor-detail {
+  display: flex;
+  flex-direction: column;
+  margin: 0 16px 12px;
+  border: 1px solid #3a3d44;
+  border-radius: 2px;
+  background: #1a1c20;
+  height: 200px;
+  flex-shrink: 0;
+}
+
+.executor-detail-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #c8a800;
+  color: #1a1c20;
+  border-bottom: 1px solid #3a3d44;
+}
+
+.executor-detail-seqname {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.executor-detail-no {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.executor-detail-cuelist {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+
+.executor-detail-empty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 12px 10px;
+  text-align: center;
+}
+
+.executor-detail-cue {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 10px;
+  font-size: 13px;
+  color: #6a6d74;
+  border-left: 2px solid transparent;
+}
+
+.executor-detail-cue-current {
+  background: #c8a800;
+  color: #1a1c20;
+  font-weight: 700;
+  border-left-color: #c8a800;
+}
+
+.executor-detail-cue-adjacent {
+  color: #8a8d94;
+}
+
+.executor-detail-cue-gotoable {
+  cursor: pointer;
+}
+
+.executor-detail-cue-gotoable:hover,
+.executor-detail-cue-gotoable:focus-visible {
+  background: rgba(154, 160, 166, 0.14);
+  outline: none;
+}
+
+.executor-detail-cue-no {
+  min-width: 28px;
+  font-variant-numeric: tabular-nums;
+}
+
+.executor-detail-cue-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.executor-detail-fader {
+  height: 14px;
+  margin: 0 10px 6px;
+  background: #2b2f36;
+  border: 1px solid #3a3d44;
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.executor-detail-fader-fill {
+  height: 100%;
+  width: 100%;
+  background: #8a8520;
+}
+
+.executor-detail-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  border-top: 1px solid #3a3d44;
+}
+
+.executor-detail-btn {
+  padding: 8px 4px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  background: #3a3d44;
+  color: var(--text);
+}
+
+.executor-detail-btn:hover:not(:disabled) {
+  background: #4a4d54;
+}
+
+.executor-detail-btn:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  background: #2b2f36;
+}
+
+.executor-detail-btn-go {
+  background: #5a5d10;
+  color: #e8e8c0;
+}
+
+.executor-detail-btn-go:hover:not(:disabled) {
+  background: #6a6d18;
+}
+
+/* Recent-execution history — compact section at the bottom. Fixed max-height
+   keeps it small; the list scrolls internally. */
 .cue-monitor-history {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  max-height: 140px;
+  flex-shrink: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid #2b2f36;
 }
 
 .cue-monitor-history-title {
   font-size: 13px;
   font-weight: 700;
   color: var(--muted);
+  padding: 10px 16px 6px;
+  flex-shrink: 0;
+}
+
+.cue-monitor-history-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px 12px;
+  margin: 0;
+  list-style: none;
 }
 
 .cue-monitor-history-item {
@@ -1835,6 +2193,7 @@ body {
   min-width: 64px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 .cue-monitor-history-command {

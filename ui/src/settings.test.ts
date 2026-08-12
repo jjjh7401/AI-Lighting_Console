@@ -20,6 +20,7 @@ import {
 
 const EFFECTIVE: EffectiveSettings = {
   active_provider: "gemini",
+  claude_code_model: "sonnet",
   console_host: "127.0.0.1",
   console_port: 8000,
   receive_port: 9000,
@@ -31,14 +32,21 @@ const EFFECTIVE: EffectiveSettings = {
 
 const RESPONSE: SettingsResponse = {
   settings: EFFECTIVE,
-  providers: ["anthropic", "gemini"],
-  keys: { anthropic: false, gemini: false },
+  providers: ["anthropic", "claude_code", "gemini"],
+  keys: { anthropic: false, claude_code: false, gemini: false },
   keystore_available: true,
+  claude_code: {
+    available: true,
+    logged_in: false,
+    model_options: ["opus", "sonnet", "fable"],
+  },
+  active_model: "gemini-3.5-flash",
 };
 
 function validForm(): SettingsForm {
   return {
     active_provider: "gemini",
+    claude_code_model: "sonnet",
     console_port: 8000,
     receive_port: 9000,
     plugin_import_dir: "/home/op/plugins",
@@ -69,6 +77,7 @@ describe("formFromSettings", () => {
     const form = formFromSettings(EFFECTIVE);
     expect(form).toEqual({
       active_provider: "gemini",
+      claude_code_model: "sonnet",
       console_port: 8000,
       receive_port: 9000,
       plugin_import_dir: "/home/op/plugins",
@@ -114,6 +123,7 @@ describe("buildSettingsPayload", () => {
     const body = JSON.parse(buildSettingsPayload(validForm()));
     expect(body).toEqual({
       active_provider: "gemini",
+      claude_code_model: "sonnet",
       console_port: 8000,
       receive_port: 9000,
       plugin_import_dir: "/home/op/plugins",

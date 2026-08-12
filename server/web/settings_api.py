@@ -27,8 +27,11 @@ Safety invariants (this module is deliberately narrow):
 
 from __future__ import annotations
 
+import json
+import shutil
+import subprocess
 from collections.abc import MutableMapping
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -52,7 +55,9 @@ from server.deploy.settings import (
     resolve_effective_settings,
     save_user_settings,
 )
-from server.llm.config import SUPPORTED_PROVIDERS
+from server.llm.config import SUPPORTED_PROVIDERS, load_provider_config
+from server.llm.factory import build_provider
+from server.llm.runtime import ProviderSlot
 
 # Human-friendly Korean surface for the store-unavailable case (REQ-DEPLOY-020
 # error-UX lineage — no raw SDK/store error string is exposed to the client).
@@ -77,6 +82,9 @@ class SettingsDeps:
     environ: MutableMapping[str, str] | None = None
     providers: tuple[str, ...] = SUPPORTED_PROVIDERS
 
+    provider_slot: ProviderSlot | None = None
+    provider_config_path: Path | None = None
+
 
 # @MX:NOTE: [AUTO] keys are read transiently only to derive a boolean presence
 #   flag — the key VALUE is never returned to the caller (and thus never to the
@@ -92,6 +100,9 @@ def _provider_key_status(deps: SettingsDeps) -> tuple[dict[str, bool], bool]:
     keys: dict[str, bool] = {}
     keystore_available = True
     for provider in deps.providers:
+        if provider == "claude_code":
+            keys[provider] = False
+            continue
         try:
             keys[provider] = get_api_key(provider, session=deps.session) is not None
         except KeystoreUnavailableError:
@@ -110,6 +121,54 @@ def _provider_key_status(deps: SettingsDeps) -> tuple[dict[str, bool], bool]:
 #   gate would open an ungated console-command path (a safety regression); the
 #   source-scan guard in test_web_settings_api.py enforces the boundary.
 # @MX:SPEC: SPEC-COPILOT-DEPLOY-001
+
+
+def _claude_code_auth_status() -> dict:
+    """Return public subscription-login state; never return a credential."""
+    if shutil.which("claude") is None:
+        return {"available": False, "logged_in": False, "model_options": []}
+    try:
+        result = subprocess.run(
+            ["claude", "auth", "status", "--json"],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=10,
+        )
+        raw = json.loads(result.stdout) if result.returncode == 0 else {}
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        raw = {}
+    return {
+        "available": True,
+        "logged_in": bool(raw.get("loggedIn")),
+        "email": raw.get("email") if raw.get("loggedIn") else None,
+        "subscription_type": raw.get("subscriptionType") if raw.get("loggedIn") else None,
+        "model_options": ["opus", "sonnet", "fable"],
+    }
+
+
+def _select_runtime_provider(deps: SettingsDeps, settings) -> None:
+    """Apply a saved provider selection to the next chat turn."""
+    if deps.provider_slot is None or deps.provider_config_path is None:
+        return
+    config = load_provider_config(deps.provider_config_path)
+    config = replace(
+        config,
+        active=settings.active_provider,
+        claude_code=replace(config.claude_code, model=settings.claude_code_model),
+    )
+    deps.provider_slot.select(build_provider(config))
+
+
+def _active_model_id(deps: SettingsDeps, settings) -> str | None:
+    if settings.active_provider == "claude_code":
+        return settings.claude_code_model
+    if deps.provider_config_path is None:
+        return None
+    config = load_provider_config(deps.provider_config_path)
+    return getattr(config, settings.active_provider).model
+
+
 def build_settings_router(deps: SettingsDeps) -> APIRouter:
     """Build the settings/key REST router around one composed dependency set."""
     router = APIRouter()
@@ -125,6 +184,8 @@ def build_settings_router(deps: SettingsDeps) -> APIRouter:
             "providers": list(deps.providers),
             "keys": keys,
             "keystore_available": keystore_available,
+            "claude_code": _claude_code_auth_status(),
+            "active_model": _active_model_id(deps, settings),
         }
 
     @router.post("/api/settings")
@@ -141,7 +202,34 @@ def build_settings_router(deps: SettingsDeps) -> APIRouter:
         except SettingsError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
         save_user_settings(settings, deps.settings_path)
-        return {"ok": True, "settings": asdict(settings)}
+        try:
+            _select_runtime_provider(deps, settings)
+        except Exception as error:
+            raise HTTPException(
+                status_code=422, detail=f"프로바이더를 적용하지 못했습니다: {error}"
+            ) from error
+        return {
+            "ok": True,
+            "settings": asdict(settings),
+            "active_model": _active_model_id(deps, settings),
+        }
+
+    @router.post("/api/claude-code/login")
+    def login_claude_code() -> dict:
+        if shutil.which("claude") is None:
+            raise HTTPException(status_code=503, detail="Claude Code가 설치되어 있지 않습니다.")
+        try:
+            subprocess.Popen(
+                ["claude", "auth", "login", "--claudeai"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        except OSError as error:
+            raise HTTPException(
+                status_code=503, detail="Claude 로그인 창을 열지 못했습니다."
+            ) from error
+        return {"ok": True}
 
     @router.post("/api/keys")
     def post_key(payload: dict) -> dict:

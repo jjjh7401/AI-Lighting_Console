@@ -121,9 +121,9 @@ class TestGetSettings:
         assert body["settings"]["console_port"] == 8000
         assert body["settings"]["receive_port"] == 9000
         assert body["settings"]["active_provider"] == "gemini"
-        assert set(body["providers"]) == {"anthropic", "gemini"}
+        assert set(body["providers"]) == {"anthropic", "claude_code", "gemini"}
         # No key configured yet -> both false.
-        assert body["keys"] == {"anthropic": False, "gemini": False}
+        assert body["keys"] == {"anthropic": False, "claude_code": False, "gemini": False}
         assert body["keystore_available"] is True
 
     def test_reflects_persisted_user_settings(self, tmp_path, memory_keyring):
@@ -172,7 +172,7 @@ class TestGetSettings:
         body = response.json()
         assert body["keystore_available"] is False
         # No key readable -> both false, no crash.
-        assert body["keys"] == {"anthropic": False, "gemini": False}
+        assert body["keys"] == {"anthropic": False, "claude_code": False, "gemini": False}
 
 
 # ----------------------------------------------------------------- POST /settings

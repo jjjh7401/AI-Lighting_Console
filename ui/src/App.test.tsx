@@ -30,6 +30,20 @@ function childArray(element: ReactElement): unknown[] {
   return Array.isArray(children) ? children : [children];
 }
 
+/** DashBoard now lives inside a .dashboard-wrap div — find it one level deeper. */
+function findDashBoard(shellChildren: unknown[]): ReactElement | undefined {
+  for (const child of shellChildren) {
+    if ((child as ReactElement | null)?.type === DashBoard) return child as ReactElement;
+    const el = child as ReactElement | null;
+    if (el?.props?.className === "dashboard-wrap") {
+      const inner = Array.isArray(el.props.children) ? el.props.children : [el.props.children];
+      const found = inner.find((c: unknown) => (c as ReactElement | null)?.type === DashBoard);
+      if (found) return found as ReactElement;
+    }
+  }
+  return undefined;
+}
+
 // Stands in for the existing chat UI subtree (header/banner/main/composer —
 // ChatView, ApprovalCard, ReviewCard, SettingsPanel, StatusBanner all live
 // inside it). AppShell must never inspect or rewrite it — only wrap it.
@@ -154,11 +168,9 @@ describe("AppShell — console-primary split layout (M6 inversion)", () => {
     expect(element.props.className).toBe("app-shell chat-split");
 
     const children = childArray(element);
-    const dashboardNodes = children.filter(
-      (child) => (child as ReactElement | null)?.type === DashBoard,
-    ) as ReactElement[];
-    expect(dashboardNodes).toHaveLength(1);
-    expect(dashboardNodes[0].props.dash).toBe(initialState.dash);
+    const db = findDashBoard(children);
+    expect(db).toBeDefined();
+    expect(db!.props.dash).toBe(initialState.dash);
     expect(children).toContain(CHAT_SENTINEL);
   });
 
@@ -175,10 +187,8 @@ describe("AppShell — console-primary split layout (M6 inversion)", () => {
     expect(element.props.className).toBe("app-shell chat-collapsed");
 
     const children = childArray(element);
-    const dashboardNodes = children.filter(
-      (child) => (child as ReactElement | null)?.type === DashBoard,
-    );
-    expect(dashboardNodes).toHaveLength(1);
+    const db = findDashBoard(children);
+    expect(db).toBeDefined();
     expect(children).not.toContain(CHAT_SENTINEL);
 
     const rail = children.find(
@@ -201,10 +211,9 @@ describe("AppShell — console-primary split layout (M6 inversion)", () => {
       onToggleChat: vi.fn(),
       children: CHAT_SENTINEL,
     }) as ReactElement;
-    const children = childArray(element) as ReactElement[];
-    const dashboardNode = children.find((child) => child?.type === DashBoard) as ReactElement;
+    const db = findDashBoard(childArray(element));
 
-    expect(dashboardNode.props.onToggleCollapse).toBeUndefined();
+    expect(db!.props.onToggleCollapse).toBeUndefined();
   });
 
   // M5 (design.md §4, REQ-DASHUI-017) — press/refresh/running wiring passthrough.
@@ -222,12 +231,11 @@ describe("AppShell — console-primary split layout (M6 inversion)", () => {
       onItemPress,
       children: CHAT_SENTINEL,
     }) as ReactElement;
-    const children = childArray(element) as ReactElement[];
-    const dashboardNode = children.find((child) => child?.type === DashBoard) as ReactElement;
+    const db = findDashBoard(childArray(element));
 
-    expect(dashboardNode.props.onRefresh).toBe(onRefresh);
-    expect(dashboardNode.props.isItemRunning).toBe(isItemRunning);
-    expect(dashboardNode.props.onItemPress).toBe(onItemPress);
+    expect(db!.props.onRefresh).toBe(onRefresh);
+    expect(db!.props.isItemRunning).toBe(isItemRunning);
+    expect(db!.props.onItemPress).toBe(onItemPress);
   });
 
   it("omitting onRefresh/isItemRunning/onItemPress leaves DashBoard's slots undefined — no forced stub", () => {
@@ -238,12 +246,11 @@ describe("AppShell — console-primary split layout (M6 inversion)", () => {
       onToggleChat: vi.fn(),
       children: CHAT_SENTINEL,
     }) as ReactElement;
-    const children = childArray(element) as ReactElement[];
-    const dashboardNode = children.find((child) => child?.type === DashBoard) as ReactElement;
+    const db = findDashBoard(childArray(element));
 
-    expect(dashboardNode.props.onRefresh).toBeUndefined();
-    expect(dashboardNode.props.isItemRunning).toBeUndefined();
-    expect(dashboardNode.props.onItemPress).toBeUndefined();
+    expect(db!.props.onRefresh).toBeUndefined();
+    expect(db!.props.isItemRunning).toBeUndefined();
+    expect(db!.props.onItemPress).toBeUndefined();
   });
 
   it("never mutates or wraps the passed children — same value passes through unchanged when chat is open", () => {
