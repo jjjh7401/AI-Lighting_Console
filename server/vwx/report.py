@@ -250,6 +250,7 @@ class VwxReport:
         return [
             {
                 "unit_number": fixture.unit_number,
+                "fixture_name": fixture.fixture_name,
                 "instrument_type": fixture.instrument_type,
                 "gdtf_fixture": fixture.gdtf_fixture,
                 "mode": fixture.mode,

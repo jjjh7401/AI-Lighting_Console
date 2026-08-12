@@ -408,6 +408,7 @@ class DesignedAttributes:
     (M0 함정 7: 실측 14 vs 실제 stride 16).
     """
 
+    fixture_name: str | None = None
     gdtf_fixture: str | None = None
     mode: str | None = None
     footprint: int | None = None
@@ -439,6 +440,7 @@ def designed_attributes_by_candidate(
                 address,
             )
             indexed[key] = DesignedAttributes(
+                fixture_name=_optional_string(fixture.get("fixture_name")),
                 gdtf_fixture=_optional_string(fixture.get("gdtf_fixture")),
                 mode=_optional_string(fixture.get("mode")),
                 footprint=_optional_int(fixture.get("footprint")),

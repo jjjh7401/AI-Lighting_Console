@@ -11,10 +11,12 @@ from __future__ import annotations
 
 import base64
 import binascii
+import io
 import json
 import math
 import re
 import time
+import zipfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
@@ -141,6 +143,8 @@ from server.vwx.diff import compare as compare_vectorworks_rig
 from server.vwx.librarywatch import read_snapshot as read_library_snapshot
 from server.vwx.librarywatch import selection_prompt as fixture_type_selection_prompt
 from server.vwx.librarywatch import wait_for_addition as wait_for_library_addition
+from server.vwx.mvr import SCENE_ENTRY
+from server.vwx.mvr import read as read_mvr
 from server.vwx.patchplan import (
     ASSUMPTION_71_GO,
     ASSUMPTION_71_NEGATIVE,
@@ -211,6 +215,7 @@ TOOL_NAMES = (
     "precheck_patch",
     "precheck_vectorworks_diff",
     "apply_vectorworks_patch",
+    "vectorworks_autopatch",
     "preshow_check",
     "ask_user",
     "resolve_fixture_type",
@@ -1186,6 +1191,7 @@ def build_toolset(
     preshow_osc_slot: int | None = None,
     group_approval_port: ApprovalPort | None = None,
     question_port: object | None = None,
+    vectorworks_upload: VectorworksUploadPort | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
 
@@ -2391,6 +2397,12 @@ def build_toolset(
             return _error_result(call, f"'file_content_base64' is not valid base64: {error}")
 
         try:
+            with zipfile.ZipFile(io.BytesIO(raw_bytes)) as archive:
+                is_mvr = SCENE_ENTRY in archive.namelist()
+        except zipfile.BadZipFile:
+            is_mvr = False
+
+        try:
             inventory = read_inventory(_InventoryPort(state_port, property_port))
         except InventoryReadError as error:
             return _error_result(call, f"fixture inventory unreadable: {error}")
@@ -2405,7 +2417,7 @@ def build_toolset(
         #   까지 탈출한 결함이 발견됐다 — 리더 계층 수정만으로는 미래의
         #   유사 입력(다른 예외를 던지는 파서 계층)을 방어하지 못한다.
         try:
-            read_result = read_vwx_export(raw_bytes)
+            read_result = read_mvr(raw_bytes) if is_mvr else read_vwx_export(raw_bytes)
             column_records, column_failures, excluded_rows = resolve_vwx_columns(
                 list(read_result.records)
             )
@@ -2458,6 +2470,75 @@ def build_toolset(
                 is_error=False,
             ),
             command_outcomes=(),
+        )
+
+    # -- vectorworks_autopatch (single conversational entry over VWX-001 M6 +
+    #    AUTOPATCH-001 M7) ----------------------------------------------------
+    #
+    # @MX:NOTE: wraps `precheck_vectorworks_diff` (analyse) and
+    #   `apply_vectorworks_patch` (prepare) behind one tool so the model never
+    #   asks the operator to re-paste a report or a base64 blob mid-conversation.
+    #   The uploaded export stays in this WebSocket session. Keeping its bytes
+    #   and report behind this handler avoids spending model context on base64
+    #   or asking the operator to paste a report back into chat.
+    def vectorworks_autopatch(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        action = call.arguments.get("action", "analyse")
+        if action not in ("analyse", "prepare"):
+            return _error_result(call, "'action' must be 'analyse' or 'prepare'")
+
+        if action == "analyse":
+            content = vectorworks_upload.content_base64 if vectorworks_upload is not None else None
+            if not isinstance(content, str) or not content:
+                return _error_result(
+                    call,
+                    "이번 대화에 업로드된 Vectorworks 파일이 없다 — 먼저 파일을 업로드해 달라고 "
+                    "안내하고 내용을 채팅에 붙여 넣으라고 요구하지 마라",
+                )
+            execution = precheck_vectorworks_diff(
+                ToolCall(
+                    id=call.id,
+                    name="precheck_vectorworks_diff",
+                    arguments={"file_content_base64": content},
+                ),
+                context,
+            )
+            if not execution.result.is_error:
+                try:
+                    report = json.loads(execution.result.content)
+                except json.JSONDecodeError:
+                    report = None
+                if isinstance(report, Mapping):
+                    vectorworks_upload.report = report
+            return ToolExecution(
+                result=ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=execution.result.content,
+                    is_error=execution.result.is_error,
+                ),
+                command_outcomes=execution.command_outcomes,
+            )
+
+        report = vectorworks_upload.report if vectorworks_upload is not None else None
+        if not isinstance(report, Mapping):
+            return _error_result(
+                call,
+                "아직 이 업로드 파일의 대조 결과가 없다 — 먼저 action='analyse'로 대조를 수행하라",
+            )
+        arguments = dict(call.arguments)
+        arguments.pop("action", None)
+        arguments["report"] = report
+        execution = apply_vectorworks_patch(
+            ToolCall(id=call.id, name="apply_vectorworks_patch", arguments=arguments), context
+        )
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=execution.result.content,
+                is_error=execution.result.is_error,
+            ),
+            command_outcomes=execution.command_outcomes,
         )
 
     # -- apply_vectorworks_patch (SPEC-COPILOT-AUTOPATCH-001 M7) ---------------
@@ -2607,11 +2688,16 @@ def build_toolset(
         address_plan = screen_console_occupancy(
             plan.targets, address_plan=address_plan, console_fixtures=console_fixtures
         )
+        effective_names = dict(names or {})
+        for target in plan.targets:
+            design_name = designed[target.id].fixture_name
+            if design_name and target.id not in effective_names:
+                effective_names[target.id] = design_name
         handoff = build_patch_handoff(
             plan.targets,
             address_plan=address_plan,
             resolutions=type_plan.resolutions,
-            names=dict(names or {}),
+            names=effective_names,
             dry_run=dry_run,
         )
         payload["handoff"] = handoff.to_dict()
@@ -5927,144 +6013,6 @@ def build_toolset(
             },
         ),
         ToolDefinition(
-            name="precheck_vectorworks_diff",
-            description=(
-                "Compare a Vectorworks Instrument Data export (Export Instrument "
-                "Data tab-text, or Export Worksheet .xls/.xlsx/.txt/.csv/.dif/.slk) "
-                "against THIS console's actual patch. Reads the file content and "
-                "the console's own fixture inventory itself and reports three "
-                "difference classes: fixtures the drawing has but the console does "
-                "not (missing_in_console), address collisions the console "
-                "inventory already knows about (address_collision, reused from "
-                "precheck_patch — never recomputed), and per-type quantity "
-                "mismatches between drawing and console (quantity_mismatch). The "
-                "join key is (universe, address) plus fixture type — never a "
-                "fixture id or custom id: a show file where console slot and "
-                "fixture id coincide makes that comparison structurally "
-                "unverifiable, and that gap is reported under skipped_checks "
-                "rather than silently attempted. A fixture the drawing marks "
-                "unpatched (DMX Address/Absolute Address is 0 or blank) is a "
-                "third state, never counted as missing_in_console. Do not pass "
-                "rig numbers: none are accepted — the console side is read "
-                "directly, and the parsed file never reaches the console."
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "file_content_base64": {
-                        "type": "string",
-                        "description": (
-                            "The Vectorworks export file's raw bytes, base64-"
-                            "encoded. Text or binary — encoding and file "
-                            "structure are detected from content, never from a "
-                            "file name or extension."
-                        ),
-                    },
-                },
-                "required": ["file_content_base64"],
-                "additionalProperties": False,
-            },
-        ),
-        ToolDefinition(
-            name="apply_vectorworks_patch",
-            description=(
-                "Turn a precheck_vectorworks_diff report into fixtures the human "
-                "creates on the console. THE SERVER NEVER EXECUTES THE PATCH: "
-                "server-driven AddFixtures was measured creating ZERO fixtures on "
-                "this build across every reachable path, so this tool plans the "
-                "work, renders reviewable AddFixtures Lua, hands over the exact "
-                "execution procedure, and then re-reads the console to say what "
-                "actually got created. The human presses the button.\n"
-                "\n"
-                "dry_run defaults to TRUE and a dry run already returns the full "
-                "Lua source and the target table — this app has no undo and no "
-                "backup restore, so review first and pass dry_run=false only "
-                "after the user approved the listed targets. Setting dry_run="
-                "false does NOT make the server execute anything; it adds the "
-                "execution procedure and the verification hand-off.\n"
-                "\n"
-                "Call it AGAIN with the same arguments after the human ran the "
-                "plugin: the second call re-reads the console, skips fixtures "
-                "that already exist with the same (universe, address, type, "
-                "mode), reports address conflicts and unconfirmable identities "
-                "separately, and verifies each approved item. It never retries "
-                "or repairs anything by itself.\n"
-                "\n"
-                "Items are DROPPED with a reason rather than guessed at: no "
-                "designed footprint, no fixture name supplied, an unconfirmed "
-                "type match, an occupied address. A type match needs the user's "
-                "confirmation once — pass it back through type_aliases. Do not "
-                "pass rig numbers: none are accepted; the console is read here."
-            ),
-            parameters={
-                "type": "object",
-                "properties": {
-                    "report": {
-                        "type": "object",
-                        "description": (
-                            "The precheck_vectorworks_diff payload, verbatim. Patch "
-                            "candidates are read from its diffs.missing_in_console "
-                            "rows and the designed footprint/mode from its "
-                            "designed_rig.fixtures rows."
-                        ),
-                    },
-                    "selected": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": (
-                            "Candidate ids the user approved. Omitted means NONE — "
-                            "nothing is patched by default."
-                        ),
-                    },
-                    "fid_range": {
-                        "type": "object",
-                        "properties": {
-                            "start": {"type": "integer"},
-                            "end": {"type": "integer"},
-                        },
-                        "required": ["start", "end"],
-                        "additionalProperties": False,
-                        "description": (
-                            "The empty fixture-id range the user confirmed. Omitted "
-                            "means refuse — ids are never invented."
-                        ),
-                    },
-                    "fid_range_visually_confirmed_empty": {
-                        "type": "boolean",
-                        "description": (
-                            "The user visually confirmed that range is empty. "
-                            "Required only when the console cannot pre-check id "
-                            "conflicts; approving targets does not imply it."
-                        ),
-                    },
-                    "names": {
-                        "type": "object",
-                        "description": (
-                            "Candidate id -> the fixture name to create. A candidate "
-                            "with no name here is excluded with a reason; this layer "
-                            "never invents a name."
-                        ),
-                    },
-                    "type_aliases": {
-                        "type": "object",
-                        "description": (
-                            "Drawing type name -> console library type name, for "
-                            "matches the user already confirmed once. Without it a "
-                            "candidate stays unconfirmed and is not delivered."
-                        ),
-                    },
-                    "dry_run": {
-                        "type": "boolean",
-                        "description": (
-                            "Omitted means true. False = hand over for human execution."
-                        ),
-                    },
-                },
-                "required": ["report"],
-                "additionalProperties": False,
-            },
-        ),
-        ToolDefinition(
             name="preshow_check",
             description=(
                 "Run the standard pre-show checklist in one pass: sequence/"
@@ -7097,6 +7045,7 @@ def build_toolset(
         "precheck_patch": precheck_patch,
         "precheck_vectorworks_diff": precheck_vectorworks_diff,
         "apply_vectorworks_patch": apply_vectorworks_patch,
+        "vectorworks_autopatch": vectorworks_autopatch,
         "preshow_check": preshow_check,
         "ask_user": ask_user,
         "resolve_fixture_type": resolve_fixture_type,

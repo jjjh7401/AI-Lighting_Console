@@ -279,6 +279,7 @@ class ChatSession:
             rig_paths=rig_paths,
             deploy_pipeline=deploy_pipeline,
             question_port=question_channel,
+            vectorworks_upload=self._vectorworks_upload,
             # SPEC-COPILOT-PRESHOW-001 T-G2: reuse the gate's own audited
             # heartbeat as the pre-show OSC checks' liveness probe — no
             # second console link, no new socket. Gated on preshow_receive_port

@@ -314,6 +314,25 @@ class TestRealWorldPositiveSampleEndToEndThroughDispatch:
         assert "console_footprint_width_injection_deferred" in skipped_kinds
 
 
+class TestRealWorldMvrEndToEndThroughDispatch:
+    """MVR 바이트가 워크시트와 같은 대조 경계를 통과하는지 확인한다."""
+
+    _FIXTURE_PATH = Path(__file__).parent / "fixtures" / "vwx" / "demoshow_grandma3.mvr"
+
+    def test_mvr_fixture_count_and_addresses_reach_the_diff_tool(self):
+        data = self._FIXTURE_PATH.read_bytes()
+        execution = _dispatch(
+            _registry(),
+            file_content_base64=base64.b64encode(data).decode("ascii"),
+        )
+        payload = json.loads(execution.result.content)
+
+        assert execution.result.is_error is False
+        assert payload["designed_rig"]["fixture_count"] == 176
+        assert payload["designed_rig"]["design_overlaps"] == []
+        assert payload["read_failures"] == []
+
+
 class TestUnitNumberScopeFixEndToEndThroughDispatch:
     """v0.1.5 회귀(코디네이터 정확 재현) — 서로 다른 포지션의 동명 Unit Number가
     dispatch 전체 경로에서 더 이상 전멸하지 않는다."""
