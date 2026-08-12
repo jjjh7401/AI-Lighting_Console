@@ -305,8 +305,9 @@ export function PaperworkPanel({ onClose }: { onClose: () => void }) {
       } else {
         setNotice(outcome.message);
       }
-    } catch {
-      setNotice("문서 생성 중 오류가 발생했습니다.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      setNotice(`문서 생성 중 오류가 발생했습니다.${msg ? ` (${msg})` : ""}`);
     } finally {
       setBusyKind(null);
     }
