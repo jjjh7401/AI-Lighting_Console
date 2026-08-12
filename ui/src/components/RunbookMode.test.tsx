@@ -13,8 +13,8 @@ import {
   runbookButtonLabel,
   runbookCaution,
   runbookIsRunnable,
+  runbookSection,
 } from "./RunbookMode";
-
 function childArray(element: ReactElement): unknown[] {
   const children = element.props.children;
   if (children === undefined) return [];
@@ -104,6 +104,17 @@ describe("runbookIsRunnable", () => {
   });
 });
 
+describe("runbookSection", () => {
+  it("classifies recognised musical structure without inventing time data", () => {
+    expect(runbookSection("Opening wash")).toBe("Intro");
+    expect(runbookSection("Vocal Verse")).toBe("Verse");
+    expect(runbookSection("Golden Chorus")).toBe("Chorus");
+    expect(runbookSection("Guitar solo")).toBe("Bridge");
+    expect(runbookSection("End song fade")).toBe("Outro");
+    expect(runbookSection("Dimmer Wave")).toBe("Cue");
+  });
+});
+
 const POPULATED_STATE: CueMonitorState = {
   executors: [OK_KNOWN_CUE, OK_UNKNOWN_CUE, UNASSIGNED_ENTRY, UNAVAILABLE_ENTRY],
   history: [],
@@ -159,7 +170,7 @@ describe("RunbookMode", () => {
       firstRowElement.props,
     );
     const rowChildren = childArray(firstRow) as ReactElement[];
-    const main = rowChildren.find((child) => child?.props?.className === "runbook-item-main") as ReactElement;
+    const main = rowChildren.find((child) => child?.props?.className === "runbook-track-header") as ReactElement;
     const button = childArray(main).find(
       (child) => typeof (child as ReactElement)?.props?.onClick === "function",
     ) as ReactElement;

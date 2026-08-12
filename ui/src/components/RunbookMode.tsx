@@ -22,7 +22,7 @@
 // project has no DOM/jsdom test harness; see protocol.ts's own header note).
 import { type CueExecutorEntry, type CueMonitorState } from "../protocol";
 import { formatSyncTime } from "./DashBoard";
-import { currentCueLabel, sequenceLabel } from "./CueMonitor";
+import { sequenceLabel } from "./CueMonitor";
 
 export interface RunbookModeProps {
   cueMonitor: CueMonitorState;
@@ -65,6 +65,21 @@ export function runbookButtonLabel(entry: CueExecutorEntry, running: boolean): s
   return cueValue ? `큐 ${cueValue} 실행` : "다음 큐 실행";
 }
 
+/** Best-effort cue-sheet grouping derived only from console-authored cue
+ * names. No musical timing is invented: unrecognised names remain a cue. */
+export type RunbookSection = "Intro" | "Verse" | "Pre-Chorus" | "Chorus" | "Bridge" | "Outro" | "Cue";
+
+export function runbookSection(name: string): RunbookSection {
+  const value = name.toLowerCase();
+  if (/\bintro\b|opening|start/.test(value)) return "Intro";
+  if (/\bpre[- ]?chorus\b/.test(value)) return "Pre-Chorus";
+  if (/\bchorus\b|hook|refrain/.test(value)) return "Chorus";
+  if (/\bverse\b/.test(value)) return "Verse";
+  if (/\bbridge\b|solo|breakdown/.test(value)) return "Bridge";
+  if (/\boutro\b|ending|end song|blackout/.test(value)) return "Outro";
+  return "Cue";
+}
+
 /** Only an "ok" executor is fireable — an unassigned/unavailable row has no
  * console-confirmed target to safely advance (fail-closed, same posture as
  * DashBoard's unresolved-executor guard). */
@@ -85,11 +100,20 @@ function RunbookRow({
 }) {
   const runnable = runbookIsRunnable(entry);
   const caution = runbookCaution(entry);
+  const activeCue = entry.current_cue?.status === "ok" ? entry.current_cue.value : null;
+
   return (
-    <li className="runbook-item" data-executor-no={entry.executor_no}>
-      <div className="runbook-item-main">
-        <span className="runbook-item-no">{index + 1}</span>
-        <span className="runbook-item-name">{sequenceLabel(entry)}</span>
+    <li className={`runbook-item${running ? " runbook-item-live" : ""}`} data-executor-no={entry.executor_no}>
+      <div className="runbook-track-header">
+        <span className="runbook-item-no">{String(index + 1).padStart(2, "0")}</span>
+        <div className="runbook-track-title">
+          <span className="runbook-track-kicker">EXEC {entry.executor_no}</span>
+          <span className="runbook-item-name">{sequenceLabel(entry)}</span>
+        </div>
+        <div className="runbook-track-status">
+          <span className={`runbook-status-dot${running ? " is-live" : ""}`} />
+          {running ? "LIVE" : "READY"}
+        </div>
         <button
           className={`runbook-item-run${running ? " runbook-item-run-active" : ""}`}
           onClick={() => onExecute?.(entry.executor_no)}
@@ -98,19 +122,30 @@ function RunbookRow({
           {runbookButtonLabel(entry, running)}
         </button>
       </div>
-      {entry.status === "ok" && (
-        <div className="runbook-item-current-cue">{currentCueLabel(entry)}</div>
+
+      {entry.status === "ok" && entry.cues.length > 0 && (
+        <div className="runbook-cue-sheet">
+          <div className="runbook-sheet-heading">
+            <span>CUE</span><span>SECTION / SCENE</span><span>LOOK / NOTE</span>
+          </div>
+          {entry.cues.map((cue, cueIndex) => {
+            const cueNo = String(cue.cue_no ?? cue.no);
+            const section = runbookSection(cue.name);
+            const isCurrent = activeCue === cueNo;
+            const sectionChanged = cueIndex === 0 || runbookSection(entry.cues[cueIndex - 1].name) !== section;
+            return (
+              <div className={`runbook-sheet-row${isCurrent ? " is-current" : ""}`} key={cue.no}>
+                <span className="runbook-sheet-cue">{cueNo}{isCurrent && <em>CURRENT</em>}</span>
+                <span className={`runbook-sheet-section section-${section.toLowerCase().replace("-", "")}`}>
+                  {sectionChanged ? section : ""}
+                </span>
+                <span className="runbook-sheet-name">{cue.name}</span>
+              </div>
+            );
+          })}
+        </div>
       )}
       {caution && <div className="runbook-item-caution">⚠ {caution}</div>}
-      {entry.status === "ok" && entry.cues.length > 0 && (
-        <ol className="runbook-item-cues">
-          {entry.cues.map((cue) => (
-            <li key={cue.no} className="runbook-item-cue">
-              {cue.cue_no !== undefined ? `큐 ${cue.cue_no}` : `#${cue.no}`} — {cue.name}
-            </li>
-          ))}
-        </ol>
-      )}
     </li>
   );
 }

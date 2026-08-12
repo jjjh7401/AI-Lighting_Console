@@ -1324,22 +1324,23 @@ body {
 }
 
 .runbook-track-kicker,
-.runbook-sheet-heading,
-.runbook-cue-section {
+.runbook-sheet-heading {
   font-family: ui-monospace, monospace;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .1em;
 }
 
-.runbook-track-kicker { color: #8492a6; }
+.runbook-track-kicker { color: #aab8ca; font-size: 12px; }
 
 .runbook-item-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 21px;
-  font-weight: 750;
+  font-size: 30px;
+  line-height: 1.06;
+  font-weight: 800;
+  letter-spacing: -.035em;
 }
 
 .runbook-track-status {
@@ -1375,57 +1376,13 @@ body {
 .runbook-item-run:disabled { background: #2b3442; color: var(--muted); cursor: not-allowed; }
 .runbook-item-run-active { background: var(--warn); color: #201a08; }
 
-.runbook-timeline {
-  position: relative;
-  min-height: 96px;
-  margin: 18px 24px 8px;
-}
 
-.runbook-timeline-rail {
-  position: absolute;
-  height: 2px;
-  left: 0;
-  right: 0;
-  top: 32px;
-  background: linear-gradient(90deg, #63758c, #4f8cff, #63758c);
-}
-
-.runbook-cue {
-  position: absolute;
-  left: var(--cue-position);
-  top: 0;
-  width: min(160px, 16vw);
-  transform: translateX(-50%);
-  display: grid;
-  justify-items: center;
-  gap: 5px;
-  color: #aeb9c8;
-  text-align: center;
-}
-
-.runbook-cue-marker {
-  width: 10px;
-  height: 10px;
-  box-sizing: border-box;
-  margin-top: 27px;
-  border: 2px solid #91a3b7;
-  border-radius: 50%;
-  background: #181e28;
-  z-index: 1;
-}
-
-.runbook-cue.is-current { color: #fff; }
-.runbook-cue.is-current .runbook-cue-marker { background: #5289ff; border-color: #b7d0ff; box-shadow: 0 0 12px #5289ff; }
-.runbook-cue-section { color: #75a5ff; white-space: nowrap; }
-.runbook-cue-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
-.runbook-cue-label b { font-family: ui-monospace, monospace; color: #f0f4fa; }
-
-.runbook-cue-sheet { margin-top: 6px; border-top: 1px solid #303a48; }
+.runbook-cue-sheet { border-top: 1px solid #303a48; }
 
 .runbook-sheet-heading,
 .runbook-sheet-row {
   display: grid;
-  grid-template-columns: 84px 92px 130px minmax(0, 1fr);
+  grid-template-columns: 112px 180px minmax(0, 1fr);
   align-items: center;
 }
 
@@ -1437,17 +1394,17 @@ body {
 }
 
 .runbook-sheet-row {
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 24px;
   border-top: 1px solid rgba(67, 79, 96, .56);
   color: #cbd4df;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .runbook-sheet-row.is-current { background: rgba(82, 137, 255, .12); box-shadow: inset 3px 0 #5289ff; }
-.runbook-sheet-cue { font: 700 13px ui-monospace, monospace; color: #fff; }
-.runbook-sheet-trigger { font: 700 11px ui-monospace, monospace; color: #aebed1; }
-.runbook-sheet-section { font: 700 11px ui-monospace, monospace; color: #9baec5; }
+.runbook-sheet-cue { display: flex; align-items: center; gap: 9px; font: 700 14px ui-monospace, monospace; color: #fff; }
+.runbook-sheet-cue em { color: #8fb5ff; font: 700 9px ui-monospace, monospace; font-style: normal; letter-spacing: .08em; }
+.runbook-sheet-section { min-height: 16px; font: 700 12px ui-monospace, monospace; color: #9baec5; }
 .runbook-sheet-section.section-intro { color: #75b9ff; }
 .runbook-sheet-section.section-chorus { color: #f5bd5d; }
 .runbook-sheet-section.section-bridge { color: #d89eff; }
@@ -1458,10 +1415,10 @@ body {
 @media (max-width: 700px) {
   .runbook-mode-frame { padding: 14px; }
   .runbook-track-header { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+  .runbook-item-name { font-size: 24px; }
   .runbook-track-status { margin-left: 48px; }
   .runbook-item-run { margin-left: auto; }
-  .runbook-timeline { display: none; }
-  .runbook-sheet-heading, .runbook-sheet-row { grid-template-columns: 52px 66px 96px minmax(0, 1fr); padding: 0 12px; }
+  .runbook-sheet-heading, .runbook-sheet-row { grid-template-columns: 70px 110px minmax(0, 1fr); padding: 0 12px; }
   .runbook-sheet-heading { font-size: 8px; }
 }
 
