@@ -56,6 +56,7 @@ from server.looks.songcue import (
     SectionTimeError,
     SequenceNumberError,
     SongCueBundleError,
+    SongCueTimingAxes,
     build_songcue_bundle,
     build_songcue_timing,
     map_sections_to_looks,
@@ -232,6 +233,8 @@ TOOL_NAMES = (
     "arrange_fixtures",
     "classify_arrangement_topology",
     "create_arrangement_groups",
+    "build_handover_pack",
+    "build_magic_sheet",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -286,6 +289,27 @@ DEFAULT_RIG_CONTEXT_PATHS = {
     "matricks": "DataPool/MAtricks",
     "worlds": "DataPool/Worlds",
 }
+
+# The timecode pool, kept OUT of the table above on purpose.
+#
+# ``DEFAULT_RIG_CONTEXT_PATHS`` carries two contracts this path cannot honour:
+# every entry is LIVE-CALIBRATED (``test_tools.py`` pins the set against the
+# measured object tree) and every entry is NAMED to the model in the
+# ``get_rig_context`` description. This path is neither — it is UNVERIFIED, and
+# the model has no business browsing timecodes.
+#
+# It exists for exactly one caller: ``_timecode_slot_verdict``, the occupancy
+# check that stops ``prepare_songcue`` from storing over an existing timecode
+# track. Overridable through ``rig_paths["timecodes"]`` for a showfile that
+# keeps it elsewhere.
+#
+# UNVERIFIED is stated rather than assumed because this file's own history is
+# the reason to state it: "Patch/Fixtures" and "DataPool/Presets" were guessed,
+# shipped dead, and reached the model as "unavailable" on every call for the
+# whole of Stage 1. If this spelling is wrong the occupancy check cannot be
+# made, and the timecode axis degrades to its designed DESCOPE branch — the
+# write is withheld, never sent unchecked.
+TIMECODE_POOL_PATH = "DataPool/Timecodes"
 
 # Sections whose children are CONTAINERS worth opening. A depth-1 snapshot of
 # these answers "does it exist"; the show-readiness question is "is anything IN
@@ -806,6 +830,12 @@ def read_spatial_fixtures(
     property reads per fixture, both through the gate-audited query ports. No
     command line is composed and the execution port is never reached from here.
 
+    Returns ONE OF TWO SHAPES (SPEC-COPILOT-TRUNCATE-001). A complete read
+    returns the list under ``fixtures``; an incomplete one returns it under
+    ``partial_fixtures``, WITHOUT a ``fixtures`` key, plus ``missing``. Every
+    caller must handle both — see the anchor on the return below for why the
+    key MOVES instead of a flag being raised beside it.
+
     Raises whatever the state port raises when the container itself does not
     answer — a rig with no enumerable patch is a failed call, not an empty one.
     """
@@ -878,23 +908,67 @@ def read_spatial_fixtures(
             unreadable.append(absence)  # type: ignore[arg-type]
         else:
             fixtures.append(record)
+    # REQ-GROUPGEN-024 amendment coverage signal — "judged" is how many
+    # fixtures actually fed a topology judgment, "of" is the rig's real
+    # total; "complete" is False whenever EITHER the container listing
+    # was truncated OR the per-fixture property walk was budget-capped
+    # OR the two counts simply disagree.
+    complete = not truncated and not roundtrip_capped and len(fixtures) == total_fixture_count
+    coverage = {"judged": len(fixtures), "of": total_fixture_count, "complete": complete}
+
+    # @MX:ANCHOR: [SPEC] the reply-SHAPE divergence (SPEC-COPILOT-TRUNCATE-001
+    #   REQ-TRUNCATE-001/002 / AC-TRUNCATE-001/002, mutation-required). ONE
+    #   predicate decides it — ``complete``, the coverage formula computed
+    #   directly above and nowhere else. No new judgment is introduced: the
+    #   truncation test (flag OR arithmetic) and the coverage arithmetic are
+    #   untouched (REQ-TRUNCATE-011); only where their result is PLACED
+    #   changes.
+    # @MX:REASON: A boolean beside the data is ignorable, and WAS ignored. On
+    #   the measured 18-of-19 read the model quoted the row analysis and said
+    #   nothing about the 19th fixture (SPATIAL progress.md:485-499), because
+    #   ``truncated: true`` sits next to a payload that reads perfectly well
+    #   without it. An ABSENT key is not ignorable — there is nothing left to
+    #   ignore: code written for the complete shape gets a KeyError, and a
+    #   prompt written for it finds nothing to quote. So a partial read does
+    #   not return a flagged ``fixtures`` list; it returns a DIFFERENT reply.
+    if complete:
+        return {
+            "source": SPATIAL_SOURCE_PATCH3D,
+            "path": fixtures_path,
+            "fixtures": fixtures,
+            "unreadable": unreadable,
+            "truncated": truncated,
+            "roundtrip_capped": roundtrip_capped,
+            "coverage": coverage,
+        }
     return {
         "source": SPATIAL_SOURCE_PATCH3D,
         "path": fixtures_path,
-        "fixtures": fixtures,
+        # NOT "fixtures". Every coordinate in this list was read off the
+        # console and is true of the fixture it names, but the LIST is not
+        # the rig — so it does not get to sit under the key a whole rig uses.
+        "partial_fixtures": fixtures,
         "unreadable": unreadable,
+        # Still SEPARATE fields (REQ-TRUNCATE-005 / REQ-SPATIAL-006): only
+        # ``roundtrip_capped`` is fixable by asking again. What the shape
+        # divergence unifies is the BRANCH, never the two signals.
         "truncated": truncated,
         "roundtrip_capped": roundtrip_capped,
-        # REQ-GROUPGEN-024 amendment coverage signal — "judged" is how many
-        # fixtures actually fed a topology judgment, "of" is the rig's real
-        # total; "complete" is False whenever EITHER the container listing
-        # was truncated OR the per-fixture property walk was budget-capped
-        # OR the two counts simply disagree.
-        "coverage": {
-            "judged": len(fixtures),
-            "of": total_fixture_count,
-            "complete": (
-                not truncated and not roundtrip_capped and len(fixtures) == total_fixture_count
+        "coverage": coverage,
+        # The shortfall as ARITHMETIC, not as an adjective (REQ-TRUNCATE-004):
+        # "19 expected, 18 received, 1 unseen", never "incomplete" — a flag
+        # does not say HOW MANY, and how many is what the reader needs.
+        # ``expected`` is the console's OWN count and stays None when it
+        # reported none: the unknown-total rule ``rig_section`` already fixes,
+        # and precisely the case where "the count equals what arrived" would
+        # be the lie. ``unseen_count`` is expected - received, so it covers a
+        # fixture the responder never delivered AND one whose coordinates
+        # would not parse; the latter are itemised in ``unreadable``.
+        "missing": {
+            "expected": child_count if isinstance(child_count, int) else None,
+            "received": len(fixtures),
+            "unseen_count": (
+                max(child_count - len(fixtures), 0) if isinstance(child_count, int) else None
             ),
         },
     }
@@ -1882,7 +1956,21 @@ def build_toolset(
                 sequences_section=rig_sections["sequences"],  # type: ignore[arg-type]
                 groups_section=rig_sections["groups"],  # type: ignore[arg-type]
             )
-            timing = build_songcue_timing(bundle, timecode_number=timecode_number)
+            occupied, axes = _timecode_slot_verdict(
+                state_port,
+                rig_paths.get("timecodes", TIMECODE_POOL_PATH),
+                timecode_number,
+            )
+            if occupied is not None:
+                return _error_result(
+                    call,
+                    f"Timecode {timecode_number} is already in use "
+                    f"({occupied}) — storing over it would discard an existing "
+                    "timecode track, and this application has no restore path. "
+                    "Pass a free 'timecode_number' or ask the operator which "
+                    "one to replace.",
+                )
+            timing = build_songcue_timing(bundle, timecode_number=timecode_number, axes=axes)
         except (SequenceNumberError, SongCueBundleError, ValueError) as error:
             return _error_result(call, f"song cue list cannot be built: {error}")
         if not bundle.commands:
@@ -1960,6 +2048,79 @@ def build_toolset(
     #   handler READS the rig and, when it has to speak, calls ``run_commands``
     #   above rather than ``execution_port`` — the gate screens the whole macro
     #   bundle before a single line reaches the console.
+
+    def _timecode_slot_verdict(
+        port: StateQueryPort, path: str, wanted: int
+    ) -> tuple[str | None, SongCueTimingAxes]:
+        """Is ``Timecode <wanted>`` free? Returns ``(occupant_or_None, axes)``.
+
+        ``prepare_songcue`` emits ``Store Timecode <n>`` with a MODEL-SUPPLIED
+        number. Nothing checked it, so a showfile already using that slot lost
+        its timecode track silently — the same defect ``_free_macro_slot``
+        exists to prevent for macros (``REQ-PRECHK-004``'s count-vs-flag
+        discipline, applied to the other path that writes into a pool).
+
+        THREE outcomes, and the third is why this returns axes rather than just
+        a boolean:
+
+        * **free** — ``(None, default axes)``. The write proceeds.
+        * **occupied** — ``(occupant name, …)``. The caller refuses. Unlike the
+          macro helper this does NOT silently pick another slot: the number is
+          part of this tool's schema and the operator asked for a specific one,
+          so substituting it would answer a question nobody asked.
+        * **unknown** — ``(None, axes with timecode_go=False)``. The pool did
+          not answer, the enumeration was short, or it reported zero children
+          (which ``M.safe_children`` also returns when the read FAILS, so an
+          empty pool and a dead pool are one payload — the same trap
+          ``_free_macro_slot`` refuses to walk into). The timecode axis is
+          suppressed and its reason is reported through the EXISTING
+          ``skipped_axes`` channel, which is the designed DESCOPE branch this
+          bundle already ships and tests.
+
+        The unknown branch is not a corner case: ``rig_paths["timecodes"]`` is
+        the one UNVERIFIED path in ``DEFAULT_RIG_CONTEXT_PATHS``. If it is
+        wrong, every call lands here — and the result is that the app stops
+        writing timecode rather than writing it blind. Degrading a feature
+        beats overwriting an operator's show.
+        """
+
+        def _suppressed(reason: str) -> tuple[None, SongCueTimingAxes]:
+            return None, SongCueTimingAxes(
+                timecode_go=False,
+                timecode_skip_reason=(
+                    f"timecode pool occupancy could not be established ({reason}) — "
+                    "the timecode write is withheld rather than sent unchecked"
+                ),
+            )
+
+        try:
+            payload = port.query_state(path)
+        except Exception as error:  # noqa: BLE001 - any read failure is "unknown"
+            return _suppressed(f"{path} did not answer: {error}")
+        if not isinstance(payload, dict):
+            return _suppressed(f"{path} returned a non-mapping payload")
+        if payload.get("truncated"):
+            return _suppressed(f"{path} enumeration was truncated")
+        children = [c for c in (payload.get("children") or ()) if isinstance(c, dict)]
+        node = payload.get("node")
+        child_count = node.get("childCount") if isinstance(node, dict) else None
+        if not isinstance(child_count, int) or isinstance(child_count, bool):
+            return _suppressed(f"{path} reported no childCount")
+        if child_count > len(children):
+            return _suppressed(
+                f"{path} enumeration is short: childCount {child_count} "
+                f"but {len(children)} children returned"
+            )
+        if child_count == 0:
+            return _suppressed(
+                f"{path} reported zero children — a failed enumeration and an "
+                "empty pool are indistinguishable here"
+            )
+        for child in children:
+            if child.get("i") == wanted:
+                name = child.get("name")
+                return (str(name) if name else f"slot {wanted}"), SongCueTimingAxes()
+        return None, SongCueTimingAxes()
 
     class _InventoryPort:
         """The two reads the inventory needs, joined from the wired ports."""
@@ -4193,6 +4354,112 @@ def build_toolset(
             result=ToolResult(tool_call_id=call.id, name=call.name, content=content, is_error=False)
         )
 
+    def build_magic_sheet(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        # Deferred import — see build_patch_sheet's comment above.
+        from server.paperwork.data import build_magic_sheet as build_magic_sheet_query
+        from server.paperwork.output import write_paperwork_html
+        from server.paperwork.render import render_magic_sheet
+
+        if property_port is None:
+            # Coordinates live ONLY in properties (the container enumeration
+            # carries name/class/i and nothing else), so without a property
+            # port this sheet would render an empty plan view that looks like
+            # a rig with no fixtures. Same wording build_patch_sheet uses.
+            return _error_result(
+                call,
+                "property reads are not wired — build_toolset needs property_port "
+                "(or a state_port that also implements query_property)",
+            )
+        sheet = build_magic_sheet_query(
+            _InventoryPort(state_port, property_port),
+            groups_path=rig_paths.get("groups", DEFAULT_RIG_CONTEXT_PATHS["groups"]),
+            preset_pools_path=rig_paths.get(
+                "preset_pools", DEFAULT_RIG_CONTEXT_PATHS["preset_pools"]
+            ),
+            fixtures_path=rig_paths.get("fixtures", DEFAULT_RIG_CONTEXT_PATHS["fixtures"]),
+        )
+        try:
+            path = write_paperwork_html("magic_sheet.html", render_magic_sheet(sheet))
+        except OSError as error:
+            return _error_result(call, f"magic sheet could not be written to disk: {error}")
+        content = json.dumps(
+            {
+                "path": str(path),
+                "group_count": len(sheet.group_names),
+                "preset_pool_count": len(sheet.preset_names),
+                "placement_count": len(sheet.placements),
+                "placements_complete": sheet.placements_complete,
+                # Surfaced in the RESULT, not only in the document: a model
+                # that only reads this JSON must not conclude the sheet
+                # answers "what is in this group".
+                "group_membership_readable": False,
+            },
+            ensure_ascii=False,
+        )
+        return ToolExecution(
+            result=ToolResult(tool_call_id=call.id, name=call.name, content=content, is_error=False)
+        )
+
+    # -- build_handover_pack (T-J — server/paperwork/bundle.py wiring) --------
+    #
+    # The three sheets above plus one more file (index.html) that links them
+    # together and states, up front, how much of the rig each one actually
+    # saw — the last step of "인수인계 용이" (T-J's proposal payoff). No new
+    # console read: the walk wiring below is precheck_patch's own (:1563-1587
+    # above), reused verbatim rather than re-derived, so the two upper-bound
+    # verdicts a caller could get for the SAME rig never diverge.
+
+    def build_handover_pack(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        # Deferred import — see build_patch_sheet's comment above (a
+        # module-level import here would close the tools -> paperwork ->
+        # tools cycle).
+        from server.paperwork.bundle import build_handover_pack as build_handover_pack_query
+
+        missing_sections = [
+            section for section in PRECHK_FOOTPRINT_SECTIONS if section not in rig_paths
+        ]
+        if missing_sections:
+            walk = WalkOutcome(
+                complete=False,
+                failure=REASON_UNRESOLVED,
+                failure_detail=(
+                    f"리그 컨텍스트에 {missing_sections} 경로가 설정되지 않아 점유폭 상계를 "
+                    "계산하지 않았다 — 조회를 시도하지 않았으므로 판독 실패가 아니다."
+                ),
+            )
+        else:
+            walk = walk_mode_widths(
+                state_port,
+                root=rig_paths["fixture_types"],
+                budget=PRECHK_FOOTPRINT_QUERY_CAP,
+                sibling_answered=True,
+            )
+        try:
+            pack = build_handover_pack_query(
+                state_port, property_port, rig_paths=rig_paths, walk=walk
+            )
+        except OSError as error:
+            return _error_result(call, f"handover pack could not be written to disk: {error}")
+        content = json.dumps(
+            {
+                "index_path": str(pack.index_path),
+                "generated_at": pack.generated_at,
+                "documents": [
+                    {
+                        "kind": document.kind,
+                        "status": document.status,
+                        "path": str(document.path) if document.path is not None else None,
+                        "detail": document.detail,
+                    }
+                    for document in pack.documents
+                ],
+            },
+            ensure_ascii=False,
+        )
+        return ToolExecution(
+            result=ToolResult(tool_call_id=call.id, name=call.name, content=content, is_error=False)
+        )
+
     # -- plan_executor_layout (T-J — server/looks/layout.py wiring) ------------
     #
     # PLANS ONLY, NEVER SENDS: this handler never calls run_commands and never
@@ -4344,17 +4611,52 @@ def build_toolset(
             return _error_result(
                 call, f"stage patch enumeration failed for {fixtures_path!r}: {exc}"
             )
-        try:
-            reply["analysis"] = spatial_analysis_to_dict(
-                analyze_spatial_records(reply["fixtures"])  # type: ignore[arg-type]
-            )
-        except SpatialAnalysisError as error:
-            # The coordinate map plus the absence report is the mandatory
-            # deliverable; row structure is a fold-in over it. A read defect the
-            # pure layer refuses (two records claiming one fid) costs the
-            # analysis, never the map the caller can still inspect.
-            reply["analysis"] = None
-            reply["analysis_error"] = str(error)
+        # @MX:ANCHOR: [SPEC] the WITHHELD analysis (SPEC-COPILOT-TRUNCATE-001
+        #   REQ-TRUNCATE-003 / AC-TRUNCATE-002, mutation-required). Branch on
+        #   the SHAPE the read returned, never on a second reading of the
+        #   coverage — `read_spatial_fixtures` already judged it once, and a
+        #   handler that re-judged could disagree with the payload it is
+        #   annotating.
+        # @MX:REASON: This is the half of the design that carries the load,
+        #   and the moved key is only the half that makes it visible.
+        #   `analyze_spatial_records` takes records and NOTHING else
+        #   (server/spatial/rows.py) — no truncation argument exists, so its
+        #   output is structurally incapable of knowing it describes part of a
+        #   rig. On the measured 18-of-19 read it therefore reported
+        #   `low_confidence: False` ("high confidence, one row") — a confident
+        #   layout asserted for a rig that does not exist. Flagging it is not
+        #   an option: the ability would have to come from `server/spatial/**`,
+        #   which REQ-TRUNCATE-012 keeps as a pure geometry layer that knows
+        #   nothing about read completeness. So the tool layer withholds. A
+        #   model that ignores a boolean can still quote a row ordering; it
+        #   cannot quote a key that was never computed.
+        if "partial_fixtures" in reply:
+            reply["analysis_withheld"] = {
+                "withheld": "analysis",
+                "reason": (
+                    "row structure was NOT computed for this read and is not in "
+                    "this reply. The analysis takes the coordinate records alone "
+                    "and has no way to know the list is incomplete, so folding it "
+                    "over a partial rig produces a confident layout for a rig "
+                    "that does not exist — measured: low_confidence false on an "
+                    "18-of-19 read. See 'missing' for the shortfall. If you need "
+                    "an order, derive it from the coordinates in "
+                    "'partial_fixtures' yourself AND say which fixtures are "
+                    "absent from it."
+                ),
+            }
+        else:
+            try:
+                reply["analysis"] = spatial_analysis_to_dict(
+                    analyze_spatial_records(reply["fixtures"])  # type: ignore[arg-type]
+                )
+            except SpatialAnalysisError as error:
+                # The coordinate map plus the absence report is the mandatory
+                # deliverable; row structure is a fold-in over it. A read defect
+                # the pure layer refuses (two records claiming one fid) costs the
+                # analysis, never the map the caller can still inspect.
+                reply["analysis"] = None
+                reply["analysis_error"] = str(error)
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
@@ -4826,8 +5128,18 @@ def build_toolset(
             return _error_result(
                 call, f"stage patch enumeration failed for {fixtures_path!r}: {exc}"
             )
+        # The read reply now comes in TWO shapes (REQ-TRUNCATE-001/002): a
+        # complete read carries `fixtures`, a partial one carries
+        # `partial_fixtures` and NO `fixtures` key at all. This handler is the
+        # ONE in-process consumer of that reply, migrated in the same window
+        # (REQ-TRUNCATE-007) — and the KeyError a shape-blind reader would
+        # take here is the enforcement working in-process, not an accident to
+        # paper over with `.get(...)`. Both shapes hold the SAME kind of
+        # record; what differs is whether the list is the whole rig, and the
+        # coverage read below is where that difference is already handled.
+        records = reply["partial_fixtures"] if "partial_fixtures" in reply else reply["fixtures"]
         try:
-            fixtures = spatial_fixtures_from_records(reply["fixtures"])  # type: ignore[arg-type]
+            fixtures = spatial_fixtures_from_records(records)  # type: ignore[arg-type]
         except SpatialAnalysisError as error:
             return _error_result(call, f"fixture coordinates could not be parsed: {error}")
 
@@ -4948,6 +5260,74 @@ def build_toolset(
     # never see ANY approval stage). Deleting the approval check is a RED
     # mutation, not a silent behavior change.
 
+    # Why the acknowledgement is an ENUMERATION and not a boolean — read this
+    # before touching the checks below.
+    #
+    # `classify_arrangement_topology` has stamped every geometric group with
+    # `topology_partial` since the GROUPGEN-024 amendment (2026-08-04), and
+    # this handler read it ZERO times: the flag rode all the way into a
+    # console write and did nothing. Closing that hole with a boolean
+    # (`acknowledge_partial: true`) would have reproduced the exact defect
+    # this SPEC exists to close — a boolean beside the data gets filled in
+    # reflexively, without reading what is missing, which is precisely how
+    # `truncated: true` was ignored on the measured 18-of-19 read. An
+    # ENUMERATION cannot be produced without reading the reply: naming the
+    # fids a read never saw means looking at `missing` and at the fixtures
+    # that did arrive. A SPEC whose thesis is "an instruction is not an
+    # enforcement mechanism" has to hold its OWN acknowledgement to that bar.
+    def _unread_acknowledgement_refusal(
+        acknowledged: object,
+        partial_group_names: Sequence[str],
+        write_fids: frozenset[int],
+        shortfall: int | None,
+    ) -> str | None:
+        """Why this acknowledgement is not one — or ``None`` when it is valid."""
+        named = ", ".join(repr(name) for name in partial_group_names)
+        if not isinstance(acknowledged, list) or not acknowledged:
+            return (
+                f"{named} came from a PARTIAL rig read (topology_partial: true). "
+                "Writing them needs 'acknowledged_unread_fids': a non-empty list "
+                "of the fixture ids that read never saw. There is no boolean "
+                "acknowledgement here — name them. get_spatial_context's "
+                "'missing' says how many are unseen and 'partial_fixtures' says "
+                "which ones did arrive."
+            )
+        if not all(isinstance(fid, int) and not isinstance(fid, bool) for fid in acknowledged):
+            # `True` IS an `int` in Python, so this bool exclusion is the one
+            # line that refuses a boolean wearing a list: delete it and
+            # `[True]` passes as an enumeration of one fixture id, which is
+            # the reflexive acknowledgement this whole argument shape exists
+            # to prevent.
+            return (
+                "'acknowledged_unread_fids' must hold fixture ids as integers. A "
+                "boolean is not a fixture id, and it is not an acknowledgement "
+                "either."
+            )
+        if len(set(acknowledged)) != len(acknowledged):
+            return (
+                "'acknowledged_unread_fids' names the same fid more than once — "
+                "an unseen fixture is unseen once, and a repeat inflates the "
+                "count checked against the shortfall."
+            )
+        overlap = sorted(write_fids.intersection(acknowledged))
+        if overlap:
+            return (
+                f"'acknowledged_unread_fids' names {overlap}, which this same "
+                "call is writing into a group. A fixture you are grouping is one "
+                "the read DID see — the enumeration is for the ones it did not, "
+                "which is why it cannot be produced without reading the list."
+            )
+        if shortfall is not None and len(acknowledged) != shortfall:
+            return (
+                f"'acknowledged_unread_fids' names {len(acknowledged)} fixture "
+                f"id(s), but the fixture container reports {shortfall} unseen. "
+                "Acknowledge exactly the fixtures that are missing — if the "
+                "container now lists the whole rig, re-run "
+                "classify_arrangement_topology and write its fresh groups "
+                "instead."
+            )
+        return None
+
     def create_arrangement_groups(call: ToolCall, context: ExecutionContext) -> ToolExecution:
         groups_arg = call.arguments.get("groups")
         if (
@@ -4990,6 +5370,38 @@ def build_toolset(
         )
         groups_section = sections["groups"]
         fixtures_section = sections["fixtures"]
+
+        # @MX:ANCHOR: [SPEC] the partial-read write refusal
+        #   (SPEC-COPILOT-TRUNCATE-001 REQ-TRUNCATE-008 / AC-TRUNCATE-008,
+        #   mutation-required). Deleting this block restores the measured hole:
+        #   a group derived from a rig the tool never fully saw is written
+        #   without anybody naming what was missed.
+        # @MX:REASON: Placed AFTER the rig sections are read — they are the
+        #   shortfall's only source — and BEFORE the plan is built, so a
+        #   refusal costs exactly the two READS this call already makes and
+        #   reaches neither the approval card nor the console. The truthiness
+        #   test is deliberate rather than `is True`: fail-closed, an
+        #   unexpected value refuses. Species groups carry no
+        #   `topology_partial` key at all and are unaffected, and a group
+        #   flagged False passes straight through — this gate demands reading,
+        #   not abstinence.
+        partial_group_names = [
+            entry["name"] for entry in groups_arg if entry.get("topology_partial")
+        ]
+        if partial_group_names:
+            fixtures_total = fixtures_section.get("total")
+            arrived = len(fixtures_section.get("objects") or [])  # type: ignore[arg-type]
+            refusal = _unread_acknowledgement_refusal(
+                call.arguments.get("acknowledged_unread_fids"),
+                partial_group_names,
+                frozenset(fid for entry in groups_arg for fid in entry["fids"]),
+                # `total` is None when the responder reported no childCount —
+                # `rig_section`'s unknown-total rule. The size check simply
+                # does not apply then; the other three still do.
+                max(fixtures_total - arrived, 0) if isinstance(fixtures_total, int) else None,
+            )
+            if refusal is not None:
+                return _error_result(call, refusal)
 
         try:
             plan = build_group_write_plan(
@@ -6467,6 +6879,56 @@ def build_toolset(
             parameters={"type": "object", "properties": {}, "additionalProperties": False},
         ),
         ToolDefinition(
+            name="build_magic_sheet",
+            description=(
+                "Build a printable REDUCED magic sheet — group names, "
+                "preset-pool names, a patch summary, and every fixture's "
+                "stage coordinates (fid, name, x, y, z). READS ONLY, sends "
+                "nothing.\n"
+                "\n"
+                "REDUCED is not a shortcut, it is the whole truth available: "
+                "which fixtures a GROUP holds cannot be read on grandMA3 "
+                "(the prop ladder and the COUNT accessors are all closed), so "
+                "the sheet lists group NAMES and says on its face that "
+                "membership is unknown. Do not tell the operator this sheet "
+                "shows what is in a group, and never infer membership from a "
+                "fixture's coordinates being near a group's tile.\n"
+                "\n"
+                "Like build_patch_sheet this tool returns a file path plus a "
+                "small numeric summary (group_count, preset_pool_count, "
+                "placement_count, placements_complete), never the HTML "
+                "itself — the document is for a human to open, not for you "
+                "to read."
+            ),
+            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+        ),
+        ToolDefinition(
+            name="build_handover_pack",
+            description=(
+                "Build the FULL handover pack — patch sheet, cue sheet, "
+                "preset list, plus one more index page that links all "
+                "three — in a single folder, from the same rig reads "
+                "build_patch_sheet / build_cue_sheet / build_preset_list "
+                "each use on their own. READS ONLY, sends nothing.\n"
+                "\n"
+                "The index page shows its own incompleteness FIRST, before "
+                "the document list: how many fixtures/cues/presets were "
+                "actually observed versus how many the console claims to "
+                "hold. A person taking over a show from this pack must see "
+                "that up front, not discover it three clicks in.\n"
+                "\n"
+                "A single sheet failing (an unwired property read, an "
+                "unreachable pool) does NOT fail the whole pack — that one "
+                "document is recorded as unavailable, with why, and the "
+                "other two still generate. This tool does NOT return the "
+                "HTML itself; the result carries only the index file path "
+                "plus each document's path/status/detail. Tell the "
+                "operator the index path; do not try to quote or "
+                "summarize the HTML."
+            ),
+            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+        ),
+        ToolDefinition(
             name="plan_executor_layout",
             description=(
                 "Plan which executor each look of an already-chosen genre "
@@ -6550,9 +7012,21 @@ def build_toolset(
                 "\n"
                 "READS ONLY — it sends no command and changes nothing.\n"
                 "\n"
-                'Returns {"source": "patch3d", "fixtures": [...], '
-                '"unreadable": [...], "truncated": bool, '
-                '"roundtrip_capped": bool, "analysis": {...}}.\n'
+                "Returns ONE OF TWO SHAPES, and which one you got is itself "
+                "the completeness signal.\n"
+                "\n"
+                'COMPLETE read: {"source": "patch3d", "fixtures": [...], '
+                '"unreadable": [...], "truncated": false, '
+                '"roundtrip_capped": false, "coverage": {...}, '
+                '"analysis": {...}}.\n'
+                "\n"
+                'INCOMPLETE read: there is NO "fixtures" key and NO "analysis" '
+                "key. The coordinates that did arrive are under "
+                '"partial_fixtures"; "missing" is {"expected", "received", '
+                '"unseen_count"}; "analysis_withheld" says why no row '
+                'structure was computed. Reaching for "fixtures" and not '
+                "finding it MEANS this read was partial — report that, and "
+                "never present the part you received as the rig.\n"
                 "\n"
                 'Each fixture is {"fid", "name", "x", "y", "z"} in metres, '
                 'and "fid" is the fixture id the CONSOLE returned — it is the '
@@ -6571,11 +7045,15 @@ def build_toolset(
                 "fixture list, so fixtures exist that this call was never "
                 'shown; "roundtrip_capped": true means this call hit its own '
                 "query budget and stopped asking part-way through a rig "
-                "bigger than it can read in one go. Either way the list is "
-                "NOT the whole rig — say so rather than presenting a "
-                "left-to-right order over the part you happened to receive.\n"
+                "bigger than it can read in one go. Only the second one is "
+                "fixable by asking differently, which is why they stay "
+                "separate — but EITHER produces the incomplete shape above, "
+                'and so does a "childCount" that simply disagrees with what '
+                'arrived. "missing" gives you the arithmetic: how many the '
+                "console counted, how many you got, how many you never saw.\n"
                 "\n"
-                '"analysis" is the row structure detected from those '
+                '"analysis" is present ONLY in the complete shape. It is the '
+                "row structure detected from those "
                 'coordinates: "row_count", "rows" (each with its "fids" in '
                 'stage order), "row_order" and "low_confidence". This is what '
                 "makes one 30-fixture bar and a 3x10 grid produce DIFFERENT "
@@ -6798,7 +7276,15 @@ def build_toolset(
                 "reads back correctly. 'human_check_commands' gives you a "
                 "'Group <n>' line per group so the operator can confirm the "
                 "arrangement by eye on stage — that is the only way "
-                "membership is ever actually confirmed."
+                "membership is ever actually confirmed.\n"
+                "\n"
+                "If a group you pass carries 'topology_partial': true — "
+                "classify_arrangement_topology stamps that on every geometric "
+                "group it derived from a rig read that was NOT complete — "
+                "this call is REFUSED unless you also pass "
+                "'acknowledged_unread_fids'. There is no boolean form of that "
+                "acknowledgement on purpose: a flag can be set without "
+                "reading anything, and naming the fids cannot."
             ),
             parameters={
                 "type": "object",
@@ -6829,6 +7315,22 @@ def build_toolset(
                             "The groups to Store and Label, in order. Each "
                             "one becomes exactly one showfile group at a "
                             "freshly-measured empty slot."
+                        ),
+                    },
+                    "acknowledged_unread_fids": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": (
+                            "Required ONLY when a group carries "
+                            "'topology_partial': true. The fixture ids the "
+                            "partial rig read never saw, named one by one — "
+                            "non-empty, distinct, and none of them among the "
+                            "fids you are grouping (those were seen). Take "
+                            "them from get_spatial_context: 'missing' says "
+                            "how many are unseen and 'partial_fixtures' says "
+                            "which ones arrived. NOT a boolean — a flag can "
+                            "be set without reading what is absent, which is "
+                            "the failure this argument exists to prevent."
                         ),
                     },
                 },
@@ -6862,6 +7364,8 @@ def build_toolset(
         "build_patch_sheet": build_patch_sheet,
         "build_cue_sheet": build_cue_sheet,
         "build_preset_list": build_preset_list,
+        "build_magic_sheet": build_magic_sheet,
+        "build_handover_pack": build_handover_pack,
         "plan_executor_layout": plan_executor_layout,
         "get_spatial_context": get_spatial_context,
         "arrange_fixtures": arrange_fixtures,

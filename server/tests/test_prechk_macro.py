@@ -698,8 +698,10 @@ class TestStoredLineLiterals:
         # `.moai/specs/SPEC-COPILOT-PRECHK-001/progress.md` §E.2a. The quoted
         # property value is reclassified recursively
         # (server/safety/classify.py:201-222), and `Off` is an invoking verb
-        # (server/safety/blacklist.yaml:29) whose target `Group` is NOT a
-        # recognized reference type (server/safety/classify.py:44) -> held.
+        # (server/safety/blacklist.yaml key `invoking_verbs.verbs`) whose target
+        # `Group` is NOT a recognized reference type (server/safety/classify.py:44)
+        # -> held. The key path, not a line number: that file grows and this
+        # anchor drifted twice during SPEC-COPILOT-WRITEGATE-001 alone.
         from server.safety.classify import classify_command
         from server.safety.grammar import validate as validate_grammar
         from server.safety.ruleset import load_ruleset
@@ -716,11 +718,12 @@ class TestStoredLineLiterals:
 
     def test_the_measured_on_form_is_also_gate_held(self):
         # Finding of this milestone, recorded so it cannot be lost: `On` sits in
-        # the SAME invoking-verb list as `Off` (server/safety/blacklist.yaml:28),
-        # so the authoring line that stores the M0-measured `On Group <n>` is
-        # held for human approval on the production path. A hold is a DEFINED
-        # outcome (AC-PRECHK-014 ④), not a failure -- but it is not "clears the
-        # gate", and this test fails loudly if that ever changes.
+        # the SAME invoking-verb list as `Off` (server/safety/blacklist.yaml key
+        # `invoking_verbs.verbs`), so the authoring line that stores the
+        # M0-measured `On Group <n>` is held for human approval on the production
+        # path. A hold is a DEFINED outcome (AC-PRECHK-014 ④), not a failure --
+        # but it is not "clears the gate", and this test fails loudly if that
+        # ever changes.
         from server.safety.classify import classify_command
         from server.safety.grammar import validate as validate_grammar
         from server.safety.ruleset import load_ruleset

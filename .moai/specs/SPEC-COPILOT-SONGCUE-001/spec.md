@@ -74,7 +74,7 @@ related_specs: [SPEC-COPILOT-BUSKWIZ-001, SPEC-COPILOT-LOOKLIB-001, SPEC-COPILOT
    **곡은 후렴이 반복되므로 장르 팔레트보다 충돌 확률이 구조적으로 높다.**
 3. **생성한 초안을 앱이 스스로 검증할 수 없다 — 실측 확정 사실.** 응답기는
    `DataPool/Sequences/<n>/<m>`에서 `name`/`class`/`i`(+ 중첩 `Part`)만 반환하고 **커맨드·CueFade·
-   TrigType 등 프로퍼티는 어떤 형태로도 반환하지 않는다**(`SPEC-COPILOT-EXECREF-001/design.md:167`
+   TrigType 등 프로퍼티는 어떤 형태로도 반환하지 않는다**(`SPEC-COPILOT-EXECREF-001/design.md:167` **※ 소급 정정(2026-08-07)**: 응답기 **v1.5.0**이 `prop` 동사를 추가해 **`TrigType`·`TrigTime`은 판독 가능**해졌다(`.moai/specs/SPEC-COPILOT-SCENE-001/spec.md:230` · `console/lua/copilot_responder.lua:55-57`) — 그 개정은 **본 SPEC의 M0가 직접 집행**했다. 위 서술은 **v1.5.0 이전** 사실이며 판정 시점 기록으로 보존한다. 여전히 판독 불가인 것은 **`CueFade`와 큐의 내용(저장된 값)** 둘이다(`SCENE-001/spec.md:231-232`).
    라이브 실측). 검증은 **큐의 존재와 이름** 수준이며, 그 한계를 결과에 명시해야 한다.
 
 ---

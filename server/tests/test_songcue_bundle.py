@@ -144,6 +144,57 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # 정의 앞에 다른 툴들과 같은 `# -- toolname (SPEC-ID) --` + `@MX:NOTE:` 앵커
 # 주석을 더한 자리(순수 주석, 실행 코드 0줄). 50훅(49 + 164). 보호 구간 겹침
 # 재계산: ZERO — 164는 (234,238)·(524,569) 어느 쪽에도 닿지 않는다.
+# SPEC-COPILOT-TRUNCATE-001 (2026-08-05, user-approved) — granted exception,
+# re-walked per the same SPATIAL §E.2.19 precedent. The partial-read reply shape
+# diverges (`fixtures`/`analysis` withheld, `partial_fixtures`/`missing`/
+# `analysis_withheld` in their place), the one in-process consumer
+# (`classify_arrangement_topology`) is migrated to the new keys, and
+# `create_arrangement_groups` gains the `acknowledged_unread_fids` refusal. That
+# opens the 952..1007 block and widens much of 1070..1231.
+#
+# THIS GRANT IS NOT ADDITIVE-ONLY, and that is the difference from the two above:
+#   git diff --unified=0 38a6e7e2..HEAD -- server/orchestrator/tools.py
+#     | grep -cE '^-[^-]'                                          ->  203
+# So the "ZERO pre-existing lines modified" evidence the GROUPGEN note leans on
+# is NOT available here and must not be implied. What IS verified is the thing
+# this test actually protects, and it was checked by CONTENT rather than by
+# position: both protected ranges are present VERBATIM in HEAD --
+#   old 234..238  `_PROGRAMMER_STATE_COMMANDS`  (the "state" half of the name)
+#   old 524..569  the in-bundle dedupe loop     (the "dedupe" half)
+# Protected-range overlap re-verified mechanically: ZERO across all 43 hunks.
+# A positional list that shifts while those two blocks stay byte-identical is
+# bookkeeping catching up, not a boundary being crossed — but a future re-walk
+# MUST re-check the content, because with 203 modified lines the position check
+# alone no longer implies it.
+# 2026-08-07 granted exception — the timecode SLOT OCCUPANCY check. Re-walked by
+# the same procedure as the three grants above, and it adds TWO hunks:
+#   old 104   `SongCueTimingAxes` added to the songcue import block
+#   old 1231  `_timecode_slot_verdict` + the `axes=` argument at its call site
+#
+# WHY IT IS IN SCOPE OF THIS TEST'S NAME. `prepare_songcue` emitted
+# `Store Timecode <n>` with a MODEL-SUPPLIED number and no occupancy read, so a
+# showfile already using that slot lost its timecode track silently — with no
+# approval card and no way back (`backup.py` retains snapshots but there is no
+# restore SEND path). Both hunks are songcue REGISTRATION plumbing, which is the
+# half of this test's name that is allowed to move; neither is dedupe or state.
+#
+# ADDITIVITY, measured rather than claimed:
+#   git diff --unified=0 8eb5d56..HEAD -- server/orchestrator/tools.py
+#     | grep -cE '^-[^-]'                                          ->  1
+# The one modified line is the `build_songcue_timing(...)` call itself, gaining
+# `axes=`. So this grant is NOT additive-only either, and per the TRUNCATE note
+# above the position check alone therefore does not carry the claim. Re-checked
+# by CONTENT, mechanically, both blocks byte-identical in HEAD:
+#   old 234..238  `_PROGRAMMER_STATE_COMMANDS`  -> present verbatim
+#   old 524..569  the in-bundle dedupe loop     -> present verbatim
+# Neither new hunk start falls inside either protected range (104, 1231 vs
+# 234..238 / 524..569): overlap ZERO.
+#
+# ⚠️ HOW THIS GATE WAS TRIPPED, recorded because it will happen again: it diffs
+# `BASE..HEAD`, so it is BLIND to an uncommitted working tree. A full green
+# suite run before `git commit` does not exercise it, and the failure surfaces
+# only after the commit — which is how it reached `main` in PR #33. Run the
+# suite ONCE MORE after committing, before merging.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -152,6 +203,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     27,
     33,
     49,
+    104,
     125,
     164,
     184,

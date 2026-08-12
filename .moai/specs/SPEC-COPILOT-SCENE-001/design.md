@@ -327,7 +327,7 @@ assert set(names) - set(SCENE_UNIFORM_ATTRIBUTES) <= {"Zoom", "Iris"}        # �
 - **AP-9**: *"충돌 열거는 나중에 붙이자"* — 조용한 덮어쓰기가 곧 결함이다. 열거는 정적 계산이라 비용이 거의 없다(§3.3).
 - **AP-10**: *"SONGCUE에도 균일 집합을 소급 적용하자"* — PRESERVE 위반. 기록하되 고치지 않는다(§6.4).
 - **AP-14**: *"룩 값 라인을 씬이 직접 조립하면 순서를 마음대로 할 수 있잖아"* — 재조립은 §2.2가 금지한다. 순서는 **`_values_line`에 넘기는 인자의 순서**로 강제하며, 문자열 생성기는 여전히 상류 한 벌이다(§6.1 (가)).
-- **AP-11**: *"`Goto Cue`로 섹션 점프도 넣자"* — 게이트 `RECOGNIZED_REFERENCE_TYPES`에 `Cue`가 없다(`classify.py:44`). 게이트 어휘 확장을 요구하므로 보류다.
+- **AP-11**: *"`Goto Cue`로 섹션 점프도 넣자"* — 게이트 `RECOGNIZED_REFERENCE_TYPES`에 `Cue`가 없다(`classify.py:44`). 게이트 어휘 확장을 요구하므로 보류다. **※ 2026-08-07 정정 — "보류"가 아니라 산정 가능한 후속이다**: 폐쇄집합 개정 절차가 선례화됐다 — `SPEC-COPILOT-WRITEGATE-001`이 엔트리 추가 + version 범프 + REVISION HISTORY + 코퍼스 갈래 결정을 **첫 실행**했다(`.moai/specs/SPEC-COPILOT-WRITEGATE-001/spec.md:131` · `progress.md:158-161`). 비용도 그 SPEC이 실측해 뒀다.
 - **AP-12**: *"`CueFade`도 설정하자"* — 두 경로 모두 판독 불가다. 확인할 수 없는 것을 산출물에 넣지 않는다.
 - **AP-13**: *"한 턴에 씬 두 개 만들어주자"* — 2회차는 접힌다. v1은 지시 턴당 1회다(§4.3).
 

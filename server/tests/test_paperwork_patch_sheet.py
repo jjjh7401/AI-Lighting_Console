@@ -12,6 +12,12 @@ import pytest
 
 from server.paperwork.data import PatchSheet, build_patch_sheet
 from server.paperwork.render import render_patch_sheet
+from server.prechk.footprint import (
+    REASON_UNRESOLVED,
+    ModeFootprint,
+    WalkOutcome,
+    upper_bound,
+)
 from server.prechk.inventory import FIXTURE_ROOT, InventoryReadError
 
 
@@ -161,3 +167,111 @@ class TestRenderPatchSheet:
         sheet = build_patch_sheet(FakeInventoryPort(states, {}))
         html = render_patch_sheet(sheet)
         assert "No fixtures observed." in html
+
+
+class TestChannelWidthUpperBound:
+    """``walk`` threads ``server.prechk.footprint.WalkOutcome`` into the
+    sheet — never a raw ``max()`` (§3 of the shared contract: a partial mode
+    set folded with ``max`` looks like a bound and is smaller than the true
+    one)."""
+
+    def test_walk_omitted_leaves_all_three_fields_none(self):
+        sheet = build_patch_sheet(_two_fixture_port())
+        assert sheet.bound is None
+        assert sheet.bound_source is None
+        assert sheet.bound_unavailable is None
+
+    def test_walk_omitted_renders_no_bound_line_at_all(self):
+        sheet = build_patch_sheet(_two_fixture_port())
+        html = render_patch_sheet(sheet)
+        assert "upper bound" not in html.lower()
+
+    def test_complete_walk_yields_the_same_value_as_upper_bound(self):
+        walk = WalkOutcome(
+            complete=True,
+            footprints=(
+                ModeFootprint(path="Patch/FixtureTypes/1/DMXModes/1/DMXChannels", width=17),
+                ModeFootprint(path="Patch/FixtureTypes/1/DMXModes/2/DMXChannels", width=23),
+            ),
+        )
+        sheet = build_patch_sheet(_two_fixture_port(), walk=walk)
+        assert sheet.bound == upper_bound(walk) == 23
+        assert sheet.bound_unavailable is None
+
+    def test_complete_walk_bound_source_names_the_widest_path(self):
+        walk = WalkOutcome(
+            complete=True,
+            footprints=(
+                ModeFootprint(path="Patch/FixtureTypes/1/DMXModes/1/DMXChannels", width=17),
+                ModeFootprint(path="Patch/FixtureTypes/1/DMXModes/2/DMXChannels", width=23),
+            ),
+        )
+        sheet = build_patch_sheet(_two_fixture_port(), walk=walk)
+        assert sheet.bound_source == "Patch/FixtureTypes/1/DMXModes/2/DMXChannels childCount"
+
+    def test_complete_walk_renders_value_and_source_and_qualifier_in_one_sentence(self):
+        walk = WalkOutcome(
+            complete=True,
+            footprints=(
+                ModeFootprint(path="Patch/FixtureTypes/1/DMXModes/1/DMXChannels", width=23),
+            ),
+        )
+        sheet = build_patch_sheet(_two_fixture_port(), walk=walk)
+        html = render_patch_sheet(sheet)
+        # value + source + the asymmetric qualifier must share ONE meta line —
+        # splitting the qualifier into its own sentence loses it on a partial
+        # read (OVERLAP-001 M5).
+        assert (
+            "Channel-width upper bound: 23 "
+            "(source: Patch/FixtureTypes/1/DMXModes/1/DMXChannels childCount) — "
+            "gaps at or above this bound cannot overlap; "
+            "gaps below it are unsettled, not confirmed clear." in html
+        )
+
+    def test_incomplete_walk_has_no_bound(self):
+        walk = WalkOutcome(
+            complete=False,
+            failure=REASON_UNRESOLVED,
+            failure_detail="경로 Patch/FixtureTypes를 이 쇼파일에서 찾지 못했다.",
+        )
+        sheet = build_patch_sheet(_two_fixture_port(), walk=walk)
+        assert sheet.bound is None
+        assert sheet.bound_source is None
+
+    def test_incomplete_walk_bound_unavailable_is_the_walks_own_reason_verbatim(self):
+        walk = WalkOutcome(
+            complete=False,
+            failure=REASON_UNRESOLVED,
+            failure_detail="경로 Patch/FixtureTypes를 이 쇼파일에서 찾지 못했다.",
+        )
+        sheet = build_patch_sheet(_two_fixture_port(), walk=walk)
+        assert sheet.bound_unavailable == walk.failure_detail
+
+    def test_incomplete_walk_renders_the_unavailable_reason(self):
+        walk = WalkOutcome(
+            complete=False,
+            failure=REASON_UNRESOLVED,
+            failure_detail="경로 Patch/FixtureTypes를 이 쇼파일에서 찾지 못했다.",
+        )
+        sheet = build_patch_sheet(_two_fixture_port(), walk=walk)
+        html = render_patch_sheet(sheet)
+        assert "Channel-width upper bound not established" in html
+        assert "경로 Patch/FixtureTypes를 이 쇼파일에서 찾지 못했다." in html
+
+    def test_partial_mode_set_does_not_leak_a_smaller_bound(self):
+        """Non-vacuity: an incomplete walk with SOME footprints already
+        enumerated must still yield ``bound is None`` — if a naive ``max()``
+        over the partial set snuck in here instead of ``upper_bound()``, this
+        assertion is the one that would catch it (a partial-max is smaller
+        than the true bound and would clear a gap that isn't actually
+        clear)."""
+        walk = WalkOutcome(
+            complete=False,
+            footprints=(
+                ModeFootprint(path="Patch/FixtureTypes/1/DMXModes/1/DMXChannels", width=17),
+            ),
+            notes=("모드 열거가 불완전하다(Patch/FixtureTypes/1/DMXModes)",),
+        )
+        assert upper_bound(walk) is None
+        sheet = build_patch_sheet(_two_fixture_port(), walk=walk)
+        assert sheet.bound is None

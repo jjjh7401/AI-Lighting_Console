@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>브랜치 현황 — feature/SPEC-COPILOT-VWX-001</title>
+<style>
+  :root {
+    --ink: #1c1f26;
+    --ink-soft: #4a5061;
+    --ink-faint: #7b8095;
+    --paper: #faf8f3;
+    --paper-raised: #ffffff;
+    --line: #e2ddd0;
+    --line-strong: #c9c2ae;
+    --accent: #8a5a2b;
+    --accent-soft: #f1e6d4;
+    --done: #1e6b45;
+    --done-bg: #e4f3e9;
+    --done-line: #a9d8bb;
+    --partial: #92650b;
+    --partial-bg: #fbf0d9;
+    --partial-line: #eccd8b;
+    --blocked: #a3312c;
+    --blocked-bg: #fbe7e5;
+    --blocked-line: #eeb3ae;
+    --deferred: #3c5a86;
+    --deferred-bg: #e7edf6;
+    --deferred-line: #b7c8e2;
+    --mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Pretendard, "Noto Sans KR", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.68;
+    font-size: 15.5px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); }
+
+  /* ---------- layout shell ---------- */
+  .shell {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0 28px 120px;
+  }
+
+  header.masthead {
+    padding: 56px 0 34px;
+    border-bottom: 3px solid var(--ink);
+    margin-bottom: 6px;
+  }
+  header.masthead .kicker {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  header.masthead h1 {
+    font-family: var(--serif);
+    font-size: 40px;
+    line-height: 1.18;
+    margin: 0 0 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  header.masthead .subtitle {
+    font-size: 16.5px;
+    color: var(--ink-soft);
+    max-width: 62ch;
+  }
+
+  .meta-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    margin: 28px 0 0;
+  }
+  .meta-strip div {
+    background: var(--paper-raised);
+    padding: 14px 16px;
+  }
+  .meta-strip .k {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+    margin-bottom: 5px;
+  }
+  .meta-strip .v {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* ---------- sticky nav ---------- */
+  nav.toc {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(250, 248, 243, 0.94);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--line-strong);
+    margin: 0 -28px 40px;
+    padding: 0 28px;
+  }
+  nav.toc ul {
+    max-width: 980px;
+    margin: 0 auto;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 4px;
+    padding: 10px 0;
+  }
+  nav.toc a {
+    display: inline-block;
+    padding: 6px 11px;
+    font-size: 12.5px;
+    font-family: var(--mono);
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  nav.toc a:hover { background: var(--accent-soft); color: var(--accent); }
+
+  /* ---------- sections ---------- */
+  section { margin: 0 0 58px; }
+  section > h2 {
+    font-family: var(--serif);
+    font-size: 26px;
+    margin: 0 0 6px;
+    padding-top: 8px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  section > h2 .num {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  section > .section-intro {
+    color: var(--ink-soft);
+    max-width: 74ch;
+    margin: 8px 0 26px;
+  }
+  h3 {
+    font-family: var(--serif);
+    font-size: 19px;
+    margin: 34px 0 12px;
+    color: var(--ink);
+  }
+  h4 {
+    font-family: var(--sans);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-faint);
+    margin: 22px 0 10px;
+    font-weight: 700;
+  }
+  p { margin: 0 0 12px; }
+  code {
+    font-family: var(--mono);
+    font-size: 0.87em;
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+  }
+  pre {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    background: var(--ink);
+    color: #e8e4d8;
+    padding: 14px 16px;
+    border-radius: 5px;
+    overflow-x: auto;
+    line-height: 1.55;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* ---------- badges ---------- */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 9px 3px 7px;
+    border-radius: 20px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+  }
+  .badge.done   { background: var(--done-bg);   color: var(--done);   border-color: var(--done-line); }
+  .badge.partial{ background: var(--partial-bg);color: var(--partial);border-color: var(--partial-line); }
+  .badge.blocked{ background: var(--blocked-bg);color: var(--blocked);border-color: var(--blocked-line); }
+  .badge.deferred{background: var(--deferred-bg);color: var(--deferred);border-color: var(--deferred-line); }
+
+  /* ---------- pipeline ---------- */
+  .pipeline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 8px 0 28px;
+  }
+  .pstage {
+    flex: 1 1 200px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line-strong);
+    border-top: 3px solid var(--ink-faint);
+    padding: 14px 15px 15px;
+    position: relative;
+  }
+  .pstage.done   { border-top-color: var(--done); }
+  .pstage.partial{ border-top-color: var(--partial); }
+  .pstage.blocked{ border-top-color: var(--blocked); }
+  .pstage .n {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin-bottom: 4px;
+  }
+  .pstage .t {
+    font-weight: 700;
+    font-size: 14.5px;
+    margin-bottom: 8px;
+  }
+  .pstage .d {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+  .parrow {
+    align-self: center;
+    color: var(--line-strong);
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* ---------- callouts ---------- */
+  .callout {
+    border: 1px solid var(--line-strong);
+    border-left: 4px solid var(--ink);
+    background: var(--paper-raised);
+    padding: 16px 20px;
+    margin: 18px 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .callout.finding { border-left-color: var(--blocked); }
+  .callout.pivot { border-left-color: var(--partial); }
+  .callout .label {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+    margin-bottom: 8px;
+    display: block;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ---------- feature lists ---------- */
+  ul.flist, ol.flist { margin: 0 0 16px; padding-left: 0; list-style: none; }
+  ul.flist li, ol.flist li {
+    position: relative;
+    padding: 10px 0 10px 30px;
+    border-bottom: 1px solid var(--line);
+    font-size: 14.5px;
+  }
+  ul.flist li:last-child, ol.flist li:last-child { border-bottom: none; }
+  ul.flist li::before {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 16px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  ul.flist.done li::before { background: var(--done); }
+  ul.flist.partial li::before { background: var(--partial); }
+  ul.flist.blocked li::before { background: var(--blocked); }
+  .flist .ids {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-faint);
+    margin-top: 3px;
+  }
+  .flist .cause {
+    display: block;
+    margin-top: 5px;
+    padding: 8px 10px;
+    background: var(--blocked-bg);
+    border-radius: 3px;
+    font-size: 13px;
+    color: #6b241f;
+  }
+  .flist .cause b { color: var(--blocked); }
+
+  /* ---------- tables ---------- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0 20px;
+    font-size: 13.5px;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-faint);
+    border-bottom: 2px solid var(--line-strong);
+  }
+  tr:hover td { background: rgba(138, 90, 43, 0.035); }
+
+  /* ---------- spec header card ---------- */
+  .spec-card {
+    background: var(--paper-raised);
+    border: 1px solid var(--line-strong);
+    padding: 22px 24px;
+    margin-bottom: 22px;
+  }
+  .spec-card .row1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .spec-card .spec-id {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .spec-card .stat-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--line-strong);
+  }
+  .spec-card .stat-row .s {
+    font-size: 12px;
+    color: var(--ink-faint);
+  }
+  .spec-card .stat-row .s b {
+    display: block;
+    font-family: var(--mono);
+    font-size: 17px;
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  /* ---------- commit list ---------- */
+  .commit {
+    display: grid;
+    grid-template-columns: 74px 1fr;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: baseline;
+  }
+  .commit .sha {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-faint);
+  }
+  .commit .msg .type {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-right: 8px;
+    font-weight: 700;
+  }
+  .commit .type.feat { background: var(--done-bg); color: var(--done); }
+  .commit .type.fix { background: var(--blocked-bg); color: var(--blocked); }
+
+  /* ---------- priority list ---------- */
+  .priority-group { margin-bottom: 26px; }
+  .priority-group h4 { margin-top: 0; }
+  .prio {
+    display: flex;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--ink-faint);
+    margin-bottom: 8px;
+    font-size: 13.8px;
+  }
+  .prio.p0 { border-left-color: var(--blocked); }
+  .prio.p1 { border-left-color: var(--partial); }
+  .prio.p2 { border-left-color: var(--deferred); }
+  .prio .tag {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 3px;
+    height: fit-content;
+    white-space: nowrap;
+  }
+  .prio.p0 .tag { background: var(--blocked-bg); color: var(--blocked); }
+  .prio.p1 .tag { background: var(--partial-bg); color: var(--partial); }
+  .prio.p2 .tag { background: var(--deferred-bg); color: var(--deferred); }
+  .prio .body b { display: block; margin-bottom: 3px; }
+  .prio .body span { color: var(--ink-soft); font-size: 13px; }
+
+  details.cite {
+    margin: 18px 0;
+    border: 1px solid var(--line);
+    background: var(--paper-raised);
+  }
+  details.cite summary {
+    cursor: pointer;
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--accent);
+    font-weight: 700;
+    list-style: none;
+  }
+  details.cite summary::-webkit-details-marker { display: none; }
+  details.cite summary::before { content: "▸ "; }
+  details.cite[open] summary::before { content: "▾ "; }
+  details.cite .cite-body { padding: 0 16px 16px; font-size: 12.5px; color: var(--ink-soft); }
+  details.cite .cite-body code { display: block; margin: 2px 0; background: none; color: var(--ink-soft); padding: 0; }
+
+  footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 2px solid var(--ink);
+    font-size: 12.5px;
+    color: var(--ink-faint);
+  }
+  footer p { margin-bottom: 6px; }
+
+  @media (max-width: 700px) {
+    .shell { padding: 0 16px 100px; }
+    nav.toc { margin: 0 -16px 30px; padding: 0 16px; }
+    header.masthead h1 { font-size: 30px; }
+    .pipeline { flex-direction: column; }
+    .parrow { display: none; }
+  }
+
+  @media print {
+    nav.toc { display: none; }
+    details.cite { border: none; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="toc">
+  <ul>
+    <li><a href="#summary">개요</a></li>
+    <li><a href="#pipeline">파이프라인 현황</a></li>
+    <li><a href="#vwx">VWX-001</a></li>
+    <li><a href="#autopatch">AUTOPATCH-001</a></li>
+    <li><a href="#deploy">DEPLOY-001</a></li>
+    <li><a href="#session">이번 세션 작업</a></li>
+    <li><a href="#improve">개선 제안</a></li>
+  </ul>
+</nav>
+
+<div class="shell">
+
+<header class="masthead">
+  <div class="kicker">Branch Status Report · AI-Lighting_Console</div>
+  <h1>Vectorworks → grandMA3 콘솔 대화형 자동 패치<br>브랜치 종합 현황</h1>
+  <div class="subtitle">
+    <code>feature/SPEC-COPILOT-VWX-001</code> — 89개 커밋, 3개 SPEC(VWX-001 · AUTOPATCH-001 · DEPLOY-001)에
+    걸친 구현 상태를 원래 목표 대비 정리한다. 구현 완료 / 부분 구현 / 미구현·차단 항목과 그 원인,
+    그리고 문서 자체가 이미 제기한 개선 제안을 모았다.
+  </div>
+  <div class="meta-strip">
+    <div><div class="k">HEAD</div><div class="v">721a067</div></div>
+    <div><div class="k">Commits ahead of main</div><div class="v">89</div></div>
+    <div><div class="k">Backend tests</div><div class="v">7,600 passed</div></div>
+    <div><div class="k">Frontend tests</div><div class="v">359 passed</div></div>
+    <div><div class="k">Report date</div><div class="v">2026-08-12</div></div>
+  </div>
+</header>
+
+<section id="summary">
+  <h2><span class="num">01</span> 개요</h2>
+  <p class="section-intro">
+    원래 목표는 하나의 문장이었다 — <b>"Vectorworks에서 설계한 장비를 조명 콘솔에 자동으로 패치하고,
+    문제가 생기면 사용자에게 대화로 물어서 수동 개입을 받는다."</b> 이 목표는 세 SPEC으로 쪼개져 구현됐다.
+  </p>
+
+  <table>
+    <tr><th>SPEC</th><th>담당 범위</th><th>상태</th></tr>
+    <tr>
+      <td><code>SPEC-COPILOT-VWX-001</code></td>
+      <td>도면(CSV/XLSX/MVR) 읽기 → 설계 리그 모델 → 콘솔 실측과 3종 차이 대조(누락·주소충돌·수량불일치)</td>
+      <td><span class="badge partial">부분 차단</span> M1–M7 완료 · M0/M8 실물 샘플 부재로 차단</td>
+    </tr>
+    <tr>
+      <td><code>SPEC-COPILOT-AUTOPATCH-001</code></td>
+      <td>패치 후보 선별 → FID 배정 → 타입 해석 → Lua 생성 → 실행 인계 → 검증</td>
+      <td><span class="badge partial">M8 GO / 릴리스 보류</span> 전 마일스톤 완료, 라이브 종단 성공, 독립 감사 4건 미해소</td>
+    </tr>
+    <tr>
+      <td><code>SPEC-COPILOT-DEPLOY-001</code></td>
+      <td>패키징(Stage-1) + 네이티브 셸(Stage-2) + 이번 세션의 OSC 무접촉 부트스트랩</td>
+      <td><span class="badge done">Stage-1 완료</span> <span class="badge partial">Stage-2 진행중</span></td>
+    </tr>
+  </table>
+
+  <div class="callout finding">
+    <span class="label">가장 중요한 단일 발견</span>
+    <p>
+      원래 목표는 <b>서버가 콘솔의 <code>AddFixtures</code>를 직접 실행</b>하는 완전 자동 패치였다.
+      AUTOPATCH-001 M0 라이브 프로브가 서로 다른 실행 경로 10가지·인자 조합 8종을 전부 실측한 결과
+      <b>전량 0건 생성</b> — 서버 단독 트리거로는 원리적으로 되지 않는다는 것이 실측으로 확정됐다.
+      그래서 v0.1.3에서 <b>반자동 모델</b>로 설계를 전환했다: 서버가 계획을 생성 → <b>사람이 콘솔에서
+      직접 실행</b>(Patch 편집기가 열려 있어야 함) → 서버가 재조회로 검증. 이것은 실패가 아니라
+      정확히 사용자가 최초에 요청한 그 형태다 — <i>"자동 패치에 문제가 생기면 사용자에게 일부 수동을
+      요청"</i>. 다만 "문제가 생기면"이 아니라 <b>"항상"</b> 사람의 마지막 실행 클릭이 필요하다는 점이
+      원래 기대와 다르다.
+    </p>
+  </div>
+
+  <div class="callout finding">
+    <span class="label">이번 세션이 발견한 두 번째 플랫폼 한계</span>
+    <p>
+      OSC 설정 화면의 <code>Interface</code> 드롭다운(어느 네트워크 어댑터로 OSC를 받을지)은 onPC 2.4.2에
+      <b>명령줄·파일 경로가 전혀 없는 GUI 전용 기능</b>이다 — 라이브 검증:
+      <code>Set 'ShowData'.'OSCBase' 'Interface' "lo0"</code> 및 정수형 <code>1</code> 둘 다
+      <code>Illegal value</code>. 해법으로 <b>템플릿 쇼파일</b>(<code>CopilotOscTemplate.show</code>)을
+      만들어 <code>New Show</code> 대신 그 파일에서 <code>Save As</code>로 시작하면 Interface 설정이
+      쇼파일에 저장돼 함께 따라오도록 우회했다 — 사용자 클릭 0건. 단, <code>New Show</code>로 시작하면
+      여전히 GUI 클릭 1회가 필요하다.
+    </p>
+  </div>
+</section>
+
+<section id="pipeline">
+  <h2><span class="num">02</span> 목표 파이프라인 단계별 현황</h2>
+  <p class="section-intro">
+    "도면 → 콘솔 패치"라는 단일 목표를 7단계로 쪼개면 무엇이 끝났고 무엇이 남았는지 한눈에 보인다.
+  </p>
+  <div class="pipeline">
+    <div class="pstage done">
+      <div class="n">1</div><div class="t">도면 읽기</div>
+      <div class="d">CSV/TXT/XLSX + MVR. 컬럼 별칭·주소 3중 표현 교차검증.</div>
+    </div>
+    <div class="parrow">→</div>
+    <div class="pstage partial">
+      <div class="n">2</div><div class="t">콘솔과 대조</div>
+      <div class="d">누락·주소충돌·수량불일치 3종 리포트. 워크시트 그리드(경로B) 실물 미검증.</div>
+    </div>
+    <div class="parrow">→</div>
+    <div class="pstage done">
+      <div class="n">3</div><div class="t">패치 계획 생성</div>
+      <div class="d">FID 배정 · 타입/모드 해석 · Lua AddFixtures 생성 · 주소 계획.</div>
+    </div>
+    <div class="parrow">→</div>
+    <div class="pstage partial">
+      <div class="n">4</div><div class="t">실행</div>
+      <div class="d">서버 자동실행 NEGATIVE(10경로 전부 0건) → 사람이 Patch 편집기에서 직접 실행.</div>
+    </div>
+    <div class="parrow">→</div>
+    <div class="pstage done">
+      <div class="n">5</div><div class="t">검증</div>
+      <div class="d">재조회로만 성공 판정. 멱등(이미 있는 픽스처는 계획에서 제외).</div>
+    </div>
+    <div class="parrow">→</div>
+    <div class="pstage done">
+      <div class="n">6</div><div class="t">대화형 UX</div>
+      <div class="d">파일 업로드 → 자동 대조 → 되묻기 → 실행 인계, 한 세션 안에서 완결(이번 세션).</div>
+    </div>
+    <div class="parrow">→</div>
+    <div class="pstage partial">
+      <div class="n">7</div><div class="t">배포/설치</div>
+      <div class="d">Stage-1 완료(.app/.dmg). Stage-2 진행중. OSC 설정은 템플릿 쇼파일로 거의 무접촉.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="vwx">
+  <h2><span class="num">03</span> SPEC-COPILOT-VWX-001 — 도면 읽기 · 대조</h2>
+
+  <div class="spec-card">
+    <div class="row1">
+      <div class="spec-id">SPEC-COPILOT-VWX-001</div>
+      <span class="badge partial">run_status: partial-blocked</span>
+    </div>
+    <p>
+      <b>원래 목표</b> — Vectorworks Instrument Data(엑셀/CSV/tab-text 또는 MVR)를 읽어
+      <b>설계상 리그(designed rig)</b> 모델을 만들고, 이미 라이브 검증된 <code>precheck_patch</code>
+      (콘솔 실측)와 대조해 "도면 vs 실제 콘솔 패치" 차이 리포트를 낸다. 자동 패치 실행 자체와
+      MVR/GDTF 정밀 지원은 후속 SPEC(AUTOPATCH-001)으로 분리하는 것이 원래 계획이었으나, 이후
+      MVR 실물 판독은 이 SPEC 안으로 다시 들어왔다(범위 확장, 아래 참조).
+    </p>
+    <div class="stat-row">
+      <div class="s">REQ<b>28</b></div>
+      <div class="s">AC<b>29</b></div>
+      <div class="s">마일스톤<b>M0–M8</b></div>
+      <div class="s">신규 모듈<b>server/vwx/ 7개</b></div>
+      <div class="s">스위트 증가<b>+182</b></div>
+    </div>
+  </div>
+
+  <h3>구현 완료</h3>
+  <ul class="flist done">
+    <li>
+      읽기 계층(M1) — CSV/TXT/XLSX 3형식, 인코딩(UTF-8-BOM 포함) 자동판별, 컬럼 별칭 테이블 매칭
+      <span class="ids">M1 · AC-VWX-002~006</span>
+    </li>
+    <li>
+      주소 처리(M3) — 유니버스/주소/3중 표현(절대·상대·복합) 교차검증, 근거 등급 분리(v0.1.7 재설계)
+      <span class="ids">M3 · REQ-VWX-009(재정의) · AC-VWX-010</span>
+    </li>
+    <li>
+      설계 리그 모델(M4) — 대조 조인 키를 (유니버스, 주소)+타입으로 설계, FID/CID 의존 0건으로 우회
+      <span class="ids">M4</span>
+    </li>
+    <li>
+      대조 엔진(M5) — 3종 차이 클래스(missing_in_console · address_collision · quantity_mismatch),
+      기존 <code>server/prechk/</code> 콘솔 실측 로직을 재구현 없이 소비만
+      <span class="ids">M5 · AC-VWX-013~018</span>
+    </li>
+    <li>
+      리포트 + 툴 배선(M6/M7) — <code>precheck_vectorworks_diff</code> 툴로 4지점(TOOL_NAMES·핸들러·정의) 등록
+      <span class="ids">M6·M7 · AC-VWX-023</span>
+    </li>
+    <li>
+      MVR 실물 판독 — GeneralSceneDescription.xml zip 판독, 사용자 제출 시트 포맷 지원(범위 확장)
+      <span class="ids">커밋 <code>face08d</code></span>
+    </li>
+    <li>
+      부분 정보 인테이크 + 되묻기 — 모자란 값을 지어내지 않고 질문 카드로 사용자에게 되돌림
+      <span class="ids">커밋 <code>71d9bcf</code>·<code>052aa23</code></span>
+    </li>
+  </ul>
+
+  <h3>부분 구현 / 제약</h3>
+  <ul class="flist partial">
+    <li>
+      M0(컬럼 계약 검증) — 실물 샘플 4종으로 <b>ASSUMPTION-68(별칭 부족) NEGATIVE로 해소</b>,
+      <b>ASSUMPTION-69(절대주소 근거) v0.1.7에서 GO로 재판정</b>됐으나, 전부 <b>단일 포지션·단일
+      유니버스 행복경로</b>만 덮는다는 한계가 명시돼 있다.
+      <span class="ids">§E.2 "M0 실물 컬럼 계약 검증" · ASSUMPTION-68/69</span>
+    </li>
+  </ul>
+
+  <h3>미구현 / 차단됨</h3>
+  <ul class="flist blocked">
+    <li>
+      <b>M8 종단 검증 — BLOCKED.</b> AC-VWX-026.
+      <div class="cause">
+        <b>원인</b> — <code>ASSUMPTION-70</code>이 미해소로 남아 있다. Vectorworks export는 두 경로로 나뉜다:
+        경로A(단일 최상단 헤더의 flat 테이블)와 경로B(제목행 선행형 또는 헤더 반복형 워크시트 그리드).
+        지금까지 확보한 <b>모든 실물 샘플이 경로A로 판독</b>됐다 — 진짜 경로B 워크시트 그리드 샘플이
+        저장소에 <b>한 건도 없다</b>. 합성 픽스처(<code>synthetic_path_b_worksheet_grid.csv</code>)로
+        코드 경로 자체는 실행되는 것을 확인했지만, "이건 합성물이므로 실물 워크시트의 마커·서식·
+        인코딩 특이성을 대변하지 않는다"고 문서가 스스로 못박고 있다. <b>필요 조건</b>: 제목행 선행형
+        또는 헤더 반복형 실물 워크시트 export 샘플 최소 1건.
+      </div>
+    </li>
+  </ul>
+
+  <details class="cite">
+    <summary>핵심 인용 — VWX-001</summary>
+    <div class="cite-body">
+      <code>.moai/specs/SPEC-COPILOT-VWX-001/spec.md</code> §B(REQ 7절) · §D(Out of Scope)
+      <code>.moai/specs/SPEC-COPILOT-VWX-001/acceptance.md</code> §C.0(역추적표 28/28) · §C.0a(마일스톤 배정)
+      <code>.moai/specs/SPEC-COPILOT-VWX-001/progress.md</code> §0(인수인계) · §E.2 "M0 실물 컬럼 계약 검증" ·
+      "실물 샘플 3종 투입" · milestones_blocked_reason(§E.3 부근)
+    </div>
+  </details>
+</section>
+
+<!-- ============================================================ -->
+<section id="autopatch">
+  <h2><span class="num">04</span> SPEC-COPILOT-AUTOPATCH-001 — 패치 계획 · 실행 · 검증</h2>
+
+  <div class="spec-card">
+    <div class="row1">
+      <div class="spec-id">SPEC-COPILOT-AUTOPATCH-001</div>
+      <span class="badge partial">M8 세션 GO / round23 감사 FAIL(릴리스 NO-GO)</span>
+    </div>
+    <p>
+      <b>원래 목표</b> — VWX-001이 낸 차이 리포트에서 <b>누락 픽스처를 콘솔에 실제로 패치</b>한다.
+      최초 설계는 서버가 <code>AddFixtures</code>를 직접 실행하는 완전 자동이었다.
+    </p>
+    <div class="stat-row">
+      <div class="s">REQ<b>26</b></div>
+      <div class="s">AC<b>27</b></div>
+      <div class="s">마일스톤<b>M0–M8</b></div>
+      <div class="s">독립 감사<b>round1–23</b></div>
+      <div class="s">스위트 증가<b>+2,336</b></div>
+    </div>
+  </div>
+
+  <div class="callout pivot">
+    <span class="label">설계 전환 — v0.1.3 (2026-08-06)</span>
+    <p>
+      M0 라이브 프로브가 <b>10가지 실행 경로 · 8종 인자 변형</b>을 전부 실측한 결과 <b>전량 0건 생성</b>.
+      원인은 "잘못된 호출 방식"이 아니라 <b>필요 조건 자체가 서버 단독으로는 충족 불가</b>였다 — MA3의
+      <code>AddFixtures</code>는 <b>Patch 편집기가 열려 있고 사람이 직접 실행</b>해야 동작한다.
+      이 사실이 M8 라이브 세션(2026-08-08)에서 <b>최초로 성공 관측</b>됐다. 그래서 REQ-AUTOPATCH-018·
+      020·024를 조정해 <b>반자동 모델</b>(서버 생성 → 사람 실행 → 서버 검증)로 v0.1.3에서 공식
+      전환했다.
+    </p>
+  </div>
+
+  <h3>구현 완료</h3>
+  <ul class="flist done">
+    <li>M1 패치 후보 입력 모델 <span class="ids">AC-AUTOPATCH-002·003 PASS</span></li>
+    <li>M2 FID(fixture-id) 배정 — 사용자 확인 범위 안에서만, 충돌 사전검사 포함 <span class="ids">AC-AUTOPATCH-005~008·027 전량 PASS</span></li>
+    <li>M3 FixtureType·DMXMode 해석 — 라이브러리 열거만 사용, 퍼지 매칭은 사람 확인 필수 <span class="ids">AC-AUTOPATCH-009~012 PASS</span></li>
+    <li>M4 Lua 생성기 + 주소 계획 — 룰북 필드 집합만으로 <code>AddFixtures</code> 생성, 도면 주소 그대로 사용 <span class="ids">AC-AUTOPATCH-013·014·016 PASS</span></li>
+    <li>M5 실행 전달(사람) + 검증 인계 — 서버는 검토용 Lua와 실행 절차를 사람에게 넘기는 데서 멈춤 <span class="ids">AC-AUTOPATCH-015·017~019 PASS</span></li>
+    <li>M6 멱등 + 검증 읽기 — 이미 있는 픽스처는 계획에서 제외, 성공은 재조회에서만 판정 <span class="ids">AC-AUTOPATCH-020~022 PASS</span></li>
+    <li>M7 툴 배선 + 회귀 + PRESERVE — <code>apply_vectorworks_patch</code> 5지점 등록 <span class="ids">AC-AUTOPATCH-023~025 PASS</span></li>
+    <li>M8 라이브 종단 세션(2026-08-08) — 4관문(G1 전달·G2 사람 실행·G3 검증·G4 원복) 전부 통과, <code>AddFixtures</code> 최초 성공 관측 3건 <span class="ids">AC-AUTOPATCH-026</span></li>
+    <li>
+      <b>(이번 세션)</b> <code>vectorworks_autopatch</code> 단일 진입 툴 — analyse/prepare 두 액션으로
+      VWX-001 대조와 AUTOPATCH-001 실행을 하나의 대화형 흐름으로 묶고, 업로드 파일이 세션에만 머물게 함
+      <span class="ids">커밋 <code>cf5cfac</code></span>
+    </li>
+  </ul>
+
+  <h3>부분 구현 / 제약</h3>
+  <ul class="flist partial">
+    <li>
+      실행 조건 — <code>AddFixtures</code>는 <b>Patch 편집기가 열려 있어야</b> 동작한다는 필요조건이
+      코드로 강제되지 않는다(사람이 지켜야 하는 절차적 전제). <code>ChangeDestination</code> 병행
+      사용 금지도 마찬가지.
+      <span class="ids">M8 사전조건 · U-19~23(편집기 열림 표지 자동 판별은 오픈 아이템)</span>
+    </li>
+    <li>
+      responder <code>deploy</code> 동사로 이 SPEC의 실행 자체를 배포할 수 없다 — 수동 임포트만 가능.
+      <span class="ids">progress.md architecture 노트</span>
+    </li>
+  </ul>
+
+  <h3>미구현 / 차단됨</h3>
+  <ul class="flist blocked">
+    <li>
+      <b>독립 코드 감사 round23 — FAIL / 릴리스 NO-GO</b> (단 M8 라이브 세션 자체는 GO 유지).
+      <div class="cause">
+        <b>원인</b> — round23 감사에서 결함 4건(high 1 · medium 1 · low 2)이 발견됐고, 그중 2건은
+        직전 round22의 처방 자체가 만든 새 결함(R23-1·R23-2)이다. 감사 라운드가 22회 반복되며
+        "고치면 새 결함이 남는다"는 패턴이 여러 차례 재발했다(round15 코멘트: "코드는 옳았고 그것을
+        지키는 게이트가 없었다", round16: "이번에 깨진 것은 게이트를 지키는 게이트였다"). round24
+        감사는 <b>아직 착수되지 않았다</b>.
+      </div>
+    </li>
+    <li>
+      <b>타입 라이브러리 절단(truncation) 처리 — 미착수.</b> round20이 지적한 R20-A~D 중 3건이
+      round21에서 일부만 반영됐고 나머지는 열려 있다.
+      <div class="cause"><b>원인</b> — 우선순위상 M8 라이브 검증과 반자동 전환을 먼저 닫았고, 절단 축은 후속으로 남겨졌다(사용자 지시로 명시적 이월).</div>
+    </li>
+    <li>
+      <b>R21-A(멱등 재실행 보고) — 미검증.</b> 같은 계획을 두 번 실행했을 때의 보고 정확성.
+      <div class="cause"><b>원인</b> — M8 세션에서 관측 3건 모두 최초 실행이었고, 재실행 시나리오는 별도로 측정되지 않았다.</div>
+    </li>
+  </ul>
+
+  <details class="cite">
+    <summary>핵심 인용 — AUTOPATCH-001</summary>
+    <div class="cite-body">
+      <code>.moai/specs/SPEC-COPILOT-AUTOPATCH-001/spec.md</code> — REQ-AUTOPATCH-001~026, 반자동 모델 정의(v0.1.3)
+      <code>.moai/specs/SPEC-COPILOT-AUTOPATCH-001/progress.md</code> §0/§0a(인수인계, v0.1.5) ·
+      §E.2aa(v0.1.3 반자동 전환 amendment) · §E.2ab(M8 라이브 종단, 4관문) ·
+      §E.2ad(round22, FAIL) · §E.2ae(round23, FAIL/릴리스 NO-GO·M8 세션 GO)
+    </div>
+  </details>
+</section>
+
+<!-- ============================================================ -->
+<section id="deploy">
+  <h2><span class="num">05</span> SPEC-COPILOT-DEPLOY-001 — 패키징 · 배포 · OSC 부트스트랩</h2>
+
+  <div class="spec-card">
+    <div class="row1">
+      <div class="spec-id">SPEC-COPILOT-DEPLOY-001</div>
+      <span class="badge done">Stage-1 synced</span>
+      <span class="badge partial">Stage-2 in-progress</span>
+    </div>
+    <p>
+      <b>원래 목표</b> — 기능이 검증된 MVP를 최종 사용자(조명 오퍼레이터)가 <b>설치·실행</b>할 수 있는
+      배포 가능한 앱으로 전환한다. 두 단계: Stage-1(PyInstaller onedir 로컬 런처) → Stage-2(Tauri v2
+      네이티브 데스크톱 앱). 핵심 제약은 onPC와 <b>동일 머신</b> 로컬 구동(클라우드 out of scope).
+    </p>
+    <div class="stat-row">
+      <div class="s">REQ<b>37</b></div>
+      <div class="s">AC<b>30</b></div>
+      <div class="s">Stage-1 테스트<b>1,256 passed</b></div>
+      <div class="s">Stage-2<b>M7.1–M7.5</b></div>
+    </div>
+  </div>
+
+  <h3>구현 완료</h3>
+  <ul class="flist done">
+    <li>Stage-1 M1–M10 전체 — 설정 저장·OS 키체인·설정 UI·responder provisioning·health UI·PyInstaller 패키징·안전불변식 회귀 <span class="ids">§E.3 audit-ready(Stage-1)</span></li>
+    <li>v0.3.0 라이브 하드닝 5건 — rig 풀 슬롯 계약(M17.1), OSC 수신 포트 결함 3건(M18.1), ad-hoc 서명 실링(M10.1), .dmg + 한국어 안내(M10.2), Rust 자격저장소 미접촉 정적 스캔(M7.6)</li>
+    <li>Stage-2 M7.1–M7.4b — sidecar↔UI 핸드셰이크, teardown watchdog, 교차언어 이중 스캔, Tauri 셸 스캐폴드, Rust group-kill + 토큰 IPC</li>
+    <li>Stage-2 M7.5 — AC-DEPLOY-027 Layer② wire-level 실측(패키지 .app, 실제 OSC 싱크, 감사로그 1:1 대조)</li>
+    <li>
+      <b>(이번 세션)</b> OSC 무접촉 부트스트랩 — <code>install_osc_templates()</code>가 검증된
+      OSCData 템플릿 2행을 콘솔 import 디렉터리에 자동 스테이징, <code>osc_bootstrap_guide()</code>가
+      남은 GUI 전용 단계를 안내
+      <span class="ids">커밋 <code>d98f917</code></span>
+    </li>
+    <li>
+      <b>(이번 세션)</b> 템플릿 쇼파일 워크플로우 — <code>CopilotOscTemplate.show</code>에서
+      <code>Save As</code>로 시작하면 Interface·OSC 행 2개·Enable Output/Input·플러그인이 전부 따라옴
+    </li>
+  </ul>
+
+  <h3>부분 구현 / 제약</h3>
+  <ul class="flist partial">
+    <li>
+      M18.1(포트 점유 복구 사슬) — force-quit → onPC 포트 점유 → 재기동 → 셸 안내의 연속 시나리오가
+      <b>실 onPC 하드웨어에서 한 번도 검증되지 않았다.</b>
+      <span class="ids">progress.md M18.1 마지막 행</span>
+    </li>
+    <li>
+      flaky 테스트 1건 — <code>test_orphaned_sidecar_reaps_the_group_without_a_pipe</code>가 1회
+      실패 후 통과, 근본 원인(타이밍 레이스) 미해소.
+    </li>
+    <li>
+      debug 빌드 잔존 구버전 — <code>src-tauri/target/debug/console/lua/copilot_responder.lua</code>가
+      v1.1.0(구버전)으로 남아 있음. 배포 아티팩트(release)는 v1.2.0로 정상.
+    </li>
+  </ul>
+
+  <h3>미구현 / 차단됨</h3>
+  <ul class="flist blocked">
+    <li>
+      <b>Developer ID 서명 · 공증 · Windows Authenticode — DESCOPED.</b> AC-DEPLOY-009·010.
+      <div class="cause">
+        <b>원인</b> — 사용자 결정: "배포 형태 = 소수 인원 직접 전달" → Gatekeeper/SmartScreen 통과가
+        완료 조건이 아니게 됨. ad-hoc 서명(<code>codesign --verify --strict</code> 통과)까지는 되지만
+        <code>spctl --assess</code>는 영구 거부 — 사용자가 <code>xattr -dr com.apple.quarantine</code>
+        또는 시스템설정에서 수동으로 열어야 한다. <b>이것은 버그가 아니라 명시적 스코프 축소다.</b>
+      </div>
+    </li>
+    <li>
+      <b>Tauri 자동 업데이트 — DESCOPED.</b> AC-DEPLOY-011·018, M8 마일스톤 자체가 폐기.
+      <div class="cause"><b>원인</b> — 사용자 결정: 수동 재배포(새 .dmg 전달)로 대체. 업데이트 매니페스트/호스팅이 통째로 불필요해짐(plan.md §F F6 MOOT).</div>
+    </li>
+    <li>
+      <b>Windows 플랫폼 + universal2 빌드 — DEFERRED(폐기 아님).</b>
+      <div class="cause">
+        <b>원인</b> — 사용자 지시("우선 윈도우는 제외하고 맥에서 오류없이 작동")와 빌드 호스트 부재
+        (이 빌드 호스트는 arm64 전용 CPython). 코드 자체는 <code>PYI_TARGET_ARCH=universal2</code> 환경변수만으로
+        활성화되도록 준비돼 있다 — 알려진 블로커 3건(handshake.py Windows origin 미포함,
+        sidecar.rs Job Object 미배선, tauri.conf.json windows 키 부재)만 남음.
+      </div>
+    </li>
+    <li>
+      <b>OSC <code>Interface</code> 필드 완전 무접촉화 — 원리적으로 불가.</b>
+      <div class="cause">
+        <b>원인</b> — onPC 2.4.2 플랫폼 자체의 한계(GUI 다이얼로그 전용, 명령줄/파일 경로 없음).
+        템플릿 쇼파일 워크플로우로 <b>대부분의 경우</b>를 무접촉으로 우회했지만, 누군가
+        <code>New Show</code>(빈 쇼)로 시작하면 여전히 GUI 클릭 1회가 필요하다.
+      </div>
+    </li>
+  </ul>
+
+  <details class="cite">
+    <summary>핵심 인용 — DEPLOY-001</summary>
+    <div class="cite-body">
+      <code>.moai/specs/SPEC-COPILOT-DEPLOY-001/spec.md</code> §A(배포전제축소 v0.5.0) · §B.1~B.11(REQ) · §D(Windows)
+      <code>.moai/specs/SPEC-COPILOT-DEPLOY-001/acceptance.md</code> — v0.5.0 DESCOPED 마커(AC-009·010·011·018)
+      <code>.moai/specs/SPEC-COPILOT-DEPLOY-001/progress.md</code> §E.2(M1~M10·M17.1·M18.1·M10.1·M10.2·M7.6) ·
+      §E.3(audit-ready, Stage-1) · §E.4(synced <code>aca6b8c</code>, 2026-07-20)
+      <code>README.md</code> "Packaged app" · "Native desktop shell" 절
+      <code>console/lua/README.md</code> §1.-1(이번 세션 신설, 2026-08-12)
+    </div>
+  </details>
+</section>
+
+<!-- ============================================================ -->
+<section id="session">
+  <h2><span class="num">06</span> 이번 세션에서 추가된 작업</h2>
+  <p class="section-intro">
+    이번 세션은 세 SPEC의 산출물을 <b>사용자가 실제로 대화로 쓸 수 있는 한 흐름</b>으로 묶는 마지막
+    이음매 작업이었다 — 원래 사용자 요청("자동 패치에 문제가 생기면 사용자에게 일부 수동을 요청하고,
+    사용자와 대화를 통해서 패치를 진행")을 코드로 완결했다. 커밋 6건(순서대로):
+  </p>
+
+  <div class="commit">
+    <div class="sha">d98f917</div>
+    <div class="msg"><span class="type feat">feat</span><b>OSC 무접촉 부트스트랩</b> — 템플릿 자동 설치 + 쇼파일 워크플로우 (DEPLOY-001)</div>
+  </div>
+  <div class="commit">
+    <div class="sha">cf5cfac</div>
+    <div class="msg"><span class="type feat">feat</span><b>대화형 자동 패치</b> — <code>vectorworks_autopatch</code> 단일 진입 툴, 업로드 채널 전체 배선 (AUTOPATCH-001)</div>
+  </div>
+  <div class="commit">
+    <div class="sha">184a7e8</div>
+    <div class="msg"><span class="type fix">fix</span>console/lua PRESERVE 게이트에 README 전용 승인 예외 등록 — 커밋 후 전체 스위트 재실행에서 발견</div>
+  </div>
+  <div class="commit">
+    <div class="sha">721a067</div>
+    <div class="msg"><span class="type fix">fix</span><code>vectorworks_autopatch</code> 앵커 주석의 hunk 위치를 songcue 트립와이어에 등록</div>
+  </div>
+
+  <p>
+    핵심 설계: <code>vectorworks_autopatch(action)</code> 하나가 <code>analyse</code>(VWX-001의
+    <code>precheck_vectorworks_diff</code> 호출, 업로드 바이트·리포트를 세션에만 보관)와
+    <code>prepare</code>(AUTOPATCH-001의 <code>apply_vectorworks_patch</code> 호출, 도면 이름
+    자동 상속)를 감싼다. 모델은 base64나 리포트를 다시 붙여넣으라고 요구하지 않는다. 프론트엔드는
+    파일 선택 위젯(8MB/확장자 클라이언트 검증) → <code>vectorworks_export_upload</code> WS 메시지 →
+    업로드 즉시 자동 분석 시작까지 한 번에 연결됐다.
+  </p>
+
+  <div class="callout">
+    <span class="label">이번 세션 중 발견해 즉시 고친 회귀 2건</span>
+    <p>
+      커밋 직후 전체 백엔드 스위트(7,600개)를 재실행해서야 드러난 문제였다 — 부분 테스트만 돌리고
+      커밋한 것이 원인. (1) <code>console/lua/README.md</code> 수정이 OVERLAP-001이 상속한
+      PRESERVE 게이트를 깼다 — README는 코드/와이어 계약이 아니므로 rulebook/looks-library와
+      동일한 패턴으로 <b>승인 예외</b>를 좁게 등록했다(Lua 소스·XML·PROTOCOL.md 3파일은 여전히
+      바이트 동일 요구). (2) 새로 추가한 앵커 주석이 <code>tools.py</code> hunk 위치를 하나 더
+      열어 SONGCUE 트립와이어가 깨졌다 — 보호 구간 무교차를 재확인하고 스냅샷에 등록했다.
+      둘 다 별도 <code>fix</code> 커밋으로 남겼다.
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="improve">
+  <h2><span class="num">07</span> 개선 제안 종합</h2>
+  <p class="section-intro">
+    문서 자체가 이미 제기했거나, 이번 조사 과정에서 관측된 항목을 우선순위별로 정리했다.
+  </p>
+
+  <div class="priority-group">
+    <h4>🔴 즉시 필요 — 병합 전 확인 권장</h4>
+    <div class="prio p0">
+      <span class="tag">P0</span>
+      <div class="body"><b>AUTOPATCH-001 round24 독립 감사 미착수</b>
+      <span>round23이 FAIL/릴리스 NO-GO로 남긴 결함 4건(high 1·medium 1·low 2)이 아직 재검증되지 않았다. M8 세션 자체는 GO이므로 기능은 동작하지만, "릴리스 가능" 판정을 받으려면 이 라운드를 닫아야 한다.</span></div>
+    </div>
+    <div class="prio p0">
+      <span class="tag">P0</span>
+      <div class="body"><b>부분 테스트만 돌리고 커밋하는 습관 — 이번 세션에 2번 재발</b>
+      <span>커밋 전 스코프를 좁혀 검증하고 전체 스위트를 생략하면, git-diff 기반 트립와이어(SONGCUE·OVERLAP PRESERVE)처럼 "커밋해야만 보이는" 실패를 놓친다. 이 저장소는 CI가 0건이라 커밋 후 재검증이 유일한 안전망이다 — CHANGELOG에 이미 같은 교훈이 기록돼 있다("git 상태에 의존하는 테스트는 커밋 후 한 번 더 돌린다").</span></div>
+    </div>
+  </div>
+
+  <div class="priority-group">
+    <h4>🟡 권장 — 다음 작업 전 처리하면 좋음</h4>
+    <div class="prio p1">
+      <span class="tag">P1</span>
+      <div class="body"><b>VWX-001 M8 차단 해소 — 실물 경로B 워크시트 샘플 확보</b>
+      <span>제목행 선행형 또는 헤더 반복형 실물 Vectorworks 워크시트 export 1건만 있으면 ASSUMPTION-70을 닫고 M8 종단 검증을 시작할 수 있다. 사용자 접점으로 명시돼 있다.</span></div>
+    </div>
+    <div class="prio p1">
+      <span class="tag">P1</span>
+      <div class="body"><b>DEPLOY-001 M18.1 실 하드웨어 연속 시나리오 검증</b>
+      <span>force-quit → 포트 점유 → 재기동 → 셸 안내의 전체 사슬을 실제 onPC 2.4.2에서 한 번 실행해야 한다. debug 빌드 경로(v1.1.0 구 responder 잔존)로 수행하면 M17.1이 고친 슬롯 결함의 재현 조건도 같이 확인된다.</span></div>
+    </div>
+    <div class="prio p1">
+      <span class="tag">P1</span>
+      <div class="body"><b>CHANGELOG.md 미기록</b>
+      <span>이 브랜치의 87개 커밋(VWX-001·AUTOPATCH-001·DEPLOY-001 3개 SPEC 전체)이 <code>CHANGELOG.md</code>에 한 줄도 반영되지 않았다 — 이 파일은 main의 다른 브랜치 작업(SPATIAL-001·GROUPGEN-001 등)만 반영하고 있다. 병합 전에 Unreleased 섹션에 요약을 추가할 필요가 있다.</span></div>
+    </div>
+    <div class="prio p1">
+      <span class="tag">P1</span>
+      <div class="body"><b>최상위 README.md에 VWX/AUTOPATCH 기능 섹션 없음</b>
+      <span>현재 README.md는 MVP(M1~M7) + DEPLOY-001만 다룬다. Vectorworks 대화형 자동 패치 기능(이 브랜치의 핵심 산출물)이 사용자 문서 어디에도 소개되지 않는다.</span></div>
+    </div>
+    <div class="prio p1">
+      <span class="tag">P1</span>
+      <div class="body"><b>AUTOPATCH-001 타입 라이브러리 절단 처리 마무리</b>
+      <span>round20이 지적한 R20-A~D 중 미반영분이 남아 있다 — 대형 타입 라이브러리에서 잘린 응답을 다루는 경로.</span></div>
+    </div>
+  </div>
+
+  <div class="priority-group">
+    <h4>🔵 향후 — 우선순위 낮음, 알고 있을 것</h4>
+    <div class="prio p2">
+      <span class="tag">P2</span>
+      <div class="body"><b>M8 실행 사전조건(Patch 편집기 열림)이 코드로 강제되지 않음</b>
+      <span>사람이 절차를 잊으면 조용히 실패할 수 있다 — U-19~23이 이미 "편집기 열림 표지 자동 판별"을 오픈 아이템으로 남겨뒀다.</span></div>
+    </div>
+    <div class="prio p2">
+      <span class="tag">P2</span>
+      <div class="body"><b>멱등 재실행(R21-A) 보고 정확성 미검증</b>
+      <span>같은 계획을 두 번 실행했을 때 두 번째 실행이 "이미 있음"을 정확히 보고하는지 라이브로 확인된 적이 없다.</span></div>
+    </div>
+    <div class="prio p2">
+      <span class="tag">P2</span>
+      <div class="body"><b>Windows/universal2 빌드 — 빌드 호스트 확보 시 재개</b>
+      <span>코드는 이미 준비돼 있다(<code>PYI_TARGET_ARCH=universal2</code> 환경변수 1개). 알려진 Rust/설정 블로커 3건만 남음.</span></div>
+    </div>
+    <div class="prio p2">
+      <span class="tag">P2</span>
+      <div class="body"><b>flaky 테스트 근본 원인 — 타이밍 레이스 미해소</b>
+      <span><code>test_orphaned_sidecar_reaps_the_group_without_a_pipe</code>가 1회 실패 후 통과한 이력이 있다. 재발 시 디버깅 우선순위를 높일 것.</span></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p><b>작성 방법론</b> — 이 리포트는 3개 병렬 조사 에이전트(scout)가 각 SPEC의 <code>spec.md</code> /
+  <code>acceptance.md</code> / <code>progress.md</code> 원본을 직접 읽어 추출한 결과와, 커밋 히스토리
+  ·전체 테스트 스위트 재실행·PRESERVE 게이트 검증을 조합해 작성했다. 모든 수치(REQ/AC 개수, 테스트
+  통과 수, 커밋 해시)는 2026-08-12 12:35 KST 기준 저장소에서 직접 확인했다.</p>
+  <p>Generated for <code>feature/SPEC-COPILOT-VWX-001</code> @ <code>721a067</code> — AI-Lighting_Console</p>
+</footer>
+
+</div>
+</body>
+</html>

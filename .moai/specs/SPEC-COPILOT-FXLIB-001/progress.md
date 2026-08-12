@@ -482,7 +482,7 @@ GO:     ASSUMPTION-40 — 스텝 생성 형상의 Pan/Tilt 일반화 성립. swe
 |---|---|---|---|
 | 1 | **design.md §5 접힘 시작점 정정** — `Step 2` → `ChangeDestination Root`(첫 줄). SPEC 경계를 **강화**하는 방향이라 재감사 불요 | **manager-spec**(design.md 소유). FXLIB이 `completed`이므로 `completed → in-progress (amendment)` 전환으로 in-place 개정하거나, 다음 fx 계열 SPEC이 승계 시 함께 정정 | 문서 1줄. 라이브 불요 |
 | 2 | **@MX ANCHOR 상한 결정** — `tools.py` 6 vs `anchor_per_file: 3`. **본 SPEC 착수 전부터 4건으로 초과**했고 FXLIB이 2건 추가. 프로토콜 처방("최저 fan_in부터 강등")이 축퇴한다(6개 전부 Load 1·호출 0 동률) | **사용자**(`.moai/config/sections/mx.yaml` 소유). 선택지 2개 — (a) 툴 레지스트리 파일에 한해 상한 상향 또는 문서화된 예외, (b) ANCHOR 기준을 fan_in에서 "모델 도달 초크포인트"로 재정의. **어느 쪽도 코드 변경 아님** | 설정 판단 1회 |
-| 3 | **`SaveShow` → 디스크 쇼파일 판독 가설** — 열리면 이 SPEC의 **가장 비싼 제약**(효과 기계 검증 불가)이 풀릴 수 있다. 현재 응답기 5동사는 닫혀 있고 코드베이스에 쇼파일 판독기도 없으나, 이 경로는 **배제된 적이 없다** | **후속 SPEC**(신규). 착수 조건: 라이브 콘솔 세션 1회 + `SaveShow` 산출물 구조 조사. `server/deploy/pack.py:16`의 기존 관측이 출발점 | 조사 1회 + 라이브 1회 |
+| 3 | ~~**`SaveShow` → 디스크 쇼파일 판독 가설**~~ — **배제한다(2026-08-07 정정).** 이 SPEC이 원한 것은 **라이브 효과의 기계 검증**인데 `SaveShow` 산출물은 **정의상 라이브 상태가 아니다** — BUSKWIZ가 디스크 export XML(`Port="9001"`)을 근거로 삼아 오진한 실측 선례가 있다(`.moai/specs/SPEC-COPILOT-BUSKWIZ-001/progress.md` 「착수 시 오진 1건」). 그리고 `server/showfile/`는 지금도 부재하며 `.moai/specs/SPEC-COPILOT-PRECHK-001/research.md:44-47`이 그 부재를 `[코드]` 등급으로 고정했다. **가설이 목적을 달성할 수 없다** | **없음(폐기).** 후속 SPEC을 세우지 않는다 — 효과 증거는 사람 GUI 확인이며 `server/fx/report.py`의 `EFFECT_EVIDENCE_NOTICE`가 이미 그 정답을 문면화하고 있다 | — |
 
 #### 감사자가 반증에 실패한 것 (방어가 실제로 작동함)
 

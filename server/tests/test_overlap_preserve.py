@@ -28,6 +28,7 @@ the failure mode a one-off manual gate leaves open.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import subprocess
 from pathlib import Path
@@ -160,16 +161,41 @@ _SAFETY_DIR = "server/safety/"
 #: `TestPrecedentGateFileIsNotExtended` above). Bounding both ends fixes it.
 _OVERLAP_MERGE_COMMIT = "156a3e1aaf6ef78788394d65cf724bacaec7b567"
 
-#: The safety chokepoint's measured state, PRECHK-base relative. Grown three
+#: The safety chokepoint's measured state, PRECHK-base relative. Grown four
 #: times: the predecessor's (OVERLAP's) property-read addition (console.py,
 #: gate.py), then SPEC-COPILOT-BACKUP-001 T-B/T-B2's snapshot-retention +
 #: audit-linkage extension (backup.py, gate.py again), then the T-I audit-log
-#: crash fix -- audit.py joins the set (SCOPE CORRECTION below). Every
-#: deletion's TEXT is pinned in `_SAFETY_ALLOWED_DELETED_LINES` below, because
-#: a bare count lets a meaningful removal hide under the allowance.
+#: crash fix -- audit.py joins the set (SCOPE CORRECTION below), then the
+#: closed-set revision below. Every deletion's TEXT is pinned in
+#: `_SAFETY_ALLOWED_DELETED_LINES` below, because a bare count lets a
+#: meaningful removal hide under the allowance.
+#:
+#: 2026-08-05 granted exception -- SPEC-COPILOT-WRITEGATE-001 revises the
+#: closed-set SSOT `blacklist.yaml` from version 1 to 2, adding exactly ONE
+#: entry ("Set Fixture"). User-approved after the alternatives were searched
+#: and rejected, which is the part worth recording: a design touching only
+#: `gate.py` would have cost ZERO entries here (gate.py is already an allowed
+#: row and the addition deletes nothing), but it would have forked the
+#: closed-set interpretation that `classify.py`'s @MX:ANCHOR forbids and,
+#: concretely, missed a patch write smuggled through a quoted `Property
+#: 'Command'` value -- the recursion that catches those calls
+#: `classify_command`, not the gate. So the cheaper boundary was declined for
+#: the correct layer, and the cost is this one row.
+#:
+#: Why it could not be avoided at all: `SafetyGate.screen()` takes a command
+#: sequence and nothing else, so no caller can declare a bundle risky
+#: (SPATIAL-001 progress.md:294-296). Every possible design edits at least one
+#: file under `server/safety/`. The FIRST attempt at this change was reverted
+#: precisely here (SPATIAL progress.md:302-306) -- it was blocked by ownership,
+#: not by being wrong, and WRITEGATE-001 owns `server/safety/`.
+#:
+#: The grant is one FILE with one PINNED deletion, and it widens nothing else.
+#: Another file under the chokepoint, a second deleted line in this one, or any
+#: text other than `version: 1` still fails the gate.
 _SAFETY_EXPECTED_DELETIONS = {
     "server/safety/audit.py": 1,
     "server/safety/backup.py": 2,
+    "server/safety/blacklist.yaml": 1,
     "server/safety/console.py": 0,
     "server/safety/gate.py": 3,
 }
@@ -191,6 +217,12 @@ _SAFETY_ALLOWED_DELETED_LINES = {
         "Three rules: ① once at session start, ② periodic (default 10 minutes,",
         '    """Drives the 3-rule backup policy against an injected backup action."""',
     ),
+    # The version bump IS the revision: `version: 1` is replaced by
+    # `version: 2`, which is the one deletion granted above. The entry addition
+    # and the REVISION HISTORY block that justifies it are pure additions, so
+    # they need no allowance -- and `test_safety_ruleset.py` pins the new
+    # content exactly, so this grant cannot be used to smuggle a second entry.
+    "server/safety/blacklist.yaml": ("version: 1",),
     "server/safety/gate.py": (
         "from server.safety.backup import BackupError, BackupManager",
         '    """StateQueryPort implementation riding the gate-audited console link."""',
@@ -204,6 +236,38 @@ _DESCOPE_LINE = "DESCOPE: ASSUMPTION-27"
 _PRECHK_SPEC_DIR = ".moai/specs/SPEC-COPILOT-PRECHK-001/"
 _PRECHK_PROGRESS = f"{_PRECHK_SPEC_DIR}progress.md"
 
+#: 2026-08-07 granted exception — the spec-feasibility correction pass
+#: (PR #29, commit ``2d04125``, user-mandated: "완결 SPEC의 과거 판정은 사실이다.
+#: 뒤집혔으면 원문 보존 + 소급 정정 각주. 고쳐 쓰는 것은 미래를 가리키는 문장뿐이다").
+#:
+#: The pass rewrote TEN rows across the predecessor's two FORWARD-POINTING
+#: candidate tables (§E.3a "다음 후보" and the "후속 후보 순위" table) because five
+#: of them named work that had since SHIPPED and two named a wrong blocker. A
+#: stale "막혀 있다" row is not inert: it stops the next reader from starting work
+#: that is already possible. NOTHING measured was erased — no ASSUMPTION verdict,
+#: no evidence row, no DESCOPE line (that one keeps its own gate below).
+#:
+#: Pinned two ways, following ``_SAFETY_ALLOWED_DELETED_LINES``: the row keys are
+#: listed so a reader sees WHAT was granted, and the digest fixes the exact text
+#: of all ten so a reader cannot grow the grant. Deleting an eleventh line — or
+#: one different byte of these ten — still fails the gate. A future correction to
+#: this file needs its own grant; that re-review is the point.
+_PRECHK_GRANTED_DOC = _PRECHK_PROGRESS
+_PRECHK_GRANTED_DELETED_ROW_KEYS = (
+    "**FID 축**",
+    "**구간 겹침 재개**",
+    "**페이지·익스큐터 저작**",
+    "**프리셋 읽기**",
+    "SONGCUE 잔여 · P2-4 자동 페이퍼워크 · P2-5 볼런티어 런북",
+    "**1**",
+    "3",
+    "4",
+    "5",
+    "6",
+)
+#: sha256 of the ten deleted lines joined by "\n", in diff order.
+_PRECHK_GRANTED_DELETION_DIGEST = "3c0748d55a049581e2b9592762299177a02e227963072ddb44c013489a56b88a"
+
 
 def _git(*arguments: str) -> str:
     result = subprocess.run(  # noqa: S603
@@ -214,6 +278,12 @@ def _git(*arguments: str) -> str:
         text=True,
     )
     return result.stdout
+
+
+def _deleted_lines(base: str, path: str) -> list[str]:
+    """The `-` body lines of a diff, with the marker stripped and headers dropped."""
+    body = _git("diff", f"{base}..HEAD", "--", path).splitlines()
+    return [line[1:] for line in body if line.startswith("-") and not line.startswith("---")]
 
 
 def _preserve_diff_command() -> list[str]:
@@ -622,8 +692,35 @@ class TestPrecedentGateFileIsNotExtended:
 class TestPredecessorSpecDocuments:
     """AC-OVERLAP-019 ⑧ — the one assertion that uses THIS SPEC's base."""
 
-    def test_the_predecessor_spec_documents_are_untouched(self):
-        assert _git("diff", "--stat", f"{_OVERLAP_BASE}..HEAD", "--", _PRECHK_SPEC_DIR) == ""
+    def test_every_predecessor_document_but_the_granted_one_is_untouched(self):
+        others = _git(
+            "diff",
+            "--stat",
+            f"{_OVERLAP_BASE}..HEAD",
+            "--",
+            _PRECHK_SPEC_DIR,
+            f":(exclude){_PRECHK_GRANTED_DOC}",
+        )
+        assert others == ""
+
+    def test_the_exclusion_above_is_not_swallowing_the_whole_directory(self):
+        """Non-vacuity: `:(exclude)` on a mistyped path would empty the diff."""
+        assert _git("diff", "--stat", f"{_OVERLAP_BASE}..HEAD", "--", _PRECHK_SPEC_DIR) != ""
+
+    def test_the_granted_document_deleted_exactly_the_ten_granted_rows(self):
+        deleted = _deleted_lines(_OVERLAP_BASE, _PRECHK_GRANTED_DOC)
+        assert len(deleted) == len(_PRECHK_GRANTED_DELETED_ROW_KEYS)
+        keys = tuple(line.split("|")[1].strip() for line in deleted)
+        assert keys == _PRECHK_GRANTED_DELETED_ROW_KEYS
+        digest = hashlib.sha256("\n".join(deleted).encode("utf-8")).hexdigest()
+        assert digest == _PRECHK_GRANTED_DELETION_DIGEST
+
+    def test_the_digest_would_reject_an_eleventh_deletion(self):
+        """Non-vacuity: the pin is content-sensitive, not just count-sensitive."""
+        deleted = _deleted_lines(_OVERLAP_BASE, _PRECHK_GRANTED_DOC)
+        smuggled = [*deleted, "| 7 | 몰래 지운 행 | |"]
+        digest = hashlib.sha256("\n".join(smuggled).encode("utf-8")).hexdigest()
+        assert digest != _PRECHK_GRANTED_DELETION_DIGEST
 
     def test_the_predecessor_base_would_be_the_wrong_reference_here(self):
         """Why this single item uses a different base from the rest of the file.

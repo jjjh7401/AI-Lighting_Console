@@ -81,7 +81,7 @@ test enforces that no other production module can reach the OSC send surface):
    one rejection voids the whole bundle (all-or-nothing). Without an approval
    channel the default is deny-all.
 
-The closed sets (blacklist 6 entries, invoking verbs 10 + 2 bare forms) live
+The closed sets (blacklist, invoking verbs and their bare object forms) live
 in ONE version-controlled file: [`server/safety/blacklist.yaml`](server/safety/blacklist.yaml).
 Changing a set requires a file revision with a version bump — tests iterate
 the file's content, so revisions auto-extend the FN corpora.

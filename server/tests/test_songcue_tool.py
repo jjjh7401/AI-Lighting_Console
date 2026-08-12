@@ -21,6 +21,7 @@ _SPEC_MODULES = (
 )
 _GROUPS_PATH = "DataPool/Groups"
 _SEQUENCES_PATH = "DataPool/Sequences"
+_TIMECODES_PATH = "DataPool/Timecodes"
 _SEQUENCE_BODY_PATH = "DataPool/Sequences/3"
 _DEFAULT_SECTIONS = (
     {"name": "Verse", "start": "0:10"},
@@ -282,6 +283,83 @@ class TestPayload:
         assert any("Property 'TrigType' 'Time'" in command for command in command_lines)
 
 
+class TestTimecodeSlotOccupancy:
+    """`Store Timecode <n>` takes a MODEL-SUPPLIED number.
+
+    Nothing checked it, so a showfile already using that slot lost its timecode
+    track silently — the defect `_free_macro_slot` exists to prevent on the
+    other pool-writing path. The three branches below are the three things the
+    pool read can tell us, and each has a different correct answer.
+    """
+
+    def test_a_free_slot_still_emits_the_timecode_write(self):
+        _execution, payload = _call(_registry())
+        commands = [entry["command"] for entry in payload["commands"]]
+        assert any(command.startswith("Store Timecode 7") for command in commands)
+        assert payload["timing"]["skipped_axes"] == []
+
+    def test_an_occupied_slot_is_refused_and_names_the_occupant(self):
+        state = _SongCueStatePort(_tree(timecodes=(1, 3, 7)))
+        execution, payload = _call(_registry(state=state))
+        assert execution.result.is_error is True
+        assert "Timecode 7" in payload["error"]
+        # The occupant is named so the operator can decide, and the refusal says
+        # WHY it matters — there is no restore path if the guess is wrong.
+        assert "no restore path" in payload["error"]
+
+    def test_it_does_not_silently_pick_a_different_slot(self):
+        """Unlike `_free_macro_slot`, the number is part of this tool's schema.
+
+        Substituting one would answer a question nobody asked, and the operator
+        would find their timecode somewhere they did not put it."""
+        state = _SongCueStatePort(_tree(timecodes=(1, 3, 7)))
+        execution, payload = _call(_registry(state=state))
+        assert execution.result.is_error is True
+        assert "commands" not in payload
+
+    def test_an_unreadable_pool_withholds_the_write_instead_of_sending_it(self):
+        """The path is UNVERIFIED, so this branch is not a corner case.
+
+        A dead pool must not read as "nothing is stored there" — the write is
+        withheld and the reason travels on the EXISTING skipped_axes channel,
+        which is the designed DESCOPE branch this bundle already ships.
+        """
+        state = _SongCueStatePort(_tree(drop=(_TIMECODES_PATH,)))
+        execution, payload = _call(_registry(state=state))
+        assert execution.result.is_error is False
+        commands = [entry["command"] for entry in payload["commands"]]
+        assert not any(command.startswith("Store Timecode") for command in commands)
+        reasons = [axis["reason"] for axis in payload["timing"]["skipped_axes"]]
+        assert any("occupancy could not be established" in reason for reason in reasons)
+
+    def test_the_auto_advance_axis_survives_a_dead_timecode_pool(self):
+        """Degrading one axis must not take the other with it — the cue timing
+        is what actually drives the show."""
+        state = _SongCueStatePort(_tree(drop=(_TIMECODES_PATH,)))
+        _execution, payload = _call(_registry(state=state))
+        commands = [entry["command"] for entry in payload["commands"]]
+        assert any("Property 'TrigType' 'Time'" in command for command in commands)
+
+    def test_an_empty_pool_is_treated_as_unreadable_not_as_free(self):
+        """`M.safe_children` returns an empty table when the read FAILS, so an
+        empty pool and a dead pool are one payload. Trusting it would make every
+        slot look free — the exact trap `_free_macro_slot` refuses to walk into.
+        """
+        state = _SongCueStatePort(_tree(timecodes=()))
+        _execution, payload = _call(_registry(state=state))
+        commands = [entry["command"] for entry in payload["commands"]]
+        assert not any(command.startswith("Store Timecode") for command in commands)
+
+    def test_a_truncated_pool_is_treated_as_unreadable(self):
+        """A short enumeration makes the occupied set a SUBSET, so "slot 7 was
+        not in the list" stops being evidence that slot 7 is free."""
+        tree = _tree()
+        tree[_TIMECODES_PATH] = _payload(_TIMECODES_PATH, [_child(1, "Timecode 1")], truncated=True)
+        _execution, payload = _call(_registry(state=_SongCueStatePort(tree)))
+        commands = [entry["command"] for entry in payload["commands"]]
+        assert not any(command.startswith("Store Timecode") for command in commands)
+
+
 def _schema_property_names(schema: dict[str, Any]) -> set[str]:
     names: set[str] = set()
     if isinstance(schema, dict):
@@ -300,6 +378,7 @@ def _tree(
     *,
     groups: tuple[tuple[int | None, str], ...] = _FULL_GROUPS,
     sequences: tuple[int, ...] = (1, 2, 4),
+    timecodes: tuple[int, ...] = (1, 3),
     drop: tuple[str, ...] = (),
 ) -> dict[str, dict]:
     tree = {
@@ -314,6 +393,15 @@ def _tree(
                 {"class": "Cue", "cueNo": 1, "name": "Verse"},
                 {"class": "Cue", "cueNo": 2, "name": "Chorus"},
             ),
+        ),
+        # Slot 7 (the number every case here passes) is deliberately FREE, and
+        # slots 1/3 are deliberately taken: an empty pool would read as "the
+        # enumeration failed" to `_timecode_slot_verdict` and suppress the
+        # timecode axis, so a pool with occupants is what proves the check
+        # passes on merit rather than on an unreadable pool.
+        _TIMECODES_PATH: _payload(
+            _TIMECODES_PATH,
+            [_child(number, f"Timecode {number}") for number in timecodes],
         ),
     }
     for path in drop:

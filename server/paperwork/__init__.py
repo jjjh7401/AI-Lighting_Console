@@ -6,6 +6,7 @@ for the builders and ``server/paperwork/render.py`` for the self-contained
 HTML renderers.
 """
 
+from server.paperwork.bundle import HandoverDocument, HandoverPack, build_handover_pack
 from server.paperwork.data import (
     PatchRow,
     PatchSheet,
@@ -24,7 +25,10 @@ __all__ = [
     "Pool",
     "PoolEntry",
     "PoolListing",
+    "HandoverDocument",
+    "HandoverPack",
     "build_cue_sheet",
+    "build_handover_pack",
     "build_patch_sheet",
     "build_preset_list",
     "render_cue_sheet",

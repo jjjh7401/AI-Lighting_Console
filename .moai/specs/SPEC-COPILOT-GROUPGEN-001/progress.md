@@ -505,6 +505,9 @@ human_check_commands: ["Group 2", "Group 3"]
 `승인 요청 번들 = 0`이었다 — AC-SPATIAL-031 `[DEFERRED]`(함정 8)의 라이브 재현이다.
 본 SPEC의 그룹 쓰기는 승인을 강제하지만(REQ-031) **좌표 축은 여전히 무승인**이다.
 GROUPGEN 범위 밖이며 SPATIAL 후속 SPEC 소관이다 — 침묵하지 않고 기록한다.
+**※ 2026-08-07 정정 — 해소됨**: `SPEC-COPILOT-WRITEGATE-001`(2026-08-05)이 `blacklist.yaml`을 v2로
+올려 `"Set Fixture"`를 폐쇄집합에 추가했고, 그로써 좌표 기록이 **risky·승인 카드 경로**가 됐다
+(`.moai/specs/SPEC-COPILOT-SPATIAL-001/acceptance.md:254-259` — 19/19 커맨드 형태 실측).
 
 #### §E.2.9.5 사람 무대 관측 — **GO** (2026-08-04, 사용자 직접 확인)
 
@@ -629,9 +632,13 @@ M0~M6 전 구간에서 라이브가 잡은 것 중 **단위 테스트로는 원�
 ### 별도 SPEC 후보 3건
 
 1. **채팅 경로 무승인 그룹 생성** — 본 SPEC 툴을 경유하지 않는 직접 `Store Group` 발화는 여전히
-   무승인(spec.md §C.1.1). 본 SPEC 범위 밖.
-2. **무승인 좌표 쓰기** — `arrange_fixtures`가 `status: arranged`로 좌표를 기록하는데 승인 요청 번들이
-   0이다(§E.2.9.4). AC-SPATIAL-031 `[DEFERRED]`의 라이브 재현. SPATIAL 후속 SPEC 소관.
+   무승인(spec.md §C.1.1). 본 SPEC 범위 밖. **※ 2026-08-07 — 수취인 지명**: `WRITEGATE-001`의
+   후속(`Store` 축)이 소관이다. 그 SPEC이 비용을 이미 실측해 뒀다 —
+   `.moai/specs/SPEC-COPILOT-WRITEGATE-001/spec.md:128-131`(`Store Group` 3건/1종 + DEPLOY 테스트 3건 파손).
+2. ~~**무승인 좌표 쓰기**~~ — **해소됨(`SPEC-COPILOT-WRITEGATE-001`, 2026-08-05).** `blacklist.yaml` v2가
+   `"Set Fixture"`를 폐쇄집합에 추가해 좌표 기록이 risky·승인 카드 경로가 됐다
+   (`.moai/specs/SPEC-COPILOT-SPATIAL-001/acceptance.md:254-259` — 19/19 커맨드 형태 실측).
+   원 기록: `arrange_fixtures`가 `status: arranged`로 좌표를 기록하는데 승인 요청 번들이 0이었다(§E.2.9.4).
 3. **`corpus.yaml` 큰따옴표 미노출 결함** — `group_create`가 `Label Group 3 "Vocal"`을 쓰는데
    `protocol.py:109`가 이 형태를 거부한다(mock 전용 코퍼스라 실행 경로에 미노출된 기존 잠재 결함).
 
