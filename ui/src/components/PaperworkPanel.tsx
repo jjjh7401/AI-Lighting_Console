@@ -288,36 +288,43 @@ export function PaperworkPanelView({
 }: PaperworkPanelViewProps) {
   return (
     <section className="paperwork-panel" aria-label="페이퍼워크">
-      <header className="paperwork-header">
-        <span className="paperwork-title">페이퍼워크</span>
-        <button className="paperwork-close" onClick={onClose} aria-label="닫기">
-          ✕
-        </button>
-      </header>
-      {notice !== null && <div className="paperwork-notice">{notice}</div>}
-      <div className="paperwork-cards">
-        {PAPERWORK_KINDS.map((meta) => (
-          <PaperworkCard
-            key={meta.kind}
-            meta={meta}
-            result={results[meta.kind] ?? null}
-            busy={busyKind === meta.kind}
-            previewing={previewKind === meta.kind}
-            onGenerate={onGenerate}
-            onPreview={onPreview}
-            onDownload={onDownload}
-          />
-        ))}
+      <div className="paperwork-sidebar">
+        <header className="paperwork-header">
+          <span className="paperwork-title">페이퍼워크</span>
+          <button className="paperwork-close" onClick={onClose} aria-label="닫기">
+            ✕
+          </button>
+        </header>
+        {notice !== null && <div className="paperwork-notice">{notice}</div>}
+        <div className="paperwork-cards">
+          {PAPERWORK_KINDS.map((meta) => (
+            <PaperworkCard
+              key={meta.kind}
+              meta={meta}
+              result={results[meta.kind] ?? null}
+              busy={busyKind === meta.kind}
+              previewing={previewKind === meta.kind}
+              onGenerate={onGenerate}
+              onPreview={onPreview}
+              onDownload={onDownload}
+            />
+          ))}
+        </div>
       </div>
-      {previewKind !== null && (
-        <div className="paperwork-preview">
+      <div className="paperwork-preview-area">
+        {previewKind !== null ? (
           <iframe
             className="paperwork-preview-frame"
             src={contentUrl(previewKind)}
             title={PAPERWORK_KINDS.find((m) => m.kind === previewKind)?.label ?? "미리보기"}
           />
-        </div>
-      )}
+        ) : (
+          <div className="paperwork-preview-empty">
+            <span className="paperwork-preview-empty-icon">📄</span>
+            <span>문서를 생성하면 여기에 미리보기가 표시됩니다</span>
+          </div>
+        )}
+      </div>
     </section>
   );
 }

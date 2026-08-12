@@ -293,10 +293,24 @@ describe("PaperworkPanelView — ① 4종 렌더", () => {
     onDownload: vi.fn(),
     ...overrides,
   });
+
+  // The new split-pane layout: section.paperwork-panel > [div.paperwork-sidebar, div.paperwork-preview-area]
+  // Cards and notices live inside the sidebar; preview lives in the preview area.
+  function sidebar(element: ReactElement): ReactElement {
+    return childArray(element).find((child) =>
+      isElementWithClassName(child, "paperwork-sidebar"),
+    ) as ReactElement;
+  }
+
+  function previewArea(element: ReactElement): ReactElement | undefined {
+    return childArray(element).find((child) =>
+      isElementWithClassName(child, "paperwork-preview-area"),
+    ) as ReactElement | undefined;
+  }
   it("renders exactly one card per PAPERWORK_KINDS entry, in order", () => {
     const element = PaperworkPanelView(viewProps());
-    const children = childArray(element);
-    const cardsBox = children.find((child) =>
+    const sb = sidebar(element);
+    const cardsBox = childArray(sb).find((child) =>
       isElementWithClassName(child, "paperwork-cards"),
     ) as ReactElement;
     const cards = childArray(cardsBox) as ReactElement[];
@@ -311,7 +325,8 @@ describe("PaperworkPanelView — ① 4종 렌더", () => {
 
   it("passes each kind's own result (or null) down to its card, keyed by kind", () => {
     const element = PaperworkPanelView(viewProps({ results: { cue_sheet: CUE_SHEET_TRUNCATED } }));
-    const cardsBox = childArray(element).find((child) =>
+    const sb = sidebar(element);
+    const cardsBox = childArray(sb).find((child) =>
       isElementWithClassName(child, "paperwork-cards"),
     ) as ReactElement;
     const cards = childArray(cardsBox) as ReactElement[];
@@ -323,7 +338,8 @@ describe("PaperworkPanelView — ① 4종 렌더", () => {
 
   it("marks only the busy kind's card as busy", () => {
     const element = PaperworkPanelView(viewProps({ busyKind: "preset_list" }));
-    const cardsBox = childArray(element).find((child) =>
+    const sb = sidebar(element);
+    const cardsBox = childArray(sb).find((child) =>
       isElementWithClassName(child, "paperwork-cards"),
     ) as ReactElement;
     const cards = childArray(cardsBox) as ReactElement[];
@@ -332,12 +348,14 @@ describe("PaperworkPanelView — ① 4종 렌더", () => {
 
   it("renders a notice line only when one is present", () => {
     const withoutNotice = PaperworkPanelView(viewProps());
+    const sb1 = sidebar(withoutNotice);
     expect(
-      childArray(withoutNotice).some((child) => isElementWithClassName(child, "paperwork-notice")),
+      childArray(sb1).some((child) => isElementWithClassName(child, "paperwork-notice")),
     ).toBe(false);
 
     const withNotice = PaperworkPanelView(viewProps({ notice: "문서 생성 중 오류가 발생했습니다." }));
-    const notice = childArray(withNotice).find((child) =>
+    const sb2 = sidebar(withNotice);
+    const notice = childArray(sb2).find((child) =>
       isElementWithClassName(child, "paperwork-notice"),
     ) as ReactElement;
     expect(childArray(notice)).toEqual(["문서 생성 중 오류가 발생했습니다."]);
@@ -345,28 +363,28 @@ describe("PaperworkPanelView — ① 4종 렌더", () => {
 
   it("renders iframe preview when previewKind is set", () => {
     const element = PaperworkPanelView(viewProps({ previewKind: "cue_sheet" }));
-    const preview = childArray(element).find((child) =>
-      isElementWithClassName(child, "paperwork-preview"),
-    ) as ReactElement;
-    expect(preview).toBeDefined();
-    const iframe = childArray(preview).find(
+    const pa = previewArea(element)!;
+    const iframe = childArray(pa).find(
       (child) => (child as ReactElement).type === "iframe",
     ) as ReactElement;
+    expect(iframe).toBeDefined();
     expect(iframe.props.src).toBe("/api/paperwork/cue_sheet/content");
   });
 
-  it("no iframe when previewKind is null", () => {
+  it("shows empty state when previewKind is null", () => {
     const element = PaperworkPanelView(viewProps());
-    const preview = childArray(element).find((child) =>
-      isElementWithClassName(child, "paperwork-preview"),
+    const pa = previewArea(element)!;
+    const empty = childArray(pa).find((child) =>
+      isElementWithClassName(child, "paperwork-preview-empty"),
     );
-    expect(preview).toBeUndefined();
+    expect(empty).toBeDefined();
   });
 
   it("the close button fires onClose", () => {
     const onClose = vi.fn();
     const element = PaperworkPanelView(viewProps({ onClose }));
-    const header = childArray(element).find((child) =>
+    const sb = sidebar(element);
+    const header = childArray(sb).find((child) =>
       isElementWithClassName(child, "paperwork-header"),
     ) as ReactElement;
     const closeButton = childArray(header).find(
@@ -514,7 +532,10 @@ describe("render() smoke — PaperworkPanelView descends into real PaperworkCard
       onDownload: vi.fn(),
       onClose: vi.fn(),
     });
-    const cardsBox = childArray(element).find((child) =>
+    const sb = childArray(element).find((child) =>
+      isElementWithClassName(child, "paperwork-sidebar"),
+    ) as ReactElement;
+    const cardsBox = childArray(sb).find((child) =>
       isElementWithClassName(child, "paperwork-cards"),
     ) as ReactElement;
     const firstCard = (childArray(cardsBox) as ReactElement[])[0];
