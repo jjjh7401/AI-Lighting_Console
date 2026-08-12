@@ -10,6 +10,11 @@
 
 export const RESPONDER_ASSETS = ["copilot_responder.xml", "copilot_responder.lua"] as const;
 
+export const OSC_TEMPLATE_ASSETS = [
+  "copilot_osc_row1_receive.xml",
+  "copilot_osc_row2_send.xml",
+] as const;
+
 // -- server response shapes (mirror server/web/provision_api.py) --------------
 
 export interface ResponderGuide {
@@ -28,6 +33,19 @@ export interface ResponderStatusResponse {
   configured_osc_slot?: number;
   installed_osc_slot?: number | null;
   osc_slot_mismatch?: boolean;
+  // Per-show OSC bootstrap (2026-08-12 recipe). Optional so a status from an
+  // older backend parses unchanged and simply hides the OSC section.
+  osc_import_dir?: string;
+  osc_template_assets?: string[];
+  osc_templates_installed?: Record<string, boolean>;
+  osc_templates_installed_all?: boolean;
+  osc_bootstrap_guide?: OscBootstrapGuide;
+}
+
+export interface OscBootstrapGuide {
+  console_port: number;
+  receive_port: number;
+  steps: string[];
 }
 
 function isGuide(value: unknown): value is ResponderGuide {
@@ -62,6 +80,15 @@ export function parseResponderStatus(raw: string): ResponderStatusResponse | nul
 export function allInstalled(status: ResponderStatusResponse): boolean {
   if (status.installed_all) return true;
   const values = Object.values(status.installed);
+  return values.length > 0 && values.every(Boolean);
+}
+
+/** Whether both OSC connectivity templates are staged in the import directory.
+ *  ``undefined`` (an older backend that predates this field) reports false —
+ *  the UI must not claim the OSC section is done when it cannot tell. */
+export function allOscTemplatesInstalled(status: ResponderStatusResponse): boolean {
+  if (status.osc_templates_installed_all) return true;
+  const values = Object.values(status.osc_templates_installed ?? {});
   return values.length > 0 && values.every(Boolean);
 }
 

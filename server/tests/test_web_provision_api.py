@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from server.deploy.provisioning import (
+    OSC_TEMPLATE_ASSETS,
     RESPONDER_ASSETS,
     install_responder,
     read_installed_osc_slot,
@@ -23,7 +24,7 @@ from server.deploy.settings import UserSettings, save_user_settings
 from server.web.provision_api import ProvisionDeps, build_provision_router
 
 
-def _settings_file(tmp_path, *, import_dir, receive_port=9000, osc_slot=1):
+def _settings_file(tmp_path, *, import_dir, receive_port=9000, osc_slot=1, osc_import_dir=None):
     settings = UserSettings(
         active_provider="gemini",
         console_host="127.0.0.1",
@@ -33,15 +34,23 @@ def _settings_file(tmp_path, *, import_dir, receive_port=9000, osc_slot=1):
         web_port=8765,
         plugin_import_dir=str(import_dir),
         osc_slot=osc_slot,
+        # Scoped under tmp_path by default so a test that forgets to pass this
+        # never falls back to the dataclass default (a real path under the
+        # developer's home directory) and writes OSC templates there.
+        osc_import_dir=str(osc_import_dir if osc_import_dir is not None else tmp_path / "osc"),
     )
     path = tmp_path / "settings.toml"
     save_user_settings(settings, path)
     return path
 
 
-def _client(tmp_path, *, import_dir, receive_port=9000, osc_slot=1):
+def _client(tmp_path, *, import_dir, receive_port=9000, osc_slot=1, osc_import_dir=None):
     settings_path = _settings_file(
-        tmp_path, import_dir=import_dir, receive_port=receive_port, osc_slot=osc_slot
+        tmp_path,
+        import_dir=import_dir,
+        receive_port=receive_port,
+        osc_slot=osc_slot,
+        osc_import_dir=osc_import_dir,
     )
     deps = ProvisionDeps(settings_path=settings_path, seed_path=tmp_path / "no-seed.toml")
     app = FastAPI()
@@ -124,6 +133,52 @@ class TestProvisionInstall:
         assert detail["error"] == "install_failed"
         # No raw OS error string leaks as the message.
         assert "확인해 주세요" in detail["message"]
+
+
+class TestOscTemplateProvisioning:
+    """The per-show OSC bootstrap (2026-08-12 recipe): POST stages both row
+    templates into the configured OSC import dir, alongside the responder
+    plugin, so onPC's native In & Out > OSC > Import has something to read."""
+
+    def test_get_reports_osc_templates_not_installed_before_install(self, tmp_path):
+        osc_dir = tmp_path / "osc"
+        client = _client(tmp_path, import_dir=tmp_path / "plugins", osc_import_dir=osc_dir)
+        body = client.get("/api/provision/responder").json()
+
+        assert body["osc_import_dir"] == str(osc_dir)
+        assert body["osc_template_assets"] == list(OSC_TEMPLATE_ASSETS)
+        assert body["osc_templates_installed"] == {name: False for name in OSC_TEMPLATE_ASSETS}
+        assert body["osc_templates_installed_all"] is False
+        assert body["osc_bootstrap_guide"]["console_port"] == 8000
+        assert body["osc_bootstrap_guide"]["receive_port"] == 9000
+
+    def test_post_stages_the_osc_templates_alongside_the_plugin(self, tmp_path):
+        osc_dir = tmp_path / "osc"
+        client = _client(tmp_path, import_dir=tmp_path / "plugins", osc_import_dir=osc_dir)
+
+        response = client.post("/api/provision/responder")
+        assert response.status_code == 200
+        body = response.json()
+        assert set(body["osc_templates_installed"]) == set(OSC_TEMPLATE_ASSETS)
+        assert body["osc_import_dir"] == str(osc_dir)
+        for name in OSC_TEMPLATE_ASSETS:
+            assert (osc_dir / name).is_file()
+
+        status = client.get("/api/provision/responder").json()
+        assert status["osc_templates_installed_all"] is True
+
+    def test_post_renders_ports_from_settings_into_the_staged_templates(self, tmp_path):
+        osc_dir = tmp_path / "osc"
+        client = _client(
+            tmp_path, import_dir=tmp_path / "plugins", osc_import_dir=osc_dir, receive_port=9456
+        )
+
+        assert client.post("/api/provision/responder").status_code == 200
+
+        row1 = (osc_dir / "copilot_osc_row1_receive.xml").read_text(encoding="utf-8")
+        row2 = (osc_dir / "copilot_osc_row2_send.xml").read_text(encoding="utf-8")
+        assert 'Port="8000"' in row1  # console_port, fixed at 8000 in _settings_file
+        assert 'Port="9456"' in row2  # receive_port, overridden for this test
 
 
 class TestOscSlotMismatchGuard:

@@ -35,6 +35,25 @@ from server.resources import resource_base
 # component, so both are installed as a pair.
 RESPONDER_ASSETS: tuple[str, ...] = ("copilot_responder.xml", "copilot_responder.lua")
 
+# The per-show OSC connectivity template pair (2026-08-12 recipe, captured by
+# reading a live, working onPC show's In & Out > OSC screen and exporting both
+# rows via onPC's native OSCData Export). onPC does NOT carry OSC config
+# forward to a new show — every fresh show starts with only a default row 1
+# and none of the fields this project depends on (prefix, destination, the
+# dedicated send-only reply row). Importing these two files via onPC's native
+# In & Out > OSC > Import is what makes a brand-new show reachable without
+# re-discovering the recipe by hand:
+#   row1 = RECEIVE — prefix "copilot" on the console-command port, native
+#     "Receive Command" execs an incoming /copilot/cmd payload as a command
+#     line (this is how server.bridge.osc.OscBridge.send_command reaches the
+#     console — no plugin round trip needed for the send direction).
+#   row2 = SEND-only — the responder's reply channel (CONFIG.osc_slot in
+#     copilot_responder.lua points at this row's index).
+OSC_TEMPLATE_ASSETS: tuple[str, ...] = (
+    "copilot_osc_row1_receive.xml",
+    "copilot_osc_row2_send.xml",
+)
+
 
 class ProvisioningError(RuntimeError):
     """Raised when a bundled responder asset is missing or cannot be installed."""
@@ -59,6 +78,16 @@ def bundled_responder_dir() -> Path:
     obligation.
     """
     return resource_base() / "console" / "lua"
+
+
+def bundled_osc_template_dir() -> Path:
+    """Resolve the bundled OSC-connectivity-template directory (dev + frozen).
+
+    Mirrors :func:`bundled_responder_dir` but for the per-show OSC row
+    templates: dev checkout resolves to ``<repo>/console/osc``; a frozen
+    PyInstaller bundle resolves to ``sys._MEIPASS/console/osc``.
+    """
+    return resource_base() / "console" / "osc"
 
 
 # The single CONFIG assignment in the bundled Lua. Anchored to line start (in
@@ -157,6 +186,83 @@ def install_responder(
     return InstallResult(installed=tuple(installed), import_dir=str(dest))
 
 
+# Matches the single ``Port="<digits>"`` attribute on the template's one
+# <OSCData .../> element. Anchored the same way as ``_OSC_SLOT_ANCHOR``: a
+# render must hit exactly one attribute, never zero (silently shipping the
+# bundled port) and never more than one (a template edit gained a second
+# Port attribute and the substitution now touches the wrong one).
+_OSC_PORT_ANCHOR = re.compile(r'Port="\d+"')
+
+
+def _render_osc_port(source_text: str, port: int) -> str:
+    """Substitute the site's port into a bundled OSCData template.
+
+    Row 1's port must track ``console_port`` (server.bridge.osc.OscBridge's
+    send target) and row 2's must track ``receive_port`` (this app's bound
+    feedback listener) — both configurable per site, so both must render
+    the same way ``osc_slot`` renders into the Lua (see ``_render_lua``).
+    """
+    rendered, count = _OSC_PORT_ANCHOR.subn(f'Port="{port}"', source_text)
+    if count != 1:
+        raise ProvisioningError(
+            'OSC template has no unique `Port="<n>"` attribute to render '
+            f"(matched {count} times) — refusing to install a row that may "
+            "not carry the configured port"
+        )
+    return rendered
+
+
+def install_osc_templates(
+    osc_import_dir: Path | str,
+    *,
+    source_dir: Path | str | None = None,
+    console_port: int | None = None,
+    receive_port: int | None = None,
+) -> InstallResult:
+    """Copy the bundled OSC row templates into ``osc_import_dir`` (filesystem only).
+
+    Mirrors :func:`install_responder`: creates the directory if absent,
+    overwrites existing files (idempotent re-install), and renders the
+    site's ports into the templates as they are copied — row 1's from
+    ``console_port``, row 2's from ``receive_port``. Leaving either ``None``
+    copies that template verbatim, keeping the bundled default port.
+
+    This does NOT configure onPC — it only stages the two files where onPC's
+    native In & Out > OSC > Import can read them. The operator (or a
+    computer-use driven setup pass) still performs one Import per new show;
+    see :func:`osc_bootstrap_guide` for the exact steps. NO OSC / console-send
+    happens here (AC-DEPLOY-014 ③) — this stays pure filesystem, same as
+    :func:`install_responder`.
+    """
+    source = Path(source_dir) if source_dir is not None else bundled_osc_template_dir()
+    dest = Path(osc_import_dir).expanduser()
+    dest.mkdir(parents=True, exist_ok=True)
+
+    ports = {
+        "copilot_osc_row1_receive.xml": console_port,
+        "copilot_osc_row2_send.xml": receive_port,
+    }
+    installed: list[str] = []
+    for name in OSC_TEMPLATE_ASSETS:
+        src = source / name
+        if not src.is_file():
+            raise ProvisioningError(f"bundled OSC template missing: {src}")
+        port = ports.get(name)
+        if port is not None:
+            rendered = _render_osc_port(src.read_text(encoding="utf-8"), port)
+            (dest / name).write_text(rendered, encoding="utf-8")
+        else:
+            shutil.copyfile(src, dest / name)
+        installed.append(name)
+    return InstallResult(installed=tuple(installed), import_dir=str(dest))
+
+
+def osc_template_status(osc_import_dir: Path | str) -> dict[str, bool]:
+    """Per-asset "is it staged?" booleans for the configured OSC import directory."""
+    dest = Path(osc_import_dir).expanduser()
+    return {name: (dest / name).is_file() for name in OSC_TEMPLATE_ASSETS}
+
+
 def responder_status(import_dir: Path | str) -> dict[str, bool]:
     """Per-asset "is it installed?" booleans for the configured import directory."""
     dest = Path(import_dir).expanduser()
@@ -178,5 +284,44 @@ def responder_guide(receive_port: int) -> dict:
             "onPC의 Plugins 풀 창에서 CopilotResponder 플러그인을 임포트(로드)합니다.",
             "임포트한 플러그인을 실행해 responder를 활성화합니다.",
             f"onPC의 OSC 출력(Output)을 이 앱의 피드백 수신 포트({receive_port})로 설정합니다.",
+        ],
+    }
+
+
+def osc_bootstrap_guide(console_port: int, receive_port: int) -> dict:
+    """Per-show OSC bootstrap steps (2026-08-12 recipe — see ``OSC_TEMPLATE_ASSETS``).
+
+    A brand-new onPC show carries NO OSC config forward — Interface binding,
+    Enable Output/Input, and every OSCData row reset to onPC's own defaults.
+    Without this one-time-per-show pass the responder plugin can be installed
+    and imported correctly and the console will still never reply: the
+    verified failure mode is an OSCData row bound to the machine's Wi-Fi/
+    Ethernet interface (``en0``) instead of loopback, which silently drops
+    127.0.0.1 traffic even after every port number is right.
+
+    ``install_osc_templates`` stages the two row files so steps 3-4 are an
+    Import + file pick rather than re-typing every field; the interface and
+    enable toggles have no export/import path in onPC 2.4.2 and must still be
+    set by hand (or by a computer-use pass driving the same screen).
+    """
+    return {
+        "console_port": console_port,
+        "receive_port": receive_port,
+        "steps": [
+            "Menu > Settings > In & Out > OSC 화면을 연다.",
+            (
+                "Interface를 lo0 (127.0.0.1)로 설정한다 — "
+                "en0/Wi-Fi로 두면 127.0.0.1 트래픽이 조용히 사라진다."
+            ),
+            (
+                f'OSC 1 행(copilot_osc_row1_receive.xml, prefix "copilot")을 '
+                f"Import한다 — 콘솔 명령 수신 포트({console_port})."
+            ),
+            (
+                f"OSC 2 행(copilot_osc_row2_send.xml)을 Import한다 — "
+                f"이 앱의 피드백 수신 포트({receive_port})."
+            ),
+            "Enable Output과 Enable Input을 둘 다 켠다(노란색으로 표시되면 켜진 상태).",
+            'Plugin "CopilotResponder" "ping <id>"를 콘솔 명령줄에서 한 번 실행해 왕복을 확인한다.',
         ],
     }

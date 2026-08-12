@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiUrl } from "../launchContext";
 import {
   allInstalled,
+  allOscTemplatesInstalled,
   installSummary,
   oscSlotWarning,
   parseInstalledList,
@@ -107,6 +108,25 @@ export function ResponderGuide() {
               <li key={step}>{step}</li>
             ))}
           </ol>
+          {status.osc_bootstrap_guide !== undefined && (
+            <>
+              <h4>OSC 연결 설정 (쇼파일마다 1회)</h4>
+              <p className="settings-hint">
+                {status.osc_import_dir !== undefined && (
+                  <>
+                    OSC 임포트 디렉터리: <code>{status.osc_import_dir}</code>
+                    {" — "}
+                  </>
+                )}
+                {allOscTemplatesInstalled(status) ? "템플릿 준비됨" : "템플릿 미준비"}
+              </p>
+              <ol className="responder-steps">
+                {status.osc_bootstrap_guide.steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </>
+          )}
         </>
       )}
 
