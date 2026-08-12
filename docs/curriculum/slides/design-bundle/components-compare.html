@@ -1,0 +1,122 @@
+<!-- @dsCard group="Components" -->
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Components — 대응표 · 2단 대비 (주력 2종)</title>
+<style>
+:root{--bg:#000;--sf-1:#1C1C1E;--sf-2:#2C2C2E;--sep:rgba(84,84,88,.65);--sep-o:rgba(84,84,88,.35);
+--lb:#fff;--lb-2:rgba(235,235,245,.60);--lb-3:rgba(235,235,245,.30);
+--red:#FF453A;--orange:#FF9F0A;--yellow:#FFD60A;--green:#30D158;--cyan:#64D2FF;--blue:#0A84FF;--purple:#BF5AF2;
+--sf:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Apple SD Gothic Neo","Pretendard","Noto Sans KR",system-ui,sans-serif;
+--sfm:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;--r:1.1em;--r-s:.55em}
+*{box-sizing:border-box}
+body{margin:0;background:#0B0B0D;color:var(--lb);font-family:var(--sf);-webkit-font-smoothing:antialiased;
+word-break:keep-all;line-break:strict;padding:44px 40px 72px;line-height:1.6;max-width:1040px}
+h1{font-size:30px;font-weight:750;letter-spacing:-.024em;margin:0 0 8px}
+h2{font-size:18px;font-weight:650;letter-spacing:-.01em;margin:36px 0 4px}
+.eyebrow{font-family:var(--sfm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);margin:0 0 12px;font-weight:600}
+.sub{font-size:15px;color:var(--lb-2);margin:0 0 6px;max-width:62ch}
+.sub b{color:var(--lb);font-weight:600}
+.mono{font-family:var(--sfm)}
+.spec{font-family:var(--sfm);font-size:11.5px;color:var(--lb-3);margin:6px 0 0;line-height:1.7}
+.spec b{color:var(--cyan);font-weight:400}
+
+.slide{container-type:inline-size;aspect-ratio:16/9;width:100%;background:#000;border-radius:12px;overflow:hidden;
+position:relative;font-size:1.5625cqw;line-height:1.4;padding:3.2em 3.6em 2.8em;display:flex;flex-direction:column;gap:1.1em;
+margin-top:12px;box-shadow:0 12px 32px -22px #000}
+.slide::before{content:"";position:absolute;left:0;top:0;bottom:0;width:.3em;background:var(--hue)}
+.slide .num{position:absolute;right:2.2em;bottom:1.5em;font-family:var(--sfm);font-size:.62em;color:var(--lb-3);letter-spacing:.08em}
+.eb{font-family:var(--sfm);font-size:.62em;letter-spacing:.14em;text-transform:uppercase;color:var(--hue);font-weight:600;margin:0}
+.head{margin:0;font-size:1.75em;line-height:1.14;letter-spacing:-.022em;font-weight:700;text-wrap:balance}
+.grow{flex:1 1 auto;min-height:0}
+
+/* 대응표 */
+.map{display:flex;flex-direction:column;border-radius:var(--r);overflow:hidden;background:var(--sf-1)}
+.map .row{display:grid;grid-template-columns:1fr 2.4em 1fr;align-items:center;gap:.4em;padding:.72em 1.15em;border-bottom:1px solid var(--sep-o)}
+.map .row:last-child{border-bottom:0}
+.map .row.h{background:var(--sf-2);padding-top:.55em;padding-bottom:.55em}
+.map .row.h span{font-family:var(--sfm);font-size:.62em;letter-spacing:.12em;text-transform:uppercase;color:var(--lb-3)}
+.map .l{font-size:.92em;color:var(--lb-2);line-height:1.4}
+.map .r{font-size:.92em;color:var(--lb);font-weight:500;line-height:1.4}
+.map .r b{font-weight:700}
+.map .ar{color:var(--hue);justify-self:center;width:1.1em;height:1.1em}
+
+/* 2단 대비 */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:.7em;align-items:stretch}
+.pane{background:var(--sf-1);border-radius:var(--r);padding:1.2em 1.25em 1.3em;display:flex;flex-direction:column;gap:.6em;min-width:0}
+.pane.no{background:#1A1416} .pane.yes{background:#0F1A22}
+.pane .ph{display:flex;align-items:center;gap:.5em;font-family:var(--sfm);font-size:.66em;letter-spacing:.11em;text-transform:uppercase;font-weight:600}
+.pane.no .ph{color:var(--red)} .pane.yes .ph{color:var(--cyan)}
+.pane ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.5em}
+.pane li{font-size:.92em;line-height:1.5;color:var(--lb-2);display:flex;gap:.55em;align-items:flex-start}
+.pane li b{color:var(--lb);font-weight:600}
+.pane li .b{flex:none;width:1.05em;height:1.05em;margin-top:.22em}
+.pane.no li .b{color:var(--red)} .pane.yes li .b{color:var(--cyan)}
+.snip{font-family:var(--sfm);font-size:.82em;line-height:1.75;white-space:pre;overflow-x:auto;color:var(--lb);padding:.4em 0}
+.snip .c{color:var(--lb-3)} .snip .ok{color:var(--green)} .snip .bad{color:var(--red)}
+.callout{background:color-mix(in srgb,var(--hue) 16%,var(--sf-1));border-radius:var(--r);padding:1em 1.2em;display:flex;gap:.85em;align-items:flex-start}
+.callout .icon{width:1.5em;height:1.5em;color:var(--hue);flex:none}
+.callout .icon svg{width:100%;height:100%;display:block}
+.callout p{margin:0;font-size:.95em;line-height:1.55;color:var(--lb)}
+.callout p b{font-weight:700;color:var(--hue)}
+.note{background:var(--sf-1);border-left:3px solid var(--cyan);border-radius:0 10px 10px 0;padding:14px 18px;font-size:13.5px;color:var(--lb-2);margin-top:20px}
+.note b{color:var(--lb)}
+</style></head><body>
+
+<p class="eyebrow">Components · Compare</p>
+<h1>이 덱 설득의 뼈대 2종</h1>
+<p class="sub">대응표는 <b>34장 중 5장</b>에 쓰이는 주력 컴포넌트입니다. 이 강연의 논지 자체가 <b>“당신이 이미 하는 일 → AI에게 하는 일”</b>이라는 대응 구조라, 이 컴포넌트가 곧 메시지입니다. 가장 공들여 그립니다.</p>
+
+<h2>① 대응표 <span class="mono" style="font-size:12px;color:var(--lb-3)">.map</span> — 11 · 13 · 16 · 19 · 34</h2>
+<p class="spec">3열 그리드 <b>1fr / 2.4em / 1fr</b> &nbsp;·&nbsp; <b>왼쪽 = 익숙한 것</b>(lb-2, 흐리게) <b>→ 화살표</b>(모듈색) <b>→ 오른쪽 = 새로 배울 것</b>(lb, 진하게) &nbsp;·&nbsp; 좌우 무게 차이가 <b>“이미 아는 것에서 출발한다”</b>를 시각으로 말한다 &nbsp;·&nbsp; 헤더 행은 <span class="mono">--sf-2</span></p>
+<section class="slide" style="--hue:var(--red)">
+  <p class="eb">M1 · 당신이 이미 가진 것</p>
+  <h2 class="head">조명 하는 사람은 이미 절반을 배웠습니다</h2>
+  <div class="map grow">
+    <div class="row h"><span>조명에서 하는 일</span><span></span><span>AI를 부릴 때 하는 일</span></div>
+    <div class="row"><span class="l">큐 순서를 짠다</span><svg class="ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13M13 7l5 5-5 5"/></svg><span class="r">작업 순서를 짠다</span></div>
+    <div class="row"><span class="l">포커싱 시키고 결과를 눈으로 본다</span><svg class="ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13M13 7l5 5-5 5"/></svg><span class="r">시키고 결과를 확인한다</span></div>
+    <div class="row"><span class="l">안 밝으면 채널 → 밝기 → 패치 순으로 본다</span><svg class="ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13M13 7l5 5-5 5"/></svg><span class="r">안 되면 원인을 단계별로 찾는다</span></div>
+    <div class="row"><span class="l">리허설 없이 본공연 안 간다</span><svg class="ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13M13 7l5 5-5 5"/></svg><span class="r">확인 없이 실제 적용 안 한다</span></div>
+    <div class="row"><span class="l">실수하면 공연이 멈춘다는 감각</span><svg class="ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13M13 7l5 5-5 5"/></svg><span class="r"><b>되돌릴 수 없는 일</b>을 구분한다</span></div>
+  </div>
+  <span class="num">13</span>
+</section>
+
+<h2>② 2단 대비 <span class="mono" style="font-size:12px;color:var(--lb-3)">.split</span> — 03 · 07 · 21 · 28 · 31</h2>
+<p class="spec"><b>왼쪽 = 문제 · 금지</b> (<span class="mono">.pane.no</span> / 배경 <span class="mono">#1A1416</span> / red) &nbsp;·&nbsp; <b>오른쪽 = 해법 · 권장</b> (<span class="mono">.pane.yes</span> / 배경 <span class="mono">#0F1A22</span> / cyan) &nbsp;·&nbsp; 좌우 항목 수를 <b>같게</b> 맞춘다 — 한쪽만 길면 대비가 아니라 편들기로 보인다</p>
+<section class="slide" style="--hue:var(--purple)">
+  <p class="eb">M5-4 · 루프</p>
+  <h2 class="head">“될 때까지”에는 <span style="color:var(--red)">반드시</span> 그만둘 조건을 겁니다</h2>
+  <div class="split grow">
+    <div class="pane no">
+      <span class="ph">나쁜 조건</span>
+      <div class="snip"><span class="bad">"완벽해질 때까지"</span>
+<span class="c">→ 판정 불가. 영원히 돈다</span></div>
+      <ul>
+        <li><svg class="b" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg><span>“잘 작동하면”</span></li>
+        <li><svg class="b" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg><span>“문제 없으면”</span></li>
+        <li><svg class="b" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg><span>“완성되면”</span></li>
+      </ul>
+    </div>
+    <div class="pane yes">
+      <span class="ph">좋은 조건</span>
+      <div class="snip"><span class="ok">"점검표 통과 &amp;&amp; 문법 검사 통과,</span>
+<span class="ok"> 안 되면 20번 하고 중단"</span>
+<span class="c">→ 기계가 판정 가능 + 탈출구</span></div>
+      <ul>
+        <li><svg class="b" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg><span>점검 명령이 <b>0을 반환하면</b></span></li>
+        <li><svg class="b" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg><span>오류 개수가 <b>0이면</b></span></li>
+        <li><svg class="b" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg><span>파일이 <b>있으면</b></span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout" style="--hue:var(--red)">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 4.3 2.6 17.5A1.9 1.9 0 0 0 4.3 20.4h15.4a1.9 1.9 0 0 0 1.7-2.9L13.7 4.3a1.9 1.9 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17v.1"/></svg></span>
+    <p>반드시 세 가지 한도를 겁니다 — <b>몇 번까지 반복할지 · 돈을 얼마까지 쓸지 · 같은 실패를 몇 번까지</b>. 이 프로젝트는 재시도 <b>3번</b>입니다.</p>
+  </div>
+  <span class="num">21</span>
+</section>
+
+<div class="note"><b>대응표의 좌우 무게 차이는 의도된 것입니다.</b> 왼쪽(<span class="mono">--lb-2</span>)을 오른쪽(<span class="mono">--lb</span>)만큼 진하게 만들면 "두 개를 비교하는 표"가 되어버립니다.<br>
+이 컴포넌트가 말하려는 건 비교가 아니라 <b>이동</b>입니다 — 왼쪽에서 오른쪽으로 건너간다는 것. 흐린 왼쪽 → 화살표 → 진한 오른쪽 순서로 눈이 흐르게 두세요.</div>
+
+</body></html>

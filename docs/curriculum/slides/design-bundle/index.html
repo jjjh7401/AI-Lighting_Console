@@ -1,0 +1,105 @@
+<!-- @dsCard group="개요" -->
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>조명감독 AI 강연 — 슬라이드 디자인 시스템</title>
+<style>
+:root{--bg:#000;--sf-1:#1C1C1E;--sf-2:#2C2C2E;--sep:rgba(84,84,88,.65);--sep-o:rgba(84,84,88,.35);
+--lb:#fff;--lb-2:rgba(235,235,245,.60);--lb-3:rgba(235,235,245,.30);
+--red:#FF453A;--orange:#FF9F0A;--yellow:#FFD60A;--green:#30D158;--cyan:#64D2FF;--blue:#0A84FF;--purple:#BF5AF2;
+--sf:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Apple SD Gothic Neo","Pretendard","Noto Sans KR",system-ui,sans-serif;
+--sfm:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--lb);font-family:var(--sf);-webkit-font-smoothing:antialiased;
+word-break:keep-all;line-break:strict;padding:44px 40px 72px;line-height:1.6;max-width:1080px}
+h1{font-size:30px;font-weight:750;letter-spacing:-.024em;margin:0 0 8px;text-wrap:balance}
+h2{font-size:19px;font-weight:650;letter-spacing:-.01em;margin:40px 0 12px}
+.eyebrow{font-family:var(--sfm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin:0 0 12px;font-weight:600}
+.sub{font-size:15.5px;color:var(--lb-2);margin:0;max-width:62ch}
+.sub b{color:var(--lb);font-weight:600}
+.mono{font-family:var(--sfm);font-variant-numeric:tabular-nums}
+table{border-collapse:collapse;width:100%;font-size:13px;margin-top:10px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--sep-o);vertical-align:top}
+thead th{font-family:var(--sfm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--lb-3);font-weight:500;background:var(--sf-1)}
+td:first-child{font-weight:600;white-space:nowrap}
+.rail{display:inline-block;width:22px;height:6px;border-radius:2px;vertical-align:middle;margin-right:8px}
+.note{background:var(--sf-1);border-left:3px solid var(--blue);border-radius:0 10px 10px 0;padding:14px 18px;font-size:13.5px;color:var(--lb-2);margin-top:18px}
+.note b{color:var(--lb)}
+.map{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:14px}
+.mc{background:var(--sf-1);border-radius:14px;padding:16px 18px 18px}
+.mc .n{font-family:var(--sfm);font-size:10px;letter-spacing:.12em;color:var(--lb-3);display:block;margin-bottom:6px}
+.mc .t{font-size:15px;font-weight:650;display:block;margin-bottom:5px}
+.mc .d{font-size:13px;color:var(--lb-2);line-height:1.55}
+.star{color:var(--orange);font-weight:700}
+</style></head><body>
+
+<p class="eyebrow">Overview</p>
+<h1>조명감독을 위한 AI 도구 제작 — 3시간 인식 강연</h1>
+<p class="sub">조명감독·조명 전공학생 대상 특강 슬라이드 <b>34장</b>의 디자인 시스템입니다. 청중은 <b>AI와 프로그래밍을 전혀 모른다고 전제</b>합니다. Apple HIG 다크 모드를 그대로 적용했고, 슬라이드 면은 항상 다크로 고정합니다(투사면).</p>
+
+<div class="map">
+  <div class="mc"><span class="n">FORMAT</span><span class="t">16:9 · 1280×720</span><span class="d">컨테이너 쿼리로 통째 스케일. 내부 치수는 전부 <span class="mono">em</span></span></div>
+  <div class="mc"><span class="n">THEME</span><span class="t">다크 고정</span><span class="d">뷰어 테마는 슬라이드 <b>바깥 여백에만</b> 반영</span></div>
+  <div class="mc"><span class="n">LANGUAGE</span><span class="t">전량 한국어</span><span class="d">영문은 eyebrow·상태 라벨에만. <span class="mono">keep-all</span> 필수</span></div>
+  <div class="mc"><span class="n">STRUCTURE</span><span class="t">3부 구성</span><span class="d">왜 만드나 50분 · 어떻게 부리나 80분 · 뭐가 되나 50분</span></div>
+</div>
+
+<h2>이 프로젝트를 여는 순서</h2>
+<table>
+  <thead><tr><th>순서</th><th>파일</th><th>무엇이 들어 있나</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td class="mono">brief</td><td>청중·톤·금지사항·근거. <b>디자인보다 이걸 먼저 읽는다</b> — 톤이 어긋나면 다른 게 다 맞아도 실패한다</td></tr>
+    <tr><td>2</td><td class="mono">foundations-color</td><td>표면·텍스트 토큰 + Apple 시스템 색 7개의 <b>의미 배정</b></td></tr>
+    <tr><td>3</td><td class="mono">foundations-type</td><td>타입 스케일 · 한글 조판 규칙 · 컨테이너 스케일 방식</td></tr>
+    <tr><td>4</td><td class="mono">foundations-layout</td><td>슬라이드 프레임 · 간격 · 모서리 · 모듈 레일</td></tr>
+    <tr><td>5</td><td class="mono">components-frames</td><td>표지 · 섹션 표지 · 전면 인용 — 화면 전체를 쓰는 3종</td></tr>
+    <tr><td>6</td><td class="mono">components-content</td><td>카드 · 숫자판 · 타일 · 칩 · 스텝 · 콜아웃 — 본문 6종</td></tr>
+    <tr><td>7</td><td class="mono">components-compare</td><td><b>대응표 · 2단 대비</b> — 이 덱 설득의 뼈대 2종</td></tr>
+    <tr><td>8</td><td class="mono">svg-system</td><td>아이콘 규격 12종 + 다이어그램 클래스 규약 + 8종 명세</td></tr>
+    <tr><td>9</td><td class="mono">slides-full</td><td>완성된 34장 전체 · 발표자 노트 토글 포함</td></tr>
+  </tbody>
+</table>
+
+<h2>슬라이드 34장 지도</h2>
+<table>
+  <thead><tr><th>#</th><th>섹션</th><th>색</th><th>컴포넌트</th><th>핵심 메시지</th></tr></thead>
+  <tbody>
+    <tr><td>01</td><td>표지</td><td><span class="rail" style="background:#0A84FF"></span>blue</td><td>표지</td><td>코드 타이핑은 배우지 않는다</td></tr>
+    <tr><td>02</td><td>아젠다</td><td><span class="rail" style="background:#0A84FF"></span>blue</td><td>다이어그램</td><td>3시간 = 50 + 80 + 50분</td></tr>
+    <tr><td>03</td><td>범위 선언</td><td><span class="rail" style="background:#0A84FF"></span>blue</td><td>2단 대비</td><td>안 배우는 것 4 / 배우는 것 4</td></tr>
+    <tr><td>04</td><td>근거</td><td><span class="rail" style="background:#0A84FF"></span>blue</td><td>숫자 판</td><td>3주 · 443 · 17 · 131 · 10 · <b>1명</b></td></tr>
+    <tr><td>05</td><td>용어</td><td><span class="rail" style="background:#FF9F0A"></span>orange</td><td>칩 6</td><td>오늘 나올 말은 여섯 개가 전부</td></tr>
+    <tr><td>06</td><td>용어 ①</td><td><span class="rail" style="background:#FF9F0A"></span>orange</td><td>다이어그램</td><td>바이브 코딩 · 되돌림이 작업의 8할</td></tr>
+    <tr><td>07</td><td>용어 ②③</td><td><span class="rail" style="background:#64D2FF"></span>cyan</td><td>2단 대비</td><td>조별과제를 조장 혼자 하면</td></tr>
+    <tr><td>08</td><td>용어 ④⑤⑥</td><td><span class="rail" style="background:#30D158"></span>green</td><td>카드 3</td><td>마구 · 리밋스위치 · 탈출조건</td></tr>
+    <tr><td>09</td><td><b>PART 1</b></td><td><span class="rail" style="background:#FF453A"></span>red</td><td>섹션 표지</td><td>왜 해야 하는가</td></tr>
+    <tr><td>10</td><td>M1</td><td><span class="rail" style="background:#FF453A"></span>red</td><td>카드 3</td><td>그 프로그램이 없는 이유 3가지</td></tr>
+    <tr><td>11</td><td>M1</td><td><span class="rail" style="background:#FF453A"></span>red</td><td>대응표</td><td>그 셋이 <b>당신에게는</b> 해당 없다</td></tr>
+    <tr><td>12</td><td>M1 <span class="star">★</span></td><td><span class="rail" style="background:#FF453A"></span>red</td><td>다이어그램</td><td>막히던 자리가 사라졌다</td></tr>
+    <tr><td>13</td><td>M1</td><td><span class="rail" style="background:#FF453A"></span>red</td><td>대응표</td><td>조명인은 이미 절반을 배웠다</td></tr>
+    <tr><td>14</td><td>M1 마무리</td><td><span class="rail" style="background:#FF453A"></span>red</td><td>인용</td><td>새로 배울 건 코딩이 아니다</td></tr>
+    <tr><td>15</td><td><b>PART 2</b></td><td><span class="rail" style="background:#64D2FF"></span>cyan</td><td>섹션 표지</td><td>여러 대를 부리는 법</td></tr>
+    <tr><td>16</td><td>M5-1</td><td><span class="rail" style="background:#64D2FF"></span>cyan</td><td>대응표</td><td>감독은 직접 다 하지 않는다</td></tr>
+    <tr><td>17</td><td>M5-2</td><td><span class="rail" style="background:#64D2FF"></span>cyan</td><td>타일 10</td><td>역할 10개 중 <b>3개가 검사 전담</b></td></tr>
+    <tr><td>18</td><td>M5-2 <span class="star">★</span></td><td><span class="rail" style="background:#64D2FF"></span>cyan</td><td>인용</td><td>내가 검수하면 못 본다</td></tr>
+    <tr><td>19</td><td>M5-3</td><td><span class="rail" style="background:#30D158"></span>green</td><td>대응표</td><td>규칙 63 · 스킬 28 · 훅 25</td></tr>
+    <tr><td>20</td><td>M5-3</td><td><span class="rail" style="background:#30D158"></span>green</td><td>다이어그램</td><td>하네스는 자란다</td></tr>
+    <tr><td>21</td><td>M5-4 <span class="star">★</span></td><td><span class="rail" style="background:#BF5AF2"></span>purple</td><td>2단 대비</td><td>나쁜 조건 vs 좋은 조건 · 상한 3회</td></tr>
+    <tr><td>22</td><td>M5-5</td><td><span class="rail" style="background:#64D2FF"></span>cyan</td><td>2단 혼합</td><td>순서 짜기 + 기억 관리</td></tr>
+    <tr><td>23</td><td>M5 종합 <span class="star">★</span></td><td><span class="rail" style="background:#64D2FF"></span>cyan</td><td>다이어그램</td><td>다섯이 맞물리는 전체 그림</td></tr>
+    <tr><td>24</td><td><b>PART 3</b></td><td><span class="rail" style="background:#0A84FF"></span>blue</td><td>섹션 표지</td><td>그래서 뭐가 되나 · 라이브 시연</td></tr>
+    <tr><td>25</td><td>M6 <span class="star">★</span></td><td><span class="rail" style="background:#0A84FF"></span>blue</td><td>스텝 6</td><td>말 한마디가 조명이 되기까지</td></tr>
+    <tr><td>26</td><td>M6</td><td><span class="rail" style="background:#0A84FF"></span>blue</td><td>다이어그램</td><td>통행권 — 애매하면 막는다</td></tr>
+    <tr><td>27</td><td>M6-1</td><td><span class="rail" style="background:#30D158"></span>green</td><td>타일 12</td><td>지금 되는 것 12가지</td></tr>
+    <tr><td>28</td><td><b>실패</b> <span class="star">★최중요</span></td><td><span class="rail" style="background:#FF453A"></span>red</td><td>2단 + 코드</td><td>없는 명령이 <span class="mono">ok</span>라고 답했다</td></tr>
+    <tr><td>29</td><td>실패</td><td><span class="rail" style="background:#FF453A"></span>red</td><td>다이어그램</td><td>화면 번호 ≠ 진짜 주소</td></tr>
+    <tr><td>30</td><td>정리 <span class="star">★</span></td><td><span class="rail" style="background:#FF9F0A"></span>orange</td><td>카드 3</td><td>외울 문장 3개</td></tr>
+    <tr><td>31</td><td>한계</td><td><span class="rail" style="background:#FFD60A"></span>yellow</td><td>2단 대비</td><td>반만 되는 것 / <b>일부러</b> 안 하는 것</td></tr>
+    <tr><td>32</td><td>결론</td><td><span class="rail" style="background:#0A84FF"></span>blue</td><td>인용</td><td>만 명 vs 당신 한 사람</td></tr>
+    <tr><td>33</td><td>클로징 <span class="star">★</span></td><td><span class="rail" style="background:#BF5AF2"></span>purple</td><td>인용</td><td>이미 하고 있는 일</td></tr>
+    <tr><td>34</td><td>다음 단계</td><td><span class="rail" style="background:#0A84FF"></span>blue</td><td>대응표</td><td>정규 편성 4종</td></tr>
+  </tbody>
+</table>
+
+<div class="note"><b>★ 표시 8장이 시각적 정점입니다 — 12 · 18 · 21 · 23 · 25 · 28 · 30 · 33.</b><br>
+이 8장이 약하면 덱 전체가 무너집니다. 나머지를 다듬기 전에 이 8장부터 완성하세요. 특히 <b>28번(실패 사례)이 성공 슬라이드보다 약해 보이면 안 됩니다</b> — 이 강연은 성공담이 아니라 검증 규율을 가르치는 자리입니다.</div>
+
+</body></html>

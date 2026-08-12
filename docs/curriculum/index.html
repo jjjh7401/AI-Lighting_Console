@@ -1,0 +1,1465 @@
+<title>조명감독을 위한 AI 도구 제작 과정 — 강의계획서</title>
+
+<style>
+/* ─── TOKENS · light: drafting vellum under daylight ─── */
+:root {
+  --paper:#E7E9E2; --surface:#F3F4EF; --surface-2:#DEE1D8;
+  --ink:#191C18; --ink-2:#474C45; --ink-3:#757B72;
+  --rule:#C4C8BD; --rule-soft:#D6D9CF;
+  --accent:#1F5479; --accent-ink:#16405C; --accent-bg:#DCE5EC;
+  --warn:#9A3412; --warn-bg:#EFDED5; --good:#2C6B45; --good-bg:#DCE7DF;
+  --shadow:0 1px 0 rgba(25,28,24,.06), 0 8px 24px -18px rgba(25,28,24,.5);
+  --gel-1:#C1272D; --gel-2:#DE8A1B; --gel-3:#D9B429; --gel-4:#2F7D4F;
+  --gel-5:#1B7A82; --gel-6:#1E4C93; --gel-7:#4A2C86;
+  --sans:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,"Cascadia Mono",Consolas,"Liberation Mono",monospace;
+  --gutter:5.25rem; --measure:34rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:#141716; --surface:#1C201E; --surface-2:#262B28;
+    --ink:#E3E6E0; --ink-2:#A7ADA6; --ink-3:#79807A;
+    --rule:#333935; --rule-soft:#272C29;
+    --accent:#74AAD0; --accent-ink:#9CC5E3; --accent-bg:#1A2833;
+    --warn:#E0906A; --warn-bg:#2E1F18; --good:#6FBF8F; --good-bg:#182420;
+    --shadow:0 1px 0 rgba(0,0,0,.4), 0 10px 30px -20px rgba(0,0,0,.9);
+    --gel-1:#E0484E; --gel-2:#F0A63C; --gel-3:#E8CB4C; --gel-4:#4FA875;
+    --gel-5:#3AA2AC; --gel-6:#4C7FCB; --gel-7:#7E5FBE;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:#141716; --surface:#1C201E; --surface-2:#262B28;
+  --ink:#E3E6E0; --ink-2:#A7ADA6; --ink-3:#79807A;
+  --rule:#333935; --rule-soft:#272C29;
+  --accent:#74AAD0; --accent-ink:#9CC5E3; --accent-bg:#1A2833;
+  --warn:#E0906A; --warn-bg:#2E1F18; --good:#6FBF8F; --good-bg:#182420;
+  --shadow:0 1px 0 rgba(0,0,0,.4), 0 10px 30px -20px rgba(0,0,0,.9);
+  --gel-1:#E0484E; --gel-2:#F0A63C; --gel-3:#E8CB4C; --gel-4:#4FA875;
+  --gel-5:#3AA2AC; --gel-6:#4C7FCB; --gel-7:#7E5FBE;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.8;-webkit-font-smoothing:antialiased;word-break:keep-all}
+.sheet{max-width:60rem;margin:0 auto;padding:2rem 1.25rem 6rem}
+p{margin:0;max-width:var(--measure)}
+strong{font-weight:700;color:var(--ink)}
+em{font-style:normal}
+a{color:var(--accent);text-underline-offset:3px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--mono);font-size:.6875rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);margin:0}
+
+/* ─── title block ─── */
+.titleblock{border:1px solid var(--rule);background:var(--surface);box-shadow:var(--shadow);display:flex;flex-direction:column}
+.titleblock-main{padding:2.25rem 1.75rem 2rem;display:flex;flex-direction:column;gap:1rem;border-bottom:1px solid var(--rule)}
+.titleblock h1{margin:0;font-size:clamp(1.75rem,4.8vw,2.85rem);line-height:1.18;letter-spacing:-.022em;font-weight:800;text-wrap:balance}
+.titleblock .lede{font-size:clamp(1rem,2.1vw,1.125rem);color:var(--ink-2);line-height:1.75;max-width:38rem}
+.titleblock-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(10.5rem,1fr))}
+.field{padding:.9rem 1.1rem 1rem;border-right:1px solid var(--rule-soft);border-top:1px solid var(--rule-soft);display:flex;flex-direction:column;gap:.2rem}
+.field:last-child{border-right:0}
+.field dt{font-family:var(--mono);font-size:.625rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.field dd{margin:0;font-size:.9375rem;line-height:1.5;color:var(--ink);font-weight:600}
+
+/* ─── facts ─── */
+.facts{margin-top:2.5rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(7.5rem,1fr));gap:1px;background:var(--rule-soft);border:1px solid var(--rule-soft)}
+.fact{background:var(--paper);padding:1.05rem .95rem 1.15rem;display:flex;flex-direction:column;gap:.15rem}
+.fact-num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:clamp(1.4rem,4vw,1.95rem);font-weight:600;line-height:1.05;letter-spacing:-.02em;color:var(--ink)}
+.fact-num .unit{font-size:.5em;color:var(--ink-3);margin-left:.15em}
+.fact-label{font-size:.78125rem;color:var(--ink-2);line-height:1.45}
+.facts-note{margin-top:.7rem;font-size:.78125rem;color:var(--ink-3);font-family:var(--mono);max-width:none;overflow-x:auto}
+
+/* ─── block layout ─── */
+.block{margin-top:4.25rem;display:grid;grid-template-columns:var(--gutter) minmax(0,1fr);gap:0 1.75rem;align-items:start}
+.cue{position:sticky;top:1.5rem;display:flex;flex-direction:column;gap:.5rem;padding-top:.35rem}
+.cue-id{font-family:var(--mono);font-size:.6875rem;letter-spacing:.1em;color:var(--ink-3);text-transform:uppercase}
+.cue-hr{font-family:var(--mono);font-size:.625rem;color:var(--ink-3)}
+.chip{width:2.25rem;height:.5rem;border-radius:1px;background:var(--chip,var(--ink-3))}
+.block-body{display:flex;flex-direction:column;gap:1.35rem;min-width:0}
+.block h2{margin:0;font-size:clamp(1.3rem,3vw,1.7rem);line-height:1.28;letter-spacing:-.015em;font-weight:750;text-wrap:balance}
+.block h3{margin:0;font-size:1.0625rem;font-weight:700;line-height:1.45;letter-spacing:-.008em}
+.block h4{margin:0;font-size:.9375rem;font-weight:700;line-height:1.5}
+@media (max-width:46rem){
+  .block{grid-template-columns:1fr;gap:1rem}
+  .cue{position:static;flex-direction:row;align-items:center;gap:.7rem;padding-top:0}
+  .chip{width:1.6rem}
+}
+
+/* ─── PLAIN-LANGUAGE LAYERS ─── */
+.plain{
+  border-left:4px solid var(--accent);
+  background:var(--accent-bg);
+  padding:1rem 1.15rem 1.1rem;
+  border-radius:0 3px 3px 0;
+  display:flex;flex-direction:column;gap:.4rem;max-width:none;
+}
+.plain-tag{font-family:var(--mono);font-size:.6875rem;letter-spacing:.1em;color:var(--accent-ink);font-weight:600}
+.plain-body{font-size:1rem;line-height:1.72;color:var(--ink);font-weight:500}
+.plain-body strong{font-weight:750}
+
+.easy{
+  border:1px dashed var(--good);
+  background:var(--good-bg);
+  padding:.9rem 1.05rem 1rem;
+  border-radius:3px;
+  display:flex;flex-direction:column;gap:.35rem;max-width:none;
+}
+.easy-tag{font-family:var(--mono);font-size:.6875rem;letter-spacing:.08em;color:var(--good);font-weight:600}
+.easy p{font-size:.9375rem;line-height:1.7;color:var(--ink);max-width:none}
+
+.adv{
+  border:1px solid var(--rule);
+  background:var(--surface);
+  padding:.9rem 1.05rem 1rem;
+  border-radius:3px;
+  display:flex;flex-direction:column;gap:.4rem;max-width:none;
+}
+.adv-tag{font-family:var(--mono);font-size:.6875rem;letter-spacing:.08em;color:var(--ink-3);font-weight:600}
+.adv p{font-size:.875rem;line-height:1.68;color:var(--ink-2);max-width:none}
+
+.terms{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center;max-width:none}
+.terms-tag{font-family:var(--mono);font-size:.6875rem;letter-spacing:.08em;color:var(--ink-3);margin-right:.2rem}
+.term{
+  font-size:.78125rem;padding:.15rem .5rem .2rem;border:1px solid var(--rule);
+  border-radius:99px;color:var(--ink-2);background:var(--surface);
+}
+
+.lvl{font-family:var(--mono);font-size:.625rem;letter-spacing:.06em;color:var(--ink-3);white-space:nowrap}
+
+/* ─── module map ─── */
+.modmap{display:flex;flex-direction:column;border-top:1px solid var(--rule)}
+.mod{border-bottom:1px solid var(--rule-soft);padding:.9rem 0;display:grid;grid-template-columns:2.75rem minmax(0,1fr) 4.5rem;gap:0 .9rem;align-items:start}
+.mod-id{font-family:var(--mono);font-size:.875rem;font-weight:600;color:var(--ink-3);padding-top:.15rem;display:flex;flex-direction:column;gap:.35rem}
+.mod-gel{width:1.75rem;height:.375rem;border-radius:1px}
+.mod-body{display:flex;flex-direction:column;gap:.2rem;min-width:0}
+.mod-t{font-size:1rem;font-weight:700;line-height:1.45}
+.mod-q{font-size:.875rem;color:var(--ink-2);line-height:1.55}
+.mod-h{font-family:var(--mono);font-size:.75rem;color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums;padding-top:.25rem;display:flex;flex-direction:column;gap:.15rem;align-items:flex-end}
+.mod--core{background:var(--accent-bg);padding-left:.75rem;padding-right:.75rem;border-bottom-color:var(--accent)}
+.mod--core .mod-id{color:var(--accent-ink)}
+
+/* ─── glossary ─── */
+.gloss{display:grid;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr));gap:1px;background:var(--rule-soft);border:1px solid var(--rule-soft)}
+.gloss-col{background:var(--paper);padding:1.2rem 1.15rem 1.3rem;display:flex;flex-direction:column;gap:.75rem}
+.gloss-head{font-family:var(--mono);font-size:.6875rem;letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:.5rem}
+.gloss-head::before{content:"";width:.5rem;height:.5rem;background:currentColor;border-radius:50%;flex:none}
+.gloss--light .gloss-head{color:var(--gel-2)}
+.gloss--ai .gloss-head{color:var(--accent)}
+.gloss dl{margin:0;display:flex;flex-direction:column;gap:.55rem}
+.gloss dt{font-size:.9375rem;font-weight:700;line-height:1.45}
+.gloss dd{margin:0;font-size:.875rem;color:var(--ink-2);line-height:1.6}
+
+/* ─── two-up ─── */
+.twoup{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1px;background:var(--rule-soft);border:1px solid var(--rule-soft)}
+.pane{background:var(--paper);padding:1.3rem 1.2rem 1.4rem;display:flex;flex-direction:column;gap:.8rem}
+.pane ul{margin:0;padding-left:1.05rem;display:flex;flex-direction:column;gap:.45rem}
+.pane li{font-size:.9375rem;line-height:1.65;color:var(--ink-2)}
+.pane-head{font-family:var(--mono);font-size:.6875rem;letter-spacing:.13em;text-transform:uppercase;display:flex;align-items:center;gap:.5rem}
+.pane-head::before{content:"";width:.5rem;height:.5rem;background:currentColor;border-radius:50%;flex:none}
+.pane--no .pane-head{color:var(--ink-3)}
+.pane--yes .pane-head{color:var(--accent)}
+
+/* ─── diagram ─── */
+.diagram{border:1px solid var(--rule);background:var(--surface);padding:1.5rem 1.25rem;overflow-x:auto}
+.diagram svg{display:block;width:100%;height:auto;min-width:21rem;max-width:34rem;margin:0 auto}
+.d-node{fill:var(--surface-2);stroke:var(--rule);stroke-width:1}
+.d-node--you{fill:var(--accent-bg);stroke:var(--accent)}
+.d-node--warn{fill:var(--warn-bg);stroke:var(--warn)}
+.d-label{fill:var(--ink);font-family:var(--sans);font-size:12px;font-weight:650}
+.d-small{fill:var(--ink-2);font-family:var(--sans);font-size:10.5px}
+.d-sub{fill:var(--ink-3);font-family:var(--mono);font-size:9.5px;letter-spacing:.1em}
+.d-line{stroke:var(--ink-3);stroke-width:1.25;fill:none}
+.d-head{fill:var(--ink-3)}
+.diagram-cap{font-size:.8125rem;color:var(--ink-3);line-height:1.65;margin-top:.75rem;max-width:none}
+
+/* ─── flow ─── */
+.flow{display:flex;flex-direction:column;gap:1px;background:var(--rule-soft);border:1px solid var(--rule-soft)}
+.step{background:var(--paper);padding:.85rem 1.1rem .95rem;display:grid;grid-template-columns:1.6rem minmax(0,1fr);gap:.8rem;align-items:start}
+.step-n{font-family:var(--mono);font-size:.8125rem;color:var(--ink-3);padding-top:.1rem}
+.step-b{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+.step-t{font-size:.9375rem;font-weight:650;line-height:1.5}
+.step-d{font-size:.875rem;color:var(--ink-2);line-height:1.62}
+.step--mark{background:var(--accent-bg)}
+.step--mark .step-n{color:var(--accent-ink)}
+
+/* ─── concepts ─── */
+.concepts{display:flex;flex-direction:column;gap:1.9rem}
+.concept{border-top:2px solid var(--chip,var(--accent));padding-top:.9rem;display:flex;flex-direction:column;gap:.75rem}
+.concept-head{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+.concept-n{font-family:var(--mono);font-size:.6875rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);flex:none}
+.concept-t{font-size:1.125rem;font-weight:750;line-height:1.35;letter-spacing:-.01em}
+.concept p{font-size:.9375rem;color:var(--ink-2);line-height:1.68}
+
+/* ─── cases ─── */
+.cases{display:flex;flex-direction:column;gap:1px;background:var(--rule-soft);border:1px solid var(--rule-soft)}
+.case{background:var(--paper);padding:1.15rem 1.2rem 1.25rem;display:flex;flex-direction:column;gap:.55rem}
+.case-head{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+.case-id{font-family:var(--mono);font-size:.6875rem;letter-spacing:.1em;color:var(--ink-3);flex:none}
+.case-title{font-size:.9375rem;font-weight:700;line-height:1.45}
+.case p{font-size:.9375rem;color:var(--ink-2);line-height:1.68}
+.snippet{font-family:var(--mono);font-size:.8125rem;line-height:1.75;background:var(--surface);border:1px solid var(--rule-soft);border-left:2px solid var(--warn);padding:.75rem .85rem;overflow-x:auto;white-space:pre;color:var(--ink);max-width:none}
+.kicker{font-size:.9375rem;font-weight:600;color:var(--warn);line-height:1.65;background:var(--warn-bg);padding:.6rem .8rem;border-radius:2px;max-width:none}
+.kicker strong{color:var(--warn)}
+
+/* ─── checklist ─── */
+.check{border:1px solid var(--rule);background:var(--surface);box-shadow:var(--shadow)}
+.check-head{padding:1.1rem 1.2rem;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:.3rem}
+.check-head p{font-size:.875rem;color:var(--ink-2)}
+.check-row{display:grid;grid-template-columns:1.75rem minmax(0,1fr) auto;gap:.75rem;align-items:center;padding:.75rem 1.2rem;border-bottom:1px solid var(--rule-soft)}
+.check-n{font-family:var(--mono);font-size:.8125rem;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.check-q{font-size:.9375rem;line-height:1.55}
+.check-q small{display:block;color:var(--ink-3);font-size:.78125rem;line-height:1.5;margin-top:.1rem}
+.toggle{display:flex;gap:.3rem;flex:none}
+.toggle button{font-family:var(--mono);font-size:.6875rem;letter-spacing:.05em;padding:.32rem .6rem .36rem;border:1px solid var(--rule);background:var(--paper);color:var(--ink-3);border-radius:2px;cursor:pointer;transition:background .12s ease,color .12s ease,border-color .12s ease}
+.toggle button:hover{border-color:var(--ink-3);color:var(--ink-2)}
+.toggle button[aria-pressed="true"][data-v="ok"]{background:var(--good);border-color:var(--good);color:var(--paper)}
+.toggle button[aria-pressed="true"][data-v="no"]{background:var(--warn);border-color:var(--warn);color:var(--paper)}
+.verdict{padding:1.05rem 1.2rem 1.25rem;display:flex;flex-direction:column;gap:.3rem;border-top:2px solid var(--rule)}
+.verdict-title{font-size:1rem;font-weight:700;line-height:1.45}
+.verdict-body{font-size:.875rem;color:var(--ink-2);line-height:1.65}
+.verdict[data-state="go"]{border-top-color:var(--good)}
+.verdict[data-state="go"] .verdict-title{color:var(--good)}
+.verdict[data-state="care"]{border-top-color:var(--accent)}
+.verdict[data-state="care"] .verdict-title{color:var(--accent-ink)}
+.verdict[data-state="stop"]{border-top-color:var(--warn)}
+.verdict[data-state="stop"] .verdict-title{color:var(--warn)}
+
+/* ─── table ─── */
+.tablewrap{overflow-x:auto;border:1px solid var(--rule-soft)}
+.tablewrap--wide table{min-width:46rem}
+.tablewrap--wide td,.tablewrap--wide th{font-size:.8125rem}
+table{border-collapse:collapse;width:100%;min-width:28rem;font-size:.875rem}
+th,td{text-align:left;padding:.62rem .8rem;border-bottom:1px solid var(--rule-soft);vertical-align:top;line-height:1.6}
+thead th{font-family:var(--mono);font-size:.625rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);background:var(--surface);font-weight:500}
+tbody tr:last-child td{border-bottom:0}
+tbody td:first-child{font-weight:650}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.yes{color:var(--good);font-weight:700}
+.na{color:var(--ink-3);font-size:.75rem;font-family:var(--mono)}
+.tag{display:inline-block;font-family:var(--mono);font-size:.625rem;letter-spacing:.1em;text-transform:uppercase;padding:.08rem .4rem .12rem;border-radius:1px;border:1px solid currentColor;white-space:nowrap}
+.tag--todo{color:var(--warn)}
+.tag--done{color:var(--good)}
+
+/* ─── misc ─── */
+.limits{display:flex;flex-direction:column;gap:1px;background:var(--rule-soft);border:1px solid var(--rule-soft)}
+.limit{background:var(--paper);padding:.95rem 1.1rem 1.05rem;display:flex;flex-direction:column;gap:.25rem}
+.limit-t{font-size:.9375rem;font-weight:700;line-height:1.5}
+.limit-d{font-size:.875rem;color:var(--ink-2);line-height:1.65}
+.pull{border-left:3px solid var(--accent);padding:.4rem 0 .4rem 1.1rem;font-size:clamp(1.03rem,2.3vw,1.2rem);line-height:1.65;font-weight:650;letter-spacing:-.008em;color:var(--ink);max-width:36rem}
+.aside{font-size:.875rem;color:var(--ink-2);line-height:1.7;max-width:var(--measure)}
+.warnbox{border:1px solid var(--warn);background:var(--warn-bg);padding:.85rem 1rem;font-size:.875rem;line-height:1.68;color:var(--ink);max-width:none;border-radius:2px}
+.warnbox strong{color:var(--warn)}
+.srcs{display:flex;flex-direction:column;gap:.3rem;font-size:.8125rem;line-height:1.6;color:var(--ink-2);max-width:none}
+.srcs a{word-break:break-all}
+.colophon{margin-top:4.5rem;padding-top:1.5rem;border-top:1px solid var(--rule);display:flex;flex-direction:column;gap:.55rem}
+.colophon p{font-size:.8125rem;color:var(--ink-3);line-height:1.7;max-width:42rem}
+.colophon .mono{color:var(--ink-2)}
+
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important}}
+</style>
+
+<div class="sheet">
+
+<header class="titleblock">
+  <div class="titleblock-main">
+    <p class="eyebrow">강의계획서 · Curriculum</p>
+    <h1>조명감독을 위한<br>AI 도구 제작 과정</h1>
+    <p class="lede">조명 하는 사람이 <strong>AI에게 일을 시켜서, 자기한테 필요한 프로그램을 직접 만드는 법</strong>을 배운다.
+      코드를 타이핑하는 법은 안 배운다. <strong>말로 시키고 · 결과를 의심하고 · 안전하게 콘솔에 연결하는 법</strong>을 배운다.</p>
+  </div>
+  <dl class="titleblock-fields">
+    <div class="field"><dt>누가 듣나</dt><dd>현업 조명인 <span style="color:var(--ink-3);font-weight:500">+</span> 전공 학생<br>프로그래밍 지식 불필요</dd></div>
+    <div class="field"><dt>구성</dt><dd><span class="mono">7</span>개 모듈 + 수료 프로젝트</dd></div>
+    <div class="field"><dt>표준 편성</dt><dd><span class="mono">30</span>시간 · <span class="mono">10</span>회 × <span class="mono">3</span>h<br><span style="font-weight:500;color:var(--ink-3)">학생 입문 <span class="mono">20</span>h 편성 별도</span></dd></div>
+    <div class="field"><dt>실습</dt><dd>grandMA3 onPC (무료)<br>+ AI 개발 도구</dd></div>
+    <div class="field"><dt>근거</dt><dd>실제 개발 기록<br><span class="mono">2026-07-15 → 08-07</span></dd></div>
+  </dl>
+</header>
+
+<section class="facts" aria-label="근거가 되는 실제 프로젝트 실측치">
+  <div class="fact"><span class="fact-num">3<span class="unit">주</span></span><span class="fact-label">기획 → 작동하는 앱</span></div>
+  <div class="fact"><span class="fact-num">443</span><span class="fact-label">저장 횟수</span></div>
+  <div class="fact"><span class="fact-num">17</span><span class="fact-label">프로그램 부품</span></div>
+  <div class="fact"><span class="fact-num">131</span><span class="fact-label">자동 점검표</span></div>
+  <div class="fact"><span class="fact-num">10</span><span class="fact-label">AI 역할</span></div>
+  <div class="fact"><span class="fact-num">1<span class="unit">명</span></span><span class="fact-label">만든 사람</span></div>
+</section>
+<p class="facts-note">실측 · git rev-list --count --all → 443 · server/ 17모듈 · 테스트 131 · .claude/agents 10 · rules 63 · skills 28 · hooks 25</p>
+
+<!-- ══ 읽는 법 ══ -->
+<section class="block">
+  <div class="cue"><span class="cue-id">읽는 법</span><span class="chip" style="--chip:var(--ink-3)"></span></div>
+  <div class="block-body">
+    <h2>이 교안에는 두 종류의 수강생이 있다</h2>
+    <div class="twoup">
+      <div class="pane pane--yes">
+        <span class="pane-head">현업 트랙</span>
+        <ul>
+          <li>조명감독 · LD · 오퍼레이터 · 시스템 담당</li>
+          <li>이미 아는 것 — <strong>콘솔 실무, 현장 관행</strong></li>
+          <li>어려워하는 곳 — <strong>컴퓨터 용어</strong> (M2 · M5)</li>
+        </ul>
+      </div>
+      <div class="pane pane--no">
+        <span class="pane-head">학생 트랙</span>
+        <ul>
+          <li>조명 · 무대 전공생 · 신입</li>
+          <li>이미 아는 것 — <strong>컴퓨터를 좀 쓴다</strong> (그 정도면 충분)</li>
+          <li>어려워하는 곳 — <strong>조명 용어 + 컴퓨터 용어 양쪽</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>표시 읽는 법</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col">표시</th><th scope="col">뜻</th></tr></thead>
+      <tbody>
+        <tr><td>💬 한 줄로 말하면</td><td>그 절의 내용을 일상어로만 요약. <strong>여기만 읽어도 흐름은 따라간다</strong></td></tr>
+        <tr><td>🔑 처음 나오는 말</td><td>그 모듈에서 새로 나오는 용어. 아래 용어 사전에 전부 있다</td></tr>
+        <tr><td>💡 쉬운 말로</td><td>어려운 대목을 다시 풀어 쓴 상자</td></tr>
+        <tr><td>🔵 심화</td><td>깊은 내용. <strong>학생 트랙은 건너뛰어도 된다</strong></td></tr>
+        <tr><td>🎓 학생 트랙</td><td>콘솔·장비가 없을 때의 대체 실습</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="warnbox"><strong>강사 규칙 하나</strong> — 새 단어는 <strong>일상어 설명을 먼저</strong> 하고 용어를 뒤에 붙인다.<br>
+      ✅ “AI가 지금 기억하는 내용 — 이걸 <strong>컨텍스트</strong>라고 합니다”<br>
+      ❌ “컨텍스트가 부족하면 앞을 잊습니다”<br>
+      그리고 <strong>조명 비유에 쓰는 조명 용어도 설명한다.</strong> 학생에게는 비유가 오히려 장벽이 된다.</div>
+  </div>
+</section>
+
+<!-- ══ 용어 사전 ══ -->
+<section class="block">
+  <div class="cue"><span class="cue-id">용어</span><span class="chip" style="--chip:var(--gel-2)"></span></div>
+  <div class="block-body">
+    <h2>먼저 용어부터 — 1회차에 나눠준다</h2>
+    <div class="plain">
+      <span class="plain-tag">💬 한 줄로 말하면</span>
+      <span class="plain-body">이 과정의 가장 큰 걸림돌은 개념이 아니라 <strong>단어</strong>다.
+        조명 쪽 말과 컴퓨터 쪽 말이 섞여 나오는데, <strong>수강생마다 막히는 쪽이 다르다.</strong> 그래서 양쪽을 다 깔아둔다.</span>
+    </div>
+
+    <div class="gloss">
+      <div class="gloss-col gloss--light">
+        <span class="gloss-head">조명 용어 — 컴퓨터 쪽 사람에게</span>
+        <dl>
+          <dt>콘솔</dt><dd>조명을 조작하는 큰 조종대</dd>
+          <dt>onPC</dt><dd>그 콘솔을 <strong>일반 컴퓨터에서 돌리는 프로그램</strong>. 무료다</dd>
+          <dt>리그</dt><dd>무대에 매달아 놓은 조명 장비 <strong>전체</strong></dd>
+          <dt>픽스처</dt><dd>조명 기구 <strong>한 대</strong></dd>
+          <dt>패치</dt><dd>조명 기구를 콘솔에 <strong>등록하는 일</strong></dd>
+          <dt>큐</dt><dd>저장해 둔 <strong>조명 장면 하나</strong>. 공연 중 순서대로 실행</dd>
+          <dt>프리셋</dt><dd>자주 쓰는 설정을 저장해 둔 것</dd>
+          <dt>실행기</dt><dd>큐를 실행하는 <strong>버튼·페이더 자리</strong></dd>
+          <dt>룩</dt><dd>완성된 <strong>한 장면의 조명 그림</strong></dd>
+          <dt>쇼파일</dt><dd>공연 하나의 <strong>모든 설정이 담긴 파일</strong>. 날아가면 처음부터</dd>
+          <dt>버스킹</dt><dd>미리 안 짜고 <strong>즉석에서</strong> 조명을 운용하는 것</dd>
+          <dt>포커싱</dt><dd>조명이 정확한 위치를 비추도록 <strong>맞추는 작업</strong></dd>
+        </dl>
+      </div>
+      <div class="gloss-col gloss--ai">
+        <span class="gloss-head">AI · 컴퓨터 용어 — 조명 쪽 사람에게</span>
+        <dl>
+          <dt>바이브 코딩</dt><dd>코드를 안 치고 <strong>원하는 걸 말로 설명해서</strong> AI가 만들게 하는 방식</dd>
+          <dt>터미널 · CLI</dt><dd>컴퓨터에 <strong>글자로 명령을 입력하는 창</strong>과 그 프로그램</dd>
+          <dt>컨텍스트</dt><dd>AI가 <strong>지금 기억하고 있는 내용 전부</strong>. 넘치면 앞을 잊는다</dd>
+          <dt>토큰</dt><dd>AI가 글을 세는 단위. <strong>비용이 이 단위로 계산된다</strong></dd>
+          <dt>오케스트레이션</dt><dd>여러 AI에게 <strong>일을 나눠 주고 결과를 모으는 것</strong> · 조별과제 조장</dd>
+          <dt>에이전트</dt><dd><strong>역할과 권한이 정해진 AI 한 명</strong> · 조별과제 팀원</dd>
+          <dt>하네스</dt><dd>AI가 지킬 <strong>규칙 + 자동 검사 장치</strong> · 원래 뜻은 말에 씌우는 마구(고삐)</dd>
+          <dt>훅</dt><dd><strong>특정 순간에 자동으로 켜지는 검사</strong> · 원래 뜻은 갈고리</dd>
+          <dt>루프</dt><dd>조건이 될 때까지 <strong>AI가 스스로 반복</strong>하게 하는 것</dd>
+          <dt>그래프 엔지니어링</dt><dd><strong>순서 짜기</strong> + <strong>기억 관리</strong> · 지하철 노선도 같은 관계도</dd>
+          <dt>MCP</dt><dd>AI가 다른 프로그램과 연결되는 <strong>공통 규격</strong> · <strong>USB 같은 것</strong></dd>
+          <dt>샌드박스</dt><dd>AI가 놀 수 있는 <strong>울타리</strong>. 안에서 뭘 해도 밖은 안 망가진다</dd>
+          <dt>테스트</dt><dd>제대로 도는지 확인하는 <strong>자동 점검표</strong></dd>
+          <dt>프로바이더 추상화</dt><dd><strong>AI를 갈아끼우기 쉽게</strong> 만들어두는 설계 · 전구 소켓과 같다</dd>
+        </dl>
+      </div>
+    </div>
+
+    <h3>헷갈리기 쉬운 짝 — 첫 회차에 짚는다</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col">이것 ≠ 저것</th><th scope="col">차이</th></tr></thead>
+      <tbody>
+        <tr><td>개발 도구 ≠ 런타임 모델</td><td>내가 <strong>만들 때</strong> 쓰는 것 vs 만든 앱 <strong>안에서 도는</strong> 것</td></tr>
+        <tr><td>조회 ≠ 조작</td><td>읽을 수 있다고 시킬 수 있는 건 아니다</td></tr>
+        <tr><td><span class="mono">ok</span> ≠ 증거</td><td>“됐습니다”는 주장이다. 증거는 <strong>다시 확인한 결과</strong></td></tr>
+        <tr><td><span class="mono">0</span> ≠ 비었음</td><td>“0개”가 “이 방법으로는 안 보인다”일 수 있다</td></tr>
+        <tr><td>부품 검사 ≠ 완성품 검사</td><td>부품이 다 멀쩡해도 조립이 틀릴 수 있다</td></tr>
+        <tr><td>훅 ≠ 스킬</td><td>자동으로 켜지는 <strong>검사</strong> vs 필요할 때 꺼내 읽는 <strong>지식</strong></td></tr>
+      </tbody>
+    </table></div>
+    <p class="aside">전체 용어 사전(조명 20개 · AI 35개)은 <span class="mono">docs/curriculum/glossary.md</span>에 있다. <strong>인쇄해서 나눠준다.</strong></p>
+  </div>
+</section>
+
+<!-- ══ MODULE MAP ══ -->
+<section class="block">
+  <div class="cue"><span class="cue-id">Map</span><span class="chip" style="--chip:var(--ink-3)"></span></div>
+  <div class="block-body">
+    <h2>7개 모듈</h2>
+    <p>🟢 기본은 전원 필수, 🔵 심화는 현업 트랙 위주. <strong>M4와 M5가 전체의 절반</strong>이다 — M4는 조명 쪽, M5는 컴퓨터 쪽.</p>
+    <div class="modmap">
+      <article class="mod">
+        <span class="mod-id">M1<span class="mod-gel" style="background:var(--gel-1)"></span></span>
+        <span class="mod-body"><span class="mod-t">왜 조명감독이 바이브 코딩을 해야 하는가</span><span class="mod-q">왜 남이 안 만들어 주나, 왜 이제 내가 만들 수 있나</span></span>
+        <span class="mod-h">2h<span class="lvl">🟢</span></span>
+      </article>
+      <article class="mod">
+        <span class="mod-id">M2<span class="mod-gel" style="background:var(--gel-2)"></span></span>
+        <span class="mod-body"><span class="mod-t">무엇으로 만드나 — AI 모델과 도구 선택</span><span class="mod-q">어떤 AI를 어디에 쓰나</span></span>
+        <span class="mod-h">3h<span class="lvl">🟢🔵</span></span>
+      </article>
+      <article class="mod">
+        <span class="mod-id">M3<span class="mod-gel" style="background:var(--gel-3)"></span></span>
+        <span class="mod-body"><span class="mod-t">어떻게 만드나 — 아이디어에서 실물까지</span><span class="mod-q">첫날부터 뭘 어떤 순서로 하나</span></span>
+        <span class="mod-h">4h<span class="lvl">🟢</span></span>
+      </article>
+      <article class="mod mod--core">
+        <span class="mod-id">M4<span class="mod-gel" style="background:var(--gel-4)"></span></span>
+        <span class="mod-body"><span class="mod-t">조명 콘솔과 어떻게 연동하나</span><span class="mod-q">AI가 어떻게 콘솔을 실제로 움직이나 — 조명 쪽 핵심</span></span>
+        <span class="mod-h">6h<span class="lvl">🟢🔵</span></span>
+      </article>
+      <article class="mod mod--core">
+        <span class="mod-id">M5<span class="mod-gel" style="background:var(--gel-5)"></span></span>
+        <span class="mod-body"><span class="mod-t">바이브 코딩의 기술</span><span class="mod-q">AI 한 대가 아니라 <strong>여러 대를 부리는 법</strong> — 컴퓨터 쪽 핵심</span></span>
+        <span class="mod-h">8h<span class="lvl">🟢🔵</span></span>
+      </article>
+      <article class="mod">
+        <span class="mod-id">M6<span class="mod-gel" style="background:var(--gel-6)"></span></span>
+        <span class="mod-body"><span class="mod-t">결과 — 무엇을 할 수 있게 되었나</span><span class="mod-q">그래서 실제로 뭐가 되나</span></span>
+        <span class="mod-h">2h<span class="lvl">🟢</span></span>
+      </article>
+      <article class="mod">
+        <span class="mod-id">M7<span class="mod-gel" style="background:var(--gel-7)"></span></span>
+        <span class="mod-body"><span class="mod-t">앞으로의 과제</span><span class="mod-q">아직 안 되는 건 뭔가</span></span>
+        <span class="mod-h">2h<span class="lvl">🟢</span></span>
+      </article>
+      <article class="mod">
+        <span class="mod-id">P</span>
+        <span class="mod-body"><span class="mod-t">수료 프로젝트</span><span class="mod-q">내 것 하나 만들어 보기 — 완성보다 과정이 평가 대상</span></span>
+        <span class="mod-h">3h<span class="lvl">🟢</span></span>
+      </article>
+    </div>
+    <p class="aside"><strong>편성 변형</strong> · <strong>학생 입문 20h</strong>(🟢 기본만, M4는 시연 중심) · 부트캠프 5일×6h · 핵심 단축 12h · 기술 심화 16h · 인식 강연 3h.
+      어떤 편성에서도 빼지 않는 것은 <strong>M4의 검증 규율</strong>과 <strong>M5의 루프 상한</strong>이다.</p>
+  </div>
+</section>
+
+<!-- ══ M1 ══ -->
+<section class="block">
+  <div class="cue"><span class="cue-id">M1</span><span class="chip" style="--chip:var(--gel-1)"></span><span class="cue-hr">2h · 🟢</span></div>
+  <div class="block-body">
+    <h2>왜 조명감독이 바이브 코딩을 해야 하는가</h2>
+    <div class="plain">
+      <span class="plain-tag">💬 한 줄로 말하면</span>
+      <span class="plain-body">내가 매번 손으로 하는 지겨운 작업이 있는데, <strong>아무도 그걸 자동으로 해주는 프로그램을 안 만들어 준다.</strong><br>
+        예전엔 그래서 포기했는데, 지금은 <strong>AI에게 시켜서 내가 만들 수 있다.</strong></span>
+    </div>
+    <p class="terms"><span class="terms-tag">🔑 처음 나오는 말</span><span class="term">바이브 코딩</span><span class="term">AI 모델</span></p>
+
+    <h3>왜 그 프로그램은 세상에 없나</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col">이유</th><th scope="col">무슨 뜻인가</th><th scope="col">그래서</th></tr></thead>
+      <tbody>
+        <tr><td>사려는 사람이 적다</td><td>그 기능이 필요한 사람이 전 세계에 수십 명일 수도</td><td>회사가 팔 물건으로 안 만든다</td></tr>
+        <tr><td>현장마다 다 다르다</td><td>같은 콘솔을 써도 극장마다 장비도 방식도 다르다</td><td>하나 만들어 다 팔 수가 없다</td></tr>
+        <tr><td>프로그래머는 조명을 모른다</td><td>뭘 원하는지 설명하는 데만 며칠 걸린다</td><td>돈은 많이 들고 결과는 어긋난다</td></tr>
+      </tbody>
+    </table></div>
+    <div class="easy">
+      <span class="easy-tag">💡 쉬운 말로</span>
+      <p>시장이 작아서 안 만들고, 다 달라서 못 만들고, 설명이 어려워서 안 된다.
+        그런데 <strong>당신은</strong> 팔 걱정이 없고, 당신 현장만 알면 되고, 설명할 필요가 없다 — <strong>이미 알고 있으니까.</strong></p>
+    </div>
+
+    <h3>무엇이 바뀌었나</h3>
+    <div class="diagram">
+      <svg viewBox="0 0 480 150" role="img" aria-label="예전에는 조명 지식과 코딩 능력이 둘 다 필요했고 코딩에서 막혔다. 지금은 조명 지식과 AI를 부리는 능력이면 되고, 조명 지식이 더 귀해졌다.">
+        <text class="d-sub" x="16" y="20">예전</text>
+        <rect class="d-node" x="16" y="28" width="130" height="34" rx="2"/>
+        <text class="d-small" x="81" y="49" text-anchor="middle">조명을 안다</text>
+        <text class="d-label" x="160" y="49" text-anchor="middle">+</text>
+        <rect class="d-node d-node--warn" x="174" y="28" width="130" height="34" rx="2"/>
+        <text class="d-small" x="239" y="49" text-anchor="middle">코드를 쓸 줄 안다</text>
+        <text class="d-label" x="318" y="49" text-anchor="middle">=</text>
+        <rect class="d-node" x="332" y="28" width="70" height="34" rx="2"/>
+        <text class="d-small" x="367" y="49" text-anchor="middle">프로그램</text>
+        <text class="d-sub" x="239" y="76" text-anchor="middle">↑ 여기서 막혔다</text>
+
+        <text class="d-sub" x="16" y="108">지금</text>
+        <rect class="d-node d-node--you" x="16" y="116" width="130" height="34" rx="2"/>
+        <text class="d-small" x="81" y="137" text-anchor="middle">조명을 안다</text>
+        <text class="d-label" x="160" y="137" text-anchor="middle">+</text>
+        <rect class="d-node" x="174" y="116" width="130" height="34" rx="2"/>
+        <text class="d-small" x="239" y="137" text-anchor="middle">AI를 부릴 줄 안다</text>
+        <text class="d-label" x="318" y="137" text-anchor="middle">=</text>
+        <rect class="d-node" x="332" y="116" width="70" height="34" rx="2"/>
+        <text class="d-small" x="367" y="137" text-anchor="middle">프로그램</text>
+        <text class="d-sub" x="81" y="110" text-anchor="middle">↓ 이게 더 귀하다</text>
+      </svg>
+      <p class="diagram-cap">AI는 코드를 쓸 줄 안다. 그런데 <strong>당신 극장의 장비 배치도, 무엇이 위험한지도 모른다.</strong> 그건 당신만 안다.</p>
+    </div>
+    <p class="aside">🎓 <strong>학생에게</strong> — 아직 현장 경험이 적어도 괜찮다. <strong>배우는 중인 것 자체가 자산</strong>이다. 학교 실습실에서 반복되는 작업도 훌륭한 소재다.</p>
+
+    <h3>조명 하는 사람은 이미 절반을 배웠다</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col">조명에서 하는 일</th><th scope="col">AI를 부릴 때 하는 일</th></tr></thead>
+      <tbody>
+        <tr><td>큐 순서를 짠다</td><td>작업 순서를 짠다</td></tr>
+        <tr><td>포커싱 시키고 결과를 눈으로 본다</td><td>시키고 결과를 확인한다</td></tr>
+        <tr><td>안 밝으면 채널 → 밝기 → 패치 순으로 본다</td><td>안 되면 원인을 단계별로 찾는다</td></tr>
+        <tr><td>리허설 없이 본공연 안 간다</td><td>확인 없이 실제 적용 안 한다</td></tr>
+        <tr><td>실수하면 공연이 멈춘다는 감각</td><td><strong>되돌릴 수 없는 일</strong>을 구분한다</td></tr>
+      </tbody>
+    </table></div>
+    <p class="pull">새로 배울 건 코딩이 아니다. 이 습관을 컴퓨터에게도 쓰는 방법이다.</p>
+  </div>
+</section>
+
+<!-- ══ M2 ══ -->
+<section class="block">
+  <div class="cue"><span class="cue-id">M2</span><span class="chip" style="--chip:var(--gel-2)"></span><span class="cue-hr">3h · 🟢🔵</span></div>
+  <div class="block-body">
+    <h2>무엇으로 만드나 — AI 모델과 도구 선택</h2>
+    <div class="plain">
+      <span class="plain-tag">💬 한 줄로 말하면</span>
+      <span class="plain-body">AI가 여러 종류인데 <strong>어디에 뭘 쓰는지</strong>가 다르다.<br>
+        특히 <strong>“내가 만들 때 쓰는 AI”와 “만든 프로그램 안에서 도는 AI”는 다른 것</strong>이다. 이것부터 구분한다.</span>
+    </div>
+    <p class="terms"><span class="terms-tag">🔑 처음 나오는 말</span><span class="term">터미널 · CLI</span><span class="term">컨텍스트</span><span class="term">토큰</span><span class="term">MCP</span><span class="term">프로바이더 추상화</span></p>
+
+    <h3>가장 많이 헷갈리는 것부터</h3>
+    <div class="easy">
+      <span class="easy-tag">💡 쉬운 말로 — 요리사와 레시피</span>
+      <p>내가 <strong>레시피를 쓸 때</strong> 도와주는 사람 → ① 개발 도구<br>
+        손님이 주문하면 <strong>주방에서 실제로 요리하는</strong> 사람 → ② 런타임 모델<br>
+        <strong>둘은 다른 사람이어도 된다.</strong></p>
+    </div>
+    <div class="diagram">
+      <svg viewBox="0 0 480 190" role="img" aria-label="개발 도구는 프로그램을 만들 때 쓰는 것이고, 런타임 모델은 만든 프로그램 안에서 도는 것이다.">
+        <rect class="d-node d-node--you" x="20" y="16" width="440" height="62" rx="2"/>
+        <text class="d-sub" x="36" y="36">① 개발 도구</text>
+        <text class="d-label" x="36" y="54">내가 “프로그램을 만들 때” 쓰는 것</text>
+        <text class="d-small" x="36" y="70">Claude Code · Codex CLI · Antigravity CLI · Cursor — 내 컴퓨터 파일을 읽고 쓴다</text>
+        <path class="d-line" d="M240 78 V102"/>
+        <path class="d-head" d="M240 110 l-4 -8 h8 z"/>
+        <text class="d-sub" x="252" y="98">이걸로 만들어낸다</text>
+        <rect class="d-node" x="20" y="112" width="440" height="62" rx="2"/>
+        <text class="d-sub" x="36" y="132">② 런타임 모델</text>
+        <text class="d-label" x="36" y="150">내가 만든 “프로그램 안에서 도는” 것</text>
+        <text class="d-small" x="36" y="166">Claude API · Gemini API — 사용자의 한국어 지시를 콘솔 명령으로 바꾼다</text>
+      </svg>
+      <p class="diagram-cap">이 프로젝트도 둘이 다르다. 만들 때는 Claude Code를 썼지만, 프로그램 안에서는 <strong>AI를 갈아끼울 수 있게</strong> 만들어 두 회사 것을 다 쓸 수 있다.</p>
+    </div>
+
+    <h3>개발 도구 고르는 기준 6가지</h3>
+    <p><strong>제품 이름을 외우지 말고 기준을 외운다.</strong> 이름은 사라지고 기준은 남는다.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col">#</th><th scope="col">기준 — 쉬운 말로</th><th scope="col">이게 없으면</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td><strong>파일을 직접 다루나</strong> — 내 컴퓨터 파일을 열고 고칠 수 있나</td><td>복사·붙여넣기 노동이 된다</td></tr>
+        <tr><td class="num">2</td><td><strong>혼자 계속 일하나</strong> — 한 번 시키면 여러 단계를 스스로 하나</td><td>매 단계 내가 붙어 있어야 한다</td></tr>
+        <tr><td class="num">3</td><td><strong>얼마나 기억하나</strong> — 앞에 한 말을 얼마나 들고 있나 <span class="na">(=컨텍스트)</span></td><td>앞을 잊고 같은 실수를 반복</td></tr>
+        <tr><td class="num">4</td><td><strong>규칙을 심을 수 있나</strong> — “우리 현장은 이렇게 한다”를 가르치나</td><td><strong>안전 규칙을 기계로 못 지키게 한다</strong></td></tr>
+        <tr><td class="num">5</td><td><strong>다른 프로그램과 이어지나</strong> — 콘솔·도면과 연결되나</td><td>혼자 뚝 떨어진 섬이 된다</td></tr>
+        <tr><td class="num">6</td><td><strong>돈이 얼마나 드나</strong> — 정액인가 쓴 만큼인가, 한도가 있나</td><td>예상 못 한 요금이 나온다</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>도구 지형 — 2026-08-07 조사 기준</h3>
+    <p>표의 모든 항목은 각 제품의 <strong>공식 문서에서 직접 확인</strong>했다. 없던 항목은 <strong>“문서 미기재”</strong>로 남겼다 — <strong>짐작으로 채우지 않았다.</strong></p>
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col">종류</th><th scope="col">대표</th><th scope="col">어떤 건가</th></tr></thead>
+      <tbody>
+        <tr><td>터미널에서 도는 것</td><td>Claude Code · Codex CLI · Antigravity CLI</td><td>글자로 명령하는 창에서 실행. 파일과 명령을 직접 다룬다</td></tr>
+        <tr><td>편집기 안에서 도는 것</td><td>Cursor 등</td><td>코드 편집 프로그램 안에서 동작</td></tr>
+        <tr><td>웹 채팅</td><td>각 회사의 웹 화면</td><td>설치 불필요. 단 <strong>내 파일을 못 만져서 도구 제작엔 부적합</strong></td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>조명 도구를 만들려면 첫 번째(터미널)가 맞다.</strong> 콘솔과 통신하는 코드, 콘솔에 넣을 파일, 규칙집, 점검표를 <strong>동시에</strong> 다뤄야 하는데 그게 전부 파일 작업이기 때문이다.</p>
+
+    <div class="adv">
+      <span class="adv-tag">🔵 심화 — 현업 트랙</span>
+      <p>아래 비교표는 현업 트랙용이다. <strong>학생 트랙은 “다 비슷한데 Claude Code가 규칙·역할 나누기가 세다” 정도만 알면 된다.</strong></p>
+    </div>
+    <div class="tablewrap tablewrap--wide"><table>
+      <thead><tr>
+        <th scope="col">항목</th>
+        <th scope="col">Claude Code<br><span class="na">Anthropic</span></th>
+        <th scope="col">Codex CLI<br><span class="na">OpenAI</span></th>
+        <th scope="col">Antigravity CLI<br><span class="na">Google</span></th>
+      </tr></thead>
+      <tbody>
+        <tr><td>공개 여부</td><td>비공개 · 구독</td><td><strong>소스 공개(Apache-2.0)</strong></td><td>비공개</td></tr>
+        <tr><td>쓸 수 있는 곳</td><td>터미널 · VS Code · JetBrains · 데스크톱 · 웹/모바일</td><td>터미널 · VS Code/Cursor/Windsurf · 데스크톱 모드</td><td>터미널 (데스크톱 앱과 엔진 공유)</td></tr>
+        <tr><td>역할 나누기</td><td><span class="yes">✓</span> 각자 기억 따로 · <strong>권한 제한 가능</strong> · 역할별 AI 지정</td><td><span class="na">문서 미기재</span></td><td><span class="yes">✓</span> 동시에 여러 개</td></tr>
+        <tr><td>자동 검사(훅)</td><td><span class="yes">✓</span></td><td><span class="na">문서 미기재</span></td><td><span class="yes">✓</span></td></tr>
+        <tr><td>지식 묶음(스킬)</td><td><span class="yes">✓</span></td><td><span class="na">문서 미기재</span></td><td><span class="yes">✓</span></td></tr>
+        <tr><td>규칙 파일</td><td><span class="mono">CLAUDE.md</span> + 자동 기억</td><td><span class="mono">AGENTS.md</span></td><td>Rules</td></tr>
+        <tr><td>묶음 배포</td><td><span class="yes">✓</span></td><td><span class="na">문서 미기재</span></td><td><span class="yes">✓</span></td></tr>
+        <tr><td>외부 연결(MCP)</td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+        <tr><td>울타리·승인</td><td><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="yes">✓</span> OS 기본 기능</td></tr>
+        <tr><td>예약 실행</td><td><span class="yes">✓</span></td><td><span class="na">문서 미기재</span></td><td><span class="na">문서 미기재</span></td></tr>
+        <tr><td>쓰는 AI</td><td>Claude 5 계열</td><td><span class="mono">gpt-5.6-sol</span></td><td><span class="na">문서 미기재</span></td></tr>
+        <tr><td>어떻게 쓰나</td><td>Claude 구독 또는 개발자 계정</td><td>ChatGPT 요금제 또는 개발자 키</td><td><span class="na">문서 미기재</span></td></tr>
+      </tbody>
+    </table></div>
+    <div class="easy">
+      <span class="easy-tag">💡 “문서 미기재”를 어떻게 읽나</span>
+      <p><strong>그 기능이 없다는 뜻이 아니다.</strong> 공식 문서에서 <strong>확인이 안 됐다</strong>는 뜻이다.<br>
+        이 구분이 이 과정 전체에서 가장 중요한 태도다 — <strong>확인 안 된 걸 확인된 것처럼 적지 않는다.</strong></p>
+    </div>
+
+    <div class="warnbox">
+      <strong>⚠️ Gemini CLI는 개인 사용자에게 이미 끝났다 (2026-06-18)</strong><br>
+      2026-06-18부터 Gemini CLI는 <strong>개인 계정의 요청을 더 이상 처리하지 않는다</strong>(공식 공지).
+      대신 쓸 것은 <strong>Antigravity CLI</strong>이며, 설치하면 기존 설정을 자동으로 옮겨 준다.
+      기업용 라이선스 사용자와 개발자 키 사용자는 영향이 없다.
+    </div>
+    <div class="easy">
+      <span class="easy-tag">💡 이 사건이 M2에서 가장 중요한 교재다</span>
+      <p>반년 전까지 <strong>“무료로 쓸 수 있는 유일한 터미널 AI”</strong>로 여기저기서 추천되던 도구가, <strong>한 달 예고하고 사라졌다.</strong></p>
+    </div>
+    <div class="flow">
+      <div class="step step--mark"><span class="step-n">1</span><span class="step-b"><span class="step-t">제품 이름 말고 기준을 외운다</span><span class="step-d">이름은 사라지고 기준은 남는다. 위 6기준이 그래서 있다.</span></span></div>
+      <div class="step step--mark"><span class="step-n">2</span><span class="step-b"><span class="step-t">갈아탈 수 있게 만들어 둔다</span><span class="step-d">남의 회사 결정이 내 프로그램을 죽이지 못하게.</span></span></div>
+    </div>
+
+    <h3>프로그램 안에서 돌 AI — 갈아끼울 수 있게</h3>
+    <div class="easy">
+      <span class="easy-tag">💡 쉬운 말로 — 전구 소켓</span>
+      <p><strong>E26 소켓</strong>을 생각하면 된다. 규격만 맞으면 <strong>어느 회사 전구든 끼워진다.</strong>
+        전구를 바꾸려고 등기구를 통째로 갈지 않는다.<br>
+        프로그램도 똑같이 만들어 뒀다. <strong>AI를 바꿔도 나머지는 안 건드린다.</strong> 어려운 말로 <strong>프로바이더 추상화</strong>다.</p>
+    </div>
+    <div class="diagram">
+      <svg viewBox="0 0 480 175" role="img" aria-label="프로그램 윗부분은 어떤 AI를 쓰는지 모르고, 공통 규격 소켓 아래에 Anthropic과 Gemini가 붙는다.">
+        <rect class="d-node" x="60" y="14" width="360" height="38" rx="2"/>
+        <text class="d-small" x="240" y="38" text-anchor="middle">프로그램 윗부분 — 화면 · 안전장치 · 지휘 담당</text>
+        <text class="d-sub" x="240" y="66" text-anchor="middle">어떤 AI를 쓰는지 모른다</text>
+        <rect class="d-node d-node--you" x="120" y="76" width="240" height="38" rx="2"/>
+        <text class="d-label" x="240" y="100" text-anchor="middle">소켓 (공통 규격)</text>
+        <path class="d-line" d="M180 114 V128 H120 V138"/>
+        <path class="d-head" d="M120 146 l-4 -8 h8 z"/>
+        <path class="d-line" d="M300 114 V128 H360 V138"/>
+        <path class="d-head" d="M360 146 l-4 -8 h8 z"/>
+        <rect class="d-node" x="52" y="146" width="136" height="26" rx="2"/>
+        <text class="d-small" x="120" y="164" text-anchor="middle">Anthropic</text>
+        <rect class="d-node" x="292" y="146" width="136" height="26" rx="2"/>
+        <text class="d-small" x="360" y="164" text-anchor="middle">Gemini</text>
+      </svg>
+      <p class="diagram-cap">값과 성능은 계속 변한다. 더 싸거나 빠른 게 나오면 <strong>설정 한 줄로 갈아탄다.</strong></p>
+    </div>
+
+    <div class="twoup">
+      <div class="pane pane--yes">
+        <span class="pane-head">고르는 기준 4가지</span>
+        <ul>
+          <li>시킨 대로 <strong>정확히</strong> 명령을 만드나 — 목표: 틀리는 비율 5% 미만</li>
+          <li><strong>빠른가</strong> — 지시부터 실행까지 10초 미만</li>
+          <li><strong>싼가</strong> — 위 둘을 통과하는 것 중 싼 쪽</li>
+          <li>같은 내용을 <strong>매번 다시 안 보내도</strong> 되나</li>
+        </ul>
+      </div>
+      <div class="pane pane--no">
+        <span class="pane-head">AI도 급이 있다</span>
+        <ul>
+          <li><strong>크고 똑똑한 것</strong> — 설계 · 어려운 문제 · 검사</li>
+          <li><strong>중간</strong> — 보통 작업</li>
+          <li><strong>작고 빠른 것</strong> — 단순 반복, “다 됐나?” 판정</li>
+          <li>💡 <strong>모든 자리에 무빙을 걸지 않는 것</strong>과 같다</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="easy">
+      <span class="easy-tag">💡 돈 이야기 — 숨기지 않는다</span>
+      <p>AI 사용료는 <strong>진짜 나가는 돈</strong>이고 무한하지 않다. AI를 혼자 계속 돌게 두면 <strong>방치하면 돈이 샌다</strong> — 이 프로젝트는 <strong>3번까지만 재시도</strong>하게 막아 뒀다.
+        <strong>만들 때 드는 돈</strong>과 <strong>만든 프로그램이 쓰는 돈</strong>은 별개다. 공연장 인터넷이 불안정하면 못 쓴다.</p>
+    </div>
+    <p class="aside">🎓 <strong>학생 트랙 대안</strong> — 설치는 강사 화면 공유로 함께, 요금 계산은 조별로 하나만.</p>
+  </div>
+</section>
+
+<!-- ══ M3 ══ -->
+<section class="block">
+  <div class="cue"><span class="cue-id">M3</span><span class="chip" style="--chip:var(--gel-3)"></span><span class="cue-hr">4h · 🟢</span></div>
+  <div class="block-body">
+    <h2>어떻게 만드나 — 아이디어에서 실물까지</h2>
+    <div class="plain">
+      <span class="plain-tag">💬 한 줄로 말하면</span>
+      <span class="plain-body">첫날 코드부터 짜지 않는다. <strong>뭘 만들지 · 뭘 안 만들지 · 다 되면 어떻게 알지</strong>를 먼저 글로 적는다.<br>
+        그 다음 <strong>작게 쪼개서 하나씩</strong> 만든다.</span>
+    </div>
+    <p class="terms"><span class="terms-tag">🔑 처음 나오는 말</span><span class="term">계획 문서(SPEC)</span><span class="term">비목표</span><span class="term">인수 기준</span><span class="term">테스트</span></p>
+
+    <p>이 프로젝트의 <strong>첫 기록에는 코드가 없다.</strong> 계획 문서가 있다.
+      그리고 <strong>첫 계획 문서의 제목이 “평가”였다</strong> — 만들기가 아니라 <strong>남이 만든 비슷한 프로그램을 써 보고 뭐가 부족한지 목록을 만드는 일</strong>이 첫 작업이었다.
+      거기서 발견한 빈틈 — <strong>그 제품은 영어만 됐다.</strong> 그게 이 프로젝트가 존재할 이유가 됐다.</p>
+    <div class="easy">
+      <span class="easy-tag">💡 쉬운 말로</span>
+      <p>공연 준비할 때 <strong>먼저 무대를 보러 가는 것</strong>과 같다. 도면부터 그리지 않는다.</p>
+    </div>
+
+    <h3>계획서에 반드시 들어가는 3가지</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col">항목</th><th scope="col">쉬운 말로</th><th scope="col">없으면</th></tr></thead>
+      <tbody>
+        <tr><td>뭘 만드나</td><td>한 문장으로</td><td>AI가 자꾸 딴 걸 만든다</td></tr>
+        <tr><td>뭘 <strong>안</strong> 만드나</td><td>일부러 뺄 것 <span class="na">(=비목표)</span></td><td>매번 다시 싸운다</td></tr>
+        <tr><td>다 되면 어떻게 아나</td><td>완료 판정 기준 <span class="na">(=인수 기준)</span></td><td>“됐다”를 아무도 판정 못 한다</td></tr>
+      </tbody>
+    </table></div>
+    <p>이 프로젝트가 실제로 적은 <strong>“안 할 것” 3가지</strong> — ① 공연 중에는 AI가 스스로 실행하지 않는다(제안만, <strong>버튼은 사람이</strong>) ② 예쁜지 아닌지는 사람이 정한다 ③ 하드웨어 없이 실제 조명은 못 켠다.</p>
+
+    <h3>만드는 순서</h3>
+    <div class="flow">
+      <div class="step"><span class="step-n">①</span><span class="step-b"><span class="step-t">계획</span><span class="step-d">뭘 / 안 할 것 / 완료 기준을 글로</span></span></div>
+      <div class="step step--mark"><span class="step-n">②</span><span class="step-b"><span class="step-t">검사 — 만든 사람 말고 다른 쪽이 구멍을 찾는다</span><span class="step-d">💡 <strong>내가 포커싱한 걸 내가 검수하면 못 본다.</strong> 이 프로젝트는 계획마다 다른 쪽에 검사를 맡겼고, 실제로 여러 건이 뒤집혔다.</span></span></div>
+      <div class="step"><span class="step-n">③</span><span class="step-b"><span class="step-t">만들기</span><span class="step-d">작게 쪼개서 하나씩. 단계마다 확인</span></span></div>
+      <div class="step step--mark"><span class="step-n">④</span><span class="step-b"><span class="step-t">실제 콘솔에서 확인</span><span class="step-d">컴퓨터 점검표를 다 통과해도 <strong>진짜 콘솔에서는 다르게 동작한다.</strong> “됐다”의 최종 기준은 항상 실제 콘솔이었다.</span></span></div>
+      <div class="step"><span class="step-n">⑤</span><span class="step-b"><span class="step-t">정리</span><span class="step-d">문서 갱신 + 배운 것 기록 → 다음 번 규칙이 된다</span></span></div>
+    </div>
+
+    <h3>점검표(테스트)를 왜 만드나</h3>
+    <p class="pull">프리셋을 하나 고쳤는데, 그 프리셋을 쓰던 큐 40개가 멀쩡한지 어떻게 아나? 하나씩 다 눌러보는 것 — 그게 테스트다.</p>
+    <p class="aside">이 프로젝트에는 자동 점검표가 <strong>131개</strong> 있다. 코드를 고칠 때마다 전부 자동으로 돌려서 <strong>고친 데 말고 다른 데가 깨졌는지</strong>를 즉시 잡는다.
+      <br>⚠️ 단, 점검표가 전부는 아니다 — 부품 점검 980여 개가 다 통과했는데 <strong>완성품을 실제로 켜니</strong> 부품끼리 연결이 안 돼 있던 적이 있다. <strong>부품 검사와 완성품 검사는 다른 일이다.</strong></p>
+  </div>
+</section>
+
+<!-- ══ M4 ══ -->
+<section class="block">
+  <div class="cue"><span class="cue-id">M4</span><span class="chip" style="--chip:var(--gel-4)"></span><span class="cue-hr">6h · 🟢🔵</span></div>
+  <div class="block-body">
+    <h2>조명 콘솔과 어떻게 연동하나</h2>
+    <div class="plain">
+      <span class="plain-tag">💬 한 줄로 말하면</span>
+      <span class="plain-body">AI는 조명 콘솔을 <strong>직접 못 만진다.</strong> 그래서 중간에 <strong>네 겹의 번역기</strong>를 놓는다.<br>
+        사람 말 → AI가 고른 <strong>도구</strong> → <strong>안전 검사</strong> → 네트워크로 보낸 <strong>명령</strong> → <strong>콘솔 안에 심어 둔 작은 프로그램</strong>.<br>
+        이 네 겹이 어떻게 이어지는지가 이 모듈의 전부다.</span>
+    </div>
+    <p class="terms"><span class="terms-tag">🔑 처음 나오는 말</span><span class="term">OSC</span><span class="term">UDP</span><span class="term">Lua</span><span class="term">도구(tool)</span><span class="term">통행권</span><span class="term">퍼센트 인코딩</span><span class="term">플러그인</span></p>
+
+    <h3>M4-0 · 전체 그림 — 말 한마디가 조명이 되기까지</h3>
+    <div class="diagram">
+      <svg viewBox="0 0 480 340" role="img" aria-label="사람의 말이 AI 모델의 도구 선택, 안전 게이트, OSC 전송, 콘솔 안 Lua 응답기를 거쳐 조명이 되고, 결과가 다시 돌아오는 6단계 흐름.">
+        <rect class="d-node d-node--you" x="70" y="8" width="250" height="34" rx="2"/>
+        <text class="d-sub" x="82" y="24">①  사람</text>
+        <text class="d-label" x="82" y="37">“무빙 앞줄을 파랗게”</text>
+        <path class="d-line" d="M195 42 V56"/><path class="d-head" d="M195 62 l-4 -7 h8 z"/>
+
+        <rect class="d-node" x="70" y="62" width="250" height="42" rx="2"/>
+        <text class="d-sub" x="82" y="78">②  AI 모델</text>
+        <text class="d-label" x="82" y="91">어떤 도구를 쓸지 고른다</text>
+        <text class="d-sub" x="330" y="84">아무 명령이나 못 쏜다</text>
+        <text class="d-sub" x="330" y="96">— 도구만 부를 수 있다</text>
+        <path class="d-line" d="M195 104 V118"/><path class="d-head" d="M195 124 l-4 -7 h8 z"/>
+
+        <rect class="d-node d-node--warn" x="70" y="124" width="250" height="52" rx="2"/>
+        <text class="d-sub" x="82" y="140">③  안전 게이트</text>
+        <text class="d-label" x="82" y="153">문법 → 위험도 → 승인 → 백업</text>
+        <text class="d-label" x="82" y="168">→ 통행권 발급</text>
+        <text class="d-sub" x="330" y="152">통행권 없으면</text>
+        <text class="d-sub" x="330" y="164">한 글자도 못 나간다</text>
+        <path class="d-line" d="M195 176 V190"/><path class="d-head" d="M195 196 l-4 -7 h8 z"/>
+
+        <rect class="d-node" x="70" y="196" width="250" height="42" rx="2"/>
+        <text class="d-sub" x="82" y="212">④  OSC 전송</text>
+        <text class="d-label" x="82" y="225">네트워크로 명령 한 줄</text>
+        <text class="d-sub" x="330" y="222">/copilot/cmd</text>
+        <path class="d-line" d="M195 238 V252"/><path class="d-head" d="M195 258 l-4 -7 h8 z"/>
+
+        <rect class="d-node d-node--you" x="70" y="258" width="250" height="52" rx="2"/>
+        <text class="d-sub" x="82" y="274">⑤  콘솔 안의 Lua 응답기</text>
+        <text class="d-label" x="82" y="287">실행하고, 결과를 되돌려 준다</text>
+        <text class="d-sub" x="330" y="286">/copilot/feedback</text>
+        <text class="d-sub" x="330" y="298">/copilot/state</text>
+
+        <path class="d-line" d="M70 284 H40 V25 H62"/>
+        <path class="d-head" d="M68 25 l-7 -4 v8 z"/>
+        <text class="d-sub" x="8" y="160">⑥ 확인 후</text>
+        <text class="d-sub" x="8" y="172">다음 수</text>
+      </svg>
+    </div>
+    <div class="easy">
+      <span class="easy-tag">💡 쉬운 말로 — 외국인 손님과 주방</span>
+      <p>손님(AI)은 주방 말을 모르고 주방에 들어갈 수도 없다.
+        그래서 <strong>메뉴판</strong>(도구)에서 고르게 하고, <strong>점원</strong>(안전 게이트)이 확인하고, <strong>전표</strong>(OSC)로 전달하고, <strong>주방 안의 사람</strong>(Lua 응답기)이 실제로 만든다.</p>
+    </div>
+
+    <h3>M4-1 · 왜 직접 연결이 안 되나</h3>
+    <p>AI 모델은 글을 만드는 프로그램이다. <strong>네트워크도 못 쓰고, 콘솔도 모른다.</strong></p>
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col">AI가 못 하는 것</th><th scope="col">그래서 필요한 것</th></tr></thead>
+      <tbody>
+        <tr><td>콘솔 명령어를 정확히 모른다</td><td><strong>도구 목록</strong>으로 고를 수 있는 것만 준다 (M4-2)</td></tr>
+        <tr><td>위험한 명령을 만들어낼 수 있다</td><td><strong>안전 게이트</strong>가 막는다 (M4-3)</td></tr>
+        <tr><td>네트워크로 뭘 보낼 수 없다</td><td><strong>OSC 브리지</strong>가 대신 보낸다 (M4-4)</td></tr>
+        <tr><td>콘솔 안을 들여다볼 수 없다</td><td><strong>콘솔 안의 Lua 응답기</strong>가 읽어서 알려준다 (M4-5)</td></tr>
+      </tbody>
+    </table></div>
+    <p class="aside"><strong>이 네 개가 이 프로젝트의 전부다.</strong> 나머지는 이 위에 쌓은 것이다.</p>
+
+    <h3>M4-2 · 계층 1 — AI에게는 “메뉴판”만 준다</h3>
+    <p>AI에게 “아무 명령이나 만들어 봐”라고 하지 않는다. <strong>미리 정한 도구 20개</strong> 중에서만 고르게 한다.</p>
+    <div class="snippet">바닥에 깔린 원시 도구 3개   ← 이것만이 실제로 콘솔을 건드린다
+ ┌──────────────────────────────────────────────┐
+ │ run_commands    명령을 실행한다               │
+ │ query_state     콘솔 상태를 읽는다            │
+ │ deploy_plugin   콘솔에 작은 프로그램을 심는다 │
+ └──────────────────────────────────────────────┘
+                      ▲
+ 그 위에 쌓은 전문 도구 16개
+ ┌──────────────────────────────────────────────┐
+ │ get_rig_context      지금 리그가 어떤지 요약  │
+ │ find_looks · instantiate_look   룩 찾기·만들기│
+ │ find_fx   · instantiate_fx      이펙트        │
+ │ find_scene · compile_scene      장면          │
+ │ prepare_busking · prepare_songcue  즉석·곡 큐 │
+ │ precheck_patch  · preshow_check    사전 점검  │
+ │ build_patch_sheet · build_cue_sheet ·         │
+ │ build_preset_list · build_handover_pack  서류 │
+ │ plan_executor_layout            실행기 배치   │
+ └──────────────────────────────────────────────┘</div>
+    <div class="easy">
+      <span class="easy-tag">💡 쉬운 말로 — 왜 이렇게 나누나</span>
+      <p><strong>원시 도구 3개는 “칼·불·도마”</strong>다. 뭐든 할 수 있지만 위험하다.<br>
+        <strong>전문 도구 16개는 “레시피”</strong>다. 자주 하는 일을 미리 안전하게 묶어 둔 것이다.<br>
+        AI가 “룩을 만들어 줘”를 처리할 때, 명령어를 처음부터 지어내는 것보다 <strong>이미 검증된 레시피를 부르는 게 훨씬 안전하다.</strong></p>
+    </div>
+    <div class="adv">
+      <span class="adv-tag">🔵 심화</span>
+      <p>전문 도구도 결국 내부에서 <span class="mono">run_commands</span>를 부른다. 다만 <strong>어떤 명령을 만들지가 사람이 검증해 둔 코드</strong>라서, AI의 상상력이 끼어들 자리가 없다.</p>
+    </div>
+
+    <h3>M4-3 · 계층 2 — 안전 게이트: “통행권” 모델</h3>
+    <p>명령이 콘솔로 나가려면 <strong>반드시 게이트를 통과해야 한다.</strong> 이 프로젝트에서 가장 공들인 부분이다.</p>
+    <div class="flow">
+      <div class="step"><span class="step-n">①</span><span class="step-b"><span class="step-t">상태 점검</span><span class="step-d">콘솔이 살아 있나</span></span></div>
+      <div class="step"><span class="step-n">②</span><span class="step-b"><span class="step-t">문법 검증</span><span class="step-d">이 명령이 문법에 맞나</span></span></div>
+      <div class="step"><span class="step-n">③</span><span class="step-b"><span class="step-t">위험도 분류 — 5가지로 판정</span><span class="step-d">금지 목록에 걸리나 · 대상이 지정 안 됐나(“전부”에 걸리는 것) · 참조를 펼쳐 봐야 아나(매크로 안에 뭐가 있나) · 플러그인 플래그가 붙었나 · 이전에 결과를 확인 못 한 이력이 있나</span></span></div>
+      <div class="step"><span class="step-n">④</span><span class="step-b"><span class="step-t">공연 중 잠금 확인</span><span class="step-d">지금 쇼가 돌고 있나</span></span></div>
+      <div class="step step--mark"><span class="step-n">⑤</span><span class="step-b"><span class="step-t">사람 승인 — 위험한 것만</span><span class="step-d">기본값은 <strong>전부 거부</strong></span></span></div>
+      <div class="step"><span class="step-n">⑥</span><span class="step-b"><span class="step-t">잠금 재확인</span><span class="step-d">승인받는 사이에 공연이 시작됐을 수도 있다</span></span></div>
+      <div class="step"><span class="step-n">⑦</span><span class="step-b"><span class="step-t">백업</span><span class="step-d">위험한 작업 전에 저장</span></span></div>
+      <div class="step step--mark"><span class="step-n">⑧</span><span class="step-b"><span class="step-t">통행권 발급</span><span class="step-d">여기까지 와야 나갈 수 있다</span></span></div>
+    </div>
+    <div class="easy">
+      <span class="easy-tag">💡 통행권이 왜 중요한가 — 백스테이지 출입증</span>
+      <p>출입구를 아무리 잘 알아도 <strong>패스가 없으면 못 들어간다.</strong> 그리고 패스는 <strong>1회용</strong>이다 — 한 번 쓰면 소모된다.<br>
+        이렇게 만들면 <strong>누가 실수로 전송 통로를 직접 붙잡아도 우회가 불가능하다.</strong> 코드 어딘가에서 몰래 명령을 보내는 일이 원천적으로 안 된다.<br>
+        그리고 <strong>모든 전송은 1:1로 기록된다</strong> — 나간 명령 하나에 감사 기록 하나.</p>
+    </div>
+    <p class="kicker"><strong>애매하면 막는다.</strong> 승인 기본값은 전부 거부다. “확실히 안전할 때만 통과”이지, “확실히 위험할 때만 차단”이 아니다. 판단이 안 서는 명령은 <strong>그냥 안 나간다.</strong></p>
+
+    <h3>M4-4 · 계층 3 — OSC: 콘솔에 말 거는 방법</h3>
+    <div class="easy">
+      <span class="easy-tag">💡 OSC가 뭔가</span>
+      <p><strong>네트워크로 짧은 메시지를 주고받는 약속</strong>이다. 원래 음악·조명 장비끼리 쓰라고 만든 규격이다.
+        편지로 치면 <strong>봉투 규격</strong>과 같다 — 주소를 어디 적고 내용을 어떻게 담을지 정해 둔 것.</p>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col">주소</th><th scope="col">방향</th><th scope="col">담는 것</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">/copilot/cmd</td><td>컴퓨터 → 콘솔</td><td>실행할 명령 한 줄</td></tr>
+        <tr><td class="mono">/copilot/feedback</td><td>콘솔 → 컴퓨터</td><td>실행 결과 · 살아있음 응답 · 오류</td></tr>
+        <tr><td class="mono">/copilot/state</td><td>콘솔 → 컴퓨터</td><td>콘솔 내부 상태 스냅숏</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>★ 이 설계의 핵심 제약 — 입구가 하나뿐이다</h4>
+    <p class="kicker"><strong>콘솔은 <span class="mono">/cmd</span> 주소로 들어온 “명령 한 줄”만 실행한다.</strong> 다른 주소를 만들어 “이건 조회 요청이야”라고 알려줄 방법이 <strong>없다.</strong> 콘솔 쪽에 주소를 추가하는 기능 자체가 없기 때문이다.</p>
+    <div class="snippet">원하는 것 :  "시퀀스 목록 좀 보여줘"   (조회)
+
+그런데 조회 전용 입구가 없다.
+           ↓
+그래서   :  조회 요청을 "명령"으로 위장해서 /cmd 로 보낸다
+
+     Plugin "CopilotResponder" "state 42 DataPool/Sequences"
+     └────────────────────────────────────────────────┘
+       콘솔 입장에선 그냥 "플러그인 실행" 명령이다
+
+           ↓ 콘솔이 그 플러그인을 실행한다
+           ↓ 플러그인이 시퀀스 목록을 읽는다
+           ↓ 플러그인이 /copilot/state 로 답장을 보낸다</div>
+    <div class="easy">
+      <span class="easy-tag">💡 쉬운 말로 — 우체통이 하나뿐인 건물</span>
+      <p>“택배는 여기, 편지는 저기”가 없다. 그래서 <strong>모든 걸 편지 봉투에 넣어</strong> 그 하나뿐인 우체통에 넣는다. 안에 있는 사람이 열어보고 알아서 처리한다.<br>
+        <strong>조회조차 “명령”의 모양을 하고 들어가는 것</strong> — 이게 이 시스템 구조의 이유다.</p>
+    </div>
+
+    <h4>UDP라서 생기는 문제와 해결</h4>
+    <p>OSC는 <strong>UDP</strong>라는 방식으로 오간다. UDP는 빠르지만 <strong>불친절하다</strong> — 보낸 게 <strong>도착 안 할 수 있고</strong>(사라져도 안 알려준다), 순서가 <strong>뒤바뀔 수 있다.</strong> 그래서 두 가지 장치를 뒀다.</p>
+    <div class="snippet">① 요청 번호로 짝을 맞춘다
+
+  보낼 때 :  state 42 DataPool/Sequences
+                   ↑ 요청 번호
+
+  답장    :  { "v":1, "id":"42", "kind":"state", ... }
+                            ↑ 그대로 되돌아온다
+
+  → 답장 3개가 뒤섞여 와도 어느 게 어느 요청의 답인지 안다</div>
+    <p><strong>② 도착한 것만 인정한다 — 정직 계약.</strong> 브리지는 <strong>실제로 도착한 답장만</strong> 전달한다. “안 왔으니 실패겠지” 같은 추측을 하지 않는다.
+      콘솔 쪽 응답기도 마찬가지다 — <strong>타이머 없음 · 재시도 없음 · 상주 루프 없음.</strong> 온 요청에만 답한다.</p>
+    <p class="aside">💡 이건 M4-8의 <strong>“ok는 증거가 아니다”</strong>와 같은 원칙이다. <strong>모르는 건 모른다고 둔다.</strong> 안다고 꾸미지 않는다.</p>
+
+    <h3>M4-5 · 계층 4 — 콘솔 안의 Lua 응답기</h3>
+    <p>콘솔은 <strong>명령을 실행</strong>해 준다. 그런데 <strong>“안에 뭐가 들었는지 알려줘”</strong>는 명령어로 안 된다.
+      그래서 <strong>콘솔 안에서 도는 작은 프로그램</strong>을 하나 심어 둔다. 그게 <strong>Lua 응답기</strong>다.</p>
+    <div class="easy">
+      <span class="easy-tag">💡 Lua가 왜 나오나</span>
+      <p><strong>Lua</strong>는 간단한 프로그래밍 언어다. grandMA3가 플러그인 언어로 채택하고 있어서 <strong>콘솔 안쪽은 Lua</strong>로 쓴다.
+        컴퓨터 <strong>바깥쪽은 파이썬</strong>이다. <strong>두 언어가 OSC로 만난다.</strong></p>
+    </div>
+    <p>이 프로젝트의 응답기는 <strong>약 990줄짜리 Lua 파일</strong> 하나다. 이름은 <span class="mono">CopilotResponder</span>. 요청은 전부 이 모양이다:</p>
+    <div class="snippet">Plugin "CopilotResponder" "&lt;동사&gt; &lt;요청번호&gt; [나머지]"</div>
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col">동사</th><th scope="col">무엇을 하나</th><th scope="col">어디로 답하나</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">ping</td><td>살아 있니?</td><td class="mono">/copilot/feedback</td></tr>
+        <tr><td class="mono">state</td><td>이 경로 안에 뭐가 있는지 보여줘</td><td class="mono">/copilot/state</td></tr>
+        <tr><td class="mono">prop</td><td>이 물건의 이 속성값 알려줘</td><td class="mono">/copilot/state</td></tr>
+        <tr><td class="mono">exec</td><td>이 명령 실행하고 결과 알려줘</td><td class="mono">/copilot/feedback</td></tr>
+        <tr><td class="mono">deploy</td><td>이 Lua 코드를 플러그인으로 심어</td><td class="mono">/copilot/feedback</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>이 5개가 전부다.</strong> 콘솔에 할 수 있는 모든 일이 이 다섯 동사 위에 올라간다.</p>
+    <div class="easy">
+      <span class="easy-tag">💡 답장은 어떻게 오나 — 퍼센트 인코딩</span>
+      <p>응답기는 결과를 <strong>JSON</strong>(정해진 형식의 글)으로 되돌린다. 그냥 보내면 깨진다 — 따옴표·쉼표·공백이 명령줄 문법과 충돌하기 때문이다.<br>
+        그래서 <strong>위험한 글자를 안전한 글자로 바꿔 적는다.</strong> 공백을 <span class="mono">%20</span>처럼 바꾸면 중간에 끊길 일이 없다. 받는 쪽에서 되돌린다.
+        인터넷 주소창에서 한글이 이상한 글자로 보이는 것과 같은 원리다.<br>
+        답장에는 항상 <span class="mono">"v": 1</span>(규격 버전)이 붙는다. 규격이 바뀌면 이 숫자를 올리고 <strong>양쪽을 동시에</strong> 고친다.</p>
+    </div>
+    <div class="adv">
+      <span class="adv-tag">🔵 심화 — 현장에서 진짜 문제가 됐던 것 3가지</span>
+      <p><strong>① 답장을 어느 줄로 보내나</strong> — 콘솔 OSC 설정에는 여러 줄이 있고 <strong>줄마다 역할이 다르다.</strong> 이 현장은 <strong>1번이 수신 전용, 2번이 송신 가능</strong>이었다. 그래서 설정이 <span class="mono">osc_slot = 2</span>다. 1번을 가리키면 답장이 <strong>조용히 사라진다.</strong></p>
+      <p><strong>② 콘솔마다 답장 함수 모양이 다르다</strong> — 그래서 응답기는 <strong>네 방식을 차례로 시도</strong>한다. 명령어로 보내는 방식은 <strong>맨 마지막</strong>이다. 이유가 중요하다 — <strong>그 방식은 실패해도 실패했다고 안 알려준다.</strong> 실패를 알 수 있는 방법부터 먼저 쓰고, 알 수 없는 방법은 최후에 쓴다.</p>
+      <p><strong>③ 따옴표를 못 쓴다</strong> — 요청이 <span class="mono">"…"</span> 안에 담기므로 내용에 큰따옴표가 있으면 <strong>거기서 잘린다.</strong> 이름은 작은따옴표로: <span class="mono">Store Cue 5 'name'</span></p>
+    </div>
+
+    <h3>M4-6 · 플러그인을 콘솔에 심는 두 가지 길</h3>
+    <p>AI가 Lua 코드를 짜서 콘솔에 심으려면 <strong>파일을 콘솔 안으로 넣어야</strong> 한다. 길이 두 개 있었고 <strong>하나가 이겼다.</strong></p>
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col"></th><th scope="col">길 A — OSC로 보내기</th><th scope="col">길 B — 파일 만들고 Import ✅</th></tr></thead>
+      <tbody>
+        <tr><td>방법</td><td>소스 코드를 명령 한 줄에 담아 전송</td><td>콘솔이 읽는 형식의 파일을 만들고 불러오기</td></tr>
+        <tr><td>문제</td><td><strong>약 2KB에서 잘린다.</strong> 그리고 이 방식으로 심은 건 콘솔에 <strong>저장이 안 됐다</strong></td><td>크기 제한 없음</td></tr>
+        <tr><td>한계</td><td>—</td><td>서버와 콘솔이 <strong>같은 컴퓨터</strong>에 있어야 한다</td></tr>
+        <tr><td>결과</td><td>실사용 포기</td><td><strong>실제로 심은 플러그인은 전부 이 길로 나갔다</strong></td></tr>
+      </tbody>
+    </table></div>
+    <p>같은 “파일 만들기”인데도 <strong>두 가지 형태</strong>가 있었고, 여기서 한 번 더 막혔다.</p>
+    <div class="snippet">❌ 파일 이름만 적어 두는 형태
+   &lt;ComponentLua FileName="내코드.lua"&gt;
+   → 불러오면 껍데기만 들어오고 내용이 없다. 실행해도 아무 일 없음
+
+✅ 코드를 파일 안에 통째로 넣는 형태
+   &lt;UserPlugin&gt;&lt;ComponentLua&gt;&lt;FileContent&gt;
+       &lt;Block Base64="……"/&gt;     ← 코드를 조각내서 담는다
+   → 이 형태만 실제로 동작했다</div>
+    <div class="easy">
+      <span class="easy-tag">💡 쉬운 말로</span>
+      <p>❌는 <strong>“내 코드는 저기 있어요”라고 쪽지만 넣은 것</strong>이다. 콘솔이 그 쪽지를 안 따라간다.<br>
+        ✅는 <strong>코드를 통째로 봉투에 넣은 것</strong>이다.</p>
+    </div>
+    <p><strong>심기 전에 세 관문을 통과한다.</strong> AI가 짠 코드라고 그냥 넣지 않는다.</p>
+    <div class="flow">
+      <div class="step"><span class="step-n">①</span><span class="step-b"><span class="step-t">컴파일 검사</span><span class="step-d">문법이 맞나 — 콘솔에 넣기 전에 미리 확인</span></span></div>
+      <div class="step"><span class="step-n">②</span><span class="step-b"><span class="step-t">스캔</span><span class="step-d">위험한 코드가 들었나</span></span></div>
+      <div class="step step--mark"><span class="step-n">③</span><span class="step-b"><span class="step-t">사람 검토</span><span class="step-d">사람이 읽고 승인해야 통과</span></span></div>
+      <div class="step"><span class="step-n">④</span><span class="step-b"><span class="step-t">콘솔에 심기</span><span class="step-d">①과 ③이 <strong>둘 다</strong> 통과해야만. 기본값은 거부</span></span></div>
+    </div>
+
+    <h3>M4-7 · 실제 왕복 한 번 따라가기</h3>
+    <p>“무빙 앞줄을 파랗게” 한마디가 실제로 어떻게 도는지, 처음부터 끝까지.</p>
+    <div class="snippet"> 1  사람        "무빙 앞줄을 파랗게 해줘"
+ 2  AI 모델     리그를 먼저 확인해야겠다 → get_rig_context
+ 3  서버        query_state 로 그룹 목록 조회 준비
+ 4  게이트      읽기 전용이라 안전 → 통행권 발급
+ 5  OSC 전송    /copilot/cmd ← Plugin "CopilotResponder" "state 17 DataPool/Groups"
+ 6  콘솔        플러그인 실행 → 그룹 목록을 읽음
+ 7  응답기      JSON 포장 → 퍼센트 인코딩 → /copilot/state 로 발송
+ 8  서버        요청번호 17로 짝 맞춤 → AI에게 전달
+ 9  AI 모델     "앞줄 무빙은 Group 3" → run_commands(["Group 3","Color 5"])
+10  게이트      문법 OK · 위험 아님 · 공연 중 아님 → 통행권 발급
+11  OSC 전송    /copilot/cmd ← Plugin "CopilotResponder" "exec 18 Group 3"
+12  응답기      명령 실행 → 결과를 /copilot/feedback 으로
+13  서버        결과 확인
+14  ★ 재조회    query_state 로 진짜 바뀌었는지 다시 확인  ← 이게 증거다
+15  사람        화면에서 파래진 걸 본다</div>
+    <p class="kicker"><strong>14번이 없으면 12번의 “성공”은 주장일 뿐이다.</strong> 왜 그런지는 바로 다음에서 본다.</p>
+
+    <h3>M4-8 · 여기서 실제로 틀렸던 것들</h3>
+    <p>원리를 알았으니, 이제 <strong>그 원리가 어디서 배신했는지</strong>를 본다. 전부 이 프로젝트에서 실제로 겪은 일이다.</p>
+    <div class="cases">
+      <article class="case">
+        <div class="case-head"><span class="case-id">Case A</span><span class="case-title">화면 번호 ≠ 진짜 번호</span></div>
+        <p>목록에서 읽은 번호로 명령을 보내니 대부분 거절당했다. 진짜 주소는 <strong>읽은 번호 + 100</strong>.</p>
+        <p class="kicker">무서운 건 <strong>두 번호 다 오류가 안 난다</strong>는 것. 하나는 경고 없이 <strong>엉뚱한 조명을 켠다.</strong> 7번 거절당하는 것보다 <strong>1번 조용히 잘못 실행되는 게 나쁘다.</strong></p>
+      </article>
+      <article class="case">
+        <div class="case-head"><span class="case-id">Case B</span><span class="case-title">같은 규칙이 상황 따라 정반대</span></div>
+        <p>장비 등록 작업에서는 “작업 위치를 직접 지정하면” 실패한다. 조명 만드는 작업에서는 <strong>반드시 필요</strong>하다. → <strong>“한 번 됐으니 저기서도 되겠지”가 조용히 틀린다.</strong></p>
+      </article>
+      <article class="case">
+        <div class="case-head"><span class="case-id">Case C</span><span class="case-title">“0개”가 “비었다”가 아니었다</span></div>
+        <p>쓰고 있는 그룹을 <span class="mono">state</span>로 조회했더니 <strong>0개</strong>로 나왔다. 그룹은 멀쩡히 쓰이고 있었다 — <strong>그 조회 경로가 그 정보를 안 담고 있었을 뿐</strong>이다.</p>
+        <p class="kicker">못 읽으면 → 확인 못 하고 → 백업 못 하고 → <strong>되돌릴 수 없다.</strong> 그래서 그 자리 자동 생성은 <strong>금지</strong>로 못 박았다.</p>
+      </article>
+      <article class="case">
+        <div class="case-head"><span class="case-id">Case D</span><span class="case-title">없는 명령이 “성공”이라고 답했다</span></div>
+        <p>일부러 오타 낸 가짜 명령을 먼저 쏴 봤더니 <strong><span class="mono">ok</span>가 오고 큐까지 만들어졌다.</strong> 콘솔은 모르는 옵션을 <strong>조용히 무시</strong>한다.</p>
+        <p class="kicker">가짜를 안 쏴봤으면 <strong>아무 일도 안 하는 기능 위에 전부를 세웠을 것이다.</strong></p>
+      </article>
+    </div>
+    <div class="flow">
+      <div class="step step--mark"><span class="step-n">①</span><span class="step-b"><span class="step-t">반드시 실패해야 하는 가짜 명령을 먼저 쏜다</span><span class="step-d">실패한다 → 이 길은 믿을 수 있다 · 성공한다 → 이 길은 아무것도 구별 못 한다, 다른 길을 찾는다</span></span></div>
+      <div class="step"><span class="step-n">②</span><span class="step-b"><span class="step-t">진짜 명령을 쏜다</span></span></div>
+      <div class="step"><span class="step-n">③</span><span class="step-b"><span class="step-t">다시 조회해서 확인한다</span><span class="step-d">M4-7의 14번</span></span></div>
+    </div>
+    <div class="twoup">
+      <div class="pane pane--yes">
+        <span class="pane-head">외울 문장 3개</span>
+        <ul>
+          <li><strong>“됐습니다”는 증거가 아니다</strong> — 다시 확인한 결과가 증거다</li>
+          <li><strong>읽을 수 있다 ≠ 시킬 수 있다</strong></li>
+          <li><strong>도구를 먼저 의심하라</strong></li>
+        </ul>
+      </div>
+      <div class="pane pane--no">
+        <span class="pane-head">M4-9 · 규칙집 — 검증된 명령만</span>
+        <ul>
+          <li>AI는 콘솔 명령어를 <strong>그럴듯하게 지어낼 수 있다</strong></li>
+          <li>그래서 <strong>실제로 확인된 명령만</strong> 모아 항상 읽힌다</li>
+          <li>들어가는 것 — 확인된 형식 · 상황별 예외 · 금지 · <strong>실패했던 방법과 이유</strong></li>
+          <li><strong>규칙집은 자란다.</strong> M5의 하네스의 조명 버전이다</li>
+        </ul>
+      </div>
+    </div>
+    <div class="easy">
+      <span class="easy-tag">💡 조명으로 하면</span>
+      <p>페이더를 올렸는데 안 밝다. 램프부터 보지 않는다 — <strong>채널 → 밝기 → 패치</strong> 순서로 본다.
+        <strong>당신은 이미 이 습관이 있다. AI에게도 쓰면 된다.</strong></p>
+    </div>
+
+    <h3>M4-10 · 실습 — 왕복 한 번 직접</h3>
+    <div class="flow">
+      <div class="step"><span class="step-n">1</span><span class="step-b"><span class="step-t">실습용 쇼파일 만들고 백업</span></span></div>
+      <div class="step"><span class="step-n">2</span><span class="step-b"><span class="step-t">콘솔 OSC 설정에서 송신 가능한 줄이 몇 번인지 확인</span><span class="step-d">M4-5 심화 ①</span></span></div>
+      <div class="step step--mark"><span class="step-n">3</span><span class="step-b"><span class="step-t"><span class="mono">ping</span> 보내서 살아있는지 확인</span><span class="step-d">여기서 막히면 통신 설정 문제</span></span></div>
+      <div class="step"><span class="step-n">4</span><span class="step-b"><span class="step-t"><span class="mono">state</span>로 그룹 목록 조회</span></span></div>
+      <div class="step step--mark"><span class="step-n">5</span><span class="step-b"><span class="step-t">가짜 명령 먼저 쏴 보기 → 실패하는지 확인</span><span class="step-d">건너뛰는 조가 반드시 나온다. 그 조에게 Case D를 다시 읽힌다</span></span></div>
+      <div class="step"><span class="step-n">6</span><span class="step-b"><span class="step-t"><span class="mono">exec</span>로 진짜 명령 1건</span></span></div>
+      <div class="step step--mark"><span class="step-n">7</span><span class="step-b"><span class="step-t">다시 <span class="mono">state</span>로 조회해서 확인</span><span class="step-d">이게 증거다</span></span></div>
+    </div>
+    <p class="aside">🎓 <strong>학생 트랙 대안</strong> — 강사 콘솔 하나로 조별 순서 진행. 단, <strong>3번(ping)과 5번(가짜 명령)은 전원이 직접</strong> 본다.</p>
+  </div>
+</section>
+
+<!-- ══ M5 ══ -->
+<section class="block">
+  <div class="cue"><span class="cue-id">M5</span><span class="chip" style="--chip:var(--gel-5)"></span><span class="cue-hr">8h · 🟢🔵</span></div>
+  <div class="block-body">
+    <h2>바이브 코딩의 기술</h2>
+    <div class="plain">
+      <span class="plain-tag">💬 한 줄로 말하면</span>
+      <span class="plain-body">AI 한 대에게 전부 시키지 않는다. <strong>여러 대에게 역할을 나눠 주고, 규칙을 깔고, 될 때까지 반복시키고, 순서를 짠다.</strong><br>
+        <strong>조별과제에서 조장이 하는 일</strong>과 똑같다.</span>
+    </div>
+    <p class="terms"><span class="terms-tag">🔑 처음 나오는 말</span><span class="term">오케스트레이션</span><span class="term">에이전트</span><span class="term">하네스</span><span class="term">훅</span><span class="term">루프</span><span class="term">그래프 엔지니어링</span></p>
+
+    <div class="easy">
+      <span class="easy-tag">💡 왜 AI 한 대로는 안 되나 — 조별과제</span>
+      <p>조별과제를 <strong>조장 혼자 다 하면</strong> 어떻게 되나?<br>
+        할 게 너무 많아서 <strong>앞에 뭐 했는지 까먹고</strong> · 자기가 쓴 걸 자기가 검사하니 <strong>틀린 걸 못 보고</strong> · 하나씩 하니 <strong>느리고</strong> · 혼자 다 건드리니 <strong>하나 잘못되면 전부 망한다.</strong><br>
+        조명으로 치면 <strong>감독 혼자 포커싱도 프로그래밍도 검수도 하는 것</strong>이다.</p>
+    </div>
+
+    <div class="concepts">
+
+      <article class="concept" style="--chip:var(--gel-1)">
+        <div class="concept-head"><span class="concept-n">5-1 · 1.5h</span><span class="concept-t">오케스트레이션 — 일 나눠 시키기</span></div>
+        <p><strong>혼자 다 하지 않고, 나눠 주고, 모은다.</strong></p>
+        <div class="tablewrap"><table>
+          <thead><tr><th scope="col">조명 현장</th><th scope="col">여기서는</th></tr></thead>
+          <tbody>
+            <tr><td>조명감독</td><td><strong>지휘 담당 AI</strong> — 방향 정하고, 일 나누고, 최종 판단</td></tr>
+            <tr><td>오퍼레이터</td><td>실제로 만드는 AI</td></tr>
+            <tr><td>포커스 크루</td><td>특정 작업만 하는 AI</td></tr>
+            <tr><td>외부 검수</td><td><strong>검사만 하는 AI</strong></td></tr>
+          </tbody>
+        </table></div>
+        <p><strong>나누는 방법 3가지</strong> · <strong>차례로 넘기기</strong>(앞 결과가 뒤의 재료일 때) · <strong>동시에 시키기</strong>(서로 상관없을 때) · <strong>대량으로 돌리기</strong>(같은 작업 수십~수백 개).</p>
+        <p><em>실물</em> — 이 저장소는 지휘 담당이 <strong>10종의 일꾼</strong>에게 일을 나눈다. 그리고 <strong>지휘 담당은 직접 만들지 않는다.</strong></p>
+      </article>
+
+      <article class="concept" style="--chip:var(--gel-2)">
+        <div class="concept-head"><span class="concept-n">5-2 · 1.5h</span><span class="concept-t">에이전트 — 역할 나누기</span></div>
+        <p><strong>역할과 할 수 있는 일이 정해진 AI 한 명.</strong> 각자 자기 기억만 갖고, 끝나면 결과만 보고한다. <em>조별과제 팀원</em>이다.</p>
+        <div class="tablewrap"><table>
+          <thead><tr><th scope="col">나누는 이유</th><th scope="col">쉬운 말로</th></tr></thead>
+          <tbody>
+            <tr><td>기억이 안 섞인다</td><td>만드는 담당이 문서 담당 대화까지 기억할 필요가 없다</td></tr>
+            <tr><td>권한을 줄이면 안전하다</td><td><strong>조사만 하는 AI에게는 고칠 권한을 안 준다.</strong> 실수해도 안 망가진다</td></tr>
+            <tr><td>딴 사람이 검사한다</td><td>만든 쪽이 아닌 다른 쪽이 검사한다</td></tr>
+          </tbody>
+        </table></div>
+        <p class="kicker"><strong>가장 중요한 규칙 — 검사는 만든 사람이 하지 않는다.</strong> 두 검사 담당은 통과시키는 게 일이 아니라 <strong>결함을 찾는 게 일</strong>이다.
+          💡 <strong>내가 포커싱한 걸 내가 검수하면 못 본다.</strong></p>
+        <p><strong>일꾼은 사용자에게 직접 못 묻는다.</strong> 정보가 없으면 지휘 담당에게 보고하고, 지휘 담당이 사용자에게 묻는다.
+          💡 <strong>사용자는 한 명하고만 대화한다.</strong> 10명이 각자 말 걸면 현장이 마비된다.</p>
+      </article>
+
+      <article class="concept" style="--chip:var(--gel-3)">
+        <div class="concept-head"><span class="concept-n">5-3 · 2h</span><span class="concept-t">하네스 — 규칙과 안전장치</span></div>
+        <p>AI에게 <strong>“우리 현장에선 이렇게 한다”를 가르쳐 두고</strong>, AI가 깜빡해도 <strong>기계가 대신 잡아주게</strong> 하는 것.</p>
+        <div class="easy">
+          <span class="easy-tag">💡 이름의 뜻</span>
+          <p><strong>하네스(harness)</strong>는 원래 <strong>말에 씌우는 마구(고삐)</strong>를 뜻한다. 말이 힘이 세다고 아무 데나 뛰게 두지 않는다 — <strong>원하는 방향으로 몰기 위해</strong> 씌운다. AI도 똑같다.</p>
+        </div>
+        <div class="tablewrap"><table>
+          <thead><tr><th scope="col">조명 현장</th><th scope="col">여기서는</th><th scope="col">이 저장소</th></tr></thead>
+          <tbody>
+            <tr><td>극장 하우스 룰</td><td><strong>규칙 파일</strong> — 반드시 지킬 것</td><td class="num">63개</td></tr>
+            <tr><td>매뉴얼 선반</td><td><strong>스킬</strong> — 필요할 때 꺼내 읽는 자료</td><td class="num">28개</td></tr>
+            <tr><td><strong>리밋 스위치 · 인터록</strong></td><td><strong>훅</strong> — 자동으로 켜지는 검사</td><td class="num">25개</td></tr>
+            <tr><td>콘솔 설정</td><td>설정 파일</td><td>—</td></tr>
+          </tbody>
+        </table></div>
+        <p class="pull">리밋 스위치는 오퍼레이터가 깜빡해도 무빙이 벽을 치지 않게 한다. 훅은 AI가 깜빡해도 규칙을 어기지 못하게 한다.</p>
+        <p><strong>훅이 자동으로 켜지는 순간들</strong> — 작업 시작할 때 · 명령 실행 직전(위험한지 검사) · 명령 실행 직후 · 일꾼이 시작·끝날 때 · <strong>한 턴 끝날 때(점검표 통과했나)</strong> · <strong>한 턴 끝날 때(목표 달성했나)</strong> · 기억이 꽉 찰 때.</p>
+        <div class="snippet">실패한다 → 왜 실패했는지 적는다 → 규칙 파일에 추가한다
+     ↑                                       │
+     └────────── 같은 실패가 다시 안 난다 ◀──┘</div>
+        <p class="kicker"><strong>규칙을 잘 깔면 같은 AI라도 결과가 좋아진다. 도구를 바꾸기 전에 규칙을 먼저 고쳐라.</strong></p>
+      </article>
+
+      <article class="concept" style="--chip:var(--gel-4)">
+        <div class="concept-head"><span class="concept-n">5-4 · 1.5h</span><span class="concept-t">루프 — 될 때까지 반복시키기</span></div>
+        <p><strong>“이게 될 때까지 계속해”</strong>라고 시켜두는 것. 단, <strong>언제 그만둘지도 반드시 같이 정한다.</strong></p>
+        <div class="tablewrap"><table>
+          <thead><tr><th scope="col">종류</th><th scope="col">언제 멈추나</th><th scope="col">예</th></tr></thead>
+          <tbody>
+            <tr><td>조건 루프</td><td>정해둔 조건이 참이 되면</td><td>“점검표 전부 통과할 때까지”</td></tr>
+            <tr><td>목록 루프</td><td>문제 목록이 빌 때까지</td><td>“잡힌 오류 다 없앨 때까지”</td></tr>
+            <tr><td>시간 루프</td><td>사람이 끌 때까지</td><td>“5분마다 상태 확인”</td></tr>
+          </tbody>
+        </table></div>
+        <div class="snippet">나쁜 조건 :  "완벽해질 때까지"          ← 판정 불가. 영원히 돈다
+
+좋은 조건 :  "점검표 통과 && 문법 검사 통과,
+              안 되면 20번 하고 중단"    ← 기계가 판정 가능 + 탈출구</div>
+        <p><strong>세 가지 한도를 반드시 건다</strong> — 몇 번까지 반복할지 · 돈을 얼마까지 쓸지 · 같은 실패를 몇 번까지(이 프로젝트는 <strong>3번</strong>).</p>
+        <p class="pull">“될 때까지 반복”은 러닝 큐가 아니다. 탈출 조건 없는 루프는 무대에 무한 체이스를 걸어두고 퇴근하는 것과 같다.</p>
+        <p><strong>조건은 기계가 판정할 수 있어야 한다.</strong> 루프가 도는 동안 <strong>사람은 안 보고 있다.</strong> “잘 작동하면”이 아니라 <span class="mono">오류 개수가 0이면</span>.</p>
+        <p class="kicker"><strong>틀린 판정 기준 위에서 도는 루프가 가장 비싸다.</strong> 그래서 M4의 검증이 루프보다 먼저 와야 한다.</p>
+      </article>
+
+      <article class="concept" style="--chip:var(--gel-6)">
+        <div class="concept-head"><span class="concept-n">5-5 · 1.5h</span><span class="concept-t">그래프 엔지니어링 — 순서와 기억 짜기</span></div>
+        <p><strong>뭘 동시에 하고 뭘 차례로 할지</strong> 정하는 것 + <strong>AI에게 뭘 언제 읽힐지</strong> 정하는 것.
+          💡 <strong>그래프</strong>는 점과 선으로 그린 <strong>관계도</strong>를 말한다. 지하철 노선도를 생각하면 된다.</p>
+
+        <h4>(a) 순서 짜기</h4>
+        <div class="diagram">
+          <svg viewBox="0 0 480 130" role="img" aria-label="계획 뒤에 안전·속도·읽기쉬움 검토가 동시에 진행되고, 종합한 뒤 만들기와 문서가 차례로 이어진다.">
+            <rect class="d-node d-node--you" x="10" y="50" width="62" height="30" rx="2"/>
+            <text class="d-small" x="41" y="69" text-anchor="middle">계획</text>
+            <path class="d-line" d="M76 65 H96"/><path class="d-head" d="M102 65 l-6 -4 v8 z"/>
+            <rect class="d-node" x="106" y="14" width="96" height="28" rx="2"/>
+            <text class="d-small" x="154" y="32" text-anchor="middle">안전 검토</text>
+            <rect class="d-node" x="106" y="51" width="96" height="28" rx="2"/>
+            <text class="d-small" x="154" y="69" text-anchor="middle">속도 검토</text>
+            <rect class="d-node" x="106" y="88" width="96" height="28" rx="2"/>
+            <text class="d-small" x="154" y="106" text-anchor="middle">읽기쉬움 검토</text>
+            <text class="d-sub" x="154" y="128" text-anchor="middle">동시에</text>
+            <path class="d-line" d="M206 28 H228 V61"/>
+            <path class="d-line" d="M206 65 H228"/>
+            <path class="d-line" d="M206 102 H228 V69"/>
+            <path class="d-head" d="M234 65 l-6 -4 v8 z"/>
+            <rect class="d-node" x="238" y="50" width="62" height="30" rx="2"/>
+            <text class="d-small" x="269" y="69" text-anchor="middle">종합</text>
+            <path class="d-line" d="M304 65 H322"/><path class="d-head" d="M328 65 l-6 -4 v8 z"/>
+            <rect class="d-node" x="332" y="50" width="62" height="30" rx="2"/>
+            <text class="d-small" x="363" y="69" text-anchor="middle">만들기</text>
+            <path class="d-line" d="M398 65 H414"/><path class="d-head" d="M420 65 l-6 -4 v8 z"/>
+            <rect class="d-node" x="424" y="50" width="48" height="30" rx="2"/>
+            <text class="d-small" x="448" y="69" text-anchor="middle">문서</text>
+            <text class="d-sub" x="358" y="94" text-anchor="middle">차례로</text>
+          </svg>
+          <p class="diagram-cap">판단 기준은 하나 — <strong>앞의 결과가 뒤에 필요한가?</strong> 필요하면 차례로, 상관없으면 동시에.</p>
+        </div>
+        <div class="easy">
+          <span class="easy-tag">💡 쉬운 말로</span>
+          <p><strong>밥 짓기 → 상 차리기</strong>는 차례로 해야 한다. 밥이 있어야 차린다.<br>
+            <strong>세 사람이 각각 다른 방 청소</strong>는 동시에 해도 된다. 서로 상관없으니까.</p>
+        </div>
+        <p><em>이 저장소의 실제 규칙 2가지</em> — ① 상관없는 일은 <strong>한 번에 같이</strong> 보낸다 ② <strong>고칠 권한이 있는 AI 둘을 동시에 돌리지 않는다.</strong>
+          💡 <strong>같은 실행기를 두 큐가 동시에 물면 안 되는 것</strong>과 같은 제약이다.</p>
+
+        <h4>(b) 기억 관리</h4>
+        <p><strong>AI가 기억할 수 있는 양은 정해져 있다.</strong> 규칙 63개를 전부 항상 읽히면 <strong>정작 일할 자리가 없다.</strong></p>
+        <div class="easy">
+          <span class="easy-tag">💡 쉬운 말로 — 시험 볼 때 책상</span>
+          <p>시험 볼 때 책상에 <strong>모든 교과서를 다 펴놓지 않는다.</strong> 지금 푸는 과목만 놓고, 나머지는 가방에 둔다. 필요하면 꺼낸다.</p>
+        </div>
+        <div class="flow">
+          <div class="step"><span class="step-n">1</span><span class="step-b"><span class="step-t">항상 읽힘</span><span class="step-d">꼭 필요한 규칙 몇 개 — 안전 · 말투 · 대화 방식</span></span></div>
+          <div class="step"><span class="step-n">2</span><span class="step-b"><span class="step-t">때에 따라</span><span class="step-d">그 작업일 때만 — 콘솔 작업이면 콘솔 규칙집</span></span></div>
+          <div class="step"><span class="step-n">3</span><span class="step-b"><span class="step-t">부를 때만</span><span class="step-d">자료 28개 — 제목만 보이고 내용은 부를 때 가져온다</span></span></div>
+        </div>
+        <p class="pull">콘솔 화면에 모든 풀을 다 띄우지 않는다. 지금 쓸 것만 띄운다.</p>
+        <p><strong>기억이 꽉 차면 — 인수인계.</strong> 지금까지 한 걸 요약해 저장 → 기억을 비우고 새로 시작 → 요약을 읽고 이어서.
+          💡 <strong>교대할 때 넘기는 공연 노트</strong>와 같다.</p>
+      </article>
+
+    </div>
+
+    <h3>다섯 개가 어떻게 맞물리나</h3>
+    <div class="diagram">
+      <svg viewBox="0 0 480 195" role="img" aria-label="하네스가 바닥을 깔고, 지휘 담당이 순서대로 일꾼에게 일을 나눠 주며, 루프가 조건까지 반복하고 훅이 매 턴 판정한다.">
+        <rect class="d-node d-node--you" x="10" y="8" width="460" height="30" rx="2"/>
+        <text class="d-small" x="240" y="27" text-anchor="middle">하네스 — 규칙 · 자료 · 자동 검사 (모든 것의 바닥)</text>
+        <rect class="d-node" x="10" y="58" width="150" height="34" rx="2"/>
+        <text class="d-small" x="85" y="79" text-anchor="middle">지휘 담당</text>
+        <text class="d-sub" x="85" y="106" text-anchor="middle">순서대로 나눠 준다</text>
+        <path class="d-line" d="M164 75 H196"/><path class="d-head" d="M202 75 l-6 -4 v8 z"/>
+        <rect class="d-node" x="206" y="52" width="120" height="22" rx="2"/>
+        <text class="d-small" x="266" y="67" text-anchor="middle">일꾼 · 만들기</text>
+        <rect class="d-node" x="206" y="80" width="120" height="22" rx="2"/>
+        <text class="d-small" x="266" y="95" text-anchor="middle">일꾼 · 검사</text>
+        <path class="d-line" d="M330 75 H360"/><path class="d-head" d="M366 75 l-6 -4 v8 z"/>
+        <rect class="d-node" x="370" y="58" width="100" height="34" rx="2"/>
+        <text class="d-small" x="420" y="79" text-anchor="middle">결과</text>
+        <path class="d-line" d="M420 96 V128 H85 V116"/>
+        <path class="d-head" d="M85 110 l-4 7 h8 z"/>
+        <text class="d-sub" x="250" y="142" text-anchor="middle">루프 — 조건이 될 때까지 반복</text>
+        <rect class="d-node d-node--warn" x="140" y="156" width="200" height="28" rx="2"/>
+        <text class="d-small" x="240" y="174" text-anchor="middle">훅이 매 턴 판정한다</text>
+      </svg>
+      <p class="diagram-cap"><strong>한 문장으로</strong> — 규칙을 깔고 → 순서를 정하고 → 나눠 주고 → 될 때까지 반복하고 → 매번 검사한다.</p>
+    </div>
+    <p class="aside">🎓 <strong>학생 트랙 대안</strong> — 실습은 “규칙 파일 1개 직접 써보기”와 “읽기만 되는 일꾼에게 조사 시켜보기”만. 루프는 강사 시연.</p>
+  </div>
+</section>
+
+<!-- ══ M6 ══ -->
+<section class="block">
+  <div class="cue"><span class="cue-id">M6</span><span class="chip" style="--chip:var(--gel-6)"></span><span class="cue-hr">2h · 🟢</span></div>
+  <div class="block-body">
+    <h2>결과 — 무엇을 할 수 있게 되었나</h2>
+    <div class="plain">
+      <span class="plain-tag">💬 한 줄로 말하면</span>
+      <span class="plain-body">3주 만에 <strong>실제로 되는 것들</strong>과 <strong>아직 안 되는 것들</strong>을 정직하게 본다.</span>
+    </div>
+
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col">되는 것</th><th scope="col">쉬운 말로</th></tr></thead>
+      <tbody>
+        <tr><td>한국어 → 콘솔 명령</td><td>말로 시키면 콘솔이 움직인다</td></tr>
+        <tr><td>장비 등록 자동화</td><td>조명 기구를 한꺼번에 등록 (<strong>실제 9대 성공</strong>)</td></tr>
+        <tr><td>콘솔용 프로그램 만들기</td><td>AI가 코드를 짜서 콘솔에 심는다</td></tr>
+        <tr><td>룩 만들기</td><td>“따뜻한 저녁 느낌” → 실제 설정으로</td></tr>
+        <tr><td>이펙트 다루기</td><td>반복 움직임을 말로 만든다</td></tr>
+        <tr><td>장면 구성 · 배치 인식</td><td>큐를 짜고, 어느 조명이 어디 있는지 읽어 연출</td></tr>
+        <tr><td>콘솔 상태 보기 · 사전 점검</td><td>지금 뭐가 어떤지 화면으로, 공연 전 이상 확인</td></tr>
+        <tr><td>서류 자동화 · 안전장치 · 설치 앱</td><td>인수인계 문서, 위험 명령 차단, 더블클릭 실행</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="twoup">
+      <div class="pane pane--no">
+        <span class="pane-head">반만 되는 것</span>
+        <ul>
+          <li><strong>그룹 자동 만들기</strong> — 빈 자리만. 쓰는 자리는 되돌릴 수 없어 막았다</li>
+          <li><strong>추상적인 지시</strong> — “웅장하게”는 아직. 배치를 더 깊이 읽어야</li>
+          <li><strong>이펙트 확인</strong> — 기계로는 못 본다. <strong>사람이 눈으로</strong></li>
+        </ul>
+      </div>
+      <div class="pane pane--no">
+        <span class="pane-head">일부러 안 하는 것</span>
+        <ul>
+          <li><strong>공연 중 AI가 스스로 실행</strong> — 기술 문제가 아니라 <strong>선택</strong></li>
+          <li><strong>예쁜지 판단</strong> — AI는 초안까지</li>
+          <li><strong>하드웨어 없이 실제 조명</strong> — 콘솔 회사 정책</li>
+          <li><strong>읽을 수 없는 걸 자동화</strong> — 백업·복구 안 되면 막는다</li>
+        </ul>
+      </div>
+    </div>
+    <p class="pull">상용 제품은 만 명을 위해 만든다. 당신의 도구는 당신 한 사람을 위해 만들면 된다.</p>
+  </div>
+</section>
+
+<!-- ══ M7 ══ -->
+<section class="block">
+  <div class="cue"><span class="cue-id">M7</span><span class="chip" style="--chip:var(--gel-7)"></span><span class="cue-hr">2h · 🟢</span></div>
+  <div class="block-body">
+    <h2>앞으로의 과제</h2>
+    <div class="plain">
+      <span class="plain-tag">💬 한 줄로 말하면</span>
+      <span class="plain-body">아직 못 한 게 많다. <strong>그게 여러분이 할 몫이다.</strong></span>
+    </div>
+
+    <div class="tablewrap"><table>
+      <thead><tr><th scope="col">단계</th><th scope="col">목표</th><th scope="col">상태</th></tr></thead>
+      <tbody>
+        <tr><td>확인</td><td>남의 제품 평가, 범위 정하기</td><td><span class="tag tag--done">끝</span></td></tr>
+        <tr><td>최소 동작</td><td>통신 · 대답 · 채팅 화면 · 안전장치</td><td><span class="tag tag--done">대부분 끝</span></td></tr>
+        <tr><td>장비 배치 이해</td><td>도면·장비 파일을 읽어서 <strong>“코러스에서 금색으로 웅장하게”</strong> 수준의 지시를 실행</td><td><span class="tag tag--todo">미착수</span></td></tr>
+        <tr><td>음악 → 큐 자동 생성</td><td>곡을 분석해 <strong>3분 곡 → 10분 안에 큐 초안</strong></td><td><span class="tag tag--todo">미착수</span></td></tr>
+        <tr><td>공연 중 보조</td><td>다음 큐 제안, 즉석 운용 추천, 이상 알림</td><td><span class="tag tag--todo">미착수</span></td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="easy">
+      <span class="easy-tag">💡 외부와 이을 때 왜 “읽기”부터인가</span>
+      <p>지금 하는 작업은 이 프로그램을 <strong>다른 AI가 불러 쓸 수 있게</strong> 만드는 것이다. <strong>1단계는 읽기만</strong> — 콘솔을 바꾸는 기능은 하나도 안 열어준다.<br>
+        <strong>읽기는 되돌릴 게 없다. 쓰기는 되돌릴 게 있다.</strong> M3·M4에서 배운 순서 그대로다.</p>
+    </div>
+
+    <div class="twoup">
+      <div class="pane pane--no">
+        <span class="pane-head">아직 못 푼 기술 문제</span>
+        <ul>
+          <li>그룹 안에 뭐가 들었는지 <strong>못 읽는다</strong></li>
+          <li>쇼파일을 <strong>되돌리는 길이 없다</strong> — 여러 기능이 이것 때문에 막혀 있다</li>
+          <li>이펙트가 잘 도는지 <strong>기계로 못 본다</strong></li>
+          <li>콘솔 업데이트 대응 · 인터넷 없을 때</li>
+        </ul>
+      </div>
+      <div class="pane pane--no">
+        <span class="pane-head">넓혀 갈 곳</span>
+        <ul>
+          <li><strong>도면 프로그램과 연결</strong></li>
+          <li><strong>다른 콘솔</strong> — 지금은 grandMA3만</li>
+          <li><strong>여러 명이 함께</strong> — 지금은 1인용</li>
+          <li><strong>인수인계 자동화</strong> — 시작은 했다</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>기술 밖의 문제</h3>
+    <div class="limits">
+      <div class="limit"><span class="limit-t">약관과 법</span><span class="limit-d">콘솔 회사 약관상 재배포 제약이 있다. 팔려면 법률 검토가 필요하다.</span></div>
+      <div class="limit"><span class="limit-t">책임 소재</span><span class="limit-d"><strong>AI가 만든 큐가 사고를 냈다면 누구 책임인가.</strong> 아직 답이 없다.</span></div>
+      <div class="limit"><span class="limit-t">서로 안 통함</span><span class="limit-d">각자 만든 도구가 호환이 안 된다.</span></div>
+      <div class="limit"><span class="limit-t">가르치기</span><span class="limit-d">이걸 아는 사람이 늘어야 생태계가 생긴다 — <strong>이 과정이 그 시도다.</strong></span></div>
+    </div>
+
+    <p class="pull">이 과정에서 배운 건 코딩이 아닙니다. 원하는 걸 정확히 말하고, 결과를 의심하고, 확인을 요구하고, 되돌릴 수 없는 걸 구분하는 것 — 여러분이 이미 배우고 있는 일입니다. 달라진 건 하나뿐입니다. 이제 그 상대가 컴퓨터이기도 하다는 것.</p>
+  </div>
+</section>
+
+<!-- ══ 부록 체크리스트 ══ -->
+<section class="block">
+  <div class="cue"><span class="cue-id">부록</span><span class="chip" style="--chip:var(--ink-3)"></span></div>
+  <div class="block-body">
+    <h2>수료 프로젝트 선정 체크리스트</h2>
+    <div class="plain">
+      <span class="plain-tag">💬 한 줄로 말하면</span>
+      <span class="plain-body">내가 만들고 싶은 그 작업이 <strong>지금 만들 만한 것인지</strong> 판별한다. 일곱 개를 눌러 보면 결론이 나온다.</span>
+    </div>
+
+    <div class="check">
+      <div class="check-head">
+        <h3>이 작업, 만들 수 있는가?</h3>
+        <p>각 항목을 눌러 판정하세요. 일곱 개를 모두 판정하면 결론이 나옵니다.</p>
+      </div>
+      <div class="check-row" data-row><span class="check-n">01</span><span class="check-q">작업 결과를 눈으로 확인할 수 있나?<small>초록 — 콘솔 화면에서 바로 보인다 · 빨강 — 확인할 방법이 없다</small></span><span class="toggle"><button type="button" data-v="ok" aria-pressed="false">초록</button><button type="button" data-v="no" aria-pressed="false">빨강</button></span></div>
+      <div class="check-row" data-row><span class="check-n">02</span><span class="check-q">틀렸을 때 되돌릴 수 있나?<small>초록 — 다시 만들면 된다 · 빨강 — 원본이 사라진다</small></span><span class="toggle"><button type="button" data-v="ok" aria-pressed="false">초록</button><button type="button" data-v="no" aria-pressed="false">빨강</button></span></div>
+      <div class="check-row" data-row><span class="check-n">03</span><span class="check-q">콘솔이 명령으로 받아주는 작업인가?<small>초록 — 명령어로도 되는 일 · 빨강 — 마우스로만 되는 일</small></span><span class="toggle"><button type="button" data-v="ok" aria-pressed="false">초록</button><button type="button" data-v="no" aria-pressed="false">빨강</button></span></div>
+      <div class="check-row" data-row><span class="check-n">04</span><span class="check-q">규칙이 상황마다 뒤집히나?<small>초록 — 늘 같은 방식 · 빨강 — 상황마다 다르다 (Case B)</small></span><span class="toggle"><button type="button" data-v="ok" aria-pressed="false">초록</button><button type="button" data-v="no" aria-pressed="false">빨강</button></span></div>
+      <div class="check-row" data-row><span class="check-n">05</span><span class="check-q">언제 필요한가?<small>초록 — 준비 중(리허설 전) · 빨강 — 공연 중</small></span><span class="toggle"><button type="button" data-v="ok" aria-pressed="false">초록</button><button type="button" data-v="no" aria-pressed="false">빨강</button></span></div>
+      <div class="check-row" data-row><span class="check-n">06</span><span class="check-q">실패하면 누가 다치나?<small>초록 — 나만 다시 하면 됨 · 빨강 — 공연이 멈춘다</small></span><span class="toggle"><button type="button" data-v="ok" aria-pressed="false">초록</button><button type="button" data-v="no" aria-pressed="false">빨강</button></span></div>
+      <div class="check-row" data-row><span class="check-n">07</span><span class="check-q">할 만한 가치가 있나?<small>초록 — 자주 × 오래 걸림 · 빨강 — 어쩌다 한 번 × 5분</small></span><span class="toggle"><button type="button" data-v="ok" aria-pressed="false">초록</button><button type="button" data-v="no" aria-pressed="false">빨강</button></span></div>
+      <div class="verdict" id="verdict" data-state="idle" role="status" aria-live="polite">
+        <span class="verdict-title" id="v-title">판정 0 / 7</span>
+        <span class="verdict-body" id="v-body">일곱 항목을 모두 판정하면 결론이 나옵니다.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="colophon">
+  <p class="eyebrow">근거</p>
+  <p>교재의 모든 사례와 숫자는 이 저장소에서 실제로 만들어진 grandMA3 AI 코파일럿의 개발 기록에서 나왔다. 지어낸 예제는 없다.
+    실측 — <span class="mono">git rev-list --count --all</span> → 443, 첫 기록 <span class="mono">2026-07-15</span>,
+    계획 문서 15건, 프로그램 부품 17개, 자동 점검표 131개, AI 역할 10 · 규칙 63 · 자료 28 · 자동 검사 25.</p>
+  <p>전체 용어 사전과 모듈별 상세 교안은 <span class="mono">docs/curriculum/</span> 아래에 있다 —
+    <span class="mono">glossary.md</span>(용어 사전) · <span class="mono">sessions.md</span>(모듈 상세) · <span class="mono">case-library.md</span>(사례 출처).</p>
+
+  <p class="eyebrow" style="margin-top:.6rem">M2 도구 비교 출처 · 2026-08-07 확인</p>
+  <div class="srcs">
+    <span>Claude Code — <a href="https://code.claude.com/docs/en/overview">code.claude.com/docs/en/overview</a> · <a href="https://code.claude.com/docs/en/sub-agents">/sub-agents</a></span>
+    <span>Codex CLI — <a href="https://github.com/openai/codex">github.com/openai/codex</a> · <a href="https://learn.chatgpt.com/docs/codex/cli">learn.chatgpt.com/docs/codex/cli</a></span>
+    <span>Antigravity CLI — <a href="https://antigravity.google/docs/cli/features">antigravity.google/docs/cli/features</a></span>
+    <span>Gemini CLI 종료 공지 — <a href="https://github.com/google-gemini/gemini-cli/discussions/28017">google-gemini/gemini-cli Discussion #28017</a></span>
+    <span>Gemini CLI → Antigravity CLI 전환 발표 — <a href="https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/">developers.googleblog.com</a></span>
+    <span>Cursor — <a href="https://cursor.com/docs">cursor.com/docs</a></span>
+  </div>
+</footer>
+</div>
+
+<script>
+(function () {
+  var rows = Array.prototype.slice.call(document.querySelectorAll('[data-row]'));
+  var verdict = document.getElementById('verdict');
+  var vTitle = document.getElementById('v-title');
+  var vBody = document.getElementById('v-body');
+
+  rows.forEach(function (row) {
+    var buttons = Array.prototype.slice.call(row.querySelectorAll('button'));
+    buttons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var already = btn.getAttribute('aria-pressed') === 'true';
+        buttons.forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+        btn.setAttribute('aria-pressed', already ? 'false' : 'true');
+        update();
+      });
+    });
+  });
+
+  function update() {
+    var answered = 0, red = 0, observabilityRed = false;
+    rows.forEach(function (row, i) {
+      var on = row.querySelector('button[aria-pressed="true"]');
+      if (!on) { return; }
+      answered++;
+      if (on.getAttribute('data-v') === 'no') {
+        red++;
+        if (i === 0) { observabilityRed = true; }
+      }
+    });
+
+    if (answered < rows.length) {
+      verdict.setAttribute('data-state', 'idle');
+      vTitle.textContent = '판정 ' + answered + ' / ' + rows.length;
+      vBody.textContent = '일곱 항목을 모두 판정하면 결론이 나옵니다.';
+      return;
+    }
+    if (observabilityRed) {
+      verdict.setAttribute('data-state', 'stop');
+      vTitle.textContent = '지금은 아니다 — 1번이 빨강입니다';
+      vBody.textContent = '결과를 확인할 방법이 없으면 나머지는 볼 것도 없습니다. 먼저 "무엇을 보고 됐다고 판단할 것인가"를 찾으세요 (M4).';
+      return;
+    }
+    if (red >= 3) {
+      verdict.setAttribute('data-state', 'stop');
+      vTitle.textContent = '지금은 아니다 — 빨강 ' + red + '개';
+      vBody.textContent = '먼저 빨강을 초록으로 바꿀 방법을 찾으세요. 무엇이 하나만 바뀌면 초록이 될지 짝과 이야기해 보세요.';
+    } else if (red >= 1) {
+      verdict.setAttribute('data-state', 'care');
+      vTitle.textContent = '안전장치를 두고 시도해 볼 만하다 — 빨강 ' + red + '개';
+      vBody.textContent = '2번(되돌리기)이나 6번(피해 범위)이 빨강이면, AI가 만들되 버튼은 사람이 누르는 형태로 설계하세요 (M4).';
+    } else {
+      verdict.setAttribute('data-state', 'go');
+      vTitle.textContent = '바로 해 볼 만하다 — 빨강 0개';
+      vBody.textContent = '가장 작은 조각부터 시작하세요. 한 번에 전부 만들려 하지 말고, 첫 조각만으로도 도움이 되는 지점을 찾으세요 (M3).';
+    }
+  }
+})();
+</script>

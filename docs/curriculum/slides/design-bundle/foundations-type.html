@@ -1,0 +1,103 @@
+<!-- @dsCard group="Foundations" -->
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Typography — SF 스케일 + 한글 조판</title>
+<style>
+:root{--bg:#000;--sf-1:#1C1C1E;--sf-2:#2C2C2E;--sep-o:rgba(84,84,88,.35);
+--lb:#fff;--lb-2:rgba(235,235,245,.60);--lb-3:rgba(235,235,245,.30);
+--red:#FF453A;--orange:#FF9F0A;--green:#30D158;--cyan:#64D2FF;--blue:#0A84FF;
+--sf:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Apple SD Gothic Neo","Pretendard","Noto Sans KR",system-ui,sans-serif;
+--sfm:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--lb);font-family:var(--sf);-webkit-font-smoothing:antialiased;
+word-break:keep-all;line-break:strict;padding:44px 40px 72px;line-height:1.6;max-width:1040px}
+h1{font-size:30px;font-weight:750;letter-spacing:-.024em;margin:0 0 8px}
+h2{font-size:19px;font-weight:650;letter-spacing:-.01em;margin:40px 0 6px}
+.eyebrow{font-family:var(--sfm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);margin:0 0 12px;font-weight:600}
+.sub{font-size:15px;color:var(--lb-2);margin:0 0 8px;max-width:62ch}
+.sub b{color:var(--lb);font-weight:600}
+.mono{font-family:var(--sfm)}
+pre{font-family:var(--sfm);font-size:12.5px;line-height:1.8;background:var(--sf-1);border-radius:12px;padding:16px 18px;overflow-x:auto;margin-top:12px;color:var(--lb)}
+pre .c{color:var(--lb-3)}
+.scale{display:flex;flex-direction:column;border-radius:14px;overflow:hidden;background:var(--sf-1);margin-top:14px}
+.r{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:baseline;padding:16px 20px;border-bottom:1px solid var(--sep-o)}
+.r:last-child{border-bottom:0}
+.r .meta{font-family:var(--sfm);font-size:11px;color:var(--lb-3);line-height:1.6}
+.r .meta b{display:block;color:var(--lb-2);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.r .spec{color:var(--lb);overflow:hidden}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin-top:12px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--sep-o);vertical-align:top}
+thead th{font-family:var(--sfm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--lb-3);font-weight:500;background:var(--sf-1)}
+td:first-child{font-weight:600;white-space:nowrap}
+.note{background:var(--sf-1);border-left:3px solid var(--red);border-radius:0 10px 10px 0;padding:14px 18px;font-size:13.5px;color:var(--lb-2);margin-top:18px}
+.note b{color:var(--lb)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.kp{border-radius:14px;padding:18px 20px;background:var(--sf-1);border-left:4px solid var(--h)}
+.kp .t{font-family:var(--sfm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:10px;color:var(--h)}
+.kp .demo{font-size:19px;font-weight:650;line-height:1.35;letter-spacing:-.015em}
+.kp .x{font-size:12.5px;color:var(--lb-2);margin-top:10px;line-height:1.55}
+</style></head><body>
+
+<p class="eyebrow">Foundations · Typography</p>
+<h1>SF Pro + Apple SD Gothic Neo</h1>
+<p class="sub">웹폰트를 링크하지 않습니다 — macOS·iOS에서 <span class="mono">-apple-system</span>이 SF Pro와 Apple SD Gothic Neo를 실제로 잡습니다. 그 외 환경은 Pretendard로 폴백합니다.</p>
+
+<pre><span class="c">/* 본문 · 제목 */</span>
+--sf : -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+       "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+
+<span class="c">/* 데이터 · 라벨 · 코드 */</span>
+--sfm: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;</pre>
+
+<h2>슬라이드 전체가 통째로 스케일된다</h2>
+<p class="sub">슬라이드마다 폰트 크기를 다시 잡지 않습니다. <b>컨테이너 쿼리 단위</b>로 base를 정하고 내부는 전부 <span class="mono">em</span> — 창을 줄이든 프로젝터에 띄우든 비율이 그대로 유지됩니다.</p>
+<pre>.slide {
+  container-type: inline-size;
+  font-size: 1.5625cqw;   <span class="c">/* 1280px 폭 → base 20px */</span>
+}
+<span class="c">/* 이하 슬라이드 내부는 전부 em. px를 쓰지 않는다 */</span>
+.head { font-size: 2.15em }   <span class="c">/* = 43px @1280 */</span></pre>
+
+<h2>타입 스케일 (1280px 기준 환산값)</h2>
+<div class="scale">
+  <div class="r"><span class="meta"><b>표지 제목</b>2.9em · 58px<br>700 · -.022em</span><span class="spec" style="font-size:44px;font-weight:700;letter-spacing:-.022em;line-height:1.15">조명감독을 위한 AI 도구 제작</span></div>
+  <div class="r"><span class="meta"><b>섹션 모듈번호</b>4.6em · 92px<br>600 · -.04em · 모노</span><span class="spec mono" style="font-size:58px;font-weight:600;letter-spacing:-.04em;color:var(--cyan);line-height:1">M5</span></div>
+  <div class="r"><span class="meta"><b>슬라이드 제목</b>2.15em · 43px<br>700 · -.022em</span><span class="spec" style="font-size:34px;font-weight:700;letter-spacing:-.022em;line-height:1.2">막히던 자리가 사라졌습니다</span></div>
+  <div class="r"><span class="meta"><b>제목 (본문 많을 때)</b>1.75em · 35px<br>700</span><span class="spec" style="font-size:28px;font-weight:700;letter-spacing:-.022em;line-height:1.25">“될 때까지”에는 반드시 그만둘 조건을 겁니다</span></div>
+  <div class="r"><span class="meta"><b>인용</b>2.05em · 41px<br>600 · -.022em</span><span class="spec" style="font-size:32px;font-weight:600;letter-spacing:-.022em;line-height:1.3">내가 포커싱한 걸<br>내가 검수하면 못 봅니다.</span></div>
+  <div class="r"><span class="meta"><b>리드</b>1.05em · 21px<br>400 · lb-2</span><span class="spec" style="font-size:17px;color:var(--lb-2);line-height:1.55">역할을 나눠 주고, 규칙을 깔고, 될 때까지 반복시키고, 순서를 짭니다.</span></div>
+  <div class="r"><span class="meta"><b>카드 제목</b>1em · 20px<br>600 · -.008em</span><span class="spec" style="font-size:17px;font-weight:600;letter-spacing:-.008em">자동으로 켜지는 검사</span></div>
+  <div class="r"><span class="meta"><b>카드 본문</b>.85em · 17px<br>400 · lb-2</span><span class="spec" style="font-size:14.5px;color:var(--lb-2);line-height:1.55">리밋 스위치와 같습니다. 오퍼레이터가 깜빡해도 무빙이 벽을 안 칩니다.</span></div>
+  <div class="r"><span class="meta"><b>eyebrow · 라벨</b>.62em · 12.4px<br>600 · .14em · 모노 · 대문자</span><span class="spec mono" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange);font-weight:600">M5-4 · 루프</span></div>
+</div>
+
+<h2>한글 조판 — 이게 빠지면 발표 화면에서 급격히 안 읽힌다</h2>
+<div class="two">
+  <div class="kp" style="--h:var(--red)">
+    <span class="t">❌ 기본값</span>
+    <div class="demo" style="word-break:break-all;width:200px">조명감독을 위한 AI 도구 제작 과정</div>
+    <span class="x"><span class="mono">word-break</span> 기본값이면 한글이 <b>음절 단위로 잘립니다.</b> 좁은 칸에서 특히 심하고, 읽는 속도가 눈에 띄게 떨어집니다.</span>
+  </div>
+  <div class="kp" style="--h:var(--green)">
+    <span class="t">✅ keep-all</span>
+    <div class="demo" style="word-break:keep-all;line-break:strict;width:200px">조명감독을 위한 AI 도구 제작 과정</div>
+    <span class="x"><span class="mono">word-break: keep-all</span> + <span class="mono">line-break: strict</span> — <b>어절 단위로 끊깁니다.</b> 슬라이드 전역에 적용합니다.</span>
+  </div>
+</div>
+
+<h2>나머지 필수 설정</h2>
+<table>
+  <thead><tr><th>속성</th><th>값</th><th>어디에</th><th>왜</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">word-break</td><td class="mono">keep-all</td><td><b>body 전역</b></td><td>한글 어절 단위 줄바꿈</td></tr>
+    <tr><td class="mono">line-break</td><td class="mono">strict</td><td>body 전역</td><td>금칙 처리 강화</td></tr>
+    <tr><td class="mono">text-wrap</td><td class="mono">balance</td><td>모든 제목 (<span class="mono">h1</span> · <span class="mono">.head</span> · <span class="mono">.q</span>)</td><td>줄 길이를 고르게 나눠 "한 줄만 짧게 남는" 모양을 막는다</td></tr>
+    <tr><td class="mono">font-variant-numeric</td><td class="mono">tabular-nums</td><td>숫자 판 · 표 · 페이지 번호 · 스텝 번호</td><td>자릿수가 세로로 정렬된다</td></tr>
+    <tr><td class="mono">-webkit-font-smoothing</td><td class="mono">antialiased</td><td>body</td><td>다크 배경에서 흰 글자가 굵게 번지는 것을 막는다</td></tr>
+    <tr><td class="mono">letter-spacing</td><td class="mono">-.022em</td><td>큰 제목 (28px 이상)</td><td>SF Pro Display의 광학 자간 보정</td></tr>
+    <tr><td class="mono">letter-spacing</td><td class="mono">.14em</td><td>eyebrow · 대문자 라벨</td><td>대문자는 자간을 벌려야 읽힌다</td></tr>
+  </tbody>
+</table>
+
+<div class="note"><b>굵기 주의</b> — Apple SD Gothic Neo는 <b>700 이상에서 급격히 굵어집니다.</b> 한글 제목에 800~900을 쓰면 프로젝터에서 획이 메꿔집니다. <b>제목 700, 부제 650, 본문 400</b>을 넘기지 않습니다.</div>
+
+</body></html>
