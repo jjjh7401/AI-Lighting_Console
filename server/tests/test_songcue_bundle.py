@@ -139,6 +139,11 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 #          막히지 않아(모델이 실물에서 여섯 번 우회) 구조로 옮긴 금지다.
 #   1048 — `patch_fixtures` 본문(자리 재확인 · 생성 · 실행 · **재조회 판정**).
 # 49훅 (47 + 620 + 1048). 보호 구간 겹침 재계산: ZERO.
+# 커밋 진행 후속 (SPEC-COPILOT-AUTOPATCH-001, vectorworks_autopatch 문서화) —
+# 자리가 하나 더 열렸다: 164 — `VectorworksUploadPort` 뒤 `vectorworks_autopatch`
+# 정의 앞에 다른 툴들과 같은 `# -- toolname (SPEC-ID) --` + `@MX:NOTE:` 앵커
+# 주석을 더한 자리(순수 주석, 실행 코드 0줄). 50훅(49 + 164). 보호 구간 겹침
+# 재계산: ZERO — 164는 (234,238)·(524,569) 어느 쪽에도 닿지 않는다.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -148,6 +153,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     33,
     49,
     125,
+    164,
     184,
     425,
     436,
