@@ -121,7 +121,6 @@ class UserSettings:
     plugin_import_dir: str
     osc_slot: int = DEFAULT_OSC_SLOT
     osc_import_dir: str = DEFAULT_OSC_IMPORT_DIR
-    claude_code_model: str = "sonnet"
 
 
 def _resolve_config_dir(
