@@ -296,7 +296,20 @@ def build_paperwork_router(deps: PaperworkDeps) -> APIRouter:
                     "message": f"unknown paperwork kind: {kind!r}",
                 },
             )
-        filename, html, summary = builder(deps)
+        try:
+            filename, html, summary = builder(deps)
+        except HTTPException:
+            raise  # 빌더 자체가 던진 HTTPException은 그대로 전달
+        except Exception as error:
+            # 콘솔 타임아웃(StateQueryError) 등 빌더 내부 예외 →
+            # 500 대신 502 + 구조화된 에러로 변환해 UI가 한국어 메시지를 표시.
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "error": "query_failed",
+                    "message": f"{kind} 생성 중 콘솔 통신 오류: {error}",
+                },
+            ) from error
         try:
             path = write_paperwork_html(filename, html)
         except OSError as error:
