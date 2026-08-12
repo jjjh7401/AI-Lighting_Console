@@ -57,6 +57,7 @@ from server.web.launcher import (
     wait_until_serving,
 )
 from server.web.measure import RoundTripRecorder
+from server.web.paperwork_api import PaperworkDeps
 from server.web.provision_api import ProvisionDeps
 from server.web.question import QuestionChannel
 from server.web.reply_discovery import make_reply_port_diagnostic
@@ -373,6 +374,10 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         backup_poll_seconds=args.backup_poll,
         settings=SettingsDeps(seed_path=config_path, session=SessionKeyStore()),
         provision=ProvisionDeps(seed_path=config_path),
+        # W3: paperwork generation surface — the gate's state_port implements
+        # both StateQueryPort and PropertyQueryPort, so one object serves both
+        # roles and the patch-sheet builder picks up property reads for free.
+        paperwork=PaperworkDeps(state_port=stack.gate.state_port),
         handshake=build_handshake_policy(args),
         # The SAME endpoint the gate sends OSC to (``console_host``/
         # ``console_port``) is the console's OSC INPUT port — so binding it is
