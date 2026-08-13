@@ -98,3 +98,26 @@ uv run pytest server/tests/test_web_session.py server/tests/test_spatial_arrange
 핵심 파일: `server/web/session.py`(핸들러 라우팅 + `run_instruction`),
 `server/spatial/vocabulary.py`(`parse_ring_layout`, `layout_terms_guidance`),
 `server/llm/claude_code_adapter.py`(프로파일/스키마), `server/orchestrator/runner.py`(history+교정).
+
+
+## 7. 핸드오프 이후 같은 날 추가 작업 (모두 커밋·푸시됨)
+
+1. **provider 전환: Claude Code → Gemini (`53e45f2` 이전 런타임 설정)** — Claude Code
+   CLI가 `--tools ""` 구조화 출력에서 tool_call을 비신뢰적으로 방출("No such tool
+   available" confabulation, 툴 요청 73~113s). Gemini는 정식 function-calling으로
+   같은 tool-read가 **51s·완전 정답**. `/api/settings`로 `active_provider: gemini`
+   전환(라이브 토글, 재시작 불필요). ask_user 카드도 Gemini 경유로 정상 동작 확인.
+2. **UI 개선 일괄 (`53e45f2`, 14파일 +814/-127)** — 설정 패널(모델 셀렉터
+   프로바이더별), 접기 4종(실행 결과·미리보기·승인 카드·응답 첫 문장), 컴포저
+   2줄+Enter 전송, 응답 중 대기열(순차 실행·취소), 대화 localStorage 유지(200건
+   상한)+"대화 지우기", Vite ws 프록시 수정.
+3. **새로고침 후 모델 기억 재주입 (`23de232`, 9파일 +216/-1)** — `history_restore`
+   클라이언트 메시지(役割 검증·16건 창·4000자 절단) + `session.restore_history`
+   (빈 세션만 시드, 라이브 턴 불가침) + onopen 재전송(멱등). 라이브 검증:
+   대화→새로고침→"방금 말한 색?"→정답.
+4. **주소 규칙** — UI는 항상 `http://127.0.0.1:8765`로 열 것(localStorage origin
+   고정). `localhost`로 열면 대화 기록이 빈 것처럼 보인다.
+5. **어댑터 후속(이 커밋)** — 전 프로파일 `reasoning` 선택화(필수 스크래치패드가
+   Opus 12s/call×멀티툴 턴을 70s+ "서버 꺼짐" 체감으로 만들던 것 해소), CLI
+   타임아웃 120s 유지. + 이전 아크 잔여분 커밋: `claude_code_model` 설정 필드,
+   룰북 3D 배치·elevation 절, CHANGELOG.

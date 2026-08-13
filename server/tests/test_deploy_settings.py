@@ -123,6 +123,7 @@ class TestBuiltinDefaults:
         assert settings.web_port == DEFAULT_WEB_PORT
         assert settings.plugin_import_dir == DEFAULT_PLUGIN_IMPORT_DIR
         assert settings.active_provider == "gemini"
+        assert settings.claude_code_model == "sonnet"
 
 
 class TestOscSlotIsSiteConfig:

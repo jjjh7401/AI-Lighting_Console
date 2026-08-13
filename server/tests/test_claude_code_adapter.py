@@ -65,11 +65,14 @@ def test_ask_user_one_at_a_time_contract_is_in_the_system_prompt() -> None:
     assert "한 번에" in system_prompt  # one question at a time, not a prose wall
 
 
-def test_reasoning_first_model_requires_the_reasoning_scratchpad() -> None:
+def test_reasoning_scratchpad_is_present_but_optional_for_speed() -> None:
     schema = ClaudeCodeAdapter("opus")._schema()
-    # opus is reasoning-first: reasoning is first (generation order) AND required.
+    # reasoning stays first (generation order → chain-of-thought when the model
+    # uses it) but is NOT required, so no long scratchpad is forced on every
+    # call — keeping multi-step tool turns from stacking into a long hang.
     assert list(schema["properties"])[0] == "reasoning"
-    assert set(schema["required"]) == {"reasoning", "text", "tool_calls"}
+    assert "reasoning" not in schema["required"]
+    assert set(schema["required"]) == {"text", "tool_calls"}
 
 
 def test_speed_first_model_makes_reasoning_optional() -> None:

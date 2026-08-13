@@ -119,6 +119,7 @@ class UserSettings:
     web_host: str
     web_port: int
     plugin_import_dir: str
+    claude_code_model: str = "sonnet"
     osc_slot: int = DEFAULT_OSC_SLOT
     osc_import_dir: str = DEFAULT_OSC_IMPORT_DIR
 

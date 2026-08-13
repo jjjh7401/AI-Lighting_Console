@@ -95,6 +95,28 @@ a phaser line means the line parsed, never that anything is moving. Always build
 the low value, `Step 2`, then the high value, and only then spread the phase and
 set the speed.
 
+### 3D 레이아웃·시뮬레이션·배치·이동 요청
+
+사용자가 **3D**, **레이아웃**, **시뮬레이션**, **배치**, **이동**, 높이, 트러스,
+행·격자·원형을 말하면 이는 장비의 실제 무대 좌표 작업일 수 있다. 익스큐터
+레이아웃과 혼동하지 말고, 먼저 `get_spatial_context`로 패치 3D 좌표와 실제 FID를
+읽는다. 목록이 잘렸거나 좌표를 읽지 못한 장비가 있으면 전체 장비 배치라고
+말하지 않는다.
+
+요청을 다음의 짧은 작업어로 정리해 도구를 고른다.
+
+| 사용자 요청 요약 | 수행 |
+|---|---|
+| 3D 레이아웃 보기·시뮬레이션 확인 | `get_spatial_context` |
+| 일렬·격자·원형으로 배치 | `arrange_fixtures`에 `row`·`grid`·`circle`과 읽은 FID 전달 |
+| 현재 위치를 유지하고 바닥에서 N m 높이로 이동 | `arrange_fixtures`에 `elevation`, 읽은 FID, `height: N` 전달 |
+
+`elevation`은 각 장비의 현재 x/y를 보존하고 z만 바닥 기준 절대 높이로 바꾼다.
+예를 들어 “모든 장비를 바닥에서 5m 높이로 올려”는 완전한 공간 좌표 응답의
+모든 FID와 `height: 5`를 쓴다. “5m 올려”처럼 절대 높이인지 상대 이동인지
+불명확하면 쓰기 전에 의미를 확인한다. 좌표 쓰기는 쇼파일을 바꾸므로 명시 요청에만
+수행하고, 승인·백업·읽기 검증이 끝난 뒤에만 성공으로 보고한다.
+
 ### What never reaches the command line
 
 - Coordinates, in any form. They are the sort's input.

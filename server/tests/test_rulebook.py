@@ -294,6 +294,20 @@ class TestSpatialDesignAsset:
         assert _asset_text(_SPATIAL_ASSET).strip() in builds[0]
         assert all(build == builds[0] for build in builds)
 
+    def test_the_spatial_asset_routes_korean_3d_layout_requests_to_the_write_tool(self):
+        text = _asset_text(_SPATIAL_ASSET)
+        for token in (
+            "3D",
+            "레이아웃",
+            "시뮬레이션",
+            "배치",
+            "이동",
+            "arrange_fixtures",
+            "elevation",
+            "get_spatial_context",
+        ):
+            assert token in text, token
+
     def test_the_spatial_asset_names_no_per_show_binding(self):
         for number, line in enumerate(_asset_text(_SPATIAL_ASSET).splitlines(), 1):
             match = _PER_SHOW_PATTERN.search(line)

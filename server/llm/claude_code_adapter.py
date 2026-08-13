@@ -50,7 +50,11 @@ class _ModelProfile:
 
 
 _DEFAULT_PROFILE = _ModelProfile(
-    reasoning_required=True,
+    # Optional, not required: a required scratchpad forces a long chain-of-thought
+    # on EVERY call and each Opus CLI call is ~12s, so a multi-step tool turn
+    # stacked to ~70s+ of dead air (perceived as "server down"). Keep it as an
+    # available, directive-encouraged field the model fills only when it helps.
+    reasoning_required=False,
     reasoning_hint=(
         "사용자에게 보이지 않는 사고 공간. 먼저 사용자의 의도와 요청을 분석하고, "
         "이전 대화 맥락과 이미 주어진 값을 반영하고, 부족하거나 모호한 값을 짚고, "
