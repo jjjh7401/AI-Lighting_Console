@@ -41,6 +41,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 __all__ = [
+    "BASIC_POSITION_SEQUENCE",
     "FAN_MODES",
     "POINTING_TILT_LIMIT_DEGREES",
     "POSITION_PRESET_POOL",
@@ -49,6 +50,7 @@ __all__ = [
     "SpatialPointingError",
     "aim_pan_tilt",
     "aimed_commands",
+    "basic_position_presets",
     "fan_pan_tilt",
     "pointing_commands",
     "position_preset_store_commands",
@@ -319,3 +321,104 @@ def position_preset_store_commands(preset_no: int, label: str | None = None) -> 
             raise SpatialPointingError(f"preset label {label!r} is empty or carries a quote")
         commands.append(f"Label Preset {POSITION_PRESET_POOL}.{preset_no} '{text}'")
     return tuple(commands)
+
+
+#: The ten canonical design positions, most basic first, variation growing —
+#: derived from the researched vocabulary (straight-down "Godspot", parallel
+#: beam curtains, audience/house beams, focus points, fans, crossed beams,
+#: radial rings — see docs/proposals/pan-tilt-position-preset-strategy.md).
+#: Slot 1 is ALWAYS "Home". The sequence is a contract: preset numbers are
+#: allocated in exactly this order.
+BASIC_POSITION_SEQUENCE: tuple[str, ...] = (
+    "Home",
+    "Wall",
+    "Audience",
+    "Center",
+    "Vocal DSC",
+    "Fan Out",
+    "Fan In",
+    "Cross",
+    "Ring Out",
+    "Ring In",
+)
+
+#: The fixed angles behind the uniform looks. Wall = the parallel downstage
+#: beam curtain (base fan direction with zero spread); Audience = the same
+#: pan swung past horizontal into the house air, still inside the tilt
+#: ceiling.
+_WALL_PAN, _WALL_TILT = 180.0, 45.0
+_AUDIENCE_PAN, _AUDIENCE_TILT = 180.0, 100.0
+#: Focus-point geometry derived from the rig itself, so the same ten names
+#: work on a bar, a ring, a rectangle or a triangle: the centre is the rig
+#: centroid, the vocal point sits 2 m downstage (-Y) of the rig's front edge
+#: at standing-person height, and the converge cone meets 3 m above the
+#: centroid.
+_VOCAL_DOWNSTAGE_OFFSET = 2.0
+_VOCAL_HEIGHT = 1.6
+_RING_IN_HEIGHT = 3.0
+
+
+def basic_position_presets(
+    fixtures: Sequence[tuple[int, tuple[float, float, float]]],
+) -> tuple[tuple[str, tuple[tuple[int, float, float], ...], tuple[int, ...]], ...]:
+    """The ten basic looks for THIS rig — ``(label, aims, skipped_fids)`` each.
+
+    Everything is derived from the fixtures' own patch coordinates, so the
+    same sequence adapts to any placement design (bar, ring, rectangle,
+    triangle, semicircle): the centroid anchors Center/Ring, the bounding
+    box's front edge anchors the vocal point, and the fans ride the x-ordered
+    chain. A fixture a look cannot aim (standing on its target or past the
+    tilt ceiling) is skipped AND named — never clamped, and one impossible
+    fixture never voids the other nine looks.
+    """
+    if not fixtures:
+        raise SpatialPointingError("no fixtures to build basic positions for")
+    xs = [position[0] for _fid, position in fixtures]
+    ys = [position[1] for _fid, position in fixtures]
+    cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
+    front_y = min(ys)
+    ordered = sorted(fixtures, key=lambda item: (item[1][0], item[0]))
+    ordered_fids = [fid for fid, _position in ordered]
+
+    def _focus(target: tuple[float, float, float]) -> tuple[tuple, tuple]:
+        aims: list[tuple[int, float, float]] = []
+        skipped: list[int] = []
+        for fid, position in fixtures:
+            try:
+                pan, tilt = aim_pan_tilt(position, target)
+            except SpatialPointingError:
+                skipped.append(fid)
+            else:
+                aims.append((fid, pan, tilt))
+        return tuple(aims), tuple(skipped)
+
+    def _radial(mode: str, **kwargs: float) -> tuple[tuple, tuple]:
+        aims: list[tuple[int, float, float]] = []
+        skipped: list[int] = []
+        for fid, position in fixtures:
+            try:
+                aims.extend(
+                    radial_pan_tilt([(fid, position)], center=(cx, cy), mode=mode, **kwargs)
+                )
+            except SpatialPointingError:
+                skipped.append(fid)
+        return tuple(aims), tuple(skipped)
+
+    def _uniform(pan: float, tilt: float) -> tuple[tuple, tuple]:
+        return tuple((fid, pan, tilt) for fid, _position in fixtures), ()
+
+    center_aims = _focus((cx, cy, 0.0))
+    vocal_aims = _focus((cx, front_y - _VOCAL_DOWNSTAGE_OFFSET, _VOCAL_HEIGHT))
+    looks: dict[str, tuple[tuple, tuple]] = {
+        "Home": _uniform(0.0, 0.0),
+        "Wall": _uniform(_WALL_PAN, _WALL_TILT),
+        "Audience": _uniform(_AUDIENCE_PAN, _AUDIENCE_TILT),
+        "Center": center_aims,
+        "Vocal DSC": vocal_aims,
+        "Fan Out": (fan_pan_tilt(ordered_fids, mode="out"), ()),
+        "Fan In": (fan_pan_tilt(ordered_fids, mode="in"), ()),
+        "Cross": (fan_pan_tilt(ordered_fids, mode="cross"), ()),
+        "Ring Out": _radial("out"),
+        "Ring In": _radial("in", height=_RING_IN_HEIGHT),
+    }
+    return tuple((label, *looks[label]) for label in BASIC_POSITION_SEQUENCE)

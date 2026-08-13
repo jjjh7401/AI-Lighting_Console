@@ -37,10 +37,12 @@ from server.safety.gate import SafetyGate, ScreenDecision
 from server.safety.monitor import HealthMonitor
 from server.safety.session_context import bind_session_key, new_session_key, reset_session_key
 from server.spatial.pointing import (
+    BASIC_POSITION_SEQUENCE,
     PointingTarget,
     SpatialPointingError,
     aim_pan_tilt,
     aimed_commands,
+    basic_position_presets,
     fan_pan_tilt,
     pointing_commands,
     position_preset_store_commands,
@@ -155,6 +157,15 @@ _LOOK_SPREAD = re.compile(r"(?P<value>\d+(?:\.\d+)?)\s*도")
 _LOOK_PRESET_STORE = re.compile(
     r"프리셋\s*(?P<no>\d+)\s*(?:번)?\s*(?:으?로|에)?\s*저장|저장.*?프리셋\s*(?P<no2>\d+)"
 )
+
+# The ten-basic-positions request: build the canonical position sequence for
+# THIS rig and store it as consecutive Position presets, asking for the first
+# preset number when the instruction does not carry one.
+_BASIC_POSITIONS_REQUEST = re.compile(
+    r"(?:기본|베이직|basic).{0,16}?(?:포지션|프리셋|position).*?(?:저장|만들|잡아|생성)",
+    re.IGNORECASE | re.DOTALL,
+)
+_BASIC_POSITIONS_START = re.compile(r"(?P<no>\d+)\s*(?:번)?\s*(?:부터|에서(?:부터)?|번대)")
 
 _REPEATING_TYPE_COLUMNS_REQUEST = re.compile(
     r"(?:\d+\s*열\s*:\s*)?.*mmx.*(?:\d+\s*열\s*:\s*)?.*350\s*m?.*반복",
@@ -905,6 +916,100 @@ class ChatSession:
             duration_seconds=0.0,
         )
 
+    def _basic_position_presets(self, text: str) -> InstructionResult | None:
+        """Build the ten canonical positions for THIS rig and store them.
+
+        Preset 1 of the run is ALWAYS 'Home'; the rest follow
+        ``BASIC_POSITION_SEQUENCE`` from most basic to most varied. The first
+        preset number comes from the instruction ("N번부터") or from ONE
+        question card — never from a guessed free slot: ``Store Preset``
+        silently overwrites, so the number is the operator's call.
+        Each look is applied, stored, labelled and cleared as its own bundle,
+        so one refused look never voids the other nine.
+        """
+        if _BASIC_POSITIONS_REQUEST.search(text) is None:
+            return None
+        fixtures = self._read_pointing_coordinates("basic-presets-read")
+        if isinstance(fixtures, InstructionResult):
+            return fixtures
+        if not fixtures:
+            return self._pointing_refusal(
+                "좌표가 확인된 장비가 없어 기본 포지션 프리셋을 시작하지 않았습니다."
+            )
+        start_match = _BASIC_POSITIONS_START.search(text)
+        if start_match is not None:
+            start_no = int(start_match.group("no"))
+        else:
+            count = len(BASIC_POSITION_SEQUENCE)
+            answer = self._ask_one(
+                f"기본 포지션 {count}개를 Position 프리셋 몇 번부터 저장할까요? "
+                f"(예: 1 → Preset 2.1~2.{count}) 이미 있는 번호는 덮어씁니다.",
+                options=(
+                    QuestionOption(label="1"),
+                    QuestionOption(label="11"),
+                    QuestionOption(label="21"),
+                ),
+                why=(
+                    "Store Preset은 기존 슬롯을 경고 없이 덮어쓰므로 "
+                    "시작 번호는 운영자가 정해야 합니다."
+                ),
+            )
+            try:
+                start_no = int(re.search(r"\d+", answer or "").group(0))
+            except AttributeError:
+                return self._pointing_refusal(
+                    "시작 프리셋 번호를 받지 못해 저장을 시작하지 않았습니다. "
+                    "예: '기본 포지션 10개를 프리셋 21번부터 저장해줘'"
+                )
+        if start_no <= 0:
+            return self._pointing_refusal("시작 프리셋 번호는 1 이상이어야 합니다.")
+        try:
+            looks = basic_position_presets(fixtures)
+        except SpatialPointingError as error:
+            return self._pointing_refusal(f"기본 포지션을 계산할 수 없습니다: {error}")
+        outcomes: list[CommandOutcome] = []
+        stored: list[str] = []
+        skipped_notes: list[str] = []
+        for offset, (label, aims, skipped) in enumerate(looks):
+            preset_no = start_no + offset
+            if not aims:
+                skipped_notes.append(f"{label}(2.{preset_no}): 조준 가능한 장비 없음 — 건너뜀")
+                continue
+            commands = [
+                *aimed_commands(aims),
+                *position_preset_store_commands(preset_no, label),
+                "ClearAll",
+            ]
+            executed = self._registry.dispatch(
+                ToolCall(
+                    id=f"basic-preset-{preset_no}",
+                    name="run_commands",
+                    arguments={"commands": commands},
+                )
+            )
+            outcomes.extend(executed.command_outcomes)
+            stored.append(f"2.{preset_no} '{label}'")
+            if skipped:
+                skipped_notes.append(f"{label}: FID {', '.join(str(fid) for fid in skipped)} 제외")
+        if not stored:
+            return self._pointing_refusal(
+                "어느 포지션도 계산되지 않아 프리셋을 저장하지 않았습니다."
+            )
+        notes = f" 참고: {'; '.join(skipped_notes)}." if skipped_notes else ""
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"리그 배치에서 유도한 기본 포지션 {len(stored)}개를 "
+                f"Position 프리셋에 저장 요청했습니다: {', '.join(stored)}.{notes} "
+                "각 프리셋은 적용→저장→ClearAll 순서로 처리했으며, 승인 또는 라이브 "
+                "잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+            ),
+            command_outcomes=tuple(outcomes),
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
     def _repeating_type_columns_layout(self, text: str) -> InstructionResult | None:
         """Arrange repeating MMX/MMX/350 columns with independent grid pitches."""
         pattern_present = _REPEATING_TYPE_COLUMNS_REQUEST.search(text) is not None
@@ -1493,6 +1598,8 @@ class ChatSession:
         try:
             try:
                 result = self._all_fixtures_elevation(text)
+                if result is None:
+                    result = self._basic_position_presets(text)
                 if result is None:
                     result = self._look_pan_tilt(text)
                 if result is None:

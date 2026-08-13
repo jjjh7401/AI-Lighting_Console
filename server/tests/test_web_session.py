@@ -1233,6 +1233,101 @@ class TestPointFixturesAtTarget:
         assert event["text"] == "어느 지점을 바라보게 할까요?"
 
 
+class TestBasicPositionPresets:
+    def _registry(self, calls):
+        fixtures = [
+            {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
+            {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
+        ]
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    (CommandOutcome(command="Fixture 20", status="proposal"),),
+                )
+
+        return Registry()
+
+    class _Channel:
+        def __init__(self, answers):
+            self.answers = list(answers)
+            self.asked = []
+
+        def ask(self, request, **_kwargs):
+            self.asked.append(request)
+            return self.answers.pop(0) if self.answers else UNANSWERED
+
+    def test_asks_the_start_number_once_and_stores_ten_presets(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(["21"])
+        session._question_channel = channel
+
+        event = session.run_instruction("기본 포지션 10개를 프리셋에 저장해줘")
+
+        assert provider.calls == []
+        assert len(channel.asked) == 1
+        assert "몇 번부터" in channel.asked[0].prompt
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert len(writes) == 10
+        first = writes[0].arguments["commands"]
+        # Home = straight down for both fixtures, stored+labelled+cleared.
+        assert first == [
+            "Fixture 20 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 0",
+            "Fixture 26 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 0",
+            "Store Preset 2.21",
+            "Label Preset 2.21 'Home'",
+            "ClearAll",
+        ]
+        # Every bundle ends with its own ClearAll; numbering is consecutive.
+        assert all(call.arguments["commands"][-1] == "ClearAll" for call in writes)
+        assert [call.arguments["commands"][-3] for call in writes] == [
+            f"Store Preset 2.{21 + offset}" for offset in range(10)
+        ]
+        assert "2.21 'Home'" in event["text"]
+        assert "2.30 'Ring In'" in event["text"]
+
+    def test_an_explicit_start_number_skips_the_question(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel([])
+        session._question_channel = channel
+
+        session.run_instruction("기본 포지션 프리셋을 5번부터 만들어줘")
+
+        assert channel.asked == []
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert "Store Preset 2.5" in writes[0].arguments["commands"]
+
+    def test_no_answer_refuses_instead_of_guessing_a_slot(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel([])  # UNANSWERED
+
+        event = session.run_instruction("기본 포지션 10개를 프리셋에 저장해줘")
+
+        assert [call.name for call in calls] == ["get_spatial_context"]
+        assert "시작 프리셋 번호" in event["text"]
+
+
 class TestLookPanTilt:
     def _registry(self, calls):
         fixtures = [

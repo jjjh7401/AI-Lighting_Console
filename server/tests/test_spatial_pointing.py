@@ -12,11 +12,13 @@ import math
 import pytest
 
 from server.spatial.pointing import (
+    BASIC_POSITION_SEQUENCE,
     POINTING_TILT_LIMIT_DEGREES,
     PointingTarget,
     SpatialPointingError,
     aim_pan_tilt,
     aimed_commands,
+    basic_position_presets,
     fan_pan_tilt,
     pointing_commands,
     position_preset_store_commands,
@@ -236,3 +238,57 @@ class TestAimedCommandsAndPresetStore:
             position_preset_store_commands(0)
         with pytest.raises(SpatialPointingError, match="quote"):
             position_preset_store_commands(1, "bad'name")
+
+
+class TestBasicPositionSequence:
+    # A two-fixture bar plus the origin marker — enough to exercise every
+    # look family (uniform, focus, fan, radial) and the skip path.
+    _FIXTURES = [
+        (20, (4.0, 0.0, 6.0)),
+        (26, (-4.0, 0.0, 6.0)),
+        (41, (0.0, 0.0, 0.0)),
+    ]
+
+    def test_the_sequence_is_ten_looks_and_home_is_always_first(self):
+        assert len(BASIC_POSITION_SEQUENCE) == 10
+        assert BASIC_POSITION_SEQUENCE[0] == "Home"
+        looks = basic_position_presets(self._FIXTURES)
+        assert [label for label, _aims, _skipped in looks] == list(BASIC_POSITION_SEQUENCE)
+
+    def test_home_points_every_fixture_straight_down(self):
+        looks = dict(
+            (label, aims) for label, aims, _skipped in basic_position_presets(self._FIXTURES)
+        )
+        assert looks["Home"] == ((20, 0.0, 0.0), (26, 0.0, 0.0), (41, 0.0, 0.0))
+
+    def test_uniform_looks_share_one_angle_across_the_rig(self):
+        looks = dict(
+            (label, aims) for label, aims, _skipped in basic_position_presets(self._FIXTURES)
+        )
+        assert {(pan, tilt) for _fid, pan, tilt in looks["Wall"]} == {(180.0, 45.0)}
+        assert {(pan, tilt) for _fid, pan, tilt in looks["Audience"]} == {(180.0, 100.0)}
+
+    def test_focus_looks_are_derived_from_the_rig_centroid(self):
+        # Centroid of the three fixtures is (0, 0): Center aims 20/26 at the
+        # origin (the measured 90/33.7 case) and skips the marker ON it.
+        by_label = {
+            label: (aims, skipped)
+            for label, aims, skipped in basic_position_presets(self._FIXTURES)
+        }
+        aims, skipped = by_label["Center"]
+        assert (20, 90.0, 33.7) in aims
+        assert (26, -90.0, 33.7) in aims
+        assert skipped == (41,)
+
+    def test_ring_out_skips_the_centroid_fixture_but_keeps_the_rest(self):
+        by_label = {
+            label: (aims, skipped)
+            for label, aims, skipped in basic_position_presets(self._FIXTURES)
+        }
+        aims, skipped = by_label["Ring Out"]
+        assert skipped == (41,)
+        assert {fid for fid, _pan, _tilt in aims} == {20, 26}
+
+    def test_an_empty_rig_is_refused(self):
+        with pytest.raises(SpatialPointingError, match="no fixtures"):
+            basic_position_presets([])

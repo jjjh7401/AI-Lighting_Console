@@ -67,6 +67,34 @@ pan  = atan2( -v_x, v_y ) − Rotz     # (−180, 180] 로 정규화
   "프리셋 N로 저장" → 저장 체이닝 (`_look_pan_tilt`, `server/web/session.py`).
   전략 문서: `docs/proposals/pan-tilt-position-preset-strategy.md`.
 
+## 2c. 기본 포지션 10종 시퀀스 (`basic_position_presets`)
+
+"기본 포지션 10개를 프리셋에 저장" 요청의 표준 시퀀스. 1번은 **항상 'Home'**,
+이후 기본→변형 큰 순서. 전부 리그 좌표에서 유도되므로 일자·원형·사각형·삼각형·
+반원 어떤 배치에도 같은 이름 체계가 적용된다 (중심=무게중심, 보컬점=전면 모서리
+−2m/높이 1.6m, 수렴콘=중심 위 3m):
+
+| # | 이름 | 정의 |
+|---|---|---|
+| 1 | Home | 전 대 pan0/tilt0 (수직 아래) |
+| 2 | Wall | 전 대 pan180/tilt45 — 평행 빔 커튼 |
+| 3 | Audience | 전 대 pan180/tilt100 — 객석 공중 |
+| 4 | Center | 무게중심 바닥 FOCUS |
+| 5 | Vocal DSC | (cx, ymin−2, 1.6) FOCUS |
+| 6 | Fan Out | x정렬 체인 팬 ±30° |
+| 7 | Fan In | 오프셋 반전 (모임) |
+| 8 | Cross | 홀수번째 부호 반전 (교차) |
+| 9 | Ring Out | 방사 바깥 (reach 4m 바닥) |
+| 10 | Ring In | 중심 위 3m 수렴콘 |
+
+- 저장 플로우(`_basic_position_presets`): 시작 번호가 지시문에 없으면 질문 카드
+  **한 장**으로 묻는다 — `Store Preset`은 경고 없이 덮어쓰므로 번호는 운영자 결정.
+  "N번부터"가 있으면 카드 생략. 프리셋마다 적용→`Store`→`Label`→`ClearAll`을
+  별도 번들로 실행해 하나가 거부돼도 나머지가 살아남는다.
+- 리콜: `Fixture <sel> ; At Preset 2.<n>` (라이브 검증: 2.28 'Cross' 재현 확인).
+- MA3는 프리셋 이름 중복 시 `#2` 접미사를 자동으로 붙인다(대소문자 무시) —
+  같은 이름을 재저장하기 전에 옛 슬롯을 지워라.
+
 ## 3. 명령 문법 — 픽스처당 한 줄로 체이닝 (필수)
 
 ```
