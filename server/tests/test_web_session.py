@@ -1233,6 +1233,123 @@ class TestPointFixturesAtTarget:
         assert event["text"] == "어느 지점을 바라보게 할까요?"
 
 
+class TestPositionMoodSuggestion:
+    def _registry(self, calls):
+        fixtures = [
+            {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
+            {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
+        ]
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    (CommandOutcome(command="Fixture 20", status="proposal"),),
+                )
+
+        return Registry()
+
+    class _Channel:
+        def __init__(self, answers):
+            self.answers = list(answers)
+            self.asked = []
+
+        def ask(self, request, **_kwargs):
+            self.asked.append(request)
+            return self.answers.pop(0) if self.answers else UNANSWERED
+
+    def test_a_mood_request_suggests_then_applies_the_accepted_look(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(["Vocal DSC"])
+        session._question_channel = channel
+
+        event = session.run_instruction("잔잔한 발라드 느낌으로 불 켜고 포지션 잡아줘")
+
+        assert provider.calls == []
+        assert len(channel.asked) == 1
+        assert "보컬 포커스" in channel.asked[0].prompt
+        # 추천이 첫 옵션, 대안 + '적용 안 함'이 뒤따른다.
+        labels = [option.label for option in channel.asked[0].options]
+        assert labels[0] == "Vocal DSC"
+        assert labels[-1] == "적용 안 함"
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert len(writes) == 1
+        commands = writes[0].arguments["commands"]
+        # Vocal DSC: 두 대가 (0, -2, 1.6)을 향한다 — 픽스처별 상이한 pan/tilt,
+        # 디머 온, 픽스처당 한 줄.
+        assert len(commands) == 2
+        assert commands[0].startswith("Fixture 20 ; Attribute 'Dimmer' At 100 ; ")
+        assert "Vocal DSC 포지션을 장비 2대에" in event["text"]
+
+    def test_an_alternative_answer_applies_that_look_instead(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel(["Wall"])
+
+        session.run_instruction("잔잔한 발라드 포지션으로")
+
+        commands = [call for call in calls if call.name == "run_commands"][0].arguments["commands"]
+        # Wall = 전 대 동일 pan180/tilt45.
+        assert commands == [
+            "Fixture 20 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 45",
+            "Fixture 26 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 45",
+        ]
+
+    def test_declining_sends_nothing(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel(["적용 안 함"])
+
+        event = session.run_instruction("웅장한 피날레 연출 포지션")
+
+        assert [call.name for call in calls] == ["get_spatial_context"]
+        assert "적용하지 않았습니다" in event["text"]
+
+    def test_a_mood_without_position_intent_reaches_the_model(self, tmp_path):
+        # "따뜻한 발라드 느낌으로 만들어줘"는 색·룩 요청일 수 있다 — 모델
+        # 경로(find_looks)에 남긴다.
+        provider = ScriptedProvider([_final("룩 라이브러리를 확인하겠습니다")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+
+        event = session.run_instruction("잔잔한 발라드 느낌으로 만들어줘")
+
+        assert len(provider.calls) == 1
+        assert event["text"] == "룩 라이브러리를 확인하겠습니다"
+
+    def test_an_explicit_technique_request_is_not_intercepted(self, tmp_path):
+        # "화려하게 부채살로 펼쳐줘"는 무드 어휘(화려)를 담지만 기법이 명시돼
+        # 있다 — LOOK 핸들러가 먼저 잡아 카드 없이 실행된다.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel([])
+        session._question_channel = channel
+
+        session.run_instruction("화려하게 부채살로 펼쳐줘")
+
+        assert channel.asked == []
+        assert [call.name for call in calls] == ["get_spatial_context", "run_commands"]
+
+
 class TestBasicPositionPresets:
     def _registry(self, calls):
         fixtures = [

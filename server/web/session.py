@@ -49,6 +49,7 @@ from server.spatial.pointing import (
     position_preset_store_commands,
     radial_pan_tilt,
 )
+from server.spatial.position_moods import match_position_mood
 from server.spatial.vocabulary import (
     layout_terms_guidance,
     match_explicit_layout,
@@ -164,6 +165,9 @@ _LOOK_TILT_FAN = re.compile(
 _LOOK_PRESET_STORE = re.compile(
     r"프리셋\s*(?P<no>\d+)\s*(?:번)?\s*(?:으?로|에)?\s*저장|저장.*?프리셋\s*(?P<no2>\d+)"
 )
+# 무드→포지션 제안 게이트: 포지션 의도 단어가 있어야만 발화한다 — 무드 어휘만
+# 있는 문장(색·룩 요청일 수 있음)은 모델 경로(find_looks 등)에 남긴다.
+_POSITION_INTENT = re.compile(r"포지션|포커스|방향|바라보|비추|조준|잡아|연출")
 
 # The ten-basic-positions request: build the canonical position sequence for
 # THIS rig and store it as consecutive Position presets, asking for the first
@@ -935,6 +939,86 @@ class ChatSession:
             duration_seconds=0.0,
         )
 
+    def _position_mood_suggestion(self, text: str) -> InstructionResult | None:
+        """연출 의도(무드) → 포지션 추천 카드 → 선택된 룩만 적용.
+
+        docs/proposals의 무드→포지션 매핑(`server/spatial/position_moods.py`)
+        기반. 실행이 아니라 제안이 기본이다: 키워드가 맞아도 카드로 확인을
+        받고, 무응답·거절이면 아무것도 보내지 않는다 — 키워드 하나로 단정해
+        실행하던 반사적 처리의 재도입을 막는 경계.
+        """
+        if _POSITION_INTENT.search(text) is None:
+            return None
+        suggestion = match_position_mood(text)
+        if suggestion is None:
+            return None
+        fixtures = self._read_pointing_coordinates("mood-read")
+        if isinstance(fixtures, InstructionResult):
+            return fixtures
+        if not fixtures:
+            return self._pointing_refusal(
+                "좌표가 확인된 장비가 없어 포지션 제안을 시작하지 않았습니다."
+            )
+        entry = suggestion.entry
+        options = [QuestionOption(label=entry.label, description=entry.reason)]
+        by_label = {
+            label: (aims, skipped) for label, aims, skipped in basic_position_presets(fixtures)
+        }
+        for alt in entry.alternatives:
+            options.append(QuestionOption(label=alt))
+        options.append(QuestionOption(label="적용 안 함"))
+        matched = ", ".join(suggestion.matched)
+        answer = self._ask_one(
+            f"'{matched}' 느낌에는 {entry.korean}({entry.label}) 포지션을 추천합니다. 적용할까요?",
+            options=tuple(options),
+            why=entry.reason,
+        )
+        if answer is None or "안 함" in answer or "안함" in answer:
+            return self._pointing_refusal(
+                f"포지션을 적용하지 않았습니다. (추천이었던 룩: {entry.label})"
+            )
+        chosen = next(
+            (label for label in by_label if label.casefold() == answer.strip().casefold()),
+            None,
+        )
+        if chosen is None:
+            return self._pointing_refusal(
+                f"'{answer}'는 기본 포지션 이름이 아니어서 적용하지 않았습니다. "
+                f"(가능: {', '.join(by_label)})"
+            )
+        aims, skipped = by_label[chosen]
+        if not aims:
+            return self._pointing_refusal(
+                f"{chosen} 포지션을 계산할 수 있는 장비가 없어 적용하지 않았습니다."
+            )
+        dimmer = 100.0 if _POINT_DIMMER_ON.search(text) is not None else None
+        executed = self._registry.dispatch(
+            ToolCall(
+                id="mood-write",
+                name="run_commands",
+                arguments={"commands": list(aimed_commands(aims, dimmer=dimmer))},
+            )
+        )
+        skipped_note = (
+            f" 조준 불가 {len(skipped)}대(FID {', '.join(str(fid) for fid in skipped)})는 "
+            "제외했습니다."
+            if skipped
+            else ""
+        )
+        dimmer_note = "디머를 켜고 " if dimmer is not None else ""
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"{dimmer_note}'{matched}' 의도에 맞춰 {chosen} 포지션을 장비 "
+                f"{len(aims)}대에 요청했습니다.{skipped_note} 승인 또는 라이브 잠금 "
+                "상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+            ),
+            command_outcomes=executed.command_outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
     def _basic_position_presets(self, text: str) -> InstructionResult | None:
         """Build the ten canonical positions for THIS rig and store them.
 
@@ -1623,6 +1707,8 @@ class ChatSession:
                     result = self._look_pan_tilt(text)
                 if result is None:
                     result = self._point_fixtures_at_target(text)
+                if result is None:
+                    result = self._position_mood_suggestion(text)
                 if result is None:
                     result = self._repeating_type_columns_layout(text)
                 if result is None:
