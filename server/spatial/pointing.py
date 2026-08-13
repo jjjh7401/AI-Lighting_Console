@@ -41,11 +41,18 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 __all__ = [
+    "FAN_MODES",
     "POINTING_TILT_LIMIT_DEGREES",
+    "POSITION_PRESET_POOL",
+    "RADIAL_MODES",
     "PointingTarget",
     "SpatialPointingError",
     "aim_pan_tilt",
+    "aimed_commands",
+    "fan_pan_tilt",
     "pointing_commands",
+    "position_preset_store_commands",
+    "radial_pan_tilt",
 ]
 
 
@@ -151,20 +158,164 @@ def pointing_commands(
     """
     if not fixtures:
         raise SpatialPointingError("no fixtures to point")
-    if dimmer is not None and not 0.0 <= dimmer <= 100.0:
-        raise SpatialPointingError(f"dimmer {dimmer!r} is outside 0..100")
     seen: set[int] = set()
-    commands: list[str] = []
+    aims: list[tuple[int, float, float]] = []
     rotations = rotz_by_fid or {}
     for fid, position in fixtures:
         if fid in seen:
             raise SpatialPointingError(f"fid {fid} named twice")
         seen.add(fid)
         pan, tilt = aim_pan_tilt(position, target.as_tuple(), rotz=rotations.get(fid, 0.0))
+        aims.append((fid, pan, tilt))
+    return aimed_commands(aims, dimmer=dimmer)
+
+
+#: The design-look (LOOK family) vocabularies — closed, like the spatial sorts.
+#: ``out`` fans the ends away from the base direction, ``in`` mirrors that
+#: toward it (converge), ``cross`` alternates the out-offsets' sign so
+#: neighbouring beams cross (the FancyFAN "Crossed Fan" shape).
+FAN_MODES = ("out", "in", "cross")
+
+#: ``out`` aims every fixture away from the rig centre (beam lands on the
+#: floor outside the ring), ``in`` converges every beam on one point of the
+#: centre axis.
+RADIAL_MODES = ("out", "in")
+
+#: grandMA3's default Position preset pool number (`Preset 2.x`).
+POSITION_PRESET_POOL = 2
+
+
+def fan_pan_tilt(
+    fids: Sequence[int],
+    *,
+    base_pan: float = 180.0,
+    base_tilt: float = 45.0,
+    spread: float = 30.0,
+    mode: str = "out",
+) -> tuple[tuple[int, float, float], ...]:
+    """Per-fixture (fid, pan, tilt) for a fan look over an ORDERED chain.
+
+    ``fids`` must already be in stage order (e.g. left-to-right) — the fan is
+    a function of that order, exactly like MA3's own ``Align``: fixture ``i``
+    of ``N`` gets a pan offset of ``spread * (2i/(N-1) - 1)`` around
+    ``base_pan`` (linear distribution, the Align default). ``spread`` is the
+    END fixture's offset in degrees, so the full aperture is ``2 * spread``.
+    ``mode`` picks the design: ``out`` fans away, ``in`` converges (mirrored
+    offsets), ``cross`` alternates the offset sign per fixture so the beams
+    cross mid-air. The defaults (base pan 180 = downstage -Y, tilt 45) make a
+    classic audience-facing fan on the measured axis conventions.
+    """
+    if not fids:
+        raise SpatialPointingError("no fixtures to fan")
+    if len(set(fids)) != len(fids):
+        raise SpatialPointingError("a fid is named twice in the fan chain")
+    if mode not in FAN_MODES:
+        raise SpatialPointingError(f"{mode!r} is not a fan mode (allowed: {FAN_MODES})")
+    if not 0.0 <= spread <= 180.0:
+        raise SpatialPointingError(f"fan spread {spread!r} is outside 0..180 degrees")
+    if abs(base_tilt) > POINTING_TILT_LIMIT_DEGREES:
+        raise SpatialPointingError(
+            f"fan base tilt {base_tilt!r} exceeds the "
+            f"{POINTING_TILT_LIMIT_DEGREES:.0f} degree ceiling"
+        )
+    count = len(fids)
+    aims: list[tuple[int, float, float]] = []
+    for index, fid in enumerate(fids):
+        offset = 0.0 if count == 1 else spread * (2.0 * index / (count - 1) - 1.0)
+        if mode == "in" or mode == "cross" and index % 2 == 1:
+            offset = -offset
+        pan = _normalize_degrees(base_pan + offset)
+        aims.append((fid, round(pan, _VALUE_DECIMALS), round(base_tilt, _VALUE_DECIMALS)))
+    return tuple(aims)
+
+
+def radial_pan_tilt(
+    fixtures: Sequence[tuple[int, tuple[float, float, float]]],
+    *,
+    center: tuple[float, float] = (0.0, 0.0),
+    mode: str = "out",
+    reach: float = 4.0,
+    height: float = 0.0,
+) -> tuple[tuple[int, float, float], ...]:
+    """Per-fixture (fid, pan, tilt) for a ring look around ``center``.
+
+    ``out``: each beam lands on the floor ``reach`` metres OUTSIDE the
+    fixture, along its own radial from the rig centre — the classic
+    outward-facing ring. ``in``: every beam converges on the point
+    ``(center, height)`` on the centre axis (``height`` in metres above the
+    floor; 0 = the floor itself). A fixture standing ON the centre has no
+    radial in ``out`` mode and is refused, never guessed.
+    """
+    if not fixtures:
+        raise SpatialPointingError("no fixtures to aim radially")
+    if mode not in RADIAL_MODES:
+        raise SpatialPointingError(f"{mode!r} is not a radial mode (allowed: {RADIAL_MODES})")
+    if mode == "out" and reach <= 0.0:
+        raise SpatialPointingError(f"radial reach {reach!r} must be positive")
+    cx, cy = center
+    aims: list[tuple[int, float, float]] = []
+    seen: set[int] = set()
+    for fid, position in fixtures:
+        if fid in seen:
+            raise SpatialPointingError(f"fid {fid} named twice")
+        seen.add(fid)
+        fx, fy, fz = position
+        if mode == "in":
+            target = (cx, cy, height)
+        else:
+            dx, dy = fx - cx, fy - cy
+            radial = math.hypot(dx, dy)
+            if radial < 1e-9:
+                raise SpatialPointingError(
+                    f"fid {fid} stands on the ring centre — it has no outward radial"
+                )
+            target = (fx + dx / radial * reach, fy + dy / radial * reach, 0.0)
+        pan, tilt = aim_pan_tilt((fx, fy, fz), target)
+        aims.append((fid, pan, tilt))
+    return tuple(aims)
+
+
+def aimed_commands(
+    aims: Sequence[tuple[int, float, float]],
+    *,
+    dimmer: float | None = None,
+) -> tuple[str, ...]:
+    """One chained command line per ``(fid, pan, tilt)`` aim.
+
+    Same shape and same reason as :func:`pointing_commands`: the execution
+    path dedupes repeated command TEXT within one instruction, so every line
+    carries its ``Fixture <fid>`` prefix to stay unique.
+    """
+    if not aims:
+        raise SpatialPointingError("no aims to render")
+    if dimmer is not None and not 0.0 <= dimmer <= 100.0:
+        raise SpatialPointingError(f"dimmer {dimmer!r} is outside 0..100")
+    commands: list[str] = []
+    for fid, pan, tilt in aims:
         parts = [f"Fixture {fid}"]
         if dimmer is not None:
             parts.append(f"Attribute 'Dimmer' At {_format_value(dimmer)}")
         parts.append(f"Attribute 'Pan' At {_format_value(pan)}")
         parts.append(f"Attribute 'Tilt' At {_format_value(tilt)}")
         commands.append(" ; ".join(parts))
+    return tuple(commands)
+
+
+def position_preset_store_commands(preset_no: int, label: str | None = None) -> tuple[str, ...]:
+    """Store the programmer's current position values as ``Preset 2.<n>``.
+
+    Run AFTER the aim bundle, while the values still sit in the programmer —
+    cues built from the preset then hold a REFERENCE, so regenerating the
+    preset re-focuses every cue that uses it. The label rides a separate
+    ``Label`` line in single quotes (double quotes cannot be sent at all —
+    ``server/bridge/protocol.py`` rejects them).
+    """
+    if preset_no <= 0:
+        raise SpatialPointingError(f"preset number {preset_no!r} must be positive")
+    commands = [f"Store Preset {POSITION_PRESET_POOL}.{preset_no}"]
+    if label is not None:
+        text = label.strip()
+        if not text or "'" in text or '"' in text:
+            raise SpatialPointingError(f"preset label {label!r} is empty or carries a quote")
+        commands.append(f"Label Preset {POSITION_PRESET_POOL}.{preset_no} '{text}'")
     return tuple(commands)

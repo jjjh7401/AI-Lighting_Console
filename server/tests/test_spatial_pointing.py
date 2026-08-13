@@ -16,7 +16,11 @@ from server.spatial.pointing import (
     PointingTarget,
     SpatialPointingError,
     aim_pan_tilt,
+    aimed_commands,
+    fan_pan_tilt,
     pointing_commands,
+    position_preset_store_commands,
+    radial_pan_tilt,
 )
 
 
@@ -141,3 +145,94 @@ class TestCommandBundle:
         assert "Attribute 'Pan' At -90" in commands[1]
         tilts = {command.rsplit("At ", 1)[1] for command in commands}
         assert len(tilts) == 1
+
+
+class TestFanLook:
+    def test_a_linear_out_fan_spreads_symmetrically_around_the_base(self):
+        aims = fan_pan_tilt([1, 2, 3, 4, 5], base_pan=180.0, base_tilt=45.0, spread=30.0)
+        assert [pan for _fid, pan, _tilt in aims] == [150.0, 165.0, 180.0, -165.0, -150.0]
+        assert all(tilt == 45.0 for _fid, _pan, tilt in aims)
+
+    def test_in_mode_mirrors_the_out_offsets(self):
+        out = fan_pan_tilt([1, 2, 3], spread=20.0, mode="out")
+        in_ = fan_pan_tilt([1, 2, 3], spread=20.0, mode="in")
+        assert [pan for _f, pan, _t in in_] == [pan for _f, pan, _t in reversed(out)]
+
+    def test_cross_mode_alternates_the_offset_sign(self):
+        aims = fan_pan_tilt([1, 2, 3, 4], base_pan=0.0, spread=30.0, mode="cross")
+        offsets = [pan for _fid, pan, _tilt in aims]
+        # out offsets for 4 fixtures: -30, -10, +10, +30; odd indices flip.
+        assert offsets == [-30.0, 10.0, 10.0, -30.0]
+
+    def test_a_single_fixture_fan_stays_on_the_base(self):
+        assert fan_pan_tilt([7], base_pan=90.0, base_tilt=30.0, spread=45.0) == ((7, 90.0, 30.0),)
+
+    def test_fan_refusals(self):
+        with pytest.raises(SpatialPointingError, match="no fixtures"):
+            fan_pan_tilt([])
+        with pytest.raises(SpatialPointingError, match="named twice"):
+            fan_pan_tilt([1, 1])
+        with pytest.raises(SpatialPointingError, match="not a fan mode"):
+            fan_pan_tilt([1, 2], mode="sideways")
+        with pytest.raises(SpatialPointingError, match="outside 0..180"):
+            fan_pan_tilt([1, 2], spread=181.0)
+        with pytest.raises(SpatialPointingError, match="ceiling"):
+            fan_pan_tilt([1, 2], base_tilt=140.0)
+
+
+class TestRadialLook:
+    def test_out_mode_aims_every_fixture_away_from_the_centre(self):
+        aims = radial_pan_tilt(
+            [(20, (4.0, 0.0, 6.0)), (26, (-4.0, 0.0, 6.0))], mode="out", reach=6.0
+        )
+        # Outward target for FID 20 is (10, 0, 0): pan -90 (toward +X), and
+        # the mirrored fixture gets the mirrored pan on the same tilt.
+        by_fid = {fid: (pan, tilt) for fid, pan, tilt in aims}
+        assert by_fid[20][0] == -90.0
+        assert by_fid[26][0] == 90.0
+        assert by_fid[20][1] == by_fid[26][1] == 45.0
+
+    def test_in_mode_converges_on_the_centre_axis_at_height(self):
+        aims = radial_pan_tilt(
+            [(20, (4.0, 0.0, 6.0)), (26, (-4.0, 0.0, 6.0))], mode="in", height=2.0
+        )
+        by_fid = {fid: (pan, tilt) for fid, pan, tilt in aims}
+        assert by_fid[20][0] == 90.0
+        assert by_fid[26][0] == -90.0
+        assert by_fid[20][1] == pytest.approx(45.0, abs=0.05)
+
+    def test_a_fixture_on_the_centre_is_refused_outward(self):
+        with pytest.raises(SpatialPointingError, match="no outward radial"):
+            radial_pan_tilt([(41, (0.0, 0.0, 6.0))], mode="out")
+
+    def test_radial_refusals(self):
+        with pytest.raises(SpatialPointingError, match="not a radial mode"):
+            radial_pan_tilt([(1, (1.0, 0.0, 6.0))], mode="up")
+        with pytest.raises(SpatialPointingError, match="must be positive"):
+            radial_pan_tilt([(1, (1.0, 0.0, 6.0))], mode="out", reach=0.0)
+
+
+class TestAimedCommandsAndPresetStore:
+    def test_aims_render_as_one_chained_line_each(self):
+        commands = aimed_commands([(1, 150.0, 45.0), (2, -165.0, 45.0)], dimmer=100.0)
+        assert commands == (
+            "Fixture 1 ; Attribute 'Dimmer' At 100 ; "
+            "Attribute 'Pan' At 150 ; Attribute 'Tilt' At 45",
+            "Fixture 2 ; Attribute 'Dimmer' At 100 ; "
+            "Attribute 'Pan' At -165 ; Attribute 'Tilt' At 45",
+        )
+
+    def test_the_preset_store_targets_the_position_pool(self):
+        assert position_preset_store_commands(11, "FAN OUT") == (
+            "Store Preset 2.11",
+            "Label Preset 2.11 'FAN OUT'",
+        )
+
+    def test_a_bare_store_carries_no_label_line(self):
+        assert position_preset_store_commands(3) == ("Store Preset 2.3",)
+
+    def test_preset_store_refusals(self):
+        with pytest.raises(SpatialPointingError, match="must be positive"):
+            position_preset_store_commands(0)
+        with pytest.raises(SpatialPointingError, match="quote"):
+            position_preset_store_commands(1, "bad'name")

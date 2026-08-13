@@ -40,7 +40,11 @@ from server.spatial.pointing import (
     PointingTarget,
     SpatialPointingError,
     aim_pan_tilt,
+    aimed_commands,
+    fan_pan_tilt,
     pointing_commands,
+    position_preset_store_commands,
+    radial_pan_tilt,
 )
 from server.spatial.vocabulary import (
     layout_terms_guidance,
@@ -135,6 +139,21 @@ _TYPED_TWO_ROW_REQUEST = re.compile(
     r"(?:mmx).*(?:350m|350\s*m).*(?:1[.,]?5\s*(?:m|미터))"
     r"|(?:350m|350\s*m).*(?:mmx).*(?:1[.,]?5\s*(?:m|미터))",
     re.IGNORECASE,
+)
+
+# LOOK-family (design-relation) pan/tilt handlers: fan over an ordered chain,
+# or an inward/outward ring around the rig centroid. See
+# docs/proposals/pan-tilt-position-preset-strategy.md.
+_LOOK_FAN = re.compile(r"부채살|부채꼴|부채|팬\s*(?:아웃|인)|\bfan\b", re.IGNORECASE)
+_LOOK_FAN_IN = re.compile(r"모아|모으|모이|converge|팬\s*인|안쪽으로\s*모", re.IGNORECASE)
+_LOOK_FAN_CROSS = re.compile(r"교차|크로스|엇갈|cross", re.IGNORECASE)
+_LOOK_RING = re.compile(
+    r"(?P<dir>안쪽|바깥쪽|바깥|밖)(?:을|으로|를)?\s*(?:다\s*)?(?:바라보|바라볼|향하|향해|비추|비추도록|비출)",
+    re.IGNORECASE,
+)
+_LOOK_SPREAD = re.compile(r"(?P<value>\d+(?:\.\d+)?)\s*도")
+_LOOK_PRESET_STORE = re.compile(
+    r"프리셋\s*(?P<no>\d+)\s*(?:번)?\s*(?:으?로|에)?\s*저장|저장.*?프리셋\s*(?P<no2>\d+)"
 )
 
 _REPEATING_TYPE_COLUMNS_REQUEST = re.compile(
@@ -671,6 +690,55 @@ class ChatSession:
             duration_seconds=0.0,
         )
 
+    @staticmethod
+    def _pointing_refusal(text: str) -> InstructionResult:
+        """A no-op turn result carrying WHY no aim command was sent."""
+        return InstructionResult(
+            status="ok",
+            text=text,
+            command_outcomes=(),
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
+    def _read_pointing_coordinates(
+        self, call_id: str
+    ) -> list[tuple[int, tuple[float, float, float]]] | InstructionResult:
+        """Every coordinate-confirmed ``(fid, (x, y, z))`` — or the refusal.
+
+        Shared by the FOCUS (point-at) and LOOK (fan/ring) handlers: both
+        compute per-fixture pan/tilt from the console's own patch read, and
+        both must refuse on a partial read rather than aim half a rig.
+        """
+        spatial = self._registry.dispatch(
+            ToolCall(id=call_id, name="get_spatial_context", arguments={})
+        )
+        if spatial.result.is_error:
+            return self._pointing_refusal(
+                "3D 좌표를 읽지 못해 조명 방향 변경을 시작하지 않았습니다. "
+                "콘솔 연결을 확인해 주세요."
+            )
+        try:
+            payload = json.loads(spatial.result.content)
+            records = payload["fixtures"] if "fixtures" in payload else payload["partial_fixtures"]
+            if "fixtures" not in payload and (
+                payload.get("truncated") or payload.get("roundtrip_capped")
+            ):
+                raise ValueError("coordinate read is incomplete")
+            return [
+                (record["fid"], (float(record["x"]), float(record["y"]), float(record["z"])))
+                for record in records
+                if isinstance(record, dict)
+                and isinstance(record.get("fid"), int)
+                and not isinstance(record.get("fid"), bool)
+            ]
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+            return self._pointing_refusal(
+                "3D 좌표 응답이 전송 중 잘렸거나 조회 한도에 도달해 조명 방향 "
+                "변경을 시작하지 않았습니다."
+            )
+
     def _point_fixtures_at_target(self, text: str) -> InstructionResult | None:
         """Aim every coordinate-confirmed fixture's beam at one stage point.
 
@@ -691,47 +759,9 @@ class ChatSession:
             target = PointingTarget(0.0, 0.0, 0.0)
         else:
             return None  # aiming verb without a target — let the model ask
-        spatial = self._registry.dispatch(
-            ToolCall(id="pointing-read", name="get_spatial_context", arguments={})
-        )
-        if spatial.result.is_error:
-            return InstructionResult(
-                status="ok",
-                text=(
-                    "3D 좌표를 읽지 못해 조명 방향 변경을 시작하지 않았습니다. "
-                    "콘솔 연결을 확인해 주세요."
-                ),
-                command_outcomes=(),
-                retries_used=0,
-                model_calls=0,
-                duration_seconds=0.0,
-            )
-        try:
-            payload = json.loads(spatial.result.content)
-            records = payload["fixtures"] if "fixtures" in payload else payload["partial_fixtures"]
-            if "fixtures" not in payload and (
-                payload.get("truncated") or payload.get("roundtrip_capped")
-            ):
-                raise ValueError("coordinate read is incomplete")
-            fixtures = [
-                (record["fid"], (float(record["x"]), float(record["y"]), float(record["z"])))
-                for record in records
-                if isinstance(record, dict)
-                and isinstance(record.get("fid"), int)
-                and not isinstance(record.get("fid"), bool)
-            ]
-        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
-            return InstructionResult(
-                status="ok",
-                text=(
-                    "3D 좌표 응답이 전송 중 잘렸거나 조회 한도에 도달해 조명 방향 "
-                    "변경을 시작하지 않았습니다."
-                ),
-                command_outcomes=(),
-                retries_used=0,
-                model_calls=0,
-                duration_seconds=0.0,
-            )
+        fixtures = self._read_pointing_coordinates("pointing-read")
+        if isinstance(fixtures, InstructionResult):
+            return fixtures
         pointable: list[tuple[int, tuple[float, float, float]]] = []
         skipped: list[int] = []
         for fid, position in fixtures:
@@ -773,6 +803,101 @@ class ChatSession:
                 f"({target.x:g}, {target.y:g}, {target.z:g}) 지점을 향하도록 "
                 f"Pan/Tilt를 요청했습니다.{skipped_note} 승인 또는 라이브 잠금 "
                 "상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+            ),
+            command_outcomes=executed.command_outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
+    def _look_pan_tilt(self, text: str) -> InstructionResult | None:
+        """Aim the rig into a DESIGN look — fan (out/in/cross) or ring (in/out).
+
+        The LOOK family of docs/proposals/pan-tilt-position-preset-strategy.md:
+        values are a function of the fixtures' RELATION (chain order, or the
+        radial around the rig centroid), not of one target point. Optionally
+        stores the programmer as a Position preset when the instruction names
+        an explicit preset number (never a guessed slot).
+        """
+        ring = _LOOK_RING.search(text)
+        fan = _LOOK_FAN.search(text)
+        if ring is None and fan is None:
+            return None
+        fixtures = self._read_pointing_coordinates("look-read")
+        if isinstance(fixtures, InstructionResult):
+            return fixtures
+        if not fixtures:
+            return self._pointing_refusal(
+                "좌표가 확인된 장비가 없어 룩 포지션을 시작하지 않았습니다."
+            )
+        skipped: list[int] = []
+        if ring is not None:
+            mode = "in" if ring.group("dir") == "안쪽" else "out"
+            cx = sum(position[0] for _fid, position in fixtures) / len(fixtures)
+            cy = sum(position[1] for _fid, position in fixtures) / len(fixtures)
+            aims: list[tuple[int, float, float]] = []
+            for fid, position in fixtures:
+                try:
+                    aims.extend(radial_pan_tilt([(fid, position)], center=(cx, cy), mode=mode))
+                except SpatialPointingError:
+                    skipped.append(fid)
+            look_label = f"RING {mode.upper()}"
+            look_korean = "링 " + ("안쪽" if mode == "in" else "바깥쪽") + " 조준"
+        else:
+            if _LOOK_FAN_CROSS.search(text) is not None:
+                mode = "cross"
+            elif _LOOK_FAN_IN.search(text) is not None:
+                mode = "in"
+            else:
+                mode = "out"
+            spread_match = _LOOK_SPREAD.search(text)
+            spread = float(spread_match.group("value")) if spread_match else 30.0
+            ordered = sorted(fixtures, key=lambda item: (item[1][0], item[0]))
+            try:
+                aims = list(
+                    fan_pan_tilt([fid for fid, _position in ordered], spread=spread, mode=mode)
+                )
+            except SpatialPointingError as error:
+                return self._pointing_refusal(f"부채살 포지션을 만들 수 없습니다: {error}")
+            look_label = f"FAN {mode.upper()}"
+            look_korean = {
+                "out": f"부채살(끝 장비 ±{spread:g}도)",
+                "in": f"모으는 부채살(끝 장비 ±{spread:g}도)",
+                "cross": f"교차 부채살(끝 장비 ±{spread:g}도)",
+            }[mode]
+        if not aims:
+            return self._pointing_refusal(
+                "룩 포지션을 계산할 수 있는 장비가 없어 시작하지 않았습니다."
+            )
+        dimmer = 100.0 if _POINT_DIMMER_ON.search(text) is not None else None
+        commands = list(aimed_commands(aims, dimmer=dimmer))
+        preset_match = _LOOK_PRESET_STORE.search(text)
+        preset_note = ""
+        if preset_match is not None:
+            preset_no = int(preset_match.group("no") or preset_match.group("no2"))
+            try:
+                commands.extend(position_preset_store_commands(preset_no, look_label))
+            except SpatialPointingError as error:
+                return self._pointing_refusal(f"프리셋 저장 명령을 만들 수 없습니다: {error}")
+            preset_note = (
+                f" 이어서 Position 프리셋 2.{preset_no}에 '{look_label}'로 저장을 요청했습니다."
+            )
+        executed = self._registry.dispatch(
+            ToolCall(id="look-write", name="run_commands", arguments={"commands": commands})
+        )
+        skipped_note = (
+            f" 중심과 겹치거나 틸트 한계를 넘는 {len(skipped)}대(FID "
+            f"{', '.join(str(fid) for fid in skipped)})는 제외했습니다."
+            if skipped
+            else ""
+        )
+        dimmer_note = "디머를 켜고 " if dimmer is not None else ""
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"{dimmer_note}좌표가 확인된 장비 {len(aims)}대를 {look_korean} "
+                f"포지션으로 요청했습니다.{skipped_note}{preset_note} 승인 또는 "
+                "라이브 잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
             ),
             command_outcomes=executed.command_outcomes,
             retries_used=0,
@@ -1368,6 +1493,8 @@ class ChatSession:
         try:
             try:
                 result = self._all_fixtures_elevation(text)
+                if result is None:
+                    result = self._look_pan_tilt(text)
                 if result is None:
                     result = self._point_fixtures_at_target(text)
                 if result is None:

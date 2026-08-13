@@ -1233,6 +1233,102 @@ class TestPointFixturesAtTarget:
         assert event["text"] == "어느 지점을 바라보게 할까요?"
 
 
+class TestLookPanTilt:
+    def _registry(self, calls):
+        fixtures = [
+            {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
+            {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
+            {"fid": 41, "name": "Sphere 1", "x": 0.0, "y": 0.0, "z": 0.0},
+        ]
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    (CommandOutcome(command="Fixture 20", status="proposal"),),
+                )
+
+        return Registry()
+
+    def test_a_fan_request_spreads_pan_over_the_x_ordered_chain(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        event = session.run_instruction("전체 장비를 불 켜고 45도 부채살로 펼쳐줘")
+
+        assert provider.calls == []
+        assert [call.name for call in calls] == ["get_spatial_context", "run_commands"]
+        # x-ordered chain 26(-4) -> 41(0) -> 20(4); base pan 180, offsets
+        # -45/0/+45, tilt 45, dimmer on.
+        assert calls[-1].arguments["commands"] == [
+            "Fixture 26 ; Attribute 'Dimmer' At 100 ; "
+            "Attribute 'Pan' At 135 ; Attribute 'Tilt' At 45",
+            "Fixture 41 ; Attribute 'Dimmer' At 100 ; "
+            "Attribute 'Pan' At 180 ; Attribute 'Tilt' At 45",
+            "Fixture 20 ; Attribute 'Dimmer' At 100 ; "
+            "Attribute 'Pan' At -135 ; Attribute 'Tilt' At 45",
+        ]
+        assert "부채살" in event["text"]
+
+    def test_a_ring_out_request_skips_the_centroid_fixture_and_can_store_a_preset(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        event = session.run_instruction("장비들이 바깥쪽을 바라보게 하고 프리셋 11로 저장해줘")
+
+        commands = calls[-1].arguments["commands"]
+        # Centroid is (0,0): the sphere ON it has no outward radial and is
+        # skipped; 20/26 aim 4 m outward (target z=0 -> tilt 33.7) with
+        # mirrored pans; the explicit preset number appends the store+label.
+        assert commands == [
+            "Fixture 20 ; Attribute 'Pan' At -90 ; Attribute 'Tilt' At 33.7",
+            "Fixture 26 ; Attribute 'Pan' At 90 ; Attribute 'Tilt' At 33.7",
+            "Store Preset 2.11",
+            "Label Preset 2.11 'RING OUT'",
+        ]
+        assert "1대(FID 41)" in event["text"]
+        assert "2.11" in event["text"]
+
+    def test_a_ring_in_request_converges_on_the_centroid(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        session.run_instruction("모든 장비가 안쪽을 바라보게 해줘")
+
+        commands = calls[-1].arguments["commands"]
+        assert "Fixture 20 ; Attribute 'Pan' At 90 ; Attribute 'Tilt' At 33.7" in commands
+        assert "Fixture 26 ; Attribute 'Pan' At -90 ; Attribute 'Tilt' At 33.7" in commands
+
+    def test_a_centre_pointing_request_still_reaches_the_focus_handler(self, tmp_path):
+        # "중앙을 바라보게" carries an aiming verb but no fan/ring word — it
+        # must fall through to the FOCUS handler, not be eaten by LOOK.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        event = session.run_instruction("모든 장비가 무대 중앙을 바라보게 해줘")
+
+        assert "지점을 향하도록" in event["text"]
+
+
 class TestMultiRingCircle:
     def test_asks_radii_and_order_then_places_three_rings(self, tmp_path):
         provider = ScriptedProvider([])

@@ -47,6 +47,26 @@ pan  = atan2( -v_x, v_y ) − Rotz     # (−180, 180] 로 정규화
 - 구현: `server/spatial/pointing.py` — `aim_pan_tilt()`, `pointing_commands()`.
   단위 테스트: `server/tests/test_spatial_pointing.py` (실측 케이스 고정).
 
+## 2b. 디자인 룩 (LOOK 계열) — 장비 간 상관관계로 값이 정해지는 포지션
+
+한 점 조준(FOCUS)이 아니라 리그의 **관계**가 값을 만든다. 전부 라이브 검증됨:
+
+- **FAN out/in/cross** (`fan_pan_tilt`): 정렬된 체인(x 오름차순 등)의 i번째가
+  pan 오프셋 `spread·(2i/(N−1)−1)`을 받는다 (MA3 Align Linear와 동일 분배).
+  기본 base = pan 180(객석 방향)/tilt 45. `in`은 오프셋 반전(모임),
+  `cross`는 홀수번째 부호 반전(교차빔).
+- **RING out/in** (`radial_pan_tilt`): 리그 무게중심 C 기준. `out`은
+  `target = F + (F−C)/|F−C|·reach` (바닥, 기본 reach 4m) — 바깥 방사.
+  `in`은 중심축 위 한 점 `(C, height)`로 수렴. 중심 위에 선 픽스처는
+  out 방사 방향이 없으므로 제외·보고.
+- **프리셋 저장** (`position_preset_store_commands`): 조준 번들 직후 프로그래머가
+  살아있는 상태에서 `Store Preset 2.<n>` + `Label Preset 2.<n> '<name>'`.
+  큐는 프리셋 참조로 빌드하면 재생성만으로 전 큐가 따라온다. 프리셋 번호는
+  사용자가 명시했을 때만 사용(임의 슬롯 추측 금지).
+- 세션 어휘: "부채살/교차/모아" → FAN, "안쪽·바깥쪽을 바라보게" → RING,
+  "프리셋 N로 저장" → 저장 체이닝 (`_look_pan_tilt`, `server/web/session.py`).
+  전략 문서: `docs/proposals/pan-tilt-position-preset-strategy.md`.
+
 ## 3. 명령 문법 — 픽스처당 한 줄로 체이닝 (필수)
 
 ```
