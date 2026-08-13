@@ -140,6 +140,30 @@ describe("composerViewState", () => {
     expect(ready.canSubmit).toBe(true);
   });
 
+  it("keeps the composer open while responding: typing queues, empty cannot submit", () => {
+    const empty = composerViewState({
+      connected: true,
+      status: { health: "online", live_lock: false, executions_blocked: false },
+      draft: "",
+      responding: true,
+    });
+    const drafted = composerViewState({
+      connected: true,
+      status: { health: "online", live_lock: false, executions_blocked: false },
+      draft: "다음 요청",
+      responding: true,
+    });
+
+    // The operator can DRAFT the next request during a running turn…
+    expect(empty.inputDisabled).toBe(false);
+    expect(empty.submitDisabled).toBe(true);
+    expect(empty.canSubmit).toBe(false);
+    // …and submitting queues it (serialized execution, never concurrent).
+    expect(drafted.canSubmit).toBe(true);
+    expect(drafted.buttonLabel).toBe("대기열 추가");
+    expect(drafted.helperText).toBe("요청 응답이 완료될 때까지 잠시 기다려 주세요.");
+  });
+
   it("keeps live-lock proposal mode available instead of treating it as offline", () => {
     const state = composerViewState({
       connected: true,

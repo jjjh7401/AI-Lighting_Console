@@ -1,8 +1,14 @@
+import { useState } from "react";
+
 import {
   type ExecutionPreview,
   type ExecutionPreviewCommand,
   type PreviewRiskLevel,
 } from "../protocol";
+
+// Preview command lists start COLLAPSED regardless of length (operator
+// decision); the summary + risk badge + warnings stay visible either way.
+export const PREVIEW_COLLAPSE_THRESHOLD = 0;
 
 const RISK_LABELS: Record<PreviewRiskLevel, string> = {
   info: "정보",
@@ -28,7 +34,18 @@ export function previewCommandMeta(command: ExecutionPreviewCommand): string {
   return `${target} · ${action}`;
 }
 
-export function ExecutionPreviewCard({ preview }: { preview: ExecutionPreview }) {
+/** Pure, hook-free view — the plain-function-testable half (AppShell pattern). */
+export function ExecutionPreviewCardView({
+  preview,
+  collapsible,
+  open,
+  onToggle,
+}: {
+  preview: ExecutionPreview;
+  collapsible: boolean;
+  open: boolean;
+  onToggle: () => void;
+}) {
   return (
     <section className={`execution-preview-card preview-risk-${preview.risk_level}`}>
       <div className="preview-header">
@@ -36,15 +53,29 @@ export function ExecutionPreviewCard({ preview }: { preview: ExecutionPreview })
         <span className="preview-risk">{RISK_LABELS[preview.risk_level]}</span>
       </div>
       <div className="preview-summary">{preview.summary}</div>
-      <div className="preview-command-list">
-        {preview.commands.map((command, index) => (
-          <div className="preview-command-row" key={`${preview.preview_id}-${index}`}>
-            <code className="preview-command-text">{command.command}</code>
-            <span className="preview-command-label">{command.label}</span>
-            <span className="preview-command-meta">{previewCommandMeta(command)}</span>
-          </div>
-        ))}
-      </div>
+      {collapsible && (
+        <button
+          type="button"
+          className="commands-toggle"
+          aria-expanded={open}
+          onClick={onToggle}
+        >
+          <span className="commands-toggle-arrow">{open ? "▾" : "▸"}</span> 명령{" "}
+          {preview.commands.length}개
+          <span className="commands-toggle-hint">{open ? " 접기" : " 펼치기"}</span>
+        </button>
+      )}
+      {open && (
+        <div className="preview-command-list">
+          {preview.commands.map((command, index) => (
+            <div className="preview-command-row" key={`${preview.preview_id}-${index}`}>
+              <code className="preview-command-text">{command.command}</code>
+              <span className="preview-command-label">{command.label}</span>
+              <span className="preview-command-meta">{previewCommandMeta(command)}</span>
+            </div>
+          ))}
+        </div>
+      )}
       {preview.warnings.length > 0 && (
         <div className="preview-warning-list">
           {preview.warnings.map((warning, index) => (
@@ -60,5 +91,18 @@ export function ExecutionPreviewCard({ preview }: { preview: ExecutionPreview })
       )}
       <div className="preview-scope">명령 문자열 기반 preview입니다. 실제 Cue diff/tracking 영향은 포함하지 않습니다.</div>
     </section>
+  );
+}
+
+export function ExecutionPreviewCard({ preview }: { preview: ExecutionPreview }) {
+  const collapsible = preview.commands.length > PREVIEW_COLLAPSE_THRESHOLD;
+  const [open, setOpen] = useState(!collapsible);
+  return (
+    <ExecutionPreviewCardView
+      preview={preview}
+      collapsible={collapsible}
+      open={open}
+      onToggle={() => setOpen((value) => !value)}
+    />
   );
 }

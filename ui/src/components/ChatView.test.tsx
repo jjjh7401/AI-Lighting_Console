@@ -2,7 +2,13 @@ import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
 import { type CommandView } from "../protocol";
-import { CommandRow, commandDetailText } from "./ChatView";
+import {
+  COMMANDS_COLLAPSE_THRESHOLD,
+  CommandRow,
+  commandDetailText,
+  commandStatusSummary,
+  firstSentence,
+} from "./ChatView";
 
 function childArray(element: ReactElement): unknown[] {
   const children = element.props.children;
@@ -42,5 +48,38 @@ describe("CommandRow", () => {
     expect(detail.props.children).toContain("execution unconfirmed");
     expect(label.props.children).toBe("실행 미확인 (자동 재전송 안 함)");
     expect(copy.props["aria-label"]).toBe("명령 복사");
+  });
+});
+
+describe("collapsed command summary", () => {
+  it("rolls statuses up per Korean label, insertion-ordered", () => {
+    const commands: CommandView[] = [
+      { ...COMMAND, label: "실행 완료", status: "executed_ok" },
+      { ...COMMAND, label: "실행 완료", status: "executed_ok" },
+      { ...COMMAND, label: "건너뜀 (중복 실행 방지)", status: "skipped_already_executed" },
+    ];
+    expect(commandStatusSummary(commands)).toBe("실행 완료 2 · 건너뜀 (중복 실행 방지) 1");
+  });
+
+  it("every command list collapses by default (operator decision)", () => {
+    // Threshold 0: even a 1-command result starts collapsed — the collapsed
+    // line carries count + status roll-up, and expanding is one click.
+    expect(COMMANDS_COLLAPSE_THRESHOLD).toBe(0);
+  });
+});
+
+describe("firstSentence — collapsed assistant body", () => {
+  it("cuts at the first sentence end", () => {
+    expect(firstSentence("요청한 명령을 모두 실행했습니다. 모든 장비(Group 13)를 선택하여…")).toBe(
+      "요청한 명령을 모두 실행했습니다.",
+    );
+  });
+
+  it("falls back to the first line when no period ends it", () => {
+    expect(firstSentence("## 완료 — 전체 40대 반영\n상세 내용…")).toBe("## 완료 — 전체 40대 반영");
+  });
+
+  it("a single short sentence needs no toggle (preview equals text)", () => {
+    expect(firstSentence("완료했습니다.")).toBe("완료했습니다.");
   });
 });

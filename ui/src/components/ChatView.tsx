@@ -1,7 +1,23 @@
 // Chat transcript: user lines, assistant reports (gate-truth command statuses),
 // proposal cards (REQ-MVP-016), Korean errors (REQ-MVP-044), busy/notice lines.
+import { useState } from "react";
+
 import { type ChatEntry, type CommandView } from "../protocol";
 import { ExecutionPreviewCard } from "./ExecutionPreviewCard";
+
+// Command lists start COLLAPSED regardless of length (operator decision): the
+// collapsed line already carries the count + per-status roll-up, so nothing
+// load-bearing is hidden, and the transcript stays scannable.
+export const COMMANDS_COLLAPSE_THRESHOLD = 0;
+
+/** Korean per-status roll-up for the collapsed summary line, insertion-ordered. */
+export function commandStatusSummary(commands: CommandView[]): string {
+  const counts = new Map<string, number>();
+  for (const command of commands) {
+    counts.set(command.label, (counts.get(command.label) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([label, count]) => `${label} ${count}`).join(" · ");
+}
 
 function statusClass(status: string): string {
   switch (status) {
@@ -52,6 +68,59 @@ export function CommandRow({ command }: { command: CommandView }) {
   );
 }
 
+export function CollapsibleCommands({ commands }: { commands: CommandView[] }) {
+  const collapsible = commands.length > COMMANDS_COLLAPSE_THRESHOLD;
+  const [open, setOpen] = useState(!collapsible);
+  return (
+    <div className="commands">
+      {collapsible && (
+        <button
+          type="button"
+          className="commands-toggle"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <span className="commands-toggle-arrow">{open ? "▾" : "▸"}</span> 명령{" "}
+          {commands.length}개 — {commandStatusSummary(commands)}
+          <span className="commands-toggle-hint">{open ? " 접기" : " 펼치기"}</span>
+        </button>
+      )}
+      {open &&
+        commands.map((command, index) => (
+          <CommandRow key={`${command.command}-${index}`} command={command} />
+        ))}
+    </div>
+  );
+}
+
+/** The first sentence of a reply — what the collapsed body shows. Falls back
+ *  to the first line when the line carries no sentence-ending period. */
+export function firstSentence(text: string): string {
+  const firstLine = text.split("\n", 1)[0].trim();
+  const match = firstLine.match(/^[^.!?]*[.!?]/);
+  return (match ? match[0] : firstLine).trim();
+}
+
+export function CollapsibleAssistantText({ text }: { text: string }) {
+  const preview = firstSentence(text);
+  const truncated = preview.length < text.trim().length;
+  const [open, setOpen] = useState(false);
+  if (!truncated) return <div className="assistant-text">{text}</div>;
+  return (
+    <div className="assistant-text">
+      {open ? text : preview}
+      <button
+        type="button"
+        className="assistant-text-toggle"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        {open ? "접기" : "…펼치기"}
+      </button>
+    </div>
+  );
+}
+
 function Entry({ entry }: { entry: ChatEntry }) {
   switch (entry.kind) {
     case "user":
@@ -60,14 +129,8 @@ function Entry({ entry }: { entry: ChatEntry }) {
       return (
         <div className="entry entry-assistant">
           {entry.summary && <div className="summary">{entry.summary}</div>}
-          {entry.text && <div className="assistant-text">{entry.text}</div>}
-          {entry.commands.length > 0 && (
-            <div className="commands">
-              {entry.commands.map((command, index) => (
-                <CommandRow key={`${command.command}-${index}`} command={command} />
-              ))}
-            </div>
-          )}
+          {entry.text && <CollapsibleAssistantText text={entry.text} />}
+          {entry.commands.length > 0 && <CollapsibleCommands commands={entry.commands} />}
         </div>
       );
     case "proposal":

@@ -18,10 +18,13 @@ import {
   buildReviewDecision,
   buildStatusRequest,
   buildVectorworksExportUpload,
+  CHAT_STORAGE_KEY,
   clearPendingRequests,
   initialState,
   parseServerEvent,
+  parseStoredEntries,
   reduceServerEvent,
+  serializeEntriesForStorage,
   type PanelTargetKind,
   type UiState,
 } from "./protocol";
@@ -29,7 +32,8 @@ import {
 export type Action =
   | { kind: "server"; raw: string }
   | { kind: "user"; text: string }
-  | { kind: "disconnected" };
+  | { kind: "disconnected" }
+  | { kind: "clear_chat" };
 
 // Exported for direct unit testing (see useCopilotSocket.test.ts): the hook
 // itself needs a DOM/renderer this project's test setup doesn't provide, but
@@ -37,8 +41,23 @@ export type Action =
 export function reducer(state: UiState, action: Action): UiState {
   if (action.kind === "user") return addUserMessage(state, action.text);
   if (action.kind === "disconnected") return clearPendingRequests(state);
+  if (action.kind === "clear_chat") return { ...state, entries: [] };
   const event = parseServerEvent(action.raw);
   return event === null ? state : reduceServerEvent(state, event);
+}
+
+/** Restore the persisted transcript at mount so a refresh keeps the visible
+ *  conversation; storage failures degrade to a clean start, never a crash. */
+export function restoredInitialState(): UiState {
+  if (typeof window === "undefined") return initialState;
+  try {
+    return {
+      ...initialState,
+      entries: parseStoredEntries(window.localStorage.getItem(CHAT_STORAGE_KEY)),
+    };
+  } catch {
+    return initialState;
+  }
 }
 
 function defaultUrl(): string {
@@ -160,6 +179,8 @@ export function cueMonitorResyncFrame(raw: string): string | null {
 export interface CopilotSocket {
   state: UiState;
   connected: boolean;
+  /** True from an accepted chat frame until its terminal response/error arrives. */
+  responding: boolean;
   sendChat: (text: string) => void;
   sendDecision: (requestId: string, approved: boolean) => void;
   sendReviewDecision: (requestId: string, approved: boolean) => void;
@@ -174,24 +195,41 @@ export interface CopilotSocket {
   sendPanelGoto: (targetKind: PanelTargetKind, target: number, cue: number) => void;
   sendDashRefresh: () => void;
   sendCueMonitorRefresh: () => void;
+  /** Clear the persisted transcript (the top-right 대화 지우기 button). */
+  clearChat: () => void;
 }
-
 export function useCopilotSocket(url?: string): CopilotSocket {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, initialState, restoredInitialState);
   const [connected, setConnected] = useState(false);
+  const [responding, setResponding] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
+
+  // Best-effort persistence: quota/denied storage must never break the chat.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(CHAT_STORAGE_KEY, serializeEntriesForStorage(state.entries));
+    } catch {
+      /* persistence is best effort */
+    }
+  }, [state.entries]);
 
   useEffect(() => {
     let disposed = false;
     let retryDelay = 500;
     let timer: number | undefined;
-
+    let ownedSocket: WebSocket | null = null;
     const connect = () => {
       const target = url ?? defaultUrl();
       const protocols = connectProtocols(launchToken());
       const socket = protocols ? new WebSocket(target, protocols) : new WebSocket(target);
+      ownedSocket = socket;
       socketRef.current = socket;
       socket.onopen = () => {
+        if (disposed || socketRef.current !== socket) {
+          socket.close();
+          return;
+        }
         retryDelay = 500;
         setConnected(true);
         // AC-DASHUI-017: every (re)connect re-requests both catalogs + status
@@ -200,7 +238,10 @@ export function useCopilotSocket(url?: string): CopilotSocket {
         connectResyncFrames().forEach((frame) => socket.send(frame));
       };
       socket.onmessage = (message) => {
+        if (socketRef.current !== socket) return;
         const raw = String(message.data);
+        const event = parseServerEvent(raw);
+        if (event?.type === "chat_response" || event?.type === "error") setResponding(false);
         dispatch({ kind: "server", raw });
         // A chat mutation refreshes the catalog; a completed executor press
         // refreshes the separate current-cue snapshot immediately. Both are
@@ -211,6 +252,12 @@ export function useCopilotSocket(url?: string): CopilotSocket {
         }
       };
       socket.onclose = () => {
+        // An older connection can close after its replacement opened. It must
+        // never clear the replacement's connected state or overwrite
+        // socketRef with a retrying rejected connection.
+        if (socketRef.current !== socket) return;
+        socketRef.current = null;
+        setResponding(false);
         setConnected(false);
         // The server fail-safe-denies every pending approval/review for
         // this session on disconnect (M6c-1) — clear the stale cards so a
@@ -228,7 +275,7 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     return () => {
       disposed = true;
       if (timer !== undefined) window.clearTimeout(timer);
-      socketRef.current?.close();
+      ownedSocket?.close();
     };
   }, [url]);
 
@@ -259,13 +306,13 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     if (socket !== null && socket.readyState === WebSocket.OPEN) socket.send(frame);
   }, []);
 
-  const sendChat = useCallback(
-    (text: string) => {
-      dispatch({ kind: "user", text });
-      send(buildChat(text));
-    },
-    [send],
-  );
+  const sendChat = useCallback((text: string) => {
+    const socket = socketRef.current;
+    if (socket === null || socket.readyState !== WebSocket.OPEN) return;
+    dispatch({ kind: "user", text });
+    setResponding(true);
+    socket.send(buildChat(text));
+  }, []);
   const sendVectorworksExportUpload = useCallback(
     (fileName: string, contentBase64: string) => {
       const socket = socketRef.current;
@@ -308,10 +355,12 @@ export function useCopilotSocket(url?: string): CopilotSocket {
   );
   const sendDashRefresh = useCallback(() => send(buildDashCatalogRequest()), [send]);
   const sendCueMonitorRefresh = useCallback(() => send(buildCueMonitorRequest()), [send]);
+  const clearChat = useCallback(() => dispatch({ kind: "clear_chat" }), []);
 
   return {
     state,
     connected,
+    responding,
     sendChat,
     sendVectorworksExportUpload,
     sendDecision,
@@ -324,5 +373,6 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendPanelGoto,
     sendDashRefresh,
     sendCueMonitorRefresh,
+    clearChat,
   };
 }

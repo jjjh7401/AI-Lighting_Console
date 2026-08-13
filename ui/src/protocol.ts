@@ -823,6 +823,72 @@ export function addUserMessage(state: UiState, text: string): UiState {
   return { ...state, entries: [...state.entries, { kind: "user", text }] };
 }
 
+// -- chat transcript persistence (refresh survival) ----------------------------
+//
+// The transcript is persisted to localStorage so a page refresh keeps the
+// conversation visible. NOTE this restores the VISIBLE transcript only — the
+// server builds a fresh session per WebSocket connection, so the model's own
+// cross-turn memory starts anew after a refresh.
+
+export const CHAT_STORAGE_KEY = "ma3-copilot.chat-entries.v1";
+// Bound the stored transcript so localStorage never grows unbounded; the tail
+// is what carries context, so the OLDEST entries are dropped first.
+export const CHAT_STORAGE_MAX_ENTRIES = 200;
+
+/** Serialize entries for storage. `busy` lines are transient progress markers
+ *  — restoring a stale "처리 중" would claim work that is not running. */
+export function serializeEntriesForStorage(entries: ChatEntry[]): string {
+  const kept = entries.filter((entry) => entry.kind !== "busy");
+  return JSON.stringify(kept.slice(-CHAT_STORAGE_MAX_ENTRIES));
+}
+
+function isStoredEntry(item: unknown): item is ChatEntry {
+  if (typeof item !== "object" || item === null) return false;
+  const entry = item as Record<string, unknown>;
+  switch (entry.kind) {
+    case "user":
+      return typeof entry.text === "string";
+    case "assistant":
+      return (
+        typeof entry.status === "string" &&
+        typeof entry.summary === "string" &&
+        typeof entry.text === "string" &&
+        Array.isArray(entry.commands)
+      );
+    case "proposal":
+      return Array.isArray(entry.commands) && Array.isArray(entry.reasons);
+    case "preview": {
+      const preview = entry.preview as Record<string, unknown> | null | undefined;
+      return (
+        typeof preview === "object" &&
+        preview !== null &&
+        Array.isArray(preview.commands) &&
+        Array.isArray(preview.warnings)
+      );
+    }
+    case "error":
+      return typeof entry.message === "string" && typeof entry.errorKind === "string";
+    case "notice":
+      return typeof entry.message === "string";
+    default:
+      return false;
+  }
+}
+
+/** Parse a stored transcript; malformed input or items degrade to fewer/zero
+ *  entries rather than crashing the boot render (boundary discipline). */
+export function parseStoredEntries(raw: string | null): ChatEntry[] {
+  if (!raw) return [];
+  let data: unknown;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(data)) return [];
+  return data.filter(isStoredEntry);
+}
+
 /**
  * Drop every pending approval/review card. The server fail-safe-denies all
  * of a session's own outstanding requests on that session's disconnect —

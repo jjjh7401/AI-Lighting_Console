@@ -2,7 +2,11 @@ import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
 import { type ExecutionPreview } from "../protocol";
-import { ExecutionPreviewCard, previewCommandMeta } from "./ExecutionPreviewCard";
+import {
+  ExecutionPreviewCardView,
+  PREVIEW_COLLAPSE_THRESHOLD,
+  previewCommandMeta,
+} from "./ExecutionPreviewCard";
 
 function childArray(element: ReactElement): unknown[] {
   const children = element.props.children;
@@ -53,10 +57,19 @@ describe("previewCommandMeta", () => {
   });
 });
 
-describe("ExecutionPreviewCard", () => {
-  it("renders risk, commands, warnings, and scope caveat", () => {
-    const element = ExecutionPreviewCard({ preview: PREVIEW }) as ReactElement;
-    const [header, summary, commandList, warningList, scope] = childArray(element) as ReactElement[];
+describe("ExecutionPreviewCardView", () => {
+  const noToggle = () => {};
+
+  it("renders risk, commands, warnings, and scope caveat when open", () => {
+    const element = ExecutionPreviewCardView({
+      preview: PREVIEW,
+      collapsible: false,
+      open: true,
+      onToggle: noToggle,
+    }) as ReactElement;
+    const [header, summary, commandList, warningList, scope] = childArray(
+      element,
+    ) as ReactElement[];
     const [title, risk] = childArray(header) as ReactElement[];
     const commandRows = childArray(commandList) as ReactElement[];
     const warnings = childArray(warningList) as ReactElement[];
@@ -68,5 +81,27 @@ describe("ExecutionPreviewCard", () => {
     expect(commandRows).toHaveLength(2);
     expect(warnings).toHaveLength(2);
     expect(scope.props.children).toContain("실제 Cue diff/tracking 영향");
+  });
+
+  it("collapsed: hides the command list but keeps summary, toggle, and warnings", () => {
+    const element = ExecutionPreviewCardView({
+      preview: PREVIEW,
+      collapsible: true,
+      open: false,
+      onToggle: noToggle,
+    }) as ReactElement;
+    const [header, summary, toggle, warningList, scope] = childArray(element) as ReactElement[];
+
+    expect(header).toBeDefined();
+    expect(summary.props.children).toBe("실행 전 미리보기 — 2개 명령");
+    expect(toggle.type).toBe("button");
+    expect(toggle.props["aria-expanded"]).toBe(false);
+    // Warnings are safety-critical: they must stay visible even collapsed.
+    expect(childArray(warningList)).toHaveLength(2);
+    expect(scope.props.children).toContain("실제 Cue diff/tracking 영향");
+  });
+
+  it("every preview collapses by default (operator decision)", () => {
+    expect(PREVIEW_COLLAPSE_THRESHOLD).toBe(0);
   });
 });

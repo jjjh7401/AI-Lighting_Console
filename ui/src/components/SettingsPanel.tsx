@@ -161,7 +161,9 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               <p className="settings-hint">
                 키는 OS 자격 증명 저장소에만 저장되며 화면에 다시 표시되지 않습니다.
               </p>
-              {loaded.providers.map((provider) => (
+              {loaded.providers
+                .filter((provider) => provider !== "claude_code")
+                .map((provider) => (
                 <div key={provider} className="settings-key-row">
                   <label>
                     {providerLabel(provider)}
@@ -252,19 +254,38 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </select>
               </label>
               <label className="settings-field">
-                Claude 구독 모델
-                <select
-                  value={form.claude_code_model}
-                  onChange={(event) => patch({ claude_code_model: event.target.value })}
-                  disabled={!loaded.claude_code.available}
-                >
-                  {loaded.claude_code.model_options.map((model) => (
-                    <option key={model} value={model}>
-                      {model === "opus" ? "Opus" : model === "sonnet" ? "Sonnet" : "Fable"}
-                    </option>
-                  ))}
-                </select>
+                모델
+                {form.active_provider === "claude_code" ? (
+                  <select
+                    value={form.claude_code_model}
+                    onChange={(event) => patch({ claude_code_model: event.target.value })}
+                    disabled={!loaded.claude_code.available}
+                  >
+                    {loaded.claude_code.model_options.map((model) => (
+                      <option key={model} value={model}>
+                        {model === "opus" ? "Opus" : model === "sonnet" ? "Sonnet" : "Fable"}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    readOnly
+                    value={
+                      form.active_provider === loaded.settings.active_provider &&
+                      loaded.active_model
+                        ? loaded.active_model
+                        : "저장하면 이 프로바이더의 모델이 표시됩니다"
+                    }
+                  />
+                )}
               </label>
+              {form.active_provider !== "claude_code" && (
+                <p className="settings-hint">
+                  이 프로바이더의 모델은 설정 파일에 고정되어 있어 여기서 바꿀 수 없습니다.
+                  (Claude 구독을 선택하면 Opus·Sonnet·Fable 중에서 고를 수 있습니다.)
+                </p>
+              )}
               <label className="settings-field">
                 OSC 콘솔 송신 포트
                 <input

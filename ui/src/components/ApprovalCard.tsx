@@ -24,6 +24,24 @@ export function createDecisionGuard(
     return true;
   };
 }
+/** Deduped risk reasons across all items — the collapsed card keeps showing
+ *  WHY the bundle is risky even when the per-command rows are folded away. */
+export function approvalRiskSummary(items: PendingApproval["items"]): string[] {
+  const seen = new Set<string>();
+  for (const item of items) {
+    for (const reason of item.risk_reasons) seen.add(reason);
+  }
+  return [...seen];
+}
+
+/** Deduped warnings across all items — safety-critical, never folded away. */
+export function approvalWarningSummary(items: PendingApproval["items"]): string[] {
+  const seen = new Set<string>();
+  for (const item of items) {
+    for (const warning of item.warnings) seen.add(warning);
+  }
+  return [...seen];
+}
 
 export function ApprovalCard({
   approval,
@@ -33,6 +51,11 @@ export function ApprovalCard({
   onDecision: (requestId: string, approved: boolean) => void;
 }) {
   const [decided, setDecided] = useState(false);
+  // Per-command rows start COLLAPSED (operator decision — a bulk coordinate
+  // write carries 24-120 rows and buried the approve/reject buttons). The
+  // deduped risk reasons + warnings stay visible, so the DECISION inputs are
+  // never hidden; only the row-by-row detail is behind the toggle.
+  const [open, setOpen] = useState(false);
   // useRef (not useState) for the guard itself: it must be synchronously
   // consistent across two clicks that land before React re-renders, which a
   // plain state-checked closure would not guarantee. One card = one
@@ -51,38 +74,51 @@ export function ApprovalCard({
   return (
     <div className="approval-card">
       <div className="approval-title">승인 대기 — 위험 명령</div>
-      {approval.items.map((item) => (
-        <div key={item.command} className="approval-item">
-          <code className="approval-command">{item.command}</code>
-          <ul className="approval-reasons">
-            {item.risk_reasons.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-          {item.warnings.length > 0 && (
-            <div className="approval-warnings">
-              {item.warnings.map((warning) => (
-                <div key={warning} className="warning">
-                  ⚠ {warning}
-                </div>
-              ))}
-            </div>
-          )}
+      <ul className="approval-reasons">
+        {approvalRiskSummary(approval.items).map((reason) => (
+          <li key={reason}>{reason}</li>
+        ))}
+      </ul>
+      {approvalWarningSummary(approval.items).map((warning) => (
+        <div key={warning} className="warning">
+          ⚠ {warning}
         </div>
       ))}
+      <button
+        type="button"
+        className="commands-toggle"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span className="commands-toggle-arrow">{open ? "▾" : "▸"}</span> 명령{" "}
+        {approval.items.length}개
+        <span className="commands-toggle-hint">{open ? " 접기" : " 펼치기"}</span>
+      </button>
+      {open &&
+        approval.items.map((item) => (
+          <div key={item.command} className="approval-item">
+            <code className="approval-command">{item.command}</code>
+            <ul className="approval-reasons">
+              {item.risk_reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+            {item.warnings.length > 0 && (
+              <div className="approval-warnings">
+                {item.warnings.map((warning) => (
+                  <div key={warning} className="warning">
+                    ⚠ {warning}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
       <div className="approval-actions">
-        <button
-          className="approve"
-          onClick={() => decide(true)}
-          disabled={decided}
-        >
+        <button className="approve" onClick={() => decide(true)} disabled={decided}>
           승인
         </button>
-        <button
-          className="reject"
-          onClick={() => decide(false)}
-          disabled={decided}
-        >
+        <button className="reject" onClick={() => decide(false)} disabled={decided}>
           거부
         </button>
       </div>

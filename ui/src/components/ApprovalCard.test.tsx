@@ -12,7 +12,23 @@
 // rendering the component and simulating real click events.
 import { describe, expect, it, vi } from "vitest";
 
-import { createDecisionGuard } from "./ApprovalCard";
+import { approvalRiskSummary, approvalWarningSummary, createDecisionGuard } from "./ApprovalCard";
+
+describe("collapsed approval summaries", () => {
+  const items = [
+    { command: "Set Fixture 1 Posx '1.0'", risk_reasons: ["좌표 쓰기"], warnings: [] },
+    { command: "Set Fixture 2 Posx '2.0'", risk_reasons: ["좌표 쓰기"], warnings: ["덮어쓰기"] },
+    { command: "Off Sequence 5", risk_reasons: ["실행 중지"], warnings: ["덮어쓰기"] },
+  ];
+
+  it("dedupes risk reasons across items so the folded card still says WHY", () => {
+    expect(approvalRiskSummary(items)).toEqual(["좌표 쓰기", "실행 중지"]);
+  });
+
+  it("dedupes warnings across items — safety stays visible while collapsed", () => {
+    expect(approvalWarningSummary(items)).toEqual(["덮어쓰기"]);
+  });
+});
 
 describe("createDecisionGuard", () => {
   it("submits the first decision and reports success", () => {

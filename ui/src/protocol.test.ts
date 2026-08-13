@@ -16,7 +16,10 @@ import {
   buildPanelStop,
   buildPanelUnpin,
   buildReviewDecision,
+  CHAT_STORAGE_MAX_ENTRIES,
   clearOnDisconnect,
+  parseStoredEntries,
+  serializeEntriesForStorage,
   healthGuidance,
   healthLabel,
   initialState,
@@ -1037,5 +1040,45 @@ describe("clearOnDisconnect cue monitor extension (reducer half)", () => {
 
   it("remains a no-op on an already-clean state", () => {
     expect(clearOnDisconnect(initialState)).toBe(initialState);
+  });
+});
+
+describe("chat transcript persistence", () => {
+  const entries = [
+    { kind: "user" as const, text: "장비 배치해줘" },
+    { kind: "busy" as const, message: "처리 중" },
+    {
+      kind: "assistant" as const,
+      status: "ok",
+      summary: "",
+      text: "완료했습니다",
+      commands: [],
+    },
+  ];
+
+  it("round-trips entries and drops transient busy lines", () => {
+    const restored = parseStoredEntries(serializeEntriesForStorage(entries));
+    expect(restored.map((entry) => entry.kind)).toEqual(["user", "assistant"]);
+  });
+
+  it("caps the stored transcript at the bound, keeping the newest tail", () => {
+    const many = Array.from({ length: CHAT_STORAGE_MAX_ENTRIES + 20 }, (_, index) => ({
+      kind: "user" as const,
+      text: `지시 ${index}`,
+    }));
+    const restored = parseStoredEntries(serializeEntriesForStorage(many));
+    expect(restored).toHaveLength(CHAT_STORAGE_MAX_ENTRIES);
+    expect((restored[restored.length - 1] as { text: string }).text).toBe(
+      `지시 ${CHAT_STORAGE_MAX_ENTRIES + 19}`,
+    );
+  });
+
+  it("degrades malformed storage to zero/fewer entries, never a crash", () => {
+    expect(parseStoredEntries(null)).toEqual([]);
+    expect(parseStoredEntries("not json")).toEqual([]);
+    expect(parseStoredEntries('{"kind":"user"}')).toEqual([]);
+    expect(
+      parseStoredEntries('[{"kind":"user","text":"ok"},{"kind":"user"},{"kind":"evil"}]'),
+    ).toEqual([{ kind: "user", text: "ok" }]);
   });
 });

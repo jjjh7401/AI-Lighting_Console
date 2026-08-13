@@ -17,6 +17,7 @@ import { DashBoard } from "./components/DashBoard";
 import { LockToggle } from "./components/LockToggle";
 import { OnboardingBanner } from "./components/OnboardingBanner";
 import { PaperworkPanel } from "./components/PaperworkPanel";
+import { QuestionCard } from "./components/QuestionCard";
 import { ReviewCard } from "./components/ReviewCard";
 import { RunbookMode } from "./components/RunbookMode";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -112,10 +113,12 @@ export function composerViewState({
   connected,
   status,
   draft,
+  responding = false,
 }: {
   connected: boolean;
   status: StatusState | null;
   draft: string;
+  responding?: boolean;
 }): ComposerViewState {
   if (!connected) {
     return {
@@ -145,6 +148,20 @@ export function composerViewState({
       buttonLabel: "차단됨",
       helperText: "콘솔 연결이 필요합니다. 설정에서 onPC OSC와 responder를 확인하세요.",
       canSubmit: false,
+    };
+  }
+  if (responding) {
+    // The turn runs on the server; the composer stays OPEN so the operator can
+    // draft the next request. Submitting now QUEUES it (App serializes the
+    // queue — one instruction at a time, never concurrent).
+    const hasDraft = draft.trim().length > 0;
+    return {
+      inputDisabled: false,
+      submitDisabled: !hasDraft,
+      placeholder: "처리 중에도 다음 요청을 미리 작성할 수 있습니다…",
+      buttonLabel: "대기열 추가",
+      helperText: "요청 응답이 완료될 때까지 잠시 기다려 주세요.",
+      canSubmit: hasDraft,
     };
   }
   const hasDraft = draft.trim().length > 0;
@@ -272,6 +289,7 @@ export default function App() {
   const {
     state,
     connected,
+    responding,
     sendChat,
     sendDecision,
     sendReviewDecision,
@@ -284,8 +302,14 @@ export default function App() {
     sendDashRefresh,
     sendCueMonitorRefresh,
     sendVectorworksExportUpload,
+    clearChat,
   } = useCopilotSocket();
   const [draft, setDraft] = useState("");
+  // Requests typed while a turn is running. Drained ONE at a time — the next
+  // is sent only after the current turn's terminal response arrives, so
+  // queued instructions execute strictly in order, never concurrently (the
+  // server rejects a second in-flight chat with a busy event anyway).
+  const [queue, setQueue] = useState<string[]>([]);
   const vectorworksInputRef = useRef<HTMLInputElement>(null);
   const [vectorworksUploadError, setVectorworksUploadError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -388,7 +412,7 @@ export default function App() {
       cancelled = true;
     };
   }, [settingsRefresh]);
-  const composer = composerViewState({ connected, status: state.status, draft });
+  const composer = composerViewState({ connected, status: state.status, draft, responding });
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -402,9 +426,21 @@ export default function App() {
   const submit = () => {
     if (!composer.canSubmit) return;
     const text = draft.trim();
-    sendChat(text);
+    if (responding || queue.length > 0) {
+      setQueue((pending) => [...pending, text]);
+    } else {
+      sendChat(text);
+    }
     setDraft("");
   };
+
+  useEffect(() => {
+    if (responding || queue.length === 0) return;
+    if (!connected || state.status === null || state.status.executions_blocked) return;
+    const [next, ...rest] = queue;
+    setQueue(rest);
+    sendChat(next);
+  }, [responding, queue, connected, state.status, sendChat]);
 
   const uploadVectorworksExport = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0];
@@ -583,6 +619,19 @@ export default function App() {
           >
             <div className="app">
               <main className="main">
+                {state.entries.length > 0 && (
+                  <div className="chat-tools">
+                    <button
+                      type="button"
+                      className="chat-clear"
+                      onClick={() => {
+                        if (window.confirm("대화 내용을 모두 지울까요?")) clearChat();
+                      }}
+                    >
+                      대화 지우기
+                    </button>
+                  </div>
+                )}
                 <ChatView entries={state.entries} />
                 {state.pendingApprovals.map((approval) => (
                   <ApprovalCard
@@ -608,42 +657,79 @@ export default function App() {
                 {vectorworksUploadError && (
                   <div className="composer-status composer-upload-error">{vectorworksUploadError}</div>
                 )}
-                <input
-                  ref={vectorworksInputRef}
-                  className="composer-file-input"
-                  type="file"
-                  accept=".csv,.txt,.xlsx,.mvr"
-                  onChange={uploadVectorworksExport}
-                  disabled={composer.inputDisabled}
-                />
-                <button
-                  type="button"
-                  className="composer-upload"
-                  onClick={() => vectorworksInputRef.current?.click()}
-                  disabled={composer.inputDisabled}
-                >
-                  VWX 파일
-                </button>
-                <input
+                {queue.length > 0 && (
+                  <div className="composer-queue" aria-label="대기 중 요청">
+                    {queue.map((text, index) => (
+                      <div className="composer-queue-item" key={`${index}-${text.slice(0, 24)}`}>
+                        <span className="composer-queue-order">{index + 1}</span>
+                        <span className="composer-queue-text">{text}</span>
+                        <button
+                          type="button"
+                          className="composer-queue-remove"
+                          aria-label="대기 요청 삭제"
+                          onClick={() =>
+                            setQueue((pending) => pending.filter((_, at) => at !== index))
+                          }
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <textarea
+                  className="composer-input"
+                  rows={2}
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
                   onKeyDown={(event) => {
-                    if (event.key === "Enter" && !event.nativeEvent.isComposing) submit();
+                    if (
+                      event.key === "Enter" &&
+                      !event.shiftKey &&
+                      !event.nativeEvent.isComposing
+                    ) {
+                      event.preventDefault();
+                      submit();
+                    }
                   }}
                   placeholder={composer.placeholder}
                   disabled={composer.inputDisabled}
                 />
-                <button onClick={submit} disabled={composer.submitDisabled}>
-                  {composer.buttonLabel}
-                </button>
-                <div className="composer-model" aria-live="polite">
-                  {activeModel === null
-                    ? "AI 모델 확인 중…"
-                    : `사용 모델 · ${
-                        activeModel.settings.active_provider === "claude_code"
-                          ? "Claude 구독"
-                          : providerLabel(activeModel.settings.active_provider)
-                      }${activeModel.active_model ? ` · ${activeModel.active_model}` : ""}`}
+                <div className="composer-bar">
+                  <input
+                    ref={vectorworksInputRef}
+                    className="composer-file-input"
+                    type="file"
+                    accept=".csv,.txt,.xlsx,.mvr"
+                    onChange={uploadVectorworksExport}
+                    disabled={composer.inputDisabled}
+                  />
+                  <button
+                    type="button"
+                    className="composer-upload"
+                    onClick={() => vectorworksInputRef.current?.click()}
+                    disabled={composer.inputDisabled}
+                    title="VWX 파일 첨부 (CSV·TXT·XLSX·MVR)"
+                    aria-label="VWX 파일 첨부"
+                  >
+                    ＋
+                  </button>
+                  <div className="composer-model" aria-live="polite">
+                    {activeModel === null
+                      ? "모델 확인 중…"
+                      : `${
+                          activeModel.settings.active_provider === "claude_code"
+                            ? "Claude 구독"
+                            : providerLabel(activeModel.settings.active_provider)
+                        }${activeModel.active_model ? ` · ${activeModel.active_model}` : ""}`}
+                  </div>
+                  <button
+                    className="composer-send"
+                    onClick={submit}
+                    disabled={composer.submitDisabled}
+                  >
+                    {composer.buttonLabel}
+                  </button>
                 </div>
               </footer>
             </div>
