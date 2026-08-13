@@ -55,6 +55,11 @@ pan  = atan2( -v_x, v_y ) − Rotz     # (−180, 180] 로 정규화
   pan 오프셋 `spread·(2i/(N−1)−1)`을 받는다 (MA3 Align Linear와 동일 분배).
   기본 base = pan 180(객석 방향)/tilt 45. `in`은 오프셋 반전(모임),
   `cross`는 홀수번째 부호 반전(교차빔).
+- **2축 부채살 (pan/tilt fan)**: 일자·반원·삼각형·사각형처럼 펼쳐진 배치의
+  표준 룩. `tilt_spread`가 중심 대칭 V(`Align <>` on Tilt 상당)를 더한다 —
+  중앙 장비는 base tilt, 끝 장비는 ±tilt_spread만큼 더 젖힘(음수 = 끝이
+  내려감). 끝 장비 tilt가 한계(135°)를 넘으면 전체 거부. 어휘: "팬 45도
+  틸트 20도 부채살", "팬틸트 모두/틸트도/입체 부채살"(기본 틸트 ±15도).
 - **RING out/in** (`radial_pan_tilt`): 리그 무게중심 C 기준. `out`은
   `target = F + (F−C)/|F−C|·reach` (바닥, 기본 reach 4m) — 바깥 방사.
   `in`은 중심축 위 한 점 `(C, height)`로 수렴. 중심 위에 선 픽스처는

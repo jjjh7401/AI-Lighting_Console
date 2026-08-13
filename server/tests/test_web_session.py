@@ -1378,6 +1378,36 @@ class TestLookPanTilt:
         ]
         assert "부채살" in event["text"]
 
+    def test_a_pan_tilt_fan_request_adds_the_symmetric_tilt_v(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        event = session.run_instruction("팬 45도 틸트 20도 부채살로 펼쳐줘")
+
+        commands = calls[-1].arguments["commands"]
+        # Pan spread 45 with a tilt V: end fixtures 45+20=65, centre stays 45.
+        assert commands == [
+            "Fixture 26 ; Attribute 'Pan' At 135 ; Attribute 'Tilt' At 65",
+            "Fixture 41 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 45",
+            "Fixture 20 ; Attribute 'Pan' At -135 ; Attribute 'Tilt' At 65",
+        ]
+        assert "틸트 ±20도" in event["text"]
+
+    def test_a_both_axes_word_without_numbers_takes_the_default_tilt_v(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        session.run_instruction("팬틸트 모두 부채살로 펼쳐줘")
+
+        commands = calls[-1].arguments["commands"]
+        # Default pan ±30 with the default ±15 tilt V: ends 60, centre 45.
+        assert "Attribute 'Tilt' At 60" in commands[0]
+        assert "Attribute 'Tilt' At 45" in commands[1]
+
     def test_a_ring_out_request_skips_the_centroid_fixture_and_can_store_a_preset(self, tmp_path):
         provider = ScriptedProvider([])
         session, _console, _audit, _sent, _ = _session(tmp_path, provider)

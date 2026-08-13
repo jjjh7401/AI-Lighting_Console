@@ -182,6 +182,26 @@ class TestFanLook:
         with pytest.raises(SpatialPointingError, match="ceiling"):
             fan_pan_tilt([1, 2], base_tilt=140.0)
 
+    def test_tilt_spread_makes_a_centre_symmetric_v(self):
+        # The two-axis fan (Align <> on Tilt): centre fixture stays on the
+        # base tilt, the END fixtures swing tilt_spread degrees further.
+        aims = fan_pan_tilt([1, 2, 3, 4, 5], base_tilt=45.0, spread=30.0, tilt_spread=15.0)
+        assert [tilt for _fid, _pan, tilt in aims] == [60.0, 52.5, 45.0, 52.5, 60.0]
+
+    def test_negative_tilt_spread_drops_the_ends(self):
+        aims = fan_pan_tilt([1, 2, 3], base_tilt=45.0, tilt_spread=-20.0)
+        assert [tilt for _fid, _pan, tilt in aims] == [25.0, 45.0, 25.0]
+
+    def test_a_zero_tilt_spread_keeps_the_flat_fan(self):
+        aims = fan_pan_tilt([1, 2, 3], base_tilt=45.0)
+        assert {tilt for _fid, _pan, tilt in aims} == {45.0}
+
+    def test_an_end_fixture_over_the_ceiling_refuses_the_whole_fan(self):
+        with pytest.raises(SpatialPointingError, match="end-fixture tilt"):
+            fan_pan_tilt([1, 2], base_tilt=125.0, tilt_spread=15.0)
+        with pytest.raises(SpatialPointingError, match="outside -90..90"):
+            fan_pan_tilt([1, 2], tilt_spread=91.0)
+
 
 class TestRadialLook:
     def test_out_mode_aims_every_fixture_away_from_the_centre(self):

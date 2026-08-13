@@ -195,18 +195,29 @@ def fan_pan_tilt(
     base_tilt: float = 45.0,
     spread: float = 30.0,
     mode: str = "out",
+    tilt_spread: float = 0.0,
 ) -> tuple[tuple[int, float, float], ...]:
     """Per-fixture (fid, pan, tilt) for a fan look over an ORDERED chain.
 
     ``fids`` must already be in stage order (e.g. left-to-right) — the fan is
     a function of that order, exactly like MA3's own ``Align``: fixture ``i``
     of ``N`` gets a pan offset of ``spread * (2i/(N-1) - 1)`` around
-    ``base_pan`` (linear distribution, the Align default). ``spread`` is the
-    END fixture's offset in degrees, so the full aperture is ``2 * spread``.
+    ``base_pan`` (linear distribution, ``Align /``). ``spread`` is the END
+    fixture's offset in degrees, so the full aperture is ``2 * spread``.
     ``mode`` picks the design: ``out`` fans away, ``in`` converges (mirrored
     offsets), ``cross`` alternates the offset sign per fixture so the beams
-    cross mid-air. The defaults (base pan 180 = downstage -Y, tilt 45) make a
-    classic audience-facing fan on the measured axis conventions.
+    cross mid-air.
+
+    ``tilt_spread`` adds the SECOND axis of the classic spread-rig fan
+    (``Align <>`` on Tilt): a centre-symmetric V where the middle fixture
+    stays on ``base_tilt`` and the END fixtures swing ``tilt_spread`` degrees
+    further (negative = ends lower). Combined with the pan spread this is the
+    "부채살 pan/tilt 모두" look common on bars, semicircles, triangles and
+    squares. Every resulting tilt must clear the physical ceiling — one
+    over-range end fixture refuses the whole fan rather than bending it.
+
+    The defaults (base pan 180 = downstage -Y, tilt 45) make a classic
+    audience-facing fan on the measured axis conventions.
     """
     if not fids:
         raise SpatialPointingError("no fixtures to fan")
@@ -216,19 +227,28 @@ def fan_pan_tilt(
         raise SpatialPointingError(f"{mode!r} is not a fan mode (allowed: {FAN_MODES})")
     if not 0.0 <= spread <= 180.0:
         raise SpatialPointingError(f"fan spread {spread!r} is outside 0..180 degrees")
+    if abs(tilt_spread) > 90.0:
+        raise SpatialPointingError(f"fan tilt spread {tilt_spread!r} is outside -90..90 degrees")
     if abs(base_tilt) > POINTING_TILT_LIMIT_DEGREES:
         raise SpatialPointingError(
             f"fan base tilt {base_tilt!r} exceeds the "
             f"{POINTING_TILT_LIMIT_DEGREES:.0f} degree ceiling"
         )
+    if abs(base_tilt) + abs(tilt_spread) > POINTING_TILT_LIMIT_DEGREES:
+        raise SpatialPointingError(
+            f"end-fixture tilt {abs(base_tilt) + abs(tilt_spread):.1f}° exceeds the "
+            f"{POINTING_TILT_LIMIT_DEGREES:.0f} degree ceiling"
+        )
     count = len(fids)
     aims: list[tuple[int, float, float]] = []
     for index, fid in enumerate(fids):
-        offset = 0.0 if count == 1 else spread * (2.0 * index / (count - 1) - 1.0)
+        position = 0.0 if count == 1 else 2.0 * index / (count - 1) - 1.0
+        offset = spread * position
         if mode == "in" or mode == "cross" and index % 2 == 1:
             offset = -offset
         pan = _normalize_degrees(base_pan + offset)
-        aims.append((fid, round(pan, _VALUE_DECIMALS), round(base_tilt, _VALUE_DECIMALS)))
+        tilt = base_tilt + tilt_spread * abs(position)
+        aims.append((fid, round(pan, _VALUE_DECIMALS), round(tilt, _VALUE_DECIMALS)))
     return tuple(aims)
 
 

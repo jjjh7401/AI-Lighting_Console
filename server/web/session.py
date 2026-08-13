@@ -154,7 +154,13 @@ _LOOK_RING = re.compile(
     r"(?P<dir>안쪽|바깥쪽|바깥|밖)(?:을|으로|를)?\s*(?:다\s*)?(?:바라보|바라볼|향하|향해|비추|비추도록|비출)",
     re.IGNORECASE,
 )
-_LOOK_SPREAD = re.compile(r"(?P<value>\d+(?:\.\d+)?)\s*도")
+_LOOK_SPREAD = re.compile(r"(?:팬\s*)?(?P<value>\d+(?:\.\d+)?)\s*도")
+# The second fan axis (Align <> on Tilt): "틸트 15도" names the end-fixture
+# tilt offset; "틸트도/팬틸트 모두/입체" without a number takes the default V.
+_LOOK_TILT_SPREAD = re.compile(r"틸트\s*(?P<value>-?\d+(?:\.\d+)?)\s*도")
+_LOOK_TILT_FAN = re.compile(
+    r"틸트\s*(?:도|까지|랑|과|와)|팬\s*[/·]?\s*틸트|pan\s*/?\s*tilt|입체", re.IGNORECASE
+)
 _LOOK_PRESET_STORE = re.compile(
     r"프리셋\s*(?P<no>\d+)\s*(?:번)?\s*(?:으?로|에)?\s*저장|저장.*?프리셋\s*(?P<no2>\d+)"
 )
@@ -862,17 +868,32 @@ class ChatSession:
                 mode = "in"
             else:
                 mode = "out"
-            spread_match = _LOOK_SPREAD.search(text)
+            spread_match = _LOOK_SPREAD.search(_LOOK_TILT_SPREAD.sub("", text))
             spread = float(spread_match.group("value")) if spread_match else 30.0
+            tilt_match = _LOOK_TILT_SPREAD.search(text)
+            if tilt_match is not None:
+                tilt_spread = float(tilt_match.group("value"))
+            elif _LOOK_TILT_FAN.search(text) is not None:
+                tilt_spread = 15.0
+            else:
+                tilt_spread = 0.0
             try:
-                aims = list(fan_pan_tilt(list(fan_chain(fixtures)), spread=spread, mode=mode))
+                aims = list(
+                    fan_pan_tilt(
+                        list(fan_chain(fixtures)),
+                        spread=spread,
+                        mode=mode,
+                        tilt_spread=tilt_spread,
+                    )
+                )
             except SpatialPointingError as error:
                 return self._pointing_refusal(f"부채살 포지션을 만들 수 없습니다: {error}")
             look_label = f"FAN {mode.upper()}"
+            tilt_note = f", 틸트 ±{tilt_spread:g}도" if tilt_spread else ""
             look_korean = {
-                "out": f"부채살(끝 장비 ±{spread:g}도)",
-                "in": f"모으는 부채살(끝 장비 ±{spread:g}도)",
-                "cross": f"교차 부채살(끝 장비 ±{spread:g}도)",
+                "out": f"부채살(끝 장비 팬 ±{spread:g}도{tilt_note})",
+                "in": f"모으는 부채살(끝 장비 팬 ±{spread:g}도{tilt_note})",
+                "cross": f"교차 부채살(끝 장비 팬 ±{spread:g}도{tilt_note})",
             }[mode]
         if not aims:
             return self._pointing_refusal(
