@@ -43,6 +43,7 @@ from server.spatial.pointing import (
     aim_pan_tilt,
     aimed_commands,
     basic_position_presets,
+    fan_chain,
     fan_pan_tilt,
     pointing_commands,
     position_preset_store_commands,
@@ -863,11 +864,8 @@ class ChatSession:
                 mode = "out"
             spread_match = _LOOK_SPREAD.search(text)
             spread = float(spread_match.group("value")) if spread_match else 30.0
-            ordered = sorted(fixtures, key=lambda item: (item[1][0], item[0]))
             try:
-                aims = list(
-                    fan_pan_tilt([fid for fid, _position in ordered], spread=spread, mode=mode)
-                )
+                aims = list(fan_pan_tilt(list(fan_chain(fixtures)), spread=spread, mode=mode))
             except SpatialPointingError as error:
                 return self._pointing_refusal(f"부채살 포지션을 만들 수 없습니다: {error}")
             look_label = f"FAN {mode.upper()}"

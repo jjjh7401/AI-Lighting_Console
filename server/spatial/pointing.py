@@ -51,6 +51,7 @@ __all__ = [
     "aim_pan_tilt",
     "aimed_commands",
     "basic_position_presets",
+    "fan_chain",
     "fan_pan_tilt",
     "pointing_commands",
     "position_preset_store_commands",
@@ -358,6 +359,28 @@ _VOCAL_HEIGHT = 1.6
 _RING_IN_HEIGHT = 3.0
 
 
+def fan_chain(
+    fixtures: Sequence[tuple[int, tuple[float, float, float]]],
+) -> tuple[int, ...]:
+    """The fan's fixture order — along the rig's DOMINANT horizontal axis.
+
+    A fan is a function of the chain order, and the chain must follow the
+    axis the rig actually extends along: a bar hung ACROSS the stage fans
+    left-to-right (x ascending), but a bar hung front-to-back has no x
+    structure to ride — there the chain follows y. The wider horizontal span
+    wins; a tie (a ring, a square) falls back to x, which is the measured
+    left-to-right convention. fid is the documented tie-break within the
+    axis, same as the spatial sorts.
+    """
+    if not fixtures:
+        raise SpatialPointingError("no fixtures to chain")
+    xs = [position[0] for _fid, position in fixtures]
+    ys = [position[1] for _fid, position in fixtures]
+    axis = 1 if (max(ys) - min(ys)) > (max(xs) - min(xs)) else 0
+    ordered = sorted(fixtures, key=lambda item: (item[1][axis], item[0]))
+    return tuple(fid for fid, _position in ordered)
+
+
 def basic_position_presets(
     fixtures: Sequence[tuple[int, tuple[float, float, float]]],
 ) -> tuple[tuple[str, tuple[tuple[int, float, float], ...], tuple[int, ...]], ...]:
@@ -377,8 +400,7 @@ def basic_position_presets(
     ys = [position[1] for _fid, position in fixtures]
     cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
     front_y = min(ys)
-    ordered = sorted(fixtures, key=lambda item: (item[1][0], item[0]))
-    ordered_fids = [fid for fid, _position in ordered]
+    ordered_fids = list(fan_chain(fixtures))
 
     def _focus(target: tuple[float, float, float]) -> tuple[tuple, tuple]:
         aims: list[tuple[int, float, float]] = []

@@ -19,6 +19,7 @@ from server.spatial.pointing import (
     aim_pan_tilt,
     aimed_commands,
     basic_position_presets,
+    fan_chain,
     fan_pan_tilt,
     pointing_commands,
     position_preset_store_commands,
@@ -292,3 +293,29 @@ class TestBasicPositionSequence:
     def test_an_empty_rig_is_refused(self):
         with pytest.raises(SpatialPointingError, match="no fixtures"):
             basic_position_presets([])
+
+
+class TestFanChain:
+    def test_a_cross_stage_bar_chains_left_to_right(self):
+        fixtures = [(2, (0.0, 0.0, 6.0)), (1, (-3.0, 0.0, 6.0)), (3, (3.0, 0.0, 6.0))]
+        assert fan_chain(fixtures) == (1, 2, 3)
+
+    def test_a_front_to_back_bar_chains_along_y(self):
+        # No x structure to ride: the dominant axis is depth, so the chain
+        # follows y ascending instead of collapsing into the fid tie-break.
+        fixtures = [(2, (0.0, 0.0, 6.0)), (1, (0.0, 4.0, 6.0)), (3, (0.0, -4.0, 6.0))]
+        assert fan_chain(fixtures) == (3, 2, 1)
+
+    def test_a_tie_falls_back_to_the_measured_x_convention(self):
+        # A square spans both axes equally: x wins, fid breaks the remainder.
+        fixtures = [
+            (4, (1.0, 1.0, 6.0)),
+            (1, (-1.0, -1.0, 6.0)),
+            (3, (1.0, -1.0, 6.0)),
+            (2, (-1.0, 1.0, 6.0)),
+        ]
+        assert fan_chain(fixtures) == (1, 2, 3, 4)
+
+    def test_an_empty_chain_is_refused(self):
+        with pytest.raises(SpatialPointingError, match="no fixtures"):
+            fan_chain([])
