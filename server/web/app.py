@@ -364,6 +364,12 @@ def create_app(deps: WebDeps) -> FastAPI:
                             message["content_base64"],
                         )
                     )
+                elif message_type == "history_restore":
+                    # Refresh survival: seed the fresh session's rolling memory
+                    # from the client's persisted transcript. Cheap list build —
+                    # no console I/O, no model call — so it runs inline; the
+                    # session itself ignores it once live turns exist.
+                    session.restore_history(message["messages"])
                 elif message_type == "approval_decision":
                     resolved = deps.approval_channel.resolve(
                         message["request_id"], approved=message["approved"]

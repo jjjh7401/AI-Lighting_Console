@@ -1201,6 +1201,9 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "chat",
     "cue_monitor_request",
     "dash_catalog_request",
+    # 새로고침 생존 (2026-08-13) — 복원된 화면 기록을 새 세션의 모델 메모리에
+    # 재주입하는 채널. PRECHK/OVERLAP 축과 무관한 정당한 확장.
+    "history_restore",
     "lock",
     "panel_back",
     "panel_catalog_request",

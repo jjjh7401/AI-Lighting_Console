@@ -16,7 +16,9 @@ import {
   buildPanelStop,
   buildPanelUnpin,
   buildReviewDecision,
+  buildHistoryRestore,
   CHAT_STORAGE_MAX_ENTRIES,
+  HISTORY_RESTORE_MAX_MESSAGES,
   clearOnDisconnect,
   parseStoredEntries,
   serializeEntriesForStorage,
@@ -1080,5 +1082,49 @@ describe("chat transcript persistence", () => {
     expect(
       parseStoredEntries('[{"kind":"user","text":"ok"},{"kind":"user"},{"kind":"evil"}]'),
     ).toEqual([{ kind: "user", text: "ok" }]);
+  });
+});
+
+describe("buildHistoryRestore", () => {
+  it("maps user/assistant entries, skips other kinds, caps the window", () => {
+    const entries = [
+      { kind: "notice" as const, message: "공지" },
+      { kind: "user" as const, text: "링 배치해줘" },
+      {
+        kind: "assistant" as const,
+        status: "ok",
+        summary: "요약",
+        text: "3개 링을 배치했습니다",
+        commands: [],
+      },
+      { kind: "error" as const, message: "err", errorKind: "provider" },
+    ];
+    const frame = JSON.parse(buildHistoryRestore(entries)!);
+    expect(frame.type).toBe("history_restore");
+    expect(frame.messages).toEqual([
+      { role: "user", text: "링 배치해줘" },
+      { role: "assistant", text: "3개 링을 배치했습니다" },
+    ]);
+  });
+
+  it("falls back to the summary when the assistant body is empty", () => {
+    const frame = JSON.parse(
+      buildHistoryRestore([
+        { kind: "assistant", status: "ok", summary: "실행 완료 요약", text: "", commands: [] },
+      ])!,
+    );
+    expect(frame.messages).toEqual([{ role: "assistant", text: "실행 완료 요약" }]);
+  });
+
+  it("returns null when nothing is worth reinjecting", () => {
+    expect(buildHistoryRestore([])).toBeNull();
+    expect(buildHistoryRestore([{ kind: "busy", message: "x" }])).toBeNull();
+  });
+
+  it("keeps only the newest window", () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({ kind: "user" as const, text: `지시 ${i}` }));
+    const frame = JSON.parse(buildHistoryRestore(many)!);
+    expect(frame.messages).toHaveLength(HISTORY_RESTORE_MAX_MESSAGES);
+    expect(frame.messages[frame.messages.length - 1].text).toBe("지시 39");
   });
 });

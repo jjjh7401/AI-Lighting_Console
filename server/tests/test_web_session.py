@@ -640,6 +640,49 @@ class TestLastCreatedSessionTracking:
         assert last_conversation[0].text == f"지시 {10 - HISTORY_MAX_MESSAGES // 2}"
         assert last_conversation[-1].text == "지시 10"
 
+    def test_restored_transcript_seeds_a_fresh_session_and_reaches_the_model(self, tmp_path):
+        # Refresh survival: the client reinjects its persisted transcript, and
+        # the NEXT model turn sees those messages as prior context.
+        provider = ScriptedProvider([_final("이어서 진행합니다")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        session.restore_history(
+            [
+                {"role": "user", "text": "링 배치해줘"},
+                {"role": "assistant", "text": "3개 링을 배치했습니다"},
+            ]
+        )
+        session.run_instruction("아까 그거 반지름만 5m로 바꿔줘")
+
+        conversation = provider.calls[0]
+        assert isinstance(conversation[0], UserMessage)
+        assert conversation[0].text == "링 배치해줘"
+        assert isinstance(conversation[1], ModelTurn)
+        assert conversation[1].text == "3개 링을 배치했습니다"
+        assert conversation[-1].text == "아까 그거 반지름만 5m로 바꿔줘"
+
+    def test_restore_never_overwrites_live_session_memory(self, tmp_path):
+        provider = ScriptedProvider([_final("첫 답"), _final("둘째 답")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        session.run_instruction("실제 첫 지시")  # live turn recorded
+        session.restore_history([{"role": "user", "text": "낡은 복원 기록"}])
+        session.run_instruction("둘째 지시")
+
+        second_conversation = provider.calls[1]
+        # The live exchange survives; the late restore frame was ignored.
+        assert second_conversation[0].text == "실제 첫 지시"
+        assert all(
+            item.text != "낡은 복원 기록" for item in second_conversation if hasattr(item, "text")
+        )
+
+    def test_restore_caps_to_the_rolling_window(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        session.restore_history(
+            [{"role": "user", "text": f"지시 {n}"} for n in range(HISTORY_MAX_MESSAGES + 10)]
+        )
+        assert len(session._history) == HISTORY_MAX_MESSAGES
+        assert session._history[-1].text == f"지시 {HISTORY_MAX_MESSAGES + 9}"
+
 
 class TestAllFixturesElevation:
     def test_uses_complete_spatial_read_and_preserves_xy(self, tmp_path):

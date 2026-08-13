@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 
 from server.deploy.review import ReviewRequest
@@ -1283,6 +1283,33 @@ class ChatSession:
         return self.run_instruction(_VECTORWORKS_UPLOAD_INSTRUCTION)
 
     # -- internals ------------------------------------------------------------------
+
+    def restore_history(self, messages: Sequence[Mapping[str, str]]) -> None:
+        """Seed the rolling transcript from the client's persisted UI transcript.
+
+        Refresh survival: the browser keeps the visible conversation in
+        localStorage and reinjects it on (re)connect, so the model's cross-turn
+        memory continues across a page refresh. Seeds a FRESH session only — a
+        session that already holds live turns never lets a late or duplicate
+        restore frame overwrite what actually happened here. Wire-level
+        validation (roles, non-empty text, length caps) happened in
+        ``parse_client_message``; the window cap is re-applied for defence.
+        """
+        if self._history:
+            return
+        for item in list(messages)[-HISTORY_MAX_MESSAGES:]:
+            if item["role"] == "user":
+                self._history.append(UserMessage(text=item["text"]))
+            else:
+                self._history.append(
+                    ModelTurn(
+                        text=item["text"],
+                        tool_calls=(),
+                        stop_reason="end",
+                        usage=Usage(),
+                        provider="history",
+                    )
+                )
 
     def _record_history(self, user_text: str, reply_text: str) -> None:
         """Append this turn's user instruction and assistant reply to memory.

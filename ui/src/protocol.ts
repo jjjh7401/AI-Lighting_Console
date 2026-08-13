@@ -889,6 +889,30 @@ export function parseStoredEntries(raw: string | null): ChatEntry[] {
   return data.filter(isStoredEntry);
 }
 
+// On (re)connect the restored transcript is reinjected into the fresh server
+// session so the MODEL's cross-turn memory also survives a refresh (the
+// server keeps history per WebSocket connection). Mirror of the server's
+// HISTORY_RESTORE_MAX_MESSAGES — only the newest window carries context.
+export const HISTORY_RESTORE_MAX_MESSAGES = 16;
+
+/** Build the history_restore frame from a transcript, or null when there is
+ *  no user/assistant exchange worth reinjecting. */
+export function buildHistoryRestore(entries: ChatEntry[]): string | null {
+  const messages = entries
+    .flatMap((entry) => {
+      if (entry.kind === "user") return [{ role: "user", text: entry.text }];
+      if (entry.kind === "assistant") {
+        const text = entry.text.trim() || entry.summary.trim();
+        return text ? [{ role: "assistant", text }] : [];
+      }
+      return [];
+    })
+    .filter((message) => message.text.trim().length > 0)
+    .slice(-HISTORY_RESTORE_MAX_MESSAGES);
+  if (messages.length === 0) return null;
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "history_restore", messages });
+}
+
 /**
  * Drop every pending approval/review card. The server fail-safe-denies all
  * of a session's own outstanding requests on that session's disconnect —

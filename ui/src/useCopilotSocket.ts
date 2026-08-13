@@ -18,6 +18,7 @@ import {
   buildReviewDecision,
   buildStatusRequest,
   buildVectorworksExportUpload,
+  buildHistoryRestore,
   CHAT_STORAGE_KEY,
   clearPendingRequests,
   initialState,
@@ -203,6 +204,10 @@ export function useCopilotSocket(url?: string): CopilotSocket {
   const [connected, setConnected] = useState(false);
   const [responding, setResponding] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
+  // Fresh transcript for the (re)connect handler below — the connect effect
+  // closes over [url] only, so it reads the entries through this ref.
+  const entriesRef = useRef(state.entries);
+  entriesRef.current = state.entries;
 
   // Best-effort persistence: quota/denied storage must never break the chat.
   useEffect(() => {
@@ -236,6 +241,12 @@ export function useCopilotSocket(url?: string): CopilotSocket {
         // rather than trusting pre-disconnect state, which `dispatch({ kind:
         // "disconnected" })` has already marked stale/cleared on the prior close.
         connectResyncFrames().forEach((frame) => socket.send(frame));
+        // Refresh survival, model half: the server session is NEW on every
+        // connection, so reinject the restored transcript to seed its rolling
+        // memory. The server seeds an EMPTY session only, making this
+        // idempotent across reconnects mid-conversation.
+        const restore = buildHistoryRestore(entriesRef.current);
+        if (restore !== null) socket.send(restore);
       };
       socket.onmessage = (message) => {
         if (socketRef.current !== socket) return;

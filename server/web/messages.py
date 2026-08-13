@@ -59,6 +59,14 @@ DASH_CLIENT_MESSAGE_TYPES = ("dash_catalog_request",)
 # there is nothing client-supplied to validate.
 CUE_MONITOR_CLIENT_MESSAGE_TYPES = ("cue_monitor_request",)
 
+# Refresh survival (2026-08-13): the client persists the visible transcript in
+# localStorage; on (re)connect it reinjects that transcript so the model's
+# cross-turn memory continues across a page refresh. Bounds mirror the
+# session's own rolling window (server/web/session.py HISTORY_MAX_MESSAGES).
+HISTORY_RESTORE_MAX_MESSAGES = 16
+HISTORY_RESTORE_MAX_TEXT_CHARS = 4000
+HISTORY_RESTORE_ROLES = ("user", "assistant")
+
 # Closed set of client -> server message types. "review_decision" is the M7
 # additive extension (deploy review) — protocol version stays 1.
 CLIENT_MESSAGE_TYPES = (
@@ -71,6 +79,8 @@ CLIENT_MESSAGE_TYPES = (
     "question_answer",
     "lock",
     "status_request",
+    # 새로고침 생존: 복원된 화면 기록을 새 세션에 재주입(위 상수 참조).
+    "history_restore",
     *PANEL_CLIENT_MESSAGE_TYPES,
     *DASH_CLIENT_MESSAGE_TYPES,
     *CUE_MONITOR_CLIENT_MESSAGE_TYPES,
@@ -205,6 +215,25 @@ def parse_client_message(raw: str) -> dict:
             "request_id": request_id,
             "answer": answer,
         }
+
+    if message_type == "history_restore":
+        raw_messages = message.get("messages")
+        if not isinstance(raw_messages, list) or not raw_messages:
+            raise ProtocolError("history_restore.messages must be a non-empty list")
+        normalized: list[dict] = []
+        # Only the newest window is admitted — the tail is what carries context,
+        # and the session's own rolling window is the same size.
+        for item in raw_messages[-HISTORY_RESTORE_MAX_MESSAGES:]:
+            if not isinstance(item, dict):
+                raise ProtocolError("history_restore.messages items must be objects")
+            role = item.get("role")
+            text = item.get("text")
+            if role not in HISTORY_RESTORE_ROLES:
+                raise ProtocolError("history_restore.role must be 'user' or 'assistant'")
+            if not isinstance(text, str) or not text.strip():
+                raise ProtocolError("history_restore.text must be a non-empty string")
+            normalized.append({"role": role, "text": text[:HISTORY_RESTORE_MAX_TEXT_CHARS]})
+        return {"v": PROTOCOL_VERSION, "type": "history_restore", "messages": normalized}
 
     if message_type in ("approval_decision", "review_decision"):
         request_id = message.get("request_id")

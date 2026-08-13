@@ -98,6 +98,32 @@ class TestClientMessageParsing:
     def test_status_request_parses(self):
         assert parse_client_message(_raw(type="status_request"))["type"] == "status_request"
 
+    def test_history_restore_parses_and_caps_the_window(self):
+        messages = [{"role": "user", "text": f"지시 {n}"} for n in range(20)]
+        parsed = parse_client_message(_raw(type="history_restore", messages=messages))
+        assert parsed["type"] == "history_restore"
+        # Only the newest 16 survive; the tail carries the context.
+        assert len(parsed["messages"]) == 16
+        assert parsed["messages"][-1] == {"role": "user", "text": "지시 19"}
+
+    def test_history_restore_truncates_oversized_texts(self):
+        parsed = parse_client_message(
+            _raw(type="history_restore", messages=[{"role": "assistant", "text": "가" * 5000}])
+        )
+        assert len(parsed["messages"][0]["text"]) == 4000
+
+    def test_history_restore_rejects_bad_roles_and_empty_texts(self):
+        for messages in (
+            [],
+            "not-a-list",
+            [{"role": "tool", "text": "x"}],
+            [{"role": "user", "text": "  "}],
+            [{"role": "user"}],
+            ["not-an-object"],
+        ):
+            with pytest.raises(ProtocolError):
+                parse_client_message(_raw(type="history_restore", messages=messages))
+
     @pytest.mark.parametrize(
         "raw",
         [
