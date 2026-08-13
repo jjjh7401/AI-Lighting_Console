@@ -49,6 +49,41 @@ MAX_RETRIES = 3
 # 여유를 더한 값이고, 폭주는 여전히 유한한 자리에서 끊긴다.
 DEFAULT_MAX_MODEL_CALLS = 24
 
+# The model sometimes ENDS a turn by claiming the app's tools are not connected
+# ("No such tool available", "도구가 연결돼 있지 않다") and writing prose instead
+# of emitting a tool_call — even though the tools ARE registered and offered on
+# every turn. That is a hallucination, not a real failure: a genuine tool error
+# arrives THROUGH a tool_call + ToolResult, never as a bare text claim on a turn
+# with zero tool_calls. When it happens we nudge ONCE and let the model retry,
+# so a whole request does not dead-end on a false "unavailable" report.
+_TOOL_UNAVAILABLE_MARKERS = (
+    "no such tool",
+    "tool available",
+    "도구가 연결",
+    "연결돼 있지 않",
+    "연결되어 있지 않",
+    "붙어 있지 않",
+    "올라와 있지 않",
+    "사용할 수 없는 도구",
+    "mcp가 없",
+    "mcp 연결",
+)
+MAX_UNAVAILABLE_CORRECTIONS = 1
+
+_TOOLS_ARE_AVAILABLE = (
+    "그 도구들(get_spatial_context·arrange_fixtures·ask_user 등)은 이 앱에 실제로 "
+    "연결되어 있다. '없다 / 연결 안 됨 / No such tool'이라고 말하지 말고, 지금 필요한 "
+    "호출을 tool_calls로 내보내라. 배치·이동·높이 변경은 먼저 get_spatial_context로 "
+    "실제 FID를 읽고, 확인이 필요한 값이 있으면 ask_user를 한 번에 하나씩 호출해 "
+    "물어라 — 채팅 본문에 여러 질문을 늘어놓지 마라."
+)
+
+
+def _claims_tool_unavailable(text: str) -> bool:
+    """True when a tool-less turn falsely reports the app tools as unavailable."""
+    lowered = text.casefold()
+    return any(marker in lowered for marker in _TOOL_UNAVAILABLE_MARKERS)
+
 
 @dataclass(frozen=True)
 class InstructionResult:
@@ -187,19 +222,31 @@ class Orchestrator:
         return closing.text or ""
 
     def handle_instruction(
-        self, instruction: str, session_context: str | None = None
+        self,
+        instruction: str,
+        history: Sequence[ConversationItem] = (),
+        session_context: str | None = None,
     ) -> InstructionResult:
         """Drive one user instruction through the model↔tool loop.
 
+        ``history`` is the prior conversation transcript (earlier user
+        instructions and the assistant's replies) this session has accumulated.
+        Prepending it is what lets the model keep CONTEXT across turns: without
+        it every turn is stateless and the model answers each message in
+        isolation, forgetting an in-progress task the moment the turn ends.
+        Intermediate tool calls/results are deliberately NOT replayed — only the
+        user-visible exchange — so history stays compact and no console side
+        effect is re-fed to the loop.
+
         ``session_context`` (REQ-DEPLOY-030, #4): when supplied, a synthetic
         UserMessage carrying cross-turn state (the last-created look's target
-        identity + a regenerate-don't-blind-edit steer) is prepended BEFORE the
-        instruction, so a bare follow-up modification anchors to the real
-        target. Default ``None`` keeps the conversation byte-identical for every
-        existing caller.
+        identity + a regenerate-don't-blind-edit steer) is appended AFTER the
+        history and BEFORE the instruction, so a bare follow-up modification
+        anchors to the real target. Default ``None`` keeps the conversation
+        byte-identical for every existing caller that passes neither argument.
         """
         started = self._clock()
-        conversation: list[ConversationItem] = []
+        conversation: list[ConversationItem] = list(history)
         if session_context:
             conversation.append(UserMessage(text=session_context))
         conversation.append(UserMessage(text=instruction))
@@ -212,6 +259,8 @@ class Orchestrator:
         human_turns = 0
         final_text = ""
         status = "ok"
+        tool_definitions = self._registry.definitions()
+        unavailable_corrections = 0
 
         while True:
             if model_calls - human_turns >= self._max_model_calls:
@@ -224,12 +273,26 @@ class Orchestrator:
             turn = self._provider.complete(
                 system_prefix=self._system_prefix,
                 conversation=conversation,
-                tools=self._registry.definitions(),
+                tools=tool_definitions,
             )
             model_calls += 1
             if turn.text:
                 final_text = turn.text
             if not turn.tool_calls:
+                if (
+                    tool_definitions
+                    and unavailable_corrections < MAX_UNAVAILABLE_CORRECTIONS
+                    and _claims_tool_unavailable(turn.text)
+                ):
+                    # False "tools unavailable" report on a turn with zero
+                    # tool_calls: keep it for context, tell the model the tools
+                    # ARE connected, and let it retry with real tool_calls.
+                    # Bounded so a model that insists cannot loop — after the
+                    # cap we accept its text as the final answer.
+                    unavailable_corrections += 1
+                    conversation.append(turn)
+                    conversation.append(UserMessage(text=_TOOLS_ARE_AVAILABLE))
+                    continue
                 break  # final answer — instruction complete
             conversation.append(turn)
             # A correction round is charged AT MOST ONCE per model turn, at

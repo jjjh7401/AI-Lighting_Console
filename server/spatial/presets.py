@@ -83,7 +83,9 @@ SPATIAL_PRESET_MAX_ABS = 1000.0
 
 #: Which parameter keys each preset accepts. Closed — see the module docstring.
 _PRESET_PARAMS: dict[str, frozenset[str]] = {
-    "grid": frozenset({"rows", "columns", "spacing", "origin", "orientation"}),
+    "grid": frozenset(
+        {"rows", "columns", "spacing", "row_spacing", "column_spacing", "origin", "orientation"}
+    ),
     "row": frozenset({"spacing", "origin", "orientation"}),
     "circle": frozenset({"radius", "start_angle", "origin", "orientation"}),
 }
@@ -331,8 +333,14 @@ def spatial_preset_placements(
         spacing = _positive_number(
             supplied.get("spacing", SPATIAL_PRESET_DEFAULTS["spacing"]), field="spacing"
         )
+        row_spacing = _positive_number(supplied.get("row_spacing", spacing), field="row_spacing")
+        column_spacing = _positive_number(
+            supplied.get("column_spacing", spacing), field="column_spacing"
+        )
         rows, columns = _grid_shape(supplied, len(targets))
         resolved["spacing"] = spacing
+        resolved["row_spacing"] = row_spacing
+        resolved["column_spacing"] = column_spacing
         resolved["rows"] = rows
         resolved["columns"] = columns
         # Row-major fill: row 0 first, left to right inside it. Row 0 is the
@@ -343,8 +351,8 @@ def spatial_preset_placements(
         # wrote be read back and sorted without an off-by-one row flip.
         row_axis = orientation[1]
         column_axis = orientation[0]
-        row_offsets = _centred_offsets(rows, spacing)
-        column_offsets = _centred_offsets(columns, spacing)
+        row_offsets = _centred_offsets(rows, row_spacing)
+        column_offsets = _centred_offsets(columns, column_spacing)
         for index, fid in enumerate(targets):
             row_index, column_index = divmod(index, columns)
             x, y, z = _place(

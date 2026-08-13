@@ -741,14 +741,14 @@ SPATIAL_FIXTURE_PROPERTIES = ("fid", "posx", "posy", "posz")
 #: axis that fails to read is the reason the whole fixture is reported absent.
 SPATIAL_AXES = (("x", "posx"), ("y", "posy"), ("z", "posz"))
 
-#: Ceiling on property round trips per ``get_spatial_context`` call — 30
-#: fixtures at ``SPATIAL_FIXTURE_PROPERTIES`` each. Not a round number picked
-#: for looks: one round trip is a MEASURED 66.7 ms (progress.md §E.2.2, where
-#: 18 fixtures x 3 axes took 3.60 s), so 120 trips is ~8.0 s — the exact
-#: 30-fixture cost design.md §7 tabulated and decision D-1 accepted. A larger
-#: rig stops AT the ceiling and says so; the one thing it must never do is
-#: return most of a rig as if it were all of it.
-SPATIAL_PROPERTY_QUERY_CAP = 120
+#: Ceiling on property round trips per ``get_spatial_context`` call — 60
+#: fixtures at ``SPATIAL_FIXTURE_PROPERTIES`` each. A 40-fixture production
+#: rig cannot be safely moved as a whole when this cap is 30: the read is
+#: correctly marked partial, but the operator's all-fixture request can never
+#: proceed. 240 measured calls remain below the 30 s interactive request
+#: budget while preserving the same explicit partial-read signal for larger
+#: rigs.
+SPATIAL_PROPERTY_QUERY_CAP = 240
 
 #: Why a container child was never queried at all. Distinct from a property
 #: read that FAILED: the responder declined to establish this child's slot, so
@@ -844,20 +844,46 @@ def read_spatial_fixtures(
     children = [child for child in (payload.get("children") or []) if isinstance(child, dict)]
     node = payload.get("node")
     child_count = node.get("childCount") if isinstance(node, dict) else None
-
-    # @MX:ANCHOR: [SPEC] item-drop signal (REQ-SPATIAL-006 / AC-SPATIAL-006,
-    #   mutation-required). Read TWO ways on purpose: the responder's own
-    #   ``truncated`` flag, and the arithmetic it is derived from
-    #   (``node.childCount`` against the children that actually arrived).
-    # @MX:REASON: The live rig already crosses this boundary — the measured
-    #   container answered childCount 19 with 18 children and truncated:true
-    #   (progress.md §E.2.3), and slot 19 read back perfectly well when asked
-    #   directly. So the missing fixture is NOT unreadable and NOT absent; it
-    #   is unseen, and a reply that did not say so would describe an 18-fixture
-    #   rig that does not exist. Keeping the arithmetic alongside the flag means
-    #   a responder that ever drops the flag still cannot make the loss silent.
-    truncated = bool(payload.get("truncated", False)) or (
-        isinstance(child_count, int) and child_count > len(children)
+    # A depth-1 responder reply is deliberately capped. A truncated patch
+    # listing is recoverable: protocol v1 defines a numeric child path as the
+    # real pool slot, so probe the omitted slots one by one rather than
+    # mistaking the first page for the entire rig.
+    if (
+        bool(payload.get("truncated"))
+        and isinstance(child_count, int)
+        and child_count > len(children)
+    ):
+        known_slots = {
+            child["i"]
+            for child in children
+            if isinstance(child.get("i"), int) and not isinstance(child.get("i"), bool)
+        }
+        for slot in range(1, child_count + 1):
+            if slot in known_slots:
+                continue
+            try:
+                child_payload = state_port.query_state(f"{fixtures_path}/{slot}")
+            except Exception:
+                continue
+            if child_payload.get("ok") is not True:
+                continue
+            child_node = child_payload.get("node")
+            if not isinstance(child_node, dict):
+                continue
+            children.append(
+                {
+                    "i": slot,
+                    "name": str(child_node.get("name") or f"Fixture {slot}"),
+                    "class": str(child_node.get("class") or "Fixture"),
+                }
+            )
+            known_slots.add(slot)
+    # A responder `truncated` flag describes its first page, not the recovered
+    # enumeration above. The arithmetic is the final completeness authority.
+    truncated = (
+        child_count > len(children)
+        if isinstance(child_count, int)
+        else bool(payload.get("truncated"))
     )
 
     # @MX:ANCHOR: [SPEC] coverage signal (REQ-GROUPGEN-024 amendment,
@@ -996,6 +1022,12 @@ def read_spatial_fixtures(
 #: whitelist below.
 ARRANGE_AXES: tuple[tuple[str, str], ...] = (("x", "Posx"), ("y", "Posy"), ("z", "Posz"))
 
+#: ``elevation`` moves fixtures to an absolute height while retaining their
+#: measured x/y positions. Unlike the geometric presets it is resolved only
+#: after the backup read, because those positions are live patch data.
+ELEVATION_PRESET = "elevation"
+ARRANGE_PRESETS: tuple[str, ...] = (*SPATIAL_PRESETS, ELEVATION_PRESET)
+
 #: The same three axes as the responder wants them for a READ. Property lookup
 #: is case-insensitive live (progress.md §E.2.1); lower case matches the read
 #: tool so both paths ask for one spelling.
@@ -1087,8 +1119,10 @@ def arrange_format_value(value: float) -> str:
     return text
 
 
-def arrange_write_commands(placements: Sequence[SpatialPlacement]) -> tuple[str, ...]:
-    """The write bundle: one line per axis per placement, x then y then z."""
+def _arrange_axis_write_commands(
+    placements: Sequence[SpatialPlacement], axes: Sequence[tuple[str, str]]
+) -> tuple[str, ...]:
+    """Build position writes for the requested axes in placement order."""
     return tuple(
         ARRANGE_COMMAND_TEMPLATE.format(
             fid=placement.fid,
@@ -1096,8 +1130,13 @@ def arrange_write_commands(placements: Sequence[SpatialPlacement]) -> tuple[str,
             value=arrange_format_value(getattr(placement, attribute)),
         )
         for placement in placements
-        for attribute, axis_property in ARRANGE_AXES
+        for attribute, axis_property in axes
     )
+
+
+def arrange_write_commands(placements: Sequence[SpatialPlacement]) -> tuple[str, ...]:
+    """The full-arrangement write bundle: x, then y, then z per fixture."""
+    return _arrange_axis_write_commands(placements, ARRANGE_AXES)
 
 
 # @MX:ANCHOR: [MANUAL] the restore bundle — the ONLY route back from a
@@ -4689,9 +4728,9 @@ def build_toolset(
 
     def arrange_fixtures(call: ToolCall, context: ExecutionContext) -> ToolExecution:
         preset = call.arguments.get("preset")
-        if not isinstance(preset, str) or preset not in SPATIAL_PRESETS:
+        if not isinstance(preset, str) or preset not in ARRANGE_PRESETS:
             return _error_result(
-                call, f"'preset' must be one of {list(SPATIAL_PRESETS)}, not {preset!r}"
+                call, f"'preset' must be one of {list(ARRANGE_PRESETS)}, not {preset!r}"
             )
         fids = call.arguments.get("fids")
         if not isinstance(fids, list) or not fids:
@@ -4703,19 +4742,52 @@ def build_toolset(
         params = {
             key: value for key, value in call.arguments.items() if key not in ("preset", "fids")
         }
-        try:
-            plan = spatial_preset_placements(preset, fids, params)
-        except SpatialPresetError as error:
-            return _error_result(call, f"{preset!r} arrangement cannot be computed: {error}")
-        targets = plan.fids
+        elevation_height: float | None = None
+        if preset == ELEVATION_PRESET:
+            if set(params) != {"height"}:
+                return _error_result(
+                    call,
+                    "elevation needs exactly one 'height' in metres; it preserves the "
+                    "current x/y coordinates and changes only z",
+                )
+            raw_height = params["height"]
+            if (
+                isinstance(raw_height, bool)
+                or not isinstance(raw_height, (int, float))
+                or not math.isfinite(float(raw_height))
+                or float(raw_height) < 0.0
+            ):
+                return _error_result(
+                    call,
+                    f"elevation height must be a finite non-negative number, got {raw_height!r}",
+                )
+            targets = tuple(fids)
+            invalid_target = any(
+                isinstance(fid, bool) or not isinstance(fid, int) or fid <= 0 for fid in targets
+            )
+            if invalid_target or len(set(targets)) != len(targets):
+                return _error_result(call, "elevation fids must be distinct positive integers")
+            elevation_height = float(raw_height)
+            resolved: dict[str, object] = {"height": elevation_height}
+            planned: tuple[SpatialPlacement, ...] | None = None
+        else:
+            try:
+                plan = spatial_preset_placements(preset, fids, params)
+            except SpatialPresetError as error:
+                return _error_result(call, f"{preset!r} arrangement cannot be computed: {error}")
+            targets = plan.fids
+            resolved = plan.resolved
+            planned = plan.placements
 
         def _arrange_payload(**extra: object) -> dict[str, object]:
             """The report skeleton every branch returns, in one place."""
             payload: dict[str, object] = {
-                "preset": plan.preset,
-                "resolved": plan.resolved,
+                "preset": preset,
+                "resolved": resolved,
                 "targets": list(targets),
-                "planned": spatial_placements_to_records(plan.placements),
+                "planned": (
+                    spatial_placements_to_records(planned) if planned is not None else None
+                ),
             }
             payload.update(extra)
             return payload
@@ -4759,7 +4831,7 @@ def build_toolset(
         except Exception:  # a gate that cannot answer is not a locked gate
             live_locked = False
         if live_locked:
-            proposed = arrange_write_commands(plan.placements)
+            proposed = arrange_write_commands(planned) if planned is not None else ()
             notice = (
                 "live lock active (read-only) — proposal only. Nothing was read and "
                 "nothing was written: the original-coordinate backup this tool "
@@ -4815,6 +4887,24 @@ def build_toolset(
             children = snapshot.get("children") if isinstance(snapshot, dict) else None
             if not isinstance(children, list):
                 raise LookupError(f"{fixtures_path} returned no children list")
+            node = snapshot.get("node")
+            child_count = node.get("childCount") if isinstance(node, dict) else None
+            if (
+                bool(snapshot.get("truncated"))
+                and isinstance(child_count, int)
+                and child_count > len(children)
+            ):
+                known_slots = {
+                    child["i"]
+                    for child in children
+                    if isinstance(child, dict)
+                    and isinstance(child.get("i"), int)
+                    and not isinstance(child.get("i"), bool)
+                }
+                children = list(children)
+                children.extend(
+                    {"i": slot} for slot in range(1, child_count + 1) if slot not in known_slots
+                )
             remaining = list(targets)
             found: dict[int, tuple[int, str]] = {}
             queries = 0
@@ -4938,7 +5028,20 @@ def build_toolset(
                 is_error=True,
             )
 
-        commands = arrange_write_commands(plan.placements)
+        if elevation_height is not None:
+            planned = tuple(
+                SpatialPlacement(
+                    fid=backup.fid,
+                    x=backup.values[0],
+                    y=backup.values[1],
+                    z=elevation_height,
+                )
+                for backup in backups
+            )
+            commands = _arrange_axis_write_commands(planned, (("z", "Posz"),))
+        else:
+            assert planned is not None
+            commands = arrange_write_commands(planned)
         restore_bundle = arrange_restore_commands(backups)
         violations = arrange_scope_violations(commands, targets)
         if violations:
@@ -5009,7 +5112,7 @@ def build_toolset(
         #   would fail it.
         readback: list[dict[str, object]] = []
         mismatches: list[dict[str, object]] = []
-        for placement, backup in zip(plan.placements, backups, strict=True):
+        for placement, backup in zip(planned, backups, strict=True):
             raw, values, failure = _arrange_read(backup.slot)
             if failure is not None:
                 mismatches.append({"fid": placement.fid, "reason": failure})
@@ -6291,9 +6394,16 @@ def build_toolset(
                 "syntaxes and GDTF file names, deployed and ran a plugin, "
                 "created ZERO fixtures and burned 59.6 seconds. Ask instead.\n"
                 "\n"
+                "Ask EXACTLY ONE question per call. When several values are "
+                "missing, call ask_user again for each one — one decision at a "
+                "time — and act only after every answer is in; NEVER pack "
+                "multiple questions or a long option table into a single chat "
+                "message, which the operator cannot answer. Keep the prompt to "
+                "one short sentence.\n"
                 "'options' renders as buttons and 'steps' as a numbered "
                 "procedure the operator can follow on the console; the "
-                "operator may always type a free-form answer instead. "
+                "operator may always type a free-form answer instead. Leave "
+                "'options' empty for a plain free-text answer box. "
                 "'answered': false means the question timed out or no UI was "
                 "attached — report that plainly, never fabricate the answer."
             ),
@@ -7072,12 +7182,14 @@ def build_toolset(
             name="arrange_fixtures",
             description=(
                 "MOVE fixtures in the patch: compute a grid / row / circle "
-                "arrangement and WRITE the resulting 3D stage coordinates "
+                "arrangement, or set their absolute elevation while preserving "
+                "each fixture's measured x/y, then WRITE 3D stage coordinates "
                 "(metres) onto the fixtures you name. This CHANGES THE "
                 "SHOWFILE — call it only when the operator explicitly asked "
                 "for an arrangement ('line these 8 PARs up', 'lay this out as "
-                "a 3x10 grid'). Never call it to 'tidy up' a rig on your own "
-                "initiative, and never as a step toward some other goal.\n"
+                "a 3x10 grid', 'put all fixtures 5 m above the floor'). Never "
+                "call it to 'tidy up' a rig on your own initiative, and never "
+                "as a step toward some other goal.\n"
                 "\n"
                 "'fids' is the EXPLICIT target list and it is also the ORDER "
                 "they occupy the shape in: fids[0] takes the first slot "
@@ -7112,11 +7224,12 @@ def build_toolset(
                 "properties": {
                     "preset": {
                         "type": "string",
-                        "enum": list(SPATIAL_PRESETS),
+                        "enum": list(ARRANGE_PRESETS),
                         "description": (
                             "The arrangement shape. 'row' spreads the fixtures "
                             "along one axis, 'grid' fills rows x columns, "
-                            "'circle' spaces them evenly around a ring."
+                            "'circle' spaces them evenly around a ring, and "
+                            "'elevation' changes only their absolute z height."
                         ),
                     },
                     "fids": {
@@ -7127,6 +7240,13 @@ def build_toolset(
                             "occupy the shape. These are FIDs as the console "
                             "reports them (get_spatial_context returns them), "
                             "not positions in a list."
+                        ),
+                    },
+                    "height": {
+                        "type": "number",
+                        "description": (
+                            "elevation only. Absolute z height above the floor "
+                            "in metres; x/y remain at their backed-up values."
                         ),
                     },
                     "rows": {
@@ -7146,6 +7266,18 @@ def build_toolset(
                         "type": "number",
                         "description": (
                             "grid/row only. Metres between neighbours. Defaults to 1.0."
+                        ),
+                    },
+                    "row_spacing": {
+                        "type": "number",
+                        "description": (
+                            "grid only. Metres between grid rows; defaults to 'spacing'."
+                        ),
+                    },
+                    "column_spacing": {
+                        "type": "number",
+                        "description": (
+                            "grid only. Metres between fixtures in a row; defaults to 'spacing'."
                         ),
                     },
                     "radius": {

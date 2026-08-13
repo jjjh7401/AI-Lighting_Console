@@ -23,14 +23,20 @@ from google.genai import errors as genai_errors
 from server.llm.anthropic_adapter import AnthropicAdapter
 from server.llm.config import AnthropicSettings, GeminiSettings
 from server.llm.gemini_adapter import GeminiAdapter
-from server.llm.types import UserMessage
+from server.llm.types import ModelTurn, ToolCall, ToolResult, UserMessage
 from server.orchestrator.last_created import LastCreated
-from server.orchestrator.tools import CommandOutcome
+from server.orchestrator.tools import CommandOutcome, ToolExecution
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate
 from server.web.approval_bridge import ApprovalChannel
 from server.web.measure import RoundTripRecorder
-from server.web.session import ChatSession, outcome_view, summarize_outcomes
+from server.web.question import UNANSWERED, QuestionRequest
+from server.web.session import (
+    HISTORY_MAX_MESSAGES,
+    ChatSession,
+    outcome_view,
+    summarize_outcomes,
+)
 
 from .test_runner_self_correction import ScriptedProvider, _final, _run_turn
 from .test_safety_gate import FakeConsole
@@ -556,8 +562,14 @@ class TestLastCreatedSessionTracking:
         session.run_instruction("보컬 룩 만들어줘")
         session.run_instruction("더 느리게")
         followup_conversation = provider.calls[2]
-        assert len(followup_conversation) == 2
-        preamble = followup_conversation[0]
+        # The follow-up now also carries the prior turn's transcript (rolling
+        # memory): [user create, assistant reply, session-context, instruction].
+        assert len(followup_conversation) == 4
+        assert isinstance(followup_conversation[0], UserMessage)
+        assert followup_conversation[0].text == "보컬 룩 만들어줘"
+        assert isinstance(followup_conversation[1], ModelTurn)
+        assert followup_conversation[1].text == "보컬 룩을 만들었습니다"
+        preamble = followup_conversation[-2]
         assert isinstance(preamble, UserMessage)
         # AC ②: identity present — Seq 71 / Exec 201, NOT an arbitrary target.
         assert "71" in preamble.text
@@ -565,7 +577,7 @@ class TestLastCreatedSessionTracking:
         # AC ③: regeneration is preferred over a blind edit.
         assert "regenerat" in preamble.text.lower()
         # the real instruction follows the injected note
-        assert followup_conversation[1].text == "더 느리게"
+        assert followup_conversation[-1].text == "더 느리게"
 
     def test_last_created_snapshot_is_not_an_accumulating_history(self, tmp_path):
         # A second creation replaces (not appends to) the snapshot — the single
@@ -597,6 +609,589 @@ class TestLastCreatedSessionTracking:
         session.run_instruction("룩 만들어줘")
         session.run_instruction("지금 상태 어때?")
         assert session._last_created == LastCreated(sequence=71, executor=201)
+
+    def test_prior_turns_are_replayed_to_the_model_as_context(self, tmp_path):
+        # A non-layout follow-up must see earlier turns: the model receives the
+        # rolling transcript, not just the bare current instruction.
+        provider = ScriptedProvider([_final("첫 답"), _final("둘째 답")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        session.run_instruction("사파리 리그 상태 알려줘")
+        session.run_instruction("그럼 아까 그건 어때?")
+        second_conversation = provider.calls[1]
+        assert [type(item) for item in second_conversation] == [
+            UserMessage,
+            ModelTurn,
+            UserMessage,
+        ]
+        assert second_conversation[0].text == "사파리 리그 상태 알려줘"
+        assert second_conversation[1].text == "첫 답"
+        assert second_conversation[2].text == "그럼 아까 그건 어때?"
+
+    def test_history_window_is_bounded_to_recent_exchanges(self, tmp_path):
+        provider = ScriptedProvider([_final(f"답 {n}") for n in range(11)])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        for n in range(11):  # turns 0..10 -> provider.calls[0..10]
+            session.run_instruction(f"지시 {n}")
+        # The final turn's replayed history never exceeds the bound (2 messages
+        # per exchange), and it holds the MOST RECENT exchanges, not the oldest.
+        last_conversation = provider.calls[10]
+        assert len(last_conversation) == HISTORY_MAX_MESSAGES + 1  # + current instruction
+        # Before turn 10, exchanges 0..9 were recorded; trimmed to the last 8.
+        assert last_conversation[0].text == f"지시 {10 - HISTORY_MAX_MESSAGES // 2}"
+        assert last_conversation[-1].text == "지시 10"
+
+
+class TestAllFixturesElevation:
+    def test_uses_complete_spatial_read_and_preserves_xy(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {
+                                    "fixtures": [{"fid": 20}, {"fid": 21}],
+                                    "coverage": {"complete": True},
+                                }
+                            ),
+                            is_error=False,
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content="{}",
+                        is_error=False,
+                    ),
+                    (CommandOutcome(command="Set Fixture 20 PosZ 5.0", status="proposal"),),
+                )
+
+        session._registry = Registry()
+        event = session.run_instruction(
+            "3D 레이아웃의 모든 장비를 바닥으로부터 5미터 높이로 올려줘"
+        )
+
+        assert event["text"].startswith("전체 배치 장비 2대")
+        assert event["commands"][0]["status"] == "proposal"
+
+        assert provider.calls == []
+        assert [call.name for call in calls] == ["get_spatial_context", "arrange_fixtures"]
+        assert calls[1].arguments == {
+            "preset": "elevation",
+            "fids": [20, 21],
+            "height": 5.0,
+        }
+
+    def test_routes_stage_floor_height_vocabulary_without_model_tool_call(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=(
+                            json.dumps(
+                                {
+                                    "fixtures": [{"fid": 20}, {"fid": 21}],
+                                    "coverage": {"complete": True},
+                                }
+                            )
+                            if call.name == "get_spatial_context"
+                            else "{}"
+                        ),
+                    )
+                )
+
+        session._registry = Registry()
+        session.run_instruction("전체 조명을 무대 위 5m로 배치해줘")
+
+        assert provider.calls == []
+        assert calls[-1].arguments == {
+            "preset": "elevation",
+            "fids": [20, 21],
+            "height": 5.0,
+        }
+
+    def test_vocabulary_request_reaches_the_model_with_reasoning_guidance(self, tmp_path):
+        # No canned keyword reply: a "짝지어/번갈아" request now REASONS via the
+        # model, and the model receives guidance about the missing parameters
+        # rather than a reflexive one-liner short-circuiting the turn.
+        provider = ScriptedProvider([_final("링 구성을 확인하겠습니다")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+
+        event = session.run_instruction("MMX와 350M을 짝지어 좌→우로 배치해줘")
+
+        assert len(provider.calls) == 1  # went to the model, not a canned handler
+        context_note = provider.calls[0][0].text
+        assert "짝지어" in context_note or "번갈아" in context_note
+        assert "ask_user" in context_note
+        assert event["text"] == "링 구성을 확인하겠습니다"
+
+    def test_reuses_complete_spatial_fixture_ids_for_repeated_elevation(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                content = json.dumps(
+                    {"fixtures": [{"fid": 20}, {"fid": 21}], "coverage": {"complete": True}}
+                )
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=content if call.name == "get_spatial_context" else "{}",
+                        is_error=False,
+                    )
+                )
+
+        session._registry = Registry()
+        request = "3D 레이아웃의 모든 장비를 바닥으로부터 5미터 높이로 올려줘"
+        session.run_instruction(request)
+        session.run_instruction(request)
+
+        assert [call.name for call in calls] == [
+            "get_spatial_context",
+            "arrange_fixtures",
+            "arrange_fixtures",
+        ]
+        assert calls[-1].arguments["fids"] == [20, 21]
+
+    def test_routes_repeating_mmx_mmx_350_columns_without_model_tool_call(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                fixtures = [
+                    *[{"fid": fid, "name": f"MMX {fid}"} for fid in range(1, 21)],
+                    *[{"fid": fid, "name": f"350M {fid}"} for fid in range(21, 31)],
+                ]
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=(
+                            json.dumps({"fixtures": fixtures, "coverage": {"complete": True}})
+                            if call.name == "get_spatial_context"
+                            else "{}"
+                        ),
+                    )
+                )
+
+        session._registry = Registry()
+        session.run_instruction(
+            "1열: MMX 10대, 2열: MMX 10대, 3열: 350 10대 다음과 같이 반복해서 "
+            "모든 장비를 배치해줘. 열간 간격은 1.5미터, 장비간의 간격은 1미터로 배치해줘"
+        )
+
+        assert provider.calls == []
+        assert [call.name for call in calls] == ["get_spatial_context", "arrange_fixtures"]
+        assert calls[-1].arguments == {
+            "preset": "grid",
+            "fids": list(range(1, 31)),
+            "rows": 3,
+            "columns": 10,
+            "row_spacing": 1.5,
+            "column_spacing": 1.0,
+            "orientation": "xy",
+        }
+
+    def test_places_all_complete_columns_across_types_not_just_the_first(self, tmp_path):
+        # Regression: 19 MMX + 20 beam must place 3 full columns (MMX,350,350 =
+        # 30 fixtures), never one MMX column while abandoning all 20 beams.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                fixtures = [
+                    *[{"fid": fid, "name": f"MMX {fid}"} for fid in range(1, 20)],  # 19
+                    *[{"fid": fid, "name": f"RLB350M {fid}"} for fid in range(20, 40)],  # 20
+                ]
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=(
+                            json.dumps({"fixtures": fixtures, "coverage": {"complete": True}})
+                            if call.name == "get_spatial_context"
+                            else "{}"
+                        ),
+                    )
+                )
+
+        session._registry = Registry()
+        event = session.run_instruction(
+            "1열 MMX 10대, 2열 MMX 10대, 3열 350 10대 반복 배치해줘. "
+            "열간 간격은 1.5미터, 장비간의 간격은 1미터"
+        )
+
+        assert calls[-1].arguments["rows"] == 3
+        assert calls[-1].arguments["fids"] == [*range(1, 11), *range(20, 30), *range(30, 40)]
+        assert "MMX 9대" in event["text"]  # honest remainder, not silently dropped
+
+    def test_missing_spacing_is_collected_one_card_at_a_time(self, tmp_path):
+        # Instead of a prose wall, each missing gap becomes its OWN card, asked
+        # one at a time; after both answers the placement runs.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                fixtures = [
+                    *[{"fid": fid, "name": f"MMX {fid}"} for fid in range(1, 21)],
+                    *[{"fid": fid, "name": f"RLB350M {fid}"} for fid in range(21, 31)],
+                ]
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=(
+                            json.dumps({"fixtures": fixtures, "coverage": {"complete": True}})
+                            if call.name == "get_spatial_context"
+                            else "{}"
+                        ),
+                    )
+                )
+
+        class FakeQuestionChannel:
+            def __init__(self, answers):
+                self.answers = list(answers)
+                self.asked: list[QuestionRequest] = []
+
+            def ask(self, request, **_kwargs):
+                self.asked.append(request)
+                return self.answers.pop(0) if self.answers else UNANSWERED
+
+        channel = FakeQuestionChannel(["1.5m", "1m"])
+        session._registry = Registry()
+        session._question_channel = channel
+        session.run_instruction(
+            "1열 MMX 10대, 2열 MMX 10대, 3열 350 10대 반복 배치해줘"  # no spacing given
+        )
+
+        # Two separate cards, one per gap, each offering clickable presets.
+        assert len(channel.asked) == 2
+        assert "열간" in channel.asked[0].prompt
+        assert [opt.label for opt in channel.asked[0].options] == ["1m", "1.5m", "2m"]
+        assert "좌우" in channel.asked[1].prompt
+        # Collected answers drive the real placement.
+        assert calls[-1].name == "arrange_fixtures"
+        assert calls[-1].arguments["row_spacing"] == 1.5
+        assert calls[-1].arguments["column_spacing"] == 1.0
+
+    def test_missing_spacing_falls_back_to_prose_without_a_question_channel(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        session._question_channel = None
+        event = session.run_instruction("1열 MMX 10대, 2열 MMX 10대, 3열 350 10대 반복 배치해줘")
+        assert "미터 단위로 알려주세요" in event["text"]
+
+    def test_bare_grid_request_reasons_via_model_not_a_canned_reply(self, tmp_path):
+        # The canned "행×열과 간격이 필요합니다" reflex is gone: a bare grid
+        # request now reaches the model to reason and ask holistically.
+        provider = ScriptedProvider([_final("몇 행 몇 열로 놓을지 함께 정해요")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        event = session.run_instruction("장비를 바둑판으로 배치해줘")
+        assert len(provider.calls) == 1
+        assert event["text"] == "몇 행 몇 열로 놓을지 함께 정해요"
+
+    def test_session_note_carries_established_spacing(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        assert session._session_context_note() is None
+        session._last_layout_spacing = (1.5, 1.0)
+        note = session._session_context_note()
+        assert note is not None
+        assert "column gap 1.5 m" in note
+        assert "fixture gap 1 m" in note
+
+    def test_places_complete_columns_and_reports_leftovers(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                fixtures = [
+                    *[{"fid": fid, "name": f"Robin MMX Spot {fid}"} for fid in range(1, 26)],
+                    *[{"fid": fid, "name": f"Robin LEDBeam 350 {fid}"} for fid in range(26, 36)],
+                ]
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=(
+                            json.dumps({"fixtures": fixtures, "coverage": {"complete": True}})
+                            if call.name == "get_spatial_context"
+                            else "{}"
+                        ),
+                    )
+                )
+
+        session._registry = Registry()
+        event = session.run_instruction(
+            "1열 MMX 10대, 2열 MMX 10대, 3열 350 10대 반복 배치해줘. "
+            "열간 간격은 1.5미터, 장비간의 간격은 1미터"
+        )
+
+        assert provider.calls == []
+        # 25 MMX + 10 beam -> MMX,MMX,350 = 3 full columns (20 MMX + 10 beam); 5 MMX left over.
+        assert calls[-1].arguments["fids"] == [*range(1, 21), *range(26, 36)]
+        assert calls[-1].arguments["rows"] == 3
+        assert "MMX 25대" in event["text"]
+        assert "350 계열 10대" in event["text"]
+        assert "MMX 5대" in event["text"]
+
+    def test_reports_actual_counts_when_no_column_can_form(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                fixtures = [{"fid": fid, "name": f"MMX {fid}"} for fid in range(1, 6)]
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=json.dumps({"fixtures": fixtures, "coverage": {"complete": True}}),
+                    )
+                )
+
+        session._registry = Registry()
+        event = session.run_instruction(
+            "1열 MMX 10대, 2열 MMX 10대, 3열 350 10대 반복 배치해줘. "
+            "열간 간격은 1.5미터, 장비간의 간격은 1미터"
+        )
+
+        assert provider.calls == []
+        assert [call.name for call in calls] == ["get_spatial_context"]
+        assert "MMX 5대" in event["text"]
+        assert "최소 10대" in event["text"]
+
+    def test_remembers_repeating_layout_until_spacing_follow_up(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                fixtures = [
+                    *[{"fid": fid, "name": f"MMX {fid}"} for fid in range(1, 21)],
+                    *[{"fid": fid, "name": f"350M {fid}"} for fid in range(21, 31)],
+                ]
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=(
+                            json.dumps({"fixtures": fixtures, "coverage": {"complete": True}})
+                            if call.name == "get_spatial_context"
+                            else "{}"
+                        ),
+                    )
+                )
+
+        session._registry = Registry()
+        first = session.run_instruction(
+            "1열: MMX 10대, 2열: MMX 10대, 3열: 350 10대 반복해서 모든 장비를 배치해줘"
+        )
+        question = session.run_instruction("내가 뭘 알려주면 돼?")
+        session.run_instruction("장비간의 좌우간격은 1미터, 열간 간격은 1.5미터")
+
+        assert "기억했습니다" in first["text"]
+        assert "반복 배치를 계속 준비 중" in question["text"]
+        assert provider.calls == []
+        assert calls[-1].arguments["row_spacing"] == 1.5
+        assert calls[-1].arguments["column_spacing"] == 1.0
+
+    def test_routes_typed_two_row_layout_without_model_tool_call(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    fixtures = [
+                        *[{"fid": fid, "name": f"350M {fid}"} for fid in range(1, 11)],
+                        *[{"fid": fid, "name": f"MMX {fid}"} for fid in range(11, 21)],
+                    ]
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    (CommandOutcome(command="Set Fixture 1 PosX '0.0'", status="proposal"),),
+                )
+
+        session._registry = Registry()
+        event = session.run_instruction(
+            "제일 뒤쪽부터 MMX 10대, 그 앞줄에 350M 10대를 1.5미터 간격으로 배치해줘"
+        )
+
+        assert provider.calls == []
+        assert event["commands"][0]["status"] == "proposal"
+        assert calls[1].arguments == {
+            "preset": "grid",
+            "fids": list(range(1, 21)),
+            "rows": 2,
+            "columns": 10,
+            "spacing": 1.5,
+            "orientation": "xy",
+        }
+
+    def test_routes_whole_rig_vocabulary_grid_without_model_tool_call(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                fixtures = [{"fid": fid} for fid in range(1, 5)]
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=(
+                            json.dumps({"fixtures": fixtures, "coverage": {"complete": True}})
+                            if call.name == "get_spatial_context"
+                            else "{}"
+                        ),
+                    ),
+                    (CommandOutcome(command="Set Fixture 1 PosX '0.0'", status="proposal"),),
+                )
+
+        session._registry = Registry()
+        event = session.run_instruction("모든 장비를 2행×2열 그리드로 1.5m 간격 배치해줘")
+
+        assert provider.calls == []
+        assert event["commands"][0]["status"] == "proposal"
+        assert [call.name for call in calls] == ["get_spatial_context", "arrange_fixtures"]
+        assert calls[-1].arguments == {
+            "preset": "grid",
+            "fids": [1, 2, 3, 4],
+            "rows": 2,
+            "columns": 2,
+            "spacing": 1.5,
+        }
+
+
+class TestMultiRingCircle:
+    def test_asks_radii_and_order_then_places_three_rings(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                fixtures = [
+                    *[{"fid": f, "name": f"MMX {f}", "x": f, "y": 0.0} for f in range(1, 20)],
+                    *[{"fid": f, "name": f"RLB350 {f}", "x": f, "y": 1.0} for f in range(20, 40)],
+                    {"fid": 40, "name": "Sharpy 250W Beam", "x": 40.0, "y": 2.0},
+                ]
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=(
+                            json.dumps({"fixtures": fixtures, "coverage": {"complete": True}})
+                            if call.name == "get_spatial_context"
+                            else "{}"
+                        ),
+                    ),
+                    (CommandOutcome(command="Set Fixture 1 Posx '2.0'", status="proposal"),),
+                )
+
+        class FakeQuestionChannel:
+            def __init__(self, answers):
+                self.answers = list(answers)
+                self.asked: list[QuestionRequest] = []
+
+            def ask(self, request, **_kwargs):
+                self.asked.append(request)
+                return self.answers.pop(0) if self.answers else UNANSWERED
+
+        channel = FakeQuestionChannel(["4·6·8m", "FID 오름차순"])
+        session._registry = Registry()
+        session._question_channel = channel
+        session.run_instruction(
+            "장비를 여러 겹의 원형으로 배치할거야. 가장 안쪽에 mmx 8대 , 2번째원은 "
+            "RLB350 12대, 3번째 원은 남은 장비들을 번갈아 배치해줘."
+        )
+
+        assert provider.calls == []  # reasoned + executed directly, no model wall
+        # Two cards, one at a time: radii first, then the remainder-ring order.
+        assert len(channel.asked) == 2
+        assert "지름" in channel.asked[0].prompt
+        assert [o.label for o in channel.asked[0].options] == ["4·6·8m", "6·8·10m"]
+        assert "번갈아" in channel.asked[1].prompt
+        # Three circle writes, innermost first, with the parsed radii.
+        writes = [c for c in calls if c.name == "arrange_fixtures"]
+        assert len(writes) == 3
+        assert [w.arguments["preset"] for w in writes] == ["circle", "circle", "circle"]
+        assert writes[0].arguments["fids"] == list(range(1, 9))  # MMX 1~8
+        assert writes[0].arguments["radius"] == 2.0
+        assert writes[1].arguments["fids"] == list(range(20, 32))  # RLB350 20~31
+        assert writes[1].arguments["radius"] == 3.0
+        assert writes[2].arguments["radius"] == 4.0
+        assert writes[2].arguments["fids"] == [
+            9,
+            32,
+            10,
+            33,
+            11,
+            34,
+            12,
+            35,
+            13,
+            36,
+            14,
+            37,
+            15,
+            38,
+            16,
+            39,
+            17,
+            18,
+            19,
+            40,
+        ]
 
 
 class TestStatusSnapshot:

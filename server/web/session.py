@@ -19,11 +19,13 @@ thread-safe (the app wraps the WebSocket send accordingly).
 
 from __future__ import annotations
 
+import json
+import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from server.deploy.review import ReviewRequest
-from server.llm.types import LLMProvider, ToolCall
+from server.llm.types import LLMProvider, ModelTurn, ToolCall, Usage, UserMessage
 from server.looks.instantiate import LookInstantiation
 from server.orchestrator.last_created import LastCreated, parse_last_created
 from server.orchestrator.ports import ExecutionResult
@@ -34,6 +36,11 @@ from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate, ScreenDecision
 from server.safety.monitor import HealthMonitor
 from server.safety.session_context import bind_session_key, new_session_key, reset_session_key
+from server.spatial.vocabulary import (
+    layout_terms_guidance,
+    match_explicit_layout,
+    parse_ring_layout,
+)
 from server.web.approval_bridge import ApprovalChannel
 from server.web.korean_errors import classify_exception
 from server.web.measure import RoundTripRecorder
@@ -51,12 +58,18 @@ from server.web.messages import (
     status_event,
 )
 from server.web.preview import build_execution_preview
-from server.web.question import QuestionChannel, QuestionRequest
+from server.web.question import UNANSWERED, QuestionChannel, QuestionOption, QuestionRequest
 from server.web.reply_discovery import ReplyPortMismatch
 
 # The gate's unconfirmed-execution marker (REQ-MVP-032). String contract pinned
 # by tests here AND by the gate's own tests — a wording change fails both.
 UNCONFIRMED_MARKER = "execution unconfirmed"
+
+# Rolling conversation memory: how many prior transcript messages (user +
+# assistant, so an EVEN cap keeps exchanges paired) travel with each new turn.
+# Bounded so token cost per turn stays finite while the model still sees enough
+# recent context to keep an in-progress task in mind across follow-ups.
+HISTORY_MAX_MESSAGES = 16
 
 # Korean labels for every per-command status the chat surface can show.
 STATUS_LABELS: dict[str, str] = {
@@ -89,6 +102,45 @@ _TURN_STATUS_SUMMARY: dict[str, str] = {
     "loop_limit": "모델 호출 한도를 초과하여 중단했습니다.",
 }
 
+_ALL_FIXTURES_ELEVATION = re.compile(
+    r"(?:3d|레이아웃|공간).*(?:모든|전체).*(?:장비|픽스처|fixture)"
+    r".*(?:5\s*(?:m|미터)|5m).*(?:높이|올려|이동)"
+    r"|(?:모든|전체).*(?:장비|픽스처|fixture)"
+    r".*(?:5\s*(?:m|미터)|5m).*(?:높이|올려|이동)"
+    r"|(?:모든|전체|전부).*(?:장비|픽스처|fixture|조명)"
+    r".*(?:바닥(?:으로부터)?|무대(?:\s*바닥)?).*(?:위|기준).*(?:5\s*(?:m|미터)|5m)",
+    re.IGNORECASE,
+)
+
+_TYPED_TWO_ROW_REQUEST = re.compile(
+    r"(?:mmx).*(?:350m|350\s*m).*(?:1[.,]?5\s*(?:m|미터))"
+    r"|(?:350m|350\s*m).*(?:mmx).*(?:1[.,]?5\s*(?:m|미터))",
+    re.IGNORECASE,
+)
+
+_REPEATING_TYPE_COLUMNS_REQUEST = re.compile(
+    r"(?:\d+\s*열\s*:\s*)?.*mmx.*(?:\d+\s*열\s*:\s*)?.*350\s*m?.*반복",
+    re.IGNORECASE,
+)
+_COLUMN_GAP = re.compile(
+    r"(?:열\s*간|열간)\s*간격(?:은|은)?\s*(?P<value>\d+(?:[.,]\d+)?)\s*(?:m|미터)",
+    re.IGNORECASE,
+)
+_FIXTURE_GAP = re.compile(
+    r"(?:장비\s*간|장비간)\s*(?:의\s*)?(?:좌우\s*)?간격(?:은|은)?\s*"
+    r"(?P<value>\d+(?:[.,]\d+)?)\s*(?:m|미터)",
+    re.IGNORECASE,
+)
+_METRE_VALUE = re.compile(r"(\d+(?:[.,]\d+)?)")
+
+
+def _first_metres(text: str | None) -> float | None:
+    """The first number in a free-form spacing answer (e.g. '1.5m' -> 1.5)."""
+    if not text:
+        return None
+    match = _METRE_VALUE.search(text)
+    return float(match.group(1).replace(",", ".")) if match else None
+
 
 @dataclass
 class _UploadedVectorworksExport:
@@ -107,6 +159,15 @@ class _UploadedVectorworksExport:
         self.content_base64 = None
         self.file_name = None
         self.report = None
+
+
+@dataclass
+class _PendingRepeatingColumns:
+    """The still-incomplete MMX/MMX/350 layout for this chat connection."""
+
+    instruction: str
+    row_spacing: float | None = None
+    column_spacing: float | None = None
 
 
 _VECTORWORKS_UPLOAD_INSTRUCTION = (
@@ -252,6 +313,23 @@ class ChatSession:
         self._reply_port_probe = reply_port_probe
         self._audit = audit
         self._send = send_event
+        # Fixture IDs are immutable patch identities. Once a complete spatial
+        # read has established them, a later elevation can reuse the set:
+        # arrange_fixtures still resolves every ID to its current slot and
+        # backs up/read-backs the write, so this removes only a redundant
+        # 4-property-per-fixture discovery pass.
+        self._spatial_fids: tuple[int, ...] | None = None
+        self._pending_repeating_columns: _PendingRepeatingColumns | None = None
+        # Layout parameters the operator has already established this session
+        # (column gap, fixture gap in metres). Persisted ACROSS turns and NOT
+        # cleared after a placement, so a follow-up ("나머지도 배치해줘") reuses
+        # them instead of the copilot re-asking for spacing it was already told.
+        self._last_layout_spacing: tuple[float, float] | None = None
+        # Rolling transcript of prior turns (user instruction + assistant reply),
+        # replayed to the model so context survives across turns for EVERY
+        # conversation, not just the layout special-cases. Bounded to the last
+        # HISTORY_MAX_MESSAGES entries; reset only when this connection ends.
+        self._history: list[UserMessage | ModelTurn] = []
         self._channel = approval_channel
         self._review_channel = review_channel
         self._question_channel = question_channel
@@ -479,6 +557,672 @@ class ChatSession:
         self._send(event)
         return event
 
+    def _all_fixtures_elevation(self, text: str) -> InstructionResult | None:
+        """Raise every fixture with a console-confirmed 3D position to 5 m.
+
+        A partial general-layout read can still name a safe elevation target:
+        fixtures omitted because they have no usable 3D coordinates are not
+        placed in the layout. Console truncation and our own query ceiling are
+        different: neither can establish that an omitted fixture is unplaced,
+        so both remain a hard stop.
+        """
+        if _ALL_FIXTURES_ELEVATION.search(text) is None:
+            return None
+        if self._spatial_fids is not None:
+            fids = list(self._spatial_fids)
+            target_label = "전체 배치 장비"
+        else:
+            spatial = self._registry.dispatch(
+                ToolCall(id="spatial-read", name="get_spatial_context", arguments={})
+            )
+            if spatial.result.is_error:
+                return InstructionResult(
+                    status="ok",
+                    text=(
+                        "3D 좌표를 읽지 못해 높이 변경을 시작하지 않았습니다. "
+                        "콘솔 연결을 확인해 주세요."
+                    ),
+                    command_outcomes=(),
+                    retries_used=0,
+                    model_calls=0,
+                    duration_seconds=0.0,
+                )
+            try:
+                payload = json.loads(spatial.result.content)
+                coverage = payload["coverage"]
+                complete = coverage["complete"]
+                fixtures = payload.get("fixtures")
+                if complete is True and isinstance(fixtures, list):
+                    target_label = "전체 배치 장비"
+                else:
+                    fixtures = payload["partial_fixtures"]
+                    if payload.get("truncated") or payload.get("roundtrip_capped"):
+                        raise ValueError("coordinate read is incomplete")
+                    target_label = "좌표가 확인된 배치 장비"
+                fids = [
+                    fixture["fid"]
+                    for fixture in fixtures
+                    if isinstance(fixture, dict)
+                    and isinstance(fixture.get("fid"), int)
+                    and not isinstance(fixture.get("fid"), bool)
+                ]
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+                return InstructionResult(
+                    status="ok",
+                    text=(
+                        "3D 좌표 응답이 전송 중 잘렸거나 조회 한도에 도달해 높이 변경을 "
+                        "시작하지 않았습니다."
+                    ),
+                    command_outcomes=(),
+                    retries_used=0,
+                    model_calls=0,
+                    duration_seconds=0.0,
+                )
+        if not fids or len(set(fids)) != len(fids):
+            return InstructionResult(
+                status="ok",
+                text=(
+                    "확인된 3D 좌표에서 유효한 FID 목록을 만들지 못해 "
+                    "높이 변경을 시작하지 않았습니다."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        if self._spatial_fids is None and complete is True:
+            self._spatial_fids = tuple(fids)
+        arranged = self._registry.dispatch(
+            ToolCall(
+                id="spatial-elevation",
+                name="arrange_fixtures",
+                arguments={"preset": "elevation", "fids": fids, "height": 5.0},
+            )
+        )
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"{target_label} {len(fids)}대의 x/y는 유지하고, 바닥 기준 z=5m로 "
+                "변경을 요청했습니다. 승인 또는 라이브 잠금 상태에 따른 결과를 아래 "
+                "명령 상태에서 확인해 주세요."
+            ),
+            command_outcomes=arranged.command_outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
+    def _repeating_type_columns_layout(self, text: str) -> InstructionResult | None:
+        """Arrange repeating MMX/MMX/350 columns with independent grid pitches."""
+        pattern_present = _REPEATING_TYPE_COLUMNS_REQUEST.search(text) is not None
+        if pattern_present:
+            self._pending_repeating_columns = _PendingRepeatingColumns(instruction=text)
+        pending = self._pending_repeating_columns
+        if pending is None:
+            return None
+
+        column_gap = _COLUMN_GAP.search(text)
+        fixture_gap = _FIXTURE_GAP.search(text)
+        if (
+            not pattern_present
+            and column_gap is None
+            and fixture_gap is None
+            and re.search(r"(?:뭘|무엇|뭐).*(?:알려|필요)|(?:필요|알려).*?(?:뭘|무엇|뭐)", text)
+        ):
+            missing_labels = [
+                label
+                for value, label in (
+                    (pending.row_spacing, "열간 간격"),
+                    (pending.column_spacing, "장비간 좌우 간격"),
+                )
+                if value is None
+            ]
+            detail = (
+                f"현재 필요한 정보는 {', '.join(missing_labels)}입니다."
+                if missing_labels
+                else (
+                    "열간·장비간 간격은 모두 확인했습니다. 전체 3D 패치에서 "
+                    "MMX·350 수량만 확인하면 됩니다."
+                )
+            )
+            return InstructionResult(
+                status="ok",
+                text=f"MMX 10대 → MMX 10대 → 350 10대 반복 배치를 계속 준비 중입니다. {detail}",
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        try:
+            if column_gap is not None:
+                pending.row_spacing = float(column_gap.group("value").replace(",", "."))
+            if fixture_gap is not None:
+                pending.column_spacing = float(fixture_gap.group("value").replace(",", "."))
+            if (
+                pending.row_spacing is not None
+                and pending.row_spacing <= 0.0
+                or pending.column_spacing is not None
+                and pending.column_spacing <= 0.0
+            ):
+                raise ValueError("non-positive spacing")
+        except ValueError:
+            return InstructionResult(
+                status="ok",
+                text="열간·장비간 간격은 0보다 큰 미터 값이어야 합니다.",
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        missing = [
+            label
+            for value, label in (
+                (pending.row_spacing, "열간 간격"),
+                (pending.column_spacing, "장비간 좌우 간격"),
+            )
+            if value is None
+        ]
+        if missing:
+            # Collect each missing gap through its OWN card, one at a time —
+            # clickable presets plus a free-text box — instead of a prose wall
+            # the operator has to parse and answer in one breath.
+            gap_options = (
+                QuestionOption(label="1m"),
+                QuestionOption(label="1.5m"),
+                QuestionOption(label="2m"),
+            )
+            for attr, prompt in (
+                ("row_spacing", "열 사이(열간) 간격은 몇 미터인가요?"),
+                ("column_spacing", "같은 열 안 장비 사이(좌우) 간격은 몇 미터인가요?"),
+            ):
+                if getattr(pending, attr) is not None:
+                    continue
+                answer = self._ask_one(
+                    prompt,
+                    why="열 배치를 계산하려면 열간·장비간 간격이 각각 필요합니다.",
+                    options=gap_options,
+                )
+                value = _first_metres(answer)
+                if value is not None and value > 0.0:
+                    setattr(pending, attr, value)
+            still_missing = [
+                label
+                for value, label in (
+                    (pending.row_spacing, "열간 간격"),
+                    (pending.column_spacing, "장비간 좌우 간격"),
+                )
+                if value is None
+            ]
+            if still_missing:
+                return InstructionResult(
+                    status="ok",
+                    text=(
+                        "MMX 10대 → MMX 10대 → 350 10대 반복 배치를 기억했습니다. "
+                        f"계속하려면 {', '.join(still_missing)}을 미터 단위로 알려주세요."
+                    ),
+                    command_outcomes=(),
+                    retries_used=0,
+                    model_calls=0,
+                    duration_seconds=0.0,
+                )
+        row_spacing = pending.row_spacing
+        column_spacing = pending.column_spacing
+        assert row_spacing is not None and column_spacing is not None
+        spatial = self._registry.dispatch(
+            ToolCall(id="repeating-columns-read", name="get_spatial_context", arguments={})
+        )
+        try:
+            payload = json.loads(spatial.result.content)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            payload = None
+        if spatial.result.is_error or not isinstance(payload, dict):
+            return InstructionResult(
+                status="ok",
+                text=(
+                    "3D 좌표를 읽지 못해 배치를 시작하지 않았습니다. 콘솔 연결(응답기·OSC "
+                    "포트)을 확인한 뒤 다시 요청해 주세요."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        coverage = payload.get("coverage") or {}
+        fixtures = payload.get("fixtures")
+        if coverage.get("complete") is not True or not isinstance(fixtures, list):
+            return InstructionResult(
+                status="ok",
+                text=(
+                    "전체 3D 패치를 완전히 읽지 못했습니다(부분/절단 응답). 일부만 읽은 상태로 "
+                    "배치하면 누락된 장비를 덮어쓸 수 있어 시작하지 않았습니다."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+
+        def _named(predicate: Callable[[str], bool]) -> list[int]:
+            return [
+                item["fid"]
+                for item in fixtures
+                if isinstance(item, dict)
+                and isinstance(item.get("fid"), int)
+                and not isinstance(item.get("fid"), bool)
+                and predicate(str(item.get("name", "")))
+            ]
+
+        mmx = _named(lambda name: "mmx" in name.casefold())
+        mmx_set = set(mmx)
+        beam = [
+            fid
+            for fid in _named(lambda name: re.search(r"350\s*m?", name, re.IGNORECASE) is not None)
+            if fid not in mmx_set  # MMX classification wins, so a type is never double-counted
+        ]
+        found_line = f"현재 패치에서 MMX {len(mmx)}대, 350 계열 {len(beam)}대를 확인했습니다."
+
+        self._last_layout_spacing = (row_spacing, column_spacing)
+        column_size = 10
+        cycle = ("mmx", "mmx", "beam")
+        pools = {"mmx": mmx, "beam": beam}
+        cursor = {"mmx": 0, "beam": 0}
+        # Budget = how many COMPLETE columns each type can still fill. Follow the
+        # requested cyclic order, but SKIP a type that has no full column left
+        # rather than stopping the whole walk at the first short type — the old
+        # early-stop abandoned every later type in the cycle (e.g. 19 MMX + 20
+        # 350 placed one MMX column and dropped all 20 beams). Stop only when no
+        # type can fill another column.
+        budget = {kind: len(pool) // column_size for kind, pool in pools.items()}
+        columns: list[list[int]] = []
+        step = 0
+        while any(budget.values()):
+            kind = cycle[step % len(cycle)]
+            step += 1
+            if budget[kind] <= 0:
+                continue
+            start = cursor[kind]
+            columns.append(pools[kind][start : start + column_size])
+            cursor[kind] = start + column_size
+            budget[kind] -= 1
+
+        if not columns:
+            return InstructionResult(
+                status="ok",
+                text=(
+                    f"{found_line} MMX/MMX/350 반복 배치는 한 열이 {column_size}대이므로, "
+                    f"먼저 MMX가 최소 {column_size}대 있어야 첫 열을 만들 수 있습니다. "
+                    "장비 타입이 이름으로 구분되는지(MMX·350 포함) 확인해 주세요."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+
+        fids = [fid for column in columns for fid in column]
+        arranged = self._registry.dispatch(
+            ToolCall(
+                id="repeating-columns-write",
+                name="arrange_fixtures",
+                arguments={
+                    "preset": "grid",
+                    "fids": fids,
+                    "rows": len(columns),
+                    "columns": column_size,
+                    "row_spacing": row_spacing,
+                    "column_spacing": column_spacing,
+                    "orientation": "xy",
+                },
+            )
+        )
+        placed_mmx = cursor["mmx"]
+        placed_beam = cursor["beam"]
+        summary = (
+            f"{found_line} MMX {placed_mmx}대·350 계열 {placed_beam}대를 10대씩 "
+            f"{len(columns)}열로, 열간 {row_spacing:g}m·장비간 {column_spacing:g}m 그리드로 "
+            "배치하도록 요청했습니다. 승인 또는 라이브 잠금 상태에 따른 결과를 아래 명령 "
+            "상태에서 확인해 주세요."
+        )
+        leftovers = []
+        if len(mmx) - placed_mmx > 0:
+            leftovers.append(f"MMX {len(mmx) - placed_mmx}대")
+        if len(beam) - placed_beam > 0:
+            leftovers.append(f"350 계열 {len(beam) - placed_beam}대")
+        if leftovers:
+            summary += (
+                f" 남은 {', '.join(leftovers)}는 {column_size}대에 못 미쳐 완전한 열을 "
+                "만들지 못했습니다. 요청하신 MMX·MMX·350 반복은 MMX가 350의 2배일 때 "
+                "딱 맞는데 현재 수량은 그렇지 않습니다. 남은 장비를 (1) 부분 열로 그대로 "
+                "붙일지, (2) 열당 대수를 바꿔 다시 배치할지 알려주시면 이어서 처리합니다."
+            )
+        self._pending_repeating_columns = None
+        return InstructionResult(
+            status="ok",
+            text=summary,
+            command_outcomes=arranged.command_outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
+    def _multi_ring_circle_layout(self, text: str) -> InstructionResult | None:
+        """Place a multi-ring circle: ask the missing decisions one card at a
+        time (radii, then the remainder ring's order), then arrange each ring.
+
+        This is an EXECUTING handler, not a canned clarifier: it reasons about
+        the whole request (ring types/counts + a remainder ring), collects only
+        what is genuinely missing through interactive cards, reads the real rig,
+        and writes each ring with its own circle arrange (backup + verify per
+        call). Count mismatches are reported, never guessed away.
+        """
+        rings = parse_ring_layout(text)
+        if rings is None:
+            return None
+
+        radii = self._ask_ring_radii(len(rings))
+        order = "fid"
+        if any(r.kind == "remainder" and r.alternate for r in rings):
+            order = self._ask_remainder_order()
+
+        spatial = self._registry.dispatch(
+            ToolCall(id="ring-read", name="get_spatial_context", arguments={})
+        )
+        try:
+            payload = json.loads(spatial.result.content)
+            fixtures = payload["fixtures"]
+            if spatial.result.is_error or payload["coverage"]["complete"] is not True:
+                raise ValueError("incomplete spatial read")
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+            return InstructionResult(
+                status="ok",
+                text=(
+                    "여러 겹 원형 배치를 계획했지만 전체 3D 좌표를 읽지 못해 시작하지 "
+                    "않았습니다. 콘솔 연결을 확인한 뒤 다시 요청해 주세요."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+
+        def _valid(item: object) -> bool:
+            return (
+                isinstance(item, dict)
+                and isinstance(item.get("fid"), int)
+                and not isinstance(item.get("fid"), bool)
+            )
+
+        coord = {
+            item["fid"]: (float(item.get("x", 0.0)), float(item.get("y", 0.0)))
+            for item in fixtures
+            if _valid(item)
+        }
+        key = {"fid": lambda f: f, "left": lambda f: coord[f][0], "front": lambda f: coord[f][1]}[
+            order
+        ]
+
+        def _named(pred) -> list[int]:
+            picked = [
+                item["fid"] for item in fixtures if _valid(item) and pred(str(item.get("name", "")))
+            ]
+            return sorted(picked, key=key)
+
+        mmx = _named(lambda n: "mmx" in n.casefold())
+        mmx_set = set(mmx)
+        beam = [
+            fid
+            for fid in _named(lambda n: re.search(r"350\s*m?", n, re.IGNORECASE) is not None)
+            if fid not in mmx_set
+        ]
+        beam_set = set(beam)
+        classified = mmx_set | beam_set
+        others = sorted(
+            (item["fid"] for item in fixtures if _valid(item) and item["fid"] not in classified),
+            key=key,
+        )
+
+        pos = {"mmx": 0, "beam": 0}
+        notes: list[str] = []
+        ring_fids: list[list[int]] = []
+        for index, ring in enumerate(rings, start=1):
+            if ring.kind == "remainder":
+                rest_mmx = mmx[pos["mmx"] :]
+                rest_beam = beam[pos["beam"] :]
+                pos["mmx"], pos["beam"] = len(mmx), len(beam)
+                merged: list[int] = []
+                for a, b in zip(rest_mmx, rest_beam, strict=False):
+                    merged.extend((a, b))
+                shorter = min(len(rest_mmx), len(rest_beam))
+                tail = rest_mmx[shorter:] + rest_beam[shorter:]
+                merged.extend(tail)
+                merged.extend(others)
+                ring_fids.append(merged)
+            else:
+                pool = mmx if ring.kind == "mmx" else beam
+                want = ring.count or 0
+                take = pool[pos[ring.kind] : pos[ring.kind] + want]
+                pos[ring.kind] += len(take)
+                if len(take) < want:
+                    label = "MMX" if ring.kind == "mmx" else "350 계열"
+                    notes.append(f"{index}번째 원 {label} {want}대 요청 중 {len(take)}대만 가능")
+                ring_fids.append(take)
+
+        outcomes: list[CommandOutcome] = []
+        placed_lines: list[str] = []
+        for index, (fids, radius) in enumerate(zip(ring_fids, radii, strict=False), start=1):
+            if not fids:
+                notes.append(f"{index}번째 원에 배치할 장비가 없습니다")
+                continue
+            arranged = self._registry.dispatch(
+                ToolCall(
+                    id=f"ring-write-{index}",
+                    name="arrange_fixtures",
+                    arguments={
+                        "preset": "circle",
+                        "fids": fids,
+                        "radius": radius,
+                        "start_angle": 0.0,
+                        "orientation": "xy",
+                    },
+                )
+            )
+            outcomes.extend(arranged.command_outcomes)
+            placed_lines.append(f"{index}번째 원(반지름 {radius:g}m): {len(fids)}대")
+
+        summary = "여러 겹 원형 배치를 요청했습니다 — " + ", ".join(placed_lines) + "."
+        if notes:
+            summary += " 다만 " + "; ".join(notes) + "."
+        summary += " 승인 또는 라이브 잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+        return InstructionResult(
+            status="ok",
+            text=summary,
+            command_outcomes=tuple(outcomes),
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
+    def _ask_ring_radii(self, count: int) -> list[float]:
+        """One card for the ring diameters (innermost→outer); default 4/6/8… m."""
+        default = [2.0 + i for i in range(count)]  # radius 2,3,4… (diameter 4,6,8…)
+        answer = self._ask_one(
+            "각 원의 지름을 안쪽→바깥 순서로 알려주세요 (미터).",
+            options=(
+                QuestionOption(label="4·6·8m"),
+                QuestionOption(label="6·8·10m"),
+            ),
+            why="원마다 반지름이 달라야 여러 겹으로 겹치지 않고 배치됩니다.",
+        )
+        if not answer:
+            return default
+        diameters = [float(v.replace(",", ".")) for v in re.findall(r"\d+(?:[.,]\d+)?", answer)]
+        radii = [d / 2.0 for d in diameters if d > 0.0]
+        if len(radii) < count:
+            radii += default[len(radii) :]
+        return radii[:count]
+
+    def _ask_remainder_order(self) -> str:
+        """One card for how the remainder ring's 번갈아 order is decided."""
+        answer = self._ask_one(
+            "마지막 원(남은 장비)을 어떤 순서로 번갈아 배치할까요?",
+            options=(
+                QuestionOption(label="FID 오름차순", description="패치 번호 순 — 가장 예측 가능"),
+                QuestionOption(label="좌→우", description="현재 무대 x좌표 순"),
+                QuestionOption(label="앞→뒤", description="현재 무대 y좌표 순"),
+            ),
+            why="circle 프리셋은 넘긴 FID 순서대로 채우므로 번갈아 기준이 필요합니다.",
+        )
+        if answer and ("좌" in answer or "left" in answer.casefold()):
+            return "left"
+        if answer and ("앞" in answer or "front" in answer.casefold()):
+            return "front"
+        return "fid"
+
+    def _typed_two_row_layout(self, text: str) -> InstructionResult | None:
+        """Place named MMX/350M rows without trusting the CLI model's tool view."""
+        if _TYPED_TWO_ROW_REQUEST.search(text) is None:
+            return None
+        spatial = self._registry.dispatch(
+            ToolCall(id="typed-layout-read", name="get_spatial_context", arguments={})
+        )
+        try:
+            payload = json.loads(spatial.result.content)
+            fixtures = payload["fixtures"]
+            if spatial.result.is_error or payload["coverage"]["complete"] is not True:
+                raise ValueError("incomplete spatial read")
+            mmx = [
+                item["fid"]
+                for item in fixtures
+                if isinstance(item, dict)
+                and isinstance(item.get("fid"), int)
+                and "mmx" in str(item.get("name", "")).lower()
+            ][:10]
+            beam = [
+                item["fid"]
+                for item in fixtures
+                if isinstance(item, dict)
+                and isinstance(item.get("fid"), int)
+                and re.search(r"350\s*m", str(item.get("name", "")), re.IGNORECASE)
+            ][:10]
+            if len(mmx) != 10 or len(beam) != 10:
+                raise ValueError("fixture types not uniquely identified")
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+            return InstructionResult(
+                status="ok",
+                text=(
+                    "MMX와 350M을 각각 10대로 확정할 수 있는 전체 패치 이름·3D 좌표를 "
+                    "읽지 못해 배치를 시작하지 않았습니다."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        arranged = self._registry.dispatch(
+            ToolCall(
+                id="typed-layout-write",
+                name="arrange_fixtures",
+                arguments={
+                    "preset": "grid",
+                    "fids": [*beam, *mmx],
+                    "rows": 2,
+                    "columns": 10,
+                    "spacing": 1.5,
+                    "orientation": "xy",
+                },
+            )
+        )
+        self._last_layout_spacing = (1.5, 1.5)
+        return InstructionResult(
+            status="ok",
+            text="350M 10대 앞줄, MMX 10대 뒷줄의 1.5m 간격 2×10 그리드를 요청했습니다.",
+            command_outcomes=arranged.command_outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
+    def _vocabulary_layout(self, text: str) -> InstructionResult | None:
+        """Apply an explicitly worded whole-rig geometry without model latency."""
+        match = match_explicit_layout(text)
+        if match is None:
+            return None
+        if self._spatial_fids is None:
+            spatial = self._registry.dispatch(
+                ToolCall(id="vocabulary-layout-read", name="get_spatial_context", arguments={})
+            )
+            try:
+                payload = json.loads(spatial.result.content)
+                fixtures = payload["fixtures"]
+                if spatial.result.is_error or payload["coverage"]["complete"] is not True:
+                    raise ValueError("incomplete spatial read")
+                fids = tuple(
+                    fixture["fid"]
+                    for fixture in fixtures
+                    if isinstance(fixture, dict)
+                    and isinstance(fixture.get("fid"), int)
+                    and not isinstance(fixture.get("fid"), bool)
+                )
+                if not fids or len(fids) != len(fixtures) or len(set(fids)) != len(fids):
+                    raise ValueError("invalid fixture identities")
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+                return InstructionResult(
+                    status="ok",
+                    text="전체 3D 좌표와 FID를 확인하지 못해 배치를 시작하지 않았습니다.",
+                    command_outcomes=(),
+                    retries_used=0,
+                    model_calls=0,
+                    duration_seconds=0.0,
+                )
+            self._spatial_fids = fids
+
+        arguments: dict[str, object] = {
+            "preset": match.preset,
+            "fids": list(self._spatial_fids),
+        }
+        if match.rows is not None:
+            arguments["rows"] = match.rows
+        if match.columns is not None:
+            arguments["columns"] = match.columns
+        if match.spacing is not None:
+            arguments["spacing"] = match.spacing
+        if match.radius is not None:
+            arguments["radius"] = match.radius
+        if match.preset == "grid" and match.rows * match.columns != len(self._spatial_fids):
+            return InstructionResult(
+                status="ok",
+                text=(
+                    f"전체 장비는 {len(self._spatial_fids)}대입니다. 요청한 "
+                    f"{match.rows}행×{match.columns}열은 장비 수와 일치하지 않아 "
+                    "배치를 시작하지 않았습니다."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        arranged = self._registry.dispatch(
+            ToolCall(
+                id="vocabulary-layout-write",
+                name="arrange_fixtures",
+                arguments=arguments,
+            )
+        )
+        if match.spacing is not None:
+            self._last_layout_spacing = (match.spacing, match.spacing)
+        labels = {"grid": "그리드", "row": "일렬", "circle": "원형"}
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"전체 배치 장비 {len(self._spatial_fids)}대를 {labels[match.preset]} "
+                "형태로 배치하도록 요청했습니다."
+            ),
+            command_outcomes=arranged.command_outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
     # @MX:NOTE: [AUTO] one instruction turn — measurement start/finish, gate-truth
     #   summary composition, and the REQ-MVP-044 raw-detail/audit split all funnel
     #   through this single method
@@ -495,11 +1239,30 @@ class ChatSession:
         token = bind_session_key(self._session_key)
         try:
             try:
-                result = self._orchestrator.handle_instruction(
-                    text, session_context=self._session_context_note()
-                )
+                result = self._all_fixtures_elevation(text)
+                if result is None:
+                    result = self._repeating_type_columns_layout(text)
+                if result is None:
+                    result = self._typed_two_row_layout(text)
+                if result is None:
+                    result = self._multi_ring_circle_layout(text)
+                if result is None:
+                    result = self._vocabulary_layout(text)
+                if result is None:
+                    # No canned clarifiers: an under-specified layout request
+                    # (rings, alternation, shapes) goes to the model so it
+                    # reasons about the WHOLE request and, if something is truly
+                    # missing, asks one question at a time via ask_user — never a
+                    # reflexive keyword-triggered line.
+                    result = self._orchestrator.handle_instruction(
+                        text,
+                        history=tuple(self._history),
+                        session_context=self._session_context_note(text),
+                    )
             except Exception as exc:  # REQ-MVP-044: raw detail NEVER reaches the surface
-                return self._report_error(exc)
+                event = self._report_error(exc)
+                self._record_history(text, event.get("message", ""))
+                return event
             self._capture_last_created(result)
             views = [outcome_view(outcome) for outcome in result.command_outcomes]
             summary = self._compose_summary(result, views)
@@ -509,6 +1272,7 @@ class ChatSession:
                 status=result.status, summary=summary, text=result.text, commands=views
             )
             self._send(event)
+            self._record_history(text, result.text)
             return event
         finally:
             reset_session_key(token)
@@ -519,6 +1283,28 @@ class ChatSession:
         return self.run_instruction(_VECTORWORKS_UPLOAD_INSTRUCTION)
 
     # -- internals ------------------------------------------------------------------
+
+    def _record_history(self, user_text: str, reply_text: str) -> None:
+        """Append this turn's user instruction and assistant reply to memory.
+
+        Only the user-visible exchange is kept — never the intermediate tool
+        calls/results — so replaying it is cheap and re-feeds no console side
+        effect. The window is trimmed from the front in whole pairs so the
+        model never sees a user message stripped of its answer.
+        """
+        self._history.append(UserMessage(text=user_text))
+        self._history.append(
+            ModelTurn(
+                text=reply_text or "",
+                tool_calls=(),
+                stop_reason="end",
+                usage=Usage(),
+                provider="history",
+            )
+        )
+        excess = len(self._history) - HISTORY_MAX_MESSAGES
+        if excess > 0:
+            del self._history[:excess]
 
     def _capture_last_created(self, result: InstructionResult) -> None:
         """Snapshot the just-created look from this turn's SUCCESSFUL commands.
@@ -535,8 +1321,44 @@ class ChatSession:
         if captured is not None:
             self._last_created = captured
 
-    def _session_context_note(self) -> str | None:
-        """Cross-turn grounding for the last look and an uploaded design file."""
+    def _ask_one(
+        self,
+        prompt: str,
+        *,
+        options: tuple[QuestionOption, ...] = (),
+        why: str = "",
+        steps: tuple[str, ...] = (),
+    ) -> str | None:
+        """Ask the operator ONE question through the interactive card channel.
+
+        This is how a direct handler collects a missing decision WITHOUT the
+        wall-of-prose failure: the UI renders ``options`` as clickable buttons
+        and always offers a free-text box, and the worker thread blocks here
+        until exactly one answer returns — so a handler that needs several
+        decisions calls this once per decision and the cards appear one at a
+        time, never as a single unanswerable message.
+
+        Returns the answer, or ``None`` when no UI is attached or the question
+        went unanswered (timeout / disconnect) — the caller then falls back to
+        a plain-text prompt instead of hanging.
+        """
+        if self._question_channel is None:
+            return None
+        answer = self._question_channel.ask(
+            QuestionRequest(prompt=prompt, why=why, steps=steps, options=options)
+        )
+        if not isinstance(answer, str) or answer in ("", UNANSWERED):
+            return None
+        return answer
+
+    def _session_context_note(self, text: str = "") -> str | None:
+        """Cross-turn grounding plus reasoning aids for THIS instruction.
+
+        ``text`` is the current instruction: recognized layout vocabulary is
+        surfaced as guidance so the model REASONS about the whole request and
+        asks any genuinely-missing parameter one at a time — replacing the old
+        reflexive canned clarifier that fired on a keyword alone.
+        """
         notes: list[str] = []
         last = self._last_created
         if last is not None and last.sequence is not None:
@@ -551,6 +1373,15 @@ class ChatSession:
                 f"regenerating the look on {target} over blind-editing a different "
                 f"target."
             )
+        if self._last_layout_spacing is not None:
+            row_gap, column_gap = self._last_layout_spacing
+            notes.append(
+                "Session context — the operator already set the layout spacing "
+                f"this session: column gap {row_gap:g} m, fixture gap {column_gap:g} m. "
+                "Reuse these for any follow-up placement (e.g. 나머지 장비도 배치해줘) "
+                "instead of asking for spacing again; only ask for what is genuinely "
+                "still missing."
+            )
         if self._vectorworks_upload.content_base64 is not None:
             notes.append(
                 "Session context — one Vectorworks export is uploaded for this "
@@ -558,6 +1389,9 @@ class ChatSession:
                 "through vectorworks_autopatch; never request them in chat or infer "
                 "details that tool did not report."
             )
+        guidance = layout_terms_guidance(text)
+        if guidance:
+            notes.append(guidance)
         return "\n\n".join(notes) or None
 
     def _report_error(self, exc: Exception) -> dict:

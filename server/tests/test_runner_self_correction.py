@@ -340,3 +340,50 @@ class TestLoopGuard:
         result = _orchestrator(provider, max_model_calls=5).handle_instruction("hi")
         assert result.status == "loop_limit"
         assert result.model_calls == 5
+
+
+class TestFalseToolUnavailability:
+    """A tool-less turn that claims the app tools are missing is a hallucination:
+    the orchestrator nudges once so the request does not dead-end, then retries."""
+
+    def test_false_unavailable_claim_is_corrected_and_retried(self):
+        from server.orchestrator.runner import _TOOLS_ARE_AVAILABLE
+
+        provider = ScriptedProvider(
+            [
+                _final("get_spatial_context가 No such tool available로 거부됐습니다"),
+                _run_turn(["Store Cue 1"], "c1"),
+                _final("배치를 마쳤습니다"),
+            ]
+        )
+        port = ScriptedPort()
+        result = _orchestrator(provider, port).handle_instruction("장비 배치해줘")
+
+        assert result.status == "ok"
+        assert port.executed == ["Store Cue 1"]  # it actually used the tool after the nudge
+        assert result.text == "배치를 마쳤습니다"
+        # The retry conversation carries the corrective steer.
+        retry_conversation = provider.calls[1]
+        assert any(
+            isinstance(item, UserMessage) and item.text == _TOOLS_ARE_AVAILABLE
+            for item in retry_conversation
+        )
+
+    def test_an_insisting_model_is_not_looped_and_its_text_is_kept(self):
+        provider = ScriptedProvider(
+            [
+                _final("도구가 연결돼 있지 않습니다"),
+                _final("여전히 연결돼 있지 않습니다"),
+            ]
+        )
+        result = _orchestrator(provider).handle_instruction("장비 배치해줘")
+
+        assert result.model_calls == 2  # initial + exactly one correction, no loop
+        assert result.text == "여전히 연결돼 있지 않습니다"
+
+    def test_a_normal_final_answer_is_not_treated_as_a_false_claim(self):
+        provider = ScriptedProvider([_final("리그 상태는 정상입니다")])
+        result = _orchestrator(provider).handle_instruction("상태 알려줘")
+
+        assert result.model_calls == 1  # accepted immediately, no needless correction
+        assert result.text == "리그 상태는 정상입니다"

@@ -372,6 +372,22 @@ class TestGridGeometry:
         plan = spatial_preset_placements("grid", list(range(1, 7)), {"rows": 3, "columns": 2})
         assert [p.y for p in plan.placements] == [-1.0, -1.0, 0.0, 0.0, 1.0, 1.0]
 
+    def test_grid_supports_independent_row_and_column_spacing(self):
+        plan = spatial_preset_placements(
+            "grid",
+            [1, 2, 3, 4],
+            {"rows": 2, "columns": 2, "row_spacing": 1.5, "column_spacing": 1.0},
+        )
+
+        assert [(p.x, p.y, p.z) for p in plan.placements] == [
+            (-0.5, -0.75, 0.0),
+            (0.5, -0.75, 0.0),
+            (-0.5, 0.75, 0.0),
+            (0.5, 0.75, 0.0),
+        ]
+        assert plan.resolved["row_spacing"] == 1.5
+        assert plan.resolved["column_spacing"] == 1.0
+
     def test_one_dimension_may_be_omitted_and_is_derived(self):
         plan = spatial_preset_placements("grid", list(range(1, 13)), {"rows": 3})
         assert plan.resolved["columns"] == 4
@@ -534,9 +550,71 @@ class TestToolRegistration:
 
     def test_its_schema_closes_the_preset_vocabulary(self):
         definition = next(d for d in registry(rig()).definitions() if d.name == "arrange_fixtures")
-        assert definition.parameters["properties"]["preset"]["enum"] == list(SPATIAL_PRESETS)
+        assert definition.parameters["properties"]["preset"]["enum"] == [
+            *SPATIAL_PRESETS,
+            "elevation",
+        ]
         assert definition.parameters["required"] == ["preset", "fids"]
         assert definition.parameters["additionalProperties"] is False
+        assert definition.parameters["properties"]["height"]["description"].startswith(
+            "elevation only"
+        )
+
+
+class TestElevationPlacement:
+    def test_elevation_sets_only_z_and_preserves_each_fixture_plan_position(self):
+        console = ArrangeConsole(
+            [
+                (1, 11, "PAR 1", -3.5, 1.25, 0.0),
+                (2, 12, "PAR 2", 2.75, -4.0, 7.5),
+                (3, 13, "PAR 3", 0.0, 3.5, 2.0),
+            ]
+        )
+
+        _execution, payload = arrange(
+            console, {"preset": "elevation", "fids": [11, 12, 13], "height": 5.0}
+        )
+
+        assert payload["verified"] is True
+        assert payload["resolved"] == {"height": 5.0}
+        assert payload["planned"] == [
+            {"fid": 11, "x": -3.5, "y": 1.25, "z": 5.0},
+            {"fid": 12, "x": 2.75, "y": -4.0, "z": 5.0},
+            {"fid": 13, "x": 0.0, "y": 3.5, "z": 5.0},
+        ]
+        assert {command.split()[3] for command in console.writes} == {"Posz"}
+        assert console.coordinates(11) == pytest.approx((-3.5, 1.25, 5.0))
+        assert console.coordinates(12) == pytest.approx((2.75, -4.0, 5.0))
+        assert console.coordinates(13) == pytest.approx((0.0, 3.5, 5.0))
+
+    def test_elevation_requires_approval_and_verifies_the_approved_z_writes(self, tmp_path):
+        console = ArrangeConsole(
+            [(1, 11, "PAR 1", -2.0, 1.0, 0.0), (2, 12, "PAR 2", 2.0, -1.0, 3.0)]
+        )
+        approval = ScriptedApprovalPort(approve=True)
+
+        _execution, payload = arrange(
+            console,
+            {"preset": "elevation", "fids": [11, 12], "height": 5.0},
+            gate=real_gate(tmp_path, locked=False, approval_port=approval),
+        )
+
+        assert len(approval.requests) == 1
+        assert [item.command for item in approval.requests[0].items] == [
+            "Set Fixture 11 Posz '5.0'",
+            "Set Fixture 12 Posz '5.0'",
+        ]
+        assert payload["verified"] is True
+        assert console.coordinates(11) == pytest.approx((-2.0, 1.0, 5.0))
+        assert console.coordinates(12) == pytest.approx((2.0, -1.0, 5.0))
+
+    def test_elevation_requires_a_finite_non_negative_height(self):
+        console = rig()
+        execution, payload = arrange(console, {"preset": "elevation", "fids": [11], "height": -0.1})
+
+        assert execution.result.is_error is True
+        assert console.writes == []
+        assert "height" in payload["error"]
 
 
 class TestBackupPrecedesTheWrite:
