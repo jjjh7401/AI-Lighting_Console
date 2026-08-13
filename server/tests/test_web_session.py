@@ -1154,6 +1154,423 @@ class TestAllFixturesElevation:
         }
 
 
+class TestPointFixturesAtTarget:
+    def _registry(self, calls):
+        fixtures = [
+            {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
+            {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
+            {"fid": 41, "name": "Sphere 1", "x": 0.0, "y": 0.0, "z": 0.0},
+        ]
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    (CommandOutcome(command="Fixture 20", status="proposal"),),
+                )
+
+        return Registry()
+
+    def test_routes_centre_pointing_without_model_and_skips_the_on_target_fixture(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        event = session.run_instruction(
+            "모든 장비를 선택해서 불을 켜고 무대 바닥 중앙(0,0,0) 위치로 "
+            "조명장비의 헤드가 바라볼 수 있도록 해줘"
+        )
+
+        assert provider.calls == []
+        assert [call.name for call in calls] == ["get_spatial_context", "run_commands"]
+        commands = calls[-1].arguments["commands"]
+        # ONE chained line per fixture (text-dedupe defence); the measured aim
+        # for FID 20 at (4,0,6) -> origin: Pan 90 / Tilt 33.7, mirrored fixture
+        # gets the mirrored pan; the sphere ON the target is skipped, and
+        # 불을 켜고 turns the dimmer on.
+        assert commands == [
+            "Fixture 20 ; Attribute 'Dimmer' At 100 ; "
+            "Attribute 'Pan' At 90 ; Attribute 'Tilt' At 33.7",
+            "Fixture 26 ; Attribute 'Dimmer' At 100 ; "
+            "Attribute 'Pan' At -90 ; Attribute 'Tilt' At 33.7",
+        ]
+        assert "2대" in event["text"]
+        assert "1대(FID 41)" in event["text"]
+
+    def test_an_explicit_coordinate_triple_overrides_the_centre_words(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        event = session.run_instruction("전체 헤드가 (2, -3, 0.5) 지점을 바라보게 해줘")
+
+        assert calls[-1].name == "run_commands"
+        assert "(2, -3, 0.5)" in event["text"]
+        commands = calls[-1].arguments["commands"]
+        # No dimmer word -> no dimmer line.
+        assert not any("Dimmer" in command for command in commands)
+
+    def test_an_aiming_verb_without_a_target_goes_to_the_model(self, tmp_path):
+        provider = ScriptedProvider([_final("어느 지점을 바라보게 할까요?")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+
+        event = session.run_instruction("무빙헤드가 저쪽을 바라보게 해줘")
+
+        assert len(provider.calls) == 1
+        assert event["text"] == "어느 지점을 바라보게 할까요?"
+
+
+class TestPositionMoodSuggestion:
+    def _registry(self, calls):
+        fixtures = [
+            {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
+            {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
+        ]
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    (CommandOutcome(command="Fixture 20", status="proposal"),),
+                )
+
+        return Registry()
+
+    class _Channel:
+        def __init__(self, answers):
+            self.answers = list(answers)
+            self.asked = []
+
+        def ask(self, request, **_kwargs):
+            self.asked.append(request)
+            return self.answers.pop(0) if self.answers else UNANSWERED
+
+    def test_a_mood_request_suggests_then_applies_the_accepted_look(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(["Vocal DSC"])
+        session._question_channel = channel
+
+        event = session.run_instruction("잔잔한 발라드 느낌으로 불 켜고 포지션 잡아줘")
+
+        assert provider.calls == []
+        assert len(channel.asked) == 1
+        assert "보컬 포커스" in channel.asked[0].prompt
+        # 추천이 첫 옵션, 대안 + '적용 안 함'이 뒤따른다.
+        labels = [option.label for option in channel.asked[0].options]
+        assert labels[0] == "Vocal DSC"
+        assert labels[-1] == "적용 안 함"
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert len(writes) == 1
+        commands = writes[0].arguments["commands"]
+        # Vocal DSC: 두 대가 (0, -2, 1.6)을 향한다 — 픽스처별 상이한 pan/tilt,
+        # 디머 온, 픽스처당 한 줄.
+        assert len(commands) == 2
+        assert commands[0].startswith("Fixture 20 ; Attribute 'Dimmer' At 100 ; ")
+        assert "Vocal DSC 포지션을 장비 2대에" in event["text"]
+
+    def test_an_alternative_answer_applies_that_look_instead(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel(["Wall"])
+
+        session.run_instruction("잔잔한 발라드 포지션으로")
+
+        commands = [call for call in calls if call.name == "run_commands"][0].arguments["commands"]
+        # Wall = 전 대 동일 pan180/tilt45.
+        assert commands == [
+            "Fixture 20 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 45",
+            "Fixture 26 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 45",
+        ]
+
+    def test_declining_sends_nothing(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel(["적용 안 함"])
+
+        event = session.run_instruction("웅장한 피날레 연출 포지션")
+
+        assert [call.name for call in calls] == ["get_spatial_context"]
+        assert "적용하지 않았습니다" in event["text"]
+
+    def test_a_mood_without_position_intent_reaches_the_model(self, tmp_path):
+        # "따뜻한 발라드 느낌으로 만들어줘"는 색·룩 요청일 수 있다 — 모델
+        # 경로(find_looks)에 남긴다.
+        provider = ScriptedProvider([_final("룩 라이브러리를 확인하겠습니다")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+
+        event = session.run_instruction("잔잔한 발라드 느낌으로 만들어줘")
+
+        assert len(provider.calls) == 1
+        assert event["text"] == "룩 라이브러리를 확인하겠습니다"
+
+    def test_an_explicit_technique_request_is_not_intercepted(self, tmp_path):
+        # "화려하게 부채살로 펼쳐줘"는 무드 어휘(화려)를 담지만 기법이 명시돼
+        # 있다 — LOOK 핸들러가 먼저 잡아 카드 없이 실행된다.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel([])
+        session._question_channel = channel
+
+        session.run_instruction("화려하게 부채살로 펼쳐줘")
+
+        assert channel.asked == []
+        assert [call.name for call in calls] == ["get_spatial_context", "run_commands"]
+
+
+class TestBasicPositionPresets:
+    def _registry(self, calls):
+        fixtures = [
+            {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
+            {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
+        ]
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    (CommandOutcome(command="Fixture 20", status="proposal"),),
+                )
+
+        return Registry()
+
+    class _Channel:
+        def __init__(self, answers):
+            self.answers = list(answers)
+            self.asked = []
+
+        def ask(self, request, **_kwargs):
+            self.asked.append(request)
+            return self.answers.pop(0) if self.answers else UNANSWERED
+
+    def test_asks_the_start_number_once_and_stores_ten_presets(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(["21"])
+        session._question_channel = channel
+
+        event = session.run_instruction("기본 포지션 10개를 프리셋에 저장해줘")
+
+        assert provider.calls == []
+        assert len(channel.asked) == 1
+        assert "몇 번부터" in channel.asked[0].prompt
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert len(writes) == 10
+        first = writes[0].arguments["commands"]
+        # Home = straight down for both fixtures, stored+labelled+cleared.
+        assert first == [
+            "Fixture 20 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 0",
+            "Fixture 26 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 0",
+            "Store Preset 2.21",
+            "Label Preset 2.21 'Home'",
+            "ClearAll",
+        ]
+        # Every bundle ends with its own ClearAll; numbering is consecutive.
+        assert all(call.arguments["commands"][-1] == "ClearAll" for call in writes)
+        assert [call.arguments["commands"][-3] for call in writes] == [
+            f"Store Preset 2.{21 + offset}" for offset in range(10)
+        ]
+        assert "2.21 'Home'" in event["text"]
+        assert "2.30 'Ring In'" in event["text"]
+
+    def test_an_explicit_start_number_skips_the_question(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel([])
+        session._question_channel = channel
+
+        session.run_instruction("기본 포지션 프리셋을 5번부터 만들어줘")
+
+        assert channel.asked == []
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert "Store Preset 2.5" in writes[0].arguments["commands"]
+
+    def test_no_answer_refuses_instead_of_guessing_a_slot(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel([])  # UNANSWERED
+
+        event = session.run_instruction("기본 포지션 10개를 프리셋에 저장해줘")
+
+        assert [call.name for call in calls] == ["get_spatial_context"]
+        assert "시작 프리셋 번호" in event["text"]
+
+
+class TestLookPanTilt:
+    def _registry(self, calls):
+        fixtures = [
+            {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
+            {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
+            {"fid": 41, "name": "Sphere 1", "x": 0.0, "y": 0.0, "z": 0.0},
+        ]
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    (CommandOutcome(command="Fixture 20", status="proposal"),),
+                )
+
+        return Registry()
+
+    def test_a_fan_request_spreads_pan_over_the_x_ordered_chain(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        event = session.run_instruction("전체 장비를 불 켜고 45도 부채살로 펼쳐줘")
+
+        assert provider.calls == []
+        assert [call.name for call in calls] == ["get_spatial_context", "run_commands"]
+        # x-ordered chain 26(-4) -> 41(0) -> 20(4); base pan 180, offsets
+        # -45/0/+45, tilt 45, dimmer on.
+        assert calls[-1].arguments["commands"] == [
+            "Fixture 26 ; Attribute 'Dimmer' At 100 ; "
+            "Attribute 'Pan' At 135 ; Attribute 'Tilt' At 45",
+            "Fixture 41 ; Attribute 'Dimmer' At 100 ; "
+            "Attribute 'Pan' At 180 ; Attribute 'Tilt' At 45",
+            "Fixture 20 ; Attribute 'Dimmer' At 100 ; "
+            "Attribute 'Pan' At -135 ; Attribute 'Tilt' At 45",
+        ]
+        assert "부채살" in event["text"]
+
+    def test_a_pan_tilt_fan_request_adds_the_symmetric_tilt_v(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        event = session.run_instruction("팬 45도 틸트 20도 부채살로 펼쳐줘")
+
+        commands = calls[-1].arguments["commands"]
+        # Pan spread 45 with a tilt V: end fixtures 45+20=65, centre stays 45.
+        assert commands == [
+            "Fixture 26 ; Attribute 'Pan' At 135 ; Attribute 'Tilt' At 65",
+            "Fixture 41 ; Attribute 'Pan' At 180 ; Attribute 'Tilt' At 45",
+            "Fixture 20 ; Attribute 'Pan' At -135 ; Attribute 'Tilt' At 65",
+        ]
+        assert "틸트 ±20도" in event["text"]
+
+    def test_a_both_axes_word_without_numbers_takes_the_default_tilt_v(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        session.run_instruction("팬틸트 모두 부채살로 펼쳐줘")
+
+        commands = calls[-1].arguments["commands"]
+        # Default pan ±30 with the default ±15 tilt V: ends 60, centre 45.
+        assert "Attribute 'Tilt' At 60" in commands[0]
+        assert "Attribute 'Tilt' At 45" in commands[1]
+
+    def test_a_ring_out_request_skips_the_centroid_fixture_and_can_store_a_preset(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        event = session.run_instruction("장비들이 바깥쪽을 바라보게 하고 프리셋 11로 저장해줘")
+
+        commands = calls[-1].arguments["commands"]
+        # Centroid is (0,0): the sphere ON it has no outward radial and is
+        # skipped; 20/26 aim 4 m outward (target z=0 -> tilt 33.7) with
+        # mirrored pans; the explicit preset number appends the store+label.
+        assert commands == [
+            "Fixture 20 ; Attribute 'Pan' At -90 ; Attribute 'Tilt' At 33.7",
+            "Fixture 26 ; Attribute 'Pan' At 90 ; Attribute 'Tilt' At 33.7",
+            "Store Preset 2.11",
+            "Label Preset 2.11 'RING OUT'",
+        ]
+        assert "1대(FID 41)" in event["text"]
+        assert "2.11" in event["text"]
+
+    def test_a_ring_in_request_converges_on_the_centroid(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        session.run_instruction("모든 장비가 안쪽을 바라보게 해줘")
+
+        commands = calls[-1].arguments["commands"]
+        assert "Fixture 20 ; Attribute 'Pan' At 90 ; Attribute 'Tilt' At 33.7" in commands
+        assert "Fixture 26 ; Attribute 'Pan' At -90 ; Attribute 'Tilt' At 33.7" in commands
+
+    def test_a_centre_pointing_request_still_reaches_the_focus_handler(self, tmp_path):
+        # "중앙을 바라보게" carries an aiming verb but no fan/ring word — it
+        # must fall through to the FOCUS handler, not be eaten by LOOK.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        event = session.run_instruction("모든 장비가 무대 중앙을 바라보게 해줘")
+
+        assert "지점을 향하도록" in event["text"]
+
+
 class TestMultiRingCircle:
     def test_asks_radii_and_order_then_places_three_rings(self, tmp_path):
         provider = ScriptedProvider([])

@@ -36,6 +36,20 @@ from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate, ScreenDecision
 from server.safety.monitor import HealthMonitor
 from server.safety.session_context import bind_session_key, new_session_key, reset_session_key
+from server.spatial.pointing import (
+    BASIC_POSITION_SEQUENCE,
+    PointingTarget,
+    SpatialPointingError,
+    aim_pan_tilt,
+    aimed_commands,
+    basic_position_presets,
+    fan_chain,
+    fan_pan_tilt,
+    pointing_commands,
+    position_preset_store_commands,
+    radial_pan_tilt,
+)
+from server.spatial.position_moods import match_position_mood
 from server.spatial.vocabulary import (
     layout_terms_guidance,
     match_explicit_layout,
@@ -112,11 +126,57 @@ _ALL_FIXTURES_ELEVATION = re.compile(
     re.IGNORECASE,
 )
 
+# Aim every moving head's beam at one stage point (measured pan/tilt model —
+# server/spatial/pointing.py). Trigger: an aiming verb plus either a centre
+# word or an explicit coordinate triple.
+_POINT_AT_TARGET = re.compile(
+    r"(?:바라보|바라볼|비추|비춰|비출|향하|향해|향할|조준|겨냥|point|aim)",
+    re.IGNORECASE,
+)
+_POINT_TARGET_CENTRE = re.compile(r"중앙|센터|가운데|정?중앙|원점|center|centre", re.IGNORECASE)
+_POINT_TARGET_TRIPLE = re.compile(
+    r"\(?\s*(?P<x>-?\d+(?:\.\d+)?)\s*,\s*(?P<y>-?\d+(?:\.\d+)?)\s*,\s*(?P<z>-?\d+(?:\.\d+)?)\s*\)?"
+)
+_POINT_DIMMER_ON = re.compile(r"불(?:을|도)?\s*(?:다\s*)?켜|점등|풀\s*디머|dimmer", re.IGNORECASE)
+
 _TYPED_TWO_ROW_REQUEST = re.compile(
     r"(?:mmx).*(?:350m|350\s*m).*(?:1[.,]?5\s*(?:m|미터))"
     r"|(?:350m|350\s*m).*(?:mmx).*(?:1[.,]?5\s*(?:m|미터))",
     re.IGNORECASE,
 )
+
+# LOOK-family (design-relation) pan/tilt handlers: fan over an ordered chain,
+# or an inward/outward ring around the rig centroid. See
+# docs/proposals/pan-tilt-position-preset-strategy.md.
+_LOOK_FAN = re.compile(r"부채살|부채꼴|부채|팬\s*(?:아웃|인)|\bfan\b", re.IGNORECASE)
+_LOOK_FAN_IN = re.compile(r"모아|모으|모이|converge|팬\s*인|안쪽으로\s*모", re.IGNORECASE)
+_LOOK_FAN_CROSS = re.compile(r"교차|크로스|엇갈|cross", re.IGNORECASE)
+_LOOK_RING = re.compile(
+    r"(?P<dir>안쪽|바깥쪽|바깥|밖)(?:을|으로|를)?\s*(?:다\s*)?(?:바라보|바라볼|향하|향해|비추|비추도록|비출)",
+    re.IGNORECASE,
+)
+_LOOK_SPREAD = re.compile(r"(?:팬\s*)?(?P<value>\d+(?:\.\d+)?)\s*도")
+# The second fan axis (Align <> on Tilt): "틸트 15도" names the end-fixture
+# tilt offset; "틸트도/팬틸트 모두/입체" without a number takes the default V.
+_LOOK_TILT_SPREAD = re.compile(r"틸트\s*(?P<value>-?\d+(?:\.\d+)?)\s*도")
+_LOOK_TILT_FAN = re.compile(
+    r"틸트\s*(?:도|까지|랑|과|와)|팬\s*[/·]?\s*틸트|pan\s*/?\s*tilt|입체", re.IGNORECASE
+)
+_LOOK_PRESET_STORE = re.compile(
+    r"프리셋\s*(?P<no>\d+)\s*(?:번)?\s*(?:으?로|에)?\s*저장|저장.*?프리셋\s*(?P<no2>\d+)"
+)
+# 무드→포지션 제안 게이트: 포지션 의도 단어가 있어야만 발화한다 — 무드 어휘만
+# 있는 문장(색·룩 요청일 수 있음)은 모델 경로(find_looks 등)에 남긴다.
+_POSITION_INTENT = re.compile(r"포지션|포커스|방향|바라보|비추|조준|잡아|연출")
+
+# The ten-basic-positions request: build the canonical position sequence for
+# THIS rig and store it as consecutive Position presets, asking for the first
+# preset number when the instruction does not carry one.
+_BASIC_POSITIONS_REQUEST = re.compile(
+    r"(?:기본|베이직|basic).{0,16}?(?:포지션|프리셋|position).*?(?:저장|만들|잡아|생성)",
+    re.IGNORECASE | re.DOTALL,
+)
+_BASIC_POSITIONS_START = re.compile(r"(?P<no>\d+)\s*(?:번)?\s*(?:부터|에서(?:부터)?|번대)")
 
 _REPEATING_TYPE_COLUMNS_REQUEST = re.compile(
     r"(?:\d+\s*열\s*:\s*)?.*mmx.*(?:\d+\s*열\s*:\s*)?.*350\s*m?.*반복",
@@ -647,6 +707,407 @@ class ChatSession:
                 "명령 상태에서 확인해 주세요."
             ),
             command_outcomes=arranged.command_outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
+    @staticmethod
+    def _pointing_refusal(text: str) -> InstructionResult:
+        """A no-op turn result carrying WHY no aim command was sent."""
+        return InstructionResult(
+            status="ok",
+            text=text,
+            command_outcomes=(),
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
+    def _read_pointing_coordinates(
+        self, call_id: str
+    ) -> list[tuple[int, tuple[float, float, float]]] | InstructionResult:
+        """Every coordinate-confirmed ``(fid, (x, y, z))`` — or the refusal.
+
+        Shared by the FOCUS (point-at) and LOOK (fan/ring) handlers: both
+        compute per-fixture pan/tilt from the console's own patch read, and
+        both must refuse on a partial read rather than aim half a rig.
+        """
+        spatial = self._registry.dispatch(
+            ToolCall(id=call_id, name="get_spatial_context", arguments={})
+        )
+        if spatial.result.is_error:
+            return self._pointing_refusal(
+                "3D 좌표를 읽지 못해 조명 방향 변경을 시작하지 않았습니다. "
+                "콘솔 연결을 확인해 주세요."
+            )
+        try:
+            payload = json.loads(spatial.result.content)
+            records = payload["fixtures"] if "fixtures" in payload else payload["partial_fixtures"]
+            if "fixtures" not in payload and (
+                payload.get("truncated") or payload.get("roundtrip_capped")
+            ):
+                raise ValueError("coordinate read is incomplete")
+            return [
+                (record["fid"], (float(record["x"]), float(record["y"]), float(record["z"])))
+                for record in records
+                if isinstance(record, dict)
+                and isinstance(record.get("fid"), int)
+                and not isinstance(record.get("fid"), bool)
+            ]
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+            return self._pointing_refusal(
+                "3D 좌표 응답이 전송 중 잘렸거나 조회 한도에 도달해 조명 방향 "
+                "변경을 시작하지 않았습니다."
+            )
+
+    def _point_fixtures_at_target(self, text: str) -> InstructionResult | None:
+        """Aim every coordinate-confirmed fixture's beam at one stage point.
+
+        Runs on the MEASURED pan/tilt model (``server/spatial/pointing.py``):
+        positions come off the console's own patch read, the pan/tilt degrees
+        are computed per fixture, and the writes ride ``run_commands`` through
+        the ordinary approval gate. A fixture standing ON the target or beyond
+        the tilt ceiling is skipped and reported, never clamped.
+        """
+        if _POINT_AT_TARGET.search(text) is None:
+            return None
+        triple = _POINT_TARGET_TRIPLE.search(text)
+        if triple is not None:
+            target = PointingTarget(
+                float(triple.group("x")), float(triple.group("y")), float(triple.group("z"))
+            )
+        elif _POINT_TARGET_CENTRE.search(text) is not None:
+            target = PointingTarget(0.0, 0.0, 0.0)
+        else:
+            return None  # aiming verb without a target — let the model ask
+        fixtures = self._read_pointing_coordinates("pointing-read")
+        if isinstance(fixtures, InstructionResult):
+            return fixtures
+        pointable: list[tuple[int, tuple[float, float, float]]] = []
+        skipped: list[int] = []
+        for fid, position in fixtures:
+            try:
+                aim_pan_tilt(position, target.as_tuple())
+            except SpatialPointingError:
+                skipped.append(fid)
+            else:
+                pointable.append((fid, position))
+        if not pointable:
+            return InstructionResult(
+                status="ok",
+                text="목표 지점을 향할 수 있는 장비가 없어 조명 방향 변경을 시작하지 않았습니다.",
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        dimmer = 100.0 if _POINT_DIMMER_ON.search(text) is not None else None
+        commands = pointing_commands(pointable, target, dimmer=dimmer)
+        executed = self._registry.dispatch(
+            ToolCall(
+                id="pointing-write",
+                name="run_commands",
+                arguments={"commands": list(commands)},
+            )
+        )
+        skipped_note = (
+            f" 목표 지점과 겹치거나 틸트 한계를 넘는 {len(skipped)}대(FID "
+            f"{', '.join(str(fid) for fid in skipped)})는 제외했습니다."
+            if skipped
+            else ""
+        )
+        dimmer_note = "디머를 켜고 " if dimmer is not None else ""
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"{dimmer_note}좌표가 확인된 장비 {len(pointable)}대의 헤드가 "
+                f"({target.x:g}, {target.y:g}, {target.z:g}) 지점을 향하도록 "
+                f"Pan/Tilt를 요청했습니다.{skipped_note} 승인 또는 라이브 잠금 "
+                "상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+            ),
+            command_outcomes=executed.command_outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
+    def _look_pan_tilt(self, text: str) -> InstructionResult | None:
+        """Aim the rig into a DESIGN look — fan (out/in/cross) or ring (in/out).
+
+        The LOOK family of docs/proposals/pan-tilt-position-preset-strategy.md:
+        values are a function of the fixtures' RELATION (chain order, or the
+        radial around the rig centroid), not of one target point. Optionally
+        stores the programmer as a Position preset when the instruction names
+        an explicit preset number (never a guessed slot).
+        """
+        ring = _LOOK_RING.search(text)
+        fan = _LOOK_FAN.search(text)
+        if ring is None and fan is None:
+            return None
+        fixtures = self._read_pointing_coordinates("look-read")
+        if isinstance(fixtures, InstructionResult):
+            return fixtures
+        if not fixtures:
+            return self._pointing_refusal(
+                "좌표가 확인된 장비가 없어 룩 포지션을 시작하지 않았습니다."
+            )
+        skipped: list[int] = []
+        if ring is not None:
+            mode = "in" if ring.group("dir") == "안쪽" else "out"
+            cx = sum(position[0] for _fid, position in fixtures) / len(fixtures)
+            cy = sum(position[1] for _fid, position in fixtures) / len(fixtures)
+            aims: list[tuple[int, float, float]] = []
+            for fid, position in fixtures:
+                try:
+                    aims.extend(radial_pan_tilt([(fid, position)], center=(cx, cy), mode=mode))
+                except SpatialPointingError:
+                    skipped.append(fid)
+            look_label = f"RING {mode.upper()}"
+            look_korean = "링 " + ("안쪽" if mode == "in" else "바깥쪽") + " 조준"
+        else:
+            if _LOOK_FAN_CROSS.search(text) is not None:
+                mode = "cross"
+            elif _LOOK_FAN_IN.search(text) is not None:
+                mode = "in"
+            else:
+                mode = "out"
+            spread_match = _LOOK_SPREAD.search(_LOOK_TILT_SPREAD.sub("", text))
+            spread = float(spread_match.group("value")) if spread_match else 30.0
+            tilt_match = _LOOK_TILT_SPREAD.search(text)
+            if tilt_match is not None:
+                tilt_spread = float(tilt_match.group("value"))
+            elif _LOOK_TILT_FAN.search(text) is not None:
+                tilt_spread = 15.0
+            else:
+                tilt_spread = 0.0
+            try:
+                aims = list(
+                    fan_pan_tilt(
+                        list(fan_chain(fixtures)),
+                        spread=spread,
+                        mode=mode,
+                        tilt_spread=tilt_spread,
+                    )
+                )
+            except SpatialPointingError as error:
+                return self._pointing_refusal(f"부채살 포지션을 만들 수 없습니다: {error}")
+            look_label = f"FAN {mode.upper()}"
+            tilt_note = f", 틸트 ±{tilt_spread:g}도" if tilt_spread else ""
+            look_korean = {
+                "out": f"부채살(끝 장비 팬 ±{spread:g}도{tilt_note})",
+                "in": f"모으는 부채살(끝 장비 팬 ±{spread:g}도{tilt_note})",
+                "cross": f"교차 부채살(끝 장비 팬 ±{spread:g}도{tilt_note})",
+            }[mode]
+        if not aims:
+            return self._pointing_refusal(
+                "룩 포지션을 계산할 수 있는 장비가 없어 시작하지 않았습니다."
+            )
+        dimmer = 100.0 if _POINT_DIMMER_ON.search(text) is not None else None
+        commands = list(aimed_commands(aims, dimmer=dimmer))
+        preset_match = _LOOK_PRESET_STORE.search(text)
+        preset_note = ""
+        if preset_match is not None:
+            preset_no = int(preset_match.group("no") or preset_match.group("no2"))
+            try:
+                commands.extend(position_preset_store_commands(preset_no, look_label))
+            except SpatialPointingError as error:
+                return self._pointing_refusal(f"프리셋 저장 명령을 만들 수 없습니다: {error}")
+            preset_note = (
+                f" 이어서 Position 프리셋 2.{preset_no}에 '{look_label}'로 저장을 요청했습니다."
+            )
+        executed = self._registry.dispatch(
+            ToolCall(id="look-write", name="run_commands", arguments={"commands": commands})
+        )
+        skipped_note = (
+            f" 중심과 겹치거나 틸트 한계를 넘는 {len(skipped)}대(FID "
+            f"{', '.join(str(fid) for fid in skipped)})는 제외했습니다."
+            if skipped
+            else ""
+        )
+        dimmer_note = "디머를 켜고 " if dimmer is not None else ""
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"{dimmer_note}좌표가 확인된 장비 {len(aims)}대를 {look_korean} "
+                f"포지션으로 요청했습니다.{skipped_note}{preset_note} 승인 또는 "
+                "라이브 잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+            ),
+            command_outcomes=executed.command_outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
+    def _position_mood_suggestion(self, text: str) -> InstructionResult | None:
+        """연출 의도(무드) → 포지션 추천 카드 → 선택된 룩만 적용.
+
+        docs/proposals의 무드→포지션 매핑(`server/spatial/position_moods.py`)
+        기반. 실행이 아니라 제안이 기본이다: 키워드가 맞아도 카드로 확인을
+        받고, 무응답·거절이면 아무것도 보내지 않는다 — 키워드 하나로 단정해
+        실행하던 반사적 처리의 재도입을 막는 경계.
+        """
+        if _POSITION_INTENT.search(text) is None:
+            return None
+        suggestion = match_position_mood(text)
+        if suggestion is None:
+            return None
+        fixtures = self._read_pointing_coordinates("mood-read")
+        if isinstance(fixtures, InstructionResult):
+            return fixtures
+        if not fixtures:
+            return self._pointing_refusal(
+                "좌표가 확인된 장비가 없어 포지션 제안을 시작하지 않았습니다."
+            )
+        entry = suggestion.entry
+        options = [QuestionOption(label=entry.label, description=entry.reason)]
+        by_label = {
+            label: (aims, skipped) for label, aims, skipped in basic_position_presets(fixtures)
+        }
+        for alt in entry.alternatives:
+            options.append(QuestionOption(label=alt))
+        options.append(QuestionOption(label="적용 안 함"))
+        matched = ", ".join(suggestion.matched)
+        answer = self._ask_one(
+            f"'{matched}' 느낌에는 {entry.korean}({entry.label}) 포지션을 추천합니다. 적용할까요?",
+            options=tuple(options),
+            why=entry.reason,
+        )
+        if answer is None or "안 함" in answer or "안함" in answer:
+            return self._pointing_refusal(
+                f"포지션을 적용하지 않았습니다. (추천이었던 룩: {entry.label})"
+            )
+        chosen = next(
+            (label for label in by_label if label.casefold() == answer.strip().casefold()),
+            None,
+        )
+        if chosen is None:
+            return self._pointing_refusal(
+                f"'{answer}'는 기본 포지션 이름이 아니어서 적용하지 않았습니다. "
+                f"(가능: {', '.join(by_label)})"
+            )
+        aims, skipped = by_label[chosen]
+        if not aims:
+            return self._pointing_refusal(
+                f"{chosen} 포지션을 계산할 수 있는 장비가 없어 적용하지 않았습니다."
+            )
+        dimmer = 100.0 if _POINT_DIMMER_ON.search(text) is not None else None
+        executed = self._registry.dispatch(
+            ToolCall(
+                id="mood-write",
+                name="run_commands",
+                arguments={"commands": list(aimed_commands(aims, dimmer=dimmer))},
+            )
+        )
+        skipped_note = (
+            f" 조준 불가 {len(skipped)}대(FID {', '.join(str(fid) for fid in skipped)})는 "
+            "제외했습니다."
+            if skipped
+            else ""
+        )
+        dimmer_note = "디머를 켜고 " if dimmer is not None else ""
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"{dimmer_note}'{matched}' 의도에 맞춰 {chosen} 포지션을 장비 "
+                f"{len(aims)}대에 요청했습니다.{skipped_note} 승인 또는 라이브 잠금 "
+                "상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+            ),
+            command_outcomes=executed.command_outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
+    def _basic_position_presets(self, text: str) -> InstructionResult | None:
+        """Build the ten canonical positions for THIS rig and store them.
+
+        Preset 1 of the run is ALWAYS 'Home'; the rest follow
+        ``BASIC_POSITION_SEQUENCE`` from most basic to most varied. The first
+        preset number comes from the instruction ("N번부터") or from ONE
+        question card — never from a guessed free slot: ``Store Preset``
+        silently overwrites, so the number is the operator's call.
+        Each look is applied, stored, labelled and cleared as its own bundle,
+        so one refused look never voids the other nine.
+        """
+        if _BASIC_POSITIONS_REQUEST.search(text) is None:
+            return None
+        fixtures = self._read_pointing_coordinates("basic-presets-read")
+        if isinstance(fixtures, InstructionResult):
+            return fixtures
+        if not fixtures:
+            return self._pointing_refusal(
+                "좌표가 확인된 장비가 없어 기본 포지션 프리셋을 시작하지 않았습니다."
+            )
+        start_match = _BASIC_POSITIONS_START.search(text)
+        if start_match is not None:
+            start_no = int(start_match.group("no"))
+        else:
+            count = len(BASIC_POSITION_SEQUENCE)
+            answer = self._ask_one(
+                f"기본 포지션 {count}개를 Position 프리셋 몇 번부터 저장할까요? "
+                f"(예: 1 → Preset 2.1~2.{count}) 이미 있는 번호는 덮어씁니다.",
+                options=(
+                    QuestionOption(label="1"),
+                    QuestionOption(label="11"),
+                    QuestionOption(label="21"),
+                ),
+                why=(
+                    "Store Preset은 기존 슬롯을 경고 없이 덮어쓰므로 "
+                    "시작 번호는 운영자가 정해야 합니다."
+                ),
+            )
+            try:
+                start_no = int(re.search(r"\d+", answer or "").group(0))
+            except AttributeError:
+                return self._pointing_refusal(
+                    "시작 프리셋 번호를 받지 못해 저장을 시작하지 않았습니다. "
+                    "예: '기본 포지션 10개를 프리셋 21번부터 저장해줘'"
+                )
+        if start_no <= 0:
+            return self._pointing_refusal("시작 프리셋 번호는 1 이상이어야 합니다.")
+        try:
+            looks = basic_position_presets(fixtures)
+        except SpatialPointingError as error:
+            return self._pointing_refusal(f"기본 포지션을 계산할 수 없습니다: {error}")
+        outcomes: list[CommandOutcome] = []
+        stored: list[str] = []
+        skipped_notes: list[str] = []
+        for offset, (label, aims, skipped) in enumerate(looks):
+            preset_no = start_no + offset
+            if not aims:
+                skipped_notes.append(f"{label}(2.{preset_no}): 조준 가능한 장비 없음 — 건너뜀")
+                continue
+            commands = [
+                *aimed_commands(aims),
+                *position_preset_store_commands(preset_no, label),
+                "ClearAll",
+            ]
+            executed = self._registry.dispatch(
+                ToolCall(
+                    id=f"basic-preset-{preset_no}",
+                    name="run_commands",
+                    arguments={"commands": commands},
+                )
+            )
+            outcomes.extend(executed.command_outcomes)
+            stored.append(f"2.{preset_no} '{label}'")
+            if skipped:
+                skipped_notes.append(f"{label}: FID {', '.join(str(fid) for fid in skipped)} 제외")
+        if not stored:
+            return self._pointing_refusal(
+                "어느 포지션도 계산되지 않아 프리셋을 저장하지 않았습니다."
+            )
+        notes = f" 참고: {'; '.join(skipped_notes)}." if skipped_notes else ""
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"리그 배치에서 유도한 기본 포지션 {len(stored)}개를 "
+                f"Position 프리셋에 저장 요청했습니다: {', '.join(stored)}.{notes} "
+                "각 프리셋은 적용→저장→ClearAll 순서로 처리했으며, 승인 또는 라이브 "
+                "잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+            ),
+            command_outcomes=tuple(outcomes),
             retries_used=0,
             model_calls=0,
             duration_seconds=0.0,
@@ -1240,6 +1701,14 @@ class ChatSession:
         try:
             try:
                 result = self._all_fixtures_elevation(text)
+                if result is None:
+                    result = self._basic_position_presets(text)
+                if result is None:
+                    result = self._look_pan_tilt(text)
+                if result is None:
+                    result = self._point_fixtures_at_target(text)
+                if result is None:
+                    result = self._position_mood_suggestion(text)
                 if result is None:
                     result = self._repeating_type_columns_layout(text)
                 if result is None:

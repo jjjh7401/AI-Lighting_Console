@@ -38,6 +38,13 @@ from server.spatial.choreography import (
     match_spatial_qualifier,
     resolve_spatial_sort,
 )
+from server.spatial.pointing import (
+    POINTING_TILT_LIMIT_DEGREES,
+    PointingTarget,
+    SpatialPointingError,
+    aim_pan_tilt,
+    pointing_commands,
+)
 from server.spatial.presets import (
     SPATIAL_PRESET_DECIMALS,
     SPATIAL_PRESET_DEFAULTS,
@@ -72,6 +79,7 @@ from server.spatial.schema import (
 from server.spatial.sorting import spatial_sorted_fids, spatial_sorted_fixtures
 
 __all__ = [
+    "POINTING_TILT_LIMIT_DEGREES",
     "SPATIAL_LOW_CONFIDENCE_REASONS",
     "SPATIAL_PRESETS",
     "SPATIAL_PRESET_DECIMALS",
@@ -91,20 +99,24 @@ __all__ = [
     "SPATIAL_WAVE_HIGH",
     "SPATIAL_WAVE_LOW",
     "SPATIAL_WAVE_PHASE_SPAN",
+    "PointingTarget",
     "SpatialAnalysis",
     "SpatialAnalysisError",
     "SpatialFixture",
     "SpatialGapProfile",
     "SpatialPlacement",
+    "SpatialPointingError",
     "SpatialPresetError",
     "SpatialPresetPlan",
     "SpatialQualifierMatch",
     "SpatialRow",
+    "aim_pan_tilt",
     "analyze_spatial_records",
     "analyze_spatial_rows",
     "build_spatial_selection_chain",
     "build_spatial_wave_commands",
     "match_spatial_qualifier",
+    "pointing_commands",
     "resolve_spatial_sort",
     "spatial_analysis_to_dict",
     "spatial_fixture_from_record",
