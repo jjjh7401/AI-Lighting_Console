@@ -137,6 +137,14 @@ Fixture 26 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At -90 ; Attribute 'Til
   `_point_fixtures_at_target` (`server/web/session.py`)가
   "…중앙/(x,y,z)…바라보게" 요청을 모델 없이 처리한다.
   명령 생성은 `server/spatial/pointing.py::pointing_commands()`.
+- **큐 페이저 함정 (라이브 계측)**: 페이저(컬러 체이스 등)가 든 큐에 포지션만
+  담긴 프로그래머를 `Store Cue <n> ... /merge`로 병합하면 **페이저가 평탄화**
+  된다 — 재생 시 무지개가 멎은 정지 스프레드만 남는다. ok 응답으로는 구분
+  불가(룰북의 "ok ≠ 움직임"과 같은 결). 올바른 절차: 포지션 프리셋 리콜과
+  페이저를 **한 프로그래머 상태**에 함께 만든 뒤 `/Overwrite`로 저장한다.
+  검증은 3D 두 프레임 픽셀 diff(정지=0px, 구동=수만 px)로 한다.
+- 익스큐터 배정의 검증 문법은 `Assign Sequence <n> At Executor <m>` —
+  `At Page 1.<x>` 형태는 Cannot Create Object로 거부될 수 있다.
 
 ## 4. 검증 절차 (재계측 레시피)
 
