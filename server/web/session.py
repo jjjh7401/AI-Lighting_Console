@@ -36,6 +36,12 @@ from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate, ScreenDecision
 from server.safety.monitor import HealthMonitor
 from server.safety.session_context import bind_session_key, new_session_key, reset_session_key
+from server.spatial.pointing import (
+    PointingTarget,
+    SpatialPointingError,
+    aim_pan_tilt,
+    pointing_commands,
+)
 from server.spatial.vocabulary import (
     layout_terms_guidance,
     match_explicit_layout,
@@ -111,6 +117,19 @@ _ALL_FIXTURES_ELEVATION = re.compile(
     r".*(?:바닥(?:으로부터)?|무대(?:\s*바닥)?).*(?:위|기준).*(?:5\s*(?:m|미터)|5m)",
     re.IGNORECASE,
 )
+
+# Aim every moving head's beam at one stage point (measured pan/tilt model —
+# server/spatial/pointing.py). Trigger: an aiming verb plus either a centre
+# word or an explicit coordinate triple.
+_POINT_AT_TARGET = re.compile(
+    r"(?:바라보|바라볼|비추|비춰|비출|향하|향해|향할|조준|겨냥|point|aim)",
+    re.IGNORECASE,
+)
+_POINT_TARGET_CENTRE = re.compile(r"중앙|센터|가운데|정?중앙|원점|center|centre", re.IGNORECASE)
+_POINT_TARGET_TRIPLE = re.compile(
+    r"\(?\s*(?P<x>-?\d+(?:\.\d+)?)\s*,\s*(?P<y>-?\d+(?:\.\d+)?)\s*,\s*(?P<z>-?\d+(?:\.\d+)?)\s*\)?"
+)
+_POINT_DIMMER_ON = re.compile(r"불(?:을|도)?\s*(?:다\s*)?켜|점등|풀\s*디머|dimmer", re.IGNORECASE)
 
 _TYPED_TWO_ROW_REQUEST = re.compile(
     r"(?:mmx).*(?:350m|350\s*m).*(?:1[.,]?5\s*(?:m|미터))"
@@ -647,6 +666,115 @@ class ChatSession:
                 "명령 상태에서 확인해 주세요."
             ),
             command_outcomes=arranged.command_outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
+    def _point_fixtures_at_target(self, text: str) -> InstructionResult | None:
+        """Aim every coordinate-confirmed fixture's beam at one stage point.
+
+        Runs on the MEASURED pan/tilt model (``server/spatial/pointing.py``):
+        positions come off the console's own patch read, the pan/tilt degrees
+        are computed per fixture, and the writes ride ``run_commands`` through
+        the ordinary approval gate. A fixture standing ON the target or beyond
+        the tilt ceiling is skipped and reported, never clamped.
+        """
+        if _POINT_AT_TARGET.search(text) is None:
+            return None
+        triple = _POINT_TARGET_TRIPLE.search(text)
+        if triple is not None:
+            target = PointingTarget(
+                float(triple.group("x")), float(triple.group("y")), float(triple.group("z"))
+            )
+        elif _POINT_TARGET_CENTRE.search(text) is not None:
+            target = PointingTarget(0.0, 0.0, 0.0)
+        else:
+            return None  # aiming verb without a target — let the model ask
+        spatial = self._registry.dispatch(
+            ToolCall(id="pointing-read", name="get_spatial_context", arguments={})
+        )
+        if spatial.result.is_error:
+            return InstructionResult(
+                status="ok",
+                text=(
+                    "3D 좌표를 읽지 못해 조명 방향 변경을 시작하지 않았습니다. "
+                    "콘솔 연결을 확인해 주세요."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        try:
+            payload = json.loads(spatial.result.content)
+            records = payload["fixtures"] if "fixtures" in payload else payload["partial_fixtures"]
+            if "fixtures" not in payload and (
+                payload.get("truncated") or payload.get("roundtrip_capped")
+            ):
+                raise ValueError("coordinate read is incomplete")
+            fixtures = [
+                (record["fid"], (float(record["x"]), float(record["y"]), float(record["z"])))
+                for record in records
+                if isinstance(record, dict)
+                and isinstance(record.get("fid"), int)
+                and not isinstance(record.get("fid"), bool)
+            ]
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+            return InstructionResult(
+                status="ok",
+                text=(
+                    "3D 좌표 응답이 전송 중 잘렸거나 조회 한도에 도달해 조명 방향 "
+                    "변경을 시작하지 않았습니다."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        pointable: list[tuple[int, tuple[float, float, float]]] = []
+        skipped: list[int] = []
+        for fid, position in fixtures:
+            try:
+                aim_pan_tilt(position, target.as_tuple())
+            except SpatialPointingError:
+                skipped.append(fid)
+            else:
+                pointable.append((fid, position))
+        if not pointable:
+            return InstructionResult(
+                status="ok",
+                text="목표 지점을 향할 수 있는 장비가 없어 조명 방향 변경을 시작하지 않았습니다.",
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        dimmer = 100.0 if _POINT_DIMMER_ON.search(text) is not None else None
+        commands = pointing_commands(pointable, target, dimmer=dimmer)
+        executed = self._registry.dispatch(
+            ToolCall(
+                id="pointing-write",
+                name="run_commands",
+                arguments={"commands": list(commands)},
+            )
+        )
+        skipped_note = (
+            f" 목표 지점과 겹치거나 틸트 한계를 넘는 {len(skipped)}대(FID "
+            f"{', '.join(str(fid) for fid in skipped)})는 제외했습니다."
+            if skipped
+            else ""
+        )
+        dimmer_note = "디머를 켜고 " if dimmer is not None else ""
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"{dimmer_note}좌표가 확인된 장비 {len(pointable)}대의 헤드가 "
+                f"({target.x:g}, {target.y:g}, {target.z:g}) 지점을 향하도록 "
+                f"Pan/Tilt를 요청했습니다.{skipped_note} 승인 또는 라이브 잠금 "
+                "상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+            ),
+            command_outcomes=executed.command_outcomes,
             retries_used=0,
             model_calls=0,
             duration_seconds=0.0,
@@ -1240,6 +1368,8 @@ class ChatSession:
         try:
             try:
                 result = self._all_fixtures_elevation(text)
+                if result is None:
+                    result = self._point_fixtures_at_target(text)
                 if result is None:
                     result = self._repeating_type_columns_layout(text)
                 if result is None:

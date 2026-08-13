@@ -1154,6 +1154,85 @@ class TestAllFixturesElevation:
         }
 
 
+class TestPointFixturesAtTarget:
+    def _registry(self, calls):
+        fixtures = [
+            {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
+            {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
+            {"fid": 41, "name": "Sphere 1", "x": 0.0, "y": 0.0, "z": 0.0},
+        ]
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    (CommandOutcome(command="Fixture 20", status="proposal"),),
+                )
+
+        return Registry()
+
+    def test_routes_centre_pointing_without_model_and_skips_the_on_target_fixture(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        event = session.run_instruction(
+            "모든 장비를 선택해서 불을 켜고 무대 바닥 중앙(0,0,0) 위치로 "
+            "조명장비의 헤드가 바라볼 수 있도록 해줘"
+        )
+
+        assert provider.calls == []
+        assert [call.name for call in calls] == ["get_spatial_context", "run_commands"]
+        commands = calls[-1].arguments["commands"]
+        # ONE chained line per fixture (text-dedupe defence); the measured aim
+        # for FID 20 at (4,0,6) -> origin: Pan 90 / Tilt 33.7, mirrored fixture
+        # gets the mirrored pan; the sphere ON the target is skipped, and
+        # 불을 켜고 turns the dimmer on.
+        assert commands == [
+            "Fixture 20 ; Attribute 'Dimmer' At 100 ; "
+            "Attribute 'Pan' At 90 ; Attribute 'Tilt' At 33.7",
+            "Fixture 26 ; Attribute 'Dimmer' At 100 ; "
+            "Attribute 'Pan' At -90 ; Attribute 'Tilt' At 33.7",
+        ]
+        assert "2대" in event["text"]
+        assert "1대(FID 41)" in event["text"]
+
+    def test_an_explicit_coordinate_triple_overrides_the_centre_words(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        event = session.run_instruction("전체 헤드가 (2, -3, 0.5) 지점을 바라보게 해줘")
+
+        assert calls[-1].name == "run_commands"
+        assert "(2, -3, 0.5)" in event["text"]
+        commands = calls[-1].arguments["commands"]
+        # No dimmer word -> no dimmer line.
+        assert not any("Dimmer" in command for command in commands)
+
+    def test_an_aiming_verb_without_a_target_goes_to_the_model(self, tmp_path):
+        provider = ScriptedProvider([_final("어느 지점을 바라보게 할까요?")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+
+        event = session.run_instruction("무빙헤드가 저쪽을 바라보게 해줘")
+
+        assert len(provider.calls) == 1
+        assert event["text"] == "어느 지점을 바라보게 할까요?"
+
+
 class TestMultiRingCircle:
     def test_asks_radii_and_order_then_places_three_rings(self, tmp_path):
         provider = ScriptedProvider([])

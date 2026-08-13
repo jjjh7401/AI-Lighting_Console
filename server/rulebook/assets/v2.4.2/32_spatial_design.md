@@ -117,6 +117,36 @@ set the speed.
 불명확하면 쓰기 전에 의미를 확인한다. 좌표 쓰기는 쇼파일을 바꾸므로 명시 요청에만
 수행하고, 승인·백업·읽기 검증이 끝난 뒤에만 성공으로 보고한다.
 
+### 헤드를 무대 좌표로 향하게 하기 — Pan/Tilt 조준 (measured)
+
+`Attribute 'Pan' At <n>` / `Attribute 'Tilt' At <n>` 의 값은 **물리 각도(도)**다 —
+퍼센트가 아니다. 라이브 계측으로 확정한 규약 (패치 회전 전부 0 기준):
+
+- Pan 0 / Tilt 0 = 빔이 수직 아래(무대 −Z).
+- Tilt 양수 = 빔이 무대 +Y(업스테이지) 쪽으로 기움 (Pan 0 기준).
+- Pan 양수 = 그 기울임 방향을 위에서 봐서 반시계로 회전 (+Y → −X at +90).
+- 패치 바디 회전 `Rotz r` 은 Pan 기준틀을 같은 방향으로 돌린다 — 필요한
+  Pan에서 r을 뺀다. `Rotx`/`Roty` 는 미계측: 0이 아니면 조준을 계산하지 말고
+  말하라.
+- 음수 값은 따옴표 없이 그대로 동작한다 (`At -150`). 패치 좌표 쓰기의
+  작은따옴표 규칙과 다른 채널이다.
+
+픽스처 위치 F에서 목표 T를 향하는 값은, v = T − F 로 두고 tilt는
+`acos(-v_z / |v|)`, pan은 `atan2(-v_x, v_y) − Rotz` (−180..180 정규화)다.
+픽스처마다 값이 다르므로 반드시 **한 대씩 선택 → 속성** 순서로 묶는다:
+
+```
+Fixture <fid>
+Attribute 'Dimmer' At 100
+Attribute 'Pan' At <pan degrees>
+Attribute 'Tilt' At <tilt degrees>
+```
+
+- 목표와 같은 좌표에 있는 오브젝트(원점 마커 등)는 방향이 정의되지 않는다 —
+  제외하고 그렇게 말하라.
+- 계산된 tilt가 헤드 가동범위(약 135도)를 넘으면 clamp하지 말고 제외·보고한다.
+- 서버 구현: `server/spatial/pointing.py` (`aim_pan_tilt`, `pointing_commands`).
+
 ### What never reaches the command line
 
 - Coordinates, in any form. They are the sort's input.
