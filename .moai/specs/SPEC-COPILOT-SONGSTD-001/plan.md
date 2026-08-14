@@ -5,6 +5,7 @@
 ```
 server/design/                # 신설 — 표준 엔진 (콘솔 무접촉, 순수)
   profile.py                  # MusicProfile, 통합 무드 사전 (R1)
+  rig.py                      # RigProfile — 인벤토리/층/기하/스케일 (R1b)
   energy.py                   # D→축 예산 함수, 박↔초 환산, 장르 오버레이 (R2)
   lint.py                     # L1~L14 (R3)
 server/audio/                 # 신설 — M4 (librosa 지연 import)
@@ -24,12 +25,16 @@ server/web/session.py         # 어휘 확장 (BPM·장르 파싱, M4 업로드 
    palette)`, `resolve_section(mood_text, profile) -> (D, color_tendency,
    position_candidates)` + 우선순위 M2. 컨셉 시드 표(우주/네온/빈티지 등
    초기 6종).
-2. `energy.py`: `axis_budget(D, profile) -> AxisBudget(dimmer_pct,
+2. `rig.py`: `RigProfile` + `build_rig_profile(patch, groups, coords,
+   declared_layers=None)` — RG5 층 결정 순서(선언>그룹 이름 휴리스틱>
+   단일층 축퇴), RG6 예산 비례. 린트·예산 함수는 RigProfile을 인자로
+   받아 규칙을 조건화 (RG1 비활성 노트 포함).
+3. `energy.py`: `axis_budget(D, profile, rig) -> AxisBudget(dimmer_pct,
    fade_beats, position_width, saturation, fx_axes, fx_speed_mult)` +
    `beats_to_seconds`. §3 표를 코드 상수로, §7 장르 오버레이.
-3. `lint.py`: `lint_sheet(sheet, profile) -> tuple[LintFinding, ...]`.
-4. 유닛: 사전/예산/린트 각각. Seq 114 실측 결함(전 큐 100%)을 L2 위반
-   고정 케이스로.
+4. `lint.py`: `lint_sheet(sheet, profile, rig) -> tuple[LintFinding, ...]`.
+5. 유닛: 사전/리그/예산/린트 각각. Seq 114 실측 결함(전 큐 100%)을 L2
+   위반 고정 케이스로, 단일층 리그의 L6/L7 비활성 케이스 포함.
 
 ## M2 — 포지션+디머 표준 시트 (라이브 검증)
 
