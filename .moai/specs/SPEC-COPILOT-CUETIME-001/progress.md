@@ -23,6 +23,20 @@
 - 도구: tools/ws_live_t1.py (WS 원샷 드라이버 — 승인 자동, 카드 답변
   스크립트).
 
-## M2 (T2 MIB) — 미착수
+## M2 (T2 MIB) — 완료 2026-08-14
+
+- 구현: `server/spatial/mib.py` — `PositionCuePlan`, `apply_mib`(다크→
+  리빌+새 프리셋이면 중간 번호에 포지션 전용 선이동 큐 삽입, 리빌 큐
+  포지션 제거, 불명 시작 상태는 점등 간주), `position_cue_bundle`
+  (T1 빌더 재사용).
+- 테스트: test_mib.py 12개 — 65 passed (mib+pointing 스코프), ruff clean.
+- 라이브 A/B (Seq 102 MIB vs Seq 103 대조군, Wide 2.26→Black→Cross 2.28):
+  - 다크 선이동(큐 2.5) 중 가시 변화 0 px.
+  - 리빌 t0.5→t2.5 moved_away: MIB **0 px** vs 대조군 **4,731 px**,
+    기하 IoU(Otsu) 0.70 vs 0.54 — 허우적거림 제거 정량 확인.
+  - 콘솔 산출물: **Sequence 102** (MIB 데모, 큐 1/2/2.5/3) 잔존.
+    대조군 103은 삭제.
+- 계측 노하우 스킬 §3c 기록 (뷰포트 크롭, 프레임별 Otsu, 고정 임계값
+  함정, /NoConfirm).
 
 ## M3 (T3 곡 시트) — 미착수
