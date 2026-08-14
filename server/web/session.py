@@ -1354,9 +1354,10 @@ class ChatSession:
                     f"큐 {res.cue_no} {res.section.name}({stamp}): 건너뜀 — {res.skipped_reason}"
                 )
             else:
+                varied = f", {res.varied_from} 대안" if res.varied_from else ""
                 lines.append(
                     f"큐 {res.cue_no} {res.section.name}({stamp}): {res.look_label} "
-                    f"(Preset 2.{res.preset_no})"
+                    f"(Preset 2.{res.preset_no}{varied})"
                 )
         mib_notes = [
             f"큐 {plan.cue_no:g} '{plan.name}' (다크 선이동)"

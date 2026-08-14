@@ -70,6 +70,7 @@ class PositionSheetResolution:
     preset_no: int | None = None
     blackout: bool = False
     skipped_reason: str | None = None
+    varied_from: str | None = None  # canonical mood look when an alternative was used
 
 
 @dataclass(frozen=True)
@@ -93,6 +94,25 @@ def _cue_name(section: PositionSheetSection, cue_no: int) -> str:
     if not kept or kept.isdigit():
         return f"Section {cue_no}"
     return kept
+
+
+def _pick_varied(candidates: Sequence[str], usage: dict[str, tuple[int, int]]) -> str:
+    """The mood's look, rotated over its ALTERNATIVES when the sheet repeats.
+
+    A recurring chorus mood should not park the rig on the identical preset
+    every time (measured: the metal sheet stored Cross twice and Fan Out
+    twice). Deterministic choice among the entry's same-vibe candidates:
+    fewest uses so far, then least-recently used, then table order — the
+    first occurrence keeps the canonical look and every repeat drifts to a
+    fresh alternative before any look comes back.
+    """
+
+    def key(pair: tuple[int, str]) -> tuple[int, int, int]:
+        order, label = pair
+        count, last_index = usage.get(label, (0, -1))
+        return (count, last_index, order)
+
+    return min(enumerate(candidates), key=key)[1]
 
 
 def build_position_cue_sheet(
@@ -124,6 +144,7 @@ def build_position_cue_sheet(
             )
 
     resolutions: list[PositionSheetResolution] = []
+    usage: dict[str, tuple[int, int]] = {}  # label -> (use count, last section index)
     plans: list[PositionCuePlan] = []
     for index, section in enumerate(sections):
         cue_no = index + 1  # skipped sections consume numbers (songcue convention)
@@ -150,11 +171,17 @@ def build_position_cue_sheet(
                 )
             )
             continue
-        label = suggestion.entry.label
+        candidates = (suggestion.entry.label, *suggestion.entry.alternatives)
+        label = _pick_varied(candidates, usage)
+        usage[label] = (usage.get(label, (0, -1))[0] + 1, index)
         preset_no = preset_start + BASIC_POSITION_SEQUENCE.index(label)
         resolutions.append(
             PositionSheetResolution(
-                section=section, cue_no=cue_no, look_label=label, preset_no=preset_no
+                section=section,
+                cue_no=cue_no,
+                look_label=label,
+                preset_no=preset_no,
+                varied_from=(suggestion.entry.label if label != suggestion.entry.label else None),
             )
         )
         plans.append(

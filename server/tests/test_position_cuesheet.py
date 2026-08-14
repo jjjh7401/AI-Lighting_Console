@@ -86,6 +86,26 @@ class TestBuildPositionCueSheet:
         store = next(line for line in sheet.bundles[0] if line.startswith("Store"))
         assert store == "Store Sequence 110 Cue 1 'Section 1' CueFade 3"
 
+    def test_repeating_moods_rotate_over_alternatives(self):
+        # A metal set repeats its chorus/verse moods; the sheet must not park
+        # the rig on the identical preset every time. Deterministic rotation:
+        # fewest uses -> least recently used -> table order.
+        sections = (
+            PositionSheetSection("Drop1", 0, "클럽 드롭"),
+            PositionSheetSection("Verse", 10_000, "화려하게 펼침"),
+            PositionSheetSection("Drop2", 20_000, "클럽 드롭"),
+            PositionSheetSection("Solo", 30_000, "화려 펼침"),
+        )
+        sheet = build_position_cue_sheet(sections, sequence_no=110, preset_start=21, fids=[20])
+        labels = [res.look_label for res in sheet.resolutions]
+        # First occurrences keep the canonical looks; repeats drift to fresh
+        # same-vibe alternatives (Cross -> Ring Out, Fan Out -> Audience).
+        assert labels == ["Cross", "Fan Out", "Ring Out", "Audience"]
+        assert len(set(labels)) == 4
+        assert sheet.resolutions[2].varied_from == "Cross"
+        assert sheet.resolutions[3].varied_from == "Fan Out"
+        assert sheet.resolutions[0].varied_from is None
+
     def test_refusals(self):
         with pytest.raises(SpatialPointingError, match="no song sections"):
             build_position_cue_sheet((), sequence_no=110, preset_start=21, fids=[20])
