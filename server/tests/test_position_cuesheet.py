@@ -78,6 +78,14 @@ class TestBuildPositionCueSheet:
         store = next(line for line in sheet.bundles[0] if line.startswith("Store"))
         assert store == "Store Sequence 110 Cue 1 'v21' CueFade 3"
 
+    def test_a_digits_only_name_remainder_falls_back(self):
+        # "브레이크1" → ASCII remainder "1" — measured live: the cue list
+        # filled with cues named '1', '2'. Digits-only = fall back.
+        sections = (PositionSheetSection("브레이크1", 0, "잔잔하게"),)
+        sheet = build_position_cue_sheet(sections, sequence_no=110, preset_start=21, fids=[20])
+        store = next(line for line in sheet.bundles[0] if line.startswith("Store"))
+        assert store == "Store Sequence 110 Cue 1 'Section 1' CueFade 3"
+
     def test_refusals(self):
         with pytest.raises(SpatialPointingError, match="no song sections"):
             build_position_cue_sheet((), sequence_no=110, preset_start=21, fids=[20])

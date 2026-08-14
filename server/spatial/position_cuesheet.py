@@ -83,9 +83,16 @@ class PositionCueSheet:
 
 
 def _cue_name(section: PositionSheetSection, cue_no: int) -> str:
-    """An MA3-safe cue name — ASCII subset, no dots (the console strips them)."""
+    """An MA3-safe cue name — ASCII subset, no dots (the console strips them).
+
+    A Korean name with a trailing digit ("브레이크1") would otherwise degrade
+    to the bare digit (measured live: cues named '1', '2') — a digits-only
+    remainder is as meaningless as an empty one, so both fall back.
+    """
     kept = "".join(_SAFE_NAME.findall(section.name)).strip()
-    return kept or f"Section {cue_no}"
+    if not kept or kept.isdigit():
+        return f"Section {cue_no}"
+    return kept
 
 
 def build_position_cue_sheet(
