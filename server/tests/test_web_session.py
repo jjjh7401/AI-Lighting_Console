@@ -1445,6 +1445,122 @@ class TestBasicPositionPresets:
         assert "시작 프리셋 번호" in event["text"]
 
 
+class TestPositionCueStoreSession:
+    """T1: '프리셋 N을 시퀀스 S 큐 C로 저장, 페이드 F초' — preset-referenced cue."""
+
+    def _registry(self, calls):
+        fixtures = [
+            {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
+            {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
+        ]
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    (CommandOutcome(command="Fixture 20", status="proposal"),),
+                )
+
+        return Registry()
+
+    class _Channel:
+        def __init__(self, answers):
+            self.answers = list(answers)
+            self.asked = []
+
+        def ask(self, request, **_kwargs):
+            self.asked.append(request)
+            return self.answers.pop(0) if self.answers else UNANSWERED
+
+    def test_the_full_instruction_builds_the_referenced_cue_bundle(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel([])
+        session._question_channel = channel
+
+        event = session.run_instruction("프리셋 2.28을 시퀀스 101 큐 1로 저장, 페이드 5초")
+
+        assert provider.calls == []
+        assert channel.asked == []
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert len(writes) == 1
+        assert writes[0].arguments["commands"] == [
+            "Fixture 20 + 26 ; At Preset 2.28",
+            "Store Sequence 101 Cue 1 'Pos 2.28' CueFade 5",
+            "ClearAll",
+        ]
+        assert "페이드 5초" in event["text"]
+
+    def test_a_missing_sequence_number_asks_one_card(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(["110"])
+        session._question_channel = channel
+
+        session.run_instruction("프리셋 28번 포지션을 큐로 저장해줘, 페이드 3초")
+
+        assert len(channel.asked) == 1
+        assert "어느 시퀀스" in channel.asked[0].prompt
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert writes[0].arguments["commands"][1] == (
+            "Store Sequence 110 Cue 1 'Pos 2.28' CueFade 3"
+        )
+
+    def test_no_answer_refuses_instead_of_guessing_a_sequence(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel([])  # UNANSWERED
+
+        event = session.run_instruction("프리셋 28을 큐로 저장해줘")
+
+        assert [call.name for call in calls] == ["get_spatial_context"]
+        assert "시퀀스 번호를 받지 못해" in event["text"]
+
+    def test_a_fade_less_instruction_omits_cuefade(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel([])
+
+        session.run_instruction("프리셋 2.21을 시퀀스 101 큐 2로 저장해줘")
+
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert writes[0].arguments["commands"][1] == "Store Sequence 101 Cue 2 'Pos 2.21'"
+
+    def test_a_preset_store_without_cue_words_is_not_intercepted(self, tmp_path):
+        # "프리셋 N로 저장" (no 큐) stays with the look/preset path.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel([])
+
+        session.run_instruction("장비들이 바깥쪽을 바라보게 하고 프리셋 11로 저장해줘")
+
+        writes = [call for call in calls if call.name == "run_commands"]
+        commands = writes[0].arguments["commands"]
+        assert any(command.startswith("Store Preset 2.11") for command in commands)
+        assert not any("Store Sequence" in command for command in commands)
+
+
 class TestLookPanTilt:
     def _registry(self, calls):
         fixtures = [

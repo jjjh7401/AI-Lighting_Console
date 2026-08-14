@@ -146,6 +146,32 @@ Fixture 26 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At -90 ; Attribute 'Til
 - 익스큐터 배정의 검증 문법은 `Assign Sequence <n> At Executor <m>` —
   `At Page 1.<x>` 형태는 Cannot Create Object로 거부될 수 있다.
 
+## 3b. 포지션 큐 트랜지션 (T1 실측 — SPEC-COPILOT-CUETIME-001)
+
+검증된 번들(빌더 `position_cue_store_commands` + `preset_recall_command`,
+세션 어휘 "프리셋 N을 시퀀스 S 큐 C로 저장, 페이드 F초"):
+
+```
+Fixture 20 + 26 + … ; At Preset 2.28
+Store Sequence 101 Cue 1 'Pos 2.28' CueFade 5
+ClearAll
+```
+
+- 라이브 확인: 페이드 중 3D 프레임 diff 13만~40만 px, 페이드 종료 후
+  연속 프레임 diff 5 px(정지). 픽스처 시트 PanTilt 열이 값이 아니라
+  "2.28 Cro…" **프리셋 참조**로 표시 — 참조 저장 성립.
+- **큐 이름의 점(.)은 MA3가 삼킨다**: `'Pos 2.28'`로 저장하면 실제 큐
+  이름은 `Pos 228`이 된다. 이름으로 오브젝트를 다시 찾을 때(prop/state
+  경로) 점 없는 이름을 써야 한다.
+- **CueFade readback**: Cue 오브젝트의 `CueFade`/`Fade` prop은
+  `property not readable`. 실제 값은 **큐 Part**에 `CueInFade`로 산다 —
+  `prop:DataPool/Sequences/<n>/<cueName>/<partName>|CueInFade` (part
+  이름은 큐 이름과 동일; 실측 5.0 readback). CueFade는 state snapshot에도
+  없다(songcue_report.py PROPERTY_UNOBSERVED_NOTE) — ok 응답만으로 페이드
+  검증 금지.
+- 시퀀스 번호는 운영자 결정(카드 1장) — Store는 기존 큐 슬롯에 그대로
+  얹힌다. `/Merge`·`/Overwrite`는 쓰지 않는다(페이저 평탄화·블랙리스트).
+
 ## 4. 검증 절차 (재계측 레시피)
 
 1. `grandma3-web-stable` 프로세스를 잠시 중지 (feedback 포트 9005 단독 점유).

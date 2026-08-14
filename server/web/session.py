@@ -46,7 +46,9 @@ from server.spatial.pointing import (
     fan_chain,
     fan_pan_tilt,
     pointing_commands,
+    position_cue_store_commands,
     position_preset_store_commands,
+    preset_recall_command,
     radial_pan_tilt,
 )
 from server.spatial.position_moods import match_position_mood
@@ -164,6 +166,18 @@ _LOOK_TILT_FAN = re.compile(
 )
 _LOOK_PRESET_STORE = re.compile(
     r"프리셋\s*(?P<no>\d+)\s*(?:번)?\s*(?:으?로|에)?\s*저장|저장.*?프리셋\s*(?P<no2>\d+)"
+)
+# Position-cue store (T1, SPEC-COPILOT-CUETIME-001): "프리셋 N(포지션)을
+# 시퀀스 S 큐 C로 저장, 페이드 F초". The cue is stored from a PRESET RECALL
+# state so it holds a reference (32_spatial_design.md) — regenerating the
+# preset re-focuses every cue built on it. The sequence number is the
+# operator's call when absent (Store can land on an existing cue).
+_CUE_STORE_INTENT = re.compile(r"(?=.*큐)(?=.*저장)", re.DOTALL)
+_CUE_PRESET_REF = re.compile(r"프리셋\s*(?:2\s*\.\s*)?(?P<no>\d+)\s*(?:번)?")
+_CUE_SEQUENCE_NO = re.compile(r"시퀀스\s*(?P<no>\d+)")
+_CUE_NO = re.compile(r"큐\s*(?P<no>\d+(?:\.\d+)?)")
+_CUE_FADE = re.compile(
+    r"페이드\s*(?P<sec>\d+(?:\.\d+)?)\s*초?|(?P<sec2>\d+(?:\.\d+)?)\s*초\s*페이드"
 )
 # 무드→포지션 제안 게이트: 포지션 의도 단어가 있어야만 발화한다 — 무드 어휘만
 # 있는 문장(색·룩 요청일 수 있음)은 모델 경로(find_looks 등)에 남긴다.
@@ -1113,6 +1127,97 @@ class ChatSession:
             duration_seconds=0.0,
         )
 
+    def _position_cue_store(self, text: str) -> InstructionResult | None:
+        """Store a Position preset as a cue with an optional position fade (T1).
+
+        The bundle is ``recall → Store Sequence S Cue C 'Pos 2.N' CueFade F →
+        ClearAll``: the cue keeps a preset REFERENCE, and the fade is what
+        makes the beams glide instead of snap. The sequence number comes from
+        the instruction or ONE question card — ``Store`` on an occupied cue
+        changes a show object, so the number is the operator's call. No
+        ``/Merge``/``/Overwrite`` ever (phaser-flattening + blacklist).
+        """
+        if _CUE_STORE_INTENT.search(text) is None:
+            return None
+        preset_ref = _CUE_PRESET_REF.search(text)
+        if preset_ref is None:
+            return None
+        preset_no = int(preset_ref.group("no"))
+        fixtures = self._read_pointing_coordinates("cue-store-read")
+        if isinstance(fixtures, InstructionResult):
+            return fixtures
+        if not fixtures:
+            return self._pointing_refusal(
+                "좌표가 확인된 장비가 없어 포지션 큐 저장을 시작하지 않았습니다."
+            )
+        sequence_match = _CUE_SEQUENCE_NO.search(text)
+        if sequence_match is not None:
+            sequence_no = int(sequence_match.group("no"))
+        else:
+            answer = self._ask_one(
+                f"Position 프리셋 2.{preset_no}을(를) 어느 시퀀스에 큐로 저장할까요? "
+                "(예: 101) 이미 큐가 있는 시퀀스면 해당 큐가 바뀔 수 있습니다.",
+                options=(
+                    QuestionOption(label="101"),
+                    QuestionOption(label="110"),
+                    QuestionOption(label="200"),
+                ),
+                why=(
+                    "Store Sequence는 지정한 큐 슬롯에 그대로 저장되므로 "
+                    "시퀀스 번호는 운영자가 정해야 합니다."
+                ),
+            )
+            try:
+                sequence_no = int(re.search(r"\d+", answer or "").group(0))
+            except AttributeError:
+                return self._pointing_refusal(
+                    "시퀀스 번호를 받지 못해 큐 저장을 시작하지 않았습니다. "
+                    "예: '프리셋 2.28을 시퀀스 101 큐 1로 저장, 페이드 5초'"
+                )
+        cue_match = _CUE_NO.search(text)
+        cue_no = float(cue_match.group("no")) if cue_match is not None else 1.0
+        fade_match = _CUE_FADE.search(text)
+        fade_seconds = (
+            float(fade_match.group("sec") or fade_match.group("sec2"))
+            if fade_match is not None
+            else None
+        )
+        fids = [fid for fid, _position in fixtures]
+        try:
+            commands = [
+                preset_recall_command(fids, preset_no),
+                *position_cue_store_commands(
+                    sequence_no,
+                    cue_no,
+                    fade_seconds=fade_seconds,
+                    name=f"Pos 2.{preset_no}",
+                ),
+                "ClearAll",
+            ]
+        except SpatialPointingError as error:
+            return self._pointing_refusal(f"큐 저장 명령을 만들 수 없습니다: {error}")
+        executed = self._registry.dispatch(
+            ToolCall(
+                id="cue-store-write",
+                name="run_commands",
+                arguments={"commands": commands},
+            )
+        )
+        fade_note = f" 페이드 {fade_seconds:g}초로" if fade_seconds is not None else ""
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"Position 프리셋 2.{preset_no} 리콜 상태를 시퀀스 {sequence_no} "
+                f"큐 {cue_match.group('no') if cue_match else '1'}에{fade_note} 저장 "
+                "요청했습니다 (프리셋 참조 유지, 저장 후 ClearAll). 승인 또는 라이브 "
+                "잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+            ),
+            command_outcomes=executed.command_outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
     def _repeating_type_columns_layout(self, text: str) -> InstructionResult | None:
         """Arrange repeating MMX/MMX/350 columns with independent grid pitches."""
         pattern_present = _REPEATING_TYPE_COLUMNS_REQUEST.search(text) is not None
@@ -1703,6 +1808,8 @@ class ChatSession:
                 result = self._all_fixtures_elevation(text)
                 if result is None:
                     result = self._basic_position_presets(text)
+                if result is None:
+                    result = self._position_cue_store(text)
                 if result is None:
                     result = self._look_pan_tilt(text)
                 if result is None:
