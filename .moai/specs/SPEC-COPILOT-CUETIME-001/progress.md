@@ -79,3 +79,17 @@
 - 라이브 (Seq 113, 동일 12구간): 드롭1=Cross vs 후렴=**Ring Out**
   (IoU 0.46, 이전 1.00), 벌스=Fan Out vs 기타솔로=Cross — 점등 9큐가
   8종 룩 사용. 콘솔 정리: Seq 111·112 삭제, 110·113 잔존.
+
+## MIB Follow 트리거 (사용자 피드백 2, 2026-08-14)
+
+- 지적: "MIB가 적용 안 된 것 같다" — 실측 확인: 선이동 큐 3.5/7.5는
+  존재했지만 **TrigType=Go** — 스스로 발화하지 않아 운영자의 리빌 Go가
+  보이지 않는 다크 이동을 재생(한 박자 지연). 내 이전 검증은 Go를 큐
+  수만큼(14번) 눌러 결함을 가렸음.
+- 수정: `PositionCuePlan.premove` 플래그 + `premove_follow_command`
+  (`Set Cue k.5 Sequence n Property 'TrigType' 'Follow'`, 검증 문법
+  31_choreo:111) — 시트가 선이동 큐 번들에 자동 첨부. 149 passed.
+- 라이브 (Seq 114, 앱 UI 51명령): TrigType readback Follow×2.
+  **운영자 플로우 — Go 12번(구간당 1번)으로 14큐 완주**: 암전 Go 후
+  선이동 자동 발화(다크 53px), 다음 Go 첫 프레임부터 리빌 점등
+  (moved_away 0px×2). 콘솔: Seq 113 삭제, 110·114 잔존.

@@ -32,6 +32,7 @@ __all__ = [
     "PositionCuePlan",
     "apply_mib",
     "position_cue_bundle",
+    "premove_follow_command",
 ]
 
 #: The pre-move cue's own fade. The move happens in the dark, so it only has
@@ -55,6 +56,10 @@ class PositionCuePlan:
     preset_no: int | None = None
     dimmer: float | None = None
     fade_seconds: float | None = None
+    premove: bool = False
+    """A MIB dark pre-move — MUST fire automatically (``TrigType Follow``):
+    left on Go, the operator's press at the reveal moment plays an invisible
+    move instead of the reveal, one press late (measured live, Seq 113)."""
 
 
 def _validate(cues: Sequence[PositionCuePlan]) -> None:
@@ -121,6 +126,7 @@ def apply_mib(
                     name=f"{cue.name} Move",
                     preset_no=cue.preset_no,
                     fade_seconds=move_seconds,
+                    premove=True,
                 )
             )
             result.append(replace(cue, preset_no=None))
@@ -168,3 +174,19 @@ def position_cue_bundle(
     )
     lines.append("ClearAll")
     return tuple(lines)
+
+
+def premove_follow_command(sequence_no: int, plan: PositionCuePlan) -> str:
+    """The trigger line that makes a MIB pre-move fire on its own.
+
+    ``Set Cue <no> Sequence <n> Property 'TrigType' 'Follow'`` — verified
+    grammar (31_choreography_patterns.md:111; the ``/trig=`` option form is
+    rejected by 2.4.2). Follow fires when the previous cue completes, so the
+    heads move in the dark right after the blackout lands and the operator's
+    NEXT Go is the reveal — Go count stays one-per-song-section.
+    """
+    if not plan.premove:
+        raise SpatialPointingError(f"cue {plan.cue_no!r} is not a MIB pre-move")
+    if sequence_no <= 0:
+        raise SpatialPointingError(f"sequence number {sequence_no!r} must be positive")
+    return f"Set Cue {plan.cue_no:g} Sequence {sequence_no} Property 'TrigType' 'Follow'"

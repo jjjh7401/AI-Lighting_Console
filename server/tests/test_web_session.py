@@ -1629,6 +1629,7 @@ class TestPositionCueSheetSession:
             "Fixture 20 + 26 ; At Preset 2.28",
             "Store Sequence 110 Cue 2.5 'Section 3 Move' CueFade 1",
             "ClearAll",
+            "Set Cue 2.5 Sequence 110 Property 'TrigType' 'Follow'",
         ]
         reveal = writes[3].arguments["commands"]
         assert reveal == [

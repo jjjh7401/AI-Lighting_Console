@@ -197,6 +197,14 @@ ClearAll
   양쪽 다 0으로 나옴) — 프레임별 Otsu 임계값을 써라.
 - `Delete Sequence <n> /NoConfirm` 은 probe(게이트 밖 계측 경로)에서 확인
   팝업 없이 동작 — 서버 경로에서는 여전히 블랙리스트(승인 필요).
+- **선이동 큐는 반드시 `TrigType 'Follow'`** (실측, Seq 113→114): Store만
+  하면 TrigType이 Go로 남아 선이동이 스스로 발화하지 않는다 — 운영자가
+  드롭 타이밍에 누른 Go가 "보이지 않는 다크 이동"을 재생하고 리빌이 한
+  박자 늦는다. 저장 직후
+  `Set Cue <k.5> Sequence <n> Property 'TrigType' 'Follow'` 를 붙여라
+  (`premove_follow_command`). Follow면 암전 큐 완료 시 자동 발화 —
+  Go 횟수 = 곡 구간 수. 검증: Go 12번으로 14큐 시트 완주, 리빌 첫 Go에서
+  즉시 점등(moved_away 0 px).
 
 ## 3d. 곡 구조 포지션 큐 시트 (T3 — songcue × moods × MIB 결합)
 

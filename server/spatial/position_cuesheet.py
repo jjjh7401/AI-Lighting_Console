@@ -28,7 +28,12 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from server.spatial.mib import PositionCuePlan, apply_mib, position_cue_bundle
+from server.spatial.mib import (
+    PositionCuePlan,
+    apply_mib,
+    position_cue_bundle,
+    premove_follow_command,
+)
 from server.spatial.pointing import BASIC_POSITION_SEQUENCE, SpatialPointingError
 from server.spatial.position_moods import match_position_mood
 
@@ -197,7 +202,11 @@ def build_position_cue_sheet(
     if not plans:
         raise SpatialPointingError("no section resolved to a cue — nothing to store")
     mib_plans = apply_mib(plans, move_seconds=move_seconds)
-    bundles = tuple(position_cue_bundle(sequence_no, plan, fids) for plan in mib_plans)
+    bundles = tuple(
+        position_cue_bundle(sequence_no, plan, fids)
+        + ((premove_follow_command(sequence_no, plan),) if plan.premove else ())
+        for plan in mib_plans
+    )
     return PositionCueSheet(
         sequence_no=sequence_no,
         resolutions=tuple(resolutions),

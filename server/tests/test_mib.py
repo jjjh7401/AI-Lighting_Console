@@ -10,7 +10,12 @@ from __future__ import annotations
 
 import pytest
 
-from server.spatial.mib import PositionCuePlan, apply_mib, position_cue_bundle
+from server.spatial.mib import (
+    PositionCuePlan,
+    apply_mib,
+    position_cue_bundle,
+    premove_follow_command,
+)
 from server.spatial.pointing import SpatialPointingError
 
 
@@ -34,9 +39,22 @@ class TestApplyMib:
         # The reveal cue keeps its intensity fade but loses the position —
         # the pre-move already parked the heads.
         reveal = result[3]
+        assert premove.premove is True
+        assert reveal.premove is False
         assert reveal.preset_no is None
         assert reveal.dimmer == 100
         assert reveal.fade_seconds == 3
+
+    def test_the_premove_follow_command_matches_the_verified_grammar(self):
+        # 31_choreography_patterns.md:111 — Property form; /trig= is rejected
+        # by 2.4.2. Left on Go, the operator's reveal press plays an invisible
+        # dark move instead (measured live, Seq 113).
+        premove = apply_mib(_sheet())[2]
+        assert premove_follow_command(101, premove) == (
+            "Set Cue 2.5 Sequence 101 Property 'TrigType' 'Follow'"
+        )
+        with pytest.raises(SpatialPointingError, match="not a MIB pre-move"):
+            premove_follow_command(101, _sheet()[0])
 
     def test_a_lit_transition_is_untouched(self):
         cues = (
