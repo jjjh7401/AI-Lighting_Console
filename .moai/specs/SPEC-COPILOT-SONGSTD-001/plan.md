@@ -8,6 +8,7 @@ server/design/                # 신설 — 표준 엔진 (콘솔 무접촉, 순�
   rig.py                      # RigProfile — 인벤토리/층/기하/스케일 (R1b)
   energy.py                   # D→축 예산 함수, 박↔초 환산, 장르 오버레이 (R2)
   lint.py                     # L1~L14 (R3)
+  interview.py                # 연출 인터뷰 5문항 — 제안 유도·오버라이드 (R1c)
 server/audio/                 # 신설 — M4 (librosa 지연 import)
   analyze.py                  # BPM/온셋/RMS→D후보/경계 (DSP)
 server/spatial/position_cuesheet.py   # M2 — energy.py 소비로 확장
