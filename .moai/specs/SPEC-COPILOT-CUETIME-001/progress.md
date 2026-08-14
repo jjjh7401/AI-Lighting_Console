@@ -39,4 +39,19 @@
 - 계측 노하우 스킬 §3c 기록 (뷰포트 크롭, 프레임별 Otsu, 고정 임계값
   함정, /NoConfirm).
 
-## M3 (T3 곡 시트) — 미착수
+## M3 (T3 곡 시트) — 완료 2026-08-14
+
+- 구현: `server/spatial/position_cuesheet.py` —
+  `build_position_cue_sheet` (songcue `normalise_start_ms` × position_moods
+  × mib.apply_mib 결합), 세션 어휘 `_position_cue_sheet`
+  ("포지션 큐 시트, 시퀀스 S, 프리셋 P번부터: 이름 시각 무드, …";
+  시퀀스·프리셋 기준 미지정 시 카드 각 1장, 무응답 거절, 큐별 개별 번들).
+- 테스트: test_position_cuesheet.py 6개 + 세션 4개 — 스코프 146 passed,
+  ruff clean.
+- 라이브 (Seq 110, 5구간: 잔잔→Vocal DSC 2.25 / 오프닝→Center 2.24 /
+  암전 / 클럽 드롭→Cross 2.28 / 피날레→Ring In 2.30):
+  - 큐 1/2/3/**3.5 'Section 4 Move'**/4/5 콘솔 실재 — MIB 자동 삽입.
+  - 구간 간 기하 IoU 0.12~0.16 (전부 구별되는 포지션), 암전·다크 선이동
+    가시 변화 0 px, 리빌 moved_away 0 px.
+  - 콘솔 산출물: **Sequence 110** (곡 시트 데모) 잔존.
+- 스킬 §3d 기록.

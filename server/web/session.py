@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from server.deploy.review import ReviewRequest
 from server.llm.types import LLMProvider, ModelTurn, ToolCall, Usage, UserMessage
 from server.looks.instantiate import LookInstantiation
+from server.looks.songcue import normalise_start_ms
 from server.orchestrator.last_created import LastCreated, parse_last_created
 from server.orchestrator.ports import ExecutionResult
 from server.orchestrator.runner import InstructionResult, Orchestrator
@@ -51,6 +52,7 @@ from server.spatial.pointing import (
     preset_recall_command,
     radial_pan_tilt,
 )
+from server.spatial.position_cuesheet import PositionSheetSection, build_position_cue_sheet
 from server.spatial.position_moods import match_position_mood
 from server.spatial.vocabulary import (
     layout_terms_guidance,
@@ -179,6 +181,16 @@ _CUE_NO = re.compile(r"큐\s*(?P<no>\d+(?:\.\d+)?)")
 _CUE_FADE = re.compile(
     r"페이드\s*(?P<sec>\d+(?:\.\d+)?)\s*초?|(?P<sec2>\d+(?:\.\d+)?)\s*초\s*페이드"
 )
+# Song-structure position cue sheet (T3, SPEC-COPILOT-CUETIME-001):
+# "포지션 큐 시트 … 시퀀스 S, 프리셋 P번부터[, 페이드 F초]: 이름 시각 무드, …".
+# Sections ride "이름 m:ss 무드" (or "이름 N초 무드") comma-separated; the
+# preset base is the operator-stated 'Home' slot of the stored basic ten.
+_POSITION_SHEET_REQUEST = re.compile(r"포지션\s*큐\s*시트")
+_SHEET_SECTION = re.compile(
+    r"(?P<name>[가-힣A-Za-z0-9]+)\s+(?P<start>\d+:\d{2}(?:\.\d{1,3})?|\d+(?:\.\d+)?\s*초)"
+    r"\s+(?P<mood>.+)$"
+)
+_SHEET_PRESET_START = re.compile(r"프리셋\s*(?P<no>\d+)\s*(?:번)?\s*부터")
 # 무드→포지션 제안 게이트: 포지션 의도 단어가 있어야만 발화한다 — 무드 어휘만
 # 있는 문장(색·룩 요청일 수 있음)은 모델 경로(find_looks 등)에 남긴다.
 _POSITION_INTENT = re.compile(r"포지션|포커스|방향|바라보|비추|조준|잡아|연출")
@@ -1218,6 +1230,154 @@ class ChatSession:
             duration_seconds=0.0,
         )
 
+    def _position_cue_sheet(self, text: str) -> InstructionResult | None:
+        """Song-structure position cue sheet draft (T3) — mood → preset cues.
+
+        Sections ("이름 시각 무드", comma-separated) resolve through the mood
+        table to the stored basic Position presets; blackout sections store
+        dimmer 0 and the MIB rule inserts dark pre-move cues (measured, M2).
+        The sequence number AND the preset base come from the instruction or
+        one question card each — recalling a guessed preset slot would aim
+        the show at whatever lives there. Each cue is its own bundle, so one
+        refused cue never voids the rest of the sheet.
+        """
+        if _POSITION_SHEET_REQUEST.search(text) is None:
+            return None
+        sections: list[PositionSheetSection] = []
+        for part in text.split(","):
+            matched = _SHEET_SECTION.search(part.strip())
+            if matched is None:
+                continue
+            start_token = matched.group("start").replace("초", "").strip()
+            try:
+                start_ms = normalise_start_ms(start_token)
+            except Exception:
+                continue
+            sections.append(
+                PositionSheetSection(
+                    name=matched.group("name"),
+                    start_ms=start_ms,
+                    mood=matched.group("mood").strip(),
+                )
+            )
+        if not sections:
+            return self._pointing_refusal(
+                "곡 구간을 읽지 못해 포지션 큐 시트를 만들지 않았습니다. 형식: "
+                "'포지션 큐 시트, 시퀀스 110, 프리셋 21번부터: 인트로 0:00 잔잔하게, "
+                "후렴 0:40 클럽 드롭'"
+            )
+        fixtures = self._read_pointing_coordinates("sheet-read")
+        if isinstance(fixtures, InstructionResult):
+            return fixtures
+        if not fixtures:
+            return self._pointing_refusal(
+                "좌표가 확인된 장비가 없어 포지션 큐 시트를 시작하지 않았습니다."
+            )
+        sequence_match = _CUE_SEQUENCE_NO.search(text)
+        if sequence_match is not None:
+            sequence_no = int(sequence_match.group("no"))
+        else:
+            answer = self._ask_one(
+                "포지션 큐 시트를 어느 시퀀스에 저장할까요? (예: 110) "
+                "이미 큐가 있는 시퀀스면 해당 큐가 바뀔 수 있습니다.",
+                options=(
+                    QuestionOption(label="110"),
+                    QuestionOption(label="120"),
+                    QuestionOption(label="200"),
+                ),
+                why="Store Sequence는 지정한 큐 슬롯에 그대로 저장되므로 운영자 결정입니다.",
+            )
+            try:
+                sequence_no = int(re.search(r"\d+", answer or "").group(0))
+            except AttributeError:
+                return self._pointing_refusal(
+                    "시퀀스 번호를 받지 못해 큐 시트를 만들지 않았습니다."
+                )
+        preset_match = _SHEET_PRESET_START.search(text)
+        if preset_match is not None:
+            preset_start = int(preset_match.group("no"))
+        else:
+            answer = self._ask_one(
+                "기본 포지션 10종(Home~Ring In)이 Position 프리셋 몇 번부터 "
+                "저장돼 있나요? (예: 21 → 2.21~2.30)",
+                options=(
+                    QuestionOption(label="1"),
+                    QuestionOption(label="11"),
+                    QuestionOption(label="21"),
+                ),
+                why=(
+                    "큐는 프리셋 참조로 빌드됩니다 — 잘못된 슬롯을 리콜하면 "
+                    "그 자리에 있는 다른 포지션이 무대에 나갑니다."
+                ),
+            )
+            try:
+                preset_start = int(re.search(r"\d+", answer or "").group(0))
+            except AttributeError:
+                return self._pointing_refusal(
+                    "프리셋 시작 번호를 받지 못해 큐 시트를 만들지 않았습니다."
+                )
+        fade_match = _CUE_FADE.search(text)
+        fade_seconds = (
+            float(fade_match.group("sec") or fade_match.group("sec2"))
+            if fade_match is not None
+            else 3.0
+        )
+        fids = [fid for fid, _position in fixtures]
+        try:
+            sheet = build_position_cue_sheet(
+                sections,
+                sequence_no=sequence_no,
+                preset_start=preset_start,
+                fids=fids,
+                fade_seconds=fade_seconds,
+            )
+        except SpatialPointingError as error:
+            return self._pointing_refusal(f"포지션 큐 시트를 만들 수 없습니다: {error}")
+        outcomes: list[CommandOutcome] = []
+        for plan, bundle in zip(sheet.plans, sheet.bundles, strict=True):
+            executed = self._registry.dispatch(
+                ToolCall(
+                    id=f"song-sheet-cue-{plan.cue_no:g}",
+                    name="run_commands",
+                    arguments={"commands": list(bundle)},
+                )
+            )
+            outcomes.extend(executed.command_outcomes)
+        lines: list[str] = []
+        for res in sheet.resolutions:
+            minute, second = divmod(res.section.start_ms // 1000, 60)
+            stamp = f"{minute}:{second:02d}"
+            if res.blackout:
+                lines.append(f"큐 {res.cue_no} {res.section.name}({stamp}): 암전")
+            elif res.skipped_reason is not None:
+                lines.append(
+                    f"큐 {res.cue_no} {res.section.name}({stamp}): 건너뜀 — {res.skipped_reason}"
+                )
+            else:
+                lines.append(
+                    f"큐 {res.cue_no} {res.section.name}({stamp}): {res.look_label} "
+                    f"(Preset 2.{res.preset_no})"
+                )
+        mib_notes = [
+            f"큐 {plan.cue_no:g} '{plan.name}' (다크 선이동)"
+            for plan in sheet.plans
+            if plan.name.endswith(" Move")
+        ]
+        mib_note = f" MIB 삽입: {', '.join(mib_notes)}." if mib_notes else ""
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"시퀀스 {sequence_no}에 포지션 큐 시트 {len(sheet.plans)}큐를 저장 "
+                f"요청했습니다 (페이드 {fade_seconds:g}초, 전 큐 프리셋 참조). "
+                f"{' / '.join(lines)}.{mib_note} 승인 또는 라이브 잠금 상태에 따른 "
+                "결과를 아래 명령 상태에서 확인해 주세요."
+            ),
+            command_outcomes=tuple(outcomes),
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
     def _repeating_type_columns_layout(self, text: str) -> InstructionResult | None:
         """Arrange repeating MMX/MMX/350 columns with independent grid pitches."""
         pattern_present = _REPEATING_TYPE_COLUMNS_REQUEST.search(text) is not None
@@ -1808,6 +1968,8 @@ class ChatSession:
                 result = self._all_fixtures_elevation(text)
                 if result is None:
                     result = self._basic_position_presets(text)
+                if result is None:
+                    result = self._position_cue_sheet(text)
                 if result is None:
                     result = self._position_cue_store(text)
                 if result is None:

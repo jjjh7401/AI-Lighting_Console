@@ -1561,6 +1561,125 @@ class TestPositionCueStoreSession:
         assert not any("Store Sequence" in command for command in commands)
 
 
+class TestPositionCueSheetSession:
+    """T3: '포지션 큐 시트 …: 이름 시각 무드, …' — full-song preset-cue draft."""
+
+    def _registry(self, calls):
+        fixtures = [
+            {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
+            {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
+        ]
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    (CommandOutcome(command="Fixture 20", status="proposal"),),
+                )
+
+        return Registry()
+
+    class _Channel:
+        def __init__(self, answers):
+            self.answers = list(answers)
+            self.asked = []
+
+        def ask(self, request, **_kwargs):
+            self.asked.append(request)
+            return self.answers.pop(0) if self.answers else UNANSWERED
+
+    _FULL = (
+        "포지션 큐 시트 만들어줘, 시퀀스 110, 프리셋 21번부터, 페이드 2초: "
+        "인트로 0:00 잔잔한 발라드, 브레이크 0:40 암전, 후렴 0:50 클럽 드롭"
+    )
+
+    def test_a_full_instruction_stores_the_sheet_with_mib(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel([])
+        session._question_channel = channel
+
+        event = session.run_instruction(self._FULL)
+
+        assert provider.calls == []
+        assert channel.asked == []
+        writes = [call for call in calls if call.name == "run_commands"]
+        # 3 sections + 1 MIB pre-move, each its own bundle.
+        assert [call.id for call in writes] == [
+            "song-sheet-cue-1",
+            "song-sheet-cue-2",
+            "song-sheet-cue-2.5",
+            "song-sheet-cue-3",
+        ]
+        premove = writes[2].arguments["commands"]
+        assert premove == [
+            "Fixture 20 + 26 ; At Preset 2.28",
+            "Store Sequence 110 Cue 2.5 'Section 3 Move' CueFade 1",
+            "ClearAll",
+        ]
+        reveal = writes[3].arguments["commands"]
+        assert reveal == [
+            "Fixture 20 + 26 ; Attribute 'Dimmer' At 100",
+            "Store Sequence 110 Cue 3 'Section 3' CueFade 2",
+            "ClearAll",
+        ]
+        assert "Vocal DSC" in event["text"]
+        assert "MIB 삽입" in event["text"]
+
+    def test_missing_numbers_ask_two_cards_in_order(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(["110", "21"])
+        session._question_channel = channel
+
+        session.run_instruction("포지션 큐 시트: 인트로 0:00 잔잔하게, 후렴 0:40 클럽 드롭")
+
+        assert len(channel.asked) == 2
+        assert "어느 시퀀스" in channel.asked[0].prompt
+        assert "몇 번부터" in channel.asked[1].prompt
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert writes[0].arguments["commands"][0] == "Fixture 20 + 26 ; At Preset 2.25"
+
+    def test_no_answer_refuses(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel([])  # UNANSWERED
+
+        event = session.run_instruction("포지션 큐 시트: 인트로 0:00 잔잔하게, 후렴 0:40 드롭")
+
+        assert [call.name for call in calls] == ["get_spatial_context"]
+        assert "시퀀스 번호를 받지 못해" in event["text"]
+
+    def test_unparseable_sections_refuse_with_the_format(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel([])
+
+        event = session.run_instruction("포지션 큐 시트 만들어줘")
+
+        assert calls == []
+        assert "형식" in event["text"]
+
+
 class TestLookPanTilt:
     def _registry(self, calls):
         fixtures = [

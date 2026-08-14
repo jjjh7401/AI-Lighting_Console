@@ -198,6 +198,18 @@ ClearAll
 - `Delete Sequence <n> /NoConfirm` 은 probe(게이트 밖 계측 경로)에서 확인
   팝업 없이 동작 — 서버 경로에서는 여전히 블랙리스트(승인 필요).
 
+## 3d. 곡 구조 포지션 큐 시트 (T3 — songcue × moods × MIB 결합)
+
+세션 어휘: `"포지션 큐 시트, 시퀀스 S, 프리셋 P번부터[, 페이드 F초]:
+이름 시각 무드, 이름 시각 무드, …"` (시각 = `m:ss` 또는 `N초`).
+구현: `server/spatial/position_cuesheet.py::build_position_cue_sheet` —
+구간 무드를 `position_moods`로 풀어 운영자 기준(P=Home 슬롯) 프리셋
+참조 큐로 빌드하고, "암전" 구간은 디머 0 큐, 그 뒤 리빌에는 `apply_mib`가
+다크 선이동 큐를 자동 삽입한다. 무드가 표와 안 맞는 구간은 추측 없이
+건너뛰고 번호만 소비(songcue 관례). 라이브 검증(Seq 110, 5구간): 구간 간
+기하 IoU 0.12~0.16(전부 다른 포지션), 암전·선이동 가시 변화 0 px,
+리빌 moved_away 0 px.
+
 ## 4. 검증 절차 (재계측 레시피)
 
 1. `grandma3-web-stable` 프로세스를 잠시 중지 (feedback 포트 9005 단독 점유).
