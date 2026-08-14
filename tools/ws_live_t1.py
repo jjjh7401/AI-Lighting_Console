@@ -34,7 +34,8 @@ async def drive(instruction: str, answer: str | None) -> None:
                 await ws.send(
                     json.dumps(
                         {
-                            "v": 1, "type": "approval_decision",
+                            "v": 1,
+                            "type": "approval_decision",
                             "request_id": event["request_id"],
                             "approved": True,
                         }
@@ -45,7 +46,8 @@ async def drive(instruction: str, answer: str | None) -> None:
                 await ws.send(
                     json.dumps(
                         {
-                            "v": 1, "type": "question_answer",
+                            "v": 1,
+                            "type": "question_answer",
                             "request_id": event["request_id"],
                             "answer": answer,
                         }
