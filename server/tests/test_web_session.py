@@ -2307,6 +2307,58 @@ class TestSongDesignInterviewSession:
         assert [call for call in calls if call.name == "run_commands"] == []
         assert session._pending_song_plan is not None
 
+    def test_confirmed_back_layer_adds_group_dimmer_lines_to_the_bundle(self, tmp_path):
+        # 결함 6 후속 (priority 6): the mapping is no longer display-only —
+        # every LIT section cue carries a group-addressed back-layer dimmer at
+        # 80% of its key level, between the key dimmer and the store.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._song_layer_mapping = [{"role": "back", "group_no": 12, "group_name": "Back"}]
+        session._question_channel = self._Channel(
+            [
+                "110",
+                "21",
+                "수동 Go",
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "BPM 질감",
+                # Requery cards for the two unresolved sections (벌스, 브리지).
+                "Center → Fan Out",
+                "Wall 저조도",
+                "승인",
+            ]
+        )
+        session.run_instruction(self._PLAIN_BRIEF)
+
+        stores = [call for call in calls if call.name == "run_commands"]
+        assert len(stores) == 1
+        commands = stores[0].arguments["commands"]
+        back_lines = [command for command in commands if command.startswith("Group 12 ; ")]
+        # One per lit section cue (all five sections are lit in this brief).
+        assert len(back_lines) == 5
+        for line in back_lines:
+            index = commands.index(line)
+            key_line = commands[index - 1]
+            assert key_line.startswith("Fixture ") and "'Dimmer' At " in key_line
+            assert commands[index + 1].startswith("Store Sequence 110 Cue ")
+            key_pct = float(key_line.rsplit(" At ", 1)[1])
+            back_pct = float(line.rsplit(" At ", 1)[1])
+            assert back_pct == round(key_pct * 0.8, 6)
+
+    def test_without_a_back_mapping_no_group_lines_are_emitted(self, tmp_path):
+        session, sent, calls = self._pending_plan_session(tmp_path)
+        session._question_channel = self._Channel(["승인"])
+
+        session.run_instruction("큐 4 삭제")
+
+        stores = [call for call in calls if call.name == "run_commands"]
+        commands = stores[0].arguments["commands"]
+        assert not [command for command in commands if command.startswith("Group ")]
+
     def test_plan_edit_then_approval_stores_once(self, tmp_path):
         session, sent, calls = self._pending_plan_session(tmp_path)
         session._question_channel = self._Channel(["승인"])

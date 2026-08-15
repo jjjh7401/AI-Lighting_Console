@@ -142,6 +142,22 @@ class TestPositionCueBundle:
             "ClearAll",
         )
 
+    def test_extra_value_lines_land_between_the_dimmer_and_the_store(self):
+        plan = PositionCuePlan(1, "Wide", preset_no=26, dimmer=100, fade_seconds=2)
+        bundle = position_cue_bundle(
+            102,
+            plan,
+            [20, 26],
+            extra_value_lines=("Group 12 ; Attribute 'Dimmer' At 80",),
+        )
+        assert bundle == (
+            "Fixture 20 + 26 ; At Preset 2.26",
+            "Fixture 20 + 26 ; Attribute 'Dimmer' At 100",
+            "Group 12 ; Attribute 'Dimmer' At 80",
+            "Store Sequence 102 Cue 1 'Wide' CueFade 2",
+            "ClearAll",
+        )
+
     def test_refusals(self):
         with pytest.raises(SpatialPointingError, match="no fixtures"):
             position_cue_bundle(102, PositionCuePlan(1, "A", dimmer=100), [])

@@ -144,6 +144,8 @@ def position_cue_bundle(
     sequence_no: int,
     plan: PositionCuePlan,
     fids: Sequence[int],
+    *,
+    extra_value_lines: Sequence[str] = (),
 ) -> tuple[str, ...]:
     """The store bundle for ONE planned cue — recall/dimmer → store → clear.
 
@@ -151,6 +153,8 @@ def position_cue_bundle(
     stays unique under the instruction-scope command dedupe (SKILL §3), and
     the bundle ends with ``ClearAll`` so nothing leaks into the next store.
     Cue names must not carry dots — MA3 strips them (measured, SKILL §3b).
+    ``extra_value_lines`` are appended after the plan's own value lines and
+    before the store — e.g. a group-addressed back-layer dimmer override.
     """
     if not fids:
         raise SpatialPointingError("no fixtures to build the cue on")
@@ -162,6 +166,7 @@ def position_cue_bundle(
             raise SpatialPointingError(f"dimmer {plan.dimmer!r} is outside 0..100")
         selection = " + ".join(str(fid) for fid in fids)
         lines.append(f"Fixture {selection} ; Attribute 'Dimmer' At {plan.dimmer:g}")
+    lines.extend(extra_value_lines)
     if not lines:
         raise SpatialPointingError(f"cue {plan.cue_no!r} carries neither a position nor a dimmer")
     lines.extend(

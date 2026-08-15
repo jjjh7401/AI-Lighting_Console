@@ -767,6 +767,33 @@ _SINGLE_LAYER_WARNING = (
     "단일 레이어 계획입니다. Front/Back/Beam/Audience 분리 연출은 검증되지 않았습니다."
 )
 
+
+def _back_layer_value_lines(cue, layer_mapping: Sequence[Mapping[str, object]]) -> tuple[str, ...]:
+    """결함 6 후속 (priority 6): Front/Back 분리 연출 — the director-confirmed
+    'back' role group adds ONE group-addressed dimmer line to every LIT
+    section cue, at 80% of the key level (the same key→back ratio the
+    composer's layered-rig path uses). The group NUMBER is console-addressable
+    without membership knowledge (RG5 — fids are never claimed); blackouts and
+    MIB pre-moves stay untouched. The line comes AFTER the all-fixture key
+    dimmer, so the console's last-wins programmer order lowers only the back
+    group."""
+    back_no = next(
+        (
+            entry["group_no"]
+            for entry in layer_mapping
+            if entry.get("role") == "back" and isinstance(entry.get("group_no"), int)
+        ),
+        None,
+    )
+    if back_no is None or cue.kind != "section":
+        return ()
+    key_pct = cue.dimmer.key_pct
+    if key_pct is None or key_pct <= 0:
+        return ()
+    back_pct = cue.dimmer.back_pct if cue.dimmer.back_pct is not None else key_pct * 0.8
+    return (f"Group {back_no} ; Attribute 'Dimmer' At {back_pct:g}",)
+
+
 #: The placeholder title `_build_unified_song_plan` stamps on a fresh design —
 #: auto-snapshots fall back to the sequence name instead of versioning it.
 _DESIGN_INTERVIEW_TITLE = "Design Interview"
@@ -2826,6 +2853,7 @@ class ChatSession:
         preset_start: int,
         fids: Sequence[int],
         timing: TimingPlan,
+        layer_mapping: Sequence[Mapping[str, object]] = (),
     ) -> tuple[str, ...]:
         bundle = composition.bundle
         if bundle is None:
@@ -2851,7 +2879,14 @@ class ChatSession:
                 fade_seconds=cue.fade_seconds,
                 premove=cue.kind == "mib_premove",
             )
-            commands.extend(position_cue_bundle(sequence_no, plan, fids))
+            commands.extend(
+                position_cue_bundle(
+                    sequence_no,
+                    plan,
+                    fids,
+                    extra_value_lines=_back_layer_value_lines(cue, layer_mapping),
+                )
+            )
             if plan.premove:
                 commands.append(premove_follow_command(sequence_no, plan))
         commands.extend(self._reviewed_song_timing_commands(bundle, sequence_no, timing))
@@ -4124,6 +4159,7 @@ class ChatSession:
                 preset_start=state.preset_start,
                 fids=state.fids,
                 timing=state.timing,
+                layer_mapping=state.layer_mapping,
             )
         except SpatialPointingError as error:
             return self._pointing_refusal(f"리뷰 번들을 실행 명령으로 만들 수 없습니다: {error}")
