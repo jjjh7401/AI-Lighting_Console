@@ -831,6 +831,35 @@ def _timeline_edit_target_position(text: str) -> str | None:
     return best
 
 
+# PLAN-stage edit grammar (handoff 2026-08-15 priority 1): while a composed
+# plan is pending director approval, "큐 N …" turns edit the PLAN — never the
+# console. Delete/insert restructure the section list; a position/color word
+# retargets one cue via the same override/mood machinery the requery path uses.
+_PLAN_EDIT_DELETE = re.compile(r"큐\s*(?P<cue>\d+)\s*(?:번)?\s*(?:을|를)?\s*(?:삭제|제거|빼)")
+_PLAN_EDIT_INSERT_BETWEEN = re.compile(
+    r"큐\s*(?P<a>\d+)\s*(?:번)?\s*(?:와|과|이랑|하고)\s*(?:큐\s*)?(?P<b>\d+)\s*(?:번)?\s*사이에\s*"
+    r"(?P<name>.+?)\s*(?:구간)?\s*(?:을|를)?\s*추가"
+)
+_PLAN_EDIT_INSERT_ADJACENT = re.compile(
+    r"큐\s*(?P<cue>\d+)\s*(?:번)?\s*(?P<where>뒤|다음|앞)에\s*"
+    r"(?P<name>.+?)\s*(?:구간)?\s*(?:을|를)?\s*추가"
+)
+_PLAN_EDIT_CUE = re.compile(r"큐\s*(?P<cue>\d+)")
+
+
+def _plan_insert_start_ms(sections: Sequence[PositionSheetSection], insert_slot: int) -> int:
+    """A start time strictly inside the neighbouring gap: midpoint between
+    neighbours, +30s past the current last section, or half of the first
+    section's start when inserting at the head."""
+    prev_ms = sections[insert_slot - 1].start_ms if insert_slot > 0 else None
+    next_ms = sections[insert_slot].start_ms if insert_slot < len(sections) else None
+    if prev_ms is not None and next_ms is not None:
+        return (prev_ms + next_ms) // 2
+    if prev_ms is not None:
+        return prev_ms + 30_000
+    return (next_ms or 0) // 2
+
+
 def _build_unified_song_plan(
     *,
     sections: Sequence[PositionSheetSection],
@@ -1609,6 +1638,10 @@ class ChatSession:
         # kept so the NEXT turn can answer "벌스는 Center → Fan Out" and resume
         # the same plan instead of restarting the interview.
         self._pending_song_requery: _SongDesignState | None = None
+        # PLAN-stage editing (handoff 2026-08-15 priority 1): the LAST fully
+        # composed but not-yet-approved design, kept so a later turn can
+        # delete/insert/retarget cues console-free and re-request approval.
+        self._pending_song_plan: _SongDesignState | None = None
         # 결함 6: role → group-number mapping inferred from console group names
         # and confirmed by the director ONCE per session. None = not yet asked;
         # [] = declined or nothing inferable (single-layer, disclosed).
@@ -2929,6 +2962,7 @@ class ChatSession:
         if palette_match is not None:
             pre_specified[Q2_PALETTE] = palette_match.group("palette").strip()
         self._pending_song_requery = None  # a fresh design supersedes a stale one
+        self._pending_song_plan = None
         interview = DirectorInterview(profile, rig, pre_specified=pre_specified)
         failure = self._song_run_interview(interview)
         if failure is not None:
@@ -3215,6 +3249,124 @@ class ChatSession:
                 break
         return plan, composition, None
 
+    def _song_plan_edit(self, text: str) -> InstructionResult | None:
+        """PLAN-stage editing (handoff 2026-08-15 priority 1): while a composed
+        song design awaits approval, "큐 N …" turns mutate the PLAN — delete a
+        cue, insert a section between cues, or retarget one cue's position/
+        color — with ZERO console commands, then recompose and re-ask
+        approval. Approved/stored timelines keep riding `_timeline_cue_edit`
+        (diff-only /Merge); this route exists so pre-approval edits never
+        touch the console at all."""
+        state = self._pending_song_plan
+        if state is None:
+            return None
+        if _SONG_DESIGN_REQUEST.search(text) is not None or _is_natural_song_brief(text):
+            return None  # a fresh design supersedes; that path clears pending
+        if _SONG_REQUERY_CANCEL.match(text) is not None:
+            self._pending_song_plan = None
+            self._pending_song_requery = None
+            return InstructionResult(
+                status="ok",
+                text=(
+                    "보류 중이던 곡 설계 계획을 취소했습니다. 콘솔에는 아무것도 쓰지 않았습니다."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        delete = _PLAN_EDIT_DELETE.search(text)
+        between = _PLAN_EDIT_INSERT_BETWEEN.search(text)
+        adjacent = _PLAN_EDIT_INSERT_ADJACENT.search(text)
+        count = len(state.sections)
+        if delete is not None:
+            cue = int(delete.group("cue"))
+            if not 1 <= cue <= count:
+                return self._pointing_refusal(
+                    f"계획에 큐 {cue}가 없어 삭제하지 않았습니다. (보유 큐: 1~{count})"
+                )
+            if count == 1:
+                return self._pointing_refusal(
+                    "마지막 남은 큐는 삭제할 수 없습니다. "
+                    "계획 전체를 중단하려면 '취소'라고 답해 주세요."
+                )
+            removed = state.sections.pop(cue - 1)
+            state.requery_overrides = {
+                (index - 1 if index > cue else index): override
+                for index, override in state.requery_overrides.items()
+                if index != cue
+            }
+            note = f"큐 {cue}({removed.name}) 삭제"
+        elif between is not None or adjacent is not None:
+            if between is not None:
+                first = int(between.group("a"))
+                second = int(between.group("b"))
+                name = between.group("name").strip()
+                if second != first + 1 or not 1 <= first < count:
+                    return self._pointing_refusal(
+                        f"큐 {first}와 {second} 사이에는 추가할 수 없습니다. "
+                        f"이웃한 큐 번호를 지정해 주세요. (보유 큐: 1~{count})"
+                    )
+                insert_slot = first
+            else:
+                assert adjacent is not None
+                cue = int(adjacent.group("cue"))
+                name = adjacent.group("name").strip()
+                if not 1 <= cue <= count:
+                    return self._pointing_refusal(
+                        f"계획에 큐 {cue}가 없어 추가하지 않았습니다. (보유 큐: 1~{count})"
+                    )
+                insert_slot = cue if adjacent.group("where") in ("뒤", "다음") else cue - 1
+            if not name:
+                return self._pointing_refusal(
+                    "추가할 구간의 이름/무드가 필요합니다. 예: '큐 2와 3 사이에 브레이크 추가'."
+                )
+            start_ms = _plan_insert_start_ms(state.sections, insert_slot)
+            state.sections.insert(
+                insert_slot, PositionSheetSection(name=name, start_ms=start_ms, mood=name)
+            )
+            inserted_index = insert_slot + 1
+            state.requery_overrides = {
+                (index + 1 if index >= inserted_index else index): override
+                for index, override in state.requery_overrides.items()
+            }
+            note = f"큐 {inserted_index}({name}) 추가"
+        else:
+            cue_match = _PLAN_EDIT_CUE.search(text)
+            if cue_match is None:
+                return None
+            position = _requery_position_from_answer(text) or _timeline_edit_target_position(text)
+            colors = _extract_color_words(text)
+            if position is None and not colors:
+                return None  # not an edit vocabulary we own — fall through
+            cue = int(cue_match.group("cue"))
+            if not 1 <= cue <= count:
+                return self._pointing_refusal(
+                    f"계획에 큐 {cue}가 없어 수정하지 않았습니다. (보유 큐: 1~{count})"
+                )
+            slot = cue - 1
+            changes: list[str] = []
+            if colors:
+                # Palette flows from the section's OWN color words — replace
+                # any earlier ones so edits retarget instead of accumulating.
+                section = state.sections[slot]
+                stripped = _COLOR_WORDS.sub("", section.mood).strip()
+                state.sections[slot] = replace(
+                    section, mood=f"{stripped} {' '.join(colors)}".strip()
+                )
+                changes.append(f"컬러 {'/'.join(colors)}")
+            if position is not None:
+                self._song_merge_requery_answer(state, cue, f"{position} {' '.join(colors)}")
+                changes.append(f"포지션 {position}")
+            note = f"큐 {cue} {' · '.join(changes)}"
+        plan, composition = self._song_compose(state)
+        self._song_send_timeline(state, plan, composition)
+        plan, composition, failure = self._song_requery_rounds(state, plan, composition)
+        if failure is not None:
+            return failure
+        result = self._song_finalize(state, plan, composition)
+        return replace(result, text=f"계획 수정(콘솔 무접촉): {note}. {result.text}")
+
     def _timeline_cue_edit(self, text: str) -> InstructionResult | None:
         """Edit ONE cue of the DISPLAYED director timeline (user finding,
         2026-08-15: the model fallback once edited an unrelated sequence by
@@ -3409,6 +3561,7 @@ class ChatSession:
         if composition.requery_requirements:
             # 미응답 요구를 세션에 보존 — 다음 턴의 포지션 답변이 이어서 병합된다.
             self._pending_song_requery = state
+            self._pending_song_plan = state
             open_prompts = "; ".join(
                 requirement.prompt for requirement in composition.requery_requirements
             )
@@ -3428,6 +3581,7 @@ class ChatSession:
                 duration_seconds=0.0,
             )
         self._pending_song_requery = None
+        self._pending_song_plan = state
         sequence_no = state.sequence_no
         approval = self._ask_one(
             f"{review_text}\n\n이 전체 리뷰 번들을 시퀀스 {sequence_no}에 원자적으로 저장할까요?",
@@ -3447,6 +3601,9 @@ class ChatSession:
                 text=(
                     f"연출 인터뷰 결과 — {' / '.join(audit_lines)}. "
                     "전체 리뷰 번들을 보여드렸고, 감독 승인 전이므로 콘솔에 쓰지 않았습니다. "
+                    "승인 전 계획은 콘솔 무접촉으로 계속 수정할 수 있습니다 — "
+                    "예: '큐 3을 Center로', '큐 3 컬러를 골드로', "
+                    "'큐 2와 3 사이에 브레이크 추가', '큐 4 삭제' (중단: '취소'). "
                     f"{review_text}"
                 ),
                 command_outcomes=(),
@@ -3454,6 +3611,7 @@ class ChatSession:
                 model_calls=0,
                 duration_seconds=0.0,
             )
+        self._pending_song_plan = None
         approved_plan = replace(plan, approval=ApprovalState.approved(reviewer="director"))
         approved_composition = compose_song_cue_bundle(approved_plan)
         self._song_send_timeline(state, approved_plan, approved_composition, lifecycle="approved")
@@ -4343,6 +4501,8 @@ class ChatSession:
                     result = self._basic_position_presets(text)
                 if result is None:
                     result = self._position_cue_sheet(text)
+                if result is None:
+                    result = self._song_plan_edit(text)
                 if result is None:
                     result = self._song_requery_resume(text)
                 if result is None:

@@ -2207,6 +2207,119 @@ class TestSongDesignInterviewSession:
         assert len(timelines[-1]["sections"]) == 5
         assert session._pending_song_requery is None
 
+    def _pending_plan_session(self, tmp_path):
+        """Turn 1: full brief, every requery answered, approval DECLINED —
+        leaves a complete pending_approval plan editable on later turns."""
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel(
+            [
+                "110",
+                "21",
+                "수동 Go",
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "BPM 질감",
+                "Center → Fan Out",
+                "Wall 저조도",
+                "Vocal DSC 스페셜",
+                "Fan Out → Audience",
+                "Center → Fan Out",
+                "수정",
+                "수정",
+            ]
+        )
+        session.run_instruction(self._PLAIN_BRIEF)
+        assert session._pending_song_plan is not None
+        assert [call for call in calls if call.name == "run_commands"] == []
+        return session, sent, calls
+
+    def test_declined_approval_keeps_the_plan_editable(self, tmp_path):
+        session, sent, _calls = self._pending_plan_session(tmp_path)
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["lifecycle"] == "pending_approval"
+        assert len(timelines[-1]["sections"]) == 5
+
+    def test_plan_edit_deletes_a_cue_without_console_commands(self, tmp_path):
+        session, sent, calls = self._pending_plan_session(tmp_path)
+        session._question_channel = self._Channel(["수정"])
+
+        event = session.run_instruction("큐 4 삭제해줘")
+
+        assert event["text"].startswith("계획 수정(콘솔 무접촉): 큐 4")
+        assert [call for call in calls if call.name == "run_commands"] == []
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["lifecycle"] == "pending_approval"
+        assert len(timelines[-1]["sections"]) == 4
+        assert session._pending_song_plan is not None
+
+    def test_plan_edit_inserts_a_section_between_cues(self, tmp_path):
+        session, sent, calls = self._pending_plan_session(tmp_path)
+        # The inserted section's mood ("브레이크") may need one requery card;
+        # answer it with a position, then decline approval again.
+        session._question_channel = self._Channel(["Wall 저조도", "수정"])
+
+        event = session.run_instruction("큐 2와 3 사이에 브레이크 추가")
+
+        assert event["text"].startswith("계획 수정(콘솔 무접촉): 큐 3(브레이크) 추가")
+        assert [call for call in calls if call.name == "run_commands"] == []
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["lifecycle"] == "pending_approval"
+        sections = timelines[-1]["sections"]
+        assert len(sections) == 6
+        assert sections[2]["label"] == "브레이크"
+        # The new section sits strictly between its neighbours on the clock.
+        assert sections[1]["start_ms"] < sections[2]["start_ms"] < sections[3]["start_ms"]
+
+    def test_plan_edit_retargets_position_and_color_console_free(self, tmp_path):
+        session, sent, calls = self._pending_plan_session(tmp_path)
+        session._question_channel = self._Channel(["수정"])
+
+        event = session.run_instruction("타임라인 큐 3을 무대 중앙으로, 컬러는 골드로")
+
+        # Pre-approval, the PLAN route wins over the console /Merge route.
+        assert event["text"].startswith("계획 수정(콘솔 무접촉): 큐 3")
+        assert [call for call in calls if call.name == "run_commands"] == []
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        section = timelines[-1]["sections"][2]
+        assert section["position"] == "Center"
+        assert "골드" in section["palette"]
+
+    def test_plan_edit_cancel_clears_the_pending_plan(self, tmp_path):
+        session, _sent, calls = self._pending_plan_session(tmp_path)
+
+        event = session.run_instruction("취소")
+
+        assert "취소" in event["text"]
+        assert session._pending_song_plan is None
+        assert [call for call in calls if call.name == "run_commands"] == []
+
+    def test_plan_edit_refuses_an_unknown_cue(self, tmp_path):
+        session, _sent, calls = self._pending_plan_session(tmp_path)
+
+        event = session.run_instruction("큐 9 삭제")
+
+        assert "큐 9가 없어" in event["text"]
+        assert [call for call in calls if call.name == "run_commands"] == []
+        assert session._pending_song_plan is not None
+
+    def test_plan_edit_then_approval_stores_once(self, tmp_path):
+        session, sent, calls = self._pending_plan_session(tmp_path)
+        session._question_channel = self._Channel(["승인"])
+
+        event = session.run_instruction("큐 4 삭제")
+
+        stores = [call for call in calls if call.name == "run_commands"]
+        assert len(stores) == 1
+        assert session._pending_song_plan is None
+        commands = stores[0].arguments["commands"]
+        assert any("Store Sequence 110" in command for command in commands)
+        assert event["status"] in ("ok", "readback_failed")
+
     def _stored_timeline_payload(self) -> dict:
         return {
             "song_title": "밝은 팝 무대 v1",
