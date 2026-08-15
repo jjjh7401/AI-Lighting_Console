@@ -117,6 +117,8 @@ class TestSessionStorageAndReplace:
         assert event["type"] == "notice"
         assert "stage-sketch.png" in event["message"]
         assert "2KB" in event["message"]
+        # First upload: nothing was replaced, so the notice must not claim it.
+        assert "교체" not in event["message"]
         assert sent == [event]
 
     def test_a_new_upload_replaces_the_previous_one(self, tmp_path):
@@ -130,6 +132,10 @@ class TestSessionStorageAndReplace:
         # Only the most recent image is kept — no accumulation.
         assert session._layout_image.file_name != "first.png"
         assert len(sent) == 2  # one notice per upload, both surfaced
+        # The session keeps ONE image; the second notice says the swap out
+        # loud so the operator never believes both sketches are attached.
+        assert "교체" not in sent[0]["message"]
+        assert "교체" in sent[1]["message"]
 
     def test_upload_does_not_start_a_model_instruction(self, tmp_path):
         # Unlike upload_vectorworks_export, this must NOT call run_instruction

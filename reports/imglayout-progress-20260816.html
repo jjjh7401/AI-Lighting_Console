@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MA3 코파일럿 — 이미지 기반 배치 제안 (IMGLAYOUT-001) 진행 리포트 (2026-08-16)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413; --clay:#D97757; --clay-d:#B85C3E;
+  --oat:#E3DACC; --olive:#788C5D;
+  --g100:#F0EEE6; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+  --sans:"Pretendard",system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;
+  --max-width:860px; --radius-panel:12px; --radius-row:8px; --border:1.5px solid var(--g300);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--slate);font-family:var(--sans);line-height:1.65;font-size:15px}
+main{max-width:var(--max-width);margin:0 auto;padding:32px 20px 80px}
+h1{font-size:26px;line-height:1.3;margin:8px 0 4px}
+h2{font-size:19px;margin:44px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--oat)}
+h3{font-size:16px;margin:24px 0 8px}
+.sub{color:var(--g500);font-size:13px}
+.badge{display:inline-block;background:var(--olive);color:#fff;border-radius:20px;padding:2px 12px;font-size:12px;font-weight:600;margin-right:6px}
+.badge.clay{background:var(--clay)}
+.badge.oat{background:var(--oat);color:var(--g700)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:20px 0}
+.card{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px}
+.card .num{font-size:28px;font-weight:700;color:var(--clay)}
+.card .lbl{font-size:12.5px;color:var(--g500);margin-top:2px}
+table{width:100%;border-collapse:collapse;background:var(--paper);border:var(--border);border-radius:var(--radius-panel);overflow:hidden;font-size:14px}
+th{background:var(--g100);text-align:left;padding:9px 12px;font-size:12.5px;color:var(--g700)}
+td{padding:9px 12px;border-top:1px solid var(--g100);vertical-align:top}
+code,kbd{font-family:var(--mono);font-size:12.5px;background:var(--g100);border-radius:4px;padding:1px 6px}
+.lead{background:var(--paper);border-left:4px solid var(--clay);border-radius:0 var(--radius-row) var(--radius-row) 0;padding:12px 16px;margin:12px 0;font-size:14.5px}
+.callout{background:var(--g100);border-radius:var(--radius-row);padding:12px 16px;margin:12px 0;font-size:14px}
+.callout.warn{background:#F7E8DC;border-left:4px solid var(--clay)}
+.callout.ok{background:#EAEFE3;border-left:4px solid var(--olive)}
+details{background:var(--paper);border:var(--border);border-radius:var(--radius-row);padding:10px 14px;margin:8px 0}
+summary{cursor:pointer;font-weight:600;font-size:14px}
+.flow{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px;margin:16px 0;overflow-x:auto}
+.step{display:flex;gap:10px;align-items:flex-start;margin:10px 0}
+.step .n{flex:0 0 26px;height:26px;border-radius:50%;background:var(--slate);color:var(--ivory);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
+.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:1px 7px;margin-right:6px;vertical-align:middle}
+.tag.plan{background:var(--oat);color:var(--g700)}
+.tag.live{background:var(--clay);color:#fff}
+.tag.safe{background:var(--olive);color:#fff}
+footer{margin-top:56px;color:var(--g500);font-size:12.5px;border-top:1px solid var(--g300);padding-top:14px}
+</style>
+</head>
+<body>
+<main>
+
+<p class="sub">MA3 코파일럿 · feature/SPEC-COPILOT-IMGLAYOUT-001 · 2026-08-16</p>
+<h1>이미지 기반 배치 제안 — 스케치를 첨부하면 배치 계획이 나온다</h1>
+<p><span class="badge">M0~M5 전 마일스톤 완료</span><span class="badge clay">라이브 비전 스모크 통과</span><span class="badge oat">main 머지 완료</span></p>
+
+<p class="lead">
+이번 작업의 목표는 <strong>조명감독이 배치 스케치(그림·레퍼런스 사진·도면 낙서)를 채팅에 붙이면,
+코파일럿이 그 그림의 구조를 읽고 배치 계획을 제안하는 것</strong>이었습니다.
+그림을 "잘 알아맞히는" 것이 아니라 <strong>정직하게 읽는 것</strong>이 핵심입니다 —
+그림에 적힌 글씨("간격 2m", "MMX x6")는 데이터로 쓰고, 그림에 없는 수치는
+절대 지어내지 않고 질문으로 넘깁니다. 실제 콘솔에 쓰는 것은 기존 승인 경로
+(<code>arrange_fixtures</code>) 그대로이므로 <strong>새 쓰기 표면은 0개</strong>입니다.
+</p>
+
+<div class="cards">
+  <div class="card"><div class="num">5 / 5</div><div class="lbl">마일스톤 M1~M5 완료 (+M0 스펙)</div></div>
+  <div class="card"><div class="num">38</div><div class="lbl">신규 자동 테스트 (4개 파일)</div></div>
+  <div class="card"><div class="num">10.8s</div><div class="lbl">라이브 비전 스모크 (gemini-3.5-flash)</div></div>
+  <div class="card"><div class="num">0</div><div class="lbl">새 콘솔 쓰기 경로 (기존 승인 경로만)</div></div>
+</div>
+
+<h2>사용자가 보게 되는 흐름</h2>
+<div class="flow">
+  <div class="step"><div class="n">1</div><div><strong>첨부</strong> — 채팅 입력창의 <em>단일 첨부 버튼</em>으로 이미지를 올립니다. 파일 종류가 목적지를 결정합니다 (이미지 → 배치 분석, CSV/XLSX → 벡터웍스 패치). 썸네일과 업로드 확인 알림이 뜹니다. <span class="tag plan">PLAN</span></div></div>
+  <div class="step"><div class="n">2</div><div><strong>분석</strong> — <code>analyse_layout_image</code> 툴이 비전 모델을 1회 호출해 구조 사양(패턴·겹·대수·대칭·주석·미해결 항목)을 뽑습니다. 콘솔로는 아무것도 보내지 않습니다. <span class="tag plan">PLAN</span></div></div>
+  <div class="step"><div class="n">3</div><div><strong>질문</strong> — 그림 어디에도 없는 값(예: "삼각형 한 변 길이")은 기존 질문 카드로 하나씩 확인합니다. 모델이 값을 지어내는 것은 금지. <span class="tag plan">PLAN</span></div></div>
+  <div class="step"><div class="n">4</div><div><strong>승인</strong> — 승인 카드에 그림 속 글씨의 <em>원문과 해석을 나란히</em> 보여줍니다 ("삼각형 간격 3m" → spacing 3.0). OCR 오독은 여기서 사람이 잡습니다. <span class="tag safe">승인</span></div></div>
+  <div class="step"><div class="n">5</div><div><strong>실행</strong> — 승인 후에만 기존 <code>arrange_fixtures</code>(백업 → 쓰기 → 재검증) 단일 경로로 좌표를 기록합니다. <span class="tag live">LIVE</span></div></div>
+</div>
+
+<h2>지키기로 한 원칙 (위반은 결함)</h2>
+<table>
+<tr><th>원칙</th><th>의미</th></tr>
+<tr><td><strong>구조는 읽고, 픽셀 수치는 읽지 않는다</strong></td><td>그림의 비율에서 치수를 추정하는 출력은 금지. 수치 출처는 (a) 그림 속 글씨, (b) 조명감독의 답변 둘뿐.</td></tr>
+<tr><td><strong>그림 속 글씨는 데이터다</strong></td><td>단, 승인 카드에 원문·해석을 나란히 노출해 오독("2m"→"12m")을 사람이 잡게 한다.</td></tr>
+<tr><td><strong>비전 결과는 제안이다</strong></td><td>실행은 기존 <code>arrange_fixtures</code> 단일 경로. 새 콘솔 쓰기 표면 금지.</td></tr>
+<tr><td><strong>base64는 대화 컨텍스트에 넣지 않는다</strong></td><td>세션이 바이트를 보관하고, 비전 호출 시에만 어댑터가 이미지 블록으로 첨부.</td></tr>
+<tr><td><strong>추측 금지</strong></td><td>그림이 대상 픽스처를 지정하지 않으면 반드시 질문. 이미지를 못 읽는 프로바이더(claude_code)는 조용히 버리지 않고 정직하게 거부.</td></tr>
+</table>
+
+<h2>이번에 만들어진 것</h2>
+
+<h3>M1 — 업로드 채널</h3>
+<p>WebSocket 메시지 <code>layout_image_upload</code>를 서버·UI 양쪽 허용목록에 동시 등록.
+MIME은 PNG·JPEG·WebP만, 디코드 후 5MB 상한. 위반은 오류로 거부하고 세션에 보관하지 않습니다.
+세션은 최신 1장만 보관(교체형)하며, 저장·영속화 없이 접속 수명과 함께 사라집니다.</p>
+
+<h3>M2 — 프로바이더 이미지 배선</h3>
+<p><code>UserMessage</code>에 <code>images</code> 필드를 기본값 빈 튜플로 추가 — 기존 코드는 무변경 동작.
+anthropic 어댑터는 이미지 블록 배열로, gemini 어댑터는 Part 바이트로 조립.
+<strong>claude_code 어댑터는 이미지를 조용히 버리는 대신 "이 프로바이더는 이미지를 읽을 수 없다"고 정직하게 답합니다.</strong></p>
+
+<h3>M3 — <code>analyse_layout_image</code> 툴</h3>
+<p>세션 보관 이미지 + 감독의 설명을 받아 비전 1회 호출로 구조 사양 JSON
+(<code>pattern</code>/<code>layers</code>/<code>symmetry</code>/<code>confidence</code>/<code>annotations</code>[원문+해석 쌍]/<code>unresolved</code>)을 반환.
+콘솔 실행 동사 0개.</p>
+
+<h3>M4+M5 — 세션 배선 + 통합 테스트</h3>
+<p>업로드→분석→질문→승인→arrange 전체 흐름을 mock 프로바이더 스크립트로 관통하는 통합 테스트 1건 포함,
+총 38개 테스트(크기·MIME 거부, 어댑터별 와이어 페이로드, 정직 거부, 주석 쌍 노출, 미해결 질문 라우팅).</p>
+
+<h3>UI — 첨부 버튼 통합</h3>
+<p>이미지용·CSV용 버튼을 따로 두지 않고 <strong>하나의 첨부 버튼</strong>으로 합쳤습니다.
+파일 확장자/MIME이 목적지(배치 분석 vs 벡터웍스 패치)를 자동으로 결정합니다.</p>
+
+<h2>라이브 스모크 — 실제 비전 모델로 확인한 것</h2>
+<div class="callout ok">
+<strong>✅ 2026-08-15 통과 (gemini-3.5-flash, 10.8초)</strong> — 삼각형 3개 × MMX 3대, 손글씨 주석 3종이 든 테스트 이미지.
+<ul style="margin:8px 0 0">
+<li><strong>주석 OCR 3종 전부 정확</strong>: "삼각형 간격 3m"→spacing 3.0 · "H 5.5m"→z 5.5 · "MMX x3"→count+type, 삼각형별 적용 구분까지.</li>
+<li><strong>지어내지 않음</strong>: 그림에 없는 "삼각형 한 변 길이"는 <code>unresolved</code>로 넘어가 질문 대상이 됨. 픽셀 추정 수치 0건.</li>
+<li><strong>어휘 밖 값을 발명하지 않음</strong>: 패턴 어휘에 <code>triangle</code>이 없어 <code>rows</code> + 레이어 노트로 <em>강등 표현</em> — 설계 의도대로의 정상 동작.</li>
+</ul>
+</div>
+
+<h2>마무리 정리 (오늘 새벽)</h2>
+<ul>
+<li><strong>가드 스냅샷 갱신</strong> — 툴 수 33개·<code>layout_image_upload</code> 채널을 보존 게이트 스냅샷에 반영, ruff format/fix.</li>
+<li><strong>보존 게이트 핀 원상복구</strong> — 스냅샷 갱신 중 건드린 핀 파일(console.py·preview.py)을 보존 diff 규율에 맞게 되돌림.</li>
+<li>main의 감독 타임라인 워크플로우·FX 수정(프리셋 라벨, 한글 라벨 영어 대체)을 머지로 수용.</li>
+</ul>
+
+<h2>개선 제안</h2>
+
+<h3>1. <code>triangle</code> 패턴 프리셋 추가 (스펙에 이미 v2 후보로 기록됨)</h3>
+<p class="callout warn">지금은 삼각형 그림이 <code>rows</code>로 강등되어 <strong>삼각형 꼭짓점 좌표를 실제로 만들 프리셋이 없습니다.</strong>
+스모크에서 정확히 읽어낸 구조를 실행으로 못 잇는 것이 현재 가장 큰 간극입니다.
+추가하려면 어휘·검증·<code>spatial/presets.py</code>·<code>arrange_fixtures</code> 프리셋 목록이 함께 넓어져야 합니다 (계약 §3 + ARRANGE_PRESETS).</p>
+
+<h3>2. 실기 1턴 왕복 스모크</h3>
+<p>라이브 스모크는 <em>비전 분석까지</em>만 실측했습니다. 실제 onPC + 실제 프로바이더로
+<strong>업로드→분석→질문 답변→승인 카드→arrange 실행→좌표 재검증</strong>을 한 턴으로 관통하는 실기 확인이 남아 있습니다.
+SPATIAL 결함 2(무승인 좌표 기록)의 전례를 볼 때, 승인 카드가 이 경로에서도 실제 렌더되는지 사람 입회로 보는 것이 값어치가 큽니다.</p>
+
+<h3>3. 확신도(<code>confidence</code>)의 UI 노출</h3>
+<p>구조 사양에 <code>confidence</code>가 있지만 승인 카드에서 감독이 보는지 확인이 필요합니다.
+낮은 확신의 패턴 판독은 주석 원문-해석 쌍처럼 <strong>시각적으로 구별</strong>해 주면
+"모델이 자신 없어 하는 부분"을 승인 단계에서 더 빨리 잡을 수 있습니다.</p>
+
+<h3>4. 업로드 UX 소소한 것들</h3>
+<ul>
+<li><strong>드래그앤드롭 / 클립보드 붙여넣기</strong> — 스케치는 사진 찍어 바로 붙이는 경우가 많아 첨부 버튼보다 자연스럽습니다.</li>
+<li><strong>교체 알림</strong> — 세션이 최신 1장만 보관하므로, 두 번째 업로드가 첫 장을 조용히 덮습니다. "이전 이미지를 교체했습니다" 안내가 있으면 혼동을 줄입니다.</li>
+<li><strong>5MB 초과 시 클라이언트 사전 안내</strong> — 서버 거부 전에 UI에서 크기를 먼저 알려주면 왕복이 줄어듭니다. (요즘 폰 사진 원본은 5MB를 쉽게 넘습니다 — 클라이언트 측 리사이즈도 후보.)</li>
+</ul>
+
+<h3>5. 스펙 상태 문구 동기화</h3>
+<p><code>spec.md</code>는 <code>status: in-progress</code>이고 CHANGELOG는 "라이브 스모크만 남음"이라 적혀 있는데,
+스모크는 이미 통과했습니다. v1 범위 기준으로는 완료 조건이 대부분 찼으므로
+<code>completed</code> 전환(또는 실기 1턴을 명시적 잔여로 남기는 개정)을 정리해 두면 다음 세션 혼선이 없습니다.</p>
+
+<footer>
+생성: 2026-08-16 · 근거: <code>.moai/specs/SPEC-COPILOT-IMGLAYOUT-001/spec.md</code> · 커밋 <code>b491b15…546e45f</code> (M0 스펙 → M1~M5 → 라이브 스모크 → 첨부 통합 → main 머지 → 가드 스냅샷/핀 정리) · CHANGELOG [Unreleased]
+</footer>
+
+</main>
+</body>
+</html>

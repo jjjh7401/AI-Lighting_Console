@@ -472,10 +472,12 @@ class LayoutImageUploadPort(Protocol):
 # prompt below asks for: a model that emits a pixel-ratio estimate as an extra
 # 'interpreted' key (e.g. an invented 'estimated_spacing_px') is refused here,
 # not trusted to have obeyed the prompt.
-_LAYOUT_PATTERNS = frozenset({"rings", "rows", "grid", "arc", "scatter", "single_point"})
+_LAYOUT_PATTERNS = frozenset(
+    {"rings", "rows", "grid", "arc", "scatter", "single_point", "triangle"}
+)
 _LAYOUT_SYMMETRIES = frozenset({"radial", "bilateral", "none"})
 _LAYOUT_CONFIDENCES = frozenset({"high", "medium", "low"})
-_LAYOUT_INTERPRETED_KEYS = frozenset({"spacing", "radius", "z", "count", "type_name"})
+_LAYOUT_INTERPRETED_KEYS = frozenset({"spacing", "radius", "z", "count", "type_name", "side"})
 _LAYOUT_TOP_KEYS = frozenset(
     {"pattern", "layers", "symmetry", "confidence", "annotations", "unresolved"}
 )
@@ -496,7 +498,8 @@ def _build_layout_vision_prompt(description: str) -> str:
         "덧붙이지 마라.\n"
         "\n"
         "{\n"
-        '  "pattern": "rings" | "rows" | "grid" | "arc" | "scatter" | "single_point",\n'
+        '  "pattern": "rings" | "rows" | "grid" | "arc" | "scatter" | '
+        '"single_point" | "triangle",\n'
         '  "layers": [{"count": 6, "note": "inner"}],\n'
         '  "symmetry": "radial" | "bilateral" | "none",\n'
         '  "confidence": "high" | "medium" | "low",\n'
@@ -513,8 +516,8 @@ def _build_layout_vision_prompt(description: str) -> str:
         "이미지 안에 적힌 텍스트(예: '간격 2m', 'MMX x6')는 annotations 항목 "
         "하나씩으로 만들어라 — 'text'는 이미지에 적힌 원문 그대로, "
         "'interpreted'는 그 해석이다. 'interpreted'에 넣을 수 있는 키는 "
-        "spacing, radius, z, count, type_name 다섯 개뿐이며 다른 키를 만들지 "
-        "마라.\n"
+        "spacing, radius, z, count, type_name, side 여섯 개뿐이며 다른 키를 "
+        "만들지 마라 ('side'는 삼각형 등 도형의 한 변 길이다).\n"
         "이미지에도 텍스트 주석에도 없는 값은 절대 지어내지 말고, "
         "unresolved 배열에 그 값이 무엇인지 한국어로 짧게 적어라.\n"
         f"조명감독의 설명: {description}\n"
@@ -7831,7 +7834,7 @@ def build_toolset(
         ToolDefinition(
             name="arrange_fixtures",
             description=(
-                "MOVE fixtures in the patch: compute a grid / row / circle "
+                "MOVE fixtures in the patch: compute a grid / row / circle / triangle "
                 "arrangement, or set their absolute elevation while preserving "
                 "each fixture's measured x/y, then WRITE 3D stage coordinates "
                 "(metres) onto the fixtures you name. This CHANGES THE "
@@ -7844,7 +7847,7 @@ def build_toolset(
                 "'fids' is the EXPLICIT target list and it is also the ORDER "
                 "they occupy the shape in: fids[0] takes the first slot "
                 "(leftmost of a row, front-left of a grid, start_angle of a "
-                "circle). Fixtures you do not name are never touched. Only "
+                "circle, apex of a triangle). Fixtures you do not name are never touched. Only "
                 "position is written; fixture orientation is never changed.\n"
                 "\n"
                 "The stage origin is the CENTRE, so negative coordinates are "
@@ -7878,8 +7881,12 @@ def build_toolset(
                         "description": (
                             "The arrangement shape. 'row' spreads the fixtures "
                             "along one axis, 'grid' fills rows x columns, "
-                            "'circle' spaces them evenly around a ring, and "
-                            "'elevation' changes only their absolute z height."
+                            "'circle' spaces them evenly around a ring, "
+                            "'triangle' spreads them at equal arc length along "
+                            "the perimeter of an equilateral triangle (apex "
+                            "first; a count divisible by 3 puts a fixture on "
+                            "every vertex), and 'elevation' changes only their "
+                            "absolute z height."
                         ),
                     },
                     "fids": {
@@ -7942,6 +7949,15 @@ def build_toolset(
                             "it stage-right of the origin."
                         ),
                     },
+                    "side": {
+                        "type": "number",
+                        "description": (
+                            "triangle only. Side length of the equilateral "
+                            "triangle in metres. Defaults to 3.0. Take it from "
+                            "an image annotation or the operator's answer — "
+                            "never from pixel proportions."
+                        ),
+                    },
                     "origin": {
                         "type": "array",
                         "items": {"type": "number"},
@@ -7957,7 +7973,7 @@ def build_toolset(
                         "description": (
                             "Which axis or plane to lay out on. row: 'x' "
                             "(default, left-right), 'y' (upstage depth) or 'z' "
-                            "(height). grid/circle: 'xy' (default, floor plan) "
+                            "(height). grid/circle/triangle: 'xy' (default, floor plan) "
                             "or 'xz' (a vertical wall or truss array)."
                         ),
                     },
@@ -8139,8 +8155,12 @@ def build_toolset(
                 "original image text ('text') NEXT TO its interpreted value "
                 "— the operator catches an OCR misread ('2m' read as "
                 "'12m') by comparing the two, so hiding the original "
-                "defeats that check. For every 'unresolved' entry, ask the "
-                "operator ONE question per item — never invent a value the "
+                "defeats that check. ALWAYS state the reading's 'confidence' "
+                "verbatim (high/medium/low) when presenting; when it is "
+                "'medium' or 'low', LEAD with a warning that the structural "
+                "read itself is uncertain and must be double-checked against "
+                "the sketch before approval. For every 'unresolved' entry, ask "
+                "the operator ONE question per item — never invent a value the "
                 "image never stated.\n"
                 "\n"
                 "Requires an image already attached in this conversation; "
