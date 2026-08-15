@@ -122,6 +122,12 @@ PATTERNS: dict[str, Fx] = {
 # turn into a phaser AND capture into a stored cue. It is the regression
 # baseline, quoted here verbatim rather than rebuilt from the builder's own
 # helpers (which would make the comparison circular).
+#
+# ONE addition rides after the measured store (user report, 2026-08-15 live
+# test): `Label Sequence <n> '<name>'` — the store's quoted name labels the
+# CUE only, so the sequence object showed as a bare number in every pool and
+# executor view. The Label form is already validated and emitted by
+# songcue.py/layout.py; it extends the anchor, it does not reorder it.
 M0_ANCHOR = (
     "ChangeDestination Root",
     "ClearAll",
@@ -132,6 +138,7 @@ M0_ANCHOR = (
     "Attribute 'Dimmer' At Phase 0 Thru 360",
     "Attribute 'Dimmer' At Speed 60",
     "Store Sequence 12 Cue 1 'Dimmer Pulse'",
+    "Label Sequence 12 'Dimmer Pulse'",
     "ClearAll",
 )
 
@@ -834,7 +841,7 @@ def test_not_executed_commands_are_propagated_and_success_is_withheld():
     assert report.failed == (plan.commands[store],)
     assert report.not_executed == tuple(plan.commands[store + 1 :])
     text = to_korean(report)
-    assert "미실행 1개" in text
+    assert "미실행 2개" in text  # Label Sequence + ClearAll follow the failed store
     assert "실패 1개" in text
 
 

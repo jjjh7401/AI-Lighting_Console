@@ -600,6 +600,11 @@ def build_fx_bundle(
     commands.extend(_timing_lines(fx))
     commands.extend(f"Set Selection MAtricks '{axis}' {_format_value(v)}" for axis, v in matricks)
     commands.append(f"Store Sequence {sequence} Cue {_CUE_NUMBER} '{text}'")
+    # The quoted store name labels the CUE only; the SEQUENCE object stays
+    # unnamed and shows as a bare number in every pool/executor view (user
+    # report, 2026-08-15 live test). Label it too — the same validated form
+    # songcue.py/layout.py already emit (`Label Sequence <n> '<name>'`).
+    commands.append(f"Label Sequence {sequence} '{text}'")
     if matricks:
         # After the Store: the sub-selection is part of the shape being stored,
         # so releasing it earlier would store the undivided effect (:90).

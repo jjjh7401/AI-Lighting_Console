@@ -6898,7 +6898,9 @@ def build_toolset(
         ToolDefinition(
             name="instantiate_fx",
             description=(
-                "Put an effect FROM find_fx onto THIS rig as a sequence + cue. "
+                "Put an effect FROM find_fx onto THIS rig — a labeled preset "
+                '(destination "preset", the operator flow default) or a '
+                "sequence + cue when a cue was asked for. "
                 "Pass the fx_id of the match you chose; do NOT hand-write the "
                 "bundle with run_commands, because this tool is the only thing "
                 "that emits the measured step grammar (values, then a "
@@ -6943,17 +6945,22 @@ def build_toolset(
                 "its very first line. If the operator wants two effects, do "
                 "the second after they reply.\n"
                 "\n"
-                "STOP AT THE STORE. Do NOT follow this call with hand-written "
-                "run_commands that recall the result, store extra cues, "
-                "'Assign ... At Executor/Page' or 'Go+' — executor placement "
-                "and playback are the operator's call (measured live "
-                "2026-08-15: that follow-up bundle was refused at the gate "
-                "and burned two extra approval cards). Report the stored "
-                "numbers and OFFER the fader assignment as the operator's "
-                "next instruction instead. Same rule for a preset detour: a "
-                "plain movement request ('흔들어줘', '돌려줘') is destination "
-                '"sequence" in ONE call — reach for "preset" only when the '
-                "operator asked to keep/reuse it.\n"
+                "STOP AT THE STORE — the operator's flow (user direction "
+                "2026-08-15): store the effect as a labeled PRESET "
+                '(destination "preset") and STOP. Do NOT follow up with '
+                "hand-written run_commands that recall it live, store cues, "
+                "'Assign ... At Executor/Page' or 'Go+' — those choices "
+                "belong to the operator, and the measured cost of ignoring "
+                "this was a gate refusal plus two wasted approval cards. "
+                "Store into a sequence/cue only when the operator already "
+                "asked for a cue.\n"
+                "\n"
+                "ANSWER FORMAT after a successful store — SHORT. Two "
+                "sentences maximum: (1) what was stored (pool.slot and "
+                "label) plus the stage-check caveat, (2) ONE question: "
+                "'시퀀스(큐)에도 저장할까요?'. No command-line examples, no "
+                "next-step tutorials, no option lists — the choice is the "
+                "operator's, so leave only the question.\n"
                 "\n"
                 "Finally, and this holds even when every command came back "
                 "ok: the effect itself cannot be verified by machine. The "
@@ -7083,11 +7090,10 @@ def build_toolset(
                 "x/x_wings/x_shuffle for rig-geometry spreads, every-Nth, "
                 "mirroring and seeded shuffle.\n"
                 "\n"
-                'destination "sequence" (default) stores a sequence + cue; '
-                '"preset" stores a reusable preset into an "All" pool via '
-                "/Universal (the operator asked for a preset — '프리셋으로 "
-                "잡아줘', '프리셋에 저장' — or wants to reuse the effect "
-                "across songs). Numbers "
+                'destination "preset" (the operator flow default) stores a '
+                'reusable preset into an "All" pool via /Universal; '
+                '"sequence" stores a sequence + cue — use it when the '
+                "operator already asked for a cue. Numbers "
                 "are measured from the rig on this call — never guessed.\n"
                 "\n"
                 "Run ONE compose_fx per instruction (a second one folds shared "
@@ -7096,10 +7102,11 @@ def build_toolset(
                 '"complete" is a success. The effect itself is NOT machine-'
                 "verifiable — a human has to watch the stage; say so.\n"
                 "\n"
-                "STOP AT THE STORE (same rule as instantiate_fx): no "
-                "hand-written recall/Assign/Go+ follow-up bundles — report "
-                "the stored numbers and offer executor placement as the "
-                "operator's next instruction."
+                "STOP AT THE STORE (same rule as instantiate_fx): labeled "
+                "preset by default, no hand-written recall/cue/Assign/Go+ "
+                "follow-ups, and a SHORT answer — stored slot + label + "
+                "stage-check caveat, then the single question "
+                "'시퀀스(큐)에도 저장할까요?'."
             ),
             parameters={
                 "type": "object",
