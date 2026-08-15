@@ -2580,14 +2580,13 @@ body {
   gap: 12px;
 }
 
-/* Auto-fill: the column count itself shrinks as the pane narrows — no fixed
-   column count to break at small widths. T-H5: minmax lowered from 150px so
-   MULTIPLE tiles fit side by side at the pane's typical width — a single
-   column reads as a list again, which is exactly the MA3-executor-bar
-   feeling this layout exists to avoid. */
+/* 진행 순서 보드 (user direction 2026-08-15): a VERTICAL list, one executor
+   per row, so the show order reads top-to-bottom like a timeline — the
+   multi-column tile grid hid the order. Each row lays its facts out
+   horizontally instead (see .cue-tile below). */
 .cue-monitor-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 6px;
 }
 
@@ -2597,13 +2596,14 @@ body {
   grid-column: 1 / -1;
 }
 
-/* One executor = one tile. Info hierarchy top -> bottom: number (corner,
-   small) -> sequence name (title) -> current cue (emphasized, accent
-   colour — the value an operator checks most often) -> status+Go/Off. */
+/* One executor = one ROW (진행 순서 보드): number+badges | sequence name |
+   current cue+progress | Go controls, left to right — the vertical position
+   in the list IS the show order. */
 .cue-tile {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
   background: var(--bg);
   border: 1px solid #2b2f36;
   border-radius: 2px;
@@ -2623,8 +2623,9 @@ body {
 .cue-tile-topline {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 6px;
+  flex: 0 0 auto;
+  min-width: 110px;
 }
 
 .cue-tile-no {
@@ -2641,6 +2642,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1 1 30%;
 }
 
 .cue-tile-current-cue {
@@ -2651,14 +2653,15 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1 1 35%;
 }
 
 .cue-tile-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 3px;
-  margin-top: 2px;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 /* The cue sheet — ONE open at a time (CueMonitor.tsx never renders more
