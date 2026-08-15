@@ -3448,6 +3448,23 @@ class ChatSession:
         touch the console at all."""
         state = self._pending_song_plan
         if state is None:
+            # 2026-08-16 user finding: after a server restart / browser
+            # reconnect the in-memory pending plan is GONE, and an unmistakable
+            # plan-structure edit ("큐 2와 3 사이에 브레이크 추가") fell through
+            # to the model — which answered with a fabricated "서버 내부 오류"
+            # apology. An unambiguous structure edit with no pending plan gets
+            # an honest refusal instead; softer edits still fall through.
+            if (
+                _PLAN_EDIT_DELETE.search(text) is not None
+                or _PLAN_EDIT_INSERT_BETWEEN.search(text) is not None
+                or _PLAN_EDIT_INSERT_ADJACENT.search(text) is not None
+            ):
+                return self._pointing_refusal(
+                    "수정할 보류 중 계획(승인 전 타임라인)이 없습니다 — 서버 재시작이나 "
+                    "화면 새로고침으로 세션의 계획이 사라졌을 수 있습니다. 곡 설계를 "
+                    "다시 실행해 계획을 만든 뒤 편집해 주세요. 이미 콘솔에 저장된 "
+                    "타임라인의 포지션은 '타임라인 큐 N을 …으로' 형태로 수정할 수 있습니다."
+                )
             return None
         if _SONG_DESIGN_REQUEST.search(text) is not None or _is_natural_song_brief(text):
             return None  # a fresh design supersedes; that path clears pending

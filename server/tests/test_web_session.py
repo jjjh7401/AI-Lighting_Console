@@ -2359,6 +2359,21 @@ class TestSongDesignInterviewSession:
         commands = stores[0].arguments["commands"]
         assert not [command for command in commands if command.startswith("Group ")]
 
+    def test_structure_edit_without_a_pending_plan_refuses_honestly(self, tmp_path):
+        # 2026-08-16 user finding: after a restart/reconnect the pending plan
+        # is gone; "큐 2와 3 사이에 브레이크 추가" must NOT fall through to the
+        # model (which fabricated a "서버 내부 오류" apology) — it explains.
+        provider = ScriptedProvider([])  # any model consultation would raise
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        assert session._pending_song_plan is None
+
+        for text in ("큐 2와 3 사이에 브레이크 추가", "큐 4 삭제", "큐 2 뒤에 아웃트로 추가"):
+            event = session.run_instruction(text)
+            assert "보류 중 계획" in event["text"], text
+        assert calls == []
+
     def test_plan_edit_then_approval_stores_once(self, tmp_path):
         session, sent, calls = self._pending_plan_session(tmp_path)
         session._question_channel = self._Channel(["승인"])
