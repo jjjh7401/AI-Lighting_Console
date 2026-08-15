@@ -84,29 +84,32 @@ def build_presets_router(deps: PresetsDeps) -> APIRouter:
 
     @router.get("/api/presets/{pool_no}")
     def read_pool(pool_no: int) -> dict:
-        pools = _pools()
-        listed = {
-            obj["no"]: str(obj.get("name", ""))
-            for obj in pools["objects"]
-            if isinstance(obj.get("no"), int)
-        }
-        if pool_no not in listed:
-            # Absence from a TRUNCATED listing is not evidence of absence,
-            # but it is not evidence of presence either — the honest answer
-            # names the condition instead of interpolating the number.
-            detail = f"프리셋 풀 {pool_no}은(는) 이 리그의 풀 목록에 없습니다"
-            if pools["truncated"]:
-                detail += " (풀 목록이 잘려 있어 존재 여부를 판정할 수 없습니다)"
-            raise HTTPException(status_code=404, detail=detail)
+        # ONE query on the happy path (popup-open latency is one OSC round
+        # trip): the pool is read DIRECTLY, and its own ``node.name`` names it.
+        # This is still never-guess — the console itself either answers for
+        # that exact path or refuses it; only the FAILURE path spends a second
+        # query, on the pool listing, to tell "no such pool" (404, with the
+        # truncation caveat when the listing cannot prove absence) apart from
+        # "console unreachable" (502).
         try:
             payload = deps.state_port.query_state(f"{deps.preset_pools_path}/{pool_no}")
         except Exception as error:
-            raise HTTPException(
-                status_code=502, detail=f"프리셋 풀 {pool_no}을(를) 읽지 못했습니다: {error}"
-            ) from error
+            pools = _pools()  # raises its own 502 when the console is down
+            listed = {obj.get("no") for obj in pools["objects"]}
+            if pool_no in listed:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"프리셋 풀 {pool_no}을(를) 읽지 못했습니다: {error}",
+                ) from error
+            detail = f"프리셋 풀 {pool_no}은(는) 이 리그의 풀 목록에 없습니다"
+            if pools["truncated"]:
+                detail += " (풀 목록이 잘려 있어 존재 여부를 판정할 수 없습니다)"
+            raise HTTPException(status_code=404, detail=detail) from error
         section = _section_of(payload)
+        node = payload.get("node")
+        name = node.get("name") if isinstance(node, dict) else None
         return {
-            "pool": {"no": pool_no, "name": listed[pool_no]},
+            "pool": {"no": pool_no, "name": name if isinstance(name, str) else ""},
             "presets": section["objects"],
             "truncated": section["truncated"],
             "total": section["total"],

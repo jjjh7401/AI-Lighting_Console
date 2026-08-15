@@ -39,13 +39,15 @@ class _StatePort:
         return self._tree[path]
 
 
-def _payload(path: str, children: list[dict], *, truncated: bool = False) -> dict:
+def _payload(
+    path: str, children: list[dict], *, truncated: bool = False, name: str = ""
+) -> dict:
     return {
         "v": 1,
         "kind": "state",
         "path": path,
         "children": children,
-        "node": {"childCount": len(children)},
+        "node": {"childCount": len(children), "name": name},
         "truncated": truncated,
     }
 
@@ -68,6 +70,7 @@ def _default_tree(*, pool_truncated: bool = False, pools_truncated: bool = False
             f"{POOLS_PATH}/21",
             [{"i": 1, "name": "Breath FX"}, {"i": 2, "name": "Snap Pulse"}, {"name": "ghost"}],
             truncated=pool_truncated,
+            name="All 1",
         ),
     }
 
@@ -91,10 +94,12 @@ class TestListPools:
 
 
 class TestReadPool:
-    def test_one_pool_costs_exactly_two_reads_and_returns_fresh_contents(self):
+    def test_the_happy_path_costs_exactly_one_read(self):
+        # Popup-open latency is one OSC round trip: the pool is read DIRECTLY
+        # and named by its own node — no pre-validating listing query.
         client, port = _client(_default_tree())
         body = client.get("/api/presets/21").json()
-        assert port.queried == [POOLS_PATH, f"{POOLS_PATH}/21"]
+        assert port.queried == [f"{POOLS_PATH}/21"]
         assert body["pool"] == {"no": 21, "name": "All 1"}
         # The name-only "ghost" child degrades to a name-only entry — never
         # numbered by its listing position.
@@ -105,11 +110,12 @@ class TestReadPool:
         ]
         assert body["total"] == 3
 
-    def test_an_unlisted_pool_is_a_404_before_any_pool_read(self):
+    def test_an_unlisted_pool_is_a_404_diagnosed_on_the_failure_path_only(self):
         client, port = _client(_default_tree())
         response = client.get("/api/presets/99")
         assert response.status_code == 404
-        assert port.queried == [POOLS_PATH]
+        # The listing is spent only AFTER the direct read failed.
+        assert port.queried == [f"{POOLS_PATH}/99", POOLS_PATH]
 
     def test_a_truncated_pool_listing_names_the_uncertainty_in_the_404(self):
         client, _port = _client(_default_tree(pools_truncated=True))
@@ -121,10 +127,14 @@ class TestReadPool:
         client, _port = _client(_default_tree(pool_truncated=True))
         assert client.get("/api/presets/21").json()["truncated"] is True
 
-    def test_a_pool_read_failure_is_a_502(self):
+    def test_a_listed_pool_whose_read_fails_is_a_502_not_a_404(self):
         tree = _default_tree()
         del tree[f"{POOLS_PATH}/21"]
         client, _port = _client(tree)
+        assert client.get("/api/presets/21").status_code == 502
+
+    def test_a_dead_console_is_a_502_from_the_diagnosis_path(self):
+        client, _port = _client({})
         assert client.get("/api/presets/21").status_code == 502
 
 
