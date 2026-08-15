@@ -665,6 +665,12 @@ def build_fx_preset_bundle(
     commands.extend(_timing_lines(fx))
     commands.extend(f"Set Selection MAtricks '{axis}' {_format_value(v)}" for axis, v in matricks)
     commands.append(f"Store Preset {preset_pool}.{preset} '{text}' /Universal")
+    # 실기 2026-08-16 (사용자 발견): the inline '<label>' on Store Preset is
+    # ACCEPTED (ok) but NOT applied as the pool label — the presets landed
+    # nameless. Same console behavior the position-preset path already works
+    # around (`server/spatial/pointing.py::position_preset_store_commands`):
+    # the name must ride its own Label line.
+    commands.append(f"Label Preset {preset_pool}.{preset} '{text}'")
     if matricks:
         commands.append(_RESET_MATRICKS)
     commands.append(_CLEAR)

@@ -1105,6 +1105,9 @@ class TestPresetDestination:
         # Pool 21 is the first "All …" pool the LISTING showed; slot 1 is
         # occupied by "Warm", so the measured free slot is 2.
         assert "Store Preset 21.2 'Sine FX' /Universal" in port.executed
+        # 실기 2026-08-16: inline name on Store Preset is not applied — the
+        # label must ride its own Label line or the preset lands nameless.
+        assert "Label Preset 21.2 'Sine FX'" in port.executed
         assert payload["report"]["preset_pool"] == 21
         assert payload["report"]["preset"] == 2
         assert payload["report"]["sequence"] is None
