@@ -22,6 +22,7 @@ from server.llm.config import AnthropicSettings
 from server.llm.errors import ProviderError, normalize_anthropic_error
 from server.llm.types import (
     ConversationItem,
+    ImageAttachment,
     ModelTurn,
     ToolCall,
     ToolDefinition,
@@ -83,6 +84,25 @@ class AnthropicAdapter:
         }
 
     @staticmethod
+    def _image_block(image: ImageAttachment) -> dict:
+        return {
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": image.mime_type,
+                "data": image.content_base64,
+            },
+        }
+
+    @classmethod
+    def _user_content(cls, item: UserMessage) -> Any:
+        if not item.images:
+            return item.text  # unchanged wire shape — no images, no regression
+        return [cls._image_block(image) for image in item.images] + [
+            {"type": "text", "text": item.text}
+        ]
+
+    @staticmethod
     def _assistant_content(turn: ModelTurn) -> Any:
         if turn.provider == PROVIDER_NAME and turn.provider_payload is not None:
             return turn.provider_payload  # verbatim echo (thinking/tool_use blocks)
@@ -99,7 +119,7 @@ class AnthropicAdapter:
         messages: list[dict] = []
         for item in conversation:
             if isinstance(item, UserMessage):
-                messages.append({"role": "user", "content": item.text})
+                messages.append({"role": "user", "content": self._user_content(item)})
             elif isinstance(item, ModelTurn):
                 messages.append({"role": "assistant", "content": self._assistant_content(item)})
             elif isinstance(item, ToolResultsMessage):

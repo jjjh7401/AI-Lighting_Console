@@ -56,10 +56,24 @@ class Usage:
 
 
 @dataclass(frozen=True)
+class ImageAttachment:
+    """One image attached to a :class:`UserMessage` (contract.md §2).
+
+    ``content_base64`` is trusted-valid here — MIME/size validation happens
+    once, at the WS upload boundary (contract.md §1), not on every message
+    construction.
+    """
+
+    mime_type: str
+    content_base64: str
+
+
+@dataclass(frozen=True)
 class UserMessage:
     """A user-authored conversation item (instruction or injected context)."""
 
     text: str
+    images: tuple[ImageAttachment, ...] = ()
 
 
 @dataclass(frozen=True)
