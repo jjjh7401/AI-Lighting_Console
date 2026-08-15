@@ -17,8 +17,8 @@ const LIFECYCLE_LABEL: Record<SongTimelineView["lifecycle"], string> = {
 
 const TIMING_LABEL: Record<SongTimelineView["timing_mode"], string> = {
   manual_go: "수동 Go",
-  trig_time: "TrigTime",
-  timecode: "Timecode",
+  trig_time: "큐 타임 (자동 진행)",
+  timecode: "타임코드",
 };
 
 function formatTimestamp(startMs: number): string {
@@ -156,7 +156,7 @@ function TimelineSectionCard({
       <footer>
         {section.mib && <span>MIB</span>}
         {section.accents.length > 0 && <span>ACCENT</span>}
-        {section.trig_time_seconds !== null && <span>T+{section.trig_time_seconds}s</span>}
+        {section.trig_time_seconds !== null && <span>큐 타임 +{section.trig_time_seconds}s</span>}
       </footer>
       {liveExecutor && (
         <p className={`song-timeline-live-cue${current ? " is-current" : ""}`}>

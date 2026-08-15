@@ -677,12 +677,12 @@ def _build_q5(profile: MusicProfile, rig: RigProfile) -> QuestionCard:
     genre_texture = _find_genre_texture(profile.genre)
     if genre_texture is not None:
         candidates.append(
-            (f"{genre_texture.genre} 장르 질감", genre_texture.reason, genre_texture.texture)
+            (f"{genre_texture.genre} 스타일 전환", genre_texture.reason, genre_texture.texture)
         )
     tempo_texture, tempo_reason = _tempo_band_texture(profile)
-    candidates.append(("BPM 질감", tempo_reason, tempo_texture))
+    candidates.append(("템포 맞춤 (BPM 기준)", tempo_reason, tempo_texture))
     candidates.append(
-        ("중립 질감", "장르·BPM 어느 쪽도 특이하지 않을 때의 기본값.", GLOBAL_DEFAULT_TEXTURE)
+        ("표준 전환", "장르·BPM 어느 쪽도 특이하지 않을 때의 기본값.", GLOBAL_DEFAULT_TEXTURE)
     )
 
     seen: set[str] = set()
@@ -706,7 +706,7 @@ def _build_q5(profile: MusicProfile, rig: RigProfile) -> QuestionCard:
             seen.add(entry.texture)
             options.append(
                 QuestionOption(
-                    label=f"{entry.genre} 장르 질감(참고)",
+                    label=f"{entry.genre} 스타일 전환(참고)",
                     description=f"{entry.texture} 느낌으로 빛의 변화를 정해요. ({_rig_note(rig)})",
                     value=entry.texture,
                 )
@@ -716,8 +716,8 @@ def _build_q5(profile: MusicProfile, rig: RigProfile) -> QuestionCard:
 
     return QuestionCard(
         step=Q5_TEXTURE,
-        prompt="빛은 빠르게 바뀌는 편이 좋을까요, 부드럽게 이어지는 편이 좋을까요?",
-        why="원하는 속도를 고르면 노래의 느낌에 맞춰 빛의 변화 폭을 정할 수 있어요.",
+        prompt="전환 방식은 어떻게 갈까요? 컷으로 딱 끊을지, 페이드로 이어갈지 정해요.",
+        why="전환 방식을 고르면 노래의 느낌에 맞춰 빛이 바뀌는 속도를 정할 수 있어요.",
         options=tuple(options[:3]),
     )
 

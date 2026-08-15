@@ -253,8 +253,8 @@ def _apply_genre_overrides(
         max(high, _BALLAD_FADE_IN_FLOOR_SECONDS),
     )
     note = (
-        f"§7 {_BALLAD_GENRE}: 긴 페이드(5s+) — fade_seconds floored at "
-        f"{_BALLAD_FADE_IN_FLOOR_SECONDS}s"
+        f"§7 {_BALLAD_GENRE}: 기본 페이드 최소 {_BALLAD_FADE_IN_FLOOR_SECONDS:g}초 적용 "
+        "(히트 큐는 컷 허용)"
     )
     return floored, (note,)
 

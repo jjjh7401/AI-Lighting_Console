@@ -1726,7 +1726,7 @@ class TestPositionCueSheetSession:
 
 class TestSongDesignInterviewSession:
     """SONGSTD M2 R1c/R4: '디자인 큐 시트 …' — 5-card director interview
-    (Q1 컨셉 ~ Q5 질감) → standard profile+rig sheet. Narrowly gated on
+    (Q1 컨셉 ~ Q5 전환 방식) → standard profile+rig sheet. Narrowly gated on
     "디자인"/"연출 인터뷰" so it never fires on the existing "포지션 큐 시트"
     vocabulary (see ``TestPositionCueSheetSession`` above, unmodified)."""
 
@@ -1866,7 +1866,7 @@ class TestSongDesignInterviewSession:
         # rig/profile — a deterministic full-choice path (DI1 confirms every
         # axis; no auto-draft anywhere).
         channel = self._Channel(
-            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "BPM 질감"]
+            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "템포 맞춤 (BPM 기준)"]
         )
         session._question_channel = channel
 
@@ -1878,7 +1878,7 @@ class TestSongDesignInterviewSession:
             "어떤 색이 가장 잘 어울릴까요?",
             "가장 중요한 순간을 어떻게 보여 주면 좋겠어요?",
             "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?",
-            "빛은 빠르게 바뀌는 편이 좋을까요, 부드럽게 이어지는 편이 좋을까요?",
+            "전환 방식은 어떻게 갈까요? 컷으로 딱 끊을지, 페이드로 이어갈지 정해요.",
         ]
         assert "전곡 리뷰 번들" in channel.asked[5].prompt
         for q in channel.asked[:5]:
@@ -1900,7 +1900,7 @@ class TestSongDesignInterviewSession:
         calls: list[ToolCall] = []
         session._registry = self._registry(calls)
         session._question_channel = self._Channel(
-            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "BPM 질감"]
+            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "템포 맞춤 (BPM 기준)"]
         )
 
         event = session.run_instruction(
@@ -1939,7 +1939,7 @@ class TestSongDesignInterviewSession:
                 "우주 색 조합",
                 "Ring In",
                 "우주 컨셉 우선 배치",
-                "BPM 질감",
+                "템포 맞춤 (BPM 기준)",
                 "수정",
             ]
         )
@@ -1964,7 +1964,7 @@ class TestSongDesignInterviewSession:
             "어떤 색이 가장 잘 어울릴까요?",
             "가장 중요한 순간을 어떻게 보여 주면 좋겠어요?",
             "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?",
-            "빛은 빠르게 바뀌는 편이 좋을까요, 부드럽게 이어지는 편이 좋을까요?",
+            "전환 방식은 어떻게 갈까요? 컷으로 딱 끊을지, 페이드로 이어갈지 정해요.",
         ]
         timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
         assert timelines[-1]["lifecycle"] == "requires_requery"
@@ -1989,7 +1989,14 @@ class TestSongDesignInterviewSession:
         calls: list[ToolCall] = []
         session._registry = self._registry(calls)
         channel = self._Channel(
-            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "BPM 질감", "승인"]
+            [
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "템포 맞춤 (BPM 기준)",
+                "승인",
+            ]
         )
         session._question_channel = channel
 
@@ -2066,7 +2073,7 @@ class TestSongDesignInterviewSession:
                 "우주 색 조합",
                 "Ring In",
                 "우주 컨셉 우선 배치",
-                "BPM 질감",
+                "템포 맞춤 (BPM 기준)",
                 # Requery answers — one per unresolved section, in order.
                 "Center → Fan Out",
                 "Wall 저조도",
@@ -2108,7 +2115,7 @@ class TestSongDesignInterviewSession:
                 "우주 색 조합",
                 "Ring In",
                 "우주 컨셉 우선 배치",
-                "BPM 질감",
+                "템포 맞춤 (BPM 기준)",
                 "Center → Fan Out",
                 "Wall 저조도",
                 "Vocal DSC 스페셜",
@@ -2153,8 +2160,8 @@ class TestSongDesignInterviewSession:
             [
                 "Ring In",
                 "",
-                "BPM 질감",
-                "구간 분배 (조용한 구간 팔레트, 후렴 컨셉 색)",
+                "템포 맞춤 (BPM 기준)",
+                "구간 분리 (잔잔한 구간 팔레트, 후렴 컨셉 색)",
             ]
         )
         session._question_channel = channel
@@ -2167,12 +2174,12 @@ class TestSongDesignInterviewSession:
         session.run_instruction(text)
 
         assert [call for call in calls if call.name == "run_commands"] == []
-        conflict_cards = [q for q in channel.asked if "색감 결정이 충돌" in q.prompt]
+        conflict_cards = [q for q in channel.asked if "베이스 컬러 결정" in q.prompt]
         assert len(conflict_cards) == 1
         assert [option.label for option in conflict_cards[0].options] == [
-            "팔레트 중심",
-            "컨셉 색 중심",
-            "구간 분배 (조용한 구간 팔레트, 후렴 컨셉 색)",
+            "팔레트 베이스",
+            "컨셉 색 베이스",
+            "구간 분리 (잔잔한 구간 팔레트, 후렴 컨셉 색)",
         ]
         timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
         intro, chorus = timelines[-1]["sections"]
@@ -2191,7 +2198,7 @@ class TestSongDesignInterviewSession:
         store = SongTimelineStore()
         session._timeline_store = store
         session._question_channel = self._Channel(
-            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "BPM 질감"]
+            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "템포 맞춤 (BPM 기준)"]
         )
 
         session.run_instruction(self._FULL)
@@ -2259,7 +2266,7 @@ class TestSongDesignInterviewSession:
                 "우주 색 조합",
                 "Ring In",
                 "우주 컨셉 우선 배치",
-                "BPM 질감",
+                "템포 맞춤 (BPM 기준)",
             ]
         )
         first = session.run_instruction(self._PLAIN_BRIEF)
@@ -2306,7 +2313,7 @@ class TestSongDesignInterviewSession:
                 "우주 색 조합",
                 "Ring In",
                 "우주 컨셉 우선 배치",
-                "BPM 질감",
+                "템포 맞춤 (BPM 기준)",
                 "Center → Fan Out",
                 "Wall 저조도",
                 "Vocal DSC 스페셜",
@@ -2408,7 +2415,7 @@ class TestSongDesignInterviewSession:
                 "우주 색 조합",
                 "Ring In",
                 "우주 컨셉 우선 배치",
-                "BPM 질감",
+                "템포 맞춤 (BPM 기준)",
                 # Requery cards for the two unresolved sections (벌스, 브리지).
                 "Center → Fan Out",
                 "Wall 저조도",
@@ -2451,7 +2458,15 @@ class TestSongDesignInterviewSession:
         calls: list[ToolCall] = []
         session._registry = self._registry(calls, sequence_exists_before_store=True)
         channel = self._Channel(
-            ["120", "우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "BPM 질감", "승인"]
+            [
+                "120",
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "템포 맞춤 (BPM 기준)",
+                "승인",
+            ]
         )
         session._question_channel = channel
 
@@ -2504,8 +2519,8 @@ class TestSongDesignInterviewSession:
                 "우주 색 조합",
                 "Ring In",
                 "우주 컨셉 우선 배치",
-                "BPM 질감",
-                "타임코드 8 (비어 있음)",
+                "템포 맞춤 (BPM 기준)",
+                "타임코드 8번 슬롯 (비어 있음)",
                 "승인",
             ]
         )
@@ -2516,7 +2531,7 @@ class TestSongDesignInterviewSession:
         conflict = next(
             str(getattr(request, "prompt", request))
             for request in channel.asked
-            if "타임코드 7에 이미" in str(getattr(request, "prompt", request))
+            if "타임코드 7번 슬롯에 기존" in str(getattr(request, "prompt", request))
         )
         assert "어떻게 할까요" in conflict
         stores = [call for call in calls if call.name == "run_commands"]
@@ -2535,7 +2550,7 @@ class TestSongDesignInterviewSession:
 
         approval_prompt = str(getattr(channel.asked[-1], "prompt", channel.asked[-1]))
         assert "영향 요약" in approval_prompt
-        assert "Sequence 110: 비어 있음 확인(신규 저장)" in approval_prompt
+        assert "시퀀스 110: 비어 있음 확인(신규 저장)" in approval_prompt
         assert "기존 데이터 덮어쓰기: 없음" in approval_prompt
 
     def test_a_failed_probe_reads_as_occupied_never_empty(self, tmp_path):
@@ -2590,7 +2605,7 @@ class TestSongDesignInterviewSession:
                 "우주 색 조합",
                 "Ring In",
                 "우주 컨셉 우선 배치",
-                "BPM 질감",
+                "템포 맞춤 (BPM 기준)",
                 "Center → Fan Out",
                 "Wall 저조도",
                 "수정",
@@ -2909,7 +2924,7 @@ class TestSongDesignInterviewSession:
                 "우주 색 조합",
                 "Ring In",
                 "우주 컨셉 우선 배치",
-                "BPM 질감",
+                "템포 맞춤 (BPM 기준)",
             ]
         )
         session.run_instruction(self._PLAIN_BRIEF)
@@ -2934,9 +2949,9 @@ class TestSongDesignInterviewSession:
                 "우주 색 조합",
                 "Ring In",
                 "",
-                "BPM 질감",
+                "템포 맞춤 (BPM 기준)",
                 "우주 컨셉 우선 배치",
-                "BPM 질감",
+                "템포 맞춤 (BPM 기준)",
                 "수정",
             ]
         )
@@ -2978,7 +2993,7 @@ class TestSongDesignInterviewSession:
                 "우주 색 조합",
                 "Ring In",
                 "우주 컨셉 우선 배치",
-                "BPM 질감",
+                "템포 맞춤 (BPM 기준)",
                 "이 매핑 사용",
                 "수정",
             ]
@@ -3009,7 +3024,14 @@ class TestSongDesignInterviewSession:
             sequence_readback=self._sequence_readback(cue_1_trig_time="1"),
         )
         channel = self._Channel(
-            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "BPM 질감", "승인"]
+            [
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "템포 맞춤 (BPM 기준)",
+                "승인",
+            ]
         )
         session._question_channel = channel
 
@@ -3045,7 +3067,7 @@ class TestSongDesignInterviewSession:
         calls: list[ToolCall] = []
         session._registry = self._registry(calls)
         channel = self._Channel(
-            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "BPM 질감"]
+            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "템포 맞춤 (BPM 기준)"]
         )
         session._question_channel = channel
         text = (
@@ -3141,7 +3163,7 @@ class TestSongDesignInterviewSession:
         event = session.run_instruction(self._FULL)
 
         assert "연출 인터뷰 결과" in event["text"]
-        for label in ("Q1 컨셉", "Q2 팔레트", "Q3 클라이맥스", "Q4 공간 스토리", "Q5 질감"):
+        for label in ("Q1 컨셉", "Q2 팔레트", "Q3 클라이맥스", "Q4 공간 스토리", "Q5 전환 방식"):
             assert label in event["text"]
 
     def test_partial_restart_reruns_from_the_named_step(self, tmp_path):

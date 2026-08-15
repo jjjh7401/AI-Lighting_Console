@@ -376,7 +376,7 @@ _DI_STEP_LABELS: dict[str, str] = {
     Q2_PALETTE: "Q2 팔레트",
     Q3_CLIMAX: "Q3 클라이맥스",
     Q4_SPATIAL_STORY: "Q4 공간 스토리",
-    Q5_TEXTURE: "Q5 질감",
+    Q5_TEXTURE: "Q5 전환 방식",
 }
 
 
@@ -653,7 +653,7 @@ def _section_texture_decision(
     if label is None:
         return base
     return TextureDecision(
-        label=label, source="section_arc", notes=(f"감독 질감 기준: {base.label}",)
+        label=label, source="section_arc", notes=(f"감독 전환 방식 기준: {base.label}",)
     )
 
 
@@ -1491,7 +1491,7 @@ def _validate_song_sequence_readback(
         trig_time = _readback_property(cue, "TrigTime")
         if not _same_trig_time(trig_time, expected.trig_time):
             return (
-                f"Sequence readback timed cue {cue_label}의 TrigTime이 "
+                f"Sequence readback timed cue {cue_label}의 큐 타임(TrigTime)이 "
                 f"{expected.trig_time}이 아닙니다: {trig_time!r}"
             )
     return None
@@ -2868,11 +2868,11 @@ class ChatSession:
                 "이 곡 큐의 타이밍 방식을 선택해 주세요.",
                 options=(
                     QuestionOption(label="타임코드"),
-                    QuestionOption(label="TrigTime"),
+                    QuestionOption(label="큐 타임 (자동 진행)"),
                     QuestionOption(label="수동 Go"),
                 ),
                 why=(
-                    "Cue 저장 전에 수동 Go, TrigTime, Timecode 중 하나가 "
+                    "Cue 저장 전에 수동 Go, 큐 타임(자동 진행), 타임코드 중 하나가 "
                     "명시적으로 확정돼야 합니다."
                 ),
             )
@@ -2880,7 +2880,7 @@ class ChatSession:
                 return None
             mode = _timing_mode_from_text(answer) or {
                 "타임코드": "timecode",
-                "TrigTime": "trig_time",
+                "큐 타임 (자동 진행)": "trig_time",
                 "수동 Go": "manual_go",
             }.get(answer.strip())
         if mode == "manual_go":
@@ -3160,7 +3160,7 @@ class ChatSession:
                 status="ok",
                 text=(
                     "타이밍 모드가 확정되지 않아 큐를 쓰지 않았습니다. "
-                    "수동 Go, TrigTime, Timecode 중 하나를 선택해 주세요."
+                    "수동 Go, 큐 타임(자동 진행), 타임코드 중 하나를 선택해 주세요."
                 ),
                 command_outcomes=(),
                 retries_used=0,
@@ -3212,23 +3212,27 @@ class ChatSession:
             )
         ):
             conflict_answer = self._ask_one(
-                "색감 결정이 충돌합니다.\n"
-                f"전체 컨셉: {' / '.join(concept_colors)}\n"
+                "베이스 컬러 결정 — 색을 두 계열로 말씀하셨습니다.\n"
+                f"컨셉 색: {' / '.join(concept_colors)}\n"
                 f"팔레트: {' / '.join(_palette_colors(palette_value))}\n"
-                "어느 방향으로 설계할까요?",
+                "베이스 컬러를 어느 쪽으로 잡을까요?",
                 options=(
-                    QuestionOption(label="팔레트 중심"),
-                    QuestionOption(label="컨셉 색 중심"),
-                    QuestionOption(label="구간 분배 (조용한 구간 팔레트, 후렴 컨셉 색)"),
+                    QuestionOption(label="팔레트 베이스"),
+                    QuestionOption(label="컨셉 색 베이스"),
+                    QuestionOption(label="구간 분리 (잔잔한 구간 팔레트, 후렴 컨셉 색)"),
                 ),
                 why="결정 전에는 전역 팔레트를 조용히 덮어쓰지 않습니다.",
             )
-            if conflict_answer and ("분배" in conflict_answer or "혼합" in conflict_answer):
+            if conflict_answer and (
+                "분리" in conflict_answer or "분배" in conflict_answer or "혼합" in conflict_answer
+            ):
                 palette_mode = "mixed"
             elif conflict_answer and "컨셉" in conflict_answer:
                 palette_mode = "concept"
             elif conflict_answer is None:
-                plan_warnings.append("색감 충돌 미해결 — 감독 결정 전까지 Q2 팔레트를 유지합니다.")
+                plan_warnings.append(
+                    "베이스 컬러 미결정 — 감독 결정 전까지 Q2 팔레트를 유지합니다."
+                )
         # 결함 6: role → group-number layer mapping, read from console group
         # names and confirmed once per session; single-layer stays disclosed.
         layer_mapping = self._confirm_song_layer_mapping()
@@ -4519,10 +4523,10 @@ class ChatSession:
             if self._timecode_occupied(timecode_no):
                 free_timecodes = self._free_timecode_slots(timecode_no)
                 answer = self._ask_one(
-                    f"타임코드 {timecode_no}에 이미 콘솔 데이터가 있습니다. 어떻게 할까요?",
-                    options=(QuestionOption(label=f"그대로 진행 (타임코드 {timecode_no}에 저장)"),)
+                    f"타임코드 {timecode_no}번 슬롯에 기존 데이터가 있습니다. 어떻게 할까요?",
+                    options=(QuestionOption(label=f"그대로 저장 ({timecode_no}번 슬롯)"),)
                     + tuple(
-                        QuestionOption(label=f"타임코드 {slot} (비어 있음)")
+                        QuestionOption(label=f"타임코드 {slot}번 슬롯 (비어 있음)")
                         for slot in free_timecodes
                     )
                     + (QuestionOption(label="취소 (계획 보존)"),),
@@ -4530,11 +4534,11 @@ class ChatSession:
                 )
                 if answer is None or "취소" in (answer or ""):
                     return self._pointing_refusal(
-                        f"타임코드 {timecode_no} 충돌이 해결되지 않아 저장하지 않았습니다. "
+                        f"타임코드 {timecode_no}번 슬롯 충돌이 해결되지 않아 저장하지 않았습니다. "
                         "계획은 그대로 보존했습니다."
                     )
                 if "그대로" in answer:
-                    timecode_note = f" · Timecode {timecode_no}: 기존 슬롯에 저장(감독 확인)"
+                    timecode_note = f" · 타임코드 {timecode_no}번 슬롯: 기존 슬롯에 저장(감독 확인)"
                 else:
                     moved = re.search(r"\d+", answer)
                     if moved is None:
@@ -4546,9 +4550,9 @@ class ChatSession:
                     plan, composition = self._song_compose(state)
                     review_text = _review_text(plan, composition)
                     self._song_send_timeline(state, plan, composition)
-                    timecode_note = f" · Timecode {timecode_no}: 비어 있음 확인"
+                    timecode_note = f" · 타임코드 {timecode_no}번 슬롯: 비어 있음 확인"
             else:
-                timecode_note = f" · Timecode {timecode_no}: 비어 있음 확인"
+                timecode_note = f" · 타임코드 {timecode_no}번 슬롯: 비어 있음 확인"
         sequence_no = state.sequence_no
         # #5 (2026-08-16): the approval card carries a VERIFIED impact summary
         # — what gets created where, and that nothing existing is overwritten.
@@ -4559,7 +4563,7 @@ class ChatSession:
             else "사용 중 — 승인 후 빈 시퀀스 선택 카드가 열립니다"
         )
         impact = (
-            f"영향 요약 — Sequence {sequence_no}: {sequence_verdict}"
+            f"영향 요약 — 시퀀스 {sequence_no}: {sequence_verdict}"
             f"{timecode_note} · 기존 데이터 덮어쓰기: 없음."
         )
         approval = self._ask_one(
