@@ -770,6 +770,32 @@ def _known_color_tokens() -> frozenset[str]:
 _KNOWN_COLOR_TOKENS = _known_color_tokens()
 
 
+def _palette_value_tokens(value: object) -> tuple[str, ...]:
+    """The Q2 answer split into its color tokens — 실측 2026-08-16: the raw
+    answer '블루와 화이트' rode into ``MusicProfile.palette`` as ONE string,
+    so lint L5 saw a one-color palette and flagged every cue. Splits on the
+    usual separators AND strips the Korean joining particles (와/과/랑/이랑/
+    하고) when what remains is a known color token; unknown chunks survive
+    verbatim (a color our vocabulary lacks is kept, never dropped)."""
+    chunks = re.split(r"[/,、=+·\s]+", str(value))
+    tokens: list[str] = []
+    for chunk in chunks:
+        cleaned = chunk.strip()
+        if not cleaned:
+            continue
+        for particle in ("이랑", "하고", "랑", "와", "과"):
+            if (
+                len(cleaned) > len(particle)
+                and cleaned.endswith(particle)
+                and cleaned[: -len(particle)].casefold() in _KNOWN_COLOR_TOKENS
+            ):
+                cleaned = cleaned[: -len(particle)]
+                break
+        if cleaned and cleaned not in tokens:
+            tokens.append(cleaned)
+    return tuple(tokens) or (str(value),)
+
+
 def _parse_free_text(step: str, raw: str, profile: MusicProfile) -> object | _ParseFailure:
     """Parse one step's free text into the same value shape its options
     carry (DI3). Q1/Q5 are open vocabulary and always resolve; Q2 checks
@@ -863,7 +889,9 @@ class DirectorInterview:
         if Q1_CONCEPT in self.answers:
             profile = dataclasses.replace(profile, concept=self.answers[Q1_CONCEPT].value)
         if Q2_PALETTE in self.answers:
-            profile = dataclasses.replace(profile, palette=(self.answers[Q2_PALETTE].value,))
+            profile = dataclasses.replace(
+                profile, palette=_palette_value_tokens(self.answers[Q2_PALETTE].value)
+            )
         return profile
 
     @property

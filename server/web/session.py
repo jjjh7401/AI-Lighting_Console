@@ -1167,42 +1167,93 @@ def _build_unified_song_plan(
     )
 
 
+_REVIEW_TRIGGER_LABELS = {
+    "go": "수동 Go",
+    "manual": "수동 Go",
+    "manual_go": "수동 Go",
+    "time": "큐 타임 자동",
+    "trig_time": "큐 타임 자동",
+    "follow": "Follow 자동",
+    "timecode": "타임코드",
+}
+
+
+def _review_timing_label(timing: dict) -> str:
+    mode = str(timing.get("mode") or "")
+    if mode == "timecode":
+        return f"타임코드 {timing.get('timecode_number')}번 슬롯 자동 진행"
+    if mode == "trig_time":
+        return "큐 타임 자동 진행"
+    if mode == "manual_go":
+        return "수동 Go"
+    return mode or "미정"
+
+
+def _review_lint_line(finding) -> str:
+    """One check finding in field language — L5 (팔레트 이탈) gets a Korean
+    template with the colors pulled out; unknown rules keep the raw
+    description (honesty over polish)."""
+    if finding.rule_id == "L5":
+        colors = re.search(r"\[(.*?)\]", finding.description)
+        color_text = colors.group(1).replace("'", "") if colors else finding.description
+        if finding.cue_number:
+            return f"큐 {finding.cue_number:g}: 팔레트 밖 포인트 컬러({color_text})"
+        return f"팔레트 색 수 초과({color_text})"
+    return f"{finding.rule_id} 큐 {finding.cue_number:g}: {finding.description}"
+
+
+def _review_disabled_lines(composition) -> list[str]:
+    """Known internal notes translated to one field-language line each,
+    deduped; unknown notes pass through verbatim."""
+    lines: list[str] = []
+    for raw in [f"{note.rule_id}: {note.reason}" for note in composition.disabled_rule_notes] + [
+        note.reason for note in composition.disabled_plan_notes
+    ]:
+        if "no mapped key/back layer" in raw or "degrades to single-layer" in raw:
+            line = "레이어 매핑 없음 — 단일 레이어로 진행 (키/백 분리 체크 L6·L7 미적용)"
+        else:
+            line = raw
+        if line not in lines:
+            lines.append(line)
+    return lines
+
+
 def _review_text(plan: UnifiedSongLightingPlan, composition: SongCueCompositionResult) -> str:
     cue_lines: list[str] = []
     if composition.bundle is not None:
         for cue in composition.bundle.cues:
-            cue_lines.append(
-                f"{cue.cue_number:g} {cue.cue_name}: D{cue.d_level}, "
-                f"{cue.position.stored or 'position-tracked'}, "
-                f"{'/'.join(cue.color.palette) or 'no-color'}, {cue.timing.trigger}"
+            trigger = _REVIEW_TRIGGER_LABELS.get(
+                str(cue.timing.trigger).casefold(), str(cue.timing.trigger)
             )
-    lint = (
-        "린트 위반 없음"
-        if not composition.lint_findings
-        else "린트 {}건: {}".format(
+            cue_lines.append(
+                f"큐 {cue.cue_number:g} {cue.cue_name} — D{cue.d_level} · "
+                f"{cue.position.stored or '포지션 유지'} · "
+                f"{'/'.join(cue.color.palette) or '컬러 유지'} · {trigger}"
+            )
+    if not composition.lint_findings:
+        lint = "자동 체크 통과"
+    else:
+        lint = "확인 포인트 {}건: {}".format(
             len(composition.lint_findings),
-            "; ".join(
-                f"{finding.rule_id}@{finding.cue_number:g} {finding.description}"
-                for finding in composition.lint_findings
-            ),
+            "; ".join(_review_lint_line(finding) for finding in composition.lint_findings),
         )
-    )
-    disabled_notes = [
-        f"{note.rule_id}: {note.reason}" for note in composition.disabled_rule_notes
-    ] + [note.reason for note in composition.disabled_plan_notes]
-    disabled = "비활성 규칙 없음" if not disabled_notes else "비활성: " + "; ".join(disabled_notes)
+        if any(finding.rule_id == "L5" for finding in composition.lint_findings):
+            lint += " — 구간 무드/컨셉에서 더해진 색입니다. 의도한 포인트면 그대로 승인하세요"
+    disabled_lines = _review_disabled_lines(composition)
+    disabled = "" if not disabled_lines else " 참고: " + "; ".join(disabled_lines) + "."
     unresolved = (
-        "미해결 없음"
+        ""
         if not composition.requery_requirements
-        else "재질의 필요: "
+        else " 재질의 필요: "
         + "; ".join(requirement.prompt for requirement in composition.requery_requirements)
+        + "."
     )
     timing = plan.timing.to_dict()
-    timeline = " / ".join(cue_lines) if cue_lines else "저장 가능한 큐 없음"
+    timeline = "\n".join(cue_lines) if cue_lines else "저장 가능한 큐 없음"
     return (
-        f"전곡 리뷰 번들 — {plan.sequence_name}, 타이밍 {timing['mode']}"
-        f"{' #' + str(timing['timecode_number']) if timing['timecode_number'] else ''}. "
-        f"타임라인: {timeline}. {lint}. {unresolved}. {disabled}."
+        f"전곡 리뷰 번들 — {plan.sequence_name.replace('Sequence', '시퀀스')} · "
+        f"진행 {_review_timing_label(timing)}.\n"
+        f"{timeline}\n{lint}.{unresolved}{disabled}"
     )
 
 
