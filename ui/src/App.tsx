@@ -12,6 +12,11 @@ import { type ChangeEvent, type ReactNode, useEffect, useRef, useState } from "r
 
 import { ApprovalCard } from "./components/ApprovalCard";
 import { ChatView } from "./components/ChatView";
+import {
+  fetchPresetPool,
+  PresetPoolPopup,
+  type PresetPopupState,
+} from "./components/PresetPoolPopup";
 import { CueMonitor } from "./components/CueMonitor";
 import { DashBoard } from "./components/DashBoard";
 import { LockToggle } from "./components/LockToggle";
@@ -212,6 +217,7 @@ export function AppShell({
   onSectionAreaResizeStart,
   dashWidth,
   onDashDividerDown,
+  onPresetPoolOpen,
   children,
 }: {
   chatCollapsed: boolean;
@@ -240,6 +246,8 @@ export function AppShell({
   dashWidth?: number;
   /** Start a divider drag between dashboard and cue monitor. */
   onDashDividerDown?: (startX: number) => void;
+  /** Opens one preset pool's on-demand popup (read-only fetch, no console press). */
+  onPresetPoolOpen?: (item: DashItem) => void;
   children: ReactNode;
 }) {
   const dashStyle = dashWidth !== undefined ? { width: dashWidth, flexShrink: 0 } : undefined;
@@ -255,6 +263,7 @@ export function AppShell({
           onSectionTileSizeChange={onSectionTileSizeChange}
           sectionArea={sectionArea}
           onSectionAreaResizeStart={onSectionAreaResizeStart}
+          onPresetPoolOpen={onPresetPoolOpen}
         />
       </div>
       {onDashDividerDown && (
@@ -365,6 +374,26 @@ export default function App() {
     };
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
+  };
+  // Preset pool popup (user direction, 2026-08-15): opened from a 프리셋
+  // category card; contents are fetched ON DEMAND per open — never from the
+  // dash snapshot's bounded drilldown budget, so they are always current.
+  const [presetPopup, setPresetPopup] = useState<PresetPopupState | null>(null);
+  const openPresetPool = (item: DashItem) => {
+    const pool = { no: item.no, name: item.name };
+    setPresetPopup({ phase: "loading", pool });
+    void fetchPresetPool(item.no).then((next) => {
+      setPresetPopup((current) => {
+        // Ignore a late response after the popup closed or moved pools.
+        if (current === null) return current;
+        const currentNo = current.phase === "ready" ? current.contents.pool.no : current.pool.no;
+        if (currentNo !== item.no) return current;
+        if (next.phase === "error" || next.phase === "loading") {
+          return { ...next, pool };
+        }
+        return next;
+      });
+    });
   };
   // T-H4 — CueMonitor's cue sheet opens ONE executor at a time (MA3 console
   // convention); this is the SAME name toggling off as re-closing (see
@@ -750,8 +779,20 @@ export default function App() {
             onSectionAreaResizeStart={startSectionAreaResize}
             dashWidth={dashWidth}
             onDashDividerDown={startDashDividerDrag}
+            onPresetPoolOpen={openPresetPool}
           >
             {chatColumn}
+            {presetPopup !== null && (
+              <PresetPoolPopup
+                state={presetPopup}
+                onClose={() => setPresetPopup(null)}
+                onRefresh={() => {
+                  const pool =
+                    presetPopup.phase === "ready" ? presetPopup.contents.pool : presetPopup.pool;
+                  openPresetPool({ no: pool.no, name: pool.name });
+                }}
+              />
+            )}
           </AppShell>
         </>
       )}

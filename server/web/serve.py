@@ -60,6 +60,7 @@ from server.web.launcher import (
 from server.web.measure import RoundTripRecorder
 from server.web.panel import pin_store_path
 from server.web.paperwork_api import PaperworkDeps
+from server.web.presets_api import PresetsDeps
 from server.web.provision_api import ProvisionDeps
 from server.web.question import QuestionChannel
 from server.web.reply_discovery import make_reply_port_diagnostic
@@ -391,6 +392,8 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         # both StateQueryPort and PropertyQueryPort, so one object serves both
         # roles and the patch-sheet builder picks up property reads for free.
         paperwork=PaperworkDeps(state_port=stack.gate.state_port),
+        # Preset-pool popup: the SAME gate-owned query port — read-only.
+        presets=PresetsDeps(state_port=stack.gate.state_port),
         handshake=build_handshake_policy(args),
         # The SAME endpoint the gate sends OSC to (``console_host``/
         # ``console_port``) is the console's OSC INPUT port — so binding it is

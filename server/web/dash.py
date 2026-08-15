@@ -55,8 +55,10 @@ from server.web.messages import dash_catalog_event, dash_item, dash_section
 # number.
 
 # Preset pools drilldown: tools.py names ~8-10 preset TYPES; 12 gives a
-# typical showfile headroom while staying bounded.
-DASH_PRESET_POOL_QUERY_CAP = 12
+# typical showfile headroom while staying bounded. Raised 12 -> 16 after a
+# default 2.4.2 showfile measured 14 pools (9 feature groups + All 1-5) and
+# capped the walk — the dashboard popup design needs every pool STORED-COUNT.
+DASH_PRESET_POOL_QUERY_CAP = 16
 
 # Executor page walk: one query per page opened (usually few pages).
 DASH_EXECUTOR_PAGE_QUERY_CAP = 8

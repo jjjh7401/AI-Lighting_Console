@@ -252,7 +252,11 @@ class TestPresetPoolsDrilldown:
         # executor page-walk+verify queries; each concern's cap is bounded
         # independently instead.
         tree = _rig_tree()
-        many_pools = [(n, f"Pool {n}") for n in range(1, 15)]
+        # Sized RELATIVE to the cap (12 -> 16 raise, 2026-08-15: a default
+        # 2.4.2 showfile measures 14 pools and the dashboard popup design
+        # wants every pool's stored_count) so the capping property stays
+        # measured however the number moves.
+        many_pools = [(n, f"Pool {n}") for n in range(1, DASH_PRESET_POOL_QUERY_CAP + 5)]
         tree["DataPool/PresetPools"] = _snapshot("DataPool/PresetPools", many_pools)
         for number, _ in many_pools:
             tree[f"DataPool/PresetPools/{number}"] = _snapshot(

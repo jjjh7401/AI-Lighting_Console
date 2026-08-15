@@ -1177,6 +1177,12 @@ _EXPECTED_WEB_ROUTES = (
     ("paperwork_api.py", "router.get", "/api/paperwork/{kind}/content"),
     ("paperwork_api.py", "router.get", "/api/paperwork/{kind}/download"),
     ("paperwork_api.py", "router.post", "/api/paperwork/{kind}"),
+    # Preset-pool popup (user direction, 2026-08-15): the dashboard shows pool
+    # CATEGORY tiles and opening one fetches its contents on demand here
+    # (server/web/presets_api.py). Read-only — no route sends a console
+    # command; unrelated to the PRECHK/OVERLAP axis this baseline pins.
+    ("presets_api.py", "router.get", "/api/presets"),
+    ("presets_api.py", "router.get", "/api/presets/{pool_no}"),
     ("provision_api.py", "router.get", "/api/provision/responder"),
     ("provision_api.py", "router.post", "/api/provision/responder"),
     ("settings_api.py", "router.delete", "/api/keys/{provider}"),
