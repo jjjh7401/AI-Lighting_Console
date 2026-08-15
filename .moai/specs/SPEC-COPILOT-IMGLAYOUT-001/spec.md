@@ -64,4 +64,16 @@ base: origin/main (614eab9)
 - 크기·MIME·base64 검증 거부 테스트
 - claude_code 정직 거부 테스트
 - 주석 원문-해석 쌍 노출 테스트, 미해결 항목 질문 라우팅 테스트
-- 실제 이미지 1장(원형 배치 스케치) 라이브 스모크
+- 실제 이미지 1장 라이브 스모크 — ✅ 2026-08-15 통과 (gemini-3.5-flash, 10.8s).
+  이미지: `smoke-three-triangles.png` (삼각형 3개 × MMX 3대, 주석 3종).
+  결과: 폐쇄 패턴 어휘에 `triangle`이 없어 `pattern: "rows"` + layer note로
+  강등 표현(정상 동작 — 어휘 밖 값을 지어내지 않음). 주석 OCR 3종 전부 정확
+  ("삼각형 간격 3m"→spacing 3.0, "H 5.5m"→z 5.5, "MMX x3"→count+type_name,
+  삼각형별 applies_to 구분). unresolved에 "삼각형 한 변의 길이" — 이미지에
+  없는 값을 추정하지 않고 질문으로 넘김. 픽셀 추정 수치 0건.
+
+## 후속 결정 필요 (v2 후보)
+
+- `triangle` 패턴을 어휘와 `spatial/presets.py`에 추가할지 — 현재는 rows로
+  강등되어 삼각형 꼭짓점 좌표를 만들 프리셋이 없다. 추가 시 어휘·검증·프리셋·
+  arrange_fixtures 프리셋 목록이 함께 넓어져야 한다(계약 §3 + ARRANGE_PRESETS).
