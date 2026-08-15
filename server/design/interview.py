@@ -299,7 +299,14 @@ class _ParseFailure:
 
 
 def _rig_note(rig: RigProfile) -> str:
-    return f"현재 장비 {rig.inventory.fixture_count}대를 기준으로 만든 제안이에요"
+    count = rig.inventory.fixture_count
+    if count <= 0:
+        # 실측 2026-08-16: the design-interview rig is built with patch=[]
+        # (RG5 — no console patch query on this path), so the inventory count
+        # is structurally 0 while the stage clearly has fixtures. Showing
+        # "장비 0대" reads as a broken rig — say what we actually used.
+        return "무대 좌표를 기준으로 만든 제안이에요"
+    return f"현재 장비 {count}대를 기준으로 만든 제안이에요"
 
 
 def _find_concept_seed(concept: str | None) -> ConceptSeed | None:

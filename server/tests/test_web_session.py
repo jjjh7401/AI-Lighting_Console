@@ -2592,8 +2592,9 @@ class TestSongDesignInterviewSession:
         pool = {
             "ok": True,
             "node": {"name": "Position", "class": "PresetPool"},
-            "children": [{"no": slot, "name": f"Pos {slot}"} for slot in range(21, 31)]
-            + [{"no": 35, "name": "고아 슬롯"}],
+            # 실기 responder 형태 그대로: 슬롯 번호는 "i" 키 (PROTOCOL §4.2)
+            "children": [{"i": slot, "name": f"Pos {slot}"} for slot in range(21, 31)]
+            + [{"i": 35, "name": "고아 슬롯"}],
         }
         session._registry = self._registry(calls, preset_pool_readback=pool)
         channel = self._Channel(

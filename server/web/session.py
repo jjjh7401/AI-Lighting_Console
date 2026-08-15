@@ -4305,7 +4305,9 @@ class ChatSession:
         for child in children:
             if isinstance(child, dict):
                 try:
-                    slots.add(int(child.get("no")))
+                    # 실기 responder는 슬롯 번호를 "i"로 보낸다 (PROTOCOL §4.2,
+                    # rig_object와 동일 규칙); "no"는 정규화된 페이로드용.
+                    slots.add(int(child.get("i", child.get("no"))))
                 except (TypeError, ValueError):
                     continue
         return slots
