@@ -449,6 +449,39 @@ def test_an_explicit_label_overrides_the_display_name():
     assert "Store Sequence 12 Cue 1 'Chorus Pulse'" in plan.commands
 
 
+# 실기 2026-08-16 (사용자 발견): onPC 2.4.2 풀 타일은 한글 라벨을 표시하지
+# 못한다 — 저장은 접수되지만 이름이 보이지 않는다. 한글(비ASCII) 라벨은
+# fx_id에서 파생한 영어 라벨로 자동 대체된다.
+def test_a_korean_display_name_falls_back_to_an_english_label():
+    fx = _fx(
+        "pulse",
+        fx_id="pulse-sine-breath",
+        name="사인 브리딩",
+        steps=[{"Dimmer": 100}, {"Dimmer": 0}],
+        speed=60,
+    )
+    plan = build_fx_bundle(fx, group=11, sequence=12)
+    assert plan.label == "Sine Breath Pulse"
+    assert "Store Sequence 12 Cue 1 'Sine Breath Pulse'" in plan.commands
+    assert "Label Sequence 12 'Sine Breath Pulse'" in plan.commands
+
+
+def test_an_explicit_korean_label_also_falls_back_to_english():
+    fx = _fx(
+        "pulse",
+        fx_id="composed-pulse",
+        steps=[{"Dimmer": 100}, {"Dimmer": 0}],
+        speed=60,
+    )
+    plan = build_fx_bundle(fx, group=11, sequence=12, label="살랑살랑 무빙")
+    assert plan.label == "Composed Pulse"
+
+
+def test_an_ascii_label_is_never_rewritten():
+    plan = build_fx_bundle(PATTERNS["pulse"], group=11, sequence=12, label="Gently Sway")
+    assert plan.label == "Gently Sway"
+
+
 def test_the_plan_exposes_the_lines_the_dedupe_will_compare():
     plan = build_fx_bundle(PATTERNS["pulse"], group=11, sequence=12)
     assert "ClearAll" not in plan.non_exempt_commands

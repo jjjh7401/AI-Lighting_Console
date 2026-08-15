@@ -345,12 +345,30 @@ def _format_value(value: float) -> str:
     return str(int(value)) if float(value).is_integer() else str(value)
 
 
+def _english_fallback_label(fx: Fx) -> str:
+    """A console-displayable English name derived from the fx_id.
+
+    ``sweep-soft-wide`` -> ``Soft Wide Sweep`` (the leading pattern token
+    reads better trailing, matching how the Korean display names are built).
+    """
+    parts = [part for part in fx.fx_id.replace("_", "-").split("-") if part]
+    if len(parts) > 1 and parts[0].casefold() == fx.pattern.casefold():
+        parts = parts[1:] + parts[:1]
+    derived = " ".join(part.capitalize() for part in parts)
+    return derived or fx.pattern.capitalize()
+
+
 def _label_of(fx: Fx, label: str | None) -> str:
     text = fx.display_name if label is None else label
     if not text.strip():
         raise FxInstantiationError(
             LABEL_UNQUOTABLE, f"fx {fx.fx_id!r} has an empty label to store under"
         )
+    if not text.isascii():
+        # 실기 2026-08-16 (사용자 발견): onPC 2.4.2 풀 타일이 한글 라벨을
+        # 표시하지 못한다 — 저장은 접수되지만 이름이 보이지 않는다. 보이지
+        # 않는 이름 대신 fx_id에서 파생한 영어 라벨을 자동으로 붙인다.
+        text = _english_fallback_label(fx)
     if "'" in text or "\n" in text:
         raise FxInstantiationError(
             LABEL_UNQUOTABLE,

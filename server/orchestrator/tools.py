@@ -7003,7 +7003,12 @@ def build_toolset(
                     "label": {
                         "type": "string",
                         "description": (
-                            "Optional cue label. Defaults to the fx's own display name."
+                            "Optional label — ENGLISH ONLY: the console pool "
+                            "tiles cannot display Hangul (measured live), and "
+                            "a non-ASCII label is auto-replaced with an "
+                            "English name derived from the fx_id. Defaults "
+                            "to the fx's display name (same auto-replacement "
+                            "applies)."
                         ),
                     },
                     "destination": {
@@ -7136,7 +7141,15 @@ def build_toolset(
                             "by get_rig_context on THIS rig."
                         ),
                     },
-                    "label": {"type": "string", "description": "Optional label."},
+                    "label": {
+                        "type": "string",
+                        "description": (
+                            "Optional label — ENGLISH ONLY (console tiles "
+                            "cannot display Hangul; non-ASCII is replaced "
+                            "with a name derived from the pattern). Translate "
+                            "the operator's Korean name into short English."
+                        ),
+                    },
                     "phase_from": {"type": "number"},
                     "phase_to": {"type": "number"},
                     "speed": {"type": "number", "description": "BPM."},
