@@ -407,7 +407,17 @@ export default function App() {
     sectionName: string,
     start: { clientX: number; clientY: number },
   ) => {
-    const base = sectionAreas[sectionName] ?? POOL_AREA_DEFAULT;
+    // First drag on an AUTO-FIT section (no stored area yet): snapshot its
+    // currently RENDERED size so the drag continues from what the operator
+    // sees instead of jumping to the legacy fixed default.
+    const rendered = document.querySelector(
+      `.pool-section-${sectionName}`,
+    ) as HTMLElement | null;
+    const base =
+      sectionAreas[sectionName] ??
+      (rendered !== null
+        ? clampPoolArea({ width: rendered.offsetWidth, height: rendered.offsetHeight })
+        : POOL_AREA_DEFAULT);
     const onMove = (move: MouseEvent) => {
       const next = clampPoolArea({
         width: base.width + (move.clientX - start.clientX),

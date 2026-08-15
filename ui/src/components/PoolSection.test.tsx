@@ -12,7 +12,6 @@ import { type DashItem, type DashSection } from "../protocol";
 import {
   clampPoolArea,
   clampPoolTileSize,
-  POOL_AREA_DEFAULT,
   POOL_AREA_MAX_WIDTH,
   POOL_AREA_MIN_HEIGHT,
   POOL_TILE_DEFAULT_SIZE,
@@ -267,16 +266,15 @@ describe("PoolSection — square cells + window area", () => {
     expect(grid.props.style.gridTemplateColumns).toBe("repeat(auto-fill, 120px)");
   });
 
-  it("defaults tileSize/area when omitted", () => {
+  it("defaults tileSize when omitted, and AUTO-FITS the window (2026-08-15)", () => {
     const element = PoolSection({
       section: OK_SECTION,
       label: "그룹",
       isPressable: () => false,
     }) as ReactElement;
-    expect(element.props.style).toEqual({
-      width: `${POOL_AREA_DEFAULT.width}px`,
-      height: `${POOL_AREA_DEFAULT.height}px`,
-    });
+    // No dragged area -> content-fit under a viewport cap; POOL_AREA_DEFAULT
+    // now only seeds a drag on a section the DOM cannot measure.
+    expect(element.props.style).toEqual({ width: "100%", height: "auto", maxHeight: "45vh" });
     const grid = childArray(element)[1] as ReactElement;
     expect(grid.props.style.gridTemplateColumns).toBe(
       `repeat(auto-fill, ${POOL_TILE_DEFAULT_SIZE}px)`,
@@ -329,5 +327,26 @@ describe("PoolSection — square cells + window area", () => {
     expect(handle!.props["aria-label"]).toBe("영역 크기 조절 — 모서리를 드래그");
     handle!.props.onMouseDown({ clientX: 700, clientY: 400 });
     expect(onAreaResizeStart).toHaveBeenCalledWith({ clientX: 700, clientY: 400 });
+  });
+});
+
+describe("auto-fit window sizing (2026-08-15 방향) — 내용에 맞추고, 드래그가 이기고", () => {
+  it("no dragged area -> the window fits its contents under a viewport cap", () => {
+    const element = PoolSection({
+      section: { name: "groups", status: "ok", items: [{ no: 1, name: "A" }] },
+      label: "그룹",
+      isPressable: () => false,
+    }) as ReactElement;
+    expect(element.props.style).toEqual({ width: "100%", height: "auto", maxHeight: "45vh" });
+  });
+
+  it("a dragged area still wins for that section", () => {
+    const element = PoolSection({
+      section: { name: "groups", status: "ok", items: [] },
+      label: "그룹",
+      isPressable: () => false,
+      area: { width: 600, height: 300 },
+    }) as ReactElement;
+    expect(element.props.style).toEqual({ width: "600px", height: "300px" });
   });
 });
