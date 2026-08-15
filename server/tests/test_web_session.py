@@ -1033,7 +1033,10 @@ class TestAllFixturesElevation:
         )
 
         assert provider.calls == []
-        assert [call.name for call in calls] == ["get_spatial_context"]
+        # Read-only probes (verified number proposals, 2026-08-16) are fine;
+        # the invariant is ZERO writes without an answer.
+        assert calls[0].name == "get_spatial_context"
+        assert all(call.name in ("get_spatial_context", "query_state") for call in calls)
         assert "MMX 5대" in event["text"]
         assert "최소 10대" in event["text"]
 
@@ -1348,7 +1351,10 @@ class TestPositionMoodSuggestion:
 
         event = session.run_instruction("웅장한 피날레 연출 포지션")
 
-        assert [call.name for call in calls] == ["get_spatial_context"]
+        # Read-only probes (verified number proposals, 2026-08-16) are fine;
+        # the invariant is ZERO writes without an answer.
+        assert calls[0].name == "get_spatial_context"
+        assert all(call.name in ("get_spatial_context", "query_state") for call in calls)
         assert "적용하지 않았습니다" in event["text"]
 
     def test_a_mood_without_position_intent_reaches_the_model(self, tmp_path):
@@ -1469,7 +1475,10 @@ class TestBasicPositionPresets:
 
         event = session.run_instruction("기본 포지션 10개를 프리셋에 저장해줘")
 
-        assert [call.name for call in calls] == ["get_spatial_context"]
+        # Read-only probes (verified number proposals, 2026-08-16) are fine;
+        # the invariant is ZERO writes without an answer.
+        assert calls[0].name == "get_spatial_context"
+        assert all(call.name in ("get_spatial_context", "query_state") for call in calls)
         assert "시작 프리셋 번호" in event["text"]
 
 
@@ -1558,7 +1567,10 @@ class TestPositionCueStoreSession:
 
         event = session.run_instruction("프리셋 28을 큐로 저장해줘")
 
-        assert [call.name for call in calls] == ["get_spatial_context"]
+        # Read-only probes (verified number proposals, 2026-08-16) are fine;
+        # the invariant is ZERO writes without an answer.
+        assert calls[0].name == "get_spatial_context"
+        assert all(call.name in ("get_spatial_context", "query_state") for call in calls)
         assert "시퀀스 번호를 받지 못해" in event["text"]
 
     def test_a_fade_less_instruction_omits_cuefade(self, tmp_path):
@@ -1693,7 +1705,10 @@ class TestPositionCueSheetSession:
 
         event = session.run_instruction("포지션 큐 시트: 인트로 0:00 잔잔하게, 후렴 0:40 드롭")
 
-        assert [call.name for call in calls] == ["get_spatial_context"]
+        # Read-only probes (verified number proposals, 2026-08-16) are fine;
+        # the invariant is ZERO writes without an answer.
+        assert calls[0].name == "get_spatial_context"
+        assert all(call.name in ("get_spatial_context", "query_state") for call in calls)
         assert "시퀀스 번호를 받지 못해" in event["text"]
 
     def test_unparseable_sections_refuse_with_the_format(self, tmp_path):
@@ -1754,6 +1769,7 @@ class TestSongDesignInterviewSession:
         groups_readback=None,
         preset_pool_readback=None,
         sequence_exists_before_store=False,
+        timecode_exists_before_store=False,
         store_fails=False,
     ):
         fixtures = [
@@ -1788,9 +1804,14 @@ class TestSongDesignInterviewSession:
                     # a run_commands dispatched the stores.
                     stored = any(entry.name == "run_commands" for entry in calls)
                     if (
-                        path.startswith("DataPool/Sequences/")
+                        path.startswith(("DataPool/Sequences/", "DataPool/Timecodes/"))
                         and not stored
-                        and not sequence_exists_before_store
+                        and not (
+                            sequence_exists_before_store and path.startswith("DataPool/Sequences/")
+                        )
+                        and not (
+                            timecode_exists_before_store and path.startswith("DataPool/Timecodes/")
+                        )
                     ):
                         payload = {}
                     else:
@@ -1988,11 +2009,14 @@ class TestSongDesignInterviewSession:
         # The one-time layer-mapping group read, then the 2026-08-16
         # occupied-slot pre-check, then the two post-store readbacks.
         assert readbacks == [
-            # Up-front pick verification (2026-08-16), the one-time
-            # layer-mapping group read, the pre-store slot check, then the
-            # two post-store readbacks.
+            # Up-front pick verification, the one-time layer-mapping group
+            # read, the timecode-conflict check + approval impact summary
+            # (2026-08-16), the pre-store slot check, then the two post-store
+            # readbacks.
             "DataPool/Sequences/110",
             "DataPool/Groups",
+            "DataPool/Timecodes/7",
+            "DataPool/Sequences/110",
             "DataPool/Sequences/110",
             "DataPool/Sequences/110",
             "DataPool/Timecodes/7",
@@ -2441,6 +2465,100 @@ class TestSongDesignInterviewSession:
         commands = stores[0].arguments["commands"]
         assert any(command.startswith("Store Sequence 120 Cue 1") for command in commands)
         assert not any("Sequence 110" in command for command in commands)
+
+    def test_pending_plan_survives_a_reconnect_via_the_shared_store(self, tmp_path):
+        # #2 (2026-08-16): a page refresh opens a NEW session; with the shared
+        # store, the new session adopts the pending plan and keeps editing.
+        from server.web.session import PendingSongPlanStore
+
+        store = PendingSongPlanStore()
+        session, _sent, calls = self._pending_plan_session(tmp_path)
+        # Simulate the app wiring: move the plan into the shared store.
+        store.state = session._pending_song_plan
+        provider = ScriptedProvider([])
+        fresh, _console, _audit, fresh_sent, _ = _session(tmp_path, provider)
+        fresh_calls: list[ToolCall] = []
+        fresh._registry = self._registry(fresh_calls)
+        fresh._pending_plan_store = store
+        fresh._question_channel = self._Channel(["수정"])
+
+        event = fresh.run_instruction("큐 4 삭제")
+
+        assert event["text"].startswith("계획 수정(콘솔 무접촉): 큐 4")
+        assert [call for call in fresh_calls if call.name == "run_commands"] == []
+        timelines = [item["timeline"] for item in fresh_sent if item["type"] == "song_timeline"]
+        assert len(timelines[-1]["sections"]) == 4
+        assert store.state is not None
+
+    def test_occupied_timecode_opens_a_conflict_card_before_approval(self, tmp_path):
+        # #3 (2026-08-16): a timecode slot that already holds data is resolved
+        # BEFORE approval — proceed on it, move to a verified-empty slot, or
+        # cancel with the plan preserved.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls, timecode_exists_before_store=True)
+        channel = self._Channel(
+            [
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "BPM 질감",
+                "타임코드 8 (비어 있음)",
+                "승인",
+            ]
+        )
+        session._question_channel = channel
+
+        session.run_instruction(self._FULL)
+
+        conflict = next(
+            str(getattr(request, "prompt", request))
+            for request in channel.asked
+            if "타임코드 7에 이미" in str(getattr(request, "prompt", request))
+        )
+        assert "어떻게 할까요" in conflict
+        stores = [call for call in calls if call.name == "run_commands"]
+        assert len(stores) == 1
+        assert "Store Timecode 8" in stores[0].arguments["commands"]
+        assert "Store Timecode 7" not in stores[0].arguments["commands"]
+
+    def test_approval_card_carries_a_verified_impact_summary(self, tmp_path):
+        # #5 (2026-08-16): the approval card states WHAT gets created WHERE,
+        # from console-verified facts — never a blind "저장할까요?".
+        session, _sent, _calls = self._pending_plan_session(tmp_path)
+        channel = self._Channel(["수정"])
+        session._question_channel = channel
+
+        session.run_instruction("큐 4 삭제")
+
+        approval_prompt = str(getattr(channel.asked[-1], "prompt", channel.asked[-1]))
+        assert "영향 요약" in approval_prompt
+        assert "Sequence 110: 비어 있음 확인(신규 저장)" in approval_prompt
+        assert "기존 데이터 덮어쓰기: 없음" in approval_prompt
+
+    def test_a_failed_probe_reads_as_occupied_never_empty(self, tmp_path):
+        # #6 (2026-08-16): a flapping responder must NEVER get an occupied
+        # slot proposed as empty — an unreadable probe is fail-closed.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+
+        class BrokenRegistry:
+            def dispatch(self, call):
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content="responder unreachable",
+                        is_error=True,
+                    )
+                )
+
+        session._registry = BrokenRegistry()
+        assert session._song_sequence_occupied(110) is True
+        assert session._timecode_occupied(7) is True
+        assert session._song_free_sequence_slots(110) == []
 
     def test_preset_start_options_come_from_the_console_pool(self, tmp_path):
         # The preset question proposes only starts where TEN consecutive
@@ -2893,11 +3011,14 @@ class TestSongDesignInterviewSession:
         assert len(writes) == 1
         readbacks = [call.arguments["path"] for call in calls if call.name == "query_state"]
         assert readbacks == [
-            # Up-front pick verification (2026-08-16), the one-time
-            # layer-mapping group read, the pre-store slot check, then the
-            # two post-store readbacks.
+            # Up-front pick verification, the one-time layer-mapping group
+            # read, the timecode-conflict check + approval impact summary
+            # (2026-08-16), the pre-store slot check, then the two post-store
+            # readbacks.
             "DataPool/Sequences/110",
             "DataPool/Groups",
+            "DataPool/Timecodes/7",
+            "DataPool/Sequences/110",
             "DataPool/Sequences/110",
             "DataPool/Sequences/110",
             "DataPool/Timecodes/7",

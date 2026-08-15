@@ -66,7 +66,7 @@ from server.web.paperwork_api import PaperworkDeps, build_paperwork_router
 from server.web.presets_api import PresetsDeps, build_presets_router
 from server.web.provision_api import ProvisionDeps, build_provision_router
 from server.web.question import QuestionChannel
-from server.web.session import ChatSession, SongTimelineStore
+from server.web.session import ChatSession, PendingSongPlanStore, SongTimelineStore
 from server.web.settings_api import SettingsDeps, build_settings_router
 from server.web.timeline_api import TimelineLibraryDeps, build_timeline_router
 from server.web.timeline_library import SongTimelineLibrary
@@ -160,6 +160,9 @@ class WebDeps:
     timeline_library: SongTimelineLibrary = field(default_factory=SongTimelineLibrary)
     # Stale-while-revalidate cache for the two many-round-trip snapshots.
     snapshots: SnapshotCache = field(default_factory=SnapshotCache)
+    # #2 (2026-08-16): the ONE pending (unapproved) song design, process-wide
+    # so a page refresh (new WebSocket session) keeps the editable plan.
+    pending_plan_store: PendingSongPlanStore = field(default_factory=PendingSongPlanStore)
 
 
 async def _safe_send(websocket: WebSocket, event: dict) -> None:
@@ -300,6 +303,7 @@ def create_app(deps: WebDeps) -> FastAPI:
             preshow_osc_slot=deps.preshow_osc_slot,
             timeline_store=deps.song_timeline_store,
             timeline_library=deps.timeline_library,
+            pending_plan_store=deps.pending_plan_store,
         )
 
         def push_status() -> None:

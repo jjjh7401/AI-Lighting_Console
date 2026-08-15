@@ -1730,6 +1730,20 @@ class SongTimelineStore:
             pass
 
 
+class PendingSongPlanStore:
+    """Process-wide holder for the ONE pending (composed, not yet approved)
+    song design (#2, 2026-08-16): a page refresh opens a NEW WebSocket
+    session, and before this store that new session started with no pending
+    plan — the director's un-stored edits were silently gone. Memory-only on
+    purpose: `_SongDesignState` carries live interview/rig objects that have
+    no JSON form, so a SERVER restart still clears it (disclosed in the
+    structure-edit refusal). Holding a plan grants no console capability —
+    every write still rides the approval gate."""
+
+    def __init__(self) -> None:
+        self.state: _SongDesignState | None = None
+
+
 class _MeasuredExecutionPort:
     """Wraps the gate executor; marks each RECEIVED console result (§2 end)."""
 
@@ -1822,6 +1836,7 @@ class ChatSession:
         preshow_osc_slot: int | None = None,
         timeline_store: SongTimelineStore | None = None,
         timeline_library: SongTimelineLibrary | None = None,
+        pending_plan_store: PendingSongPlanStore | None = None,
     ) -> None:
         self._gate = gate
         # Injected so the status surface owns the I/O and the health state
@@ -1844,7 +1859,10 @@ class ChatSession:
         # PLAN-stage editing (handoff 2026-08-15 priority 1): the LAST fully
         # composed but not-yet-approved design, kept so a later turn can
         # delete/insert/retarget cues console-free and re-request approval.
-        self._pending_song_plan: _SongDesignState | None = None
+        # #2 (2026-08-16): when a process-wide store is wired, the plan lives
+        # THERE — a page refresh (new session) adopts it instead of losing it.
+        self._pending_plan_store = pending_plan_store
+        self._pending_song_plan_local: _SongDesignState | None = None
         # 결함 6: role → group-number mapping inferred from console group names
         # and confirmed by the director ONCE per session. None = not yet asked;
         # [] = declined or nothing inferable (single-layer, disclosed).
@@ -1921,6 +1939,21 @@ class ChatSession:
         self._orchestrator = Orchestrator(
             provider=provider, registry=registry, system_prefix=system_prefix
         )
+
+    @property
+    def _pending_song_plan(self) -> _SongDesignState | None:
+        """The pending (composed, unapproved) design — process-wide when a
+        store is wired (#2: survives page refreshes), session-local in tests
+        and bare deps."""
+        if self._pending_plan_store is not None:
+            return self._pending_plan_store.state
+        return self._pending_song_plan_local
+
+    @_pending_song_plan.setter
+    def _pending_song_plan(self, state: _SongDesignState | None) -> None:
+        if self._pending_plan_store is not None:
+            self._pending_plan_store.state = state
+        self._pending_song_plan_local = state
 
     def close(self) -> None:
         """Disconnect: unbind both channels for THIS session ONLY — denies
@@ -2522,14 +2555,29 @@ class ChatSession:
             start_no = int(start_match.group("no"))
         else:
             count = len(BASIC_POSITION_SEQUENCE)
-            answer = self._ask_one(
-                f"기본 포지션 {count}개를 Position 프리셋 몇 번부터 저장할까요? "
-                f"(예: 1 → Preset 2.1~2.{count}) 이미 있는 번호는 덮어씁니다.",
-                options=(
+            free_starts = self._position_preset_free_starts()
+            if free_starts:
+                prompt = (
+                    f"기본 포지션 {count}개를 Position 프리셋 몇 번부터 저장할까요? "
+                    f"{count}칸 연속 비어 있는 구간을 콘솔에서 확인했습니다."
+                )
+                options = tuple(
+                    QuestionOption(label=f"{start} (2.{start}~2.{start + count - 1} 비어 있음)")
+                    for start in free_starts
+                )
+            else:
+                prompt = (
+                    f"기본 포지션 {count}개를 Position 프리셋 몇 번부터 저장할까요? "
+                    f"(예: 1 → Preset 2.1~2.{count}) 이미 있는 번호는 덮어씁니다."
+                )
+                options = (
                     QuestionOption(label="1"),
                     QuestionOption(label="11"),
                     QuestionOption(label="21"),
-                ),
+                )
+            answer = self._ask_one(
+                prompt,
+                options=options,
                 why=(
                     "Store Preset은 기존 슬롯을 경고 없이 덮어쓰므로 "
                     "시작 번호는 운영자가 정해야 합니다."
@@ -2725,49 +2773,28 @@ class ChatSession:
             return self._pointing_refusal(
                 "좌표가 확인된 장비가 없어 포지션 큐 시트를 시작하지 않았습니다."
             )
+        # 2026-08-16 사용자 방향 확산: same verified-number proposals as the
+        # design-interview path — empty sequence, console-confirmed presets.
         sequence_match = _CUE_SEQUENCE_NO.search(text)
-        if sequence_match is not None:
-            sequence_no = int(sequence_match.group("no"))
-        else:
-            answer = self._ask_one(
-                "포지션 큐 시트를 어느 시퀀스에 저장할까요? (예: 110) "
-                "이미 큐가 있는 시퀀스면 해당 큐가 바뀔 수 있습니다.",
-                options=(
-                    QuestionOption(label="110"),
-                    QuestionOption(label="120"),
-                    QuestionOption(label="200"),
-                ),
-                why="Store Sequence는 지정한 큐 슬롯에 그대로 저장되므로 운영자 결정입니다.",
-            )
-            try:
-                sequence_no = int(re.search(r"\d+", answer or "").group(0))
-            except AttributeError:
-                return self._pointing_refusal(
-                    "시퀀스 번호를 받지 못해 큐 시트를 만들지 않았습니다."
-                )
+        requested_sequence = int(sequence_match.group("no")) if sequence_match is not None else None
+        picked = self._song_pick_sequence(
+            requested_sequence,
+            purpose="포지션 큐 시트",
+            refusal="시퀀스 번호를 받지 못해 큐 시트를 만들지 않았습니다.",
+        )
+        if isinstance(picked, InstructionResult):
+            return picked
+        sequence_no = picked
         preset_match = _SHEET_PRESET_START.search(text)
         if preset_match is not None:
             preset_start = int(preset_match.group("no"))
         else:
-            answer = self._ask_one(
-                "기본 포지션 10종(Home~Ring In)이 Position 프리셋 몇 번부터 "
-                "저장돼 있나요? (예: 21 → 2.21~2.30)",
-                options=(
-                    QuestionOption(label="1"),
-                    QuestionOption(label="11"),
-                    QuestionOption(label="21"),
-                ),
-                why=(
-                    "큐는 프리셋 참조로 빌드됩니다 — 잘못된 슬롯을 리콜하면 "
-                    "그 자리에 있는 다른 포지션이 무대에 나갑니다."
-                ),
+            asked = self._ask_position_preset_start(
+                "프리셋 시작 번호를 받지 못해 큐 시트를 만들지 않았습니다."
             )
-            try:
-                preset_start = int(re.search(r"\d+", answer or "").group(0))
-            except AttributeError:
-                return self._pointing_refusal(
-                    "프리셋 시작 번호를 받지 못해 큐 시트를 만들지 않았습니다."
-                )
+            if isinstance(asked, InstructionResult):
+                return asked
+            preset_start = asked
         fade_match = _CUE_FADE.search(text)
         fade_seconds = (
             float(fade_match.group("sec") or fade_match.group("sec2"))
@@ -3118,40 +3145,12 @@ class ChatSession:
         if preset_match is not None:
             preset_start = int(preset_match.group("no"))
         else:
-            ready_starts = self._position_preset_ready_starts()
-            if ready_starts:
-                prompt = (
-                    "기본 포지션 10종(Home~Ring In)이 Position 프리셋 몇 번부터 "
-                    "저장돼 있나요? 콘솔에서 10칸 연속 저장된 구간을 확인했습니다."
-                )
-                options = tuple(
-                    QuestionOption(label=f"{start} (2.{start}~2.{start + 9} 저장 확인됨)")
-                    for start in ready_starts[:3]
-                )
-            else:
-                prompt = (
-                    "기본 포지션 10종(Home~Ring In)이 Position 프리셋 몇 번부터 "
-                    "저장돼 있나요? (예: 21 → 2.21~2.30)"
-                )
-                options = (
-                    QuestionOption(label="1"),
-                    QuestionOption(label="11"),
-                    QuestionOption(label="21"),
-                )
-            answer = self._ask_one(
-                prompt,
-                options=options,
-                why=(
-                    "큐는 프리셋 참조로 빌드됩니다 — 잘못된 슬롯을 리콜하면 "
-                    "그 자리에 있는 다른 포지션이 무대에 나갑니다."
-                ),
+            asked = self._ask_position_preset_start(
+                "프리셋 시작 번호를 받지 못해 연출 인터뷰를 시작하지 않았습니다."
             )
-            try:
-                preset_start = int(re.search(r"\d+", answer or "").group(0))
-            except AttributeError:
-                return self._pointing_refusal(
-                    "프리셋 시작 번호를 받지 못해 연출 인터뷰를 시작하지 않았습니다."
-                )
+            if isinstance(asked, InstructionResult):
+                return asked
+            preset_start = asked
         timing = self._song_timing_choice(text)
         if timing is None:
             return InstructionResult(
@@ -3817,25 +3816,12 @@ class ChatSession:
         sequence_no = timeline["sequence_number"]
         preset_start = timeline.get("preset_start")
         if not isinstance(preset_start, int):
-            answer = self._ask_one(
-                "기본 포지션 10종(Home~Ring In)이 Position 프리셋 몇 번부터 "
-                "저장돼 있나요? (예: 21 → 2.21~2.30)",
-                options=(
-                    QuestionOption(label="1"),
-                    QuestionOption(label="11"),
-                    QuestionOption(label="21"),
-                ),
-                why=(
-                    "이 타임라인 저장본에는 프리셋 시작 번호가 없어, 잘못된 "
-                    "슬롯을 리콜하면 다른 포지션이 무대에 나갑니다."
-                ),
+            asked = self._ask_position_preset_start(
+                "프리셋 시작 번호를 받지 못해 큐를 수정하지 않았습니다."
             )
-            try:
-                preset_start = int(re.search(r"\d+", answer or "").group(0))
-            except AttributeError:
-                return self._pointing_refusal(
-                    "프리셋 시작 번호를 받지 못해 큐를 수정하지 않았습니다."
-                )
+            if isinstance(asked, InstructionResult):
+                return asked
+            preset_start = asked
         fixtures = self._read_pointing_coordinates("timeline-edit-read")
         if isinstance(fixtures, InstructionResult):
             return fixtures
@@ -3964,44 +3950,77 @@ class ChatSession:
             )
         plan_rows: list[tuple[str, int, int, int]] = []  # (곡, 원본, 슬롯, executor)
         skipped: list[str] = []
+        playable: list[tuple[str, int]] = []
         for base in chosen:
             timeline = latest[base].get("timeline") or {}
             source = timeline.get("sequence_number")
             if not isinstance(source, int) or not timeline.get("console_stored"):
                 skipped.append(f"{base}(콘솔 미저장 — 승인/저장 후 다시)")
                 continue
-            slot_index = len(plan_rows)
-            plan_rows.append(
-                (base, source, seq_start + _SETLIST_SEQ_STEP * slot_index, exec_start + slot_index)
-            )
-        if not plan_rows:
+            playable.append((base, source))
+        if not playable:
             reasons = "; ".join(skipped) if skipped else "곡 없음"
             return self._pointing_refusal(f"셋리스트에 넣을 수 있는 곡이 없습니다: {reasons}.")
-        # PRE-CHECK: every target slot must be empty (a live rig may already
-        # hold sequences there — the 2026-08-15 safety rule: 새 번호 사용 또는
-        # 기존 상태 확인). A source-equals-slot row skips the copy, not the check.
-        occupied: list[str] = []
-        for base, source, slot, _exec_no in plan_rows:
-            if slot == source:
-                continue
-            probe = self._registry.dispatch(
-                ToolCall(
-                    id=f"setlist-slot-check-{slot}",
-                    name="query_state",
-                    arguments={"path": f"{self._rig_paths['sequences']}/{slot}"},
-                )
-            )
-            try:
-                payload = json.loads(probe.result.content)
-            except (json.JSONDecodeError, TypeError):
-                payload = None
-            if _setlist_node_exists(payload):
-                occupied.append(f"Sequence {slot} ({base} 슬롯)")
+
+        def _rows_for(start: int) -> list[tuple[str, int, int, int]]:
+            return [
+                (base, source, start + _SETLIST_SEQ_STEP * index, exec_start + index)
+                for index, (base, source) in enumerate(playable)
+            ]
+
+        def _occupied_slots(rows: list[tuple[str, int, int, int]]) -> list[str]:
+            found: list[str] = []
+            for base, source, slot, _exec_no in rows:
+                if slot != source and self._console_slot_occupied(
+                    f"{self._rig_paths['sequences']}/{slot}",
+                    probe_id=f"setlist-slot-check-{slot}",
+                ):
+                    found.append(f"Sequence {slot} ({base} 슬롯)")
+            return found
+
+        # PRE-CHECK: every target slot must be empty (2026-08-15 safety rule).
+        # 2026-08-16 사용자 방향: an occupied run is a QUESTION, not a dead
+        # end — propose alternate verified-free base numbers on the spot.
+        plan_rows = _rows_for(seq_start)
+        occupied = _occupied_slots(plan_rows)
         if occupied:
-            return self._pointing_refusal(
-                f"셋리스트 슬롯이 이미 사용 중입니다: {', '.join(occupied)}. "
-                "기존 시퀀스는 덮어쓰지 않습니다 — '시퀀스 N부터'로 빈 구간을 지정해 주세요."
+            span = _SETLIST_SEQ_STEP * len(playable)
+            free_bases: list[int] = []
+            candidate = seq_start
+            for _probe in range(8):
+                candidate += span
+                if not _occupied_slots(_rows_for(candidate)):
+                    free_bases.append(candidate)
+                if len(free_bases) == 2:
+                    break
+            options = tuple(QuestionOption(label=f"시퀀스 {slot}부터") for slot in free_bases) + (
+                QuestionOption(label="취소"),
             )
+            answer = self._ask_one(
+                f"셋리스트 슬롯이 이미 사용 중입니다: {', '.join(occupied)}. "
+                "기존 시퀀스는 덮어쓰지 않습니다.\n"
+                + (
+                    "빈 구간을 콘솔에서 확인했습니다 — 어느 번호부터 배분할까요? (직접 입력도 가능)"
+                    if free_bases
+                    else "빈 구간을 찾지 못했습니다 — 시작 번호를 직접 입력해 주세요."
+                ),
+                options=options,
+                why="문제를 만나면 중단 대신 해결 방법을 함께 정합니다.",
+            )
+            number = re.search(r"\d+", answer or "")
+            if answer is None or "취소" in (answer or "") or number is None:
+                return self._pointing_refusal(
+                    f"셋리스트 슬롯이 이미 사용 중입니다: {', '.join(occupied)}. "
+                    "'시퀀스 N부터'로 빈 구간을 지정해 다시 요청해 주세요."
+                )
+            seq_start = int(number.group(0))
+            plan_rows = _rows_for(seq_start)
+            occupied = _occupied_slots(plan_rows)
+            if occupied:
+                return self._pointing_refusal(
+                    f"지정한 구간도 사용 중입니다: {', '.join(occupied)}. "
+                    "다른 시작 번호로 다시 요청해 주세요."
+                )
         plan_lines = [
             f"{index}. {base}: Sequence {source} → {slot} / Executor {exec_no}"
             for index, (base, source, slot, exec_no) in enumerate(plan_rows, start=1)
@@ -4153,21 +4172,132 @@ class ChatSession:
             return failure
         return self._song_finalize(state, plan, composition)
 
-    def _song_sequence_occupied(self, sequence_no: int) -> bool:
-        """True when the console already holds ANY data at this sequence slot
-        — the same query_state posture the setlist pre-check uses."""
+    def _console_slot_occupied(self, path: str, *, probe_id: str) -> bool:
+        """Whether a console pool slot holds data — FAIL-CLOSED (#6,
+        2026-08-16): an errored or unparseable probe reads as OCCUPIED, so a
+        flapping responder can never get an occupied slot proposed as empty."""
         probe = self._registry.dispatch(
-            ToolCall(
-                id=f"song-design-slot-check-{sequence_no}",
-                name="query_state",
-                arguments={"path": f"{self._rig_paths['sequences']}/{sequence_no}"},
-            )
+            ToolCall(id=probe_id, name="query_state", arguments={"path": path})
         )
+        if probe.result.is_error:
+            return True
         try:
             payload = json.loads(probe.result.content)
         except (json.JSONDecodeError, TypeError):
-            payload = None
+            return True
+        if not isinstance(payload, dict):
+            return True
         return _setlist_node_exists(payload)
+
+    def _song_sequence_occupied(self, sequence_no: int) -> bool:
+        """True when the console already holds ANY data at this sequence slot
+        — the same query_state posture the setlist pre-check uses."""
+        return self._console_slot_occupied(
+            f"{self._rig_paths['sequences']}/{sequence_no}",
+            probe_id=f"song-design-slot-check-{sequence_no}",
+        )
+
+    def _timecode_occupied(self, timecode_no: int) -> bool:
+        """Whether a Timecode pool slot already holds data (fail-closed)."""
+        pool = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+        return self._console_slot_occupied(
+            f"{pool}/{timecode_no}", probe_id=f"song-design-timecode-check-{timecode_no}"
+        )
+
+    def _free_timecode_slots(self, start: int, *, count: int = 2, probes: int = 10) -> list[int]:
+        """Up to ``count`` console-VERIFIED empty timecode slots from
+        ``start + 1`` upward (step 1 — timecode pools are dense)."""
+        free: list[int] = []
+        candidate = start
+        for _probe in range(probes):
+            candidate += 1
+            if not self._timecode_occupied(candidate):
+                free.append(candidate)
+                if len(free) == count:
+                    break
+        return free
+
+    def _position_preset_pool_slots(self) -> set[int] | None:
+        """The Position pool's stored preset numbers, or None when the pool
+        cannot be read (callers fall back to static examples, never a guess)."""
+        pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
+        probe = self._registry.dispatch(
+            ToolCall(
+                id="song-design-preset-pool-read",
+                name="query_state",
+                arguments={"path": f"{pool_root}/2"},
+            )
+        )
+        if probe.result.is_error:
+            return None
+        try:
+            payload = json.loads(probe.result.content)
+        except (json.JSONDecodeError, TypeError):
+            return None
+        children = payload.get("children") if isinstance(payload, dict) else None
+        if not isinstance(children, list):
+            return None
+        slots: set[int] = set()
+        for child in children:
+            if isinstance(child, dict):
+                try:
+                    slots.add(int(child.get("no")))
+                except (TypeError, ValueError):
+                    continue
+        return slots
+
+    def _position_preset_free_starts(self, *, count: int = 3) -> list[int] | None:
+        """Start numbers where TEN consecutive Position slots are EMPTY —
+        for the preset STORE path, the mirror image of
+        `_position_preset_ready_starts`. None = pool unreadable."""
+        slots = self._position_preset_pool_slots()
+        if slots is None:
+            return None
+        span = len(BASIC_POSITION_SEQUENCE)
+        starts: list[int] = []
+        for base in range(1, 92, span):
+            if all(base + offset not in slots for offset in range(span)):
+                starts.append(base)
+                if len(starts) == count:
+                    break
+        return starts
+
+    def _ask_position_preset_start(self, refusal: str) -> int | InstructionResult:
+        """The shared '기본 포지션이 프리셋 몇 번부터?' card — proposes only
+        starts the console VERIFIED as ten consecutive stored presets, and
+        falls back to the static examples when the pool is unreadable."""
+        ready_starts = self._position_preset_ready_starts()
+        if ready_starts:
+            prompt = (
+                "기본 포지션 10종(Home~Ring In)이 Position 프리셋 몇 번부터 "
+                "저장돼 있나요? 콘솔에서 10칸 연속 저장된 구간을 확인했습니다."
+            )
+            options = tuple(
+                QuestionOption(label=f"{start} (2.{start}~2.{start + 9} 저장 확인됨)")
+                for start in ready_starts[:3]
+            )
+        else:
+            prompt = (
+                "기본 포지션 10종(Home~Ring In)이 Position 프리셋 몇 번부터 "
+                "저장돼 있나요? (예: 21 → 2.21~2.30)"
+            )
+            options = (
+                QuestionOption(label="1"),
+                QuestionOption(label="11"),
+                QuestionOption(label="21"),
+            )
+        answer = self._ask_one(
+            prompt,
+            options=options,
+            why=(
+                "큐는 프리셋 참조로 빌드됩니다 — 잘못된 슬롯을 리콜하면 "
+                "그 자리에 있는 다른 포지션이 무대에 나갑니다."
+            ),
+        )
+        try:
+            return int(re.search(r"\d+", answer or "").group(0))
+        except AttributeError:
+            return self._pointing_refusal(refusal)
 
     def _song_free_sequence_slots(
         self, start: int, *, count: int = 3, probes: int = 12, step: int = 10
@@ -4186,33 +4316,11 @@ class ChatSession:
 
     def _position_preset_ready_starts(self, *, count: int = 3) -> list[int]:
         """Start numbers where the Position pool holds TEN consecutive stored
-        presets (2.s ~ 2.s+9) — read once off the console's own pool. An
-        unreadable pool returns [] and the caller falls back to the static
-        examples rather than guessing."""
-        pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
-        probe = self._registry.dispatch(
-            ToolCall(
-                id="song-design-preset-pool-read",
-                name="query_state",
-                arguments={"path": f"{pool_root}/2"},
-            )
-        )
-        if probe.result.is_error:
+        presets (2.s ~ 2.s+9). Unreadable pool → [] (callers fall back to the
+        static examples rather than guessing)."""
+        stored = self._position_preset_pool_slots()
+        if not stored:
             return []
-        try:
-            payload = json.loads(probe.result.content)
-        except (json.JSONDecodeError, TypeError):
-            return []
-        children = payload.get("children") if isinstance(payload, dict) else None
-        if not isinstance(children, list):
-            return []
-        stored: set[int] = set()
-        for child in children:
-            if isinstance(child, dict):
-                try:
-                    stored.add(int(child.get("no")))
-                except (TypeError, ValueError):
-                    continue
         span = len(BASIC_POSITION_SEQUENCE)
         starts: list[int] = []
         for slot in sorted(stored):
@@ -4350,9 +4458,59 @@ class ChatSession:
             )
         self._pending_song_requery = None
         self._pending_song_plan = state
+        # #3 (2026-08-16): resolve a conflicting timecode slot BEFORE approval
+        # — same interactive posture as the sequence recovery card.
+        timecode_no = state.timing.timecode_number
+        timecode_note = ""
+        if timecode_no is not None:
+            if self._timecode_occupied(timecode_no):
+                free_timecodes = self._free_timecode_slots(timecode_no)
+                answer = self._ask_one(
+                    f"타임코드 {timecode_no}에 이미 콘솔 데이터가 있습니다. 어떻게 할까요?",
+                    options=(QuestionOption(label=f"그대로 진행 (타임코드 {timecode_no}에 저장)"),)
+                    + tuple(
+                        QuestionOption(label=f"타임코드 {slot} (비어 있음)")
+                        for slot in free_timecodes
+                    )
+                    + (QuestionOption(label="취소 (계획 보존)"),),
+                    why="문제를 만나면 중단 대신 해결 방법을 함께 정합니다.",
+                )
+                if answer is None or "취소" in (answer or ""):
+                    return self._pointing_refusal(
+                        f"타임코드 {timecode_no} 충돌이 해결되지 않아 저장하지 않았습니다. "
+                        "계획은 그대로 보존했습니다."
+                    )
+                if "그대로" in answer:
+                    timecode_note = f" · Timecode {timecode_no}: 기존 슬롯에 저장(감독 확인)"
+                else:
+                    moved = re.search(r"\d+", answer)
+                    if moved is None:
+                        return self._pointing_refusal(
+                            "타임코드 번호를 읽지 못해 저장하지 않았습니다. 계획은 보존했습니다."
+                        )
+                    state.timing = TimingPlan.timecode(int(moved.group(0)), source="director")
+                    timecode_no = state.timing.timecode_number
+                    plan, composition = self._song_compose(state)
+                    review_text = _review_text(plan, composition)
+                    timecode_note = f" · Timecode {timecode_no}: 비어 있음 확인"
+            else:
+                timecode_note = f" · Timecode {timecode_no}: 비어 있음 확인"
         sequence_no = state.sequence_no
+        # #5 (2026-08-16): the approval card carries a VERIFIED impact summary
+        # — what gets created where, and that nothing existing is overwritten.
+        sequence_free = not self._song_sequence_occupied(sequence_no)
+        sequence_verdict = (
+            "비어 있음 확인(신규 저장)"
+            if sequence_free
+            else "사용 중 — 승인 후 빈 시퀀스 선택 카드가 열립니다"
+        )
+        impact = (
+            f"영향 요약 — Sequence {sequence_no}: {sequence_verdict}"
+            f"{timecode_note} · 기존 데이터 덮어쓰기: 없음."
+        )
         approval = self._ask_one(
-            f"{review_text}\n\n이 전체 리뷰 번들을 시퀀스 {sequence_no}에 원자적으로 저장할까요?",
+            f"{review_text}\n\n{impact}\n\n"
+            f"이 전체 리뷰 번들을 시퀀스 {sequence_no}에 원자적으로 저장할까요?",
             options=(
                 QuestionOption(label="승인"),
                 QuestionOption(label="수정"),
