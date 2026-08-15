@@ -6943,6 +6943,18 @@ def build_toolset(
                 "its very first line. If the operator wants two effects, do "
                 "the second after they reply.\n"
                 "\n"
+                "STOP AT THE STORE. Do NOT follow this call with hand-written "
+                "run_commands that recall the result, store extra cues, "
+                "'Assign ... At Executor/Page' or 'Go+' — executor placement "
+                "and playback are the operator's call (measured live "
+                "2026-08-15: that follow-up bundle was refused at the gate "
+                "and burned two extra approval cards). Report the stored "
+                "numbers and OFFER the fader assignment as the operator's "
+                "next instruction instead. Same rule for a preset detour: a "
+                "plain movement request ('흔들어줘', '돌려줘') is destination "
+                '"sequence" in ONE call — reach for "preset" only when the '
+                "operator asked to keep/reuse it.\n"
+                "\n"
                 "Finally, and this holds even when every command came back "
                 "ok: the effect itself cannot be verified by machine. The "
                 "console reports that the commands were accepted, and a stored "
@@ -7082,7 +7094,12 @@ def build_toolset(
                 "lines and stores an INCOMPLETE object). The result carries "
                 "the same report/verdict contract as instantiate_fx; only "
                 '"complete" is a success. The effect itself is NOT machine-'
-                "verifiable — a human has to watch the stage; say so."
+                "verifiable — a human has to watch the stage; say so.\n"
+                "\n"
+                "STOP AT THE STORE (same rule as instantiate_fx): no "
+                "hand-written recall/Assign/Go+ follow-up bundles — report "
+                "the stored numbers and offer executor placement as the "
+                "operator's next instruction."
             ),
             parameters={
                 "type": "object",
