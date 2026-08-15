@@ -35,7 +35,14 @@ from server.groupgen.write import (
     build_group_write_plan,
     guard_bundle_collision,
 )
-from server.llm.types import ToolCall, ToolDefinition, ToolResult
+from server.llm.types import (
+    ImageAttachment,
+    LLMProvider,
+    ToolCall,
+    ToolDefinition,
+    ToolResult,
+    UserMessage,
+)
 from server.looks.busking import build_genre_bundle, select_genre
 from server.looks.instantiate import (
     CAPTURE_PER_FAMILY,
@@ -236,6 +243,7 @@ TOOL_NAMES = (
     "create_arrangement_groups",
     "build_handover_pack",
     "build_magic_sheet",
+    "analyse_layout_image",
 )
 
 # Object-tree paths for the rig-context summary (REQ-MVP-037). LIVE-CALIBRATED
@@ -440,6 +448,153 @@ class VectorworksUploadPort(Protocol):
 
     content_base64: str | None
     report: Mapping[str, object] | None
+
+
+class LayoutImageUploadPort(Protocol):
+    """Session-local storage for the most recently attached layout image.
+
+    Same session-held-upload pattern as :class:`VectorworksUploadPort`
+    (contract.md §1): the session keeps at most one image, and a new upload
+    replaces it. Nothing attached is ``content_base64 is None``.
+    """
+
+    file_name: str | None
+    mime_type: str | None
+    content_base64: str | None
+
+
+# -- analyse_layout_image vision contract (contract.md §3) --------------------
+#
+# The model reads STRUCTURE, not pixels (spec.md 원칙 1) — a numeric value with
+# no text backing it is 'unresolved', never a ratio guessed off the drawing.
+# These four sets are the schema's OWN enforcement, independent of whatever the
+# prompt below asks for: a model that emits a pixel-ratio estimate as an extra
+# 'interpreted' key (e.g. an invented 'estimated_spacing_px') is refused here,
+# not trusted to have obeyed the prompt.
+_LAYOUT_PATTERNS = frozenset({"rings", "rows", "grid", "arc", "scatter", "single_point"})
+_LAYOUT_SYMMETRIES = frozenset({"radial", "bilateral", "none"})
+_LAYOUT_CONFIDENCES = frozenset({"high", "medium", "low"})
+_LAYOUT_INTERPRETED_KEYS = frozenset({"spacing", "radius", "z", "count", "type_name"})
+_LAYOUT_TOP_KEYS = frozenset(
+    {"pattern", "layers", "symmetry", "confidence", "annotations", "unresolved"}
+)
+_LAYOUT_LAYER_KEYS = frozenset({"count", "note"})
+_LAYOUT_ANNOTATION_KEYS = frozenset({"text", "interpreted", "applies_to"})
+
+
+def _build_layout_vision_prompt(description: str) -> str:
+    """The one-shot structural-read prompt sent with the attached image.
+
+    Sourced verbatim from contract.md §3's JSON shape so the schema the model
+    is told to emit and the schema :func:`_parse_layout_vision_response`
+    enforces never drift apart.
+    """
+    return (
+        "당신은 조명 배치 스케치의 구조만 읽어내는 판독기다. 이미지를 보고 아래 "
+        "JSON 객체 하나만 출력하라 — 설명 문장, 코드펜스, 그 외 어떤 텍스트도 "
+        "덧붙이지 마라.\n"
+        "\n"
+        "{\n"
+        '  "pattern": "rings" | "rows" | "grid" | "arc" | "scatter" | "single_point",\n'
+        '  "layers": [{"count": 6, "note": "inner"}],\n'
+        '  "symmetry": "radial" | "bilateral" | "none",\n'
+        '  "confidence": "high" | "medium" | "low",\n'
+        '  "annotations": [\n'
+        '    {"text": "간격 2m", "interpreted": {"spacing": 2.0}, '
+        '"applies_to": "outer ring"}\n'
+        "  ],\n"
+        '  "unresolved": ["안쪽 링 반지름"]\n'
+        "}\n"
+        "\n"
+        "절대 금지: 도형의 픽셀 크기·간격을 재서 비율로 수치(간격, 반지름, 좌표 "
+        "등)를 추정하지 마라. 수치의 출처는 오직 (a) 이미지에 실제로 적힌 텍스트 "
+        "주석, (b) 값을 모르면 unresolved에 남기는 것, 이 둘뿐이다.\n"
+        "이미지 안에 적힌 텍스트(예: '간격 2m', 'MMX x6')는 annotations 항목 "
+        "하나씩으로 만들어라 — 'text'는 이미지에 적힌 원문 그대로, "
+        "'interpreted'는 그 해석이다. 'interpreted'에 넣을 수 있는 키는 "
+        "spacing, radius, z, count, type_name 다섯 개뿐이며 다른 키를 만들지 "
+        "마라.\n"
+        "이미지에도 텍스트 주석에도 없는 값은 절대 지어내지 말고, "
+        "unresolved 배열에 그 값이 무엇인지 한국어로 짧게 적어라.\n"
+        f"조명감독의 설명: {description}\n"
+        "설명이 이미지가 보여주는 구조와 다르게 말하면 이미지를 우선하라.\n"
+        "다른 무엇도 출력하지 말고, 위 JSON 객체 하나만 출력하라."
+    )
+
+
+def _parse_layout_vision_response(text: str) -> tuple[dict[str, object] | None, str | None]:
+    """Parse + validate one vision reply against contract.md §3.
+
+    Returns ``(payload, None)`` on a schema-clean reply, or ``(None, message)``
+    when the reply cannot be trusted as-is — non-JSON text, a JSON value that
+    isn't an object, or any key/value the schema does not allow. A schema
+    violation is refused rather than silently repaired: repairing it would
+    mean guessing what the model meant, which is exactly the numeric-
+    estimation risk 원칙 1 (spec.md) forbids.
+    """
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        stripped = stripped.strip("`")
+        if stripped.lower().startswith("json"):
+            stripped = stripped[len("json") :]
+        stripped = stripped.strip()
+    try:
+        payload = json.loads(stripped)
+    except json.JSONDecodeError:
+        return None, f"모델이 JSON을 반환하지 않았다: {text[:200]!r}"
+    if not isinstance(payload, dict):
+        return None, "모델 응답이 JSON 객체가 아니다"
+
+    extra_top = set(payload) - _LAYOUT_TOP_KEYS
+    if extra_top:
+        return None, f"응답에 스키마 밖 키가 있다: {sorted(extra_top)}"
+
+    if payload.get("pattern") not in _LAYOUT_PATTERNS:
+        return None, f"'pattern'은 {sorted(_LAYOUT_PATTERNS)} 중 하나여야 한다"
+    if payload.get("symmetry") not in _LAYOUT_SYMMETRIES:
+        return None, f"'symmetry'는 {sorted(_LAYOUT_SYMMETRIES)} 중 하나여야 한다"
+    if payload.get("confidence") not in _LAYOUT_CONFIDENCES:
+        return None, f"'confidence'는 {sorted(_LAYOUT_CONFIDENCES)} 중 하나여야 한다"
+
+    layers = payload.get("layers")
+    if not isinstance(layers, list) or not layers:
+        return None, "'layers'는 비어있지 않은 배열이어야 한다"
+    for layer in layers:
+        if not isinstance(layer, dict) or isinstance(layer.get("count"), bool):
+            return None, "'layers' 항목은 count(정수)를 가진 객체여야 한다"
+        if not isinstance(layer.get("count"), int):
+            return None, "'layers' 항목은 count(정수)를 가진 객체여야 한다"
+        extra = set(layer) - _LAYOUT_LAYER_KEYS
+        if extra:
+            return None, f"'layers' 항목에 스키마 밖 키가 있다: {sorted(extra)}"
+
+    annotations = payload.get("annotations", [])
+    if not isinstance(annotations, list):
+        return None, "'annotations'는 배열이어야 한다"
+    for annotation in annotations:
+        if not isinstance(annotation, dict):
+            return None, "'annotations' 항목은 객체여야 한다"
+        extra = set(annotation) - _LAYOUT_ANNOTATION_KEYS
+        if extra:
+            return None, f"'annotations' 항목에 스키마 밖 키가 있다: {sorted(extra)}"
+        text_value = annotation.get("text")
+        if not isinstance(text_value, str) or not text_value.strip():
+            return None, "'annotations' 항목의 'text'는 이미지 원문이어야 한다"
+        interpreted = annotation.get("interpreted", {})
+        if not isinstance(interpreted, dict):
+            return None, "'annotations' 항목의 'interpreted'는 객체여야 한다"
+        extra_keys = set(interpreted) - _LAYOUT_INTERPRETED_KEYS
+        if extra_keys:
+            return None, (
+                "'interpreted'에 스키마 밖 키가 있다(픽셀 추정 필드는 금지): "
+                f"{sorted(extra_keys)}"
+            )
+
+    unresolved = payload.get("unresolved", [])
+    if not isinstance(unresolved, list) or not all(isinstance(item, str) for item in unresolved):
+        return None, "'unresolved'는 문자열 배열이어야 한다"
+
+    return payload, None
 
 
 @dataclass(frozen=True)
@@ -1283,6 +1438,8 @@ def build_toolset(
     group_approval_port: ApprovalPort | None = None,
     question_port: object | None = None,
     vectorworks_upload: VectorworksUploadPort | None = None,
+    vision_provider: LLMProvider | None = None,
+    layout_image_upload: LayoutImageUploadPort | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
 
@@ -1333,6 +1490,18 @@ def build_toolset(
     approval stage on their own. Omitted (the default), it falls back to
     ``DenyAllApprovalPort`` — fail-closed, matching the port's own module
     docstring: with no approval channel wired, nothing is ever sent.
+
+    ``vision_provider`` / ``layout_image_upload`` (SPEC-COPILOT-IMGLAYOUT-001
+    M3) wire ``analyse_layout_image``. ``vision_provider`` is a SEPARATE
+    :class:`~server.llm.types.LLMProvider` injection from whatever drives the
+    session's own tool loop — this one exists to make exactly one vision call
+    per ``analyse_layout_image`` invocation, never to touch the conversation
+    loop or its retry budget. ``layout_image_upload`` mirrors
+    ``vectorworks_upload``'s session-held-upload pattern (contract.md §1): the
+    session keeps at most one image, and a new upload replaces it. Both
+    omitted (the default) keeps every existing caller byte-identical; the
+    tool then reports the missing capability / missing image rather than
+    guessing.
     """
     rig_paths = dict(rig_paths or DEFAULT_RIG_CONTEXT_PATHS)
     group_approval = group_approval_port or DenyAllApprovalPort()
@@ -2858,6 +3027,61 @@ def build_toolset(
         return tuple(entries)
 
     def _patch_payload(call: ToolCall, payload: Mapping[str, object]) -> ToolExecution:
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            ),
+            command_outcomes=(),
+        )
+
+    # -- analyse_layout_image (SPEC-COPILOT-IMGLAYOUT-001 M3 — REQ-IMGLAYOUT-
+    #    007/008/009) ------------------------------------------------------------
+    #
+    # @MX:NOTE: reads the session-held layout image (contract.md §1 upload,
+    #   consumed the same way precheck_vectorworks_diff/vectorworks_autopatch
+    #   consume vectorworks_upload) through ONE vision_provider.complete()
+    #   call and returns the contract.md §3 structure JSON. Never touches the
+    #   console -- 0 exec verbs, same read-only class as
+    #   precheck_vectorworks_diff. Execution stays exclusively on the existing
+    #   arrange_fixtures path (spec.md 원칙 3); this tool adds no console
+    #   write surface.
+    def analyse_layout_image(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        if vision_provider is None:
+            return _error_result(
+                call,
+                "vision analysis is not wired — build_toolset needs vision_provider",
+            )
+        if layout_image_upload is None or not layout_image_upload.content_base64:
+            return _error_result(call, "첨부된 이미지가 없습니다")
+        description = call.arguments.get("description")
+        if not isinstance(description, str) or not description.strip():
+            return _error_result(call, "'description' must be a non-empty string")
+
+        try:
+            turn = vision_provider.complete(
+                system_prefix="",
+                conversation=(
+                    UserMessage(
+                        text=_build_layout_vision_prompt(description),
+                        images=(
+                            ImageAttachment(
+                                mime_type=layout_image_upload.mime_type or "",
+                                content_base64=layout_image_upload.content_base64,
+                            ),
+                        ),
+                    ),
+                ),
+                tools=(),
+            )
+        except Exception as error:  # noqa: BLE001 — 툴 경계 최종 방어선(설계상 의도적)
+            return _error_result(call, f"비전 모델 호출이 실패했다: {error}")
+
+        payload, error_message = _parse_layout_vision_response(turn.text)
+        if error_message is not None:
+            return _error_result(call, error_message)
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
@@ -7471,6 +7695,49 @@ def build_toolset(
                 "additionalProperties": False,
             },
         ),
+        ToolDefinition(
+            name="analyse_layout_image",
+            description=(
+                "Read the STRUCTURE of the layout image already attached to "
+                "this conversation — pattern, layer counts, symmetry — plus "
+                "the text written INSIDE the image itself (spacing notes, "
+                "fixture-type counts). Never estimates a number from pixel "
+                "proportions; a value with no text backing it comes back "
+                "under 'unresolved', never guessed. Sends nothing to the "
+                "console (0 exec verbs, the same read-only class as "
+                "precheck_vectorworks_diff) — this only proposes a structure "
+                "for arrange_fixtures to execute after the operator "
+                "approves it.\n"
+                "\n"
+                "When presenting the result, ALWAYS show each annotation's "
+                "original image text ('text') NEXT TO its interpreted value "
+                "— the operator catches an OCR misread ('2m' read as "
+                "'12m') by comparing the two, so hiding the original "
+                "defeats that check. For every 'unresolved' entry, ask the "
+                "operator ONE question per item — never invent a value the "
+                "image never stated.\n"
+                "\n"
+                "Requires an image already attached in this conversation; "
+                "if this refuses for lack of one, ask the operator to "
+                "attach the image and call again."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "description": (
+                            "The operator's own words about the image — "
+                            "what it shows, what to focus on. Passed to the "
+                            "vision model alongside the image, never "
+                            "invented."
+                        ),
+                    },
+                },
+                "required": ["description"],
+                "additionalProperties": False,
+            },
+        ),
     )
     handlers: dict[str, _Handler] = {
         "run_commands": run_commands,
@@ -7504,5 +7771,6 @@ def build_toolset(
         "arrange_fixtures": arrange_fixtures,
         "classify_arrangement_topology": classify_arrangement_topology,
         "create_arrangement_groups": create_arrangement_groups,
+        "analyse_layout_image": analyse_layout_image,
     }
     return ToolRegistry(definitions, handlers)
