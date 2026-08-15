@@ -308,7 +308,16 @@ def build_dash_catalog(
     for index, name in failed:
         sections[index] = dash_section(name=name, status=status, items=[])
 
-    return [s for s in sections if s is not None]
+    ordered = [s for s in sections if s is not None]
+    # Display order (user direction, 2026-08-15): 익스큐터 sits BEFORE 플러그인 —
+    # the press-able playback row outranks the read-only plugin reference row.
+    # Reordered HERE because the client renders wire order verbatim
+    # (REQ-DASHUI-003 — nothing sorts on the UI side).
+    names = [s["name"] for s in ordered]
+    if "executors" in names and "plugins" in names:
+        executors = ordered.pop(names.index("executors"))
+        ordered.insert([s["name"] for s in ordered].index("plugins"), executors)
+    return ordered
 
 
 def resolved_executor_nos(sections: list[dict]) -> list[int]:

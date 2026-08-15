@@ -125,13 +125,15 @@ def _ids(items: list[dict]) -> list[int]:
 class TestDashCatalogAccuracy:
     def test_every_section_the_ia_names_is_present_in_priority_order(self):
         sections = build_dash_catalog(FakeStatePort(_rig_tree()))
+        # 익스큐터 before 플러그인: user direction 2026-08-15 (the press-able
+        # playback row outranks the read-only plugin reference row).
         assert [s["name"] for s in sections] == [
             "groups",
             "preset_pools",
             "macros",
+            "executors",
             "plugins",
             "fixtures",
-            "executors",
         ]
 
     def test_group_items_carry_the_real_pool_number_never_a_list_position(self):
@@ -542,3 +544,19 @@ class TestResolvedExecutorMembership:
         assert store.contains("executor", 105) is True
         # Only the executor class is widened — no cross-kind bleed.
         assert store.contains("macro", 105) is False
+
+
+class TestSectionDisplayOrder:
+    def test_executors_render_before_plugins(self):
+        # User direction 2026-08-15: the press-able playback row outranks the
+        # read-only plugin reference row. The client renders wire order
+        # verbatim (REQ-DASHUI-003), so the order is pinned HERE.
+        names = [s["name"] for s in build_dash_catalog(FakeStatePort(_rig_tree()))]
+        assert names.index("executors") < names.index("plugins")
+
+    def test_the_reorder_survives_a_failed_plugins_section(self):
+        tree = _rig_tree()
+        tree.pop("DataPool/Plugins", None)
+        names = [s["name"] for s in build_dash_catalog(FakeStatePort(tree))]
+        # Both rows still present (plugins as a failed placeholder), same order.
+        assert names.index("executors") < names.index("plugins")
