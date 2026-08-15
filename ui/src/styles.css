@@ -3110,7 +3110,10 @@ body {
 }
 
 /* Measured per-pool stored count (preset pools) — top-right chip. Absent
-   when the drilldown never opened the pool: no measured number, no badge. */
+   when the drilldown never opened the pool: no measured number, no badge.
+   YELLOW for visibility (user direction 2026-08-15) — the accent-tinted
+   chip sank into the section colours; this amber matches the running-tile
+   state so the palette stays in the family. */
 .pool-tile-count {
   position: absolute;
   top: 5px;
@@ -3118,8 +3121,8 @@ body {
   min-width: 18px;
   padding: 1px 5px;
   border-radius: 9px;
-  background: var(--pool-accent, #4a5160);
-  color: #0e1114;
+  background: #e8c025;
+  color: #201a08;
   font-size: 11px;
   font-weight: 700;
   line-height: 1.4;
