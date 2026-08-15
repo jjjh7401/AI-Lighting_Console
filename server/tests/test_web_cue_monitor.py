@@ -26,6 +26,7 @@ from server.web.cue_monitor import (
     cue_monitor_snapshot,
     order_by_show_plan,
     parse_current_cue_index,
+    planned_show_order,
     recent_execution_history,
 )
 from server.web.messages import PROTOCOL_VERSION, cue_executor_entry
@@ -540,3 +541,25 @@ class TestShowPlanOrdering:
         entries = [self._entry(101, 210), self._entry(102, None)]
         ordered = order_by_show_plan(entries, [999])
         assert sorted(e["executor_no"] for e in ordered) == [101, 102]
+
+
+class TestPlannedShowOrderSource:
+    """Handoff 2026-08-15 item 3 — the board's plan source: an EXECUTED
+    setlist allocation (multi-song) beats the single director timeline."""
+
+    class _Store:
+        def __init__(self, *, setlist=None, latest=None):
+            self.setlist_sequence_nos = list(setlist or [])
+            self.latest = latest
+
+    def test_a_setlist_allocation_beats_the_single_timeline(self):
+        store = self._Store(setlist=[210, 220, 230], latest={"sequence_number": 999})
+        assert planned_show_order(store) == [210, 220, 230]
+
+    def test_without_a_setlist_the_director_timeline_leads(self):
+        store = self._Store(latest={"sequence_number": 210})
+        assert planned_show_order(store) == [210]
+
+    def test_with_neither_the_plan_is_empty(self):
+        assert planned_show_order(self._Store()) == []
+        assert planned_show_order(self._Store(latest={"sequence_number": "x"})) == []
