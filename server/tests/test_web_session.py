@@ -1752,6 +1752,7 @@ class TestSongDesignInterviewSession:
         sequence_readback=None,
         timecode_readback=None,
         groups_readback=None,
+        preset_pool_readback=None,
         sequence_exists_before_store=False,
         store_fails=False,
     ):
@@ -1763,6 +1764,7 @@ class TestSongDesignInterviewSession:
             "DataPool/Sequences/110": sequence_readback or self._sequence_readback(),
             "DataPool/Timecodes/7": timecode_readback or self._timecode_readback(),
             "DataPool/Groups": groups_readback or {},
+            "DataPool/PresetPools/2": preset_pool_readback or {},
         }
 
         class Registry:
@@ -1986,6 +1988,10 @@ class TestSongDesignInterviewSession:
         # The one-time layer-mapping group read, then the 2026-08-16
         # occupied-slot pre-check, then the two post-store readbacks.
         assert readbacks == [
+            # Up-front pick verification (2026-08-16), the one-time
+            # layer-mapping group read, the pre-store slot check, then the
+            # two post-store readbacks.
+            "DataPool/Sequences/110",
             "DataPool/Groups",
             "DataPool/Sequences/110",
             "DataPool/Sequences/110",
@@ -2412,6 +2418,68 @@ class TestSongDesignInterviewSession:
         commands = stores[0].arguments["commands"]
         assert not [command for command in commands if command.startswith("Group ")]
 
+    def test_a_requested_occupied_sequence_is_caught_at_the_first_ask(self, tmp_path):
+        # 2026-08-16 사용자 방향: verify numbers UP FRONT — a brief naming an
+        # occupied sequence opens the pick card (verified-empty proposals)
+        # BEFORE the interview, so the store never targets a full slot.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls, sequence_exists_before_store=True)
+        channel = self._Channel(
+            ["120", "우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "BPM 질감", "승인"]
+        )
+        session._question_channel = channel
+
+        session.run_instruction(self._FULL)
+
+        first_prompt = str(getattr(channel.asked[0], "prompt", channel.asked[0]))
+        assert "이미 콘솔 데이터가 있어" in first_prompt
+        assert "비어 있는 번호" in first_prompt
+        stores = [call for call in calls if call.name == "run_commands"]
+        assert len(stores) == 1
+        commands = stores[0].arguments["commands"]
+        assert any(command.startswith("Store Sequence 120 Cue 1") for command in commands)
+        assert not any("Sequence 110" in command for command in commands)
+
+    def test_preset_start_options_come_from_the_console_pool(self, tmp_path):
+        # The preset question proposes only starts where TEN consecutive
+        # Position presets actually exist on the console.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        pool = {
+            "ok": True,
+            "node": {"name": "Position", "class": "PresetPool"},
+            "children": [{"no": slot, "name": f"Pos {slot}"} for slot in range(21, 31)]
+            + [{"no": 35, "name": "고아 슬롯"}],
+        }
+        session._registry = self._registry(calls, preset_pool_readback=pool)
+        channel = self._Channel(
+            [
+                "110",
+                "21 (2.21~2.30 저장 확인됨)",
+                "수동 Go",
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "BPM 질감",
+                "Center → Fan Out",
+                "Wall 저조도",
+                "수정",
+            ]
+        )
+        session._question_channel = channel
+
+        session.run_instruction(self._PLAIN_BRIEF)
+
+        preset_card = channel.asked[1]
+        labels = [option.label for option in preset_card.options]
+        assert labels == ["21 (2.21~2.30 저장 확인됨)"]
+        assert "10칸 연속 저장된 구간을 확인했습니다" in str(preset_card.prompt)
+        assert session._pending_song_plan is not None
+
     def test_occupied_sequence_opens_a_recovery_card_and_stores_on_the_pick(self, tmp_path):
         # 2026-08-16 사용자 방향: an occupied Sequence 110 is not a dead end —
         # the recovery card proposes verified-empty slots and a pick stores
@@ -2825,6 +2893,10 @@ class TestSongDesignInterviewSession:
         assert len(writes) == 1
         readbacks = [call.arguments["path"] for call in calls if call.name == "query_state"]
         assert readbacks == [
+            # Up-front pick verification (2026-08-16), the one-time
+            # layer-mapping group read, the pre-store slot check, then the
+            # two post-store readbacks.
+            "DataPool/Sequences/110",
             "DataPool/Groups",
             "DataPool/Sequences/110",
             "DataPool/Sequences/110",

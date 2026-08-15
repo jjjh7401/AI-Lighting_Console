@@ -3101,38 +3101,46 @@ class ChatSession:
             return self._pointing_refusal(
                 "좌표가 확인된 장비가 없어 연출 인터뷰를 시작하지 않았습니다."
             )
+        # 2026-08-16 사용자 방향: propose numbers the console VERIFIED instead
+        # of static examples — an empty sequence slot for the store target,
+        # and a preset range that actually holds all 10 basic positions.
         sequence_match = _CUE_SEQUENCE_NO.search(text)
-        if sequence_match is not None:
-            sequence_no = int(sequence_match.group("no"))
-        else:
-            answer = self._ask_one(
-                "디자인 큐 시트를 어느 시퀀스에 저장할까요? (예: 110) "
-                "이미 큐가 있는 시퀀스면 해당 큐가 바뀔 수 있습니다.",
-                options=(
-                    QuestionOption(label="110"),
-                    QuestionOption(label="120"),
-                    QuestionOption(label="200"),
-                ),
-                why="Store Sequence는 지정한 큐 슬롯에 그대로 저장되므로 운영자 결정입니다.",
-            )
-            try:
-                sequence_no = int(re.search(r"\d+", answer or "").group(0))
-            except AttributeError:
-                return self._pointing_refusal(
-                    "시퀀스 번호를 받지 못해 연출 인터뷰를 시작하지 않았습니다."
-                )
+        requested_sequence = int(sequence_match.group("no")) if sequence_match is not None else None
+        picked = self._song_pick_sequence(
+            requested_sequence,
+            purpose="디자인 큐 시트",
+            refusal="시퀀스 번호를 받지 못해 연출 인터뷰를 시작하지 않았습니다.",
+        )
+        if isinstance(picked, InstructionResult):
+            return picked
+        sequence_no = picked
         preset_match = _SHEET_PRESET_START.search(text)
         if preset_match is not None:
             preset_start = int(preset_match.group("no"))
         else:
-            answer = self._ask_one(
-                "기본 포지션 10종(Home~Ring In)이 Position 프리셋 몇 번부터 "
-                "저장돼 있나요? (예: 21 → 2.21~2.30)",
-                options=(
+            ready_starts = self._position_preset_ready_starts()
+            if ready_starts:
+                prompt = (
+                    "기본 포지션 10종(Home~Ring In)이 Position 프리셋 몇 번부터 "
+                    "저장돼 있나요? 콘솔에서 10칸 연속 저장된 구간을 확인했습니다."
+                )
+                options = tuple(
+                    QuestionOption(label=f"{start} (2.{start}~2.{start + 9} 저장 확인됨)")
+                    for start in ready_starts[:3]
+                )
+            else:
+                prompt = (
+                    "기본 포지션 10종(Home~Ring In)이 Position 프리셋 몇 번부터 "
+                    "저장돼 있나요? (예: 21 → 2.21~2.30)"
+                )
+                options = (
                     QuestionOption(label="1"),
                     QuestionOption(label="11"),
                     QuestionOption(label="21"),
-                ),
+                )
+            answer = self._ask_one(
+                prompt,
+                options=options,
                 why=(
                     "큐는 프리셋 참조로 빌드됩니다 — 잘못된 슬롯을 리콜하면 "
                     "그 자리에 있는 다른 포지션이 무대에 나갑니다."
@@ -4161,6 +4169,104 @@ class ChatSession:
             payload = None
         return _setlist_node_exists(payload)
 
+    def _song_free_sequence_slots(
+        self, start: int, *, count: int = 3, probes: int = 12, step: int = 10
+    ) -> list[int]:
+        """Up to ``count`` console-VERIFIED empty sequence slots, walking
+        ``step`` at a time from ``start`` (inclusive)."""
+        free: list[int] = []
+        candidate = start
+        for _probe in range(probes):
+            if not self._song_sequence_occupied(candidate):
+                free.append(candidate)
+                if len(free) == count:
+                    break
+            candidate += step
+        return free
+
+    def _position_preset_ready_starts(self, *, count: int = 3) -> list[int]:
+        """Start numbers where the Position pool holds TEN consecutive stored
+        presets (2.s ~ 2.s+9) — read once off the console's own pool. An
+        unreadable pool returns [] and the caller falls back to the static
+        examples rather than guessing."""
+        pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
+        probe = self._registry.dispatch(
+            ToolCall(
+                id="song-design-preset-pool-read",
+                name="query_state",
+                arguments={"path": f"{pool_root}/2"},
+            )
+        )
+        if probe.result.is_error:
+            return []
+        try:
+            payload = json.loads(probe.result.content)
+        except (json.JSONDecodeError, TypeError):
+            return []
+        children = payload.get("children") if isinstance(payload, dict) else None
+        if not isinstance(children, list):
+            return []
+        stored: set[int] = set()
+        for child in children:
+            if isinstance(child, dict):
+                try:
+                    stored.add(int(child.get("no")))
+                except (TypeError, ValueError):
+                    continue
+        span = len(BASIC_POSITION_SEQUENCE)
+        starts: list[int] = []
+        for slot in sorted(stored):
+            if (slot - 1) in stored:
+                continue  # not a run start
+            if all(slot + offset in stored for offset in range(span)):
+                starts.append(slot)
+                if len(starts) == count:
+                    break
+        return starts
+
+    def _song_pick_sequence(
+        self, requested: int | None, *, purpose: str, refusal: str
+    ) -> int | InstructionResult:
+        """The store-target sequence, verified EMPTY up front (2026-08-16
+        사용자 방향): a free requested number passes silently; an occupied or
+        missing one opens a card that proposes console-verified empty slots."""
+        if requested is not None and not self._song_sequence_occupied(requested):
+            return requested
+        free_slots = self._song_free_sequence_slots(
+            (requested or 100) + 10 if requested is not None else 110
+        )
+        lead = (
+            f"시퀀스 {requested}에는 이미 콘솔 데이터가 있어 그대로 저장하면 콘솔이 거부합니다. "
+            if requested is not None
+            else ""
+        )
+        if free_slots:
+            prompt = (
+                f"{lead}{purpose}를 어느 시퀀스에 저장할까요? "
+                "비어 있는 번호를 콘솔에서 확인해 제안합니다. (직접 입력도 가능)"
+            )
+            options = tuple(QuestionOption(label=f"{slot} (비어 있음)") for slot in free_slots)
+        else:
+            prompt = (
+                f"{lead}{purpose}를 어느 시퀀스에 저장할까요? 비어 있는 번호를 "
+                "찾지 못해 직접 입력이 필요합니다. 이미 큐가 있는 시퀀스면 "
+                "저장이 거부될 수 있습니다."
+            )
+            options = (
+                QuestionOption(label="110"),
+                QuestionOption(label="120"),
+                QuestionOption(label="200"),
+            )
+        answer = self._ask_one(
+            prompt,
+            options=options,
+            why="Store Sequence는 지정한 큐 슬롯에 그대로 저장되므로 운영자 결정입니다.",
+        )
+        try:
+            return int(re.search(r"\d+", answer or "").group(0))
+        except AttributeError:
+            return self._pointing_refusal(refusal)
+
     def _song_recover_sequence(
         self, state: _SongDesignState, *, problem: str
     ) -> tuple[UnifiedSongLightingPlan, SongCueCompositionResult] | InstructionResult:
@@ -4168,14 +4274,7 @@ class ChatSession:
         problem, PROPOSE verified-empty sequence slots, and let the director
         pick one on the spot. A pick retargets the pending plan and the caller
         stores immediately; cancel/no-answer keeps the plan editable."""
-        free_slots: list[int] = []
-        candidate = state.sequence_no
-        for _probe in range(12):
-            candidate += 10
-            if not self._song_sequence_occupied(candidate):
-                free_slots.append(candidate)
-            if len(free_slots) == 3:
-                break
+        free_slots = self._song_free_sequence_slots(state.sequence_no + 10)
         options = tuple(QuestionOption(label=f"시퀀스 {slot}") for slot in free_slots) + (
             QuestionOption(label="취소 (계획 보존)"),
         )
