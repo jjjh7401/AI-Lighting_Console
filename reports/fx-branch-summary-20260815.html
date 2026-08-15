@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>research/ma3-effects-phaser — 작업 정리 & 이펙트 3방식 가이드</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --ivory:#FAF9F5;--paper:#FFF;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;
+  --oat:#E3DACC;--olive:#788C5D;--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;
+  --sans:"Pretendard",system-ui,-apple-system,sans-serif;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ivory);color:var(--slate);font-family:var(--sans);line-height:1.65;font-size:15px}
+.wrap{max-width:880px;margin:0 auto;padding:40px 24px 80px}
+h1{font-size:26px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
+h2{font-size:19px;font-weight:700;margin:44px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--oat)}
+h3{font-size:15.5px;font-weight:700;margin:24px 0 8px;color:var(--g700)}
+.sub{color:var(--g500);font-size:13px;margin-bottom:26px}
+.sub code{font-family:var(--mono);font-size:12px;background:var(--g100);padding:1px 6px;border-radius:4px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:18px 0 6px}
+.kpi{background:var(--paper);border:1.5px solid var(--g300);border-radius:12px;padding:14px 16px}
+.kpi b{display:block;font-size:21px;font-weight:800;color:var(--clay-d)}
+.kpi span{font-size:12px;color:var(--g500)}
+table{width:100%;border-collapse:collapse;margin:12px 0;background:var(--paper);border-radius:10px;overflow:hidden;font-size:13.5px}
+th{background:var(--g100);text-align:left;padding:9px 12px;font-weight:700;font-size:12.5px;color:var(--g700);border-bottom:1.5px solid var(--g300)}
+td{padding:9px 12px;border-bottom:1px solid var(--g100);vertical-align:top}
+tr:last-child td{border-bottom:none}
+code{font-family:var(--mono);font-size:12px;background:var(--g100);padding:1px 5px;border-radius:4px}
+.callout{background:var(--paper);border:1.5px solid var(--g300);border-left:5px solid var(--clay);border-radius:10px;padding:14px 18px;margin:14px 0;font-size:14px}
+.callout.green{border-left-color:var(--olive)}
+.callout b{font-weight:700}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-right:6px;vertical-align:1px}
+.tag.p{background:#F6E3DB;color:var(--clay-d)}
+.tag.m{background:#E7EDDF;color:#5A7044}
+.tag.r{background:var(--g100);color:var(--g500)}
+.tag.hi{background:#FBEED2;color:#8A6A1F}
+.flow{background:var(--paper);border:1.5px solid var(--g300);border-radius:12px;padding:18px;margin:16px 0;overflow-x:auto}
+.step{display:flex;gap:12px;margin:10px 0;align-items:flex-start}
+.stepno{flex:0 0 26px;height:26px;border-radius:50%;background:var(--clay);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.ex{font-size:13px;color:var(--g700);background:var(--g100);border-radius:8px;padding:8px 12px;margin-top:6px}
+.ex b{color:var(--clay-d)}
+.prio{display:flex;gap:12px;margin:12px 0;background:var(--paper);border:1.5px solid var(--g300);border-radius:12px;padding:14px 16px}
+.prio .n{flex:0 0 30px;height:30px;border-radius:8px;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+.p1{background:#F6D7CB;color:var(--clay-d)}.p2{background:#FBEED2;color:#8A6A1F}.p3{background:var(--g100);color:var(--g500)}
+.small{font-size:12.5px;color:var(--g500)}
+footer{margin-top:56px;padding-top:14px;border-top:1.5px solid var(--oat);font-size:12px;color:var(--g500)}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>MA3 이펙트(페이저) 저작 + 코파일럿 UI 개편 — 작업 정리</h1>
+<p class="sub">브랜치 <code>research/ma3-effects-phaser</code> · onPC 2.4.2 라이브 실측 기반 · 2026-08-15 세션 + 후속 확정분</p>
+
+<div class="kpis">
+  <div class="kpi"><b>V1~V7 +3</b><span>라이브 실측 7건 + 오퍼레이터 확인 3건 (게이트 전량 확정)</span></div>
+  <div class="kpi"><b>19종</b><span>출하 이펙트 라이브러리 (신규 7종)</span></div>
+  <div class="kpi"><b>8,780</b><span>서버 pytest 전량 그린</span></div>
+  <div class="kpi"><b>1.1G→363M</b><span>감사 로그 (성장 원인 99.9% 제거)</span></div>
+</div>
+
+<h2>1. 조명감독을 위한 안내 — 이펙트를 어떻게 요청하면 되나</h2>
+
+<p><b>그냥 원하는 것을 한국어로 말하면 됩니다.</b> 코파일럿이 요청을 읽고 아래 3가지 방식 중
+맞는 것을 스스로 고르도록 만들어져 있습니다. 방식 이름(페이저, MAtricks…)을 외울 필요는 없습니다 —
+이 표는 "내 요청이 내부에서 어떻게 처리되는지" 이해를 돕기 위한 것입니다.</p>
+
+<h3>이펙트를 만드는 3가지 방식</h3>
+<table>
+<tr><th style="width:130px">방식</th><th>답하는 질문</th><th>이런 요청이 여기로 갑니다</th><th style="width:130px">지원 상태</th></tr>
+<tr>
+  <td><span class="tag p">Phaser</span>페이저</td>
+  <td><b>"어떤 파형인가"</b> — 시간축 위의 움직임(스텝·곡선·속도)</td>
+  <td>"사인으로 숨쉬는 디머", "무지개 흘려줘", "딱딱 끊기는 펄스", "지금 위치에서 살짝 도는 원"</td>
+  <td>✅ 전면 지원<br><span class="small">실측 문법으로 자동 조립</span></td>
+</tr>
+<tr>
+  <td><span class="tag m">MAtricks</span>매트릭스</td>
+  <td><b>"어떤 순서로, 어떤 픽스처가"</b> — 선택을 나누는 방법</td>
+  <td>"짝수 조명만", "가운데서 양쪽으로 미러", "랜덤인데 매번 같은 랜덤으로", "2대 건너 하나씩"</td>
+  <td>✅ 지원 (X축 5종)<br><span class="small">페이저 요청에 얹어서 함께 처리</span></td>
+</tr>
+<tr>
+  <td><span class="tag r">Recipe</span>레시피</td>
+  <td><b>"값이냐 참조냐"</b> — 프리셋을 바꾸면 모든 곡이 따라오게</td>
+  <td>"이 색 프리셋 바꾸면 전 곡에 반영되게 묶어줘"</td>
+  <td>⛔ 쓰기 미지원<br><span class="small">읽기만. 가까운 대안: 프리셋 목적지 저장(아래)</span></td>
+</tr>
+</table>
+
+<div class="callout green">
+<b>세 방식은 경쟁이 아니라 조합입니다.</b> "무지개를 <u>가운데서 미러로</u> 흘려줘"라고 하면
+파형(무지개 체이스)은 페이저로, 순서(미러)는 MAtricks로 — 한 번의 요청, 한 장의 승인 카드로 같이 처리됩니다.
+</div>
+
+<h3>요청이 처리되는 실제 경로</h3>
+<div class="flow">
+  <div class="step"><div class="stepno">1</div><div>
+    <b>자연어 요청</b> — "발라드에 어울리게 숨쉬는 워시 하나"
+  </div></div>
+  <div class="step"><div class="stepno">2</div><div>
+    <b>기성 라이브러리 조회</b> (<code>find_fx</code>, 19종) — 디자인된 답이 있으면 그걸 씁니다.
+    <div class="ex">매칭 예: 숨쉬는 워시 → <b>pulse-sine-breath</b> · 무지개 → <b>chase-rainbow-wave</b> · 딱딱한 펄스 → <b>pulse-snap</b> · 제자리 원 → <b>circle-relative-orbit</b></div>
+  </div></div>
+  <div class="step"><div class="stepno">3</div><div>
+    <b>없으면 맞춤 조립</b> (<code>compose_fx</code>) — 라이브러리가 못 하는 말만 자연어 파라미터로 직접 조립.
+    출하 엔트리와 <u>같은 스키마 검증</u>을 통과해야만 발화됩니다.
+    <div class="ex">예: "빨강-흰색 4스텝, 비트의 25%만 켜지게, 템포는 마스터 3번 페이더 따라가게"</div>
+  </div></div>
+  <div class="step"><div class="stepno">4</div><div>
+    <b>리그 재조회 → 승인 카드 1장 → 안전 게이트 → 콘솔 발화.</b>
+    그룹 번호·프리셋 풀 번호는 절대 추측하지 않고 항상 그 자리에서 다시 읽습니다.
+  </div></div>
+  <div class="step"><div class="stepno">5</div><div>
+    <b>저장 목적지 선택</b> — 말하는 대로 갈립니다:
+    <div class="ex"><b>"큐로 저장해줘"</b> → 시퀀스 + 큐 (기본) &nbsp;·&nbsp; <b>"프리셋으로 저장해줘"</b> → All 풀 프리셋.
+    프리셋을 큐에 실으면 <u>참조</u>가 실려서, 나중에 프리셋을 고치면 그 큐들도 따라 바뀝니다 — 레시피의 가장 가까운 대안.</div>
+  </div></div>
+</div>
+
+<div class="callout">
+<b>정직한 한계 한 가지:</b> 콘솔은 이펙트의 "내용"을 기계로 되읽을 수 없습니다(실측으로 확정된 경계).
+저장이 됐다는 것까지는 기계가 확인하지만, <b>움직임이 의도대로인지는 무대를 보는 사람이 최종 판정</b>합니다.
+코파일럿도 리포트에 항상 이 사실을 밝히도록 되어 있습니다.
+</div>
+
+<h3>바로 써볼 수 있는 요청 예문</h3>
+<table>
+<tr><th>이렇게 말하면</th><th>내부에서 일어나는 일</th></tr>
+<tr><td>"무버 그룹에 부드러운 사인 디머, 2스텝"</td><td>라이브러리 매칭 → 스텝 완성 <u>후</u> Accel/Decel 발화(실측된 순서 규칙) → 사인 페이드</td></tr>
+<tr><td>"지금 포지션 그대로 두고 그 위에서 살짝 원 그리게"</td><td><code>relative</code> 스텝 값 — 현재 위치 중심 궤도. 프리셋으로 저장해 리콜해도 중심추종 유지(확인 완료)</td></tr>
+<tr><td>"템포는 스피드마스터 2번에 물려줘"</td><td><code>At SpeedMaster 2</code> — 마스터 BPM을 바꾸면 실시간 변속. 고정 BPM과 동시 지정은 거부(미측정 조합)</td></tr>
+<tr><td>"미러로 퍼지는 틸트 웨이브, 프리셋으로"</td><td>MAtricks XWings + 틸트 페이저 → All 풀 프리셋. MAtricks 형상이 프리셋에 고착됨(확인 완료)</td></tr>
+<tr><td>"컬러가 따뜻했다 차가웠다 사인으로"</td><td>컬러 축에도 Accel/Decel 사인이 성립(확인 완료) → RGB 2스텝 + 곡선</td></tr>
+</table>
+
+<h2>2. 이번 브랜치에서 함께 바뀐 것 (UI · 성능 · 운영)</h2>
+<table>
+<tr><th style="width:180px">영역</th><th>내용</th></tr>
+<tr><td>프리셋 팝업</td><td>카테고리 카드 → 정사각 타일 팝업, 실측 저장 개수만 노란 배지로 표시. 테스트 프리셋 9종이 이 화면에서 바로 보임</td></tr>
+<tr><td>진행 순서 보드</td><td>큐 모니터를 세로 진행 순서 리스트로. <b>셋리스트 배분을 실행하면 그 곡 순서가 보드 정렬이 됨</b>(감독 타임라인 단곡보다 우선) — "진행 n" 배지</td></tr>
+<tr><td>셋리스트 모드</td><td>"셋리스트 만들어줘" 한 마디로 라이브러리 곡들을 시퀀스 210, 220…과 페이지1 익스큐터에 일괄 배분. 빈 슬롯 사전 점검 + 승인 1장 + 배정 재검증</td></tr>
+<tr><td>감사 로그 (근본 수정)</td><td>읽기 프로브(초당 ~10건, 로그의 99.9%)를 별도 파일로 분리 — 보존 2일 + 일 64MiB 상한. 1.1GB → 363MB, 이틀 내 ~1MB대로 자동 수렴. 명령·승인·차단 기록은 90일 그대로</td></tr>
+<tr><td>성능</td><td>로그 역방향 청크 리더(RSS 5.6GB→106MB), 대시/큐 스냅샷 캐시(첫 화면 즉시 + 갱신), 섹션 창 auto-fit</td></tr>
+</table>
+
+<h2>3. 개선 제안 (우선순위순)</h2>
+
+<div class="prio"><div class="n p1">1</div><div>
+<b>"만들고 페이더에 올려줘"가 한 번에 안 됨 — 익스큐터 자동 배정 부재.</b>
+지금은 이펙트 저장까지만 자동이고, 실행하려면 "시퀀스 N을 익스큐터에 올려줘"를 따로 말해야 합니다.
+셋리스트 모드가 이미 검증한 패턴(빈 슬롯 사전 점검 + 승인 1장 + 배정 재검증)을 이펙트 저장 뒤에도 옵션으로 붙이면,
+감독의 자연어 한 문장("숨쉬는 워시 만들어서 191번에 올려줘")이 완결됩니다. <span class="small">FXLIB §D 계승 제외 항목이라 스펙 개정 필요 — 안전 패턴은 이미 존재.</span>
+</div></div>
+
+<div class="prio"><div class="n p1">2</div><div>
+<b>복합 요청은 두 턴 — 지시 턴당 이펙트 1개 제한(dedupe).</b>
+"베이스 워시 깔고 그 위에 서클"은 한 번에 못 만들고 답을 기다렸다 두 번째를 만들어야 합니다.
+look+fx 조합은 <code>find_scene</code>이 일부 보완하지만 fx+fx 조합은 없습니다. 감독의 요청 단위는 "장면"이지 "이펙트 1개"가 아니므로,
+복수 이펙트를 <u>승인 카드 한 장</u>에 계획으로 묶되 발화는 순차로 하는 형태를 제안. <span class="small">dedupe 경계 자체는 기각 선례가 있어 개정 불가 — 우회는 "계획 큐잉"이지 dedupe 완화가 아님.</span>
+</div></div>
+
+<div class="prio"><div class="n p2">3</div><div>
+<b>도구 설명과 실제 능력의 불일치 1건 — 즉시 수정 가능.</b>
+<code>compose_fx</code> 설명이 "팬은 천천히 틸트는 빠르게"를 예문으로 들지만, 스키마는 fx 전역 <u>단일 속도원</u>만 허용합니다
+(attribute별 독립 속도는 Out of Scope). 감독이 딱 이렇게 요청하면 모델이 이 도구로 갔다가 표현 불가능한 것을 조립하거나 어색하게 거절합니다.
+예문 교체(1줄)가 단기 처방, attribute별 속도 라이브 프로브가 장기 처방.
+</div></div>
+
+<div class="prio"><div class="n p2">4</div><div>
+<b>레시피 쓰기 라이브 프로브</b> — "프리셋 바꾸면 전 곡이 따라오게"는 감독이 실제로 쓰는 말인데 현재는 콘솔 수동 안내로 끝납니다.
+<code>EditRecipe</code>/<code>Cook</code> 접수+효과를 실측하면 DESCOPE 게이트(REQ-FXGEN-018/019)를 열 수 있습니다.
+프리셋-참조 저장이 이미 확인됐으므로 반쯤은 와 있는 길. <span class="small">프로브는 9005 선점 필요 → 서버 잠시 내려야 함.</span>
+</div></div>
+
+<div class="prio"><div class="n p3">5</div><div>
+<b>MAtricks Y/Grid 축 미실측</b> — 현재 X축 5종뿐이라 "위쪽 라인만", "매트릭스 벽에서 세로 웨이브" 같은
+2차원 리그 요청을 못 받습니다. 리그가 트러스 1열인 동안은 체감 없음 — 매트릭스형 리그 도입 시점에 프로브.
+</div></div>
+
+<div class="prio"><div class="n p3">6</div><div>
+<b>사람 관측의 기록 루프</b> — 효과 검증이 사람 몫이라면 그 판정을 남길 자리가 있어야 합니다.
+지금은 "무대 확인 필요"라고 말하고 끝. 프리셋 팝업 타일에 "무대 확인됨" 마킹 한 번이면,
+다음 리허설 때 어떤 이펙트가 검증된 것인지 감독과 코파일럿이 같은 사실을 공유합니다.
+</div></div>
+
+<h2>4. 판정 — "자연어로 요청하면 알아서 고르는가?"</h2>
+<p><b>예, 그렇게 만들어져 있습니다.</b> 룰북 프리픽스(33_effect_editors)가 요청 문형 → 방식 라우팅 표를 모델에게 상시 제공하고,
+도구 설명 자체가 "라이브러리 먼저, 없으면 조립, 손으로 커맨드 쓰지 말 것"을 강제합니다. 발화 문법은 전부 라이브 실측분만 씁니다.
+남은 격차는 방식 선택이 아니라 <b>완결성</b>입니다 — 위 제안 1·2가 해소되면 감독의 한 문장이 "저장"이 아니라 "무대에서 도는 것"까지 갑니다.</p>
+
+<footer>
+근거: <code>.moai/specs/SPEC-COPILOT-FXGEN-001/spec.md</code> · <code>server/rulebook/assets/v2.4.2/31·33</code> · <code>server/orchestrator/tools.py</code>(find_fx/instantiate_fx/compose_fx) ·
+handoff/2026-08-15 · 서버 pytest 8,780 그린 기준. 미측정 항목은 본문에 명시.
+</footer>
+</div></body></html>
