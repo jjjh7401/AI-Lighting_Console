@@ -891,6 +891,11 @@ _PLAN_EDIT_TIME_MOVE = re.compile(
     r"(?P<time>\d+:\d{2}(?:\.\d{1,3})?|\d+\s*분(?:\s*\d+\s*초)?|\d+(?:\.\d+)?\s*초)\s*"
     r"(?:지점)?\s*(?:로|으로|에)\s*(?:이동|옮|시작)"
 )
+# 저장 대상 시퀀스 변경 (2026-08-16): "시퀀스 320으로 변경/바꿔/옮겨" — 점유된
+# 슬롯이 Store를 'Not allowed'로 거부했을 때 계획을 버리지 않고 옮기는 어휘.
+_PLAN_EDIT_SEQUENCE = re.compile(
+    r"시퀀스\s*(?P<no>\d+)\s*(?:번)?\s*(?:으로|로)\s*(?:변경|바꿔|바꾸|옮겨|옮기|저장|이동)"
+)
 
 # 리허설 편집 (handoff 2026-08-15 priority 5): "지금 이 큐"/"현재 큐" names the
 # cue the console is PLAYING right now — no cue number in the instruction.
@@ -1646,11 +1651,22 @@ class SongTimelineStore:
     fail-open read (a corrupt file degrades to "no timeline yet", never a
     startup failure). Path-less stores (tests, bare WebDeps) stay memory-only.
     The payload is a read-only projection — restoring it grants no console
-    capability; every write still rides the approval gate."""
+    capability; every write still rides the approval gate.
+
+    ``setlist_sequence_nos`` (진행 순서 보드 연동, handoff 2026-08-15 item 3):
+    the EXECUTED setlist allocation's slot order — written by the session's
+    셋리스트 모드 only after its command bundle actually ran, read by the
+    cue-monitor snapshot as the multi-song planned order. Same projection
+    rule: a stored order is bookkeeping, never a console capability."""
 
     def __init__(self, path: Path | str | None = None) -> None:
         self._path = Path(path) if path is not None else None
-        self._latest: dict | None = self._load()
+        data = self._load()
+        self._latest: dict | None = data.get("timeline") if data else None
+        setlist = data.get("setlist") if data else None
+        self._setlist: list[int] = (
+            [no for no in setlist if isinstance(no, int)] if isinstance(setlist, list) else []
+        )
 
     @property
     def latest(self) -> dict | None:
@@ -1660,7 +1676,16 @@ class SongTimelineStore:
     def latest(self, payload: dict | None) -> None:
         self._latest = payload
         if payload is not None:
-            self._save(payload)
+            self._save()
+
+    @property
+    def setlist_sequence_nos(self) -> list[int]:
+        return list(self._setlist)
+
+    @setlist_sequence_nos.setter
+    def setlist_sequence_nos(self, nos: list[int]) -> None:
+        self._setlist = [no for no in nos if isinstance(no, int)]
+        self._save()
 
     def _load(self) -> dict | None:
         if self._path is None:
@@ -1672,15 +1697,21 @@ class SongTimelineStore:
         if not isinstance(data, dict):
             return None
         timeline = data.get("timeline")
-        return timeline if isinstance(timeline, dict) else None
+        if not isinstance(timeline, dict):
+            data = dict(data)
+            data["timeline"] = None
+        return data
 
-    def _save(self, payload: dict) -> None:
+    def _save(self) -> None:
         if self._path is None:
             return
         # Atomic same-dir temp + os.replace, mirroring PinStore._save — a crash
         # mid-write must leave the previous file intact.
         try:
-            body = json.dumps({"version": 1, "timeline": payload}, ensure_ascii=False)
+            body = json.dumps(
+                {"version": 1, "timeline": self._latest, "setlist": self._setlist},
+                ensure_ascii=False,
+            )
             self._path.parent.mkdir(parents=True, exist_ok=True)
             fd, tmp_name = tempfile.mkstemp(
                 dir=str(self._path.parent), prefix=".song-timeline-", suffix=".tmp"
@@ -3481,11 +3512,19 @@ class ChatSession:
                 model_calls=0,
                 duration_seconds=0.0,
             )
+        sequence_move = _PLAN_EDIT_SEQUENCE.search(text)
         delete = _PLAN_EDIT_DELETE.search(text)
         between = _PLAN_EDIT_INSERT_BETWEEN.search(text)
         adjacent = _PLAN_EDIT_INSERT_ADJACENT.search(text)
         count = len(state.sections)
-        if delete is not None:
+        if sequence_move is not None:
+            new_sequence = int(sequence_move.group("no"))
+            if new_sequence <= 0:
+                return self._pointing_refusal("시퀀스 번호는 1 이상이어야 합니다.")
+            previous = state.sequence_no
+            state.sequence_no = new_sequence
+            note = f"저장 대상 시퀀스 {previous} → {new_sequence}"
+        elif delete is not None:
             cue = int(delete.group("cue"))
             if not 1 <= cue <= count:
                 return self._pointing_refusal(
@@ -4012,6 +4051,13 @@ class ChatSession:
                 model_calls=0,
                 duration_seconds=0.0,
             )
+        # 진행 순서 보드 연동 (handoff item 3): the bundle RAN, so the plan's
+        # slot order becomes the operator's multi-song planned order — the
+        # cue monitor reads it as planned_sequence_nos. Recorded before the
+        # readback loop on purpose: a readback mismatch is reported honestly
+        # below, but the executed allocation order is still the show plan.
+        if self._timeline_store is not None:
+            self._timeline_store.setlist_sequence_nos = [slot for _b, _s, slot, _e in plan_rows]
         verified: list[str] = []
         mismatched: list[str] = []
         for base, _source, slot, exec_no in plan_rows:
@@ -4165,6 +4211,37 @@ class ChatSession:
                 model_calls=0,
                 duration_seconds=0.0,
             )
+        # 2026-08-16 사용자 발견: an OCCUPIED target sequence makes the console
+        # refuse the bare Store with "Not allowed" — the bundle half-executes
+        # and the plan was already discarded. Pre-check the slot (the same
+        # posture the setlist mode uses) and KEEP the plan on any failure so
+        # "시퀀스 N으로 변경" + 재승인 can recover without redesigning.
+        slot_probe = self._registry.dispatch(
+            ToolCall(
+                id="song-design-slot-check",
+                name="query_state",
+                arguments={"path": f"{self._rig_paths['sequences']}/{sequence_no}"},
+            )
+        )
+        try:
+            slot_payload = json.loads(slot_probe.result.content)
+        except (json.JSONDecodeError, TypeError):
+            slot_payload = None
+        if _setlist_node_exists(slot_payload):
+            self._pending_song_plan = state
+            return InstructionResult(
+                status="ok",
+                text=(
+                    f"시퀀스 {sequence_no}에 이미 콘솔 데이터가 있어 저장하지 않았습니다 — "
+                    "기존 큐 위에 덮어쓰는 Store는 콘솔이 'Not allowed'로 거부합니다. "
+                    f"계획은 그대로 보존했습니다. '시퀀스 320으로 변경'처럼 빈 시퀀스 "
+                    "번호를 지정한 뒤 다시 승인해 주세요."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
         self._pending_song_plan = None
         approved_plan = replace(plan, approval=ApprovalState.approved(reviewer="director"))
         approved_composition = compose_song_cue_bundle(approved_plan)
@@ -4179,6 +4256,7 @@ class ChatSession:
                 layer_mapping=state.layer_mapping,
             )
         except SpatialPointingError as error:
+            self._pending_song_plan = state
             return self._pointing_refusal(f"리뷰 번들을 실행 명령으로 만들 수 없습니다: {error}")
         executed = self._registry.dispatch(
             ToolCall(
@@ -4187,6 +4265,43 @@ class ChatSession:
                 arguments={"commands": list(commands)},
             )
         )
+        store_failures = [
+            outcome
+            for outcome in executed.command_outcomes
+            if outcome.status in ("failed", "blocked", "rejected")
+        ]
+        if executed.result.is_error or store_failures:
+            # Keep the plan editable, clear the half-filled programmer (the
+            # chain stopped before its own ClearAll), and stay honest about
+            # what the console said.
+            self._pending_song_plan = state
+            self._registry.dispatch(
+                ToolCall(
+                    id="song-design-cleanup",
+                    name="run_commands",
+                    arguments={"commands": ["ClearAll"]},
+                )
+            )
+            self._song_send_timeline(state, plan, composition, lifecycle="pending_approval")
+            first_failure = store_failures[0] if store_failures else None
+            detail = (
+                f"{first_failure.command} → {first_failure.detail or first_failure.status}"
+                if first_failure is not None
+                else str(executed.result.content)
+            )
+            return InstructionResult(
+                status="ok",
+                text=(
+                    f"시퀀스 {sequence_no} 저장이 콘솔에서 거부되어 중단했습니다"
+                    f"({detail}). 프로그래머는 ClearAll로 정리했고 계획은 그대로 "
+                    "보존했습니다 — 'Not allowed'는 보통 대상 시퀀스/큐가 이미 존재할 "
+                    "때입니다. '시퀀스 320으로 변경' 후 다시 승인해 주세요."
+                ),
+                command_outcomes=tuple(executed.command_outcomes),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
         timed_cues = (
             _song_timed_cue_expectations(approved_composition.bundle, state.timing)
             if approved_composition.bundle is not None

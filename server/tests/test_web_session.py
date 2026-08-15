@@ -1752,6 +1752,8 @@ class TestSongDesignInterviewSession:
         sequence_readback=None,
         timecode_readback=None,
         groups_readback=None,
+        sequence_exists_before_store=False,
+        store_fails=False,
     ):
         fixtures = [
             {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
@@ -1777,12 +1779,39 @@ class TestSongDesignInterviewSession:
                         )
                     )
                 if call.name == "query_state":
+                    path = call.arguments["path"]
+                    # A real console's target sequence is EMPTY before the
+                    # store bundle runs (the 2026-08-16 occupied-slot pre-check
+                    # reads it first); the readback fixture only exists AFTER
+                    # a run_commands dispatched the stores.
+                    stored = any(entry.name == "run_commands" for entry in calls)
+                    if (
+                        path.startswith("DataPool/Sequences/")
+                        and not stored
+                        and not sequence_exists_before_store
+                    ):
+                        payload = {}
+                    else:
+                        payload = states.get(path, {})
                     return ToolExecution(
                         ToolResult(
                             tool_call_id=call.id,
                             name=call.name,
-                            content=json.dumps(states.get(call.arguments["path"], {})),
+                            content=json.dumps(payload),
                         )
+                    )
+                if call.name == "run_commands" and store_fails:
+                    outcomes = tuple(
+                        CommandOutcome(
+                            command=command,
+                            status=("failed" if command.startswith("Store ") else "proposal"),
+                            detail=("Not allowed" if command.startswith("Store ") else ""),
+                        )
+                        for command in call.arguments.get("commands", [])
+                    )
+                    return ToolExecution(
+                        ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                        outcomes,
                     )
                 return ToolExecution(
                     ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
@@ -1954,9 +1983,11 @@ class TestSongDesignInterviewSession:
         assert any(" CueFade " in command for command in commands)
         assert not any("Property 'Fade'" in command for command in commands)
         readbacks = [call.arguments["path"] for call in calls if call.name == "query_state"]
-        # The one-time layer-mapping group read precedes the two readbacks.
+        # The one-time layer-mapping group read, then the 2026-08-16
+        # occupied-slot pre-check, then the two post-store readbacks.
         assert readbacks == [
             "DataPool/Groups",
+            "DataPool/Sequences/110",
             "DataPool/Sequences/110",
             "DataPool/Timecodes/7",
         ]
@@ -2161,6 +2192,28 @@ class TestSongDesignInterviewSession:
         memory.latest = {"lifecycle": "verified"}
         assert memory.latest == {"lifecycle": "verified"}
 
+    def test_timeline_store_persists_the_setlist_order(self, tmp_path):
+        from server.web.session import SongTimelineStore
+
+        path = tmp_path / "song_timeline.json"
+        store = SongTimelineStore(path)
+        store.setlist_sequence_nos = [210, 220, "junk"]  # non-int filtered
+        reborn = SongTimelineStore(path)
+        assert reborn.setlist_sequence_nos == [210, 220]
+        assert reborn.latest is None  # a setlist alone implies no timeline
+
+    def test_a_legacy_store_file_without_a_setlist_loads_empty(self, tmp_path):
+        from server.web.session import SongTimelineStore
+
+        path = tmp_path / "song_timeline.json"
+        path.write_text(
+            json.dumps({"version": 1, "timeline": {"sequence_number": 210}}),
+            encoding="utf-8",
+        )
+        store = SongTimelineStore(path)
+        assert store.latest == {"sequence_number": 210}
+        assert store.setlist_sequence_nos == []
+
     def test_unanswered_requery_persists_and_resumes_on_a_later_turn(self, tmp_path):
         provider = ScriptedProvider([])
         session, _console, _audit, sent, _ = _session(tmp_path, provider)
@@ -2358,6 +2411,55 @@ class TestSongDesignInterviewSession:
         stores = [call for call in calls if call.name == "run_commands"]
         commands = stores[0].arguments["commands"]
         assert not [command for command in commands if command.startswith("Group ")]
+
+    def test_occupied_target_sequence_refuses_and_keeps_the_plan(self, tmp_path):
+        # 2026-08-16 user finding: Sequence 110 already held cues on the real
+        # console, the bare Store came back "Not allowed", and the plan had
+        # already been discarded. The pre-check must refuse BEFORE any store
+        # and keep the plan editable.
+        session, _sent, calls = self._pending_plan_session(tmp_path)
+        occupied_calls: list[ToolCall] = []
+        session._registry = self._registry(occupied_calls, sequence_exists_before_store=True)
+        session._question_channel = self._Channel(["승인"])
+
+        event = session.run_instruction("큐 4 삭제")
+
+        assert "이미 콘솔 데이터가 있어 저장하지 않았습니다" in event["text"]
+        assert "시퀀스 320으로 변경" in event["text"]
+        assert [call for call in occupied_calls if call.name == "run_commands"] == []
+        assert [call for call in calls if call.name == "run_commands"] == []
+        assert session._pending_song_plan is not None
+
+    def test_sequence_move_edit_retargets_the_pending_plan(self, tmp_path):
+        session, sent, calls = self._pending_plan_session(tmp_path)
+        session._question_channel = self._Channel(["수정"])
+
+        event = session.run_instruction("시퀀스 320으로 변경해줘")
+
+        assert event["text"].startswith("계획 수정(콘솔 무접촉): 저장 대상 시퀀스 110 → 320")
+        assert [call for call in calls if call.name == "run_commands"] == []
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["sequence_number"] == 320
+        assert session._pending_song_plan is not None
+
+    def test_failed_store_keeps_the_plan_and_clears_the_programmer(self, tmp_path):
+        session, sent, calls = self._pending_plan_session(tmp_path)
+        failing_calls: list[ToolCall] = []
+        session._registry = self._registry(failing_calls, store_fails=True)
+        session._question_channel = self._Channel(["승인"])
+
+        event = session.run_instruction("큐 4 삭제")
+
+        assert "저장이 콘솔에서 거부되어 중단했습니다" in event["text"]
+        assert "Not allowed" in event["text"]
+        assert "계획은 그대로 보존" in event["text"]
+        runs = [call for call in failing_calls if call.name == "run_commands"]
+        # The failed bundle, then the safety ClearAll cleanup.
+        assert len(runs) == 2
+        assert runs[1].arguments["commands"] == ["ClearAll"]
+        assert session._pending_song_plan is not None
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["lifecycle"] == "pending_approval"
 
     def test_structure_edit_without_a_pending_plan_refuses_honestly(self, tmp_path):
         # 2026-08-16 user finding: after a restart/reconnect the pending plan
@@ -2708,6 +2810,7 @@ class TestSongDesignInterviewSession:
         readbacks = [call.arguments["path"] for call in calls if call.name == "query_state"]
         assert readbacks == [
             "DataPool/Groups",
+            "DataPool/Sequences/110",
             "DataPool/Sequences/110",
             "DataPool/Timecodes/7",
         ]
@@ -3182,6 +3285,38 @@ class TestSetlistMode:
         ]
         assert "readback 검증 완료" in event["text"]
         assert "곡A: Sequence 115 → 210 / Executor 101" in event["text"]
+
+    def test_setlist_execution_records_the_board_plan_order(self, tmp_path):
+        # 진행 순서 보드 연동 (handoff item 3): the executed allocation's slot
+        # order lands in the shared timeline store for the cue monitor.
+        from server.web.session import SongTimelineStore
+
+        states = {
+            "Executor 101": {"ok": True, "node": {"name": "Exec", "sequenceNo": 210}},
+            "Executor 102": {"ok": True, "node": {"name": "Exec", "sequenceNo": 220}},
+        }
+        session, library, _calls, _sent = self._setlist_session(tmp_path, states=states)
+        store = SongTimelineStore()
+        session._timeline_store = store
+        library.save("곡A", self._entry_timeline(110))
+        library.save("곡B", self._entry_timeline(150))
+
+        event = session.run_instruction("셋리스트: 곡A, 곡B")
+
+        assert "실행했습니다" in event["text"]
+        assert store.setlist_sequence_nos == [210, 220]
+
+    def test_a_declined_setlist_records_no_board_plan(self, tmp_path):
+        from server.web.session import SongTimelineStore
+
+        session, library, _calls, _sent = self._setlist_session(tmp_path, answers=("취소",))
+        store = SongTimelineStore()
+        session._timeline_store = store
+        library.save("곡A", self._entry_timeline(110))
+
+        session.run_instruction("셋리스트 배분해줘")
+
+        assert store.setlist_sequence_nos == []
 
     def test_setlist_refuses_an_occupied_slot_without_writing(self, tmp_path):
         states = {
