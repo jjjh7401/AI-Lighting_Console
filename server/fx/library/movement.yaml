@@ -16,9 +16,10 @@
 #   * Step values are absolute numbers, and no attribute may repeat a value
 #     inside one entry. A repeated value emits an identical command line, the
 #     dedupe drops the second one, and the phaser silently loses a step.
-#   * Amplitude is the DIFFERENCE between step values. The relative-amplitude
-#     verb is never emitted in v1 — whether it holds as a step value is
-#     unmeasured (ASSUMPTION-40).
+#   * Amplitude is the DIFFERENCE between step values. Since the 2026-08-15
+#     live session an entry may instead set `relative: true`, which emits every
+#     step value as `At Relative <n>` — measured to sweep around the fixture's
+#     CURRENT position (SPEC-COPILOT-FXGEN-001 spec.md §A, V2).
 #   * No rig binding of any kind, and no command lines. Both arrive later.
 #   * Speed is BPM (ASSUMPTION-38 GO, read off the console display). The seeds
 #     come from the rulebook mood table (31_choreography_patterns.md:236-241):
@@ -119,7 +120,7 @@ fx:
       - Pan: 20
         Tilt: 10
     phase_from: 0
-    speed: 18
+    speed: 12
 
   - fx_id: "circle-club-wings"
     display_name: "미러 서클"
@@ -168,3 +169,54 @@ fx:
     phase_from: 0
     speed: 104
     x: 2
+
+  # --- entries below entered on the 2026-08-15 live session ------------------
+
+  # V2 transcribed: relative step values ride on top of whatever base look is
+  # active, so the same entry sweeps around ANY position preset — the "circle
+  # around a position" family the absolute entries above cannot express.
+  - fx_id: "sweep-relative-center"
+    display_name: "제자리 스윕"
+    pattern: "sweep"
+    aliases: ["제자리 스윕", "현재 위치 스윕", "상대 스윕", "relative sweep"]
+    mood_keywords: ["현재", "제자리", "유지하면서", "부드러운", "포지션", "relative", "center"]
+    steps:
+      - Pan: -15
+      - Pan: 15
+    relative: true
+    phase_from: 0
+    phase_to: 360
+    speed: 18
+
+  # A relative circle: both axes offset around the CURRENT aim, a quarter cycle
+  # apart (the circle pattern's own offset rule). Small magnitudes on purpose —
+  # the swing rides on top of a base position that may already be near a limit.
+  - fx_id: "circle-relative-orbit"
+    display_name: "제자리 서클"
+    pattern: "circle"
+    aliases: ["제자리 서클", "현재 위치 원", "궤도", "relative circle", "orbit"]
+    mood_keywords: ["제자리", "원형", "궤도", "몽환적인", "유지", "orbit", "relative"]
+    steps:
+      - Pan: -12
+        Tilt: -8
+      - Pan: 12
+        Tilt: 8
+    relative: true
+    phase_from: 0
+    speed: 14
+
+  # V1's curve on the position axes: accel/decel -100 rounds the turnaround so
+  # the sweep eases in and out instead of bouncing off its endpoints.
+  - fx_id: "sweep-sine-ease"
+    display_name: "이지 스윕"
+    pattern: "sweep"
+    aliases: ["이지 스윕", "부드럽게 도는 스윕", "사인 스윕", "eased sweep"]
+    mood_keywords: ["부드러운", "우아한", "느린", "유려한", "고급스러운", "ease", "sine", "elegant"]
+    steps:
+      - Pan: -26
+      - Pan: 26
+    accel: -100
+    decel: -100
+    phase_from: 0
+    phase_to: 360
+    speed: 12

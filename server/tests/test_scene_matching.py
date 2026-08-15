@@ -302,7 +302,7 @@ class TestFxPatternIdInference:
     def test_shipped_fx_ids_carry_the_pattern_slug_scene_matching_infers(self):
         library = load_fx_library_from_dir()
 
-        assert len(library.fx) == 12
+        assert len(library.fx) == 19
         for entry in library.fx:
             tokens = frozenset(re.split(r"[-_\s]+", entry.fx_id.casefold()))
             assert entry.pattern in tokens, entry.fx_id

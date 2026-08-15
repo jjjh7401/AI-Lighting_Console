@@ -27,12 +27,6 @@ from server.fx.instantiate import (
     CIRCLE_PHASE_CONFLICT as fx_circle_phase_conflict,
 )
 from server.fx.instantiate import (
-    GATED_AXIS_NOT_EMITTED as fx_gated_axis_not_emitted,
-)
-from server.fx.instantiate import (
-    RELATIVE_NOT_EMITTED as fx_relative_not_emitted,
-)
-from server.fx.instantiate import (
     SEQUENCE_NUMBER_UNAVAILABLE as fx_sequence_number_unavailable,
 )
 from server.fx.instantiate import SEQUENCE_OCCUPIED as fx_sequence_occupied
@@ -46,6 +40,9 @@ from server.fx.instantiate import (
     SKIPPED_ALREADY_EXECUTED,
     FxInstantiationError,
     build_fx_bundle,
+)
+from server.fx.instantiate import (
+    SPEED_SOURCE_CONFLICT as fx_speed_source_conflict,
 )
 from server.fx.instantiate import (
     STEP_AXIS_TOO_SHORT as fx_step_axis_too_short,
@@ -1139,12 +1136,6 @@ def test_an_occupied_sequence_surfaces_as_a_scene_error_not_an_fx_one():
 
 
 _UNEMITTED_AXIS_FX = {
-    # Reachable through the SHIPPED fx loader: it accepts `relative` and never
-    # cross-checks `circle` against `phase_to`.
-    "relative": (
-        _fx("pulse", steps=[{"Dimmer": 100}, {"Dimmer": 0}], relative=30),
-        fx_relative_not_emitted,
-    ),
     "circle_phase": (
         _fx(
             "circle",
@@ -1160,13 +1151,11 @@ _UNEMITTED_AXIS_FX = {
         _fx("pulse", steps=[{"Dimmer": 100}]),
         fx_step_axis_too_short,
     ),
-    "accel": (
-        _fx("pulse", steps=[{"Dimmer": 100}, {"Dimmer": 0}], accel=25),
-        fx_gated_axis_not_emitted,
-    ),
-    "decel": (
-        _fx("pulse", steps=[{"Dimmer": 100}, {"Dimmer": 0}], decel=25),
-        fx_gated_axis_not_emitted,
+    # Measured 2026-08-15 (V1/V3): accel/decel and relative EMIT now; the only
+    # surviving axis conflict is a double speed source.
+    "speed_conflict": (
+        _fx("pulse", steps=[{"Dimmer": 100}, {"Dimmer": 0}], speed=60, speed_master=1),
+        fx_speed_source_conflict,
     ),
 }
 

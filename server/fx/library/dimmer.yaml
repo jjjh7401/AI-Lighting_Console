@@ -45,3 +45,56 @@ fx:
     phase_from: 0
     phase_to: 360
     speed: 14
+
+  # --- entries below entered on the 2026-08-15 live session ------------------
+  #
+  # Each rides ONLY axes whose effect was confirmed on stage that day
+  # (SPEC-COPILOT-FXGEN-001 spec.md §A): the accel/decel sine curve
+  # (V1), width + measure step timing (V4), and the SpeedMaster binding (V3).
+
+  # V1 transcribed: the measured sine shape itself (10/90, curves -100/-100).
+  # Speed differs from the probe's 30 BPM only to keep this entry's lines from
+  # colliding with a neighbouring instantiation in one instruction turn.
+  - fx_id: "pulse-sine-breath"
+    display_name: "사인 브리딩"
+    aliases: ["사인 브리딩", "부드러운 숨쉬기", "사인파 딤머", "sine breathing"]
+    mood_keywords: ["부드러운", "유기적인", "숨쉬는", "몽환적인", "발라드", "sine", "smooth", "organic"]
+    pattern: "pulse"
+    steps:
+      - Dimmer: 10
+      - Dimmer: 90
+    accel: -100
+    decel: -100
+    phase_from: 0
+    phase_to: 360
+    speed: 16
+
+  # V4 transcribed: a narrow pulse (width 25) on a 4-beat loop (measure 4).
+  # Still a pulse, not a flash: the floor stays lit and the tempo is musical.
+  - fx_id: "pulse-snap"
+    display_name: "스냅 펄스"
+    aliases: ["스냅 펄스", "짧은 펄스", "튀는 딤머", "snap pulse"]
+    mood_keywords: ["짧은", "튀는", "긴장감", "임팩트", "리듬", "snap", "punchy"]
+    pattern: "pulse"
+    steps:
+      - Dimmer: 5
+      - Dimmer: 95
+    width: 25
+    measure: 4
+    phase_from: 0
+    phase_to: 360
+    speed: 90
+
+  # V3 transcribed: no fixed BPM — the phaser follows Speed Master 1 live, so
+  # the operator (or a tempo tool) retunes every bound effect from one fader.
+  - fx_id: "pulse-master-sync"
+    display_name: "마스터 동기 펄스"
+    aliases: ["마스터 동기 펄스", "템포 동기 딤머", "스피드마스터 펄스", "master sync pulse"]
+    mood_keywords: ["동기화", "템포", "라이브", "박자", "마스터", "sync", "tempo", "live"]
+    pattern: "pulse"
+    steps:
+      - Dimmer: 15
+      - Dimmer: 85
+    phase_from: 0
+    phase_to: 360
+    speed_master: 1

@@ -47,7 +47,7 @@ from dataclasses import dataclass
 
 # @MX:WARN: [AUTO] every value-line generator this module calls is a PRIVATE
 #   function of an upstream package (`server.looks.instantiate._values_line`,
-#   `server.fx.instantiate._step_lines`/`_phase_lines`/`_speed_line`/`_matricks`).
+#   `server.fx.instantiate._step_lines`/`_curve_lines`/`_phase_lines`/`_timing_lines`/`_matricks`).
 # @MX:REASON: design.md §2.2 makes each of these the single source of truth for
 #   the exact string it produces; re-implementing any of them here would be a
 #   second copy that can drift out of sync with what `run_commands`' own dedupe
@@ -57,11 +57,12 @@ from dataclasses import dataclass
 #   `server/looks/songcue.py:11`, both importing `_values_line` the same way.
 from server.fx.instantiate import (
     FxInstantiationError,
+    _curve_lines,
     _matricks,
     _phase_lines,
     _refuse_unemitted_axes,
-    _speed_line,
     _step_lines,
+    _timing_lines,
     collided_lines,
     is_programmer_state,
     select_sequence_number,
@@ -429,8 +430,9 @@ def compile_scene(
     matricks: tuple[tuple[str, float], ...] = ()
     if fx is not None:
         commands.extend(_step_lines(fx))
+        commands.extend(_curve_lines(fx))
         commands.extend(_phase_lines(fx))
-        commands.extend(_speed_line(fx))
+        commands.extend(_timing_lines(fx))
         matricks = _matricks(fx)
         commands.extend(
             f"Set Selection MAtricks '{axis}' {_format_value(value)}" for axis, value in matricks

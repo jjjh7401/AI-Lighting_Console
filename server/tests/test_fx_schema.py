@@ -23,8 +23,10 @@ import yaml
 
 from server.fx.loader import FxSchemaError, load_library, load_library_from_dir
 from server.fx.schema import (
+    CURVE_AXES,
+    CURVE_MAX,
+    CURVE_MIN,
     FX_SCHEMA_VERSION,
-    GATED_CURVE_AXES,
     KNOWN_ATTRIBUTES,
     MATRICKS_AXES,
     MEASURED_ATTRIBUTES,
@@ -130,7 +132,7 @@ class TestLoaderAcceptsAValidLibrary:
             FxStep(values=(StepValue(attribute="Pan", value=20),)),
         )
         assert (fx.phase_from, fx.phase_to, fx.speed) == (0, 360, 60)
-        assert fx.relative is None
+        assert fx.relative is False
         assert fx.reverse is False
         assert (fx.accel, fx.decel) == (None, None)
 
@@ -407,9 +409,35 @@ class TestLoaderRejectsOutOfRangeValues:
         fx = load_library(_library(_fx(x_shuffle=987654))).fx[0]
         assert fx.x_shuffle == 987654
 
-    def test_a_non_numeric_relative_amplitude_is_rejected(self):
-        with pytest.raises(FxSchemaError, match="relative must be a number"):
-            load_library(_library(_fx(relative="wide")))
+    def test_a_non_boolean_relative_flag_is_rejected(self):
+        # Measured 2026-08-15 (V2): relative became a BOOLEAN verb switch — the
+        # amplitude still lives in the step values, so a number here is a
+        # leftover of the old unmeasured-amplitude shape and must fail loudly.
+        with pytest.raises(FxSchemaError, match="relative must be true or false"):
+            load_library(_library(_fx(relative=30)))
+
+    def test_an_out_of_range_curve_value_is_rejected(self):
+        with pytest.raises(FxSchemaError, match="accel is out of range"):
+            load_library(_library(_fx(accel=-101)))
+
+    def test_an_oversized_speed_master_is_rejected(self):
+        # 16 masters exist (help.malighting.com, Speed Masters).
+        with pytest.raises(FxSchemaError, match="speed_master must be <= 16"):
+            load_library(_library(_fx(speed=None, speed_master=17)))
+
+    def test_a_zero_width_is_rejected(self):
+        with pytest.raises(FxSchemaError, match="width must be a percent"):
+            load_library(_library(_fx(width=0)))
+
+    def test_a_non_positive_measure_is_rejected(self):
+        with pytest.raises(FxSchemaError, match="measure must be a positive"):
+            load_library(_library(_fx(measure=0)))
+
+    def test_a_fixed_bpm_and_a_master_binding_together_are_rejected(self):
+        # V3 bound the phaser to a master INSTEAD of a fixed BPM; the
+        # combination is unmeasured, so the loader refuses it outright.
+        with pytest.raises(FxSchemaError, match="both speed and speed_master"):
+            load_library(_library(_fx(speed_master=1)))
 
 
 class TestOptionalAxesAndMalformedShapes:
@@ -449,32 +477,20 @@ class TestOptionalAxesAndMalformedShapes:
             fx.steps[0].value_of("Tilt")
 
 
-class TestAccelDecelAreDefinedButGated:
-    """REQ-FXLIB-001 gate clause — M0 returned `ok:true` with no observed effect.
-
-    The LOOKLIB `MovementSpec` shape ("v1 defines this field but does not emit
-    it", server/looks/schema.py:86-102) applies to this axis only, with one
-    tightening the SPEC asks for: the loader also REFUSES a value, so the
-    unmeasured vocabulary cannot enter the library by accident.
+class TestMeasuredCurveAxes:
+    """2026-08-15 live session (V1): `Step <k> At Accel/Decel -100` fired after
+    the whole step run renders a sinusoidal fade — the axes carry values now,
+    bounded to the percent span.
     """
 
     def test_the_curve_axes_are_declared_on_the_schema(self):
-        assert GATED_CURVE_AXES == ("accel", "decel")
+        assert CURVE_AXES == ("accel", "decel")
+        assert (CURVE_MIN, CURVE_MAX) == (-100.0, 100.0)
         assert {"accel", "decel"} <= set(Fx.__dataclass_fields__)
 
-    def test_the_dataclass_can_still_carry_a_curve_value(self):
-        # Definition present: the DESCOPE shape is "defined, unused", NOT
-        # "deleted". A later probe that turns the gate GO must find the field.
-        fx = Fx(fx_id="x", display_name="x", pattern="pulse", steps=(), accel=-100, decel=-100)
-        assert (fx.accel, fx.decel) == (-100, -100)
-
-    def test_the_loader_rejects_an_accel_value(self):
-        with pytest.raises(FxSchemaError, match="accel curve is probe-pending"):
-            load_library(_library(_fx(accel=-100)))
-
-    def test_the_loader_rejects_a_decel_value(self):
-        with pytest.raises(FxSchemaError, match="decel curve is probe-pending"):
-            load_library(_library(_fx(decel=-100)))
+    def test_the_loader_accepts_the_measured_sine_literals(self):
+        fx = load_library(_library(_fx(accel=-100, decel=-100))).fx[0]
+        assert (fx.accel, fx.decel) == (-100.0, -100.0)
 
     def test_a_curve_free_entry_round_trips_with_the_axes_unset(self):
         original = load_library(_library()).fx[0]

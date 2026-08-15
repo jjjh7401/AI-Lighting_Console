@@ -84,7 +84,11 @@ _RULEBOOK_LOCKED_ASSETS = (
     "server/rulebook/assets/v2.4.2/30_plugin_patterns.md",
     "server/rulebook/assets/v2.4.2/31_choreography_patterns.md",
 )
-_RULEBOOK_GRANTED_ADDITION = "server/rulebook/assets/v2.4.2/32_spatial_design.md"
+_RULEBOOK_GRANTED_ADDITIONS = (
+    "server/rulebook/assets/v2.4.2/32_spatial_design.md",
+    # SPEC-COPILOT-FXGEN-001 REQ-FXGEN-016 — the effect-editor routing asset.
+    "server/rulebook/assets/v2.4.2/33_effect_editors.md",
+)
 
 #: 2026-08-12 granted exception — SPEC-COPILOT-DEPLOY-001's OSC zero-touch
 #: bootstrap section (``console/lua/README.md`` § 1.-1) documents a
@@ -416,12 +420,13 @@ class TestRulebookGrantedAddition:
             path.name for path in (_REPO_ROOT / _RULEBOOK_DIR).iterdir() if path.suffix == ".md"
         )
         locked = sorted(Path(path).name for path in _RULEBOOK_LOCKED_ASSETS)
-        assert locked == sorted(set(on_disk) - {Path(_RULEBOOK_GRANTED_ADDITION).name})
+        granted = {Path(path).name for path in _RULEBOOK_GRANTED_ADDITIONS}
+        assert locked == sorted(set(on_disk) - granted)
         assert len(_RULEBOOK_LOCKED_ASSETS) == 5
 
     def test_the_only_rulebook_change_is_the_granted_addition(self):
         rows = _numstat(_PRECHK_BASE, _RULEBOOK_DIR)
-        assert set(rows) == {_RULEBOOK_GRANTED_ADDITION}
+        assert set(rows) == set(_RULEBOOK_GRANTED_ADDITIONS)
 
     def test_the_grant_removes_nothing(self):
         # A rulebook asset is a fixed system-prompt prefix; a deletion inside

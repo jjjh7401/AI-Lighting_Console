@@ -608,14 +608,26 @@ class TestTheRulebookNeverLearnedAboutFx:
     reads as harmless.
     """
 
-    def test_no_rulebook_asset_names_an_fx_tool(self):
+    def test_only_the_fxgen_routing_asset_names_an_fx_tool(self):
+        # SPEC-COPILOT-FXGEN-001 REQ-FXGEN-016 grants ONE asset the fx tool
+        # vocabulary: 33_effect_editors.md exists to route the model between
+        # the three editor paradigms and their tools. Every OTHER asset stays
+        # under the original decision-G boundary — the fixed prefix changed
+        # once, deliberately, and must not keep drifting one sentence at a time.
         offenders = [
             f"{path.name}: {token}"
             for path in _rulebook_assets()
+            if path.name != "33_effect_editors.md"
             for token in FX_TOOL_VOCABULARY
             if token in path.read_text(encoding="utf-8")
         ]
         assert offenders == []
+
+    def test_the_routing_asset_does_name_the_fx_tools(self):
+        # Non-vacuity for the exemption above: the grant is used, not dormant.
+        text = (RULEBOOK_ASSETS / "33_effect_editors.md").read_text(encoding="utf-8")
+        assert "compose_fx" in text
+        assert "instantiate_fx" in text
 
     def test_the_scan_reads_the_real_asset_text(self):
         # Non-vacuity: `find_looks` IS there, in the fallback sentence M5 found.
@@ -637,6 +649,9 @@ class TestTheRulebookNeverLearnedAboutFx:
             # SPEC-COPILOT-SPATIAL-001 M3 — the ONLY asset that SPEC adds; the
             # other five stay byte-identical (plan.md §C.2 PRESERVE).
             "32_spatial_design.md",
+            # SPEC-COPILOT-FXGEN-001 REQ-FXGEN-016 — the effect-editor routing
+            # asset, the second granted addition.
+            "33_effect_editors.md",
         ]
 
     @pytest.mark.parametrize("token", FX_TOOL_VOCABULARY)

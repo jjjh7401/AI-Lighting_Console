@@ -45,6 +45,10 @@ _PRESERVED_ASSETS = (
     "31_choreography_patterns.md",
 )
 _SPATIAL_ASSET = "32_spatial_design.md"
+# SPEC-COPILOT-FXGEN-001 REQ-FXGEN-016 — the effect-editor routing asset. Like
+# file 32 it is APPENDED after the preserved five, never interleaved, and it
+# follows the newer disciplines: no per-show binding, no dates, no session ids.
+_EDITORS_ASSET = "33_effect_editors.md"
 
 # A per-show binding is a rig object addressed by number. REQ-SPATIAL-017 keeps
 # them out of the NEW asset: an example id in a freshly added file reads to the
@@ -265,11 +269,11 @@ class TestSpatialDesignAsset:
     def test_the_spatial_asset_sorts_immediately_after_the_choreography_one(self):
         names = [path.name for path in rulebook_asset_files()]
         assert names[names.index("31_choreography_patterns.md") + 1] == _SPATIAL_ASSET
-        assert names[-1] == _SPATIAL_ASSET, "the spatial axis reads last, after the grammar"
+        assert names[-1] == _EDITORS_ASSET, "the effect-editor axis reads last"
 
     def test_the_asset_set_is_the_five_preserved_files_plus_the_new_one(self):
         names = tuple(path.name for path in rulebook_asset_files())
-        assert names == (*_PRESERVED_ASSETS, _SPATIAL_ASSET)
+        assert names == (*_PRESERVED_ASSETS, _SPATIAL_ASSET, _EDITORS_ASSET)
 
     def test_the_preserved_assets_all_exist_at_the_run_phase_base(self):
         # Non-vacuity for the gate below: `git diff` reports nothing for a path
@@ -316,6 +320,36 @@ class TestSpatialDesignAsset:
     def test_the_per_show_scan_would_catch_a_binding(self):
         # Non-vacuity: the scan above must be able to fail.
         assert _PER_SHOW_PATTERN.search("Fixture 11 + Fixture 12") is not None
+
+    def test_the_editors_asset_is_in_the_prefix_and_routes_the_three_paradigms(self):
+        # SPEC-COPILOT-FXGEN-001 REQ-FXGEN-016 — the asset must route between
+        # the three effect-creation paradigms and carry the verified preset
+        # store + the recipe write boundary.
+        text = _asset_text(_EDITORS_ASSET)
+        assert text.strip() in assemble_prefix()
+        for token in (
+            "Phaser",
+            "MAtricks",
+            "Recipe",
+            "compose_fx",
+            "instantiate_fx",
+            "/Universal",
+            "At Relative",
+            "At SpeedMaster",
+            "At Width",
+            "At Measure",
+            "At Accel",
+        ):
+            assert token in text, token
+
+    def test_the_editors_asset_forbids_recipe_writing(self):
+        text = _asset_text(_EDITORS_ASSET)
+        assert "Do NOT emit recipe-writing" in text
+
+    def test_the_editors_asset_names_no_per_show_binding(self):
+        for number, line in enumerate(_asset_text(_EDITORS_ASSET).splitlines(), 1):
+            match = _PER_SHOW_PATTERN.search(line)
+            assert match is None, f"{_EDITORS_ASSET}:{number} binds {match.group(0)!r}"
 
     def test_the_recipe_teaches_the_two_step_phaser(self):
         text = _asset_text(_SPATIAL_ASSET)

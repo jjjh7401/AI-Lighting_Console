@@ -59,3 +59,31 @@ fx:
         ColorRGB_B: 100
     speed: 128
     x_shuffle: 1234
+
+  # --- entry below entered on the 2026-08-15 live session ---------------------
+  #
+  # V5 transcribed: a three-step R/G/B walk observed as a rainbow travelling
+  # across the selection. The builder spends phase_to across the three channels
+  # (0/120/240 around the cycle) and the MAtricks X spread carries the travel
+  # across the rig — both literal families were confirmed in the same session.
+  # Low non-zero floors keep every channel moving (the no-repeated-value rule).
+  - fx_id: "chase-rainbow-wave"
+    display_name: "무지개 웨이브"
+    pattern: "chase"
+    aliases: ["무지개", "레인보우", "무지개 웨이브", "rainbow", "rainbow wave"]
+    mood_keywords: ["무지개", "화려한", "다채로운", "흐르는", "축제", "rainbow", "colorful", "festive"]
+    steps:
+      - ColorRGB_R: 100
+        ColorRGB_G: 1
+        ColorRGB_B: 2
+      - ColorRGB_R: 1
+        ColorRGB_G: 100
+        ColorRGB_B: 3
+      - ColorRGB_R: 2
+        ColorRGB_G: 2
+        ColorRGB_B: 100
+    phase_from: 0
+    phase_to: 360
+    speed: 96
+    phase_from_x: 0
+    phase_to_x: 360

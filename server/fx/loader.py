@@ -36,15 +36,22 @@ import yaml
 
 from server.fx.schema import (
     ATTRIBUTE_VALUE_RANGE,
+    CURVE_AXES,
+    CURVE_MAX,
+    CURVE_MIN,
     FX_SCHEMA_VERSION,
-    GATED_CURVE_AXES,
     KNOWN_ATTRIBUTES,
     MATRICKS_AXES,
+    MEASURE_MIN,
     MIN_STEPS,
     PATTERN_KINDS,
     PHASE_MAX,
     PHASE_MIN,
     PHASER_MODIFIER_AXES,
+    SPEED_MASTER_MAX,
+    SPEED_MASTER_MIN,
+    WIDTH_MAX,
+    WIDTH_MIN,
     Fx,
     FxLibrary,
     FxStep,
@@ -55,7 +62,7 @@ DEFAULT_LIBRARY_DIR = Path(__file__).resolve().parent / "library"
 
 _LIBRARY_KEYS = frozenset({"schema_version", "fx"})
 _FX_REQUIRED = ("fx_id", "display_name", "pattern", "steps")
-_MODIFIER_KEYS = PHASER_MODIFIER_AXES + MATRICKS_AXES + GATED_CURVE_AXES
+_MODIFIER_KEYS = PHASER_MODIFIER_AXES + MATRICKS_AXES + CURVE_AXES
 _FX_OPTIONAL = ("aliases", "mood_keywords") + _MODIFIER_KEYS
 _FX_KEYS = frozenset(_FX_REQUIRED + _FX_OPTIONAL)
 _INTEGER_MATRICKS_AXES = ("x", "x_wings", "x_shuffle")
@@ -187,13 +194,17 @@ def _speed(raw: Mapping[str, Any], *, where: str) -> float | None:
     return value
 
 
-def _reverse(raw: Mapping[str, Any], *, where: str) -> bool:
-    value = raw.get("reverse", False)
+def _bool_axis(raw: Mapping[str, Any], key: str, *, where: str) -> bool:
+    value = raw.get(key, False)
     if value is None:
         return False
     if not isinstance(value, bool):
-        raise FxSchemaError(f"{where} reverse must be true or false, got {value!r}")
+        raise FxSchemaError(f"{where} {key} must be true or false, got {value!r}")
     return value
+
+
+def _reverse(raw: Mapping[str, Any], *, where: str) -> bool:
+    return _bool_axis(raw, "reverse", where=where)
 
 
 def _integer_axis(raw: Mapping[str, Any], key: str, *, minimum: int, where: str) -> int | None:
@@ -207,16 +218,42 @@ def _integer_axis(raw: Mapping[str, Any], key: str, *, minimum: int, where: str)
     return value
 
 
-def _gated_curve(raw: Mapping[str, Any], key: str, *, where: str) -> None:
-    if raw.get(key) is None:
-        return
-    # M0 fired `At Accel -100` / `At Decel -100` and got `ok:true` with NO
-    # observed effect (SKIP). Unmeasured vocabulary does not enter the library.
-    raise FxSchemaError(
-        f"{where} sets {key}={raw[key]!r}, but the {key} curve is probe-pending: M0 "
-        "recorded ok:true with no observed effect, so v1 defines the field and "
-        "never carries a value in it"
-    )
+def _curve(raw: Mapping[str, Any], key: str, *, where: str) -> float | None:
+    # Measured 2026-08-15 (V1): `Step <k> At Accel -100` / `At Decel -100`
+    # rendered a sinusoidal fade on stage, so the axis carries values now.
+    value = _optional_number(raw, key, where=where)
+    if value is None:
+        return None
+    return _in_range(value, CURVE_MIN, CURVE_MAX, where=f"{where} {key}")
+
+
+def _speed_master(raw: Mapping[str, Any], *, where: str) -> int | None:
+    value = _integer_axis(raw, "speed_master", minimum=SPEED_MASTER_MIN, where=where)
+    if value is not None and value > SPEED_MASTER_MAX:
+        raise FxSchemaError(f"{where} speed_master must be <= {SPEED_MASTER_MAX}, got {value}")
+    return value
+
+
+def _width(raw: Mapping[str, Any], *, where: str) -> float | None:
+    value = _optional_number(raw, "width", where=where)
+    if value is None:
+        return None
+    if not WIDTH_MIN < value <= WIDTH_MAX:
+        raise FxSchemaError(
+            f"{where} width must be a percent in ({WIDTH_MIN}, {WIDTH_MAX}], got {value}"
+        )
+    return value
+
+
+def _measure(raw: Mapping[str, Any], *, where: str) -> float | None:
+    value = _optional_number(raw, "measure", where=where)
+    if value is None:
+        return None
+    if value <= MEASURE_MIN:
+        # Only the lower bound is principled — zero or negative beats is not a
+        # duration; no measured upper limit exists, so none is invented.
+        raise FxSchemaError(f"{where} measure must be a positive beat count, got {value}")
+    return value
 
 
 def _fx(raw: object, *, source: str) -> Fx:
@@ -240,8 +277,16 @@ def _fx(raw: object, *, source: str) -> Fx:
 
     fx_id = _text(raw["fx_id"], where=f"{source} fx_id")
     where = f"{source}: fx {fx_id!r}"
-    for key in GATED_CURVE_AXES:
-        _gated_curve(raw, key, where=where)
+    speed = _speed(raw, where=where)
+    speed_master = _speed_master(raw, where=where)
+    if speed is not None and speed_master is not None:
+        # Measured V3 bound the phaser to a master INSTEAD of a fixed BPM; the
+        # combination of both lines on one attribute is unmeasured, so an entry
+        # declaring both is refused rather than silently picking one.
+        raise FxSchemaError(
+            f"{where} declares both speed and speed_master; the combination is "
+            "unmeasured — pick a fixed BPM or a master binding, not both"
+        )
     return Fx(
         fx_id=fx_id,
         display_name=_text(raw["display_name"], where=f"{where} display_name"),
@@ -251,8 +296,11 @@ def _fx(raw: object, *, source: str) -> Fx:
         mood_keywords=_string_tuple(raw.get("mood_keywords"), where=f"{where} mood_keywords"),
         phase_from=_phase(raw, "phase_from", where=where),
         phase_to=_phase(raw, "phase_to", where=where),
-        speed=_speed(raw, where=where),
-        relative=_optional_number(raw, "relative", where=where),
+        speed=speed,
+        speed_master=speed_master,
+        width=_width(raw, where=where),
+        measure=_measure(raw, where=where),
+        relative=_bool_axis(raw, "relative", where=where),
         reverse=_reverse(raw, where=where),
         phase_from_x=_phase(raw, "phase_from_x", where=where),
         phase_to_x=_phase(raw, "phase_to_x", where=where),
@@ -261,6 +309,8 @@ def _fx(raw: object, *, source: str) -> Fx:
         # XShuffle carries a SEED, not a count (31_choreography_patterns.md:89),
         # so it has no upper bound and 0 is a legal seed.
         x_shuffle=_integer_axis(raw, "x_shuffle", minimum=0, where=where),
+        accel=_curve(raw, "accel", where=where),
+        decel=_curve(raw, "decel", where=where),
     )
 
 
