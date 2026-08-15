@@ -3089,7 +3089,13 @@ body {
 .preset-popup-tile .pool-tile-name {
   font-size: 12px;
   line-height: 1.25;
-  overflow-wrap: anywhere;
+  /* Wrap between WORDS ("Master Sync" / "Pulse"), never inside one
+     ("Master Sync P/ulse" — observed 2026-08-15). keep-all keeps Korean
+     phrases whole too; break-word stays as the last resort for a single
+     word wider than the cell, which no shipped label currently is. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 .preset-popup-empty,
