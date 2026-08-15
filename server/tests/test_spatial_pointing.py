@@ -22,7 +22,9 @@ from server.spatial.pointing import (
     fan_chain,
     fan_pan_tilt,
     pointing_commands,
+    position_cue_store_commands,
     position_preset_store_commands,
+    preset_recall_command,
     radial_pan_tilt,
 )
 
@@ -259,6 +261,54 @@ class TestAimedCommandsAndPresetStore:
             position_preset_store_commands(0)
         with pytest.raises(SpatialPointingError, match="quote"):
             position_preset_store_commands(1, "bad'name")
+
+
+class TestPositionCueStore:
+    """T1 (SPEC-COPILOT-CUETIME-001): preset-referenced cue with a fade."""
+
+    def test_the_full_form_matches_the_verified_grammar(self):
+        # 31_choreography_patterns.md:50 — sequence-explicit store + CueFade.
+        assert position_cue_store_commands(101, 1, fade_seconds=5, name="Pos 2.28") == (
+            "Store Sequence 101 Cue 1 'Pos 2.28' CueFade 5",
+        )
+
+    def test_fade_and_name_are_optional(self):
+        assert position_cue_store_commands(101, 2) == ("Store Sequence 101 Cue 2",)
+
+    def test_decimal_cue_numbers_render_without_noise(self):
+        # Decimal cue numbers are the verified insert grammar (…:56) — the
+        # MIB pre-move cue (T2) rides on them.
+        assert position_cue_store_commands(101, 1.5, fade_seconds=0.5) == (
+            "Store Sequence 101 Cue 1.5 CueFade 0.5",
+        )
+
+    def test_zero_fade_is_an_explicit_snap_not_an_omission(self):
+        assert position_cue_store_commands(101, 1, fade_seconds=0) == (
+            "Store Sequence 101 Cue 1 CueFade 0",
+        )
+
+    def test_refusals(self):
+        with pytest.raises(SpatialPointingError, match="sequence number"):
+            position_cue_store_commands(0, 1)
+        with pytest.raises(SpatialPointingError, match="cue number"):
+            position_cue_store_commands(101, 0)
+        with pytest.raises(SpatialPointingError, match="fade"):
+            position_cue_store_commands(101, 1, fade_seconds=-1)
+        with pytest.raises(SpatialPointingError, match="fade"):
+            position_cue_store_commands(101, 1, fade_seconds=float("inf"))
+        with pytest.raises(SpatialPointingError, match="quote"):
+            position_cue_store_commands(101, 1, name="bad'name")
+
+    def test_preset_recall_is_one_selection_chained_line(self):
+        # One line: the selection prefix keeps the text unique under the
+        # instruction-scope dedupe (SKILL §3).
+        assert preset_recall_command([20, 26], 28) == "Fixture 20 + 26 ; At Preset 2.28"
+
+    def test_recall_refusals(self):
+        with pytest.raises(SpatialPointingError, match="no fixtures"):
+            preset_recall_command([], 28)
+        with pytest.raises(SpatialPointingError, match="must be positive"):
+            preset_recall_command([20], 0)
 
 
 class TestBasicPositionSequence:

@@ -27,6 +27,7 @@ def _config_value(name: str) -> str:
     assert match, f"CONFIG.{name} not found in {LUA_SOURCE}"
     return match.group(1).strip()
 
+
 def test_max_payload_fits_the_ma3_command_line_limit():
     max_payload = int(_config_value("max_payload"))
     state_address = _config_value("state_address").strip('"')
@@ -39,6 +40,7 @@ def test_max_payload_fits_the_ma3_command_line_limit():
         f"MA3 command-line limit ({MA3_COMMAND_LINE_LIMIT}); replies would be "
         "silently dropped (Cmd() does not raise on rejection)"
     )
+
 
 def test_max_payload_is_not_zero_or_negative():
     assert int(_config_value("max_payload")) > 0

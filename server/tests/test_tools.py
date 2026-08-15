@@ -144,13 +144,30 @@ class TestRegistry:
         # + build_magic_sheet (server/paperwork/data.py, P0-5 — the REDUCED
         #   magic sheet: names + patch summary + placement coordinates. The
         #   FULL form stays impossible; group membership is not readable.)
+        # + the round24 quartet — ask_user, resolve_fixture_type,
+        #   resolve_patch_address, patch_fixtures — the never-guess loop: ask
+        #   instead of fabricating, resolve before patching, patch ONLY
+        #   through the verifying tool.
+        # + SPEC-COPILOT-VWX-001 M6's precheck_vectorworks_diff (READ) +
+        #   SPEC-COPILOT-AUTOPATCH-001 M7's apply_vectorworks_patch (plans,
+        #   never executes) + vectorworks_autopatch (the single conversational
+        #   entry wrapping both).
+        # + SPEC-COPILOT-FXGEN-001's compose_fx — the parametric phaser door:
+        #   arbitrary steps/axes validated by the SAME loader schema as the
+        #   shipped library, delivered through the same run_commands tail as
+        #   instantiate_fx, with a sequence OR preset-pool destination.
+        # The count moves to 31 with those seven — they were registered AND
+        # declared when they shipped, but this enumeration (and the count
+        # below) was never advanced past 24; the declared tuple had also
+        # picked up a duplicate "build_handover_pack" in the f4fb366 merge,
+        # which the sorted() compare here caught. Both are now reconciled.
         # The count is asserted against the declared tuple's length so the set
         # stays CLOSED: adding a handler without declaring it, or declaring one
         # without a handler, still fails here.
         registry = _registry()
         names = [definition.name for definition in registry.definitions()]
         assert sorted(names) == sorted(TOOL_NAMES)
-        assert len(names) == len(TOOL_NAMES) == 24
+        assert len(names) == len(TOOL_NAMES) == 32
 
     def test_the_four_original_tools_are_still_registered(self):
         # The M5 addition must not have displaced any of them.

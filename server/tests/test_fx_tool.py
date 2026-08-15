@@ -302,7 +302,16 @@ class TestToolRegistration:
         definition = _definition(_registry(), INSTANTIATE)
         assert definition.parameters["required"] == ["fx_id", "group"]
         properties = definition.parameters["properties"]
-        assert set(properties) == {"fx_id", "group", "sequence", "executor", "label"}
+        assert set(properties) == {
+            "fx_id",
+            "group",
+            "sequence",
+            "executor",
+            "label",
+            "destination",
+            "preset_pool",
+            "preset",
+        }
         assert properties["group"]["type"] == "integer"
 
     def test_neither_tool_accepts_undeclared_arguments(self):
@@ -760,8 +769,9 @@ class TestTheHandlersNameNoExecutionSurface:
 
     A behavioural test proves the gate saw THIS bundle; it cannot prove a future
     edit will not add a second route. This one reads each handler's own body:
-    ``instantiate_fx`` may name ``run_commands`` and must never name the
-    execution port; ``find_fx`` must name neither.
+    ``instantiate_fx`` and ``compose_fx`` deliver through ``_deliver_fx_plan``,
+    which may name ``run_commands`` and must never name the execution port;
+    ``find_fx`` must name neither.
     """
 
     @staticmethod
@@ -784,10 +794,16 @@ class TestTheHandlersNameNoExecutionSurface:
                 found.add(node.id)
         return found
 
-    def test_the_instantiate_handler_calls_the_run_commands_tool(self):
-        assert "run_commands" in self._identifiers(INSTANTIATE)
+    def test_the_delivery_helper_calls_the_run_commands_tool(self):
+        assert "run_commands" in self._identifiers("_deliver_fx_plan")
 
-    @pytest.mark.parametrize("handler", [FIND, INSTANTIATE])
+    @pytest.mark.parametrize("handler", [INSTANTIATE, "compose_fx"])
+    def test_every_fx_handler_delivers_through_the_single_tail(self, handler):
+        assert "_deliver_fx_plan" in self._identifiers(handler)
+
+    @pytest.mark.parametrize(
+        "handler", [FIND, INSTANTIATE, "compose_fx", "_deliver_fx_plan", "_fx_preset_destination"]
+    )
     def test_no_fx_handler_names_the_execution_port(self, handler):
         identifiers = self._identifiers(handler)
         assert "execution_port" not in identifiers
@@ -972,3 +988,180 @@ class TestProviderNeutrality:
         assert find_payload["selected"] == "test-fx"
         assert instantiate.result.is_error is False
         assert instantiate_payload["succeeded"] is True
+
+
+# =============================================================================
+# SPEC-COPILOT-FXGEN-001 — compose_fx and the preset destination
+# =============================================================================
+
+COMPOSE = "compose_fx"
+PRESET_POOLS_PATH = "DataPool/PresetPools"
+
+
+def _preset_tree(
+    *,
+    pools: tuple[tuple[int | None, str], ...] = ((1, "Dimmer"), (21, "All 1"), (22, "All 2")),
+    all_pool: int = 21,
+    presets: tuple[tuple[int | None, str], ...] = ((1, "Warm"),),
+    pool_truncated: bool = False,
+) -> dict[str, dict]:
+    tree = _tree()
+    tree[PRESET_POOLS_PATH] = _payload(PRESET_POOLS_PATH, [_child(n, name) for n, name in pools])
+    tree[f"{PRESET_POOLS_PATH}/{all_pool}"] = _payload(
+        f"{PRESET_POOLS_PATH}/{all_pool}",
+        [_child(n, name) for n, name in presets],
+        truncated=pool_truncated,
+    )
+    return tree
+
+
+def _compose(registry, arguments: dict | None = None, context=None):
+    base = {
+        "pattern": "pulse",
+        "steps": [{"Dimmer": 10}, {"Dimmer": 90}],
+        "group": 11,
+        "accel": -100,
+        "decel": -100,
+        "speed": 24,
+        "phase_from": 0,
+        "phase_to": 360,
+    }
+    return _dispatch(registry, COMPOSE, base if arguments is None else arguments, context)
+
+
+class TestComposeFx:
+    def test_compose_fx_is_registered_and_requires_pattern_steps_group(self):
+        assert COMPOSE in TOOL_NAMES
+        definition = _definition(_registry(), COMPOSE)
+        assert definition.parameters["required"] == ["pattern", "steps", "group"]
+        assert definition.parameters["additionalProperties"] is False
+
+    def test_a_composed_sine_pulse_emits_the_measured_grammar(self):
+        port = _RecordingPort()
+        execution, payload = _compose(_registry(port=port))
+        assert execution.result.is_error is False
+        assert payload["succeeded"] is True
+        assert "Attribute 'Dimmer' At 10" in port.executed
+        assert "Step 2" in port.executed
+        assert "Step 1 At Accel -100" in port.executed
+        assert "Step 2 At Decel -100" in port.executed
+        # The curve lines fire AFTER the whole step run (the V1 measurement).
+        assert port.executed.index("Step 1 At Accel -100") > port.executed.index(
+            "Attribute 'Dimmer' At 90"
+        )
+
+    def test_a_schema_violation_is_a_correctable_error_result(self):
+        execution, payload = _compose(
+            _registry(),
+            {"pattern": "pulse", "steps": [{"Dimmer": 10}], "group": 11},
+        )
+        assert execution.result.is_error is True
+        assert "composed fx is invalid" in payload["error"]
+
+    def test_an_unlisted_group_is_refused_before_any_send(self):
+        port = _RecordingPort()
+        execution, payload = _compose(
+            _registry(port=port),
+            {"pattern": "pulse", "steps": [{"Dimmer": 10}, {"Dimmer": 90}], "group": 7},
+        )
+        assert execution.result.is_error is True
+        assert port.executed == []
+        assert payload["groups"] == [11, 12]
+
+    def test_a_double_speed_source_is_refused(self):
+        execution, payload = _compose(
+            _registry(),
+            {
+                "pattern": "pulse",
+                "steps": [{"Dimmer": 10}, {"Dimmer": 90}],
+                "group": 11,
+                "speed": 60,
+                "speed_master": 1,
+            },
+        )
+        assert execution.result.is_error is True
+        assert "both speed and speed_master" in payload["error"]
+
+
+class TestPresetDestination:
+    def _preset_registry(self, port=None, **kwargs):
+        return _registry(port=port, tree=_preset_tree(**kwargs))
+
+    def test_a_preset_destination_stores_into_the_measured_all_pool(self):
+        port = _RecordingPort()
+        registry = self._preset_registry(port=port)
+        execution, payload = _compose(
+            registry,
+            {
+                "pattern": "pulse",
+                "steps": [{"Dimmer": 10}, {"Dimmer": 90}],
+                "group": 11,
+                "speed": 24,
+                "destination": "preset",
+                "label": "Sine FX",
+            },
+        )
+        assert execution.result.is_error is False, payload
+        # Pool 21 is the first "All …" pool the LISTING showed; slot 1 is
+        # occupied by "Warm", so the measured free slot is 2.
+        assert "Store Preset 21.2 'Sine FX' /Universal" in port.executed
+        # 실기 2026-08-16: inline name on Store Preset is not applied — the
+        # label must ride its own Label line or the preset lands nameless.
+        assert "Label Preset 21.2 'Sine FX'" in port.executed
+        assert payload["report"]["preset_pool"] == 21
+        assert payload["report"]["preset"] == 2
+        assert payload["report"]["sequence"] is None
+
+    def test_instantiate_fx_reaches_the_same_preset_destination(self):
+        port = _RecordingPort()
+        registry = self._preset_registry(port=port)
+        execution, payload = _instantiate(
+            registry, {"fx_id": "test-fx", "group": 11, "destination": "preset"}
+        )
+        assert execution.result.is_error is False, payload
+        assert any(c.startswith("Store Preset 21.") for c in port.executed)
+
+    def test_an_executor_with_a_preset_destination_is_refused(self):
+        execution, payload = _compose(
+            self._preset_registry(),
+            {
+                "pattern": "pulse",
+                "steps": [{"Dimmer": 10}, {"Dimmer": 90}],
+                "group": 11,
+                "speed": 24,
+                "destination": "preset",
+                "executor": 101,
+            },
+        )
+        assert execution.result.is_error is True
+        assert "executor is a sequence concept" in payload["error"]
+
+    def test_a_truncated_pool_listing_refuses_automatic_assignment(self):
+        port = _RecordingPort()
+        execution, payload = _compose(
+            self._preset_registry(port=port, pool_truncated=True),
+            {
+                "pattern": "pulse",
+                "steps": [{"Dimmer": 10}, {"Dimmer": 90}],
+                "group": 11,
+                "speed": 24,
+                "destination": "preset",
+            },
+        )
+        assert execution.result.is_error is True
+        assert payload["reason"] == "preset_pool_truncated"
+        assert not any(c.startswith("Store Preset") for c in port.executed)
+
+    def test_a_rig_without_an_all_pool_names_the_pools_it_has(self):
+        execution, payload = _compose(
+            self._preset_registry(pools=((1, "Dimmer"), (4, "Color"))),
+            {
+                "pattern": "pulse",
+                "steps": [{"Dimmer": 10}, {"Dimmer": 90}],
+                "group": 11,
+                "speed": 24,
+                "destination": "preset",
+            },
+        )
+        assert execution.result.is_error is True
+        assert "preset_pools" in payload

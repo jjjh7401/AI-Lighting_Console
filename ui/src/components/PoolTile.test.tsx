@@ -167,3 +167,44 @@ describe("PoolTile", () => {
     });
   });
 });
+
+describe("stored-count badge (2026-08-15 방향) — 실측된 풀에만", () => {
+  it("shows the measured stored_count top-right", () => {
+    const element = PoolTile({
+      item: { no: 21, name: "All 1", meta: { stored_count: 9 } },
+      pressable: true,
+      verb: "열기",
+    }) as ReactElement;
+    const badge = childArray(element).find(
+      (child) => (child as ReactElement)?.props?.className === "pool-tile-count",
+    ) as ReactElement;
+    expect(badge).toBeTruthy();
+    expect(badge.props.children).toBe(9);
+    expect(badge.props["aria-label"]).toBe("프리셋 9개");
+  });
+
+  it("a pool the drilldown never opened wears NO badge — unknown is not zero", () => {
+    for (const meta of [undefined, { contents_unavailable: true }]) {
+      const element = PoolTile({
+        item: { no: 25, name: "All 5", meta },
+        pressable: true,
+        verb: "열기",
+      }) as ReactElement;
+      const badge = childArray(element).find(
+        (child) => (child as ReactElement)?.props?.className === "pool-tile-count",
+      );
+      expect(badge).toBeFalsy();
+    }
+  });
+
+  it("a measured ZERO still shows — empty is a fact, not an unknown", () => {
+    const element = PoolTile({
+      item: { no: 3, name: "Gobo", meta: { stored_count: 0 } },
+      pressable: false,
+    }) as ReactElement;
+    const badge = childArray(element).find(
+      (child) => (child as ReactElement)?.props?.className === "pool-tile-count",
+    ) as ReactElement;
+    expect(badge.props.children).toBe(0);
+  });
+});

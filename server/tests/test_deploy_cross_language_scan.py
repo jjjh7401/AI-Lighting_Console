@@ -457,9 +457,7 @@ def configured_send_port(tmp_path, sink):
 
     user_file = tmp_path / "settings.toml"
     user_file.write_text(
-        "[settings]\n"
-        f"console_port = {sink.port}\n"
-        f"receive_port = {sink.port + 1}\n",
+        f"[settings]\nconsole_port = {sink.port}\nreceive_port = {sink.port + 1}\n",
         encoding="utf-8",
     )
     settings = resolve_effective_settings(user_path=user_file, seed_path=tmp_path / "absent.toml")

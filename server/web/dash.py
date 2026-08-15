@@ -55,15 +55,22 @@ from server.web.messages import dash_catalog_event, dash_item, dash_section
 # number.
 
 # Preset pools drilldown: tools.py names ~8-10 preset TYPES; 12 gives a
-# typical showfile headroom while staying bounded.
-DASH_PRESET_POOL_QUERY_CAP = 12
+# typical showfile headroom while staying bounded. Raised 12 -> 16 after a
+# default 2.4.2 showfile measured 14 pools (9 feature groups + All 1-5) and
+# capped the walk — the dashboard popup design needs every pool STORED-COUNT.
+DASH_PRESET_POOL_QUERY_CAP = 16
 
 # Executor page walk: one query per page opened (usually few pages).
 DASH_EXECUTOR_PAGE_QUERY_CAP = 8
 
-# Executor resolution: one "Executor <n>" verification query per candidate,
-# bounded separately from the page walk since it is a distinct query class.
-DASH_EXECUTOR_VERIFY_QUERY_CAP = 16
+# Executor resolution: one "Executor <n>" verification query per CANDIDATE
+# FORM, bounded separately from the page walk since it is a distinct query
+# class. Raised 16 -> 32 (2026-08-15 live measurement): each page-drilled slot
+# costs up to TWO verify queries — the raw slot form first, then the console's
+# page*100+slot form — so 16 capped a plain 13-executor single-page showfile
+# mid-walk and the section wore the "드릴다운 예산 소진" badge on an ordinary
+# rig. 32 covers 16 slots at both forms while staying bounded.
+DASH_EXECUTOR_VERIFY_QUERY_CAP = 32
 
 
 @dataclass(frozen=True)
@@ -301,7 +308,19 @@ def build_dash_catalog(
     for index, name in failed:
         sections[index] = dash_section(name=name, status=status, items=[])
 
-    return [s for s in sections if s is not None]
+    ordered = [s for s in sections if s is not None]
+    # Display order (user direction, 2026-08-15, twice-revised): 익스큐터 sits
+    # BEFORE 매크로 (and therefore before 플러그인) — the press-able playback
+    # row outranks both reference rows. Reordered HERE because the client
+    # renders wire order verbatim (REQ-DASHUI-003 — nothing sorts on the UI
+    # side). The anchor falls back to "plugins" so a rig without a macros
+    # section still gets the executors-above-reference-rows order.
+    names = [s["name"] for s in ordered]
+    anchor = "macros" if "macros" in names else "plugins" if "plugins" in names else None
+    if "executors" in names and anchor is not None:
+        executors = ordered.pop(names.index("executors"))
+        ordered.insert([s["name"] for s in ordered].index(anchor), executors)
+    return ordered
 
 
 def resolved_executor_nos(sections: list[dict]) -> list[int]:

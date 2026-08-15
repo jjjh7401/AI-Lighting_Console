@@ -38,6 +38,7 @@ execution surface of its own — it never imports the OSC send surface.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 
 from server.orchestrator.ports import PropertyQueryPort, StateQueryPort
 from server.orchestrator.tools import rig_object
@@ -68,7 +69,7 @@ CURRENT_CUE_PROPERTY_CANDIDATES: tuple[str, ...] = ("CurrentCue",)
 _CURRENT_CUE_INDEX_RE = re.compile(r"\.(\d+)$")
 
 
-def _parse_current_cue_index(value: str) -> int | None:
+def parse_current_cue_index(value: str) -> int | None:
     """The integer after the LAST ``.`` in ``value``, or ``None`` when the
     shape does not match (empty string, no ``.``, non-integer suffix)."""
     match = _CURRENT_CUE_INDEX_RE.search(value)
@@ -179,7 +180,7 @@ def _read_current_cue(
         read = reads.get(name)
         if read is None or not read.ok or not read.value:
             continue
-        index = _parse_current_cue_index(read.value)
+        index = parse_current_cue_index(read.value)
         if index is None:
             continue
         cue_name = _cue_name_for_index(cues, index)
@@ -292,12 +293,18 @@ def recent_execution_history(audit: AuditLog, *, limit: int = DEFAULT_HISTORY_LI
     dropped, so the operator's full history stays trustworthy even for
     commands this module cannot address to an executor.
     """
-    executed = [
-        event
-        for event in audit.iter_events()
-        if event.get("event") == "executed" and event.get("kind") == "command"
-    ]
-    tail = executed[-limit:] if limit > 0 else executed
+    # Backwards, bounded: collect the newest ``limit`` matches and STOP —
+    # never a whole-log parse (audit.iter_events_reversed's own header names
+    # the 709 MB incident this replaced). include_probes=False: the probe
+    # file family (state_query/property_query/heartbeat) can never match the
+    # kind filter below, so it is not even opened.
+    newest_first: list[dict] = []
+    for event in audit.iter_events_reversed(include_probes=False):
+        if event.get("event") == "executed" and event.get("kind") == "command":
+            newest_first.append(event)
+            if 0 < limit <= len(newest_first):
+                break
+    tail = list(reversed(newest_first))
     entries = []
     for event in tail:
         command = str(event.get("command", ""))
@@ -314,6 +321,53 @@ def recent_execution_history(audit: AuditLog, *, limit: int = DEFAULT_HISTORY_LI
     return entries
 
 
+def planned_show_order(store) -> list[int]:
+    """The operator's planned sequence order for the 진행 순서 보드.
+
+    Priority (handoff 2026-08-15 item 3): an EXECUTED setlist allocation
+    (``store.setlist_sequence_nos`` — written by 셋리스트 모드 only after its
+    command bundle ran) is the multi-song show plan and beats the single
+    director-timeline sequence; with neither, the board keeps plain
+    ascending executor order (empty plan).
+    """
+    setlist = getattr(store, "setlist_sequence_nos", None) or []
+    if setlist:
+        return [no for no in setlist if isinstance(no, int)]
+    latest = getattr(store, "latest", None)
+    if isinstance(latest, dict) and isinstance(latest.get("sequence_number"), int):
+        return [latest["sequence_number"]]
+    return []
+
+
+def order_by_show_plan(entries: list[dict], planned_sequence_nos: Sequence[int]) -> list[dict]:
+    """Arrange executor rows in the operator's PLANNED show order (진행 순서
+    보드, user direction 2026-08-15).
+
+    Executors whose assigned sequence appears in ``planned_sequence_nos``
+    come FIRST, in plan order, each stamped with its 1-based
+    ``planned_position``; everything else follows in ascending executor
+    number. Purely a rearrangement — no row is dropped, no claim is added
+    beyond the position stamp, and an empty plan leaves the ascending order
+    untouched.
+    """
+    plan_rank = {no: index for index, no in enumerate(planned_sequence_nos)}
+    planned: list[tuple[int, dict]] = []
+    rest: list[dict] = []
+    for entry in entries:
+        rank = plan_rank.get(entry.get("sequence_no"))
+        if rank is None:
+            rest.append(entry)
+        else:
+            planned.append((rank, entry))
+    planned.sort(key=lambda pair: pair[0])
+    rest.sort(key=lambda entry: entry.get("executor_no") or 0)
+    ordered = []
+    for position, (_rank, entry) in enumerate(planned, start=1):
+        ordered.append({**entry, "planned_position": position})
+    ordered.extend(rest)
+    return ordered
+
+
 def cue_monitor_snapshot(
     state_port: StateQueryPort,
     property_port: PropertyQueryPort,
@@ -321,6 +375,7 @@ def cue_monitor_snapshot(
     console_nos: list[int],
     *,
     history_limit: int = DEFAULT_HISTORY_LIMIT,
+    planned_sequence_nos: Sequence[int] = (),
 ) -> dict:
     """The full ``cue_monitor`` server event for one refresh (contract items 1+2).
 
@@ -328,9 +383,13 @@ def cue_monitor_snapshot(
     each executor's ``last_app_action`` and the flat history list are
     attributed from the exact same read — never two independent audit-log
     passes that could observe different tails under concurrent writes.
+
+    ``planned_sequence_nos`` (진행 순서 보드) rearranges the executor rows in
+    the operator's planned show order — see ``order_by_show_plan``.
     """
     history = recent_execution_history(audit, limit=history_limit)
+    executors = build_cue_progress(state_port, property_port, console_nos, history=history)
     return cue_monitor_event(
-        executors=build_cue_progress(state_port, property_port, console_nos, history=history),
+        executors=order_by_show_plan(executors, planned_sequence_nos),
         history=history,
     )

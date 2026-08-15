@@ -125,13 +125,15 @@ def _ids(items: list[dict]) -> list[int]:
 class TestDashCatalogAccuracy:
     def test_every_section_the_ia_names_is_present_in_priority_order(self):
         sections = build_dash_catalog(FakeStatePort(_rig_tree()))
+        # 익스큐터 before 매크로/플러그인: user direction 2026-08-15 (the
+        # press-able playback row outranks both reference rows).
         assert [s["name"] for s in sections] == [
             "groups",
             "preset_pools",
+            "executors",
             "macros",
             "plugins",
             "fixtures",
-            "executors",
         ]
 
     def test_group_items_carry_the_real_pool_number_never_a_list_position(self):
@@ -252,7 +254,11 @@ class TestPresetPoolsDrilldown:
         # executor page-walk+verify queries; each concern's cap is bounded
         # independently instead.
         tree = _rig_tree()
-        many_pools = [(n, f"Pool {n}") for n in range(1, 15)]
+        # Sized RELATIVE to the cap (12 -> 16 raise, 2026-08-15: a default
+        # 2.4.2 showfile measures 14 pools and the dashboard popup design
+        # wants every pool's stored_count) so the capping property stays
+        # measured however the number moves.
+        many_pools = [(n, f"Pool {n}") for n in range(1, DASH_PRESET_POOL_QUERY_CAP + 5)]
         tree["DataPool/PresetPools"] = _snapshot("DataPool/PresetPools", many_pools)
         for number, _ in many_pools:
             tree[f"DataPool/PresetPools/{number}"] = _snapshot(
@@ -386,7 +392,12 @@ class TestExecutorResolution:
 
     def test_the_verify_budget_is_separate_from_the_page_walk_budget(self):
         tree = _rig_tree()
-        many = [(100 + n, f"Exec {100 + n}") for n in range(1, 20)]
+        # Sized RELATIVE to the cap (16 -> 32 raise, 2026-08-15: 13 executors
+        # on one page cost up to TWO verify queries each — slot form, then the
+        # page*100+slot form — so 16 capped a 13-executor rig mid-walk) so the
+        # separation property stays measured however the number moves. Each
+        # fixture executor resolves on its FIRST candidate, so items == cap.
+        many = [(100 + n, f"Exec {100 + n}") for n in range(1, DASH_EXECUTOR_VERIFY_QUERY_CAP + 8)]
         tree["DataPool/Pages/1"] = _snapshot("DataPool/Pages/1", many)
         for number, name in many:
             tree[f"Executor {number}"] = _identity(name)
@@ -520,7 +531,9 @@ class TestResolvedExecutorMembership:
     def test_registered_console_numbers_become_panel_members_and_are_replaced_not_merged(self):
         from server.web.panel import PanelStore, PinStore
 
-        store = PanelStore(state_port=DeadStatePort(), pins=PinStore("/tmp/dash-membership-pins.json"))
+        store = PanelStore(
+            state_port=DeadStatePort(), pins=PinStore("/tmp/dash-membership-pins.json")
+        )
         assert store.contains("executor", 111) is False
         store.register_dash_executors([111, 201])
         assert store.contains("executor", 111) is True
@@ -531,3 +544,29 @@ class TestResolvedExecutorMembership:
         assert store.contains("executor", 105) is True
         # Only the executor class is widened — no cross-kind bleed.
         assert store.contains("macro", 105) is False
+
+
+class TestSectionDisplayOrder:
+    def test_executors_render_before_macros_and_plugins(self):
+        # User direction 2026-08-15 (twice-revised): the press-able playback
+        # row outranks BOTH reference rows. The client renders wire order
+        # verbatim (REQ-DASHUI-003), so the order is pinned HERE.
+        names = [s["name"] for s in build_dash_catalog(FakeStatePort(_rig_tree()))]
+        assert names.index("executors") < names.index("macros")
+        assert names.index("executors") < names.index("plugins")
+
+    def test_the_reorder_survives_a_failed_plugins_section(self):
+        tree = _rig_tree()
+        tree.pop("DataPool/Plugins", None)
+        names = [s["name"] for s in build_dash_catalog(FakeStatePort(tree))]
+        # All rows still present (plugins as a failed placeholder), same order.
+        assert names.index("executors") < names.index("macros")
+        assert names.index("executors") < names.index("plugins")
+
+    def test_without_a_macros_section_executors_still_precede_plugins(self):
+        # The anchor falls back: a rig whose macros path never resolves keeps
+        # the playback row above the remaining reference row.
+        tree = _rig_tree()
+        tree.pop("DataPool/Macros", None)
+        names = [s["name"] for s in build_dash_catalog(FakeStatePort(tree))]
+        assert names.index("executors") < names.index("plugins")

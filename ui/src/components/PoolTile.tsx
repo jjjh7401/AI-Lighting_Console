@@ -44,11 +44,20 @@ export interface PoolTileProps {
 
 export function PoolTile({ item, pressable, verb, running, onPress }: PoolTileProps) {
   const unresolved = !pressable && item.meta?.resolved === false;
+  // The drilldown's MEASURED per-pool count (preset pools carry it as
+  // meta.stored_count). Shown only when a number was actually read — a pool
+  // the budget never opened wears no badge rather than a guessed one.
+  const storedCount = item.meta?.stored_count;
   const runningClass = pressable && running ? " pool-tile-running" : "";
   return (
     <div className={`pool-tile ${pressable ? "pool-tile-press" : "pool-tile-info"}${runningClass}`}>
       <span className="pool-tile-no">{item.no}</span>
       <span className="pool-tile-name">{item.name || "—"}</span>
+      {typeof storedCount === "number" ? (
+        <span className="pool-tile-count" aria-label={`프리셋 ${storedCount}개`}>
+          {storedCount}
+        </span>
+      ) : null}
       {item.appearance ? (
         <span className="pool-tile-appearance" style={{ background: item.appearance }} />
       ) : null}

@@ -13,19 +13,25 @@ import { type DashItem, type DashSection, type DashState } from "../protocol";
 import { PoolSection, type PoolArea } from "./PoolSection";
 
 /**
- * Site preference (user direction, 2026-07-24): the preset pool list is too
- * long to be useful on the dashboard — show ONLY pool 21 ("All 1"). Every
- * other section renders unfiltered. Widen this set when more pools become
- * operationally relevant.
+ * Site preference (user direction, 2026-08-15, superseding the 2026-07-24
+ * pool-21-only filter): the 프리셋 section shows CATEGORY cards — every pool
+ * that plausibly HOLDS something — and opening a card fetches that pool's
+ * contents on demand into a popup (PresetPoolPopup). A pool whose drilldown
+ * measured stored_count === 0 is hidden as noise; a pool the budget never
+ * opened (no stored_count) stays VISIBLE — "not opened" is not evidence of
+ * "empty", and hiding it would make a capped walk look like an empty show.
  */
-export const VISIBLE_PRESET_POOL_NOS: ReadonlySet<number> = new Set([21]);
+export function presetPoolHasInfo(item: DashItem): boolean {
+  const count = item.meta?.stored_count;
+  return typeof count !== "number" || count > 0;
+}
 
 /** The section as the dashboard actually renders it (preset filter applied). */
 export function visibleSection(section: DashSection): DashSection {
   if (section.name !== "preset_pools") return section;
   return {
     ...section,
-    items: section.items.filter((item) => VISIBLE_PRESET_POOL_NOS.has(item.no)),
+    items: section.items.filter(presetPoolHasInfo),
   };
 }
 
@@ -62,6 +68,13 @@ export interface DashBoardProps {
     sectionName: string,
     event: { clientX: number; clientY: number },
   ) => void;
+  /**
+   * Opens one preset pool's on-demand popup (PresetPoolPopup). This is NOT a
+   * console press — targetKindForDashSection("preset_pools") stays null, so
+   * the section remains structurally unable to fire panel_execute; the card's
+   * only affordance is a read-only fetch.
+   */
+  onPresetPoolOpen?: (item: DashItem) => void;
 }
 
 const SECTION_LABEL: Record<string, string> = {
@@ -156,6 +169,7 @@ export function DashBoard({
   onSectionTileSizeChange,
   sectionArea,
   onSectionAreaResizeStart,
+  onPresetPoolOpen,
 }: DashBoardProps) {
   const hasSections = dash.sections.length > 0;
   const fixturesSection = dash.sections.find((section) => section.name === "fixtures");
@@ -201,13 +215,25 @@ export function DashBoard({
                 key={section.name}
                 section={section}
                 label={sectionLabel(section.name)}
-                isPressable={(item) => dashItemIsPressable(section.name, item)}
-                verb={pressVerbForSection(section.name)}
+                isPressable={(item) =>
+                  section.name === "preset_pools"
+                    ? onPresetPoolOpen !== undefined
+                    : dashItemIsPressable(section.name, item)
+                }
+                verb={
+                  section.name === "preset_pools" ? "열기" : pressVerbForSection(section.name)
+                }
                 runningVerb={runningVerbForSection(section.name)}
                 isRunning={
                   isItemRunning ? (item) => isItemRunning(section.name, item) : undefined
                 }
-                onPress={onItemPress ? (item) => onItemPress(section.name, item) : undefined}
+                onPress={
+                  section.name === "preset_pools"
+                    ? onPresetPoolOpen
+                    : onItemPress
+                      ? (item) => onItemPress(section.name, item)
+                      : undefined
+                }
                 tileSize={sectionTileSize?.(section.name)}
                 onTileSizeChange={
                   onSectionTileSizeChange

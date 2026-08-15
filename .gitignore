@@ -247,3 +247,6 @@ dist-ssr/
 .firebase/
 # runtime state must never be committed under a SPEC dir
 .moai/specs/*/.moai/
+
+# playwright-cli tool cache
+.playwright-cli/

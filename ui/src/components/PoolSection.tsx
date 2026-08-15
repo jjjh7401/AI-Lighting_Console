@@ -113,17 +113,26 @@ export function PoolSection({
   onPress,
   tileSize = POOL_TILE_DEFAULT_SIZE,
   onTileSizeChange,
-  area = POOL_AREA_DEFAULT,
+  area,
   onAreaResizeStart,
 }: PoolSectionProps) {
   const health = sectionHealthLabel(section);
   const size = clampPoolTileSize(tileSize);
-  const { width, height } = clampPoolArea(area);
+  // Auto-fit by default (user direction, 2026-08-15): with NO manually
+  // dragged area the window grows to its contents — no clipped tiles, no
+  // dead space — and stops at a viewport-relative cap (scrolling past it).
+  // A corner-dragged area still wins for that section: the drag stores an
+  // explicit PoolArea in App state, and an explicit area lands here.
+  const sized = area !== undefined ? clampPoolArea(area) : null;
+  const style =
+    sized !== null
+      ? { width: `${sized.width}px`, height: `${sized.height}px` }
+      : { width: "100%", height: "auto", maxHeight: "45vh" };
   return (
     <section
       className={`pool-section pool-section-${section.name}`}
       aria-label={label}
-      style={{ width: `${width}px`, height: `${height}px` }}
+      style={style}
     >
       <header className="pool-section-header">
         <span className="pool-section-label">{label}</span>

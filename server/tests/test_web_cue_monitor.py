@@ -21,13 +21,15 @@ from server.web.approval_bridge import ApprovalChannel
 from server.web.cue_monitor import (
     CURRENT_CUE_PROPERTY_CANDIDATES,
     _cue_name_for_index,
-    _parse_current_cue_index,
     build_cue_progress,
     build_executor_cue_progress,
     cue_monitor_snapshot,
+    order_by_show_plan,
+    parse_current_cue_index,
+    planned_show_order,
     recent_execution_history,
 )
-from server.web.messages import PROTOCOL_VERSION
+from server.web.messages import PROTOCOL_VERSION, cue_executor_entry
 
 from .test_runner_self_correction import ScriptedProvider
 from .test_safety_gate import FakeConsole
@@ -90,22 +92,22 @@ class TestParseCurrentCueIndex:
     contract: normal, empty string, unexpected shape."""
 
     def test_parses_the_index_after_the_last_dot(self):
-        assert _parse_current_cue_index("Sequence 80.2") == 2
+        assert parse_current_cue_index("Sequence 80.2") == 2
 
     def test_parses_a_sequence_name_that_itself_contains_a_dot(self):
         # The rule is explicitly "the LAST '.'" — a dotted sequence name
         # must not confuse which suffix is the index.
-        assert _parse_current_cue_index("Song v1.2.5") == 5
+        assert parse_current_cue_index("Song v1.2.5") == 5
 
     def test_an_empty_string_fails_to_parse(self):
         # The coordinator's own finding: CueNo goes '' once playing. A blank
         # CurrentCue value must degrade the same way, never be treated as 0.
-        assert _parse_current_cue_index("") is None
+        assert parse_current_cue_index("") is None
 
     def test_an_unexpected_shape_with_no_integer_suffix_fails_to_parse(self):
-        assert _parse_current_cue_index("Sequence 80") is None
-        assert _parse_current_cue_index("Sequence 80.") is None
-        assert _parse_current_cue_index("Sequence 80.abc") is None
+        assert parse_current_cue_index("Sequence 80") is None
+        assert parse_current_cue_index("Sequence 80.") is None
+        assert parse_current_cue_index("Sequence 80.abc") is None
 
 
 class TestCueNameForIndex:
@@ -143,6 +145,7 @@ class TestBuildExecutorCueProgress:
             "cues": [],
             "current_cue": None,
             "last_app_action": None,
+            "planned_position": None,
         }
 
     def test_unassigned_when_the_executor_carries_no_sequence(self):
@@ -503,3 +506,60 @@ class TestCueMonitorRequestDispatch:
                 "target_no": 101,
             }
         ]
+
+
+class TestShowPlanOrdering:
+    """진행 순서 보드 (user direction 2026-08-15) — the executor rows follow the
+    operator's PLANNED order (the director timeline's sequence first), each
+    planned row stamped with its 1-based position; the rest stay ascending."""
+
+    @staticmethod
+    def _entry(executor_no: int, sequence_no: int | None) -> dict:
+        return cue_executor_entry(
+            executor_no=executor_no,
+            status="ok" if sequence_no is not None else "unassigned",
+            sequence_no=sequence_no,
+        )
+
+    def test_planned_sequences_lead_in_plan_order_with_positions(self):
+        entries = [
+            self._entry(101, 210),
+            self._entry(102, 17),
+            self._entry(103, 100),
+        ]
+        ordered = order_by_show_plan(entries, [100, 210])
+        assert [e["executor_no"] for e in ordered] == [103, 101, 102]
+        assert [e.get("planned_position") for e in ordered] == [1, 2, None]
+
+    def test_an_empty_plan_changes_nothing(self):
+        entries = [self._entry(103, 100), self._entry(101, 210)]
+        ordered = order_by_show_plan(entries, [])
+        assert [e["executor_no"] for e in ordered] == [101, 103]
+        assert all(e.get("planned_position") is None for e in ordered)
+
+    def test_no_row_is_ever_dropped(self):
+        entries = [self._entry(101, 210), self._entry(102, None)]
+        ordered = order_by_show_plan(entries, [999])
+        assert sorted(e["executor_no"] for e in ordered) == [101, 102]
+
+
+class TestPlannedShowOrderSource:
+    """Handoff 2026-08-15 item 3 — the board's plan source: an EXECUTED
+    setlist allocation (multi-song) beats the single director timeline."""
+
+    class _Store:
+        def __init__(self, *, setlist=None, latest=None):
+            self.setlist_sequence_nos = list(setlist or [])
+            self.latest = latest
+
+    def test_a_setlist_allocation_beats_the_single_timeline(self):
+        store = self._Store(setlist=[210, 220, 230], latest={"sequence_number": 999})
+        assert planned_show_order(store) == [210, 220, 230]
+
+    def test_without_a_setlist_the_director_timeline_leads(self):
+        store = self._Store(latest={"sequence_number": 210})
+        assert planned_show_order(store) == [210]
+
+    def test_with_neither_the_plan_is_empty(self):
+        assert planned_show_order(self._Store()) == []
+        assert planned_show_order(self._Store(latest={"sequence_number": "x"})) == []

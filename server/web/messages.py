@@ -731,6 +731,7 @@ def cue_executor_entry(
     cues: list[dict] | None = None,
     current_cue: dict | None = None,
     last_app_action: dict | None = None,
+    planned_position: int | None = None,
 ) -> dict:
     """One executor's live cue-progress row.
 
@@ -750,6 +751,12 @@ def cue_executor_entry(
     sent this executor anything. It is never a claim about whether the
     console is CURRENTLY playing that command — only that it was sent and
     acknowledged (or not).
+
+    ``planned_position`` (진행 순서 보드, additive) is this executor's 1-based
+    slot in the operator's PLANNED show order (the director timeline's
+    sequence), or ``None`` for an executor the plan does not name. The
+    ordering itself is applied by the snapshot builder; this field only lets
+    the UI badge the planned rows.
     """
     if status not in CUE_EXECUTOR_STATUSES:
         raise ValueError(
@@ -763,6 +770,7 @@ def cue_executor_entry(
         "cues": list(cues) if cues is not None else [],
         "current_cue": current_cue,
         "last_app_action": last_app_action,
+        "planned_position": planned_position,
     }
 
 
@@ -801,3 +809,9 @@ def cue_monitor_event(*, executors: list[dict], history: list[dict]) -> dict:
     server-side merge with a previous snapshot.
     """
     return _event("cue_monitor", executors=list(executors), history=list(history))
+
+
+def song_timeline_event(*, timeline: dict) -> dict:
+    """Read-only director timeline projection. The payload deliberately carries
+    no console commands; execution remains behind the server approval gate."""
+    return _event("song_timeline", timeline=timeline)

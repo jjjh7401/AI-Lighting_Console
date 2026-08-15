@@ -33,7 +33,7 @@ from server.safety.backup import BackupManager
 from server.safety.gate import SafetyGate
 from server.safety.session_context import new_session_key
 from server.web.approval_bridge import ApprovalChannel
-from server.web.cue_monitor import cue_monitor_snapshot
+from server.web.cue_monitor import cue_monitor_snapshot, planned_show_order
 from server.web.dash import build_dash_catalog, resolved_executor_nos, send_dash_catalog
 from server.web.handshake import (
     CLOSE_POLICY_VIOLATION,
@@ -50,6 +50,7 @@ from server.web.messages import (
     parse_client_message,
     question_resolved_event,
     review_resolved_event,
+    song_timeline_event,
 )
 from server.web.panel import (
     PANEL_BACK_VERB,
@@ -62,10 +63,13 @@ from server.web.panel import (
     PinStore,
 )
 from server.web.paperwork_api import PaperworkDeps, build_paperwork_router
+from server.web.presets_api import PresetsDeps, build_presets_router
 from server.web.provision_api import ProvisionDeps, build_provision_router
 from server.web.question import QuestionChannel
-from server.web.session import ChatSession
+from server.web.session import ChatSession, PendingSongPlanStore, SongTimelineStore
 from server.web.settings_api import SettingsDeps, build_settings_router
+from server.web.timeline_api import TimelineLibraryDeps, build_timeline_router
+from server.web.timeline_library import SongTimelineLibrary
 
 _PROTOCOL_ERROR_MESSAGE = "잘못된 메시지 형식입니다. 프로토콜 v1 스키마를 확인해 주세요."
 _STALE_APPROVAL_MESSAGE = "만료되었거나 알 수 없는 승인 요청입니다."
@@ -73,6 +77,19 @@ _STALE_REVIEW_MESSAGE = "만료되었거나 알 수 없는 리뷰 요청입니�
 _STALE_QUESTION_MESSAGE = "만료되었거나 알 수 없는 질문입니다."
 _BUSY_MESSAGE = "이전 지시를 처리 중입니다 — 완료된 뒤 다시 시도해 주세요."
 _PANEL_TASK_ERROR_MESSAGE = "패널 요청을 처리하지 못했습니다."
+
+
+@dataclass
+class SnapshotCache:
+    """Last successful dash / cue-monitor events, process-wide.
+
+    Read/written from worker threads and the event loop; a whole-dict swap is
+    atomic under the GIL, and a torn read is impossible because entries are
+    replaced, never mutated in place.
+    """
+
+    dash: dict | None = None
+    cue: dict | None = None
 
 
 @dataclass
@@ -101,6 +118,9 @@ class WebDeps:
     # — no /api/paperwork routes are mounted), matching the settings/provision
     # optional-Deps convention above.
     paperwork: PaperworkDeps | None = None
+    # Preset-pool browsing popup (/api/presets): on-demand, read-only. Same
+    # optional-Deps convention; ``None`` = surface absent (older composers).
+    presets: PresetsDeps | None = None
     # M7.1 (REQ-DEPLOY-002a): the /ws Origin+token gate. ``None`` = no gate,
     # which is the pre-M7.1 behaviour dev runs and unit tests compose.
     handshake: HandshakePolicy | None = None
@@ -132,6 +152,17 @@ class WebDeps:
     # a test that never presses a tile never touches the user's pin file.
     panel: PanelStore | None = None
     status_listeners: set = field(default_factory=set)
+    # Runbook director timeline: the LAST projection, shared process-wide so a
+    # refreshed browser (new WebSocket) is replayed the current timeline.
+    song_timeline_store: SongTimelineStore = field(default_factory=SongTimelineStore)
+    # Timeline library (save/load named versions of the director timeline).
+    # Memory-only by default; serve.py wires the persistent JSON path.
+    timeline_library: SongTimelineLibrary = field(default_factory=SongTimelineLibrary)
+    # Stale-while-revalidate cache for the two many-round-trip snapshots.
+    snapshots: SnapshotCache = field(default_factory=SnapshotCache)
+    # #2 (2026-08-16): the ONE pending (unapproved) song design, process-wide
+    # so a page refresh (new WebSocket session) keeps the editable plan.
+    pending_plan_store: PendingSongPlanStore = field(default_factory=PendingSongPlanStore)
 
 
 async def _safe_send(websocket: WebSocket, event: dict) -> None:
@@ -270,6 +301,9 @@ def create_app(deps: WebDeps) -> FastAPI:
             reply_port_probe=deps.reply_port_probe,
             preshow_receive_port=deps.preshow_receive_port,
             preshow_osc_slot=deps.preshow_osc_slot,
+            timeline_store=deps.song_timeline_store,
+            timeline_library=deps.timeline_library,
+            pending_plan_store=deps.pending_plan_store,
         )
 
         def push_status() -> None:
@@ -335,6 +369,21 @@ def create_app(deps: WebDeps) -> FastAPI:
 
         current_task: asyncio.Task | None = None
         await websocket.send_json(session.status_snapshot())
+        if deps.song_timeline_store.latest is not None:
+            await _safe_send(
+                websocket, song_timeline_event(timeline=deps.song_timeline_store.latest)
+            )
+        # Stale-while-revalidate (user direction, 2026-08-15): a dash / cue
+        # snapshot costs DOZENS of serialized console round trips, and every
+        # lost UDP reply stalls 5s — so a fresh connection used to stare at
+        # "동기화 전" for tens of seconds. The last successful snapshots are
+        # process-cached and pushed IMMEDIATELY here, marked ``cached`` so the
+        # client renders them under its existing stale badge; the fresh build
+        # replaces them (and the badge) when the console answers.
+        if deps.snapshots.dash is not None:
+            await _safe_send(websocket, {**deps.snapshots.dash, "cached": True})
+        if deps.snapshots.cue is not None:
+            await _safe_send(websocket, {**deps.snapshots.cue, "cached": True})
         try:
             while True:
                 raw = await websocket.receive_text()
@@ -509,6 +558,10 @@ def create_app(deps: WebDeps) -> FastAPI:
                     # many-round-trip state_port read, and serializing it
                     # against the existing catalog build avoids stacking
                     # concurrent OSC query storms on the console.
+                    if deps.snapshots.dash is not None:
+                        # First paint NOW, honest stale badge; fresh build follows.
+                        await _safe_send(websocket, {**deps.snapshots.dash, "cached": True})
+
                     def _dash_catalog_and_membership() -> None:
                         # M6 — the build's VERIFIED executor console numbers
                         # become panel members (AC-DASHUI-005): the SHOWUI
@@ -517,6 +570,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                         # tiles' only legitimate targets would be rejected
                         # as "not on the panel".
                         event = send_dash_catalog(deps.gate.state_port, send_event)
+                        deps.snapshots.dash = event
                         panel.register_dash_executors(resolved_executor_nos(event["sections"]))
 
                     spawn_panel(panel_task(_dash_catalog_and_membership, lane=panel_side_lane))
@@ -528,14 +582,23 @@ def create_app(deps: WebDeps) -> FastAPI:
                     # shares panel_side_lane for the same reason dash does:
                     # another many-round-trip state_port read that should not
                     # stack concurrent OSC query storms on the console.
+                    if deps.snapshots.cue is not None:
+                        await _safe_send(websocket, {**deps.snapshots.cue, "cached": True})
+
                     def _cue_monitor() -> None:
                         sections = build_dash_catalog(deps.gate.state_port)
                         console_nos = resolved_executor_nos(sections)
+                        # 진행 순서 보드 (user direction, 2026-08-15): the
+                        # operator's plan leads the board — setlist allocation
+                        # first, single director timeline second, else plain
+                        # ascending order (see planned_show_order).
+                        planned = planned_show_order(deps.song_timeline_store)
                         event = cue_monitor_snapshot(
                             deps.gate.state_port,
                             deps.gate.state_port,
                             deps.audit,
                             console_nos,
+                            planned_sequence_nos=planned,
                         )
                         # T-H5 — the SAME cue lists the UI's cue sheet just
                         # rendered become the Goto membership map: a jump to a
@@ -543,6 +606,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                         # refused before it reaches the gate (panel.py's
                         # register_executor_cues/executor_has_cue).
                         panel.register_executor_cues(event["executors"])
+                        deps.snapshots.cue = event
                         send_event(event)
 
                     spawn_panel(panel_task(_cue_monitor, lane=panel_side_lane))
@@ -582,6 +646,22 @@ def create_app(deps: WebDeps) -> FastAPI:
     # the catch-all static mount, same reasoning as settings/provision above.
     if deps.paperwork is not None:
         app.include_router(build_paperwork_router(deps.paperwork))
+
+    # Preset-pool popup surface (/api/presets): the on-demand half of the
+    # dashboard's preset design — the dash snapshot shows pool CATEGORY tiles
+    # under a bounded drilldown budget, and opening one pool fetches its
+    # contents fresh here, off that budget. Read-only; registered BEFORE the
+    # catch-all static mount, same reasoning as settings/provision above.
+    if deps.presets is not None:
+        app.include_router(build_presets_router(deps.presets))
+
+    # Director-timeline library (/api/timelines): save / list / load / delete
+    # named versions. Read-and-projection only — no console command route.
+    app.include_router(
+        build_timeline_router(
+            TimelineLibraryDeps(store=deps.song_timeline_store, library=deps.timeline_library)
+        )
+    )
 
     if deps.ui_dist is not None and Path(deps.ui_dist).is_dir():
         app.mount("/", StaticFiles(directory=str(deps.ui_dist), html=True), name="ui")

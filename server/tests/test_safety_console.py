@@ -219,9 +219,7 @@ class TestStateBodyFetcherExecutor:
     def test_executor_unassigned_is_unavailable(self):
         # Node resolves, but nothing is assigned to it (no sequenceNo key —
         # PROTOCOL.md §4.2: "absent entirely ... when unassigned").
-        fetcher = self._fetcher(
-            {"Executor 201": {"ok": True, "node": {"class": "Executor"}}}
-        )
+        fetcher = self._fetcher({"Executor 201": {"ok": True, "node": {"class": "Executor"}}})
         with pytest.raises(BodyUnavailable, match="Executor 201"):
             fetcher.fetch_body("Executor 201")
 

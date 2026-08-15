@@ -169,7 +169,7 @@ export function ChatView({ entries }: { entries: ChatEntry[] }) {
     <div className="chat-view">
       {entries.length === 0 && (
         <div className="entry entry-hint">
-          한국어로 지시를 입력해 보세요 — 예: "보컬 그룹 만들어줘"
+          어려운 용어 없이 말하듯 적어 보세요 — 예: "처음은 차분하게, 후렴은 크게 터지게 해줘"
         </div>
       )}
       {entries.map((entry, index) => (

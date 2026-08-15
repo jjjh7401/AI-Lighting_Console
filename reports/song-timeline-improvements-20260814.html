@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MA3 코파일럿 — 감독 타임라인 개선 리포트 · 2026-08-14</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --ivory:#FAF9F5; --paper:#FFFFFF; --slate:#141413; --clay:#D97757; --clay-d:#B85C3E;
+  --oat:#E3DACC; --olive:#788C5D;
+  --g100:#F0EEE6; --g300:#D1CFC5; --g500:#87867F; --g700:#3D3D3A;
+  --sans:"Pretendard",system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;
+  --max-width:860px; --radius-panel:12px; --radius-row:8px; --border:1.5px solid var(--g300);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--slate);font:15px/1.65 var(--sans)}
+main{max-width:var(--max-width);margin:0 auto;padding:40px 24px 80px}
+header.report h1{font-size:26px;line-height:1.3;margin:6px 0 4px;font-weight:800}
+.eyebrow{font:700 11px var(--mono);letter-spacing:.12em;color:var(--clay);text-transform:uppercase;margin:0}
+.meta{color:var(--g500);font-size:13px;margin:0 0 28px}
+h2{font-size:18px;margin:44px 0 14px;padding-bottom:8px;border-bottom:var(--border)}
+h3{font-size:15px;margin:22px 0 8px}
+p{margin:8px 0}
+code{font:13px var(--mono);background:var(--g100);padding:1px 6px;border-radius:4px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
+.card{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:14px 16px}
+.card b{display:block;font-size:22px;margin-bottom:2px}
+.card span{font-size:12px;color:var(--g500)}
+.panel{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:18px 20px;margin:14px 0}
+.panel h3{margin-top:0}
+.tag{display:inline-block;font:700 10px var(--mono);letter-spacing:.08em;padding:2px 8px;border-radius:99px;margin-right:6px;vertical-align:middle}
+.tag.done{background:#E7F0E2;color:var(--olive);border:1px solid var(--olive)}
+.tag.next{background:#FBEEE8;color:var(--clay-d);border:1px solid var(--clay)}
+.tag.idea{background:var(--g100);color:var(--g700);border:1px solid var(--g300)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin:12px 0}
+th{font:700 11px var(--mono);letter-spacing:.06em;text-align:left;color:var(--g500);border-bottom:var(--border);padding:8px 10px}
+td{border-bottom:1px solid var(--g100);padding:8px 10px;vertical-align:top}
+tr:last-child td{border-bottom:0}
+ul{margin:8px 0;padding-left:22px}
+li{margin:5px 0}
+.flow{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:16px;margin:14px 0;overflow-x:auto}
+.kbd{font:600 12px var(--mono);background:var(--g700);color:var(--ivory);border-radius:4px;padding:2px 7px}
+.warn{border-left:4px solid var(--clay);background:#FBF3EC;border-radius:0 var(--radius-row) var(--radius-row) 0;padding:10px 14px;margin:12px 0;font-size:13.5px}
+.ok{color:var(--olive);font-weight:700}
+.small{font-size:12.5px;color:var(--g500)}
+ol.steps{counter-reset:s;list-style:none;padding-left:0}
+ol.steps li{counter-increment:s;position:relative;padding:10px 12px 10px 44px;background:var(--paper);border:var(--border);border-radius:var(--radius-row);margin:8px 0}
+ol.steps li::before{content:counter(s);position:absolute;left:12px;top:10px;width:22px;height:22px;border-radius:50%;background:var(--clay);color:#fff;font:700 12px/22px var(--mono);text-align:center}
+@media(max-width:680px){.cards{grid-template-columns:repeat(2,1fr)}}
+@media print{body{background:#fff}.panel,.card,ol.steps li{border-color:#bbb}}
+</style>
+</head>
+<body>
+<main>
+<header class="report">
+  <p class="eyebrow">MA3 Copilot · Director Timeline</p>
+  <h1>곡 조명 연출 / 감독 타임라인 개선 리포트</h1>
+  <p class="meta">2026-08-14 · 핸드오프 결함 1~5 대응 · 실행 주소 <code>http://127.0.0.1:8765/</code> (백엔드 재시작 완료, 신규 UI 빌드 반영)</p>
+</header>
+
+<div class="cards">
+  <div class="card"><b>5 / 6</b><span>핸드오프 결함 해결<br>(결함 6은 다음 단계)</span></div>
+  <div class="card"><b>132</b><span>테스트 통과<br>서버 96 · UI 22 · 큐시트 14</span></div>
+  <div class="card"><b>10</b><span>신규 테스트<br>서버 3 · UI 7</span></div>
+  <div class="card"><b class="ok">0</b><span>미승인 콘솔 쓰기<br>(안전 규칙 유지)</span></div>
+</div>
+
+<h2>① 완료된 개선</h2>
+
+<div class="panel">
+  <h3><span class="tag done">DONE</span>1단계 — 미해결 구간 재질의 &amp; 전 구간 재합성 <span class="small">(결함 2)</span></h3>
+  <p>첫 질문 하나만 묻고 흐름을 끝내던 구조를 제거했습니다. 이제 모든 <code>requery_requirements</code>가 각각 카드로 표시되고, 답변은 <b>새 자연어 요청이 아니라 기존 계획의 해당 구간에 병합</b>됩니다.</p>
+  <ul>
+    <li>포지션 이름이 포함된 답변(예: <code>Center → Fan Out</code>) → 도착 포지션 + 아크 기반 D/색으로 완전한 <code>DirectorOverride</code> 생성</li>
+    <li>포지션이 없는 답변 → 해당 구간의 새 무드 텍스트로 재해석</li>
+    <li>병합 시마다 <code>_build_unified_song_plan → compose_song_cue_bundle</code> 전 구간 재합성 + 타임라인 이벤트 재전송 (최대 3라운드)</li>
+    <li>미해결이 남아있는 동안 <code>run_commands</code> 도달 불가 · 종료 메시지에 남은 재질의 <b>전체 목록</b> 표기</li>
+  </ul>
+  <div class="flow">
+<svg viewBox="0 0 800 90" width="100%" height="90" role="img" aria-label="재질의 흐름">
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0L8,4L0,8z" fill="#87867F"/></marker></defs>
+<g font-family="Pretendard,sans-serif" font-size="12" text-anchor="middle">
+<rect x="5" y="25" width="110" height="40" rx="8" fill="#F0EEE6" stroke="#D1CFC5"/><text x="60" y="49">미해결 N개</text>
+<rect x="155" y="25" width="130" height="40" rx="8" fill="#FBEEE8" stroke="#D97757"/><text x="220" y="43">재질의 카드</text><text x="220" y="58">(항목별 전부)</text>
+<rect x="325" y="25" width="120" height="40" rx="8" fill="#FBEEE8" stroke="#D97757"/><text x="385" y="49">답변 → 병합</text>
+<rect x="485" y="25" width="120" height="40" rx="8" fill="#F0EEE6" stroke="#D1CFC5"/><text x="545" y="49">전 구간 재합성</text>
+<rect x="645" y="25" width="150" height="40" rx="8" fill="#E7F0E2" stroke="#788C5D"/><text x="720" y="43">PLAN CUE 5</text><text x="720" y="58">pending_approval</text>
+<line x1="115" y1="45" x2="153" y2="45" stroke="#87867F" stroke-width="1.5" marker-end="url(#a)"/>
+<line x1="285" y1="45" x2="323" y2="45" stroke="#87867F" stroke-width="1.5" marker-end="url(#a)"/>
+<line x1="445" y1="45" x2="483" y2="45" stroke="#87867F" stroke-width="1.5" marker-end="url(#a)"/>
+<line x1="605" y1="45" x2="643" y2="45" stroke="#87867F" stroke-width="1.5" marker-end="url(#a)"/>
+</g></svg>
+  </div>
+</div>
+
+<div class="panel">
+  <h3><span class="tag done">DONE</span>2단계 — 계획 / 저장 / 검증 Cue 상태 분리 <span class="small">(결함 1)</span></h3>
+  <p>화면상의 CUE가 실제 콘솔 Cue처럼 보이던 문제를 상태 모델로 분리했습니다.</p>
+  <table>
+    <tr><th>계층</th><th>추가된 계약</th></tr>
+    <tr><td>서버 payload</td><td>섹션별 <code>plan_status: draft | requires_requery | approved | stored | verified</code> · 타임라인 <code>console_stored</code>, <code>warnings[]</code></td></tr>
+    <tr><td>UI 카드</td><td><b>PLAN CUE n</b> (점선 카드 · "설계 초안/재질의 필요 · 콘솔 미저장") vs <b>CUE n</b> ("콘솔 저장 확인")</td></tr>
+    <tr><td>LIVE 배지</td><td><code>stored/verified</code> <b>그리고</b> 시퀀스 번호 일치 Executor일 때만 — 이름 유사성 매칭 없음(기존 규칙 유지)</td></tr>
+    <tr><td>헤더</td><td><code>console_stored=false</code> → "계획 단계 — 콘솔에 저장된 큐가 없습니다."</td></tr>
+  </table>
+</div>
+
+<div class="panel">
+  <h3><span class="tag done">DONE</span>3단계 — Section별 Look Arc <span class="small">(결함 3)</span></h3>
+  <p>전역 고정이던 Texture / FX / Palette를 구간 역할 기반 결정(<code>_section_texture_decision</code> / <code>_section_fx_decision</code>)으로 전환했습니다.</p>
+  <table>
+    <tr><th>구간</th><th>D</th><th>Palette 아크</th><th>Texture</th><th>FX</th></tr>
+    <tr><td>도입</td><td>D2</td><td>deep blue / warm special</td><td>긴 페이드 · 정적</td><td>없음</td></tr>
+    <tr><td>벌스</td><td>D3</td><td>blue → cyan</td><td>점진 빌드</td><td>slow pan</td></tr>
+    <tr><td>첫 후렴</td><td>D5</td><td>warm white + magenta</td><td>샤프 히트</td><td>chase + pan sweep</td></tr>
+    <tr><td>브리지</td><td>D2</td><td>cold blue</td><td>스파스 · 고립</td><td>slow tilt</td></tr>
+    <tr><td>피날레</td><td>D5</td><td>warm white + gold</td><td>서스테인 히트</td><td>chase + accent</td></tr>
+  </table>
+  <ul>
+    <li>Q5 질감의 FX 밀도는 <b>상한</b>으로 존중 — 감독이 정적을 고르면 아크가 FX를 되살리지 않음</li>
+    <li>불변식 강제: 피날레 D ≥ 후렴 D(사후 보정) · 브리지 FX ≤ 후렴 · 도입 FX 없음 · 전 구간 동일 룩이면 경고</li>
+  </ul>
+</div>
+
+<div class="panel">
+  <h3><span class="tag done">DONE</span>결함 4 — 구간 자연어 의도가 Q4보다 우선</h3>
+  <p>우선순위 체인: <b>재질의 답변 &gt; 구간 직접 자연어 의도 &gt; Q3/Q4 &gt; 장르 &gt; fallback</b></p>
+  <table>
+    <tr><th>자연어 의도</th><th>매핑 포지션</th><th>이전 결과</th></tr>
+    <tr><td>"보컬에게만 시선을 모아줘"</td><td>Vocal DSC</td><td>Home ✗</td></tr>
+    <tr><td>"무대 폭을 조금씩 넓혀줘"</td><td>Fan Out</td><td>Center ✗</td></tr>
+    <tr><td>"관객까지 에너지가 퍼지는"</td><td>Audience</td><td>Ring In ✗</td></tr>
+    <tr><td>"차갑고 비워진 느낌"</td><td>Wall</td><td>Fan Out ✗</td></tr>
+  </table>
+</div>
+
+<div class="panel">
+  <h3><span class="tag done">DONE</span>4단계 / 결함 5 — 색감 충돌 카드</h3>
+  <p>Q1 컨셉의 색 단어와 Q2 팔레트가 서로소면 합성 전에 충돌 카드를 표시합니다: <span class="kbd">팔레트 중심</span> <span class="kbd">컨셉 색 중심</span> <span class="kbd">구간 분배</span></p>
+  <ul>
+    <li><b>구간 분배</b>: 후렴/피날레만 컨셉 색, 조용한 구간은 팔레트 유지</li>
+    <li>미응답 시 팔레트 유지 + <code>warnings</code>에 명시 — 조용한 덮어쓰기 금지</li>
+  </ul>
+</div>
+
+<h2>② 검증 결과</h2>
+<table>
+  <tr><th>검증</th><th>결과</th></tr>
+  <tr><td><code>pytest server/tests/test_web_session.py</code></td><td class="ok">96 passed (신규 3)</td></tr>
+  <tr><td><code>pytest server/tests/test_position_cuesheet.py</code></td><td class="ok">14 passed</td></tr>
+  <tr><td><code>vitest</code> SongTimeline + RunbookMode / <code>vite build</code></td><td class="ok">22 passed (신규 7) · build OK</td></tr>
+  <tr><td>브라우저 스모크 (127.0.0.1:8765, 백엔드 재시작 후)</td><td class="ok">PLAN CUE 카드 · 콘솔 미저장 · 계획 단계 헤더 확인</td></tr>
+  <tr><td>CueFade 계약</td><td class="ok"><code>Store … CueFade</code> 사용 · <code>Property 'Fade'</code> 금지 어서션 통과</td></tr>
+</table>
+<div class="warn"><b>이번 작업과 무관한 사전 존재 실패</b> — 서버 스냅샷/린트류 6건(paperwork · prechk · tools registry · spatial_analysis · songcue hunks), <code>PaperworkPanel.test.tsx</code> 11건(커밋된 테스트가 컴포넌트에 없는 <code>fileUrlForPath</code>를 참조하는 drift).</div>
+
+<h2>③ 다음 단계</h2>
+<ol class="steps">
+  <li><b>결함 6 — Rig Layer 매핑</b> · 콘솔 Group readback 또는 1회 확인 카드로 Front / Back / Beam / Wash / Audience 역할 수립. 미확인 동안 "단일 레이어 계획 — 분리 연출 미검증" 문구 유지. 매핑 확보 시 "보컬만 비춰줘 / 배경 암전 / 후면 빔만" 정확 구현 가능.</li>
+  <li><b>실기 E2E</b> · 새 시퀀스 번호로 승인 → 저장 → readback → Executor LIVE 연동을 실제 콘솔에서 실측. <b>Sequence 150은 성공 결과로 간주 금지</b> — 먼저 상태 확인·정리 후 진행.</li>
+  <li><b>재질의 UX 고도화</b> · 현재 고정 4종 선택지를 구간 무드 파생 맞춤 선택지로 교체(핸드오프 예시: "벌스 · 00:22 → [Center → Fan Out] [Center → Audience] …"). 미응답 요구를 세션에 pending으로 보존해 다음 턴에 이어서 질의.</li>
+  <li><b>미확정 인터뷰 답변 처리</b> · Q_n 자동 초안(미확정)으로 생긴 재질의를 부분 재인터뷰(<code>Q_n 다시</code>) 경로로 라우팅 — 현재는 목록에 표기만 하고 병합하지 못함.</li>
+</ol>
+
+<h2>④ 추가 제안</h2>
+<ul>
+  <li><span class="tag idea">IDEA</span><b>장르별 아크 프로파일</b> — 아크 테이블(색/FX/D)을 발라드 / EDM / 메탈 프로파일로 분리해 <code>MusicProfile.genre</code>와 연결.</li>
+  <li><span class="tag idea">IDEA</span><b>재합성 diff 표시</b> — 타임라인 replace 이벤트에 변경 구간 하이라이트를 실어 감독이 "무엇이 바뀌었는지" 즉시 확인.</li>
+  <li><span class="tag idea">IDEA</span><b>warnings → lint 승격</b> — 동일 룩 경고 등을 <code>composition.lint_findings</code>로 통합해 승인 카드에서 한 곳에 노출.</li>
+  <li><span class="tag idea">IDEA</span><b>시퀀스 선점 확인</b> — 저장 직전 <code>query_state</code>로 대상 Sequence에 기존 큐가 있는지 확인하고, 있으면 덮어쓰기 확인 카드를 먼저 표시.</li>
+</ul>
+
+<h2>⑤ 안전 규칙 (변경 없음 · 재확인)</h2>
+<ul>
+  <li>다음 상태에서 <code>run_commands</code> 절대 금지: unresolved 존재 · bundle 없음 · 승인 대기 · 팔레트 충돌 미해결 · 레이어 매핑 필수인데 미확인</li>
+  <li>Cue Fade 문법: <code>Store Sequence &lt;S&gt; Cue &lt;N&gt; '&lt;Name&gt;' CueFade &lt;sec&gt;</code>만 허용 · <code>Set Cue … Property 'Fade'</code> 금지</li>
+</ul>
+
+<p class="small" style="margin-top:40px">수정 파일: <code>server/web/session.py</code> · <code>server/tests/test_web_session.py</code> · <code>ui/src/protocol.ts</code> · <code>ui/src/components/SongTimeline.tsx</code> · <code>ui/src/components/SongTimeline.test.tsx</code> · <code>ui/src/styles.css</code></p>
+</main>
+</body>
+</html>
