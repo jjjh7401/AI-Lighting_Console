@@ -38,6 +38,7 @@ execution surface of its own — it never imports the OSC send surface.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 
 from server.orchestrator.ports import PropertyQueryPort, StateQueryPort
 from server.orchestrator.tools import rig_object
@@ -318,6 +319,35 @@ def recent_execution_history(audit: AuditLog, *, limit: int = DEFAULT_HISTORY_LI
     return entries
 
 
+def order_by_show_plan(entries: list[dict], planned_sequence_nos: Sequence[int]) -> list[dict]:
+    """Arrange executor rows in the operator's PLANNED show order (진행 순서
+    보드, user direction 2026-08-15).
+
+    Executors whose assigned sequence appears in ``planned_sequence_nos``
+    come FIRST, in plan order, each stamped with its 1-based
+    ``planned_position``; everything else follows in ascending executor
+    number. Purely a rearrangement — no row is dropped, no claim is added
+    beyond the position stamp, and an empty plan leaves the ascending order
+    untouched.
+    """
+    plan_rank = {no: index for index, no in enumerate(planned_sequence_nos)}
+    planned: list[tuple[int, dict]] = []
+    rest: list[dict] = []
+    for entry in entries:
+        rank = plan_rank.get(entry.get("sequence_no"))
+        if rank is None:
+            rest.append(entry)
+        else:
+            planned.append((rank, entry))
+    planned.sort(key=lambda pair: pair[0])
+    rest.sort(key=lambda entry: entry.get("executor_no") or 0)
+    ordered = []
+    for position, (_rank, entry) in enumerate(planned, start=1):
+        ordered.append({**entry, "planned_position": position})
+    ordered.extend(rest)
+    return ordered
+
+
 def cue_monitor_snapshot(
     state_port: StateQueryPort,
     property_port: PropertyQueryPort,
@@ -325,6 +355,7 @@ def cue_monitor_snapshot(
     console_nos: list[int],
     *,
     history_limit: int = DEFAULT_HISTORY_LIMIT,
+    planned_sequence_nos: Sequence[int] = (),
 ) -> dict:
     """The full ``cue_monitor`` server event for one refresh (contract items 1+2).
 
@@ -332,9 +363,13 @@ def cue_monitor_snapshot(
     each executor's ``last_app_action`` and the flat history list are
     attributed from the exact same read — never two independent audit-log
     passes that could observe different tails under concurrent writes.
+
+    ``planned_sequence_nos`` (진행 순서 보드) rearranges the executor rows in
+    the operator's planned show order — see ``order_by_show_plan``.
     """
     history = recent_execution_history(audit, limit=history_limit)
+    executors = build_cue_progress(state_port, property_port, console_nos, history=history)
     return cue_monitor_event(
-        executors=build_cue_progress(state_port, property_port, console_nos, history=history),
+        executors=order_by_show_plan(executors, planned_sequence_nos),
         history=history,
     )

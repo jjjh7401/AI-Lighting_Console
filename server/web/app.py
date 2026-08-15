@@ -584,11 +584,24 @@ def create_app(deps: WebDeps) -> FastAPI:
                     def _cue_monitor() -> None:
                         sections = build_dash_catalog(deps.gate.state_port)
                         console_nos = resolved_executor_nos(sections)
+                        # 진행 순서 보드 (user direction, 2026-08-15): the
+                        # director timeline IS the operator's planned order, so
+                        # the executor bound to its sequence leads the board;
+                        # everything else follows by executor number. No
+                        # timeline -> plain ascending order, unchanged.
+                        latest = deps.song_timeline_store.latest
+                        planned = (
+                            [latest["sequence_number"]]
+                            if isinstance(latest, dict)
+                            and isinstance(latest.get("sequence_number"), int)
+                            else []
+                        )
                         event = cue_monitor_snapshot(
                             deps.gate.state_port,
                             deps.gate.state_port,
                             deps.audit,
                             console_nos,
+                            planned_sequence_nos=planned,
                         )
                         # T-H5 — the SAME cue lists the UI's cue sheet just
                         # rendered become the Goto membership map: a jump to a

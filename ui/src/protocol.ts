@@ -249,6 +249,10 @@ export interface CueExecutorEntry {
   cues: CueItem[];
   current_cue: CueCurrentCue | null;
   last_app_action?: CueLastAppAction | null;
+  /** 1-based slot in the operator's PLANNED show order (진행 순서 보드) —
+   *  the server orders rows by the director timeline's sequence and stamps
+   *  the planned ones; absent/null for rows the plan does not name. */
+  planned_position?: number | null;
 }
 
 /** One recent-execution row (audit-log derived, oldest-first). Attribution

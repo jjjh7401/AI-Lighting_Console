@@ -352,6 +352,24 @@ export function isCueRowCurrent(match: CurrentCueMatch | null, cue: CueItem): bo
   return match.by === "cue_no" ? cue.cue_no === match.index : cue.no === match.index;
 }
 
+/**
+ * 진행 순서 보드 (user direction, 2026-08-15) — the tile's progress line:
+ * "큐 <current>/<total>" where total counts the PLAYABLE cues (rows the
+ * responder numbered with cue_no >= 1 — OffCue/CueZero are console plumbing,
+ * not show progress), and current re-uses `currentCueMatch`'s index. `null`
+ * when there is nothing honest to say: no playable cues, or no confirmed
+ * current cue (never a guessed "0/N").
+ */
+export function cueProgressLabel(entry: CueExecutorEntry): string | null {
+  const total = entry.cues.filter(
+    (cue) => typeof cue.cue_no === "number" && cue.cue_no >= 1,
+  ).length;
+  if (total === 0) return null;
+  const index = currentCueIndexFromValue(entry.current_cue?.value);
+  if (index === null || index < 1) return null;
+  return `큐 ${index}/${total}`;
+}
+
 export function ExecutorStatusChip({ entry }: { entry: CueExecutorEntry }) {
   const grade = lastActionGrade(entry);
   const action = entry.last_app_action;
@@ -465,9 +483,11 @@ export function ExecutorTile({
 }) {
   const handleToggle = () => onToggleOpen?.(entry.executor_no);
   const view = currentCueRowView(entry);
+  const progress = cueProgressLabel(entry);
+  const planned = entry.planned_position ?? null;
   return (
     <div
-      className={`cue-tile${isOpen ? " cue-tile-open" : ""}`}
+      className={`cue-tile${isOpen ? " cue-tile-open" : ""}${planned !== null ? " cue-tile-planned" : ""}`}
       data-executor-no={entry.executor_no}
       role="button"
       tabIndex={0}
@@ -483,11 +503,17 @@ export function ExecutorTile({
     >
       <div className="cue-tile-topline">
         <span className="cue-tile-no">{entry.executor_no}</span>
+        {planned !== null ? (
+          <span className="cue-tile-planned-badge" aria-label={`진행 순서 ${planned}번째`}>
+            진행 {planned}
+          </span>
+        ) : null}
         <ExecutorStatusChip entry={entry} />
       </div>
       <div className="cue-tile-sequence">{sequenceLabel(entry)}</div>
       <div className="cue-tile-current-cue" title={view.reason ?? undefined}>
         {view.label}
+        {progress !== null ? <span className="cue-tile-progress">{progress}</span> : null}
       </div>
       <div
         className="cue-tile-footer"

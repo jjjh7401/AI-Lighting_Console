@@ -24,10 +24,11 @@ from server.web.cue_monitor import (
     build_cue_progress,
     build_executor_cue_progress,
     cue_monitor_snapshot,
+    order_by_show_plan,
     parse_current_cue_index,
     recent_execution_history,
 )
-from server.web.messages import PROTOCOL_VERSION
+from server.web.messages import PROTOCOL_VERSION, cue_executor_entry
 
 from .test_runner_self_correction import ScriptedProvider
 from .test_safety_gate import FakeConsole
@@ -143,6 +144,7 @@ class TestBuildExecutorCueProgress:
             "cues": [],
             "current_cue": None,
             "last_app_action": None,
+            "planned_position": None,
         }
 
     def test_unassigned_when_the_executor_carries_no_sequence(self):
@@ -503,3 +505,38 @@ class TestCueMonitorRequestDispatch:
                 "target_no": 101,
             }
         ]
+
+
+class TestShowPlanOrdering:
+    """진행 순서 보드 (user direction 2026-08-15) — the executor rows follow the
+    operator's PLANNED order (the director timeline's sequence first), each
+    planned row stamped with its 1-based position; the rest stay ascending."""
+
+    @staticmethod
+    def _entry(executor_no: int, sequence_no: int | None) -> dict:
+        return cue_executor_entry(
+            executor_no=executor_no,
+            status="ok" if sequence_no is not None else "unassigned",
+            sequence_no=sequence_no,
+        )
+
+    def test_planned_sequences_lead_in_plan_order_with_positions(self):
+        entries = [
+            self._entry(101, 210),
+            self._entry(102, 17),
+            self._entry(103, 100),
+        ]
+        ordered = order_by_show_plan(entries, [100, 210])
+        assert [e["executor_no"] for e in ordered] == [103, 101, 102]
+        assert [e.get("planned_position") for e in ordered] == [1, 2, None]
+
+    def test_an_empty_plan_changes_nothing(self):
+        entries = [self._entry(103, 100), self._entry(101, 210)]
+        ordered = order_by_show_plan(entries, [])
+        assert [e["executor_no"] for e in ordered] == [101, 103]
+        assert all(e.get("planned_position") is None for e in ordered)
+
+    def test_no_row_is_ever_dropped(self):
+        entries = [self._entry(101, 210), self._entry(102, None)]
+        ordered = order_by_show_plan(entries, [999])
+        assert sorted(e["executor_no"] for e in ordered) == [101, 102]

@@ -29,6 +29,7 @@ import {
   isRecentAppAction,
   lastActionGrade,
   sequenceLabel,
+  cueProgressLabel,
 } from "./CueMonitor";
 
 function childArray(element: ReactElement): unknown[] {
@@ -1049,5 +1050,36 @@ describe("CueMonitor — panel-level banner rendering (T-H2)", () => {
       (child) => (child as ReactElement)?.props?.entry !== undefined,
     ) as ReactElement[];
     expect(tiles.map((tile) => tile.props.entry.executor_no)).toEqual([401, 402]);
+  });
+});
+
+describe("진행 순서 보드 (2026-08-15) — 진행도와 계획 배지", () => {
+  const baseEntry = {
+    executor_no: 101,
+    status: "ok",
+    sequence_no: 210,
+    sequence_name: "Sequence 210",
+    cues: [
+      { no: 1, name: "OffCue" },
+      { no: 2, name: "CueZero", cue_no: 0 },
+      { no: 3, name: "Intro", cue_no: 1 },
+      { no: 4, name: "Chorus", cue_no: 2 },
+      { no: 5, name: "Outro", cue_no: 3 },
+    ],
+    current_cue: { status: "ok", value: "2 — Chorus", property: "CurrentCue", tried: [] },
+  } as unknown as CueExecutorEntry;
+
+  it("cueProgressLabel counts PLAYABLE cues only (OffCue/CueZero are plumbing)", () => {
+    expect(cueProgressLabel(baseEntry)).toBe("큐 2/3");
+  });
+
+  it("no confirmed current cue -> no guessed progress", () => {
+    expect(
+      cueProgressLabel({ ...baseEntry, current_cue: { status: "unavailable", tried: [] } }),
+    ).toBeNull();
+  });
+
+  it("no playable cues -> no progress line at all", () => {
+    expect(cueProgressLabel({ ...baseEntry, cues: [{ no: 1, name: "OffCue" }] })).toBeNull();
   });
 });
