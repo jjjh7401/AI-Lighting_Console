@@ -2412,20 +2412,36 @@ class TestSongDesignInterviewSession:
         commands = stores[0].arguments["commands"]
         assert not [command for command in commands if command.startswith("Group ")]
 
-    def test_occupied_target_sequence_refuses_and_keeps_the_plan(self, tmp_path):
-        # 2026-08-16 user finding: Sequence 110 already held cues on the real
-        # console, the bare Store came back "Not allowed", and the plan had
-        # already been discarded. The pre-check must refuse BEFORE any store
-        # and keep the plan editable.
+    def test_occupied_sequence_opens_a_recovery_card_and_stores_on_the_pick(self, tmp_path):
+        # 2026-08-16 사용자 방향: an occupied Sequence 110 is not a dead end —
+        # the recovery card proposes verified-empty slots and a pick stores
+        # IMMEDIATELY on the chosen one.
         session, _sent, calls = self._pending_plan_session(tmp_path)
         occupied_calls: list[ToolCall] = []
         session._registry = self._registry(occupied_calls, sequence_exists_before_store=True)
-        session._question_channel = self._Channel(["승인"])
+        session._question_channel = self._Channel(["승인", "시퀀스 120"])
 
         event = session.run_instruction("큐 4 삭제")
 
-        assert "이미 콘솔 데이터가 있어 저장하지 않았습니다" in event["text"]
-        assert "시퀀스 320으로 변경" in event["text"]
+        stores = [call for call in occupied_calls if call.name == "run_commands"]
+        assert len(stores) == 1
+        commands = stores[0].arguments["commands"]
+        assert any(command.startswith("Store Sequence 120 Cue 1") for command in commands)
+        assert not any("Sequence 110" in command for command in commands)
+        # The recovery card was the second question, after the approval card.
+        # Stored on the picked slot; the honest readback verdict follows.
+        assert "시퀀스 120에 리뷰 번들 1건을 원자 실행 요청" in event["text"]
+
+    def test_occupied_sequence_with_no_answer_keeps_the_plan(self, tmp_path):
+        session, _sent, calls = self._pending_plan_session(tmp_path)
+        occupied_calls: list[ToolCall] = []
+        session._registry = self._registry(occupied_calls, sequence_exists_before_store=True)
+        session._question_channel = self._Channel(["승인"])  # recovery card unanswered
+
+        event = session.run_instruction("큐 4 삭제")
+
+        assert "이미 콘솔 데이터가 있어" in event["text"]
+        assert "계획은 그대로 보존" in event["text"]
         assert [call for call in occupied_calls if call.name == "run_commands"] == []
         assert [call for call in calls if call.name == "run_commands"] == []
         assert session._pending_song_plan is not None
@@ -2442,15 +2458,15 @@ class TestSongDesignInterviewSession:
         assert timelines[-1]["sequence_number"] == 320
         assert session._pending_song_plan is not None
 
-    def test_failed_store_keeps_the_plan_and_clears_the_programmer(self, tmp_path):
+    def test_failed_store_cleans_up_asks_recovery_and_keeps_the_plan(self, tmp_path):
         session, sent, calls = self._pending_plan_session(tmp_path)
         failing_calls: list[ToolCall] = []
         session._registry = self._registry(failing_calls, store_fails=True)
-        session._question_channel = self._Channel(["승인"])
+        session._question_channel = self._Channel(["승인"])  # recovery card unanswered
 
         event = session.run_instruction("큐 4 삭제")
 
-        assert "저장이 콘솔에서 거부되어 중단했습니다" in event["text"]
+        assert "거부되었습니다" in event["text"]
         assert "Not allowed" in event["text"]
         assert "계획은 그대로 보존" in event["text"]
         runs = [call for call in failing_calls if call.name == "run_commands"]

@@ -4145,6 +4145,76 @@ class ChatSession:
             return failure
         return self._song_finalize(state, plan, composition)
 
+    def _song_sequence_occupied(self, sequence_no: int) -> bool:
+        """True when the console already holds ANY data at this sequence slot
+        — the same query_state posture the setlist pre-check uses."""
+        probe = self._registry.dispatch(
+            ToolCall(
+                id=f"song-design-slot-check-{sequence_no}",
+                name="query_state",
+                arguments={"path": f"{self._rig_paths['sequences']}/{sequence_no}"},
+            )
+        )
+        try:
+            payload = json.loads(probe.result.content)
+        except (json.JSONDecodeError, TypeError):
+            payload = None
+        return _setlist_node_exists(payload)
+
+    def _song_recover_sequence(
+        self, state: _SongDesignState, *, problem: str
+    ) -> tuple[UnifiedSongLightingPlan, SongCueCompositionResult] | InstructionResult:
+        """The interactive recovery card (2026-08-16 사용자 방향): explain the
+        problem, PROPOSE verified-empty sequence slots, and let the director
+        pick one on the spot. A pick retargets the pending plan and the caller
+        stores immediately; cancel/no-answer keeps the plan editable."""
+        free_slots: list[int] = []
+        candidate = state.sequence_no
+        for _probe in range(12):
+            candidate += 10
+            if not self._song_sequence_occupied(candidate):
+                free_slots.append(candidate)
+            if len(free_slots) == 3:
+                break
+        options = tuple(QuestionOption(label=f"시퀀스 {slot}") for slot in free_slots) + (
+            QuestionOption(label="취소 (계획 보존)"),
+        )
+        answer = self._ask_one(
+            f"{problem}\n"
+            + (
+                "비어 있는 시퀀스를 콘솔에서 확인했습니다 — 어디에 저장할까요? "
+                "(선택하면 즉시 그 시퀀스에 저장합니다. 다른 번호는 직접 입력해도 됩니다.)"
+                if free_slots
+                else "비어 있는 시퀀스를 찾지 못했습니다 — 저장할 번호를 직접 입력해 주세요."
+            ),
+            options=options,
+            why=(
+                "문제를 만나면 중단 대신 해결 방법을 함께 정합니다. "
+                "기존 시퀀스는 절대 덮어쓰지 않습니다."
+            ),
+        )
+        number = re.search(r"\d+", answer or "")
+        if (
+            answer is None
+            or _SONG_REQUERY_CANCEL.match(answer) is not None
+            or "취소" in answer
+            or number is None
+        ):
+            self._pending_song_plan = state
+            return InstructionResult(
+                status="ok",
+                text=(
+                    f"{problem} 저장하지 않았고 계획은 그대로 보존했습니다. "
+                    "준비되면 '시퀀스 N으로 변경'이라고 답한 뒤 다시 승인해 주세요."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        state.sequence_no = int(number.group(0))
+        return self._song_compose(state)
+
     def _song_finalize(
         self,
         state: _SongDesignState,
@@ -4211,97 +4281,99 @@ class ChatSession:
                 model_calls=0,
                 duration_seconds=0.0,
             )
-        # 2026-08-16 사용자 발견: an OCCUPIED target sequence makes the console
-        # refuse the bare Store with "Not allowed" — the bundle half-executes
-        # and the plan was already discarded. Pre-check the slot (the same
-        # posture the setlist mode uses) and KEEP the plan on any failure so
-        # "시퀀스 N으로 변경" + 재승인 can recover without redesigning.
-        slot_probe = self._registry.dispatch(
-            ToolCall(
-                id="song-design-slot-check",
-                name="query_state",
-                arguments={"path": f"{self._rig_paths['sequences']}/{sequence_no}"},
+        # 2026-08-16 사용자 방향: a problem is a QUESTION, not a dead end.
+        # An occupied target ("Not allowed") or a console-refused store opens
+        # a recovery card that PROPOSES verified-empty sequences — picking one
+        # stores immediately; declining keeps the plan editable.
+        executed = None
+        approved_plan = plan
+        approved_composition = composition
+        for _attempt in range(3):
+            sequence_no = state.sequence_no
+            if self._song_sequence_occupied(sequence_no):
+                recovered = self._song_recover_sequence(
+                    state,
+                    problem=(
+                        f"시퀀스 {sequence_no}에 이미 콘솔 데이터가 있어 그대로 저장하면 "
+                        "콘솔이 'Not allowed'로 거부합니다."
+                    ),
+                )
+                if isinstance(recovered, InstructionResult):
+                    return recovered
+                plan, composition = recovered
+                continue
+            self._pending_song_plan = None
+            approved_plan = replace(plan, approval=ApprovalState.approved(reviewer="director"))
+            approved_composition = compose_song_cue_bundle(approved_plan)
+            self._song_send_timeline(
+                state, approved_plan, approved_composition, lifecycle="approved"
             )
-        )
-        try:
-            slot_payload = json.loads(slot_probe.result.content)
-        except (json.JSONDecodeError, TypeError):
-            slot_payload = None
-        if _setlist_node_exists(slot_payload):
-            self._pending_song_plan = state
-            return InstructionResult(
-                status="ok",
-                text=(
-                    f"시퀀스 {sequence_no}에 이미 콘솔 데이터가 있어 저장하지 않았습니다 — "
-                    "기존 큐 위에 덮어쓰는 Store는 콘솔이 'Not allowed'로 거부합니다. "
-                    f"계획은 그대로 보존했습니다. '시퀀스 320으로 변경'처럼 빈 시퀀스 "
-                    "번호를 지정한 뒤 다시 승인해 주세요."
-                ),
-                command_outcomes=(),
-                retries_used=0,
-                model_calls=0,
-                duration_seconds=0.0,
-            )
-        self._pending_song_plan = None
-        approved_plan = replace(plan, approval=ApprovalState.approved(reviewer="director"))
-        approved_composition = compose_song_cue_bundle(approved_plan)
-        self._song_send_timeline(state, approved_plan, approved_composition, lifecycle="approved")
-        try:
-            commands = self._reviewed_song_commands(
-                approved_composition,
-                sequence_no=sequence_no,
-                preset_start=state.preset_start,
-                fids=state.fids,
-                timing=state.timing,
-                layer_mapping=state.layer_mapping,
-            )
-        except SpatialPointingError as error:
-            self._pending_song_plan = state
-            return self._pointing_refusal(f"리뷰 번들을 실행 명령으로 만들 수 없습니다: {error}")
-        executed = self._registry.dispatch(
-            ToolCall(
-                id="song-design-reviewed-bundle",
-                name="run_commands",
-                arguments={"commands": list(commands)},
-            )
-        )
-        store_failures = [
-            outcome
-            for outcome in executed.command_outcomes
-            if outcome.status in ("failed", "blocked", "rejected")
-        ]
-        if executed.result.is_error or store_failures:
-            # Keep the plan editable, clear the half-filled programmer (the
-            # chain stopped before its own ClearAll), and stay honest about
-            # what the console said.
-            self._pending_song_plan = state
-            self._registry.dispatch(
+            try:
+                commands = self._reviewed_song_commands(
+                    approved_composition,
+                    sequence_no=sequence_no,
+                    preset_start=state.preset_start,
+                    fids=state.fids,
+                    timing=state.timing,
+                    layer_mapping=state.layer_mapping,
+                )
+            except SpatialPointingError as error:
+                self._pending_song_plan = state
+                return self._pointing_refusal(
+                    f"리뷰 번들을 실행 명령으로 만들 수 없습니다: {error}"
+                )
+            executed = self._registry.dispatch(
                 ToolCall(
-                    id="song-design-cleanup",
+                    id="song-design-reviewed-bundle",
                     name="run_commands",
-                    arguments={"commands": ["ClearAll"]},
+                    arguments={"commands": list(commands)},
                 )
             )
-            self._song_send_timeline(state, plan, composition, lifecycle="pending_approval")
-            first_failure = store_failures[0] if store_failures else None
-            detail = (
-                f"{first_failure.command} → {first_failure.detail or first_failure.status}"
-                if first_failure is not None
-                else str(executed.result.content)
+            store_failures = [
+                outcome
+                for outcome in executed.command_outcomes
+                if outcome.status in ("failed", "blocked", "rejected")
+            ]
+            if executed.result.is_error or store_failures:
+                # Keep the plan editable, clear the half-filled programmer
+                # (the chain stopped before its own ClearAll), then ask HOW
+                # to proceed instead of just reporting the refusal.
+                self._pending_song_plan = state
+                self._registry.dispatch(
+                    ToolCall(
+                        id="song-design-cleanup",
+                        name="run_commands",
+                        arguments={"commands": ["ClearAll"]},
+                    )
+                )
+                self._song_send_timeline(state, plan, composition, lifecycle="pending_approval")
+                first_failure = store_failures[0] if store_failures else None
+                detail = (
+                    f"{first_failure.command} → {first_failure.detail or first_failure.status}"
+                    if first_failure is not None
+                    else str(executed.result.content)
+                )
+                recovered = self._song_recover_sequence(
+                    state,
+                    problem=(
+                        f"시퀀스 {sequence_no} 저장이 콘솔에서 거부되었습니다({detail}). "
+                        "프로그래머는 ClearAll로 정리했습니다."
+                    ),
+                )
+                if isinstance(recovered, InstructionResult):
+                    return replace(recovered, command_outcomes=tuple(executed.command_outcomes))
+                plan, composition = recovered
+                executed = None
+                continue
+            break
+        if executed is None:
+            self._pending_song_plan = state
+            return self._pointing_refusal(
+                "세 차례 시도에도 저장할 수 있는 시퀀스를 확정하지 못해 저장하지 "
+                "않았습니다. 계획은 그대로 보존했습니다 — '시퀀스 N으로 변경' 후 "
+                "다시 승인해 주세요."
             )
-            return InstructionResult(
-                status="ok",
-                text=(
-                    f"시퀀스 {sequence_no} 저장이 콘솔에서 거부되어 중단했습니다"
-                    f"({detail}). 프로그래머는 ClearAll로 정리했고 계획은 그대로 "
-                    "보존했습니다 — 'Not allowed'는 보통 대상 시퀀스/큐가 이미 존재할 "
-                    "때입니다. '시퀀스 320으로 변경' 후 다시 승인해 주세요."
-                ),
-                command_outcomes=tuple(executed.command_outcomes),
-                retries_used=0,
-                model_calls=0,
-                duration_seconds=0.0,
-            )
+        sequence_no = state.sequence_no
         timed_cues = (
             _song_timed_cue_expectations(approved_composition.bundle, state.timing)
             if approved_composition.bundle is not None
