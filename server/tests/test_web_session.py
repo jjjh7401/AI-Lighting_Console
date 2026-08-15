@@ -2893,6 +2893,146 @@ class TestSongDesignInterviewSession:
         assert calls == []
 
 
+class TestRehearsalCueEdit:
+    """Priority 5 (handoff 2026-08-15): '지금 이 큐' edits the cue the console
+    is PLAYING (CurrentCue off the sequence handle), always behind a fresh
+    approval card because the output is live."""
+
+    class _Channel:
+        def __init__(self, answers):
+            self.answers = list(answers)
+            self.asked = []
+
+        def ask(self, request, **_kwargs):
+            self.asked.append(request)
+            return self.answers.pop(0) if self.answers else UNANSWERED
+
+    class _CuePort:
+        def __init__(self, value, *, ok=True, error=None):
+            self.value = value
+            self.ok = ok
+            self.error = error
+            self.queries = []
+
+        def query_property(self, path, name):
+            self.queries.append((path, name))
+            if not self.ok:
+                return {"ok": False, "error": self.error or "unreachable"}
+            return {"ok": True, "value": self.value}
+
+    def _registry(self, calls):
+        fixtures = [
+            {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
+            {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
+        ]
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                outcomes = tuple(
+                    CommandOutcome(command=command, status="executed_ok")
+                    for command in call.arguments.get("commands", [])
+                )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    outcomes,
+                )
+
+        return Registry()
+
+    def _stored_timeline(self, *, stored=True):
+        return {
+            "song_title": "밝은 팝 무대",
+            "sequence_number": 210,
+            "lifecycle": "verified" if stored else "pending_approval",
+            "console_stored": stored,
+            "preset_start": 21,
+            "sections": [
+                {"index": 3, "label": "후렴", "cue_number": 3, "position": "Audience"},
+                {"index": 5, "label": "피날레", "cue_number": 5, "position": "Audience"},
+            ],
+            "readback": {"verified": True, "message": "ok"},
+        }
+
+    def _rehearsal_session(self, tmp_path, *, current_cue, stored=True, answers=("승인",)):
+        from server.web.session import SongTimelineStore
+
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        store = SongTimelineStore()
+        store.latest = self._stored_timeline(stored=stored)
+        session._timeline_store = store
+        port = self._CuePort(current_cue)
+        session._current_cue_port = port
+        session._question_channel = self._Channel(list(answers))
+        return session, calls, sent, port
+
+    def test_edits_the_playing_cue_after_explicit_approval(self, tmp_path):
+        session, calls, sent, port = self._rehearsal_session(tmp_path, current_cue="Sequence 210.3")
+
+        event = session.run_instruction("지금 이 큐를 무대 중앙으로 바꿔줘")
+
+        assert "지금 나가는 큐 3의 포지션을 Center" in event["text"]
+        assert port.queries == [("DataPool/Sequences/210", "CurrentCue")]
+        stores = [call for call in calls if call.name == "run_commands"]
+        assert len(stores) == 1
+        assert "Store Sequence 210 Cue 3 /Merge" in stores[0].arguments["commands"]
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["sections"][0]["position"] == "Center"
+        assert "리허설" in timelines[-1]["readback"]["message"]
+
+    def test_decline_writes_nothing(self, tmp_path):
+        session, calls, _sent, _port = self._rehearsal_session(
+            tmp_path, current_cue="Sequence 210.3", answers=("취소",)
+        )
+
+        event = session.run_instruction("지금 나가는 큐를 객석으로")
+
+        assert "승인 전이므로 콘솔에 쓰지 않았습니다" in event["text"]
+        assert [call for call in calls if call.name == "run_commands"] == []
+
+    def test_a_sequence_at_rest_or_blank_value_refuses(self, tmp_path):
+        session, calls, _sent, _port = self._rehearsal_session(tmp_path, current_cue="")
+
+        event = session.run_instruction("현재 큐를 무대 중앙으로")
+
+        assert "확인할 수 없습니다" in event["text"]
+        assert [call for call in calls if call.name == "run_commands"] == []
+
+    def test_a_plan_only_timeline_refuses(self, tmp_path):
+        session, calls, _sent, _port = self._rehearsal_session(
+            tmp_path, current_cue="Sequence 210.3", stored=False
+        )
+
+        event = session.run_instruction("지금 이 큐를 중앙으로")
+
+        assert "콘솔에 저장된 타임라인만" in event["text"]
+        assert [call for call in calls if call.name == "run_commands"] == []
+
+    def test_a_playing_cue_missing_from_the_timeline_refuses(self, tmp_path):
+        session, calls, _sent, _port = self._rehearsal_session(
+            tmp_path, current_cue="Sequence 210.9"
+        )
+
+        event = session.run_instruction("지금 이 큐를 중앙으로")
+
+        assert "큐 9가 화면 타임라인에 없습니다" in event["text"]
+        assert "보유 큐: 3, 5" in event["text"]
+        assert [call for call in calls if call.name == "run_commands"] == []
+
+
 class TestSetlistMode:
     """Priority 4 (handoff 2026-08-15): library songs → setlist sequences
     (210, 220, …) + page-1 executors (101~), copy-then-assign, one approval,

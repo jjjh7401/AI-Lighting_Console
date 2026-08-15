@@ -97,6 +97,7 @@ from server.orchestrator.tools import (
     DeployPipelinePort,
     build_toolset,
 )
+from server.prechk.query import read_properties
 from server.safety.approval import ApprovalRequest
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate, ScreenDecision
@@ -126,6 +127,7 @@ from server.spatial.vocabulary import (
     parse_ring_layout,
 )
 from server.web.approval_bridge import ApprovalChannel
+from server.web.cue_monitor import parse_current_cue_index
 from server.web.korean_errors import classify_exception
 from server.web.measure import RoundTripRecorder
 from server.web.messages import (
@@ -862,6 +864,10 @@ _PLAN_EDIT_TIME_MOVE = re.compile(
     r"(?P<time>\d+:\d{2}(?:\.\d{1,3})?|\d+\s*분(?:\s*\d+\s*초)?|\d+(?:\.\d+)?\s*초)\s*"
     r"(?:지점)?\s*(?:로|으로|에)\s*(?:이동|옮|시작)"
 )
+
+# 리허설 편집 (handoff 2026-08-15 priority 5): "지금 이 큐"/"현재 큐" names the
+# cue the console is PLAYING right now — no cue number in the instruction.
+_REHEARSAL_EDIT_REQUEST = re.compile(r"(?:지금|현재)\s*(?:이|나가는|재생\s*중인)?\s*큐")
 
 # 셋리스트 모드 (handoff 2026-08-15 priority 4): allocate the library's songs
 # to consecutive setlist sequences (210, 220, …) and page-1 executors (101~).
@@ -1820,6 +1826,10 @@ class ChatSession:
             review_channel.bind(self._notify_review, session_key=self._session_key)
         if question_channel is not None:
             question_channel.bind(self._notify_question, session_key=self._session_key)
+        # 리허설 편집: the live CurrentCue read rides the gate's own state
+        # port (it also implements query_property — the same adoption
+        # build_toolset performs). Tests stub this attribute directly.
+        self._current_cue_port = gate.state_port
         registry = build_toolset(
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
@@ -3604,11 +3614,108 @@ class ChatSession:
             return self._pointing_refusal(
                 f"감독 타임라인에 큐 {cue_no}가 없습니다. (보유 큐: {known or '없음'})"
             )
+        return self._merge_timeline_cue_position(timeline, sections, slot, cue_no, target)
+
+    def _rehearsal_cue_edit(self, text: str) -> InstructionResult | None:
+        """리허설 편집 (priority 5): "지금 이 큐를 무대 중앙으로" — no cue
+        number; the target cue is read off the console's live playback via
+        the SEQUENCE handle's ``CurrentCue`` property (the T-H3 live-verified
+        path cue_monitor uses — never the executor handle, never ``CueNo``).
+        Because the cue may be ON STAGE right now, the merge NEVER runs
+        without a fresh explicit approval card (라이브 중 승인 필수)."""
+        if _REHEARSAL_EDIT_REQUEST.search(text) is None:
+            return None
+        target = _timeline_edit_target_position(text)
+        if target is None:
+            return None
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if not isinstance(timeline, dict):
+            return self._pointing_refusal(
+                "수정할 감독 타임라인이 없습니다. 곡 설계를 완료하거나 "
+                "라이브러리에서 타임라인을 먼저 불러와 주세요."
+            )
         sequence_no = timeline.get("sequence_number")
         if not isinstance(sequence_no, int):
             return self._pointing_refusal(
                 "타임라인의 시퀀스 번호를 확인할 수 없어 수정하지 않았습니다."
             )
+        if not timeline.get("console_stored"):
+            return self._pointing_refusal(
+                "리허설 편집은 콘솔에 저장된 타임라인만 대상입니다. 승인 전 계획은 "
+                "'큐 N …' 형태로 수정해 주세요."
+            )
+        sequence_path = f"{self._rig_paths['sequences']}/{sequence_no}"
+        read = read_properties(self._current_cue_port, sequence_path, ("CurrentCue",))["CurrentCue"]
+        if not read.ok:
+            return self._pointing_refusal(
+                f"현재 큐를 읽지 못했습니다({read.error}). 큐 번호를 지정해 "
+                "'타임라인 큐 N …'으로 수정해 주세요."
+            )
+        cue_no = parse_current_cue_index(str(read.value or ""))
+        if cue_no is None:
+            return self._pointing_refusal(
+                f"시퀀스 {sequence_no}의 CurrentCue 값({read.value!r})에서 재생 중인 "
+                "큐를 확인할 수 없습니다 — 시퀀스가 재생 중인지 확인해 주세요."
+            )
+        sections = timeline.get("sections")
+        sections = sections if isinstance(sections, list) else []
+        slot = next(
+            (
+                index
+                for index, section in enumerate(sections)
+                if isinstance(section, dict) and section.get("cue_number") == cue_no
+            ),
+            None,
+        )
+        if slot is None:
+            known = ", ".join(
+                str(section.get("cue_number")) for section in sections if isinstance(section, dict)
+            )
+            return self._pointing_refusal(
+                f"지금 나가는 큐 {cue_no}가 화면 타임라인에 없습니다. (보유 큐: {known or '없음'})"
+            )
+        label = str(sections[slot].get("label") or f"Cue {cue_no}")
+        approval = self._ask_one(
+            f"지금 나가는 큐 {cue_no}({label})의 포지션을 {target}(으)로 수정합니다.\n"
+            "라이브 출력 중인 큐라 병합 즉시 무대에 반영됩니다. 진행할까요?",
+            options=(
+                QuestionOption(label="승인"),
+                QuestionOption(label="취소"),
+            ),
+            why="리허설 편집은 라이브 출력을 바꿉니다 — 승인 없이는 실행하지 않습니다.",
+        )
+        if not _is_explicit_song_approval(approval):
+            return InstructionResult(
+                status="ok",
+                text=(
+                    f"지금 나가는 큐 {cue_no}({label}) 수정 계획을 보여드렸고, "
+                    "승인 전이므로 콘솔에 쓰지 않았습니다."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        result = self._merge_timeline_cue_position(
+            timeline, sections, slot, cue_no, target, live=True
+        )
+        return result
+
+    def _merge_timeline_cue_position(
+        self,
+        timeline: dict,
+        sections: list,
+        slot: int,
+        cue_no: int,
+        target: str,
+        *,
+        live: bool = False,
+    ) -> InstructionResult:
+        """The shared /Merge tail of the timeline + rehearsal cue edits:
+        preset-start resolution, coordinate read, position-preset recall into
+        ``Store Sequence S Cue N /Merge``, then the projection/replay update."""
+        sequence_no = timeline["sequence_number"]
         preset_start = timeline.get("preset_start")
         if not isinstance(preset_start, int):
             answer = self._ask_one(
@@ -3646,7 +3753,7 @@ class ChatSession:
         )
         executed = self._registry.dispatch(
             ToolCall(
-                id="timeline-cue-edit",
+                id="rehearsal-cue-edit" if live else "timeline-cue-edit",
                 name="run_commands",
                 arguments={"commands": list(commands)},
             )
@@ -3674,17 +3781,22 @@ class ChatSession:
         updated_sections[slot] = updated_section
         updated = dict(timeline)
         updated["sections"] = updated_sections
+        live_note = " (리허설 — 재생 중 큐)" if live else ""
         updated["readback"] = {
             "verified": (timeline.get("readback") or {}).get("verified"),
-            "message": f"큐 {cue_no} 포지션을 {target}(으)로 수정 (Preset 2.{preset_no} 병합)",
+            "message": (
+                f"큐 {cue_no} 포지션을 {target}(으)로 수정 (Preset 2.{preset_no} 병합){live_note}"
+            ),
         }
+        store = self._timeline_store
         if store is not None:
             store.latest = updated
         self._send(song_timeline_event(timeline=updated))
+        prefix = "지금 나가는 큐" if live else "감독 타임라인 큐"
         return InstructionResult(
             status="ok",
             text=(
-                f"감독 타임라인 큐 {cue_no}의 포지션을 {target}(으)로 수정했습니다 — "
+                f"{prefix} {cue_no}의 포지션을 {target}(으)로 수정했습니다 — "
                 f"Sequence {sequence_no} Cue {cue_no}에 Preset 2.{preset_no}을 병합하고 "
                 "타임라인에 즉시 반영했습니다."
             ),
@@ -4918,6 +5030,8 @@ class ChatSession:
                     result = self._song_plan_edit(text)
                 if result is None:
                     result = self._song_requery_resume(text)
+                if result is None:
+                    result = self._rehearsal_cue_edit(text)
                 if result is None:
                     result = self._timeline_cue_edit(text)
                 if result is None:

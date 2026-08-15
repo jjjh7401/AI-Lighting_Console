@@ -21,10 +21,10 @@ from server.web.approval_bridge import ApprovalChannel
 from server.web.cue_monitor import (
     CURRENT_CUE_PROPERTY_CANDIDATES,
     _cue_name_for_index,
-    _parse_current_cue_index,
     build_cue_progress,
     build_executor_cue_progress,
     cue_monitor_snapshot,
+    parse_current_cue_index,
     recent_execution_history,
 )
 from server.web.messages import PROTOCOL_VERSION
@@ -90,22 +90,22 @@ class TestParseCurrentCueIndex:
     contract: normal, empty string, unexpected shape."""
 
     def test_parses_the_index_after_the_last_dot(self):
-        assert _parse_current_cue_index("Sequence 80.2") == 2
+        assert parse_current_cue_index("Sequence 80.2") == 2
 
     def test_parses_a_sequence_name_that_itself_contains_a_dot(self):
         # The rule is explicitly "the LAST '.'" — a dotted sequence name
         # must not confuse which suffix is the index.
-        assert _parse_current_cue_index("Song v1.2.5") == 5
+        assert parse_current_cue_index("Song v1.2.5") == 5
 
     def test_an_empty_string_fails_to_parse(self):
         # The coordinator's own finding: CueNo goes '' once playing. A blank
         # CurrentCue value must degrade the same way, never be treated as 0.
-        assert _parse_current_cue_index("") is None
+        assert parse_current_cue_index("") is None
 
     def test_an_unexpected_shape_with_no_integer_suffix_fails_to_parse(self):
-        assert _parse_current_cue_index("Sequence 80") is None
-        assert _parse_current_cue_index("Sequence 80.") is None
-        assert _parse_current_cue_index("Sequence 80.abc") is None
+        assert parse_current_cue_index("Sequence 80") is None
+        assert parse_current_cue_index("Sequence 80.") is None
+        assert parse_current_cue_index("Sequence 80.abc") is None
 
 
 class TestCueNameForIndex:

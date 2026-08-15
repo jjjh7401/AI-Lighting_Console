@@ -68,7 +68,7 @@ CURRENT_CUE_PROPERTY_CANDIDATES: tuple[str, ...] = ("CurrentCue",)
 _CURRENT_CUE_INDEX_RE = re.compile(r"\.(\d+)$")
 
 
-def _parse_current_cue_index(value: str) -> int | None:
+def parse_current_cue_index(value: str) -> int | None:
     """The integer after the LAST ``.`` in ``value``, or ``None`` when the
     shape does not match (empty string, no ``.``, non-integer suffix)."""
     match = _CURRENT_CUE_INDEX_RE.search(value)
@@ -179,7 +179,7 @@ def _read_current_cue(
         read = reads.get(name)
         if read is None or not read.ok or not read.value:
             continue
-        index = _parse_current_cue_index(read.value)
+        index = parse_current_cue_index(read.value)
         if index is None:
             continue
         cue_name = _cue_name_for_index(cues, index)
