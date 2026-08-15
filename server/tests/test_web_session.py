@@ -2553,6 +2553,31 @@ class TestSongDesignInterviewSession:
         assert "시퀀스 110: 비어 있음 확인(신규 저장)" in approval_prompt
         assert "기존 데이터 덮어쓰기: 없음" in approval_prompt
 
+    def test_a_flapping_probe_revives_on_the_single_retry_pass(self, tmp_path):
+        # 실기 2026-08-16: responder flapping은 간헐적 — 첫 탐침이 실패한
+        # 슬롯은 1회 재시도로 살아나 검증된 번호를 제안할 수 있어야 한다.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        seen: dict[str, int] = {}
+
+        class FlappingRegistry:
+            def dispatch(self, call):
+                path = call.arguments["path"]
+                seen[path] = seen.get(path, 0) + 1
+                if seen[path] == 1:  # first touch always times out
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content="responder timeout",
+                            is_error=True,
+                        )
+                    )
+                return ToolExecution(ToolResult(tool_call_id=call.id, name=call.name, content="{}"))
+
+        session._registry = FlappingRegistry()
+        assert session._song_free_sequence_slots(120) == [120, 130, 140]
+
     def test_a_failed_probe_reads_as_occupied_never_empty(self, tmp_path):
         # #6 (2026-08-16): a flapping responder must NEVER get an occupied
         # slot proposed as empty — an unreadable probe is fail-closed.

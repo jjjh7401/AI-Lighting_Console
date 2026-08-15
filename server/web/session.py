@@ -4386,10 +4386,13 @@ class ChatSession:
         self, start: int, *, count: int = 3, probes: int = 12, step: int = 10
     ) -> tuple[list[int], int, int]:
         """(verified-empty slots, occupied count, unreadable count) walking
-        ``step`` at a time from ``start`` (inclusive)."""
+        ``step`` at a time from ``start`` (inclusive). Unreadable slots get
+        ONE retry pass — responder flapping is intermittent (핸드오프 실측:
+        재시도로 해결), so a second probe usually revives them; a slot that
+        fails twice stays unreadable (fail-closed, never proposed)."""
         free: list[int] = []
         occupied = 0
-        unreadable = 0
+        retry_queue: list[int] = []
         candidate = start
         for _probe in range(probes):
             verdict = self._console_slot_state(
@@ -4403,8 +4406,23 @@ class ChatSession:
             elif verdict == "occupied":
                 occupied += 1
             else:
-                unreadable += 1
+                retry_queue.append(candidate)
             candidate += step
+        unreadable = 0
+        for slot in retry_queue:
+            if len(free) == count:
+                break
+            verdict = self._console_slot_state(
+                f"{self._rig_paths['sequences']}/{slot}",
+                probe_id=f"song-design-slot-recheck-{slot}",
+            )
+            if verdict == "empty":
+                free.append(slot)
+            elif verdict == "occupied":
+                occupied += 1
+            else:
+                unreadable += 1
+        free.sort()
         return free, occupied, unreadable
 
     def _song_free_sequence_slots(
@@ -4492,18 +4510,28 @@ class ChatSession:
         problem, PROPOSE verified-empty sequence slots, and let the director
         pick one on the spot. A pick retargets the pending plan and the caller
         stores immediately; cancel/no-answer keeps the plan editable."""
-        free_slots = self._song_free_sequence_slots(state.sequence_no + 10)
+        free_slots, occupied, unreadable = self._song_probe_sequence_slots(state.sequence_no + 10)
+        if free_slots:
+            situation = (
+                "비어 있는 시퀀스를 콘솔에서 확인했습니다 — 어디에 저장할까요? "
+                "(선택하면 즉시 그 시퀀스에 저장합니다. 다른 번호는 직접 입력해도 됩니다.)"
+            )
+        else:
+            situation = (
+                f"비어 있음을 확인한 시퀀스가 없습니다 (탐침 결과: 점유 {occupied}곳 · "
+                f"조회 실패 {unreadable}곳)."
+            )
+            if unreadable:
+                situation += (
+                    " 콘솔 응답이 불안정합니다(responder) — 잠시 기다렸다가 다시 "
+                    "승인하면 검증된 번호를 제안할 수 있습니다."
+                )
+            situation += " 저장할 번호를 직접 입력해 주세요."
         options = tuple(QuestionOption(label=f"시퀀스 {slot}") for slot in free_slots) + (
             QuestionOption(label="취소 (계획 보존)"),
         )
         answer = self._ask_one(
-            f"{problem}\n"
-            + (
-                "비어 있는 시퀀스를 콘솔에서 확인했습니다 — 어디에 저장할까요? "
-                "(선택하면 즉시 그 시퀀스에 저장합니다. 다른 번호는 직접 입력해도 됩니다.)"
-                if free_slots
-                else "비어 있는 시퀀스를 찾지 못했습니다 — 저장할 번호를 직접 입력해 주세요."
-            ),
+            f"{problem}\n{situation}",
             options=options,
             why=(
                 "문제를 만나면 중단 대신 해결 방법을 함께 정합니다. "
