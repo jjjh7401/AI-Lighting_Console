@@ -863,6 +863,64 @@ _PLAN_EDIT_TIME_MOVE = re.compile(
     r"(?:지점)?\s*(?:로|으로|에)\s*(?:이동|옮|시작)"
 )
 
+# 셋리스트 모드 (handoff 2026-08-15 priority 4): allocate the library's songs
+# to consecutive setlist sequences (210, 220, …) and page-1 executors (101~).
+_SETLIST_REQUEST = re.compile(r"셋\s*리스트|set\s*list", re.IGNORECASE)
+_SETLIST_SEQ_START = re.compile(r"시퀀스\s*(?P<no>\d+)\s*(?:번)?\s*부터")
+_SETLIST_EXEC_START = re.compile(
+    r"(?:executor|익스큐터|이그제큐터|실행기)\s*(?P<no>\d+)\s*(?:번)?\s*부터", re.IGNORECASE
+)
+#: The library's auto-snapshot stamp — stripped so every version of a song
+#: collapses to ONE setlist slot (the newest entry wins).
+_SETLIST_AUTO_SUFFIX = re.compile(r"\s*\(자동 v\d+\)\s*$")
+_SETLIST_DEFAULT_SEQ_START = 210
+_SETLIST_SEQ_STEP = 10
+_SETLIST_DEFAULT_EXEC_START = 101
+
+
+def _setlist_base_name(name: object) -> str:
+    return _SETLIST_AUTO_SUFFIX.sub("", str(name or "")).strip()
+
+
+def _setlist_requested_names(text: str) -> list[str]:
+    """Song names after the first ':' (comma-separated), with the numeric
+    start directives filtered out. Empty = every library song."""
+    _head, _colon, tail = text.partition(":")
+    names: list[str] = []
+    for part in tail.split(","):
+        cleaned = part.strip()
+        if not cleaned:
+            continue
+        if _SETLIST_SEQ_START.search(cleaned) or _SETLIST_EXEC_START.search(cleaned):
+            continue
+        names.append(cleaned)
+    return names
+
+
+def _setlist_node_exists(payload: object) -> bool:
+    """True when a ``query_state`` payload names a real console object —
+    the responder returns ``{}``/``ok: false``/``node: null`` for holes."""
+    if not isinstance(payload, dict) or payload.get("ok") is False:
+        return False
+    return isinstance(payload.get("node"), dict)
+
+
+def _setlist_executor_sequence_no(payload: object) -> int | None:
+    """The assigned sequence number off an ``Executor <n>`` identity probe —
+    the same ``node.sequenceNo`` shape ``cue_monitor``/``dash`` read."""
+    if not isinstance(payload, dict):
+        return None
+    node = payload.get("node")
+    if not isinstance(node, dict):
+        return None
+    value = node.get("sequenceNo")
+    if value is None and isinstance(node.get("properties"), dict):
+        value = node["properties"].get("sequenceNo")
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
 
 def _plan_edit_fx(decision: FxDecision, override: bool | None) -> FxDecision:
     """Apply a director's PLAN-stage FX on/off: off empties the allowed set
@@ -3636,6 +3694,199 @@ class ChatSession:
             duration_seconds=0.0,
         )
 
+    def _setlist_mode(self, text: str) -> InstructionResult | None:
+        """셋리스트 모드 (priority 4): allocate library songs to consecutive
+        setlist sequences (기본 210, 220, …) and page-1 executors (기본 101~).
+
+        Per song (newest library version per base name): ``Copy Sequence
+        <원본> At <슬롯>`` — the stored song is duplicated into its setlist
+        slot, never moved — then ``Assign Sequence <슬롯> At Executor <n>``.
+        Safety: every target slot is PRE-CHECKED empty (기존 시퀀스를 덮어쓰지
+        않음), the whole plan rides ONE explicit approval card, the bundle is
+        dispatched atomically, and each executor assignment is readback-
+        verified via the ``Executor <n>`` identity probe (``node.sequenceNo``
+        — the same shape cue_monitor/dash read)."""
+        if _SETLIST_REQUEST.search(text) is None:
+            return None
+        library = self._timeline_library
+        entries = library.items() if library is not None else []
+        if not entries:
+            return self._pointing_refusal(
+                "셋리스트를 만들 라이브러리 곡이 없습니다. 곡 설계를 승인/저장하거나 "
+                "타임라인을 라이브러리에 먼저 저장해 주세요."
+            )
+        # Newest first — the FIRST entry per base name is that song's latest.
+        latest: dict[str, dict] = {}
+        order: list[str] = []
+        for entry in entries:
+            base = _setlist_base_name(entry.get("name"))
+            if base and base not in latest:
+                latest[base] = entry
+                order.append(base)
+        requested = _setlist_requested_names(text)
+        if requested:
+            chosen: list[str] = []
+            for name in requested:
+                base = _setlist_base_name(name)
+                match = next(
+                    (known for known in order if known.casefold() == base.casefold()), None
+                )
+                if match is None:
+                    return self._pointing_refusal(
+                        f"라이브러리에 '{base}' 곡이 없습니다. (보유 곡: {', '.join(order)})"
+                    )
+                if match not in chosen:
+                    chosen.append(match)
+        else:
+            chosen = list(order)
+        seq_match = _SETLIST_SEQ_START.search(text)
+        exec_match = _SETLIST_EXEC_START.search(text)
+        seq_start = int(seq_match.group("no")) if seq_match else _SETLIST_DEFAULT_SEQ_START
+        exec_start = int(exec_match.group("no")) if exec_match else _SETLIST_DEFAULT_EXEC_START
+        # Executor console form is page*100+slot (dash/cue_monitor measured):
+        # the run must stay inside one page's 1~99 slot window.
+        slots_left = 99 - (exec_start % 100) + 1
+        if exec_start % 100 == 0 or len(chosen) > slots_left:
+            return self._pointing_refusal(
+                f"Executor {exec_start}부터 {len(chosen)}곡을 배정하면 페이지 슬롯 범위"
+                "(x01~x99)를 벗어납니다. 시작 번호를 조정해 주세요."
+            )
+        plan_rows: list[tuple[str, int, int, int]] = []  # (곡, 원본, 슬롯, executor)
+        skipped: list[str] = []
+        for base in chosen:
+            timeline = latest[base].get("timeline") or {}
+            source = timeline.get("sequence_number")
+            if not isinstance(source, int) or not timeline.get("console_stored"):
+                skipped.append(f"{base}(콘솔 미저장 — 승인/저장 후 다시)")
+                continue
+            slot_index = len(plan_rows)
+            plan_rows.append(
+                (base, source, seq_start + _SETLIST_SEQ_STEP * slot_index, exec_start + slot_index)
+            )
+        if not plan_rows:
+            reasons = "; ".join(skipped) if skipped else "곡 없음"
+            return self._pointing_refusal(f"셋리스트에 넣을 수 있는 곡이 없습니다: {reasons}.")
+        # PRE-CHECK: every target slot must be empty (a live rig may already
+        # hold sequences there — the 2026-08-15 safety rule: 새 번호 사용 또는
+        # 기존 상태 확인). A source-equals-slot row skips the copy, not the check.
+        occupied: list[str] = []
+        for base, source, slot, _exec_no in plan_rows:
+            if slot == source:
+                continue
+            probe = self._registry.dispatch(
+                ToolCall(
+                    id=f"setlist-slot-check-{slot}",
+                    name="query_state",
+                    arguments={"path": f"{self._rig_paths['sequences']}/{slot}"},
+                )
+            )
+            try:
+                payload = json.loads(probe.result.content)
+            except (json.JSONDecodeError, TypeError):
+                payload = None
+            if _setlist_node_exists(payload):
+                occupied.append(f"Sequence {slot} ({base} 슬롯)")
+        if occupied:
+            return self._pointing_refusal(
+                f"셋리스트 슬롯이 이미 사용 중입니다: {', '.join(occupied)}. "
+                "기존 시퀀스는 덮어쓰지 않습니다 — '시퀀스 N부터'로 빈 구간을 지정해 주세요."
+            )
+        plan_lines = [
+            f"{index}. {base}: Sequence {source} → {slot} / Executor {exec_no}"
+            for index, (base, source, slot, exec_no) in enumerate(plan_rows, start=1)
+        ]
+        skipped_note = f" 제외: {'; '.join(skipped)}." if skipped else ""
+        approval = self._ask_one(
+            "셋리스트 배분 계획:\n"
+            + "\n".join(plan_lines)
+            + f"\n{skipped_note}\n원본 시퀀스는 유지(복사)되고, 지정 Executor의 기존 배정은 "
+            "덮어씁니다. 실행할까요?",
+            options=(
+                QuestionOption(label="승인"),
+                QuestionOption(label="취소"),
+            ),
+            why="셋리스트 배분은 콘솔 쇼 객체(시퀀스 복사·Executor 배정)를 변경합니다.",
+        )
+        if not _is_explicit_song_approval(approval):
+            return InstructionResult(
+                status="ok",
+                text=(
+                    "셋리스트 계획을 보여드렸고, 승인 전이므로 콘솔에 쓰지 않았습니다. "
+                    + " / ".join(plan_lines)
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        commands: list[str] = []
+        for _base, source, slot, exec_no in plan_rows:
+            if slot != source:
+                commands.append(f"Copy Sequence {source} At {slot}")
+            commands.append(f"Assign Sequence {slot} At Executor {exec_no}")
+        executed = self._registry.dispatch(
+            ToolCall(
+                id="setlist-assign-bundle",
+                name="run_commands",
+                arguments={"commands": commands},
+            )
+        )
+        failed = [
+            outcome
+            for outcome in executed.command_outcomes
+            if outcome.status in ("failed", "blocked", "rejected", "not_executed")
+        ]
+        if executed.result.is_error or failed:
+            return InstructionResult(
+                status="ok",
+                text=(
+                    "셋리스트 배분 명령이 완료되지 않았습니다 — 아래 명령 상태를 확인해 "
+                    "주세요. " + " / ".join(plan_lines)
+                ),
+                command_outcomes=tuple(executed.command_outcomes),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        verified: list[str] = []
+        mismatched: list[str] = []
+        for base, _source, slot, exec_no in plan_rows:
+            probe = self._registry.dispatch(
+                ToolCall(
+                    id=f"setlist-readback-{exec_no}",
+                    name="query_state",
+                    arguments={"path": f"Executor {exec_no}"},
+                )
+            )
+            try:
+                payload = json.loads(probe.result.content)
+            except (json.JSONDecodeError, TypeError):
+                payload = None
+            assigned = _setlist_executor_sequence_no(payload)
+            if assigned == slot:
+                verified.append(f"Executor {exec_no}→Seq {slot}({base})")
+            else:
+                mismatched.append(
+                    f"Executor {exec_no}: 기대 Seq {slot}, 확인값 {assigned!r}({base})"
+                )
+        status = "ok" if not mismatched else "readback_failed"
+        readback_note = (
+            f"readback 검증 완료: {', '.join(verified)}."
+            if not mismatched
+            else f"readback 불일치: {'; '.join(mismatched)}."
+        )
+        return InstructionResult(
+            status=status,
+            text=(
+                f"셋리스트 배분을 실행했습니다 — {' / '.join(plan_lines)}.{skipped_note} "
+                f"{readback_note}"
+            ),
+            command_outcomes=tuple(executed.command_outcomes),
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
     def _song_requery_resume(self, text: str) -> InstructionResult | None:
         """A later turn answering an open requery card ("벌스는 Center → Fan
         Out") resumes the SAME pending plan — never a new natural-language
@@ -4669,6 +4920,8 @@ class ChatSession:
                     result = self._song_requery_resume(text)
                 if result is None:
                     result = self._timeline_cue_edit(text)
+                if result is None:
+                    result = self._setlist_mode(text)
                 if result is None:
                     result = self._song_design_interview(text)
                 if result is None:

@@ -2893,6 +2893,165 @@ class TestSongDesignInterviewSession:
         assert calls == []
 
 
+class TestSetlistMode:
+    """Priority 4 (handoff 2026-08-15): library songs → setlist sequences
+    (210, 220, …) + page-1 executors (101~), copy-then-assign, one approval,
+    empty-slot pre-check, executor-identity readback."""
+
+    class _Channel:
+        def __init__(self, answers):
+            self.answers = list(answers)
+            self.asked = []
+
+        def ask(self, request, **_kwargs):
+            self.asked.append(request)
+            return self.answers.pop(0) if self.answers else UNANSWERED
+
+    def _registry(self, calls, states):
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "query_state":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(states.get(call.arguments["path"], {})),
+                        )
+                    )
+                outcomes = tuple(
+                    CommandOutcome(command=command, status="executed_ok")
+                    for command in call.arguments.get("commands", [])
+                )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    outcomes,
+                )
+
+        return Registry()
+
+    def _entry_timeline(self, sequence_number, *, stored=True):
+        return {
+            "song_title": "곡",
+            "sequence_number": sequence_number,
+            "lifecycle": "verified" if stored else "pending_approval",
+            "console_stored": stored,
+            "sections": [{"index": 1, "label": "도입", "cue_number": 1}],
+        }
+
+    def _setlist_session(self, tmp_path, *, states=None, answers=("승인",)):
+        from server.web.timeline_library import SongTimelineLibrary
+
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls, states or {})
+        library = SongTimelineLibrary(tmp_path / "library.json")
+        session._timeline_library = library
+        session._question_channel = self._Channel(list(answers))
+        return session, library, calls, sent
+
+    def test_setlist_copies_and_assigns_in_requested_order(self, tmp_path):
+        states = {
+            "Executor 101": {"ok": True, "node": {"name": "Exec", "sequenceNo": 210}},
+            "Executor 102": {"ok": True, "node": {"name": "Exec", "sequenceNo": 220}},
+        }
+        session, library, calls, _sent = self._setlist_session(tmp_path, states=states)
+        library.save("곡A (자동 v1)", self._entry_timeline(110))
+        library.save("곡A (자동 v2)", self._entry_timeline(115))
+        library.save("곡B", self._entry_timeline(150))
+
+        event = session.run_instruction("셋리스트 만들어줘: 곡A, 곡B")
+
+        assert event["status"] == "ok"
+        stores = [call for call in calls if call.name == "run_commands"]
+        assert len(stores) == 1
+        # 곡A rides its LATEST version (Seq 115, 자동 v2), not v1's 110.
+        assert stores[0].arguments["commands"] == [
+            "Copy Sequence 115 At 210",
+            "Assign Sequence 210 At Executor 101",
+            "Copy Sequence 150 At 220",
+            "Assign Sequence 220 At Executor 102",
+        ]
+        assert "readback 검증 완료" in event["text"]
+        assert "곡A: Sequence 115 → 210 / Executor 101" in event["text"]
+
+    def test_setlist_refuses_an_occupied_slot_without_writing(self, tmp_path):
+        states = {
+            "DataPool/Sequences/210": {"ok": True, "node": {"name": "Sequence 210"}},
+        }
+        session, library, calls, _sent = self._setlist_session(tmp_path, states=states)
+        library.save("곡A", self._entry_timeline(110))
+
+        event = session.run_instruction("셋리스트 모드")
+
+        assert "이미 사용 중" in event["text"]
+        assert [call for call in calls if call.name == "run_commands"] == []
+
+    def test_setlist_skips_unstored_songs_and_reports_them(self, tmp_path):
+        states = {
+            "Executor 101": {"ok": True, "node": {"name": "Exec", "sequenceNo": 210}},
+        }
+        session, library, calls, _sent = self._setlist_session(tmp_path, states=states)
+        library.save("계획만", self._entry_timeline(110, stored=False))
+        library.save("저장곡", self._entry_timeline(120))
+
+        event = session.run_instruction("셋리스트 만들어줘")
+
+        stores = [call for call in calls if call.name == "run_commands"]
+        assert len(stores) == 1
+        assert stores[0].arguments["commands"] == [
+            "Copy Sequence 120 At 210",
+            "Assign Sequence 210 At Executor 101",
+        ]
+        assert "계획만(콘솔 미저장" in event["text"]
+
+    def test_setlist_decline_writes_nothing(self, tmp_path):
+        session, library, calls, _sent = self._setlist_session(tmp_path, answers=("취소",))
+        library.save("곡A", self._entry_timeline(110))
+
+        event = session.run_instruction("셋리스트 배분해줘")
+
+        assert "승인 전이므로 콘솔에 쓰지 않았습니다" in event["text"]
+        assert [call for call in calls if call.name == "run_commands"] == []
+
+    def test_setlist_readback_mismatch_is_reported_honestly(self, tmp_path):
+        states = {
+            "Executor 101": {"ok": True, "node": {"name": "Exec", "sequenceNo": 999}},
+        }
+        session, library, calls, _sent = self._setlist_session(tmp_path, states=states)
+        library.save("곡A", self._entry_timeline(110))
+
+        event = session.run_instruction("셋리스트 만들어줘")
+
+        assert event["status"] == "readback_failed"
+        assert "readback 불일치" in event["text"]
+
+    def test_setlist_with_custom_starts_and_page_window_guard(self, tmp_path):
+        states = {
+            "Executor 305": {"ok": True, "node": {"name": "Exec", "sequenceNo": 400}},
+        }
+        session, library, calls, _sent = self._setlist_session(tmp_path, states=states)
+        library.save("곡A", self._entry_timeline(110))
+
+        event = session.run_instruction("셋리스트: 곡A, 시퀀스 400부터, Executor 305부터")
+
+        stores = [call for call in calls if call.name == "run_commands"]
+        assert stores[0].arguments["commands"] == [
+            "Copy Sequence 110 At 400",
+            "Assign Sequence 400 At Executor 305",
+        ]
+        assert event["status"] == "ok"
+
+    def test_setlist_without_a_library_refuses(self, tmp_path):
+        session, _library, calls, _sent = self._setlist_session(tmp_path)
+
+        event = session.run_instruction("셋리스트 모드 시작")
+
+        assert "라이브러리 곡이 없습니다" in event["text"]
+        assert calls == []
+
+
 class TestLookPanTilt:
     def _registry(self, calls):
         fixtures = [
