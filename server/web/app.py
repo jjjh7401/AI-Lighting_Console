@@ -80,6 +80,19 @@ _PANEL_TASK_ERROR_MESSAGE = "패널 요청을 처리하지 못했습니다."
 
 
 @dataclass
+class SnapshotCache:
+    """Last successful dash / cue-monitor events, process-wide.
+
+    Read/written from worker threads and the event loop; a whole-dict swap is
+    atomic under the GIL, and a torn read is impossible because entries are
+    replaced, never mutated in place.
+    """
+
+    dash: dict | None = None
+    cue: dict | None = None
+
+
+@dataclass
 class WebDeps:
     """Everything the web app consumes — composed by serve.py / tests."""
 
@@ -145,6 +158,8 @@ class WebDeps:
     # Timeline library (save/load named versions of the director timeline).
     # Memory-only by default; serve.py wires the persistent JSON path.
     timeline_library: SongTimelineLibrary = field(default_factory=SongTimelineLibrary)
+    # Stale-while-revalidate cache for the two many-round-trip snapshots.
+    snapshots: SnapshotCache = field(default_factory=SnapshotCache)
 
 
 async def _safe_send(websocket: WebSocket, event: dict) -> None:
@@ -284,6 +299,7 @@ def create_app(deps: WebDeps) -> FastAPI:
             preshow_receive_port=deps.preshow_receive_port,
             preshow_osc_slot=deps.preshow_osc_slot,
             timeline_store=deps.song_timeline_store,
+            timeline_library=deps.timeline_library,
         )
 
         def push_status() -> None:
@@ -353,6 +369,17 @@ def create_app(deps: WebDeps) -> FastAPI:
             await _safe_send(
                 websocket, song_timeline_event(timeline=deps.song_timeline_store.latest)
             )
+        # Stale-while-revalidate (user direction, 2026-08-15): a dash / cue
+        # snapshot costs DOZENS of serialized console round trips, and every
+        # lost UDP reply stalls 5s — so a fresh connection used to stare at
+        # "동기화 전" for tens of seconds. The last successful snapshots are
+        # process-cached and pushed IMMEDIATELY here, marked ``cached`` so the
+        # client renders them under its existing stale badge; the fresh build
+        # replaces them (and the badge) when the console answers.
+        if deps.snapshots.dash is not None:
+            await _safe_send(websocket, {**deps.snapshots.dash, "cached": True})
+        if deps.snapshots.cue is not None:
+            await _safe_send(websocket, {**deps.snapshots.cue, "cached": True})
         try:
             while True:
                 raw = await websocket.receive_text()
@@ -527,6 +554,10 @@ def create_app(deps: WebDeps) -> FastAPI:
                     # many-round-trip state_port read, and serializing it
                     # against the existing catalog build avoids stacking
                     # concurrent OSC query storms on the console.
+                    if deps.snapshots.dash is not None:
+                        # First paint NOW, honest stale badge; fresh build follows.
+                        await _safe_send(websocket, {**deps.snapshots.dash, "cached": True})
+
                     def _dash_catalog_and_membership() -> None:
                         # M6 — the build's VERIFIED executor console numbers
                         # become panel members (AC-DASHUI-005): the SHOWUI
@@ -535,6 +566,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                         # tiles' only legitimate targets would be rejected
                         # as "not on the panel".
                         event = send_dash_catalog(deps.gate.state_port, send_event)
+                        deps.snapshots.dash = event
                         panel.register_dash_executors(resolved_executor_nos(event["sections"]))
 
                     spawn_panel(panel_task(_dash_catalog_and_membership, lane=panel_side_lane))
@@ -546,6 +578,9 @@ def create_app(deps: WebDeps) -> FastAPI:
                     # shares panel_side_lane for the same reason dash does:
                     # another many-round-trip state_port read that should not
                     # stack concurrent OSC query storms on the console.
+                    if deps.snapshots.cue is not None:
+                        await _safe_send(websocket, {**deps.snapshots.cue, "cached": True})
+
                     def _cue_monitor() -> None:
                         sections = build_dash_catalog(deps.gate.state_port)
                         console_nos = resolved_executor_nos(sections)
@@ -561,6 +596,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                         # refused before it reaches the gate (panel.py's
                         # register_executor_cues/executor_has_cue).
                         panel.register_executor_cues(event["executors"])
+                        deps.snapshots.cue = event
                         send_event(event)
 
                     spawn_panel(panel_task(_cue_monitor, lane=panel_side_lane))

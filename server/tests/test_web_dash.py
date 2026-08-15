@@ -390,7 +390,12 @@ class TestExecutorResolution:
 
     def test_the_verify_budget_is_separate_from_the_page_walk_budget(self):
         tree = _rig_tree()
-        many = [(100 + n, f"Exec {100 + n}") for n in range(1, 20)]
+        # Sized RELATIVE to the cap (16 -> 32 raise, 2026-08-15: 13 executors
+        # on one page cost up to TWO verify queries each — slot form, then the
+        # page*100+slot form — so 16 capped a 13-executor rig mid-walk) so the
+        # separation property stays measured however the number moves. Each
+        # fixture executor resolves on its FIRST candidate, so items == cap.
+        many = [(100 + n, f"Exec {100 + n}") for n in range(1, DASH_EXECUTOR_VERIFY_QUERY_CAP + 8)]
         tree["DataPool/Pages/1"] = _snapshot("DataPool/Pages/1", many)
         for number, name in many:
             tree[f"Executor {number}"] = _identity(name)

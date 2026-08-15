@@ -420,12 +420,13 @@ export type ServerEvent =
       target: number;
       message: string;
     }
-  | { v: 1; type: "dash_catalog"; sections: DashSection[] }
+  | { v: 1; type: "dash_catalog"; sections: DashSection[]; cached?: boolean }
   | {
       v: 1;
       type: "cue_monitor";
       executors: CueExecutorEntry[];
       history: CueHistoryEntry[];
+      cached?: boolean;
     }
   | SongTimelineEvent;
 
@@ -888,11 +889,17 @@ export function reduceServerEvent(
       };
     case "dash_catalog":
       // A refresh REPLACES the section list (REQ-DASHUI-006) — merging would
-      // keep pools the showfile no longer has. A fresh catalog also renews the
-      // freshness claim: sync time stamped, any stale mark withdrawn.
+      // keep pools the showfile no longer has. A FRESH catalog renews the
+      // freshness claim; a CACHED one (the server's stale-while-revalidate
+      // first paint) renders immediately but keeps the stale badge and the
+      // previous sync stamp — the console never answered for it.
       return {
         ...state,
-        dash: { sections: event.sections, lastSyncAt: nowMs, stale: false },
+        dash: {
+          sections: event.sections,
+          lastSyncAt: event.cached === true ? state.dash.lastSyncAt : nowMs,
+          stale: event.cached === true,
+        },
       };
     case "cue_monitor":
       // A refresh REPLACES both lists — same replace semantics as
@@ -903,8 +910,8 @@ export function reduceServerEvent(
         cueMonitor: {
           executors: event.executors,
           history: event.history,
-          lastSyncAt: nowMs,
-          stale: false,
+          lastSyncAt: event.cached === true ? state.cueMonitor.lastSyncAt : nowMs,
+          stale: event.cached === true,
         },
       };
     case "song_timeline":

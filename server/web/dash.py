@@ -63,9 +63,14 @@ DASH_PRESET_POOL_QUERY_CAP = 16
 # Executor page walk: one query per page opened (usually few pages).
 DASH_EXECUTOR_PAGE_QUERY_CAP = 8
 
-# Executor resolution: one "Executor <n>" verification query per candidate,
-# bounded separately from the page walk since it is a distinct query class.
-DASH_EXECUTOR_VERIFY_QUERY_CAP = 16
+# Executor resolution: one "Executor <n>" verification query per CANDIDATE
+# FORM, bounded separately from the page walk since it is a distinct query
+# class. Raised 16 -> 32 (2026-08-15 live measurement): each page-drilled slot
+# costs up to TWO verify queries — the raw slot form first, then the console's
+# page*100+slot form — so 16 capped a plain 13-executor single-page showfile
+# mid-walk and the section wore the "드릴다운 예산 소진" badge on an ordinary
+# rig. 32 covers 16 slots at both forms while staying bounded.
+DASH_EXECUTOR_VERIFY_QUERY_CAP = 32
 
 
 @dataclass(frozen=True)

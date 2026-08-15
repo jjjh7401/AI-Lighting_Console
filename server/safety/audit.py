@@ -80,6 +80,38 @@ class AuditLog:
                 if line.strip():
                     yield json.loads(line)
 
+    def iter_events_reversed(self, *, chunk_bytes: int = 1 << 22) -> Iterator[dict]:
+        """Yield all retained events NEWEST-FIRST, reading backwards in bounded
+        chunks (default 4 MiB).
+
+        Exists because :meth:`iter_events` materialises every retained day as
+        one decoded string — measured 2026-08-15 at 709 MB of JSONL (a
+        background poller writes ~10 probe events/second), which turned every
+        cue-monitor snapshot into a whole-log parse: hundreds of MB of
+        transient objects per UI refresh, GC pressure that starved the event
+        loop, and multi-second static responses. A consumer that wants "the
+        most recent N matching events" stops this iterator after N hits and
+        never touches more than a chunk or two.
+        """
+        for path in sorted(self._directory.glob(f"{_FILE_PREFIX}*{_FILE_SUFFIX}"), reverse=True):
+            with path.open("rb") as handle:
+                handle.seek(0, 2)
+                position = handle.tell()
+                carry = b""
+                while position > 0:
+                    step = min(chunk_bytes, position)
+                    position -= step
+                    handle.seek(position)
+                    buffer = handle.read(step) + carry
+                    lines = buffer.split(b"\n")
+                    # The first split piece may be a PARTIAL line whose head
+                    # lives in the previous (not yet read) chunk — carry it.
+                    carry = lines[0] if position > 0 else b""
+                    complete = lines[1:] if position > 0 else lines
+                    for line in reversed(complete):
+                        if line.strip():
+                            yield json.loads(line)
+
     # -- the four gate event types (AC-MVP-006) ------------------------------
 
     def log_executed(

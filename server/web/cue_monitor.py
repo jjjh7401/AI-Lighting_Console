@@ -292,12 +292,16 @@ def recent_execution_history(audit: AuditLog, *, limit: int = DEFAULT_HISTORY_LI
     dropped, so the operator's full history stays trustworthy even for
     commands this module cannot address to an executor.
     """
-    executed = [
-        event
-        for event in audit.iter_events()
-        if event.get("event") == "executed" and event.get("kind") == "command"
-    ]
-    tail = executed[-limit:] if limit > 0 else executed
+    # Backwards, bounded: collect the newest ``limit`` matches and STOP —
+    # never a whole-log parse (audit.iter_events_reversed's own header names
+    # the 709 MB incident this replaced).
+    newest_first: list[dict] = []
+    for event in audit.iter_events_reversed():
+        if event.get("event") == "executed" and event.get("kind") == "command":
+            newest_first.append(event)
+            if 0 < limit <= len(newest_first):
+                break
+    tail = list(reversed(newest_first))
     entries = []
     for event in tail:
         command = str(event.get("command", ""))
