@@ -39,9 +39,7 @@ class _StatePort:
         return self._tree[path]
 
 
-def _payload(
-    path: str, children: list[dict], *, truncated: bool = False, name: str = ""
-) -> dict:
+def _payload(path: str, children: list[dict], *, truncated: bool = False, name: str = "") -> dict:
     return {
         "v": 1,
         "kind": "state",
