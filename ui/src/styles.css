@@ -2603,7 +2603,11 @@ body {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 10px;
+  /* Narrow pane: the facts keep their left-to-right order but the Go
+     controls wrap to a second line instead of crushing the sequence /
+     current-cue text into ellipses. */
+  flex-wrap: wrap;
+  gap: 4px 10px;
   background: var(--bg);
   border: 1px solid #2b2f36;
   border-radius: 2px;
@@ -2625,7 +2629,6 @@ body {
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
-  min-width: 110px;
 }
 
 .cue-tile-no {
@@ -2642,7 +2645,8 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex: 1 1 30%;
+  flex: 1 1 140px;
+  min-width: 100px;
 }
 
 .cue-tile-current-cue {
@@ -2653,7 +2657,8 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex: 1 1 35%;
+  flex: 1 1 160px;
+  min-width: 110px;
 }
 
 .cue-tile-footer {
