@@ -33,7 +33,7 @@ from server.safety.backup import BackupManager
 from server.safety.gate import SafetyGate
 from server.safety.session_context import new_session_key
 from server.web.approval_bridge import ApprovalChannel
-from server.web.cue_monitor import cue_monitor_snapshot
+from server.web.cue_monitor import cue_monitor_snapshot, planned_show_order
 from server.web.dash import build_dash_catalog, resolved_executor_nos, send_dash_catalog
 from server.web.handshake import (
     CLOSE_POLICY_VIOLATION,
@@ -585,17 +585,10 @@ def create_app(deps: WebDeps) -> FastAPI:
                         sections = build_dash_catalog(deps.gate.state_port)
                         console_nos = resolved_executor_nos(sections)
                         # 진행 순서 보드 (user direction, 2026-08-15): the
-                        # director timeline IS the operator's planned order, so
-                        # the executor bound to its sequence leads the board;
-                        # everything else follows by executor number. No
-                        # timeline -> plain ascending order, unchanged.
-                        latest = deps.song_timeline_store.latest
-                        planned = (
-                            [latest["sequence_number"]]
-                            if isinstance(latest, dict)
-                            and isinstance(latest.get("sequence_number"), int)
-                            else []
-                        )
+                        # operator's plan leads the board — setlist allocation
+                        # first, single director timeline second, else plain
+                        # ascending order (see planned_show_order).
+                        planned = planned_show_order(deps.song_timeline_store)
                         event = cue_monitor_snapshot(
                             deps.gate.state_port,
                             deps.gate.state_port,

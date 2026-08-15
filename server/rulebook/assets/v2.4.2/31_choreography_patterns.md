@@ -243,3 +243,42 @@ answered with a fallback signal (pick concrete numbers, then adjust):
 Build it as one or more cues in a fresh sequence and put it on an executor so the operator
 can run it. When the concept implies MULTIPLE looks (a build, a verse→chorus), store several
 cues in the same sequence with sensible `CueFade` times.
+
+### OBSERVED EFFECT — live validation V1~V7 + operator confirmations
+
+Measured on onPC 2.4.2 (`tools/console_probe.py` fired the commands, the operator
+watched the GUI/stage). Effects have NO machine evidence channel (cue/preset content
+reads back `childCount 0`); the only machine-readable proof is preset-pool listing
+re-query, which confirms object CREATION, never motion. Everything below is therefore
+command acceptance (machine) + stage effect (human observation).
+
+- **V1 — Accel/Decel curve**: `Step <k> At Accel -100` / `At Decel -100` fired AFTER the
+  whole step run exists produces a smooth sine fade. Fired before the steps exist it is
+  accepted and does nothing — the missing piece was ORDER, not grammar.
+- **V2 — Relative step values**: `At Relative <n>` as a step value sweeps around the
+  fixture's CURRENT position — the effect rides on the live base look.
+- **V3 — SpeedMaster**: `Attribute '<a>' At SpeedMaster <n>` binds the phaser rate to a
+  live master; master BPM changes track in real time. Combining with a fixed `At Speed`
+  is UNMEASURED and stays refused.
+- **V4 — Width/Measure**: `At Width 25` (step narrowed to 25 % of the beat) together
+  with `At Measure 4` (loop scaled to 4 beats) both act as labeled.
+- **V5 — 3+ steps**: a 3-step RGB phaser with per-channel `At Phase 0 Thru 360` walks a
+  moving rainbow — `MIN_STEPS=2` is a floor, not a ceiling.
+- **V6 — Preset store**: `Store Preset <pool>.<slot> '<label>' /Universal` lands a
+  multi-step phaser in an "All" pool. Pool and slot numbers are PER-SHOW facts —
+  re-read the pool listing first; that listing re-query is the machine evidence the
+  store happened.
+- **V7 — Preset recall → cue**: fixture selection + `At Preset <pool>.<slot>` +
+  `Store Sequence <n> Cue 1` is accepted and creates the cue; the cue stores a
+  REFERENCE, so later preset edits follow into it.
+
+**Operator confirmations (a bank of stored test phasers in an All pool, recalled and
+watched on stage — closes the three observations the live validation left open):**
+
+- Accel/Decel `-100` shapes a sine on the COLOR axis too, not just dimmer
+  (warm↔cool color sine).
+- `At Relative` keeps its center-follow semantics when the phaser arrives via PRESET
+  RECALL — the orbit still rides the fixtures' current position at recall time.
+- MAtricks selection shaping (XWings mirror, seeded XShuffle) PERSISTS into a stored
+  preset — the recalled effect keeps the mirror/shuffle order without re-applying the
+  MAtricks lines (mirror tilt wave / shuffle chase).

@@ -295,9 +295,11 @@ def recent_execution_history(audit: AuditLog, *, limit: int = DEFAULT_HISTORY_LI
     """
     # Backwards, bounded: collect the newest ``limit`` matches and STOP —
     # never a whole-log parse (audit.iter_events_reversed's own header names
-    # the 709 MB incident this replaced).
+    # the 709 MB incident this replaced). include_probes=False: the probe
+    # file family (state_query/property_query/heartbeat) can never match the
+    # kind filter below, so it is not even opened.
     newest_first: list[dict] = []
-    for event in audit.iter_events_reversed():
+    for event in audit.iter_events_reversed(include_probes=False):
         if event.get("event") == "executed" and event.get("kind") == "command":
             newest_first.append(event)
             if 0 < limit <= len(newest_first):
@@ -317,6 +319,24 @@ def recent_execution_history(audit: AuditLog, *, limit: int = DEFAULT_HISTORY_LI
             )
         )
     return entries
+
+
+def planned_show_order(store) -> list[int]:
+    """The operator's planned sequence order for the 진행 순서 보드.
+
+    Priority (handoff 2026-08-15 item 3): an EXECUTED setlist allocation
+    (``store.setlist_sequence_nos`` — written by 셋리스트 모드 only after its
+    command bundle ran) is the multi-song show plan and beats the single
+    director-timeline sequence; with neither, the board keeps plain
+    ascending executor order (empty plan).
+    """
+    setlist = getattr(store, "setlist_sequence_nos", None) or []
+    if setlist:
+        return [no for no in setlist if isinstance(no, int)]
+    latest = getattr(store, "latest", None)
+    if isinstance(latest, dict) and isinstance(latest.get("sequence_number"), int):
+        return [latest["sequence_number"]]
+    return []
 
 
 def order_by_show_plan(entries: list[dict], planned_sequence_nos: Sequence[int]) -> list[dict]:
