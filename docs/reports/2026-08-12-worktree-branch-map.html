@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Lighting Console — 워크트리 · 브랜치 구조</title>
+  <style>
+    :root { --ink:#18201d; --muted:#5f6c66; --paper:#f7f6f0; --card:#fffefa; --line:#d7ddd6; --green:#1d7052; --green-soft:#e5f1ea; --amber:#a85e13; --amber-soft:#fff1d9; --blue:#296894; --blue-soft:#e8f2f8; --red:#a04335; --red-soft:#f9e7e4; --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; --sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif; }
+    * { box-sizing:border-box; } body { margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); line-height:1.65; }
+    main { max-width:1020px; margin:0 auto; padding:56px 28px 84px; }
+    .eyebrow { color:var(--green); font:700 12px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; }
+    h1 { margin:12px 0 10px; font-size:clamp(30px,5vw,52px); line-height:1.12; letter-spacing:-.045em; } h2 { margin:46px 0 14px; font-size:23px; letter-spacing:-.025em; } h3 { margin:0 0 7px; font-size:16px; } p { margin:0 0 12px; } .lede { max-width:760px; color:var(--muted); font-size:18px; }
+    .callout { margin:28px 0; padding:20px 22px; border-left:5px solid var(--amber); background:var(--amber-soft); border-radius:0 10px 10px 0; } .callout strong { color:#713d08; }
+    .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; } .card { padding:20px; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:0 2px 9px rgb(20 30 25 / .035); } .tag { display:inline-block; margin-bottom:10px; padding:3px 8px; border-radius:99px; background:var(--blue-soft); color:var(--blue); font:700 11px/1 var(--mono); } .card code, code { font-family:var(--mono); font-size:.88em; overflow-wrap:anywhere; } .path { color:var(--muted); font-size:13px; word-break:break-all; }
+    table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; } th,td { padding:12px 14px; text-align:left; vertical-align:top; border-bottom:1px solid var(--line); } th { background:#edf1ed; font-size:13px; } tr:last-child td { border-bottom:0; }
+    .diagram { margin:20px 0; padding:20px; background:#17231e; border-radius:14px; overflow-x:auto; } svg { display:block; min-width:730px; width:100%; height:auto; } .flow-title { fill:#f7fbf8; font:700 15px var(--sans); } .flow-meta { fill:#c7d4cb; font:12px var(--mono); } .flow-note { fill:#93bca8; font:700 11px var(--mono); } .box { stroke-width:1.5; rx:10; } .arrow { stroke:#a4c3b0; stroke-width:2; fill:none; marker-end:url(#arrow); } .branch { stroke:#dca962; }
+    ol { padding-left:22px; } li { margin:8px 0; } pre { margin:14px 0; padding:15px 17px; overflow:auto; background:#1b2521; color:#eaf2ec; border-radius:10px; font:13px/1.6 var(--mono); } .good { color:var(--green); font-weight:700; } .risk { color:var(--red); font-weight:700; }
+    .footer { margin-top:52px; padding-top:16px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+    @media (max-width:760px) { main { padding:34px 18px 60px; } .grid { grid-template-columns:1fr; } table { display:block; overflow-x:auto; } }
+    @media print { body { background:white; } main { max-width:none; padding:18px; } .card,table { box-shadow:none; } .diagram { print-color-adjust:exact; -webkit-print-color-adjust:exact; } }
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Repository topology report · 2026-08-12</div>
+  <h1>워크트리와 브랜치 구조</h1>
+  <p class="lede">현재 작업 폴더는 <code>main</code>이 아닙니다. 공간 높이 편집 기능은 현재 UI/가이드 브랜치가 아니라, 최신 <code>main</code>에서 분리한 전용 기능 워크트리에서 구현해야 합니다.</p>
+
+  <section class="callout">
+    <strong>결론</strong> — 현재 <code>jjjh7401/ui-user-guide</code>에는 공간 좌표 쓰기 기능이 없습니다. 이 브랜치에 기능을 복구해 구현하면 이미 <code>main</code>에 존재하는 공간 기능과 중복되고, 이후 병합 충돌 위험이 커집니다.
+  </section>
+
+  <h2>현재 활성 작업 폴더</h2>
+  <div class="grid">
+    <article class="card"><span class="tag">CURRENT WORKTREE</span><h3>UI / 사용자 가이드</h3><code>jjjh7401/ui-user-guide</code><p class="path">/Users/studiox/Documents/Claude/Code/AI-Lighting_Console</p><p>현재 조사한 폴더. UI·가이드·큐 모니터 변경 19개를 포함합니다.</p></article>
+    <article class="card"><span class="tag">INTEGRATION WORKTREE</span><h3>메인 통합 브랜치</h3><code>main</code><p class="path">/Users/studiox/orca/workspaces/AI-Lighting_Console/spec-vwx-001</p><p>공간 배치 기능과 Vectorworks 자동 패치가 포함된 통합 기준입니다.</p></article>
+    <article class="card"><span class="tag">SEPARATE E2E WORKTREE</span><h3>도구 검증 브랜치</h3><code>spec/introspect-001</code><p class="path">/Users/studiox/orca/workspaces/AI-Lighting_Console/e2e-live</p><p>현재 공간 높이 기능과 직접 관계없는 E2E/도구 개수 검증 브랜치입니다.</p></article>
+  </div>
+
+  <h2>분기 관계</h2>
+  <div class="diagram">
+    <svg viewBox="0 0 930 292" role="img" aria-label="공통 기준에서 main, UI user guide, introspect 브랜치가 분기한 구조">
+      <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#a4c3b0"/></marker></defs>
+      <text x="25" y="27" class="flow-title">공통 기준: 3176900</text><text x="25" y="48" class="flow-meta">이후 세 브랜치가 독립적으로 진행</text>
+      <rect class="box" x="25" y="72" width="190" height="75" fill="#314b3d" stroke="#6e9e83"/><text x="42" y="103" class="flow-title">3176900</text><text x="42" y="126" class="flow-meta">공통 기준점</text>
+      <path class="arrow" d="M215 109 H318 V72 H410"/><path class="arrow branch" d="M215 109 H318 V170 H410"/><path class="arrow" d="M215 109 H318 V250 H410"/>
+      <rect class="box" x="410" y="25" width="230" height="95" fill="#225b45" stroke="#7ab497"/><text x="430" y="57" class="flow-title">main · 63083a6</text><text x="430" y="81" class="flow-meta">공간 READ/WRITE 포함</text><text x="430" y="102" class="flow-note">공간 높이 기능의 기반</text>
+      <rect class="box" x="410" y="137" width="250" height="74" fill="#66491e" stroke="#dca962"/><text x="430" y="168" class="flow-title">ui-user-guide · 23b3e6e</text><text x="430" y="191" class="flow-meta">현재 폴더 · main과 분리</text>
+      <rect class="box" x="410" y="224" width="230" height="55" fill="#314b3d" stroke="#6e9e83"/><text x="430" y="248" class="flow-title">introspect · c7780f5</text><text x="430" y="268" class="flow-meta">별도 E2E 목적</text>
+      <path class="arrow" d="M640 72 H786"/><rect class="box" x="786" y="25" width="120" height="95" fill="#174537" stroke="#9cd5af"/><text x="802" y="57" class="flow-title">새 기능</text><text x="802" y="80" class="flow-meta">spatial-</text><text x="802" y="99" class="flow-meta">height-001</text>
+    </svg>
+  </div>
+
+  <h2>근거 요약</h2>
+  <table>
+    <thead><tr><th>항목</th><th>확인 결과</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td>공통 기준</td><td><code>3176900</code></td><td>현재 UI 브랜치와 <code>main</code>은 여기서 갈라졌습니다.</td></tr>
+      <tr><td>현재 브랜치 전용</td><td>19 commits</td><td>UI/가이드 변경을 별도로 검토·병합해야 합니다.</td></tr>
+      <tr><td><code>main</code> 전용</td><td>156 commits</td><td>현재 브랜치로 공간 기능을 구현하면 최신 통합 변경을 놓칩니다.</td></tr>
+      <tr><td>공간 기능 커밋</td><td><code>1c72d3e</code></td><td><code>get_spatial_context</code>, <code>arrange_fixtures</code>, 좌표 백업·복원·재검증을 포함합니다.</td></tr>
+      <tr><td>현재 등록 도구</td><td>19개, spatial 도구 0개</td><td>현재 코파일럿이 레이아웃 편집을 거절한 직접 원인입니다.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>왜 코파일럿이 “도구가 없다”고 답했나</h2>
+  <p>현재 체크아웃은 <code>server/spatial/</code> 소스와 <code>get_spatial_context</code>·<code>arrange_fixtures</code> 등록을 갖고 있지 않습니다. 반면 사용자 가이드는 해당 기능을 여전히 안내하고 있어, <span class="risk">문서와 실행 가능한 도구 목록이 불일치</span>합니다.</p>
+  <p><code>main</code>에 있는 기존 공간 기능은 Fixture의 X/Y/Z 좌표를 읽고, 배치 좌표를 쓰기 전에 원본 좌표를 백업합니다. 변경 후에는 좌표를 다시 읽어 검증하고, 실패·오입력 시 쓸 수 있는 복원 명령 묶음도 반환합니다.</p>
+
+  <h2>정상화 작업 순서</h2>
+  <ol>
+    <li><strong>현재 UI 브랜치를 보존합니다.</strong> 공간 기능을 이 브랜치에 추가하지 않습니다.</li>
+    <li><strong>UI 브랜치의 19개 변경은 별도 PR로 처리합니다.</strong> 병합 전 최신 <code>main</code>에 rebase 또는 merge하여 충돌을 해결합니다.</li>
+    <li><strong>최신 <code>main</code>에서 새 워크트리를 생성합니다.</strong><pre>branch:   feature/SPEC-COPILOT-SPATIAL-HEIGHT-001
+worktree: /Users/studiox/orca/workspaces/AI-Lighting_Console/spatial-height-001</pre></li>
+    <li><strong>그 새 브랜치에서 높이 전용 편집을 추가합니다.</strong> 기존 X/Y·Rotation을 보존하면서 <code>Posz = 5.0</code>만 변경하고, 기존 백업·안전 게이트·재검증·복원을 그대로 사용합니다.</li>
+    <li><strong>별도 PR로 병합합니다.</strong> 병합 후 앱을 재빌드·배포하고, 백엔드와 앱을 재시작한 뒤 새 채팅을 엽니다.</li>
+  </ol>
+
+  <h2>최종 사용자 명령의 목표</h2>
+  <pre>레이아웃 전체 장비 바닥에서 5m로</pre>
+  <p><span class="good">의도된 실행 결과</span>: 패치된 모든 조명 Fixture의 <code>Posz</code>를 절대값 <code>5.0m</code>로 설정합니다. <code>Posx</code>, <code>Posy</code>, Rotation, DMX 값, Pan/Tilt, Cue, Preset은 유지합니다.</p>
+
+  <p class="footer">근거: 현재 Git worktree 등록, 활성 브랜치 선형 이력, 공통 조상, 현재 등록 도구 목록, 공간 기능이 포함된 <code>1c72d3e</code> 커밋을 확인해 작성했습니다.</p>
+</main>
+</body>
+</html>
