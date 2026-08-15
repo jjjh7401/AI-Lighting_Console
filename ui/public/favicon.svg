@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="MA3 Copilot">
+  <rect width="64" height="64" rx="12" fill="#111720"/>
+  <path d="M14 43V21h7l11 13 11-13h7v22h-7V31L32 44 21 31v12z" fill="#5289ff"/>
+  <circle cx="50" cy="14" r="5" fill="#5dc48c"/>
+</svg>

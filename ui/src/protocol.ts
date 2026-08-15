@@ -262,6 +262,87 @@ export interface CueHistoryEntry {
   target_no?: number | null;
 }
 
+// -- director song timeline ---------------------------------------------------
+//
+// This is a review artifact, never a command surface. It mirrors the
+// server-owned UnifiedSongLightingPlan after every material lifecycle change:
+// draft/requery → explicit approval → readback verdict.
+export type SongTimelineLifecycle =
+  | "draft"
+  | "requires_requery"
+  | "pending_approval"
+  | "approved"
+  | "verified"
+  | "readback_failed";
+
+// Per-section design/console state. `draft`/`requires_requery`/`approved`
+// are PLAN-only (nothing stored on the console yet); `stored`/`verified`
+// mean the cue exists on the console. Optional on the wire so older server
+// payloads still parse — consumers derive a fallback from `lifecycle`.
+export type SongTimelinePlanStatus =
+  | "draft"
+  | "requires_requery"
+  | "approved"
+  | "stored"
+  | "verified";
+
+export interface SongTimelineDecision {
+  step: string;
+  axis: string;
+  value: unknown;
+  confirmed: boolean;
+  source: string;
+}
+
+export interface SongTimelineSection {
+  index: number;
+  label: string;
+  start_ms: number;
+  cue_number: number;
+  d_level: number;
+  palette: string[];
+  position: string;
+  texture: string;
+  fx: string[];
+  accents: string[];
+  mib: boolean;
+  trig_time_seconds: number | null;
+  plan_status?: SongTimelinePlanStatus;
+}
+
+export interface SongTimelineView {
+  song_title: string;
+  sequence_name: string | null;
+  sequence_number: number;
+  timing_mode: "manual_go" | "trig_time" | "timecode";
+  timecode_number: number | null;
+  lifecycle: SongTimelineLifecycle;
+  approval: string;
+  director_decisions: SongTimelineDecision[];
+  sections: SongTimelineSection[];
+  lint: { rule_id: string; cue_number: number; description: string }[];
+  unresolved: { axis: string; section_index: number | null; reason: string }[];
+  disabled: { axis: string; section_index: number | null; reason: string }[];
+  readback: { verified: boolean | null; message: string | null };
+  /** True only when the console actually holds cues for this plan
+   * (lifecycle readback_failed/verified). Optional for older payloads. */
+  console_stored?: boolean;
+  warnings?: string[];
+  /** 결함 6: role → console group-number mapping recorded by the director
+   * (group membership is unreadable, so this never claims member fixtures). */
+  layer_mapping?: { role: string; group_no: number; group_name: string }[];
+  /** Basic-position preset base the plan was built on (edit support). */
+  preset_start?: number | null;
+}
+
+export type DirectorTimelineView = SongTimelineView;
+
+export interface SongTimelineEvent {
+  v: 1;
+  type: "song_timeline";
+  timeline: SongTimelineView;
+}
+
 export type ServerEvent =
   | {
       v: 1;
@@ -345,7 +426,8 @@ export type ServerEvent =
       type: "cue_monitor";
       executors: CueExecutorEntry[];
       history: CueHistoryEntry[];
-    };
+    }
+  | SongTimelineEvent;
 
 const SERVER_EVENT_TYPES = new Set([
   "chat_response",
@@ -369,6 +451,7 @@ const SERVER_EVENT_TYPES = new Set([
   "dash_catalog",
   // Cue monitor (T-C, wave 2) — mirrored by CUE_* in server/web/messages.py.
   "cue_monitor",
+  "song_timeline",
 ]);
 
 /** Parse one server frame; unknown/foreign frames return null (ignored). */
@@ -621,6 +704,13 @@ export interface CueMonitorState {
   stale: boolean;
 }
 
+/** Last server-authored director plan. It is review-only and becomes stale
+ * after disconnect because a new server session has no plan to execute. */
+export interface SongTimelineState {
+  timeline: SongTimelineView | null;
+  stale: boolean;
+}
+
 export interface PendingQuestion {
   request_id: string;
   prompt: string;
@@ -638,11 +728,13 @@ export interface UiState {
   panel: PanelState;
   dash: DashState;
   cueMonitor: CueMonitorState;
+  songTimeline: SongTimelineState;
 }
 
 export const initialState: UiState = {
   entries: [],
   status: null,
+  songTimeline: { timeline: null, stale: false },
   pendingApprovals: [],
   pendingReviews: [],
   pendingQuestions: [],
@@ -815,6 +907,11 @@ export function reduceServerEvent(
           stale: false,
         },
       };
+    case "song_timeline":
+      return {
+        ...state,
+        songTimeline: { timeline: event.timeline, stale: false },
+      };
   }
 }
 
@@ -960,6 +1057,9 @@ export function clearOnDisconnect(state: UiState): UiState {
   // Same withdrawal for the cue monitor's own freshness claim.
   if (next.cueMonitor.lastSyncAt !== null && !next.cueMonitor.stale) {
     next = { ...next, cueMonitor: { ...next.cueMonitor, stale: true } };
+  }
+  if (next.songTimeline.timeline !== null && !next.songTimeline.stale) {
+    next = { ...next, songTimeline: { ...next.songTimeline, stale: true } };
   }
   return next;
 }

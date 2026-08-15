@@ -20,6 +20,8 @@ import { PaperworkPanel } from "./components/PaperworkPanel";
 import { QuestionCard } from "./components/QuestionCard";
 import { ReviewCard } from "./components/ReviewCard";
 import { RunbookMode } from "./components/RunbookMode";
+import { TimelineLibrary } from "./components/TimelineLibrary";
+import { SONG_TIMELINE_EXAMPLE } from "./components/songTimelineExample";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { StatusBanner } from "./components/StatusBanner";
 import {
@@ -303,6 +305,7 @@ export default function App() {
     sendCueMonitorRefresh,
     sendVectorworksExportUpload,
     clearChat,
+    applySongTimeline,
   } = useCopilotSocket();
   const [draft, setDraft] = useState("");
   // Requests typed while a turn is running. Drained ONE at a time — the next
@@ -324,6 +327,7 @@ export default function App() {
       return next;
     });
   };
+  const [timelineExample, setTimelineExample] = useState(false);
   // W3 — paperwork panel toggle. Session-volatile (no localStorage), same
   // default every other App.tsx view preference besides runbookMode uses
   // (design.md §6 / D5) — runbookMode's persistence is an explicit,
@@ -426,6 +430,10 @@ export default function App() {
   const submit = () => {
     if (!composer.canSubmit) return;
     const text = draft.trim();
+    // A demo is only a visual rehearsal.  Once the operator sends a real
+    // instruction, remove it immediately rather than leaving it beside an
+    // in-flight plan and implying that it came from the console.
+    setTimelineExample(false);
     if (responding || queue.length > 0) {
       setQueue((pending) => [...pending, text]);
     } else {
@@ -516,107 +524,11 @@ export default function App() {
     }
   };
 
-  return (
-    <div className="app-frame">
-      <header className="header">
-        <h1>MA3 코파일럿</h1>
-        <div className="header-actions">
-          <button
-            className={`runbook-toggle${runbookMode ? " runbook-toggle-active" : ""}`}
-            onClick={toggleRunbookMode}
-            aria-label={runbookMode ? "런북 모드 끄기" : "런북 모드 켜기"}
-            aria-pressed={runbookMode}
-          >
-            {runbookMode ? "✓ 런북 모드" : "런북 모드"}
-          </button>
-          <button
-            className={`paperwork-toggle${paperworkMode ? " paperwork-toggle-active" : ""}`}
-            onClick={() => setPaperworkMode((active) => !active)}
-            aria-label={paperworkMode ? "페이퍼워크 닫기" : "페이퍼워크 열기"}
-            aria-pressed={paperworkMode}
-          >
-            {paperworkMode ? "✓ 페이퍼워크" : "페이퍼워크"}
-          </button>
-          <button
-            className="chat-toggle"
-            onClick={() => setChatCollapsed((collapsed) => !collapsed)}
-            aria-label={chatCollapsed ? "채팅 펼치기" : "채팅 접기"}
-          >
-            {chatCollapsed ? "◂ 채팅" : "▸ 채팅"}
-          </button>
-          <LockToggle status={state.status} onToggle={sendLock} />
-          <button
-            className="settings-open"
-            onClick={() => setSettingsOpen(true)}
-            aria-label="설정 열기"
-          >
-            ⚙ 설정
-          </button>
-        </div>
-      </header>
-      {runbookMode ? (
-        <div className="runbook-mode-frame">
-          <RunbookMode
-            cueMonitor={state.cueMonitor}
-            isExecutorRunning={isExecutorRunning}
-            onExecute={pressExecutor}
-            onRefresh={sendCueMonitorRefresh}
-          />
-          {/* Approvals/reviews still surface here — RunbookMode's run button
-              rides the same gated panel_execute path, so a required
-              approval never gets bypassed just because the rest of the UI
-              is hidden (contract item 4). */}
-          {state.pendingApprovals.map((approval) => (
-            <ApprovalCard key={approval.request_id} approval={approval} onDecision={sendDecision} />
-          ))}
-          {state.pendingQuestions.map((question) => (
-            <QuestionCard
-              key={question.request_id}
-              question={question}
-              onAnswer={sendQuestionAnswer}
-            />
-          ))}
-          {state.pendingReviews.map((review) => (
-            <ReviewCard key={review.request_id} review={review} onDecision={sendReviewDecision} />
-          ))}
-        </div>
-      ) : paperworkMode ? (
-        <div className="paperwork-mode-frame">
-          <PaperworkPanel onClose={() => setPaperworkMode(false)} />
-        </div>
-      ) : (
-        <>
-          <StatusBanner status={state.status} connected={connected} />
-          <OnboardingBanner
-            onOpenSettings={() => setSettingsOpen(true)}
-            refreshSignal={settingsRefresh}
-          />
-          {settingsOpen && <SettingsPanel onClose={closeSettings} />}
-          <AppShell
-            chatCollapsed={chatCollapsed}
-            dash={state.dash}
-            cueMonitor={state.cueMonitor}
-            onToggleChat={() => setChatCollapsed((collapsed) => !collapsed)}
-            onRefresh={sendDashRefresh}
-            onCueMonitorRefresh={sendCueMonitorRefresh}
-            isItemRunning={isDashItemRunning}
-            onItemPress={pressDashItem}
-            isExecutorRunning={isExecutorRunning}
-            onExecutorExecute={(executorNo) => sendPanelExecute("executor", executorNo)}
-            onExecutorBack={(executorNo) => sendPanelBack("executor", executorNo)}
-            onExecutorStop={(executorNo) => sendPanelStop("executor", executorNo)}
-            onExecutorGoto={(executorNo, cue) => sendPanelGoto("executor", executorNo, cue)}
-            openCueExecutorNo={openCueExecutorNo}
-            onToggleCueExecutor={toggleCueExecutor}
-            sectionTileSize={(sectionName) => sectionTileSizes[sectionName]}
-            onSectionTileSizeChange={(sectionName, next) =>
-              setSectionTileSizes((sizes) => ({ ...sizes, [sectionName]: next }))
-            }
-            sectionArea={(sectionName) => sectionAreas[sectionName]}
-            onSectionAreaResizeStart={startSectionAreaResize}
-            dashWidth={dashWidth}
-            onDashDividerDown={startDashDividerDrag}
-          >
+  // The copilot chat column (messages + approval/question/review cards +
+  // composer) — ONE definition shared by the normal split view and runbook
+  // mode, so runbook mode keeps the conversation fully usable beside the
+  // runbook pane instead of hiding it.
+  const chatColumn = (
             <div className="app">
               <main className="main">
                 {state.entries.length > 0 && (
@@ -733,6 +645,113 @@ export default function App() {
                 </div>
               </footer>
             </div>
+  );
+
+  return (
+    <div className="app-frame">
+      <header className="header">
+        <h1>MA3 코파일럿</h1>
+        <div className="header-actions">
+          <button
+            className={`runbook-toggle${runbookMode ? " runbook-toggle-active" : ""}`}
+            onClick={toggleRunbookMode}
+            aria-label={runbookMode ? "런북 모드 끄기" : "런북 모드 켜기"}
+            aria-pressed={runbookMode}
+          >
+            {runbookMode ? "✓ 런북 모드" : "런북 모드"}
+          </button>
+          <button
+            className={`paperwork-toggle${paperworkMode ? " paperwork-toggle-active" : ""}`}
+            onClick={() => setPaperworkMode((active) => !active)}
+            aria-label={paperworkMode ? "페이퍼워크 닫기" : "페이퍼워크 열기"}
+            aria-pressed={paperworkMode}
+          >
+            {paperworkMode ? "✓ 페이퍼워크" : "페이퍼워크"}
+          </button>
+          <button
+            className="chat-toggle"
+            onClick={() => setChatCollapsed((collapsed) => !collapsed)}
+            aria-label={chatCollapsed ? "채팅 펼치기" : "채팅 접기"}
+          >
+            {chatCollapsed ? "◂ 채팅" : "▸ 채팅"}
+          </button>
+          <LockToggle status={state.status} onToggle={sendLock} />
+          <button
+            className="settings-open"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="설정 열기"
+          >
+            ⚙ 설정
+          </button>
+        </div>
+      </header>
+      {runbookMode ? (
+        <div className="runbook-mode-frame runbook-with-chat">
+          <div className="runbook-pane">
+            <RunbookMode
+              cueMonitor={state.cueMonitor}
+              isExecutorRunning={isExecutorRunning}
+              onExecute={pressExecutor}
+              onRefresh={sendCueMonitorRefresh}
+              timeline={state.songTimeline.timeline ?? (timelineExample ? SONG_TIMELINE_EXAMPLE : null)}
+              timelineStale={state.songTimeline.stale}
+              timelineIsExample={state.songTimeline.timeline === null && timelineExample}
+              onShowTimelineExample={() => {
+                setTimelineExample(true);
+              }}
+              librarySlot={
+                <TimelineLibrary
+                  hasTimeline={state.songTimeline.timeline !== null}
+                  onLoaded={applySongTimeline}
+                />
+              }
+            />
+          </div>
+          {/* The copilot chat rides ALONGSIDE the runbook pane (user request,
+              2026-08-14): the director keeps talking to the copilot while
+              watching the runbook. Approval/question/review cards live inside
+              the chat column, which is ALWAYS visible here — so a required
+              approval still never gets bypassed (contract item 4). */}
+          {chatColumn}
+        </div>
+      ) : paperworkMode ? (
+        <div className="paperwork-mode-frame">
+          <PaperworkPanel onClose={() => setPaperworkMode(false)} />
+        </div>
+      ) : (
+        <>
+          <StatusBanner status={state.status} connected={connected} />
+          <OnboardingBanner
+            onOpenSettings={() => setSettingsOpen(true)}
+            refreshSignal={settingsRefresh}
+          />
+          {settingsOpen && <SettingsPanel onClose={closeSettings} />}
+          <AppShell
+            chatCollapsed={chatCollapsed}
+            dash={state.dash}
+            cueMonitor={state.cueMonitor}
+            onToggleChat={() => setChatCollapsed((collapsed) => !collapsed)}
+            onRefresh={sendDashRefresh}
+            onCueMonitorRefresh={sendCueMonitorRefresh}
+            isItemRunning={isDashItemRunning}
+            onItemPress={pressDashItem}
+            isExecutorRunning={isExecutorRunning}
+            onExecutorExecute={(executorNo) => sendPanelExecute("executor", executorNo)}
+            onExecutorBack={(executorNo) => sendPanelBack("executor", executorNo)}
+            onExecutorStop={(executorNo) => sendPanelStop("executor", executorNo)}
+            onExecutorGoto={(executorNo, cue) => sendPanelGoto("executor", executorNo, cue)}
+            openCueExecutorNo={openCueExecutorNo}
+            onToggleCueExecutor={toggleCueExecutor}
+            sectionTileSize={(sectionName) => sectionTileSizes[sectionName]}
+            onSectionTileSizeChange={(sectionName, next) =>
+              setSectionTileSizes((sizes) => ({ ...sizes, [sectionName]: next }))
+            }
+            sectionArea={(sectionName) => sectionAreas[sectionName]}
+            onSectionAreaResizeStart={startSectionAreaResize}
+            dashWidth={dashWidth}
+            onDashDividerDown={startDashDividerDrag}
+          >
+            {chatColumn}
           </AppShell>
         </>
       )}

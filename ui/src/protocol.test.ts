@@ -1045,6 +1045,43 @@ describe("clearOnDisconnect cue monitor extension (reducer half)", () => {
   });
 });
 
+const songTimelineEvent = {
+  type: "song_timeline",
+  timeline: {
+    song_title: "Neon Run",
+    sequence_name: "Sequence 120",
+    sequence_number: 120,
+    timing_mode: "timecode",
+    timecode_number: 901,
+    lifecycle: "pending_approval",
+    approval: "pending_review",
+    director_decisions: [{ step: "Q1_CONCEPT", axis: "texture", value: "neon", confirmed: true, source: "option" }],
+    sections: [{
+      index: 1, label: "Intro", start_ms: 0, cue_number: 1, d_level: 2,
+      palette: ["cyan", "magenta"], position: "Center", texture: "fade",
+      fx: [], accents: [], mib: false, trig_time_seconds: 0,
+    }],
+    lint: [],
+    unresolved: [],
+    disabled: [],
+    readback: { verified: null, message: null },
+  },
+};
+
+describe("director timeline protocol", () => {
+  it("stores the server-authored plan as a review-only state slice", () => {
+    const next = reduceServerEvent(initialState, event(songTimelineEvent));
+    expect(next.songTimeline.timeline?.sequence_number).toBe(120);
+    expect(next.songTimeline.timeline?.sections[0].position).toBe("Center");
+    expect(next.songTimeline.stale).toBe(false);
+  });
+
+  it("marks a received plan stale on disconnect rather than inventing a fresh plan", () => {
+    const next = reduceServerEvent(initialState, event(songTimelineEvent));
+    expect(clearOnDisconnect(next).songTimeline.stale).toBe(true);
+  });
+});
+
 describe("chat transcript persistence", () => {
   const entries = [
     { kind: "user" as const, text: "장비 배치해줘" },
