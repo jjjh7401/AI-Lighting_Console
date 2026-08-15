@@ -319,7 +319,6 @@ export default function App() {
   const [vectorworksUploadError, setVectorworksUploadError] = useState<string | null>(null);
   // SPEC-COPILOT-IMGLAYOUT-001 M1 — the attached layout-sketch thumbnail
   // (client-side display only; the server holds the authoritative copy).
-  const layoutImageInputRef = useRef<HTMLInputElement>(null);
   const [layoutImageUploadError, setLayoutImageUploadError] = useState<string | null>(null);
   const [layoutImage, setLayoutImage] = useState<{ fileName: string; dataUrl: string } | null>(
     null,
@@ -454,10 +453,7 @@ export default function App() {
     sendChat(next);
   }, [responding, queue, connected, state.status, sendChat]);
 
-  const uploadVectorworksExport = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.currentTarget.files?.[0];
-    event.currentTarget.value = "";
-    if (file === undefined) return;
+  const uploadVectorworksExport = (file: File) => {
     if (![".csv", ".txt", ".xlsx", ".mvr"].some((extension) => file.name.toLowerCase().endsWith(extension))) {
       setVectorworksUploadError("Vectorworks export는 CSV, TXT, XLSX 또는 MVR 파일만 올릴 수 있습니다.");
       return;
@@ -488,10 +484,7 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
-  const uploadLayoutImage = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.currentTarget.files?.[0];
-    event.currentTarget.value = "";
-    if (file === undefined) return;
+  const uploadLayoutImage = (file: File) => {
     if (!LAYOUT_IMAGE_MIME_TYPES.includes(file.type)) {
       setLayoutImageUploadError("이미지는 PNG, JPEG 또는 WEBP 파일만 첨부할 수 있습니다.");
       return;
@@ -521,6 +514,21 @@ export default function App() {
       setLayoutImage({ fileName: file.name, dataUrl: result });
     };
     reader.readAsDataURL(file);
+  };
+
+  // 사용자 결정 (2026-08-15): 첨부 버튼은 하나 — 파일 종류가 목적지를 고른다.
+  // 이미지 MIME(계약 §1)은 layout_image_upload로, 나머지는 기존 Vectorworks
+  // 경로로 보낸다. 각 경로의 검증·오류 문구는 그대로다: 여기는 라우터일 뿐
+  // 두 번째 검증 계층이 아니다.
+  const uploadAttachment = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (file === undefined) return;
+    if (LAYOUT_IMAGE_MIME_TYPES.includes(file.type)) {
+      uploadLayoutImage(file);
+    } else {
+      uploadVectorworksExport(file);
+    }
   };
 
   // M5 (design.md §4, REQ-DASHUI-017): the dash pool grid's fireable sections
@@ -750,8 +758,8 @@ export default function App() {
                     ref={vectorworksInputRef}
                     className="composer-file-input"
                     type="file"
-                    accept=".csv,.txt,.xlsx,.mvr"
-                    onChange={uploadVectorworksExport}
+                    accept=".csv,.txt,.xlsx,.mvr,image/png,image/jpeg,image/webp"
+                    onChange={uploadAttachment}
                     disabled={composer.inputDisabled}
                   />
                   <button
@@ -759,28 +767,10 @@ export default function App() {
                     className="composer-upload"
                     onClick={() => vectorworksInputRef.current?.click()}
                     disabled={composer.inputDisabled}
-                    title="VWX 파일 첨부 (CSV·TXT·XLSX·MVR)"
-                    aria-label="VWX 파일 첨부"
+                    title="파일 첨부 — VWX(CSV·TXT·XLSX·MVR) 또는 배치 이미지(PNG·JPEG·WEBP)"
+                    aria-label="파일 첨부"
                   >
                     ＋
-                  </button>
-                  <input
-                    ref={layoutImageInputRef}
-                    className="composer-file-input"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={uploadLayoutImage}
-                    disabled={composer.inputDisabled}
-                  />
-                  <button
-                    type="button"
-                    className="composer-upload"
-                    onClick={() => layoutImageInputRef.current?.click()}
-                    disabled={composer.inputDisabled}
-                    title="배치 이미지 첨부 (PNG·JPEG·WEBP)"
-                    aria-label="배치 이미지 첨부"
-                  >
-                    🖼
                   </button>
                   {layoutImage && (
                     <div className="composer-image-thumb" title={layoutImage.fileName}>
