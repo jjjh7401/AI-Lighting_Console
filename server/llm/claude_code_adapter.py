@@ -29,6 +29,20 @@ from server.llm.types import (
 PROVIDER_NAME = "claude_code"
 _MODEL_ALIASES = frozenset({"opus", "sonnet", "fable"})
 
+# REQ-IMGLAYOUT-006 / contract.md §2: this provider has no image transport, so
+# an image-bearing turn must refuse honestly rather than silently drop the
+# image and answer as if it were text-only.
+_NO_IMAGE_SUPPORT_MESSAGE = (
+    "현재 프로바이더(claude_code)는 이미지를 읽을 수 없습니다. "
+    "provider.toml에서 anthropic 또는 gemini로 전환하세요."
+)
+
+
+def _has_images(conversation: Sequence[ConversationItem]) -> bool:
+    return any(
+        isinstance(item, UserMessage) and item.images for item in conversation
+    )
+
 
 @dataclasses.dataclass(frozen=True)
 class _ModelProfile:
@@ -214,6 +228,15 @@ class ClaudeCodeAdapter:
         conversation: Sequence[ConversationItem],
         tools: Sequence[ToolDefinition] = (),
     ) -> ModelTurn:
+        if _has_images(conversation):
+            return ModelTurn(
+                text=_NO_IMAGE_SUPPORT_MESSAGE,
+                tool_calls=(),
+                stop_reason="end",
+                usage=Usage(),
+                provider=PROVIDER_NAME,
+                provider_payload=None,
+            )
         command = [
             "claude",
             "--print",

@@ -19,6 +19,7 @@ thread-safe (the app wraps the WebSocket send accordingly).
 
 from __future__ import annotations
 
+import base64
 import contextlib
 import json
 import os
@@ -1606,6 +1607,20 @@ class _UploadedVectorworksExport:
         self.report = None
 
 
+@dataclass(frozen=True)
+class LayoutImageUpload:
+    """One session's most-recently attached layout image (SPEC-COPILOT-IMGLAYOUT-001 M1).
+
+    Ephemeral and WS-session-scoped, same as ``_UploadedVectorworksExport`` —
+    but a new upload REPLACES the field wholesale (contract §1) rather than
+    mutating in place, so the dataclass itself can stay frozen.
+    """
+
+    file_name: str
+    mime_type: str
+    content_base64: str
+
+
 @dataclass
 class _PendingRepeatingColumns:
     """The still-incomplete MMX/MMX/350 layout for this chat connection."""
@@ -1847,6 +1862,38 @@ class _GateLivenessPort:
         return self._gate.heartbeat() == HealthMonitor.ONLINE
 
 
+class _LayoutImageUploadView:
+    """Adapts ``ChatSession._layout_image`` to ``LayoutImageUploadPort`` (M4).
+
+    ``_layout_image`` is a ``LayoutImageUpload | None`` field that a new
+    upload REPLACES wholesale (contract.md §1) — unlike
+    ``_UploadedVectorworksExport``, it is never mutated in place. Passing
+    ``self._layout_image`` straight into ``build_toolset`` at construction
+    time would therefore freeze the pre-upload ``None`` into the
+    ``analyse_layout_image`` tool closure forever. This view reads through to
+    the CURRENT field on every access instead, so an upload that arrives
+    after session construction is still visible to the tool.
+    """
+
+    def __init__(self, session: "ChatSession") -> None:
+        self._session = session
+
+    @property
+    def file_name(self) -> str | None:
+        image = self._session._layout_image
+        return image.file_name if image is not None else None
+
+    @property
+    def mime_type(self) -> str | None:
+        image = self._session._layout_image
+        return image.mime_type if image is not None else None
+
+    @property
+    def content_base64(self) -> str | None:
+        image = self._session._layout_image
+        return image.content_base64 if image is not None else None
+
+
 class _ObservingBundleGate:
     """BundleGate wrapper surfacing every screening decision to the session."""
 
@@ -1947,6 +1994,10 @@ class ChatSession:
         # bare follow-up modification can anchor to the real target.
         self._last_created: LastCreated | None = None
         self._vectorworks_upload = _UploadedVectorworksExport()
+        # SPEC-COPILOT-IMGLAYOUT-001 M1 — the layout-sketch attachment (most
+        # recent only; a new upload replaces it). M3's ``analyse_layout_image``
+        # tool reads this field; M1 only stores it.
+        self._layout_image: LayoutImageUpload | None = None
         # M6c-1 Finding 1/2: a unique identity for THIS connection, scoping the
         # shared approval_channel/review_channel/gate's per-session state so a
         # sibling ChatSession's disconnect or screening never leaks in.
@@ -1968,6 +2019,16 @@ class ChatSession:
             deploy_pipeline=deploy_pipeline,
             question_port=question_channel,
             vectorworks_upload=self._vectorworks_upload,
+            # SPEC-COPILOT-IMGLAYOUT-001 M4: analyse_layout_image (M3) reads
+            # the session's held image through this view (see
+            # _LayoutImageUploadView) and reasons with the session's own
+            # active provider — there is exactly one provider per session
+            # (server/llm/factory.py builds a SINGLE active adapter), so
+            # vision calls inherit its claude_code honest-refusal behavior
+            # (REQ-IMGLAYOUT-006) automatically; no separate vision provider
+            # config exists to wire.
+            vision_provider=provider,
+            layout_image_upload=_LayoutImageUploadView(self),
             # SPEC-COPILOT-PRESHOW-001 T-G2: reuse the gate's own audited
             # heartbeat as the pre-show OSC checks' liveness probe — no
             # second console link, no new socket. Gated on preshow_receive_port
@@ -5733,6 +5794,26 @@ class ChatSession:
         """Replace this session's export and immediately start its guided analysis."""
         self._vectorworks_upload.replace(file_name, content_base64)
         return self.run_instruction(_VECTORWORKS_UPLOAD_INSTRUCTION)
+
+    def upload_layout_image(self, file_name: str, mime_type: str, content_base64: str) -> dict:
+        """Replace this session's attached layout image (REQ-IMGLAYOUT-001/003).
+
+        Storage only — unlike ``upload_vectorworks_export`` this does NOT start
+        a guided instruction. The vision analysis is a tool the model reaches
+        for (``analyse_layout_image``, M3) only once the operator has actually
+        described what to do with the image; auto-analysing on upload would
+        spend a model call before there is any description to analyse against.
+        Wire-level validation (MIME allowlist, base64, the 5 MiB cap) already
+        happened in ``parse_client_message`` — a message that reaches here is
+        already accepted.
+        """
+        self._layout_image = LayoutImageUpload(
+            file_name=file_name, mime_type=mime_type, content_base64=content_base64
+        )
+        size_kb = len(base64.b64decode(content_base64)) // 1024
+        event = notice_event(f"이미지 '{file_name}' 첨부됨 ({size_kb}KB)")
+        self._send(event)
+        return event
 
     # -- internals ------------------------------------------------------------------
 

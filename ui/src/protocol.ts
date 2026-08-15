@@ -489,6 +489,27 @@ export function buildVectorworksExportUpload(fileName: string, contentBase64: st
   });
 }
 
+/**
+ * SPEC-COPILOT-IMGLAYOUT-001 M1 — attach a design/reference image (contract
+ * §1). `mimeType` must be one of the server's allowed MIME types
+ * (`image/png` / `image/jpeg` / `image/webp`) — this builder does not
+ * validate; the server rejects an unlisted type with `error(kind:
+ * "layout_image_rejected")`.
+ */
+export function buildLayoutImageUpload(
+  fileName: string,
+  mimeType: string,
+  contentBase64: string,
+): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "layout_image_upload",
+    file_name: fileName,
+    mime_type: mimeType,
+    content_base64: contentBase64,
+  });
+}
+
 export function buildApprovalDecision(requestId: string, approved: boolean): string {
   return JSON.stringify({
     v: PROTOCOL_VERSION,

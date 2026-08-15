@@ -22,6 +22,7 @@ are recorded as gaps in progress.md.
 
 from __future__ import annotations
 
+import base64
 import logging
 import threading
 from collections.abc import Sequence
@@ -265,9 +266,15 @@ class GeminiAdapter:
         contents: list[Any] = []
         for item in conversation:
             if isinstance(item, UserMessage):
-                contents.append(
-                    gtypes.Content(role="user", parts=[gtypes.Part.from_text(text=item.text)])
-                )
+                parts: list[Any] = [
+                    gtypes.Part.from_bytes(
+                        data=base64.b64decode(image.content_base64),
+                        mime_type=image.mime_type,
+                    )
+                    for image in item.images
+                ]
+                parts.append(gtypes.Part.from_text(text=item.text))
+                contents.append(gtypes.Content(role="user", parts=parts))
             elif isinstance(item, ModelTurn):
                 if item.provider == PROVIDER_NAME and item.provider_payload is not None:
                     contents.append(item.provider_payload)  # verbatim echo
