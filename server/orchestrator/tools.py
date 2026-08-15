@@ -587,8 +587,7 @@ def _parse_layout_vision_response(text: str) -> tuple[dict[str, object] | None, 
         extra_keys = set(interpreted) - _LAYOUT_INTERPRETED_KEYS
         if extra_keys:
             return None, (
-                "'interpreted'에 스키마 밖 키가 있다(픽셀 추정 필드는 금지): "
-                f"{sorted(extra_keys)}"
+                f"'interpreted'에 스키마 밖 키가 있다(픽셀 추정 필드는 금지): {sorted(extra_keys)}"
             )
 
     unresolved = payload.get("unresolved", [])

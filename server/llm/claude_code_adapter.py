@@ -39,9 +39,7 @@ _NO_IMAGE_SUPPORT_MESSAGE = (
 
 
 def _has_images(conversation: Sequence[ConversationItem]) -> bool:
-    return any(
-        isinstance(item, UserMessage) and item.images for item in conversation
-    )
+    return any(isinstance(item, UserMessage) and item.images for item in conversation)
 
 
 @dataclasses.dataclass(frozen=True)

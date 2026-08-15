@@ -92,9 +92,7 @@ class TestClientMessageParsing:
 
     def test_rejects_empty_content_base64(self):
         with pytest.raises(ProtocolError):
-            parse_client_message(
-                _raw(file_name="plan.png", mime_type=_PNG_MIME, content_base64="")
-            )
+            parse_client_message(_raw(file_name="plan.png", mime_type=_PNG_MIME, content_base64=""))
 
     def test_layout_image_upload_registered_on_client_message_types(self):
         # The whole-message unknown-type rejection path (kept in this file

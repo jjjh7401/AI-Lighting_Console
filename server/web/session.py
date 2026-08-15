@@ -1875,7 +1875,7 @@ class _LayoutImageUploadView:
     after session construction is still visible to the tool.
     """
 
-    def __init__(self, session: "ChatSession") -> None:
+    def __init__(self, session: ChatSession) -> None:
         self._session = session
 
     @property

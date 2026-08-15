@@ -1219,6 +1219,9 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     # 새로고침 생존 (2026-08-13) — 복원된 화면 기록을 새 세션의 모델 메모리에
     # 재주입하는 채널. PRECHK/OVERLAP 축과 무관한 정당한 확장.
     "history_restore",
+    # SPEC-COPILOT-IMGLAYOUT-001 (2026-08-15) — 배치 이미지가 세션에 머물게
+    # 하는 업로드 채널. PRECHK/OVERLAP 축과 무관한 정당한 확장.
+    "layout_image_upload",
     "lock",
     "panel_back",
     "panel_catalog_request",
