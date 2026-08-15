@@ -81,9 +81,7 @@ class TestAssertKeyringBackend:
         # A leaked plaintext/obfuscated keyrings.alt backend is exactly the
         # REQ-DEPLOY-006a leak vector — the __module__ gate rejects it.
         with pytest.raises(RuntimeError):
-            launcher.assert_keyring_backend(
-                keyring_module=_fake_keyring("keyrings.alt.file")
-            )
+            launcher.assert_keyring_backend(keyring_module=_fake_keyring("keyrings.alt.file"))
 
     def test_discriminates_on_module_not_class_name(self):
         # The wrong backend's class is ALSO named "Keyring"; only __module__
@@ -143,22 +141,16 @@ class TestRunSelfCheck:
         assert rc != 0
 
     def test_nonzero_on_leaked_alt_backend(self):
-        rc = launcher.run_self_check(
-            keyring_module=_FakeStore("keyrings.alt.file"), out=_Sink()
-        )
+        rc = launcher.run_self_check(keyring_module=_FakeStore("keyrings.alt.file"), out=_Sink())
         assert rc != 0
 
     def test_nonzero_when_roundtrip_write_raises(self):
-        rc = launcher.run_self_check(
-            keyring_module=_FakeStore(broken_set=True), out=_Sink()
-        )
+        rc = launcher.run_self_check(keyring_module=_FakeStore(broken_set=True), out=_Sink())
         assert rc != 0
 
     def test_nonzero_when_delete_leaves_the_value(self):
         # delete then get must be None; a backend that leaves the value fails.
-        rc = launcher.run_self_check(
-            keyring_module=_FakeStore(broken_delete=True), out=_Sink()
-        )
+        rc = launcher.run_self_check(keyring_module=_FakeStore(broken_delete=True), out=_Sink())
         assert rc != 0
 
     def test_uses_the_research_probe_service_and_sentinel(self):
@@ -288,19 +280,14 @@ class TestOscReceivePortIsProbedAsUdp:
         # real bind options does NOT weaken this detection.
         with _occupy_osc_receive_port() as port:
             assert (
-                launcher.probe_port_available(
-                    "127.0.0.1", port, sock_type=socket.SOCK_DGRAM
-                )
+                launcher.probe_port_available("127.0.0.1", port, sock_type=socket.SOCK_DGRAM)
                 is False
             )
 
     def test_a_free_udp_port_is_still_reported_available(self):
         with _occupy_osc_receive_port() as port:
             pass  # released on exit — the same number must now read free
-        assert (
-            launcher.probe_port_available("127.0.0.1", port, sock_type=socket.SOCK_DGRAM)
-            is True
-        )
+        assert launcher.probe_port_available("127.0.0.1", port, sock_type=socket.SOCK_DGRAM) is True
 
     def test_require_ports_available_rejects_an_occupied_receive_port(self):
         with (
@@ -352,9 +339,7 @@ class TestThePreflightModelsTheReceiversActualBind:
         # preflight must report the port available.
         with _occupy_wildcard_udp_port() as port:
             assert (
-                launcher.probe_port_available(
-                    "127.0.0.1", port, sock_type=socket.SOCK_DGRAM
-                )
+                launcher.probe_port_available("127.0.0.1", port, sock_type=socket.SOCK_DGRAM)
                 is True
             )
 
@@ -374,9 +359,7 @@ class TestThePreflightModelsTheReceiversActualBind:
 
         with _occupy_wildcard_udp_port() as port:
             assert (
-                launcher.probe_port_available(
-                    "127.0.0.1", port, sock_type=socket.SOCK_DGRAM
-                )
+                launcher.probe_port_available("127.0.0.1", port, sock_type=socket.SOCK_DGRAM)
                 is True
             )
             server = _ReuseAddrOSCUDPServer(("127.0.0.1", port), Dispatcher())
@@ -419,9 +402,7 @@ class TestThePreflightModelsTheReceiversActualBind:
         server = _ReuseAddrOSCUDPServer(("0.0.0.0", port), Dispatcher())
         try:
             assert (
-                launcher.probe_port_available(
-                    "127.0.0.1", port, sock_type=socket.SOCK_DGRAM
-                )
+                launcher.probe_port_available("127.0.0.1", port, sock_type=socket.SOCK_DGRAM)
                 is True
             ), "the UDP preflight dropped SO_REUSEADDR — it now blocks a working start"
         finally:
@@ -460,17 +441,13 @@ class TestThePreflightModelsTheReceiversActualBind:
 class TestOpenAppBrowser:
     def test_opens_when_enabled(self):
         opened: list[str] = []
-        ok = launcher.open_app_browser(
-            "http://127.0.0.1:8765", enabled=True, opener=opened.append
-        )
+        ok = launcher.open_app_browser("http://127.0.0.1:8765", enabled=True, opener=opened.append)
         assert ok is True
         assert opened == ["http://127.0.0.1:8765"]
 
     def test_suppressed_when_disabled(self):
         opened: list[str] = []
-        ok = launcher.open_app_browser(
-            "http://127.0.0.1:8765", enabled=False, opener=opened.append
-        )
+        ok = launcher.open_app_browser("http://127.0.0.1:8765", enabled=False, opener=opened.append)
         assert ok is False
         assert opened == []
 
@@ -652,9 +629,7 @@ class TestWatchdogPipeEOF:
     def test_eof_triggers_self_reap_within_the_latency_bound(self):
         read_fd, write_fd = os.pipe()
         reaped: list[int] = []
-        watchdog = launcher.ParentLivenessWatchdog(
-            pipe_fd=read_fd, reaper=reaped.append, pid=4242
-        )
+        watchdog = launcher.ParentLivenessWatchdog(pipe_fd=read_fd, reaper=reaped.append, pid=4242)
         watchdog.start()
         try:
             time.sleep(0.05)
@@ -673,9 +648,7 @@ class TestWatchdogPipeEOF:
     def test_heartbeat_byte_does_not_trigger(self):
         read_fd, write_fd = os.pipe()
         reaped: list[int] = []
-        watchdog = launcher.ParentLivenessWatchdog(
-            pipe_fd=read_fd, reaper=reaped.append, pid=4242
-        )
+        watchdog = launcher.ParentLivenessWatchdog(pipe_fd=read_fd, reaper=reaped.append, pid=4242)
         watchdog.start()
         try:
             os.write(write_fd, b"\x01")  # a live parent's heartbeat
@@ -822,9 +795,7 @@ class TestSessionLeaderDetach:
 
     def test_a_standalone_launch_never_detaches(self):
         calls: list[int] = []
-        assert (
-            launcher.become_session_leader(environ={}, setsid=lambda: calls.append(1)) is False
-        )
+        assert launcher.become_session_leader(environ={}, setsid=lambda: calls.append(1)) is False
         assert calls == [], "a standalone launch detached from its terminal"
 
     def test_a_declared_sidecar_detaches(self):
@@ -851,9 +822,7 @@ class TestSessionLeaderDetach:
         # setsid() fails with EPERM when the caller is already a group leader —
         # which means the goal is ALREADY met. Never fatal.
         assert (
-            launcher.become_session_leader(
-                environ={launcher.PARENT_PID_ENV: "4242"}, setsid=_angry
-            )
+            launcher.become_session_leader(environ={launcher.PARENT_PID_ENV: "4242"}, setsid=_angry)
             is False
         )
 
@@ -1059,11 +1028,16 @@ class TestSidecarSelfReap:
             [
                 sys.executable,
                 _CHILD_SCRIPT,
-                "--mode", "sidecar",
-                "--status", str(status),
-                "--web-port", str(web_port),
-                "--osc-port", str(osc_port),
-                "--pipe-fd", str(read_fd),
+                "--mode",
+                "sidecar",
+                "--status",
+                str(status),
+                "--web-port",
+                str(web_port),
+                "--osc-port",
+                str(osc_port),
+                "--pipe-fd",
+                str(read_fd),
             ],
             pass_fds=(read_fd,),
             start_new_session=True,  # the sidecar leads its own group
@@ -1100,9 +1074,7 @@ class TestSidecarSelfReap:
             if write_fd >= 0:
                 os.close(write_fd)
             os.close(read_fd)
-            _force_cleanup(
-                proc.pid, info.get("grandchild", 0), pgids=(sidecar_pgid,)
-            )
+            _force_cleanup(proc.pid, info.get("grandchild", 0), pgids=(sidecar_pgid,))
 
     def test_orphaned_sidecar_reaps_the_group_without_a_pipe(self, tmp_path):
         # AC-DEPLOY-026 ③ (FALLBACK trigger): no pipe channel — the sidecar is
@@ -1113,10 +1085,14 @@ class TestSidecarSelfReap:
             [
                 sys.executable,
                 _CHILD_SCRIPT,
-                "--mode", "parent",
-                "--status", str(status),
-                "--web-port", str(web_port),
-                "--osc-port", str(osc_port),
+                "--mode",
+                "parent",
+                "--status",
+                str(status),
+                "--web-port",
+                str(web_port),
+                "--osc-port",
+                str(osc_port),
             ],
             start_new_session=True,  # keep the helper out of pytest's own group
             stdout=subprocess.DEVNULL,
@@ -1146,6 +1122,4 @@ class TestSidecarSelfReap:
             if recorded.exists():
                 with contextlib.suppress(json.JSONDecodeError, OSError):
                     spawned = json.loads(recorded.read_text(encoding="utf-8"))["sidecar"]
-            _force_cleanup(
-                parent.pid, info.get("pid", 0), info.get("grandchild", 0), spawned
-            )
+            _force_cleanup(parent.pid, info.get("pid", 0), info.get("grandchild", 0), spawned)

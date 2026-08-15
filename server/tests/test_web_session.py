@@ -1153,6 +1153,26 @@ class TestAllFixturesElevation:
             "spacing": 1.5,
         }
 
+    def test_locked_whole_rig_layout_does_not_read_or_write_inventory(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                raise AssertionError("locked layout must not dispatch a rig read or write")
+
+        session._registry = Registry()
+        session._gate.lock.activate()
+
+        event = session.run_instruction("전체 장비를 동그랗게 놓아줘")
+
+        assert provider.calls == []
+        assert calls == []
+        assert event["commands"] == []
+        assert "라이브 잠금 중이라 현재 리그 좌표를 읽지 않았습니다." in event["text"]
+
 
 class TestPointFixturesAtTarget:
     def _registry(self, calls):
@@ -1173,6 +1193,14 @@ class TestPointFixturesAtTarget:
                             content=json.dumps(
                                 {"fixtures": fixtures, "coverage": {"complete": True}}
                             ),
+                        )
+                    )
+                if call.name == "query_state":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps({"ok": True, "path": call.arguments["path"]}),
                         )
                     )
                 return ToolExecution(
@@ -1679,6 +1707,969 @@ class TestPositionCueSheetSession:
 
         assert calls == []
         assert "형식" in event["text"]
+
+
+class TestSongDesignInterviewSession:
+    """SONGSTD M2 R1c/R4: '디자인 큐 시트 …' — 5-card director interview
+    (Q1 컨셉 ~ Q5 질감) → standard profile+rig sheet. Narrowly gated on
+    "디자인"/"연출 인터뷰" so it never fires on the existing "포지션 큐 시트"
+    vocabulary (see ``TestPositionCueSheetSession`` above, unmodified)."""
+
+    def _sequence_readback(self, *, cue_1_trig_time: object = "0") -> dict:
+        return {
+            "ok": True,
+            "path": "DataPool/Sequences/110",
+            "node": {"name": "Sequence 110", "class": "Sequence", "childCount": 2},
+            "children": [
+                {
+                    "class": "Cue",
+                    "cueNo": 1,
+                    "name": "Intro",
+                    "TrigType": "Time",
+                    "TrigTime": cue_1_trig_time,
+                },
+                {
+                    "class": "Cue",
+                    "cueNo": 2,
+                    "name": "Chorus",
+                    "properties": {"TrigType": "Time", "TrigTime": "40"},
+                },
+            ],
+        }
+
+    def _timecode_readback(self) -> dict:
+        return {
+            "ok": True,
+            "path": "DataPool/Timecodes/7",
+            "node": {"name": "Sequence 110 Timecode", "class": "Timecode", "childCount": 0},
+            "children": [],
+        }
+
+    def _registry(
+        self,
+        calls,
+        *,
+        sequence_readback=None,
+        timecode_readback=None,
+        groups_readback=None,
+    ):
+        fixtures = [
+            {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
+            {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
+        ]
+        states = {
+            "DataPool/Sequences/110": sequence_readback or self._sequence_readback(),
+            "DataPool/Timecodes/7": timecode_readback or self._timecode_readback(),
+            "DataPool/Groups": groups_readback or {},
+        }
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                if call.name == "query_state":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(states.get(call.arguments["path"], {})),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    (CommandOutcome(command="Fixture 20", status="proposal"),),
+                )
+
+        return Registry()
+
+    class _Channel:
+        def __init__(self, answers):
+            self.answers = list(answers)
+            self.asked = []
+
+        def ask(self, request, **_kwargs):
+            self.asked.append(request)
+            return self.answers.pop(0) if self.answers else UNANSWERED
+
+    _FULL = (
+        "디자인 큐 시트, 시퀀스 110, 프리셋 21번부터, 타임코드 7: "
+        "인트로 0:00 잔잔한 발라드, 후렴 0:40 클럽 드롭"
+    )
+
+    def test_full_choice_flow_previews_before_any_write_and_asks_for_approval(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        # Every answer is the recommended (index-0) option label for this
+        # rig/profile — a deterministic full-choice path (DI1 confirms every
+        # axis; no auto-draft anywhere).
+        channel = self._Channel(
+            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "BPM 질감"]
+        )
+        session._question_channel = channel
+
+        event = session.run_instruction(self._FULL)
+
+        assert len(channel.asked) == 6
+        assert [q.prompt for q in channel.asked[:5]] == [
+            "공연 전체가 어떤 느낌이면 좋겠어요?",
+            "어떤 색이 가장 잘 어울릴까요?",
+            "가장 중요한 순간을 어떻게 보여 주면 좋겠어요?",
+            "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?",
+            "빛은 빠르게 바뀌는 편이 좋을까요, 부드럽게 이어지는 편이 좋을까요?",
+        ]
+        assert "전곡 리뷰 번들" in channel.asked[5].prompt
+        for q in channel.asked[:5]:
+            assert len(q.options) == 3  # R1c: 제안 3개 + 자유 입력(무조건 제공)
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert writes == []
+        assert event["status"] == "ok"
+        assert "(확정)" in event["text"]
+        assert "(감독 미확정)" not in event["text"]
+        assert "승인 전" in event["text"]
+        timelines = [event["timeline"] for event in sent if event["type"] == "song_timeline"]
+        assert timelines[-1]["lifecycle"] == "pending_approval"
+        assert timelines[-1]["sections"][0]["cue_number"] == 1
+        assert timelines[-1]["sections"][0]["trig_time_seconds"] == 0
+
+    def test_natural_song_lighting_brief_routes_to_timeline(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel(
+            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "BPM 질감"]
+        )
+
+        event = session.run_instruction(
+            "90초 록 곡 조명 설계를 만들어줘. 시퀀스 110, 프리셋 21번부터, 수동 Go. "
+            "0:00 인트로는 파란색과 낮은 밝기로 시작하고, "
+            "0:24 벌스에서 시안을 추가해 조금 올리고, "
+            "0:48 후렴에서 마젠타와 화이트로 가장 크게 터뜨리고, "
+            "1:12 마지막은 화이트 스냅으로 마무리해줘. "
+            "아직 콘솔에는 적용하지 말고 검토용 타임라인만 만들어줘."
+        )
+
+        assert event["status"] == "ok"
+        assert [call for call in calls if call.name == "run_commands"] == []
+        timelines = [event["timeline"] for event in sent if event["type"] == "song_timeline"]
+        assert timelines[-1]["lifecycle"] == "requires_requery"
+        assert [section["label"] for section in timelines[-1]["sections"]] == [
+            "인트로",
+            "벌스",
+            "후렴",
+            "마지막",
+        ]
+
+    def test_plain_multisection_song_brief_starts_full_interview_not_model_execution(
+        self, tmp_path
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "110",
+                "21",
+                "수동 Go",
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "BPM 질감",
+                "수정",
+            ]
+        )
+        session._question_channel = channel
+
+        event = session.run_instruction(
+            "곡은 약 1분 40초의 밝은 팝 무대야.\n"
+            "0:00 도입은 무대를 어둡게 두고 보컬에게만 시선을 모아줘.\n"
+            "0:22 벌스는 리듬이 시작되면서 무대 폭을 조금씩 넓혀줘.\n"
+            "0:48 첫 후렴은 관객까지 에너지가 퍼지는 가장 큰 장면으로 만들어줘.\n"
+            "1:12 브리지는 차갑고 비워진 느낌으로 대비를 줘.\n"
+            "1:32 마지막 후렴은 따뜻하고 환하게, 가장 큰 에너지로 끝내줘."
+        )
+
+        assert event["status"] == "ok"
+        assert [call for call in calls if call.name == "run_commands"] == []
+        # 3 setup + 5 interview + 1 requery answered ("수정") + 1 requery that
+        # went unanswered (channel exhausted) — the loop stops without writes.
+        assert len(channel.asked) == 10
+        assert [question.prompt for question in channel.asked[3:8]] == [
+            "공연 전체가 어떤 느낌이면 좋겠어요?",
+            "어떤 색이 가장 잘 어울릴까요?",
+            "가장 중요한 순간을 어떻게 보여 주면 좋겠어요?",
+            "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?",
+            "빛은 빠르게 바뀌는 편이 좋을까요, 부드럽게 이어지는 편이 좋을까요?",
+        ]
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["lifecycle"] == "requires_requery"
+        assert timelines[-1]["console_stored"] is False
+        assert all(
+            section["plan_status"] in ("draft", "requires_requery")
+            for section in timelines[-1]["sections"]
+        )
+        assert [section["label"] for section in timelines[-1]["sections"]] == [
+            "도입",
+            "벌스",
+            "후렴",
+            "브리지",
+            "마지막",
+        ]
+
+    def test_explicit_approval_runs_one_reviewed_bundle_and_requests_timing_readback(
+        self, tmp_path
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "BPM 질감", "승인"]
+        )
+        session._question_channel = channel
+
+        event = session.run_instruction(self._FULL)
+
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert len(writes) == 1
+        assert writes[0].id == "song-design-reviewed-bundle"
+        commands = writes[0].arguments["commands"]
+        assert any(command.startswith("Store Sequence 110 Cue 1") for command in commands)
+        assert "Store Timecode 7" in commands
+        assert "Set Cue 1 Sequence 110 Property 'TrigTime' 0" in commands
+        assert not any("/Merge" in command for command in commands)
+        assert any(" CueFade " in command for command in commands)
+        assert not any("Property 'Fade'" in command for command in commands)
+        readbacks = [call.arguments["path"] for call in calls if call.name == "query_state"]
+        # The one-time layer-mapping group read precedes the two readbacks.
+        assert readbacks == [
+            "DataPool/Groups",
+            "DataPool/Sequences/110",
+            "DataPool/Timecodes/7",
+        ]
+        assert event["commands"] == [
+            {
+                "command": "Fixture 20",
+                "status": "proposal",
+                "label": "제안 (라이브 잠금 — 전송되지 않음)",
+                "detail": "",
+            }
+        ]
+        assert "리뷰 번들 1건을 원자 실행" in event["text"]
+        assert "readback 검증 완료" in event["text"]
+        timelines = [event["timeline"] for event in sent if event["type"] == "song_timeline"]
+        assert [timeline["lifecycle"] for timeline in timelines] == [
+            "pending_approval",
+            "approved",
+            "verified",
+        ]
+        assert timelines[-1]["readback"]["verified"] is True
+        assert timelines[0]["console_stored"] is False
+        assert all(s["plan_status"] == "draft" for s in timelines[0]["sections"])
+        assert timelines[-1]["console_stored"] is True
+        assert all(s["plan_status"] == "verified" for s in timelines[-1]["sections"])
+
+    _PLAIN_BRIEF = (
+        "곡은 약 1분 40초의 밝은 팝 무대야.\n"
+        "0:00 도입은 무대를 어둡게 두고 보컬에게만 시선을 모아줘.\n"
+        "0:22 벌스는 리듬이 시작되면서 무대 폭을 조금씩 넓혀줘.\n"
+        "0:48 첫 후렴은 관객까지 에너지가 퍼지는 가장 큰 장면으로 만들어줘.\n"
+        "1:12 브리지는 차갑고 비워진 느낌으로 대비를 줘.\n"
+        "1:32 마지막 후렴은 따뜻하고 환하게, 가장 큰 에너지로 끝내줘."
+    )
+
+    def test_all_requery_answers_merge_and_recompose_to_pending_approval(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "110",
+                "21",
+                "수동 Go",
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "BPM 질감",
+                # Requery answers — one per unresolved section, in order.
+                "Center → Fan Out",
+                "Wall 저조도",
+                "Vocal DSC 스페셜",
+                "Fan Out → Audience",
+                "Center → Fan Out",
+                # Approval card (if reached): decline so nothing is written.
+                "수정",
+                "수정",
+            ]
+        )
+        session._question_channel = channel
+
+        event = session.run_instruction(self._PLAIN_BRIEF)
+
+        assert event["status"] == "ok"
+        assert [call for call in calls if call.name == "run_commands"] == []
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        # The first composition required requeries; the merged recomposition
+        # replaced it with a complete 5-cue pending_approval plan.
+        assert timelines[0]["lifecycle"] == "requires_requery"
+        assert timelines[-1]["lifecycle"] == "pending_approval"
+        assert timelines[-1]["unresolved"] == []
+        assert len(timelines[-1]["sections"]) == 5
+        assert all(s["plan_status"] == "draft" for s in timelines[-1]["sections"])
+        assert timelines[-1]["console_stored"] is False
+
+    def test_section_look_arc_varies_texture_fx_palette_and_d_levels(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel(
+            [
+                "110",
+                "21",
+                "수동 Go",
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "BPM 질감",
+                "Center → Fan Out",
+                "Wall 저조도",
+                "Vocal DSC 스페셜",
+                "Fan Out → Audience",
+                "Center → Fan Out",
+                "수정",
+                "수정",
+            ]
+        )
+
+        session.run_instruction(self._PLAIN_BRIEF)
+
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        sections = timelines[-1]["sections"]
+        assert len(sections) == 5
+        intro, verse, chorus, bridge, finale = sections
+        # 결함 3: the look arc must vary across the song.
+        assert len({s["texture"] for s in sections}) > 1
+        assert len({len(s["fx"]) for s in sections}) > 1
+        assert len({tuple(s["palette"]) for s in sections}) > 1
+        assert bridge["d_level"] < chorus["d_level"]
+        assert finale["d_level"] >= chorus["d_level"]
+        assert intro["fx"] == []
+        assert len(bridge["fx"]) <= len(chorus["fx"])
+        assert chorus["accents"] or finale["accents"]
+        # 결함 4: direct section wording beats the Q4 whole-song story.
+        assert intro["position"] == "Vocal DSC"
+        assert verse["position"] == "Fan Out"
+        assert chorus["position"] == "Audience"
+        # No same-look warning; only the disclosed single-layer note (this
+        # fake rig exposes no role-named groups).
+        assert timelines[-1]["warnings"] == [
+            "단일 레이어 계획입니다. Front/Back/Beam/Audience 분리 연출은 검증되지 않았습니다."
+        ]
+
+    def test_palette_conflict_card_offers_direction_before_composing(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "Ring In",
+                "",
+                "BPM 질감",
+                "구간 분배 (조용한 구간 팔레트, 후렴 컨셉 색)",
+            ]
+        )
+        session._question_channel = channel
+        text = (
+            "디자인 큐 시트, 시퀀스 110, 프리셋 21번부터, 타임코드 7, "
+            "컨셉은 엘로우와 그린, 팔레트는 블루+웜화이트: "
+            "인트로 0:00 잔잔한 발라드, 후렴 0:40 클럽 드롭"
+        )
+
+        session.run_instruction(text)
+
+        assert [call for call in calls if call.name == "run_commands"] == []
+        conflict_cards = [q for q in channel.asked if "색감 결정이 충돌" in q.prompt]
+        assert len(conflict_cards) == 1
+        assert [option.label for option in conflict_cards[0].options] == [
+            "팔레트 중심",
+            "컨셉 색 중심",
+            "구간 분배 (조용한 구간 팔레트, 후렴 컨셉 색)",
+        ]
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        intro, chorus = timelines[-1]["sections"]
+        # Mixed split: quiet sections keep the Q2 palette, the peak carries
+        # the concept colors — no silent global overwrite either way.
+        assert any("블루" in color for color in intro["palette"])
+        assert any(color in ("엘로우", "그린") for color in chorus["palette"])
+
+    def test_timeline_store_keeps_the_last_projection_for_new_connections(self, tmp_path):
+        from server.web.session import SongTimelineStore
+
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        store = SongTimelineStore()
+        session._timeline_store = store
+        session._question_channel = self._Channel(
+            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "BPM 질감"]
+        )
+
+        session.run_instruction(self._FULL)
+
+        assert store.latest is not None
+        assert store.latest["sequence_number"] == 110
+        assert store.latest["lifecycle"] == "pending_approval"
+
+    def test_timeline_store_persists_to_disk_and_survives_a_new_instance(self, tmp_path):
+        from server.web.session import SongTimelineStore
+
+        path = tmp_path / "song_timeline.json"
+        store = SongTimelineStore(path)
+        assert store.latest is None
+        store.latest = {"sequence_number": 210, "lifecycle": "verified", "sections": []}
+        # A fresh instance (= a restarted server) reads the same payload back.
+        reborn = SongTimelineStore(path)
+        assert reborn.latest == {"sequence_number": 210, "lifecycle": "verified", "sections": []}
+
+    def test_timeline_store_fails_open_on_a_corrupt_file(self, tmp_path):
+        from server.web.session import SongTimelineStore
+
+        path = tmp_path / "song_timeline.json"
+        path.write_text("{not json", encoding="utf-8")
+        assert SongTimelineStore(path).latest is None
+        # Path-less store stays memory-only and never touches disk.
+        memory = SongTimelineStore()
+        memory.latest = {"lifecycle": "verified"}
+        assert memory.latest == {"lifecycle": "verified"}
+
+    def test_unanswered_requery_persists_and_resumes_on_a_later_turn(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        # Turn 1: interview answered, every requery card left unanswered.
+        session._question_channel = self._Channel(
+            [
+                "110",
+                "21",
+                "수동 Go",
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "BPM 질감",
+            ]
+        )
+        first = session.run_instruction(self._PLAIN_BRIEF)
+        assert "남은 재질의" in first["text"]
+        assert "다음 턴에 포지션으로 답하면" in first["text"]
+        assert session._pending_song_requery is not None
+        assert [call for call in calls if call.name == "run_commands"] == []
+
+        # Turn 2: a position answer resumes the SAME plan; the remaining
+        # requery cards ride the channel, and approval is declined.
+        session._question_channel = self._Channel(
+            [
+                "Wall 저조도",
+                "Vocal DSC 스페셜",
+                "Fan Out → Audience",
+                "Center → Fan Out",
+                "수정",
+                "수정",
+            ]
+        )
+        second = session.run_instruction("벌스는 Center → Fan Out으로 가자")
+
+        assert second["status"] == "ok"
+        assert [call for call in calls if call.name == "run_commands"] == []
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["lifecycle"] == "pending_approval"
+        assert timelines[-1]["unresolved"] == []
+        assert len(timelines[-1]["sections"]) == 5
+        assert session._pending_song_requery is None
+
+    def _stored_timeline_payload(self) -> dict:
+        return {
+            "song_title": "밝은 팝 무대 v1",
+            "sequence_name": "Sequence 210",
+            "sequence_number": 210,
+            "timing_mode": "manual_go",
+            "timecode_number": None,
+            "lifecycle": "verified",
+            "approval": "approved",
+            "director_decisions": [],
+            "sections": [
+                {"index": 3, "label": "후렴", "cue_number": 3, "position": "Audience"},
+                {"index": 5, "label": "마지막", "cue_number": 5, "position": "Audience"},
+            ],
+            "lint": [],
+            "unresolved": [],
+            "disabled": [],
+            "readback": {"verified": True, "message": "ok"},
+            "console_stored": True,
+            "warnings": [],
+            "layer_mapping": [],
+            "preset_start": 21,
+        }
+
+    def test_timeline_cue_edit_targets_the_displayed_sequence(self, tmp_path):
+        from server.web.session import SongTimelineStore
+
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        store = SongTimelineStore()
+        store.latest = self._stored_timeline_payload()
+        session._timeline_store = store
+        session._question_channel = self._Channel([])
+
+        event = session.run_instruction(
+            "타임라인 큐3를 객석이 아니라 무대 중앙으로 집중되게 수정해줘"
+        )
+
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert len(writes) == 1
+        commands = writes[0].arguments["commands"]
+        # Center = BASIC slot index 3 → preset 21 + 3 = 2.24; the edit merges
+        # into the TIMELINE's sequence (210), never a name-matched one.
+        assert any("At Preset 2.24" in command for command in commands)
+        assert "Store Sequence 210 Cue 3 /Merge" in commands
+        assert not any("150" in command for command in commands)
+        assert "타임라인에 즉시 반영" in event["text"]
+        assert store.latest["sections"][0]["position"] == "Center"
+        assert store.latest["sections"][1]["position"] == "Audience"  # untouched
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["sections"][0]["position"] == "Center"
+        assert "큐 3 포지션을 Center" in timelines[-1]["readback"]["message"]
+
+    def test_timeline_cue_edit_without_a_timeline_refuses(self, tmp_path):
+        from server.web.session import SongTimelineStore
+
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._timeline_store = SongTimelineStore()
+        session._question_channel = self._Channel([])
+
+        event = session.run_instruction("타임라인 큐 3를 무대 중앙으로 수정해줘")
+
+        assert [call for call in calls if call.name == "run_commands"] == []
+        assert "불러와" in event["text"]
+
+    def test_timeline_cue_edit_unknown_cue_lists_the_known_ones(self, tmp_path):
+        from server.web.session import SongTimelineStore
+
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        store = SongTimelineStore()
+        store.latest = self._stored_timeline_payload()
+        session._timeline_store = store
+        session._question_channel = self._Channel([])
+
+        event = session.run_instruction("타임라인 큐 9를 무대 중앙으로 수정해줘")
+
+        assert [call for call in calls if call.name == "run_commands"] == []
+        assert "큐 9가 없습니다" in event["text"]
+        assert "3, 5" in event["text"]
+
+    def test_pending_requery_cancel_clears_without_any_write(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel(
+            [
+                "110",
+                "21",
+                "수동 Go",
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "BPM 질감",
+            ]
+        )
+        session.run_instruction(self._PLAIN_BRIEF)
+        assert session._pending_song_requery is not None
+
+        event = session.run_instruction("취소")
+
+        assert "취소" in event["text"]
+        assert session._pending_song_requery is None
+        assert [call for call in calls if call.name == "run_commands"] == []
+
+    def test_unconfirmed_interview_step_reopens_its_card_with_real_answers(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        # Q4 left blank (auto-draft, unconfirmed) → the requery loop reruns
+        # the interview from Q4 with REAL answers this time.
+        channel = self._Channel(
+            [
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "",
+                "BPM 질감",
+                "우주 컨셉 우선 배치",
+                "BPM 질감",
+                "수정",
+            ]
+        )
+        session._question_channel = channel
+
+        event = session.run_instruction(self._FULL)
+
+        assert "감독 미확정" not in event["text"]
+        assert [call for call in calls if call.name == "run_commands"] == []
+        q4_prompts = [
+            q.prompt
+            for q in channel.asked
+            if q.prompt == "처음부터 끝까지 무대가 어떻게 달라 보이면 좋겠어요?"
+        ]
+        assert len(q4_prompts) == 2  # first pass + DI5 re-interview
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["lifecycle"] == "pending_approval"
+
+    def test_layer_mapping_card_infers_roles_from_console_groups(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(
+            calls,
+            groups_readback={
+                "ok": True,
+                "path": "DataPool/Groups",
+                "children": [
+                    {"i": 11, "name": "Back", "class": "Group"},
+                    {"i": 12, "name": "Front", "class": "Group"},
+                    {"i": 13, "name": "Wash", "class": "Group"},
+                    {"i": 14, "name": "Audience", "class": "Group"},
+                ],
+            },
+        )
+        channel = self._Channel(
+            [
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "BPM 질감",
+                "이 매핑 사용",
+                "수정",
+            ]
+        )
+        session._question_channel = channel
+
+        session.run_instruction(self._FULL)
+
+        layer_cards = [q for q in channel.asked if "레이어 역할" in q.prompt]
+        assert len(layer_cards) == 1
+        assert [call for call in calls if call.name == "run_commands"] == []
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["layer_mapping"] == [
+            {"role": "back", "group_no": 11, "group_name": "Back"},
+            {"role": "key", "group_no": 12, "group_name": "Front"},
+            {"role": "audience", "group_no": 14, "group_name": "Audience"},
+        ]
+        # "Wash" matches no role alias (exact match only) and the single-layer
+        # disclosure disappears once a mapping is recorded.
+        assert all("단일 레이어" not in warning for warning in timelines[-1]["warnings"])
+
+    def test_readback_validation_failure_is_reported_distinctly(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(
+            calls,
+            sequence_readback=self._sequence_readback(cue_1_trig_time="1"),
+        )
+        channel = self._Channel(
+            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "BPM 질감", "승인"]
+        )
+        session._question_channel = channel
+
+        event = session.run_instruction(self._FULL)
+
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert len(writes) == 1
+        readbacks = [call.arguments["path"] for call in calls if call.name == "query_state"]
+        assert readbacks == [
+            "DataPool/Groups",
+            "DataPool/Sequences/110",
+            "DataPool/Timecodes/7",
+        ]
+        assert event["status"] == "readback_failed"
+        assert "readback 검증에 실패" in event["text"]
+        assert "TrigTime" in event["text"]
+        assert "0이 아닙니다" in event["text"]
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["lifecycle"] == "readback_failed"
+        assert timelines[-1]["readback"]["verified"] is False
+
+    def test_unresolved_section_requeries_without_write(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            ["우주", "우주 색 조합", "Ring In", "우주 컨셉 우선 배치", "BPM 질감"]
+        )
+        session._question_channel = channel
+        text = (
+            "디자인 인터뷰, 시퀀스 110, 프리셋 21번부터, 타임코드 7, "
+            "BPM 128, 메탈: 0:00 도입, 0:20 후렴"
+        )
+
+        event = session.run_instruction(text)
+
+        assert len(channel.asked) == 6
+        assert "도입 구간" in channel.asked[-1].prompt
+        assert [call for call in calls if call.name == "run_commands"] == []
+        assert "미확정/미해결 입력" in event["text"]
+
+    def test_free_text_answer_resolves_the_palette_verbatim(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        # Q1 blank (auto-draft) -> Q2 free text naming a known color token
+        # ("레드") that matches none of Q2's 3 option labels -> Q3-Q5 blank.
+        channel = self._Channel(["", "레드 톤 위주로 가죠", "", "", ""])
+        session._question_channel = channel
+
+        event = session.run_instruction(self._FULL)
+
+        # 5 interview cards + a DI5 partial re-interview of the first
+        # unconfirmed step (Q1 → Q5 re-asked, unanswered → restored).
+        assert len(channel.asked) == 10
+        assert "Q2 팔레트: 레드 톤 위주로 가죠 (확정)" in event["text"]
+        assert [call for call in calls if call.name == "run_commands"] == []
+
+    def test_q1_answer_re_derives_the_q2_palette_suggestions(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(["네온", "", "", "", ""])
+        session._question_channel = channel
+
+        session.run_instruction(self._FULL)
+
+        # 5 interview cards + restart_from(Q2)'s 4 re-asked cards.
+        assert len(channel.asked) == 9
+        q2_labels = [option.label for option in channel.asked[1].options]
+        assert "네온 색 조합" in q2_labels  # DI2: Q1's confirmed concept re-seeds Q2
+
+    def test_instruction_specified_palette_skips_its_card(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(["", "", "", ""])
+        session._question_channel = channel
+        text = (
+            "디자인 큐 시트, 시퀀스 110, 프리셋 21번부터, 타임코드 7, 팔레트는 청록+마젠타: "
+            "인트로 0:00 잔잔한 발라드, 후렴 0:40 클럽 드롭"
+        )
+
+        event = session.run_instruction(text)
+
+        # Q2 card never fires on the FIRST pass — only Q1/Q3/Q4/Q5 ask; the
+        # unanswered DI5 re-interview then re-opens Q1..Q5 (5 more asks) and
+        # restores the pre-specified palette untouched.
+        assert len(channel.asked) == 9
+        assert all("팔레트" not in q.prompt for q in channel.asked[:4])
+        assert "Q2 팔레트: 청록+마젠타 (확정)" in event["text"]
+
+    def test_no_answer_marks_every_step_unconfirmed_and_requeries_without_write(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel([])  # UNANSWERED every card
+
+        event = session.run_instruction(self._FULL)
+
+        # 5 cards + the unanswered Q1 re-interview (5 re-asks, restored).
+        assert len(session._question_channel.asked) == 10
+        assert event["status"] == "ok"
+        assert event["text"].count("감독 미확정") == 5
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert writes == []
+        assert "미확정/미해결 입력" in event["text"]
+
+    def test_final_response_carries_the_di6_audit_trail(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        session._question_channel = self._Channel([])
+
+        event = session.run_instruction(self._FULL)
+
+        assert "연출 인터뷰 결과" in event["text"]
+        for label in ("Q1 컨셉", "Q2 팔레트", "Q3 클라이맥스", "Q4 공간 스토리", "Q5 질감"):
+            assert label in event["text"]
+
+    def test_partial_restart_reruns_from_the_named_step(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        # Answer Q1/Q2, then on Q3 ask for "Q1만 다시" instead of answering —
+        # DI5: Q1 reruns (this time "빈티지"), Q2-Q5 follow fresh.
+        channel = self._Channel(["우주", "", "Q1만 다시", "빈티지", "", "", ""])
+        session._question_channel = channel
+
+        event = session.run_instruction(self._FULL)
+
+        # 8 interview cards (Q1,Q2,Q3 + DI5 restart Q1..Q5) + the unanswered
+        # Q2 re-interview (4 re-asks, restored).
+        assert len(channel.asked) == 12
+        assert "Q1 컨셉: 빈티지 (확정)" in event["text"]
+
+    def test_time_first_two_token_sections_start_the_interview(self, tmp_path):
+        """Repro (post-restart browser submission): '디자인 인터뷰, BPM 128,
+        메탈: 0:00 도입, 0:20 후렴' used to hit the "곡 구간을 읽지 못해"
+        refusal because ``_SHEET_SECTION`` requires a third mood token. The
+        2-token "시각 이름" fallback must read both sections and let the
+        5-card interview start."""
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(["", "", "", "", ""])
+        session._question_channel = channel
+        text = (
+            "디자인 인터뷰, 시퀀스 110, 프리셋 21번부터, 타임코드 7, "
+            "BPM 128, 메탈: 0:00 도입, 0:20 후렴"
+        )
+
+        event = session.run_instruction(text)
+
+        assert "곡 구간을 읽지 못해" not in event["text"]
+        assert len(channel.asked) == 6
+        assert [q.prompt for q in channel.asked][0] == "공연 전체가 어떤 느낌이면 좋겠어요?"
+        assert event["status"] == "ok"
+        assert "미확정/미해결 입력" in event["text"]
+        assert [call for call in calls if call.name == "run_commands"] == []
+        # only "후렴" matches a mood keyword; "도입" has none in the table
+
+    def test_name_first_two_token_sections_start_the_interview(self, tmp_path):
+        """Same 2-token fallback, opposite token order — '도입 0:00' instead
+        of '0:00 도입' — must also read both sections."""
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(["", "", "", "", ""])
+        session._question_channel = channel
+        text = (
+            "디자인 인터뷰, 시퀀스 110, 프리셋 21번부터, 타임코드 7, "
+            "BPM 128, 메탈: 도입 0:00, 후렴 0:20"
+        )
+
+        event = session.run_instruction(text)
+
+        assert "곡 구간을 읽지 못해" not in event["text"]
+        assert len(channel.asked) == 6
+        assert event["status"] == "ok"
+        assert "미확정/미해결 입력" in event["text"]
+        assert [call for call in calls if call.name == "run_commands"] == []
+        # only "후렴" matches a mood keyword; "도입" has none in the table
+
+    def test_three_token_sections_still_parse_unchanged(self, tmp_path):
+        """The pre-existing '이름 시각 무드' form (self._FULL) must keep
+        working byte-for-byte after the 2-token fallback was added —
+        _SHEET_SECTION is tried first and the fallback never engages."""
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(["", "", "", "", ""])
+        session._question_channel = channel
+
+        event = session.run_instruction(self._FULL)
+
+        # 5 cards + the unanswered Q1 re-interview (5 re-asks, restored).
+        assert len(channel.asked) == 10
+        assert event["status"] == "ok"
+        assert "미확정/미해결 입력" in event["text"]
+        assert [call for call in calls if call.name == "run_commands"] == []
+
+    def test_plain_opinion_collects_five_director_decisions_without_console_commands(
+        self, tmp_path
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "보컬 고정 · 후면 긴장",
+                "청록 · 보라 대비",
+                "팬 아웃 · 후렴에서 객석 확장",
+                "박자 펄스 · 2·4박 강조",
+                "화이트 히트 · 0.5초 스냅",
+            ]
+        )
+        session._question_channel = channel
+
+        event = session.run_instruction("메탈 공연을 차갑고 웅장하게 꾸며줘")
+
+        assert len(channel.asked) == 5, event
+        assert all(len(question.options) == 3 for question in channel.asked)
+        assert [question.prompt.split(" · ", 1)[0] for question in channel.asked] == [
+            "01",
+            "02",
+            "03",
+            "04",
+            "05",
+        ]
+        assert "청록 · 보라 대비" in event["text"]
+        assert "화이트 히트 · 0.5초 스냅" in event["text"]
+        assert (
+            "아직 콘솔 명령, 장비 배치, 프리셋 리콜, 큐 저장은 수행하지 않았습니다."
+            in event["text"]
+        )
+        assert calls == []
+
+    def test_status_question_never_reaches_the_model_or_console(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+
+        event = session.run_instruction("진행하고 있는거야?")
+
+        assert "콘솔 명령을 생성하거나 실행하지 않습니다." in event["text"]
+        assert provider.calls == []
+        assert calls == []
 
 
 class TestLookPanTilt:

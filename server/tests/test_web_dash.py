@@ -520,7 +520,9 @@ class TestResolvedExecutorMembership:
     def test_registered_console_numbers_become_panel_members_and_are_replaced_not_merged(self):
         from server.web.panel import PanelStore, PinStore
 
-        store = PanelStore(state_port=DeadStatePort(), pins=PinStore("/tmp/dash-membership-pins.json"))
+        store = PanelStore(
+            state_port=DeadStatePort(), pins=PinStore("/tmp/dash-membership-pins.json")
+        )
         assert store.contains("executor", 111) is False
         store.register_dash_executors([111, 201])
         assert store.contains("executor", 111) is True

@@ -43,8 +43,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 
 from server.orchestrator.ports import PropertyQueryPort, StateQueryPort
 from server.orchestrator.tools import DEFAULT_RIG_CONTEXT_PATHS
@@ -323,5 +324,66 @@ def build_paperwork_router(deps: PaperworkDeps) -> APIRouter:
         result = {"path": str(path), **summary}
         last_results[kind] = result
         return {"ok": True, "kind": kind, **result}
+
+    # -- in-app preview + download (35c0d0e's declared surface, hunk restored) -
+    #
+    # The commit that shipped the UI's iframe preview / download buttons
+    # (feat(ui): 페이퍼워크 인앱 미리보기·다운로드) declared these two GETs in
+    # its message and in test_prechk_tool.py's route whitelist, but the squash
+    # dropped the router hunk itself — PaperworkPanel.tsx's contentUrl()/
+    # downloadUrl() have been calling a 404 since. Both serve ONLY what the
+    # POST above already wrote: the kind is validated against the same closed
+    # table, and the path comes from ``last_results`` (set exclusively by a
+    # successful POST), so neither route can name a file the generator did
+    # not produce, and neither executes a builder or touches the console.
+
+    def _generated_file(kind: str) -> Path:
+        if kind not in _KIND_TABLE:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "unknown_kind",
+                    "message": f"unknown paperwork kind: {kind!r}",
+                },
+            )
+        record = last_results.get(kind)
+        if record is None:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "not_generated",
+                    "message": f"{kind} has not been generated yet — POST first",
+                },
+            )
+        return Path(record["path"])
+
+    def _read_generated(kind: str) -> tuple[Path, str]:
+        path = _generated_file(kind)
+        try:
+            return path, path.read_text(encoding="utf-8")
+        except OSError as error:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "not_generated",
+                    "message": f"{kind}'s generated file is gone: {error}",
+                },
+            ) from error
+
+    @router.get("/api/paperwork/{kind}/content")
+    def content(kind: str) -> Response:
+        _, html = _read_generated(kind)
+        return Response(content=html, media_type="text/html; charset=utf-8")
+
+    @router.get("/api/paperwork/{kind}/download")
+    def download(kind: str) -> Response:
+        path, html = _read_generated(kind)
+        return Response(
+            content=html,
+            media_type="text/html; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{path.name}"',
+            },
+        )
 
     return router

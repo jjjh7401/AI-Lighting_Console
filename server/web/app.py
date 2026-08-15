@@ -50,6 +50,7 @@ from server.web.messages import (
     parse_client_message,
     question_resolved_event,
     review_resolved_event,
+    song_timeline_event,
 )
 from server.web.panel import (
     PANEL_BACK_VERB,
@@ -64,8 +65,10 @@ from server.web.panel import (
 from server.web.paperwork_api import PaperworkDeps, build_paperwork_router
 from server.web.provision_api import ProvisionDeps, build_provision_router
 from server.web.question import QuestionChannel
-from server.web.session import ChatSession
+from server.web.session import ChatSession, SongTimelineStore
 from server.web.settings_api import SettingsDeps, build_settings_router
+from server.web.timeline_api import TimelineLibraryDeps, build_timeline_router
+from server.web.timeline_library import SongTimelineLibrary
 
 _PROTOCOL_ERROR_MESSAGE = "잘못된 메시지 형식입니다. 프로토콜 v1 스키마를 확인해 주세요."
 _STALE_APPROVAL_MESSAGE = "만료되었거나 알 수 없는 승인 요청입니다."
@@ -132,6 +135,12 @@ class WebDeps:
     # a test that never presses a tile never touches the user's pin file.
     panel: PanelStore | None = None
     status_listeners: set = field(default_factory=set)
+    # Runbook director timeline: the LAST projection, shared process-wide so a
+    # refreshed browser (new WebSocket) is replayed the current timeline.
+    song_timeline_store: SongTimelineStore = field(default_factory=SongTimelineStore)
+    # Timeline library (save/load named versions of the director timeline).
+    # Memory-only by default; serve.py wires the persistent JSON path.
+    timeline_library: SongTimelineLibrary = field(default_factory=SongTimelineLibrary)
 
 
 async def _safe_send(websocket: WebSocket, event: dict) -> None:
@@ -270,6 +279,7 @@ def create_app(deps: WebDeps) -> FastAPI:
             reply_port_probe=deps.reply_port_probe,
             preshow_receive_port=deps.preshow_receive_port,
             preshow_osc_slot=deps.preshow_osc_slot,
+            timeline_store=deps.song_timeline_store,
         )
 
         def push_status() -> None:
@@ -335,6 +345,10 @@ def create_app(deps: WebDeps) -> FastAPI:
 
         current_task: asyncio.Task | None = None
         await websocket.send_json(session.status_snapshot())
+        if deps.song_timeline_store.latest is not None:
+            await _safe_send(
+                websocket, song_timeline_event(timeline=deps.song_timeline_store.latest)
+            )
         try:
             while True:
                 raw = await websocket.receive_text()
@@ -582,6 +596,14 @@ def create_app(deps: WebDeps) -> FastAPI:
     # the catch-all static mount, same reasoning as settings/provision above.
     if deps.paperwork is not None:
         app.include_router(build_paperwork_router(deps.paperwork))
+
+    # Director-timeline library (/api/timelines): save / list / load / delete
+    # named versions. Read-and-projection only — no console command route.
+    app.include_router(
+        build_timeline_router(
+            TimelineLibraryDeps(store=deps.song_timeline_store, library=deps.timeline_library)
+        )
+    )
 
     if deps.ui_dist is not None and Path(deps.ui_dist).is_dir():
         app.mount("/", StaticFiles(directory=str(deps.ui_dist), html=True), name="ui")

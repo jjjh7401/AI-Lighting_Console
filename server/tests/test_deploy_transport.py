@@ -328,9 +328,7 @@ class TestGatePerSendDeployAudit:
         console = DeployableFakeConsole()
         console.deploy_sends = (
             DeploySend(kind="state_query", command="DataPool/Plugins", ok=True, outcome="ok"),
-            DeploySend(
-                kind="command", command="Import Plugin 1 'Cleaner'", ok=True, outcome="ok"
-            ),
+            DeploySend(kind="command", command="Import Plugin 1 'Cleaner'", ok=True, outcome="ok"),
         )
         gate, _, audit = _gate(tmp_path, console=console)
         assert gate.deploy_plugin_source("Cleaner", "return 1").ok is True

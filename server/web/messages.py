@@ -801,3 +801,9 @@ def cue_monitor_event(*, executors: list[dict], history: list[dict]) -> dict:
     server-side merge with a previous snapshot.
     """
     return _event("cue_monitor", executors=list(executors), history=list(history))
+
+
+def song_timeline_event(*, timeline: dict) -> dict:
+    """Read-only director timeline projection. The payload deliberately carries
+    no console commands; execution remains behind the server approval gate."""
+    return _event("song_timeline", timeline=timeline)

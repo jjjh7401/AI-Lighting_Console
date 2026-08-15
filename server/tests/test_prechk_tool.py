@@ -1184,6 +1184,15 @@ _EXPECTED_WEB_ROUTES = (
     ("settings_api.py", "router.post", "/api/claude-code/login"),
     ("settings_api.py", "router.post", "/api/keys"),
     ("settings_api.py", "router.post", "/api/settings"),
+    # Timeline library (user request, 2026-08-14): save/list/load/delete named
+    # director-timeline versions (server/web/timeline_api.py). Read-and-
+    # projection only — no route sends a console command; unrelated to the
+    # PRECHK/OVERLAP axis this baseline pins, snapshot updated per the same
+    # "frozen at the axis's base commit" rule the paperwork rows follow.
+    ("timeline_api.py", "router.delete", "/api/timelines/{entry_id}"),
+    ("timeline_api.py", "router.get", "/api/timelines"),
+    ("timeline_api.py", "router.post", "/api/timelines"),
+    ("timeline_api.py", "router.post", "/api/timelines/{entry_id}/load"),
 )
 
 # client -> server: the closed allowlists ``parse_client_message`` validates
@@ -1244,6 +1253,7 @@ _EXPECTED_SERVER_MESSAGE_TYPES = (
     "question_resolved",
     "review_request",
     "review_resolved",
+    "song_timeline",
     "status",
 )
 
