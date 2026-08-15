@@ -145,6 +145,7 @@ from server.web.messages import (
 from server.web.preview import build_execution_preview
 from server.web.question import UNANSWERED, QuestionChannel, QuestionOption, QuestionRequest
 from server.web.reply_discovery import ReplyPortMismatch
+from server.web.timeline_library import SongTimelineLibrary
 
 # The gate's unconfirmed-execution marker (REQ-MVP-032). String contract pinned
 # by tests here AND by the gate's own tests — a wording change fails both.
@@ -764,6 +765,10 @@ _SINGLE_LAYER_WARNING = (
     "단일 레이어 계획입니다. Front/Back/Beam/Audience 분리 연출은 검증되지 않았습니다."
 )
 
+#: The placeholder title `_build_unified_song_plan` stamps on a fresh design —
+#: auto-snapshots fall back to the sequence name instead of versioning it.
+_DESIGN_INTERVIEW_TITLE = "Design Interview"
+
 
 def _requery_card_options(
     section: PositionSheetSection, *, section_index: int, section_count: int
@@ -1050,7 +1055,7 @@ def _build_unified_song_plan(
                 )
     disabled = tuple(DisabledNote(axis=FX_AXIS, reason=note) for note in getattr(rig, "notes", ()))
     return UnifiedSongLightingPlan(
-        song_title="Design Interview",
+        song_title=_DESIGN_INTERVIEW_TITLE,
         sequence_name=f"Sequence {sequence_no}",
         sections=tuple(decisions),
         timing=timing,
@@ -1694,6 +1699,7 @@ class ChatSession:
         preshow_receive_port: int | None = None,
         preshow_osc_slot: int | None = None,
         timeline_store: SongTimelineStore | None = None,
+        timeline_library: SongTimelineLibrary | None = None,
     ) -> None:
         self._gate = gate
         # Injected so the status surface owns the I/O and the health state
@@ -1722,6 +1728,9 @@ class ChatSession:
         # [] = declined or nothing inferable (single-layer, disclosed).
         self._song_layer_mapping: list[dict[str, object]] | None = None
         self._timeline_store = timeline_store
+        # Priority 3 (handoff 2026-08-15): approved console stores auto-save a
+        # library version ("이름 (자동 vN)"). None (tests, bare deps) = no-op.
+        self._timeline_library = timeline_library
         # Layout parameters the operator has already established this session
         # (column gap, fixture gap in metres). Persisted ACROSS turns and NOT
         # cleared after a placement, so a follow-up ("나머지도 배치해줘") reuses
@@ -3781,13 +3790,14 @@ class ChatSession:
                 readback_verified=False,
                 readback_message=readback.failure,
             )
+            snapshot_note = self._song_auto_snapshot()
             return InstructionResult(
                 status="readback_failed",
                 text=(
                     f"연출 인터뷰 결과 — {' / '.join(audit_lines)}. "
                     f"감독 승인 후 시퀀스 {sequence_no}에 리뷰 번들 1건을 원자 실행 요청했지만 "
                     f"readback 검증에 실패했습니다: {readback.failure}. "
-                    f"{review_text} readback 요청: {', '.join(readback.paths)}."
+                    f"{review_text} readback 요청: {', '.join(readback.paths)}.{snapshot_note}"
                 ),
                 command_outcomes=tuple(executed.command_outcomes),
                 retries_used=0,
@@ -3802,18 +3812,40 @@ class ChatSession:
             readback_verified=True,
             readback_message="Sequence 및 타이밍 readback 검증 완료",
         )
+        snapshot_note = self._song_auto_snapshot()
         return InstructionResult(
             status="ok",
             text=(
                 f"연출 인터뷰 결과 — {' / '.join(audit_lines)}. "
                 f"감독 승인 후 시퀀스 {sequence_no}에 리뷰 번들 1건을 원자 실행 요청했습니다. "
-                f"{review_text} readback 검증 완료: {', '.join(readback.paths)}."
+                f"{review_text} readback 검증 완료: {', '.join(readback.paths)}.{snapshot_note}"
             ),
             command_outcomes=tuple(executed.command_outcomes),
             retries_used=0,
             model_calls=0,
             duration_seconds=0.0,
         )
+
+    def _song_auto_snapshot(self) -> str:
+        """Auto version snapshot (priority 3): after an approved console store
+        (verified OR readback_failed — the bundle was dispatched either way),
+        save the just-sent timeline projection to the library as
+        ``<이름> (자동 vN)``. Read-only bookkeeping: a failure never blocks the
+        store result, and a saved entry grants no console capability."""
+        library = self._timeline_library
+        store = self._timeline_store
+        payload = store.latest if store is not None else None
+        if library is None or not isinstance(payload, dict):
+            return ""
+        title = str(payload.get("song_title") or "").strip()
+        if not title or title == _DESIGN_INTERVIEW_TITLE:
+            sequence_no = payload.get("sequence_number")
+            title = f"Sequence {sequence_no}" if sequence_no is not None else "타임라인"
+        try:
+            entry = library.auto_save(title, payload)
+        except Exception:
+            return " (라이브러리 자동 저장 실패 — 콘솔 저장 결과에는 영향 없음)"
+        return f" 라이브러리에 '{entry['name']}' 자동 저장."
 
     def _repeating_type_columns_layout(self, text: str) -> InstructionResult | None:
         """Arrange repeating MMX/MMX/350 columns with independent grid pitches."""

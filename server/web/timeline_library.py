@@ -18,6 +18,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 import tempfile
 import uuid
 from datetime import UTC, datetime
@@ -82,6 +83,21 @@ class SongTimelineLibrary:
         self._persist(entries)
         self._entries = entries  # committed only after the file swap succeeded
         return dict(entry)
+
+    def auto_save(self, base_name: str, timeline: dict) -> dict:
+        """Version-stamped snapshot: ``<base> (자동 vN)`` where N counts up
+        per base name (handoff 2026-08-15 priority 3 — every approved console
+        store leaves a recoverable library version without a manual save)."""
+        base = (base_name or "").strip()
+        if not base:
+            raise ValueError("timeline base name must be non-empty")
+        stamp = re.compile(rf"^{re.escape(base)} \(자동 v(?P<n>\d+)\)$")
+        versions = [
+            int(match.group("n"))
+            for entry in self._entries
+            if (match := stamp.match(str(entry.get("name") or ""))) is not None
+        ]
+        return self.save(f"{base} (자동 v{max(versions, default=0) + 1})", timeline)
 
     def remove(self, entry_id: str) -> bool:
         entries = [entry for entry in self._entries if entry.get("id") != entry_id]

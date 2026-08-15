@@ -61,6 +61,27 @@ class TestSongTimelineLibrary:
         assert reborn.remove(entry["id"]) is False
         assert SongTimelineLibrary(path).get(entry["id"]) is None
 
+    def test_auto_save_numbers_versions_per_base_name(self, tmp_path):
+        library = SongTimelineLibrary(tmp_path / "library.json")
+        first = library.auto_save("Sequence 110", _TIMELINE)
+        second = library.auto_save("Sequence 110", _TIMELINE)
+        other = library.auto_save("밝은 팝 무대", _TIMELINE)
+        assert first["name"] == "Sequence 110 (자동 v1)"
+        assert second["name"] == "Sequence 110 (자동 v2)"
+        assert other["name"] == "밝은 팝 무대 (자동 v1)"
+
+    def test_auto_save_ignores_manual_names_and_survives_deletion_gaps(self, tmp_path):
+        library = SongTimelineLibrary(tmp_path / "library.json")
+        library.save("Sequence 110", _TIMELINE)  # manual save, no stamp
+        library.save("Sequence 110 (자동 v7) 복사본", _TIMELINE)  # not an exact stamp
+        third = library.auto_save("Sequence 110", _TIMELINE)
+        assert third["name"] == "Sequence 110 (자동 v1)"
+        # Numbering is max(existing stamp)+1 — deleting versions frees numbers.
+        library.remove(third["id"])
+        library.auto_save("Sequence 110", _TIMELINE)
+        latest = library.auto_save("Sequence 110", _TIMELINE)
+        assert latest["name"] == "Sequence 110 (자동 v2)"
+
     def test_blank_name_and_empty_payload_are_refused(self, tmp_path):
         library = SongTimelineLibrary(tmp_path / "library.json")
         try:

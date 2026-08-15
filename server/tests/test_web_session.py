@@ -2320,6 +2320,41 @@ class TestSongDesignInterviewSession:
         assert any("Store Sequence 110" in command for command in commands)
         assert event["status"] in ("ok", "readback_failed")
 
+    def test_approved_store_auto_saves_a_library_version(self, tmp_path):
+        from server.web.session import SongTimelineStore
+        from server.web.timeline_library import SongTimelineLibrary
+
+        session, sent, calls = self._pending_plan_session(tmp_path)
+        library = SongTimelineLibrary(tmp_path / "library.json")
+        session._timeline_store = SongTimelineStore()
+        session._timeline_library = library
+        session._question_channel = self._Channel(["승인"])
+
+        event = session.run_instruction("큐 4 삭제")
+
+        assert [call for call in calls if call.name == "run_commands"]
+        entries = library.items()
+        assert len(entries) == 1
+        assert entries[0]["name"] == "Sequence 110 (자동 v1)"
+        assert "'Sequence 110 (자동 v1)' 자동 저장" in event["text"]
+        # The snapshot is the just-sent projection — same lifecycle, 4 cues.
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert entries[0]["timeline"]["lifecycle"] == timelines[-1]["lifecycle"]
+        assert len(entries[0]["timeline"]["sections"]) == 4
+
+    def test_declined_approval_saves_no_library_version(self, tmp_path):
+        from server.web.timeline_library import SongTimelineLibrary
+
+        session, _sent, calls = self._pending_plan_session(tmp_path)
+        library = SongTimelineLibrary(tmp_path / "library.json")
+        session._timeline_library = library
+        session._question_channel = self._Channel(["수정"])
+
+        session.run_instruction("큐 4 삭제")
+
+        assert [call for call in calls if call.name == "run_commands"] == []
+        assert library.items() == []
+
     def test_plan_edit_sets_a_dimmer_level(self, tmp_path):
         session, sent, calls = self._pending_plan_session(tmp_path)
         session._question_channel = self._Channel(["수정"])
