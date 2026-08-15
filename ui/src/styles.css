@@ -3013,10 +3013,16 @@ body {
 
 .preset-popup {
   background: #14171a;
-  border: 1px solid var(--pool-accent, #1d8a80);
+  /* Pinned HERE because the dash scopes it to .pool-section-*: inside the
+     overlay the tiles would otherwise render with an unset accent
+     (invisible borders — observed 2026-08-15). Same teal as the 프리셋
+     section so the popup reads as the SAME UI family. */
+  --pool-accent: #1d8a80;
+  border: 1px solid var(--pool-accent);
   border-radius: 10px;
-  width: min(1240px, 94vw);
-  max-height: 88vh;
+  /* SQUARE window (user direction 2026-08-15), bounded by the viewport. */
+  width: min(760px, 90vw, 86vh);
+  aspect-ratio: 1;
   display: flex;
   flex-direction: column;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
@@ -3068,33 +3074,21 @@ body {
 
 .preset-popup-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
 }
 
-/* Compact info cells: the dashboard's SQUARE pool-cell shape is wrong at
-   popup density — many small NAMED slots beat few big empty squares. The
-   dash tile's border rides var(--pool-accent), which is scoped to
-   .pool-section-* and therefore UNSET inside the overlay (invisible cell
-   boundaries — observed 2026-08-15); the popup pins its own accent. */
-.preset-popup-tile {
-  aspect-ratio: auto;
-  min-height: 40px;
-  gap: 0;
-  padding: 4px 7px 5px;
-  background: #1a1f26;
-  border: 1px solid #2e6b64;
-}
-
+/* The SAME onPC square cell the dashboard's 프리셋 section renders (number
+   top-left, name below, teal accent border) — just smaller, so a full pool
+   fits the square window. Sizing is the only override; shape and colours
+   come from .pool-tile itself. */
 .preset-popup-tile .pool-tile-no {
-  font-size: 11px;
-  line-height: 1.2;
-  color: #7ec8bf;
+  font-size: 12px;
 }
 
 .preset-popup-tile .pool-tile-name {
-  font-size: 11.5px;
-  line-height: 1.3;
+  font-size: 12px;
+  line-height: 1.25;
   overflow-wrap: anywhere;
 }
 
