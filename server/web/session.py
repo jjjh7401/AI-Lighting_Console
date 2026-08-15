@@ -339,6 +339,38 @@ class _GateLivenessPort:
         return self._gate.heartbeat() == HealthMonitor.ONLINE
 
 
+class _LayoutImageUploadView:
+    """Adapts ``ChatSession._layout_image`` to ``LayoutImageUploadPort`` (M4).
+
+    ``_layout_image`` is a ``LayoutImageUpload | None`` field that a new
+    upload REPLACES wholesale (contract.md §1) — unlike
+    ``_UploadedVectorworksExport``, it is never mutated in place. Passing
+    ``self._layout_image`` straight into ``build_toolset`` at construction
+    time would therefore freeze the pre-upload ``None`` into the
+    ``analyse_layout_image`` tool closure forever. This view reads through to
+    the CURRENT field on every access instead, so an upload that arrives
+    after session construction is still visible to the tool.
+    """
+
+    def __init__(self, session: "ChatSession") -> None:
+        self._session = session
+
+    @property
+    def file_name(self) -> str | None:
+        image = self._session._layout_image
+        return image.file_name if image is not None else None
+
+    @property
+    def mime_type(self) -> str | None:
+        image = self._session._layout_image
+        return image.mime_type if image is not None else None
+
+    @property
+    def content_base64(self) -> str | None:
+        image = self._session._layout_image
+        return image.content_base64 if image is not None else None
+
+
 class _ObservingBundleGate:
     """BundleGate wrapper surfacing every screening decision to the session."""
 
@@ -437,6 +469,16 @@ class ChatSession:
             deploy_pipeline=deploy_pipeline,
             question_port=question_channel,
             vectorworks_upload=self._vectorworks_upload,
+            # SPEC-COPILOT-IMGLAYOUT-001 M4: analyse_layout_image (M3) reads
+            # the session's held image through this view (see
+            # _LayoutImageUploadView) and reasons with the session's own
+            # active provider — there is exactly one provider per session
+            # (server/llm/factory.py builds a SINGLE active adapter), so
+            # vision calls inherit its claude_code honest-refusal behavior
+            # (REQ-IMGLAYOUT-006) automatically; no separate vision provider
+            # config exists to wire.
+            vision_provider=provider,
+            layout_image_upload=_LayoutImageUploadView(self),
             # SPEC-COPILOT-PRESHOW-001 T-G2: reuse the gate's own audited
             # heartbeat as the pre-show OSC checks' liveness probe — no
             # second console link, no new socket. Gated on preshow_receive_port
