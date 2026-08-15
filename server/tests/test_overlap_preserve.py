@@ -207,7 +207,7 @@ _OVERLAP_MERGE_COMMIT = "156a3e1aaf6ef78788394d65cf724bacaec7b567"
 #: Another file under the chokepoint, a second deleted line in this one, or any
 #: text other than `version: 1` still fails the gate.
 _SAFETY_EXPECTED_DELETIONS = {
-    "server/safety/audit.py": 1,
+    "server/safety/audit.py": 9,
     "server/safety/backup.py": 2,
     "server/safety/blacklist.yaml": 1,
     "server/safety/console.py": 0,
@@ -224,8 +224,24 @@ _SAFETY_ALLOWED_DELETED_LINES = {
     # than dropping the whole event; this legitimately reopens audit.py under
     # the chokepoint for the first time, the same maintenance shape as the
     # `gate.py` extension above.
+    # SECOND audit.py reopening (probe-traffic split, handoff 2026-08-15
+    # item 2): the gate's read probes (state_query/property_query/heartbeat)
+    # measured 99.9 % of the audit volume (~200 MB/day) and now route to a
+    # capped, short-retention `probe-` file family; record()/purge/iterators
+    # were reshaped around the two families. Same @MX:ANCHOR discipline — one
+    # durable write point, deploy sub-sends (deploy_of) keep 90-day retention.
+    # The nine deletions are the single-family write/purge/iterate lines the
+    # two-family versions replaced (the T-I `default=str` line among them).
     "server/safety/audit.py": (
+        '        """Append one audit event (AuditSink-compatible); adds a UTC timestamp."""',
+        '        path = self._directory / f"{_FILE_PREFIX}{now:%Y%m%d}{_FILE_SUFFIX}"',
         r'            handle.write(json.dumps(enriched, ensure_ascii=False) + "\n")',
+        "        cutoff = (now - timedelta(days=self._retention_days)).date()",
+        '        for path in self._directory.glob(f"{_FILE_PREFIX}*{_FILE_SUFFIX}"):',
+        "                continue  # foreign file — never delete what we did not write",
+        "            if file_date < cutoff:",
+        "                path.unlink()",
+        '        for path in sorted(self._directory.glob(f"{_FILE_PREFIX}*{_FILE_SUFFIX}")):',
     ),
     "server/safety/backup.py": (
         "Three rules: ① once at session start, ② periodic (default 10 minutes,",
