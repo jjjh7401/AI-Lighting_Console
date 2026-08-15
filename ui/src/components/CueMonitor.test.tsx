@@ -325,11 +325,9 @@ describe("isRecentAppAction — the pulse window", () => {
   });
 });
 
-describe("ExecutorStatusChip", () => {
-  it("renders the unknown grade with no last_app_action", () => {
-    const element = ExecutorStatusChip({ entry: UNASSIGNED_ENTRY }) as ReactElement;
-    expect(element.props.className).toBe("cue-status-chip cue-status-chip-unknown");
-    expect(childArray(element)[0]).toBe("○ 미확인");
+describe("ExecutorStatusChip — problem-only (user direction 2026-08-15)", () => {
+  it("renders NOTHING for an untouched executor — '미확인' is not a problem", () => {
+    expect(ExecutorStatusChip({ entry: UNASSIGNED_ENTRY })).toBeNull();
   });
 
   it("renders confirmed + pulsing right after a fresh ok action", () => {
@@ -350,12 +348,12 @@ describe("ExecutorStatusChip", () => {
     );
   });
 
-  it("stops pulsing once the action ages past the window, but stays confirmed", () => {
+  it("keeps a confirmed action visible (no pulse) inside the 60s window", () => {
     const entry = {
       ...OK_ENTRY,
       last_app_action: {
         command: "Go+ Executor 101",
-        ts: new Date(Date.now() - 60_000).toISOString(),
+        ts: new Date(Date.now() - 30_000).toISOString(),
         ok: true,
       },
     };
@@ -363,10 +361,26 @@ describe("ExecutorStatusChip", () => {
     expect(element.props.className).toBe("cue-status-chip cue-status-chip-confirmed");
   });
 
-  it("renders failed for a not-ok action — never pulsing", () => {
+  it("hides a confirmed action once it is stale — '확인됨 22분 전' is noise", () => {
     const entry = {
       ...OK_ENTRY,
-      last_app_action: { command: "Off Executor 101", ts: new Date().toISOString(), ok: false },
+      last_app_action: {
+        command: "Go+ Executor 101",
+        ts: new Date(Date.now() - 22 * 60_000).toISOString(),
+        ok: true,
+      },
+    };
+    expect(ExecutorStatusChip({ entry })).toBeNull();
+  });
+
+  it("keeps a FAILED action on screen no matter how old — the one real warning", () => {
+    const entry = {
+      ...OK_ENTRY,
+      last_app_action: {
+        command: "Off Executor 101",
+        ts: new Date(Date.now() - 60 * 60_000).toISOString(),
+        ok: false,
+      },
     };
     const element = ExecutorStatusChip({ entry }) as ReactElement;
     expect(element.props.className).toBe("cue-status-chip cue-status-chip-failed");

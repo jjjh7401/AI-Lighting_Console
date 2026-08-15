@@ -127,6 +127,11 @@ const GRADE_LABEL: Record<LastActionGrade, string> = {
   unknown: "○ 미확인",
 };
 
+/** How long a fresh CONFIRMED action stays visible before the chip hides
+ * (user direction, 2026-08-15: the chip is a problem signal, not a ledger —
+ * a stale "확인됨 22분 전" and a permanent "미확인" are both noise). */
+export const APP_ACTION_CONFIRM_VISIBLE_MS = 60_000;
+
 /** How long after a confirmed action the acknowledgement pulse plays. */
 export const APP_ACTION_PULSE_WINDOW_MS = 6_000;
 
@@ -371,19 +376,27 @@ export function cueProgressLabel(entry: CueExecutorEntry): string | null {
 }
 
 export function ExecutorStatusChip({ entry }: { entry: CueExecutorEntry }) {
+  // Problem-only chip (user direction, 2026-08-15): "미확인" just means the
+  // app never touched this executor — not a problem, so nothing renders.
+  // A CONFIRMED action shows briefly as press feedback, then hides; only a
+  // FAILED/unanswered action stays on screen as a persistent warning.
   const grade = lastActionGrade(entry);
   const action = entry.last_app_action;
-  const pulsing = grade === "confirmed" && !!action && isRecentAppAction(action.ts);
-  const title = action
-    ? `${action.command} · ${action.ok ? "ok" : "실패"} · ${formatRelativeAgo(action.ts)}`
-    : "이 실행기로 앱이 보낸 명령이 아직 없습니다 — 콘솔에서 직접 조작했을 수 있습니다.";
+  if (grade === "unknown" || !action) return null;
+  if (grade === "confirmed") {
+    const then = Date.parse(action.ts);
+    const age = Number.isNaN(then) ? Number.POSITIVE_INFINITY : Date.now() - then;
+    if (age < 0 || age >= APP_ACTION_CONFIRM_VISIBLE_MS) return null;
+  }
+  const pulsing = grade === "confirmed" && isRecentAppAction(action.ts);
+  const title = `${action.command} · ${action.ok ? "ok" : "실패"} · ${formatRelativeAgo(action.ts)}`;
   return (
     <span
       className={`cue-status-chip cue-status-chip-${grade}${pulsing ? " cue-status-chip-pulse" : ""}`}
       title={title}
     >
       {GRADE_LABEL[grade]}
-      {action && <span className="cue-status-chip-age">{formatRelativeAgo(action.ts)}</span>}
+      <span className="cue-status-chip-age">{formatRelativeAgo(action.ts)}</span>
     </span>
   );
 }
