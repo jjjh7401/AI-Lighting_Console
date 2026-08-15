@@ -26,6 +26,7 @@ import re
 import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
+from dataclasses import field as dataclass_field
 from pathlib import Path
 
 from server.deploy.review import ReviewRequest
@@ -845,6 +846,62 @@ _PLAN_EDIT_INSERT_ADJACENT = re.compile(
     r"(?P<name>.+?)\s*(?:구간)?\s*(?:을|를)?\s*추가"
 )
 _PLAN_EDIT_CUE = re.compile(r"큐\s*(?P<cue>\d+)")
+# Priority-2 edit vocabulary: dimmer (D1~5 or brighter/darker words), FX
+# on/off, and a time move ("큐 2를 0:30으로 이동"). Fade reuses `_CUE_FADE`.
+_PLAN_EDIT_D = re.compile(r"[Dd]\s*(?P<d>[1-5])(?!\d)")
+_PLAN_EDIT_DARKER = re.compile(r"어둡게|저조도|은은하게")
+_PLAN_EDIT_BRIGHTER = re.compile(r"밝게|환하게")
+_PLAN_EDIT_FX_OFF = re.compile(r"fx\s*(?:를|은|는)?\s*(?:꺼|끄|없이|오프|off)", re.IGNORECASE)
+_PLAN_EDIT_FX_ON = re.compile(r"fx\s*(?:를|은|는)?\s*(?:켜|살려|온|on)", re.IGNORECASE)
+_PLAN_EDIT_TIME_MOVE = re.compile(
+    r"(?P<time>\d+:\d{2}(?:\.\d{1,3})?|\d+\s*분(?:\s*\d+\s*초)?|\d+(?:\.\d+)?\s*초)\s*"
+    r"(?:지점)?\s*(?:로|으로|에)\s*(?:이동|옮|시작)"
+)
+
+
+def _plan_edit_fx(decision: FxDecision, override: bool | None) -> FxDecision:
+    """Apply a director's PLAN-stage FX on/off: off empties the allowed set
+    (audited as disabled); on/None keeps the standard arc decision."""
+    if override is False and decision.allowed:
+        return FxDecision(allowed=(), source="director_edit", disabled=decision.allowed, density=0)
+    return decision
+
+
+def _plan_edit_d_level(text: str) -> int | None:
+    """The PLAN-edit dimmer target: an explicit D1~D5 wins; otherwise the
+    darker/brighter words map to the quiet (D2) / bright (D4) tiers."""
+    match = _PLAN_EDIT_D.search(text)
+    if match is not None:
+        return int(match.group("d"))
+    if _PLAN_EDIT_DARKER.search(text) is not None:
+        return 2
+    if _PLAN_EDIT_BRIGHTER.search(text) is not None:
+        return 4
+    return None
+
+
+def _plan_edit_remap_overrides(state, key_map) -> None:
+    """Re-key every per-cue override dict after a structural edit. ``key_map``
+    returns the new 1-based index, or None to drop the entry."""
+    for attr in ("requery_overrides", "fade_overrides", "fx_overrides"):
+        remapped = {}
+        for index, value in getattr(state, attr).items():
+            new_index = key_map(index)
+            if new_index is not None:
+                remapped[new_index] = value
+        setattr(state, attr, remapped)
+
+
+def _plan_edit_time_ms(token: str) -> int | None:
+    """Parse the move-target token to milliseconds — 'm:ss', 'N분 M초', 'N초'."""
+    token = token.strip()
+    minute_match = re.fullmatch(r"(?P<m>\d+)\s*분(?:\s*(?P<s>\d+)\s*초)?", token)
+    if minute_match is not None:
+        return int(minute_match.group("m")) * 60_000 + int(minute_match.group("s") or 0) * 1_000
+    try:
+        return normalise_start_ms(token.replace("초", "").strip())
+    except Exception:
+        return None
 
 
 def _plan_insert_start_ms(sections: Sequence[PositionSheetSection], insert_slot: int) -> int:
@@ -871,6 +928,8 @@ def _build_unified_song_plan(
     requery_overrides: Mapping[int, DirectorOverride] | None = None,
     palette_mode: str = "palette",
     concept_colors: tuple[str, ...] = (),
+    fade_overrides: Mapping[int, float] | None = None,
+    fx_overrides: Mapping[int, bool] | None = None,
 ) -> UnifiedSongLightingPlan:
     climax_index = _climax_section_index(sections)
     section_count = len(sections)
@@ -961,15 +1020,19 @@ def _build_unified_song_plan(
                     section_count=section_count,
                     records=records,
                 ),
-                fx=_section_fx_decision(
-                    section=section,
-                    section_index=index,
-                    climax_index=climax_index,
-                    section_count=section_count,
-                    records=records,
+                fx=_plan_edit_fx(
+                    _section_fx_decision(
+                        section=section,
+                        section_index=index,
+                        climax_index=climax_index,
+                        section_count=section_count,
+                        records=records,
+                    ),
+                    (fx_overrides or {}).get(index),
                 ),
                 accent=_accent_decision(records, section_index=index, climax_index=climax_index),
                 cue_number=index,
+                fade_override=(fade_overrides or {}).get(index),
             )
         )
     # Invariant (결함 3): the finale never lands below the first chorus.
@@ -1092,6 +1155,15 @@ def _song_timeline_payload(
     unresolved_indexes = {
         note.section_index for note in plan.unresolved if note.section_index is not None
     }
+    fade_by_section = (
+        {
+            cue.section_index: cue.fade_seconds
+            for cue in bundle.cues
+            if cue.kind == "section" and cue.section_index is not None
+        }
+        if bundle is not None
+        else {}
+    )
     default_status = _SECTION_STATUS_BY_LIFECYCLE.get(lifecycle, "draft")
     console_stored = lifecycle in ("readback_failed", "verified")
     return {
@@ -1128,6 +1200,7 @@ def _song_timeline_payload(
                 "position": decision.position.preset,
                 "texture": decision.texture.label,
                 "fx": list(decision.fx.allowed),
+                "fade_seconds": fade_by_section.get(decision.section.index),
                 "accents": list(decision.accent.accents),
                 "mib": decision.section.index in mib_section_indexes,
                 "trig_time_seconds": (
@@ -1407,6 +1480,8 @@ class _SongDesignState:
     plan_warnings: list[str]
     layer_mapping: list[dict[str, object]]
     requery_overrides: dict[int, DirectorOverride]
+    fade_overrides: dict[int, float] = dataclass_field(default_factory=dict)
+    fx_overrides: dict[int, bool] = dataclass_field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -3128,6 +3203,8 @@ class ChatSession:
             timing=state.timing,
             sequence_no=state.sequence_no,
             requery_overrides=state.requery_overrides,
+            fade_overrides=state.fade_overrides,
+            fx_overrides=state.fx_overrides,
             palette_mode=state.palette_mode,
             concept_colors=state.concept_colors,
         )
@@ -3291,11 +3368,9 @@ class ChatSession:
                     "계획 전체를 중단하려면 '취소'라고 답해 주세요."
                 )
             removed = state.sections.pop(cue - 1)
-            state.requery_overrides = {
-                (index - 1 if index > cue else index): override
-                for index, override in state.requery_overrides.items()
-                if index != cue
-            }
+            _plan_edit_remap_overrides(
+                state, lambda index: None if index == cue else (index - 1 if index > cue else index)
+            )
             note = f"큐 {cue}({removed.name}) 삭제"
         elif between is not None or adjacent is not None:
             if between is not None:
@@ -3326,10 +3401,9 @@ class ChatSession:
                 insert_slot, PositionSheetSection(name=name, start_ms=start_ms, mood=name)
             )
             inserted_index = insert_slot + 1
-            state.requery_overrides = {
-                (index + 1 if index >= inserted_index else index): override
-                for index, override in state.requery_overrides.items()
-            }
+            _plan_edit_remap_overrides(
+                state, lambda index: index + 1 if index >= inserted_index else index
+            )
             note = f"큐 {inserted_index}({name}) 추가"
         else:
             cue_match = _PLAN_EDIT_CUE.search(text)
@@ -3337,7 +3411,20 @@ class ChatSession:
                 return None
             position = _requery_position_from_answer(text) or _timeline_edit_target_position(text)
             colors = _extract_color_words(text)
-            if position is None and not colors:
+            d_level = _plan_edit_d_level(text)
+            fade_match = _CUE_FADE.search(text)
+            fx_off = _PLAN_EDIT_FX_OFF.search(text) is not None
+            fx_on = not fx_off and _PLAN_EDIT_FX_ON.search(text) is not None
+            time_match = _PLAN_EDIT_TIME_MOVE.search(text)
+            if (
+                position is None
+                and not colors
+                and d_level is None
+                and fade_match is None
+                and not fx_off
+                and not fx_on
+                and time_match is None
+            ):
                 return None  # not an edit vocabulary we own — fall through
             cue = int(cue_match.group("cue"))
             if not 1 <= cue <= count:
@@ -3358,6 +3445,48 @@ class ChatSession:
             if position is not None:
                 self._song_merge_requery_answer(state, cue, f"{position} {' '.join(colors)}")
                 changes.append(f"포지션 {position}")
+            if d_level is not None:
+                existing = state.requery_overrides.get(cue)
+                if existing is None:
+                    # Preserve the section's own direct position intent — a
+                    # bare override would otherwise drop it (결함 4 priority).
+                    section = state.sections[slot]
+                    direct = _direct_position_intent(f"{section.name} {section.mood}")
+                    existing = DirectorOverride(position_candidates=direct)
+                state.requery_overrides[cue] = replace(existing, d_level=d_level)
+                changes.append(f"디머 D{d_level}")
+            if fade_match is not None:
+                fade_seconds = float(fade_match.group("sec") or fade_match.group("sec2"))
+                state.fade_overrides[cue] = fade_seconds
+                changes.append(f"페이드 {fade_seconds:g}초")
+            if fx_off:
+                state.fx_overrides[cue] = False
+                changes.append("FX 끔")
+            elif fx_on:
+                state.fx_overrides.pop(cue, None)
+                changes.append("FX 표준 복원")
+            if time_match is not None:
+                moved_ms = _plan_edit_time_ms(time_match.group("time"))
+                if moved_ms is None:
+                    return self._pointing_refusal(
+                        "이동할 시각을 읽지 못했습니다. 예: '큐 2를 0:30으로 이동'."
+                    )
+                section = state.sections[slot]
+                state.sections[slot] = replace(section, start_ms=moved_ms)
+                minute, second = divmod(moved_ms // 1000, 60)
+                changes.append(f"시작 {minute}:{second:02d}")
+                if [s.start_ms for s in state.sections] != sorted(
+                    s.start_ms for s in state.sections
+                ):
+                    # The move crossed a neighbour — re-sort and remap every
+                    # per-index override to the section's new cue number.
+                    order = sorted(
+                        range(len(state.sections)), key=lambda i: state.sections[i].start_ms
+                    )
+                    new_index = {old + 1: new + 1 for new, old in enumerate(order)}
+                    state.sections = [state.sections[i] for i in order]
+                    _plan_edit_remap_overrides(state, lambda index: new_index.get(index, index))
+                    changes.append(f"큐 순서 재정렬 (큐 {new_index[cue]}로 이동)")
             note = f"큐 {cue} {' · '.join(changes)}"
         plan, composition = self._song_compose(state)
         self._song_send_timeline(state, plan, composition)
@@ -3602,7 +3731,8 @@ class ChatSession:
                     f"연출 인터뷰 결과 — {' / '.join(audit_lines)}. "
                     "전체 리뷰 번들을 보여드렸고, 감독 승인 전이므로 콘솔에 쓰지 않았습니다. "
                     "승인 전 계획은 콘솔 무접촉으로 계속 수정할 수 있습니다 — "
-                    "예: '큐 3을 Center로', '큐 3 컬러를 골드로', "
+                    "예: '큐 3을 Center로', '큐 3 컬러를 골드로', '큐 2 D4', "
+                    "'큐 3 페이드 2초', '큐 2 FX 꺼', '큐 2를 0:30으로 이동', "
                     "'큐 2와 3 사이에 브레이크 추가', '큐 4 삭제' (중단: '취소'). "
                     f"{review_text}"
                 ),

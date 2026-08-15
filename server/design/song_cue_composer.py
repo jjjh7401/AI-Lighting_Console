@@ -575,7 +575,11 @@ def _section_cue(
     blackout = _is_blackout(decision)
     dimmer = _dimmer_data(budget, plan, blackout=blackout)
     fx = _fx_data(decision, budget)
-    fade_seconds = _fade_seconds(budget)
+    fade_seconds = (
+        float(decision.fade_override)
+        if decision.fade_override is not None
+        else _fade_seconds(budget)
+    )
     position_label = None if blackout else decision.position.preset
     return ComposedCue(
         kind="section",

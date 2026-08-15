@@ -2320,6 +2320,79 @@ class TestSongDesignInterviewSession:
         assert any("Store Sequence 110" in command for command in commands)
         assert event["status"] in ("ok", "readback_failed")
 
+    def test_plan_edit_sets_a_dimmer_level(self, tmp_path):
+        session, sent, calls = self._pending_plan_session(tmp_path)
+        session._question_channel = self._Channel(["수정"])
+
+        event = session.run_instruction("큐 2를 D5로 올려줘")
+
+        assert event["text"].startswith("계획 수정(콘솔 무접촉): 큐 2 디머 D5")
+        assert [call for call in calls if call.name == "run_commands"] == []
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["sections"][1]["d_level"] == 5
+
+    def test_plan_edit_sets_an_explicit_fade(self, tmp_path):
+        session, sent, calls = self._pending_plan_session(tmp_path)
+        session._question_channel = self._Channel(["수정"])
+
+        event = session.run_instruction("큐 3 페이드 2초로")
+
+        assert event["text"].startswith("계획 수정(콘솔 무접촉): 큐 3 페이드 2초")
+        assert [call for call in calls if call.name == "run_commands"] == []
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["sections"][2]["fade_seconds"] == 2.0
+
+    def test_plan_edit_turns_fx_off_and_back_on(self, tmp_path):
+        session, sent, calls = self._pending_plan_session(tmp_path)
+        before = [item["timeline"] for item in sent if item["type"] == "song_timeline"][-1]
+        original_fx = before["sections"][2]["fx"]
+        session._question_channel = self._Channel(["수정", "수정"])
+
+        session.run_instruction("큐 3 FX 꺼줘")
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["sections"][2]["fx"] == []
+
+        session.run_instruction("큐 3 FX 켜줘")
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        assert timelines[-1]["sections"][2]["fx"] == original_fx
+        assert [call for call in calls if call.name == "run_commands"] == []
+
+    def test_plan_edit_moves_a_cue_in_time(self, tmp_path):
+        session, sent, calls = self._pending_plan_session(tmp_path)
+        session._question_channel = self._Channel(["수정"])
+
+        event = session.run_instruction("큐 2를 0:30으로 이동해줘")
+
+        assert event["text"].startswith("계획 수정(콘솔 무접촉): 큐 2 시작 0:30")
+        assert [call for call in calls if call.name == "run_commands"] == []
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        sections = timelines[-1]["sections"]
+        assert sections[1]["start_ms"] == 30_000
+        assert [s["label"] for s in sections] == [s["label"] for s in sections]  # no reorder
+        assert sections[1]["label"] == "벌스"
+
+    def test_plan_edit_time_move_across_neighbours_reorders_cues(self, tmp_path):
+        session, sent, calls = self._pending_plan_session(tmp_path)
+        before = [item["timeline"] for item in sent if item["type"] == "song_timeline"][-1][
+            "sections"
+        ]
+        moved_position = before[1]["position"]
+        session._question_channel = self._Channel(["수정"])
+
+        event = session.run_instruction("큐 2를 1:20으로 옮겨줘")
+
+        assert "큐 순서 재정렬" in event["text"]
+        assert [call for call in calls if call.name == "run_commands"] == []
+        timelines = [item["timeline"] for item in sent if item["type"] == "song_timeline"]
+        sections = timelines[-1]["sections"]
+        starts = [s["start_ms"] for s in sections]
+        assert starts == sorted(starts)
+        assert sections[3]["label"] == "벌스"
+        assert sections[3]["start_ms"] == 80_000
+        # The moved section kept its confirmed position override.
+        assert sections[3]["position"] == moved_position
+        assert [s["cue_number"] for s in sections] == [1, 2, 3, 4, 5]
+
     def _stored_timeline_payload(self) -> dict:
         return {
             "song_title": "밝은 팝 무대 v1",

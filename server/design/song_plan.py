@@ -288,6 +288,9 @@ class SectionDecision:
     fx: FxDecision
     accent: AccentDecision
     cue_number: int | None = None
+    #: A director's explicit PLAN-stage fade for this cue (seconds). None =
+    #: derive from the D-level axis budget as before.
+    fade_override: float | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.section, TimestampedSection):
@@ -306,6 +309,14 @@ class SectionDecision:
             raise SongPlanError("accent must be an AccentDecision")
         if self.cue_number is not None:
             _validate_int("cue_number", self.cue_number, minimum=1)
+        if self.fade_override is not None and (
+            not isinstance(self.fade_override, (int, float))
+            or isinstance(self.fade_override, bool)
+            or self.fade_override < 0
+        ):
+            raise SongPlanError(
+                f"fade_override must be a non-negative number, got {self.fade_override!r}"
+            )
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -319,6 +330,7 @@ class SectionDecision:
                 ACCENT_AXIS: self.accent.to_dict(),
             },
             "cue_number": self.cue_number,
+            "fade_override": self.fade_override,
         }
 
 
