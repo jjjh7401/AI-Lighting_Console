@@ -309,14 +309,17 @@ def build_dash_catalog(
         sections[index] = dash_section(name=name, status=status, items=[])
 
     ordered = [s for s in sections if s is not None]
-    # Display order (user direction, 2026-08-15): 익스큐터 sits BEFORE 플러그인 —
-    # the press-able playback row outranks the read-only plugin reference row.
-    # Reordered HERE because the client renders wire order verbatim
-    # (REQ-DASHUI-003 — nothing sorts on the UI side).
+    # Display order (user direction, 2026-08-15, twice-revised): 익스큐터 sits
+    # BEFORE 매크로 (and therefore before 플러그인) — the press-able playback
+    # row outranks both reference rows. Reordered HERE because the client
+    # renders wire order verbatim (REQ-DASHUI-003 — nothing sorts on the UI
+    # side). The anchor falls back to "plugins" so a rig without a macros
+    # section still gets the executors-above-reference-rows order.
     names = [s["name"] for s in ordered]
-    if "executors" in names and "plugins" in names:
+    anchor = "macros" if "macros" in names else "plugins" if "plugins" in names else None
+    if "executors" in names and anchor is not None:
         executors = ordered.pop(names.index("executors"))
-        ordered.insert([s["name"] for s in ordered].index("plugins"), executors)
+        ordered.insert([s["name"] for s in ordered].index(anchor), executors)
     return ordered
 
 

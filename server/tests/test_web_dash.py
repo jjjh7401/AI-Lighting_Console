@@ -125,13 +125,13 @@ def _ids(items: list[dict]) -> list[int]:
 class TestDashCatalogAccuracy:
     def test_every_section_the_ia_names_is_present_in_priority_order(self):
         sections = build_dash_catalog(FakeStatePort(_rig_tree()))
-        # 익스큐터 before 플러그인: user direction 2026-08-15 (the press-able
-        # playback row outranks the read-only plugin reference row).
+        # 익스큐터 before 매크로/플러그인: user direction 2026-08-15 (the
+        # press-able playback row outranks both reference rows).
         assert [s["name"] for s in sections] == [
             "groups",
             "preset_pools",
-            "macros",
             "executors",
+            "macros",
             "plugins",
             "fixtures",
         ]
@@ -547,16 +547,26 @@ class TestResolvedExecutorMembership:
 
 
 class TestSectionDisplayOrder:
-    def test_executors_render_before_plugins(self):
-        # User direction 2026-08-15: the press-able playback row outranks the
-        # read-only plugin reference row. The client renders wire order
+    def test_executors_render_before_macros_and_plugins(self):
+        # User direction 2026-08-15 (twice-revised): the press-able playback
+        # row outranks BOTH reference rows. The client renders wire order
         # verbatim (REQ-DASHUI-003), so the order is pinned HERE.
         names = [s["name"] for s in build_dash_catalog(FakeStatePort(_rig_tree()))]
+        assert names.index("executors") < names.index("macros")
         assert names.index("executors") < names.index("plugins")
 
     def test_the_reorder_survives_a_failed_plugins_section(self):
         tree = _rig_tree()
         tree.pop("DataPool/Plugins", None)
         names = [s["name"] for s in build_dash_catalog(FakeStatePort(tree))]
-        # Both rows still present (plugins as a failed placeholder), same order.
+        # All rows still present (plugins as a failed placeholder), same order.
+        assert names.index("executors") < names.index("macros")
+        assert names.index("executors") < names.index("plugins")
+
+    def test_without_a_macros_section_executors_still_precede_plugins(self):
+        # The anchor falls back: a rig whose macros path never resolves keeps
+        # the playback row above the remaining reference row.
+        tree = _rig_tree()
+        tree.pop("DataPool/Macros", None)
+        names = [s["name"] for s in build_dash_catalog(FakeStatePort(tree))]
         assert names.index("executors") < names.index("plugins")
