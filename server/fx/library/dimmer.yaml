@@ -25,8 +25,8 @@ fx:
   - fx_id: "pulse-beat"
     display_name: "박자 펄스"
     pattern: "pulse"
-    aliases: ["펄스", "박자 펄스", "깜빡이는 딤머", "pulse"]
-    mood_keywords: ["박자", "깜빡이는", "리듬", "펄스", "또렷한", "pulse", "beat"]
+    aliases: ["펄스", "박자 펄스", "깜빡이는 딤머", "비트 타는 펄스", "박자 맞춰 깜빡", "pulse"]
+    mood_keywords: ["박자", "깜빡이는", "리듬", "펄스", "또렷한", "비트", "pulse", "beat"]
     steps:
       - Dimmer: 100
       - Dimmer: 0
@@ -37,8 +37,8 @@ fx:
   - fx_id: "pulse-breath"
     display_name: "숨쉬는 딤머"
     pattern: "pulse"
-    aliases: ["숨쉬는 딤머", "브리딩", "느린 펄스", "breathing"]
-    mood_keywords: ["숨쉬는", "느린", "따뜻한", "잔잔한", "발라드", "breath", "slow"]
+    aliases: ["숨쉬는 딤머", "브리딩", "느린 펄스", "숨쉬듯이", "은은하게 오르내리는", "breathing"]
+    mood_keywords: ["숨쉬는", "느린", "따뜻한", "잔잔한", "발라드", "은은한", "breath", "slow"]
     steps:
       - Dimmer: 25
       - Dimmer: 75
@@ -57,8 +57,8 @@ fx:
   # colliding with a neighbouring instantiation in one instruction turn.
   - fx_id: "pulse-sine-breath"
     display_name: "사인 브리딩"
-    aliases: ["사인 브리딩", "부드러운 숨쉬기", "사인파 딤머", "sine breathing"]
-    mood_keywords: ["부드러운", "유기적인", "숨쉬는", "몽환적인", "발라드", "sine", "smooth", "organic"]
+    aliases: ["사인 브리딩", "부드러운 숨쉬기", "사인파 딤머", "천천히 밝았다 어두웠다", "숨쉬는 워시", "sine breathing"]
+    mood_keywords: ["부드러운", "유기적인", "숨쉬는", "몽환적인", "발라드", "매끄러운", "sine", "smooth", "organic"]
     pattern: "pulse"
     steps:
       - Dimmer: 10
@@ -73,8 +73,8 @@ fx:
   # Still a pulse, not a flash: the floor stays lit and the tempo is musical.
   - fx_id: "pulse-snap"
     display_name: "스냅 펄스"
-    aliases: ["스냅 펄스", "짧은 펄스", "튀는 딤머", "snap pulse"]
-    mood_keywords: ["짧은", "튀는", "긴장감", "임팩트", "리듬", "snap", "punchy"]
+    aliases: ["스냅 펄스", "짧은 펄스", "튀는 딤머", "따닥따닥", "끊어 치는 펄스", "콕콕 찍는", "snap pulse"]
+    mood_keywords: ["짧은", "튀는", "긴장감", "임팩트", "리듬", "타이트한", "snap", "punchy"]
     pattern: "pulse"
     steps:
       - Dimmer: 5
@@ -89,8 +89,8 @@ fx:
   # the operator (or a tempo tool) retunes every bound effect from one fader.
   - fx_id: "pulse-master-sync"
     display_name: "마스터 동기 펄스"
-    aliases: ["마스터 동기 펄스", "템포 동기 딤머", "스피드마스터 펄스", "master sync pulse"]
-    mood_keywords: ["동기화", "템포", "라이브", "박자", "마스터", "sync", "tempo", "live"]
+    aliases: ["마스터 동기 펄스", "템포 동기 딤머", "스피드마스터 펄스", "템포 물려줘", "속도 페이더로", "master sync pulse"]
+    mood_keywords: ["동기화", "템포", "라이브", "박자", "마스터", "페이더", "sync", "tempo", "live"]
     pattern: "pulse"
     steps:
       - Dimmer: 15

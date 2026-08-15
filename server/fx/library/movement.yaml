@@ -47,8 +47,8 @@ fx:
   - fx_id: "sweep-soft-wide"
     display_name: "부드러운 좌우 스윕"
     pattern: "sweep"
-    aliases: ["좌우 스윕", "부드러운 스윕", "좌우로 쓸어줘", "soft sweep"]
-    mood_keywords: ["부드러운", "느린", "잔잔한", "넓은", "발라드", "soft", "slow", "sweep"]
+    aliases: ["좌우 스윕", "부드러운 스윕", "좌우로 쓸어줘", "무빙 살랑살랑", "빔 천천히 흔들어", "soft sweep"]
+    mood_keywords: ["부드러운", "느린", "잔잔한", "넓은", "발라드", "살랑살랑", "soft", "slow", "sweep"]
     steps:
       - Pan: -30
       - Pan: 30
@@ -63,8 +63,8 @@ fx:
   - fx_id: "sweep-club-xwave"
     display_name: "클럽 좌우 웨이브"
     pattern: "sweep"
-    aliases: ["클럽 스윕", "빠른 스윕", "엑스축 웨이브", "club sweep"]
-    mood_keywords: ["빠른", "신나는", "클럽", "에너지", "파도", "fast", "club", "energetic"]
+    aliases: ["클럽 스윕", "빠른 스윕", "엑스축 웨이브", "빔 흔들어줘", "무빙 신나게 흔들어", "club sweep"]
+    mood_keywords: ["빠른", "신나는", "클럽", "에너지", "파도", "흔드는", "fast", "club", "energetic"]
     steps:
       - Pan: -20
       - Pan: 20
@@ -76,8 +76,8 @@ fx:
   - fx_id: "wave-soft-rise"
     display_name: "부드러운 상하 웨이브"
     pattern: "wave"
-    aliases: ["상하 웨이브", "웨이브", "부드러운 웨이브", "soft wave"]
-    mood_keywords: ["부드러운", "느린", "물결", "잔잔한", "예배", "soft", "wave", "gentle"]
+    aliases: ["상하 웨이브", "웨이브", "부드러운 웨이브", "웨이브 태워줘", "파도 타게", "soft wave"]
+    mood_keywords: ["부드러운", "느린", "물결", "잔잔한", "예배", "파도", "soft", "wave", "gentle"]
     steps:
       - Tilt: -12
       - Tilt: 12
@@ -92,8 +92,8 @@ fx:
   - fx_id: "wave-fall-reverse"
     display_name: "내려오는 웨이브"
     pattern: "wave"
-    aliases: ["내려오는 웨이브", "역방향 웨이브", "폭포", "reverse wave"]
-    mood_keywords: ["내려오는", "역방향", "쏟아지는", "빠른", "reverse", "falling"]
+    aliases: ["내려오는 웨이브", "역방향 웨이브", "폭포", "위에서 쏟아지게", "떨어지는 웨이브", "reverse wave"]
+    mood_keywords: ["내려오는", "역방향", "쏟아지는", "빠른", "폭포수", "reverse", "falling"]
     steps:
       - Tilt: 15
       - Tilt: -15
@@ -112,8 +112,8 @@ fx:
   - fx_id: "circle-soft-ballyhoo"
     display_name: "느린 발리후"
     pattern: "circle"
-    aliases: ["발리후", "느린 원", "동그라미", "slow circle"]
-    mood_keywords: ["느린", "원형", "발리후", "몽환적인", "부드러운", "circle", "slow"]
+    aliases: ["발리후", "느린 원", "동그라미", "무빙 돌려줘", "뱅글뱅글", "slow circle"]
+    mood_keywords: ["느린", "원형", "발리후", "몽환적인", "부드러운", "도는", "circle", "slow"]
     steps:
       - Pan: -20
         Tilt: -10
@@ -125,8 +125,8 @@ fx:
   - fx_id: "circle-club-wings"
     display_name: "미러 서클"
     pattern: "circle"
-    aliases: ["미러 서클", "좌우 대칭 원", "빠른 원", "mirror circle"]
-    mood_keywords: ["빠른", "대칭", "화려한", "클럽", "원형", "fast", "mirror"]
+    aliases: ["미러 서클", "좌우 대칭 원", "빠른 원", "양쪽에서 돌게", "대칭으로 돌려", "mirror circle"]
+    mood_keywords: ["빠른", "대칭", "화려한", "클럽", "원형", "미러", "fast", "mirror"]
     steps:
       - Pan: -25
         Tilt: -12
@@ -146,7 +146,7 @@ fx:
   - fx_id: "diagonal-soft-inphase"
     display_name: "부드러운 대각선"
     pattern: "diagonal"
-    aliases: ["대각선", "사선", "비스듬히", "soft diagonal"]
+    aliases: ["대각선", "사선", "비스듬히", "사선으로 쓸어줘", "soft diagonal"]
     mood_keywords: ["부드러운", "느린", "대각선", "사선", "잔잔한", "diagonal", "slow"]
     steps:
       - Pan: -28
@@ -159,7 +159,7 @@ fx:
   - fx_id: "diagonal-club-cross"
     display_name: "교차 대각선"
     pattern: "diagonal"
-    aliases: ["교차 대각선", "엇갈린 사선", "엑스자", "cross diagonal"]
+    aliases: ["교차 대각선", "엇갈린 사선", "엑스자", "엇갈리게 쳐줘", "cross diagonal"]
     mood_keywords: ["빠른", "교차", "날카로운", "클럽", "엇갈리는", "cross", "fast"]
     steps:
       - Pan: -22
@@ -178,8 +178,8 @@ fx:
   - fx_id: "sweep-relative-center"
     display_name: "제자리 스윕"
     pattern: "sweep"
-    aliases: ["제자리 스윕", "현재 위치 스윕", "상대 스윕", "relative sweep"]
-    mood_keywords: ["현재", "제자리", "유지하면서", "부드러운", "포지션", "relative", "center"]
+    aliases: ["제자리 스윕", "현재 위치 스윕", "상대 스윕", "포지션 그대로 흔들어", "지금 위치에서 살짝", "relative sweep"]
+    mood_keywords: ["현재", "제자리", "유지하면서", "부드러운", "포지션", "그대로", "relative", "center"]
     steps:
       - Pan: -15
       - Pan: 15
@@ -194,8 +194,8 @@ fx:
   - fx_id: "circle-relative-orbit"
     display_name: "제자리 서클"
     pattern: "circle"
-    aliases: ["제자리 서클", "현재 위치 원", "궤도", "relative circle", "orbit"]
-    mood_keywords: ["제자리", "원형", "궤도", "몽환적인", "유지", "orbit", "relative"]
+    aliases: ["제자리 서클", "현재 위치 원", "궤도", "제자리에서 돌려줘", "포지션 그대로 돌려", "relative circle", "orbit"]
+    mood_keywords: ["제자리", "원형", "궤도", "몽환적인", "유지", "그대로", "orbit", "relative"]
     steps:
       - Pan: -12
         Tilt: -8
@@ -210,8 +210,8 @@ fx:
   - fx_id: "sweep-sine-ease"
     display_name: "이지 스윕"
     pattern: "sweep"
-    aliases: ["이지 스윕", "부드럽게 도는 스윕", "사인 스윕", "eased sweep"]
-    mood_keywords: ["부드러운", "우아한", "느린", "유려한", "고급스러운", "ease", "sine", "elegant"]
+    aliases: ["이지 스윕", "부드럽게 도는 스윕", "사인 스윕", "스르륵 갔다 오는", "eased sweep"]
+    mood_keywords: ["부드러운", "우아한", "느린", "유려한", "고급스러운", "매끄러운", "ease", "sine", "elegant"]
     steps:
       - Pan: -26
       - Pan: 26
