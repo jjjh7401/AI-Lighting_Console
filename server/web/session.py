@@ -337,8 +337,11 @@ _SONG_GENRE = re.compile(
 # same idiom as _CUE_SEQUENCE_NO/_SHEET_PRESET_START above — only Q1/Q2 have
 # a reliable free-form keyword to detect ahead of the interview; Q3-Q5 always
 # ride their own card.
-_SONG_CONCEPT_HINT = re.compile(r"컨셉\s*(?:은|는)?\s*[:\-]?\s*(?P<concept>[^,:]+)")
-_SONG_PALETTE_HINT = re.compile(r"팔레트\s*(?:는|은)?\s*[:\-]?\s*(?P<palette>[^,:]+)")
+# 2026-08-16 실측: [^,:]+ ran past the sentence into the next line ("블루와
+# 화이트. 타임코드 7로 맞춰줘.\n0…" became the palette). Stop at comma, colon,
+# PERIOD, or NEWLINE — a hint is one clause, never the rest of the brief.
+_SONG_CONCEPT_HINT = re.compile(r"컨셉\s*(?:은|는)?\s*[:\-]?\s*(?P<concept>[^,:.\n]+)")
+_SONG_PALETTE_HINT = re.compile(r"팔레트\s*(?:는|은)?\s*[:\-]?\s*(?P<palette>[^,:.\n]+)")
 # DI5 "QN만 다시" 부분 재인터뷰: an interview-card answer carrying "Q<N> 다시"
 # is never fed to the current step's parser (it would corrupt a free-text
 # step like Q1/Q5) — it restarts from Q<N> instead, keeping every earlier
@@ -4542,6 +4545,7 @@ class ChatSession:
                     timecode_no = state.timing.timecode_number
                     plan, composition = self._song_compose(state)
                     review_text = _review_text(plan, composition)
+                    self._song_send_timeline(state, plan, composition)
                     timecode_note = f" · Timecode {timecode_no}: 비어 있음 확인"
             else:
                 timecode_note = f" · Timecode {timecode_no}: 비어 있음 확인"
