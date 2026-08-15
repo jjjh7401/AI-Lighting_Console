@@ -4172,22 +4172,28 @@ class ChatSession:
             return failure
         return self._song_finalize(state, plan, composition)
 
-    def _console_slot_occupied(self, path: str, *, probe_id: str) -> bool:
-        """Whether a console pool slot holds data — FAIL-CLOSED (#6,
-        2026-08-16): an errored or unparseable probe reads as OCCUPIED, so a
-        flapping responder can never get an occupied slot proposed as empty."""
+    def _console_slot_state(self, path: str, *, probe_id: str) -> str:
+        """One pool slot's verdict: 'empty' | 'occupied' | 'unreadable'.
+        FAIL-CLOSED consumers treat unreadable as occupied (#6, 2026-08-16),
+        but the split lets fallback cards SAY why nothing could be proposed
+        (실측 2026-08-15: responder flapping 중 전 슬롯이 점유로 보이는 폴백을
+        사용자가 '전부 차 있음'으로 오독)."""
         probe = self._registry.dispatch(
             ToolCall(id=probe_id, name="query_state", arguments={"path": path})
         )
         if probe.result.is_error:
-            return True
+            return "unreadable"
         try:
             payload = json.loads(probe.result.content)
         except (json.JSONDecodeError, TypeError):
-            return True
+            return "unreadable"
         if not isinstance(payload, dict):
-            return True
-        return _setlist_node_exists(payload)
+            return "unreadable"
+        return "occupied" if _setlist_node_exists(payload) else "empty"
+
+    def _console_slot_occupied(self, path: str, *, probe_id: str) -> bool:
+        """Fail-closed boolean view of `_console_slot_state`."""
+        return self._console_slot_state(path, probe_id=probe_id) != "empty"
 
     def _song_sequence_occupied(self, sequence_no: int) -> bool:
         """True when the console already holds ANY data at this sequence slot
@@ -4266,7 +4272,8 @@ class ChatSession:
         """The shared '기본 포지션이 프리셋 몇 번부터?' card — proposes only
         starts the console VERIFIED as ten consecutive stored presets, and
         falls back to the static examples when the pool is unreadable."""
-        ready_starts = self._position_preset_ready_starts()
+        pool_slots = self._position_preset_pool_slots()
+        ready_starts = self._position_preset_ready_starts(slots=pool_slots) if pool_slots else []
         if ready_starts:
             prompt = (
                 "기본 포지션 10종(Home~Ring In)이 Position 프리셋 몇 번부터 "
@@ -4277,9 +4284,25 @@ class ChatSession:
                 for start in ready_starts[:3]
             )
         else:
+            if pool_slots is None:
+                diagnosis = (
+                    "Position 풀을 읽지 못했습니다 — 콘솔 응답이 불안정하면(responder) "
+                    "잠시 후 다시 시도하면 확인된 구간을 제안할 수 있습니다."
+                )
+            elif not pool_slots:
+                diagnosis = (
+                    "Position 풀에 저장된 프리셋이 없습니다 — 먼저 "
+                    "'기본 포지션 10개 저장'을 실행해 주세요."
+                )
+            else:
+                diagnosis = (
+                    f"Position 풀에 프리셋 {len(pool_slots)}개가 있지만 10칸 연속 "
+                    "구간을 찾지 못했습니다."
+                )
             prompt = (
                 "기본 포지션 10종(Home~Ring In)이 Position 프리셋 몇 번부터 "
-                "저장돼 있나요? (예: 21 → 2.21~2.30)"
+                f"저장돼 있나요? {diagnosis} 아래 예시는 검증되지 않은 번호입니다. "
+                "(예: 21 → 2.21~2.30)"
             )
             options = (
                 QuestionOption(label="1"),
@@ -4299,26 +4322,47 @@ class ChatSession:
         except AttributeError:
             return self._pointing_refusal(refusal)
 
-    def _song_free_sequence_slots(
+    def _song_probe_sequence_slots(
         self, start: int, *, count: int = 3, probes: int = 12, step: int = 10
-    ) -> list[int]:
-        """Up to ``count`` console-VERIFIED empty sequence slots, walking
+    ) -> tuple[list[int], int, int]:
+        """(verified-empty slots, occupied count, unreadable count) walking
         ``step`` at a time from ``start`` (inclusive)."""
         free: list[int] = []
+        occupied = 0
+        unreadable = 0
         candidate = start
         for _probe in range(probes):
-            if not self._song_sequence_occupied(candidate):
+            verdict = self._console_slot_state(
+                f"{self._rig_paths['sequences']}/{candidate}",
+                probe_id=f"song-design-slot-check-{candidate}",
+            )
+            if verdict == "empty":
                 free.append(candidate)
                 if len(free) == count:
                     break
+            elif verdict == "occupied":
+                occupied += 1
+            else:
+                unreadable += 1
             candidate += step
+        return free, occupied, unreadable
+
+    def _song_free_sequence_slots(
+        self, start: int, *, count: int = 3, probes: int = 12, step: int = 10
+    ) -> list[int]:
+        """Up to ``count`` console-VERIFIED empty sequence slots."""
+        free, _occupied, _unreadable = self._song_probe_sequence_slots(
+            start, count=count, probes=probes, step=step
+        )
         return free
 
-    def _position_preset_ready_starts(self, *, count: int = 3) -> list[int]:
+    def _position_preset_ready_starts(
+        self, *, count: int = 3, slots: set[int] | None = None
+    ) -> list[int]:
         """Start numbers where the Position pool holds TEN consecutive stored
-        presets (2.s ~ 2.s+9). Unreadable pool → [] (callers fall back to the
-        static examples rather than guessing)."""
-        stored = self._position_preset_pool_slots()
+        presets (2.s ~ 2.s+9). ``slots`` skips a second pool read when the
+        caller already fetched it. Unreadable pool → []."""
+        stored = slots if slots is not None else self._position_preset_pool_slots()
         if not stored:
             return []
         span = len(BASIC_POSITION_SEQUENCE)
@@ -4340,7 +4384,7 @@ class ChatSession:
         missing one opens a card that proposes console-verified empty slots."""
         if requested is not None and not self._song_sequence_occupied(requested):
             return requested
-        free_slots = self._song_free_sequence_slots(
+        free_slots, occupied, unreadable = self._song_probe_sequence_slots(
             (requested or 100) + 10 if requested is not None else 110
         )
         lead = (
@@ -4355,10 +4399,16 @@ class ChatSession:
             )
             options = tuple(QuestionOption(label=f"{slot} (비어 있음)") for slot in free_slots)
         else:
+            diagnosis = f"탐침 결과: 점유 {occupied}곳 · 조회 실패 {unreadable}곳."
+            if unreadable:
+                diagnosis += (
+                    " 콘솔 응답이 불안정합니다(responder) — 잠시 후 다시 시도하면 "
+                    "검증된 번호를 제안할 수 있습니다."
+                )
             prompt = (
-                f"{lead}{purpose}를 어느 시퀀스에 저장할까요? 비어 있는 번호를 "
-                "찾지 못해 직접 입력이 필요합니다. 이미 큐가 있는 시퀀스면 "
-                "저장이 거부될 수 있습니다."
+                f"{lead}{purpose}를 어느 시퀀스에 저장할까요? 비어 있음을 확인한 "
+                f"번호가 없어 직접 입력이 필요합니다. {diagnosis} 아래 예시는 "
+                "검증되지 않은 번호이며, 이미 큐가 있으면 저장이 거부될 수 있습니다."
             )
             options = (
                 QuestionOption(label="110"),

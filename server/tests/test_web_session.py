@@ -2559,6 +2559,14 @@ class TestSongDesignInterviewSession:
         assert session._song_sequence_occupied(110) is True
         assert session._timecode_occupied(7) is True
         assert session._song_free_sequence_slots(110) == []
+        # The fallback card SAYS why nothing could be proposed (실측 2026-08-15
+        # 오독: 전 슬롯 폴백이 '전부 차 있음'처럼 보였음).
+        channel = self._Channel([])
+        session._question_channel = channel
+        session._song_pick_sequence(None, purpose="디자인 큐 시트", refusal="거절")
+        prompt = str(getattr(channel.asked[0], "prompt", channel.asked[0]))
+        assert "조회 실패 12곳" in prompt
+        assert "콘솔 응답이 불안정" in prompt
 
     def test_preset_start_options_come_from_the_console_pool(self, tmp_path):
         # The preset question proposes only starts where TEN consecutive
