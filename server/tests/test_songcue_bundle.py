@@ -153,6 +153,29 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # suite run before `git commit` does not exercise it, and the failure surfaces
 # only after the commit — which is how it reached `main` in PR #33. Run the
 # suite ONCE MORE after committing, before merging.
+# 2026-08-14 re-walk — two catch-ups in one, per the same procedure as the
+# grants above:
+# ① f4fb366 (P0 페이퍼워크 — build_handover_pack/paperwork registration) added
+#   its own three hunks at 1048 / 1061 / 1067 (the paperwork ToolDefinitions
+#   region) but updated this pin BLIND, before committing — exactly the ⚠️
+#   failure mode recorded just above, tripped a second time.
+# ② 2e20dda (도구환각 교정 — rewritten ToolDefinition descriptions/schemas)
+#   adds 1035 / 1110 / 1116 / 1210 (find_looks gains `genre` +
+#   `sequence_numbers`, patch_fixtures gains `fixture_type_records`, and the
+#   surrounding description text is rewritten), moves the 1089 hunk's boundary
+#   to 1088, and 1218 leaves the list because unified=0 merged it into the
+#   widened 1220 hunk — not because anything there was reverted.
+# ADDITIVITY, measured rather than claimed:
+#   git diff --unified=0 38a6e7e2..HEAD -- server/orchestrator/tools.py
+#     | grep -cE '^-[^-]'                                          ->  215
+# (203 at the TRUNCATE grant), so NOT additive-only; per the TRUNCATE note the
+# position check alone does not carry the claim. Re-checked by CONTENT,
+# mechanically, both blocks byte-identical in HEAD:
+#   old 234..238  `_PROGRAMMER_STATE_COMMANDS`  -> present verbatim
+#   old 524..569  the in-bundle dedupe loop     -> present verbatim
+# Neither new start falls inside either protected range: overlap ZERO across
+# all 54 hunks. Every moved hunk is registration/definition plumbing — the
+# half of this test's name that is allowed to move; none is dedupe or state.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -176,13 +199,19 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     971,
     989,
     1007,
+    1035,
+    1048,
+    1061,
+    1067,
     1070,
     1072,
     1081,
-    1089,
+    1088,
     1096,
     1103,
+    1110,
     1113,
+    1116,
     1118,
     1122,
     1124,
@@ -198,8 +227,8 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     1192,
     1196,
     1198,
+    1210,
     1213,
-    1218,
     1220,
     1231,
 )

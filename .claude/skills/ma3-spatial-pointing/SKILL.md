@@ -146,6 +146,83 @@ Fixture 26 ; Attribute 'Dimmer' At 100 ; Attribute 'Pan' At -90 ; Attribute 'Til
 - 익스큐터 배정의 검증 문법은 `Assign Sequence <n> At Executor <m>` —
   `At Page 1.<x>` 형태는 Cannot Create Object로 거부될 수 있다.
 
+## 3b. 포지션 큐 트랜지션 (T1 실측 — SPEC-COPILOT-CUETIME-001)
+
+검증된 번들(빌더 `position_cue_store_commands` + `preset_recall_command`,
+세션 어휘 "프리셋 N을 시퀀스 S 큐 C로 저장, 페이드 F초"):
+
+```
+Fixture 20 + 26 + … ; At Preset 2.28
+Store Sequence 101 Cue 1 'Pos 2.28' CueFade 5
+ClearAll
+```
+
+- 라이브 확인: 페이드 중 3D 프레임 diff 13만~40만 px, 페이드 종료 후
+  연속 프레임 diff 5 px(정지). 픽스처 시트 PanTilt 열이 값이 아니라
+  "2.28 Cro…" **프리셋 참조**로 표시 — 참조 저장 성립.
+- **큐 이름의 점(.)은 MA3가 삼킨다**: `'Pos 2.28'`로 저장하면 실제 큐
+  이름은 `Pos 228`이 된다. 이름으로 오브젝트를 다시 찾을 때(prop/state
+  경로) 점 없는 이름을 써야 한다.
+- **CueFade readback**: Cue 오브젝트의 `CueFade`/`Fade` prop은
+  `property not readable`. 실제 값은 **큐 Part**에 `CueInFade`로 산다 —
+  `prop:DataPool/Sequences/<n>/<cueName>/<partName>|CueInFade` (part
+  이름은 큐 이름과 동일; 실측 5.0 readback). CueFade는 state snapshot에도
+  없다(songcue_report.py PROPERTY_UNOBSERVED_NOTE) — ok 응답만으로 페이드
+  검증 금지.
+- 시퀀스 번호는 운영자 결정(카드 1장) — Store는 기존 큐 슬롯에 그대로
+  얹힌다. `/Merge`·`/Overwrite`는 쓰지 않는다(페이저 평탄화·블랙리스트).
+
+## 3c. MIB (Move In Black) — T2 실측 (룰북 무전례, 이 계측이 근거)
+
+규칙(`server/spatial/mib.py::apply_mib`): 마지막 명시 디머가 0(다크)이고
+다음 큐가 "새 프리셋 + 디머 >0"(리빌+이동)이면, 두 큐 번호의 중간에
+**포지션 전용 선이동 큐**(기본 CueFade 1)를 삽입하고 리빌 큐에서 포지션을
+제거한다. 트래킹이 선이동 큐의 디머를 0으로 유지하므로 디머 라인은 넣지
+않는다. 시작 상태 불명(명시 디머 없음)은 **점등으로 간주** — 보일지 모르는
+리그에 유령 선이동을 넣으면 MIB가 없애려는 스윙을 오히려 만든다.
+
+라이브 A/B 계측 (onPC 2.4.2, 40대 링, Wide 2.26→Black→Cross 2.28):
+
+| 측정 | MIB (Seq 102, 큐 1/2/2.5/3) | 대조군 (Seq 103, 선이동 없음) |
+|---|---|---|
+| 다크 선이동 중 가시 변화 | 0 px (잔여 UI 58px 불변) | — |
+| 리빌 t0.5s→t2.5s moved_away | **0 px** (밝기만 성장) | **4,731 px** (빔이 자리를 떠남) |
+| 리빌 초반↔후반 기하 IoU (Otsu) | 0.70 | 0.54 |
+
+- 판독법: moved_away = 초반에 밝던 픽셀이 후반에 어두워진 수 — 페이드 중
+  빔이 스윙하면 커지고, 이미 주차된 빔이 페이드 인만 하면 0이다.
+- 측정은 3D 뷰포트만 크롭해서 하라 — 창 전체를 diff하면 픽스처 시트의
+  숫자 갱신이 잡음으로 들어온다.
+- 고정 임계값 이진화는 밝기 차이에 눌려 판별력이 없다(실측: moved_away가
+  양쪽 다 0으로 나옴) — 프레임별 Otsu 임계값을 써라.
+- `Delete Sequence <n> /NoConfirm` 은 probe(게이트 밖 계측 경로)에서 확인
+  팝업 없이 동작 — 서버 경로에서는 여전히 블랙리스트(승인 필요).
+- **선이동 큐는 반드시 `TrigType 'Follow'`** (실측, Seq 113→114): Store만
+  하면 TrigType이 Go로 남아 선이동이 스스로 발화하지 않는다 — 운영자가
+  드롭 타이밍에 누른 Go가 "보이지 않는 다크 이동"을 재생하고 리빌이 한
+  박자 늦는다. 저장 직후
+  `Set Cue <k.5> Sequence <n> Property 'TrigType' 'Follow'` 를 붙여라
+  (`premove_follow_command`). Follow면 암전 큐 완료 시 자동 발화 —
+  Go 횟수 = 곡 구간 수. 검증: Go 12번으로 14큐 시트 완주, 리빌 첫 Go에서
+  즉시 점등(moved_away 0 px).
+
+## 3d. 곡 구조 포지션 큐 시트 (T3 — songcue × moods × MIB 결합)
+
+세션 어휘: `"포지션 큐 시트, 시퀀스 S, 프리셋 P번부터[, 페이드 F초]:
+이름 시각 무드, 이름 시각 무드, …"` (시각 = `m:ss` 또는 `N초`).
+구현: `server/spatial/position_cuesheet.py::build_position_cue_sheet` —
+구간 무드를 `position_moods`로 풀어 운영자 기준(P=Home 슬롯) 프리셋
+참조 큐로 빌드하고, "암전" 구간은 디머 0 큐, 그 뒤 리빌에는 `apply_mib`가
+다크 선이동 큐를 자동 삽입한다. 무드가 표와 안 맞는 구간은 추측 없이
+건너뛰고 번호만 소비(songcue 관례). 라이브 검증(Seq 110, 5구간): 구간 간
+기하 IoU 0.12~0.16(전부 다른 포지션), 암전·선이동 가시 변화 0 px,
+리빌 moved_away 0 px.
+E2E(실제 앱 UI, Seq 112 — 1분 헤비메탈 12구간·14큐·페이드 0.5초): 암전
+히트 2회 뒤 MIB 3.5/7.5 자동 삽입, 점등 룩 7종 기하 전부 구별(IoU
+0.01~0.65), 반복 프리셋 리콜은 픽셀 단위 결정론. 함정: 한글+숫자
+구간명("브레이크1")은 ASCII 정리 후 숫자만 남아 큐 이름이 '1'로 퇴화 —
+digits-only 남으면 'Section n' 폴백(코드에 반영).
+
 ## 4. 검증 절차 (재계측 레시피)
 
 1. `grandma3-web-stable` 프로세스를 잠시 중지 (feedback 포트 9005 단독 점유).

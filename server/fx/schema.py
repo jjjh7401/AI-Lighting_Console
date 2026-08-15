@@ -12,8 +12,9 @@ The attribute vocabulary is fx-owned and split into two bands (REQ-FXLIB-003):
 2. Movement — ``Pan`` / ``Tilt``, legal only inside a phaser. As a static value
    they are exactly the hard pan/tilt the SPEC forbids.
 
-The probe-pending band (``At Accel`` / ``At Decel``) is not an attribute at all;
-it is the ``accel``/``decel`` curve axis below, defined but gated.
+The former probe-pending band (``At Accel`` / ``At Decel``) opened on the
+2026-08-15 live session (SPEC-COPILOT-FXGEN-001 spec.md §A): the
+curve axes below are now measured vocabulary, valued per entry.
 
 # @MX:NOTE: [AUTO] the closed field set is the mechanism enforcing
 #   REQ-FXLIB-004: there is no group, sequence, cue, FID or executor field to
@@ -94,10 +95,16 @@ ATTRIBUTE_VALUE_RANGE: Mapping[str, tuple[float, float]] = {
 
 # The axes that MODIFY an already-created phaser. Declaring any of them without
 # a step axis is the exact shape M0 fired three times for zero motion.
+# `speed_master`/`width`/`measure` entered on the 2026-08-15 live session
+# (SPEC-COPILOT-FXGEN-001 spec.md §A, V3/V4): each was fired from
+# the command line and its effect confirmed on stage by GUI observation.
 PHASER_MODIFIER_AXES: tuple[str, ...] = (
     "phase_from",
     "phase_to",
     "speed",
+    "speed_master",
+    "width",
+    "measure",
     "relative",
     "reverse",
 )
@@ -111,18 +118,40 @@ MATRICKS_AXES: tuple[str, ...] = (
     "x_shuffle",
 )
 
-# Probe-pending curve axes: M0 got `ok:true` and observed NO effect (SKIP), so
-# they stay defined and unused in v1 — the `MovementSpec` shape from
-# `server/looks/schema.py:86-102`, tightened by a loader refusal.
-GATED_CURVE_AXES: tuple[str, ...] = ("accel", "decel")
+# Curve axes — MEASURED on the 2026-08-15 live session (V1): two dimmer steps
+# plus `Step <k> At Accel -100` / `At Decel -100` per step rendered a smooth
+# sinusoidal fade on stage (M0 had recorded ok:true with no observed effect;
+# the missing piece was firing the curve lines AFTER both steps existed).
+CURVE_AXES: tuple[str, ...] = ("accel", "decel")
+
+# The measured curve literal is -100 (the sine shape); the console GUI spans
+# the same axis symmetrically, so the authoring bound is the full percent span.
+CURVE_MIN = -100.0
+CURVE_MAX = 100.0
+
+# 16 speed masters exist, each 0-225 BPM (help.malighting.com, Speed Masters).
+# The axis here is the MASTER NUMBER a phaser binds to, not the BPM.
+SPEED_MASTER_MIN = 1
+SPEED_MASTER_MAX = 16
+
+# Width is a percent of one beat (measured literal: 25). Zero would erase the
+# step; the M0 anchor's own `At 100` shape makes 100 the inclusive top.
+WIDTH_MIN = 0.0
+WIDTH_MAX = 100.0
+
+# Measure scales the whole loop to N beats (measured literal: 4). Only the
+# lower bound is principled — zero or negative beats is not a duration; no
+# measured upper limit exists, so none is invented.
+MEASURE_MIN = 0.0
 
 
 @dataclass(frozen=True)
 class StepValue:
-    """One absolute attribute value inside one step, e.g. ``At 100``.
+    """One attribute value inside one step, e.g. ``At 100``.
 
-    Absolute only: whether ``At Relative <n>`` holds as a STEP value is
-    unmeasured (ASSUMPTION-40), and v1 never emits it.
+    Emitted as ``At <n>`` by default, or ``At Relative <n>`` when the owning
+    fx sets ``relative`` — measured 2026-08-15 (V2): relative step values
+    sweep around the fixture's CURRENT position instead of an absolute aim.
     """
 
     attribute: str
@@ -167,7 +196,13 @@ class Fx:
     phase_from: float | None = None
     phase_to: float | None = None
     speed: float | None = None
-    relative: float | None = None
+    # Speed source is EITHER a fixed BPM (`speed`) or a live master binding
+    # (`speed_master`, V3) — never both; the combination is unmeasured.
+    speed_master: int | None = None
+    width: float | None = None
+    measure: float | None = None
+    # True => every step value line is emitted `At Relative <n>` (V2).
+    relative: bool = False
     reverse: bool = False
     # MAtricks division axes.
     phase_from_x: float | None = None
@@ -175,7 +210,7 @@ class Fx:
     x: int | None = None
     x_wings: int | None = None
     x_shuffle: int | None = None
-    # Gated curve axes — defined, never valued in v1 (M0 SKIP).
+    # Curve axes — measured 2026-08-15 (V1): -100/-100 renders a sine fade.
     accel: float | None = None
     decel: float | None = None
 
@@ -219,7 +254,7 @@ def fx_to_dict(fx: Fx) -> dict:
         "mood_keywords": list(fx.mood_keywords),
         "steps": [step_to_dict(step) for step in fx.steps],
     }
-    for axis in PHASER_MODIFIER_AXES + MATRICKS_AXES + GATED_CURVE_AXES:
+    for axis in PHASER_MODIFIER_AXES + MATRICKS_AXES + CURVE_AXES:
         value = getattr(fx, axis)
         if value is None or value is False:
             continue

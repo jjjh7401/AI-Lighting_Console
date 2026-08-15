@@ -92,9 +92,7 @@ class TestStartupErrorLine:
 
     def test_a_multiline_cause_cannot_forge_a_second_protocol_line(self):
         out = io.StringIO()
-        host_channel.emit_startup_error(
-            "line one\n@copilot:ready http://evil", out=out
-        )
+        host_channel.emit_startup_error("line one\n@copilot:ready http://evil", out=out)
         assert out.getvalue().count("\n") == 1, out.getvalue()
 
     def test_emitting_without_a_stream_is_a_no_op(self):

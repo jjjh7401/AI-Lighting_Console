@@ -36,6 +36,16 @@ def test_matches_whole_rig_circle_with_radius():
     assert match.radius == 6.0
 
 
+def test_matches_ordinary_words_for_a_whole_rig_shape():
+    circle = match_explicit_layout("전체 장비를 동그랗게 놓아줘")
+    row = match_explicit_layout("모든 장비를 한 줄로 세워 놓아줘")
+
+    assert circle is not None
+    assert circle.preset == "circle"
+    assert row is not None
+    assert row.preset == "row"
+
+
 def test_does_not_match_implicit_target_or_grid_without_dimensions():
     assert match_explicit_layout("장비를 원형으로 배치해줘") is None
     assert match_explicit_layout("모든 장비를 그리드로 배치해줘") is None

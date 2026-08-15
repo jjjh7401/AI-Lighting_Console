@@ -39,13 +39,16 @@ import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from server.fx.schema import GATED_CURVE_AXES, MIN_STEPS, Fx
+from server.fx.schema import MIN_STEPS, Fx
 
 __all__ = [
     "CIRCLE_PHASE_CONFLICT",
     "CROSS_CALL_COLLISION",
-    "GATED_AXIS_NOT_EMITTED",
-    "RELATIVE_NOT_EMITTED",
+    "PRESET_NUMBER_UNAVAILABLE",
+    "PRESET_OCCUPIED",
+    "PRESET_POOL_TRUNCATED",
+    "PRESET_POOL_UNAVAILABLE",
+    "SPEED_SOURCE_CONFLICT",
     "SEQUENCE_NUMBER_UNAVAILABLE",
     "SEQUENCE_OCCUPIED",
     "SEQUENCE_TRUNCATED",
@@ -57,6 +60,8 @@ __all__ = [
     "FxInstantiationError",
     "build_fx_bundle",
     "collided_lines",
+    "build_fx_preset_bundle",
+    "select_preset_number",
     "instantiate_fx",
     "is_programmer_state",
     "select_sequence_number",
@@ -71,8 +76,11 @@ SEQUENCE_UNAVAILABLE = "sequence_unavailable"  # the pool could not be read at a
 SEQUENCE_TRUNCATED = "sequence_truncated"  # the listing was cut, so "free" is unknowable
 SEQUENCE_NUMBER_UNAVAILABLE = "sequence_number_unavailable"  # a child carries no number
 SEQUENCE_OCCUPIED = "sequence_occupied"  # the requested number is taken
-RELATIVE_NOT_EMITTED = "relative_not_emitted"  # `At Relative` is unmeasured as a step value
-GATED_AXIS_NOT_EMITTED = "gated_axis_not_emitted"  # `At Accel`/`At Decel` are probe-pending
+SPEED_SOURCE_CONFLICT = "speed_source_conflict"  # both a fixed BPM and a master binding
+PRESET_POOL_UNAVAILABLE = "preset_pool_unavailable"  # the preset pool could not be read
+PRESET_POOL_TRUNCATED = "preset_pool_truncated"  # the pool listing was cut short
+PRESET_NUMBER_UNAVAILABLE = "preset_number_unavailable"  # a pool child carries no number
+PRESET_OCCUPIED = "preset_occupied"  # the requested preset slot is taken
 LABEL_UNQUOTABLE = "label_unquotable"
 STEP_AXIS_TOO_SHORT = "step_axis_too_short"  # fewer than two steps: no phaser is created
 CIRCLE_PHASE_CONFLICT = "circle_phase_conflict"  # `circle` owns its offset; phase_to would fight it
@@ -155,14 +163,25 @@ class FxInstantiation:
     display_name: str
     pattern: str
     group: int
-    sequence: int
     label: str
+    # Destination: EITHER a sequence + cue (the original shape) OR a preset
+    # slot in a pool (`Store Preset <pool>.<n> /Universal`, live-verified —
+    # the "All" pools accept multistep/phaser data regardless of feature group).
+    sequence: int | None = None
+    preset_pool: int | None = None
+    preset: int | None = None
     commands: tuple[str, ...] = ()
-    cue: int = _CUE_NUMBER
+    cue: int | None = _CUE_NUMBER
     executor: int | None = None
     attributes: tuple[str, ...] = ()
     step_count: int = 0
     speed_bpm: float | None = None
+    speed_master: int | None = None
+    width: float | None = None
+    measure: float | None = None
+    accel: float | None = None
+    decel: float | None = None
+    relative: bool = False
     matricks: tuple[tuple[str, float], ...] = ()
 
     @property
@@ -178,11 +197,19 @@ class FxInstantiation:
             "group": self.group,
             "sequence": self.sequence,
             "cue": self.cue,
+            "preset_pool": self.preset_pool,
+            "preset": self.preset,
             "label": self.label,
             "executor": self.executor,
             "attributes": list(self.attributes),
             "step_count": self.step_count,
             "speed_bpm": self.speed_bpm,
+            "speed_master": self.speed_master,
+            "width": self.width,
+            "measure": self.measure,
+            "accel": self.accel,
+            "decel": self.decel,
+            "relative": self.relative,
             "matricks": [{"axis": axis, "value": value} for axis, value in self.matricks],
             "commands": list(self.commands),
         }
@@ -254,11 +281,81 @@ def select_sequence_number(
     return candidate
 
 
+# -- preset slot -----------------------------------------------------------------
+
+
+def select_preset_number(
+    presets_section: Mapping[str, object], *, requested: int | None = None
+) -> int:
+    """Measure a free preset slot from a re-queried pool listing.
+
+    The mirror of ``select_sequence_number`` with the same refusal discipline:
+    an unreadable or truncated listing licenses NO number, and a child without
+    a number poisons the whole pool ("free" cannot be measured).
+    """
+    unavailable = presets_section.get("reason")
+    if isinstance(unavailable, str) or presets_section.get("ok") is False:
+        raise FxInstantiationError(
+            PRESET_POOL_UNAVAILABLE,
+            "the preset pool could not be read "
+            f"({unavailable or 'the section reported not-ok'}), so no free slot "
+            "can be measured",
+        )
+    if presets_section.get("truncated"):
+        raise FxInstantiationError(
+            PRESET_POOL_TRUNCATED,
+            "the preset pool listing was truncated, so an unlisted preset may hold "
+            "any candidate slot; automatic assignment is refused",
+        )
+    listed = presets_section.get("objects")
+    if not isinstance(listed, list):
+        raise FxInstantiationError(
+            PRESET_POOL_UNAVAILABLE,
+            "the preset pool carries no object listing, so no free slot can be "
+            "measured; inventing one is forbidden",
+        )
+    occupied: set[int] = set()
+    for entry in listed:
+        number = entry.get("no") if isinstance(entry, Mapping) else None
+        if not isinstance(number, int):
+            raise FxInstantiationError(
+                PRESET_NUMBER_UNAVAILABLE,
+                "a preset in the pool carries no number, so no slot in the pool "
+                "can be claimed free",
+            )
+        occupied.add(number)
+    if requested is not None:
+        if requested in occupied:
+            raise FxInstantiationError(
+                PRESET_OCCUPIED,
+                f"preset slot {requested} is already occupied; this path never "
+                "stores onto an existing preset (no /Merge, no un-flagged Store)",
+            )
+        return requested
+    candidate = 1
+    while candidate in occupied:
+        candidate += 1
+    return candidate
+
+
 # -- bundle construction -------------------------------------------------------
 
 
 def _format_value(value: float) -> str:
     return str(int(value)) if float(value).is_integer() else str(value)
+
+
+def _english_fallback_label(fx: Fx) -> str:
+    """A console-displayable English name derived from the fx_id.
+
+    ``sweep-soft-wide`` -> ``Soft Wide Sweep`` (the leading pattern token
+    reads better trailing, matching how the Korean display names are built).
+    """
+    parts = [part for part in fx.fx_id.replace("_", "-").split("-") if part]
+    if len(parts) > 1 and parts[0].casefold() == fx.pattern.casefold():
+        parts = parts[1:] + parts[:1]
+    derived = " ".join(part.capitalize() for part in parts)
+    return derived or fx.pattern.capitalize()
 
 
 def _label_of(fx: Fx, label: str | None) -> str:
@@ -267,6 +364,11 @@ def _label_of(fx: Fx, label: str | None) -> str:
         raise FxInstantiationError(
             LABEL_UNQUOTABLE, f"fx {fx.fx_id!r} has an empty label to store under"
         )
+    if not text.isascii():
+        # 실기 2026-08-16 (사용자 발견): onPC 2.4.2 풀 타일이 한글 라벨을
+        # 표시하지 못한다 — 저장은 접수되지만 이름이 보이지 않는다. 보이지
+        # 않는 이름 대신 fx_id에서 파생한 영어 라벨을 자동으로 붙인다.
+        text = _english_fallback_label(fx)
     if "'" in text or "\n" in text:
         raise FxInstantiationError(
             LABEL_UNQUOTABLE,
@@ -304,23 +406,16 @@ def _refuse_unemitted_axes(fx: Fx) -> None:
             "apart by definition, measured from phase_from, so phase_to has "
             "nothing left to describe",
         )
-    if fx.relative is not None:
+    if fx.speed is not None and fx.speed_master is not None:
+        # Measured V3 bound the phaser to a master INSTEAD of a fixed BPM; the
+        # combination of both lines on one attribute is unmeasured. The loader
+        # already refuses this, but a directly-constructed Fx never met it.
         raise FxInstantiationError(
-            RELATIVE_NOT_EMITTED,
-            f"fx {fx.fx_id!r} declares relative={_format_value(fx.relative)}, but v1 "
-            "never emits `At Relative`: whether it holds as a step value is "
-            "unmeasured (ASSUMPTION-40), and amplitude is carried by the difference "
-            "between step values instead",
+            SPEED_SOURCE_CONFLICT,
+            f"fx {fx.fx_id!r} declares both speed={_format_value(fx.speed)} and "
+            f"speed_master={fx.speed_master}; the combination is unmeasured — "
+            "pick a fixed BPM or a master binding, not both",
         )
-    for axis in GATED_CURVE_AXES:
-        value = getattr(fx, axis)
-        if value is not None:
-            raise FxInstantiationError(
-                GATED_AXIS_NOT_EMITTED,
-                f"fx {fx.fx_id!r} declares {axis}={_format_value(value)}, but the "
-                f"{axis} curve is probe-pending: M0 recorded ok:true with no observed "
-                "effect (SKIP), so v1 defines the field and never emits it",
-            )
 
 
 def _step_lines(fx: Fx) -> list[str]:
@@ -332,13 +427,31 @@ def _step_lines(fx: Fx) -> list[str]:
     console accepts it with ok:true and nothing happens (REQ-FXLIB-022).
     """
     lines: list[str] = []
+    verb = "At Relative" if fx.relative else "At"
     for index, step in enumerate(fx.steps):
         if index:
             lines.append(f"Step {index + 1}")
         lines.extend(
-            f"Attribute '{value.attribute}' At {_format_value(value.value)}"
+            f"Attribute '{value.attribute}' {verb} {_format_value(value.value)}"
             for value in step.values
         )
+    return lines
+
+
+def _curve_lines(fx: Fx) -> list[str]:
+    """The per-step curve lines — AFTER the whole step run exists.
+
+    Measured 2026-08-15 (V1): `Step <k> At Accel -100` / `At Decel -100` fired
+    after both steps were built renders a sinusoidal fade. M0's SKIP came from
+    firing the same literals into a programmer that held no second step yet, so
+    the ordering here is the measurement, not a style choice.
+    """
+    lines: list[str] = []
+    for index in range(len(fx.steps)):
+        if fx.accel is not None:
+            lines.append(f"Step {index + 1} At Accel {_format_value(fx.accel)}")
+        if fx.decel is not None:
+            lines.append(f"Step {index + 1} At Decel {_format_value(fx.decel)}")
     return lines
 
 
@@ -408,17 +521,42 @@ def _phase_lines(fx: Fx) -> list[str]:
     ]
 
 
-def _speed_line(fx: Fx) -> list[str]:
-    if fx.speed is None:
-        return []
-    # `;` chaining is a validated literal (:39) and design.md §4.3 keeps it on
-    # the Speed line only — its combination with the step context is unmeasured,
-    # so step value lines stay one per line.
-    return [
-        " ; ".join(
-            f"Attribute '{name}' At Speed {_format_value(fx.speed)}" for name in fx.attributes
+def _timing_lines(fx: Fx) -> list[str]:
+    """Width, Measure, then the speed source (fixed BPM or master binding).
+
+    Each follows the `_speed_line` precedent: one `;`-chained line per axis
+    covering every target attribute (the `;` chain is a validated literal and
+    stays OFF the step value lines — design.md §4.3). Width narrows each step
+    (V4), Measure scales the whole loop in beats (V4), and `At SpeedMaster <n>`
+    binds the phaser to a live master instead of a fixed BPM (V3).
+    """
+    lines: list[str] = []
+    if fx.width is not None:
+        lines.append(
+            " ; ".join(
+                f"Attribute '{name}' At Width {_format_value(fx.width)}" for name in fx.attributes
+            )
         )
-    ]
+    if fx.measure is not None:
+        lines.append(
+            " ; ".join(
+                f"Attribute '{name}' At Measure {_format_value(fx.measure)}"
+                for name in fx.attributes
+            )
+        )
+    if fx.speed is not None:
+        lines.append(
+            " ; ".join(
+                f"Attribute '{name}' At Speed {_format_value(fx.speed)}" for name in fx.attributes
+            )
+        )
+    if fx.speed_master is not None:
+        lines.append(
+            " ; ".join(
+                f"Attribute '{name}' At SpeedMaster {fx.speed_master}" for name in fx.attributes
+            )
+        )
+    return lines
 
 
 def _matricks(fx: Fx) -> tuple[tuple[str, float], ...]:
@@ -475,10 +613,16 @@ def build_fx_bundle(
 
     commands: list[str] = [_DESTINATION, _CLEAR, f"Group {group}"]
     commands.extend(_step_lines(fx))
+    commands.extend(_curve_lines(fx))
     commands.extend(_phase_lines(fx))
-    commands.extend(_speed_line(fx))
+    commands.extend(_timing_lines(fx))
     commands.extend(f"Set Selection MAtricks '{axis}' {_format_value(v)}" for axis, v in matricks)
     commands.append(f"Store Sequence {sequence} Cue {_CUE_NUMBER} '{text}'")
+    # The quoted store name labels the CUE only; the SEQUENCE object stays
+    # unnamed and shows as a bare number in every pool/executor view (user
+    # report, 2026-08-15 live test). Label it too — the same validated form
+    # songcue.py/layout.py already emit (`Label Sequence <n> '<name>'`).
+    commands.append(f"Label Sequence {sequence} '{text}'")
     if matricks:
         # After the Store: the sub-selection is part of the shape being stored,
         # so releasing it earlier would store the undivided effect (:90).
@@ -500,6 +644,76 @@ def build_fx_bundle(
         attributes=fx.attributes,
         step_count=len(fx.steps),
         speed_bpm=fx.speed,
+        speed_master=fx.speed_master,
+        width=fx.width,
+        measure=fx.measure,
+        accel=fx.accel,
+        decel=fx.decel,
+        relative=fx.relative,
+        matricks=matricks,
+    )
+
+
+def build_fx_preset_bundle(
+    fx: Fx,
+    *,
+    group: int,
+    preset_pool: int,
+    preset: int,
+    label: str | None = None,
+) -> FxInstantiation:
+    """Build the bundle that stores one fx as a PRESET instead of a cue.
+
+    Live-verified shape: the same capture cycle as ``build_fx_bundle`` with the
+    Store line swapped for ``Store Preset <pool>.<n> '<label>' /Universal`` —
+    an "All" pool accepts phaser data regardless of feature group, and
+    ``/Universal`` makes the preset applicable to any compatible fixture. The
+    pool NUMBER is a per-show fact the CALLER measured from the rig (the pool
+    named "All 1" is not guaranteed a fixed slot), and so is the free preset
+    slot. Executor binding is a sequence concept and has no meaning here.
+    """
+    _refuse_unemitted_axes(fx)
+    text = _label_of(fx, label)
+    matricks = _matricks(fx)
+
+    commands: list[str] = [_DESTINATION, _CLEAR, f"Group {group}"]
+    commands.extend(_step_lines(fx))
+    commands.extend(_curve_lines(fx))
+    commands.extend(_phase_lines(fx))
+    commands.extend(_timing_lines(fx))
+    commands.extend(f"Set Selection MAtricks '{axis}' {_format_value(v)}" for axis, v in matricks)
+    commands.append(f"Store Preset {preset_pool}.{preset} '{text}' /Universal")
+    # 실기 2026-08-16 (사용자 발견): the inline '<label>' on Store Preset is
+    # ACCEPTED (ok) but NOT applied as the pool label — the presets landed
+    # nameless. Same console behavior the position-preset path already works
+    # around (`server/spatial/pointing.py::position_preset_store_commands`):
+    # the name must ride its own Label line.
+    commands.append(f"Label Preset {preset_pool}.{preset} '{text}'")
+    if matricks:
+        commands.append(_RESET_MATRICKS)
+    commands.append(_CLEAR)
+
+    _guard_collision(fx, commands)
+    return FxInstantiation(
+        fx_id=fx.fx_id,
+        display_name=fx.display_name,
+        pattern=fx.pattern,
+        group=group,
+        sequence=None,
+        cue=None,
+        preset_pool=preset_pool,
+        preset=preset,
+        label=text,
+        commands=tuple(commands),
+        attributes=fx.attributes,
+        step_count=len(fx.steps),
+        speed_bpm=fx.speed,
+        speed_master=fx.speed_master,
+        width=fx.width,
+        measure=fx.measure,
+        accel=fx.accel,
+        decel=fx.decel,
+        relative=fx.relative,
         matricks=matricks,
     )
 

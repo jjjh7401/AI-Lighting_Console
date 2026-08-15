@@ -15,8 +15,9 @@ import {
   PAPERWORK_KINDS,
   PaperworkCard,
   PaperworkPanelView,
+  contentUrl,
+  downloadUrl,
   fetchPaperworkList,
-  fileUrlForPath,
   generatePaperworkDocument,
   paperworkBadges,
   parsePaperworkGenerateResponse,
@@ -144,14 +145,14 @@ describe("paperworkBadges — ③ 불완전성 배지가 응답 플래그에 따
 
 describe("PaperworkCard — hook-free structural render", () => {
   it("renders the kind label and a [생성] button when no result yet", () => {
-    const onGenerate = vi.fn();
-    const onOpenInBrowser = vi.fn();
     const element = PaperworkCard({
       meta: PAPERWORK_KINDS[0],
       result: null,
       busy: false,
-      onGenerate,
-      onOpenInBrowser,
+      previewing: false,
+      onGenerate: vi.fn(),
+      onPreview: vi.fn(),
+      onDownload: vi.fn(),
     });
     const children = childArray(element);
     const head = children.find((child) => isElementWithClassName(child, "paperwork-card-head"));
@@ -159,9 +160,9 @@ describe("PaperworkCard — hook-free structural render", () => {
     const headChildren = childArray(head as ReactElement);
     const label = headChildren.find((child) => isElementWithClassName(child, "paperwork-card-label"));
     expect(childArray(label as ReactElement)).toEqual(["패치시트"]);
-    // No result yet -> no .paperwork-card-result section at all.
-    const result = children.find((child) => isElementWithClassName(child, "paperwork-card-result"));
-    expect(result).toBeUndefined();
+    // No result yet -> no .paperwork-card-actions section at all.
+    const actions = children.find((child) => isElementWithClassName(child, "paperwork-card-actions"));
+    expect(actions).toBeUndefined();
   });
 
   it("② 생성 클릭 시 onGenerate(kind)가 호출된다 (App/PaperworkPanel이 fetch로 연결)", () => {
@@ -170,8 +171,10 @@ describe("PaperworkCard — hook-free structural render", () => {
       meta: PAPERWORK_KINDS[1],
       result: null,
       busy: false,
+      previewing: false,
       onGenerate,
-      onOpenInBrowser: vi.fn(),
+      onPreview: vi.fn(),
+      onDownload: vi.fn(),
     });
     const head = childArray(element).find((child) =>
       isElementWithClassName(child, "paperwork-card-head"),
@@ -189,8 +192,10 @@ describe("PaperworkCard — hook-free structural render", () => {
       meta: PAPERWORK_KINDS[0],
       result: null,
       busy: true,
+      previewing: false,
       onGenerate: vi.fn(),
-      onOpenInBrowser: vi.fn(),
+      onPreview: vi.fn(),
+      onDownload: vi.fn(),
     });
     const head = childArray(element).find((child) =>
       isElementWithClassName(child, "paperwork-card-head"),
@@ -202,27 +207,29 @@ describe("PaperworkCard — hook-free structural render", () => {
     expect(childArray(button)).toEqual(["생성 중…"]);
   });
 
-  it("③ 배지가 나타난다 — an incomplete result shows the path + badges + open button", () => {
+  it("③ 배지가 나타난다 — an incomplete result shows badges + preview/download buttons", () => {
     const element = PaperworkCard({
       meta: PAPERWORK_KINDS[0],
       result: PATCH_SHEET_INCOMPLETE,
       busy: false,
+      previewing: false,
       onGenerate: vi.fn(),
-      onOpenInBrowser: vi.fn(),
+      onPreview: vi.fn(),
+      onDownload: vi.fn(),
     });
-    const result = childArray(element).find((child) =>
-      isElementWithClassName(child, "paperwork-card-result"),
+    const actions = childArray(element).find((child) =>
+      isElementWithClassName(child, "paperwork-card-actions"),
     ) as ReactElement;
-    expect(result).toBeDefined();
-    const path = childArray(result).find(
-      (child) => (child as ReactElement).props.className === "paperwork-card-path",
-    ) as ReactElement;
-    expect(childArray(path)).toEqual([PATCH_SHEET_INCOMPLETE.path]);
-    const badgesBox = childArray(result).find((child) =>
+    expect(actions).toBeDefined();
+    const badgesBox = childArray(actions).find((child) =>
       isElementWithClassName(child, "paperwork-card-badges"),
     ) as ReactElement;
     const badgeTexts = childArray(badgesBox).map((badge) => childArray(badge as ReactElement)[0]);
     expect(badgeTexts).toEqual(expect.arrayContaining(["관측 18 / 선언 19", "불완전"]));
+    const buttons = childArray(actions).find((child) =>
+      isElementWithClassName(child, "paperwork-card-buttons"),
+    );
+    expect(buttons).toBeDefined();
   });
 
   it("③ 배지가 사라진다 — a complete result shows no badges box at all", () => {
@@ -230,53 +237,77 @@ describe("PaperworkCard — hook-free structural render", () => {
       meta: PAPERWORK_KINDS[0],
       result: PATCH_SHEET_COMPLETE,
       busy: false,
+      previewing: false,
       onGenerate: vi.fn(),
-      onOpenInBrowser: vi.fn(),
+      onPreview: vi.fn(),
+      onDownload: vi.fn(),
     });
-    const result = childArray(element).find((child) =>
-      isElementWithClassName(child, "paperwork-card-result"),
+    const actions = childArray(element).find((child) =>
+      isElementWithClassName(child, "paperwork-card-actions"),
     ) as ReactElement;
-    const badgesBox = childArray(result).find((child) =>
+    const badgesBox = childArray(actions).find((child) =>
       isElementWithClassName(child, "paperwork-card-badges"),
     );
     expect(badgesBox).toBeUndefined();
   });
 
-  it("the [브라우저에서 열기] button fires onOpenInBrowser with the generated path", () => {
-    const onOpenInBrowser = vi.fn();
+  it("the [미리보기]/[다운로드] buttons fire onPreview/onDownload with the kind", () => {
+    const onPreview = vi.fn();
+    const onDownload = vi.fn();
     const element = PaperworkCard({
       meta: PAPERWORK_KINDS[0],
       result: PATCH_SHEET_COMPLETE,
       busy: false,
+      previewing: false,
       onGenerate: vi.fn(),
-      onOpenInBrowser,
+      onPreview,
+      onDownload,
     });
-    const result = childArray(element).find((child) =>
-      isElementWithClassName(child, "paperwork-card-result"),
+    const actions = childArray(element).find((child) =>
+      isElementWithClassName(child, "paperwork-card-actions"),
     ) as ReactElement;
-    const openButton = childArray(result).find(
-      (child) => (child as ReactElement).props.className === "paperwork-card-open",
+    const buttons = childArray(actions).find((child) =>
+      isElementWithClassName(child, "paperwork-card-buttons"),
     ) as ReactElement;
-    openButton.props.onClick();
-    expect(onOpenInBrowser).toHaveBeenCalledWith(PATCH_SHEET_COMPLETE.path);
+    const [previewButton, downloadButton] = childArray(buttons) as ReactElement[];
+    previewButton.props.onClick();
+    expect(onPreview).toHaveBeenCalledWith("patch_sheet");
+    downloadButton.props.onClick();
+    expect(onDownload).toHaveBeenCalledWith("patch_sheet");
   });
 });
 
+function panelView(overrides: Partial<Parameters<typeof PaperworkPanelView>[0]> = {}) {
+  return PaperworkPanelView({
+    results: {},
+    busyKind: null,
+    notice: null,
+    previewKind: null,
+    onGenerate: vi.fn(),
+    onPreview: vi.fn(),
+    onDownload: vi.fn(),
+    onClose: vi.fn(),
+    ...overrides,
+  });
+}
+
+/** The view now splits into `.paperwork-sidebar` + `.paperwork-preview-area`;
+ * the cards live inside the sidebar. */
+function sidebarOf(element: ReactElement): ReactElement {
+  return childArray(element).find((child) =>
+    isElementWithClassName(child, "paperwork-sidebar"),
+  ) as ReactElement;
+}
+
+function cardsBoxOf(element: ReactElement): ReactElement {
+  return childArray(sidebarOf(element)).find((child) =>
+    isElementWithClassName(child, "paperwork-cards"),
+  ) as ReactElement;
+}
+
 describe("PaperworkPanelView — ① 4종 렌더", () => {
   it("renders exactly one card per PAPERWORK_KINDS entry, in order", () => {
-    const element = PaperworkPanelView({
-      results: {},
-      busyKind: null,
-      notice: null,
-      onGenerate: vi.fn(),
-      onOpenInBrowser: vi.fn(),
-      onClose: vi.fn(),
-    });
-    const children = childArray(element);
-    const cardsBox = children.find((child) =>
-      isElementWithClassName(child, "paperwork-cards"),
-    ) as ReactElement;
-    const cards = childArray(cardsBox) as ReactElement[];
+    const cards = childArray(cardsBoxOf(panelView())) as ReactElement[];
     expect(cards).toHaveLength(4);
     expect(cards.map((card) => card.props.meta.kind)).toEqual([
       "patch_sheet",
@@ -287,18 +318,8 @@ describe("PaperworkPanelView — ① 4종 렌더", () => {
   });
 
   it("passes each kind's own result (or null) down to its card, keyed by kind", () => {
-    const element = PaperworkPanelView({
-      results: { cue_sheet: CUE_SHEET_TRUNCATED },
-      busyKind: null,
-      notice: null,
-      onGenerate: vi.fn(),
-      onOpenInBrowser: vi.fn(),
-      onClose: vi.fn(),
-    });
-    const cardsBox = childArray(element).find((child) =>
-      isElementWithClassName(child, "paperwork-cards"),
-    ) as ReactElement;
-    const cards = childArray(cardsBox) as ReactElement[];
+    const element = panelView({ results: { cue_sheet: CUE_SHEET_TRUNCATED } });
+    const cards = childArray(cardsBoxOf(element)) as ReactElement[];
     expect(cards[0].props.result).toBeNull(); // patch_sheet: no last_result
     expect(cards[1].props.result).toBe(CUE_SHEET_TRUNCATED); // cue_sheet
     expect(cards[2].props.result).toBeNull(); // preset_list
@@ -306,74 +327,52 @@ describe("PaperworkPanelView — ① 4종 렌더", () => {
   });
 
   it("marks only the busy kind's card as busy", () => {
-    const element = PaperworkPanelView({
-      results: {},
-      busyKind: "preset_list",
-      notice: null,
-      onGenerate: vi.fn(),
-      onOpenInBrowser: vi.fn(),
-      onClose: vi.fn(),
-    });
-    const cardsBox = childArray(element).find((child) =>
-      isElementWithClassName(child, "paperwork-cards"),
-    ) as ReactElement;
-    const cards = childArray(cardsBox) as ReactElement[];
+    const cards = childArray(cardsBoxOf(panelView({ busyKind: "preset_list" }))) as ReactElement[];
     expect(cards.map((card) => card.props.busy)).toEqual([false, false, true, false]);
   });
 
+  it("marks only the previewed kind's card as previewing", () => {
+    const cards = childArray(cardsBoxOf(panelView({ previewKind: "cue_sheet" }))) as ReactElement[];
+    expect(cards.map((card) => card.props.previewing)).toEqual([false, true, false, false]);
+  });
+
   it("renders a notice line only when one is present", () => {
-    const withoutNotice = PaperworkPanelView({
-      results: {},
-      busyKind: null,
-      notice: null,
-      onGenerate: vi.fn(),
-      onOpenInBrowser: vi.fn(),
-      onClose: vi.fn(),
-    });
     expect(
-      childArray(withoutNotice).some((child) => isElementWithClassName(child, "paperwork-notice")),
+      childArray(sidebarOf(panelView())).some((child) =>
+        isElementWithClassName(child, "paperwork-notice"),
+      ),
     ).toBe(false);
 
-    const withNotice = PaperworkPanelView({
-      results: {},
-      busyKind: null,
-      notice: "문서 생성 중 오류가 발생했습니다.",
-      onGenerate: vi.fn(),
-      onOpenInBrowser: vi.fn(),
-      onClose: vi.fn(),
-    });
-    const notice = childArray(withNotice).find((child) =>
+    const withNotice = panelView({ notice: "문서 생성 중 오류가 발생했습니다." });
+    const notice = childArray(sidebarOf(withNotice)).find((child) =>
       isElementWithClassName(child, "paperwork-notice"),
     ) as ReactElement;
     expect(childArray(notice)).toEqual(["문서 생성 중 오류가 발생했습니다."]);
   });
 
-  it("always shows the PDF guidance line (⌘P — no bundled PDF library, by design)", () => {
-    const element = PaperworkPanelView({
-      results: {},
-      busyKind: null,
-      notice: null,
-      onGenerate: vi.fn(),
-      onOpenInBrowser: vi.fn(),
-      onClose: vi.fn(),
-    });
-    const hint = childArray(element).find((child) =>
-      isElementWithClassName(child, "paperwork-hint"),
+  it("shows the empty preview placeholder until a preview kind is chosen", () => {
+    const area = childArray(panelView()).find((child) =>
+      isElementWithClassName(child, "paperwork-preview-area"),
     ) as ReactElement;
-    expect(childArray(hint).join("")).toMatch(/⌘P/);
+    expect(
+      childArray(area).some((child) => isElementWithClassName(child, "paperwork-preview-empty")),
+    ).toBe(true);
+  });
+
+  it("renders the preview iframe for the chosen kind", () => {
+    const area = childArray(panelView({ previewKind: "patch_sheet" })).find((child) =>
+      isElementWithClassName(child, "paperwork-preview-area"),
+    ) as ReactElement;
+    const frame = childArray(area).find((child) =>
+      isElementWithClassName(child, "paperwork-preview-frame"),
+    ) as ReactElement;
+    expect(frame.props.src).toBe("/api/paperwork/patch_sheet/content");
   });
 
   it("the close button fires onClose", () => {
     const onClose = vi.fn();
-    const element = PaperworkPanelView({
-      results: {},
-      busyKind: null,
-      notice: null,
-      onGenerate: vi.fn(),
-      onOpenInBrowser: vi.fn(),
-      onClose,
-    });
-    const header = childArray(element).find((child) =>
+    const element = panelView({ onClose });
+    const header = childArray(sidebarOf(element)).find((child) =>
       isElementWithClassName(child, "paperwork-header"),
     ) as ReactElement;
     const closeButton = childArray(header).find(
@@ -452,11 +451,10 @@ describe("parsePaperworkGenerateResponse", () => {
   });
 });
 
-describe("fileUrlForPath", () => {
-  it("prefixes an absolute path with file://", () => {
-    expect(fileUrlForPath("/tmp/paperwork_output/patch_sheet.html")).toBe(
-      "file:///tmp/paperwork_output/patch_sheet.html",
-    );
+describe("contentUrl / downloadUrl", () => {
+  it("builds the same-origin API urls for preview and download", () => {
+    expect(contentUrl("patch_sheet")).toBe("/api/paperwork/patch_sheet/content");
+    expect(downloadUrl("magic_sheet")).toBe("/api/paperwork/magic_sheet/download");
   });
 });
 
@@ -519,18 +517,7 @@ describe("fetch wrappers — ② 생성 클릭 시 fetch 호출 (실제 네트�
 
 describe("render() smoke — PaperworkPanelView descends into real PaperworkCard elements", () => {
   it("a card pulled from the rendered tree, re-rendered one level deeper, shows its label", () => {
-    const element = PaperworkPanelView({
-      results: {},
-      busyKind: null,
-      notice: null,
-      onGenerate: vi.fn(),
-      onOpenInBrowser: vi.fn(),
-      onClose: vi.fn(),
-    });
-    const cardsBox = childArray(element).find((child) =>
-      isElementWithClassName(child, "paperwork-cards"),
-    ) as ReactElement;
-    const firstCard = (childArray(cardsBox) as ReactElement[])[0];
+    const firstCard = (childArray(cardsBoxOf(panelView())) as ReactElement[])[0];
     const rendered = render(firstCard);
     const head = childArray(rendered).find((child) =>
       isElementWithClassName(child, "paperwork-card-head"),

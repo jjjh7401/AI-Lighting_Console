@@ -69,6 +69,7 @@ same change. `AC-SHOWUI-001` is the parity test that holds this.
 | `panel_busy` | `id: string`, `target_kind`, `target: int`, `message: string` | (SHOWUI M1) A panel execution was refused because one is in flight (REQ-SHOWUI-011). Names the tile it refused so the UI can unlock that tile — distinct from `busy`, which is the CHAT turn lock the panel deliberately does not share (REQ-SHOWUI-013). |
 | `dash_catalog` | `sections: DashSection[]` | (DASHUI M1) The console-info dashboard's read-only pool catalog. A refresh REPLACES the list; it does not merge (REQ-DASHUI-006). Info-only by shape — see DashSection / DashItem below. |
 | `cue_monitor` | `executors: CueExecutorEntry[]`, `history: CueHistoryEntry[]` | (T-C, wave 2) The live cue-progress monitor's snapshot — see "Live cue-progress monitor" below. A refresh REPLACES both lists; it does not merge. |
+| `song_timeline` | `timeline: SongTimelineView` | 감독이 검토하는 전곡 조명 타임라인. 구간별 D·팔레트·포지션·질감·FX·MIB·Cue·타이밍과 Q1~Q5 확정 상태, lint/disabled/unresolved notes, 승인·readback 상태를 담는다. 명령 문자열이나 실행 제어 필드는 없다. |
 
 ### Panel command outcomes (SHOWUI M3)
 

@@ -67,11 +67,11 @@ export function QuestionCard({
           type="text"
           value={typed}
           onChange={(event) => setTyped(event.target.value)}
-          placeholder="직접 입력해서 답하기"
-          aria-label="직접 답 입력"
+          placeholder="감독 요청을 직접 입력"
+          aria-label="감독 요청 직접 입력"
         />
         <button type="submit" disabled={!typed.trim()}>
-          보내기
+          감독 요청 반영
         </button>
       </form>
     </section>

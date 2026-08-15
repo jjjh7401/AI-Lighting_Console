@@ -82,9 +82,23 @@ _RULEBOOK_LOCKED_ASSETS = (
     "server/rulebook/assets/v2.4.2/10_object_model.md",
     "server/rulebook/assets/v2.4.2/20_korean_terms.md",
     "server/rulebook/assets/v2.4.2/30_plugin_patterns.md",
-    "server/rulebook/assets/v2.4.2/31_choreography_patterns.md",
 )
-_RULEBOOK_GRANTED_ADDITION = "server/rulebook/assets/v2.4.2/32_spatial_design.md"
+_RULEBOOK_GRANTED_ADDITIONS = (
+    "server/rulebook/assets/v2.4.2/32_spatial_design.md",
+    # SPEC-COPILOT-FXGEN-001 REQ-FXGEN-016 — the effect-editor routing asset.
+    "server/rulebook/assets/v2.4.2/33_effect_editors.md",
+)
+#: 2026-08-15 granted exception — SPEC-COPILOT-FXGEN-001 REQ-FXGEN-017 (b):
+#: the 2026-08-15 live-measurement record (V1~V7 "OBSERVED EFFECT" section +
+#: the operator confirmations that closed the session's three open
+#: observations) is REQUIRED to land in ``31_choreography_patterns.md`` — the
+#: anchor the fx code already cites. The grant is APPEND-ONLY and pinned below:
+#: zero deleted lines (every existing line-number citation into this file —
+#: :29, :75, :80, :85-89, :100, :111, :115, :236-241 — stays valid because
+#: nothing above the old EOF may move) and the added block must carry the
+#: OBSERVED EFFECT heading. Any other edit to the file still fails the gate.
+_RULEBOOK_GRANTED_APPEND = "server/rulebook/assets/v2.4.2/31_choreography_patterns.md"
+_RULEBOOK_APPEND_HEADING = "### OBSERVED EFFECT — live validation V1~V7 + operator confirmations"
 
 #: 2026-08-12 granted exception — SPEC-COPILOT-DEPLOY-001's OSC zero-touch
 #: bootstrap section (``console/lua/README.md`` § 1.-1) documents a
@@ -193,7 +207,7 @@ _OVERLAP_MERGE_COMMIT = "156a3e1aaf6ef78788394d65cf724bacaec7b567"
 #: Another file under the chokepoint, a second deleted line in this one, or any
 #: text other than `version: 1` still fails the gate.
 _SAFETY_EXPECTED_DELETIONS = {
-    "server/safety/audit.py": 1,
+    "server/safety/audit.py": 9,
     "server/safety/backup.py": 2,
     "server/safety/blacklist.yaml": 1,
     "server/safety/console.py": 0,
@@ -210,8 +224,24 @@ _SAFETY_ALLOWED_DELETED_LINES = {
     # than dropping the whole event; this legitimately reopens audit.py under
     # the chokepoint for the first time, the same maintenance shape as the
     # `gate.py` extension above.
+    # SECOND audit.py reopening (probe-traffic split, handoff 2026-08-15
+    # item 2): the gate's read probes (state_query/property_query/heartbeat)
+    # measured 99.9 % of the audit volume (~200 MB/day) and now route to a
+    # capped, short-retention `probe-` file family; record()/purge/iterators
+    # were reshaped around the two families. Same @MX:ANCHOR discipline — one
+    # durable write point, deploy sub-sends (deploy_of) keep 90-day retention.
+    # The nine deletions are the single-family write/purge/iterate lines the
+    # two-family versions replaced (the T-I `default=str` line among them).
     "server/safety/audit.py": (
+        '        """Append one audit event (AuditSink-compatible); adds a UTC timestamp."""',
+        '        path = self._directory / f"{_FILE_PREFIX}{now:%Y%m%d}{_FILE_SUFFIX}"',
         r'            handle.write(json.dumps(enriched, ensure_ascii=False) + "\n")',
+        "        cutoff = (now - timedelta(days=self._retention_days)).date()",
+        '        for path in self._directory.glob(f"{_FILE_PREFIX}*{_FILE_SUFFIX}"):',
+        "                continue  # foreign file — never delete what we did not write",
+        "            if file_date < cutoff:",
+        "                path.unlink()",
+        '        for path in sorted(self._directory.glob(f"{_FILE_PREFIX}*{_FILE_SUFFIX}")):',
     ),
     "server/safety/backup.py": (
         "Three rules: ① once at session start, ② periodic (default 10 minutes,",
@@ -409,19 +439,23 @@ class TestRulebookGrantedAddition:
     become a rewrite of an old one.
     """
 
-    def test_the_five_existing_assets_are_the_locked_set(self):
+    def test_the_four_fully_locked_assets_are_the_locked_set(self):
         # Non-vacuity: a typo'd path contributes nothing to a git diff, so the
-        # locked list is checked against the real directory listing.
+        # locked list is checked against the real directory listing. The fifth
+        # pre-existing asset, 31_choreography_patterns.md, moved to the
+        # narrower APPEND-ONLY grant below (REQ-FXGEN-017 (b)).
         on_disk = sorted(
             path.name for path in (_REPO_ROOT / _RULEBOOK_DIR).iterdir() if path.suffix == ".md"
         )
         locked = sorted(Path(path).name for path in _RULEBOOK_LOCKED_ASSETS)
-        assert locked == sorted(set(on_disk) - {Path(_RULEBOOK_GRANTED_ADDITION).name})
-        assert len(_RULEBOOK_LOCKED_ASSETS) == 5
+        granted = {Path(path).name for path in _RULEBOOK_GRANTED_ADDITIONS}
+        granted.add(Path(_RULEBOOK_GRANTED_APPEND).name)
+        assert locked == sorted(set(on_disk) - granted)
+        assert len(_RULEBOOK_LOCKED_ASSETS) == 4
 
-    def test_the_only_rulebook_change_is_the_granted_addition(self):
+    def test_the_only_rulebook_changes_are_the_granted_ones(self):
         rows = _numstat(_PRECHK_BASE, _RULEBOOK_DIR)
-        assert set(rows) == {_RULEBOOK_GRANTED_ADDITION}
+        assert set(rows) == set(_RULEBOOK_GRANTED_ADDITIONS) | {_RULEBOOK_GRANTED_APPEND}
 
     def test_the_grant_removes_nothing(self):
         # A rulebook asset is a fixed system-prompt prefix; a deletion inside
@@ -435,6 +469,41 @@ class TestRulebookGrantedAddition:
         # Stated directly as well as via the emptiness gate: this is the claim
         # the whole grant rests on, and it should be readable on its own.
         assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", *_RULEBOOK_LOCKED_ASSETS) == ""
+
+
+class TestChoreographyObservedEffectGrantedAppend:
+    """The 2026-08-15 grant (REQ-FXGEN-017 (b)) — an APPEND-ONLY addition.
+
+    The fx code cites ``31_choreography_patterns.md`` by LINE NUMBER (:75,
+    :78-79, :80, :85-89, :236-241 …), so the grant's load-bearing property is
+    that nothing above the old EOF moved: zero deleted lines means zero
+    shifted lines, and every citation stays valid.
+    """
+
+    def test_the_append_deletes_nothing(self):
+        assert _deleted_lines(_PRECHK_BASE, _RULEBOOK_GRANTED_APPEND) == []
+
+    def test_the_addition_is_one_appended_hunk_at_the_old_eof(self):
+        hunks = _hunks(_PRECHK_BASE, _RULEBOOK_GRANTED_APPEND)
+        assert len(hunks) == 1
+        old_start, old_count = hunks[0]
+        assert old_count == 0, "an insertion hunk touches no old lines"
+        # git names a pure insertion by the line it follows — the old EOF.
+        text = _git("show", f"{_PRECHK_BASE}:{_RULEBOOK_GRANTED_APPEND}")
+        assert old_start == len(text.splitlines())
+
+    def test_the_appended_block_is_the_observed_effect_record(self):
+        # Non-vacuity: the file really did change, and the change is the
+        # measurement record the grant names, not arbitrary prose.
+        assert _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", _RULEBOOK_GRANTED_APPEND) != ""
+        added = [
+            line[1:]
+            for line in _git(
+                "diff", "--unified=0", f"{_PRECHK_BASE}..HEAD", "--", _RULEBOOK_GRANTED_APPEND
+            ).splitlines()
+            if line.startswith("+") and not line.startswith("+++")
+        ]
+        assert _RULEBOOK_APPEND_HEADING in added
 
 
 class TestConsoleLuaReadmeGrantedException:

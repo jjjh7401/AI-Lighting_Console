@@ -12,6 +12,11 @@ import { type ChangeEvent, type ReactNode, useEffect, useRef, useState } from "r
 
 import { ApprovalCard } from "./components/ApprovalCard";
 import { ChatView } from "./components/ChatView";
+import {
+  fetchPresetPool,
+  PresetPoolPopup,
+  type PresetPopupState,
+} from "./components/PresetPoolPopup";
 import { CueMonitor } from "./components/CueMonitor";
 import { DashBoard } from "./components/DashBoard";
 import { LockToggle } from "./components/LockToggle";
@@ -20,6 +25,8 @@ import { PaperworkPanel } from "./components/PaperworkPanel";
 import { QuestionCard } from "./components/QuestionCard";
 import { ReviewCard } from "./components/ReviewCard";
 import { RunbookMode } from "./components/RunbookMode";
+import { TimelineLibrary } from "./components/TimelineLibrary";
+import { SONG_TIMELINE_EXAMPLE } from "./components/songTimelineExample";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { StatusBanner } from "./components/StatusBanner";
 import {
@@ -214,6 +221,7 @@ export function AppShell({
   onSectionAreaResizeStart,
   dashWidth,
   onDashDividerDown,
+  onPresetPoolOpen,
   children,
 }: {
   chatCollapsed: boolean;
@@ -242,6 +250,8 @@ export function AppShell({
   dashWidth?: number;
   /** Start a divider drag between dashboard and cue monitor. */
   onDashDividerDown?: (startX: number) => void;
+  /** Opens one preset pool's on-demand popup (read-only fetch, no console press). */
+  onPresetPoolOpen?: (item: DashItem) => void;
   children: ReactNode;
 }) {
   const dashStyle = dashWidth !== undefined ? { width: dashWidth, flexShrink: 0 } : undefined;
@@ -257,6 +267,7 @@ export function AppShell({
           onSectionTileSizeChange={onSectionTileSizeChange}
           sectionArea={sectionArea}
           onSectionAreaResizeStart={onSectionAreaResizeStart}
+          onPresetPoolOpen={onPresetPoolOpen}
         />
       </div>
       {onDashDividerDown && (
@@ -308,6 +319,7 @@ export default function App() {
     sendVectorworksExportUpload,
     sendLayoutImageUpload,
     clearChat,
+    applySongTimeline,
   } = useCopilotSocket();
   const [draft, setDraft] = useState("");
   // Requests typed while a turn is running. Drained ONE at a time — the next
@@ -335,6 +347,7 @@ export default function App() {
       return next;
     });
   };
+  const [timelineExample, setTimelineExample] = useState(false);
   // W3 — paperwork panel toggle. Session-volatile (no localStorage), same
   // default every other App.tsx view preference besides runbookMode uses
   // (design.md §6 / D5) — runbookMode's persistence is an explicit,
@@ -373,6 +386,26 @@ export default function App() {
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
   };
+  // Preset pool popup (user direction, 2026-08-15): opened from a 프리셋
+  // category card; contents are fetched ON DEMAND per open — never from the
+  // dash snapshot's bounded drilldown budget, so they are always current.
+  const [presetPopup, setPresetPopup] = useState<PresetPopupState | null>(null);
+  const openPresetPool = (item: DashItem) => {
+    const pool = { no: item.no, name: item.name };
+    setPresetPopup({ phase: "loading", pool });
+    void fetchPresetPool(item.no).then((next) => {
+      setPresetPopup((current) => {
+        // Ignore a late response after the popup closed or moved pools.
+        if (current === null) return current;
+        const currentNo = current.phase === "ready" ? current.contents.pool.no : current.pool.no;
+        if (currentNo !== item.no) return current;
+        if (next.phase === "error" || next.phase === "loading") {
+          return { ...next, pool };
+        }
+        return next;
+      });
+    });
+  };
   // T-H4 — CueMonitor's cue sheet opens ONE executor at a time (MA3 console
   // convention); this is the SAME name toggling off as re-closing (see
   // CueMonitor.tsx's own module header on why this is controlled here
@@ -385,7 +418,17 @@ export default function App() {
     sectionName: string,
     start: { clientX: number; clientY: number },
   ) => {
-    const base = sectionAreas[sectionName] ?? POOL_AREA_DEFAULT;
+    // First drag on an AUTO-FIT section (no stored area yet): snapshot its
+    // currently RENDERED size so the drag continues from what the operator
+    // sees instead of jumping to the legacy fixed default.
+    const rendered = document.querySelector(
+      `.pool-section-${sectionName}`,
+    ) as HTMLElement | null;
+    const base =
+      sectionAreas[sectionName] ??
+      (rendered !== null
+        ? clampPoolArea({ width: rendered.offsetWidth, height: rendered.offsetHeight })
+        : POOL_AREA_DEFAULT);
     const onMove = (move: MouseEvent) => {
       const next = clampPoolArea({
         width: base.width + (move.clientX - start.clientX),
@@ -437,6 +480,10 @@ export default function App() {
   const submit = () => {
     if (!composer.canSubmit) return;
     const text = draft.trim();
+    // A demo is only a visual rehearsal.  Once the operator sends a real
+    // instruction, remove it immediately rather than leaving it beside an
+    // in-flight plan and implying that it came from the console.
+    setTimelineExample(false);
     if (responding || queue.length > 0) {
       setQueue((pending) => [...pending, text]);
     } else {
@@ -571,107 +618,11 @@ export default function App() {
     }
   };
 
-  return (
-    <div className="app-frame">
-      <header className="header">
-        <h1>MA3 코파일럿</h1>
-        <div className="header-actions">
-          <button
-            className={`runbook-toggle${runbookMode ? " runbook-toggle-active" : ""}`}
-            onClick={toggleRunbookMode}
-            aria-label={runbookMode ? "런북 모드 끄기" : "런북 모드 켜기"}
-            aria-pressed={runbookMode}
-          >
-            {runbookMode ? "✓ 런북 모드" : "런북 모드"}
-          </button>
-          <button
-            className={`paperwork-toggle${paperworkMode ? " paperwork-toggle-active" : ""}`}
-            onClick={() => setPaperworkMode((active) => !active)}
-            aria-label={paperworkMode ? "페이퍼워크 닫기" : "페이퍼워크 열기"}
-            aria-pressed={paperworkMode}
-          >
-            {paperworkMode ? "✓ 페이퍼워크" : "페이퍼워크"}
-          </button>
-          <button
-            className="chat-toggle"
-            onClick={() => setChatCollapsed((collapsed) => !collapsed)}
-            aria-label={chatCollapsed ? "채팅 펼치기" : "채팅 접기"}
-          >
-            {chatCollapsed ? "◂ 채팅" : "▸ 채팅"}
-          </button>
-          <LockToggle status={state.status} onToggle={sendLock} />
-          <button
-            className="settings-open"
-            onClick={() => setSettingsOpen(true)}
-            aria-label="설정 열기"
-          >
-            ⚙ 설정
-          </button>
-        </div>
-      </header>
-      {runbookMode ? (
-        <div className="runbook-mode-frame">
-          <RunbookMode
-            cueMonitor={state.cueMonitor}
-            isExecutorRunning={isExecutorRunning}
-            onExecute={pressExecutor}
-            onRefresh={sendCueMonitorRefresh}
-          />
-          {/* Approvals/reviews still surface here — RunbookMode's run button
-              rides the same gated panel_execute path, so a required
-              approval never gets bypassed just because the rest of the UI
-              is hidden (contract item 4). */}
-          {state.pendingApprovals.map((approval) => (
-            <ApprovalCard key={approval.request_id} approval={approval} onDecision={sendDecision} />
-          ))}
-          {state.pendingQuestions.map((question) => (
-            <QuestionCard
-              key={question.request_id}
-              question={question}
-              onAnswer={sendQuestionAnswer}
-            />
-          ))}
-          {state.pendingReviews.map((review) => (
-            <ReviewCard key={review.request_id} review={review} onDecision={sendReviewDecision} />
-          ))}
-        </div>
-      ) : paperworkMode ? (
-        <div className="paperwork-mode-frame">
-          <PaperworkPanel onClose={() => setPaperworkMode(false)} />
-        </div>
-      ) : (
-        <>
-          <StatusBanner status={state.status} connected={connected} />
-          <OnboardingBanner
-            onOpenSettings={() => setSettingsOpen(true)}
-            refreshSignal={settingsRefresh}
-          />
-          {settingsOpen && <SettingsPanel onClose={closeSettings} />}
-          <AppShell
-            chatCollapsed={chatCollapsed}
-            dash={state.dash}
-            cueMonitor={state.cueMonitor}
-            onToggleChat={() => setChatCollapsed((collapsed) => !collapsed)}
-            onRefresh={sendDashRefresh}
-            onCueMonitorRefresh={sendCueMonitorRefresh}
-            isItemRunning={isDashItemRunning}
-            onItemPress={pressDashItem}
-            isExecutorRunning={isExecutorRunning}
-            onExecutorExecute={(executorNo) => sendPanelExecute("executor", executorNo)}
-            onExecutorBack={(executorNo) => sendPanelBack("executor", executorNo)}
-            onExecutorStop={(executorNo) => sendPanelStop("executor", executorNo)}
-            onExecutorGoto={(executorNo, cue) => sendPanelGoto("executor", executorNo, cue)}
-            openCueExecutorNo={openCueExecutorNo}
-            onToggleCueExecutor={toggleCueExecutor}
-            sectionTileSize={(sectionName) => sectionTileSizes[sectionName]}
-            onSectionTileSizeChange={(sectionName, next) =>
-              setSectionTileSizes((sizes) => ({ ...sizes, [sectionName]: next }))
-            }
-            sectionArea={(sectionName) => sectionAreas[sectionName]}
-            onSectionAreaResizeStart={startSectionAreaResize}
-            dashWidth={dashWidth}
-            onDashDividerDown={startDashDividerDrag}
-          >
+  // The copilot chat column (messages + approval/question/review cards +
+  // composer) — ONE definition shared by the normal split view and runbook
+  // mode, so runbook mode keeps the conversation fully usable beside the
+  // runbook pane instead of hiding it.
+  const chatColumn = (
             <div className="app">
               <main className="main">
                 {state.entries.length > 0 && (
@@ -796,6 +747,125 @@ export default function App() {
                 </div>
               </footer>
             </div>
+  );
+
+  return (
+    <div className="app-frame">
+      <header className="header">
+        <h1>MA3 코파일럿</h1>
+        <div className="header-actions">
+          <button
+            className={`runbook-toggle${runbookMode ? " runbook-toggle-active" : ""}`}
+            onClick={toggleRunbookMode}
+            aria-label={runbookMode ? "런북 모드 끄기" : "런북 모드 켜기"}
+            aria-pressed={runbookMode}
+          >
+            {runbookMode ? "✓ 런북 모드" : "런북 모드"}
+          </button>
+          <button
+            className={`paperwork-toggle${paperworkMode ? " paperwork-toggle-active" : ""}`}
+            onClick={() => setPaperworkMode((active) => !active)}
+            aria-label={paperworkMode ? "페이퍼워크 닫기" : "페이퍼워크 열기"}
+            aria-pressed={paperworkMode}
+          >
+            {paperworkMode ? "✓ 페이퍼워크" : "페이퍼워크"}
+          </button>
+          <button
+            className="chat-toggle"
+            onClick={() => setChatCollapsed((collapsed) => !collapsed)}
+            aria-label={chatCollapsed ? "채팅 펼치기" : "채팅 접기"}
+          >
+            {chatCollapsed ? "◂ 채팅" : "▸ 채팅"}
+          </button>
+          <LockToggle status={state.status} onToggle={sendLock} />
+          <button
+            className="settings-open"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="설정 열기"
+          >
+            ⚙ 설정
+          </button>
+        </div>
+      </header>
+      {runbookMode ? (
+        <div className="runbook-mode-frame runbook-with-chat">
+          <div className="runbook-pane">
+            <RunbookMode
+              cueMonitor={state.cueMonitor}
+              isExecutorRunning={isExecutorRunning}
+              onExecute={pressExecutor}
+              onRefresh={sendCueMonitorRefresh}
+              timeline={state.songTimeline.timeline ?? (timelineExample ? SONG_TIMELINE_EXAMPLE : null)}
+              timelineStale={state.songTimeline.stale}
+              timelineIsExample={state.songTimeline.timeline === null && timelineExample}
+              onShowTimelineExample={() => {
+                setTimelineExample(true);
+              }}
+              librarySlot={
+                <TimelineLibrary
+                  hasTimeline={state.songTimeline.timeline !== null}
+                  onLoaded={applySongTimeline}
+                />
+              }
+            />
+          </div>
+          {/* The copilot chat rides ALONGSIDE the runbook pane (user request,
+              2026-08-14): the director keeps talking to the copilot while
+              watching the runbook. Approval/question/review cards live inside
+              the chat column, which is ALWAYS visible here — so a required
+              approval still never gets bypassed (contract item 4). */}
+          {chatColumn}
+        </div>
+      ) : paperworkMode ? (
+        <div className="paperwork-mode-frame">
+          <PaperworkPanel onClose={() => setPaperworkMode(false)} />
+        </div>
+      ) : (
+        <>
+          <StatusBanner status={state.status} connected={connected} />
+          <OnboardingBanner
+            onOpenSettings={() => setSettingsOpen(true)}
+            refreshSignal={settingsRefresh}
+          />
+          {settingsOpen && <SettingsPanel onClose={closeSettings} />}
+          <AppShell
+            chatCollapsed={chatCollapsed}
+            dash={state.dash}
+            cueMonitor={state.cueMonitor}
+            onToggleChat={() => setChatCollapsed((collapsed) => !collapsed)}
+            onRefresh={sendDashRefresh}
+            onCueMonitorRefresh={sendCueMonitorRefresh}
+            isItemRunning={isDashItemRunning}
+            onItemPress={pressDashItem}
+            isExecutorRunning={isExecutorRunning}
+            onExecutorExecute={(executorNo) => sendPanelExecute("executor", executorNo)}
+            onExecutorBack={(executorNo) => sendPanelBack("executor", executorNo)}
+            onExecutorStop={(executorNo) => sendPanelStop("executor", executorNo)}
+            onExecutorGoto={(executorNo, cue) => sendPanelGoto("executor", executorNo, cue)}
+            openCueExecutorNo={openCueExecutorNo}
+            onToggleCueExecutor={toggleCueExecutor}
+            sectionTileSize={(sectionName) => sectionTileSizes[sectionName]}
+            onSectionTileSizeChange={(sectionName, next) =>
+              setSectionTileSizes((sizes) => ({ ...sizes, [sectionName]: next }))
+            }
+            sectionArea={(sectionName) => sectionAreas[sectionName]}
+            onSectionAreaResizeStart={startSectionAreaResize}
+            dashWidth={dashWidth}
+            onDashDividerDown={startDashDividerDrag}
+            onPresetPoolOpen={openPresetPool}
+          >
+            {chatColumn}
+            {presetPopup !== null && (
+              <PresetPoolPopup
+                state={presetPopup}
+                onClose={() => setPresetPopup(null)}
+                onRefresh={() => {
+                  const pool =
+                    presetPopup.phase === "ready" ? presetPopup.contents.pool : presetPopup.pool;
+                  openPresetPool({ no: pool.no, name: pool.name });
+                }}
+              />
+            )}
           </AppShell>
         </>
       )}

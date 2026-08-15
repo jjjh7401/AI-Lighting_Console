@@ -29,6 +29,7 @@ import {
   isRecentAppAction,
   lastActionGrade,
   sequenceLabel,
+  cueProgressLabel,
 } from "./CueMonitor";
 
 function childArray(element: ReactElement): unknown[] {
@@ -324,11 +325,9 @@ describe("isRecentAppAction — the pulse window", () => {
   });
 });
 
-describe("ExecutorStatusChip", () => {
-  it("renders the unknown grade with no last_app_action", () => {
-    const element = ExecutorStatusChip({ entry: UNASSIGNED_ENTRY }) as ReactElement;
-    expect(element.props.className).toBe("cue-status-chip cue-status-chip-unknown");
-    expect(childArray(element)[0]).toBe("○ 미확인");
+describe("ExecutorStatusChip — problem-only (user direction 2026-08-15)", () => {
+  it("renders NOTHING for an untouched executor — '미확인' is not a problem", () => {
+    expect(ExecutorStatusChip({ entry: UNASSIGNED_ENTRY })).toBeNull();
   });
 
   it("renders confirmed + pulsing right after a fresh ok action", () => {
@@ -349,12 +348,12 @@ describe("ExecutorStatusChip", () => {
     );
   });
 
-  it("stops pulsing once the action ages past the window, but stays confirmed", () => {
+  it("keeps a confirmed action visible (no pulse) inside the 60s window", () => {
     const entry = {
       ...OK_ENTRY,
       last_app_action: {
         command: "Go+ Executor 101",
-        ts: new Date(Date.now() - 60_000).toISOString(),
+        ts: new Date(Date.now() - 30_000).toISOString(),
         ok: true,
       },
     };
@@ -362,10 +361,26 @@ describe("ExecutorStatusChip", () => {
     expect(element.props.className).toBe("cue-status-chip cue-status-chip-confirmed");
   });
 
-  it("renders failed for a not-ok action — never pulsing", () => {
+  it("hides a confirmed action once it is stale — '확인됨 22분 전' is noise", () => {
     const entry = {
       ...OK_ENTRY,
-      last_app_action: { command: "Off Executor 101", ts: new Date().toISOString(), ok: false },
+      last_app_action: {
+        command: "Go+ Executor 101",
+        ts: new Date(Date.now() - 22 * 60_000).toISOString(),
+        ok: true,
+      },
+    };
+    expect(ExecutorStatusChip({ entry })).toBeNull();
+  });
+
+  it("keeps a FAILED action on screen no matter how old — the one real warning", () => {
+    const entry = {
+      ...OK_ENTRY,
+      last_app_action: {
+        command: "Off Executor 101",
+        ts: new Date(Date.now() - 60 * 60_000).toISOString(),
+        ok: false,
+      },
     };
     const element = ExecutorStatusChip({ entry }) as ReactElement;
     expect(element.props.className).toBe("cue-status-chip cue-status-chip-failed");
@@ -1049,5 +1064,36 @@ describe("CueMonitor — panel-level banner rendering (T-H2)", () => {
       (child) => (child as ReactElement)?.props?.entry !== undefined,
     ) as ReactElement[];
     expect(tiles.map((tile) => tile.props.entry.executor_no)).toEqual([401, 402]);
+  });
+});
+
+describe("진행 순서 보드 (2026-08-15) — 진행도와 계획 배지", () => {
+  const baseEntry = {
+    executor_no: 101,
+    status: "ok",
+    sequence_no: 210,
+    sequence_name: "Sequence 210",
+    cues: [
+      { no: 1, name: "OffCue" },
+      { no: 2, name: "CueZero", cue_no: 0 },
+      { no: 3, name: "Intro", cue_no: 1 },
+      { no: 4, name: "Chorus", cue_no: 2 },
+      { no: 5, name: "Outro", cue_no: 3 },
+    ],
+    current_cue: { status: "ok", value: "2 — Chorus", property: "CurrentCue", tried: [] },
+  } as unknown as CueExecutorEntry;
+
+  it("cueProgressLabel counts PLAYABLE cues only (OffCue/CueZero are plumbing)", () => {
+    expect(cueProgressLabel(baseEntry)).toBe("큐 2/3");
+  });
+
+  it("no confirmed current cue -> no guessed progress", () => {
+    expect(
+      cueProgressLabel({ ...baseEntry, current_cue: { status: "unavailable", tried: [] } }),
+    ).toBeNull();
+  });
+
+  it("no playable cues -> no progress line at all", () => {
+    expect(cueProgressLabel({ ...baseEntry, cues: [{ no: 1, name: "OffCue" }] })).toBeNull();
   });
 });

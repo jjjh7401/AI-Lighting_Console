@@ -64,6 +64,31 @@ class TestWebSocketBasics:
             assert event["health"] == "online"
             assert event["live_lock"] is False
 
+    def test_a_new_connection_is_replayed_the_last_song_timeline(self, tmp_path):
+        # A page refresh opens a NEW WebSocket; without the replay the runbook
+        # director timeline would be blank even though the plan still exists.
+        deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
+        deps.song_timeline_store.latest = {
+            "song_title": "Design Interview",
+            "sequence_number": 210,
+            "lifecycle": "verified",
+            "sections": [],
+        }
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            assert ws.receive_json()["type"] == "status"
+            event = ws.receive_json()
+            assert event["type"] == "song_timeline"
+            assert event["timeline"]["sequence_number"] == 210
+            assert event["timeline"]["lifecycle"] == "verified"
+
+    def test_a_connection_without_a_stored_timeline_gets_no_replay(self, tmp_path):
+        deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            assert ws.receive_json()["type"] == "status"
+            _send(ws, type="status_request")
+            # The very next frame is the requested status — no timeline slipped in.
+            assert ws.receive_json()["type"] == "status"
+
     def test_chat_round_trip(self, tmp_path):
         provider = ScriptedProvider([_run_turn(["Store Group 3"], "c1"), _final("만들었습니다")])
         deps, console, _gate = _deps(tmp_path, provider)

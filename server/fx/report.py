@@ -100,6 +100,8 @@ class FxReport:
             "group": plan.group,
             "sequence": plan.sequence,
             "cue": plan.cue,
+            "preset_pool": plan.preset_pool,
+            "preset": plan.preset,
             "label": plan.label,
             "executor": plan.executor,
             "attributes": list(plan.attributes),
@@ -166,8 +168,12 @@ def build_report(
 def to_korean(report: FxReport) -> str:
     """사용자 대면 요약. 요약 한 단, 상세 한 단 — 둘 다 낸다."""
     plan = report.instantiation
+    if plan.preset_pool is not None:
+        destination = f"프리셋 {plan.preset_pool}.{plan.preset}"
+    else:
+        destination = f"시퀀스 {plan.sequence} 큐 {plan.cue}"
     lines = [
-        f"[{plan.pattern}] 시퀀스 {plan.sequence} 큐 {plan.cue} '{plan.label}' · "
+        f"[{plan.pattern}] {destination} '{plan.label}' · "
         f"그룹 {plan.group} · 커맨드 {len(plan.commands)}개 · "
         f"판정 {verdict_label(report.verdict)}",
     ]

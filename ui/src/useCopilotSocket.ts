@@ -201,6 +201,8 @@ export interface CopilotSocket {
   sendCueMonitorRefresh: () => void;
   /** Clear the persisted transcript (the top-right 대화 지우기 button). */
   clearChat: () => void;
+  /** Apply a library-loaded timeline as if a `song_timeline` frame arrived. */
+  applySongTimeline: (timeline: unknown) => void;
 }
 export function useCopilotSocket(url?: string): CopilotSocket {
   const [state, dispatch] = useReducer(reducer, initialState, restoredInitialState);
@@ -380,6 +382,15 @@ export function useCopilotSocket(url?: string): CopilotSocket {
   const sendDashRefresh = useCallback(() => send(buildDashCatalogRequest()), [send]);
   const sendCueMonitorRefresh = useCallback(() => send(buildCueMonitorRequest()), [send]);
   const clearChat = useCallback(() => dispatch({ kind: "clear_chat" }), []);
+  /** Apply a library-loaded timeline locally, riding the SAME parse/reduce
+   * path as a server `song_timeline` frame (the server store was already
+   * updated by the load call, so replays stay consistent). */
+  const applySongTimeline = useCallback((timeline: unknown) => {
+    dispatch({
+      kind: "server",
+      raw: JSON.stringify({ v: 1, type: "song_timeline", timeline }),
+    });
+  }, []);
 
   return {
     state,
@@ -399,5 +410,6 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendDashRefresh,
     sendCueMonitorRefresh,
     clearChat,
+    applySongTimeline,
   };
 }

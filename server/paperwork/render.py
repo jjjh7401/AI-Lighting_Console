@@ -64,13 +64,13 @@ def _bound_meta(sheet: PatchSheet) -> str:
     if sheet.bound is not None:
         source = f" (source: {escape(sheet.bound_source)})" if sheet.bound_source else ""
         return (
-            '<div class="meta">Channel-width upper bound: '
-            f"{sheet.bound}{source} — gaps at or above this bound cannot overlap; "
-            "gaps below it are unsettled, not confirmed clear.</div>\n"
+            '<div class="meta">채널폭 상계: '
+            f"{sheet.bound}{source} — 이 값 이상의 간격은 겹침 없음 확인; "
+            "이하는 미확정.</div>\n"
         )
     if sheet.bound_unavailable is not None:
         return (
-            '<div class="meta unavailable">Channel-width upper bound not established: '
+            '<div class="meta unavailable">채널폭 상계 미확인: '
             f"{escape(sheet.bound_unavailable)}</div>\n"
         )
     return ""

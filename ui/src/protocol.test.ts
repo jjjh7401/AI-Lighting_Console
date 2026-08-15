@@ -1053,6 +1053,43 @@ describe("clearOnDisconnect cue monitor extension (reducer half)", () => {
   });
 });
 
+const songTimelineEvent = {
+  type: "song_timeline",
+  timeline: {
+    song_title: "Neon Run",
+    sequence_name: "Sequence 120",
+    sequence_number: 120,
+    timing_mode: "timecode",
+    timecode_number: 901,
+    lifecycle: "pending_approval",
+    approval: "pending_review",
+    director_decisions: [{ step: "Q1_CONCEPT", axis: "texture", value: "neon", confirmed: true, source: "option" }],
+    sections: [{
+      index: 1, label: "Intro", start_ms: 0, cue_number: 1, d_level: 2,
+      palette: ["cyan", "magenta"], position: "Center", texture: "fade",
+      fx: [], accents: [], mib: false, trig_time_seconds: 0,
+    }],
+    lint: [],
+    unresolved: [],
+    disabled: [],
+    readback: { verified: null, message: null },
+  },
+};
+
+describe("director timeline protocol", () => {
+  it("stores the server-authored plan as a review-only state slice", () => {
+    const next = reduceServerEvent(initialState, event(songTimelineEvent));
+    expect(next.songTimeline.timeline?.sequence_number).toBe(120);
+    expect(next.songTimeline.timeline?.sections[0].position).toBe("Center");
+    expect(next.songTimeline.stale).toBe(false);
+  });
+
+  it("marks a received plan stale on disconnect rather than inventing a fresh plan", () => {
+    const next = reduceServerEvent(initialState, event(songTimelineEvent));
+    expect(clearOnDisconnect(next).songTimeline.stale).toBe(true);
+  });
+});
+
 describe("chat transcript persistence", () => {
   const entries = [
     { kind: "user" as const, text: "장비 배치해줘" },
@@ -1134,5 +1171,50 @@ describe("buildHistoryRestore", () => {
     const frame = JSON.parse(buildHistoryRestore(many)!);
     expect(frame.messages).toHaveLength(HISTORY_RESTORE_MAX_MESSAGES);
     expect(frame.messages[frame.messages.length - 1].text).toBe("지시 39");
+  });
+});
+
+describe("cached snapshots — stale-while-revalidate first paint (2026-08-15)", () => {
+  const cachedDash = {
+    v: 1,
+    type: "dash_catalog",
+    cached: true,
+    sections: [{ name: "groups", status: "ok", items: [] }],
+  };
+
+  it("a cached dash_catalog renders sections but keeps the stale badge and the old stamp", () => {
+    const primed = reduceServerEvent(
+      initialState,
+      JSON.parse(JSON.stringify({ v: 1, type: "dash_catalog", sections: [] })),
+      1000,
+    );
+    const next = reduceServerEvent(primed, JSON.parse(JSON.stringify(cachedDash)), 2000);
+    expect(next.dash.sections).toHaveLength(1);
+    expect(next.dash.stale).toBe(true);
+    expect(next.dash.lastSyncAt).toBe(1000);
+  });
+
+  it("the following FRESH dash_catalog clears the badge and stamps the clock", () => {
+    const cached = reduceServerEvent(initialState, JSON.parse(JSON.stringify(cachedDash)), 2000);
+    const fresh = reduceServerEvent(
+      cached,
+      JSON.parse(JSON.stringify({ v: 1, type: "dash_catalog", sections: [] })),
+      3000,
+    );
+    expect(fresh.dash.stale).toBe(false);
+    expect(fresh.dash.lastSyncAt).toBe(3000);
+  });
+
+  it("a cached cue_monitor behaves the same way", () => {
+    const event = {
+      v: 1,
+      type: "cue_monitor",
+      cached: true,
+      executors: [],
+      history: [],
+    };
+    const next = reduceServerEvent(initialState, JSON.parse(JSON.stringify(event)), 2000);
+    expect(next.cueMonitor.stale).toBe(true);
+    expect(next.cueMonitor.lastSyncAt).toBeNull();
   });
 });

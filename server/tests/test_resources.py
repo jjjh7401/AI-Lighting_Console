@@ -29,8 +29,8 @@ class TestResourceBaseDevMode:
         # pre-M6 `Path(__file__).resolve().parents[2]` climbs from serve.py /
         # config.py resolved to (so no dev-path regression).
         legacy_from_serve = (
-            Path(__file__).resolve().parents[1] / "web" / "serve.py"
-        ).resolve().parents[2]
+            (Path(__file__).resolve().parents[1] / "web" / "serve.py").resolve().parents[2]
+        )
         assert resource_base() == legacy_from_serve
 
 

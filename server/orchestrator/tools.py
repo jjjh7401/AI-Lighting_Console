@@ -21,15 +21,16 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
 
-from server.fx.instantiate import FxInstantiationError
+from server.fx.instantiate import FxInstantiationError, build_fx_preset_bundle, select_preset_number
 from server.fx.instantiate import instantiate_fx as bind_fx
 from server.fx.loader import DEFAULT_LIBRARY_DIR as FX_LIBRARY_DIR
 from server.fx.loader import FxSchemaError
+from server.fx.loader import load_library as load_fx_library_mapping
 from server.fx.loader import load_library_from_dir as load_fx_library_from_dir
 from server.fx.matching import match_fx
 from server.fx.report import build_report as build_fx_report
 from server.fx.report import to_korean as fx_report_to_korean
-from server.fx.schema import FxLibrary
+from server.fx.schema import FX_SCHEMA_VERSION, MATRICKS_AXES, PATTERN_KINDS, FxLibrary
 from server.groupgen.write import (
     GroupSlotError,
     build_group_write_plan,
@@ -230,6 +231,7 @@ TOOL_NAMES = (
     "patch_fixtures",
     "find_fx",
     "instantiate_fx",
+    "compose_fx",
     "find_scene",
     "compile_scene",
     "build_patch_sheet",
@@ -241,7 +243,6 @@ TOOL_NAMES = (
     "arrange_fixtures",
     "classify_arrangement_topology",
     "create_arrangement_groups",
-    "build_handover_pack",
     "build_magic_sheet",
     "analyse_layout_image",
 )
@@ -3934,60 +3935,23 @@ def build_toolset(
     #   this tool repairs, so do not un-register it without giving the chain
     #   another one.
 
-    def instantiate_fx(call: ToolCall, context: ExecutionContext) -> ToolExecution:
-        nonlocal fx_lib
-        fx_id = call.arguments.get("fx_id")
-        if not isinstance(fx_id, str) or not fx_id.strip():
-            return _error_result(call, "'fx_id' must be the fx_id string returned by find_fx")
-        group = _positive_int(call.arguments.get("group"))
-        if group is None:
-            return _error_result(
-                call,
-                "'group' must be a positive integer group number that get_rig_context "
-                "listed on this rig — not a group name, and not a fixture slot",
-            )
-        sequence = call.arguments.get("sequence")
-        if sequence is not None and _positive_int(sequence) is None:
-            return _error_result(
-                call,
-                "'sequence' must be a positive integer, or omitted so this tool "
-                "measures a free number from the rig",
-            )
-        executor = call.arguments.get("executor")
-        if executor is not None and _positive_int(executor) is None:
-            return _error_result(call, "'executor' must be a positive integer executor number")
-        label = call.arguments.get("label")
-        if label is not None and (not isinstance(label, str) or not label.strip()):
-            return _error_result(
-                call, "'label' must be a non-empty label string, or omitted for the fx's own name"
-            )
-        if fx_lib is None:
-            try:
-                fx_lib = load_fx_library_from_dir(FX_LIBRARY_DIR)
-            except FxSchemaError as error:
-                return _error_result(call, f"fx library unavailable: {error}")
-        try:
-            fx = fx_lib.by_id(fx_id.strip())
-        except KeyError:
-            # An id this library does not hold is a correctable mistake, so it IS
-            # an error result — unlike a find_fx miss, a retry with the right id
-            # succeeds.
-            return _error_result(
-                call,
-                f"unknown fx_id {fx_id!r} — call find_fx and pass back the fx_id "
-                f"from one of its matches",
-            )
+    # Shared by instantiate_fx and compose_fx: the rig read + group gate, the
+    # preset destination resolution, and the run_commands delivery tail. One
+    # copy each — a fork would be a second chance to soften a refusal.
+
+    def _fx_bind_context(call: ToolCall, group: int):
+        """Rig read + group gate. Returns ``(sections, error)`` — one is None."""
         missing = [section for section in FX_RIG_SECTIONS if section not in rig_paths]
         if missing:
-            return _error_result(
+            return None, _error_result(
                 call,
                 f"rig context has no path configured for {missing} — an fx cannot be "
                 f"bound to this rig without them",
             )
         # The rig is READ here even though the group arrives as an argument: the
         # argument says WHICH group, this read says whether that group exists.
-        # The sequence number is never an argument the tool trusts blind either —
-        # it is measured from this same read (AP-16).
+        # The sequence/preset number is never an argument the tool trusts blind
+        # either — it is measured from this same read (AP-16).
         sections, _resolved, _failed = collect_rig_sections(
             state_port,
             {section: rig_paths[section] for section in FX_RIG_SECTIONS},
@@ -4003,7 +3967,7 @@ def build_toolset(
             # A section that never arrived is NOT a rig that answered "no such
             # group". Refusing the group here would state a fact about a rig
             # nobody observed.
-            return _fx_error_result(
+            return None, _fx_error_result(
                 call,
                 "the rig sections an fx is bound against did not arrive: "
                 + "; ".join(f"{n}: {e['reason']}" for n, e in unavailable.items()),
@@ -4020,7 +3984,7 @@ def build_toolset(
             # of absence, but it is not evidence of presence, which is what
             # addressing it would assume.
             truncated = bool(groups_section.get("truncated"))  # type: ignore[union-attr]
-            return _fx_error_result(
+            return None, _fx_error_result(
                 call,
                 f"group {group} is not addressable on this rig"
                 + (
@@ -4032,19 +3996,78 @@ def build_toolset(
                 groups=addressable,
                 groups_truncated=truncated,
             )
+        return sections, None
+
+    def _fx_preset_destination(call: ToolCall, pool_arg, slot_arg):
+        """Measure the target preset pool + a free slot from the rig.
+
+        Returns ``((pool_no, slot), error)`` — one is None. The pool defaults
+        to the first pool whose NAME starts with "All" (live-verified: the All
+        pools accept multistep/phaser data regardless of feature group), and
+        the pool number is read from the pool listing, never assumed — "All 1"
+        is not guaranteed a fixed slot across showfiles.
+        """
+        pools_path = rig_paths.get("preset_pools")
+        if pools_path is None:
+            return None, _error_result(
+                call,
+                "rig context has no path configured for preset pools — a preset "
+                "destination cannot be measured on this rig",
+            )
         try:
-            plan = bind_fx(
-                fx,
-                group=group,
-                sequences_section=sections["sequences"],  # type: ignore[arg-type]
-                sequence=sequence,
-                executor=executor,
-                label=label,
-            )
+            pools_payload = state_port.query_state(pools_path)
+        except Exception as exc:  # noqa: BLE001 — every port failure is one refusal
+            return None, _fx_error_result(call, f"the preset pool listing did not arrive: {exc}")
+        pools = [
+            rig_object(child)
+            for child in (pools_payload.get("children") or [])
+            if isinstance(child, dict)
+        ]
+        if pool_arg is not None:
+            listed = {p.get("no") for p in pools if isinstance(p.get("no"), int)}
+            if pool_arg not in listed:
+                return None, _fx_error_result(
+                    call,
+                    f"preset pool {pool_arg} is not listed on this rig — use one "
+                    "of the pools below",
+                    preset_pools=pools,
+                )
+            pool_no = pool_arg
+        else:
+            all_pools = [
+                p
+                for p in pools
+                if isinstance(p.get("no"), int)
+                and str(p.get("name", "")).casefold().startswith("all")
+            ]
+            if not all_pools:
+                return None, _fx_error_result(
+                    call,
+                    'no preset pool named "All …" is listed on this rig — pass '
+                    "preset_pool explicitly with one of the pools below",
+                    preset_pools=pools,
+                )
+            pool_no = all_pools[0]["no"]
+        try:
+            pool_payload = state_port.query_state(f"{pools_path}/{pool_no}")
+        except Exception as exc:  # noqa: BLE001
+            return None, _fx_error_result(call, f"preset pool {pool_no} could not be read: {exc}")
+        presets_section = rig_section(
+            [
+                rig_object(child)
+                for child in (pool_payload.get("children") or [])
+                if isinstance(child, dict)
+            ],
+            pool_payload,
+        )
+        try:
+            slot = select_preset_number(presets_section, requested=slot_arg)
         except FxInstantiationError as error:
-            return _fx_error_result(
-                call, f"fx {fx.fx_id!r} cannot be instantiated: {error}", reason=error.reason
-            )
+            return None, _fx_error_result(call, str(error), reason=error.reason)
+        return (pool_no, slot), None
+
+    def _deliver_fx_plan(call: ToolCall, context: ExecutionContext, plan) -> ToolExecution:
+        """The single delivery tail: run_commands re-entry + two-tier report."""
         if not plan.commands:
             # Defensive: the builder always emits a destination, a clear, a
             # selection and a store, so this is unreachable today. It stays
@@ -4088,11 +4111,8 @@ def build_toolset(
         is_error = execution.result.is_error or not report.succeeded
         if payload.get("gate_status") == _LOCKED:
             # ...except a LiveLock demotion, which is an ANSWER, not a failure:
-            # the proposal IS the deliverable. `is_error=True` would feed the
-            # self-correction loop and send the model back into the same lock —
-            # during a show, which is precisely when the lock is on. The sibling
-            # tools demote the same way (`prepare_busking` REQ-BUSKWIZ-014,
-            # `precheck_patch` AC-PRECHK-014 ④); fx diverged until M6 measured it.
+            # the proposal IS the deliverable (REQ-BUSKWIZ-014 / AC-PRECHK-014 ④
+            # precedent — see the sibling tools).
             is_error = False
         return ToolExecution(
             result=ToolResult(
@@ -4103,6 +4123,226 @@ def build_toolset(
             ),
             command_outcomes=execution.command_outcomes,
         )
+
+    def instantiate_fx(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        nonlocal fx_lib
+        fx_id = call.arguments.get("fx_id")
+        if not isinstance(fx_id, str) or not fx_id.strip():
+            return _error_result(call, "'fx_id' must be the fx_id string returned by find_fx")
+        group = _positive_int(call.arguments.get("group"))
+        if group is None:
+            return _error_result(
+                call,
+                "'group' must be a positive integer group number that get_rig_context "
+                "listed on this rig — not a group name, and not a fixture slot",
+            )
+        sequence = call.arguments.get("sequence")
+        if sequence is not None and _positive_int(sequence) is None:
+            return _error_result(
+                call,
+                "'sequence' must be a positive integer, or omitted so this tool "
+                "measures a free number from the rig",
+            )
+        executor = call.arguments.get("executor")
+        if executor is not None and _positive_int(executor) is None:
+            return _error_result(call, "'executor' must be a positive integer executor number")
+        label = call.arguments.get("label")
+        if label is not None and (not isinstance(label, str) or not label.strip()):
+            return _error_result(
+                call, "'label' must be a non-empty label string, or omitted for the fx's own name"
+            )
+        if fx_lib is None:
+            try:
+                fx_lib = load_fx_library_from_dir(FX_LIBRARY_DIR)
+            except FxSchemaError as error:
+                return _error_result(call, f"fx library unavailable: {error}")
+        try:
+            fx = fx_lib.by_id(fx_id.strip())
+        except KeyError:
+            # An id this library does not hold is a correctable mistake, so it IS
+            # an error result — unlike a find_fx miss, a retry with the right id
+            # succeeds.
+            return _error_result(
+                call,
+                f"unknown fx_id {fx_id!r} — call find_fx and pass back the fx_id "
+                f"from one of its matches",
+            )
+        destination = call.arguments.get("destination", "sequence")
+        if destination not in ("sequence", "preset"):
+            return _error_result(call, '\'destination\' must be "sequence" (default) or "preset"')
+        preset_pool = call.arguments.get("preset_pool")
+        if preset_pool is not None and _positive_int(preset_pool) is None:
+            return _error_result(call, "'preset_pool' must be a positive integer pool number")
+        preset = call.arguments.get("preset")
+        if preset is not None and _positive_int(preset) is None:
+            return _error_result(
+                call,
+                "'preset' must be a positive integer, or omitted so this tool "
+                "measures a free slot from the pool",
+            )
+        if destination == "preset" and executor is not None:
+            return _error_result(
+                call,
+                "an executor is a sequence concept — a preset destination cannot "
+                "bind one; omit 'executor' or use destination \"sequence\"",
+            )
+        sections, gate_error = _fx_bind_context(call, group)
+        if gate_error is not None:
+            return gate_error
+        try:
+            if destination == "preset":
+                resolved, dest_error = _fx_preset_destination(call, preset_pool, preset)
+                if dest_error is not None:
+                    return dest_error
+                pool_no, slot = resolved
+                plan = build_fx_preset_bundle(
+                    fx, group=group, preset_pool=pool_no, preset=slot, label=label
+                )
+            else:
+                plan = bind_fx(
+                    fx,
+                    group=group,
+                    sequences_section=sections["sequences"],  # type: ignore[arg-type]
+                    sequence=sequence,
+                    executor=executor,
+                    label=label,
+                )
+        except FxInstantiationError as error:
+            return _fx_error_result(
+                call, f"fx {fx.fx_id!r} cannot be instantiated: {error}", reason=error.reason
+            )
+        return _deliver_fx_plan(call, context, plan)
+
+    # -- compose_fx (parametric phasers — the natural-language escape hatch) ---
+    #
+    # @MX:ANCHOR: [AUTO] the only model-reachable entry that builds a phaser the
+    #   LIBRARY does not hold — steps and axes arrive as arguments, validated by
+    #   the SAME loader schema every shipped entry passes, then bound and fired
+    #   through the SAME chain instantiate_fx uses.
+    # @MX:REASON: a fixed library cannot satisfy every operator request. Without
+    #   this door the model hand-writes bundles through run_commands and loses
+    #   the measured step grammar, the collision guards and the measured
+    #   sequence/preset numbers all at once. This handler is a CALLER of
+    #   run_commands via _deliver_fx_plan, never a second execution surface.
+
+    _COMPOSE_NUMBER_AXES = (
+        "phase_from",
+        "phase_to",
+        "speed",
+        "speed_master",
+        "width",
+        "measure",
+        "accel",
+        "decel",
+        *MATRICKS_AXES,
+    )
+    _COMPOSE_FLAG_AXES = ("relative", "reverse")
+
+    def compose_fx(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        pattern = call.arguments.get("pattern")
+        if not isinstance(pattern, str) or pattern not in PATTERN_KINDS:
+            return _error_result(
+                call,
+                f"'pattern' must be one of {list(PATTERN_KINDS)} — it decides how "
+                "the phase axis is spent (circle = quarter-cycle offset between "
+                "the two axes, sweep/wave/chase = spread or per-attribute walk)",
+            )
+        steps = call.arguments.get("steps")
+        if not isinstance(steps, list) or not steps:
+            return _error_result(
+                call,
+                "'steps' must be a non-empty list of {attribute: value} mappings — "
+                "a phaser only exists once two steps hold different values",
+            )
+        group = _positive_int(call.arguments.get("group"))
+        if group is None:
+            return _error_result(
+                call,
+                "'group' must be a positive integer group number that get_rig_context "
+                "listed on this rig — not a group name, and not a fixture slot",
+            )
+        label = call.arguments.get("label")
+        if label is not None and (not isinstance(label, str) or not label.strip()):
+            return _error_result(call, "'label' must be a non-empty label string, or omitted")
+        destination = call.arguments.get("destination", "sequence")
+        if destination not in ("sequence", "preset"):
+            return _error_result(call, '\'destination\' must be "sequence" (default) or "preset"')
+        sequence = call.arguments.get("sequence")
+        if sequence is not None and _positive_int(sequence) is None:
+            return _error_result(
+                call,
+                "'sequence' must be a positive integer, or omitted so this tool "
+                "measures a free number from the rig",
+            )
+        executor = call.arguments.get("executor")
+        if executor is not None and _positive_int(executor) is None:
+            return _error_result(call, "'executor' must be a positive integer executor number")
+        if destination == "preset" and executor is not None:
+            return _error_result(
+                call,
+                "an executor is a sequence concept — a preset destination cannot "
+                "bind one; omit 'executor' or use destination \"sequence\"",
+            )
+        preset_pool = call.arguments.get("preset_pool")
+        if preset_pool is not None and _positive_int(preset_pool) is None:
+            return _error_result(call, "'preset_pool' must be a positive integer pool number")
+        preset = call.arguments.get("preset")
+        if preset is not None and _positive_int(preset) is None:
+            return _error_result(
+                call,
+                "'preset' must be a positive integer, or omitted so this tool "
+                "measures a free slot from the pool",
+            )
+        # The entry is assembled in the library's own WIRE FORM and pushed
+        # through the SAME loader every shipped asset passes — one schema, one
+        # set of refusals, no second validation vocabulary.
+        entry: dict[str, object] = {
+            "fx_id": f"composed-{pattern}",
+            "display_name": (label or f"Composed {pattern}").strip(),
+            "pattern": pattern,
+            "steps": steps,
+        }
+        for axis in _COMPOSE_NUMBER_AXES:
+            if call.arguments.get(axis) is not None:
+                entry[axis] = call.arguments[axis]
+        for axis in _COMPOSE_FLAG_AXES:
+            if call.arguments.get(axis) is not None:
+                entry[axis] = call.arguments[axis]
+        try:
+            composed = load_fx_library_mapping(
+                {"schema_version": FX_SCHEMA_VERSION, "fx": [entry]},
+                source="<compose_fx>",
+            ).fx[0]
+        except FxSchemaError as error:
+            # The loader's message names the exact axis and bound — the model
+            # can correct the arguments and retry.
+            return _error_result(call, f"composed fx is invalid: {error}")
+        sections, gate_error = _fx_bind_context(call, group)
+        if gate_error is not None:
+            return gate_error
+        try:
+            if destination == "preset":
+                resolved, dest_error = _fx_preset_destination(call, preset_pool, preset)
+                if dest_error is not None:
+                    return dest_error
+                pool_no, slot = resolved
+                plan = build_fx_preset_bundle(
+                    composed, group=group, preset_pool=pool_no, preset=slot, label=label
+                )
+            else:
+                plan = bind_fx(
+                    composed,
+                    group=group,
+                    sequences_section=sections["sequences"],  # type: ignore[arg-type]
+                    sequence=sequence,
+                    executor=executor,
+                    label=label,
+                )
+        except FxInstantiationError as error:
+            return _fx_error_result(
+                call, f"composed fx cannot be instantiated: {error}", reason=error.reason
+            )
+        return _deliver_fx_plan(call, context, plan)
 
     # -- find_scene (REQ-SCENE-018 — lookup only, sends nothing) ---------------
     #
@@ -6882,7 +7122,9 @@ def build_toolset(
         ToolDefinition(
             name="instantiate_fx",
             description=(
-                "Put an effect FROM find_fx onto THIS rig as a sequence + cue. "
+                "Put an effect FROM find_fx onto THIS rig — a labeled preset "
+                '(destination "preset", the operator flow default) or a '
+                "sequence + cue when a cue was asked for. "
                 "Pass the fx_id of the match you chose; do NOT hand-write the "
                 "bundle with run_commands, because this tool is the only thing "
                 "that emits the measured step grammar (values, then a "
@@ -6927,6 +7169,23 @@ def build_toolset(
                 "its very first line. If the operator wants two effects, do "
                 "the second after they reply.\n"
                 "\n"
+                "STOP AT THE STORE — the operator's flow (user direction "
+                "2026-08-15): store the effect as a labeled PRESET "
+                '(destination "preset") and STOP. Do NOT follow up with '
+                "hand-written run_commands that recall it live, store cues, "
+                "'Assign ... At Executor/Page' or 'Go+' — those choices "
+                "belong to the operator, and the measured cost of ignoring "
+                "this was a gate refusal plus two wasted approval cards. "
+                "Store into a sequence/cue only when the operator already "
+                "asked for a cue.\n"
+                "\n"
+                "ANSWER FORMAT after a successful store — SHORT. Two "
+                "sentences maximum: (1) what was stored (pool.slot and "
+                "label) plus the stage-check caveat, (2) ONE question: "
+                "'시퀀스(큐)에도 저장할까요?'. No command-line examples, no "
+                "next-step tutorials, no option lists — the choice is the "
+                "operator's, so leave only the question.\n"
+                "\n"
                 "Finally, and this holds even when every command came back "
                 "ok: the effect itself cannot be verified by machine. The "
                 "console reports that the commands were accepted, and a stored "
@@ -6968,11 +7227,179 @@ def build_toolset(
                     "label": {
                         "type": "string",
                         "description": (
-                            "Optional cue label. Defaults to the fx's own display name."
+                            "Optional label — ENGLISH ONLY: the console pool "
+                            "tiles cannot display Hangul (measured live), and "
+                            "a non-ASCII label is auto-replaced with an "
+                            "English name derived from the fx_id. Defaults "
+                            "to the fx's display name (same auto-replacement "
+                            "applies)."
+                        ),
+                    },
+                    "destination": {
+                        "type": "string",
+                        "enum": ["sequence", "preset"],
+                        "description": (
+                            'Where to store the effect. "sequence" (default) '
+                            'makes a sequence + cue. "preset" stores it as a '
+                            'reusable preset in an "All" pool via /Universal '
+                            "— the operator can then recall it on any "
+                            "compatible fixtures and reference it from cues."
+                        ),
+                    },
+                    "preset_pool": {
+                        "type": "integer",
+                        "description": (
+                            "Optional, preset destination only. A preset pool "
+                            "number listed on THIS rig. Leave unset to use the "
+                            'first pool named "All …" — measured from the '
+                            "rig, never assumed."
+                        ),
+                    },
+                    "preset": {
+                        "type": "integer",
+                        "description": (
+                            "Optional, preset destination only. Leave unset — "
+                            "a free slot is measured from the pool. An "
+                            "occupied slot is refused."
                         ),
                     },
                 },
                 "required": ["fx_id", "group"],
+                "additionalProperties": False,
+            },
+        ),
+        ToolDefinition(
+            name="compose_fx",
+            description=(
+                "Build a CUSTOM phaser the library does not hold — the "
+                "natural-language escape hatch when find_fx falls back or the "
+                "operator's request does not match any shipped entry "
+                "('빨강 흰색 번갈아 따닥따닥 치는 4스텝', '박자 맞춰 짧게 "
+                "끊어 치는 펄스', '포지션 그대로 두고 제자리에서 살짝 "
+                "돌려줘'). Prefer "
+                "find_fx + instantiate_fx "
+                "when a library entry matches; compose only what the library "
+                "cannot say.\n"
+                "\n"
+                "You pass the steps and axes; the tool validates them against "
+                "the SAME schema the shipped library passes, emits the measured "
+                "step grammar (values, a standalone 'Step 2' line, the next "
+                "values, THEN curve/phase/timing lines), measures the free "
+                "sequence or preset number from the rig, and runs the bundle "
+                "through the same gate, live lock and audit as run_commands. "
+                "Do NOT hand-write phaser bundles with run_commands.\n"
+                "\n"
+                "Vocabulary (every axis live-verified on onPC 2.4.2):\n"
+                "- steps: 2+ mappings of attribute -> value. Attributes: "
+                "Dimmer, ColorRGB_R/G/B (0-100), Pan, Tilt. Every step must "
+                "name the SAME attribute set, and no attribute may repeat a "
+                "value across steps (the dedupe would silently drop the line).\n"
+                "- relative (bool): emit step values as 'At Relative <n>' — "
+                "the effect rides on the CURRENT position/look instead of "
+                "absolute values. Use for '포지션 그대로', '제자리에서', "
+                "'지금 그림 유지한 채로'.\n"
+                "- accel / decel (-100..100): per-step curve. -100/-100 is the "
+                "measured smooth SINE shape; unset is linear/snappy.\n"
+                "- phase_from / phase_to (-360..360): one attribute + phase_to "
+                "spreads the phase across the SELECTION (a travelling wave); "
+                "several attributes split the span between them; circle "
+                "pattern ignores phase_to and offsets its two axes 90°.\n"
+                "- speed (BPM) OR speed_master (1-16, live master binding) — "
+                "exactly one, and it is ONE speed source for the WHOLE fx: "
+                "per-attribute speeds ('팬은 천천히 틸트는 빠르게') are NOT "
+                "expressible in one fx — say so, build the first attribute's "
+                "phaser now, and offer the other as a separate follow-up "
+                "instruction. Use speed_master when the operator wants tempo "
+                "control from a fader ('마스터에 물려줘', '속도는 페이더로 "
+                "잡을게', '템포 따라가게').\n"
+                "- width (0-100]: percent of a beat one step occupies — small "
+                "width = short pulse. measure (>0): scales the whole loop to "
+                "N beats — bigger = slower overall.\n"
+                "- reverse (bool), and MAtricks axes phase_from_x/phase_to_x/"
+                "x/x_wings/x_shuffle for rig-geometry spreads, every-Nth, "
+                "mirroring and seeded shuffle.\n"
+                "\n"
+                'destination "preset" (the operator flow default) stores a '
+                'reusable preset into an "All" pool via /Universal; '
+                '"sequence" stores a sequence + cue — use it when the '
+                "operator already asked for a cue. Numbers "
+                "are measured from the rig on this call — never guessed.\n"
+                "\n"
+                "Run ONE compose_fx per instruction (a second one folds shared "
+                "lines and stores an INCOMPLETE object). The result carries "
+                "the same report/verdict contract as instantiate_fx; only "
+                '"complete" is a success. The effect itself is NOT machine-'
+                "verifiable — a human has to watch the stage; say so.\n"
+                "\n"
+                "STOP AT THE STORE (same rule as instantiate_fx): labeled "
+                "preset by default, no hand-written recall/cue/Assign/Go+ "
+                "follow-ups, and a SHORT answer — stored slot + label + "
+                "stage-check caveat, then the single question "
+                "'시퀀스(큐)에도 저장할까요?'."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "pattern": {
+                        "type": "string",
+                        "enum": ["sweep", "wave", "circle", "diagonal", "pulse", "chase"],
+                        "description": (
+                            "How the phase axis is spent. circle = its two "
+                            "axes a quarter cycle apart; everything else "
+                            "spreads or walks phase_from/phase_to."
+                        ),
+                    },
+                    "steps": {
+                        "type": "array",
+                        "items": {"type": "object"},
+                        "description": (
+                            '2+ step mappings, e.g. [{"Dimmer": 10}, '
+                            '{"Dimmer": 90}] or [{"Pan": -15, "Tilt": '
+                            '-8}, {"Pan": 15, "Tilt": 8}].'
+                        ),
+                    },
+                    "group": {
+                        "type": "integer",
+                        "description": (
+                            "The group number to run the effect on, as listed "
+                            "by get_rig_context on THIS rig."
+                        ),
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": (
+                            "Optional label — ENGLISH ONLY (console tiles "
+                            "cannot display Hangul; non-ASCII is replaced "
+                            "with a name derived from the pattern). Translate "
+                            "the operator's Korean name into short English."
+                        ),
+                    },
+                    "phase_from": {"type": "number"},
+                    "phase_to": {"type": "number"},
+                    "speed": {"type": "number", "description": "BPM."},
+                    "speed_master": {"type": "integer", "description": "Master 1-16."},
+                    "width": {"type": "number"},
+                    "measure": {"type": "number"},
+                    "accel": {"type": "number"},
+                    "decel": {"type": "number"},
+                    "relative": {"type": "boolean"},
+                    "reverse": {"type": "boolean"},
+                    "phase_from_x": {"type": "number"},
+                    "phase_to_x": {"type": "number"},
+                    "x": {"type": "integer"},
+                    "x_wings": {"type": "integer"},
+                    "x_shuffle": {"type": "integer"},
+                    "destination": {
+                        "type": "string",
+                        "enum": ["sequence", "preset"],
+                        "description": 'Default "sequence".',
+                    },
+                    "sequence": {"type": "integer"},
+                    "executor": {"type": "integer"},
+                    "preset_pool": {"type": "integer"},
+                    "preset": {"type": "integer"},
+                },
+                "required": ["pattern", "steps", "group"],
                 "additionalProperties": False,
             },
         ),
@@ -7759,6 +8186,7 @@ def build_toolset(
         "patch_fixtures": patch_fixtures,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,
+        "compose_fx": compose_fx,
         "find_scene": find_scene,
         "compile_scene": compile_scene,
         "build_patch_sheet": build_patch_sheet,

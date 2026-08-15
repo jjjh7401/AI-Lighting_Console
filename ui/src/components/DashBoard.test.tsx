@@ -20,6 +20,8 @@ import {
   fixtureCount,
   fixtureSummaryLabel,
   formatSyncTime,
+  presetPoolHasInfo,
+  visibleSection,
 } from "./DashBoard";
 import { PoolSection } from "./PoolSection";
 
@@ -330,5 +332,36 @@ describe("DashBoard", () => {
       expect(executorsEl.props.onPress).toBeUndefined();
       expect(executorsEl.props.isRunning).toBeUndefined();
     });
+  });
+});
+
+describe("presetPoolHasInfo — 정보가 있는 카테고리만 카드로 (2026-08-15 방향)", () => {
+  it("a pool measured EMPTY (stored_count 0) is hidden as noise", () => {
+    expect(presetPoolHasInfo({ no: 1, name: "Dimmer", meta: { stored_count: 0 } })).toBe(false);
+  });
+
+  it("a pool with stored presets stays visible", () => {
+    expect(presetPoolHasInfo({ no: 21, name: "All 1", meta: { stored_count: 9 } })).toBe(true);
+  });
+
+  it("a pool the drilldown never opened stays visible — 'not opened' is not 'empty'", () => {
+    expect(presetPoolHasInfo({ no: 25, name: "All 5" })).toBe(true);
+    expect(
+      presetPoolHasInfo({ no: 24, name: "All 4", meta: { contents_unavailable: true } }),
+    ).toBe(true);
+  });
+
+  it("visibleSection applies the filter to preset_pools only", () => {
+    const presets: DashSection = {
+      name: "preset_pools",
+      status: "ok",
+      items: [
+        { no: 1, name: "Dimmer", meta: { stored_count: 0 } },
+        { no: 21, name: "All 1", meta: { stored_count: 9 } },
+      ],
+    };
+    expect(visibleSection(presets).items.map((i) => i.no)).toEqual([21]);
+    const groups: DashSection = { name: "groups", status: "ok", items: presets.items };
+    expect(visibleSection(groups).items).toHaveLength(2);
   });
 });

@@ -54,7 +54,9 @@ __all__ = [
     "fan_chain",
     "fan_pan_tilt",
     "pointing_commands",
+    "position_cue_store_commands",
     "position_preset_store_commands",
+    "preset_recall_command",
     "radial_pan_tilt",
 ]
 
@@ -342,6 +344,66 @@ def position_preset_store_commands(preset_no: int, label: str | None = None) -> 
             raise SpatialPointingError(f"preset label {label!r} is empty or carries a quote")
         commands.append(f"Label Preset {POSITION_PRESET_POOL}.{preset_no} '{text}'")
     return tuple(commands)
+
+
+def preset_recall_command(fids: Sequence[int], preset_no: int) -> str:
+    """One selection line that recalls ``Preset 2.<n>`` into the programmer.
+
+    ``Fixture a + b + … ; At Preset 2.<n>`` — the cue stored from this state
+    holds a REFERENCE to the preset (32_spatial_design.md), so regenerating
+    the preset at a new venue re-focuses every cue built on it. One single
+    line: the selection prefix keeps the text unique under the instruction-
+    scope command dedupe.
+    """
+    if not fids:
+        raise SpatialPointingError("no fixtures to recall the preset on")
+    if preset_no <= 0:
+        raise SpatialPointingError(f"preset number {preset_no!r} must be positive")
+    selection = " + ".join(str(fid) for fid in fids)
+    return f"Fixture {selection} ; At Preset {POSITION_PRESET_POOL}.{preset_no}"
+
+
+def _format_cue_no(cue_no: float) -> str:
+    """Cue numbers carry decimals (insert with 1.5) — render without noise."""
+    if float(cue_no).is_integer():
+        return str(int(cue_no))
+    return f"{cue_no:g}"
+
+
+def position_cue_store_commands(
+    sequence_no: int,
+    cue_no: float,
+    *,
+    fade_seconds: float | None = None,
+    name: str | None = None,
+) -> tuple[str, ...]:
+    """Store the programmer as a cue with an optional position fade.
+
+    Verified grammar: ``Store Sequence 11 Cue 1 'Warm Wash' CueFade 2``
+    (31_choreography_patterns.md:50) — the sequence-explicit form, so the cue
+    never lands in whatever sequence happens to be selected. No ``/Merge`` or
+    ``/Overwrite`` flag ever: merging flattens phasers living in the cue
+    (measured — SKILL §3) and overwrite is blacklisted; the caller targets an
+    empty cue slot. ``fade_seconds`` is the CueFade — omit it to keep the
+    console default.
+    """
+    if sequence_no <= 0:
+        raise SpatialPointingError(f"sequence number {sequence_no!r} must be positive")
+    if not math.isfinite(cue_no) or cue_no <= 0:
+        raise SpatialPointingError(f"cue number {cue_no!r} must be a positive finite number")
+    command = f"Store Sequence {sequence_no} Cue {_format_cue_no(cue_no)}"
+    if name is not None:
+        text = name.strip()
+        if not text or "'" in text or '"' in text:
+            raise SpatialPointingError(f"cue name {name!r} is empty or carries a quote")
+        command += f" '{text}'"
+    if fade_seconds is not None:
+        if not math.isfinite(fade_seconds) or fade_seconds < 0:
+            raise SpatialPointingError(
+                f"fade {fade_seconds!r} must be a non-negative finite number of seconds"
+            )
+        command += f" CueFade {fade_seconds:g}"
+    return (command,)
 
 
 #: The ten canonical design positions, most basic first, variation growing —

@@ -58,11 +58,15 @@ from server.web.launcher import (
     wait_until_serving,
 )
 from server.web.measure import RoundTripRecorder
+from server.web.panel import pin_store_path
 from server.web.paperwork_api import PaperworkDeps
+from server.web.presets_api import PresetsDeps
 from server.web.provision_api import ProvisionDeps
 from server.web.question import QuestionChannel
 from server.web.reply_discovery import make_reply_port_diagnostic
+from server.web.session import SongTimelineStore
 from server.web.settings_api import SettingsDeps
+from server.web.timeline_library import SongTimelineLibrary
 
 
 def default_ui_dist() -> Path:
@@ -388,6 +392,8 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         # both StateQueryPort and PropertyQueryPort, so one object serves both
         # roles and the patch-sheet builder picks up property reads for free.
         paperwork=PaperworkDeps(state_port=stack.gate.state_port),
+        # Preset-pool popup: the SAME gate-owned query port — read-only.
+        presets=PresetsDeps(state_port=stack.gate.state_port),
         handshake=build_handshake_policy(args),
         # The SAME endpoint the gate sends OSC to (``console_host``/
         # ``console_port``) is the console's OSC INPUT port — so binding it is
@@ -405,6 +411,11 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         # apply_effective_settings ran (the real-serve entry) — a test caller
         # that builds args directly never gets a fabricated "confirmed" slot.
         preshow_osc_slot=getattr(args, "osc_slot", None),
+        # Runbook director timeline: persisted next to panel_pins.json so it
+        # survives server restarts, not just page refreshes.
+        song_timeline_store=SongTimelineStore(pin_store_path("song_timeline.json")),
+        # Timeline library: named/versioned saves, persisted alongside.
+        timeline_library=SongTimelineLibrary(pin_store_path("song_timeline_library.json")),
     )
     # REQ-DEPLOY-018/026 follow-up: a grandMA3 OSC entry has ONE port for BOTH
     # directions, so the port the console replies THROUGH and the port the app

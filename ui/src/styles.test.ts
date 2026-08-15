@@ -142,23 +142,21 @@ describe("--live-amber stays exclusive to .pool-tile-running even after T-H5's a
   });
 });
 
-describe("T-H5 tile density — the grid fits multiple tiles side by side (task #8/#9)", () => {
-  // A regression guard on the MINMAX value driving column count
-  // (`repeat(auto-fill, minmax(<px>, 1fr))`): T-H4 shipped at 150px, which
-  // left the pane at ONE column — the exact "MA3 executor-bar 느낌이 안
-  // 난다" complaint T-H5 fixes. This pins the value low enough that at least
-  // two ~104px tiles plus their gap fit inside a typical cue-monitor pane
-  // width (documented assumption: >= 260px content width, this app's
-  // right-side panel is comfortably wider than that in practice).
-  it("cue-monitor-grid's tile minmax is narrow enough for 2+ columns at typical pane width", () => {
+describe("진행 순서 보드 (2026-08-15) — the executor list is VERTICAL", () => {
+  // Supersedes the T-H5 multi-column density pin: the user's show-order
+  // direction wants ONE executor per row so the top-to-bottom position IS
+  // the progression order; the row lays its facts out horizontally instead.
+  it("cue-monitor-grid is a column flex list, not a multi-column grid", () => {
     const block = blocks.find((b) => b.selector === ".cue-monitor-grid");
     expect(block).toBeDefined();
-    const match = block!.body.match(/minmax\((\d+)px/);
-    expect(match).not.toBeNull();
-    const minmaxPx = Number(match![1]);
-    const gapMatch = block!.body.match(/gap:\s*(\d+)px/);
-    const gapPx = gapMatch ? Number(gapMatch[1]) : 0;
-    const ASSUMED_PANE_CONTENT_WIDTH_PX = 260;
-    expect(minmaxPx * 2 + gapPx).toBeLessThanOrEqual(ASSUMED_PANE_CONTENT_WIDTH_PX);
+    expect(block!.body).toMatch(/display:\s*flex/);
+    expect(block!.body).toMatch(/flex-direction:\s*column/);
+    expect(block!.body).not.toMatch(/grid-template-columns/);
+  });
+
+  it("each cue tile is a horizontal row", () => {
+    const block = blocks.find((b) => b.selector === ".cue-tile");
+    expect(block).toBeDefined();
+    expect(block!.body).toMatch(/flex-direction:\s*row/);
   });
 });

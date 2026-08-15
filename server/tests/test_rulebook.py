@@ -42,9 +42,17 @@ _PRESERVED_ASSETS = (
     "10_object_model.md",
     "20_korean_terms.md",
     "30_plugin_patterns.md",
-    "31_choreography_patterns.md",
 )
+# SPEC-COPILOT-FXGEN-001 REQ-FXGEN-017 (b) — the OBSERVED EFFECT measurement
+# record is REQUIRED to land in this asset (the anchor the fx code cites by
+# line number), so it is APPEND-ONLY rather than byte-locked: the run-phase
+# content must remain a byte-identical PREFIX of the working-tree file.
+_APPEND_ASSET = "31_choreography_patterns.md"
 _SPATIAL_ASSET = "32_spatial_design.md"
+# SPEC-COPILOT-FXGEN-001 REQ-FXGEN-016 — the effect-editor routing asset. Like
+# file 32 it is APPENDED after the preserved five, never interleaved, and it
+# follows the newer disciplines: no per-show binding, no dates, no session ids.
+_EDITORS_ASSET = "33_effect_editors.md"
 
 # A per-show binding is a rig object addressed by number. REQ-SPATIAL-017 keeps
 # them out of the NEW asset: an example id in a freshly added file reads to the
@@ -265,28 +273,38 @@ class TestSpatialDesignAsset:
     def test_the_spatial_asset_sorts_immediately_after_the_choreography_one(self):
         names = [path.name for path in rulebook_asset_files()]
         assert names[names.index("31_choreography_patterns.md") + 1] == _SPATIAL_ASSET
-        assert names[-1] == _SPATIAL_ASSET, "the spatial axis reads last, after the grammar"
+        assert names[-1] == _EDITORS_ASSET, "the effect-editor axis reads last"
 
     def test_the_asset_set_is_the_five_preserved_files_plus_the_new_one(self):
         names = tuple(path.name for path in rulebook_asset_files())
-        assert names == (*_PRESERVED_ASSETS, _SPATIAL_ASSET)
+        assert names == (*_PRESERVED_ASSETS, _APPEND_ASSET, _SPATIAL_ASSET, _EDITORS_ASSET)
 
     def test_the_preserved_assets_all_exist_at_the_run_phase_base(self):
         # Non-vacuity for the gate below: `git diff` reports nothing for a path
-        # the base never had, so an empty diff is only evidence once the base is
+        # that never existed, so the byte-diff-0 gate is anchored on a base
         # known to carry all five.
-        listed = _git("ls-tree", "--name-only", _RUN_PHASE_BASE, "--", *_preserved_paths())
-        assert sorted(listed.split()) == sorted(_preserved_paths())
+        paths = (*_preserved_paths(), f"{_ASSETS_PREFIX}/{_APPEND_ASSET}")
+        listed = _git("ls-tree", "--name-only", _RUN_PHASE_BASE, "--", *paths)
+        assert sorted(listed.split()) == sorted(paths)
 
     def test_every_preserved_asset_is_byte_unchanged_from_the_run_phase_base(self):
         # Working tree against the base commit — not `base..HEAD` — so an
-        # uncommitted edit is caught too. The five must not change at all.
+        # uncommitted edit is caught too. The four must not change at all.
         assert _git("diff", "--stat", _RUN_PHASE_BASE, "--", *_preserved_paths()) == ""
 
+    def test_the_choreography_asset_only_ever_grows_at_its_tail(self):
+        # REQ-FXGEN-017 (b): the OBSERVED EFFECT record appends; the run-phase
+        # bytes stay a verbatim prefix so every `31_...md:<line>` citation in
+        # the fx code keeps pointing at the line it named.
+        base = _git("show", f"{_RUN_PHASE_BASE}:{_ASSETS_PREFIX}/{_APPEND_ASSET}")
+        assert _asset_text(_APPEND_ASSET).startswith(base)
+
     def test_the_new_asset_is_appended_and_perturbs_no_earlier_byte(self):
-        # The five preserved files still assemble, in order, as the HEAD of the
+        # The five prior files still assemble, in order, as the HEAD of the
         # prefix. File 32 is appended, never interleaved.
-        head = "\n\n".join(_asset_text(name).strip() for name in _PRESERVED_ASSETS)
+        head = "\n\n".join(
+            _asset_text(name).strip() for name in (*_PRESERVED_ASSETS, _APPEND_ASSET)
+        )
         assert assemble_prefix().startswith(head + "\n\n")
 
     def test_the_prefix_carries_the_new_asset_verbatim_and_stays_byte_stable(self):
@@ -316,6 +334,36 @@ class TestSpatialDesignAsset:
     def test_the_per_show_scan_would_catch_a_binding(self):
         # Non-vacuity: the scan above must be able to fail.
         assert _PER_SHOW_PATTERN.search("Fixture 11 + Fixture 12") is not None
+
+    def test_the_editors_asset_is_in_the_prefix_and_routes_the_three_paradigms(self):
+        # SPEC-COPILOT-FXGEN-001 REQ-FXGEN-016 — the asset must route between
+        # the three effect-creation paradigms and carry the verified preset
+        # store + the recipe write boundary.
+        text = _asset_text(_EDITORS_ASSET)
+        assert text.strip() in assemble_prefix()
+        for token in (
+            "Phaser",
+            "MAtricks",
+            "Recipe",
+            "compose_fx",
+            "instantiate_fx",
+            "/Universal",
+            "At Relative",
+            "At SpeedMaster",
+            "At Width",
+            "At Measure",
+            "At Accel",
+        ):
+            assert token in text, token
+
+    def test_the_editors_asset_forbids_recipe_writing(self):
+        text = _asset_text(_EDITORS_ASSET)
+        assert "Do NOT emit recipe-writing" in text
+
+    def test_the_editors_asset_names_no_per_show_binding(self):
+        for number, line in enumerate(_asset_text(_EDITORS_ASSET).splitlines(), 1):
+            match = _PER_SHOW_PATTERN.search(line)
+            assert match is None, f"{_EDITORS_ASSET}:{number} binds {match.group(0)!r}"
 
     def test_the_recipe_teaches_the_two_step_phaser(self):
         text = _asset_text(_SPATIAL_ASSET)

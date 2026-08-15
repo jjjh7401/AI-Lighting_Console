@@ -102,9 +102,7 @@ def _assert_rejected(client: TestClient, **connect_kwargs) -> None:
 
 class TestHandshakeDecisionMatrix:
     def test_origin_outside_the_allowlist_is_rejected(self):
-        decision = evaluate_handshake(
-            _policy(), origin=EVIL_ORIGIN, subprotocols=_protocols(TOKEN)
-        )
+        decision = evaluate_handshake(_policy(), origin=EVIL_ORIGIN, subprotocols=_protocols(TOKEN))
         assert decision.accepted is False
         assert decision.reason == "origin_not_allowed"
 
@@ -195,9 +193,7 @@ class TestBrowserOriginsForHost:
 class TestWebSocketEndpointGate:
     def test_disallowed_origin_never_reaches_accept(self, tmp_path):
         client = TestClient(_app(tmp_path, handshake=_policy()))
-        _assert_rejected(
-            client, headers={"origin": EVIL_ORIGIN}, subprotocols=_protocols(TOKEN)
-        )
+        _assert_rejected(client, headers={"origin": EVIL_ORIGIN}, subprotocols=_protocols(TOKEN))
 
     def test_stage2_origin_missing_token_never_reaches_accept(self, tmp_path):
         client = TestClient(_app(tmp_path, handshake=_policy()))
@@ -288,9 +284,7 @@ class TestLaunchTokenSecrecy:
         client = TestClient(_app(tmp_path, handshake=_policy()))
         # A rejected connect is the interesting path: the token is in scope in
         # the audit record the reject writes, so a careless log line would leak.
-        _assert_rejected(
-            client, headers={"origin": TAURI_ORIGIN}, subprotocols=_protocols("wrong")
-        )
+        _assert_rejected(client, headers={"origin": TAURI_ORIGIN}, subprotocols=_protocols("wrong"))
         with client.websocket_connect(
             "/ws", headers={"origin": TAURI_ORIGIN}, subprotocols=_protocols(TOKEN)
         ) as ws:

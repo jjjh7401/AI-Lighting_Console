@@ -24,12 +24,11 @@ import pytest
 from server.fx.instantiate import (
     CIRCLE_PHASE_CONFLICT,
     CROSS_CALL_COLLISION,
-    GATED_AXIS_NOT_EMITTED,
-    RELATIVE_NOT_EMITTED,
     SEQUENCE_NUMBER_UNAVAILABLE,
     SEQUENCE_OCCUPIED,
     SEQUENCE_TRUNCATED,
     SEQUENCE_UNAVAILABLE,
+    SPEED_SOURCE_CONFLICT,
     STEP_AXIS_TOO_SHORT,
     VALUE_LINE_COLLISION,
     FxInstantiationError,
@@ -123,6 +122,12 @@ PATTERNS: dict[str, Fx] = {
 # turn into a phaser AND capture into a stored cue. It is the regression
 # baseline, quoted here verbatim rather than rebuilt from the builder's own
 # helpers (which would make the comparison circular).
+#
+# ONE addition rides after the measured store (user report, 2026-08-15 live
+# test): `Label Sequence <n> '<name>'` — the store's quoted name labels the
+# CUE only, so the sequence object showed as a bare number in every pool and
+# executor view. The Label form is already validated and emitted by
+# songcue.py/layout.py; it extends the anchor, it does not reorder it.
 M0_ANCHOR = (
     "ChangeDestination Root",
     "ClearAll",
@@ -133,6 +138,7 @@ M0_ANCHOR = (
     "Attribute 'Dimmer' At Phase 0 Thru 360",
     "Attribute 'Dimmer' At Speed 60",
     "Store Sequence 12 Cue 1 'Dimmer Pulse'",
+    "Label Sequence 12 'Dimmer Pulse'",
     "ClearAll",
 )
 
@@ -443,6 +449,39 @@ def test_an_explicit_label_overrides_the_display_name():
     assert "Store Sequence 12 Cue 1 'Chorus Pulse'" in plan.commands
 
 
+# 실기 2026-08-16 (사용자 발견): onPC 2.4.2 풀 타일은 한글 라벨을 표시하지
+# 못한다 — 저장은 접수되지만 이름이 보이지 않는다. 한글(비ASCII) 라벨은
+# fx_id에서 파생한 영어 라벨로 자동 대체된다.
+def test_a_korean_display_name_falls_back_to_an_english_label():
+    fx = _fx(
+        "pulse",
+        fx_id="pulse-sine-breath",
+        name="사인 브리딩",
+        steps=[{"Dimmer": 100}, {"Dimmer": 0}],
+        speed=60,
+    )
+    plan = build_fx_bundle(fx, group=11, sequence=12)
+    assert plan.label == "Sine Breath Pulse"
+    assert "Store Sequence 12 Cue 1 'Sine Breath Pulse'" in plan.commands
+    assert "Label Sequence 12 'Sine Breath Pulse'" in plan.commands
+
+
+def test_an_explicit_korean_label_also_falls_back_to_english():
+    fx = _fx(
+        "pulse",
+        fx_id="composed-pulse",
+        steps=[{"Dimmer": 100}, {"Dimmer": 0}],
+        speed=60,
+    )
+    plan = build_fx_bundle(fx, group=11, sequence=12, label="살랑살랑 무빙")
+    assert plan.label == "Composed Pulse"
+
+
+def test_an_ascii_label_is_never_rewritten():
+    plan = build_fx_bundle(PATTERNS["pulse"], group=11, sequence=12, label="Gently Sway")
+    assert plan.label == "Gently Sway"
+
+
 def test_the_plan_exposes_the_lines_the_dedupe_will_compare():
     plan = build_fx_bundle(PATTERNS["pulse"], group=11, sequence=12)
     assert "ClearAll" not in plan.non_exempt_commands
@@ -464,21 +503,51 @@ def test_the_structured_plan_names_what_it_will_create():
     assert data["commands"] == list(_bundle("circle", executor=191))
 
 
-def test_an_fx_declaring_relative_is_refused_because_v1_never_emits_it():
-    fx = _fx("sweep", steps=[{"Pan": -20}, {"Pan": 20}], speed=60, relative=30)
-    with pytest.raises(FxInstantiationError) as excinfo:
-        build_fx_bundle(fx, group=11, sequence=12)
-    assert excinfo.value.reason == RELATIVE_NOT_EMITTED
-    assert "declares relative=30" in str(excinfo.value)
+def test_a_relative_fx_emits_relative_step_values():
+    # Measured 2026-08-15 (V2): `At Relative <n>` step values sweep around the
+    # fixture's CURRENT position. The verb replaces the bare `At` on every step
+    # value line and touches nothing else in the bundle.
+    fx = _fx("sweep", steps=[{"Pan": -15}, {"Pan": 15}], speed=60, relative=True)
+    commands = build_fx_bundle(fx, group=11, sequence=12).commands
+    assert "Attribute 'Pan' At Relative -15" in commands
+    assert "Attribute 'Pan' At Relative 15" in commands
+    assert not any(re.fullmatch(r"Attribute 'Pan' At -?15", c) for c in commands)
 
 
 @pytest.mark.parametrize("axis", ["accel", "decel"])
-def test_an_fx_declaring_a_gated_curve_axis_is_refused(axis):
-    fx = _fx("pulse", steps=[{"Dimmer": 100}, {"Dimmer": 0}], speed=60, **{axis: -100})
+def test_a_curve_axis_emits_per_step_lines_after_the_step_run(axis):
+    # Measured 2026-08-15 (V1): the curve lines fire AFTER the whole step run
+    # exists — M0's SKIP came from firing them into a one-step programmer.
+    fx = _fx("pulse", steps=[{"Dimmer": 10}, {"Dimmer": 90}], speed=60, **{axis: -100})
+    commands = list(build_fx_bundle(fx, group=11, sequence=12).commands)
+    keyword = axis.title()
+    lines = [c for c in commands if f"At {keyword} -100" in c]
+    assert lines == [f"Step 1 At {keyword} -100", f"Step 2 At {keyword} -100"]
+    # Both curve lines sit after the last step value line.
+    assert commands.index(lines[0]) > commands.index("Attribute 'Dimmer' At 90")
+
+
+def test_width_measure_and_speedmaster_emit_their_measured_literals():
+    fx = _fx(
+        "pulse",
+        steps=[{"Dimmer": 5}, {"Dimmer": 95}],
+        width=25,
+        measure=4,
+        speed_master=1,
+    )
+    commands = build_fx_bundle(fx, group=11, sequence=12).commands
+    assert "Attribute 'Dimmer' At Width 25" in commands
+    assert "Attribute 'Dimmer' At Measure 4" in commands
+    assert "Attribute 'Dimmer' At SpeedMaster 1" in commands
+
+
+def test_a_fixed_bpm_and_a_master_binding_together_are_refused():
+    # V3 bound the phaser to a master INSTEAD of a fixed BPM; the combination
+    # of both lines on one attribute is unmeasured.
+    fx = _fx("pulse", steps=[{"Dimmer": 0}, {"Dimmer": 100}], speed=60, speed_master=1)
     with pytest.raises(FxInstantiationError) as excinfo:
         build_fx_bundle(fx, group=11, sequence=12)
-    assert excinfo.value.reason == GATED_AXIS_NOT_EMITTED
-    assert f"declares {axis}=-100" in str(excinfo.value)
+    assert excinfo.value.reason == SPEED_SOURCE_CONFLICT
 
 
 # =============================================================================
@@ -805,7 +874,7 @@ def test_not_executed_commands_are_propagated_and_success_is_withheld():
     assert report.failed == (plan.commands[store],)
     assert report.not_executed == tuple(plan.commands[store + 1 :])
     text = to_korean(report)
-    assert "미실행 1개" in text
+    assert "미실행 2개" in text  # Label Sequence + ClearAll follow the failed store
     assert "실패 1개" in text
 
 

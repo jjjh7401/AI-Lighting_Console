@@ -11,16 +11,21 @@
 // No tool list, no full pool catalog, no settings, no approval cards live
 // here — those are hidden by App.tsx's mode switch, not by this component.
 //
-// Sources ONLY `cue_monitor` state (no new server endpoint, per contract).
-// The run button reuses the EXACT SAME panel_execute wire path DashBoard's
-// executor tiles use (App.tsx wires it in) — a required approval/gate still
-// surfaces the normal ApprovalCard/ReviewCard, since this mode never
-// bypasses that flow (App.tsx keeps rendering them above/below this list).
+// The execution view sources `cue_monitor`; the adjacent director timeline is
+// a server-authored review projection with no executable command fields.
+// Both remain read-only until App.tsx drives the existing approval route.
 //
 // No internal hooks, same convention as CueMonitor.tsx/DashBoard.tsx — a
 // hook-free component callable directly as a plain function in tests (this
 // project has no DOM/jsdom test harness; see protocol.ts's own header note).
-import { type CueExecutorEntry, type CueMonitorState } from "../protocol";
+import type { ReactNode } from "react";
+
+import {
+  type CueExecutorEntry,
+  type CueMonitorState,
+  type SongTimelineView,
+} from "../protocol";
+import { SongTimeline } from "./SongTimeline";
 import { formatSyncTime } from "./DashBoard";
 import { sequenceLabel } from "./CueMonitor";
 
@@ -34,6 +39,14 @@ export interface RunbookModeProps {
   onExecute?: (executorNo: number) => void;
   /** Manual `cue_monitor_request` dispatch, same as CueMonitor's refresh. */
   onRefresh?: () => void;
+  timeline?: SongTimelineView | null;
+  timelineStale?: boolean;
+  timelineIsExample?: boolean;
+  /** Adds a visibly marked, non-executable fixture for UI review only. */
+  onShowTimelineExample?: () => void;
+  /** Timeline library panel (save/load named versions) — rendered above the
+   * timeline when App supplies it; RunbookMode itself stays hook-free. */
+  librarySlot?: ReactNode;
 }
 
 /**
@@ -150,7 +163,17 @@ function RunbookRow({
   );
 }
 
-export function RunbookMode({ cueMonitor, isExecutorRunning, onExecute, onRefresh }: RunbookModeProps) {
+export function RunbookMode({
+  cueMonitor,
+  isExecutorRunning,
+  onExecute,
+  onRefresh,
+  timeline = null,
+  timelineStale = false,
+  timelineIsExample = false,
+  onShowTimelineExample,
+  librarySlot = null,
+}: RunbookModeProps) {
   const staleSuffix = cueMonitor.stale ? " (오래됨 — 콘솔 연결을 확인하세요)" : "";
 
   return (
@@ -165,6 +188,28 @@ export function RunbookMode({ cueMonitor, isExecutorRunning, onExecute, onRefres
           ⟳ 새로고침
         </button>
       </header>
+      {librarySlot}
+      {timeline === null ? (
+        <section className="runbook-timeline-pending" aria-label="감독 타임라인 대기">
+          <div>
+            <p>감독 타임라인</p>
+            <span>실제 설계가 완료되면 구간별 Cue 계획이 실행 런북 위에 표시됩니다.</span>
+          </div>
+          {onShowTimelineExample && (
+            <button className="runbook-timeline-example" onClick={onShowTimelineExample}>
+              예제 보기
+            </button>
+          )}
+        </section>
+      ) : (
+        <SongTimeline
+          timeline={timeline}
+          cueMonitor={cueMonitor}
+          stale={timelineStale}
+          isExample={timelineIsExample}
+        />
+      )}
+      <p className="runbook-execution-label">실행 런북 · 현재 콘솔 큐</p>
       {cueMonitor.executors.length === 0 ? (
         <div className="runbook-empty">
           확인된 곡·큐가 없습니다 — 콘솔이 아직 연결되지 않았거나 응답이 없을 수 있습니다.

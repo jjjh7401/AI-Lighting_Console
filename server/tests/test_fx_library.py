@@ -33,7 +33,9 @@ import yaml
 
 from server.fx.loader import DEFAULT_LIBRARY_DIR, FxSchemaError, load_library_from_dir
 from server.fx.schema import (
-    GATED_CURVE_AXES,
+    CURVE_AXES,
+    CURVE_MAX,
+    CURVE_MIN,
     KNOWN_ATTRIBUTES,
     MIN_STEPS,
     PATTERN_KINDS,
@@ -68,9 +70,6 @@ M0_ANCHOR_PHASE = (0.0, 360.0)
 # comment is the invitation for the next author to write a real one.
 FORBIDDEN_COMMAND_FORMS = (
     "at absolute",  # static position value — spec.md §D
-    "at accel",  # probe-pending curve, effect unobserved at M0 (SKIP)
-    "at decel",
-    "at relative",  # unmeasured as a step value — ASSUMPTION-40, v1 never emits it
     "attribute '",  # the assets carry values, never command lines
 )
 
@@ -256,31 +255,29 @@ class TestVocabularyBands:
                 "(spec.md §D) and the preview classifier rates it dangerous"
             )
 
-    def test_no_loaded_fx_carries_a_relative_amplitude(self, library):
-        # The parsed half of the `At Relative` exclusion: the schema keeps the
-        # axis (a successor may measure it) and v1 leaves it empty.
-        offenders = [fx.fx_id for fx in library.fx if fx.relative is not None]
-        assert offenders == [], f"{offenders} declare a relative amplitude; v1 never emits it"
+    def test_relative_is_a_boolean_flag_on_every_loaded_fx(self, library):
+        # Measured 2026-08-15 (V2): `At Relative <n>` holds as a step value.
+        # The axis is a bool — the amplitude still lives in the step values.
+        offenders = [fx.fx_id for fx in library.fx if not isinstance(fx.relative, bool)]
+        assert offenders == [], f"{offenders} carry a non-boolean relative flag"
 
 
-class TestGatedCurveAxesCarryNoValue:
-    """AC-FXLIB-003 ② — accel/decel got `ok:true` and no observed effect at M0."""
+class TestCurveAxesStayInsideTheMeasuredSpan:
+    """Measured 2026-08-15 (V1): `Step <k> At Accel/Decel -100` renders a sine
+    fade on stage, so the curve axes carry values now — inside the percent span.
+    """
 
-    def test_no_asset_entry_declares_a_gated_curve_key(self, raw_entries):
-        # Raw layer on purpose: the loader refuses these values, but that
-        # refusal is M1's test. This one names the ASSET as the offender.
-        for where, entry in raw_entries:
-            declared = [axis for axis in GATED_CURVE_AXES if entry.get(axis) is not None]
-            assert declared == [], (
-                f"{where} declares {declared}; those curves are probe-pending "
-                "(M0 recorded ok:true with no observed effect), so v1 defines the "
-                "field and never carries a value in it"
-            )
-
-    def test_no_loaded_fx_carries_a_gated_curve_value(self, library):
+    def test_every_declared_curve_value_is_in_range(self, library):
         for fx in library.fx:
-            for axis in GATED_CURVE_AXES:
-                assert getattr(fx, axis) is None, f"{fx.fx_id} carries {axis}"
+            for axis in CURVE_AXES:
+                value = getattr(fx, axis)
+                if value is not None:
+                    assert CURVE_MIN <= value <= CURVE_MAX, f"{fx.fx_id} {axis}={value}"
+
+    def test_the_measured_sine_shape_is_in_the_library(self, library):
+        # The V1 measurement transcribed: breath-sine IS the observed effect.
+        fx = library.by_id("pulse-sine-breath")
+        assert (fx.accel, fx.decel) == (-100.0, -100.0)
 
 
 class TestForbiddenStepFormIsAbsent:
@@ -375,11 +372,14 @@ class TestKoreanIsFirstClass:
 class TestSpeedSeeds:
     """REQ-FXLIB-002 — the mood table reseeded under a BPM reading."""
 
-    def test_every_fx_declares_a_speed(self, library):
-        # An entry with no speed inherits whatever rate was last set, which is
-        # the same silent inheritance an unset colour channel would cause.
+    def test_every_fx_declares_exactly_one_speed_source(self, library):
+        # An entry with no speed source inherits whatever rate was last set,
+        # which is the same silent inheritance an unset colour channel would
+        # cause. Since 2026-08-15 (V3) the source may instead be a live master
+        # binding — but never BOTH (the combination is unmeasured).
         for fx in library.fx:
-            assert fx.speed is not None, f"{fx.fx_id} declares no speed"
+            sources = [s for s in (fx.speed, fx.speed_master) if s is not None]
+            assert len(sources) == 1, f"{fx.fx_id} declares {len(sources)} speed sources"
 
     def test_every_speed_is_a_mood_table_seed_or_the_measured_anchor(self, library):
         for fx in library.fx:
@@ -389,6 +389,8 @@ class TestSpeedSeeds:
                 # read off a table (progress.md §E.2).
                 assert fx.speed == M0_ANCHOR_SPEED
                 continue
+            if fx.speed is None:
+                continue  # master-bound: the operator owns the tempo (V3)
             in_slow = SLOW_BAND[0] <= fx.speed <= SLOW_BAND[1]
             in_fast = FAST_BAND[0] <= fx.speed <= FAST_BAND[1]
             assert in_slow or in_fast, (
@@ -397,7 +399,7 @@ class TestSpeedSeeds:
             )
 
     def test_the_library_offers_both_bands(self, library):
-        speeds = [fx.speed for fx in library.fx]
+        speeds = [fx.speed for fx in library.fx if fx.speed is not None]
         assert any(SLOW_BAND[0] <= s <= SLOW_BAND[1] for s in speeds), "no slow-band entry"
         assert any(FAST_BAND[0] <= s <= FAST_BAND[1] for s in speeds), "no fast-band entry"
 
