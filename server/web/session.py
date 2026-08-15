@@ -19,6 +19,7 @@ thread-safe (the app wraps the WebSocket send accordingly).
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 from collections.abc import Callable, Mapping, Sequence
@@ -221,6 +222,20 @@ class _UploadedVectorworksExport:
         self.report = None
 
 
+@dataclass(frozen=True)
+class LayoutImageUpload:
+    """One session's most-recently attached layout image (SPEC-COPILOT-IMGLAYOUT-001 M1).
+
+    Ephemeral and WS-session-scoped, same as ``_UploadedVectorworksExport`` —
+    but a new upload REPLACES the field wholesale (contract §1) rather than
+    mutating in place, so the dataclass itself can stay frozen.
+    """
+
+    file_name: str
+    mime_type: str
+    content_base64: str
+
+
 @dataclass
 class _PendingRepeatingColumns:
     """The still-incomplete MMX/MMX/350 layout for this chat connection."""
@@ -401,6 +416,10 @@ class ChatSession:
         # bare follow-up modification can anchor to the real target.
         self._last_created: LastCreated | None = None
         self._vectorworks_upload = _UploadedVectorworksExport()
+        # SPEC-COPILOT-IMGLAYOUT-001 M1 — the layout-sketch attachment (most
+        # recent only; a new upload replaces it). M3's ``analyse_layout_image``
+        # tool reads this field; M1 only stores it.
+        self._layout_image: LayoutImageUpload | None = None
         # M6c-1 Finding 1/2: a unique identity for THIS connection, scoping the
         # shared approval_channel/review_channel/gate's per-session state so a
         # sibling ChatSession's disconnect or screening never leaks in.
@@ -1750,6 +1769,26 @@ class ChatSession:
         """Replace this session's export and immediately start its guided analysis."""
         self._vectorworks_upload.replace(file_name, content_base64)
         return self.run_instruction(_VECTORWORKS_UPLOAD_INSTRUCTION)
+
+    def upload_layout_image(self, file_name: str, mime_type: str, content_base64: str) -> dict:
+        """Replace this session's attached layout image (REQ-IMGLAYOUT-001/003).
+
+        Storage only — unlike ``upload_vectorworks_export`` this does NOT start
+        a guided instruction. The vision analysis is a tool the model reaches
+        for (``analyse_layout_image``, M3) only once the operator has actually
+        described what to do with the image; auto-analysing on upload would
+        spend a model call before there is any description to analyse against.
+        Wire-level validation (MIME allowlist, base64, the 5 MiB cap) already
+        happened in ``parse_client_message`` — a message that reaches here is
+        already accepted.
+        """
+        self._layout_image = LayoutImageUpload(
+            file_name=file_name, mime_type=mime_type, content_base64=content_base64
+        )
+        size_kb = len(base64.b64decode(content_base64)) // 1024
+        event = notice_event(f"이미지 '{file_name}' 첨부됨 ({size_kb}KB)")
+        self._send(event)
+        return event
 
     # -- internals ------------------------------------------------------------------
 

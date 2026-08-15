@@ -18,6 +18,7 @@ import {
   buildReviewDecision,
   buildStatusRequest,
   buildVectorworksExportUpload,
+  buildLayoutImageUpload,
   buildHistoryRestore,
   CHAT_STORAGE_KEY,
   clearPendingRequests,
@@ -187,6 +188,8 @@ export interface CopilotSocket {
   sendReviewDecision: (requestId: string, approved: boolean) => void;
   sendQuestionAnswer: (requestId: string, answer: string) => void;
   sendVectorworksExportUpload: (fileName: string, contentBase64: string) => boolean;
+  /** SPEC-COPILOT-IMGLAYOUT-001 M1 — attach a design/reference image. */
+  sendLayoutImageUpload: (fileName: string, mimeType: string, contentBase64: string) => boolean;
   sendLock: (active: boolean) => void;
   sendPanelExecute: (targetKind: PanelTargetKind, target: number) => void;
   sendPanelStop: (targetKind: PanelTargetKind, target: number) => void;
@@ -334,6 +337,16 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     },
     [],
   );
+  const sendLayoutImageUpload = useCallback(
+    (fileName: string, mimeType: string, contentBase64: string) => {
+      const socket = socketRef.current;
+      if (socket === null || socket.readyState !== WebSocket.OPEN) return false;
+      dispatch({ kind: "user", text: `이미지 첨부: ${fileName}` });
+      socket.send(buildLayoutImageUpload(fileName, mimeType, contentBase64));
+      return true;
+    },
+    [],
+  );
   const sendDecision = useCallback(
     (requestId: string, approved: boolean) => send(buildApprovalDecision(requestId, approved)),
     [send],
@@ -374,6 +387,7 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     responding,
     sendChat,
     sendVectorworksExportUpload,
+    sendLayoutImageUpload,
     sendDecision,
     sendReviewDecision,
     sendQuestionAnswer,

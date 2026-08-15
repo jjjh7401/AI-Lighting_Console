@@ -5,6 +5,7 @@ import {
   buildApprovalDecision,
   buildChat,
   buildVectorworksExportUpload,
+  buildLayoutImageUpload,
   buildCueMonitorRequest,
   buildDashCatalogRequest,
   buildLock,
@@ -65,6 +66,13 @@ describe("builders", () => {
       v: 1,
       type: "vectorworks_export_upload",
       file_name: "design.xlsx",
+      content_base64: "c2FmZQ==",
+    });
+    expect(JSON.parse(buildLayoutImageUpload("stage-sketch.png", "image/png", "c2FmZQ=="))).toEqual({
+      v: 1,
+      type: "layout_image_upload",
+      file_name: "stage-sketch.png",
+      mime_type: "image/png",
       content_base64: "c2FmZQ==",
     });
     expect(JSON.parse(buildApprovalDecision("req-1", true))).toEqual({

@@ -25,6 +25,13 @@ VECTORWORKS_UPLOAD_EXTENSIONS = (".csv", ".txt", ".xlsx", ".mvr")
 MAX_VECTORWORKS_UPLOAD_BYTES = 8 * 1024 * 1024
 MAX_VECTORWORKS_UPLOAD_BASE64_LENGTH = ((MAX_VECTORWORKS_UPLOAD_BYTES + 2) // 3) * 4
 
+# SPEC-COPILOT-IMGLAYOUT-001 M1 — the layout-sketch attachment channel. Same
+# validate-before-store shape as the Vectorworks export above: an unlisted MIME
+# type or an oversized payload never reaches session storage.
+LAYOUT_IMAGE_MIME_TYPES = ("image/png", "image/jpeg", "image/webp")
+MAX_LAYOUT_IMAGE_BYTES = 5 * 1024 * 1024
+MAX_LAYOUT_IMAGE_BASE64_LENGTH = ((MAX_LAYOUT_IMAGE_BYTES + 2) // 3) * 4
+
 # The show-control panel's client messages (SPEC-COPILOT-SHOWUI-001 M1). Like
 # the M7 "review_decision" extension before it this is ADDITIVE: the protocol
 # version stays 1 and every type below is registered on BOTH allowlists — here
@@ -72,6 +79,8 @@ HISTORY_RESTORE_ROLES = ("user", "assistant")
 CLIENT_MESSAGE_TYPES = (
     "chat",
     "vectorworks_export_upload",
+    # SPEC-COPILOT-IMGLAYOUT-001 M1 — the layout-sketch attachment channel.
+    "layout_image_upload",
     "approval_decision",
     "review_decision",
     # [round24 후속] 모델이 되묻고 사용자가 답하는 통로. 승인·검토와 달리
@@ -199,6 +208,39 @@ def parse_client_message(raw: str) -> dict:
             "v": PROTOCOL_VERSION,
             "type": "vectorworks_export_upload",
             "file_name": file_name.strip(),
+            "content_base64": content_base64,
+        }
+
+    if message_type == "layout_image_upload":
+        file_name = message.get("file_name")
+        mime_type = message.get("mime_type")
+        content_base64 = message.get("content_base64")
+        if not isinstance(file_name, str) or not file_name.strip():
+            raise ProtocolError("layout_image_upload.file_name must be a non-empty string")
+        if mime_type not in LAYOUT_IMAGE_MIME_TYPES:
+            allowed = ", ".join(LAYOUT_IMAGE_MIME_TYPES)
+            raise ProtocolError(f"layout_image_upload.mime_type must be one of: {allowed}")
+        if not isinstance(content_base64, str) or not content_base64:
+            raise ProtocolError(
+                "layout_image_upload.content_base64 must be a non-empty base64 string"
+            )
+        if len(content_base64) > MAX_LAYOUT_IMAGE_BASE64_LENGTH:
+            raise ProtocolError("layout_image_upload exceeds the 5 MiB limit")
+        try:
+            payload = base64.b64decode(content_base64, validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise ProtocolError(
+                f"layout_image_upload.content_base64 is not valid base64: {error}"
+            ) from error
+        if not payload:
+            raise ProtocolError("layout_image_upload.content_base64 must not decode to empty")
+        if len(payload) > MAX_LAYOUT_IMAGE_BYTES:
+            raise ProtocolError("layout_image_upload exceeds the 5 MiB limit")
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "layout_image_upload",
+            "file_name": file_name.strip(),
+            "mime_type": mime_type,
             "content_base64": content_base64,
         }
 
