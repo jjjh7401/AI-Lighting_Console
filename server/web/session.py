@@ -4232,14 +4232,22 @@ class ChatSession:
 
     def _console_slot_state(self, path: str, *, probe_id: str) -> str:
         """One pool slot's verdict: 'empty' | 'occupied' | 'unreadable'.
-        FAIL-CLOSED consumers treat unreadable as occupied (#6, 2026-08-16),
-        but the split lets fallback cards SAY why nothing could be proposed
-        (실측 2026-08-15: responder flapping 중 전 슬롯이 점유로 보이는 폴백을
-        사용자가 '전부 차 있음'으로 오독)."""
+
+        실측 2026-08-16 (사용자 질문 '왜 항상 같은 번호만 제안?'): the REAL
+        console answers an EMPTY pool slot with an ERROR — ``ok:false, "path
+        segment not found: …"`` — not an empty payload. That error is the
+        console POSITIVELY stating absence (the same reading tools.py's
+        requery path documents), so it maps to 'empty'; only a genuinely
+        unknown failure (timeout, transport) stays 'unreadable'. FAIL-CLOSED
+        consumers treat unreadable as occupied (#6), and the split lets
+        fallback cards SAY why nothing could be proposed."""
         probe = self._registry.dispatch(
             ToolCall(id=probe_id, name="query_state", arguments={"path": path})
         )
         if probe.result.is_error:
+            detail = str(probe.result.content or "").casefold()
+            if "not found" in detail:
+                return "empty"
             return "unreadable"
         try:
             payload = json.loads(probe.result.content)

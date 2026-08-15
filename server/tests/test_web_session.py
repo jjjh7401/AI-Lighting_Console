@@ -2553,6 +2553,39 @@ class TestSongDesignInterviewSession:
         assert "시퀀스 110: 비어 있음 확인(신규 저장)" in approval_prompt
         assert "기존 데이터 덮어쓰기: 없음" in approval_prompt
 
+    def test_a_not_found_error_is_a_verified_empty_slot(self, tmp_path):
+        # 실기 2026-08-16 (사용자: '왜 항상 같은 번호만 제안?'): 실기 콘솔은
+        # 빈 슬롯 조회에 'path segment not found' 오류로 답한다 — 부재의
+        # 확답이므로 '비어 있음'으로 판정해야 제안이 가능하다.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+
+        class RealConsoleRegistry:
+            def dispatch(self, call):
+                path = call.arguments["path"]
+                if path.endswith("/110"):  # 실존 시퀀스만 정상 응답
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps({"ok": True, "node": {"name": "Sequence 110"}}),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=f"state query failed for {path!r}: path segment not found",
+                        is_error=True,
+                    )
+                )
+
+        session._registry = RealConsoleRegistry()
+        assert session._song_sequence_occupied(110) is True
+        assert session._song_sequence_occupied(120) is False
+        assert session._song_free_sequence_slots(120) == [120, 130, 140]
+        assert session._free_timecode_slots(7) == [8, 9]
+
     def test_a_flapping_probe_revives_on_the_single_retry_pass(self, tmp_path):
         # 실기 2026-08-16: responder flapping은 간헐적 — 첫 탐침이 실패한
         # 슬롯은 1회 재시도로 살아나 검증된 번호를 제안할 수 있어야 한다.
