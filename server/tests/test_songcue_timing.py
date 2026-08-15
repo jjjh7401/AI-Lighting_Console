@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import re
 
 import pytest
@@ -13,6 +14,7 @@ from server.looks.songcue import (
     build_songcue_bundle,
     build_songcue_timing,
     parse_sections,
+    plan_prepare_songcue_timing,
 )
 from server.tests.busking_fixtures import FULL_RIG
 from server.tests.test_looks_instantiate import _groups
@@ -101,6 +103,58 @@ def test_disabled_timecode_axis_keeps_auto_advance_go_independent():
     assert _commands_matching(plan.commands, r"\bTimecode\b") == []
     assert _trig_times(plan.auto_advance_commands) == ["10", "14"]
     assert _skip_axes(plan) == {TIMECODE_DESCOPE}
+
+
+def test_prepare_songcue_timing_plan_preserves_existing_command_formation():
+    bundle = _bundle()
+    request = {
+        "song_title": "테스트 곡",
+        "genre": "록",
+        "timecode_number": 7,
+        "sections": [{"name": "Chorus", "start": "0:10"}],
+    }
+
+    plan = plan_prepare_songcue_timing(bundle, request)
+
+    assert plan == build_songcue_timing(bundle, timecode_number=7)
+    assert plan.timecode_commands == (
+        "Store Timecode 7",
+        f"Set Timecode 7 Property 'Name' '{bundle.sequence_name} Timecode'",
+        f"Assign Sequence {bundle.sequence_number} At Timecode 7",
+    )
+    assert plan.auto_advance_commands == (
+        f"Set Cue 1 Sequence {bundle.sequence_number} Property 'TrigType' 'Time'",
+        f"Set Cue 1 Sequence {bundle.sequence_number} Property 'TrigTime' 10",
+        f"Set Cue 2 Sequence {bundle.sequence_number} Property 'TrigType' 'Time'",
+        f"Set Cue 2 Sequence {bundle.sequence_number} Property 'TrigTime' 14",
+    )
+
+
+@pytest.mark.parametrize(
+    "request_payload",
+    (
+        {},
+        {"timecode": 7},
+        {"timecode_number": 0},
+        {"timecode_number": True},
+        {"timecode_number": "7"},
+        {"timecode_number": 7.0},
+    ),
+)
+def test_prepare_songcue_timing_plan_rejects_non_prepare_songcue_timecode_grammar(
+    request_payload,
+):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("'timecode_number' must be a positive integer"),
+    ):
+        plan_prepare_songcue_timing(_bundle(), request_payload)
+
+
+def test_prepare_songcue_timing_plan_has_no_console_io_surface():
+    parameters = set(inspect.signature(plan_prepare_songcue_timing).parameters)
+
+    assert parameters == {"bundle", "request", "axes"}
 
 
 @pytest.mark.skip(reason="ASSUMPTION-20 is GO in M4; DESCOPE branch retained for a future rerun")

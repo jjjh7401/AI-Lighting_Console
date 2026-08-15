@@ -340,6 +340,19 @@ def build_songcue_timing(
     )
 
 
+def plan_prepare_songcue_timing(
+    bundle: SongCueBundle,
+    request: Mapping[str, object],
+    *,
+    axes: SongCueTimingAxes | None = None,
+) -> SongCueTimingPlan:
+    return build_songcue_timing(
+        bundle,
+        timecode_number=_prepare_songcue_timecode_number(request),
+        axes=axes,
+    )
+
+
 def _parse_section(raw: Mapping[str, object] | Sequence[object], index: int) -> SongCueSection:
     section = _raw_section(raw)
     name = section.name.strip()
@@ -594,6 +607,17 @@ def _raw_section(raw: Mapping[str, object] | Sequence[object]) -> _RawSection:
         raise ValueError("section entries must provide exactly two values")
     name, start = raw
     return _RawSection(name=str(name), start=start)
+
+
+def _prepare_songcue_timecode_number(request: Mapping[str, object]) -> int:
+    timecode_number = request.get("timecode_number")
+    if (
+        isinstance(timecode_number, bool)
+        or not isinstance(timecode_number, int)
+        or timecode_number < 1
+    ):
+        raise ValueError("'timecode_number' must be a positive integer")
+    return timecode_number
 
 
 def _first_present(values: Mapping[str, object], keys: Sequence[str]) -> object:

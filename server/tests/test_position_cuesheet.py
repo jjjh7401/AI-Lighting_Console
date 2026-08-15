@@ -10,11 +10,20 @@ from __future__ import annotations
 
 import pytest
 
+from server.design.position_sheet import build_standard_position_cue_sheet
+from server.design.profile import MusicProfile
+from server.design.rig import build_rig_profile
 from server.spatial.pointing import SpatialPointingError
 from server.spatial.position_cuesheet import (
     PositionSheetSection,
     build_position_cue_sheet,
 )
+
+
+def _single_layer_rig():
+    """A rig with no declared layers and no group-name heuristic hit — the
+    RG1 single-layer degrade (RigLayers.mapped is False)."""
+    return build_rig_profile(patch=[], groups={}, coords=[])
 
 
 def _sections() -> tuple[PositionSheetSection, ...]:
@@ -127,4 +136,123 @@ class TestBuildPositionCueSheet:
                 sequence_no=110,
                 preset_start=21,
                 fids=[20],
+            )
+
+
+class TestStandardEngineIntegration:
+    """R4: the standard sheet consuming M1's profile+rig engine
+    (SPEC-COPILOT-SONGSTD-001, spec.md §R4) — via
+    ``server.design.position_sheet.build_standard_position_cue_sheet``, the
+    design-layer home the SONGSTD M2 path moved to so ``server/spatial``
+    stays stdlib + intra-spatial (AC-SPATIAL-013)."""
+
+    def _profile_sections(self):
+        return (
+            PositionSheetSection("Verse", 0, "잔잔한 발라드"),  # Vocal DSC, D2
+            PositionSheetSection("Outro", 20_000, "웅장한 피날레"),  # Ring In, D5
+        )
+
+    def test_no_profile_output_is_unchanged(self):
+        # Byte-identical to the pre-R4 contract: flat _LIT_DIMMER — and the
+        # pure spatial draft carries no lint at all since the SONGSTD M2
+        # boundary move (the audit lives on StandardPositionCueSheet).
+        sheet = build_position_cue_sheet(
+            self._profile_sections(), sequence_no=110, preset_start=21, fids=[20]
+        )
+        assert [plan.dimmer for plan in sheet.plans] == [100.0, 100.0]
+        assert not hasattr(sheet, "lint_report")
+
+    def test_explicit_profile_changes_d2_vs_d5_dimmer_and_fade(self):
+        profile = MusicProfile(bpm=120.0)
+        rig = _single_layer_rig()
+        sheet = build_standard_position_cue_sheet(
+            self._profile_sections(),
+            sequence_no=110,
+            preset_start=21,
+            fids=[20],
+            profile=profile,
+            rig=rig,
+        )
+        by_cue = {plan.cue_no: plan for plan in sheet.plans}
+        # D2 row: dimmer (40, 60) -> midpoint 50; fade_beats (4, 4) at 120bpm -> 2.0s.
+        assert by_cue[1].dimmer == 50.0
+        assert by_cue[1].fade_seconds == 2.0
+        # D5 row: dimmer (100, 100) -> 100; fade_beats (0, 1) at 120bpm -> 0.25s.
+        assert by_cue[2].dimmer == 100.0
+        assert by_cue[2].fade_seconds == 0.25
+        # E1/G2: D rose -> dimmer rose and fade shortened.
+        assert by_cue[1].dimmer < by_cue[2].dimmer
+        assert by_cue[1].fade_seconds > by_cue[2].fade_seconds
+
+    def test_no_all_100_percent_sheet(self):
+        # The Seq 114 defect this REQ fixes: every cue flat at 100%.
+        profile = MusicProfile(bpm=120.0)
+        rig = _single_layer_rig()
+        sheet = build_standard_position_cue_sheet(
+            self._profile_sections(),
+            sequence_no=110,
+            preset_start=21,
+            fids=[20],
+            profile=profile,
+            rig=rig,
+        )
+        dimmers = [plan.dimmer for plan in sheet.plans]
+        assert not all(value == 100.0 for value in dimmers)
+
+    def test_mib_alternative_rotation_and_follow_survive_with_profile(self):
+        profile = MusicProfile(bpm=120.0)
+        rig = _single_layer_rig()
+        sheet = build_standard_position_cue_sheet(
+            _sections(),
+            sequence_no=110,
+            preset_start=21,
+            fids=[20],
+            profile=profile,
+            rig=rig,
+        )
+        assert [plan.cue_no for plan in sheet.plans] == [1, 2, 2.5, 3]
+        premove = sheet.plans[2]
+        assert premove.preset_no == 28 and premove.dimmer is None
+        reveal = sheet.plans[3]
+        assert reveal.preset_no is None
+        # D4 ("클럽 드롭" -> Cross): dimmer (80, 100) -> midpoint 90, not the
+        # flat pre-R4 100.0 — proof the reveal's dimmer is now D-budget-driven.
+        assert reveal.dimmer == 90.0
+        follow_lines = [line for bundle in sheet.bundles for line in bundle if "Follow" in line]
+        assert follow_lines == ["Set Cue 2.5 Sequence 110 Property 'TrigType' 'Follow'"]
+
+    def test_single_layer_rig_reports_l6_l7_disabled(self):
+        profile = MusicProfile(bpm=120.0)
+        rig = _single_layer_rig()
+        sheet = build_standard_position_cue_sheet(
+            (PositionSheetSection("Verse", 0, "잔잔한 발라드"),),
+            sequence_no=110,
+            preset_start=21,
+            fids=[20],
+            profile=profile,
+            rig=rig,
+        )
+        disabled_ids = {note.rule_id for note in sheet.lint_report.disabled_rules}
+        assert {"L6", "L7"} <= disabled_ids
+
+    def test_profile_and_rig_are_structurally_required(self):
+        # The old runtime "supplied together" check became structural with
+        # the SONGSTD M2 boundary move: the design entry point REQUIRES both
+        # keywords, and the pure spatial builder accepts neither.
+        with pytest.raises(TypeError):
+            build_standard_position_cue_sheet(
+                self._profile_sections(),
+                sequence_no=110,
+                preset_start=21,
+                fids=[20],
+                profile=MusicProfile(bpm=120.0),
+            )
+        with pytest.raises(TypeError):
+            build_position_cue_sheet(
+                self._profile_sections(),
+                sequence_no=110,
+                preset_start=21,
+                fids=[20],
+                profile=MusicProfile(bpm=120.0),
+                rig=_single_layer_rig(),
             )

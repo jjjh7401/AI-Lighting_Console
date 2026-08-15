@@ -128,6 +128,7 @@ def build_position_cue_sheet(
     fids: Sequence[int],
     fade_seconds: float = 3.0,
     move_seconds: float = 1.0,
+    lit_dimmer_fade: Sequence[tuple[float, float]] | None = None,
 ) -> PositionCueSheet:
     """The draft sheet for ``sections`` — resolutions, MIB plans, bundles.
 
@@ -136,11 +137,28 @@ def build_position_cue_sheet(
     exactly as ``_basic_position_presets`` stored them. Recalling a guessed
     slot would aim the show at whatever happens to live there, so the number
     always comes from the operator (instruction or question card).
+
+    ``lit_dimmer_fade`` is R4's optional per-section (dimmer %, fade
+    seconds) pair, aligned one-to-one with ``sections`` (SPEC-COPILOT-
+    SONGSTD-001 M2). The design layer derives each pair from the section's
+    own D level and hands the finished numbers DOWN
+    (:func:`server.design.position_sheet.build_standard_position_cue_sheet`)
+    — this analysis layer stays stdlib + intra-spatial (AC-SPATIAL-013).
+    Omitted, behaviour is byte-identical to the pre-R4 contract: every lit
+    cue stores the flat ``_LIT_DIMMER`` and the caller's own
+    ``fade_seconds``. Blackout cues, the skip rule, MIB pre-moves, the
+    alternative-rotation, and the pre-move ``Follow`` trigger never read
+    these pairs.
     """
     if not sections:
         raise SpatialPointingError("no song sections to build a sheet from")
     if preset_start <= 0:
         raise SpatialPointingError(f"preset start {preset_start!r} must be positive")
+    if lit_dimmer_fade is not None and len(lit_dimmer_fade) != len(sections):
+        raise SpatialPointingError(
+            f"lit_dimmer_fade carries {len(lit_dimmer_fade)} pairs "
+            f"for {len(sections)} sections — one pair per section"
+        )
     for prev, cur in zip(sections, sections[1:], strict=False):
         if not cur.start_ms > prev.start_ms:
             raise SpatialPointingError(
@@ -189,13 +207,17 @@ def build_position_cue_sheet(
                 varied_from=(suggestion.entry.label if label != suggestion.entry.label else None),
             )
         )
+        if lit_dimmer_fade is None:
+            cue_dimmer, cue_fade = _LIT_DIMMER, fade_seconds
+        else:
+            cue_dimmer, cue_fade = lit_dimmer_fade[index]
         plans.append(
             PositionCuePlan(
                 cue_no=cue_no,
                 name=_cue_name(section, cue_no),
                 preset_no=preset_no,
-                dimmer=_LIT_DIMMER,
-                fade_seconds=fade_seconds,
+                dimmer=cue_dimmer,
+                fade_seconds=cue_fade,
             )
         )
 

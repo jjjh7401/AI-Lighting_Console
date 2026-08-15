@@ -157,8 +157,8 @@ def layout_terms_guidance(text: str) -> str:
 
 
 _GRID = re.compile(r"(?:바둑판|그리드|grid|매트릭스)", re.IGNORECASE)
-_ROW = re.compile(r"(?:일렬|한[\s-]*줄|라인|row)", re.IGNORECASE)
-_CIRCLE = re.compile(r"(?:원형|원[\s-]*형|원으로|링|circle|ring)", re.IGNORECASE)
+_ROW = re.compile(r"(?:일렬|한[\s-]*줄|라인|row|줄\s*세워)", re.IGNORECASE)
+_CIRCLE = re.compile(r"(?:원형|원[\s-]*형|원으로|링|circle|ring|동그랗게|둥글게)", re.IGNORECASE)
 _GRID_SIZE = re.compile(r"(?P<rows>\d+)\s*행\s*(?:[×xX*]\s*)?(?P<columns>\d+)\s*열")
 _SPACING = re.compile(
     r"(?P<value>\d+(?:[.,]\d+)?)\s*(?:m|미터)\s*(?:간격|spacing)",
