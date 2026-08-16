@@ -1,8 +1,9 @@
 """Preset geometry — the target coordinates a WRITE arranges fixtures onto
 (REQ-SPATIAL-019, design.md §6.6, AC-SPATIAL-018).
 
-Three shapes, ``grid`` / ``row`` / ``circle``, computed from standard-library
-arithmetic only. Like the rest of this package the layer is PURE: it reads no
+Four shapes, ``grid`` / ``row`` / ``circle`` / ``triangle``, computed from
+standard-library arithmetic only. Like the rest of this package the layer is
+PURE: it reads no
 console, sends nothing, and knows nothing about how a coordinate eventually
 reaches a fixture. It answers one question — *where should fixture N end up* —
 and the answer is a number, deterministic for a given request.
@@ -35,10 +36,13 @@ import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-#: The three preset shapes, in the order spec.md §B.4 names them. A tuple, not
-#: a set: the order is the canonical order for reports and for the
+#: The preset shapes, in the order spec.md §B.4 names them (``triangle`` was
+#: added by SPEC-COPILOT-IMGLAYOUT-001's v2 follow-up: the live vision smoke
+#: read a three-triangle sketch correctly but the vocabulary could only demote
+#: it to ``rows``, leaving no preset able to compute the vertices). A tuple,
+#: not a set: the order is the canonical order for reports and for the
 #: exhaustiveness assertions that pin the vocabulary shut.
-SPATIAL_PRESETS: tuple[str, ...] = ("grid", "row", "circle")
+SPATIAL_PRESETS: tuple[str, ...] = ("grid", "row", "circle", "triangle")
 
 #: Which plane/axis each preset may be laid out on, per preset. ``row`` spreads
 #: along ONE axis; ``grid`` and ``circle`` occupy a PLANE — ``xy`` is the floor
@@ -49,6 +53,7 @@ SPATIAL_PRESET_ORIENTATIONS: dict[str, tuple[str, ...]] = {
     "grid": ("xy", "xz"),
     "row": ("x", "y", "z"),
     "circle": ("xy", "xz"),
+    "triangle": ("xy", "xz"),
 }
 
 #: The documented defaults, pinned by golden tests (AC-SPATIAL-018 judges
@@ -61,12 +66,16 @@ SPATIAL_PRESET_ORIENTATIONS: dict[str, tuple[str, ...]] = {
 #:   radius       3.0 m   - circle only; a ring that fits a small stage
 #:   start_angle  0.0 deg - circle only; measured counter-clockwise from +X, so
 #:                          fixture 1 sits at (origin.x + radius, origin.y)
+#:   side         3.0 m   - triangle only; the side length of the equilateral
+#:                          triangle (the value the smoke image's "삼각형 간격
+#:                          3m" annotation asked about)
 SPATIAL_PRESET_DEFAULTS: dict[str, object] = {
     "spacing": 1.0,
     "origin": (0.0, 0.0, 0.0),
-    "orientation": {"grid": "xy", "row": "x", "circle": "xy"},
+    "orientation": {"grid": "xy", "row": "x", "circle": "xy", "triangle": "xy"},
     "radius": 3.0,
     "start_angle": 0.0,
+    "side": 3.0,
 }
 
 #: Computed coordinates are quantised to this many decimals — 0.1 mm, far below
@@ -88,6 +97,7 @@ _PRESET_PARAMS: dict[str, frozenset[str]] = {
     ),
     "row": frozenset({"spacing", "origin", "orientation"}),
     "circle": frozenset({"radius", "start_angle", "origin", "orientation"}),
+    "triangle": frozenset({"side", "origin", "orientation"}),
 }
 
 _AXIS_INDEX = {"x": 0, "y": 1, "z": 2}
@@ -364,7 +374,7 @@ def spatial_preset_placements(
             )
             placements.append(SpatialPlacement(fid=fid, x=x, y=y, z=z))
 
-    else:  # circle
+    elif preset == "circle":
         radius = _positive_number(
             supplied.get("radius", SPATIAL_PRESET_DEFAULTS["radius"]), field="radius"
         )
@@ -389,6 +399,47 @@ def spatial_preset_placements(
                 **{
                     first_axis: radius * math.cos(angle),
                     second_axis: radius * math.sin(angle),
+                },
+            )
+            placements.append(SpatialPlacement(fid=fid, x=x, y=y, z=z))
+
+    else:  # triangle
+        side = _positive_number(supplied.get("side", SPATIAL_PRESET_DEFAULTS["side"]), field="side")
+        resolved["side"] = side
+        resolved["count"] = len(targets)
+        # An equilateral triangle centred on the origin (its centroid), apex
+        # pointing along the +second axis (upstage for the default "xy", up for
+        # "xz"). The vertices sit on the circumcircle (R = side/sqrt(3)) at
+        # 90 / 210 / 330 degrees, counter-clockwise from +X — the same angle
+        # convention the circle preset documents. Fixtures are spread at EQUAL
+        # ARC LENGTH along the perimeter starting at the apex, walking
+        # counter-clockwise, so a count divisible by 3 puts a fixture on every
+        # vertex and 3 fixtures land exactly on the vertices — the shape the
+        # IMGLAYOUT smoke sketch drew. "Where does a triangle start" has no
+        # natural answer either — only this documented one.
+        circumradius = side / math.sqrt(3.0)
+        vertices = [
+            (
+                circumradius * math.cos(math.radians(angle)),
+                circumradius * math.sin(math.radians(angle)),
+            )
+            for angle in (90.0, 210.0, 330.0)
+        ]
+        perimeter = 3.0 * side
+        step_length = perimeter / len(targets)
+        first_axis = orientation[0]
+        second_axis = orientation[1]
+        for index, fid in enumerate(targets):
+            distance = index * step_length
+            edge_index, along = divmod(distance, side)
+            start = vertices[int(edge_index) % 3]
+            end = vertices[(int(edge_index) + 1) % 3]
+            fraction = along / side
+            x, y, z = _place(
+                origin,
+                **{
+                    first_axis: start[0] + (end[0] - start[0]) * fraction,
+                    second_axis: start[1] + (end[1] - start[1]) * fraction,
                 },
             )
             placements.append(SpatialPlacement(fid=fid, x=x, y=y, z=z))

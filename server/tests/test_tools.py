@@ -156,6 +156,8 @@ class TestRegistry:
         #   arbitrary steps/axes validated by the SAME loader schema as the
         #   shipped library, delivered through the same run_commands tail as
         #   instantiate_fx, with a sequence OR preset-pool destination.
+        # + SPEC-COPILOT-IMGLAYOUT-001 M3's analyse_layout_image (READ) — one
+        #   vision call over the session-held layout image; no write surface.
         # The count moves to 31 with those seven — they were registered AND
         # declared when they shipped, but this enumeration (and the count
         # below) was never advanced past 24; the declared tuple had also
@@ -167,7 +169,7 @@ class TestRegistry:
         registry = _registry()
         names = [definition.name for definition in registry.definitions()]
         assert sorted(names) == sorted(TOOL_NAMES)
-        assert len(names) == len(TOOL_NAMES) == 32
+        assert len(names) == len(TOOL_NAMES) == 33
 
     def test_the_four_original_tools_are_still_registered(self):
         # The M5 addition must not have displaced any of them.

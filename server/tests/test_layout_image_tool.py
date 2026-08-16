@@ -325,6 +325,35 @@ class TestPixelEstimationFieldsRejected:
         assert execution.result.is_error is True
         assert "pattern" in json.loads(execution.result.content)["error"]
 
+    def test_triangle_pattern_and_side_key_are_in_the_vocabulary(self):
+        # IMGLAYOUT-001 v2 follow-up: the smoke sketch's triangle no longer
+        # demotes to 'rows', and "한 변 3m" can land in interpreted.side.
+        response = json.dumps(
+            {
+                "pattern": "triangle",
+                "layers": [{"count": 3, "note": "vertices"}],
+                "symmetry": "radial",
+                "confidence": "high",
+                "annotations": [
+                    {
+                        "text": "한 변 3m",
+                        "interpreted": {"side": 3.0},
+                        "applies_to": "triangle",
+                    }
+                ],
+                "unresolved": [],
+            }
+        )
+        provider = _MockVisionProvider(response)
+        execution = _dispatch(
+            _registry(vision_provider=provider, layout_image_upload=_attached_image()),
+            description="삼각형 배치 스케치",
+        )
+        assert execution.result.is_error is False
+        payload = json.loads(execution.result.content)
+        assert payload["pattern"] == "triangle"
+        assert payload["annotations"][0]["interpreted"] == {"side": 3.0}
+
 
 class TestDescriptionParameter:
     def test_missing_description_is_rejected(self):

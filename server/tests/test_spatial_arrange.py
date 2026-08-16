@@ -287,14 +287,16 @@ class TestPresetDefaults:
         assert SPATIAL_PRESET_DEFAULTS["origin"] == (0.0, 0.0, 0.0)
         assert SPATIAL_PRESET_DEFAULTS["radius"] == 3.0
         assert SPATIAL_PRESET_DEFAULTS["start_angle"] == 0.0
+        assert SPATIAL_PRESET_DEFAULTS["side"] == 3.0
         assert SPATIAL_PRESET_DEFAULTS["orientation"] == {
             "grid": "xy",
             "row": "x",
             "circle": "xy",
+            "triangle": "xy",
         }
 
     def test_the_preset_vocabulary_is_closed(self):
-        assert SPATIAL_PRESETS == ("grid", "row", "circle")
+        assert SPATIAL_PRESETS == ("grid", "row", "circle", "triangle")
         with pytest.raises(SpatialPresetError):
             spatial_preset_placements("spiral", [1, 2, 3])
 
@@ -439,6 +441,54 @@ class TestCircleGeometry:
     def test_a_shifted_origin_moves_the_whole_ring(self):
         plan = spatial_preset_placements("circle", [1, 2], {"origin": {"x": -5.0, "y": 1.0}})
         assert [(p.x, p.y, p.z) for p in plan.placements] == [(-2.0, 1.0, 0.0), (-8.0, 1.0, 0.0)]
+
+
+class TestTriangleGeometry:
+    """IMGLAYOUT-001 v2 follow-up — the preset the smoke sketch had no home for.
+
+    Documented convention: equilateral triangle centred on the origin
+    (centroid), apex on the +second axis, vertices at 90/210/330 degrees on
+    the circumcircle (R = side/sqrt(3)), fixtures at equal ARC LENGTH along
+    the perimeter starting at the apex, counter-clockwise.
+    """
+
+    def test_three_fixtures_land_exactly_on_the_vertices(self):
+        # side 3.0 -> R = sqrt(3) = 1.7321 (quantised)
+        plan = spatial_preset_placements("triangle", [1, 2, 3])
+        assert [(p.x, p.y, p.z) for p in plan.placements] == [
+            (0.0, 1.7321, 0.0),
+            (-1.5, -0.866, 0.0),
+            (1.5, -0.866, 0.0),
+        ]
+
+    def test_six_fixtures_add_the_edge_midpoints_between_the_vertices(self):
+        plan = spatial_preset_placements("triangle", [1, 2, 3, 4, 5, 6])
+        assert [(p.x, p.y) for p in plan.placements] == [
+            (0.0, 1.7321),
+            (-0.75, 0.433),
+            (-1.5, -0.866),
+            (0.0, -0.866),
+            (1.5, -0.866),
+            (0.75, 0.433),
+        ]
+
+    def test_the_side_parameter_scales_the_shape(self):
+        # side 6.0 -> R = 6/sqrt(3) = 3.4641
+        plan = spatial_preset_placements("triangle", [1, 2, 3], {"side": 6.0})
+        assert plan.placements[0].y == 3.4641
+        assert plan.resolved["side"] == 6.0
+
+    def test_the_xz_orientation_stands_the_triangle_up(self):
+        plan = spatial_preset_placements("triangle", [1, 2, 3], {"orientation": "xz"})
+        assert [(p.x, p.y, p.z) for p in plan.placements] == [
+            (0.0, 0.0, 1.7321),
+            (-1.5, 0.0, -0.866),
+            (1.5, 0.0, -0.866),
+        ]
+
+    def test_a_circle_parameter_is_refused_not_ignored(self):
+        with pytest.raises(SpatialPresetError):
+            spatial_preset_placements("triangle", [1, 2, 3], {"radius": 4.0})
 
 
 class TestPresetRefusals:

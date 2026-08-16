@@ -56,7 +56,10 @@ def _anthropic_text_response(text: str = "done") -> SimpleNamespace:
         content=[SimpleNamespace(type="text", text=text)],
         stop_reason="end_turn",
         usage=SimpleNamespace(
-            input_tokens=1, output_tokens=1, cache_read_input_tokens=0, cache_creation_input_tokens=0
+            input_tokens=1,
+            output_tokens=1,
+            cache_read_input_tokens=0,
+            cache_creation_input_tokens=0,
         ),
     )
 

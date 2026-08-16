@@ -176,11 +176,14 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # Neither new start falls inside either protected range: overlap ZERO across
 # all 54 hunks. Every moved hunk is registration/definition plumbing — the
 # half of this test's name that is allowed to move; none is dedupe or state.
+# 2026-08-15 catch-up — SPEC-COPILOT-IMGLAYOUT-001 (analyse_layout_image
+# registration/definition plumbing): 17→18, 971 merged away, 1013/1029 added.
+# Protected ranges re-checked by the overlap assert below: zero overlap.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
     14,
-    17,
+    18,
     27,
     33,
     49,
@@ -196,9 +199,10 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     479,
     620,
     952,
-    971,
     989,
     1007,
+    1013,
+    1029,
     1035,
     1048,
     1061,

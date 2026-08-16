@@ -1,6 +1,6 @@
 # SPEC-COPILOT-IMGLAYOUT-001 — 이미지 기반 배치 제안
 
-status: in-progress
+status: completed
 branch: feature/SPEC-COPILOT-IMGLAYOUT-001
 base: origin/main (614eab9)
 
@@ -72,8 +72,25 @@ base: origin/main (614eab9)
   삼각형별 applies_to 구분). unresolved에 "삼각형 한 변의 길이" — 이미지에
   없는 값을 추정하지 않고 질문으로 넘김. 픽셀 추정 수치 0건.
 
-## 후속 결정 필요 (v2 후보)
+## 후속 (2026-08-16 처리)
 
-- `triangle` 패턴을 어휘와 `spatial/presets.py`에 추가할지 — 현재는 rows로
-  강등되어 삼각형 꼭짓점 좌표를 만들 프리셋이 없다. 추가 시 어휘·검증·프리셋·
-  arrange_fixtures 프리셋 목록이 함께 넓어져야 한다(계약 §3 + ARRANGE_PRESETS).
+- ✅ `triangle` 패턴을 어휘·프리셋에 추가했다 — `_LAYOUT_PATTERNS`와 비전
+  프롬프트에 `triangle`, `interpreted` 키에 `side`(한 변 길이),
+  `spatial/presets.py`에 `triangle` 프리셋(정삼각형: 무게중심=origin, 꼭짓점
+  90/210/330°, 둘레 등간격 배치·apex 시작·반시계, `side` 기본 3.0m),
+  `arrange_fixtures` 스키마에 `side` 파라미터. 스모크가 정확히 읽고도 rows로
+  강등하던 간극이 닫혔다. 수치 규율은 동일: `side`의 출처는 이미지 주석 또는
+  감독의 답뿐, 픽셀 추정 금지.
+- ✅ 업로드 UX — 드래그앤드롭·클립보드 붙여넣기(같은 라우터 경유), 두 번째
+  업로드 시 "이전 이미지를 교체했습니다" notice(세션은 1장 보관이므로 침묵
+  교체는 오해를 만든다). 5MB·MIME 클라이언트 사전 검사는 v1부터 있었음을 확인.
+- ✅ `analyse_layout_image` 설명에 confidence 노출 규율 추가 — 제시할 때
+  confidence를 원문 그대로 말하고, medium/low면 경고를 앞세운다 (주석
+  원문-해석 쌍 노출과 같은 계열의 지시).
+
+## 남은 잔여 (의도적 미실행)
+
+- 실기 1턴 왕복(업로드→분석→질문 답변→승인 카드 렌더→arrange→재검증)은
+  **사람 입회 없이는 돌리지 않는다** — WRITEGATE M2와 같은 이유: 실제
+  쇼파일에 좌표를 쓰는 행위를 무인으로 하는 것은 검증이 아니라 결함의
+  재현이다. 구조적 기준(통합 테스트·어댑터 단위·거부 계열)은 전부 충족.

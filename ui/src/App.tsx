@@ -8,7 +8,15 @@
 // collapsing it leaves a thin rail with a re-open affordance. The global
 // header/status/settings live ABOVE the split so they stay reachable in
 // both states.
-import { type ChangeEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type ClipboardEvent,
+  type DragEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { ApprovalCard } from "./components/ApprovalCard";
 import { ChatView } from "./components/ChatView";
@@ -531,8 +539,21 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
+  // macOS WKWebView/Safari 계열의 파일 선택창과 일부 드래그 소스는 MIME을
+  // 비워 보내거나 accept의 MIME 지정을 무시한다 — 확장자에서 계약 §1의 세
+  // MIME으로 역산하는 폴백. 여기서 못 알아낸 파일은 이미지가 아니다.
+  const layoutImageMimeFor = (file: File): string | null => {
+    if (LAYOUT_IMAGE_MIME_TYPES.includes(file.type)) return file.type;
+    const name = file.name.toLowerCase();
+    if (name.endsWith(".png")) return "image/png";
+    if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+    if (name.endsWith(".webp")) return "image/webp";
+    return null;
+  };
+
   const uploadLayoutImage = (file: File) => {
-    if (!LAYOUT_IMAGE_MIME_TYPES.includes(file.type)) {
+    const mimeType = layoutImageMimeFor(file);
+    if (mimeType === null) {
       setLayoutImageUploadError("이미지는 PNG, JPEG 또는 WEBP 파일만 첨부할 수 있습니다.");
       return;
     }
@@ -553,7 +574,7 @@ export default function App() {
         setLayoutImageUploadError("파일을 이미지 프레임으로 변환하지 못했습니다.");
         return;
       }
-      if (!sendLayoutImageUpload(file.name, file.type, result.slice(separator + 1))) {
+      if (!sendLayoutImageUpload(file.name, mimeType, result.slice(separator + 1))) {
         setLayoutImageUploadError("서버 연결이 끊겨 이미지를 올릴 수 없습니다.");
         return;
       }
@@ -567,15 +588,37 @@ export default function App() {
   // 이미지 MIME(계약 §1)은 layout_image_upload로, 나머지는 기존 Vectorworks
   // 경로로 보낸다. 각 경로의 검증·오류 문구는 그대로다: 여기는 라우터일 뿐
   // 두 번째 검증 계층이 아니다.
-  const uploadAttachment = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.currentTarget.files?.[0];
-    event.currentTarget.value = "";
-    if (file === undefined) return;
-    if (LAYOUT_IMAGE_MIME_TYPES.includes(file.type)) {
+  const routeAttachment = (file: File) => {
+    if (layoutImageMimeFor(file) !== null) {
       uploadLayoutImage(file);
     } else {
       uploadVectorworksExport(file);
     }
+  };
+  const uploadAttachment = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (file === undefined) return;
+    routeAttachment(file);
+  };
+  // 스케치는 폰으로 찍어 바로 끌어놓거나 붙여넣는 경우가 많다 — 버튼과 같은
+  // 라우터(routeAttachment)를 지나므로 검증·오류 문구도 동일하다.
+  const dropAttachment = (event: DragEvent<HTMLElement>) => {
+    if (composer.inputDisabled) return;
+    const file = event.dataTransfer?.files?.[0];
+    if (file === undefined) return;
+    event.preventDefault();
+    routeAttachment(file);
+  };
+  const pasteAttachment = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    if (composer.inputDisabled) return;
+    const item = Array.from(event.clipboardData?.items ?? []).find(
+      (candidate) => candidate.kind === "file" && LAYOUT_IMAGE_MIME_TYPES.includes(candidate.type),
+    );
+    const file = item?.getAsFile();
+    if (!file) return; // 일반 텍스트 붙여넣기는 그대로 통과
+    event.preventDefault();
+    uploadLayoutImage(file);
   };
 
   // M5 (design.md §4, REQ-DASHUI-017): the dash pool grid's fireable sections
@@ -658,7 +701,13 @@ export default function App() {
                 ))}
                 <div ref={bottomRef} />
               </main>
-              <footer className="composer">
+              <footer
+                className="composer"
+                onDragOver={(event) => {
+                  if (event.dataTransfer?.types?.includes("Files")) event.preventDefault();
+                }}
+                onDrop={dropAttachment}
+              >
                 {composer.helperText && <div className="composer-status">{composer.helperText}</div>}
                 {vectorworksUploadError && (
                   <div className="composer-status composer-upload-error">{vectorworksUploadError}</div>
@@ -691,6 +740,7 @@ export default function App() {
                   rows={2}
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
+                  onPaste={pasteAttachment}
                   onKeyDown={(event) => {
                     if (
                       event.key === "Enter" &&
@@ -709,7 +759,7 @@ export default function App() {
                     ref={vectorworksInputRef}
                     className="composer-file-input"
                     type="file"
-                    accept=".csv,.txt,.xlsx,.mvr,image/png,image/jpeg,image/webp"
+                    accept=".csv,.txt,.xlsx,.mvr,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
                     onChange={uploadAttachment}
                     disabled={composer.inputDisabled}
                   />

@@ -1875,7 +1875,7 @@ class _LayoutImageUploadView:
     after session construction is still visible to the tool.
     """
 
-    def __init__(self, session: "ChatSession") -> None:
+    def __init__(self, session: ChatSession) -> None:
         self._session = session
 
     @property
@@ -5807,11 +5807,21 @@ class ChatSession:
         happened in ``parse_client_message`` — a message that reaches here is
         already accepted.
         """
+        replaced = self._layout_image is not None
         self._layout_image = LayoutImageUpload(
             file_name=file_name, mime_type=mime_type, content_base64=content_base64
         )
         size_kb = len(base64.b64decode(content_base64)) // 1024
-        event = notice_event(f"이미지 '{file_name}' 첨부됨 ({size_kb}KB)")
+        # The session keeps ONE image (contract.md §1 — a new upload replaces
+        # it wholesale). Silence about that would let the operator believe two
+        # sketches are attached, then approve a plan analysed against the
+        # wrong one — so the replacement is said out loud.
+        if replaced:
+            event = notice_event(
+                f"이미지 '{file_name}' 첨부됨 ({size_kb}KB) — 이전에 첨부한 이미지를 교체했습니다"
+            )
+        else:
+            event = notice_event(f"이미지 '{file_name}' 첨부됨 ({size_kb}KB)")
         self._send(event)
         return event
 
