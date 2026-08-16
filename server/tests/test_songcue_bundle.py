@@ -182,6 +182,9 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # 2026-08-16 catch-up — spatial rotation opt-in (include_rotation read
 # plumbing in get_spatial_context): 54→56 hunks; all in the SPATIAL read
 # helper/registration region, none touching dedupe or programmer state.
+# 2026-08-16 re-walk — get_spatial_context DESCRIPTION gains a rotation
+# paragraph (pure insertion inside the already-widened SPATIAL definition
+# hunk): re-measured 56 hunks, starts identical, pin unchanged, overlap ZERO.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,

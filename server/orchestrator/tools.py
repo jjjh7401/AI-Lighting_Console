@@ -7928,6 +7928,18 @@ def build_toolset(
                 "slot get_rig_context shows. Negative coordinates are normal: "
                 "the stage origin has sides.\n"
                 "\n"
+                'Pass {"include_rotation": true} to ALSO read each '
+                "fixture's patched body rotation on the same record — "
+                '"rotx", "roty", "rotz" in degrees. Position says where a '
+                "fixture STANDS; rotation says which way its body FACES, "
+                "and any question about mounting orientation, hang "
+                "direction or 'which way is it pointing' needs these axes "
+                "— read them here instead of improvising console queries "
+                "or Lua. Best-effort: an axis that could not be read "
+                'appears by NAME in that fixture\'s "rotation_unread" and '
+                "its value stays unknown — never assume 0 for a listed "
+                "axis.\n"
+                "\n"
                 '"unreadable" lists fixtures that have NO coordinate here, '
                 "each with the console's own reason. Their positions are "
                 "genuinely unknown — never assume 0, a neighbour's value or "
