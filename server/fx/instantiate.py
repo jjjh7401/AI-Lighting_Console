@@ -369,6 +369,15 @@ def _label_of(fx: Fx, label: str | None) -> str:
         # 표시하지 못한다 — 저장은 접수되지만 이름이 보이지 않는다. 보이지
         # 않는 이름 대신 fx_id에서 파생한 영어 라벨을 자동으로 붙인다.
         text = _english_fallback_label(fx)
+        if not text.strip() or not text.isascii():
+            # 독립 리뷰 2026-08-16: fx_id에 ASCII 슬러그 제약이 없으므로
+            # 파생 폴백 자체가 비ASCII/공백일 수 있다 — 그대로 내보내면
+            # 이 수정이 막으려던 '보이지 않는 라벨'이 재발한다. 구조적 거부.
+            raise FxInstantiationError(
+                LABEL_UNQUOTABLE,
+                f"fx {fx.fx_id!r} yields no console-displayable ASCII label — "
+                f"give the fx an ASCII fx_id or pass an explicit English label",
+            )
     if "'" in text or "\n" in text:
         raise FxInstantiationError(
             LABEL_UNQUOTABLE,

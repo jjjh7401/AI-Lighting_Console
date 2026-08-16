@@ -222,9 +222,40 @@ class TestProbeFamilySplit:
         ]
 
     def test_startup_compaction_splits_a_legacy_mixed_file(self, tmp_path):
+        # Dated YESTERDAY relative to the fake clock (2026-07-16): today's
+        # file is deliberately never rewritten (concurrent-append safety).
         directory = tmp_path / "audit"
         directory.mkdir()
-        legacy = directory / "audit-20260716.jsonl"
+        legacy = directory / "audit-20260715.jsonl"
+        rows = [
+            {
+                "ts": "2026-07-15T10:00:00+00:00",
+                "event": "executed",
+                "kind": "command",
+                "command": "Store Cue 5",
+            },
+            {
+                "ts": "2026-07-15T10:00:01+00:00",
+                "event": "executed",
+                "kind": "state_query",
+                "command": "Patch/Stages",
+            },
+        ]
+        legacy.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+        log, _clock = _log(tmp_path)  # __init__ runs the compaction
+        audit = _lines(directory)["audit-20260715.jsonl"]
+        probe = self._probe_lines(directory)["probe-20260715.jsonl"]
+        assert [json.loads(line)["command"] for line in audit] == ["Store Cue 5"]
+        assert [json.loads(line)["command"] for line in probe] == ["Patch/Stages"]
+        assert list(log.iter_events_reversed(include_probes=False))[0]["command"] == "Store Cue 5"
+
+    def test_compaction_never_rewrites_todays_file(self, tmp_path):
+        # Independent review 2026-08-16: a concurrent AuditLog only ever
+        # appends to TODAY's file; rewriting it via os.replace could unlink a
+        # racing durable append. Today's mixed file stays untouched.
+        directory = tmp_path / "audit"
+        directory.mkdir()
+        legacy = directory / "audit-20260716.jsonl"  # == the fake clock's today
         rows = [
             {
                 "ts": "2026-07-16T10:00:00+00:00",
@@ -239,13 +270,11 @@ class TestProbeFamilySplit:
                 "command": "Patch/Stages",
             },
         ]
-        legacy.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
-        log, _clock = _log(tmp_path)  # __init__ runs the compaction
-        audit = _lines(directory)["audit-20260716.jsonl"]
-        probe = self._probe_lines(directory)["probe-20260716.jsonl"]
-        assert [json.loads(line)["command"] for line in audit] == ["Store Cue 5"]
-        assert [json.loads(line)["command"] for line in probe] == ["Patch/Stages"]
-        assert list(log.iter_events_reversed(include_probes=False))[0]["command"] == "Store Cue 5"
+        body = "".join(json.dumps(r) + "\n" for r in rows)
+        legacy.write_text(body, encoding="utf-8")
+        _log(tmp_path)
+        assert legacy.read_text(encoding="utf-8") == body  # byte-identical
+        assert self._probe_lines(directory) == {}
 
     def test_compaction_drops_probes_older_than_probe_retention(self, tmp_path):
         directory = tmp_path / "audit"

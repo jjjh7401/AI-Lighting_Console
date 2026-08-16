@@ -7124,9 +7124,10 @@ def build_toolset(
         ToolDefinition(
             name="instantiate_fx",
             description=(
-                "Put an effect FROM find_fx onto THIS rig — a labeled preset "
-                '(destination "preset", the operator flow default) or a '
-                "sequence + cue when a cue was asked for. "
+                "Put an effect FROM find_fx onto THIS rig — pass destination "
+                '"preset" EXPLICITLY for the operator flow (a labeled preset), '
+                "or omit it for a sequence + cue (the parameter default) when "
+                "a cue was asked for. "
                 "Pass the fx_id of the match you chose; do NOT hand-write the "
                 "bundle with run_commands, because this tool is the only thing "
                 "that emits the measured step grammar (values, then a "
@@ -7241,8 +7242,10 @@ def build_toolset(
                         "type": "string",
                         "enum": ["sequence", "preset"],
                         "description": (
-                            'Where to store the effect. "sequence" (default) '
-                            'makes a sequence + cue. "preset" stores it as a '
+                            'Where to store the effect. Omitted = "sequence" '
+                            "(parameter default — a sequence + cue); the "
+                            "operator flow (STOP AT THE STORE) wants "
+                            '"preset" passed EXPLICITLY — it stores a '
                             'reusable preset in an "All" pool via /Universal '
                             "— the operator can then recall it on any "
                             "compatible fixtures and reference it from cues."
@@ -7321,7 +7324,8 @@ def build_toolset(
                 "x/x_wings/x_shuffle for rig-geometry spreads, every-Nth, "
                 "mirroring and seeded shuffle.\n"
                 "\n"
-                'destination "preset" (the operator flow default) stores a '
+                'destination "preset" (pass it EXPLICITLY — the operator '
+                'flow; omitted still means "sequence") stores a '
                 'reusable preset into an "All" pool via /Universal; '
                 '"sequence" stores a sequence + cue — use it when the '
                 "operator already asked for a cue. Numbers "
@@ -7394,7 +7398,10 @@ def build_toolset(
                     "destination": {
                         "type": "string",
                         "enum": ["sequence", "preset"],
-                        "description": 'Default "sequence".',
+                        "description": (
+                            'Omitted = "sequence" (parameter default); the '
+                            'operator flow wants "preset" passed explicitly.'
+                        ),
                     },
                     "sequence": {"type": "integer"},
                     "executor": {"type": "integer"},
