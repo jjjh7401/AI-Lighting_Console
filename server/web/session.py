@@ -3737,6 +3737,7 @@ class ChatSession:
             read_id="regenerate-presets-read",
             bundle="basic-preset",
             store_example="기본 포지션 10개 저장",
+            first_label=BASIC_POSITION_SEQUENCE[0],
         )
 
     def _regenerate_fx_position_presets(self, text: str) -> InstructionResult | None:
@@ -3759,6 +3760,7 @@ class ChatSession:
             read_id="regenerate-fx-presets-read",
             bundle="fx-preset",
             store_example="FX 포지션 10개 저장",
+            first_label=FX_POSITION_SEQUENCE[0],
         )
 
     def _regenerate_position_preset_sequence(
@@ -3770,6 +3772,7 @@ class ChatSession:
         read_id: str,
         bundle: str,
         store_example: str,
+        first_label: str,
     ) -> InstructionResult | None:
         """이미 저장된 10칸 구간을 지금 배치로 **제자리 갱신**한다 — 공용 몸통.
 
@@ -3790,19 +3793,52 @@ class ChatSession:
             return self._pointing_refusal(
                 f"좌표가 확인된 장비가 없어 {noun} 재생성을 시작하지 않았습니다."
             )
-        pool_slots = self._position_preset_pool_slots()
-        if pool_slots is None:
+        pool_children = self._position_preset_pool_children()
+        if pool_children is None:
             # 신규 저장(REQ-004, 진행)과 **반대**다 — 재생성은 표적 구간의 존재를
             # 전제하므로 미상 위에서 진행할 수 없다(REQ-PRESETGUARD-013).
             return self._pointing_refusal(
                 "Position 풀을 읽지 못해 다시 잡을 구간을 확인하지 못했습니다 — "
                 "표적을 모르는 상태에서는 저장하지 않습니다."
             )
-        ready = self._position_preset_ready_starts(slots=pool_slots)
-        if not ready:
+        pool_slots = set(pool_children)
+        run_starts = self._position_preset_ready_starts(slots=pool_slots)
+        if not run_starts:
             return self._pointing_refusal(
                 f"10칸 연속 저장된 {noun} 구간을 찾지 못해 다시 잡을 자리가 "
                 f"없습니다 — 먼저 '{store_example}'을 실행해 주세요."
+            )
+        # 가족 판별 — 구간 첫 슬롯의 이름이 시퀀스 첫 라벨과 일치해야 같은
+        # 가족이다(콘솔의 중복명 자동 접미 '#N' 허용). 실측 2026-08-16: BASIC
+        # (2.21~30)과 FX(2.41~50)가 한 덩어리로 이어진 풀에서 런 시작은 21
+        # 하나뿐이라 FX 재생성이 카드 한 장 없이 2.21을 자동 선택, 기본
+        # 프리셋 10개가 FX 값으로 덮였다. 그래서 후보는 런 시작이 아니라
+        # **라벨이 맞는 모든 10칸 저장 지점**이다. 이름을 모르는 페이로드
+        # (구버전)는 판별 불가로 런 시작을 그대로 후보에 남긴다 — 필터는
+        # 아는 것만 거른다.
+        span = len(BASIC_POSITION_SEQUENCE)
+
+        def _is_family(name: object) -> bool:
+            return isinstance(name, str) and (
+                name == first_label or name.startswith(f"{first_label}#")
+            )
+
+        def _full_span(start: int) -> bool:
+            return all(start + offset in pool_slots for offset in range(span))
+
+        labeled = [
+            slot
+            for slot in sorted(pool_slots)
+            if _is_family(pool_children.get(slot)) and _full_span(slot)
+        ]
+        unknown_runs = [
+            start for start in run_starts if not isinstance(pool_children.get(start), str)
+        ]
+        ready = sorted(set(labeled) | set(unknown_runs))
+        if not ready:
+            return self._pointing_refusal(
+                f"저장된 10칸 구간은 있으나 첫 슬롯 라벨이 '{first_label}'인 "
+                f"{noun} 구간이 없습니다 — 먼저 '{store_example}'을 실행해 주세요."
             )
         # 지시가 번호를 담고 있으면 그 번호로 **재생성 안에서** 구간을 고른다.
         # 의도가 경로를 정하고, 번호는 그 경로 안의 구간을 정한다 — 번호가 있다고
@@ -3811,7 +3847,19 @@ class ChatSession:
         # 2.21~2.30을 덮어쓴다 — 이 SPEC이 없애려던 바로 그 형상이다.
         named = _BASIC_POSITIONS_START.search(text)
         if named is not None:
-            start_no = _preset_pick_ready_span([int(named.group("no"))], ready)
+            named_no = int(named.group("no"))
+            if (
+                named_no not in ready
+                and _full_span(named_no)
+                and not _is_family(pool_children.get(named_no))
+                and isinstance(pool_children.get(named_no), str)
+            ):
+                return self._pointing_refusal(
+                    f"{named_no}번 구간의 첫 슬롯 라벨이 '{first_label}'이 아니라 "
+                    f"{noun} 구간이 아닙니다 — 다른 가족의 프리셋을 덮지 않도록 "
+                    "저장하지 않았습니다."
+                )
+            start_no = _preset_pick_ready_span([named_no], ready)
         elif len(ready) == 1:
             start_no = ready[0]
         else:
@@ -5456,9 +5504,9 @@ class ChatSession:
                     break
         return free
 
-    def _position_preset_pool_slots(self) -> set[int] | None:
-        """The Position pool's stored preset numbers, or None when the pool
-        cannot be read (callers fall back to static examples, never a guess).
+    def _position_preset_pool_children(self) -> dict[int, str | None] | None:
+        """The Position pool's stored slots mapped to their NAMES (or None
+        when a child carried no name), or None when the pool cannot be read.
 
         The responder caps ``children`` at 24 per reply (PROTOCOL §4.2), so
         pools past 24 presets need PAGING: follow-up queries carry ``offset``
@@ -5467,6 +5515,11 @@ class ChatSession:
         read-back report 10 freshly stored presets as "미확인 0/10" because
         slots 41~50 fell outside the first window — paged reads recover
         exactly that case.
+
+        Names ride along because span-family selection needs them: the
+        regeneration card offered a BASIC span for an FX regeneration request
+        (live 2026-08-16) and the first option got picked — the name of a
+        span's first slot is what tells the families apart.
 
         Truncation WITHOUT progress is still "cannot be read", not a smaller
         pool: a legacy responder ignores ``offset`` (no echo, always the
@@ -5477,7 +5530,7 @@ class ChatSession:
         """
         pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
         path = f"{pool_root}/2"
-        slots: set[int] = set()
+        slots: dict[int, str | None] = {}
         seen = 0
         for page in range(10):  # 상한 10페이지(240슬롯) — 실제 풀 크기의 여유 상계
             arguments: dict[str, object] = {"path": path}
@@ -5519,9 +5572,11 @@ class ChatSession:
                     try:
                         # 실기 responder는 슬롯 번호를 "i"로 보낸다 (PROTOCOL §4.2,
                         # rig_object와 동일 규칙); "no"는 정규화된 페이로드용.
-                        slots.add(int(child.get("i", child.get("no"))))
+                        number = int(child.get("i", child.get("no")))
                     except (TypeError, ValueError):
                         continue
+                    name = child.get("name")
+                    slots[number] = name if isinstance(name, str) else None
             seen += len(children)
             # 절단 판정은 두 경로 — 응답기 truncated 플래그 또는 childCount 산술.
             # 한쪽만 삭제돼도 나머지가 잡는다 (TRUNCATE-001과 같은 이중 방어).
@@ -5536,6 +5591,11 @@ class ChatSession:
                 # 빈 창이 "더 있다"고 주장 — offset이 전진할 수 없는 모순.
                 return None
         return None  # 페이지 상한 초과 — 부분 판독은 더 작은 풀이 아니다
+
+    def _position_preset_pool_slots(self) -> set[int] | None:
+        """Number-only view of :meth:`_position_preset_pool_children`."""
+        children = self._position_preset_pool_children()
+        return None if children is None else set(children)
 
     def _position_preset_free_starts(self, *, count: int = 3) -> list[int] | None:
         """Start numbers where TEN consecutive Position slots are EMPTY —

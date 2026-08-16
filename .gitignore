@@ -250,3 +250,4 @@ dist-ssr/
 
 # playwright-cli tool cache
 .playwright-cli/
+server/**/.moai/

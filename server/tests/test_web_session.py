@@ -1599,6 +1599,7 @@ class _PresetPoolRegistry:
         child_count=None,
         page_size=None,
         legacy_pager=False,
+        names=None,
     ):
         self.calls = calls
         self.pool = tuple(pool)
@@ -1614,8 +1615,17 @@ class _PresetPoolRegistry:
         # 첫 창을 돌려주며 에코가 없다. 둘 다 childCount는 총계다.
         self.page_size = page_size
         self.legacy_pager = legacy_pager
+        #: 슬롯 번호 → 프리셋 이름. 가족 필터(재생성)가 이름을 볼 때만 지정한다;
+        #: 미지정 슬롯은 이름 없는 자식(구형 페이로드)으로 남는다.
+        self.names = dict(names or {})
         self.state_reads = 0
         self.wrote = False
+
+    def _child(self, number):
+        child = {"i": number}
+        if number in self.names:
+            child["name"] = self.names[number]
+        return child
 
     def dispatch(self, call: ToolCall) -> ToolExecution:
         self.calls.append(call)
@@ -1640,7 +1650,7 @@ class _PresetPoolRegistry:
                 offset = 0 if self.legacy_pager else requested
                 window = slots[offset : offset + self.page_size]
                 payload = {
-                    "children": [{"i": n} for n in window],
+                    "children": [self._child(n) for n in window],
                     "node": {"childCount": len(slots)},
                 }
                 # truncated = 이 창 **이후에도** 남았는가 (계약 §4.2).
@@ -1649,7 +1659,7 @@ class _PresetPoolRegistry:
                 if not self.legacy_pager:
                     payload["offset"] = offset
             else:
-                payload = {"children": [{"i": n} for n in slots]}
+                payload = {"children": [self._child(n) for n in slots]}
                 if self.truncated:
                     payload["truncated"] = True
                 if self.child_count is not None:
@@ -2503,6 +2513,77 @@ class TestFxPositionPresetRegeneration:
             assert f"Label Preset 2.{41 + offset} '{label}'" in commands
         assert len(_writes(calls)) == 10
         assert all("몇 번부터" not in ask.prompt for ask in chan.asked)
+
+    # 가족 필터 실측 재현 2026-08-16 — 21~50이 전부 저장된 풀(연속 30칸)에서
+    # ready 후보는 21·31·41이지만, FX 재생성은 첫 슬롯 라벨이 'Sweep L'인
+    # 41만 겨눠야 한다. 필터가 없으면 카드 첫 옵션(21)이 선택될 때 BASIC
+    # 프리셋 10개가 FX 값으로 덮인다 — 실제로 일어났던 사고다.
+    _FAMILY_NAMES = {
+        21: "Home",
+        31: "Home#2",
+        41: "Sweep L",
+    }
+
+    def test_fx_regeneration_skips_basic_spans_by_first_slot_label(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "지금 배치로 이펙트 포지션 다시 잡아줘",
+            pool=tuple(range(21, 51)),
+            names=self._FAMILY_NAMES,
+            answers=["덮어쓰기 진행"],
+        )
+
+        commands = _all_commands(calls)
+        # 유일한 FX 가족 후보(41)라 구간 선택 카드 없이 41~50만 갱신한다.
+        assert all("어느 구간" not in ask.prompt for ask in chan.asked)
+        for offset in range(10):
+            assert f"Store Preset 2.{41 + offset}" in commands
+        assert not any(cmd.startswith("Store Preset 2.2") for cmd in commands)
+        assert not any(cmd.startswith("Store Preset 2.3") for cmd in commands)
+
+    def test_a_named_basic_span_is_refused_for_fx_regeneration(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "21번부터 이펙트 포지션 다시 잡아줘",
+            pool=tuple(range(21, 51)),
+            names=self._FAMILY_NAMES,
+        )
+
+        assert _writes(calls) == []
+        assert "구간이 아닙니다" in event["text"]
+
+    def test_basic_regeneration_offers_only_home_spans(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=tuple(range(21, 51)),
+            names=self._FAMILY_NAMES,
+            answers=["21 (2.21~2.30)", "덮어쓰기 진행"],
+        )
+
+        span_cards = [ask for ask in chan.asked if "어느 구간" in ask.prompt]
+        assert len(span_cards) == 1
+        labels = [option.label for option in span_cards[0].options]
+        assert any(label.startswith("21 ") for label in labels)
+        assert any(label.startswith("31 ") for label in labels)
+        assert not any(label.startswith("41 ") for label in labels)
+        commands = _all_commands(calls)
+        assert "Store Preset 2.21" in commands
+
+    def test_unnamed_pool_children_keep_the_old_run_start_behaviour(self, tmp_path):
+        # 이름 없는 페이로드(구형)는 판별 불가 — 런 시작(연속 덩어리의 첫
+        # 슬롯)만 후보로 남는 종전 동작이 보존된다. 21~50 연속 풀의 런 시작은
+        # 21 하나라 카드 없이 21이 선택된다 — 바로 이 형상이 이름이 필요한
+        # 이유다(실측 사고의 재현이자, 이름이 오면 필터가 이를 막는다).
+        _event, calls, chan = self._run(
+            tmp_path,
+            "지금 배치로 이펙트 포지션 다시 잡아줘",
+            pool=tuple(range(21, 51)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        assert all("어느 구간" not in ask.prompt for ask in chan.asked)
+        assert "Store Preset 2.21" in _all_commands(calls)
 
     # 라우팅 — FX 재생성 어휘 변형이 전부 재생성으로 간다. 신규 저장으로 샜다면
     # 시작 번호 카드("몇 번부터")가 떴을 것이다.
