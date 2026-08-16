@@ -1203,15 +1203,24 @@ def _review_lint_line(finding) -> str:
     return f"{finding.rule_id} 큐 {finding.cue_number:g}: {finding.description}"
 
 
-def _review_disabled_lines(composition) -> list[str]:
+def _review_disabled_lines(composition, *, layer_mapped: bool = False) -> list[str]:
     """Known internal notes translated to one field-language line each,
-    deduped; unknown notes pass through verbatim."""
+    deduped; unknown notes pass through verbatim. ``layer_mapped`` reflects
+    the SESSION's director-confirmed group mapping — the rig-profile note
+    only knows the structural rig (patch=[], RG5), so without this flag the
+    review said '레이어 매핑 없음' on a bundle that HAD Group-addressed back
+    lines (실기 2026-08-16 관측)."""
     lines: list[str] = []
     for raw in [f"{note.rule_id}: {note.reason}" for note in composition.disabled_rule_notes] + [
         note.reason for note in composition.disabled_plan_notes
     ]:
         if "no mapped key/back layer" in raw or "degrades to single-layer" in raw:
-            line = "레이어 매핑 없음 — 단일 레이어로 진행 (키/백 분리 체크 L6·L7 미적용)"
+            line = (
+                "레이어 매핑 사용 — Back 그룹 디머 분리 적용(키 대비 80%). "
+                "자동 체크 L6·L7은 그룹 멤버십을 읽을 수 없어 미적용"
+                if layer_mapped
+                else "레이어 매핑 없음 — 단일 레이어로 진행 (키/백 분리 체크 L6·L7 미적용)"
+            )
         else:
             line = raw
         if line not in lines:
@@ -1219,7 +1228,12 @@ def _review_disabled_lines(composition) -> list[str]:
     return lines
 
 
-def _review_text(plan: UnifiedSongLightingPlan, composition: SongCueCompositionResult) -> str:
+def _review_text(
+    plan: UnifiedSongLightingPlan,
+    composition: SongCueCompositionResult,
+    *,
+    layer_mapped: bool = False,
+) -> str:
     cue_lines: list[str] = []
     if composition.bundle is not None:
         for cue in composition.bundle.cues:
@@ -1240,7 +1254,7 @@ def _review_text(plan: UnifiedSongLightingPlan, composition: SongCueCompositionR
         )
         if any(finding.rule_id == "L5" for finding in composition.lint_findings):
             lint += " — 구간 무드/컨셉에서 더해진 색입니다. 의도한 포인트면 그대로 승인하세요"
-    disabled_lines = _review_disabled_lines(composition)
+    disabled_lines = _review_disabled_lines(composition, layer_mapped=layer_mapped)
     disabled = "" if not disabled_lines else " 참고: " + "; ".join(disabled_lines) + "."
     unresolved = (
         ""
@@ -4635,7 +4649,7 @@ class ChatSession:
         plan: UnifiedSongLightingPlan,
         composition: SongCueCompositionResult,
     ) -> InstructionResult:
-        review_text = _review_text(plan, composition)
+        review_text = _review_text(plan, composition, layer_mapped=bool(state.layer_mapping))
         audit_lines = [
             f"{_DI_STEP_LABELS[record.step]}: {_describe_di_value(record.value)} "
             f"({'확정' if record.confirmed else '감독 미확정'})"
@@ -4698,7 +4712,9 @@ class ChatSession:
                     state.timing = TimingPlan.timecode(int(moved.group(0)), source="director")
                     timecode_no = state.timing.timecode_number
                     plan, composition = self._song_compose(state)
-                    review_text = _review_text(plan, composition)
+                    review_text = _review_text(
+                        plan, composition, layer_mapped=bool(state.layer_mapping)
+                    )
                     self._song_send_timeline(state, plan, composition)
                     timecode_note = f" · 타임코드 {timecode_no}번 슬롯: 비어 있음 확인"
             else:
