@@ -831,6 +831,14 @@ def drill_into(
     nothing configured, which is exactly the ambiguity a readiness check exists
     to remove.
 
+    ``contents`` is ONE responder window (24 children, PROTOCOL §4.2) — for a
+    container past the cap, ``contents_total`` additionally carries the
+    responder's own ``node.childCount`` claim, so a count consumer (the dash
+    pool badge) can report the real total instead of the window length (live
+    2026-08-16: Color pool 37, badge said the window). Enumerating consumers
+    (occupancy, tiles) still see one window; the popup's paged reader is the
+    surface that walks past it.
+
     When the budget runs out before every object is opened, the section is
     marked ``drilldown_capped`` rather than silently presenting a partial walk
     as a complete one — each query is a UDP round trip through the gate +
@@ -853,6 +861,10 @@ def drill_into(
             continue
         children = child_payload.get("children", [])
         obj["contents"] = [rig_object(c) for c in children if isinstance(c, dict)]
+        node = child_payload.get("node")
+        child_count = node.get("childCount") if isinstance(node, dict) else None
+        if isinstance(child_count, int):
+            obj["contents_total"] = child_count
     if capped:
         entry["drilldown_capped"] = True
     return budget
