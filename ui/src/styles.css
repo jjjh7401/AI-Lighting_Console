@@ -3118,12 +3118,15 @@ body {
    and the name row below untouched, so growing the circle can push the
    tile taller but never overlap text. */
 .preset-popup-swatch {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.35);
   align-self: center;
-  margin: 4px 0;
+  /* Tiles are fixed squares (aspect-ratio 1, overflow hidden) — the circle
+     hugs the number row above it (no top margin) so the name row below
+     keeps its full line height instead of clipping at the tile edge. */
+  margin: 0 0 2px;
   flex-shrink: 0;
 }
 
