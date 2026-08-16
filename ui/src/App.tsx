@@ -604,10 +604,13 @@ export default function App() {
   // 스케치는 폰으로 찍어 바로 끌어놓거나 붙여넣는 경우가 많다 — 버튼과 같은
   // 라우터(routeAttachment)를 지나므로 검증·오류 문구도 동일하다.
   const dropAttachment = (event: DragEvent<HTMLElement>) => {
-    if (composer.inputDisabled) return;
     const file = event.dataTransfer?.files?.[0];
     if (file === undefined) return;
+    // 리뷰 P2: 파일 드롭의 기본 동작(브라우저가 파일로 내비게이션 — 진행 중
+    // 세션 화면 이탈)은 입력 비활성 여부와 무관하게 항상 막는다. 라우팅만
+    // inputDisabled에 걸린다.
     event.preventDefault();
+    if (composer.inputDisabled) return;
     routeAttachment(file);
   };
   const pasteAttachment = (event: ClipboardEvent<HTMLTextAreaElement>) => {
