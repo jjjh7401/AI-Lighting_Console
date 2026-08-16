@@ -1,0 +1,734 @@
+<title>포지션 프리셋 감사</title>
+<style>
+  :root {
+    --bg:        #EDF0EF;
+    --surface-1: #F8FAF9;
+    --surface-2: #E3E9E7;
+    --ink:       #10181A;
+    --ink-soft:  #3C4A4C;
+    --muted:     #5A6A6C;
+    --line:      #D3DBD9;
+    --line-firm: #B9C5C3;
+    --beam:      #0E8F8A;
+    --beam-wash: rgba(14, 143, 138, 0.10);
+    --tungsten:  #9A6620;
+    --tungsten-wash: rgba(176, 118, 42, 0.14);
+    --alert:     #B33F2C;
+    --alert-wash: rgba(194, 74, 54, 0.11);
+
+    --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+            "Segoe UI", "Noto Sans KR", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Mono",
+            "Roboto Mono", monospace;
+
+    --measure: 66ch;
+    --pad: clamp(1.25rem, 4vw, 3rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #0C1214;
+      --surface-1: #131C1F;
+      --surface-2: #1A2529;
+      --ink:       #E6EDEB;
+      --ink-soft:  #C3D0CE;
+      --muted:     #8DA09F;
+      --line:      #222F32;
+      --line-firm: #33454A;
+      --beam:      #34D6C8;
+      --beam-wash: rgba(52, 214, 200, 0.12);
+      --tungsten:  #E0A445;
+      --tungsten-wash: rgba(224, 164, 69, 0.14);
+      --alert:     #F0765C;
+      --alert-wash: rgba(240, 118, 92, 0.13);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg:        #0C1214;
+    --surface-1: #131C1F;
+    --surface-2: #1A2529;
+    --ink:       #E6EDEB;
+    --ink-soft:  #C3D0CE;
+    --muted:     #8DA09F;
+    --line:      #222F32;
+    --line-firm: #33454A;
+    --beam:      #34D6C8;
+    --beam-wash: rgba(52, 214, 200, 0.12);
+    --tungsten:  #E0A445;
+    --tungsten-wash: rgba(224, 164, 69, 0.14);
+    --alert:     #F0765C;
+    --alert-wash: rgba(240, 118, 92, 0.13);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.72;
+    -webkit-font-smoothing: antialiased;
+    word-break: keep-all;
+  }
+
+  .wrap {
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: var(--pad);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(3rem, 7vw, 5rem);
+  }
+
+  /* ---- header ---------------------------------------------------- */
+
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--beam);
+    margin: 0;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(2.1rem, 6.5vw, 3.4rem);
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    margin: 0;
+    max-width: var(--measure);
+    font-size: clamp(1.02rem, 2.2vw, 1.15rem);
+    color: var(--ink-soft);
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.5rem;
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    color: var(--muted);
+    padding-top: 0.4rem;
+  }
+  .meta span::before {
+    content: "";
+    display: inline-block;
+    width: 0.4rem;
+    height: 0.4rem;
+    margin-right: 0.5rem;
+    vertical-align: 0.08em;
+    background: var(--line-firm);
+  }
+
+  /* ---- sections -------------------------------------------------- */
+
+  section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: clamp(1.35rem, 3.4vw, 1.75rem);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    font-weight: 750;
+    text-wrap: balance;
+  }
+
+  h2 .h2-mark {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1.06rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.4;
+  }
+
+  p { margin: 0; max-width: var(--measure); }
+
+  a { color: var(--beam); text-underline-offset: 0.2em; }
+  a:focus-visible { outline: 2px solid var(--beam); outline-offset: 3px; }
+
+  code, .m {
+    font-family: var(--mono);
+    font-size: 0.87em;
+    background: var(--surface-2);
+    padding: 0.1em 0.36em;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .m-plain {
+    font-family: var(--mono);
+    font-size: 0.87em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  /* ---- summary tiles --------------------------------------------- */
+
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .tile {
+    background: var(--surface-1);
+    padding: 1.25rem 1.35rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .tile b {
+    font-family: var(--mono);
+    font-size: 2rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .tile .t-good  { color: var(--beam); }
+  .tile .t-open  { color: var(--alert); }
+  .tile small {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ---- pool grid ------------------------------------------------- */
+
+  .pool {
+    border: 1px solid var(--line);
+    background: var(--surface-1);
+    padding: 1.35rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .pool-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem 1rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(6.4rem, 1fr));
+    gap: 0.4rem;
+  }
+  .slot {
+    border: 1px solid var(--line-firm);
+    background: var(--bg);
+    padding: 0.55rem 0.6rem 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-height: 4.1rem;
+  }
+  .slot .no {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .slot .nm {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--ink);
+  }
+  .slot.written {
+    border-color: var(--beam);
+    background: var(--beam-wash);
+  }
+  .slot.written .no { color: var(--beam); }
+  .slot.clobber {
+    border-color: var(--alert);
+    background: var(--alert-wash);
+  }
+  .slot.clobber .no { color: var(--alert); }
+  .slot .fate {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+    color: var(--alert);
+    margin-top: auto;
+  }
+
+  /* ---- capability list ------------------------------------------- */
+
+  .caps {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .cap {
+    background: var(--surface-1);
+    padding: 1.1rem 1.3rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.45rem;
+  }
+  @media (min-width: 46rem) {
+    .cap {
+      grid-template-columns: 13rem minmax(0, 1fr);
+      gap: 0.45rem 1.5rem;
+      align-items: baseline;
+    }
+    .cap .cap-where { grid-row: span 2; }
+  }
+  .cap-where {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+  .cap-what { font-weight: 650; }
+  .cap-how { font-size: 0.92rem; color: var(--ink-soft); }
+  .cap-how .m { white-space: normal; }
+
+  /* ---- proposals ------------------------------------------------- */
+
+  .props {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+  .prop {
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--line-firm);
+    background: var(--surface-1);
+    padding: 1.35rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+  .prop.sev-risk { border-left-color: var(--alert); }
+  .prop.sev-trust { border-left-color: var(--tungsten); }
+  .prop.sev-feat { border-left-color: var(--beam); }
+
+  .prop-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 0.85rem;
+  }
+  .chip {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.22em 0.6em;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .chip-risk  { color: var(--alert); background: var(--alert-wash); }
+  .chip-trust { color: var(--tungsten); background: var(--tungsten-wash); }
+  .chip-feat  { color: var(--beam); background: var(--beam-wash); }
+  .cost {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  .prop dl {
+    margin: 0;
+    display: grid;
+    gap: 0.55rem 1.1rem;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  @media (min-width: 40rem) {
+    .prop dl { grid-template-columns: 4.5rem minmax(0, 1fr); }
+  }
+  .prop dt {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-top: 0.28em;
+  }
+  .prop dd {
+    margin: 0;
+    max-width: var(--measure);
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+  }
+  .prop dd strong { color: var(--ink); font-weight: 650; }
+
+  .cite {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+  }
+
+  .scroller { overflow-x: auto; }
+
+  /* ---- footer ---------------------------------------------------- */
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  footer p { font-size: 0.9rem; color: var(--muted); }
+  footer .fnote { color: var(--ink-soft); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">grandMA3 Copilot · 기능 감사</p>
+    <h1>포지션 프리셋 감사</h1>
+    <p class="standfirst">
+      앱에는 이미 Position 프리셋 기능이 있습니다. 리그의 실제 3D 좌표에서
+      포지션을 계산하고, <span class="m">Preset 2.x</span>에 저장하고, 큐에는
+      값이 아니라 참조를 심습니다. 아래는 지금 무엇이 동작하는지와, 다음에
+      손볼 만한 다섯 곳입니다.
+    </p>
+    <div class="meta">
+      <span>검사일 2026-08-16</span>
+      <span>server/spatial/pointing.py</span>
+      <span>server/web/session.py</span>
+      <span>테스트 8,861 passed</span>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="h2-mark">한눈에</span>기능은 있고, 구멍은 저장 이후에 있다</h2>
+    <p>
+      계산과 명령 생성은 촘촘합니다. 번호를 추측하지 않고, 룩 하나가 실패해도
+      나머지가 살아남고, 큐는 참조로 빌드됩니다. 반면 <strong>저장한 뒤에
+      벌어지는 일</strong> — 덮어썼는지, 실제로 들어갔는지 — 은 아직 아무도
+      확인하지 않습니다.
+    </p>
+    <div class="tiles">
+      <div class="tile">
+        <b class="t-good">3</b>
+        <small>대화 진입점<br>기본 10종 · 룩 저장 · 큐 저장</small>
+      </div>
+      <div class="tile">
+        <b class="t-good">10</b>
+        <small>리그 배치에서 유도되는<br>기본 포지션 종류</small>
+      </div>
+      <div class="tile">
+        <b class="t-good">4</b>
+        <small>풀 조회 헬퍼<br>점유 · 빈 구간 · 준비된 구간</small>
+      </div>
+      <div class="tile">
+        <b class="t-open">5</b>
+        <small>이번에 제안하는<br>개선 항목</small>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="h2-mark">지금 되는 것 · 1</span>기본 포지션 10종은 리그 모양에서 나온다</h2>
+    <p>
+      고정 각도표가 아닙니다. <span class="m">basic_position_presets()</span>는
+      좌표가 확인된 장비들의 중심점·경계상자·주축을 먼저 구하고, 거기서 10종을
+      유도합니다. 그래서 같은 이름이 일자 바에서도, 링에서도, 사각 그리드에서도
+      각각 그 리그에 맞는 룩을 만듭니다.
+    </p>
+    <div class="pool">
+      <div class="pool-head">
+        <span>Position Pool · Preset 2.x</span>
+        <span>시작 번호로 21을 골랐을 때</span>
+      </div>
+      <div class="slots">
+        <div class="slot written"><span class="no">2.21</span><span class="nm">Home</span></div>
+        <div class="slot written"><span class="no">2.22</span><span class="nm">Wall</span></div>
+        <div class="slot written"><span class="no">2.23</span><span class="nm">Audience</span></div>
+        <div class="slot written"><span class="no">2.24</span><span class="nm">Center</span></div>
+        <div class="slot written"><span class="no">2.25</span><span class="nm">Vocal DSC</span></div>
+        <div class="slot written"><span class="no">2.26</span><span class="nm">Fan Out</span></div>
+        <div class="slot written"><span class="no">2.27</span><span class="nm">Fan In</span></div>
+        <div class="slot written"><span class="no">2.28</span><span class="nm">Cross</span></div>
+        <div class="slot written"><span class="no">2.29</span><span class="nm">Ring Out</span></div>
+        <div class="slot written"><span class="no">2.30</span><span class="nm">Ring In</span></div>
+      </div>
+      <p class="cite">
+        BASIC_POSITION_SEQUENCE — server/spatial/pointing.py:415 ·
+        유도 로직 :466 · 풀 번호 2 고정 :190
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="h2-mark">지금 되는 것 · 2</span>세 개의 진입점과 그 아래 명령들</h2>
+    <div class="caps">
+
+      <div class="cap">
+        <div class="cap-where">session.py:2800<br>트리거 :1579</div>
+        <div class="cap-what">기본 10종 한 번에 저장</div>
+        <div class="cap-how">
+          &ldquo;기본 포지션 프리셋 21번부터 저장해줘&rdquo; — 각 룩을
+          <span class="m">적용 → Store → Label → ClearAll</span> 순의 독립
+          번들로 처리합니다. 하나가 거부돼도 나머지 아홉은 살아남습니다.
+        </div>
+      </div>
+
+      <div class="cap">
+        <div class="cap-where">session.py:2684<br>트리거 :247</div>
+        <div class="cap-what">룩 하나 만들고 저장</div>
+        <div class="cap-how">
+          &ldquo;장비들이 바깥쪽을 바라보게 하고 프리셋 11로 저장해줘&rdquo; —
+          부채살·교차·링 룩을 만든 직후, 값이 프로그래머에 남아 있는 동안
+          저장합니다.
+        </div>
+      </div>
+
+      <div class="cap">
+        <div class="cap-where">session.py:2909</div>
+        <div class="cap-what">프리셋을 큐로 저장</div>
+        <div class="cap-how">
+          &ldquo;프리셋 11을 시퀀스 5 큐 2로 페이드 3초 저장&rdquo; — 프리셋을
+          리콜한 상태에서 저장해 큐가 <strong>참조</strong>를 쥐게 합니다.
+          <span class="m">/Merge</span> · <span class="m">/Overwrite</span>는
+          절대 붙지 않습니다.
+        </div>
+      </div>
+
+      <div class="cap">
+        <div class="cap-where">pointing.py:329 · :349<br>:373</div>
+        <div class="cap-what">명령 생성 계층</div>
+        <div class="cap-how">
+          <span class="m">Store Preset 2.n</span> ·
+          <span class="m">Label Preset 2.n 'Home'</span> ·
+          <span class="m">Fixture a + b ; At Preset 2.n</span> ·
+          <span class="m">Store Sequence S Cue C 'name' CueFade F</span>.
+          라벨에 따옴표가 섞이면 명령을 만들지 않고 거부합니다.
+        </div>
+      </div>
+
+      <div class="cap">
+        <div class="cap-where">session.py:4505 · :4536<br>:4658 · :4552</div>
+        <div class="cap-what">풀 조회와 질문 카드</div>
+        <div class="cap-how">
+          콘솔의 Position 풀을 직접 읽어 점유 슬롯을 구하고, 10칸 연속으로 빈
+          구간과 이미 저장된 구간을 각각 찾아 선택지로 제시합니다. 풀을 못
+          읽으면 추측하지 않고 &ldquo;검증되지 않은 번호&rdquo;라고 밝힙니다.
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="h2-mark">개선 제안</span>다음에 손볼 다섯 곳</h2>
+    <p>
+      위험한 것부터 순서대로입니다. 앞의 둘은 이미 있는 함수를 한 번 더
+      부르는 정도로 닫히고, 셋째는 아키텍처가 이미 준비해 둔 기능에 입구만
+      내는 일입니다.
+    </p>
+
+    <div class="props">
+
+      <article class="prop sev-risk">
+        <div class="prop-head">
+          <span class="chip chip-risk">덮어쓰기 위험</span>
+          <h3>번호를 직접 말하면 점유 검사를 건너뛴다</h3>
+          <span class="cost">라운드트립 +1</span>
+        </div>
+        <dl>
+          <dt>근거</dt>
+          <dd>
+            &ldquo;21번부터&rdquo;처럼 번호가 지시문에 있으면 코드는 곧장 그
+            번호를 씁니다. 빈 구간을 조회하는
+            <span class="m">_position_preset_free_starts()</span>는 번호가
+            <em>없을 때만</em> 호출됩니다. 그런데
+            <span class="m">Store Preset</span>은 경고 없이 덮어쓰고, 이
+            콘솔에는 되돌릴 경로가 없습니다.
+            <span class="cite">session.py:2820</span>
+          </dd>
+          <dt>제안</dt>
+          <dd>
+            명시 번호에도 <span class="m">_position_preset_pool_slots()</span>를
+            돌려 <span class="m">2.N ~ 2.N+9</span> 점유를 확인하고, 충돌하면
+            <strong>어느 슬롯이 사라지는지 이름과 함께</strong> 보여주는 확인
+            카드를 한 번 띄웁니다. 풀을 못 읽으면 지금처럼 진행하되 그 사실을
+            응답에 밝힙니다.
+          </dd>
+        </dl>
+        <div class="scroller">
+          <div class="slots" style="min-width: 34rem;">
+            <div class="slot written"><span class="no">2.21</span><span class="nm">Home</span></div>
+            <div class="slot written"><span class="no">2.22</span><span class="nm">Wall</span></div>
+            <div class="slot written"><span class="no">2.23</span><span class="nm">Audience</span></div>
+            <div class="slot clobber"><span class="no">2.24</span><span class="nm">Center</span><span class="fate">기존 삭제</span></div>
+            <div class="slot clobber"><span class="no">2.25</span><span class="nm">Vocal DSC</span><span class="fate">기존 삭제</span></div>
+            <div class="slot written"><span class="no">2.26</span><span class="nm">Fan Out</span></div>
+          </div>
+        </div>
+        <p class="cite">
+          현재 동작 — 2.24 · 2.25에 다른 프리셋이 있어도 조용히 덮어씀
+        </p>
+      </article>
+
+      <article class="prop sev-trust">
+        <div class="prop-head">
+          <span class="chip chip-trust">신뢰성</span>
+          <h3>저장했는지 되읽어 확인하지 않는다</h3>
+          <span class="cost">라운드트립 +1 (10개 전체에 1회)</span>
+        </div>
+        <dl>
+          <dt>근거</dt>
+          <dd>
+            10종 저장 루프는 명령을 보낸 뒤 &ldquo;저장 요청했습니다&rdquo;로
+            끝납니다. 같은 앱의 좌표 쓰기(<span class="m">arrange_fixtures</span>)는
+            백업하고 되읽어 검증하는데, 프리셋 저장에는 그 단계가 없습니다.
+            이 프로젝트는 <strong>&ldquo;요청됨&rdquo;을 &ldquo;반영됨&rdquo;으로
+            읽었다가 이미 한 번 데인</strong> 이력이 있습니다.
+            <span class="cite">session.py:2866 이하</span>
+          </dd>
+          <dt>제안</dt>
+          <dd>
+            저장이 끝나면 풀을 한 번 다시 읽어 기대한 슬롯 집합과 대조하고,
+            응답에 <span class="m">2.21–2.30 중 10개 확인</span> 또는
+            <span class="m">2.27 미확인</span>처럼 <strong>대조 결과를
+            숫자로</strong> 적습니다. 조회 함수는 이미 있습니다.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="prop sev-feat">
+        <div class="prop-head">
+          <span class="chip chip-feat">미구현 기능</span>
+          <h3>리포커스(재생성) 진입점이 없다</h3>
+          <span class="cost">핸들러 1개</span>
+        </div>
+        <dl>
+          <dt>근거</dt>
+          <dd>
+            큐에 값이 아니라 참조를 심는 설계의 근거는 코드 주석에 이렇게
+            적혀 있습니다 — <em>프리셋을 다시 만들면 그 프리셋을 쓰는 모든
+            큐의 포커스가 함께 갱신된다.</em> 그런데 그 &ldquo;다시
+            만들기&rdquo;를 부르는 핸들러가 없습니다. 기본 10종 경로는 늘 새
+            시작 번호를 묻고 새로 저장합니다.
+            <span class="cite">pointing.py:329 docstring</span>
+          </dd>
+          <dt>제안</dt>
+          <dd>
+            &ldquo;지금 배치로 기본 포지션 다시 잡아줘&rdquo; 트리거를 만들어,
+            <span class="m">_position_preset_ready_starts()</span>가 찾아낸
+            기존 10칸 구간에 <strong>의도적으로</strong> 덮어씁니다(확인 카드
+            1회). 공연장을 옮기거나 리그가 바뀌었을 때 큐를 한 개도 건드리지
+            않고 포커스만 갱신하는 흐름이 그때 열립니다.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="prop sev-feat">
+        <div class="prop-head">
+          <span class="chip chip-feat">정확도</span>
+          <h3>장비 타입을 구분하지 않는다</h3>
+          <span class="cost">별도 SPEC 규모</span>
+        </div>
+        <dl>
+          <dt>근거</dt>
+          <dd>
+            <span class="m">basic_position_presets(fixtures)</span>는 좌표가
+            확인된 장비를 한 덩어리로 받습니다. 프리셋 경로 어디에서도
+            <span class="m">server/spatial/fixture_type.py</span>를 부르지
+            않습니다. 스팟과 워시가 같은 지점을 봐도 필요한 틸트는 다르므로,
+            섞인 프리셋은 <strong>모두에게 조금씩 틀린 타협</strong>입니다.
+          </dd>
+          <dt>제안</dt>
+          <dd>
+            타입별로 나눠 저장하거나, 최소한 &ldquo;이 프리셋에 타입 N종이
+            함께 들어갑니다&rdquo;를 응답에 밝힙니다. 후자는 작고, 전자는
+            프리셋 번호 배분 규칙까지 건드리므로 SPEC 후보입니다.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="prop sev-feat">
+        <div class="prop-head">
+          <span class="chip chip-feat">운영</span>
+          <h3>프리셋이 현재 배치에서 나온 것인지 알 수 없다</h3>
+          <span class="cost">라벨 규칙 + 로컬 기록</span>
+        </div>
+        <dl>
+          <dt>근거</dt>
+          <dd>
+            라벨은 <span class="m">Home</span>,
+            <span class="m">Fan Out</span>뿐입니다. 어느 리그 배치에서
+            유도됐는지 아무 흔적이 없어서, 패치 좌표가 바뀐 뒤에도 프리셋은
+            멀쩡해 보입니다. 콘솔만 봐서는 <strong>철 지난 프리셋과 방금 만든
+            프리셋이 구별되지 않습니다.</strong>
+          </dd>
+          <dt>제안</dt>
+          <dd>
+            저장 시점의 좌표 서명을 앱 쪽에 기록해 두고, 다음 세션에서 리그를
+            읽었을 때 달라졌으면 &ldquo;이 프리셋은 다른 배치에서
+            만들어졌습니다&rdquo;를 먼저 알립니다. 라벨에 축약 표기를 얹는
+            방안도 가능하지만, 라벨은 따옴표 제약이 있으니 형식을 먼저 정해야
+            합니다.
+          </dd>
+        </dl>
+      </article>
+
+    </div>
+  </section>
+
+  <footer>
+    <p class="fnote">
+      오늘 커밋한 회전 반영(<span class="m-plain">4dd8487</span>)은 프리셋에
+      <em>담기는 Pan/Tilt 값</em>을 정확하게 만든 변경입니다. 저장 로직 자체는
+      건드리지 않았으므로 위 다섯 항목은 그대로 남아 있습니다.
+    </p>
+    <p>
+      인용한 줄 번호는 모두 현재 HEAD 기준입니다. 제안 1·2는 기존 함수를
+      재사용하므로 새 콘솔 문법이나 실기 측정 없이 닫힙니다.
+    </p>
+  </footer>
+
+</div>
