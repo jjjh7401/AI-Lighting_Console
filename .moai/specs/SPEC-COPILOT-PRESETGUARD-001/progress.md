@@ -187,7 +187,7 @@ D1은 **이 SPEC이 닫으려는 결함과 같은 형상**이다 — 관측하�
 
 ### 종결
 
-- `sync_commit_sha: pending-backfill-close` (본 종결 커밋은 자기 SHA를 알 수 없어 후속 커밋에서 채운다 — 스키마 §D3 자기참조 예외)
+- `sync_commit_sha: 5b30a66` (종결 커밋. 커밋은 자기 SHA를 알 수 없으므로 `pending-backfill-close` 자리표시자로 실었다가 본 후속 커밋에서 채웠다 — 스키마 §D3 자기참조 예외). sync 산출물 커밋은 `0d5760c`.
 - `spec.md` frontmatter `implemented → completed`. 감사 판정 PASS-WITH-DEBT + 실패 AC 0건 + 사용자 지시에 근거한다.
 - **열린 항목 3건은 미충족 인수 기준이 아니라 후속 제안이다** — AC 14건 전건 PASS·범위 봉쇄 유지가 확인됐으므로 후속이 남았다는 이유로 SPEC을 열어두지 않는다.
 
