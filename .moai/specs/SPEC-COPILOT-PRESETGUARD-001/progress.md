@@ -8,7 +8,7 @@
 
 **무엇**: Position 프리셋(풀 2)의 **비가역 덮어쓰기**를 세 곳에서 막는다 — ① 시작 번호가 확정된 시점에 점유를 검사하고 충돌하면 **어느 슬롯이 사라지는지 번호로** 물어본다(오늘은 번호를 명시하면 검사가 아예 없다) ② 저장 후 풀을 **한 번 되읽어** 결과를 형용사가 아닌 **산술**로 보고한다(오늘은 되읽지 않는다) ③ *"지금 배치로 다시 잡아줘"* 로 **기존 구간을 제자리 갱신**하는 입구를 만든다(오늘은 없다 — 큐가 참조를 들고 있으므로 프리셋만 다시 만들면 모든 큐가 재조준된다). 핵심 설계는 하나다: **확인 카드는 하나, 호출자는 둘** — ①과 ③이 같은 판정 로직을 공유해야 한쪽만 fail-closed가 되는 드리프트가 안 생긴다.
 
-**상태**: **run-phase 진행 중 (in-progress v0.1.0).** 구현 커밋 **1건** (`237c4db` — 점유 가드 · 저장 되읽기 · 재생성 3경로, 신규 테스트 19건) · 라이브 0. plan 산출물 커밋 = `d27a5fc`(문서가 f5cfe15에 미커밋 상태였음 — 뒤늦게 반영). 직접 관측: 전체 스위트 **8880 passed · 8 skipped** (기준선 8861 + 신규 19, 회귀 0) · `ruff check server/` 선재 2건 외 신규 0 · `server/spatial/**`·`tools.py`·`server/safety/**` byte-diff 0 · 뮤테이션 필수 8건 포함 10건 전건 RED(생존 0, 로그 `.moai/state/verify/presetguard/mutations.log`). **미완**: 독립 리뷰(review-tjueyo) 결과를 lead-tjueyo 경유로 **NOT-A-PASS — 결함 9건(차단 3건)** 으로 전달받았고 F1~F9 수정이 승인됐다(리뷰 원문은 이 세션이 직접 관측하지 않음). §E.2 Run-phase Evidence 미작성. base `jjjh7401/MAcopilotpos` HEAD = `f5cfe15`. Tier **M** · REQ **20** · AC **14**(뮤테이션 필수 **8**) · Out of Scope **6항** · ASSUMPTION **81~85** · 열린 결정 **3건**(전부 에이전트 판단 가능) · **라이브 콘솔 세션 0회**.
+**상태**: **sync 완료 (implemented v0.1.0).** 3-phase 전 사이클 종료 — plan(`d27a5fc`) → run(`237c4db` 구현 1차 → `6fb447c` draft→in-progress → `ca0294c` F1~F9 → `74f3375` R4+뮤테이션 기록 복구 → `0948ac6` R2·R3) → sync(본 §E.4). 라이브 **0회**(계약상 불필요 — REQ-020). sync 세션 직접 재측정: 전체 스위트 **8929 passed · 8 skipped**(141.44s) · `ruff check server/` 선재 2건 외 **신규 0** · `ruff format --check` 실패 2파일은 base `f5cfe15`에서도 실패 → **신규 0**(재서식 안 함) · `server/spatial/**`·`tools.py`·`server/safety/**` byte-diff **0**(f5cfe15..HEAD) · 뮤테이션 1라운드 10/10 · 2라운드 12/12, 생존 0(로그 `.moai/state/verify/presetguard/mutations.log` — 기록은 확인했으나 재실행은 run 세션의 것). 독립 리뷰(review-tjueyo)는 **NOT-A-PASS — 결함 9건(차단 3건)** 이었고 F1~F9 수정 후 재리뷰 통과로 sync가 열렸다 — **리뷰 원문은 run·sync 어느 세션도 직접 관측하지 않았다.** base `jjjh7401/MAcopilotpos` HEAD = `f5cfe15`. Tier **M** · REQ **20** · AC **14**(뮤테이션 필수 **8**) · Out of Scope **6항** · ASSUMPTION **81~85** · **미푸시**(브랜치 `jjjh7401/MAcopilotpos`, PR 없음 — Tier M). 열린 항목 3건은 §E.4 말미 표 참조(닫지 않음).
 
 **이 SPEC의 한 줄**: *가장 확신을 갖고 행동한 운영자가 가장 보호받지 못한다* — 번호를 직접 지목한 경로에만 점유 검사가 없다는 사실(`server/web/session.py:2820`)이 이 SPEC을 요구했다.
 
@@ -92,3 +92,62 @@ lead 쪽 사용자는 이 둘을 이연하기로 했으나, **이 세션의 사�
   - **수정**: 판정을 완전 일치에서 **어절 단위 형태 정규화**로 바꿨다 — 답을 공백으로 쪼개고 각 어절에서 존대·청유 어미(`해주세요`·`해줘`·`요` 등)를 뗀 뒤, **모든 어절이** 승낙어여야 승낙이다. 부분 문자열 매칭이 아니므로 F1의 다섯 문장은 그대로 막힌다("네"는 승낙이지만 "네가 판단해"의 `네가`는 아니다). 네 번째 판정 상태 `unrecognised`를 도입해 거절과 분리했고, 회신이 원인을 오귀속하지 않고 `'덮어쓰기 진행' 또는 '취소'로 답해 주세요`를 안내한다. 거절어도 같은 어절 규칙으로 판정하므로 `"취소하지 마"`(= 취소하지 말라)가 거절로 뒤집히지 않고 `unrecognised`로 간다. 공허했던 비공허성 테스트는 **손으로 적은 독립 코퍼스** 14문장(`test_natural_korean_consent_completes_the_overwrite`)으로 교체했다 — 구현의 토큰 목록에서 유도하지 않는다.
 - **R3 — `다시\s*\S{0,4}?(?:잡|만들|…)`의 `\S`는 공백을 넘지 못한다.** 그래서 `"기본 포지션 다시 한번 잡아줘"` · `"다시 좀 잡아줘"` 가 재생성에서 빠져 **저장 경로로 가고, 운영자는 프리셋이 갱신됐다고 믿는데 실제로는 새 구간에 저장된다.** 어휘를 넓히는 문제가 아니라 **같은 어휘에 부사 하나가 낀** 경우다. 사이에 공백으로 구분된 토큰 하나를 허용하면 AC-011 ① 코퍼스를 유지한 채 닫힌다.
   - **수정**: 꼬리를 `다시(?:\s+\S{1,6})?\s*(?:잡|만들|생성|갱신)`으로 바꿔 사이 어절 **하나**를 허용했다. 앞의 `.{0,12}?` 한도는 그대로라 F5 봉쇄(부사 `다시`가 다른 동사에 붙은 문장)는 유지된다 — F5 뮤테이션이 여전히 RED인 것으로 확인했다. 회귀 3문장(`다시 한번 잡아줘` · `다시 좀 잡아줘` · `지금 배치로 … 다시 한번 잡아줘`)을 핀했다.
+
+---
+
+## §E.4 Sync-phase Audit-Ready Signal
+
+작성자: sync 세션(`dda49267`, 칸반 run `tjueyo`). **모든 수치는 이 세션이 직접 실행해 관측한 것**이며, run/review 세션이 보고한 값을 옮겨 적지 않았다. 전달받은 주장 중 재측정한 것과 재측정하지 못한 것을 아래에서 구분한다.
+
+### 산출물
+
+| 파일 | 변경 |
+|---|---|
+| `CHANGELOG.md` | `[Unreleased] · Added` 최상단에 PRESETGUARD-001 항목 신설 |
+| `README.md` | `## Irreversible-write guard — Position presets (PRESETGUARD)` 절 신설 (안전 게이트 절 바로 뒤 — 게이트와 **다른 계층**임을 본문에서 명시) |
+| `spec.md` | frontmatter `status: in-progress → implemented` |
+| `progress.md` | 본 §E.4 |
+
+### 직접 측정 (명령 + 관측)
+
+| 주장 | 명령 | 관측 |
+|---|---|---|
+| 전체 스위트 무회귀 | `uv run pytest server/tests -q` | **8929 passed · 8 skipped · 1 warning** (141.44s). 로그 `.moai/state/verify/presetguard/sync-pytest.log` |
+| 린트 신규 0 | `uv run ruff check server/` | `Found 2 errors` — 전부 선재 E501(`server/safety/console.py`) |
+| 서식 신규 0 | `uv run ruff format --check server/` | 실패 2파일(`server/safety/console.py` · `server/web/preview.py`), 366파일 정상 |
+| 그 2파일은 base에서도 실패 | `git show f5cfe15:<path>` 로 사본 추출 후 동일 명령 | **2 files would be reformatted** — base `f5cfe15`에서 이미 실패 |
+| 범위 봉쇄 유지 | `git diff --stat f5cfe15 HEAD -- server/spatial/ server/safety/ server/orchestrator/tools.py` | **출력 없음**(byte-diff 0) |
+| 코드 변경 2파일 | `git diff --stat f5cfe15 0948ac6 -- server/` | `session.py` +543 · `test_web_session.py` +737 (2 files) |
+| 동의어 3종 미인식 | `_preset_answer_intent()` 직접 호출 | `그래` · `덮어써줘` · `ㅇㅇ` → 전부 `unrecognised` (쓰기 0) |
+| R2 수정 동작 | 동일 | `진행해주세요` · `좋아요` · `넵` → `consent`, `취소하지 마` → `unrecognised`(거절 아님) |
+| 회전 도구설명 결함 | `tools.py` `get_spatial_context` ToolDefinition(7895~7980) 판독 | 서술형 `description=`에 rotation **0회**. 첫 등장은 `include_rotation` **파라미터 스키마 안**(7965~) |
+
+### DoD 3번 판정 — "통과"가 아니라 **"신규 0"**
+
+`acceptance.md` §E DoD 3번의 `ruff format --check 통과` 문면은 **부정확하다.** `server/safety/console.py` · `server/web/preview.py`는 base `f5cfe15`에서 **이미** 실패하므로 무조건 통과는 달성 불가능하다. 옆의 `ruff check` 조항과 같이 **"신규 0"** 으로 읽는다. 두 파일은 재서식하지 **않았다** — `server/safety/`는 범위 봉쇄 안쪽이고, 봉쇄를 깨면서 DoD 문면을 만족시키는 것은 정확히 이 SPEC이 경계하는 종류의 거래다. **문면 자체는 다음 개정에서 고칠 대상으로 남긴다.**
+
+### 재측정하지 못한 것 (승계 필요)
+
+- **독립 리뷰 원문.** review-tjueyo의 NOT-A-PASS 판정과 결함 9건의 원문을 이 세션은 관측하지 않았다. F1~F9의 내용은 커밋 메시지와 `progress.md`를 통해서만 안다.
+- **뮤테이션 재실행.** `mutations.log`가 1라운드 10/10 · 2라운드 12/12(생존 0)를 기록하는 것은 파일로 확인했으나, **이 세션이 하니스를 다시 돌리지는 않았다.** 로그는 git HEAD와 추적파일 clean 여부를 각인하므로 위조 없는 기록이지만, 그 기록을 만든 실행은 run 세션의 것이다.
+- **라이브 콘솔.** 본 SPEC은 신규 MA3 문법 0건이므로 실기 세션이 계약상 불필요하다(REQ-020). 따라서 *"덮어쓰기가 실제로 막혔다"* 는 라이브 관측은 **존재하지 않으며, 존재해야 하는 것도 아니다.**
+
+### `ca0294c` 정정문 도달성
+
+CHANGELOG 항목은 부정확한 숫자(**19**)를 되풀이하지 않고, 그 커밋 메시지가 부정확하다는 사실과 정정 위치(§E.2)를 함께 적었다. 커밋을 나중에 읽는 사람이 CHANGELOG → §E.2 정정문에 도달할 수 있다. **커밋 재작성은 하지 않았다.**
+
+### 열린 항목 — 닫지 않고 찾을 수 있게만 둔다
+
+| # | 항목 | 성격 | 위치 |
+|---|---|---|---|
+| 1 | 동의어 `그래` · `덮어써줘` · `ㅇㅇ` 미인식 | 안전 방향(쓰기 0), 사용성 간극 | `_PRESET_CONSENT_WORDS` (`session.py`) |
+| 2 | P4′ — `basic_position_presets()`가 고정 등기구(PAR·블라인더)에도 Pan/Tilt를 준다 | 설계 간극. `pointing.py`는 무빙헤드 조준용으로 문서화됨 | `session.py` · `server/spatial/pointing.py` |
+| 3 | `get_spatial_context` 도구설명에 rotation 미언급 → 모델이 Lua 즉흥 작성 | **본 SPEC 범위 밖** | `tools.py` (봉쇄 구역 — 별도 커밋 + `test_songcue_bundle.py` 헝크핀 재측정 필요) |
+
+3번은 이 SPEC에서 손대지 않는다. `tools.py` 변경은 `server/tests/test_songcue_bundle.py`가 고정한 diff hunk 위치를 흔들며, 그것은 §0 함정 7번이 명시적으로 경고한 트립와이어다.
+
+### 남은 상태
+
+- 브랜치 `jjjh7401/MAcopilotpos` **미푸시** — 푸시는 사용자 결정이며 sync 세션이 판단하지 않는다.
+- **PR 없음** (Tier M — Hybrid Trunk).
+- 미추적 부산물 2건(`server/.moai/state/config-cache.json` · `server/safety/.moai/state/config-cache.json`)은 moai CLI가 작업 디렉터리 폴백으로 만든 것이다. **추적 파일이 아니므로 범위 봉쇄 불변식에는 영향이 없고**, 커밋하지 않았다. 정리(삭제 또는 `.gitignore`)는 별건.

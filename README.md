@@ -94,6 +94,39 @@ immediately before approved risky commands; backup failure blocks execution),
 (append-only JSONL under `server/audit_logs/`, daily rotation, 90-day
 retention — every console send reconciles 1:1 with an audit record).
 
+## Irreversible-write guard — Position presets (PRESETGUARD)
+
+A **separate** layer from the safety gate above: the gate classifies command
+risk, but `Store Preset 2.n` is a perfectly ordinary command that silently
+overwrites whatever occupies the slot. There is no undo, no restore path, and
+`Delete` is blacklisted — **an overwritten preset is gone.** So the guard lives
+in the session layer ([`server/web/session.py`](server/web/session.py)), not in
+`server/safety/`, and it closes three holes:
+
+1. **Occupancy is checked regardless of how the start number arrived.** The
+   check used to run only when the operator left the number to the system;
+   naming a number explicitly (`"21번부터"`) skipped it entirely — the most
+   confident operator was the least protected. The guard now sits outside that
+   branch, so the explicit-number path and the free-text answer path are
+   checked alike, and a collision asks **which numbered slots would be lost**.
+2. **The pool is read back after storing.** The store loop used to fire
+   `run_commands` and report "저장 요청했습니다". It now re-reads the pool once
+   and reports arithmetic (landed / missing slot numbers) instead of an
+   adjective. A withheld-by-approval slot is classified `proposal`, not a
+   defect — otherwise the report cries wolf on every gated run.
+3. **Regeneration updates presets in place.** *"지금 배치로 다시 잡아줘"* now
+   rewrites an existing range, so every cue referencing those presets is
+   re-aimed. Previously no handler existed and such a phrase fell through to
+   the store path — the operator believed the presets were refreshed while a
+   new range was written instead.
+
+Two rules hold the design together. **One confirmation card, two callers** —
+first-time store and regeneration share the same decision logic, so one path
+cannot drift out of fail-closed. And **unknown ≠ empty** — when the pool cannot
+be read, that is never reported as "checked, and it was empty"; a store
+proceeds with an explicit notice while a regeneration refuses outright, since
+regeneration presupposes the range exists.
+
 ## Korean chat UI (M5)
 
 The chat surface is a FastAPI WebSocket server ([`server/web/`](server/web/))
