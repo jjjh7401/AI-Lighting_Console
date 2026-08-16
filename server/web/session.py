@@ -1588,9 +1588,21 @@ _BASIC_POSITIONS_START = re.compile(r"(?P<no>\d+)\s*(?:번)?\s*(?:부터|에서(
 # **함께 매치한다**(2026-08-16 실측 — ASSUMPTION-83 반증). 교집합을 없애려면 이미
 # 출하된 트리거를 좁혀야 하므로, 대신 디스패치 등록 순서로 행선지를 고정한다
 # (REQ-PRESETGUARD-015). 어휘는 좁게 잡는다 — 넓힐수록 신규 저장이 새어든다(D-1).
+#
+# 꼬리는 **묶는다**. `.*?`로 열어 두면 "기본 포지션 10개 저장해줘, 끝나면 다시
+# 알려줘" 처럼 `다시`가 다른 동사에 붙은 문장까지 재생성으로 끌려온다 — 그러면
+# 저장 요청이 "다시 잡을 자리가 없습니다, 먼저 저장하세요"로 되돌아와 같은 문장을
+# 다시 쳐도 영원히 같은 답이 나오고, 풀에 10칸 구간이 있으면 사용자가 언급한 적
+# 없는 구간을 덮어쓰겠다는 카드가 뜬다.
 _REGENERATE_POSITIONS_REQUEST = re.compile(
     r"(?:기본|베이직|basic).{0,16}?(?:포지션|프리셋|position)"
-    r".*?(?:다시|재생성|재조준|리포커스|refocus)",
+    r"(?:"
+    # 그 자체로 재생성을 뜻하는 명사 — 뒤에 동사가 붙지 않아도 된다.
+    r".{0,12}?(?:재생성|재조준|리포커스|refocus)"
+    r"|"
+    # `다시`는 부사라 홀로는 의미가 없다. 재생성 동사에 **붙어 있어야** 한다.
+    r".{0,12}?다시\s*\S{0,4}?(?:잡|만들|생성|저장|갱신)"
+    r")",
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -1715,12 +1727,58 @@ class _SongReadbackResult:
 #: 안전 게이트가 명령을 **보류**한 상태들. 보류된 저장은 **당연히** 풀에 없으므로
 #: 되읽기가 이를 미확인 결함으로 보고하면 정상 워크플로에서 상시 거짓 경보가 나고,
 #: 무시되는 경보는 진짜 미착지도 함께 가린다 (REQ-PRESETGUARD-009).
-_PRESET_GATE_PENDING_STATUSES = frozenset({"proposal", "held", "locked", "blocked", "rejected"})
+#: 승인되면 착지할 수 있는 **보류** 상태.
+_PRESET_GATE_AWAITING_STATUSES = frozenset({"proposal", "held"})
 
-_PRESET_OVERWRITE_DECLINE = re.compile(
-    r"취소|아니|중단|안\s*해|그만|하지\s*마|no\b|cancel", re.IGNORECASE
+#: 게이트가 **차단/거부**한 상태 — 승인을 기다려도 착지하지 않는다. AC-009는 이들을
+#: 미확인 결함으로 세지 말라고 요구할 뿐 **문면까지 지정하지는 않는다.** 이를
+#: "승인 후 반영"으로 렌더하면 이미 부정 확정됐거나 오지 않을 승인을 기다리라고 말하게
+#: 되므로, 분류는 보류로 유지하되 문면을 분리한다.
+_PRESET_GATE_BLOCKED_STATUSES = frozenset({"blocked", "rejected", "locked"})
+
+_PRESET_GATE_PENDING_STATUSES = _PRESET_GATE_AWAITING_STATUSES | _PRESET_GATE_BLOCKED_STATUSES
+
+#: 확인 카드가 제시하는 승낙 버튼 라벨. 정확 일치가 **가장 강한 신호**다.
+_PRESET_OVERWRITE_CONSENT_LABEL = "덮어쓰기 진행"
+_PRESET_OVERWRITE_DECLINE_LABEL = "취소"
+
+#: 승낙으로 인정하는 **완전 일치** 토큰. 부분 문자열 매칭은 쓰지 않는다.
+#:
+#: `확인`·`네`·`예`·`응`은 평범한 한국어 단어의 조각이라 부분 매칭으로는 비승낙을
+#: 승낙으로 삼킨다 — 실측: "잠깐 확인해보고요" · "안 되네요" · "확인 안 했어요" ·
+#: "네가 판단해" · "예전 값으로 되돌려줘" 다섯 문장이 전부 승낙으로 읽혀 비가역
+#: 덮어쓰기가 나갔다. 토큰을 더 넣어 막는 것은 이길 수 없는 군비 경쟁이므로
+#: **모양을 바꾼다**: 승낙은 명시적·일의적 신호여야 하고 그 밖의 전부는 거절이다.
+#: 완전 일치만 인정하므로 한 글자 토큰도 다른 단어 안에 숨어들 수 없다. `확인`은
+#: 그 자체로 "확인해보겠다"와 구별되지 않으므로 **어떤 형태로도** 승낙이 아니다.
+_PRESET_OVERWRITE_CONSENT_TOKENS = frozenset(
+    {
+        _PRESET_OVERWRITE_CONSENT_LABEL,
+        "덮어쓰기",
+        "덮어써",
+        "덮어쓰자",
+        "덮어쓸게",
+        "진행",
+        "승인",
+        "네",
+        "예",
+        "응",
+        "yes",
+        "y",
+        "ok",
+        "okay",
+    }
 )
-_PRESET_OVERWRITE_ACCEPT = re.compile(r"진행|덮어|계속|승인|확인|응|네|예|yes|ok", re.IGNORECASE)
+_PRESET_OVERWRITE_CONSENT_NORMALIZED = frozenset(
+    token.casefold() for token in _PRESET_OVERWRITE_CONSENT_TOKENS
+)
+
+
+def _preset_overwrite_consented(answer: str) -> bool:
+    """답이 **명시적 승낙**인가. 그 밖의 전부는 거절이다(fail-closed)."""
+    return (
+        " ".join(answer.split()).strip(" .!?~,·").casefold() in _PRESET_OVERWRITE_CONSENT_NORMALIZED
+    )
 
 
 @dataclass(frozen=True)
@@ -1761,7 +1819,14 @@ class _PresetStoreRun:
     stored: tuple[str, ...]
     skipped_notes: tuple[str, ...]
     expected: Mapping[int, str]
-    pending: frozenset[int]
+    #: 슬롯 → 게이트 처분 (`"awaiting"` 승인 대기 · `"blocked"` 차단·거부).
+    #: 둘 다 미확인 결함으로 세지 않지만 회신 문면은 갈린다 — 차단된 저장은
+    #: 승인을 기다려도 오지 않는다.
+    pending: Mapping[int, str]
+    #: 저장 **직전**의 풀 점유. 사전에 이미 차 있던 슬롯은 되읽기에서 "확인"으로
+    #: 셀 수 없다(F3) — 응답기가 슬롯 번호(`i`)만 보내므로 내용이 바뀌었는지
+    #: 관측할 수단이 없기 때문이다. `None`이면 판독 자체가 실패한 것이다.
+    before: frozenset[int] | None = None
 
 
 def _preset_slot_list(slots: Sequence[int]) -> str:
@@ -1778,6 +1843,49 @@ def _preset_overwrite_refusal(verdict: _PresetSpanVerdict) -> str:
             "복구할 수 없습니다."
         )
     return f"덮어쓰기를 승인받지 못해 프리셋을 저장하지 않았습니다: {listed}."
+
+
+def _preset_pick_ready_span(named: Sequence[int], ready: Sequence[int]) -> int | None:
+    """지목된 번호들이 후보 구간을 **정확히 하나** 가리킬 때만 그 구간을 낸다.
+
+    재생성의 표적은 콘솔이 확인한 10칸 저장 구간이어야 한다. 후보 목록과 대조하지
+    않으면 평범한 답이 엉뚱한 구간을 만든다 — *"2번째"*(두 번째라는 뜻)가 숫자 2로
+    파싱돼 2.2~2.11을 덮어쓰면, 원래 구간은 한 칸 밀려 2.1을 참조하던 큐만 옛
+    좌표에 남는다. 그 위에서 회신은 *"같은 자리에 다시 저장"* 이라 말한다.
+
+    지목이 여럿이면(*"1번 말고 21번"*) 어느 쪽인지 알 수 없으므로 거절한다 —
+    범위 검사만으로는 1도 후보일 때 잘못된 쪽을 고른다.
+    """
+    matched = {no for no in named if no in ready}
+    return matched.pop() if len(matched) == 1 else None
+
+
+def _preset_answer_to_ready_span(answer: str | None, ready: Sequence[int]) -> int | None:
+    """구간 선택 카드의 답 → 후보 구간. 특정하지 못하면 ``None``(저장 안 함)."""
+    if answer is None:
+        return None
+    stripped = answer.strip()
+    for start in ready:
+        # 버튼을 그대로 눌렀을 때가 가장 강한 신호다. 라벨에는 "21 (2.21~2.30)"처럼
+        # 숫자가 여럿 들어 있어 자릿수만 훑으면 오히려 모호해진다.
+        if stripped in (str(start), f"{start} (2.{start}~2.{start + 9})"):
+            return start
+    return _preset_pick_ready_span([int(found) for found in re.findall(r"\d+", stripped)], ready)
+
+
+def _preset_reply_text(
+    run: _PresetStoreRun, verdict: _PresetSpanVerdict, readback: str, *, lead: str, tail: str
+) -> str:
+    """신규 저장과 재생성이 **공유**하는 회신 조립.
+
+    두 경로의 회신 꼬리는 문구 몇 개만 다르고 나머지는 같았다. 되읽기 문면을
+    고칠 때 두 곳을 각각 손대야 했고, 한쪽을 놓치면 조용히 갈라진다 — plan.md
+    §E 위험 2가 저장 루프에 대해 지목한 드리프트 표면과 같은 것이다.
+    """
+    notes = f" 참고: {'; '.join(run.skipped_notes)}." if run.skipped_notes else ""
+    guard_note = f" {verdict.note}" if verdict.note else ""
+    readback_note = f" {readback}" if readback else ""
+    return f"{lead}{notes}{guard_note}{readback_note} {tail}"
 
 
 _VECTORWORKS_UPLOAD_INSTRUCTION = (
@@ -2943,32 +3051,33 @@ class ChatSession:
         # 질문 카드도 자유 입력을 항상 제공하므로(`_ask_one` 독스트링), else
         # 갈래에서 손으로 타이핑한 번호는 명시 번호와 **동일하게 무방비**다
         # (REQ-PRESETGUARD-001 '출처 무관' 조항).
-        verdict = self._confirm_preset_span_overwrite(
-            start_no, self._position_preset_pool_slots(), intent="store"
-        )
+        pool_slots = self._position_preset_pool_slots()
+        verdict = self._confirm_preset_span_overwrite(start_no, pool_slots, intent="store")
         if not verdict.proceed:
             return self._pointing_refusal(_preset_overwrite_refusal(verdict))
         try:
             looks = basic_position_presets(fixtures)
         except SpatialPointingError as error:
             return self._pointing_refusal(f"기본 포지션을 계산할 수 없습니다: {error}")
-        run = self._store_position_preset_looks(looks, start_no)
+        run = self._store_position_preset_looks(looks, start_no, before=pool_slots)
         if not run.stored:
             return self._pointing_refusal(
                 "어느 포지션도 계산되지 않아 프리셋을 저장하지 않았습니다."
             )
-        notes = f" 참고: {'; '.join(run.skipped_notes)}." if run.skipped_notes else ""
-        guard_note = f" {verdict.note}" if verdict.note else ""
-        readback = self._verify_preset_span_stored(run)
-        readback_note = f" {readback}" if readback else ""
         return InstructionResult(
             status="ok",
-            text=(
-                f"리그 배치에서 유도한 기본 포지션 {len(run.stored)}개를 "
-                f"Position 프리셋에 저장 요청했습니다: {', '.join(run.stored)}.{notes}"
-                f"{guard_note}{readback_note} "
-                "각 프리셋은 적용→저장→ClearAll 순서로 처리했으며, 승인 또는 라이브 "
-                "잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+            text=_preset_reply_text(
+                run,
+                verdict,
+                self._verify_preset_span_stored(run),
+                lead=(
+                    f"리그 배치에서 유도한 기본 포지션 {len(run.stored)}개를 "
+                    f"Position 프리셋에 저장 요청했습니다: {', '.join(run.stored)}."
+                ),
+                tail=(
+                    "각 프리셋은 적용→저장→ClearAll 순서로 처리했으며, 승인 또는 라이브 "
+                    "잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+                ),
             ),
             command_outcomes=run.outcomes,
             retries_used=0,
@@ -3004,8 +3113,8 @@ class ChatSession:
             f"{lead} 이미 저장된 프리셋 {len(collisions)}개를 덮어씁니다: "
             f"{_preset_slot_list(collisions)}. 진행할까요?",
             options=(
-                QuestionOption(label="덮어쓰기 진행"),
-                QuestionOption(label="취소"),
+                QuestionOption(label=_PRESET_OVERWRITE_CONSENT_LABEL),
+                QuestionOption(label=_PRESET_OVERWRITE_DECLINE_LABEL),
             ),
             why=(
                 "Store Preset은 경고 없이 덮어쓰고 이 앱에는 프리셋 복원 경로가 "
@@ -3014,15 +3123,15 @@ class ChatSession:
         )
         if answer is None:
             return _PresetSpanVerdict("unanswered", collisions)
-        if _PRESET_OVERWRITE_DECLINE.search(answer):
-            return _PresetSpanVerdict("declined", collisions)
-        if _PRESET_OVERWRITE_ACCEPT.search(answer):
+        # 승낙은 **명시적·일의적**이어야 한다. 자유 입력은 언제나 열려 있으므로
+        # ("잠깐 확인해보고요", "안 되네요") 승낙 토큰을 부분 문자열로 찾으면
+        # 비승낙이 승낙으로 삼켜진다 — 완전 일치가 아니면 전부 거절이다.
+        if _preset_overwrite_consented(answer):
             return _PresetSpanVerdict("confirmed", collisions)
-        # 승낙으로 읽히지 않는 자유 입력은 승낙이 아니다 (fail-closed).
         return _PresetSpanVerdict("declined", collisions)
 
     def _store_position_preset_looks(
-        self, looks: Sequence[tuple], start_no: int
+        self, looks: Sequence[tuple], start_no: int, *, before: set[int] | None
     ) -> _PresetStoreRun:
         """룩마다 적용 → ``Store`` → ``Label`` → ``ClearAll``을 **별개 번들**로
         디스패치한다 — 한 룩이 거절돼도 나머지 아홉은 산다.
@@ -3033,7 +3142,7 @@ class ChatSession:
         stored: list[str] = []
         skipped_notes: list[str] = []
         expected: dict[int, str] = {}
-        pending: set[int] = set()
+        pending: dict[int, str] = {}
         for offset, (label, aims, skipped) in enumerate(looks):
             preset_no = start_no + offset
             if not aims:
@@ -3054,11 +3163,13 @@ class ChatSession:
             outcomes.extend(executed.command_outcomes)
             stored.append(f"2.{preset_no} '{label}'")
             expected[preset_no] = label
-            if any(
-                outcome.status in _PRESET_GATE_PENDING_STATUSES
-                for outcome in executed.command_outcomes
-            ):
-                pending.add(preset_no)
+            statuses = {outcome.status for outcome in executed.command_outcomes}
+            # 차단이 대기보다 우선한다 — 한 번들에 둘이 섞이면 "기다리면 된다"가
+            # 아니라 "이 번들은 착지하지 않는다"가 운영자에게 필요한 사실이다.
+            if statuses & _PRESET_GATE_BLOCKED_STATUSES:
+                pending[preset_no] = "blocked"
+            elif statuses & _PRESET_GATE_AWAITING_STATUSES:
+                pending[preset_no] = "awaiting"
             if skipped:
                 skipped_notes.append(f"{label}: FID {', '.join(str(fid) for fid in skipped)} 제외")
         return _PresetStoreRun(
@@ -3066,7 +3177,8 @@ class ChatSession:
             stored=tuple(stored),
             skipped_notes=tuple(skipped_notes),
             expected=expected,
-            pending=frozenset(pending),
+            pending=pending,
+            before=None if before is None else frozenset(before),
         )
 
     def _verify_preset_span_stored(self, run: _PresetStoreRun) -> str:
@@ -3088,12 +3200,36 @@ class ChatSession:
                 "저장 결과를 되읽지 못했습니다 — Position 풀 판독 실패로 "
                 f"{len(run.expected)}개 전건 미검증입니다."
             )
-        landed = sorted(no for no in run.expected if no in slots)
-        waiting = sorted(no for no in run.pending if no not in slots)
-        missing = sorted(no for no in run.expected if no not in slots and no not in run.pending)
+        # 슬롯 존재만으로는 **덮어쓰기가 착지했는지** 알 수 없다. 저장 직전에 이미
+        # 차 있던 슬롯은 새 값이 들어갔든 안 들어갔든 똑같이 "있음"으로 보인다.
+        # 응답기가 슬롯 번호(`i`)만 보내므로 내용을 대조할 수단이 없다 — 그래서
+        # 사전 점유 슬롯은 **확인으로 세지 않고** 별도 범주로 정직하게 적는다.
+        # 관측할 수 없는 것을 주장하지 않는다는 것이 이 SPEC의 규율이며, 하필
+        # 덮어쓰기 경로에서 거짓 확인이 가장 많이 나온다.
+        preexisting = frozenset() if run.before is None else run.before
+        landed, unprovable, waiting, blocked, missing = [], [], [], [], []
+        for no in sorted(run.expected):
+            disposition = run.pending.get(no)
+            if disposition == "blocked":
+                blocked.append(no)
+            elif disposition == "awaiting":
+                waiting.append(no)
+            elif no not in slots:
+                missing.append(no)
+            elif no in preexisting or run.before is None:
+                unprovable.append(no)
+            else:
+                landed.append(no)
         parts = [f"되읽기: 기대 {len(run.expected)}개 중 {len(landed)}개 확인"]
+        if unprovable:
+            parts.append(
+                f"덮어쓰기 확인 불가 {_preset_slot_list(unprovable)} — 저장 전부터 "
+                "차 있던 슬롯이라 값이 바뀌었는지 콘솔에서 읽을 수 없습니다"
+            )
         if waiting:
             parts.append(f"승인 대기 {_preset_slot_list(waiting)} — 승인 후 반영")
+        if blocked:
+            parts.append(f"게이트 차단 {_preset_slot_list(blocked)} — 반영되지 않음")
         if missing:
             parts.append(f"미확인 {_preset_slot_list(missing)}")
         return "; ".join(parts) + "."
@@ -3111,10 +3247,6 @@ class ChatSession:
         입력의 행선지를 등록 순서로 고정한다(REQ-PRESETGUARD-015).
         """
         if _REGENERATE_POSITIONS_REQUEST.search(text) is None:
-            return None
-        if _BASIC_POSITIONS_START.search(text) is not None:
-            # 번호를 지목했다면 그 자리에 새로 저장하겠다는 뜻이다 — 신규 저장
-            # 경로로 넘긴다(D-1: 어휘는 좁게, 명시 번호는 재생성에서 뺀다).
             return None
         fixtures = self._read_pointing_coordinates("regenerate-presets-read")
         if isinstance(fixtures, InstructionResult):
@@ -3137,7 +3269,15 @@ class ChatSession:
                 "10칸 연속 저장된 기본 포지션 구간을 찾지 못해 다시 잡을 자리가 "
                 "없습니다 — 먼저 '기본 포지션 10개 저장'을 실행해 주세요."
             )
-        if len(ready) == 1:
+        # 지시가 번호를 담고 있으면 그 번호로 **재생성 안에서** 구간을 고른다.
+        # 의도가 경로를 정하고, 번호는 그 경로 안의 구간을 정한다 — 번호가 있다고
+        # 신규 저장으로 넘기면 "21번부터 기본 포지션 다시 잡아줘"가 풀 미상일 때
+        # 재생성의 엄격한 규칙(미상이면 저장 안 함)을 잃고 카드 한 장 없이
+        # 2.21~2.30을 덮어쓴다 — 이 SPEC이 없애려던 바로 그 형상이다.
+        named = _BASIC_POSITIONS_START.search(text)
+        if named is not None:
+            start_no = _preset_pick_ready_span([int(named.group("no"))], ready)
+        elif len(ready) == 1:
             start_no = ready[0]
         else:
             answer = self._ask_one(
@@ -3148,10 +3288,13 @@ class ChatSession:
                 ),
                 why=("재생성은 그 자리를 덮어씁니다 — 어느 쇼의 구간인지는 운영자만 압니다."),
             )
-            try:
-                start_no = int(re.search(r"\d+", answer or "").group(0))
-            except AttributeError:
-                return self._pointing_refusal("다시 잡을 구간을 받지 못해 저장하지 않았습니다.")
+            start_no = _preset_answer_to_ready_span(answer, ready)
+        if start_no is None:
+            return self._pointing_refusal(
+                "다시 잡을 구간을 하나로 특정하지 못해 저장하지 않았습니다. "
+                f"10칸 연속 저장된 구간은 {_preset_slot_list(ready)}에서 시작합니다 — "
+                "그중 하나의 시작 번호만 답해 주세요."
+            )
         verdict = self._confirm_preset_span_overwrite(start_no, pool_slots, intent="regenerate")
         if not verdict.proceed:
             return self._pointing_refusal(_preset_overwrite_refusal(verdict))
@@ -3159,22 +3302,22 @@ class ChatSession:
             looks = basic_position_presets(fixtures)
         except SpatialPointingError as error:
             return self._pointing_refusal(f"기본 포지션을 계산할 수 없습니다: {error}")
-        run = self._store_position_preset_looks(looks, start_no)
+        run = self._store_position_preset_looks(looks, start_no, before=pool_slots)
         if not run.stored:
             return self._pointing_refusal(
                 "어느 포지션도 계산되지 않아 프리셋을 저장하지 않았습니다."
             )
-        notes = f" 참고: {'; '.join(run.skipped_notes)}." if run.skipped_notes else ""
-        guard_note = f" {verdict.note}" if verdict.note else ""
-        readback = self._verify_preset_span_stored(run)
-        readback_note = f" {readback}" if readback else ""
         return InstructionResult(
             status="ok",
-            text=(
-                f"지금 리그 배치로 기본 포지션 {len(run.stored)}개를 같은 자리에 "
-                f"다시 저장 요청했습니다: {', '.join(run.stored)}.{notes}"
-                f"{guard_note}{readback_note} "
-                "이 프리셋을 참조하는 큐는 별도 수정 없이 새 좌표를 따라갑니다."
+            text=_preset_reply_text(
+                run,
+                verdict,
+                self._verify_preset_span_stored(run),
+                lead=(
+                    f"지금 리그 배치로 기본 포지션 {len(run.stored)}개를 같은 자리에 "
+                    f"다시 저장 요청했습니다: {', '.join(run.stored)}."
+                ),
+                tail="이 프리셋을 참조하는 큐는 별도 수정 없이 새 좌표를 따라갑니다.",
             ),
             command_outcomes=run.outcomes,
             retries_used=0,

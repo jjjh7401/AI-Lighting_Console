@@ -18,6 +18,7 @@ import threading
 
 import anthropic
 import httpx
+import pytest
 from google.genai import errors as genai_errors
 
 from server.llm.anthropic_adapter import AnthropicAdapter
@@ -1570,8 +1571,12 @@ class _PresetPoolRegistry:
     리그다(acceptance.md 머리말 '스텁 함정'). 점유 가드를 검증하는 테스트는
     전부 이 리그처럼 풀 판독이 **성공하는** 상태를 명시 구성해야 한다.
 
-    ``pool``은 첫 ``query_state``(가드 판독), ``readback``은 그 이후
-    (저장 되읽기)가 보는 점유 집합이다.
+    ``pool``은 **첫 write 이전**의 모든 ``query_state``가 보는 점유 집합이고,
+    ``readback``은 그 이후가 보는 집합이다. 호출 순번이 아니라 write 경계로 가르는
+    이유: 카드 경로는 ``_position_preset_free_starts``가 풀을 한 번 먼저 읽으므로
+    "첫 판독 = 가드"가 성립하지 않는다. 순번으로 갈랐다면 카드 경로 테스트에서
+    가드를 겨눈다고 믿으면서 실제로는 ``readback``을 겨누게 된다 — 두 값이 기본으로
+    같아 조용히 통과한다.
     """
 
     _FIXTURES = [
@@ -1596,6 +1601,7 @@ class _PresetPoolRegistry:
         self.readback_error = readback_error
         self.status = status
         self.state_reads = 0
+        self.wrote = False
 
     def dispatch(self, call: ToolCall) -> ToolExecution:
         self.calls.append(call)
@@ -1611,9 +1617,10 @@ class _PresetPoolRegistry:
             )
         if call.name == "query_state":
             self.state_reads += 1
-            first = self.state_reads == 1
-            error = self.pool_error if first else self.readback_error
-            slots = self.pool if first else self.readback
+            # write 경계로 가른다 — 호출 순번이 아니다(§F9).
+            before_write = not self.wrote
+            error = self.pool_error if before_write else self.readback_error
+            slots = self.pool if before_write else self.readback
             return ToolExecution(
                 ToolResult(
                     tool_call_id=call.id,
@@ -1622,6 +1629,7 @@ class _PresetPoolRegistry:
                     is_error=error,
                 )
             )
+        self.wrote = True
         return ToolExecution(
             ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
             (CommandOutcome(command="Store Preset", status=self.status),),
@@ -1826,6 +1834,105 @@ class TestPositionPresetOverwriteGuard:
         assert "승인 대기" in event["text"]
         assert "미확인" not in event["text"]
 
+    # F1 — 동의는 명시적·일의적 신호여야 한다 (부분 문자열 매칭 금지)
+    #
+    # `확인|네|예|응`을 부분 문자열로 찾던 구현에서 아래 다섯 문장이 전부 승낙으로
+    # 읽혀 비가역 덮어쓰기가 나갔다. 평범한 한국어 비승낙이 승낙 토큰을 조각으로
+    # 품기 때문이며, 토큰을 더 넣는 방식으로는 막을 수 없다.
+    @pytest.mark.parametrize(
+        "answer",
+        [
+            "잠깐 확인해보고요",
+            "안 되네요",
+            "예전 값으로 되돌려줘",
+            "네가 판단해",
+            "확인 안 했어요",
+            # 아래 둘은 옛 구현에서도 우연히 통과했다 — 토큰이 하나 늘면 조용히
+            # 승낙으로 넘어갈 수 있으므로 함께 못 박는다.
+            "21번은 살려줘",
+            "일단 보류",
+        ],
+    )
+    def test_free_text_that_is_not_explicit_consent_stores_nothing(self, tmp_path, answer):
+        event, calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            answers=[answer],
+        )
+
+        assert len(chan.asked) == 1, answer
+        assert _writes(calls) == [], answer
+        assert "저장하지 않" in event["text"], answer
+
+    @pytest.mark.parametrize("answer", ["덮어쓰기 진행", "진행", "네", "ok", "OK", "덮어쓰기"])
+    def test_explicit_consent_tokens_do_store(self, tmp_path, answer):
+        # 비공허성 짝 — 승낙 판정이 "전부 거절"로 퇴화하지 않았음을 고정한다.
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            readback=tuple(range(21, 31)),
+            answers=[answer],
+        )
+
+        assert len(_writes(calls)) == 10, answer
+
+    # F3 — 사전 점유 슬롯은 "확인"으로 셀 수 없다
+    def test_a_preoccupied_slot_is_not_counted_as_confirmed(self, tmp_path):
+        # 21·22·27은 저장 전부터 차 있었다. 되읽기에서 여전히 "있음"으로 보이지만
+        # 새 값이 들어갔는지는 알 수 없다 — 응답기가 슬롯 번호만 보내기 때문이다.
+        event, _calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            readback=tuple(range(21, 31)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        assert "10개 확인" not in event["text"]
+        assert "7개 확인" in event["text"]
+        assert "확인 불가" in event["text"]
+        for slot in ("2.21", "2.22", "2.27"):
+            assert slot in event["text"].split("확인 불가", 1)[1]
+
+    # F6 — 카드 경로도 점유 구간에서 막힌다 (REQ-001 '출처 무관')
+    def test_a_typed_number_from_the_card_hits_the_same_guard(self, tmp_path):
+        # 제안 버튼(1·11·31)을 무시하고 손으로 21을 타이핑한 경우. 이 경로가
+        # 가드를 통과하지 못하면 가드를 if 갈래 안으로 되돌려도 스위트가 통과한다.
+        # `readback`을 일부러 다르게 둔다: 이 경로는 `_position_preset_free_starts`가
+        # 풀을 먼저 한 번 읽으므로, 리그가 "첫 판독 = 가드"로 갈랐다면 가드는
+        # `readback`(빈 풀)을 보고 충돌 없음으로 통과해 버린다(§F9).
+        event, calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 10개를 프리셋에 저장해줘",
+            pool=(21, 22, 23),
+            readback=(),
+            answers=["21"],  # 시작 번호만 답하고 덮어쓰기 카드는 무응답
+        )
+
+        assert _writes(calls) == []
+        assert any("덮어씁니다" in ask.prompt for ask in chan.asked)
+        assert "2.21" in event["text"]
+        assert "2.23" in event["text"]
+
+    # F7 — 차단·거부는 "승인 후 반영"이 아니다
+    @pytest.mark.parametrize("status", ["blocked", "rejected"])
+    def test_a_gate_blocked_store_is_not_rendered_as_awaiting_approval(self, tmp_path, status):
+        event, _calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(),
+            status=status,
+        )
+
+        assert "게이트 차단" in event["text"], status
+        assert "반영되지 않음" in event["text"], status
+        assert "승인 후 반영" not in event["text"], status
+        # 분류는 여전히 보류다 — 미확인 결함으로 세지 않는다(AC-009).
+        assert "미확인" not in event["text"], status
+
     # AC-PRESETGUARD-014 — 경계가 움직이지 않는다 (기존 안전 동작 회귀)
     def test_the_bundle_shape_and_merge_ban_survive(self, tmp_path):
         _event, calls, _chan = self._run(
@@ -1947,6 +2054,105 @@ class TestPositionPresetRegeneration:
 
         assert any("어느 구간" in ask.prompt for ask in chan.asked)
         assert "Store Preset 2.21" in _all_commands(calls)
+
+    # F2 — 구간 선택 답은 후보 목록과 대조된다
+    #
+    # "2번째"(두 번째라는 뜻)가 숫자 2로 파싱돼 2.2~2.11을 덮어쓰면 원래 구간이
+    # 한 칸 밀리고, 2.1을 참조하던 큐만 옛 좌표에 남는다. 그 상태에서 회신은
+    # "같은 자리에 다시 저장"이라고 말한다. "1번 말고 21번"은 첫 숫자만 집으면
+    # 1을 고르는데, 1도 후보라 범위 검사만으로는 걸러지지 않는다.
+    @pytest.mark.parametrize("answer", ["2번째", "1번 말고 21번", "두 번째", "아무거나"])
+    def test_an_answer_that_does_not_name_one_candidate_stores_nothing(self, tmp_path, answer):
+        occupied = tuple(range(1, 11)) + tuple(range(21, 31))
+        # 덮어쓰기 카드까지 **승낙**을 미리 넣어 둔다. 넣지 않으면 구간을 잘못
+        # 고르더라도 두 번째 카드가 무응답으로 막아서 테스트가 통과해 버린다 —
+        # 구간 선택이 아니라 fail-closed를 검증하는 꼴이 된다.
+        event, calls, _chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=occupied,
+            answers=[answer, "덮어쓰기 진행"],
+        )
+
+        assert _writes(calls) == [], answer
+        assert "Store Preset 2.2" not in _all_commands(calls), answer
+        assert "저장하지 않" in event["text"], answer
+
+    def test_the_span_card_accepts_the_offered_label_verbatim(self, tmp_path):
+        # 비공허성 짝 — 버튼을 그대로 누른 답(라벨에 숫자가 여럿 들어 있다)은
+        # 모호하다고 거절되면 안 된다.
+        occupied = tuple(range(1, 11)) + tuple(range(21, 31))
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=occupied,
+            answers=["21 (2.21~2.30)", "덮어쓰기 진행"],
+        )
+
+        assert "Store Preset 2.21" in _all_commands(calls)
+
+    # F4 — 번호를 지목해도 재생성은 재생성이다
+    def test_a_numbered_regeneration_sentence_stays_in_the_regeneration_path(self, tmp_path):
+        # 풀 미상에서 신규 저장은 진행하고(REQ-004) 재생성은 거부한다(AC-013③).
+        # 번호가 있다고 신규 저장으로 넘기면 이 문장이 카드 한 장 없이
+        # 2.21~2.30을 덮어쓴다 — 이 SPEC이 없애려던 바로 그 형상이다.
+        event, calls, chan = self._run(
+            tmp_path,
+            "21번부터 기본 포지션 다시 잡아줘",
+            pool_error=True,
+        )
+
+        assert _writes(calls) == []
+        assert chan.asked == []
+        assert "저장하지 않" in event["text"]
+
+    def test_a_numbered_regeneration_sentence_targets_the_named_span(self, tmp_path):
+        occupied = tuple(range(1, 11)) + tuple(range(21, 31))
+        _event, calls, chan = self._run(
+            tmp_path,
+            "21번부터 기본 포지션 다시 잡아줘",
+            pool=occupied,
+            answers=["덮어쓰기 진행"],
+        )
+
+        assert "Store Preset 2.21" in _all_commands(calls)
+        # 후보가 둘이지만 번호를 지목했으므로 구간을 되묻지 않는다.
+        assert all("어느 구간" not in ask.prompt for ask in chan.asked)
+
+    def test_a_named_span_that_is_not_a_stored_run_stores_nothing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "41번부터 기본 포지션 다시 잡아줘",
+            pool=tuple(range(21, 31)),
+        )
+
+        assert _writes(calls) == []
+        assert "저장하지 않" in event["text"]
+
+    # F5 — '다시'가 다른 동사에 붙은 문장은 재생성이 아니다
+    def test_an_adverbial_dasi_does_not_route_to_regeneration(self, tmp_path):
+        # "끝나면 다시 알려줘"의 '다시'는 알려줘를 꾸민다. 이 문장이 재생성으로
+        # 가면 저장 요청이 "먼저 저장하세요"로 되돌아와 영원히 같은 답이 나온다.
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 10개 저장해줘, 끝나면 다시 알려줘",
+            pool=(),
+            answers=["1"],
+        )
+
+        assert "Store Preset 2.1" in _all_commands(calls)
+
+    def test_an_adverbial_dasi_never_offers_to_overwrite_an_unmentioned_span(self, tmp_path):
+        # 풀에 10칸 구간이 있으면, 옛 정규식은 사용자가 언급한 적 없는 21~30을
+        # "다시 잡으면 … 덮어씁니다"로 제안했다.
+        _event, _calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 10개 저장해줘, 끝나면 다시 알려줘",
+            pool=tuple(range(21, 31)),
+            answers=["1"],
+        )
+
+        assert not any("다시 잡으면" in ask.prompt for ask in chan.asked)
 
     def test_an_unreadable_pool_refuses_instead_of_guessing_a_span(self, tmp_path):
         # 신규 저장(REQ-004, 진행)과 **반대**다 — 재생성은 표적의 존재를 전제한다.
