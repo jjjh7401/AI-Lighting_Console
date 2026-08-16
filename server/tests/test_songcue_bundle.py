@@ -185,6 +185,11 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # 2026-08-16 re-walk — get_spatial_context DESCRIPTION gains a rotation
 # paragraph (pure insertion inside the already-widened SPATIAL definition
 # hunk): re-measured 56 hunks, starts identical, pin unchanged, overlap ZERO.
+# 2026-08-16 re-walk 2 — query_state gains a paging pass-through (offset arg
+# validation in the handler at old 591/593 and the optional 'offset' schema
+# property, a widening of the definition hunk): 56→58 hunks, new starts 591
+# and 593 are the query_state handler region, far from both protected ranges
+# (234..238 / 524..569) — overlap ZERO.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -203,6 +208,8 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     475,
     477,
     479,
+    591,
+    593,
     620,
     952,
     989,

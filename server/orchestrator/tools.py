@@ -1729,8 +1729,14 @@ def build_toolset(
         path = call.arguments.get("path")
         if not isinstance(path, str) or not path.strip():
             return _error_result(call, "'path' must be a non-empty object-tree path")
+        offset = call.arguments.get("offset", 0)
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            return _error_result(call, "'offset' must be a non-negative integer")
         try:
-            payload = state_port.query_state(path)
+            if offset:
+                payload = state_port.query_state(path, offset=offset)
+            else:
+                payload = state_port.query_state(path)
         except Exception as exc:
             return _error_result(call, f"state query failed for {path!r}: {exc}")
         return ToolExecution(
@@ -6394,7 +6400,17 @@ def build_toolset(
                     "path": {
                         "type": "string",
                         "description": "Object-tree path, e.g. 'DataPool/Sequences'.",
-                    }
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": (
+                            "0-based children window start for paging past a "
+                            "truncated listing (PROTOCOL §4.2). The reply echoes "
+                            "the offset it honoured; no echo means the console-"
+                            "side responder predates paging — stop paging then. "
+                            "Default 0 (first window)."
+                        ),
+                    },
                 },
                 "required": ["path"],
             },
