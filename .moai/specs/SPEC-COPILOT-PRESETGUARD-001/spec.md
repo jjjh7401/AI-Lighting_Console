@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-PRESETGUARD-001
 title: "Position 프리셋 덮어쓰기 가드 · 저장 확인 · 재생성 경로 (Preset Guard)"
 version: "0.1.0"
-status: draft
+status: in-progress
 created: 2026-08-16
 updated: 2026-08-16
 author: manager-spec
