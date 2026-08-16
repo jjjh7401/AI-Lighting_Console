@@ -42,6 +42,7 @@ from server.web.handshake import (
 )
 from server.web.measure import RoundTripRecorder
 from server.web.messages import (
+    LayoutImageRejectedError,
     ProtocolError,
     approval_request_event,
     approval_resolved_event,
@@ -389,6 +390,19 @@ def create_app(deps: WebDeps) -> FastAPI:
                 raw = await websocket.receive_text()
                 try:
                     message = parse_client_message(raw)
+                except LayoutImageRejectedError as rejection:
+                    # SPEC-COPILOT-IMGLAYOUT-001 contract.md §1: an upload
+                    # rejection travels under its OWN kind so the UI can pin
+                    # the reason to the attach widget (ui/src/protocol.ts
+                    # promises kind="layout_image_rejected"). Forwarding
+                    # str(rejection) verbatim is safe: every reason is a fixed
+                    # server-authored phrase — no user input, no payload bytes
+                    # (see the layout_image_upload branch in messages.py).
+                    await _safe_send(
+                        websocket,
+                        error_event(message=str(rejection), kind="layout_image_rejected"),
+                    )
+                    continue
                 except ProtocolError:
                     await _safe_send(
                         websocket, error_event(message=_PROTOCOL_ERROR_MESSAGE, kind="protocol")

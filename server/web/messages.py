@@ -144,6 +144,19 @@ class ProtocolError(ValueError):
     """A client message violated the protocol (rejected before any handling)."""
 
 
+class LayoutImageRejectedError(ProtocolError):
+    """A ``layout_image_upload`` frame failed validation (MIME / base64 / size).
+
+    A ProtocolError SUBCLASS, not a sibling: everything upstream that treats a
+    bad frame as "reject before handling" keeps working unchanged. The app
+    layer catches this class FIRST so the contract's named error kind
+    ("layout_image_rejected" — contract.md §1, mirrored in
+    ``ui/src/protocol.ts``) reaches the client instead of the anonymous
+    kind="protocol"; the UI needs the name to tell "your image was refused,
+    here is why" apart from "your frame was malformed".
+    """
+
+
 def _is_object_number(value: object) -> bool:
     """True when ``value`` is a console object number the panel may address.
 
@@ -215,27 +228,39 @@ def parse_client_message(raw: str) -> dict:
         file_name = message.get("file_name")
         mime_type = message.get("mime_type")
         content_base64 = message.get("content_base64")
+        # Every rejection below is LayoutImageRejectedError (not the generic
+        # ProtocolError) so the app layer can forward the reason under the
+        # contract's kind="layout_image_rejected". The reason strings are safe
+        # to surface: each one is a fixed phrase authored HERE — the only
+        # interpolations are the server-owned MIME allowlist and binascii's
+        # own diagnostic (which reports character counts, never payload bytes).
         if not isinstance(file_name, str) or not file_name.strip():
-            raise ProtocolError("layout_image_upload.file_name must be a non-empty string")
+            raise LayoutImageRejectedError(
+                "layout_image_upload.file_name must be a non-empty string"
+            )
         if mime_type not in LAYOUT_IMAGE_MIME_TYPES:
             allowed = ", ".join(LAYOUT_IMAGE_MIME_TYPES)
-            raise ProtocolError(f"layout_image_upload.mime_type must be one of: {allowed}")
+            raise LayoutImageRejectedError(
+                f"layout_image_upload.mime_type must be one of: {allowed}"
+            )
         if not isinstance(content_base64, str) or not content_base64:
-            raise ProtocolError(
+            raise LayoutImageRejectedError(
                 "layout_image_upload.content_base64 must be a non-empty base64 string"
             )
         if len(content_base64) > MAX_LAYOUT_IMAGE_BASE64_LENGTH:
-            raise ProtocolError("layout_image_upload exceeds the 5 MiB limit")
+            raise LayoutImageRejectedError("layout_image_upload exceeds the 5 MiB limit")
         try:
             payload = base64.b64decode(content_base64, validate=True)
         except (binascii.Error, ValueError) as error:
-            raise ProtocolError(
+            raise LayoutImageRejectedError(
                 f"layout_image_upload.content_base64 is not valid base64: {error}"
             ) from error
         if not payload:
-            raise ProtocolError("layout_image_upload.content_base64 must not decode to empty")
+            raise LayoutImageRejectedError(
+                "layout_image_upload.content_base64 must not decode to empty"
+            )
         if len(payload) > MAX_LAYOUT_IMAGE_BYTES:
-            raise ProtocolError("layout_image_upload exceeds the 5 MiB limit")
+            raise LayoutImageRejectedError("layout_image_upload exceeds the 5 MiB limit")
         return {
             "v": PROTOCOL_VERSION,
             "type": "layout_image_upload",

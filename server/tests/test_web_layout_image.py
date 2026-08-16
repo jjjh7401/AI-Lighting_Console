@@ -14,17 +14,21 @@ import base64
 import json
 
 import pytest
+from fastapi.testclient import TestClient
 
+from server.web.app import _PROTOCOL_ERROR_MESSAGE, create_app
 from server.web.messages import (
     LAYOUT_IMAGE_MIME_TYPES,
     MAX_LAYOUT_IMAGE_BYTES,
     PROTOCOL_VERSION,
+    LayoutImageRejectedError,
     ProtocolError,
     parse_client_message,
 )
-from server.web.session import LayoutImageUpload
+from server.web.session import LayoutImageUpload, _base64_decoded_size
 
 from .test_runner_self_correction import ScriptedProvider
+from .test_web_app import _deps, _send
 from .test_web_session import _session
 
 _PNG_MIME = "image/png"
@@ -64,22 +68,25 @@ class TestClientMessageParsing:
         assert LAYOUT_IMAGE_MIME_TYPES == ("image/png", "image/jpeg", "image/webp")
 
     # -- 검증 거부 3종: MIME 화이트리스트 / base64 유효성 / 5MB 상한 -------------
+    # LayoutImageRejectedError (a ProtocolError subclass) — the named class is
+    # what lets app.py answer with the contract's kind="layout_image_rejected"
+    # instead of the anonymous kind="protocol" (contract.md §1).
 
     def test_rejects_unlisted_mime_type(self):
-        with pytest.raises(ProtocolError):
+        with pytest.raises(LayoutImageRejectedError):
             parse_client_message(
                 _raw(file_name="plan.gif", mime_type="image/gif", content_base64=_payload(16))
             )
 
     def test_rejects_invalid_base64(self):
-        with pytest.raises(ProtocolError):
+        with pytest.raises(LayoutImageRejectedError):
             parse_client_message(
                 _raw(file_name="plan.png", mime_type=_PNG_MIME, content_base64="not base64")
             )
 
     def test_rejects_oversized_payload(self):
         oversized = _payload(MAX_LAYOUT_IMAGE_BYTES + 1)
-        with pytest.raises(ProtocolError):
+        with pytest.raises(LayoutImageRejectedError):
             parse_client_message(
                 _raw(file_name="plan.png", mime_type=_PNG_MIME, content_base64=oversized)
             )
@@ -144,3 +151,62 @@ class TestSessionStorageAndReplace:
         session, _console, _audit, sent, _channel = _session(tmp_path, ScriptedProvider([]))
         session.upload_layout_image("a.png", _PNG_MIME, _payload(16))
         assert all(event["type"] != "chat_response" for event in sent)
+
+
+class TestAppLevelRejection:
+    """The WS layer's half of the contract: kind="layout_image_rejected".
+
+    Same TestClient shape as test_web_app.py — the parse rejection happens in
+    the app's receive loop, so a session-method test can never see it.
+    """
+
+    def test_a_rejected_upload_answers_with_the_contract_kind_and_reason(self, tmp_path):
+        deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            ws.receive_json()  # initial status
+            _send(
+                ws,
+                type="layout_image_upload",
+                file_name="plan.gif",
+                mime_type="image/gif",
+                content_base64=_payload(16),
+            )
+            event = ws.receive_json()
+        assert event["type"] == "error"
+        assert event["kind"] == "layout_image_rejected"
+        # The ACTUAL reason travels (contract.md §1) — safe because every
+        # reason is a fixed server-authored phrase, never user input.
+        allowed = ", ".join(LAYOUT_IMAGE_MIME_TYPES)
+        assert event["message"] == f"layout_image_upload.mime_type must be one of: {allowed}"
+
+    def test_other_protocol_errors_keep_the_generic_kind_and_message(self, tmp_path):
+        # Regression guard: only the layout-image branch got the named kind.
+        # Any other message type's ProtocolError must still surface as the
+        # byte-identical generic answer (kind="protocol", fixed Korean text).
+        deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            ws.receive_json()  # initial status
+            _send(ws, type="chat")  # ProtocolError: chat.text is missing
+            event = ws.receive_json()
+        assert event["type"] == "error"
+        assert event["kind"] == "protocol"
+        assert event["message"] == _PROTOCOL_ERROR_MESSAGE
+
+
+class TestAckSizeArithmetic:
+    """IMG-SEC-05: the ack's size comes from length arithmetic, not a second
+    5 MiB decode. The arithmetic must be EXACT for every padding shape."""
+
+    # 3n / 3n+1 / 3n+2 decoded bytes → 0 / 2 / 1 trailing '=' — all three
+    # padding cases base64 can produce.
+    @pytest.mark.parametrize("n_bytes", [3072, 3073, 3074])
+    def test_arithmetic_matches_a_real_decode_for_every_padding(self, n_bytes):
+        encoded = _payload(n_bytes)
+        assert _base64_decoded_size(encoded) == len(base64.b64decode(encoded)) == n_bytes
+
+    def test_the_notice_reports_the_arithmetic_size(self, tmp_path):
+        session, _console, _audit, _sent, _channel = _session(tmp_path, ScriptedProvider([]))
+        # 5000 bytes: 5000 % 3 == 2 → one trailing '=' — a padded shape, and
+        # the KB figure must still equal the decoded truth (5000 // 1024 == 4).
+        event = session.upload_layout_image("pad.png", _PNG_MIME, _payload(5000))
+        assert "(4KB)" in event["message"]

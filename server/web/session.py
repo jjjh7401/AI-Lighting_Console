@@ -19,7 +19,6 @@ thread-safe (the app wraps the WebSocket send accordingly).
 
 from __future__ import annotations
 
-import base64
 import contextlib
 import json
 import os
@@ -1619,6 +1618,22 @@ class LayoutImageUpload:
     file_name: str
     mime_type: str
     content_base64: str
+
+
+def _base64_decoded_size(content_base64: str) -> int:
+    """Decoded byte count of a PADDED base64 string, by length arithmetic.
+
+    Exact for the input this receives: ``parse_client_message`` already ran
+    ``b64decode(validate=True)``, so the string is well-formed base64 whose
+    length is a multiple of 4 with 0–2 trailing ``=``. Each 4-char group
+    encodes 3 bytes and each padding ``=`` removes exactly one byte:
+    ``len * 3 // 4 - padding``. Arithmetic instead of a second decode because
+    validation already paid the decode once — re-decoding a 5 MiB image just
+    to print its size in an ack would allocate the whole payload again
+    (security review IMG-SEC-05).
+    """
+    padding = len(content_base64) - len(content_base64.rstrip("="))
+    return len(content_base64) * 3 // 4 - padding
 
 
 @dataclass
@@ -5811,7 +5826,7 @@ class ChatSession:
         self._layout_image = LayoutImageUpload(
             file_name=file_name, mime_type=mime_type, content_base64=content_base64
         )
-        size_kb = len(base64.b64decode(content_base64)) // 1024
+        size_kb = _base64_decoded_size(content_base64) // 1024
         # The session keeps ONE image (contract.md §1 — a new upload replaces
         # it wholesale). Silence about that would let the operator believe two
         # sketches are attached, then approve a plan analysed against the

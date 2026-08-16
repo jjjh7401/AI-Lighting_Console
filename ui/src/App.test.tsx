@@ -16,6 +16,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   AppShell,
+  ATTACHMENT_BUSY_MESSAGE,
+  attachmentControlState,
   composerViewState,
   dashPressTargetNo,
   readRunbookModeFromStorage,
@@ -175,6 +177,56 @@ describe("composerViewState", () => {
     expect(state.canSubmit).toBe(true);
     expect(state.placeholder).toContain("제안");
     expect(state.helperText).toContain("제안 카드");
+  });
+});
+
+// 리뷰 발견 #1 — 서버는 응답 처리 중(busy) 업로드를 busy_event로 버리고
+// 저장하지 않으므로, UI가 먼저 첨부를 막아 낙관적 썸네일과 서버 상태의
+// 불일치를 원천 차단해야 한다 (App.tsx attachmentControlState 참조).
+describe("attachmentControlState", () => {
+  it("disables attachment while responding and explains why in the title", () => {
+    const state = attachmentControlState({
+      inputDisabled: false,
+      responding: true,
+      queueLength: 0,
+    });
+
+    expect(state.disabled).toBe(true);
+    expect(state.title).toBe(ATTACHMENT_BUSY_MESSAGE);
+  });
+
+  it("disables attachment while requests are queued (the next turn starts immediately)", () => {
+    const state = attachmentControlState({
+      inputDisabled: false,
+      responding: false,
+      queueLength: 2,
+    });
+
+    expect(state.disabled).toBe(true);
+    expect(state.title).toBe(ATTACHMENT_BUSY_MESSAGE);
+  });
+
+  it("stays disabled when the composer itself is closed, without the busy message", () => {
+    const state = attachmentControlState({
+      inputDisabled: true,
+      responding: false,
+      queueLength: 0,
+    });
+
+    expect(state.disabled).toBe(true);
+    expect(state.title).toContain("파일 첨부");
+  });
+
+  it("allows attachment when idle with the default file-format title", () => {
+    const state = attachmentControlState({
+      inputDisabled: false,
+      responding: false,
+      queueLength: 0,
+    });
+
+    expect(state.disabled).toBe(false);
+    expect(state.title).toContain("VWX");
+    expect(state.title).toContain("PNG");
   });
 });
 

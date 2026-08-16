@@ -198,6 +198,39 @@ export function composerViewState({
   };
 }
 
+// 리뷰 발견 #1 — 응답 처리 중(busy)의 업로드는 서버가 busy_event로 버리고
+// 저장하지 않는다(server/web/app.py의 busy-guard). 그런데 UI는 썸네일을
+// 낙관적으로 표시하므로, 서버에 없는 첨부가 붙은 것처럼 보이는 상태 불일치가
+// 생긴다. UI가 먼저 첨부 경로를 막아 그 불일치를 원천 차단한다. VWX 업로드도
+// 같은 busy-guard 뒤에 있으므로 (통합 첨부 버튼 하나라) 함께 막는다.
+// composerViewState처럼 hook-free로 분리해 App.test.tsx가 직접 검증한다.
+export const ATTACHMENT_BUSY_MESSAGE = "응답 처리 중에는 첨부할 수 없습니다";
+
+export interface AttachmentControlState {
+  disabled: boolean;
+  title: string;
+}
+
+export function attachmentControlState({
+  inputDisabled,
+  responding,
+  queueLength,
+}: {
+  inputDisabled: boolean;
+  responding: boolean;
+  queueLength: number;
+}): AttachmentControlState {
+  // queue.length > 0이면 곧 다음 요청이 전송되어 다시 busy가 되므로, 그 사이
+  // 짧은 틈에 올린 첨부도 서버에서 유실될 수 있다 — responding과 함께 막는다.
+  const busy = responding || queueLength > 0;
+  return {
+    disabled: inputDisabled || busy,
+    title: busy
+      ? ATTACHMENT_BUSY_MESSAGE
+      : "파일 첨부 — VWX(CSV·TXT·XLSX·MVR) 또는 배치 이미지(PNG·JPEG·WEBP)",
+  };
+}
+
 /**
  * The split-pane shell — deliberately hook-free so App.test.tsx can call it
  * directly (this project has no DOM/jsdom test harness; see protocol.ts's
@@ -475,6 +508,11 @@ export default function App() {
     };
   }, [settingsRefresh]);
   const composer = composerViewState({ connected, status: state.status, draft, responding });
+  const attachment = attachmentControlState({
+    inputDisabled: composer.inputDisabled,
+    responding,
+    queueLength: queue.length,
+  });
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -602,19 +640,36 @@ export default function App() {
     routeAttachment(file);
   };
   // 스케치는 폰으로 찍어 바로 끌어놓거나 붙여넣는 경우가 많다 — 버튼과 같은
-  // 라우터(routeAttachment)를 지나므로 검증·오류 문구도 동일하다.
+  // 라우터(routeAttachment)를 지나므로 검증·오류 문구도 동일하다. 드롭/붙여넣기는
+  // disabled 속성이 없어 busy 차단 시 이유를 오류 문구로 알려준다(버튼은
+  // disabled + title이 그 역할).
   const dropAttachment = (event: DragEvent<HTMLElement>) => {
     const file = event.dataTransfer?.files?.[0];
     if (file === undefined) return;
     // 리뷰 P2: 파일 드롭의 기본 동작(브라우저가 파일로 내비게이션 — 진행 중
     // 세션 화면 이탈)은 입력 비활성 여부와 무관하게 항상 막는다. 라우팅만
-    // inputDisabled에 걸린다.
+    // 첨부 busy-guard에 걸린다.
     event.preventDefault();
-    if (composer.inputDisabled) return;
+    if (attachment.disabled) {
+      if (!composer.inputDisabled) setLayoutImageUploadError(ATTACHMENT_BUSY_MESSAGE);
+      return;
+    }
     routeAttachment(file);
   };
   const pasteAttachment = (event: ClipboardEvent<HTMLTextAreaElement>) => {
-    if (composer.inputDisabled) return;
+    if (attachment.disabled) {
+      // 이미지 붙여넣기만 막고 일반 텍스트 붙여넣기는 통과해야 하므로, 파일
+      // 항목이 있을 때만 안내 후 차단한다.
+      const hasImage = Array.from(event.clipboardData?.items ?? []).some(
+        (candidate) =>
+          candidate.kind === "file" && LAYOUT_IMAGE_MIME_TYPES.includes(candidate.type),
+      );
+      if (hasImage) {
+        event.preventDefault();
+        if (!composer.inputDisabled) setLayoutImageUploadError(ATTACHMENT_BUSY_MESSAGE);
+      }
+      return;
+    }
     const item = Array.from(event.clipboardData?.items ?? []).find(
       (candidate) => candidate.kind === "file" && LAYOUT_IMAGE_MIME_TYPES.includes(candidate.type),
     );
@@ -764,14 +819,14 @@ export default function App() {
                     type="file"
                     accept=".csv,.txt,.xlsx,.mvr,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
                     onChange={uploadAttachment}
-                    disabled={composer.inputDisabled}
+                    disabled={attachment.disabled}
                   />
                   <button
                     type="button"
                     className="composer-upload"
                     onClick={() => vectorworksInputRef.current?.click()}
-                    disabled={composer.inputDisabled}
-                    title="파일 첨부 — VWX(CSV·TXT·XLSX·MVR) 또는 배치 이미지(PNG·JPEG·WEBP)"
+                    disabled={attachment.disabled}
+                    title={attachment.title}
                     aria-label="파일 첨부"
                   >
                     ＋
