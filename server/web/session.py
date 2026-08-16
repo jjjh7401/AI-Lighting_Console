@@ -122,6 +122,7 @@ from server.spatial.pointing import (
     radial_pan_tilt,
 )
 from server.spatial.position_cuesheet import PositionSheetSection, build_position_cue_sheet
+from server.spatial.position_fx import position_fx_commands
 from server.spatial.position_moods import match_position_mood
 from server.spatial.vocabulary import (
     layout_terms_guidance,
@@ -1597,6 +1598,23 @@ _FX_POSITIONS_REQUEST = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+# 포지션 이펙트 시퀀스: 저장된 FX 포지션 프리셋(FX_POSITION_SEQUENCE)을 실제로
+# **소비**하는 빌더 — "좌우 스윕 시퀀스 만들어줘". 진입은 세 조각이 전부 있어야
+# 한다: 효과어(스윕/플라이아웃/서클/발리후/웨이브) + 명사(시퀀스 | 포지션 이펙트)
+# + 생성 동사. 효과어가 필수라서 프리셋 저장 문장("이펙트 포지션 프리셋 …")과
+# 겹치지 않고, 명사·동사가 필수라서 이펙트 **적용** 문장("무빙 이펙트 적용해줘")은
+# 그대로 기존 경로(모델/기존 핸들러)로 간다. 항목은 (효과, 어휘, 한글 라벨) —
+# 라벨은 `position_fx_commands`의 시퀀스 라벨로 그대로 들어간다.
+_POSITION_FX_VOCABULARY: tuple[tuple[str, re.Pattern[str], str], ...] = (
+    ("sweep", re.compile(r"스[윕윅]|sweep", re.IGNORECASE), "좌우 스윕"),
+    ("flyout", re.compile(r"플라이\s*아웃|flyout|하늘\S*\s*객석", re.IGNORECASE), "플라이아웃"),
+    ("circle", re.compile(r"서클|원을?\s*그[리려]|동그라미|circle", re.IGNORECASE), "서클"),
+    ("ballyhoo", re.compile(r"발리후|ballyhoo", re.IGNORECASE), "발리후"),
+    ("wave", re.compile(r"웨이브|물결|wave", re.IGNORECASE), "웨이브"),
+)
+_POSITION_FX_NOUN = re.compile(r"시퀀스|포지션\s*이펙트", re.IGNORECASE)
+_POSITION_FX_VERB = re.compile(r"만들|생성|저장|걸어")
+
 # 재생성: 이미 저장된 구간을 **제자리에서** 다시 잡는다. 큐는 프리셋 REFERENCE를
 # 들고 있으므로 같은 번호에 다시 저장하면 그 프리셋을 쓰는 모든 큐가 따라온다.
 # `_BASIC_POSITIONS_REQUEST`는 동사 대안에 '잡아'를 이미 갖고 있어 재생성 문장을
@@ -1629,6 +1647,22 @@ _REGENERATE_POSITIONS_REQUEST = re.compile(
     # 빠졌다. 그러면 저장 경로로 가 **새 구간에 저장**되는데, 운영자는 기존
     # 프리셋이 갱신됐다고 믿는다 — 큐는 옛 좌표를 계속 가리킨다. 어휘를 넓히는
     # 게 아니라 어절 하나를 건너뛰게 하는 것이라 F5 봉쇄(꼬리 12자 한도)는 그대로다.
+    r".{0,12}?다시(?:\s+\S{1,6})?\s*(?:잡|만들|생성|갱신)"
+    r")",
+    re.IGNORECASE | re.DOTALL,
+)
+
+# FX 재생성: BASIC 재생성과 같은 문형에서 **명사만** 다르다. 어휘는
+# `_FX_POSITIONS_REQUEST`와 같은 축(이펙트/효과/fx/effect)이라 BASIC 쪽
+# (기본/베이직/basic)과 서로소다 — '기본' 문장은 여기 걸리지 않고 그 역도
+# 성립하므로 상호 오라우팅이 없다. 꼬리 규율(묶인 '다시', '저장' 제외, 어절
+# 하나 허용)은 위 `_REGENERATE_POSITIONS_REQUEST` 주석의 근거를 그대로
+# 상속한다 — 두 정규식의 동사부는 의도적으로 동일하다.
+_REGENERATE_FX_POSITIONS_REQUEST = re.compile(
+    r"(?:이펙트|효과|fx|effect).{0,16}?(?:포지션|position)"
+    r"(?:"
+    r".{0,12}?(?:재생성|재조준|리포커스|refocus)"
+    r"|"
     r".{0,12}?다시(?:\s+\S{1,6})?\s*(?:잡|만들|생성|갱신)"
     r")",
     re.IGNORECASE | re.DOTALL,
@@ -3143,6 +3177,142 @@ class ChatSession:
             example="이펙트 포지션 프리셋을 41번부터 저장해줘",
         )
 
+    def _position_fx_sequence(self, text: str) -> InstructionResult | None:
+        """저장된 FX 포지션 프리셋을 **소비**하는 포지션 이펙트 시퀀스 빌더.
+
+        `_fx_position_presets`가 저장한 골격(2.N~2.N+9)을 참조해 시퀀스 하나를
+        만든다 — A/B형(sweep·flyout)은 2큐 크로스페이드, base형(circle·
+        ballyhoo·wave)은 base 프리셋 위의 상대 페이저 1큐. 명령열은 전부
+        ``position_fx_commands``(라이브 검증 문법)가 만들고, 이 핸들러는 세
+        입력만 해석한다: 효과(어휘), FX 프리셋 시작 번호("N번부터" 또는 카드
+        1장), 시퀀스 번호("시퀀스 N" 또는 카드 1장). 답을 못 읽으면 저장
+        0건으로 거부한다 — 시퀀스 Store는 슬롯을 그대로 바꾸므로 번호는
+        운영자의 결정이다. 디스패치는 ``run_commands`` 1번들: 기존 게이트
+        경로 그대로, ``/Overwrite`` 없음.
+        """
+        matched = next(
+            (
+                (name, korean)
+                for name, pattern, korean in _POSITION_FX_VOCABULARY
+                if pattern.search(text) is not None
+            ),
+            None,
+        )
+        if matched is None:
+            return None
+        if _POSITION_FX_NOUN.search(text) is None or _POSITION_FX_VERB.search(text) is None:
+            return None
+        effect, label = matched
+        fixtures = self._read_pointing_coordinates("position-fx-read")
+        if isinstance(fixtures, InstructionResult):
+            return fixtures
+        if not fixtures:
+            return self._pointing_refusal(
+                "좌표가 확인된 장비가 없어 포지션 이펙트 시퀀스를 시작하지 않았습니다."
+            )
+        start_match = _BASIC_POSITIONS_START.search(text)
+        if start_match is not None:
+            fx_preset_start = int(start_match.group("no"))
+        else:
+            answer = self._ask_one(
+                f"{label} 이펙트가 참조할 FX 포지션 프리셋이 몇 번부터 저장돼 "
+                "있나요? (예: 41 → Preset 2.41~2.50)",
+                options=(
+                    QuestionOption(label="41"),
+                    QuestionOption(label="31"),
+                    QuestionOption(label="21"),
+                ),
+                why=(
+                    "이펙트 시퀀스는 저장된 FX 포지션 프리셋을 참조하므로 "
+                    "시작 번호는 운영자가 정해야 합니다."
+                ),
+            )
+            try:
+                fx_preset_start = int(re.search(r"\d+", answer or "").group(0))
+            except AttributeError:
+                return self._pointing_refusal(
+                    "FX 프리셋 시작 번호를 받지 못해 시퀀스를 만들지 않았습니다. "
+                    "예: '좌우 스윕 시퀀스 201 만들어줘, FX 프리셋 41번부터'"
+                )
+        sequence_match = _CUE_SEQUENCE_NO.search(text)
+        if sequence_match is not None:
+            sequence_no = int(sequence_match.group("no"))
+        else:
+            answer = self._ask_one(
+                f"{label} 이펙트를 몇 번 시퀀스로 저장할까요? (예: 201) "
+                "이미 데이터가 있는 시퀀스면 해당 큐가 바뀔 수 있습니다.",
+                options=(
+                    QuestionOption(label="201"),
+                    QuestionOption(label="210"),
+                    QuestionOption(label="220"),
+                ),
+                why=(
+                    "Store Sequence는 지정한 슬롯에 그대로 저장되므로 "
+                    "시퀀스 번호는 운영자가 정해야 합니다."
+                ),
+            )
+            try:
+                sequence_no = int(re.search(r"\d+", answer or "").group(0))
+            except AttributeError:
+                return self._pointing_refusal(
+                    "시퀀스 번호를 받지 못해 시퀀스를 만들지 않았습니다. "
+                    "예: '좌우 스윕 시퀀스 201 만들어줘, FX 프리셋 41번부터'"
+                )
+        # 점유 확인은 셋리스트/곡 설계와 같은 fail-closed 프로브를 재사용한다 —
+        # 빈 시퀀스 Store는 자동 생성이라 비가역 위험이 낮지만, 점유된 슬롯은
+        # 기존 쇼 데이터가 바뀌므로 승낙 없이는 저장하지 않는다.
+        if sequence_no <= 0:
+            return self._pointing_refusal("시퀀스 번호는 1 이상이어야 합니다.")
+        if self._song_sequence_occupied(sequence_no):
+            answer = self._ask_one(
+                f"시퀀스 {sequence_no}에 기존 데이터가 있습니다. {label} 이펙트를 "
+                "이 시퀀스에 저장하면 기존 큐가 바뀔 수 있습니다. 진행할까요?",
+                options=(
+                    QuestionOption(label="진행"),
+                    QuestionOption(label=_PRESET_OVERWRITE_DECLINE_LABEL),
+                ),
+                why=(
+                    "Store Sequence /Merge는 점유된 큐 슬롯의 내용을 바꾸며 "
+                    "이 앱에는 시퀀스 복원 경로가 없습니다."
+                ),
+            )
+            if answer is None or _preset_answer_intent(answer) != "consent":
+                return self._pointing_refusal(
+                    f"시퀀스 {sequence_no} 사용 승낙을 받지 못해 저장하지 않았습니다."
+                )
+        fids = [fid for fid, _position in fixtures]
+        try:
+            commands = position_fx_commands(
+                effect,
+                fids=fids,
+                fx_preset_start=fx_preset_start,
+                sequence_no=sequence_no,
+                label=label,
+            )
+        except SpatialPointingError as error:
+            return self._pointing_refusal(f"포지션 이펙트 명령을 만들 수 없습니다: {error}")
+        executed = self._registry.dispatch(
+            ToolCall(
+                id="position-fx-write",
+                name="run_commands",
+                arguments={"commands": list(commands)},
+            )
+        )
+        span_end = fx_preset_start + len(FX_POSITION_SEQUENCE) - 1
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"{label} 포지션 이펙트를 시퀀스 {sequence_no}에 저장 요청했습니다 "
+                f"— FX 포지션 프리셋 2.{fx_preset_start}~2.{span_end} 구간을 "
+                "참조합니다 (프리셋 참조 유지, 저장 후 ClearAll). 승인 또는 라이브 "
+                "잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+            ),
+            command_outcomes=executed.command_outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
     def _store_position_preset_sequence(
         self,
         text: str,
@@ -3421,25 +3591,75 @@ class ChatSession:
         return "; ".join(parts) + "."
 
     def _regenerate_position_presets(self, text: str) -> InstructionResult | None:
-        """*"지금 배치로 기본 포지션 다시 잡아줘"* — 기존 구간을 제자리 갱신한다.
+        """*"지금 배치로 기본 포지션 다시 잡아줘"* — BASIC 구간을 제자리 갱신한다.
+
+        디스패치 등록은 ``_basic_position_presets``보다 **앞**이다: 기존 트리거가
+        '잡아'를 이미 대안으로 갖고 있어 재생성 문장을 함께 매치하므로, 겹치는
+        입력의 행선지를 등록 순서로 고정한다(REQ-PRESETGUARD-015). 판정·저장
+        규율은 전부 ``_regenerate_position_preset_sequence``에 있다 — FX 재생성과
+        공유하므로 두 경로의 안전 동작이 갈라질 수 없다.
+        """
+        if _REGENERATE_POSITIONS_REQUEST.search(text) is None:
+            return None
+        return self._regenerate_position_preset_sequence(
+            text,
+            noun="기본 포지션",
+            build=basic_position_presets,
+            read_id="regenerate-presets-read",
+            bundle="basic-preset",
+            store_example="기본 포지션 10개 저장",
+        )
+
+    def _regenerate_fx_position_presets(self, text: str) -> InstructionResult | None:
+        """*"지금 배치로 이펙트 포지션 다시 잡아줘"* — FX 구간을 제자리 갱신한다.
+
+        페이저 시퀀스는 FX 프리셋의 REFERENCE를 들고 스윙하므로, 리그가 바뀐 뒤
+        같은 번호에 다시 저장하면 그 프리셋을 쓰는 모든 이펙트가 새 좌표를
+        따라온다 — BASIC 재생성과 동일한 논거다. 디스패치 등록은
+        ``_fx_position_presets``보다 **앞**이다: FX 저장 트리거도 '잡아'를
+        대안으로 가져 재생성 문장을 함께 매치한다(REQ-PRESETGUARD-015와 같은
+        형상). 어휘(이펙트/효과/fx)는 BASIC(기본/베이직)과 서로소라 두 재생성이
+        서로의 문장을 삼키지 않는다.
+        """
+        if _REGENERATE_FX_POSITIONS_REQUEST.search(text) is None:
+            return None
+        return self._regenerate_position_preset_sequence(
+            text,
+            noun="FX 포지션",
+            build=fx_position_presets,
+            read_id="regenerate-fx-presets-read",
+            bundle="fx-preset",
+            store_example="FX 포지션 10개 저장",
+        )
+
+    def _regenerate_position_preset_sequence(
+        self,
+        text: str,
+        *,
+        noun: str,
+        build: Callable[[Sequence[tuple[int, tuple[float, float, float]]]], Sequence[tuple]],
+        read_id: str,
+        bundle: str,
+        store_example: str,
+    ) -> InstructionResult | None:
+        """이미 저장된 10칸 구간을 지금 배치로 **제자리 갱신**한다 — 공용 몸통.
 
         큐는 프리셋 REFERENCE를 들고 있으므로(``pointing.py`` ``position_preset_
         store_commands`` 독스트링) 같은 번호에 다시 저장하면 그 프리셋을 쓰는 모든
         큐가 따라온다. 새 번호에 저장하면 기존 큐는 옛 좌표를 계속 가리키므로
         재생성이 성립하지 않는다 — 그래서 **새 시작 번호를 묻지 않는다.**
 
-        디스패치 등록은 ``_basic_position_presets``보다 **앞**이다: 기존 트리거가
-        '잡아'를 이미 대안으로 갖고 있어 재생성 문장을 함께 매치하므로, 겹치는
-        입력의 행선지를 등록 순서로 고정한다(REQ-PRESETGUARD-015).
+        BASIC과 FX가 이 하나를 공유한다(신규 저장의
+        ``_store_position_preset_sequence``와 같은 이유): 풀 미상 거부·10칸 구간
+        탐색·명시 번호 대조·덮어쓰기 카드·되읽기 산술이 두 곳에 복제되면 한쪽만
+        갱신되는 드리프트가 생긴다.
         """
-        if _REGENERATE_POSITIONS_REQUEST.search(text) is None:
-            return None
-        fixtures = self._read_pointing_coordinates("regenerate-presets-read")
+        fixtures = self._read_pointing_coordinates(read_id)
         if isinstance(fixtures, InstructionResult):
             return fixtures
         if not fixtures:
             return self._pointing_refusal(
-                "좌표가 확인된 장비가 없어 기본 포지션 재생성을 시작하지 않았습니다."
+                f"좌표가 확인된 장비가 없어 {noun} 재생성을 시작하지 않았습니다."
             )
         pool_slots = self._position_preset_pool_slots()
         if pool_slots is None:
@@ -3452,8 +3672,8 @@ class ChatSession:
         ready = self._position_preset_ready_starts(slots=pool_slots)
         if not ready:
             return self._pointing_refusal(
-                "10칸 연속 저장된 기본 포지션 구간을 찾지 못해 다시 잡을 자리가 "
-                "없습니다 — 먼저 '기본 포지션 10개 저장'을 실행해 주세요."
+                f"10칸 연속 저장된 {noun} 구간을 찾지 못해 다시 잡을 자리가 "
+                f"없습니다 — 먼저 '{store_example}'을 실행해 주세요."
             )
         # 지시가 번호를 담고 있으면 그 번호로 **재생성 안에서** 구간을 고른다.
         # 의도가 경로를 정하고, 번호는 그 경로 안의 구간을 정한다 — 번호가 있다고
@@ -3485,10 +3705,10 @@ class ChatSession:
         if not verdict.proceed:
             return self._pointing_refusal(_preset_overwrite_refusal(verdict))
         try:
-            looks = basic_position_presets(fixtures)
+            looks = build(fixtures)
         except SpatialPointingError as error:
-            return self._pointing_refusal(f"기본 포지션을 계산할 수 없습니다: {error}")
-        run = self._store_position_preset_looks(looks, start_no, before=pool_slots)
+            return self._pointing_refusal(f"{noun}을 계산할 수 없습니다: {error}")
+        run = self._store_position_preset_looks(looks, start_no, before=pool_slots, bundle=bundle)
         if not run.stored:
             return self._pointing_refusal(
                 "어느 포지션도 계산되지 않아 프리셋을 저장하지 않았습니다."
@@ -3500,7 +3720,7 @@ class ChatSession:
                 verdict,
                 self._verify_preset_span_stored(run),
                 lead=(
-                    f"지금 리그 배치로 기본 포지션 {len(run.stored)}개를 같은 자리에 "
+                    f"지금 리그 배치로 {noun} {len(run.stored)}개를 같은 자리에 "
                     f"다시 저장 요청했습니다: {', '.join(run.stored)}."
                 ),
                 tail="이 프리셋을 참조하는 큐는 별도 수정 없이 새 좌표를 따라갑니다.",
@@ -6510,7 +6730,17 @@ class ChatSession:
                     # 입력의 행선지를 고정한다 (REQ-PRESETGUARD-015).
                     result = self._regenerate_position_presets(text)
                 if result is None:
+                    # FX 재생성도 같은 이유로 신규 FX 저장('잡아' 대안 포함)보다
+                    # 앞이다 — 어휘(이펙트/효과/fx vs 기본/베이직)가 서로소라
+                    # BASIC 재생성과는 어느 쪽 순서든 오라우팅이 없다.
+                    result = self._regenerate_fx_position_presets(text)
+                if result is None:
                     result = self._basic_position_presets(text)
+                if result is None:
+                    # 효과어(스윕/서클/…)가 필수인 시퀀스 빌더가 프리셋 저장보다
+                    # 먼저 본다 — 어휘가 더 구체적이고, 프리셋 저장 문장에는
+                    # 효과어가 없어 그대로 아래로 흘러내린다.
+                    result = self._position_fx_sequence(text)
                 if result is None:
                     result = self._fx_position_presets(text)
                 if result is None:

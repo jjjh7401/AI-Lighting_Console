@@ -29,7 +29,8 @@ from server.orchestrator.last_created import LastCreated
 from server.orchestrator.tools import CommandOutcome, ToolExecution
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate
-from server.spatial.pointing import FX_POSITION_SEQUENCE
+from server.spatial.pointing import BASIC_POSITION_SEQUENCE, FX_POSITION_SEQUENCE
+from server.spatial.position_fx import position_fx_commands
 from server.web.approval_bridge import ApprovalChannel
 from server.web.measure import RoundTripRecorder
 from server.web.question import UNANSWERED, QuestionRequest
@@ -2360,6 +2361,145 @@ class TestPositionPresetRegeneration:
 
         assert _writes(calls) == []
         assert "읽지 못" in event["text"]
+
+
+class TestFxPositionPresetRegeneration:
+    """FX 재생성 — '지금 배치로 이펙트 포지션 다시 잡아줘'가 저장된 FX 구간을
+    **제자리** 갱신한다. 몸통은 `_regenerate_position_preset_sequence`로 BASIC
+    재생성과 공유되므로(풀 미상 거부·구간 탐색·덮어쓰기 카드·되읽기), 여기서는
+    라우팅(상호 배타)·제자리 갱신·FX 고유 문면을 겨눈다.
+    """
+
+    def _run(self, tmp_path, text, *, answers=(), **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, **rig)
+        chan = _AnsweringChannel(answers)
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # 제자리 갱신 — 저장된 41~50 구간에 **같은 번호**로 Store 10건. 새 시작
+    # 번호를 묻지 않는다: 새 자리에 저장하면 프리셋 참조를 든 이펙트 시퀀스가
+    # 옛 좌표를 계속 가리킨다.
+    def test_fx_regeneration_overwrites_the_stored_span_in_place(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "지금 배치로 이펙트 포지션 다시 잡아줘",
+            pool=tuple(range(41, 51)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        commands = _all_commands(calls)
+        for offset, label in enumerate(FX_POSITION_SEQUENCE):
+            assert f"Store Preset 2.{41 + offset}" in commands
+            assert f"Label Preset 2.{41 + offset} '{label}'" in commands
+        assert len(_writes(calls)) == 10
+        assert all("몇 번부터" not in ask.prompt for ask in chan.asked)
+
+    # 라우팅 — FX 재생성 어휘 변형이 전부 재생성으로 간다. 신규 저장으로 샜다면
+    # 시작 번호 카드("몇 번부터")가 떴을 것이다.
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "이펙트 포지션 다시 잡아줘",
+            "지금 배치로 효과 포지션 다시 잡아줘",
+            "fx 포지션 재생성해줘",
+            "이펙트 포지션 다시 한번 잡아줘",
+        ],
+    )
+    def test_fx_regeneration_vocabulary_routes_to_regeneration(self, tmp_path, text):
+        _event, calls, chan = self._run(
+            tmp_path,
+            text,
+            pool=tuple(range(41, 51)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        assert "Store Preset 2.41" in _all_commands(calls), text
+        assert all("몇 번부터" not in ask.prompt for ask in chan.asked), text
+
+    # 풀 미상 — 표적 구간의 존재를 확인하지 못하면 저장하지 않는다(unknown ≠
+    # empty; 신규 저장의 '진행'과 반대). 번호를 지목해도 재생성은 재생성이다.
+    def test_an_unreadable_pool_refuses_fx_regeneration_without_writing(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "41번부터 이펙트 포지션 다시 잡아줘",
+            pool_error=True,
+        )
+
+        assert _writes(calls) == []
+        assert chan.asked == []
+        assert "저장하지 않" in event["text"]
+
+    def test_no_stored_span_refuses_and_names_the_fx_store_step(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "지금 배치로 이펙트 포지션 다시 잡아줘",
+            pool=(1, 2, 3),
+        )
+
+        assert _writes(calls) == []
+        assert "FX 포지션 10개 저장" in event["text"]
+
+    def test_a_named_fx_span_that_is_not_a_stored_run_stores_nothing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "21번부터 이펙트 포지션 다시 잡아줘",
+            pool=tuple(range(41, 51)),
+        )
+
+        assert _writes(calls) == []
+        assert "저장하지 않" in event["text"]
+
+    # fail-closed — 덮어쓰기 카드 무응답이면 쓰기 0건 (BASIC과 같은 공용 카드).
+    def test_fx_regeneration_stores_nothing_without_an_answer(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "지금 배치로 이펙트 포지션 다시 잡아줘",
+            pool=tuple(range(41, 51)),
+            answers=[],  # UNANSWERED
+        )
+
+        assert _writes(calls) == []
+        assert "응답" in event["text"]
+
+    # 상호 배타 — '기본' 문장은 BASIC 룩만, '이펙트' 문장은 FX 룩만 만든다.
+    # 같은 21~30 구간을 겨눠도 어휘가 빌더를 정한다.
+    def test_the_two_regeneration_vocabularies_never_cross_route(self, tmp_path):
+        _e1, basic_calls, _c1 = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=tuple(range(21, 31)),
+            answers=["덮어쓰기 진행"],
+        )
+        basic_commands = _all_commands(basic_calls)
+        assert f"Label Preset 2.21 '{BASIC_POSITION_SEQUENCE[0]}'" in basic_commands
+        assert not any(f"'{FX_POSITION_SEQUENCE[0]}'" in cmd for cmd in basic_commands)
+
+        _e2, fx_calls, _c2 = self._run(
+            tmp_path,
+            "지금 배치로 이펙트 포지션 다시 잡아줘",
+            pool=tuple(range(21, 31)),
+            answers=["덮어쓰기 진행"],
+        )
+        fx_commands = _all_commands(fx_calls)
+        assert f"Label Preset 2.21 '{FX_POSITION_SEQUENCE[0]}'" in fx_commands
+        assert not any(f"'{BASIC_POSITION_SEQUENCE[0]}'" in cmd for cmd in fx_commands)
+
+    # F5의 FX 판 — '다시'가 다른 동사에 붙은 FX 저장 문장은 재생성이 아니다.
+    # 재생성이 삼키면 빈 풀에서 "먼저 저장하세요"로 되돌아와 영원히 같은 답이 나온다.
+    def test_an_adverbial_dasi_keeps_the_fx_store_path(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "이펙트 포지션 10개 저장해줘, 끝나면 다시 알려줘",
+            pool=(),
+            answers=["41"],
+        )
+
+        assert "Store Preset 2.41" in _all_commands(calls)
+        assert "다시 잡을 자리가 없습니다" not in event["text"]
 
 
 class TestFxPositionPresets:
@@ -4925,3 +5065,154 @@ class TestStatusSnapshot:
         assert snapshot["health"] == "online"
         assert snapshot["live_lock"] is False
         assert snapshot["executions_blocked"] is False
+
+
+class TestPositionFxSequence:
+    """포지션 이펙트 시퀀스 빌더 — 저장된 FX 포지션 프리셋(2.N~2.N+9)을 실제로
+    소비하는 시퀀스를 만든다. 명령열 자체는 ``position_fx_commands``가 만들므로
+    여기서는 (1) 효과어 5종 라우팅과 산출 명령열의 일치, (2) 번호 두 개의 출처
+    (문장/카드), (3) fail-closed(미답·미해석 시 쓰기 0건), (4) 점유 시퀀스 확인
+    카드, (5) 이펙트 **적용** 문장 비탈취를 겨눈다."""
+
+    _FIDS = [20, 26]  # `_PresetPoolRegistry._FIXTURES`의 fid들
+
+    def _run(self, tmp_path, text, *, answers=(), **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, **rig)
+        chan = _AnsweringChannel(answers)
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    def _expected(self, effect, label, *, start=41, sequence=201):
+        return position_fx_commands(
+            effect,
+            fids=self._FIDS,
+            fx_preset_start=start,
+            sequence_no=sequence,
+            label=label,
+        )
+
+    # (1)+(2 문장) — 어휘 5종이 각자 효과로 라우팅되고, 두 번호를 모두 문장에서
+    # 읽으면 카드 없이 run_commands 1번들이 position_fx_commands 산출 그대로 나간다.
+    @pytest.mark.parametrize(
+        ("text", "effect", "label"),
+        [
+            ("좌우 스윕 시퀀스 201 만들어줘, FX 프리셋 41번부터", "sweep", "좌우 스윕"),
+            (
+                "플라이아웃 포지션 이펙트 시퀀스 201 생성해줘, 프리셋 41번부터",
+                "flyout",
+                "플라이아웃",
+            ),
+            ("원을 그리는 포지션 이펙트 시퀀스 201 걸어줘, 41번부터", "circle", "서클"),
+            ("발리후 시퀀스 201 만들어줘, FX 프리셋 41번부터", "ballyhoo", "발리후"),
+            ("물결 시퀀스 201 저장해줘, FX 프리셋 41번부터", "wave", "웨이브"),
+        ],
+    )
+    def test_each_effect_word_builds_the_exact_bundle(self, tmp_path, text, effect, label):
+        event, calls, chan = self._run(tmp_path, text)
+
+        assert chan.asked == []
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert tuple(writes[0].arguments["commands"]) == self._expected(effect, label)
+        assert "시퀀스 201" in event["text"]
+        assert "2.41~2.50" in event["text"]
+
+    # (2 카드) — 번호가 둘 다 없으면 카드가 정확히 두 장(프리셋 시작 → 시퀀스)
+    # 뜨고, 답이 명령열에 그대로 반영된다.
+    def test_missing_numbers_are_asked_one_card_each(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path, "좌우 스윕 시퀀스 만들어줘", answers=["41", "201"]
+        )
+
+        assert len(chan.asked) == 2
+        assert "몇 번부터" in chan.asked[0].prompt
+        assert "몇 번 시퀀스" in chan.asked[1].prompt
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert tuple(writes[0].arguments["commands"]) == self._expected("sweep", "좌우 스윕")
+
+    # (3) — 첫 카드 미답이면 쓰기 0건으로 거부한다 (fail-closed).
+    def test_an_unanswered_start_card_writes_nothing(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "좌우 스윕 시퀀스 만들어줘",
+            answers=[],  # UNANSWERED
+        )
+
+        assert len(chan.asked) == 1
+        assert _writes(calls) == []
+        assert "FX 프리셋 시작 번호" in event["text"]
+
+    def test_an_unanswered_sequence_card_writes_nothing(self, tmp_path):
+        event, calls, chan = self._run(tmp_path, "좌우 스윕 시퀀스 만들어줘", answers=["41"])
+
+        assert len(chan.asked) == 2
+        assert _writes(calls) == []
+        assert "시퀀스 번호" in event["text"]
+
+    def test_a_numberless_answer_is_refused_with_the_format_example(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path, "좌우 스윕 시퀀스 만들어줘", answers=["모르겠는데"]
+        )
+
+        assert _writes(calls) == []
+        assert "예: " in event["text"]
+
+    # (4) — 점유된 시퀀스는 확인 카드를 거친다: 취소는 쓰기 0건, 승낙은 진행.
+    def test_an_occupied_sequence_asks_and_cancel_writes_nothing(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "좌우 스윕 시퀀스 201 만들어줘, FX 프리셋 41번부터",
+            child_count=3,  # query_state가 node를 돌려줘 점유로 판독된다
+            answers=["취소"],
+        )
+
+        assert _writes(calls) == []
+        assert len(chan.asked) == 1
+        assert "기존 데이터" in chan.asked[0].prompt
+        assert "저장하지 않" in event["text"]
+
+    def test_an_occupied_sequence_proceeds_on_consent(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "좌우 스윕 시퀀스 201 만들어줘, FX 프리셋 41번부터",
+            child_count=3,
+            answers=["진행"],
+        )
+
+        assert len(chan.asked) == 1
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert tuple(writes[0].arguments["commands"]) == self._expected("sweep", "좌우 스윕")
+
+    # (5) — 이펙트 **적용** 문장은 효과어가 있어도(웨이브) 시퀀스/포지션 이펙트
+    # 명사와 생성 동사가 없으므로 이 빌더를 지나쳐 기존 경로(모델)로 간다.
+    @pytest.mark.parametrize("text", ["무빙 이펙트 적용해줘", "웨이브 이펙트 적용해줘"])
+    def test_effect_application_sentences_fall_through_to_the_model(self, tmp_path, text):
+        provider = ScriptedProvider([_final("이펙트 적용을 확인하겠습니다")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls)
+        chan = _AnsweringChannel([])
+        session._question_channel = chan
+
+        session.run_instruction(text)
+
+        assert len(provider.calls) == 1
+        assert chan.asked == []
+        assert not any("Store Sequence" in cmd for cmd in _all_commands(calls))
+
+    # 라우팅 회귀 — 프리셋 **저장** 문장(효과어 없음)은 여전히 FX 프리셋 저장
+    # 흐름으로 가 10번들을 쓴다. 이 빌더가 앞에서 가로챘다면 1번들이었을 것이다.
+    def test_a_preset_store_sentence_is_not_captured_by_the_builder(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path, "이펙트 포지션 프리셋을 41번부터 저장해줘", pool=(1, 2, 3)
+        )
+
+        assert chan.asked == []
+        assert len(_writes(calls)) == 10
+        assert not any("Store Sequence" in cmd for cmd in _all_commands(calls))
