@@ -1821,6 +1821,39 @@ class TestPositionPresetOverwriteGuard:
         assert "미검증" in event["text"]
         assert "개 확인" not in event["text"]
 
+    # D3 (독립 감사 지적, 종결 후 후속) — 사전 판독 실패를 "원래 차 있었다"로 적지 않는다
+    #
+    # `run.before is None`은 저장 **전** 풀 판독이 실패했다는 뜻이다 — 그 슬롯이
+    # 원래 차 있었는지 **우리는 모른다**. 그런데 회신은 사전 점유가 관측된 경우와
+    # 같은 문장("저장 전부터 차 있던 슬롯이라")을 냈다. 바로 앞 문장에서 "풀을 읽지
+    # 못했다"고 말해 놓고 다음 문장에서 사전 상태를 단언하는 자기모순이며, 이는
+    # 이 SPEC이 닫으려는 결함(관측하지 않은 것을 관측했다고 적기)과 같은 형상이다.
+    def test_an_unread_pre_state_is_not_reported_as_preexisting_occupancy(self, tmp_path):
+        unknown_before, unknown_calls, _c1 = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool_error=True,  # 저장 전 판독 실패 → before = None
+            readback=tuple(range(21, 31)),  # 저장 후 판독은 성공
+        )
+        observed_before, _c2, _c3 = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=tuple(range(21, 31)),  # 저장 전 판독 성공 + 실제 점유
+            readback=tuple(range(21, 31)),
+            answers=("덮어쓰기 진행",),
+        )
+
+        # 양쪽 모두 저장은 나간다.
+        assert len(_writes(unknown_calls)) == 10
+        # 관측된 사전 점유에만 "저장 전부터 차 있던"을 쓴다.
+        assert "저장 전부터" in observed_before["text"]
+        assert "저장 전부터" not in unknown_before["text"]
+        # 그리고 모른다는 사실을 모른다고 적는다.
+        assert "저장 전 상태를 읽지 못해" in unknown_before["text"]
+        # 어느 쪽도 확인으로 세지 않는다 (둘 다 fail-closed 유지).
+        assert "10개 확인" not in unknown_before["text"]
+        assert "10개 확인" not in observed_before["text"]
+
     # AC-PRESETGUARD-009 — 승인 대기가 결함으로 보고되지 않는다
     def test_a_gate_held_store_is_classified_as_pending_not_missing(self, tmp_path):
         event, _calls, _chan = self._run(

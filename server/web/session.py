@@ -3309,8 +3309,15 @@ class ChatSession:
         # 사전 점유 슬롯은 **확인으로 세지 않고** 별도 범주로 정직하게 적는다.
         # 관측할 수 없는 것을 주장하지 않는다는 것이 이 SPEC의 규율이며, 하필
         # 덮어쓰기 경로에서 거짓 확인이 가장 많이 나온다.
-        preexisting = frozenset() if run.before is None else run.before
-        landed, unprovable, waiting, blocked, missing = [], [], [], [], []
+        # 사전 판독 실패(`before is None`)와 사전 점유 관측은 **다른 상태**다. 앞은
+        # 그 슬롯이 원래 차 있었는지조차 모르는 것이고, 뒤는 차 있었음을 관측했으나
+        # 응답기가 슬롯 번호(`i`)만 보내 내용을 대조할 수단이 없는 것이다. 둘을 한
+        # 바구니에 담아 "저장 전부터 차 있던 슬롯이라"고 적으면 **관측하지 않은 사전
+        # 상태를 단언**하게 되고, 그것은 이 SPEC이 닫으려는 결함과 같은 형상이다.
+        pre_state_unknown = run.before is None
+        preexisting = frozenset() if pre_state_unknown else run.before
+        landed, unprovable, unknown_before = [], [], []
+        waiting, blocked, missing = [], [], []
         for no in sorted(run.expected):
             disposition = run.pending.get(no)
             if disposition == "blocked":
@@ -3319,11 +3326,18 @@ class ChatSession:
                 waiting.append(no)
             elif no not in slots:
                 missing.append(no)
-            elif no in preexisting or run.before is None:
+            elif pre_state_unknown:
+                unknown_before.append(no)
+            elif no in preexisting:
                 unprovable.append(no)
             else:
                 landed.append(no)
         parts = [f"되읽기: 기대 {len(run.expected)}개 중 {len(landed)}개 확인"]
+        if unknown_before:
+            parts.append(
+                f"덮어쓰기 확인 불가 {_preset_slot_list(unknown_before)} — 저장 전 "
+                "상태를 읽지 못해 원래 비어 있었는지 차 있었는지 알 수 없습니다"
+            )
         if unprovable:
             parts.append(
                 f"덮어쓰기 확인 불가 {_preset_slot_list(unprovable)} — 저장 전부터 "
