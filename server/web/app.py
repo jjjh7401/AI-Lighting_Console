@@ -413,6 +413,23 @@ def create_app(deps: WebDeps) -> FastAPI:
                             message["content_base64"],
                         )
                     )
+                elif message_type == "layout_image_upload":
+                    # SPEC-COPILOT-IMGLAYOUT-001 — 2026-08-16 사용자 관측으로 발견된
+                    # M4 배선 갭: parse_client_message는 이 타입을 통과시키는데
+                    # 여기 분기가 없어 메시지가 조용히 버려졌다(세션 보관 0,
+                    # ack notice 0). 기존 테스트가 전부 session 메서드를 직접
+                    # 불러서 이 층을 지나지 않았다. vectorworks 업로드와 같은
+                    # busy-guard 아래 같은 스레드 패턴으로 배선한다 — 단, 저장
+                    # 전용이라 모델 호출은 없다(upload_layout_image docstring).
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(
+                        session.upload_layout_image,
+                        message["file_name"],
+                        message["mime_type"],
+                        message["content_base64"],
+                    )
                 elif message_type == "history_restore":
                     # Refresh survival: seed the fresh session's rolling memory
                     # from the client's persisted transcript. Cheap list build —

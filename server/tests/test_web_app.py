@@ -114,6 +114,26 @@ class TestWebSocketBasics:
         assert event["text"] == "도면과 콘솔을 비교하겠습니다"
         assert "c2FmZQ==" not in json.dumps(event, ensure_ascii=False)
 
+    def test_layout_image_upload_is_stored_and_acked_over_the_wire(self, tmp_path):
+        # 2026-08-16 사용자 관측 회귀 — parse_client_message는 이 타입을
+        # 통과시키는데 app.py 디스패치에 분기가 없어 메시지가 조용히
+        # 버려졌다(세션 보관 0 · ack notice 0). 세션 메서드 직접 호출
+        # 테스트(test_web_layout_image.py)는 이 층을 지나지 않아 못 잡았다:
+        # 회귀 판정은 반드시 WS 왕복으로 한다.
+        deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            ws.receive_json()
+            _send(
+                ws,
+                type="layout_image_upload",
+                file_name="stage-sketch.png",
+                mime_type="image/png",
+                content_base64="c2FmZQ==",
+            )
+            event = _receive_until(ws, "notice")
+        assert "stage-sketch.png" in event["message"]
+        assert "첨부됨" in event["message"]
+
     def test_malformed_message_yields_a_korean_protocol_error(self, tmp_path):
         deps, _console, _gate = _deps(tmp_path, ScriptedProvider([]))
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
