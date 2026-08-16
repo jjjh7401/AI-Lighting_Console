@@ -3110,6 +3110,19 @@ body {
   font-size: 12px;
 }
 
+/* The preset's OWN colour as a circle — only presets the app stored from its
+   palette carry one (the console exposes no preset colour; manual presets
+   honestly render without a swatch). Bigger than .pool-tile-appearance's
+   10px chip: here the colour IS the information. */
+.preset-popup-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  align-self: center;
+  margin: 2px 0;
+}
+
 .preset-popup-tile .pool-tile-name {
   font-size: 12px;
   line-height: 1.25;

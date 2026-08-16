@@ -17,10 +17,16 @@
 // fetch wrappers below are plain functions, unit-testable without a DOM.
 import { apiUrl } from "../launchContext";
 
-/** One preset slot as the wire carries it: the console's REAL number + name. */
+/** One preset slot as the wire carries it: the console's REAL number + name.
+ * `color` (optional `#rrggbb`) is the app's OWN palette colour for presets it
+ * stored itself — the console exposes no preset colour (Appearance/Color
+ * props answered "not readable", live-probed 2026-08-16), so a manual
+ * preset's colour is unknown and the API honestly omits the field rather
+ * than inventing one. */
 export interface PresetEntry {
   no: number;
   name: string;
+  color?: string;
 }
 
 export interface PresetPoolContents {
@@ -44,11 +50,16 @@ function entryOf(raw: unknown): PresetEntry | null {
   if (typeof raw !== "object" || raw === null) return null;
   const no = (raw as Record<string, unknown>).no;
   const name = (raw as Record<string, unknown>).name;
+  const color = (raw as Record<string, unknown>).color;
   // A name-only entry (the responder could not number the slot) is dropped:
   // a tile without a REAL console number would invite addressing by position,
   // the exact trap the real-`no` rule exists to prevent.
   if (typeof no !== "number") return null;
-  return { no, name: typeof name === "string" ? name : "" };
+  const entry: PresetEntry = { no, name: typeof name === "string" ? name : "" };
+  // Only a well-formed hex colour rides through — anything else is treated
+  // as absent (never a CSS injection channel).
+  if (typeof color === "string" && /^#[0-9a-fA-F]{6}$/.test(color)) entry.color = color;
+  return entry;
 }
 
 /** Parse GET /api/presets/{no}'s body; null = malformed (treated as error). */
@@ -158,6 +169,13 @@ export function PresetPoolPopup({ state, onClose, onRefresh }: PresetPoolPopupPr
                 {state.contents.presets.map((preset) => (
                   <div key={preset.no} className="pool-tile pool-tile-info preset-popup-tile">
                     <span className="pool-tile-no">{preset.no}</span>
+                    {preset.color ? (
+                      <span
+                        className="preset-popup-swatch"
+                        style={{ background: preset.color }}
+                        aria-label={`색 ${preset.color}`}
+                      />
+                    ) : null}
                     <span className="pool-tile-name">{preset.name || "—"}</span>
                   </div>
                 ))}

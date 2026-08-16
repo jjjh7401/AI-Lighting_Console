@@ -136,6 +136,46 @@ class TestReadPool:
         assert client.get("/api/presets/21").status_code == 502
 
 
+class TestPaletteSwatches:
+    """팔레트 라벨 → 색 원형(#rrggbb) — 앱이 아는 색만, 발명 금지.
+
+    콘솔은 프리셋 색을 노출하지 않는다(Appearance/Color prop 판독 불가,
+    2026-08-16 라이브 프로브) — 유일하게 정직한 출처는 앱 자신이 저장한
+    COLOR_PALETTE_SEQUENCE다. 수동 프리셋은 color 필드 자체가 없다.
+    """
+
+    def _color_tree(self) -> dict:
+        return {
+            POOLS_PATH: _payload(POOLS_PATH, [{"i": 4, "name": "Color"}]),
+            f"{POOLS_PATH}/4": _payload(
+                f"{POOLS_PATH}/4",
+                [
+                    {"i": 1, "name": "FrontWarm"},  # 수동 — 색 미상
+                    {"i": 21, "name": "Warm White"},
+                    {"i": 31, "name": "Warm White#2"},  # 콘솔 중복명 접미
+                    {"i": 23, "name": "Red"},
+                ],
+                name="Color",
+            ),
+        }
+
+    def test_palette_names_carry_their_own_hex_and_manual_ones_do_not(self):
+        client, _port = _client(self._color_tree())
+        presets = {p["no"]: p for p in client.get("/api/presets/4").json()["presets"]}
+        assert presets[23]["color"] == "#ff0000"  # Red (100,0,0) → #ff0000
+        assert presets[21]["color"] == presets[31]["color"]  # #N 접미 동일 취급
+        assert "color" not in presets[1]  # 수동 프리셋 — 색 발명 금지
+
+    def test_the_hex_conversion_is_percent_scaled(self):
+        from server.web.presets_api import _palette_hex_by_label
+        from server.web.session import COLOR_PALETTE_SEQUENCE
+
+        palette = _palette_hex_by_label()
+        assert set(palette) == {label for label, _rgb in COLOR_PALETTE_SEQUENCE}
+        # Amber (100,55,5) → 255,140,13
+        assert palette["Amber"] == "#ff8c0d"
+
+
 class TestNoExecutionSurface:
     def test_the_module_never_imports_the_send_surface(self):
         source = Path("server/web/presets_api.py").read_text(encoding="utf-8")

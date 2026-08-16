@@ -58,6 +58,42 @@ def _section_of(payload: dict) -> dict:
     return rig_section(objects, payload)
 
 
+def _palette_hex_by_label() -> dict[str, str]:
+    """Palette label → ``#rrggbb`` from the session's own COLOR_PALETTE_SEQUENCE.
+
+    Imported lazily to keep this module's import surface narrow (the router
+    is composed by serve.py, which loads the session anyway). The console
+    does NOT expose a preset's colour (Appearance/Color props answered
+    "not readable", live-probed 2026-08-16), so the ONLY honest colour
+    source is the palette the app itself stored — a manual preset's colour
+    is unknown and never invented.
+    """
+    from server.web.session import COLOR_PALETTE_SEQUENCE
+
+    def _hex(rgb: tuple[int, int, int]) -> str:
+        return "#" + "".join(f"{round(v * 255 / 100):02x}" for v in rgb)
+
+    return {label: _hex(rgb) for label, rgb in COLOR_PALETTE_SEQUENCE}
+
+
+def _swatch_of(name: object, palette: dict[str, str]) -> str | None:
+    """The known palette colour for a preset NAME, tolerating the console's
+    duplicate-name suffix (``Warm White#2`` is still Warm White)."""
+    if not isinstance(name, str):
+        return None
+    base = name.split("#", 1)[0]
+    return palette.get(base)
+
+
+def _with_swatches(objects: list[dict]) -> list[dict]:
+    palette = _palette_hex_by_label()
+    enriched = []
+    for obj in objects:
+        swatch = _swatch_of(obj.get("name"), palette)
+        enriched.append({**obj, "color": swatch} if swatch else obj)
+    return enriched
+
+
 def build_presets_router(deps: PresetsDeps) -> APIRouter:
     """Build the preset-browsing REST router around one composed dependency set."""
     router = APIRouter()
@@ -110,7 +146,7 @@ def build_presets_router(deps: PresetsDeps) -> APIRouter:
         name = node.get("name") if isinstance(node, dict) else None
         return {
             "pool": {"no": pool_no, "name": name if isinstance(name, str) else ""},
-            "presets": section["objects"],
+            "presets": _with_swatches(section["objects"]),
             "truncated": section["truncated"],
             "total": section["total"],
         }

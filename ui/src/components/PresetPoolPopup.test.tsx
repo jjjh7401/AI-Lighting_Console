@@ -36,6 +36,24 @@ describe("parsePresetPoolResponse — GET /api/presets/{no}의 와이어 형태"
     expect(parsed?.total).toBeNull();
   });
 
+  it("carries a well-formed palette colour and drops anything else — never a CSS injection channel", () => {
+    const parsed = parsePresetPoolResponse(
+      JSON.stringify({
+        pool: { no: 4, name: "Color" },
+        presets: [
+          { no: 21, name: "Warm White", color: "#ff8c0d" },
+          { no: 1, name: "FrontWarm" }, // 수동 프리셋 — 색 없음이 정직한 상태
+          { no: 2, name: "evil", color: "red;background:url(x)" },
+        ],
+        truncated: false,
+        total: 3,
+      }),
+    );
+    expect(parsed?.presets[0].color).toBe("#ff8c0d");
+    expect(parsed?.presets[1].color).toBeUndefined();
+    expect(parsed?.presets[2].color).toBeUndefined();
+  });
+
   it("malformed JSON or a missing pool is null, never a fabricated shape", () => {
     expect(parsePresetPoolResponse("not-json")).toBeNull();
     expect(parsePresetPoolResponse(JSON.stringify({ presets: [] }))).toBeNull();
