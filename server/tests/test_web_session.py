@@ -36,6 +36,7 @@ from server.web.measure import RoundTripRecorder
 from server.web.question import UNANSWERED, QuestionRequest
 from server.web.session import (
     COLOR_PALETTE_SEQUENCE,
+    COLOR_PHASER_SEQUENCE,
     HISTORY_MAX_MESSAGES,
     ChatSession,
     outcome_view,
@@ -2327,6 +2328,251 @@ class TestBasicColorPresets:
         session._current_cue_port = _ColorRigPropPort({})
 
         assert session._color_rig_fixture_pairs() is None
+
+
+class TestColorPhaserPresets:
+    """멀티컬러 페이저 프리셋 10종 — T1/T1b 라이브 프로브
+    (``docs/research/ma3-effects/08-color-phaser-m0-probe.md``)로 실측된
+    커맨드라인 문법의 카탈로그 구현.
+
+    판정 원칙: ``TestBasicColorPresets``의 **세대화**다 — 소재 공급만
+    갈아끼우고(``_color_phaser_preset_material``), 라우팅·가드·번들·되읽기
+    몸통은 100% 재사용이므로 여기서는 (1) 트리거가 기본 컬러 트리거와
+    서로소로 동작하는지, (2) 멀티스텝(2/3스텝) 커맨드라인이 프로브에서
+    실측된 그대로인지, (3) Form(Sine/Rectangle)·Phase 커맨드가 정확한지,
+    (4) 재생성 가족 필터가 'Breathe Warm'인지에 집중한다.
+    """
+
+    def _run(
+        self,
+        tmp_path,
+        text,
+        *,
+        answers=(),
+        channel=True,
+        pool_index=None,
+        pairs=((20, 20), (26, 26)),
+        fid_unread=(),
+        capable=(20, 26),
+        excluded=(),
+        undetermined=(),
+        stub_material=True,
+        **rig,
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(
+            calls,
+            pool_index=_M0_POOL_INDEX if pool_index is None else pool_index,
+            **rig,
+        )
+        if stub_material:
+            session._color_rig_fixture_pairs = lambda: (
+                [tuple(pair) for pair in pairs],
+                list(fid_unread),
+            )
+            session._color_capable_fids = lambda _pairs, *, probe_id_prefix: (
+                list(capable),
+                list(excluded),
+                list(undetermined),
+            )
+        chan = _AnsweringChannel(answers) if channel else None
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # 카탈로그 계약 — 라벨·스텝·Form·Phase 순서는 핸드오프 §2 표 그대로.
+    def test_the_catalog_matches_the_handoff_table(self):
+        assert [entry[0] for entry in COLOR_PHASER_SEQUENCE] == [
+            "Breathe Warm",
+            "Breathe Cool",
+            "Chase RB",
+            "Chase CM",
+            "Wave CM",
+            "Wave WA",
+            "Rainbow",
+            "Pulse RY",
+            "Duo GL",
+            "Slam RW",
+        ]
+        assert COLOR_PHASER_SEQUENCE[0][0] == "Breathe Warm"  # 가족 필터 계약
+        assert COLOR_PHASER_SEQUENCE[6][1] == ("Red", "Green", "Blue")  # Rainbow 3스텝
+
+    # 트리거 서로소 — 멀티컬러/컬러 이펙트 문장은 기본 컬러 경로로 새지
+    # 않고, 기본 컬러 문장은 멀티컬러 페이저 경로로 새지 않는다.
+    def test_the_trigger_is_disjoint_from_basic_color(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        commands = _all_commands(calls)
+        assert "Store Preset 4.31" in commands
+        assert any("Breathe Warm" in cmd for cmd in commands)
+        # 기본 컬러 풀(4.11~)로는 한 줄도 쓰지 않는다 — 페이저는 4.31~로만.
+        assert not any(cmd.startswith("Store Preset 4.1") for cmd in commands)
+        assert "멀티컬러 페이저" in event["text"]
+
+        event2, calls2, _chan2 = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 11번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(11, 21)),
+        )
+        commands2 = _all_commands(calls2)
+        assert "Store Preset 4.11" in commands2
+        assert not any("Breathe Warm" in cmd for cmd in commands2)
+        assert "기본 컬러" in event2["text"]
+
+    # 2스텝 Sine — Breathe Warm 커맨드라인이 프로브 §1-B/§3 문법 그대로인지.
+    def test_a_two_step_sine_preset_carries_the_probed_grammar(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        writes = _writes(calls)
+        assert len(writes) == 10
+        call = writes[0]
+        assert call.id == "color-phaser-preset-31"
+        assert call.arguments["commands"] == [
+            "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40",
+            "Step 2",
+            "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; "
+            "Attribute 'ColorRGB_B' At 5",
+            "Attribute 'ColorRGB_R' At Accel -100",
+            "Attribute 'ColorRGB_G' At Accel -100",
+            "Attribute 'ColorRGB_B' At Accel -100",
+            "Attribute 'ColorRGB_R' At Decel -100",
+            "Attribute 'ColorRGB_G' At Decel -100",
+            "Attribute 'ColorRGB_B' At Decel -100",
+            "Attribute 'ColorRGB_R' At Phase 0",
+            "Store Preset 4.31",
+            "Label Preset 4.31 'Breathe Warm'",
+            "ClearAll",
+        ]
+
+    # 2스텝 Rectangle — Chase RB(#3)가 Transition/Accel/Decel 0 근사치를
+    # 정확히 싣는지(프로브 §6.1 ASSUMPTION 그대로).
+    def test_a_two_step_rectangle_preset_carries_the_probed_approximation(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        writes = _writes(calls)
+        call = writes[2]  # Chase RB (index 2 in the catalog)
+        assert call.id == "color-phaser-preset-33"
+        assert call.arguments["commands"] == [
+            "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0",
+            "Step 2",
+            "Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; "
+            "Attribute 'ColorRGB_B' At 100",
+            "Attribute 'ColorRGB_R' At Accel 0",
+            "Attribute 'ColorRGB_G' At Accel 0",
+            "Attribute 'ColorRGB_B' At Accel 0",
+            "Attribute 'ColorRGB_R' At Decel 0",
+            "Attribute 'ColorRGB_G' At Decel 0",
+            "Attribute 'ColorRGB_B' At Decel 0",
+            "Attribute 'ColorRGB_R' At Transition 0",
+            "Attribute 'ColorRGB_G' At Transition 0",
+            "Attribute 'ColorRGB_B' At Transition 0",
+            "Attribute 'ColorRGB_R' At Phase 0",
+            "Store Preset 4.33",
+            "Label Preset 4.33 'Chase RB'",
+            "ClearAll",
+        ]
+
+    # 3스텝 Rainbow — 프로브 §6.2 실측(Step 3 직후 Store해도 3색 다 담김).
+    def test_the_three_step_rainbow_preset_carries_all_three_steps(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        writes = _writes(calls)
+        call = writes[6]  # Rainbow (index 6 in the catalog)
+        assert call.id == "color-phaser-preset-37"
+        commands = call.arguments["commands"]
+        assert commands[0] == (
+            "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0"
+        )
+        assert commands[1] == "Step 2"
+        assert commands[2] == (
+            "Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 100 ; "
+            "Attribute 'ColorRGB_B' At 10"
+        )
+        assert commands[3] == "Step 3"
+        assert commands[4] == (
+            "Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; "
+            "Attribute 'ColorRGB_B' At 100"
+        )
+        assert commands[-4] == "Attribute 'ColorRGB_R' At Phase 0 Thru 360"
+        assert commands[-3] == "Store Preset 4.37"
+        assert commands[-2] == "Label Preset 4.37 'Rainbow'"
+        assert commands[-1] == "ClearAll"
+
+    # Phase 분산 문법 — Duo GL(#9, Phase 180)과 Wave CM(#5, 0 Thru 360).
+    def test_phase_tokens_match_the_catalog(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        writes = _writes(calls)
+        duo_gl = writes[8].arguments["commands"]
+        assert "Attribute 'ColorRGB_R' At Phase 180" in duo_gl
+        wave_cm = writes[4].arguments["commands"]
+        assert "Attribute 'ColorRGB_R' At Phase 0 Thru 360" in wave_cm
+
+    # 풀 미상 거부 — 기본 컬러와 동일 규율(REQ-002 상속).
+    def test_a_missing_color_pool_refuses_without_writing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool_index={1: "Dimmer", 2: "Position"},
+        )
+
+        assert _writes(calls) == []
+        assert "Color 풀을 찾지 못했습니다" in event["text"]
+
+    # 재생성 가족 필터 — 'Breathe Warm'로 시작하는 구간만 표적이다.
+    def test_regeneration_targets_only_the_breathe_warm_family(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 다시 잡아줘",
+            pool=tuple(range(11, 21)) + tuple(range(31, 41)),
+            names={11: "Sunset Wash", 31: "Breathe Warm"},
+            answers=["덮어쓰기 진행"],
+        )
+
+        writes = _writes(calls)
+        assert len(writes) == 10
+        commands = _all_commands(calls)
+        assert "Store Preset 4.31" in commands
+        assert not any(cmd == "Store Preset 4.11" for cmd in commands)
+        assert "다시 저장 요청했습니다" in event["text"]
+
+    # 재생성이 신규 저장보다 앞이다 — "다시 잡아줘"는 저장 트리거의 '잡아'와
+    # 겹치므로 등록 순서로 행선지가 고정됨을 뮤테이션으로 증명한다.
+    def test_regenerate_is_tried_before_store(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 다시 잡아줘",
+            pool=(),  # 저장된 구간이 없다 — 재생성 특유의 거부 문면이 나와야 한다
+        )
+
+        assert _writes(calls) == []
+        assert "먼저" in event["text"] and "저장" in event["text"]
 
 
 class TestPositionPresetOverwriteGuard:

@@ -300,3 +300,8 @@
 {"timestamp":"2026-08-16T04:05:52.099425Z","event_type":"tool_failure","subject":"Bash","context_hash":"UnknownFailure","tier_increment":0,"schema_version":"v2.1"}
 {"timestamp":"2026-08-16T04:53:34.257117Z","event_type":"tool_failure","subject":"Bash","context_hash":"UnknownFailure","tier_increment":0,"schema_version":"v2.1"}
 {"timestamp":"2026-08-16T06:31:25.455737Z","event_type":"tool_failure","subject":"Bash","context_hash":"UnknownFailure","tier_increment":0,"schema_version":"v2.1"}
+{"timestamp":"2026-08-16T15:07:28.219221Z","event_type":"tool_failure","subject":"Bash","context_hash":"UnknownFailure","tier_increment":0,"schema_version":"v2.1"}
+{"timestamp":"2026-08-16T15:08:17.553095Z","event_type":"tool_failure","subject":"Bash","context_hash":"UnknownFailure","tier_increment":0,"schema_version":"v2.1"}
+{"timestamp":"2026-08-16T15:10:45.411518Z","event_type":"tool_failure","subject":"Bash","context_hash":"UnknownFailure","tier_increment":0,"schema_version":"v2.1"}
+{"timestamp":"2026-08-16T15:22:43.315299Z","event_type":"tool_failure","subject":"Bash","context_hash":"UnknownFailure","tier_increment":0,"schema_version":"v2.1"}
+{"timestamp":"2026-08-16T15:26:11.201874Z","event_type":"tool_failure","subject":"Bash","context_hash":"UnknownFailure","tier_increment":0,"schema_version":"v2.1"}

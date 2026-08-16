@@ -1713,6 +1713,56 @@ COLOR_PALETTE_SEQUENCE: tuple[tuple[str, tuple[int, int, int]], ...] = (
     ("Lavender", (55, 35, 100)),
 )
 
+#: 팔레트 라벨 → RGB(0-100) 역인덱스 — 멀티컬러 페이저 스텝은 팔레트 프리셋
+#: 번호(`At Preset 4.x`)가 아니라 **이 RGB 값 자체**를 스텝에 직접 싣는다
+#: (T1 프로브 결론, `08-color-phaser-m0-probe.md` §1). 팔레트 프리셋이 실제로
+#: 저장된 슬롯 번호는 운영자가 저장 시점에 고른 값이라 코드가 아는 상수가
+#: 아니다 — RGB 직접 지정은 그 의존을 없애고 `_color_apply_command`와 같은
+#: 문법(라이브 검증됨)만 재사용한다.
+_COLOR_PALETTE_RGB: dict[str, tuple[int, int, int]] = dict(COLOR_PALETTE_SEQUENCE)
+
+#: 멀티컬러 페이저 프리셋 10종 카탈로그 — `docs/handoff/2026-08-16-session-
+#: handoff.md` §2 표 그대로 고정(라벨·스텝·Form·Phase 순서가 계약). 슬롯 1은
+#: 항상 'Breathe Warm'이고 재생성 가족 필터의 first_label이 된다(팔레트·
+#: 포지션·FX와 같은 규율). 각 원소: (라벨, 스텝 순서의 팔레트 라벨들,
+#: Form("sine"|"rectangle"), Phase 커맨드 토큰).
+COLOR_PHASER_SEQUENCE: tuple[tuple[str, tuple[str, ...], str, str], ...] = (
+    ("Breathe Warm", ("Warm White", "Amber"), "sine", "0"),
+    ("Breathe Cool", ("Cool White", "Blue"), "sine", "0"),
+    ("Chase RB", ("Red", "Blue"), "rectangle", "0"),
+    ("Chase CM", ("Cyan", "Magenta"), "rectangle", "0"),
+    ("Wave CM", ("Cyan", "Magenta"), "sine", "0 Thru 360"),
+    ("Wave WA", ("Warm White", "Amber"), "sine", "0 Thru 360"),
+    ("Rainbow", ("Red", "Green", "Blue"), "sine", "0 Thru 360"),
+    ("Pulse RY", ("Red", "Yellow"), "sine", "0"),
+    ("Duo GL", ("Green", "Lavender"), "sine", "180"),
+    ("Slam RW", ("Red", "Warm White"), "rectangle", "0 Thru 360"),
+)
+
+# 멀티컬러 페이저 저장 (핸드오프 §2 지침 2): 어휘축(멀티컬러/컬러 이펙트/
+# multi-color/color effect)이 기본 컬러 트리거의 어휘축(기본/베이직/basic)과
+# 서로소라 두 컬러 경로가 서로의 문장을 삼키지 않는다 — "멀티컬러 프리셋
+# 저장해줘"는 `_BASIC_COLORS_REQUEST`를 매치하지 않고, "기본 컬러 프리셋
+# 저장해줘"는 이 트리거를 매치하지 않는다.
+_COLOR_PHASER_REQUEST = re.compile(
+    r"(?:멀티\s*컬러|컬러\s*이펙트|multi-?color|color\s*effect)"
+    r".{0,24}?(?:저장|만들|잡아|생성)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+# 멀티컬러 페이저 재생성: BASIC/컬러 재생성과 같은 문형에서 어휘축만 다르다.
+# 꼬리 규율(묶인 '다시', '저장' 제외, 어절 하나 허용)은 `_REGENERATE_COLORS_
+# REQUEST` 주석의 근거를 그대로 상속한다 — 동사부는 의도적으로 동일하다.
+_REGENERATE_COLOR_PHASER_REQUEST = re.compile(
+    r"(?:멀티\s*컬러|컬러\s*이펙트|multi-?color|color\s*effect)"
+    r"(?:"
+    r".{0,12}?재생성"
+    r"|"
+    r".{0,12}?다시(?:\s+\S{1,6})?\s*(?:잡|만들|생성|갱신)"
+    r")",
+    re.IGNORECASE | re.DOTALL,
+)
+
 _REPEATING_TYPE_COLUMNS_REQUEST = re.compile(
     r"(?:\d+\s*열\s*:\s*)?.*mmx.*(?:\d+\s*열\s*:\s*)?.*350\s*m?.*반복",
     re.IGNORECASE,
@@ -2059,6 +2109,77 @@ def _color_apply_command(fids: Sequence[int], rgb: tuple[int, int, int]) -> str:
         f"Fixture {selection} ; Attribute 'ColorRGB_R' At {r} ; "
         f"Attribute 'ColorRGB_G' At {g} ; Attribute 'ColorRGB_B' At {b}"
     )
+
+
+#: 컬러 채널 3종 — 페이저 Form/레이어 명령은 R/G/B 세 채널 모두에 동일하게
+#: 실어야 한 스텝의 색이 채널별로 다른 커브로 어긋나지 않는다.
+_COLOR_PHASER_CHANNELS: tuple[str, ...] = ("ColorRGB_R", "ColorRGB_G", "ColorRGB_B")
+
+
+def _color_phaser_step_commands(
+    fids: Sequence[int], rgbs: Sequence[tuple[int, int, int]]
+) -> tuple[str, ...]:
+    """멀티스텝 컬러 페이저를 프로그래머에 싣는 커맨드라인 시퀀스.
+
+    라이브 실측(``08-color-phaser-m0-probe.md`` §1-B/§6.2): 첫 스텝은
+    ``Fixture <fids> ; Attribute 'ColorRGB_R/G/B' At <n>``로 선택+값을 함께
+    싣고, 이후 스텝은 선택이 프로그래머에 남아 있으므로 ``Step N`` 다음
+    값 3줄만 보낸다 — 재선택하지 않는다. ``Step N`` 직후 곧바로 다음 스텝
+    값을 잇고, ``Store Preset``은 이 함수 밖(``_preset_store_commands``,
+    무수정)에서 별도로 붙는다 — Step 명령과 Store 명령을 합치지 않는다는
+    함정①의 안전 순서를 그대로 따른다(같은 문서 §3, 재현되지 않았지만
+    보수적으로 유지).
+
+    2스텝(Breathe/Chase/Wave/Pulse/Duo/Slam)과 3스텝(Rainbow) 둘 다 라이브
+    확인됨.
+    """
+    if len(rgbs) < 2:
+        raise SpatialPointingError(f"color phaser needs at least 2 steps, got {len(rgbs)}")
+    selection = " + ".join(str(fid) for fid in fids)
+    commands: list[str] = []
+    for step_no, (r, g, b) in enumerate(rgbs, start=1):
+        chain = (
+            f"Attribute 'ColorRGB_R' At {r} ; Attribute 'ColorRGB_G' At {g} ; "
+            f"Attribute 'ColorRGB_B' At {b}"
+        )
+        if step_no == 1:
+            commands.append(f"Fixture {selection} ; {chain}")
+        else:
+            commands.append(f"Step {step_no}")
+            commands.append(chain)
+    return tuple(commands)
+
+
+def _color_phaser_form_commands(form: str) -> tuple[str, ...]:
+    """Form 레이어 근사 — Sine은 라이브 검증됨, Rectangle은 ASSUMPTION.
+
+    ``05-phaser-editor.md`` §4: Form 버튼은 Transition+Accel+Decel 레이어의
+    단축키일 뿐 명령줄 키워드가 없다. Sine ≈ Accel −100 / Decel −100은
+    R/G/B 세 채널 모두에서 라이브 수락 확인(``08-…-probe.md`` §3). Rectangle
+    후보(Transition 0 / Accel 0 / Decel 0)는 §6.1에서 **명령 자체는 거부되지
+    않음**을 확인했지만, 하드컷 파형이 실제로 만들어지는지(공식 Accel/Decel
+    수치가 없음)는 이 저장소 구조상(OSC/Lua만, 화면을 볼 수 없음) 확인할 수
+    없다 — Rectangle 커브는 검증되지 않은 근사치임을 여기 명시한다.
+    """
+    if form == "sine":
+        curve = -100
+    elif form == "rectangle":
+        curve = 0
+    else:
+        raise SpatialPointingError(f"unknown color phaser form {form!r}")
+    commands = [f"Attribute '{channel}' At Accel {curve}" for channel in _COLOR_PHASER_CHANNELS]
+    commands += [f"Attribute '{channel}' At Decel {curve}" for channel in _COLOR_PHASER_CHANNELS]
+    if form == "rectangle":
+        commands += [f"Attribute '{channel}' At Transition 0" for channel in _COLOR_PHASER_CHANNELS]
+    return tuple(commands)
+
+
+def _color_phaser_phase_command(phase: str) -> str:
+    """Phase 분산 — ``ColorRGB_R`` 한 채널에만 싣는다(레이어는 세트로 저장되므로
+    한 채널만으로 충분, ``05-phaser-editor.md`` §5). ``"0"``/``"180"``/``"0 Thru
+    360"`` 세 토큰 다 라이브 수락 확인됨(``08-…-probe.md`` §3/§6.3).
+    """
+    return f"Attribute 'ColorRGB_R' At Phase {phase}"
 
 
 def _preset_overwrite_refusal(verdict: _PresetSpanVerdict) -> str:
@@ -4132,20 +4253,21 @@ class ChatSession:
                 fid_unread.append(slot)
         return pairs, fid_unread
 
-    def _color_preset_material(
+    def _color_pool_and_capable_fids(
         self, *, noun: str
-    ) -> (
-        tuple[int, list[int], tuple[tuple[str, tuple[str], tuple[()]], ...], str]
-        | InstructionResult
-    ):
-        """컬러 저장·재생성이 공유하는 소재 — ``(pool_no, capable, looks,
-        disclosure)`` 또는 거부.
+    ) -> tuple[int, list[int], str] | InstructionResult:
+        """Color 풀 번호 해석 + 3-hop 컬러 판별 + 산술 고지 — ``(pool_no,
+        capable, disclosure)`` 또는 거부.
 
-        순서가 규율이다: ① Color 풀 번호를 리그에서 해석(실패 = 거부, REQ-002)
-        ② 패치 픽스처 (slot, fid) 짝 열거(부분 판독 = 거부 — 반쪽 리그에 색을
-        칠하지 않는다, 좌표 판독과 같은 규율) ③ 3-hop 판별로 컬러 가능 FID만
-        남기고(REQ-005, fail-closed) ④ 제외·판별 불가를 대수+FID 산술로 고지
-        문장에 적는다(침묵 축소 금지).
+        팔레트 색상표 저장(``_color_preset_material``)과 멀티컬러 페이저
+        저장(``_color_phaser_preset_material``)이 공유하는 **앞부분**이다 —
+        룩(스텝 커맨드) 구성만 갈라진다. 순서가 규율이다: ① Color 풀 번호를
+        리그에서 해석(실패 = 거부, REQ-002) ② 패치 픽스처 (slot, fid) 짝
+        열거(부분 판독 = 거부 — 반쪽 리그에 색을 칠하지 않는다, 좌표 판독과
+        같은 규율) ③ 3-hop 판별로 컬러 가능 FID만 남기고(REQ-005,
+        fail-closed) ④ 제외·판별 불가를 대수+FID 산술로 고지 문장에 적는다
+        (침묵 축소 금지). 이 함수는 순수 추출이다 — 메시지 문면은 리팩터
+        이전과 문자 단위로 동일하다.
         """
         pool_no = self._resolve_color_pool_no()
         if pool_no is None:
@@ -4191,9 +4313,57 @@ class ChatSession:
                 f"(패치 슬롯 {', '.join(str(slot) for slot in fid_unread)}) 제외"
             )
         disclosure = ", ".join(parts) + "."
+        return pool_no, capable, disclosure
+
+    def _color_preset_material(
+        self, *, noun: str
+    ) -> (
+        tuple[int, list[int], tuple[tuple[str, tuple[str], tuple[()]], ...], str]
+        | InstructionResult
+    ):
+        """컬러 저장·재생성이 공유하는 소재 — ``(pool_no, capable, looks,
+        disclosure)`` 또는 거부. 공유 앞부분은 ``_color_pool_and_capable_
+        fids``(REQ-COLORPRESET-006 리팩터), 이 함수는 팔레트 단일-스텝 룩
+        구성만 맡는다.
+        """
+        shared = self._color_pool_and_capable_fids(noun=noun)
+        if isinstance(shared, InstructionResult):
+            return shared
+        pool_no, capable, disclosure = shared
         looks = tuple(
             (label, (_color_apply_command(capable, rgb),), ())
             for label, rgb in COLOR_PALETTE_SEQUENCE
+        )
+        return pool_no, capable, looks, disclosure
+
+    def _color_phaser_preset_material(
+        self, *, noun: str
+    ) -> (
+        tuple[int, list[int], tuple[tuple[str, tuple[str, ...], tuple[()]], ...], str]
+        | InstructionResult
+    ):
+        """멀티컬러 페이저 저장·재생성이 공유하는 소재 — ``_color_preset_
+        material``과 앞부분(``_color_pool_and_capable_fids``)을 공유하고,
+        룩 구성만 갈라진다: 팔레트 단일 값 대신 ``COLOR_PHASER_SEQUENCE``의
+        스텝 시퀀스 + Form + Phase 커맨드를 싣는다(핸드오프 §2 지침 2).
+        """
+        shared = self._color_pool_and_capable_fids(noun=noun)
+        if isinstance(shared, InstructionResult):
+            return shared
+        pool_no, capable, disclosure = shared
+        looks = tuple(
+            (
+                label,
+                (
+                    *_color_phaser_step_commands(
+                        capable, tuple(_COLOR_PALETTE_RGB[step_label] for step_label in steps)
+                    ),
+                    *_color_phaser_form_commands(form),
+                    _color_phaser_phase_command(phase),
+                ),
+                (),
+            )
+            for label, steps, form, phase in COLOR_PHASER_SEQUENCE
         )
         return pool_no, capable, looks, disclosure
 
@@ -4262,6 +4432,76 @@ class ChatSession:
             apply=list,
             lead_intro="표준 무대 팔레트로",
             tail="이 프리셋을 참조하는 큐는 별도 수정 없이 새 색을 따라갑니다.",
+            disclosure=disclosure,
+        )
+
+    def _color_phaser_presets(self, text: str) -> InstructionResult | None:
+        """*"멀티컬러 페이저 프리셋 저장해줘"* — 카탈로그 10종(핸드오프 §2)을
+        해석된 Color 풀의 연속 10칸에 저장한다.
+
+        기본 컬러 프리셋 기계의 소비자다: 번호 출처(지시 또는 카드 1장)·
+        점유 검사·공용 덮어쓰기 카드·페이지드 되읽기 산술 전부
+        ``_store_position_preset_sequence``가 수행한다 — 새 카드·새 어휘
+        없음. 소재만 다르다: 팔레트 단일 값 대신 ``_color_phaser_preset_
+        material``이 스텝·Form·Phase 커맨드를 실은 룩을 공급한다. 디스패치
+        등록은 기본 컬러 저장·재생성 **바로 다음**이다 — 어휘축(멀티컬러/
+        컬러 이펙트)이 기본 컬러 어휘축(기본/베이직/basic)과 서로소라 순서
+        자체는 상호 오라우팅에 영향을 주지 않지만, 컬러 계열끼리 인접
+        배치해 두 컬러 몸통의 안전 동작이 갈라지지 않는다는 것을 코드
+        위치로도 드러낸다.
+        """
+        if _COLOR_PHASER_REQUEST.search(text) is None:
+            return None
+        material = self._color_phaser_preset_material(noun="멀티컬러 페이저")
+        if isinstance(material, InstructionResult):
+            return material
+        pool_no, capable, looks, disclosure = material
+        return self._store_position_preset_sequence(
+            text,
+            noun="멀티컬러 페이저",
+            sequence=tuple(label for label, _steps, _form, _phase in COLOR_PHASER_SEQUENCE),
+            build=lambda _fixtures: looks,
+            read_id="color-phaser-presets-read",
+            bundle="color-phaser-preset",
+            example="멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool_no=pool_no,
+            pool_label="Color",
+            read=lambda _call_id: capable,
+            apply=list,
+            lead_intro="멀티컬러 페이저 카탈로그에서 가져온",
+            disclosure=disclosure,
+        )
+
+    def _regenerate_color_phaser_presets(self, text: str) -> InstructionResult | None:
+        """*"멀티컬러 페이저 다시 잡아줘"* — 저장된 페이저 10칸 구간을 제자리
+        갱신한다.
+
+        리그가 바뀌면 컬러 가능 장비 집합이 바뀌므로 같은 번호에 다시
+        저장해 프리셋을 쓰는 큐가 새 선택을 따라오게 한다 — 기본 컬러
+        재생성과 동일 몸통(가족 필터 first_label='Breathe Warm', 풀 미상
+        거부). 디스패치 등록은 신규 저장보다 **앞**(트리거의 '잡아' 중첩,
+        REQ-PRESETGUARD-015와 같은 형상)이다.
+        """
+        if _REGENERATE_COLOR_PHASER_REQUEST.search(text) is None:
+            return None
+        material = self._color_phaser_preset_material(noun="멀티컬러 페이저")
+        if isinstance(material, InstructionResult):
+            return material
+        pool_no, capable, looks, disclosure = material
+        return self._regenerate_position_preset_sequence(
+            text,
+            noun="멀티컬러 페이저",
+            build=lambda _fixtures: looks,
+            read_id="regenerate-color-phaser-presets-read",
+            bundle="color-phaser-preset",
+            store_example="멀티컬러 페이저 프리셋 10개 저장",
+            first_label=COLOR_PHASER_SEQUENCE[0][0],
+            pool_no=pool_no,
+            pool_label="Color",
+            read=lambda _call_id: capable,
+            apply=list,
+            lead_intro="멀티컬러 페이저 카탈로그로",
+            tail="이 프리셋을 참조하는 큐는 별도 수정 없이 새 페이저를 따라갑니다.",
             disclosure=disclosure,
         )
 
@@ -7470,6 +7710,15 @@ class ChatSession:
                     result = self._regenerate_basic_color_presets(text)
                 if result is None:
                     result = self._basic_color_presets(text)
+                if result is None:
+                    # 멀티컬러 페이저도 같은 이유로 재생성이 신규 저장보다
+                    # 앞이다(저장 트리거의 '잡아'가 재생성 문장을 함께
+                    # 매치, REQ-PRESETGUARD-015와 같은 형상). 어휘축(멀티
+                    # 컬러/컬러 이펙트)이 기본 컬러(기본/베이직/basic)와
+                    # 서로소라 두 컬러 계열은 서로의 문장을 삼키지 않는다.
+                    result = self._regenerate_color_phaser_presets(text)
+                if result is None:
+                    result = self._color_phaser_presets(text)
                 if result is None:
                     # 재생성이 신규 저장보다 **먼저**다 — 두 트리거의 교집합이
                     # 공집합이 아니므로(ASSUMPTION-83 반증) 등록 순서가 겹치는
