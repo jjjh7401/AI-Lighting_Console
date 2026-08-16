@@ -943,6 +943,15 @@ SPATIAL_FIXTURE_PROPERTIES = ("fid", "posx", "posy", "posz")
 #: axis that fails to read is the reason the whole fixture is reported absent.
 SPATIAL_AXES = (("x", "posx"), ("y", "posy"), ("z", "posz"))
 
+#: Body-rotation properties, read ONLY when a caller opts in
+#: (``include_rotation``). Best-effort by design: the rotation property names
+#: are the patch-3D siblings of ``posx``-family reads but are NOT yet
+#: live-measured, so a failed rotation read never drops the fixture from the
+#: coordinate map — it is itemised in the record's ``rotation_unread`` list
+#: instead, and the value is never invented (the same absence-is-an-item rule
+#: the coordinate guard enforces).
+SPATIAL_ROTATION_PROPERTIES = ("rotx", "roty", "rotz")
+
 #: Ceiling on property round trips per ``get_spatial_context`` call — 60
 #: fixtures at ``SPATIAL_FIXTURE_PROPERTIES`` each. A 40-fixture production
 #: rig cannot be safely moved as a whole when this cap is 30: the read is
@@ -951,6 +960,22 @@ SPATIAL_AXES = (("x", "posx"), ("y", "posy"), ("z", "posz"))
 #: budget while preserving the same explicit partial-read signal for larger
 #: rigs.
 SPATIAL_PROPERTY_QUERY_CAP = 240
+
+
+def _spatial_read_budget(include_rotation: bool) -> int:
+    """The round-trip budget for one spatial read, scaled to the property set.
+
+    The cap is a FIXTURE ceiling in disguise (60 fixtures at 4 properties
+    each). Reading rotations must not shrink that ceiling — a 40-fixture rig
+    that reads completely today must still read completely with rotations on
+    — so the budget scales with the per-fixture property count instead of
+    staying a flat round-trip number.
+    """
+    per_fixture = len(SPATIAL_FIXTURE_PROPERTIES) + (
+        len(SPATIAL_ROTATION_PROPERTIES) if include_rotation else 0
+    )
+    return (SPATIAL_PROPERTY_QUERY_CAP // len(SPATIAL_FIXTURE_PROPERTIES)) * per_fixture
+
 
 #: Why a container child was never queried at all. Distinct from a property
 #: read that FAILED: the responder declined to establish this child's slot, so
@@ -1021,11 +1046,42 @@ def spatial_fixture_record(
     return record, None
 
 
+def attach_spatial_rotation(record: dict[str, object], reads: Mapping[str, PropertyRead]) -> None:
+    """Fold best-effort rotation reads into a coordinate-confirmed record.
+
+    A readable, finite rotation lands under its own property name
+    (``rotx``/``roty``/``rotz``, degrees). Anything else — a failed read, an
+    unparseable value, a non-finite float — puts the property NAME into
+    ``rotation_unread``: the caller learns the rotation is unknown, and no
+    zero is ever invented for it (the coordinate-invention guard's rule,
+    applied to the rotation axes).
+    """
+    unread: list[str] = []
+    for prop in SPATIAL_ROTATION_PROPERTIES:
+        read = reads.get(prop)
+        if read is None or not read.ok:
+            unread.append(prop)
+            continue
+        try:
+            value = float(str(read.value).strip())
+        except ValueError:
+            unread.append(prop)
+            continue
+        if not math.isfinite(value):
+            unread.append(prop)
+            continue
+        record[prop] = value
+    if unread:
+        record["rotation_unread"] = unread
+
+
 def read_spatial_fixtures(
     state_port: StateQueryPort,
     property_port: PropertyQueryPort,
     fixtures_path: str,
     budget: int,
+    *,
+    include_rotation: bool = False,
 ) -> dict[str, object]:
     """Read ``(fid, name, x, y, z)`` for every fixture in the stage patch container.
 
@@ -1102,7 +1158,10 @@ def read_spatial_fixtures(
     fixtures: list[dict[str, object]] = []
     unreadable: list[dict[str, object]] = []
     roundtrip_capped = False
-    per_fixture = len(SPATIAL_FIXTURE_PROPERTIES)
+    properties = SPATIAL_FIXTURE_PROPERTIES + (
+        SPATIAL_ROTATION_PROPERTIES if include_rotation else ()
+    )
+    per_fixture = len(properties)
     for child in children:
         # @MX:ANCHOR: [SPEC] round-trip cap signal (REQ-SPATIAL-006). A SEPARATE
         #   field from ``truncated`` — the console shortened its answer, this
@@ -1129,13 +1188,13 @@ def read_spatial_fixtures(
             unreadable.append(_spatial_absence(name, _SPATIAL_NO_SLOT_REASON))
             continue
         budget -= per_fixture
-        reads = read_properties(
-            property_port, f"{fixtures_path}/{slot}", SPATIAL_FIXTURE_PROPERTIES
-        )
+        reads = read_properties(property_port, f"{fixtures_path}/{slot}", properties)
         record, absence = spatial_fixture_record(name, reads)
         if record is None:
             unreadable.append(absence)  # type: ignore[arg-type]
         else:
+            if include_rotation:
+                attach_spatial_rotation(record, reads)
             fixtures.append(record)
     # REQ-GROUPGEN-024 amendment coverage signal — "judged" is how many
     # fixtures actually fed a topology judgment, "of" is the rig's real
@@ -5146,6 +5205,9 @@ def build_toolset(
     # blur which approval card the operator is being shown.
 
     def get_spatial_context(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        include_rotation = bool(
+            isinstance(call.arguments, dict) and call.arguments.get("include_rotation")
+        )
         fixtures_path = rig_paths.get("fixtures")
         if not fixtures_path:
             # Fail by NAME, like every other rig-section guard here — a
@@ -5168,7 +5230,11 @@ def build_toolset(
             )
         try:
             reply = read_spatial_fixtures(
-                state_port, property_port, fixtures_path, SPATIAL_PROPERTY_QUERY_CAP
+                state_port,
+                property_port,
+                fixtures_path,
+                _spatial_read_budget(include_rotation),
+                include_rotation=include_rotation,
             )
         except Exception as exc:
             return _error_result(
@@ -7893,7 +7959,24 @@ def build_toolset(
                 "why; do not invent a left-to-right order the patch does not "
                 "support."
             ),
-            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+            parameters={
+                "type": "object",
+                "properties": {
+                    "include_rotation": {
+                        "type": "boolean",
+                        "description": (
+                            "Also read each fixture's patched body rotation "
+                            "(rotx/roty/rotz, degrees). Best-effort: a "
+                            "rotation that could not be read is listed by "
+                            "name under the fixture's 'rotation_unread' and "
+                            "its value stays unknown — never assume 0 for a "
+                            "listed axis. Costs 3 extra property reads per "
+                            "fixture. Default false."
+                        ),
+                    }
+                },
+                "additionalProperties": False,
+            },
         ),
         ToolDefinition(
             name="arrange_fixtures",

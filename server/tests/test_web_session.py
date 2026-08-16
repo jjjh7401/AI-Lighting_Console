@@ -1240,6 +1240,79 @@ class TestPointFixturesAtTarget:
         assert "2대" in event["text"]
         assert "1대(FID 41)" in event["text"]
 
+    def test_body_rotation_is_compensated_skipped_or_disclosed(self, tmp_path):
+        # Rotz is the measured axis: the pan the console needs is the
+        # geometric pan minus the body rotation, so FID 20's Pan 90 becomes
+        # Pan 0 under Rotz 90. Rotx/Roty are UNMEASURED: a confirmed non-zero
+        # value skips the fixture by name instead of aiming it confidently
+        # wrong. A fixture whose rotation could not be read keeps the old
+        # assume-zero behaviour, said out loud.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        fixtures = [
+            {
+                "fid": 20,
+                "name": "A",
+                "x": 4.0,
+                "y": 0.0,
+                "z": 6.0,
+                "rotx": 0.0,
+                "roty": 0.0,
+                "rotz": 90.0,
+            },
+            {
+                "fid": 26,
+                "name": "B",
+                "x": -4.0,
+                "y": 0.0,
+                "z": 6.0,
+                "rotx": 15.0,
+                "roty": 0.0,
+                "rotz": 0.0,
+            },
+            {
+                "fid": 30,
+                "name": "C",
+                "x": 4.0,
+                "y": 0.0,
+                "z": 6.0,
+                "rotation_unread": ["rotx", "roty", "rotz"],
+            },
+        ]
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    (CommandOutcome(command="Fixture 20", status="proposal"),),
+                )
+
+        session._registry = Registry()
+        event = session.run_instruction("모든 장비가 무대 중앙(0,0,0)을 바라보게 해줘")
+
+        assert calls[0].name == "get_spatial_context"
+        assert calls[0].arguments == {"include_rotation": True}
+        commands = calls[-1].arguments["commands"]
+        assert commands == [
+            "Fixture 20 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 33.7",
+            "Fixture 30 ; Attribute 'Pan' At 90 ; Attribute 'Tilt' At 33.7",
+        ]
+        assert "1대(FID 26)" in event["text"]  # non-zero Rotx: skipped by name
+        assert "Rotx/Roty" in event["text"]
+        assert "회전값을 읽지 못한 1대(FID 30)" in event["text"]  # assume-0 disclosure
+
     def test_an_explicit_coordinate_triple_overrides_the_centre_words(self, tmp_path):
         provider = ScriptedProvider([])
         session, _console, _audit, _sent, _ = _session(tmp_path, provider)

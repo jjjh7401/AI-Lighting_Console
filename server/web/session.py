@@ -203,6 +203,11 @@ _ALL_FIXTURES_ELEVATION = re.compile(
     re.IGNORECASE,
 )
 
+# A patched body rotation smaller than this reads as "not rotated": console
+# rotation strings are exact ("0.0"), so the tolerance only absorbs float
+# parsing noise, never a real installation tilt.
+_ROTATION_TOLERANCE_DEGREES = 0.01
+
 # Aim every moving head's beam at one stage point (measured pan/tilt model —
 # server/spatial/pointing.py). Trigger: an aiming verb plus either a centre
 # word or an explicit coordinate triple.
@@ -2416,6 +2421,104 @@ class ChatSession:
                 "변경을 시작하지 않았습니다."
             )
 
+    def _read_pointing_frames(
+        self, call_id: str
+    ) -> (
+        tuple[
+            list[tuple[int, tuple[float, float, float]]],
+            dict[int, float],
+            list[int],
+            list[int],
+        ]
+        | InstructionResult
+    ):
+        """Coordinates PLUS best-effort body rotations, for the direct aim paths.
+
+        Returns ``(fixtures, rotz_by_fid, rotation_skipped, rotation_assumed)``
+        or the refusal. The pan/tilt inverse model compensates ``Rotz`` only —
+        ``Rotx``/``Roty`` were never live-measured (``server/spatial/
+        pointing.py``) — so a fixture whose patched X/Y tilt is confirmed
+        non-zero lands in ``rotation_skipped`` (aiming it would be confidently
+        wrong), while a fixture whose rotation could not be read keeps the
+        pre-rotation behaviour (assume 0) but is named in
+        ``rotation_assumed`` so the reply can say the assumption out loud.
+        """
+        spatial = self._registry.dispatch(
+            ToolCall(
+                id=call_id,
+                name="get_spatial_context",
+                arguments={"include_rotation": True},
+            )
+        )
+        if spatial.result.is_error:
+            return self._pointing_refusal(
+                "3D 좌표를 읽지 못해 조명 방향 변경을 시작하지 않았습니다. "
+                "콘솔 연결을 확인해 주세요."
+            )
+        try:
+            payload = json.loads(spatial.result.content)
+            records = payload["fixtures"] if "fixtures" in payload else payload["partial_fixtures"]
+            if "fixtures" not in payload and (
+                payload.get("truncated") or payload.get("roundtrip_capped")
+            ):
+                raise ValueError("coordinate read is incomplete")
+            fixtures: list[tuple[int, tuple[float, float, float]]] = []
+            rotz_by_fid: dict[int, float] = {}
+            rotation_skipped: list[int] = []
+            rotation_assumed: list[int] = []
+            for record in records:
+                if not (
+                    isinstance(record, dict)
+                    and isinstance(record.get("fid"), int)
+                    and not isinstance(record.get("fid"), bool)
+                ):
+                    continue
+                fid = record["fid"]
+                position = (float(record["x"]), float(record["y"]), float(record["z"]))
+
+                def _rotation(prop: str) -> float | None:
+                    value = record.get(prop)  # noqa: B023 — consumed before next loop step
+                    if isinstance(value, (int, float)) and not isinstance(value, bool):
+                        return float(value)
+                    return None
+
+                rotx, roty, rotz = _rotation("rotx"), _rotation("roty"), _rotation("rotz")
+                if any(
+                    value is not None and abs(value) > _ROTATION_TOLERANCE_DEGREES
+                    for value in (rotx, roty)
+                ):
+                    rotation_skipped.append(fid)
+                    continue
+                if rotz is not None:
+                    rotz_by_fid[fid] = rotz
+                if rotx is None or roty is None or rotz is None:
+                    rotation_assumed.append(fid)
+                fixtures.append((fid, position))
+            return fixtures, rotz_by_fid, rotation_skipped, rotation_assumed
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+            return self._pointing_refusal(
+                "3D 좌표 응답이 전송 중 잘렸거나 조회 한도에 도달해 조명 방향 "
+                "변경을 시작하지 않았습니다."
+            )
+
+    @staticmethod
+    def _rotation_notes(rotation_skipped: list[int], rotation_assumed: list[int]) -> str:
+        """The disclosure sentences the aim replies carry about body rotation."""
+        notes = ""
+        if rotation_skipped:
+            notes += (
+                f" 몸체 기울임 회전(Rotx/Roty)이 설정되어 조준식이 검증되지 않은 "
+                f"{len(rotation_skipped)}대(FID "
+                f"{', '.join(str(fid) for fid in rotation_skipped)})는 제외했습니다."
+            )
+        if rotation_assumed:
+            notes += (
+                f" 회전값을 읽지 못한 {len(rotation_assumed)}대(FID "
+                f"{', '.join(str(fid) for fid in rotation_assumed)})는 회전 0으로 "
+                "가정해 계산했습니다."
+            )
+        return notes
+
     def _point_fixtures_at_target(self, text: str) -> InstructionResult | None:
         """Aim every coordinate-confirmed fixture's beam at one stage point.
 
@@ -2436,14 +2539,15 @@ class ChatSession:
             target = PointingTarget(0.0, 0.0, 0.0)
         else:
             return None  # aiming verb without a target — let the model ask
-        fixtures = self._read_pointing_coordinates("pointing-read")
-        if isinstance(fixtures, InstructionResult):
-            return fixtures
+        frames = self._read_pointing_frames("pointing-read")
+        if isinstance(frames, InstructionResult):
+            return frames
+        fixtures, rotz_by_fid, rotation_skipped, rotation_assumed = frames
         pointable: list[tuple[int, tuple[float, float, float]]] = []
         skipped: list[int] = []
         for fid, position in fixtures:
             try:
-                aim_pan_tilt(position, target.as_tuple())
+                aim_pan_tilt(position, target.as_tuple(), rotz=rotz_by_fid.get(fid, 0.0))
             except SpatialPointingError:
                 skipped.append(fid)
             else:
@@ -2458,7 +2562,7 @@ class ChatSession:
                 duration_seconds=0.0,
             )
         dimmer = 100.0 if _POINT_DIMMER_ON.search(text) is not None else None
-        commands = pointing_commands(pointable, target, dimmer=dimmer)
+        commands = pointing_commands(pointable, target, dimmer=dimmer, rotz_by_fid=rotz_by_fid)
         executed = self._registry.dispatch(
             ToolCall(
                 id="pointing-write",
@@ -2478,8 +2582,10 @@ class ChatSession:
             text=(
                 f"{dimmer_note}좌표가 확인된 장비 {len(pointable)}대의 헤드가 "
                 f"({target.x:g}, {target.y:g}, {target.z:g}) 지점을 향하도록 "
-                f"Pan/Tilt를 요청했습니다.{skipped_note} 승인 또는 라이브 잠금 "
-                "상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+                f"Pan/Tilt를 요청했습니다.{skipped_note}"
+                f"{self._rotation_notes(rotation_skipped, rotation_assumed)} "
+                "승인 또는 라이브 잠금 상태에 따른 결과를 아래 명령 상태에서 "
+                "확인해 주세요."
             ),
             command_outcomes=executed.command_outcomes,
             retries_used=0,
@@ -2500,12 +2606,27 @@ class ChatSession:
         fan = _LOOK_FAN.search(text)
         if ring is None and fan is None:
             return None
-        fixtures = self._read_pointing_coordinates("look-read")
-        if isinstance(fixtures, InstructionResult):
-            return fixtures
+        frames = self._read_pointing_frames("look-read")
+        if isinstance(frames, InstructionResult):
+            return frames
+        fixtures, rotz_by_fid, rotation_skipped, rotation_assumed = frames
+        # A design look's pan values are absolute programmer values, and the
+        # fan/ring generators have no per-fixture rotation input — so a
+        # confirmed non-zero Rotz invalidates the look for that fixture the
+        # same way a non-zero Rotx/Roty invalidates aiming, and it joins the
+        # named skip list instead of receiving a silently-wrong pan.
+        rotation_skipped = list(rotation_skipped)
+        untwisted: list[tuple[int, tuple[float, float, float]]] = []
+        for fid, position in fixtures:
+            if abs(rotz_by_fid.get(fid, 0.0)) > _ROTATION_TOLERANCE_DEGREES:
+                rotation_skipped.append(fid)
+            else:
+                untwisted.append((fid, position))
+        fixtures = untwisted
         if not fixtures:
             return self._pointing_refusal(
                 "좌표가 확인된 장비가 없어 룩 포지션을 시작하지 않았습니다."
+                + self._rotation_notes(rotation_skipped, rotation_assumed)
             )
         skipped: list[int] = []
         if ring is not None:
@@ -2585,8 +2706,10 @@ class ChatSession:
             status="ok",
             text=(
                 f"{dimmer_note}좌표가 확인된 장비 {len(aims)}대를 {look_korean} "
-                f"포지션으로 요청했습니다.{skipped_note}{preset_note} 승인 또는 "
-                "라이브 잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+                f"포지션으로 요청했습니다.{skipped_note}"
+                f"{self._rotation_notes(rotation_skipped, rotation_assumed)}"
+                f"{preset_note} 승인 또는 라이브 잠금 상태에 따른 결과를 아래 "
+                "명령 상태에서 확인해 주세요."
             ),
             command_outcomes=executed.command_outcomes,
             retries_used=0,
