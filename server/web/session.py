@@ -107,6 +107,7 @@ from server.spatial.mib import PositionCuePlan, position_cue_bundle, premove_fol
 from server.spatial.pointing import (
     BASIC_POSITION_SEQUENCE,
     FX_POSITION_SEQUENCE,
+    POSITION_PRESET_POOL,
     PointingTarget,
     SpatialPointingError,
     aim_pan_tilt,
@@ -1668,6 +1669,50 @@ _REGENERATE_FX_POSITIONS_REQUEST = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+# 기본 컬러 프리셋 저장 (SPEC-COPILOT-COLORPRESET-001 REQ-001): 어휘가 컬러축
+# (컬러/색/color)이라 포지션축(포지션/position)과 서로소다 — 컬러 문장이 포지션
+# 경로로 새지 않는다. 역방향은 성립하지 않는다: `_BASIC_POSITIONS_REQUEST`가
+# 명사 대안에 '프리셋'을 이미 가져 "기본 컬러 프리셋 저장" 문장을 **함께
+# 매치**하므로, 겹치는 입력의 행선지는 디스패치 등록 순서(컬러 먼저)로 고정한다
+# — 재생성이 신규 저장보다 앞서는 것과 같은 형상이다(REQ-PRESETGUARD-015).
+_BASIC_COLORS_REQUEST = re.compile(
+    r"(?:기본|베이직|basic).{0,16}?(?:컬러|색|color).*?(?:저장|만들|잡아|생성)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+# 컬러 재생성 (REQ-COLORPRESET-004): BASIC 재생성과 같은 문형에서 명사축만
+# 컬러다. 꼬리 규율(묶인 '다시', '저장' 제외, 어절 하나 허용)은
+# `_REGENERATE_POSITIONS_REQUEST` 주석의 근거를 그대로 상속한다 — 동사부는
+# 의도적으로 동일하다. '재조준/리포커스'는 포지션 전용 어휘라 들이지 않는다.
+_REGENERATE_COLORS_REQUEST = re.compile(
+    r"(?:기본|베이직|basic).{0,16}?(?:컬러|색|color)"
+    r"(?:"
+    r".{0,12}?재생성"
+    r"|"
+    r".{0,12}?다시(?:\s+\S{1,6})?\s*(?:잡|만들|생성|갱신)"
+    r")",
+    re.IGNORECASE | re.DOTALL,
+)
+
+#: 표준 무대 팔레트 10색 — 슬롯 순서가 계약이다(spec.md §A.2): 슬롯 1은 항상
+#: 'Warm White'이고 재생성 가족 필터의 first_label이 된다(포지션 'Home'·FX
+#: 'Sweep L'과 같은 규율). RGB(0-100)는 spec §A.2의 고정 시퀀스 — 4번(Amber
+#: 100/55/5)·8번(Blue 5/20/100)은 기존 `fx/library/color.yaml`의 실측 대역에서
+#: 왔다. 전 장비 동일 값이지만 저장은 Selective(프로그래머 경유)뿐이다 —
+#: Global/Universal 플래그는 미검증 문법(REQ-COLORPRESET-008).
+COLOR_PALETTE_SEQUENCE: tuple[tuple[str, tuple[int, int, int]], ...] = (
+    ("Warm White", (100, 75, 40)),
+    ("Cool White", (85, 95, 100)),
+    ("Red", (100, 0, 0)),
+    ("Amber", (100, 55, 5)),
+    ("Yellow", (100, 85, 0)),
+    ("Green", (0, 100, 10)),
+    ("Cyan", (0, 90, 100)),
+    ("Blue", (5, 20, 100)),
+    ("Magenta", (100, 0, 70)),
+    ("Lavender", (55, 35, 100)),
+)
+
 _REPEATING_TYPE_COLUMNS_REQUEST = re.compile(
     r"(?:\d+\s*열\s*:\s*)?.*mmx.*(?:\d+\s*열\s*:\s*)?.*350\s*m?.*반복",
     re.IGNORECASE,
@@ -1934,6 +1979,11 @@ class _PresetSpanVerdict:
 
     state: str
     collisions: tuple[int, ...] = ()
+    #: 판정이 가리키는 풀 — 문면(슬롯 표기·풀 이름)만 바꾸고 판정 로직은 풀
+    #: 무관이다(REQ-COLORPRESET-003: 컬러 전용 카드·어휘 신설 금지). 기본값이
+    #: 오늘의 Position이라 기존 생성 지점은 무수정 동작 동일(REQ-COLORPRESET-006).
+    pool_no: int = POSITION_PRESET_POOL
+    pool_label: str = "Position"
 
     @property
     def proceed(self) -> bool:
@@ -1943,9 +1993,9 @@ class _PresetSpanVerdict:
     def note(self) -> str:
         """회신에 덧붙일 문장 — 진행 사유를 형용사가 아닌 상태로 적는다."""
         if self.state == "unverified":
-            return "Position 풀을 읽지 못해 기존 점유를 확인하지 못했습니다."
+            return f"{self.pool_label} 풀을 읽지 못해 기존 점유를 확인하지 못했습니다."
         if self.state == "confirmed":
-            return "덮어쓰기 승인: " + _preset_slot_list(self.collisions) + "."
+            return "덮어쓰기 승인: " + _preset_slot_list(self.collisions, self.pool_no) + "."
         return ""
 
 
@@ -1971,8 +2021,44 @@ class _PresetStoreRun:
     before: frozenset[int] | None = None
 
 
-def _preset_slot_list(slots: Sequence[int]) -> str:
-    return ", ".join(f"2.{no}" for no in slots)
+def _preset_slot_list(slots: Sequence[int], pool_no: int = POSITION_PRESET_POOL) -> str:
+    return ", ".join(f"{pool_no}.{no}" for no in slots)
+
+
+def _preset_store_commands(
+    pool_no: int, preset_no: int, label: str | None = None
+) -> tuple[str, ...]:
+    """``Store Preset <pool>.<n>`` (+ ``Label``) — 풀 일반형 저장 명령 빌더.
+
+    ``pointing.position_preset_store_commands``의 문면·규칙(양수 번호, 빈
+    라벨·따옴표 거부)을 임의 풀 번호에 적용한다. spatial은 무접촉이라
+    (REQ-COLORPRESET-007) 일반형은 세션 계층에 산다 — ``pool_no=2``의 출력은
+    포지션 빌더와 문자 단위로 동일하다(REQ-COLORPRESET-006의 근거).
+    """
+    if preset_no <= 0:
+        raise SpatialPointingError(f"preset number {preset_no!r} must be positive")
+    commands = [f"Store Preset {pool_no}.{preset_no}"]
+    if label is not None:
+        text = label.strip()
+        if not text or "'" in text or '"' in text:
+            raise SpatialPointingError(f"preset label {label!r} is empty or carries a quote")
+        commands.append(f"Label Preset {pool_no}.{preset_no} '{text}'")
+    return tuple(commands)
+
+
+def _color_apply_command(fids: Sequence[int], rgb: tuple[int, int, int]) -> str:
+    """한 색을 컬러 가능 장비 전체에 싣는 **한 줄** 체인 (spec §B REQ-003).
+
+    ``aimed_commands``의 한 줄 규율과 같은 이유(텍스트 중복 제거 방어)로
+    선택과 세 어트리뷰트를 ``;``로 묶는다 — 문법은 룰북 라이브 검증분만
+    (``Attribute 'ColorRGB_R' At <0-100>``, G/B 동일).
+    """
+    selection = " + ".join(str(fid) for fid in fids)
+    r, g, b = rgb
+    return (
+        f"Fixture {selection} ; Attribute 'ColorRGB_R' At {r} ; "
+        f"Attribute 'ColorRGB_G' At {g} ; Attribute 'ColorRGB_B' At {b}"
+    )
 
 
 def _preset_overwrite_refusal(verdict: _PresetSpanVerdict) -> str:
@@ -1982,7 +2068,7 @@ def _preset_overwrite_refusal(verdict: _PresetSpanVerdict) -> str:
     것을 "승인받지 못했다"로 적으면 거절한 적 없는 사람에게 거절했다고 통보하는
     셈이고, 어떻게 답해야 하는지도 알려주지 않아 같은 답을 반복하게 만든다.
     """
-    listed = _preset_slot_list(verdict.collisions)
+    listed = _preset_slot_list(verdict.collisions, verdict.pool_no)
     if verdict.state == "unanswered":
         return (
             "덮어쓰기 확인 카드에 응답이 없어(UI 미연결 또는 무응답) 프리셋을 "
@@ -2014,7 +2100,9 @@ def _preset_pick_ready_span(named: Sequence[int], ready: Sequence[int]) -> int |
     return matched.pop() if len(matched) == 1 else None
 
 
-def _preset_answer_to_ready_span(answer: str | None, ready: Sequence[int]) -> int | None:
+def _preset_answer_to_ready_span(
+    answer: str | None, ready: Sequence[int], pool_no: int = POSITION_PRESET_POOL
+) -> int | None:
     """구간 선택 카드의 답 → 후보 구간. 특정하지 못하면 ``None``(저장 안 함)."""
     if answer is None:
         return None
@@ -2022,7 +2110,7 @@ def _preset_answer_to_ready_span(answer: str | None, ready: Sequence[int]) -> in
     for start in ready:
         # 버튼을 그대로 눌렀을 때가 가장 강한 신호다. 라벨에는 "21 (2.21~2.30)"처럼
         # 숫자가 여럿 들어 있어 자릿수만 훑으면 오히려 모호해진다.
-        if stripped in (str(start), f"{start} (2.{start}~2.{start + 9})"):
+        if stripped in (str(start), f"{start} ({pool_no}.{start}~{pool_no}.{start + 9})"):
             return start
     return _preset_pick_ready_span([int(found) for found in re.findall(r"\d+", stripped)], ready)
 
@@ -3448,20 +3536,35 @@ class ChatSession:
         *,
         noun: str,
         sequence: tuple[str, ...],
-        build: Callable[[Sequence[tuple[int, tuple[float, float, float]]]], Sequence[tuple]],
+        build: Callable[[Sequence], Sequence[tuple]],
         read_id: str,
         bundle: str,
         example: str,
+        pool_no: int = POSITION_PRESET_POOL,
+        pool_label: str = "Position",
+        read: Callable[[str], Sequence | InstructionResult] | None = None,
+        apply: Callable[[object], Sequence[str]] = aimed_commands,
+        lead_intro: str = "리그 배치에서 유도한",
+        disclosure: str = "",
     ) -> InstructionResult | None:
-        """Store one named position sequence as consecutive Position presets.
+        """Store one named look sequence as consecutive presets of ONE pool.
 
         The first preset number comes from the instruction ("N번부터") or from
         ONE question card — never from a guessed free slot: ``Store Preset``
         silently overwrites, so the number is the operator's call.
         Each look is applied, stored, labelled and cleared as its own bundle,
         so one refused look never voids the others.
+
+        포지션 전용으로 태어난 몸통의 **풀 매개변수화**(SPEC-COPILOT-
+        COLORPRESET-001 §A.1): ``pool_no``/``pool_label``은 경로·문면만 바꾸고
+        점유 검사·카드·번들·되읽기 규율은 그대로다. 기본값이 오늘의 Position
+        (2)이라 기존 호출 지점은 무수정 동작 동일(REQ-COLORPRESET-006).
+        ``read``/``apply``는 소재 공급과 적용 명령만 바꾼다 — 컬러는 좌표가
+        필요 없고(``_color_capable_fids``로 축소된 FID 목록) 조준 대신 색
+        체인을 싣는다. ``disclosure``는 회신 lead에 붙는 산술 고지(REQ-005).
         """
-        fixtures = self._read_pointing_coordinates(read_id)
+        source = self._read_pointing_coordinates if read is None else read
+        fixtures = source(read_id)
         if isinstance(fixtures, InstructionResult):
             return fixtures
         if not fixtures:
@@ -3473,20 +3576,22 @@ class ChatSession:
             start_no = int(start_match.group("no"))
         else:
             count = len(sequence)
-            free_starts = self._position_preset_free_starts()
+            free_starts = self._position_preset_free_starts(pool_no=pool_no)
             if free_starts:
                 prompt = (
-                    f"{noun} {count}개를 Position 프리셋 몇 번부터 저장할까요? "
+                    f"{noun} {count}개를 {pool_label} 프리셋 몇 번부터 저장할까요? "
                     f"{count}칸 연속 비어 있는 구간을 콘솔에서 확인했습니다."
                 )
                 options = tuple(
-                    QuestionOption(label=f"{start} (2.{start}~2.{start + count - 1} 비어 있음)")
+                    QuestionOption(
+                        label=f"{start} ({pool_no}.{start}~{pool_no}.{start + count - 1} 비어 있음)"
+                    )
                     for start in free_starts
                 )
             else:
                 prompt = (
-                    f"{noun} {count}개를 Position 프리셋 몇 번부터 저장할까요? "
-                    f"(예: 1 → Preset 2.1~2.{count}) 이미 있는 번호는 덮어씁니다."
+                    f"{noun} {count}개를 {pool_label} 프리셋 몇 번부터 저장할까요? "
+                    f"(예: 1 → Preset {pool_no}.1~{pool_no}.{count}) 이미 있는 번호는 덮어씁니다."
                 )
                 options = (
                     QuestionOption(label="1"),
@@ -3513,15 +3618,19 @@ class ChatSession:
         # 질문 카드도 자유 입력을 항상 제공하므로(`_ask_one` 독스트링), else
         # 갈래에서 손으로 타이핑한 번호는 명시 번호와 **동일하게 무방비**다
         # (REQ-PRESETGUARD-001 '출처 무관' 조항).
-        pool_slots = self._position_preset_pool_slots()
-        verdict = self._confirm_preset_span_overwrite(start_no, pool_slots, intent="store")
+        pool_slots = self._position_preset_pool_slots(pool_no=pool_no)
+        verdict = self._confirm_preset_span_overwrite(
+            start_no, pool_slots, intent="store", pool_no=pool_no, pool_label=pool_label
+        )
         if not verdict.proceed:
             return self._pointing_refusal(_preset_overwrite_refusal(verdict))
         try:
             looks = build(fixtures)
         except SpatialPointingError as error:
             return self._pointing_refusal(f"{noun}을 계산할 수 없습니다: {error}")
-        run = self._store_position_preset_looks(looks, start_no, before=pool_slots, bundle=bundle)
+        run = self._store_position_preset_looks(
+            looks, start_no, before=pool_slots, bundle=bundle, pool_no=pool_no, apply=apply
+        )
         if not run.stored:
             return self._pointing_refusal(
                 "어느 포지션도 계산되지 않아 프리셋을 저장하지 않았습니다."
@@ -3531,10 +3640,11 @@ class ChatSession:
             text=_preset_reply_text(
                 run,
                 verdict,
-                self._verify_preset_span_stored(run),
+                self._verify_preset_span_stored(run, pool_no=pool_no, pool_label=pool_label),
                 lead=(
-                    f"리그 배치에서 유도한 {noun} {len(run.stored)}개를 "
-                    f"Position 프리셋에 저장 요청했습니다: {', '.join(run.stored)}."
+                    f"{lead_intro} {noun} {len(run.stored)}개를 "
+                    f"{pool_label} 프리셋에 저장 요청했습니다: {', '.join(run.stored)}."
+                    + (f" {disclosure}" if disclosure else "")
                 ),
                 tail=(
                     "각 프리셋은 적용→저장→ClearAll 순서로 처리했으며, 승인 또는 라이브 "
@@ -3548,7 +3658,13 @@ class ChatSession:
         )
 
     def _confirm_preset_span_overwrite(
-        self, start_no: int, slots: set[int] | None, *, intent: str
+        self,
+        start_no: int,
+        slots: set[int] | None,
+        *,
+        intent: str,
+        pool_no: int = POSITION_PRESET_POOL,
+        pool_label: str = "Position",
     ) -> _PresetSpanVerdict:
         """구간 ``2.N … 2.N+9``의 충돌을 판정하는 **공용 카드**.
 
@@ -3562,18 +3678,18 @@ class ChatSession:
         """
         span = len(BASIC_POSITION_SEQUENCE)
         if slots is None:
-            return _PresetSpanVerdict("unverified")
+            return _PresetSpanVerdict("unverified", pool_no=pool_no, pool_label=pool_label)
         collisions = tuple(no for no in range(start_no, start_no + span) if no in slots)
         if not collisions:
-            return _PresetSpanVerdict("clear")
+            return _PresetSpanVerdict("clear", pool_no=pool_no, pool_label=pool_label)
         lead = (
             "지금 배치로 다시 잡으면"
             if intent == "regenerate"
-            else f"2.{start_no}~2.{start_no + span - 1}에 저장하면"
+            else f"{pool_no}.{start_no}~{pool_no}.{start_no + span - 1}에 저장하면"
         )
         answer = self._ask_one(
             f"{lead} 이미 저장된 프리셋 {len(collisions)}개를 덮어씁니다: "
-            f"{_preset_slot_list(collisions)}. 진행할까요?",
+            f"{_preset_slot_list(collisions, pool_no)}. 진행할까요?",
             options=(
                 QuestionOption(label=_PRESET_OVERWRITE_CONSENT_LABEL),
                 QuestionOption(label=_PRESET_OVERWRITE_DECLINE_LABEL),
@@ -3584,17 +3700,25 @@ class ChatSession:
             ),
         )
         if answer is None:
-            return _PresetSpanVerdict("unanswered", collisions)
+            return _PresetSpanVerdict(
+                "unanswered", collisions, pool_no=pool_no, pool_label=pool_label
+            )
         # 승낙은 **명시적·일의적**이어야 한다. 자유 입력은 언제나 열려 있으므로
         # ("잠깐 확인해보고요", "안 되네요") 승낙어를 부분 문자열로 찾으면 비승낙이
         # 승낙으로 삼켜진다. 어절 단위로 판정하고, 승낙도 거절도 아니면 저장하지
         # 않되 **거절과는 다른 문면**으로 답한다.
         intent = _preset_answer_intent(answer)
         if intent == "consent":
-            return _PresetSpanVerdict("confirmed", collisions)
+            return _PresetSpanVerdict(
+                "confirmed", collisions, pool_no=pool_no, pool_label=pool_label
+            )
         if intent == "decline":
-            return _PresetSpanVerdict("declined", collisions)
-        return _PresetSpanVerdict("unrecognised", collisions)
+            return _PresetSpanVerdict(
+                "declined", collisions, pool_no=pool_no, pool_label=pool_label
+            )
+        return _PresetSpanVerdict(
+            "unrecognised", collisions, pool_no=pool_no, pool_label=pool_label
+        )
 
     def _store_position_preset_looks(
         self,
@@ -3603,6 +3727,8 @@ class ChatSession:
         *,
         before: set[int] | None,
         bundle: str = "basic-preset",
+        pool_no: int = POSITION_PRESET_POOL,
+        apply: Callable[[object], Sequence[str]] = aimed_commands,
     ) -> _PresetStoreRun:
         """룩마다 적용 → ``Store`` → ``Label`` → ``ClearAll``을 **별개 번들**로
         디스패치한다 — 한 룩이 거절돼도 나머지 아홉은 산다.
@@ -3617,11 +3743,13 @@ class ChatSession:
         for offset, (label, aims, skipped) in enumerate(looks):
             preset_no = start_no + offset
             if not aims:
-                skipped_notes.append(f"{label}(2.{preset_no}): 조준 가능한 장비 없음 — 건너뜀")
+                skipped_notes.append(
+                    f"{label}({pool_no}.{preset_no}): 조준 가능한 장비 없음 — 건너뜀"
+                )
                 continue
             commands = [
-                *aimed_commands(aims),
-                *position_preset_store_commands(preset_no, label),
+                *apply(aims),
+                *_preset_store_commands(pool_no, preset_no, label),
                 "ClearAll",
             ]
             executed = self._registry.dispatch(
@@ -3632,7 +3760,7 @@ class ChatSession:
                 )
             )
             outcomes.extend(executed.command_outcomes)
-            stored.append(f"2.{preset_no} '{label}'")
+            stored.append(f"{pool_no}.{preset_no} '{label}'")
             expected[preset_no] = label
             statuses = {outcome.status for outcome in executed.command_outcomes}
             # 차단이 대기보다 우선한다 — 한 번들에 둘이 섞이면 "기다리면 된다"가
@@ -3652,7 +3780,13 @@ class ChatSession:
             before=None if before is None else frozenset(before),
         )
 
-    def _verify_preset_span_stored(self, run: _PresetStoreRun) -> str:
+    def _verify_preset_span_stored(
+        self,
+        run: _PresetStoreRun,
+        *,
+        pool_no: int = POSITION_PRESET_POOL,
+        pool_label: str = "Position",
+    ) -> str:
         """저장 루프가 끝난 뒤 풀을 **정확히 한 번** 되읽어 산술로 보고한다.
 
         이 저장소는 좌표 쓰기에서 이미 *"성공은 관측에서만 나온다"* 를 규율로
@@ -3664,11 +3798,11 @@ class ChatSession:
         """
         if not run.expected:
             return ""
-        slots = self._position_preset_pool_slots()
+        slots = self._position_preset_pool_slots(pool_no=pool_no)
         if slots is None:
             # 판독 불가는 통과가 아니다 — 확인됨으로 보고하지 않는다.
             return (
-                "저장 결과를 되읽지 못했습니다 — Position 풀 판독 실패로 "
+                f"저장 결과를 되읽지 못했습니다 — {pool_label} 풀 판독 실패로 "
                 f"{len(run.expected)}개 전건 미검증입니다."
             )
         # 슬롯 존재만으로는 **덮어쓰기가 착지했는지** 알 수 없다. 저장 직전에 이미
@@ -3703,20 +3837,20 @@ class ChatSession:
         parts = [f"되읽기: 기대 {len(run.expected)}개 중 {len(landed)}개 확인"]
         if unknown_before:
             parts.append(
-                f"덮어쓰기 확인 불가 {_preset_slot_list(unknown_before)} — 저장 전 "
+                f"덮어쓰기 확인 불가 {_preset_slot_list(unknown_before, pool_no)} — 저장 전 "
                 "상태를 읽지 못해 원래 비어 있었는지 차 있었는지 알 수 없습니다"
             )
         if unprovable:
             parts.append(
-                f"덮어쓰기 확인 불가 {_preset_slot_list(unprovable)} — 저장 전부터 "
+                f"덮어쓰기 확인 불가 {_preset_slot_list(unprovable, pool_no)} — 저장 전부터 "
                 "차 있던 슬롯이라 값이 바뀌었는지 콘솔에서 읽을 수 없습니다"
             )
         if waiting:
-            parts.append(f"승인 대기 {_preset_slot_list(waiting)} — 승인 후 반영")
+            parts.append(f"승인 대기 {_preset_slot_list(waiting, pool_no)} — 승인 후 반영")
         if blocked:
-            parts.append(f"게이트 차단 {_preset_slot_list(blocked)} — 반영되지 않음")
+            parts.append(f"게이트 차단 {_preset_slot_list(blocked, pool_no)} — 반영되지 않음")
         if missing:
-            parts.append(f"미확인 {_preset_slot_list(missing)}")
+            parts.append(f"미확인 {_preset_slot_list(missing, pool_no)}")
         return "; ".join(parts) + "."
 
     def _regenerate_position_presets(self, text: str) -> InstructionResult | None:
@@ -3768,11 +3902,18 @@ class ChatSession:
         text: str,
         *,
         noun: str,
-        build: Callable[[Sequence[tuple[int, tuple[float, float, float]]]], Sequence[tuple]],
+        build: Callable[[Sequence], Sequence[tuple]],
         read_id: str,
         bundle: str,
         store_example: str,
         first_label: str,
+        pool_no: int = POSITION_PRESET_POOL,
+        pool_label: str = "Position",
+        read: Callable[[str], Sequence | InstructionResult] | None = None,
+        apply: Callable[[object], Sequence[str]] = aimed_commands,
+        lead_intro: str = "지금 리그 배치로",
+        tail: str = "이 프리셋을 참조하는 큐는 별도 수정 없이 새 좌표를 따라갑니다.",
+        disclosure: str = "",
     ) -> InstructionResult | None:
         """이미 저장된 10칸 구간을 지금 배치로 **제자리 갱신**한다 — 공용 몸통.
 
@@ -3786,23 +3927,24 @@ class ChatSession:
         탐색·명시 번호 대조·덮어쓰기 카드·되읽기 산술이 두 곳에 복제되면 한쪽만
         갱신되는 드리프트가 생긴다.
         """
-        fixtures = self._read_pointing_coordinates(read_id)
+        source = self._read_pointing_coordinates if read is None else read
+        fixtures = source(read_id)
         if isinstance(fixtures, InstructionResult):
             return fixtures
         if not fixtures:
             return self._pointing_refusal(
                 f"좌표가 확인된 장비가 없어 {noun} 재생성을 시작하지 않았습니다."
             )
-        pool_children = self._position_preset_pool_children()
+        pool_children = self._position_preset_pool_children(pool_no=pool_no)
         if pool_children is None:
             # 신규 저장(REQ-004, 진행)과 **반대**다 — 재생성은 표적 구간의 존재를
             # 전제하므로 미상 위에서 진행할 수 없다(REQ-PRESETGUARD-013).
             return self._pointing_refusal(
-                "Position 풀을 읽지 못해 다시 잡을 구간을 확인하지 못했습니다 — "
+                f"{pool_label} 풀을 읽지 못해 다시 잡을 구간을 확인하지 못했습니다 — "
                 "표적을 모르는 상태에서는 저장하지 않습니다."
             )
         pool_slots = set(pool_children)
-        run_starts = self._position_preset_ready_starts(slots=pool_slots)
+        run_starts = self._position_preset_ready_starts(slots=pool_slots, pool_no=pool_no)
         if not run_starts:
             return self._pointing_refusal(
                 f"10칸 연속 저장된 {noun} 구간을 찾지 못해 다시 잡을 자리가 "
@@ -3867,25 +4009,30 @@ class ChatSession:
                 "어느 구간을 지금 배치로 다시 잡을까요? 10칸 연속 저장된 구간을 "
                 "콘솔에서 확인했습니다.",
                 options=tuple(
-                    QuestionOption(label=f"{start} (2.{start}~2.{start + 9})") for start in ready
+                    QuestionOption(label=f"{start} ({pool_no}.{start}~{pool_no}.{start + 9})")
+                    for start in ready
                 ),
                 why=("재생성은 그 자리를 덮어씁니다 — 어느 쇼의 구간인지는 운영자만 압니다."),
             )
-            start_no = _preset_answer_to_ready_span(answer, ready)
+            start_no = _preset_answer_to_ready_span(answer, ready, pool_no)
         if start_no is None:
             return self._pointing_refusal(
                 "다시 잡을 구간을 하나로 특정하지 못해 저장하지 않았습니다. "
-                f"10칸 연속 저장된 구간은 {_preset_slot_list(ready)}에서 시작합니다 — "
+                f"10칸 연속 저장된 구간은 {_preset_slot_list(ready, pool_no)}에서 시작합니다 — "
                 "그중 하나의 시작 번호만 답해 주세요."
             )
-        verdict = self._confirm_preset_span_overwrite(start_no, pool_slots, intent="regenerate")
+        verdict = self._confirm_preset_span_overwrite(
+            start_no, pool_slots, intent="regenerate", pool_no=pool_no, pool_label=pool_label
+        )
         if not verdict.proceed:
             return self._pointing_refusal(_preset_overwrite_refusal(verdict))
         try:
             looks = build(fixtures)
         except SpatialPointingError as error:
             return self._pointing_refusal(f"{noun}을 계산할 수 없습니다: {error}")
-        run = self._store_position_preset_looks(looks, start_no, before=pool_slots, bundle=bundle)
+        run = self._store_position_preset_looks(
+            looks, start_no, before=pool_slots, bundle=bundle, pool_no=pool_no, apply=apply
+        )
         if not run.stored:
             return self._pointing_refusal(
                 "어느 포지션도 계산되지 않아 프리셋을 저장하지 않았습니다."
@@ -3895,17 +4042,227 @@ class ChatSession:
             text=_preset_reply_text(
                 run,
                 verdict,
-                self._verify_preset_span_stored(run),
+                self._verify_preset_span_stored(run, pool_no=pool_no, pool_label=pool_label),
                 lead=(
-                    f"지금 리그 배치로 {noun} {len(run.stored)}개를 같은 자리에 "
+                    f"{lead_intro} {noun} {len(run.stored)}개를 같은 자리에 "
                     f"다시 저장 요청했습니다: {', '.join(run.stored)}."
+                    + (f" {disclosure}" if disclosure else "")
                 ),
-                tail="이 프리셋을 참조하는 큐는 별도 수정 없이 새 좌표를 따라갑니다.",
+                tail=tail,
             ),
             command_outcomes=run.outcomes,
             retries_used=0,
             model_calls=0,
             duration_seconds=0.0,
+        )
+
+    def _resolve_color_pool_no(self) -> int | None:
+        """The Color pool's NUMBER, resolved from the console's own pool list.
+
+        `instantiate.py:220`의 함정을 세션 계층에 적용한 것이다(REQ-COLORPRESET-
+        002): *"Preset 4.1 = Color"는 룰북 예시 프로즈이지 이 쇼파일의 계약이
+        아니다* — 풀 이름은 운영자가 바꿀 수 있으므로 4를 하드코딩하면 손으로
+        만든 프리셋을 덮는다. ``DataPool/PresetPools`` 자식에서 이름이 정확히
+        ``Color``인 풀을 찾고, 실패·부재·절단은 전부 ``None``(거부)이다 —
+        M0 실측(progress.md §E.1): 이 리그는 1 Dimmer · 2 Position · 3 Gobo ·
+        4 Color · 5 Beam. 풀 목록은 십수 개 규모라 페이징 없이 한 창을 읽고,
+        절단 주장(플래그 또는 childCount 산술)이 있으면 추측하지 않는다.
+        """
+        pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
+        probe = self._registry.dispatch(
+            ToolCall(
+                id="basic-color-pool-resolve",
+                name="query_state",
+                arguments={"path": pool_root},
+            )
+        )
+        if probe.result.is_error:
+            return None
+        try:
+            payload = json.loads(probe.result.content)
+        except (json.JSONDecodeError, TypeError):
+            return None
+        children = payload.get("children") if isinstance(payload, dict) else None
+        if not isinstance(children, list):
+            return None
+        node = payload.get("node")
+        child_count = node.get("childCount") if isinstance(node, dict) else None
+        if bool(payload.get("truncated")) or (
+            isinstance(child_count, int) and child_count > len(children)
+        ):
+            return None  # 절단된 목록에 Color가 없다 ≠ 풀이 없다 — 모름은 거부다
+        for child in children:
+            if not isinstance(child, dict) or child.get("name") != "Color":
+                continue
+            try:
+                return int(child.get("i", child.get("no")))
+            except (TypeError, ValueError):
+                return None
+        return None
+
+    def _color_rig_fixture_pairs(
+        self,
+    ) -> tuple[list[tuple[int, int]], list[int]] | None:
+        """``((slot, fid) …, fid_unread_slots)`` for every patched fixture —
+        or None when the patch container cannot be read completely.
+
+        컬러 저장은 좌표가 필요 없으므로 ``get_spatial_context``(픽스처당 4회
+        속성 왕복) 대신 컨테이너 자식 목록(페이징 판독, 41대 리그는 24캡을
+        넘는다)과 슬롯당 ``fid`` 속성 1회로 짝을 만든다. 판별(``_color_capable_
+        fids``)은 slot 경로로 속성을 읽고, 선택·산술 고지는 fid로 말하므로 둘
+        다 필요하다. fid를 읽지 못한 슬롯은 산술에서 이름을 부를 수 없으므로
+        짝에서 빼고 슬롯 번호로 별도 보고한다(침묵 축소 금지, REQ-005).
+        """
+        fixtures_root = self._rig_paths.get("fixtures", "Patch/Stages/1/Fixtures")
+        children = self._paged_pool_children(fixtures_root, probe_id="basic-color-fixture-list")
+        if children is None:
+            return None
+        pairs: list[tuple[int, int]] = []
+        fid_unread: list[int] = []
+        for slot in sorted(children):
+            read = read_properties(self._current_cue_port, f"{fixtures_root}/{slot}", ("fid",))[
+                "fid"
+            ]
+            if not read.ok:
+                fid_unread.append(slot)
+                continue
+            try:
+                pairs.append((slot, int(str(read.value).strip())))
+            except ValueError:
+                fid_unread.append(slot)
+        return pairs, fid_unread
+
+    def _color_preset_material(
+        self, *, noun: str
+    ) -> (
+        tuple[int, list[int], tuple[tuple[str, tuple[str], tuple[()]], ...], str]
+        | InstructionResult
+    ):
+        """컬러 저장·재생성이 공유하는 소재 — ``(pool_no, capable, looks,
+        disclosure)`` 또는 거부.
+
+        순서가 규율이다: ① Color 풀 번호를 리그에서 해석(실패 = 거부, REQ-002)
+        ② 패치 픽스처 (slot, fid) 짝 열거(부분 판독 = 거부 — 반쪽 리그에 색을
+        칠하지 않는다, 좌표 판독과 같은 규율) ③ 3-hop 판별로 컬러 가능 FID만
+        남기고(REQ-005, fail-closed) ④ 제외·판별 불가를 대수+FID 산술로 고지
+        문장에 적는다(침묵 축소 금지).
+        """
+        pool_no = self._resolve_color_pool_no()
+        if pool_no is None:
+            return self._pointing_refusal(
+                "Color 풀을 찾지 못했습니다 — 프리셋 풀 목록에서 이름이 'Color'인 "
+                f"풀을 확인하지 못해 {noun} 프리셋을 시작하지 않았습니다. "
+                "풀 번호를 추측해 저장하면 다른 풀의 프리셋을 덮을 수 있습니다."
+            )
+        enumerated = self._color_rig_fixture_pairs()
+        if enumerated is None:
+            return self._pointing_refusal(
+                f"패치된 픽스처 목록을 읽지 못해 {noun} 프리셋을 시작하지 않았습니다."
+            )
+        pairs, fid_unread = enumerated
+        if not pairs:
+            return self._pointing_refusal(
+                f"패치된 픽스처가 확인되지 않아 {noun} 프리셋을 시작하지 않았습니다."
+            )
+        capable, excluded, undetermined = self._color_capable_fids(
+            pairs, probe_id_prefix="basic-color"
+        )
+        if not capable:
+            return self._pointing_refusal(
+                f"컬러 어트리뷰트(ColorRGB)가 확인된 장비가 없어 {noun} 프리셋을 "
+                f"저장하지 않았습니다 — 전체 {len(pairs)}대 중 컬러 없음 "
+                f"{len(excluded)}대, 판별 불가 {len(undetermined)}대."
+            )
+        parts = [f"컬러 판별: 전체 {len(pairs)}대 중 {len(capable)}대 적용"]
+        if excluded:
+            parts.append(
+                f"컬러 어트리뷰트 없음 {len(excluded)}대"
+                f"(FID {', '.join(str(fid) for fid in excluded)}) 제외"
+            )
+        if undetermined:
+            parts.append(
+                f"판별 불가 {len(undetermined)}대"
+                f"(FID {', '.join(str(fid) for fid in undetermined)}) 제외 — "
+                "판독 실패는 보유로 치지 않습니다"
+            )
+        if fid_unread:
+            parts.append(
+                f"FID 미판독 {len(fid_unread)}대"
+                f"(패치 슬롯 {', '.join(str(slot) for slot in fid_unread)}) 제외"
+            )
+        disclosure = ", ".join(parts) + "."
+        looks = tuple(
+            (label, (_color_apply_command(capable, rgb),), ())
+            for label, rgb in COLOR_PALETTE_SEQUENCE
+        )
+        return pool_no, capable, looks, disclosure
+
+    def _basic_color_presets(self, text: str) -> InstructionResult | None:
+        """*"기본 컬러 프리셋을 N번부터 저장해줘"* — 표준 무대 팔레트 10색을
+        해석된 Color 풀의 연속 10칸에 저장한다(SPEC-COPILOT-COLORPRESET-001).
+
+        포지션 프리셋 기계의 **세 번째 소비자**다: 번호 출처(지시 또는 카드 1장)·
+        점유 검사·공용 덮어쓰기 카드·색별 독립 번들(적용→Store→Label→ClearAll)·
+        페이지드 되읽기 산술 전부 ``_store_position_preset_sequence``가 수행한다
+        — 컬러 전용 카드·어휘는 없다(REQ-003). 좌표 판독만 다르다: 컬러는 위치
+        무관이라 3-hop 판별로 축소한 FID 목록이 소재다(REQ-005). 디스패치 등록은
+        포지션 저장·재생성보다 **앞**이다 — `_BASIC_POSITIONS_REQUEST`가 명사
+        대안 '프리셋'으로 "기본 컬러 프리셋 …" 문장을 함께 매치하기 때문이다
+        (REQ-PRESETGUARD-015와 같은 등록 순서 고정).
+        """
+        if _BASIC_COLORS_REQUEST.search(text) is None:
+            return None
+        material = self._color_preset_material(noun="기본 컬러")
+        if isinstance(material, InstructionResult):
+            return material
+        pool_no, capable, looks, disclosure = material
+        return self._store_position_preset_sequence(
+            text,
+            noun="기본 컬러",
+            sequence=tuple(label for label, _rgb in COLOR_PALETTE_SEQUENCE),
+            build=lambda _fixtures: looks,
+            read_id="basic-color-presets-read",
+            bundle="basic-color-preset",
+            example="기본 컬러 프리셋을 11번부터 저장해줘",
+            pool_no=pool_no,
+            pool_label="Color",
+            read=lambda _call_id: capable,
+            apply=list,
+            lead_intro="표준 무대 팔레트에서 가져온",
+            disclosure=disclosure,
+        )
+
+    def _regenerate_basic_color_presets(self, text: str) -> InstructionResult | None:
+        """*"기본 컬러 다시 잡아줘"* — 저장된 컬러 10칸 구간을 제자리 갱신한다.
+
+        리그가 바뀌면 컬러 가능 장비 집합이 바뀌므로 같은 번호에 다시 저장해
+        프리셋을 쓰는 큐가 새 선택을 따라오게 한다 — 포지션·FX 재생성과 동일
+        몸통(가족 필터 first_label='Warm White', 풀 미상 거부, REQ-004).
+        디스패치 등록은 컬러 신규 저장보다 **앞**(트리거의 '잡아' 중첩)이고,
+        포지션 재생성보다도 앞이다 — `_REGENERATE_POSITIONS_REQUEST`가 명사
+        대안 '프리셋'으로 "기본 컬러 프리셋 다시 …" 문장을 함께 매치한다.
+        """
+        if _REGENERATE_COLORS_REQUEST.search(text) is None:
+            return None
+        material = self._color_preset_material(noun="기본 컬러")
+        if isinstance(material, InstructionResult):
+            return material
+        pool_no, capable, looks, disclosure = material
+        return self._regenerate_position_preset_sequence(
+            text,
+            noun="기본 컬러",
+            build=lambda _fixtures: looks,
+            read_id="regenerate-color-presets-read",
+            bundle="basic-color-preset",
+            store_example="기본 컬러 프리셋 10개 저장",
+            first_label=COLOR_PALETTE_SEQUENCE[0][0],
+            pool_no=pool_no,
+            pool_label="Color",
+            read=lambda _call_id: capable,
+            apply=list,
+            lead_intro="표준 무대 팔레트로",
+            tail="이 프리셋을 참조하는 큐는 별도 수정 없이 새 색을 따라갑니다.",
+            disclosure=disclosure,
         )
 
     def _position_cue_store(self, text: str) -> InstructionResult | None:
@@ -5504,17 +5861,31 @@ class ChatSession:
                     break
         return free
 
-    def _position_preset_pool_children(self) -> dict[int, str | None] | None:
-        """The Position pool's stored slots mapped to their NAMES (or None
+    def _position_preset_pool_children(
+        self, *, pool_no: int = POSITION_PRESET_POOL
+    ) -> dict[int, str | None] | None:
+        """ONE preset pool's stored slots mapped to their NAMES (or None
         when a child carried no name), or None when the pool cannot be read.
 
+        ``pool_no``는 경로만 바꾼다(기본값 = 오늘의 Position 2, REQ-COLORPRESET-
+        006) — 페이징·무진전 방어 규율은 :meth:`_paged_pool_children`에 있고
+        컬러 풀(해석된 번호)도 같은 판독기를 탄다.
+        """
+        pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
+        return self._paged_pool_children(
+            f"{pool_root}/{pool_no}", probe_id="song-design-preset-pool-read"
+        )
+
+    def _paged_pool_children(self, path: str, *, probe_id: str) -> dict[int, str | None] | None:
+        """``path`` 컨테이너의 자식 번호→이름 완전 판독 — 페이징 공용 몸통.
+
         The responder caps ``children`` at 24 per reply (PROTOCOL §4.2), so
-        pools past 24 presets need PAGING: follow-up queries carry ``offset``
-        (the accumulated child count) and a paging-aware responder echoes it
-        back. Live-measured 2026-08-16: a 31-preset pool made the store
-        read-back report 10 freshly stored presets as "미확인 0/10" because
-        slots 41~50 fell outside the first window — paged reads recover
-        exactly that case.
+        containers past 24 children need PAGING: follow-up queries carry
+        ``offset`` (the accumulated child count) and a paging-aware responder
+        echoes it back. Live-measured 2026-08-16: a 31-preset pool made the
+        store read-back report 10 freshly stored presets as "미확인 0/10"
+        because slots 41~50 fell outside the first window — paged reads
+        recover exactly that case.
 
         Names ride along because span-family selection needs them: the
         regeneration card offered a BASIC span for an FX regeneration request
@@ -5522,17 +5893,15 @@ class ChatSession:
         span's first slot is what tells the families apart.
 
         Truncation WITHOUT progress is still "cannot be read", not a smaller
-        pool: a legacy responder ignores ``offset`` (no echo, always the
+        container: a legacy responder ignores ``offset`` (no echo, always the
         first window), so a paged reply missing the matching echo — or adding
         zero new children, or erroring, or blowing the page cap — aborts to
         None. Unknown ≠ empty — partial reads join the unreadable path, which
         every caller already renders honestly.
         """
-        pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
-        path = f"{pool_root}/2"
         slots: dict[int, str | None] = {}
         seen = 0
-        for page in range(10):  # 상한 10페이지(240슬롯) — 실제 풀 크기의 여유 상계
+        for page in range(10):  # 상한 10페이지(240슬롯) — 실제 컨테이너 크기의 여유 상계
             arguments: dict[str, object] = {"path": path}
             if page:
                 # 후속 창은 누적 자식 수부터. 첫 요청은 기존 무페이징 판독과
@@ -5540,11 +5909,7 @@ class ChatSession:
                 arguments["offset"] = seen
             probe = self._registry.dispatch(
                 ToolCall(
-                    id=(
-                        f"song-design-preset-pool-read-p{page}"
-                        if page
-                        else "song-design-preset-pool-read"
-                    ),
+                    id=f"{probe_id}-p{page}" if page else probe_id,
                     name="query_state",
                     arguments=arguments,
                 )
@@ -5590,18 +5955,22 @@ class ChatSession:
             if not children:
                 # 빈 창이 "더 있다"고 주장 — offset이 전진할 수 없는 모순.
                 return None
-        return None  # 페이지 상한 초과 — 부분 판독은 더 작은 풀이 아니다
+        return None  # 페이지 상한 초과 — 부분 판독은 더 작은 컨테이너가 아니다
 
-    def _position_preset_pool_slots(self) -> set[int] | None:
+    def _position_preset_pool_slots(
+        self, *, pool_no: int = POSITION_PRESET_POOL
+    ) -> set[int] | None:
         """Number-only view of :meth:`_position_preset_pool_children`."""
-        children = self._position_preset_pool_children()
+        children = self._position_preset_pool_children(pool_no=pool_no)
         return None if children is None else set(children)
 
-    def _position_preset_free_starts(self, *, count: int = 3) -> list[int] | None:
-        """Start numbers where TEN consecutive Position slots are EMPTY —
+    def _position_preset_free_starts(
+        self, *, count: int = 3, pool_no: int = POSITION_PRESET_POOL
+    ) -> list[int] | None:
+        """Start numbers where TEN consecutive pool slots are EMPTY —
         for the preset STORE path, the mirror image of
         `_position_preset_ready_starts`. None = pool unreadable."""
-        slots = self._position_preset_pool_slots()
+        slots = self._position_preset_pool_slots(pool_no=pool_no)
         if slots is None:
             return None
         span = len(BASIC_POSITION_SEQUENCE)
@@ -5612,6 +5981,148 @@ class ChatSession:
                 if len(starts) == count:
                     break
         return starts
+
+    def _dmx_channel_names(
+        self, type_index: int, mode_index: int, *, probe_id_prefix: str
+    ) -> list[str | None] | None:
+        """Every channel NAME under one ``(type, mode)``'s ``DMXChannels`` —
+        or None when the listing cannot be COMPLETELY read.
+
+        The responder caps children per reply, and the channel listing hits
+        that cap on real fixtures (M0 live probe 2026-08-16: type 2's 29
+        channels came back 15-of-29 truncated), so this read pages exactly
+        like :meth:`_position_preset_pool_children`: follow-up windows carry
+        ``offset`` (accumulated child count), a paging-aware responder echoes
+        it back, and truncation WITHOUT progress — no echo, zero new
+        children, an error, or the page cap — aborts to None. Unknown ≠
+        read: a partial channel list is not a smaller channel list, and the
+        caller must not judge capability on one.
+
+        A child that carries no string name contributes ``None`` — the
+        listing arrived whole, but that channel's identity did not, and the
+        caller's verdict must account for it (unknown ≠ absent).
+        """
+        types_root = self._rig_paths.get("fixture_types", "Patch/FixtureTypes")
+        path = f"{types_root}/{type_index}/DMXModes/{mode_index}/DMXChannels"
+        names: list[str | None] = []
+        seen = 0
+        for page in range(10):  # 상한 10페이지 — 실측 최대 29채널의 여유 상계
+            arguments: dict[str, object] = {"path": path}
+            if page:
+                arguments["offset"] = seen
+            probe = self._registry.dispatch(
+                ToolCall(
+                    id=f"{probe_id_prefix}-channels-t{type_index}m{mode_index}"
+                    + (f"-p{page}" if page else ""),
+                    name="query_state",
+                    arguments=arguments,
+                )
+            )
+            if probe.result.is_error:
+                return None
+            try:
+                payload = json.loads(probe.result.content)
+            except (json.JSONDecodeError, TypeError):
+                return None
+            children = payload.get("children") if isinstance(payload, dict) else None
+            if not isinstance(children, list):
+                return None
+            if page:
+                # 무진전 방어 — 구버전 응답기는 offset을 무시하고 항상 첫 창을
+                # 돌려준다(에코 부재). 에코 불일치·신규 자식 0개는 전진 불가.
+                echo = payload.get("offset")
+                if isinstance(echo, bool) or echo != seen:
+                    return None
+                if not children:
+                    return None
+            for child in children:
+                name = child.get("name") if isinstance(child, dict) else None
+                names.append(name if isinstance(name, str) else None)
+            seen += len(children)
+            # 절단 판정은 이중 — truncated 플래그 또는 childCount 산술.
+            node = payload.get("node")
+            child_count = node.get("childCount") if isinstance(node, dict) else None
+            more = bool(payload.get("truncated")) or (
+                isinstance(child_count, int) and child_count > seen
+            )
+            if not more:
+                return names
+            if not children:
+                return None
+        return None  # 페이지 상한 초과 — 부분 판독은 더 짧은 채널 목록이 아니다
+
+    def _color_capable_fids(
+        self, fixtures: Sequence[tuple[int, int]], *, probe_id_prefix: str
+    ) -> tuple[list[int], list[int], list[int]]:
+        """``(capable_fids, excluded_fids, undetermined_fids)`` for the color
+        preset bundle — the M0-measured 3-hop discrimination
+        (SPEC-COPILOT-COLORPRESET-001 REQ-005, progress.md §E.1).
+
+        ``fixtures`` is ``(slot, fid)`` pairs: ``slot`` addresses the patch
+        child under ``rig_paths["fixtures"]`` (the property reads need the
+        PATH), ``fid`` is what the caller selects with (the return lists).
+
+        Per fixture: ① ``FixtureType`` property → ``"FixtureType N"``
+        (display string, M0-measured form — the trailing integer IS the
+        library path index on this channel) ② ``Mode`` property →
+        ``"<m> <name>"`` (first token is the mode path index) ③ the
+        ``(N, m)`` combination's ``DMXChannels`` child names, paged
+        (:meth:`_dmx_channel_names`), judged by SUBSTRING ``"ColorRGB"`` —
+        ``ColorRGB_R/G/B`` and ``ColorRGB_W`` alike (measured: LEDBeam350
+        carries the W channel).
+
+        Verdicts: a name match → capable; a COMPLETELY read list with no
+        match → excluded; everything else — a failed/unparseable property, an
+        unresolved truncation, a nameless channel child masking the answer —
+        → undetermined. unknown ≠ capable AND unknown ≠ excluded: silently
+        promoting either way would aim the bundle at fixtures nobody judged
+        or silently shrink it (REQ-005 forbids both).
+
+        Round-trip budget: 2 property reads per fixture (FixtureType + Mode)
+        plus ≤10 paged channel windows per DISTINCT ``(type, mode)``
+        combination — cached per call, so the measured 41-fixture rig with
+        ≤5 combinations costs 82 property reads + a handful of state pages.
+        """
+        fixtures_root = self._rig_paths.get("fixtures", "Patch/Stages/1/Fixtures")
+        combo_verdicts: dict[tuple[int, int], str] = {}
+        capable: set[int] = set()
+        excluded: set[int] = set()
+        undetermined: set[int] = set()
+        for slot, fid in fixtures:
+            reads = read_properties(
+                self._current_cue_port,
+                f"{fixtures_root}/{slot}",
+                ("FixtureType", "Mode"),
+            )
+            type_read = reads["FixtureType"]
+            mode_read = reads["Mode"]
+            if not type_read.ok or not mode_read.ok:
+                undetermined.add(fid)
+                continue
+            # 표시 문자열 파싱 — M0 실측 형태만 받는다. 다른 형태(타입 이름 표시,
+            # 무번호 모드)는 추측하지 않고 판별 불가로 내린다(fail-closed).
+            type_match = re.fullmatch(r"FixtureType\s+(\d+)", str(type_read.value or "").strip())
+            mode_match = re.match(r"(\d+)(?:\s|$)", str(mode_read.value or "").strip())
+            if type_match is None or mode_match is None:
+                undetermined.add(fid)
+                continue
+            combo = (int(type_match.group(1)), int(mode_match.group(1)))
+            verdict = combo_verdicts.get(combo)
+            if verdict is None:
+                names = self._dmx_channel_names(combo[0], combo[1], probe_id_prefix=probe_id_prefix)
+                if names is not None and any(
+                    name is not None and "ColorRGB" in name for name in names
+                ):
+                    verdict = "capable"
+                elif names is not None and all(name is not None for name in names):
+                    verdict = "excluded"  # 전 채널 이름 완독 + 부재 — 확정 제외
+                else:
+                    verdict = "undetermined"  # 절단 미해소·무명 자식 — 판별 불가
+                combo_verdicts[combo] = verdict
+            {"capable": capable, "excluded": excluded, "undetermined": undetermined}[verdict].add(
+                fid
+            )
+        return sorted(capable), sorted(excluded), sorted(undetermined)
 
     def _ask_position_preset_start(self, refusal: str) -> int | InstructionResult:
         """The shared '기본 포지션이 프리셋 몇 번부터?' card — proposes only
@@ -5720,12 +6231,16 @@ class ChatSession:
         return free
 
     def _position_preset_ready_starts(
-        self, *, count: int = 3, slots: set[int] | None = None
+        self,
+        *,
+        count: int = 3,
+        slots: set[int] | None = None,
+        pool_no: int = POSITION_PRESET_POOL,
     ) -> list[int]:
-        """Start numbers where the Position pool holds TEN consecutive stored
-        presets (2.s ~ 2.s+9). ``slots`` skips a second pool read when the
+        """Start numbers where the pool holds TEN consecutive stored
+        presets (s ~ s+9). ``slots`` skips a second pool read when the
         caller already fetched it. Unreadable pool → []."""
-        stored = slots if slots is not None else self._position_preset_pool_slots()
+        stored = slots if slots is not None else self._position_preset_pool_slots(pool_no=pool_no)
         if not stored:
             return []
         span = len(BASIC_POSITION_SEQUENCE)
@@ -6945,6 +7460,16 @@ class ChatSession:
                 result = self._status_inquiry(text)
                 if result is None:
                     result = self._all_fixtures_elevation(text)
+                if result is None:
+                    # 컬러가 포지션 계열보다 **앞**이다 — 포지션 트리거들이 명사
+                    # 대안 '프리셋'으로 "기본 컬러 프리셋 …" 문장을 함께 매치하는
+                    # 반면 컬러 트리거(컬러/색/color 필수)는 포지션 문장을 매치할
+                    # 수 없다. 컬러 안에서는 재생성이 신규 저장보다 앞이다 —
+                    # 저장 트리거의 '잡아'가 재생성 문장을 함께 매치한다
+                    # (REQ-PRESETGUARD-015와 같은 등록 순서 고정).
+                    result = self._regenerate_basic_color_presets(text)
+                if result is None:
+                    result = self._basic_color_presets(text)
                 if result is None:
                     # 재생성이 신규 저장보다 **먼저**다 — 두 트리거의 교집합이
                     # 공집합이 아니므로(ASSUMPTION-83 반증) 등록 순서가 겹치는

@@ -35,6 +35,7 @@ from server.web.approval_bridge import ApprovalChannel
 from server.web.measure import RoundTripRecorder
 from server.web.question import UNANSWERED, QuestionRequest
 from server.web.session import (
+    COLOR_PALETTE_SEQUENCE,
     HISTORY_MAX_MESSAGES,
     ChatSession,
     outcome_view,
@@ -1600,6 +1601,8 @@ class _PresetPoolRegistry:
         page_size=None,
         legacy_pager=False,
         names=None,
+        pool_index=None,
+        pool_index_truncated=False,
     ):
         self.calls = calls
         self.pool = tuple(pool)
@@ -1609,6 +1612,11 @@ class _PresetPoolRegistry:
         self.status = status
         self.truncated = truncated
         self.child_count = child_count
+        #: 풀 **목록**(`DataPool/PresetPools` 루트)의 번호→이름 — 컬러 풀 해석
+        #: (REQ-COLORPRESET-002) 전용. None이면 루트도 기존 풀 페이로드로
+        #: 응답한다(기존 테스트 무수정 동작 동일).
+        self.pool_index = None if pool_index is None else dict(pool_index)
+        self.pool_index_truncated = pool_index_truncated
         # 페이징 응답기 시뮬레이션 (PROTOCOL §4.2, responder 1.6.0):
         # ``page_size``가 있으면 창 단위로 자르고 ``offset``을 에코한다.
         # ``legacy_pager=True``는 구버전(≤1.5.0) — offset을 무시하고 항상
@@ -1641,6 +1649,23 @@ class _PresetPoolRegistry:
             )
         if call.name == "query_state":
             self.state_reads += 1
+            if self.pool_index is not None and call.arguments.get("path") == "DataPool/PresetPools":
+                # 풀 목록 루트 — 컬러 풀 해석(REQ-COLORPRESET-002) 전용 응답.
+                index_payload = {
+                    "children": [
+                        {"i": no, "name": name} for no, name in sorted(self.pool_index.items())
+                    ],
+                    "node": {"childCount": len(self.pool_index)},
+                }
+                if self.pool_index_truncated:
+                    index_payload["truncated"] = True
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=json.dumps(index_payload),
+                    )
+                )
             # write 경계로 가른다 — 호출 순번이 아니다(§F9).
             before_write = not self.wrote
             error = self.pool_error if before_write else self.readback_error
@@ -1779,6 +1804,529 @@ class TestPresetPoolPaging:
         assert "되읽지 못했습니다" not in event["text"]
         # 가드 1창 + 되읽기 2창 = 3회 — 페이지 수만큼만 늘어난다.
         assert len(self._reads(calls)) == 3
+
+
+class _ColorRigPropPort:
+    """``query_property``가 M0 실측 **표시 문자열**을 돌려주는 픽스처 포트.
+
+    세션의 판별 hop-1/2는 ``read_properties(self._current_cue_port, ...)``를
+    타므로(리허설 CurrentCue 읽기와 같은 채널) 레지스트리가 아니라 이 포트를
+    직접 스텁한다.
+    """
+
+    def __init__(self, entries, *, fail=()):
+        self.entries = dict(entries)
+        self.fail = set(fail)
+        self.calls: list[tuple[str, str]] = []
+
+    def query_property(self, path, property_name):
+        self.calls.append((path, property_name))
+        if (path, property_name) in self.fail:
+            return {"ok": False, "error": "property read failed"}
+        value = self.entries.get((path, property_name))
+        if value is None:
+            return {"ok": False, "error": f"no value: {path}|{property_name}"}
+        return {"ok": True, "value": value}
+
+
+class _ColorChannelRegistry:
+    """``query_state``가 ``DMXChannels`` 창을 돌려주는 리그 — hop-3 전용.
+
+    ``page_size``가 있으면 창 단위로 자르고 ``offset``을 에코한다(응답기
+    1.6.0). ``legacy_pager=True``는 구버전 — offset 무시·에코 부재·항상 첫
+    창(무진전). 채널 이름 ``None``은 이름 없는 자식(무명 채널)이다.
+    """
+
+    def __init__(self, calls, *, channels, page_size=None, legacy_pager=False):
+        self.calls = calls
+        self.channels = {key: list(names) for key, names in channels.items()}
+        self.page_size = page_size
+        self.legacy_pager = legacy_pager
+
+    def dispatch(self, call: ToolCall) -> ToolExecution:
+        self.calls.append(call)
+        assert call.name == "query_state", call
+        parts = call.arguments["path"].split("/")
+        assert parts[:2] == ["Patch", "FixtureTypes"], call.arguments["path"]
+        assert parts[3] == "DMXModes" and parts[5] == "DMXChannels", parts
+        names = self.channels[(int(parts[2]), int(parts[4]))]
+        page_size = self.page_size if self.page_size is not None else max(len(names), 1)
+        requested = call.arguments.get("offset", 0)
+        offset = 0 if self.legacy_pager else requested
+        window = names[offset : offset + page_size]
+        children = []
+        for index, name in enumerate(window, start=offset + 1):
+            child = {"i": index}
+            if name is not None:
+                child["name"] = name
+            children.append(child)
+        payload = {"children": children, "node": {"childCount": len(names)}}
+        if offset + len(window) < len(names):
+            payload["truncated"] = True
+        if not self.legacy_pager:
+            payload["offset"] = offset
+        return ToolExecution(
+            ToolResult(tool_call_id=call.id, name=call.name, content=json.dumps(payload))
+        )
+
+
+def _color_fixture_props(assignments):
+    """슬롯 → (타입, 모드) 배치를 M0 표시 문자열 항목으로 펼친다."""
+    entries = {}
+    for slot, (type_index, mode_index) in assignments.items():
+        base = f"Patch/Stages/1/Fixtures/{slot}"
+        entries[(base, "FixtureType")] = f"FixtureType {type_index}"
+        entries[(base, "Mode")] = f"{mode_index} Mode {mode_index}"
+    return entries
+
+
+#: M0 실측 리그의 채널 목록 축약본 (progress.md §E.1) — 타입 1 Sphere(채널
+#: 1개), 타입 2 MMX(ColorRGB_R/G/B + Color1 휠), 타입 3 LEDBeam350(+W),
+#: 타입 4 Sharpy(Color1 휠만 — RGB 믹싱 없음).
+_M0_COLOR_CHANNELS = {
+    (1, 1): ["DMXChannel 1"],
+    (2, 1): ["Dimmer", "Pan", "Tilt", "ColorRGB_R", "ColorRGB_G", "ColorRGB_B", "Color1"],
+    (3, 1): ["Dimmer", "ColorRGB_R", "ColorRGB_G", "ColorRGB_B", "ColorRGB_W"],
+    (4, 1): ["Dimmer", "Pan", "Tilt", "Color1", "Gobo1"],
+}
+
+#: M0 리그 배치 — 슬롯 ≠ FID로 잡아 prop 경로가 **슬롯**을 쓰는지도 함께
+#: 증명한다. fid 40(Sharpy)·41(Sphere)이 제외 2대(REQ-005 산술 기준값).
+_M0_COLOR_PAIRS = [(1, 10), (2, 11), (3, 12), (4, 40), (5, 41)]
+_M0_COLOR_ASSIGNMENTS = {1: (2, 1), 2: (2, 1), 3: (3, 1), 4: (4, 1), 5: (1, 1)}
+
+
+class TestColorCapabilityDiscrimination:
+    """SPEC-COPILOT-COLORPRESET-001 REQ-005 — M0 3-hop 컬러 판별 (§E.1).
+
+    판정 원칙: **unknown ≠ capable, unknown ≠ excluded.** prop 실패·표시
+    문자열 파싱 불가·채널 목록 절단 미해소·무명 자식은 전부 undetermined다 —
+    어느 쪽으로도 승격하지 않는다(침묵 축소·오조준 양쪽 금지).
+    """
+
+    def _discriminate(
+        self,
+        tmp_path,
+        pairs=None,
+        assignments=None,
+        channels=None,
+        *,
+        page_size=None,
+        legacy_pager=False,
+        fail=(),
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _ColorChannelRegistry(
+            calls,
+            channels=_M0_COLOR_CHANNELS if channels is None else channels,
+            page_size=page_size,
+            legacy_pager=legacy_pager,
+        )
+        port = _ColorRigPropPort(
+            _color_fixture_props(_M0_COLOR_ASSIGNMENTS if assignments is None else assignments),
+            fail=fail,
+        )
+        session._current_cue_port = port
+        result = session._color_capable_fids(
+            _M0_COLOR_PAIRS if pairs is None else pairs, probe_id_prefix="test-color"
+        )
+        return result, calls, port
+
+    # REQ-COLORPRESET-005 — M0 리그 재현: 타입 2·3 capable, 타입 1·4 제외.
+    def test_the_measured_rig_splits_into_capable_and_excluded(self, tmp_path):
+        (capable, excluded, undetermined), _calls, port = self._discriminate(tmp_path)
+
+        assert capable == [10, 11, 12]
+        assert excluded == [40, 41]
+        assert undetermined == []
+        # prop 경로는 FID가 아니라 **슬롯**이다 (슬롯 1~5 ≠ fid 10~41).
+        assert ("Patch/Stages/1/Fixtures/4", "FixtureType") in port.calls
+        assert all("/40" not in path for path, _name in port.calls)
+
+    # 비용 계약 — (타입,모드) 조합 단위 캐시: 채널 조회는 조합당 1회다.
+    def test_a_type_mode_combination_probes_its_channels_once(self, tmp_path):
+        _result, calls, port = self._discriminate(tmp_path)
+
+        paths = [call.arguments["path"] for call in calls]
+        # 픽스처 5대·조합 4개 — 슬롯 1·2가 같은 (2,1)을 공유해도 조회는 1회.
+        assert len(paths) == 4
+        assert len(set(paths)) == 4
+        assert paths.count("Patch/FixtureTypes/2/DMXModes/1/DMXChannels") == 1
+        # 픽스처당 prop 2회 (FixtureType + Mode) — 라운드트립 예산의 절반.
+        assert len(port.calls) == 2 * len(_M0_COLOR_PAIRS)
+
+    # M0 주의 재현 — 절단된 채널 목록(29중 15)은 페이징으로 완주해 판정한다.
+    def test_a_truncated_channel_list_is_paged_to_completion(self, tmp_path):
+        filler = [f"Channel {n}" for n in range(1, 27)]
+        channels = {(2, 1): filler + ["ColorRGB_R", "ColorRGB_G", "ColorRGB_B"]}
+        (capable, excluded, undetermined), calls, _port = self._discriminate(
+            tmp_path,
+            pairs=[(1, 10)],
+            assignments={1: (2, 1)},
+            channels=channels,
+            page_size=15,
+        )
+
+        # ColorRGB는 둘째 창에만 있다 — 첫 창 판정이었다면 excluded로 오판한다.
+        assert capable == [10]
+        assert (excluded, undetermined) == ([], [])
+        assert len(calls) == 2
+        assert "offset" not in calls[0].arguments
+        assert calls[1].arguments["offset"] == 15
+
+    # 무진전 방어 — 구버전 응답기(에코 부재·항상 첫 창)는 undetermined다.
+    def test_a_no_progress_pager_yields_undetermined(self, tmp_path):
+        channels = {(2, 1): [f"Channel {n}" for n in range(1, 27)] + ["ColorRGB_R"]}
+        (capable, excluded, undetermined), calls, _port = self._discriminate(
+            tmp_path,
+            pairs=[(1, 10)],
+            assignments={1: (2, 1)},
+            channels=channels,
+            page_size=15,
+            legacy_pager=True,
+        )
+
+        # 첫 창에 ColorRGB가 없고 완독도 못 했다 — capable도 excluded도 아니다.
+        assert (capable, excluded) == ([], [])
+        assert undetermined == [10]
+        assert len(calls) == 2  # 에코 부재를 본 즉시 중단 — 재시도 루프 금지
+
+    # prop 실패·표시 문자열 파싱 불가 — 채널 조회 없이 undetermined다.
+    def test_a_property_failure_or_unparseable_display_yields_undetermined(self, tmp_path):
+        assignments = {1: (2, 1)}
+        entries = _color_fixture_props(assignments)
+        # 슬롯 2는 무번호 모드 표시("Mode 1") — M0 형태가 아니므로 파싱 불가.
+        entries[("Patch/Stages/1/Fixtures/2", "FixtureType")] = "FixtureType 2"
+        entries[("Patch/Stages/1/Fixtures/2", "Mode")] = "Mode 1"
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _ColorChannelRegistry(calls, channels=_M0_COLOR_CHANNELS)
+        session._current_cue_port = _ColorRigPropPort(
+            entries, fail={("Patch/Stages/1/Fixtures/1", "FixtureType")}
+        )
+        capable, excluded, undetermined = session._color_capable_fids(
+            [(1, 10), (2, 11)], probe_id_prefix="test-color"
+        )
+
+        assert (capable, excluded) == ([], [])
+        assert undetermined == [10, 11]
+        assert calls == []  # 판별 못 한 픽스처는 채널 조회 비용도 쓰지 않는다
+
+    # 부분 문자열 판정 — ColorRGB_W만 있는 가상 타입도 capable이다.
+    def test_a_w_only_emitter_is_capable_by_substring(self, tmp_path):
+        (capable, excluded, undetermined), _calls, _port = self._discriminate(
+            tmp_path,
+            pairs=[(1, 10)],
+            assignments={1: (7, 2)},
+            channels={(7, 2): ["Dimmer", "ColorRGB_W"]},
+        )
+
+        assert capable == [10]
+        assert (excluded, undetermined) == ([], [])
+
+    # 무명 자식 — 목록은 끝까지 왔지만 그 채널의 정체는 안 왔다. excluded로
+    # 확정하면 침묵 축소가 된다 — undetermined다.
+    def test_a_nameless_channel_child_blocks_an_excluded_verdict(self, tmp_path):
+        (capable, excluded, undetermined), _calls, _port = self._discriminate(
+            tmp_path,
+            pairs=[(1, 10)],
+            assignments={1: (7, 1)},
+            channels={(7, 1): ["Dimmer", None, "Gobo1"]},
+        )
+
+        assert (capable, excluded) == ([], [])
+        assert undetermined == [10]
+
+
+#: 컬러 플로우 테스트의 표준 풀 목록 — M0 실측(progress.md §E.1)의 배치.
+_M0_POOL_INDEX = {1: "Dimmer", 2: "Position", 3: "Gobo", 4: "Color", 5: "Beam"}
+
+
+class TestBasicColorPresets:
+    """SPEC-COPILOT-COLORPRESET-001 — 표준 무대 팔레트 10색의 저장·가드·재생성.
+
+    판정 원칙: 포지션 프리셋 기계의 **세대화**다 — 풀 번호는 리그 판독으로만
+    얻고(REQ-002), 안전 장치(점유 카드·되읽기 산술)는 공용 몸통 그대로이며
+    (REQ-003/006), 컬러 미보유·판별 불가 장비는 침묵 없이 산술로 고지한다
+    (REQ-005). 판별 자체(_color_capable_fids)는 위
+    `TestColorCapabilityDiscrimination`이 검증하므로 여기서는 소재 공급을
+    인스턴스 스텁으로 갈아끼우고 **흐름**(라우팅·가드·번들·회신)을 겨눈다.
+    """
+
+    def _run(
+        self,
+        tmp_path,
+        text,
+        *,
+        answers=(),
+        channel=True,
+        pool_index=None,
+        pairs=((20, 20), (26, 26)),
+        fid_unread=(),
+        capable=(20, 26),
+        excluded=(),
+        undetermined=(),
+        stub_material=True,
+        **rig,
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(
+            calls,
+            pool_index=_M0_POOL_INDEX if pool_index is None else pool_index,
+            **rig,
+        )
+        if stub_material:
+            session._color_rig_fixture_pairs = lambda: (
+                [tuple(pair) for pair in pairs],
+                list(fid_unread),
+            )
+            session._color_capable_fids = lambda _pairs, *, probe_id_prefix: (
+                list(capable),
+                list(excluded),
+                list(undetermined),
+            )
+        chan = _AnsweringChannel(answers) if channel else None
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # REQ-001/-006 — 6경로 코퍼스: 컬러/포지션/FX × 저장/재생성이 서로의
+    # 문장을 삼키지 않는다. 저장 3경로는 제 풀·제 라벨로만 쓰고, 재생성
+    # 3경로는 빈 풀 거부 문면의 명사가 행선지를 증명한다.
+    def test_the_six_preset_paths_route_mutually_exclusively(self, tmp_path):
+        stores = [
+            ("기본 컬러 프리셋을 11번부터 저장해줘", "Store Preset 4.11", "Warm White", "4."),
+            ("기본 포지션 프리셋을 21번부터 저장해줘", "Store Preset 2.21", "Home", "2."),
+            ("이펙트 포지션 프리셋을 41번부터 저장해줘", "Store Preset 2.41", "Sweep L", "2."),
+        ]
+        for text, store_cmd, first_label, pool_prefix in stores:
+            _event, calls, _chan = self._run(tmp_path, text)
+            commands = _all_commands(calls)
+            assert store_cmd in commands, text
+            assert any(first_label in cmd for cmd in commands), text
+            # 다른 풀로는 한 줄도 쓰지 않는다 — 상호 배타의 실체.
+            assert all(
+                cmd.split("Store Preset ", 1)[1].startswith(pool_prefix)
+                for cmd in commands
+                if cmd.startswith("Store Preset ")
+            ), text
+        regenerations = [
+            ("기본 컬러 다시 잡아줘", "기본 컬러"),
+            ("기본 포지션 다시 잡아줘", "기본 포지션"),
+            ("이펙트 포지션 다시 잡아줘", "FX 포지션"),
+        ]
+        for text, noun in regenerations:
+            event, calls, _chan = self._run(tmp_path, text)
+            assert noun in event["text"], text
+            assert _writes(calls) == [], text
+
+    # REQ-002 — 풀 목록에 'Color'가 없으면 거부한다. 4 하드코딩이 있었다면
+    # 이 리그(목록에 Color 부재)에서도 4번 풀로 썼을 것이다.
+    def test_a_missing_color_pool_refuses_without_writing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 11번부터 저장해줘",
+            pool_index={1: "Dimmer", 2: "Position"},
+        )
+
+        assert _writes(calls) == []
+        assert "Color 풀을 찾지 못했습니다" in event["text"]
+
+    # REQ-002 fail-closed — 절단된 풀 목록의 'Color 부재'는 부재가 아니라
+    # 모름이다. 모름 위에서는 저장하지 않는다.
+    def test_a_truncated_pool_index_refuses_without_writing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 11번부터 저장해줘",
+            pool_index=_M0_POOL_INDEX,
+            pool_index_truncated=True,
+        )
+
+        assert _writes(calls) == []
+        assert "Color 풀을 찾지 못했습니다" in event["text"]
+
+    # REQ-003 — M0 실측 재현: Color 4.1~4.7 수동 프리셋 실존. 명시 번호 1은
+    # 그 7개와 충돌하고, 카드가 전부 번호로 열거하며, 거절이면 쓰기 0건이다.
+    def test_an_explicit_number_hitting_the_manual_presets_opens_the_card(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 1번부터 저장해줘",
+            pool=(1, 2, 3, 4, 5, 6, 7),
+            answers=["취소"],
+        )
+
+        assert _writes(calls) == []
+        assert len(chan.asked) == 1
+        prompt = chan.asked[0].prompt
+        assert "7개" in prompt
+        assert "4.1" in prompt and "4.7" in prompt
+        assert "저장하지 않았습니다" in event["text"]
+
+    def test_a_consented_overwrite_stores_and_reports_the_slots(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 1번부터 저장해줘",
+            pool=(1, 2, 3, 4, 5, 6, 7),
+            readback=tuple(range(1, 11)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        assert len(chan.asked) == 1
+        assert len(_writes(calls)) == 10
+        assert "덮어쓰기 승인" in event["text"]
+        overwrote = event["text"].split("덮어쓰기 승인", 1)[1]
+        assert "4.7" in overwrote and "4.8" not in overwrote
+
+    # REQ-001/-003/-008 — 검증된 빈 구간: 카드 없이 색별 독립 번들 10건.
+    # 번들 = 색 체인 → Store → Label → ClearAll, RGB 값은 팔레트 계약 그대로.
+    def test_the_ten_color_bundles_carry_the_palette_exactly(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 11번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(11, 21)),
+        )
+
+        assert chan.asked == []
+        writes = _writes(calls)
+        assert len(writes) == 10
+        for offset, (label, (r, g, b)) in enumerate(COLOR_PALETTE_SEQUENCE):
+            preset_no = 11 + offset
+            call = writes[offset]
+            assert call.id == f"basic-color-preset-{preset_no}"
+            assert call.arguments["commands"] == [
+                f"Fixture 20 + 26 ; Attribute 'ColorRGB_R' At {r} ; "
+                f"Attribute 'ColorRGB_G' At {g} ; Attribute 'ColorRGB_B' At {b}",
+                f"Store Preset 4.{preset_no}",
+                f"Label Preset 4.{preset_no} '{label}'",
+                "ClearAll",
+            ]
+        assert COLOR_PALETTE_SEQUENCE[0][0] == "Warm White"  # 가족 필터 계약
+        commands = _all_commands(calls)
+        assert not any("/Merge" in cmd or "/Overwrite" in cmd for cmd in commands)
+
+    # REQ-005 — M0 산술 기준값 재현: 41대 중 39대 적용, fid 40·41 제외.
+    def test_exclusion_arithmetic_is_disclosed_with_fids(self, tmp_path):
+        pairs = tuple((slot, slot) for slot in range(1, 42))
+        event, _calls, _chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 11번부터 저장해줘",
+            pairs=pairs,
+            capable=tuple(range(1, 40)),
+            excluded=(40, 41),
+        )
+
+        assert "전체 41대 중 39대 적용" in event["text"]
+        assert "컬러 어트리뷰트 없음 2대(FID 40, 41) 제외" in event["text"]
+
+    def test_undetermined_fixtures_are_excluded_and_named(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 11번부터 저장해줘",
+            pairs=((1, 10), (2, 11), (3, 12)),
+            capable=(10,),
+            undetermined=(11, 12),
+        )
+
+        assert "판별 불가 2대(FID 11, 12) 제외" in event["text"]
+        # 판별 불가는 번들에 오르지 않는다 — 침묵 승격 금지.
+        assert all(
+            "11" not in cmd.split(";")[0]
+            for cmd in _all_commands(calls)
+            if cmd.startswith("Fixture ")
+        )
+
+    def test_no_capable_fixture_refuses_with_arithmetic(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 11번부터 저장해줘",
+            capable=(),
+            excluded=(20, 26),
+        )
+
+        assert _writes(calls) == []
+        assert "컬러 어트리뷰트(ColorRGB)가 확인된 장비가 없어" in event["text"]
+
+    # REQ-001 — 번호 없는 지시는 카드 1장: 문면은 Color 풀을 말하고 제안
+    # 구간은 4.x 표기다(컬러 전용 카드 신설 없이 공용 카드의 풀 문면만 바뀜).
+    def test_a_numberless_instruction_asks_with_color_pool_wording(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋 저장해줘",
+            pool=(),
+            answers=["11"],
+        )
+
+        assert len(chan.asked) == 1
+        prompt = chan.asked[0].prompt
+        assert "Color 프리셋 몇 번부터" in prompt
+        assert any("4.11" in option.label for option in chan.asked[0].options)
+        assert "Store Preset 4.11" in _all_commands(calls)
+
+    # REQ-004 — 재생성 가족 필터: 'Warm White'로 시작하는 구간만 표적이다.
+    def test_regeneration_targets_only_the_warm_white_family(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "기본 컬러 다시 잡아줘",
+            pool=tuple(range(11, 21)) + tuple(range(21, 31)),
+            names={11: "Sunset Wash", 21: "Warm White"},
+            answers=["덮어쓰기 진행"],
+        )
+
+        writes = _writes(calls)
+        assert len(writes) == 10
+        commands = _all_commands(calls)
+        # 라벨이 맞는 21 구간만 덮는다 — 11 구간(다른 가족)은 무접촉.
+        assert "Store Preset 4.21" in commands
+        assert not any(cmd == "Store Preset 4.11" for cmd in commands)
+        assert "다시 저장 요청했습니다" in event["text"]
+
+    def test_regenerating_a_foreign_family_span_by_number_refuses(self, tmp_path):
+        # Warm White 구간(21~)이 실존해도 지목된 11 구간은 다른 가족이다 —
+        # 후보로 갈아타지 않고 지목 자체를 거부한다(오표적 방지).
+        event, calls, _chan = self._run(
+            tmp_path,
+            "11번부터 기본 컬러 다시 잡아줘",
+            pool=tuple(range(11, 31)),
+            names={11: "Sunset Wash", 21: "Warm White"},
+        )
+
+        assert _writes(calls) == []
+        assert "'Warm White'이 아니라" in event["text"]
+
+    # 소재 공급 실물 — (slot, fid) 짝은 컨테이너 자식 열거 + 슬롯당 fid 속성
+    # 1회로 만들어지고, fid를 읽지 못한 슬롯은 짝에서 빠져 슬롯 번호로 남는다.
+    def test_fixture_pair_enumeration_maps_slots_to_fids(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, pool=(1, 2, 3))
+        session._current_cue_port = _ColorRigPropPort(
+            {
+                ("Patch/Stages/1/Fixtures/1", "fid"): "10",
+                ("Patch/Stages/1/Fixtures/3", "fid"): "30",
+            }
+        )
+
+        result = session._color_rig_fixture_pairs()
+
+        assert result == ([(1, 10), (3, 30)], [2])
+        reads = [call for call in calls if call.name == "query_state"]
+        assert reads[0].arguments == {"path": "Patch/Stages/1/Fixtures"}
+
+    def test_an_unreadable_fixture_container_yields_none(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, pool_error=True)
+        session._current_cue_port = _ColorRigPropPort({})
+
+        assert session._color_rig_fixture_pairs() is None
 
 
 class TestPositionPresetOverwriteGuard:
