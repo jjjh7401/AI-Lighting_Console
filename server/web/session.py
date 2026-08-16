@@ -1804,6 +1804,12 @@ _PRESET_GATE_PENDING_STATUSES = _PRESET_GATE_AWAITING_STATUSES | _PRESET_GATE_BL
 _PRESET_OVERWRITE_CONSENT_LABEL = "덮어쓰기 진행"
 _PRESET_OVERWRITE_DECLINE_LABEL = "취소"
 
+#: 실행기 할당 제안 카드의 버튼 라벨과 제안 대역(101~115). '걸기'는 승낙어
+#: 집합에 없으므로 라벨 정확 일치를 별도 승낙 신호로 받는다.
+_FX_EXECUTOR_ASSIGN_LABEL = "걸기"
+_FX_EXECUTOR_SKIP_LABEL = "건너뛰기"
+_FX_EXECUTOR_BAND = tuple(range(101, 116))
+
 #: 승낙 어절에서 떼어내는 존대·청유 어미. 형태만 다른 **같은 답**을 받기 위한
 #: 것이지 부분 문자열 매칭이 아니다 — 어미를 뗀 어절이 승낙어와 **통째로** 같아야
 #: 한다. 긴 것부터 떼어야 "해주세요"가 "요"로 잘리지 않는다.
@@ -3299,18 +3305,141 @@ class ChatSession:
             )
         )
         span_end = fx_preset_start + len(FX_POSITION_SEQUENCE) - 1
+        reply = (
+            f"{label} 포지션 이펙트를 시퀀스 {sequence_no}에 저장 요청했습니다 "
+            f"— FX 포지션 프리셋 2.{fx_preset_start}~2.{span_end} 구간을 "
+            "참조합니다 (프리셋 참조 유지, 저장 후 ClearAll). 승인 또는 라이브 "
+            "잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+        )
+        outcomes = tuple(executed.command_outcomes)
+        # 실행기 제안은 저장 번들이 **전건 executed_ok**로 끝났을 때만 — 승인
+        # 대기·차단·부분 실행 위에 Assign을 얹으면 존재하지 않는 시퀀스를 걸거나
+        # 게이트를 우회한 것처럼 보이는 회신이 된다.
+        statuses = [outcome.status for outcome in outcomes]
+        if (
+            not executed.result.is_error
+            and statuses
+            and all(status == "executed_ok" for status in statuses)
+        ):
+            note, assign_outcomes = self._offer_fx_executor_assignment(sequence_no)
+            reply = f"{reply}\n{note}"
+            outcomes += assign_outcomes
         return InstructionResult(
             status="ok",
-            text=(
-                f"{label} 포지션 이펙트를 시퀀스 {sequence_no}에 저장 요청했습니다 "
-                f"— FX 포지션 프리셋 2.{fx_preset_start}~2.{span_end} 구간을 "
-                "참조합니다 (프리셋 참조 유지, 저장 후 ClearAll). 승인 또는 라이브 "
-                "잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
-            ),
-            command_outcomes=executed.command_outcomes,
+            text=reply,
+            command_outcomes=outcomes,
             retries_used=0,
             model_calls=0,
             duration_seconds=0.0,
+        )
+
+    def _page_one_executors(self, *, probe_id: str) -> set[int] | None:
+        """Page 1이 점유한 **실행기 번호** 집합 — 판독 불가 시 ``None``.
+
+        응답기의 Page children이 나르는 ``i``는 실행기 번호가 아니라 페이지
+        슬롯 인덱스다: **실행기 번호 = i + 100** (2026-08-16 콘솔 실측,
+        i=4 ↔ Executor 104 — 이 매핑을 놓친 오판 하나가 점유된 105를
+        '빈칸'으로 읽어 기존 바인딩을 덮어썼다). truncated 플래그와
+        childCount 산술 불일치는 부분 창이므로 '더 작은 페이지'가 아니라
+        '모름'이다 — `_position_preset_pool_slots`와 같은 이중 방어.
+        """
+        pages_root = self._rig_paths.get("pages", "DataPool/Pages")
+        probe = self._registry.dispatch(
+            ToolCall(
+                id=probe_id,
+                name="query_state",
+                arguments={"path": f"{pages_root}/1"},
+            )
+        )
+        if probe.result.is_error:
+            return None
+        try:
+            payload = json.loads(probe.result.content)
+        except (json.JSONDecodeError, TypeError):
+            return None
+        if not isinstance(payload, dict):
+            return None
+        children = payload.get("children")
+        if not isinstance(children, list):
+            return None
+        if payload.get("truncated"):
+            return None
+        node = payload.get("node")
+        if isinstance(node, dict):
+            child_count = node.get("childCount")
+            if isinstance(child_count, int) and child_count > len(children):
+                return None
+        executors: set[int] = set()
+        for child in children:
+            if not isinstance(child, dict):
+                continue
+            try:
+                executors.add(int(child.get("i", child.get("no"))) + 100)
+            except (TypeError, ValueError):
+                continue
+        return executors
+
+    def _offer_fx_executor_assignment(
+        self, sequence_no: int
+    ) -> tuple[str, tuple[CommandOutcome, ...]]:
+        """방금 저장된 시퀀스를 **빈** 실행기에 걸지 제안한다 — 회신 꼬리
+        한 줄과 Assign 번들 결과를 돌려준다.
+
+        카드는 Page 1 점유를 **읽은 다음에만** 띄운다: 판독 불가 위에서 빈
+        실행기를 고르면 점유 오판이 기존 바인딩을 소리 없이 덮어쓴다
+        (2026-08-16 Executor 105 사고 — 이 게이트가 그 재발 방지이자 이
+        기능의 존재 이유다). 승낙 후에도 Cmd의 OK는 착지 증거가 아니므로
+        (같은 날 실측) 착지는 Page 1 **되읽기**로만 보고한다.
+        """
+        occupied = self._page_one_executors(probe_id="position-fx-executor-scan")
+        if occupied is None:
+            return ("실행기 점유를 읽지 못해 할당을 제안하지 않았습니다.", ())
+        target = next((no for no in _FX_EXECUTOR_BAND if no not in occupied), None)
+        if target is None:
+            return (
+                f"Executor {_FX_EXECUTOR_BAND[0]}~{_FX_EXECUTOR_BAND[-1]}가 모두 "
+                "점유돼 있어 할당을 제안하지 않았습니다.",
+                (),
+            )
+        answer = self._ask_one(
+            f"시퀀스 {sequence_no}을(를) 실행기 {target}에 걸까요?",
+            options=(
+                QuestionOption(label=_FX_EXECUTOR_ASSIGN_LABEL),
+                QuestionOption(label=_FX_EXECUTOR_SKIP_LABEL),
+            ),
+            why=(
+                f"Page 1 판독에서 실행기 {target}이 비어 있었습니다 "
+                f"(children i={target - 100} 부재 → Executor {target}). "
+                "Assign은 기존 바인딩을 덮어쓰므로 빈 실행기만 제안합니다."
+            ),
+        )
+        consented = answer is not None and (
+            answer.strip() == _FX_EXECUTOR_ASSIGN_LABEL
+            or _preset_answer_intent(answer) == "consent"
+        )
+        if not consented:
+            return ("실행기 미할당 — 시퀀스는 저장된 상태 그대로입니다.", ())
+        executed = self._registry.dispatch(
+            ToolCall(
+                id="position-fx-assign",
+                name="run_commands",
+                arguments={"commands": [f"Assign Sequence {sequence_no} At Executor {target}"]},
+            )
+        )
+        outcomes = tuple(executed.command_outcomes)
+        after = self._page_one_executors(probe_id="position-fx-executor-readback")
+        if after is not None and target in after:
+            return (
+                f"시퀀스 {sequence_no}을(를) 실행기 {target}에 할당하고 되읽기로 "
+                f"착지를 확인했습니다 — Page 1 children i={target - 100} "
+                f"(= {target} − 100).",
+                outcomes,
+            )
+        return (
+            f"실행기 {target} 할당을 요청했지만 되읽기에서 착지 미확인입니다 — "
+            f"콘솔에서 Executor {target}를 직접 확인해 주세요 (명령 OK는 착지 "
+            "증거가 아닙니다).",
+            outcomes,
         )
 
     def _store_position_preset_sequence(
@@ -5331,50 +5460,82 @@ class ChatSession:
         """The Position pool's stored preset numbers, or None when the pool
         cannot be read (callers fall back to static examples, never a guess).
 
-        A TRUNCATED listing is "cannot be read", not a smaller pool: the
-        responder caps ``children`` at 24 (PROTOCOL §4.2), so past 24 presets
-        the cap window hides real slots and absence stops meaning emptiness.
-        Live-measured 2026-08-16: a 31-preset pool made the store read-back
-        report 10 freshly stored presets as "미확인 0/10" because slots
-        41~50 fell outside the window. Unknown ≠ empty — partial reads join
-        the unreadable path, which every caller already renders honestly.
+        The responder caps ``children`` at 24 per reply (PROTOCOL §4.2), so
+        pools past 24 presets need PAGING: follow-up queries carry ``offset``
+        (the accumulated child count) and a paging-aware responder echoes it
+        back. Live-measured 2026-08-16: a 31-preset pool made the store
+        read-back report 10 freshly stored presets as "미확인 0/10" because
+        slots 41~50 fell outside the first window — paged reads recover
+        exactly that case.
+
+        Truncation WITHOUT progress is still "cannot be read", not a smaller
+        pool: a legacy responder ignores ``offset`` (no echo, always the
+        first window), so a paged reply missing the matching echo — or adding
+        zero new children, or erroring, or blowing the page cap — aborts to
+        None. Unknown ≠ empty — partial reads join the unreadable path, which
+        every caller already renders honestly.
         """
         pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
-        probe = self._registry.dispatch(
-            ToolCall(
-                id="song-design-preset-pool-read",
-                name="query_state",
-                arguments={"path": f"{pool_root}/2"},
-            )
-        )
-        if probe.result.is_error:
-            return None
-        try:
-            payload = json.loads(probe.result.content)
-        except (json.JSONDecodeError, TypeError):
-            return None
-        children = payload.get("children") if isinstance(payload, dict) else None
-        if not isinstance(children, list):
-            return None
-        # 절단 판정은 두 경로 — 응답기 truncated 플래그 또는 childCount 산술.
-        # 한쪽만 삭제돼도 나머지가 잡는다 (TRUNCATE-001과 같은 이중 방어).
-        if payload.get("truncated"):
-            return None
-        node = payload.get("node")
-        if isinstance(node, dict):
-            child_count = node.get("childCount")
-            if isinstance(child_count, int) and child_count > len(children):
-                return None
+        path = f"{pool_root}/2"
         slots: set[int] = set()
-        for child in children:
-            if isinstance(child, dict):
-                try:
-                    # 실기 responder는 슬롯 번호를 "i"로 보낸다 (PROTOCOL §4.2,
-                    # rig_object와 동일 규칙); "no"는 정규화된 페이로드용.
-                    slots.add(int(child.get("i", child.get("no"))))
-                except (TypeError, ValueError):
-                    continue
-        return slots
+        seen = 0
+        for page in range(10):  # 상한 10페이지(240슬롯) — 실제 풀 크기의 여유 상계
+            arguments: dict[str, object] = {"path": path}
+            if page:
+                # 후속 창은 누적 자식 수부터. 첫 요청은 기존 무페이징 판독과
+                # 인자까지 동일하다(하위호환 — 구버전 응답기도 첫 창은 준다).
+                arguments["offset"] = seen
+            probe = self._registry.dispatch(
+                ToolCall(
+                    id=(
+                        f"song-design-preset-pool-read-p{page}"
+                        if page
+                        else "song-design-preset-pool-read"
+                    ),
+                    name="query_state",
+                    arguments=arguments,
+                )
+            )
+            if probe.result.is_error:
+                return None
+            try:
+                payload = json.loads(probe.result.content)
+            except (json.JSONDecodeError, TypeError):
+                return None
+            children = payload.get("children") if isinstance(payload, dict) else None
+            if not isinstance(children, list):
+                return None
+            if page:
+                # 무진전 방어 — 구버전 응답기는 offset을 무시하고 항상 첫 창을
+                # 돌려준다(에코 부재). 에코 불일치·신규 자식 0개도 같은 갈래:
+                # 반복해도 전진이 없으므로 즉시 부분 판독(None)으로 내려간다.
+                echo = payload.get("offset")
+                if isinstance(echo, bool) or echo != seen:
+                    return None
+                if not children:
+                    return None
+            for child in children:
+                if isinstance(child, dict):
+                    try:
+                        # 실기 responder는 슬롯 번호를 "i"로 보낸다 (PROTOCOL §4.2,
+                        # rig_object와 동일 규칙); "no"는 정규화된 페이로드용.
+                        slots.add(int(child.get("i", child.get("no"))))
+                    except (TypeError, ValueError):
+                        continue
+            seen += len(children)
+            # 절단 판정은 두 경로 — 응답기 truncated 플래그 또는 childCount 산술.
+            # 한쪽만 삭제돼도 나머지가 잡는다 (TRUNCATE-001과 같은 이중 방어).
+            node = payload.get("node")
+            child_count = node.get("childCount") if isinstance(node, dict) else None
+            more = bool(payload.get("truncated")) or (
+                isinstance(child_count, int) and child_count > seen
+            )
+            if not more:
+                return slots  # 누적 == 총계(또는 총계 미달 주장 없음) — 완전 판독
+            if not children:
+                # 빈 창이 "더 있다"고 주장 — offset이 전진할 수 없는 모순.
+                return None
+        return None  # 페이지 상한 초과 — 부분 판독은 더 작은 풀이 아니다
 
     def _position_preset_free_starts(self, *, count: int = 3) -> list[int] | None:
         """Start numbers where TEN consecutive Position slots are EMPTY —

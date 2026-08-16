@@ -53,8 +53,12 @@ local M = {
     -- transport dies silently past the MA3 ~2048-byte command-line limit
     -- (live-measured; big snapshots like a 27-macro pool never replied).
     -- 1.5.0: additive prop verb + Cue child cueNo when the real cue number
-    -- can be read from the cue object; Protocol v1 throughout.
-    VERSION = "1.5.0",
+    -- can be read from the cue object; Protocol v1 throughout. 1.6.0:
+    -- snapshot paging -- a state request may carry a trailing "offset=<n>"
+    -- token (0-based children window start); the reply echoes "offset" (0
+    -- when the request carried none) and `truncated` means "more children
+    -- AFTER this window". Old-style requests are byte-for-byte unchanged.
+    VERSION = "1.6.0",
     PROTO = 1,
     CONFIG = CONFIG,
 }
@@ -169,6 +173,25 @@ function M.parse_request(s)
         return nil, "empty request"
     end
     return { kind = kind:lower(), id = id, rest = rest }
+end
+
+-- Paged snapshot requests (responder 1.6.0, PROTOCOL.md §4.2): the state
+-- rest-of-line may end in one whitespace-separated "offset=<n>" token,
+-- naming the 0-based children window start. Paths may contain spaces, so
+-- ONLY a trailing token is recognized; a negative, fractional, or
+-- non-numeric value degrades to 0 (never an error -- the reply's echoed
+-- `offset` tells the caller what was actually used).
+function M.parse_state_args(rest)
+    local path, raw = rest:match("^(.-)%s+offset=(%S*)%s*$")
+    if not path or path == "" then
+        return rest, 0
+    end
+    local n = tonumber(raw)
+    n = n and math.tointeger(n)
+    if not n or n < 0 then
+        return path, 0
+    end
+    return path, n
 end
 
 -- -- MA3 handle accessors (defensive: exact 2.4.2 surface verified live) ----
@@ -556,10 +579,14 @@ local function safe_truncate(s, max_len)
     return s:sub(1, cut)
 end
 
-function M.build_snapshot(id, path)
+function M.build_snapshot(id, path, offset)
+    offset = offset or 0
     local handle, err = M.resolve_path(path)
     if not handle then
-        local payload = { v = M.PROTO, kind = "state", id = id, path = path, ok = false, error = err }
+        local payload = {
+            v = M.PROTO, kind = "state", id = id, path = path,
+            ok = false, error = err, offset = offset,
+        }
         -- Size guard (M6c-4 fix): the success branch below already bounds
         -- its reply to CONFIG.max_payload by dropping children; this
         -- failure branch used to echo the full, unbounded query path
@@ -578,9 +605,12 @@ function M.build_snapshot(id, path)
     end
     local children = M.safe_children(handle)
     local total = #children
-    local cap = math.min(total, CONFIG.max_children)
+    -- Paging window (1.6.0): `offset` is the 0-based start; the window is at
+    -- most CONFIG.max_children wide and empty when offset >= childCount.
+    local first = offset + 1
+    local last = math.min(offset + CONFIG.max_children, total)
     local items = M.array({})
-    for i = 1, cap do
+    for i = first, last do
         local entry = children[i]
         local item = { name = M.safe_name(entry.obj), class = M.safe_class(entry.obj) }
         -- `i` carries the REAL pool slot and is OMITTED when that slot could
@@ -607,7 +637,11 @@ function M.build_snapshot(id, path)
             childCount = total,
         },
         children = items,
-        truncated = cap < total,
+        offset = offset,
+        -- `truncated` = children remain AFTER this window (not "the listing
+        -- is partial overall"); on the first window (offset 0) this is the
+        -- exact pre-1.6.0 meaning.
+        truncated = last < total,
     }
     -- Executor-only branch (REQ-EXECBODY-003, additive — AC-EXECBODY-004):
     -- expose the assigned sequence's pool number so a safety-gate caller can
@@ -894,7 +928,8 @@ function M.handle_request(request)
                 error = "missing object path (expected: state <id> <path>)",
             }
         else
-            payload = M.build_snapshot(parsed.id, parsed.rest)
+            local path, offset = M.parse_state_args(parsed.rest)
+            payload = M.build_snapshot(parsed.id, path, offset)
         end
         M.send_reply(CONFIG.state_address, payload)
     elseif parsed.kind == "prop" then

@@ -128,6 +128,29 @@ class TestPingAndState:
         assert payload["ok"] is True
         assert payload["path"] == "DataPool/Sequences"
 
+    def test_query_state_offset_zero_keeps_the_request_bytes_identical(self):
+        # PROTOCOL §4.2 하위호환 — offset=0은 무페이징 요청과 바이트 동일.
+        plain = ConsoleLink(timeouts=_FAST)
+        plain_send, plain_sent = _echo_send(plain)
+        plain.bind_send(plain_send)
+        plain.query_state("DataPool/PresetPools/2")
+
+        paged = ConsoleLink(timeouts=_FAST)
+        paged_send, paged_sent = _echo_send(paged)
+        paged.bind_send(paged_send)
+        paged.query_state("DataPool/PresetPools/2", offset=0)
+
+        assert paged_sent == plain_sent
+        assert "offset" not in plain_sent[0]
+
+    def test_query_state_positive_offset_rides_a_trailing_token(self):
+        link = ConsoleLink(timeouts=_FAST)
+        send, sent = _echo_send(link)
+        link.bind_send(send)
+        payload = link.query_state("DataPool/PresetPools/2", offset=24)
+        assert payload["ok"] is True
+        assert sent[0].endswith(' offset=24"')
+
     def test_query_state_timeout_raises_and_notes_monitor(self):
         monitor = HealthMonitor()
         link = ConsoleLink(timeouts=_FAST, monitor=monitor)

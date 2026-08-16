@@ -1597,6 +1597,8 @@ class _PresetPoolRegistry:
         status="executed_ok",
         truncated=False,
         child_count=None,
+        page_size=None,
+        legacy_pager=False,
     ):
         self.calls = calls
         self.pool = tuple(pool)
@@ -1606,6 +1608,12 @@ class _PresetPoolRegistry:
         self.status = status
         self.truncated = truncated
         self.child_count = child_count
+        # 페이징 응답기 시뮬레이션 (PROTOCOL §4.2, responder 1.6.0):
+        # ``page_size``가 있으면 창 단위로 자르고 ``offset``을 에코한다.
+        # ``legacy_pager=True``는 구버전(≤1.5.0) — offset을 무시하고 항상
+        # 첫 창을 돌려주며 에코가 없다. 둘 다 childCount는 총계다.
+        self.page_size = page_size
+        self.legacy_pager = legacy_pager
         self.state_reads = 0
         self.wrote = False
 
@@ -1627,11 +1635,25 @@ class _PresetPoolRegistry:
             before_write = not self.wrote
             error = self.pool_error if before_write else self.readback_error
             slots = self.pool if before_write else self.readback
-            payload = {"children": [{"i": n} for n in slots]}
-            if self.truncated:
-                payload["truncated"] = True
-            if self.child_count is not None:
-                payload["node"] = {"childCount": self.child_count}
+            if self.page_size is not None:
+                requested = call.arguments.get("offset", 0)
+                offset = 0 if self.legacy_pager else requested
+                window = slots[offset : offset + self.page_size]
+                payload = {
+                    "children": [{"i": n} for n in window],
+                    "node": {"childCount": len(slots)},
+                }
+                # truncated = 이 창 **이후에도** 남았는가 (계약 §4.2).
+                if offset + len(window) < len(slots):
+                    payload["truncated"] = True
+                if not self.legacy_pager:
+                    payload["offset"] = offset
+            else:
+                payload = {"children": [{"i": n} for n in slots]}
+                if self.truncated:
+                    payload["truncated"] = True
+                if self.child_count is not None:
+                    payload["node"] = {"childCount": self.child_count}
             return ToolExecution(
                 ToolResult(
                     tool_call_id=call.id,
@@ -1663,6 +1685,90 @@ def _writes(calls):
 
 def _all_commands(calls):
     return [cmd for call in _writes(calls) for cmd in call.arguments["commands"]]
+
+
+class TestPresetPoolPaging:
+    """PROTOCOL §4.2 페이징 — 캡(24) 밖 슬롯의 완전 판독과 무진전 방어.
+
+    실측 2026-08-16: 31개 풀에서 캡(24) 밖의 신규 저장 41~50이 되읽기에서
+    "미확인 0/10"으로 오보됐다. 페이징 판독은 그 창을 이어 붙여 복구하되,
+    전진 없는 반복(구버전 응답기·상한 초과)은 오늘의 '절단=미상(None)'
+    규율로 내려간다 — 부분 판독은 더 작은 풀이 아니다.
+    """
+
+    def _slots(self, tmp_path, **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, **rig)
+        return session._position_preset_pool_slots(), calls
+
+    @staticmethod
+    def _reads(calls):
+        return [call for call in calls if call.name == "query_state"]
+
+    def test_a_two_page_pool_reads_completely(self, tmp_path):
+        # 31슬롯 — 41~50이 둘째 창에 있어도 슬롯 집합에 들어온다.
+        pool = tuple(range(1, 22)) + tuple(range(41, 51))
+        slots, calls = self._slots(tmp_path, pool=pool, page_size=24)
+
+        assert slots == set(pool)
+        reads = self._reads(calls)
+        assert len(reads) == 2
+        # 첫 요청은 기존 무페이징 판독과 인자까지 동일하다(하위호환).
+        assert "offset" not in reads[0].arguments
+        assert reads[1].arguments["offset"] == 24
+
+    def test_a_legacy_responder_aborts_to_none_without_looping(self, tmp_path):
+        # 구버전 응답기 — offset 무시·에코 부재·항상 첫 창. 둘째 요청에서
+        # 에코가 없으므로 즉시 None. 절대 재시도하지 않는다(무한루프 금지).
+        slots, calls = self._slots(
+            tmp_path, pool=tuple(range(1, 32)), page_size=24, legacy_pager=True
+        )
+
+        assert slots is None
+        assert len(self._reads(calls)) == 2
+
+    def test_the_page_cap_aborts_to_none(self, tmp_path):
+        # 창 2개짜리 응답기로 31슬롯 → 16페이지 필요 > 상한 10 → None.
+        slots, calls = self._slots(tmp_path, pool=tuple(range(1, 32)), page_size=2)
+
+        assert slots is None
+        assert len(self._reads(calls)) == 10
+
+    def test_a_single_window_pool_is_unchanged(self, tmp_path):
+        # 무회귀 — 한 창에 다 들어오는 풀은 요청 1회로 끝난다.
+        slots, calls = self._slots(tmp_path, pool=(1, 2, 3), page_size=24)
+
+        assert slots == {1, 2, 3}
+        assert len(self._reads(calls)) == 1
+
+    def test_a_forced_truncation_without_echo_still_reads_none(self, tmp_path):
+        # 모놀리식(무페이징) 리그의 truncated 강제 — 둘째 창 시도에서 에코가
+        # 없어 None. 오늘의 '절단=판독 불가' 동작이 페이징 실패 경로로 유지된다.
+        slots, _calls = self._slots(tmp_path, pool=tuple(range(1, 25)), truncated=True)
+
+        assert slots is None
+
+    def test_readback_confirms_slots_in_the_second_window(self, tmp_path):
+        # 실측 재현 — 신규 저장 41~50이 둘째 창으로 밀려나도 되읽기가 확인한다.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(
+            calls,
+            pool=tuple(range(1, 22)),  # 21슬롯 — 41~50은 검증된 빈칸(가드 통과)
+            readback=tuple(range(1, 22)) + tuple(range(41, 51)),  # 31슬롯, 2창
+            page_size=24,
+        )
+        session._question_channel = _AnsweringChannel([])
+        event = session.run_instruction("기본 포지션 프리셋을 41번부터 저장해줘")
+
+        assert len(_writes(calls)) == 10
+        assert "10개 확인" in event["text"]
+        assert "되읽지 못했습니다" not in event["text"]
+        # 가드 1창 + 되읽기 2창 = 3회 — 페이지 수만큼만 늘어난다.
+        assert len(self._reads(calls)) == 3
 
 
 class TestPositionPresetOverwriteGuard:
@@ -5114,23 +5220,30 @@ class TestPositionFxSequence:
     def test_each_effect_word_builds_the_exact_bundle(self, tmp_path, text, effect, label):
         event, calls, chan = self._run(tmp_path, text)
 
-        assert chan.asked == []
+        # 저장 번들이 전건 executed_ok로 끝나면 실행기 제안 카드가 **한 장**
+        # 따라온다 — 리그의 Page 1은 비어 있으므로 대역 최소인 101을 제안하고,
+        # 미답이면 Assign 없이 미할당으로 끝난다.
+        assert len(chan.asked) == 1
+        assert "실행기 101" in chan.asked[0].prompt
         writes = _writes(calls)
         assert len(writes) == 1
         assert tuple(writes[0].arguments["commands"]) == self._expected(effect, label)
         assert "시퀀스 201" in event["text"]
         assert "2.41~2.50" in event["text"]
+        assert "실행기 미할당" in event["text"]
 
     # (2 카드) — 번호가 둘 다 없으면 카드가 정확히 두 장(프리셋 시작 → 시퀀스)
-    # 뜨고, 답이 명령열에 그대로 반영된다.
+    # 뜨고, 답이 명령열에 그대로 반영된다. 저장이 성공하므로 실행기 제안 카드가
+    # 세 번째로 따라온다(미답 → Assign 0건).
     def test_missing_numbers_are_asked_one_card_each(self, tmp_path):
         _event, calls, chan = self._run(
             tmp_path, "좌우 스윕 시퀀스 만들어줘", answers=["41", "201"]
         )
 
-        assert len(chan.asked) == 2
+        assert len(chan.asked) == 3
         assert "몇 번부터" in chan.asked[0].prompt
         assert "몇 번 시퀀스" in chan.asked[1].prompt
+        assert "걸까요" in chan.asked[2].prompt
         writes = _writes(calls)
         assert len(writes) == 1
         assert tuple(writes[0].arguments["commands"]) == self._expected("sweep", "좌우 스윕")
@@ -5216,3 +5329,210 @@ class TestPositionFxSequence:
         assert chan.asked == []
         assert len(_writes(calls)) == 10
         assert not any("Store Sequence" in cmd for cmd in _all_commands(calls))
+
+
+class _ExecutorPageRegistry(_PresetPoolRegistry):
+    """``DataPool/Pages/1`` 판독만 분리 제어하는 리그 — 실행기 제안 흐름 전용.
+
+    베이스 리그는 모든 ``query_state``에 같은 페이로드를 돌려주므로 "제안 전
+    스캔"과 "Assign 후 되읽기"를 구별해 겨눌 수 없다. 여기서는 Pages/1 경로만
+    가로채고, Assign write 경계 전에는 ``page``, 후에는 ``page_after``를
+    돌려준다 — 값은 실행기 번호가 아니라 응답기의 ``i``(= 실행기 − 100)다.
+    """
+
+    def __init__(
+        self,
+        calls,
+        *,
+        page=(),
+        page_after=None,
+        page_error=False,
+        page_after_error=False,
+        page_truncated=False,
+        page_child_count=None,
+        **kwargs,
+    ):
+        super().__init__(calls, **kwargs)
+        self.page = tuple(page)
+        self.page_after = self.page if page_after is None else tuple(page_after)
+        self.page_error = page_error
+        self.page_after_error = page_after_error
+        self.page_truncated = page_truncated
+        self.page_child_count = page_child_count
+        self.assigned = False
+
+    def dispatch(self, call: ToolCall) -> ToolExecution:
+        if call.name == "query_state" and str(call.arguments.get("path", "")).endswith("Pages/1"):
+            self.calls.append(call)
+            if self.page_error or (self.assigned and self.page_after_error):
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="", is_error=True)
+                )
+            slots = self.page_after if self.assigned else self.page
+            payload = {"children": [{"i": n} for n in slots]}
+            if self.page_truncated:
+                payload["truncated"] = True
+            if self.page_child_count is not None:
+                payload["node"] = {"childCount": self.page_child_count}
+            return ToolExecution(
+                ToolResult(tool_call_id=call.id, name=call.name, content=json.dumps(payload))
+            )
+        if call.name == "run_commands" and any(
+            "Assign Sequence" in cmd for cmd in call.arguments.get("commands", ())
+        ):
+            self.assigned = True
+        return super().dispatch(call)
+
+
+def _assign_writes(calls):
+    return [
+        call
+        for call in _writes(calls)
+        if any("Assign Sequence" in cmd for cmd in call.arguments["commands"])
+    ]
+
+
+class TestPositionFxExecutorOffer:
+    """시퀀스 저장 성공 직후의 실행기 할당 제안 — 2026-08-16 Executor 105
+    사고(점유 오판 위의 Assign이 기존 바인딩을 덮어씀)의 재발 방지 계약.
+
+    겨누는 것: (1) i−100 매핑과 대역(101~115) 최소 빈 번호 제안, (2) 승낙 시
+    Assign 정확히 1건 + Page 1 되읽기로만 착지 보고, (3) 건너뛰기/미답 시
+    Assign 0건, (4) 판독 불가(에러·truncated·childCount 불일치) 시 카드 0·
+    Assign 0·고지 문면, (5) 되읽기 불일치 시 '착지 미확인' 문면, (6) 저장
+    번들이 전건 executed_ok가 아니면 제안 자체가 없다.
+    """
+
+    _TEXT = "좌우 스윕 시퀀스 201 만들어줘, FX 프리셋 41번부터"
+
+    def _run(self, tmp_path, *, answers=(), **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _ExecutorPageRegistry(calls, **rig)
+        chan = _AnsweringChannel(answers)
+        session._question_channel = chan
+        event = session.run_instruction(self._TEXT)
+        return event, calls, chan
+
+    # (1) — children i=1~6 점유(= Executor 101~106)면 대역의 최소 빈 번호인
+    # 107을 제안한다. i를 실행기 번호로 오독하면 101을 제안했을 것이다.
+    def test_occupied_children_map_i_plus_100_and_propose_the_lowest_free(self, tmp_path):
+        _event, _calls, chan = self._run(tmp_path, page=(1, 2, 3, 4, 5, 6), answers=[])
+
+        offer_cards = [q for q in chan.asked if "걸까요" in q.prompt]
+        assert len(offer_cards) == 1
+        assert "실행기 107" in offer_cards[0].prompt
+        assert "시퀀스 201" in offer_cards[0].prompt
+
+    # (1 보강) — i=4/5/6 점유는 Executor 104/105/106이므로 최소 빈 번호는
+    # 101이다. 105 사고의 반대 방향 오독(i에 100을 두 번 더함)을 잡는다.
+    def test_a_sparse_page_still_proposes_the_band_minimum(self, tmp_path):
+        _event, _calls, chan = self._run(tmp_path, page=(4, 5, 6), answers=[])
+
+        offer_cards = [q for q in chan.asked if "걸까요" in q.prompt]
+        assert len(offer_cards) == 1
+        assert "실행기 101" in offer_cards[0].prompt
+
+    # (2) — 승낙(옵션 라벨 '걸기')이면 검증된 문법의 Assign이 정확히 1건
+    # 나가고, 되읽기(page_after에 i=7 등장)로 착지를 확인해 산술과 함께
+    # 보고한다.
+    def test_consent_assigns_once_and_reports_the_verified_landing(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            page=(1, 2, 3, 4, 5, 6),
+            page_after=(1, 2, 3, 4, 5, 6, 7),
+            answers=["걸기"],
+        )
+
+        assigns = _assign_writes(calls)
+        assert len(assigns) == 1
+        assert assigns[0].arguments["commands"] == ["Assign Sequence 201 At Executor 107"]
+        # 스캔 1회 + 되읽기 1회 — 착지 판정은 되읽기에서만 나온다.
+        page_reads = [
+            c
+            for c in calls
+            if c.name == "query_state" and str(c.arguments.get("path", "")).endswith("Pages/1")
+        ]
+        assert len(page_reads) == 2
+        assert "실행기 107" in event["text"]
+        assert "착지를 확인" in event["text"]
+        assert "i=7" in event["text"]
+
+    # (2 보강) — 자유 입력 승낙어('네')도 승낙이다 (_preset_answer_intent).
+    def test_a_free_text_consent_word_also_assigns(self, tmp_path):
+        _event, calls, _chan = self._run(tmp_path, page=(), page_after=(1,), answers=["네"])
+
+        assert len(_assign_writes(calls)) == 1
+
+    # (3) — 건너뛰기·미답이면 Assign 0건, 저장 회신은 유지되고 미할당 한 줄이
+    # 붙는다.
+    @pytest.mark.parametrize("answers", [["건너뛰기"], []])
+    def test_skip_or_silence_never_assigns(self, tmp_path, answers):
+        event, calls, chan = self._run(tmp_path, page=(1,), answers=answers)
+
+        assert len(chan.asked) == 1
+        assert _assign_writes(calls) == []
+        assert "시퀀스 201" in event["text"]
+        assert "실행기 미할당" in event["text"]
+
+    # (4) — 판독 불가 세 갈래(에러 / truncated / childCount 불일치)는 전부
+    # 카드 0·Assign 0에 고지 문면으로 끝난다. 모름 위의 제안이 105 사고다.
+    @pytest.mark.parametrize(
+        "rig",
+        [
+            {"page_error": True},
+            {"page": (1, 2), "page_truncated": True},
+            {"page": (1, 2), "page_child_count": 30},
+        ],
+    )
+    def test_an_unreadable_page_offers_nothing_and_says_why(self, tmp_path, rig):
+        event, calls, chan = self._run(tmp_path, answers=["걸기"], **rig)
+
+        assert chan.asked == []
+        assert _assign_writes(calls) == []
+        assert "시퀀스 201" in event["text"]  # 저장 회신은 유지된다
+        assert "실행기 점유를 읽지 못해 할당을 제안하지 않았습니다" in event["text"]
+
+    # (4 보강) — 대역 전체(101~115)가 점유면 제안할 빈 실행기가 없다:
+    # 카드 없이 고지만 남긴다.
+    def test_a_full_band_offers_nothing(self, tmp_path):
+        event, calls, chan = self._run(tmp_path, page=tuple(range(1, 16)), answers=["걸기"])
+
+        assert chan.asked == []
+        assert _assign_writes(calls) == []
+        assert "모두 점유돼 있어 할당을 제안하지 않았습니다" in event["text"]
+
+    # (5) — Assign의 OK는 착지 증거가 아니다(2026-08-16 실측): 되읽기에서
+    # 표적이 나타나지 않으면 '착지 미확인'으로 보고한다.
+    def test_a_readback_miss_reports_the_unconfirmed_landing(self, tmp_path):
+        event, calls, _chan = self._run(tmp_path, page=(1,), page_after=(1,), answers=["걸기"])
+
+        assert len(_assign_writes(calls)) == 1
+        assert "착지 미확인" in event["text"]
+        assert "실행기 102" in event["text"]
+
+    # (5 보강) — 되읽기 자체가 죽어도(판독 불가) 착지 확인으로 위장하지 않고,
+    # Assign도 다시 쏘지 않는다.
+    def test_a_dead_readback_is_also_unconfirmed(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path, page=(1,), page_after_error=True, answers=["걸기"]
+        )
+
+        assert len(_assign_writes(calls)) == 1
+        assert "착지 미확인" in event["text"]
+
+    # (6) — 저장 번들이 전건 executed_ok가 아니면(게이트 proposal 등) 제안
+    # 자체가 없다: 존재가 확정되지 않은 시퀀스를 걸지 않는다.
+    def test_a_gated_store_bundle_suppresses_the_offer(self, tmp_path):
+        event, calls, chan = self._run(tmp_path, status="proposal", answers=["걸기"])
+
+        assert chan.asked == []
+        assert _assign_writes(calls) == []
+        page_reads = [
+            c
+            for c in calls
+            if c.name == "query_state" and str(c.arguments.get("path", "")).endswith("Pages/1")
+        ]
+        assert page_reads == []
+        assert "실행기" not in event["text"]

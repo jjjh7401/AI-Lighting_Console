@@ -117,7 +117,9 @@ class _GateStatePort:
     def __init__(self, gate: SafetyGate) -> None:
         self._gate = gate
 
-    def query_state(self, path: str) -> dict:
+    def query_state(self, path: str, *, offset: int = 0) -> dict:
+        if offset:
+            return self._gate._query_state(path, offset=offset)
         return self._gate._query_state(path)
 
     def query_property(self, path: str, property_name: str) -> dict:
@@ -641,11 +643,16 @@ class SafetyGate:
         if len(self._unconfirmed) > _MAX_UNCONFIRMED:
             self._unconfirmed.popitem(last=False)
 
-    def _query_state(self, path: str) -> dict:
+    def _query_state(self, path: str, *, offset: int = 0) -> dict:
         # Audited even on failure: a timed-out query still SENT one OSC
         # request, and the 1:1 send↔audit reconciliation must not lose it.
+        # ``offset`` (PROTOCOL §4.2 paging) rides through unchanged; 0 keeps
+        # the request bytes identical to the pre-paging wire.
         try:
-            payload = self._console.query_state(path)
+            if offset:
+                payload = self._console.query_state(path, offset=offset)
+            else:
+                payload = self._console.query_state(path)
         except Exception:
             self._audit.log_executed(path, kind="state_query", ok=False)
             raise
