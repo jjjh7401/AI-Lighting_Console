@@ -36,6 +36,7 @@ from server.groupgen.write import (
     build_group_write_plan,
     guard_bundle_collision,
 )
+
 # 리뷰 #5(독립 리뷰) — analyse_layout_image의 claude_code 사전 차단이 이 안내문을
 # 그대로 내보낸다. 별도 문자열을 두면 어댑터 문구가 바뀔 때 둘이 어긋난다
 # (contract.md §1: 중복 문자열 금지).
@@ -623,21 +624,18 @@ def _parse_layout_vision_response(text: str) -> tuple[dict[str, object] | None, 
                     or not math.isfinite(value)
                 ):
                     return None, (
-                        f"'interpreted'의 '{key}' 값 {value!r}이(가) 거부됐다: "
-                        "유한 실수여야 한다"
+                        f"'interpreted'의 '{key}' 값 {value!r}이(가) 거부됐다: 유한 실수여야 한다"
                     )
             elif key == "count":
                 if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
                     return None, (
-                        f"'interpreted'의 '{key}' 값 {value!r}이(가) 거부됐다: "
-                        "양의 정수여야 한다"
+                        f"'interpreted'의 '{key}' 값 {value!r}이(가) 거부됐다: 양의 정수여야 한다"
                     )
-            elif key == "type_name":
-                if not isinstance(value, str) or not value.strip():
-                    return None, (
-                        f"'interpreted'의 '{key}' 값 {value!r}이(가) 거부됐다: "
-                        "비어있지 않은 문자열이어야 한다"
-                    )
+            elif key == "type_name" and (not isinstance(value, str) or not value.strip()):
+                return None, (
+                    f"'interpreted'의 '{key}' 값 {value!r}이(가) 거부됐다: "
+                    "비어있지 않은 문자열이어야 한다"
+                )
 
     unresolved = payload.get("unresolved", [])
     if not isinstance(unresolved, list) or not all(isinstance(item, str) for item in unresolved):
