@@ -1,10 +1,10 @@
 ---
 id: SPEC-COPILOT-FXGEN-001
 title: "파라메트릭 이펙트 생성 — compose_fx와 열린 축 (Parametric Effect Generation)"
-version: "0.1.0"
-status: draft
+version: "0.2.0"
+status: completed
 created: 2026-08-15
-updated: 2026-08-15
+updated: 2026-08-16
 author: manager-spec
 priority: P1
 phase: "Phase 2 연출 계층 — 시간축 어휘 확장 (FXLIB 후속: 폐쇄 라이브러리 → 파라메트릭 저작)"
