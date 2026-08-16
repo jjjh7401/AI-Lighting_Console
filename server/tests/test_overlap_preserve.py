@@ -207,7 +207,7 @@ _OVERLAP_MERGE_COMMIT = "156a3e1aaf6ef78788394d65cf724bacaec7b567"
 #: Another file under the chokepoint, a second deleted line in this one, or any
 #: text other than `version: 1` still fails the gate.
 _SAFETY_EXPECTED_DELETIONS = {
-    "server/safety/audit.py": 9,
+    "server/safety/audit.py": 10,
     "server/safety/backup.py": 2,
     "server/safety/blacklist.yaml": 1,
     "server/safety/console.py": 0,
@@ -232,6 +232,10 @@ _SAFETY_ALLOWED_DELETED_LINES = {
     # durable write point, deploy sub-sends (deploy_of) keep 90-day retention.
     # The nine deletions are the single-family write/purge/iterate lines the
     # two-family versions replaced (the T-I `default=str` line among them).
+    # TENTH line (probe-split follow-up, 46d9002/363133f): the OSC-send
+    # docstring '"""One console send (every OSC send maps 1:1 …)"""' was
+    # replaced by the two-family version stating the bounded probe exception
+    # — the doc had to change WITH the behavior it documents.
     "server/safety/audit.py": (
         '        """Append one audit event (AuditSink-compatible); adds a UTC timestamp."""',
         '        path = self._directory / f"{_FILE_PREFIX}{now:%Y%m%d}{_FILE_SUFFIX}"',
@@ -242,6 +246,7 @@ _SAFETY_ALLOWED_DELETED_LINES = {
         "            if file_date < cutoff:",
         "                path.unlink()",
         '        for path in sorted(self._directory.glob(f"{_FILE_PREFIX}*{_FILE_SUFFIX}")):',
+        '        """One console send (every OSC send maps 1:1 to an executed event)."""',
     ),
     "server/safety/backup.py": (
         "Three rules: ① once at session start, ② periodic (default 10 minutes,",

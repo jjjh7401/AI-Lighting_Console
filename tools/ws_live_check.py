@@ -83,7 +83,7 @@ async def drive(instruction: str) -> None:
                 print(event.get("text", "")[:1200])
                 print("--- commands ---")
                 for row in event.get("commands", [])[:40]:
-                    print(f"  {row.get('status','?'):14s} {row.get('command','')[:110]}")
+                    print(f"  {row.get('status', '?'):14s} {row.get('command', '')[:110]}")
                 return
             elif kind == "song_timeline":
                 tl = event.get("timeline", {})
