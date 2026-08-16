@@ -5109,7 +5109,16 @@ class ChatSession:
 
     def _position_preset_pool_slots(self) -> set[int] | None:
         """The Position pool's stored preset numbers, or None when the pool
-        cannot be read (callers fall back to static examples, never a guess)."""
+        cannot be read (callers fall back to static examples, never a guess).
+
+        A TRUNCATED listing is "cannot be read", not a smaller pool: the
+        responder caps ``children`` at 24 (PROTOCOL §4.2), so past 24 presets
+        the cap window hides real slots and absence stops meaning emptiness.
+        Live-measured 2026-08-16: a 31-preset pool made the store read-back
+        report 10 freshly stored presets as "미확인 0/10" because slots
+        41~50 fell outside the window. Unknown ≠ empty — partial reads join
+        the unreadable path, which every caller already renders honestly.
+        """
         pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
         probe = self._registry.dispatch(
             ToolCall(
@@ -5127,6 +5136,15 @@ class ChatSession:
         children = payload.get("children") if isinstance(payload, dict) else None
         if not isinstance(children, list):
             return None
+        # 절단 판정은 두 경로 — 응답기 truncated 플래그 또는 childCount 산술.
+        # 한쪽만 삭제돼도 나머지가 잡는다 (TRUNCATE-001과 같은 이중 방어).
+        if payload.get("truncated"):
+            return None
+        node = payload.get("node")
+        if isinstance(node, dict):
+            child_count = node.get("childCount")
+            if isinstance(child_count, int) and child_count > len(children):
+                return None
         slots: set[int] = set()
         for child in children:
             if isinstance(child, dict):

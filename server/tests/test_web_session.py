@@ -1594,6 +1594,8 @@ class _PresetPoolRegistry:
         pool_error=False,
         readback_error=False,
         status="executed_ok",
+        truncated=False,
+        child_count=None,
     ):
         self.calls = calls
         self.pool = tuple(pool)
@@ -1601,6 +1603,8 @@ class _PresetPoolRegistry:
         self.pool_error = pool_error
         self.readback_error = readback_error
         self.status = status
+        self.truncated = truncated
+        self.child_count = child_count
         self.state_reads = 0
         self.wrote = False
 
@@ -1622,11 +1626,16 @@ class _PresetPoolRegistry:
             before_write = not self.wrote
             error = self.pool_error if before_write else self.readback_error
             slots = self.pool if before_write else self.readback
+            payload = {"children": [{"i": n} for n in slots]}
+            if self.truncated:
+                payload["truncated"] = True
+            if self.child_count is not None:
+                payload["node"] = {"childCount": self.child_count}
             return ToolExecution(
                 ToolResult(
                     tool_call_id=call.id,
                     name=call.name,
-                    content=("" if error else json.dumps({"children": [{"i": n} for n in slots]})),
+                    content=("" if error else json.dumps(payload)),
                     is_error=error,
                 )
             )
@@ -1779,6 +1788,35 @@ class TestPositionPresetOverwriteGuard:
         assert "확인하지 못했습니다" in unreadable["text"]
         assert "확인하지 못했습니다" not in verified["text"]
         assert unreadable["text"] != verified["text"]
+
+    # 절단 실측 2026-08-16 — 31개 풀에서 캡(24) 밖의 신규 저장 10건이
+    # "미확인 0/10"으로 오보됐다. 절단은 판독 불가이지 빈칸이 아니다.
+    def test_a_truncated_pool_listing_is_unreadable_not_empty(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 41번부터 저장해줘",
+            pool=tuple(range(1, 25)),
+            truncated=True,
+        )
+
+        # 저장은 진행하되(판독 불가 규율과 동일) 되읽기는 전건 미검증이다.
+        assert len(_writes(calls)) == 10
+        assert "되읽지 못했습니다" in event["text"]
+        assert "미확인 2.4" not in event["text"]
+        assert "0개 확인" not in event["text"]
+
+    def test_childcount_arithmetic_alone_marks_the_pool_unreadable(self, tmp_path):
+        # truncated 플래그가 빠져도 childCount > len(children)이 잡는다 — 이중 방어.
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 41번부터 저장해줘",
+            pool=tuple(range(1, 25)),
+            child_count=31,
+        )
+
+        assert len(_writes(calls)) == 10
+        assert "되읽지 못했습니다" in event["text"]
+        assert "0개 확인" not in event["text"]
 
     # AC-PRESETGUARD-007 — 되읽기 산술이 회신에 실린다 (뮤테이션 필수)
     def test_the_readback_carries_arithmetic(self, tmp_path):
