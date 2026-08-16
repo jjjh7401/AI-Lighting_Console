@@ -106,6 +106,7 @@ from server.safety.session_context import bind_session_key, new_session_key, res
 from server.spatial.mib import PositionCuePlan, position_cue_bundle, premove_follow_command
 from server.spatial.pointing import (
     BASIC_POSITION_SEQUENCE,
+    FX_POSITION_SEQUENCE,
     PointingTarget,
     SpatialPointingError,
     aim_pan_tilt,
@@ -113,6 +114,7 @@ from server.spatial.pointing import (
     basic_position_presets,
     fan_chain,
     fan_pan_tilt,
+    fx_position_presets,
     pointing_commands,
     position_cue_store_commands,
     position_preset_store_commands,
@@ -1581,6 +1583,19 @@ _BASIC_POSITIONS_REQUEST = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _BASIC_POSITIONS_START = re.compile(r"(?P<no>\d+)\s*(?:번)?\s*(?:부터|에서(?:부터)?|번대)")
+
+# The FX-positions request: the geometric skeletons phaser effects swing
+# around (sweeps, circle/bally bases, tails, splits), a set distinct from the
+# design-oriented BASIC ten. The vocabulary is disjoint from
+# `_BASIC_POSITIONS_REQUEST` (이펙트/효과/fx/effect vs 기본/베이직/basic), so
+# neither request can leak into the other flow. '포지션' is REQUIRED between
+# the effect word and the store verb — effect-APPLICATION sentences ("무빙
+# 이펙트 적용해줘") carry an effect word but no position noun and no store
+# verb, and must keep reaching their current handlers untouched.
+_FX_POSITIONS_REQUEST = re.compile(
+    r"(?:이펙트|효과|fx|effect).{0,16}?(?:포지션|position).*?(?:저장|만들|잡아|생성)",
+    re.IGNORECASE | re.DOTALL,
+)
 
 # 재생성: 이미 저장된 구간을 **제자리에서** 다시 잡는다. 큐는 프리셋 REFERENCE를
 # 들고 있으므로 같은 번호에 다시 저장하면 그 프리셋을 쓰는 모든 큐가 따라온다.
@@ -3088,31 +3103,81 @@ class ChatSession:
         """Build the ten canonical positions for THIS rig and store them.
 
         Preset 1 of the run is ALWAYS 'Home'; the rest follow
-        ``BASIC_POSITION_SEQUENCE`` from most basic to most varied. The first
-        preset number comes from the instruction ("N번부터") or from ONE
-        question card — never from a guessed free slot: ``Store Preset``
-        silently overwrites, so the number is the operator's call.
-        Each look is applied, stored, labelled and cleared as its own bundle,
-        so one refused look never voids the other nine.
+        ``BASIC_POSITION_SEQUENCE`` from most basic to most varied. Number
+        sourcing, the overwrite guard, the per-look store loop and the pool
+        readback all live in ``_store_position_preset_sequence`` — shared
+        with the FX flow so the two sets can never drift on safety behaviour.
         """
         if _BASIC_POSITIONS_REQUEST.search(text) is None:
             return None
-        fixtures = self._read_pointing_coordinates("basic-presets-read")
+        return self._store_position_preset_sequence(
+            text,
+            noun="기본 포지션",
+            sequence=BASIC_POSITION_SEQUENCE,
+            build=basic_position_presets,
+            read_id="basic-presets-read",
+            bundle="basic-preset",
+            example="기본 포지션 10개를 프리셋 21번부터 저장해줘",
+        )
+
+    def _fx_position_presets(self, text: str) -> InstructionResult | None:
+        """Build the ten FX skeleton positions for THIS rig and store them.
+
+        These are the geometric backbones phaser effects swing around
+        (``FX_POSITION_SEQUENCE``: sweeps, sky/floor extremes, circle and
+        bally bases, tails, splits), a set distinct from the design-oriented
+        BASIC ten. The flow is the EXACT basic store flow — explicit-number
+        occupancy guard, the one shared overwrite card, per-look bundles,
+        post-store pool readback — via ``_store_position_preset_sequence``;
+        no FX-specific card or vocabulary exists.
+        """
+        if _FX_POSITIONS_REQUEST.search(text) is None:
+            return None
+        return self._store_position_preset_sequence(
+            text,
+            noun="FX 포지션",
+            sequence=FX_POSITION_SEQUENCE,
+            build=fx_position_presets,
+            read_id="fx-presets-read",
+            bundle="fx-preset",
+            example="이펙트 포지션 프리셋을 41번부터 저장해줘",
+        )
+
+    def _store_position_preset_sequence(
+        self,
+        text: str,
+        *,
+        noun: str,
+        sequence: tuple[str, ...],
+        build: Callable[[Sequence[tuple[int, tuple[float, float, float]]]], Sequence[tuple]],
+        read_id: str,
+        bundle: str,
+        example: str,
+    ) -> InstructionResult | None:
+        """Store one named position sequence as consecutive Position presets.
+
+        The first preset number comes from the instruction ("N번부터") or from
+        ONE question card — never from a guessed free slot: ``Store Preset``
+        silently overwrites, so the number is the operator's call.
+        Each look is applied, stored, labelled and cleared as its own bundle,
+        so one refused look never voids the others.
+        """
+        fixtures = self._read_pointing_coordinates(read_id)
         if isinstance(fixtures, InstructionResult):
             return fixtures
         if not fixtures:
             return self._pointing_refusal(
-                "좌표가 확인된 장비가 없어 기본 포지션 프리셋을 시작하지 않았습니다."
+                f"좌표가 확인된 장비가 없어 {noun} 프리셋을 시작하지 않았습니다."
             )
         start_match = _BASIC_POSITIONS_START.search(text)
         if start_match is not None:
             start_no = int(start_match.group("no"))
         else:
-            count = len(BASIC_POSITION_SEQUENCE)
+            count = len(sequence)
             free_starts = self._position_preset_free_starts()
             if free_starts:
                 prompt = (
-                    f"기본 포지션 {count}개를 Position 프리셋 몇 번부터 저장할까요? "
+                    f"{noun} {count}개를 Position 프리셋 몇 번부터 저장할까요? "
                     f"{count}칸 연속 비어 있는 구간을 콘솔에서 확인했습니다."
                 )
                 options = tuple(
@@ -3121,7 +3186,7 @@ class ChatSession:
                 )
             else:
                 prompt = (
-                    f"기본 포지션 {count}개를 Position 프리셋 몇 번부터 저장할까요? "
+                    f"{noun} {count}개를 Position 프리셋 몇 번부터 저장할까요? "
                     f"(예: 1 → Preset 2.1~2.{count}) 이미 있는 번호는 덮어씁니다."
                 )
                 options = (
@@ -3141,8 +3206,7 @@ class ChatSession:
                 start_no = int(re.search(r"\d+", answer or "").group(0))
             except AttributeError:
                 return self._pointing_refusal(
-                    "시작 프리셋 번호를 받지 못해 저장을 시작하지 않았습니다. "
-                    "예: '기본 포지션 10개를 프리셋 21번부터 저장해줘'"
+                    f"시작 프리셋 번호를 받지 못해 저장을 시작하지 않았습니다. 예: '{example}'"
                 )
         if start_no <= 0:
             return self._pointing_refusal("시작 프리셋 번호는 1 이상이어야 합니다.")
@@ -3155,10 +3219,10 @@ class ChatSession:
         if not verdict.proceed:
             return self._pointing_refusal(_preset_overwrite_refusal(verdict))
         try:
-            looks = basic_position_presets(fixtures)
+            looks = build(fixtures)
         except SpatialPointingError as error:
-            return self._pointing_refusal(f"기본 포지션을 계산할 수 없습니다: {error}")
-        run = self._store_position_preset_looks(looks, start_no, before=pool_slots)
+            return self._pointing_refusal(f"{noun}을 계산할 수 없습니다: {error}")
+        run = self._store_position_preset_looks(looks, start_no, before=pool_slots, bundle=bundle)
         if not run.stored:
             return self._pointing_refusal(
                 "어느 포지션도 계산되지 않아 프리셋을 저장하지 않았습니다."
@@ -3170,7 +3234,7 @@ class ChatSession:
                 verdict,
                 self._verify_preset_span_stored(run),
                 lead=(
-                    f"리그 배치에서 유도한 기본 포지션 {len(run.stored)}개를 "
+                    f"리그 배치에서 유도한 {noun} {len(run.stored)}개를 "
                     f"Position 프리셋에 저장 요청했습니다: {', '.join(run.stored)}."
                 ),
                 tail=(
@@ -3234,7 +3298,12 @@ class ChatSession:
         return _PresetSpanVerdict("unrecognised", collisions)
 
     def _store_position_preset_looks(
-        self, looks: Sequence[tuple], start_no: int, *, before: set[int] | None
+        self,
+        looks: Sequence[tuple],
+        start_no: int,
+        *,
+        before: set[int] | None,
+        bundle: str = "basic-preset",
     ) -> _PresetStoreRun:
         """룩마다 적용 → ``Store`` → ``Label`` → ``ClearAll``을 **별개 번들**로
         디스패치한다 — 한 룩이 거절돼도 나머지 아홉은 산다.
@@ -3258,7 +3327,7 @@ class ChatSession:
             ]
             executed = self._registry.dispatch(
                 ToolCall(
-                    id=f"basic-preset-{preset_no}",
+                    id=f"{bundle}-{preset_no}",
                     name="run_commands",
                     arguments={"commands": commands},
                 )
@@ -6424,6 +6493,8 @@ class ChatSession:
                     result = self._regenerate_position_presets(text)
                 if result is None:
                     result = self._basic_position_presets(text)
+                if result is None:
+                    result = self._fx_position_presets(text)
                 if result is None:
                     result = self._position_cue_sheet(text)
                 if result is None:

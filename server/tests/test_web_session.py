@@ -29,6 +29,7 @@ from server.orchestrator.last_created import LastCreated
 from server.orchestrator.tools import CommandOutcome, ToolExecution
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate
+from server.spatial.pointing import FX_POSITION_SEQUENCE
 from server.web.approval_bridge import ApprovalChannel
 from server.web.measure import RoundTripRecorder
 from server.web.question import UNANSWERED, QuestionRequest
@@ -2321,6 +2322,141 @@ class TestPositionPresetRegeneration:
 
         assert _writes(calls) == []
         assert "읽지 못" in event["text"]
+
+
+class TestFxPositionPresets:
+    """FX 포지션 프리셋 — 페이저 이펙트의 골격 10종을 BASIC과 **동일한** 안전
+    장치(점유 가드 → 덮어쓰기 카드 → 룩별 번들 → 되읽기 산술)로 저장한다.
+
+    흐름 자체는 `_store_position_preset_sequence`로 BASIC과 공유되므로, 여기서는
+    라우팅(상호 배타)과 FX 고유 문면·라벨 순서를 겨눈다.
+    """
+
+    def _run(self, tmp_path, text, *, answers=(), **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, **rig)
+        chan = _AnsweringChannel(answers)
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # 라우팅 — FX 문장은 FX 흐름으로 들어가 41번부터 열 개를 저장한다. 재생성
+    # 핸들러가 앞에서 가로챘다면 (풀에 10칸 연속 구간이 없으므로) 쓰기 0건으로
+    # 거부됐을 것이다 — 열 개의 Store가 그 오인 매칭의 부재를 함께 증언한다.
+    def test_an_fx_request_stores_ten_presets_from_the_named_number(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "이펙트 포지션 프리셋을 41번부터 저장해줘",
+            pool=(1, 2, 3),
+        )
+
+        assert chan.asked == []
+        assert len(_writes(calls)) == 10
+        commands = _all_commands(calls)
+        for offset, label in enumerate(FX_POSITION_SEQUENCE):
+            assert f"Store Preset 2.{41 + offset}" in commands
+            assert f"Label Preset 2.{41 + offset} '{label}'" in commands
+
+    # 라우팅 회귀 — '기본 포지션' 문장은 여전히 BASIC 시퀀스로 간다.
+    def test_a_basic_request_still_lands_in_the_basic_flow(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+        )
+
+        commands = _all_commands(calls)
+        assert "Label Preset 2.21 'Home'" in commands
+        assert not any("'Sweep L'" in command for command in commands)
+
+    # 라우팅 — 저장 동사 없는 이펙트 **적용** 요청은 어느 프리셋 흐름에도 안 간다.
+    def test_an_effect_application_request_enters_neither_flow(self, tmp_path):
+        provider = ScriptedProvider([_final("이펙트 적용을 확인하겠습니다")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls)
+        chan = _AnsweringChannel([])
+        session._question_channel = chan
+
+        session.run_instruction("무빙 이펙트 적용해줘")
+
+        # 모델까지 내려갔다 — 프리셋 저장 흐름의 카드도 쓰기도 없다.
+        assert len(provider.calls) == 1
+        assert chan.asked == []
+        assert not any("Store Preset" in command for command in _all_commands(calls))
+
+    # 명시 번호가 점유 슬롯과 겹치면 카드가 뜨고, '취소'는 쓰기 0건이다.
+    def test_a_collision_asks_the_card_and_cancel_writes_nothing(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "이펙트 포지션 프리셋을 41번부터 저장해줘",
+            pool=(41, 42, 47),
+            answers=["취소"],
+        )
+
+        assert _writes(calls) == []
+        assert len(chan.asked) == 1
+        assert "덮어씁니다" in chan.asked[0].prompt
+        assert "2.41" in chan.asked[0].prompt
+        assert "승인" in event["text"] or "저장하지 않" in event["text"]
+
+    # 승낙 시 룩별 독립 번들이 FX_POSITION_SEQUENCE 순서·라벨 그대로 나간다.
+    def test_consent_stores_each_look_as_its_own_bundle_in_sequence_order(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "이펙트 포지션 프리셋을 41번부터 저장해줘",
+            pool=(41, 42, 47),
+            readback=tuple(range(41, 51)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        writes = _writes(calls)
+        assert len(writes) == 10
+        for offset, (call, label) in enumerate(zip(writes, FX_POSITION_SEQUENCE, strict=True)):
+            commands = call.arguments["commands"]
+            assert commands[-3] == f"Store Preset 2.{41 + offset}"
+            assert commands[-2] == f"Label Preset 2.{41 + offset} '{label}'"
+            assert commands[-1] == "ClearAll"
+
+    # 저장 후 되읽기 산술(착지/누락)이 회신 문면에 실린다.
+    def test_the_readback_carries_arithmetic_including_a_missing_slot(self, tmp_path):
+        verified, verified_calls, _c1 = self._run(
+            tmp_path,
+            "이펙트 포지션 프리셋을 41번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=tuple(range(41, 51)),
+        )
+        landed = tuple(n for n in range(41, 51) if n != 47)
+        partial, partial_calls, _c2 = self._run(
+            tmp_path,
+            "이펙트 포지션 프리셋을 41번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=landed,
+        )
+
+        assert len(_writes(verified_calls)) == 10
+        assert "기대 10개" in verified["text"]
+        assert "10개 확인" in verified["text"]
+        assert len(_writes(partial_calls)) == 10
+        assert "미확인" in partial["text"]
+        assert "2.47" in partial["text"]
+
+    # 번호 미지정이면 시작 번호 질문 카드가 정확히 한 번 뜬다.
+    def test_no_number_asks_the_start_question_once(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "이펙트 포지션 프리셋 저장해줘",
+            pool=(1, 2, 3),
+            answers=[],  # UNANSWERED
+        )
+
+        assert len(chan.asked) == 1
+        assert "몇 번부터" in chan.asked[0].prompt
+        assert "FX 포지션" in chan.asked[0].prompt
+        assert _writes(calls) == []
+        assert "시작 프리셋 번호" in event["text"]
 
 
 class TestPositionCueStoreSession:
