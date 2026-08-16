@@ -22,11 +22,14 @@ import { apiUrl } from "../launchContext";
  * stored itself — the console exposes no preset colour (Appearance/Color
  * props answered "not readable", live-probed 2026-08-16), so a manual
  * preset's colour is unknown and the API honestly omits the field rather
- * than inventing one. */
+ * than inventing one. `colors` (optional, 2+ hexes) is the same rule for the
+ * app's own multi-colour PHASER presets: the step colours it stored from its
+ * palette, drawn as the split circle the console shows on a ⋯ preset. */
 export interface PresetEntry {
   no: number;
   name: string;
   color?: string;
+  colors?: string[];
 }
 
 export interface PresetPoolContents {
@@ -51,6 +54,7 @@ function entryOf(raw: unknown): PresetEntry | null {
   const no = (raw as Record<string, unknown>).no;
   const name = (raw as Record<string, unknown>).name;
   const color = (raw as Record<string, unknown>).color;
+  const colors = (raw as Record<string, unknown>).colors;
   // A name-only entry (the responder could not number the slot) is dropped:
   // a tile without a REAL console number would invite addressing by position,
   // the exact trap the real-`no` rule exists to prevent.
@@ -59,6 +63,16 @@ function entryOf(raw: unknown): PresetEntry | null {
   // Only a well-formed hex colour rides through — anything else is treated
   // as absent (never a CSS injection channel).
   if (typeof color === "string" && /^#[0-9a-fA-F]{6}$/.test(color)) entry.color = color;
+  // A phaser's step colours ride only when EVERY entry is a well-formed hex
+  // and there are at least 2 (a 1-step list is not a phaser; a bad entry
+  // drops the whole field — never a partial or injected gradient).
+  if (
+    Array.isArray(colors) &&
+    colors.length >= 2 &&
+    colors.every((c) => typeof c === "string" && /^#[0-9a-fA-F]{6}$/.test(c))
+  ) {
+    entry.colors = colors as string[];
+  }
   return entry;
 }
 
@@ -135,6 +149,16 @@ export interface PresetPoolPopupProps {
   onRefresh: () => void;
 }
 
+/** The console's ⋯ split circle: N step colours as N equal conic segments.
+ * `from 270deg` puts a 2-step split on the horizontal (top/bottom halves,
+ * matching the onPC pool tile); 3 steps become thirds (the Rainbow pie).
+ * Inputs are already hex-validated by `entryOf` — never a CSS channel. */
+export function phaserGradient(colors: string[]): string {
+  const n = colors.length;
+  const stops = colors.map((c, i) => `${c} ${(i * 100) / n}% ${((i + 1) * 100) / n}%`);
+  return `conic-gradient(from 270deg, ${stops.join(", ")})`;
+}
+
 export function PresetPoolPopup({ state, onClose, onRefresh }: PresetPoolPopupProps) {
   return (
     <div className="preset-popup-overlay" onClick={onClose} role="presentation">
@@ -169,7 +193,13 @@ export function PresetPoolPopup({ state, onClose, onRefresh }: PresetPoolPopupPr
                 {state.contents.presets.map((preset) => (
                   <div key={preset.no} className="pool-tile pool-tile-info preset-popup-tile">
                     <span className="pool-tile-no">{preset.no}</span>
-                    {preset.color ? (
+                    {preset.colors ? (
+                      <span
+                        className="preset-popup-swatch"
+                        style={{ background: phaserGradient(preset.colors) }}
+                        aria-label={`색 ${preset.colors.join("/")}`}
+                      />
+                    ) : preset.color ? (
                       <span
                         className="preset-popup-swatch"
                         style={{ background: preset.color }}

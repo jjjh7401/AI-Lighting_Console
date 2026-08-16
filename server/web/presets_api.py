@@ -90,20 +90,45 @@ def _palette_hex_by_label() -> dict[str, str]:
     return {label: _hex(rgb) for label, rgb in COLOR_PALETTE_SEQUENCE}
 
 
-def _swatch_of(name: object, palette: dict[str, str]) -> str | None:
-    """The known palette colour for a preset NAME, tolerating the console's
-    duplicate-name suffix (``Warm White#2`` is still Warm White)."""
+def _phaser_hexes_by_label() -> dict[str, tuple[str, ...]]:
+    """페이저 라벨 → 스텝 순서의 ``#rrggbb`` 목록 — 앱이 아는 색만.
+
+    같은 정직성 규율의 확장이다: 콘솔은 프리셋 색을 노출하지 않지만, 멀티컬러
+    페이저 10종은 앱 자신이 ``COLOR_PHASER_SEQUENCE``의 팔레트 스텝으로
+    저장했다(4.31~4.40, 2026-08-16 실기) — 그 스텝 색이 콘솔이 ⋯ 프리셋에
+    그리는 분할 원의 유일하게 정직한 출처다. 수동 페이저는 여기 없으므로
+    여전히 색 없이 강등된다.
+    """
+    from server.web.session import COLOR_PALETTE_SEQUENCE, COLOR_PHASER_SEQUENCE
+
+    def _hex(rgb: tuple[int, int, int]) -> str:
+        return "#" + "".join(f"{round(v * 255 / 100):02x}" for v in rgb)
+
+    palette = {label: _hex(rgb) for label, rgb in COLOR_PALETTE_SEQUENCE}
+    return {
+        label: tuple(palette[step] for step in steps)
+        for label, steps, _form, _phase in COLOR_PHASER_SEQUENCE
+    }
+
+
+def _base_name(name: object) -> str | None:
+    """콘솔 중복명 접미 제거 — ``Warm White#2``는 여전히 Warm White."""
     if not isinstance(name, str):
         return None
-    base = name.split("#", 1)[0]
-    return palette.get(base)
+    return name.split("#", 1)[0]
 
 
 def _with_swatches(objects: list[dict]) -> list[dict]:
     palette = _palette_hex_by_label()
+    phasers = _phaser_hexes_by_label()
     enriched = []
     for obj in objects:
-        swatch = _swatch_of(obj.get("name"), palette)
+        base = _base_name(obj.get("name"))
+        steps = phasers.get(base) if base else None
+        if steps:
+            enriched.append({**obj, "colors": list(steps)})
+            continue
+        swatch = palette.get(base) if base else None
         enriched.append({**obj, "color": swatch} if swatch else obj)
     return enriched
 

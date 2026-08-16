@@ -175,6 +175,41 @@ class TestPaletteSwatches:
         # Amber (100,55,5) → 255,140,13
         assert palette["Amber"] == "#ff8c0d"
 
+    def test_phaser_presets_carry_their_step_colours_in_order(self):
+        # 앱 자신이 저장한 페이저(4.31~4.40)의 스텝 색 — 같은 발명 금지
+        # 규율의 확장: COLOR_PHASER_SEQUENCE가 유일한 출처다.
+        tree = {
+            POOLS_PATH: _payload(POOLS_PATH, [{"i": 4, "name": "Color"}]),
+            f"{POOLS_PATH}/4": _payload(
+                f"{POOLS_PATH}/4",
+                [
+                    {"i": 33, "name": "Chase RB"},
+                    {"i": 37, "name": "Rainbow"},
+                    {"i": 39, "name": "Duo GL#2"},  # 콘솔 중복명 접미 동일 취급
+                    {"i": 1, "name": "MyPhaser"},  # 수동 페이저 — 색 미상, 발명 금지
+                ],
+                name="Color",
+            ),
+        }
+        client, _port = _client(tree)
+        presets = {p["no"]: p for p in client.get("/api/presets/4").json()["presets"]}
+        from server.web.presets_api import _palette_hex_by_label
+
+        hx = _palette_hex_by_label()
+        assert presets[33]["colors"] == [hx["Red"], hx["Blue"]]  # 스텝 순서 보존
+        assert presets[37]["colors"] == [hx["Red"], hx["Green"], hx["Blue"]]
+        assert presets[39]["colors"] == [hx["Green"], hx["Lavender"]]  # 접미 동일 취급
+        assert "colors" not in presets[1] and "color" not in presets[1]
+
+    def test_every_catalog_phaser_label_resolves_to_step_hexes(self):
+        from server.web.presets_api import _phaser_hexes_by_label
+        from server.web.session import COLOR_PHASER_SEQUENCE
+
+        hexes = _phaser_hexes_by_label()
+        assert set(hexes) == {label for label, _s, _f, _p in COLOR_PHASER_SEQUENCE}
+        for label, steps, _form, _phase in COLOR_PHASER_SEQUENCE:
+            assert len(hexes[label]) == len(steps) >= 2
+
 
 class TestPagedPoolRead:
     """24캡 너머 풀의 팝업 판독 — 라이브 2026-08-16: 페이저 10종(4.31~4.40)이
