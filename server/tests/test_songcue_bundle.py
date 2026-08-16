@@ -179,6 +179,9 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # 2026-08-15 catch-up — SPEC-COPILOT-IMGLAYOUT-001 (analyse_layout_image
 # registration/definition plumbing): 17→18, 971 merged away, 1013/1029 added.
 # Protected ranges re-checked by the overlap assert below: zero overlap.
+# 2026-08-16 catch-up — spatial rotation opt-in (include_rotation read
+# plumbing in get_spatial_context): 54→56 hunks; all in the SPATIAL read
+# helper/registration region, none touching dedupe or programmer state.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -199,8 +202,8 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     479,
     620,
     952,
-    971,
     989,
+    1004,
     1007,
     1011,
     1013,
