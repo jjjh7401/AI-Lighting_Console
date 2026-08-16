@@ -157,7 +157,16 @@ class AuditLog:
         then apply), everything else is rewritten in place atomically
         (same-dir temp + ``os.replace``). After the first pass the audit
         family is small, so later startups re-scan only kilobytes.
+
+        TODAY's file is deliberately SKIPPED (independent review 2026-08-16):
+        a concurrent AuditLog on the same directory (double-launched server,
+        tool process) only ever appends to the CURRENT day's file, and an
+        append racing this rewrite's ``os.replace`` would land on the
+        unlinked inode — a silently lost durable event. Past days have no
+        writers, so rewriting them is race-free; today's residue splits on
+        the next startup once the date has rolled.
         """
+        today = now.date()
         probe_cutoff = (now - timedelta(days=self._probe_retention_days)).date()
         for path in sorted(self._directory.glob(f"{_FILE_PREFIX}*{_FILE_SUFFIX}")):
             stamp = path.name[len(_FILE_PREFIX) : -len(_FILE_SUFFIX)]
@@ -165,6 +174,8 @@ class AuditLog:
                 file_date = datetime.strptime(stamp, "%Y%m%d").date()
             except ValueError:
                 continue  # foreign file — never rewrite what we did not write
+            if file_date >= today:
+                continue  # a concurrent instance may be appending here — never rewrite
             probe_path = self._directory / f"{_PROBE_PREFIX}{stamp}{_FILE_SUFFIX}"
             keep_probes = file_date >= probe_cutoff
             moved = 0
@@ -257,7 +268,11 @@ class AuditLog:
     def log_executed(
         self, command: str, *, kind: str = "command", ok: bool = True, detail: str = "", **extra
     ) -> None:
-        """One console send (every OSC send maps 1:1 to an executed event)."""
+        """One console send — one executed event, with ONE bounded exception:
+        probe kinds (:data:`PROBE_KINDS`) route to the capped short-retention
+        probe family, so past the daily cap a probe send leaves only the
+        aggregate ``probe_log_capped`` marker. Command/gate/deploy sends keep
+        the literal 1:1 durable mapping (see the class @MX:ANCHOR)."""
         self.record(
             {"event": "executed", "command": command, "kind": kind, "ok": ok, "detail": detail}
             | extra

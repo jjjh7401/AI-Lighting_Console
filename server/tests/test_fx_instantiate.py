@@ -482,6 +482,20 @@ def test_an_ascii_label_is_never_rewritten():
     assert plan.label == "Gently Sway"
 
 
+def test_a_non_ascii_fx_id_cannot_smuggle_an_invisible_label_back_in():
+    # 독립 리뷰 2026-08-16: 폴백은 fx_id에서 파생되므로 fx_id 자체가 한글이면
+    # 파생 라벨도 한글 — 구조적으로 거부해야 '보이지 않는 타일'이 재발하지 않는다.
+    fx = _fx(
+        "pulse",
+        fx_id="한글-아이디",
+        name="한글 이름",
+        steps=[{"Dimmer": 100}, {"Dimmer": 0}],
+        speed=60,
+    )
+    with pytest.raises(FxInstantiationError, match="console-displayable ASCII"):
+        build_fx_bundle(fx, group=11, sequence=12)
+
+
 def test_the_plan_exposes_the_lines_the_dedupe_will_compare():
     plan = build_fx_bundle(PATTERNS["pulse"], group=11, sequence=12)
     assert "ClearAll" not in plan.non_exempt_commands
