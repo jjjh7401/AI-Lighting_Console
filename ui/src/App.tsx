@@ -539,8 +539,21 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
+  // macOS WKWebView/Safari 계열의 파일 선택창과 일부 드래그 소스는 MIME을
+  // 비워 보내거나 accept의 MIME 지정을 무시한다 — 확장자에서 계약 §1의 세
+  // MIME으로 역산하는 폴백. 여기서 못 알아낸 파일은 이미지가 아니다.
+  const layoutImageMimeFor = (file: File): string | null => {
+    if (LAYOUT_IMAGE_MIME_TYPES.includes(file.type)) return file.type;
+    const name = file.name.toLowerCase();
+    if (name.endsWith(".png")) return "image/png";
+    if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+    if (name.endsWith(".webp")) return "image/webp";
+    return null;
+  };
+
   const uploadLayoutImage = (file: File) => {
-    if (!LAYOUT_IMAGE_MIME_TYPES.includes(file.type)) {
+    const mimeType = layoutImageMimeFor(file);
+    if (mimeType === null) {
       setLayoutImageUploadError("이미지는 PNG, JPEG 또는 WEBP 파일만 첨부할 수 있습니다.");
       return;
     }
@@ -561,7 +574,7 @@ export default function App() {
         setLayoutImageUploadError("파일을 이미지 프레임으로 변환하지 못했습니다.");
         return;
       }
-      if (!sendLayoutImageUpload(file.name, file.type, result.slice(separator + 1))) {
+      if (!sendLayoutImageUpload(file.name, mimeType, result.slice(separator + 1))) {
         setLayoutImageUploadError("서버 연결이 끊겨 이미지를 올릴 수 없습니다.");
         return;
       }
@@ -576,7 +589,7 @@ export default function App() {
   // 경로로 보낸다. 각 경로의 검증·오류 문구는 그대로다: 여기는 라우터일 뿐
   // 두 번째 검증 계층이 아니다.
   const routeAttachment = (file: File) => {
-    if (LAYOUT_IMAGE_MIME_TYPES.includes(file.type)) {
+    if (layoutImageMimeFor(file) !== null) {
       uploadLayoutImage(file);
     } else {
       uploadVectorworksExport(file);
@@ -746,7 +759,7 @@ export default function App() {
                     ref={vectorworksInputRef}
                     className="composer-file-input"
                     type="file"
-                    accept=".csv,.txt,.xlsx,.mvr,image/png,image/jpeg,image/webp"
+                    accept=".csv,.txt,.xlsx,.mvr,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
                     onChange={uploadAttachment}
                     disabled={composer.inputDisabled}
                   />
