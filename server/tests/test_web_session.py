@@ -1533,11 +1533,17 @@ class TestBasicPositionPresets:
         channel = self._Channel([])
         session._question_channel = channel
 
-        session.run_instruction("기본 포지션 프리셋을 5번부터 만들어줘")
+        event = session.run_instruction("기본 포지션 프리셋을 5번부터 만들어줘")
 
         assert channel.asked == []
         writes = [call for call in calls if call.name == "run_commands"]
         assert "Store Preset 2.5" in writes[0].arguments["commands"]
+        # 이 리그는 query_state에 "{}"를 돌려주므로 풀 판독이 None(미상)이다 —
+        # 겹침 가드는 `unverified` 갈래를 타 카드 없이 진행하며(오늘 동작 보존),
+        # 회신은 점유를 확인하지 못했음을 **명시한다**. 카드가 안 뜬 이유가
+        # "검증된 빈칸"이 아니라 "판독 실패"임을 이 단정이 고정한다
+        # (SPEC-COPILOT-PRESETGUARD-001 AC-006 · 스텁 함정).
+        assert "확인하지 못했습니다" in event["text"]
 
     def test_no_answer_refuses_instead_of_guessing_a_slot(self, tmp_path):
         provider = ScriptedProvider([])
@@ -1553,6 +1559,405 @@ class TestBasicPositionPresets:
         assert calls[0].name == "get_spatial_context"
         assert all(call.name in ("get_spatial_context", "query_state") for call in calls)
         assert "시작 프리셋 번호" in event["text"]
+
+
+class _PresetPoolRegistry:
+    """``query_state``가 **실제 Position 풀 페이로드**를 돌려주는 리그.
+
+    기존 ``TestBasicPositionPresets._registry``는 ``query_state``에 ``"{}"``를
+    돌려주므로 ``_position_preset_pool_slots()``가 ``None``(미상)이 되고, 점유
+    가드는 ``unverified`` 갈래로 빠진다 — **가드가 없어도 통과하는** 위양성
+    리그다(acceptance.md 머리말 '스텁 함정'). 점유 가드를 검증하는 테스트는
+    전부 이 리그처럼 풀 판독이 **성공하는** 상태를 명시 구성해야 한다.
+
+    ``pool``은 첫 ``query_state``(가드 판독), ``readback``은 그 이후
+    (저장 되읽기)가 보는 점유 집합이다.
+    """
+
+    _FIXTURES = [
+        {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
+        {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
+    ]
+
+    def __init__(
+        self,
+        calls,
+        *,
+        pool=(),
+        readback=None,
+        pool_error=False,
+        readback_error=False,
+        status="executed_ok",
+    ):
+        self.calls = calls
+        self.pool = tuple(pool)
+        self.readback = self.pool if readback is None else tuple(readback)
+        self.pool_error = pool_error
+        self.readback_error = readback_error
+        self.status = status
+        self.state_reads = 0
+
+    def dispatch(self, call: ToolCall) -> ToolExecution:
+        self.calls.append(call)
+        if call.name == "get_spatial_context":
+            return ToolExecution(
+                ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(
+                        {"fixtures": self._FIXTURES, "coverage": {"complete": True}}
+                    ),
+                )
+            )
+        if call.name == "query_state":
+            self.state_reads += 1
+            first = self.state_reads == 1
+            error = self.pool_error if first else self.readback_error
+            slots = self.pool if first else self.readback
+            return ToolExecution(
+                ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=("" if error else json.dumps({"children": [{"i": n} for n in slots]})),
+                    is_error=error,
+                )
+            )
+        return ToolExecution(
+            ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+            (CommandOutcome(command="Store Preset", status=self.status),),
+        )
+
+
+class _AnsweringChannel:
+    def __init__(self, answers):
+        self.answers = list(answers)
+        self.asked = []
+
+    def ask(self, request, **_kwargs):
+        self.asked.append(request)
+        return self.answers.pop(0) if self.answers else UNANSWERED
+
+
+def _writes(calls):
+    return [call for call in calls if call.name == "run_commands"]
+
+
+def _all_commands(calls):
+    return [cmd for call in _writes(calls) for cmd in call.arguments["commands"]]
+
+
+class TestPositionPresetOverwriteGuard:
+    """SPEC-COPILOT-PRESETGUARD-001 §B.1/§B.2 — 점유 가드와 저장 되읽기.
+
+    판정 원칙: **손실 가능한 쓰기는 승낙의 증거 없이 진행하지 않는다.**
+    """
+
+    def _run(self, tmp_path, text, *, answers=(), channel=True, **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, **rig)
+        chan = _AnsweringChannel(answers) if channel else None
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # AC-PRESETGUARD-001 — 명시 번호의 충돌에서 쓰기가 0건이다 (뮤테이션 필수)
+    def test_an_explicit_number_hitting_stored_slots_writes_nothing(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            answers=["취소"],
+        )
+
+        assert _writes(calls) == []
+        assert len(chan.asked) == 1
+        assert "승인" in event["text"] or "저장하지 않" in event["text"]
+
+    # AC-PRESETGUARD-002 — 검증된 빈 구간에는 카드가 뜨지 않는다 (비공허성 짝)
+    def test_a_verified_empty_span_stores_without_asking(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+        )
+
+        assert chan.asked == []
+        writes = _writes(calls)
+        assert len(writes) == 10
+        commands = _all_commands(calls)
+        for offset in range(10):
+            assert f"Store Preset 2.{21 + offset}" in commands
+
+    # AC-PRESETGUARD-003 — 카드가 사라지는 슬롯을 번호로 열거한다
+    def test_the_card_lists_every_slot_that_disappears(self, tmp_path):
+        # 비연속 점유 {21,22,27} — "2.21~2.30" 범위 문구로는 22·27을 담을 수 없다.
+        _event, _calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            answers=["취소"],
+        )
+
+        prompt = chan.asked[0].prompt
+        assert "21" in prompt
+        assert "22" in prompt
+        assert "27" in prompt
+
+    # AC-PRESETGUARD-004 — 무응답에서 쓰기가 0건이다 (fail-closed · 뮤테이션 필수)
+    def test_an_unanswered_card_stores_nothing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            answers=[],  # UNANSWERED
+        )
+
+        assert _writes(calls) == []
+        assert "응답" in event["text"]
+
+    def test_no_ui_attached_stores_nothing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            channel=False,
+        )
+
+        assert _writes(calls) == []
+        assert "응답" in event["text"]
+
+    # AC-PRESETGUARD-005 — 승낙하면 진행하고 덮어쓴 슬롯을 회신한다 (비공허성 짝)
+    def test_an_accepted_card_stores_and_reports_the_overwritten_slots(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            readback=tuple(range(21, 31)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        # 카드가 실제로 떴고, 승낙 뒤에야 저장이 나갔다.
+        assert len(_chan.asked) == 1
+        assert len(_writes(calls)) == 10
+        # 회신은 "저장한 슬롯"이 아니라 **덮어쓴 슬롯**을 따로 적는다.
+        assert "덮어쓰기 승인" in event["text"]
+        overwrote = event["text"].split("덮어쓰기 승인", 1)[1]
+        assert "2.22" in overwrote
+        assert "2.27" in overwrote
+        assert "2.23" not in overwrote
+
+    # AC-PRESETGUARD-006 — 판독 불가와 검증된 빈칸의 회신이 다르다 (뮤테이션 필수)
+    def test_an_unreadable_pool_is_not_reported_as_an_empty_span(self, tmp_path):
+        unreadable, unreadable_calls, _c1 = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool_error=True,
+            readback=(),
+        )
+        verified, verified_calls, _c2 = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=tuple(range(21, 31)),
+        )
+
+        # 양쪽 모두 저장은 진행한다 (오늘의 동작 보존, REQ-PRESETGUARD-004).
+        assert len(_writes(unreadable_calls)) == 10
+        assert len(_writes(verified_calls)) == 10
+        # 그러나 회신 문면은 다르다 — 미상은 검증된 빈칸이 아니다.
+        assert "확인하지 못했습니다" in unreadable["text"]
+        assert "확인하지 못했습니다" not in verified["text"]
+        assert unreadable["text"] != verified["text"]
+
+    # AC-PRESETGUARD-007 — 되읽기 산술이 회신에 실린다 (뮤테이션 필수)
+    def test_the_readback_carries_arithmetic(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=tuple(range(21, 31)),
+        )
+
+        assert "기대 10개" in event["text"]
+        assert "10개 확인" in event["text"]
+        # 가드 1회 + 되읽기 1회 = 2회. 루프당 반복이 아니다.
+        assert len([c for c in calls if c.name == "query_state"]) == 2
+
+    def test_a_missing_slot_is_enumerated_and_triggers_no_retry(self, tmp_path):
+        landed = tuple(n for n in range(21, 31) if n != 27)
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=landed,
+        )
+
+        assert "2.27" in event["text"]
+        assert "미확인" in event["text"]
+        # REQ-PRESETGUARD-010 — 되읽기는 보고이지 자기수정 루프가 아니다.
+        assert event["status"] == "ok"
+        assert len(_writes(calls)) == 10
+
+    # AC-PRESETGUARD-008 — 되읽기 불가가 확인됨으로 보고되지 않는다 (뮤테이션 필수)
+    def test_an_unreadable_readback_is_reported_unverified(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback_error=True,
+        )
+
+        assert len(_writes(calls)) == 10
+        assert "미검증" in event["text"]
+        assert "개 확인" not in event["text"]
+
+    # AC-PRESETGUARD-009 — 승인 대기가 결함으로 보고되지 않는다
+    def test_a_gate_held_store_is_classified_as_pending_not_missing(self, tmp_path):
+        event, _calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(),
+            status="proposal",
+        )
+
+        assert "승인 대기" in event["text"]
+        assert "미확인" not in event["text"]
+
+    # AC-PRESETGUARD-014 — 경계가 움직이지 않는다 (기존 안전 동작 회귀)
+    def test_the_bundle_shape_and_merge_ban_survive(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+        )
+
+        writes = _writes(calls)
+        first = writes[0].arguments["commands"]
+        assert first[-3:] == [
+            "Store Preset 2.21",
+            "Label Preset 2.21 'Home'",
+            "ClearAll",
+        ]
+        commands = _all_commands(calls)
+        assert not any("/Merge" in cmd or "/Overwrite" in cmd for cmd in commands)
+
+
+class TestPositionPresetRegeneration:
+    """SPEC-COPILOT-PRESETGUARD-001 §B.3 — 지금 배치로 기존 구간을 다시 잡는다."""
+
+    def _run(self, tmp_path, text, *, answers=(), channel=True, **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, **rig)
+        chan = _AnsweringChannel(answers) if channel else None
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # AC-PRESETGUARD-010 — 재생성이 기존 구간을 표적으로 삼는다 (뮤테이션 필수)
+    def test_regeneration_overwrites_the_stored_span_in_place(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=tuple(range(21, 31)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        commands = _all_commands(calls)
+        for offset in range(10):
+            assert f"Store Preset 2.{21 + offset}" in commands
+        # 새 시작 번호를 묻지 않는다 — 새 자리에 저장하면 큐가 따라오지 않는다.
+        assert all("몇 번부터" not in ask.prompt for ask in chan.asked)
+        # 큐·시퀀스는 건드리지 않는다 — 참조를 든 큐는 프리셋 갱신만으로 따라온다.
+        assert not any("Store Sequence" in cmd or "Cue" in cmd for cmd in commands)
+
+    # AC-PRESETGUARD-011 — 겹치는 문장이 재생성으로 결정적 라우팅된다 (뮤테이션 필수)
+    def test_overlapping_sentences_route_to_regeneration(self, tmp_path):
+        corpus = [
+            "기본 포지션 다시 잡아줘",
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            "기본 포지션 프리셋 재생성해줘",
+        ]
+        for text in corpus:
+            _event, calls, chan = self._run(
+                tmp_path,
+                text,
+                pool=tuple(range(21, 31)),
+                answers=["덮어쓰기 진행"],
+            )
+            commands = _all_commands(calls)
+            assert "Store Preset 2.21" in commands, text
+            assert all("몇 번부터" not in ask.prompt for ask in chan.asked), text
+
+    def test_new_store_sentences_still_route_to_the_store_path(self, tmp_path):
+        # 명시 번호가 있으면 신규 저장이다 — 21번 구간이 비어 있으므로 카드 없이 저장.
+        _event, calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 10개를 프리셋 21번부터 저장해줘",
+            pool=(1, 2, 3),
+        )
+        assert chan.asked == []
+        assert "Store Preset 2.21" in _all_commands(calls)
+
+        # 번호가 없으면 시작 번호를 묻는 기존 카드가 그대로 뜬다.
+        _event2, calls2, chan2 = self._run(
+            tmp_path,
+            "기본 포지션 10개를 프리셋에 저장해줘",
+            pool=(1, 2, 3),
+            answers=["41"],
+        )
+        assert any("몇 번부터" in ask.prompt for ask in chan2.asked)
+        assert "Store Preset 2.41" in _all_commands(calls2)
+
+    # AC-PRESETGUARD-012 — 재생성도 같은 fail-closed를 통과한다 (뮤테이션 필수)
+    def test_regeneration_stores_nothing_without_an_answer(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=tuple(range(21, 31)),
+            answers=[],  # UNANSWERED
+        )
+
+        assert _writes(calls) == []
+        assert "응답" in event["text"]
+
+    # AC-PRESETGUARD-013 — 표적이 모호하면 묻고, 미상이면 저장하지 않는다
+    def test_no_stored_span_refuses_without_writing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=(1, 2, 3),
+        )
+
+        assert _writes(calls) == []
+        assert "찾지 못" in event["text"]
+
+    def test_two_candidate_spans_ask_which_one(self, tmp_path):
+        occupied = tuple(range(1, 11)) + tuple(range(21, 31))
+        _event, calls, chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=occupied,
+            answers=["21", "덮어쓰기 진행"],
+        )
+
+        assert any("어느 구간" in ask.prompt for ask in chan.asked)
+        assert "Store Preset 2.21" in _all_commands(calls)
+
+    def test_an_unreadable_pool_refuses_instead_of_guessing_a_span(self, tmp_path):
+        # 신규 저장(REQ-004, 진행)과 **반대**다 — 재생성은 표적의 존재를 전제한다.
+        event, calls, _chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool_error=True,
+        )
+
+        assert _writes(calls) == []
+        assert "읽지 못" in event["text"]
 
 
 class TestPositionCueStoreSession:
