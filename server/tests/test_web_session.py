@@ -2154,6 +2154,38 @@ class TestPositionPresetRegeneration:
 
         assert not any("다시 잡으면" in ask.prompt for ask in chan.asked)
 
+    # R4 — '저장'은 신규 저장의 동사다. 재생성 어휘에 넣으면 안 된다.
+    def test_dasi_jeojang_routes_to_the_store_path_on_an_empty_pool(self, tmp_path):
+        # 옛 어휘에서는 이 문장이 재생성으로 끌려가, 저장해달라는 요청에
+        # "먼저 '기본 포지션 10개 저장'을 실행해 주세요"라고 답했다 — 같은 문장을
+        # 다시 쳐도 영원히 같은 답이 나오는 자기모순이다.
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋 21번부터 다시 저장해줘",
+            pool=(),
+        )
+
+        assert "Store Preset 2.21" in _all_commands(calls)
+        assert "다시 잡을 자리가 없습니다" not in event["text"]
+
+    def test_dasi_jeojang_is_not_refused_after_a_partial_first_store(self, tmp_path):
+        # 첫 저장이 일부만 착지하면(게이트 보류·부분 거절) 그 구간은 정의상
+        # 10칸 연속이 아니다. 재생성이 이 문장을 삼키면 가장 자연스러운 재시도가
+        # **영구히** 거부된다 — 하필 재시도가 가장 필요한 상황에서.
+        event, calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋 21번부터 다시 저장해줘",
+            pool=tuple(range(21, 26)),  # 21~25만 착지한 상태
+            readback=tuple(range(21, 31)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        assert len(_writes(calls)) == 10
+        assert "Store Preset 2.21" in _all_commands(calls)
+        # 거부가 아니라 덮어쓰기 확인으로 간다 — 21~25는 실제로 덮어써지므로.
+        assert any("덮어씁니다" in ask.prompt for ask in chan.asked)
+        assert "자리가 없습니다" not in event["text"]
+
     def test_an_unreadable_pool_refuses_instead_of_guessing_a_span(self, tmp_path):
         # 신규 저장(REQ-004, 진행)과 **반대**다 — 재생성은 표적의 존재를 전제한다.
         event, calls, _chan = self._run(
