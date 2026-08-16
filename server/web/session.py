@@ -1608,7 +1608,13 @@ _REGENERATE_POSITIONS_REQUEST = re.compile(
     # 주세요"라고 답하게 된다. 더 나쁜 건 첫 저장이 일부만 착지했을 때다 — 그
     # 구간은 정의상 10칸 연속이 아니므로, 가장 자연스러운 재시도 문장이 영구히
     # 거부된다. 게이트 보류나 부분 거절이 만드는 바로 그 상황이다.
-    r".{0,12}?다시\s*\S{0,4}?(?:잡|만들|생성|갱신)"
+    #
+    # 사이에 어절 **하나**를 허용한다. `\S`는 공백을 넘지 못해서, 같은 어휘에 부사
+    # 하나가 낀 "기본 포지션 다시 한번 잡아줘" · "다시 좀 잡아줘"가 재생성에서
+    # 빠졌다. 그러면 저장 경로로 가 **새 구간에 저장**되는데, 운영자는 기존
+    # 프리셋이 갱신됐다고 믿는다 — 큐는 옛 좌표를 계속 가리킨다. 어휘를 넓히는
+    # 게 아니라 어절 하나를 건너뛰게 하는 것이라 F5 봉쇄(꼬리 12자 한도)는 그대로다.
+    r".{0,12}?다시(?:\s+\S{1,6})?\s*(?:잡|만들|생성|갱신)"
     r")",
     re.IGNORECASE | re.DOTALL,
 )
@@ -1749,43 +1755,117 @@ _PRESET_GATE_PENDING_STATUSES = _PRESET_GATE_AWAITING_STATUSES | _PRESET_GATE_BL
 _PRESET_OVERWRITE_CONSENT_LABEL = "덮어쓰기 진행"
 _PRESET_OVERWRITE_DECLINE_LABEL = "취소"
 
-#: 승낙으로 인정하는 **완전 일치** 토큰. 부분 문자열 매칭은 쓰지 않는다.
+#: 승낙 어절에서 떼어내는 존대·청유 어미. 형태만 다른 **같은 답**을 받기 위한
+#: 것이지 부분 문자열 매칭이 아니다 — 어미를 뗀 어절이 승낙어와 **통째로** 같아야
+#: 한다. 긴 것부터 떼어야 "해주세요"가 "요"로 잘리지 않는다.
+_PRESET_ANSWER_SUFFIXES = (
+    "해주십시오",
+    "해주세요",
+    "해 주세요",
+    "해줄래",
+    "해줘요",
+    "해주면",
+    "해줘",
+    "합니다",
+    "할게요",
+    "하세요",
+    "해요",
+    "할게",
+    "하자",
+    "하지",
+    "해",
+    "이에요",
+    "예요",
+    "입니다",
+    "이요",
+    "요",
+    "죠",
+)
+
+#: 승낙으로 인정하는 어절(어미를 뗀 형태). 부분 문자열 매칭은 쓰지 않는다.
 #:
 #: `확인`·`네`·`예`·`응`은 평범한 한국어 단어의 조각이라 부분 매칭으로는 비승낙을
 #: 승낙으로 삼킨다 — 실측: "잠깐 확인해보고요" · "안 되네요" · "확인 안 했어요" ·
 #: "네가 판단해" · "예전 값으로 되돌려줘" 다섯 문장이 전부 승낙으로 읽혀 비가역
-#: 덮어쓰기가 나갔다. 토큰을 더 넣어 막는 것은 이길 수 없는 군비 경쟁이므로
-#: **모양을 바꾼다**: 승낙은 명시적·일의적 신호여야 하고 그 밖의 전부는 거절이다.
-#: 완전 일치만 인정하므로 한 글자 토큰도 다른 단어 안에 숨어들 수 없다. `확인`은
-#: 그 자체로 "확인해보겠다"와 구별되지 않으므로 **어떤 형태로도** 승낙이 아니다.
-_PRESET_OVERWRITE_CONSENT_TOKENS = frozenset(
+#: 덮어쓰기가 나갔다. 그래서 판정은 **어절 단위**다: 답을 공백으로 쪼개고 각
+#: 어절에서 어미를 뗀 뒤, **모든 어절이** 승낙어여야 승낙이다. 이러면 "네"는
+#: 승낙이지만 "네가 판단해"의 "네가"는 아니다 — 한 글자 승낙어가 다른 단어 안에
+#: 숨어들 수 없다. `확인`은 그 자체로 "확인해보겠다"와 구별되지 않으므로
+#: **어떤 형태로도** 승낙이 아니다.
+_PRESET_CONSENT_WORDS = frozenset(
     {
-        _PRESET_OVERWRITE_CONSENT_LABEL,
         "덮어쓰기",
         "덮어써",
-        "덮어쓰자",
+        "덮어쓰",
         "덮어쓸게",
+        "덮어쓰자",
         "진행",
         "승인",
+        "좋아",
         "네",
+        "넵",
         "예",
         "응",
         "yes",
         "y",
         "ok",
         "okay",
+        "오케이",
     }
 )
-_PRESET_OVERWRITE_CONSENT_NORMALIZED = frozenset(
-    token.casefold() for token in _PRESET_OVERWRITE_CONSENT_TOKENS
+
+#: 명시적 거절 어절. 승낙과 **같은 어절 규칙**으로 판정한다 — 부분 문자열로 찾으면
+#: "취소하지 마"(= 취소하지 말라 = 승낙)가 거절로 읽힌다.
+_PRESET_DECLINE_WORDS = frozenset(
+    {
+        "취소",
+        "아니",
+        "아니요",
+        "아뇨",
+        "중단",
+        "그만",
+        "보류",
+        "안돼",
+        "안됨",
+        "no",
+        "n",
+        "cancel",
+        "stop",
+    }
 )
 
 
-def _preset_overwrite_consented(answer: str) -> bool:
-    """답이 **명시적 승낙**인가. 그 밖의 전부는 거절이다(fail-closed)."""
-    return (
-        " ".join(answer.split()).strip(" .!?~,·").casefold() in _PRESET_OVERWRITE_CONSENT_NORMALIZED
-    )
+def _preset_answer_words(answer: str) -> list[str]:
+    """답을 어절로 쪼개고 각 어절에서 존대·청유 어미를 뗀다."""
+    words: list[str] = []
+    for raw in answer.split():
+        word = raw.strip(" .!?~,·'\"()").casefold()
+        for suffix in _PRESET_ANSWER_SUFFIXES:
+            if word.endswith(suffix) and len(word) > len(suffix):
+                word = word[: -len(suffix)]
+                break
+        if word:
+            words.append(word)
+    return words
+
+
+def _preset_answer_intent(answer: str) -> str:
+    """카드 응답의 의도 — ``consent`` · ``decline`` · ``unrecognised``.
+
+    **모든** 어절이 같은 부류여야 그 부류로 판정한다. 하나라도 섞이거나 모르는
+    말이면 ``unrecognised``이고, 그때 저장하지 않는 것은 승낙과 마찬가지로
+    fail-closed다 — 다만 회신 문면이 다르다. 거절과 "못 알아들음"을 같은 말로
+    묶으면 운영자가 거절한 적 없는데 거절했다고 통보받고, 무엇이 잘못됐는지 모르는
+    채 같은 답을 반복하게 된다.
+    """
+    words = _preset_answer_words(answer)
+    if not words:
+        return "unrecognised"
+    if all(word in _PRESET_CONSENT_WORDS for word in words):
+        return "consent"
+    if all(word in _PRESET_DECLINE_WORDS for word in words):
+        return "decline"
+    return "unrecognised"
 
 
 @dataclass(frozen=True)
@@ -1841,13 +1921,25 @@ def _preset_slot_list(slots: Sequence[int]) -> str:
 
 
 def _preset_overwrite_refusal(verdict: _PresetSpanVerdict) -> str:
-    """승낙 없이 끝난 카드의 회신. 침묵과 거절을 구별해 적는다."""
+    """승낙 없이 끝난 카드의 회신. 침묵·거절·못 알아들음을 **구별해** 적는다.
+
+    셋 다 저장하지 않는다는 점은 같지만 운영자가 다음에 할 일이 다르다. 못 알아들은
+    것을 "승인받지 못했다"로 적으면 거절한 적 없는 사람에게 거절했다고 통보하는
+    셈이고, 어떻게 답해야 하는지도 알려주지 않아 같은 답을 반복하게 만든다.
+    """
     listed = _preset_slot_list(verdict.collisions)
     if verdict.state == "unanswered":
         return (
             "덮어쓰기 확인 카드에 응답이 없어(UI 미연결 또는 무응답) 프리셋을 "
             f"저장하지 않았습니다 — 침묵은 승낙이 아니며, 덮어쓴 프리셋({listed})은 "
             "복구할 수 없습니다."
+        )
+    if verdict.state == "unrecognised":
+        return (
+            "덮어쓰기 확인 카드의 답을 승낙으로도 거절로도 읽지 못해 프리셋을 "
+            f"저장하지 않았습니다 — 덮어쓸 대상은 {listed}입니다. "
+            f"'{_PRESET_OVERWRITE_CONSENT_LABEL}' 또는 "
+            f"'{_PRESET_OVERWRITE_DECLINE_LABEL}'로 답해 주세요."
         )
     return f"덮어쓰기를 승인받지 못해 프리셋을 저장하지 않았습니다: {listed}."
 
@@ -3131,11 +3223,15 @@ class ChatSession:
         if answer is None:
             return _PresetSpanVerdict("unanswered", collisions)
         # 승낙은 **명시적·일의적**이어야 한다. 자유 입력은 언제나 열려 있으므로
-        # ("잠깐 확인해보고요", "안 되네요") 승낙 토큰을 부분 문자열로 찾으면
-        # 비승낙이 승낙으로 삼켜진다 — 완전 일치가 아니면 전부 거절이다.
-        if _preset_overwrite_consented(answer):
+        # ("잠깐 확인해보고요", "안 되네요") 승낙어를 부분 문자열로 찾으면 비승낙이
+        # 승낙으로 삼켜진다. 어절 단위로 판정하고, 승낙도 거절도 아니면 저장하지
+        # 않되 **거절과는 다른 문면**으로 답한다.
+        intent = _preset_answer_intent(answer)
+        if intent == "consent":
             return _PresetSpanVerdict("confirmed", collisions)
-        return _PresetSpanVerdict("declined", collisions)
+        if intent == "decline":
+            return _PresetSpanVerdict("declined", collisions)
+        return _PresetSpanVerdict("unrecognised", collisions)
 
     def _store_position_preset_looks(
         self, looks: Sequence[tuple], start_no: int, *, before: set[int] | None

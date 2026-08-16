@@ -1865,9 +1865,32 @@ class TestPositionPresetOverwriteGuard:
         assert _writes(calls) == [], answer
         assert "저장하지 않" in event["text"], answer
 
-    @pytest.mark.parametrize("answer", ["덮어쓰기 진행", "진행", "네", "ok", "OK", "덮어쓰기"])
-    def test_explicit_consent_tokens_do_store(self, tmp_path, answer):
-        # 비공허성 짝 — 승낙 판정이 "전부 거절"로 퇴화하지 않았음을 고정한다.
+    # 비공허성 짝 — 승낙 판정이 "전부 거절"로 퇴화하지 않았음을 고정한다.
+    #
+    # 이 코퍼스는 **구현의 토큰 목록에서 유도하지 않는다.** 토큰 목록을
+    # 파라미터화하면 토큰이 존재하는 한 결코 실패할 수 없어 아무것도 검증하지
+    # 못한다(공허). 아래는 운영자가 카드 앞에서 실제로 칠 법한 문장을 손으로 적은
+    # 것이며, 그래서 구현이 좁아지면 여기가 먼저 깨진다.
+    @pytest.mark.parametrize(
+        "answer",
+        [
+            "덮어쓰기 진행",  # 버튼 그대로
+            "덮어쓰기 진행해줘",  # 버튼 + 존대
+            "진행해주세요",
+            "네 진행해주세요",
+            "네",
+            "넵",
+            "좋아요",
+            "응",
+            "오케이",
+            "덮어써",
+            "승인",
+            "ok",
+            "OK",
+            "yes",
+        ],
+    )
+    def test_natural_korean_consent_completes_the_overwrite(self, tmp_path, answer):
         _event, calls, _chan = self._run(
             tmp_path,
             "기본 포지션 프리셋을 21번부터 저장해줘",
@@ -1877,6 +1900,51 @@ class TestPositionPresetOverwriteGuard:
         )
 
         assert len(_writes(calls)) == 10, answer
+
+    # R2 — 거절과 "못 알아들음"은 다른 상태다
+    @pytest.mark.parametrize("answer", ["취소", "아니요", "그만", "보류", "no"])
+    def test_an_explicit_decline_is_reported_as_a_decline(self, tmp_path, answer):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            answers=[answer],
+        )
+
+        assert _writes(calls) == [], answer
+        assert "승인받지 못해" in event["text"], answer
+
+    @pytest.mark.parametrize("answer", ["잠깐 확인해보고요", "네가 판단해", "일단 뭐랄까"])
+    def test_an_unreadable_answer_says_so_and_shows_how_to_answer(self, tmp_path, answer):
+        # 저장하지 않는 것은 거절과 같지만, 운영자는 거절한 적이 없다. 원인을
+        # 잘못 귀속하지 않고 어떻게 답해야 하는지 알려준다.
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            answers=[answer],
+        )
+
+        assert _writes(calls) == [], answer
+        assert "읽지 못해" in event["text"], answer
+        assert "덮어쓰기 진행" in event["text"], answer
+        assert "취소" in event["text"], answer
+        assert "승인받지 못해" not in event["text"], answer
+
+    def test_a_negated_decline_word_is_not_read_as_a_decline(self, tmp_path):
+        # "취소하지 마" = 취소하지 말라 = 승낙 의도. 부분 문자열로 `취소`를 찾으면
+        # 정반대로 읽힌다. 승낙으로 단정하지도 않고(모호하므로) 거절로도 읽지
+        # 않는다 — 못 알아들었다고 답하고 저장하지 않는다.
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            answers=["취소하지 마"],
+        )
+
+        assert _writes(calls) == []
+        assert "읽지 못해" in event["text"]
+        assert "승인받지 못해" not in event["text"]
 
     # F3 — 사전 점유 슬롯은 "확인"으로 셀 수 없다
     def test_a_preoccupied_slot_is_not_counted_as_confirmed(self, tmp_path):
@@ -2185,6 +2253,30 @@ class TestPositionPresetRegeneration:
         # 거부가 아니라 덮어쓰기 확인으로 간다 — 21~25는 실제로 덮어써지므로.
         assert any("덮어씁니다" in ask.prompt for ask in chan.asked)
         assert "자리가 없습니다" not in event["text"]
+
+    # R3 — 같은 어휘에 부사 하나가 껴도 재생성이다
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "기본 포지션 다시 한번 잡아줘",
+            "기본 포지션 다시 좀 잡아줘",
+            "지금 배치로 기본 포지션 다시 한번 잡아줘",
+        ],
+    )
+    def test_an_adverb_between_dasi_and_the_verb_stays_regeneration(self, tmp_path, text):
+        # `\S`가 공백을 넘지 못해 이 문장들이 저장 경로로 샜다. 그러면 **새 구간**에
+        # 저장되는데 운영자는 기존 프리셋이 갱신됐다고 믿는다 — 큐는 옛 좌표를
+        # 계속 가리키므로, 조용히 틀리는 종류의 실패다.
+        _event, calls, chan = self._run(
+            tmp_path,
+            text,
+            pool=tuple(range(21, 31)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        assert "Store Preset 2.21" in _all_commands(calls), text
+        # 새 시작 번호를 묻지 않는다 = 기존 구간을 제자리 갱신했다.
+        assert all("몇 번부터" not in ask.prompt for ask in chan.asked), text
 
     def test_an_unreadable_pool_refuses_instead_of_guessing_a_span(self, tmp_path):
         # 신규 저장(REQ-004, 진행)과 **반대**다 — 재생성은 표적의 존재를 전제한다.
