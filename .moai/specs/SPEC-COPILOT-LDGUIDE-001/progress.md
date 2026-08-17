@@ -650,7 +650,7 @@ P1 2건은 **가이드가 아니라 `acceptance.md` §D를 고치는 일**이다
 
 ```
 sync_status: audit-ready
-sync_commit_sha: pending-backfill-sync
+sync_commit_sha: 3bfe660
 observer: sync-tjueej
 base: f30ab4c
 review_head: 6bb350f
