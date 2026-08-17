@@ -175,13 +175,28 @@ def _base_name(name: object) -> str | None:
     return name.split("#", 1)[0]
 
 
-def _with_swatches(objects: list[dict]) -> list[dict]:
-    palette = {**_palette_hex_by_label(), **_dimmer_hex_by_label()}
-    phasers = {
-        **_phaser_hexes_by_label(),
-        **_dimmer_phaser_hexes_by_label(),
-        **_combo_phaser_hexes_by_label(),
-    }
+def _with_swatches(objects: list[dict], *, pool_name: str) -> list[dict]:
+    """앱 카탈로그 색을 **풀 이름으로 스코핑**해 붙인다.
+
+    라벨-단독 매칭은 다른 풀의 동명 수동 프리셋(예: Color 풀에 운영자가
+    저장한 'Full'이나 'Police')에 앱이 저장한 적 없는 색을 붙인다 —
+    발명 금지 규율의 실질 위반 경로(2026-08-17 리뷰). 각 카탈로그는 앱이
+    저장하는 풀이 정해져 있으므로(팔레트·컬러 페이저=Color, 디머 레벨·
+    페이저=Dimmer, 콤보=All N) 그 풀 이름에서만 매칭한다. 풀 이름이 어느
+    카탈로그 풀도 아니면(운영자가 풀을 개명했거나 미지의 풀) 스와치 없이
+    정직하게 강등된다. 같은 풀 안의 동명 수동 프리셋 오인은 남는다 —
+    슬롯 대장이 없는 한 이름 매칭의 불가피한 한계(주석으로 계약 고지).
+    """
+    palette: dict[str, str] = {}
+    phasers: dict[str, tuple[str, ...]] = {}
+    if pool_name == "Color":
+        palette = _palette_hex_by_label()
+        phasers = _phaser_hexes_by_label()
+    elif pool_name == "Dimmer":
+        palette = _dimmer_hex_by_label()
+        phasers = _dimmer_phaser_hexes_by_label()
+    elif pool_name.startswith("All"):
+        phasers = _combo_phaser_hexes_by_label()
     enriched = []
     for obj in objects:
         base = _base_name(obj.get("name"))
@@ -194,8 +209,9 @@ def _with_swatches(objects: list[dict]) -> list[dict]:
     return enriched
 
 
-#: 세션 ``_paged_pool_children``과 같은 상한 — 10창(240슬롯)이면 실제 풀
-#: 크기의 여유 상계다. 상한 초과는 완전 판독 주장 없이 ``truncated``로 남는다.
+#: 후속 창 상한 — 이미 받은 첫 창에 더해 최대 10창을 더 읽는다(총 11창,
+#: 264슬롯; 세션 판독기는 첫 창 포함 10창이라 한 창 더 여유가 있다). 상한
+#: 초과는 완전 판독 주장 없이 ``truncated``로 남는다.
 _POOL_PAGE_CAP = 10
 
 
@@ -204,6 +220,10 @@ def _claims_more(payload: dict, seen: int) -> bool:
     (세션 판독기와 동일, TRUNCATE-001)."""
     node = payload.get("node")
     child_count = node.get("childCount") if isinstance(node, dict) else None
+    # bool은 int의 서브클래스 — childCount: true(True>0)가 허위 '더 있음'
+    # 판정을 만들지 않게 명시 배제한다(SEC-TYPE-002).
+    if isinstance(child_count, bool):
+        child_count = None
     return bool(payload.get("truncated")) or (isinstance(child_count, int) and child_count > seen)
 
 
@@ -297,9 +317,11 @@ def build_presets_router(deps: PresetsDeps) -> APIRouter:
         node = payload.get("node")
         name = node.get("name") if isinstance(node, dict) else None
         child_count = node.get("childCount") if isinstance(node, dict) else None
+        if isinstance(child_count, bool):  # bool-as-int 배제 (SEC-TYPE-002)
+            child_count = None
         return {
             "pool": {"no": pool_no, "name": name if isinstance(name, str) else ""},
-            "presets": _with_swatches(objects),
+            "presets": _with_swatches(objects, pool_name=name if isinstance(name, str) else ""),
             "truncated": truncated,
             "total": child_count if isinstance(child_count, int) else None,
         }

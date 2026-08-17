@@ -123,7 +123,7 @@ def _drilldown_items(objects: list[dict]) -> list[dict]:
             # (라이브 2026-08-16: Color 37인데 배지가 창 길이)에서 팝업 제목
             # ("N개")과 같은 수를 말한다. 총계 주장이 없으면 창 길이 그대로.
             total = obj.get("contents_total")
-            if isinstance(total, int):
+            if isinstance(total, int) and not isinstance(total, bool):
                 meta = {"stored_count": total}
             else:
                 meta = {"stored_count": len(contents)} if contents is not None else None

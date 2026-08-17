@@ -146,8 +146,10 @@ DataPool/PresetPools/1  childCount: 7(baseline) → 9(1.50+1.52 저장 후, 1.51
 2. **숫자만 단독인 라벨**(예: `'50'`)은 시도하지 않았다 — 공백+숫자 조합(`'Dim 50'`)만
    확인.
 3. **저장된 프리셋의 실제 스텝 개수/Accel-Decel-Phase-Speed 반영 여부를 기계로 셀
-   방법** — `08-...`§2/§4/§6.4와 동일한 구조적 한계(`state` childCount:0,
-   `prop StepCount/Steps` 모두 미탐색). 이번엔 `prop` 재탐색도 하지 않았다(범위 밖).
+   방법** — `08-...`§2/§4와 동일한 구조적 한계(`state` childCount:0). `prop
+   StepCount/Steps`는 08 §6.4가 이미 시도해 'property not readable'로 **거부를
+   실측**했고, 디머에서 재탐색은 하지 않았다(범위 밖 — '미탐색'이 아니라
+   08의 거부 실측을 상속).
 4. **Rectangle Form 근사**(`Transition 0`)는 디머에서 시도하지 않았다 — 카탈로그에
    Rectangle 디머 항목이 없다면 불필요, 필요해지면 `08-...`§6.1 패턴을 채널명만 바꿔
    재사용 가능할 것(ASSUMPTION, 미검증).

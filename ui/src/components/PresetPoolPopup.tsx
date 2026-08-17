@@ -132,12 +132,16 @@ export async function fetchPresetPool(poolNo: number): Promise<PresetPopupState>
 
 // -- hook-free view (directly testable) ----------------------------------------
 
-/** The header line: pool number/name plus an honest count when known. */
+/** The header line: pool number/name plus an honest count when known.
+ * A truncated read with no responder total claim must NOT state the partial
+ * window length as THE count — `N개 이상` keeps the header consistent with
+ * the "일부만 표시됨" badge (2026-08-17 review). */
 export function presetPopupTitle(state: PresetPopupState): string {
   if (state.phase === "ready") {
-    const { pool, presets, total } = state.contents;
+    const { pool, presets, total, truncated } = state.contents;
     const count = total ?? presets.length;
-    return `프리셋 풀 ${pool.no} · ${pool.name || "—"} — ${count}개`;
+    const suffix = truncated && total === null ? `${count}개 이상` : `${count}개`;
+    return `프리셋 풀 ${pool.no} · ${pool.name || "—"} — ${suffix}`;
   }
   const name = state.pool.name ? ` · ${state.pool.name}` : "";
   return `프리셋 풀 ${state.pool.no}${name}`;
@@ -196,12 +200,14 @@ export function PresetPoolPopup({ state, onClose, onRefresh }: PresetPoolPopupPr
                     {preset.colors ? (
                       <span
                         className="preset-popup-swatch"
+                        role="img"
                         style={{ background: phaserGradient(preset.colors) }}
                         aria-label={`색 ${preset.colors.join("/")}`}
                       />
                     ) : preset.color ? (
                       <span
                         className="preset-popup-swatch"
+                        role="img"
                         style={{ background: preset.color }}
                         aria-label={`색 ${preset.color}`}
                       />

@@ -115,6 +115,20 @@ describe("presetPopupTitle — 개수는 아는 만큼만", () => {
     ).toBe("프리셋 풀 21 · All 1 — 9개");
   });
 
+  it("a truncated read with no total claim says N개 이상, never a flat count", () => {
+    expect(
+      presetPopupTitle({
+        phase: "ready",
+        contents: {
+          pool: { no: 4, name: "Color" },
+          presets: [{ no: 1, name: "A" }, { no: 2, name: "B" }],
+          truncated: true,
+          total: null,
+        },
+      }),
+    ).toBe("프리셋 풀 4 · Color — 2개 이상");
+  });
+
   it("loading/error show the pool identity only", () => {
     expect(presetPopupTitle({ phase: "loading", pool: { no: 25, name: "" } })).toBe("프리셋 풀 25");
   });

@@ -1741,9 +1741,10 @@ COLOR_PHASER_SEQUENCE: tuple[tuple[str, tuple[str, ...], str, str], ...] = (
 
 # 멀티컬러 페이저 저장 (핸드오프 §2 지침 2): 어휘축(멀티컬러/컬러 이펙트/
 # multi-color/color effect)이 기본 컬러 트리거의 어휘축(기본/베이직/basic)과
-# 서로소라 두 컬러 경로가 서로의 문장을 삼키지 않는다 — "멀티컬러 프리셋
-# 저장해줘"는 `_BASIC_COLORS_REQUEST`를 매치하지 않고, "기본 컬러 프리셋
-# 저장해줘"는 이 트리거를 매치하지 않는다.
+# 서로소 주장(축 토큰끼리는 참)에 더해, '기본'+페이저 어휘가 한 문장에 공존하는
+# 합성 문장("기본 멀티컬러 페이저 저장해줘")은 기본 트리거의 갭(.{0,16}?)에도
+# 매치되므로 **디스패치 등록 순서**(페이저가 기본보다 앞)가 행선지를 고정한다
+# (2026-08-17 리뷰 실측 — run_instruction 디스패치 블록 참조).
 _COLOR_PHASER_REQUEST = re.compile(
     r"(?:멀티\s*컬러|컬러\s*이펙트|multi-?color|color\s*effect)"
     r".{0,24}?(?:저장|만들|잡아|생성)",
@@ -1868,9 +1869,11 @@ COMBO_PHASER_SEQUENCE: tuple[tuple[str, tuple[tuple[str, int], ...], str, str], 
 )
 
 # 콤보 페이저 저장: 컬러/디머 페이저 트리거를 어휘축만 바꿔 미러한다(콤보/
-# combo/컬러디머/드롭 프리셋). 기존 5개 축(기본컬러/멀티컬러/기본디머/
-# 디머페이저/포지션)과 서로소다 — "컬러 디머"는 "디머 이펙트"/"디머 페이저"와
-# 어순이 달라 겹치지 않고, "드롭 프리셋"은 다른 축에 없는 명사 조합이다.
+# combo/컬러디머/드롭 프리셋). 축 토큰 자체는 기존 5개 축과 서로소지만,
+# 합성 문장 "컬러 디머 페이저 저장"은 디머 페이저 축('디머 페이저' 연속
+# 토큰)에도 매치된다 — 그래서 **디스패치 등록 순서**가 콤보를 모든 프리셋
+# 가족의 맨 앞에 둔다(2026-08-17 리뷰 실측, run_instruction 디스패치 블록).
+# "드롭 프리셋"은 다른 축에 없는 명사 조합이다.
 _COMBO_PHASER_REQUEST = re.compile(
     r"(?:콤보|combo|컬러\s*디머|드롭\s*프리셋)"
     r".{0,24}?(?:저장|만들|잡아|생성)",
@@ -2211,6 +2214,11 @@ def _preset_store_commands(
     (REQ-COLORPRESET-007) 일반형은 세션 계층에 산다 — ``pool_no=2``의 출력은
     포지션 빌더와 문자 단위로 동일하다(REQ-COLORPRESET-006의 근거).
     """
+    if not isinstance(pool_no, int) or isinstance(pool_no, bool) or pool_no <= 0:
+        # 대칭 검증 — preset_no만 지키고 pool_no(응답기 풀 목록 유래)를
+        # 방치하면 'Store Preset -3.31' 같은 기형 표적이 조립될 수 있다
+        # (2026-08-17 보안 리뷰 SEC-CMD-003).
+        raise SpatialPointingError(f"pool number {pool_no!r} must be a positive integer")
     if preset_no <= 0:
         raise SpatialPointingError(f"preset number {preset_no!r} must be positive")
     commands = [f"Store Preset {pool_no}.{preset_no}"]
@@ -8395,49 +8403,44 @@ class ChatSession:
                 if result is None:
                     result = self._all_fixtures_elevation(text)
                 if result is None:
-                    # 컬러가 포지션 계열보다 **앞**이다 — 포지션 트리거들이 명사
-                    # 대안 '프리셋'으로 "기본 컬러 프리셋 …" 문장을 함께 매치하는
-                    # 반면 컬러 트리거(컬러/색/color 필수)는 포지션 문장을 매치할
-                    # 수 없다. 컬러 안에서는 재생성이 신규 저장보다 앞이다 —
-                    # 저장 트리거의 '잡아'가 재생성 문장을 함께 매치한다
+                    # 프리셋 가족 디스패치는 **구체적 어휘축 → 포괄 어휘축**
+                    # 순서다(합성 문장 오라우팅 방지, 2026-08-17 리뷰 실측):
+                    # ① 콤보(콤보/컬러 디머/드롭)가 맨 앞 — "컬러 디머 페이저
+                    #    저장" 같은 합성 문장이 디머 페이저 축(디머 페이저)에도
+                    #    매치되므로, 뒤에 두면 회색조 카탈로그가 Dimmer 풀에
+                    #    저장되는 오라우팅이 실제로 발생했다.
+                    # ② 페이저(멀티컬러/컬러 이펙트, 디머 이펙트/디머 페이저)가
+                    #    기본(기본 컬러/기본 디머)보다 앞 — "기본 멀티컬러 페이저
+                    #    저장"의 '멀티'가 기본 트리거의 .{0,16}? 갭에 흡수되어
+                    #    팔레트 경로가 페이저 문장을 삼키는 것을 막는다. 역방향은
+                    #    안전하다: 순수 기본 문장("기본 컬러 저장")은 페이저
+                    #    축 토큰이 없어 페이저 트리거를 매치하지 못한다.
+                    # 각 가족 안에서는 재생성이 신규 저장보다 앞이다 — 저장
+                    # 트리거의 '잡아'가 재생성 문장을 함께 매치한다
                     # (REQ-PRESETGUARD-015와 같은 등록 순서 고정).
-                    result = self._regenerate_basic_color_presets(text)
+                    result = self._regenerate_combo_phaser_presets(text)
                 if result is None:
-                    result = self._basic_color_presets(text)
+                    result = self._combo_phaser_presets(text)
                 if result is None:
-                    # 멀티컬러 페이저도 같은 이유로 재생성이 신규 저장보다
-                    # 앞이다(저장 트리거의 '잡아'가 재생성 문장을 함께
-                    # 매치, REQ-PRESETGUARD-015와 같은 형상). 어휘축(멀티
-                    # 컬러/컬러 이펙트)이 기본 컬러(기본/베이직/basic)와
-                    # 서로소라 두 컬러 계열은 서로의 문장을 삼키지 않는다.
                     result = self._regenerate_color_phaser_presets(text)
                 if result is None:
                     result = self._color_phaser_presets(text)
                 if result is None:
-                    # 디머 레벨도 컬러와 같은 이유로 재생성이 신규 저장보다
-                    # 앞이다 — 트리거의 '잡아'가 재생성 문장을 함께 매치한다
-                    # (REQ-PRESETGUARD-015와 같은 형상). 컬러 계열 바로 다음에
-                    # 배치해 두 프리셋 계열(색·밝기)의 안전 동작이 갈라지지
-                    # 않는다는 것을 코드 위치로도 드러낸다.
-                    result = self._regenerate_basic_dimmer_presets(text)
-                if result is None:
-                    result = self._basic_dimmer_presets(text)
-                if result is None:
-                    # 디머 페이저도 같은 이유로 재생성이 신규 저장보다 앞이다.
-                    # 어휘축(디머 이펙트/디머 페이저)이 디머 레벨 어휘축(기본
-                    # 디머)과 서로소라 두 디머 계열은 서로의 문장을 삼키지
-                    # 않는다.
                     result = self._regenerate_dimmer_phaser_presets(text)
                 if result is None:
                     result = self._dimmer_phaser_presets(text)
                 if result is None:
-                    # 콤보(컬러+디머) 페이저도 같은 이유로 재생성이 신규
-                    # 저장보다 앞이다. 어휘축(콤보/combo/컬러디머/드롭
-                    # 프리셋)이 기존 5개 축과 서로소라 다른 어느 계열의
-                    # 문장도 삼키지 않는다.
-                    result = self._regenerate_combo_phaser_presets(text)
+                    # 기본(포괄) 계열은 페이저 뒤, 포지션 앞 — 포지션 트리거의
+                    # 명사 대안 '프리셋'이 "기본 컬러 프리셋 …" 문장을 함께
+                    # 매치하는 반면 컬러/디머 트리거는 포지션 문장을 매치할
+                    # 수 없다(기존 근거 유지).
+                    result = self._regenerate_basic_color_presets(text)
                 if result is None:
-                    result = self._combo_phaser_presets(text)
+                    result = self._basic_color_presets(text)
+                if result is None:
+                    result = self._regenerate_basic_dimmer_presets(text)
+                if result is None:
+                    result = self._basic_dimmer_presets(text)
                 if result is None:
                     # 재생성이 신규 저장보다 **먼저**다 — 두 트리거의 교집합이
                     # 공집합이 아니므로(ASSUMPTION-83 반증) 등록 순서가 겹치는

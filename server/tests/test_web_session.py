@@ -2406,6 +2406,21 @@ class TestColorPhaserPresets:
         assert COLOR_PHASER_SEQUENCE[0][0] == "Breathe Warm"  # 가족 필터 계약
         assert COLOR_PHASER_SEQUENCE[6][1] == ("Red", "Green", "Blue")  # Rainbow 3스텝
 
+    # 합성 문장 — '기본'+페이저 어휘 공존("기본 멀티컬러 페이저 …")은 기본
+    # 트리거의 갭에도 매치되지만, 디스패치 순서(페이저가 기본보다 앞)가
+    # 페이저 경로로 고정한다(2026-08-17 리뷰 오라우팅 재발 방지).
+    def test_a_composite_basic_plus_phaser_sentence_routes_to_the_phaser(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        commands = _all_commands(calls)
+        assert any("Breathe Warm" in cmd for cmd in commands)  # 페이저 카탈로그
+        assert not any("'Warm White'" in cmd for cmd in commands)  # 팔레트 아님
+        assert "멀티컬러 페이저" in event["text"]
+
     # 트리거 서로소 — 멀티컬러/컬러 이펙트 문장은 기본 컬러 경로로 새지
     # 않고, 기본 컬러 문장은 멀티컬러 페이저 경로로 새지 않는다.
     def test_the_trigger_is_disjoint_from_basic_color(self, tmp_path):
@@ -2797,6 +2812,20 @@ class TestDimmerPhaserPresets:
         assert DIMMER_PHASER_SEQUENCE[0][0] == "Breathe Soft"  # 가족 필터 계약
         assert DIMMER_PHASER_SEQUENCE[6][1] == (30, 60, 100)  # Ripple 3스텝
 
+    # 합성 문장 — "기본 디머 이펙트 …"는 기본 디머 트리거의 갭에도 매치되지만
+    # 디스패치 순서가 페이저 경로로 고정한다(2026-08-17 리뷰).
+    def test_a_composite_basic_plus_phaser_sentence_routes_to_the_phaser(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 디머 이펙트 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(21, 31)),
+        )
+        commands = _all_commands(calls)
+        assert any("Breathe Soft" in cmd for cmd in commands)  # 페이저 카탈로그
+        assert not any("'Dim 10'" in cmd for cmd in commands)  # 레벨 아님
+        assert "디머 페이저" in event["text"]
+
     # 트리거 서로소 — 디머 이펙트/페이저 문장은 디머 레벨 경로로 새지 않고,
     # 디머 레벨 문장은 디머 페이저 경로로 새지 않는다.
     def test_the_trigger_is_disjoint_from_basic_dimmer(self, tmp_path):
@@ -3023,6 +3052,23 @@ class TestComboPhaserPresets:
             ("Green", 50),
             ("Blue", 100),
         )  # Rainbow Run 3스텝
+
+    # 합성 문장 — "컬러 디머 페이저 …"는 디머 페이저 축('디머 페이저')에도
+    # 매치되지만 디스패치 순서(콤보 맨 앞)가 콤보 경로로 고정한다(2026-08-17
+    # 리뷰 실측: 순서 수정 전에는 회색조 카탈로그가 Dimmer 풀로 오착지했다).
+    def test_a_composite_color_dimmer_sentence_routes_to_the_combo(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "컬러 디머 페이저 프리셋을 51번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(51, 61)),
+        )
+        commands = _all_commands(calls)
+        assert "Store Preset 21.51" in commands  # All 1 풀로만
+        assert any("Drop Slam" in cmd for cmd in commands)
+        assert not any("Breathe Soft" in cmd for cmd in commands)  # 디머 페이저 아님
+        assert not any(cmd.startswith("Store Preset 1.") for cmd in commands)
+        assert "콤보 페이저" in event["text"]
 
     # 트리거 서로소 — 콤보 문장은 기존 4개 저장 축(기본컬러/멀티컬러/기본
     # 디머/디머페이저) 어느 경로로도 새지 않고, 그 역도 마찬가지다.

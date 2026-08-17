@@ -368,6 +368,63 @@ class TestComboSwatches:
         assert combo_labels.isdisjoint(_dimmer_phaser_hexes_by_label())
 
 
+class TestSwatchPoolScoping:
+    """스와치 카탈로그는 풀 이름으로 스코핑 — 다른 풀의 동명 수동 프리셋에
+    앱이 저장한 적 없는 색을 붙이지 않는다(2026-08-17 리뷰, 발명 금지)."""
+
+    def test_a_manual_preset_named_like_another_pools_catalog_stays_colorless(self):
+        # Color 풀의 수동 'Full'(디머 라벨)·'Police'(콤보 라벨)은 무색이어야
+        # 한다 — 앱이 그 풀에 그 라벨로 저장한 적이 없다.
+        tree = {
+            POOLS_PATH: _payload(POOLS_PATH, [{"i": 4, "name": "Color"}]),
+            f"{POOLS_PATH}/4": _payload(
+                f"{POOLS_PATH}/4",
+                [
+                    {"i": 1, "name": "Full"},
+                    {"i": 2, "name": "Police"},
+                    {"i": 3, "name": "Warm White"},  # 컬러 카탈로그 — 색 유지
+                ],
+                name="Color",
+            ),
+        }
+        client, _port = _client(tree)
+        presets = {p["no"]: p for p in client.get("/api/presets/4").json()["presets"]}
+        assert "color" not in presets[1] and "colors" not in presets[1]
+        assert "color" not in presets[2] and "colors" not in presets[2]
+        assert presets[3]["color"] == "#ffbf66"  # Warm White (100,75,40)
+
+    def test_an_unknown_pool_name_degrades_to_no_swatches(self):
+        # 운영자가 풀을 개명하면 카탈로그 소속을 증명할 수 없다 — 색 발명
+        # 대신 무색 강등이 정직한 갈래.
+        tree = {
+            POOLS_PATH: _payload(POOLS_PATH, [{"i": 4, "name": "MyColors"}]),
+            f"{POOLS_PATH}/4": _payload(
+                f"{POOLS_PATH}/4",
+                [{"i": 21, "name": "Warm White"}],
+                name="MyColors",
+            ),
+        }
+        client, _port = _client(tree)
+        presets = client.get("/api/presets/4").json()["presets"]
+        assert "color" not in presets[0] and "colors" not in presets[0]
+
+    def test_a_bool_childcount_is_never_a_total_claim(self):
+        # bool은 int의 서브클래스 — childCount: true가 total로 승격되거나
+        # 허위 '더 있음' 페이징 판정을 만들면 안 된다(SEC-TYPE-002).
+        tree = {
+            POOLS_PATH: _payload(POOLS_PATH, [{"i": 4, "name": "Color"}]),
+            f"{POOLS_PATH}/4": {
+                **_payload(f"{POOLS_PATH}/4", [{"i": 1, "name": "Solo"}], name="Color"),
+                "node": {"childCount": True, "name": "Color"},
+            },
+        }
+        client, port = _client(tree)
+        body = client.get("/api/presets/4").json()
+        assert body["total"] is None
+        assert body["truncated"] is False
+        assert port.queried == [f"{POOLS_PATH}/4"]  # 허위 페이징 없음
+
+
 class TestPagedPoolRead:
     """24캡 너머 풀의 팝업 판독 — 라이브 2026-08-16: 페이저 10종(4.31~4.40)이
     첫 창 밖이라 팝업이 콘솔과 다른 풀을 보여줬다. 세션 판독기의 페이징

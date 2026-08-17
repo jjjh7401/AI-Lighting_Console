@@ -863,7 +863,9 @@ def drill_into(
         obj["contents"] = [rig_object(c) for c in children if isinstance(c, dict)]
         node = child_payload.get("node")
         child_count = node.get("childCount") if isinstance(node, dict) else None
-        if isinstance(child_count, int):
+        # bool은 int의 서브클래스 — childCount: true가 총계로 승격되지 않게
+        # 명시 배제한다(매크로 풀 경로의 기존 규약과 동일, SEC-TYPE-002).
+        if isinstance(child_count, int) and not isinstance(child_count, bool):
             obj["contents_total"] = child_count
     if capped:
         entry["drilldown_capped"] = True
