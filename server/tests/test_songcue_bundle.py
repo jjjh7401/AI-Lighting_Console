@@ -190,6 +190,11 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # property, a widening of the definition hunk): 56→58 hunks, new starts 591
 # and 593 are the query_state handler region, far from both protected ranges
 # (234..238 / 524..569) — overlap ZERO.
+# 2026-08-16 re-walk 3 — drill_into gains contents_total (the responder's own
+# node.childCount claim, for the dash pool badge; commit 8800168): 58→60
+# hunks, new starts 345 (docstring paragraph) and 367 (childCount extraction)
+# are pure insertions inside drill_into, far from both protected ranges
+# (234..238 / 524..569) — overlap ZERO.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -202,6 +207,8 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     125,
     164,
     184,
+    345,
+    367,
     425,
     436,
     463,

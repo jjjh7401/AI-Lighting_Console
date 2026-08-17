@@ -211,6 +211,95 @@ class TestPaletteSwatches:
             assert len(hexes[label]) == len(steps) >= 2
 
 
+class TestDimmerSwatches:
+    """디머 라벨 → 회색 색 원형(#rrggbb) — T5 지시(``TestPaletteSwatches``의
+    미러). 값(0~100)을 255*v/100 반올림한 R=G=B 회색으로 렌더한다. 라벨은
+    컬러 팔레트·페이저와 서로소라(Dim 10..Full vs Warm White..Lavender,
+    Breathe Soft.. vs Breathe Warm..) 병합에 충돌이 없다.
+    """
+
+    def _dimmer_tree(self) -> dict:
+        return {
+            POOLS_PATH: _payload(POOLS_PATH, [{"i": 1, "name": "Dimmer"}]),
+            f"{POOLS_PATH}/1": _payload(
+                f"{POOLS_PATH}/1",
+                [
+                    {"i": 1, "name": "FrontBack"},  # 수동 — 색 미상
+                    {"i": 11, "name": "Dim 10"},
+                    {"i": 15, "name": "Dim 50"},
+                    {"i": 25, "name": "Dim 50#2"},  # 콘솔 중복명 접미
+                    {"i": 20, "name": "Full"},
+                ],
+                name="Dimmer",
+            ),
+        }
+
+    def test_level_labels_carry_their_own_gray_hex_and_manual_ones_do_not(self):
+        client, _port = _client(self._dimmer_tree())
+        presets = {p["no"]: p for p in client.get("/api/presets/1").json()["presets"]}
+        assert presets[11]["color"] == "#1a1a1a"  # Dim 10 (10%) → round(25.5)=26
+        assert presets[15]["color"] == "#808080"  # Dim 50 (50%) → round(127.5)=128
+        assert presets[15]["color"] == presets[25]["color"]  # #N 접미 동일 취급
+        assert presets[20]["color"] == "#ffffff"  # Full (100%)
+        assert "color" not in presets[1]  # 수동 프리셋 — 색 발명 금지
+
+    def test_the_gray_conversion_is_percent_scaled(self):
+        from server.web.presets_api import _dimmer_hex_by_label
+        from server.web.session import DIMMER_LEVEL_SEQUENCE
+
+        gray = _dimmer_hex_by_label()
+        assert set(gray) == {label for label, _value in DIMMER_LEVEL_SEQUENCE}
+        assert gray["Dim 50"] == "#808080"
+        assert gray["Full"] == "#ffffff"
+        assert all(
+            hex_value[1:3] == hex_value[3:5] == hex_value[5:7] for hex_value in gray.values()
+        )
+
+    def test_dimmer_phaser_presets_carry_their_step_gray_hexes_in_order(self):
+        # 앱 자신이 저장한 디머 페이저(1.21~1.30)의 스텝 회색 — 컬러 페이저와
+        # 같은 발명 금지 규율의 확장: DIMMER_PHASER_SEQUENCE가 유일한 출처다.
+        tree = {
+            POOLS_PATH: _payload(POOLS_PATH, [{"i": 1, "name": "Dimmer"}]),
+            f"{POOLS_PATH}/1": _payload(
+                f"{POOLS_PATH}/1",
+                [
+                    {"i": 23, "name": "Pulse Hard"},
+                    {"i": 27, "name": "Ripple"},
+                    {"i": 29, "name": "Alt Half#2"},  # 콘솔 중복명 접미 동일 취급
+                    {"i": 1, "name": "MyFade"},  # 수동 페이저 — 색 미상, 발명 금지
+                ],
+                name="Dimmer",
+            ),
+        }
+        client, _port = _client(tree)
+        presets = {p["no"]: p for p in client.get("/api/presets/1").json()["presets"]}
+
+        assert presets[23]["colors"] == ["#000000", "#ffffff"]  # Pulse Hard 0/100
+        assert presets[27]["colors"] == ["#4c4c4c", "#999999", "#ffffff"]  # Ripple 30/60/100
+        assert presets[29]["colors"] == ["#808080", "#ffffff"]  # Alt Half 접미 동일 취급
+        assert "colors" not in presets[1] and "color" not in presets[1]
+
+    def test_every_catalog_dimmer_phaser_label_resolves_to_step_gray_hexes(self):
+        from server.web.presets_api import _dimmer_phaser_hexes_by_label
+        from server.web.session import DIMMER_PHASER_SEQUENCE
+
+        hexes = _dimmer_phaser_hexes_by_label()
+        assert set(hexes) == {label for label, _v, _f, _p in DIMMER_PHASER_SEQUENCE}
+        for label, values, _form, _phase in DIMMER_PHASER_SEQUENCE:
+            assert len(hexes[label]) == len(values) >= 2
+
+    def test_dimmer_and_color_swatch_labels_do_not_collide(self):
+        from server.web.presets_api import (
+            _dimmer_hex_by_label,
+            _dimmer_phaser_hexes_by_label,
+            _palette_hex_by_label,
+            _phaser_hexes_by_label,
+        )
+
+        assert set(_dimmer_hex_by_label()).isdisjoint(_palette_hex_by_label())
+        assert set(_dimmer_phaser_hexes_by_label()).isdisjoint(_phaser_hexes_by_label())
+
+
 class TestPagedPoolRead:
     """24캡 너머 풀의 팝업 판독 — 라이브 2026-08-16: 페이저 10종(4.31~4.40)이
     첫 창 밖이라 팝업이 콘솔과 다른 풀을 보여줬다. 세션 판독기의 페이징

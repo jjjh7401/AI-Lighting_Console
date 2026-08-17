@@ -37,6 +37,8 @@ from server.web.question import UNANSWERED, QuestionRequest
 from server.web.session import (
     COLOR_PALETTE_SEQUENCE,
     COLOR_PHASER_SEQUENCE,
+    DIMMER_LEVEL_SEQUENCE,
+    DIMMER_PHASER_SEQUENCE,
     HISTORY_MAX_MESSAGES,
     ChatSession,
     outcome_view,
@@ -2569,6 +2571,375 @@ class TestColorPhaserPresets:
             tmp_path,
             "멀티컬러 페이저 다시 잡아줘",
             pool=(),  # 저장된 구간이 없다 — 재생성 특유의 거부 문면이 나와야 한다
+        )
+
+        assert _writes(calls) == []
+        assert "먼저" in event["text"] and "저장" in event["text"]
+
+
+class TestBasicDimmerPresets:
+    """T5 — 디머 레벨 프리셋 10종의 저장·가드·재생성.
+
+    판정 원칙: ``TestBasicColorPresets``의 세대화이되 **판별 없음이 계약**
+    이다(T5 지시, ``session._dimmer_pool_and_fids`` 독스트링 근거) —
+    ``_color_capable_fids``의 대응물을 두지 않으므로 열거된 fid 전부가 그대로
+    적용 대상이 된다. 소재 공급은 fixture pair 열거만 스텁하고
+    (``_color_rig_fixture_pairs`` 재사용), 라우팅·가드·번들·회신은 공용
+    몸통(``_store_position_preset_sequence``) 그대로 검증한다.
+    """
+
+    def _run(
+        self,
+        tmp_path,
+        text,
+        *,
+        answers=(),
+        channel=True,
+        pool_index=None,
+        pairs=((20, 20), (26, 26)),
+        fid_unread=(),
+        stub_material=True,
+        **rig,
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(
+            calls,
+            pool_index=_M0_POOL_INDEX if pool_index is None else pool_index,
+            **rig,
+        )
+        if stub_material:
+            session._color_rig_fixture_pairs = lambda: (
+                [tuple(pair) for pair in pairs],
+                list(fid_unread),
+            )
+        chan = _AnsweringChannel(answers) if channel else None
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # 트리거 서로소 — 기본 디머 문장은 컬러 풀(4.x)로도 포지션 풀(2.x)로도
+    # 새지 않는다(Dimmer 풀=1로만 착지).
+    def test_the_trigger_is_disjoint_from_color_and_position(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 디머 프리셋을 11번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(11, 21)),
+        )
+        commands = _all_commands(calls)
+        assert "Store Preset 1.11" in commands
+        assert any("Dim 10" in cmd for cmd in commands)
+        assert not any(cmd.startswith("Store Preset 4.") for cmd in commands)
+        assert not any(cmd.startswith("Store Preset 2.") for cmd in commands)
+        assert "디머 레벨" in event["text"]
+
+    # 풀 미상 거부 — 컬러(REQ-002)와 동일 규율, 명사만 Dimmer.
+    def test_a_missing_dimmer_pool_refuses_without_writing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 디머 프리셋을 11번부터 저장해줘",
+            pool_index={2: "Position", 4: "Color"},
+        )
+
+        assert _writes(calls) == []
+        assert "Dimmer 풀을 찾지 못했습니다" in event["text"]
+
+    # 판별 생략 계약 — 컬러식 "N대 중 M대 적용/제외" 산술 문면이 없고, 열거된
+    # fid 전부가 하나의 Fixture 선택으로 번들에 실린다.
+    def test_no_discrimination_arithmetic_and_all_enumerated_fids_apply(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 디머 프리셋을 11번부터 저장해줘",
+            pairs=((1, 10), (2, 11), (3, 12)),
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(11, 21)),
+        )
+
+        assert "판별" not in event["text"]
+        assert "제외" not in event["text"]
+        commands = _all_commands(calls)
+        assert any(cmd.startswith("Fixture 10 + 11 + 12 ;") for cmd in commands)
+
+    # fid 미판독은 컬러와 동일하게 침묵 없이 고지한다.
+    def test_unread_fid_slots_are_disclosed(self, tmp_path):
+        event, _calls, _chan = self._run(
+            tmp_path,
+            "기본 디머 프리셋을 11번부터 저장해줘",
+            pairs=((1, 10),),
+            fid_unread=(2, 3),
+            pool=(1,),
+            readback=(1,) + tuple(range(11, 21)),
+        )
+
+        assert "FID 미판독 2대(패치 슬롯 2, 3) 제외" in event["text"]
+
+    # REQ-001/-003 대응물 — 검증된 빈 구간: 카드 없이 레벨별 독립 번들 10건.
+    # 값은 카탈로그의 % 그대로(Full=100).
+    def test_the_ten_level_bundles_carry_the_catalog_exactly(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "기본 디머 프리셋을 11번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(11, 21)),
+        )
+
+        assert chan.asked == []
+        writes = _writes(calls)
+        assert len(writes) == 10
+        for offset, (label, value) in enumerate(DIMMER_LEVEL_SEQUENCE):
+            preset_no = 11 + offset
+            call = writes[offset]
+            assert call.id == f"basic-dimmer-preset-{preset_no}"
+            assert call.arguments["commands"] == [
+                f"Fixture 20 + 26 ; Attribute 'Dimmer' At {value}",
+                f"Store Preset 1.{preset_no}",
+                f"Label Preset 1.{preset_no} '{label}'",
+                "ClearAll",
+            ]
+        assert DIMMER_LEVEL_SEQUENCE[0][0] == "Dim 10"  # 가족 필터 계약
+        assert DIMMER_LEVEL_SEQUENCE[-1] == ("Full", 100)
+        commands = _all_commands(calls)
+        assert not any("/Merge" in cmd or "/Overwrite" in cmd for cmd in commands)
+
+    # REQ-004 대응물 — 재생성 가족 필터: 'Dim 10'로 시작하는 구간만 표적이다.
+    def test_regeneration_targets_only_the_dim_10_family(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 디머 다시 잡아줘",
+            pool=tuple(range(11, 21)) + tuple(range(21, 31)),
+            names={11: "Custom Fade", 21: "Dim 10"},
+            answers=["덮어쓰기 진행"],
+        )
+
+        writes = _writes(calls)
+        assert len(writes) == 10
+        commands = _all_commands(calls)
+        assert "Store Preset 1.21" in commands
+        assert not any(cmd == "Store Preset 1.11" for cmd in commands)
+        assert "다시 저장 요청했습니다" in event["text"]
+
+    # 재생성이 신규 저장보다 앞이다 — "다시 잡아줘"는 저장 트리거의 '잡아'와
+    # 겹치므로 등록 순서로 행선지가 고정됨을 빈 풀 거부 문면으로 증명한다.
+    def test_regenerate_is_tried_before_store(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 디머 다시 잡아줘",
+            pool=(),
+        )
+
+        assert _writes(calls) == []
+        assert "먼저" in event["text"] and "저장" in event["text"]
+
+
+class TestDimmerPhaserPresets:
+    """디머 페이저 프리셋 10종 — T4 라이브 프로브
+    (``docs/research/ma3-effects/09-dimmer-phaser-m0-probe.md``)로 실측된
+    커맨드라인 문법의 카탈로그 구현. ``TestColorPhaserPresets``의 세대화 —
+    소재 공급만 갈아끼우고(``_dimmer_phaser_preset_material``), 라우팅·가드·
+    번들·되읽기 몸통은 100% 재사용이므로 여기서는 (1) 트리거가 디머 레벨
+    트리거와 서로소로 동작하는지, (2) 멀티스텝(2/3스텝) 커맨드라인이 프로브에서
+    실측된 그대로인지, (3) Form(Sine/Rectangle)·Phase 커맨드가 정확한지,
+    (4) 재생성 가족 필터가 'Breathe Soft'인지에 집중한다.
+    """
+
+    def _run(
+        self,
+        tmp_path,
+        text,
+        *,
+        answers=(),
+        channel=True,
+        pool_index=None,
+        pairs=((20, 20), (26, 26)),
+        fid_unread=(),
+        stub_material=True,
+        **rig,
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(
+            calls,
+            pool_index=_M0_POOL_INDEX if pool_index is None else pool_index,
+            **rig,
+        )
+        if stub_material:
+            session._color_rig_fixture_pairs = lambda: (
+                [tuple(pair) for pair in pairs],
+                list(fid_unread),
+            )
+        chan = _AnsweringChannel(answers) if channel else None
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # 카탈로그 계약 — 라벨·스텝·Form·Phase 순서는 T5 지시 표 그대로.
+    def test_the_catalog_matches_the_t5_table(self):
+        assert [entry[0] for entry in DIMMER_PHASER_SEQUENCE] == [
+            "Breathe Soft",
+            "Breathe Deep",
+            "Pulse Hard",
+            "Pulse Half",
+            "Wave Soft",
+            "Wave Full",
+            "Ripple",
+            "Flash Accent",
+            "Alt Half",
+            "Slam Run",
+        ]
+        assert DIMMER_PHASER_SEQUENCE[0][0] == "Breathe Soft"  # 가족 필터 계약
+        assert DIMMER_PHASER_SEQUENCE[6][1] == (30, 60, 100)  # Ripple 3스텝
+
+    # 트리거 서로소 — 디머 이펙트/페이저 문장은 디머 레벨 경로로 새지 않고,
+    # 디머 레벨 문장은 디머 페이저 경로로 새지 않는다.
+    def test_the_trigger_is_disjoint_from_basic_dimmer(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(21, 31)),
+        )
+        commands = _all_commands(calls)
+        assert "Store Preset 1.21" in commands
+        assert any("Breathe Soft" in cmd for cmd in commands)
+        # 디머 레벨 풀(1.11~)로는 한 줄도 쓰지 않는다 — 페이저는 1.21~로만.
+        assert not any(cmd.startswith("Store Preset 1.1") for cmd in commands)
+        assert "디머 페이저" in event["text"]
+
+        event2, calls2, _chan2 = self._run(
+            tmp_path,
+            "기본 디머 프리셋을 11번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(11, 21)),
+        )
+        commands2 = _all_commands(calls2)
+        assert "Store Preset 1.11" in commands2
+        assert not any("Breathe Soft" in cmd for cmd in commands2)
+        assert "디머 레벨" in event2["text"]
+
+    # 2스텝 Sine — Breathe Soft 커맨드라인이 프로브 §2 문법 그대로인지.
+    def test_a_two_step_sine_preset_carries_the_probed_grammar(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(21, 31)),
+        )
+        writes = _writes(calls)
+        assert len(writes) == 10
+        call = writes[0]
+        assert call.id == "dimmer-phaser-preset-21"
+        assert call.arguments["commands"] == [
+            "Fixture 20 + 26 ; Attribute 'Dimmer' At 30",
+            "Step 2",
+            "Attribute 'Dimmer' At 70",
+            "Attribute 'Dimmer' At Accel -100",
+            "Attribute 'Dimmer' At Decel -100",
+            "Attribute 'Dimmer' At Phase 0",
+            "Store Preset 1.21",
+            "Label Preset 1.21 'Breathe Soft'",
+            "ClearAll",
+        ]
+
+    # 2스텝 Rectangle — Pulse Hard(#3)가 Transition/Accel/Decel 0 근사치를
+    # 정확히 싣는지(프로브 §6.1 컬러 패턴의 디머 이식, ASSUMPTION 그대로).
+    def test_a_two_step_rectangle_preset_carries_the_probed_approximation(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(21, 31)),
+        )
+        writes = _writes(calls)
+        call = writes[2]  # Pulse Hard (index 2 in the catalog)
+        assert call.id == "dimmer-phaser-preset-23"
+        assert call.arguments["commands"] == [
+            "Fixture 20 + 26 ; Attribute 'Dimmer' At 0",
+            "Step 2",
+            "Attribute 'Dimmer' At 100",
+            "Attribute 'Dimmer' At Accel 0",
+            "Attribute 'Dimmer' At Decel 0",
+            "Attribute 'Dimmer' At Transition 0",
+            "Attribute 'Dimmer' At Phase 0",
+            "Store Preset 1.23",
+            "Label Preset 1.23 'Pulse Hard'",
+            "ClearAll",
+        ]
+
+    # 3스텝 Ripple — 프로브 §3(3-step)/§6.2(컬러) 실측(Step 3 직후 Store해도
+    # 3값 다 담김).
+    def test_the_three_step_ripple_preset_carries_all_three_steps(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(21, 31)),
+        )
+        writes = _writes(calls)
+        call = writes[6]  # Ripple (index 6 in the catalog)
+        assert call.id == "dimmer-phaser-preset-27"
+        commands = call.arguments["commands"]
+        assert commands[0] == "Fixture 20 + 26 ; Attribute 'Dimmer' At 30"
+        assert commands[1] == "Step 2"
+        assert commands[2] == "Attribute 'Dimmer' At 60"
+        assert commands[3] == "Step 3"
+        assert commands[4] == "Attribute 'Dimmer' At 100"
+        assert commands[-4] == "Attribute 'Dimmer' At Phase 0 Thru 360"
+        assert commands[-3] == "Store Preset 1.27"
+        assert commands[-2] == "Label Preset 1.27 'Ripple'"
+        assert commands[-1] == "ClearAll"
+
+    # Phase 분산 문법 — Alt Half(#9, Phase 180)와 Wave Soft(#5, 0 Thru 360).
+    def test_phase_tokens_match_the_catalog(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(21, 31)),
+        )
+        writes = _writes(calls)
+        alt_half = writes[8].arguments["commands"]
+        assert "Attribute 'Dimmer' At Phase 180" in alt_half
+        wave_soft = writes[4].arguments["commands"]
+        assert "Attribute 'Dimmer' At Phase 0 Thru 360" in wave_soft
+
+    # 풀 미상 거부 — 디머 레벨과 동일 규율.
+    def test_a_missing_dimmer_pool_refuses_without_writing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 프리셋을 21번부터 저장해줘",
+            pool_index={2: "Position", 4: "Color"},
+        )
+
+        assert _writes(calls) == []
+        assert "Dimmer 풀을 찾지 못했습니다" in event["text"]
+
+    # 재생성 가족 필터 — 'Breathe Soft'로 시작하는 구간만 표적이다.
+    def test_regeneration_targets_only_the_breathe_soft_family(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 다시 잡아줘",
+            pool=tuple(range(11, 21)) + tuple(range(21, 31)),
+            names={11: "Custom Fade", 21: "Breathe Soft"},
+            answers=["덮어쓰기 진행"],
+        )
+
+        writes = _writes(calls)
+        assert len(writes) == 10
+        commands = _all_commands(calls)
+        assert "Store Preset 1.21" in commands
+        assert not any(cmd == "Store Preset 1.11" for cmd in commands)
+        assert "다시 저장 요청했습니다" in event["text"]
+
+    # 재생성이 신규 저장보다 앞이다 — 트리거의 '잡아'가 겹치므로 등록 순서로
+    # 행선지가 고정됨을 뮤테이션으로 증명한다.
+    def test_regenerate_is_tried_before_store(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 다시 잡아줘",
+            pool=(),
         )
 
         assert _writes(calls) == []

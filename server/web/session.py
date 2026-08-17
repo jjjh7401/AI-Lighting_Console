@@ -1763,6 +1763,84 @@ _REGENERATE_COLOR_PHASER_REQUEST = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+#: 디머 레벨 프리셋 10종 — T5 카탈로그(코디네이터 지시 고정). 라벨은 그대로
+#: Dimmer 값(%)이다(Full=100). 슬롯 1은 항상 'Dim 10'이고 재생성 가족 필터의
+#: first_label이 된다(팔레트·포지션·FX·멀티컬러와 같은 규율).
+DIMMER_LEVEL_SEQUENCE: tuple[tuple[str, int], ...] = (
+    ("Dim 10", 10),
+    ("Dim 20", 20),
+    ("Dim 30", 30),
+    ("Dim 40", 40),
+    ("Dim 50", 50),
+    ("Dim 60", 60),
+    ("Dim 70", 70),
+    ("Dim 80", 80),
+    ("Dim 90", 90),
+    ("Full", 100),
+)
+
+# 기본 디머(레벨) 프리셋 저장 — 컬러의 `_BASIC_COLORS_REQUEST`를 어휘축만 바꿔
+# 미러한다(기본/베이직/basic + 디머/dimmer). 컬러축(컬러/색/color)과 서로소라
+# 두 계열이 서로의 문장을 삼키지 않는다. 포지션 트리거의 명사 대안 '프리셋'과는
+# 여전히 교집합이 있지만(컬러와 같은 형상), 디스패치 등록 순서(디머가 포지션보다
+# 앞)로 행선지를 고정한다(REQ-PRESETGUARD-015와 같은 패턴).
+_BASIC_DIMMER_REQUEST = re.compile(
+    r"(?:기본|베이직|basic).{0,16}?(?:디머|dimmer).*?(?:저장|만들|잡아|생성)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+# 디머 레벨 재생성: BASIC 재생성과 같은 문형에서 명사축만 디머다. 꼬리 규율은
+# `_REGENERATE_POSITIONS_REQUEST` 주석의 근거를 그대로 상속한다. '재조준/
+# 리포커스'는 포지션 전용 어휘라 들이지 않는다(컬러와 동일 사유).
+_REGENERATE_DIMMER_REQUEST = re.compile(
+    r"(?:기본|베이직|basic).{0,16}?(?:디머|dimmer)"
+    r"(?:"
+    r".{0,12}?재생성"
+    r"|"
+    r".{0,12}?다시(?:\s+\S{1,6})?\s*(?:잡|만들|생성|갱신)"
+    r")",
+    re.IGNORECASE | re.DOTALL,
+)
+
+#: 디머 페이저 프리셋 10종 — T5 카탈로그(코디네이터 지시 고정, T4 프로브
+#: `09-dimmer-phaser-m0-probe.md`가 확인한 문법만 사용). 각 원소: (라벨,
+#: 스텝 순서의 디머 값(%)들, Form("sine"|"rectangle"), Phase 커맨드 토큰).
+#: 슬롯 1은 항상 'Breathe Soft'이고 재생성 가족 필터의 first_label이 된다.
+DIMMER_PHASER_SEQUENCE: tuple[tuple[str, tuple[int, ...], str, str], ...] = (
+    ("Breathe Soft", (30, 70), "sine", "0"),
+    ("Breathe Deep", (10, 90), "sine", "0"),
+    ("Pulse Hard", (0, 100), "rectangle", "0"),
+    ("Pulse Half", (30, 100), "rectangle", "0"),
+    ("Wave Soft", (30, 70), "sine", "0 Thru 360"),
+    ("Wave Full", (0, 100), "sine", "0 Thru 360"),
+    ("Ripple", (30, 60, 100), "sine", "0 Thru 360"),
+    ("Flash Accent", (100, 20), "rectangle", "0"),
+    ("Alt Half", (50, 100), "sine", "180"),
+    ("Slam Run", (0, 100), "rectangle", "0 Thru 360"),
+)
+
+# 디머 페이저 저장: 컬러의 `_COLOR_PHASER_REQUEST`를 어휘축만 바꿔 미러한다
+# (디머 이펙트/디머 페이저/dimmer effect/dimmer phaser). '기본' 접두를 요구하지
+# 않는 점도 컬러의 멀티컬러 트리거와 동일 — 어휘 자체(이펙트/페이저 복합어)가
+# 이미 레벨 트리거(단순 '디머')와 서로소다.
+_DIMMER_PHASER_REQUEST = re.compile(
+    r"(?:디머\s*이펙트|디머\s*페이저|dimmer\s*effect|dimmer\s*phaser)"
+    r".{0,24}?(?:저장|만들|잡아|생성)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+# 디머 페이저 재생성: 디머 레벨 재생성과 같은 문형에서 어휘축만 다르다(컬러/
+# 멀티컬러 재생성 쌍과 동일 형상).
+_REGENERATE_DIMMER_PHASER_REQUEST = re.compile(
+    r"(?:디머\s*이펙트|디머\s*페이저|dimmer\s*effect|dimmer\s*phaser)"
+    r"(?:"
+    r".{0,12}?재생성"
+    r"|"
+    r".{0,12}?다시(?:\s+\S{1,6})?\s*(?:잡|만들|생성|갱신)"
+    r")",
+    re.IGNORECASE | re.DOTALL,
+)
+
 _REPEATING_TYPE_COLUMNS_REQUEST = re.compile(
     r"(?:\d+\s*열\s*:\s*)?.*mmx.*(?:\d+\s*열\s*:\s*)?.*350\s*m?.*반복",
     re.IGNORECASE,
@@ -2180,6 +2258,66 @@ def _color_phaser_phase_command(phase: str) -> str:
     360"`` 세 토큰 다 라이브 수락 확인됨(``08-…-probe.md`` §3/§6.3).
     """
     return f"Attribute 'ColorRGB_R' At Phase {phase}"
+
+
+def _dimmer_apply_command(fids: Sequence[int], value: int) -> str:
+    """한 디머 레벨을 대상 픽스처 전체에 싣는 **한 줄** 체인 —
+    ``_color_apply_command``의 단일 채널('Dimmer') 미러(T4 프로브 §1 문법)."""
+    selection = " + ".join(str(fid) for fid in fids)
+    return f"Fixture {selection} ; Attribute 'Dimmer' At {value}"
+
+
+def _dimmer_phaser_step_commands(fids: Sequence[int], values: Sequence[int]) -> tuple[str, ...]:
+    """멀티스텝 디머 페이저를 프로그래머에 싣는 커맨드라인 시퀀스.
+
+    ``_color_phaser_step_commands``의 단일 채널 미러 — 라이브 실측
+    (``09-dimmer-phaser-m0-probe.md`` §2/§3): 첫 스텝은 ``Fixture <fids> ;
+    Attribute 'Dimmer' At <n>``로 선택+값을 함께 싣고, 이후 스텝은 선택이
+    프로그래머에 남아 있으므로 ``Step N`` 다음 값 1줄만 보낸다. 2스텝
+    (Breathe/Pulse/Wave/Flash/Alt/Slam)과 3스텝(Ripple) 둘 다 라이브 확인됨
+    (같은 문서 §2/§3, 함정① 무재현).
+    """
+    if len(values) < 2:
+        raise SpatialPointingError(f"dimmer phaser needs at least 2 steps, got {len(values)}")
+    selection = " + ".join(str(fid) for fid in fids)
+    commands: list[str] = []
+    for step_no, value in enumerate(values, start=1):
+        chain = f"Attribute 'Dimmer' At {value}"
+        if step_no == 1:
+            commands.append(f"Fixture {selection} ; {chain}")
+        else:
+            commands.append(f"Step {step_no}")
+            commands.append(chain)
+    return tuple(commands)
+
+
+def _dimmer_phaser_form_commands(form: str) -> tuple[str, ...]:
+    """Form 레이어 근사 — ``_color_phaser_form_commands``의 단일 채널 미러.
+
+    Sine(Accel −100/Decel −100)은 라이브 검증됨(``09-…-probe.md`` §2).
+    Rectangle(Transition 0/Accel 0/Decel 0)은 컬러와 같은 사유로 ASSUMPTION —
+    명령 자체는 거부되지 않지만(``08-…-probe.md`` §6.1과 동일 근사, 디머
+    전용으로는 미시도) 하드컷 파형이 실제로 만들어지는지는 이 저장소 구조상
+    (OSC/Lua만) 확인할 수 없다.
+    """
+    if form == "sine":
+        curve = -100
+    elif form == "rectangle":
+        curve = 0
+    else:
+        raise SpatialPointingError(f"unknown dimmer phaser form {form!r}")
+    commands = [f"Attribute 'Dimmer' At Accel {curve}", f"Attribute 'Dimmer' At Decel {curve}"]
+    if form == "rectangle":
+        commands.append("Attribute 'Dimmer' At Transition 0")
+    return tuple(commands)
+
+
+def _dimmer_phaser_phase_command(phase: str) -> str:
+    """Phase 분산 — ``'Dimmer'`` 한 채널에 싣는다. ``"0"``/``"180"``/``"0 Thru
+    360"`` 세 토큰 다 컬러 채널에서 라이브 수락 확인됨(``08-…-probe.md``
+    §3/§6.3) — 디머 채널로는 문법 형태만 이식(같은 ``At Phase`` 커맨드).
+    """
+    return f"Attribute 'Dimmer' At Phase {phase}"
 
 
 def _preset_overwrite_refusal(verdict: _PresetSpanVerdict) -> str:
@@ -4501,6 +4639,256 @@ class ChatSession:
             read=lambda _call_id: capable,
             apply=list,
             lead_intro="멀티컬러 페이저 카탈로그로",
+            tail="이 프리셋을 참조하는 큐는 별도 수정 없이 새 페이저를 따라갑니다.",
+            disclosure=disclosure,
+        )
+
+    def _resolve_dimmer_pool_no(self) -> int | None:
+        """The Dimmer pool's NUMBER, resolved from the console's own pool list.
+
+        ``_resolve_color_pool_no``의 미러 — 같은 위험(풀 이름은 운영자가 바꿀
+        수 있으므로 1을 하드코딩하면 손으로 만든 프리셋을 덮는다)이라 같은
+        해법을 쓴다: ``DataPool/PresetPools`` 자식에서 이름이 정확히
+        ``Dimmer``인 풀을 찾고, 실패·부재·절단은 전부 ``None``(거부)이다.
+        T4 프로브 전제검증(``09-dimmer-phaser-m0-probe.md``): 이 리그는
+        풀 1='Dimmer'.
+        """
+        pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
+        probe = self._registry.dispatch(
+            ToolCall(
+                id="basic-dimmer-pool-resolve",
+                name="query_state",
+                arguments={"path": pool_root},
+            )
+        )
+        if probe.result.is_error:
+            return None
+        try:
+            payload = json.loads(probe.result.content)
+        except (json.JSONDecodeError, TypeError):
+            return None
+        children = payload.get("children") if isinstance(payload, dict) else None
+        if not isinstance(children, list):
+            return None
+        node = payload.get("node")
+        child_count = node.get("childCount") if isinstance(node, dict) else None
+        if bool(payload.get("truncated")) or (
+            isinstance(child_count, int) and child_count > len(children)
+        ):
+            return None  # 절단된 목록에 Dimmer가 없다 ≠ 풀이 없다 — 모름은 거부다
+        for child in children:
+            if not isinstance(child, dict) or child.get("name") != "Dimmer":
+                continue
+            try:
+                return int(child.get("i", child.get("no")))
+            except (TypeError, ValueError):
+                return None
+        return None
+
+    def _dimmer_pool_and_fids(self, *, noun: str) -> tuple[int, list[int], str] | InstructionResult:
+        """Dimmer 풀 번호 해석 + 패치 픽스처 전량 열거 — ``(pool_no, fids,
+        disclosure)`` 또는 거부.
+
+        ``_color_pool_and_capable_fids``의 앞부분(풀 해석 → 픽스처 열거)을
+        미러하되, 3-hop 컬러 판별(``_color_capable_fids``, REQ-COLORPRESET-
+        005)의 대응물을 **두지 않는다** — T5 지시에 따른 의도적 생략, 근거는
+        다음과 같다: 이 저장소의 기존 Dimmer 소비자(``spatial/mib.py:168``,
+        ``spatial/pointing.py:324``, 본 파일의 무대 뒷조명 체인)는 전부 판별
+        없이 대상 픽스처 전체에 ``Attribute 'Dimmer' At <n>``을 무조건 싣고,
+        T4 프로브(``docs/research/ma3-effects/09-dimmer-phaser-m0-probe.md``
+        §1/§2)도 ``'Dimmer'`` 속성명이 ``Group 11``(이 리그) 전체에서 거부
+        없이 수락됨만 확인했다 — "Dimmer 없는 조명 장비"라는 반례를 이 리그·
+        이 저장소 어디에서도 만들지 않아, 컬러처럼 fail-closed로 축소할
+        근거가 없다. ``_color_rig_fixture_pairs``는 이름과 달리 컬러 속성을
+        읽지 않는(패치 슬롯·fid 짝만 여는 범용 열거자)라 그대로 재사용한다.
+        """
+        pool_no = self._resolve_dimmer_pool_no()
+        if pool_no is None:
+            return self._pointing_refusal(
+                "Dimmer 풀을 찾지 못했습니다 — 프리셋 풀 목록에서 이름이 'Dimmer'인 "
+                f"풀을 확인하지 못해 {noun} 프리셋을 시작하지 않았습니다. "
+                "풀 번호를 추측해 저장하면 다른 풀의 프리셋을 덮을 수 있습니다."
+            )
+        enumerated = self._color_rig_fixture_pairs()
+        if enumerated is None:
+            return self._pointing_refusal(
+                f"패치된 픽스처 목록을 읽지 못해 {noun} 프리셋을 시작하지 않았습니다."
+            )
+        pairs, fid_unread = enumerated
+        if not pairs:
+            return self._pointing_refusal(
+                f"패치된 픽스처가 확인되지 않아 {noun} 프리셋을 시작하지 않았습니다."
+            )
+        fids = sorted(fid for _slot, fid in pairs)
+        disclosure = (
+            (
+                f"FID 미판독 {len(fid_unread)}대(패치 슬롯 "
+                f"{', '.join(str(slot) for slot in fid_unread)}) 제외 — 판독 실패는 "
+                "보유로 치지 않습니다."
+            )
+            if fid_unread
+            else ""
+        )
+        return pool_no, fids, disclosure
+
+    def _dimmer_preset_material(
+        self, *, noun: str
+    ) -> (
+        tuple[int, list[int], tuple[tuple[str, tuple[str], tuple[()]], ...], str]
+        | InstructionResult
+    ):
+        """디머 레벨 저장·재생성이 공유하는 소재 — ``(pool_no, fids, looks,
+        disclosure)`` 또는 거부. ``_color_preset_material``의 미러, 공유
+        앞부분은 ``_dimmer_pool_and_fids``, 이 함수는 레벨 단일-스텝 룩
+        구성만 맡는다.
+        """
+        shared = self._dimmer_pool_and_fids(noun=noun)
+        if isinstance(shared, InstructionResult):
+            return shared
+        pool_no, fids, disclosure = shared
+        looks = tuple(
+            (label, (_dimmer_apply_command(fids, value),), ())
+            for label, value in DIMMER_LEVEL_SEQUENCE
+        )
+        return pool_no, fids, looks, disclosure
+
+    def _dimmer_phaser_preset_material(
+        self, *, noun: str
+    ) -> (
+        tuple[int, list[int], tuple[tuple[str, tuple[str, ...], tuple[()]], ...], str]
+        | InstructionResult
+    ):
+        """디머 페이저 저장·재생성이 공유하는 소재 — ``_dimmer_preset_
+        material``과 앞부분(``_dimmer_pool_and_fids``)을 공유하고, 룩 구성만
+        갈라진다: 레벨 단일 값 대신 ``DIMMER_PHASER_SEQUENCE``의 스텝
+        시퀀스 + Form + Phase 커맨드를 싣는다(``_color_phaser_preset_
+        material`` 미러).
+        """
+        shared = self._dimmer_pool_and_fids(noun=noun)
+        if isinstance(shared, InstructionResult):
+            return shared
+        pool_no, fids, disclosure = shared
+        looks = tuple(
+            (
+                label,
+                (
+                    *_dimmer_phaser_step_commands(fids, values),
+                    *_dimmer_phaser_form_commands(form),
+                    _dimmer_phaser_phase_command(phase),
+                ),
+                (),
+            )
+            for label, values, form, phase in DIMMER_PHASER_SEQUENCE
+        )
+        return pool_no, fids, looks, disclosure
+
+    def _basic_dimmer_presets(self, text: str) -> InstructionResult | None:
+        """*"기본 디머 프리셋을 N번부터 저장해줘"* — 디머 레벨 10종을 해석된
+        Dimmer 풀의 연속 10칸에 저장한다. ``_basic_color_presets``의 미러 —
+        공용 저장 몸통(``_store_position_preset_sequence``)을 그대로 쓰고,
+        소재만 ``_dimmer_preset_material``이 공급한다(컬러 판별 없음, T5
+        지시).
+        """
+        if _BASIC_DIMMER_REQUEST.search(text) is None:
+            return None
+        material = self._dimmer_preset_material(noun="디머 레벨")
+        if isinstance(material, InstructionResult):
+            return material
+        pool_no, fids, looks, disclosure = material
+        return self._store_position_preset_sequence(
+            text,
+            noun="디머 레벨",
+            sequence=tuple(label for label, _value in DIMMER_LEVEL_SEQUENCE),
+            build=lambda _fixtures: looks,
+            read_id="basic-dimmer-presets-read",
+            bundle="basic-dimmer-preset",
+            example="디머 레벨 프리셋을 11번부터 저장해줘",
+            pool_no=pool_no,
+            pool_label="Dimmer",
+            read=lambda _call_id: fids,
+            apply=list,
+            lead_intro="표준 디머 레벨에서 가져온",
+            disclosure=disclosure,
+        )
+
+    def _regenerate_basic_dimmer_presets(self, text: str) -> InstructionResult | None:
+        """*"기본 디머 다시 잡아줘"* — 저장된 디머 레벨 10칸 구간을 제자리
+        갱신한다. ``_regenerate_basic_color_presets``의 미러 — 가족 필터
+        first_label='Dim 10', 풀 미상 거부.
+        """
+        if _REGENERATE_DIMMER_REQUEST.search(text) is None:
+            return None
+        material = self._dimmer_preset_material(noun="디머 레벨")
+        if isinstance(material, InstructionResult):
+            return material
+        pool_no, fids, looks, disclosure = material
+        return self._regenerate_position_preset_sequence(
+            text,
+            noun="디머 레벨",
+            build=lambda _fixtures: looks,
+            read_id="regenerate-dimmer-presets-read",
+            bundle="basic-dimmer-preset",
+            store_example="디머 레벨 프리셋 10개 저장",
+            first_label=DIMMER_LEVEL_SEQUENCE[0][0],
+            pool_no=pool_no,
+            pool_label="Dimmer",
+            read=lambda _call_id: fids,
+            apply=list,
+            lead_intro="표준 디머 레벨로",
+            tail="이 프리셋을 참조하는 큐는 별도 수정 없이 새 레벨을 따라갑니다.",
+            disclosure=disclosure,
+        )
+
+    def _dimmer_phaser_presets(self, text: str) -> InstructionResult | None:
+        """*"디머 페이저 프리셋 저장해줘"* — 카탈로그 10종(T5)을 해석된 Dimmer
+        풀의 연속 10칸에 저장한다. ``_color_phaser_presets``의 미러.
+        """
+        if _DIMMER_PHASER_REQUEST.search(text) is None:
+            return None
+        material = self._dimmer_phaser_preset_material(noun="디머 페이저")
+        if isinstance(material, InstructionResult):
+            return material
+        pool_no, fids, looks, disclosure = material
+        return self._store_position_preset_sequence(
+            text,
+            noun="디머 페이저",
+            sequence=tuple(label for label, _values, _form, _phase in DIMMER_PHASER_SEQUENCE),
+            build=lambda _fixtures: looks,
+            read_id="dimmer-phaser-presets-read",
+            bundle="dimmer-phaser-preset",
+            example="디머 페이저 프리셋을 21번부터 저장해줘",
+            pool_no=pool_no,
+            pool_label="Dimmer",
+            read=lambda _call_id: fids,
+            apply=list,
+            lead_intro="디머 페이저 카탈로그에서 가져온",
+            disclosure=disclosure,
+        )
+
+    def _regenerate_dimmer_phaser_presets(self, text: str) -> InstructionResult | None:
+        """*"디머 페이저 다시 잡아줘"* — 저장된 디머 페이저 10칸 구간을 제자리
+        갱신한다. ``_regenerate_color_phaser_presets``의 미러 — 가족 필터
+        first_label='Breathe Soft'.
+        """
+        if _REGENERATE_DIMMER_PHASER_REQUEST.search(text) is None:
+            return None
+        material = self._dimmer_phaser_preset_material(noun="디머 페이저")
+        if isinstance(material, InstructionResult):
+            return material
+        pool_no, fids, looks, disclosure = material
+        return self._regenerate_position_preset_sequence(
+            text,
+            noun="디머 페이저",
+            build=lambda _fixtures: looks,
+            read_id="regenerate-dimmer-phaser-presets-read",
+            bundle="dimmer-phaser-preset",
+            store_example="디머 페이저 프리셋 10개 저장",
+            first_label=DIMMER_PHASER_SEQUENCE[0][0],
+            pool_no=pool_no,
+            pool_label="Dimmer",
+            read=lambda _call_id: fids,
+            apply=list,
+            lead_intro="디머 페이저 카탈로그로",
             tail="이 프리셋을 참조하는 큐는 별도 수정 없이 새 페이저를 따라갑니다.",
             disclosure=disclosure,
         )
@@ -7719,6 +8107,23 @@ class ChatSession:
                     result = self._regenerate_color_phaser_presets(text)
                 if result is None:
                     result = self._color_phaser_presets(text)
+                if result is None:
+                    # 디머 레벨도 컬러와 같은 이유로 재생성이 신규 저장보다
+                    # 앞이다 — 트리거의 '잡아'가 재생성 문장을 함께 매치한다
+                    # (REQ-PRESETGUARD-015와 같은 형상). 컬러 계열 바로 다음에
+                    # 배치해 두 프리셋 계열(색·밝기)의 안전 동작이 갈라지지
+                    # 않는다는 것을 코드 위치로도 드러낸다.
+                    result = self._regenerate_basic_dimmer_presets(text)
+                if result is None:
+                    result = self._basic_dimmer_presets(text)
+                if result is None:
+                    # 디머 페이저도 같은 이유로 재생성이 신규 저장보다 앞이다.
+                    # 어휘축(디머 이펙트/디머 페이저)이 디머 레벨 어휘축(기본
+                    # 디머)과 서로소라 두 디머 계열은 서로의 문장을 삼키지
+                    # 않는다.
+                    result = self._regenerate_dimmer_phaser_presets(text)
+                if result is None:
+                    result = self._dimmer_phaser_presets(text)
                 if result is None:
                     # 재생성이 신규 저장보다 **먼저**다 — 두 트리거의 교집합이
                     # 공집합이 아니므로(ASSUMPTION-83 반증) 등록 순서가 겹치는
