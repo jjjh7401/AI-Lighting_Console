@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-LDGUIDE-001
 title: "조명감독 워크플로우 기준 사용 가이드 전면 개정 + 개선 제안 도출 (LD Guide)"
-version: "0.5.0"
+version: "0.6.0"
 status: draft
 created: 2026-08-17
 updated: 2026-08-17
@@ -262,6 +262,7 @@ comm -23 /tmp/t.txt /tmp/present.txt | wc -l                # 17 부재
 | 버전 | 일자 | 작성 | 변경 |
 |---|---|---|---|
 | 0.1.0 | 2026-08-17 | kanban plan session | 최초 작성(draft, Tier M). 칸반 카드 t1. 사용자 확인 3건(9단계 축·전면 개정·독자 2계층) 반영. 카드 전제("문서 없음") 정정 — 기존 문서 존재 실측. |
+| 0.6.0 | 2026-08-17 | kanban plan session | **§D 명령 4건 교정 + §G 19/19 완결.** `run-tjueej`가 미검증 10개를 뮤테이션 검증해 D.1(오통과)·D.2(육안 판정)·D.7(상시 통과)·D.13(**상시 실패**)을 찾았다. D.13은 rebase로 기준점이 이동해 무관한 이력 296파일을 삼킨 **fail-closed** — 이 SPEC 최초의 반대 방향 결함. `BASE`를 고정 SHA에서 `git merge-base`로 교체. D.7은 run의 1차 교정형이 위양성(운용 사실 3건)을 내 최종형으로 재교정. `progress.md` §6-F에 기전 7종 목록 신설. M5 부채(R7) 해소. |
 | 0.5.0 | 2026-08-17 | kanban plan session | **§A.2 오측 정정** — 등장/부재가 뒤바뀌어 있었다(17 등장/16 부재 → **16 등장/17 부재**). 기전은 단어 경계 없는 alternation이 유령 이름 `run_preshow_check` 안에서 등록명 `preshow_check`에 부분 매치한 것. run 단계 M0 실측 발견, lead 독립 재측정 확인. 부재 목록에 `preshow_check` 추가, Q1·plan 게이트 C·AC-009 기준값 동반 정정. `acceptance.md` §0에 규약 6(부분 문자열 매칭 금지) 신설. |
 | 0.4.0 | 2026-08-17 | kanban plan session | plan-audit 3회차(FAIL 0.79 · 상한 도달 · 권고 PASS-WITH-DEBT) 잔여 R1~R7 반영. §A.4가 3건 → **5건**(전량 차집합 전환으로 `propose_plan`·`write_coordinate` 추가 발견) + 허용목록 2종 실측 확정. REQ-016을 부인목록 금지·전량 차집합으로 명문화. |
 | 0.3.0 | 2026-08-17 | kanban plan session | plan-audit 2회차(FAIL 0.70) 결함 반영. 신규 P0 3건(gitignore 경유 상시통과·제목줄 오계수·부록 마커 부재 fail-open) 교정. §A.4 신설(유령 3건), REQ-013에 `class="warn"` 리터럴, REQ-015에 검증 한계 명시, REQ-017 부착 대상 구조 정의. |
