@@ -59,7 +59,7 @@ The loop taxonomy is re-expressed as **goal engine + preset**: the four quadrant
 - **How it ends**: success-exit when the goal engine confirms "queue drained + diagnostics clean" via the independent final pass (Step 1/1.5), or a ceiling exit that emits the 5-section verdict and persists residue per § Ceiling-Exit Verdict Contract.
 - **When it fits**: sweeping a project-wide finite issue queue to zero across many iterations — not a one-off turn, not a schedule.
 
-Sibling presets (same **goal engine + preset** framing, different quadrant): **turn-based** one-shot fixing is `.claude/skills/moai/workflows/fix.md` (its unresolved residue persists to the same verdict schema and recommends re-entry here); **time-based** cadence recipes are `.claude/rules/moai/workflow/cadence-bridge.md`; **proactive** CI-triggered watch is the `moai-workflow-ci-loop` skill. The `goal engine + preset` framing is consistent across the `loop.md`/`fix.md` sibling quadrant notes.
+Sibling presets (same **goal engine + preset** framing, different quadrant): **turn-based** one-shot fixing is `.claude/skills/moai/workflows/fix.md` (its unresolved residue persists to the same verdict schema and recommends re-entry here); **time-based** cadence recipes are `.claude/rules/moai/workflow/cadence-bridge.md`. The `goal engine + preset` framing is consistent across the `loop.md`/`fix.md` sibling quadrant notes.
 
 ## Goal-Preset Composition — how the sweep is built ON the goal engine
 
@@ -181,10 +181,12 @@ Step 6 - Fix Execution:
 
 Agent selection by issue type (domain expertise injected per-spawn per `.claude/rules/moai/workflow/archived-agent-rejection.md` §C):
 - Type errors, logic bugs: manager-develop subagent (or orchestrator verification batch)
-- Import/module issues: manager-develop (or per-spawn `Agent(general-purpose)` backend/frontend specialist)
-- Test failures: manager-develop subagent
-- Security issues: per-spawn `Agent(general-purpose)` security reviewer
+- Import/module issues: manager-develop (or per-spawn `Agent(general-purpose)` backend/frontend specialist) — inject `At start, invoke Skill("moai-ref-api-patterns")` for backend import/module work
+- Test failures: manager-develop subagent — inject `At start, invoke Skill("moai-ref-testing-pyramid")` for test-suite structure
+- Security issues: per-spawn `Agent(general-purpose)` security reviewer — inject `At start, invoke Skill("moai-ref-owasp-checklist") for the OWASP Top 10 baseline.`
 - Performance issues: per-spawn `Agent(general-purpose)` performance specialist
+
+Skill injection: per skill-routing.md §1, before each spawn inject 0-3 `At start, invoke Skill("<name>") for <reason>` lines from the delegation map (`.moai/config/sections/delegation.yaml`), matched to the issue type's domain (security → moai-ref-owasp-checklist, test → moai-ref-testing-pyramid, backend import/module → moai-ref-api-patterns).
 
 Fix levels applied per --auto setting:
 - Level 1 (Immediate): No approval. Import sorting, whitespace
@@ -375,4 +377,4 @@ All fixes within the loop follow CLAUDE.md Section 7 Safe Development Protocol:
 ---
 
 Version: 2.6.0
-Updated: 2026-07-12. Redefined `/moai loop` as a **goal preset** — a project-wide improvement sweep built ON the goal engine. Added the Goal-Preset Composition section (delegates the iterate-until-done decision to the goal engine via `stop-goal`), the Scan Stage finite-issue-queue section (default LSP + lint + test + review lenses [security, @MX], opt-in `--lens clean|simplify|coverage`, no-invented-improvements HARD boundary, empty-queue immediate exit), the /moai review + /moai fix layering section, and the additive `sweep-residue` exit_kind value. PRESERVED: the mechanical predicate + independent final pass (Step 1/1.5), the ceiling-exit 5-section verdict contract with `.moai/state/loop-verdict-<id>.json` persistence, the iteration-ceiling precedence rule, and the memory-pressure guard. Previous: 2.3.0 (2026-07-09) replaced sentinel-string success-exit with mechanical predicate; 2.2.0 (2026-03-02) expanded Language-Specific Commands to 16 languages.
+Changes: Redefined `/moai loop` as a **goal preset** — a project-wide improvement sweep built ON the goal engine. Added the Goal-Preset Composition section (delegates the iterate-until-done decision to the goal engine via `stop-goal`), the Scan Stage finite-issue-queue section (default LSP + lint + test + review lenses [security, @MX], opt-in `--lens clean|simplify|coverage`, no-invented-improvements HARD boundary, empty-queue immediate exit), the /moai review + /moai fix layering section, and the additive `sweep-residue` exit_kind value. PRESERVED: the mechanical predicate + independent final pass (Step 1/1.5), the ceiling-exit 5-section verdict contract with `.moai/state/loop-verdict-<id>.json` persistence, the iteration-ceiling precedence rule, and the memory-pressure guard. Previous: 2.3.0 replaced sentinel-string success-exit with mechanical predicate; 2.2.0 expanded Language-Specific Commands to 16 languages.
