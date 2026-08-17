@@ -780,6 +780,91 @@ _SINGLE_LAYER_WARNING = (
 )
 
 
+# 페이저 자동 제안(T12) — 곡 설계 섹션 큐의 역할 텍스트에서 고신뢰 쌍만
+# 제안한다(코디네이터 매핑 표, 보수적). ``cue.cue_name``은 ``song_plan.
+# CuePayload.cue_name == section.label == section.name``(디자인 인터뷰가
+# 부여한 섹션 원문 이름) — session.py의 ``_section_role`` 역할 판별기가
+# 쓰는 것과 같은 어휘를 재사용한다. '최고 에너지(드롭/후렴 피크 상당)'와
+# '후렴'을 가르기 위해 기존 ``_SONG_CLIMAX_SECTION``(후렴|드롭|클라이맥스|
+# 피크를 하나로 뭉뚱그림)을 두 갈래로 세분화했다 — 드롭/클라이맥스/피크
+# 어휘가 있으면 최고 에너지, 없이 '후렴'만 있으면 일반 후렴이다.
+# ``cue.d_level``(1-5)은 이 판별에 쓰지 않는다 — ``_ARC_D_LEVEL``에서
+# chorus=finale=5로 같은 값을 공유해 최고 에너지/후렴/피날레를 구별할
+# 신호가 못 된다(추측 금지 — 확인 결과는 worker_done에 보고). 매칭되지
+# 않는 나머지 전부(인트로 포함)는 None — 정적 유지가 안전 기본값이다.
+_PHASER_PEAK_SECTION = re.compile(r"드롭|클라이맥스|피크|drop|climax|peak", re.IGNORECASE)
+_PHASER_CHORUS_SECTION = re.compile(r"후렴|chorus", re.IGNORECASE)
+
+
+def _phaser_label_for_cue(cue) -> str | None:
+    """섹션 큐 → 카탈로그 페이저 라벨 제안, 없으면 None(정적 유지 = 안전).
+
+    MIB pre-move(``kind != 'section'``)는 어두운 순간의 순수 이동 큐라
+    제외한다 — 페이저는 보이는 연출이므로 암전 이동에 실을 이유가 없다.
+    블랙아웃 큐(``dimmer.blackout`` 또는 key_pct 없음/0)도 제외한다 —
+    페이저 recall이 프로그래머 Dimmer 값을 되살려 의도한 암전을 깰 수
+    있다(``_back_layer_value_lines``와 같은 안전 규율, key_pct<=0 가드).
+    """
+    if cue.kind != "section":
+        return None
+    if cue.dimmer.blackout or not cue.dimmer.key_pct or cue.dimmer.key_pct <= 0:
+        return None
+    name = cue.cue_name or ""
+    if _PHASER_PEAK_SECTION.search(name):
+        return "Drop Slam"
+    if _PHASER_CHORUS_SECTION.search(name):
+        return "Wave CM"
+    if _SECTION_ROLE_BRIDGE.search(name):
+        return "Breathe Cool"
+    if _SECTION_ROLE_FINALE.search(name):
+        return "Finale Slam"
+    if _SECTION_ROLE_VERSE.search(name):
+        return "Breathe Warm"
+    return None
+
+
+def _phaser_cue_value_lines(
+    cue, fids: Sequence[int], phaser_slots: Mapping[str, tuple[int, int]]
+) -> tuple[str, ...]:
+    """제안된 페이저의 recall 한 줄(T11 §2 문법) — 슬롯 미해석이면 빈 튜플.
+
+    ``position_cue_bundle``의 ``extra_value_lines``에 얹힌다: 플랜 자신의
+    포지션/디머 라인 **뒤**에 온다(``_reviewed_song_commands`` 호출부),
+    그래서 콤보/디머 페이저의 디머 스텝이 큐의 정적 key_pct를 프로그래머
+    last-wins 규칙으로 정확히 덮어쓴다(계약 #5 순서 규율). [ASSUMPTION —
+    T11 프로브 §1/§4] recall이 멀티스텝 페이저를 통째로 싣는지, 저장된
+    큐가 그 참조를 보존하는지는 이 저장소의 프로토콜 경로로 판독 불가한
+    구조적 한계다 — 콘솔 화면에서 직접 확인이 필요하다.
+    """
+    label = _phaser_label_for_cue(cue)
+    if label is None:
+        return ()
+    resolved = phaser_slots.get(label)
+    if resolved is None:
+        return ()
+    pool_no, slot = resolved
+    return (_preset_recall_command(pool_no, fids, slot),)
+
+
+#: [ASSUMPTION 명시 — 계약 #6, T11 프로브 §1/§4] recall이 멀티스텝 페이저를
+#: 통째로 싣는지, 저장된 큐가 그 참조를 보존하는지는 이 저장소의 프로토콜
+#: 경로(OSC/Lua state/prop)로 구조적으로 판독 불가하다 — 단정하지 않는다.
+_PHASER_REVIEW_ASSUMPTION_NOTE = (
+    "페이저 제안은 승인 후 실기 슬롯을 조회해 배정합니다(못 찾으면 그 큐는 "
+    "페이저 없이 진행). recall이 멀티스텝 페이저를 통째로 싣는지, 큐가 그 "
+    "참조를 보존하는지는 이 경로로 판독할 수 없어 ASSUMPTION입니다 — "
+    "페이저 재생은 콘솔 화면에서 직접 확인해 주세요."
+)
+
+
+def _phaser_failure_note(failures: Mapping[str, str]) -> str:
+    """계약 #4 — 슬롯 미해석 페이저는 곡 설계를 무산시키지 않되, 사유를
+    최종 회신에 반드시 노출한다(추측 없이 정직한 강등 고지)."""
+    if not failures:
+        return ""
+    return " 페이저 미배정: " + "; ".join(failures.values()) + "."
+
+
 def _back_layer_value_lines(cue, layer_mapping: Sequence[Mapping[str, object]]) -> tuple[str, ...]:
     """결함 6 후속 (priority 6): Front/Back 분리 연출 — the director-confirmed
     'back' role group adds ONE group-addressed dimmer line to every LIT
@@ -1243,15 +1328,20 @@ def _review_text(
     layer_mapped: bool = False,
 ) -> str:
     cue_lines: list[str] = []
+    any_phaser_proposed = False
     if composition.bundle is not None:
         for cue in composition.bundle.cues:
             trigger = _REVIEW_TRIGGER_LABELS.get(
                 str(cue.timing.trigger).casefold(), str(cue.timing.trigger)
             )
+            phaser_label = _phaser_label_for_cue(cue)
+            phaser_note = f" · 페이저 제안: {phaser_label}" if phaser_label else ""
+            if phaser_label:
+                any_phaser_proposed = True
             cue_lines.append(
                 f"큐 {cue.cue_number:g} {cue.cue_name} — D{cue.d_level} · "
                 f"{cue.position.stored or '포지션 유지'} · "
-                f"{'/'.join(cue.color.palette) or '컬러 유지'} · {trigger}"
+                f"{'/'.join(cue.color.palette) or '컬러 유지'} · {trigger}{phaser_note}"
             )
     if not composition.lint_findings:
         lint = "자동 체크 통과"
@@ -1273,10 +1363,11 @@ def _review_text(
     )
     timing = plan.timing.to_dict()
     timeline = "\n".join(cue_lines) if cue_lines else "저장 가능한 큐 없음"
+    phaser_caveat = f" {_PHASER_REVIEW_ASSUMPTION_NOTE}" if any_phaser_proposed else ""
     return (
         f"전곡 리뷰 번들 — {plan.sequence_name.replace('Sequence', '시퀀스')} · "
         f"진행 {_review_timing_label(timing)}.\n"
-        f"{timeline}\n{lint}.{unresolved}{disabled}"
+        f"{timeline}\n{lint}.{unresolved}{disabled}{phaser_caveat}"
     )
 
 
@@ -1892,6 +1983,45 @@ _REGENERATE_COMBO_PHASER_REQUEST = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+# 페이저 recall(T11) — 저장된 카탈로그 30종(컬러/디머/콤보 페이저)을
+# 소비(즉시 발사·해제·시퀀스화)하는 어휘. 저장·재생성 가족은 포괄 어휘축
+# (멀티컬러/디머 이펙트/콤보 등)으로 문장을 매치하고, 여기는 반대로 라벨
+# 자체(예: 'Breathe Warm')가 문장에 있어야만 발동한다 — 두 축이 사용하는
+# 토큰 집합이 겹치지 않으므로(저장 문장에는 카탈로그 라벨이 없다) 디스패치
+# 등록 순서를 저장·재생성 가족들보다 뒤에 둬도 그 문장들을 삼키지 않는다.
+_PHASER_LABEL_POOL_NAME: dict[str, str] = {
+    **{label: "Color" for label, *_ in COLOR_PHASER_SEQUENCE},
+    **{label: "Dimmer" for label, *_ in DIMMER_PHASER_SEQUENCE},
+    **{label: "All 1" for label, *_ in COMBO_PHASER_SEQUENCE},
+}
+#: 긴 라벨을 먼저 검사 — 한 라벨이 다른 라벨의 부분 문자열이 되는 사고를
+#: 막는다(현재 30종 라벨 자체는 서로소이지만, 방어적으로 유지).
+_PHASER_CATALOG_LABELS_BY_LENGTH: tuple[str, ...] = tuple(
+    sorted(_PHASER_LABEL_POOL_NAME, key=len, reverse=True)
+)
+
+# 발사 동사 — '재생'은 '재생성'(가족 재생성 어휘)의 부분 문자열이므로 부정
+# 전방탐색으로 그 겹침을 막는다(재생성 문장은 이미 위 재생성 가족들이
+# 먼저 가로챈다는 전제와 별개로, 라벨+동사 조합만으로 재생성 문장을
+# 오인식하지 않기 위한 이중 방어).
+_PHASER_RECALL_VERB = re.compile(r"쳐\s*줘|쏴|걸어|발사|틀어|재생(?!성)", re.IGNORECASE)
+# 해제 동사 — 발사 동사와 서로소(빼/꺼/해제/off/클리어는 발사 동사 목록에
+# 없는 토큰).
+_PHASER_RELEASE_VERB = re.compile(r"빼|꺼|해제|off|클리어", re.IGNORECASE)
+# 2단계(시퀀스+실행기) 전용 명사 — 1단계(즉시 발사)와의 서로소는 이 명사의
+# 유무로 가르고, 디스패치 등록 순서(2단계가 1단계보다 앞)로 고정한다.
+_PHASER_RECALL_NOUN = re.compile(r"시퀀스|실행기|exec", re.IGNORECASE)
+
+
+def _match_phaser_label(text: str) -> str | None:
+    """문장에서 카탈로그 30종 라벨 중 하나를 찾는다 — 못 찾으면 None."""
+    folded = text.casefold()
+    for label in _PHASER_CATALOG_LABELS_BY_LENGTH:
+        if label.casefold() in folded:
+            return label
+    return None
+
+
 _REPEATING_TYPE_COLUMNS_REQUEST = re.compile(
     r"(?:\d+\s*열\s*:\s*)?.*mmx.*(?:\d+\s*열\s*:\s*)?.*350\s*m?.*반복",
     re.IGNORECASE,
@@ -2228,6 +2358,78 @@ def _preset_store_commands(
             raise SpatialPointingError(f"preset label {label!r} is empty or carries a quote")
         commands.append(f"Label Preset {pool_no}.{preset_no} '{text}'")
     return tuple(commands)
+
+
+def _preset_recall_command(pool_no: int, fids: Sequence[int], preset_no: int) -> str:
+    """``Fixture <fids> ; At Preset <pool>.<n>`` — 풀 일반형 recall 명령 빌더.
+
+    ``pointing.preset_recall_command``의 문면·규칙(양수 preset_no, 빈 fids
+    거부)을 임의 풀 번호에 적용한다 — ``_preset_store_commands``와 같은 세션
+    계층 일반화(REQ-COLORPRESET-007, pool_no=2 출력은 문자 단위로 동일)이고,
+    실측 문법 출처는 T11 프로브 §2(Color/Dimmer/All 1 3풀 전부 수락)다.
+    """
+    if not isinstance(pool_no, int) or isinstance(pool_no, bool) or pool_no <= 0:
+        # 대칭 검증 — _preset_store_commands와 같은 이유(SEC-CMD-003).
+        raise SpatialPointingError(f"pool number {pool_no!r} must be a positive integer")
+    if preset_no <= 0:
+        raise SpatialPointingError(f"preset number {preset_no!r} must be positive")
+    if not fids:
+        raise SpatialPointingError("no fixtures to recall the preset on")
+    selection = " + ".join(str(fid) for fid in fids)
+    return f"Fixture {selection} ; At Preset {pool_no}.{preset_no}"
+
+
+def _preset_release_command(fids: Sequence[int]) -> str:
+    """``Fixture <fids> ; At Preset 0`` — T11 프로브 §3 실측 해제 문법.
+
+    ``Off`` 단독 명령도 응답기가 수락하지만(같은 프로브), 셀렉터 없이 실행하면
+    그 순간 프로그래머에 남아 있는 임의의 선택을 해제해 recall과 무관한
+    장비의 값을 지울 위험이 있다 — 이 형태는 recall과 동일한 셀렉터 접두를
+    재사용해 항상 그 페이저가 실린 장비로만 해제를 좁힌다. 셀렉터 뒤에
+    ``Off``를 이어붙이는 형태(``Group 11 Off``)는 응답기가 'Not implemented'로
+    거부하므로(같은 프로브) 쓰지 않는다.
+    """
+    if not fids:
+        raise SpatialPointingError("no fixtures to release the preset on")
+    selection = " + ".join(str(fid) for fid in fids)
+    return f"Fixture {selection} ; At Preset 0"
+
+
+def _phaser_sequence_commands(
+    pool_no: int,
+    fids: Sequence[int],
+    preset_no: int,
+    sequence_no: int,
+    label: str,
+    *,
+    cue_fade: int = 2,
+) -> tuple[str, ...]:
+    """``ChangeDestination Root`` → recall → 1큐 ``Store Sequence`` 번들.
+
+    ``position_fx.position_fx_commands``의 프리앰블·라벨 검증 규율(``ChangeDestination
+    Root``·``ClearAll``·따옴표 거부)을 미러하되, 그 모듈은 Position 풀(2)
+    고정이라 임의 풀(Color/Dimmer/All 1)을 받을 수 없다 — 이 함수가 그
+    일반형이다(``_preset_recall_command``와 같은 세션 계층 일반화, T11 프로브
+    §2/§4 실측: recall 1줄 뒤 ``Store Sequence <n> Cue 1 '<label>' CueFade
+    <f>``가 성공한다). ``/Merge``·``/Overwrite``는 절대 쓰지 않는다(단일
+    큐라 필요 없음) — spatial(position_fx.py/pointing.py)은 무접촉이다.
+    """
+    if sequence_no <= 0:
+        raise SpatialPointingError(f"sequence number {sequence_no!r} must be positive")
+    if cue_fade < 0:
+        raise SpatialPointingError(f"cue fade {cue_fade!r} must be non-negative")
+    text = label.strip()
+    if not text or "'" in text or '"' in text:
+        raise SpatialPointingError(f"sequence label {label!r} is empty or carries a quote")
+    recall = _preset_recall_command(pool_no, fids, preset_no)
+    return (
+        "ChangeDestination Root",
+        "ClearAll",
+        recall,
+        f"Store Sequence {sequence_no} Cue 1 '{text}' CueFade {cue_fade}",
+        f"Label Sequence {sequence_no} '{text}'",
+        "ClearAll",
+    )
 
 
 def _color_apply_command(fids: Sequence[int], rgb: tuple[int, int, int]) -> str:
@@ -2820,6 +3022,11 @@ class ChatSession:
         # cleared after a placement, so a follow-up ("나머지도 배치해줘") reuses
         # them instead of the copilot re-asking for spacing it was already told.
         self._last_layout_spacing: tuple[float, float] | None = None
+        # T12 — last reviewed-command build's unresolved phaser labels
+        # (label → reason), stashed so ``_song_finalize`` can disclose them
+        # in the final reply without threading a new return value through
+        # ``_reviewed_song_commands``'s existing call sites/signature.
+        self._last_phaser_failures: dict[str, str] = {}
         # Rolling transcript of prior turns (user instruction + assistant reply),
         # replayed to the model so context survives across turns for EVERY
         # conversation, not just the layout special-cases. Bounded to the last
@@ -3907,6 +4114,266 @@ class ChatSession:
             f"콘솔에서 Executor {target}를 직접 확인해 주세요 (명령 OK는 착지 "
             "증거가 아닙니다).",
             outcomes,
+        )
+
+    def _phaser_slot_by_label(self, label: str) -> tuple[int, int] | None:
+        """카탈로그 페이저 라벨 → 실기 ``(pool_no, slot)``, 못 찾으면 None(거부).
+
+        슬롯 번호는 코드 상수가 아니다 — 저장 시점에 실제로 어느 칸에 앉았는지
+        는 운영자의 저장 순서가 정하므로, 라벨을 키로 실기를 페이지드로 완전
+        열거해 찾는다(T11 프로브 §5, ``_paged_pool_children`` 실측 입증). 어느
+        풀을 열지는 ``_PHASER_LABEL_POOL_NAME``(카탈로그 3계열이 서로소이므로
+        고정 매핑이 안전)으로 정하고, 그 풀의 실기 번호는 ``_resolve_named_
+        pool_no``로 해석한다(하드코딩 금지, 기존 Color/Dimmer/All 1 리졸버와
+        동일 규율). 중복명 접미('#2')는 ``presets_api._base_name``과 같은
+        규율로 관용한다. 풀 해석 실패·페이징 판독 실패·라벨 부재는 모두
+        None(추측 금지) — 판독 실패와 부재를 구별한 고지는 호출자 책임이다.
+        """
+        pool_name = _PHASER_LABEL_POOL_NAME.get(label)
+        if pool_name is None:
+            return None
+        probe_slug = pool_name.lower().replace(" ", "")
+        pool_no = self._resolve_named_pool_no(
+            pool_name, probe_id=f"phaser-recall-pool-{probe_slug}"
+        )
+        if pool_no is None:
+            return None
+        pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
+        children = self._paged_pool_children(
+            f"{pool_root}/{pool_no}", probe_id=f"phaser-recall-slots-{probe_slug}"
+        )
+        if children is None:
+            return None
+        for slot, name in children.items():
+            base = name.split("#", 1)[0] if isinstance(name, str) else None
+            if base == label:
+                return pool_no, slot
+        return None
+
+    def _phaser_recall_fids(
+        self, label: str, *, noun: str, probe_id_prefix: str
+    ) -> tuple[list[int], str] | InstructionResult:
+        """라벨의 소속 풀에 맞는 대상 장비 판별 — ``(fids, disclosure)`` 또는 거부.
+
+        컬러를 포함한 페이저(Color/All 1 풀)는 컬러 판별이 상한이므로 ``_color_
+        capability_and_disclosure``를 재사용하고(REQ-005, fail-closed), 디머
+        전용 페이저(Dimmer 풀)는 판별 없이 전량 열거하는 ``_dimmer_pool_and_
+        fids``를 재사용한다 — 두 계열 모두 이미 슬롯을 안 뒤에 다시 풀 번호를
+        해석하지만(내부에서 한 번 더 조회), 저장 가족들과 판별 몸통을 공유해
+        거절·고지 문면이 갈라지지 않게 하는 이득이 왕복 1회 비용을 상회한다
+        (기존 저장 가족들의 리팩터 판단과 동일).
+        """
+        pool_name = _PHASER_LABEL_POOL_NAME[label]
+        if pool_name == "Dimmer":
+            shared = self._dimmer_pool_and_fids(noun=noun)
+            if isinstance(shared, InstructionResult):
+                return shared
+            _pool_no, fids, disclosure = shared
+            return fids, disclosure
+        shared = self._color_capability_and_disclosure(noun=noun, probe_id_prefix=probe_id_prefix)
+        if isinstance(shared, InstructionResult):
+            return shared
+        capable, disclosure = shared
+        return capable, disclosure
+
+    def _phaser_recall(self, text: str) -> InstructionResult | None:
+        """*"Breathe Warm 쳐줘"* / *"Breathe Warm 꺼줘"* — 카탈로그 페이저를
+        즉시 recall(발사)하거나 해제(off)한다.
+
+        카탈로그 30종 라벨 중 하나가 문장에 있어야만 발동한다(``_match_
+        phaser_label``) — 저장·재생성 가족의 포괄 어휘축과 서로소라 디스패치
+        등록은 그 가족들보다 뒤에 둬도 안전하다. 2단계(``_phaser_recall_
+        sequence``)와는 명사('시퀀스'/'실행기'/'exec') 유무로 갈라지며, 등록
+        순서(2단계가 먼저)가 그 서로소를 고정한다.
+
+        recall이 멀티스텝 페이저를 통째로 싣는지는 이 저장소의 프로토콜
+        경로(OSC/Lua state/prop)로는 판독 불가다(T11 프로브 §1, 구조적
+        한계 — 응답기 ``resolve_path``에 Programmer/Selection 별칭이 없다).
+        회신에 그 ASSUMPTION을 명시하고 "실렸다"고 단정하지 않는다.
+        """
+        label = _match_phaser_label(text)
+        if label is None:
+            return None
+        release = _PHASER_RELEASE_VERB.search(text) is not None
+        launch = _PHASER_RECALL_VERB.search(text) is not None
+        if not release and not launch:
+            return None
+        # 해제 동사를 발사보다 우선한다 — "쳐줬다가 꺼줘"류 합성 문장에서
+        # 마지막 의도(해제)가 이겨야 하고, 두 동사가 겹칠 때 발사를 기본값
+        # 으로 삼으면 의도치 않은 재발사가 된다(보수적 선택).
+        action = "release" if release else "recall"
+        verb_korean = "해제" if action == "release" else "발사"
+        resolved = self._phaser_slot_by_label(label)
+        if resolved is None:
+            return self._pointing_refusal(
+                f"'{label}' 페이저 프리셋을 콘솔에서 찾지 못해 {verb_korean}하지 "
+                "않았습니다 — 저장돼 있는지, 라벨이 정확한지 확인해 주세요."
+            )
+        pool_no, slot = resolved
+        pool_name = _PHASER_LABEL_POOL_NAME[label]
+        probe_slug = pool_name.lower().replace(" ", "")
+        shared = self._phaser_recall_fids(
+            label, noun=f"'{label}' 페이저", probe_id_prefix=f"phaser-recall-{probe_slug}"
+        )
+        if isinstance(shared, InstructionResult):
+            return shared
+        fids, disclosure = shared
+        try:
+            command = (
+                _preset_release_command(fids)
+                if action == "release"
+                else _preset_recall_command(pool_no, fids, slot)
+            )
+        except SpatialPointingError as error:
+            return self._pointing_refusal(f"{verb_korean} 명령을 만들 수 없습니다: {error}")
+        executed = self._registry.dispatch(
+            ToolCall(
+                id=f"phaser-recall-{action}",
+                name="run_commands",
+                arguments={"commands": [command]},
+            )
+        )
+        disclosure_note = f" {disclosure}" if disclosure else ""
+        assumption_note = (
+            ""
+            if action == "release"
+            else (
+                " (recall이 멀티스텝 페이저를 통째로 싣는지는 이 경로로 판독할 수 "
+                "없어 ASSUMPTION입니다 — 콘솔 화면에서 재생 여부를 확인해 주세요.)"
+            )
+        )
+        return InstructionResult(
+            status="ok",
+            text=(
+                f"'{label}' 페이저를 Preset {pool_no}.{slot}에서 장비 {len(fids)}대에 "
+                f"{verb_korean} 요청했습니다.{disclosure_note}{assumption_note} 승인 또는 "
+                "라이브 잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+            ),
+            command_outcomes=executed.command_outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
+        )
+
+    def _phaser_recall_sequence(self, text: str) -> InstructionResult | None:
+        """*"Breathe Warm 시퀀스로 쳐줘"* — 카탈로그 페이저를 새 시퀀스 1큐로
+        저장하고, 저장이 전건 성공하면 빈 실행기에 걸도록 제안한다.
+
+        1단계(``_phaser_recall``)와 어휘축(카탈로그 라벨 + 발사 동사)이
+        겹친다 — 서로소는 명사('시퀀스'/'실행기'/'exec')의 유무로 가르고,
+        디스패치 등록 순서를 이 함수가 1단계보다 **앞**에 둬서 고정한다
+        (``_position_fx_sequence``가 ``_fx_position_presets``보다 앞인 것과
+        같은 형상, REQ-PRESETGUARD-015류 등록 순서 고정). 시퀀스 번호 해석·
+        점유 승낙 카드는 ``_position_fx_sequence``의 몸통을 그대로 미러하고,
+        실행기 할당은 ``_offer_fx_executor_assignment``를 수정 없이 재사용
+        한다(이미 시퀀스 번호만 받는 범용 함수).
+        """
+        label = _match_phaser_label(text)
+        if label is None:
+            return None
+        if _PHASER_RECALL_NOUN.search(text) is None:
+            return None
+        if _PHASER_RECALL_VERB.search(text) is None:
+            return None
+        resolved = self._phaser_slot_by_label(label)
+        if resolved is None:
+            return self._pointing_refusal(
+                f"'{label}' 페이저 프리셋을 콘솔에서 찾지 못해 시퀀스를 만들지 "
+                "않았습니다 — 저장돼 있는지, 라벨이 정확한지 확인해 주세요."
+            )
+        pool_no, slot = resolved
+        pool_name = _PHASER_LABEL_POOL_NAME[label]
+        probe_slug = pool_name.lower().replace(" ", "")
+        shared = self._phaser_recall_fids(
+            label,
+            noun=f"'{label}' 페이저 시퀀스",
+            probe_id_prefix=f"phaser-recall-seq-{probe_slug}",
+        )
+        if isinstance(shared, InstructionResult):
+            return shared
+        fids, disclosure = shared
+        sequence_match = _CUE_SEQUENCE_NO.search(text)
+        if sequence_match is not None:
+            sequence_no = int(sequence_match.group("no"))
+        else:
+            answer = self._ask_one(
+                f"'{label}' 페이저를 몇 번 시퀀스로 저장할까요? (예: 201) "
+                "이미 데이터가 있는 시퀀스면 해당 큐가 바뀔 수 있습니다.",
+                options=(
+                    QuestionOption(label="201"),
+                    QuestionOption(label="210"),
+                    QuestionOption(label="220"),
+                ),
+                why=(
+                    "Store Sequence는 지정한 슬롯에 그대로 저장되므로 시퀀스 "
+                    "번호는 운영자가 정해야 합니다."
+                ),
+            )
+            try:
+                sequence_no = int(re.search(r"\d+", answer or "").group(0))
+            except AttributeError:
+                return self._pointing_refusal(
+                    f"시퀀스 번호를 받지 못해 '{label}' 시퀀스를 만들지 않았습니다. "
+                    f"예: '{label} 시퀀스 201로 쳐줘'"
+                )
+        if sequence_no <= 0:
+            return self._pointing_refusal("시퀀스 번호는 1 이상이어야 합니다.")
+        if self._song_sequence_occupied(sequence_no):
+            answer = self._ask_one(
+                f"시퀀스 {sequence_no}에 기존 데이터가 있습니다. '{label}' 페이저를 "
+                "이 시퀀스에 저장하면 기존 큐가 바뀔 수 있습니다. 진행할까요?",
+                options=(
+                    QuestionOption(label="진행"),
+                    QuestionOption(label=_PRESET_OVERWRITE_DECLINE_LABEL),
+                ),
+                why=(
+                    "Store Sequence /Merge는 점유된 큐 슬롯의 내용을 바꾸며 "
+                    "이 앱에는 시퀀스 복원 경로가 없습니다."
+                ),
+            )
+            if answer is None or _preset_answer_intent(answer) != "consent":
+                return self._pointing_refusal(
+                    f"시퀀스 {sequence_no} 사용 승낙을 받지 못해 저장하지 않았습니다."
+                )
+        try:
+            commands = _phaser_sequence_commands(pool_no, fids, slot, sequence_no, label)
+        except SpatialPointingError as error:
+            return self._pointing_refusal(f"페이저 시퀀스 명령을 만들 수 없습니다: {error}")
+        executed = self._registry.dispatch(
+            ToolCall(
+                id="phaser-recall-sequence-write",
+                name="run_commands",
+                arguments={"commands": list(commands)},
+            )
+        )
+        disclosure_note = f" {disclosure}" if disclosure else ""
+        reply = (
+            f"'{label}' 페이저를 시퀀스 {sequence_no}에 저장 요청했습니다 — Preset "
+            f"{pool_no}.{slot} 참조, 대상 장비 {len(fids)}대.{disclosure_note} "
+            "(recall이 멀티스텝 페이저를 통째로 싣는지는 이 경로로 판독할 수 없어 "
+            "ASSUMPTION입니다 — 콘솔 화면에서 재생 여부를 확인해 주세요.) 승인 또는 "
+            "라이브 잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+        )
+        outcomes = tuple(executed.command_outcomes)
+        # 실행기 제안은 저장 번들이 **전건 executed_ok**로 끝났을 때만 —
+        # _position_fx_sequence와 동일한 게이트(존재하지 않는 시퀀스에 걸거나
+        # 게이트를 우회한 것처럼 보이는 회신을 막는다).
+        statuses = [outcome.status for outcome in outcomes]
+        if (
+            not executed.result.is_error
+            and statuses
+            and all(status == "executed_ok" for status in statuses)
+        ):
+            note, assign_outcomes = self._offer_fx_executor_assignment(sequence_no)
+            reply = f"{reply}\n{note}"
+            outcomes += assign_outcomes
+        return InstructionResult(
+            status="ok",
+            text=reply,
+            command_outcomes=outcomes,
+            retries_used=0,
+            model_calls=0,
+            duration_seconds=0.0,
         )
 
     def _store_position_preset_sequence(
@@ -5412,6 +5879,7 @@ class ChatSession:
         bundle = composition.bundle
         if bundle is None:
             return ()
+        phaser_slots, self._last_phaser_failures = self._phaser_slots_for_bundle(bundle)
         commands: list[str] = ["ChangeDestination Root"]
         for cue in bundle.cues:
             preset_no = None
@@ -5438,13 +5906,37 @@ class ChatSession:
                     sequence_no,
                     plan,
                     fids,
-                    extra_value_lines=_back_layer_value_lines(cue, layer_mapping),
+                    extra_value_lines=(
+                        *_back_layer_value_lines(cue, layer_mapping),
+                        *_phaser_cue_value_lines(cue, fids, phaser_slots),
+                    ),
                 )
             )
             if plan.premove:
                 commands.append(premove_follow_command(sequence_no, plan))
         commands.extend(self._reviewed_song_timing_commands(bundle, sequence_no, timing))
         return tuple(commands)
+
+    def _phaser_slots_for_bundle(self, bundle) -> tuple[dict[str, tuple[int, int]], dict[str, str]]:
+        """제안된 페이저 라벨을 실기에서 배치 해석한다(T12) — ``(resolved,
+        failed)``.
+
+        필요한 라벨만 중복 없이 한 번씩 조회한다(``_phaser_slot_by_label``,
+        T11 §5 페이지드 열거 재사용) — 큐마다 반복 조회하지 않는다. 못 찾은
+        라벨은 ``failed``에 사유를 남기고 ``resolved``에서 빠진다: 그 라벨을
+        쓰는 모든 큐는 페이저 없이 그대로 진행한다 — 곡 설계 전체를 페이저
+        부재로 무산시키지 않는다(계약 #4).
+        """
+        needed = {label for cue in bundle.cues if (label := _phaser_label_for_cue(cue)) is not None}
+        resolved: dict[str, tuple[int, int]] = {}
+        failed: dict[str, str] = {}
+        for label in needed:
+            slot = self._phaser_slot_by_label(label)
+            if slot is None:
+                failed[label] = f"'{label}' 페이저 프리셋을 콘솔에서 찾지 못했습니다"
+            else:
+                resolved[label] = slot
+        return resolved, failed
 
     def _reviewed_song_timing_commands(
         self,
@@ -7469,6 +7961,7 @@ class ChatSession:
                     f"감독 승인 후 시퀀스 {sequence_no}에 리뷰 번들 1건을 원자 실행 요청했지만 "
                     f"readback 검증에 실패했습니다: {readback.failure}. "
                     f"{review_text} readback 요청: {', '.join(readback.paths)}.{snapshot_note}"
+                    f"{_phaser_failure_note(self._last_phaser_failures)}"
                 ),
                 command_outcomes=tuple(executed.command_outcomes),
                 retries_used=0,
@@ -7490,6 +7983,7 @@ class ChatSession:
                 f"연출 인터뷰 결과 — {' / '.join(audit_lines)}. "
                 f"감독 승인 후 시퀀스 {sequence_no}에 리뷰 번들 1건을 원자 실행 요청했습니다. "
                 f"{review_text} readback 검증 완료: {', '.join(readback.paths)}.{snapshot_note}"
+                f"{_phaser_failure_note(self._last_phaser_failures)}"
             ),
             command_outcomes=tuple(executed.command_outcomes),
             retries_used=0,
@@ -8381,6 +8875,21 @@ class ChatSession:
                     result = self._regenerate_fx_position_presets(text)
                 if result is None:
                     result = self._basic_position_presets(text)
+                if result is None:
+                    # 페이저 recall(T11)이 포지션 이펙트 시퀀스보다 **앞**이다 —
+                    # 라이브 2026-08-17 실측: "Wave CM 시퀀스로 걸어줘"가
+                    # position-FX의 세 게이트(효과어 'wave' + 명사 '시퀀스' +
+                    # 동사 '걸어')를 전부 만족해 포지션 경로에 삼켜졌다
+                    # ('Wave'를 품은 라벨 6종: Wave CM/WA/Soft/Full, Ocean
+                    # Wave, Golden Wave). 페이저 핸들러는 **카탈로그 라벨**을
+                    # 필수 게이트로 쓰므로(_match_phaser_label) 라벨 없는
+                    # 포지션 문장("좌우 스윕 시퀀스 만들어줘")은 그대로 아래로
+                    # 흘러내린다 — 구체 축 먼저라는 같은 규율의 적용이다.
+                    # 2단계(시퀀스+실행기)가 1단계(즉시 발사)보다 먼저다 —
+                    # 서로소는 명사('시퀀스'/'실행기'/'exec') 유무로 가른다.
+                    result = self._phaser_recall_sequence(text)
+                if result is None:
+                    result = self._phaser_recall(text)
                 if result is None:
                     # 효과어(스윕/서클/…)가 필수인 시퀀스 빌더가 프리셋 저장보다
                     # 먼저 본다 — 어휘가 더 구체적이고, 프리셋 저장 문장에는

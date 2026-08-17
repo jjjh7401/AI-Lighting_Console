@@ -21,6 +21,16 @@ import httpx
 import pytest
 from google.genai import errors as genai_errors
 
+from server.design.song_cue_composer import (
+    ComposedCue,
+    CueColorData,
+    CueDimmerData,
+    CueFxData,
+    CueMibData,
+    CuePositionData,
+    CueTimingData,
+)
+from server.design.song_plan import MANUAL_GO
 from server.llm.anthropic_adapter import AnthropicAdapter
 from server.llm.config import AnthropicSettings, GeminiSettings
 from server.llm.gemini_adapter import GeminiAdapter
@@ -29,7 +39,14 @@ from server.orchestrator.last_created import LastCreated
 from server.orchestrator.tools import CommandOutcome, ToolExecution
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate
-from server.spatial.pointing import BASIC_POSITION_SEQUENCE, FX_POSITION_SEQUENCE
+from server.spatial.mib import PositionCuePlan, position_cue_bundle
+from server.spatial.pointing import (
+    BASIC_POSITION_SEQUENCE,
+    FX_POSITION_SEQUENCE,
+    POSITION_PRESET_POOL,
+    SpatialPointingError,
+    preset_recall_command,
+)
 from server.spatial.position_fx import position_fx_commands
 from server.web.approval_bridge import ApprovalChannel
 from server.web.measure import RoundTripRecorder
@@ -42,6 +59,12 @@ from server.web.session import (
     DIMMER_PHASER_SEQUENCE,
     HISTORY_MAX_MESSAGES,
     ChatSession,
+    _phaser_cue_value_lines,
+    _phaser_failure_note,
+    _phaser_label_for_cue,
+    _phaser_sequence_commands,
+    _preset_recall_command,
+    _preset_release_command,
     outcome_view,
     summarize_outcomes,
 )
@@ -4715,6 +4738,13 @@ class TestSongDesignInterviewSession:
             "전환 방식은 어떻게 갈까요? 컷으로 딱 끊을지, 페이드로 이어갈지 정해요.",
         ]
         assert "전곡 리뷰 번들" in channel.asked[5].prompt
+        # T12(d) — the '후렴' section's phaser proposal (Wave CM) is visible
+        # in the pre-approval review sheet BEFORE any console write, plus
+        # the [ASSUMPTION] caveat that recall/reference persistence is not
+        # mechanically verifiable (T11 프로브 §1/§4).
+        assert "페이저 제안: Wave CM" in channel.asked[5].prompt
+        assert "ASSUMPTION" in channel.asked[5].prompt
+        assert "콘솔 화면에서 직접 확인" in channel.asked[5].prompt
         for q in channel.asked[:5]:
             assert len(q.options) == 3  # R1c: 제안 3개 + 자유 입력(무조건 제공)
         writes = [call for call in calls if call.name == "run_commands"]
@@ -4859,6 +4889,13 @@ class TestSongDesignInterviewSession:
             "DataPool/Timecodes/7",
             "DataPool/Sequences/110",
             "DataPool/Sequences/110",
+            # T12: '후렴' section matches the phaser mapping table (Wave CM) —
+            # ONE pool-resolution probe inside `_reviewed_song_commands`
+            # (`_phaser_slots_for_bundle`, deduplicated per label). This
+            # registry has no PresetPools fixture, so resolution fails and
+            # the cue proceeds WITHOUT a phaser (contract #4) — the
+            # `run_commands` output below is byte-identical to pre-T12.
+            "DataPool/PresetPools",
             "DataPool/Sequences/110",
             "DataPool/Timecodes/7",
         ]
@@ -4872,6 +4909,11 @@ class TestSongDesignInterviewSession:
         ]
         assert "리뷰 번들 1건을 원자 실행" in event["text"]
         assert "readback 검증 완료" in event["text"]
+        # T12(c) — the 'Wave CM' pool-resolution failure above (this
+        # registry has no PresetPools fixture) surfaces its reason in the
+        # final reply — the song design was not voided by it (contract #4).
+        assert "페이저 미배정" in event["text"]
+        assert "Wave CM" in event["text"]
         timelines = [event["timeline"] for event in sent if event["type"] == "song_timeline"]
         assert [timeline["lifecycle"] for timeline in timelines] == [
             "pending_approval",
@@ -4883,6 +4925,87 @@ class TestSongDesignInterviewSession:
         assert all(s["plan_status"] == "draft" for s in timelines[0]["sections"])
         assert timelines[-1]["console_stored"] is True
         assert all(s["plan_status"] == "verified" for s in timelines[-1]["sections"])
+
+    # T12(b) — a brief whose sections carry NO phaser-mapping role words
+    # (no 드롭/후렴/브리지/피날레/벌스 vocabulary) must never probe
+    # PresetPools at all: read traffic for a phaser-irrelevant song stays
+    # byte-identical to pre-T12 (coordinator condition b).
+    def test_a_phaser_irrelevant_brief_never_probes_presetpools(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "템포 맞춤 (BPM 기준)",
+                "승인",
+            ]
+        )
+        session._question_channel = channel
+        neutral_brief = (
+            "디자인 큐 시트, 시퀀스 110, 프리셋 21번부터, 타임코드 7: "
+            "장면1 0:00 잔잔한 발라드, 장면2 0:40 밝은 팝"
+        )
+
+        session.run_instruction(neutral_brief)
+
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert len(writes) == 1
+        readbacks = [call.arguments["path"] for call in calls if call.name == "query_state"]
+        assert "DataPool/PresetPools" not in readbacks
+        assert readbacks == [
+            "DataPool/Sequences/110",
+            "DataPool/Groups",
+            "DataPool/Timecodes/7",
+            "DataPool/Sequences/110",
+            "DataPool/Sequences/110",
+            "DataPool/Sequences/110",
+            "DataPool/Timecodes/7",
+        ]
+        assert not any(
+            "At Preset 4." in command or "At Preset 21." in command
+            for command in writes[0].arguments["commands"]
+        )
+
+    # T12(a)+(b) integration — when the live slot lookup SUCCEEDS, the
+    # recall line lands in the real ``run_commands`` bundle exactly once,
+    # and the label is resolved exactly once (batched, not per-cue).
+    def test_a_resolved_phaser_lands_in_the_final_command_bundle(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        resolve_calls: list[str] = []
+
+        def _stub_resolve(label):
+            resolve_calls.append(label)
+            return (4, 35) if label == "Wave CM" else None
+
+        session._phaser_slot_by_label = _stub_resolve
+        channel = self._Channel(
+            [
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "템포 맞춤 (BPM 기준)",
+                "승인",
+            ]
+        )
+        session._question_channel = channel
+
+        event = session.run_instruction(self._FULL)
+
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert len(writes) == 1
+        commands = writes[0].arguments["commands"]
+        assert "Fixture 20 + 26 ; At Preset 4.35" in commands
+        assert resolve_calls == ["Wave CM"]  # 라벨당 정확히 한 번 — 중복 조회 없음
+        assert "페이저 미배정" not in event["text"]
 
     _PLAIN_BRIEF = (
         "곡은 약 1분 40초의 밝은 팝 무대야.\n"
@@ -5943,6 +6066,10 @@ class TestSongDesignInterviewSession:
             "DataPool/Timecodes/7",
             "DataPool/Sequences/110",
             "DataPool/Sequences/110",
+            # T12: same one-time phaser pool-resolution probe as the sibling
+            # test above ('후렴' → Wave CM, resolution fails in this registry
+            # so the cue proceeds without a phaser — commands unchanged).
+            "DataPool/PresetPools",
             "DataPool/Sequences/110",
             "DataPool/Timecodes/7",
         ]
@@ -7109,3 +7236,459 @@ class TestPositionFxExecutorOffer:
         ]
         assert page_reads == []
         assert "실행기" not in event["text"]
+
+
+class TestPhaserRecall:
+    """T11 1단계(즉시 recall/해제)·2단계(시퀀스+Exec) — T11 프로브
+    (``docs/research/ma3-effects/11-phaser-recall-m0-probe.md``)로 실측된
+    recall/해제/큐 저장 문법의 소비 구현.
+
+    겨누는 것: (1) 모듈 빌더가 T11 §2/§3/§4 문법과 문자 단위로 일치하는지
+    (pool_no=2 출력은 ``pointing.preset_recall_command``와 동일해야 함),
+    (2) 라벨→(pool_no, slot) 실기 해석이 페이징으로 이뤄지고 부재는
+    거부인지, (3) Color/Dimmer/All 1 세 카탈로그 각각의 대상 장비 판별이
+    맞는 몸통(컬러 판별 vs 전량 열거)으로 가는지, (4) 1단계/2단계/저장
+    가족이 서로소로 라우팅되는지, (5) 2단계가 ``_position_fx_sequence``/
+    ``_offer_fx_executor_assignment``의 시퀀스 번호·점유·실행기 제안
+    몸통을 그대로 재사용하는지.
+    """
+
+    _FIDS = [20, 26]  # `_PresetPoolRegistry._FIXTURES`의 fid들
+
+    def _run(
+        self,
+        tmp_path,
+        text,
+        *,
+        answers=(),
+        pool_index=_COMBO_POOL_INDEX,
+        pool=(),
+        names=None,
+        pairs=((20, 20), (26, 26)),
+        fid_unread=(),
+        capable=(20, 26),
+        excluded=(),
+        undetermined=(),
+        sequence_occupied=None,
+        **rig,
+    ):
+        provider = ScriptedProvider([_final("확인하겠습니다")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(
+            calls, pool_index=pool_index, pool=pool, names=names or {}, **rig
+        )
+        session._color_rig_fixture_pairs = lambda: (
+            [tuple(pair) for pair in pairs],
+            list(fid_unread),
+        )
+        session._color_capable_fids = lambda _pairs, *, probe_id_prefix: (
+            list(capable),
+            list(excluded),
+            list(undetermined),
+        )
+        if sequence_occupied is not None:
+            session._song_sequence_occupied = lambda _no: sequence_occupied
+        chan = _AnsweringChannel(answers)
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # ---- (1) 모듈 빌더 — T11 §2/§3/§4 실측 문법과 문자 단위 일치 ----
+
+    def test_recall_command_matches_pointing_at_the_position_pool(self):
+        fids = [3, 7, 12]
+        assert _preset_recall_command(POSITION_PRESET_POOL, fids, 5) == preset_recall_command(
+            fids, 5
+        )
+
+    def test_recall_command_carries_the_requested_pool(self):
+        assert _preset_recall_command(4, [2], 31) == "Fixture 2 ; At Preset 4.31"
+        assert _preset_recall_command(1, [2, 7], 21) == "Fixture 2 + 7 ; At Preset 1.21"
+
+    @pytest.mark.parametrize(
+        ("pool_no", "fids", "preset_no"),
+        [(0, [2], 1), (-1, [2], 1), (2, [], 1), (2, [2], 0), (2, [2], -1)],
+    )
+    def test_recall_command_rejects_non_positive_inputs(self, pool_no, fids, preset_no):
+        with pytest.raises(SpatialPointingError):
+            _preset_recall_command(pool_no, fids, preset_no)
+
+    def test_release_command_matches_the_probed_grammar(self):
+        assert _preset_release_command([2]) == "Fixture 2 ; At Preset 0"
+        assert _preset_release_command([2, 7]) == "Fixture 2 + 7 ; At Preset 0"
+
+    def test_release_command_rejects_empty_fids(self):
+        with pytest.raises(SpatialPointingError):
+            _preset_release_command([])
+
+    def test_sequence_bundle_matches_the_probed_grammar(self):
+        commands = _phaser_sequence_commands(4, [2], 31, 201, "Breathe Warm")
+        assert commands == (
+            "ChangeDestination Root",
+            "ClearAll",
+            "Fixture 2 ; At Preset 4.31",
+            "Store Sequence 201 Cue 1 'Breathe Warm' CueFade 2",
+            "Label Sequence 201 'Breathe Warm'",
+            "ClearAll",
+        )
+        assert not any("/Merge" in cmd or "/Overwrite" in cmd for cmd in commands)
+
+    def test_sequence_bundle_rejects_a_quoted_label(self):
+        with pytest.raises(SpatialPointingError):
+            _phaser_sequence_commands(4, [2], 31, 201, "Bad'Label")
+
+    def test_sequence_bundle_rejects_a_non_positive_sequence_no(self):
+        with pytest.raises(SpatialPointingError):
+            _phaser_sequence_commands(4, [2], 31, 0, "Breathe Warm")
+
+    # ---- (2)+(3) 1단계 — 라벨→슬롯 실기 해석, 발사/해제, 카탈로그별 판별 ----
+
+    def test_recall_resolves_the_slot_via_paged_listing_and_fires(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path, "Breathe Warm 쳐줘", pool=(31,), names={31: "Breathe Warm"}
+        )
+        assert chan.asked == []
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert list(writes[0].arguments["commands"]) == [_preset_recall_command(4, self._FIDS, 31)]
+        assert "Preset 4.31" in event["text"]
+        assert "판독할 수 없어 ASSUMPTION" in event["text"]
+
+    def test_recall_refuses_when_the_label_is_not_on_console(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path, "Breathe Warm 쳐줘", pool=(31,), names={31: "Chase RB"}
+        )
+        assert _writes(calls) == []
+        assert "찾지 못해" in event["text"]
+
+    def test_release_verb_fires_the_at_preset_zero_grammar(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path, "Breathe Warm 꺼줘", pool=(31,), names={31: "Breathe Warm"}
+        )
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert list(writes[0].arguments["commands"]) == [_preset_release_command(self._FIDS)]
+        assert "ASSUMPTION" not in event["text"]
+
+    # 발사·해제 동사가 한 문장에 공존하면 해제가 이긴다(보수적 — 재발사
+    # 사고를 피한다).
+    def test_both_verbs_present_prefers_release(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path, "Breathe Warm 쳐줬다가 꺼줘", pool=(31,), names={31: "Breathe Warm"}
+        )
+        writes = _writes(calls)
+        assert list(writes[0].arguments["commands"]) == [_preset_release_command(self._FIDS)]
+
+    # '재생성'의 부분 문자열 '재생'이 발사 동사로 오인되지 않는다.
+    def test_regenerate_wording_does_not_trigger_a_launch(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "Breathe Warm 다시 재생성해줘",
+            pool=(31,),
+            names={31: "Breathe Warm"},
+        )
+        assert _writes(calls) == []
+        assert chan.asked == []
+
+    def test_a_dimmer_catalog_label_uses_the_dimmer_pool_and_full_enumeration(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "Breathe Soft 쳐줘",
+            pool=(21,),
+            names={21: "Breathe Soft"},
+            capable=(20,),  # 디머는 컬러 판별을 타지 않으므로 무시돼야 한다
+        )
+        writes = _writes(calls)
+        assert list(writes[0].arguments["commands"]) == [_preset_recall_command(1, self._FIDS, 21)]
+        assert "Preset 1.21" in event["text"]
+
+    def test_a_combo_catalog_label_uses_all1_and_color_capability(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "Drop Slam 쳐줘",
+            pool=(25,),
+            names={25: "Drop Slam"},
+            capable=(20,),
+            excluded=(26,),
+        )
+        writes = _writes(calls)
+        assert list(writes[0].arguments["commands"]) == [_preset_recall_command(21, [20], 25)]
+        assert "Preset 21.25" in event["text"]
+        assert "컬러 판별" in event["text"]
+
+    def test_storage_sentences_are_not_captured_by_recall(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        writes = _writes(calls)
+        assert len(writes) == 10  # 저장 가족(카탈로그 10종)이 그대로 처리
+        assert chan.asked == []
+
+    # ---- (4)+(5) 2단계 — 시퀀스+실행기, 1단계와 명사 유무로 서로소 ----
+
+    def test_sequence_recall_builds_the_exact_bundle_and_offers_an_executor(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "Breathe Warm 시퀀스 201로 쳐줘",
+            pool=(31,),
+            names={31: "Breathe Warm"},
+        )
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert tuple(writes[0].arguments["commands"]) == _phaser_sequence_commands(
+            4, self._FIDS, 31, 201, "Breathe Warm"
+        )
+        assert len(chan.asked) == 1
+        assert "실행기 101" in chan.asked[0].prompt
+        assert "시퀀스 201" in event["text"]
+        assert "실행기 미할당" in event["text"]
+
+    def test_a_wave_named_label_is_not_swallowed_by_the_position_fx_path(self, tmp_path):
+        # 라이브 2026-08-17 회귀: "Wave CM 시퀀스로 걸어줘"가 position-FX의
+        # 세 게이트(효과어 'wave' + 명사 '시퀀스' + 동사 '걸어')를 전부
+        # 만족해 포지션 이펙트 경로에 삼켜졌다 — 'Wave'를 품은 카탈로그
+        # 라벨 6종(Wave CM/WA/Soft/Full, Ocean Wave, Golden Wave)이 2단계에
+        # 도달하지 못했다. 디스패치 순서를 페이저 먼저로 고쳐 고정한다.
+        event, calls, _chan = self._run(
+            tmp_path,
+            "Wave CM 시퀀스 202로 걸어줘",
+            pool=(35,),
+            names={35: "Wave CM"},
+        )
+        writes = _writes(calls)
+        assert len(writes) == 1
+        commands = writes[0].arguments["commands"]
+        # 페이저 경로: Color 풀 4.35 recall + 라벨이 'Wave CM'인 시퀀스
+        assert any("At Preset 4.35" in cmd for cmd in commands)
+        assert any("Store Sequence 202" in cmd and "Wave CM" in cmd for cmd in commands)
+        # 포지션 이펙트 경로의 흔적(Pan/Tilt 상대 페이저)이 없어야 한다
+        assert not any("Attribute 'Pan'" in cmd or "Attribute 'Tilt'" in cmd for cmd in commands)
+        assert "Wave CM" in event["text"]
+
+    def test_a_position_fx_sentence_still_reaches_the_position_path(self, tmp_path):
+        # 역방향 — 카탈로그 라벨이 없는 포지션 문장은 페이저 핸들러를
+        # 그대로 통과해 종전 경로로 흘러내린다(라벨 게이트의 근거).
+        from server.web.session import _match_phaser_label
+
+        assert _match_phaser_label("좌우 스윕 시퀀스 201 만들어줘") is None
+        assert _match_phaser_label("웨이브 시퀀스 만들어줘") is None
+
+    def test_a_plain_recall_sentence_does_not_reach_the_sequence_builder(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path, "Breathe Warm 쳐줘", pool=(31,), names={31: "Breathe Warm"}
+        )
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert not any("Store Sequence" in cmd for cmd in writes[0].arguments["commands"])
+        assert chan.asked == []  # 1단계는 실행기 카드를 제안하지 않는다
+
+    def test_missing_sequence_number_asks_one_card(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "Breathe Warm 시퀀스로 쳐줘",
+            pool=(31,),
+            names={31: "Breathe Warm"},
+            answers=["201"],
+        )
+        sequence_cards = [q for q in chan.asked if "몇 번 시퀀스" in q.prompt]
+        assert len(sequence_cards) == 1
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert "Store Sequence 201" in writes[0].arguments["commands"][3]
+
+    def test_an_unanswered_sequence_card_writes_nothing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "Breathe Warm 시퀀스로 쳐줘",
+            pool=(31,),
+            names={31: "Breathe Warm"},
+            answers=[],
+        )
+        assert _writes(calls) == []
+        assert "시퀀스 번호를 받지 못해" in event["text"]
+
+    def test_an_occupied_sequence_asks_and_cancel_writes_nothing(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "Breathe Warm 시퀀스 201로 쳐줘",
+            pool=(31,),
+            names={31: "Breathe Warm"},
+            sequence_occupied=True,
+            answers=["취소"],
+        )
+        assert _writes(calls) == []
+        assert len(chan.asked) == 1
+        assert "기존 데이터" in chan.asked[0].prompt
+        assert "저장하지 않" in event["text"]
+
+    def test_an_occupied_sequence_proceeds_on_consent(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "Breathe Warm 시퀀스 201로 쳐줘",
+            pool=(31,),
+            names={31: "Breathe Warm"},
+            sequence_occupied=True,
+            answers=["진행"],
+        )
+        writes = _writes(calls)
+        assert len(writes) == 1
+
+
+def _cue(
+    *,
+    cue_name: str,
+    d_level: int = 3,
+    key_pct: float | None = 60.0,
+    blackout: bool = False,
+    kind: str = "section",
+) -> ComposedCue:
+    """A minimal, valid ``ComposedCue`` for direct classifier/builder tests —
+    only ``cue_name``/``d_level``/``dimmer`` vary; every other field is a
+    harmless constant satisfying each nested dataclass's own validation."""
+    resolved_key_pct = 0.0 if blackout else key_pct
+    return ComposedCue(
+        kind=kind,
+        section_index=1,
+        cue_number=1.0,
+        cue_name=cue_name,
+        d_level=d_level,
+        fade_seconds=2.0,
+        position=CuePositionData(requested=None, stored=None, width_tier=None, source="test"),
+        dimmer=CueDimmerData(
+            key_pct=resolved_key_pct,
+            back_pct=None,
+            budget_range_pct=(0.0, 100.0),
+            blackout=blackout,
+        ),
+        color=CueColorData(palette=("White",), saturation="full"),
+        fx=CueFxData(requested=(), permitted=(), disabled=(), density=0, axis_budget=0),
+        accents=(),
+        mib=CueMibData(),
+        timing=CueTimingData(mode=MANUAL_GO, trigger="manual_go", start_ms=0),
+    )
+
+
+class TestPhaserSongCueMapping:
+    """T12 — 곡 큐 페이저 통합. 겨누는 것: (e) 매핑 표 계약(``_phaser_label_
+    for_cue``, 코디네이터 5-카테고리 + '그 외 전부 없음'), (a)/(b) 명령
+    조립(``_phaser_cue_value_lines``, 슬롯 미해석/불일치 시 빈 튜플, 해석
+    시 recall 한 줄이 플랜 자신의 값 라인 뒤·Store 앞에 온다), 안전 가드
+    (MIB pre-move·블랙아웃 제외), (c) 미해석 사유 노출(``_phaser_failure_
+    note``). 실기 슬롯 해석(``_phaser_slot_by_label``, 배치 쿼리)과 리뷰
+    시트 표시(``_review_text``)는 ``TestSongDesignInterviewSession``의
+    비회귀 테스트(§T12(a)/(b) 회귀 방어)가 이미 실측한다.
+    """
+
+    # ---- (e) 매핑 표 계약 ----
+
+    @pytest.mark.parametrize(
+        ("cue_name", "expected"),
+        [
+            ("드롭", "Drop Slam"),
+            ("클라이맥스", "Drop Slam"),
+            ("피크", "Drop Slam"),
+            ("Drop", "Drop Slam"),
+            ("후렴", "Wave CM"),
+            ("Chorus", "Wave CM"),
+            ("벌스", "Breathe Warm"),
+            ("Verse 1", "Breathe Warm"),
+            ("브리지", "Breathe Cool"),
+            ("간주", "Breathe Cool"),
+            ("피날레", "Finale Slam"),
+            ("아웃트로", "Finale Slam"),
+            ("엔딩", "Finale Slam"),
+            ("인트로", None),  # 코디네이터 표에 없음 — 안전 강등
+            ("전주", None),
+            ("장면1", None),
+        ],
+    )
+    def test_the_mapping_table_matches_the_coordinator_contract(self, cue_name, expected):
+        assert _phaser_label_for_cue(_cue(cue_name=cue_name)) == expected
+
+    # 최고 에너지(드롭/클라이맥스/피크)가 일반 후렴보다 우선한다 — 두
+    # 어휘가 한 섹션 이름에 공존하는 문장("후렴 드롭")에서도 갈라진다.
+    def test_a_peak_word_wins_over_a_co_occurring_chorus_word(self):
+        assert _phaser_label_for_cue(_cue(cue_name="후렴 드롭")) == "Drop Slam"
+
+    # d_level만으로는 최고 에너지/후렴/피날레를 가를 수 없다(_ARC_D_LEVEL
+    # 에서 chorus=finale=5로 공유) — 텍스트 신호 없이 d_level 하나로
+    # 안 만든다는 확인.
+    def test_d_level_alone_never_decides_the_label(self):
+        assert _phaser_label_for_cue(_cue(cue_name="장면1", d_level=5)) is None
+        assert _phaser_label_for_cue(_cue(cue_name="장면1", d_level=1)) is None
+
+    # ---- 안전 가드 ----
+
+    def test_mib_premove_cues_never_get_a_phaser(self):
+        assert _phaser_label_for_cue(_cue(cue_name="후렴", kind="mib_premove")) is None
+
+    def test_blackout_cues_never_get_a_phaser(self):
+        assert _phaser_label_for_cue(_cue(cue_name="후렴", blackout=True)) is None
+
+    def test_a_zero_key_pct_cue_never_gets_a_phaser(self):
+        assert _phaser_label_for_cue(_cue(cue_name="후렴", key_pct=0.0)) is None
+
+    def test_a_none_key_pct_cue_never_gets_a_phaser(self):
+        assert _phaser_label_for_cue(_cue(cue_name="후렴", key_pct=None)) is None
+
+    # ---- (a)/(b) 명령 조립 — 슬롯 미해석 시 빈 튜플, 해석 시 recall 한 줄 ----
+
+    def test_a_resolved_phaser_adds_exactly_one_recall_line(self):
+        cue = _cue(cue_name="후렴")
+        lines = _phaser_cue_value_lines(cue, [20, 26], {"Wave CM": (4, 35)})
+        assert lines == ("Fixture 20 + 26 ; At Preset 4.35",)
+
+    def test_an_unresolved_phaser_adds_nothing(self):
+        cue = _cue(cue_name="후렴")
+        assert _phaser_cue_value_lines(cue, [20, 26], {}) == ()
+
+    def test_a_non_matching_cue_adds_nothing_even_when_other_slots_are_resolved(self):
+        cue = _cue(cue_name="장면1")
+        assert _phaser_cue_value_lines(cue, [20, 26], {"Wave CM": (4, 35)}) == ()
+
+    # (b) — 순서 규율(계약 #5): recall 한 줄은 플랜 자신의 포지션/디머 값
+    # 라인 **뒤**·Store **앞**에 온다 — 콤보/디머 페이저의 디머 스텝이
+    # 큐의 정적 key_pct를 프로그래머 last-wins로 정확히 덮어쓴다.
+    def test_the_recall_line_lands_after_the_plans_own_dimmer_line_and_before_store(self):
+        plan = PositionCuePlan(cue_no=1.0, name="Chorus", preset_no=None, dimmer=60.0)
+        cue = _cue(cue_name="후렴")
+        lines = position_cue_bundle(
+            110,
+            plan,
+            [20, 26],
+            extra_value_lines=_phaser_cue_value_lines(cue, [20, 26], {"Wave CM": (4, 35)}),
+        )
+        dimmer_index = next(i for i, line in enumerate(lines) if "Attribute 'Dimmer'" in line)
+        recall_index = next(i for i, line in enumerate(lines) if "At Preset 4.35" in line)
+        store_index = next(i for i, line in enumerate(lines) if line.startswith("Store Sequence"))
+        assert dimmer_index < recall_index < store_index
+
+    # 페이저가 배정되지 않은 큐(라벨 불일치)는 extra_value_lines가 빈
+    # 튜플이라 명령열이 T12 이전과 문자 단위로 동일하다.
+    def test_no_phaser_leaves_the_bundle_byte_identical_to_pre_t12(self):
+        plan = PositionCuePlan(cue_no=1.0, name="Scene1", preset_no=None, dimmer=60.0)
+        cue = _cue(cue_name="장면1")
+        with_phaser_lookup = position_cue_bundle(
+            110,
+            plan,
+            [20, 26],
+            extra_value_lines=_phaser_cue_value_lines(cue, [20, 26], {"Wave CM": (4, 35)}),
+        )
+        without_lookup = position_cue_bundle(110, plan, [20, 26])
+        assert with_phaser_lookup == without_lookup
+
+    # ---- (c) 미해석 사유 노출 ----
+
+    def test_unresolved_labels_are_reported_by_name(self):
+        note = _phaser_failure_note(
+            {"Wave CM": "'Wave CM' 페이저 프리셋을 콘솔에서 찾지 못했습니다"}
+        )
+        assert "Wave CM" in note
+        assert "찾지 못했습니다" in note
+
+    def test_no_failures_produces_an_empty_note(self):
+        assert _phaser_failure_note({}) == ""
