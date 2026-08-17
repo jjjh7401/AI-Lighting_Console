@@ -195,6 +195,11 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # hunks, new starts 345 (docstring paragraph) and 367 (childCount extraction)
 # are pure insertions inside drill_into, far from both protected ranges
 # (234..238 / 524..569) — overlap ZERO.
+# 2026-08-17 re-walk 4 — rig_object gains int coercion for the responder's
+# 'i' slot (SEC-TRUST-001 review fix): 60→64 hunks, new starts 302 (docstring
+# paragraph insertion) and 304/306/308 (single-line rewrites inside
+# rig_object's body), all far from both protected ranges (234..238 / 524..569)
+# — overlap ZERO.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -207,6 +212,10 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     125,
     164,
     184,
+    302,
+    304,
+    306,
+    308,
     345,
     367,
     425,

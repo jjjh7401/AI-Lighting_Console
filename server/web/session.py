@@ -4435,22 +4435,24 @@ class ChatSession:
             duration_seconds=0.0,
         )
 
-    def _resolve_color_pool_no(self) -> int | None:
-        """The Color pool's NUMBER, resolved from the console's own pool list.
+    def _resolve_named_pool_no(self, target_name: str, *, probe_id: str) -> int | None:
+        """이름이 정확히 ``target_name``인 프리셋 풀의 번호 — 공용 몸통.
 
         `instantiate.py:220`의 함정을 세션 계층에 적용한 것이다(REQ-COLORPRESET-
         002): *"Preset 4.1 = Color"는 룰북 예시 프로즈이지 이 쇼파일의 계약이
-        아니다* — 풀 이름은 운영자가 바꿀 수 있으므로 4를 하드코딩하면 손으로
-        만든 프리셋을 덮는다. ``DataPool/PresetPools`` 자식에서 이름이 정확히
-        ``Color``인 풀을 찾고, 실패·부재·절단은 전부 ``None``(거부)이다 —
-        M0 실측(progress.md §E.1): 이 리그는 1 Dimmer · 2 Position · 3 Gobo ·
-        4 Color · 5 Beam. 풀 목록은 십수 개 규모라 페이징 없이 한 창을 읽고,
-        절단 주장(플래그 또는 childCount 산술)이 있으면 추측하지 않는다.
+        아니다* — 풀 이름은 운영자가 바꿀 수 있으므로 번호를 하드코딩하면
+        손으로 만든 프리셋을 덮는다. ``DataPool/PresetPools`` 자식에서 이름
+        일치 풀을 찾고, 실패·부재·절단은 전부 ``None``(거부)이다. 풀 목록은
+        십수 개 규모라 페이징 없이 한 창을 읽고, 절단 주장(플래그 또는
+        childCount 산술)이 있으면 추측하지 않는다. Color/Dimmer/All 1 세
+        리졸버가 이름 문자열만 다른 복사본 3본으로 갈라져 있던 것을 한
+        몸통으로 통합했다(2026-08-17 리뷰 — 거절 규율이 한쪽만 고쳐져
+        조용히 갈라지는 분기 위험 제거). 프로브 id는 호출자별로 유지된다.
         """
         pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
         probe = self._registry.dispatch(
             ToolCall(
-                id="basic-color-pool-resolve",
+                id=probe_id,
                 name="query_state",
                 arguments={"path": pool_root},
             )
@@ -4469,15 +4471,24 @@ class ChatSession:
         if bool(payload.get("truncated")) or (
             isinstance(child_count, int) and child_count > len(children)
         ):
-            return None  # 절단된 목록에 Color가 없다 ≠ 풀이 없다 — 모름은 거부다
+            # 절단된 목록에 대상 풀이 없다 ≠ 풀이 없다 — 모름은 거부다.
+            return None
         for child in children:
-            if not isinstance(child, dict) or child.get("name") != "Color":
+            if not isinstance(child, dict) or child.get("name") != target_name:
                 continue
             try:
                 return int(child.get("i", child.get("no")))
             except (TypeError, ValueError):
                 return None
         return None
+
+    def _resolve_color_pool_no(self) -> int | None:
+        """The Color pool's NUMBER — ``_resolve_named_pool_no`` 위임.
+
+        M0 실측(progress.md §E.1): 이 리그는 1 Dimmer · 2 Position · 3 Gobo ·
+        4 Color · 5 Beam.
+        """
+        return self._resolve_named_pool_no("Color", probe_id="basic-color-pool-resolve")
 
     def _color_rig_fixture_pairs(
         self,
@@ -4511,29 +4522,21 @@ class ChatSession:
                 fid_unread.append(slot)
         return pairs, fid_unread
 
-    def _color_pool_and_capable_fids(
-        self, *, noun: str
-    ) -> tuple[int, list[int], str] | InstructionResult:
-        """Color 풀 번호 해석 + 3-hop 컬러 판별 + 산술 고지 — ``(pool_no,
-        capable, disclosure)`` 또는 거부.
+    def _color_capability_and_disclosure(
+        self, *, noun: str, probe_id_prefix: str
+    ) -> tuple[list[int], str] | InstructionResult:
+        """패치 열거 → 3-hop 컬러 판별 → 산술 고지 — ``(capable, disclosure)``
+        또는 거부. 순서가 규율이다: ① 패치 픽스처 (slot, fid) 짝 열거(부분
+        판독 = 거부 — 반쪽 리그에 색을 칠하지 않는다, 좌표 판독과 같은 규율)
+        ② 3-hop 판별로 컬러 가능 FID만 남기고(REQ-005, fail-closed) ③ 제외·
+        판별 불가를 대수+FID 산술로 고지 문장에 적는다(침묵 축소 금지).
 
-        팔레트 색상표 저장(``_color_preset_material``)과 멀티컬러 페이저
-        저장(``_color_phaser_preset_material``)이 공유하는 **앞부분**이다 —
-        룩(스텝 커맨드) 구성만 갈라진다. 순서가 규율이다: ① Color 풀 번호를
-        리그에서 해석(실패 = 거부, REQ-002) ② 패치 픽스처 (slot, fid) 짝
-        열거(부분 판독 = 거부 — 반쪽 리그에 색을 칠하지 않는다, 좌표 판독과
-        같은 규율) ③ 3-hop 판별로 컬러 가능 FID만 남기고(REQ-005,
-        fail-closed) ④ 제외·판별 불가를 대수+FID 산술로 고지 문장에 적는다
-        (침묵 축소 금지). 이 함수는 순수 추출이다 — 메시지 문면은 리팩터
-        이전과 문자 단위로 동일하다.
+        컬러(Color 풀)와 콤보(All 1 풀)가 공유하는 **뒷부분**이다 — 갈라지는
+        것은 저장 풀 해석뿐. 두 호출자에 문면 동일 본문이 복사돼 있던 것을
+        통합했다(2026-08-17 리뷰 — 거절·고지 문면이 한쪽만 고쳐져 조용히
+        갈라지는 분기 위험 제거). 순수 추출 — 메시지 문면은 리팩터 이전과
+        문자 단위로 동일하다.
         """
-        pool_no = self._resolve_color_pool_no()
-        if pool_no is None:
-            return self._pointing_refusal(
-                "Color 풀을 찾지 못했습니다 — 프리셋 풀 목록에서 이름이 'Color'인 "
-                f"풀을 확인하지 못해 {noun} 프리셋을 시작하지 않았습니다. "
-                "풀 번호를 추측해 저장하면 다른 풀의 프리셋을 덮을 수 있습니다."
-            )
         enumerated = self._color_rig_fixture_pairs()
         if enumerated is None:
             return self._pointing_refusal(
@@ -4545,7 +4548,7 @@ class ChatSession:
                 f"패치된 픽스처가 확인되지 않아 {noun} 프리셋을 시작하지 않았습니다."
             )
         capable, excluded, undetermined = self._color_capable_fids(
-            pairs, probe_id_prefix="basic-color"
+            pairs, probe_id_prefix=probe_id_prefix
         )
         if not capable:
             return self._pointing_refusal(
@@ -4570,7 +4573,30 @@ class ChatSession:
                 f"FID 미판독 {len(fid_unread)}대"
                 f"(패치 슬롯 {', '.join(str(slot) for slot in fid_unread)}) 제외"
             )
-        disclosure = ", ".join(parts) + "."
+        return capable, ", ".join(parts) + "."
+
+    def _color_pool_and_capable_fids(
+        self, *, noun: str
+    ) -> tuple[int, list[int], str] | InstructionResult:
+        """Color 풀 번호 해석 + 3-hop 컬러 판별 + 산술 고지 — ``(pool_no,
+        capable, disclosure)`` 또는 거부.
+
+        팔레트 색상표 저장(``_color_preset_material``)과 멀티컬러 페이저
+        저장(``_color_phaser_preset_material``)이 공유하는 **앞부분**이다 —
+        룩(스텝 커맨드) 구성만 갈라진다. 풀 해석 실패 = 거부(REQ-002),
+        판별·고지는 ``_color_capability_and_disclosure`` 공용 뒷부분.
+        """
+        pool_no = self._resolve_color_pool_no()
+        if pool_no is None:
+            return self._pointing_refusal(
+                "Color 풀을 찾지 못했습니다 — 프리셋 풀 목록에서 이름이 'Color'인 "
+                f"풀을 확인하지 못해 {noun} 프리셋을 시작하지 않았습니다. "
+                "풀 번호를 추측해 저장하면 다른 풀의 프리셋을 덮을 수 있습니다."
+            )
+        shared = self._color_capability_and_disclosure(noun=noun, probe_id_prefix="basic-color")
+        if isinstance(shared, InstructionResult):
+            return shared
+        capable, disclosure = shared
         return pool_no, capable, disclosure
 
     def _color_preset_material(
@@ -4764,49 +4790,16 @@ class ChatSession:
         )
 
     def _resolve_combo_pool_no(self) -> int | None:
-        """The 'All 1' pool's NUMBER, resolved from the console's own pool list.
+        """The 'All 1' pool's NUMBER — ``_resolve_named_pool_no`` 위임.
 
-        ``_resolve_color_pool_no``/``_resolve_dimmer_pool_no``의 미러 — 같은
-        위험(풀 번호를 하드코딩하면 운영자가 손으로 만든 프리셋을 덮는다)
-        이라 같은 해법을 쓴다. 콤보(컬러+디머 혼합) 프리셋은 T7 프로브
-        (``10-combo-phaser-m0-probe.md`` §1/§5)가 확정한 'All 1' 풀에 저장
-        한다 — 함정②("혼합은 All 풀만 수용")가 명령 수준에서는 재현되지
-        않았지만, 저장 콘텐츠가 실제로 필터링됐는지는 판별 불가(같은 문서
-        §2 GAP)이므로 관측되지 않은 위험을 피하는 보수적 선택으로 All 1을
-        기본 저장 대상으로 고정한다. 이름이 정확히 ``All 1``인 풀만 찾고
-        (All 2~5는 별개 풀), 실패·부재·절단은 전부 ``None``(거부)이다.
+        콤보(컬러+디머 혼합) 프리셋은 T7 프로브(``10-combo-phaser-m0-probe.md``
+        §1/§5)가 확정한 'All 1' 풀에 저장한다 — 함정②("혼합은 All 풀만
+        수용")가 명령 수준에서는 재현되지 않았지만, 저장 콘텐츠가 실제로
+        필터링됐는지는 판별 불가(같은 문서 §2 GAP)이므로 관측되지 않은
+        위험을 피하는 보수적 선택으로 All 1을 기본 저장 대상으로 고정한다.
+        이름이 정확히 ``All 1``인 풀만 찾는다(All 2~5는 별개 풀).
         """
-        pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
-        probe = self._registry.dispatch(
-            ToolCall(
-                id="combo-pool-resolve",
-                name="query_state",
-                arguments={"path": pool_root},
-            )
-        )
-        if probe.result.is_error:
-            return None
-        try:
-            payload = json.loads(probe.result.content)
-        except (json.JSONDecodeError, TypeError):
-            return None
-        children = payload.get("children") if isinstance(payload, dict) else None
-        if not isinstance(children, list):
-            return None
-        node = payload.get("node")
-        child_count = node.get("childCount") if isinstance(node, dict) else None
-        if bool(payload.get("truncated")) or (
-            isinstance(child_count, int) and child_count > len(children)
-        ):
-            return None  # 절단된 목록에 All 1이 없다 ≠ 풀이 없다 — 모름은 거부다
-        for child in children:
-            if not isinstance(child, dict) or child.get("name") != "All 1":
-                continue
-            try:
-                return int(child.get("i", child.get("no")))
-            except (TypeError, ValueError):
-                return None
-        return None
+        return self._resolve_named_pool_no("All 1", probe_id="combo-pool-resolve")
 
     def _combo_pool_and_capable_fids(
         self, *, noun: str
@@ -4814,13 +4807,13 @@ class ChatSession:
         """All 1 풀 번호 해석 + 3-hop 컬러 판별 + 산술 고지 — ``(pool_no,
         capable, disclosure)`` 또는 거부.
 
-        ``_color_pool_and_capable_fids``의 미러 — 앞부분(픽스처 열거 →
-        3-hop 컬러 판별)은 동일 재사용, 갈라지는 것은 저장 풀 해석뿐(Color가
-        아니라 ``_resolve_combo_pool_no``). 콤보는 컬러를 반드시 포함하므로
-        (T8 카탈로그, 모든 스텝이 팔레트 라벨을 갖는다) 컬러 판별이 그대로
-        상한이다 — 디머는 판별 없이 컬러 가능 장비 전체에 얹힌다(디머 없는
-        장비라는 반례가 이 리그 어디에도 없다는 근거는 ``_dimmer_pool_and_
-        fids`` 독스트링과 동일).
+        ``_color_pool_and_capable_fids``의 미러 — 갈라지는 것은 저장 풀
+        해석뿐(Color가 아니라 ``_resolve_combo_pool_no``), 판별·고지는
+        ``_color_capability_and_disclosure`` 공용 뒷부분. 콤보는 컬러를
+        반드시 포함하므로(T8 카탈로그, 모든 스텝이 팔레트 라벨을 갖는다)
+        컬러 판별이 그대로 상한이다 — 디머는 판별 없이 컬러 가능 장비
+        전체에 얹힌다(디머 없는 장비라는 반례가 이 리그 어디에도 없다는
+        근거는 ``_dimmer_pool_and_fids`` 독스트링과 동일).
         """
         pool_no = self._resolve_combo_pool_no()
         if pool_no is None:
@@ -4829,41 +4822,10 @@ class ChatSession:
                 f"풀을 확인하지 못해 {noun} 프리셋을 시작하지 않았습니다. "
                 "풀 번호를 추측해 저장하면 다른 풀의 프리셋을 덮을 수 있습니다."
             )
-        enumerated = self._color_rig_fixture_pairs()
-        if enumerated is None:
-            return self._pointing_refusal(
-                f"패치된 픽스처 목록을 읽지 못해 {noun} 프리셋을 시작하지 않았습니다."
-            )
-        pairs, fid_unread = enumerated
-        if not pairs:
-            return self._pointing_refusal(
-                f"패치된 픽스처가 확인되지 않아 {noun} 프리셋을 시작하지 않았습니다."
-            )
-        capable, excluded, undetermined = self._color_capable_fids(pairs, probe_id_prefix="combo")
-        if not capable:
-            return self._pointing_refusal(
-                f"컬러 어트리뷰트(ColorRGB)가 확인된 장비가 없어 {noun} 프리셋을 "
-                f"저장하지 않았습니다 — 전체 {len(pairs)}대 중 컬러 없음 "
-                f"{len(excluded)}대, 판별 불가 {len(undetermined)}대."
-            )
-        parts = [f"컬러 판별: 전체 {len(pairs)}대 중 {len(capable)}대 적용"]
-        if excluded:
-            parts.append(
-                f"컬러 어트리뷰트 없음 {len(excluded)}대"
-                f"(FID {', '.join(str(fid) for fid in excluded)}) 제외"
-            )
-        if undetermined:
-            parts.append(
-                f"판별 불가 {len(undetermined)}대"
-                f"(FID {', '.join(str(fid) for fid in undetermined)}) 제외 — "
-                "판독 실패는 보유로 치지 않습니다"
-            )
-        if fid_unread:
-            parts.append(
-                f"FID 미판독 {len(fid_unread)}대"
-                f"(패치 슬롯 {', '.join(str(slot) for slot in fid_unread)}) 제외"
-            )
-        disclosure = ", ".join(parts) + "."
+        shared = self._color_capability_and_disclosure(noun=noun, probe_id_prefix="combo")
+        if isinstance(shared, InstructionResult):
+            return shared
+        capable, disclosure = shared
         return pool_no, capable, disclosure
 
     def _combo_phaser_preset_material(
@@ -4958,46 +4920,12 @@ class ChatSession:
         )
 
     def _resolve_dimmer_pool_no(self) -> int | None:
-        """The Dimmer pool's NUMBER, resolved from the console's own pool list.
+        """The Dimmer pool's NUMBER — ``_resolve_named_pool_no`` 위임.
 
-        ``_resolve_color_pool_no``의 미러 — 같은 위험(풀 이름은 운영자가 바꿀
-        수 있으므로 1을 하드코딩하면 손으로 만든 프리셋을 덮는다)이라 같은
-        해법을 쓴다: ``DataPool/PresetPools`` 자식에서 이름이 정확히
-        ``Dimmer``인 풀을 찾고, 실패·부재·절단은 전부 ``None``(거부)이다.
         T4 프로브 전제검증(``09-dimmer-phaser-m0-probe.md``): 이 리그는
         풀 1='Dimmer'.
         """
-        pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
-        probe = self._registry.dispatch(
-            ToolCall(
-                id="basic-dimmer-pool-resolve",
-                name="query_state",
-                arguments={"path": pool_root},
-            )
-        )
-        if probe.result.is_error:
-            return None
-        try:
-            payload = json.loads(probe.result.content)
-        except (json.JSONDecodeError, TypeError):
-            return None
-        children = payload.get("children") if isinstance(payload, dict) else None
-        if not isinstance(children, list):
-            return None
-        node = payload.get("node")
-        child_count = node.get("childCount") if isinstance(node, dict) else None
-        if bool(payload.get("truncated")) or (
-            isinstance(child_count, int) and child_count > len(children)
-        ):
-            return None  # 절단된 목록에 Dimmer가 없다 ≠ 풀이 없다 — 모름은 거부다
-        for child in children:
-            if not isinstance(child, dict) or child.get("name") != "Dimmer":
-                continue
-            try:
-                return int(child.get("i", child.get("no")))
-            except (TypeError, ValueError):
-                return None
-        return None
+        return self._resolve_named_pool_no("Dimmer", probe_id="basic-dimmer-pool-resolve")
 
     def _dimmer_pool_and_fids(self, *, noun: str) -> tuple[int, list[int], str] | InstructionResult:
         """Dimmer 풀 번호 해석 + 패치 픽스처 전량 열거 — ``(pool_no, fids,

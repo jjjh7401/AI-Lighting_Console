@@ -788,12 +788,22 @@ def rig_object(child: dict) -> dict[str, object]:
     That absence is meaningful, not a glitch: it degrades to a name-only entry
     so the model has no number to address — it must resolve the real one (e.g.
     via ``query_state``) instead of counting list positions.
+
+    The slot is int-COERCED before it becomes ``no`` (the same try/except the
+    session's paged reader applies, SEC-TRUST-001): a non-numeric ``i`` from a
+    hostile or buggy responder would otherwise ride into drill query paths and
+    the UI's ``/api/presets/{no}`` fetch URL. A value that cannot be an int
+    degrades to the same name-only entry as a missing slot — unparseable is
+    not addressable.
     """
-    number = child.get("i")
     name = child.get("name", "")
-    if number is None:
+    number = child.get("i")
+    if number is None or isinstance(number, bool):
         return {"name": name}
-    return {"no": number, "name": name}
+    try:
+        return {"no": int(number), "name": name}
+    except (TypeError, ValueError):
+        return {"name": name}
 
 
 def rig_section(objects: list[dict[str, object]], payload: dict) -> dict[str, object]:
