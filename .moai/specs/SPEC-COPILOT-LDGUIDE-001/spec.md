@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-LDGUIDE-001
 title: "조명감독 워크플로우 기준 사용 가이드 전면 개정 + 개선 제안 도출 (LD Guide)"
-version: "0.4.0"
+version: "0.5.0"
 status: draft
 created: 2026-08-17
 updated: 2026-08-17
@@ -40,23 +40,49 @@ related_specs: [SPEC-COPILOT-SPATIAL-001, SPEC-COPILOT-GROUPGEN-001, SPEC-COPILO
 
 측정 기준: 워크트리 `.claude/worktrees/ldguide`, HEAD `2092a42`(`main` 최신), 2026-08-17.
 
-### A.2 식별자 부재 16건 (검증됨) — 다만 "능력 누락"과 동일하지 않다
+### A.2 식별자 부재 17건 (검증됨) — 다만 "능력 누락"과 동일하지 않다
 
-등록된 도구 33종 중 **17종만** 가이드 본문에 식별자로 등장한다. 나머지 16종은 식별자가
-한 번도 나오지 않는다:
+> **[정정 — v0.5.0]** 초판은 "17종 등장 / 16종 부재"로 적었다. **등장과 부재가 뒤바뀐
+> 오측이었다.** 실제는 **16종 등장 / 17종 부재**다. 기전은 이 SPEC이 내내 잡아온 것과
+> 같은 계열이다 — §A.2의 대조 grep에 **단어 경계가 없어서**, 등록명 `preshow_check`가
+> 가이드의 유령 이름 `run_preshow_check` **안에 부분 문자열로 걸려** 등장으로 계수됐다.
+>
+> ```
+> grep -c '\bpreshow_check\b' docs/user-guide.html   → 0   (단독으로는 없다)
+> grep -c 'preshow_check'     docs/user-guide.html   → 1   (유령 안에 매치)
+> ```
+>
+> 즉 **§A.4의 유령이 §A.2의 숫자를 오염시키고 있었다.** 유령을 잡는 절과 개수를 세는 절이
+> 같은 문서 안에서 서로를 가린 셈이다. plan-audit 3회가 이것을 잡지 못한 이유도 같다 —
+> 감사도 같은 깨진 명령을 봤다. run 단계 M0 실측이 발견했고 lead가 독립 재측정으로 확인했다.
+> (§6-C.5의 "수정이 새로운 헛도는 명령을 만든다" 패턴의 또 다른 실례.)
+
+등록된 도구 33종 중 **16종만** 가이드 본문에 식별자로 등장한다. 나머지 17종은 단독
+식별자로 한 번도 나오지 않는다:
 
 ```
-precheck_patch · precheck_vectorworks_diff · vectorworks_autopatch ·
-apply_vectorworks_patch · ask_user · resolve_fixture_type · resolve_patch_address ·
-patch_fixtures · compose_fx · find_scene · build_magic_sheet · plan_executor_layout ·
-arrange_fixtures · classify_arrangement_topology · create_arrangement_groups ·
-analyse_layout_image
+analyse_layout_image · apply_vectorworks_patch · arrange_fixtures · ask_user ·
+build_magic_sheet · classify_arrangement_topology · compose_fx ·
+create_arrangement_groups · find_scene · patch_fixtures · plan_executor_layout ·
+precheck_patch · precheck_vectorworks_diff · preshow_check · resolve_fixture_type ·
+resolve_patch_address · vectorworks_autopatch
 ```
 
-**[미검증 — 과장 금지]** 이 16건이 곧 "가이드가 그 능력을 다루지 않는다"는 뜻은 **아니다**.
+측정(단어 경계 + 집합 연산 — 부분 문자열 오탐 차단):
+
+```bash
+grep -oE '^            name="[a-z_]+",$' server/orchestrator/tools.py \
+  | sed 's/.*name="//;s/",//' | sort > /tmp/t.txt          # 33
+grep -oE '\b[a-z]+_[a-z_]+\b' docs/user-guide.html | sort -u > /tmp/g.txt
+comm -12 /tmp/g.txt /tmp/t.txt > /tmp/present.txt
+wc -l < /tmp/present.txt                                    # 16 등장
+comm -23 /tmp/t.txt /tmp/present.txt | wc -l                # 17 부재
+```
+
+**[미검증 — 과장 금지]** 이 17건이 곧 "가이드가 그 능력을 다루지 않는다"는 뜻은 **아니다**.
 주제어 검색으로 확인한 반례가 있다: `vectorworks|도면|MVR` 8건, `배치|위상` 15건,
 `매직|magic` 2건, `익스큐터` 6건이 본문에 등장하고, `<h3>6-2. 패치 점검</h3>` 절이
-`precheck_patch`를 식별자 없이 산문으로 설명한다. 따라서 16건 각각이 (a) 산문으로 덮여
+`precheck_patch`를 식별자 없이 산문으로 설명한다. 따라서 17건 각각이 (a) 산문으로 덮여
 있는가 (b) 실제로 빠졌는가 (c) 낡은 서술로 덮여 있는가는 **M0에서 도구별 1:1 대조로
 판정한다.** 개수 차이만으로 결함을 단정하지 않는다.
 
@@ -224,7 +250,7 @@ analyse_layout_image
 
 | # | 질문 | 상태 |
 |---|---|---|
-| Q1 | 16건 식별자 부재 중 실제 능력 누락은 몇 건인가 | **M0에서 판정** — 개수 추론 금지(§A.2) |
+| Q1 | 17건 식별자 부재 중 실제 능력 누락은 몇 건인가 | **M0에서 판정** — 개수 추론 금지(§A.2) |
 | Q2 | 단계 3(포커싱)에 대응하는 도구가 실제로 있는가 | **M0에서 판정.** `server/spatial/pointing.py`는 존재하나 33종 등록 목록에 조준 도구 이름이 없다 — 노출 여부 미확인 |
 | Q3 | 단계 7(리허설·수정)에 전용 지원이 있는가 | **M0에서 판정.** 현재 후보는 `query_state`/`run_commands` 저수준뿐으로 보이나 UI 기능(큐 진행 모니터 등)이 덮을 수 있음 |
 | Q4 | 참조 부록의 도구 대조표를 남길 것인가 | REQ-LDG-005로 **남김** 결정. 카드의 "내부 모듈명 금지"는 모듈 경로를 뜻하며 앱 기능 표면과 구분된다는 판단 — 사용자가 뒤집으면 부록만 삭제하면 되는 국소 결정 |
@@ -236,6 +262,7 @@ analyse_layout_image
 | 버전 | 일자 | 작성 | 변경 |
 |---|---|---|---|
 | 0.1.0 | 2026-08-17 | kanban plan session | 최초 작성(draft, Tier M). 칸반 카드 t1. 사용자 확인 3건(9단계 축·전면 개정·독자 2계층) 반영. 카드 전제("문서 없음") 정정 — 기존 문서 존재 실측. |
+| 0.5.0 | 2026-08-17 | kanban plan session | **§A.2 오측 정정** — 등장/부재가 뒤바뀌어 있었다(17 등장/16 부재 → **16 등장/17 부재**). 기전은 단어 경계 없는 alternation이 유령 이름 `run_preshow_check` 안에서 등록명 `preshow_check`에 부분 매치한 것. run 단계 M0 실측 발견, lead 독립 재측정 확인. 부재 목록에 `preshow_check` 추가, Q1·plan 게이트 C·AC-009 기준값 동반 정정. `acceptance.md` §0에 규약 6(부분 문자열 매칭 금지) 신설. |
 | 0.4.0 | 2026-08-17 | kanban plan session | plan-audit 3회차(FAIL 0.79 · 상한 도달 · 권고 PASS-WITH-DEBT) 잔여 R1~R7 반영. §A.4가 3건 → **5건**(전량 차집합 전환으로 `propose_plan`·`write_coordinate` 추가 발견) + 허용목록 2종 실측 확정. REQ-016을 부인목록 금지·전량 차집합으로 명문화. |
 | 0.3.0 | 2026-08-17 | kanban plan session | plan-audit 2회차(FAIL 0.70) 결함 반영. 신규 P0 3건(gitignore 경유 상시통과·제목줄 오계수·부록 마커 부재 fail-open) 교정. §A.4 신설(유령 3건), REQ-013에 `class="warn"` 리터럴, REQ-015에 검증 한계 명시, REQ-017 부착 대상 구조 정의. |
 | 0.2.0 | 2026-08-17 | kanban plan session | plan-audit 1회차(FAIL 0.56) 결함 반영. §A.4 신설(유령 식별자 3건 — 역방향 미측정, D2). REQ-005에 조동사+부록 리터럴 마커(D4·D8), REQ-009 백분율 포섭(D13), REQ-013을 "근거 귀속된 것을 배치"로 재정의해 AC-014 모순 해소(D3), REQ-016(유령 식별자 금지)·REQ-017(`data-ev` 원장 대응 장치, D5) 신설. Out of Scope h3화(D14). 열린 질문 Q5·Q6 추가. |
