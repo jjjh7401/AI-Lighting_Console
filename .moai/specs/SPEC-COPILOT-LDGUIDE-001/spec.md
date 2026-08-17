@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-LDGUIDE-001
 title: "조명감독 워크플로우 기준 사용 가이드 전면 개정 + 개선 제안 도출 (LD Guide)"
 version: "0.6.0"
-status: draft
+status: completed
 created: 2026-08-17
-updated: 2026-08-17
+updated: 2026-08-18
 author: orchestrator (kanban plan session)
 priority: P2
 phase: "Phase 3 사용자 문서 — 감독 언어 축 재정렬"

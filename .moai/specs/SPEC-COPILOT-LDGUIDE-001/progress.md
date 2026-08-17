@@ -4,11 +4,13 @@
 
 | 항목 | 값 |
 |---|---|
-| 단계 | **plan** |
-| status | `draft` (v0.1.0) |
+| 단계 | **sync 완료** (plan → run → review → sync) |
+| status | `completed` (v0.6.0) |
+| 판정 | review **PASS-WITH-FINDINGS**(결함 4건, 전부 검사 명령 쪽 · 가이드 본문 0건) · sync 이관 3건 처리(§E.4) |
+| 미종결 이월 | §D 교정 4건 + 원장 선별 인용 4건 → **후속 카드**(lead 결정) · REQ-015 부정 주장은 기계 검증 불가로 영구 미해소 |
 | 워크트리 | `.claude/worktrees/ldguide` |
 | 브랜치 | `worktree-ldguide` |
-| 기준 커밋 | `2092a42` (`main` 최신 — "Merge pull request #43") |
+| 기준 커밋 | `2092a42` (plan 착수 시점) → **rebase 후 base `f30ab4c`** (아래 base 행이 현행) |
 | 칸반 카드 | t1 (Class C), lead = `lead-tjueej` |
 | plan-audit | 0.56 → 0.70 → **0.79 (3/3 상한 도달)** · 권고 **PASS-WITH-DEBT** · 잔여 R1~R7 반영 완료(v0.4.0) |
 | 디스포지션 | **PASS-WITH-DEBT 승인** · 재감사 없이 run 진입 — **사용자 결정** |
@@ -744,6 +746,30 @@ AC 19/19). 소유권 행렬상 `draft → in-progress`는 manager-develop의 몫
 - **원장 선별 인용은 다른 게이트에도 있을 수 있다.** 이 세션은 게이트 D의 5건만 재실행했다.
   §1~§5·§7의 명령은 표본 밖이다.
 
+### §E.4.5 종결 — lead 결정 반영 (2026-08-18)
+
+회신이 유실될 수 있으므로 **결정과 근거를 파일에 남긴다.** lead가 블로커 3건에 답했고,
+그중 ③이 sync 소유라는 지적은 옳다. 보류했던 이유는 소유권을 오판해서가 아니라 블로커 A가
+열려 있어 **종결 전이 자체가 불가**했기 때문이며, A가 닫힌 지금 진행했다.
+
+| 블로커 | lead 결정 | 이 세션의 처리 |
+|---|---|---|
+| ① §D 교정 주체 | 지금 고치지 않음 · 후속 카드로 이월 | 교정 안 함. 이월 대상에 **원장 선별 인용 4건(§E.4.1 ②)을 추가**해 위 요약표에 기재 |
+| ② PR 생성 | 만듦 · lead가 처리 | push·PR 안 함 (lead 몫) |
+| ③ `status: draft` 잔존 | sync가 고칠 것 | `completed`로 전이 + `updated: 2026-08-18` |
+
+**전이 기록의 공백을 감춰서 적지 않는다.** frontmatter는 `draft`에서 곧바로 `completed`로
+갔다. 사이의 `in-progress`(manager-develop, run 커밋 몫)와 `implemented`는 **한 번도 기록된
+적이 없다.** 이 커밋은 그 두 전이를 소급해 만들어내지 않으며, 없었던 것을 있었던 것처럼
+적지도 않는다 — 실제로 일어난 일은 "run·review는 수행됐으나 frontmatter에 반영되지 않았고,
+sync가 종결 상태만 기재했다"이다. 상태 이력을 감사할 때 frontmatter가 아니라 §E.2/§E.3/§J와
+git log를 봐야 하는 이유다.
+
+- 명령: `git rev-parse --short HEAD` · `git branch --show-current`
+- 관측: `d836113` · `worktree-ldguide` (편집 직전 재확인)
+
+**이 세션이 하지 않은 것**: push, PR 생성, 백로그 등록, §D 교정. 전부 lead 소관이다.
+
 ## 이력
 
 | 일자 | 내용 |
@@ -754,3 +780,4 @@ AC 19/19). 소유권 행렬상 `draft → in-progress`는 manager-develop의 몫
 | 2026-08-17 | plan-audit 3회차 FAIL 0.79(상한 도달, 권고 PASS-WITH-DEBT). 잔여 R1~R7 전량 반영 → v0.4.0. 각 교정을 뮤테이션으로 사전 검증(§G 9/19). R2 수행 중 유령 2건 추가 발견 → §A.4가 3건→5건. **재감사 미실시이므로 점수 개선은 주장하지 않는다 — 마지막 관측값은 0.79.** |
 | 2026-08-17 | PASS-WITH-DEBT 승인. `origin/main`(f30ab4c) 위로 rebase — 충돌 0, SPEC 5개 파일 해시 전량 일치(전후 대조). rebase가 Tier M REQ/AC 예산 규칙을 소급 적용시켜 17/19 초과가 드러났고, 규칙이 SPEC·감사보다 나중임을 기계 확인 후 **현행 유지 예외**로 기록(§6-D). 다음 SPEC부터 16/16 적용. |
 | 2026-08-17 | sync 단계. 이관 3건 판정(게이트 D 테스트 5파일 1144 passed로 닫음 · 원장 자기인증은 부분 해소 + 선별 인용 결함 P2 1건 발견 · REQ-015 부정 주장은 기계 검증 불가로 미해소). §6-F에 기전 #8 등록 + §6-F.3 결론 정정. frontmatter `status: draft` 잔존 발견 — 미교정, lead 보고. §D 교정 주체·PR 생성은 블로커로 상신. |
+| 2026-08-18 | sync 종결. lead 블로커 답 반영 — §D 교정은 후속 카드 이월(원장 선별 인용 4건 추가), PR은 lead 처리, `status: draft → completed` 전이 + 요약표 갱신(단계 plan → sync 완료, v0.1.0 → v0.6.0). frontmatter가 draft에서 completed로 직행했고 중간 in-progress·implemented는 미기록임을 §E.4.5에 명시. |
