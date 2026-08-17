@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-LDGUIDE-001
 title: "조명감독 워크플로우 기준 사용 가이드 전면 개정 + 개선 제안 도출 (LD Guide)"
-version: "0.3.0"
+version: "0.4.0"
 status: draft
 created: 2026-08-17
 updated: 2026-08-17
@@ -82,19 +82,28 @@ analyse_layout_image
 기존 5단계가 이 9단계를 덮지 못하는 지점이 구조적으로 존재한다 — 특히 **3(포커싱)**과
 **7(리허설·수정)**은 기존 축에 대응 절이 없다.
 
-### A.4 유령 도구 이름 3건 (검증됨) — 역방향 결함
+### A.4 유령 도구 이름 5건 (검증됨) — 역방향 결함
 
 §A.1·§A.2는 **코드 → 가이드** 한 방향만 쟀다. 반대 방향(가이드에 적힌 이름 → 실제 등록
-여부)을 재보니 **저장소에 존재하지 않는 이름 3건**이 가이드 본문에 남아 있다:
+여부)을 재보니 **저장소에 존재하지 않는 이름 5건**이 가이드에 남아 있다.
 
-| 가이드에 적힌 이름 | 위치 | 실제 |
-|---|---|---|
-| `run_preshow_check` | `docs/user-guide.html` L360 | 등록명은 `preshow_check`. 내부 함수도 `run_preshow_checklist`로 이름이 다르다 |
-| `check_patch` | `docs/user-guide.html` L361 | 등록명은 `precheck_patch`. 단독 단어 `check_patch`는 `server/` 전체에서 0건 |
-| `generate_groups` | `docs/user-guide.html` L363 | `grep -rn "generate_groups" server ui` → **0건.** 저장소 어디에도 없다 |
+측정: 가이드의 스네이크케이스 토큰 전량(23종)에서 등록 도구 33종과 허용목록 2종을
+차집합으로 제거한 잔여.
 
-이것은 §A.1이 지목한 드리프트와 **같은 종류**이며, 방향만 반대다. §A.1·§A.2의 도구 대조는
-이 방향을 재지 않았으므로 결함 목록에서 빠져 있었다(plan-audit 1회차 D2 지적, 재측정으로 확인).
+| 가이드에 적힌 이름 | 실제 |
+|---|---|
+| `run_preshow_check` | 등록명은 `preshow_check`. 내부 함수도 `run_preshow_checklist`로 이름이 다르다 |
+| `check_patch` | 등록명은 `precheck_patch`. 단독 단어 `check_patch`는 0건 |
+| `generate_groups` | `server`·`ui`·`console` 전체 **0건** |
+| `propose_plan` | `server`·`ui`·`console` 전체 **0건** |
+| `write_coordinate` | `server`·`ui`·`console` 전체 **0건** |
+
+**허용목록(비도구이나 정당한 토큰) 2종** — 코드에 실재함을 확인했다:
+`contents_unavailable`(`server/web/messages.py` 외) · `drilldown_capped`(`server/fx/matching.py` 외).
+
+이것은 §A.1이 지목한 드리프트와 **같은 종류**이며 방향만 반대다. 1회차 감사(D2)가 3건을
+지목했고, 3회차 조치로 부인목록을 **전량 차집합**으로 바꾸자 나머지 2건이 즉시 드러났다 —
+알려진 것만 찾는 검사는 4번째를 영원히 놓친다는 것의 실증이다.
 
 ## B. 요구사항 (GEARS)
 
@@ -126,8 +135,9 @@ analyse_layout_image
   특정할 수 있어야 AC가 실행 가능해지기 때문이다. 기존 가이드에 이미 존재하던 목록 절의
   유용성을 보존하되(REQ-LDG-010), 본문 서술은 감독 언어로 유지하기 위한 분리다.
 - **REQ-LDG-016** [Unwanted] — the 가이드 **shall not** 등록되지 않은 도구 식별자를 쓴다.
-  §A.4의 유령 3건(`run_preshow_check` · `check_patch` · `generate_groups`)은 제거하거나
-  실제 등록명으로 교정한다. 본문·부록 모두에 적용된다.
+  §A.4의 유령 5건은 제거하거나 실제 등록명으로 교정한다. 본문·부록 모두에 적용된다.
+  판정은 **전량 차집합**으로 한다 — 가이드의 스네이크케이스 토큰 전량에서 등록 도구명과
+  허용목록(§A.4의 2종)을 뺀 잔여가 0이어야 한다. 알려진 이름만 찾는 부인목록은 금지한다.
 - **REQ-LDG-017** [Ubiquitous] — the 가이드 **shall** 모든 능력 주장에 증거 원장의 행 id를
   `data-ev` 속성으로 부착한다. **부착 대상은 구조로 정의한다**: `part-app` 구간의 모든
   `<p>`와 모든 `class="warn"` 블록. "능력 주장 문장"을 의미로 정의하면 셀 수 없으므로,
@@ -226,4 +236,6 @@ analyse_layout_image
 | 버전 | 일자 | 작성 | 변경 |
 |---|---|---|---|
 | 0.1.0 | 2026-08-17 | kanban plan session | 최초 작성(draft, Tier M). 칸반 카드 t1. 사용자 확인 3건(9단계 축·전면 개정·독자 2계층) 반영. 카드 전제("문서 없음") 정정 — 기존 문서 존재 실측. |
+| 0.4.0 | 2026-08-17 | kanban plan session | plan-audit 3회차(FAIL 0.79 · 상한 도달 · 권고 PASS-WITH-DEBT) 잔여 R1~R7 반영. §A.4가 3건 → **5건**(전량 차집합 전환으로 `propose_plan`·`write_coordinate` 추가 발견) + 허용목록 2종 실측 확정. REQ-016을 부인목록 금지·전량 차집합으로 명문화. |
+| 0.3.0 | 2026-08-17 | kanban plan session | plan-audit 2회차(FAIL 0.70) 결함 반영. 신규 P0 3건(gitignore 경유 상시통과·제목줄 오계수·부록 마커 부재 fail-open) 교정. §A.4 신설(유령 3건), REQ-013에 `class="warn"` 리터럴, REQ-015에 검증 한계 명시, REQ-017 부착 대상 구조 정의. |
 | 0.2.0 | 2026-08-17 | kanban plan session | plan-audit 1회차(FAIL 0.56) 결함 반영. §A.4 신설(유령 식별자 3건 — 역방향 미측정, D2). REQ-005에 조동사+부록 리터럴 마커(D4·D8), REQ-009 백분율 포섭(D13), REQ-013을 "근거 귀속된 것을 배치"로 재정의해 AC-014 모순 해소(D3), REQ-016(유령 식별자 금지)·REQ-017(`data-ev` 원장 대응 장치, D5) 신설. Out of Scope h3화(D14). 열린 질문 Q5·Q6 추가. |
