@@ -22,10 +22,10 @@ Optional standard fields:
 - allowed-tools: Comma-separated string of tool names the skill can use (experimental)
 - user-invocable: Boolean to control slash command menu visibility (default: true, set to false to hide from / menu)
 - disable-model-invocation: Boolean, when true only user can invoke (not Claude). Use for workflows with side effects (default: false)
-- effort: Session effort override: low, medium, high, xhigh, max (xhigh/max require Opus 4.7+)
+- effort: Session effort override: low, medium, high, xhigh, max (xhigh/max available on Opus 5, Sonnet 5, Opus 4.8, Opus 4.7)
 - model: Model override when skill is active (sonnet, opus, haiku)
 - shell: Shell for command injection: bash (default) or powershell
-- context: Set to "fork" to run skill in forked subagent context (isolated execution)
+- context: Set to "fork" to run skill in forked subagent context (isolated execution). As of Claude Code v2.1.218, `context: fork` skills run in the background by default; opt out per skill with `background: false`. MoAI ships no `context: fork` skill (documentation-only impact)
 - agent: Subagent type when context is fork. Built-in: Explore, Plan, general-purpose, or custom agent name
 - hooks: Hook definitions scoped to skill lifecycle
 - paths: Glob patterns limiting auto-invocation to matching files (comma-separated or YAML array)
@@ -46,6 +46,7 @@ Common metadata keys:
 - modularized: Whether content is split into modules ("true" or "false")
 - tags: Comma-separated tag list as single string
 - author: Skill author name
+- docs-libraries: Comma-separated library identifiers for documentation lookup (WebSearch / WebFetch)
 - related-skills: Comma-separated related skill names
 - aliases: Comma-separated alternative names
 
@@ -134,8 +135,25 @@ Level 2 (Body):
 
 Level 3 (Bundled):
 - Tokens: Variable
-- Content: reference.md, modules/, examples/
+- Content: reference.md (single root file), references/ (multi-file directory), reference/ (single directory, Claude Code Pattern 2), modules/, examples/, INDEX.md (module index)
 - Loading: On-demand by Claude
+
+### Skill Directory Layout
+
+MoAI skills follow the Agent Skills standard with MoAI-specific extensions. The bundled directory layout (Level 3) accepts any of the following optional supporting locations, chosen by skill size and content shape:
+
+| Path | Form | Status | Use |
+|------|------|--------|-----|
+| `reference.md` | root file | official SSOT | single external-links / API-docs file (simple skills) |
+| `references/` | multi-file directory | MoAI official extension | multiple reference files grouped together (large skills, e.g. a `claude-code-*-official.md` series) |
+| `reference/` | single directory | Claude Code Pattern 2 (Anthropic `skills.md` bigquery example) | domain-specific reference organization |
+| `modules/` | multi-file directory | MoAI official (`modular-system.md`) | topic-focused deep-dive content, self-contained |
+| `examples.md` | root file | official | copy-paste-ready working examples |
+| `scripts/` | directory | official | executable utility scripts |
+| `templates/` | directory | official | reusable file templates |
+| `INDEX.md` | root file (inside `modules/`) | MoAI convention | optional human-readable index of the modules in a `modules/` directory |
+
+A skill MAY use `reference.md`, `references/`, and `reference/` independently or together based on its content volume. `modular-system.md` (inside the `moai-foundation-core` skill) is the canonical deep-dive on this layout.
 
 ### Skill Listing Budget and Compaction (Claude Code runtime)
 
@@ -216,10 +234,10 @@ Three invocation modes control how skills appear and load:
 | Setting | User invokes | Claude invokes | Description loaded | Use case |
 |---------|-------------|---------------|-------------------|----------|
 | (default / user-invocable: true) | Yes | Yes | Always | Standard skills |
-| disable-model-invocation: true | Yes | No | No | Workflows with side effects |
+| disable-model-invocation: true | Yes | No (refused) | Yes | Workflows with side effects |
 | user-invocable: false | No | Yes | Always | Background knowledge |
 
-When `disable-model-invocation: true` is set, the skill is NOT loaded into Claude's context, so Claude cannot auto-invoke it. Use for skills that perform destructive actions.
+When `disable-model-invocation: true` is set, Claude cannot auto-invoke the skill. The skill remains visible to Claude — it is simply not model-invocable: as of CC v2.1.222 an attempted model invocation is refused, and Claude is told to ask the user to run the skill rather than replicating its workflow. Use for skills that perform destructive actions.
 
 When `user-invocable: false` is set, the skill is hidden from the `/` menu but Claude can still invoke it as background knowledge. Use for reference material.
 
