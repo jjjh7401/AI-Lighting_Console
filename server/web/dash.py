@@ -118,7 +118,15 @@ def _drilldown_items(objects: list[dict]) -> list[dict]:
             meta = {"contents_unavailable": True}
         else:
             contents = obj.get("contents")
-            meta = {"stored_count": len(contents)} if contents is not None else None
+            # 배지의 정직한 출처는 창 길이가 아니라 응답기 자신의 총계 주장
+            # (drill_into의 contents_total = node.childCount) — 24캡 너머 풀
+            # (라이브 2026-08-16: Color 37인데 배지가 창 길이)에서 팝업 제목
+            # ("N개")과 같은 수를 말한다. 총계 주장이 없으면 창 길이 그대로.
+            total = obj.get("contents_total")
+            if isinstance(total, int) and not isinstance(total, bool):
+                meta = {"stored_count": total}
+            else:
+                meta = {"stored_count": len(contents)} if contents is not None else None
         items.append(dash_item(no=no, name=str(obj.get("name", "")), meta=meta))
     return items
 

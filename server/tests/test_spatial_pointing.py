@@ -13,6 +13,7 @@ import pytest
 
 from server.spatial.pointing import (
     BASIC_POSITION_SEQUENCE,
+    FX_POSITION_SEQUENCE,
     POINTING_TILT_LIMIT_DEGREES,
     PointingTarget,
     SpatialPointingError,
@@ -21,6 +22,7 @@ from server.spatial.pointing import (
     basic_position_presets,
     fan_chain,
     fan_pan_tilt,
+    fx_position_presets,
     pointing_commands,
     position_cue_store_commands,
     position_preset_store_commands,
@@ -389,3 +391,112 @@ class TestFanChain:
     def test_an_empty_chain_is_refused(self):
         with pytest.raises(SpatialPointingError, match="no fixtures"):
             fan_chain([])
+
+
+class TestFxPositionSequence:
+    # A symmetric two-fixture bar carries the mirror/sweep symmetry checks;
+    # a three-fixture bar exercises the chain-ordered looks (tail, floor fan).
+    _BAR = [(20, (4.0, 0.0, 6.0)), (26, (-4.0, 0.0, 6.0))]
+    _TRIO = [(1, (-4.0, 0.0, 6.0)), (2, (0.0, 0.0, 6.0)), (3, (4.0, 0.0, 6.0))]
+
+    @staticmethod
+    def _by_label(fixtures):
+        return {label: (aims, skipped) for label, aims, skipped in fx_position_presets(fixtures)}
+
+    def test_the_sequence_is_exactly_the_ten_fx_labels(self):
+        assert FX_POSITION_SEQUENCE == (
+            "Sweep L",
+            "Sweep R",
+            "Sky Out",
+            "Floor Base",
+            "Circle Base",
+            "Bally Base",
+            "Tail",
+            "Mirror Split",
+            "Fan Floor",
+            "Aisle Punch",
+        )
+
+    def test_the_return_shape_mirrors_the_basic_presets(self):
+        looks = fx_position_presets(self._TRIO)
+        assert [label for label, _aims, _skipped in looks] == list(FX_POSITION_SEQUENCE)
+        all_fids = {fid for fid, _position in self._TRIO}
+        for _label, aims, skipped in looks:
+            assert isinstance(aims, tuple) and isinstance(skipped, tuple)
+            assert {fid for fid, _pan, _tilt in aims} | set(skipped) == all_fids
+
+    def test_the_sweep_endpoints_are_pan_mirrors_on_a_symmetric_rig(self):
+        by_label = self._by_label(self._BAR)
+        left = {fid: (pan, tilt) for fid, pan, tilt in by_label["Sweep L"][0]}
+        right = {fid: (pan, tilt) for fid, pan, tilt in by_label["Sweep R"][0]}
+        # Mirroring x mirrors the fixture too: 20 (x=+4) against the left
+        # endpoint is the mirror image of 26 (x=-4) against the right one.
+        for fid, mirror_fid in ((20, 26), (26, 20)):
+            assert left[fid][0] == -right[mirror_fid][0]
+            assert left[fid][1] == right[mirror_fid][1]
+
+    def test_sky_out_and_circle_base_are_uniform_headroom_angles(self):
+        by_label = self._by_label(self._BAR)
+        assert POINTING_TILT_LIMIT_DEGREES - 15.0 == 120.0
+        assert {(pan, tilt) for _fid, pan, tilt in by_label["Sky Out"][0]} == {(180.0, 120.0)}
+        assert {(pan, tilt) for _fid, pan, tilt in by_label["Circle Base"][0]} == {(180.0, 40.0)}
+
+    def test_floor_base_puts_each_beam_at_its_own_feet(self):
+        by_label = self._by_label(self._BAR)
+        aims = {fid: (pan, tilt) for fid, pan, tilt in by_label["Floor Base"][0]}
+        assert aims[20] == aim_pan_tilt((4.0, 0.0, 6.0), (4.0, -1.5, 0.0))
+        assert aims[26] == aim_pan_tilt((-4.0, 0.0, 6.0), (-4.0, -1.5, 0.0))
+
+    def test_bally_base_keeps_the_out_fan_pans_at_the_wobble_tilt(self):
+        by_label = self._by_label(self._TRIO)
+        fan = fan_pan_tilt(list(fan_chain(self._TRIO)), mode="out")
+        assert [(fid, pan) for fid, pan, _tilt in by_label["Bally Base"][0]] == [
+            (fid, pan) for fid, pan, _tilt in fan
+        ]
+        assert {tilt for _fid, _pan, tilt in by_label["Bally Base"][0]} == {60.0}
+
+    def test_the_tail_chain_closes_its_loop(self):
+        by_label = self._by_label(self._TRIO)
+        aims = {fid: (pan, tilt) for fid, pan, tilt in by_label["Tail"][0]}
+        # Chain order is 1→2→3; each fixture chases its predecessor's floor
+        # point and the FIRST chases the LAST one's, closing the loop.
+        assert aims[1] == aim_pan_tilt((-4.0, 0.0, 6.0), (4.0, 0.0, 0.0))
+        assert aims[2] == aim_pan_tilt((0.0, 0.0, 6.0), (-4.0, 0.0, 0.0))
+        assert aims[3] == aim_pan_tilt((4.0, 0.0, 6.0), (0.0, 0.0, 0.0))
+
+    def test_mirror_split_crosses_the_two_halves(self):
+        by_label = self._by_label(self._BAR)
+        pans = {fid: pan for fid, pan, _tilt in by_label["Mirror Split"][0]}
+        # The right fixture leans left (+pan on the measured convention) and
+        # the left one leans right: opposite signs = the beams cross.
+        assert pans[20] > 0.0 > pans[26]
+        assert pans[20] == -pans[26]
+
+    def test_fan_floor_lands_on_equally_spaced_points(self):
+        by_label = self._by_label(self._TRIO)
+        aims = list(by_label["Fan Floor"][0])
+        # Landing xs are -5, 0, +5 — the rig span plus the 1 m margins split
+        # equally. Verify each aim by re-deriving it from its landing point.
+        assert aims == [
+            (1, *aim_pan_tilt((-4.0, 0.0, 6.0), (-5.0, -2.0, 0.0))),
+            (2, *aim_pan_tilt((0.0, 0.0, 6.0), (0.0, -2.0, 0.0))),
+            (3, *aim_pan_tilt((4.0, 0.0, 6.0), (5.0, -2.0, 0.0))),
+        ]
+        # The pans swing monotonically across downstage; fold the ±180 wrap
+        # into 0..360 to see the monotone run.
+        unwrapped = [pan % 360.0 for _fid, pan, _tilt in aims]
+        assert unwrapped == sorted(unwrapped)
+        assert len(set(unwrapped)) == 3
+
+    def test_aisle_punch_skips_a_fixture_past_the_tilt_ceiling(self):
+        # A sub-stage marker 7 m below deck would have to tilt >135° up to
+        # reach the knee-height punch point — refused, skipped by name, and
+        # absent from the aims.
+        fixtures = [*self._BAR, (43, (0.0, 0.0, -7.0))]
+        aims, skipped = self._by_label(fixtures)["Aisle Punch"]
+        assert skipped == (43,)
+        assert {fid for fid, _pan, _tilt in aims} == {20, 26}
+
+    def test_an_empty_rig_is_refused(self):
+        with pytest.raises(SpatialPointingError, match="no fixtures"):
+            fx_position_presets([])

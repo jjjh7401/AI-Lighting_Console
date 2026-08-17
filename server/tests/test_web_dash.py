@@ -236,6 +236,23 @@ class TestPresetPoolsDrilldown:
         # that could not be opened at all.
         assert color["meta"] == {"stored_count": 0}
 
+    def test_a_pool_past_the_responder_window_reports_the_claimed_total(self):
+        # 라이브 2026-08-16: Color 풀 37개인데 배지가 창 길이를 말했다 —
+        # 배지의 정직한 출처는 응답기 자신의 node.childCount 주장이고,
+        # 팝업 제목("37개")과 같은 수여야 한다.
+        tree = _rig_tree()
+        window = [(n, f"P{n}") for n in range(1, 25)]  # 24캡 첫 창
+        tree["DataPool/PresetPools/1"] = _snapshot(
+            "DataPool/PresetPools/1",
+            window,
+            node={"childCount": 37, "name": "Dimmer"},
+            truncated=True,
+        )
+        sections = build_dash_catalog(FakeStatePort(tree))
+        presets = _section(sections, "preset_pools")
+        dimmer = next(i for i in presets["items"] if i["no"] == 1)
+        assert dimmer["meta"] == {"stored_count": 37}
+
     def test_a_pool_that_cannot_be_opened_is_contents_unavailable(self):
         tree = _rig_tree()
         tree["DataPool/PresetPools"] = _snapshot(

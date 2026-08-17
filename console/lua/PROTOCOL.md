@@ -7,6 +7,14 @@ M2 deliverable; consumed by the M3 tool-runner and the M4 safety gate.
 Versioning: every reply payload carries `"v": 1`. Any breaking change bumps the
 version in BOTH implementations and revises this document.
 
+> Revision note (responder 1.6.0): snapshot **paging** — a `state` request may
+> carry one trailing `offset=<n>` token (§2); the reply echoes `offset` as a
+> top-level integer (0 when the request carried none), and `truncated` now
+> means "children remain **after** this window" — on the first window
+> (offset 0) that is exactly the pre-1.6.0 meaning. Requests without the token
+> are byte-for-byte unchanged; their replies change only by the additive
+> `offset:0` echo. Wire protocol version stays 1.
+>
 > Revision note (responder 1.5.0): ADDITIVE `prop` verb (§2) + `prop`
 > reply kind (§4.6), and `Cue` children in sequence snapshots may carry
 > `cueNo` (§4.2) when the responder can read the cue object's real number.
@@ -64,7 +72,7 @@ Plugin "CopilotResponder" "<verb> <request-id> [rest]"
 | Verb | Form | Reply address / kind |
 |---|---|---|
 | `ping` | `ping <id>` | `/copilot/feedback`, kind=`pong` |
-| `state` | `state <id> <object-path>` | `/copilot/state`, kind=`state` |
+| `state` | `state <id> <object-path> [offset=<n>]` | `/copilot/state`, kind=`state` |
 | `prop` | `prop <id> <object-path> <PropertyName>` | `/copilot/state`, kind=`prop` |
 | `exec` | `exec <id> <ma3-command>` | `/copilot/feedback`, kind=`result` |
 | `deploy` | `deploy <id> <enc-name> <enc-source>` (M7) | `/copilot/feedback`, kind=`deploy` |
@@ -78,6 +86,21 @@ Plugin "CopilotResponder" "<verb> <request-id> [rest]"
   creates the plugin object in `DataPool/Plugins` and sets its Lua component
   source (ASSUMPTION-6). The server sends ONLY review-approved source through
   this verb (`server/deploy/pipeline.py`, REQ-MVP-019).
+
+- `state ... offset=<n>` (1.6.0, §4.2 paging): one OPTIONAL trailing
+  whitespace-separated token; `<n>` is the 0-based `children` window start.
+  Because `<object-path>` is rest-of-line (spaces legal), ONLY a trailing
+  token is recognized — a path whose final segment literally ends in
+  ` offset=<something>` cannot be expressed in a paged-capable responder
+  (query it without the token). A negative, fractional, or non-numeric value
+  degrades to 0; the reply's echoed `offset` reports what was actually used.
+  The server builder (`build_state_query`) omits the token for offset
+  `None`/`0`, keeping the first-window request byte-identical to pre-1.6.0.
+  **Pre-1.6.0 responders do not know the token**: they parse it as part of
+  the path, fail resolution, and reply `ok:false` with no `offset` echo —
+  a caller that pages MUST treat a missing `offset` echo or an `ok:false`
+  reply as *no progress* and stop paging (fall back to per-slot queries
+  below), never retry the same offset.
 
 - `<request-id>`: token matching `[A-Za-z0-9._-]+`; echoed back verbatim so the
   server can correlate replies (UDP gives no ordering/delivery guarantee).
@@ -133,7 +156,7 @@ Success (depth-1 snapshot of the resolved node):
 {"v":1, "kind":"state", "id":"<id>", "path":"DataPool/Sequences", "ok":true,
  "node": {"name":"Sequences", "class":"Pool", "childCount":12},
  "children": [{"i":1, "name":"Sequence 1", "class":"Sequence"}],
- "truncated": false}
+ "offset": 0, "truncated": true}
 ```
 
 - Each `children` entry is `{"i": <pool slot>, "name": ..., "class": ...}`,
@@ -161,20 +184,36 @@ Success (depth-1 snapshot of the resolved node):
   not reinterpreted for cues. `cueNo` is omitted entirely when the responder
   cannot read a numeric cue number from the cue object. Consumers MUST treat
   absence as "unknown", never substitute the array position or `i`.
-- `children` is capped at `CONFIG.max_children` (default 24) and further
-  reduced until the encoded payload fits `CONFIG.max_payload` (default 1900
-  bytes — MA3 command-line budget, §5). `truncated:true` signals a partial
-  listing; `node.childCount` always carries the real total. Deeper inspection =
+- `children` is a WINDOW of at most `CONFIG.max_children` (default 24)
+  entries starting at the requested `offset` (0-based; 0 when the request
+  carried no token), further reduced until the encoded payload fits
+  `CONFIG.max_payload` (default 1900 bytes — MA3 command-line budget, §5).
+  `node.childCount` always carries the real total. Deeper inspection =
   follow-up query on a child path.
-- **There is no paging.** The request carries no offset and the reply carries
-  no cursor, so a `truncated:true` listing cannot be continued — re-querying
-  the same path returns the same first N children forever. To enumerate a pool
-  larger than the cap, query each slot as its own path
-  (`<pool>/<n>`, e.g. `DataPool/Macros/150`) and stop once `node.childCount`
-  from the pool query has been accounted for. A slot query answers whether or
-  not the slot is occupied, so the scan needs no prior knowledge of which
-  numbers exist. Measured live 2026-07-25 on a 27-macro pool that reported
-  only 17 children: batches of 10 slot queries with a ~2.5 s collection window
+- **`offset` echo + paging (responder 1.6.0).** The reply's top-level
+  `offset` is the 0-based window start the responder ACTUALLY used (an
+  invalid requested value degrades to 0, §2); it is present on both
+  `ok:true` and `ok:false` state replies. `truncated:true` means children
+  remain **after** this window — i.e. `offset + len(children) <
+  node.childCount` — so a full listing is walked by re-querying the same
+  path with `offset` advanced past the children already received, until a
+  reply with `truncated:false` (or the accumulated count reaching
+  `node.childCount`). The budget guard can shrink any window below the
+  24-cap, so callers MUST advance by the number of children actually
+  received, never by a fixed page size. `offset >= childCount` yields an
+  empty `children` window with `truncated:false`.
+- **Paging against a pre-1.6.0 responder** (no `offset` echo anywhere): the
+  token rides inside the rest-of-line path, so the old responder fails path
+  resolution and replies `ok:false` — it never returns a wrong window, but
+  it cannot be paged. Callers MUST stop paging on a reply without an
+  `offset` echo, on `ok:false`, or on a repeated first child (defense in
+  depth against any responder that ignores the token), and fall back to
+  per-slot enumeration: query each slot as its own path (`<pool>/<n>`,
+  e.g. `DataPool/Macros/150`) and stop once `node.childCount` from the pool
+  query has been accounted for. A slot query answers whether or not the
+  slot is occupied, so the scan needs no prior knowledge of which numbers
+  exist. Measured live 2026-07-25 on a 27-macro pool that reported only 17
+  children: batches of 10 slot queries with a ~2.5 s collection window
   recovered 27/27 without dropping a request on the MA3 command queue.
 - **`node.sequenceNo`** (additive, `Executor` nodes only, SPEC-COPILOT-EXECBODY-001
   M2/REQ-EXECBODY-003): the pool number of the sequence assigned to this
@@ -191,7 +230,9 @@ Success (depth-1 snapshot of the resolved node):
   number could not be established — consumers MUST treat absence as "unknown"
   and never substitute a guess. Wire protocol version stays 1 (additive field
   on an existing reply kind — same precedent as ASSUMPTION-6/§4.5).
-- Failure: `{"v":1,"kind":"state","id":"<id>","path":"...","ok":false,"error":"<message>"}`
+- Failure: `{"v":1,"kind":"state","id":"<id>","path":"...","ok":false,"error":"<message>","offset":<n>}`
+  (`offset` echoed on the failure branch too, responder 1.6.0 — a pre-1.6.0
+  failure reply has no `offset` key).
 
 ### 4.3 `result` (execution result — on `/copilot/feedback`, REQ-MVP-004)
 

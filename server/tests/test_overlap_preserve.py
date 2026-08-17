@@ -113,11 +113,20 @@ _RULEBOOK_APPEND_HEADING = "### OBSERVED EFFECT — live validation V1~V7 + oper
 #: keep being discovered live. Swapped out of the directory sweep the same
 #: way ``server/looks/library/`` and the rulebook directory are.
 _CONSOLE_LUA_DIR = "console/lua/"
-_CONSOLE_LUA_LOCKED_ASSETS = (
-    "console/lua/copilot_responder.lua",
-    "console/lua/copilot_responder.xml",
-    "console/lua/PROTOCOL.md",
-)
+_CONSOLE_LUA_LOCKED_ASSETS = ("console/lua/copilot_responder.xml",)
+#: 2026-08-16 granted revision — preset-pool PAGING (responder 1.5.0 → 1.6.0):
+#: the state query gains an optional trailing ``offset=<n>`` token and the
+#: reply an integer ``offset`` echo, with PROTOCOL.md §4.2 rewritten from
+#: "there is no paging" to the paging + legacy-fallback contract. The wire
+#: CONTRACT changed deliberately (user-approved 2026-08-16 "진행해줘",
+#: live-verified: responder_roundtrip 1.6.0 PASS + a 31-preset pool read
+#: completely across two windows). The two revised files leave the byte-lock
+#: and are pinned by CONTENT DIGEST instead — one byte of further drift still
+#: fails the gate, and the next legitimate revision must re-pin here.
+_CONSOLE_LUA_GRANTED_REVISION_DIGESTS = {
+    "console/lua/copilot_responder.lua": "5b5cfac59fc46b4d8f02abe046817574aae76c1a",
+    "console/lua/PROTOCOL.md": "a88f4dc7c15d39aa77478e61dedbcc373b816894",
+}
 
 #: 2026-08-02 granted exception — the upstream vocabulary extension
 #: (docs/proposals/2026-08-02-upstream-vocabulary-extension-proposal.md §6,
@@ -210,8 +219,8 @@ _SAFETY_EXPECTED_DELETIONS = {
     "server/safety/audit.py": 10,
     "server/safety/backup.py": 2,
     "server/safety/blacklist.yaml": 1,
-    "server/safety/console.py": 0,
-    "server/safety/gate.py": 3,
+    "server/safety/console.py": 15,
+    "server/safety/gate.py": 6,
 }
 _SAFETY_ALLOWED_DELETED_LINES = {
     # SCOPE CORRECTION (T-I audit-log crash fix): AuditLog.record() used a
@@ -258,10 +267,44 @@ _SAFETY_ALLOWED_DELETED_LINES = {
     # they need no allowance -- and `test_safety_ruleset.py` pins the new
     # content exactly, so this grant cannot be used to smuggle a second entry.
     "server/safety/blacklist.yaml": ("version: 1",),
+    # 2026-08-16 granted extension — preset-pool PAGING (PROTOCOL §4.2):
+    # `query_state` gains a keyword-only `offset` (default 0 — historical
+    # bytes preserved; the PRECHK signature pin machine-checks that shape).
+    # console.py's fifteen deletions are the paging revision of query_state
+    # (signature, one-line docstring, and the fixed-wire `_round_trip` call
+    # replaced by an offset-aware wire choice) PLUS five ruff-format rewrap
+    # pairs: entering the touched set made TestTouchedFilesPassLint demand
+    # format-cleanliness on the whole file, so the historical non-clean
+    # wrappings had to align WITH the edit that touched the file.
+    "server/safety/console.py": (
+        "    def _run_file_import(",
+        "        self, name: str, lua_source: str, sends: list[DeploySend]",
+        "    ) -> ExecOutcome:",
+        '            return ExecOutcome(status="failed", detail=f"cannot write plugin file {target}: {error}")',  # noqa: E501
+        '            return ExecOutcome(status="unconfirmed", detail=f"imported but pool unreadable: {error}")',  # noqa: E501
+        "    def query_state(self, path: str) -> dict:",
+        '        """Object-tree snapshot query (REQ-MVP-003); raises on failure/timeout."""',
+        "        payload = self._round_trip(",
+        "            build_state_query(request_id, path), request_id, self._timeouts.state_query_seconds",  # noqa: E501
+        "            raise BodyUnavailable(",
+        '                f"identity query failed for {reference!r}: {error}"',
+        "            ) from error",
+        "    def _fetch_body_at_path(",
+        "        self, reference: str, path: str, *, allow_empty: bool",
+        "    ) -> Sequence[str]:",
+    ),
+    # gate.py's three NEW deletions (2026-08-16 paging) are the two
+    # `query_state` signatures gaining the same keyword-only offset and the
+    # fixed `self._console.query_state(path)` call replaced by the
+    # offset-conditional pair — the audited chokepoint rides through
+    # unchanged (`_query_state` still audits every send, 1:1).
     "server/safety/gate.py": (
         "from server.safety.backup import BackupError, BackupManager",
         '    """StateQueryPort implementation riding the gate-audited console link."""',
+        "    def query_state(self, path: str) -> dict:",
         '        """Attach a BackupManager whose action saves the showfile via this gate."""',
+        "    def _query_state(self, path: str) -> dict:",
+        "            payload = self._console.query_state(path)",
     ),
 }
 
@@ -512,13 +555,14 @@ class TestChoreographyObservedEffectGrantedAppend:
 
 
 class TestConsoleLuaReadmeGrantedException:
-    """The 2026-08-12 grant — README.md only, the responder source/wire untouched.
+    """The 2026-08-12 README grant + the 2026-08-16 paging revision grant.
 
-    Not a weakening: the three locked assets are named in
-    :func:`_preserve_diff_command`, so touching the Lua source, its plugin
-    wrapper, or the wire protocol still fails the emptiness gate above. This
-    class bounds the other side — the directory-level diff may show ONLY
-    README.md, nothing else.
+    Not a weakening: the plugin wrapper stays byte-locked and named in
+    :func:`_preserve_diff_command`, while the two 2026-08-16-revised files
+    (responder source + wire protocol) are pinned by CONTENT DIGEST — one
+    byte of drift past the granted revision still fails, and the next
+    legitimate revision must re-pin the digests deliberately. This class
+    bounds the directory's change set to exactly those grants.
     """
 
     def test_the_locked_console_lua_assets_are_byte_identical(self):
@@ -528,9 +572,13 @@ class TestConsoleLuaReadmeGrantedException:
             _git("diff", "--stat", f"{_PRECHK_BASE}..HEAD", "--", *_CONSOLE_LUA_LOCKED_ASSETS) == ""
         )
 
-    def test_the_only_console_lua_change_is_the_readme(self):
+    def test_the_revised_assets_match_the_granted_digests_exactly(self):
+        for path, digest in _CONSOLE_LUA_GRANTED_REVISION_DIGESTS.items():
+            assert _git("hash-object", path).strip() == digest, path
+
+    def test_the_only_console_lua_changes_are_the_granted_ones(self):
         rows = _numstat(_PRECHK_BASE, _CONSOLE_LUA_DIR)
-        assert set(rows) == {"console/lua/README.md"}
+        assert set(rows) == {"console/lua/README.md"} | set(_CONSOLE_LUA_GRANTED_REVISION_DIGESTS)
 
     def test_the_grant_is_not_an_empty_exemption(self):
         # Non-vacuity, this module's own standard: both assertions above are

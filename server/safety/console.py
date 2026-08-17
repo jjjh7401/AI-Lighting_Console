@@ -276,9 +276,7 @@ class ConsoleLink:
         )
         return outcome
 
-    def _run_file_import(
-        self, name: str, lua_source: str, sends: list[DeploySend]
-    ) -> ExecOutcome:
+    def _run_file_import(self, name: str, lua_source: str, sends: list[DeploySend]) -> ExecOutcome:
         try:
             xml = build_plugin_xml(name, lua_source)
         except ValueError as error:
@@ -289,7 +287,9 @@ class ConsoleLink:
             self._import_dir.mkdir(parents=True, exist_ok=True)
             target.write_text(xml, encoding="utf-8")
         except OSError as error:
-            return ExecOutcome(status="failed", detail=f"cannot write plugin file {target}: {error}")
+            return ExecOutcome(
+                status="failed", detail=f"cannot write plugin file {target}: {error}"
+            )
 
         # One pool read: find an existing same-Name slot (idempotent redeploy)
         # AND the occupied slots (to pick a free one). A no-slot `Import Plugin`
@@ -343,7 +343,9 @@ class ConsoleLink:
         try:
             pool = self._deploy_query_state("DataPool/Plugins", sends)
         except StateQueryError as error:
-            return ExecOutcome(status="unconfirmed", detail=f"imported but pool unreadable: {error}")
+            return ExecOutcome(
+                status="unconfirmed", detail=f"imported but pool unreadable: {error}"
+            )
         names = [c.get("name") for c in pool.get("children", []) if isinstance(c, dict)]
         if name in names:
             return ExecOutcome(status="ok", detail=f"imported plugin {name!r} via file+Import")
@@ -372,12 +374,23 @@ class ConsoleLink:
         detail = str(payload.get("error") or payload.get("result") or "deployed")
         return ExecOutcome(status="ok" if ok else "failed", detail=detail)
 
-    def query_state(self, path: str) -> dict:
-        """Object-tree snapshot query (REQ-MVP-003); raises on failure/timeout."""
+    def query_state(self, path: str, *, offset: int = 0) -> dict:
+        """Object-tree snapshot query (REQ-MVP-003); raises on failure/timeout.
+
+        ``offset`` (PROTOCOL.md §4.2 paging) is the 0-based ``children``
+        window start for pools past the responder's 24-child cap. ``0`` (the
+        default) emits the historical request bytes — no token — so every
+        existing caller and pre-paging responder is untouched. A paging-aware
+        responder echoes ``offset`` back in the reply; callers paging past
+        the first window must treat a missing echo as "no progress".
+        """
         request_id = self._new_id()
-        payload = self._round_trip(
-            build_state_query(request_id, path), request_id, self._timeouts.state_query_seconds
+        wire = (
+            build_state_query(request_id, path, offset=offset)
+            if offset
+            else build_state_query(request_id, path)
         )
+        payload = self._round_trip(wire, request_id, self._timeouts.state_query_seconds)
         if payload is None:
             if self._monitor is not None:
                 self._monitor.note_query_timeout()
@@ -468,9 +481,7 @@ class StateBodyFetcher:
         try:
             identity = self._query(reference)
         except Exception as error:
-            raise BodyUnavailable(
-                f"identity query failed for {reference!r}: {error}"
-            ) from error
+            raise BodyUnavailable(f"identity query failed for {reference!r}: {error}") from error
         node = identity.get("node") if isinstance(identity, dict) else None
         sequence_no = node.get("sequenceNo") if isinstance(node, dict) else None
         if not isinstance(sequence_no, int):
@@ -491,9 +502,7 @@ class StateBodyFetcher:
             sequence_reference, sequence_template.format(ref=sequence_no), allow_empty=True
         )
 
-    def _fetch_body_at_path(
-        self, reference: str, path: str, *, allow_empty: bool
-    ) -> Sequence[str]:
+    def _fetch_body_at_path(self, reference: str, path: str, *, allow_empty: bool) -> Sequence[str]:
         try:
             payload = self._query(path)
         except Exception as error:
