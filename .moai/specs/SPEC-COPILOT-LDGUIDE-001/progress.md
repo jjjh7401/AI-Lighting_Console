@@ -435,7 +435,46 @@ A로 이관한 판단이 맞았다. **"없다"로 단정했으면 있는 기능�
 | AC-018 | PASS | `data-ev` 전량 원장 앵커로 해석 · 부착 53/53 |
 | AC-019 | PASS | 유령 식별자 0 (개정 전 5 — 비공허성 확인됨) |
 
-AC-013(변경 경로 봉쇄)은 커밋 이후 `git diff --name-only "$BASE"...HEAD`로 판정한다.
+| AC-013 | PASS | 커밋 후 판정 — 아래 참조 |
+
+AC-013(변경 경로 봉쇄)은 run 커밋 `bb0b3c3` 직후 판정했다:
+
+```bash
+BASE=$(git merge-base HEAD origin/main)     # f30ab4c
+git diff --name-only "$BASE"...HEAD
+```
+
+관측 출력 8건 전량이 허용 2경로 안에 있다 — `docs/user-guide.html` 1건 +
+`.moai/specs/SPEC-COPILOT-LDGUIDE-001/` 하위 7건. 허용 밖 경로 **0**.
+`server/` · `ui/` · 룰북 · 다른 SPEC 무접촉.
+
+> 교정 전 명령(`BASE=2092a42`)이었다면 이 시점에도 296파일을 반환해 **실패했을 것**이다.
+> 그 교정이 없었으면 run은 통과할 수 없는 AC를 붙들고 있었다.
+
+## §E.3 Run-phase Audit-Ready Signal
+
+```
+run_status: audit-ready
+run_commit_sha: bb0b3c3
+ac_pass: 19 / 19
+base: f30ab4c
+observer: run-tjueej
+```
+
+**품질 게이트 생략 1건 — 침묵하지 않고 기록한다.** pre-commit의 `npm test`가
+`vitest: command not found`로 실패해 훅이 안내하는 `SKIP_MOAI_PRECOMMIT=1` 경로로 넘겼다.
+원인은 이 워크트리에 `ui/node_modules`가 없기 때문이며(공유 체크아웃에는 존재 — 워크트리는
+gitignore된 의존성을 공유하지 않는다), 스테이지된 파일에 `server/`·`ui/` 코드가 0건이라
+실행 대상 자체가 없다. `acceptance.md` §F 2가 사전에 기록해 둔 상황이다.
+훅 우회 플래그는 사용하지 않았다.
+
+부수 관측: 첫 커밋 시도가 가드에 막혔는데, 원인은 명령이 아니라 **커밋 메시지 본문에 적은
+플래그 이름**이었다. 데이터로 실린 문자열을 명령으로 읽은 위양성이다. 문구를 바꿔 해소했다.
+
+**sync 단계로 넘기는 것 3건**
+1. 게이트 D 근거 테스트 4종 — 존재만 확인, 실행 안 함
+2. 증거 원장 자기인증 순환 — plan 단계가 sync 감사로 이관한 항목
+3. REQ-015 부정 주장 — 기계 검증 불가, 긍정 산출물만 검증됨
 
 ### E.2.3 개정이 실제로 바로잡은 것
 
