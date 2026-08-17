@@ -37,6 +37,7 @@ from server.web.question import UNANSWERED, QuestionRequest
 from server.web.session import (
     COLOR_PALETTE_SEQUENCE,
     COLOR_PHASER_SEQUENCE,
+    COMBO_PHASER_SEQUENCE,
     DIMMER_LEVEL_SEQUENCE,
     DIMMER_PHASER_SEQUENCE,
     HISTORY_MAX_MESSAGES,
@@ -2047,6 +2048,10 @@ class TestColorCapabilityDiscrimination:
 #: 컬러 플로우 테스트의 표준 풀 목록 — M0 실측(progress.md §E.1)의 배치.
 _M0_POOL_INDEX = {1: "Dimmer", 2: "Position", 3: "Gobo", 4: "Color", 5: "Beam"}
 
+#: 콤보 플로우 테스트의 표준 풀 목록 — T7 라이브 프로브
+#: (``10-combo-phaser-m0-probe.md`` §1)가 확정한 'All 1'=21을 더한 것.
+_COMBO_POOL_INDEX = {**_M0_POOL_INDEX, 21: "All 1"}
+
 
 class TestBasicColorPresets:
     """SPEC-COPILOT-COLORPRESET-001 — 표준 무대 팔레트 10색의 저장·가드·재생성.
@@ -2939,6 +2944,282 @@ class TestDimmerPhaserPresets:
         event, calls, _chan = self._run(
             tmp_path,
             "디머 페이저 다시 잡아줘",
+            pool=(),
+        )
+
+        assert _writes(calls) == []
+        assert "먼저" in event["text"] and "저장" in event["text"]
+
+
+class TestComboPhaserPresets:
+    """콤보(컬러+디머 혼합) 페이저 프리셋 10종 — T7 라이브 프로브
+    (``docs/research/ma3-effects/10-combo-phaser-m0-probe.md``)로 실측된
+    저장 풀·문법의 카탈로그 구현. ``TestColorPhaserPresets``의 세대화 —
+    소재 공급만 갈아끼우고(``_combo_phaser_preset_material``), 라우팅·가드·
+    번들·되읽기 몸통은 100% 재사용이므로 여기서는 (1) 트리거가 기존 5개
+    축과 서로소로 동작하는지, (2) 저장 풀이 Color/Dimmer가 아니라 'All 1'
+    (T7 프로브가 확정한 21)인지, (3) 스텝이 컬러 3줄+디머 1줄을 한 체인에
+    싣는지(2/3스텝), (4) Form(Sine/Rectangle)·Phase 커맨드가 4채널
+    (ColorRGB_R/G/B + Dimmer)에 정확히 실리는지, (5) 재생성 가족 필터가
+    'Drop Slam'인지에 집중한다.
+    """
+
+    def _run(
+        self,
+        tmp_path,
+        text,
+        *,
+        answers=(),
+        channel=True,
+        pool_index=None,
+        pairs=((20, 20), (26, 26)),
+        fid_unread=(),
+        capable=(20, 26),
+        excluded=(),
+        undetermined=(),
+        stub_material=True,
+        **rig,
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(
+            calls,
+            pool_index=_COMBO_POOL_INDEX if pool_index is None else pool_index,
+            **rig,
+        )
+        if stub_material:
+            session._color_rig_fixture_pairs = lambda: (
+                [tuple(pair) for pair in pairs],
+                list(fid_unread),
+            )
+            session._color_capable_fids = lambda _pairs, *, probe_id_prefix: (
+                list(capable),
+                list(excluded),
+                list(undetermined),
+            )
+        chan = _AnsweringChannel(answers) if channel else None
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # 카탈로그 계약 — 라벨·스텝·Form·Phase 순서는 T8 지시 표 그대로.
+    def test_the_catalog_matches_the_t8_table(self):
+        assert [entry[0] for entry in COMBO_PHASER_SEQUENCE] == [
+            "Drop Slam",
+            "Breathe Amber",
+            "Breathe Blue",
+            "Police",
+            "Heartbeat",
+            "Golden Wave",
+            "Ocean Wave",
+            "Rainbow Run",
+            "Club Duo",
+            "Finale Slam",
+        ]
+        assert COMBO_PHASER_SEQUENCE[0][0] == "Drop Slam"  # 가족 필터 계약
+        assert COMBO_PHASER_SEQUENCE[7][1] == (
+            ("Red", 100),
+            ("Green", 50),
+            ("Blue", 100),
+        )  # Rainbow Run 3스텝
+
+    # 트리거 서로소 — 콤보 문장은 기존 4개 저장 축(기본컬러/멀티컬러/기본
+    # 디머/디머페이저) 어느 경로로도 새지 않고, 그 역도 마찬가지다.
+    def test_the_trigger_is_disjoint_from_the_other_four_axes(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(51, 61)),
+        )
+        commands = _all_commands(calls)
+        assert "Store Preset 21.51" in commands
+        assert any("Drop Slam" in cmd for cmd in commands)
+        # Color(4.x)·Dimmer(1.x) 어느 풀로도 한 줄도 쓰지 않는다 — All 1(21)로만.
+        assert not any(cmd.startswith("Store Preset 4.") for cmd in commands)
+        assert not any(cmd.startswith("Store Preset 1.") for cmd in commands)
+        assert "콤보 페이저" in event["text"]
+
+        event2, calls2, _chan2 = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        commands2 = _all_commands(calls2)
+        assert not any("Drop Slam" in cmd for cmd in commands2)
+        assert "멀티컬러 페이저" in event2["text"]
+
+    # 2스텝 Rectangle — Drop Slam(#1)이 컬러 3줄+디머 1줄을 한 체인에 싣고,
+    # Transition/Accel/Decel 0 근사치가 4채널(ColorRGB_R/G/B+Dimmer) 전부에
+    # 정확히 실리는지(프로브 §2 항목1/4 실측 문법 그대로).
+    def test_a_two_step_rectangle_preset_carries_the_probed_grammar(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(51, 61)),
+        )
+        writes = _writes(calls)
+        assert len(writes) == 10
+        call = writes[0]
+        assert call.id == "combo-phaser-preset-51"
+        assert call.arguments["commands"] == [
+            "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0 ; "
+            "Attribute 'Dimmer' At 100",
+            "Step 2",
+            "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; "
+            "Attribute 'ColorRGB_B' At 0 ; Attribute 'Dimmer' At 0",
+            "Attribute 'ColorRGB_R' At Accel 0",
+            "Attribute 'ColorRGB_G' At Accel 0",
+            "Attribute 'ColorRGB_B' At Accel 0",
+            "Attribute 'Dimmer' At Accel 0",
+            "Attribute 'ColorRGB_R' At Decel 0",
+            "Attribute 'ColorRGB_G' At Decel 0",
+            "Attribute 'ColorRGB_B' At Decel 0",
+            "Attribute 'Dimmer' At Decel 0",
+            "Attribute 'ColorRGB_R' At Transition 0",
+            "Attribute 'ColorRGB_G' At Transition 0",
+            "Attribute 'ColorRGB_B' At Transition 0",
+            "Attribute 'Dimmer' At Transition 0",
+            "Attribute 'ColorRGB_R' At Phase 0",
+            "Store Preset 21.51",
+            "Label Preset 21.51 'Drop Slam'",
+            "ClearAll",
+        ]
+
+    # 2스텝 Sine — Breathe Amber(#2)가 서로 다른 팔레트+디머% 스텝 쌍을
+    # 정확히 싣는지.
+    def test_a_two_step_sine_preset_carries_the_probed_grammar(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(51, 61)),
+        )
+        writes = _writes(calls)
+        call = writes[1]  # Breathe Amber (index 1 in the catalog)
+        assert call.id == "combo-phaser-preset-52"
+        assert call.arguments["commands"] == [
+            "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40 ; "
+            "Attribute 'Dimmer' At 70",
+            "Step 2",
+            "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; "
+            "Attribute 'ColorRGB_B' At 5 ; Attribute 'Dimmer' At 30",
+            "Attribute 'ColorRGB_R' At Accel -100",
+            "Attribute 'ColorRGB_G' At Accel -100",
+            "Attribute 'ColorRGB_B' At Accel -100",
+            "Attribute 'Dimmer' At Accel -100",
+            "Attribute 'ColorRGB_R' At Decel -100",
+            "Attribute 'ColorRGB_G' At Decel -100",
+            "Attribute 'ColorRGB_B' At Decel -100",
+            "Attribute 'Dimmer' At Decel -100",
+            "Attribute 'ColorRGB_R' At Phase 0",
+            "Store Preset 21.52",
+            "Label Preset 21.52 'Breathe Amber'",
+            "ClearAll",
+        ]
+
+    # 3스텝 Rainbow Run — 프로브 §2 항목5(3스텝 혼합) 실측(Step 3 직후
+    # Store해도 3색+3디머값 다 담김).
+    def test_the_three_step_rainbow_run_preset_carries_all_three_steps(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(51, 61)),
+        )
+        writes = _writes(calls)
+        call = writes[7]  # Rainbow Run (index 7 in the catalog)
+        assert call.id == "combo-phaser-preset-58"
+        commands = call.arguments["commands"]
+        assert commands[0] == (
+            "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0 ; "
+            "Attribute 'Dimmer' At 100"
+        )
+        assert commands[1] == "Step 2"
+        assert commands[2] == (
+            "Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 100 ; "
+            "Attribute 'ColorRGB_B' At 10 ; Attribute 'Dimmer' At 50"
+        )
+        assert commands[3] == "Step 3"
+        assert commands[4] == (
+            "Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; "
+            "Attribute 'ColorRGB_B' At 100 ; Attribute 'Dimmer' At 100"
+        )
+        assert commands[-4] == "Attribute 'ColorRGB_R' At Phase 0 Thru 360"
+        assert commands[-3] == "Store Preset 21.58"
+        assert commands[-2] == "Label Preset 21.58 'Rainbow Run'"
+        assert commands[-1] == "ClearAll"
+
+    # Phase 분산 문법 — Club Duo(#9, Phase 180)와 Golden Wave(#6, 0 Thru 360).
+    def test_phase_tokens_match_the_catalog(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(51, 61)),
+        )
+        writes = _writes(calls)
+        club_duo = writes[8].arguments["commands"]
+        assert "Attribute 'ColorRGB_R' At Phase 180" in club_duo
+        golden_wave = writes[5].arguments["commands"]
+        assert "Attribute 'ColorRGB_R' At Phase 0 Thru 360" in golden_wave
+
+    # 풀 미상 거부 — 컬러/디머와 동일 규율, 명사만 'All 1'.
+    def test_a_missing_all_pool_refuses_without_writing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool_index={1: "Dimmer", 2: "Position", 4: "Color"},
+        )
+
+        assert _writes(calls) == []
+        assert "All 1 풀을 찾지 못했습니다" in event["text"]
+
+    # 컬러 판별 상한 — 컬러 없는 장비는 콤보에서도 제외된다.
+    def test_color_incapable_fixtures_are_excluded(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(51, 61)),
+            pairs=((20, 20), (26, 26), (30, 30)),
+            capable=(20, 26),
+            excluded=(30,),
+        )
+        commands = _all_commands(calls)
+        assert "Fixture 20 + 26" in commands[0]
+        assert "30" not in commands[0].split(";")[0]
+        assert "컬러 판별" in event["text"]
+
+    # 재생성 가족 필터 — 'Drop Slam'으로 시작하는 구간만 표적이다.
+    def test_regeneration_targets_only_the_drop_slam_family(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 다시 잡아줘",
+            pool=tuple(range(41, 51)) + tuple(range(51, 61)),
+            names={41: "Old Combo", 51: "Drop Slam"},
+            answers=["덮어쓰기 진행"],
+        )
+
+        writes = _writes(calls)
+        assert len(writes) == 10
+        commands = _all_commands(calls)
+        assert "Store Preset 21.51" in commands
+        assert not any(cmd == "Store Preset 21.41" for cmd in commands)
+        assert "다시 저장 요청했습니다" in event["text"]
+
+    # 재생성이 신규 저장보다 앞이다 — 트리거의 '잡아'가 겹치므로 등록 순서로
+    # 행선지가 고정됨을 뮤테이션으로 증명한다.
+    def test_regenerate_is_tried_before_store(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 다시 잡아줘",
             pool=(),
         )
 

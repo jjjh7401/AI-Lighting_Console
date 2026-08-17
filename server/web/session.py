@@ -1841,6 +1841,54 @@ _REGENERATE_DIMMER_PHASER_REQUEST = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+#: 콤보(컬러+디머 혼합) 페이저 프리셋 10종 — T8 카탈로그(코디네이터 지시
+#: 고정, T7 프로브 ``10-combo-phaser-m0-probe.md``가 확인한 저장 풀만
+#: 사용). 각 원소: (라벨, 스텝 순서의 (팔레트 라벨, 디머%) 쌍들,
+#: Form("sine"|"rectangle"), Phase 커맨드 토큰). 슬롯 1은 항상 'Drop Slam'
+#: 이고 재생성 가족 필터의 first_label이 된다(팔레트·포지션·컬러·디머와
+#: 같은 규율). Rectangle 근사는 ``_color_phaser_form_commands``/
+#: ``_dimmer_phaser_form_commands``와 동일한 ASSUMPTION(공식 수치 없음)을
+#: 상속한다.
+COMBO_PHASER_SEQUENCE: tuple[tuple[str, tuple[tuple[str, int], ...], str, str], ...] = (
+    ("Drop Slam", (("Red", 100), ("Red", 0)), "rectangle", "0"),
+    ("Breathe Amber", (("Warm White", 70), ("Amber", 30)), "sine", "0"),
+    ("Breathe Blue", (("Cool White", 60), ("Blue", 25)), "sine", "0"),
+    ("Police", (("Red", 100), ("Blue", 100)), "rectangle", "0"),
+    ("Heartbeat", (("Red", 90), ("Red", 15)), "sine", "0"),
+    ("Golden Wave", (("Amber", 100), ("Warm White", 40)), "sine", "0 Thru 360"),
+    ("Ocean Wave", (("Cyan", 90), ("Blue", 30)), "sine", "0 Thru 360"),
+    (
+        "Rainbow Run",
+        (("Red", 100), ("Green", 50), ("Blue", 100)),
+        "sine",
+        "0 Thru 360",
+    ),
+    ("Club Duo", (("Magenta", 100), ("Cyan", 40)), "rectangle", "180"),
+    ("Finale Slam", (("Warm White", 100), ("Red", 0)), "rectangle", "0 Thru 360"),
+)
+
+# 콤보 페이저 저장: 컬러/디머 페이저 트리거를 어휘축만 바꿔 미러한다(콤보/
+# combo/컬러디머/드롭 프리셋). 기존 5개 축(기본컬러/멀티컬러/기본디머/
+# 디머페이저/포지션)과 서로소다 — "컬러 디머"는 "디머 이펙트"/"디머 페이저"와
+# 어순이 달라 겹치지 않고, "드롭 프리셋"은 다른 축에 없는 명사 조합이다.
+_COMBO_PHASER_REQUEST = re.compile(
+    r"(?:콤보|combo|컬러\s*디머|드롭\s*프리셋)"
+    r".{0,24}?(?:저장|만들|잡아|생성)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+# 콤보 페이저 재생성: 다른 재생성 쌍과 동일 형상(트리거의 '잡아' 중첩으로
+# 신규 저장보다 등록 순서가 앞이어야 함).
+_REGENERATE_COMBO_PHASER_REQUEST = re.compile(
+    r"(?:콤보|combo|컬러\s*디머|드롭\s*프리셋)"
+    r"(?:"
+    r".{0,12}?재생성"
+    r"|"
+    r".{0,12}?다시(?:\s+\S{1,6})?\s*(?:잡|만들|생성|갱신)"
+    r")",
+    re.IGNORECASE | re.DOTALL,
+)
+
 _REPEATING_TYPE_COLUMNS_REQUEST = re.compile(
     r"(?:\d+\s*열\s*:\s*)?.*mmx.*(?:\d+\s*열\s*:\s*)?.*350\s*m?.*반복",
     re.IGNORECASE,
@@ -2318,6 +2366,70 @@ def _dimmer_phaser_phase_command(phase: str) -> str:
     §3/§6.3) — 디머 채널로는 문법 형태만 이식(같은 ``At Phase`` 커맨드).
     """
     return f"Attribute 'Dimmer' At Phase {phase}"
+
+
+#: 콤보 채널 4종 — 컬러 3채널 + 디머 1채널. Form 레이어는 넷 모두에 동일하게
+#: 실어야 한 스텝의 색·밝기가 채널별로 다른 커브로 어긋나지 않는다.
+_COMBO_PHASER_CHANNELS: tuple[str, ...] = _COLOR_PHASER_CHANNELS + ("Dimmer",)
+
+
+def _combo_phaser_step_commands(
+    fids: Sequence[int], steps: Sequence[tuple[tuple[int, int, int], int]]
+) -> tuple[str, ...]:
+    """혼합(컬러+디머) 멀티스텝 페이저를 프로그래머에 싣는 커맨드라인 시퀀스.
+
+    ``_color_phaser_step_commands``·``_dimmer_phaser_step_commands``를 한
+    스텝에 합친 신설 빌더 — 기존 두 빌더는 문자 단위로 무수정이다. 각 스텝은
+    컬러 RGB 3줄 + Dimmer 1줄을 한 체인으로 묶는다(T7 프로브 §2 항목 1/4/5
+    실측 문법, ``10-combo-phaser-m0-probe.md``). 첫 스텝은 선택+값을 함께
+    싣고, 이후 스텝은 선택이 프로그래머에 남아 있으므로 ``Step N`` 다음 값
+    4줄만 보낸다 — 컬러/디머 단일축 빌더와 동일 규율. ``Step N``과
+    ``Store Preset``은 이 함수 밖(``_preset_store_commands``)에서 별도로
+    붙는다(함정①의 안전 순서, 재현되지 않았지만 보수적으로 유지).
+    """
+    if len(steps) < 2:
+        raise SpatialPointingError(f"combo phaser needs at least 2 steps, got {len(steps)}")
+    selection = " + ".join(str(fid) for fid in fids)
+    commands: list[str] = []
+    for step_no, ((r, g, b), dimmer) in enumerate(steps, start=1):
+        chain = (
+            f"Attribute 'ColorRGB_R' At {r} ; Attribute 'ColorRGB_G' At {g} ; "
+            f"Attribute 'ColorRGB_B' At {b} ; Attribute 'Dimmer' At {dimmer}"
+        )
+        if step_no == 1:
+            commands.append(f"Fixture {selection} ; {chain}")
+        else:
+            commands.append(f"Step {step_no}")
+            commands.append(chain)
+    return tuple(commands)
+
+
+def _combo_phaser_form_commands(form: str) -> tuple[str, ...]:
+    """Form 레이어 근사 — 컬러+디머 4채널 전부에 동일 레이어를 싣는다
+    (``_color_phaser_form_commands``의 4채널 확장). Sine은 라이브 검증됨
+    (컬러·디머 채널 각각 ``08-…-probe.md``/``09-…-probe.md``). Rectangle
+    (Transition 0/Accel 0/Decel 0)은 여전히 ASSUMPTION — 명령 자체는
+    거부되지 않지만(``08-…-probe.md`` §6.1) 하드컷 파형이 실제로 만들어
+    지는지는 이 저장소 구조상(OSC/Lua만, 화면을 볼 수 없음) 확인할 수 없다.
+    """
+    if form == "sine":
+        curve = -100
+    elif form == "rectangle":
+        curve = 0
+    else:
+        raise SpatialPointingError(f"unknown combo phaser form {form!r}")
+    commands = [f"Attribute '{channel}' At Accel {curve}" for channel in _COMBO_PHASER_CHANNELS]
+    commands += [f"Attribute '{channel}' At Decel {curve}" for channel in _COMBO_PHASER_CHANNELS]
+    if form == "rectangle":
+        commands += [f"Attribute '{channel}' At Transition 0" for channel in _COMBO_PHASER_CHANNELS]
+    return tuple(commands)
+
+
+def _combo_phaser_phase_command(phase: str) -> str:
+    """Phase 분산 — ``ColorRGB_R`` 한 채널에만 싣는다(레이어는 세트로
+    저장되므로 한 채널만으로 충분, 컬러/디머 페이저와 동일 규율).
+    """
+    return f"Attribute 'ColorRGB_R' At Phase {phase}"
 
 
 def _preset_overwrite_refusal(verdict: _PresetSpanVerdict) -> str:
@@ -4639,6 +4751,200 @@ class ChatSession:
             read=lambda _call_id: capable,
             apply=list,
             lead_intro="멀티컬러 페이저 카탈로그로",
+            tail="이 프리셋을 참조하는 큐는 별도 수정 없이 새 페이저를 따라갑니다.",
+            disclosure=disclosure,
+        )
+
+    def _resolve_combo_pool_no(self) -> int | None:
+        """The 'All 1' pool's NUMBER, resolved from the console's own pool list.
+
+        ``_resolve_color_pool_no``/``_resolve_dimmer_pool_no``의 미러 — 같은
+        위험(풀 번호를 하드코딩하면 운영자가 손으로 만든 프리셋을 덮는다)
+        이라 같은 해법을 쓴다. 콤보(컬러+디머 혼합) 프리셋은 T7 프로브
+        (``10-combo-phaser-m0-probe.md`` §1/§5)가 확정한 'All 1' 풀에 저장
+        한다 — 함정②("혼합은 All 풀만 수용")가 명령 수준에서는 재현되지
+        않았지만, 저장 콘텐츠가 실제로 필터링됐는지는 판별 불가(같은 문서
+        §2 GAP)이므로 관측되지 않은 위험을 피하는 보수적 선택으로 All 1을
+        기본 저장 대상으로 고정한다. 이름이 정확히 ``All 1``인 풀만 찾고
+        (All 2~5는 별개 풀), 실패·부재·절단은 전부 ``None``(거부)이다.
+        """
+        pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
+        probe = self._registry.dispatch(
+            ToolCall(
+                id="combo-pool-resolve",
+                name="query_state",
+                arguments={"path": pool_root},
+            )
+        )
+        if probe.result.is_error:
+            return None
+        try:
+            payload = json.loads(probe.result.content)
+        except (json.JSONDecodeError, TypeError):
+            return None
+        children = payload.get("children") if isinstance(payload, dict) else None
+        if not isinstance(children, list):
+            return None
+        node = payload.get("node")
+        child_count = node.get("childCount") if isinstance(node, dict) else None
+        if bool(payload.get("truncated")) or (
+            isinstance(child_count, int) and child_count > len(children)
+        ):
+            return None  # 절단된 목록에 All 1이 없다 ≠ 풀이 없다 — 모름은 거부다
+        for child in children:
+            if not isinstance(child, dict) or child.get("name") != "All 1":
+                continue
+            try:
+                return int(child.get("i", child.get("no")))
+            except (TypeError, ValueError):
+                return None
+        return None
+
+    def _combo_pool_and_capable_fids(
+        self, *, noun: str
+    ) -> tuple[int, list[int], str] | InstructionResult:
+        """All 1 풀 번호 해석 + 3-hop 컬러 판별 + 산술 고지 — ``(pool_no,
+        capable, disclosure)`` 또는 거부.
+
+        ``_color_pool_and_capable_fids``의 미러 — 앞부분(픽스처 열거 →
+        3-hop 컬러 판별)은 동일 재사용, 갈라지는 것은 저장 풀 해석뿐(Color가
+        아니라 ``_resolve_combo_pool_no``). 콤보는 컬러를 반드시 포함하므로
+        (T8 카탈로그, 모든 스텝이 팔레트 라벨을 갖는다) 컬러 판별이 그대로
+        상한이다 — 디머는 판별 없이 컬러 가능 장비 전체에 얹힌다(디머 없는
+        장비라는 반례가 이 리그 어디에도 없다는 근거는 ``_dimmer_pool_and_
+        fids`` 독스트링과 동일).
+        """
+        pool_no = self._resolve_combo_pool_no()
+        if pool_no is None:
+            return self._pointing_refusal(
+                "All 1 풀을 찾지 못했습니다 — 프리셋 풀 목록에서 이름이 'All 1'인 "
+                f"풀을 확인하지 못해 {noun} 프리셋을 시작하지 않았습니다. "
+                "풀 번호를 추측해 저장하면 다른 풀의 프리셋을 덮을 수 있습니다."
+            )
+        enumerated = self._color_rig_fixture_pairs()
+        if enumerated is None:
+            return self._pointing_refusal(
+                f"패치된 픽스처 목록을 읽지 못해 {noun} 프리셋을 시작하지 않았습니다."
+            )
+        pairs, fid_unread = enumerated
+        if not pairs:
+            return self._pointing_refusal(
+                f"패치된 픽스처가 확인되지 않아 {noun} 프리셋을 시작하지 않았습니다."
+            )
+        capable, excluded, undetermined = self._color_capable_fids(pairs, probe_id_prefix="combo")
+        if not capable:
+            return self._pointing_refusal(
+                f"컬러 어트리뷰트(ColorRGB)가 확인된 장비가 없어 {noun} 프리셋을 "
+                f"저장하지 않았습니다 — 전체 {len(pairs)}대 중 컬러 없음 "
+                f"{len(excluded)}대, 판별 불가 {len(undetermined)}대."
+            )
+        parts = [f"컬러 판별: 전체 {len(pairs)}대 중 {len(capable)}대 적용"]
+        if excluded:
+            parts.append(
+                f"컬러 어트리뷰트 없음 {len(excluded)}대"
+                f"(FID {', '.join(str(fid) for fid in excluded)}) 제외"
+            )
+        if undetermined:
+            parts.append(
+                f"판별 불가 {len(undetermined)}대"
+                f"(FID {', '.join(str(fid) for fid in undetermined)}) 제외 — "
+                "판독 실패는 보유로 치지 않습니다"
+            )
+        if fid_unread:
+            parts.append(
+                f"FID 미판독 {len(fid_unread)}대"
+                f"(패치 슬롯 {', '.join(str(slot) for slot in fid_unread)}) 제외"
+            )
+        disclosure = ", ".join(parts) + "."
+        return pool_no, capable, disclosure
+
+    def _combo_phaser_preset_material(
+        self, *, noun: str
+    ) -> (
+        tuple[int, list[int], tuple[tuple[str, tuple[str, ...], tuple[()]], ...], str]
+        | InstructionResult
+    ):
+        """콤보(컬러+디머) 페이저 저장·재생성이 공유하는 소재 — ``_color_
+        phaser_preset_material``의 미러, 소재만 ``COMBO_PHASER_SEQUENCE``의
+        (팔레트 라벨, 디머%) 스텝 쌍 + Form + Phase 커맨드이고, 저장 풀은
+        Color가 아니라 'All 1'(``_combo_pool_and_capable_fids``, T7 프로브).
+        """
+        shared = self._combo_pool_and_capable_fids(noun=noun)
+        if isinstance(shared, InstructionResult):
+            return shared
+        pool_no, capable, disclosure = shared
+        looks = tuple(
+            (
+                label,
+                (
+                    *_combo_phaser_step_commands(
+                        capable,
+                        tuple(
+                            (_COLOR_PALETTE_RGB[palette_label], dimmer)
+                            for palette_label, dimmer in steps
+                        ),
+                    ),
+                    *_combo_phaser_form_commands(form),
+                    _combo_phaser_phase_command(phase),
+                ),
+                (),
+            )
+            for label, steps, form, phase in COMBO_PHASER_SEQUENCE
+        )
+        return pool_no, capable, looks, disclosure
+
+    def _combo_phaser_presets(self, text: str) -> InstructionResult | None:
+        """*"콤보 페이저 프리셋 저장해줘"* — 카탈로그 10종(T8)을 해석된
+        All 1 풀의 연속 10칸에 저장한다. ``_color_phaser_presets``의 미러 —
+        공용 저장 몸통(``_store_position_preset_sequence``) 그대로, 소재만
+        ``_combo_phaser_preset_material``이 공급한다.
+        """
+        if _COMBO_PHASER_REQUEST.search(text) is None:
+            return None
+        material = self._combo_phaser_preset_material(noun="콤보 페이저")
+        if isinstance(material, InstructionResult):
+            return material
+        pool_no, capable, looks, disclosure = material
+        return self._store_position_preset_sequence(
+            text,
+            noun="콤보 페이저",
+            sequence=tuple(label for label, _steps, _form, _phase in COMBO_PHASER_SEQUENCE),
+            build=lambda _fixtures: looks,
+            read_id="combo-phaser-presets-read",
+            bundle="combo-phaser-preset",
+            example="콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool_no=pool_no,
+            pool_label="All 1",
+            read=lambda _call_id: capable,
+            apply=list,
+            lead_intro="콤보(컬러+디머) 페이저 카탈로그에서 가져온",
+            disclosure=disclosure,
+        )
+
+    def _regenerate_combo_phaser_presets(self, text: str) -> InstructionResult | None:
+        """*"콤보 페이저 다시 잡아줘"* — 저장된 콤보 페이저 10칸 구간을
+        제자리 갱신한다. ``_regenerate_color_phaser_presets``의 미러 —
+        가족 필터 first_label='Drop Slam', 풀 미상 거부.
+        """
+        if _REGENERATE_COMBO_PHASER_REQUEST.search(text) is None:
+            return None
+        material = self._combo_phaser_preset_material(noun="콤보 페이저")
+        if isinstance(material, InstructionResult):
+            return material
+        pool_no, capable, looks, disclosure = material
+        return self._regenerate_position_preset_sequence(
+            text,
+            noun="콤보 페이저",
+            build=lambda _fixtures: looks,
+            read_id="regenerate-combo-phaser-presets-read",
+            bundle="combo-phaser-preset",
+            store_example="콤보 페이저 프리셋 10개 저장",
+            first_label=COMBO_PHASER_SEQUENCE[0][0],
+            pool_no=pool_no,
+            pool_label="All 1",
+            read=lambda _call_id: capable,
+            apply=list,
+            lead_intro="콤보(컬러+디머) 페이저 카탈로그로",
             tail="이 프리셋을 참조하는 큐는 별도 수정 없이 새 페이저를 따라갑니다.",
             disclosure=disclosure,
         )
@@ -8124,6 +8430,14 @@ class ChatSession:
                     result = self._regenerate_dimmer_phaser_presets(text)
                 if result is None:
                     result = self._dimmer_phaser_presets(text)
+                if result is None:
+                    # 콤보(컬러+디머) 페이저도 같은 이유로 재생성이 신규
+                    # 저장보다 앞이다. 어휘축(콤보/combo/컬러디머/드롭
+                    # 프리셋)이 기존 5개 축과 서로소라 다른 어느 계열의
+                    # 문장도 삼키지 않는다.
+                    result = self._regenerate_combo_phaser_presets(text)
+                if result is None:
+                    result = self._combo_phaser_presets(text)
                 if result is None:
                     # 재생성이 신규 저장보다 **먼저**다 — 두 트리거의 교집합이
                     # 공집합이 아니므로(ASSUMPTION-83 반증) 등록 순서가 겹치는

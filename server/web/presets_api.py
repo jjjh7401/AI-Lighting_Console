@@ -111,6 +111,29 @@ def _phaser_hexes_by_label() -> dict[str, tuple[str, ...]]:
     }
 
 
+def _combo_phaser_hexes_by_label() -> dict[str, tuple[str, ...]]:
+    """콤보(컬러+디머) 페이저 라벨 → 스텝 순서의 ``#rrggbb`` 목록 —
+    ``_phaser_hexes_by_label``의 확장. 콘솔은 프리셋 색을 노출하지 않으므로
+    앱이 저장 시점에 실은 값만 정직한 출처다: 각 스텝의 팔레트 RGB를 그
+    스텝의 디머%로 스케일(``rgb × dimmer/100``)한 뒤 hex로 바꾼다 — 밝기가
+    낮은 스텝은 어둡게, 0%(예: Drop Slam 2스텝)는 검정으로 보인다.
+    """
+    from server.web.session import COLOR_PALETTE_SEQUENCE, COMBO_PHASER_SEQUENCE
+
+    def _hex(rgb: tuple[float, float, float]) -> str:
+        return "#" + "".join(f"{round(v * 255 / 100):02x}" for v in rgb)
+
+    palette = dict(COLOR_PALETTE_SEQUENCE)
+    result: dict[str, tuple[str, ...]] = {}
+    for label, steps, _form, _phase in COMBO_PHASER_SEQUENCE:
+        hexes = []
+        for palette_label, dimmer in steps:
+            r, g, b = palette[palette_label]
+            hexes.append(_hex((r * dimmer / 100, g * dimmer / 100, b * dimmer / 100)))
+        result[label] = tuple(hexes)
+    return result
+
+
 def _gray_hex(value: int) -> str:
     """레벨 v(0~100) → 회색 ``#rrggbb``(R=G=B=round(255*v/100)) — 디머 프리셋
     전용 색 소스(T5 지시). 컬러와 같은 정직성 규율: 콘솔은 프리셋 색을
@@ -154,7 +177,11 @@ def _base_name(name: object) -> str | None:
 
 def _with_swatches(objects: list[dict]) -> list[dict]:
     palette = {**_palette_hex_by_label(), **_dimmer_hex_by_label()}
-    phasers = {**_phaser_hexes_by_label(), **_dimmer_phaser_hexes_by_label()}
+    phasers = {
+        **_phaser_hexes_by_label(),
+        **_dimmer_phaser_hexes_by_label(),
+        **_combo_phaser_hexes_by_label(),
+    }
     enriched = []
     for obj in objects:
         base = _base_name(obj.get("name"))

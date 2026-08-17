@@ -300,6 +300,74 @@ class TestDimmerSwatches:
         assert set(_dimmer_phaser_hexes_by_label()).isdisjoint(_phaser_hexes_by_label())
 
 
+class TestComboSwatches:
+    """콤보(컬러+디머) 페이저 라벨 → 스텝 순서의 밝기-스케일 색 원형
+    (#rrggbb) — ``TestPaletteSwatches``/``TestDimmerSwatches``의 확장.
+    콘솔은 프리셋 색을 노출하지 않으므로 앱이 저장 시점에 실은 값(팔레트
+    RGB × 디머%)만 정직한 출처다. 저장 풀은 Color/Dimmer가 아니라 'All 1'
+    (T7 프로브 ``10-combo-phaser-m0-probe.md`` §1이 확정한 21)이다.
+    """
+
+    def _combo_tree(self) -> dict:
+        return {
+            POOLS_PATH: _payload(POOLS_PATH, [{"i": 21, "name": "All 1"}]),
+            f"{POOLS_PATH}/21": _payload(
+                f"{POOLS_PATH}/21",
+                [
+                    {"i": 51, "name": "Drop Slam"},
+                    {"i": 58, "name": "Rainbow Run"},
+                    {"i": 52, "name": "Breathe Amber#2"},  # 콘솔 중복명 접미 동일 취급
+                    {"i": 1, "name": "MyCombo"},  # 수동 콤보 — 색 미상, 발명 금지
+                ],
+                name="All 1",
+            ),
+        }
+
+    def test_combo_presets_carry_their_scaled_step_colours_in_order(self):
+        client, _port = _client(self._combo_tree())
+        presets = {p["no"]: p for p in client.get("/api/presets/21").json()["presets"]}
+        from server.web.presets_api import _combo_phaser_hexes_by_label
+
+        hx = _combo_phaser_hexes_by_label()
+        assert presets[51]["colors"] == list(hx["Drop Slam"])  # 스텝 순서 보존
+        assert presets[58]["colors"] == list(hx["Rainbow Run"])
+        assert presets[52]["colors"] == list(hx["Breathe Amber"])  # 접미 동일 취급
+        assert "colors" not in presets[1] and "color" not in presets[1]
+
+    def test_the_hex_scaling_multiplies_palette_rgb_by_dimmer_percent(self):
+        from server.web.presets_api import _combo_phaser_hexes_by_label
+
+        hexes = _combo_phaser_hexes_by_label()
+        # Drop Slam: Red(100,0,0)@100% -> #ff0000, Red@0% -> #000000
+        assert hexes["Drop Slam"] == ("#ff0000", "#000000")
+        # Golden Wave: Amber(100,55,5)@100% -> #ff8c0d
+        assert hexes["Golden Wave"][0] == "#ff8c0d"
+
+    def test_every_catalog_combo_phaser_label_resolves_to_step_hexes(self):
+        from server.web.presets_api import _combo_phaser_hexes_by_label
+        from server.web.session import COMBO_PHASER_SEQUENCE
+
+        hexes = _combo_phaser_hexes_by_label()
+        assert set(hexes) == {label for label, _s, _f, _p in COMBO_PHASER_SEQUENCE}
+        for label, steps, _form, _phase in COMBO_PHASER_SEQUENCE:
+            assert len(hexes[label]) == len(steps) >= 2
+
+    def test_combo_swatch_labels_do_not_collide_with_the_other_four_catalogs(self):
+        from server.web.presets_api import (
+            _combo_phaser_hexes_by_label,
+            _dimmer_hex_by_label,
+            _dimmer_phaser_hexes_by_label,
+            _palette_hex_by_label,
+            _phaser_hexes_by_label,
+        )
+
+        combo_labels = set(_combo_phaser_hexes_by_label())
+        assert combo_labels.isdisjoint(_palette_hex_by_label())
+        assert combo_labels.isdisjoint(_phaser_hexes_by_label())
+        assert combo_labels.isdisjoint(_dimmer_hex_by_label())
+        assert combo_labels.isdisjoint(_dimmer_phaser_hexes_by_label())
+
+
 class TestPagedPoolRead:
     """24캡 너머 풀의 팝업 판독 — 라이브 2026-08-16: 페이저 10종(4.31~4.40)이
     첫 창 밖이라 팝업이 콘솔과 다른 풀을 보여줬다. 세션 판독기의 페이징
