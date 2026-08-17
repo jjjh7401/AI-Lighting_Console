@@ -2,7 +2,6 @@
 # MoAI-ADK Package Distribution .gitignore
 # ============================================
 # Version: 0.33.0
-# Updated: 2026-01-10
 # Purpose: Essential patterns for user projects
 # ============================================
 
@@ -111,19 +110,6 @@ logs/*
 *.bak
 *.backup
 
-# Safety-gate audit log runtime data (JSONL, daily rotation — plan.md A-4).
-# The SSOT config server/safety/blacklist.yaml IS tracked; only runtime
-# audit data is ignored.
-server/audit_logs/
-
-# Paperwork tool output (deterministic, overwrite-on-write HTML — T-J).
-server/paperwork_output/
-
-# MoAI 세션 런타임 산출물 — 리뷰 가치 없음.
-# 루트 앵커된 `logs/*`가 .moai/logs/를 덮지 못해 실제로 PR에 110건이 쓸려 들어갔다.
-.moai/logs/
-.moai/reports/
-
 # ===========================================
 # Backups
 # ===========================================
@@ -169,6 +155,14 @@ secret-*.*
 # Cloud provider credentials
 .aws/config
 .aws/credentials
+
+# MoAI git-credential runtime files (defense-in-depth). The reconfigure wizard
+# delegates git provider credentials to the gh/glab CLI and never writes an
+# access token to a tracked config; these patterns ensure that if a
+# credential-bearing runtime file is ever introduced under .moai/, it is not
+# committed.
+.moai/**/credentials.yaml
+.moai/**/*.credentials
 
 # MINK agent credentials (plaintext API keys, per AC-CR-026).
 # Ignored anywhere in the tree so per-project auth dirs are never committed.
@@ -245,8 +239,11 @@ dist-ssr/
 .vercel/
 .netlify/
 .firebase/
-# runtime state must never be committed under a SPEC dir
-.moai/specs/*/.moai/
 
-# playwright-cli tool cache
+# User Custom Patterns (preserved by moai update)
+server/audit_logs/
+server/paperwork_output/
+.moai/logs/
+.moai/reports/
+.moai/specs/*/.moai/
 .playwright-cli/

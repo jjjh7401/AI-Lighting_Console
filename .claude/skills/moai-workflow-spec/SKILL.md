@@ -96,7 +96,7 @@ Quick Commands:
 
 ```bash
 /moai plan "user authentication system"                   # Create new SPEC
-/moai plan "login" "signup" --worktree                    # Parallel SPECs
+/moai plan "login" "signup"                              # Parallel SPECs
 /moai plan "payment processing" --branch                  # New branch
 /moai plan SPEC-001 "add OAuth support"                   # Update existing
 ```
@@ -192,7 +192,7 @@ See [requirement clarification detailed workflow](references/requirement-clarifi
 
 ### Plan-Run-Sync Workflow Integration
 
-PLAN (/moai plan): manager-spec analyzes input → EARS requirements → clarification → SPEC creation in `.moai/specs/` → optional `--branch` or `--worktree`.
+PLAN (/moai plan): manager-spec analyzes input → EARS requirements → clarification → SPEC creation in `.moai/specs/` → optional `--branch`.
 
 RUN (/moai run): manager-develop loads SPEC → ANALYZE-PRESERVE-IMPROVE (DDD) or RED-GREEN-REFACTOR (TDD) per `quality.yaml` `constitution.development_mode` → moai-workflow-testing reference → per-spawn Agent(general-purpose) domain delegation → quality-gate validation (Stop hook / /moai gate).
 
@@ -302,12 +302,11 @@ These routing rules decide what is out of scope for a SPEC document (and where i
 - manager-develop: DDD/TDD implementation based on SPEC requirements
 - /moai gate skill (or sync-phase-quality-gate.sh Stop hook): TRUST 5 quality validation and gate enforcement (former manager-quality role)
 
-For migration scenarios and validation scripts: [reference/migration-guide.md](reference/migration-guide.md).
+For migration scenarios and validation scripts: [references/migration-guide.md](references/migration-guide.md).
 
 ---
 
 Version: 1.3.1 (skill body compression pass)
-Last Updated: 2026-05-23
 Integration Status: Complete - Plan-Run-Sync workflow with SDD 2025 features
 
 <!-- moai:evolvable-start id="rationalizations" -->

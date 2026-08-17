@@ -1,27 +1,22 @@
 # Security Hardening Configuration
 # Extra patterns extend (never replace) DefaultSecurityPolicy hardcoded patterns.
 # Uses SOLID O-Principle: extend via config without modifying core.
-
 security:
   # Additional dangerous Bash command patterns (regex, case-insensitive).
   # These are APPENDED to the built-in deny patterns.
   extra_dangerous_bash_patterns:
-    - 'curl\s+.*\|\s*(ba)?sh'      # curl pipe to shell
-    - 'wget\s+.*\|\s*(ba)?sh'      # wget pipe to shell
-    - 'chmod\s+777'                  # world-writable permissions
-    - 'rm\s+-rf\s+/[^.]'            # rm -rf targeting root paths
-    - 'mkfs\.'                       # filesystem format commands
-    - 'dd\s+if=.*of=/dev/'          # raw disk write
-
+    - 'curl\s+.*\|\s*(ba)?sh' # curl pipe to shell
+    - 'wget\s+.*\|\s*(ba)?sh' # wget pipe to shell
+    - 'chmod\s+777' # world-writable permissions
+    - 'rm\s+-rf\s+/[^.]' # rm -rf targeting root paths
+    - 'mkfs\.' # filesystem format commands
+    - 'dd\s+if=.*of=/dev/' # raw disk write
   # Additional file deny patterns (regex, case-insensitive).
   extra_deny_patterns: []
-
   # Additional file ask patterns (regex, case-insensitive).
   extra_ask_patterns: []
-
   # Additional sensitive content patterns (regex, case-insensitive).
   extra_sensitive_content_patterns: []
-
   # Permission subsystem keys.
   permission:
     # When strict_mode=true, agent spawn in bypassPermissions mode is rejected.
@@ -30,7 +25,6 @@ security:
     pre_allowlist: []
     # session_rules: session-scoped rules loaded at the SrcSession tier.
     session_rules: []
-
   # Sandbox Execution Layer configuration.
   sandbox:
     # When required=true, agents with sandbox: none are rejected without sandbox.justification.
