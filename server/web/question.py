@@ -75,6 +75,10 @@ class QuestionRequest:
     why: str = ""
     #: 사용자가 따라 할 수 있는 절차(콘솔 조작 등). 없으면 빈 튜플.
     steps: tuple[str, ...] = ()
+    #: 사용자가 콘솔 명령줄에 **그대로 복사해 실행**할 명령들. UI가 복사 버튼과
+    #: 함께 렌더한다 — 서버가 대신 실행하면 안 되는 명령(AddFixtures 패치 등)의
+    #: 인계 통로다. 없으면 빈 튜플.
+    commands: tuple[str, ...] = ()
     options: tuple[QuestionOption, ...] = field(default_factory=tuple)
 
     def to_dict(self) -> dict[str, object]:
@@ -82,6 +86,7 @@ class QuestionRequest:
             "prompt": self.prompt,
             "why": self.why,
             "steps": list(self.steps),
+            "commands": list(self.commands),
             "options": [
                 {"label": option.label, "description": option.description}
                 for option in self.options

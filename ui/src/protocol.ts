@@ -383,6 +383,9 @@ export type ServerEvent =
       prompt: string;
       why: string;
       steps: string[];
+      // 사용자가 콘솔 명령줄에 복사해 실행할 명령들 — 서버가 대신 실행하면
+      // 안 되는 인계 명령(AddFixtures 패치 등). 구버전 서버에는 없다(additive).
+      commands?: string[];
       options: { label: string; description: string }[];
     }
   | { v: 1; type: "question_resolved"; request_id: string; answer: string }
@@ -742,6 +745,7 @@ export interface PendingQuestion {
   prompt: string;
   why: string;
   steps: string[];
+  commands: string[];
   options: { label: string; description: string }[];
 }
 
@@ -825,6 +829,7 @@ export function reduceServerEvent(
             prompt: event.prompt,
             why: event.why,
             steps: event.steps ?? [],
+            commands: event.commands ?? [],
             options: event.options ?? [],
           },
         ],

@@ -71,6 +71,12 @@ class StateReader(Protocol):
     def query_state(self, path: str) -> dict: ...
 
 
+class PropertyReader(Protocol):
+    """The property port the per-type read uses for the mode footprint."""
+
+    def query_property(self, path: str, property_name: str) -> dict: ...
+
+
 class BudgetExhausted(RuntimeError):
     """The query budget ran out mid-walk. Not an error condition of the rig."""
 

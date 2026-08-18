@@ -2,6 +2,10 @@ import { useState } from "react";
 
 import type { PendingQuestion } from "../protocol";
 
+function copyCommand(command: string) {
+  if (typeof navigator === "undefined" || navigator.clipboard === undefined) return;
+  void navigator.clipboard.writeText(command);
+}
 /**
  * 모델이 되묻는 질문 카드 — 추측 대신 물으라는 통로.
  *
@@ -33,6 +37,27 @@ export function QuestionCard({
             <li key={index}>{step}</li>
           ))}
         </ol>
+      )}
+      {question.commands.length > 0 && (
+        <div className="question-commands">
+          {question.commands.map((command) => (
+            <div key={command} className="question-command-row">
+              <code className="command-text">{command}</code>
+              <button
+                type="button"
+                className="command-copy"
+                onClick={() => copyCommand(command)}
+                aria-label="명령 복사"
+              >
+                복사
+              </button>
+            </div>
+          ))}
+          <p className="question-command-hint">
+            위 명령을 복사해 <strong>콘솔 명령줄에 직접</strong> 붙여넣고 실행하세요 — 앱이
+            대신 실행하면 동작하지 않습니다.
+          </p>
+        </div>
       )}
 
       {question.options.length > 0 && (
