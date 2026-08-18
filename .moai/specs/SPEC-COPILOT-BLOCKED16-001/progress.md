@@ -1707,6 +1707,23 @@ stray mtime 14:41                                ← 내가 지우고 AC를 돌�
 **삭제 행 귀속** — lead가 물은 「설명되지 않은 삭제 1줄」은 이 커밋에 없다:
 `git diff --numstat 7c2abf2 HEAD -- progress.md` → `429	0`. 삭제 0건이며 전량 추가다.
 
+### §N.14 sync 종결
+
+| 항목 | 값 |
+|---|---|
+| PR | **#47** — https://github.com/jjjh7401/AI-Lighting_Console/pull/47 (OPEN, 미머지) |
+| 브랜치 | `jjjh7401/blocked16` → `main` · 파일 9건 · +4768 −2 |
+| `status` 전이 | `in-progress` → **`completed`**(`spec.md` frontmatter) |
+| sync-audit | 1차 **FAIL 58.82** → delta 재판정 **PASS-WITH-DEBT 93.75** → 커밋 후 **AC-013 RED 적발** → CHANGELOG 철회로 **계약 준수**. 순서를 지우지 않는다 |
+| CHANGELOG | **파일 미반영.** `plan.md` §C.1 PRESERVE가 `CHANGELOG.md`를 무접촉으로 선언 → 항목 전문을 **PR #47 본문**에 이관 |
+| AC | 13/13 `exit=0` — 각각 별도 서브셸, **커밋 후** 실행, 실사용 셸 zsh 5.9 |
+| 앵커 축 뮤테이션 | zsh · bash · sh **3개 셸 × 5상태 = 15/15**(현행 PASS · 뮤테이션 4형태 전부 RED) |
+| 함께 실린 타 세션 산출물 | `plan-tjxy3n` 절 1개(「stray 생산자 — 기전 정정」, 저자 표기 있음). 커밋 전 전문 읽음 |
+| 머지 | **하지 않았다** — 감독 결정 |
+
+**sync 세션이 직접 측정하지 않은 것은 §N.7 그대로 유효하다.** 특히 **테스트 스위트 미실행** ·
+커버리지 85% 게이트 미측정 · 라이브 콘솔 0건 · 나머지 12개 AC는 zsh에서만 실행.
+
 ### 이력
 
 | 일자 | 내용 |
