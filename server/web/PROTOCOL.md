@@ -348,7 +348,7 @@ Rules:
 | `rejected` | 거부됨 | human rejection — all-or-nothing (REQ-MVP-015) |
 | `proposal` | 제안 (라이브 잠금 — 전송되지 않음) | live lock (REQ-MVP-016) |
 | `held` | 승인 대기 | pending approval |
-| `not_created` | 생성 안 됨 (콘솔 명령줄에서 직접 실행 필요) | patch verification read — zero fixtures observed; the server never executed the command (semi-automatic patch model) |
+| `not_created` | 생성 안 됨 (Patch 편집기를 연 뒤 재시도 필요) | patch verification read — zero fixtures observed **after the server executed the command**; the usual cause is the console's command destination not being the fixture layer (semi-automatic patch model: the server fires, the operator only keeps the Patch editor open) |
 | `partially_created` | 부분 생성 (자동 재시도 안 함) | patch verification read — some but not all fixtures observed |
 
 ## Ordering & concurrency

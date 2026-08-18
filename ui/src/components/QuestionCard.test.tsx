@@ -6,8 +6,8 @@ import type { PendingQuestion } from "../protocol";
 
 const QUESTION: PendingQuestion = {
   request_id: "q1",
-  prompt: "콘솔에서 패치를 실행해 주세요 — Robin Esprite 20대.",
-  why: "서버가 대신 실행하면 만들어지지 않습니다.",
+  prompt: "콘솔에서 Patch 편집기를 열어 주세요 — Robin Esprite 20대.",
+  why: "실행은 앱이 하니 편집기만 열어 두시면 됩니다.",
   steps: ["Patch 편집기를 엽니다."],
   commands: ["Plugin \"PatchEsprite\""],
   options: [],
@@ -20,8 +20,11 @@ describe("QuestionCard handover commands", () => {
     );
     expect(html).toContain("Plugin &quot;PatchEsprite&quot;");
     expect(html).toContain("명령 복사");
-    // 사용자가 앱에 실행을 다시 시키지 않도록 직접 실행을 명시한다.
-    expect(html).toContain("콘솔 명령줄에 직접");
+    // 서버-실행 모델: 명령은 자동 실행 실패 시의 대비책이다. 구모델 문구
+    // («앱이 대신 실행하면 동작하지 않습니다»)로 되돌아가지 않게 고정한다.
+    expect(html).toContain("대신 실행");
+    expect(html).toContain("자동 실행이 또 실패할 때만");
+    expect(html).not.toContain("앱이 대신 실행하면 동작하지 않습니다");
   });
 
   it("renders no command block when there is nothing to hand over", () => {
