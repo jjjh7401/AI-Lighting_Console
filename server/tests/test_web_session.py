@@ -7353,7 +7353,9 @@ class TestPhaserRecall:
         assert len(writes) == 1
         assert list(writes[0].arguments["commands"]) == [_preset_recall_command(4, self._FIDS, 31)]
         assert "Preset 4.31" in event["text"]
-        assert "판독할 수 없어 ASSUMPTION" in event["text"]
+        # recall 적재 ASSUMPTION은 2026-08-19 육안 확인으로 종결 — 발사 회신은
+        # Rectangle 파형 잔여 미검증만 고지한다(13번 프로브 §확인 기록).
+        assert "Rectangle 계열 파형" in event["text"]
 
     def test_recall_refuses_when_the_label_is_not_on_console(self, tmp_path):
         event, calls, _chan = self._run(
