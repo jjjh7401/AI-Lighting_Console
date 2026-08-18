@@ -27,6 +27,7 @@ from server.bridge.protocol import (
     build_exec_request,
     build_ping,
     build_prop_query,
+    build_props_query,
     build_state_query,
     decode_payload,
 )
@@ -276,9 +277,7 @@ class ConsoleLink:
         )
         return outcome
 
-    def _run_file_import(
-        self, name: str, lua_source: str, sends: list[DeploySend]
-    ) -> ExecOutcome:
+    def _run_file_import(self, name: str, lua_source: str, sends: list[DeploySend]) -> ExecOutcome:
         try:
             xml = build_plugin_xml(name, lua_source)
         except ValueError as error:
@@ -289,7 +288,9 @@ class ConsoleLink:
             self._import_dir.mkdir(parents=True, exist_ok=True)
             target.write_text(xml, encoding="utf-8")
         except OSError as error:
-            return ExecOutcome(status="failed", detail=f"cannot write plugin file {target}: {error}")
+            return ExecOutcome(
+                status="failed", detail=f"cannot write plugin file {target}: {error}"
+            )
 
         # One pool read: find an existing same-Name slot (idempotent redeploy)
         # AND the occupied slots (to pick a free one). A no-slot `Import Plugin`
@@ -343,7 +344,9 @@ class ConsoleLink:
         try:
             pool = self._deploy_query_state("DataPool/Plugins", sends)
         except StateQueryError as error:
-            return ExecOutcome(status="unconfirmed", detail=f"imported but pool unreadable: {error}")
+            return ExecOutcome(
+                status="unconfirmed", detail=f"imported but pool unreadable: {error}"
+            )
         names = [c.get("name") for c in pool.get("children", []) if isinstance(c, dict)]
         if name in names:
             return ExecOutcome(status="ok", detail=f"imported plugin {name!r} via file+Import")
@@ -415,6 +418,40 @@ class ConsoleLink:
             )
         return payload
 
+    def query_properties(
+        self,
+        path: str,
+        start_slot: int,
+        count: int,
+        property_names: Sequence[str],
+    ) -> dict:
+        """ONE round trip for a PAGE of children x several properties (1.6.0).
+
+        Same id correlation, timeout budget and error type as
+        :meth:`query_property`; the responder answers ``props`` on the state
+        address, which :meth:`deliver` already accepts.
+
+        Raises :class:`StateQueryError` when the reply does not arrive or comes
+        back ``ok:false`` — which is also what an OLDER responder does with an
+        unknown verb, so a caller can treat the exception as "not available
+        here" and fall back to the per-property walk.
+        """
+        request_id = self._new_id()
+        payload = self._round_trip(
+            build_props_query(request_id, path, start_slot, count, property_names),
+            request_id,
+            self._timeouts.state_query_seconds,
+        )
+        if payload is None:
+            if self._monitor is not None:
+                self._monitor.note_query_timeout()
+            raise StateQueryError(
+                f"no props reply for {path!r} within {self._timeouts.state_query_seconds}s"
+            )
+        if not payload.get("ok"):
+            raise StateQueryError(str(payload.get("error") or f"props query failed: {path}"))
+        return payload
+
 
 # -- reference body fetching (expand-or-hold production path) -----------------
 
@@ -468,9 +505,7 @@ class StateBodyFetcher:
         try:
             identity = self._query(reference)
         except Exception as error:
-            raise BodyUnavailable(
-                f"identity query failed for {reference!r}: {error}"
-            ) from error
+            raise BodyUnavailable(f"identity query failed for {reference!r}: {error}") from error
         node = identity.get("node") if isinstance(identity, dict) else None
         sequence_no = node.get("sequenceNo") if isinstance(node, dict) else None
         if not isinstance(sequence_no, int):
@@ -491,9 +526,7 @@ class StateBodyFetcher:
             sequence_reference, sequence_template.format(ref=sequence_no), allow_empty=True
         )
 
-    def _fetch_body_at_path(
-        self, reference: str, path: str, *, allow_empty: bool
-    ) -> Sequence[str]:
+    def _fetch_body_at_path(self, reference: str, path: str, *, allow_empty: bool) -> Sequence[str]:
         try:
             payload = self._query(path)
         except Exception as error:

@@ -1,0 +1,495 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>AI 조명 코파일럿 — 앱 · LLM · onPC 구조</title>
+<style>
+  :root{
+    --bg:#0B0E14; --surface:#141A26; --surface-2:#1B2333; --raise:#232D40;
+    --border:rgba(255,255,255,.09); --border-2:rgba(255,255,255,.14);
+    --text:#E7EAF2; --muted:#98A2B8; --faint:#616B85;
+    --human:#C7D0E0; --llm:#FFB24D; --app:#B583F5; --onpc:#4FD3E8;
+    --ok:#55E08A; --warn:#FFC24D; --crit:#FF6D74;
+    --human-dim:rgba(199,208,224,.14); --llm-dim:rgba(255,178,77,.15);
+    --app-dim:rgba(181,131,245,.16); --onpc-dim:rgba(79,211,232,.15);
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px -14px rgba(0,0,0,.7);
+    --font-sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    --font-mono:"SF Mono","JetBrains Mono","Fira Code",ui-monospace,Menlo,Consolas,monospace;
+    --maxw:1080px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#EEF1F6; --surface:#FFFFFF; --surface-2:#F5F7FB; --raise:#EAEEF5;
+      --border:rgba(12,17,28,.10); --border-2:rgba(12,17,28,.16);
+      --text:#151A26; --muted:#54607A; --faint:#8791A6;
+      --human:#5A6480; --llm:#B9760F; --app:#7A46C9; --onpc:#0E8CA6;
+      --human-dim:rgba(90,100,128,.10); --llm-dim:rgba(185,118,15,.11);
+      --app-dim:rgba(122,70,201,.10); --onpc-dim:rgba(14,140,166,.10);
+      --shadow:0 1px 2px rgba(20,28,48,.08),0 14px 34px -18px rgba(20,28,48,.28);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0B0E14; --surface:#141A26; --surface-2:#1B2333; --raise:#232D40;
+    --border:rgba(255,255,255,.09); --border-2:rgba(255,255,255,.14);
+    --text:#E7EAF2; --muted:#98A2B8; --faint:#616B85;
+    --human:#C7D0E0; --llm:#FFB24D; --app:#B583F5; --onpc:#4FD3E8;
+    --human-dim:rgba(199,208,224,.14); --llm-dim:rgba(255,178,77,.15);
+    --app-dim:rgba(181,131,245,.16); --onpc-dim:rgba(79,211,232,.15);
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px -14px rgba(0,0,0,.7);
+  }
+  :root[data-theme="light"]{
+    --bg:#EEF1F6; --surface:#FFFFFF; --surface-2:#F5F7FB; --raise:#EAEEF5;
+    --border:rgba(12,17,28,.10); --border-2:rgba(12,17,28,.16);
+    --text:#151A26; --muted:#54607A; --faint:#8791A6;
+    --human:#5A6480; --llm:#B9760F; --app:#7A46C9; --onpc:#0E8CA6;
+    --human-dim:rgba(90,100,128,.10); --llm-dim:rgba(185,118,15,.11);
+    --app-dim:rgba(122,70,201,.10); --onpc-dim:rgba(14,140,166,.10);
+    --shadow:0 1px 2px rgba(20,28,48,.08),0 14px 34px -18px rgba(20,28,48,.28);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0}
+  .page{
+    background:
+      radial-gradient(1100px 520px at 78% -8%, var(--llm-dim), transparent 60%),
+      radial-gradient(1000px 560px at 12% 6%, var(--app-dim), transparent 62%),
+      radial-gradient(1200px 700px at 50% 108%, var(--onpc-dim), transparent 60%),
+      var(--bg);
+    color:var(--text); font-family:var(--font-sans);
+    line-height:1.6; -webkit-font-smoothing:antialiased; letter-spacing:.1px;
+    min-height:100vh; overflow-x:hidden;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px}
+  section{padding:clamp(48px,7vw,88px) 0; border-top:1px solid var(--border)}
+  section:first-of-type{border-top:0}
+
+  .eyebrow{
+    font-family:var(--font-mono); font-size:.72rem; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--faint); margin:0 0 14px;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  .eyebrow .tick{width:26px; height:1px; background:var(--border-2)}
+  h1,h2,h3{text-wrap:balance; margin:0; font-weight:760; letter-spacing:-.02em; line-height:1.1}
+  h1{font-size:clamp(2.3rem,6.2vw,4rem)}
+  h2{font-size:clamp(1.7rem,3.6vw,2.5rem)}
+  h3{font-size:1.06rem; letter-spacing:-.01em; font-weight:700}
+  p{margin:0}
+  .lede{color:var(--muted); font-size:clamp(1.02rem,1.5vw,1.18rem); max-width:60ch}
+  .sec-head{max-width:64ch; margin-bottom:clamp(28px,4vw,44px)}
+  .sec-head p{color:var(--muted); margin-top:14px; max-width:62ch}
+  code,.mono{font-family:var(--font-mono)}
+
+  /* ---------- HERO ---------- */
+  .hero{padding-top:clamp(52px,8vw,96px)}
+  .hero h1{margin-bottom:22px}
+  .hero h1 .g{background:linear-gradient(100deg,var(--llm),var(--app) 52%,var(--onpc));
+    -webkit-background-clip:text; background-clip:text; color:transparent}
+  .equation{
+    display:flex; align-items:stretch; gap:10px; flex-wrap:wrap;
+    margin:34px 0 8px; font-family:var(--font-mono);
+  }
+  .eq-node{
+    display:flex; flex-direction:column; gap:4px; justify-content:center;
+    padding:14px 18px; border-radius:13px; border:1px solid var(--border);
+    background:var(--surface); box-shadow:var(--shadow); min-width:132px; flex:1 1 132px;
+  }
+  .eq-node .k{font-size:.68rem; letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
+  .eq-node .v{font-size:1.04rem; font-weight:600; letter-spacing:-.01em; font-family:var(--font-sans)}
+  .eq-node.human{border-color:color-mix(in srgb,var(--human) 40%,var(--border))}
+  .eq-node.human .v{color:var(--human)}
+  .eq-node.llm{border-color:color-mix(in srgb,var(--llm) 42%,var(--border))}
+  .eq-node.llm .v{color:var(--llm)}
+  .eq-node.onpc{border-color:color-mix(in srgb,var(--onpc) 42%,var(--border))}
+  .eq-node.onpc .v{color:var(--onpc)}
+  .eq-arrow{display:flex; align-items:center; color:var(--faint); font-size:1.3rem; padding:0 2px}
+  .hero-note{margin-top:26px; color:var(--faint); font-size:.86rem; font-family:var(--font-mono)}
+
+  /* ---------- LAYER DIAGRAM ---------- */
+  .stack{display:flex; flex-direction:column; gap:0; margin-top:8px}
+  .layer{
+    position:relative; border:1px solid var(--border); border-radius:16px;
+    background:var(--surface); box-shadow:var(--shadow); padding:22px 22px;
+    display:grid; grid-template-columns:auto 1fr; gap:18px; align-items:start;
+  }
+  .layer .role{
+    font-family:var(--font-mono); font-size:.68rem; letter-spacing:.13em; text-transform:uppercase;
+    writing-mode:vertical-rl; transform:rotate(180deg); align-self:stretch;
+    display:flex; align-items:center; justify-content:center; color:var(--faint);
+    border-right:1px solid var(--border); padding-right:16px; min-width:34px;
+  }
+  .layer .body{min-width:0}
+  .layer .title{display:flex; align-items:center; gap:11px; flex-wrap:wrap; margin-bottom:6px}
+  .dot{width:11px; height:11px; border-radius:50%; flex:none; box-shadow:0 0 0 4px var(--_dim)}
+  .layer .title h3{letter-spacing:-.01em}
+  .layer .sub{color:var(--muted); font-size:.95rem; margin-bottom:14px}
+  .chips{display:flex; flex-wrap:wrap; gap:7px}
+  .chip{
+    font-family:var(--font-mono); font-size:.74rem; padding:4px 9px; border-radius:7px;
+    border:1px solid var(--border); background:var(--surface-2); color:var(--muted); white-space:nowrap;
+  }
+  .layer.human{--_c:var(--human); --_dim:var(--human-dim)}
+  .layer.app{--_c:var(--app); --_dim:var(--app-dim)}
+  .layer.onpc{--_c:var(--onpc); --_dim:var(--onpc-dim)}
+  .layer .dot{background:var(--_c)}
+  .layer .role{color:color-mix(in srgb,var(--_c) 60%,var(--faint))}
+  .layer::before{content:""; position:absolute; left:0; top:16px; bottom:16px; width:3px;
+    border-radius:3px; background:linear-gradient(var(--_c),transparent); opacity:.8}
+
+  .connector{
+    display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:14px;
+    padding:12px 26px; min-height:64px;
+  }
+  .rail{position:relative; height:34px; border-radius:20px; overflow:hidden;
+    border:1px solid var(--border); background:var(--surface-2)}
+  .rail .lbl{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-size:.72rem; letter-spacing:.04em; color:var(--muted); z-index:2}
+  .rail .glow{position:absolute; top:0; bottom:0; width:44%; z-index:1; filter:blur(2px)}
+  .rail.down .glow{background:linear-gradient(90deg,transparent,var(--down-c),transparent);
+    animation:travelDown 3.4s linear infinite}
+  .rail.up .glow{background:linear-gradient(90deg,transparent,var(--up-c),transparent);
+    animation:travelUp 3.4s linear infinite}
+  .conn-arrow{font-family:var(--font-mono); font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--faint); text-align:center; line-height:1.5; min-width:52px}
+  @keyframes travelDown{from{left:-44%}to{left:100%}}
+  @keyframes travelUp{from{left:100%}to{left:-44%}}
+  .conn-1{--down-c:var(--app); --up-c:var(--human)}
+  .conn-2{--down-c:var(--onpc); --up-c:var(--app)}
+
+  /* ---------- STEPS ---------- */
+  .steps{display:grid; gap:14px; counter-reset:s}
+  .step{
+    display:grid; grid-template-columns:auto 1fr; gap:20px; align-items:start;
+    padding:20px 22px; border:1px solid var(--border); border-radius:14px;
+    background:var(--surface); box-shadow:var(--shadow);
+  }
+  .step .num{counter-increment:s; font-family:var(--font-mono); font-size:.9rem; font-weight:600;
+    width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--border-2); color:var(--text); background:var(--surface-2)}
+  .step .num::before{content:counter(s,decimal-leading-zero)}
+  .step .who{font-family:var(--font-mono); font-size:.7rem; letter-spacing:.12em; text-transform:uppercase;
+    margin-bottom:5px; display:inline-flex; align-items:center; gap:7px}
+  .step .who .d{width:8px;height:8px;border-radius:50%}
+  .step .txt{color:var(--muted); font-size:.96rem}
+  .step .txt b{color:var(--text); font-weight:640}
+  .who.human{color:var(--human)} .who.human .d{background:var(--human)}
+  .who.app{color:var(--app)} .who.app .d{background:var(--app)}
+  .who.llm{color:var(--llm)} .who.llm .d{background:var(--llm)}
+  .who.onpc{color:var(--onpc)} .who.onpc .d{background:var(--onpc)}
+  .quote{font-family:var(--font-mono); font-size:.86rem; background:var(--surface-2);
+    border:1px solid var(--border); border-radius:8px; padding:8px 11px; color:var(--text);
+    display:inline-block; margin-top:2px}
+
+  /* ---------- GRID CARDS ---------- */
+  .grid{display:grid; gap:16px}
+  .g4{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(2,1fr)}
+  .card{
+    border:1px solid var(--border); border-radius:14px; background:var(--surface);
+    box-shadow:var(--shadow); padding:22px; position:relative; overflow:hidden;
+  }
+  .tool .name{font-family:var(--font-mono); font-size:1rem; font-weight:600; color:var(--llm);
+    letter-spacing:-.01em; margin-bottom:4px; display:flex; align-items:center; gap:9px}
+  .tool .name::before{content:""; width:9px;height:9px;border-radius:2px;background:var(--llm)}
+  .tool .role{font-family:var(--font-mono); font-size:.68rem; letter-spacing:.11em; text-transform:uppercase;
+    color:var(--faint); margin-bottom:10px}
+  .tool p{color:var(--muted); font-size:.94rem}
+  .tool .ex{margin-top:12px; font-family:var(--font-mono); font-size:.78rem; color:var(--onpc);
+    background:var(--surface-2); border:1px solid var(--border); border-radius:7px; padding:7px 10px;
+    overflow-x:auto; white-space:nowrap}
+
+  .safety .top{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:8px}
+  .safety h3{font-size:1rem}
+  .safety .tag{font-family:var(--font-mono); font-size:.64rem; letter-spacing:.1em; text-transform:uppercase;
+    padding:3px 8px; border-radius:6px; border:1px solid var(--border); color:var(--muted); white-space:nowrap}
+  .safety p{color:var(--muted); font-size:.92rem}
+  .safety .card{border-left:3px solid color-mix(in srgb,var(--app) 55%,var(--border))}
+
+  .cap .card{border-left:3px solid color-mix(in srgb,var(--onpc) 55%,var(--border))}
+  .cap h3{font-size:1rem; margin-bottom:6px}
+  .cap .verified{font-family:var(--font-mono); font-size:.66rem; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--ok); display:inline-flex; align-items:center; gap:6px; margin-bottom:9px}
+  .cap .verified .d{width:7px;height:7px;border-radius:50%;background:var(--ok);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 22%,transparent)}
+  .cap p{color:var(--muted); font-size:.93rem}
+  .cap p em{color:var(--onpc); font-style:normal; font-family:var(--font-mono); font-size:.85em}
+
+  /* ---------- RESPONDER ---------- */
+  .responder{display:grid; grid-template-columns:1.05fr .95fr; gap:24px; align-items:center}
+  .term{
+    font-family:var(--font-mono); font-size:.82rem; background:#0A0D13; color:#D7DEEC;
+    border:1px solid var(--border-2); border-radius:13px; overflow:hidden; box-shadow:var(--shadow);
+  }
+  :root[data-theme="light"] .term{background:#0E1320; color:#D7DEEC}
+  @media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .term{background:#0E1320; color:#D7DEEC}}
+  .term .bar{display:flex; align-items:center; gap:7px; padding:10px 14px; border-bottom:1px solid rgba(255,255,255,.08);
+    font-size:.7rem; letter-spacing:.06em; color:#8794AE}
+  .term .bar i{width:10px;height:10px;border-radius:50%;display:block}
+  .term .body{padding:15px 16px; line-height:1.85; overflow-x:auto}
+  .term .l{white-space:pre; display:block}
+  .term .c-out{color:#B587F5} .term .c-in{color:#4FD3E8} .term .c-cmt{color:#5E6883}
+  .term .c-ok{color:#55E08A} .term .c-key{color:#FFB24D}
+  .verbs{display:grid; gap:10px}
+  .verb{display:grid; grid-template-columns:auto 1fr; gap:14px; align-items:baseline;
+    padding:12px 14px; border:1px solid var(--border); border-radius:11px; background:var(--surface)}
+  .verb .v{font-family:var(--font-mono); color:var(--onpc); font-weight:600; font-size:.9rem}
+  .verb .d{color:var(--muted); font-size:.9rem}
+
+  /* ---------- FOOTER ---------- */
+  .foot{border-top:1px solid var(--border); padding:40px 0 60px; color:var(--faint)}
+  .foot .stackrow{display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 22px}
+  .foot .st{font-family:var(--font-mono); font-size:.74rem; padding:5px 10px; border-radius:7px;
+    border:1px solid var(--border); background:var(--surface); color:var(--muted)}
+  .foot .fine{font-size:.8rem; max-width:70ch; line-height:1.7}
+
+  .reveal{opacity:0; transform:translateY(14px); transition:opacity .6s ease, transform .6s ease}
+  .reveal.in{opacity:1; transform:none}
+
+  @media (max-width:720px){
+    .g4,.g3,.responder{grid-template-columns:1fr}
+    .layer{grid-template-columns:1fr}
+    .layer .role{writing-mode:horizontal-tb; transform:none; border-right:0; border-bottom:1px solid var(--border);
+      padding:0 0 10px; justify-content:flex-start; min-width:0}
+    .layer::before{display:none}
+    .connector{grid-template-columns:1fr; gap:8px; padding:10px 8px}
+    .conn-arrow{min-width:0}
+    .equation{flex-direction:column}
+    .eq-arrow{transform:rotate(90deg); align-self:center}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .rail .glow{animation:none; opacity:.5; left:28%!important}
+    .reveal{transition:none; opacity:1; transform:none}
+  }
+</style>
+
+<div class="page">
+<div class="wrap">
+
+  <!-- HERO -->
+  <header class="hero" >
+    <p class="eyebrow"><span class="tick"></span>grandMA3 AI Copilot · SPEC-COPILOT-MVP-001</p>
+    <h1>말로 무대를 밝히는<br><span class="g">AI 조명 코파일럿</span></h1>
+    <p class="lede">평소 쓰는 말로 조명을 요청하면 — LLM이 그 뜻을 grandMA3의 언어로 번역하고, 앱이 안전하게 검증해 실제 콘솔을 작동시킵니다. 사람은 <b style="color:var(--text)">의도</b>만 말하고, 나머지는 시스템이 처리합니다.</p>
+
+    <div class="equation" aria-label="핵심 흐름: 사람의 말에서 실제 조명까지">
+      <div class="eq-node human"><span class="k">Human</span><span class="v">사람의 말</span></div>
+      <div class="eq-arrow">→</div>
+      <div class="eq-node llm"><span class="k">LLM · Gemini</span><span class="v">뜻을 해석</span></div>
+      <div class="eq-arrow">→</div>
+      <div class="eq-node human" style="border-color:color-mix(in srgb,var(--app) 42%,var(--border))"><span class="k" >App · Python</span><span class="v" style="color:var(--app)">검증 · 전송</span></div>
+      <div class="eq-arrow">→</div>
+      <div class="eq-node onpc"><span class="k">onPC · grandMA3</span><span class="v">실제 빛</span></div>
+    </div>
+    <p class="hero-note">// 자연어 → LLM → 커맨드/Lua → OSC → 콘솔 — 그리고 결과가 같은 길로 되돌아옵니다</p>
+  </header>
+
+  <!-- 세 주역 + LAYER DIAGRAM -->
+  <section>
+    <div class="sec-head reveal">
+      <p class="eyebrow"><span class="tick"></span>The relationship · 앱 ↔ LLM ↔ onPC</p>
+      <h2>세 주역이 신호를 주고받습니다</h2>
+      <p>이 시스템은 세 계층으로 되어 있습니다. <b style="color:var(--app)">앱</b>이 한가운데서 사용자와 LLM, 그리고 콘솔을 잇는 <b style="color:var(--text)">신경계</b> 역할을 합니다. 요청은 위에서 아래로 내려가고, 결과는 다시 위로 올라옵니다.</p>
+    </div>
+
+    <div class="stack reveal">
+      <div class="layer human">
+        <div class="role">Human</div>
+        <div class="body">
+          <div class="title"><span class="dot"></span><h3>사용자 — 자연어로 요청</h3></div>
+          <p class="sub">픽스처 번호도, 커맨드도 몰라도 됩니다. "따뜻한 발라드 느낌으로", "여름 록 무한 루프" 처럼 <b style="color:var(--text)">원하는 그림</b>만 말합니다.</p>
+          <div class="chips"><span class="chip">한국어/자연어</span><span class="chip">컨셉·분위기</span><span class="chip">채팅 인터페이스</span></div>
+        </div>
+      </div>
+
+      <div class="connector conn-1">
+        <div class="rail down"><span class="lbl">요청 · 자연어</span><span class="glow"></span></div>
+        <div class="conn-arrow">▼ 요청<br>▲ 응답</div>
+        <div class="rail up"><span class="lbl">응답 · 설명</span><span class="glow"></span></div>
+      </div>
+
+      <div class="layer app">
+        <div class="role">Orchestrator</div>
+        <div class="body">
+          <div class="title"><span class="dot"></span><h3>앱 (Python 서버) — 오케스트레이터 · 안전장치</h3></div>
+          <p class="sub">사용법 지식(룰북)을 붙여 <b style="color:var(--llm)">LLM(Gemini)</b>에게 물어보고, LLM이 만든 커맨드를 <b style="color:var(--text)">안전 게이트</b>로 검증한 뒤 콘솔로 보냅니다. 결과 확인·백업·기록까지 담당합니다.</p>
+          <div class="chips">
+            <span class="chip" style="color:var(--llm);border-color:color-mix(in srgb,var(--llm) 34%,var(--border))">⇄ LLM 대화 · 도구 호출</span>
+            <span class="chip">안전 게이트</span><span class="chip">배포 검증</span><span class="chip">헬스 모니터</span><span class="chip">감사 로그</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="connector conn-2">
+        <div class="rail down"><span class="lbl">OSC · 커맨드</span><span class="glow"></span></div>
+        <div class="conn-arrow">▼ 커맨드<br>▲ 회신</div>
+        <div class="rail up"><span class="lbl">JSON · 결과</span><span class="glow"></span></div>
+      </div>
+
+      <div class="layer onpc">
+        <div class="role">Console</div>
+        <div class="body">
+          <div class="title"><span class="dot"></span><h3>onPC (grandMA3) + CopilotResponder</h3></div>
+          <p class="sub">콘솔 안에 사는 작은 Lua 플러그인 <b style="color:var(--text)">CopilotResponder</b>가 OSC를 받아 실제 콘솔 커맨드를 실행하고, 결과를 앱에 되돌려줍니다. 여기서 진짜 빛이 나옵니다.</p>
+          <div class="chips"><span class="chip">grandMA3 onPC 2.4.2</span><span class="chip">CopilotResponder (Lua)</span><span class="chip">OSC/UDP · 8000 / 9005</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROUND TRIP -->
+  <section>
+    <div class="sec-head reveal">
+      <p class="eyebrow"><span class="tick"></span>Round-trip · 한 번의 요청이 흐르는 길</p>
+      <h2>"무버 9대를 파랗게, 천천히 원을 그리게"</h2>
+      <p>한 문장을 넣었을 때 시스템 안에서 실제로 일어나는 일. 각 단계는 색으로 담당 주역을 표시합니다.</p>
+    </div>
+    <div class="steps reveal">
+      <div class="step"><div class="num"></div><div>
+        <span class="who human"><span class="d"></span>사용자</span>
+        <div class="txt">평소 말로 요청합니다. <span class="quote">"무버 9대를 파랗게, 천천히 원을 그리게 해줘"</span></div></div></div>
+      <div class="step"><div class="num"></div><div>
+        <span class="who app"><span class="d"></span>앱</span>
+        <div class="txt"><b>룰북(사용법 지식)</b>을 시스템 프롬프트로 붙여 Gemini에게 요청을 전달합니다. 룰북은 MA3 문법·연출 패턴을 담은 마크다운 모음입니다.</div></div></div>
+      <div class="step"><div class="num"></div><div>
+        <span class="who llm"><span class="d"></span>LLM · Gemini</span>
+        <div class="txt">필요한 <b>도구</b>를 호출합니다. 먼저 <em>get_rig_context</em>로 실제 리그를 확인하고, 색·움직임·속도를 정해 <em>run_commands</em>로 커맨드를 만듭니다.</div></div></div>
+      <div class="step"><div class="num"></div><div>
+        <span class="who app"><span class="d"></span>앱 · 안전 게이트</span>
+        <div class="txt">커맨드 묶음을 <b>통째로 검사</b>합니다(all-or-nothing). 위험하거나 콘솔이 응답 없으면 실행을 막고 LLM에 되돌려 자가수정하게 합니다.</div></div></div>
+      <div class="step"><div class="num"></div><div>
+        <span class="who onpc"><span class="d"></span>OSC → 콘솔</span>
+        <div class="txt">검증된 커맨드를 <b>단일 창구(OSC/UDP)</b>로 보냅니다. 콘솔 속 <b>CopilotResponder</b>가 <em>Cmd()</em>로 실제 실행 — 픽스처가 파랗게, 페이저가 원을 그립니다.</div></div></div>
+      <div class="step"><div class="num"></div><div>
+        <span class="who app"><span class="d"></span>결과 회신</span>
+        <div class="txt">콘솔이 <b>퍼센트-인코딩 JSON</b>으로 결과를 회신하고, Gemini가 성공을 확인한 뒤 사용자에게 무엇을 만들었는지 우리말로 설명합니다.</div></div></div>
+    </div>
+  </section>
+
+  <!-- 4 TOOLS -->
+  <section>
+    <div class="sec-head reveal">
+      <p class="eyebrow"><span class="tick"></span>The LLM's hands · 네 가지 도구</p>
+      <h2>LLM이 콘솔을 만지는 네 개의 손</h2>
+      <p>Gemini는 자유롭게 아무 명령이나 실행하지 않습니다. 앱이 열어준 <b style="color:var(--text)">딱 네 개의 도구</b>만 호출할 수 있고, 모든 실행은 이 도구를 통해 안전 계층을 거칩니다.</p>
+    </div>
+    <div class="grid g4 reveal">
+      <div class="card tool">
+        <div class="name">run_commands</div>
+        <div class="role">MA3 커맨드 실행</div>
+        <p>선택 · 값 설정 · 큐 저장 · 재생 등 콘솔 커맨드 라인을 순서대로 실행합니다. 대부분의 연출이 이 도구로 이뤄집니다.</p>
+        <div class="ex">Fixture 11 Thru 19 · At 100 · Store Sequence 41 Cue 1 · Go+ Executor 111</div>
+      </div>
+      <div class="card tool">
+        <div class="name">deploy_plugin</div>
+        <div class="role">Lua 플러그인 배포 · 실행</div>
+        <p>커맨드로 못 하는 작업(예: 픽스처 패칭)을 위해 Lua 플러그인을 배포·실행합니다. 컴파일 검사 + 위험 스캔 + 사람 승인을 거칩니다.</p>
+        <div class="ex">AddFixtures{...} · file+Import · 사람 승인 게이트</div>
+      </div>
+      <div class="card tool">
+        <div class="name">query_state</div>
+        <div class="role">콘솔 상태 읽기</div>
+        <p>시퀀스·그룹·플러그인 등 콘솔의 오브젝트 트리를 조회해, 무엇을 바꿀지 결정하기 전에 현재 상태를 확인합니다.</p>
+        <div class="ex">DataPool/Sequences · Patch/Fixtures · DataPool/Plugins</div>
+      </div>
+      <div class="card tool">
+        <div class="name">get_rig_context</div>
+        <div class="role">리그 요약</div>
+        <p>패치된 픽스처·그룹·프리셋을 요약합니다. 모호한 요청에서 <b style="color:var(--text)">실제 존재하는 대상만</b> 겨냥하게 해 헛도는 명령을 막습니다.</p>
+        <div class="ex">fixtures · groups · presets → 실제 이름/번호</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SAFETY -->
+  <section>
+    <div class="sec-head reveal">
+      <p class="eyebrow"><span class="tick"></span>Why the app exists · 안전 계층</p>
+      <h2>앱의 진짜 가치 — 안전하게 콘솔을 지킨다</h2>
+      <p>LLM은 실수할 수 있고, 라이브 무대에서 잘못된 명령은 위험합니다. 앱은 LLM과 콘솔 사이에서 <b style="color:var(--text)">여러 겹의 안전장치</b>로 실제 실행을 통제합니다.</p>
+    </div>
+    <div class="grid g3 reveal safety">
+      <div class="card"><div class="top"><h3>안전 게이트</h3><span class="tag">Gate</span></div>
+        <p>커맨드 묶음을 실행 전 통째로 검사합니다. 하나라도 막히면 전부 중단(all-or-nothing)하고 이유를 LLM에 돌려줍니다.</p></div>
+      <div class="card"><div class="top"><h3>배포 파이프라인</h3><span class="tag">Deploy</span></div>
+        <p>Lua 플러그인은 컴파일 체크 → 파괴적 명령 스캔 → <b style="color:var(--text)">사람 승인</b>을 통과해야만 콘솔에 올라갑니다.</p></div>
+      <div class="card"><div class="top"><h3>헬스 모니터</h3><span class="tag">Health</span></div>
+        <p>콘솔이 오프라인이거나 응답이 없으면 새 실행을 차단합니다. 성공적인 핑으로만 복구됩니다.</p></div>
+      <div class="card"><div class="top"><h3>세션 백업</h3><span class="tag">Backup</span></div>
+        <p>세션 시작 시 쇼파일을 백업 시도합니다. 되돌릴 수 있는 안전망을 먼저 확보합니다.</p></div>
+      <div class="card"><div class="top"><h3>감사 로그</h3><span class="tag">Audit</span></div>
+        <p>보낸 명령을 1:1로 기록합니다. 무엇이 언제 콘솔에 나갔는지 추적 가능합니다.</p></div>
+      <div class="card"><div class="top"><h3>단일 송신 창구</h3><span class="tag">Chokepoint</span></div>
+        <p>콘솔로 나가는 OSC 통로는 오직 하나. 게이트를 우회하는 경로가 원천적으로 없습니다.</p></div>
+    </div>
+  </section>
+
+  <!-- CAPABILITIES -->
+  <section>
+    <div class="sec-head reveal">
+      <p class="eyebrow"><span class="tick"></span>What it can do · 라이브 검증됨</p>
+      <h2>할 수 있는 일 — 실제 onPC에서 증명</h2>
+      <p>아래 기능들은 실제 grandMA3 onPC와 진짜 Gemini로 <b style="color:var(--ok)">라이브 검증</b>된 것입니다. 자연어 한 줄에서 실제 콘솔 동작까지 이어집니다.</p>
+    </div>
+    <div class="grid g3 reveal cap">
+      <div class="card"><h3>픽스처 패칭</h3><div class="verified"><span class="d"></span>Live verified</div>
+        <p>Lua <em>AddFixtures</em>로 픽스처를 자동 추가합니다. 자연어 지시로 무버 9대(FID 11~19)를 앱이 패치.</p></div>
+      <div class="card"><h3>룩 · 큐 프로그래밍</h3><div class="verified"><span class="d"></span>Live verified</div>
+        <p>색·밝기·위치를 설정하고 큐로 저장합니다. 값이 실제 엔진에 잡히는 것까지 되읽어 확인.</p></div>
+      <div class="card"><h3>이펙트 · 무한 루프</h3><div class="verified"><span class="d"></span>Live verified</div>
+        <p>페이저 기반 <em>팬틸트 서클 · 컬러 체이스 · 딤머 이펙트</em>. 실행기에 올리면 무한 반복. 커맨드 39/39 검증.</p></div>
+      <div class="card"><h3>시퀀스 · 실행기</h3><div class="verified"><span class="d"></span>Live verified</div>
+        <p>여러 큐로 쇼를 구성하고 실행기에 할당해 <em>Go+</em>로 재생. MAtricks 팬·레인보우·타임코드까지.</p></div>
+      <div class="card"><h3>컨셉 → 디자인</h3><div class="verified"><span class="d"></span>Live verified</div>
+        <p>"따뜻한 발라드" → 앰버 · 느린 틸트 · 4초 페이드. 분위기 한마디를 실제 조명 설계로 번역.</p></div>
+      <div class="card"><h3>자연어 End-to-End</h3><div class="verified"><span class="d"></span>Live verified</div>
+        <p>한국어 지시 → 진짜 Gemini → 앱 → 콘솔. 사람이 손대지 않고 앱이 스스로 완성.</p></div>
+    </div>
+  </section>
+
+  <!-- RESPONDER -->
+  <section>
+    <div class="sec-head reveal">
+      <p class="eyebrow"><span class="tick"></span>Inside the console · CopilotResponder</p>
+      <h2>콘솔 속에 사는 요원</h2>
+      <p>앱은 콘솔을 직접 만지지 않습니다. 콘솔 안에 심어둔 Lua 플러그인 <b style="color:var(--onpc)">CopilotResponder</b>가 OSC 메시지를 받아 대신 실행하고, 결과를 <b style="color:var(--text)">퍼센트-인코딩 JSON</b>으로 되돌려줍니다.</p>
+    </div>
+    <div class="responder reveal">
+      <div class="term" role="img" aria-label="OSC 왕복 예시: 앱이 exec 명령을 보내고 콘솔이 OK로 회신">
+        <div class="bar"><i style="background:#FF6D74"></i><i style="background:#FFC24D"></i><i style="background:#55E08A"></i><span style="margin-left:6px">OSC round-trip · /copilot</span></div>
+        <div class="body">
+<span class="l"><span class="c-cmt"># 앱 → 콘솔 (/copilot/cmd)</span></span>
+<span class="l"><span class="c-out">→ Plugin "CopilotResponder"</span> <span class="c-key">"exec h-1 Go+ Executor 111"</span></span>
+<span class="l"> </span>
+<span class="l"><span class="c-cmt"># 콘솔 → 앱 (/copilot/feedback)</span></span>
+<span class="l"><span class="c-in">←</span> { <span class="c-key">"id"</span>:"h-1", <span class="c-key">"kind"</span>:"result",</span>
+<span class="l">    <span class="c-key">"ok"</span>:<span class="c-ok">true</span>, <span class="c-key">"result"</span>:<span class="c-ok">"OK"</span> }</span>
+        </div>
+      </div>
+      <div class="verbs">
+        <div class="verb"><span class="v">ping</span><span class="d">살아있는지 확인 · 헬스 체크(pong 회신)</span></div>
+        <div class="verb"><span class="v">exec</span><span class="d">커맨드 라인 실행 · 성공/실패 결과 회신</span></div>
+        <div class="verb"><span class="v">state</span><span class="d">오브젝트 트리 스냅샷 조회</span></div>
+        <div class="verb"><span class="v">deploy</span><span class="d">Lua 플러그인 배포(원격 폴백; 주 경로는 file+Import)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="foot">
+    <p class="eyebrow"><span class="tick"></span>Tech stack</p>
+    <div class="stackrow">
+      <span class="st">Python 서버</span><span class="st">Gemini (LLM)</span><span class="st">OSC / UDP</span>
+      <span class="st">grandMA3 onPC 2.4.2</span><span class="st">Lua 5.4 (CopilotResponder)</span><span class="st">퍼센트-인코딩 JSON 프로토콜</span>
+    </div>
+    <p class="fine">한 줄 요약 — 사람은 <b style="color:var(--human)">의도</b>를 말하고, <b style="color:var(--llm)">LLM</b>이 그 뜻을 콘솔의 언어로 옮기며, <b style="color:var(--app)">앱</b>이 안전하게 검증·전송하고, <b style="color:var(--onpc)">onPC</b>가 실제 빛을 냅니다. 앱은 이 네 주역을 잇는 신경계입니다.</p>
+  </footer>
+
+</div>
+</div>
+
+<script>
+  (function(){
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+    },{threshold:.12, rootMargin:'0px 0px -8% 0px'});
+    document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+  })();
+</script>
+
+</body></html>

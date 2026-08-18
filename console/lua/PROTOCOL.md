@@ -239,6 +239,38 @@ the string returned by the console-side property read path; the responder does
 not parse, normalize, or infer semantics. If the property cannot be read, the
 reply is `ok:false` with `error`; callers must not fill defaults.
 
+### 4.7 `props` (batched property page — on `/copilot/state`, responder 1.6.0)
+
+Request: `props <id> <container-path> <startSlot> <count> <Name1,Name2,...>`
+
+```json
+{"v":1,"kind":"props","id":"<id>","ok":true,"path":"Patch/Stages/1/Fixtures",
+ "node":{"childCount":200},
+ "rows":[{"i":1,"p":{"name":"Robin Esprite 1","fid":"1","posx":"4.0","posy":"0.0","posz":"8.0"}}],
+ "next":41}
+{"v":1,"kind":"props","id":"<id>","ok":false,"path":"...","error":"malformed props request (expected: props <id> <path> <startSlot> <count> <Name1,Name2,...>)"}
+```
+
+**Why it exists.** `prop` costs one round trip per property, live-measured at
+**66.7 ms** (2026-08-18). A coordinate read of an 80-fixture rig therefore cost
+~320 property trips plus ~80 slot-recovery `state` trips (a `state` reply carries
+at most `CONFIG.max_children` = 24 children), about 26 s — and a 200-fixture rig
+could not finish inside any interactive budget. One `props` page carries many
+children × many properties, so the same read costs a handful of trips.
+
+- `rows[].i` is the **real pool slot**, never a list position — same rule as
+  `children[].i` in §4.2. A child whose slot cannot be established is SKIPPED
+  rather than reported at a guessed number.
+- `rows[].p` holds only the properties that answered. A name that does not read
+  is simply ABSENT from the map; the responder never fills a default.
+- `next` names the slot to resume from and is **absent when the walk finished**,
+  so "no more rows" and "stopped early" are distinguishable without counting.
+  The responder emits it both when `count` is reached and when one more row
+  would exceed `CONFIG.max_payload` — the page is trimmed, never truncated
+  mid-encoding.
+- `path` may not contain spaces here (three fixed tokens follow it), unlike
+  `state` which parses its path as rest-of-line.
+
 ## 5. Console-side reply transport (`CONFIG.send_variant`)
 
 | Variant | Mechanism |

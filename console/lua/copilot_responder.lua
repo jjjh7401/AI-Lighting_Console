@@ -54,7 +54,14 @@ local M = {
     -- (live-measured; big snapshots like a 27-macro pool never replied).
     -- 1.5.0: additive prop verb + Cue child cueNo when the real cue number
     -- can be read from the cue object; Protocol v1 throughout.
-    VERSION = "1.5.0",
+    -- 1.6.0: additive `props` verb -- MANY children, MANY properties, ONE
+    -- round trip. The per-child `prop` walk costs one 66.7 ms round trip per
+    -- property (live-measured 2026-08-18), so a spatial read of an 80-fixture
+    -- rig cost ~400 trips (~26 s) and a 200-fixture rig could not complete
+    -- inside any interactive budget. `props` pages by pool slot and returns
+    -- rows of {i, p={name=value}}, so the same read costs a handful of trips.
+    -- Nothing existing changes: `state`/`prop`/`exec`/`deploy` are untouched.
+    VERSION = "1.6.0",
     PROTO = 1,
     CONFIG = CONFIG,
 }
@@ -671,6 +678,87 @@ function M.build_prop_result(id, path, property_name)
     }
 end
 
+
+-- MANY children x MANY properties in ONE reply (1.6.0).
+--
+-- Why this exists: `prop` costs one round trip per property, live-measured at
+-- 66.7 ms. Reading fid+POSX/POSY/POSZ for 80 fixtures therefore cost ~320
+-- property trips plus ~80 slot-recovery `state` trips (`max_children` is 24),
+-- about 26 s; a 200-fixture rig could not finish inside any interactive
+-- budget. Paging rows into one reply turns that into a handful of trips.
+--
+-- Paging is by POOL SLOT, never by list position: a sparse pool makes the two
+-- disagree and the caller would read a neighbour's coordinates. `next` names
+-- the slot to resume from and is ABSENT when the walk finished, so a caller
+-- can tell "no more rows" from "stopped early" without counting.
+function M.build_props_result(id, path, start_slot, count, names)
+    local function fail(message)
+        return {
+            v = M.PROTO,
+            kind = "props",
+            id = id,
+            ok = false,
+            path = path,
+            error = message,
+        }
+    end
+    local handle, err = M.resolve_path(path)
+    if not handle then
+        return fail(err)
+    end
+    if type(names) ~= "table" or #names == 0 then
+        return fail("no property names requested")
+    end
+    local children = M.safe_children(handle)
+    local total = #children
+    local rows = M.array({})
+    local next_slot = nil
+    local function payload_with(current_rows, resume)
+        local out = {
+            v = M.PROTO,
+            kind = "props",
+            id = id,
+            ok = true,
+            path = path,
+            node = { childCount = total },
+            rows = current_rows,
+        }
+        if resume then
+            out.next = resume
+        end
+        return out
+    end
+    for i = 1, total do
+        local entry = children[i]
+        local slot = entry and entry.slot
+        -- A child whose slot could not be established is SKIPPED, exactly as
+        -- `build_snapshot` omits `i`: addressing it by list position is the
+        -- sparse-pool bug this protocol already refuses elsewhere.
+        if slot and slot >= start_slot then
+            if #rows >= count then
+                next_slot = slot
+                break
+            end
+            local values = {}
+            for _, name in ipairs(names) do
+                local value = M.safe_property(entry.obj, name)
+                if value ~= nil then
+                    values[name] = value
+                end
+            end
+            rows[#rows + 1] = { i = slot, p = values }
+            -- Budget guard: the reply must fit the command-line transport, so
+            -- the LAST row that would overflow is removed and becomes `next`.
+            if #M.encode_payload(payload_with(rows, slot)) > CONFIG.max_payload then
+                rows[#rows] = nil
+                next_slot = slot
+                break
+            end
+        end
+    end
+    return payload_with(rows, next_slot)
+end
+
 -- @MX:NOTE: [AUTO] Cmd() result classification is an assumption pending live
 --   2.4.2 verification (PROTOCOL.md §6 ASSUMPTION-3): nil/""/"ok" = success,
 --   any other string = failure with the raw string as the error message.
@@ -911,6 +999,36 @@ function M.handle_request(request)
             }
         else
             payload = M.build_prop_result(parsed.id, path, property_name)
+        end
+        M.send_reply(CONFIG.state_address, payload)
+    elseif parsed.kind == "props" then
+        -- props <id> <path> <startSlot> <count> <Name1,Name2,...>
+        -- The path comes FIRST and may not contain spaces here (unlike `state`):
+        -- three fixed tokens follow it, so a greedy path would swallow them.
+        local path, start_text, count_text, name_list =
+            parsed.rest:match("^(%S+)%s+(%d+)%s+(%d+)%s+(%S+)%s*$")
+        if not path then
+            payload = {
+                v = M.PROTO,
+                kind = "props",
+                id = parsed.id,
+                ok = false,
+                path = "",
+                error = "malformed props request (expected: props <id> <path> "
+                    .. "<startSlot> <count> <Name1,Name2,...>)",
+            }
+        else
+            local names = {}
+            for name in name_list:gmatch("[^,]+") do
+                names[#names + 1] = name
+            end
+            payload = M.build_props_result(
+                parsed.id,
+                path,
+                tonumber(start_text),
+                tonumber(count_text),
+                names
+            )
         end
         M.send_reply(CONFIG.state_address, payload)
     elseif parsed.kind == "exec" then

@@ -1,0 +1,11 @@
+{
+  "spec_id": "SPEC-V3R3-UPDATE-CLEANUP-001",
+  "deleted_at": "2026-08-16T03:13:55.127556Z",
+  "files": [
+    {
+      "path": ".moai/config/sections/db.yaml",
+      "hash": "sha256:6afb9de5f4fc945781cc9e243baa6efe9dc58a6a39604b06d8c5dbf0f4883e5c",
+      "classification": "UnverifiedDeprecated"
+    }
+  ]
+}

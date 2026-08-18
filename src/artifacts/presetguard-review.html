@@ -1,0 +1,1020 @@
+<title>PRESETGUARD 리뷰 기록</title>
+<style>
+  :root {
+    /* 콘솔 하우징 계열 — 차가운 쪽으로 치우친 중립색 */
+    --ground: #E9EBEE;
+    --surface: #FFFFFF;
+    --surface-2: #F3F5F7;
+    --inset: #1B1E24;
+    --inset-ink: #D6DBE2;
+    --ink: #16181D;
+    --ink-2: #3D4451;
+    --muted: #626B7C;
+    --line: #D2D7DE;
+    --line-2: #C0C7D1;
+
+    --accent: #0F6E8C;
+    --accent-soft: #DCEAF0;
+
+    --sev-high: #A32219;
+    --sev-high-bg: #F7E3E1;
+    --sev-med: #9C5D00;
+    --sev-med-bg: #F8ECD9;
+    --sev-low: #4A5568;
+    --sev-low-bg: #E5E8ED;
+    --ok: #1B7A57;
+    --ok-bg: #DCEEE6;
+
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
+            Pretendard, "Noto Sans KR", "Malgun Gothic", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Mono",
+            D2Coding, "Noto Sans Mono CJK KR", monospace;
+
+    --r: 3px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #121419;
+      --surface: #1A1D24;
+      --surface-2: #21252D;
+      --inset: #0C0E12;
+      --inset-ink: #C4CBD5;
+      --ink: #E6EAF0;
+      --ink-2: #B4BCC9;
+      --muted: #8A94A4;
+      --line: #2C313B;
+      --line-2: #3A404C;
+
+      --accent: #4FB4D4;
+      --accent-soft: #14313D;
+
+      --sev-high: #E8756A;
+      --sev-high-bg: #341A18;
+      --sev-med: #D9A44F;
+      --sev-med-bg: #2F2618;
+      --sev-low: #93A0B4;
+      --sev-low-bg: #23272F;
+      --ok: #5FC59C;
+      --ok-bg: #16302A;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #121419;
+    --surface: #1A1D24;
+    --surface-2: #21252D;
+    --inset: #0C0E12;
+    --inset-ink: #C4CBD5;
+    --ink: #E6EAF0;
+    --ink-2: #B4BCC9;
+    --muted: #8A94A4;
+    --line: #2C313B;
+    --line-2: #3A404C;
+
+    --accent: #4FB4D4;
+    --accent-soft: #14313D;
+
+    --sev-high: #E8756A;
+    --sev-high-bg: #341A18;
+    --sev-med: #D9A44F;
+    --sev-med-bg: #2F2618;
+    --sev-low: #93A0B4;
+    --sev-low-bg: #23272F;
+    --ok: #5FC59C;
+    --ok-bg: #16302A;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 24px 96px;
+  }
+
+  /* ── 헤더 ───────────────────────────────── */
+  .masthead {
+    border-bottom: 2px solid var(--ink);
+    padding: 56px 0 20px;
+    margin-bottom: 40px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    font-weight: 640;
+    margin: 0 0 16px;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 17px;
+    color: var(--ink-2);
+    margin: 0;
+    max-width: 62ch;
+  }
+  .masthead-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    margin-top: 24px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .masthead-meta b {
+    color: var(--ink-2);
+    font-weight: 600;
+  }
+
+  /* ── 요약 보드 ───────────────────────────── */
+  .board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .tile {
+    background: var(--surface);
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .tile-label {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .tile-value {
+    font-family: var(--mono);
+    font-size: 27px;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .tile-note {
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .tile.is-ok .tile-value { color: var(--ok); }
+  .tile.is-high .tile-value { color: var(--sev-high); }
+  .tile-value .frac { font-size: 16px; color: var(--muted); }
+
+  .verdict {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--ok);
+    border-radius: var(--r);
+    padding: 16px 20px;
+    margin-bottom: 52px;
+  }
+  .verdict-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ok);
+    font-weight: 700;
+    padding-top: 3px;
+    white-space: nowrap;
+  }
+  .verdict p { margin: 0; font-size: 14.5px; color: var(--ink-2); }
+
+  /* ── 섹션 ───────────────────────────────── */
+  section { margin-bottom: 60px; }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    border-bottom: 1px solid var(--line-2);
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  h2 {
+    font-size: 21px;
+    font-weight: 640;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .sec-sub {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .sec-intro {
+    font-size: 14.5px;
+    color: var(--ink-2);
+    margin: 14px 0 26px;
+    max-width: 68ch;
+  }
+
+  /* ── 결함 카드 ───────────────────────────── */
+  .findings { display: flex; flex-direction: column; gap: 14px; }
+
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--sev-low);
+    border-radius: var(--r);
+    padding: 18px 22px 20px;
+  }
+  .finding.sev-high { border-left-color: var(--sev-high); }
+  .finding.sev-med { border-left-color: var(--sev-med); }
+
+  .f-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .f-id {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .chip {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .chip-high { background: var(--sev-high-bg); color: var(--sev-high); }
+  .chip-med { background: var(--sev-med-bg); color: var(--sev-med); }
+  .chip-low { background: var(--sev-low-bg); color: var(--sev-low); }
+  .chip-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--line-2);
+    font-weight: 600;
+  }
+
+  .f-title {
+    font-size: 16.5px;
+    font-weight: 620;
+    line-height: 1.4;
+    margin: 0 0 12px;
+    text-wrap: balance;
+  }
+  .f-body { font-size: 14.5px; color: var(--ink-2); }
+  .f-body p { margin: 0 0 10px; }
+  .f-body p:last-child { margin-bottom: 0; }
+  .f-body strong { color: var(--ink); font-weight: 640; }
+
+  .f-meta {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 16px;
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line-2);
+    font-size: 13px;
+  }
+  .f-meta dt {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-top: 3px;
+  }
+  .f-meta dd { margin: 0; color: var(--ink-2); }
+
+  code, .loc {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 1px 5px;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  /* ── 판독 패널: 기계가 말한 것 ─────────────── */
+  .readout {
+    background: var(--inset);
+    color: var(--inset-ink);
+    border-radius: var(--r);
+    margin: 14px 0 4px;
+    overflow: hidden;
+    border: 1px solid var(--line-2);
+  }
+  .readout-cap {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #7F8B9C;
+    padding: 9px 16px;
+    border-bottom: 1px solid #2A2F38;
+    background: #15181E;
+  }
+  .readout pre {
+    margin: 0;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    white-space: pre;
+  }
+  .readout .hi { color: #E8756A; font-weight: 600; }
+  .readout .go { color: #5FC59C; }
+  .readout .dim { color: #6B7686; }
+
+  /* ── 표 ─────────────────────────────────── */
+  .table-scroll { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.m { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+  td.ok { color: var(--ok); }
+  td.bad { color: var(--sev-high); }
+
+  /* ── 목록 ───────────────────────────────── */
+  .plainlist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .plainlist li {
+    font-size: 14.5px;
+    color: var(--ink-2);
+    padding-left: 20px;
+    position: relative;
+  }
+  .plainlist li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 8px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .note-card {
+    background: var(--accent-soft);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 18px 22px;
+    font-size: 14.5px;
+    color: var(--ink-2);
+  }
+  .note-card p { margin: 0 0 10px; }
+  .note-card p:last-child { margin-bottom: 0; }
+  .note-card strong { color: var(--ink); }
+
+  footer {
+    border-top: 1px solid var(--line-2);
+    padding-top: 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 0 16px 64px; }
+    .masthead { padding-top: 36px; }
+    .f-meta { grid-template-columns: 1fr; gap: 2px; }
+    .f-meta dt { padding-top: 8px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">독립 리뷰 · 읽기 전용 · 2라운드</p>
+    <h1>Position 프리셋 덮어쓰기 가드</h1>
+    <p class="standfirst">
+      되돌릴 수 없는 프리셋 덮어쓰기를 막는 가드에 대한 독립 감사 기록.
+      결함을 찾는 것이 목적이고, 통과를 승인하는 것이 목적이 아니다.
+      코드는 한 줄도 수정하지 않았다.
+    </p>
+    <div class="masthead-meta">
+      <span>SPEC <b>COPILOT-PRESETGUARD-001</b></span>
+      <span>1라운드 <b>237c4db</b></span>
+      <span>2라운드 <b>ca0294c</b></span>
+      <span>대상 <b>server/web/session.py</b></span>
+    </div>
+  </header>
+
+  <div class="board">
+    <div class="tile">
+      <span class="tile-label">1라운드 결함</span>
+      <span class="tile-value">9</span>
+      <span class="tile-note">전건 수용 · 반박 0 · 하향 0</span>
+    </div>
+    <div class="tile is-ok">
+      <span class="tile-label">실행 재현</span>
+      <span class="tile-value">6</span>
+      <span class="tile-note">코드 추론이 아니라 세션을 돌려 관측</span>
+    </div>
+    <div class="tile is-ok">
+      <span class="tile-label">2라운드 폐쇄</span>
+      <span class="tile-value">9<span class="frac">/9</span></span>
+      <span class="tile-note">코드 수준 전건 · 눈속임 폐쇄 없음</span>
+    </div>
+    <div class="tile is-high">
+      <span class="tile-label">2라운드 신규</span>
+      <span class="tile-value">4</span>
+      <span class="tile-note">증거 무결성 1 · 수정이 만든 회귀 3</span>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <span class="verdict-tag">차단 없음</span>
+    <p>
+      2라운드 신규 결함 3건은 전부 <strong>쓰기 0건 방향</strong>이라 비가역 손실을 만들지 않는다.
+      남은 필수 항목은 코드가 아니라 <strong>뮤테이션 로그 재실행</strong> 하나다 —
+      완료 조건이 요구하는 RED 관측 증거가 커밋된 트리와 어긋나 있다.
+    </p>
+  </div>
+
+  <section>
+    <div class="sec-head">
+      <h2>왜 이 가드가 필요했나</h2>
+      <span class="sec-sub">배경</span>
+    </div>
+    <p class="sec-intro">
+      가드가 정확히 뒤집혀 있었다. 운영자가 프리셋 번호를 <em>직접 지목한</em> 경로에는
+      점유 검사가 한 번도 없었고, 번호를 말하지 않은 경로만 빈 구간을 확인했다.
+      <code>Store Preset</code>은 경고 없이 덮어쓰고 이 앱에는 프리셋 복원 경로가 없다.
+      오타 한 글자가 열 개 슬롯을 복구 불가하게 지운다.
+      <strong>가장 확신을 갖고 행동한 운영자가 가장 보호받지 못했다.</strong>
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>1라운드 — 결함 9건</h2>
+      <span class="sec-sub">237c4db · 694줄 추가</span>
+    </div>
+    <p class="sec-intro">
+      등급은 실행 여부에 따라 갈렸다. 코드 추론만으로 매긴 잠정 등급 2건은
+      실제로 돌려본 뒤 <strong>상향 정정</strong>했다.
+    </p>
+
+    <div class="findings">
+
+      <article class="finding sev-high">
+        <div class="f-top">
+          <span class="f-id">F1</span>
+          <span class="chip chip-high">HIGH</span>
+          <span class="chip chip-ghost">실행 재현</span>
+        </div>
+        <p class="f-title">평범한 한국어가 승낙으로 읽혀 프리셋 10개가 덮여 썼다</p>
+        <div class="f-body">
+          <p>
+            승낙 판정이 <code>확인 · 네 · 예 · 응</code> 같은 토큰을 <strong>부분 문자열</strong>로 찾았다.
+            이 글자들은 평범한 한국어 단어의 조각이라, 승낙이 아닌 문장이 승낙으로 삼켜졌다.
+          </p>
+        </div>
+        <div class="readout">
+          <div class="readout-cap">확인 카드 답변 → 판정 (10문장 중 5건이 승낙)</div>
+<pre>'잠깐 확인해보고요'    → <span class="hi">confirmed</span>   (확인)
+'안 되네요'           → <span class="hi">confirmed</span>   (네)
+'예전 값으로 되돌려줘'  → <span class="hi">confirmed</span>   (예)
+'네가 판단해'          → <span class="hi">confirmed</span>   (네)
+'확인 안 했어요'       → <span class="hi">confirmed</span>   (확인)
+<span class="dim">'그건 좀 위험한데요'     → declined</span>
+<span class="dim">'일단 보류'            → declined</span></pre>
+        </div>
+        <div class="readout">
+          <div class="readout-cap">세션 실행 — "잠깐 확인해보고요" 한 마디의 결과</div>
+<pre>writes = <span class="hi">10</span>
+reply  = "… 덮어쓰기 승인: 2.21, 2.22, 2.27. …"</pre>
+        </div>
+        <dl class="f-meta">
+          <dt>위치</dt><dd><span class="loc">session.py:1723</span> · 판정 <span class="loc">:3019</span></dd>
+          <dt>시나리오</dt><dd>운영자가 "확인해보고 오겠다"는 뜻으로 답 → 승낙으로 읽혀 프리셋 3개 소멸</dd>
+          <dt>테스트</dt><dd>자유 입력을 먹이는 테스트가 0건 — fail-closed 분기가 실행조차 안 됨</dd>
+        </dl>
+      </article>
+
+      <article class="finding sev-high">
+        <div class="f-top">
+          <span class="f-id">F2</span>
+          <span class="chip chip-high">HIGH</span>
+          <span class="chip chip-ghost">실행 재현</span>
+        </div>
+        <p class="f-title">"2번째"라고 답하면 후보에 없던 구간에 저장됐다</p>
+        <div class="f-body">
+          <p>
+            재생성 구간 선택 답을 <strong>후보 목록과 대조하지 않았다.</strong>
+            첫 숫자만 뽑아 쓰는 바람에, 순서를 뜻하는 "2번째"가 슬롯 번호 2로 파싱됐다.
+          </p>
+        </div>
+        <div class="readout">
+          <div class="readout-cap">후보 = 1 · 21 &nbsp;|&nbsp; 답변 = "2번째"</div>
+<pre>stores = <span class="hi">Store Preset 2.2 … 2.11</span>
+reply  = "지금 리그 배치로 기본 포지션 10개를
+          <span class="hi">같은 자리에</span> 다시 저장 요청했습니다"   ← 거짓</pre>
+        </div>
+        <div class="f-body">
+          <p>
+            기존 1–10 구간이 한 칸 밀린다. 2.1을 참조하던 큐만 <strong>옛 좌표에 남고</strong>,
+            2.11은 새로 덮여 쓴다. 그 위에서 회신은 "같은 자리"라고 말한다.
+          </p>
+        </div>
+        <dl class="f-meta">
+          <dt>위치</dt><dd><span class="loc">session.py:3140</span></dd>
+          <dt>비대칭</dt><dd>"두 번째"(한글)는 숫자가 없어 안전하게 거부 — 아라비아 숫자로 쓸 때만 위험</dd>
+        </dl>
+      </article>
+
+      <article class="finding sev-med">
+        <div class="f-top">
+          <span class="f-id">F3</span>
+          <span class="chip chip-med">MED-HIGH</span>
+          <span class="chip chip-ghost">실행 재현</span>
+        </div>
+        <p class="f-title">되읽기가 실패한 덮어쓰기를 구조적으로 감지할 수 없었다</p>
+        <div class="f-body">
+          <p>
+            저장 후 되읽기가 <strong>슬롯 존재 여부만</strong> 확인했다.
+            원래 차 있던 슬롯은 새 값이 들어갔든 아니든 똑같이 "있음"으로 보인다.
+          </p>
+        </div>
+        <div class="readout">
+          <div class="readout-cap">풀이 전혀 변하지 않은 리그 (아무것도 착지하지 않음)</div>
+<pre>pool before = {21, 22, 27}
+pool after  = {21, 22, 27}      <span class="dim">← 변화 없음</span>
+reply       = "되읽기: 기대 10개 중 <span class="hi">3개 확인</span>; 미확인 2.23 …"</pre>
+        </div>
+        <div class="f-body">
+          <p>
+            SPEC이 스스로 규탄한 <em>"미상을 검증됨으로 위장"</em>이 되읽기에서 재발한 형태다.
+            그리고 <strong>덮어쓸 슬롯이 많을수록 거짓 확인도 많아진다</strong> — 하필 이 가드가 존재하는 이유인 경로에서.
+          </p>
+        </div>
+        <dl class="f-meta">
+          <dt>위치</dt><dd><span class="loc">session.py:3091</span></dd>
+          <dt>테스트 공백</dt><dd>되읽기 테스트가 전부 겹치지 않는 풀 <code>(1,2,3)</code>을 써서 이 경우를 통과</dd>
+        </dl>
+      </article>
+
+      <article class="finding sev-high">
+        <div class="f-top">
+          <span class="f-id">F4</span>
+          <span class="chip chip-high">HIGH</span>
+          <span class="chip chip-ghost">MED에서 상향</span>
+        </div>
+        <p class="f-title">숫자 하나 차이로 확인 카드가 통째로 사라졌다</p>
+        <div class="f-body">
+          <p>
+            번호를 지목한 재생성 문장이 신규 저장 경로로 넘어갔고, 그 경로는 풀 판독 실패 시
+            <strong>충돌 계산 전에 빠져나가</strong> 카드를 띄우지 않는다.
+          </p>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>같은 의도, 숫자만 다름</th><th>경로</th><th>카드</th><th>쓰기</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="m">기본 포지션 다시 잡아줘</td>
+                <td>재생성</td><td class="m">—</td>
+                <td class="m ok">0건 · 거부</td>
+              </tr>
+              <tr>
+                <td class="m">21번부터 기본 포지션 다시 잡아줘</td>
+                <td>신규 저장</td>
+                <td class="m bad">0회</td>
+                <td class="m bad">10건 · 2.21~2.30</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <dl class="f-meta">
+          <dt>위치</dt><dd><span class="loc">session.py:3115</span> · 가드 <span class="loc">:2993</span></dd>
+          <dt>정정 사유</dt><dd>처음엔 "더 느슨한 규칙으로 샌다"로 MED. 실행해 보니 <strong>질문 절차 자체가 0회</strong>여서 HIGH로 상향</dd>
+        </dl>
+      </article>
+
+      <article class="finding sev-med">
+        <div class="f-top">
+          <span class="f-id">F5</span>
+          <span class="chip chip-med">MED</span>
+          <span class="chip chip-ghost">실행 재현</span>
+        </div>
+        <p class="f-title">앱이 방금 요청받은 일을 먼저 하라고 되돌려줬다</p>
+        <div class="f-body">
+          <p>재생성 정규식의 꼬리가 열려 있어, <code>다시</code>가 엉뚱한 동사에 붙은 문장까지 끌려왔다.</p>
+        </div>
+        <div class="readout">
+          <div class="readout-cap">자기모순 회신</div>
+<pre>사용자 : "<span class="go">기본 포지션 10개 저장해줘</span>, 끝나면 다시 알려줘"
+앱     : "…다시 잡을 자리가 없습니다 —
+          먼저 '<span class="hi">기본 포지션 10개 저장</span>'을 실행해 주세요"</pre>
+        </div>
+        <div class="f-body">
+          <p>같은 문장으로 재입력하면 같은 답이 무한 반복된다. 풀에 10칸 구간이 있으면
+          <strong>사용자가 언급한 적 없는 구간</strong>을 덮어쓰겠다는 카드가 대신 뜬다.</p>
+        </div>
+        <dl class="f-meta">
+          <dt>위치</dt><dd><span class="loc">session.py:1591</span></dd>
+        </dl>
+      </article>
+
+      <article class="finding sev-med">
+        <div class="f-top">
+          <span class="f-id">F6</span>
+          <span class="chip chip-med">MED</span>
+          <span class="chip chip-ghost">코드는 정상</span>
+        </div>
+        <p class="f-title">설계가 가장 힘주어 적은 결정에 회귀 보호가 없었다</p>
+        <div class="f-body">
+          <p>
+            카드에 손으로 친 번호도 가드에 걸린다 — 직접 돌려 확인했다.
+            문제는 <strong>저장소 안에 그 상황을 태우는 테스트가 없다</strong>는 것이다.
+            가드를 원래 자리(명시 번호 갈래 안)로 되돌려도 스위트 전건이 통과한다.
+          </p>
+          <p>
+            설계 문서는 이 '출처 무관' 조항이 <em>가드의 위치를 결정한다</em>고 못박아 뒀다.
+            가장 강조된 결정이 정작 핀을 못 받고 있었다.
+          </p>
+        </div>
+        <dl class="f-meta">
+          <dt>분류</dt><dd>코드 결함 아님 — 테스트 공백</dd>
+        </dl>
+      </article>
+
+      <article class="finding sev-med">
+        <div class="f-top">
+          <span class="f-id">F7</span>
+          <span class="chip chip-med">MED</span>
+          <span class="chip chip-ghost">LOW-MED에서 상향</span>
+        </div>
+        <p class="f-title">오지 않을 승인을 기다리라고 안내했다</p>
+        <div class="f-body">
+          <p>
+            게이트가 <code>blocked</code> · <code>rejected</code>로 차단한 저장을
+            "승인 대기 — <strong>승인 후 반영</strong>"으로 렌더했다. 그 저장은 절대 반영되지 않는다.
+          </p>
+          <p>
+            처음엔 "SPEC 문구 탓, 구현은 충실"로 판단했다. 다시 읽으니 인수 기준이 요구한 것은
+            <strong>분류</strong>였지 <strong>문면</strong>이 아니었다 — 문면까지 끌고 간 것은 구현의 선택이다.
+            이 정정으로 리드가 내렸던 "손대지 말라"는 지시가 철회되고 수정 범위에 편입됐다.
+          </p>
+        </div>
+        <dl class="f-meta">
+          <dt>위치</dt><dd><span class="loc">session.py:1717</span> · 렌더 <span class="loc">:3096</span></dd>
+          <dt>부수 확인</dt><dd>다섯 상태 중 <code>held</code> · <code>locked</code>는 실제로 대입되는 곳이 없는 죽은 멤버</dd>
+        </dl>
+      </article>
+
+      <article class="finding">
+        <div class="f-top">
+          <span class="f-id">F8</span>
+          <span class="chip chip-low">LOW</span>
+        </div>
+        <p class="f-title">회신 조립이 두 곳에 복제돼 있었다 — 29줄 중 24줄이 동일</p>
+        <div class="f-body">
+          <p>
+            신규 저장과 재생성의 회신 꼬리가 텍스트 5줄만 다르고 나머지는 바이트 동일했다.
+            실질 영향은 <strong>F7의 문구를 고치려면 두 곳을 똑같이 고쳐야 한다</strong>는 것 —
+            설계 문서가 저장 루프에 대해 경고했던 드리프트 표면이 그대로 남아 있었다.
+          </p>
+        </div>
+      </article>
+
+      <article class="finding">
+        <div class="f-top">
+          <span class="f-id">F9</span>
+          <span class="chip chip-low">LOW</span>
+        </div>
+        <p class="f-title">테스트 리그의 계약이 한 경로에서 거짓이었다</p>
+        <div class="f-body">
+          <p>
+            리그는 "첫 판독 = 가드"라고 선언했지만, 카드 경로는 다른 헬퍼가 풀을 먼저 읽어
+            <strong>가드가 되읽기 값을 본다.</strong> 두 값의 기본값이 같아 조용히 통과하고 있었다.
+          </p>
+          <p>
+            왕복 횟수보다 이쪽이 문제였다 — F6의 공백을 메우려는 다음 사람이 정확히 이 함정에 빠진다.
+          </p>
+        </div>
+        <div class="readout">
+          <div class="readout-cap">풀 판독 횟수 실측</div>
+<pre>명시 번호 저장 : 2회
+카드 경로 저장 : <span class="hi">3회</span>   <span class="dim">← free_starts + 가드 + 되읽기</span>
+재생성         : 2회</pre>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>2라운드 — 폐쇄 확인</h2>
+      <span class="sec-sub">ca0294c · 411줄 추가 · 62줄 삭제</span>
+    </div>
+    <p class="sec-intro">
+      판정 기준은 하나였다. <strong>단정을 뒤집지 않고 통과하는 것은 수정이 아니다.</strong>
+      1라운드에서 쓴 프로브를 그대로 새 커밋에 걸었고, 결함 동작이 사라졌다면 프로브가 실패해야 한다.
+    </p>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>프로브</th><th>대상</th><th>새 커밋 결과</th><th>판정</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="m">ambiguous_free_text_read_as_consent</td><td class="m">F1</td><td class="m bad">FAILED</td><td class="ok">닫힘</td></tr>
+          <tr><td class="m">span_answer_not_validated</td><td class="m">F2</td><td class="m bad">FAILED</td><td class="ok">닫힘</td></tr>
+          <tr><td class="m">preoccupied_slot_reported_confirmed</td><td class="m">F3</td><td class="m bad">FAILED</td><td class="ok">닫힘</td></tr>
+          <tr><td class="m">f4_number_writes_blind</td><td class="m">F4</td><td class="m bad">FAILED</td><td class="ok">닫힘</td></tr>
+          <tr><td class="m">f5_refused_as_regeneration</td><td class="m">F5</td><td class="m bad">FAILED</td><td class="ok">닫힘</td></tr>
+          <tr><td class="m">f5_offers_unrelated_span</td><td class="m">F5</td><td class="m bad">FAILED</td><td class="ok">닫힘</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="sec-intro" style="margin-top:22px">
+      F3은 내가 사전에 <em>허용 가능</em>이라고 선언해 둔 <strong>정직한 기권</strong> 쪽으로 갔다 —
+      사전 점유 슬롯을 확인 수에서 빼고 "값이 바뀌었는지 콘솔에서 읽을 수 없습니다"라고 적는다.
+      불가라고 못 박았던 "산술은 두고 테스트만 겹치지 않는 풀로" 쪽이 아니다.
+      F9 리그 계약은 세 경로 전부에서 참임을 실측했다.
+    </p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>2라운드 — 신규 결함 4건</h2>
+      <span class="sec-sub">수정이 무엇을 깨뜨렸나</span>
+    </div>
+
+    <div class="findings">
+
+      <article class="finding sev-high">
+        <div class="f-top">
+          <span class="f-id">R1</span>
+          <span class="chip chip-high">HIGH</span>
+          <span class="chip chip-ghost">증거 무결성 · 코드 아님</span>
+        </div>
+        <p class="f-title">뮤테이션 로그가 커밋된 트리와 일치하지 않는다</p>
+        <div class="f-body">
+          <p>보고된 것은 "19건 RED"였지만, 디스크의 로그는 다르게 적고 있다.</p>
+        </div>
+        <div class="readout">
+          <div class="readout-cap">mutations.log — F계열 최종 요약</div>
+<pre><span class="hi">APPLY-FAILED</span> F1    승낙을 부분 문자열 매칭으로 되돌림
+<span class="hi">APPLY-FAILED</span> F1b   자유 입력 → 거절 낙하를 제거
+<span class="hi">SURVIVED</span>     F2    후보 대조를 제거하고 첫 숫자를 그대로 씀
+RED          F3 · F4 · F5 · F6 · F7 · F9
+
+<span class="hi">RED 6/9</span></pre>
+        </div>
+        <div class="f-body">
+          <p>
+            여기서 멈추지 않고 <strong>로그가 낡은 것인지 코드가 깨진 것인지</strong>를 갈랐다.
+            두 뮤테이션의 표적 문자열은 지금 소스에 그대로 있고(재실행하면 적용된다),
+            저장소를 수정하지 않고 런타임 몽키패치로 <strong>똑같은 치환</strong>을 걸어 재현했다.
+          </p>
+        </div>
+        <div class="readout">
+          <div class="readout-cap">뮤테이션 재현 — 현행 테스트가 실제로 잡는가</div>
+<pre>F1 뮤테이션 (부분 문자열 매칭 복원)
+  '잠깐 확인해보고요'   writes=<span class="hi">10</span>   <span class="go">→ 테스트 RED</span>
+  '안 되네요'          writes=<span class="hi">10</span>   <span class="go">→ 테스트 RED</span>
+
+F2 뮤테이션 (후보 대조 제거)
+  '2번째'             writes=<span class="hi">10</span>   <span class="go">→ 테스트 RED</span>
+  '1번 말고 21번'      writes=<span class="hi">10</span>   <span class="go">→ 테스트 RED</span></pre>
+        </div>
+        <div class="f-body">
+          <p>
+            <strong>코드는 이상 없다.</strong> 두 성질 모두 현행 테스트가 실제로 고정한다.
+            로그의 <code>SURVIVED</code>는 저자가 스스로 공허했다고 보고한 <em>이전 버전</em>의 테스트에서 나온 결과이고,
+            테스트를 고친 뒤 재실행되지 않았다. F1은 아예 증거가 없다.
+          </p>
+          <p>
+            완료 조건은 뮤테이션 필수 항목에 <strong>RED 관측 증거</strong>를 요구한다.
+            로그를 재실행하기 전까지 그 조건은 문서상 미충족이다.
+          </p>
+        </div>
+        <dl class="f-meta">
+          <dt>조치</dt><dd>F계열 뮤테이션 재실행 + 로그 갱신 — 코드 수정 불필요</dd>
+        </dl>
+      </article>
+
+      <article class="finding sev-med">
+        <div class="f-top">
+          <span class="f-id">R2</span>
+          <span class="chip chip-med">MED-HIGH</span>
+          <span class="chip chip-ghost">17문장 실행</span>
+        </div>
+        <p class="f-title">이제 정당한 승낙이 사실상 전부 거절된다</p>
+        <div class="f-body">
+          <p>
+            F1의 수정 방향은 옳다 — 완전 일치만 승낙으로 인정한다. 그런데 인정 목록이 14개 토큰뿐이라,
+            운영자가 실제로 칠 법한 문장이 전멸한다.
+          </p>
+        </div>
+        <div class="readout">
+          <div class="readout-cap">충돌 리그에서 승낙 의도로 답한 17문장 → 전건 writes=0</div>
+<pre>넵 · 네네 · 예예 · 좋아요 · 그래 · 진행해줘 · 진행해주세요
+진행할게요 · 덮어써줘 · <span class="hi">덮어쓰기 진행해줘</span> · 덮어쓸게요
+응응 · ㅇㅇ · yes please · OK 진행 · 네 진행해주세요
+확인했습니다 진행해주세요</pre>
+        </div>
+        <div class="f-body">
+          <p>
+            <strong>버튼 라벨 그대로에 "해줘" 두 글자가 붙은 것도 막힌다.</strong>
+            방향은 안전하지만(쓰기 0건) 두 가지 실질 비용이 있다.
+          </p>
+        </div>
+        <ul class="plainlist">
+          <li>자유 입력으로는 의도한 덮어쓰기를 <strong>완료할 수 없다.</strong> 버튼을 누르거나 토큰을 정확히 맞혀야 한다.</li>
+          <li>회신이 원인을 잘못 귀속한다 — "승인받지 못해"는 <strong>운영자가 거절한 것처럼</strong> 읽힌다.
+            침묵 · 거절은 구별하면서, 새로 생긴 세 번째 상태(<em>답을 알아듣지 못함</em>)를 거절에 합쳤다.</li>
+        </ul>
+        <div class="f-body" style="margin-top:12px">
+          <p>
+            그리고 이것이 <strong>세 번째 공허성</strong>이다. 비공허성 짝 테스트의 코퍼스가
+            구현의 토큰 목록 그 자체여서, 위 17건이 전부 막히는 상태가 스위트에 아무 신호도 남기지 않는다.
+            구현에서 도출한 기준으로 구현을 검증하고 있다.
+          </p>
+        </div>
+      </article>
+
+      <article class="finding sev-med">
+        <div class="f-top">
+          <span class="f-id">R3</span>
+          <span class="chip chip-med">MED</span>
+          <span class="chip chip-ghost">내 지적의 비용</span>
+        </div>
+        <p class="f-title">꼬리를 묶으면서 자연스러운 재생성 문장이 빠져나갔다</p>
+        <div class="f-body">
+          <p><code>다시</code>와 동사 사이에 단어가 하나만 껴도 매치가 깨진다.</p>
+        </div>
+        <div class="readout">
+          <div class="readout-cap">재생성 라우팅</div>
+<pre>기본 포지션 다시 잡아줘              <span class="go">regen=True</span>   <span class="dim">← 인수 코퍼스</span>
+지금 배치로 기본 포지션 다시 잡아줘    <span class="go">regen=True</span>   <span class="dim">← 인수 코퍼스</span>
+기본 포지션 프리셋 재생성해줘         <span class="go">regen=True</span>   <span class="dim">← 인수 코퍼스</span>
+기본 포지션 프리셋을 다시 만들어줘     <span class="go">regen=True</span>
+기본 포지션 <span class="hi">다시 한번</span> 잡아줘         <span class="hi">regen=False</span>
+기본 포지션 프리셋 <span class="hi">다시 좀</span> 잡아줘      <span class="hi">regen=False</span></pre>
+        </div>
+        <div class="f-body">
+          <p>
+            빠져나간 두 문장은 신규 저장 경로로 가서 <strong>새 구간에 저장</strong>한다.
+            재생성 경로가 존재하는 이유가 바로 그것을 막기 위해서다 —
+            새 번호에 저장하면 기존 큐는 옛 좌표를 계속 가리킨다.
+          </p>
+          <p>
+            1라운드에서 F5를 지적하며 내가 "꼬리를 묶으면 된다"고 방향까지 적었고,
+            그 방향이 정확히 이 과소 포착을 만들었다. <strong>내 지적의 비용으로 기록한다.</strong>
+          </p>
+        </div>
+      </article>
+
+      <article class="finding sev-med">
+        <div class="f-top">
+          <span class="f-id">R4</span>
+          <span class="chip chip-med">MED</span>
+        </div>
+        <p class="f-title">자기모순 회신이 형태를 바꿔 돌아왔다</p>
+        <div class="f-body">
+          <p>
+            재생성 동사 목록에 <code>저장</code>이 들어갔다.
+            <code>잡 · 만들 · 생성 · 갱신</code>은 재생성 동사지만 <strong><code>저장</code>은 신규 저장 동사다.</strong>
+          </p>
+        </div>
+        <div class="readout">
+          <div class="readout-cap">"기본 포지션 프리셋 21번부터 다시 저장해줘"</div>
+<pre>풀 = {21…25}  <span class="dim">(첫 시도가 부분 착지)</span>
+  → writes=0 · "…찾지 못해… 먼저 '기본 포지션 10개 저장'을 실행해 주세요"
+
+풀 = {1,2,3}  <span class="dim">(아직 아무것도 없음)</span>
+  → writes=0 · 동일한 회신</pre>
+        </div>
+        <div class="f-body">
+          <p>
+            첫 경우가 실무적으로 더 나쁘다. <strong>첫 저장이 부분 착지하면 그 구간은 정의상 10칸 연속이 아니므로,
+            가장 자연스러운 재시도 표현이 영구히 거부된다.</strong>
+            게이트 보류나 일부 거절이 났을 때가 정확히 그 상황이다.
+          </p>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>확인하지 않은 것</h2>
+      <span class="sec-sub">negative space</span>
+    </div>
+    <p class="sec-intro">
+      증거 부재는 성공의 증거가 아니다. 아래는 이 리뷰가 <strong>보지 않은</strong> 범위다.
+    </p>
+    <ul class="plainlist">
+      <li>전체 테스트 스위트 · 린트 · 범위 봉인 — 리드가 직접 실행했다기에 재실행하지 않았다.</li>
+      <li>SPEC 아티팩트 본문 646줄 — 인수 기준 정의와 보존 조항, 완료 조건만 읽었다.</li>
+      <li>인수 기준 계열 뮤테이션 10건 — 로그의 RED 기록을 그대로 받았고 재현하지 않았다. 재현한 것은 F1 · F2 둘뿐이다.</li>
+      <li>재조준됐다고 전해 들은 두 뮤테이션이 <em>무엇을</em> 겨누는지 — 로그에 흔적이 없어 판정하지 못했다.</li>
+      <li>라이브 콘솔 접근 0회 (SPEC이 금지) · 기하 계산 · 안전 게이트 내부 · 성능 · 동시성.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>등급 정정 기록</h2>
+      <span class="sec-sub">2건 · 둘 다 상향</span>
+    </div>
+    <div class="note-card">
+      <p>
+        <strong>F4</strong> MED → HIGH · <strong>F7</strong> LOW-MED → MED.
+        둘 다 <strong>실행 전 코드 추론으로 매긴 잠정 등급이 낮았던 경우</strong>다.
+      </p>
+      <p>
+        1라운드 보고에서 "정정 2건은 둘 다 상향이며 하향된 건 없습니다"라고 적었고,
+        <strong>일방향 래칫을 미덕으로 읽지 말라</strong>는 지적을 받았다. 맞는 지적이다 —
+        등급은 증거를 따라가야지 꼼꼼함을 증명하는 도구가 아니다.
+        추론 등급이 낮아서 상향이 나왔다면, 같은 원인으로 <em>높게</em> 매기는 경우도 같은 빈도로 나와야 정상이다.
+        2라운드에서 하향 사유를 찾지 못한 것은 결과일 뿐 성과가 아니며,
+        R3 · R4는 애초에 내 지적이 만든 회귀다.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    독립 리뷰 · 읽기 전용 · 저장소 무변경 · 프로브 7개는 세션 스크래치패드에만 존재<br>
+    1라운드 237c4db · 2라운드 ca0294c · SPEC-COPILOT-PRESETGUARD-001
+  </footer>
+
+</div>

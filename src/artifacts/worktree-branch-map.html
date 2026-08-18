@@ -1,0 +1,113 @@
+<title>AI-Lighting_Console — 워크트리·브랜치 지도</title>
+<style>
+:root{
+  --bg:#f7f8f6; --surface:#ffffff; --ink:#1f231e; --muted:#67705f;
+  --line:#dde2d8; --accent:#3f7d4e; --accent-ink:#2c5e39;
+  --hot:#b45309; --stale:#8a8577; --code-bg:#edf0e9;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#131711; --surface:#1b211a; --ink:#e6ebe1; --muted:#9aa591;
+    --line:#2f3a2c; --accent:#6fbf8f; --accent-ink:#8fd3a9;
+    --hot:#e09b4a; --stale:#8a8577; --code-bg:#242c22; }
+}
+:root[data-theme="dark"]{ --bg:#131711; --surface:#1b211a; --ink:#e6ebe1; --muted:#9aa591;
+  --line:#2f3a2c; --accent:#6fbf8f; --accent-ink:#8fd3a9;
+  --hot:#e09b4a; --stale:#8a8577; --code-bg:#242c22; }
+:root[data-theme="light"]{ --bg:#f7f8f6; --surface:#ffffff; --ink:#1f231e; --muted:#67705f;
+  --line:#dde2d8; --accent:#3f7d4e; --accent-ink:#2c5e39;
+  --hot:#b45309; --stale:#8a8577; --code-bg:#edf0e9; }
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Apple SD Gothic Neo","Pretendard","Noto Sans KR",-apple-system,sans-serif;
+  line-height:1.65;font-size:15.5px;}
+main{max-width:940px;margin:0 auto;padding:44px 24px 90px;}
+.eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-ink);font-weight:700;}
+h1{font-size:30px;line-height:1.25;margin:.3em 0 .2em;text-wrap:balance;font-weight:800;}
+.sub{color:var(--muted);margin:0 0 30px;max-width:64ch;}
+h2{font-size:20px;margin:2.4em 0 .6em;font-weight:800;}
+code{background:var(--code-bg);padding:.1em .35em;border-radius:4px;font-size:.87em;
+  font-family:"SF Mono",ui-monospace,Menlo,monospace;}
+table{border-collapse:collapse;width:100%;font-size:13.5px;}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:14px 0;}
+th{text-align:left;font-size:12px;letter-spacing:.04em;color:var(--muted);
+  border-bottom:2px solid var(--line);padding:9px 12px;white-space:nowrap;}
+td{border-bottom:1px solid var(--line);padding:8px 12px;vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap;}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 9px;border-radius:99px;white-space:nowrap;}
+.pill.active{color:var(--accent);border:1px solid var(--accent);}
+.pill.hot{color:var(--hot);border:1px solid var(--hot);}
+.pill.stale{color:var(--stale);border:1px solid var(--stale);}
+.tree{background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  padding:20px 22px;overflow-x:auto;margin:16px 0;
+  font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:13px;line-height:1.75;white-space:pre;}
+.tree b{color:var(--accent-ink);}
+.tree .h{color:var(--hot);font-weight:700;}
+.tree .m{color:var(--muted);}
+.callout{border-left:3px solid var(--hot);background:var(--surface);
+  padding:13px 17px;border-radius:0 8px 8px 0;margin:18px 0;font-size:14.5px;max-width:74ch;}
+.callout b{color:var(--hot);}
+p{max-width:72ch;}
+ul{padding-left:1.2em;max-width:72ch;} li{margin:.3em 0;}
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--muted);}
+</style>
+
+<main>
+<div class="eyebrow">AI-Lighting_Console · git 실측 · 2026-08-05</div>
+<h1>워크트리 · 브랜치 구조 지도</h1>
+<p class="sub">한 저장소가 <b>메인 폴더 1곳 + Orca 워크스페이스 17곳</b>, 총 18개 워크트리로 펼쳐져 있습니다. 기준점 main은 <code>b1a630e</code>(SPATIAL·GROUPGEN 머지 포함)입니다.</p>
+
+<div class="callout"><b>먼저, 질문에 대한 답:</b> "앱의 메인이 MCP로 되어 있다"는 것은 저장소의 기본 브랜치가 바뀐 게 아니라, <b>메인 폴더(원본 체크아웃)가 지금 <code>feature/SPEC-COPILOT-MCP-001</code> 브랜치를 체크아웃하고 있다</b>는 뜻입니다. 원격의 기본 브랜치는 여전히 <code>main</code>이고, 다른 워크트리들은 영향을 받지 않습니다.</div>
+
+<h2>1. 전체 배치</h2>
+<div class="tree">~/Documents/Claude/Code/<b>AI-Lighting_Console</b>          ← 메인 폴더 (원본)
+└─ 체크아웃: <span class="h">feature/SPEC-COPILOT-MCP-001</span> @ 5a64475   <span class="m">← 이 세션 + MCP 작업 세션</span>
+
+~/orca/workspaces/AI-Lighting_Console/               ← Orca가 만든 워크트리 17개
+├─ <b>axiscore</b>            spec/axiscore-001        @ b1a630e  <span class="m">= main과 동일 (막 시작)</span>
+├─ <b>truncate</b>            spec/truncate-001        @ b1a630e  <span class="m">= main과 동일 (막 시작)</span>
+├─ <b>writepath</b>           spec/writepath-001       @ 6f8d1fa  <span class="m">main +3 (WRITEGATE 판정 기록)</span>
+│   ├─ rev-boundary / rev-classify / rev-tests       <span class="m">↑ 같은 커밋을 보는 리뷰용 3개</span>
+├─ <b>e2e-live</b>            spec/introspect-001      @ c7780f5  <span class="m">main +17 — PR #23 충돌, 리베이스 대기</span>
+└─ (나머지 10개)          jjjh7401/*               <span class="m">8/2 세션에서 PR 머지 완료된 작업 잔재</span></div>
+
+<h2>2. 워크트리별 상세</h2>
+
+<h3>활성 — 지금 살아있는 작업</h3>
+<div class="tblwrap"><table>
+<tr><th>워크트리 폴더</th><th>브랜치</th><th>main 대비</th><th>상태</th></tr>
+<tr><td>(메인 폴더)</td><td><code>feature/SPEC-COPILOT-MCP-001</code></td><td class="num">+2 / base 구세대</td><td><span class="pill hot">작업 중</span> MCP 서버 plan (감사 1차 FAIL 0.78 후속)</td></tr>
+<tr><td>axiscore</td><td><code>spec/axiscore-001</code></td><td class="num">±0</td><td><span class="pill active">활성</span> main 최신에서 막 시작</td></tr>
+<tr><td>truncate</td><td><code>spec/truncate-001</code></td><td class="num">±0</td><td><span class="pill active">활성</span> main 최신에서 막 시작</td></tr>
+<tr><td>writepath</td><td><code>spec/writepath-001</code></td><td class="num">+3</td><td><span class="pill active">활성</span> WRITEGATE run-phase 판정 기록 (M0/M1/M3 완료, M2 SKIP)</td></tr>
+<tr><td>rev-boundary · rev-classify · rev-tests</td><td><code>review/rev-*</code> 3개</td><td class="num">+3 (동일 커밋)</td><td><span class="pill active">리뷰용</span> writepath와 같은 커밋을 3개 관점에서 보는 병렬 리뷰 자리</td></tr>
+<tr><td>e2e-live</td><td><code>spec/introspect-001</code></td><td class="num">+17 / −1</td><td><span class="pill hot">리베이스 대기</span> INTROSPECT run 완료·PR #23 충돌 → main 리베이스가 다음 할 일</td></tr>
+</table></div>
+
+<h3>잔재 — PR 머지 후 남은 워크트리 10개 (정리 후보)</h3>
+<p>8월 2일 세션에서 PR 11건이 머지될 때 쓰였던 Orca 작업 폴더들입니다. 각 브랜치의 커밋은 스쿼시 머지로 main에 이미 반영됐고, 워크트리만 남아 있습니다.</p>
+<div class="tblwrap"><table>
+<tr><th>워크트리 폴더</th><th>브랜치 (jjjh7401/*)</th><th>했던 일 (머지된 PR)</th></tr>
+<tr><td>tool-registration</td><td><code>tool-registration</code></td><td>미등록 툴 4종 등록 14→18 (#22)</td></tr>
+<tr><td>paperwork</td><td><code>paperwork</code></td><td>서류 3종 도구 (#13)</td></tr>
+<tr><td>executor-layout</td><td><code>executor-layout</code></td><td>실행기 레이아웃 플래너 (#18)</td></tr>
+<tr><td>live-cue-monitor</td><td><code>live-cue-monitor</code></td><td>큐 모니터 (#20)</td></tr>
+<tr><td>exec-state-visual</td><td><code>exec-state-visual</code></td><td>실행 상태 시각화 (#20 계열)</td></tr>
+<tr><td>runbook-mode</td><td><code>runbook-mode</code></td><td>자원봉사자 런북 모드</td></tr>
+<tr><td>preshow-check</td><td><code>preshow-check</code></td><td>공연 전 점검 도구</td></tr>
+<tr><td>preshow-osc-fix</td><td><code>preshow-osc-fix</code></td><td>OSC 점검 결함 수정 (#19)</td></tr>
+<tr><td>snapshot-restore</td><td><code>snapshot-restore</code></td><td>백업 복원 경로 작업 (SEND 경로 제거)</td></tr>
+<tr><td>audit-crash-fix</td><td><code>audit-crash-fix</code></td><td>감사 로그 유실 결함 (#21)</td></tr>
+</table></div>
+
+<h2>3. 읽는 법 & 권고</h2>
+<ul>
+  <li><b>워크트리 = 같은 저장소를 다른 폴더에 하나 더 펼친 것.</b> 폴더마다 서로 다른 브랜치를 체크아웃할 수 있고, 커밋 이력(.git)은 전부 공유합니다. 그래서 세션끼리 폴더만 다르면 안전하게 병행 작업이 됩니다.</li>
+  <li><b>Vectorworks 신규 작업</b>은 인계 메시지대로 <code>--worktree</code>로 시작하면 이 목록에 새 폴더가 하나 더 추가되는 형태가 됩니다. 메인 폴더(MCP)와 충돌하지 않습니다.</li>
+  <li><b>잔재 10개는 정리 후보</b>입니다. 다만 스쿼시 머지 특성상 "머지됨"을 커밋 숫자만으로 단정할 수 없으니, 지우기 전에 각 폴더에 미커밋 변경이 없는지(<code>git -C &lt;폴더&gt; status</code>) 확인 후 <code>git worktree remove &lt;폴더&gt;</code>로 제거하는 것이 안전합니다. 삭제는 사용자 승인 후에만.</li>
+  <li><b>e2e-live(INTROSPECT)</b>는 삭제 금지 — run 완료 상태이며 main 리베이스만 남은 살아있는 작업입니다.</li>
+</ul>
+
+<footer>실측 명령: <code>git worktree list</code> · <code>git branch -vv</code> · <code>git rev-list --count --left-right origin/main...&lt;branch&gt;</code> — 2026-08-05, main = b1a630e.</footer>
+</main>

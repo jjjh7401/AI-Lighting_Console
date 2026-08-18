@@ -1,0 +1,148 @@
+<title>AI-Lighting Console — 앞으로의 로드맵 지도</title>
+<style>
+:root{
+  --bg:#faf8f4; --ink:#26221c; --sub:#6f675c; --line:#ddd6cb;
+  --card:#ffffff; --trunk:#b8874a;
+  --ok:#3b7d4f; --ok-bg:#e8f2ea; --live:#b3660a; --live-bg:#faeeda;
+  --next:#1f6f8b; --next-bg:#e3eff3; --idea:#7a5ea8; --idea-bg:#efe9f6;
+  --mono:"SF Mono","JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#191613; --ink:#ece5da; --sub:#9d9486; --line:#3a342c;
+  --card:#221e19; --trunk:#d99a4e;
+  --ok:#7dc492; --ok-bg:#22301f; --live:#f0b35c; --live-bg:#3a2c17;
+  --next:#6fb8d0; --next-bg:#16303a; --idea:#b39ddb; --idea-bg:#2b2438;
+}}
+:root[data-theme="dark"]{
+  --bg:#191613; --ink:#ece5da; --sub:#9d9486; --line:#3a342c;
+  --card:#221e19; --trunk:#d99a4e;
+  --ok:#7dc492; --ok-bg:#22301f; --live:#f0b35c; --live-bg:#3a2c17;
+  --next:#6fb8d0; --next-bg:#16303a; --idea:#b39ddb; --idea-bg:#2b2438;
+}
+:root[data-theme="light"]{
+  --bg:#faf8f4; --ink:#26221c; --sub:#6f675c; --line:#ddd6cb;
+  --card:#ffffff; --trunk:#b8874a;
+  --ok:#3b7d4f; --ok-bg:#e8f2ea; --live:#b3660a; --live-bg:#faeeda;
+  --next:#1f6f8b; --next-bg:#e3eff3; --idea:#7a5ea8; --idea-bg:#efe9f6;
+}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"Apple SD Gothic Neo","Pretendard",system-ui,sans-serif;line-height:1.6;margin:0;padding:2.5rem 1.25rem 4rem}
+.wrap{max-width:840px;margin:0 auto}
+h1{font-size:1.6rem;letter-spacing:-.01em;margin:0 0 .3rem;text-wrap:balance}
+.sub{color:var(--sub);margin:0 0 1.6rem;font-size:.95rem}
+.legend{display:flex;gap:.6rem;flex-wrap:wrap;margin:0 0 1.8rem}
+.pill{font-size:.75rem;padding:.15rem .6rem;border-radius:99px;font-weight:600;white-space:nowrap}
+.p-ok{background:var(--ok-bg);color:var(--ok)} .p-live{background:var(--live-bg);color:var(--live)}
+.p-next{background:var(--next-bg);color:var(--next)} .p-idea{background:var(--idea-bg);color:var(--idea)}
+.rail{position:relative;padding-left:2.1rem}
+.rail::before{content:"";position:absolute;left:.55rem;top:0;bottom:0;width:3px;background:var(--trunk);border-radius:2px}
+.rail.future::before{background:repeating-linear-gradient(to bottom,var(--trunk) 0 8px,transparent 8px 16px)}
+.era{margin:0 0 .6rem;padding-top:1.4rem;position:relative}
+.era::before{content:"";position:absolute;left:-1.98rem;top:1.85rem;width:13px;height:13px;border-radius:50%;background:var(--trunk);border:3px solid var(--bg)}
+.era h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.09em;color:var(--trunk);margin:0 0 .5rem}
+.era .whom{font-size:.8rem;color:var(--sub);margin:-.3rem 0 .6rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:.85rem 1rem;margin:0 0 .7rem;position:relative}
+.card::before{content:"";position:absolute;left:-1.55rem;top:1.35rem;width:1.55rem;height:2px;background:var(--line)}
+.card.now{border-color:var(--live);box-shadow:0 0 0 1px var(--live)}
+.card.dash{border-style:dashed}
+.bname{font-family:var(--mono);font-size:.8rem;font-weight:700;word-break:break-all}
+.brow{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+.desc{font-size:.88rem;color:var(--sub);margin:.25rem 0 0}
+.desc b{color:var(--ink);font-weight:600}
+.sha{font-family:var(--mono);font-size:.73rem;color:var(--sub)}
+.persona{margin-top:2.2rem}
+.persona h2{font-size:1.1rem;margin:0 0 .8rem}
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:1rem 1.15rem;margin:0 0 .9rem}
+.pcard h3{margin:0 0 .5rem;font-size:.98rem}
+.pcard ul{margin:.2rem 0 0;padding-left:1.2rem;font-size:.88rem}
+.pcard li{margin:.35rem 0}
+.pcard li b{font-weight:600}
+.tag{font-size:.7rem;padding:.1rem .45rem;border-radius:4px;font-weight:700;vertical-align:1px}
+.t-have{background:var(--ok-bg);color:var(--ok)} .t-part{background:var(--next-bg);color:var(--next)} .t-new{background:var(--idea-bg);color:var(--idea)}
+.note{margin-top:1.6rem;padding:1rem 1.15rem;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:.88rem;color:var(--sub)}
+.note b{color:var(--ink)}
+</style>
+<div class="wrap">
+<h1>앞으로의 로드맵 — 브랜치 지도</h1>
+<p class="sub">기준: 2026-07-31 · main = <span class="sha">85a4b23</span> (PRECHK PR #7 병합 완료). 실선 = 실제 브랜치, 점선 = 앞으로 만들 브랜치 후보.</p>
+
+<div class="legend">
+  <span class="pill p-ok">✔ 병합 완료</span>
+  <span class="pill p-live">● 지금 작업 중</span>
+  <span class="pill p-next">▶ 다음 단계 (확정도 높음)</span>
+  <span class="pill p-idea">✦ 제안 (관점별 신규)</span>
+</div>
+
+<div class="rail">
+  <div class="era"><h2>현재 — main 최신</h2>
+    <div class="card"><div class="brow"><span class="bname">feature/SPEC-COPILOT-PRECHK-001</span> <span class="pill p-ok">✔ PR #7 병합</span></div>
+    <p class="desc"><b>프리쇼 패치 점검</b> — AC 17/17 통과로 main 합류. 어제까지 작업하던 브랜치가 닫혔습니다.</p></div>
+    <div class="card now"><div class="brow"><span class="bname">feature/SPEC-COPILOT-OVERLAP-001</span> <span class="pill p-live">● run 완료 · sync 대기</span></div>
+    <p class="desc"><b>주소 구간 겹침 판정</b> — "두 픽스처의 DMX 주소가 겹치는가"를 보수적 상계로 증명. 구현·검증은 끝났고 <b>문서 동기화(sync) + PR만 남음</b>. +20 커밋, 미커밋 변경 정리 필요.</p></div>
+  </div>
+</div>
+
+<div class="rail future">
+  <div class="era"><h2>1단계 — 마무리 (바로 다음)</h2>
+    <div class="card dash"><div class="brow"><span class="bname">OVERLAP-001 sync → PR</span> <span class="pill p-next">▶ 다음</span></div>
+    <p class="desc">이 브랜치를 닫고 main에 병합. 점검 계층(PRECHK+OVERLAP)이 완성됨.</p></div>
+    <div class="card dash"><div class="brow"><span class="bname">DEPLOY-001 M8·M9 (배포 마감)</span> <span class="pill p-next">▶ 대기 중</span></div>
+    <p class="desc">코드 서명·공증 등 <b>macOS 앱 배포 마무리</b>. 기능이 아니라 "남에게 줄 수 있는 앱"을 완성하는 단계. Windows는 이연 유지.</p></div>
+  </div>
+
+  <div class="era"><h2>2단계 — 제안서 P2 잔여 (문서·안내 계층)</h2>
+    <div class="whom">주 수혜자: 조명감독 · 오퍼레이터</div>
+    <div class="card dash"><div class="brow"><span class="bname">P2-4 자동 페이퍼워크</span> <span class="pill p-next">▶ 제안서 잔여</span></div>
+    <p class="desc">쇼파일을 읽어 <b>매직시트·큐시트·훅업 차트</b>를 HTML/PDF로 자동 생성. PRECHK가 만든 읽기 계층을 그대로 재사용 — 지금이 착수 적기.</p></div>
+    <div class="card dash"><div class="brow"><span class="bname">P2-5 볼런티어 런북 모드</span> <span class="pill p-next">▶ 제안서 잔여</span></div>
+    <p class="desc">큐리스트를 읽어 <b>"다음 Go를 누르면 무슨 일이 일어나는지" 한국어 진행 대본</b> 생성. "망칠까 봐" 두려움이 최대 장벽이라는 조사에 대응.</p></div>
+  </div>
+
+  <div class="era"><h2>3단계 — 제안서 P3 (장기)</h2>
+    <div class="whom">주 수혜자: 공연 연출자</div>
+    <div class="card dash"><div class="brow"><span class="bname">P3-7 레퍼런스 이미지 → 룩</span> <span class="pill p-idea">✦ 장기</span></div>
+    <p class="desc">무드보드·공연 사진에서 팔레트/무드를 추출해 룩 제안. LOOKLIB 어휘 위에서 동작.</p></div>
+    <div class="card dash"><div class="brow"><span class="bname">P3-8 라이브 다음 큐 제안·이상 감지</span> <span class="pill p-idea">✦ 장기</span></div>
+    <p class="desc">라이브 잠금 모드에서 read-only 제안 카드. 자율 운영은 계속 비목표.</p></div>
+    <div class="card dash"><div class="brow"><span class="bname">P3-9 previz 연계 (MVR)</span> <span class="pill p-idea">✦ 장기</span></div>
+    <p class="desc">Capture/Depence 시각화 검증 루프 연결.</p></div>
+  </div>
+</div>
+
+<div class="persona">
+<h2>세 관점에서 추가를 제안하는 것</h2>
+<p class="sub" style="margin-bottom:1rem">표기: <span class="tag t-have">있음</span> 이미 구현됨 · <span class="tag t-part">부분</span> 기반은 있고 확장 필요 · <span class="tag t-new">신규</span> 새 SPEC 필요</p>
+
+<div class="pcard">
+<h3>🎭 공연 연출자 — "내 머릿속 그림이 무대에 그대로 나오는가"</h3>
+<ul>
+  <li><b>룩 미리보기 카드</b> <span class="tag t-new">신규</span> — 룩을 콘솔에 만들기 전에 색·강도·무브먼트를 앱 화면에서 시각 카드로 확인하고 승인. 지금은 만들어진 뒤에야 무대에서 확인 가능. (P3-9 previz의 가벼운 선행판)</li>
+  <li><b>레퍼런스 이미지 → 룩</b> <span class="tag t-part">부분</span> — "이 사진 느낌으로"가 연출자의 실제 언어. P3-7을 앞당길 가치가 있음. LOOKLIB 어휘가 이미 받쳐줌.</li>
+  <li><b>연출 의도 메모</b> <span class="tag t-new">신규</span> — 큐마다 "왜 이 색인가"를 한 줄로 기록해 쇼파일과 함께 보존. 재공연·인수인계 때 연출 의도가 증발하는 문제 대응.</li>
+</ul>
+</div>
+
+<div class="pcard">
+<h3>💡 조명감독 — "리그가 정합하고, 문서가 남고, 넘겨줄 수 있는가"</h3>
+<ul>
+  <li><b>패치 점검 + 겹침 판정</b> <span class="tag t-have">있음</span> — PRECHK + OVERLAP이 바로 이 관점의 기능. 이번에 완성됨.</li>
+  <li><b>자동 페이퍼워크 (P2-4)</b> <span class="tag t-part">부분</span> — 매직시트·훅업 차트는 조명감독의 4대 문서. 읽기 계층이 완성된 지금이 최적 착수 시점. <b>가장 먼저 권하는 신규 착수 항목.</b></li>
+  <li><b>쇼파일 변경 이력 리포트</b> <span class="tag t-new">신규</span> — "어제와 오늘 쇼파일에서 무엇이 달라졌나"를 요약. 여러 사람이 만지는 현장에서 사고 원인 추적의 핵심.</li>
+  <li><b>리그 건강 요약을 대시보드에</b> <span class="tag t-part">부분</span> — PRECHK 판정 결과를 DASHUI 대시보드 왼쪽 패널에 상시 표시(지금은 툴 호출 결과로만 나옴).</li>
+</ul>
+</div>
+
+<div class="pcard">
+<h3>🎚 오퍼레이터 — "쇼 당일, 실수 없이 진행할 수 있는가"</h3>
+<ul>
+  <li><b>프리쇼 응답확인 매크로</b> <span class="tag t-have">있음</span> — PRECHK가 생성. 버튼 하나로 그룹별 점등 확인.</li>
+  <li><b>볼런티어 런북 (P2-5)</b> <span class="tag t-part">부분</span> — "다음 Go에 무슨 일이 일어나는지" 대본. 비전문 오퍼레이터가 핵심 타깃인 이 앱과 정확히 겹침. <b>P2-4 다음으로 권하는 항목.</b></li>
+  <li><b>쇼 당일 잠금 모드</b> <span class="tag t-new">신규</span> — 공연 중에는 쇼파일을 바꾸는 명령(패치·프리셋 수정)을 앱이 스스로 거부하고 실행 명령만 허용. 안전 게이트의 자연스러운 확장.</li>
+  <li><b>비상 카드</b> <span class="tag t-new">신규</span> — "조명이 안 나올 때 순서대로 확인할 것" 체크리스트를 리그 실측 기반으로 생성(OSC 연결 → 응답기 → 익스큐터 → 딤머 순). 무대 옆에서 보는 종이 한 장.</li>
+</ul>
+</div>
+</div>
+
+<div class="note">
+<b>권장 순서</b>: ① OVERLAP sync·PR로 현재 브랜치 마감 → ② DEPLOY 배포 마감(사용자가 늘어날 준비) → ③ P2-4 페이퍼워크(조명감독) → ④ P2-5 런북(오퍼레이터) → ⑤ 쇼 당일 잠금 모드 → 이후 P3 장기 항목. 근거: 읽기 계층(PRECHK/OVERLAP)이 방금 완성되어 ③·④가 그 위에 바로 올라가고, 잠금 모드는 기존 안전 게이트의 확장이라 구현 부담이 낮음.
+</div>
+</div>

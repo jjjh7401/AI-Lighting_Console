@@ -1,0 +1,575 @@
+<title>막히는 16곳</title>
+<style>
+:root {
+  /* 조명 세계에서 가져온 팔레트 — 텅스텐 앰버(2700K)와 CTB 보정 블루의 대비,
+     바탕은 극장 도면 용지의 살짝 푸른 회색 */
+  --paper:      #E9ECF0;
+  --surface:    #F4F6F8;
+  --surface-2:  #DFE4EA;
+  --ink:        #1A1E24;
+  --ink-soft:   #4A525E;
+  --ink-faint:  #78828F;
+  --rule:       #C6CDD6;
+  --amber:      #B87322;
+  --amber-soft: #EFD9BB;
+  --ctb:        #35637F;
+  --ctb-soft:   #CBDCE8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #14171C;
+    --surface:    #1B1F26;
+    --surface-2:  #242932;
+    --ink:        #E4E8ED;
+    --ink-soft:   #A8B2BF;
+    --ink-faint:  #737E8C;
+    --rule:       #333A45;
+    --amber:      #E0A254;
+    --amber-soft: #3A2E1E;
+    --ctb:        #6BA3CB;
+    --ctb-soft:   #1E2C38;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper:      #14171C;
+  --surface:    #1B1F26;
+  --surface-2:  #242932;
+  --ink:        #E4E8ED;
+  --ink-soft:   #A8B2BF;
+  --ink-faint:  #737E8C;
+  --rule:       #333A45;
+  --amber:      #E0A254;
+  --amber-soft: #3A2E1E;
+  --ctb:        #6BA3CB;
+  --ctb-soft:   #1E2C38;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 3.5rem 1.5rem 6rem;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 2.9rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  text-wrap: balance;
+}
+
+.lede {
+  font-size: 1.075rem;
+  color: var(--ink-soft);
+  max-width: 44rem;
+  margin: 0 0 2.5rem;
+}
+
+.lede strong { color: var(--ink); font-weight: 600; }
+
+.tally {
+  display: flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--surface);
+  margin: 0 0 3.5rem;
+  overflow: hidden;
+}
+
+.tally div.cell {
+  flex: 1 1 8rem;
+  padding: 1.1rem 1.25rem;
+  border-right: 1px solid var(--rule);
+}
+.tally div.cell:last-child { border-right: none; }
+
+.tally .n {
+  font-size: 1.85rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.tally .k {
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.06em;
+  margin-top: 0.35rem;
+}
+
+h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.section-note {
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  margin: 0 0 1.75rem;
+  max-width: 44rem;
+}
+
+section { margin-bottom: 4rem; }
+
+.bundles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+
+.bundle {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--ctb);
+  border-radius: 3px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.bundle.lowcost { border-top-color: var(--amber); }
+
+.bundle h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.bundle p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+.bundle p strong { color: var(--ink); }
+
+.stagepins {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+.pin {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 2px;
+  background: var(--ctb-soft);
+  color: var(--ctb);
+}
+.bundle.lowcost .pin { background: var(--amber-soft); color: var(--amber); }
+
+.item {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr;
+  gap: 0 1.25rem;
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--rule);
+}
+.item:last-of-type { border-bottom: 1px solid var(--rule); }
+
+.stage {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+  padding-top: 0.2rem;
+  letter-spacing: 0.01em;
+}
+
+.stage b {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--amber);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.15rem;
+}
+
+.body h4 {
+  font-size: 1.02rem;
+  font-weight: 650;
+  margin: 0 0 0.6rem;
+  line-height: 1.45;
+  text-wrap: balance;
+}
+
+.meta { display: grid; gap: 0.5rem; }
+
+.row {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: 0.75rem;
+  font-size: 0.895rem;
+  line-height: 1.6;
+}
+
+.row .lbl {
+  color: var(--ink-faint);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding-top: 0.25rem;
+}
+
+.row .val { color: var(--ink-soft); }
+.row.next .val { color: var(--ink); }
+.row .val strong { color: var(--ink); font-weight: 650; }
+
+code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.85em;
+  background: var(--surface-2);
+  padding: 0.1em 0.35em;
+  border-radius: 2px;
+  color: var(--ctb);
+}
+
+.dist {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 0.4rem;
+  margin-top: 1.75rem;
+  align-items: end;
+}
+
+.dist div.col { text-align: center; }
+
+.dist .bar {
+  background: var(--amber-soft);
+  border-bottom: 2px solid var(--amber);
+  border-radius: 2px 2px 0 0;
+}
+.dist .bar.h1 { height: 1.4rem; }
+.dist .bar.h2 { height: 2.6rem; }
+
+.dist .lab {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin-top: 0.3rem;
+  font-variant-numeric: tabular-nums;
+}
+
+footer {
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-faint);
+  font-size: 0.83rem;
+  line-height: 1.7;
+}
+
+footer p { margin: 0 0 0.5rem; }
+footer strong { color: var(--ink-soft); }
+
+@media (max-width: 34rem) {
+  .item { grid-template-columns: 1fr; gap: 0.75rem; }
+  .stage { display: flex; align-items: baseline; gap: 0.5rem; }
+  .stage b { display: inline; font-size: 1.15rem; margin: 0; }
+  .row { grid-template-columns: 1fr; gap: 0.15rem; }
+}
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">코파일럿 개선 제안 · 2026-08-17</p>
+  <h1>막히는 16곳</h1>
+  <p class="lede">
+    사용 가이드를 <strong>공연 준비 9단계</strong> 순서로 다시 쓰면서, 각 단계마다
+    “앱이 못 하는 것”을 정직하게 적었습니다. 이 목록은 그 칸에서 그대로 수거한 것입니다.
+    없는 기능을 상상해 적은 것이 아니라 <strong>가이드를 쓰다가 실제로 막힌 자리</strong>이고,
+    아홉 단계 전부에서 최소 하나씩 나왔습니다.
+  </p>
+
+  <div class="tally">
+    <div class="cell"><div class="n">16</div><div class="k">막히는 지점</div></div>
+    <div class="cell"><div class="n">9</div><div class="k">단계 전부에서 발생</div></div>
+    <div class="cell"><div class="n">3</div><div class="k">한 번에 열리는 묶음</div></div>
+    <div class="cell"><div class="n">33</div><div class="k">현재 등록된 기능</div></div>
+  </div>
+
+  <section>
+    <h2>먼저 볼 것 — 하나를 재면 여럿이 열립니다</h2>
+    <p class="section-note">
+      16건을 순서대로 처리할 필요는 없습니다. 서로 같은 뿌리에 걸려 있어서
+      하나만 확인하면 여러 항목의 성립 여부가 동시에 갈리는 묶음이 셋 있습니다.
+    </p>
+
+    <div class="bundles">
+      <div class="bundle">
+        <h3>콘솔이 값을 주는가</h3>
+        <p>
+          채널폭 · 페이드 시간 · 큐 내용 · 그룹 멤버십 — 네 항목이 전부 “콘솔이 그 값을
+          돌려주는가”에 걸려 있습니다. 읽기 프로브 한 번이면 넷이 같이 판가름납니다.
+          <strong>재보지 않고 착수하면 다 만든 뒤에 전제가 거짓으로 드러납니다.</strong>
+        </p>
+        <div class="stagepins"><span class="pin">2단계</span><span class="pin">4단계</span><span class="pin">6단계</span><span class="pin">7단계</span></div>
+      </div>
+
+      <div class="bundle">
+        <h3>되돌릴 수 없다</h3>
+        <p>
+          덮어쓴 그룹·프리셋, 리허설 중 수정, 인계 패키지 — 세 단계에서 같은 문제가
+          각각 다른 얼굴로 나타납니다. 백업은 있는데 복원 경로가 없습니다.
+        </p>
+        <div class="stagepins"><span class="pin">4단계</span><span class="pin">7단계</span><span class="pin">9단계</span></div>
+      </div>
+
+      <div class="bundle lowcost">
+        <h3>있는데 안 보인다</h3>
+        <p>
+          조준 기능은 이미 동작합니다. 다만 기능 목록에 없어서 감독이 존재를 알 수 없습니다.
+          <strong>만드는 일이 아니라 보이게 하는 일</strong>이라 비용이 가장 낮고,
+          이번 개정이 실제로 드러낸 종류의 결함에 바로 대응합니다.
+        </p>
+        <div class="stagepins"><span class="pin">3단계</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>단계별 16건</h2>
+    <p class="section-note">
+      각 항목은 세 가지를 갖춥니다 — 어디서 막히는가, 무엇을 관측했는가,
+      다음에 무엇을 정해야 하는가. “좋아지면 좋겠다” 수준의 문장은 항목으로 넣지 않았습니다.
+    </p>
+
+    <div class="item">
+      <div class="stage"><b>1</b>도면 수령</div>
+      <div class="body">
+        <h4>도면과 현장이 어긋났을 때 어느 쪽이 맞는지 앱이 판정하지 못한다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">대조 기능은 등록돼 있으나 판정 기준을 담은 경로가 없다</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">어긋남을 유형별로 분류할 것인가, 감독 판정만 돕는 표로 남길 것인가</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>2</b>패치</div>
+      <div class="body">
+        <h4>장비 채널폭을 직접 읽지 못해 주소 충돌을 확정 판정할 수 없다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">겹침 판정 기능은 등록됨. 개정 전 가이드도 “충돌 가능은 상계”라 적었고, 이번 실측에서도 판독 경로가 확인되지 않았다</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">채널폭을 읽는 경로가 있는지 비파괴 프로브로 먼저 판정하고, 없으면 상계 판정을 문서 계약으로 고정</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>2</b>패치</div>
+      <div class="body">
+        <h4>서버가 패치를 콘솔에 직접 써넣지 못해 사람이 플러그인을 실행해야 한다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">실행 경로가 이 빌드에서 동작하지 않는다는 것이 기능 계약에 명시돼 있고 대응 테스트가 존재한다</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">이 제약을 영구 계약으로 굳힐 것인가, 다른 실행 경로를 재측정할 것인가</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>3</b>셋업·포커싱</div>
+      <div class="body">
+        <h4>조준 기능이 기능 목록에 나타나지 않아 감독이 존재를 알 수 없다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">조준은 자연어로 도달하지만 등록 기능 33종에는 없다</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">조준을 정식 기능으로 노출할 것인가, 목록에 비기능 항목을 추가할 것인가, 문서로만 안내할 것인가</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>3</b>셋업·포커싱</div>
+      <div class="body">
+        <h4>포커싱 결과를 정리한 차트가 없다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">좌표 판독은 되지만 팬·틸트 현재값을 문서로 뽑는 기능이 등록 목록에 없다</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">포커스 값 판독 경로를 먼저 측정하고, 가능하면 차트를 서류 종류에 추가</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>4</b>그룹·프리셋</div>
+      <div class="body">
+        <h4>그룹 안에 어떤 장비가 들어 있는지 읽지 못해 매직시트가 축약형에 머문다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">응답기가 그룹 내용을 주지 않아 총계 승격을 막는 처리가 코드에 들어 있다. 매직시트 기능 자체는 등록됨</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">멤버십을 우회 판독할 경로가 있는지 판정하고, 없으면 축약형을 최종 형태로 확정</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>4</b>그룹·프리셋</div>
+      <div class="body">
+        <h4>덮어쓴 그룹과 프리셋을 되돌릴 수 없다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">백업은 있으나 복원 경로가 없다. 삭제 계열은 승인 필수로 묶여 있다</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">스냅샷 로드 경로를 측정하고, 가능하면 승인 게이트를 통과하는 복원 명령을 설계</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>5</b>룩·이펙트</div>
+      <div class="body">
+        <h4>사용자가 직접 룩이나 장르를 정의해 라이브러리에 넣을 수 없다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">내장 장르는 4개, 룩 32개가 파일로 고정돼 있다</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">사용자 정의를 파일 편집으로 열 것인가, 화면에서 저장하는 학습 기능으로 열 것인가</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>5</b>룩·이펙트</div>
+      <div class="body">
+        <h4>참고 이미지에서 색감을 뽑아 룩으로 옮기는 경로가 없다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">이미지 판독 기능은 배치 도면용으로 등록돼 있고 룩 매칭과는 연결돼 있지 않다</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">이미지 판독의 출력을 룩 검색 입력으로 이을 수 있는지, 별도 경로가 필요한지</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>6</b>큐리스트</div>
+      <div class="body">
+        <h4>큐시트에 페이드 시간이 들어가지 않는다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">큐시트 기능은 등록됨. 페이드 값 판독 경로가 확인되지 않아 비워 둔 상태다</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">페이드 속성을 읽는 경로를 측정하고, 불가하면 비움을 명시적 계약으로 고정</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>6</b>큐리스트</div>
+      <div class="body">
+        <h4>음원에서 구간을 자동 분할하지 못해 사람이 구간을 적어야 한다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">큐리스트 기능은 구간 정보를 입력으로 받는다. 오디오 입력 경로가 없다</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">오디오 의존성과 업로드 경로를 함께 열 것인지, 구간 입력을 더 쉽게 만드는 쪽으로 갈 것인지</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>7</b>리허설</div>
+      <div class="body">
+        <h4>큐 내용을 읽지 못해 다음 Go가 무엇을 바꾸는지 미리 보여 줄 수 없다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">상태 조회는 되지만 큐 내부 값 판독 경로가 없다. <strong>리허설에서 가장 아쉬운 지점</strong></span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">큐 내용 판독 경로를 측정하고, 가능하면 런북과 큐 모니터에 변화 설명을 붙일 것</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>7</b>리허설</div>
+      <div class="body">
+        <h4>수정을 되돌리는 경로가 없어 손으로 다시 바꿔야 한다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">실행 경로는 있으나 취소 개념이 없다</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">세션 단위 되돌리기를 기록 기반으로 재구성할 것인가, 콘솔 스냅샷에 의존할 것인가</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>8</b>본공연</div>
+      <div class="body">
+        <h4>장비가 실제로 반응했는지 자동으로 감지하지 못한다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">콘솔이 되돌아오는 신호를 주지 않아 <strong>원리적으로 불가</strong>하다. 대체 수단인 응답 확인 매크로는 이미 있다</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">원리적 불가를 계약으로 고정하고, 사람 확인 절차를 문서화된 체크리스트로 승격할 것인지</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>8</b>본공연</div>
+      <div class="body">
+        <h4>여러 콘솔이 물린 네트워크 환경을 다루지 못한다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">단일 onPC 기준으로 설계돼 있다. 공연 전 점검도 단일 대상이다</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">다중 콘솔을 범위에 넣을 것인지, 명시적 비범위로 문서에 고정할 것인지</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="stage"><b>9</b>철수·인계</div>
+      <div class="body">
+        <h4>인수인계 패키지가 담지 못하는 항목이 세 가지 남는다</h4>
+        <div class="meta">
+          <div class="row"><span class="lbl">관측</span><span class="val">그룹 멤버십과 페이드 시간이 비고, 복원 경로가 없다</span></div>
+          <div class="row next"><span class="lbl">정할 것</span><span class="val">불완전성 요약에 이 세 항목을 고정 문구로 넣을 것인지, 판독 경로 측정을 선행할 것인지</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dist">
+      <div class="col"><div class="bar h1"></div><div class="lab">1</div></div>
+      <div class="col"><div class="bar h2"></div><div class="lab">2</div></div>
+      <div class="col"><div class="bar h2"></div><div class="lab">3</div></div>
+      <div class="col"><div class="bar h2"></div><div class="lab">4</div></div>
+      <div class="col"><div class="bar h2"></div><div class="lab">5</div></div>
+      <div class="col"><div class="bar h2"></div><div class="lab">6</div></div>
+      <div class="col"><div class="bar h2"></div><div class="lab">7</div></div>
+      <div class="col"><div class="bar h2"></div><div class="lab">8</div></div>
+      <div class="col"><div class="bar h1"></div><div class="lab">9</div></div>
+    </div>
+    <p class="section-note" style="margin-top:0.6rem">
+      단계별 분포. 어느 단계에도 “간극 없음”이 없습니다.
+    </p>
+  </section>
+
+  <footer>
+    <p><strong>이 목록의 성격</strong> — 우선순위는 정해져 있지 않습니다. 위의 묶음 셋은
+      순서를 정할 때 참고하시라고 남긴 것이며, 무엇을 먼저 할지는 감독님 판단입니다.</p>
+    <p>각 항목의 “관측”은 코드에서 직접 확인한 것입니다. 이번 개정 전 가이드는 실제 기능보다
+      뒤처져 있었고(등록 33종을 22종으로 표기), 존재하지 않는 기능 이름이 다섯 건 적혀
+      있었습니다. 같은 일이 반복되지 않도록 모든 능력 서술에 근거를 붙였습니다.</p>
+    <p>출처 <code>backlog-candidates.md</code> · SPEC-COPILOT-LDGUIDE-001 · 측정 2026-08-17</p>
+  </footer>
+
+</div>

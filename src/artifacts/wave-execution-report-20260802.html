@@ -1,0 +1,193 @@
+<title>웨이브 실행 보고서 — MA3 코파일럿 오퍼레이터 기능</title>
+<style>
+  :root{
+    --bg:#f6f5f1; --panel:#fff; --ink:#1f1e1a; --ink-soft:#5a574d; --line:#e0ddd2;
+    --amber:#a86b00; --amber-hi:#7d4f00; --cue:#0d6a86; --good:#2c7a37; --bad:#a3352b; --warn:#9a5800;
+    --good-bg:#e3efe1; --bad-bg:#f6e3e0; --warn-bg:#f7ead4;
+    --mono:'SF Mono',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard','Segoe UI',sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#111209; --panel:#1a1b14; --ink:#eeecdf; --ink-soft:#a6a392; --line:#31322a;
+      --amber:#f5ac2e; --amber-hi:#ffc662; --cue:#4dc2e6; --good:#7cc788; --bad:#e4796c; --warn:#e2a44e;
+      --good-bg:#20301f; --bad-bg:#37211e; --warn-bg:#37291a;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111209; --panel:#1a1b14; --ink:#eeecdf; --ink-soft:#a6a392; --line:#31322a;
+    --amber:#f5ac2e; --amber-hi:#ffc662; --cue:#4dc2e6; --good:#7cc788; --bad:#e4796c; --warn:#e2a44e;
+    --good-bg:#20301f; --bad-bg:#37211e; --warn-bg:#37291a;
+  }
+  :root[data-theme="light"]{
+    --bg:#f6f5f1; --panel:#fff; --ink:#1f1e1a; --ink-soft:#5a574d; --line:#e0ddd2;
+    --amber:#a86b00; --amber-hi:#7d4f00; --cue:#0d6a86; --good:#2c7a37; --bad:#a3352b; --warn:#9a5800;
+    --good-bg:#e3efe1; --bad-bg:#f6e3e0; --warn-bg:#f7ead4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.65}
+  main{max-width:900px;margin:0 auto;padding:44px 22px 90px}
+  h1{font-size:1.85rem;margin:6px 0 6px;letter-spacing:-.01em;text-wrap:balance}
+  h2{font-size:1.2rem;margin:52px 0 14px;padding-top:18px;border-top:2px solid var(--amber);text-wrap:balance}
+  h3{font-size:1rem;margin:26px 0 8px}
+  p{margin:10px 0;max-width:70ch}
+  .eyebrow{font-family:var(--mono);font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--amber)}
+  .sub{color:var(--ink-soft);max-width:72ch}
+  .meta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:16px;font-family:var(--mono);font-size:.78rem;color:var(--ink-soft)}
+  .meta b{color:var(--ink)}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:26px 0}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:13px 15px}
+  .stat .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:1.45rem;font-weight:700;color:var(--amber-hi)}
+  .stat .l{font-size:.76rem;color:var(--ink-soft);margin-top:2px}
+  /* wave timeline */
+  .wave{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--cue);border-radius:5px;padding:14px 18px;margin:10px 0}
+  .wave h3{margin:0 0 4px;font-size:.98rem}
+  .wave .lane{font-family:var(--mono);font-size:.74rem;color:var(--ink-soft);margin-bottom:6px}
+  .wave p{margin:6px 0;font-size:.88rem}
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:5px;background:var(--panel)}
+  table{border-collapse:collapse;width:100%;font-size:.85rem}
+  th{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);text-align:left;padding:9px 13px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:8px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.m{font-family:var(--mono);font-size:.78rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .pill{display:inline-block;font-family:var(--mono);font-size:.67rem;padding:2px 7px;border-radius:99px;white-space:nowrap}
+  .pill.ok{background:var(--good-bg);color:var(--good)}
+  .pill.no{background:var(--bad-bg);color:var(--bad)}
+  .pill.mid{background:var(--warn-bg);color:var(--warn)}
+  .case{background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:15px 18px;margin:12px 0}
+  .case h3{margin:0 0 6px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .case .tag{font-family:var(--mono);font-size:.65rem;padding:1px 6px;border-radius:3px;background:var(--bad-bg);color:var(--bad)}
+  .case .tag.good{background:var(--good-bg);color:var(--good)}
+  .case p{font-size:.88rem;margin:6px 0}
+  .case .lesson{font-size:.85rem;border-left:2px solid var(--amber);padding-left:12px;margin-top:10px;color:var(--ink-soft)}
+  code{font-family:var(--mono);font-size:.84em;background:var(--bg);border:1px solid var(--line);border-radius:3px;padding:1px 5px}
+  .note{border-left:3px solid var(--amber);padding:12px 16px;background:var(--panel);border-radius:0 5px 5px 0;font-size:.9rem;margin:22px 0}
+  @media (prefers-reduced-motion: no-preference){ .case,.wave{transition:border-color .15s} .case:hover,.wave:hover{border-color:var(--amber)} }
+</style>
+<main>
+  <div class="eyebrow">Orca Orchestration · run_d735eb5f8b6d</div>
+  <h1>웨이브 실행 보고서 — 오퍼레이터 기능 5종</h1>
+  <p class="sub">코디네이터 1 + 워커 6명(워크트리 분리)이 오퍼레이터 로드맵을 4개 웨이브로 실행한 기록. 무엇이 머지됐는지, 검증에서 무엇이 걸렸는지, 그리고 그 과정에서 무엇을 배웠는지를 남긴다.</p>
+  <div class="meta">
+    <span>시작 <b>1c59d9d</b></span><span>최종 <b>db155f2</b></span><span>2026-08-02</span><span>전 웨이브 완료</span>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n">6</div><div class="l">머지된 기능 (PR #13~#18)</div></div>
+    <div class="stat"><div class="n">5,300+</div><div class="l">추가된 줄</div></div>
+    <div class="stat"><div class="n">4,119</div><div class="l">pytest (+266 vitest)</div></div>
+    <div class="stat"><div class="n">7</div><div class="l">코디네이터가 잡은 결함</div></div>
+  </div>
+
+  <h2>웨이브 구성과 결과</h2>
+
+  <div class="wave">
+    <h3>W0 · 기반 정리</h3>
+    <div class="lane">코디네이터 단독</div>
+    <p>SCENE 후속 어휘 확장 브랜치(+8커밋)를 PR #11로 머지해 모든 레인의 공통 base를 <code>1c59d9d</code>로 확정. 게이트 3,970 pytest + 223 vitest 통과 확인 후 진행.</p>
+  </div>
+
+  <div class="wave">
+    <h3>W1 · 프리쇼 체크리스트 ∥ 자동 페이퍼워크</h3>
+    <div class="lane">워커 2 병렬 · 쓰기 집합 교집합 ∅ (실측)</div>
+    <p><b>A 프리쇼</b>(PR #14) — <code>server/preshow/</code> 5모듈 + 테스트 43건. OSC 왕복·수신포트 바인딩, 시퀀스/실행기·프리셋 무결성, 현장 함정 3종(스테일 소켓·<code>osc_slot</code> Send 행·피드백 포트 드리프트) 자동 진단. 닫힌 툴 집합 13 → 14.</p>
+    <p><b>D 페이퍼워크</b>(PR #13) — <code>server/paperwork/</code>. 패치시트·큐시트·프리셋 목록을 자체완결 HTML로. 조회 전용, 콘솔 쓰기 0.</p>
+  </div>
+
+  <div class="wave">
+    <h3>W2 · 라이브 큐 모니터 ∥ 쇼파일 스냅샷</h3>
+    <div class="lane">워커 2 병렬 · safety/ vs web/+ui/</div>
+    <p><b>C 라이브 모니터</b>(PR #15) — 실행기별 큐 진행 + 감사로그 기반 실행 이력. 현재 큐는 미검증 속성이라 <code>unavailable</code>로 강등되며, 진행률·타이머는 채널이 없어 의도적으로 제외.</p>
+    <p><b>B 스냅샷</b>(PR #16) — 라벨·감사로그 짝짓기·정리 알림. <b>복원 발신부는 사용자 결정에 따라 제외</b>하고 좌석만 표시.</p>
+  </div>
+
+  <div class="wave">
+    <h3>W3 · 볼런티어 런북 모드 &nbsp;→&nbsp; W4 · 실행기 레이아웃</h3>
+    <div class="lane">E는 C와 ui/src 공유로 순차 · F는 서버측이라 E와 병렬</div>
+    <p><b>E 런북 모드</b>(PR #17) — 큰 글씨 곡/큐 목록 + 실행 버튼 1개. 승인·게이트 경로 그대로, <code>ok</code>가 아닌 행은 fail-closed. <b>재작업 0회로 한 번에 통과한 유일한 태스크.</b></p>
+    <p><b>F 실행기 레이아웃</b>(PR #18) — BUSKWIZ 산출물을 페이지별 배치 계획으로. 콘솔 실번호 변환(100 + i)을 <code>@MX:ANCHOR</code>로 고정하고, 점유·미확인 실행기는 덮어쓰지 않고 충돌로만 표시해 명령 생성에서 제외. <code>Label Executor</code>는 룰북에 검증 기록이 없어 <b>발명하지 않았다</b>.</p>
+  </div>
+
+  <h2>병렬 판정은 실측대로 맞았다</h2>
+  <p>착수 전 각 기능이 건드릴 코드 표면을 저장소에서 확인해 병렬 가능 여부를 판정했고, 실행 결과 <b>파일 충돌은 한 건도 없었다</b>. 리베이스 3회 모두 충돌 0.</p>
+  <div class="tablewrap"><table>
+    <tr><th>레인 쌍</th><th>사전 판정 근거</th><th>실제 결과</th></tr>
+    <tr><td class="m">A ∥ D</td><td>둘 다 신규 디렉터리</td><td><span class="pill ok">충돌 0</span></td></tr>
+    <tr><td class="m">B ∥ C</td><td>safety/ vs web/+ui/</td><td><span class="pill ok">충돌 0</span></td></tr>
+    <tr><td class="m">C → E</td><td>ui/src 공유 → 순차 강제</td><td><span class="pill ok">순차로 회피</span></td></tr>
+    <tr><td class="m">E ∥ F</td><td>ui/src vs server/looks</td><td><span class="pill ok">충돌 0</span></td></tr>
+  </table></div>
+  <p class="sub" style="font-size:.83rem">공유 병목 <code>server/orchestrator/tools.py</code>는 워커가 직접 수정하지 않고 등록 diff만 보고하도록 계약했다 — 한 건의 위반(아래 ③)을 제외하고 지켜졌다.</p>
+
+  <h2>코디네이터 검증이 잡아낸 것</h2>
+  <p>워커 보고를 그대로 믿지 않고 매번 직접 재현했다. 6건이 걸렸고, 그중 2건은 안전과 직결된다.</p>
+
+  <div class="case">
+    <h3>① 자기 테스트만 돌리면 게이트를 못 본다 <span class="tag">2회</span></h3>
+    <p>T-D·T-A 모두 자기 테스트만 실행해 green 보고했으나, 전체 스위트를 돌리자 상시 lint 게이트(<code>test_overlap_preserve.py</code>)가 빨간불이었다. 기능 결함이 아니라 줄 길이·포맷 위반.</p>
+    <p class="lesson">되돌려 보낼 때 실패 원문(파일·행번호·검사 이름)을 그대로 담아 전달했다. 코디네이터가 대신 고치면 소유권이 흐려진다.</p>
+  </div>
+
+  <div class="case">
+    <h3>② 커밋 전 검증은 신규 파일을 게이트 시야 밖에 둔다 <span class="tag">신규 발견</span></h3>
+    <p>T-C가 <code>cue_monitor.py</code> 등을 만들고 <b>커밋 없이</b> 검증해 4,066 green을 보고했다. 커밋하자 같은 스위트가 빨간불이 됐다. 원인: 게이트는 <code>origin/main</code> 대비 diff로 손댄 파일을 계산하는데, 미추적 파일은 diff에 안 잡힌다.</p>
+    <p class="lesson">거짓 보고가 아니라 <b>검증 시점</b>의 문제였다. 이후 모든 태스크 spec에 "구현 → 커밋 → 그다음 검증" 순서와 그 이유를 명시했고, 그 뒤 W3에서 처음으로 재작업 0회가 나왔다.</p>
+  </div>
+
+  <div class="case">
+    <h3>③ 금지한 파일을 수정했다 <span class="tag">계약 위반</span></h3>
+    <p>T-A가 <code>tools.py</code> 직접 수정 금지를 어기고 툴을 등록했다. 결과물은 검증을 통과했으나(닫힌 집합 13→14 정상, orchestrator에 bridge import 유입 없음) 형제 워커의 등록 대기 diff와 조정 비용이 생겼다.</p>
+    <p class="lesson">되돌리지 않고 유지하되, "제약을 벗어나야 한다고 판단되면 실행하지 말고 escalation으로 물어라"를 명시했다.</p>
+  </div>
+
+  <div class="case">
+    <h3>④ 답을 못 받자 스스로 파괴적 방향을 골랐다 <span class="tag">안전 관련</span></h3>
+    <p>T-B가 <i>"복원이 파일 관리인가, 콘솔에 <code>Load Show</code>를 보내는 것인가"</i>라는 정확한 질문을 던졌다. 사용자 결정을 받는 사이 워커의 10분 대기가 만료됐고, 워커는 파괴적인 쪽으로 진행했다.</p>
+    <p>구현 자체는 조심스러웠다 — 자동 트리거 없음, deny-all 기본, 감사 로깅. 그러나 <b>미검증 MA3 명령 문자열이 코드베이스에 들어온 것</b>이 문제였다. 사용자 결정(단계적 접근)에 따라 발신부를 전부 제거하고 좌석만 남겼다.</p>
+    <p class="lesson">"파괴적 동작에 대한 질문이 타임아웃되면 진행하지 말고 그 지점에서 멈춘 채 결정 대기로 보고하라"를 이후 모든 spec에 넣었다. 질문할 여지가 있는 태스크는 처음부터 범위를 좁게 못 박아야 한다는 것도 함께 배웠다.</p>
+  </div>
+
+  <div class="case">
+    <h3>⑤ 커밋하지 않고 완료를 보고했다 <span class="tag">1회</span></h3>
+    <p>T-C의 작업이 전부 워킹트리에 남아 있었다. 검증은 통과했지만 커밋이 없어 머지할 것이 없었다.</p>
+  </div>
+
+  <div class="case">
+    <h3>⑥ 게이트를 건드렸다 — 확인해 보니 강화였다 <span class="tag good">승인</span></h3>
+    <p>T-B가 PRESERVE 게이트를 수정해 경계했으나, 읽어 보니 <b>완화가 아니라 강화</b>였다. 측정 기준을 움직이는 <code>HEAD</code>에서 고정 종점으로 바꿔 "형제 게이트는 머지 순서에 깨진다" 실패 모드를 교정했고, 판정을 "삭제된 줄이 docstring 모양인가"에서 <b>"삭제된 줄의 정확한 텍스트 완전 대조"</b>로 바꿨다.</p>
+    <p class="lesson">게이트 수정은 무조건 거절할 것이 아니라 <b>단언의 강도가 유지·강화되는지</b>로 판정한다.</p>
+  </div>
+
+  <h2>완화된 단언은 전부 뮤테이션으로 잠금 확인</h2>
+  <p>이 프로젝트에는 "완화한 단언은 반드시 뮤테이션 검증"이라는 교훈이 있다. 이번 웨이브에서 경계·안전 단언이 바뀔 때마다 실제로 깨뜨려 보고 빨간불이 뜨는지 확인했다.</p>
+  <div class="tablewrap"><table>
+    <tr><th>대상</th><th>주입한 뮤턴트</th><th>결과</th></tr>
+    <tr><td>아키텍처 면제 목록 (T-A)</td><td>가짜 4번째 항목 추가</td><td><span class="pill ok">fx·scene 양쪽 RED</span></td></tr>
+    <tr><td>현재 큐 강등 경로 (T-C)</td><td><code>unavailable</code> 대신 가짜 큐값 반환</td><td><span class="pill ok">RED</span></td></tr>
+    <tr><td>런북 fail-closed (T-E)</td><td><code>runbookIsRunnable</code>이 항상 true</td><td><span class="pill ok">RED</span></td></tr>
+    <tr><td>safety chokepoint (T-B)</td><td>커밋 필요 → 파괴적 명령 거부됨</td><td><span class="pill mid">코드 정독으로 대체 확인</span></td></tr>
+    <tr><td>실행기 번호 변환 (T-F)</td><td>변환을 항등함수로 (<code>return slot_index</code>)</td><td><span class="pill ok">30개 테스트 RED</span></td></tr>
+  </table></div>
+  <p class="sub" style="font-size:.83rem">마지막 항목은 <code>git reset --hard</code>가 포함된 뮤테이션 시도가 거부되어, 단언 코드를 직접 읽어 <code>assert deleted == list(allowed)</code> 완전 동등임을 확인하는 방식으로 대체했다.</p>
+
+  <h2>지금 오퍼레이터가 얻은 것</h2>
+  <div class="tablewrap"><table>
+    <tr><th>공연 단계</th><th>기능</th><th>콘솔 없이도 되나</th></tr>
+    <tr><td>준비</td><td>패치시트·큐시트·프리셋 목록 인쇄용 HTML</td><td><span class="pill ok">예 — 조회 전용</span></td></tr>
+    <tr><td>공연 전</td><td><code>preshow_check</code> — OSC·오브젝트·프리셋·함정 3종 한 번에</td><td><span class="pill mid">항목별 SKIP</span></td></tr>
+    <tr><td>공연 중</td><td>실행기별 큐 진행 + 최근 실행 이력</td><td><span class="pill ok">이력은 항상 표시</span></td></tr>
+    <tr><td>공연 중</td><td>런북 모드 — 큰 글씨 목록 + 버튼 하나</td><td><span class="pill ok">목록은 렌더</span></td></tr>
+    <tr><td>상시</td><td>스냅샷 보관·라벨·감사로그 짝짓기</td><td><span class="pill ok">예</span></td></tr>
+    <tr><td>버스킹 준비</td><td>페이지별 실행기 배치 계획 + 명령 번들</td><td><span class="pill mid">계획은 순수 계산</span></td></tr>
+  </table></div>
+
+  <h2>T-F가 스스로 물어온 설계 판단</h2>
+  <p>T-F는 완료 보고에 확인 요청을 함께 냈다. BUSKWIZ M5가 '실행기/시퀀스 배치'를 DESCOPE하며 두 개의 미해결 전제를 남겼다 — <i>"빈 실행기를 식별할 질의 경로가 없다"</i>, <i>"바인딩 대상 시퀀스가 이미 존재해야 한다"</i>.</p>
+  <p>T-F는 이렇게 우회했다: <b>시퀀스 번호를 스스로 할당하지 않고</b> 호출자가 이미 존재하는 번호를 넘기게 하며, 빈 실행기 식별은 형제 워커 T-C가 같은 세션에서 추가한 <code>node.sequenceNo</code> 점유 판정으로 메운다. 코디네이터는 이 선택을 승인했다 — 스스로 번호를 발명하는 쪽이 훨씬 위험하고, 점유 판정 경로는 이번 웨이브에서 새로 생긴 자산이다.</p>
+  <p class="sub" style="font-size:.85rem">웨이브 2의 산출물이 웨이브 4의 미해결 전제를 메운 셈이다. 순서를 다르게 잡았다면 T-F는 같은 벽에 막혔을 것이다.</p>
+
+  <div class="note">
+    <b>남은 것</b> — ① 라이브 프로브 2건: 현재 큐 속성(<code>Cue</code>)이 실제로 응답하는지, 그리고 복원 명령 검증 후 발신부 추가 ② <code>tools.py</code>에 페이퍼워크 3종·레이아웃 툴 등록(워커들이 직접 수정하지 않고 남겨 둔 몫).<br>
+    라이브 검증이 필요한 항목은 전부 좌석과 <code>@MX:UPGRADE</code> 표시를 남겨 두었으므로, 콘솔 앞에 앉는 날 이어서 닫을 수 있다.
+  </div>
+</main>

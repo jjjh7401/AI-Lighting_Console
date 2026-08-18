@@ -1,0 +1,256 @@
+<title>MA3 AI 코파일럿 — 진행 현황 & 오퍼레이터 기능 제안</title>
+<style>
+  :root{
+    --bg:#f5f4f0;
+    --panel:#ffffff;
+    --ink:#22211c;
+    --ink-soft:#5c594e;
+    --line:#e2dfd5;
+    --amber:#b07600;
+    --amber-strong:#8a5c00;
+    --cue:#0e6e8c;
+    --good:#2f7d3a;
+    --warn:#a05a00;
+    --chip-good-bg:#e4f0e2;
+    --chip-warn-bg:#f6ead6;
+    --mono:'SF Mono',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard','Segoe UI',sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#12130f;
+      --panel:#1b1c16;
+      --ink:#eceadf;
+      --ink-soft:#a5a293;
+      --line:#31322a;
+      --amber:#ffb42e;
+      --amber-strong:#ffc95e;
+      --cue:#4fc3e8;
+      --good:#7fc98a;
+      --warn:#e8a94f;
+      --chip-good-bg:#233527;
+      --chip-warn-bg:#3a2f1c;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#12130f; --panel:#1b1c16; --ink:#eceadf; --ink-soft:#a5a293; --line:#31322a;
+    --amber:#ffb42e; --amber-strong:#ffc95e; --cue:#4fc3e8; --good:#7fc98a; --warn:#e8a94f;
+    --chip-good-bg:#233527; --chip-warn-bg:#3a2f1c;
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f4f0; --panel:#ffffff; --ink:#22211c; --ink-soft:#5c594e; --line:#e2dfd5;
+    --amber:#b07600; --amber-strong:#8a5c00; --cue:#0e6e8c; --good:#2f7d3a; --warn:#a05a00;
+    --chip-good-bg:#e4f0e2; --chip-warn-bg:#f6ead6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.65;font-size:16px}
+  main{max-width:880px;margin:0 auto;padding:48px 24px 96px}
+  h1,h2,h3{line-height:1.3;text-wrap:balance}
+  h1{font-size:1.9rem;margin:8px 0 4px;letter-spacing:-.01em}
+  h2{font-size:1.25rem;margin:56px 0 16px;padding-top:20px;border-top:2px solid var(--amber)}
+  h3{font-size:1.02rem;margin:24px 0 8px}
+  p{margin:10px 0;max-width:70ch}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+  .sub{color:var(--ink-soft);max-width:72ch}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 20px;margin:20px 0 0;font-family:var(--mono);font-size:.8rem;color:var(--ink-soft)}
+  .meta b{color:var(--ink);font-weight:600}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:28px 0}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+  .stat .n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:1.5rem;font-weight:700;color:var(--amber-strong)}
+  .stat .l{font-size:.78rem;color:var(--ink-soft);margin-top:2px}
+  .pipe{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:16px 0}
+  .pipe .node{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--cue);border-radius:5px;padding:10px 14px;flex:1 1 140px;min-width:140px}
+  .pipe .node b{display:block;font-size:.88rem}
+  .pipe .node span{font-size:.76rem;color:var(--ink-soft)}
+  .pipe .arrow{align-self:center;color:var(--ink-soft);font-family:var(--mono)}
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+  table{border-collapse:collapse;width:100%;font-size:.86rem}
+  th{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}
+  td{padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.id{font-family:var(--mono);font-size:.78rem;white-space:nowrap}
+  .chip{display:inline-block;font-family:var(--mono);font-size:.68rem;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .chip.done{background:var(--chip-good-bg);color:var(--good)}
+  .chip.wip{background:var(--chip-warn-bg);color:var(--warn)}
+  .tier{margin:28px 0 8px;font-family:var(--mono);font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--cue)}
+  .prop{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px 20px;margin:12px 0}
+  .prop h3{margin:0 0 6px;font-size:1rem}
+  .prop .why{font-size:.86rem;color:var(--ink-soft);margin:4px 0}
+  .prop .how{font-size:.86rem;margin:6px 0 0}
+  .prop .tag{font-family:var(--mono);font-size:.66rem;color:var(--amber-strong);border:1px solid var(--line);border-radius:4px;padding:1px 6px;margin-left:8px;vertical-align:middle}
+  code{font-family:var(--mono);font-size:.84em;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+  .note{border-left:3px solid var(--amber);padding:10px 16px;background:var(--panel);border-radius:0 6px 6px 0;font-size:.9rem;margin:20px 0}
+  @media (prefers-reduced-motion: no-preference){
+    .stat,.prop{transition:border-color .15s ease}
+    .prop:hover{border-color:var(--amber)}
+  }
+</style>
+<main>
+  <div class="eyebrow">AI-Lighting Console · grandMA3 onPC Copilot</div>
+  <h1>진행 현황 정리 & 오퍼레이터 기능 제안</h1>
+  <p class="sub">자연어 지시를 grandMA3 onPC의 실제 조명 연출(패치·룩·이펙트·큐·버스킹)로 바꿔 주는 AI 코파일럿 앱. 아래는 2026-08-02 기준 전체 진행 현황과, 오퍼레이터 관점에서 다음에 붙일 만한 기능 제안입니다.</p>
+  <div class="meta">
+    <span>main <b>85611a1</b></span>
+    <span>작업 브랜치 <b>feat/upstream-vocabulary-extension</b> (+8 커밋, main 미머지)</span>
+    <span>onPC <b>2.4.2</b> 라이브 검증</span>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n">14</div><div class="l">SPEC 총계 (완료 12 · 진행 2)</div></div>
+    <div class="stat"><div class="n">3,927</div><div class="l">pytest 통과 (+223 vitest)</div></div>
+    <div class="stat"><div class="n">13</div><div class="l">닫힌 툴 집합 (find/compile/exec…)</div></div>
+    <div class="stat"><div class="n">47/47</div><div class="l">뮤테이션 테스트 killed</div></div>
+  </div>
+
+  <h2>지금까지 만들어진 것 — 의도→메모리 파이프라인</h2>
+  <p>“파란 느낌으로 잔잔하게”라는 한국어 문장이 콘솔 메모리(프리셋·시퀀스·큐)가 되기까지의 전체 계층이 완성돼 있습니다. 각 계층은 별도 SPEC으로 실제 콘솔에서 검증됐습니다.</p>
+  <div class="pipe">
+    <div class="node"><b>자연어 이해</b><span>LLM(Gemini/Anthropic) + 룰북</span></div>
+    <div class="arrow">→</div>
+    <div class="node"><b>정지 화면 어휘</b><span>LOOKLIB — 룩→프리셋 실물 생성</span></div>
+    <div class="arrow">→</div>
+    <div class="node"><b>시간축 어휘</b><span>FXLIB — 페이저/이펙트 계층</span></div>
+    <div class="arrow">→</div>
+    <div class="node"><b>씬 컴파일</b><span>SCENE — 룩+이펙트+타이밍→큐 1개</span></div>
+    <div class="arrow">→</div>
+    <div class="node"><b>연출 단위</b><span>SONGCUE 큐리스트 · BUSKWIZ 버스킹</span></div>
+  </div>
+  <p>실행 경로는 앱 → Lua 플러그인 배포(파일+Import) → OSC 왕복(<code>ping/state/exec</code>)이며, 모든 명령이 안전 게이트(<code>gate.screen()</code>) 단일 관문을 지나고 감사 로그가 남습니다. 배포는 Tauri 기반 macOS <code>.app</code>(arm64) 패키징까지 완료.</p>
+
+  <h2>SPEC별 상태</h2>
+  <div class="tablewrap"><table>
+    <tr><th>SPEC</th><th>내용</th><th>상태</th></tr>
+    <tr><td class="id">MVP-001</td><td>코어 앱 — 자연어→Lua/OSC 파이프라인, 패치·연출 라이브 크랙</td><td><span class="chip wip">in-progress*</span></td></tr>
+    <tr><td class="id">EVAL-001</td><td>평가 하니스</td><td><span class="chip done">completed</span></td></tr>
+    <tr><td class="id">SHOWUI-001</td><td>연출 컨트롤 패널 (실행기 실번호=i+100 실측 포함)</td><td><span class="chip done">completed</span></td></tr>
+    <tr><td class="id">EXECREF / EXECBODY</td><td>실행기 인식·single-press 마찰 제거 (응답기 Lua 확장)</td><td><span class="chip done">completed</span></td></tr>
+    <tr><td class="id">DASHUI-001</td><td>좌(콘솔 상태 풀)/우(채팅) 분할 대시보드 UI</td><td><span class="chip done">completed</span></td></tr>
+    <tr><td class="id">DEPLOY-001</td><td>배포 — Stage-1 패키징 + Tauri 셸(M7)까지 완료, M8/M9(서명·Windows) 이연</td><td><span class="chip wip">in-progress</span></td></tr>
+    <tr><td class="id">LOOKLIB-001</td><td>룩 라이브러리 — 자연어→룩→프리셋 실물 생성</td><td><span class="chip done">completed</span></td></tr>
+    <tr><td class="id">SONGCUE-001</td><td>송 구조 기반 큐리스트 생성 (제안서 P1-1)</td><td><span class="chip done">completed</span></td></tr>
+    <tr><td class="id">BUSKWIZ-001</td><td>버스킹 준비 마법사 (제안서 P1-2)</td><td><span class="chip done">completed</span></td></tr>
+    <tr><td class="id">PRECHK / OVERLAP</td><td>사전 검증 — 구간 겹침 판정(보수적 점유폭 상계)</td><td><span class="chip done">completed</span></td></tr>
+    <tr><td class="id">FXLIB-001</td><td>이펙트 어휘 계층 (AC 23/23)</td><td><span class="chip done">completed</span></td></tr>
+    <tr><td class="id">SCENE-001</td><td>씬 컴파일러 — 하나의 큐로 합성 (AC 24/24, PR #10 머지)</td><td><span class="chip done">completed</span></td></tr>
+  </table></div>
+  <p class="sub" style="font-size:.82rem">* MVP-001은 후속 SPEC들의 상위 트래커 성격으로 열려 있음. 현재 브랜치에는 SCENE 사후 후보 이행(재조회 증거 채널, 동치 가드)과 상류 어휘 확장(어미 ‘하는’, 룩 별칭 ‘파란’)이 커밋돼 있고 main 머지 대기 상태.</p>
+
+  <h2>오퍼레이터 관점 기능 제안</h2>
+  <p>“연출을 만드는 것”은 파이프라인이 이미 해냅니다. 이제 부족한 것은 <b>공연 당일 오퍼레이터의 시간 흐름</b> — 셋업 → 리허설 → 본 공연 → 철수 — 을 따라가는 기능입니다. 기존 자산(OSC 왕복·툴 13종·대시보드)을 재활용할 수 있는 순서로 정리했습니다.</p>
+
+  <div class="tier">Tier 1 — 즉시 착수 가능 (기존 자산 재조합)</div>
+  <div class="prop">
+    <h3>프리쇼 체크리스트 자동화 <span class="tag">제안서 P2-6</span></h3>
+    <p class="why">공연 30분 전 오퍼레이터가 손으로 확인하는 것들 — OSC 연결, 시퀀스/실행기 존재, 프리셋 무결성, DMX 출력 — 을 한 번에 검사.</p>
+    <p class="how">기존 <code>ping/state</code> 왕복 + <code>get_rig_context</code> 10경로 조회를 묶어 “공연 준비 OK / 항목별 결함” 신호등 리포트로. 과거 반복된 함정(소켓 스테일, <code>osc_slot</code> Send행, 응답포트 9005 드리프트)을 자동 진단 항목으로 승격하면 실전 가치가 큼.</p>
+  </div>
+  <div class="prop">
+    <h3>쇼파일 스냅샷 & 안전 되돌리기</h3>
+    <p class="why">AI가 콘솔 메모리를 만드는 앱의 최대 불안은 “잘못 만들면?”. 오퍼레이터가 안심하고 시키려면 되돌리기가 필요.</p>
+    <p class="how">배치 작업 전 <code>SaveShow</code> 스냅샷을 자동으로 남기고, 감사 로그와 짝지어 “이 지시 이전으로 복원” 제공. 콘솔 쇼파일 정리 세션(34건 삭제) 경험이 그대로 재료가 됨.</p>
+  </div>
+  <div class="prop">
+    <h3>라이브 큐 진행 모니터 (대시보드 확장)</h3>
+    <p class="why">본 공연 중 오퍼레이터의 시선은 “지금 어느 큐, 다음 큐는 뭐, 페이드 얼마나 남았나”에 고정됨.</p>
+    <p class="how">DASHUI 좌측 상태 풀에 현재 시퀀스/큐 번호·다음 큐 미리보기·최근 실행 이력을 폴링 표시. <code>state</code> 채널 확장만으로 가능.</p>
+  </div>
+
+  <div class="tier">Tier 2 — 중기 (한 SPEC 규모)</div>
+  <div class="prop">
+    <h3>자동 페이퍼워크 생성 <span class="tag">제안서 P2-4</span></h3>
+    <p class="why">패치시트·큐시트·매직시트는 만들기 귀찮지만 대관·협업에 필수인 문서.</p>
+    <p class="how"><code>get_rig_context</code>가 이미 리그 전체를 회수하므로, 이를 인쇄용 HTML/PDF(패치시트·큐시트·프리셋 목록)로 렌더링. 콘솔 쓰기 없음 → 위험 0.</p>
+  </div>
+  <div class="prop">
+    <h3>볼런티어 런북 모드 <span class="tag">제안서 P2-5</span></h3>
+    <p class="why">교회·소극장에선 비전문 오퍼레이터가 콘솔을 잡는 날이 많음. “이 버튼만 누르세요” 수준의 안내가 필요.</p>
+    <p class="how">SONGCUE 큐리스트를 기반으로 곡 순서·큐별 실행 버튼·주의사항만 남긴 극단순 UI 프리셋. DASHUI에 모드 스위치로.</p>
+  </div>
+  <div class="prop">
+    <h3>페이지·실행기 레이아웃 자동 구성</h3>
+    <p class="why">버스킹의 실제 마찰은 “페이더 어디에 뭘 놓을까”. 실행기 주소 체계(실번호=i+100)는 이미 실측·검증 완료.</p>
+    <p class="how">BUSKWIZ 산출물을 받아 장르·곡 구성에 맞춰 페이지별 실행기 배치를 제안·자동 할당하고 라벨까지 부여. “버스킹 준비”의 마지막 조각.</p>
+  </div>
+
+  <div class="tier">Tier 3 — 장기 (검증 난도 높음)</div>
+  <div class="prop">
+    <h3>타임코드/음악 동기 연출</h3>
+    <p class="how">SONGCUE가 만든 큐리스트를 타임코드 트리거(<code>TrigType</code> 설정은 이미 라이브 검증됨)로 자동 배선 — 재생만 누르면 곡 전체가 무인 진행.</p>
+  </div>
+  <div class="prop">
+    <h3>음성 명령 버스킹</h3>
+    <p class="how">본 공연 중 손은 페이더에 있음. “다음 곡”, “파랗게” 같은 짧은 음성을 기존 자연어 파이프라인에 그대로 흘리는 입력 채널 추가.</p>
+  </div>
+  <div class="prop">
+    <h3>공연 후 자동 회고 리포트</h3>
+    <p class="how">감사 로그 + 실행 이력으로 “이번 공연에서 실제 쓴 큐/안 쓴 큐, 수동 개입 지점”을 정리 — 다음 공연의 쇼파일 다이어트 재료.</p>
+  </div>
+
+  <h2>실행 로드맵 — 세션 단위 순차 진행 + 병렬 판정</h2>
+  <p>아래 순서는 기능마다 실제로 건드릴 코드 표면을 저장소에서 확인해 잡은 것입니다. 공유 병목은 딱 하나 — 신규 툴 등록이 전부 지나는 <code>server/orchestrator/tools.py</code> — 이고, 나머지 표면은 기능별로 분리돼 있습니다.</p>
+
+  <h3>기능별 코드 표면과 병렬 판정 (실측 근거)</h3>
+  <div class="tablewrap"><table>
+    <tr><th>기호</th><th>기능</th><th>주 코드 표면</th><th>병렬 판정</th></tr>
+    <tr><td class="id">A</td><td>프리쇼 체크리스트</td><td><code>server/tools/</code>(smoke 하니스 기존) + 신규 <code>server/preshow/</code> + tools.py 등록</td><td>B·C·D와 병렬 가능</td></tr>
+    <tr><td class="id">B</td><td>쇼파일 스냅샷·되돌리기</td><td><code>server/safety/backup.py</code>(기존 모듈 확장) + gate·audit</td><td>A·C·D와 병렬 가능</td></tr>
+    <tr><td class="id">C</td><td>라이브 큐 진행 모니터</td><td><code>server/web/dash.py·panel.py</code> + <code>ui/src</code></td><td>A·B·D와 병렬 — <b>E와는 충돌</b>(ui/src 공유)</td></tr>
+    <tr><td class="id">D</td><td>자동 페이퍼워크</td><td>신규 <code>server/paperwork/</code> — 조회 전용, 콘솔 쓰기 없음</td><td>전부와 병렬 가능 (가장 안전)</td></tr>
+    <tr><td class="id">E</td><td>볼런티어 런북 모드</td><td><code>ui/src</code> 중심</td><td>C 완료 후 순차</td></tr>
+    <tr><td class="id">F</td><td>실행기 레이아웃 자동 구성</td><td>orchestrator·rulebook + BUSKWIZ 산출물 소비</td><td>A~D와 표면상 병렬 가능하나 tools.py 경합 → 후순위 권장</td></tr>
+  </table></div>
+  <p class="sub" style="font-size:.82rem">공유 지점인 <code>tools.py</code> 등록 커밋만 순서를 정해 리베이스하면 되는 작은 경합입니다. MoAI 운영 규칙상 한 세션에 쓰기 에이전트는 1개이므로, 병렬은 <b>워크트리 분리 세션</b>(L2/L3, 사용자 opt-in) 또는 <b>plan-phase의 read-only 리서치 fan-out</b>(Mode 4)으로 실현합니다.</p>
+
+  <h3>순차 트랙 (메인 세션)</h3>
+  <div class="tablewrap"><table>
+    <tr><th>단계</th><th>세션 목표</th><th>진입 명령</th></tr>
+    <tr><td class="id">S0</td><td>현재 브랜치(어휘 확장 +8커밋) main 머지·정리</td><td class="id">브랜치 머지 요청 (PR 또는 직접)</td></tr>
+    <tr><td class="id">S1</td><td><b>A 프리쇼 체크리스트</b> — plan→run→sync 전 사이클</td><td class="id">/moai plan "프리쇼 체크리스트 자동화"</td></tr>
+    <tr><td class="id">S2</td><td><b>B 스냅샷·되돌리기</b> — backup.py 확장</td><td class="id">/moai plan "쇼파일 스냅샷·복원"</td></tr>
+    <tr><td class="id">S3</td><td><b>C 라이브 큐 모니터</b> — dash/panel + ui</td><td class="id">/moai plan "라이브 큐 진행 모니터"</td></tr>
+    <tr><td class="id">S4</td><td><b>E 런북 모드</b> — C의 ui 위에서</td><td class="id">/moai plan "볼런티어 런북 모드"</td></tr>
+    <tr><td class="id">S5</td><td><b>F 실행기 레이아웃</b> → 이후 Tier 3</td><td class="id">/moai plan "실행기 레이아웃 자동 구성"</td></tr>
+  </table></div>
+
+  <h3>병렬 레인 (선택 — 워크트리 분리 세션)</h3>
+  <p><b>D 페이퍼워크</b>는 조회 전용·신규 디렉터리라 어느 시점에든 별도 워크트리 세션으로 병행 가능합니다. S1~S3 어디와 붙여도 파일 충돌이 없습니다. 형제 SPEC을 같은 base에서 병행할 때의 함정(머지 순서에 따라 BASE..HEAD 게이트가 깨짐)은 FXLIB·OVERLAP 머지에서 이미 학습됨 — 먼저 머지된 쪽 이후 <b>리베이스 후 게이트 재실행</b>이 규칙입니다.</p>
+  <p>또한 각 세션 내부에서는 plan-phase 리서치(코드 표면 조사·기존 자산 인벤토리)를 read-only 서브에이전트 병렬 fan-out으로 돌려 세션 시간을 줄일 수 있습니다 — 쓰기 작업은 항상 1개 에이전트 순차.</p>
+
+  <div class="note">
+    <b>요약</b> — 순차 축은 S0→S1(A)→S2(B)→S3(C)→S4(E)→S5(F), 병렬 축은 D(페이퍼워크)를 아무 때나 워크트리로. 첫 착수는 위험이 가장 낮고 기존 OSC 노하우를 그대로 제품화하는 <b>S1 프리쇼 체크리스트</b>를 권장합니다.
+  </div>
+
+  <h2>OMP 실행 패키지 — Orca 오케스트레이션으로 돌리기</h2>
+  <p>이 저장소는 이미 Orca 오케스트레이션으로 병렬 웨이브를 성공시킨 이력이 있습니다(SCENE-001: 코디네이터 1 + 워커 3, 쓰기 집합 교집합 ∅, <b>워커는 커밋·전체테스트·SPEC 문서 쓰기 금지 — 검증과 커밋은 코디네이터</b>). 같은 계약을 그대로 재사용합니다. 아래 명령을 코디네이터 터미널(현 세션)에서 순서대로 실행하면 OMP 패널에 Run·Task·워커가 나타납니다.</p>
+
+  <h3>0단계 — Run 생성 + 태스크 DAG 등록</h3>
+  <pre style="overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;font-size:.78rem;line-height:1.5"><code>orca orchestration run-create --objective "MA3 코파일럿 오퍼레이터 로드맵 — 웨이브1(A 프리쇼·D 페이퍼워크 병렬) → 웨이브2(B 스냅샷·C 라이브모니터) → E 런북 → F 레이아웃. 워커는 커밋·전체테스트·SPEC문서쓰기 금지; 검증·머지·커밋은 코디네이터." --json
+
+orca orchestration task-create --spec "T-A 프리쇼 체크리스트: 워크트리 preshow-check에서 /moai plan→run. 쓰기 집합: server/preshow/(신규)·server/tests/. tools.py 등록은 스텁 커밋으로 분리해 코디네이터에 보고. 완료=AC 정의+pytest 신규 green 증거를 worker_done으로." --json
+orca orchestration task-create --spec "T-D 자동 페이퍼워크: 워크트리 paperwork에서 /moai plan→run. 쓰기 집합: server/paperwork/(신규)만 — 조회 전용, 콘솔 쓰기 금지. 완료=패치시트·큐시트 HTML 산출 + 테스트 green 증거를 worker_done으로." --json
+orca orchestration task-create --spec "T-B 쇼파일 스냅샷·복원: server/safety/backup.py 확장 + gate·audit 연동. T-A 머지 후 리베이스 기점에서 시작." --deps '["<T-A id>"]' --json
+orca orchestration task-create --spec "T-C 라이브 큐 모니터: server/web/dash.py·panel.py + ui/src. T-A 머지 후 시작." --deps '["<T-A id>"]' --json
+orca orchestration task-create --spec "T-E 볼런티어 런북 모드: ui/src 중심 — T-C 완료·머지 후에만 시작(ui/src 충돌)." --deps '["<T-C id>"]' --json
+orca orchestration task-create --spec "T-F 실행기 레이아웃 자동 구성: orchestrator·rulebook + BUSKWIZ 산출물 소비. 최후순." --deps '["<T-B id>","<T-E id>"]' --json</code></pre>
+
+  <h3>1단계 — 웨이브 1 워커 기동 (검증된 병렬쌍 A ∥ D)</h3>
+  <pre style="overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;font-size:.78rem;line-height:1.5"><code>orca orchestration worker-start --task &lt;T-A id&gt; --worktree new-child --name preshow-check --agent claude --setup run --json
+orca orchestration worker-start --task &lt;T-D id&gt; --worktree new-child --name paperwork --agent claude --setup run --json
+
+# 코디네이터 대기 루프 (폴링 금지 — 이벤트 대기)
+orca orchestration check --wait --types worker_done,escalation,question --timeout-ms 1800000 --json</code></pre>
+
+  <h3>2단계 — 머지 규율 (FXLIB·OVERLAP에서 학습된 규칙)</h3>
+  <p style="font-size:.9rem">worker_done 수신 시 코디네이터가 ① 워커 워크트리에서 검증 배치(테스트·게이트) 직접 실행 → ② main 머지 → ③ <b>아직 열려 있는 형제 워커에게 리베이스 + 게이트 재실행 지시</b>(같은 base 형제 SPEC의 BASE..HEAD 게이트는 머지 순서에 반드시 깨짐) → ④ 다음 웨이브 태스크 dispatch. 판단이 갈리는 지점(예: tools.py 등록 순서)은 <code>gate-create</code>로 결정 게이트를 세워 사용자 승인 후 진행.</p>
+
+  <h3>웨이브 구성 요약</h3>
+  <div class="tablewrap"><table>
+    <tr><th>웨이브</th><th>병렬 워커</th><th>근거</th></tr>
+    <tr><td class="id">W0</td><td>코디네이터 단독 — 현 브랜치(+8커밋) main 머지</td><td>모든 레인의 공통 base 확정</td></tr>
+    <tr><td class="id">W1</td><td><b>A 프리쇼</b> ∥ <b>D 페이퍼워크</b></td><td>신규 디렉터리끼리 — 쓰기 집합 교집합 ∅ (실측)</td></tr>
+    <tr><td class="id">W2</td><td><b>B 스냅샷</b> ∥ <b>C 라이브모니터</b></td><td>safety/ vs web/+ui/ — 교집합 ∅ (실측)</td></tr>
+    <tr><td class="id">W3</td><td>E 런북 (단독)</td><td>C와 ui/src 공유 → 순차 강제</td></tr>
+    <tr><td class="id">W4</td><td>F 레이아웃 → Tier 3</td><td>tools.py 경합 최소화 위해 최후순</td></tr>
+  </table></div>
+  <p class="sub" style="font-size:.82rem">공유 병목 <code>server/orchestrator/tools.py</code>는 워커가 직접 수정하지 않고 등록 diff만 보고 → 코디네이터가 머지 시점에 순서대로 적용하는 방식을 권장 (SCENE-001 웨이브 계약과 동일).</p>
+</main>

@@ -734,6 +734,16 @@ _R17_VWX_BOUNDARY_SITES: tuple[_Site, ...] = (
     # 폐기 계수 — 왔지만 쓸 수 없던 행(매핑 아님·이름 빈칸). `> 0`으로 밀면 폐기가
     # 있어도 전수로 읽히고, 그러면 선언 총계와의 차이를 절단으로 오인한다.
     _Site("librarywatch.py", "numcmp", "self.unusable_row_count == 0"),
+    # 이름 후보 매칭의 **최소 식별 길이**(`candidate_names`). 실기 2026-08-18에
+    # «robe esprite»가 «Robin Esprite»에 걸리지 않아 부재로 안내된 사고의 처방이며,
+    # 두 자리가 같은 상수를 쓴다.
+    #   토큰 축을 `>= 3`으로 밀면 'led'·'hp' 같은 조각이 제품군을 가리지 못한 채
+    #   라이브러리를 훑어 후보 카드가 무의미해진다. `>= 5`로 밀면 'robe'(4자)가
+    #   빠져 그 사고가 그대로 재현된다.
+    #   부분문자열 축도 같다: 짧은 조각이 포함 관계로 걸리면 같은 훑기가 된다.
+    # 양방향 대조군은 `test_librarywatch_matching.py`.
+    _Site("librarywatch.py", "lencmp", "len(token) >= MIN_DISTINCTIVE_TOKEN"),
+    _Site("librarywatch.py", "lencmp", "min(len(wanted), len(key)) >= MIN_DISTINCTIVE_TOKEN"),
     # --- 타입 조달 안내 (typesource.py) — 콘솔 라이브러리 경로를 만드는 자리.
     # 수치 경계가 아니라 **경로 조립**이지만 스캐너가 `/` 연산을 산술로 센다.
     # 실물 디스크로 확인한 값이다: `~/MALightingTechnology/gma3_library/` 아래

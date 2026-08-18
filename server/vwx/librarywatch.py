@@ -201,12 +201,15 @@ def selection_prompt(instrument_type: str, *, poll_seconds: float = 2.0) -> Sele
     return SelectionPrompt(
         instrument_type=instrument_type,
         steps=(
-            "콘솔에서 Menu 키를 누르고 Patch를 탭한다.",
-            "목록 아래 New Fixture 자리를 탭한 뒤 Insert New Fixture를 누른다.",
-            "Library 탭을 고르고, 드라이브(Internal)와 소스(MA / User / Shares)를 확인한다.",
-            f"검색창에 '{instrument_type}'을(를) 입력해 목록을 좁힌다.",
-            "제조사 → 픽스처 → 모드 순으로 고르고 Select를 누른다.",
-            "마법사가 열리면 **닫아도 된다** — 타입이 쇼에 들어온 것으로 충분하다.",
+            "① 콘솔에서 Menu ▸ Patch를 엽니다.",
+            "② 픽스처 목록 맨 아래 빈 줄(New Fixture)을 탭하면 "
+            "«Insert New Fixtures» 창이 열립니다.",
+            "③ 창 위쪽에서 Library 탭을 고릅니다(Show 탭이 아니라 Library입니다).",
+            f"④ 검색창에 «{instrument_type}»을(를) 입력합니다 — 제품명 일부만 넣어도 됩니다.",
+            "⑤ 제조사 → 픽스처를 고릅니다. **모드는 아무거나 둬도 됩니다** — "
+            "실제 사용할 모드는 앱이 다음 단계에서 여쭙습니다.",
+            "⑥ Select를 누릅니다. 패치 마법사가 열리면 **닫아도 된다**는 점만 기억하세요 — "
+            "타입이 쇼에 들어온 것만으로 충분합니다.",
         ),
         poll_note=(
             f"{poll_seconds:g}초마다 {FIXTURE_TYPE_LIBRARY_ROOT}를 확인한다"
@@ -214,6 +217,81 @@ def selection_prompt(instrument_type: str, *, poll_seconds: float = 2.0) -> Sele
             "선택이 감지되면 그 자리에서 이어서 진행한다 — 다시 알려 주지 않아도 된다."
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# 이름 대조 — "없다"고 말하기 전에 **토큰까지** 본다.
+#
+# 실기 2026-08-18: 사용자가 «robe esprite»를 요청했고 콘솔 라이브러리에는
+# «Robin Esprite»가 실재했는데, 부분문자열 대조("robeesprite" ⊄ "robinesprite")가
+# 어긋나 "라이브러리에 없습니다"로 안내됐다. 제조사 표기(Robe)와 제품군 표기
+# (Robin)가 다른 것은 실물에서 흔하다 — 모델 토큰 하나가 겹치면 **후보**로 올려
+# 사람에게 확인받는 것이 옳다. 확정은 여전히 사람이 한다.
+# ---------------------------------------------------------------------------
+
+#: 후보로 올릴 만한 토큰의 최소 길이. 3자 이하(led, hp, xb…)는 제품군을 가리지
+#: 못해 라이브러리 전체를 후보로 만든다.
+MIN_DISTINCTIVE_TOKEN = 4
+
+
+def _tokens(text: str) -> frozenset[str]:
+    """영숫자 토큰 집합 — 구분자·대소문자·기호를 지운다."""
+    out: list[str] = []
+    current: list[str] = []
+    for ch in text.lower():
+        if ch.isalnum():
+            current.append(ch)
+        elif current:
+            out.append("".join(current))
+            current = []
+    if current:
+        out.append("".join(current))
+    return frozenset(out)
+
+
+def _squashed(text: str) -> str:
+    return "".join(ch for ch in text.lower() if ch.isalnum())
+
+
+def candidate_names(requested: str, names: Sequence[str]) -> tuple[str, ...]:
+    """``requested``와 같은 타입일 수 있는 라이브러리 이름들 — 열거 순서 유지.
+
+    세 등급을 한 목록으로 낸다(강한 것이 앞):
+      1. 정규화 완전 일치
+      2. 부분문자열 포함(어느 방향이든)
+      3. 길이 ``MIN_DISTINCTIVE_TOKEN`` 이상 토큰 공유
+
+    빈 요청이나 영숫자가 없는 요청은 후보를 내지 않는다 — 그 이름으로 "일치"를
+    주장하면 라이브러리 전 항목이 후보가 된다.
+    """
+    wanted = _squashed(requested)
+    if not wanted:
+        return ()
+    wanted_tokens = {token for token in _tokens(requested) if len(token) >= MIN_DISTINCTIVE_TOKEN}
+
+    exact: list[str] = []
+    substring: list[str] = []
+    shared: list[str] = []
+    for name in names:
+        key = _squashed(name)
+        if not key:
+            continue
+        if key == wanted:
+            exact.append(name)
+        elif (wanted in key or key in wanted) and min(len(wanted), len(key)) >= (
+            MIN_DISTINCTIVE_TOKEN
+        ):
+            # 짧은 조각(led, hp…)이 부분문자열로 걸리면 라이브러리를 훑는다 — 확정은
+            # 사람이 하더라도 후보 카드가 무의미해진다.
+            substring.append(name)
+        elif wanted_tokens & _tokens(name):
+            shared.append(name)
+    ordered: list[str] = []
+    for group in (exact, substring, shared):
+        for name in group:
+            if name not in ordered:
+                ordered.append(name)
+    return tuple(ordered)
 
 
 def watch_until_change(

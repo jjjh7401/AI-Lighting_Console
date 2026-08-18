@@ -170,6 +170,11 @@ STATUS_LABELS: dict[str, str] = {
     "proposal": "제안 (라이브 잠금 — 전송되지 않음)",
     "held": "승인 대기",
     "unconfirmed": "실행 미확인 (자동 재전송 안 함)",
+    # 패치 검증 전용(patch_fixtures) — 서버가 실행한 명령의 성공/실패가 아니라
+    # 실행 뒤 재조회로 판정한 결과다. "실행 실패"로 내보내면 UI에서 "앱이
+    # 실행했는데 실패했다"로 읽힌다(2026-08-18 실전 테스트에서 그렇게 읽혔다).
+    "not_created": "생성 안 됨 (콘솔 명령줄에서 직접 실행 필요)",
+    "partially_created": "부분 생성 (자동 재시도 안 함)",
 }
 
 # Korean summary lines derived from gate bundle decisions (gate truth).

@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import re
 import urllib.parse
+from collections.abc import Sequence
 
 # @MX:NOTE: [AUTO] protocol version is embedded in every reply payload as "v";
 #   bump only with a PROTOCOL.md revision (M3 tool-runner consumes this contract)
@@ -140,6 +141,40 @@ def build_prop_query(request_id: str, path: str, property_name: str) -> str:
     if any(char.isspace() for char in property_name):
         raise ProtocolError(f"property name must be a single token: {property_name!r}")
     return build_plugin_call(f"prop {request_id} {path} {property_name}")
+
+
+def build_props_query(
+    request_id: str,
+    path: str,
+    start_slot: int,
+    count: int,
+    property_names: Sequence[str],
+) -> str:
+    """MANY children x MANY properties in ONE round trip (responder 1.6.0).
+
+    ``prop`` costs one round trip per property — live-measured 66.7 ms — so a
+    coordinate read of an 80-fixture rig cost ~400 trips (~26 s) and a
+    200-fixture rig could not finish inside an interactive budget. This asks
+    for a PAGE of children instead, keyed by pool slot.
+
+    The path may not contain spaces here (three fixed tokens follow it), which
+    is why this is a separate builder rather than a widened ``build_prop_query``.
+    """
+    _validate_request_id(request_id)
+    _validate_rest(path, field="object path")
+    if any(char.isspace() for char in path):
+        raise ProtocolError(f"props path must be a single token: {path!r}")
+    if start_slot < 1 or count < 1:
+        raise ProtocolError(f"start_slot and count must be >= 1: {start_slot!r}, {count!r}")
+    names = tuple(property_names)
+    if not names:
+        raise ProtocolError("at least one property name is required")
+    for name in names:
+        _validate_rest(name, field="property name")
+        if any(char.isspace() for char in name) or "," in name:
+            raise ProtocolError(f"property name must be a comma-free token: {name!r}")
+    joined = ",".join(names)
+    return build_plugin_call(f"props {request_id} {path} {start_slot} {count} {joined}")
 
 
 def build_exec_request(request_id: str, command: str) -> str:

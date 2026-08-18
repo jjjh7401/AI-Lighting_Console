@@ -1,0 +1,161 @@
+<title>SPEC-COPILOT-MCP-001 — 읽기 전용 MCP 서버</title>
+<style>
+:root{
+  --bg:#faf9f7; --panel:#ffffff; --ink:#22211e; --muted:#6e6a61; --line:#e5e1d8;
+  --accent:#b8860b; --accent-ink:#7a5a06; --read:#1a7f5a; --write:#b0433a;
+  --chipbg:#f1ede4; --codebg:#f4f2ec;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#181714; --panel:#201f1b; --ink:#e8e4da; --muted:#a49e90; --line:#38352e;
+    --accent:#e2a93b; --accent-ink:#e2a93b; --read:#4cc38a; --write:#e5726a;
+    --chipbg:#2a2822; --codebg:#26241f; }
+}
+:root[data-theme="dark"]{ --bg:#181714; --panel:#201f1b; --ink:#e8e4da; --muted:#a49e90; --line:#38352e;
+  --accent:#e2a93b; --accent-ink:#e2a93b; --read:#4cc38a; --write:#e5726a; --chipbg:#2a2822; --codebg:#26241f; }
+:root[data-theme="light"]{ --bg:#faf9f7; --panel:#ffffff; --ink:#22211e; --muted:#6e6a61; --line:#e5e1d8;
+  --accent:#b8860b; --accent-ink:#7a5a06; --read:#1a7f5a; --write:#b0433a; --chipbg:#f1ede4; --codebg:#f4f2ec; }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.65;margin:0;padding:0 20px 80px}
+main{max-width:880px;margin:0 auto}
+header{padding:48px 0 20px;border-bottom:2px solid var(--accent)}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);font-weight:700}
+h1{font-size:30px;margin:8px 0 6px;text-wrap:balance;line-height:1.3}
+.sub{color:var(--muted);font-size:15px;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
+.chip{background:var(--chipbg);border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:12.5px;color:var(--muted)}
+.chip b{color:var(--ink)}
+h2{font-size:20px;margin:44px 0 4px;padding-top:8px}
+h2 .n{color:var(--accent-ink);font-variant-numeric:tabular-nums;margin-right:8px}
+h3{font-size:16px;margin:24px 0 8px}
+.lead{color:var(--muted);margin:0 0 14px;font-size:14.5px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+th{background:var(--chipbg);text-align:left;padding:8px 12px;font-size:12.5px;letter-spacing:.04em}
+td{padding:8px 12px;border-top:1px solid var(--line);vertical-align:top}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;background:var(--codebg);padding:1px 5px;border-radius:4px}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;border-radius:4px;padding:1px 7px;letter-spacing:.03em}
+.t-read{color:var(--read);border:1px solid var(--read)}
+.t-write{color:var(--write);border:1px solid var(--write)}
+.t-m{color:var(--accent-ink);border:1px solid var(--accent)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin:12px 0}
+.card h3{margin-top:0}
+ul{padding-left:22px;margin:8px 0}
+li{margin:5px 0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.req b, .as b{color:var(--accent-ink)}
+.foot{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:20px 0 0}
+.kpi div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;text-align:center}
+.kpi .v{font-size:24px;font-weight:800;color:var(--accent-ink);font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--muted)}
+</style>
+<main>
+<header>
+  <div class="eyebrow">SPEC 검토 · draft v0.1.0 · 2026-08-04</div>
+  <h1>SPEC-COPILOT-MCP-001 — 읽기 전용 MCP 서버 (Stage&nbsp;1)</h1>
+  <p class="sub">Claude 클라이언트가 기존 OSC 링크로 grandMA3 콘솔을 <b>판독</b>한다 — 변이 툴은 하나도 노출하지 않는다.</p>
+  <div class="chips">
+    <span class="chip">Tier <b>M</b></span>
+    <span class="chip">브랜치 <b>feature/SPEC-COPILOT-MCP-001</b> (base main=3176900)</span>
+    <span class="chip">모듈 <b>server/mcp/ (신규)</b> · .mcp.json · README</span>
+    <span class="chip">우선순위 <b>P1</b></span>
+  </div>
+  <div class="kpi">
+    <div><div class="v">23</div><div class="l">요구사항 REQ</div></div>
+    <div><div class="v">16</div><div class="l">수용 기준 AC</div></div>
+    <div><div class="v">6</div><div class="l">전제 ASSUMPTION</div></div>
+    <div><div class="v">10</div><div class="l">제외 범위</div></div>
+    <div><div class="v">6</div><div class="l">마일스톤 M1~M6</div></div>
+    <div><div class="v">1</div><div class="l">라이브 세션 (M6)</div></div>
+  </div>
+</header>
+
+<h2><span class="n">01</span>무엇을 만드나</h2>
+<p>지금 앱은 서버측 LLM(Gemini)이 툴을 호출하는 닫힌 웹 앱이다. 이 SPEC은 그 <b>읽기 절반</b>을 MCP 표면으로 연다 — Claude Code / Claude Desktop이 stdio로 붙어 기존 툴 레지스트리의 읽기 전용 부분집합을 직접 호출한다. 서버는 LLM을 호출하지 않는다(키 불요). 새로 생기는 것은 세 가지다:</p>
+<ul>
+<li><b><code>server/mcp/</code> 패키지</b> — <code>python -m server.mcp</code> stdio 엔트리포인트. 기존 <code>ToolRegistry</code>의 <code>definitions()</code>/<code>dispatch()</code> 재사용 (사본·포크 금지).</li>
+<li><b>MCP 리소스</b> — 룰북 5종(문법·오브젝트 모델·한국어 용어·플러그인·연출 패턴) + 룩/FX/씬 라이브러리. MCP는 시스템 프롬프트를 주입할 수 없으므로 지식은 리소스로 노출.</li>
+<li><b>등록 아티팩트</b> — 저장소 <code>.mcp.json</code>(Claude Code) + README의 Claude Desktop 등록 절차.</li>
+</ul>
+
+<div class="card">
+<h3>사전 확정 사실 S1~S4 (재질의 금지)</h3>
+<ul>
+<li><b>S1 읽기 전용</b> — 변이 툴 전면 제외. 쓰기 서버는 Stage 2.</li>
+<li><b>S2 링크 배타 소유</b> — 수신 포트(9000) 배타 점유. 웹 앱과 동시 구동 불가, 점유 시 명확한 기동 실패.</li>
+<li><b>S3 LLM 키 불요</b> — Claude 클라이언트가 브레인.</li>
+<li><b>S4 공식 Python MCP SDK + stdio</b> 전송.</li>
+</ul>
+</div>
+
+<h2><span class="n">02</span>툴 전수 분할 — 18종 (11 노출 / 7 제외)</h2>
+<p class="lead">이 분할 자체가 테스트로 고정된다(REQ-MCP-011). 상류에 툴이 추가되면 테스트가 깨져 편입/제외 결정을 강제한다 — 침묵 편입 없음.</p>
+<div class="tw"><table>
+<tr><th>구분</th><th>툴</th><th>콘솔 접촉</th></tr>
+<tr><td><span class="tag t-read">노출 11</span></td><td><code>query_state</code> · <code>get_rig_context</code></td><td>읽기 (응답기 state 판독)</td></tr>
+<tr><td><span class="tag t-read">노출</span></td><td><code>find_looks</code> · <code>find_fx</code> · <code>find_scene</code> · <code>plan_executor_layout</code></td><td>무접촉 (순수 라이브러리/계획)</td></tr>
+<tr><td><span class="tag t-read">노출</span></td><td><code>precheck_patch</code> · <code>build_patch_sheet</code> · <code>build_cue_sheet</code> · <code>build_preset_list</code></td><td>읽기 (판독 기반 점검·시트)</td></tr>
+<tr><td><span class="tag t-read">노출</span></td><td><code>preshow_check</code></td><td>핑만 (라이브니스 왕복 — 무해)</td></tr>
+<tr><td><span class="tag t-write">제외 7</span></td><td><code>run_commands</code> · <code>deploy_plugin</code> · <code>instantiate_look</code> · <code>instantiate_fx</code> · <code>compile_scene</code> · <code>prepare_busking</code> · <code>prepare_songcue</code></td><td>변이 — Stage 2의 몫</td></tr>
+</table></div>
+<p class="lead">※ <code>get_spatial_context</code>·<code>arrange_fixtures</code>는 미머지 형제 브랜치 소유로 이 브랜치에 존재하지 않음 — 머지 후 분할 테스트가 편입 결정을 강제.</p>
+
+<h2><span class="n">03</span>무변이 3중 방벽</h2>
+<div class="grid2">
+<div class="card"><h3>① allowlist + 분할 테스트</h3><p class="lead">명시적 이름 상수. 11종은 <b>상한</b> — 축소는 SPEC 개정 없이 허용(정직한 축소), 확장은 개정 필요 (REQ-MCP-010/011).</p></div>
+<div class="card"><h3>② 거부 스텁 주입</h3><p class="lead"><code>build_toolset</code>의 필수 인자 <code>execution_port</code>에 어떤 콘솔 발화도 하지 않는 <code>RefusingExecutionPort</code>를 주입 — 필터와 독립인 2중 방벽 (REQ-MCP-007).</p></div>
+<div class="card"><h3>③ 기계적 도달성 테스트</h3><p class="lead">노출 11종을 호출 기록형 fake로 대표 호출 → <code>execute</code>/<code>deploy</code> 도달 <b>0건</b> 실측 (REQ-MCP-012, ASSUMPTION-69 판정기).</p></div>
+<div class="card"><h3>+ allowlist 밖 호출 거부</h3><p class="lead">변이 툴 이름 호출 시 실행 없이 한국어 사유의 구조화 거부 반환 (REQ-MCP-005).</p></div>
+</div>
+
+<h2><span class="n">04</span>요구사항 개요 — REQ 23건 (7그룹)</h2>
+<div class="tw"><table>
+<tr><th>그룹</th><th>REQ</th><th>핵심</th></tr>
+<tr><td>B.1 서버 표면·툴 브리지</td><td>001~005</td><td>stdio 엔트리포인트 · 레지스트리 재사용 · tools/list=allowlist만 · 무손실 반환 · 범위 밖 거부</td></tr>
+<tr><td>B.2 콘솔 링크 조립·소유권</td><td>006~009</td><td>단일 관문 불변식 준수 조립 · 거부 스텁 · 포트 점유 시 fail-fast · 동시 구동 메커니즘 금지</td></tr>
+<tr><td>B.3 무변이 보증</td><td>010~013</td><td>allowlist 상수 · 전수 분할 테스트 · 도달성 0건 · 변이 표면 전면 금지</td></tr>
+<tr><td>B.4 지식 리소스</td><td>014~016</td><td>룰북 5종 + 라이브러리 리소스 노출 · 디스크 자산 무변경 사본</td></tr>
+<tr><td>B.5 설정·등록·키</td><td>017~019</td><td>기존 설정 재사용 · .mcp.json + README 등록 · LLM 키 불요</td></tr>
+<tr><td>B.6 우아한 성능저하</td><td>020~021</td><td>콘솔 오프라인 시 구조화 에러 + 서버 생존 · 목록/리소스는 콘솔 없이 동작</td></tr>
+<tr><td>B.7 검증 규율</td><td>022~023</td><td>stdio 프로토콜 스모크 테스트 · 라이브 판정 접두 행(GO/NO-GO) 기록 의무</td></tr>
+</table></div>
+
+<h2><span class="n">05</span>전제 ASSUMPTION 68~73 — 판정 계획</h2>
+<div class="tw"><table>
+<tr><th>#</th><th>전제</th><th>판정</th><th>NO-GO 시</th></tr>
+<tr><td>68</td><td>MCP SDK가 Python 3.11 + 기존 의존성과 공존</td><td><span class="tag t-m">기계 · M1</span></td><td>버전 핀 조정 → 불가 시 중단·보고</td></tr>
+<tr><td>69</td><td>후보 11종이 execute/deploy에 도달하지 않음</td><td><span class="tag t-m">기계 · M2</span></td><td>해당 툴 allowlist 제외 (정직한 축소)</td></tr>
+<tr><td>70</td><td><code>build_console_stack</code> 재사용의 부수효과 수용 가능</td><td><span class="tag t-m">기계 · M1</span></td><td>신규 조립 경로 + 가드 의도적 diff 전환</td></tr>
+<tr><td>71</td><td>Claude 클라이언트가 venv Python 엔트리포인트 기동 가능</td><td><span class="tag t-read">라이브 · M6</span></td><td>절대 경로/래퍼 스크립트 보정 (코드 무변경)</td></tr>
+<tr><td>72</td><td>클라이언트가 리소스를 실제로 조회·활용</td><td><span class="tag t-read">라이브 · M6</span></td><td>기록 후 Stage 2에서 폴백 검토</td></tr>
+<tr><td>73</td><td>읽기 툴이 세션 상태 없이 유의미하게 동작</td><td><span class="tag t-m">기계 · M2</span></td><td>세션 의존 툴 제외 (정직한 축소)</td></tr>
+</table></div>
+
+<h2><span class="n">06</span>마일스톤 M1~M6 · AC 배정</h2>
+<div class="tw"><table>
+<tr><th>M</th><th>내용</th><th>AC</th></tr>
+<tr><td><b>M1</b></td><td>SDK 스파이크 + 조립 경로 판정 (A-68·70 닫힘)</td><td>001, 013</td></tr>
+<tr><td><b>M2</b></td><td>무변이 코어: allowlist + 분할·도달성 테스트 + 거부 스텁</td><td>003, 004, 006</td></tr>
+<tr><td><b>M3</b></td><td>MCP 툴 브리지 (tools/list·call, 거부, 오프라인 성능저하)</td><td>002, 005, 009</td></tr>
+<tr><td><b>M4</b></td><td>지식 리소스 + 등록 아티팩트</td><td>008, 011</td></tr>
+<tr><td><b>M5</b></td><td>프로토콜 스모크 + 경계 + 회귀 전체 그린</td><td>007, 010, 012, 014, 016</td></tr>
+<tr><td><b>M6</b></td><td><b>종단 라이브</b> — 실물 onPC + 실제 Claude 클라이언트 (사람 관측 · 유일한 라이브 세션)</td><td>015</td></tr>
+</table></div>
+<p class="lead">AC 16건 중 15건 기계 검증 · 1건(AC-015 라이브 종단)만 사람 관측. REQ 23건 전수 커버, 고아 0건.</p>
+
+<h2><span class="n">07</span>제외 범위 (Stage 2 이연 등 10건)</h2>
+<ul>
+<li>콘솔 변이 툴 전부 (쓰기 MCP 서버 = Stage 2)</li>
+<li>웹 앱과의 동시 구동 · 링크 공유/프록시</li>
+<li>Lua 응답기 변경 (v1.5.0 그대로 — v1.6.0은 INTROSPECT-001 예약)</li>
+<li>신규 콘솔 판독 능력 (노출이지 확장이 아님)</li>
+<li>stdio 외 전송 (HTTP/SSE/원격/다중 클라이언트)</li>
+<li>LLM 호출 · 서버측 프롬프트 엔지니어링</li>
+<li>형제 SPEC 툴 (spatial 등) · 세션 영속 상태 · SafetyGate 확장 · UI 변경</li>
+</ul>
+
+<div class="foot">
+아티팩트: <code>.moai/specs/SPEC-COPILOT-MCP-001/</code> — spec.md · plan.md · acceptance.md · progress.md (status: draft, 미커밋) ·
+결정 등록부 D-1~D-6 (해소 4 · 조건부 2) · clarification 마커 0건
+</div>
+</main>
