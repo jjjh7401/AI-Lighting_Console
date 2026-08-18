@@ -831,10 +831,12 @@ def _phaser_cue_value_lines(
     ``position_cue_bundle``의 ``extra_value_lines``에 얹힌다: 플랜 자신의
     포지션/디머 라인 **뒤**에 온다(``_reviewed_song_commands`` 호출부),
     그래서 콤보/디머 페이저의 디머 스텝이 큐의 정적 key_pct를 프로그래머
-    last-wins 규칙으로 정확히 덮어쓴다(계약 #5 순서 규율). [ASSUMPTION —
-    T11 프로브 §1/§4] recall이 멀티스텝 페이저를 통째로 싣는지, 저장된
-    큐가 그 참조를 보존하는지는 이 저장소의 프로토콜 경로로 판독 불가한
-    구조적 한계다 — 콘솔 화면에서 직접 확인이 필요하다.
+    last-wins 규칙으로 정확히 덮어쓴다(계약 #5 순서 규율). recall이 멀티스텝
+    페이저를 통째로 싣는 것은 **2026-08-19 실기 육안 확인**됐다(Drop Slam
+    발사 → 조명이 페이저로 재생, 13번 프로브 §확인 기록). [잔여 ASSUMPTION —
+    T11 프로브 §4] 이 recall을 담아 **저장한 큐**가 프리셋 참조를 보존하는지
+    (참조 vs 평탄화)는 여전히 프로토콜로 판독 불가 — 곡 큐 재생의 육안
+    확인이 남은 마지막 조각이다.
     """
     label = _phaser_label_for_cue(cue)
     if label is None:
@@ -846,17 +848,17 @@ def _phaser_cue_value_lines(
     return (_preset_recall_command(pool_no, fids, slot),)
 
 
-#: [ASSUMPTION 명시 — 계약 #6, T11 프로브 §1/§4 + T16 재공략(13번 노트)]
-#: recall이 멀티스텝 페이저를 통째로 싣는지, 저장된 큐가 그 참조를 보존하는지는
-#: introspect 1.6.1 경로로도 여전히 판독 불가다 — 단정하지 않는다. T16이 좁힌
-#: 것: recall 후 재저장본의 MEMORYFOOTPRINT(1741)가 정적 프리셋(2104)보다 작아
-#: "통째로 실렸다" 가설에 **불리한 방향의 정황**이 새로 확보됐다(확정 아님 —
-#: 그 필드가 무엇을 재는지 미확인). 최종 판정은 여전히 콘솔 화면의 시각 확인.
+#: recall 적재는 2026-08-19 실기 육안 확인으로 종결(Drop Slam 발사 → 페이저
+#: 재생 관측, 13번 프로브 §확인 기록). T16의 MEMORYFOOTPRINT 부정 정황(1741 <
+#: 2104)은 recall→재저장 경로의 저장 크기에 관한 것이었고 라이브 재생과는
+#: 별개임이 판명됐다. [잔여 ASSUMPTION — T11 프로브 §4] 저장된 **큐**가
+#: 프리셋 참조를 보존하는지(참조 vs 평탄화)는 여전히 판독 불가 — 리뷰
+#: 시트는 이 잔여분만 고지한다.
 _PHASER_REVIEW_ASSUMPTION_NOTE = (
     "페이저 제안은 승인 후 실기 슬롯을 조회해 배정합니다(못 찾으면 그 큐는 "
-    "페이저 없이 진행). recall이 멀티스텝 페이저를 통째로 싣는지, 큐가 그 "
-    "참조를 보존하는지는 이 경로로 판독할 수 없어 ASSUMPTION입니다 — "
-    "페이저 재생은 콘솔 화면에서 직접 확인해 주세요."
+    "페이저 없이 진행). recall이 페이저를 싣는 것은 실기 확인됐고(2026-08-19), "
+    "저장된 큐가 그 참조를 보존하는지는 판독할 수 없어 ASSUMPTION입니다 — "
+    "곡 큐 재생은 콘솔 화면에서 직접 확인해 주세요."
 )
 
 
@@ -4237,12 +4239,15 @@ class ChatSession:
             )
         )
         disclosure_note = f" {disclosure}" if disclosure else ""
+        # recall의 페이저 적재는 2026-08-19 실기 육안 확인으로 종결(Drop Slam)
+        # — 발사 회신은 더 이상 검증을 요구하지 않는다. 단 Rectangle 파형
+        # 근사(Chase/Slam 계열)는 여전히 미검증이라 그 잔여만 남긴다.
         assumption_note = (
             ""
             if action == "release"
             else (
-                " (recall이 멀티스텝 페이저를 통째로 싣는지는 이 경로로 판독할 수 "
-                "없어 ASSUMPTION입니다 — 콘솔 화면에서 재생 여부를 확인해 주세요.)"
+                " (Rectangle 계열 파형의 하드컷 여부는 미검증입니다 — "
+                "해당 프리셋 발사 시 콘솔에서 확인해 주세요.)"
             )
         )
         return InstructionResult(
@@ -4353,8 +4358,8 @@ class ChatSession:
         reply = (
             f"'{label}' 페이저를 시퀀스 {sequence_no}에 저장 요청했습니다 — Preset "
             f"{pool_no}.{slot} 참조, 대상 장비 {len(fids)}대.{disclosure_note} "
-            "(recall이 멀티스텝 페이저를 통째로 싣는지는 이 경로로 판독할 수 없어 "
-            "ASSUMPTION입니다 — 콘솔 화면에서 재생 여부를 확인해 주세요.) 승인 또는 "
+            "(저장된 큐가 프리셋 참조를 보존하는지는 판독할 수 없어 ASSUMPTION입니다 "
+            "— 시퀀스 재생은 콘솔 화면에서 확인해 주세요.) 승인 또는 "
             "라이브 잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
         )
         outcomes = tuple(executed.command_outcomes)
