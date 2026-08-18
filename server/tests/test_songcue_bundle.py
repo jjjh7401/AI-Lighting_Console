@@ -200,6 +200,11 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # paragraph insertion) and 304/306/308 (single-line rewrites inside
 # rig_object's body), all far from both protected ranges (234..238 / 524..569)
 # — overlap ZERO.
+# 2026-08-18 re-walk 5 — preservation merge (819aa6f WIP + origin/main,
+# merge 9469b65): the props batch reader and main's rotation/phaser work
+# interleave in the 171/952..1231 region — 64→68 hunks, starts re-measured
+# from the merged tree. Protected ranges (234..238 / 524..569) still have
+# ZERO overlapping hunks (verified from the measured (start,count) pairs).
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -211,6 +216,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     104,
     125,
     164,
+    171,
     184,
     302,
     304,
@@ -228,7 +234,12 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     593,
     620,
     952,
+    971,
+    984,
+    986,
     989,
+    993,
+    995,
     1004,
     1007,
     1011,
@@ -241,11 +252,9 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     1070,
     1072,
     1081,
-    1088,
     1096,
     1103,
     1110,
-    1111,
     1113,
     1116,
     1118,

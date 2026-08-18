@@ -1147,6 +1147,8 @@ def _batch_fixture_properties(
             break
         slot = resume
     return values
+
+
 def attach_spatial_rotation(record: dict[str, object], reads: Mapping[str, PropertyRead]) -> None:
     """Fold best-effort rotation reads into a coordinate-confirmed record.
 

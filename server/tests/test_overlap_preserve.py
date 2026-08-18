@@ -123,9 +123,15 @@ _CONSOLE_LUA_LOCKED_ASSETS = ("console/lua/copilot_responder.xml",)
 #: completely across two windows). The two revised files leave the byte-lock
 #: and are pinned by CONTENT DIGEST instead — one byte of further drift still
 #: fails the gate, and the next legitimate revision must re-pin here.
+#: 2026-08-18 granted revision — batched `props` verb (many children x many
+#: properties in ONE round trip, live-measured 66.7 ms/property-trip; WIP
+#: preserved as 819aa6f) merged with main's paging responder. Both additive,
+#: protocol v1 unchanged; PROTOCOL.md documents both. Re-pinned after the
+#: user-approved preservation merge (2026-08-18 "안정적으로 진행해줘") — one
+#: byte of further drift still fails the gate.
 _CONSOLE_LUA_GRANTED_REVISION_DIGESTS = {
-    "console/lua/copilot_responder.lua": "5b5cfac59fc46b4d8f02abe046817574aae76c1a",
-    "console/lua/PROTOCOL.md": "a88f4dc7c15d39aa77478e61dedbcc373b816894",
+    "console/lua/copilot_responder.lua": "00aa400cd7048487dd463493f42ccf42a53c7d59",
+    "console/lua/PROTOCOL.md": "a2914f4b978d22672e1c8b4990b399dfc67eb56b",
 }
 
 #: 2026-08-02 granted exception — the upstream vocabulary extension
