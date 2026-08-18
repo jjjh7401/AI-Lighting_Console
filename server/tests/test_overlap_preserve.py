@@ -123,9 +123,18 @@ _CONSOLE_LUA_LOCKED_ASSETS = ("console/lua/copilot_responder.xml",)
 #: completely across two windows). The two revised files leave the byte-lock
 #: and are pinned by CONTENT DIGEST instead — one byte of further drift still
 #: fails the gate, and the next legitimate revision must re-pin here.
+#:
+#: 2026-08-18 granted revision (re-pin) — SPEC-COPILOT-INTROSPECT-001 reland
+#: (PR #23 reland, T14): responder 1.6.0 → 1.6.1. ADDITIVE `props` +
+#: `introspect` read-only discovery verbs (§2/§4.7/§4.8) planted onto the
+#: current 1.6.0-paging generation, NOT merged from the drifted-behind
+#: original branch. The wire CONTRACT changed deliberately (user-directed
+#: reland task); it has NOT been live-verified against this reland's
+#: responder (see the PROTOCOL.md 2026-08-18 reland note) — that gap is
+#: recorded honestly rather than smoothed over, and is tracked as T15.
 _CONSOLE_LUA_GRANTED_REVISION_DIGESTS = {
-    "console/lua/copilot_responder.lua": "5b5cfac59fc46b4d8f02abe046817574aae76c1a",
-    "console/lua/PROTOCOL.md": "a88f4dc7c15d39aa77478e61dedbcc373b816894",
+    "console/lua/copilot_responder.lua": "3232101f95ef8ecf474b8f71d37f68c6377b999f",
+    "console/lua/PROTOCOL.md": "b9443a0965cb711ed1a9680bcc7644c0998bf2f0",
 }
 
 #: 2026-08-02 granted exception — the upstream vocabulary extension

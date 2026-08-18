@@ -45,16 +45,40 @@ function GetVar(store, name) return store[name] end
 function SetVar(store, name, value) store[name] = value end
 
 -- Mock object-tree node: mimics an MA3 handle (name property + Children/
--- Count/Ptr/GetClass methods). Dense pool: listing position == pool slot.
-function __NODE(name, class, children)
+-- Count/Ptr/GetClass/Get/Property* methods). Dense pool: listing position == pool slot.
+function __NODE(name, class, children, props, property_order, property_types)
     local n = {}
     n.name = name
     n._class = class
     n._children = children or {}
+    n._props = props or {}
+    n._property_order = property_order or {}
+    n._property_types = property_types or {}
+    if #n._property_order == 0 then
+        for key in pairs(n._props) do n._property_order[#n._property_order + 1] = key end
+        table.sort(n._property_order)
+    end
     function n:Children() return self._children end
     function n:Count() return #self._children end
     function n:Ptr(i) return self._children[i] end
     function n:GetClass() return self._class end
+    function n:Get(prop)
+        if prop == "name" or prop == "Name" then return self.name end
+        return self._props[prop]
+    end
+    function n:PropertyCount() return #self._property_order end
+    function n:PropertyName(i)
+        local count = self:PropertyCount()
+        if type(i) ~= "number" or i < 0 or i >= count then return nil end
+        return self._property_order[i + 1]
+    end
+    function n:PropertyType(i)
+        local count = self:PropertyCount()
+        if type(i) ~= "number" or i < 0 or i >= count then return nil end
+        local prop = self._property_order[i + 1]
+        if prop == nil then return nil end
+        return self._property_types[prop] or type(self._props[prop])
+    end
     return n
 end
 

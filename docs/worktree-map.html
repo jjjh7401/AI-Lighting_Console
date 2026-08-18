@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>AI-Lighting_Console — main 기준 브랜치·워크트리 정리 지도</title>
+<style>
+  :root{
+    --bg:#14161a; --panel:#1e2128; --panel2:#242832; --line:#2f3542;
+    --text:#e8eaed; --muted:#98a0ad; --dim:#6c7280;
+    --accent:#39a89b; --accent-dim:#1f5f58;
+    --ok:#4ec9a0; --warn:#e0b341; --bad:#e5646b; --info:#5aa9e6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 24px 64px}
+  h1{font-size:23px;margin:0 0 6px;letter-spacing:-.2px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:26px}
+  h2{font-size:16px;margin:34px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  h2 .n{color:var(--accent);margin-right:8px;font-variant-numeric:tabular-nums}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+
+  /* anchor */
+  .anchor{background:linear-gradient(180deg,#1a2f2c 0,#182523 100%);
+    border:1px solid var(--accent-dim);border-left:3px solid var(--accent);
+    border-radius:10px;padding:16px 18px;margin-bottom:8px}
+  .anchor .lbl{color:var(--accent);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+  .anchor .val{font-size:19px;margin-top:4px}
+  .anchor .path{color:var(--muted);font-size:12.5px;margin-top:6px}
+
+  /* kpi */
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:16px 0 4px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 14px}
+  .kpi .v{font-size:24px;font-variant-numeric:tabular-nums;line-height:1.2}
+  .kpi .k{color:var(--muted);font-size:11.5px;margin-top:3px}
+  .kpi.ok .v{color:var(--ok)} .kpi.warn .v{color:var(--warn)}
+  .kpi.bad .v{color:var(--bad)} .kpi.info .v{color:var(--info)}
+
+  table{width:100%;border-collapse:collapse;background:var(--panel);
+    border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  th{background:var(--panel2);color:var(--muted);font-size:11.5px;font-weight:600;
+    text-align:left;padding:9px 12px;letter-spacing:.03em;white-space:nowrap}
+  td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
+  tr.is-main td{background:rgba(57,168,155,.07)}
+  td.nowrap{white-space:nowrap}
+
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;
+    font-weight:600;white-space:nowrap}
+  .b-main{background:rgba(57,168,155,.18);color:var(--accent);border:1px solid var(--accent-dim)}
+  .b-ok{background:rgba(78,201,160,.14);color:var(--ok)}
+  .b-warn{background:rgba(224,179,65,.14);color:var(--warn)}
+  .b-bad{background:rgba(229,100,107,.14);color:var(--bad)}
+  .b-dim{background:rgba(152,160,173,.12);color:var(--muted)}
+
+  .bar{display:flex;align-items:center;gap:7px;font-variant-numeric:tabular-nums}
+  .bar .t{font-size:11.5px;color:var(--muted);min-width:74px}
+
+  .plan{display:grid;gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:14px 16px;border-left:3px solid var(--line)}
+  .card.do{border-left-color:var(--ok)}
+  .card.ask{border-left-color:var(--warn)}
+  .card.keep{border-left-color:var(--info)}
+  .card h3{margin:0 0 4px;font-size:14px}
+  .card .why{color:var(--muted);font-size:12.5px;margin:0 0 10px}
+  pre{background:#101216;border:1px solid var(--line);border-radius:7px;
+    padding:11px 13px;margin:0;overflow-x:auto;color:#cfd6e0}
+  pre .c{color:var(--dim)}
+
+  .note{background:rgba(229,100,107,.07);border:1px solid rgba(229,100,107,.3);
+    border-left:3px solid var(--bad);border-radius:9px;padding:14px 16px;margin-top:12px}
+  .note h3{margin:0 0 6px;font-size:14px;color:var(--bad)}
+  .note p{margin:0 0 8px;font-size:13px;color:#d7dae0}
+  ul{margin:6px 0 0;padding-left:18px} li{margin:3px 0}
+  .foot{color:var(--dim);font-size:11.5px;margin-top:34px;
+    border-top:1px solid var(--line);padding-top:12px}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>브랜치 · 워크트리 정리 지도</h1>
+<div class="sub">AI-Lighting_Console · <span class="mono">main</span> 기준 · 실측 2026-08-18</div>
+
+<div class="anchor">
+  <div class="lbl">기준점 — 여기가 main</div>
+  <div class="val"><span class="mono">main @ 15590e3</span> &nbsp;<span class="badge b-ok">origin/main과 동일 (ahead 0 · behind 0)</span></div>
+  <div class="path mono">/Users/studiox/orca/workspaces/AI-Lighting_Console/MAcopilotpos &nbsp;— 워킹트리 clean</div>
+</div>
+
+<div class="kpis">
+  <div class="kpi info"><div class="v">6</div><div class="k">워크트리</div></div>
+  <div class="kpi info"><div class="v">6</div><div class="k">로컬 브랜치</div></div>
+  <div class="kpi ok"><div class="v">1</div><div class="k">main에 흡수 완료</div></div>
+  <div class="kpi warn"><div class="v">4</div><div class="k">미머지 작업</div></div>
+  <div class="kpi bad"><div class="v">2</div><div class="k">커밋 안 된 변경</div></div>
+</div>
+
+<h2><span class="n">1</span>워크트리 지도</h2>
+<table>
+<thead><tr>
+  <th>워크트리</th><th>브랜치</th><th>HEAD</th><th>미커밋</th><th>main 대비</th><th>판정</th>
+</tr></thead>
+<tbody>
+<tr class="is-main">
+  <td class="mono">orca/…/<b>MAcopilotpos</b></td>
+  <td class="mono">main</td><td class="mono">15590e3</td>
+  <td><span class="badge b-ok">clean</span></td>
+  <td class="nowrap">— 기준 —</td>
+  <td><span class="badge b-main">기준점 유지</span></td>
+</tr>
+<tr>
+  <td class="mono">orca/…/MAcopilotartifacts</td>
+  <td class="mono">jjjh7401/MAcopilotartifacts</td><td class="mono">3c41694</td>
+  <td><span class="badge b-ok">clean</span></td>
+  <td class="nowrap">ahead 0 · behind 2</td>
+  <td><span class="badge b-ok">main에 전부 포함 → 삭제 가능</span></td>
+</tr>
+<tr>
+  <td class="mono">orca/…/blocked16</td>
+  <td class="mono">jjjh7401/blocked16</td><td class="mono">363d28f</td>
+  <td><span class="badge b-bad">2건</span></td>
+  <td class="nowrap">ahead 6 · behind 0</td>
+  <td><span class="badge b-warn">살아있는 작업 — 유지</span></td>
+</tr>
+<tr>
+  <td class="mono">Documents/…/ldguide</td>
+  <td class="mono">worktree-ldguide</td><td class="mono">269c0fe</td>
+  <td><span class="badge b-ok">clean</span></td>
+  <td class="nowrap">ahead 14 · behind 1</td>
+  <td><span class="badge b-warn">살아있는 작업 — 유지</span></td>
+</tr>
+<tr>
+  <td class="mono">orca/…/e2e-live</td>
+  <td class="mono">spec/introspect-001</td><td class="mono">c7780f5</td>
+  <td><span class="badge b-ok">clean</span></td>
+  <td class="nowrap">ahead 17 · <b style="color:var(--bad)">behind 308</b></td>
+  <td><span class="badge b-bad">2주 정체 (8/4) — 판단 필요</span></td>
+</tr>
+<tr>
+  <td class="mono"><b>Documents/…/AI-Lighting_Console</b><br><span style="color:var(--dim);font-size:11.5px">원본 체크아웃</span></td>
+  <td class="mono">research/ma3-effects-phaser</td><td class="mono">2566d68</td>
+  <td><span class="badge b-bad">34건</span></td>
+  <td class="nowrap">ahead 1 · <b style="color:var(--bad)">behind 44</b></td>
+  <td><span class="badge b-bad">포트 전쟁 근원 — 조치 필요</span></td>
+</tr>
+</tbody>
+</table>
+
+<h2><span class="n">2</span>브랜치가 main에서 얼마나 벌어졌나</h2>
+<table>
+<thead><tr><th>브랜치</th><th style="width:52%">main 대비 격차</th><th>원격</th><th>최종 커밋</th></tr></thead>
+<tbody>
+<tr class="is-main"><td class="mono">main</td>
+  <td><span class="badge b-main">기준</span></td>
+  <td class="mono">15590e3</td><td class="nowrap">08-18</td></tr>
+
+<tr><td class="mono">jjjh7401/MAcopilotartifacts</td>
+  <td><div class="bar"><span class="t">ahead 0</span>
+    <svg width="240" height="12"><rect width="240" height="12" rx="3" fill="#242832"/>
+    <rect width="0" height="12" rx="3" fill="#4ec9a0"/></svg>
+    <span class="t" style="min-width:0">behind 2</span></div></td>
+  <td><span class="badge b-dim">원격 없음</span></td><td class="nowrap">08-17</td></tr>
+
+<tr><td class="mono">jjjh7401/blocked16</td>
+  <td><div class="bar"><span class="t">ahead 6</span>
+    <svg width="240" height="12"><rect width="240" height="12" rx="3" fill="#242832"/>
+    <rect width="14" height="12" rx="3" fill="#e0b341"/></svg>
+    <span class="t" style="min-width:0">behind 0</span></div></td>
+  <td class="mono">있음</td><td class="nowrap">08-18</td></tr>
+
+<tr><td class="mono">worktree-ldguide</td>
+  <td><div class="bar"><span class="t">ahead 14</span>
+    <svg width="240" height="12"><rect width="240" height="12" rx="3" fill="#242832"/>
+    <rect width="32" height="12" rx="3" fill="#e0b341"/></svg>
+    <span class="t" style="min-width:0">behind 1</span></div></td>
+  <td class="mono">있음</td><td class="nowrap">08-18</td></tr>
+
+<tr><td class="mono">research/ma3-effects-phaser</td>
+  <td><div class="bar"><span class="t">ahead 1</span>
+    <svg width="240" height="12"><rect width="240" height="12" rx="3" fill="#242832"/>
+    <rect x="0" width="4" height="12" rx="3" fill="#e0b341"/>
+    <rect x="130" width="110" height="12" fill="#e5646b" opacity=".55"/></svg>
+    <span class="t" style="min-width:0">behind 44</span></div></td>
+  <td class="mono">e09aa1f<br><span style="color:var(--dim);font-size:11px">로컬이 앞섬</span></td><td class="nowrap">08-17</td></tr>
+
+<tr><td class="mono">spec/introspect-001</td>
+  <td><div class="bar"><span class="t">ahead 17</span>
+    <svg width="240" height="12"><rect width="240" height="12" rx="3" fill="#242832"/>
+    <rect x="0" width="38" height="12" rx="3" fill="#e0b341"/>
+    <rect x="40" width="200" height="12" fill="#e5646b" opacity=".75"/></svg>
+    <span class="t" style="min-width:0">behind 308</span></div></td>
+  <td class="mono">있음</td><td class="nowrap">08-04</td></tr>
+</tbody>
+</table>
+<div style="color:var(--dim);font-size:11.5px;margin-top:7px">
+  막대는 격차의 상대 크기(노랑 = main에 없는 커밋, 빨강 = 뒤처진 정도).
+  <b>behind가 클수록</b> 나중에 합칠 때 충돌 비용이 커집니다.
+</div>
+
+<h2><span class="n">3</span>하나의 main으로 — 정리 계획</h2>
+<div class="plan">
+
+<div class="card do">
+  <h3>① 지금 바로 정리 — 손실 없음</h3>
+  <p class="why"><span class="mono">jjjh7401/MAcopilotartifacts</span>는 main에 <b>전부 포함</b>돼 있습니다(ahead 0, <span class="mono">merge-base --is-ancestor</span> 확인). 워크트리도 clean이라 지워도 잃을 것이 없습니다.</p>
+<pre><span class="c"># 워크트리 제거 → 브랜치 삭제 (원격엔 이미 없음)</span>
+git worktree remove /Users/studiox/orca/workspaces/AI-Lighting_Console/MAcopilotartifacts
+git branch -d jjjh7401/MAcopilotartifacts   <span class="c"># -d = 미머지면 거부되는 안전 삭제</span></pre>
+</div>
+
+<div class="card ask">
+  <h3>② 판단이 필요한 것 — <span class="mono">spec/introspect-001</span></h3>
+  <p class="why">ahead 17 · <b>behind 308</b>, 마지막 커밋 8/4로 2주 정체. 지금 합치면 충돌이 크고, 그대로 두면 격차가 계속 벌어집니다. 셋 중 하나를 골라야 합니다.</p>
+  <ul>
+    <li><b>살린다</b> → 지금 main을 머지해 격차를 줄이고 계속 진행</li>
+    <li><b>접는다</b> → 워크트리·브랜치 삭제 (원격에 남아 있어 복구 가능)</li>
+    <li><b>보류</b> → 그대로 두되, 다음에 손댈 때 비용이 더 커진다는 것 인지</li>
+  </ul>
+</div>
+
+<div class="card keep">
+  <h3>③ 유지 — 살아있는 작업</h3>
+  <p class="why"><span class="mono">jjjh7401/blocked16</span>(ahead 6, 미커밋 2건)와 <span class="mono">worktree-ldguide</span>(ahead 14, behind 1)는 최근(8/18)까지 움직인 작업입니다. 정리 대상이 아니라 <b>완료 후 main으로 머지</b>할 대상입니다. blocked16의 미커밋 2건은 먼저 커밋하거나 스태시해 두세요.</p>
+</div>
+
+</div>
+
+<div class="note">
+  <h3>④ 진짜 골칫거리 — 원본 체크아웃 <span class="mono">Documents/…/AI-Lighting_Console</span></h3>
+  <p>이 세션 내내 포트 <span class="mono">8765/9005</span>를 빼앗아 가던 omp 데몬의 출처입니다. <b>지금도 살아 있습니다</b> — <span class="mono">pid 15779 (python3.11)</span>, cwd가 이 폴더입니다. 브랜치는 <span class="mono">research/ma3-effects-phaser</span>로 main보다 44커밋 뒤처져 있어, <b>구코드가 계속 되살아나 앱 포트를 점유</b>합니다.</p>
+  <p>여기가 git의 <b>원본 체크아웃</b>이라 <span class="mono">git worktree remove</span>로는 지울 수 없습니다. 게다가 <b>커밋 안 된 변경이 34건</b> 있어 함부로 브랜치를 바꾸면 안 됩니다.</p>
+  <ul>
+    <li><b>필수</b> — 그 폴더에서 omp 데몬 해제 (<span class="mono">grandma3-web-stable</span>, restart=on-failure·persist). 이것만 해도 포트 전쟁이 끝납니다.</li>
+    <li><b>권장</b> — 미커밋 34건을 커밋하거나 스태시한 뒤, 그 체크아웃도 main으로 맞추기</li>
+    <li><b>주의</b> — 이 폴더는 사용자 소유 작업이라 제가 임의로 건드리지 않았습니다</li>
+  </ul>
+</div>
+
+<h2><span class="n">4</span>정리 후 도달하는 모습</h2>
+<table>
+<thead><tr><th>구분</th><th>정리 전</th><th>정리 후 (①만 실행 시)</th></tr></thead>
+<tbody>
+<tr><td>워크트리</td><td>6개</td><td><b>5개</b> — artifacts 제거</td></tr>
+<tr><td>로컬 브랜치</td><td>6개</td><td><b>5개</b></td></tr>
+<tr><td>main 기준점</td><td class="mono">MAcopilotpos</td><td class="mono">MAcopilotpos <span class="badge b-main">단일 기준</span></td></tr>
+<tr><td>미머지 작업</td><td>4개</td><td>4개 — blocked16 · ldguide(진행 중) / introspect(판단) / research(원본)</td></tr>
+<tr><td>포트 전쟁</td><td><span class="badge b-bad">계속 발생</span></td><td>데몬 해제 전까지 <span class="badge b-bad">그대로</span></td></tr>
+</tbody>
+</table>
+
+<div class="foot">
+  실측 명령: <span class="mono">git worktree list --porcelain</span> ·
+  <span class="mono">git for-each-ref</span> ·
+  <span class="mono">git merge-base --is-ancestor &lt;br&gt; origin/main</span> ·
+  <span class="mono">git status --porcelain</span> (워크트리별) ·
+  <span class="mono">lsof -tiTCP:8765 / -tiUDP:9005</span> + cwd 대조.
+  모든 수치는 <span class="mono">origin/main @ 15590e3</span> 기준 실측값이며 추정치는 없습니다.
+</div>
+
+</div></body></html>

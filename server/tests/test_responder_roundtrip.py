@@ -122,10 +122,10 @@ class TestRoundtrip:
         # Deployment-reliability check (2026-07-24 finding): a fast,
         # definitive "did my deploy take effect" signal from ping alone.
         _, config = loop
-        report = run_roundtrip(config, wait=_WAIT, skip_exec=True, expect_version="1.6.0")
+        report = run_roundtrip(config, wait=_WAIT, skip_exec=True, expect_version="1.6.1")
         assert report.ok
         ping = next(step for step in report.steps if step.name == "ping")
-        assert ping.payload["version"] == "1.6.0"
+        assert ping.payload["version"] == "1.6.1"
 
     def test_expect_version_mismatch_fails_ping_with_clear_detail(self, loop):
         _, config = loop
@@ -133,7 +133,7 @@ class TestRoundtrip:
         ping = next(step for step in report.steps if step.name == "ping")
         assert ping.ok is False
         assert "9.9.9" in ping.detail
-        assert "1.6.0" in ping.detail
+        assert "1.6.1" in ping.detail
         assert report.ok is False
 
     def test_skip_exec_runs_two_steps(self, loop):
