@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>AI-Lighting_Console — 워크트리·브랜치 중심 작업 히스토리</title>
+<style>
+  :root{
+    --bg:#14161a; --panel:#1e2128; --panel2:#242832; --line:#2f3542;
+    --text:#e8eaed; --muted:#98a0ad; --dim:#6c7280;
+    --accent:#39a89b; --accent-dim:#1f5f58;
+    --ok:#4ec9a0; --warn:#e0b341; --bad:#e5646b; --info:#5aa9e6; --vio:#a98be0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.62 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 24px 64px}
+  h1{font-size:23px;margin:0 0 6px;letter-spacing:-.2px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:24px}
+  h2{font-size:16px;margin:38px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  h2 .n{color:var(--accent);margin-right:8px;font-variant-numeric:tabular-nums}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:16px 0 4px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 14px}
+  .kpi .v{font-size:23px;font-variant-numeric:tabular-nums;line-height:1.2}
+  .kpi .k{color:var(--muted);font-size:11.5px;margin-top:3px}
+  .kpi .d{color:var(--dim);font-size:10.5px;margin-top:2px}
+  .kpi.ok .v{color:var(--ok)} .kpi.warn .v{color:var(--warn)}
+  .kpi.info .v{color:var(--info)} .kpi.vio .v{color:var(--vio)}
+
+  .topo{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:20px 22px;overflow-x:auto}
+  .topo pre{background:none;border:none;padding:0;margin:0;
+    font:12.5px/1.75 ui-monospace,SFMono-Regular,Menlo,monospace;color:#cfd6e0}
+  .topo .m{color:var(--accent);font-weight:700}
+  .topo .w{color:var(--warn)} .topo .g{color:var(--dim)}
+  .topo .i{color:var(--info)} .topo .v{color:var(--vio)}
+
+  table{width:100%;border-collapse:collapse;background:var(--panel);
+    border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  th{background:var(--panel2);color:var(--muted);font-size:11.5px;font-weight:600;
+    text-align:left;padding:9px 12px;letter-spacing:.03em;white-space:nowrap}
+  td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top;font-size:13px}
+  td.nowrap{white-space:nowrap}
+  tr.is-main td{background:rgba(57,168,155,.07)}
+
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;
+    font-weight:600;white-space:nowrap}
+  .b-main{background:rgba(57,168,155,.18);color:var(--accent);border:1px solid var(--accent-dim)}
+  .b-ok{background:rgba(78,201,160,.14);color:var(--ok)}
+  .b-warn{background:rgba(224,179,65,.14);color:var(--warn)}
+  .b-bad{background:rgba(229,100,107,.14);color:var(--bad)}
+  .b-dim{background:rgba(152,160,173,.12);color:var(--muted)}
+  .b-info{background:rgba(90,169,230,.14);color:var(--info)}
+  .b-vio{background:rgba(169,139,224,.16);color:var(--vio)}
+
+  .stage{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:0;margin-bottom:14px;overflow:hidden}
+  .stage.acc{border-left:3px solid var(--accent)}
+  .stage.wrn{border-left:3px solid var(--warn)}
+  .stage.inf{border-left:3px solid var(--info)}
+  .stage.vio{border-left:3px solid var(--vio)}
+  .st-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+    padding:13px 17px;background:var(--panel2);border-bottom:1px solid var(--line)}
+  .st-head .no{color:var(--accent);font-variant-numeric:tabular-nums;font-weight:700;font-size:13px}
+  .st-head .ttl{font-size:14.5px;font-weight:600}
+  .st-head .date{color:var(--dim);font-size:11.5px;margin-left:auto;font-variant-numeric:tabular-nums}
+  .st-body{padding:14px 17px 16px}
+  .lane{color:var(--muted);font-size:12px;margin-bottom:11px;line-height:1.7}
+  .lane b{color:var(--text);font-weight:600}
+  .lane .sep{color:var(--dim);margin:0 7px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:860px){.cols{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,1fr)}}
+  .col h4{margin:0 0 7px;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  .col ul{margin:0;padding-left:17px}
+  .col li{margin-bottom:5px;font-size:13px;color:#cdd3dc}
+  .col li b{color:var(--text);font-weight:600}
+  .col.feat li::marker{color:var(--ok)}
+  .col.work li::marker{color:var(--info)}
+  .ev{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);
+    color:var(--dim);font-size:11.5px;line-height:1.8}
+  .ev b{color:var(--muted);font-weight:600}
+  .foot{color:var(--dim);font-size:11.5px;margin-top:34px;
+    border-top:1px solid var(--line);padding-top:12px;line-height:1.8}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>워크트리·브랜치 중심 작업 히스토리</h1>
+<div class="sub">AI-Lighting_Console (grandMA3 조명 코파일럿) · 2026-07-15 → 2026-08-19 · 실측 기준 <span class="mono">main @ 410a9a7</span></div>
+
+<div class="kpis">
+  <div class="kpi ok"><div class="v">641</div><div class="k">전체 커밋</div><div class="d">36일 · 全 브랜치</div></div>
+  <div class="kpi info"><div class="v">52</div><div class="k">PR</div><div class="d">#5 → #52</div></div>
+  <div class="kpi vio"><div class="v">31</div><div class="k">SPEC</div><div class="d">SPEC-COPILOT-*</div></div>
+  <div class="kpi ok"><div class="v">16</div><div class="k">작업 단계</div><div class="d">브랜치 계보 기준</div></div>
+  <div class="kpi warn"><div class="v">4</div><div class="k">현재 워크트리</div><div class="d">최대 6 → 4로 정리</div></div>
+  <div class="kpi ok"><div class="v">1,284</div><div class="k">추적 파일</div><div class="d">main 기준</div></div>
+</div>
+
+<h2><span class="n">1</span>브랜치 계보 — 모든 갈래는 main에서 뻗고 PR/머지로만 돌아온다</h2>
+<div class="topo"><pre>
+ <span class="g">2026-07</span>                                                          <span class="g">2026-08</span>
+ 15 ─ 19 ─── 22 ── 24 ── 25 ── 26 ── 29 ── 30 ─ 02 ─ 05 ── 08 ── 12 ── 14 ── 16 ── 17 ── 19
+ <span class="m">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ main (유일한 기준선) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+  ①    ②      ③     ④     <span class="g">◆</span>      ⑤            ⑥        ⑦         ⑨            ⑬     ⑯
+ <span class="g">EVAL  MVP   DEPLOY SHOWUI  트렁크  LOOKLIB   SONGCUE·SCENE  WRITEGATE  워크트리 4개   프리셋  마무리</span>
+ <span class="g">              EXEC*·DASHUI 통합머지  BUSKWIZ   PAPERWORK·T-*  TRUNCATE   병렬 PR #29~37 recall  PR #48~52</span>
+                                                   <span class="g">AXISCORE</span>
+        <span class="i">└─ spec/introspect-001 ⑦</span> <span class="g">(08-03~04, 응답기 v1.6.0 introspect/props · 원격 아카이브)</span>
+        <span class="w">└─ feature/SPEC-COPILOT-VWX-001 ⑧</span> <span class="g">(08-05~12, Vectorworks 인테이크 + AUTOPATCH 23라운드 감사) → 63083a6</span>
+        <span class="v">└─ feature/spatial-pointing ⑩</span> <span class="g">(08-13~14, 실측 pan/tilt 조준 + 포지션 프리셋 + CUETIME) → 614eab9</span>
+        <span class="w">└─ research/ma3-effects-phaser ⑪</span> <span class="g">(08-14~, 페이저 실측 + SONGSTD + 감독 타임라인) → c2aec1d · 4ee45fa · </span><span class="w">현재 미합류</span>
+        <span class="i">└─ feature/SPEC-COPILOT-IMGLAYOUT-001 ⑫</span> <span class="g">(08-15~16, 이미지 배치 제안) → c93ca32 · PR #42</span>
+        <span class="v">└─ worktree-ldguide ⑭</span> <span class="g">(08-17~18, 사용 가이드 9단계 개정) → PR #46</span>
+        <span class="w">└─ jjjh7401/blocked16 ⑮</span> <span class="g">(08-18, 차단 16건 처분표) → PR #47 · </span><span class="w">잔여 2건 미합류</span>
+
+ <span class="g">워크트리 4개 실측:</span>
+   <span class="m">main</span>                        <span class="g">orca/…/MAcopilotpos</span>      <span class="g">앱·포트(8765/9005) 소유 · 기준점</span>
+   <span class="w">research/ma3-effects-phaser</span> <span class="g">Documents/…(원본)</span>         <span class="g">ahead 4 · behind 12 · 응답기 WIP 보존</span>
+   <span class="w">jjjh7401/blocked16</span>          <span class="g">orca/…/blocked16</span>         <span class="g">ahead 6 · behind 12</span>
+   <span class="v">worktree-ldguide</span>            <span class="g">Documents/…/.claude/worktrees/ldguide</span> <span class="g">ahead 14 · behind 13</span>
+</pre></div>
+
+<h2><span class="n">2</span>단계별 작업과 추가된 기능</h2>
+
+<div class="stage acc">
+  <div class="st-head"><span class="no">①</span><span class="ttl">기반 · 역량 평가</span>
+    <span class="badge b-main">main</span><span class="badge b-vio">SPEC-EVAL-001</span>
+    <span class="date">2026-07-15 → 07-16</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> main (직접 커밋) <span class="sep">·</span> <b>커밋</b> 8건 <span class="sep">·</span> <b>기준 커밋</b> <span class="mono">2b8c28e</span></div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>MoAI 프로젝트 베이스라인 초기화 — SPEC/plan/acceptance/progress 3단 문서 체계</li>
+        <li>grandMA3 자동화 <b>역량 평가</b> 시나리오 세트 + 문서 기반 갭 후보 사전 등록</li>
+        <li>콘솔 미접촉 상황용 <b>documentary-fallback</b> 수정안 (v0.3.1) + 델타 재감사 PASS 0.95</li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능·산출물</h4><ul>
+        <li>갭 분석 <b>14건</b> 원장 + FSL(실현가능성) 결론</li>
+        <li>AC 자기검증 절차 · sync 3단 종결 규약</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>대표 커밋</b> <span class="mono">2b8c28e</span> 초기 커밋 <span class="sep">·</span> <span class="mono">9ac4725</span> M3~M5 갭 14건 <span class="sep">·</span> <span class="mono">7959067</span> sync-audit 후속</div>
+  </div>
+</div>
+
+<div class="stage acc">
+  <div class="st-head"><span class="no">②</span><span class="ttl">MVP — 코파일럿 본체가 처음 콘솔을 움직인다</span>
+    <span class="badge b-main">main</span><span class="badge b-vio">SPEC-MVP-001</span>
+    <span class="date">2026-07-16 → 07-19</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> main (M1~M7 직렬) <span class="sep">·</span> <b>커밋</b> 약 70건 <span class="sep">·</span> <b>전 마일스톤 TDD</b></div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>M1 OSC 브리지 → M2 Lua 응답기 → M3 LLM/툴 → M4 안전 게이트 → M5 웹 UI → M7 배포 게이트</li>
+        <li>M6b <b>실측</b>: Gemini 문법 오류율 5.86%(FAIL) → 룰북 레시피 보강 후 <b>0.40%</b> (분자 94.7% 감소)</li>
+        <li>M6c 독립 감사 <b>29건</b> 전량 소인 — 세션 격리, 우회 경로(Cmd 스캔 회피·인용 속성), 동시성 경합, 퍼센트 인코딩 밀반입</li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능</h4><ul>
+        <li><b>OSC 브리지</b> <span class="mono">/copilot/*</span> UDP 송신 + 피드백 수신(발신자 인증)</li>
+        <li><b>Lua 응답기</b> — 콘솔 상태 스냅샷 · 실행 결과 회수</li>
+        <li><b>LLM 추상화</b> — Anthropic/Gemini 어댑터, TOML 설정, 폴백 감지기</li>
+        <li><b>안전 게이트</b> — 위험 분류 · 문법 검증기 · 감사 로그 · 라이브 락 · 헬스 모니터 · 단일 초크포인트</li>
+        <li><b>웹 앱</b> — FastAPI WebSocket v1 + React 채팅 UI, 승인 카드, 한국어 오류 카탈로그</li>
+        <li><b>deploy_plugin</b> — lupa 컴파일 하네스 + 파괴적 Cmd() 스캔 + 리뷰 게이트(deny-by-default)</li>
+        <li>한국어 측정 코퍼스 21 시나리오 · 10 과제형 · 오류율/왕복 측정 러너</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>대표 커밋</b> <span class="mono">2998120</span> OSC <span class="sep">·</span> <span class="mono">5e59c5c</span> 안전 게이트 <span class="sep">·</span> <span class="mono">3d23d4e</span> 배포 코어 <span class="sep">·</span> <span class="mono">7de6e0a</span> 오류율 0.40% <span class="sep">·</span> <span class="mono">7cda634</span> 실행 가능 플러그인 E2E</div>
+  </div>
+</div>
+
+<div class="stage acc">
+  <div class="st-head"><span class="no">③</span><span class="ttl">배포 — 사용자 손에 넘어가는 앱</span>
+    <span class="badge b-main">main</span><span class="badge b-vio">SPEC-DEPLOY-001</span>
+    <span class="date">2026-07-20 → 07-22</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> main (Stage-1 → v0.3.0 하드닝 → Stage-2 M7) <span class="sep">·</span> <b>커밋</b> 약 45건</div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>Stage-1 설정·키·프로비저닝·패키징 → Stage-2 Tauri 셸·보안 핸드셰이크</li>
+        <li>하드닝 6건 — 키 주입, 룩 세션 추적, Gemini 캐시 만료 복구, 풀 번호 정직화, OSC 포트 재바인드</li>
+        <li>arm64 전용 빌드 호스트 한계를 <b>환경 게이트로 기록</b> (universal2/Windows 보류)</li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능</h4><ul>
+        <li><b>인앱 설정 + keyring 보안 키 저장</b> (평문 폴백 없음) · REST 경계</li>
+        <li><b>CopilotResponder 자동 프로비저닝</b> + Import Plugin 가이드 UI</li>
+        <li><b>PyInstaller onedir 패키징</b> + ad-hoc 서명 + frozen 검증</li>
+        <li><b>Tauri v2 셸 + 사이드카 스폰</b> · Rust 그룹 킬 · 런치 토큰 IPC</li>
+        <li><b>/ws Origin + 런치별 토큰 핸드셰이크</b> · 부모 생존 워치독 · 이중 언어 스캔</li>
+        <li><b>.dmg 인계 산출물 + 한국어 설치 가이드</b> · osc_slot을 사이트 설정으로 분리</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>대표 커밋</b> <span class="mono">8e8be58</span> keyring <span class="sep">·</span> <span class="mono">3a183ea</span> onedir <span class="sep">·</span> <span class="mono">77a7308</span> Tauri <span class="sep">·</span> <span class="mono">403ce90</span> .dmg + 설치 가이드</div>
+  </div>
+</div>
+
+<div class="stage acc">
+  <div class="st-head"><span class="no">④</span><span class="ttl">콘솔 UI 패리티 — 쇼컨트롤 패널 · 실행기 실체 · 대시보드</span>
+    <span class="badge b-main">main</span><span class="badge b-vio">SHOWUI · EXECREF · EXECBODY · DASHUI</span>
+    <span class="date">2026-07-22 → 07-24</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> main (4개 SPEC 연속) <span class="sep">·</span> <b>커밋</b> 약 45건</div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>SHOWUI M6 라이브 E2E에서 <b>8개 실행기 타일 중 7개가 발사 불가</b> 발견 → 정직하게 발사 가능한 타일만 노출</li>
+        <li>EXECBODY: <b>ObjectList() 네이티브 주소 해석</b> 라이브 확인 → 안전 게이트가 실행기 몸통을 배정 시퀀스로 위임</li>
+        <li>DASHUI: 사용자 방향 전환 2회 — 콘솔 우선 레이아웃 역전, onPC 풀 <b>윈도우</b> 모델</li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능</h4><ul>
+        <li><b>쇼컨트롤 패널</b> — 카탈로그·핀·멤버십, 단일 게이트 경유 실행, 소켓 끊기면 화면 소거</li>
+        <li><b>Executor를 폐쇄집합 참조 타입으로 인식</b> · resolve_path가 콘솔 주소를 해석</li>
+        <li><b>대시보드</b> — 분할 패널, MA 셀 타일, 드래그 리사이즈, 프리셋 필터, 채팅 기반 재동기</li>
+        <li>onPC 풀 윈도우 — 정사각 셀, −/+ 크기, 코너 영역 드래그</li>
+        <li>배포 신뢰성 점검 + 원샷 매크로 상태 래치 결함 수정</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>대표 커밋</b> <span class="mono">13a2f6b</span> 정직한 타일 <span class="sep">·</span> <span class="mono">cd8bc6f</span> ObjectList GO <span class="sep">·</span> <span class="mono">9c2f448</span> 풀 윈도우 모델</div>
+  </div>
+</div>
+
+<div class="stage inf">
+  <div class="st-head"><span class="no">◆</span><span class="ttl">트렁크 통합 — 갈라진 두 앱 라인을 하나로</span>
+    <span class="badge b-main">main</span><span class="badge b-warn">머지 정리</span>
+    <span class="date">2026-07-25 → 07-26</span></div>
+  <div class="st-body">
+    <div class="lane"><b>머지 커밋</b> <span class="mono">ccbb946</span> · <span class="mono">59dc196</span> (조작자 UI 안전) · <span class="mono">159659a</span> (실행 프리뷰 기반)</div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>두 갈래로 자란 앱 라인을 단일 트렁크로 병합 — "main은 최신 세대이지 양쪽의 합집합이 아니다"로 원복 판정</li>
+        <li>머지 레일 폭 회귀(대시보드 폭 0) 수정, 앱 실행 설정을 병합 트렁크로 재지정</li>
+        <li>쇼파일 정리 과정에서 배운 것을 문서로 고정 · 코드 외부 사유로 실패한 테스트 3건 정리</li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능</h4><ul>
+        <li>실행 프리뷰 기반 + 조작자 UI 안전 디테일 통합</li>
+        <li>SPEC 하위 런타임 상태 파일 <span class="mono">.gitignore</span> 규율</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>이 단계의 의미</b> 이후 모든 브랜치는 <b>단일 트렁크에서만</b> 뻗는다 — 워크트리 규율의 출발점</div>
+  </div>
+</div>
+
+<div class="stage acc">
+  <div class="st-head"><span class="no">⑤</span><span class="ttl">룩 라이브러리 · 버스킹 위저드 — 조명 어휘의 등장</span>
+    <span class="badge b-main">main</span><span class="badge b-info">feature/SPEC-COPILOT-BUSKWIZ-001 → PR #5</span>
+    <span class="date">2026-07-26 → 07-29</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> main(LOOKLIB M0~M7) + BUSKWIZ 피처 브랜치 <span class="sep">·</span> <b>커밋</b> 약 40건</div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>LOOKLIB M1~M7 — 스키마·역할 어휘·장르 라이브러리·역할→리그 리졸버·자연어 매칭·라이브 종단 PASS</li>
+        <li>run_commands 중복 제거가 프로그래머 상태 명령·맨 Clear를 삼키던 결함 예외 처리</li>
+        <li>BUSKWIZ M0 라이브 프로브 4건 판정 → M7 종단 라이브 PASS</li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능</h4><ul>
+        <li><b>내장 4장르 룩 라이브러리</b> + 룩 스키마/로더</li>
+        <li><b>역할→리그 그룹 리졸버</b> · <b>find_looks</b> 자연어 룩 매칭 툴</li>
+        <li><b>룩 인스턴스화 번들 빌더</b> — 무드 절차를 룩 라이브러리로 경유</li>
+        <li><b>prepare_busking</b> — 장르 조회 계층 · 슬롯 원장 · 다중 룩 번들 · 집계 보고</li>
+        <li>per-show 정적 금지 스캔 · 값 라인 가드</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>대표 커밋</b> <span class="mono">9b76fce</span> 4장르 <span class="sep">·</span> <span class="mono">121e52b</span> 역할 리졸버 <span class="sep">·</span> <span class="mono">11a01a4</span> BUSKWIZ 라이브 PASS <span class="sep">·</span> <b>PR</b> #5</div>
+  </div>
+</div>
+
+<div class="stage acc">
+  <div class="st-head"><span class="no">⑥</span><span class="ttl">쇼 워크플로우 폭 확장 — 큐리스트 · 씬 컴파일러 · 페이퍼워크 · 프리쇼</span>
+    <span class="badge b-main">main</span><span class="badge b-vio">SONGCUE · PRECHK · OVERLAP · FXLIB · SCENE · PAPERWORK · PRESHOW</span>
+    <span class="date">2026-07-30 → 08-02</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> main (PR #6~#22, SPEC 7개 + T-시리즈 UI) <span class="sep">·</span> <b>PR</b> 14건</div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>SPEC별 AC 전량 PASS 기록 — SONGCUE 18/18 · PRECHK 17/17 · OVERLAP 21 · FXLIB 23/23 · SCENE 24/24</li>
+        <li>라이브 E2E로 <b>OSC 점검이 실전에서 실행되지 않던 결함</b> 발견·수정</li>
+        <li>감사 로그가 직렬화 불가 값에서 예외로 유실되던 결함 수정</li>
+        <li>미등록 툴 등록 — 모델이 볼 수 있는 툴 표면 <b>14 → 18</b></li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능</h4><ul>
+        <li><b>송 구조 기반 큐리스트 초안 생성기</b> (SONGCUE)</li>
+        <li><b>프리쇼 패치 점검 + 응답 확인 매크로</b>, 프리쇼 체크리스트(점검 4종 + 함정 진단 3종)</li>
+        <li><b>이펙트 어휘 계층</b>(FXLIB) · <b>씬 컴파일러</b> — 룩+이펙트+타이밍을 하나의 큐로</li>
+        <li><b>페이퍼워크</b> — 조회 전용 패치시트·큐시트·프리셋 목록</li>
+        <li><b>라이브 큐 진행 모니터</b>(실행기별 진행 + 최근 실행 이력) · MA3 방식 큐 모니터</li>
+        <li><b>볼런티어 런북 모드</b> · <b>실행기 레이아웃 자동 배치 계획기</b> · 쇼파일 스냅샷 보관</li>
+        <li>보수적 점유폭 상계로 구간 겹침 판정(OVERLAP)</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>대표 PR</b> #6 SONGCUE · #10 SCENE · #13 PAPERWORK · #14 PRESHOW · #18 실행기 레이아웃 · #20 큐 모니터 · #22 툴 18개</div>
+  </div>
+</div>
+
+<div class="stage inf">
+  <div class="st-head"><span class="no">⑦</span><span class="ttl">자기진단 · 공간 인식 · 쓰기 무결성 — 브랜치가 갈라지기 시작한다</span>
+    <span class="badge b-info">spec/introspect-001</span><span class="badge b-main">main</span><span class="badge b-vio">INTROSPECT · SPATIAL · GROUPGEN · WRITEGATE · TRUNCATE · AXISCORE</span>
+    <span class="date">2026-08-03 → 08-05</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> <span class="mono">spec/introspect-001</span>(응답기 축, 원격 아카이브) + main(SPATIAL·GROUPGEN·게이트 3종) <span class="sep">·</span> <b>PR</b> #24 #25 #26 #27 #28</div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>INTROSPECT M1~M7 — 0-based 인덱스 정의역을 실사격으로 교정, <b>재생 상태 필드는 Sequence 핸들에 있다</b>를 발견 산출물로 확정</li>
+        <li>GROUPGEN: 업계 표준 용어 심층 조사 → REQ 30건 전개, 게이트 A(멤버십 판독) <b>NEGATIVE = MA3 플랫폼 한계</b>로 확정</li>
+        <li>Gemini가 거부하는 스키마 키워드 제거 — 전 턴이 400으로 죽던 결함</li>
+        <li>머지 전 독립 리뷰 4인 — WRITEGATE P0 1 · P1 9 · P2 12 소인</li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능</h4><ul>
+        <li><b>응답기 v1.6.0</b> — <span class="mono">props</span> · <span class="mono">introspect</span> 자기진단 동사 + 좁은 소비 포트 2종 + 개발자 CLI</li>
+        <li><b>공간 배치 인식·생성</b>(READ/WRITE) — 좌표 기반 연출</li>
+        <li><b>위상 분류 기반 그룹 자동 생성</b> + 폐쇄 어휘 명명 · 툴 표면 <b>20 → 22</b></li>
+        <li><b>쓰기 경로 무결성</b> — 좌표 기록을 게이트 risky로 분류 + 승인 흐름</li>
+        <li><b>절단 고지의 구조적 강제</b>(TRUNCATE) — 절단 회신을 구조적으로 다르게</li>
+        <li><b>축 점수 정규화</b>(AXISCORE) — 배제 규칙 삭제, 축 간 비교 가능</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>브랜치 처분</b> <span class="mono">spec/introspect-001</span>은 원격 아카이브로 남고, 내용은 단계 ⑯의 PR #48로 <b>재이식</b>되어 main에 반영</div>
+  </div>
+</div>
+
+<div class="stage wrn">
+  <div class="st-head"><span class="no">⑧</span><span class="ttl">Vectorworks 인테이크 + 자동 패치 — 23라운드 감사의 브랜치</span>
+    <span class="badge b-warn">feature/SPEC-COPILOT-VWX-001</span><span class="badge b-vio">VWX-001 · AUTOPATCH-001</span>
+    <span class="date">2026-08-05 → 08-12</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> <span class="mono">feature/SPEC-COPILOT-VWX-001</span> (약 60커밋, 최장 수명) <span class="sep">·</span> <b>합류</b> <span class="mono">63083a6</span></div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>실물 파일 프로브로 P0 결함 연쇄 소인 — 조인키 범위(unit_number는 포지션 스코프), 다중 시스템, 헤더 없는 익스포트, 절대 주소만 파생</li>
+        <li>AUTOPATCH <b>round1~23 독립 감사</b> — 지적 200건 이상 반영, 치명 결함 반복 소인. "코드는 옳았고 그것을 지키는 게이트가 없었다"</li>
+        <li>M0 라이브 9경로 전부 0건(NEGATIVE) → 근본 원인 확정 → <b>M8에서 AddFixtures 작동 확인</b>으로 종단 검증 성립</li>
+        <li>위양성 기제 7건 등재(라이브 세션과 스위트의 포트 경합 등)</li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능</h4><ul>
+        <li><b>MVR·시트 실물 판독</b> + 컬럼 별칭 해석 + 설계 리그 도메인 모델</li>
+        <li><b>부분 정보 인테이크</b> — 모자란 값을 <b>질문 카드</b>로 되돌리는 통로(일반 채팅 화면 포함)</li>
+        <li><b>precheck_patch diff</b> · 주소 충돌 시 그 자리에서 묻고 새 자리 수용</li>
+        <li>라이브러리에 없는 타입은 막다른 길 대신 <b>조달 단계</b>로 · 콘솔에서 직접 고른 선택을 서버가 이어받음</li>
+        <li><b>vectorworks_autopatch</b> 단일 진입 툴 — FID 배정 · 타입/모드 해석 · Lua 생성기 · 멱등 + 검증 읽기</li>
+        <li><b>OSC 무접촉 부트스트랩</b> — 템플릿 자동 설치 + 쇼파일 워크플로우</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>대표 커밋</b> <span class="mono">532a405</span> 실측 판정 <span class="sep">·</span> <span class="mono">f05e47f</span> M8 라이브 성립 <span class="sep">·</span> <span class="mono">cf5cfac</span> 단일 진입 툴 <span class="sep">·</span> <span class="mono">63083a6</span> main 합류</div>
+  </div>
+</div>
+
+<div class="stage acc">
+  <div class="st-head"><span class="no">⑨</span><span class="ttl">워크트리 병렬 4개 — 문서·페이퍼워크·안전을 동시에</span>
+    <span class="badge b-main">main</span><span class="badge b-info">PR #29~#37 · 워크트리 4개 동시</span>
+    <span class="date">2026-08-07 → 08-12</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> <span class="mono">jjjh7401/spec-feasibility</span> · <span class="mono">paperwork-p0-rebased</span> · <span class="mono">magic-sheet</span> · <span class="mono">safety-v3</span> · <span class="mono">handoff-3</span> · <span class="mono">session-memory</span> <span class="sep">·</span> <b>PR</b> 9건</div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>스펙 실현가능성 <b>전수 검토</b> — "나중에 하자"로 살아 있던 실현 불가·스테일 판정 <b>29건 정정</b></li>
+        <li>업무 프로세스 대비 <b>구현 커버리지 리포트</b> v1 → 정정 15건 → v2(벽 대장 완성)</li>
+        <li>병렬 PR이 서로 main을 깨뜨림 — PRESERVE 게이트/SONGCUE 훅 게이트 <b>2회 복구</b> (PR #30, #34)</li>
+        <li>세션 인계 문서를 "이 문서 하나로 재개 가능"하게 재작성 + 콜드리드 검증 정정 10건</li>
+        <li>워크트리 용어 혼동 제거 — "메인" → <span class="mono">Main</span> 워크트리(루트) vs 브랜치 <span class="mono">main</span></li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능</h4><ul>
+        <li>페이퍼워크 <b>P0 4건</b> — 폭 상계 · 인쇄 스타일 · 인수인계 패키지 · UI 노출</li>
+        <li><b>매직시트 축약형</b> — 이름 + 패치 요약 + 배치 좌표</li>
+        <li><b>쇼파일 교체 승인 게이트 + 타임코드 슬롯 점유 검사</b> (safety v3)</li>
+        <li>prop 측정 스텝 + 라이브 측정 절차서 · 교육 커리큘럼</li>
+        <li>페이퍼워크 <b>인앱 미리보기·다운로드</b> + 시트 고정폭 포맷 + 대시보드 폭 조절</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>이 단계의 교훈</b> 병렬 워크트리는 속도를 주지만 <b>게이트를 지키는 게이트</b>가 없으면 main이 깨진다 → 이후 트립와이어·hunk 핀 규율 강화</div>
+  </div>
+</div>
+
+<div class="stage vio">
+  <div class="st-head"><span class="no">⑩</span><span class="ttl">공간 조준 — 실측 pan/tilt로 무대 좌표를 겨눈다</span>
+    <span class="badge b-vio">feature/spatial-pointing</span><span class="badge b-vio">CUETIME-001</span>
+    <span class="date">2026-08-13 → 08-14</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> <span class="mono">feature/spatial-pointing</span> <span class="sep">·</span> <b>합류</b> <span class="mono">614eab9</span> <span class="sep">·</span> 이어서 main에서 CUETIME T1~T3</div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>콘솔 Pan/Tilt 값과 3D 빔 방향의 <b>실측 상관관계</b> 확립 → 역산 공식으로 임의 좌표 조준</li>
+        <li>배치 여러 종에서 라이브 다중 검증 · MIB(Move In Black) 규칙 A/B 실측</li>
+        <li>실제 앱 UI로 1분 헤비메탈 시트 E2E (12구간 · 14큐) + 숫자 이름 결함 수정</li>
+        <li>사용자 피드백 반영 — 반복 무드를 동일 계열 대안으로 로테이션, MIB 사전 이동 큐 <b>TrigType Follow 자동 발사</b></li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능</h4><ul>
+        <li><b>실측 pan/tilt 조준</b> — 헤드를 임의 무대 좌표로</li>
+        <li><b>기본 포지션 프리셋 10종</b> (리그 파생 시퀀스 · ask-first 저장)</li>
+        <li><b>LOOK 계열 pan/tilt</b> — fan out/in/cross, ring in/out</li>
+        <li>배치 적응형 팬 체인 · <b>2축 팬</b>(tilt_spread) · 무드→포지션 제안 계층</li>
+        <li><b>포지션 큐 전환</b>(Store Sequence n Cue m CueFade) + MIB 규칙 + 송 구조 포지션 큐시트</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>대표 커밋</b> <span class="mono">b63447c</span> 실측 조준 <span class="sep">·</span> <span class="mono">f97eeed</span> 프리셋 10종 <span class="sep">·</span> <span class="mono">9ba5bac</span> MIB 자동 발사 <span class="sep">·</span> <span class="mono">614eab9</span> 합류</div>
+  </div>
+</div>
+
+<div class="stage wrn">
+  <div class="st-head"><span class="no">⑪</span><span class="ttl">페이저 이펙트 · 송 디자인 표준 · 감독 타임라인</span>
+    <span class="badge b-warn">research/ma3-effects-phaser</span><span class="badge b-vio">FXGEN · SONGSTD</span><span class="badge b-warn">현재 미합류 워크트리</span>
+    <span class="date">2026-08-14 → 08-16</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> <span class="mono">research/ma3-effects-phaser</span> (연구 워크트리, 약 60커밋) <span class="sep">·</span> <b>부분 합류</b> <span class="mono">c2aec1d</span> · <span class="mono">4ee45fa</span> <span class="sep">·</span> <b>현재</b> ahead 4 · behind 12</div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>grandMA3 페이저 이펙트 연구 코퍼스 구축 → <b>실측 페이저 축</b> 개방 + 에디터 라우팅 자산</li>
+        <li>송 조명 디자인 표준 v0.1 → v0.4 — 음악 프로파일 → 리그 프로파일 → <b>LD 의도 인터뷰 계층</b>(감독이 모든 자동 추론을 능가)</li>
+        <li>오디오 분석 경로 실측 후 SONGSTD SPEC 작성 · M1(음악·리그·에너지·린트 엔진) · M2(인터뷰·통합 계획·큐 컴포저)</li>
+        <li>라이브 관측 기반 결함 연쇄 소인 — 점유 시퀀스 Store 'Not allowed', 빈 슬롯 'not found'를 확답으로, flapping 자동 재시도, 한글 라벨 미표시</li>
+        <li>감사 로그 tail 읽기 상계 · 스냅샷 캐시 · 실측 대시 예산</li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능</h4><ul>
+        <li><b>compose_fx</b> 툴 + 프리셋-All 목적지 + 현장 조명감독 표현으로 이펙트 어휘 확장</li>
+        <li><b>감독 타임라인 워크플로우</b> — 세션 흐름·영속화·라이브러리·큐 편집</li>
+        <li><b>PLAN 단계 편집</b>(콘솔 무접촉) — 큐 추가/삭제·포지션·컬러, 이어서 디머·페이드·FX on/off·시간 이동</li>
+        <li><b>자동 버전 스냅샷</b>("이름 (자동 vN)") · <b>셋리스트 모드</b>(시퀀스 210,220…·Executor 101~ 자동 배분)</li>
+        <li><b>리허설 편집</b> — '지금 이 큐' 라이브 지칭, 승인 필수</li>
+        <li><b>진행 순서 보드</b> — 계획 시퀀스 우선 + 진행률, 세로 쇼오더 리스트</li>
+        <li><b>해결형 복구 카드</b> — 점유/거부된 시퀀스에 빈 슬롯 제안 + 즉시 재저장, 탐침 진단 표기</li>
+        <li>프리셋 풀 카테고리 카드 + 온디맨드 팝업 · 실측 저장 수 배지 · 정사각 타일 통일</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>브랜치 처분</b> 응답기 WIP(+2,153줄)을 보존 커밋 <span class="mono">819aa6f</span>로 봉인 · 트립와이어 재실측 <span class="mono">ae8d494</span> · <b>의도적 미합류</b> (검증 후 PR 예정)</div>
+  </div>
+</div>
+
+<div class="stage inf">
+  <div class="st-head"><span class="no">⑫</span><span class="ttl">이미지 기반 배치 제안 — 스케치를 읽어 리그를 배치한다</span>
+    <span class="badge b-info">feature/SPEC-COPILOT-IMGLAYOUT-001</span><span class="badge b-vio">IMGLAYOUT-001</span>
+    <span class="date">2026-08-15 → 08-16</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> <span class="mono">feature/SPEC-COPILOT-IMGLAYOUT-001</span> (병렬 슬라이스 계약 M0~M5) <span class="sep">·</span> <b>합류</b> <span class="mono">c93ca32</span> · <b>PR</b> #42</div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>M0 병렬 슬라이스 계약 → M1 업로드 채널 · M2 LLM 첨부 배선 · M3 분석 툴 · M4/M5 세션 배선 + 통합 테스트</li>
+        <li>라이브 Gemini 비전 스모크 — 3겹 삼각형 이미지 PASS · 테스트 자산 v1→v3(수량순 재배열)</li>
+        <li>사용자 관측 결함: <b>layout_image_upload가 WS 디스패치에서 조용히 버려짐</b>(app.py 분기 누락) 수정</li>
+        <li>독립 리뷰 2회 — Critical/High 0건, 지적 9건 반영(첨부 busy 차단·annotations 신뢰 표지·값 타입 검증·claude_code 사전 거부)</li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능</h4><ul>
+        <li><b>레이아웃 이미지 업로드 채널</b> + 드롭 기본 내비게이션 차단</li>
+        <li><b>analyse_layout_image</b> — 비전 구조 분석 + confidence 규율</li>
+        <li><b>통합 첨부 버튼</b> — 파일 타입이 목적지를 라우팅</li>
+        <li>triangle 프리셋 + 첨부 accept 확장자/MIME 폴백 수정 · 툴 표면 <b>33개</b> 가드 스냅샷</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>대표 커밋</b> <span class="mono">16bcc7d</span> 업로드 채널 <span class="sep">·</span> <span class="mono">1b91d4e</span> 분석 툴 <span class="sep">·</span> <span class="mono">1c1e344</span> 통합 첨부 <span class="sep">·</span> <span class="mono">2c42892</span> 조용한 유실 수정</div>
+  </div>
+</div>
+
+<div class="stage acc">
+  <div class="st-head"><span class="no">⑬</span><span class="ttl">프리셋 체계 완성 — 가드 · 컬러 · 디머 · 페이저 · recall</span>
+    <span class="badge b-main">main</span><span class="badge b-info">jjjh7401/MAcopilotpos → PR #43 #44</span><span class="badge b-vio">PRESETGUARD-001/002 · COLORPRESET-001</span>
+    <span class="date">2026-08-16 → 08-17</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> main(PRESETGUARD·프리셋 확장) → <span class="mono">jjjh7401/MAcopilotpos</span>(컬러·디머·콤보·recall) <span class="sep">·</span> <b>PR</b> #43 #44</div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>PRESETGUARD 리뷰 결함 F1~F9 — <b>동의 오판 · 구간 미검증 · 거짓 확인 차단</b>, '저장' 토큰 제거, 동의 판정 어절화</li>
+        <li>풀 팝업 <b>24캡 절단</b>을 offset 페이징으로 완전 판독 — 절단된 목록은 '판독 불가'로 처리</li>
+        <li>다관점 리뷰 발견 수정 — 오라우팅 2건 · 스와치 풀 스코핑 · 정직성 보강, rig_object int 강제 · 풀 리졸버 통합</li>
+        <li>배지 개수 오보(창 길이 대신 응답기 총계 childCount) 수정</li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능</h4><ul>
+        <li><b>Position 프리셋 덮어쓰기 가드</b> + 저장 되읽기 + 재생성 경로</li>
+        <li><b>FX 포지션 프리셋 10종</b>(페이저 골격) · 프리셋 참조 포지션 이펙트 빌더</li>
+        <li><b>표준 팔레트 컬러 프리셋 10종</b> + 색 원형 스와치 UI</li>
+        <li><b>멀티컬러 페이저 프리셋 10종</b>(Color 풀 4.31~4.40) + <b>분할 원 스와치</b>(콘솔 ⋯ 재현)</li>
+        <li><b>디머 프리셋 20종</b>(레벨 10 + 페이저 10, 회색조 원형) · <b>콤보 프리셋 10종</b>(컬러+디머, All 풀)</li>
+        <li><b>페이저 recall 워크플로우 3단계</b> — 즉시 발사 · 시퀀스+Exec · 곡 큐 통합</li>
+        <li>query_state offset 페이징 관통 · 시퀀스 실행기 할당 카드 · 회전(Rotz) 보정 조준</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>대표 커밋</b> <span class="mono">237c4db</span> 프리셋 가드 <span class="sep">·</span> <span class="mono">ef0103a</span> 컬러 10종 <span class="sep">·</span> <span class="mono">74e75a4</span> 멀티컬러 페이저 <span class="sep">·</span> <span class="mono">0feec90</span> recall 3단계</div>
+  </div>
+</div>
+
+<div class="stage vio">
+  <div class="st-head"><span class="no">⑭</span><span class="ttl">사용 가이드 전면 개정 — 조명감독 9단계 축</span>
+    <span class="badge b-vio">worktree-ldguide</span><span class="badge b-vio">LDGUIDE-001</span><span class="badge b-warn">워크트리 유지</span>
+    <span class="date">2026-08-17 → 08-18</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> <span class="mono">worktree-ldguide</span> (전용 워크트리, 15커밋) <span class="sep">·</span> <b>main 합류</b> <span class="mono">15590e3</span> · <b>PR</b> #46 <span class="sep">·</span> <b>현재</b> ahead 14 · behind 13</div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>plan-audit <b>3회차</b> — FAIL 0.56 → 0.70 → 잔여 부채 R1~R7 반영 (v0.2.0 → v0.4.0)</li>
+        <li>Tier M REQ/AC <b>예산 초과 예외</b> 기록 + 귀속 정정(lead 판단 → 사용자 결정)</li>
+        <li>§A.2 오측 정정 — 등장/부재가 뒤바뀌어 있었다 · §D 명령 4건 교정</li>
+        <li>run AC <b>19/19</b> · review PASS-WITH-FINDINGS · sync 이관 3건 처리 + 기전 #8 등록</li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능</h4><ul>
+        <li><b>사용 가이드를 조명감독 9단계 워크플로우 축으로 전면 개정</b> + 증거 원장</li>
+        <li>3단(plan/run/sync) 종결 산출물 + sync_commit_sha 백필 규율</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>대표 커밋</b> <span class="mono">73737bd</span> SPEC 작성 <span class="sep">·</span> <span class="mono">bb0b3c3</span> 가이드 개정 run <span class="sep">·</span> <span class="mono">269c0fe</span> 워크트리 팁</div>
+  </div>
+</div>
+
+<div class="stage wrn">
+  <div class="st-head"><span class="no">⑮</span><span class="ttl">차단 항목 16건 처분 — 등재하되 고치지 않는다</span>
+    <span class="badge b-warn">jjjh7401/blocked16</span><span class="badge b-vio">BLOCKED16-001</span><span class="badge b-warn">워크트리 유지</span>
+    <span class="date">2026-08-18</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> <span class="mono">jjjh7401/blocked16</span> (전용 워크트리, 6커밋) <span class="sep">·</span> <b>PR</b> #47 <span class="sep">·</span> <b>현재</b> ahead 6 · behind 12</div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li>M0~M3 — 누적 차단 <b>16건 처분표</b> + 프로브 원장 + 조준 노출</li>
+        <li>review 지적 10건 교정 + D-6 처분 등급 ③→② 상향</li>
+        <li>감사 차단 결함 교정 후 status completed · §F.1에 <b>세션 경계 재발</b> 등재(새 형태로 세지 않는다)</li>
+        <li>잔여 2건은 <b>등재하되 고치지 않는다</b>로 명시 종결</li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능·산출물</h4><ul>
+        <li>차단 항목 처분 원장 — 각 건의 판정 근거 · 프로브 · 재현 조건</li>
+        <li>재발 기제 등재 규약 (동일 원인을 새 결함으로 이중 계수 금지)</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>대표 커밋</b> <span class="mono">3fe696d</span> 처분표 16건 <span class="sep">·</span> <span class="mono">7c2abf2</span> 리뷰 10건 <span class="sep">·</span> <span class="mono">363d28f</span> 잔여 2건 등재</div>
+  </div>
+</div>
+
+<div class="stage acc">
+  <div class="st-head"><span class="no">⑯</span><span class="ttl">마무리 — 재이식 · 가정 종결 · 저장소 단일화</span>
+    <span class="badge b-main">main</span><span class="badge b-info">jjjh7401/* 5개 소규모 브랜치 · PR #48~#52</span>
+    <span class="date">2026-08-18 → 08-19</span></div>
+  <div class="st-body">
+    <div class="lane"><b>브랜치</b> <span class="mono">introspect-reland</span> · <span class="mono">assumption-verify</span> · <span class="mono">worktree-map</span> · <span class="mono">assumption-close</span> · <span class="mono">handoff-0819</span> <span class="sep">·</span> 모두 PR 후 삭제</div>
+    <div class="cols">
+      <div class="col work"><h4>주요 작업</h4><ul>
+        <li><b>PR #48</b> 아카이브 브랜치의 introspect/props를 <b>응답기 v1.6.1로 재이식</b> + 라이브 재검증 프로브(배포 함정·M7 재현), 보존 게이트 위반 원복</li>
+        <li><b>PR #49</b> ASSUMPTION 3건 introspect 재공략 프로브(13번) 추가</li>
+        <li><b>PR #50</b> main 중심 <b>워크트리·브랜치 지도</b> + 유지 규칙 6개 — 워크트리 6 → 4, 포트 전쟁(구코드 데몬) 해소</li>
+        <li><b>PR #51</b> A1·A2(recall 적재) 육안 확인으로 ASSUMPTION 축소 종결</li>
+        <li><b>PR #52</b> 2026-08-19 핸드오프 — 다음 과제: 관측 2건 · research 브랜치 판정</li>
+      </ul></div>
+      <div class="col feat"><h4>추가된 기능·산출물</h4><ul>
+        <li><b>응답기 v1.6.1</b> — introspect · props 자기진단 동사 main 반영</li>
+        <li><span class="mono">docs/worktree-map.html</span> — 단일 기준점·워크트리 4개·유지 규칙 6개 실측판</li>
+        <li>저장소 단일화 — main만이 기준선, 갈래는 PR로만 복귀</li>
+      </ul></div>
+    </div>
+    <div class="ev"><b>대표 커밋</b> <span class="mono">5b4a307</span> v1.6.1 재이식 <span class="sep">·</span> <span class="mono">3621524</span> 워크트리 지도 <span class="sep">·</span> <span class="mono">410a9a7</span> 현재 main HEAD</div>
+  </div>
+</div>
+
+<h2><span class="n">3</span>브랜치 처분 요약</h2>
+<table>
+  <thead><tr><th>브랜치</th><th>단계</th><th>수명</th><th>합류 방식</th><th>현재 상태</th></tr></thead>
+  <tbody>
+    <tr class="is-main"><td class="mono">main</td><td>전체</td><td>07-15 →</td><td>—</td><td><span class="badge b-main">기준선</span> <span class="mono">410a9a7</span> · origin 동일</td></tr>
+    <tr><td class="mono">feature/SPEC-COPILOT-BUSKWIZ-001</td><td>⑤</td><td>07-28</td><td>PR #5</td><td><span class="badge b-ok">합류·삭제</span></td></tr>
+    <tr><td class="mono">spec/introspect-001</td><td>⑦</td><td>08-03~04</td><td>PR #48 재이식</td><td><span class="badge b-info">원격 아카이브</span> ahead 17</td></tr>
+    <tr><td class="mono">feature/SPEC-COPILOT-VWX-001</td><td>⑧</td><td>08-05~12</td><td>머지 <span class="mono">63083a6</span></td><td><span class="badge b-ok">합류·삭제</span></td></tr>
+    <tr><td class="mono">jjjh7401/* (9개)</td><td>⑨⑬⑯</td><td>08-07~08-19</td><td>PR #29~#37 · #43 #44 · #48~#52</td><td><span class="badge b-ok">합류·삭제</span></td></tr>
+    <tr><td class="mono">feature/spatial-pointing</td><td>⑩</td><td>08-13~14</td><td>머지 <span class="mono">614eab9</span></td><td><span class="badge b-ok">합류·삭제</span></td></tr>
+    <tr><td class="mono">research/ma3-effects-phaser</td><td>⑪</td><td>08-14 →</td><td>부분 머지 2회</td><td><span class="badge b-warn">워크트리 유지</span> ahead 4 · behind 12 · WIP 보존</td></tr>
+    <tr><td class="mono">feature/SPEC-COPILOT-IMGLAYOUT-001</td><td>⑫</td><td>08-15~16</td><td>PR #42 · <span class="mono">c93ca32</span></td><td><span class="badge b-ok">합류·삭제</span></td></tr>
+    <tr><td class="mono">worktree-ldguide</td><td>⑭</td><td>08-17~18</td><td>PR #46</td><td><span class="badge b-warn">워크트리 유지</span> ahead 14 · behind 13</td></tr>
+    <tr><td class="mono">jjjh7401/blocked16</td><td>⑮</td><td>08-18</td><td>PR #47</td><td><span class="badge b-warn">워크트리 유지</span> ahead 6 · behind 12 · 잔여 2건</td></tr>
+  </tbody>
+</table>
+
+<h2><span class="n">4</span>축 별로 본 기능 성장</h2>
+<table>
+  <thead><tr><th>축</th><th>시작</th><th>현재</th><th>결정적 단계</th></tr></thead>
+  <tbody>
+    <tr><td>모델이 볼 수 있는 툴 표면</td><td>4개 (②)</td><td><b>33개</b> (⑫ 가드 스냅샷)</td><td>⑥ 14→18 · ⑦ 20→22 · ⑫ 33</td></tr>
+    <tr><td>Lua 응답기</td><td>상태 스냅샷 (②)</td><td><b>v1.6.1</b> introspect·props</td><td>⑦ v1.6.0 · ⑯ 재이식</td></tr>
+    <tr><td>안전 게이트</td><td>위험 분류 + 감사 로그 (②)</td><td>쇼파일 교체 승인 · 타임코드 점유 · 쓰기 risky · 절단 강제</td><td>⑦ WRITEGATE·TRUNCATE · ⑨ safety v3</td></tr>
+    <tr><td>조명 어휘</td><td>없음</td><td>룩 4장르 · 이펙트 계층 · 페이저 실측 축 · 현장어</td><td>⑤ LOOKLIB · ⑥ FXLIB · ⑪ FXGEN</td></tr>
+    <tr><td>프리셋</td><td>없음</td><td>포지션 10 + FX 10 + 컬러 10 + 멀티컬러 10 + 디머 20 + 콤보 10</td><td>⑩ 포지션 · ⑬ 전 계열</td></tr>
+    <tr><td>UI</td><td>채팅 + 승인 카드 (②)</td><td>대시보드 · 풀 윈도우 · 큐 모니터 · 감독 타임라인 · 런북</td><td>④ DASHUI · ⑥ T-* · ⑪ 타임라인</td></tr>
+    <tr><td>배포</td><td>수동 (②)</td><td>.dmg + Tauri 셸 + 무접촉 OSC 부트스트랩</td><td>③ DEPLOY · ⑧ 부트스트랩</td></tr>
+    <tr><td>입력 경로</td><td>한국어 채팅만</td><td>+ Vectorworks 시트/MVR · 배치 스케치 이미지</td><td>⑧ VWX · ⑫ IMGLAYOUT</td></tr>
+  </tbody>
+</table>
+
+<div class="foot">
+  실측 근거 — <span class="mono">git log --all</span> 641커밋 · <span class="mono">git worktree list</span> 4개 · <span class="mono">git branch -a</span> · 머지 커밋 43건 · SPEC ID 31종.<br>
+  단계 번호는 브랜치 계보 기준 구획이며 시간상 일부 겹친다(⑧⑨, ⑪⑫⑬은 동시 진행).<br>
+  생성 2026-08-19 · 기준 <span class="mono">main @ 410a9a7</span> · 동반 문서 <span class="mono">docs/worktree-map.html</span>(현재 워크트리 지도·유지 규칙)
+</div>
+
+</div></body></html>

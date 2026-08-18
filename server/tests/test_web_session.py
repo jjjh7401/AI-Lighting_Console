@@ -121,6 +121,8 @@ class TestOutcomeViews:
             "rejected": "거부됨",
             "proposal": "제안",
             "held": "승인 대기",
+            "not_created": "생성 안 됨",
+            "partially_created": "부분 생성",
         }
         for status, expected in cases.items():
             view = outcome_view(CommandOutcome(command="List", status=status, detail="d"))

@@ -18,7 +18,6 @@ from server.llm.types import ToolCall
 from server.orchestrator.tools import (
     ANSWER_CANCEL,
     ANSWER_PICK_ON_CONSOLE,
-    ANSWER_SUPPLY_FILE,
     build_toolset,
 )
 from server.vwx.typemap import FIXTURE_TYPE_LIBRARY_ROOT
@@ -170,14 +169,20 @@ class TestItWaitsForTheConsole:
 
 
 class TestTheOtherAnswers:
-    def test_supplying_a_file_does_not_start_waiting(self, monkeypatch):
-        # 파일을 주겠다는 답에 2분을 기다리면 대화가 멈춘 것처럼 보인다.
-        calls: list[object] = []
-        monkeypatch.setattr("server.orchestrator.tools.time.sleep", lambda s: calls.append(s))
-        payload = _resolve(RollingStatePort(_PRESENT), RecordingQuestionPort(ANSWER_SUPPLY_FILE))
+    def test_no_file_handover_option_is_offered(self):
+        """[2026-08-18 실측] «MVR 또는 GDTF 파일을 주겠다»는 선택지를 없앤 자리.
 
-        assert calls == []
-        assert "watch_state" not in payload
+        파일을 라이브러리 폴더에 놓아도 타입은 쇼에 들어오지 않는다 — 명령줄
+        임포트는 `Failed`이거나 **모드가 없는 빈 타입**만 만든다(4가지 형태 실측).
+        못 하는 일을 선택지로 내면 조명감독은 그것을 고르고 아무 일도 일어나지
+        않는다. 카드는 실제로 되는 한 가지(콘솔에서 타입 추가)만 청한다.
+        """
+        port = RecordingQuestionPort(ANSWER_CANCEL)
+        _resolve(RollingStatePort(_PRESENT), port)
+
+        labels = [option.label for option in port.asked[0].options]
+        assert labels == [ANSWER_PICK_ON_CONSOLE, ANSWER_CANCEL]
+        assert not [label for label in labels if "GDTF" in label or "MVR" in label]
 
     def test_cancelling_ends_it(self):
         payload = _resolve(RollingStatePort(_PRESENT), RecordingQuestionPort(ANSWER_CANCEL))
@@ -216,9 +221,9 @@ class TestTheAnswersAreASharedVocabulary:
         _resolve(RollingStatePort(_PRESENT), port)
 
         offered = {option.label for option in port.asked[0].options}
-        assert offered == {ANSWER_PICK_ON_CONSOLE, ANSWER_SUPPLY_FILE, ANSWER_CANCEL}
+        assert offered == {ANSWER_PICK_ON_CONSOLE, ANSWER_CANCEL}
 
-    @pytest.mark.parametrize("label", [ANSWER_PICK_ON_CONSOLE, ANSWER_SUPPLY_FILE, ANSWER_CANCEL])
+    @pytest.mark.parametrize("label", [ANSWER_PICK_ON_CONSOLE, ANSWER_CANCEL])
     def test_every_offered_answer_is_handled(self, label, monkeypatch):
         monkeypatch.setattr("server.orchestrator.tools.time.sleep", lambda _: None)
         payload = _resolve(RollingStatePort(_PRESENT), RecordingQuestionPort(label))
@@ -374,11 +379,14 @@ class TestTheCardReadsLikeAButton:
         for label, option in self._options().items():
             assert len(option.description) <= 120, f"{label}: 버튼에 담기지 않는다"
 
-    def test_the_file_option_names_the_destination(self):
-        # 어디에 두라는 말이 없으면 그 갈래는 고를 수가 없다.
-        from server.vwx.typesource import FIXTURE_TYPE_HINT
+    def test_the_selection_steps_reach_the_card(self):
+        # 어디서 무엇을 누르라는 말이 없으면 그 갈래는 고를 수가 없다.
+        port = RecordingQuestionPort(ANSWER_CANCEL)
+        _resolve(RollingStatePort(_PRESENT), port)
 
-        assert FIXTURE_TYPE_HINT in self._options()[ANSWER_SUPPLY_FILE].description
+        steps = " ".join(port.asked[0].steps)
+        # 조명감독이 콘솔에서 따라갈 수 있는 순서가 카드에 있어야 한다.
+        assert "Library" in steps and "Select" in steps
 
     def test_the_full_plan_still_reaches_the_model(self):
         # 화면에서 뺀 것이지 버린 것이 아니다.
