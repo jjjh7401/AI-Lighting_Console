@@ -86,3 +86,30 @@ class PropertyQueryPort(Protocol):
     def query_property(self, path: str, property_name: str) -> dict:
         """Read one property of one object; raises on failure/timeout."""
         ...
+
+
+class FieldEnumerationPort(Protocol):
+    """Returns field names/types for one object path (REQ-INTROSPECT-017/024).
+
+    Same narrow-port precedent as :class:`PropertyQueryPort`: enumeration and
+    reads are different capabilities, so a consumer declares only the ability it
+    needs while staying behind the gate-owned console path.
+    """
+
+    def enumerate_fields(self, path: str) -> dict:
+        """Enumerate readable field names/types for one object; raises on failure/timeout."""
+        ...
+
+
+class BulkPropertyQueryPort(Protocol):
+    """Returns named property reads for one object path (REQ-INTROSPECT-018/024).
+
+    Split from :class:`FieldEnumerationPort` for the same reason
+    :class:`PropertyQueryPort` is split from :class:`StateQueryPort`: listing
+    names and reading values are distinct console abilities, and consumers may
+    need one without the other.
+    """
+
+    def query_properties(self, path: str, property_names: Sequence[str]) -> dict:
+        """Read named properties of one object; raises on failure/timeout."""
+        ...
