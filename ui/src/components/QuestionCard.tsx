@@ -54,8 +54,8 @@ export function QuestionCard({
             </div>
           ))}
           <p className="question-command-hint">
-            위 명령을 복사해 <strong>콘솔 명령줄에 직접</strong> 붙여넣고 실행하세요 — 앱이
-            대신 실행하면 동작하지 않습니다.
+            앱이 이 명령을 <strong>대신 실행</strong>합니다 — 위 버튼으로 답만 주시면 됩니다.
+            자동 실행이 또 실패할 때만 이 명령을 복사해 콘솔 명령줄에 붙여넣으세요.
           </p>
         </div>
       )}
