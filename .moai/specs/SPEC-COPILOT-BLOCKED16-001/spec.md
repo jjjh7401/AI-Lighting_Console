@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-BLOCKED16-001
 title: "코파일럿 막히는 지점 16건 — 처분 결정 및 최저비용 개선"
 version: "0.7.0"
-status: in-progress
+status: completed
 created: 2026-08-18
 updated: 2026-08-18
 author: orchestrator (kanban plan session, plan-tjxy3n)
