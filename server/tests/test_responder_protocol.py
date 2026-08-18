@@ -105,6 +105,27 @@ class TestRequestBuilders:
         line = build_state_query("1", "DataPool/Sequences/My Seq")
         assert line.endswith('"state 1 DataPool/Sequences/My Seq"')
 
+    def test_build_state_query_offset_none_and_zero_keep_historical_bytes(self):
+        # PROTOCOL.md §2 paging: the first window carries NO token, so the
+        # request stays byte-identical to pre-1.6.0 — safe for old responders.
+        base = f'Plugin "{PLUGIN_NAME}" "state 42 DataPool/Sequences"'
+        assert build_state_query("42", "DataPool/Sequences") == base
+        assert build_state_query("42", "DataPool/Sequences", offset=None) == base
+        assert build_state_query("42", "DataPool/Sequences", offset=0) == base
+
+    def test_build_state_query_positive_offset_appends_trailing_token(self):
+        line = build_state_query("42", "DataPool/Sequences/My Seq", offset=24)
+        assert line == (f'Plugin "{PLUGIN_NAME}" "state 42 DataPool/Sequences/My Seq offset=24"')
+
+    def test_build_state_query_rejects_negative_offset(self):
+        with pytest.raises(ProtocolError):
+            build_state_query("1", "DataPool/Sequences", offset=-1)
+
+    @pytest.mark.parametrize("bad", [True, False, 1.0, "24"])
+    def test_build_state_query_rejects_non_int_offset(self, bad):
+        with pytest.raises(ProtocolError):
+            build_state_query("1", "DataPool/Sequences", offset=bad)
+
     def test_build_prop_query(self):
         line = build_prop_query("p-1", "DataPool/Sequences/Sequence 101/Cue 2", "TrigTime")
         assert line == (

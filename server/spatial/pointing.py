@@ -43,6 +43,7 @@ from dataclasses import dataclass
 __all__ = [
     "BASIC_POSITION_SEQUENCE",
     "FAN_MODES",
+    "FX_POSITION_SEQUENCE",
     "POINTING_TILT_LIMIT_DEGREES",
     "POSITION_PRESET_POOL",
     "RADIAL_MODES",
@@ -53,6 +54,7 @@ __all__ = [
     "basic_position_presets",
     "fan_chain",
     "fan_pan_tilt",
+    "fx_position_presets",
     "pointing_commands",
     "position_cue_store_commands",
     "position_preset_store_commands",
@@ -440,6 +442,55 @@ _VOCAL_DOWNSTAGE_OFFSET = 2.0
 _VOCAL_HEIGHT = 1.6
 _RING_IN_HEIGHT = 3.0
 
+#: The ten FX skeleton positions — each one is the BASE a phaser effect
+#: swings around (sweeps, jumps, circles, ballyhoos, waves, tails, mirrors),
+#: not a finished look by itself. Like BASIC_POSITION_SEQUENCE the sequence
+#: is a contract: preset numbers are allocated in exactly this order.
+FX_POSITION_SEQUENCE: tuple[str, ...] = (
+    "Sweep L",
+    "Sweep R",
+    "Sky Out",
+    "Floor Base",
+    "Circle Base",
+    "Bally Base",
+    "Tail",
+    "Mirror Split",
+    "Fan Floor",
+    "Aisle Punch",
+)
+
+#: FX skeleton geometry. Every number is either a phaser's wobble headroom
+#: or a landing margin, derived from the rig the same way as the design-look
+#: constants above.
+#: Sweep endpoints land 2 m OUTSIDE the rig's x span so a pan phaser running
+#: A→B carries every beam past the end fixtures instead of stopping on them.
+_SWEEP_SIDE_MARGIN = 2.0
+#: The fly-out arrival beam keeps 15 degrees under the tilt refusal ceiling
+#: so a tilt phaser wobbling around it never trips the refusal.
+_SKY_OUT_TILT_MARGIN = 15.0
+#: Tilt sweeps and waves start from each fixture's own floor spot 1.5 m
+#: downstage of its feet — steep enough to read as "down", still aimable.
+_FLOOR_BASE_DOWNSTAGE_OFFSET = 1.5
+#: Circle / figure-8 phasers wobble BOTH axes around this base: pan 180
+#: faces the house, tilt 40 leaves headroom toward 0 AND the 135 ceiling.
+_CIRCLE_BASE_PAN, _CIRCLE_BASE_TILT = 180.0, 40.0
+#: Ballyhoo random phasers wobble around a mid tilt — 60 sits between the
+#: floor fan (45) and the horizon so excursions stay visible both ways.
+_BALLY_BASE_TILT = 60.0
+#: The straight landing row of the floor fan overshoots the rig ends by 1 m
+#: so the end beams visibly splay outward instead of pointing straight down.
+_FAN_FLOOR_SIDE_MARGIN = 1.0
+#: The landing row sits 2 m downstage of the rig's front edge — on the
+#: apron, where an equal-spacing row of hits reads as one straight line.
+_FAN_FLOOR_DOWNSTAGE_OFFSET = 2.0
+#: The aisle punch point is 6 m into the house — past the vocal point, deep
+#: enough that a steeply-hung fixture may legitimately refuse (and be
+#: skipped) rather than bend the look.
+_AISLE_PUNCH_DOWNSTAGE_OFFSET = 6.0
+#: Punch height 0.5 m: knee height still reads as a floor hit while keeping
+#: the beams off a grazing flat-floor angle.
+_AISLE_PUNCH_HEIGHT = 0.5
+
 
 def fan_chain(
     fixtures: Sequence[tuple[int, tuple[float, float, float]]],
@@ -526,3 +577,103 @@ def basic_position_presets(
         "Ring In": _radial("in", height=_RING_IN_HEIGHT),
     }
     return tuple((label, *looks[label]) for label in BASIC_POSITION_SEQUENCE)
+
+
+def fx_position_presets(
+    fixtures: Sequence[tuple[int, tuple[float, float, float]]],
+) -> tuple[tuple[str, tuple[tuple[int, float, float], ...], tuple[int, ...]], ...]:
+    """The ten FX skeleton positions for THIS rig — ``(label, aims, skipped_fids)``.
+
+    Same shape and rules as :func:`basic_position_presets`, but every entry
+    is the BASE a phaser swings around: the sweep endpoints, the fly-out
+    arrival, the tilt-wave floor, the circle/bally wobble centres, the tail
+    chain, the mirror cross, the equal-spacing floor fan and the aisle
+    punch. All point aims go through :func:`aim_pan_tilt`; a fixture a look
+    cannot aim is skipped AND named — never clamped, and one impossible
+    fixture never voids the other looks.
+    """
+    if not fixtures:
+        raise SpatialPointingError("no fixtures to build FX positions for")
+    xs = [position[0] for _fid, position in fixtures]
+    ys = [position[1] for _fid, position in fixtures]
+    cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
+    min_x, max_x = min(xs), max(xs)
+    front_y = min(ys)
+    by_fid = dict(fixtures)
+    ordered = [(fid, by_fid[fid]) for fid in fan_chain(fixtures)]
+
+    def _aim_each(
+        pairs: Sequence[tuple[int, tuple[float, float, float], tuple[float, float, float]]],
+    ) -> tuple[tuple, tuple]:
+        aims: list[tuple[int, float, float]] = []
+        skipped: list[int] = []
+        for fid, position, target in pairs:
+            try:
+                pan, tilt = aim_pan_tilt(position, target)
+            except SpatialPointingError:
+                skipped.append(fid)
+            else:
+                aims.append((fid, pan, tilt))
+        return tuple(aims), tuple(skipped)
+
+    def _focus(target: tuple[float, float, float]) -> tuple[tuple, tuple]:
+        return _aim_each([(fid, position, target) for fid, position in fixtures])
+
+    def _uniform(pan: float, tilt: float) -> tuple[tuple, tuple]:
+        return tuple((fid, pan, tilt) for fid, _position in fixtures), ()
+
+    # Tail: fixture i chases the floor point under its chain predecessor;
+    # index -1 closes the loop (the first fixture chases the last one).
+    tail_pairs = [
+        (fid, position, (ordered[index - 1][1][0], ordered[index - 1][1][1], 0.0))
+        for index, (fid, position) in enumerate(ordered)
+    ]
+    # Mirror Split: each half aims at the FAR side's floor edge so the two
+    # halves cross mid-stage.
+    mirror_pairs = [
+        (fid, position, ((max_x, cy, 0.0) if position[0] <= cx else (min_x, cy, 0.0)))
+        for fid, position in fixtures
+    ]
+    # Fan Floor: equal-spacing LANDING points (not equal pan splits) on one
+    # straight downstage row, one per chain slot.
+    fan_left = min_x - _FAN_FLOOR_SIDE_MARGIN
+    fan_right = max_x + _FAN_FLOOR_SIDE_MARGIN
+    fan_floor_y = front_y - _FAN_FLOOR_DOWNSTAGE_OFFSET
+    count = len(ordered)
+    fan_floor_pairs = [
+        (
+            fid,
+            position,
+            (
+                cx if count == 1 else fan_left + index * (fan_right - fan_left) / (count - 1),
+                fan_floor_y,
+                0.0,
+            ),
+        )
+        for index, (fid, position) in enumerate(ordered)
+    ]
+    # Bally Base: the out-fan's pan fan with every tilt moved to the bally
+    # wobble centre.
+    bally_aims = tuple(
+        (fid, pan, _BALLY_BASE_TILT)
+        for fid, pan, _tilt in fan_pan_tilt([fid for fid, _position in ordered], mode="out")
+    )
+
+    looks: dict[str, tuple[tuple, tuple]] = {
+        "Sweep L": _focus((min_x - _SWEEP_SIDE_MARGIN, cy, 0.0)),
+        "Sweep R": _focus((max_x + _SWEEP_SIDE_MARGIN, cy, 0.0)),
+        "Sky Out": _uniform(180.0, POINTING_TILT_LIMIT_DEGREES - _SKY_OUT_TILT_MARGIN),
+        "Floor Base": _aim_each(
+            [
+                (fid, position, (position[0], position[1] - _FLOOR_BASE_DOWNSTAGE_OFFSET, 0.0))
+                for fid, position in fixtures
+            ]
+        ),
+        "Circle Base": _uniform(_CIRCLE_BASE_PAN, _CIRCLE_BASE_TILT),
+        "Bally Base": (bally_aims, ()),
+        "Tail": _aim_each(tail_pairs),
+        "Mirror Split": _aim_each(mirror_pairs),
+        "Fan Floor": _aim_each(fan_floor_pairs),
+        "Aisle Punch": _focus((cx, front_y - _AISLE_PUNCH_DOWNSTAGE_OFFSET, _AISLE_PUNCH_HEIGHT)),
+    }
+    return tuple((label, *looks[label]) for label in FX_POSITION_SEQUENCE)

@@ -18,8 +18,19 @@ import threading
 
 import anthropic
 import httpx
+import pytest
 from google.genai import errors as genai_errors
 
+from server.design.song_cue_composer import (
+    ComposedCue,
+    CueColorData,
+    CueDimmerData,
+    CueFxData,
+    CueMibData,
+    CuePositionData,
+    CueTimingData,
+)
+from server.design.song_plan import MANUAL_GO
 from server.llm.anthropic_adapter import AnthropicAdapter
 from server.llm.config import AnthropicSettings, GeminiSettings
 from server.llm.gemini_adapter import GeminiAdapter
@@ -28,12 +39,32 @@ from server.orchestrator.last_created import LastCreated
 from server.orchestrator.tools import CommandOutcome, ToolExecution
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate
+from server.spatial.mib import PositionCuePlan, position_cue_bundle
+from server.spatial.pointing import (
+    BASIC_POSITION_SEQUENCE,
+    FX_POSITION_SEQUENCE,
+    POSITION_PRESET_POOL,
+    SpatialPointingError,
+    preset_recall_command,
+)
+from server.spatial.position_fx import position_fx_commands
 from server.web.approval_bridge import ApprovalChannel
 from server.web.measure import RoundTripRecorder
 from server.web.question import UNANSWERED, QuestionRequest
 from server.web.session import (
+    COLOR_PALETTE_SEQUENCE,
+    COLOR_PHASER_SEQUENCE,
+    COMBO_PHASER_SEQUENCE,
+    DIMMER_LEVEL_SEQUENCE,
+    DIMMER_PHASER_SEQUENCE,
     HISTORY_MAX_MESSAGES,
     ChatSession,
+    _phaser_cue_value_lines,
+    _phaser_failure_note,
+    _phaser_label_for_cue,
+    _phaser_sequence_commands,
+    _preset_recall_command,
+    _preset_release_command,
     outcome_view,
     summarize_outcomes,
 )
@@ -1242,6 +1273,79 @@ class TestPointFixturesAtTarget:
         assert "2대" in event["text"]
         assert "1대(FID 41)" in event["text"]
 
+    def test_body_rotation_is_compensated_skipped_or_disclosed(self, tmp_path):
+        # Rotz is the measured axis: the pan the console needs is the
+        # geometric pan minus the body rotation, so FID 20's Pan 90 becomes
+        # Pan 0 under Rotz 90. Rotx/Roty are UNMEASURED: a confirmed non-zero
+        # value skips the fixture by name instead of aiming it confidently
+        # wrong. A fixture whose rotation could not be read keeps the old
+        # assume-zero behaviour, said out loud.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        fixtures = [
+            {
+                "fid": 20,
+                "name": "A",
+                "x": 4.0,
+                "y": 0.0,
+                "z": 6.0,
+                "rotx": 0.0,
+                "roty": 0.0,
+                "rotz": 90.0,
+            },
+            {
+                "fid": 26,
+                "name": "B",
+                "x": -4.0,
+                "y": 0.0,
+                "z": 6.0,
+                "rotx": 15.0,
+                "roty": 0.0,
+                "rotz": 0.0,
+            },
+            {
+                "fid": 30,
+                "name": "C",
+                "x": 4.0,
+                "y": 0.0,
+                "z": 6.0,
+                "rotation_unread": ["rotx", "roty", "rotz"],
+            },
+        ]
+
+        class Registry:
+            def dispatch(self, call: ToolCall) -> ToolExecution:
+                calls.append(call)
+                if call.name == "get_spatial_context":
+                    return ToolExecution(
+                        ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(
+                                {"fixtures": fixtures, "coverage": {"complete": True}}
+                            ),
+                        )
+                    )
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+                    (CommandOutcome(command="Fixture 20", status="proposal"),),
+                )
+
+        session._registry = Registry()
+        event = session.run_instruction("모든 장비가 무대 중앙(0,0,0)을 바라보게 해줘")
+
+        assert calls[0].name == "get_spatial_context"
+        assert calls[0].arguments == {"include_rotation": True}
+        commands = calls[-1].arguments["commands"]
+        assert commands == [
+            "Fixture 20 ; Attribute 'Pan' At 0 ; Attribute 'Tilt' At 33.7",
+            "Fixture 30 ; Attribute 'Pan' At 90 ; Attribute 'Tilt' At 33.7",
+        ]
+        assert "1대(FID 26)" in event["text"]  # non-zero Rotx: skipped by name
+        assert "Rotx/Roty" in event["text"]
+        assert "회전값을 읽지 못한 1대(FID 30)" in event["text"]  # assume-0 disclosure
+
     def test_an_explicit_coordinate_triple_overrides_the_centre_words(self, tmp_path):
         provider = ScriptedProvider([])
         session, _console, _audit, _sent, _ = _session(tmp_path, provider)
@@ -1462,11 +1566,17 @@ class TestBasicPositionPresets:
         channel = self._Channel([])
         session._question_channel = channel
 
-        session.run_instruction("기본 포지션 프리셋을 5번부터 만들어줘")
+        event = session.run_instruction("기본 포지션 프리셋을 5번부터 만들어줘")
 
         assert channel.asked == []
         writes = [call for call in calls if call.name == "run_commands"]
         assert "Store Preset 2.5" in writes[0].arguments["commands"]
+        # 이 리그는 query_state에 "{}"를 돌려주므로 풀 판독이 None(미상)이다 —
+        # 겹침 가드는 `unverified` 갈래를 타 카드 없이 진행하며(오늘 동작 보존),
+        # 회신은 점유를 확인하지 못했음을 **명시한다**. 카드가 안 뜬 이유가
+        # "검증된 빈칸"이 아니라 "판독 실패"임을 이 단정이 고정한다
+        # (SPEC-COPILOT-PRESETGUARD-001 AC-006 · 스텁 함정).
+        assert "확인하지 못했습니다" in event["text"]
 
     def test_no_answer_refuses_instead_of_guessing_a_slot(self, tmp_path):
         provider = ScriptedProvider([])
@@ -1481,6 +1591,2753 @@ class TestBasicPositionPresets:
         # the invariant is ZERO writes without an answer.
         assert calls[0].name == "get_spatial_context"
         assert all(call.name in ("get_spatial_context", "query_state") for call in calls)
+        assert "시작 프리셋 번호" in event["text"]
+
+
+class _PresetPoolRegistry:
+    """``query_state``가 **실제 Position 풀 페이로드**를 돌려주는 리그.
+
+    기존 ``TestBasicPositionPresets._registry``는 ``query_state``에 ``"{}"``를
+    돌려주므로 ``_position_preset_pool_slots()``가 ``None``(미상)이 되고, 점유
+    가드는 ``unverified`` 갈래로 빠진다 — **가드가 없어도 통과하는** 위양성
+    리그다(acceptance.md 머리말 '스텁 함정'). 점유 가드를 검증하는 테스트는
+    전부 이 리그처럼 풀 판독이 **성공하는** 상태를 명시 구성해야 한다.
+
+    ``pool``은 **첫 write 이전**의 모든 ``query_state``가 보는 점유 집합이고,
+    ``readback``은 그 이후가 보는 집합이다. 호출 순번이 아니라 write 경계로 가르는
+    이유: 카드 경로는 ``_position_preset_free_starts``가 풀을 한 번 먼저 읽으므로
+    "첫 판독 = 가드"가 성립하지 않는다. 순번으로 갈랐다면 카드 경로 테스트에서
+    가드를 겨눈다고 믿으면서 실제로는 ``readback``을 겨누게 된다 — 두 값이 기본으로
+    같아 조용히 통과한다.
+    """
+
+    _FIXTURES = [
+        {"fid": 20, "name": "RLB350M1 1", "x": 4.0, "y": 0.0, "z": 6.0},
+        {"fid": 26, "name": "RLB350M1 7", "x": -4.0, "y": 0.0, "z": 6.0},
+    ]
+
+    def __init__(
+        self,
+        calls,
+        *,
+        pool=(),
+        readback=None,
+        pool_error=False,
+        readback_error=False,
+        status="executed_ok",
+        truncated=False,
+        child_count=None,
+        page_size=None,
+        legacy_pager=False,
+        names=None,
+        pool_index=None,
+        pool_index_truncated=False,
+    ):
+        self.calls = calls
+        self.pool = tuple(pool)
+        self.readback = self.pool if readback is None else tuple(readback)
+        self.pool_error = pool_error
+        self.readback_error = readback_error
+        self.status = status
+        self.truncated = truncated
+        self.child_count = child_count
+        #: 풀 **목록**(`DataPool/PresetPools` 루트)의 번호→이름 — 컬러 풀 해석
+        #: (REQ-COLORPRESET-002) 전용. None이면 루트도 기존 풀 페이로드로
+        #: 응답한다(기존 테스트 무수정 동작 동일).
+        self.pool_index = None if pool_index is None else dict(pool_index)
+        self.pool_index_truncated = pool_index_truncated
+        # 페이징 응답기 시뮬레이션 (PROTOCOL §4.2, responder 1.6.0):
+        # ``page_size``가 있으면 창 단위로 자르고 ``offset``을 에코한다.
+        # ``legacy_pager=True``는 구버전(≤1.5.0) — offset을 무시하고 항상
+        # 첫 창을 돌려주며 에코가 없다. 둘 다 childCount는 총계다.
+        self.page_size = page_size
+        self.legacy_pager = legacy_pager
+        #: 슬롯 번호 → 프리셋 이름. 가족 필터(재생성)가 이름을 볼 때만 지정한다;
+        #: 미지정 슬롯은 이름 없는 자식(구형 페이로드)으로 남는다.
+        self.names = dict(names or {})
+        self.state_reads = 0
+        self.wrote = False
+
+    def _child(self, number):
+        child = {"i": number}
+        if number in self.names:
+            child["name"] = self.names[number]
+        return child
+
+    def dispatch(self, call: ToolCall) -> ToolExecution:
+        self.calls.append(call)
+        if call.name == "get_spatial_context":
+            return ToolExecution(
+                ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=json.dumps(
+                        {"fixtures": self._FIXTURES, "coverage": {"complete": True}}
+                    ),
+                )
+            )
+        if call.name == "query_state":
+            self.state_reads += 1
+            if self.pool_index is not None and call.arguments.get("path") == "DataPool/PresetPools":
+                # 풀 목록 루트 — 컬러 풀 해석(REQ-COLORPRESET-002) 전용 응답.
+                index_payload = {
+                    "children": [
+                        {"i": no, "name": name} for no, name in sorted(self.pool_index.items())
+                    ],
+                    "node": {"childCount": len(self.pool_index)},
+                }
+                if self.pool_index_truncated:
+                    index_payload["truncated"] = True
+                return ToolExecution(
+                    ToolResult(
+                        tool_call_id=call.id,
+                        name=call.name,
+                        content=json.dumps(index_payload),
+                    )
+                )
+            # write 경계로 가른다 — 호출 순번이 아니다(§F9).
+            before_write = not self.wrote
+            error = self.pool_error if before_write else self.readback_error
+            slots = self.pool if before_write else self.readback
+            if self.page_size is not None:
+                requested = call.arguments.get("offset", 0)
+                offset = 0 if self.legacy_pager else requested
+                window = slots[offset : offset + self.page_size]
+                payload = {
+                    "children": [self._child(n) for n in window],
+                    "node": {"childCount": len(slots)},
+                }
+                # truncated = 이 창 **이후에도** 남았는가 (계약 §4.2).
+                if offset + len(window) < len(slots):
+                    payload["truncated"] = True
+                if not self.legacy_pager:
+                    payload["offset"] = offset
+            else:
+                payload = {"children": [self._child(n) for n in slots]}
+                if self.truncated:
+                    payload["truncated"] = True
+                if self.child_count is not None:
+                    payload["node"] = {"childCount": self.child_count}
+            return ToolExecution(
+                ToolResult(
+                    tool_call_id=call.id,
+                    name=call.name,
+                    content=("" if error else json.dumps(payload)),
+                    is_error=error,
+                )
+            )
+        self.wrote = True
+        return ToolExecution(
+            ToolResult(tool_call_id=call.id, name=call.name, content="{}"),
+            (CommandOutcome(command="Store Preset", status=self.status),),
+        )
+
+
+class _AnsweringChannel:
+    def __init__(self, answers):
+        self.answers = list(answers)
+        self.asked = []
+
+    def ask(self, request, **_kwargs):
+        self.asked.append(request)
+        return self.answers.pop(0) if self.answers else UNANSWERED
+
+
+def _writes(calls):
+    return [call for call in calls if call.name == "run_commands"]
+
+
+def _all_commands(calls):
+    return [cmd for call in _writes(calls) for cmd in call.arguments["commands"]]
+
+
+class TestPresetPoolPaging:
+    """PROTOCOL §4.2 페이징 — 캡(24) 밖 슬롯의 완전 판독과 무진전 방어.
+
+    실측 2026-08-16: 31개 풀에서 캡(24) 밖의 신규 저장 41~50이 되읽기에서
+    "미확인 0/10"으로 오보됐다. 페이징 판독은 그 창을 이어 붙여 복구하되,
+    전진 없는 반복(구버전 응답기·상한 초과)은 오늘의 '절단=미상(None)'
+    규율로 내려간다 — 부분 판독은 더 작은 풀이 아니다.
+    """
+
+    def _slots(self, tmp_path, **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, **rig)
+        return session._position_preset_pool_slots(), calls
+
+    @staticmethod
+    def _reads(calls):
+        return [call for call in calls if call.name == "query_state"]
+
+    def test_a_two_page_pool_reads_completely(self, tmp_path):
+        # 31슬롯 — 41~50이 둘째 창에 있어도 슬롯 집합에 들어온다.
+        pool = tuple(range(1, 22)) + tuple(range(41, 51))
+        slots, calls = self._slots(tmp_path, pool=pool, page_size=24)
+
+        assert slots == set(pool)
+        reads = self._reads(calls)
+        assert len(reads) == 2
+        # 첫 요청은 기존 무페이징 판독과 인자까지 동일하다(하위호환).
+        assert "offset" not in reads[0].arguments
+        assert reads[1].arguments["offset"] == 24
+
+    def test_a_legacy_responder_aborts_to_none_without_looping(self, tmp_path):
+        # 구버전 응답기 — offset 무시·에코 부재·항상 첫 창. 둘째 요청에서
+        # 에코가 없으므로 즉시 None. 절대 재시도하지 않는다(무한루프 금지).
+        slots, calls = self._slots(
+            tmp_path, pool=tuple(range(1, 32)), page_size=24, legacy_pager=True
+        )
+
+        assert slots is None
+        assert len(self._reads(calls)) == 2
+
+    def test_the_page_cap_aborts_to_none(self, tmp_path):
+        # 창 2개짜리 응답기로 31슬롯 → 16페이지 필요 > 상한 10 → None.
+        slots, calls = self._slots(tmp_path, pool=tuple(range(1, 32)), page_size=2)
+
+        assert slots is None
+        assert len(self._reads(calls)) == 10
+
+    def test_a_single_window_pool_is_unchanged(self, tmp_path):
+        # 무회귀 — 한 창에 다 들어오는 풀은 요청 1회로 끝난다.
+        slots, calls = self._slots(tmp_path, pool=(1, 2, 3), page_size=24)
+
+        assert slots == {1, 2, 3}
+        assert len(self._reads(calls)) == 1
+
+    def test_a_forced_truncation_without_echo_still_reads_none(self, tmp_path):
+        # 모놀리식(무페이징) 리그의 truncated 강제 — 둘째 창 시도에서 에코가
+        # 없어 None. 오늘의 '절단=판독 불가' 동작이 페이징 실패 경로로 유지된다.
+        slots, _calls = self._slots(tmp_path, pool=tuple(range(1, 25)), truncated=True)
+
+        assert slots is None
+
+    def test_readback_confirms_slots_in_the_second_window(self, tmp_path):
+        # 실측 재현 — 신규 저장 41~50이 둘째 창으로 밀려나도 되읽기가 확인한다.
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(
+            calls,
+            pool=tuple(range(1, 22)),  # 21슬롯 — 41~50은 검증된 빈칸(가드 통과)
+            readback=tuple(range(1, 22)) + tuple(range(41, 51)),  # 31슬롯, 2창
+            page_size=24,
+        )
+        session._question_channel = _AnsweringChannel([])
+        event = session.run_instruction("기본 포지션 프리셋을 41번부터 저장해줘")
+
+        assert len(_writes(calls)) == 10
+        assert "10개 확인" in event["text"]
+        assert "되읽지 못했습니다" not in event["text"]
+        # 가드 1창 + 되읽기 2창 = 3회 — 페이지 수만큼만 늘어난다.
+        assert len(self._reads(calls)) == 3
+
+
+class _ColorRigPropPort:
+    """``query_property``가 M0 실측 **표시 문자열**을 돌려주는 픽스처 포트.
+
+    세션의 판별 hop-1/2는 ``read_properties(self._current_cue_port, ...)``를
+    타므로(리허설 CurrentCue 읽기와 같은 채널) 레지스트리가 아니라 이 포트를
+    직접 스텁한다.
+    """
+
+    def __init__(self, entries, *, fail=()):
+        self.entries = dict(entries)
+        self.fail = set(fail)
+        self.calls: list[tuple[str, str]] = []
+
+    def query_property(self, path, property_name):
+        self.calls.append((path, property_name))
+        if (path, property_name) in self.fail:
+            return {"ok": False, "error": "property read failed"}
+        value = self.entries.get((path, property_name))
+        if value is None:
+            return {"ok": False, "error": f"no value: {path}|{property_name}"}
+        return {"ok": True, "value": value}
+
+
+class _ColorChannelRegistry:
+    """``query_state``가 ``DMXChannels`` 창을 돌려주는 리그 — hop-3 전용.
+
+    ``page_size``가 있으면 창 단위로 자르고 ``offset``을 에코한다(응답기
+    1.6.0). ``legacy_pager=True``는 구버전 — offset 무시·에코 부재·항상 첫
+    창(무진전). 채널 이름 ``None``은 이름 없는 자식(무명 채널)이다.
+    """
+
+    def __init__(self, calls, *, channels, page_size=None, legacy_pager=False):
+        self.calls = calls
+        self.channels = {key: list(names) for key, names in channels.items()}
+        self.page_size = page_size
+        self.legacy_pager = legacy_pager
+
+    def dispatch(self, call: ToolCall) -> ToolExecution:
+        self.calls.append(call)
+        assert call.name == "query_state", call
+        parts = call.arguments["path"].split("/")
+        assert parts[:2] == ["Patch", "FixtureTypes"], call.arguments["path"]
+        assert parts[3] == "DMXModes" and parts[5] == "DMXChannels", parts
+        names = self.channels[(int(parts[2]), int(parts[4]))]
+        page_size = self.page_size if self.page_size is not None else max(len(names), 1)
+        requested = call.arguments.get("offset", 0)
+        offset = 0 if self.legacy_pager else requested
+        window = names[offset : offset + page_size]
+        children = []
+        for index, name in enumerate(window, start=offset + 1):
+            child = {"i": index}
+            if name is not None:
+                child["name"] = name
+            children.append(child)
+        payload = {"children": children, "node": {"childCount": len(names)}}
+        if offset + len(window) < len(names):
+            payload["truncated"] = True
+        if not self.legacy_pager:
+            payload["offset"] = offset
+        return ToolExecution(
+            ToolResult(tool_call_id=call.id, name=call.name, content=json.dumps(payload))
+        )
+
+
+def _color_fixture_props(assignments):
+    """슬롯 → (타입, 모드) 배치를 M0 표시 문자열 항목으로 펼친다."""
+    entries = {}
+    for slot, (type_index, mode_index) in assignments.items():
+        base = f"Patch/Stages/1/Fixtures/{slot}"
+        entries[(base, "FixtureType")] = f"FixtureType {type_index}"
+        entries[(base, "Mode")] = f"{mode_index} Mode {mode_index}"
+    return entries
+
+
+#: M0 실측 리그의 채널 목록 축약본 (progress.md §E.1) — 타입 1 Sphere(채널
+#: 1개), 타입 2 MMX(ColorRGB_R/G/B + Color1 휠), 타입 3 LEDBeam350(+W),
+#: 타입 4 Sharpy(Color1 휠만 — RGB 믹싱 없음).
+_M0_COLOR_CHANNELS = {
+    (1, 1): ["DMXChannel 1"],
+    (2, 1): ["Dimmer", "Pan", "Tilt", "ColorRGB_R", "ColorRGB_G", "ColorRGB_B", "Color1"],
+    (3, 1): ["Dimmer", "ColorRGB_R", "ColorRGB_G", "ColorRGB_B", "ColorRGB_W"],
+    (4, 1): ["Dimmer", "Pan", "Tilt", "Color1", "Gobo1"],
+}
+
+#: M0 리그 배치 — 슬롯 ≠ FID로 잡아 prop 경로가 **슬롯**을 쓰는지도 함께
+#: 증명한다. fid 40(Sharpy)·41(Sphere)이 제외 2대(REQ-005 산술 기준값).
+_M0_COLOR_PAIRS = [(1, 10), (2, 11), (3, 12), (4, 40), (5, 41)]
+_M0_COLOR_ASSIGNMENTS = {1: (2, 1), 2: (2, 1), 3: (3, 1), 4: (4, 1), 5: (1, 1)}
+
+
+class TestColorCapabilityDiscrimination:
+    """SPEC-COPILOT-COLORPRESET-001 REQ-005 — M0 3-hop 컬러 판별 (§E.1).
+
+    판정 원칙: **unknown ≠ capable, unknown ≠ excluded.** prop 실패·표시
+    문자열 파싱 불가·채널 목록 절단 미해소·무명 자식은 전부 undetermined다 —
+    어느 쪽으로도 승격하지 않는다(침묵 축소·오조준 양쪽 금지).
+    """
+
+    def _discriminate(
+        self,
+        tmp_path,
+        pairs=None,
+        assignments=None,
+        channels=None,
+        *,
+        page_size=None,
+        legacy_pager=False,
+        fail=(),
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _ColorChannelRegistry(
+            calls,
+            channels=_M0_COLOR_CHANNELS if channels is None else channels,
+            page_size=page_size,
+            legacy_pager=legacy_pager,
+        )
+        port = _ColorRigPropPort(
+            _color_fixture_props(_M0_COLOR_ASSIGNMENTS if assignments is None else assignments),
+            fail=fail,
+        )
+        session._current_cue_port = port
+        result = session._color_capable_fids(
+            _M0_COLOR_PAIRS if pairs is None else pairs, probe_id_prefix="test-color"
+        )
+        return result, calls, port
+
+    # REQ-COLORPRESET-005 — M0 리그 재현: 타입 2·3 capable, 타입 1·4 제외.
+    def test_the_measured_rig_splits_into_capable_and_excluded(self, tmp_path):
+        (capable, excluded, undetermined), _calls, port = self._discriminate(tmp_path)
+
+        assert capable == [10, 11, 12]
+        assert excluded == [40, 41]
+        assert undetermined == []
+        # prop 경로는 FID가 아니라 **슬롯**이다 (슬롯 1~5 ≠ fid 10~41).
+        assert ("Patch/Stages/1/Fixtures/4", "FixtureType") in port.calls
+        assert all("/40" not in path for path, _name in port.calls)
+
+    # 비용 계약 — (타입,모드) 조합 단위 캐시: 채널 조회는 조합당 1회다.
+    def test_a_type_mode_combination_probes_its_channels_once(self, tmp_path):
+        _result, calls, port = self._discriminate(tmp_path)
+
+        paths = [call.arguments["path"] for call in calls]
+        # 픽스처 5대·조합 4개 — 슬롯 1·2가 같은 (2,1)을 공유해도 조회는 1회.
+        assert len(paths) == 4
+        assert len(set(paths)) == 4
+        assert paths.count("Patch/FixtureTypes/2/DMXModes/1/DMXChannels") == 1
+        # 픽스처당 prop 2회 (FixtureType + Mode) — 라운드트립 예산의 절반.
+        assert len(port.calls) == 2 * len(_M0_COLOR_PAIRS)
+
+    # M0 주의 재현 — 절단된 채널 목록(29중 15)은 페이징으로 완주해 판정한다.
+    def test_a_truncated_channel_list_is_paged_to_completion(self, tmp_path):
+        filler = [f"Channel {n}" for n in range(1, 27)]
+        channels = {(2, 1): filler + ["ColorRGB_R", "ColorRGB_G", "ColorRGB_B"]}
+        (capable, excluded, undetermined), calls, _port = self._discriminate(
+            tmp_path,
+            pairs=[(1, 10)],
+            assignments={1: (2, 1)},
+            channels=channels,
+            page_size=15,
+        )
+
+        # ColorRGB는 둘째 창에만 있다 — 첫 창 판정이었다면 excluded로 오판한다.
+        assert capable == [10]
+        assert (excluded, undetermined) == ([], [])
+        assert len(calls) == 2
+        assert "offset" not in calls[0].arguments
+        assert calls[1].arguments["offset"] == 15
+
+    # 무진전 방어 — 구버전 응답기(에코 부재·항상 첫 창)는 undetermined다.
+    def test_a_no_progress_pager_yields_undetermined(self, tmp_path):
+        channels = {(2, 1): [f"Channel {n}" for n in range(1, 27)] + ["ColorRGB_R"]}
+        (capable, excluded, undetermined), calls, _port = self._discriminate(
+            tmp_path,
+            pairs=[(1, 10)],
+            assignments={1: (2, 1)},
+            channels=channels,
+            page_size=15,
+            legacy_pager=True,
+        )
+
+        # 첫 창에 ColorRGB가 없고 완독도 못 했다 — capable도 excluded도 아니다.
+        assert (capable, excluded) == ([], [])
+        assert undetermined == [10]
+        assert len(calls) == 2  # 에코 부재를 본 즉시 중단 — 재시도 루프 금지
+
+    # prop 실패·표시 문자열 파싱 불가 — 채널 조회 없이 undetermined다.
+    def test_a_property_failure_or_unparseable_display_yields_undetermined(self, tmp_path):
+        assignments = {1: (2, 1)}
+        entries = _color_fixture_props(assignments)
+        # 슬롯 2는 무번호 모드 표시("Mode 1") — M0 형태가 아니므로 파싱 불가.
+        entries[("Patch/Stages/1/Fixtures/2", "FixtureType")] = "FixtureType 2"
+        entries[("Patch/Stages/1/Fixtures/2", "Mode")] = "Mode 1"
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _ColorChannelRegistry(calls, channels=_M0_COLOR_CHANNELS)
+        session._current_cue_port = _ColorRigPropPort(
+            entries, fail={("Patch/Stages/1/Fixtures/1", "FixtureType")}
+        )
+        capable, excluded, undetermined = session._color_capable_fids(
+            [(1, 10), (2, 11)], probe_id_prefix="test-color"
+        )
+
+        assert (capable, excluded) == ([], [])
+        assert undetermined == [10, 11]
+        assert calls == []  # 판별 못 한 픽스처는 채널 조회 비용도 쓰지 않는다
+
+    # 부분 문자열 판정 — ColorRGB_W만 있는 가상 타입도 capable이다.
+    def test_a_w_only_emitter_is_capable_by_substring(self, tmp_path):
+        (capable, excluded, undetermined), _calls, _port = self._discriminate(
+            tmp_path,
+            pairs=[(1, 10)],
+            assignments={1: (7, 2)},
+            channels={(7, 2): ["Dimmer", "ColorRGB_W"]},
+        )
+
+        assert capable == [10]
+        assert (excluded, undetermined) == ([], [])
+
+    # 무명 자식 — 목록은 끝까지 왔지만 그 채널의 정체는 안 왔다. excluded로
+    # 확정하면 침묵 축소가 된다 — undetermined다.
+    def test_a_nameless_channel_child_blocks_an_excluded_verdict(self, tmp_path):
+        (capable, excluded, undetermined), _calls, _port = self._discriminate(
+            tmp_path,
+            pairs=[(1, 10)],
+            assignments={1: (7, 1)},
+            channels={(7, 1): ["Dimmer", None, "Gobo1"]},
+        )
+
+        assert (capable, excluded) == ([], [])
+        assert undetermined == [10]
+
+
+#: 컬러 플로우 테스트의 표준 풀 목록 — M0 실측(progress.md §E.1)의 배치.
+_M0_POOL_INDEX = {1: "Dimmer", 2: "Position", 3: "Gobo", 4: "Color", 5: "Beam"}
+
+#: 콤보 플로우 테스트의 표준 풀 목록 — T7 라이브 프로브
+#: (``10-combo-phaser-m0-probe.md`` §1)가 확정한 'All 1'=21을 더한 것.
+_COMBO_POOL_INDEX = {**_M0_POOL_INDEX, 21: "All 1"}
+
+
+class TestBasicColorPresets:
+    """SPEC-COPILOT-COLORPRESET-001 — 표준 무대 팔레트 10색의 저장·가드·재생성.
+
+    판정 원칙: 포지션 프리셋 기계의 **세대화**다 — 풀 번호는 리그 판독으로만
+    얻고(REQ-002), 안전 장치(점유 카드·되읽기 산술)는 공용 몸통 그대로이며
+    (REQ-003/006), 컬러 미보유·판별 불가 장비는 침묵 없이 산술로 고지한다
+    (REQ-005). 판별 자체(_color_capable_fids)는 위
+    `TestColorCapabilityDiscrimination`이 검증하므로 여기서는 소재 공급을
+    인스턴스 스텁으로 갈아끼우고 **흐름**(라우팅·가드·번들·회신)을 겨눈다.
+    """
+
+    def _run(
+        self,
+        tmp_path,
+        text,
+        *,
+        answers=(),
+        channel=True,
+        pool_index=None,
+        pairs=((20, 20), (26, 26)),
+        fid_unread=(),
+        capable=(20, 26),
+        excluded=(),
+        undetermined=(),
+        stub_material=True,
+        **rig,
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(
+            calls,
+            pool_index=_M0_POOL_INDEX if pool_index is None else pool_index,
+            **rig,
+        )
+        if stub_material:
+            session._color_rig_fixture_pairs = lambda: (
+                [tuple(pair) for pair in pairs],
+                list(fid_unread),
+            )
+            session._color_capable_fids = lambda _pairs, *, probe_id_prefix: (
+                list(capable),
+                list(excluded),
+                list(undetermined),
+            )
+        chan = _AnsweringChannel(answers) if channel else None
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # REQ-001/-006 — 6경로 코퍼스: 컬러/포지션/FX × 저장/재생성이 서로의
+    # 문장을 삼키지 않는다. 저장 3경로는 제 풀·제 라벨로만 쓰고, 재생성
+    # 3경로는 빈 풀 거부 문면의 명사가 행선지를 증명한다.
+    def test_the_six_preset_paths_route_mutually_exclusively(self, tmp_path):
+        stores = [
+            ("기본 컬러 프리셋을 11번부터 저장해줘", "Store Preset 4.11", "Warm White", "4."),
+            ("기본 포지션 프리셋을 21번부터 저장해줘", "Store Preset 2.21", "Home", "2."),
+            ("이펙트 포지션 프리셋을 41번부터 저장해줘", "Store Preset 2.41", "Sweep L", "2."),
+        ]
+        for text, store_cmd, first_label, pool_prefix in stores:
+            _event, calls, _chan = self._run(tmp_path, text)
+            commands = _all_commands(calls)
+            assert store_cmd in commands, text
+            assert any(first_label in cmd for cmd in commands), text
+            # 다른 풀로는 한 줄도 쓰지 않는다 — 상호 배타의 실체.
+            assert all(
+                cmd.split("Store Preset ", 1)[1].startswith(pool_prefix)
+                for cmd in commands
+                if cmd.startswith("Store Preset ")
+            ), text
+        regenerations = [
+            ("기본 컬러 다시 잡아줘", "기본 컬러"),
+            ("기본 포지션 다시 잡아줘", "기본 포지션"),
+            ("이펙트 포지션 다시 잡아줘", "FX 포지션"),
+        ]
+        for text, noun in regenerations:
+            event, calls, _chan = self._run(tmp_path, text)
+            assert noun in event["text"], text
+            assert _writes(calls) == [], text
+
+    # REQ-002 — 풀 목록에 'Color'가 없으면 거부한다. 4 하드코딩이 있었다면
+    # 이 리그(목록에 Color 부재)에서도 4번 풀로 썼을 것이다.
+    def test_a_missing_color_pool_refuses_without_writing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 11번부터 저장해줘",
+            pool_index={1: "Dimmer", 2: "Position"},
+        )
+
+        assert _writes(calls) == []
+        assert "Color 풀을 찾지 못했습니다" in event["text"]
+
+    # REQ-002 fail-closed — 절단된 풀 목록의 'Color 부재'는 부재가 아니라
+    # 모름이다. 모름 위에서는 저장하지 않는다.
+    def test_a_truncated_pool_index_refuses_without_writing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 11번부터 저장해줘",
+            pool_index=_M0_POOL_INDEX,
+            pool_index_truncated=True,
+        )
+
+        assert _writes(calls) == []
+        assert "Color 풀을 찾지 못했습니다" in event["text"]
+
+    # REQ-003 — M0 실측 재현: Color 4.1~4.7 수동 프리셋 실존. 명시 번호 1은
+    # 그 7개와 충돌하고, 카드가 전부 번호로 열거하며, 거절이면 쓰기 0건이다.
+    def test_an_explicit_number_hitting_the_manual_presets_opens_the_card(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 1번부터 저장해줘",
+            pool=(1, 2, 3, 4, 5, 6, 7),
+            answers=["취소"],
+        )
+
+        assert _writes(calls) == []
+        assert len(chan.asked) == 1
+        prompt = chan.asked[0].prompt
+        assert "7개" in prompt
+        assert "4.1" in prompt and "4.7" in prompt
+        assert "저장하지 않았습니다" in event["text"]
+
+    def test_a_consented_overwrite_stores_and_reports_the_slots(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 1번부터 저장해줘",
+            pool=(1, 2, 3, 4, 5, 6, 7),
+            readback=tuple(range(1, 11)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        assert len(chan.asked) == 1
+        assert len(_writes(calls)) == 10
+        assert "덮어쓰기 승인" in event["text"]
+        overwrote = event["text"].split("덮어쓰기 승인", 1)[1]
+        assert "4.7" in overwrote and "4.8" not in overwrote
+
+    # REQ-001/-003/-008 — 검증된 빈 구간: 카드 없이 색별 독립 번들 10건.
+    # 번들 = 색 체인 → Store → Label → ClearAll, RGB 값은 팔레트 계약 그대로.
+    def test_the_ten_color_bundles_carry_the_palette_exactly(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 11번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(11, 21)),
+        )
+
+        assert chan.asked == []
+        writes = _writes(calls)
+        assert len(writes) == 10
+        for offset, (label, (r, g, b)) in enumerate(COLOR_PALETTE_SEQUENCE):
+            preset_no = 11 + offset
+            call = writes[offset]
+            assert call.id == f"basic-color-preset-{preset_no}"
+            assert call.arguments["commands"] == [
+                f"Fixture 20 + 26 ; Attribute 'ColorRGB_R' At {r} ; "
+                f"Attribute 'ColorRGB_G' At {g} ; Attribute 'ColorRGB_B' At {b}",
+                f"Store Preset 4.{preset_no}",
+                f"Label Preset 4.{preset_no} '{label}'",
+                "ClearAll",
+            ]
+        assert COLOR_PALETTE_SEQUENCE[0][0] == "Warm White"  # 가족 필터 계약
+        commands = _all_commands(calls)
+        assert not any("/Merge" in cmd or "/Overwrite" in cmd for cmd in commands)
+
+    # REQ-005 — M0 산술 기준값 재현: 41대 중 39대 적용, fid 40·41 제외.
+    def test_exclusion_arithmetic_is_disclosed_with_fids(self, tmp_path):
+        pairs = tuple((slot, slot) for slot in range(1, 42))
+        event, _calls, _chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 11번부터 저장해줘",
+            pairs=pairs,
+            capable=tuple(range(1, 40)),
+            excluded=(40, 41),
+        )
+
+        assert "전체 41대 중 39대 적용" in event["text"]
+        assert "컬러 어트리뷰트 없음 2대(FID 40, 41) 제외" in event["text"]
+
+    def test_undetermined_fixtures_are_excluded_and_named(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 11번부터 저장해줘",
+            pairs=((1, 10), (2, 11), (3, 12)),
+            capable=(10,),
+            undetermined=(11, 12),
+        )
+
+        assert "판별 불가 2대(FID 11, 12) 제외" in event["text"]
+        # 판별 불가는 번들에 오르지 않는다 — 침묵 승격 금지.
+        assert all(
+            "11" not in cmd.split(";")[0]
+            for cmd in _all_commands(calls)
+            if cmd.startswith("Fixture ")
+        )
+
+    def test_no_capable_fixture_refuses_with_arithmetic(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 11번부터 저장해줘",
+            capable=(),
+            excluded=(20, 26),
+        )
+
+        assert _writes(calls) == []
+        assert "컬러 어트리뷰트(ColorRGB)가 확인된 장비가 없어" in event["text"]
+
+    # REQ-001 — 번호 없는 지시는 카드 1장: 문면은 Color 풀을 말하고 제안
+    # 구간은 4.x 표기다(컬러 전용 카드 신설 없이 공용 카드의 풀 문면만 바뀜).
+    def test_a_numberless_instruction_asks_with_color_pool_wording(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "기본 컬러 프리셋 저장해줘",
+            pool=(),
+            answers=["11"],
+        )
+
+        assert len(chan.asked) == 1
+        prompt = chan.asked[0].prompt
+        assert "Color 프리셋 몇 번부터" in prompt
+        assert any("4.11" in option.label for option in chan.asked[0].options)
+        assert "Store Preset 4.11" in _all_commands(calls)
+
+    # REQ-004 — 재생성 가족 필터: 'Warm White'로 시작하는 구간만 표적이다.
+    def test_regeneration_targets_only_the_warm_white_family(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "기본 컬러 다시 잡아줘",
+            pool=tuple(range(11, 21)) + tuple(range(21, 31)),
+            names={11: "Sunset Wash", 21: "Warm White"},
+            answers=["덮어쓰기 진행"],
+        )
+
+        writes = _writes(calls)
+        assert len(writes) == 10
+        commands = _all_commands(calls)
+        # 라벨이 맞는 21 구간만 덮는다 — 11 구간(다른 가족)은 무접촉.
+        assert "Store Preset 4.21" in commands
+        assert not any(cmd == "Store Preset 4.11" for cmd in commands)
+        assert "다시 저장 요청했습니다" in event["text"]
+
+    def test_regenerating_a_foreign_family_span_by_number_refuses(self, tmp_path):
+        # Warm White 구간(21~)이 실존해도 지목된 11 구간은 다른 가족이다 —
+        # 후보로 갈아타지 않고 지목 자체를 거부한다(오표적 방지).
+        event, calls, _chan = self._run(
+            tmp_path,
+            "11번부터 기본 컬러 다시 잡아줘",
+            pool=tuple(range(11, 31)),
+            names={11: "Sunset Wash", 21: "Warm White"},
+        )
+
+        assert _writes(calls) == []
+        assert "'Warm White'이 아니라" in event["text"]
+
+    # 소재 공급 실물 — (slot, fid) 짝은 컨테이너 자식 열거 + 슬롯당 fid 속성
+    # 1회로 만들어지고, fid를 읽지 못한 슬롯은 짝에서 빠져 슬롯 번호로 남는다.
+    def test_fixture_pair_enumeration_maps_slots_to_fids(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, pool=(1, 2, 3))
+        session._current_cue_port = _ColorRigPropPort(
+            {
+                ("Patch/Stages/1/Fixtures/1", "fid"): "10",
+                ("Patch/Stages/1/Fixtures/3", "fid"): "30",
+            }
+        )
+
+        result = session._color_rig_fixture_pairs()
+
+        assert result == ([(1, 10), (3, 30)], [2])
+        reads = [call for call in calls if call.name == "query_state"]
+        assert reads[0].arguments == {"path": "Patch/Stages/1/Fixtures"}
+
+    def test_an_unreadable_fixture_container_yields_none(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, pool_error=True)
+        session._current_cue_port = _ColorRigPropPort({})
+
+        assert session._color_rig_fixture_pairs() is None
+
+
+class TestColorPhaserPresets:
+    """멀티컬러 페이저 프리셋 10종 — T1/T1b 라이브 프로브
+    (``docs/research/ma3-effects/08-color-phaser-m0-probe.md``)로 실측된
+    커맨드라인 문법의 카탈로그 구현.
+
+    판정 원칙: ``TestBasicColorPresets``의 **세대화**다 — 소재 공급만
+    갈아끼우고(``_color_phaser_preset_material``), 라우팅·가드·번들·되읽기
+    몸통은 100% 재사용이므로 여기서는 (1) 트리거가 기본 컬러 트리거와
+    서로소로 동작하는지, (2) 멀티스텝(2/3스텝) 커맨드라인이 프로브에서
+    실측된 그대로인지, (3) Form(Sine/Rectangle)·Phase 커맨드가 정확한지,
+    (4) 재생성 가족 필터가 'Breathe Warm'인지에 집중한다.
+    """
+
+    def _run(
+        self,
+        tmp_path,
+        text,
+        *,
+        answers=(),
+        channel=True,
+        pool_index=None,
+        pairs=((20, 20), (26, 26)),
+        fid_unread=(),
+        capable=(20, 26),
+        excluded=(),
+        undetermined=(),
+        stub_material=True,
+        **rig,
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(
+            calls,
+            pool_index=_M0_POOL_INDEX if pool_index is None else pool_index,
+            **rig,
+        )
+        if stub_material:
+            session._color_rig_fixture_pairs = lambda: (
+                [tuple(pair) for pair in pairs],
+                list(fid_unread),
+            )
+            session._color_capable_fids = lambda _pairs, *, probe_id_prefix: (
+                list(capable),
+                list(excluded),
+                list(undetermined),
+            )
+        chan = _AnsweringChannel(answers) if channel else None
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # 카탈로그 계약 — 라벨·스텝·Form·Phase 순서는 핸드오프 §2 표 그대로.
+    def test_the_catalog_matches_the_handoff_table(self):
+        assert [entry[0] for entry in COLOR_PHASER_SEQUENCE] == [
+            "Breathe Warm",
+            "Breathe Cool",
+            "Chase RB",
+            "Chase CM",
+            "Wave CM",
+            "Wave WA",
+            "Rainbow",
+            "Pulse RY",
+            "Duo GL",
+            "Slam RW",
+        ]
+        assert COLOR_PHASER_SEQUENCE[0][0] == "Breathe Warm"  # 가족 필터 계약
+        assert COLOR_PHASER_SEQUENCE[6][1] == ("Red", "Green", "Blue")  # Rainbow 3스텝
+
+    # 합성 문장 — '기본'+페이저 어휘 공존("기본 멀티컬러 페이저 …")은 기본
+    # 트리거의 갭에도 매치되지만, 디스패치 순서(페이저가 기본보다 앞)가
+    # 페이저 경로로 고정한다(2026-08-17 리뷰 오라우팅 재발 방지).
+    def test_a_composite_basic_plus_phaser_sentence_routes_to_the_phaser(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        commands = _all_commands(calls)
+        assert any("Breathe Warm" in cmd for cmd in commands)  # 페이저 카탈로그
+        assert not any("'Warm White'" in cmd for cmd in commands)  # 팔레트 아님
+        assert "멀티컬러 페이저" in event["text"]
+
+    # 트리거 서로소 — 멀티컬러/컬러 이펙트 문장은 기본 컬러 경로로 새지
+    # 않고, 기본 컬러 문장은 멀티컬러 페이저 경로로 새지 않는다.
+    def test_the_trigger_is_disjoint_from_basic_color(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        commands = _all_commands(calls)
+        assert "Store Preset 4.31" in commands
+        assert any("Breathe Warm" in cmd for cmd in commands)
+        # 기본 컬러 풀(4.11~)로는 한 줄도 쓰지 않는다 — 페이저는 4.31~로만.
+        assert not any(cmd.startswith("Store Preset 4.1") for cmd in commands)
+        assert "멀티컬러 페이저" in event["text"]
+
+        event2, calls2, _chan2 = self._run(
+            tmp_path,
+            "기본 컬러 프리셋을 11번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(11, 21)),
+        )
+        commands2 = _all_commands(calls2)
+        assert "Store Preset 4.11" in commands2
+        assert not any("Breathe Warm" in cmd for cmd in commands2)
+        assert "기본 컬러" in event2["text"]
+
+    # 2스텝 Sine — Breathe Warm 커맨드라인이 프로브 §1-B/§3 문법 그대로인지.
+    def test_a_two_step_sine_preset_carries_the_probed_grammar(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        writes = _writes(calls)
+        assert len(writes) == 10
+        call = writes[0]
+        assert call.id == "color-phaser-preset-31"
+        assert call.arguments["commands"] == [
+            "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40",
+            "Step 2",
+            "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; "
+            "Attribute 'ColorRGB_B' At 5",
+            "Attribute 'ColorRGB_R' At Accel -100",
+            "Attribute 'ColorRGB_G' At Accel -100",
+            "Attribute 'ColorRGB_B' At Accel -100",
+            "Attribute 'ColorRGB_R' At Decel -100",
+            "Attribute 'ColorRGB_G' At Decel -100",
+            "Attribute 'ColorRGB_B' At Decel -100",
+            "Attribute 'ColorRGB_R' At Phase 0",
+            "Store Preset 4.31",
+            "Label Preset 4.31 'Breathe Warm'",
+            "ClearAll",
+        ]
+
+    # 2스텝 Rectangle — Chase RB(#3)가 Transition/Accel/Decel 0 근사치를
+    # 정확히 싣는지(프로브 §6.1 ASSUMPTION 그대로).
+    def test_a_two_step_rectangle_preset_carries_the_probed_approximation(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        writes = _writes(calls)
+        call = writes[2]  # Chase RB (index 2 in the catalog)
+        assert call.id == "color-phaser-preset-33"
+        assert call.arguments["commands"] == [
+            "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0",
+            "Step 2",
+            "Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; "
+            "Attribute 'ColorRGB_B' At 100",
+            "Attribute 'ColorRGB_R' At Accel 0",
+            "Attribute 'ColorRGB_G' At Accel 0",
+            "Attribute 'ColorRGB_B' At Accel 0",
+            "Attribute 'ColorRGB_R' At Decel 0",
+            "Attribute 'ColorRGB_G' At Decel 0",
+            "Attribute 'ColorRGB_B' At Decel 0",
+            "Attribute 'ColorRGB_R' At Transition 0",
+            "Attribute 'ColorRGB_G' At Transition 0",
+            "Attribute 'ColorRGB_B' At Transition 0",
+            "Attribute 'ColorRGB_R' At Phase 0",
+            "Store Preset 4.33",
+            "Label Preset 4.33 'Chase RB'",
+            "ClearAll",
+        ]
+
+    # 3스텝 Rainbow — 프로브 §6.2 실측(Step 3 직후 Store해도 3색 다 담김).
+    def test_the_three_step_rainbow_preset_carries_all_three_steps(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        writes = _writes(calls)
+        call = writes[6]  # Rainbow (index 6 in the catalog)
+        assert call.id == "color-phaser-preset-37"
+        commands = call.arguments["commands"]
+        assert commands[0] == (
+            "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0"
+        )
+        assert commands[1] == "Step 2"
+        assert commands[2] == (
+            "Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 100 ; "
+            "Attribute 'ColorRGB_B' At 10"
+        )
+        assert commands[3] == "Step 3"
+        assert commands[4] == (
+            "Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; "
+            "Attribute 'ColorRGB_B' At 100"
+        )
+        assert commands[-4] == "Attribute 'ColorRGB_R' At Phase 0 Thru 360"
+        assert commands[-3] == "Store Preset 4.37"
+        assert commands[-2] == "Label Preset 4.37 'Rainbow'"
+        assert commands[-1] == "ClearAll"
+
+    # Phase 분산 문법 — Duo GL(#9, Phase 180)과 Wave CM(#5, 0 Thru 360).
+    def test_phase_tokens_match_the_catalog(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        writes = _writes(calls)
+        duo_gl = writes[8].arguments["commands"]
+        assert "Attribute 'ColorRGB_R' At Phase 180" in duo_gl
+        wave_cm = writes[4].arguments["commands"]
+        assert "Attribute 'ColorRGB_R' At Phase 0 Thru 360" in wave_cm
+
+    # 풀 미상 거부 — 기본 컬러와 동일 규율(REQ-002 상속).
+    def test_a_missing_color_pool_refuses_without_writing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool_index={1: "Dimmer", 2: "Position"},
+        )
+
+        assert _writes(calls) == []
+        assert "Color 풀을 찾지 못했습니다" in event["text"]
+
+    # 재생성 가족 필터 — 'Breathe Warm'로 시작하는 구간만 표적이다.
+    def test_regeneration_targets_only_the_breathe_warm_family(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 다시 잡아줘",
+            pool=tuple(range(11, 21)) + tuple(range(31, 41)),
+            names={11: "Sunset Wash", 31: "Breathe Warm"},
+            answers=["덮어쓰기 진행"],
+        )
+
+        writes = _writes(calls)
+        assert len(writes) == 10
+        commands = _all_commands(calls)
+        assert "Store Preset 4.31" in commands
+        assert not any(cmd == "Store Preset 4.11" for cmd in commands)
+        assert "다시 저장 요청했습니다" in event["text"]
+
+    # 재생성이 신규 저장보다 앞이다 — "다시 잡아줘"는 저장 트리거의 '잡아'와
+    # 겹치므로 등록 순서로 행선지가 고정됨을 뮤테이션으로 증명한다.
+    def test_regenerate_is_tried_before_store(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 다시 잡아줘",
+            pool=(),  # 저장된 구간이 없다 — 재생성 특유의 거부 문면이 나와야 한다
+        )
+
+        assert _writes(calls) == []
+        assert "먼저" in event["text"] and "저장" in event["text"]
+
+
+class TestBasicDimmerPresets:
+    """T5 — 디머 레벨 프리셋 10종의 저장·가드·재생성.
+
+    판정 원칙: ``TestBasicColorPresets``의 세대화이되 **판별 없음이 계약**
+    이다(T5 지시, ``session._dimmer_pool_and_fids`` 독스트링 근거) —
+    ``_color_capable_fids``의 대응물을 두지 않으므로 열거된 fid 전부가 그대로
+    적용 대상이 된다. 소재 공급은 fixture pair 열거만 스텁하고
+    (``_color_rig_fixture_pairs`` 재사용), 라우팅·가드·번들·회신은 공용
+    몸통(``_store_position_preset_sequence``) 그대로 검증한다.
+    """
+
+    def _run(
+        self,
+        tmp_path,
+        text,
+        *,
+        answers=(),
+        channel=True,
+        pool_index=None,
+        pairs=((20, 20), (26, 26)),
+        fid_unread=(),
+        stub_material=True,
+        **rig,
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(
+            calls,
+            pool_index=_M0_POOL_INDEX if pool_index is None else pool_index,
+            **rig,
+        )
+        if stub_material:
+            session._color_rig_fixture_pairs = lambda: (
+                [tuple(pair) for pair in pairs],
+                list(fid_unread),
+            )
+        chan = _AnsweringChannel(answers) if channel else None
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # 트리거 서로소 — 기본 디머 문장은 컬러 풀(4.x)로도 포지션 풀(2.x)로도
+    # 새지 않는다(Dimmer 풀=1로만 착지).
+    def test_the_trigger_is_disjoint_from_color_and_position(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 디머 프리셋을 11번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(11, 21)),
+        )
+        commands = _all_commands(calls)
+        assert "Store Preset 1.11" in commands
+        assert any("Dim 10" in cmd for cmd in commands)
+        assert not any(cmd.startswith("Store Preset 4.") for cmd in commands)
+        assert not any(cmd.startswith("Store Preset 2.") for cmd in commands)
+        assert "디머 레벨" in event["text"]
+
+    # 풀 미상 거부 — 컬러(REQ-002)와 동일 규율, 명사만 Dimmer.
+    def test_a_missing_dimmer_pool_refuses_without_writing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 디머 프리셋을 11번부터 저장해줘",
+            pool_index={2: "Position", 4: "Color"},
+        )
+
+        assert _writes(calls) == []
+        assert "Dimmer 풀을 찾지 못했습니다" in event["text"]
+
+    # 판별 생략 계약 — 컬러식 "N대 중 M대 적용/제외" 산술 문면이 없고, 열거된
+    # fid 전부가 하나의 Fixture 선택으로 번들에 실린다.
+    def test_no_discrimination_arithmetic_and_all_enumerated_fids_apply(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 디머 프리셋을 11번부터 저장해줘",
+            pairs=((1, 10), (2, 11), (3, 12)),
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(11, 21)),
+        )
+
+        assert "판별" not in event["text"]
+        assert "제외" not in event["text"]
+        commands = _all_commands(calls)
+        assert any(cmd.startswith("Fixture 10 + 11 + 12 ;") for cmd in commands)
+
+    # fid 미판독은 컬러와 동일하게 침묵 없이 고지한다.
+    def test_unread_fid_slots_are_disclosed(self, tmp_path):
+        event, _calls, _chan = self._run(
+            tmp_path,
+            "기본 디머 프리셋을 11번부터 저장해줘",
+            pairs=((1, 10),),
+            fid_unread=(2, 3),
+            pool=(1,),
+            readback=(1,) + tuple(range(11, 21)),
+        )
+
+        assert "FID 미판독 2대(패치 슬롯 2, 3) 제외" in event["text"]
+
+    # REQ-001/-003 대응물 — 검증된 빈 구간: 카드 없이 레벨별 독립 번들 10건.
+    # 값은 카탈로그의 % 그대로(Full=100).
+    def test_the_ten_level_bundles_carry_the_catalog_exactly(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "기본 디머 프리셋을 11번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(11, 21)),
+        )
+
+        assert chan.asked == []
+        writes = _writes(calls)
+        assert len(writes) == 10
+        for offset, (label, value) in enumerate(DIMMER_LEVEL_SEQUENCE):
+            preset_no = 11 + offset
+            call = writes[offset]
+            assert call.id == f"basic-dimmer-preset-{preset_no}"
+            assert call.arguments["commands"] == [
+                f"Fixture 20 + 26 ; Attribute 'Dimmer' At {value}",
+                f"Store Preset 1.{preset_no}",
+                f"Label Preset 1.{preset_no} '{label}'",
+                "ClearAll",
+            ]
+        assert DIMMER_LEVEL_SEQUENCE[0][0] == "Dim 10"  # 가족 필터 계약
+        assert DIMMER_LEVEL_SEQUENCE[-1] == ("Full", 100)
+        commands = _all_commands(calls)
+        assert not any("/Merge" in cmd or "/Overwrite" in cmd for cmd in commands)
+
+    # REQ-004 대응물 — 재생성 가족 필터: 'Dim 10'로 시작하는 구간만 표적이다.
+    def test_regeneration_targets_only_the_dim_10_family(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 디머 다시 잡아줘",
+            pool=tuple(range(11, 21)) + tuple(range(21, 31)),
+            names={11: "Custom Fade", 21: "Dim 10"},
+            answers=["덮어쓰기 진행"],
+        )
+
+        writes = _writes(calls)
+        assert len(writes) == 10
+        commands = _all_commands(calls)
+        assert "Store Preset 1.21" in commands
+        assert not any(cmd == "Store Preset 1.11" for cmd in commands)
+        assert "다시 저장 요청했습니다" in event["text"]
+
+    # 재생성이 신규 저장보다 앞이다 — "다시 잡아줘"는 저장 트리거의 '잡아'와
+    # 겹치므로 등록 순서로 행선지가 고정됨을 빈 풀 거부 문면으로 증명한다.
+    def test_regenerate_is_tried_before_store(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 디머 다시 잡아줘",
+            pool=(),
+        )
+
+        assert _writes(calls) == []
+        assert "먼저" in event["text"] and "저장" in event["text"]
+
+
+class TestDimmerPhaserPresets:
+    """디머 페이저 프리셋 10종 — T4 라이브 프로브
+    (``docs/research/ma3-effects/09-dimmer-phaser-m0-probe.md``)로 실측된
+    커맨드라인 문법의 카탈로그 구현. ``TestColorPhaserPresets``의 세대화 —
+    소재 공급만 갈아끼우고(``_dimmer_phaser_preset_material``), 라우팅·가드·
+    번들·되읽기 몸통은 100% 재사용이므로 여기서는 (1) 트리거가 디머 레벨
+    트리거와 서로소로 동작하는지, (2) 멀티스텝(2/3스텝) 커맨드라인이 프로브에서
+    실측된 그대로인지, (3) Form(Sine/Rectangle)·Phase 커맨드가 정확한지,
+    (4) 재생성 가족 필터가 'Breathe Soft'인지에 집중한다.
+    """
+
+    def _run(
+        self,
+        tmp_path,
+        text,
+        *,
+        answers=(),
+        channel=True,
+        pool_index=None,
+        pairs=((20, 20), (26, 26)),
+        fid_unread=(),
+        stub_material=True,
+        **rig,
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(
+            calls,
+            pool_index=_M0_POOL_INDEX if pool_index is None else pool_index,
+            **rig,
+        )
+        if stub_material:
+            session._color_rig_fixture_pairs = lambda: (
+                [tuple(pair) for pair in pairs],
+                list(fid_unread),
+            )
+        chan = _AnsweringChannel(answers) if channel else None
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # 카탈로그 계약 — 라벨·스텝·Form·Phase 순서는 T5 지시 표 그대로.
+    def test_the_catalog_matches_the_t5_table(self):
+        assert [entry[0] for entry in DIMMER_PHASER_SEQUENCE] == [
+            "Breathe Soft",
+            "Breathe Deep",
+            "Pulse Hard",
+            "Pulse Half",
+            "Wave Soft",
+            "Wave Full",
+            "Ripple",
+            "Flash Accent",
+            "Alt Half",
+            "Slam Run",
+        ]
+        assert DIMMER_PHASER_SEQUENCE[0][0] == "Breathe Soft"  # 가족 필터 계약
+        assert DIMMER_PHASER_SEQUENCE[6][1] == (30, 60, 100)  # Ripple 3스텝
+
+    # 합성 문장 — "기본 디머 이펙트 …"는 기본 디머 트리거의 갭에도 매치되지만
+    # 디스패치 순서가 페이저 경로로 고정한다(2026-08-17 리뷰).
+    def test_a_composite_basic_plus_phaser_sentence_routes_to_the_phaser(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 디머 이펙트 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(21, 31)),
+        )
+        commands = _all_commands(calls)
+        assert any("Breathe Soft" in cmd for cmd in commands)  # 페이저 카탈로그
+        assert not any("'Dim 10'" in cmd for cmd in commands)  # 레벨 아님
+        assert "디머 페이저" in event["text"]
+
+    # 트리거 서로소 — 디머 이펙트/페이저 문장은 디머 레벨 경로로 새지 않고,
+    # 디머 레벨 문장은 디머 페이저 경로로 새지 않는다.
+    def test_the_trigger_is_disjoint_from_basic_dimmer(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(21, 31)),
+        )
+        commands = _all_commands(calls)
+        assert "Store Preset 1.21" in commands
+        assert any("Breathe Soft" in cmd for cmd in commands)
+        # 디머 레벨 풀(1.11~)로는 한 줄도 쓰지 않는다 — 페이저는 1.21~로만.
+        assert not any(cmd.startswith("Store Preset 1.1") for cmd in commands)
+        assert "디머 페이저" in event["text"]
+
+        event2, calls2, _chan2 = self._run(
+            tmp_path,
+            "기본 디머 프리셋을 11번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(11, 21)),
+        )
+        commands2 = _all_commands(calls2)
+        assert "Store Preset 1.11" in commands2
+        assert not any("Breathe Soft" in cmd for cmd in commands2)
+        assert "디머 레벨" in event2["text"]
+
+    # 2스텝 Sine — Breathe Soft 커맨드라인이 프로브 §2 문법 그대로인지.
+    def test_a_two_step_sine_preset_carries_the_probed_grammar(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(21, 31)),
+        )
+        writes = _writes(calls)
+        assert len(writes) == 10
+        call = writes[0]
+        assert call.id == "dimmer-phaser-preset-21"
+        assert call.arguments["commands"] == [
+            "Fixture 20 + 26 ; Attribute 'Dimmer' At 30",
+            "Step 2",
+            "Attribute 'Dimmer' At 70",
+            "Attribute 'Dimmer' At Accel -100",
+            "Attribute 'Dimmer' At Decel -100",
+            "Attribute 'Dimmer' At Phase 0",
+            "Store Preset 1.21",
+            "Label Preset 1.21 'Breathe Soft'",
+            "ClearAll",
+        ]
+
+    # 2스텝 Rectangle — Pulse Hard(#3)가 Transition/Accel/Decel 0 근사치를
+    # 정확히 싣는지(프로브 §6.1 컬러 패턴의 디머 이식, ASSUMPTION 그대로).
+    def test_a_two_step_rectangle_preset_carries_the_probed_approximation(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(21, 31)),
+        )
+        writes = _writes(calls)
+        call = writes[2]  # Pulse Hard (index 2 in the catalog)
+        assert call.id == "dimmer-phaser-preset-23"
+        assert call.arguments["commands"] == [
+            "Fixture 20 + 26 ; Attribute 'Dimmer' At 0",
+            "Step 2",
+            "Attribute 'Dimmer' At 100",
+            "Attribute 'Dimmer' At Accel 0",
+            "Attribute 'Dimmer' At Decel 0",
+            "Attribute 'Dimmer' At Transition 0",
+            "Attribute 'Dimmer' At Phase 0",
+            "Store Preset 1.23",
+            "Label Preset 1.23 'Pulse Hard'",
+            "ClearAll",
+        ]
+
+    # 3스텝 Ripple — 프로브 §3(3-step)/§6.2(컬러) 실측(Step 3 직후 Store해도
+    # 3값 다 담김).
+    def test_the_three_step_ripple_preset_carries_all_three_steps(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(21, 31)),
+        )
+        writes = _writes(calls)
+        call = writes[6]  # Ripple (index 6 in the catalog)
+        assert call.id == "dimmer-phaser-preset-27"
+        commands = call.arguments["commands"]
+        assert commands[0] == "Fixture 20 + 26 ; Attribute 'Dimmer' At 30"
+        assert commands[1] == "Step 2"
+        assert commands[2] == "Attribute 'Dimmer' At 60"
+        assert commands[3] == "Step 3"
+        assert commands[4] == "Attribute 'Dimmer' At 100"
+        assert commands[-4] == "Attribute 'Dimmer' At Phase 0 Thru 360"
+        assert commands[-3] == "Store Preset 1.27"
+        assert commands[-2] == "Label Preset 1.27 'Ripple'"
+        assert commands[-1] == "ClearAll"
+
+    # Phase 분산 문법 — Alt Half(#9, Phase 180)와 Wave Soft(#5, 0 Thru 360).
+    def test_phase_tokens_match_the_catalog(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(21, 31)),
+        )
+        writes = _writes(calls)
+        alt_half = writes[8].arguments["commands"]
+        assert "Attribute 'Dimmer' At Phase 180" in alt_half
+        wave_soft = writes[4].arguments["commands"]
+        assert "Attribute 'Dimmer' At Phase 0 Thru 360" in wave_soft
+
+    # 풀 미상 거부 — 디머 레벨과 동일 규율.
+    def test_a_missing_dimmer_pool_refuses_without_writing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 프리셋을 21번부터 저장해줘",
+            pool_index={2: "Position", 4: "Color"},
+        )
+
+        assert _writes(calls) == []
+        assert "Dimmer 풀을 찾지 못했습니다" in event["text"]
+
+    # 재생성 가족 필터 — 'Breathe Soft'로 시작하는 구간만 표적이다.
+    def test_regeneration_targets_only_the_breathe_soft_family(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 다시 잡아줘",
+            pool=tuple(range(11, 21)) + tuple(range(21, 31)),
+            names={11: "Custom Fade", 21: "Breathe Soft"},
+            answers=["덮어쓰기 진행"],
+        )
+
+        writes = _writes(calls)
+        assert len(writes) == 10
+        commands = _all_commands(calls)
+        assert "Store Preset 1.21" in commands
+        assert not any(cmd == "Store Preset 1.11" for cmd in commands)
+        assert "다시 저장 요청했습니다" in event["text"]
+
+    # 재생성이 신규 저장보다 앞이다 — 트리거의 '잡아'가 겹치므로 등록 순서로
+    # 행선지가 고정됨을 뮤테이션으로 증명한다.
+    def test_regenerate_is_tried_before_store(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "디머 페이저 다시 잡아줘",
+            pool=(),
+        )
+
+        assert _writes(calls) == []
+        assert "먼저" in event["text"] and "저장" in event["text"]
+
+
+class TestComboPhaserPresets:
+    """콤보(컬러+디머 혼합) 페이저 프리셋 10종 — T7 라이브 프로브
+    (``docs/research/ma3-effects/10-combo-phaser-m0-probe.md``)로 실측된
+    저장 풀·문법의 카탈로그 구현. ``TestColorPhaserPresets``의 세대화 —
+    소재 공급만 갈아끼우고(``_combo_phaser_preset_material``), 라우팅·가드·
+    번들·되읽기 몸통은 100% 재사용이므로 여기서는 (1) 트리거가 기존 5개
+    축과 서로소로 동작하는지, (2) 저장 풀이 Color/Dimmer가 아니라 'All 1'
+    (T7 프로브가 확정한 21)인지, (3) 스텝이 컬러 3줄+디머 1줄을 한 체인에
+    싣는지(2/3스텝), (4) Form(Sine/Rectangle)·Phase 커맨드가 4채널
+    (ColorRGB_R/G/B + Dimmer)에 정확히 실리는지, (5) 재생성 가족 필터가
+    'Drop Slam'인지에 집중한다.
+    """
+
+    def _run(
+        self,
+        tmp_path,
+        text,
+        *,
+        answers=(),
+        channel=True,
+        pool_index=None,
+        pairs=((20, 20), (26, 26)),
+        fid_unread=(),
+        capable=(20, 26),
+        excluded=(),
+        undetermined=(),
+        stub_material=True,
+        **rig,
+    ):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(
+            calls,
+            pool_index=_COMBO_POOL_INDEX if pool_index is None else pool_index,
+            **rig,
+        )
+        if stub_material:
+            session._color_rig_fixture_pairs = lambda: (
+                [tuple(pair) for pair in pairs],
+                list(fid_unread),
+            )
+            session._color_capable_fids = lambda _pairs, *, probe_id_prefix: (
+                list(capable),
+                list(excluded),
+                list(undetermined),
+            )
+        chan = _AnsweringChannel(answers) if channel else None
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # 카탈로그 계약 — 라벨·스텝·Form·Phase 순서는 T8 지시 표 그대로.
+    def test_the_catalog_matches_the_t8_table(self):
+        assert [entry[0] for entry in COMBO_PHASER_SEQUENCE] == [
+            "Drop Slam",
+            "Breathe Amber",
+            "Breathe Blue",
+            "Police",
+            "Heartbeat",
+            "Golden Wave",
+            "Ocean Wave",
+            "Rainbow Run",
+            "Club Duo",
+            "Finale Slam",
+        ]
+        assert COMBO_PHASER_SEQUENCE[0][0] == "Drop Slam"  # 가족 필터 계약
+        assert COMBO_PHASER_SEQUENCE[7][1] == (
+            ("Red", 100),
+            ("Green", 50),
+            ("Blue", 100),
+        )  # Rainbow Run 3스텝
+
+    # 합성 문장 — "컬러 디머 페이저 …"는 디머 페이저 축('디머 페이저')에도
+    # 매치되지만 디스패치 순서(콤보 맨 앞)가 콤보 경로로 고정한다(2026-08-17
+    # 리뷰 실측: 순서 수정 전에는 회색조 카탈로그가 Dimmer 풀로 오착지했다).
+    def test_a_composite_color_dimmer_sentence_routes_to_the_combo(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "컬러 디머 페이저 프리셋을 51번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(51, 61)),
+        )
+        commands = _all_commands(calls)
+        assert "Store Preset 21.51" in commands  # All 1 풀로만
+        assert any("Drop Slam" in cmd for cmd in commands)
+        assert not any("Breathe Soft" in cmd for cmd in commands)  # 디머 페이저 아님
+        assert not any(cmd.startswith("Store Preset 1.") for cmd in commands)
+        assert "콤보 페이저" in event["text"]
+
+    # 트리거 서로소 — 콤보 문장은 기존 4개 저장 축(기본컬러/멀티컬러/기본
+    # 디머/디머페이저) 어느 경로로도 새지 않고, 그 역도 마찬가지다.
+    def test_the_trigger_is_disjoint_from_the_other_four_axes(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(51, 61)),
+        )
+        commands = _all_commands(calls)
+        assert "Store Preset 21.51" in commands
+        assert any("Drop Slam" in cmd for cmd in commands)
+        # Color(4.x)·Dimmer(1.x) 어느 풀로도 한 줄도 쓰지 않는다 — All 1(21)로만.
+        assert not any(cmd.startswith("Store Preset 4.") for cmd in commands)
+        assert not any(cmd.startswith("Store Preset 1.") for cmd in commands)
+        assert "콤보 페이저" in event["text"]
+
+        event2, calls2, _chan2 = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        commands2 = _all_commands(calls2)
+        assert not any("Drop Slam" in cmd for cmd in commands2)
+        assert "멀티컬러 페이저" in event2["text"]
+
+    # 2스텝 Rectangle — Drop Slam(#1)이 컬러 3줄+디머 1줄을 한 체인에 싣고,
+    # Transition/Accel/Decel 0 근사치가 4채널(ColorRGB_R/G/B+Dimmer) 전부에
+    # 정확히 실리는지(프로브 §2 항목1/4 실측 문법 그대로).
+    def test_a_two_step_rectangle_preset_carries_the_probed_grammar(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(51, 61)),
+        )
+        writes = _writes(calls)
+        assert len(writes) == 10
+        call = writes[0]
+        assert call.id == "combo-phaser-preset-51"
+        assert call.arguments["commands"] == [
+            "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0 ; "
+            "Attribute 'Dimmer' At 100",
+            "Step 2",
+            "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; "
+            "Attribute 'ColorRGB_B' At 0 ; Attribute 'Dimmer' At 0",
+            "Attribute 'ColorRGB_R' At Accel 0",
+            "Attribute 'ColorRGB_G' At Accel 0",
+            "Attribute 'ColorRGB_B' At Accel 0",
+            "Attribute 'Dimmer' At Accel 0",
+            "Attribute 'ColorRGB_R' At Decel 0",
+            "Attribute 'ColorRGB_G' At Decel 0",
+            "Attribute 'ColorRGB_B' At Decel 0",
+            "Attribute 'Dimmer' At Decel 0",
+            "Attribute 'ColorRGB_R' At Transition 0",
+            "Attribute 'ColorRGB_G' At Transition 0",
+            "Attribute 'ColorRGB_B' At Transition 0",
+            "Attribute 'Dimmer' At Transition 0",
+            "Attribute 'ColorRGB_R' At Phase 0",
+            "Store Preset 21.51",
+            "Label Preset 21.51 'Drop Slam'",
+            "ClearAll",
+        ]
+
+    # 2스텝 Sine — Breathe Amber(#2)가 서로 다른 팔레트+디머% 스텝 쌍을
+    # 정확히 싣는지.
+    def test_a_two_step_sine_preset_carries_the_probed_grammar(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(51, 61)),
+        )
+        writes = _writes(calls)
+        call = writes[1]  # Breathe Amber (index 1 in the catalog)
+        assert call.id == "combo-phaser-preset-52"
+        assert call.arguments["commands"] == [
+            "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 75 ; Attribute 'ColorRGB_B' At 40 ; "
+            "Attribute 'Dimmer' At 70",
+            "Step 2",
+            "Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 55 ; "
+            "Attribute 'ColorRGB_B' At 5 ; Attribute 'Dimmer' At 30",
+            "Attribute 'ColorRGB_R' At Accel -100",
+            "Attribute 'ColorRGB_G' At Accel -100",
+            "Attribute 'ColorRGB_B' At Accel -100",
+            "Attribute 'Dimmer' At Accel -100",
+            "Attribute 'ColorRGB_R' At Decel -100",
+            "Attribute 'ColorRGB_G' At Decel -100",
+            "Attribute 'ColorRGB_B' At Decel -100",
+            "Attribute 'Dimmer' At Decel -100",
+            "Attribute 'ColorRGB_R' At Phase 0",
+            "Store Preset 21.52",
+            "Label Preset 21.52 'Breathe Amber'",
+            "ClearAll",
+        ]
+
+    # 3스텝 Rainbow Run — 프로브 §2 항목5(3스텝 혼합) 실측(Step 3 직후
+    # Store해도 3색+3디머값 다 담김).
+    def test_the_three_step_rainbow_run_preset_carries_all_three_steps(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(51, 61)),
+        )
+        writes = _writes(calls)
+        call = writes[7]  # Rainbow Run (index 7 in the catalog)
+        assert call.id == "combo-phaser-preset-58"
+        commands = call.arguments["commands"]
+        assert commands[0] == (
+            "Fixture 20 + 26 ; Attribute 'ColorRGB_R' At 100 ; "
+            "Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 0 ; "
+            "Attribute 'Dimmer' At 100"
+        )
+        assert commands[1] == "Step 2"
+        assert commands[2] == (
+            "Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 100 ; "
+            "Attribute 'ColorRGB_B' At 10 ; Attribute 'Dimmer' At 50"
+        )
+        assert commands[3] == "Step 3"
+        assert commands[4] == (
+            "Attribute 'ColorRGB_R' At 5 ; Attribute 'ColorRGB_G' At 20 ; "
+            "Attribute 'ColorRGB_B' At 100 ; Attribute 'Dimmer' At 100"
+        )
+        assert commands[-4] == "Attribute 'ColorRGB_R' At Phase 0 Thru 360"
+        assert commands[-3] == "Store Preset 21.58"
+        assert commands[-2] == "Label Preset 21.58 'Rainbow Run'"
+        assert commands[-1] == "ClearAll"
+
+    # Phase 분산 문법 — Club Duo(#9, Phase 180)와 Golden Wave(#6, 0 Thru 360).
+    def test_phase_tokens_match_the_catalog(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(51, 61)),
+        )
+        writes = _writes(calls)
+        club_duo = writes[8].arguments["commands"]
+        assert "Attribute 'ColorRGB_R' At Phase 180" in club_duo
+        golden_wave = writes[5].arguments["commands"]
+        assert "Attribute 'ColorRGB_R' At Phase 0 Thru 360" in golden_wave
+
+    # 풀 미상 거부 — 컬러/디머와 동일 규율, 명사만 'All 1'.
+    def test_a_missing_all_pool_refuses_without_writing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool_index={1: "Dimmer", 2: "Position", 4: "Color"},
+        )
+
+        assert _writes(calls) == []
+        assert "All 1 풀을 찾지 못했습니다" in event["text"]
+
+    # 컬러 판별 상한 — 컬러 없는 장비는 콤보에서도 제외된다.
+    def test_color_incapable_fixtures_are_excluded(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 프리셋을 51번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(51, 61)),
+            pairs=((20, 20), (26, 26), (30, 30)),
+            capable=(20, 26),
+            excluded=(30,),
+        )
+        commands = _all_commands(calls)
+        assert "Fixture 20 + 26" in commands[0]
+        assert "30" not in commands[0].split(";")[0]
+        assert "컬러 판별" in event["text"]
+
+    # 재생성 가족 필터 — 'Drop Slam'으로 시작하는 구간만 표적이다.
+    def test_regeneration_targets_only_the_drop_slam_family(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 다시 잡아줘",
+            pool=tuple(range(41, 51)) + tuple(range(51, 61)),
+            names={41: "Old Combo", 51: "Drop Slam"},
+            answers=["덮어쓰기 진행"],
+        )
+
+        writes = _writes(calls)
+        assert len(writes) == 10
+        commands = _all_commands(calls)
+        assert "Store Preset 21.51" in commands
+        assert not any(cmd == "Store Preset 21.41" for cmd in commands)
+        assert "다시 저장 요청했습니다" in event["text"]
+
+    # 재생성이 신규 저장보다 앞이다 — 트리거의 '잡아'가 겹치므로 등록 순서로
+    # 행선지가 고정됨을 뮤테이션으로 증명한다.
+    def test_regenerate_is_tried_before_store(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "콤보 페이저 다시 잡아줘",
+            pool=(),
+        )
+
+        assert _writes(calls) == []
+        assert "먼저" in event["text"] and "저장" in event["text"]
+
+
+class TestPositionPresetOverwriteGuard:
+    """SPEC-COPILOT-PRESETGUARD-001 §B.1/§B.2 — 점유 가드와 저장 되읽기.
+
+    판정 원칙: **손실 가능한 쓰기는 승낙의 증거 없이 진행하지 않는다.**
+    """
+
+    def _run(self, tmp_path, text, *, answers=(), channel=True, **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, **rig)
+        chan = _AnsweringChannel(answers) if channel else None
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # AC-PRESETGUARD-001 — 명시 번호의 충돌에서 쓰기가 0건이다 (뮤테이션 필수)
+    def test_an_explicit_number_hitting_stored_slots_writes_nothing(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            answers=["취소"],
+        )
+
+        assert _writes(calls) == []
+        assert len(chan.asked) == 1
+        assert "승인" in event["text"] or "저장하지 않" in event["text"]
+
+    # AC-PRESETGUARD-002 — 검증된 빈 구간에는 카드가 뜨지 않는다 (비공허성 짝)
+    def test_a_verified_empty_span_stores_without_asking(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+        )
+
+        assert chan.asked == []
+        writes = _writes(calls)
+        assert len(writes) == 10
+        commands = _all_commands(calls)
+        for offset in range(10):
+            assert f"Store Preset 2.{21 + offset}" in commands
+
+    # AC-PRESETGUARD-003 — 카드가 사라지는 슬롯을 번호로 열거한다
+    def test_the_card_lists_every_slot_that_disappears(self, tmp_path):
+        # 비연속 점유 {21,22,27} — "2.21~2.30" 범위 문구로는 22·27을 담을 수 없다.
+        _event, _calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            answers=["취소"],
+        )
+
+        prompt = chan.asked[0].prompt
+        assert "21" in prompt
+        assert "22" in prompt
+        assert "27" in prompt
+
+    # AC-PRESETGUARD-004 — 무응답에서 쓰기가 0건이다 (fail-closed · 뮤테이션 필수)
+    def test_an_unanswered_card_stores_nothing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            answers=[],  # UNANSWERED
+        )
+
+        assert _writes(calls) == []
+        assert "응답" in event["text"]
+
+    def test_no_ui_attached_stores_nothing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            channel=False,
+        )
+
+        assert _writes(calls) == []
+        assert "응답" in event["text"]
+
+    # AC-PRESETGUARD-005 — 승낙하면 진행하고 덮어쓴 슬롯을 회신한다 (비공허성 짝)
+    def test_an_accepted_card_stores_and_reports_the_overwritten_slots(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            readback=tuple(range(21, 31)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        # 카드가 실제로 떴고, 승낙 뒤에야 저장이 나갔다.
+        assert len(_chan.asked) == 1
+        assert len(_writes(calls)) == 10
+        # 회신은 "저장한 슬롯"이 아니라 **덮어쓴 슬롯**을 따로 적는다.
+        assert "덮어쓰기 승인" in event["text"]
+        overwrote = event["text"].split("덮어쓰기 승인", 1)[1]
+        assert "2.22" in overwrote
+        assert "2.27" in overwrote
+        assert "2.23" not in overwrote
+
+    # AC-PRESETGUARD-006 — 판독 불가와 검증된 빈칸의 회신이 다르다 (뮤테이션 필수)
+    def test_an_unreadable_pool_is_not_reported_as_an_empty_span(self, tmp_path):
+        unreadable, unreadable_calls, _c1 = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool_error=True,
+            readback=(),
+        )
+        verified, verified_calls, _c2 = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=tuple(range(21, 31)),
+        )
+
+        # 양쪽 모두 저장은 진행한다 (오늘의 동작 보존, REQ-PRESETGUARD-004).
+        assert len(_writes(unreadable_calls)) == 10
+        assert len(_writes(verified_calls)) == 10
+        # 그러나 회신 문면은 다르다 — 미상은 검증된 빈칸이 아니다.
+        assert "확인하지 못했습니다" in unreadable["text"]
+        assert "확인하지 못했습니다" not in verified["text"]
+        assert unreadable["text"] != verified["text"]
+
+    # 절단 실측 2026-08-16 — 31개 풀에서 캡(24) 밖의 신규 저장 10건이
+    # "미확인 0/10"으로 오보됐다. 절단은 판독 불가이지 빈칸이 아니다.
+    def test_a_truncated_pool_listing_is_unreadable_not_empty(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 41번부터 저장해줘",
+            pool=tuple(range(1, 25)),
+            truncated=True,
+        )
+
+        # 저장은 진행하되(판독 불가 규율과 동일) 되읽기는 전건 미검증이다.
+        assert len(_writes(calls)) == 10
+        assert "되읽지 못했습니다" in event["text"]
+        assert "미확인 2.4" not in event["text"]
+        assert "0개 확인" not in event["text"]
+
+    def test_childcount_arithmetic_alone_marks_the_pool_unreadable(self, tmp_path):
+        # truncated 플래그가 빠져도 childCount > len(children)이 잡는다 — 이중 방어.
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 41번부터 저장해줘",
+            pool=tuple(range(1, 25)),
+            child_count=31,
+        )
+
+        assert len(_writes(calls)) == 10
+        assert "되읽지 못했습니다" in event["text"]
+        assert "0개 확인" not in event["text"]
+
+    # AC-PRESETGUARD-007 — 되읽기 산술이 회신에 실린다 (뮤테이션 필수)
+    def test_the_readback_carries_arithmetic(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=tuple(range(21, 31)),
+        )
+
+        assert "기대 10개" in event["text"]
+        assert "10개 확인" in event["text"]
+        # 가드 1회 + 되읽기 1회 = 2회. 루프당 반복이 아니다.
+        assert len([c for c in calls if c.name == "query_state"]) == 2
+
+    def test_a_missing_slot_is_enumerated_and_triggers_no_retry(self, tmp_path):
+        landed = tuple(n for n in range(21, 31) if n != 27)
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=landed,
+        )
+
+        assert "2.27" in event["text"]
+        assert "미확인" in event["text"]
+        # REQ-PRESETGUARD-010 — 되읽기는 보고이지 자기수정 루프가 아니다.
+        assert event["status"] == "ok"
+        assert len(_writes(calls)) == 10
+
+    # AC-PRESETGUARD-008 — 되읽기 불가가 확인됨으로 보고되지 않는다 (뮤테이션 필수)
+    def test_an_unreadable_readback_is_reported_unverified(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback_error=True,
+        )
+
+        assert len(_writes(calls)) == 10
+        assert "미검증" in event["text"]
+        assert "개 확인" not in event["text"]
+
+    # D3 (독립 감사 지적, 종결 후 후속) — 사전 판독 실패를 "원래 차 있었다"로 적지 않는다
+    #
+    # `run.before is None`은 저장 **전** 풀 판독이 실패했다는 뜻이다 — 그 슬롯이
+    # 원래 차 있었는지 **우리는 모른다**. 그런데 회신은 사전 점유가 관측된 경우와
+    # 같은 문장("저장 전부터 차 있던 슬롯이라")을 냈다. 바로 앞 문장에서 "풀을 읽지
+    # 못했다"고 말해 놓고 다음 문장에서 사전 상태를 단언하는 자기모순이며, 이는
+    # 이 SPEC이 닫으려는 결함(관측하지 않은 것을 관측했다고 적기)과 같은 형상이다.
+    def test_an_unread_pre_state_is_not_reported_as_preexisting_occupancy(self, tmp_path):
+        unknown_before, unknown_calls, _c1 = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool_error=True,  # 저장 전 판독 실패 → before = None
+            readback=tuple(range(21, 31)),  # 저장 후 판독은 성공
+        )
+        observed_before, _c2, _c3 = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=tuple(range(21, 31)),  # 저장 전 판독 성공 + 실제 점유
+            readback=tuple(range(21, 31)),
+            answers=("덮어쓰기 진행",),
+        )
+
+        # 양쪽 모두 저장은 나간다.
+        assert len(_writes(unknown_calls)) == 10
+        # 관측된 사전 점유에만 "저장 전부터 차 있던"을 쓴다.
+        assert "저장 전부터" in observed_before["text"]
+        assert "저장 전부터" not in unknown_before["text"]
+        # 그리고 모른다는 사실을 모른다고 적는다.
+        assert "저장 전 상태를 읽지 못해" in unknown_before["text"]
+        # 어느 쪽도 확인으로 세지 않는다 (둘 다 fail-closed 유지).
+        assert "10개 확인" not in unknown_before["text"]
+        assert "10개 확인" not in observed_before["text"]
+
+    # AC-PRESETGUARD-009 — 승인 대기가 결함으로 보고되지 않는다
+    def test_a_gate_held_store_is_classified_as_pending_not_missing(self, tmp_path):
+        event, _calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(),
+            status="proposal",
+        )
+
+        assert "승인 대기" in event["text"]
+        assert "미확인" not in event["text"]
+
+    # F1 — 동의는 명시적·일의적 신호여야 한다 (부분 문자열 매칭 금지)
+    #
+    # `확인|네|예|응`을 부분 문자열로 찾던 구현에서 아래 다섯 문장이 전부 승낙으로
+    # 읽혀 비가역 덮어쓰기가 나갔다. 평범한 한국어 비승낙이 승낙 토큰을 조각으로
+    # 품기 때문이며, 토큰을 더 넣는 방식으로는 막을 수 없다.
+    @pytest.mark.parametrize(
+        "answer",
+        [
+            "잠깐 확인해보고요",
+            "안 되네요",
+            "예전 값으로 되돌려줘",
+            "네가 판단해",
+            "확인 안 했어요",
+            # 아래 둘은 옛 구현에서도 우연히 통과했다 — 토큰이 하나 늘면 조용히
+            # 승낙으로 넘어갈 수 있으므로 함께 못 박는다.
+            "21번은 살려줘",
+            "일단 보류",
+        ],
+    )
+    def test_free_text_that_is_not_explicit_consent_stores_nothing(self, tmp_path, answer):
+        event, calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            answers=[answer],
+        )
+
+        assert len(chan.asked) == 1, answer
+        assert _writes(calls) == [], answer
+        assert "저장하지 않" in event["text"], answer
+
+    # 비공허성 짝 — 승낙 판정이 "전부 거절"로 퇴화하지 않았음을 고정한다.
+    #
+    # 이 코퍼스는 **구현의 토큰 목록에서 유도하지 않는다.** 토큰 목록을
+    # 파라미터화하면 토큰이 존재하는 한 결코 실패할 수 없어 아무것도 검증하지
+    # 못한다(공허). 아래는 운영자가 카드 앞에서 실제로 칠 법한 문장을 손으로 적은
+    # 것이며, 그래서 구현이 좁아지면 여기가 먼저 깨진다.
+    @pytest.mark.parametrize(
+        "answer",
+        [
+            "덮어쓰기 진행",  # 버튼 그대로
+            "덮어쓰기 진행해줘",  # 버튼 + 존대
+            "진행해주세요",
+            "네 진행해주세요",
+            "네",
+            "넵",
+            "좋아요",
+            "응",
+            "오케이",
+            "덮어써",
+            "승인",
+            "ok",
+            "OK",
+            "yes",
+        ],
+    )
+    def test_natural_korean_consent_completes_the_overwrite(self, tmp_path, answer):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            readback=tuple(range(21, 31)),
+            answers=[answer],
+        )
+
+        assert len(_writes(calls)) == 10, answer
+
+    # R2 — 거절과 "못 알아들음"은 다른 상태다
+    @pytest.mark.parametrize("answer", ["취소", "아니요", "그만", "보류", "no"])
+    def test_an_explicit_decline_is_reported_as_a_decline(self, tmp_path, answer):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            answers=[answer],
+        )
+
+        assert _writes(calls) == [], answer
+        assert "승인받지 못해" in event["text"], answer
+
+    @pytest.mark.parametrize("answer", ["잠깐 확인해보고요", "네가 판단해", "일단 뭐랄까"])
+    def test_an_unreadable_answer_says_so_and_shows_how_to_answer(self, tmp_path, answer):
+        # 저장하지 않는 것은 거절과 같지만, 운영자는 거절한 적이 없다. 원인을
+        # 잘못 귀속하지 않고 어떻게 답해야 하는지 알려준다.
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            answers=[answer],
+        )
+
+        assert _writes(calls) == [], answer
+        assert "읽지 못해" in event["text"], answer
+        assert "덮어쓰기 진행" in event["text"], answer
+        assert "취소" in event["text"], answer
+        assert "승인받지 못해" not in event["text"], answer
+
+    def test_a_negated_decline_word_is_not_read_as_a_decline(self, tmp_path):
+        # "취소하지 마" = 취소하지 말라 = 승낙 의도. 부분 문자열로 `취소`를 찾으면
+        # 정반대로 읽힌다. 승낙으로 단정하지도 않고(모호하므로) 거절로도 읽지
+        # 않는다 — 못 알아들었다고 답하고 저장하지 않는다.
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            answers=["취소하지 마"],
+        )
+
+        assert _writes(calls) == []
+        assert "읽지 못해" in event["text"]
+        assert "승인받지 못해" not in event["text"]
+
+    # F3 — 사전 점유 슬롯은 "확인"으로 셀 수 없다
+    def test_a_preoccupied_slot_is_not_counted_as_confirmed(self, tmp_path):
+        # 21·22·27은 저장 전부터 차 있었다. 되읽기에서 여전히 "있음"으로 보이지만
+        # 새 값이 들어갔는지는 알 수 없다 — 응답기가 슬롯 번호만 보내기 때문이다.
+        event, _calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(21, 22, 27),
+            readback=tuple(range(21, 31)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        assert "10개 확인" not in event["text"]
+        assert "7개 확인" in event["text"]
+        assert "확인 불가" in event["text"]
+        for slot in ("2.21", "2.22", "2.27"):
+            assert slot in event["text"].split("확인 불가", 1)[1]
+
+    # F6 — 카드 경로도 점유 구간에서 막힌다 (REQ-001 '출처 무관')
+    def test_a_typed_number_from_the_card_hits_the_same_guard(self, tmp_path):
+        # 제안 버튼(1·11·31)을 무시하고 손으로 21을 타이핑한 경우. 이 경로가
+        # 가드를 통과하지 못하면 가드를 if 갈래 안으로 되돌려도 스위트가 통과한다.
+        # `readback`을 일부러 다르게 둔다: 이 경로는 `_position_preset_free_starts`가
+        # 풀을 먼저 한 번 읽으므로, 리그가 "첫 판독 = 가드"로 갈랐다면 가드는
+        # `readback`(빈 풀)을 보고 충돌 없음으로 통과해 버린다(§F9).
+        event, calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 10개를 프리셋에 저장해줘",
+            pool=(21, 22, 23),
+            readback=(),
+            answers=["21"],  # 시작 번호만 답하고 덮어쓰기 카드는 무응답
+        )
+
+        assert _writes(calls) == []
+        assert any("덮어씁니다" in ask.prompt for ask in chan.asked)
+        assert "2.21" in event["text"]
+        assert "2.23" in event["text"]
+
+    # F7 — 차단·거부는 "승인 후 반영"이 아니다
+    @pytest.mark.parametrize("status", ["blocked", "rejected"])
+    def test_a_gate_blocked_store_is_not_rendered_as_awaiting_approval(self, tmp_path, status):
+        event, _calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(),
+            status=status,
+        )
+
+        assert "게이트 차단" in event["text"], status
+        assert "반영되지 않음" in event["text"], status
+        assert "승인 후 반영" not in event["text"], status
+        # 분류는 여전히 보류다 — 미확인 결함으로 세지 않는다(AC-009).
+        assert "미확인" not in event["text"], status
+
+    # AC-PRESETGUARD-014 — 경계가 움직이지 않는다 (기존 안전 동작 회귀)
+    def test_the_bundle_shape_and_merge_ban_survive(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+        )
+
+        writes = _writes(calls)
+        first = writes[0].arguments["commands"]
+        assert first[-3:] == [
+            "Store Preset 2.21",
+            "Label Preset 2.21 'Home'",
+            "ClearAll",
+        ]
+        commands = _all_commands(calls)
+        assert not any("/Merge" in cmd or "/Overwrite" in cmd for cmd in commands)
+
+
+class TestPositionPresetRegeneration:
+    """SPEC-COPILOT-PRESETGUARD-001 §B.3 — 지금 배치로 기존 구간을 다시 잡는다."""
+
+    def _run(self, tmp_path, text, *, answers=(), channel=True, **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, **rig)
+        chan = _AnsweringChannel(answers) if channel else None
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # AC-PRESETGUARD-010 — 재생성이 기존 구간을 표적으로 삼는다 (뮤테이션 필수)
+    def test_regeneration_overwrites_the_stored_span_in_place(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=tuple(range(21, 31)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        commands = _all_commands(calls)
+        for offset in range(10):
+            assert f"Store Preset 2.{21 + offset}" in commands
+        # 새 시작 번호를 묻지 않는다 — 새 자리에 저장하면 큐가 따라오지 않는다.
+        assert all("몇 번부터" not in ask.prompt for ask in chan.asked)
+        # 큐·시퀀스는 건드리지 않는다 — 참조를 든 큐는 프리셋 갱신만으로 따라온다.
+        assert not any("Store Sequence" in cmd or "Cue" in cmd for cmd in commands)
+
+    # AC-PRESETGUARD-011 — 겹치는 문장이 재생성으로 결정적 라우팅된다 (뮤테이션 필수)
+    def test_overlapping_sentences_route_to_regeneration(self, tmp_path):
+        corpus = [
+            "기본 포지션 다시 잡아줘",
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            "기본 포지션 프리셋 재생성해줘",
+        ]
+        for text in corpus:
+            _event, calls, chan = self._run(
+                tmp_path,
+                text,
+                pool=tuple(range(21, 31)),
+                answers=["덮어쓰기 진행"],
+            )
+            commands = _all_commands(calls)
+            assert "Store Preset 2.21" in commands, text
+            assert all("몇 번부터" not in ask.prompt for ask in chan.asked), text
+
+    def test_new_store_sentences_still_route_to_the_store_path(self, tmp_path):
+        # 명시 번호가 있으면 신규 저장이다 — 21번 구간이 비어 있으므로 카드 없이 저장.
+        _event, calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 10개를 프리셋 21번부터 저장해줘",
+            pool=(1, 2, 3),
+        )
+        assert chan.asked == []
+        assert "Store Preset 2.21" in _all_commands(calls)
+
+        # 번호가 없으면 시작 번호를 묻는 기존 카드가 그대로 뜬다.
+        _event2, calls2, chan2 = self._run(
+            tmp_path,
+            "기본 포지션 10개를 프리셋에 저장해줘",
+            pool=(1, 2, 3),
+            answers=["41"],
+        )
+        assert any("몇 번부터" in ask.prompt for ask in chan2.asked)
+        assert "Store Preset 2.41" in _all_commands(calls2)
+
+    # AC-PRESETGUARD-012 — 재생성도 같은 fail-closed를 통과한다 (뮤테이션 필수)
+    def test_regeneration_stores_nothing_without_an_answer(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=tuple(range(21, 31)),
+            answers=[],  # UNANSWERED
+        )
+
+        assert _writes(calls) == []
+        assert "응답" in event["text"]
+
+    # AC-PRESETGUARD-013 — 표적이 모호하면 묻고, 미상이면 저장하지 않는다
+    def test_no_stored_span_refuses_without_writing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=(1, 2, 3),
+        )
+
+        assert _writes(calls) == []
+        assert "찾지 못" in event["text"]
+
+    def test_two_candidate_spans_ask_which_one(self, tmp_path):
+        occupied = tuple(range(1, 11)) + tuple(range(21, 31))
+        _event, calls, chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=occupied,
+            answers=["21", "덮어쓰기 진행"],
+        )
+
+        assert any("어느 구간" in ask.prompt for ask in chan.asked)
+        assert "Store Preset 2.21" in _all_commands(calls)
+
+    # F2 — 구간 선택 답은 후보 목록과 대조된다
+    #
+    # "2번째"(두 번째라는 뜻)가 숫자 2로 파싱돼 2.2~2.11을 덮어쓰면 원래 구간이
+    # 한 칸 밀리고, 2.1을 참조하던 큐만 옛 좌표에 남는다. 그 상태에서 회신은
+    # "같은 자리에 다시 저장"이라고 말한다. "1번 말고 21번"은 첫 숫자만 집으면
+    # 1을 고르는데, 1도 후보라 범위 검사만으로는 걸러지지 않는다.
+    @pytest.mark.parametrize("answer", ["2번째", "1번 말고 21번", "두 번째", "아무거나"])
+    def test_an_answer_that_does_not_name_one_candidate_stores_nothing(self, tmp_path, answer):
+        occupied = tuple(range(1, 11)) + tuple(range(21, 31))
+        # 덮어쓰기 카드까지 **승낙**을 미리 넣어 둔다. 넣지 않으면 구간을 잘못
+        # 고르더라도 두 번째 카드가 무응답으로 막아서 테스트가 통과해 버린다 —
+        # 구간 선택이 아니라 fail-closed를 검증하는 꼴이 된다.
+        event, calls, _chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=occupied,
+            answers=[answer, "덮어쓰기 진행"],
+        )
+
+        assert _writes(calls) == [], answer
+        assert "Store Preset 2.2" not in _all_commands(calls), answer
+        assert "저장하지 않" in event["text"], answer
+
+    def test_the_span_card_accepts_the_offered_label_verbatim(self, tmp_path):
+        # 비공허성 짝 — 버튼을 그대로 누른 답(라벨에 숫자가 여럿 들어 있다)은
+        # 모호하다고 거절되면 안 된다.
+        occupied = tuple(range(1, 11)) + tuple(range(21, 31))
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=occupied,
+            answers=["21 (2.21~2.30)", "덮어쓰기 진행"],
+        )
+
+        assert "Store Preset 2.21" in _all_commands(calls)
+
+    # F4 — 번호를 지목해도 재생성은 재생성이다
+    def test_a_numbered_regeneration_sentence_stays_in_the_regeneration_path(self, tmp_path):
+        # 풀 미상에서 신규 저장은 진행하고(REQ-004) 재생성은 거부한다(AC-013③).
+        # 번호가 있다고 신규 저장으로 넘기면 이 문장이 카드 한 장 없이
+        # 2.21~2.30을 덮어쓴다 — 이 SPEC이 없애려던 바로 그 형상이다.
+        event, calls, chan = self._run(
+            tmp_path,
+            "21번부터 기본 포지션 다시 잡아줘",
+            pool_error=True,
+        )
+
+        assert _writes(calls) == []
+        assert chan.asked == []
+        assert "저장하지 않" in event["text"]
+
+    def test_a_numbered_regeneration_sentence_targets_the_named_span(self, tmp_path):
+        occupied = tuple(range(1, 11)) + tuple(range(21, 31))
+        _event, calls, chan = self._run(
+            tmp_path,
+            "21번부터 기본 포지션 다시 잡아줘",
+            pool=occupied,
+            answers=["덮어쓰기 진행"],
+        )
+
+        assert "Store Preset 2.21" in _all_commands(calls)
+        # 후보가 둘이지만 번호를 지목했으므로 구간을 되묻지 않는다.
+        assert all("어느 구간" not in ask.prompt for ask in chan.asked)
+
+    def test_a_named_span_that_is_not_a_stored_run_stores_nothing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "41번부터 기본 포지션 다시 잡아줘",
+            pool=tuple(range(21, 31)),
+        )
+
+        assert _writes(calls) == []
+        assert "저장하지 않" in event["text"]
+
+    # F5 — '다시'가 다른 동사에 붙은 문장은 재생성이 아니다
+    def test_an_adverbial_dasi_does_not_route_to_regeneration(self, tmp_path):
+        # "끝나면 다시 알려줘"의 '다시'는 알려줘를 꾸민다. 이 문장이 재생성으로
+        # 가면 저장 요청이 "먼저 저장하세요"로 되돌아와 영원히 같은 답이 나온다.
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 10개 저장해줘, 끝나면 다시 알려줘",
+            pool=(),
+            answers=["1"],
+        )
+
+        assert "Store Preset 2.1" in _all_commands(calls)
+
+    def test_an_adverbial_dasi_never_offers_to_overwrite_an_unmentioned_span(self, tmp_path):
+        # 풀에 10칸 구간이 있으면, 옛 정규식은 사용자가 언급한 적 없는 21~30을
+        # "다시 잡으면 … 덮어씁니다"로 제안했다.
+        _event, _calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 10개 저장해줘, 끝나면 다시 알려줘",
+            pool=tuple(range(21, 31)),
+            answers=["1"],
+        )
+
+        assert not any("다시 잡으면" in ask.prompt for ask in chan.asked)
+
+    # R4 — '저장'은 신규 저장의 동사다. 재생성 어휘에 넣으면 안 된다.
+    def test_dasi_jeojang_routes_to_the_store_path_on_an_empty_pool(self, tmp_path):
+        # 옛 어휘에서는 이 문장이 재생성으로 끌려가, 저장해달라는 요청에
+        # "먼저 '기본 포지션 10개 저장'을 실행해 주세요"라고 답했다 — 같은 문장을
+        # 다시 쳐도 영원히 같은 답이 나오는 자기모순이다.
+        event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋 21번부터 다시 저장해줘",
+            pool=(),
+        )
+
+        assert "Store Preset 2.21" in _all_commands(calls)
+        assert "다시 잡을 자리가 없습니다" not in event["text"]
+
+    def test_dasi_jeojang_is_not_refused_after_a_partial_first_store(self, tmp_path):
+        # 첫 저장이 일부만 착지하면(게이트 보류·부분 거절) 그 구간은 정의상
+        # 10칸 연속이 아니다. 재생성이 이 문장을 삼키면 가장 자연스러운 재시도가
+        # **영구히** 거부된다 — 하필 재시도가 가장 필요한 상황에서.
+        event, calls, chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋 21번부터 다시 저장해줘",
+            pool=tuple(range(21, 26)),  # 21~25만 착지한 상태
+            readback=tuple(range(21, 31)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        assert len(_writes(calls)) == 10
+        assert "Store Preset 2.21" in _all_commands(calls)
+        # 거부가 아니라 덮어쓰기 확인으로 간다 — 21~25는 실제로 덮어써지므로.
+        assert any("덮어씁니다" in ask.prompt for ask in chan.asked)
+        assert "자리가 없습니다" not in event["text"]
+
+    # R3 — 같은 어휘에 부사 하나가 껴도 재생성이다
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "기본 포지션 다시 한번 잡아줘",
+            "기본 포지션 다시 좀 잡아줘",
+            "지금 배치로 기본 포지션 다시 한번 잡아줘",
+        ],
+    )
+    def test_an_adverb_between_dasi_and_the_verb_stays_regeneration(self, tmp_path, text):
+        # `\S`가 공백을 넘지 못해 이 문장들이 저장 경로로 샜다. 그러면 **새 구간**에
+        # 저장되는데 운영자는 기존 프리셋이 갱신됐다고 믿는다 — 큐는 옛 좌표를
+        # 계속 가리키므로, 조용히 틀리는 종류의 실패다.
+        _event, calls, chan = self._run(
+            tmp_path,
+            text,
+            pool=tuple(range(21, 31)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        assert "Store Preset 2.21" in _all_commands(calls), text
+        # 새 시작 번호를 묻지 않는다 = 기존 구간을 제자리 갱신했다.
+        assert all("몇 번부터" not in ask.prompt for ask in chan.asked), text
+
+    def test_an_unreadable_pool_refuses_instead_of_guessing_a_span(self, tmp_path):
+        # 신규 저장(REQ-004, 진행)과 **반대**다 — 재생성은 표적의 존재를 전제한다.
+        event, calls, _chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool_error=True,
+        )
+
+        assert _writes(calls) == []
+        assert "읽지 못" in event["text"]
+
+
+class TestFxPositionPresetRegeneration:
+    """FX 재생성 — '지금 배치로 이펙트 포지션 다시 잡아줘'가 저장된 FX 구간을
+    **제자리** 갱신한다. 몸통은 `_regenerate_position_preset_sequence`로 BASIC
+    재생성과 공유되므로(풀 미상 거부·구간 탐색·덮어쓰기 카드·되읽기), 여기서는
+    라우팅(상호 배타)·제자리 갱신·FX 고유 문면을 겨눈다.
+    """
+
+    def _run(self, tmp_path, text, *, answers=(), **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, **rig)
+        chan = _AnsweringChannel(answers)
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # 제자리 갱신 — 저장된 41~50 구간에 **같은 번호**로 Store 10건. 새 시작
+    # 번호를 묻지 않는다: 새 자리에 저장하면 프리셋 참조를 든 이펙트 시퀀스가
+    # 옛 좌표를 계속 가리킨다.
+    def test_fx_regeneration_overwrites_the_stored_span_in_place(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "지금 배치로 이펙트 포지션 다시 잡아줘",
+            pool=tuple(range(41, 51)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        commands = _all_commands(calls)
+        for offset, label in enumerate(FX_POSITION_SEQUENCE):
+            assert f"Store Preset 2.{41 + offset}" in commands
+            assert f"Label Preset 2.{41 + offset} '{label}'" in commands
+        assert len(_writes(calls)) == 10
+        assert all("몇 번부터" not in ask.prompt for ask in chan.asked)
+
+    # 가족 필터 실측 재현 2026-08-16 — 21~50이 전부 저장된 풀(연속 30칸)에서
+    # ready 후보는 21·31·41이지만, FX 재생성은 첫 슬롯 라벨이 'Sweep L'인
+    # 41만 겨눠야 한다. 필터가 없으면 카드 첫 옵션(21)이 선택될 때 BASIC
+    # 프리셋 10개가 FX 값으로 덮인다 — 실제로 일어났던 사고다.
+    _FAMILY_NAMES = {
+        21: "Home",
+        31: "Home#2",
+        41: "Sweep L",
+    }
+
+    def test_fx_regeneration_skips_basic_spans_by_first_slot_label(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "지금 배치로 이펙트 포지션 다시 잡아줘",
+            pool=tuple(range(21, 51)),
+            names=self._FAMILY_NAMES,
+            answers=["덮어쓰기 진행"],
+        )
+
+        commands = _all_commands(calls)
+        # 유일한 FX 가족 후보(41)라 구간 선택 카드 없이 41~50만 갱신한다.
+        assert all("어느 구간" not in ask.prompt for ask in chan.asked)
+        for offset in range(10):
+            assert f"Store Preset 2.{41 + offset}" in commands
+        assert not any(cmd.startswith("Store Preset 2.2") for cmd in commands)
+        assert not any(cmd.startswith("Store Preset 2.3") for cmd in commands)
+
+    def test_a_named_basic_span_is_refused_for_fx_regeneration(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "21번부터 이펙트 포지션 다시 잡아줘",
+            pool=tuple(range(21, 51)),
+            names=self._FAMILY_NAMES,
+        )
+
+        assert _writes(calls) == []
+        assert "구간이 아닙니다" in event["text"]
+
+    def test_basic_regeneration_offers_only_home_spans(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=tuple(range(21, 51)),
+            names=self._FAMILY_NAMES,
+            answers=["21 (2.21~2.30)", "덮어쓰기 진행"],
+        )
+
+        span_cards = [ask for ask in chan.asked if "어느 구간" in ask.prompt]
+        assert len(span_cards) == 1
+        labels = [option.label for option in span_cards[0].options]
+        assert any(label.startswith("21 ") for label in labels)
+        assert any(label.startswith("31 ") for label in labels)
+        assert not any(label.startswith("41 ") for label in labels)
+        commands = _all_commands(calls)
+        assert "Store Preset 2.21" in commands
+
+    def test_unnamed_pool_children_keep_the_old_run_start_behaviour(self, tmp_path):
+        # 이름 없는 페이로드(구형)는 판별 불가 — 런 시작(연속 덩어리의 첫
+        # 슬롯)만 후보로 남는 종전 동작이 보존된다. 21~50 연속 풀의 런 시작은
+        # 21 하나라 카드 없이 21이 선택된다 — 바로 이 형상이 이름이 필요한
+        # 이유다(실측 사고의 재현이자, 이름이 오면 필터가 이를 막는다).
+        _event, calls, chan = self._run(
+            tmp_path,
+            "지금 배치로 이펙트 포지션 다시 잡아줘",
+            pool=tuple(range(21, 51)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        assert all("어느 구간" not in ask.prompt for ask in chan.asked)
+        assert "Store Preset 2.21" in _all_commands(calls)
+
+    # 라우팅 — FX 재생성 어휘 변형이 전부 재생성으로 간다. 신규 저장으로 샜다면
+    # 시작 번호 카드("몇 번부터")가 떴을 것이다.
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "이펙트 포지션 다시 잡아줘",
+            "지금 배치로 효과 포지션 다시 잡아줘",
+            "fx 포지션 재생성해줘",
+            "이펙트 포지션 다시 한번 잡아줘",
+        ],
+    )
+    def test_fx_regeneration_vocabulary_routes_to_regeneration(self, tmp_path, text):
+        _event, calls, chan = self._run(
+            tmp_path,
+            text,
+            pool=tuple(range(41, 51)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        assert "Store Preset 2.41" in _all_commands(calls), text
+        assert all("몇 번부터" not in ask.prompt for ask in chan.asked), text
+
+    # 풀 미상 — 표적 구간의 존재를 확인하지 못하면 저장하지 않는다(unknown ≠
+    # empty; 신규 저장의 '진행'과 반대). 번호를 지목해도 재생성은 재생성이다.
+    def test_an_unreadable_pool_refuses_fx_regeneration_without_writing(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "41번부터 이펙트 포지션 다시 잡아줘",
+            pool_error=True,
+        )
+
+        assert _writes(calls) == []
+        assert chan.asked == []
+        assert "저장하지 않" in event["text"]
+
+    def test_no_stored_span_refuses_and_names_the_fx_store_step(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "지금 배치로 이펙트 포지션 다시 잡아줘",
+            pool=(1, 2, 3),
+        )
+
+        assert _writes(calls) == []
+        assert "FX 포지션 10개 저장" in event["text"]
+
+    def test_a_named_fx_span_that_is_not_a_stored_run_stores_nothing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "21번부터 이펙트 포지션 다시 잡아줘",
+            pool=tuple(range(41, 51)),
+        )
+
+        assert _writes(calls) == []
+        assert "저장하지 않" in event["text"]
+
+    # fail-closed — 덮어쓰기 카드 무응답이면 쓰기 0건 (BASIC과 같은 공용 카드).
+    def test_fx_regeneration_stores_nothing_without_an_answer(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "지금 배치로 이펙트 포지션 다시 잡아줘",
+            pool=tuple(range(41, 51)),
+            answers=[],  # UNANSWERED
+        )
+
+        assert _writes(calls) == []
+        assert "응답" in event["text"]
+
+    # 상호 배타 — '기본' 문장은 BASIC 룩만, '이펙트' 문장은 FX 룩만 만든다.
+    # 같은 21~30 구간을 겨눠도 어휘가 빌더를 정한다.
+    def test_the_two_regeneration_vocabularies_never_cross_route(self, tmp_path):
+        _e1, basic_calls, _c1 = self._run(
+            tmp_path,
+            "지금 배치로 기본 포지션 다시 잡아줘",
+            pool=tuple(range(21, 31)),
+            answers=["덮어쓰기 진행"],
+        )
+        basic_commands = _all_commands(basic_calls)
+        assert f"Label Preset 2.21 '{BASIC_POSITION_SEQUENCE[0]}'" in basic_commands
+        assert not any(f"'{FX_POSITION_SEQUENCE[0]}'" in cmd for cmd in basic_commands)
+
+        _e2, fx_calls, _c2 = self._run(
+            tmp_path,
+            "지금 배치로 이펙트 포지션 다시 잡아줘",
+            pool=tuple(range(21, 31)),
+            answers=["덮어쓰기 진행"],
+        )
+        fx_commands = _all_commands(fx_calls)
+        assert f"Label Preset 2.21 '{FX_POSITION_SEQUENCE[0]}'" in fx_commands
+        assert not any(f"'{BASIC_POSITION_SEQUENCE[0]}'" in cmd for cmd in fx_commands)
+
+    # F5의 FX 판 — '다시'가 다른 동사에 붙은 FX 저장 문장은 재생성이 아니다.
+    # 재생성이 삼키면 빈 풀에서 "먼저 저장하세요"로 되돌아와 영원히 같은 답이 나온다.
+    def test_an_adverbial_dasi_keeps_the_fx_store_path(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "이펙트 포지션 10개 저장해줘, 끝나면 다시 알려줘",
+            pool=(),
+            answers=["41"],
+        )
+
+        assert "Store Preset 2.41" in _all_commands(calls)
+        assert "다시 잡을 자리가 없습니다" not in event["text"]
+
+
+class TestFxPositionPresets:
+    """FX 포지션 프리셋 — 페이저 이펙트의 골격 10종을 BASIC과 **동일한** 안전
+    장치(점유 가드 → 덮어쓰기 카드 → 룩별 번들 → 되읽기 산술)로 저장한다.
+
+    흐름 자체는 `_store_position_preset_sequence`로 BASIC과 공유되므로, 여기서는
+    라우팅(상호 배타)과 FX 고유 문면·라벨 순서를 겨눈다.
+    """
+
+    def _run(self, tmp_path, text, *, answers=(), **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, **rig)
+        chan = _AnsweringChannel(answers)
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # 라우팅 — FX 문장은 FX 흐름으로 들어가 41번부터 열 개를 저장한다. 재생성
+    # 핸들러가 앞에서 가로챘다면 (풀에 10칸 연속 구간이 없으므로) 쓰기 0건으로
+    # 거부됐을 것이다 — 열 개의 Store가 그 오인 매칭의 부재를 함께 증언한다.
+    def test_an_fx_request_stores_ten_presets_from_the_named_number(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "이펙트 포지션 프리셋을 41번부터 저장해줘",
+            pool=(1, 2, 3),
+        )
+
+        assert chan.asked == []
+        assert len(_writes(calls)) == 10
+        commands = _all_commands(calls)
+        for offset, label in enumerate(FX_POSITION_SEQUENCE):
+            assert f"Store Preset 2.{41 + offset}" in commands
+            assert f"Label Preset 2.{41 + offset} '{label}'" in commands
+
+    # 라우팅 회귀 — '기본 포지션' 문장은 여전히 BASIC 시퀀스로 간다.
+    def test_a_basic_request_still_lands_in_the_basic_flow(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "기본 포지션 프리셋을 21번부터 저장해줘",
+            pool=(1, 2, 3),
+        )
+
+        commands = _all_commands(calls)
+        assert "Label Preset 2.21 'Home'" in commands
+        assert not any("'Sweep L'" in command for command in commands)
+
+    # 라우팅 — 저장 동사 없는 이펙트 **적용** 요청은 어느 프리셋 흐름에도 안 간다.
+    def test_an_effect_application_request_enters_neither_flow(self, tmp_path):
+        provider = ScriptedProvider([_final("이펙트 적용을 확인하겠습니다")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls)
+        chan = _AnsweringChannel([])
+        session._question_channel = chan
+
+        session.run_instruction("무빙 이펙트 적용해줘")
+
+        # 모델까지 내려갔다 — 프리셋 저장 흐름의 카드도 쓰기도 없다.
+        assert len(provider.calls) == 1
+        assert chan.asked == []
+        assert not any("Store Preset" in command for command in _all_commands(calls))
+
+    # 명시 번호가 점유 슬롯과 겹치면 카드가 뜨고, '취소'는 쓰기 0건이다.
+    def test_a_collision_asks_the_card_and_cancel_writes_nothing(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "이펙트 포지션 프리셋을 41번부터 저장해줘",
+            pool=(41, 42, 47),
+            answers=["취소"],
+        )
+
+        assert _writes(calls) == []
+        assert len(chan.asked) == 1
+        assert "덮어씁니다" in chan.asked[0].prompt
+        assert "2.41" in chan.asked[0].prompt
+        assert "승인" in event["text"] or "저장하지 않" in event["text"]
+
+    # 승낙 시 룩별 독립 번들이 FX_POSITION_SEQUENCE 순서·라벨 그대로 나간다.
+    def test_consent_stores_each_look_as_its_own_bundle_in_sequence_order(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path,
+            "이펙트 포지션 프리셋을 41번부터 저장해줘",
+            pool=(41, 42, 47),
+            readback=tuple(range(41, 51)),
+            answers=["덮어쓰기 진행"],
+        )
+
+        writes = _writes(calls)
+        assert len(writes) == 10
+        for offset, (call, label) in enumerate(zip(writes, FX_POSITION_SEQUENCE, strict=True)):
+            commands = call.arguments["commands"]
+            assert commands[-3] == f"Store Preset 2.{41 + offset}"
+            assert commands[-2] == f"Label Preset 2.{41 + offset} '{label}'"
+            assert commands[-1] == "ClearAll"
+
+    # 저장 후 되읽기 산술(착지/누락)이 회신 문면에 실린다.
+    def test_the_readback_carries_arithmetic_including_a_missing_slot(self, tmp_path):
+        verified, verified_calls, _c1 = self._run(
+            tmp_path,
+            "이펙트 포지션 프리셋을 41번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=tuple(range(41, 51)),
+        )
+        landed = tuple(n for n in range(41, 51) if n != 47)
+        partial, partial_calls, _c2 = self._run(
+            tmp_path,
+            "이펙트 포지션 프리셋을 41번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=landed,
+        )
+
+        assert len(_writes(verified_calls)) == 10
+        assert "기대 10개" in verified["text"]
+        assert "10개 확인" in verified["text"]
+        assert len(_writes(partial_calls)) == 10
+        assert "미확인" in partial["text"]
+        assert "2.47" in partial["text"]
+
+    # 번호 미지정이면 시작 번호 질문 카드가 정확히 한 번 뜬다.
+    def test_no_number_asks_the_start_question_once(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "이펙트 포지션 프리셋 저장해줘",
+            pool=(1, 2, 3),
+            answers=[],  # UNANSWERED
+        )
+
+        assert len(chan.asked) == 1
+        assert "몇 번부터" in chan.asked[0].prompt
+        assert "FX 포지션" in chan.asked[0].prompt
+        assert _writes(calls) == []
         assert "시작 프리셋 번호" in event["text"]
 
 
@@ -1883,6 +4740,13 @@ class TestSongDesignInterviewSession:
             "전환 방식은 어떻게 갈까요? 컷으로 딱 끊을지, 페이드로 이어갈지 정해요.",
         ]
         assert "전곡 리뷰 번들" in channel.asked[5].prompt
+        # T12(d) — the '후렴' section's phaser proposal (Wave CM) is visible
+        # in the pre-approval review sheet BEFORE any console write, plus
+        # the [ASSUMPTION] caveat that recall/reference persistence is not
+        # mechanically verifiable (T11 프로브 §1/§4).
+        assert "페이저 제안: Wave CM" in channel.asked[5].prompt
+        assert "ASSUMPTION" in channel.asked[5].prompt
+        assert "콘솔 화면에서 직접 확인" in channel.asked[5].prompt
         for q in channel.asked[:5]:
             assert len(q.options) == 3  # R1c: 제안 3개 + 자유 입력(무조건 제공)
         writes = [call for call in calls if call.name == "run_commands"]
@@ -2027,6 +4891,13 @@ class TestSongDesignInterviewSession:
             "DataPool/Timecodes/7",
             "DataPool/Sequences/110",
             "DataPool/Sequences/110",
+            # T12: '후렴' section matches the phaser mapping table (Wave CM) —
+            # ONE pool-resolution probe inside `_reviewed_song_commands`
+            # (`_phaser_slots_for_bundle`, deduplicated per label). This
+            # registry has no PresetPools fixture, so resolution fails and
+            # the cue proceeds WITHOUT a phaser (contract #4) — the
+            # `run_commands` output below is byte-identical to pre-T12.
+            "DataPool/PresetPools",
             "DataPool/Sequences/110",
             "DataPool/Timecodes/7",
         ]
@@ -2040,6 +4911,11 @@ class TestSongDesignInterviewSession:
         ]
         assert "리뷰 번들 1건을 원자 실행" in event["text"]
         assert "readback 검증 완료" in event["text"]
+        # T12(c) — the 'Wave CM' pool-resolution failure above (this
+        # registry has no PresetPools fixture) surfaces its reason in the
+        # final reply — the song design was not voided by it (contract #4).
+        assert "페이저 미배정" in event["text"]
+        assert "Wave CM" in event["text"]
         timelines = [event["timeline"] for event in sent if event["type"] == "song_timeline"]
         assert [timeline["lifecycle"] for timeline in timelines] == [
             "pending_approval",
@@ -2051,6 +4927,87 @@ class TestSongDesignInterviewSession:
         assert all(s["plan_status"] == "draft" for s in timelines[0]["sections"])
         assert timelines[-1]["console_stored"] is True
         assert all(s["plan_status"] == "verified" for s in timelines[-1]["sections"])
+
+    # T12(b) — a brief whose sections carry NO phaser-mapping role words
+    # (no 드롭/후렴/브리지/피날레/벌스 vocabulary) must never probe
+    # PresetPools at all: read traffic for a phaser-irrelevant song stays
+    # byte-identical to pre-T12 (coordinator condition b).
+    def test_a_phaser_irrelevant_brief_never_probes_presetpools(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        channel = self._Channel(
+            [
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "템포 맞춤 (BPM 기준)",
+                "승인",
+            ]
+        )
+        session._question_channel = channel
+        neutral_brief = (
+            "디자인 큐 시트, 시퀀스 110, 프리셋 21번부터, 타임코드 7: "
+            "장면1 0:00 잔잔한 발라드, 장면2 0:40 밝은 팝"
+        )
+
+        session.run_instruction(neutral_brief)
+
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert len(writes) == 1
+        readbacks = [call.arguments["path"] for call in calls if call.name == "query_state"]
+        assert "DataPool/PresetPools" not in readbacks
+        assert readbacks == [
+            "DataPool/Sequences/110",
+            "DataPool/Groups",
+            "DataPool/Timecodes/7",
+            "DataPool/Sequences/110",
+            "DataPool/Sequences/110",
+            "DataPool/Sequences/110",
+            "DataPool/Timecodes/7",
+        ]
+        assert not any(
+            "At Preset 4." in command or "At Preset 21." in command
+            for command in writes[0].arguments["commands"]
+        )
+
+    # T12(a)+(b) integration — when the live slot lookup SUCCEEDS, the
+    # recall line lands in the real ``run_commands`` bundle exactly once,
+    # and the label is resolved exactly once (batched, not per-cue).
+    def test_a_resolved_phaser_lands_in_the_final_command_bundle(self, tmp_path):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = self._registry(calls)
+        resolve_calls: list[str] = []
+
+        def _stub_resolve(label):
+            resolve_calls.append(label)
+            return (4, 35) if label == "Wave CM" else None
+
+        session._phaser_slot_by_label = _stub_resolve
+        channel = self._Channel(
+            [
+                "우주",
+                "우주 색 조합",
+                "Ring In",
+                "우주 컨셉 우선 배치",
+                "템포 맞춤 (BPM 기준)",
+                "승인",
+            ]
+        )
+        session._question_channel = channel
+
+        event = session.run_instruction(self._FULL)
+
+        writes = [call for call in calls if call.name == "run_commands"]
+        assert len(writes) == 1
+        commands = writes[0].arguments["commands"]
+        assert "Fixture 20 + 26 ; At Preset 4.35" in commands
+        assert resolve_calls == ["Wave CM"]  # 라벨당 정확히 한 번 — 중복 조회 없음
+        assert "페이저 미배정" not in event["text"]
 
     _PLAIN_BRIEF = (
         "곡은 약 1분 40초의 밝은 팝 무대야.\n"
@@ -3111,6 +6068,10 @@ class TestSongDesignInterviewSession:
             "DataPool/Timecodes/7",
             "DataPool/Sequences/110",
             "DataPool/Sequences/110",
+            # T12: same one-time phaser pool-resolution probe as the sibling
+            # test above ('후렴' → Wave CM, resolution fails in this registry
+            # so the cue proceeds without a phaser — commands unchanged).
+            "DataPool/PresetPools",
             "DataPool/Sequences/110",
             "DataPool/Timecodes/7",
         ]
@@ -3912,3 +6873,824 @@ class TestStatusSnapshot:
         assert snapshot["health"] == "online"
         assert snapshot["live_lock"] is False
         assert snapshot["executions_blocked"] is False
+
+
+class TestPositionFxSequence:
+    """포지션 이펙트 시퀀스 빌더 — 저장된 FX 포지션 프리셋(2.N~2.N+9)을 실제로
+    소비하는 시퀀스를 만든다. 명령열 자체는 ``position_fx_commands``가 만들므로
+    여기서는 (1) 효과어 5종 라우팅과 산출 명령열의 일치, (2) 번호 두 개의 출처
+    (문장/카드), (3) fail-closed(미답·미해석 시 쓰기 0건), (4) 점유 시퀀스 확인
+    카드, (5) 이펙트 **적용** 문장 비탈취를 겨눈다."""
+
+    _FIDS = [20, 26]  # `_PresetPoolRegistry._FIXTURES`의 fid들
+
+    def _run(self, tmp_path, text, *, answers=(), **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls, **rig)
+        chan = _AnsweringChannel(answers)
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    def _expected(self, effect, label, *, start=41, sequence=201):
+        return position_fx_commands(
+            effect,
+            fids=self._FIDS,
+            fx_preset_start=start,
+            sequence_no=sequence,
+            label=label,
+        )
+
+    # (1)+(2 문장) — 어휘 5종이 각자 효과로 라우팅되고, 두 번호를 모두 문장에서
+    # 읽으면 카드 없이 run_commands 1번들이 position_fx_commands 산출 그대로 나간다.
+    @pytest.mark.parametrize(
+        ("text", "effect", "label"),
+        [
+            ("좌우 스윕 시퀀스 201 만들어줘, FX 프리셋 41번부터", "sweep", "좌우 스윕"),
+            (
+                "플라이아웃 포지션 이펙트 시퀀스 201 생성해줘, 프리셋 41번부터",
+                "flyout",
+                "플라이아웃",
+            ),
+            ("원을 그리는 포지션 이펙트 시퀀스 201 걸어줘, 41번부터", "circle", "서클"),
+            ("발리후 시퀀스 201 만들어줘, FX 프리셋 41번부터", "ballyhoo", "발리후"),
+            ("물결 시퀀스 201 저장해줘, FX 프리셋 41번부터", "wave", "웨이브"),
+        ],
+    )
+    def test_each_effect_word_builds_the_exact_bundle(self, tmp_path, text, effect, label):
+        event, calls, chan = self._run(tmp_path, text)
+
+        # 저장 번들이 전건 executed_ok로 끝나면 실행기 제안 카드가 **한 장**
+        # 따라온다 — 리그의 Page 1은 비어 있으므로 대역 최소인 101을 제안하고,
+        # 미답이면 Assign 없이 미할당으로 끝난다.
+        assert len(chan.asked) == 1
+        assert "실행기 101" in chan.asked[0].prompt
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert tuple(writes[0].arguments["commands"]) == self._expected(effect, label)
+        assert "시퀀스 201" in event["text"]
+        assert "2.41~2.50" in event["text"]
+        assert "실행기 미할당" in event["text"]
+
+    # (2 카드) — 번호가 둘 다 없으면 카드가 정확히 두 장(프리셋 시작 → 시퀀스)
+    # 뜨고, 답이 명령열에 그대로 반영된다. 저장이 성공하므로 실행기 제안 카드가
+    # 세 번째로 따라온다(미답 → Assign 0건).
+    def test_missing_numbers_are_asked_one_card_each(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path, "좌우 스윕 시퀀스 만들어줘", answers=["41", "201"]
+        )
+
+        assert len(chan.asked) == 3
+        assert "몇 번부터" in chan.asked[0].prompt
+        assert "몇 번 시퀀스" in chan.asked[1].prompt
+        assert "걸까요" in chan.asked[2].prompt
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert tuple(writes[0].arguments["commands"]) == self._expected("sweep", "좌우 스윕")
+
+    # (3) — 첫 카드 미답이면 쓰기 0건으로 거부한다 (fail-closed).
+    def test_an_unanswered_start_card_writes_nothing(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "좌우 스윕 시퀀스 만들어줘",
+            answers=[],  # UNANSWERED
+        )
+
+        assert len(chan.asked) == 1
+        assert _writes(calls) == []
+        assert "FX 프리셋 시작 번호" in event["text"]
+
+    def test_an_unanswered_sequence_card_writes_nothing(self, tmp_path):
+        event, calls, chan = self._run(tmp_path, "좌우 스윕 시퀀스 만들어줘", answers=["41"])
+
+        assert len(chan.asked) == 2
+        assert _writes(calls) == []
+        assert "시퀀스 번호" in event["text"]
+
+    def test_a_numberless_answer_is_refused_with_the_format_example(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path, "좌우 스윕 시퀀스 만들어줘", answers=["모르겠는데"]
+        )
+
+        assert _writes(calls) == []
+        assert "예: " in event["text"]
+
+    # (4) — 점유된 시퀀스는 확인 카드를 거친다: 취소는 쓰기 0건, 승낙은 진행.
+    def test_an_occupied_sequence_asks_and_cancel_writes_nothing(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "좌우 스윕 시퀀스 201 만들어줘, FX 프리셋 41번부터",
+            child_count=3,  # query_state가 node를 돌려줘 점유로 판독된다
+            answers=["취소"],
+        )
+
+        assert _writes(calls) == []
+        assert len(chan.asked) == 1
+        assert "기존 데이터" in chan.asked[0].prompt
+        assert "저장하지 않" in event["text"]
+
+    def test_an_occupied_sequence_proceeds_on_consent(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "좌우 스윕 시퀀스 201 만들어줘, FX 프리셋 41번부터",
+            child_count=3,
+            answers=["진행"],
+        )
+
+        assert len(chan.asked) == 1
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert tuple(writes[0].arguments["commands"]) == self._expected("sweep", "좌우 스윕")
+
+    # (5) — 이펙트 **적용** 문장은 효과어가 있어도(웨이브) 시퀀스/포지션 이펙트
+    # 명사와 생성 동사가 없으므로 이 빌더를 지나쳐 기존 경로(모델)로 간다.
+    @pytest.mark.parametrize("text", ["무빙 이펙트 적용해줘", "웨이브 이펙트 적용해줘"])
+    def test_effect_application_sentences_fall_through_to_the_model(self, tmp_path, text):
+        provider = ScriptedProvider([_final("이펙트 적용을 확인하겠습니다")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(calls)
+        chan = _AnsweringChannel([])
+        session._question_channel = chan
+
+        session.run_instruction(text)
+
+        assert len(provider.calls) == 1
+        assert chan.asked == []
+        assert not any("Store Sequence" in cmd for cmd in _all_commands(calls))
+
+    # 라우팅 회귀 — 프리셋 **저장** 문장(효과어 없음)은 여전히 FX 프리셋 저장
+    # 흐름으로 가 10번들을 쓴다. 이 빌더가 앞에서 가로챘다면 1번들이었을 것이다.
+    def test_a_preset_store_sentence_is_not_captured_by_the_builder(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path, "이펙트 포지션 프리셋을 41번부터 저장해줘", pool=(1, 2, 3)
+        )
+
+        assert chan.asked == []
+        assert len(_writes(calls)) == 10
+        assert not any("Store Sequence" in cmd for cmd in _all_commands(calls))
+
+
+class _ExecutorPageRegistry(_PresetPoolRegistry):
+    """``DataPool/Pages/1`` 판독만 분리 제어하는 리그 — 실행기 제안 흐름 전용.
+
+    베이스 리그는 모든 ``query_state``에 같은 페이로드를 돌려주므로 "제안 전
+    스캔"과 "Assign 후 되읽기"를 구별해 겨눌 수 없다. 여기서는 Pages/1 경로만
+    가로채고, Assign write 경계 전에는 ``page``, 후에는 ``page_after``를
+    돌려준다 — 값은 실행기 번호가 아니라 응답기의 ``i``(= 실행기 − 100)다.
+    """
+
+    def __init__(
+        self,
+        calls,
+        *,
+        page=(),
+        page_after=None,
+        page_error=False,
+        page_after_error=False,
+        page_truncated=False,
+        page_child_count=None,
+        **kwargs,
+    ):
+        super().__init__(calls, **kwargs)
+        self.page = tuple(page)
+        self.page_after = self.page if page_after is None else tuple(page_after)
+        self.page_error = page_error
+        self.page_after_error = page_after_error
+        self.page_truncated = page_truncated
+        self.page_child_count = page_child_count
+        self.assigned = False
+
+    def dispatch(self, call: ToolCall) -> ToolExecution:
+        if call.name == "query_state" and str(call.arguments.get("path", "")).endswith("Pages/1"):
+            self.calls.append(call)
+            if self.page_error or (self.assigned and self.page_after_error):
+                return ToolExecution(
+                    ToolResult(tool_call_id=call.id, name=call.name, content="", is_error=True)
+                )
+            slots = self.page_after if self.assigned else self.page
+            payload = {"children": [{"i": n} for n in slots]}
+            if self.page_truncated:
+                payload["truncated"] = True
+            if self.page_child_count is not None:
+                payload["node"] = {"childCount": self.page_child_count}
+            return ToolExecution(
+                ToolResult(tool_call_id=call.id, name=call.name, content=json.dumps(payload))
+            )
+        if call.name == "run_commands" and any(
+            "Assign Sequence" in cmd for cmd in call.arguments.get("commands", ())
+        ):
+            self.assigned = True
+        return super().dispatch(call)
+
+
+def _assign_writes(calls):
+    return [
+        call
+        for call in _writes(calls)
+        if any("Assign Sequence" in cmd for cmd in call.arguments["commands"])
+    ]
+
+
+class TestPositionFxExecutorOffer:
+    """시퀀스 저장 성공 직후의 실행기 할당 제안 — 2026-08-16 Executor 105
+    사고(점유 오판 위의 Assign이 기존 바인딩을 덮어씀)의 재발 방지 계약.
+
+    겨누는 것: (1) i−100 매핑과 대역(101~115) 최소 빈 번호 제안, (2) 승낙 시
+    Assign 정확히 1건 + Page 1 되읽기로만 착지 보고, (3) 건너뛰기/미답 시
+    Assign 0건, (4) 판독 불가(에러·truncated·childCount 불일치) 시 카드 0·
+    Assign 0·고지 문면, (5) 되읽기 불일치 시 '착지 미확인' 문면, (6) 저장
+    번들이 전건 executed_ok가 아니면 제안 자체가 없다.
+    """
+
+    _TEXT = "좌우 스윕 시퀀스 201 만들어줘, FX 프리셋 41번부터"
+
+    def _run(self, tmp_path, *, answers=(), **rig):
+        provider = ScriptedProvider([])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _ExecutorPageRegistry(calls, **rig)
+        chan = _AnsweringChannel(answers)
+        session._question_channel = chan
+        event = session.run_instruction(self._TEXT)
+        return event, calls, chan
+
+    # (1) — children i=1~6 점유(= Executor 101~106)면 대역의 최소 빈 번호인
+    # 107을 제안한다. i를 실행기 번호로 오독하면 101을 제안했을 것이다.
+    def test_occupied_children_map_i_plus_100_and_propose_the_lowest_free(self, tmp_path):
+        _event, _calls, chan = self._run(tmp_path, page=(1, 2, 3, 4, 5, 6), answers=[])
+
+        offer_cards = [q for q in chan.asked if "걸까요" in q.prompt]
+        assert len(offer_cards) == 1
+        assert "실행기 107" in offer_cards[0].prompt
+        assert "시퀀스 201" in offer_cards[0].prompt
+
+    # (1 보강) — i=4/5/6 점유는 Executor 104/105/106이므로 최소 빈 번호는
+    # 101이다. 105 사고의 반대 방향 오독(i에 100을 두 번 더함)을 잡는다.
+    def test_a_sparse_page_still_proposes_the_band_minimum(self, tmp_path):
+        _event, _calls, chan = self._run(tmp_path, page=(4, 5, 6), answers=[])
+
+        offer_cards = [q for q in chan.asked if "걸까요" in q.prompt]
+        assert len(offer_cards) == 1
+        assert "실행기 101" in offer_cards[0].prompt
+
+    # (2) — 승낙(옵션 라벨 '걸기')이면 검증된 문법의 Assign이 정확히 1건
+    # 나가고, 되읽기(page_after에 i=7 등장)로 착지를 확인해 산술과 함께
+    # 보고한다.
+    def test_consent_assigns_once_and_reports_the_verified_landing(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            page=(1, 2, 3, 4, 5, 6),
+            page_after=(1, 2, 3, 4, 5, 6, 7),
+            answers=["걸기"],
+        )
+
+        assigns = _assign_writes(calls)
+        assert len(assigns) == 1
+        assert assigns[0].arguments["commands"] == ["Assign Sequence 201 At Executor 107"]
+        # 스캔 1회 + 되읽기 1회 — 착지 판정은 되읽기에서만 나온다.
+        page_reads = [
+            c
+            for c in calls
+            if c.name == "query_state" and str(c.arguments.get("path", "")).endswith("Pages/1")
+        ]
+        assert len(page_reads) == 2
+        assert "실행기 107" in event["text"]
+        assert "착지를 확인" in event["text"]
+        assert "i=7" in event["text"]
+
+    # (2 보강) — 자유 입력 승낙어('네')도 승낙이다 (_preset_answer_intent).
+    def test_a_free_text_consent_word_also_assigns(self, tmp_path):
+        _event, calls, _chan = self._run(tmp_path, page=(), page_after=(1,), answers=["네"])
+
+        assert len(_assign_writes(calls)) == 1
+
+    # (3) — 건너뛰기·미답이면 Assign 0건, 저장 회신은 유지되고 미할당 한 줄이
+    # 붙는다.
+    @pytest.mark.parametrize("answers", [["건너뛰기"], []])
+    def test_skip_or_silence_never_assigns(self, tmp_path, answers):
+        event, calls, chan = self._run(tmp_path, page=(1,), answers=answers)
+
+        assert len(chan.asked) == 1
+        assert _assign_writes(calls) == []
+        assert "시퀀스 201" in event["text"]
+        assert "실행기 미할당" in event["text"]
+
+    # (4) — 판독 불가 세 갈래(에러 / truncated / childCount 불일치)는 전부
+    # 카드 0·Assign 0에 고지 문면으로 끝난다. 모름 위의 제안이 105 사고다.
+    @pytest.mark.parametrize(
+        "rig",
+        [
+            {"page_error": True},
+            {"page": (1, 2), "page_truncated": True},
+            {"page": (1, 2), "page_child_count": 30},
+        ],
+    )
+    def test_an_unreadable_page_offers_nothing_and_says_why(self, tmp_path, rig):
+        event, calls, chan = self._run(tmp_path, answers=["걸기"], **rig)
+
+        assert chan.asked == []
+        assert _assign_writes(calls) == []
+        assert "시퀀스 201" in event["text"]  # 저장 회신은 유지된다
+        assert "실행기 점유를 읽지 못해 할당을 제안하지 않았습니다" in event["text"]
+
+    # (4 보강) — 대역 전체(101~115)가 점유면 제안할 빈 실행기가 없다:
+    # 카드 없이 고지만 남긴다.
+    def test_a_full_band_offers_nothing(self, tmp_path):
+        event, calls, chan = self._run(tmp_path, page=tuple(range(1, 16)), answers=["걸기"])
+
+        assert chan.asked == []
+        assert _assign_writes(calls) == []
+        assert "모두 점유돼 있어 할당을 제안하지 않았습니다" in event["text"]
+
+    # (5) — Assign의 OK는 착지 증거가 아니다(2026-08-16 실측): 되읽기에서
+    # 표적이 나타나지 않으면 '착지 미확인'으로 보고한다.
+    def test_a_readback_miss_reports_the_unconfirmed_landing(self, tmp_path):
+        event, calls, _chan = self._run(tmp_path, page=(1,), page_after=(1,), answers=["걸기"])
+
+        assert len(_assign_writes(calls)) == 1
+        assert "착지 미확인" in event["text"]
+        assert "실행기 102" in event["text"]
+
+    # (5 보강) — 되읽기 자체가 죽어도(판독 불가) 착지 확인으로 위장하지 않고,
+    # Assign도 다시 쏘지 않는다.
+    def test_a_dead_readback_is_also_unconfirmed(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path, page=(1,), page_after_error=True, answers=["걸기"]
+        )
+
+        assert len(_assign_writes(calls)) == 1
+        assert "착지 미확인" in event["text"]
+
+    # (6) — 저장 번들이 전건 executed_ok가 아니면(게이트 proposal 등) 제안
+    # 자체가 없다: 존재가 확정되지 않은 시퀀스를 걸지 않는다.
+    def test_a_gated_store_bundle_suppresses_the_offer(self, tmp_path):
+        event, calls, chan = self._run(tmp_path, status="proposal", answers=["걸기"])
+
+        assert chan.asked == []
+        assert _assign_writes(calls) == []
+        page_reads = [
+            c
+            for c in calls
+            if c.name == "query_state" and str(c.arguments.get("path", "")).endswith("Pages/1")
+        ]
+        assert page_reads == []
+        assert "실행기" not in event["text"]
+
+
+class TestPhaserRecall:
+    """T11 1단계(즉시 recall/해제)·2단계(시퀀스+Exec) — T11 프로브
+    (``docs/research/ma3-effects/11-phaser-recall-m0-probe.md``)로 실측된
+    recall/해제/큐 저장 문법의 소비 구현.
+
+    겨누는 것: (1) 모듈 빌더가 T11 §2/§3/§4 문법과 문자 단위로 일치하는지
+    (pool_no=2 출력은 ``pointing.preset_recall_command``와 동일해야 함),
+    (2) 라벨→(pool_no, slot) 실기 해석이 페이징으로 이뤄지고 부재는
+    거부인지, (3) Color/Dimmer/All 1 세 카탈로그 각각의 대상 장비 판별이
+    맞는 몸통(컬러 판별 vs 전량 열거)으로 가는지, (4) 1단계/2단계/저장
+    가족이 서로소로 라우팅되는지, (5) 2단계가 ``_position_fx_sequence``/
+    ``_offer_fx_executor_assignment``의 시퀀스 번호·점유·실행기 제안
+    몸통을 그대로 재사용하는지.
+    """
+
+    _FIDS = [20, 26]  # `_PresetPoolRegistry._FIXTURES`의 fid들
+
+    def _run(
+        self,
+        tmp_path,
+        text,
+        *,
+        answers=(),
+        pool_index=_COMBO_POOL_INDEX,
+        pool=(),
+        names=None,
+        pairs=((20, 20), (26, 26)),
+        fid_unread=(),
+        capable=(20, 26),
+        excluded=(),
+        undetermined=(),
+        sequence_occupied=None,
+        **rig,
+    ):
+        provider = ScriptedProvider([_final("확인하겠습니다")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _PresetPoolRegistry(
+            calls, pool_index=pool_index, pool=pool, names=names or {}, **rig
+        )
+        session._color_rig_fixture_pairs = lambda: (
+            [tuple(pair) for pair in pairs],
+            list(fid_unread),
+        )
+        session._color_capable_fids = lambda _pairs, *, probe_id_prefix: (
+            list(capable),
+            list(excluded),
+            list(undetermined),
+        )
+        if sequence_occupied is not None:
+            session._song_sequence_occupied = lambda _no: sequence_occupied
+        chan = _AnsweringChannel(answers)
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    # ---- (1) 모듈 빌더 — T11 §2/§3/§4 실측 문법과 문자 단위 일치 ----
+
+    def test_recall_command_matches_pointing_at_the_position_pool(self):
+        fids = [3, 7, 12]
+        assert _preset_recall_command(POSITION_PRESET_POOL, fids, 5) == preset_recall_command(
+            fids, 5
+        )
+
+    def test_recall_command_carries_the_requested_pool(self):
+        assert _preset_recall_command(4, [2], 31) == "Fixture 2 ; At Preset 4.31"
+        assert _preset_recall_command(1, [2, 7], 21) == "Fixture 2 + 7 ; At Preset 1.21"
+
+    @pytest.mark.parametrize(
+        ("pool_no", "fids", "preset_no"),
+        [(0, [2], 1), (-1, [2], 1), (2, [], 1), (2, [2], 0), (2, [2], -1)],
+    )
+    def test_recall_command_rejects_non_positive_inputs(self, pool_no, fids, preset_no):
+        with pytest.raises(SpatialPointingError):
+            _preset_recall_command(pool_no, fids, preset_no)
+
+    def test_release_command_matches_the_probed_grammar(self):
+        assert _preset_release_command([2]) == "Fixture 2 ; At Preset 0"
+        assert _preset_release_command([2, 7]) == "Fixture 2 + 7 ; At Preset 0"
+
+    def test_release_command_rejects_empty_fids(self):
+        with pytest.raises(SpatialPointingError):
+            _preset_release_command([])
+
+    def test_sequence_bundle_matches_the_probed_grammar(self):
+        commands = _phaser_sequence_commands(4, [2], 31, 201, "Breathe Warm")
+        assert commands == (
+            "ChangeDestination Root",
+            "ClearAll",
+            "Fixture 2 ; At Preset 4.31",
+            "Store Sequence 201 Cue 1 'Breathe Warm' CueFade 2",
+            "Label Sequence 201 'Breathe Warm'",
+            "ClearAll",
+        )
+        assert not any("/Merge" in cmd or "/Overwrite" in cmd for cmd in commands)
+
+    def test_sequence_bundle_rejects_a_quoted_label(self):
+        with pytest.raises(SpatialPointingError):
+            _phaser_sequence_commands(4, [2], 31, 201, "Bad'Label")
+
+    def test_sequence_bundle_rejects_a_non_positive_sequence_no(self):
+        with pytest.raises(SpatialPointingError):
+            _phaser_sequence_commands(4, [2], 31, 0, "Breathe Warm")
+
+    # ---- (2)+(3) 1단계 — 라벨→슬롯 실기 해석, 발사/해제, 카탈로그별 판별 ----
+
+    def test_recall_resolves_the_slot_via_paged_listing_and_fires(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path, "Breathe Warm 쳐줘", pool=(31,), names={31: "Breathe Warm"}
+        )
+        assert chan.asked == []
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert list(writes[0].arguments["commands"]) == [_preset_recall_command(4, self._FIDS, 31)]
+        assert "Preset 4.31" in event["text"]
+        assert "판독할 수 없어 ASSUMPTION" in event["text"]
+
+    def test_recall_refuses_when_the_label_is_not_on_console(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path, "Breathe Warm 쳐줘", pool=(31,), names={31: "Chase RB"}
+        )
+        assert _writes(calls) == []
+        assert "찾지 못해" in event["text"]
+
+    def test_release_verb_fires_the_at_preset_zero_grammar(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path, "Breathe Warm 꺼줘", pool=(31,), names={31: "Breathe Warm"}
+        )
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert list(writes[0].arguments["commands"]) == [_preset_release_command(self._FIDS)]
+        assert "ASSUMPTION" not in event["text"]
+
+    # 발사·해제 동사가 한 문장에 공존하면 해제가 이긴다(보수적 — 재발사
+    # 사고를 피한다).
+    def test_both_verbs_present_prefers_release(self, tmp_path):
+        _event, calls, _chan = self._run(
+            tmp_path, "Breathe Warm 쳐줬다가 꺼줘", pool=(31,), names={31: "Breathe Warm"}
+        )
+        writes = _writes(calls)
+        assert list(writes[0].arguments["commands"]) == [_preset_release_command(self._FIDS)]
+
+    # '재생성'의 부분 문자열 '재생'이 발사 동사로 오인되지 않는다.
+    def test_regenerate_wording_does_not_trigger_a_launch(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "Breathe Warm 다시 재생성해줘",
+            pool=(31,),
+            names={31: "Breathe Warm"},
+        )
+        assert _writes(calls) == []
+        assert chan.asked == []
+
+    def test_a_dimmer_catalog_label_uses_the_dimmer_pool_and_full_enumeration(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "Breathe Soft 쳐줘",
+            pool=(21,),
+            names={21: "Breathe Soft"},
+            capable=(20,),  # 디머는 컬러 판별을 타지 않으므로 무시돼야 한다
+        )
+        writes = _writes(calls)
+        assert list(writes[0].arguments["commands"]) == [_preset_recall_command(1, self._FIDS, 21)]
+        assert "Preset 1.21" in event["text"]
+
+    def test_a_combo_catalog_label_uses_all1_and_color_capability(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "Drop Slam 쳐줘",
+            pool=(25,),
+            names={25: "Drop Slam"},
+            capable=(20,),
+            excluded=(26,),
+        )
+        writes = _writes(calls)
+        assert list(writes[0].arguments["commands"]) == [_preset_recall_command(21, [20], 25)]
+        assert "Preset 21.25" in event["text"]
+        assert "컬러 판별" in event["text"]
+
+    def test_storage_sentences_are_not_captured_by_recall(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "멀티컬러 페이저 프리셋을 31번부터 저장해줘",
+            pool=(1, 2, 3),
+            readback=(1, 2, 3) + tuple(range(31, 41)),
+        )
+        writes = _writes(calls)
+        assert len(writes) == 10  # 저장 가족(카탈로그 10종)이 그대로 처리
+        assert chan.asked == []
+
+    # ---- (4)+(5) 2단계 — 시퀀스+실행기, 1단계와 명사 유무로 서로소 ----
+
+    def test_sequence_recall_builds_the_exact_bundle_and_offers_an_executor(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "Breathe Warm 시퀀스 201로 쳐줘",
+            pool=(31,),
+            names={31: "Breathe Warm"},
+        )
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert tuple(writes[0].arguments["commands"]) == _phaser_sequence_commands(
+            4, self._FIDS, 31, 201, "Breathe Warm"
+        )
+        assert len(chan.asked) == 1
+        assert "실행기 101" in chan.asked[0].prompt
+        assert "시퀀스 201" in event["text"]
+        assert "실행기 미할당" in event["text"]
+
+    def test_a_wave_named_label_is_not_swallowed_by_the_position_fx_path(self, tmp_path):
+        # 라이브 2026-08-17 회귀: "Wave CM 시퀀스로 걸어줘"가 position-FX의
+        # 세 게이트(효과어 'wave' + 명사 '시퀀스' + 동사 '걸어')를 전부
+        # 만족해 포지션 이펙트 경로에 삼켜졌다 — 'Wave'를 품은 카탈로그
+        # 라벨 6종(Wave CM/WA/Soft/Full, Ocean Wave, Golden Wave)이 2단계에
+        # 도달하지 못했다. 디스패치 순서를 페이저 먼저로 고쳐 고정한다.
+        event, calls, _chan = self._run(
+            tmp_path,
+            "Wave CM 시퀀스 202로 걸어줘",
+            pool=(35,),
+            names={35: "Wave CM"},
+        )
+        writes = _writes(calls)
+        assert len(writes) == 1
+        commands = writes[0].arguments["commands"]
+        # 페이저 경로: Color 풀 4.35 recall + 라벨이 'Wave CM'인 시퀀스
+        assert any("At Preset 4.35" in cmd for cmd in commands)
+        assert any("Store Sequence 202" in cmd and "Wave CM" in cmd for cmd in commands)
+        # 포지션 이펙트 경로의 흔적(Pan/Tilt 상대 페이저)이 없어야 한다
+        assert not any("Attribute 'Pan'" in cmd or "Attribute 'Tilt'" in cmd for cmd in commands)
+        assert "Wave CM" in event["text"]
+
+    def test_a_position_fx_sentence_still_reaches_the_position_path(self, tmp_path):
+        # 역방향 — 카탈로그 라벨이 없는 포지션 문장은 페이저 핸들러를
+        # 그대로 통과해 종전 경로로 흘러내린다(라벨 게이트의 근거).
+        from server.web.session import _match_phaser_label
+
+        assert _match_phaser_label("좌우 스윕 시퀀스 201 만들어줘") is None
+        assert _match_phaser_label("웨이브 시퀀스 만들어줘") is None
+
+    def test_a_plain_recall_sentence_does_not_reach_the_sequence_builder(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path, "Breathe Warm 쳐줘", pool=(31,), names={31: "Breathe Warm"}
+        )
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert not any("Store Sequence" in cmd for cmd in writes[0].arguments["commands"])
+        assert chan.asked == []  # 1단계는 실행기 카드를 제안하지 않는다
+
+    def test_missing_sequence_number_asks_one_card(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "Breathe Warm 시퀀스로 쳐줘",
+            pool=(31,),
+            names={31: "Breathe Warm"},
+            answers=["201"],
+        )
+        sequence_cards = [q for q in chan.asked if "몇 번 시퀀스" in q.prompt]
+        assert len(sequence_cards) == 1
+        writes = _writes(calls)
+        assert len(writes) == 1
+        assert "Store Sequence 201" in writes[0].arguments["commands"][3]
+
+    def test_an_unanswered_sequence_card_writes_nothing(self, tmp_path):
+        event, calls, _chan = self._run(
+            tmp_path,
+            "Breathe Warm 시퀀스로 쳐줘",
+            pool=(31,),
+            names={31: "Breathe Warm"},
+            answers=[],
+        )
+        assert _writes(calls) == []
+        assert "시퀀스 번호를 받지 못해" in event["text"]
+
+    def test_an_occupied_sequence_asks_and_cancel_writes_nothing(self, tmp_path):
+        event, calls, chan = self._run(
+            tmp_path,
+            "Breathe Warm 시퀀스 201로 쳐줘",
+            pool=(31,),
+            names={31: "Breathe Warm"},
+            sequence_occupied=True,
+            answers=["취소"],
+        )
+        assert _writes(calls) == []
+        assert len(chan.asked) == 1
+        assert "기존 데이터" in chan.asked[0].prompt
+        assert "저장하지 않" in event["text"]
+
+    def test_an_occupied_sequence_proceeds_on_consent(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "Breathe Warm 시퀀스 201로 쳐줘",
+            pool=(31,),
+            names={31: "Breathe Warm"},
+            sequence_occupied=True,
+            answers=["진행"],
+        )
+        writes = _writes(calls)
+        assert len(writes) == 1
+
+
+def _cue(
+    *,
+    cue_name: str,
+    d_level: int = 3,
+    key_pct: float | None = 60.0,
+    blackout: bool = False,
+    kind: str = "section",
+) -> ComposedCue:
+    """A minimal, valid ``ComposedCue`` for direct classifier/builder tests —
+    only ``cue_name``/``d_level``/``dimmer`` vary; every other field is a
+    harmless constant satisfying each nested dataclass's own validation."""
+    resolved_key_pct = 0.0 if blackout else key_pct
+    return ComposedCue(
+        kind=kind,
+        section_index=1,
+        cue_number=1.0,
+        cue_name=cue_name,
+        d_level=d_level,
+        fade_seconds=2.0,
+        position=CuePositionData(requested=None, stored=None, width_tier=None, source="test"),
+        dimmer=CueDimmerData(
+            key_pct=resolved_key_pct,
+            back_pct=None,
+            budget_range_pct=(0.0, 100.0),
+            blackout=blackout,
+        ),
+        color=CueColorData(palette=("White",), saturation="full"),
+        fx=CueFxData(requested=(), permitted=(), disabled=(), density=0, axis_budget=0),
+        accents=(),
+        mib=CueMibData(),
+        timing=CueTimingData(mode=MANUAL_GO, trigger="manual_go", start_ms=0),
+    )
+
+
+class TestPhaserSongCueMapping:
+    """T12 — 곡 큐 페이저 통합. 겨누는 것: (e) 매핑 표 계약(``_phaser_label_
+    for_cue``, 코디네이터 5-카테고리 + '그 외 전부 없음'), (a)/(b) 명령
+    조립(``_phaser_cue_value_lines``, 슬롯 미해석/불일치 시 빈 튜플, 해석
+    시 recall 한 줄이 플랜 자신의 값 라인 뒤·Store 앞에 온다), 안전 가드
+    (MIB pre-move·블랙아웃 제외), (c) 미해석 사유 노출(``_phaser_failure_
+    note``). 실기 슬롯 해석(``_phaser_slot_by_label``, 배치 쿼리)과 리뷰
+    시트 표시(``_review_text``)는 ``TestSongDesignInterviewSession``의
+    비회귀 테스트(§T12(a)/(b) 회귀 방어)가 이미 실측한다.
+    """
+
+    # ---- (e) 매핑 표 계약 ----
+
+    @pytest.mark.parametrize(
+        ("cue_name", "expected"),
+        [
+            ("드롭", "Drop Slam"),
+            ("클라이맥스", "Drop Slam"),
+            ("피크", "Drop Slam"),
+            ("Drop", "Drop Slam"),
+            ("후렴", "Wave CM"),
+            ("Chorus", "Wave CM"),
+            ("벌스", "Breathe Warm"),
+            ("Verse 1", "Breathe Warm"),
+            ("브리지", "Breathe Cool"),
+            ("간주", "Breathe Cool"),
+            ("피날레", "Finale Slam"),
+            ("아웃트로", "Finale Slam"),
+            ("엔딩", "Finale Slam"),
+            ("인트로", None),  # 코디네이터 표에 없음 — 안전 강등
+            ("전주", None),
+            ("장면1", None),
+        ],
+    )
+    def test_the_mapping_table_matches_the_coordinator_contract(self, cue_name, expected):
+        assert _phaser_label_for_cue(_cue(cue_name=cue_name)) == expected
+
+    # 최고 에너지(드롭/클라이맥스/피크)가 일반 후렴보다 우선한다 — 두
+    # 어휘가 한 섹션 이름에 공존하는 문장("후렴 드롭")에서도 갈라진다.
+    def test_a_peak_word_wins_over_a_co_occurring_chorus_word(self):
+        assert _phaser_label_for_cue(_cue(cue_name="후렴 드롭")) == "Drop Slam"
+
+    # d_level만으로는 최고 에너지/후렴/피날레를 가를 수 없다(_ARC_D_LEVEL
+    # 에서 chorus=finale=5로 공유) — 텍스트 신호 없이 d_level 하나로
+    # 안 만든다는 확인.
+    def test_d_level_alone_never_decides_the_label(self):
+        assert _phaser_label_for_cue(_cue(cue_name="장면1", d_level=5)) is None
+        assert _phaser_label_for_cue(_cue(cue_name="장면1", d_level=1)) is None
+
+    # ---- 안전 가드 ----
+
+    def test_mib_premove_cues_never_get_a_phaser(self):
+        assert _phaser_label_for_cue(_cue(cue_name="후렴", kind="mib_premove")) is None
+
+    def test_blackout_cues_never_get_a_phaser(self):
+        assert _phaser_label_for_cue(_cue(cue_name="후렴", blackout=True)) is None
+
+    def test_a_zero_key_pct_cue_never_gets_a_phaser(self):
+        assert _phaser_label_for_cue(_cue(cue_name="후렴", key_pct=0.0)) is None
+
+    def test_a_none_key_pct_cue_never_gets_a_phaser(self):
+        assert _phaser_label_for_cue(_cue(cue_name="후렴", key_pct=None)) is None
+
+    # ---- (a)/(b) 명령 조립 — 슬롯 미해석 시 빈 튜플, 해석 시 recall 한 줄 ----
+
+    def test_a_resolved_phaser_adds_exactly_one_recall_line(self):
+        cue = _cue(cue_name="후렴")
+        lines = _phaser_cue_value_lines(cue, [20, 26], {"Wave CM": (4, 35)})
+        assert lines == ("Fixture 20 + 26 ; At Preset 4.35",)
+
+    def test_an_unresolved_phaser_adds_nothing(self):
+        cue = _cue(cue_name="후렴")
+        assert _phaser_cue_value_lines(cue, [20, 26], {}) == ()
+
+    def test_a_non_matching_cue_adds_nothing_even_when_other_slots_are_resolved(self):
+        cue = _cue(cue_name="장면1")
+        assert _phaser_cue_value_lines(cue, [20, 26], {"Wave CM": (4, 35)}) == ()
+
+    # (b) — 순서 규율(계약 #5): recall 한 줄은 플랜 자신의 포지션/디머 값
+    # 라인 **뒤**·Store **앞**에 온다 — 콤보/디머 페이저의 디머 스텝이
+    # 큐의 정적 key_pct를 프로그래머 last-wins로 정확히 덮어쓴다.
+    def test_the_recall_line_lands_after_the_plans_own_dimmer_line_and_before_store(self):
+        plan = PositionCuePlan(cue_no=1.0, name="Chorus", preset_no=None, dimmer=60.0)
+        cue = _cue(cue_name="후렴")
+        lines = position_cue_bundle(
+            110,
+            plan,
+            [20, 26],
+            extra_value_lines=_phaser_cue_value_lines(cue, [20, 26], {"Wave CM": (4, 35)}),
+        )
+        dimmer_index = next(i for i, line in enumerate(lines) if "Attribute 'Dimmer'" in line)
+        recall_index = next(i for i, line in enumerate(lines) if "At Preset 4.35" in line)
+        store_index = next(i for i, line in enumerate(lines) if line.startswith("Store Sequence"))
+        assert dimmer_index < recall_index < store_index
+
+    # 페이저가 배정되지 않은 큐(라벨 불일치)는 extra_value_lines가 빈
+    # 튜플이라 명령열이 T12 이전과 문자 단위로 동일하다.
+    def test_no_phaser_leaves_the_bundle_byte_identical_to_pre_t12(self):
+        plan = PositionCuePlan(cue_no=1.0, name="Scene1", preset_no=None, dimmer=60.0)
+        cue = _cue(cue_name="장면1")
+        with_phaser_lookup = position_cue_bundle(
+            110,
+            plan,
+            [20, 26],
+            extra_value_lines=_phaser_cue_value_lines(cue, [20, 26], {"Wave CM": (4, 35)}),
+        )
+        without_lookup = position_cue_bundle(110, plan, [20, 26])
+        assert with_phaser_lookup == without_lookup
+
+    # ---- (c) 미해석 사유 노출 ----
+
+    def test_unresolved_labels_are_reported_by_name(self):
+        note = _phaser_failure_note(
+            {"Wave CM": "'Wave CM' 페이저 프리셋을 콘솔에서 찾지 못했습니다"}
+        )
+        assert "Wave CM" in note
+        assert "찾지 못했습니다" in note
+
+    def test_no_failures_produces_an_empty_note(self):
+        assert _phaser_failure_note({}) == ""

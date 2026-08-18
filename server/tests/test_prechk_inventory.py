@@ -190,9 +190,22 @@ class TestChokepointBoundary:
         assert not [rel for rel in literals if "prechk" in rel]
 
     def test_query_state_contract_is_unchanged(self):
-        """AC-PRECHK-013 ③ — the addition is pure; it changed no signature."""
-        assert list(inspect.signature(ConsoleLink.query_state).parameters) == ["self", "path"]
-        assert list(inspect.signature(_GateStatePort.query_state).parameters) == ["self", "path"]
+        """AC-PRECHK-013 ③ — the addition is pure; it changed no signature.
+
+        2026-08-16 deliberate update (preset-pool paging, PROTOCOL §4.2):
+        the chokepoint gained ONE keyword-only ``offset`` defaulting to 0,
+        so every pre-existing positional call site is untouched — which is
+        the invariant this pin actually defends. The assertions below keep
+        that shape machine-checked: any further growth, a positional offset,
+        or a non-zero default trips this test again.
+        """
+        for port in (ConsoleLink, _GateStatePort):
+            signature = inspect.signature(port.query_state)
+            assert list(signature.parameters) == ["self", "path", "offset"]
+            offset = signature.parameters["offset"]
+            assert offset.kind is inspect.Parameter.KEYWORD_ONLY
+            assert offset.default == 0
+        # prechk's own consumer port is genuinely untouched — still pure.
         assert list(inspect.signature(StateQueryPort.query_state).parameters) == ["self", "path"]
 
     def test_approval_record_exists_in_progress(self):

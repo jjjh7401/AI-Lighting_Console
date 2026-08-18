@@ -792,12 +792,22 @@ def rig_object(child: dict) -> dict[str, object]:
     That absence is meaningful, not a glitch: it degrades to a name-only entry
     so the model has no number to address — it must resolve the real one (e.g.
     via ``query_state``) instead of counting list positions.
+
+    The slot is int-COERCED before it becomes ``no`` (the same try/except the
+    session's paged reader applies, SEC-TRUST-001): a non-numeric ``i`` from a
+    hostile or buggy responder would otherwise ride into drill query paths and
+    the UI's ``/api/presets/{no}`` fetch URL. A value that cannot be an int
+    degrades to the same name-only entry as a missing slot — unparseable is
+    not addressable.
     """
-    number = child.get("i")
     name = child.get("name", "")
-    if number is None:
+    number = child.get("i")
+    if number is None or isinstance(number, bool):
         return {"name": name}
-    return {"no": number, "name": name}
+    try:
+        return {"no": int(number), "name": name}
+    except (TypeError, ValueError):
+        return {"name": name}
 
 
 def rig_section(objects: list[dict[str, object]], payload: dict) -> dict[str, object]:
@@ -835,6 +845,14 @@ def drill_into(
     nothing configured, which is exactly the ambiguity a readiness check exists
     to remove.
 
+    ``contents`` is ONE responder window (24 children, PROTOCOL §4.2) — for a
+    container past the cap, ``contents_total`` additionally carries the
+    responder's own ``node.childCount`` claim, so a count consumer (the dash
+    pool badge) can report the real total instead of the window length (live
+    2026-08-16: Color pool 37, badge said the window). Enumerating consumers
+    (occupancy, tiles) still see one window; the popup's paged reader is the
+    surface that walks past it.
+
     When the budget runs out before every object is opened, the section is
     marked ``drilldown_capped`` rather than silently presenting a partial walk
     as a complete one — each query is a UDP round trip through the gate +
@@ -857,6 +875,12 @@ def drill_into(
             continue
         children = child_payload.get("children", [])
         obj["contents"] = [rig_object(c) for c in children if isinstance(c, dict)]
+        node = child_payload.get("node")
+        child_count = node.get("childCount") if isinstance(node, dict) else None
+        # bool은 int의 서브클래스 — childCount: true가 총계로 승격되지 않게
+        # 명시 배제한다(매크로 풀 경로의 기존 규약과 동일, SEC-TYPE-002).
+        if isinstance(child_count, int) and not isinstance(child_count, bool):
+            obj["contents_total"] = child_count
     if capped:
         entry["drilldown_capped"] = True
     return budget
@@ -947,6 +971,15 @@ SPATIAL_FIXTURE_PROPERTIES = ("fid", "posx", "posy", "posz")
 #: axis that fails to read is the reason the whole fixture is reported absent.
 SPATIAL_AXES = (("x", "posx"), ("y", "posy"), ("z", "posz"))
 
+#: Body-rotation properties, read ONLY when a caller opts in
+#: (``include_rotation``). Best-effort by design: the rotation property names
+#: are the patch-3D siblings of ``posx``-family reads but are NOT yet
+#: live-measured, so a failed rotation read never drops the fixture from the
+#: coordinate map — it is itemised in the record's ``rotation_unread`` list
+#: instead, and the value is never invented (the same absence-is-an-item rule
+#: the coordinate guard enforces).
+SPATIAL_ROTATION_PROPERTIES = ("rotx", "roty", "rotz")
+
 #: Ceiling on property round trips per ``get_spatial_context`` call.
 #:
 #: Measured on the live rig (onPC 2.4.2.2, 2026-08-18): one property read costs
@@ -967,6 +1000,22 @@ SPATIAL_AXES = (("x", "posx"), ("y", "posy"), ("z", "posz"))
 #: That needs a responder redeploy — the app's only console channel — so it is
 #: deliberately NOT bundled into this fix.
 SPATIAL_PROPERTY_QUERY_CAP = 320
+
+
+def _spatial_read_budget(include_rotation: bool) -> int:
+    """The round-trip budget for one spatial read, scaled to the property set.
+
+    The cap is a FIXTURE ceiling in disguise (60 fixtures at 4 properties
+    each). Reading rotations must not shrink that ceiling — a 40-fixture rig
+    that reads completely today must still read completely with rotations on
+    — so the budget scales with the per-fixture property count instead of
+    staying a flat round-trip number.
+    """
+    per_fixture = len(SPATIAL_FIXTURE_PROPERTIES) + (
+        len(SPATIAL_ROTATION_PROPERTIES) if include_rotation else 0
+    )
+    return (SPATIAL_PROPERTY_QUERY_CAP // len(SPATIAL_FIXTURE_PROPERTIES)) * per_fixture
+
 
 #: Why a container child was never queried at all. Distinct from a property
 #: read that FAILED: the responder declined to establish this child's slot, so
@@ -1098,6 +1147,33 @@ def _batch_fixture_properties(
             break
         slot = resume
     return values
+def attach_spatial_rotation(record: dict[str, object], reads: Mapping[str, PropertyRead]) -> None:
+    """Fold best-effort rotation reads into a coordinate-confirmed record.
+
+    A readable, finite rotation lands under its own property name
+    (``rotx``/``roty``/``rotz``, degrees). Anything else — a failed read, an
+    unparseable value, a non-finite float — puts the property NAME into
+    ``rotation_unread``: the caller learns the rotation is unknown, and no
+    zero is ever invented for it (the coordinate-invention guard's rule,
+    applied to the rotation axes).
+    """
+    unread: list[str] = []
+    for prop in SPATIAL_ROTATION_PROPERTIES:
+        read = reads.get(prop)
+        if read is None or not read.ok:
+            unread.append(prop)
+            continue
+        try:
+            value = float(str(read.value).strip())
+        except ValueError:
+            unread.append(prop)
+            continue
+        if not math.isfinite(value):
+            unread.append(prop)
+            continue
+        record[prop] = value
+    if unread:
+        record["rotation_unread"] = unread
 
 
 def read_spatial_fixtures(
@@ -1105,6 +1181,8 @@ def read_spatial_fixtures(
     property_port: PropertyQueryPort,
     fixtures_path: str,
     budget: int,
+    *,
+    include_rotation: bool = False,
 ) -> dict[str, object]:
     """Read ``(fid, name, x, y, z)`` for every fixture in the stage patch container.
 
@@ -1215,7 +1293,10 @@ def read_spatial_fixtures(
     fixtures: list[dict[str, object]] = []
     unreadable: list[dict[str, object]] = []
     roundtrip_capped = False
-    per_fixture = len(SPATIAL_FIXTURE_PROPERTIES)
+    properties = SPATIAL_FIXTURE_PROPERTIES + (
+        SPATIAL_ROTATION_PROPERTIES if include_rotation else ()
+    )
+    per_fixture = len(properties)
     for child in children:
         # @MX:ANCHOR: [SPEC] round-trip cap signal (REQ-SPATIAL-006). A SEPARATE
         #   field from ``truncated`` — the console shortened its answer, this
@@ -1250,6 +1331,11 @@ def read_spatial_fixtures(
             # are wrapped in the SAME `PropertyRead` shape the walk produces, so
             # `spatial_fixture_record` cannot tell the two apart: there is one
             # judgment path for a coordinate, never a second one for batches.
+            # Batched rows carry no rotation properties (SPATIAL_BATCH_PROPERTIES
+            # is name + coordinates), so under ``include_rotation`` the absent
+            # reads fall through ``attach_spatial_rotation`` into
+            # ``rotation_unread`` — reported unknown, never invented (merge of
+            # the batch fast path with the rotation opt-in, 2026-08-18).
             reads = {
                 key: PropertyRead(
                     name=key,
@@ -1264,13 +1350,13 @@ def read_spatial_fixtures(
                 roundtrip_capped = True
                 break
             budget -= per_fixture
-            reads = read_properties(
-                property_port, f"{fixtures_path}/{slot}", SPATIAL_FIXTURE_PROPERTIES
-            )
+            reads = read_properties(property_port, f"{fixtures_path}/{slot}", properties)
         record, absence = spatial_fixture_record(name, reads)
         if record is None:
             unreadable.append(absence)  # type: ignore[arg-type]
         else:
+            if include_rotation:
+                attach_spatial_rotation(record, reads)
             fixtures.append(record)
     # REQ-GROUPGEN-024 amendment coverage signal — "judged" is how many
     # fixtures actually fed a topology judgment, "of" is the rig's real
@@ -1805,8 +1891,14 @@ def build_toolset(
         path = call.arguments.get("path")
         if not isinstance(path, str) or not path.strip():
             return _error_result(call, "'path' must be a non-empty object-tree path")
+        offset = call.arguments.get("offset", 0)
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            return _error_result(call, "'offset' must be a non-negative integer")
         try:
-            payload = state_port.query_state(path)
+            if offset:
+                payload = state_port.query_state(path, offset=offset)
+            else:
+                payload = state_port.query_state(path)
         except Exception as exc:
             return _error_result(call, f"state query failed for {path!r}: {exc}")
         return ToolExecution(
@@ -5547,6 +5639,9 @@ def build_toolset(
     # blur which approval card the operator is being shown.
 
     def get_spatial_context(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        include_rotation = bool(
+            isinstance(call.arguments, dict) and call.arguments.get("include_rotation")
+        )
         fixtures_path = rig_paths.get("fixtures")
         if not fixtures_path:
             # Fail by NAME, like every other rig-section guard here — a
@@ -5569,7 +5664,11 @@ def build_toolset(
             )
         try:
             reply = read_spatial_fixtures(
-                state_port, property_port, fixtures_path, SPATIAL_PROPERTY_QUERY_CAP
+                state_port,
+                property_port,
+                fixtures_path,
+                _spatial_read_budget(include_rotation),
+                include_rotation=include_rotation,
             )
         except Exception as exc:
             return _error_result(
@@ -6729,7 +6828,17 @@ def build_toolset(
                     "path": {
                         "type": "string",
                         "description": "Object-tree path, e.g. 'DataPool/Sequences'.",
-                    }
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": (
+                            "0-based children window start for paging past a "
+                            "truncated listing (PROTOCOL §4.2). The reply echoes "
+                            "the offset it honoured; no echo means the console-"
+                            "side responder predates paging — stop paging then. "
+                            "Default 0 (first window)."
+                        ),
+                    },
                 },
                 "required": ["path"],
             },
@@ -8288,6 +8397,18 @@ def build_toolset(
                 "slot get_rig_context shows. Negative coordinates are normal: "
                 "the stage origin has sides.\n"
                 "\n"
+                'Pass {"include_rotation": true} to ALSO read each '
+                "fixture's patched body rotation on the same record — "
+                '"rotx", "roty", "rotz" in degrees. Position says where a '
+                "fixture STANDS; rotation says which way its body FACES, "
+                "and any question about mounting orientation, hang "
+                "direction or 'which way is it pointing' needs these axes "
+                "— read them here instead of improvising console queries "
+                "or Lua. Best-effort: an axis that could not be read "
+                'appears by NAME in that fixture\'s "rotation_unread" and '
+                "its value stays unknown — never assume 0 for a listed "
+                "axis.\n"
+                "\n"
                 '"unreadable" lists fixtures that have NO coordinate here, '
                 "each with the console's own reason. Their positions are "
                 "genuinely unknown — never assume 0, a neighbour's value or "
@@ -8319,7 +8440,24 @@ def build_toolset(
                 "why; do not invent a left-to-right order the patch does not "
                 "support."
             ),
-            parameters={"type": "object", "properties": {}, "additionalProperties": False},
+            parameters={
+                "type": "object",
+                "properties": {
+                    "include_rotation": {
+                        "type": "boolean",
+                        "description": (
+                            "Also read each fixture's patched body rotation "
+                            "(rotx/roty/rotz, degrees). Best-effort: a "
+                            "rotation that could not be read is listed by "
+                            "name under the fixture's 'rotation_unread' and "
+                            "its value stays unknown — never assume 0 for a "
+                            "listed axis. Costs 3 extra property reads per "
+                            "fixture. Default false."
+                        ),
+                    }
+                },
+                "additionalProperties": False,
+            },
         ),
         ToolDefinition(
             name="arrange_fixtures",

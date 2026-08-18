@@ -247,3 +247,4 @@ server/paperwork_output/
 .moai/reports/
 .moai/specs/*/.moai/
 .playwright-cli/
+server/**/.moai/

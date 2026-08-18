@@ -375,12 +375,23 @@ class ConsoleLink:
         detail = str(payload.get("error") or payload.get("result") or "deployed")
         return ExecOutcome(status="ok" if ok else "failed", detail=detail)
 
-    def query_state(self, path: str) -> dict:
-        """Object-tree snapshot query (REQ-MVP-003); raises on failure/timeout."""
+    def query_state(self, path: str, *, offset: int = 0) -> dict:
+        """Object-tree snapshot query (REQ-MVP-003); raises on failure/timeout.
+
+        ``offset`` (PROTOCOL.md §4.2 paging) is the 0-based ``children``
+        window start for pools past the responder's 24-child cap. ``0`` (the
+        default) emits the historical request bytes — no token — so every
+        existing caller and pre-paging responder is untouched. A paging-aware
+        responder echoes ``offset`` back in the reply; callers paging past
+        the first window must treat a missing echo as "no progress".
+        """
         request_id = self._new_id()
-        payload = self._round_trip(
-            build_state_query(request_id, path), request_id, self._timeouts.state_query_seconds
+        wire = (
+            build_state_query(request_id, path, offset=offset)
+            if offset
+            else build_state_query(request_id, path)
         )
+        payload = self._round_trip(wire, request_id, self._timeouts.state_query_seconds)
         if payload is None:
             if self._monitor is not None:
                 self._monitor.note_query_timeout()

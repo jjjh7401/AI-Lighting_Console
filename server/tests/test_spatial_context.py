@@ -182,18 +182,18 @@ class TestRegistration:
         assert "unknown tool" not in execution.result.content
         assert execution.result.name == TOOL
 
-    def test_the_parameter_schema_accepts_no_arguments(self):
+    def test_the_parameter_schema_accepts_only_the_rotation_opt_in(self):
         # The handler reads the rig itself. A caller cannot aim it at a stage,
         # a slot or a fixture, which is the only way it cannot be aimed at the
         # wrong one (the discipline precheck_patch's schema already follows).
+        # The single argument is the rotation opt-in — a boolean, never an
+        # address.
         registry = _registry(SpatialRig(_bar(3)))
         definition = next(d for d in registry.definitions() if d.name == TOOL)
         assert definition.description.strip()
-        assert definition.parameters == {
-            "type": "object",
-            "properties": {},
-            "additionalProperties": False,
-        }
+        assert definition.parameters["additionalProperties"] is False
+        assert list(definition.parameters["properties"]) == ["include_rotation"]
+        assert definition.parameters["properties"]["include_rotation"]["type"] == "boolean"
 
 
 class TestReadPathOnly:
@@ -674,3 +674,71 @@ def _handler_ast(name: str) -> ast.FunctionDef:
     ]
     assert len(matches) == 1, f"expected exactly one {name} definition, found {len(matches)}"
     return matches[0]
+
+
+class TestRotationOptIn:
+    """``include_rotation`` — best-effort body-rotation reads on the same walk.
+
+    The rotation axes follow the coordinate guard's absence rule at a softer
+    grade: a fixture whose POSITION cannot be read has no record at all, but a
+    fixture whose ROTATION cannot be read keeps its record and names the
+    unread axes under ``rotation_unread`` — the value is unknown, never a
+    fabricated zero, and the fixture is never dropped for it.
+    """
+
+    def _read(self, rig, *, include_rotation):
+        arguments = {"include_rotation": True} if include_rotation else {}
+        execution = _registry(rig).dispatch(ToolCall(id="call-1", name=TOOL, arguments=arguments))
+        assert execution.result.is_error is False
+        return json.loads(execution.result.content)
+
+    def test_default_reads_no_rotation_properties_at_all(self):
+        rig = SpatialRig(_bar(2))
+        reply = self._read(rig, include_rotation=False)
+        assert all("rotx" not in f and "rotation_unread" not in f for f in reply["fixtures"])
+        assert not [call for call in rig.property_calls if call[1] in ("rotx", "roty", "rotz")]
+
+    def test_readable_rotations_arrive_as_floats_under_their_own_names(self):
+        entries = _bar(2)
+        entries[0].update({"rotx": "0.0", "roty": "0.0", "rotz": "45.0"})
+        entries[1].update({"rotx": "-10.5", "roty": "0.0", "rotz": "0.0"})
+        reply = self._read(SpatialRig(entries), include_rotation=True)
+        first, second = reply["fixtures"]
+        assert (first["rotx"], first["roty"], first["rotz"]) == (0.0, 0.0, 45.0)
+        assert second["rotx"] == -10.5
+        assert "rotation_unread" not in first and "rotation_unread" not in second
+
+    def test_an_unreadable_rotation_is_named_and_the_fixture_is_kept(self):
+        entries = _bar(2)
+        entries[0].update({"rotz": "45.0"})  # rotx/roty stay unreadable
+        reply = self._read(SpatialRig(entries), include_rotation=True)
+        first, second = reply["fixtures"]
+        assert first["rotz"] == 45.0
+        assert first["rotation_unread"] == ["rotx", "roty"]
+        assert second["rotation_unread"] == ["rotx", "roty", "rotz"]
+        # The coordinate map is untouched by the rotation shortfall.
+        assert [f["fid"] for f in reply["fixtures"]] == [1, 2]
+        assert reply["coverage"]["complete"] is True
+
+    def test_an_unparseable_rotation_counts_as_unread_not_as_a_value(self):
+        entries = _bar(1)
+        entries[0].update({"rotx": "0.0", "roty": "0.0", "rotz": "sideways"})
+        reply = self._read(SpatialRig(entries), include_rotation=True)
+        (fixture,) = reply["fixtures"]
+        assert "rotz" not in fixture
+        assert fixture["rotation_unread"] == ["rotz"]
+
+    def test_the_fixture_ceiling_survives_the_extra_reads(self):
+        # The cap is a 60-fixture ceiling at 4 properties each. Opting into
+        # rotation trebles nothing: the SAME 60-fixture rig must still read
+        # completely, because the budget scales with the property count.
+        entries = _bar(CAP_FIXTURES)
+        for entry in entries:
+            entry.update({"rotx": "0.0", "roty": "0.0", "rotz": "0.0"})
+        reply = self._read(SpatialRig(entries), include_rotation=True)
+        assert reply["coverage"] == {
+            "judged": CAP_FIXTURES,
+            "of": CAP_FIXTURES,
+            "complete": True,
+        }
+        assert reply["roundtrip_capped"] is False

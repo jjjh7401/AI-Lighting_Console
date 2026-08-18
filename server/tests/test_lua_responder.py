@@ -662,3 +662,130 @@ class TestWireSafety:
         assert "," not in sent.payload
         payload = decode_payload(sent.payload)
         assert payload["children"][0]["name"] == "보컬 그룹"
+
+
+#: 30-child dense pool — wider than CONFIG.max_children (24), so the default
+#: cap actually windows it (the default 3-sequence tree never fills a page).
+WIDE_POOL_LUA = r"""
+local node = __NODE
+local kids = {}
+for i = 1, 30 do kids[i] = node(string.format("Seq %02d", i), "Sequence") end
+__DATAPOOL = node("Default", "DataPool", { node("Sequences", "Pool", kids) })
+function DataPool() return __DATAPOOL end
+"""
+
+
+@pytest.fixture()
+def wide_harness() -> ResponderHarness:
+    h = ResponderHarness(extra_env=WIDE_POOL_LUA)
+    # Window-shape tests need the FULL 24-cap window; the default 1900-byte
+    # payload budget shrinks a 24-child percent-encoded reply, which is the
+    # budget guard's job, not these tests' subject (the budget interaction
+    # has its own test below, which re-lowers this).
+    h.config["max_payload"] = 100000
+    return h
+
+
+class TestStatePaging:
+    """Snapshot paging (responder 1.6.0, PROTOCOL.md §2/§4.2).
+
+    A state request may end in one trailing ``offset=<n>`` token — the 0-based
+    children window start. The reply always echoes the offset actually used
+    (0 for an old-style request), and ``truncated`` means "children remain
+    AFTER this window" — on the first window, exactly the pre-paging meaning.
+    """
+
+    def _reply(self, h, request):
+        h.main(None, request)
+        sent = h.sent()
+        assert sent[-1].address == STATE_ADDRESS
+        return decode_payload(sent[-1].payload)
+
+    def test_unpaged_request_echoes_offset_zero_and_is_otherwise_unchanged(self, harness):
+        payload = self._reply(harness, "state 1 DataPool/Sequences")
+        assert payload["offset"] == 0
+        assert payload["ok"] is True
+        assert [c["name"] for c in payload["children"]] == [
+            "Sequence 1",
+            "Sequence 2",
+            "Sequence 3",
+        ]
+        assert payload["truncated"] is False
+        assert payload["node"]["childCount"] == 3
+
+    def test_explicit_offset_zero_matches_unpaged_reply(self, harness):
+        paged = self._reply(harness, "state a DataPool/Sequences offset=0")
+        assert paged["offset"] == 0
+        assert paged["path"] == "DataPool/Sequences"
+        assert [c["name"] for c in paged["children"]] == [
+            "Sequence 1",
+            "Sequence 2",
+            "Sequence 3",
+        ]
+        assert paged["truncated"] is False
+
+    def test_first_window_caps_at_max_children_and_truncates(self, wide_harness):
+        payload = self._reply(wide_harness, "state 2 DataPool/Sequences")
+        assert payload["offset"] == 0
+        assert len(payload["children"]) == 24
+        assert payload["children"][0]["name"] == "Seq 01"
+        assert payload["children"][-1]["name"] == "Seq 24"
+        assert payload["truncated"] is True
+        assert payload["node"]["childCount"] == 30
+
+    def test_offset_window_continues_where_first_stopped(self, wide_harness):
+        payload = self._reply(wide_harness, "state 3 DataPool/Sequences offset=24")
+        assert payload["offset"] == 24
+        assert [c["name"] for c in payload["children"]] == [f"Seq {n:02d}" for n in range(25, 31)]
+        assert payload["truncated"] is False
+        assert payload["node"]["childCount"] == 30
+
+    def test_mid_pool_offset_window_is_still_truncated(self, wide_harness):
+        payload = self._reply(wide_harness, "state 4 DataPool/Sequences offset=3")
+        assert payload["offset"] == 3
+        assert payload["children"][0]["name"] == "Seq 04"
+        assert payload["children"][-1]["name"] == "Seq 27"
+        assert payload["truncated"] is True
+
+    def test_offset_at_or_past_child_count_yields_empty_untruncated_window(self, wide_harness):
+        for offset in (30, 99):
+            payload = self._reply(wide_harness, f"state 5 DataPool/Sequences offset={offset}")
+            assert payload["offset"] == offset
+            assert payload["children"] == []
+            assert payload["truncated"] is False
+            assert payload["node"]["childCount"] == 30
+
+    @pytest.mark.parametrize("token", ["offset=-3", "offset=abc", "offset=1.5", "offset="])
+    def test_invalid_offset_values_degrade_to_zero(self, harness, token):
+        payload = self._reply(harness, f"state 6 DataPool/Sequences {token}")
+        assert payload["offset"] == 0
+        assert payload["ok"] is True
+        assert payload["path"] == "DataPool/Sequences"
+        assert len(payload["children"]) == 3
+
+    def test_spaced_path_survives_offset_token_split(self, harness):
+        # Paths are rest-of-line (spaces legal); only the TRAILING token is
+        # peeled off, so "Sequence 1" must still resolve.
+        payload = self._reply(harness, "state 7 DataPool/Sequences/Sequence 1 offset=0")
+        assert payload["ok"] is True
+        assert payload["node"]["name"] == "Sequence 1"
+        assert payload["offset"] == 0
+
+    def test_failure_branch_echoes_offset(self, harness):
+        payload = self._reply(harness, "state 8 DataPool/Nonexistent offset=3")
+        assert payload["ok"] is False
+        assert payload["offset"] == 3
+        assert "Nonexistent" in payload["error"]
+
+    def test_budget_shrunk_window_keeps_offset_and_reports_truncated(self, wide_harness):
+        # The final window (offset 24 -> 6 children) would be truncated:false,
+        # but a tight payload budget drops trailing children — the reply must
+        # then say truncated:true (children remain after the window) and keep
+        # the offset echo so the caller can advance by len(children).
+        wide_harness.config["max_payload"] = 450
+        payload = self._reply(wide_harness, "state 9 DataPool/Sequences offset=24")
+        assert len(wide_harness.sent()[-1].payload) <= 450
+        assert payload["offset"] == 24
+        assert 0 < len(payload["children"]) < 6
+        assert payload["truncated"] is True
+        assert payload["node"]["childCount"] == 30

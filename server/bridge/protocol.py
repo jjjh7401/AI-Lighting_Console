@@ -123,15 +123,30 @@ def build_ping(request_id: str) -> str:
     return build_plugin_call(f"ping {request_id}")
 
 
-def build_state_query(request_id: str, path: str) -> str:
+def build_state_query(request_id: str, path: str, offset: int | None = None) -> str:
     """Object-tree snapshot query (REQ-MVP-003); reply arrives on /copilot/state.
 
     ``path`` is parsed rest-of-line by the responder, so embedded spaces are
     legal (e.g. ``DataPool/Sequences/My Seq``).
+
+    ``offset`` (PROTOCOL.md §4.2 paging, responder 1.6.0) is the 0-based
+    ``children`` window start. ``None`` **and** ``0`` both emit the historical
+    request bytes (no token) — the first window needs no marker and stays
+    byte-identical for pre-1.6.0 responders. A positive value appends one
+    trailing ``offset=<n>`` token. A pre-1.6.0 responder parses that token as
+    part of the path and replies ``ok:false`` with **no** ``offset`` echo;
+    callers MUST treat a missing echo (or ``ok:false``) on a paged request as
+    "no progress" and stop paging rather than retry (PROTOCOL.md §4.2).
     """
     _validate_request_id(request_id)
     _validate_rest(path, field="object path")
-    return build_plugin_call(f"state {request_id} {path}")
+    if isinstance(offset, bool) or (offset is not None and not isinstance(offset, int)):
+        raise ProtocolError(f"offset must be an int or None: {offset!r}")
+    if offset is not None and offset < 0:
+        raise ProtocolError(f"offset must be >= 0: {offset!r}")
+    if not offset:
+        return build_plugin_call(f"state {request_id} {path}")
+    return build_plugin_call(f"state {request_id} {path} offset={offset}")
 
 
 def build_prop_query(request_id: str, path: str, property_name: str) -> str:

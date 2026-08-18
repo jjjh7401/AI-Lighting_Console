@@ -164,10 +164,12 @@ class TestVersionBump:
         # (SPEC-COPILOT-DASHUI-001 M6) lowers max_payload 4000 -> 1900: the
         # cmd_keyword reply transport dies silently past the live-measured
         # MA3 ~2048-byte command-line limit. 1.5.0 adds prop readback and
-        # Cue child cueNo without changing protocol v1. 1.6.0 adds the `props`
-        # page verb — many children x many properties in ONE round trip — after
-        # the per-property walk measured 66.7 ms/trip, i.e. ~26 s for an
-        # 80-fixture coordinate read and no finish at all on a 200-fixture rig.
+        # Cue child cueNo without changing protocol v1. 1.6.0 adds snapshot
+        # paging (trailing `offset=<n>` request token + `offset` reply echo)
+        # AND the `props` page verb — many children x many properties in ONE
+        # round trip — after the per-property walk measured 66.7 ms/trip,
+        # i.e. ~26 s for an 80-fixture coordinate read and no finish at all
+        # on a 200-fixture rig. Both additive; protocol v1 unchanged.
         assert harness.module["VERSION"] == "1.6.0"
         assert harness.module["PROTO"] == 1
 

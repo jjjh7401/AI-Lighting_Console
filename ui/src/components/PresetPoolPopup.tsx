@@ -17,10 +17,19 @@
 // fetch wrappers below are plain functions, unit-testable without a DOM.
 import { apiUrl } from "../launchContext";
 
-/** One preset slot as the wire carries it: the console's REAL number + name. */
+/** One preset slot as the wire carries it: the console's REAL number + name.
+ * `color` (optional `#rrggbb`) is the app's OWN palette colour for presets it
+ * stored itself — the console exposes no preset colour (Appearance/Color
+ * props answered "not readable", live-probed 2026-08-16), so a manual
+ * preset's colour is unknown and the API honestly omits the field rather
+ * than inventing one. `colors` (optional, 2+ hexes) is the same rule for the
+ * app's own multi-colour PHASER presets: the step colours it stored from its
+ * palette, drawn as the split circle the console shows on a ⋯ preset. */
 export interface PresetEntry {
   no: number;
   name: string;
+  color?: string;
+  colors?: string[];
 }
 
 export interface PresetPoolContents {
@@ -44,11 +53,27 @@ function entryOf(raw: unknown): PresetEntry | null {
   if (typeof raw !== "object" || raw === null) return null;
   const no = (raw as Record<string, unknown>).no;
   const name = (raw as Record<string, unknown>).name;
+  const color = (raw as Record<string, unknown>).color;
+  const colors = (raw as Record<string, unknown>).colors;
   // A name-only entry (the responder could not number the slot) is dropped:
   // a tile without a REAL console number would invite addressing by position,
   // the exact trap the real-`no` rule exists to prevent.
   if (typeof no !== "number") return null;
-  return { no, name: typeof name === "string" ? name : "" };
+  const entry: PresetEntry = { no, name: typeof name === "string" ? name : "" };
+  // Only a well-formed hex colour rides through — anything else is treated
+  // as absent (never a CSS injection channel).
+  if (typeof color === "string" && /^#[0-9a-fA-F]{6}$/.test(color)) entry.color = color;
+  // A phaser's step colours ride only when EVERY entry is a well-formed hex
+  // and there are at least 2 (a 1-step list is not a phaser; a bad entry
+  // drops the whole field — never a partial or injected gradient).
+  if (
+    Array.isArray(colors) &&
+    colors.length >= 2 &&
+    colors.every((c) => typeof c === "string" && /^#[0-9a-fA-F]{6}$/.test(c))
+  ) {
+    entry.colors = colors as string[];
+  }
+  return entry;
 }
 
 /** Parse GET /api/presets/{no}'s body; null = malformed (treated as error). */
@@ -107,12 +132,16 @@ export async function fetchPresetPool(poolNo: number): Promise<PresetPopupState>
 
 // -- hook-free view (directly testable) ----------------------------------------
 
-/** The header line: pool number/name plus an honest count when known. */
+/** The header line: pool number/name plus an honest count when known.
+ * A truncated read with no responder total claim must NOT state the partial
+ * window length as THE count — `N개 이상` keeps the header consistent with
+ * the "일부만 표시됨" badge (2026-08-17 review). */
 export function presetPopupTitle(state: PresetPopupState): string {
   if (state.phase === "ready") {
-    const { pool, presets, total } = state.contents;
+    const { pool, presets, total, truncated } = state.contents;
     const count = total ?? presets.length;
-    return `프리셋 풀 ${pool.no} · ${pool.name || "—"} — ${count}개`;
+    const suffix = truncated && total === null ? `${count}개 이상` : `${count}개`;
+    return `프리셋 풀 ${pool.no} · ${pool.name || "—"} — ${suffix}`;
   }
   const name = state.pool.name ? ` · ${state.pool.name}` : "";
   return `프리셋 풀 ${state.pool.no}${name}`;
@@ -122,6 +151,16 @@ export interface PresetPoolPopupProps {
   state: PresetPopupState;
   onClose: () => void;
   onRefresh: () => void;
+}
+
+/** The console's ⋯ split circle: N step colours as N equal conic segments.
+ * `from 270deg` puts a 2-step split on the horizontal (top/bottom halves,
+ * matching the onPC pool tile); 3 steps become thirds (the Rainbow pie).
+ * Inputs are already hex-validated by `entryOf` — never a CSS channel. */
+export function phaserGradient(colors: string[]): string {
+  const n = colors.length;
+  const stops = colors.map((c, i) => `${c} ${(i * 100) / n}% ${((i + 1) * 100) / n}%`);
+  return `conic-gradient(from 270deg, ${stops.join(", ")})`;
 }
 
 export function PresetPoolPopup({ state, onClose, onRefresh }: PresetPoolPopupProps) {
@@ -158,6 +197,21 @@ export function PresetPoolPopup({ state, onClose, onRefresh }: PresetPoolPopupPr
                 {state.contents.presets.map((preset) => (
                   <div key={preset.no} className="pool-tile pool-tile-info preset-popup-tile">
                     <span className="pool-tile-no">{preset.no}</span>
+                    {preset.colors ? (
+                      <span
+                        className="preset-popup-swatch"
+                        role="img"
+                        style={{ background: phaserGradient(preset.colors) }}
+                        aria-label={`색 ${preset.colors.join("/")}`}
+                      />
+                    ) : preset.color ? (
+                      <span
+                        className="preset-popup-swatch"
+                        role="img"
+                        style={{ background: preset.color }}
+                        aria-label={`색 ${preset.color}`}
+                      />
+                    ) : null}
                     <span className="pool-tile-name">{preset.name || "—"}</span>
                   </div>
                 ))}

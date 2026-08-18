@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   parsePresetPoolResponse,
+  phaserGradient,
   presetPoolErrorMessage,
   presetPopupTitle,
 } from "./PresetPoolPopup";
@@ -36,9 +37,56 @@ describe("parsePresetPoolResponse — GET /api/presets/{no}의 와이어 형태"
     expect(parsed?.total).toBeNull();
   });
 
+  it("carries a well-formed palette colour and drops anything else — never a CSS injection channel", () => {
+    const parsed = parsePresetPoolResponse(
+      JSON.stringify({
+        pool: { no: 4, name: "Color" },
+        presets: [
+          { no: 21, name: "Warm White", color: "#ff8c0d" },
+          { no: 1, name: "FrontWarm" }, // 수동 프리셋 — 색 없음이 정직한 상태
+          { no: 2, name: "evil", color: "red;background:url(x)" },
+        ],
+        truncated: false,
+        total: 3,
+      }),
+    );
+    expect(parsed?.presets[0].color).toBe("#ff8c0d");
+    expect(parsed?.presets[1].color).toBeUndefined();
+    expect(parsed?.presets[2].color).toBeUndefined();
+  });
+
+  it("carries a phaser's step colours only when every hex is well-formed and there are 2+", () => {
+    const parsed = parsePresetPoolResponse(
+      JSON.stringify({
+        pool: { no: 4, name: "Color" },
+        presets: [
+          { no: 33, name: "Chase RB", colors: ["#ff0000", "#0000ff"] },
+          { no: 37, name: "Rainbow", colors: ["#ff0000", "#00ff00", "#0000ff"] },
+          { no: 90, name: "evil", colors: ["#ff0000", "url(x)"] }, // 한 항목만 나빠도 통째로 탈락
+          { no: 91, name: "solo", colors: ["#ff0000"] }, // 1스텝은 페이저가 아니다
+        ],
+        truncated: false,
+        total: 4,
+      }),
+    );
+    expect(parsed?.presets[0].colors).toEqual(["#ff0000", "#0000ff"]);
+    expect(parsed?.presets[1].colors).toHaveLength(3);
+    expect(parsed?.presets[2].colors).toBeUndefined();
+    expect(parsed?.presets[3].colors).toBeUndefined();
+  });
+
   it("malformed JSON or a missing pool is null, never a fabricated shape", () => {
     expect(parsePresetPoolResponse("not-json")).toBeNull();
     expect(parsePresetPoolResponse(JSON.stringify({ presets: [] }))).toBeNull();
+  });
+});
+
+describe("phaserGradient — 콘솔의 ⋯ 분할 원", () => {
+  it("splits 2 steps into horizontal halves and 3 into thirds", () => {
+    expect(phaserGradient(["#ff0000", "#0000ff"])).toBe(
+      "conic-gradient(from 270deg, #ff0000 0% 50%, #0000ff 50% 100%)",
+    );
+    expect(phaserGradient(["#ff0000", "#00ff00", "#0000ff"])).toContain("#00ff00");
   });
 });
 
@@ -65,6 +113,20 @@ describe("presetPopupTitle — 개수는 아는 만큼만", () => {
         },
       }),
     ).toBe("프리셋 풀 21 · All 1 — 9개");
+  });
+
+  it("a truncated read with no total claim says N개 이상, never a flat count", () => {
+    expect(
+      presetPopupTitle({
+        phase: "ready",
+        contents: {
+          pool: { no: 4, name: "Color" },
+          presets: [{ no: 1, name: "A" }, { no: 2, name: "B" }],
+          truncated: true,
+          total: null,
+        },
+      }),
+    ).toBe("프리셋 풀 4 · Color — 2개 이상");
   });
 
   it("loading/error show the pool identity only", () => {

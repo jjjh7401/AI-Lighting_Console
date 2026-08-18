@@ -3133,6 +3133,26 @@ body {
   font-size: 12px;
 }
 
+/* The preset's OWN colour as a circle — only presets the app stored from its
+   palette carry one (the console exposes no preset colour; manual presets
+   honestly render without a swatch). The colour IS the information, so the
+   circle takes the tile's free middle band (2026-08-16 user direction:
+   "크게, 단 텍스트를 가리지 않는 범위") — flex keeps the number row above
+   and the name row below untouched, so growing the circle can push the
+   tile taller but never overlap text. */
+.preset-popup-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  align-self: center;
+  /* Tiles are fixed squares (aspect-ratio 1, overflow hidden) — the circle
+     hugs the number row above it (no top margin) so the name row below
+     keeps its full line height instead of clipping at the tile edge. */
+  margin: 0 0 2px;
+  flex-shrink: 0;
+}
+
 .preset-popup-tile .pool-tile-name {
   font-size: 12px;
   line-height: 1.25;
