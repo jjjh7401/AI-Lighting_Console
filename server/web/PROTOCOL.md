@@ -28,7 +28,7 @@ client (`ui/`), and the M6 measurement harness. Executable half:
 | `panel_unpin` | `target_kind`, `target` | (SHOWUI M1) Remove one pinned tile; the removal is persisted (REQ-SHOWUI-023). |
 | `panel_catalog_request` | — | (SHOWUI M1) Ask for a `panel_catalog` event (sent on connect and on manual refresh). |
 | `dash_catalog_request` | — | (DASHUI M1, additive) Ask for a `dash_catalog` event. Payload-free; sent on connect and on manual refresh only — never on a timer (REQ-DASHUI-021). |
-| `cue_monitor_request` | — | (T-C, wave 2 — ad-hoc contract, no SPEC on file) Ask for a `cue_monitor` event. Payload-free; sent on connect, on manual refresh, AND on a client-side poll (`CUE_MONITOR_POLL_INTERVAL_MS`, unlike `dash_catalog_request` — see below). |
+| `cue_monitor_request` | — | (T-C, wave 2 — ad-hoc contract, no SPEC on file) Ask for a `cue_monitor` event. Payload-free; sent on connect, on manual refresh, AND on a client-side poll (`CUE_MONITOR_POLL_INTERVAL_MS`, unlike `dash_catalog_request` — see below). A tick arriving while the previous one is still building is **dropped**, and the executor resolution it needs is TTL-cached — see "Poll cost" below. |
 
 Malformed frames (bad JSON, wrong `v`, unknown `type`, missing fields) yield an
 `error` event with `kind: "protocol"` and are otherwise ignored.
@@ -64,6 +64,7 @@ same change. `AC-SHOWUI-001` is the parity test that holds this.
 | `error` | `message: string` (Korean), `kind: string` | User-facing error. `kind` ∈ normalized provider kinds (`rate_limit`, `auth`, `invalid_request`, `connection`, `server`, `malformed_response`, `unknown`) + `unexpected` + `protocol`. |
 | `busy` | `message: string` | An instruction is already in flight. |
 | `notice` | `message: string` | Standalone Korean notice (e.g. showfile-backup failure, REQ-MVP-034). |
+| `progress` | `phase: "model_call"\|"tool_start"\|"tool_done"`, `detail: string` (Korean), `seq: int ≥ 1` | (지연 개선, additive) 턴이 **도는 동안** 흘러나오는 한 줄 — see "Turn progress streaming" below. 소멸성: 대화록에 쌓이지 않고, 그 턴의 종결 프레임(`chat_response` / `error`)에서 사라진다. |
 | `panel_catalog` | `items: PanelItem[]`, `sections: PanelSection[]` | (SHOWUI M1) The panel's executable tile list + per-section completeness. A refresh REPLACES the list; it does not merge. |
 | `panel_item_state` | `id: string`, `target_kind`, `target: int`, `running: bool`, `cue: string\|null` | (SHOWUI M1) One tile's playback state. `cue` is the running sequence's current cue — a **string**, because MA3 cue numbers are not integers ("1.5"). |
 | `panel_busy` | `id: string`, `target_kind`, `target: int`, `message: string` | (SHOWUI M1) A panel execution was refused because one is in flight (REQ-SHOWUI-011). Names the tile it refused so the UI can unlock that tile — distinct from `busy`, which is the CHAT turn lock the panel deliberately does not share (REQ-SHOWUI-013). |
@@ -260,6 +261,37 @@ polling), `cue_monitor_request` is explicitly contracted to poll
 live right now" goes stale between chat turns with nothing else to trigger a
 refresh.
 
+#### Poll cost (latency-1-3, 2026-08-19)
+
+A `cue_monitor` tick used to rebuild the ENTIRE dash catalog just to learn its
+executor console numbers — 26 console round trips per 5s tick, of which 19
+(groups / preset pools and their drilldown / macros / plugins / fixtures) were
+discarded unread. Measured over a day (`server/audit_logs/probe-*.jsonl`):
+457,666 round trips, 81 distinct queries, **100.0% duplicate rate**, 1,221
+round trips per minute while completely idle, 67.3ms p90.
+
+That also **bypassed REQ-DASHUI-021** in substance: the requirement forbids
+timer-driven re-query of the dash catalog, and the cue-monitor poll was
+re-querying every dash section on a timer under a different message name. Two
+changes close it:
+
+- The tick resolves executors through `dash.build_executor_catalog` — the
+  executors section ALONE (~7 round trips). The other five sections are never
+  read on this path, so no timer re-queries them any more; `dash_catalog`
+  itself remains refresh-on-demand only, exactly as REQ-DASHUI-021 requires.
+- Those executor numbers are TTL-cached process-wide
+  (`app.EXECUTOR_NOS_TTL_SECONDS`, 60s) because they change only when the
+  operator re-patches. Inside the TTL a tick issues **zero** executor round
+  trips. A manual `dash_catalog_request` refreshes the cache immediately, so
+  the operator never has to wait out the TTL after a re-patch.
+
+Independently, a tick that arrives while the previous build is still in flight
+is dropped rather than queued (one lost UDP reply stalls a build for 5s, which
+is exactly the poll interval — an unguarded spawn builds a backlog that never
+drains). The drop is recorded in the audit log as `cue_monitor_tick_coalesced`.
+The in-flight build produces a newer snapshot than the dropped request would
+have, so nothing is lost.
+
 ### status.console_input (additive, protocol stays v1)
 
 `console_offline` is reached by two different situations that the health monitor
@@ -328,6 +360,46 @@ Rules:
   lands. If the responder is not running, or the console replies outside the
   candidate set, nothing is observed and nothing is reported — the client then
   falls back to the `console_input` guidance.
+
+### Turn progress streaming — `progress` (additive, protocol stays v1)
+
+측정된 문제: 한 턴은 모델 호출을 최대 24회(`DEFAULT_MAX_MODEL_CALLS`) 돌고,
+도구 하나도 짧지 않다 — `server/audit_logs/probe-*.jsonl` 실측에서 콘솔 왕복
+p90이 67.3ms이고 `get_spatial_context` 1회가 240~420왕복 = 16~28초였다. CLI
+모델 호출 1회도 ~12초다(`server/llm/claude_code_adapter.py` `_DEFAULT_PROFILE`
+주석: 다단 도구 턴이 "~70초+ 무응답"으로 쌓여 사용자가 서버가 죽은 줄 안다).
+그런데 종전에는 그 사이 프레임이 **0개**였고 화면에는 턴이 전부 끝난 뒤
+`chat_response` 하나만 도착했다.
+
+`progress`는 루프의 이음매마다 한 줄을 흘린다:
+
+| `phase` | 언제 | `detail` 예 |
+|---|---|---|
+| `model_call` | 모델을 부르기 **직전** (마무리 정리 호출 포함) | `요청을 파악하는 중…`, `다음 단계를 판단하는 중… (3번째)`, `마무리 정리 중…` |
+| `tool_start` | 도구 하나를 디스패치하기 **직전** | `무대 좌표 읽기…` |
+| `tool_done` | 같은 도구가 **끝난 직후** | `무대 좌표 읽기 완료` |
+
+규칙:
+
+- **`seq`는 턴 안에서만 1부터 단조증가한다.** 순서가 곧 의미이고, 늦게 도착한
+  프레임이 앞선 상태를 되돌리는 것을 클라이언트가 막을 수 있어야 한다. 턴이
+  바뀌면 다시 1로 돌아간다 — 그때는 종결 프레임이 이미 표시를 지운 뒤다.
+- **소멸성 상태, 대화록 아님.** 클라이언트는 마지막 한 줄만 들고 있다가 그
+  턴의 종결 프레임(`chat_response` 또는 `error`)에서 `null`로 되돌린다. 한 턴에
+  수십 줄이 나오므로 전부 기록에 쌓으면 정작 읽어야 할 답이 묻힌다. 소켓이
+  끊길 때도 지운다(`clearOnDisconnect`) — 끊긴 뒤의 "…중"은 정보가 아니다.
+- **`detail`은 항상 한국어 사용자 문구** (REQ-MVP-020). 영어 도구 이름은 조명
+  감독의 어휘가 아니다 — `server/orchestrator/runner.py`의 `_TOOL_TASKS`가
+  도구 이름을 작업 이름으로 옮기고, 표에 없는 도구도 문구 없이 지나가지 않는다.
+- **Additive, `v`는 1.** 이 이벤트를 보내지 않는 서버에서는 클라이언트가 종전
+  그대로 동작하고, 이 이벤트를 모르는 클라이언트는 프레임을 조용히 버린다
+  (unknown-type 비대칭, 위 참조).
+- **러너는 웹소켓을 모른다.** `Orchestrator`는 선택적 `ProgressSink` 하나만
+  받고, 그것을 전송으로 이어 붙이는 일은 `ChatSession._emit_progress` →
+  `send_event`가 한다. 싱크가 `None`이면 배출 자체가 없다. 싱크가 던진 예외는
+  삼켜진다 — 진행 표시 때문에 실제 턴이 죽는 것은 개선이 아니라 새 고장이다.
+- **게이트 감사에는 아무 영향이 없다.** `progress`는 콘솔 왕복을 하나도 만들지
+  않는다: 이미 일어나는 일을 이름 붙여 내보내는 것뿐이다.
 
 ### CommandView
 

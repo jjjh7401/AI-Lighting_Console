@@ -739,7 +739,7 @@ export default function App() {
                     </button>
                   </div>
                 )}
-                <ChatView entries={state.entries} />
+                <ChatView entries={state.entries} progress={state.progress} />
                 {state.pendingApprovals.map((approval) => (
                   <ApprovalCard
                     key={approval.request_id}

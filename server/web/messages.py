@@ -535,6 +535,21 @@ def notice_event(message: str) -> dict:
     return _event("notice", message=message)
 
 
+def progress_event(*, phase: str, detail: str, seq: int) -> dict:
+    """턴이 **도는 동안** 흘러나가는 한 줄 (진행 스트리밍).
+
+    실측: 한 턴은 모델 호출 최대 24회 + 도구당 수백 콘솔 왕복이고, 그 사이
+    화면에는 아무 프레임도 도착하지 않았다 — 종전에는 턴이 전부 끝난 뒤
+    ``chat_response`` 하나뿐이었다. ``phase``\\ 는 ``model_call`` ·
+    ``tool_start`` · ``tool_done``, ``detail``\\ 은 한국어 사용자 문구,
+    ``seq``\\ 는 **턴 안에서만** 1부터 단조증가한다(턴 경계에서 되돌아간다).
+
+    소멸성 상태다: 클라이언트는 마지막 한 줄만 들고 있다가 그 턴의 종결
+    프레임(``chat_response``/``error``)에서 지운다 — 대화록에 쌓이지 않는다.
+    """
+    return _event("progress", phase=phase, detail=detail, seq=seq)
+
+
 # -- show-control panel (SPEC-COPILOT-SHOWUI-001 M1) ---------------------------
 
 

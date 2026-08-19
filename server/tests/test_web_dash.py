@@ -26,7 +26,9 @@ from server.web.dash import (
     DASH_EXECUTOR_VERIFY_QUERY_CAP,
     DASH_PRESET_POOL_QUERY_CAP,
     build_dash_catalog,
+    build_executor_catalog,
     dash_catalog_snapshot,
+    resolved_executor_nos,
 )
 from server.web.messages import PROTOCOL_VERSION
 
@@ -445,6 +447,70 @@ class TestExecutorResolution:
         del tree["Patch/Stages/1/Fixtures"]
         sections = build_dash_catalog(FakeStatePort(tree))
         assert {s["status"] for s in sections} == {"console_unreachable"}
+
+
+# -- executors-only build (latency-1-3) ------------------------------------------
+
+
+class TestExecutorOnlyCatalog:
+    """``build_executor_catalog`` is the cue_monitor poll's read path: the
+    executors section and NOTHING else.
+
+    Measured motivation (server/audit_logs/probe-*.jsonl, 2026-08-19): the 5s
+    tick used to run the full ``build_dash_catalog`` for its executor numbers
+    — 26 console round trips of which 19 were discarded unread.
+    """
+
+    def test_it_returns_exactly_the_executors_section(self):
+        sections = build_executor_catalog(FakeStatePort(_rig_tree()))
+        assert [s["name"] for s in sections] == ["executors"]
+
+    def test_the_section_is_identical_to_the_full_catalogs_executors_section(self):
+        # The whole point is fewer round trips, NOT a different answer — a
+        # divergence here would silently change which executors the monitor
+        # (and therefore the Goto membership map) recognises.
+        full = _section(build_dash_catalog(FakeStatePort(_rig_tree())), "executors")
+        only = _section(build_executor_catalog(FakeStatePort(_rig_tree())), "executors")
+        assert only == full
+
+    def test_it_never_reads_the_five_discarded_sections(self):
+        port = FakeStatePort(_rig_tree())
+        build_executor_catalog(port)
+        for discarded in (
+            "DataPool/Groups",
+            "DataPool/PresetPools",
+            "DataPool/Macros",
+            "DataPool/Plugins",
+            "Patch/Stages/1/Fixtures",
+        ):
+            assert discarded not in port.queries
+
+    def test_it_costs_a_fraction_of_the_full_catalogs_round_trips(self):
+        full_port = FakeStatePort(_rig_tree())
+        build_dash_catalog(full_port)
+        only_port = FakeStatePort(_rig_tree())
+        build_executor_catalog(only_port)
+        # Every saved query is one 5s-poll console round trip that used to be
+        # built and thrown away.
+        assert len(only_port.queries) < len(full_port.queries)
+        assert set(only_port.queries) <= set(full_port.queries)
+
+    def test_the_verified_console_numbers_survive_the_narrower_build(self):
+        assert resolved_executor_nos(build_executor_catalog(FakeStatePort(_rig_tree()))) == [101]
+
+    def test_a_dead_console_reports_unreachable_not_an_exception(self):
+        # No sibling section was read, so there is no evidence for the
+        # path-defect verdict — the honest report is console_unreachable.
+        sections = build_executor_catalog(DeadStatePort())
+        assert [(s["name"], s["status"]) for s in sections] == [
+            ("executors", "console_unreachable")
+        ]
+        assert sections[0]["items"] == []
+
+    def test_the_pages_path_is_overridable_so_a_site_can_move_it(self):
+        port = FakeStatePort(_rig_tree())
+        build_executor_catalog(port, paths={"pages": "Elsewhere/Pages"})
+        assert "Elsewhere/Pages" in port.queries
 
 
 # -- event builder (AC-DASHUI-001/002) -------------------------------------------

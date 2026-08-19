@@ -2,7 +2,7 @@
 // proposal cards (REQ-MVP-016), Korean errors (REQ-MVP-044), busy/notice lines.
 import { useState } from "react";
 
-import { type ChatEntry, type CommandView } from "../protocol";
+import { type ChatEntry, type CommandView, type ProgressState } from "../protocol";
 import { ExecutionPreviewCard } from "./ExecutionPreviewCard";
 
 // Command lists start COLLAPSED regardless of length (operator decision): the
@@ -164,7 +164,18 @@ function Entry({ entry }: { entry: ChatEntry }) {
   }
 }
 
-export function ChatView({ entries }: { entries: ChatEntry[] }) {
+export function ChatView({
+  entries,
+  progress = null,
+}: {
+  entries: ChatEntry[];
+  /**
+   * 진행 중인 턴의 마지막 한 줄. 대화록 **밖**에 붙는 소멸성 표시이므로
+   * `entries`에 섞지 않고 항상 맨 아래 한 줄로만 산다 — 턴이 끝나면 상위가
+   * `null`을 내려 사라진다(protocol.ts `reduceServerEvent`).
+   */
+  progress?: ProgressState | null;
+}) {
   return (
     <div className="chat-view">
       {entries.length === 0 && (
@@ -175,6 +186,11 @@ export function ChatView({ entries }: { entries: ChatEntry[] }) {
       {entries.map((entry, index) => (
         <Entry key={index} entry={entry} />
       ))}
+      {progress !== null && (
+        <div className="entry entry-progress" data-phase={progress.phase} role="status">
+          ⏳ {progress.detail}
+        </div>
+      )}
     </div>
   );
 }

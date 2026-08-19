@@ -142,6 +142,7 @@ from server.web.messages import (
     error_event,
     execution_preview_event,
     notice_event,
+    progress_event,
     proposal_event,
     question_request_event,
     review_request_event,
@@ -3116,7 +3117,13 @@ class ChatSession:
         # uses, rather than growing a second way to reach the console.
         self._registry = registry
         self._orchestrator = Orchestrator(
-            provider=provider, registry=registry, system_prefix=system_prefix
+            provider=provider,
+            registry=registry,
+            system_prefix=system_prefix,
+            # 진행 스트리밍: 러너는 웹소켓을 모른다. 이 세션이 자신의
+            # ``send_event``(app.py가 스레드 안전하게 만들어 넘긴 싱크)로
+            # 이어 붙이는 것이 전부다.
+            progress=self._emit_progress,
         )
 
     @property
@@ -3154,6 +3161,16 @@ class ChatSession:
 
     def _notify_question(self, request_id: str, request: QuestionRequest) -> None:
         self._send(question_request_event(request_id=request_id, request=request))
+
+    def _emit_progress(self, *, phase: str, detail: str, seq: int) -> None:
+        """오케스트레이터의 진행 한 줄을 이 연결의 이벤트 싱크로 이어 붙인다.
+
+        느슨한 이음매의 세션 쪽 절반이다 — ``server/orchestrator/runner.py``\\ 는
+        ``ProgressSink`` 하나만 알고 웹소켓·프로토콜·이벤트 모양은 모른다.
+        ``send_event``\\ 는 app.py가 이미 스레드 안전하게 감싸 넘긴 콜러블이므로
+        (턴은 ``asyncio.to_thread`` 워커에서 돈다) 여기서 다시 감쌀 것은 없다.
+        """
+        self._send(progress_event(phase=phase, detail=detail, seq=seq))
 
     def _on_preview(self, commands: Sequence[str]) -> None:
         if not commands:

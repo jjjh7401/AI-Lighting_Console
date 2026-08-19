@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,7 +35,11 @@ from server.safety.gate import SafetyGate
 from server.safety.session_context import new_session_key
 from server.web.approval_bridge import ApprovalChannel
 from server.web.cue_monitor import cue_monitor_snapshot, planned_show_order
-from server.web.dash import build_dash_catalog, resolved_executor_nos, send_dash_catalog
+from server.web.dash import (
+    build_executor_catalog,
+    resolved_executor_nos,
+    send_dash_catalog,
+)
 from server.web.handshake import (
     CLOSE_POLICY_VIOLATION,
     HandshakePolicy,
@@ -80,6 +85,19 @@ _BUSY_MESSAGE = "이전 지시를 처리 중입니다 — 완료된 뒤 다시 �
 _PANEL_TASK_ERROR_MESSAGE = "패널 요청을 처리하지 못했습니다."
 
 
+# cue_monitor 틱이 콘솔에 물어보는 executor 번호 목록의 캐시 수명.
+#
+# 근거 (latency-1-3, server/audit_logs/probe-*.jsonl, 2026-08-19 실측): 유휴
+# 상태에서도 콘솔 왕복이 1,221회/분(20회/초), 하루 457,666회, 고유 쿼리는 81개
+# 뿐이라 중복률이 100.0%였다. 그 대부분이 5초짜리 cue_monitor 틱의 재질의다.
+# 반면 executor 번호는 패치/편성을 바꿀 때만 변하는 사실상 불변값이다 — 그래서
+# 틱마다 다시 읽을 이유가 없다. 60초는 "쇼 중 executor 편성이 바뀌어도 늦어도
+# 1분 안에는 따라잡는다"와 "폴링 12회 중 11회는 콘솔을 아예 건드리지 않는다"의
+# 절충이며, 수동 새로고침(dash_catalog_request)은 TTL을 기다리지 않고 즉시
+# 캐시를 갱신한다.
+EXECUTOR_NOS_TTL_SECONDS = 60.0
+
+
 @dataclass
 class SnapshotCache:
     """Last successful dash / cue-monitor events, process-wide.
@@ -87,10 +105,53 @@ class SnapshotCache:
     Read/written from worker threads and the event loop; a whole-dict swap is
     atomic under the GIL, and a torn read is impossible because entries are
     replaced, never mutated in place.
+
+    NOT a rebuild suppressor — the distinction matters (latency-1-3): this is
+    stale-while-revalidate PAINT state only. It makes the first frame appear
+    instantly under the client's stale badge and the full rebuild still runs
+    behind it. :class:`ExecutorNoCache` below is the opposite: inside its TTL
+    the console is not queried at all.
     """
 
     dash: dict | None = None
     cue: dict | None = None
+
+
+@dataclass
+class ExecutorNoCache:
+    """TTL-guarded executor console numbers for the cue_monitor poll path.
+
+    A REBUILD SUPPRESSOR (unlike :class:`SnapshotCache` above): a hit means
+    the tick issues ZERO console round trips for executor resolution.
+
+    One tuple entry rather than two fields, for the same reason SnapshotCache
+    swaps whole dicts — worker threads and the event loop both touch this, and
+    a single attribute swap cannot be read torn under the GIL.
+    """
+
+    entry: tuple[float, tuple[int, ...]] | None = None
+    ttl_seconds: float = EXECUTOR_NOS_TTL_SECONDS
+
+    def get(self, *, now: float) -> list[int] | None:
+        """The cached numbers, or ``None`` when absent or expired."""
+        entry = self.entry
+        if entry is None:
+            return None
+        fetched_at, numbers = entry
+        if now - fetched_at >= self.ttl_seconds:
+            return None
+        return list(numbers)
+
+    def remember(self, numbers: list[int], *, now: float) -> None:
+        """Cache one build's result.
+
+        An EMPTY result is deliberately NOT cached: a console that answered
+        nothing (offline, or every UDP reply lost) would otherwise pin the
+        monitor to an empty board for a whole TTL. The next tick retries.
+        """
+        if not numbers:
+            return
+        self.entry = (now, tuple(numbers))
 
 
 @dataclass
@@ -164,6 +225,10 @@ class WebDeps:
     # #2 (2026-08-16): the ONE pending (unapproved) song design, process-wide
     # so a page refresh (new WebSocket session) keeps the editable plan.
     pending_plan_store: PendingSongPlanStore = field(default_factory=PendingSongPlanStore)
+    # latency-1-3: the cue_monitor poll's executor-number cache, process-wide
+    # like ``snapshots`` (executor numbers are CONSOLE state, not per-client
+    # state — so N open tabs share one refresh instead of N).
+    executor_nos: ExecutorNoCache = field(default_factory=ExecutorNoCache)
 
 
 async def _safe_send(websocket: WebSocket, event: dict) -> None:
@@ -344,6 +409,10 @@ def create_app(deps: WebDeps) -> FastAPI:
         panel_stop_lane = asyncio.Lock()
         panel_side_lane = asyncio.Lock()  # catalog / pin / unpin — store mutations
         panel_execute_task: asyncio.Task | None = None
+        # latency-1-3 coalesce guard: at most ONE cue_monitor build in flight
+        # per connection (the tick's own backlog, per-connection because the
+        # backlog is a property of THIS client's 5s poll).
+        cue_monitor_task: asyncio.Task | None = None
         panel_tasks: set[asyncio.Task] = set()
 
         async def panel_task(fn, *args, lane: asyncio.Lock | None = None, **kwargs) -> None:
@@ -602,7 +671,15 @@ def create_app(deps: WebDeps) -> FastAPI:
                         # as "not on the panel".
                         event = send_dash_catalog(deps.gate.state_port, send_event)
                         deps.snapshots.dash = event
-                        panel.register_dash_executors(resolved_executor_nos(event["sections"]))
+                        console_nos = resolved_executor_nos(event["sections"])
+                        panel.register_dash_executors(console_nos)
+                        # latency-1-3: this build just paid for the executor
+                        # resolution, so hand it to the cue_monitor tick's TTL
+                        # cache. That also makes the dashboard's MANUAL refresh
+                        # the operator's force-update handle — a re-patched
+                        # executor reaches the monitor without waiting out
+                        # EXECUTOR_NOS_TTL_SECONDS.
+                        deps.executor_nos.remember(console_nos, now=time.monotonic())
 
                     spawn_panel(panel_task(_dash_catalog_and_membership, lane=panel_side_lane))
                 elif message_type == "cue_monitor_request":
@@ -613,12 +690,36 @@ def create_app(deps: WebDeps) -> FastAPI:
                     # shares panel_side_lane for the same reason dash does:
                     # another many-round-trip state_port read that should not
                     # stack concurrent OSC query storms on the console.
+                    #
+                    # latency-1-3 coalesce (server/audit_logs/probe-*.jsonl,
+                    # 2026-08-19): the UI polls every 5s, but ONE lost UDP
+                    # reply stalls a build for 5s (server/safety/console.py:46)
+                    # — so an unguarded spawn queues a backlog on
+                    # panel_side_lane that never drains, and the console spends
+                    # the rest of the show answering ticks nobody is waiting
+                    # for. Dropping the tick costs nothing: the build already
+                    # in flight produces a NEWER snapshot than this request
+                    # would, and the next poll is 5s away.
+                    if cue_monitor_task is not None and not cue_monitor_task.done():
+                        deps.audit.record({"event": "cue_monitor_tick_coalesced"})
+                        continue
                     if deps.snapshots.cue is not None:
                         await _safe_send(websocket, {**deps.snapshots.cue, "cached": True})
 
                     def _cue_monitor() -> None:
-                        sections = build_dash_catalog(deps.gate.state_port)
-                        console_nos = resolved_executor_nos(sections)
+                        # latency-1-3: the tick needs the executor NUMBERS and
+                        # nothing else, and those change only when the operator
+                        # re-patches. Rebuilding the whole dash catalog here
+                        # cost 26 console round trips of which 19 (groups /
+                        # preset pools / macros / plugins / fixtures) were
+                        # discarded unread. Now: a TTL hit costs ZERO, and a
+                        # miss reads the executors section ALONE (~7).
+                        console_nos = deps.executor_nos.get(now=time.monotonic())
+                        if console_nos is None:
+                            console_nos = resolved_executor_nos(
+                                build_executor_catalog(deps.gate.state_port)
+                            )
+                            deps.executor_nos.remember(console_nos, now=time.monotonic())
                         # 진행 순서 보드 (user direction, 2026-08-15): the
                         # operator's plan leads the board — setlist allocation
                         # first, single director timeline second, else plain
@@ -640,7 +741,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                         deps.snapshots.cue = event
                         send_event(event)
 
-                    spawn_panel(panel_task(_cue_monitor, lane=panel_side_lane))
+                    cue_monitor_task = spawn_panel(panel_task(_cue_monitor, lane=panel_side_lane))
                 else:  # status_request
                     await _safe_send(websocket, session.status_snapshot())
         except WebSocketDisconnect:

@@ -9,6 +9,7 @@ test_web_dash.py).
 from __future__ import annotations
 
 import json
+import threading
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -16,7 +17,7 @@ from fastapi.testclient import TestClient
 
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate
-from server.web.app import WebDeps, create_app
+from server.web.app import ExecutorNoCache, WebDeps, create_app
 from server.web.approval_bridge import ApprovalChannel
 from server.web.cue_monitor import (
     CURRENT_CUE_PROPERTY_CANDIDATES,
@@ -450,8 +451,8 @@ class TestCueMonitorSnapshot:
 # -- /ws dispatch (cue_monitor_request wired in app.py alongside dash_catalog_request) --
 
 
-def _deps(tmp_path, provider):
-    console = FakeConsole()
+def _deps(tmp_path, provider, *, console=None):
+    console = console or FakeConsole()
     audit = AuditLog(tmp_path / "audit")
     channel = ApprovalChannel(timeout_seconds=2.0)
     gate = SafetyGate(console=console, audit=audit, approval_port=channel)
@@ -506,6 +507,243 @@ class TestCueMonitorRequestDispatch:
                 "target_no": 101,
             }
         ]
+
+
+# -- poll cost: TTL cache + in-flight coalesce (latency-1-3) --------------------
+
+
+class _RecordingConsole(FakeConsole):
+    """FakeConsole that records every state query and can HOLD one of them
+    mid-flight, so a second poll tick can be made to arrive while the first
+    build is still running."""
+
+    def __init__(self, state_tree: dict):
+        super().__init__(state_tree)
+        self.state_queries: list[str] = []
+        self.hold_path: str | None = None
+        self.entered_hold = threading.Event()
+        self.release_hold = threading.Event()
+
+    def query_state(self, path: str) -> dict:
+        self.state_queries.append(path)
+        if path == self.hold_path:
+            self.entered_hold.set()
+            self.release_hold.wait(timeout=10.0)
+        return super().query_state(path)
+
+
+def _poll_rig() -> dict:
+    """One page, one executor, deliberately UNASSIGNED (no ``sequenceNo``).
+
+    Unassigned keeps the cue-progress read at exactly one ``Executor 101``
+    state query and zero property reads, so the round-trip counts below
+    measure the executor RESOLUTION path and nothing else.
+    """
+    return {
+        "DataPool/Pages": {
+            "v": 1,
+            "kind": "state",
+            "path": "DataPool/Pages",
+            "children": [{"i": 1, "name": "Main"}],
+        },
+        "DataPool/Pages/1": {
+            "v": 1,
+            "kind": "state",
+            "path": "DataPool/Pages/1",
+            "children": [{"i": 101, "name": "Cyan Look"}],
+        },
+        "Executor 101": {
+            "v": 1,
+            "kind": "state",
+            "ok": True,
+            "node": {"name": "Cyan Look", "class": "Executor"},
+        },
+    }
+
+
+def _poll_deps(tmp_path, console):
+    return _deps(tmp_path, ScriptedProvider([]), console=console)
+
+
+_DISCARDED_SECTION_PATHS = (
+    "DataPool/Groups",
+    "DataPool/PresetPools",
+    "DataPool/Macros",
+    "DataPool/Plugins",
+    "Patch/Stages/1/Fixtures",
+)
+
+
+def _fresh_cue_monitor(ws) -> dict:
+    """The next FRESHLY BUILT cue_monitor event.
+
+    A tick whose predecessor already produced a snapshot gets an immediate
+    stale-while-revalidate repaint first (``cached: True``, app.py's
+    SnapshotCache). Skipping those is what makes "how many round trips did
+    THIS tick cost" a deterministic question.
+    """
+    while True:
+        event = ws.receive_json()
+        if event["type"] == "cue_monitor" and not event.get("cached"):
+            return event
+
+
+class TestCueMonitorPollCost:
+    """The 5s poll used to rebuild the ENTIRE dash catalog for its executor
+    numbers — 26 console round trips per tick, 19 of them discarded unread
+    (server/audit_logs/probe-*.jsonl, 2026-08-19: 457,666 round trips/day at
+    a 100.0% duplicate-query rate, 1,221/min while idle, 67.3ms p90).
+
+    That also bypassed REQ-DASHUI-021 ("no timer-driven catalog re-query") in
+    substance, under a different message name. These tests pin the fix.
+    """
+
+    def test_a_tick_never_reads_the_five_discarded_dash_sections(self, tmp_path):
+        console = _RecordingConsole(_poll_rig())
+        with (
+            TestClient(create_app(_poll_deps(tmp_path, console))) as client,
+            client.websocket_connect("/ws") as ws,
+        ):
+            ws.receive_json()  # initial status
+            _send(ws, type="cue_monitor_request")
+            assert ws.receive_json()["type"] == "cue_monitor"
+        for path in _DISCARDED_SECTION_PATHS:
+            assert path not in console.state_queries
+
+    def test_a_tick_resolves_the_executors_and_reports_them(self, tmp_path):
+        console = _RecordingConsole(_poll_rig())
+        with (
+            TestClient(create_app(_poll_deps(tmp_path, console))) as client,
+            client.websocket_connect("/ws") as ws,
+        ):
+            ws.receive_json()
+            _send(ws, type="cue_monitor_request")
+            event = ws.receive_json()
+        # The narrower read must not narrow the ANSWER.
+        assert [entry["executor_no"] for entry in event["executors"]] == [101]
+        assert console.state_queries == [
+            "DataPool/Pages",  # page list
+            "DataPool/Pages/1",  # page drilldown
+            "Executor 101",  # console-number verification
+            "Executor 101",  # cue-progress read
+        ]
+
+    def test_a_second_tick_inside_the_ttl_re_resolves_nothing(self, tmp_path):
+        console = _RecordingConsole(_poll_rig())
+        with (
+            TestClient(create_app(_poll_deps(tmp_path, console))) as client,
+            client.websocket_connect("/ws") as ws,
+        ):
+            ws.receive_json()
+            _send(ws, type="cue_monitor_request")
+            _fresh_cue_monitor(ws)
+            first_tick = len(console.state_queries)
+            _send(ws, type="cue_monitor_request")
+            event = _fresh_cue_monitor(ws)
+        # Executor numbers change only when the operator re-patches, so the
+        # whole resolution walk is skipped — only the cue-progress read runs.
+        assert console.state_queries[first_tick:] == ["Executor 101"]
+        assert [entry["executor_no"] for entry in event["executors"]] == [101]
+
+    def test_an_expired_ttl_re_reads_the_executor_section(self, tmp_path):
+        console = _RecordingConsole(_poll_rig())
+        deps = _poll_deps(tmp_path, console)
+        deps.executor_nos.ttl_seconds = 0.0  # every tick is a miss
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            ws.receive_json()
+            _send(ws, type="cue_monitor_request")
+            _fresh_cue_monitor(ws)
+            first_tick = len(console.state_queries)
+            _send(ws, type="cue_monitor_request")
+            _fresh_cue_monitor(ws)
+        assert "DataPool/Pages" in console.state_queries[first_tick:]
+
+    def test_a_dash_refresh_updates_the_cache_without_waiting_out_the_ttl(self, tmp_path):
+        # The operator's force-update handle after a re-patch: the dash build
+        # already paid for the resolution, so the tick reuses it.
+        console = _RecordingConsole(_poll_rig())
+        with (
+            TestClient(create_app(_poll_deps(tmp_path, console))) as client,
+            client.websocket_connect("/ws") as ws,
+        ):
+            ws.receive_json()
+            _send(ws, type="dash_catalog_request")
+            assert ws.receive_json()["type"] == "dash_catalog"
+            after_dash = len(console.state_queries)
+            _send(ws, type="cue_monitor_request")
+            ws.receive_json()
+        assert console.state_queries[after_dash:] == ["Executor 101"]
+
+
+class TestCueMonitorTickCoalesce:
+    """One lost UDP reply stalls a build for 5s (server/safety/console.py:46)
+    — exactly the poll interval. Without a guard the ticks queue on
+    ``panel_side_lane`` and the backlog never drains."""
+
+    def test_a_tick_arriving_while_a_build_is_in_flight_is_dropped(self, tmp_path):
+        console = _RecordingConsole(_poll_rig())
+        console.hold_path = "DataPool/Pages"
+        deps = _poll_deps(tmp_path, console)
+        # TTL off, so the dropped tick WOULD have re-walked the pages had it
+        # been queued — the round-trip count below is then discriminating on
+        # the coalesce guard alone.
+        deps.executor_nos.ttl_seconds = 0.0
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            ws.receive_json()  # initial status
+            _send(ws, type="cue_monitor_request")
+            assert console.entered_hold.wait(timeout=10.0), "the first build never started"
+            _send(ws, type="cue_monitor_request")  # must be dropped, not queued
+            # The receive loop is sequential, so a status reply proves the
+            # second tick has already been dispatched (and dropped).
+            _send(ws, type="status_request")
+            assert ws.receive_json()["type"] == "status"
+            console.release_hold.set()
+            assert ws.receive_json()["type"] == "cue_monitor"
+        # One build, not two: the dropped tick never re-walked the pages.
+        assert console.state_queries.count("DataPool/Pages") == 1
+        coalesced = [
+            e for e in deps.audit.iter_events() if e.get("event") == "cue_monitor_tick_coalesced"
+        ]
+        assert len(coalesced) == 1
+
+    def test_the_guard_is_not_a_latch_and_releases_on_completion(self, tmp_path):
+        console = _RecordingConsole(_poll_rig())
+        deps = _poll_deps(tmp_path, console)
+        deps.executor_nos.ttl_seconds = 0.0
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            ws.receive_json()
+            for _ in range(3):
+                _send(ws, type="cue_monitor_request")
+                _fresh_cue_monitor(ws)
+        assert console.state_queries.count("DataPool/Pages") == 3
+        assert not [
+            e for e in deps.audit.iter_events() if e.get("event") == "cue_monitor_tick_coalesced"
+        ]
+
+
+class TestExecutorNoCache:
+    def test_an_empty_result_is_not_cached_so_the_next_tick_retries(self):
+        # A console that answered nothing would otherwise pin the monitor to
+        # an empty board for a whole TTL.
+        cache = ExecutorNoCache()
+        cache.remember([], now=100.0)
+        assert cache.get(now=100.0) is None
+
+    def test_a_hit_inside_the_ttl_returns_the_numbers(self):
+        cache = ExecutorNoCache(ttl_seconds=60.0)
+        cache.remember([101, 201], now=100.0)
+        assert cache.get(now=159.9) == [101, 201]
+
+    def test_the_entry_expires_at_the_ttl_boundary(self):
+        cache = ExecutorNoCache(ttl_seconds=60.0)
+        cache.remember([101], now=100.0)
+        assert cache.get(now=160.0) is None
+
+    def test_a_returned_list_is_a_copy_a_caller_cannot_corrupt(self):
+        cache = ExecutorNoCache(ttl_seconds=60.0)
+        cache.remember([101], now=100.0)
+        cache.get(now=100.0).append(999)
+        assert cache.get(now=100.0) == [101]
 
 
 class TestShowPlanOrdering:

@@ -26,7 +26,7 @@ from pathlib import Path
 import pytest
 
 from server.bridge.osc import STATE_ADDRESS, FeedbackMessage
-from server.bridge.protocol import ProtocolError, encode_payload
+from server.bridge.protocol import MAX_PROPS_NAMES, ProtocolError, encode_payload
 from server.measurement.mock_provider import OfflineConsole
 from server.orchestrator.ports import PropertyQueryPort, StateQueryPort
 from server.prechk.inventory import (
@@ -47,7 +47,7 @@ from server.prechk.inventory import (
     slot_path,
 )
 from server.prechk.patch import evaluate_patch
-from server.prechk.query import read_properties
+from server.prechk.query import BULK_READ_CHUNK, read_properties
 from server.safety.audit import AuditLog
 from server.safety.console import ConsoleLink, ExecOutcome, LinkTimeouts, StateQueryError
 from server.safety.gate import SafetyGate, _GateStatePort
@@ -369,6 +369,219 @@ class TestReadProperties:
         # pass vacuously.
         with pytest.raises(ValueError):
             read_properties(gate.state_port, "Patch/Stages/1/Fixtures/1", ())
+
+
+class _BulkPort:
+    """A property port that also answers the bulk ``props`` verb (PROTOCOL §4.8).
+
+    ``bulk`` is either ``"ok"`` (generate a well-formed reply from ``values``),
+    an exception to raise, or a canned reply dict for the malformed-wire cases.
+    """
+
+    def __init__(self, values, *, bulk="ok", dropped=()):
+        self.values = dict(values)
+        self.bulk = bulk
+        self.dropped = set(dropped)  # names the responder cut to fit its payload
+        self.shortened = set()  # names whose value came back item-truncated
+        self.props_calls: list[tuple[str, tuple[str, ...]]] = []
+        self.property_calls: list[tuple[str, str]] = []
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        self.property_calls.append((path, property_name))
+        if property_name not in self.values:
+            return {
+                "ok": False,
+                "path": path,
+                "property": property_name,
+                "error": f"property not readable: {property_name}",
+            }
+        return {
+            "ok": True,
+            "path": path,
+            "property": property_name,
+            "value": self.values[property_name],
+        }
+
+    def query_properties(self, path: str, property_names) -> dict:
+        names = tuple(property_names)
+        self.props_calls.append((path, names))
+        if isinstance(self.bulk, BaseException):
+            raise self.bulk
+        if isinstance(self.bulk, dict):
+            return self.bulk
+        reads = []
+        for name in names:
+            if name in self.dropped:
+                continue
+            if name not in self.values:
+                reads.append({"n": name, "ok": False, "e": f"property not readable: {name}"})
+            elif name in self.shortened:
+                value = self.values[name][:4]
+                reads.append({"n": name, "ok": True, "t": "string", "v": value, "truncated": True})
+            else:
+                reads.append({"n": name, "ok": True, "t": "string", "v": self.values[name]})
+        return {
+            "v": 1,
+            "kind": "props",
+            "id": "x",
+            "ok": True,
+            "path": path,
+            "reads": reads,
+            "truncated": bool(self.dropped),
+        }
+
+
+class BulkFakeConsole(FakeConsole):
+    """FakeConsole plus the responder-1.6.1 bulk read, for the gate audit rule."""
+
+    def __init__(self, properties=None):
+        super().__init__(properties)
+        self.props_calls: list[tuple[str, tuple[str, ...]]] = []
+
+    def query_properties(self, path: str, property_names) -> dict:
+        names = tuple(property_names)
+        self.props_calls.append((path, names))
+        return {
+            "v": 1,
+            "kind": "props",
+            "ok": True,
+            "path": path,
+            "reads": [
+                {"n": name, "ok": True, "t": "string", "v": self.properties[f"{path} {name}"]}
+                for name in names
+            ],
+            "truncated": False,
+        }
+
+
+class TestBulkReadProperties:
+    """One ``props`` round trip instead of N ``prop`` ones (2026-08-19 latency work).
+
+    Measured: 457,666 console round trips in a day at a p90 of 67.3 ms, with
+    one-property-per-round-trip the second largest contributor. Bulking is only
+    admissible while the OBSERVABLE contract is untouched, so every semantic
+    the single-read loop guaranteed is re-pinned here against the bulk path.
+    """
+
+    PATH = "Patch/Stages/1/Fixtures/1"
+
+    def test_the_chunk_ceiling_is_the_protocols_own_limit(self):
+        # prechk must not import server.bridge (AC-PRECHK-013 ①), so the limit
+        # is restated in query.py -- and pinned here so it cannot drift.
+        assert BULK_READ_CHUNK == MAX_PROPS_NAMES
+
+    def test_every_name_is_read_in_one_call(self):
+        port = _BulkPort({"fid": "19", "posx": "0.0", "posy": "1.5", "posz": "-3.5"})
+        reads = read_properties(port, self.PATH, ("fid", "posx", "posy", "posz"))
+
+        assert port.props_calls == [(self.PATH, ("fid", "posx", "posy", "posz"))]
+        assert port.property_calls == []
+        assert list(reads) == ["fid", "posx", "posy", "posz"]
+        assert reads["posz"].ok is True and reads["posz"].value == "-3.5"
+
+    def test_duplicates_collapse_before_the_wire(self):
+        port = _BulkPort({"Patch": "1.001"})
+        reads = read_properties(port, self.PATH, ("Patch", "Patch"))
+
+        assert port.props_calls == [(self.PATH, ("Patch",))]
+        assert set(reads) == {"Patch"}
+
+    def test_an_item_level_failure_is_captured_per_name(self):
+        port = _BulkPort({"Patch": "1.001"})
+        reads = read_properties(port, self.PATH, ("Patch", "Mode"))
+
+        # A single unreadable property must not discard the readable one.
+        assert reads["Patch"].ok is True
+        assert reads["Mode"].ok is False
+        assert reads["Mode"].value is None
+        assert reads["Mode"].error == "property not readable: Mode"
+        assert port.property_calls == []
+
+    def test_more_names_than_the_responder_accepts_are_chunked(self):
+        names = tuple(f"p{i}" for i in range(MAX_PROPS_NAMES + 4))
+        port = _BulkPort({name: name.upper() for name in names})
+        reads = read_properties(port, self.PATH, names)
+
+        assert [len(call[1]) for call in port.props_calls] == [MAX_PROPS_NAMES, 4]
+        assert port.props_calls[1][1] == names[MAX_PROPS_NAMES:]
+        assert list(reads) == list(names)
+        assert all(reads[name].value == name.upper() for name in names)
+
+    def test_an_item_shortened_by_the_responder_is_re_read_in_full(self):
+        # ``props`` shortens a value past CONFIG.max_prop_value (§4.8) while
+        # ``prop`` does not (§4.6). Bulking must not silently trim a macro
+        # command line, so exactly that one name goes back on the single verb.
+        port = _BulkPort({"Command": "Go+ Sequence 80", "Name": "M1"})
+        port.shortened.add("Command")
+        reads = read_properties(port, self.PATH, ("Command", "Name"))
+
+        assert reads["Command"].value == "Go+ Sequence 80"
+        assert port.property_calls == [(self.PATH, "Command")]
+
+    def test_names_the_responder_dropped_to_fit_its_payload_are_re_read(self):
+        port = _BulkPort({"Patch": "1.001", "Name": "RMMXSm1 1"}, dropped=("Name",))
+        reads = read_properties(port, self.PATH, ("Patch", "Name"))
+
+        assert reads["Name"].value == "RMMXSm1 1"
+        assert port.property_calls == [(self.PATH, "Name")]  # only the dropped one
+
+    def test_a_1_6_0_responder_falls_back_silently_and_stops_asking(self):
+        # The live console: ``props`` is the 1.6.0 paged variant, so this
+        # server's request fails outright. No exception may escape, the answer
+        # must be identical, and the wasted round trip happens ONCE.
+        port = _BulkPort({"Patch": "1.001", "Name": "RMMXSm1 1"})
+        port.bulk = LookupError("unknown request kind: props")
+        first = read_properties(port, self.PATH, ("Patch", "Name"))
+        second = read_properties(port, self.PATH, ("Patch", "Name"))
+
+        assert first == second
+        assert first["Patch"].value == "1.001" and first["Name"].value == "RMMXSm1 1"
+        assert len(port.props_calls) == 1
+        assert len(port.property_calls) == 4  # two names, twice, on the single verb
+
+    def test_a_reply_shape_this_server_cannot_read_falls_back_too(self):
+        port = _BulkPort({"Patch": "1.001"}, bulk={"ok": True, "reads": "1.001"})
+        reads = read_properties(port, self.PATH, ("Patch",))
+
+        assert reads["Patch"].ok is True and reads["Patch"].value == "1.001"
+        assert port.property_calls == [(self.PATH, "Patch")]
+
+    def test_a_path_that_answers_nothing_does_not_disable_bulk(self):
+        # @MX:ANCHOR: the one-shot switch discriminates CAPABILITY from PATH.
+        # An unresolvable path fails every verb; giving up on bulk for it would
+        # cost the whole session the speed-up over one bad fixture.
+        port = _BulkPort({}, bulk=LookupError("unknown object path"))
+        read_properties(port, self.PATH, ("Patch",))
+        read_properties(port, self.PATH, ("Patch",))
+
+        assert len(port.props_calls) == 2
+
+    def test_an_empty_name_list_is_still_rejected_before_any_call(self):
+        port = _BulkPort({"Patch": "1.001"})
+        with pytest.raises(ValueError):
+            read_properties(port, self.PATH, ())
+        assert port.props_calls == [] and port.property_calls == []
+
+    def test_one_bulk_call_is_one_audit_row_and_carries_no_values(self, tmp_path):
+        console = BulkFakeConsole(
+            {
+                f"{self.PATH} Patch": "1.001",
+                f"{self.PATH} Name": "RMMXSm1 1",
+            }
+        )
+        gate, _, audit = _make_gate(tmp_path, console)
+        reads = read_properties(gate.state_port, self.PATH, ("Patch", "Name"))
+
+        assert reads["Patch"].value == "1.001"
+        assert console.props_calls == [(self.PATH, ("Patch", "Name"))]
+        assert console.property_calls == []
+        events = [e for e in _events(audit, "executed") if e.get("kind") == "props_query"]
+        assert len(events) == 1  # one send, one row (the gate's 1:1 rule)
+        assert events[0]["ok"] is True
+        # REQ-INTROSPECT-018: requested NAMES may be logged, read values may not.
+        assert "Patch" in events[0]["command"] and "Name" in events[0]["command"]
+        assert "1.001" not in events[0]["command"]
+        assert "RMMXSm1 1" not in events[0]["command"]
 
 
 # ---------------------------------------------------------------------------
