@@ -2115,6 +2115,15 @@ _PRESET_ALL_FAMILIES_RE = re.compile(
 #: 문장을 잡지 못한다 — 그 구멍을 이 낱말들로 막는다.
 _PRESET_REGENERATION_MARK_RE = re.compile(r"다시|재생성|갱신", re.IGNORECASE)
 
+#: 계열을 **좁히는** 수식어 전부(기본계·페이저계·연출계). 하나라도 있으면 그
+#: 문장은 계열을 특정한 것이고, 하나도 없으면 축만 말한 것이다.
+_PRESET_ANY_QUALIFIER_RE = re.compile(
+    r"기본|베이직|basic|스탠다드|standard"
+    r"|페이저|phaser|이펙트|effect|멀티\s*컬러|multi-?color|체이스|chase"
+    r"|효과|fx|연출",
+    re.IGNORECASE,
+)
+
 #: 재생성 트리거 전부. 레지스트리는 **신규 저장** 문장을 계열로 쪼개는 장치라,
 #: 재생성 문장은 어느 계열도 후보로 올리지 않는다. 재생성 어휘가 저장 동사를
 #: 공유하므로(«기본 컬러랑 포지션 다시 잡아줘» — '잡아'), 이 배제가 없으면
@@ -2140,6 +2149,10 @@ _REGENERATE_PRESET_REQUESTS: tuple[re.Pattern[str], ...] = (
 _PRESET_FOREIGN_INTENT_REQUESTS: tuple[re.Pattern[str], ...] = (
     _SONG_DESIGN_REQUEST,
     _POSITION_SHEET_REQUEST,
+    # «프리셋 28번 포지션을 **큐로** 저장해줘» — 프리셋을 **참조**해 큐를
+    # 만드는 요청이지 프리셋을 만드는 요청이 아니다. 축만 말한 문장이 그 축의
+    # 계열을 전부 올리게 되면서 이 문장이 카드로 끌려갔다(2026-08-19 회귀).
+    _CUE_STORE_INTENT,
 )
 
 
@@ -2206,6 +2219,26 @@ def _reads_as_all_families(text: str) -> bool:
     )
 
 
+def _reads_as_unqualified_axis(text: str, axis: re.Pattern[str]) -> bool:
+    """수식어 없이 축만 말한 문장인가 — 그 축의 계열을 **전부** 후보로 올린다.
+
+    «딤머, 포지션, 컬러, 콤보 프리셋을 설정해줘» 처럼 운영자는 축만 말한다.
+    그 축에 기본·연출·페이저가 몇 벌 있는지는 앱이 아는 사정이지 부탁할 때
+    따져야 할 것이 아니다. 축만 말하면 그 축의 계열을 모두 카드에 체크해
+    올리고, 필요 없는 줄은 체크를 풀면 된다 — 반대로 좁혀서 올리면 있는 줄도
+    모르고 지나간다.
+
+    수식어(기본/베이직/페이저/이펙트/체이스/연출…)가 **하나라도** 있으면 그
+    문장은 계열을 특정한 것이므로 이 확장을 하지 않는다: «기본 컬러 프리셋»은
+    기본 컬러 하나고, «컬러 페이저 프리셋»은 컬러 페이저 하나다.
+    """
+    if _PRESET_NOUN_RE.search(text) is None:
+        return False
+    if _PRESET_ANY_QUALIFIER_RE.search(text) is not None:
+        return False
+    return axis.search(text) is not None
+
+
 def _without_combo_tokens(text: str) -> str:
     return _PRESET_COMBO_AXIS_RE.sub(" ", text)
 
@@ -2232,6 +2265,8 @@ def _matches_basic_position_family(text: str) -> bool:
         return False
     if _reads_as_all_families(text):
         return True
+    if _reads_as_unqualified_axis(_without_combo_tokens(text), _PRESET_POSITION_AXIS_RE):
+        return True
     scoped = _PRESET_FX_POSITION_COMPOUND_RE.sub(" ", _without_combo_tokens(text))
     return _designates(scoped, _PRESET_POSITION_AXIS_RE)
 
@@ -2253,6 +2288,8 @@ def _matches_fx_position_family(text: str) -> bool:
         return False
     if _reads_as_all_families(text):
         return True
+    if _reads_as_unqualified_axis(_without_combo_tokens(text), _PRESET_POSITION_AXIS_RE):
+        return True
     if _PRESET_FX_POSITION_COMPOUND_RE.search(_without_combo_tokens(text)) is None:
         return False
     return _PRESET_NOUN_RE.search(text) is not None
@@ -2263,6 +2300,8 @@ def _matches_basic_color_family(text: str) -> bool:
         return False
     if _reads_as_all_families(text):
         return True
+    if _reads_as_unqualified_axis(_without_combo_tokens(text), _PRESET_COLOR_AXIS_RE):
+        return True
     scoped = _PRESET_COLOR_PHASER_COMPOUND_RE.sub(" ", _without_combo_tokens(text))
     return _designates(scoped, _PRESET_COLOR_AXIS_RE)
 
@@ -2272,6 +2311,8 @@ def _matches_basic_dimmer_family(text: str) -> bool:
         return False
     if _reads_as_all_families(text):
         return True
+    if _reads_as_unqualified_axis(_without_combo_tokens(text), _PRESET_DIMMER_AXIS_RE):
+        return True
     scoped = _PRESET_DIMMER_PHASER_COMPOUND_RE.sub(" ", _without_combo_tokens(text))
     return _designates(scoped, _PRESET_DIMMER_AXIS_RE)
 
@@ -2280,6 +2321,8 @@ def _matches_color_phaser_family(text: str) -> bool:
     if not _preset_store_request(text):
         return False
     if _reads_as_all_families(text):
+        return True
+    if _reads_as_unqualified_axis(_without_combo_tokens(text), _PRESET_COLOR_AXIS_RE):
         return True
     scoped = _without_combo_tokens(text)
     if (
@@ -2294,6 +2337,8 @@ def _matches_dimmer_phaser_family(text: str) -> bool:
     if not _preset_store_request(text):
         return False
     if _reads_as_all_families(text):
+        return True
+    if _reads_as_unqualified_axis(_without_combo_tokens(text), _PRESET_DIMMER_AXIS_RE):
         return True
     scoped = _without_combo_tokens(text)
     if (
