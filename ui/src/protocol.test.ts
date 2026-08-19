@@ -1291,3 +1291,44 @@ describe("progress — 진행 스트리밍 (지연 개선)", () => {
     expect(initialState.progress).toBeNull();
   });
 });
+
+describe("question card — multi (additive)", () => {
+  const ask = (fields: Record<string, unknown> = {}) =>
+    event({
+      type: "question_request",
+      request_id: "q-1",
+      prompt: "어느 계열을 설정할까요?",
+      why: "Store Preset은 경고 없이 덮어씁니다.",
+      steps: [],
+      options: [
+        { label: "기본 포지션 프리셋", description: "" },
+        { label: "기본 컬러 프리셋", description: "" },
+      ],
+      ...fields,
+    });
+
+  it("carries multi through to the pending question", () => {
+    const next = reduceServerEvent(initialState, ask({ multi: true }));
+    expect(next.pendingQuestions[0].multi).toBe(true);
+    expect(next.pendingQuestions[0].options).toHaveLength(2);
+  });
+
+  it("reads a server that sends no multi as single-select", () => {
+    // additive: 구버전 서버의 카드가 갑자기 「확인」을 요구하게 되면 안 된다.
+    const next = reduceServerEvent(initialState, ask());
+    expect(next.pendingQuestions[0].multi).toBe(false);
+  });
+
+  it("retires the card on the answer echo", () => {
+    const asked = reduceServerEvent(initialState, ask({ multi: true }));
+    const resolved = reduceServerEvent(
+      asked,
+      event({
+        type: "question_resolved",
+        request_id: "q-1",
+        answer: "기본 포지션 프리셋, 기본 컬러 프리셋",
+      }),
+    );
+    expect(resolved.pendingQuestions).toEqual([]);
+  });
+});

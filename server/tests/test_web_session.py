@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 
 import anthropic
 import httpx
@@ -108,6 +109,17 @@ def _session(
 def _surface_text(sent: list[dict]) -> str:
     """Everything the chat surface would ever render, as one string."""
     return json.dumps(sent, ensure_ascii=False)
+
+
+def _wait_for_question_frames(sent: list[dict], timeout: float = 2.0) -> list[dict]:
+    """UI로 나간 질문 카드 프레임들 — 물음을 낸 쪽이 다른 스레드라 잠깐 기다린다."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        cards = [event for event in sent if event.get("type") == "question_request"]
+        if cards:
+            return cards
+        time.sleep(0.01)
+    return []
 
 
 class TestOutcomeViews:
@@ -7696,3 +7708,76 @@ class TestPhaserSongCueMapping:
 
     def test_no_failures_produces_an_empty_note(self):
         assert _phaser_failure_note({}) == ""
+
+
+class TestMultiSelectQuestionCardReachesTheUi:
+    """다중 선택 카드가 **UI까지 그 모양으로** 가는가.
+
+    ``QuestionRequest.multi``만 맞고 이벤트가 그것을 떨어뜨리면 UI는 단일 선택으로
+    렌더하고, 사용자는 여러 계열을 지정했는데 하나만 고르게 된다 — 나머지는 조용히
+    사라진다. 그래서 여기서는 ``_ask_one``이 실제로 내보낸 **와이어 프레임**을 본다.
+    """
+
+    def test_the_wire_frame_carries_multi_and_the_answer_comes_back_joined(self, tmp_path):
+        from server.web.question import QuestionChannel, QuestionOption
+
+        session, _console, _audit, sent, _ = _session(tmp_path, ScriptedProvider([]))
+        channel = QuestionChannel(timeout_seconds=2.0)
+        channel.bind(session._notify_question)
+        session._question_channel = channel
+
+        box: list = []
+        thread = threading.Thread(
+            target=lambda: box.append(
+                session._ask_one(
+                    "어느 계열을 설정할까요?",
+                    options=(
+                        QuestionOption(label="기본 포지션 프리셋"),
+                        QuestionOption(label="기본 컬러 프리셋"),
+                    ),
+                    why="여러 계열을 한 문장에서 지정하셨습니다.",
+                    multi=True,
+                )
+            )
+        )
+        thread.start()
+
+        cards = _wait_for_question_frames(sent)
+        assert cards, "질문 카드가 UI까지 오지 않았다"
+        assert cards[-1]["multi"] is True
+        assert [option["label"] for option in cards[-1]["options"]] == [
+            "기본 포지션 프리셋",
+            "기본 컬러 프리셋",
+        ]
+
+        assert (
+            channel.resolve(cards[-1]["request_id"], answer="기본 포지션 프리셋, 기본 컬러 프리셋")
+            is True
+        )
+        thread.join(2)
+
+        # 결합된 답이 다듬어지지 않고 그대로 온다 — 계열을 가르는 것은 부르는 쪽 몫이다.
+        assert box == ["기본 포지션 프리셋, 기본 컬러 프리셋"]
+
+    def test_a_single_family_card_stays_single_select(self, tmp_path):
+        """기본값이 새면 기존 카드 전부가 「확인」을 한 번 더 요구하게 된다."""
+        from server.web.question import QuestionChannel, QuestionOption
+
+        session, _console, _audit, sent, _ = _session(tmp_path, ScriptedProvider([]))
+        channel = QuestionChannel(timeout_seconds=2.0)
+        channel.bind(session._notify_question)
+        session._question_channel = channel
+
+        thread = threading.Thread(
+            target=lambda: session._ask_one(
+                "몇 번부터 저장할까요?",
+                options=(QuestionOption(label="1번부터"),),
+            )
+        )
+        thread.start()
+
+        cards = _wait_for_question_frames(sent)
+        assert cards[-1]["multi"] is False
+
+        channel.resolve(cards[-1]["request_id"], answer="1번부터")
+        thread.join(2)

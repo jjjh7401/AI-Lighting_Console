@@ -230,6 +230,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     620,
     952,
     989,
+    995,
     1004,
     1007,
     1011,

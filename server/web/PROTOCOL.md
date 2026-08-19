@@ -20,6 +20,7 @@ client (`ui/`), and the M6 measurement harness. Executable half:
 | `vectorworks_export_upload` | `file_name: string`, `content_base64: string` | Vectorworks Instrument Data export (`.csv`, `.txt`, `.xlsx`, or `.mvr`, non-empty and ≤8 MiB). Replaces this connection's source and immediately starts guided comparison. Raw bytes stay session-local; the model calls `vectorworks_autopatch` rather than receiving base64 or asking the operator to paste it. |
 | `approval_decision` | `request_id: string`, `approved: bool` | The human decision for a pending `approval_request`. Unknown/expired ids get an `error` (kind `protocol`). |
 | `review_decision` | `request_id: string`, `approved: bool` | (M7, additive) The human decision for a pending `review_request` (deploy review). Unknown/expired ids get an `error` (kind `protocol`). |
+| `question_answer` | `request_id: string`, `answer: string` (non-empty) | The human answer for a pending `question_request` — the model's own words back, never a boolean (that is what `approval_decision` carries). For a `multi: true` question the answer is the chosen labels joined by `", "` (comma + space). Unknown/expired ids get an `error` (kind `protocol`). |
 | `lock` | `active: bool` | Live-lock toggle (REQ-MVP-016). Effective immediately — including while an approval is pending (lock-first, REQ-MVP-035). |
 | `status_request` | — | Ask for a `status` event. |
 | `panel_execute` | `target_kind: "executor"\|"sequence"\|"macro"`, `target: int ≥ 1` | (SHOWUI M1, additive) Fire one panel tile → `Go+ Executor N` / `Go+ Sequence N`, via `gate.screen()`. One panel execution at a time; a second while busy gets `panel_busy`. `macro` (DASHUI M1, additive) fires the rulebook-verified bare form `Macro N` (00_grammar.md:60) — no playback verb word precedes it. |
@@ -60,6 +61,8 @@ same change. `AC-SHOWUI-001` is the parity test that holds this.
 | `approval_resolved` | `request_id`, `approved: bool` | Decision echo — retire the approval card. |
 | `review_request` | `request_id: string`, `plugin_name: string`, `source_preview: string` (bounded, ≤4000 chars), `source_length: int`, `source_truncated: bool`, `compile_ok: bool`, `scan: ScanReport`, `actions: ["approve","reject"]` | (M7, REQ-MVP-019/027) A pending plugin-deploy review. `scan.destructive: bool`; `scan.findings: [{line, command, kind: "blacklisted"\|"invoking"\|"unparseable", matched_entry, reasons[]}]`; `scan.dynamic_calls: [{line, snippet}]` (Cmd() calls the static scan cannot verify); `scan.caveat` carries the best-effort framing — the human reviewer is the authoritative control. |
 | `review_resolved` | `request_id`, `approved: bool` | (M7) Review decision echo — retire the review card. On disconnect/timeout pending reviews are DENIED (same quadruple-deny as approvals). |
+| `question_request` | `request_id: string`, `prompt: string` (Korean), `why: string`, `steps: string[]`, `commands?: string[]`, `options: [{label, description}]`, `multi?: bool` | 모델이 추측 대신 되묻는 질문 카드 — see "질문 카드" below. Answered by `question_answer`; on disconnect/timeout the model receives **미응답**, which is NOT a rejection. |
+| `question_resolved` | `request_id`, `answer: string` | Answer echo — retire the question card. |
 | `proposal` | `commands: string[]`, `reasons: string[]` | Read-only proposal card produced under the live lock (REQ-MVP-016). |
 | `error` | `message: string` (Korean), `kind: string` | User-facing error. `kind` ∈ normalized provider kinds (`rate_limit`, `auth`, `invalid_request`, `connection`, `server`, `malformed_response`, `unknown`) + `unexpected` + `protocol`. |
 | `busy` | `message: string` | An instruction is already in flight. |
@@ -71,6 +74,35 @@ same change. `AC-SHOWUI-001` is the parity test that holds this.
 | `dash_catalog` | `sections: DashSection[]` | (DASHUI M1) The console-info dashboard's read-only pool catalog. A refresh REPLACES the list; it does not merge (REQ-DASHUI-006). Info-only by shape — see DashSection / DashItem below. |
 | `cue_monitor` | `executors: CueExecutorEntry[]`, `history: CueHistoryEntry[]` | (T-C, wave 2) The live cue-progress monitor's snapshot — see "Live cue-progress monitor" below. A refresh REPLACES both lists; it does not merge. |
 | `song_timeline` | `timeline: SongTimelineView` | 감독이 검토하는 전곡 조명 타임라인. 구간별 D·팔레트·포지션·질감·FX·MIB·Cue·타이밍과 Q1~Q5 확정 상태, lint/disabled/unresolved notes, 승인·readback 상태를 담는다. 명령 문자열이나 실행 제어 필드는 없다. |
+
+### 질문 카드 — `question_request` / `question_answer`
+
+답이 **글**인 통로다. 승인(`approval_request`)은 실패하면 거부가 안전하지만, 질문은
+실패해도 거부가 아니다 — 답을 못 받았을 뿐이므로 모델은 "사용자가 아직 답하지
+않았다"를 사실 그대로 받는다.
+
+`options`가 비면 자유 입력 질문이고, 차 있으면 선택지 + 자유 입력이다. **선택지가
+있어도 자유 입력은 닫지 않는다** — 사용자의 실제 사정이 선택지에 없는 경우가 실물에서
+흔하다.
+
+| 필드 | 값 | 뜻 |
+|---|---|---|
+| `commands` | string[] (optional) | 사용자가 콘솔 명령줄에 그대로 복사해 실행할 명령들. 구버전 서버에는 없다(additive) → 없으면 인계 명령 없음. |
+| `multi` | bool (optional, 기본 `false`) | 여러 개를 **함께** 고를 수 있는 물음인가. 구버전 서버에는 없다(additive) → 없으면 단일 선택으로 읽는다. |
+
+`multi`는 카드 **개수**가 아니라 답 하나의 **모양**을 넓힌다:
+
+| | `multi: false` (기본) | `multi: true` |
+|---|---|---|
+| UI | 선택지 하나하나가 누르면 즉시 답이 되는 버튼 | 체크박스 + 「확인」 버튼 (1개 이상 고르기 전엔 비활성) |
+| `question_answer.answer` | 고른 선택지의 `label` 하나 | 고른 `label`들을 `", "`(콤마 + 공백)로 이은 한 문자열 |
+| 순서 | — | **카드에 실린 순서**(클릭 순서가 아니다). 서버가 고른 항목을 그 순서로 처리하므로, 클릭 순서가 처리 순서를 흔들면 안 된다. |
+
+`multi: true`가 필요한 자리는 "여럿 중 하나"가 아니라 "해당하는 것 전부"인 물음이다 —
+한 문장이 여러 계열을 지정하는 요청(«포지션, 컬러, 딤머 프리셋을 설정해줘»)에 단일
+선택 카드를 세우면 그중 하나만 받고 **나머지를 조용히 버린다**. 자유 입력은 `multi`가
+참일 때도 그대로 열려 있으므로, 서버는 답을 콤마로 갈라 각 조각을 다듬어 읽어야 한다
+(사용자가 손으로 적은 답도 같은 통로로 온다).
 
 ### Panel command outcomes (SHOWUI M3)
 
