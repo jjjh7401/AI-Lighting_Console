@@ -228,7 +228,7 @@ _SAFETY_EXPECTED_DELETIONS = {
     "server/safety/audit.py": 10,
     "server/safety/backup.py": 2,
     "server/safety/blacklist.yaml": 1,
-    "server/safety/console.py": 15,
+    "server/safety/console.py": 57,
     "server/safety/gate.py": 6,
 }
 _SAFETY_ALLOWED_DELETED_LINES = {
@@ -285,12 +285,67 @@ _SAFETY_ALLOWED_DELETED_LINES = {
     # pairs: entering the touched set made TestTouchedFilesPassLint demand
     # format-cleanliness on the whole file, so the historical non-clean
     # wrappings had to align WITH the edit that touched the file.
+    # 2026-08-19 granted extension — the responder ALIAS SWAP (PR #56,
+    # docs/research/ma3-effects/12-introspect-v161-redeploy-probe.md §1.2/§1.3):
+    # `ConsoleLink.execute` wraps every command as
+    # `Plugin "CopilotResponder" "exec …"`, so re-deploying the responder made
+    # `Delete Plugin <own slot>` a SELF-delete, which MA3 answers with a
+    # confirmation dialog that OSC cannot reach ("User Canceled Command").
+    # `_run_file_import` is therefore rewritten around a temporary console-named
+    # alias, `_deploy_execute` gains `via=` so a step can run from a DIFFERENT
+    # plugin, and `execute` delegates to `_execute(..., plugin_name=…)`. The
+    # deletions below are exactly that rewrite (the old single-path import body,
+    # the old `_deploy_execute` signature and its docstring, the one wire line
+    # `execute` no longer builds itself) PLUS the fifteen paging-revision lines
+    # granted on 2026-08-16, which the count above now folds in.
     "server/safety/console.py": (
+        "            wire = build_exec_request(request_id, command)",
+        "        Idempotent: an existing plugin of the same Name is deleted first so a",
+        "        re-deploy updates in place instead of creating a duplicate.",
+        "    def _deploy_execute(self, command: str, sends: list[DeploySend]) -> ExecOutcome:",
+        '        """One exec round-trip inside a deploy — recorded with its outcome."""',
+        "        outcome = self.execute(command)",
+        "                detail=outcome.detail,",
         "    def _run_file_import(",
         "        self, name: str, lua_source: str, sends: list[DeploySend]",
         "    ) -> ExecOutcome:",
         '            return ExecOutcome(status="failed", detail=f"cannot write plugin file {target}: {error}")',  # noqa: E501
+        "        existing_slot: int | None = None",
+        "        occupied: set[int] = set()",
+        "        unnumbered = 0",
+        '            pool = self._deploy_query_state("DataPool/Plugins", sends)',
+        '            for child in pool.get("children", []):',
+        "                if not isinstance(child, dict):",
+        "                    continue",
+        '                index = child.get("i")',
+        "                if isinstance(index, int):",
+        "                    occupied.add(index)",
+        "                else:",
+        "                    unnumbered += 1",
+        '                if child.get("name") == name:',
+        "                    existing_slot = index if isinstance(index, int) else None",
+        "            pass  # non-fatal — proceed with the slot-1 fallback below",
+        "        # A listed plugin whose real slot the responder could NOT establish",
+        '        # (it omits "i" rather than substituting a listing position —',
+        "        # PROTOCOL.md §4.2) makes the arithmetic below a guess: that plugin may",
+        '        # sit in exactly the slot picked as "free", and `Import Plugin <slot>`',
+        "        # would overwrite it. Refuse rather than gamble with the user's pool.",
+        "        if unnumbered:",
+        '                status="failed",',
+        '                    f"cannot choose a free plugin slot: {unnumbered} plugin(s) in "',
+        '                    "DataPool/Plugins reported no pool slot (the console exposes no "',
+        '                    "usable child-index accessor), so importing could overwrite one"',
+        "        if isinstance(existing_slot, int):",
+        '            self._deploy_execute(f"Delete Plugin {existing_slot}", sends)',
+        "            occupied.discard(existing_slot)",
+        "        slot = 1",
+        "        while slot in occupied:",
+        "            slot += 1",
+        '            pool = self._deploy_query_state("DataPool/Plugins", sends)',
         '            return ExecOutcome(status="unconfirmed", detail=f"imported but pool unreadable: {error}")',  # noqa: E501
+        '        names = [c.get("name") for c in pool.get("children", []) if isinstance(c, dict)]',  # noqa: E501
+        "        if name in names:",
+        '            status="failed", detail=f"import did not create plugin {name!r} (pool: {names})"',  # noqa: E501
         "    def query_state(self, path: str) -> dict:",
         '        """Object-tree snapshot query (REQ-MVP-003); raises on failure/timeout."""',
         "        payload = self._round_trip(",

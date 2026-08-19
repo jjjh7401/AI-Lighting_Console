@@ -858,3 +858,55 @@ class TestBulkPropertyReads:
         assert reply["unreadable"] == [
             {"fid": 2, "name": "PAR 2", "reason": "property not readable: posy"}
         ]
+
+
+class TestTheBulkCeilingIsFixturesNotPropertyNames:
+    """An 80-fixture rig must read COMPLETELY over a bulk responder.
+
+    Live on 2026-08-19 it did not: the budget still charged four round trips
+    per fixture, so the sweep stopped at ``CAP_FIXTURES`` (60) of 80, the
+    reply came back partial, and ``_read_pointing_coordinates`` refused the
+    whole request with «3D 좌표 응답이 전송 중 잘렸거나 조회 한도에 도달해…».
+    Bulk spends ONE trip per fixture, so the cap is the fixture ceiling.
+    """
+
+    def test_a_rig_past_the_per_name_ceiling_reads_completely_over_bulk(self):
+        entries = _bar(CAP_FIXTURES + 20)  # the live rig: 80 where the cap was 60
+        bulk = BulkSpatialRig(entries)
+
+        reply = _read(bulk)
+
+        # A COMPLETE reply carries `fixtures`; a partial one has no such key.
+        assert len(reply["fixtures"]) == CAP_FIXTURES + 20
+        assert reply["coverage"] == {
+            "judged": CAP_FIXTURES + 20,
+            "of": CAP_FIXTURES + 20,
+            "complete": True,
+        }
+        assert reply["roundtrip_capped"] is False
+        assert len(bulk.props_calls) == CAP_FIXTURES + 20
+        assert bulk.property_calls == []
+
+    def test_the_same_rig_is_still_capped_on_a_per_name_console(self):
+        # The ceiling did not vanish — it tracks what a round trip costs.
+        entries = _bar(CAP_FIXTURES + 20)
+        single = SpatialRig(entries)
+
+        reply = _read(single)
+
+        assert "fixtures" not in reply
+        assert reply["roundtrip_capped"] is True
+        assert reply["coverage"]["judged"] == CAP_FIXTURES
+        assert len(single.property_calls) == SPATIAL_PROPERTY_QUERY_CAP
+
+    def test_bulk_still_stops_somewhere(self):
+        # A budget that never binds is not a budget: one past the cap is cut.
+        entries = _bar(SPATIAL_PROPERTY_QUERY_CAP + 1)
+        bulk = BulkSpatialRig(entries)
+
+        reply = _read(bulk)
+
+        assert "fixtures" not in reply
+        assert reply["roundtrip_capped"] is True
+        assert reply["coverage"]["judged"] == SPATIAL_PROPERTY_QUERY_CAP
+        assert len(bulk.props_calls) == SPATIAL_PROPERTY_QUERY_CAP

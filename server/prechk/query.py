@@ -60,8 +60,16 @@ class PropertyRead:
     error: str | None = None
 
 
-def _bulk_capable(port: object) -> bool:
-    """Does this port still offer a bulk read we have not already given up on?"""
+def bulk_capable(port: object) -> bool:
+    """Does this port still offer a bulk read we have not already given up on?
+
+    Public because the round-trip BUDGET has to agree with the read path: a
+    bulk-capable port spends ONE round trip per object regardless of how many
+    property names are asked for, so a caller that budgets per-name would cap
+    itself four to seven times too early (measured 2026-08-19 on an 80-fixture
+    rig: the per-name budget stopped the spatial read at 60 fixtures and the
+    console refused the whole request as incomplete).
+    """
     if not callable(getattr(port, "query_properties", None)):
         return False
     try:
@@ -179,7 +187,7 @@ def read_properties(
     reads: dict[str, PropertyRead] = {}
     pending: list[str] = []
     unanswered: list[str] = []  # names the BULK CALL itself could not cover
-    if _bulk_capable(port):
+    if bulk_capable(port):
         for start in range(0, len(wanted), BULK_READ_CHUNK):
             chunk = wanted[start : start + BULK_READ_CHUNK]
             answered = _bulk_chunk(port, path, chunk)
