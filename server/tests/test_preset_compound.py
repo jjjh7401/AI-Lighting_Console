@@ -48,8 +48,14 @@ COMPOUND_TEXT = (
     "포지션, 컬러, 딤머의 기본 프리셋과 페이저 프리셋을 설정하고 복합 프리셋도 All에 설정해줘"
 )
 
+#: 진단 문장이 실제로 지정하는 계열 — 레지스트리 **전체**가 아니다. FX 포지션
+#: (연출 포지션)은 이 문장에 없으므로 카드에도 오르면 안 된다. 레지스트리가
+#: 자라도 이 파일이 조용히 틀리지 않도록 문장에서 유도한다.
+DETECTED_FAMILIES = tuple(f for f in PRESET_FAMILIES if f.matches(COMPOUND_TEXT))
+
 _FAMILY_HANDLERS = {
     "basic_position": "_basic_position_presets",
+    "fx_position": "_fx_position_presets",
     "basic_color": "_basic_color_presets",
     "basic_dimmer": "_basic_dimmer_presets",
     "color_phaser": "_color_phaser_presets",
@@ -127,11 +133,68 @@ class TestFamilyRegistry:
     def test_the_registry_order_and_keys_are_the_contract(self):
         assert [family.key for family in PRESET_FAMILIES] == [
             "basic_position",
+            "fx_position",
             "basic_color",
             "basic_dimmer",
             "color_phaser",
             "dimmer_phaser",
             "combo_phaser",
+        ]
+
+    def test_the_set_is_seven_families_of_ten(self):
+        """7계열 × 10종 = 70종이 이 앱의 프리셋 세트 전부다.
+
+        FX 포지션이 레지스트리에서 빠져 카드에 60종만 올랐던 적이 있다
+        (2026-08-19 사용자 지적) — 계열 수와 카탈로그 길이를 함께 못 박는다.
+        """
+        from server.spatial.pointing import BASIC_POSITION_SEQUENCE, FX_POSITION_SEQUENCE
+        from server.web.session import (
+            COLOR_PHASER_SEQUENCE,
+            COMBO_PHASER_SEQUENCE,
+            DIMMER_PHASER_SEQUENCE,
+        )
+
+        assert len(PRESET_FAMILIES) == 7
+        for catalogue in (
+            BASIC_POSITION_SEQUENCE,
+            FX_POSITION_SEQUENCE,
+            COLOR_PHASER_SEQUENCE,
+            DIMMER_PHASER_SEQUENCE,
+            COMBO_PHASER_SEQUENCE,
+        ):
+            assert len(catalogue) == 10
+
+    def test_the_diagnostic_sentence_does_not_summon_the_fx_positions(self):
+        # 진단 문장은 '기본' 포지션만 말한다 — 연출 포지션까지 끌어오면
+        # 사용자가 요청하지 않은 10종을 덮어쓸 후보로 올리는 셈이다.
+        assert [family.key for family in DETECTED_FAMILIES] == [
+            "basic_position",
+            "basic_color",
+            "basic_dimmer",
+            "color_phaser",
+            "dimmer_phaser",
+            "combo_phaser",
+        ]
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "이펙트 포지션 프리셋 저장해줘",
+            "조명연출을 위한 포지션 프리셋 저장해줘",
+            "연출용 포지션 프리셋 설정해줘",
+            "FX 포지션 프리셋 만들어줘",
+        ],
+    )
+    def test_the_fx_positions_are_their_own_family(self, text):
+        # 기본 포지션과 **다른** 카탈로그다 — 둘 다 후보로 오르면 카드가
+        # 같은 Position 풀에 두 벌을 제안한다.
+        assert [family.key for family in PRESET_FAMILIES if family.matches(text)] == ["fx_position"]
+
+    def test_both_position_families_ride_together_when_both_are_named(self):
+        text = "기본 포지션이랑 이펙트 포지션 프리셋 저장해줘"
+        assert [family.key for family in PRESET_FAMILIES if family.matches(text)] == [
+            "basic_position",
+            "fx_position",
         ]
 
     # 합성 경로는 키마다 **기존** 핸들러를 부른다 — 하나라도 이름이 틀리면
@@ -276,24 +339,24 @@ class TestCompoundCard:
         card = question.asked[0]
         assert card.multi is True
         assert [option.label for option in card.options] == [
-            family.label for family in PRESET_FAMILIES
+            family.label for family in DETECTED_FAMILIES
         ]
         # 왜 묻는지가 카드에 있다 — 계열마다 시작 번호를 따로 여쭤본다는 사실.
         assert "시작 번호" in card.why
         assert card.to_dict()["multi"] is True
 
     def test_choosing_every_family_runs_them_in_registry_order(self, tmp_path):
-        labels = ", ".join(family.label for family in PRESET_FAMILIES)
+        labels = ", ".join(family.label for family in DETECTED_FAMILIES)
         session, calls, question = _build(tmp_path, answers=[labels])
 
         event = session.run_instruction(COMPOUND_TEXT)
 
         assert len(question.asked) == 1  # 계열마다 한 장이 아니라 한 장뿐
-        assert [key for key, _text in calls] == [family.key for family in PRESET_FAMILIES]
+        assert [key for key, _text in calls] == [family.key for family in DETECTED_FAMILIES]
         # 각 계열은 **원문 그대로** 받는다 — 그 안에서 「N번부터」를 스스로 읽는다.
         assert {text for _key, text in calls} == {COMPOUND_TEXT}
         assert event["status"] == "ok"
-        for family in PRESET_FAMILIES:
+        for family in DETECTED_FAMILIES:
             assert family.label in event["text"]
 
     def test_only_the_chosen_families_run(self, tmp_path):
@@ -441,18 +504,18 @@ class TestOneFamilyFailingKeepsTheRest:
     """look 하나가 거부돼도 나머지를 살리는 기존 번들 규율과 같은 형상."""
 
     def test_a_raising_family_does_not_stop_the_others(self, tmp_path):
-        labels = ", ".join(family.label for family in PRESET_FAMILIES)
+        labels = ", ".join(family.label for family in DETECTED_FAMILIES)
         session, calls, _question = _build(tmp_path, answers=[labels], raising={"basic_color"})
 
         event = session.run_instruction(COMPOUND_TEXT)
 
-        assert [key for key, _text in calls] == [family.key for family in PRESET_FAMILIES]
+        assert [key for key, _text in calls] == [family.key for family in DETECTED_FAMILIES]
         assert "기본 디머" in event["text"]  # 실패한 계열 뒤도 계속 진행했다
         assert "미저장" in event["text"] and "기본 컬러" in event["text"]
 
     # REQ-MVP-044 — 예외 원문은 표면에 나오지 않고 감사 로그로만 간다.
     def test_the_raw_failure_detail_never_reaches_the_surface(self, tmp_path):
-        labels = ", ".join(family.label for family in PRESET_FAMILIES)
+        labels = ", ".join(family.label for family in DETECTED_FAMILIES)
         session, _calls, _question = _build(tmp_path, answers=[labels], raising={"basic_color"})
 
         event = session.run_instruction(COMPOUND_TEXT)
@@ -461,21 +524,21 @@ class TestOneFamilyFailingKeepsTheRest:
         assert "콘솔 왕복 실패" not in event["text"]
 
     def test_a_family_that_declines_the_sentence_is_disclosed_not_silent(self, tmp_path):
-        labels = ", ".join(family.label for family in PRESET_FAMILIES)
+        labels = ", ".join(family.label for family in DETECTED_FAMILIES)
         session, calls, _question = _build(tmp_path, answers=[labels], declining={"combo_phaser"})
 
         event = session.run_instruction(COMPOUND_TEXT)
 
-        assert [key for key, _text in calls] == [family.key for family in PRESET_FAMILIES]
+        assert [key for key, _text in calls] == [family.key for family in DETECTED_FAMILIES]
         assert "건너뛰었습니다" in event["text"]
         assert "미저장" in event["text"] and "콤보 페이저" in event["text"]
 
     # 실행된 계열들의 명령 결과는 하나의 요약에 모여 표면에 도달한다.
     def test_the_summary_collects_every_family_outcome(self, tmp_path):
-        labels = ", ".join(family.label for family in PRESET_FAMILIES)
+        labels = ", ".join(family.label for family in DETECTED_FAMILIES)
         session, _calls, _question = _build(tmp_path, answers=[labels])
 
         event = session.run_instruction(COMPOUND_TEXT)
 
         commands = [view["command"] for view in event["commands"]]
-        assert commands == [f"Store Preset {family.key}" for family in PRESET_FAMILIES]
+        assert commands == [f"Store Preset {family.key}" for family in DETECTED_FAMILIES]
