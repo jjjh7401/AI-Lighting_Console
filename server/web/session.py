@@ -6127,7 +6127,11 @@ class ChatSession:
                 model_calls=0,
                 duration_seconds=0.0,
             )
-        by_label = {family.label: family for family in detected}
+        # 카드가 **제시한** 것과 답으로 **받는** 것은 같은 집합이어야 한다.
+        # 감지분으로 좁히면 카드에 미체크로 실어 둔 계열을 사용자가 체크했을 때
+        # "알 수 없는 이름"으로 되돌려보내게 된다(2026-08-19 실측: 일곱 줄을 다
+        # 체크했더니 «연출 포지션»만 거부됐다).
+        by_label = {family.label: family for family in PRESET_FAMILIES}
         picked = [part.strip() for part in answer.split(",") if part.strip()]
         unknown = [part for part in picked if part not in by_label]
         if not picked or unknown:
@@ -6149,7 +6153,7 @@ class ChatSession:
         # 실행 순서는 사용자가 체크한 순서가 아니라 ``PRESET_FAMILIES`` 순서다 —
         # 체크 순서는 UI 사정이고, 계열 간 순서는 등록 순서로 고정되어야 재현
         # 가능하다(사전 핸들러 등록 순서를 행선지 고정에 쓰는 것과 같은 규율).
-        selected = [family for family in detected if family.key in chosen_keys]
+        selected = [family for family in PRESET_FAMILIES if family.key in chosen_keys]
         outcomes: list[CommandOutcome] = []
         lines: list[str] = []
         statuses: list[str] = []
