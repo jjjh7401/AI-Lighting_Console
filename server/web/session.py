@@ -2067,10 +2067,18 @@ _PRESET_COLOR_PHASER_COMPOUND_RE = re.compile(
 _PRESET_DIMMER_PHASER_COMPOUND_RE = re.compile(
     _DIMMER_AXIS_WORD + r"\s*(?:페이저|이펙트|phaser|effect)", re.IGNORECASE
 )
-#: FX 포지션 복합어. '이펙트 포지션'은 기하 골격 계열(`_FX_POSITIONS_REQUEST`)이고
-#: 레지스트리에 없다 — 기본 포지션 계열이 그 문장을 자기 것으로 주장하면 안 된다.
+#: FX 포지션 복합어. '이펙트 포지션'은 기하 골격 계열(`_FX_POSITIONS_REQUEST`,
+#: `FX_POSITION_SEQUENCE` 10종)이고 **기본 포지션과는 다른 계열**이다 — 기본
+#: 포지션 계열이 그 문장을 자기 것으로 주장하면 안 되므로 판정 전에 걷어낸다.
+#:
+#: 수식어와 축 사이에 조사·꾸밈말이 끼는 실제 어법을 받는다(2026-08-19 사용자
+#: 표현 «조명연출을 위한 포지션»): 붙어 있는 '이펙트 포지션'만 보면 그 문장이
+#: 기본 포지션으로 새고, 같은 카드에 계열이 둘 뜬다. 간격은 짧게 묶어 둔다 —
+#: 넓히면 "무빙 이펙트 적용하고 … 포지션 프리셋 저장" 같은 무관한 문장까지
+#: FX로 끌려온다.
 _PRESET_FX_POSITION_COMPOUND_RE = re.compile(
-    r"(?:이펙트|효과|fx|effect)\s*(?:포지션|position)", re.IGNORECASE
+    r"(?:이펙트|효과|fx|effect|연출).{0,8}?(?:포지션|position)",
+    re.IGNORECASE | re.DOTALL,
 )
 #: 축 **없는** 맨 '페이저' 판정용. '이펙트/effect'는 여기 들어오면 안 된다 —
 #: "무빙 이펙트 만들어줘"(이펙트 적용)를 프리셋 카드로 끌어온다. '프리셋'을
@@ -2150,6 +2158,26 @@ def _matches_basic_position_family(text: str) -> bool:
     return _designates(scoped, _PRESET_POSITION_AXIS_RE)
 
 
+def _matches_fx_position_family(text: str) -> bool:
+    """조명연출용 기하 포지션 계열 — 기본 포지션과 **다른** 10종이다.
+
+    카탈로그는 `FX_POSITION_SEQUENCE`(Sweep L/R, Sky Out, Floor/Circle/Bally
+    Base, Tail, Mirror Split, Fan Floor, Aisle Punch)로, 페이저가 그 둘레를
+    도는 기하 골격이다. 이 계열이 레지스트리에서 빠져 있어 7계열 70종 중
+    60종만 카드에 올랐다(2026-08-19 사용자 지적).
+
+    '프리셋' 명사를 요구한다 — 축만 보면 «이펙트 포지션으로 시퀀스 만들어줘»
+    (recall 경로)까지 계열로 세어 합성 카드가 그 문장을 가로챈다. 명사가 없는
+    «이펙트 포지션 저장해줘»는 계열 하나로도 세어지지 않으므로 지금처럼
+    단일 핸들러(`_fx_position_presets`)가 그대로 받는다.
+    """
+    if not _preset_store_request(text):
+        return False
+    if _PRESET_FX_POSITION_COMPOUND_RE.search(_without_combo_tokens(text)) is None:
+        return False
+    return _PRESET_NOUN_RE.search(text) is not None
+
+
 def _matches_basic_color_family(text: str) -> bool:
     if not _preset_store_request(text):
         return False
@@ -2212,8 +2240,13 @@ class PresetFamily:
 #: 계열 순서가 계약이다 — 선택 카드의 줄 순서이자 순차 실행 순서다. 번호 규율은
 #: 계열마다 자기 카드를 그대로 낸다: `Store Preset`은 경고 없이 덮어쓰므로 시작
 #: 번호는 문장의 「N번부터」나 계열별 질문 카드에서만 온다.
+#:
+#: **7계열 × 10종 = 70종**이 이 앱의 프리셋 세트 전부다. FX 포지션(조명연출용
+#: 기하 골격)은 기본 포지션과 같은 Position 풀을 쓰지만 카탈로그가 다른 별도
+#: 계열이라 바로 뒤에 둔다 — 처음 등록에서 빠져 카드에 60종만 올랐다.
 PRESET_FAMILIES: tuple[PresetFamily, ...] = (
     PresetFamily("basic_position", "기본 포지션", _matches_basic_position_family),
+    PresetFamily("fx_position", "연출 포지션", _matches_fx_position_family),
     PresetFamily("basic_color", "기본 컬러", _matches_basic_color_family),
     PresetFamily("basic_dimmer", "기본 디머", _matches_basic_dimmer_family),
     PresetFamily("color_phaser", "컬러 페이저", _matches_color_phaser_family),
@@ -5865,6 +5898,7 @@ class ChatSession:
     #: 어떤 규율도 복제하지 않고 ``getattr``로 원본을 부른다.
     _COMPOUND_FAMILY_HANDLERS = {
         "basic_position": "_basic_position_presets",
+        "fx_position": "_fx_position_presets",
         "basic_color": "_basic_color_presets",
         "basic_dimmer": "_basic_dimmer_presets",
         "color_phaser": "_color_phaser_presets",
