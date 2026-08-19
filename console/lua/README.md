@@ -138,6 +138,42 @@ For any FUNCTIONAL Lua change (not just a `CONFIG` value tweak), consider
 skipping straight to Option B — it is the only path confirmed reliable for
 both kinds of change.
 
+### 2.2 Deployment reliability — the app's automated re-deploy (alias swap)
+
+When the app deploys through the gate (`deploy_plugin`, file+Import path), a
+re-deploy of a plugin that ALREADY exists under the same Name cannot simply
+delete the old object first. Every command the app sends is wrapped as
+`Plugin "CopilotResponder" "exec <id> <cmd>"`, so `Delete Plugin <responder's
+own slot>` would run INSIDE the object it deletes. MA3 2.4.2 answers a
+self-delete with a confirmation dialog, and the OSC/exec path has no channel to
+answer it, so the console reports `User Canceled Command`. Importing the same
+Name into an empty slot is refused for the same reason (a duplicate Name asks
+the same question). Measured live: `docs/research/ma3-effects/12-introspect-v161-redeploy-probe.md`
+§1.
+
+The app therefore swaps the responder through a temporary alias — four commands,
+none of them self-referencing:
+
+```
+Import Plugin <free slot> '<stem>' /nc          # duplicate Name needs /nc; MA3 names the copy
+(from the alias) Delete Plugin <old slot>       # foreign object -> no dialog
+(from the alias) Import Plugin <old slot> '<stem>'   # real Name is free again; NO /nc
+(from the new primary) Delete Plugin <alias slot>    # drop the temporary copy
+```
+
+The alias Name is READ BACK from `DataPool/Plugins` (MA3 chose it — `#2` was
+observed, but it is not guessed), and the deploy reports success only after a
+final pool read shows exactly one plugin under the real Name and no leftover
+alias. `Rename Plugin` is not usable — 2.4.2 answers it with `Not implemented`.
+
+**If a re-deploy fails midway, the alias is deliberately LEFT in the pool** — it
+is a working copy of the new source. The failure detail names the alias and its
+slot; recover by hand from there (delete the stale slot in the GUI, or import
+the staged `<stem>.xml` into the intended slot). Any other plugin (a generated
+patch plugin) is a foreign object to the responder, so its re-deploy keeps the
+direct `Delete` + `Import` path and only falls back to the alias swap if the
+console refuses that delete.
+
 ### Configuration (both options)
 
 The `CONFIG` table at the top of the Lua file may need on-site adjustment:

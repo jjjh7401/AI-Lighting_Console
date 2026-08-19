@@ -20,6 +20,7 @@ from server.bridge.protocol import (
     build_exec_request,
     build_introspect_query,
     build_ping,
+    build_plugin_call,
     build_prop_query,
     build_props_query,
     build_state_query,
@@ -256,3 +257,38 @@ class TestRequestBuilders:
 
     def test_protocol_version_is_one(self):
         assert PROTOCOL_VERSION == 1
+
+
+class TestAliasPluginName:
+    """The deploy alias path (server/safety/console.py::_redeploy_via_alias)
+    runs commands FROM a temporary duplicate of the responder, so the wrapper
+    has to accept a non-default invoking plugin name — and reject one that
+    would break out of the double-quoted invocation target."""
+
+    def test_plugin_call_defaults_to_the_responder(self):
+        assert build_plugin_call("ping 1") == f'Plugin "{PLUGIN_NAME}" "ping 1"'
+
+    def test_plugin_call_accepts_an_alias_name(self):
+        line = build_plugin_call("ping 1", plugin_name="CopilotResponder#2")
+        assert line == 'Plugin "CopilotResponder#2" "ping 1"'
+
+    def test_exec_request_defaults_to_the_responder(self):
+        assert build_exec_request("9", "List") == f'Plugin "{PLUGIN_NAME}" "exec 9 List"'
+
+    def test_exec_request_runs_from_the_named_alias(self):
+        line = build_exec_request("9", "Delete Plugin 1", plugin_name="CopilotResponder#2")
+        assert line == 'Plugin "CopilotResponder#2" "exec 9 Delete Plugin 1"'
+
+    def test_double_quote_in_plugin_name_is_rejected(self):
+        # The name sits INSIDE the quoted target, so a double quote would
+        # terminate it early and reshape the command line.
+        with pytest.raises(ProtocolError):
+            build_plugin_call("ping 1", plugin_name='Copilot"Responder')
+        with pytest.raises(ProtocolError):
+            build_exec_request("9", "List", plugin_name='Copilot"Responder')
+
+    def test_empty_or_multiline_plugin_name_is_rejected(self):
+        with pytest.raises(ProtocolError):
+            build_plugin_call("ping 1", plugin_name="")
+        with pytest.raises(ProtocolError):
+            build_plugin_call("ping 1", plugin_name="Copilot\nResponder")

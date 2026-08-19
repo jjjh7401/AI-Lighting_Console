@@ -149,9 +149,33 @@ def _validate_plugin_call_budget(command_line: str, *, field: str) -> None:
         )
 
 
-def build_plugin_call(request: str) -> str:
-    """Wrap one responder request string as an MA3 plugin-invoking command line."""
-    return f'Plugin "{PLUGIN_NAME}" "{request}"'
+def _validate_plugin_name(plugin_name: str) -> None:
+    """Reject a plugin name that cannot survive the ``Plugin "<name>"`` quoting.
+
+    The name lands INSIDE the double-quoted invocation target, so an embedded
+    double quote would terminate it early and reshape the command line.
+    """
+    if not plugin_name:
+        raise ProtocolError("plugin name must be non-empty")
+    if '"' in plugin_name:
+        raise ProtocolError(f'plugin name must not contain a double quote ("): {plugin_name!r}')
+    if "\n" in plugin_name or "\r" in plugin_name:
+        raise ProtocolError(f"plugin name must be a single line: {plugin_name!r}")
+
+
+# @MX:NOTE: [AUTO] ``plugin_name`` exists for the deploy alias path
+#   (server/safety/console.py::_redeploy_via_alias): a responder redeploy must
+#   run its `Delete Plugin <own slot>` from a DIFFERENT plugin object, because
+#   MA3 2.4.2 raises an unanswerable confirm dialog when the running plugin
+#   deletes itself (docs/research/ma3-effects/12-introspect-v161-redeploy-probe.md §1.2).
+def build_plugin_call(request: str, *, plugin_name: str = PLUGIN_NAME) -> str:
+    """Wrap one responder request string as an MA3 plugin-invoking command line.
+
+    ``plugin_name`` defaults to the responder; pass an alias name to run the
+    request from a temporary duplicate of the responder instead.
+    """
+    _validate_plugin_name(plugin_name)
+    return f'Plugin "{plugin_name}" "{request}"'
 
 
 def build_ping(request_id: str) -> str:
@@ -210,15 +234,19 @@ def build_props_query(request_id: str, path: str, property_names: Sequence[str])
     return line
 
 
-def build_exec_request(request_id: str, command: str) -> str:
+def build_exec_request(request_id: str, command: str, *, plugin_name: str = PLUGIN_NAME) -> str:
     """Wrapped command execution with result capture (REQ-MVP-004).
 
     The responder runs ``Cmd(command)`` and replies kind=result on
     /copilot/feedback with the success flag and raw result/error string.
+
+    ``plugin_name`` names the plugin object that RUNS the command. It defaults
+    to the responder; the deploy alias path passes a temporary duplicate so a
+    responder redeploy never deletes the plugin it is executing from.
     """
     _validate_request_id(request_id)
     _validate_rest(command, field="command")
-    return build_plugin_call(f"exec {request_id} {command}")
+    return build_plugin_call(f"exec {request_id} {command}", plugin_name=plugin_name)
 
 
 def build_deploy_request(request_id: str, name: str, lua_source: str) -> str:
