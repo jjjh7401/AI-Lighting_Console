@@ -235,3 +235,110 @@ class TestFamilyRegistryVerdicts:
         # 레지스트리는 신규 저장 문장을 계열로 쪼개는 장치다. 재생성 문장을
         # 후보로 올리면 합성 경로가 재생성 요청을 저장 카드로 바꿔버린다.
         assert _families(text) == []
+
+
+class TestDirectorVocabulary:
+    """조명감독이 실제로 쓰는 말로 계열이 불려야 한다.
+
+    2026-08-19 확장: 저장 동사는 「저장」만이 아니고(깔아·구성·준비·등록·채워),
+    축도 콘솔 용어만 쓰지 않는다(포커스·팔레트·밝기·인텐시티·체이스).
+    """
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            # 저장 동사 — 계열은 그대로, 부르는 말만 다르다.
+            ("기본 포지션 프리셋 깔아줘", ["basic_position"]),
+            ("기본 컬러 프리셋 구성해줘", ["basic_color"]),
+            ("기본 디머 프리셋 준비해줘", ["basic_dimmer"]),
+            ("기본 컬러 프리셋 등록해줘", ["basic_color"]),
+            ("기본 포지션 프리셋 채워줘", ["basic_position"]),
+            # 축 동의어 — 같은 계열을 다른 이름으로 부른다.
+            ("포커스 프리셋 저장해줘", ["basic_position"]),
+            ("위치 프리셋 저장해줘", ["basic_position"]),
+            ("팔레트 프리셋 저장해줘", ["basic_color"]),
+            ("밝기 프리셋 저장해줘", ["basic_dimmer"]),
+            ("인텐시티 프리셋 저장해줘", ["basic_dimmer"]),
+            ("광량 프리셋 저장해줘", ["basic_dimmer"]),
+            # 체이스는 페이저 어휘다 — 기본 계열까지 끌고 오면 카드에 두 줄이 뜬다.
+            ("컬러 체이스 프리셋 저장해줘", ["color_phaser"]),
+            ("디머 체이스 프리셋 저장해줘", ["dimmer_phaser"]),
+            ("밝기 페이저 프리셋 만들어줘", ["dimmer_phaser"]),
+        ],
+    )
+    def test_the_field_word_reaches_the_same_family(self, text, expected):
+        assert _families(text) == expected
+
+    @pytest.mark.parametrize(
+        "text",
+        ["프리셋 재구성해줘", "기본 컬러 프리셋 재설정해줘", "포지션 프리셋 재등록해줘"],
+    )
+    def test_the_re_prefixed_verbs_are_not_a_store_request(self, text):
+        # 재-접두 동사는 재생성 의도다. 저장 동사를 공유하므로 룩비하인드가
+        # 없으면 신규 저장 카드로 끌려간다.
+        assert _families(text) == []
+
+
+class TestAllFamiliesVocabulary:
+    """「전부/모두」는 일곱 계열을 한 번에 부른다."""
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "프리셋 전부 저장해줘",
+            "프리셋 모두 깔아줘",
+            "프리셋 전체 등록해줘",
+            "프리셋 7계열 전부 구성해줘",
+            "70종 프리셋 풀세트 준비해줘",
+            "프리셋 싹 만들어줘",
+        ],
+    )
+    def test_it_names_every_family(self, text):
+        assert _families(text) == [
+            "basic_position",
+            "fx_position",
+            "basic_color",
+            "basic_dimmer",
+            "color_phaser",
+            "dimmer_phaser",
+            "combo_phaser",
+        ]
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ("컬러 프리셋 전부 저장해줘", ["basic_color"]),
+            ("포지션 프리셋 모두 만들어줘", ["basic_position"]),
+            ("디머 프리셋 전체 저장해줘", ["basic_dimmer"]),
+        ],
+    )
+    def test_an_axis_narrows_it_back_to_that_axis(self, text, expected):
+        # 축이 있으면 '전부'는 계열이 아니라 그 축의 10종을 가리킨다 —
+        # 일곱 계열을 덮어쓸 후보로 올리면 묻지 않은 60칸이 위험해진다.
+        assert _families(text) == expected
+
+    @pytest.mark.parametrize(
+        "text",
+        ["프리셋 전부 지워줘", "프리셋 전부 다시 잡아줘", "프리셋 전부 보여줘"],
+    )
+    def test_it_needs_a_store_verb(self, text):
+        assert _families(text) == []
+
+
+class TestForeignIntentsKeepTheirSentences:
+    """프리셋 어휘를 지나가며 쓰는 남의 의도는 계열로 세지 않는다."""
+
+    def test_a_song_design_brief_is_not_a_preset_store_request(self):
+        # 곡 브리프는 시작 슬롯을 프리셋 번호로 적고 무드를 색·밝기로 쓴다.
+        # 어순 무관 판정에는 컬러·디머로 보이지만 저장 요청이 아니다 —
+        # 합성 카드가 체인 앞자리에서 이 문장을 가로채면 곡 설계가 멎는다.
+        text = (
+            "90초 록 곡 조명 설계를 만들어줘. 시퀀스 110, 프리셋 21번부터, 수동 Go. "
+            "0:00 인트로는 파란색과 낮은 밝기로 시작하고, "
+            "0:48 후렴에서 마젠타와 화이트로 가장 크게 터뜨려줘."
+        )
+        assert _families(text) == []
+
+    def test_a_position_cue_sheet_is_not_a_preset_store_request(self):
+        text = "포지션 큐 시트 만들어줘. 프리셋 21번부터, 인트로 0:00 잔잔"
+        assert _families(text) == []
