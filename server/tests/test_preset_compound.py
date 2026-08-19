@@ -395,6 +395,28 @@ class TestCompoundCard:
 
         assert [key for key, _text in calls] == ["basic_color", "dimmer_phaser"]
 
+    def test_every_offered_family_is_a_valid_answer(self, tmp_path):
+        """카드가 **제시한** 것과 답으로 **받는** 것은 같은 집합이어야 한다.
+
+        2026-08-19 실측: 카드에 일곱 줄이 뜨는데 답 검증은 문장이 지목한
+        여섯 계열로만 해서, 일곱 줄을 다 체크하자 «연출 포지션»만 "알아보지
+        못했다"며 전부 중단됐다. 미체크로 실어 둔 계열을 고를 수 있게 한
+        것이 카드의 요점이므로, 실어 둔 이상 받아야 한다.
+        """
+        every_label = ", ".join(family.label for family in PRESET_FAMILIES)
+        session, calls, question = _build(tmp_path, answers=[every_label])
+
+        event = session.run_instruction(COMPOUND_TEXT)
+
+        # 문장은 여섯 계열만 지목했지만 카드는 일곱을 실었다.
+        assert len(DETECTED_FAMILIES) == 6
+        assert [option.label for option in question.asked[0].options] == [
+            family.label for family in PRESET_FAMILIES
+        ]
+        # 일곱 개 전부가 등록 순서대로 실행된다 — 거부되는 이름이 없다.
+        assert [key for key, _text in calls] == [family.key for family in PRESET_FAMILIES]
+        assert "알아보지 못해" not in event["text"]
+
 
 class TestNoAnswerStoresNothing:
     """답을 못 받으면 아무것도 저장하지 않고 그 사실을 보고한다."""
