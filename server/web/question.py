@@ -59,6 +59,10 @@ class QuestionOption:
     label: str
     #: 이 갈래를 고르면 무슨 일이 일어나는지 — 사용자가 고르기 전에 읽는다.
     description: str = ""
+    #: 다중 선택 카드에서 **미리 체크된 채** 뜨는가. 문장이 이미 지목한 항목을
+    #: 체크해 두면, 카드는 나머지 선택지도 함께 보여 주면서 "이 문장이 무엇을
+    #: 요청했는지"를 그대로 되비춘다. 단일 선택 카드에서는 의미가 없다.
+    selected: bool = False
 
 
 @dataclass(frozen=True)
@@ -94,7 +98,11 @@ class QuestionRequest:
             "steps": list(self.steps),
             "commands": list(self.commands),
             "options": [
-                {"label": option.label, "description": option.description}
+                {
+                    "label": option.label,
+                    "description": option.description,
+                    "selected": option.selected,
+                }
                 for option in self.options
             ],
             "multi": self.multi,

@@ -245,7 +245,8 @@ class TestMultiSelect:
             "why": _ASK.why,
             "steps": list(_ASK.steps),
             "commands": [],
-            "options": [{"label": "콘솔에서 직접 고르겠다", "description": ""}],
+            # `selected`는 additive다 — 기본값 False라 단일 선택 카드의 뜻은 그대로다.
+            "options": [{"label": "콘솔에서 직접 고르겠다", "description": "", "selected": False}],
             "multi": False,
         }
 

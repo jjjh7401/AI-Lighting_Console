@@ -6036,21 +6036,35 @@ class ChatSession:
         detected = tuple(family for family in PRESET_FAMILIES if family.matches(text))
         if len(detected) < 2:
             return None
+        # 카드는 **일곱 계열 전부**를 싣고, 문장이 지목한 것만 미리 체크한다.
+        # 지목된 것만 실으면 «… 모두 설정해줘»라고 적은 운영자에게 여섯 줄만
+        # 보여 주게 되고(2026-08-19 재보고), 빠진 계열을 부르려면 문장을 다시
+        # 써야 한다. 전부 실어 두면 카드 한 장에서 넓히거나 좁힐 수 있고,
+        # 미체크 계열은 아무것도 저장하지 않으므로 덮어쓰기 위험도 늘지 않는다.
+        rest = tuple(family for family in PRESET_FAMILIES if family not in detected)
         answer = self._ask_one(
             "한 문장에 프리셋 계열이 "
             f"{len(detected)}개 담겼습니다({' / '.join(f.label for f in detected)}). "
-            "어느 계열을 저장할까요? 고른 계열을 순서대로 이어서 저장합니다.",
+            "어느 계열을 저장할까요? 고른 계열을 순서대로 이어서 저장합니다."
+            + (
+                f" 나머지 {len(rest)}개({' / '.join(f.label for f in rest)})도 "
+                "함께 고르실 수 있습니다."
+                if rest
+                else ""
+            ),
             options=tuple(
                 QuestionOption(
                     label=family.label,
                     description=f"{family.label} 카탈로그 10종을 연속 10칸에 저장합니다.",
+                    selected=family in detected,
                 )
-                for family in detected
+                for family in PRESET_FAMILIES
             ),
             why=(
                 "Store Preset은 경고 없이 덮어쓰고 이 앱에는 프리셋 복원 경로가 "
                 "없습니다. 그래서 계열마다 시작 번호를 따로 여쭤보게 됩니다 — "
-                "여기서 계열을 좁혀 두면 그만큼만 묻습니다."
+                "여기서 계열을 좁혀 두면 그만큼만 묻습니다. 체크된 계열이 이 문장이 "
+                "지목한 것이고, 체크를 더하거나 풀어 그대로 바꾸실 수 있습니다."
             ),
             multi=True,
         )
