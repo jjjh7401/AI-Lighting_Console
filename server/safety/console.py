@@ -22,6 +22,7 @@ from typing import Protocol
 
 from server.bridge.osc import FeedbackMessage
 from server.bridge.protocol import (
+    PLUGIN_NAME,
     ProtocolError,
     build_deploy_request,
     build_exec_request,
@@ -87,6 +88,78 @@ class ExecOutcome:
 
 class StateQueryError(Exception):
     """A state query failed or timed out."""
+
+
+def _unnumbered_refusal(unnumbered: int) -> str:
+    """The refusal text for a pool read whose slot arithmetic cannot be trusted.
+
+    A listed plugin whose real slot the responder could NOT establish (it omits
+    ``i`` rather than substituting a listing position — PROTOCOL.md §4.2) makes
+    free-slot arithmetic a guess: that plugin may sit in exactly the slot picked
+    as "free", and ``Import Plugin <slot>`` would overwrite it. Refuse rather
+    than gamble with the user's pool.
+    """
+    return (
+        f"cannot choose a free plugin slot: {unnumbered} plugin(s) in "
+        "DataPool/Plugins reported no pool slot (the console exposes no "
+        "usable child-index accessor), so importing could overwrite one"
+    )
+
+
+@dataclass(frozen=True)
+class _PluginPool:
+    """One ``DataPool/Plugins`` snapshot reduced to slot/Name arithmetic.
+
+    ``names`` keeps every child's Name in listing order (duplicates included —
+    the alias path exists precisely because a Name can briefly occur twice);
+    ``by_slot`` holds only children whose real pool slot the responder
+    established, and ``unnumbered`` counts the ones it could not.
+    """
+
+    by_slot: dict[int, str]
+    names: tuple[str, ...]
+    unnumbered: int
+
+    @classmethod
+    def from_payload(cls, payload: dict) -> _PluginPool:
+        by_slot: dict[int, str] = {}
+        names: list[str] = []
+        unnumbered = 0
+        for child in payload.get("children", []):
+            if not isinstance(child, dict):
+                continue
+            raw_name = child.get("name")
+            child_name = raw_name if isinstance(raw_name, str) else ""
+            names.append(child_name)
+            index = child.get("i")
+            if isinstance(index, int):
+                by_slot[index] = child_name
+            else:
+                unnumbered += 1
+        return cls(by_slot=by_slot, names=tuple(names), unnumbered=unnumbered)
+
+    def slot_of(self, name: str) -> int | None:
+        """The lowest slot holding ``name``, or None when the Name is absent."""
+        slots = [slot for slot, child_name in self.by_slot.items() if child_name == name]
+        return min(slots) if slots else None
+
+    def name_at(self, slot: int) -> str:
+        """The Name in ``slot``, or "" when the slot holds nothing readable."""
+        return self.by_slot.get(slot, "")
+
+    def count(self, name: str) -> int:
+        return self.names.count(name)
+
+    def free_slot(self, *, freed: int | None = None) -> int:
+        """The lowest positive slot no listed plugin occupies.
+
+        ``freed`` names a slot this deploy just emptied (a confirmed delete), so
+        the re-import lands back where the old version lived.
+        """
+        slot = 1
+        while slot in self.by_slot and slot != freed:
+            slot += 1
+        return slot
 
 
 class ConsolePort(Protocol):
@@ -190,9 +263,19 @@ class ConsoleLink:
 
     def execute(self, command: str) -> ExecOutcome:
         """Execute one command exec-wrapped; blocks until confirmed or timeout."""
+        return self._execute(command)
+
+    def _execute(self, command: str, *, plugin_name: str = PLUGIN_NAME) -> ExecOutcome:
+        """:meth:`execute` with a selectable executing plugin object.
+
+        ``plugin_name`` is an INTERNAL seam for the deploy alias path
+        (:meth:`_redeploy_via_alias`): a command that deletes a plugin must not
+        be run BY that plugin (see the self-delete note there). The public
+        surface always runs from the responder.
+        """
         request_id = self._new_id()
         try:
-            wire = build_exec_request(request_id, command)
+            wire = build_exec_request(request_id, command, plugin_name=plugin_name)
         except ProtocolError as error:
             return ExecOutcome(
                 status="failed", detail=f"cannot wrap command for result capture: {error}"
@@ -242,8 +325,11 @@ class ConsoleLink:
         The OSC ``deploy`` verb's embedded-content write does not run on 2.4.2
         (ASSUMPTION-6) and truncates past ~2 KB; the native inline-Base64 import
         format has neither limit (verified live: 9-fixture patch plugin ran).
-        Idempotent: an existing plugin of the same Name is deleted first so a
-        re-deploy updates in place instead of creating a duplicate.
+        Idempotent: an existing plugin of the same Name is removed first so a
+        re-deploy updates in place instead of creating a duplicate — directly
+        when that object is foreign to the responder, and through
+        :meth:`_redeploy_via_alias` when it is not (the responder cannot delete
+        itself).
 
         Per-send granularity (M7.5, AC-DEPLOY-027 Layer ②): every console
         round-trip made here is recorded as a :class:`DeploySend` on the
@@ -268,19 +354,32 @@ class ConsoleLink:
         sends.append(DeploySend(kind="state_query", command=path, ok=True, outcome="ok"))
         return payload
 
-    def _deploy_execute(self, command: str, sends: list[DeploySend]) -> ExecOutcome:
-        """One exec round-trip inside a deploy — recorded with its outcome."""
-        outcome = self.execute(command)
+    def _deploy_execute(
+        self, command: str, sends: list[DeploySend], *, via: str | None = None
+    ) -> ExecOutcome:
+        """One exec round-trip inside a deploy — recorded with its outcome.
+
+        ``via`` runs the command FROM another plugin object (the deploy alias)
+        instead of the responder. The recorded ``command`` stays the bare MA3
+        command line either way: the wire-capture reconciler keys audit entries
+        on the command subject (``packaging/wire_sink.py::audit_key``), and the
+        alias changes only WHO ran it — which the record carries in ``detail``.
+        """
+        outcome = self._execute(command, plugin_name=via or PLUGIN_NAME)
         sends.append(
             DeploySend(
                 kind="command",
                 command=command,
                 ok=outcome.status == "ok",
-                detail=outcome.detail,
+                detail=f"via {via}: {outcome.detail}" if via else outcome.detail,
                 outcome=outcome.status,
             )
         )
         return outcome
+
+    def _read_plugin_pool(self, sends: list[DeploySend]) -> _PluginPool:
+        """One ``DataPool/Plugins`` read reduced to slot arithmetic inputs."""
+        return _PluginPool.from_payload(self._deploy_query_state("DataPool/Plugins", sends))
 
     def _run_file_import(self, name: str, lua_source: str, sends: list[DeploySend]) -> ExecOutcome:
         try:
@@ -300,44 +399,66 @@ class ConsoleLink:
         # One pool read: find an existing same-Name slot (idempotent redeploy)
         # AND the occupied slots (to pick a free one). A no-slot `Import Plugin`
         # is unreliable on 2.4.2 — an explicit free slot is required.
-        existing_slot: int | None = None
-        occupied: set[int] = set()
-        unnumbered = 0
         try:
-            pool = self._deploy_query_state("DataPool/Plugins", sends)
-            for child in pool.get("children", []):
-                if not isinstance(child, dict):
-                    continue
-                index = child.get("i")
-                if isinstance(index, int):
-                    occupied.add(index)
-                else:
-                    unnumbered += 1
-                if child.get("name") == name:
-                    existing_slot = index if isinstance(index, int) else None
+            pool = self._read_plugin_pool(sends)
         except StateQueryError:
-            pass  # non-fatal — proceed with the slot-1 fallback below
-        # A listed plugin whose real slot the responder could NOT establish
-        # (it omits "i" rather than substituting a listing position —
-        # PROTOCOL.md §4.2) makes the arithmetic below a guess: that plugin may
-        # sit in exactly the slot picked as "free", and `Import Plugin <slot>`
-        # would overwrite it. Refuse rather than gamble with the user's pool.
-        if unnumbered:
-            return ExecOutcome(
-                status="failed",
-                detail=(
-                    f"cannot choose a free plugin slot: {unnumbered} plugin(s) in "
-                    "DataPool/Plugins reported no pool slot (the console exposes no "
-                    "usable child-index accessor), so importing could overwrite one"
+            # Non-fatal — nothing known to delete and nothing known to occupy a
+            # slot, so fall back to importing into slot 1 as before.
+            return self._import_under_name(name, slug, 1, sends)
+        if pool.unnumbered:
+            return ExecOutcome(status="failed", detail=_unnumbered_refusal(pool.unnumbered))
+        existing_slot = pool.slot_of(name)
+        if existing_slot is None:
+            return self._import_under_name(name, slug, pool.free_slot(), sends)
+
+        # A same-Name slot exists, so the idempotent redeploy has to remove it
+        # first. Which route is safe depends on WHO would run that delete —
+        # see :meth:`_redeploy_via_alias`.
+        if name == PLUGIN_NAME:
+            return self._redeploy_via_alias(
+                name,
+                slug,
+                existing_slot,
+                pool,
+                sends,
+                reason=(
+                    f"{name!r} is the responder that executes our commands, so "
+                    f"`Delete Plugin {existing_slot}` would be a self-delete"
                 ),
             )
-        if isinstance(existing_slot, int):
-            self._deploy_execute(f"Delete Plugin {existing_slot}", sends)
-            occupied.discard(existing_slot)
-        slot = 1
-        while slot in occupied:
-            slot += 1
+        # Any other plugin (a generated patch plugin, ...) is a foreign object:
+        # the responder can delete it directly, which keeps the round-trip count
+        # at pool read + Delete + Import + confirm read.
+        delete = self._deploy_execute(f"Delete Plugin {existing_slot}", sends)
+        if delete.status == "unconfirmed":
+            # REQ-MVP-032: a timeout is UNCONFIRMED and is never retried. The
+            # delete may or may not have landed, so importing now would gamble
+            # on the pool's shape.
+            return ExecOutcome(
+                status="unconfirmed",
+                detail=(
+                    f"Delete Plugin {existing_slot} unconfirmed ({delete.detail}) — whether "
+                    f"the old {name!r} is gone is unknown, so nothing was imported"
+                ),
+            )
+        if delete.status != "ok":
+            # The console refused the delete (the confirm-dialog family of
+            # rejections among them) — take the alias route, which never asks
+            # the console to delete an object from inside itself.
+            return self._redeploy_via_alias(
+                name,
+                slug,
+                existing_slot,
+                pool,
+                sends,
+                reason=f"`Delete Plugin {existing_slot}` was refused ({delete.detail})",
+            )
+        return self._import_under_name(name, slug, pool.free_slot(freed=existing_slot), sends)
 
+    def _import_under_name(
+        self, name: str, slug: str, slot: int, sends: list[DeploySend]
+    ) -> ExecOutcome:
+        """Import the staged file into a free slot; confirm the Name landed."""
         # Import into the chosen free slot; single-quoted stem (exec rejects ").
         outcome = self._deploy_execute(f"Import Plugin {slot} '{slug}'", sends)
         if outcome.status != "ok":
@@ -347,16 +468,181 @@ class ConsoleLink:
             )
         # Confirm the plugin object now exists in the pool under its Name.
         try:
-            pool = self._deploy_query_state("DataPool/Plugins", sends)
+            pool = self._read_plugin_pool(sends)
         except StateQueryError as error:
             return ExecOutcome(
                 status="unconfirmed", detail=f"imported but pool unreadable: {error}"
             )
-        names = [c.get("name") for c in pool.get("children", []) if isinstance(c, dict)]
-        if name in names:
+        if pool.count(name):
             return ExecOutcome(status="ok", detail=f"imported plugin {name!r} via file+Import")
         return ExecOutcome(
-            status="failed", detail=f"import did not create plugin {name!r} (pool: {names})"
+            status="failed",
+            detail=f"import did not create plugin {name!r} (pool: {list(pool.names)})",
+        )
+
+    # @MX:ANCHOR: [AUTO] alias redeploy — the ONLY path that may replace a
+    #   plugin whose delete cannot be issued from the responder itself
+    # @MX:REASON: ConsoleLink.execute wraps every command as
+    #   `Plugin "CopilotResponder" "exec <id> <cmd>"`, so `Delete Plugin <own
+    #   slot>` runs INSIDE the object it deletes; MA3 2.4.2 answers a
+    #   self-delete with a confirm dialog and the OSC/exec path has no channel
+    #   to answer it, so the console reports `User Canceled Command`. Importing
+    #   the same Name into an empty slot is refused for the same reason.
+    #   Live-measured workaround (docs/research/ma3-effects/
+    #   12-introspect-v161-redeploy-probe.md §1.2/§1.3), replayed step for step
+    #   below. `Rename Plugin` is NOT an option — 2.4.2 answers it with
+    #   `Not implemented`.
+    # @MX:SPEC: SPEC-COPILOT-DEPLOY-001
+    def _redeploy_via_alias(
+        self,
+        name: str,
+        slug: str,
+        existing_slot: int,
+        pool: _PluginPool,
+        sends: list[DeploySend],
+        *,
+        reason: str,
+    ) -> ExecOutcome:
+        """Swap a same-Name plugin through a temporary alias (four commands).
+
+        ① ``Import Plugin <alias_slot> '<stem>' /nc`` — the duplicate Name needs
+        ``/nc``; MA3 names the copy itself. ② read the pool back to LEARN that
+        Name. ③ delete the old slot FROM the alias (a foreign object now, so no
+        confirm dialog). ④ re-import under the real Name into the freed original
+        slot, still from the alias. ⑤ delete the alias from the freshly imported
+        primary. ⑥ confirm the pool holds exactly one copy again.
+
+        The alias is never removed on a mid-sequence failure: it is a WORKING
+        copy of the new source, and dropping it could leave the pool with no
+        usable plugin at all. Every failure therefore reports where the alias
+        lives so a human can finish or revert by hand.
+        """
+        alias_slot = pool.free_slot()  # the old version keeps its slot for now
+        # ① `/nc` (no-confirm) is REQUIRED here and only here: an object of this
+        #    exact Name is still in the pool, and MA3 asks about the duplicate.
+        alias_import = f"Import Plugin {alias_slot} '{slug}' /nc"
+        outcome = self._deploy_execute(alias_import, sends)
+        if outcome.status != "ok":
+            return ExecOutcome(
+                status=outcome.status,
+                detail=(
+                    f"{reason}, and the alias import failed ({alias_import}: "
+                    f"{outcome.detail}) — {name!r} is UNCHANGED in slot {existing_slot}"
+                ),
+            )
+        # ② Learn the alias Name from the pool. MA3 picks the suffix (observed:
+        #    `<Name>#2`) — guessing it would address the wrong object, or none.
+        try:
+            after = self._read_plugin_pool(sends)
+        except StateQueryError as error:
+            return ExecOutcome(
+                status="unconfirmed",
+                detail=(
+                    f"{reason}; the new source was imported into slot {alias_slot} but the "
+                    f"pool is unreadable ({error}), so its alias Name is unknown — the old "
+                    f"{name!r} still holds slot {existing_slot}"
+                ),
+            )
+        if after.unnumbered:
+            return ExecOutcome(
+                status="failed",
+                detail=(
+                    f"{_unnumbered_refusal(after.unnumbered)} — the new source is LIVE as the "
+                    f"alias in slot {alias_slot} and the old {name!r} still holds slot "
+                    f"{existing_slot}; finish or revert the swap by hand"
+                ),
+            )
+        alias_name = after.name_at(alias_slot)
+        if not alias_name:
+            return ExecOutcome(
+                status="failed",
+                detail=(
+                    f"{reason}; the alias import reported ok but slot {alias_slot} is empty in "
+                    f"the pool re-read — {name!r} is UNCHANGED in slot {existing_slot}"
+                ),
+            )
+        if alias_name == name:
+            # No suffix: two objects answer to one Name, so `Plugin "<name>"`
+            # addresses an ambiguous target — exactly the self-delete hazard
+            # again. Stop instead of guessing which copy runs the delete.
+            return ExecOutcome(
+                status="failed",
+                detail=(
+                    f"{reason}; the console did not rename the alias, so two plugins named "
+                    f"{name!r} now exist (slots {existing_slot} and {alias_slot}) — "
+                    "addressing either by Name is ambiguous, so the swap was stopped; "
+                    "delete the unwanted slot by hand"
+                ),
+            )
+        # ③ The alias is a DIFFERENT object, so this delete is not a self-delete.
+        drop_old = self._deploy_execute(f"Delete Plugin {existing_slot}", sends, via=alias_name)
+        if drop_old.status != "ok":
+            return ExecOutcome(
+                status=drop_old.status,
+                detail=(
+                    f"{reason}; deleting the old {name!r} in slot {existing_slot} via alias "
+                    f"{alias_name!r} did not confirm ({drop_old.detail}) — the new source is "
+                    f"LIVE as {alias_name!r} in slot {alias_slot} while the old version still "
+                    f"holds slot {existing_slot}; the same Lua now runs twice"
+                ),
+            )
+        # ④ Re-register under the real Name in the freed original slot. NO `/nc`:
+        #    that Name is gone from the pool now, so MA3 asks nothing — passing
+        #    the flag anyway would suppress a confirmation we want to hear about.
+        reimport = f"Import Plugin {existing_slot} '{slug}'"
+        outcome = self._deploy_execute(reimport, sends, via=alias_name)
+        if outcome.status != "ok":
+            return ExecOutcome(
+                status=outcome.status,
+                detail=(
+                    f"{reason}; the old {name!r} is DELETED and `{reimport}` did not confirm "
+                    f"({outcome.detail}) — the new source survives ONLY as alias "
+                    f"{alias_name!r} in slot {alias_slot}; keep it (it is a working plugin) or "
+                    f"import '{slug}' into slot {existing_slot} by hand"
+                ),
+            )
+        # ⑤ Drop the alias, run from the freshly imported primary — again a
+        #    foreign target, so again no confirm dialog.
+        drop_alias = self._deploy_execute(f"Delete Plugin {alias_slot}", sends)
+        if drop_alias.status != "ok":
+            return ExecOutcome(
+                status=drop_alias.status,
+                detail=(
+                    f"{name!r} was redeployed into slot {existing_slot}, but the temporary "
+                    f"alias {alias_name!r} in slot {alias_slot} could not be removed "
+                    f"({drop_alias.detail}) — delete that slot by hand; until then the same "
+                    "Lua exists twice in the pool"
+                ),
+            )
+        # ⑥ Only now is the pool back to one copy — confirm it before reporting ok.
+        try:
+            final = self._read_plugin_pool(sends)
+        except StateQueryError as error:
+            return ExecOutcome(
+                status="unconfirmed",
+                detail=(
+                    f"{name!r} was redeployed into slot {existing_slot} and alias "
+                    f"{alias_name!r} was deleted, but the confirming pool read failed "
+                    f"({error})"
+                ),
+            )
+        copies = final.count(name)
+        leftover = final.count(alias_name)
+        if copies != 1 or leftover:
+            return ExecOutcome(
+                status="failed",
+                detail=(
+                    f"alias swap left the pool inconsistent: {copies} plugin(s) named "
+                    f"{name!r} and {leftover} named {alias_name!r} (pool: "
+                    f"{list(final.names)})"
+                ),
+            )
+        return ExecOutcome(
+            status="ok",
+            detail=(
+                f"redeployed plugin {name!r} in slot {existing_slot} via temporary alias "
+                f"{alias_name!r} (removed); {reason}"
+            ),
         )
 
     def _deploy_via_osc_verb(self, name: str, lua_source: str) -> ExecOutcome:

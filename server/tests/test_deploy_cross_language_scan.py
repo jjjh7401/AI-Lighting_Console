@@ -671,6 +671,34 @@ class TestLayer2FailsClosedOnAnUnauditedSender:
         assert result.unaudited == ()
         assert result.ok is True
 
+    def test_alias_issued_deploy_send_reconciles_against_its_audit_entry(self):
+        # A responder redeploy runs its delete/import steps FROM a temporary
+        # alias plugin (server/safety/console.py::_redeploy_via_alias), so the
+        # capture sees a different invoking plugin name. The audit entry records
+        # the bare command line, and the two must still reconcile — otherwise a
+        # legitimate deploy round-trip reads as an unenumerated sender.
+        request = 'Plugin "CopilotResponder#2" "exec gate-7 Delete Plugin 1"'
+        datagram = parse_datagram(_osc_message("/copilot/cmd", request), ("127.0.0.1", 1))
+        assert datagram.verb == "exec"
+        assert datagram.subject == "Delete Plugin 1"
+        result = reconcile(
+            (datagram,),
+            [{"event": "executed", "kind": "command", "command": "Delete Plugin 1"}],
+        )
+        assert result.unaudited == ()
+        assert result.ok is True
+
+    def test_a_non_plugin_command_datagram_is_still_flagged(self):
+        # Accepting any plugin NAME must not accept any payload: a raw command
+        # line that never transited the exec wrapper stays unparseable.
+        datagram = parse_datagram(_osc_message("/copilot/cmd", "Delete Plugin 1"), ("127.0.0.1", 1))
+        assert datagram.verb == "?"
+        result = reconcile(
+            (datagram,),
+            [{"event": "executed", "kind": "command", "command": "Delete Plugin 1"}],
+        )
+        assert result.ok is False
+
 
 def _osc_message(address: str, arg: str) -> bytes:
     """Minimal OSC 1.0 string-argument message (rogue-injection helper)."""

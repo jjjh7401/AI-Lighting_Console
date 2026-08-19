@@ -31,19 +31,29 @@ console round-trips, and since M7.5 EACH one gets its own gate audit
 ``deploy_of``), so a capture spanning a deploy reconciles 1:1 with no special
 handling. The parent ``kind="deploy"`` summary entry maps to no datagram on
 the file+Import path — that is the tolerated audited-but-unobserved direction
-below, never a violation.
+below, never a violation. A responder redeploy additionally issues some of
+those round-trips from a temporary ALIAS plugin (the self-delete workaround in
+``server/safety/console.py::_redeploy_via_alias``): the invoking plugin name on
+the wire differs, the verb + command subject do not, so the audit entry for the
+bare command line still matches.
 
 Pure stdlib — runs inside the pytest suite and the packaged E2E host alike.
 """
 
 from __future__ import annotations
 
+import re
 import socket
 import threading
 import time
 from dataclasses import dataclass
 
-_PLUGIN_CALL_PREFIX = 'Plugin "CopilotResponder" "'
+# Any plugin object may be the invoking target: a deploy that replaces the
+# responder runs its delete/import steps from a temporary alias plugin
+# (server/safety/console.py::_redeploy_via_alias), so the capture sees
+# `Plugin "CopilotResponder#2" "exec ..."` alongside the responder's own sends.
+# The verb + subject — what the audit log predicts — are identical either way.
+_PLUGIN_CALL = re.compile(r'^Plugin "[^"]+" "')
 _UNPARSEABLE = "?"
 
 # Default settle window: how long to wait for in-flight loopback datagrams
@@ -115,8 +125,9 @@ def parse_datagram(raw: bytes, source: tuple[str, int]) -> ObservedDatagram:
         payload = repr(raw)
 
     verb, subject = _UNPARSEABLE, payload
-    if address == "/copilot/cmd" and payload.startswith(_PLUGIN_CALL_PREFIX):
-        request = payload[len(_PLUGIN_CALL_PREFIX) :].rstrip('"')
+    prefix = _PLUGIN_CALL.match(payload) if address == "/copilot/cmd" else None
+    if prefix is not None:
+        request = payload[prefix.end() :].rstrip('"')
         head, _, rest = request.partition(" ")
         if head in {"exec", "ping", "state", "deploy"}:
             verb = head
