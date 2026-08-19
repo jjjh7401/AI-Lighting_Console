@@ -1256,6 +1256,10 @@ _EXPECTED_SERVER_MESSAGE_TYPES = (
     "panel_busy",
     "panel_catalog",
     "panel_item_state",
+    # 진행 스트리밍 (지연 개선, 2026-08-19) — 턴이 도는 동안 흘리는 한 줄.
+    # PRECHK/OVERLAP 축과 무관한 정당한 추가라, 위 question_request와 같은
+    # 사유로 손으로 올린다(이 목록은 「웹 표면이 늘었는지」의 동결 등기다).
+    "progress",
     "proposal",
     # [round24 후속] 질문 카드와 답 반향 — 위 client 쪽과 같은 사유.
     "question_request",

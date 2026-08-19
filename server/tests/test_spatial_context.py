@@ -130,6 +130,44 @@ class SpatialRig:
         return {"ok": True, "path": path, "property": property_name, "value": value}
 
 
+class BulkSpatialRig(SpatialRig):
+    """A rig whose responder also answers the bulk ``props`` verb (PROTOCOL §4.8).
+
+    ``bulk_ok=False`` is the LIVE console of 2026-08-19: a 1.6.0 responder
+    whose ``props`` is the paged variant, so the request this server builds
+    comes back as a hard failure. The single-read verb still works, which is
+    exactly why the fallback has to be silent.
+    """
+
+    def __init__(self, fixtures, *, bulk_ok=True, **kwargs):
+        super().__init__(fixtures, **kwargs)
+        self.bulk_ok = bulk_ok
+        self.props_calls: list[tuple[str, tuple[str, ...]]] = []
+
+    def query_properties(self, path: str, property_names) -> dict:
+        names = tuple(property_names)
+        self.props_calls.append((path, names))
+        if not self.bulk_ok:
+            raise LookupError("unknown request kind: props")
+        slot = int(path.rsplit("/", 1)[1])
+        reads = []
+        for name in names:
+            value = self.fixtures[slot].get(name.lower())
+            if value is None:
+                reads.append({"n": name, "ok": False, "e": f"property not readable: {name}"})
+            else:
+                reads.append({"n": name, "ok": True, "t": "string", "v": value})
+        return {
+            "v": 1,
+            "kind": "props",
+            "id": "x",
+            "ok": True,
+            "path": path,
+            "reads": reads,
+            "truncated": False,
+        }
+
+
 class RecordingExecutionPort:
     def __init__(self):
         self.executed: list[str] = []
@@ -742,3 +780,81 @@ class TestRotationOptIn:
             "complete": True,
         }
         assert reply["roundtrip_capped"] is False
+
+
+class TestBulkPropertyReads:
+    """One round trip per fixture instead of four (2026-08-19 latency work).
+
+    The measured day carried 457,666 console round trips at a p90 of 67.3 ms,
+    and ``get_spatial_context`` was the single most expensive caller: four
+    ``prop`` requests per fixture, 240..420 of them per call, 16..28 s of wall
+    clock before the tool could answer. The responder has answered whole name
+    lists since 1.6.0 (``console/lua/PROTOCOL.md`` §4.8), so the sweep asks
+    once per fixture — WITHOUT changing a single observable value, because the
+    live console may still be a 1.6.0 whose ``props`` this server cannot read.
+    """
+
+    def test_a_bulk_capable_console_costs_one_round_trip_per_fixture(self):
+        bulk = BulkSpatialRig(_bar(3))
+        reply = _read(bulk)
+
+        assert _fids(reply) == [1, 2, 3]
+        # Four properties, one request: the whole point of the change.
+        assert bulk.props_calls == [
+            (f"{FIXTURES_PATH}/{slot}", SPATIAL_FIXTURE_PROPERTIES) for slot in (1, 2, 3)
+        ]
+        assert bulk.property_calls == []
+        # …against the cost it replaces, measured on the same material.
+        single = SpatialRig(_bar(3))
+        _read(single)
+        assert len(single.property_calls) == 12 == 4 * len(bulk.props_calls)
+
+    def test_the_bulk_reply_carries_the_same_coordinates_as_the_single_reads(self):
+        entries = _bar(3, spacing=2.5)
+        bulk_reply = _read(BulkSpatialRig(entries))
+        single_reply = _read(SpatialRig(entries))
+        assert bulk_reply == single_reply
+
+    def test_rotation_opt_in_still_costs_one_round_trip(self):
+        entries = _bar(2)
+        for entry in entries:
+            entry.update({"rotx": "0.0", "roty": "0.0", "rotz": "45.0"})
+        bulk = BulkSpatialRig(entries)
+        execution = _registry(bulk).dispatch(
+            ToolCall(id="call-1", name=TOOL, arguments={"include_rotation": True})
+        )
+        reply = json.loads(execution.result.content)
+
+        assert [f["rotz"] for f in reply["fixtures"]] == [45.0, 45.0]
+        # Seven names still fit one request (MAX_PROPS_NAMES is 16).
+        assert len(bulk.props_calls) == 2
+        assert bulk.props_calls[0][1] == SPATIAL_FIXTURE_PROPERTIES + ("rotx", "roty", "rotz")
+        assert bulk.property_calls == []
+
+    def test_a_1_6_0_responder_falls_back_silently_to_the_single_reads(self):
+        # The live console on 2026-08-19: ``props`` exists as a PAGED variant
+        # whose wire format this server cannot read, so the bulk request comes
+        # back as a hard failure. The tool must answer anyway, identically.
+        entries = _bar(3, spacing=2.5)
+        legacy = BulkSpatialRig(entries, bulk_ok=False)
+        reply = _read(legacy)
+
+        assert reply == _read(SpatialRig(entries))
+        assert legacy.property_calls == [
+            (f"{FIXTURES_PATH}/{slot}", name)
+            for slot in (1, 2, 3)
+            for name in SPATIAL_FIXTURE_PROPERTIES
+        ]
+        # One-shot switch: bulk is tried once, then never again on this port —
+        # a bulk request that always fails is pure added latency.
+        assert len(legacy.props_calls) == 1
+
+    def test_an_unreadable_axis_is_still_an_absence_not_an_invented_zero(self):
+        entries = _bar(2)
+        entries[1]["posy"] = None  # the console declines this one property
+        reply = _read(BulkSpatialRig(entries))
+
+        assert _partial_fids(reply) == [1]
+        assert reply["unreadable"] == [
+            {"fid": 2, "name": "PAR 2", "reason": "property not readable: posy"}
+        ]

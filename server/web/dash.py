@@ -331,6 +331,42 @@ def build_dash_catalog(
     return ordered
 
 
+def build_executor_catalog(
+    state_port: StateQueryPort,
+    *,
+    paths: dict[str, str] | None = None,
+    executor_page_query_cap: int = DASH_EXECUTOR_PAGE_QUERY_CAP,
+    executor_verify_query_cap: int = DASH_EXECUTOR_VERIFY_QUERY_CAP,
+) -> list[dict]:
+    """ONLY the executors section, in the same shape ``build_dash_catalog``
+    emits — for callers that need ``resolved_executor_nos`` and nothing else.
+
+    Why this exists (latency-1-3, server/audit_logs/probe-*.jsonl, measured
+    2026-08-19): the 5s cue-monitor poll used to call ``build_dash_catalog``
+    and keep only ``resolved_executor_nos(...)`` from it. On a default 2.4.2
+    showfile that is 26 console round trips per tick of which 19 (groups /
+    preset pools + their 14-pool drilldown / macros / plugins / fixtures) were
+    built and thrown away — the single largest contributor to the measured
+    457,666 round trips/day at 100.0% duplicate-query rate and a 67.3ms p90.
+
+    The dashboard's own refresh path is UNCHANGED: ``build_dash_catalog``
+    still builds every section for ``dash_catalog_request``.
+    """
+    overrides = dict(paths or {})
+    section, resolved = _build_executors_section(
+        state_port,
+        overrides.get("pages", DEFAULT_RIG_CONTEXT_PATHS["pages"]),
+        page_query_cap=executor_page_query_cap,
+        verify_query_cap=executor_verify_query_cap,
+    )
+    if resolved and section is not None:
+        return [section]
+    # Nothing else was read, so the two-failure-cause split has no other
+    # evidence to lean on: a failed pages read here can only be reported as
+    # console_unreachable (build_dash_catalog's `resolved == 0` branch).
+    return [dash_section(name="executors", status=REASON_UNREACHABLE, items=[])]
+
+
 def resolved_executor_nos(sections: list[dict]) -> list[int]:
     """The console-VERIFIED executor numbers of one dash catalog build.
 

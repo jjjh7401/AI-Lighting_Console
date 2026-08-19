@@ -1218,3 +1218,76 @@ describe("cached snapshots — stale-while-revalidate first paint (2026-08-15)",
     expect(next.cueMonitor.lastSyncAt).toBeNull();
   });
 });
+
+describe("progress — 진행 스트리밍 (지연 개선)", () => {
+  const line = (fields: Record<string, unknown>) =>
+    event({ type: "progress", phase: "tool_start", detail: "무대 좌표 읽기…", seq: 1, ...fields });
+
+  it("is on the client allowlist (server/web/messages.py progress_event와 짝)", () => {
+    expect(parseServerEvent(JSON.stringify({ v: 1, type: "progress", phase: "model_call", detail: "요청을 파악하는 중…", seq: 1 }))).not.toBeNull();
+  });
+
+  it("holds only the LAST line — 대화록에 쌓지 않는다", () => {
+    let state = reduceServerEvent(initialState, line({}));
+    state = reduceServerEvent(state, line({ phase: "tool_done", detail: "무대 좌표 읽기 완료", seq: 2 }));
+    expect(state.progress).toEqual({ phase: "tool_done", detail: "무대 좌표 읽기 완료", seq: 2 });
+    expect(state.entries).toHaveLength(0);
+  });
+
+  it("drops a frame whose seq goes BACKWARD — 늦게 온 옛 줄이 최신을 덮지 않는다", () => {
+    const state = reduceServerEvent(initialState, line({ seq: 5, detail: "다섯째" }));
+    const stale = reduceServerEvent(state, line({ seq: 3, detail: "셋째" }));
+    expect(stale).toBe(state);
+    const same = reduceServerEvent(state, line({ seq: 5, detail: "다시 다섯째" }));
+    expect(same).toBe(state);
+  });
+
+  it("chat_response clears it — 턴이 끝나면 사라진다", () => {
+    const running = reduceServerEvent(initialState, line({}));
+    expect(running.progress).not.toBeNull();
+    const done = reduceServerEvent(
+      running,
+      event({ type: "chat_response", status: "ok", summary: "요약", text: "본문", commands: [] }),
+    );
+    expect(done.progress).toBeNull();
+    expect(done.entries).toHaveLength(1);
+  });
+
+  it("error also clears it — 예외로 끝난 턴도 종결이다", () => {
+    const running = reduceServerEvent(initialState, line({}));
+    const failed = reduceServerEvent(
+      running,
+      event({ type: "error", message: "콘솔이 응답하지 않습니다", kind: "connection" }),
+    );
+    expect(failed.progress).toBeNull();
+  });
+
+  it("survives a mid-turn notice — 진행은 다른 이벤트로 지워지지 않는다", () => {
+    const running = reduceServerEvent(initialState, line({}));
+    const noticed = reduceServerEvent(running, event({ type: "notice", message: "백업 완료" }));
+    expect(noticed.progress).toEqual(running.progress);
+  });
+
+  it("a disconnect clears it — 끊긴 뒤의 '…중'은 정보가 아니다", () => {
+    const running = reduceServerEvent(initialState, line({}));
+    expect(clearOnDisconnect(running).progress).toBeNull();
+  });
+
+  it("clearOnDisconnect is a no-op identity when nothing is in flight", () => {
+    expect(clearOnDisconnect(initialState)).toBe(initialState);
+  });
+
+  it("a turn's seq restart is safe because the terminal frame already cleared it", () => {
+    let state = reduceServerEvent(initialState, line({ seq: 7 }));
+    state = reduceServerEvent(
+      state,
+      event({ type: "chat_response", status: "ok", summary: "", text: "끝", commands: [] }),
+    );
+    state = reduceServerEvent(state, line({ seq: 1, detail: "요청을 파악하는 중…" }));
+    expect(state.progress).toEqual({ phase: "tool_start", detail: "요청을 파악하는 중…", seq: 1 });
+  });
+
+  it("initialState carries no progress", () => {
+    expect(initialState.progress).toBeNull();
+  });
+});

@@ -351,6 +351,16 @@ body {
   color: var(--bad);
 }
 
+/* 진행 스트리밍 한 줄. 대화록 항목이 아니라 맨 아래 붙는 소멸성 표시이므로
+   busy/notice와 같은 조용한 톤을 쓰고, 시선을 끌지 않게 흐리게 둔다. */
+.entry-progress {
+  align-self: flex-start;
+  color: var(--muted);
+  font-size: 13px;
+  font-style: italic;
+  opacity: 0.85;
+}
+
 .entry-proposal {
   align-self: flex-start;
   background: #2b2417;

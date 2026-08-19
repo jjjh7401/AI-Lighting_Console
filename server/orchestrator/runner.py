@@ -19,6 +19,7 @@ round-trip measurement rules.
 
 from __future__ import annotations
 
+import contextlib
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -83,6 +84,80 @@ def _claims_tool_unavailable(text: str) -> bool:
     """True when a tool-less turn falsely reports the app tools as unavailable."""
     lowered = text.casefold()
     return any(marker in lowered for marker in _TOOL_UNAVAILABLE_MARKERS)
+
+
+# -- 진행 스트리밍 (체감 지연) ---------------------------------------------------
+#
+# 실측: Opus CLI 호출 1회가 ~12초이고(claude_code_adapter.py `_DEFAULT_PROFILE`
+# 주석 — 다단 도구 턴이 ~70초+ 무응답으로 쌓여 "서버가 죽은 줄 안다"고 이미
+# 적혀 있다) 한 턴의 모델 호출은 최대 `DEFAULT_MAX_MODEL_CALLS`(24)회다. 도구
+# 하나도 짧지 않다: server/audit_logs/probe-*.jsonl 측정에서 콘솔 왕복 p90이
+# 67.3ms이고 `get_spatial_context` 1회가 240~420왕복 = 16~28초였다.
+#
+# 그런데 화면에는 턴이 **전부** 끝난 뒤 `chat_response` 하나만 도착한다. 그
+# 사이 사용자가 받는 신호는 0개다. 그래서 루프의 이음매마다 한 줄을 흘린다.
+#
+# 러너는 웹소켓을 모른다 — 선택적 싱크를 주입받을 뿐이고, 그것을 전송으로
+# 이어 붙이는 일은 호출자(server/web/session.py)가 한다. 싱크가 ``None``이면
+# 배출 자체가 일어나지 않으므로 기존 호출자의 동작은 그대로다.
+PROGRESS_MODEL_CALL = "model_call"
+PROGRESS_TOOL_START = "tool_start"
+PROGRESS_TOOL_DONE = "tool_done"
+
+
+class ProgressSink(Protocol):
+    """턴 진행 한 줄을 받는다 — 전송 수단은 알지 못한다.
+
+    ``seq``\\ 는 **턴 안에서** 1부터 단조증가한다: 순서가 곧 의미이고, 늦게
+    도착한 프레임이 앞선 상태를 덮어쓰는 것을 클라이언트가 막을 수 있어야
+    한다. 턴이 바뀌면 다시 1에서 시작한다.
+    """
+
+    def __call__(self, *, phase: str, detail: str, seq: int) -> None: ...
+
+
+#: 도구 이름 → 사용자에게 보일 한국어 작업 이름. 영어 도구 이름은 조명 감독의
+#: 어휘가 아니다 — 무엇을 기다리는 중인지 읽히는 말로 바꿔서 내보낸다.
+_TOOL_TASKS: dict[str, str] = {
+    "run_commands": "콘솔에 명령 전송",
+    "query_state": "콘솔 상태 읽기",
+    "deploy_plugin": "플러그인 배포",
+    "get_rig_context": "쇼파일 리그 판독",
+    "find_looks": "룩 라이브러리 검색",
+    "instantiate_look": "룩을 리그에 적용",
+    "prepare_busking": "버스킹 팔레트 준비",
+    "prepare_songcue": "곡 큐리스트 준비",
+    "precheck_patch": "패치 사전 점검",
+    "precheck_vectorworks_diff": "Vectorworks 대조",
+    "vectorworks_autopatch": "Vectorworks 자동 패치",
+    "apply_vectorworks_patch": "패치 인계 준비",
+    "preshow_check": "프리쇼 체크리스트 실행",
+    "ask_user": "사용자 답변 대기",
+    "resolve_fixture_type": "픽스처 타입 확인",
+    "resolve_patch_address": "DMX 주소 자리 확인",
+    "patch_fixtures": "픽스처 패치 후 재확인",
+    "find_fx": "효과 라이브러리 검색",
+    "instantiate_fx": "효과를 리그에 적용",
+    "compose_fx": "페이저 직접 작성",
+    "find_scene": "장면 라이브러리 검색",
+    "compile_scene": "장면 컴파일",
+    "build_patch_sheet": "패치시트 작성",
+    "build_cue_sheet": "큐시트 작성",
+    "build_preset_list": "프리셋 목록 작성",
+    "build_magic_sheet": "매직시트 작성",
+    "build_handover_pack": "인계 문서 묶음 작성",
+    "plan_executor_layout": "실행기 배치 계획",
+    "get_spatial_context": "무대 좌표 읽기",
+    "arrange_fixtures": "픽스처 배치 이동",
+    "classify_arrangement_topology": "배치 구조 판별",
+    "create_arrangement_groups": "그룹 저장",
+    "analyse_layout_image": "첨부 도면 판독",
+}
+
+
+def progress_task_name(tool_name: str) -> str:
+    """도구 하나의 사용자용 작업 이름. 표에 없는 도구도 **말은 남긴다.**"""
+    return _TOOL_TASKS.get(tool_name, f"도구 실행({tool_name})")
 
 
 @dataclass(frozen=True)
@@ -183,6 +258,9 @@ class Orchestrator:
         fallback_detector: FallbackDetector | None = None,
         metrics_sink: MetricsSink | None = None,
         clock: Callable[[], float] = time.monotonic,
+        #: 턴 진행 한 줄을 흘려보낼 곳. ``None``(기본)이면 아무것도 배출하지
+        #: 않는다 — 진행 스트리밍 이전 호출자의 동작이 그대로 보존된다.
+        progress: ProgressSink | None = None,
     ) -> None:
         self._provider = provider
         self._registry = registry
@@ -192,6 +270,7 @@ class Orchestrator:
         self._fallback_detector = fallback_detector
         self._metrics_sink = metrics_sink
         self._clock = clock
+        self._progress = progress
 
     # @MX:NOTE: [AUTO] self-correction loop — retry accounting (<=3 per instruction,
     #   REQ-MVP-010) and the executed-command dedupe set both live ONLY here
@@ -262,14 +341,34 @@ class Orchestrator:
         tool_definitions = self._registry.definitions()
         unavailable_corrections = 0
 
+        #: 턴 안에서만 단조증가하는 진행 번호. 배출은 **절대 턴을 죽이지
+        #: 않는다** — 싱크가 던지면 조용히 넘긴다: 진행 표시는 부가 정보이고,
+        #: 그것 때문에 실제 작업이 무너지면 개선이 아니라 새 고장이다.
+        progress_seq = 0
+
+        def emit(phase: str, detail: str) -> None:
+            nonlocal progress_seq
+            if self._progress is None:
+                return
+            progress_seq += 1
+            with contextlib.suppress(Exception):
+                self._progress(phase=phase, detail=detail, seq=progress_seq)
+
         while True:
             if model_calls - human_turns >= self._max_model_calls:
                 status = "loop_limit"
                 # 가드는 **도구 루프**를 끊는 것이지 답을 삼키는 것이 아니다.
                 # 실측: 사용자가 질문 카드 셋에 답하며 끝까지 따라왔는데
                 # `text=0자`로 끝나 화면에 아무것도 안 남았다.
+                emit(PROGRESS_MODEL_CALL, "마무리 정리 중…")
                 final_text = final_text or self._closing_words(conversation)
                 break
+            emit(
+                PROGRESS_MODEL_CALL,
+                "요청을 파악하는 중…"
+                if model_calls == 0
+                else f"다음 단계를 판단하는 중… ({model_calls + 1}번째)",
+            )
             turn = self._provider.complete(
                 system_prefix=self._system_prefix,
                 conversation=conversation,
@@ -314,9 +413,15 @@ class Orchestrator:
             last_run_failed = False
             results: list[ToolResult] = []
             for call in turn.tool_calls:
+                # 도구 하나가 수십 초를 먹는다(실측: get_spatial_context 1회 =
+                # 240~420 콘솔 왕복 = 16~28초). 시작과 끝을 모두 흘려야 화면이
+                # "무엇을 기다리는 중인지"와 "그게 끝났는지"를 둘 다 말할 수 있다.
+                task = progress_task_name(call.name)
+                emit(PROGRESS_TOOL_START, f"{task}…")
                 execution = self._registry.dispatch(
                     call, ExecutionContext(executed_ok=frozenset(executed_ok))
                 )
+                emit(PROGRESS_TOOL_DONE, f"{task} 완료")
                 results.append(execution.result)
                 if execution.awaited_human:
                     # 사람이 카드에 답한 회차는 폭주가 아니다 — 가드에서 뺀다.

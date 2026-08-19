@@ -408,6 +408,10 @@ export type ServerEvent =
   | { v: 1; type: "error"; message: string; kind: string }
   | { v: 1; type: "busy"; message: string }
   | { v: 1; type: "notice"; message: string }
+  // 진행 스트리밍 (additive — 이 이벤트를 모르는 구버전 서버는 그냥 보내지
+  // 않고, 그 경우 UI는 종전처럼 turn 종료 프레임만 받는다). 소멸성 상태:
+  // 대화록에 쌓지 않고 마지막 한 줄만 들고 있다가 턴 종료에서 지운다.
+  | { v: 1; type: "progress"; phase: string; detail: string; seq: number }
   | { v: 1; type: "panel_catalog"; items: PanelItem[]; sections: PanelSection[] }
   | {
       v: 1;
@@ -451,6 +455,8 @@ const SERVER_EVENT_TYPES = new Set([
   "error",
   "busy",
   "notice",
+  // 진행 스트리밍 — server/web/messages.py `progress_event`와 짝.
+  "progress",
   // Panel (REQ-SHOWUI-014) — mirrored by PANEL_* in server/web/messages.py.
   "panel_catalog",
   "panel_item_state",
@@ -749,6 +755,24 @@ export interface PendingQuestion {
   options: { label: string; description: string }[];
 }
 
+/**
+ * 지금 돌고 있는 턴의 진행 한 줄 (`progress` 이벤트).
+ *
+ * 소멸성 상태다 — 대화록(`entries`)에 쌓지 않는다. 한 턴이 모델 호출 24회 +
+ * 도구당 수백 콘솔 왕복을 도는 동안 수십 줄이 흘러나오는데, 그것이 전부
+ * 기록으로 남으면 정작 읽어야 할 답이 묻힌다. 마지막 한 줄만 들고 있다가
+ * 턴 종료 프레임(`chat_response` / `error`)에서 `null`로 되돌린다.
+ *
+ * `seq`를 들고 있는 이유: 턴 안에서 단조증가하므로, 늦게 도착한 프레임이
+ * 앞선 상태를 되돌리는 일을 여기서 막는다(턴이 바뀌면 1로 되돌아가지만,
+ * 그때는 종료 프레임이 이미 `null`로 지워 놓은 뒤다).
+ */
+export interface ProgressState {
+  phase: string;
+  detail: string;
+  seq: number;
+}
+
 export interface UiState {
   entries: ChatEntry[];
   status: StatusState | null;
@@ -759,6 +783,8 @@ export interface UiState {
   dash: DashState;
   cueMonitor: CueMonitorState;
   songTimeline: SongTimelineState;
+  /** 진행 중인 턴의 마지막 진행 한 줄. 턴이 끝나면 `null`이 된다. */
+  progress: ProgressState | null;
 }
 
 export const initialState: UiState = {
@@ -770,6 +796,7 @@ export const initialState: UiState = {
   pendingQuestions: [],
   panel: { items: [], sections: [], running: {}, busy: null },
   dash: { sections: [], lastSyncAt: null, stale: false },
+  progress: null,
   cueMonitor: { executors: [], history: [], lastSyncAt: null, stale: false },
 };
 
@@ -788,6 +815,9 @@ export function reduceServerEvent(
     case "chat_response":
       return {
         ...state,
+        // 턴 종료 = 진행 표시 소멸. 답이 도착한 뒤에도 "…중"이 남아 있으면
+        // 그것은 정보가 아니라 거짓말이다.
+        progress: null,
         entries: [
           ...state.entries,
           {
@@ -887,7 +917,18 @@ export function reduceServerEvent(
     case "error":
       return {
         ...state,
+        // `chat_response`와 나란한 또 하나의 턴 종결 프레임 — 세션의
+        // run_instruction은 예외를 error 이벤트로 바꿔 내보내고 그대로 끝난다.
+        progress: null,
         entries: [...state.entries, { kind: "error", message: event.message, errorKind: event.kind }],
+      };
+    case "progress":
+      // 마지막 한 줄만 들고 있는다(대화록에 쌓지 않는다). `seq`가 뒤로 가는
+      // 프레임은 버린다 — 늦게 도착한 옛 줄이 최신 상태를 되돌리면 안 된다.
+      if (state.progress !== null && event.seq <= state.progress.seq) return state;
+      return {
+        ...state,
+        progress: { phase: event.phase, detail: event.detail, seq: event.seq },
       };
     case "busy":
       return { ...state, entries: [...state.entries, { kind: "busy", message: event.message }] };
@@ -1097,6 +1138,11 @@ export function clearOnDisconnect(state: UiState): UiState {
   }
   if (next.songTimeline.timeline !== null && !next.songTimeline.stale) {
     next = { ...next, songTimeline: { ...next.songTimeline, stale: true } };
+  }
+  // 진행 표시는 "지금 서버가 이걸 하고 있다"는 주장이다. 소켓이 끊긴 뒤에는
+  // 그 주장을 할 수 없다 — 남겨 두면 영원히 도는 "…중" 한 줄이 된다.
+  if (next.progress !== null) {
+    next = { ...next, progress: null };
   }
   return next;
 }
