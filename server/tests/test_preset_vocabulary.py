@@ -32,6 +32,8 @@ from server.web.session import (
     _REGENERATE_DIMMER_PHASER_REQUEST,
     _REGENERATE_DIMMER_REQUEST,
     PRESET_FAMILIES,
+    _preset_store_request,
+    _programming_artifact_target,
 )
 
 #: 저장 트리거 여섯 — 계열 키로 찾는다.
@@ -75,6 +77,57 @@ class TestStoreVerbVocabulary:
         text = "기본 포지션 프리셋 재설정해줘"
         assert [key for key, trigger in _STORE_TRIGGERS.items() if trigger.search(text)] == []
         assert _families(text) == []
+
+
+class TestProgrammingArtifactIntent:
+    """최종 산출물이 프리셋 쓰기 경로를 선택하는 유일한 근거다."""
+
+    @pytest.mark.parametrize(
+        ("text", "target"),
+        [
+            # 2026-08-19 실측: 실제 이펙트 생성 요청이 Color 풀 저장 카드로
+            # 잘못 들어왔다. 저장 동사와 컬러/이펙트 토큰만으로는 부족하다.
+            (
+                "원형을 따라 회전하는 B-R 컬러 루프 이펙트를 만들어줘. "
+                "전체가 바뀌는 것이 아니라 원형을 따라서 B/R 컬러 이펙트를 만들어줘.",
+                "effect",
+            ),
+            ("프리셋 21번으로 B-R 컬러 이펙트를 만들어줘", "effect"),
+            ("프리셋 21번으로 B-R 컬러 이펙트 시퀀스를 만들어줘", "sequence"),
+            ("B-R 컬러 이펙트 프리셋 만들어줘", "preset"),
+            ("프리셋 21번을 큐로 저장해줘", "sequence"),
+        ],
+    )
+    def test_target_is_selected_from_context_not_word_presence(self, text, target):
+        assert _programming_artifact_target(text) == target
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "원형을 따라 회전하는 B-R 컬러 루프 이펙트를 만들어줘. "
+            "전체가 바뀌는 것이 아니라 원형을 따라서 B/R 컬러 이펙트를 만들어줘.",
+            "프리셋 21번으로 B-R 컬러 이펙트를 만들어줘",
+            "프리셋 21번으로 B-R 컬러 이펙트 시퀀스를 만들어줘",
+            "컬러 페이저 만들어줘",
+            "딤머 페이저 설정해줘",
+            "기본 컬러 저장해줘",
+        ],
+    )
+    def test_only_preset_as_final_artifact_enters_store_path(self, text):
+        assert _preset_store_request(text) is False
+        assert _families(text) == []
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "컬러 페이저 프리셋 만들어줘",
+            "딤머 페이저 preset 설정해줘",
+            "기본 컬러 프리셋 저장해줘",
+            "B-R 컬러 이펙트 프리셋 만들어줘",
+        ],
+    )
+    def test_explicit_preset_as_final_artifact_keeps_store_path_enabled(self, text):
+        assert _preset_store_request(text) is True
 
 
 class TestDimmerSpelling:
@@ -156,15 +209,14 @@ class TestFamilyRegistryVerdicts:
             ("기본 딜머 프리셋 설정해줘", ["basic_dimmer"]),
             ("기본 컬러 프리셋 세팅해줘", ["basic_color"]),
             ("기본 포지션 프리셋 설정해줘", ["basic_position"]),
-            ("복합 프리셋 저장해줘", ["combo_phaser"]),
-            ("딤머 페이저 만들어줘", ["dimmer_phaser"]),
-            ("컬러 페이저 만들어줘", ["color_phaser"]),
-            # '기본'은 수식어일 뿐 — 페이저 복합어가 있으면 계열은 여전히 하나다.
-            ("기본 디머 페이저 저장해줘", ["dimmer_phaser"]),
-            ("기본 멀티컬러 페이저 저장해줘", ["color_phaser"]),
-            # 콤보 토큰이 컬러·디머 어휘를 품고 있어도 행선지는 콤보 하나다.
-            ("컬러 디머 페이저 저장해줘", ["combo_phaser"]),
-            ("콤보 페이저 저장해줘", ["combo_phaser"]),
+            # 신규 저장은 프리셋 명사가 있어야 한다. 아래는 이펙트/축 자체를
+            # 만들거나 설정하는 요청으로 남는다.
+            ("딤머 페이저 만들어줘", []),
+            ("컬러 페이저 만들어줘", []),
+            ("기본 디머 페이저 저장해줘", []),
+            ("기본 멀티컬러 페이저 저장해줘", []),
+            ("컬러 디머 페이저 저장해줘", []),
+            ("콤보 페이저 저장해줘", []),
             # ── 계열 여럿 — 카드로 물어야 하는 문장 ───────────────────────
             (
                 "포지션, 컬러, 딤머의 기본 프리셋과 페이저 프리셋을 설정하고 "
