@@ -1683,19 +1683,27 @@ def _validate_song_timecode_readback(payload: object, timecode_number: int) -> s
     return None
 
 
-#: 프리셋 **신규 저장** 동사 — 여섯 계열이 공유한다. '설정'·'세팅'은 2026-08-19
+#: 프리셋 **신규 저장** 동사 — 일곱 계열이 공유한다. '설정'·'세팅'은 2026-08-19
 #: 실측으로 들어왔다: «포지션, 컬러, 딤머의 기본 프리셋과 페이저 프리셋을
 #: 설정하고 …» 문장이 사전 핸들러 22개 중 **하나도** 매치하지 못해 LLM으로
-#: 빠졌다. `(?<!재)`는 '재설정'·'재세팅'(재생성 의도)이 신규 저장으로 끌려오는
-#: 것을 막는다 — 재생성 어휘 확장은 이번 범위 밖이라 그 문장들은 오늘과 같은
-#: 경로(LLM)에 그대로 남긴다.
-_PRESET_STORE_VERB = r"(?:저장|만들|잡아|생성|(?<!재)(?:설정|세팅))"
+#: 빠졌다. 조명감독은 「저장」만 쓰지 않는다 — 「깔아줘」·「구성해줘」·
+#: 「준비해줘」·「등록해줘」·「채워줘」가 현장 어법이라 함께 받는다.
+#:
+#: `(?<!재)`는 재생성 의도(재설정·재세팅·재구성·재등록)가 신규 저장으로
+#: 끌려오는 것을 막는다 — 두 흐름이 동사를 공유하므로 이 룩비하인드가 없으면
+#: 「재구성해줘」가 저장 카드로 간다. 재생성 어휘 확장은 이번 범위 밖이라
+#: 그 문장들은 오늘과 같은 경로(LLM)에 그대로 남는다.
+_PRESET_STORE_VERB = (
+    r"(?:저장|만들|잡아|생성|깔아|깔자|채워|넣어|올려"
+    r"|(?<!재)(?:설정|세팅|구성|준비|등록))"
+)
 
-#: 디머 축 표기 대안. '딤머'·'딜머'는 실측된 사용자 표기다 — 오타 하나가 축을
+#: 디머 축 표기·동의어. '딤머'·'딜머'는 실측된 사용자 표기다 — 오타 하나가 축을
 #: 바꿔버리면(포지션 트리거의 일반 명사 '프리셋'을 타고) 운영자가 요청한 적 없는
 #: 풀에 10칸이 저장된다. 표기 누락은 오타가 아니라 결함이므로 저장·재생성 양쪽
-#: 트리거에 같은 조각을 쓴다.
-_DIMMER_AXIS_WORD = r"(?:디머|딤머|딜머|dimmer)"
+#: 트리거에 같은 조각을 쓴다. 「밝기」·「광량」·「인텐시티」는 같은 축을 가리키는
+#: 현장 어휘다.
+_DIMMER_AXIS_WORD = r"(?:디머|딤머|딜머|dimmer|밝기|광량|인텐시티|intensity)"
 
 #: 포지션이 **아닌** 축 명사들 — 포지션 트리거의 오라우팅 가드에 쓴다.
 _NON_POSITION_AXIS_NOUN = r"(?:컬러|색|color|콤보|combo|복합|드롭|" + _DIMMER_AXIS_WORD + r")"
@@ -2043,29 +2051,38 @@ _REGENERATE_COMBO_PHASER_REQUEST = re.compile(
 # («포지션, 컬러, 딤머의 기본 프리셋 …» — '컬러'가 '기본'보다 앞이다). 어순을
 # 요구하면 바로 그 문장에서 컬러·딤머 계열을 놓친다.
 _PRESET_STORE_VERB_RE = re.compile(_PRESET_STORE_VERB)
-_PRESET_BASIC_QUALIFIER_RE = re.compile(r"기본|베이직|basic", re.IGNORECASE)
-_PRESET_POSITION_AXIS_RE = re.compile(r"포지션|position", re.IGNORECASE)
-_PRESET_COLOR_AXIS_RE = re.compile(r"컬러|색|color", re.IGNORECASE)
+_PRESET_BASIC_QUALIFIER_RE = re.compile(r"기본|베이직|basic|스탠다드|standard", re.IGNORECASE)
+#: 포지션 축 동의어 — 「포커스」·「자리」·「위치」는 같은 축을 가리키는 현장 어휘다.
+_PRESET_POSITION_AXIS_RE = re.compile(r"포지션|position|포커스|focus|자리|위치", re.IGNORECASE)
+#: 컬러 축. '색'이 색상·색깔을 부분문자열로 덮는다 — 팔레트만 따로 받는다.
+_PRESET_COLOR_AXIS_RE = re.compile(r"컬러|색|color|팔레트|palette", re.IGNORECASE)
 _PRESET_DIMMER_AXIS_RE = re.compile(_DIMMER_AXIS_WORD, re.IGNORECASE)
 #: 콤보 축 토큰. `컬러\s*디머`는 **그 자체가** 컬러·디머 어휘를 품고 있어, 걷어내지
 #: 않으면 «컬러 디머 페이저 저장해줘»가 컬러·디머 페이저 후보로도 올라 이미
 #: 출하된 행선지(디스패치 순서상 콤보가 맨 앞)를 카드 질문으로 바꿔버린다.
 #: 그래서 콤보를 제외한 모든 계열은 이 토큰을 지운 문장 위에서 판정한다.
 _PRESET_COMBO_AXIS_RE = re.compile(r"콤보|combo|복합|컬러\s*디머|드롭\s*프리셋", re.IGNORECASE)
-#: 페이저 수식어 — 축 명사와 **결합**될 때만 계열을 지정한다.
+#: 페이저 수식어 — 축 명사와 **결합**될 때만 계열을 지정한다. 「체이스」·「무빙」은
+#: 조명감독이 페이저를 부르는 현장 어휘다.
 _PRESET_PHASER_QUALIFIER_RE = re.compile(
-    r"페이저|phaser|이펙트|effect|멀티\s*컬러|multi-?color", re.IGNORECASE
+    r"페이저|phaser|이펙트|effect|멀티\s*컬러|multi-?color|체이스|chase",
+    re.IGNORECASE,
 )
 #: 축에 묶인 페이저 복합어. '기본 디머 페이저 저장'은 계열이 **하나**(디머 페이저)
 #: 인 문장이다 — '기본'은 수식어일 뿐이라 기본 디머 계열까지 후보로 올리면
 #: 출하된 단일 행선지가 카드 질문으로 바뀐다. 기본 계열은 이 복합어를 지운
 #: 문장 위에서 판정한다.
+#:
+#: 페이저를 부르는 낱말은 수식어 쪽과 **같은 집합**이어야 한다 — 한쪽에만
+#: 낱말을 더하면(예: '체이스') 그 문장이 페이저 계열로도, 기본 계열로도
+#: 잡혀 카드에 두 줄이 뜬다.
+_PHASER_WORD = r"(?:페이저|이펙트|phaser|effect|체이스|chase)"
 _PRESET_COLOR_PHASER_COMPOUND_RE = re.compile(
-    r"멀티\s*(?:컬러|color)|multi-?color|(?:컬러|색|color)\s*(?:페이저|이펙트|phaser|effect)",
+    r"멀티\s*(?:컬러|color)|multi-?color|(?:컬러|색|color|팔레트|palette)\s*" + _PHASER_WORD,
     re.IGNORECASE,
 )
 _PRESET_DIMMER_PHASER_COMPOUND_RE = re.compile(
-    _DIMMER_AXIS_WORD + r"\s*(?:페이저|이펙트|phaser|effect)", re.IGNORECASE
+    _DIMMER_AXIS_WORD + r"\s*" + _PHASER_WORD, re.IGNORECASE
 )
 #: FX 포지션 복합어. '이펙트 포지션'은 기하 골격 계열(`_FX_POSITIONS_REQUEST`,
 #: `FX_POSITION_SEQUENCE` 10종)이고 **기본 포지션과는 다른 계열**이다 — 기본
@@ -2086,6 +2103,18 @@ _PRESET_FX_POSITION_COMPOUND_RE = re.compile(
 _PRESET_BARE_PHASER_RE = re.compile(r"페이저|phaser", re.IGNORECASE)
 _PRESET_NOUN_RE = re.compile(r"프리셋|preset", re.IGNORECASE)
 
+#: 「전부/모두」 — 일곱 계열을 한 번에 부르는 어휘. 계열 축을 **하나도** 지목하지
+#: 않은 문장에서만 성립한다: «컬러 프리셋 전부 저장해줘»의 '전부'는 계열이 아니라
+#: 그 축의 10종을 가리키므로, 축이 있으면 그 축만 후보로 남긴다.
+_PRESET_ALL_FAMILIES_RE = re.compile(
+    r"전부|모두|전체|싹|일괄|풀\s*세트|full\s*set|7\s*계열|일곱\s*계열|70\s*종",
+    re.IGNORECASE,
+)
+
+#: 재생성 표지. 축별 재생성 트리거는 축 명사를 요구하므로 축 없는 「전부」
+#: 문장을 잡지 못한다 — 그 구멍을 이 낱말들로 막는다.
+_PRESET_REGENERATION_MARK_RE = re.compile(r"다시|재생성|갱신", re.IGNORECASE)
+
 #: 재생성 트리거 전부. 레지스트리는 **신규 저장** 문장을 계열로 쪼개는 장치라,
 #: 재생성 문장은 어느 계열도 후보로 올리지 않는다. 재생성 어휘가 저장 동사를
 #: 공유하므로(«기본 컬러랑 포지션 다시 잡아줘» — '잡아'), 이 배제가 없으면
@@ -2100,14 +2129,29 @@ _REGENERATE_PRESET_REQUESTS: tuple[re.Pattern[str], ...] = (
     _REGENERATE_COMBO_PHASER_REQUEST,
 )
 
+#: 프리셋 어휘를 **지나가며** 쓰는 남의 의도들. 곡 설계 브리프는 프리셋 번호로
+#: 시작 슬롯을 지정하고("프리셋 21번부터") 무드를 색·밝기로 적는다
+#: («파란색과 낮은 밝기로 시작하고 …») — 어순 무관 토큰 판정에는 컬러·디머
+#: 두 계열로 보이지만 저장 요청이 아니다. 합성 카드는 체인 앞자리에 있어
+#: 이런 문장을 가로채면 곡 설계 흐름 자체가 멎는다(2026-08-19 회귀).
+#:
+#: 트리거 정규식은 어순을 요구해 이 문장들을 원래 비켜갔다 — 배제가 필요한
+#: 쪽은 레지스트리뿐이다.
+_PRESET_FOREIGN_INTENT_REQUESTS: tuple[re.Pattern[str], ...] = (
+    _SONG_DESIGN_REQUEST,
+    _POSITION_SHEET_REQUEST,
+)
+
 
 def _reads_as_preset_regeneration(text: str) -> bool:
     return any(pattern.search(text) is not None for pattern in _REGENERATE_PRESET_REQUESTS)
 
 
 def _preset_store_request(text: str) -> bool:
-    """신규 저장 문장인가 — 저장 동사가 있고 재생성 문장은 아니다."""
+    """신규 저장 문장인가 — 저장 동사가 있고, 재생성도 남의 의도도 아니다."""
     if _reads_as_preset_regeneration(text):
+        return False
+    if any(pattern.search(text) is not None for pattern in _PRESET_FOREIGN_INTENT_REQUESTS):
         return False
     return _PRESET_STORE_VERB_RE.search(text) is not None
 
@@ -2126,6 +2170,38 @@ def _reads_as_bare_phaser(text: str) -> bool:
             _PRESET_COLOR_AXIS_RE,
             _PRESET_DIMMER_AXIS_RE,
             _PRESET_COMBO_AXIS_RE,
+        )
+    )
+
+
+def _reads_as_all_families(text: str) -> bool:
+    """«프리셋 전부 깔아줘» — 일곱 계열을 한 번에 부르는 문장인가.
+
+    성립 조건은 셋이다: 저장 문장이고, '프리셋' 명사가 있고, 계열 축을
+    **하나도** 지목하지 않았다. 축이 있으면 '전부'는 계열이 아니라 그 축의
+    10종을 뜻한다 — «컬러 프리셋 전부 저장해줘»는 컬러 하나만 남겨야 한다.
+
+    각 계열 판정이 이 함수를 함께 보므로 「몇 계열인가」의 단일 소재는 여전히
+    ``PRESET_FAMILIES``\\ 하나다 — 합성 핸들러는 고칠 것이 없다.
+
+    재생성 표지(다시·재생성·갱신)는 여기서 따로 막는다. 축별 재생성 트리거는
+    축 명사를 요구하는데 «프리셋 전부 다시 잡아줘»에는 축이 없어 그물을
+    빠져나간다 — 그대로 두면 재생성 한마디가 일곱 계열 70칸의 저장 카드가 된다.
+    """
+    if _PRESET_ALL_FAMILIES_RE.search(text) is None:
+        return False
+    if _PRESET_NOUN_RE.search(text) is None:
+        return False
+    if _PRESET_REGENERATION_MARK_RE.search(text) is not None:
+        return False
+    return not any(
+        axis.search(text) is not None
+        for axis in (
+            _PRESET_POSITION_AXIS_RE,
+            _PRESET_COLOR_AXIS_RE,
+            _PRESET_DIMMER_AXIS_RE,
+            _PRESET_COMBO_AXIS_RE,
+            _PRESET_PHASER_QUALIFIER_RE,
         )
     )
 
@@ -2154,6 +2230,8 @@ def _designates(scoped: str, axis: re.Pattern[str]) -> bool:
 def _matches_basic_position_family(text: str) -> bool:
     if not _preset_store_request(text):
         return False
+    if _reads_as_all_families(text):
+        return True
     scoped = _PRESET_FX_POSITION_COMPOUND_RE.sub(" ", _without_combo_tokens(text))
     return _designates(scoped, _PRESET_POSITION_AXIS_RE)
 
@@ -2173,6 +2251,8 @@ def _matches_fx_position_family(text: str) -> bool:
     """
     if not _preset_store_request(text):
         return False
+    if _reads_as_all_families(text):
+        return True
     if _PRESET_FX_POSITION_COMPOUND_RE.search(_without_combo_tokens(text)) is None:
         return False
     return _PRESET_NOUN_RE.search(text) is not None
@@ -2181,6 +2261,8 @@ def _matches_fx_position_family(text: str) -> bool:
 def _matches_basic_color_family(text: str) -> bool:
     if not _preset_store_request(text):
         return False
+    if _reads_as_all_families(text):
+        return True
     scoped = _PRESET_COLOR_PHASER_COMPOUND_RE.sub(" ", _without_combo_tokens(text))
     return _designates(scoped, _PRESET_COLOR_AXIS_RE)
 
@@ -2188,6 +2270,8 @@ def _matches_basic_color_family(text: str) -> bool:
 def _matches_basic_dimmer_family(text: str) -> bool:
     if not _preset_store_request(text):
         return False
+    if _reads_as_all_families(text):
+        return True
     scoped = _PRESET_DIMMER_PHASER_COMPOUND_RE.sub(" ", _without_combo_tokens(text))
     return _designates(scoped, _PRESET_DIMMER_AXIS_RE)
 
@@ -2195,6 +2279,8 @@ def _matches_basic_dimmer_family(text: str) -> bool:
 def _matches_color_phaser_family(text: str) -> bool:
     if not _preset_store_request(text):
         return False
+    if _reads_as_all_families(text):
+        return True
     scoped = _without_combo_tokens(text)
     if (
         _PRESET_COLOR_AXIS_RE.search(scoped) is not None
@@ -2207,6 +2293,8 @@ def _matches_color_phaser_family(text: str) -> bool:
 def _matches_dimmer_phaser_family(text: str) -> bool:
     if not _preset_store_request(text):
         return False
+    if _reads_as_all_families(text):
+        return True
     scoped = _without_combo_tokens(text)
     if (
         _PRESET_DIMMER_AXIS_RE.search(scoped) is not None
@@ -2219,6 +2307,8 @@ def _matches_dimmer_phaser_family(text: str) -> bool:
 def _matches_combo_phaser_family(text: str) -> bool:
     if not _preset_store_request(text):
         return False
+    if _reads_as_all_families(text):
+        return True
     if _PRESET_COMBO_AXIS_RE.search(text) is not None:
         return True
     return _reads_as_bare_phaser(text)
