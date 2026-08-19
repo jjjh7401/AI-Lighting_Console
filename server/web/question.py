@@ -80,6 +80,12 @@ class QuestionRequest:
     #: 인계 통로다. 없으면 빈 튜플.
     commands: tuple[str, ...] = ()
     options: tuple[QuestionOption, ...] = field(default_factory=tuple)
+    #: 여러 개를 **함께** 고를 수 있는 물음인가. 한 문장이 여러 계열을 지정하는
+    #: 경우(«포지션, 컬러, 딤머 프리셋을 설정해줘»)가 실물에서 흔한데, 단일
+    #: 선택 카드는 그중 하나만 받고 나머지를 조용히 버린다. 참이면 UI가 체크박스
+    #: + 「확인」으로 렌더하고, 고른 라벨을 ``", "``\\ 로 이어 하나의 답으로 보낸다
+    #: — 답의 **형식**만 다르고 통로는 그대로다(자유 입력도 계속 열려 있다).
+    multi: bool = False
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -91,6 +97,7 @@ class QuestionRequest:
                 {"label": option.label, "description": option.description}
                 for option in self.options
             ],
+            "multi": self.multi,
         }
 
 

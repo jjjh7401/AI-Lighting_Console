@@ -1683,11 +1683,39 @@ def _validate_song_timecode_readback(payload: object, timecode_number: int) -> s
     return None
 
 
+#: 프리셋 **신규 저장** 동사 — 여섯 계열이 공유한다. '설정'·'세팅'은 2026-08-19
+#: 실측으로 들어왔다: «포지션, 컬러, 딤머의 기본 프리셋과 페이저 프리셋을
+#: 설정하고 …» 문장이 사전 핸들러 22개 중 **하나도** 매치하지 못해 LLM으로
+#: 빠졌다. `(?<!재)`는 '재설정'·'재세팅'(재생성 의도)이 신규 저장으로 끌려오는
+#: 것을 막는다 — 재생성 어휘 확장은 이번 범위 밖이라 그 문장들은 오늘과 같은
+#: 경로(LLM)에 그대로 남긴다.
+_PRESET_STORE_VERB = r"(?:저장|만들|잡아|생성|(?<!재)(?:설정|세팅))"
+
+#: 디머 축 표기 대안. '딤머'·'딜머'는 실측된 사용자 표기다 — 오타 하나가 축을
+#: 바꿔버리면(포지션 트리거의 일반 명사 '프리셋'을 타고) 운영자가 요청한 적 없는
+#: 풀에 10칸이 저장된다. 표기 누락은 오타가 아니라 결함이므로 저장·재생성 양쪽
+#: 트리거에 같은 조각을 쓴다.
+_DIMMER_AXIS_WORD = r"(?:디머|딤머|딜머|dimmer)"
+
+#: 포지션이 **아닌** 축 명사들 — 포지션 트리거의 오라우팅 가드에 쓴다.
+_NON_POSITION_AXIS_NOUN = r"(?:컬러|색|color|콤보|combo|복합|드롭|" + _DIMMER_AXIS_WORD + r")"
+
 # The ten-basic-positions request: build the canonical position sequence for
 # THIS rig and store it as consecutive Position presets, asking for the first
 # preset number when the instruction does not carry one.
+#
+# 오라우팅 가드(2026-08-19 실측): 명사 대안의 '프리셋'은 일반 명사라 다른 축
+# 문장까지 삼킨다 — «기본 딤머 프리셋 저장해줘»가 **포지션** 프리셋 10종을
+# 만들었다. 그래서 다른 축 명사(컬러/디머/콤보/복합/드롭 계열)가 문장에 있고
+# 포지션 명사(포지션/position)는 없으면 포지션 계열로 판정하지 않는다.
+#
+# 가드는 문장 **전체**를 봐야 한다 — 축 명사가 '기본'보다 앞에 오는 문장이
+# 실재한다(«포지션, 컬러, 딤머의 기본 프리셋 …»). 그래서 트리거를 `\A`에 묶고
+# 선행부를 `.*?`로 흘린다. 매치 오프셋을 읽는 호출자는 없다 —
+# `_basic_position_presets`는 `search(...) is None`만 본다.
 _BASIC_POSITIONS_REQUEST = re.compile(
-    r"(?:기본|베이직|basic).{0,16}?(?:포지션|프리셋|position).*?(?:저장|만들|잡아|생성)",
+    r"\A(?:(?=.*(?:포지션|position))|(?!.*" + _NON_POSITION_AXIS_NOUN + r"))"
+    r".*?(?:기본|베이직|basic).{0,16}?(?:포지션|프리셋|position).*?" + _PRESET_STORE_VERB,
     re.IGNORECASE | re.DOTALL,
 )
 _BASIC_POSITIONS_START = re.compile(r"(?P<no>\d+)\s*(?:번)?\s*(?:부터|에서(?:부터)?|번대)")
@@ -1782,7 +1810,7 @@ _REGENERATE_FX_POSITIONS_REQUEST = re.compile(
 # 매치**하므로, 겹치는 입력의 행선지는 디스패치 등록 순서(컬러 먼저)로 고정한다
 # — 재생성이 신규 저장보다 앞서는 것과 같은 형상이다(REQ-PRESETGUARD-015).
 _BASIC_COLORS_REQUEST = re.compile(
-    r"(?:기본|베이직|basic).{0,16}?(?:컬러|색|color).*?(?:저장|만들|잡아|생성)",
+    r"(?:기본|베이직|basic).{0,16}?(?:컬러|색|color).*?" + _PRESET_STORE_VERB,
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -1851,9 +1879,11 @@ COLOR_PHASER_SEQUENCE: tuple[tuple[str, tuple[str, ...], str, str], ...] = (
 # 합성 문장("기본 멀티컬러 페이저 저장해줘")은 기본 트리거의 갭(.{0,16}?)에도
 # 매치되므로 **디스패치 등록 순서**(페이저가 기본보다 앞)가 행선지를 고정한다
 # (2026-08-17 리뷰 실측 — run_instruction 디스패치 블록 참조).
+# '컬러 페이저'는 일반 표현으로 들어온다 — 카탈로그 이름('멀티컬러')을 모르는
+# 운영자가 쓰는 어휘다. 축이 붙어 있으므로 짐작이 아니다.
 _COLOR_PHASER_REQUEST = re.compile(
-    r"(?:멀티\s*컬러|컬러\s*이펙트|multi-?color|color\s*effect)"
-    r".{0,24}?(?:저장|만들|잡아|생성)",
+    r"(?:멀티\s*컬러|컬러\s*(?:이펙트|페이저)|multi-?color|color\s*(?:effect|phaser))"
+    r".{0,24}?" + _PRESET_STORE_VERB,
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -1892,7 +1922,7 @@ DIMMER_LEVEL_SEQUENCE: tuple[tuple[str, int], ...] = (
 # 여전히 교집합이 있지만(컬러와 같은 형상), 디스패치 등록 순서(디머가 포지션보다
 # 앞)로 행선지를 고정한다(REQ-PRESETGUARD-015와 같은 패턴).
 _BASIC_DIMMER_REQUEST = re.compile(
-    r"(?:기본|베이직|basic).{0,16}?(?:디머|dimmer).*?(?:저장|만들|잡아|생성)",
+    r"(?:기본|베이직|basic).{0,16}?" + _DIMMER_AXIS_WORD + r".*?" + _PRESET_STORE_VERB,
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -1900,8 +1930,7 @@ _BASIC_DIMMER_REQUEST = re.compile(
 # `_REGENERATE_POSITIONS_REQUEST` 주석의 근거를 그대로 상속한다. '재조준/
 # 리포커스'는 포지션 전용 어휘라 들이지 않는다(컬러와 동일 사유).
 _REGENERATE_DIMMER_REQUEST = re.compile(
-    r"(?:기본|베이직|basic).{0,16}?(?:디머|dimmer)"
-    r"(?:"
+    r"(?:기본|베이직|basic).{0,16}?" + _DIMMER_AXIS_WORD + r"(?:"
     r".{0,12}?재생성"
     r"|"
     r".{0,12}?다시(?:\s+\S{1,6})?\s*(?:잡|만들|생성|갱신)"
@@ -1931,15 +1960,15 @@ DIMMER_PHASER_SEQUENCE: tuple[tuple[str, tuple[int, ...], str, str], ...] = (
 # 않는 점도 컬러의 멀티컬러 트리거와 동일 — 어휘 자체(이펙트/페이저 복합어)가
 # 이미 레벨 트리거(단순 '디머')와 서로소다.
 _DIMMER_PHASER_REQUEST = re.compile(
-    r"(?:디머\s*이펙트|디머\s*페이저|dimmer\s*effect|dimmer\s*phaser)"
-    r".{0,24}?(?:저장|만들|잡아|생성)",
+    _DIMMER_AXIS_WORD + r"\s*(?:이펙트|페이저|effect|phaser)"
+    r".{0,24}?" + _PRESET_STORE_VERB,
     re.IGNORECASE | re.DOTALL,
 )
 
 # 디머 페이저 재생성: 디머 레벨 재생성과 같은 문형에서 어휘축만 다르다(컬러/
 # 멀티컬러 재생성 쌍과 동일 형상).
 _REGENERATE_DIMMER_PHASER_REQUEST = re.compile(
-    r"(?:디머\s*이펙트|디머\s*페이저|dimmer\s*effect|dimmer\s*phaser)"
+    _DIMMER_AXIS_WORD + r"\s*(?:이펙트|페이저|effect|phaser)"
     r"(?:"
     r".{0,12}?재생성"
     r"|"
@@ -1980,9 +2009,11 @@ COMBO_PHASER_SEQUENCE: tuple[tuple[str, tuple[tuple[str, int], ...], str, str], 
 # 토큰)에도 매치된다 — 그래서 **디스패치 등록 순서**가 콤보를 모든 프리셋
 # 가족의 맨 앞에 둔다(2026-08-17 리뷰 실측, run_instruction 디스패치 블록).
 # "드롭 프리셋"은 다른 축에 없는 명사 조합이다.
+# '복합'은 사용자 확정 어휘다 — 신규 프리셋 종류가 아니라 이 콤보 계열
+# (컬러+디머 혼합, All 1 풀)의 다른 이름이다.
 _COMBO_PHASER_REQUEST = re.compile(
-    r"(?:콤보|combo|컬러\s*디머|드롭\s*프리셋)"
-    r".{0,24}?(?:저장|만들|잡아|생성)",
+    r"(?:콤보|combo|복합|컬러\s*디머|드롭\s*프리셋)"
+    r".{0,24}?" + _PRESET_STORE_VERB,
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -1996,6 +2027,198 @@ _REGENERATE_COMBO_PHASER_REQUEST = re.compile(
     r".{0,12}?다시(?:\s+\S{1,6})?\s*(?:잡|만들|생성|갱신)"
     r")",
     re.IGNORECASE | re.DOTALL,
+)
+
+
+# ── 프리셋 계열 레지스트리 ────────────────────────────────────────────────────
+#
+# 위 `_*_REQUEST` 트리거는 계열 **하나**를 겨냥한 문장을 잡는다. 한 문장이 여러
+# 계열을 지정하면(«포지션, 컬러, 딤머의 기본 프리셋과 페이저 프리셋을 설정하고
+# 복합 프리셋도 …») 사전 핸들러 체인은 첫 매칭 하나만 실행하고 턴을 끝내므로
+# 나머지 계열이 조용히 사라진다. 레지스트리는 "이 문장이 어느 계열들을
+# 지정했나"를 트리거와 **독립적으로** 판정해 합성 핸들러가 선택 카드로 묻게 한다.
+#
+# `matches`는 트리거 정규식이 아니라 **어순 무관 토큰 존재** 판정이다. 트리거는
+# 「수식어 → 축 → 동사」 순서를 요구하지만 실제 문장은 축을 앞에 세운다
+# («포지션, 컬러, 딤머의 기본 프리셋 …» — '컬러'가 '기본'보다 앞이다). 어순을
+# 요구하면 바로 그 문장에서 컬러·딤머 계열을 놓친다.
+_PRESET_STORE_VERB_RE = re.compile(_PRESET_STORE_VERB)
+_PRESET_BASIC_QUALIFIER_RE = re.compile(r"기본|베이직|basic", re.IGNORECASE)
+_PRESET_POSITION_AXIS_RE = re.compile(r"포지션|position", re.IGNORECASE)
+_PRESET_COLOR_AXIS_RE = re.compile(r"컬러|색|color", re.IGNORECASE)
+_PRESET_DIMMER_AXIS_RE = re.compile(_DIMMER_AXIS_WORD, re.IGNORECASE)
+#: 콤보 축 토큰. `컬러\s*디머`는 **그 자체가** 컬러·디머 어휘를 품고 있어, 걷어내지
+#: 않으면 «컬러 디머 페이저 저장해줘»가 컬러·디머 페이저 후보로도 올라 이미
+#: 출하된 행선지(디스패치 순서상 콤보가 맨 앞)를 카드 질문으로 바꿔버린다.
+#: 그래서 콤보를 제외한 모든 계열은 이 토큰을 지운 문장 위에서 판정한다.
+_PRESET_COMBO_AXIS_RE = re.compile(r"콤보|combo|복합|컬러\s*디머|드롭\s*프리셋", re.IGNORECASE)
+#: 페이저 수식어 — 축 명사와 **결합**될 때만 계열을 지정한다.
+_PRESET_PHASER_QUALIFIER_RE = re.compile(
+    r"페이저|phaser|이펙트|effect|멀티\s*컬러|multi-?color", re.IGNORECASE
+)
+#: 축에 묶인 페이저 복합어. '기본 디머 페이저 저장'은 계열이 **하나**(디머 페이저)
+#: 인 문장이다 — '기본'은 수식어일 뿐이라 기본 디머 계열까지 후보로 올리면
+#: 출하된 단일 행선지가 카드 질문으로 바뀐다. 기본 계열은 이 복합어를 지운
+#: 문장 위에서 판정한다.
+_PRESET_COLOR_PHASER_COMPOUND_RE = re.compile(
+    r"멀티\s*(?:컬러|color)|multi-?color|(?:컬러|색|color)\s*(?:페이저|이펙트|phaser|effect)",
+    re.IGNORECASE,
+)
+_PRESET_DIMMER_PHASER_COMPOUND_RE = re.compile(
+    _DIMMER_AXIS_WORD + r"\s*(?:페이저|이펙트|phaser|effect)", re.IGNORECASE
+)
+#: FX 포지션 복합어. '이펙트 포지션'은 기하 골격 계열(`_FX_POSITIONS_REQUEST`)이고
+#: 레지스트리에 없다 — 기본 포지션 계열이 그 문장을 자기 것으로 주장하면 안 된다.
+_PRESET_FX_POSITION_COMPOUND_RE = re.compile(
+    r"(?:이펙트|효과|fx|effect)\s*(?:포지션|position)", re.IGNORECASE
+)
+#: 축 **없는** 맨 '페이저' 판정용. '이펙트/effect'는 여기 들어오면 안 된다 —
+#: "무빙 이펙트 만들어줘"(이펙트 적용)를 프리셋 카드로 끌어온다. '프리셋'을
+#: 요구하는 것도 같은 이유다: "…페이저로 시퀀스 만들어줘"(recall)를 비켜간다.
+_PRESET_BARE_PHASER_RE = re.compile(r"페이저|phaser", re.IGNORECASE)
+_PRESET_NOUN_RE = re.compile(r"프리셋|preset", re.IGNORECASE)
+
+#: 재생성 트리거 전부. 레지스트리는 **신규 저장** 문장을 계열로 쪼개는 장치라,
+#: 재생성 문장은 어느 계열도 후보로 올리지 않는다. 재생성 어휘가 저장 동사를
+#: 공유하므로(«기본 컬러랑 포지션 다시 잡아줘» — '잡아'), 이 배제가 없으면
+#: 다축 재생성 문장이 저장 카드로 끌려간다.
+_REGENERATE_PRESET_REQUESTS: tuple[re.Pattern[str], ...] = (
+    _REGENERATE_POSITIONS_REQUEST,
+    _REGENERATE_FX_POSITIONS_REQUEST,
+    _REGENERATE_COLORS_REQUEST,
+    _REGENERATE_COLOR_PHASER_REQUEST,
+    _REGENERATE_DIMMER_REQUEST,
+    _REGENERATE_DIMMER_PHASER_REQUEST,
+    _REGENERATE_COMBO_PHASER_REQUEST,
+)
+
+
+def _reads_as_preset_regeneration(text: str) -> bool:
+    return any(pattern.search(text) is not None for pattern in _REGENERATE_PRESET_REQUESTS)
+
+
+def _preset_store_request(text: str) -> bool:
+    """신규 저장 문장인가 — 저장 동사가 있고 재생성 문장은 아니다."""
+    if _reads_as_preset_regeneration(text):
+        return False
+    return _PRESET_STORE_VERB_RE.search(text) is not None
+
+
+def _reads_as_bare_phaser(text: str) -> bool:
+    """축 없는 «페이저 프리셋 …» — 어느 한 계열로 **짐작하지 않는다**.
+
+    세 페이저 계열 전부의 후보로 올려 합성 핸들러가 선택 카드로 묻게 한다.
+    """
+    if _PRESET_BARE_PHASER_RE.search(text) is None or _PRESET_NOUN_RE.search(text) is None:
+        return False
+    return not any(
+        axis.search(text) is not None
+        for axis in (
+            _PRESET_POSITION_AXIS_RE,
+            _PRESET_COLOR_AXIS_RE,
+            _PRESET_DIMMER_AXIS_RE,
+            _PRESET_COMBO_AXIS_RE,
+        )
+    )
+
+
+def _without_combo_tokens(text: str) -> str:
+    return _PRESET_COMBO_AXIS_RE.sub(" ", text)
+
+
+def _designates(scoped: str, axis: re.Pattern[str]) -> bool:
+    """기본 계열 하나가 지정됐나 — 축 명사에 수식어나 '프리셋' 명사가 딸려야 한다.
+
+    '기본'만 요구하면 «포지션 프리셋과 컬러 프리셋 저장해줘»에서 두 계열을 모두
+    놓친다 — 운영자는 계열 이름('기본 포지션')이 아니라 축과 명사로 말한다.
+    반대로 축 명사 하나만 요구하면 프리셋과 무관한 문장("포지션 큐 만들어줘")까지
+    끌려온다. 그래서 '기본' **또는** '프리셋'을 요구한다. 열거형 문장에서는
+    명사 하나를 축들이 나눠 쓴다("포지션, 컬러 프리셋 저장해줘").
+    """
+    if axis.search(scoped) is None:
+        return False
+    return (
+        _PRESET_BASIC_QUALIFIER_RE.search(scoped) is not None
+        or _PRESET_NOUN_RE.search(scoped) is not None
+    )
+
+
+def _matches_basic_position_family(text: str) -> bool:
+    if not _preset_store_request(text):
+        return False
+    scoped = _PRESET_FX_POSITION_COMPOUND_RE.sub(" ", _without_combo_tokens(text))
+    return _designates(scoped, _PRESET_POSITION_AXIS_RE)
+
+
+def _matches_basic_color_family(text: str) -> bool:
+    if not _preset_store_request(text):
+        return False
+    scoped = _PRESET_COLOR_PHASER_COMPOUND_RE.sub(" ", _without_combo_tokens(text))
+    return _designates(scoped, _PRESET_COLOR_AXIS_RE)
+
+
+def _matches_basic_dimmer_family(text: str) -> bool:
+    if not _preset_store_request(text):
+        return False
+    scoped = _PRESET_DIMMER_PHASER_COMPOUND_RE.sub(" ", _without_combo_tokens(text))
+    return _designates(scoped, _PRESET_DIMMER_AXIS_RE)
+
+
+def _matches_color_phaser_family(text: str) -> bool:
+    if not _preset_store_request(text):
+        return False
+    scoped = _without_combo_tokens(text)
+    if (
+        _PRESET_COLOR_AXIS_RE.search(scoped) is not None
+        and _PRESET_PHASER_QUALIFIER_RE.search(scoped) is not None
+    ):
+        return True
+    return _reads_as_bare_phaser(text)
+
+
+def _matches_dimmer_phaser_family(text: str) -> bool:
+    if not _preset_store_request(text):
+        return False
+    scoped = _without_combo_tokens(text)
+    if (
+        _PRESET_DIMMER_AXIS_RE.search(scoped) is not None
+        and _PRESET_PHASER_QUALIFIER_RE.search(scoped) is not None
+    ):
+        return True
+    return _reads_as_bare_phaser(text)
+
+
+def _matches_combo_phaser_family(text: str) -> bool:
+    if not _preset_store_request(text):
+        return False
+    if _PRESET_COMBO_AXIS_RE.search(text) is not None:
+        return True
+    return _reads_as_bare_phaser(text)
+
+
+@dataclass(frozen=True)
+class PresetFamily:
+    """프리셋 계열 하나 — 다중 선택 카드의 한 줄이자 순차 실행의 한 단위.
+
+    `matches`는 필드에 담긴 순수 함수라 `family.matches(text)`로 부른다
+    (인스턴스 속성 조회이므로 self가 끼지 않는다).
+    """
+
+    key: str
+    label: str
+    matches: Callable[[str], bool]
+
+
+#: 계열 순서가 계약이다 — 선택 카드의 줄 순서이자 순차 실행 순서다. 번호 규율은
+#: 계열마다 자기 카드를 그대로 낸다: `Store Preset`은 경고 없이 덮어쓰므로 시작
+#: 번호는 문장의 「N번부터」나 계열별 질문 카드에서만 온다.
+PRESET_FAMILIES: tuple[PresetFamily, ...] = (
+    PresetFamily("basic_position", "기본 포지션", _matches_basic_position_family),
+    PresetFamily("basic_color", "기본 컬러", _matches_basic_color_family),
+    PresetFamily("basic_dimmer", "기본 디머", _matches_basic_dimmer_family),
+    PresetFamily("color_phaser", "컬러 페이저", _matches_color_phaser_family),
+    PresetFamily("dimmer_phaser", "디머 페이저", _matches_dimmer_phaser_family),
+    PresetFamily("combo_phaser", "콤보 페이저", _matches_combo_phaser_family),
 )
 
 # 페이저 recall(T11) — 저장된 카탈로그 30종(컬러/디머/콤보 페이저)을
@@ -5636,6 +5859,170 @@ class ChatSession:
             disclosure=disclosure,
         )
 
+    #: 합성 문장이 고른 계열 → 그 계열을 실제로 실행하는 **기존** 핸들러 이름.
+    #: 값이 바인딩된 함수가 아니라 이름인 것은 의도다 — 번호 카드·덮어쓰기
+    #: 가드·계열별 독립 번들은 전부 그 핸들러 안에 있으므로 합성 경로는
+    #: 어떤 규율도 복제하지 않고 ``getattr``로 원본을 부른다.
+    _COMPOUND_FAMILY_HANDLERS = {
+        "basic_position": "_basic_position_presets",
+        "basic_color": "_basic_color_presets",
+        "basic_dimmer": "_basic_dimmer_presets",
+        "color_phaser": "_color_phaser_presets",
+        "dimmer_phaser": "_dimmer_phaser_presets",
+        "combo_phaser": "_combo_phaser_presets",
+    }
+
+    def _compound_preset_request(self, text: str) -> InstructionResult | None:
+        """한 문장이 프리셋 계열을 **둘 이상** 지정했을 때 다중 선택 카드를 세우고,
+        고른 계열을 등록 순서대로 이어서 실행한다.
+
+        실측 근거(2026-08-19): "포지션, 컬러, 딤머의 기본 프리셋과 페이저
+        프리셋을 설정하고 복합 프리셋도 All에 설정해줘"는 사전 핸들러 체인이
+        **첫 매칭 하나만 실행하고 턴을 끝내는** 구조(``run_instruction``)와
+        만나 여섯 계열 중 한 계열만 저장되거나, 아무 것도 매치하지 못해 LLM
+        경로로 흘러 'Home' 하나만 생기는 결과를 냈다. 계열을 사람 대신 골라
+        주는 것은 추측이므로(``Store Preset``은 경고 없이 덮어쓴다) 여기서
+        하는 일은 **묻는 것**이다.
+
+        규율 셋:
+
+        1. 계열이 하나뿐인 문장은 ``None``\\ 을 돌려 **기존 단일 경로 그대로**
+           흘려보낸다 — 카드도 새 문면도 없다(회귀 방지의 핵심).
+        2. 카드는 한 장이다. 계열마다 한 장씩 묻지 않는다 —
+           :meth:`_ask_one`\\ 의 ``multi=True``\\ 로 체크박스 한 장을 세우고,
+           답은 고른 라벨을 ``", "``\\ 로 이은 문자열로 돌아온다.
+        3. 실행은 원본 핸들러 호출뿐이다. 시작 번호 카드·덮어쓰기 동의·계열별
+           독립 번들(적용→Store→Label→ClearAll)·되읽기는 전부 그 안에서 그대로
+           일어난다 — 계열마다 자기 번호 카드를 그대로 낸다.
+
+        한 계열이 거부·실패해도 나머지는 계속 진행하고, 끝에 계열별 결과를
+        모은 요약 한 장을 돌린다 — look 하나가 거부돼도 나머지를 살리는 기존
+        번들 규율과 같은 형상이다.
+
+        「몇 계열인가」의 **단일 소재**는 ``PRESET_FAMILIES``\\ 의 ``matches``\\ 다 —
+        여기에 두 번째 판정 규칙을 얹지 않는다. 얹어 본 적이 있다(프리셋 명사
+        2회 · 동작 동사 2회 · 열거 구두점): 2026-08-17 리뷰가 등록 순서로 고정한
+        세 문장이 축 어휘를 둘씩 담기 때문이었다. 그런데 그 셋은 레지스트리가
+        콤보 토큰·축 결합 페이저 토큰을 걷어내면서 이미 한 계열로 확정되고
+        (``TestCompositeVocabularyIsNotACompoundRequest``), 반대로 그 게이트는
+        "페이저 프리셋 설정해줘"처럼 **정말 물어봐야 하는** 문장(어느 페이저
+        계열인지 불명 + 단일 트리거는 하나도 매치하지 않음)을 LLM 경로로
+        떨어뜨렸다. 그래서 지웠다 — 판정은 한 곳에서만 한다.
+        """
+        detected = tuple(family for family in PRESET_FAMILIES if family.matches(text))
+        if len(detected) < 2:
+            return None
+        answer = self._ask_one(
+            "한 문장에 프리셋 계열이 "
+            f"{len(detected)}개 담겼습니다({' / '.join(f.label for f in detected)}). "
+            "어느 계열을 저장할까요? 고른 계열을 순서대로 이어서 저장합니다.",
+            options=tuple(
+                QuestionOption(
+                    label=family.label,
+                    description=f"{family.label} 카탈로그 10종을 연속 10칸에 저장합니다.",
+                )
+                for family in detected
+            ),
+            why=(
+                "Store Preset은 경고 없이 덮어쓰고 이 앱에는 프리셋 복원 경로가 "
+                "없습니다. 그래서 계열마다 시작 번호를 따로 여쭤보게 됩니다 — "
+                "여기서 계열을 좁혀 두면 그만큼만 묻습니다."
+            ),
+            multi=True,
+        )
+        if answer is None:
+            return InstructionResult(
+                status="ok",
+                text=(
+                    f"프리셋 계열 {len(detected)}개({', '.join(f.label for f in detected)})가 "
+                    "한 문장에 담겨 어느 계열을 저장할지 여쭤봤지만 답을 받지 못했습니다. "
+                    "콘솔에는 아무것도 저장하지 않았습니다 — 계열을 고르시면 "
+                    "고른 순서대로 시작 번호를 여쭤보고 저장합니다."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        by_label = {family.label: family for family in detected}
+        picked = [part.strip() for part in answer.split(",") if part.strip()]
+        unknown = [part for part in picked if part not in by_label]
+        if not picked or unknown:
+            listed = ", ".join(unknown) if unknown else "(빈 답)"
+            return InstructionResult(
+                status="ok",
+                text=(
+                    f"고른 항목을 프리셋 계열로 알아보지 못해 아무것도 저장하지 "
+                    f"않았습니다: {listed}. 어느 계열인지 추측하면 다른 계열의 "
+                    "프리셋을 덮어쓸 수 있어 중단했습니다 — 아래 이름 중에서 "
+                    f"골라 다시 말씀해 주세요: {', '.join(by_label)}."
+                ),
+                command_outcomes=(),
+                retries_used=0,
+                model_calls=0,
+                duration_seconds=0.0,
+            )
+        chosen_keys = {by_label[part].key for part in picked}
+        # 실행 순서는 사용자가 체크한 순서가 아니라 ``PRESET_FAMILIES`` 순서다 —
+        # 체크 순서는 UI 사정이고, 계열 간 순서는 등록 순서로 고정되어야 재현
+        # 가능하다(사전 핸들러 등록 순서를 행선지 고정에 쓰는 것과 같은 규율).
+        selected = [family for family in detected if family.key in chosen_keys]
+        outcomes: list[CommandOutcome] = []
+        lines: list[str] = []
+        statuses: list[str] = []
+        stored = 0
+        stopped: list[str] = []
+        retries = 0
+        model_calls = 0
+        duration = 0.0
+        for family in selected:
+            handler = getattr(self, self._COMPOUND_FAMILY_HANDLERS[family.key])
+            try:
+                result = handler(text)
+            except Exception as exc:  # REQ-MVP-044: raw detail NEVER reaches the surface
+                self._audit.record(
+                    {
+                        "event": "compound_preset_family_error",
+                        "family": family.key,
+                        "raw_detail": repr(exc),
+                    }
+                )
+                stopped.append(family.label)
+                lines.append(
+                    f"{family.label}: 실행 중 오류가 나 이 계열은 저장하지 못했습니다"
+                    " — 나머지 계열은 계속 진행했습니다."
+                )
+                continue
+            if result is None:
+                # 계열 어휘는 감지했는데 해당 핸들러의 트리거가 이 문장을 받지
+                # 않았다 — 조용히 넘기면 "저장했다"는 오보가 되므로 고지한다.
+                stopped.append(family.label)
+                lines.append(
+                    f"{family.label}: 이 문장만으로는 저장 조건을 확정하지 못해 "
+                    "건너뛰었습니다 — 이 계열만 따로 말씀해 주세요."
+                )
+                continue
+            stored += 1
+            statuses.append(result.status)
+            outcomes.extend(result.command_outcomes)
+            retries += result.retries_used
+            model_calls += result.model_calls
+            duration += result.duration_seconds
+            lines.append(f"{family.label}: {result.text}")
+        status = next((one for one in statuses if one != "ok"), "ok")
+        order = " → ".join(family.label for family in selected)
+        headline = f"고르신 프리셋 계열 {len(selected)}개를 이 순서로 처리했습니다: {order}"
+        if stopped:
+            headline += f" — {stored}개 진행, {len(stopped)}개 미저장({', '.join(stopped)})"
+        return InstructionResult(
+            status=status,
+            text=headline + ".\n" + "\n".join(f"- {line}" for line in lines),
+            command_outcomes=tuple(outcomes),
+            retries_used=retries,
+            model_calls=model_calls,
+            duration_seconds=duration,
+        )
+
     def _position_cue_store(self, text: str) -> InstructionResult | None:
         """Store a Position preset as a cue with an optional position fade (T1).
 
@@ -8859,6 +9246,14 @@ class ChatSession:
                 if result is None:
                     result = self._all_fixtures_elevation(text)
                 if result is None:
+                    # 합성 문장은 단일 계열 핸들러 **전부보다 앞**에서 걸러낸다 —
+                    # 체인은 첫 매칭 하나만 실행하고 턴을 끝내므로, 여섯 계열을
+                    # 지정한 문장이 아래로 흐르면 한 계열만 저장되고 나머지는
+                    # 조용히 사라진다(2026-08-19 실측). 계열이 하나뿐인 문장은
+                    # 이 핸들러가 ``None``\을 돌려 아래 기존 경로로 그대로
+                    # 흘러내린다 — 단일 요청의 행선지는 바뀌지 않는다.
+                    result = self._compound_preset_request(text)
+                if result is None:
                     # 프리셋 가족 디스패치는 **구체적 어휘축 → 포괄 어휘축**
                     # 순서다(합성 문장 오라우팅 방지, 2026-08-17 리뷰 실측):
                     # ① 콤보(콤보/컬러 디머/드롭)가 맨 앞 — "컬러 디머 페이저
@@ -9100,6 +9495,7 @@ class ChatSession:
         options: tuple[QuestionOption, ...] = (),
         why: str = "",
         steps: tuple[str, ...] = (),
+        multi: bool = False,
     ) -> str | None:
         """Ask the operator ONE question through the interactive card channel.
 
@@ -9110,6 +9506,13 @@ class ChatSession:
         decisions calls this once per decision and the cards appear one at a
         time, never as a single unanswerable message.
 
+        ``multi=True`` widens the SHAPE of that one answer, not the number of
+        cards: the UI renders checkboxes plus a 「확인」 button and returns the
+        chosen labels joined by ``", "``. Use it when the question is genuinely
+        "which of these apply" (several preset families named in one sentence)
+        rather than "which one" — a single-select card there receives one family
+        and silently drops the rest.
+
         Returns the answer, or ``None`` when no UI is attached or the question
         went unanswered (timeout / disconnect) — the caller then falls back to
         a plain-text prompt instead of hanging.
@@ -9117,7 +9520,7 @@ class ChatSession:
         if self._question_channel is None:
             return None
         answer = self._question_channel.ask(
-            QuestionRequest(prompt=prompt, why=why, steps=steps, options=options)
+            QuestionRequest(prompt=prompt, why=why, steps=steps, options=options, multi=multi)
         )
         if not isinstance(answer, str) or answer in ("", UNANSWERED):
             return None

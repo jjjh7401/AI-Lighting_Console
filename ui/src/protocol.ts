@@ -387,6 +387,10 @@ export type ServerEvent =
       // 안 되는 인계 명령(AddFixtures 패치 등). 구버전 서버에는 없다(additive).
       commands?: string[];
       options: { label: string; description: string }[];
+      // 여러 개를 함께 고를 수 있는 물음인가 — 참이면 UI가 체크박스 + 「확인」으로
+      // 렌더하고, 고른 라벨을 ", "로 이어 하나의 답으로 보낸다. 구버전 서버에는
+      // 없다(additive) → 없으면 단일 선택.
+      multi?: boolean;
     }
   | { v: 1; type: "question_resolved"; request_id: string; answer: string }
   | {
@@ -753,6 +757,7 @@ export interface PendingQuestion {
   steps: string[];
   commands: string[];
   options: { label: string; description: string }[];
+  multi: boolean;
 }
 
 /**
@@ -861,6 +866,7 @@ export function reduceServerEvent(
             steps: event.steps ?? [],
             commands: event.commands ?? [],
             options: event.options ?? [],
+            multi: event.multi ?? false,
           },
         ],
       };

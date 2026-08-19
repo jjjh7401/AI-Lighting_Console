@@ -220,3 +220,76 @@ class TestSessions:
         channel.ask(_ASK, session_key="b")
 
         assert reached == ["b"]
+
+
+class TestMultiSelect:
+    """한 문장이 여러 계열을 지정하는 물음 — **하나만 받고 나머지를 버리지 않는다.**
+
+    실측: «포지션, 컬러, 딤머의 기본 프리셋과 페이저 프리셋을 설정해줘»가 단일 선택
+    카드를 만나면 그중 하나만 답이 되고 나머지 계열은 조용히 사라진다. ``multi``는
+    카드 개수가 아니라 답 하나의 **모양**을 넓히는 필드다 — UI가 체크박스 + 「확인」으로
+    렌더하고, 고른 라벨을 ``", "``로 이어 하나의 답으로 보낸다.
+    """
+
+    def test_it_defaults_to_single_select(self):
+        """기본값이 참으로 새면 기존 카드 전부가 「확인」을 한 번 더 요구하게 된다."""
+        assert QuestionRequest(prompt="무엇을 할까요?").multi is False
+        assert _ASK.to_dict()["multi"] is False
+
+    def test_the_default_payload_keeps_every_pre_existing_field(self):
+        """additive여야 한다 — 구버전 UI가 읽던 키를 하나도 바꾸지 않는다."""
+        payload = _ASK.to_dict()
+
+        assert payload == {
+            "prompt": _ASK.prompt,
+            "why": _ASK.why,
+            "steps": list(_ASK.steps),
+            "commands": [],
+            "options": [{"label": "콘솔에서 직접 고르겠다", "description": ""}],
+            "multi": False,
+        }
+
+    def test_it_serializes_multi_for_the_ui(self):
+        request = QuestionRequest(
+            prompt="어느 계열을 설정할까요?",
+            options=(
+                QuestionOption(label="기본 포지션 프리셋"),
+                QuestionOption(label="기본 컬러 프리셋"),
+            ),
+            multi=True,
+        )
+
+        assert request.to_dict()["multi"] is True
+
+    def test_the_wire_event_carries_multi(self):
+        """``to_dict()``가 맞아도 이벤트가 떨어뜨리면 UI는 단일 선택으로 렌더한다."""
+        from server.web.messages import question_request_event
+
+        event = question_request_event(
+            request_id="q9",
+            request=QuestionRequest(prompt="어느 계열을?", multi=True),
+        )
+
+        assert event["multi"] is True
+        assert event["type"] == "question_request"
+
+    def test_the_channel_returns_the_joined_answer_verbatim(self):
+        """콤마+공백 결합은 **답 형식**이다 — 통로는 그것을 다듬지 않는다."""
+        channel = QuestionChannel(timeout_seconds=2.0)
+        recorder = Recorder(channel)
+        channel.bind(recorder.notify)
+        request = QuestionRequest(
+            prompt="어느 계열을 설정할까요?",
+            options=(
+                QuestionOption(label="기본 포지션 프리셋"),
+                QuestionOption(label="기본 컬러 프리셋"),
+            ),
+            multi=True,
+        )
+        thread, box = _ask_in_background(channel, request)
+
+        assert recorder.answer_with("기본 포지션 프리셋, 기본 컬러 프리셋") is True
+        thread.join(2)
+
+        assert box == ["기본 포지션 프리셋, 기본 컬러 프리셋"]
+        assert recorder.seen[-1][1].multi is True
