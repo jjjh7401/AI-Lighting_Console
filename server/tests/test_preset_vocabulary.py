@@ -181,8 +181,14 @@ class TestFamilyRegistryVerdicts:
             ("기본 컬러랑 기본 딤머 프리셋 설정해줘", ["basic_color", "basic_dimmer"]),
             # 운영자는 계열 이름('기본 포지션')이 아니라 축 + '프리셋'으로 말한다.
             # 열거형은 명사 하나를 축들이 나눠 쓴다.
-            ("포지션 프리셋과 컬러 프리셋 저장해줘", ["basic_position", "basic_color"]),
-            ("포지션, 컬러 프리셋 저장해줘", ["basic_position", "basic_color"]),
+            (
+                "포지션 프리셋과 컬러 프리셋 저장해줘",
+                ["basic_position", "fx_position", "basic_color", "color_phaser"],
+            ),
+            (
+                "포지션, 컬러 프리셋 저장해줘",
+                ["basic_position", "fx_position", "basic_color", "color_phaser"],
+            ),
             (
                 "컬러 페이저 프리셋과 디머 페이저 프리셋 저장해줘",
                 ["color_phaser", "dimmer_phaser"],
@@ -254,12 +260,12 @@ class TestDirectorVocabulary:
             ("기본 컬러 프리셋 등록해줘", ["basic_color"]),
             ("기본 포지션 프리셋 채워줘", ["basic_position"]),
             # 축 동의어 — 같은 계열을 다른 이름으로 부른다.
-            ("포커스 프리셋 저장해줘", ["basic_position"]),
-            ("위치 프리셋 저장해줘", ["basic_position"]),
-            ("팔레트 프리셋 저장해줘", ["basic_color"]),
-            ("밝기 프리셋 저장해줘", ["basic_dimmer"]),
-            ("인텐시티 프리셋 저장해줘", ["basic_dimmer"]),
-            ("광량 프리셋 저장해줘", ["basic_dimmer"]),
+            ("포커스 프리셋 저장해줘", ["basic_position", "fx_position"]),
+            ("위치 프리셋 저장해줘", ["basic_position", "fx_position"]),
+            ("팔레트 프리셋 저장해줘", ["basic_color", "color_phaser"]),
+            ("밝기 프리셋 저장해줘", ["basic_dimmer", "dimmer_phaser"]),
+            ("인텐시티 프리셋 저장해줘", ["basic_dimmer", "dimmer_phaser"]),
+            ("광량 프리셋 저장해줘", ["basic_dimmer", "dimmer_phaser"]),
             # 체이스는 페이저 어휘다 — 기본 계열까지 끌고 오면 카드에 두 줄이 뜬다.
             ("컬러 체이스 프리셋 저장해줘", ["color_phaser"]),
             ("디머 체이스 프리셋 저장해줘", ["dimmer_phaser"]),
@@ -307,9 +313,9 @@ class TestAllFamiliesVocabulary:
     @pytest.mark.parametrize(
         ("text", "expected"),
         [
-            ("컬러 프리셋 전부 저장해줘", ["basic_color"]),
-            ("포지션 프리셋 모두 만들어줘", ["basic_position"]),
-            ("디머 프리셋 전체 저장해줘", ["basic_dimmer"]),
+            ("컬러 프리셋 전부 저장해줘", ["basic_color", "color_phaser"]),
+            ("포지션 프리셋 모두 만들어줘", ["basic_position", "fx_position"]),
+            ("디머 프리셋 전체 저장해줘", ["basic_dimmer", "dimmer_phaser"]),
         ],
     )
     def test_an_axis_narrows_it_back_to_that_axis(self, text, expected):
@@ -342,3 +348,58 @@ class TestForeignIntentsKeepTheirSentences:
     def test_a_position_cue_sheet_is_not_a_preset_store_request(self):
         text = "포지션 큐 시트 만들어줘. 프리셋 21번부터, 인트로 0:00 잔잔"
         assert _families(text) == []
+
+    def test_storing_a_preset_as_a_cue_is_not_a_preset_store_request(self):
+        # «프리셋 28번 포지션을 큐로 저장» 은 프리셋을 **참조**해 큐를 만드는
+        # 요청이다. 축만 말한 문장이 그 축의 계열을 전부 올리게 되면서 이
+        # 문장이 두 계열로 보여 카드에 끌려갔다(2026-08-19 회귀).
+        assert _families("프리셋 28번 포지션을 큐로 저장해줘, 페이드 3초") == []
+
+
+class TestBareAxisOffersTheWholeAxis:
+    """수식어 없이 축만 말하면 그 축의 계열을 **전부** 올린다.
+
+    운영자는 축으로 말하지 계열 이름으로 말하지 않는다 — «딤머, 포지션,
+    컬러, 콤보 프리셋을 설정해줘». 그 축에 기본·연출·페이저가 몇 벌 있는지는
+    앱이 아는 사정이다. 좁혀서 올리면 있는 줄도 모르고 지나가고, 넓혀 올리면
+    카드에서 체크를 풀면 그만이다(미체크는 아무것도 저장하지 않는다).
+    """
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ("포지션 프리셋 저장해줘", ["basic_position", "fx_position"]),
+            ("컬러 프리셋 저장해줘", ["basic_color", "color_phaser"]),
+            ("딤머 프리셋 저장해줘", ["basic_dimmer", "dimmer_phaser"]),
+            # 콤보 축에는 계열이 하나뿐이다 — 넓힐 것이 없다.
+            ("콤보 프리셋 저장해줘", ["combo_phaser"]),
+        ],
+    )
+    def test_an_axis_alone_brings_its_whole_axis(self, text, expected):
+        assert _families(text) == expected
+
+    def test_the_reported_sentence_brings_all_seven(self):
+        assert _families("딤머, 포지션, 컬러, 콤보 프리셋을 설정해줘") == [
+            "basic_position",
+            "fx_position",
+            "basic_color",
+            "basic_dimmer",
+            "color_phaser",
+            "dimmer_phaser",
+            "combo_phaser",
+        ]
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            # 수식어가 하나라도 있으면 그 문장은 계열을 특정한 것이다.
+            ("기본 포지션 프리셋 저장해줘", ["basic_position"]),
+            ("기본 컬러 프리셋 저장해줘", ["basic_color"]),
+            ("기본 딤머 프리셋 저장해줘", ["basic_dimmer"]),
+            ("컬러 페이저 프리셋 저장해줘", ["color_phaser"]),
+            ("딤머 페이저 프리셋 저장해줘", ["dimmer_phaser"]),
+            ("이펙트 포지션 프리셋 저장해줘", ["fx_position"]),
+        ],
+    )
+    def test_a_qualifier_keeps_it_narrow(self, text, expected):
+        assert _families(text) == expected
