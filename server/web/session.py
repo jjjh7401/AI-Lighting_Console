@@ -4235,7 +4235,9 @@ class ChatSession:
             duration_seconds=0.0,
         )
 
-    def _basic_position_presets(self, text: str) -> InstructionResult | None:
+    def _basic_position_presets(
+        self, text: str, *, forced: bool = False
+    ) -> InstructionResult | None:
         """Build the ten canonical positions for THIS rig and store them.
 
         Preset 1 of the run is ALWAYS 'Home'; the rest follow
@@ -4244,7 +4246,7 @@ class ChatSession:
         readback all live in ``_store_position_preset_sequence`` — shared
         with the FX flow so the two sets can never drift on safety behaviour.
         """
-        if _BASIC_POSITIONS_REQUEST.search(text) is None:
+        if not forced and _BASIC_POSITIONS_REQUEST.search(text) is None:
             return None
         return self._store_position_preset_sequence(
             text,
@@ -4256,7 +4258,7 @@ class ChatSession:
             example="기본 포지션 10개를 프리셋 21번부터 저장해줘",
         )
 
-    def _fx_position_presets(self, text: str) -> InstructionResult | None:
+    def _fx_position_presets(self, text: str, *, forced: bool = False) -> InstructionResult | None:
         """Build the ten FX skeleton positions for THIS rig and store them.
 
         These are the geometric backbones phaser effects swing around
@@ -4267,7 +4269,7 @@ class ChatSession:
         post-store pool readback — via ``_store_position_preset_sequence``;
         no FX-specific card or vocabulary exists.
         """
-        if _FX_POSITIONS_REQUEST.search(text) is None:
+        if not forced and _FX_POSITIONS_REQUEST.search(text) is None:
             return None
         return self._store_position_preset_sequence(
             text,
@@ -5543,7 +5545,7 @@ class ChatSession:
         )
         return pool_no, capable, looks, disclosure
 
-    def _basic_color_presets(self, text: str) -> InstructionResult | None:
+    def _basic_color_presets(self, text: str, *, forced: bool = False) -> InstructionResult | None:
         """*"기본 컬러 프리셋을 N번부터 저장해줘"* — 표준 무대 팔레트 10색을
         해석된 Color 풀의 연속 10칸에 저장한다(SPEC-COPILOT-COLORPRESET-001).
 
@@ -5556,7 +5558,7 @@ class ChatSession:
         대안 '프리셋'으로 "기본 컬러 프리셋 …" 문장을 함께 매치하기 때문이다
         (REQ-PRESETGUARD-015와 같은 등록 순서 고정).
         """
-        if _BASIC_COLORS_REQUEST.search(text) is None:
+        if not forced and _BASIC_COLORS_REQUEST.search(text) is None:
             return None
         material = self._color_preset_material(noun="기본 컬러")
         if isinstance(material, InstructionResult):
@@ -5611,7 +5613,7 @@ class ChatSession:
             disclosure=disclosure,
         )
 
-    def _color_phaser_presets(self, text: str) -> InstructionResult | None:
+    def _color_phaser_presets(self, text: str, *, forced: bool = False) -> InstructionResult | None:
         """*"멀티컬러 페이저 프리셋 저장해줘"* — 카탈로그 10종(핸드오프 §2)을
         해석된 Color 풀의 연속 10칸에 저장한다.
 
@@ -5626,7 +5628,7 @@ class ChatSession:
         배치해 두 컬러 몸통의 안전 동작이 갈라지지 않는다는 것을 코드
         위치로도 드러낸다.
         """
-        if _COLOR_PHASER_REQUEST.search(text) is None:
+        if not forced and _COLOR_PHASER_REQUEST.search(text) is None:
             return None
         material = self._color_phaser_preset_material(noun="멀티컬러 페이저")
         if isinstance(material, InstructionResult):
@@ -5755,13 +5757,13 @@ class ChatSession:
         )
         return pool_no, capable, looks, disclosure
 
-    def _combo_phaser_presets(self, text: str) -> InstructionResult | None:
+    def _combo_phaser_presets(self, text: str, *, forced: bool = False) -> InstructionResult | None:
         """*"콤보 페이저 프리셋 저장해줘"* — 카탈로그 10종(T8)을 해석된
         All 1 풀의 연속 10칸에 저장한다. ``_color_phaser_presets``의 미러 —
         공용 저장 몸통(``_store_position_preset_sequence``) 그대로, 소재만
         ``_combo_phaser_preset_material``이 공급한다.
         """
-        if _COMBO_PHASER_REQUEST.search(text) is None:
+        if not forced and _COMBO_PHASER_REQUEST.search(text) is None:
             return None
         material = self._combo_phaser_preset_material(noun="콤보 페이저")
         if isinstance(material, InstructionResult):
@@ -5916,14 +5918,14 @@ class ChatSession:
         )
         return pool_no, fids, looks, disclosure
 
-    def _basic_dimmer_presets(self, text: str) -> InstructionResult | None:
+    def _basic_dimmer_presets(self, text: str, *, forced: bool = False) -> InstructionResult | None:
         """*"기본 디머 프리셋을 N번부터 저장해줘"* — 디머 레벨 10종을 해석된
         Dimmer 풀의 연속 10칸에 저장한다. ``_basic_color_presets``의 미러 —
         공용 저장 몸통(``_store_position_preset_sequence``)을 그대로 쓰고,
         소재만 ``_dimmer_preset_material``이 공급한다(컬러 판별 없음, T5
         지시).
         """
-        if _BASIC_DIMMER_REQUEST.search(text) is None:
+        if not forced and _BASIC_DIMMER_REQUEST.search(text) is None:
             return None
         material = self._dimmer_preset_material(noun="디머 레벨")
         if isinstance(material, InstructionResult):
@@ -5973,11 +5975,13 @@ class ChatSession:
             disclosure=disclosure,
         )
 
-    def _dimmer_phaser_presets(self, text: str) -> InstructionResult | None:
+    def _dimmer_phaser_presets(
+        self, text: str, *, forced: bool = False
+    ) -> InstructionResult | None:
         """*"디머 페이저 프리셋 저장해줘"* — 카탈로그 10종(T5)을 해석된 Dimmer
         풀의 연속 10칸에 저장한다. ``_color_phaser_presets``의 미러.
         """
-        if _DIMMER_PHASER_REQUEST.search(text) is None:
+        if not forced and _DIMMER_PHASER_REQUEST.search(text) is None:
             return None
         material = self._dimmer_phaser_preset_material(noun="디머 페이저")
         if isinstance(material, InstructionResult):
@@ -6165,7 +6169,13 @@ class ChatSession:
         for family in selected:
             handler = getattr(self, self._COMPOUND_FAMILY_HANDLERS[family.key])
             try:
-                result = handler(text)
+                # `forced`: 계열은 **레지스트리**가 판정했고 사용자가 카드에서
+                # 직접 체크해 확정했다. 핸들러의 트리거는 「수식어 → 축 → 동사」
+                # 어순을 요구하는 단일 요청용 그물이라, 열거형 문장은 그 그물을
+                # 빠져나간다 — 다시 검사하면 카드에서 고른 계열이 조용히
+                # 건너뛰어진다(2026-08-19 실측: 일곱 중 다섯이 미저장).
+                # 시작 번호 카드·덮어쓰기 가드·번들 규율은 그대로 살아 있다.
+                result = handler(text, forced=True)
             except Exception as exc:  # REQ-MVP-044: raw detail NEVER reaches the surface
                 self._audit.record(
                     {

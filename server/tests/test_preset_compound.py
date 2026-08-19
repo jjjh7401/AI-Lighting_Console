@@ -32,7 +32,11 @@ from server.llm.types import ToolCall
 from server.orchestrator.runner import InstructionResult
 from server.orchestrator.tools import CommandOutcome
 from server.web.question import UNANSWERED
-from server.web.session import PRESET_FAMILIES
+from server.web.session import (
+    _BASIC_COLORS_REQUEST,
+    _BASIC_DIMMER_REQUEST,
+    PRESET_FAMILIES,
+)
 
 from .test_runner_self_correction import ScriptedProvider
 from .test_web_session import (
@@ -91,15 +95,20 @@ def _family_result(key: str) -> InstructionResult:
 
 
 def _stub_families(session, calls, *, raising=(), declining=()):
-    """여섯 계열 핸들러를 호출 기록 더블로 갈아끼운다.
+    """일곱 계열 핸들러를 호출 기록 더블로 갈아끼운다.
 
     ``raising``\\ 은 예외를 던지는 계열, ``declining``\\ 은 ``None``\\ 을 돌리는
-    계열(자기 트리거가 이 문장을 받지 않은 경우)이다.
+    계열이다.
+
+    더블은 실제 핸들러와 **같은 시그니처**여야 한다. 합성 경로는 `forced=True`
+    로 부르는데(카드에서 확정된 계열은 트리거를 다시 묻지 않는다), 더블이 그
+    인자를 못 받으면 TypeError가 나고 합성 핸들러의 예외 처리에 삼켜져 "오류로
+    건너뜀"으로 보고된다 — 진짜 회귀와 구별되지 않는 침묵이다.
     """
 
     def make(key):
-        def handler(text):
-            calls.append((key, text))
+        def handler(text, *, forced=False):
+            calls.append((key, text, forced))
             if key in raising:
                 raise RuntimeError(f"{key} 콘솔 왕복 실패")
             if key in declining:
@@ -329,7 +338,7 @@ class TestCompositeVocabularyIsNotACompoundRequest:
             "디머 페이저",
             "콤보 페이저",
         ]
-        assert [key for key, _text in calls] == ["dimmer_phaser"]
+        assert [key for key, _text, _forced in calls] == ["dimmer_phaser"]
 
 
 class TestCompoundCard:
@@ -364,9 +373,13 @@ class TestCompoundCard:
         event = session.run_instruction(COMPOUND_TEXT)
 
         assert len(question.asked) == 1  # 계열마다 한 장이 아니라 한 장뿐
-        assert [key for key, _text in calls] == [family.key for family in DETECTED_FAMILIES]
+        assert [key for key, _text, _forced in calls] == [
+            family.key for family in DETECTED_FAMILIES
+        ]
         # 각 계열은 **원문 그대로** 받는다 — 그 안에서 「N번부터」를 스스로 읽는다.
-        assert {text for _key, text in calls} == {COMPOUND_TEXT}
+        assert {text for _key, text, _forced in calls} == {COMPOUND_TEXT}
+        # 카드에서 확정된 계열은 트리거를 다시 묻지 않는다.
+        assert all(forced for _key, _text, forced in calls)
         assert event["status"] == "ok"
         for family in DETECTED_FAMILIES:
             assert family.label in event["text"]
@@ -377,8 +390,8 @@ class TestCompoundCard:
         event = session.run_instruction(COMPOUND_TEXT)
 
         # 체크 순서(콤보 먼저)가 아니라 등록 순서(기본 컬러 먼저)로 실행된다.
-        assert [key for key, _text in calls] == _ordered({"basic_color", "combo_phaser"})
-        assert [key for key, _text in calls] == ["basic_color", "combo_phaser"]
+        assert [key for key, _text, _forced in calls] == _ordered({"basic_color", "combo_phaser"})
+        assert [key for key, _text, _forced in calls] == ["basic_color", "combo_phaser"]
         assert "기본 포지션" not in event["text"]
 
     def test_a_single_chosen_family_runs_alone(self, tmp_path):
@@ -386,14 +399,14 @@ class TestCompoundCard:
 
         session.run_instruction(COMPOUND_TEXT)
 
-        assert [key for key, _text in calls] == ["basic_dimmer"]
+        assert [key for key, _text, _forced in calls] == ["basic_dimmer"]
 
     def test_the_answer_survives_a_comma_without_a_space(self, tmp_path):
         session, calls, _question = _build(tmp_path, answers=["기본 컬러,디머 페이저"])
 
         session.run_instruction(COMPOUND_TEXT)
 
-        assert [key for key, _text in calls] == ["basic_color", "dimmer_phaser"]
+        assert [key for key, _text, _forced in calls] == ["basic_color", "dimmer_phaser"]
 
     def test_every_offered_family_is_a_valid_answer(self, tmp_path):
         """카드가 **제시한** 것과 답으로 **받는** 것은 같은 집합이어야 한다.
@@ -414,7 +427,7 @@ class TestCompoundCard:
             family.label for family in PRESET_FAMILIES
         ]
         # 일곱 개 전부가 등록 순서대로 실행된다 — 거부되는 이름이 없다.
-        assert [key for key, _text in calls] == [family.key for family in PRESET_FAMILIES]
+        assert [key for key, _text, _forced in calls] == [family.key for family in PRESET_FAMILIES]
         assert "알아보지 못해" not in event["text"]
 
 
@@ -533,6 +546,36 @@ class TestRealHandlersKeepTheirOwnGuards:
         assert "Store Preset 1.41" in commands  # 디머는 그대로 저장됐다
         assert not any(cmd.startswith("Store Preset 4.") for cmd in commands)
 
+    # 2026-08-19 실측 회귀: 카드에서 일곱 계열을 다 골랐는데 **둘만** 저장되고
+    # 다섯이 "저장 조건을 확정하지 못해 건너뛰었습니다"로 돌아왔다. 계열
+    # 핸들러가 자기 트리거를 다시 검사했기 때문이다 — 트리거는 「수식어 → 축
+    # → 동사」 어순을 요구하는 단일 요청용 그물이라 열거형 문장을 받지 않는다.
+    # 계열은 레지스트리가 판정하고 사용자가 카드에서 확정했으므로, 그 뒤에
+    # 트리거를 다시 묻는 것은 확정을 뒤집는 일이다.
+    def test_an_enumerating_sentence_still_stores_every_chosen_family(self, tmp_path):
+        session, calls, question = self._real_rig(
+            tmp_path,
+            pool_index=_M0_POOL_INDEX,
+            answers=["기본 컬러, 기본 디머", "21", "41"],
+        )
+
+        # 이 문장은 기본 컬러·기본 디머 **트리거를 둘 다 매치하지 않는다**.
+        assert _BASIC_COLORS_REQUEST.search(COMPOUND_TEXT) is None
+        assert _BASIC_DIMMER_REQUEST.search(COMPOUND_TEXT) is None
+
+        event = session.run_instruction(COMPOUND_TEXT)
+
+        commands = _all_commands(calls)
+        assert "Store Preset 4.21" in commands  # 기본 컬러 10종
+        assert "Store Preset 4.30" in commands
+        assert "Store Preset 1.41" in commands  # 디머 레벨 10종
+        assert "Store Preset 1.50" in commands
+        assert len(_writes(calls)) == 20
+        # 건너뛰었다는 보고가 없어야 한다 — 고른 계열은 실제로 저장된다.
+        assert "저장 조건을 확정하지 못해" not in event["text"]
+        # 계열마다 자기 시작 번호 카드는 그대로 뜬다(선택 1 + 번호 2).
+        assert len(question.asked) == 3
+
 
 class TestOneFamilyFailingKeepsTheRest:
     """look 하나가 거부돼도 나머지를 살리는 기존 번들 규율과 같은 형상."""
@@ -543,7 +586,9 @@ class TestOneFamilyFailingKeepsTheRest:
 
         event = session.run_instruction(COMPOUND_TEXT)
 
-        assert [key for key, _text in calls] == [family.key for family in DETECTED_FAMILIES]
+        assert [key for key, _text, _forced in calls] == [
+            family.key for family in DETECTED_FAMILIES
+        ]
         assert "기본 디머" in event["text"]  # 실패한 계열 뒤도 계속 진행했다
         assert "미저장" in event["text"] and "기본 컬러" in event["text"]
 
@@ -563,7 +608,9 @@ class TestOneFamilyFailingKeepsTheRest:
 
         event = session.run_instruction(COMPOUND_TEXT)
 
-        assert [key for key, _text in calls] == [family.key for family in DETECTED_FAMILIES]
+        assert [key for key, _text, _forced in calls] == [
+            family.key for family in DETECTED_FAMILIES
+        ]
         assert "건너뛰었습니다" in event["text"]
         assert "미저장" in event["text"] and "콤보 페이저" in event["text"]
 
