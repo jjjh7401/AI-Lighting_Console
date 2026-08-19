@@ -89,7 +89,7 @@ from server.prechk.macro import MacroPolicy, MacroResult, build_response_check_m
 from server.prechk.macro import groups_from_snapshot as read_group_pool
 from server.prechk.mode_read import read_type_mode_widths
 from server.prechk.patch import evaluate_patch
-from server.prechk.query import PropertyRead, read_properties
+from server.prechk.query import PropertyRead, bulk_capable, read_properties
 from server.prechk.report import build_report as build_precheck_report
 from server.preshow.osc_check import LivenessPort as PreshowLivenessPort
 from server.preshow.runner import run_preshow_checklist
@@ -991,7 +991,7 @@ SPATIAL_ROTATION_PROPERTIES = ("rotx", "roty", "rotz")
 SPATIAL_PROPERTY_QUERY_CAP = 240
 
 
-def _spatial_read_budget(include_rotation: bool) -> int:
+def _spatial_read_budget(include_rotation: bool, *, bulk: bool = False) -> int:
     """The round-trip budget for one spatial read, scaled to the property set.
 
     The cap is a FIXTURE ceiling in disguise (60 fixtures at 4 properties
@@ -999,7 +999,18 @@ def _spatial_read_budget(include_rotation: bool) -> int:
     that reads completely today must still read completely with rotations on
     — so the budget scales with the per-fixture property count instead of
     staying a flat round-trip number.
+
+    ``bulk``: a responder that answers ``props`` (1.6.1+) returns every name
+    for one fixture in a SINGLE round trip, so the fixture ceiling is the cap
+    itself and rotations cost nothing extra (7 names still fit the 16-name
+    request budget). Measured 2026-08-19 on the live 80-fixture rig: bulk read
+    it in 64 round trips / 8.3 s where the per-name path needed 304 / 20.4 s.
+    Keeping the per-name arithmetic here would cap a bulk read at 60 fixtures
+    and make an 80-fixture rig permanently "incomplete" — the console then
+    refuses the whole pointing request.
     """
+    if bulk:
+        return SPATIAL_PROPERTY_QUERY_CAP
     per_fixture = len(SPATIAL_FIXTURE_PROPERTIES) + (
         len(SPATIAL_ROTATION_PROPERTIES) if include_rotation else 0
     )
@@ -1190,7 +1201,10 @@ def read_spatial_fixtures(
     properties = SPATIAL_FIXTURE_PROPERTIES + (
         SPATIAL_ROTATION_PROPERTIES if include_rotation else ()
     )
-    per_fixture = len(properties)
+    # The budget counts ROUND TRIPS, so the cost of one fixture is what the
+    # read path actually spends: a bulk-capable responder answers every name
+    # in one `props` trip, a per-name one spends a trip per property.
+    per_fixture = 1 if bulk_capable(property_port) else len(properties)
     for child in children:
         # @MX:ANCHOR: [SPEC] round-trip cap signal (REQ-SPATIAL-006). A SEPARATE
         #   field from ``truncated`` — the console shortened its answer, this
@@ -5540,7 +5554,7 @@ def build_toolset(
                 state_port,
                 property_port,
                 fixtures_path,
-                _spatial_read_budget(include_rotation),
+                _spatial_read_budget(include_rotation, bulk=bulk_capable(property_port)),
                 include_rotation=include_rotation,
             )
         except Exception as exc:
