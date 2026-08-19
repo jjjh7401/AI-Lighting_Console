@@ -64,7 +64,12 @@ export function QuestionCard({
   onAnswer: (requestId: string, answer: string) => void;
 }) {
   const [typed, setTyped] = useState("");
-  const [chosen, setChosen] = useState<string[]>([]);
+  // 서버가 `selected`로 표시한 항목은 체크된 채 뜬다 — 문장이 이미 지목한
+  // 계열이 그것이다. 카드는 `key={request_id}`로 물음마다 새로 마운트되므로
+  // 초기값 한 번이면 충분하다(이전 물음의 선택이 새 카드로 새지 않는다).
+  const [chosen, setChosen] = useState<string[]>(() =>
+    question.options.filter((option) => option.selected).map((option) => option.label),
+  );
 
   return (
     <section className="card question-card" aria-label="질문">

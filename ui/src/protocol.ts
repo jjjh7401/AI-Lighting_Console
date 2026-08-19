@@ -386,7 +386,7 @@ export type ServerEvent =
       // 사용자가 콘솔 명령줄에 복사해 실행할 명령들 — 서버가 대신 실행하면
       // 안 되는 인계 명령(AddFixtures 패치 등). 구버전 서버에는 없다(additive).
       commands?: string[];
-      options: { label: string; description: string }[];
+      options: { label: string; description: string; selected?: boolean }[];
       // 여러 개를 함께 고를 수 있는 물음인가 — 참이면 UI가 체크박스 + 「확인」으로
       // 렌더하고, 고른 라벨을 ", "로 이어 하나의 답으로 보낸다. 구버전 서버에는
       // 없다(additive) → 없으면 단일 선택.
@@ -756,7 +756,7 @@ export interface PendingQuestion {
   why: string;
   steps: string[];
   commands: string[];
-  options: { label: string; description: string }[];
+  options: { label: string; description: string; selected?: boolean }[];
   multi: boolean;
 }
 

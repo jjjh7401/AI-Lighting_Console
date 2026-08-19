@@ -319,7 +319,12 @@ class TestCompositeVocabularyIsNotACompoundRequest:
         session.run_instruction("페이저 프리셋 설정해줘")
 
         assert len(question.asked) == 1
-        assert [option.label for option in question.asked[0].options] == [
+        # 카드는 일곱 계열을 모두 싣고, 문장이 지목한 것만 미리 체크한다.
+        card = question.asked[0]
+        assert [option.label for option in card.options] == [
+            family.label for family in PRESET_FAMILIES
+        ]
+        assert [option.label for option in card.options if option.selected] == [
             "컬러 페이저",
             "디머 페이저",
             "콤보 페이저",
@@ -338,9 +343,16 @@ class TestCompoundCard:
         assert len(question.asked) == 1
         card = question.asked[0]
         assert card.multi is True
+        # 카드는 일곱 계열 전부를 싣는다 — 문장이 여섯 개만 지목했어도 나머지
+        # 하나를 부르려고 문장을 다시 쓰게 하지 않는다.
         assert [option.label for option in card.options] == [
+            family.label for family in PRESET_FAMILIES
+        ]
+        # 체크된 것이 문장이 지목한 계열이다.
+        assert [option.label for option in card.options if option.selected] == [
             family.label for family in DETECTED_FAMILIES
         ]
+        assert [option.label for option in card.options if not option.selected] == ["연출 포지션"]
         # 왜 묻는지가 카드에 있다 — 계열마다 시작 번호를 따로 여쭤본다는 사실.
         assert "시작 번호" in card.why
         assert card.to_dict()["multi"] is True

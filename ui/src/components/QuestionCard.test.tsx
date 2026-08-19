@@ -92,6 +92,29 @@ describe("QuestionCard multi-select", () => {
       expect(html).toContain("question-freeform");
     }
   });
+
+  it("starts with the server-selected options checked", () => {
+    // 서버가 «이 문장이 지목한 계열»을 selected로 표시한다. 카드는 나머지도
+    // 함께 보여 주되, 체크는 문장 그대로여야 한다 — 미체크로 뜨면 운영자가
+    // 방금 적은 계열을 손으로 다시 다 골라야 한다.
+    const preselected: PendingQuestion = {
+      ...FAMILIES,
+      options: [
+        { label: "기본 포지션 프리셋", description: "Position 풀", selected: true },
+        { label: "연출 포지션 프리셋", description: "Position 풀", selected: false },
+        { label: "기본 컬러 프리셋", description: "Color 풀", selected: true },
+      ],
+    };
+    const html = renderToStaticMarkup(
+      <QuestionCard question={preselected} onAnswer={vi.fn()} />,
+    );
+
+    // 체크된 것이 둘, 확인 버튼은 살아 있다.
+    expect(html.match(/checked=""/g) ?? []).toHaveLength(2);
+    expect(html).not.toMatch(/question-option-confirm[^>]*disabled/);
+    // 지목되지 않은 계열도 고를 수 있게 카드에 실린다.
+    expect(html).toContain("연출 포지션 프리셋");
+  });
 });
 
 describe("joinChosenLabels — 다중 선택 답 형식", () => {
