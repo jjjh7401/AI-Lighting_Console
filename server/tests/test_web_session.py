@@ -3915,13 +3915,13 @@ class TestPositionPresetRegeneration:
         assert _writes(calls) == []
         assert "저장하지 않" in event["text"]
 
-    # F5 — '다시'가 다른 동사에 붙은 문장은 재생성이 아니다
+    # F5 — '다시'가 다른 동사에 붙은 문장은 재생성이 아니다.
     def test_an_adverbial_dasi_does_not_route_to_regeneration(self, tmp_path):
         # "끝나면 다시 알려줘"의 '다시'는 알려줘를 꾸민다. 이 문장이 재생성으로
         # 가면 저장 요청이 "먼저 저장하세요"로 되돌아와 영원히 같은 답이 나온다.
         _event, calls, _chan = self._run(
             tmp_path,
-            "기본 포지션 10개 저장해줘, 끝나면 다시 알려줘",
+            "기본 포지션 프리셋 10개 저장해줘, 끝나면 다시 알려줘",
             pool=(),
             answers=["1"],
         )
@@ -3933,7 +3933,7 @@ class TestPositionPresetRegeneration:
         # "다시 잡으면 … 덮어씁니다"로 제안했다.
         _event, _calls, chan = self._run(
             tmp_path,
-            "기본 포지션 10개 저장해줘, 끝나면 다시 알려줘",
+            "기본 포지션 프리셋 10개 저장해줘, 끝나면 다시 알려줘",
             pool=tuple(range(21, 31)),
             answers=["1"],
         )
@@ -4204,12 +4204,11 @@ class TestFxPositionPresetRegeneration:
         assert f"Label Preset 2.21 '{FX_POSITION_SEQUENCE[0]}'" in fx_commands
         assert not any(f"'{BASIC_POSITION_SEQUENCE[0]}'" in cmd for cmd in fx_commands)
 
-    # F5의 FX 판 — '다시'가 다른 동사에 붙은 FX 저장 문장은 재생성이 아니다.
-    # 재생성이 삼키면 빈 풀에서 "먼저 저장하세요"로 되돌아와 영원히 같은 답이 나온다.
+    # F5의 FX 판도 같다 — '다시'가 알림을 꾸민 저장 문장은 재생성이 아니다.
     def test_an_adverbial_dasi_keeps_the_fx_store_path(self, tmp_path):
         event, calls, _chan = self._run(
             tmp_path,
-            "이펙트 포지션 10개 저장해줘, 끝나면 다시 알려줘",
+            "이펙트 포지션 프리셋 10개 저장해줘, 끝나면 다시 알려줘",
             pool=(),
             answers=["41"],
         )

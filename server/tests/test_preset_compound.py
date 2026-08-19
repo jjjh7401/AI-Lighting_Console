@@ -38,7 +38,7 @@ from server.web.session import (
     PRESET_FAMILIES,
 )
 
-from .test_runner_self_correction import ScriptedProvider
+from .test_runner_self_correction import ScriptedProvider, _final
 from .test_web_session import (
     _M0_POOL_INDEX,
     _all_commands,
@@ -268,6 +268,28 @@ class TestSingleFamilyIsUntouched:
         assert session._compound_preset_request("무빙 10대를 일렬로 배치해줘") is None
         assert question.asked == []
         assert calls == []
+
+
+class TestExplicitPresetNounBypassesEveryPresetHandler:
+    """이펙트 생성 요청은 신규 프리셋 저장 경로에 들어가지 않는다."""
+
+    def test_color_effect_request_without_preset_never_raises_a_store_card(self, tmp_path):
+        text = (
+            "원형을 따라 회전하는 B-R 컬러 루프 이펙트를 만들어줘. "
+            "전체가 바뀌는 것이 아니라 원형을 따라서 B/R 컬러 이펙트를 만들어줘."
+        )
+        provider = ScriptedProvider([_final("컬러 루프 이펙트 설계를 계속합니다.")])
+        session, console, _audit, _sent, _approval = _session(tmp_path, provider)
+        question = _RecordingChannel()
+        session._question_channel = question
+
+        event = session.run_instruction(text)
+
+        assert question.asked == []
+        assert console.executed == []
+        # 프리셋 핸들러가 아니라 모델 연출 경로까지 실제로 흘렀다.
+        assert len(provider.calls) == 1
+        assert event["text"] == "컬러 루프 이펙트 설계를 계속합니다."
 
 
 class TestCompositeVocabularyIsNotACompoundRequest:

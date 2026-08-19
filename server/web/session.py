@@ -2103,6 +2103,21 @@ _PRESET_FX_POSITION_COMPOUND_RE = re.compile(
 _PRESET_BARE_PHASER_RE = re.compile(r"페이저|phaser", re.IGNORECASE)
 _PRESET_NOUN_RE = re.compile(r"프리셋|preset", re.IGNORECASE)
 
+#: 사용자가 실제로 만들거나 저장하려는 **최종 산출물**. 같은 문장에 프리셋
+#: 참조와 이펙트·시퀀스 명사가 함께 있을 수 있어, 단어 존재만으로 콘솔 저장
+#: 경로를 택하면 안 된다. 아래 분류는 쓰기 경로가 하나의 최종 산출물만 고르게
+#: 하는 공통 기준이다.
+_SEQUENCE_ARTIFACT_NOUN_RE = re.compile(r"시퀀스|sequence|큐|cue", re.IGNORECASE)
+_EFFECT_ARTIFACT_NOUN_RE = re.compile(r"이펙트|effect|페이저|phaser|체이스|chase", re.IGNORECASE)
+#: «프리셋 21번으로 B-R 이펙트를 만들어줘»의 프리셋은 **재료 참조**다.
+#: 번호와 참조 조사(`으로`·`로`·`에서`)가 붙은 이 형태를 저장 대상으로
+#: 오해하면 새 10개를 써 버린다. 목적격 `프리셋을 저장`과 처격
+#: `프리셋에 저장`은 저장 대상이므로 참조가 아니다.
+_PRESET_REFERENCE_RE = re.compile(
+    r"(?:프리셋|preset)\s*\d*\s*(?:번)?\s*(?:으로|로|에서)",
+    re.IGNORECASE,
+)
+
 #: 「전부/모두」 — 일곱 계열을 한 번에 부르는 어휘. 계열 축을 **하나도** 지목하지
 #: 않은 문장에서만 성립한다: «컬러 프리셋 전부 저장해줘»의 '전부'는 계열이 아니라
 #: 그 축의 10종을 가리키므로, 축이 있으면 그 축만 후보로 남긴다.
@@ -2160,13 +2175,33 @@ def _reads_as_preset_regeneration(text: str) -> bool:
     return any(pattern.search(text) is not None for pattern in _REGENERATE_PRESET_REQUESTS)
 
 
+def _programming_artifact_target(text: str) -> str | None:
+    """문맥상 사용자가 만들 최종 산출물을 보수적으로 한 가지로 판정한다.
+
+    우선순위는 ``시퀀스 → 프리셋 저장 → 이펙트``다. 시퀀스는 프리셋을
+    *소비*할 수 있고, 프리셋은 이펙트를 *담아* 저장할 수 있다. 따라서
+    «프리셋 21번으로 이펙트 시퀀스 만들어줘»의 최종 산출물은 시퀀스이고,
+    «B-R 컬러 이펙트 프리셋 만들어줘»는 프리셋이다. 산출물이나 행위가
+    명시되지 않으면 ``None`` — 콘솔 쓰기 경로는 선택하지 않는다.
+    """
+    if _PRESET_STORE_VERB_RE.search(text) is None:
+        return None
+    if _SEQUENCE_ARTIFACT_NOUN_RE.search(text) is not None:
+        return "sequence"
+    if _PRESET_NOUN_RE.search(text) is not None and _PRESET_REFERENCE_RE.search(text) is None:
+        return "preset"
+    if _EFFECT_ARTIFACT_NOUN_RE.search(text) is not None:
+        return "effect"
+    return None
+
+
 def _preset_store_request(text: str) -> bool:
-    """신규 저장 문장인가 — 저장 동사가 있고, 재생성도 남의 의도도 아니다."""
+    """명시적으로 프리셋을 최종 산출물로 고른 신규 저장 문장인가."""
     if _reads_as_preset_regeneration(text):
         return False
     if any(pattern.search(text) is not None for pattern in _PRESET_FOREIGN_INTENT_REQUESTS):
         return False
-    return _PRESET_STORE_VERB_RE.search(text) is not None
+    return _programming_artifact_target(text) == "preset"
 
 
 def _reads_as_bare_phaser(text: str) -> bool:
@@ -4246,7 +4281,9 @@ class ChatSession:
         readback all live in ``_store_position_preset_sequence`` — shared
         with the FX flow so the two sets can never drift on safety behaviour.
         """
-        if not forced and _BASIC_POSITIONS_REQUEST.search(text) is None:
+        if _programming_artifact_target(text) != "preset" or (
+            not forced and _BASIC_POSITIONS_REQUEST.search(text) is None
+        ):
             return None
         return self._store_position_preset_sequence(
             text,
@@ -4269,7 +4306,9 @@ class ChatSession:
         post-store pool readback — via ``_store_position_preset_sequence``;
         no FX-specific card or vocabulary exists.
         """
-        if not forced and _FX_POSITIONS_REQUEST.search(text) is None:
+        if _programming_artifact_target(text) != "preset" or (
+            not forced and _FX_POSITIONS_REQUEST.search(text) is None
+        ):
             return None
         return self._store_position_preset_sequence(
             text,
@@ -5558,7 +5597,9 @@ class ChatSession:
         대안 '프리셋'으로 "기본 컬러 프리셋 …" 문장을 함께 매치하기 때문이다
         (REQ-PRESETGUARD-015와 같은 등록 순서 고정).
         """
-        if not forced and _BASIC_COLORS_REQUEST.search(text) is None:
+        if _programming_artifact_target(text) != "preset" or (
+            not forced and _BASIC_COLORS_REQUEST.search(text) is None
+        ):
             return None
         material = self._color_preset_material(noun="기본 컬러")
         if isinstance(material, InstructionResult):
@@ -5628,7 +5669,9 @@ class ChatSession:
         배치해 두 컬러 몸통의 안전 동작이 갈라지지 않는다는 것을 코드
         위치로도 드러낸다.
         """
-        if not forced and _COLOR_PHASER_REQUEST.search(text) is None:
+        if _programming_artifact_target(text) != "preset" or (
+            not forced and _COLOR_PHASER_REQUEST.search(text) is None
+        ):
             return None
         material = self._color_phaser_preset_material(noun="멀티컬러 페이저")
         if isinstance(material, InstructionResult):
@@ -5763,7 +5806,9 @@ class ChatSession:
         공용 저장 몸통(``_store_position_preset_sequence``) 그대로, 소재만
         ``_combo_phaser_preset_material``이 공급한다.
         """
-        if not forced and _COMBO_PHASER_REQUEST.search(text) is None:
+        if _programming_artifact_target(text) != "preset" or (
+            not forced and _COMBO_PHASER_REQUEST.search(text) is None
+        ):
             return None
         material = self._combo_phaser_preset_material(noun="콤보 페이저")
         if isinstance(material, InstructionResult):
@@ -5925,7 +5970,9 @@ class ChatSession:
         소재만 ``_dimmer_preset_material``이 공급한다(컬러 판별 없음, T5
         지시).
         """
-        if not forced and _BASIC_DIMMER_REQUEST.search(text) is None:
+        if _programming_artifact_target(text) != "preset" or (
+            not forced and _BASIC_DIMMER_REQUEST.search(text) is None
+        ):
             return None
         material = self._dimmer_preset_material(noun="디머 레벨")
         if isinstance(material, InstructionResult):
@@ -5981,7 +6028,9 @@ class ChatSession:
         """*"디머 페이저 프리셋 저장해줘"* — 카탈로그 10종(T5)을 해석된 Dimmer
         풀의 연속 10칸에 저장한다. ``_color_phaser_presets``의 미러.
         """
-        if not forced and _DIMMER_PHASER_REQUEST.search(text) is None:
+        if _programming_artifact_target(text) != "preset" or (
+            not forced and _DIMMER_PHASER_REQUEST.search(text) is None
+        ):
             return None
         material = self._dimmer_phaser_preset_material(noun="디머 페이저")
         if isinstance(material, InstructionResult):
