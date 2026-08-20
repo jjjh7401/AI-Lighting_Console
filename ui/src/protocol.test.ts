@@ -1332,3 +1332,52 @@ describe("question card — multi (additive)", () => {
     expect(resolved.pendingQuestions).toEqual([]);
   });
 });
+
+// -- 답변 스트리밍 (SPEC-COPILOT-STREAM-001) ------------------------------------
+//
+// 조각 채널의 계약은 셋이다: 이어 붙는다, 늦게 온 조각이 되돌리지 못한다,
+// 턴이 끝나면 사라진다. 셋째가 특히 중요하다 — 남겨 두면 확정본과 나란히
+// 같은 답이 두 번 보인다.
+describe("answer_delta", () => {
+  const delta = (d: string, seq: number) =>
+    event({ type: "answer_delta", delta: d, seq } as never);
+
+  it("조각을 순서대로 이어 붙인다", () => {
+    const a = reduceServerEvent(initialState, delta("무대 ", 1));
+    const b = reduceServerEvent(a, delta("좌표를 ", 2));
+    const c = reduceServerEvent(b, delta("읽었습니다.", 3));
+    expect(c.streamingAnswer?.text).toBe("무대 좌표를 읽었습니다.");
+    expect(c.streamingAnswer?.seq).toBe(3);
+  });
+
+  it("늦게 도착한 조각은 본문을 되돌리지 않는다", () => {
+    const a = reduceServerEvent(initialState, delta("첫 ", 1));
+    const b = reduceServerEvent(a, delta("둘째 ", 2));
+    const stale = reduceServerEvent(b, delta("첫 ", 1));
+    expect(stale.streamingAnswer?.text).toBe("첫 둘째 ");
+  });
+
+  it("대화록에는 쌓지 않는다 — 소멸성 상태다", () => {
+    const streamed = reduceServerEvent(initialState, delta("가는 중", 1));
+    expect(streamed.entries).toHaveLength(0);
+  });
+
+  it("chat_response가 누적분을 버린다 — 같은 답이 두 번 보이면 안 된다", () => {
+    const streamed = reduceServerEvent(initialState, delta("완료했습니다", 1));
+    const done = reduceServerEvent(
+      streamed,
+      event({ type: "chat_response", status: "ok", summary: "", text: "완료했습니다", commands: [] }),
+    );
+    expect(done.streamingAnswer).toBeNull();
+    expect(done.entries).toHaveLength(1);
+  });
+
+  it("error도 턴 종결이므로 누적분을 버린다", () => {
+    const streamed = reduceServerEvent(initialState, delta("쓰다 말았", 1));
+    const failed = reduceServerEvent(
+      streamed,
+      event({ type: "error", message: "연결이 끊겼습니다", kind: "connection" }),
+    );
+    expect(failed.streamingAnswer).toBeNull();
+  });
+});

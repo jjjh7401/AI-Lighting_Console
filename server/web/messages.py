@@ -550,6 +550,26 @@ def progress_event(*, phase: str, detail: str, seq: int) -> dict:
     return _event("progress", phase=phase, detail=detail, seq=seq)
 
 
+def answer_delta_event(*, delta: str, seq: int) -> dict:
+    """답변 본문 조각 하나 (SPEC-COPILOT-STREAM-001).
+
+    ``progress``\\ 가 *무엇을 하는 중인지*\\ 를 한 줄로 갈아끼운다면, 이것은
+    *답 그 자체*\\ 를 도착하는 대로 이어 붙인다. 실측(2026-08-20): 좌표 판독
+    턴에서 마지막 모델 호출이 6~10초를 쓰는데 그동안 화면에는 진행 한 줄만
+    있었다.
+
+    누적 채널이다 — 받는 쪽이 ``delta``\\ 를 순서대로 이어 붙이면 지금까지의
+    본문이 된다. ``seq``\\ 는 턴 안에서 1부터 단조증가하므로 늦게 도착한
+    조각이 앞선 상태를 되돌리지 못한다.
+
+    **판정을 싣지 않는다.** 상태·명령 목록·요약은 여전히 ``chat_response``\\ 의
+    몫이고, 이 채널이 통째로 유실돼도 답은 온전하다. 그래서 클라이언트는 턴
+    종결 프레임에서 이 조각들을 버리고 ``chat_response``\\ 의 본문으로 갈아
+    끼운다 — 두 벌을 남기면 같은 답이 두 번 보인다.
+    """
+    return _event("answer_delta", delta=delta, seq=seq)
+
+
 # -- show-control panel (SPEC-COPILOT-SHOWUI-001 M1) ---------------------------
 
 

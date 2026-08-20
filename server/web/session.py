@@ -138,6 +138,7 @@ from server.web.measure import RoundTripRecorder
 from server.web.messages import (
     CONSOLE_INPUT_LISTENING,
     CONSOLE_INPUT_UNDETERMINED,
+    answer_delta_event,
     approval_request_event,
     chat_response_event,
     error_event,
@@ -3557,6 +3558,8 @@ class ChatSession:
             # ``send_event``(app.py가 스레드 안전하게 만들어 넘긴 싱크)로
             # 이어 붙이는 것이 전부다.
             progress=self._emit_progress,
+            # 같은 이음매의 답변 절반 (SPEC-COPILOT-STREAM-001).
+            answer=self._emit_answer,
         )
 
     @property
@@ -3604,6 +3607,15 @@ class ChatSession:
         (턴은 ``asyncio.to_thread`` 워커에서 돈다) 여기서 다시 감쌀 것은 없다.
         """
         self._send(progress_event(phase=phase, detail=detail, seq=seq))
+
+    def _emit_answer(self, *, delta: str, seq: int) -> None:
+        """답변 조각 하나를 이 연결로 흘린다 (SPEC-COPILOT-STREAM-001).
+
+        ``_emit_progress``\\ 와 같은 이음매의 같은 절반이다 — 러너는
+        ``AnswerSink`` 하나만 알고, 이 메서드가 그것을 이 연결의 프로토콜
+        프레임으로 바꾼다.
+        """
+        self._send(answer_delta_event(delta=delta, seq=seq))
 
     def _on_preview(self, commands: Sequence[str]) -> None:
         if not commands:

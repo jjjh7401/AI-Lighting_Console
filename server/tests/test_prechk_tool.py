@@ -1244,6 +1244,10 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
 # server -> client: every literal stamped into the outbound ``"type"`` field by
 # an ``_event(...)`` builder.
 _EXPECTED_SERVER_MESSAGE_TYPES = (
+    # 답변 스트리밍 (SPEC-COPILOT-STREAM-001, 2026-08-20) — 아래 "progress"와
+    # 같은 사유의 정당한 추가. 진행 한 줄이 *무엇을 하는 중인지*라면 이쪽은
+    # *답 본문*을 도착하는 대로 잇는다.
+    "answer_delta",
     "approval_request",
     "approval_resolved",
     "busy",
