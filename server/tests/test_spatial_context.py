@@ -220,18 +220,21 @@ class TestRegistration:
         assert "unknown tool" not in execution.result.content
         assert execution.result.name == TOOL
 
-    def test_the_parameter_schema_accepts_only_the_rotation_opt_in(self):
+    def test_the_parameter_schema_accepts_only_booleans_never_an_address(self):
         # The handler reads the rig itself. A caller cannot aim it at a stage,
         # a slot or a fixture, which is the only way it cannot be aimed at the
         # wrong one (the discipline precheck_patch's schema already follows).
-        # The single argument is the rotation opt-in — a boolean, never an
-        # address.
+        # Arguments may only be OPT-INS — booleans — and 2026-08-20 added the
+        # second one (`force_refresh`, SPEC-COPILOT-SPATIALMEM-001). The
+        # invariant under test is the ABSENCE of an address, so it is asserted
+        # as "every property is a boolean" rather than as one frozen name.
         registry = _registry(SpatialRig(_bar(3)))
         definition = next(d for d in registry.definitions() if d.name == TOOL)
         assert definition.description.strip()
         assert definition.parameters["additionalProperties"] is False
-        assert list(definition.parameters["properties"]) == ["include_rotation"]
-        assert definition.parameters["properties"]["include_rotation"]["type"] == "boolean"
+        assert set(definition.parameters["properties"]) == {"include_rotation", "force_refresh"}
+        for name, schema in definition.parameters["properties"].items():
+            assert schema["type"] == "boolean", name
 
 
 class TestReadPathOnly:

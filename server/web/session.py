@@ -90,6 +90,7 @@ from server.looks.songcue import (
 from server.orchestrator.last_created import LastCreated, parse_last_created
 from server.orchestrator.ports import ExecutionResult
 from server.orchestrator.runner import InstructionResult, Orchestrator
+from server.orchestrator.spatial_memory import SpatialMemory
 from server.orchestrator.tools import (
     DEFAULT_RIG_CONTEXT_PATHS,
     TIMECODE_POOL_PATH,
@@ -3424,6 +3425,7 @@ class ChatSession:
         timeline_store: SongTimelineStore | None = None,
         timeline_library: SongTimelineLibrary | None = None,
         pending_plan_store: PendingSongPlanStore | None = None,
+        spatial_memory: SpatialMemory | None = None,
     ) -> None:
         self._gate = gate
         # Injected so the status surface owns the I/O and the health state
@@ -3538,6 +3540,11 @@ class ChatSession:
             # unchanged — run_preshow_checklist itself discloses the
             # unconfirmed-default fallback rather than this layer guessing.
             preshow_osc_slot=preshow_osc_slot,
+            # SPEC-COPILOT-SPATIALMEM-001: the process-wide remembered geometry
+            # (app.py WebDeps). None in tests and bare deps, which keeps the
+            # per-fixture walk — and every round-trip count asserted against
+            # it — exactly as it was.
+            spatial_memory=spatial_memory,
         )
         # Held so a look bundle re-enters the SAME run_commands tool the model
         # uses, rather than growing a second way to reach the console.
