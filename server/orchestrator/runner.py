@@ -25,6 +25,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
+from server.llm.errors import ProviderError
 from server.llm.types import (
     ConversationItem,
     LLMProvider,
@@ -114,6 +115,21 @@ class ProgressSink(Protocol):
     """
 
     def __call__(self, *, phase: str, detail: str, seq: int) -> None: ...
+
+
+class AnswerSink(Protocol):
+    """답변 본문 조각을 도착 순서대로 받는다 (SPEC-COPILOT-STREAM-001).
+
+    ``seq``\\ 는 진행 프레임과 같은 이유로 턴 안에서 1부터 단조증가한다.
+    조각은 **누적**\\ 이다 — 받는 쪽이 이어 붙이면 지금까지의 본문이 된다.
+
+    이 채널은 최종 ``chat_response``\\ 를 대체하지 않는다. 턴의 판정과 명령
+    목록은 여전히 그 한 프레임이 싣는다. 여기로 나가는 것은 **먼저 읽기
+    시작할 수 있는 글자**\\ 뿐이고, 그래서 이 채널이 통째로 사라져도 답은
+    온전하다.
+    """
+
+    def __call__(self, *, delta: str, seq: int) -> None: ...
 
 
 #: 도구 이름 → 사용자에게 보일 한국어 작업 이름. 영어 도구 이름은 조명 감독의
@@ -261,6 +277,12 @@ class Orchestrator:
         #: 턴 진행 한 줄을 흘려보낼 곳. ``None``(기본)이면 아무것도 배출하지
         #: 않는다 — 진행 스트리밍 이전 호출자의 동작이 그대로 보존된다.
         progress: ProgressSink | None = None,
+        #: 모델이 만들어내는 답변 본문을 **도착하는 대로** 흘려보낼 곳
+        #: (SPEC-COPILOT-STREAM-001). ``None``(기본)이거나 프로바이더가
+        #: ``complete_stream``\\ 을 갖지 않으면 종전의 한 번에 받는 경로가
+        #: 그대로 쓰인다 — 스트리밍은 부가 채널이고, 턴의 판정 결과는
+        #: 두 경로에서 동일하다.
+        answer: AnswerSink | None = None,
     ) -> None:
         self._provider = provider
         self._registry = registry
@@ -271,6 +293,7 @@ class Orchestrator:
         self._metrics_sink = metrics_sink
         self._clock = clock
         self._progress = progress
+        self._answer = answer
 
     # @MX:NOTE: [AUTO] self-correction loop — retry accounting (<=3 per instruction,
     #   REQ-MVP-010) and the executed-command dedupe set both live ONLY here
@@ -354,6 +377,50 @@ class Orchestrator:
             with contextlib.suppress(Exception):
                 self._progress(phase=phase, detail=detail, seq=progress_seq)
 
+        #: 답변 조각 번호 — 진행 번호와 별개로 턴 안에서 1부터 센다.
+        answer_seq = 0
+
+        def stream_answer(delta: str) -> None:
+            nonlocal answer_seq
+            if self._answer is None or not delta:
+                return
+            answer_seq += 1
+            # 진행 배출과 같은 규율: 부가 채널이 실제 작업을 무너뜨리지 않는다.
+            with contextlib.suppress(Exception):
+                self._answer(delta=delta, seq=answer_seq)
+
+        def call_model() -> ModelTurn:
+            """스트리밍이 가능하고 받을 곳이 있을 때만 조각을 흘린다.
+
+            능력 판정은 ``hasattr``\\ 다 — 프로바이더 프로토콜을 넓히면 기존
+            어댑터 둘이 모두 구현해야 하는데, 스트리밍은 **선택적 가속**\\ 이지
+            프로바이더의 의무가 아니다. 스트리밍 호출이 실패하면 같은 턴을
+            버퍼링 경로로 한 번 더 시도한다: 조각은 아직 하나도 나가지 않았거나
+            (첫 청크 실패) 화면에 남을 뿐이고, 답을 못 받는 것보다 낫다.
+            """
+            streamer = getattr(self._provider, "complete_stream", None)
+            if self._answer is None or streamer is None:
+                return self._provider.complete(
+                    system_prefix=self._system_prefix,
+                    conversation=conversation,
+                    tools=tool_definitions,
+                )
+            try:
+                return streamer(
+                    system_prefix=self._system_prefix,
+                    conversation=conversation,
+                    tools=tool_definitions,
+                    on_text=stream_answer,
+                )
+            except ProviderError:
+                raise
+            except Exception:
+                return self._provider.complete(
+                    system_prefix=self._system_prefix,
+                    conversation=conversation,
+                    tools=tool_definitions,
+                )
+
         while True:
             if model_calls - human_turns >= self._max_model_calls:
                 status = "loop_limit"
@@ -369,11 +436,7 @@ class Orchestrator:
                 if model_calls == 0
                 else f"다음 단계를 판단하는 중… ({model_calls + 1}번째)",
             )
-            turn = self._provider.complete(
-                system_prefix=self._system_prefix,
-                conversation=conversation,
-                tools=tool_definitions,
-            )
+            turn = call_model()
             model_calls += 1
             if turn.text:
                 final_text = turn.text

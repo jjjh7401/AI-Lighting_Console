@@ -416,6 +416,11 @@ export type ServerEvent =
   // 않고, 그 경우 UI는 종전처럼 turn 종료 프레임만 받는다). 소멸성 상태:
   // 대화록에 쌓지 않고 마지막 한 줄만 들고 있다가 턴 종료에서 지운다.
   | { v: 1; type: "progress"; phase: string; detail: string; seq: number }
+  // 답변 스트리밍 (SPEC-COPILOT-STREAM-001) — `progress`와 같은 additive
+  // 규약. 조각을 순서대로 이어 붙이면 지금까지의 답 본문이 된다. 판정과
+  // 명령 목록은 여전히 `chat_response`가 싣고, 턴 종료에서 이 누적분은
+  // 버려진다 — 두 벌을 남기면 같은 답이 두 번 보인다.
+  | { v: 1; type: "answer_delta"; delta: string; seq: number }
   | { v: 1; type: "panel_catalog"; items: PanelItem[]; sections: PanelSection[] }
   | {
       v: 1;
@@ -461,6 +466,8 @@ const SERVER_EVENT_TYPES = new Set([
   "notice",
   // 진행 스트리밍 — server/web/messages.py `progress_event`와 짝.
   "progress",
+  // 답변 스트리밍 — server/web/messages.py `answer_delta_event`와 짝.
+  "answer_delta",
   // Panel (REQ-SHOWUI-014) — mirrored by PANEL_* in server/web/messages.py.
   "panel_catalog",
   "panel_item_state",
@@ -790,6 +797,13 @@ export interface UiState {
   songTimeline: SongTimelineState;
   /** 진행 중인 턴의 마지막 진행 한 줄. 턴이 끝나면 `null`이 된다. */
   progress: ProgressState | null;
+  /**
+   * 도착하는 중인 답 본문 (SPEC-COPILOT-STREAM-001). `progress`와 같은
+   * 소멸성 상태이고 같은 이유로 `seq`를 들고 있다. 턴 종료 프레임에서
+   * `null`로 되돌린다 — 그때 같은 답이 `entries`에 확정본으로 들어오므로,
+   * 지우지 않으면 화면에 두 번 보인다.
+   */
+  streamingAnswer: { text: string; seq: number } | null;
 }
 
 export const initialState: UiState = {
@@ -802,6 +816,7 @@ export const initialState: UiState = {
   panel: { items: [], sections: [], running: {}, busy: null },
   dash: { sections: [], lastSyncAt: null, stale: false },
   progress: null,
+  streamingAnswer: null,
   cueMonitor: { executors: [], history: [], lastSyncAt: null, stale: false },
 };
 
@@ -823,6 +838,9 @@ export function reduceServerEvent(
         // 턴 종료 = 진행 표시 소멸. 답이 도착한 뒤에도 "…중"이 남아 있으면
         // 그것은 정보가 아니라 거짓말이다.
         progress: null,
+        // 같은 이유로 스트리밍 누적분도 버린다: 확정본이 바로 아래
+        // `entries`에 들어가므로, 남겨 두면 같은 답이 두 번 보인다.
+        streamingAnswer: null,
         entries: [
           ...state.entries,
           {
@@ -926,6 +944,7 @@ export function reduceServerEvent(
         // `chat_response`와 나란한 또 하나의 턴 종결 프레임 — 세션의
         // run_instruction은 예외를 error 이벤트로 바꿔 내보내고 그대로 끝난다.
         progress: null,
+        streamingAnswer: null,
         entries: [...state.entries, { kind: "error", message: event.message, errorKind: event.kind }],
       };
     case "progress":
@@ -936,6 +955,19 @@ export function reduceServerEvent(
         ...state,
         progress: { phase: event.phase, detail: event.detail, seq: event.seq },
       };
+    case "answer_delta": {
+      // 누적이다: 조각을 이어 붙인다. `progress`와 같은 순서 가드 —
+      // 늦게 도착한 옛 조각을 다시 붙이면 본문이 중복된다.
+      const current = state.streamingAnswer;
+      if (current !== null && event.seq <= current.seq) return state;
+      return {
+        ...state,
+        streamingAnswer: {
+          text: (current?.text ?? "") + event.delta,
+          seq: event.seq,
+        },
+      };
+    }
     case "busy":
       return { ...state, entries: [...state.entries, { kind: "busy", message: event.message }] };
     case "notice":

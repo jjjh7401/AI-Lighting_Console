@@ -23,9 +23,10 @@ are recorded as gaps in progress.md.
 from __future__ import annotations
 
 import base64
+import dataclasses
 import logging
 import threading
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from server.llm.config import GeminiSettings
@@ -134,6 +135,24 @@ def _to_gemini_schema(schema: dict) -> dict:
         else:
             converted[key] = value
     return converted
+
+
+@dataclasses.dataclass(frozen=True)
+class _StreamedCandidate:
+    """The one candidate rebuilt from a stream, shaped for ``_parse_response``.
+
+    Reusing the parser is the point: a second parser for the streamed path is a
+    second place for the finish-reason guard and the usage mapping to drift.
+    """
+
+    content: Any
+    finish_reason: Any
+
+
+@dataclasses.dataclass(frozen=True)
+class _StreamedResponse:
+    candidates: list[_StreamedCandidate]
+    usage_metadata: Any
 
 
 class GeminiAdapter:
@@ -456,3 +475,84 @@ class GeminiAdapter:
             client, system_prefix, tools, tools_tuple, contents, cache_name
         )
         return self._parse_response(response)
+
+    # -- streaming (SPEC-COPILOT-STREAM-001) ------------------------------------
+
+    def complete_stream(
+        self,
+        *,
+        system_prefix: str,
+        conversation: Sequence[ConversationItem],
+        tools: Sequence[ToolDefinition] = (),
+        on_text: Callable[[str], None],
+    ) -> ModelTurn:
+        """Same turn as :meth:`complete`, with prose handed over as it arrives.
+
+        The returned turn is byte-equivalent to the non-streaming one — the
+        caller's tool loop is unchanged — so the ONLY difference is that the
+        operator sees the first words seconds earlier.
+
+        ``provider_payload`` is rebuilt by concatenating the parts of EVERY
+        chunk rather than keeping the last chunk's content: a turn whose parts
+        span chunks would otherwise re-enter the loop with its earlier parts
+        missing. Live-verified 2026-08-20 against the real API — a rebuilt
+        multi-part turn is accepted where a hand-built one is rejected for a
+        missing thought_signature, which is exactly the property the tool loop
+        depends on.
+
+        No cache-miss recovery here: an expired cache surfaces on the FIRST
+        chunk, before any text has been handed over, so the caller can simply
+        fall back to :meth:`complete` — and that keeps the recovery path in one
+        place instead of two.
+        """
+        from google.genai import types as gtypes
+
+        client = self._ensure_client()
+        # Capability check belongs HERE, not in the caller: a client without the
+        # streaming verb (an older SDK, or a test double) is not an error — it is
+        # a client that answers in one piece, and the buffered path already does
+        # that correctly including cache-miss recovery. Letting the failure reach
+        # the caller instead re-labels a real SDK error (rate limit, auth) as an
+        # 'unknown' stream fault.
+        if getattr(client.models, "generate_content_stream", None) is None:
+            return self.complete(
+                system_prefix=system_prefix, conversation=conversation, tools=tools
+            )
+        cache_name = self._ensure_cache(client, system_prefix, tools)
+        tools_tuple = tuple(tools)
+        _use_cache, config_kwargs = self._build_generate_config(
+            system_prefix, tools, tools_tuple, cache_name
+        )
+        try:
+            stream = client.models.generate_content_stream(
+                model=self._settings.model,
+                contents=self._to_contents(conversation),
+                config=gtypes.GenerateContentConfig(**config_kwargs),
+            )
+            parts: list[Any] = []
+            usage_metadata = None
+            finish_reason = None
+            for chunk in stream:
+                candidate = (getattr(chunk, "candidates", None) or [None])[0]
+                usage_metadata = getattr(chunk, "usage_metadata", None) or usage_metadata
+                if candidate is None:
+                    continue
+                finish_reason = getattr(candidate, "finish_reason", None) or finish_reason
+                content = getattr(candidate, "content", None)
+                for part in (getattr(content, "parts", None) or []) if content else []:
+                    parts.append(part)
+                    text = getattr(part, "text", None)
+                    if text:
+                        on_text(text)
+        except ProviderError:
+            raise
+        except Exception as exc:
+            raise normalize_gemini_error(exc) from exc
+
+        aggregated = gtypes.Content(role="model", parts=parts)
+        return self._parse_response(
+            _StreamedResponse(
+                candidates=[_StreamedCandidate(content=aggregated, finish_reason=finish_reason)],
+                usage_metadata=usage_metadata,
+            )
+        )

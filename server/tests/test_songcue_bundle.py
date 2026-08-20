@@ -200,6 +200,12 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # paragraph insertion) and 304/306/308 (single-line rewrites inside
 # rig_object's body), all far from both protected ranges (234..238 / 524..569)
 # — overlap ZERO.
+# 2026-08-20 re-walk 5 — SPEC-COPILOT-SPATIALMEM-001 (커밋 ff664a3, PR #66)이
+# tools.py에 좌표 기억/재검증을 넣으면서 이 트립와이어를 갱신하지 않았다.
+# 실측 델타: 66→65 hunks. 새 시작점 993(build_toolset 안 기억 주입),
+# 사라진 시작점 1088·1111 — 삽입이 두 이웃 헝크를 하나로 합쳐 unified=0
+# 경계가 이동한 결과이며 삭제가 아니다. 두 보호 구간(234..238 / 524..569)
+# 침범은 ZERO — 실제 불변식은 그대로 성립한다.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -230,6 +236,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     620,
     952,
     989,
+    993,
     995,
     1004,
     1007,
@@ -243,11 +250,9 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     1070,
     1072,
     1081,
-    1088,
     1096,
     1103,
     1110,
-    1111,
     1113,
     1116,
     1118,

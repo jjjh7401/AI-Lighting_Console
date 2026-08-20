@@ -167,6 +167,7 @@ function Entry({ entry }: { entry: ChatEntry }) {
 export function ChatView({
   entries,
   progress = null,
+  streamingAnswer = null,
 }: {
   entries: ChatEntry[];
   /**
@@ -175,6 +176,13 @@ export function ChatView({
    * `null`을 내려 사라진다(protocol.ts `reduceServerEvent`).
    */
   progress?: ProgressState | null;
+  /**
+   * 도착하는 중인 답 본문 (SPEC-COPILOT-STREAM-001). 같은 이유로 `entries`
+   * 밖에 산다 — 턴이 끝나면 확정본이 `entries`로 들어오고 이쪽은 사라진다.
+   * 접기 없이 통째로 보여 준다: 아직 자라는 중인 글에 "…펼치기"를 붙이면
+   * 다 읽기도 전에 버튼이 움직인다.
+   */
+  streamingAnswer?: string | null;
 }) {
   return (
     <div className="chat-view">
@@ -186,6 +194,11 @@ export function ChatView({
       {entries.map((entry, index) => (
         <Entry key={index} entry={entry} />
       ))}
+      {streamingAnswer && (
+        <div className="entry entry-assistant entry-streaming" aria-live="polite">
+          <div className="assistant-text">{streamingAnswer}</div>
+        </div>
+      )}
       {progress !== null && (
         <div className="entry entry-progress" data-phase={progress.phase} role="status">
           ⏳ {progress.detail}
