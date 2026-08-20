@@ -530,6 +530,7 @@ class GeminiAdapter:
                 config=gtypes.GenerateContentConfig(**config_kwargs),
             )
             parts: list[Any] = []
+            text_parts_seen = 0
             usage_metadata = None
             finish_reason = None
             for chunk in stream:
@@ -543,7 +544,13 @@ class GeminiAdapter:
                     parts.append(part)
                     text = getattr(part, "text", None)
                     if text:
-                        on_text(text)
+                        # `_parse_response` joins text parts with a newline, so
+                        # the deltas must carry that separator too — otherwise
+                        # the streamed prose and the final text differ by
+                        # exactly the joins, and the screen would visibly
+                        # reflow when the turn ends.
+                        on_text(("\n" if text_parts_seen else "") + text)
+                        text_parts_seen += 1
         except ProviderError:
             raise
         except Exception as exc:
