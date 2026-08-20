@@ -28,6 +28,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
 from server.llm.types import LLMProvider
+from server.orchestrator.spatial_memory import SpatialMemory
 from server.orchestrator.tools import DeployPipelinePort
 from server.safety.audit import AuditLog
 from server.safety.backup import BackupManager
@@ -229,6 +230,10 @@ class WebDeps:
     # like ``snapshots`` (executor numbers are CONSOLE state, not per-client
     # state — so N open tabs share one refresh instead of N).
     executor_nos: ExecutorNoCache = field(default_factory=ExecutorNoCache)
+    # SPEC-COPILOT-SPATIALMEM-001: remembered patch geometry, process-wide for
+    # the same reason `snapshots` is — coordinates are CONSOLE state, so N open
+    # tabs share one 80-round-trip read instead of paying it each.
+    spatial_memory: SpatialMemory = field(default_factory=SpatialMemory)
 
 
 async def _safe_send(websocket: WebSocket, event: dict) -> None:
@@ -370,6 +375,7 @@ def create_app(deps: WebDeps) -> FastAPI:
             timeline_store=deps.song_timeline_store,
             timeline_library=deps.timeline_library,
             pending_plan_store=deps.pending_plan_store,
+            spatial_memory=deps.spatial_memory,
         )
 
         def push_status() -> None:

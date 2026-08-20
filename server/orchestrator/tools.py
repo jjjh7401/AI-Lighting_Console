@@ -83,6 +83,11 @@ from server.orchestrator.ports import (
     PropertyQueryPort,
     StateQueryPort,
 )
+from server.orchestrator.spatial_memory import (
+    SpatialMemory,
+    freshness_from_console,
+    freshness_from_memory,
+)
 from server.prechk.footprint import WalkOutcome, walk_mode_widths
 from server.prechk.inventory import InventoryReadError, read_inventory
 from server.prechk.macro import MacroPolicy, MacroResult, build_response_check_macro
@@ -1122,6 +1127,7 @@ def read_spatial_fixtures(
     budget: int,
     *,
     include_rotation: bool = False,
+    slot_sink: dict[int, int] | None = None,
 ) -> dict[str, object]:
     """Read ``(fid, name, x, y, z)`` for every fixture in the stage patch container.
 
@@ -1137,6 +1143,14 @@ def read_spatial_fixtures(
 
     Raises whatever the state port raises when the container itself does not
     answer — a rig with no enumerable patch is a failed call, not an empty one.
+
+    ``slot_sink`` is an optional OUT parameter: when a dict is supplied it is
+    filled with ``fid -> container slot`` for every fixture that produced a
+    record. The slot is the address a later property read needs
+    (``<path>/<slot>``) and it is deliberately NOT added to the records
+    themselves — the reply shape is a model-facing contract
+    (SPEC-COPILOT-TRUNCATE-001) and SPEC-COPILOT-SPATIALMEM-001's probe is the
+    only caller that needs the addresses. Left ``None`` nothing is collected.
     """
     payload = state_port.query_state(fixtures_path)
     children = [child for child in (payload.get("children") or []) if isinstance(child, dict)]
@@ -1238,6 +1252,8 @@ def read_spatial_fixtures(
         else:
             if include_rotation:
                 attach_spatial_rotation(record, reads)
+            if slot_sink is not None:
+                slot_sink[int(record["fid"])] = slot  # type: ignore[arg-type]
             fixtures.append(record)
     # REQ-GROUPGEN-024 amendment coverage signal — "judged" is how many
     # fixtures actually fed a topology judgment, "of" is the rig's real
@@ -1589,6 +1605,7 @@ def build_toolset(
     vectorworks_upload: VectorworksUploadPort | None = None,
     vision_provider: LLMProvider | None = None,
     layout_image_upload: LayoutImageUploadPort | None = None,
+    spatial_memory: SpatialMemory | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
 
@@ -1651,6 +1668,13 @@ def build_toolset(
     omitted (the default) keeps every existing caller byte-identical; the
     tool then reports the missing capability / missing image rather than
     guessing.
+
+    ``spatial_memory`` (SPEC-COPILOT-SPATIALMEM-001) lets ``get_spatial_context``
+    re-serve a COMPLETE coordinate read behind a cheap sample probe instead of
+    re-reading the whole patch. Omitted (the default) the tool behaves exactly
+    as before and spends the full per-fixture walk every call — deliberate, so
+    the existing suites that count round trips keep measuring the unchanged
+    path and only production wiring opts in.
     """
     rig_paths = dict(rig_paths or DEFAULT_RIG_CONTEXT_PATHS)
     group_approval = group_approval_port or DenyAllApprovalPort()
@@ -5549,6 +5573,31 @@ def build_toolset(
                 "property reads are not wired — build_toolset needs property_port "
                 "(or a state_port that also implements query_property)",
             )
+        force_refresh = bool(
+            isinstance(call.arguments, dict) and call.arguments.get("force_refresh")
+        )
+        # REQ-SPATIALMEM-005/006/007/013. The probe decides; a miss, a failure
+        # and an explicit refresh all land on the SAME full re-read below, so
+        # the worst case costs exactly what today costs and no branch can serve
+        # geometry the probe did not clear.
+        if spatial_memory is not None and not force_refresh:
+            remembered = spatial_memory.peek(fixtures_path, include_rotation)
+            if remembered is not None:
+                outcome = spatial_memory.probe(remembered, state_port, property_port)
+                if outcome.fresh:
+                    reply = {
+                        **remembered.reply,
+                        "freshness": freshness_from_memory(remembered, outcome),
+                    }
+                    return ToolExecution(
+                        result=ToolResult(
+                            tool_call_id=call.id,
+                            name=call.name,
+                            content=json.dumps(reply, ensure_ascii=False),
+                        )
+                    )
+                spatial_memory.forget(fixtures_path)
+        slot_sink: dict[int, int] = {}
         try:
             reply = read_spatial_fixtures(
                 state_port,
@@ -5556,6 +5605,7 @@ def build_toolset(
                 fixtures_path,
                 _spatial_read_budget(include_rotation, bulk=bulk_capable(property_port)),
                 include_rotation=include_rotation,
+                slot_sink=slot_sink,
             )
         except Exception as exc:
             return _error_result(
@@ -5607,6 +5657,14 @@ def build_toolset(
                 # analysis, never the map the caller can still inspect.
                 reply["analysis"] = None
                 reply["analysis_error"] = str(error)
+        # REQ-SPATIALMEM-001/002/010. Remember only the COMPLETE shape — the
+        # partial branch above is the one that must never be frozen, because
+        # `analysis_withheld` is a per-read judgment and a cached partial would
+        # keep answering for a rig nobody finished reading. `remember` decides
+        # that from the reply's own shape rather than a flag passed down here.
+        if spatial_memory is not None:
+            spatial_memory.remember(fixtures_path, include_rotation, reply, slot_sink)
+        reply["freshness"] = freshness_from_console(len(slot_sink))
         return ToolExecution(
             result=ToolResult(
                 tool_call_id=call.id,
@@ -6052,6 +6110,23 @@ def build_toolset(
             "relative": ARRANGE_VERIFY_REL_TOLERANCE,
             "absolute": ARRANGE_VERIFY_ABS_TOLERANCE,
         }
+        # REQ-SPATIALMEM-011/012. A VERIFIED read-back is an observation, so it
+        # is folded into memory and the next spatial read stays cheap. A
+        # verification FAILURE is the opposite: some targets moved, some did
+        # not, and this code cannot say which — so the remembered geometry is
+        # dropped whole rather than patched from values nobody confirmed.
+        if spatial_memory is not None:
+            if mismatches:
+                spatial_memory.forget()
+            else:
+                spatial_memory.apply_verified_move(
+                    {
+                        int(row["fid"]):  # type: ignore[arg-type]
+                        (float(row["x"]), float(row["y"]), float(row["z"]))
+                        for row in readback
+                        if {"fid", "x", "y", "z"} <= row.keys()
+                    }
+                )
         if mismatches:
             payload["mismatches"] = mismatches
             payload["error"] = (
@@ -8341,7 +8416,21 @@ def build_toolset(
                             "listed axis. Costs 3 extra property reads per "
                             "fixture. Default false."
                         ),
-                    }
+                    },
+                    "force_refresh": {
+                        "type": "boolean",
+                        "description": (
+                            "Re-read every fixture from the console instead of "
+                            "reusing a remembered read. The reply's 'freshness' "
+                            "block says which one you got: 'remembered' means "
+                            "the coordinates were read earlier and only a "
+                            "SAMPLE was re-checked just now. Set this true when "
+                            "the operator says they changed the patch on the "
+                            "console themselves, or asks you to read it again — "
+                            "that edit is the one change this app cannot see. "
+                            "Default false."
+                        ),
+                    },
                 },
                 "additionalProperties": False,
             },

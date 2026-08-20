@@ -85,6 +85,11 @@ COMPLETE_REPLY_KEYS = [
     "roundtrip_capped",
     "coverage",
     "analysis",
+    # 2026-08-20, SPEC-COPILOT-SPATIALMEM-001: every reply now states whether
+    # its coordinates were read just now or remembered from an earlier read and
+    # sample-revalidated. APPENDED, so the pre-existing order is untouched —
+    # which is exactly what this pin exists to prove.
+    "freshness",
 ]
 
 
@@ -669,9 +674,10 @@ class TestBoundariesDidNotMove:
 
     def test_get_spatial_context_still_requires_no_arguments(self):
         # A REQUIRED argument would make the FIRST call impossible: you would
-        # need the reply to construct the call that produces it. The rotation
-        # opt-in is an optional boolean, so the zero-argument call this gate
-        # protects still works unchanged.
+        # need the reply to construct the call that produces it. Both opt-ins
+        # (rotation, and 2026-08-20's `force_refresh` from
+        # SPEC-COPILOT-SPATIALMEM-001) are optional booleans, so the
+        # zero-argument call this gate protects still works unchanged.
         registry = build_toolset(
             execution_port=RecordingExecutionPort(), state_port=_complete_rig(3)
         )
@@ -679,7 +685,7 @@ class TestBoundariesDidNotMove:
 
         assert "required" not in definition.parameters
         assert definition.parameters["additionalProperties"] is False
-        assert list(definition.parameters["properties"]) == ["include_rotation"]
+        assert set(definition.parameters["properties"]) == {"include_rotation", "force_refresh"}
 
     def test_the_new_write_argument_is_declared_and_optional(self):
         # `additionalProperties: False` means an undeclared argument is not
