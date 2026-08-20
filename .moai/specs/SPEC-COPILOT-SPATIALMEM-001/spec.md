@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-SPATIALMEM-001
 title: "리그 기하 기억 · 표본 재검증 · 신선도 고지 (Spatial Memory)"
 version: "0.1.0"
-status: in-progress
+status: completed
 created: 2026-08-20
 updated: 2026-08-20
 author: manager-spec
@@ -144,3 +144,4 @@ related_specs: [SPEC-COPILOT-SPATIAL-001, SPEC-COPILOT-TRUNCATE-001, SPEC-COPILO
 | 버전 | 날짜 | 내용 |
 |---|---|---|
 | 0.1.0 | 2026-08-20 | 최초 작성. REQ 13 · ASSUMPTION 86-88 · Out of Scope 5항. Tier M. 실측 근거: 80왕복/9.58초/67ms. |
+| 0.1.1 | 2026-08-20 | 구현·병합 완료(`ff664a3`, PR #66). 실기 검증(onPC 2.4.2, 80대): 도구 구간 9.58초 → **0.25초**, 턴 22.66초 → 10.83초. 적중 시 왕복 **4회**(표본 슬롯 1/41/80). `arrange_fixtures` 검증 이동 후 기억이 `z=5.0`을 반영한 채 적중(REQ-011), 원값 복원 완료. 뮤테이션: 프로브 무력화 6건 RED, 부분 판독 캐시 허용 2건 RED. server 9,578 passed / 6 skipped. status → completed. |
