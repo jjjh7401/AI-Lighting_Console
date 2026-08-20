@@ -7105,6 +7105,116 @@ def _assign_writes(calls):
     ]
 
 
+class TestPositionFxIntentFrame:
+    """SPEC-COPILOT-INTENT-001 M1~M3 — 어휘가 라우터가 아니라 후보라는 계약.
+
+    2026-08-19 실측 재현 케이스: "원형 회전 R/G **컬러** 페이저"가 두 번
+    연속 `_POSITION_FX_VOCABULARY` circle 정규식에 잡혀 팬/틸트 서클
+    빌더로 갔고, 두 번째 발화의 명시적 부정("포지션이 아니라 컬러다")조차
+    무시됐다. 정규식은 부정을 읽지 못하고 첫-매치가 곧 판정이기 때문이다.
+
+    겨누는 것: (1) 명시적 부정은 하드 베토 — 좌표 판독조차 하지 않고
+    빠진다, (2) 비-포지션 속성축이 주체로 명시되고 포지션 축 단어가 없으면
+    카드 1장으로 축을 확정한다, (3) 그 카드에서 컬러를 고르면 포지션
+    빌더는 저장 0건으로 빠진다, (4) 포지션을 고르면 기존 몸통이 그대로
+    돈다, (5) 방향·형상 해석은 회신에 근거가 실린다(FID 순서가 아니라
+    좌표).
+    """
+
+    _SWEEP = "좌우 스윕 시퀀스 201 만들어줘, FX 프리셋 41번부터"
+
+    def _run(self, tmp_path, text, *, answers=(), **rig):
+        provider = ScriptedProvider([_final("확인하겠습니다")])
+        session, _console, _audit, _sent, _ = _session(tmp_path, provider)
+        calls: list[ToolCall] = []
+        session._registry = _ExecutorPageRegistry(calls, **rig)
+        chan = _AnsweringChannel(answers)
+        session._question_channel = chan
+        event = session.run_instruction(text)
+        return event, calls, chan
+
+    @staticmethod
+    def _spatial_reads(calls):
+        return [call for call in calls if call.name == "get_spatial_context"]
+
+    @staticmethod
+    def _store_writes(calls):
+        return [
+            call
+            for call in _writes(calls)
+            if any("Store Sequence" in cmd for cmd in call.arguments["commands"])
+        ]
+
+    # ---- (1) 명시적 부정 = 하드 베토 ----
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "포지션은 건드리지 말고 컬러 서클 시퀀스 만들어줘",
+            "포지션이 아니라 컬러다 — 원을 그리는 시퀀스 만들어줘",
+            "빔은 아니고 색만, 웨이브 시퀀스 만들어줘",
+            "무빙 말고 컬러로 스윕 시퀀스 만들어줘",
+        ],
+    )
+    def test_an_explicit_negation_vetoes_the_position_builder(self, tmp_path, text):
+        _event, calls, chan = self._run(tmp_path, text)
+
+        # 베토는 좌표 판독 **앞**에서 끝난다 — 콘솔 왕복을 쓰지 않는다.
+        assert self._spatial_reads(calls) == []
+        assert self._store_writes(calls) == []
+        assert chan.asked == []
+
+    # ---- (2)(3) 축 충돌은 카드 1장, 컬러를 고르면 포지션 빌더가 빠진다 ----
+
+    def test_a_non_position_attribute_asks_one_axis_card(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "R/G 컬러가 원을 그리며 도는 시퀀스 201 만들어줘, FX 프리셋 41번부터",
+            answers=["색이 바뀐다 (장비는 고정)"],
+        )
+
+        axis_cards = [q for q in chan.asked if "무엇이" in q.prompt]
+        assert len(axis_cards) == 1
+        labels = [option.label for option in axis_cards[0].options]
+        assert any("색" in label for label in labels)
+        assert any("빔" in label for label in labels)
+        # 컬러를 골랐으므로 포지션 빌더는 저장 0건으로 빠진다.
+        assert self._store_writes(calls) == []
+        assert self._spatial_reads(calls) == []
+
+    def test_choosing_the_beam_axis_keeps_the_position_body(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "R/G 컬러가 원을 그리며 도는 시퀀스 201 만들어줘, FX 프리셋 41번부터",
+            answers=["빔이 움직인다 (포지션 이펙트)", "걸기"],
+        )
+
+        assert len(self._spatial_reads(calls)) == 1
+        assert len(self._store_writes(calls)) == 1
+
+    # ---- (4) 포지션 축 단어가 함께 있으면 카드 없이 기존 경로 ----
+
+    def test_an_explicit_position_word_needs_no_card(self, tmp_path):
+        _event, calls, chan = self._run(
+            tmp_path,
+            "컬러 프리셋도 쓰는 포지션 이펙트 서클 시퀀스 201 만들어줘, FX 프리셋 41번부터",
+            answers=["걸기"],
+        )
+
+        assert [q for q in chan.asked if "무엇이" in q.prompt] == []
+        assert len(self._store_writes(calls)) == 1
+
+    # ---- (5) 해석 근거를 회신에 싣는다 ----
+
+    def test_the_reply_states_how_the_geometry_was_derived(self, tmp_path):
+        event, _calls, _chan = self._run(tmp_path, self._SWEEP, answers=["건너뛰기"])
+
+        assert "좌표 해석" in event["text"]
+        assert "FID 순서" in event["text"]
+        # 실측 범위가 문면에 들어간다 — 스텁 리그는 x −4.0~+4.0.
+        assert "-4.0" in event["text"] and "4.0" in event["text"]
+
+
 class TestPositionFxExecutorOffer:
     """시퀀스 저장 성공 직후의 실행기 할당 제안 — 2026-08-16 Executor 105
     사고(점유 오판 위의 Assign이 기존 바인딩을 덮어씀)의 재발 방지 계약.

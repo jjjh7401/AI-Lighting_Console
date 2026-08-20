@@ -1759,6 +1759,29 @@ _POSITION_FX_VOCABULARY: tuple[tuple[str, re.Pattern[str], str], ...] = (
 _POSITION_FX_NOUN = re.compile(r"시퀀스|포지션\s*이펙트", re.IGNORECASE)
 _POSITION_FX_VERB = re.compile(r"만들|생성|저장|걸어")
 
+# SPEC-COPILOT-INTENT-001 M1 — **명시적 부정은 하드 베토.** 위 어휘는 첫-매치가
+# 곧 판정이라 "포지션이 아니라 컬러다"를 읽을 자리가 없다. 2026-08-19 실측:
+# "원형 회전 R/G 컬러 페이저" 요청이 circle 정규식에 잡혀 팬/틸트 빌더로 갔고,
+# 다음 발화에서 "컬러만, 포지션 아님"이라고 못박아도 **같은 곳으로 다시 갔다**.
+# `아니면`(선택 접속)은 부정이 아니므로 제외한다 — "팬 아니면 틸트로"는 베토가
+# 아니다.
+_POSITION_FX_VETO = re.compile(
+    r"(?:포지션|무빙|빔|팬|틸트|position|pan|tilt)\s*(?:은|는|이|가|을|를)?\s*"
+    r"(?:아니(?!면|냐|니)|말고|말구|제외|건드리지)",
+    re.IGNORECASE,
+)
+
+# M2 — 비-포지션 속성축이 이펙트의 **주체**로 명시된 문장. 이 단어가 있고
+# 포지션 축 단어(`_POSITION_AXIS_CLAIM`)가 **없으면** 어휘 후보 둘이 맞서는
+# 상태이므로, 조용히 포지션을 택하지 말고 카드 1장으로 축을 확정한다.
+_NON_POSITION_ATTRIBUTE: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("색(컬러)", re.compile(r"컬러|색깔|색상|색이|색을|색만|colou?r|rgb", re.IGNORECASE)),
+    ("밝기(디머)", re.compile(r"디머|밝기|dimmer", re.IGNORECASE)),
+)
+_POSITION_AXIS_CLAIM = re.compile(
+    r"포지션|무빙|빔|팬|틸트|position|pan|tilt|조준|겨[누냥]", re.IGNORECASE
+)
+
 # 재생성: 이미 저장된 구간을 **제자리에서** 다시 잡는다. 큐는 프리셋 REFERENCE를
 # 들고 있으므로 같은 번호에 다시 저장하면 그 프리셋을 쓰는 모든 큐가 따라온다.
 # `_BASIC_POSITIONS_REQUEST`는 동사 대안에 '잡아'를 이미 갖고 있어 재생성 문장을
@@ -3853,6 +3876,27 @@ class ChatSession:
         )
 
     @staticmethod
+    def _axis_interpretation_note(
+        fixtures: list[tuple[int, tuple[float, float, float]]],
+    ) -> str:
+        """방향·형상 해석의 **근거**를 사용자에게 보이는 한 줄 (INTENT-001 M3).
+
+        2026-08-19 실측 사고: '좌→우'를 FID 순서로 해석해 8개 밴드를 만들었고,
+        실제 좌표에서는 FID 1이 x=+3.0(우측)·FID 49~53이 x=−9.0(좌측)이었다 —
+        즉 FID 순서와 무대 좌우는 무관했다. 오해가 조용히 성립하지 않도록,
+        기하를 좌표에서 뽑은 핸들러는 **무엇을 어떻게 읽었는지** 회신에
+        적는다. 사용자가 이 한 줄을 보고 즉시 잡을 수 있는 것이 목적이며,
+        판독하지 못한 장비는 애초에 ``_read_pointing_coordinates``가 제외한다.
+        """
+        xs = [position[0] for _fid, position in fixtures]
+        ys = [position[1] for _fid, position in fixtures]
+        return (
+            f"좌표 해석: 좌표 확인 {len(fixtures)}대 · "
+            f"X {min(xs):.1f}~{max(xs):.1f} · Y {min(ys):.1f}~{max(ys):.1f} m "
+            "— FID 순서가 아니라 콘솔 패치 좌표로 배치를 판단했습니다."
+        )
+
+    @staticmethod
     def _pointing_refusal(text: str) -> InstructionResult:
         """A no-op turn result carrying WHY no aim command was sent."""
         return InstructionResult(
@@ -4352,6 +4396,33 @@ class ChatSession:
             return None
         if _POSITION_FX_NOUN.search(text) is None or _POSITION_FX_VERB.search(text) is None:
             return None
+        # M1 — 명시적 부정은 좌표 판독 **앞**에서 끝난다. 이 경로는 팬/틸트를
+        # 쓰므로, 포지션 축을 배제한 문장에 대해서는 후보 자격 자체가 없다.
+        # 회신을 만들지 않고 None으로 빠져 기존 폴백(모델·compose_fx)이 그
+        # 문장을 그대로 받게 한다 — 여기서 카드를 띄우면 컬러 요청에 포지션
+        # 질문이 붙는다.
+        if _POSITION_FX_VETO.search(text) is not None:
+            return None
+        # M2 — 축 후보가 맞설 때는 조용히 포지션을 택하지 않는다. 카드 1장.
+        conflict = next(
+            (name for name, pattern in _NON_POSITION_ATTRIBUTE if pattern.search(text) is not None),
+            None,
+        )
+        if conflict is not None and _POSITION_AXIS_CLAIM.search(text) is None:
+            answer = self._ask_one(
+                f"'{conflict}'을(를) 말씀하셨는데 이 경로는 빔을 움직입니다 — "
+                "무엇이 움직이는 이펙트인가요?",
+                options=(
+                    QuestionOption(label=f"{conflict}이 바뀐다 (장비는 고정)"),
+                    QuestionOption(label="빔이 움직인다 (포지션 이펙트)"),
+                ),
+                why=(
+                    "포지션 이펙트는 팬/틸트를 쓰고 컬러·디머는 건드리지 않습니다. "
+                    "축을 잘못 잡으면 요청과 다른 시퀀스가 저장됩니다."
+                ),
+            )
+            if answer is None or _POSITION_AXIS_CLAIM.search(answer) is None:
+                return None
         effect, label = matched
         fixtures = self._read_pointing_coordinates("position-fx-read")
         if isinstance(fixtures, InstructionResult):
@@ -4453,7 +4524,9 @@ class ChatSession:
             f"{label} 포지션 이펙트를 시퀀스 {sequence_no}에 저장 요청했습니다 "
             f"— FX 포지션 프리셋 2.{fx_preset_start}~2.{span_end} 구간을 "
             "참조합니다 (프리셋 참조 유지, 저장 후 ClearAll). 승인 또는 라이브 "
-            "잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요."
+            "잠금 상태에 따른 결과를 아래 명령 상태에서 확인해 주세요.\n"
+            # M3 — 기하를 좌표에서 뽑았으므로 그 근거를 같은 회신에 싣는다.
+            f"{self._axis_interpretation_note(fixtures)}"
         )
         outcomes = tuple(executed.command_outcomes)
         # 실행기 제안은 저장 번들이 **전건 executed_ok**로 끝났을 때만 — 승인
