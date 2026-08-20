@@ -18,7 +18,11 @@ from pathlib import Path
 
 from server.resources import resource_base
 
-SUPPORTED_PROVIDERS = ("anthropic", "claude_code", "gemini")
+# "ollama" is the LOCAL provider (SPEC-COPILOT-LOCALLM-001): a model running on
+# this machine through the Ollama daemon. It is the only entry here that needs
+# no credential at all, which is exactly why it is the offline fallback — a
+# venue with no internet still has a copilot.
+SUPPORTED_PROVIDERS = ("anthropic", "claude_code", "gemini", "ollama")
 
 
 def default_config_path() -> Path:
@@ -75,6 +79,22 @@ class GeminiSettings:
 
 
 @dataclass(frozen=True)
+class OllamaSettings:
+    """Local Ollama settings — model tag plus daemon reachability.
+
+    ``keep_alive`` is configuration rather than a constant because it is an
+    operational trade the venue makes: measured 2026-08-20, a cold prompt on
+    this app's 28k-token prefix costs 54 s on gemma4:26b, so an unload between
+    instructions is felt. A long hold keeps ~17 GB resident; a short one gives
+    the memory back and pays the minute again.
+    """
+
+    model: str
+    host: str = "http://127.0.0.1:11434"
+    keep_alive: str = "60m"
+
+
+@dataclass(frozen=True)
 class FallbackSettings:
     """REQ-MVP-040 part ii persistent-miss detection parameters (AD2-m1)."""
 
@@ -97,6 +117,7 @@ class ProviderConfig:
     anthropic: AnthropicSettings
     claude_code: ClaudeCodeSettings
     gemini: GeminiSettings
+    ollama: OllamaSettings
     fallback: FallbackSettings
 
 
@@ -162,6 +183,15 @@ def load_provider_config(path: Path | str = DEFAULT_CONFIG_PATH) -> ProviderConf
     if claude_code_model not in ("opus", "sonnet", "fable"):
         raise ConfigError(f"provider.claude_code.model is unsupported: {claude_code_model!r}")
     gemini_table = _provider_table(data, "gemini")
+    # Defaulted rather than required: a config written before the local
+    # provider existed must keep loading, and it does — the section only has
+    # to be present when `active = "ollama"` names a model to run.
+    ollama_table = provider.get("ollama", {"model": "gemma4:26b"})
+    if not isinstance(ollama_table, dict):
+        raise ConfigError("provider.ollama must be a table")
+    ollama_model = ollama_table.get("model")
+    if not isinstance(ollama_model, str) or not ollama_model.strip():
+        raise ConfigError("provider.ollama.model must be a non-empty Ollama model tag")
     fallback_table = data.get("fallback", {})
     if not isinstance(fallback_table, dict):
         raise ConfigError("[fallback] must be a table")
@@ -196,6 +226,11 @@ def load_provider_config(path: Path | str = DEFAULT_CONFIG_PATH) -> ProviderConf
             effort=str(anthropic_table.get("effort", "high")),
         ),
         claude_code=ClaudeCodeSettings(model=claude_code_model),
+        ollama=OllamaSettings(
+            model=ollama_model,
+            host=str(ollama_table.get("host", "http://127.0.0.1:11434")),
+            keep_alive=str(ollama_table.get("keep_alive", "60m")),
+        ),
         gemini=GeminiSettings(
             model=gemini_table["model"],
             context_caching=bool(gemini_table.get("context_caching", True)),

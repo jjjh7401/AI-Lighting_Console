@@ -10,6 +10,7 @@ import {
   buildSettingsPayload,
   formFromSettings,
   parseSettingsResponse,
+  KEYLESS_PROVIDERS,
   providerLabel,
   validateSettingsForm,
   type SettingsForm,
@@ -162,7 +163,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 키는 OS 자격 증명 저장소에만 저장되며 화면에 다시 표시되지 않습니다.
               </p>
               {loaded.providers
-                .filter((provider) => provider !== "claude_code")
+                .filter((provider) => !KEYLESS_PROVIDERS.includes(provider))
                 .map((provider) => (
                 <div key={provider} className="settings-key-row">
                   <label>
@@ -284,6 +285,13 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 <p className="settings-hint">
                   이 프로바이더의 모델은 설정 파일에 고정되어 있어 여기서 바꿀 수 없습니다.
                   (Claude 구독을 선택하면 Opus·Sonnet·Fable 중에서 고를 수 있습니다.)
+                </p>
+              )}
+              {form.active_provider === "ollama" && (
+                <p className="settings-hint">
+                  로컬 모델은 이 기계에서 돕니다 — 인터넷도 API 키도 필요 없습니다. 대신
+                  기동 후 첫 응답이 1분 가까이 걸리고(모델 적재), 그 뒤로는 빨라집니다.
+                  Ollama가 실행 중이어야 하며, 모델을 미리 받아 두어야 합니다.
                 </p>
               )}
               <label className="settings-field">

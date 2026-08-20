@@ -40,6 +40,23 @@ model = "gemini-3.5-flash"
 context_caching = true
 cache_ttl_seconds = 3600
 
+[provider.ollama]
+# 로컬 오프라인 백업 (SPEC-COPILOT-LOCALLM-001). 인터넷도 API 키도 없는
+# 공연장에서 쓰는 경로다. 쓰려면 위 `active`를 "ollama"로 바꾸고 재시작한다.
+#
+# 선정 근거 (2026-08-20 실측, M5 Pro / onPC 2.4.2):
+#   - 문법 오류율 pooled 0.00% = 0/188 라인 (AC-MVP-002 임계 5%) — 판정 통과
+#   - 도구 선택 14/14, 반복 3회 동일
+#   - 도구 판단 응답 중앙값 0.95초 (Gemini 2.92초)
+#   - 26B A4B(활성 4B MoE)라 12B 밀집 모델보다 빠르고 정확했다
+# 주의: 위 오류율은 mock 콘솔 기준이다. 실기 명령 수용은 별도 검증 대상이다.
+model = "gemma4:26b"
+host = "http://127.0.0.1:11434"
+# 콜드 프롬프트가 54초다(28k 토큰 프리픽스 실측). 언로드되면 다음 턴이 그
+# 54초를 다시 낸다. 길게 잡으면 약 17GB가 상주하고, 짧게 잡으면 메모리를
+# 돌려주는 대신 그 1분을 다시 지불한다.
+keep_alive = "60m"
+
 # REQ-MVP-040(ii) persistent-miss fallback detection (AD2-m1 defaults N=20/M=2).
 [fallback]
 window_turns = 20

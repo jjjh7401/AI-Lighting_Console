@@ -59,6 +59,11 @@ REDACTED = "***REDACTED***"
 
 # Provider -> the backend env var name(s) that carry its API key. ``gemini``
 # stores ONE key but injects both the primary name and the google-genai alias.
+# A provider absent from this map carries NO API key at all — "claude_code"
+# owns a subscription OAuth session in the Keychain, and "ollama" runs on this
+# machine. Both are supported providers, so the lookup below must treat an
+# absent entry as "nothing to inject" rather than raising: a KeyError here
+# turned selecting a keyless provider into a start-up crash.
 _PROVIDER_ENV_VARS: dict[str, tuple[str, ...]] = {
     "anthropic": ("ANTHROPIC_API_KEY",),
     "gemini": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
@@ -239,7 +244,9 @@ def inject_key_for_provider(
     """
     provider = _require_provider(provider)
     target = os.environ if environ is None else environ
-    names = list(_PROVIDER_ENV_VARS[provider])
+    names = list(_PROVIDER_ENV_VARS.get(provider, ()))
+    if not names:
+        return []  # keyless provider — see _PROVIDER_ENV_VARS
     if not overwrite and any(name in target for name in names):
         return []
     key = get_api_key(provider, session=session)

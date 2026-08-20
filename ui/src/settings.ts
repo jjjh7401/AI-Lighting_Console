@@ -7,14 +7,22 @@
 // SECURITY: a key value NEVER rides the settings payload and is NEVER returned by
 // GET /api/settings — the server exposes only a per-provider "key set" boolean.
 
-export const PROVIDERS = ["anthropic", "claude_code", "gemini"] as const;
+export const PROVIDERS = ["anthropic", "claude_code", "gemini", "ollama"] as const;
 export type ProviderId = (typeof PROVIDERS)[number];
 
 export const PROVIDER_LABELS: Record<string, string> = {
   anthropic: "Anthropic API",
   claude_code: "Claude 구독",
   gemini: "Gemini",
+  ollama: "로컬 (오프라인)",
 };
+
+/** API 키가 필요 없는 프로바이더 — 키 입력칸을 아예 만들지 않는다.
+ *
+ *  `claude_code`는 구독 OAuth 세션을 Keychain이 들고 있고, `ollama`는 이
+ *  기계에서 돈다. 서버의 `_PROVIDER_ENV_VARS`에 항목이 없는 것과 같은 집합이다
+ *  — 한쪽만 늘리면 있지도 않은 키를 입력하라는 칸이 생긴다. */
+export const KEYLESS_PROVIDERS: readonly string[] = ["claude_code", "ollama"];
 
 export function providerLabel(provider: string): string {
   return PROVIDER_LABELS[provider] ?? provider;

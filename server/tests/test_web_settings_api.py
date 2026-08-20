@@ -121,9 +121,18 @@ class TestGetSettings:
         assert body["settings"]["console_port"] == 8000
         assert body["settings"]["receive_port"] == 9000
         assert body["settings"]["active_provider"] == "gemini"
-        assert set(body["providers"]) == {"anthropic", "claude_code", "gemini"}
-        # No key configured yet -> both false.
-        assert body["keys"] == {"anthropic": False, "claude_code": False, "gemini": False}
+        # 2026-08-20: "ollama"(로컬 오프라인 백업)가 더해졌다. 목록은 고정
+        # 등기이므로 손으로 올린다 — 기본 선택은 여전히 Gemini다(위 단언).
+        assert set(body["providers"]) == {"anthropic", "claude_code", "gemini", "ollama"}
+        # No key configured yet -> all false. 키가 없는 프로바이더도 여기서는
+        # False로 보고된다 — "키 없음"은 설정 화면이 칸을 감출 근거이지,
+        # 이 응답이 항목을 빠뜨릴 근거가 아니다.
+        assert body["keys"] == {
+            "anthropic": False,
+            "claude_code": False,
+            "gemini": False,
+            "ollama": False,
+        }
         assert body["keystore_available"] is True
 
     def test_reflects_persisted_user_settings(self, tmp_path, memory_keyring):
@@ -171,8 +180,13 @@ class TestGetSettings:
         assert response.status_code == 200
         body = response.json()
         assert body["keystore_available"] is False
-        # No key readable -> both false, no crash.
-        assert body["keys"] == {"anthropic": False, "claude_code": False, "gemini": False}
+        # No key readable -> all false, no crash.
+        assert body["keys"] == {
+            "anthropic": False,
+            "claude_code": False,
+            "gemini": False,
+            "ollama": False,
+        }
 
 
 # ----------------------------------------------------------------- POST /settings
