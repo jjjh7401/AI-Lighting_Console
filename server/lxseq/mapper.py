@@ -224,8 +224,41 @@ def _occupancy_skip(
     occupants: tuple[Occupant, ...],
     existing_fid_set: frozenset[int],
 ) -> SkippedRow | None:
-    """자리·FID 점유를 행 단위로 판정한다. 덮어쓰는 경로는 존재하지 않는다."""
+    """자리·FID 점유를 행 단위로 판정한다. 덮어쓰는 경로는 존재하지 않는다.
+
+    **자리를 먼저 본다.** 이미 패치된 행은 자리 충돌과 FID 점유가 **동시에** 참인데,
+    FID 를 먼저 보면 `fid_occupied`("그 번호는 쓰인다")로 나가고 그 라벨이 지시하는
+    다음 행동은 «다른 FID 로 다시 패치하라»다 — 같은 리그를 한 벌 더 만든다. 이 앱에는
+    실행 취소가 없다. 두 조건이 겹칠 때 정직한 답은 `already_patched`(할 일 없음)다.
+    """
     address = _address_text(record)
+
+    # 구간 **안에서 시작하는** 장비만 확정 충돌이다(addressfit 규약 그대로).
+    fit = evaluate(address, count=1, width=channels, occupants=occupants)
+    first = fit.collisions[0] if fit.collisions else None
+    occupant = (
+        {
+            "address": f"{first.universe}.{first.address}",
+            "name": first.name,
+            "fixture_type": first.fixture_type,
+        }
+        if first is not None
+        else None
+    )
+
+    if (
+        first is not None
+        and (first.fixture_type or "") == console_type
+        and first.universe == record.universe
+        and first.address == record.address
+    ):
+        return SkippedRow(
+            fid=record.fid,
+            address=address,
+            kind="already_patched",
+            detail="같은 타입이 같은 자리에 이미 있다 — 이미 패치됨",
+            occupant=occupant,
+        )
 
     if record.fid in existing_fid_set:
         return SkippedRow(
@@ -233,31 +266,17 @@ def _occupancy_skip(
             address=address,
             kind="fid_occupied",
             detail=f"FID {record.fid}는 콘솔에 이미 있다",
+            occupant=occupant,
             occupied_fid=record.fid,
         )
 
-    # 구간 **안에서 시작하는** 장비만 확정 충돌이다(addressfit 규약 그대로).
-    fit = evaluate(address, count=1, width=channels, occupants=occupants)
-    if fit.collisions:
-        first = fit.collisions[0]
-        same_type = (first.fixture_type or "") == console_type
-        same_start = first.universe == record.universe and first.address == record.address
-        kind = "already_patched" if (same_type and same_start) else "address_occupied"
-        detail = (
-            "같은 타입이 같은 자리에 이미 있다 — 이미 패치됨"
-            if kind == "already_patched"
-            else "그 자리를 다른 장비가 쓰고 있다"
-        )
+    if first is not None:
         return SkippedRow(
             fid=record.fid,
             address=address,
-            kind=kind,
-            detail=detail,
-            occupant={
-                "address": f"{first.universe}.{first.address}",
-                "name": first.name,
-                "fixture_type": first.fixture_type,
-            },
+            kind="address_occupied",
+            detail="그 자리를 다른 장비가 쓰고 있다",
+            occupant=occupant,
         )
     return None
 
