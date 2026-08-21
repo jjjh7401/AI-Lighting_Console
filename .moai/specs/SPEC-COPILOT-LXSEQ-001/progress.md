@@ -577,7 +577,59 @@ fid_read    : known 86 · unresolved 0
 
 **영향**: 이 콘솔의 열거는 19대에서 절단된다. 즉 리그가 그 선을 넘는 순간 `import_lxseq_patch`는 **어떤 계획도 세우지 못한다** — 이번 멱등 확인만이 아니라 향후 모든 패치 임포트가 `console_read_incomplete`로 막힌다. 방향은 안전한 쪽(fail-closed, 쓰기 0)이지만, 실기에서 이 툴은 첫 임포트 이후 사실상 무력해진다. AC-LXSEQ-013 ①의 `already_patched` 경로도 실기에서는 도달 불가다 — 오프라인 테스트가 통과한 이유는 가짜 콘솔이 절단되지 않기 때문이다.
 
-**수정하지 않았다.** M2 파일이고 안전 판정 로직이며, M3의 순서 교정과 달리 «어느 caveat까지 통과시킬 것인가»는 감독·리드 판단이 필요한 결정이다. 후속 카드로 넘긴다.
+#### D1 수정 — 형제 규약에 맞춤 (감독 결정으로 t9 안에서 처리, 커밋 `d48d4b7`)
+
+새 정책을 만든 것이 아니라 **이미 문서화된 규약에 맞춘 것**이다. `_judge_console_read`가 `completeness` 라벨 대신 `console_read_caveat(inventory)["kind"] == CONSOLE_READ_INCOMPLETE`로 판정한다 — 형제 호출부 둘과 같은 잣대다. **규약을 넓히지 않았다**: `missing_count > 0`인 진짜 짧은 판독은 그대로 막힌다.
+
+**테스트를 먼저 세웠다.** 이 결함이 오프라인에서 안 잡힌 이유는 「가짜 콘솔은 절단되지 않는다」였으므로, `FakeConsole`에 **절단 변형**(`truncate_at`)을 추가했다 — `childCount`는 진짜 총계로 두고 `children`만 짧아진다. 신규 5건:
+
+| 테스트 | 겨냥 |
+|---|---|
+| `test_a_truncated_but_fully_observed_read_still_plans` (매퍼) | 절단·전수관측 → 12런 86대 |
+| `test_a_genuinely_short_read_still_blocks` (매퍼) | `missing_count > 0` → 여전히 차단 |
+| `test_the_gate_uses_the_repository_criterion_not_the_completeness_label` (매퍼) | 두 인벤토리의 `completeness`가 **똑같이** INCOMPLETE임을 먼저 단언 — 라벨로는 가를 수 없음을 고정 |
+| `test_a_truncating_console_still_reports_already_patched` (툴) | 실기 형상 종단 재현 |
+| `test_a_truncating_console_is_not_vacuously_truncated` (툴) | 절단 변형이 실제로 짧은 목록을 내는가 |
+
+**뮤테이션 3회 — 전부 겨냥 테스트를 죽였다** (양방향으로 확인):
+
+| # | 변형 | 결과 |
+|---|---|---|
+| ① | 잣대를 예전(`completeness` 라벨)으로 되돌림 | 신규 3건 RED — 교정이 하중을 받는다 |
+| ② | caveat 검사를 통째로 제거(규약을 지나치게 넓힘) | 5건 RED — 가드가 느슨해지지 않았다 |
+| ③ | 가짜 콘솔의 절단을 무력화 | 비공허성 1건 RED — 절단 변형이 실재한다 |
+
+복구 후 `git diff --quiet -- server/` 빈 출력 3회 확인.
+
+#### D1 라이브 재검증 — **판독 게이트 열림 확인** (preview, 쓰기 0건)
+
+콘솔의 86대는 그대로 둔 채 `--action preview`만 재실행했다.
+
+```
+판독: complete_enough_to_judge_absence: True · caveat.kind: "console_read_index_domain_unknown"
+런 0 · write_count_planned 0 · 건너뜀 86 · 승인 요청 0 · 배포 검토 0
+콘솔 상태 불변: child_count 86 · children_listed 19 · truncated true
+```
+
+수정 전 `complete_enough_to_judge_absence: False`로 막히던 자리가 **`True`로 열렸다.** 리그가 절단선을 넘으면 툴이 무력해지던 문제는 실기로 닫혔다.
+
+#### 결함 D2 — 실기 `occupant.fixture_type`은 이름이 아니라 **핸들 문자열**이다 (신규, 미수정)
+
+그런데 건너뛴 사유는 `already_patched`가 아니라 `fid_occupied` 86건이다. **원인이 D1과 다르다.**
+
+```
+occupant 표본: {"address": "1.1", "name": "KEY 101", "fixture_type": "FixtureType 10"}
+전 86행 분포 : FixtureType 4:8 · 8:24 · 9:20 · 10:14 · 11:8 · 13:6 · 14:4 · 15:2
+매퍼가 비교하는 값: "Source 4 LED Series 3 Lustr X8" 등 **이름**
+```
+
+실물 콘솔의 `FixtureType` 프로퍼티는 `FixtureType <슬롯>` 형태의 **객체 핸들**을 돌려준다. `_occupancy_skip`의 `already_patched` 갈래는 `(first.fixture_type or "") == console_type`, 즉 **이름 대조**를 요구하므로 실기에서는 절대 참이 되지 않는다. 가짜 콘솔은 이름을 그대로 돌려주므로 오프라인에서는 이 갈래가 성립한다 — **D1과 정확히 같은 계열의 가짜↔실물 괴리다.**
+
+슬롯 번호는 라이브러리 목록과 일치한다(4=Robin Spiider · 8=Mac Aura XB · 9=Rush Par 2 RGBW Zoom · 10=Source 4 LED Series 3 Lustr X8 · 11=Robin MegaPointe · 13=CuePix Blinder WW2 · 14=Atomic 3000 LED · 15=Unique 2 1, 대수 합 86). 즉 **슬롯→이름은 모호하지 않다.**
+
+**영향은 D1보다 작다**: `fid_occupied`도 건너뛰므로 쓰기는 0건이고 중복은 생기지 않는다. 다만 라벨이 지시하는 다음 행동이 여전히 「다른 FID로 다시 패치하라」라, M3에서 라벨 순서를 고친 이유가 실기에서는 아직 살아 있지 않다.
+
+**수정하지 않았다.** 핸들→이름 해석은 라이브러리 판독을 매퍼에 새로 주입해야 하는 **설계 변경**이고, 역방향(이름→슬롯)은 `Robin Spiider` 중복 때문에 모호하다. 리드·감독 판단 대상이다.
 
 #### 관측 — `Robin Spiider` 중복 등록 (추정 없음)
 
@@ -597,9 +649,11 @@ MOVER-D 8대(FID 521~528)는 **슬롯 4**를 잡았다(`FixtureType 4`, 실측).
 | `apply` 런마다 `created` 관측 | PASS | 12런 전부 `created`, 합 86 |
 | 86대 생성이 재조회로 확인 | PASS | 툴과 **독립된** 재조회에서 `child_count 86`, 표본 프로퍼티 대조 일치 |
 | 재실행은 0건 쓰기 | PASS | 런 0 · `write_count_planned` 0 · 배포 0 · 승인 요청 0 |
-| 재실행 사유 `already_patched` 86건 | **FAIL** | 실제 `console_read_incomplete` 86건 — 결함 D1 |
+| 재실행 사유 `already_patched` 86건 | **FAIL** | D1 수정 전 `console_read_incomplete` 86건 → **수정 후 `fid_occupied` 86건**. 판독 게이트는 열렸으나(D1 닫힘) 라벨은 여전히 기대와 다르다 — 원인은 신규 결함 **D2**(실기 `occupant.fixture_type`이 이름이 아닌 핸들 문자열) |
 
-`ASSUMPTION-72/73/74` 판정 및 결함 D1 처분은 sync 단계 또는 후속 카드로 넘긴다.
+D1은 이 카드 안에서 **수정·라이브 재검증 완료**. D2는 신규 발견이며 설계 변경이 필요해 **미수정**이다. `ASSUMPTION-72/73/74` 판정과 D2 처분은 sync 단계 또는 후속 카드로 넘긴다.
+
+**전체 스위트**(D1 수정 후): `uv run pytest server/tests -q` → **9681 passed, 8 skipped, 1 warning in 141.73s**. 기준선 9676 대비 **+5 = 신규 테스트 수와 정확히 일치**, 실패 0.
 
 증거 파일(전부 `.gitignore` 대상 — 본문 원문이 정본): `m4-apply.json` · `m4-apply2.json` · `m4-rerun.json` · `m4-writeprobe.json` · `m4-precheck.json`
 
