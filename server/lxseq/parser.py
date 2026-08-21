@@ -330,8 +330,7 @@ def _reject_cross_row_conflicts(
                     (row_b, fid_b, row_a),
                 ):
                     if row_no in doomed and any(
-                        r.row == row_no and r.kind == "address_overlap_in_file"
-                        for r in rejections
+                        r.row == row_no and r.kind == "address_overlap_in_file" for r in rejections
                     ):
                         continue
                     doomed.add(row_no)
@@ -340,9 +339,7 @@ def _reject_cross_row_conflicts(
                             row=row_no,
                             fid_raw=str(fid_value),
                             kind="address_overlap_in_file",
-                            detail=(
-                                f"universe {universe} span overlaps row {other}"
-                            ),
+                            detail=(f"universe {universe} span overlaps row {other}"),
                         )
                     )
 

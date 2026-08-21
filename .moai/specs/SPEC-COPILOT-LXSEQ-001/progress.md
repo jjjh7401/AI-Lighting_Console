@@ -172,7 +172,45 @@ fixture_csv: "server/tests/fixtures/lxseq/LXSEQ_RIG_01_ShowBase_r3.patch.csv sha
 - **baseline 전체 스위트**: `uv run pytest server/tests/ -q` → **9596 passed, 8 skipped, 1 warning in 144.35s** — plan-phase 기준선(progress.md §E.1: 9596 passed · 8 skipped · 1 warning · 157.34s)과 일치(수치, 시간은 참고치).
 - **AC-LXSEQ-001**: PASS (뮤테이션 ①②는 착수 전 대조·사본 확인을 실제로 수행했으므로 해당 없음).
 
-_<M1 이하 — manager-develop 소유, 착수 예정>_
+### M1 — 파서 (2026-08-21, run 세션 · cycle_type=tdd)
+
+**위임 2회 실패 후 직접 구현.** `Agent()` 스폰이 두 번 모두(격리를 지정하지 않았음에도) `main` 기준 격리 워크트리(`.claude/worktrees/agent-*`, HEAD `453846a`)로 배치돼 본 SPEC이 존재하지 않는 트리에서 깨어났다. 두 에이전트 모두 위치 불일치를 감지하고 **파일 0개 생성·커밋 0건**으로 블로커 반환. 리드 판정(2026-08-21)에 따라 M1은 이 세션이 직접 구현했다.
+
+**RED → GREEN 순서 준수**: 테스트를 먼저 작성해 수집 실패(`ModuleNotFoundError: No module named 'server.lxseq.parser'`)를 확인한 뒤 `parser.py`를 썼다. 단, 이 RED는 **수집 단계 중단**이라 개별 테스트는 하나도 실행되지 않았다 — 각 테스트의 판별력은 아래 뮤테이션으로 별도 증명한다.
+
+- **커밋**: `fc30986` (파서 + 테스트 15건) · 본 커밋(테스트 보강 3건 + ruff format + 기록)
+- **AC-LXSEQ-002** PASS — `uv run pytest server/tests/test_lxseq_parser.py -q -k "real_csv or header"` → 5 passed. 실물 CSV 86 레코드 · 거부 0 · 제외 0, 첫 `fid=101 universe=1 address=1 channels=12 group="KEY"`, 마지막 `fid=430 universe=5 address=322`.
+- **AC-LXSEQ-003** PASS — `-k "reject or overflow or duplicate or overlap"` → 7 passed. 500 통과/502 `universe_overflow`, `1.013–023` → `addr_range_mismatch`, hyphen·em-dash 관용, 중복 FID·구간 겹침은 관여 행 전부 거부.
+- **AC-LXSEQ-004** PASS — `-k "fid_is_not_an_address"` → 4 passed(보강 후). FID 오프셋 3종 + Group/Position 변경에도 자리 집합 불변, AST 스캔 위반 0(스캔 함수 ≥ 3 비공허성 동반).
+- **전체 파일**: `uv run pytest server/tests/test_lxseq_parser.py -q` → **18 passed**(초기 15 + 결함 보강 3).
+- **회귀 없음**: `uv run pytest server/tests/ -q` → **9614 passed, 8 skipped, 1 warning (145.87s)**. M0 baseline 9596 + 신규 18 = 9614, 실패 0.
+- **lint**: `uv run ruff check server/lxseq/ server/tests/test_lxseq_parser.py` → All checks passed. `ruff format` 1건 적용(`test_overlap_preserve.py::test_ruff_format_reports_no_change` PRESERVE 게이트가 적발 → 수정 후 41 passed).
+
+#### 뮤테이션 3회 — 각 AC 묶음의 판별력 검증
+
+각 회차는 `parser.py`만 변형하고 테스트는 불변으로 두었다. 복구는 "14 passed 재현"이 아니라 **`git diff -- server/lxseq/parser.py` 빈 출력**으로 증명했다(부분 복구가 통과로 위장될 수 있어 통과는 복구의 증거가 못 된다).
+
+| # | 겨냥 | 변형 | 결과 |
+|---|---|---|---|
+| 1 | AC-002 | `_resolve_header_map`이 이름 대신 **위치**로 컬럼을 읽게 | `test_header_column_order_scrambled_still_name_matched` **단독** RED (1 failed, 14 passed) — 겨냥한 그 테스트가 맞았다 |
+| 2 | AC-003 | `_addr_range_matches`가 항상 `True` 반환 | `test_reject_addr_range_mismatch_wrong_digits` **단독** RED (1 failed, 14 passed) |
+| 3 | AC-004 | `address = Address + FID % 2` (fid를 자리 계산에 섞음) | AST 스캔은 RED로 잡았으나 **`..._addresses_stable_under_fid_offset`은 GREEN을 유지** → **결함 발견** |
+
+**3회차에서 드러난 테스트 결함과 조치.** AC-LXSEQ-004 ①이 명시한 오프셋 `+1000`은 짝수라 `fid % 2`가 보존돼, fid가 주소에 실제로 섞였는데도 자리 집합이 같게 나왔다. 즉 그 테스트는 "짝수 오프셋에 대해서만" 불변을 검사하고 있었다. 리드 기준(뮤테이션에도 GREEN이면 통과가 아니라 결함)에 따라 조용히 넘기지 않고 보강했다:
+
+- `offset_kind` 3종으로 매개변수화 — `even_1000`(AC 원문 유지) · `odd_1001` · `per_row_varying`(행마다 다른 오프셋)
+- 자리 집합 비교 전 `assert baseline_addrs` 비공허성 단언 추가(빈 집합끼리 같다고 통과하는 길 차단)
+- `test_fid_is_not_an_address_group_and_position_do_not_move_addresses` 신설 — REQ-LXSEQ-003의 "Group·Position을 바꿔도 자리는 변하지 않는다" 절을 직접 검사(기존엔 미검증이었다)
+
+보강 후 같은 뮤테이션을 재투입해 판별력을 확인했다: `odd_1001`·`per_row_varying` 2건이 RED로 잡았다(`even_1000`은 여전히 통과 — 원래 결함이 재현되며, 이것이 보강이 필요했던 이유의 증거다). 복구 후 `git diff` 빈 출력 · 18 passed.
+
+**뮤테이션 4 (추가) — 미검증 부류 닫기.** 3회차 종료 시점에 거부 7부류 중 `address_out_of_range`만 전용 테스트가 없어(도달 경로만 존재) 미검증으로 남아 있었다. 테스트 3건(`Address=0` · `Address=-3` · `Universe=0`)을 추가한 뒤 `if address < 1 or universe < 1:`을 `if False:`로 무력화하니 **추가한 3건이 정확히 RED**가 됐다(3 failed, 18 passed). 복구 후 21 passed, 뮤테이션 마커 0건, 뮤테이션 관련 diff 줄 0.
+
+**최종 수치**: `uv run pytest server/tests/test_lxseq_parser.py -q` → **21 passed**(15 초기 + 3 AC-004 보강 + 3 `address_out_of_range`). lint·format 모두 통과.
+
+**Gaps(잔여 미검증)**: ① 뮤테이션은 AC 묶음당 1~2회라, 한 묶음 안 개별 테스트 **전부**의 판별력이 증명된 것은 아니다(예: AC-002 5건 중 뮤테이션이 겨냥한 것은 열 순서 1건). ② `zero_channels`·`non_integer_field`·`duplicate_fid`·`address_overlap_in_file` 부류는 테스트는 있으나 전용 뮤테이션은 돌리지 않았다 — 존재는 확인됐고 판별력은 미증명이다.
+
+_<M2 이하 — 착수 예정>_
 
 ## §E.3 Run-phase Audit-Ready Signal
 

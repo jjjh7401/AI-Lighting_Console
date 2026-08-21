@@ -204,6 +204,21 @@ def test_zero_channels_row_is_excluded_not_rejected():
     assert len(result.records) == 85
 
 
+@pytest.mark.parametrize(
+    ("field_name", "bad_value"),
+    [("Address", "0"), ("Address", "-3"), ("Universe", "0")],
+)
+def test_reject_address_out_of_range(field_name: str, bad_value: str):
+    rows = _rows_from_text(_load_fixture_text())
+    fieldnames = list(rows[0].keys())
+    bad = _rewrite_row(rows, "101", **{field_name: bad_value})
+    result = parse_patch_csv(_to_csv_text(bad, fieldnames))
+    out_of_range = [r for r in result.rejected if r.kind == "address_out_of_range"]
+    assert len(out_of_range) == 1
+    assert out_of_range[0].fid_raw == "101"
+    assert len(result.records) == 85
+
+
 def test_non_integer_field_rejected_without_raising():
     rows = _rows_from_text(_load_fixture_text())
     fieldnames = list(rows[0].keys())
@@ -219,17 +234,43 @@ def test_non_integer_field_rejected_without_raising():
 # ---------------------------------------------------------------------------
 
 
-def test_fid_is_not_an_address_addresses_stable_under_fid_offset():
+# AC-LXSEQ-004 ①은 +1000만 명시하지만, 짝수 오프셋은 `fid % 2` 같은 홀짝 의존을
+# 통과시킨다(뮤테이션 3에서 실제로 통과했다). 홀수 오프셋과 FID별로 다른 오프셋을
+# 함께 걸어 "FID 값이 어떻게 변하든 자리는 그대로"를 실제로 검사한다.
+@pytest.mark.parametrize("offset_kind", ["even_1000", "odd_1001", "per_row_varying"])
+def test_fid_is_not_an_address_addresses_stable_under_fid_offset(offset_kind: str):
     rows = _rows_from_text(_load_fixture_text())
     fieldnames = list(rows[0].keys())
-    shifted = [dict(r, FID=str(int(r["FID"]) + 1000)) for r in rows]
+
+    if offset_kind == "even_1000":
+        shifted = [dict(r, FID=str(int(r["FID"]) + 1000)) for r in rows]
+    elif offset_kind == "odd_1001":
+        shifted = [dict(r, FID=str(int(r["FID"]) + 1001)) for r in rows]
+    else:
+        shifted = [dict(r, FID=str(int(r["FID"]) + 1000 + i)) for i, r in enumerate(rows)]
 
     baseline = parse_patch_csv(_to_csv_text(rows, fieldnames))
     shifted_result = parse_patch_csv(_to_csv_text(shifted, fieldnames))
 
     baseline_addrs = {(r.universe, r.address) for r in baseline.records}
     shifted_addrs = {(r.universe, r.address) for r in shifted_result.records}
+    assert baseline_addrs  # 비공허성 — 빈 집합끼리 같다고 통과하지 않게
     assert baseline_addrs == shifted_addrs
+
+
+def test_fid_is_not_an_address_group_and_position_do_not_move_addresses():
+    """Group·Position을 바꿔도 자리는 변하지 않는다 (REQ-LXSEQ-003)."""
+    rows = _rows_from_text(_load_fixture_text())
+    fieldnames = list(rows[0].keys())
+    relabeled = [dict(r, Group="ZZZ", Position="어딘가") for r in rows]
+
+    baseline = parse_patch_csv(_to_csv_text(rows, fieldnames))
+    relabeled_result = parse_patch_csv(_to_csv_text(relabeled, fieldnames))
+
+    baseline_addrs = {(r.universe, r.address) for r in baseline.records}
+    relabeled_addrs = {(r.universe, r.address) for r in relabeled_result.records}
+    assert baseline_addrs
+    assert baseline_addrs == relabeled_addrs
 
 
 def test_fid_identifier_not_used_in_address_arithmetic_ast_scan():
