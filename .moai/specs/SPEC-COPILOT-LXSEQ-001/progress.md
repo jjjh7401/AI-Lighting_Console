@@ -417,7 +417,41 @@ SIDE-R    6대  FID 311~316  5.001 ~ 5.150
 
 증거 파일: `.moai/reports/SPEC-COPILOT-LXSEQ-001/m4-probe.json` · `m4-preview.json` — **이 경로는 `.gitignore`(`.moai/reports`)에 걸려 커밋되지 않는다.** 실행한 세션의 디스크에만 있으므로 clean checkout에서는 해석되지 않는다. 그래서 위 관측값은 전부 이 문서 본문에 원문으로 옮겨 적었다 — 판정 근거는 이 절이지 그 파일이 아니다.
 
-_<apply — 리드 승인 + 감독의 Aura XB 모드 확정 대기>_
+#### 감독 결정 — Aura XB 모드 확정 (2026-08-21)
+
+25ch 3종 중 **`Extended - Extended`**. 리그팩 폴더(`02_RIG팩`)에는 CSV와 xlsx뿐이고 서브모드를 적은 문서가 없어 추측 근거가 없었으므로 감독께 직접 여쭈어 받은 답이다(에이전트 추천은 통상값 기반임을 밝히고 물었다). apply 범위도 함께 확정: **모드 확정 후 86대 한 번에**(62대 선행안은 콘솔이 절반 찬 상태에서 2회차를 돌리게 되어 멱등 경로가 실기 첫 시험대가 되므로 기각).
+
+#### preview 재실행 (`--mode-overrides`) — **12런 86대 · 건너뜀 0**
+
+명령: `uv run python -m server.tools.lxseq_e2e --csv <정본 절대경로> --action preview --listen-port 9005 --mode-overrides '{"Martin MAC Aura XB": "Extended - Extended"}' --out .moai/reports/SPEC-COPILOT-LXSEQ-001/m4-preview-override.json` → exit 0
+
+```
+채널 trustworthy: True · sha256 대조: True · is_error: False
+승인 요청 0 · 배포 검토 0 · 콘솔 송신 0건
+런 12 · write_count_planned 86 · skipped 0 · skipped_by_kind {}
+summary_ko: "미리보기 — 쓰기 0건. 런 12개 · 계획 86대 · 건너뛴 행 0건."
+```
+
+**SPEC 기대치(런 12 · 픽스처 86 · FID 합집합 = CSV)와 일치**한다(REQ-LXSEQ-008). `mode_overrides` 재호출 경로가 실기에서 처음 밟혔고 의도대로 동작했다 — 이 경로는 오프라인 툴 테스트에서 미검증 채무였다.
+
+| # | Group | 콘솔 타입 | 모드 | 주소 | 대 | 폭 | FID | 대역 |
+|---|---|---|---|---|---|---|---|---|
+| 0 | KEY | Source 4 LED Series 3 Lustr X8 | Direct | 1.1 | 6 | 12 | 101~106 | 1.001–072 |
+| 1 | FOH | Source 4 LED Series 3 Lustr X8 | Direct | 1.73 | 8 | 12 | 111~118 | 1.073–168 |
+| 2 | BLIND | CuePix Blinder WW2 | 4 channel | 1.169 | 6 | 4 | 601~606 | 1.169–192 |
+| 3 | STROBE | Atomic 3000 LED | Extended | 1.193 | 4 | 14 | 611~614 | 1.193–248 |
+| 4 | HAZE | Unique 2 1 | Mode 0 | 1.249 | 2 | 2 | 621~622 | 1.249–252 |
+| 5 | MOVER-U | Robin MegaPointe | Mode 1 | 2.1 | 8 | 39 | 501~508 | 2.001–312 |
+| 6 | MOVER-D | Robin Spiider | Mode 1 | 3.1 | 8 | 49 | 521~528 | 3.001–392 |
+| 7 | BACK | Mac Aura XB | Extended - Extended | 4.1 | 12 | 25 | 201~212 | 4.001–300 |
+| 8 | SIDE-L | Mac Aura XB | Extended - Extended | 4.301 | 6 | 25 | 301~306 | 4.301–450 |
+| 9 | SIDE-R | Mac Aura XB | Extended - Extended | 5.1 | 6 | 25 | 311~316 | 5.001–150 |
+| 10 | WASH-U | Rush Par 2 RGBW Zoom | 9 channel | 5.151 | 10 | 9 | 401~410 | 5.151–240 |
+| 11 | WASH-D | Rush Par 2 RGBW Zoom | 9 channel | 5.241 | 10 | 9 | 421~430 | 5.241–330 |
+
+합계 **86대**. 런 7·8이 `4.001–300`/`4.301–450`으로 갈린 것은 `Group` 경계(결정 I)이며, 두 구간을 합치면 SPEC v0.2.2 R2가 실물 재계산으로 정정한 **`4.001–450`**과 일치한다.
+
+_<apply — 리드 승인 대기. 계획은 확정됐고 실행만 남았다.>_
 
 ## §E.3 Run-phase Audit-Ready Signal
 
