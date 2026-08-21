@@ -4421,8 +4421,7 @@ def build_toolset(
         if overrides_arg is not None and not isinstance(overrides_arg, Mapping):
             return _error_result(
                 call,
-                '\'mode_overrides\'는 {"<CSV FixtureType>": "<콘솔 모드 이름>"} '
-                "객체여야 한다",
+                '\'mode_overrides\'는 {"<CSV FixtureType>": "<콘솔 모드 이름>"} 객체여야 한다',
             )
         mode_overrides = {str(k): str(v) for k, v in (overrides_arg or {}).items()}
 
@@ -4659,13 +4658,10 @@ def build_toolset(
                 f"계획 {plan.write_count_planned}대 · 건너뛴 행 {skipped_count}건."
             )
         elif not plan.runs:
-            summary = (
-                f"할 일 없음 — 새로 만들 행이 없다. 건너뛴 행 {skipped_count}건, 0대 생성."
-            )
+            summary = f"할 일 없음 — 새로 만들 행이 없다. 건너뛴 행 {skipped_count}건, 0대 생성."
         elif stopped_at is None and created_total == plan.write_count_planned:
             summary = (
-                f"{created_total}대를 만들었고 콘솔 재조회로 확인했다. "
-                f"건너뛴 행 {skipped_count}건."
+                f"{created_total}대를 만들었고 콘솔 재조회로 확인했다. 건너뛴 행 {skipped_count}건."
             )
         else:
             summary = (
@@ -9207,15 +9203,14 @@ def build_toolset(
                         "type": "array",
                         "items": {"type": "integer"},
                         "description": (
-                            "선택. 이 FID들만 대상으로 삼는다. 생략하면 파일의 모든 "
-                            "행이 대상이다."
+                            "선택. 이 FID들만 대상으로 삼는다. 생략하면 파일의 모든 행이 대상이다."
                         ),
                     },
                     "mode_overrides": {
                         "type": "object",
                         "additionalProperties": {"type": "string"},
                         "description": (
-                            "선택. {\"<CSV FixtureType>\": \"<콘솔 모드 이름>\"} — "
+                            '선택. {"<CSV FixtureType>": "<콘솔 모드 이름>"} — '
                             "mode_unresolved로 건너뛴 타입의 모드를 사용자가 고른 뒤 "
                             "다시 부르는 수단이다. 콘솔 실측 목록에 있는 이름만 "
                             "받아들여지니 지어내지 마라."

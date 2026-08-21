@@ -401,9 +401,7 @@ def test_apply_propagates_awaited_human_and_stops():
     console = FakeConsole()
     deploy = FakeDeploy(console)
     runner = FakeExec(console, create=False)  # 실행해도 아무것도 안 생긴다
-    registry = _toolset(
-        console, exec_port=runner, deploy=deploy, question=Answers(ANSWER_CANCEL)
-    )
+    registry = _toolset(console, exec_port=runner, deploy=deploy, question=Answers(ANSWER_CANCEL))
     payload, execution = _call(registry, action="apply")
 
     assert payload["apply"]["runs"][0]["status"] == "not_run"

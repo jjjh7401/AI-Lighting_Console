@@ -206,6 +206,12 @@ _TOOLS_PATH = "server/orchestrator/tools.py"
 # 사라진 시작점 1088·1111 — 삽입이 두 이웃 헝크를 하나로 합쳐 unified=0
 # 경계가 이동한 결과이며 삭제가 아니다. 두 보호 구간(234..238 / 524..569)
 # 침범은 ZERO — 실제 불변식은 그대로 성립한다.
+# LXSEQ (SPEC-COPILOT-LXSEQ-001, M3)가 import_lxseq_patch를 같은 방식으로 등재했다:
+# 임포트 2줄 · TOOL_NAMES 1줄 · _LXSEQ_GUIDANCE 상수 · 핸들러 · ToolDefinition ·
+# handlers 1줄. 실측 델타: 65→65 hunks(수는 같다). 새 시작점 971·1088·1181,
+# 사라진 시작점 1029·1129·1179 — 삽입이 이웃 헝크 경계를 unified=0에서 옮긴 결과이며
+# 삭제가 아니다(BASE..HEAD의 tools.py 삭제 줄은 0). 두 보호 구간(234..238 / 524..569)
+# 침범은 ZERO — 실제 불변식은 그대로 성립한다.
 _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     11,
     12,
@@ -235,6 +241,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     593,
     620,
     952,
+    971,
     989,
     993,
     995,
@@ -242,7 +249,6 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     1007,
     1011,
     1013,
-    1029,
     1035,
     1048,
     1061,
@@ -250,6 +256,7 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     1070,
     1072,
     1081,
+    1088,
     1096,
     1103,
     1110,
@@ -258,12 +265,11 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     1118,
     1122,
     1124,
-    1129,
     1140,
     1146,
     1167,
     1175,
-    1179,
+    1181,
     1183,
     1192,
     1196,
