@@ -451,7 +451,29 @@ summary_ko: "미리보기 — 쓰기 0건. 런 12개 · 계획 86대 · 건너�
 
 합계 **86대**. 런 7·8이 `4.001–300`/`4.301–450`으로 갈린 것은 `Group` 경계(결정 I)이며, 두 구간을 합치면 SPEC v0.2.2 R2가 실물 재계산으로 정정한 **`4.001–450`**과 일치한다.
 
-_<apply — 리드 승인 대기. 계획은 확정됐고 실행만 남았다.>_
+#### 쓰기 채널 날조 대조군 (apply 직전, 리드 승인 조건)
+
+판독 채널 검증은 **쓰기 채널을 덮지 않는다**. `preview`는 명령을 한 발도 쏘지 않으므로 「틀린 명령이 `ok`로 오는가」는 별도로 봐야 한다. 그래서 apply 전에 1발을 쐈다.
+
+명령: `uv run python -m server.tools.lxseq_e2e --csv <정본 절대경로> --write-probe --approve --listen-port 9005 --out .moai/reports/SPEC-COPILOT-LXSEQ-001/m4-writeprobe.json`
+
+```
+보낸 명령: 'ZZZNOTACOMMAND'
+is_error : True
+승인 요청: 0 건
+outcome  : {"command": "ZZZNOTACOMMAND", "status": "failed", "detail": "Illegal object"}
+payload  : {"all_ok": false, "commands": [{"command": "ZZZNOTACOMMAND",
+            "status": "failed", "detail": "Illegal object"}]}
+trustworthy: True
+```
+
+**콘솔이 «Illegal object»로 거부했다 — `executed_ok`가 아니다.** 이 채널의 성공 응답은 증거로 쓸 수 있다.
+
+대조군 문자열 선택 근거: 동사도 객체도 플래그도 아닌 **단일 미지 토큰**이라 파싱이 성립하지 않고 어떤 객체도 겨냥하지 않는다. 유효 명령에 오타 플래그를 붙이는 형태(`Store … /CueOnlyy`)는 **쓰지 않았다** — 이 저장소 실측 기록에서 그 형태는 유효한 앞부분이 실행되어 `ok`+저장까지 됐다(`lesson-fabricated-control-probe.md`). 대조군은 부분적으로도 유효해서는 안 된다.
+
+**부수 관측 1건(추적 대상)**: `승인 요청 0건` — 안전 게이트가 이 명령에 승인 번들을 요구하지 않았다. 즉 게이트는 이 문자열을 위험 동사로 분류하지 않았다. 대조군 자체는 무해했으나, **게이트가 모든 송신에 승인을 요구하지는 않는다**는 사실이 여기서 실측됐다. apply의 `Plugin '…'` 실행 역시 같을 수 있다(플러그인 **배포**는 `DeployPipeline` 검토를 별도로 거친다).
+
+_<apply — 실행 직전. 감독의 Patch 편집기 열림 확인 대기.>_
 
 ## §E.3 Run-phase Audit-Ready Signal
 

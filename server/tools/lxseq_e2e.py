@@ -65,6 +65,19 @@ FABRICATED_PATH = "Patch/FixtureTypesZZZNotAThing/9999"
 #: 정상 왕복이 물어보는 경로 — 툴이 타입을 확정할 때 쓰는 바로 그 트리다.
 LIVE_PATH = "Patch/FixtureTypes"
 
+#: 픽스처 루트. `prechk.inventory.FIXTURE_ROOT`와 같은 자리를 **독립적으로** 되읽어
+#: apply 뒤 몇 대가 실제로 있는지 확인한다. 툴 응답을 생성 증거로 쓰지 않는다 —
+#: 명령이 성공한 것과 대상이 바뀐 것은 다르다.
+FIXTURES_PATH = "Patch/Stages/1/Fixtures"
+
+#: **쓰기 채널 날조 대조군.** 동사도 객체도 플래그도 아닌 단일 미지 토큰이라
+#: 파싱 자체가 성립하지 않고 어떤 객체도 겨냥하지 않는다. 기대값은 «ok 아님».
+#:
+#: 유효 명령에 오타 플래그를 붙이는 형태(`Store ... /CueOnlyy`)를 쓰지 않는 이유가
+#: 있다 — 이 저장소의 실측 기록에서 그 형태는 **유효한 앞부분이 실행되고 ok+저장까지**
+#: 됐다. 대조군은 «틀렸는데 통과하는가»를 봐야 하므로, 부분적으로도 유효해서는 안 된다.
+WRITE_PROBE_COMMAND = "ZZZNOTACOMMAND"
+
 
 class _RecordingApproval:
     """번들 승인 채널. 승인 여부와 상관없이 요청을 그대로 기록한다."""
@@ -156,6 +169,52 @@ def _probe_channel(state_port) -> dict:
     }
 
 
+def _read_fixtures(state_port, property_port) -> dict:
+    """픽스처 루트를 **직접** 되읽는다 — 툴 응답과 독립된 관측이다.
+
+    `childCount`가 진짜 총계이고 `children`은 절단될 수 있다(이 저장소의 반복
+    함정). 둘을 따로 싣고, 절단이면 그 사실을 그대로 올린다 — 짧은 판독을
+    «없음»으로 읽으면 이미 있는 장비를 덮어쓰게 된다.
+    """
+    try:
+        answer = state_port.query_state(FIXTURES_PATH)
+    except Exception as error:
+        return {"path": FIXTURES_PATH, "raised": f"{type(error).__name__}: {error}"}
+    if not isinstance(answer, dict):
+        return {"path": FIXTURES_PATH, "raw": repr(answer)[:200]}
+    node = answer.get("node") or {}
+    children = answer.get("children") or []
+    child_count = node.get("childCount") if isinstance(node, dict) else None
+    listed = len(children) if isinstance(children, list) else 0
+    rows = []
+    for child in children if isinstance(children, list) else []:
+        if not isinstance(child, dict):
+            continue
+        slot = child.get("i")
+        row = {"slot": slot, "name": child.get("name")}
+        for prop in ("FID", "Patch", "FixtureType", "Mode"):
+            try:
+                answered = property_port.query_property(f"{FIXTURES_PATH}/{slot}", prop)
+            except Exception as error:
+                row[prop] = f"<raised {type(error).__name__}>"
+                continue
+            row[prop] = (
+                answered.get("value")
+                if isinstance(answered, dict) and answered.get("ok") is True
+                else None
+            )
+        rows.append(row)
+    return {
+        "path": FIXTURES_PATH,
+        "ok": answer.get("ok"),
+        "child_count": child_count,
+        "children_listed": listed,
+        "truncated": answer.get("truncated"),
+        "enumeration_complete": (child_count == listed),
+        "fixtures": rows,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--csv", type=Path, required=True, help="정본 패치 CSV 절대경로")
@@ -175,7 +234,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--probe-only",
         action="store_true",
-        help="채널 검증만 하고 툴은 부르지 않는다",
+        help="판독 채널 검증만 하고 툴은 부르지 않는다",
+    )
+    parser.add_argument(
+        "--write-probe",
+        action="store_true",
+        help=(
+            "쓰기 채널 날조 대조군 1발만 쏘고 멈춘다 — 파싱 불가 토큰이라 어떤 객체도 "
+            "겨냥하지 않는다. ok가 아니어야 정상. 툴은 부르지 않는다"
+        ),
     )
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args(argv)
@@ -227,6 +294,49 @@ def main(argv: list[str] | None = None) -> int:
             exit_code = 2
         elif args.probe_only:
             out["stopped"] = "probe_only"
+        elif args.write_probe:
+            # 쓰기 채널 대조군은 **제품 이음매 그대로** 나간다: run_commands →
+            # 안전 게이트 → 링크. 게이트를 우회해 직접 쏘면 실제 apply가 지나갈
+            # 경로를 시험한 것이 아니게 된다.
+            registry = build_toolset(
+                execution_port=stack.gate.execution_port,
+                state_port=stack.gate.state_port,
+                bundle_gate=stack.gate,
+                question_port=questions,
+            )
+            execution = registry.dispatch(
+                ToolCall(
+                    id="lxseq-m4-writeprobe",
+                    name="run_commands",
+                    arguments={"commands": [WRITE_PROBE_COMMAND]},
+                )
+            )
+            rows = [
+                {"command": row.command, "status": row.status, "detail": row.detail}
+                for row in execution.command_outcomes
+            ]
+            executed_ok = any(row["status"] == "executed_ok" for row in rows)
+            out["write_probe"] = {
+                "command": WRITE_PROBE_COMMAND,
+                "is_error": execution.result.is_error,
+                "outcomes": rows,
+                "payload": _payload(execution),
+                "approval_bundles_asked": len(approval.asked),
+                # 기대값은 «ok 아님». executed_ok 가 참이면 이 채널의 성공 응답은
+                # 증거가 못 된다 — 틀린 명령에도 성공이라 답한다는 뜻이다.
+                "trustworthy": not executed_ok,
+                "verdict_ko": (
+                    "쓰기 채널 신뢰 가능 — 파싱 불가 명령이 executed_ok 가 아니다."
+                    if not executed_ok
+                    else (
+                        "쓰기 채널을 증거로 쓸 수 없다 — 파싱 불가 명령이 "
+                        "executed_ok 로 돌아왔다. apply 로 가지 마라."
+                    )
+                ),
+            }
+            out["stopped"] = "write_probe"
+            if executed_ok:
+                exit_code = 2
         else:
             deploy_pipeline = DeployPipeline(
                 compile_checker=LuaCompileChecker(),
@@ -290,6 +400,9 @@ def main(argv: list[str] | None = None) -> int:
             out["questions_asked"] = questions.asked
             out["approval_bundles_asked"] = len(approval.asked)
             out["deploy_reviews_asked"] = review.asked
+            # **독립 재조회.** 툴 응답을 생성 증거로 쓰지 않는다 — 여기서 픽스처
+            # 루트를 직접 되읽어 몇 대가 실제로 있는지 센다.
+            out["console_after"] = _read_fixtures(stack.gate.state_port, stack.gate.state_port)
             if execution.result.is_error:
                 exit_code = 1
     finally:
