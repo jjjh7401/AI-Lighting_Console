@@ -415,7 +415,7 @@ SIDE-R    6대  FID 311~316  5.001 ~ 5.150
 
 `preview` 구간만 관측했다. `apply`(86대 생성 재조회 확인) 및 재실행 0건 쓰기는 **미실행**이며, 리드 승인 전까지 실행하지 않는다. 감독 결정 ②에 따라 AC-LXSEQ-016 미수행 상태에서 `implemented`는 가능하나 `completed`는 불가하다.
 
-증거 파일: `.moai/reports/SPEC-COPILOT-LXSEQ-001/m4-probe.json` · `m4-preview.json`
+증거 파일: `.moai/reports/SPEC-COPILOT-LXSEQ-001/m4-probe.json` · `m4-preview.json` — **이 경로는 `.gitignore`(`.moai/reports`)에 걸려 커밋되지 않는다.** 실행한 세션의 디스크에만 있으므로 clean checkout에서는 해석되지 않는다. 그래서 위 관측값은 전부 이 문서 본문에 원문으로 옮겨 적었다 — 판정 근거는 이 절이지 그 파일이 아니다.
 
 _<apply — 리드 승인 + 감독의 Aura XB 모드 확정 대기>_
 
