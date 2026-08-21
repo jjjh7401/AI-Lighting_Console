@@ -129,3 +129,82 @@ override 가 **좁은** 모드일 때 콘솔의 발자국(예: 25)이 물리 장
 그러면 콘솔의 겹침 탐지가 **물리 현실보다 느슨해진다** — 콘솔은 안 겹친다고 하는데 실제
 리그에서는 겹칠 수 있다. 이번 범위 밖이고 override 를 쓰는 사람이 감수하는 것이지만,
 §E.2 잔여위험에 한 줄 남긴다.
+
+---
+
+# 리드 독립 검증 판정 — PASS (2026-08-22, HEAD `f07ac98`)
+
+**판정: PASS.** 아래는 전부 리드 세션이 **직접 명령을 돌려 관측한 출력**이다.
+run 세션의 §E.2 기록을 옮겨 적은 것이 아니며, 두 측정은 독립이다.
+
+## 뮤테이션 재현 3건 — 전부 RED (양방향 확인)
+
+기준 체크섬 `94ece98768e440fff20a0171c4f2e51c49457a1fbbae8008b5febbeb1e5a6bce`
+(`shasum -a 256 server/lxseq/mapper.py`). 매회 복구 직후 `shasum -a 256 -c` **OK** +
+`git status --short` **빈 출력** — 통과를 복구의 증거로 쓰지 않았다.
+
+| # | 되돌린 것 | 관측한 출력 |
+|---|---|---|
+| 1 | `mapper.py:479` 점유 검사를 `record.channels`(CSV 폭)로 | `FAILED … ::test_occupancy_uses_the_measured_width_not_the_csv_width` · `1 failed, 43 passed` |
+| 2 | `mapper.py:539` 런 경계에서 `_effective_width` 제거 | `FAILED … ::test_tree_unread_mixed_widths_still_keep_their_csv_addresses` · `1 failed, 43 passed` |
+| 3 | 계획 내 겹침 조건을 `if False:` 로 | `FAILED … ::test_plan_overlap_created_by_a_wider_measured_mode_is_rejected` · `1 failed, 43 passed` |
+
+**1번과 2번이 요점이다** — run 세션의 최초 뮤테이션에서 이 둘이 *통과*했던(= 공허했던)
+자리이고, 신설된 갈래가 실제로 판별력을 가졌음을 리드가 독립적으로 확인했다.
+
+> 앵커 주의: run 세션이 준 앵커 `_effective_width(record, mode),` 는 **1건이 아니라 2건**이다
+> (`:479` 점유 검사 · `:539` 런 경계). 뒤 문맥으로 갈라야 한다. 리드가 행 번호로 확정했다.
+
+## 원 재현 입력 2종 — CSV 주소를 지킨다
+
+리드가 결함 발견 시 쓴 입력 그대로 재실행 (`repro1.py` · `repro2.py`).
+
+**RV1** (`Aura` 12/25/12ch — CSV `1.1`·`1.13`·`1.38`)
+```
+런 1.1  count 1 mode 'Basic 12ch'    width 12
+런 1.13 count 1 mode 'Extended 25ch' width 25
+런 1.38 count 1 mode 'Basic 12ch'    width 12
+fid_map: {1: '1.1', 2: '1.13', 3: '1.38'}   skipped: []
+```
+수정 전에는 런 1개(폭 12)에 `fid_map[3] = '1.25'` 였다. **행마다 제 모드를 갖고 CSV 자리를 지킨다.**
+
+**RV2** (`MegaPointe` 39ch @`1.1`·`1.40`, override `Mode 2 25ch`)
+```
+런 1.1  count 1 width 25
+런 1.40 count 1 width 25
+fid_map: {1: '1.1', 2: '1.40'}
+```
+`channels_per_fixture` 가 **39 → 25**(자기모순 해소), `fid_map[2]` 가 **`1.40`** — 개정 기준 충족.
+
+## 수용기준 대조
+
+| 기준 | 관측 | 판정 |
+|---|---|---|
+| RV1 런 2개 이상 · `fid_map` 이 CSV 주소와 일치 | 런 3개 · 전부 일치 | PASS |
+| RV2 `channels_per_fixture == 25` · `fid_map[2] == '1.40'` | 25 · `'1.40'` | PASS |
+| 넓은 override 계획 내 겹침 탐지 | 뮤테이션 3 이 RED — 테스트 실재·판별력 있음 | PASS |
+| 점유 가드 공허성 반증 | 뮤테이션 1 이 RED | PASS |
+| 뮤테이션 양방향 + 복구 증명 | 3/3 RED · 체크섬 3/3 OK | PASS |
+| 전체 스위트 기준선 대비 +9 | `9691 passed, 8 skipped, 1 warning in 140.73s` · exit 0 (9682 → **+9**) | PASS |
+| 봉쇄 구역 0-diff | `git diff --stat 4d30134~1..HEAD -- console/lua server/safety server/prechk server/vwx server/paperwork server/rulebook/assets` → **빈 출력** | PASS |
+| 파일 범위 | `mapper.py` · `test_lxseq_mapper.py` · `progress.md` **3개뿐** | PASS |
+
+## 리드가 관측하지 **않은** 것 (Gaps)
+
+- **실기 확인 0건.** 폭이 섞인 CSV 를 실제 grandMA3 에 apply 한 사람은 아무도 없다.
+  두 결함 다 오프라인 재현·오프라인 검증이다. run 세션도 §E.2 에 같은 취지로 명시했다.
+- **`ruff` 를 리드가 재실행하지 않았다.** run 세션 보고(`All checks passed!` ·
+  `4 files already formatted`)를 읽었을 뿐이다.
+- **`_reject_plan_overlaps` 의 O(n²) 비용**을 큰 리그에서 재지 않았다.
+- **run 세션의 뮤테이션 6회 중 4·5번**(연속성·겹침 계열 나머지)은 재현하지 않았다.
+  1·2·3번(내가 지정한 3건)만 독립 확인했다.
+- **리뷰 지적 #3**(`awaited_human` 미전파) · **#5**(완전성 술어 재구현) — 여전히 미재현 가설.
+  **#4**(중복 행 이중 거부로 `rows_total` 과대 보고)는 리드가 재현했으나 이번 범위 밖이다.
+
+## 잔여 위험
+
+- 좁은 override 는 콘솔 발자국이 물리 장비 폭보다 좁아, 콘솔의 겹침 판정이 물리 현실보다
+  느슨하다. **의도된 선택**이며 이를 고정하는 테스트 본문에 그 취지가 적혀 있다 — 나중에
+  결함으로 오해해 "고치는" 사고를 막기 위함이다. `t11` 후보.
+- 가짜↔실물 괴리 계열(`D1` 절단 · `D2` 핸들 · 이번 폭 산정)이 **세 번째**다.
+  오프라인 스위트가 원리적으로 볼 수 없는 자리가 더 있다고 보는 편이 안전하다 → `t11`.
