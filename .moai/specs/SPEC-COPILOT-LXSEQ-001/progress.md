@@ -163,7 +163,16 @@ fixture_csv: "server/tests/fixtures/lxseq/LXSEQ_RIG_01_ShowBase_r3.patch.csv sha
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase — manager-develop 소유>_
+### M0 — 기존 툴 계약 확인 · 입력 정본 고정 (2026-08-21, run 세션)
+
+- **위치 확인**: `pwd` / `git rev-parse --show-toplevel` = `/Users/studiox/orca/workspaces/AI-Lighting_Console/LX-SEQ` · `git branch --show-current` = `jjjh7401/LX-SEQ` · `git rev-parse --short HEAD` = `875b2ea` (lead 대조 일치, 착수 승인 받음).
+- **게이트 복구**: `npm --prefix ui install` 실행(99 packages added). `ui/node_modules/.bin/vitest` 존재 확인. pre-commit 훅(`/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.git/worktrees/LX-SEQ` → 공유 `.git/hooks/pre-commit`) 실재 확인(gofmt+go vet 고속 서브셋 + `moai gate` 중게이트).
+- **입력 사본 확인**: `test -f server/tests/fixtures/lxseq/LXSEQ_RIG_01_ShowBase_r3.patch.csv` → 존재. `shasum -a 256` = `77a34d4bfd611fc034ce621c9715c1e33129df244a67c7e8dfd75d83816d7ee3` (정본과 일치). `wc -l` = 87행(헤더 1 + 데이터 86). 헤더 열 수 = 9(`FID,Group,FixtureType,Mode,Ch,Universe,Address,AddrRange,Position`).
+- **기존 툴 계약 드리프트 대조**: `resolve_fixture_type`(server/orchestrator/tools.py:3408) · `patch_fixtures`(server/orchestrator/tools.py:3820) · `read_existing_fids`(server/vwx/patchplan.py:1395) · `read_inventory`(server/prechk/inventory.py:344) · `read_type_mode_widths`(server/prechk/mode_read.py:76) 전부 실재 확인 — 드리프트 0건.
+- **baseline 전체 스위트**: `uv run pytest server/tests/ -q` → **9596 passed, 8 skipped, 1 warning in 144.35s** — plan-phase 기준선(progress.md §E.1: 9596 passed · 8 skipped · 1 warning · 157.34s)과 일치(수치, 시간은 참고치).
+- **AC-LXSEQ-001**: PASS (뮤테이션 ①②는 착수 전 대조·사본 확인을 실제로 수행했으므로 해당 없음).
+
+_<M1 이하 — manager-develop 소유, 착수 예정>_
 
 ## §E.3 Run-phase Audit-Ready Signal
 
@@ -183,4 +192,9 @@ _<pending sync-phase — manager-docs 소유>_
 
 ## §F Phase 4 Mode Selection
 
-_<pending — 오케스트레이터가 첫 run-phase Agent() 스폰 전에 기록. `plan.md` §G 권고: serial>_
+- **tier**: M · **scope**: 약 10파일(신규 3 + 테스트 3 + 검증 도구 1 + fixture 1(선반영) + 수정 2) · **domain**: 1(Python 백엔드) · **parallel benefit**: LOW(M1→M2→M3 강한 데이터 사슬, 코딩 중심).
+- 평가: `direct` 미선택(신규 모듈+툴 배선, 사소하지 않음) · `fanout` 미선택(도메인 1, 조사형 아님) · `sweep` 미선택(기계적 일률 변환 아님, Kickoff Approval은 이미 통과했으나 사슬 의존성이 sweep을 배제) · **`serial` 선택**.
+- **Decision: serial**
+- **Justification**: M1(파서)→M2(매퍼, M1 산출물 소비)→M3(툴 등재, M2 산출물 소비)의 강한 순차 데이터 사슬이며 코딩 중심 작업이다(Anthropic coding-task parallelism caveat). `plan.md` §G의 사전 권고와 일치.
+
+_M1 이하 — manager-develop 소유, 착수 예정_
