@@ -1,6 +1,6 @@
 # SPEC-COPILOT-LXSEQ-001 — 구현 계획 (plan)
 
-문서 상태: draft (v0.2.2, 2026-08-21 — 문서 전용: plan-audit 2회차 N1·R1~R3·R5 반영 — M4 입력 = 로컬 하네스 스크립트 `server/tools/lxseq_e2e.py`, 서버는 파일 경로를 받지 않는다) · Tier M · 칸반 카드 t9 (4단계 중 1단계)
+문서 상태: implemented (v0.2.2, 2026-08-21 — M0~M4 종료 · sync 완료 · AC 17건 중 16 PASS + AC-016 PASS-WITH-DEBT(결함 D2는 카드 t11로 분리) — 문서 전용: plan-audit 2회차 N1·R1~R3·R5 반영 — M4 입력 = 로컬 하네스 스크립트 `server/tools/lxseq_e2e.py`, 서버는 파일 경로를 받지 않는다) · Tier M · 칸반 카드 t9 (4단계 중 1단계)
 
 > **v0.2.2 — plan-audit 2회차(FAIL 0.88) N1(blocking)·R1~R3·R5 반영(문서 전용, 설계 변경 0).** M4 입력 전달 = 로컬 하네스 스크립트 `server/tools/lxseq_e2e.py`(검증 도구 — 제품 코드 아님)가 정본 CSV를 읽어 base64로 `import_lxseq_patch` 핸들러를 직접 호출; 서버는 파일 경로를 받지 않는다(REQ-LXSEQ-010 인자 집합 불변); 채팅 경유 호출은 t10 이후. v0.2.1 — 문서 전용: UI 전달 경로 t10 위임.
 >

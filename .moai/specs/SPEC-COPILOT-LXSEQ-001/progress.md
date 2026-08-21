@@ -665,7 +665,53 @@ _<pending run-phase — manager-develop 소유>_
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase — manager-docs 소유>_
+```yaml
+sync_status: audit-ready
+sync_at: 2026-08-21
+card: t9
+base_sha: 453846a
+base_branch: jjjh7401/LX-SEQ
+head_at_sync_entry: 70418dc
+docs_updated: [CHANGELOG.md, README.md, "progress.md §E.4", "spec.md/plan.md/acceptance.md frontmatter status"]
+code_changed_in_sync: 0        # sync 단계는 문서 전용 — 콘솔 무접촉, server/ 무변경
+ac_total: 17
+ac_pass: 16
+ac_pass_with_debt: 1           # AC-LXSEQ-016 (5행 중 4 PASS · 1 FAIL, 사유는 결함 D2)
+ac_fail: 0
+open_defects: 1                # D2 → 후속 카드 t11 (감독 결정으로 t9 안에서 고치지 않음)
+tools_registered: 34           # TOOL_NAMES 항목 수 실측 (33 → 34)
+```
+
+### sync 세션이 **직접 재측정**한 것 (귀속: 이 세션, 2026-08-21, HEAD `70418dc`)
+
+아래 5건은 전부 이 세션이 명령을 실행하고 출력을 관측한 것이다. 리드가 전달한 수치를 옮겨 적은 것이 아니다.
+
+| # | 명령 | 관측한 출력 | 판정 |
+|---|---|---|---|
+| ① | `uv run pytest server/tests -q` | `9681 passed, 8 skipped, 1 warning in 141.64s (0:02:21)` · exit 0 | PASS |
+| ② | `uv run ruff check server/lxseq server/orchestrator/tools.py server/orchestrator/runner.py server/tests/test_lxseq_*.py server/tools/lxseq_e2e.py` | `All checks passed!` · exit 0 | PASS |
+| ③ | `uv run ruff format --check <같은 범위>` | `9 files already formatted` | PASS |
+| ④ | `git diff --stat 453846a..HEAD -- console/lua server/safety server/prechk server/vwx server/paperwork server/rulebook/assets` | **빈 출력** | PASS (봉쇄 구역 0-diff) |
+| ⑤ | `git diff 453846a..HEAD -- server/orchestrator/tools.py \| grep -c '^-[^-]'` | `0` | PASS (순수 추가 — 기존 툴 계약 0-diff) |
+
+증거 원문: `.moai/state/verify/t9-sync/pytest-full.txt` (전체 스위트 출력 전문).
+
+**기준선 귀속**: ①의 9681은 plan-phase 기준선 9596(§E.1 `baseline_measured`)에서 M1 +18 → 9614, M2 +35 → 9649, M3 +27 → 9676, D1 수정 +5 → 9681로 이어진 값이며, 각 증가분은 §E.2에 기록된 신규 테스트 수와 일치한다. 이 세션은 최종값만 재현했고 중간 4개 값은 §E.2의 run 세션 기록을 읽은 것이다 — **재현하지 않았다.**
+
+### 미검증 (Gaps — 이 세션이 관측하지 **않은** 것)
+
+- **뮤테이션 20회**(M1 3 · M2 6 · M3 8 · D1 3)는 run 세션이 실행한 것이며, 이 세션은 §E.2의 기록을 읽었을 뿐 **재현하지 않았다.**
+- **M4 실기 증거 전부**(preview 12런 86대 · apply 86대 생성 · 독립 재조회 `child_count 86` · 날조 대조군 2종 · D1 라이브 재검증)는 run 세션이 감독 onPC에서 실행한 것이다. **이 세션은 콘솔에 접속하지 않았다** — 리드 조건 4(콘솔 무접촉)를 지켰고, 86대가 실재하는 상태는 되돌릴 수 없으므로 재현 자체가 부적절하다. `.moai/reports/SPEC-COPILOT-LXSEQ-001/m4-*.json`은 `.gitignore` 대상이라 저장소에 없으며 **§E.2 본문이 정본이다.**
+- **`§E.3 Run-phase Audit-Ready Signal`이 `pending` 상태로 남아 있다.** 소유자는 `manager-develop`이며 sync 단계에서 대신 채우지 않았다(소유 경계). run 증거 자체는 §E.2에 전량 기록돼 있으므로 **증거의 부재가 아니라 서명 블록의 부재**다.
+- **CI 부재**: `.github/workflows/`에 `label-sync.yml` 하나뿐이라 이 PR에도 테스트가 돌지 않는다. ①의 로컬 실행이 유일한 회귀 증거다.
+
+### 잔여 위험 (Residual risk — 관측했음에도 남는 것)
+
+- **D2는 열린 채로 출하된다.** 쓰기는 0건이고 중복도 생기지 않지만, 재실행 시 라벨이 `fid_occupied`로 나가 「다른 FID로 다시 패치하라」로 읽힌다. 사용자가 그 지시를 따르면 중복 리그가 생긴다 — **문서(CHANGELOG · README)에 이 간극을 명시했으나 툴 응답 문구는 고치지 않았다.** 카드 `t11`.
+- **가짜↔실물 괴리가 계열로 두 번 나왔다**(D1 절단, D2 핸들). 가짜 콘솔이 실물과 다른 자리는 이 둘 말고도 더 있을 수 있으며, 오프라인 스위트 9681건은 그 자리를 원리적으로 볼 수 없다.
+- **`Robin Spiider` 슬롯 4/12 중복** — 슬롯 12가 무엇이 다른지(모드 집합 · GDTF 판본) **못 읽었다.** 추정하지 않았고, 이름→슬롯 역방향 해석을 시도하는 후속 작업은 이 모호성을 먼저 풀어야 한다.
+- **개별 테스트 판별력 일부 미증명** — 뮤테이션이 AC 묶음당 1~2회라 `AC-LXSEQ-002` 5건 중 4건, 거부 부류 4종은 "그 검사를 무력화하면 그 테스트가 빨개지는가"가 확인되지 않았다. 조용히 깨지면 §E.1a가 먼저 볼 자리다.
+- **UI 배선 미완**(`t10`) — 지금 이 툴을 부를 수 있는 것은 로컬 하네스뿐이며, 최종 사용자 경로는 아직 존재하지 않는다.
 
 ## §E.1a 이월 채무 (plan → run, 2026-08-21 리드 확정 — run에서 기록만 이어받고 plan에서는 수정하지 않음)
 

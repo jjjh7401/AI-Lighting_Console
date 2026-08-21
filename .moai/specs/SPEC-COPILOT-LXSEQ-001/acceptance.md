@@ -1,6 +1,6 @@
 # SPEC-COPILOT-LXSEQ-001 — 인수 기준 (acceptance)
 
-문서 상태: draft (v0.2.1, 2026-08-21 — 문서 전용: AC-016 입력 전달 현재/목표 분리 · AC-017 주 추가, AC 수 불변) · Tier M · AC **17건**(오프라인 16 + onPC 실기 1). v0.2.0: plan-audit 1회차 델타(D2·D3·D4·D6·D7·O8) + 감독 Kickoff 답 반영(AC-006 `mode_unresolved`/`mode_overrides` · AC-009 9런 · **AC-017 신설** 채팅 붙여넣기 금지). 본 문서는 spec.md의 요구를 관측 가능한 Given-When-Then 검증 기준으로 전개한다. 요구(GEARS)는 spec.md가 소유하며 여기서 되풀이하지 않는다.
+문서 상태: implemented (v0.2.1, 2026-08-21 — 판정 확정: 17건 중 **16 PASS · AC-LXSEQ-016 PASS-WITH-DEBT**(5행 중 4 PASS · 1 FAIL, 사유는 결함 D2 → 카드 t11) · FAIL 0. 근거는 progress.md §E.2 — 문서 전용: AC-016 입력 전달 현재/목표 분리 · AC-017 주 추가, AC 수 불변) · Tier M · AC **17건**(오프라인 16 + onPC 실기 1). v0.2.0: plan-audit 1회차 델타(D2·D3·D4·D6·D7·O8) + 감독 Kickoff 답 반영(AC-006 `mode_unresolved`/`mode_overrides` · AC-009 9런 · **AC-017 신설** 채팅 붙여넣기 금지). 본 문서는 spec.md의 요구를 관측 가능한 Given-When-Then 검증 기준으로 전개한다. 요구(GEARS)는 spec.md가 소유하며 여기서 되풀이하지 않는다.
 
 > **참조 규약**: 정본(spec.md · 본 문서)은 줄번호로 인용하지 않고 안정 토큰만 쓴다. `파일:줄`은 코드·입력 데이터·타 SPEC 아티팩트에만 쓴다.
 

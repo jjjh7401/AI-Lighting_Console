@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-LXSEQ-001
 title: "LX-SEQ 연계 1단계 — RIG 팩 패치 CSV 가져오기 → 기존 패치 툴로 onPC 패치 (파서 + 매퍼 + 툴 1종)"
 version: "0.2.2"
-status: draft
+status: implemented
 created: 2026-08-21
 updated: 2026-08-21
 author: manager-spec
