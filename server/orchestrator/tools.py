@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import hashlib
 import io
 import json
 import math
@@ -76,6 +77,8 @@ from server.looks.songcue import (
     parse_sections,
 )
 from server.looks.songcue_report import build_songcue_report
+from server.lxseq.mapper import build_import_plan
+from server.lxseq.parser import MissingColumnsError, parse_patch_csv
 from server.orchestrator.layout_occupancy import check_occupancy
 from server.orchestrator.ports import (
     BundleGate,
@@ -241,6 +244,7 @@ TOOL_NAMES = (
     "resolve_fixture_type",
     "resolve_patch_address",
     "patch_fixtures",
+    "import_lxseq_patch",
     "find_fx",
     "instantiate_fx",
     "compose_fx",
@@ -1565,6 +1569,20 @@ def _addressable_groups(groups_section: object) -> list[int]:
             if isinstance(entry, Mapping) and isinstance(entry.get("no"), int)
         }
     )
+
+
+#: `import_lxseq_patch` 페이로드가 매번 싣는 모델 지시(REQ-LXSEQ-014 · REQ-LXSEQ-016 (b)).
+#: 툴 정의의 금지 문구를 여기서 **한 번 더** 말한다 — 정의는 대화 앞에 한 번 붙고,
+#: 이 문장은 결과 바로 옆에 붙는다.
+_LXSEQ_GUIDANCE = (
+    "apply.runs[*].status == created 인 런의 created 합만 성공으로 보고하라 — "
+    "위임 호출이 오류 없이 돌아온 것은 생성 증거가 아니다. "
+    "점유로 건너뛴 행은 덮어쓰지 말고 plan.skipped 목록을 사용자에게 그대로 보여 줘라. "
+    "types.unresolved 가 있으면 콘솔에서 타입을 추가해 달라고 사용자에게 청하라. "
+    "mode_unresolved 로 건너뛴 타입은 mode_overrides 인자로 다시 불러라. "
+    "이 툴의 바이트는 파일에서만 온다 — 사용자가 채팅에 붙여넣은 CSV 본문을 base64로 "
+    "만들어 넣지 마라. 개행·공백이 조용히 깨져 잘못된 자리에 패치된다."
+)
 
 
 class ToolRegistry:
@@ -4346,6 +4364,330 @@ def build_toolset(
                     ),
                 )
             ),
+        )
+
+    # -- import_lxseq_patch (SPEC-COPILOT-LXSEQ-001 M3) ------------------------
+    #
+    # @MX:ANCHOR: [AUTO] the only model-reachable entry to the LX-SEQ patch CSV.
+    # @MX:REASON: REQ-LXSEQ-010. Every write this tool causes goes through
+    #   `patch_fixtures` by internal `ToolCall` — it deploys nothing, executes
+    #   nothing and renders no Lua of its own, so `patch_fixtures`'s re-read
+    #   verdict stays the only source of a "created" claim.
+    # @MX:WARN: `action` omitted means "preview". Do not "helpfully" flip that —
+    #   this app has no undo, and a preview that wrote would be undetectable.
+    # @MX:REASON: REQ-LXSEQ-010 · AC-LXSEQ-011 ②.
+
+    def import_lxseq_patch(call: ToolCall, context: ExecutionContext) -> ToolExecution:
+        """LX-SEQ 패치 CSV 한 장을 콘솔 계획으로 바꾸고, 원하면 그대로 패치한다.
+
+        바이트는 **파일에서만** 온다(REQ-LXSEQ-016). 채팅에 붙여넣은 CSV 본문으로
+        base64를 만들면 개행·공백이 조용히 깨져 잘못된 자리에 패치된다 — 그래서
+        받은 바이트의 해시와 길이를 페이로드에 실어 사용자가 원본과 대조한다.
+        """
+        raw = call.arguments.get("file_content_base64")
+        if not isinstance(raw, str) or not raw.strip():
+            return _error_result(
+                call,
+                "'file_content_base64'가 없다 — 패치 CSV **파일**에서 읽은 바이트를 "
+                "base64로 넘겨라. 사용자가 채팅에 붙여넣은 본문으로 만들지 마라.",
+            )
+        try:
+            data = base64.b64decode(raw, validate=True)
+        except (binascii.Error, ValueError):
+            return _error_result(
+                call,
+                "'file_content_base64'가 base64가 아니다 — 파일 바이트를 그대로 "
+                "base64로 인코딩해 넘겨라. 채팅 본문을 옮겨 적지 마라.",
+            )
+
+        action = call.arguments.get("action", "preview")
+        if action not in ("preview", "apply"):
+            return _error_result(call, "'action'은 'preview' 또는 'apply'여야 한다")
+        name_prefix_mode = call.arguments.get("name_prefix_mode", "group")
+        if name_prefix_mode not in ("group", "type"):
+            return _error_result(call, "'name_prefix_mode'는 'group' 또는 'type'이어야 한다")
+
+        only_fids_arg = call.arguments.get("only_fids")
+        only_fids: set[int] | None = None
+        if only_fids_arg is not None:
+            if isinstance(only_fids_arg, str) or not isinstance(only_fids_arg, Sequence):
+                return _error_result(call, "'only_fids'는 정수 목록이어야 한다")
+            try:
+                only_fids = {int(value) for value in only_fids_arg}
+            except (TypeError, ValueError):
+                return _error_result(call, "'only_fids'는 정수 목록이어야 한다")
+
+        overrides_arg = call.arguments.get("mode_overrides")
+        if overrides_arg is not None and not isinstance(overrides_arg, Mapping):
+            return _error_result(
+                call,
+                '\'mode_overrides\'는 {"<CSV FixtureType>": "<콘솔 모드 이름>"} 객체여야 한다',
+            )
+        mode_overrides = {str(k): str(v) for k, v in (overrides_arg or {}).items()}
+
+        if property_port is None:
+            return _error_result(
+                call,
+                "property reads are not wired — 콘솔을 읽지 못하면 빈 자리라고 말할 수 "
+                "없다. 읽지 않고는 패치하지 않는다",
+            )
+
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            return _error_result(call, "패치 CSV가 UTF-8이 아니다 — 파일 인코딩을 확인하라")
+        try:
+            parsed = parse_patch_csv(text)
+        except MissingColumnsError as error:
+            return _error_result(call, f"패치 CSV에 정규 컬럼이 없다 — {error}")
+
+        source: dict[str, object] = {
+            "sha256": hashlib.sha256(data).hexdigest(),
+            "byte_length": len(data),
+            "rows_total": len(parsed.records) + len(parsed.rejected) + len(parsed.excluded),
+            "parsed": len(parsed.records),
+            "rejected": [
+                {"row": row.row, "fid_raw": row.fid_raw, "kind": row.kind, "detail": row.detail}
+                for row in parsed.rejected
+            ],
+            "excluded": [
+                {"row": row.row, "fid_raw": row.fid_raw, "kind": row.kind, "detail": row.detail}
+                for row in parsed.excluded
+            ],
+        }
+
+        records = parsed.records
+        if only_fids is not None:
+            records = tuple(record for record in records if record.fid in only_fids)
+
+        # ── 타입은 **형제 툴의 계약으로만** 확정한다 ──
+        # 이름을 여기서 대조하면 `resolve_fixture_type`이 쌓아 둔 후보 판정·질문
+        # 카드가 통째로 우회된다. 서로 다른 타입마다 한 번씩만 부른다.
+        distinct_types: list[str] = []
+        for record in records:
+            if record.fixture_type not in distinct_types:
+                distinct_types.append(record.fixture_type)
+
+        type_resolutions: dict[str, dict] = {}
+        for index, csv_type in enumerate(distinct_types):
+            inner = resolve_fixture_type(
+                ToolCall(
+                    id=f"{call.id}:type{index}",
+                    name="resolve_fixture_type",
+                    arguments={"instrument_type": csv_type},
+                ),
+                context,
+            )
+            try:
+                resolution = json.loads(inner.result.content)
+            except json.JSONDecodeError:
+                resolution = {}
+            type_resolutions[csv_type] = (
+                resolution if isinstance(resolution, dict) else {"status": "library_unreadable"}
+            )
+
+        resolved_types = {
+            csv_type: str(resolution.get("resolved") or csv_type)
+            for csv_type, resolution in type_resolutions.items()
+            if resolution.get("status") == "present"
+        }
+        types_block = {
+            "resolved": resolved_types,
+            "unresolved": [
+                {
+                    "csv_type": csv_type,
+                    "status": str(resolution.get("status") or "library_unreadable"),
+                    "candidates": list(resolution.get("candidates") or []),
+                }
+                for csv_type, resolution in type_resolutions.items()
+                if resolution.get("status") != "present"
+            ],
+        }
+
+        # 폭은 콘솔이 안다. 확정된 타입에 대해서만 모드 트리를 실측한다.
+        mode_reads: dict[str, object] = {}
+        for csv_type, console_type in resolved_types.items():
+            mode_reads[csv_type] = read_type_mode_widths(
+                state_port,
+                property_port,
+                root=rig_paths["fixture_types"],
+                type_name=console_type,
+            )
+
+        inventory_port = _InventoryPort(state_port, property_port)
+        try:
+            inventory = read_inventory(inventory_port)
+        except InventoryReadError as error:
+            return _error_result(call, f"fixture inventory unreadable: {error}")
+        occupants = occupants_from_patch_values(
+            (record.patch_raw, record.name, record.fixture_type) for record in inventory.fixtures
+        )
+        fid_read = read_existing_fids(inventory_port)
+
+        plan = build_import_plan(
+            records=records,
+            type_resolutions=type_resolutions,
+            mode_reads=mode_reads,  # type: ignore[arg-type]
+            inventory=inventory,
+            occupants=occupants,
+            existing_fids=fid_read,
+            mode_overrides=mode_overrides,
+            name_prefix_mode=name_prefix_mode,
+        )
+
+        caveat = console_read_caveat(inventory)
+        if caveat is None and plan.console_read.get("reason"):
+            caveat = {
+                "kind": CONSOLE_READ_INCOMPLETE,
+                "detail": str(plan.console_read["reason"]),
+            }
+        console_read = {
+            "complete_enough_to_judge_absence": plan.console_read[
+                "complete_enough_to_judge_absence"
+            ],
+            "caveat": caveat,
+            "fid_read": {
+                "attempted": fid_read.attempted,
+                "known": len(fid_read.fids),
+                "child_count": fid_read.child_count,
+                "unresolved": (
+                    (fid_read.unseen or 0)
+                    + fid_read.unreadable_fids
+                    + fid_read.unusable_rows
+                    + fid_read.unparsable_rows
+                ),
+            },
+        }
+
+        plan_block = {
+            "runs": [
+                {
+                    "index": run.index,
+                    "group": run.group,
+                    "console_type": run.console_type,
+                    "console_mode": run.console_mode,
+                    "address": run.address,
+                    "count": run.count,
+                    "channels_per_fixture": run.channels_per_fixture,
+                    "fids": list(run.fids),
+                    "name_prefix": run.name_prefix,
+                    "footprint_source": run.footprint_source,
+                }
+                for run in plan.runs
+            ],
+            "fid_map": plan.fid_map,
+            "skipped": [
+                {
+                    "fid": row.fid,
+                    "address": row.address,
+                    "kind": row.kind,
+                    "detail": row.detail,
+                    "occupant": row.occupant,
+                    "occupied_fid": row.occupied_fid,
+                }
+                for row in plan.skipped
+            ],
+            "write_count_planned": plan.write_count_planned,
+        }
+
+        apply_block: dict[str, object] = {"entered": False, "runs": []}
+        outcomes: list[CommandOutcome] = []
+        awaited_human = False
+        created_total = 0
+        stopped_at: int | None = None
+
+        if action == "apply":
+            apply_block["entered"] = True
+            rows: list[dict[str, object]] = []
+            for run in plan.runs:
+                if stopped_at is not None:
+                    # 앞 런이 `created`가 아니면 **거기서 끝난다.** 건너뛰고 계속하면
+                    # 부분 생성 위에 다시 만들어 중복이 남고, 이 앱에는 실행 취소가 없다.
+                    rows.append(
+                        {
+                            "index": run.index,
+                            "status": "not_attempted",
+                            "created": 0,
+                            "requested": run.count,
+                            "detail": f"{stopped_at}번 런이 created가 아니라 시도하지 않았다",
+                        }
+                    )
+                    continue
+                inner = patch_fixtures(
+                    ToolCall(
+                        id=f"{call.id}:run{run.index}",
+                        name="patch_fixtures",
+                        arguments=run.as_tool_arguments(),
+                    ),
+                    context,
+                )
+                try:
+                    inner_payload = json.loads(inner.result.content)
+                except json.JSONDecodeError:
+                    inner_payload = {}
+                if not isinstance(inner_payload, dict):
+                    inner_payload = {}
+                status = str(
+                    inner_payload.get("status")
+                    or ("delegation_failed" if inner.result.is_error else "unknown")
+                )
+                created = inner_payload.get("created")
+                created = int(created) if isinstance(created, int) else 0
+                created_total += created
+                outcomes.extend(inner.command_outcomes)
+                awaited_human = awaited_human or inner.awaited_human
+                rows.append(
+                    {
+                        "index": run.index,
+                        "status": status,
+                        "created": created,
+                        "requested": run.count,
+                        "detail": str(inner_payload.get("guidance") or ""),
+                    }
+                )
+                if status != "created":
+                    stopped_at = run.index
+            apply_block["runs"] = rows
+            if stopped_at is not None:
+                apply_block["stopped_at"] = stopped_at
+
+        skipped_count = len(plan.skipped)
+        if action == "preview":
+            summary = (
+                f"미리보기 — 쓰기 0건. 런 {len(plan.runs)}개 · "
+                f"계획 {plan.write_count_planned}대 · 건너뛴 행 {skipped_count}건."
+            )
+        elif not plan.runs:
+            summary = f"할 일 없음 — 새로 만들 행이 없다. 건너뛴 행 {skipped_count}건, 0대 생성."
+        elif stopped_at is None and created_total == plan.write_count_planned:
+            summary = (
+                f"{created_total}대를 만들었고 콘솔 재조회로 확인했다. 건너뛴 행 {skipped_count}건."
+            )
+        else:
+            summary = (
+                f"부분 생성 — 계획 {plan.write_count_planned}대 중 {created_total}대만 "
+                f"콘솔 재조회로 확인됐다. {stopped_at}번 런에서 멈췄다. "
+                f"건너뛴 행 {skipped_count}건."
+            )
+
+        payload = {
+            "source": source,
+            "types": types_block,
+            "console_read": console_read,
+            "plan": plan_block,
+            "apply": apply_block,
+            "summary_ko": summary,
+            "guidance": _LXSEQ_GUIDANCE,
+        }
+        return ToolExecution(
+            result=ToolResult(
+                tool_call_id=call.id,
+                name=call.name,
+                content=json.dumps(payload, ensure_ascii=False),
+                is_error=False,
+            ),
+            command_outcomes=tuple(outcomes),
+            awaited_human=awaited_human,
         )
 
     # -- find_fx (REQ-FXLIB-015 — lookup only, sends nothing) ------------------
@@ -8796,6 +9138,89 @@ def build_toolset(
                 "additionalProperties": False,
             },
         ),
+        ToolDefinition(
+            name="import_lxseq_patch",
+            description=(
+                "LX-SEQ 패치 CSV 한 장(FID/Group/FixtureType/Mode/Ch/Universe/"
+                "Address/AddrRange/Position)을 읽어 콘솔 패치 계획을 만들고, "
+                "action='apply'일 때만 실제로 패치한다. 기본은 'preview'이며 "
+                "preview는 콘솔에 **아무것도 쓰지 않는다**.\n"
+                "\n"
+                "바이트는 **파일에서만** 온다. 사용자가 채팅에 붙여넣은 CSV 본문을 "
+                "base64로 만들어 이 툴에 넣지 마라 — 붙여넣기는 개행·공백이 조용히 "
+                "깨져 잘못된 자리에 패치되고, 이 앱에는 실행 취소가 없다. 지금은 "
+                "로컬 하네스 스크립트가 파일을 읽어 이 인자를 채우고, 앞으로는 UI "
+                "파일 선택기가 채운다. 받은 바이트의 sha256과 길이는 페이로드 "
+                "source에 실리니 사용자가 원본 파일과 대조할 수 있다.\n"
+                "\n"
+                "타입 이름은 이 툴이 추측하지 않고 resolve_fixture_type에 묻는다. "
+                "모드 폭은 콘솔에서 실측하며, 폭으로도 라벨로도 모드를 확정하지 "
+                "못한 타입의 행은 만들지 않고 mode_unresolved로 건너뛴다 — 그 "
+                "목록을 사용자에게 보여 주고 mode_overrides로 다시 불러라.\n"
+                "\n"
+                "쓰기는 전부 patch_fixtures에 위임하므로 성공은 그 툴의 재조회 "
+                "판정에서만 나온다: apply.runs[*].status == 'created'인 런의 "
+                "created 합만 성공으로 보고하라. 한 런이 created가 아니면 그 자리에서 "
+                "멈추고 나머지는 not_attempted로 보고한다 — 자동 재시도는 하지 "
+                "않는다(중복이 생긴다). 이미 패치된 행·점유된 자리·쓰이는 FID는 "
+                "건너뛰고 목록으로 올리며, 절대 덮어쓰지 않는다. 그래서 같은 파일을 "
+                "다시 넣어도 런 0개로 끝난다."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "file_content_base64": {
+                        "type": "string",
+                        "description": (
+                            "패치 CSV **파일**의 바이트를 base64로 인코딩한 값. "
+                            "바이트는 파일에서만 온다 — 지금은 로컬 하네스 스크립트가 "
+                            "파일을 읽어 넘기고, 앞으로는 UI 파일 선택기가 채운다. "
+                            "사용자가 채팅에 붙여넣은 CSV 본문으로 이 값을 만들지 "
+                            "마라: 개행·공백이 조용히 깨져 잘못된 자리에 패치된다. "
+                            "이 툴은 파일 경로를 받지 않는다."
+                        ),
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["preview", "apply"],
+                        "description": (
+                            "'preview'(기본)는 계획만 낸다 — 콘솔 쓰기 0건. "
+                            "'apply'는 그 호출에서 계획을 다시 세운 뒤 런을 순서대로 "
+                            "patch_fixtures에 위임한다. 사용자가 계획을 보고 "
+                            "동의하기 전에 apply를 부르지 마라."
+                        ),
+                    },
+                    "name_prefix_mode": {
+                        "type": "string",
+                        "enum": ["group", "type"],
+                        "description": (
+                            "픽스처 이름 접두. 'group'(기본)이면 CSV의 Group을 쓰고 "
+                            "Group이 런 경계가 된다. 'type'이면 콘솔 타입 이름을 쓰고 "
+                            "Group은 경계에서 빠져 런이 더 크게 묶인다."
+                        ),
+                    },
+                    "only_fids": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": (
+                            "선택. 이 FID들만 대상으로 삼는다. 생략하면 파일의 모든 행이 대상이다."
+                        ),
+                    },
+                    "mode_overrides": {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "description": (
+                            '선택. {"<CSV FixtureType>": "<콘솔 모드 이름>"} — '
+                            "mode_unresolved로 건너뛴 타입의 모드를 사용자가 고른 뒤 "
+                            "다시 부르는 수단이다. 콘솔 실측 목록에 있는 이름만 "
+                            "받아들여지니 지어내지 마라."
+                        ),
+                    },
+                },
+                "required": ["file_content_base64"],
+                "additionalProperties": False,
+            },
+        ),
     )
     handlers: dict[str, _Handler] = {
         "run_commands": run_commands,
@@ -8815,6 +9240,7 @@ def build_toolset(
         "resolve_fixture_type": resolve_fixture_type,
         "resolve_patch_address": resolve_patch_address,
         "patch_fixtures": patch_fixtures,
+        "import_lxseq_patch": import_lxseq_patch,
         "find_fx": find_fx,
         "instantiate_fx": instantiate_fx,
         "compose_fx": compose_fx,

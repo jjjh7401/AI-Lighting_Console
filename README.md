@@ -238,6 +238,62 @@ Implementation: `server/vwx/` (7 modules) + `server/orchestrator/tools.py`
 [SPEC-COPILOT-VWX-001](.moai/specs/SPEC-COPILOT-VWX-001/spec.md),
 [SPEC-COPILOT-AUTOPATCH-001](.moai/specs/SPEC-COPILOT-AUTOPATCH-001/spec.md).
 
+## LX-SEQ patch import (LXSEQ — stage 1 of 4)
+
+A lighting designer's LX-SEQ RIG pack ships a **patch CSV** with nine columns
+(`FID,Group,FixtureType,Mode,Ch,Universe,Address,AddrRange,Position`). The
+`import_lxseq_patch` tool reads one such file and patches the console with it.
+Stage 1 covers **patch only**; groups, presets/FX, and sequences/cues are
+follow-up specifications.
+
+1. **Parse** — columns are found by name, not by position (scrambled headers
+   and a BOM are absorbed). Rejected rows are reported by kind:
+   `non_integer_field`, `universe_overflow`, `address_out_of_range`,
+   `addr_range_mismatch`, `duplicate_fid`, `address_overlap_in_file`. A duplicate
+   or an overlap rejects **every** row involved, not just the later one.
+   A row with `Ch` = 0 is **not** a rejection — a fixture that occupies no DMX
+   (a manually operated one, say) is counted separately as an *excluded* row
+   (`zero_channels`).
+   **A FID is not an address** — it never takes part in address arithmetic.
+2. **Map** — fixture type names are **never guessed**; they are resolved
+   through `resolve_fixture_type` (once per distinct type). The mode is
+   settled by the **width measured on the console**, falling back to a label
+   token when widths tie. A type whose mode cannot be settled is not patched:
+   its rows are skipped as `mode_unresolved` and handed back so you can
+   re-run with `mode_overrides`.
+3. **Check occupancy** — occupied addresses (`address_occupied`), rows already
+   patched with the same type at the same start (`already_patched`), and taken
+   fixture IDs (`fid_occupied`) are all skipped. **Nothing is ever
+   overwritten**, so re-running the same file plans zero runs.
+4. **Plan runs** — rows are grouped into runs by type, mode, universe, `Group`,
+   and address continuity. The reference 86-fixture rig plans **12 runs** in the
+   default `group` naming mode and 9 runs in `type` mode.
+5. **Execute** — `action='preview'` (the default) writes **nothing** to the
+   console. `action='apply'` hands each run to `patch_fixtures`, which owns the
+   Lua generation, the deployment gate, and the read-back. Success is only ever
+   read from that tool's re-query. If a run does not come back `created`, the
+   import **stops there** and reports the rest as `not_attempted` — there is no
+   automatic retry, because a retry on a partial write creates duplicates.
+
+**Bytes come from a file, never from chat.** `file_content_base64` must be the
+base64 of the file's bytes. Pasted CSV text silently loses newlines and
+whitespace, which patches the wrong slots — and this app has no undo. The
+payload carries the received bytes' sha256 and length so you can compare
+against the original. Today a local harness fills the argument
+(`uv run python -m server.tools.lxseq_e2e --csv <path> --action preview`); a UI
+file picker will fill it later.
+
+Live status: verified on grandMA3 onPC 2.4.2 with the reference rig — 12 runs,
+86 fixtures created, confirmed by a re-query independent of the tool. One known
+gap remains: on a real console `occupant.fixture_type` returns a handle string
+(`FixtureType <slot>`) rather than a name, so a re-run reports `fid_occupied`
+where `already_patched` is meant. Writes stay at zero either way; only the label
+is wrong.
+
+Implementation: `server/lxseq/` (parser + mapper) + `server/orchestrator/tools.py`
+(`import_lxseq_patch` tool). Specification:
+[SPEC-COPILOT-LXSEQ-001](.moai/specs/SPEC-COPILOT-LXSEQ-001/spec.md).
+
 ## Packaged app — build & run (SPEC-COPILOT-DEPLOY-001 Stage 1, M6)
 
 A self-contained PyInstaller **onedir** build lets an operator run the app
