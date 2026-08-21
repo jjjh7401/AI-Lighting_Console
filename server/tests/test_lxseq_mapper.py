@@ -211,6 +211,18 @@ def test_type_resolution_is_requested_once_per_distinct_type():
 # ---------------------------------------------------------------------------
 
 
+def _resolution(plan, csv_type: str):
+    """`plan.mode_resolutions` 를 CSV 타입 이름으로 조회한다.
+
+    키는 (타입, 채널수, CSV 모드라벨) 이다 — 한 타입이 두 폭으로 오면 해석도 갈리기
+    때문이다(PR #72 D3). 아래 테스트들은 폭이 하나인 입력만 쓰므로, 해석이 정말로
+    하나뿐인지 확인한 뒤 그것을 돌려준다. 둘 이상이면 그 사실 자체가 보고돼야 한다.
+    """
+    found = [value for key, value in plan.mode_resolutions.items() if key[0] == csv_type]
+    assert len(found) == 1, f"{csv_type}: 해석이 {len(found)}개 — 폭이 하나인 입력이 아니다"
+    return found[0]
+
+
 def _single_type_records(records, csv_label: str):
     return tuple(r for r in records if r.fixture_type == csv_label)
 
@@ -231,8 +243,8 @@ def test_mode_resolution_unique_width_match_is_adopted():
     plan = _plan(records, mode_reads=modes)
     assert plan.runs
     assert all(r.console_mode == "Mode 1" for r in plan.runs)
-    assert plan.mode_resolutions["Robe Spiider"].resolution == "resolved"
-    assert plan.mode_resolutions["Robe Spiider"].resolved_by == "width_unique"
+    assert _resolution(plan, "Robe Spiider").resolution == "resolved"
+    assert _resolution(plan, "Robe Spiider").resolved_by == "width_unique"
 
 
 def test_mode_resolution_tied_width_broken_by_label_token():
@@ -251,7 +263,7 @@ def test_mode_resolution_tied_width_broken_by_label_token():
     }
     plan = _plan(records, mode_reads=modes)
     assert all(r.console_mode == "Extended" for r in plan.runs)
-    assert plan.mode_resolutions["Robe Spiider"].resolved_by == "label_token"
+    assert _resolution(plan, "Robe Spiider").resolved_by == "label_token"
 
 
 def test_mode_resolution_unresolvable_skips_that_type_without_a_card():
@@ -272,8 +284,8 @@ def test_mode_resolution_unresolvable_skips_that_type_without_a_card():
     assert len(plan.skipped) == 8  # 비공허성 — 그 타입 행 수와 같다
     assert all(s.kind == "mode_unresolved" for s in plan.skipped)
     assert all("mode_overrides" in s.detail for s in plan.skipped)
-    assert plan.mode_resolutions["Robe Spiider"].resolution == "unresolved"
-    assert len(plan.mode_resolutions["Robe Spiider"].measured_modes) == 2
+    assert _resolution(plan, "Robe Spiider").resolution == "unresolved"
+    assert len(_resolution(plan, "Robe Spiider").measured_modes) == 2
 
 
 def test_mode_resolution_unresolvable_leaves_other_types_untouched():
@@ -317,7 +329,7 @@ def test_mode_resolution_override_adopted_when_in_measured_list(override, expect
     plan = _plan(records, mode_reads=modes, mode_overrides=override)
     assert plan.runs
     assert all(r.console_mode == expected_mode for r in plan.runs)
-    assert plan.mode_resolutions["Robe Spiider"].resolved_by == "override"
+    assert _resolution(plan, "Robe Spiider").resolved_by == "override"
 
 
 def test_mode_resolution_override_rejected_when_not_measured():
@@ -346,7 +358,7 @@ def test_mode_resolution_tree_unread_falls_back_to_caller_width():
     assert plan.runs
     assert all(r.footprint_source == "caller_unverified" for r in plan.runs)
     assert all(r.channels_per_fixture == records[0].channels for r in plan.runs)
-    assert plan.mode_resolutions["Robe Spiider"].resolution == "tree_unread"
+    assert _resolution(plan, "Robe Spiider").resolution == "tree_unread"
 
 
 def test_mode_resolution_tree_unread_passes_override_unverified():
@@ -672,3 +684,255 @@ def test_no_write_surface_in_lxseq_module():
     assert import_violations == []
     assert name_violations == []
     assert string_violations == []
+
+
+# ---------------------------------------------------------------------------
+# PR #72 리뷰 결함 — 매퍼 폭 산정 (D3 · D4)
+#
+# 두 결함 모두 「매퍼가 세운 계획값」과 「콘솔이 실제로 놓을 자리」가 어긋나는 축에
+# 있다. 기준 리그 86대는 타입마다 폭이 하나여서 이 갈래를 지나가지 않는다 —
+# 그래서 아래 입력은 픽스처가 아니라 손으로 짠 최소 CSV 다.
+# ---------------------------------------------------------------------------
+
+
+def _csv(rows) -> str:
+    """(타입, 모드라벨, 채널수, 유니버스, 시작주소) 행들을 9열 CSV 로 만든다.
+
+    `AddrRange` 는 파서가 숫자까지 대조하므로(`addr_range_mismatch`) 여기서 계산해
+    맞춰 준다 — 손으로 적으면 검증 대상이 아니라 파서 거부를 시험하게 된다.
+    """
+    header = "FID,Group,FixtureType,Mode,Ch,Universe,Address,AddrRange,Position"
+    lines = [header]
+    for fid, (ftype, mode_label, channels, universe, address) in enumerate(rows, start=1):
+        end = address + channels - 1
+        lines.append(
+            f"{fid},KEY,{ftype},{mode_label},{channels},{universe},{address},"
+            f"{universe}.{address:03d}–{end:03d},무대"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def _mixed_width_records():
+    """한 타입(`Aura`)이 12ch 과 25ch 두 폭으로 섞여 오는 3행."""
+    return parse_patch_csv(
+        _csv(
+            (
+                ("Aura", "Basic 12ch", 12, 1, 1),
+                ("Aura", "Extended 25ch", 25, 1, 13),
+                ("Aura", "Basic 12ch", 12, 1, 38),
+            )
+        )
+    ).records
+
+
+def _two_width_modes() -> dict[str, TypeModeRead]:
+    return {
+        "Aura": TypeModeRead(
+            attempted=True,
+            type_found=True,
+            modes=(
+                ModeChoice(name="Basic 12ch", width=12, slot=1),
+                ModeChoice(name="Extended 25ch", width=25, slot=2),
+            ),
+        )
+    }
+
+
+def test_mixed_width_rows_of_one_type_keep_their_csv_addresses():
+    """D3 — 모드 확정이 타입당 1회면 뒤 행들이 런 머리 폭으로 밀린다."""
+    records = _mixed_width_records()
+    plan = _plan(records, mode_reads=_two_width_modes())
+
+    assert plan.skipped == ()  # 조용히 틀리는 결함이라 건너뜀은 0 이어야 한다
+    csv_addresses = {r.fid: f"{r.universe}.{r.address}" for r in records}
+    planned = {fid: entry["address"] for fid, entry in plan.fid_map.items()}
+    assert planned == csv_addresses
+
+
+def test_mixed_width_rows_of_one_type_do_not_merge_into_one_run():
+    """D3 — 폭이 다른 행이 한 런으로 뭉치면 런 폭이 뒤 행에도 적용된다."""
+    records = _mixed_width_records()
+    plan = _plan(records, mode_reads=_two_width_modes())
+
+    assert len(plan.runs) >= 2
+    for run in plan.runs:
+        widths = {records[fid - 1].channels for fid in run.fids}
+        assert widths == {run.channels_per_fixture}
+
+
+def _override_records():
+    """CSV 는 39ch 라고 하는데 콘솔 실측 모드는 25ch 하나뿐 — override 의 정상 상황."""
+    return parse_patch_csv(
+        _csv(
+            (
+                ("MegaPointe", "Mode 1 39ch", 39, 1, 1),
+                ("MegaPointe", "Mode 1 39ch", 39, 1, 40),
+            )
+        )
+    ).records
+
+
+def _narrow_mode() -> dict[str, TypeModeRead]:
+    return {
+        "MegaPointe": TypeModeRead(
+            attempted=True,
+            type_found=True,
+            modes=(ModeChoice(name="Mode 2 25ch", width=25, slot=1),),
+        )
+    }
+
+
+def test_override_adopts_the_measured_width_not_the_csv_width():
+    """D4 — override 분기가 이름만 찾고 폭을 버리면 계획이 자기모순이 된다."""
+    records = _override_records()
+    plan = _plan(
+        records,
+        mode_reads=_narrow_mode(),
+        mode_overrides={"MegaPointe": "Mode 2 25ch"},
+    )
+
+    assert plan.runs
+    assert all(r.console_mode == "Mode 2 25ch" for r in plan.runs)
+    # 25채널 모드라고 말하면서 39채널 폭으로 자리를 잡으면 안 된다.
+    assert all(r.channels_per_fixture == 25 for r in plan.runs)
+
+
+def test_override_keeps_the_csv_address_instead_of_packing_at_the_measured_stride():
+    """D4 — 폭이 좁아지면 CSV 자리를 지키려고 런이 갈려야 한다.
+
+    한 런으로 묶으면 콘솔이 보폭 25 로 늘어놓아 둘째 대가 CSV 의 `1.40` 이 아니라
+    `1.26` 에 간다. 패치 CSV 를 수입하는 목적은 조명감독이 정한 주소를 옮기는 것이니
+    당겨 놓고 「당겼다」고 보고하는 대신 당기지 않는다.
+    """
+    records = _override_records()
+    plan = _plan(
+        records,
+        mode_reads=_narrow_mode(),
+        mode_overrides={"MegaPointe": "Mode 2 25ch"},
+    )
+
+    assert plan.fid_map[2]["address"] == "1.40"
+    csv_addresses = {r.fid: f"{r.universe}.{r.address}" for r in records}
+    assert {fid: e["address"] for fid, e in plan.fid_map.items()} == csv_addresses
+    assert len(plan.runs) == 2  # 자리를 지키려면 갈리는 수밖에 없다
+
+
+def test_override_occupancy_is_checked_at_the_address_actually_used():
+    """D4 ③ — 점유 검사가 CSV 폭으로 돌면 실제로 쓰이는 자리는 한 번도 안 본다.
+
+    자리를 상수로 박지 않는다. 먼저 빈 콘솔에 계획을 세워 **매퍼가 스스로 고른**
+    자리를 읽고, 바로 그 자리에 점유를 놓아 다시 계획한다 — 어떤 수정안을 택하든
+    「계획이 쓰겠다고 한 자리는 점유 검사를 거쳤다」는 불변식만 검사한다.
+    """
+    kwargs = {
+        "mode_reads": _narrow_mode(),
+        "mode_overrides": {"MegaPointe": "Mode 2 25ch"},
+    }
+    records = _override_records()
+    clean = _plan(records, **kwargs)
+    target = clean.fid_map[2]["address"]
+    assert clean.fid_map[2]["run_index"] is not None  # 비공허성 — 빈 콘솔에선 실제로 계획된다
+
+    universe, address = (int(part) for part in target.split("."))
+    occupants = (Occupant(universe=universe, address=address, name="기존", fixture_type="X"),)
+    blocked = _plan(_override_records(), occupants=occupants, **kwargs)
+
+    planned = {
+        entry["address"] for entry in blocked.fid_map.values() if entry["run_index"] is not None
+    }
+    assert target not in planned
+
+
+def test_tree_unread_mixed_widths_still_keep_their_csv_addresses():
+    """D3 — 모드 이름이 없을 때는 폭만이 런의 유일한 구분자다.
+
+    모드 트리를 못 읽으면 `resolution` 도 `console_mode` 도 행마다 같다. 런 경계가
+    폭을 보지 않으면 12ch 과 25ch 이 한 런으로 뭉치고, 런 폭은 머리 행 값이 되어
+    뒤 행이 CSV 가 지정한 자리에서 밀린다 — 이름이 갈라 주던 다른 갈래와 달리
+    여기서는 폭을 빼면 그대로 통과해 버린다.
+    """
+    records = _mixed_width_records()
+    plan = _plan(records, mode_reads={"Aura": TypeModeRead(attempted=True, type_found=False)})
+
+    assert all(r.footprint_source == "caller_unverified" for r in plan.runs)  # 비공허성
+    csv_addresses = {r.fid: f"{r.universe}.{r.address}" for r in records}
+    assert {fid: e["address"] for fid, e in plan.fid_map.items()} == csv_addresses
+    assert len(plan.runs) >= 2
+
+
+def _wide_mode(width: int) -> dict[str, TypeModeRead]:
+    return {
+        "MegaPointe": TypeModeRead(
+            attempted=True,
+            type_found=True,
+            modes=(ModeChoice(name=f"Mode 0 {width}ch", width=width, slot=1),),
+        )
+    }
+
+
+def test_plan_overlap_created_by_a_wider_measured_mode_is_rejected():
+    """D4 ③ 나머지 절반 — 계획이 자기 자신과 겹치는 것은 점유 검사가 못 본다.
+
+    CSV 폭 39 로는 `1.1` 과 `1.40` 이 안 겹치지만, 확정된 모드가 50채널이면 발자국이
+    `1..50` 과 `40..89` 로 넓어져 `40..50` 이 겹친다. 콘솔 기존 점유는 비어 있으므로
+    점유 검사는 아무 말도 하지 않는다 — 이 축을 따로 보지 않으면 조용히 통과한다.
+    """
+    plan = _plan(
+        _override_records(),
+        mode_reads=_wide_mode(50),
+        mode_overrides={"MegaPointe": "Mode 0 50ch"},
+    )
+
+    assert plan.runs == ()
+    assert [s.kind for s in plan.skipped] == ["address_overlap_in_plan"] * 2
+    assert all("겹친다" in s.detail for s in plan.skipped)
+
+
+def test_a_wider_measured_mode_that_still_fits_is_planned_normally():
+    """비공허성 — 넓어졌다는 이유만으로 거부하면 위 검사는 아무 뜻이 없다.
+
+    같은 50채널이라도 CSV 자리가 충분히 떨어져 있으면(`1.1` · `1.60`) 겹치지 않는다.
+    이 경우까지 거부되면 위 테스트는 「폭이 넓으면 거부」를 검사하는 것이 된다.
+    """
+    records = parse_patch_csv(
+        _csv(
+            (
+                ("MegaPointe", "Mode 1 39ch", 39, 1, 1),
+                ("MegaPointe", "Mode 1 39ch", 39, 1, 60),
+            )
+        )
+    ).records
+    plan = _plan(
+        records,
+        mode_reads=_wide_mode(50),
+        mode_overrides={"MegaPointe": "Mode 0 50ch"},
+    )
+
+    assert plan.skipped == ()
+    assert len(plan.runs) == 2
+    assert {fid: e["address"] for fid, e in plan.fid_map.items()} == {1: "1.1", 2: "1.60"}
+
+
+def test_occupancy_uses_the_measured_width_not_the_csv_width():
+    """D4 ③ 전반부 — 점유 검사의 발자국은 콘솔이 실제로 밟을 폭이어야 한다.
+
+    CSV 는 39채널이라 하고 확정된 모드는 25채널이다. 이 대는 `1.1` 에서 `1..25` 만
+    쓰므로 `1.30` 의 기존 장비와 다투지 않는다. CSV 폭으로 검사하면 발자국이 `1..39`
+    가 되어 다투지 않는 자리를 다툰다고 보고, 멀쩡한 행을 건너뛴다.
+
+    **의도된 선택임을 밝혀 둔다.** 이렇게 하면 콘솔의 겹침 판정이 물리 장비의 실제
+    폭(39)보다 느슨해진다 — 콘솔은 안 겹친다는데 실제 리그에서는 겹칠 수 있다.
+    override 를 쓰는 순간 감수하는 것이며, 이 커밋의 범위 밖이다(§E.2 잔여위험).
+    검사 기준을 콘솔 모델에 맞춘 것이지, 물리 폭을 잊은 것이 아니다.
+    """
+    records = parse_patch_csv(_csv((("MegaPointe", "Mode 1 39ch", 39, 1, 1),))).records
+    occupants = (Occupant(universe=1, address=30, name="기존", fixture_type="X"),)
+    plan = _plan(
+        records,
+        mode_reads=_narrow_mode(),
+        mode_overrides={"MegaPointe": "Mode 2 25ch"},
+        occupants=occupants,
+    )
+
+    assert plan.skipped == ()
+    assert [(r.address, r.channels_per_fixture) for r in plan.runs] == [("1.1", 25)]
