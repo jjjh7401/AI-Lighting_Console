@@ -241,7 +241,77 @@ M1에서 확립한 순서를 그대로 적용했다: **테스트 먼저 → GREE
 
 **복구 증명**: 6회 모두 복구 후 `git diff -- server/lxseq/mapper.py` 빈 출력 확인. 최종 클린 런 32 passed.
 
-_<M3 이하 — 착수 예정>_
+### M3 — 툴 등재 · 위임 · 보고 (2026-08-21, run 세션 · cycle_type=tdd · 직접 구현)
+
+- **위치 확인(착수 전)**: `pwd` / `git rev-parse --show-toplevel` = `/Users/studiox/orca/workspaces/AI-Lighting_Console/LX-SEQ` · `git branch --show-current` = `jjjh7401/LX-SEQ` · `git rev-parse --short HEAD` = `3340a62`. 리드 대조 일치.
+- **커밋 3개**(전부 명시 pathspec · 메시지에 `t9`): `4955e97`(M2 점유 판정 순서 교정) · `2b4e341`(M3 툴) · `35ab98f`(저장소 가드 3종 갱신).
+- **4지점 등재**: `TOOL_NAMES`(`patch_fixtures` 다음) · 핸들러 클로저(`patch_fixtures` 뒤) · `ToolDefinition`(정의 튜플 끝) · `handlers` 맵. **기존 핸들러 본문 변경 0건.**
+- **테스트 27건 신규** `server/tests/test_lxseq_tool.py`. 가짜 콘솔은 `deploy`가 받은 Lua를 되읽어 픽스처를 **실제로** 만든다 — 계획을 믿지 않고 실행 경로째 본다.
+
+#### 구현 중 드러난 M2 결함 1건 (M3의 AC가 잡았다)
+
+`AC-LXSEQ-013 ①`은 2회차 preview의 `skipped` 86건이 전부 `already_patched`이길 요구하는데 실측은 전부 `fid_occupied`였다:
+
+```
+skipped kinds: Counter({'fid_occupied': 43})
+planned: 43
+sample: {'fid': 101, 'address': '1.1', 'kind': 'fid_occupied',
+         'detail': 'FID 101는 콘솔에 이미 있다', 'occupant': None, 'occupied_fid': 101}
+```
+
+원인은 `mapper.py::_occupancy_skip`(M2, `7acc1b1`)의 **판정 순서** — FID 점유를 자리 충돌보다 먼저 본다. 이미 패치된 행은 두 조건이 동시에 참이라 덜 정확한 쪽이 이겼다. **거르는 동작 자체는 옳았다**(43/43 분할 정확). 틀린 것은 라벨이고, 라벨이 지시하는 다음 행동이 정반대다 — `fid_occupied`는 «다른 FID로 다시 패치하라»로 읽혀 같은 리그를 한 벌 더 만든다. 실행 취소는 없다. 자리 판정을 먼저 하도록 순서를 바꿨다(`4955e97`, 되돌리기 쉽게 별도 커밋). 리드 보고 후 진행.
+
+#### 뮤테이션 8회 — 전부 겨냥 테스트를 죽였다
+
+| # | 겨냥(사전 지목) | 변형 | 결과 |
+|---|---|---|---|
+| ① | `test_the_registered_tools_are_exactly_the_declared_set` | `TOOL_NAMES`에서 등재 1줄 제거 | 1 failed, 97 deselected — RED |
+| ② | `test_preview_is_the_default_action_and_writes_nothing` | preview 경로에서 `deploy_pipeline.deploy` 1회 호출 주입 | 1 failed — RED |
+| ③ | `test_apply_stops_...` · `test_apply_propagates_awaited_human_...` | `status != "created"`에서 멈추지 않게 | 2 failed — RED |
+| ④ | 재실행 멱등 3건 | `_occupancy_skip` 결과를 무시하게 | 3 failed — RED |
+| ④b | `AC-013 ①` 라벨 | 판정 순서를 **교정 이전으로 되돌림** | 2 failed — 원래 실패 2건 정확히 재현 (교정이 하중을 받는다는 증거) |
+| ⑤ | `test_a_partial_apply_summary_never_claims_success` | 부분 생성 요약이 «성공»을 말하게 | 1 failed — RED |
+| ⑦a | `test_the_definition_forbids_pasting_...` | 인자 설명에서 붙여넣기 금지 문구 제거 | 1 failed — RED |
+| ⑦b | `test_guidance_repeats_the_paste_ban_to_the_model` | `guidance`에서 같은 문구 제거 | 1 failed — RED |
+| ⑦c | sha256 2건 | `source.sha256`을 빈 바이트 상수로 고정 | 2 failed — RED |
+
+**복구 증명**: 8회 모두 복구 후 `git diff --quiet -- server/` 빈 출력 확인. (이 트리에는 이 카드와 무관한 미커밋 83건이 있어 인자 없는 `git diff`는 **구조적으로 비지 않는다** — 반드시 `-- server/`로 좁혀야 한다.)
+
+#### AC-LXSEQ-015 회귀·PRESERVE 게이트 (BASE=`453846a`)
+
+- ② `git diff --stat 453846a..HEAD -- console/lua server/safety server/prechk server/vwx server/paperwork server/rulebook/assets` → **빈 출력**.
+- ⑤ 게이트 비공허성: `server/prechk/mode_read.py`에 임시 2줄 주입 후 같은 대조 → `server/prechk/mode_read.py | 2 ++` **비지 않음** 확인, 되돌린 뒤 diff 빈 출력 재확인.
+- ③ `git diff 453846a..HEAD -- server/orchestrator/tools.py | grep -c '^-[^-]'` → **0** (상한 3). 삭제된 줄 원문 출력도 **빈 출력** — 순수 추가다.
+- ④ `uv run ruff check server/lxseq server/orchestrator/tools.py server/orchestrator/runner.py server/tests/test_lxseq_*.py` → `All checks passed!`
+
+#### ① 전체 스위트 — **이 저장소에는 테스트 CI가 없다**
+
+`.github/workflows/`에 `label-sync.yml` 하나뿐이라 브랜치에도 PR에도 테스트를 도는 워크플로가 없다. 전체 로컬 실행이 이 카드의 유일한 회귀 증거다.
+
+1회차(가드 갱신 전): `uv run pytest server/tests -q` → **3 failed, 9673 passed, 8 skipped, 1 warning in 141.66s**. 실패 3건은 전부 **신규 툴 등재가 원인**이며 무관한 실패가 아니었다 — `_TOOL_TASKS` 한국어 작업 이름 누락 · tools.py 헝크 트립와이어 · `ruff format`.
+
+최종: `uv run pytest server/tests -q` → **9676 passed, 8 skipped, 1 warning in 140.64s**. 기준선 9649 passed · 8 skipped 대비 **+27 = 신규 테스트 수와 정확히 일치**, 실패 0.
+
+#### AC 판정
+
+| AC | 판정 | 근거 |
+|---|---|---|
+| AC-LXSEQ-011 | PASS | 파리티 테스트 + preview 쓰기 0(뮤테이션 ①②로 판별력 증명), 런 12 · `write_count_planned` 86 · `apply.entered == False` |
+| AC-LXSEQ-012 | PASS(주 1건) | 12런 전량 `created` · 플러그인 12회 · 부분 생성에서 `stopped_at == 2` + 이후 `not_attempted` 9건 · `only_fids` 1런 2대 · Lua 출처 `luagen` |
+| AC-LXSEQ-013 | PASS | 2회차 preview 런 0 · `already_patched` 86 · 2회차 apply 쓰기 0 · `is_error False` · 절반 상태 43/43 분할 |
+| AC-LXSEQ-014 | PASS | 최상위 키 7개 일치 · 닫힌 어휘 · 부분 생성 요약에 «성공/완료» 0건 · "쓰기 0건"은 `entered == False`에서만 · `guidance` 3구절 |
+| AC-LXSEQ-015 | PASS | 위 게이트 4종 |
+| AC-LXSEQ-017 | PASS | 설명문·인자 설명·`guidance` 3중 보루 · 인자 키 5개/`required`/`additionalProperties: False` · sha256 비공허성 · 업로드 포트 읽기 0회 |
+
+**AC-LXSEQ-012 주**: ③의 "질문 카드로 **모드**를 묻는 시나리오"는 이 설계에서 **도달 불가**다 — 매퍼가 위임 전에 모드를 확정하므로 `patch_fixtures`의 모드 질문 가지에 닿지 않는다(오히려 정상 성질이다). 도달 가능한 질문 카드는 «Patch 편집기를 열어 달라» 하나뿐이라, 관측 계약 3가지(해당 런 `not_run` · `awaited_human` 전달 · 이후 런 미실행)를 그 경로로 검증했다. AC 문구와 실제 경로가 다르다는 사실을 여기 남긴다.
+
+#### M3에서 새로 생긴 이월 채무
+
+- **plan.md M3 파일 목록 밖 3파일을 만졌다.** `server/lxseq/mapper.py`(위 결함), `server/orchestrator/runner.py`(`_TOOL_TASKS`), `server/tests/test_songcue_bundle.py`(헝크 트립와이어). 뒤 둘은 "툴을 등재하면 반드시 따라오는" 가드이며 트립와이어는 자기 주석이 갱신 절차를 정해 둔 자리다 — 계획의 파일 목록이 이 두 자리를 빠뜨렸다. 다음 툴 등재 카드는 처음부터 5파일로 잡아라.
+- **`already_patched` 판정 순서를 지키는 것은 툴 테스트 2건뿐이다.** `test_lxseq_mapper.py`에는 순서를 단언하는 테스트가 없다(뮤테이션 ④b가 매퍼 테스트 32건을 전혀 죽이지 않았다). 매퍼 단위에서 이 순서가 조용히 뒤집혀도 M2 스위트는 초록이다.
+- **가짜 콘솔은 모드를 타입마다 1개만 준다.** 폭이 같은 모드가 여럿인 경우(라벨 토큰 갈래)와 `mode_overrides` 재호출 경로는 툴 계층에서 미검증이다 — 매퍼 단위 테스트에는 있다.
+
+_<M4 — onPC 실기, 리드 승인 대기. 시작하지 않았다.>_
 
 ## §E.3 Run-phase Audit-Ready Signal
 
