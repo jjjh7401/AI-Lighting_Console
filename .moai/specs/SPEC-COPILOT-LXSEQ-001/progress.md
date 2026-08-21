@@ -311,7 +311,113 @@ sample: {'fid': 101, 'address': '1.1', 'kind': 'fid_occupied',
 - **`already_patched` 판정 순서를 지키는 것은 툴 테스트 2건뿐이다.** `test_lxseq_mapper.py`에는 순서를 단언하는 테스트가 없다(뮤테이션 ④b가 매퍼 테스트 32건을 전혀 죽이지 않았다). 매퍼 단위에서 이 순서가 조용히 뒤집혀도 M2 스위트는 초록이다.
 - **가짜 콘솔은 모드를 타입마다 1개만 준다.** 폭이 같은 모드가 여럿인 경우(라벨 토큰 갈래)와 `mode_overrides` 재호출 경로는 툴 계층에서 미검증이다 — 매퍼 단위 테스트에는 있다.
 
-_<M4 — onPC 실기, 리드 승인 대기. 시작하지 않았다.>_
+### M4 — onPC 실기 확인 (2026-08-21, run 세션 · cycle_type=none · **preview까지. apply 미실행**)
+
+- **하네스**: `server/tools/lxseq_e2e.py`(커밋 `16b2d67`). DEV TOOL — `busking_e2e`·`groupgen_e2e` 계열. 콘솔 스택 `build_console_stack` · 툴 `build_toolset` · 배포 `DeployPipeline`(serve.py와 동일 조립). 우회 배선 0.
+- **이월 채무 기계 확인**: `grep -c 'server\.bridge' server/tools/lxseq_e2e.py` → **0**. `uv run pytest server/tests/test_architecture.py -q` → 4 passed.
+
+#### 착수 차단 1건 — 수신 포트 9005 이중 점유 (해소됨)
+
+```
+server.web.launcher.PortInUseError: port 9005 for 'OSC feedback receive' on 127.0.0.1 is already in use
+
+$ lsof -nP -iUDP:9005
+python3.1 67461 studiox  4u IPv4 UDP 127.0.0.1:9005
+app_gma3  99116 studiox 20u IPv4 UDP *:9005
+$ ps -o pid,ppid,lstart,command -p 67461
+67461 67459 Fri Aug 21 16:25:15 2026  .../LX-SEQ/.venv/bin/python3 -m server.web
+```
+
+막고 있던 것은 onPC가 아니라 **이 워크트리에서 뜬 코파일럿 백엔드**였다(TCP 8765 LISTEN + **ESTABLISHED 7건** — 브라우저 UI가 붙어 있었다). 부모가 `launchd`라 Ctrl-C할 터미널이 없었다. **에이전트가 죽이지 않고 감독께 올려 감독 손으로 종료**했다 — 살아 있는 세션을 말없이 끊지 않기 위해서다. 종료 후 `app_gma3(*:9005)`만 남았고 왕복은 결정적으로 돈다.
+
+#### 채널 검증 — 정상 왕복 + **날조 대조군** (매 실행 선행, 인자로 끌 수 없음)
+
+명령: `uv run python -m server.tools.lxseq_e2e --csv <정본 절대경로> --probe-only --listen-port 9005 --out .moai/reports/SPEC-COPILOT-LXSEQ-001/m4-probe.json`
+
+```json
+"live": { "path": "Patch/FixtureTypes", "ok": true, "child_count": 15,
+          "children_returned": 15, "truncated": false }
+"fabricated_control": { "path": "Patch/FixtureTypesZZZNotAThing/9999",
+          "raised": "StateQueryError: path segment not found: 'FixtureTypesZZZNotAThing'
+                     (in Patch/FixtureTypesZZZNotAThing/9999)" }
+"trustworthy": true
+```
+
+(a) 실재 경로 응답·절단 없음. (b) **날조 경로는 `ok`가 아니라 예외로 거부**됐다 — 이 채널의 `ok`는 증거로 쓸 수 있다. 이 저장소에는 오타 플래그가 붙은 명령이 `ok`로 저장까지 된 기록이 있어(`lesson-fabricated-control-probe.md`) 대조군 없이는 이후 모든 `ok`가 증거가 못 된다.
+
+**미검증으로 남는 것**: 위는 **판독 채널**이다. `preview`는 명령을 한 발도 쏘지 않으므로 **실행 채널**의 "오타가 `ok`로 오는가"는 아직 검증되지 않았다. apply 승인 전에 처분이 필요하다.
+
+#### preview 실측 — 계획 12런 86대가 아니라 **9런 62대**
+
+명령: `uv run python -m server.tools.lxseq_e2e --csv <정본 절대경로> --action preview --listen-port 9005 --out .moai/reports/SPEC-COPILOT-LXSEQ-001/m4-preview.json` → exit 0
+
+```
+is_error: False · awaited_human: False
+sha256 대조: True  — source.sha256 == 로컬 파일 sha256
+              77a34d4bfd611fc034ce621c9715c1e33129df244a67c7e8dfd75d83816d7ee3 / 7258 bytes
+console_read: {complete_enough_to_judge_absence: True, caveat: None,
+               fid_read: {attempted: True, known: 0, child_count: 0, unresolved: 0}}
+런 9 · write_count_planned 62 · skipped 24 · skipped_by_kind {"mode_unresolved": 24}
+types.unresolved []  ·  승인 요청 0 · 배포 검토 0 · 질문 0 · 콘솔 송신 0건
+summary_ko: "미리보기 — 쓰기 0건. 런 9개 · 계획 62대 · 건너뛴 행 24건."
+```
+
+`fid_read.child_count == 0` — **감독이 말씀하신 "패치 U1~U5 비어 있음"이 기계로 확인**됐다. 점유 건너뜀 0건이 그 결과다.
+
+**타입 해석 8종 전부 성공**(`types.unresolved == []`):
+
+| CSV | 콘솔 |
+|---|---|
+| ETC S4 LED S3 Lustr X8 | Source 4 LED Series 3 Lustr X8 |
+| Robe Spiider | Robin Spiider |
+| Robe MegaPointe | Robin MegaPointe |
+| Martin MAC Aura XB | Mac Aura XB |
+| Martin RUSH PAR 2 RGBW Z | Rush Par 2 RGBW Zoom |
+| Martin Atomic 3000 LED | Atomic 3000 LED |
+| Elation CUEPIX Blinder WW2 | CuePix Blinder WW2 |
+| Look Unique 2.1 | Unique 2 1 |
+
+**주의(추적 대상)**: 콘솔 라이브러리 15종 목록에 `Robin Spiider`가 **두 번** 나온다(중복 등록). 이번 호출은 `present`로 확정됐으나 어느 슬롯을 잡았는지는 이 페이로드로 알 수 없다.
+
+#### 건너뛴 24대 — `mode_unresolved` 단일 원인 (설계대로 동작)
+
+전부 `Martin MAC Aura XB` · CSV `Mode="Extended 25ch"` · `Ch=25`.
+
+```
+BACK     12대  FID 201~212  4.001 ~ 4.300
+SIDE-L    6대  FID 301~306  4.301 ~ 4.450
+SIDE-R    6대  FID 311~316  5.001 ~ 5.150
+```
+
+콘솔 실측 모드 6종: `Extended - Extended(25)` · `Extended - RAW(25)` · `Extended - RGB(25)` · `Standard - Extended(14)` · `Standard - RAW(14)` · `Standard - RGB(14)`.
+
+**25ch가 3개**라 폭-유일로 못 가르고, CSV 라벨 토큰 `Extended`가 그 셋 **모두**에 걸려 라벨 토큰으로도 못 가른다 → `mode_unresolved`. **결정 J가 의도한 그대로다** — 셋 중 하나를 집었으면 24대가 잘못된 색 모드로 패치됐고, MA3는 패치된 장비를 코파일럿으로 지울 수단이 없다. 세 모드는 **폭이 같아 주소 계획은 동일**하고 속성 배치만 다르다: 오선택의 결과는 주소 충돌이 아니라 «장비가 엉뚱하게 반응»이다.
+
+해소 경로: 감독이 모드를 고른 뒤 `--mode-overrides '{"Martin MAC Aura XB": "<콘솔 모드 이름>"}'`로 재호출.
+
+#### 계획된 9런 · 예상 주소 대역 (폭 전량 `console_measured`)
+
+| # | Group | 콘솔 타입 | 모드 | 주소 | 대 | 폭 | FID | 대역 |
+|---|---|---|---|---|---|---|---|---|
+| 0 | KEY | Source 4 LED Series 3 Lustr X8 | Direct | 1.1 | 6 | 12 | 101~106 | 1.001–072 |
+| 1 | FOH | Source 4 LED Series 3 Lustr X8 | Direct | 1.73 | 8 | 12 | 111~118 | 1.073–168 |
+| 2 | BLIND | CuePix Blinder WW2 | 4 channel | 1.169 | 6 | 4 | 601~606 | 1.169–192 |
+| 3 | STROBE | Atomic 3000 LED | Extended | 1.193 | 4 | 14 | 611~614 | 1.193–248 |
+| 4 | HAZE | Unique 2 1 | Mode 0 | 1.249 | 2 | 2 | 621~622 | 1.249–252 |
+| 5 | MOVER-U | Robin MegaPointe | Mode 1 | 2.1 | 8 | 39 | 501~508 | 2.001–312 |
+| 6 | MOVER-D | Robin Spiider | Mode 1 | 3.1 | 8 | 49 | 521~528 | 3.001–392 |
+| 7 | WASH-U | Rush Par 2 RGBW Zoom | 9 channel | 5.151 | 10 | 9 | 401~410 | 5.151–240 |
+| 8 | WASH-D | Rush Par 2 RGBW Zoom | 9 channel | 5.241 | 10 | 9 | 421~430 | 5.241–330 |
+
+합계 **62대**. 런 7·8은 주소가 이어지지만 `Group` 경계(결정 I, `name_prefix_mode="group"`)로 갈렸다 — 의도대로다.
+
+#### 판정 — **AC-LXSEQ-016 미완결**
+
+`preview` 구간만 관측했다. `apply`(86대 생성 재조회 확인) 및 재실행 0건 쓰기는 **미실행**이며, 리드 승인 전까지 실행하지 않는다. 감독 결정 ②에 따라 AC-LXSEQ-016 미수행 상태에서 `implemented`는 가능하나 `completed`는 불가하다.
+
+증거 파일: `.moai/reports/SPEC-COPILOT-LXSEQ-001/m4-probe.json` · `m4-preview.json`
+
+_<apply — 리드 승인 + 감독의 Aura XB 모드 확정 대기>_
 
 ## §E.3 Run-phase Audit-Ready Signal
 
