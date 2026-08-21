@@ -83,11 +83,20 @@ class FakeConsole:
     모드는 타입마다 하나(폭 = CSV의 Ch)라 매퍼의 폭-유일 확정이 성립한다.
     """
 
-    def __init__(self, fixtures: list[dict[str, object]] | None = None) -> None:
+    def __init__(
+        self,
+        fixtures: list[dict[str, object]] | None = None,
+        *,
+        truncate_at: int | None = None,
+    ) -> None:
         self._widths = _type_widths()
         self._slots = {name: index + 1 for index, name in enumerate(self._widths)}
         self.fixtures: list[dict[str, object]] = list(fixtures or [])
         self.deployed: dict[str, str] = {}
+        #: 실물 콘솔은 픽스처 열거를 19대에서 자른다 — `childCount`는 진짜 총계로
+        #: 남고 `children`만 짧아진다. 절단되지 않는 가짜는 판독 게이트의 한 갈래를
+        #: 통째로 가리므로(결함 D1이 실기에서야 드러난 이유) 이 변형을 둔다.
+        self.truncate_at = truncate_at
 
     # -- 계획 → 콘솔 상태(테스트가 미리 채워 둘 때 쓴다) --------------------
     @staticmethod
@@ -104,15 +113,20 @@ class FakeConsole:
     def query_state(self, path: str) -> dict:
         if path.startswith(TYPES_ROOT):
             return self._type_tree(path)
+        children = [
+            {"class": "Fixture", "i": index + 1, "name": row["name"]}
+            for index, row in enumerate(self.fixtures)
+        ]
+        cut = self.truncate_at
+        truncated = cut is not None and len(children) > cut
         return {
             "ok": True,
             "path": path,
-            "truncated": False,
-            "node": {"childCount": len(self.fixtures)},
-            "children": [
-                {"class": "Fixture", "i": index + 1, "name": row["name"]}
-                for index, row in enumerate(self.fixtures)
-            ],
+            # `childCount`는 자르지 않는다 — 그것이 진짜 총계다. 짧아지는 것은
+            # `children`뿐이고, 판독기는 슬롯을 하나씩 지목해 복구 스윕한다.
+            "truncated": truncated,
+            "node": {"childCount": len(children)},
+            "children": children[:cut] if truncated else children,
         }
 
     def _type_tree(self, path: str) -> dict:
@@ -453,6 +467,37 @@ def test_a_second_apply_writes_nothing_and_is_not_an_error():
     assert payload["apply"]["runs"] == []
     assert "할 일 없음" in payload["summary_ko"]
     assert execution.result.is_error is False
+
+
+def test_a_truncating_console_still_reports_already_patched():
+    # 결함 D1 (M4 실기): 86대를 채운 콘솔은 열거를 19대에서 자른다. 그때도 선언된
+    # 자식은 전부 관측되므로 «이미 패치됨»으로 갈려야 한다 — 「콘솔을 다 못 읽었다」가
+    # 아니다. 절단되지 않는 가짜 콘솔은 이 갈래를 영원히 가린다.
+    plan_payload, _execution, _console, _deploy, _runner = _run()
+    rows = _planned_fixtures(plan_payload)
+    assert len(rows) == 86
+
+    console = FakeConsole(fixtures=rows, truncate_at=19)
+    payload, execution = _call(_toolset(console), action="preview")
+
+    assert payload["console_read"]["complete_enough_to_judge_absence"] is True
+    assert payload["plan"]["runs"] == []
+    assert payload["plan"]["write_count_planned"] == 0
+    assert {row["kind"] for row in payload["plan"]["skipped"]} == {"already_patched"}
+    assert execution.result.is_error is False
+
+
+def test_a_truncating_console_is_not_vacuously_truncated():
+    # 비공허성 — 절단 변형이 실제로 짧은 목록을 낸다(그렇지 않으면 위 테스트는
+    # 절단을 시험한 것이 아니라 그냥 온전한 콘솔을 다시 시험한 것이다).
+    plan_payload, _execution, _console, _deploy, _runner = _run()
+    console = FakeConsole(fixtures=_planned_fixtures(plan_payload), truncate_at=19)
+
+    answer = console.query_state("Patch/Stages/1/Fixtures")
+
+    assert answer["node"]["childCount"] == 86
+    assert len(answer["children"]) == 19
+    assert answer["truncated"] is True
 
 
 def test_a_half_patched_console_replans_only_the_remainder():

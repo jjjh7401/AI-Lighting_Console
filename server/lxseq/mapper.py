@@ -17,10 +17,12 @@ from dataclasses import dataclass
 from typing import Any
 
 from server.lxseq.parser import LxseqPatchRecord
-from server.prechk.inventory import COMPLETE, Inventory
+from server.prechk.inventory import Inventory
 from server.prechk.mode_read import TypeModeRead
 from server.vwx.addressfit import Occupant, evaluate
+from server.vwx.apply import console_read_caveat
 from server.vwx.patchplan import ExistingFidRead
+from server.vwx.verdicts import CONSOLE_READ_INCOMPLETE
 
 # `resolve_fixture_type` 계약의 status 어휘. `present`만 런에 들어간다.
 _STATUS_PRESENT = "present"
@@ -109,14 +111,29 @@ def _distinct_types(records: tuple[LxseqPatchRecord, ...]) -> tuple[str, ...]:
 def _judge_console_read(
     inventory: Inventory | None, existing_fids: ExistingFidRead
 ) -> tuple[bool, str]:
-    """전수 판독인가. 아니면 왜 아닌가."""
+    """전수 판독인가. 아니면 왜 아닌가.
+
+    **절단은 미판독이 아니다.** 판정은 `completeness` 라벨이 아니라
+    `console_read_caveat`의 caveat 종류로 내린다 — 그것이 이 저장소의 정본 규약이고,
+    형제 호출부 둘(`orchestrator/tools.py`의 `patch_fixtures`, `vwx/apply.py`)이 이미
+    같은 잣대를 쓴다. 그 함수의 독스트링이 두 상태를 갈라 놓았다:
+
+    * `missing_count > 0` (또는 주소 미판독) — 이 상태의 «없음»은 관측이 아니라
+      미판독이다. **막는다.**
+    * `missing_count == 0` 인데 열거만 짧다(`index_domain_unknown`) — 선언된 자식을
+      전부 관측했고 `childCount`가 진짜 총계라 **수량 비교는 정확하다.** 주의는
+      남기되 막지 않는다.
+
+    라벨만 보던 이전 판은 두 번째 갈래까지 막았다. 실물 콘솔의 열거는 픽스처
+    19대에서 절단되므로, 그 판정으로는 리그가 그 선을 넘는 순간 이 매퍼가 **어떤
+    계획도 세우지 못한다**(2026-08-21 M4 실기: 86대 패치 후 재실행이 86행 전부
+    `console_read_incomplete`). 안전한 방향이었으나 툴이 무력해졌다.
+    """
     if inventory is None:
         return False, "인벤토리를 읽지 않았다"
-    if inventory.completeness != COMPLETE:
-        return False, (
-            f"인벤토리 판독이 전수가 아니다(completeness={inventory.completeness}, "
-            f"미관측 {inventory.missing_count}건)"
-        )
+    caveat = console_read_caveat(inventory)
+    if caveat is not None and caveat["kind"] == CONSOLE_READ_INCOMPLETE:
+        return False, str(caveat["reason"])
     if not existing_fids.attempted:
         return False, "기존 FID를 조회하지 않았다"
     if existing_fids.root_unreadable:

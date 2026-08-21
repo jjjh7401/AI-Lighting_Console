@@ -465,6 +465,58 @@ def test_read_incomplete_records_reason_in_plan():
     assert plan.console_read["reason"]
 
 
+# -- 결함 D1 (M4 실기에서 드러남): 절단 ≠ 미판독 ---------------------------
+#
+# 실물 콘솔의 열거는 19대에서 절단된다. 86대를 패치한 뒤 재실행하면 열거는 짧지만
+# **선언된 자식을 전부 관측**한다(`child_count == observed_count`, `missing_count 0`).
+# 저장소 정본 `server/vwx/apply.py::console_read_caveat` 독스트링이 그 상태를
+# «주의는 남기되 막지 않는다»로 정해 두었고 형제 호출부 둘이 그 규약을 지킨다.
+# 이 게이트가 `completeness` 라벨만 보고 막으면, 리그가 절단선을 넘는 순간 이 툴은
+# 어떤 계획도 세우지 못한다. 오프라인 가짜 콘솔은 절단되지 않아 이 분기를 가렸다.
+
+
+def _index_domain_only_inventory() -> Inventory:
+    """열거는 절단됐으나 선언된 자식을 **전부** 관측한 판독 — 막지 않아야 한다."""
+    return Inventory(
+        path="Root",
+        child_count=86,
+        enumerated_count=19,
+        recovered_count=67,
+        observed_count=86,
+        missing_count=0,
+        completeness=INCOMPLETE,
+        recovery_boundary=19,
+        index_domain_unknown=True,
+    )
+
+
+def test_a_truncated_but_fully_observed_read_still_plans():
+    plan = _plan(inventory=_index_domain_only_inventory())
+
+    assert plan.console_read["complete_enough_to_judge_absence"] is True
+    assert len(plan.runs) == 12
+    assert plan.write_count_planned == 86
+
+
+def test_a_genuinely_short_read_still_blocks():
+    # 비공허성 — 규약을 넓힌 것이 아니다. 못 읽은 것이 남아 있으면 여전히 막는다.
+    plan = _plan(inventory=_truncated_inventory())
+
+    assert plan.console_read["complete_enough_to_judge_absence"] is False
+    assert plan.runs == ()
+
+
+def test_the_gate_uses_the_repository_criterion_not_the_completeness_label():
+    # 두 인벤토리는 `completeness`가 **똑같이** INCOMPLETE다. 라벨로는 가를 수 없고,
+    # caveat 종류로만 갈린다 — 이 테스트가 그 잣대를 고정한다.
+    blocked = _truncated_inventory()
+    allowed = _index_domain_only_inventory()
+    assert blocked.completeness == allowed.completeness == INCOMPLETE
+
+    assert _plan(inventory=blocked).runs == ()
+    assert _plan(inventory=allowed).runs
+
+
 # ---------------------------------------------------------------------------
 # AC-LXSEQ-009 — runs
 # ---------------------------------------------------------------------------
