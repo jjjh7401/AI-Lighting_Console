@@ -210,7 +210,38 @@ fixture_csv: "server/tests/fixtures/lxseq/LXSEQ_RIG_01_ShowBase_r3.patch.csv sha
 
 **Gaps(잔여 미검증)**: ① 뮤테이션은 AC 묶음당 1~2회라, 한 묶음 안 개별 테스트 **전부**의 판별력이 증명된 것은 아니다(예: AC-002 5건 중 뮤테이션이 겨냥한 것은 열 순서 1건). ② `zero_channels`·`non_integer_field`·`duplicate_fid`·`address_overlap_in_file` 부류는 테스트는 있으나 전용 뮤테이션은 돌리지 않았다 — 존재는 확인됐고 판별력은 미증명이다.
 
-_<M2 이하 — 착수 예정>_
+### M2 — 매퍼 (2026-08-21, run 세션 · cycle_type=tdd · 직접 구현)
+
+M1에서 확립한 순서를 그대로 적용했다: **테스트 먼저 → GREEN 커밋 → 그 다음 뮤테이션**(커밋을 선행해야 `git diff`가 복구 증거로 선다).
+
+- **커밋**: `7acc1b1`(매퍼 + 테스트 32건) · 본 커밋(AC-010 결함 보강 + 기록)
+- **RED**: `ModuleNotFoundError: No module named 'server.lxseq.mapper'` — M1과 같은 수집 단계 중단이라 개별 판별력은 아래 뮤테이션으로 별도 증명했다.
+- **AC-LXSEQ-005** PASS — `-k "type_resolution"` 5 passed. `present`만 런에 들어가고 콘솔 이름을 쓴다(CSV 표기 `Robe Spiider`가 런에 0회), `ambiguous`/`absent`/`library_unreadable`은 그 타입 전 행 `type_unresolved`, 타입 해석 요청은 **서로 다른 타입 8종에 8회**(행 86회가 아니다).
+- **AC-LXSEQ-006** PASS — `-k "mode_resolution"` 9 passed. 폭 유일 → `width_unique`, 폭 동률 + 라벨 토큰 유일 → `label_token`, 둘 다 실패 → 그 타입 전 행 `mode_unresolved`(질문 카드 없음 — 결정 J), `mode_overrides`는 실측 목록에 있을 때만 채택(대소문자 무시), 목록에 없으면 여전히 `mode_unresolved`, 트리 미판독 → `caller_unverified`. CSV `Mode` 문자열이 런에 새는 경우 0.
+- **AC-LXSEQ-007** PASS — `-k "occupied"` 5 passed. 자리 점유 → `address_occupied`(점유자 동봉), 같은 타입·같은 시작 주소 → `already_patched`(별 부류), FID 점유 → `fid_occupied`. **구간 안에서 시작**하는 장비만 확정 충돌이고, 구간 앞에서 시작해 뻗는 장비는 잡지 않되 `blind_spot` 문구를 계획에 싣는다. 건너뛴 FID는 어느 런에도 없다.
+- **AC-LXSEQ-008** PASS — `-k "read_incomplete"` 5 passed. 인벤토리 절단·FID 미해결·FID 미조회 세 분기 각각에서 런 0 · 전 행 `console_read_incomplete`, 읽기가 전수로 바뀌면 런이 생긴다(비공허성).
+- **AC-LXSEQ-009** PASS — `-k "runs"` 6 passed. 기본 `group` 모드 **런 12개 · 86대**, `type` 모드 **9개 · 86대**, KEY 런 `1.1`/6대/FID 101~106/12ch, MOVER-D 런 `3.1`/8대/FID 521~528, `fid_map` 키 86개, 중간 행을 건너뛰면 MOVER-U가 런 2개로 갈린다.
+- **AC-LXSEQ-010** PASS — `-k "no_write_surface"` 1 passed(**보강 후**) + `test_architecture.py` 통과. 금지 import·식별자·문자열 0건, 스캔 파일 3개(비공허성).
+- **전체 파일**: 32 passed. **회귀 없음**: `uv run pytest server/tests/ -q` → **9649 passed, 8 skipped, 1 warning**(M1 종료 9614 대비 +35, 실패 0). lint·format 모두 통과.
+
+#### 뮤테이션 6회 — 그리고 드러난 결함 1건
+
+| # | 겨냥 | 변형 | 결과 |
+|---|---|---|---|
+| 1 | AC-005 | `present` 아닌 타입도 런에 넣게 | 겨냥 묶음 3건 RED (3 failed, 29 passed) |
+| 2 | AC-006 | 폭 동률이어도 첫 번째를 집게(`len(same_width) >= 1`) | 겨냥 묶음 3건 RED |
+| 3 | AC-007 | 점유 판정 결과를 무시하게 | 겨냥 묶음 5건 + 런 분할 1건 RED (6 failed) |
+| 4 | AC-008 | 전수 판독 게이트를 항상 통과시키게 | 겨냥 묶음 4건 RED |
+| 5 | AC-009 | 런 경계의 연속성 조건을 무시하게(`contiguous = True`) | 1건만 RED — 아래 관찰 참조 |
+| 6 | AC-010 | `from server.vwx import luagen` 주입 | **32 passed — 잡지 못했다 → 결함** |
+
+**결함(뮤테이션 6): 쓰기표면 스캔이 `from X import Y` 형태를 통과시켰다.** `from server.vwx import luagen`은 AST에서 `module="server.vwx"` · `alias="luagen"`으로 갈라지는데, 검사가 `module`만 금지 접두와 대조하고 있었다. 즉 `import server.vwx.luagen`과 `from server.vwx.luagen import X`는 잡지만 **실제로 쓰기 모듈을 끌어오는 가장 자연스러운 형태는 통과**했다 — REQ-LXSEQ-009 보루에 구멍이 있었다는 뜻이다. `module`과 `alias`를 합친 정규화 이름(`f"{module}.{alias.name}"`)까지 대조하도록 보강했고, 3가지 형태(`from server.vwx import luagen` · `import server.bridge` · `from server.vwx import stagedpatch`)를 각각 주입해 **전부 RED**가 되는 것을 확인했다.
+
+**관찰(뮤테이션 5): 런 개수 단언은 연속성을 검사하지 않는다.** 연속성 조건을 무력화해도 `런 12개`·`런 9개` 단언은 통과했다. 실물 CSV에서는 런 경계가 (타입·모드·유니버스·Group) 키만으로 이미 갈려, 연속성 조건이 실제로 작동할 자리가 없기 때문이다. 연속성을 검사하는 것은 `test_runs_split_when_a_row_in_the_middle_is_skipped` 하나뿐이다 — 커버는 되지만 **단 1건에 의존**한다. 결함은 아니나 이월 채무로 적는다.
+
+**복구 증명**: 6회 모두 복구 후 `git diff -- server/lxseq/mapper.py` 빈 출력 확인. 최종 클린 런 32 passed.
+
+_<M3 이하 — 착수 예정>_
 
 ## §E.3 Run-phase Audit-Ready Signal
 
@@ -227,6 +258,23 @@ _<pending sync-phase — manager-docs 소유>_
 - R4: plan-audit §Iteration 1 optional O4~O7 미적용 (재량)
 - R6: 커밋은 명시 pathspec만 — fixture `server/tests/fixtures/lxseq/` 포함, 스윕(`add -A`/`add .`/`commit -a`) 금지
 - M4 하네스 `server.bridge` import 0 전제 → 구현 시 `grep -c server.bridge server/tools/lxseq_e2e.py` 로 기계 확인
+
+### M1에서 새로 생긴 이월 채무 (2026-08-21, 리드 확정 — 확대하지 말고 기록만)
+
+뮤테이션은 AC 묶음당 1~2회로 그쳤다. 이미 실결함 1건(AC-004 짝수 오프셋)을 건졌고 개별 테스트 전수 뮤테이션은 이 단계에서 값보다 비용이 크다는 판단이다. 나중에 이 부분이 조용히 깨지면 **아래가 먼저 볼 자리**다:
+
+- **AC-LXSEQ-002 5건 중 판별력이 증명된 것은 1건**(`test_header_column_order_scrambled_still_name_matched`)뿐이다. 나머지 4건(실물 86행 · BOM 흡수 · 누락 컬럼 파일 단위 실패 · `extra` 보존)은 존재는 확인됐고 판별력은 미증명이다.
+- **거부 부류 4종에 전용 뮤테이션 미실시**: `zero_channels` · `non_integer_field` · `duplicate_fid` · `address_overlap_in_file`. 테스트는 있으나 "그 검사를 무력화하면 그 테스트가 빨개지는가"는 확인하지 않았다.
+- 반대로 판별력이 기계로 증명된 것: `addr_range_mismatch`(뮤테이션 2) · `address_out_of_range` 3건(뮤테이션 4) · AC-004 자리 불변 2종 + AST 스캔(뮤테이션 3·3b).
+
+### M2에서 새로 생긴 이월 채무 (2026-08-21)
+
+- **런 경계의 연속성 조건은 테스트 1건에만 의존한다.** 연속성을 무력화해도 `런 12개`·`런 9개` 단언은 통과한다(실물 CSV에서는 타입·모드·유니버스·Group 키만으로 이미 런이 갈려, 연속성이 작동할 자리가 없다). 유일한 검사자는 `test_runs_split_when_a_row_in_the_middle_is_skipped`다 — 이 테스트가 지워지거나 약해지면 연속성 회귀가 조용히 통과한다.
+- **`address_out_of_range`·`zero_channels` 행이 매퍼 단계에 도달하는 경로는 미검증이다.** 파서가 걸러내므로 매퍼 테스트는 항상 정상 레코드만 받는다.
+
+### M2·M3 절차 규칙 (M1 1회차 실패에서 도출 — 리드 확정)
+
+**GREEN을 먼저 커밋하고 그 다음에 뮤테이션한다.** M1 1회차 뮤테이션은 `parser.py`가 미추적이라 `git diff`가 구조적으로 항상 빈 출력이었고, 복구 증명이 성립하지 못했다(코드 원문 대조로 대신했다). 커밋을 선행하면 diff가 항상 증거로 선다.
 
 ## §F Phase 4 Mode Selection
 

@@ -569,6 +569,12 @@ def test_no_write_surface_in_lxseq_module():
                 module = node.module or ""
                 if any(module.startswith(p) for p in _FORBIDDEN_IMPORTS):
                     import_violations.append(f"{source}: {module}")
+                # `from server.vwx import luagen` 형태 — module은 `server.vwx`라
+                # 위 검사를 통과한다. 실제로 끌어오는 이름까지 합쳐 봐야 한다.
+                for alias in node.names:
+                    qualified = f"{module}.{alias.name}" if module else alias.name
+                    if any(qualified.startswith(p) for p in _FORBIDDEN_IMPORTS):
+                        import_violations.append(f"{source}: {qualified}")
             elif isinstance(node, ast.Name) and node.id in _FORBIDDEN_NAMES:
                 name_violations.append(f"{source}: {node.id}")
             elif isinstance(node, ast.Attribute) and node.attr in _FORBIDDEN_NAMES:
