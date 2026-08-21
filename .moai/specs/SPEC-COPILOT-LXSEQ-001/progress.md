@@ -473,7 +473,137 @@ trustworthy: True
 
 **부수 관측 1건(추적 대상)**: `승인 요청 0건` — 안전 게이트가 이 명령에 승인 번들을 요구하지 않았다. 즉 게이트는 이 문자열을 위험 동사로 분류하지 않았다. 대조군 자체는 무해했으나, **게이트가 모든 송신에 승인을 요구하지는 않는다**는 사실이 여기서 실측됐다. apply의 `Plugin '…'` 실행 역시 같을 수 있다(플러그인 **배포**는 `DeployPipeline` 검토를 별도로 거친다).
 
-_<apply — 실행 직전. 감독의 Patch 편집기 열림 확인 대기.>_
+#### apply 1차 — **0대 생성, fail-closed** (하네스 결함)
+
+감독이 onPC에서 Patch 편집기를 열어 두신 것을 확인받고 실행. 5.5초 만에 끝났다.
+
+```
+요약: 부분 생성 — 계획 86대 중 0대만 콘솔 재조회로 확인됐다. 0번 런에서 멈췄다.
+런 0: not_deployed  created 0/6
+      "배포가 deploy_failed로 끝났다(cannot confirm plugin source write
+       (readback did not match any setter form)). 패치는 일어나지 않았다."
+런 1~11: not_attempted  (0번 런이 created가 아니라 시도하지 않았다)
+독립 재조회: child_count 0  ← 콘솔은 그대로였다
+```
+
+**설계대로 멈췄다.** 첫 런이 `created`가 아니므로 나머지 11런은 시도조차 하지 않았고, 독립 재조회가 `child_count 0`으로 **아무것도 쓰이지 않았음을 확인**했다. 부분 생성 위에 재시도하는 경로는 존재하지 않는다.
+
+**원인은 제품이 아니라 하네스였다.** `--plugin-import-dir`를 넘기지 않아 OSC `deploy` 동사 대체 경로로 떨어졌다. 현장 설정(`~/Library/Application Support/…/settings.toml`)에는 값이 있었다:
+
+```
+plugin_import_dir = "/Users/studiox/MALightingTechnology/gma3_library/datapools/plugins"
+receive_port = 9005
+osc_slot = 2
+```
+
+`serve.py`는 이 값을 `resolve_effective_settings`로 읽는데, 하네스는 플래그로만 받고 있었다. **하네스가 앱과 다른 값을 쓰면 검증 대상이 제품 경로가 아니다.** 그래서 플래그 기본값을 하드코딩하는 대신 **같은 이음매(`resolve_effective_settings`)를 쓰도록** 고쳤다 — 현장 설정이 바뀌면 하네스가 따라간다. 페이로드에 `plugin_import_dir`와 `plugin_import_dir_source`를 실어 어느 값을 썼는지 매 실행 기록한다.
+
+재시도 전 전제 재확인: `child_count 0` · 계획 12런 86대 불변 · `plugin_import_dir_source: site_settings`.
+
+#### apply 2차 — **86대 생성 확인** (5분 3초)
+
+명령: `uv run python -m server.tools.lxseq_e2e --csv <정본 절대경로> --action apply --approve --listen-port 9005 --mode-overrides '{"Martin MAC Aura XB": "Extended - Extended"}' --out .moai/reports/SPEC-COPILOT-LXSEQ-001/m4-apply2.json`
+
+```
+is_error: False · awaited_human: False · stopped_at: None · 질문 카드 0건
+요약: "86대를 만들었고 콘솔 재조회로 확인했다. 건너뛴 행 0건."
+
+런  0 created  6/6     런  6 created  8/8
+런  1 created  8/8     런  7 created 12/12
+런  2 created  6/6     런  8 created  6/6
+런  3 created  4/4     런  9 created  6/6
+런  4 created  2/2     런 10 created 10/10
+런  5 created  8/8     런 11 created 10/10
+생성 합계 86
+
+배포 검토 12건 — 타입마다 자기 플러그인(CopilotPatchSource4LEDSeries3LustrX8 ×2 ·
+CuePixBlinderWW2 · Atomic3000LED · Unique21 · RobinMegaPointe · RobinSpiider ·
+MacAuraXB ×3 · RushPar2RGBWZoom ×2)
+```
+
+**독립 재조회**(툴 응답과 별개로 픽스처 루트를 직접 되읽음):
+
+```
+{"path": "Patch/Stages/1/Fixtures", "ok": true, "child_count": 86,
+ "children_listed": 19, "truncated": true, "enumeration_complete": false}
+```
+
+`childCount == 86`. 열거는 19대에서 **절단**됐다(이 저장소의 알려진 함정 — `childCount`가 진짜 총계다). 절단 범위 안 19행을 프로퍼티까지 되읽어 계획과 대조한 결과 FID·주소가 정확히 일치했다:
+
+```
+slot  1 FID 101 1.001 · … · slot  6 FID 106 1.061   (KEY,   12ch 간격)
+slot  7 FID 111 1.073 · … · slot 14 FID 118 1.157   (FOH,   12ch 간격)
+slot 15 FID 601 1.169 · … · slot 19 FID 605 1.185   (BLIND,  4ch 간격)
+```
+
+절단 밖 슬롯도 직접 지목해 표본 확인(읽기 전용 일회성 진단):
+
+```
+slot 35~42  FID 521~528  3.001/3.050/3.099/…/3.344  FixtureType 4  "1 Mode 1"       Name "MOVER-D 521…528"   (49ch 간격)
+slot 43~44  FID 201~202  4.001/4.026                FixtureType 8  "1 Extended - Extended"  Name "BACK 201/202"  (25ch 간격)
+```
+
+폭·이름 접두(`{Group} {FID}`)·모드 전부 계획대로다.
+
+#### 재실행 — 쓰기 0건 (AC 핵심 충족) · **다만 사유가 기대와 다르다**
+
+```
+요약: "미리보기 — 쓰기 0건. 런 0개 · 계획 0대 · 건너뛴 행 86건."
+런 0 · write_count_planned 0 · skipped_by_kind {"console_read_incomplete": 86}
+승인 요청 0 · 배포 검토 0
+```
+
+**「재실행은 0건 쓰기」는 충족됐다.** 그러나 plan.md M4 ③이 기대한 `already_patched` 86건이 아니라 `console_read_incomplete` 86건이다. 콘솔 판독은 이랬다:
+
+```
+complete_enough_to_judge_absence: false
+caveat.kind : "console_read_index_domain_unknown"
+caveat      : child_count 86 · observed_count 86 · missing_count 0 ·
+              unreadable_address_count 0 · unread_count 0
+              "열거가 절단됐으나 선언된 자식을 전부 관측했다 — 수량 비교는 정확하고,
+               인덱스 도메인만 미상이다."
+fid_read    : known 86 · unresolved 0
+```
+
+#### 결함 D1 — 매퍼의 판독 게이트가 저장소 정본 규약보다 엄격하다 (M2, 미수정)
+
+**추론이 아니라 대조로 확인했다.** `server/vwx/apply.py::console_read_caveat` 독스트링이 두 상태를 명시적으로 가른다:
+
+> `missing_count == 0` 인데 `index_domain_unknown` — 열거는 짧았지만 선언된 것을 전부 관측했다. `childCount`가 진짜 총계이므로 **수량 비교는 정확하다**. **주의는 남기되 막지 않는다.**
+
+형제 호출부 둘이 그 규약을 지킨다 — `server/orchestrator/tools.py:4203`(`patch_fixtures`)과 `server/vwx/apply.py:804`가 똑같이 `caveat["kind"] != CONSOLE_READ_INCOMPLETE`로 판정한다. 실제로 이번 apply에서 `patch_fixtures`는 같은 절단 상태에서 12런 전부를 정확히 `created`로 판정했다.
+
+그런데 `server/lxseq/mapper.py:115`의 `_judge_console_read`는 `inventory.completeness != COMPLETE`를 쓴다 — **caveat 종류를 보지 않고 완전성 라벨만 본다.** `index_domain_unknown`은 `completeness == "incomplete"`이므로 여기서 막힌다.
+
+**영향**: 이 콘솔의 열거는 19대에서 절단된다. 즉 리그가 그 선을 넘는 순간 `import_lxseq_patch`는 **어떤 계획도 세우지 못한다** — 이번 멱등 확인만이 아니라 향후 모든 패치 임포트가 `console_read_incomplete`로 막힌다. 방향은 안전한 쪽(fail-closed, 쓰기 0)이지만, 실기에서 이 툴은 첫 임포트 이후 사실상 무력해진다. AC-LXSEQ-013 ①의 `already_patched` 경로도 실기에서는 도달 불가다 — 오프라인 테스트가 통과한 이유는 가짜 콘솔이 절단되지 않기 때문이다.
+
+**수정하지 않았다.** M2 파일이고 안전 판정 로직이며, M3의 순서 교정과 달리 «어느 caveat까지 통과시킬 것인가»는 감독·리드 판단이 필요한 결정이다. 후속 카드로 넘긴다.
+
+#### 관측 — `Robin Spiider` 중복 등록 (추정 없음)
+
+```
+Patch/FixtureTypes  childCount 15 · listed 15 · truncated false
+  슬롯  4  Robin Spiider   <-- 중복
+  슬롯 12  Robin Spiider   <-- 중복
+```
+
+MOVER-D 8대(FID 521~528)는 **슬롯 4**를 잡았다(`FixtureType 4`, 실측). 슬롯 12가 무엇이 다른지(모드 집합·GDTF 판본)는 이 판독으로 알 수 없다 — **못 읽음**으로 적는다. 감독 확인 대상이다.
+
+#### AC-LXSEQ-016 판정 — **PASS-WITH-DEBT**
+
+| 요구 | 판정 | 근거 |
+|---|---|---|
+| `preview` 계획 확인 | PASS | 12런 · 86대 · 건너뜀 0 · 콘솔 송신 0건 |
+| `apply` 런마다 `created` 관측 | PASS | 12런 전부 `created`, 합 86 |
+| 86대 생성이 재조회로 확인 | PASS | 툴과 **독립된** 재조회에서 `child_count 86`, 표본 프로퍼티 대조 일치 |
+| 재실행은 0건 쓰기 | PASS | 런 0 · `write_count_planned` 0 · 배포 0 · 승인 요청 0 |
+| 재실행 사유 `already_patched` 86건 | **FAIL** | 실제 `console_read_incomplete` 86건 — 결함 D1 |
+
+`ASSUMPTION-72/73/74` 판정 및 결함 D1 처분은 sync 단계 또는 후속 카드로 넘긴다.
+
+증거 파일(전부 `.gitignore` 대상 — 본문 원문이 정본): `m4-apply.json` · `m4-apply2.json` · `m4-rerun.json` · `m4-writeprobe.json` · `m4-precheck.json`
+
+_<M4 종료. 콘솔에 86대가 실재한다 — 이 상태는 되돌릴 수 없다.>_
 
 ## §E.3 Run-phase Audit-Ready Signal
 

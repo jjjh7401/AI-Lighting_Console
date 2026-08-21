@@ -52,6 +52,7 @@ from pathlib import Path
 from server.deploy.compile import LuaCompileChecker
 from server.deploy.pipeline import DeployPipeline
 from server.deploy.review import ReviewRequest
+from server.deploy.settings import resolve_effective_settings
 from server.llm.types import ToolCall
 from server.orchestrator.tools import build_toolset
 from server.safety.approval import ApprovalRequest
@@ -276,6 +277,19 @@ def main(argv: list[str] | None = None) -> int:
         },
     }
 
+    # 플러그인 배포 경로는 **현장 설정에서 읽는다** — `serve.py`가 쓰는 것과 같은
+    # `resolve_effective_settings` 이음매다. 하네스가 이 값을 스스로 정하면 앱이
+    # 쓰는 경로와 조용히 갈라지고, 그때 하네스가 검증하는 것은 제품 경로가 아니다.
+    #
+    # 실측(2026-08-21 M4 1차 apply): 이 값을 넘기지 않아 OSC `deploy` 동사 대체
+    # 경로로 떨어졌고 `deploy_failed (cannot confirm plugin source write —
+    # readback did not match any setter form)` 으로 12런 중 0번에서 멈췄다.
+    # 콘솔은 그대로였다(재조회 child_count 0) — 실패는 fail-closed 였다.
+    settings = resolve_effective_settings()
+    plugin_import_dir = args.plugin_import_dir or settings.plugin_import_dir or None
+    out["plugin_import_dir"] = plugin_import_dir
+    out["plugin_import_dir_source"] = "cli" if args.plugin_import_dir else "site_settings"
+
     approval = _RecordingApproval(approve=args.approve)
     review = _RecordingReview(approve=args.approve)
     questions = _RefusingQuestions()
@@ -284,7 +298,7 @@ def main(argv: list[str] | None = None) -> int:
         send_port=args.port,
         receive_port=args.listen_port,
         approval_port=approval,
-        plugin_import_dir=args.plugin_import_dir or None,
+        plugin_import_dir=plugin_import_dir,
     )
     exit_code = 0
     try:
