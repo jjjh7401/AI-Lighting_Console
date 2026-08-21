@@ -659,9 +659,148 @@ D1은 이 카드 안에서 **수정·라이브 재검증 완료**. D2는 신규 
 
 _<M4 종료. 콘솔에 86대가 실재한다 — 이 상태는 되돌릴 수 없다.>_
 
+### 감사 후속 — F3 · F4 · DOC-2 수정 (2026-08-21, sync 세션 · 감독 결정으로 t9 안에서 처리)
+
+독립 감사 2건이 **공허한 검사 3건**을 소인했다. 셋 다 「테스트가 존재하는가」가 아니라 **「그 테스트가 무엇을 재는가」**의 문제였고, 그래서 스위트는 내내 초록이었다. 감독 결정에 따라 t9 안에서 고쳤다(F1=D2만 카드 `t11`로 간다).
+
+#### F3 — 매퍼의 자기 보고를 재던 단언 (`test_lxseq_mapper.py`)
+
+종전 단언은 `assert len(plan.types_requested) == 8`이었다. 그런데 `mapper.py:316`은 `types_requested = _distinct_types(records)` — **records 에서 파생된 값**이다. 매퍼가 해석표를 행마다(86회) 조회해도 이 값은 8종 그대로다. **테스트 이름이 주장하는 것(「타입마다 한 번씩」)과 단언이 재는 것이 서로 다른 물건이었다.**
+
+교정: 조회를 기록하는 `_CountingResolutions`(dict 하위형, `get`/`__getitem__` 계측)를 주입해 **실제 조회 횟수**를 잰다. 접근 지점은 `mapper.py:352`·`:367` 두 곳뿐임을 grep 으로 확인했다. 비공허성 두 줄(`len(distinct) == 8` + `len(records) == 86`)을 함께 세워, 행 수와 타입 수가 같으면 이 단언이 아무것도 가르지 못한다는 점을 고정했다.
+
+**뮤테이션 ①** — `mapper.py:351`의 타입 루프를 행 루프로 뒤집었다:
+
+```python
+-    for csv_type in types_requested:
++    for csv_type in (r.fixture_type for r in records):  # MUTATION
+```
+
+관측 (양쪽을 같은 뮤테이션 아래에서 잰 것이 핵심이다):
+
+```
+[새 단언]  uv run pytest server/tests/test_lxseq_mapper.py -q -k "requested_once"
+>       assert len(resolutions.lookups) == 8
+E       AssertionError: assert 86 == 8
+FAILED test_type_resolution_is_requested_once_per_distinct_type
+1 failed, 34 deselected in 0.06s
+
+[옛 단언]  같은 뮤테이션 하에서 파생값을 직접 확인
+plan.types_requested 길이 = 8
+옛 단언  len(plan.types_requested) == 8  -> True        ← 그대로 통과한다
+```
+
+**옛 단언은 이 결함을 원리적으로 볼 수 없었다**는 것이 기계로 증명됐다. 복구 후 `git diff --quiet -- server/lxseq/` 빈 출력 확인, 테스트 GREEN 재확인.
+
+#### F4 — 부분 겹침에 테스트가 없었다 (`test_lxseq_parser.py`)
+
+기존 `test_reject_address_overlap_in_same_universe`는 FID 102를 101과 **같은 시작 주소**(1)로 옮긴다. 시작점만 비교하는 구현이라도 초록이다. 뒤 장비가 앞 장비 구간 **안쪽에서** 시작하는 부분 겹침은 검사가 없었다 — `grep -c '104\|105' server/tests/test_lxseq_parser.py` → `0`.
+
+신규 `test_reject_address_overlap_when_a_row_starts_inside_the_earlier_span`: 픽스처 실측(FID 104 = `1.037–048`, FID 105 = `1.049–060` — 인접하되 겹치지 않음)을 비공허성으로 먼저 고정한 뒤, 105를 주소 40으로 옮긴다(37 ≠ 40, 구간은 40–48에서 겹침). 두 행 모두 거부되고 레코드가 84로 줄어드는지 본다.
+
+**뮤테이션 ②** — 겹침 판정을 시작점 동일로 좁혔다:
+
+```python
+                 if start_b > end_a:
+                     break
++                if start_a != start_b:  # MUTATION — 시작점이 같을 때만 겹침으로 본다
++                    continue
+```
+
+관측:
+
+```
+uv run pytest server/tests/test_lxseq_parser.py -q -k "overlap"
+>       assert len(overlap_rejections) == 2
+E       assert 0 == 2
+FAILED test_reject_address_overlap_when_a_row_starts_inside_the_earlier_span
+1 failed, 1 passed, 20 deselected in 0.03s
+```
+
+**`1 failed, 1 passed`가 요점이다** — 기존 테스트는 통과했고(맹점) 신규만 빨개졌다. 복구 후 `git diff --quiet -- server/lxseq/` 빈 출력 확인, 겹침 2건 GREEN 재확인.
+
+#### DOC-2 — AC-LXSEQ-013의 검증 명령이 테스트를 0건 수집했다 (`acceptance.md`)
+
+종전 선택자 `-k "idempotent"` 실측: **`29 deselected in 0.19s`** — 이 파일의 어떤 테스트 이름에도 `idempotent`가 없다. AC-LXSEQ-011이 「수집 0건이면 게이트가 공허하므로 **FAIL로 친다**」고 못박은 그 형태이며, F3과 같은 계열(검사가 도는데 판별력이 0)이다.
+
+교체 후 실측 — 수집이 비어 있지 않음을 이름으로 확인했다:
+
+```
+uv run pytest server/tests/test_lxseq_tool.py -q -k "second_preview or second_apply or truncating or half_patched"
+5 passed, 24 deselected in 0.18s
+  test_a_second_preview_after_apply_plans_nothing
+  test_a_second_apply_writes_nothing_and_is_not_an_error
+  test_a_truncating_console_still_reports_already_patched
+  test_a_truncating_console_is_not_vacuously_truncated
+  test_a_half_patched_console_replans_only_the_remainder
+```
+
+**소유 경계 표기**: `acceptance.md` 본문은 정본상 `manager-spec` 소유다. 감독 결정으로 sync 세션이 이 한 줄을 교정했으며, 넘은 사실을 숨기지 않기 위해 해당 줄과 여기 양쪽에 남긴다.
+
+#### 커버리지 실측 (F15 — 어느 세션도 잰 적이 없던 DoD)
+
+```
+uv run pytest server/tests/test_lxseq_{parser,mapper,tool}.py -q --cov=server.lxseq --cov-report=term-missing
+Name                       Stmts   Miss  Cover   Missing
+server/lxseq/__init__.py       0      0   100%
+server/lxseq/mapper.py       190      2    99%   133, 140
+server/lxseq/parser.py       156      3    98%   63, 155, 335
+TOTAL                        346      5    99%
+86 passed in 0.58s
+```
+
+기준 85% 대비 **99%** — PASS. 이 값은 sync 세션이 직접 측정했다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase — manager-develop 소유>_
+```yaml
+run_status: audit-ready
+run_at: 2026-08-21
+card: t9
+cycle_type: tdd                # M0·M4 는 cycle_type=none (계약 확인 · 실기 확인)
+base_sha: 453846a
+base_branch: jjjh7401/LX-SEQ
+run_commit_range: ca56f1b..70418dc     # 17 커밋 (plan 커밋 875b2ea 이후 ~ sync 커밋 2b328c6 이전)
+head_at_run_close: 70418dc
+milestones_total: 5            # M0~M4
+milestones_done: 5
+ac_total: 17
+ac_pass: 16
+ac_fail: 1                     # AC-LXSEQ-016 — 5행 중 4 PASS · 1 FAIL. 사유는 결함 D2
+                               # 정정 2026-08-21: 이 줄은 처음 `ac_pass_with_debt: 1 / ac_fail: 0`으로
+                               # 적혔다(§E.4에서 그대로 옮김). 독립 감사가 반박했고 정본이 그 편이다 —
+                               # acceptance.md 는 "PASS-WITH-DEBT"를 유효 등급으로 정의한 적이 없고,
+                               # AC-016 ⑤는 실패 행이 있으면 M4를 PASS로 닫지 않는다고 명시한다.
+                               # 실패 행이 1개면 실패한 AC는 1건이다.
+tests_baseline: 9596           # §E.1 baseline_measured
+tests_final: 9681              # +85 = M1 18 · M2 35 · M3 27 · D1 5
+mutations_run: 20              # M1 3 · M2 6 · M3 8 · D1 3
+defects_found: 4               # M1 테스트 결함 1 · M2 점유 판정 순서 1 · D1 판독 게이트 1 · D2 핸들 문자열 1
+defects_fixed: 3               # D2 만 열린 채 출하 → 후속 카드 t11
+live_session: "M4 — 감독 onPC, apply 2차에서 86대 생성 확인 (되돌릴 수 없음)"
+tools_registered: 34           # TOOL_NAMES 33 → 34 (import_lxseq_patch)
+```
+
+### 서명 귀속 (누가, 무엇을 근거로 서명했는가)
+
+이 블록의 소유자는 정본상 `manager-develop`(run 세션)이다. run 세션이 서명하지 못한 채 종료됐고, **2026-08-21 리드 지시(인수인계 전제 3)에 따라 sync-close 세션이 §E.2 기록을 근거로 대신 서명**한다. 소유 경계를 넘은 대필임을 여기 명시한다 — 아래 구분은 그래서 필요하다.
+
+**이 세션이 직접 실행하고 출력을 관측한 것 (1건, HEAD `2b328c6`)**
+
+| 명령 | 관측한 출력 | 판정 |
+|---|---|---|
+| `uv run pytest server/tests -q` | `9681 passed, 8 skipped, 1 warning in 173.17s (0:02:53)` · exit 0 | PASS |
+
+증거 원문: `.moai/state/verify/t9-syncclose/pytest-full.txt` — **`.gitignore:203` 대상이라 저장소에 없다. 위 표의 인용문이 정본이다.** 이 값은 §E.4가 `70418dc`에서 관측한 `9681 passed` 와 일치하며, sync 커밋 `2b328c6`(문서 전용, `server/` 무변경) 이후에도 동일함을 재현한 것이다.
+
+**§E.2 기록을 읽었을 뿐, 이 세션이 재현하지 않은 것**
+
+- 마일스톤별 AC 판정 16건 전부 — 각 판정의 명령·출력은 §E.2 본문이 정본이다.
+- 뮤테이션 20회 — run 세션이 실행했다.
+- M4 실기 증거 전부(preview 12런 86대 · apply 86대 생성 · 독립 재조회 `child_count 86` · 날조 대조군 2종 · D1 라이브 재검증) — **이 세션은 콘솔에 접속하지 않았다.** 86대가 실재하는 상태는 되돌릴 수 없어 재현 자체가 부적절하다.
+- 중간 기준선 4개(9614 · 9649 · 9676 · 9681로 이어지는 증가분) — 최종값만 재현했다.
+
+**따라서 이 서명이 보증하는 범위**: run 단계가 종료 조건(마일스톤 5/5, AC 17건 판정 완료, 회귀 0)에 도달했다는 **기록상의 사실**과, 최종 스위트가 지금도 초록이라는 **재측정된 사실** 뿐이다. 개별 AC의 판정 근거는 이 세션이 검증하지 않았으며, 그 재판정은 독립 감사(sync-auditor)의 몫이다.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
@@ -672,13 +811,26 @@ card: t9
 base_sha: 453846a
 base_branch: jjjh7401/LX-SEQ
 head_at_sync_entry: 70418dc
-docs_updated: [CHANGELOG.md, README.md, "progress.md §E.4", "spec.md/plan.md/acceptance.md frontmatter status"]
-code_changed_in_sync: 0        # sync 단계는 문서 전용 — 콘솔 무접촉, server/ 무변경
+docs_updated: [CHANGELOG.md, README.md, "progress.md §E.2 감사 후속", "progress.md §E.4",
+               "acceptance.md AC-013 검증 명령 + 판정 줄", "spec.md/plan.md/research.md frontmatter status"]
+code_changed_in_sync: 2        # 감독 결정으로 감사 후속 F3·F4 를 t9 안에서 처리 — 둘 다 **테스트 파일만**이다:
+                               #   server/tests/test_lxseq_mapper.py  (F3 — 공허한 단언 교정)
+                               #   server/tests/test_lxseq_parser.py  (F4 — 부분 겹침 테스트 신설)
+                               # 제품 코드(server/lxseq/·server/orchestrator/)는 여전히 무변경이고
+                               # 콘솔도 무접촉이다. 처음 이 줄은 0 이었다 — 그때는 사실이었다.
 ac_total: 17
 ac_pass: 16
-ac_pass_with_debt: 1           # AC-LXSEQ-016 (5행 중 4 PASS · 1 FAIL, 사유는 결함 D2)
-ac_fail: 0
-open_defects: 1                # D2 → 후속 카드 t11 (감독 결정으로 t9 안에서 고치지 않음)
+ac_fail: 1                     # AC-LXSEQ-016 — 정정 2026-08-21, 근거는 §E.3 의 같은 줄 주석
+sync_commit_sha: 2b328c6       # 1차 sync 아티팩트를 운반한 커밋. 감사 후속 수정은 그 다음 커밋이며
+                               # (커밋은 자기 해시를 모르므로) 이 필드는 후속 커밋에서 백필한다.
+sync_audit_pre_fix: FAIL 0.80  # 독립 감사 1회차 (HEAD 2b328c6, 수정 **전**) — 아래 「독립 감사」 절
+sync_audit: pending-reaudit    # F3·F4·DOC-2 수정 후 재판정 대기. **미판정을 통과로 읽지 말 것.**
+open_defects: 1                # D2(F1) → 카드 t11. F2 는 정정 완료, F3·F4 는 이 카드에서 수정,
+                               # F13 은 파급이 3곳이 아니라 1곳으로 확인돼 등급 하향(아래 참조).
+                               # 정정 이력: 1 → 5 → 1. 가운데 5 는 F3·F4 를 t11 로 미룬다는 전제였고,
+                               # 감독이 t9 안에서 고치기로 결정해 전제가 사라졌다.
+coverage_lxseq: "TOTAL 346 5 99%"  # `--cov=server.lxseq`, §D DoD 기준 85% 대비 PASS.
+                                   # **이번 sync 세션이 처음 실측했다** — run 세션도 잰 적이 없다(F15).
 tools_registered: 34           # TOOL_NAMES 항목 수 실측 (33 → 34)
 ```
 
@@ -694,7 +846,18 @@ tools_registered: 34           # TOOL_NAMES 항목 수 실측 (33 → 34)
 | ④ | `git diff --stat 453846a..HEAD -- console/lua server/safety server/prechk server/vwx server/paperwork server/rulebook/assets` | **빈 출력** | PASS (봉쇄 구역 0-diff) |
 | ⑤ | `git diff 453846a..HEAD -- server/orchestrator/tools.py \| grep -c '^-[^-]'` | `0` | PASS (순수 추가 — 기존 툴 계약 0-diff) |
 
-증거 원문: `.moai/state/verify/t9-sync/pytest-full.txt` (전체 스위트 출력 전문).
+### 감사 후속 수정 **뒤** 재측정 (귀속: 이 세션, 2026-08-21)
+
+| # | 명령 | 관측한 출력 | 판정 |
+|---|---|---|---|
+| ⑥ | `uv run pytest server/tests -q` | `9682 passed, 8 skipped, 1 warning in 142.05s (0:02:22)` · exit 0 | PASS |
+| ⑦ | `uv run pytest server/tests/test_lxseq_{parser,mapper,tool}.py -q --cov=server.lxseq` | `TOTAL 346 5 99%` · `86 passed in 0.58s` | PASS (기준 85%) |
+| ⑧ | `uv run pytest server/tests/test_lxseq_tool.py -q -k "second_preview or second_apply or truncating or half_patched"` | `5 passed, 24 deselected in 0.18s` | PASS (DOC-2 선택자가 **비어 있지 않다**) |
+
+**⑥의 증가분이 요점이다**: 수정 전 9681 → 수정 후 **9682**, **+1 = F4 신규 테스트 1건**과 정확히 일치한다. F3은 단언 교체라 개수가 변하지 않고, DOC-2는 문서다. 실패 0.
+
+증거 원문: `.moai/state/verify/t9-sync/pytest-full.txt`(수정 전) · `pytest-full-after-fixes.txt`(수정 후).
+⚠️ 두 파일 모두 `.moai/state/`(`.gitignore:203`) 아래라 **저장소에 없다** — `git check-ignore -v`로 확인했다. 경로만 인용하면 남이 열 수 없으므로 **위 표의 관측 출력이 정본이다.** 같은 이유로 감사 보고서(`.moai/reports/` — `.gitignore:247`)도 아래 「독립 감사」 절이 정본이다.
 
 **기준선 귀속**: ①의 9681은 plan-phase 기준선 9596(§E.1 `baseline_measured`)에서 M1 +18 → 9614, M2 +35 → 9649, M3 +27 → 9676, D1 수정 +5 → 9681로 이어진 값이며, 각 증가분은 §E.2에 기록된 신규 테스트 수와 일치한다. 이 세션은 최종값만 재현했고 중간 4개 값은 §E.2의 run 세션 기록을 읽은 것이다 — **재현하지 않았다.**
 
@@ -703,15 +866,62 @@ tools_registered: 34           # TOOL_NAMES 항목 수 실측 (33 → 34)
 - **뮤테이션 20회**(M1 3 · M2 6 · M3 8 · D1 3)는 run 세션이 실행한 것이며, 이 세션은 §E.2의 기록을 읽었을 뿐 **재현하지 않았다.**
 - **M4 실기 증거 전부**(preview 12런 86대 · apply 86대 생성 · 독립 재조회 `child_count 86` · 날조 대조군 2종 · D1 라이브 재검증)는 run 세션이 감독 onPC에서 실행한 것이다. **이 세션은 콘솔에 접속하지 않았다** — 리드 조건 4(콘솔 무접촉)를 지켰고, 86대가 실재하는 상태는 되돌릴 수 없으므로 재현 자체가 부적절하다. `.moai/reports/SPEC-COPILOT-LXSEQ-001/m4-*.json`은 `.gitignore` 대상이라 저장소에 없으며 **§E.2 본문이 정본이다.**
 - **`§E.3 Run-phase Audit-Ready Signal`이 `pending` 상태로 남아 있다.** 소유자는 `manager-develop`이며 sync 단계에서 대신 채우지 않았다(소유 경계). run 증거 자체는 §E.2에 전량 기록돼 있으므로 **증거의 부재가 아니라 서명 블록의 부재**다.
+  - _해소됨 (2026-08-21, sync-close 세션)_ — 리드 지시로 sync-close 세션이 §E.2를 근거로 대필 서명했다. 소유 경계를 넘은 대필임과, 서명이 보증하는 범위(기록상의 종료 조건 + 최종 스위트 재측정 1건뿐)는 §E.3 「서명 귀속」에 명시했다. **개별 AC 16건의 판정 근거는 여전히 이 세션이 재현하지 않았다** — 이 미검증은 §E.3으로 이관됐을 뿐 사라지지 않았다.
 - **CI 부재**: `.github/workflows/`에 `label-sync.yml` 하나뿐이라 이 PR에도 테스트가 돌지 않는다. ①의 로컬 실행이 유일한 회귀 증거다.
 
 ### 잔여 위험 (Residual risk — 관측했음에도 남는 것)
 
-- **D2는 열린 채로 출하된다.** 쓰기는 0건이고 중복도 생기지 않지만, 재실행 시 라벨이 `fid_occupied`로 나가 「다른 FID로 다시 패치하라」로 읽힌다. 사용자가 그 지시를 따르면 중복 리그가 생긴다 — **문서(CHANGELOG · README)에 이 간극을 명시했으나 툴 응답 문구는 고치지 않았다.** 카드 `t11`.
+- **D2는 열린 채로 출하된다.** 쓰기는 0건이고 중복도 생기지 않지만, 재실행 시 라벨이 `fid_occupied`로 나가 「다른 FID로 다시 패치하라」로 읽힌다. ~~사용자가 그 지시를 따르면 중복 리그가 생긴다~~ — **문서(CHANGELOG · README)에 이 간극을 명시했으나 툴 응답 문구는 고치지 않았다.** 카드 `t11`.
+  - _정정 (2026-08-21, sync-close 세션 · 감사 F13)_ — 취소선 부분은 **검증하지 않은 채 적은 결과 주장**이었고, 독립 감사가 반증했다: 라벨을 따라 FID를 바꿔 다시 넣어도 두 번째 가드(주소 점유)가 잡아 86행 전부 `address_occupied`로 건너뛰며 `deploy 0 · exec 0 · 콘솔 불변`이다. 즉 **타입 판정과 무관한 가드가 하나 더 있어 중복 리그는 이 경로로 생기지 않는다.** 잘못된 것은 라벨뿐이며, 그 점은 README·CHANGELOG가 이미 정확히 적고 있었다(README `"Writes stay at zero either way; only the label is wrong."`). 과장은 이 내부 기록 한 곳에만 있었다 — **사용자용 문서로는 나가지 않았다.** 근거는 감사관의 오프라인 프로브이며 이 세션이 재현하지 않았다.
 - **가짜↔실물 괴리가 계열로 두 번 나왔다**(D1 절단, D2 핸들). 가짜 콘솔이 실물과 다른 자리는 이 둘 말고도 더 있을 수 있으며, 오프라인 스위트 9681건은 그 자리를 원리적으로 볼 수 없다.
 - **`Robin Spiider` 슬롯 4/12 중복** — 슬롯 12가 무엇이 다른지(모드 집합 · GDTF 판본) **못 읽었다.** 추정하지 않았고, 이름→슬롯 역방향 해석을 시도하는 후속 작업은 이 모호성을 먼저 풀어야 한다.
-- **개별 테스트 판별력 일부 미증명** — 뮤테이션이 AC 묶음당 1~2회라 `AC-LXSEQ-002` 5건 중 4건, 거부 부류 4종은 "그 검사를 무력화하면 그 테스트가 빨개지는가"가 확인되지 않았다. 조용히 깨지면 §E.1a가 먼저 볼 자리다.
+- **개별 테스트 판별력 — 일부 해소, 일부 잔존.** 종전에는 「뮤테이션이 AC 묶음당 1~2회라 `AC-LXSEQ-002` 5건 중 4건과 거부 부류 4종이 미증명」이라 적었다. 그 뒤 두 가지가 바뀌었다:
+  - _해소_ — 감사자가 자작 뮤테이션 12회를 돌려 `duplicate_fid` · `non_integer_field` · `zero_channels`(제외) · `address_overlap_in_file` · `extra` 컬럼 보존 · `MissingColumnsError` 각각에서 정확히 1건씩 RED 를 확인했고, 이 세션이 F3·F4 뮤테이션 2회를 추가로 돌려 **양방향**(새 단언 RED + 옛 단언 통과)을 증명했다. 「전용 뮤테이션이 없다」는 사실이었으나 「따라서 판별력을 모른다」는 결론은 반증됐다.
+  - _잔존_ — 감사자의 12회는 **저장소에 커밋되지 않은 일회성 실행**이고, `.moai/reports/` 아래 보고서는 `.gitignore` 대상이라 남지 않는다. 즉 그 증명은 **재현 가능한 형태로 보존되지 않았다.** 이 세션의 F3·F4 뮤테이션만 §E.2에 원문으로 남아 있다. 회귀가 조용히 들어오면 여전히 §E.1a가 먼저 볼 자리다.
 - **UI 배선 미완**(`t10`) — 지금 이 툴을 부를 수 있는 것은 로컬 하네스뿐이며, 최종 사용자 경로는 아직 존재하지 않는다.
+
+### 독립 감사 (sync-auditor, 2026-08-21 · HEAD `2b328c6`)
+
+**판정: FAIL · 가중 조화평균 0.80** — 콘솔 접촉 0회, 소스 파일 수정 0건.
+
+보고서는 `.moai/reports/sync-audit/SPEC-COPILOT-LXSEQ-001-2026-08-21.md`(47,938 bytes)에 있으나 **`.moai/reports/`는 `.gitignore:247` 대상이라 저장소에 없다** — M4 증거 JSON과 같은 처지다. **이 절이 판정의 정본이며**, 사본이 사라진 뒤에 이 판정을 검증할 방법은 재감사뿐이다.
+
+| 차원 | 점수 | 판정 |
+|---|---|---|
+| Functionality (40%) | 0.70 | **FAIL** (must-pass) |
+| Security (25%) | 0.90 | PASS |
+| Craft (20%) | 0.86 | PASS |
+| Consistency (15%) | 0.88 | PASS |
+
+**FAIL 사유는 AC-LXSEQ-016 하나다.** run 세션이 붙인 "PASS-WITH-DEBT"는 acceptance.md 가 유효 등급으로 정의한 적이 없고, AC-016 ⑤는 실패 행이 있으면 M4 를 PASS 로 닫지 않는다고 명시한다. 이 판정은 받아들였고 `ac_fail` 을 1 로 정정했다.
+
+**이 판정이 뒤집지 않는 것**: `status: implemented` 는 유효하다 — acceptance.md §D DoD 가 AC-016 미충족 상태의 `implemented` 를 명시적으로 허용한다. FAIL 이 막는 것은 `completed` 전환이다.
+
+blocking 결함 4건(전부 카드 `t11`): **F1** D2 — 감사관이 이를 **오프라인에서 재현**했다(`Counter({'fid_occupied': 86})`). 따라서 이 이음매는 오프라인 스위트의 원리적 맹점이 아니라 **가짜 콘솔의 충실도 부족**이며, `FakeConsole` 에 핸들 문자열 갈래를 추가하면(D1 의 `truncate_at` 과 같은 수) 오프라인에서 잡힌다. · **F2** 등급 자기모순(본 커밋에서 정정) · **F3** `AC-005 ⑤` "정확히 8회 호출" 단언이 **공허**하다 — 파생값(`plan.types_requested`)을 재고 있어 툴 루프를 86회로 바꿔도 스위트가 초록이다 · **F4** `AC-003 ④` 부분 겹침(104·105)에 테스트가 없다.
+
+acceptance.md 본문 결함 3건(**F6** AC-013 의 검증 명령이 `29 deselected` 로 0건 수집 · **F7** AC-012 ③ 이 설계상 도달 불가 · **F8** AC-002 ③ 이 `AddrRange` 를 지칭하나 테스트는 `Position` 을 떨군다)은 소유자가 `manager-spec` 이라 이 세션이 고치지 않고 `t11` 로 넘긴다.
+
+**감사 주장 1건은 이 세션이 대조해 범위를 줄였다 (F13)** — 감사관은 D2 의 과장된 결과 주장이 "사용자용 README 까지 실려 나갔다"라고 했으나, README 는 정확하다(`"Writes stay at zero either way; only the label is wrong."`). 과장은 내부 기록 한 곳뿐이었다. 결함은 실재하되 파급은 3곳이 아니라 1곳이며, 근거 없이 심각도를 유지하지 않는다.
+
+**감사가 처음 측정한 것 (F15)** — `uv run pytest --cov=server/lxseq` → `TOTAL 346 5 99%`. acceptance.md §D 의 커버리지 DoD 를 **run·sync 어느 세션도 잰 적이 없었다.** _이 세션이 직접 재측정해 같은 값을 관측했다(위 ⑦)._
+
+#### 감사 이후 처분 — 위 목록은 이 지점에서 낡는다 (2026-08-21, 감독 결정)
+
+위 「blocking 결함 4건(전부 카드 `t11`)」과 「acceptance.md 본문 결함 3건 … `t11` 로 넘긴다」는 **감사 시점의 처분**이다. 감독이 그 뒤 **F3·F4 는 t9 안에서 고치기로** 결정했고, DOC-2(=F6)도 같은 계열이라 함께 고쳤다. 현재 처분은 이렇다:
+
+| 결함 | 감사 시점 처분 | **현재 처분** | 근거 |
+|---|---|---|---|
+| **F1** (D2, 핸들↔이름) | t11 | **t11 (변동 없음)** | 설계 변경이 필요하고 역방향이 `Robin Spiider` 중복으로 모호하다. 감사관의 오프라인 재현 관측(`Counter({'fid_occupied': 86})`)은 **이 세션이 재현하지 않았다** — t11 카드에 「가짜 콘솔 충실도 부족일 가능성」으로 실어 보낸다 |
+| **F2** (등급 자기모순) | 정정 완료 | **닫힘** | `ac_fail: 1`, acceptance.md 판정 줄, CHANGELOG 세 곳 일치 |
+| **F3** (공허한 8회 단언) | t11 | **t9 에서 수정** | §E.2 「감사 후속」 — 뮤테이션 원문 + 양방향 관측 |
+| **F4** (부분 겹침 미검사) | t11 | **t9 에서 수정** | §E.2 「감사 후속」 — `1 failed, 1 passed` 원문 |
+| **F6** (AC-013 수집 0건) | t11 (manager-spec 소유) | **t9 에서 수정** | 소유 경계를 넘은 사실을 acceptance.md 해당 줄과 §E.2 양쪽에 표기 |
+| **F7 · F8** (AC-012 ③ 도달 불가 · AC-002 ③ 지칭 불일치) | t11 | **t11 (변동 없음)** | acceptance.md 본문 판정 문구 수정이며 F6 처럼 「검사가 공허하다」는 계열이 아니다 |
+| **F13** (D2 과장 주장) | — | **등급 하향** | 파급이 3곳이 아니라 **1곳**(내부 기록)임을 대조로 확인. 사용자용 문서는 정확했다 |
+
+**판정 자체는 갱신되지 않았다.** 위 `FAIL 0.80`은 **수정 전** HEAD `2b328c6`에 대한 판정이고, F3·F4·F6 수정 후의 재판정은 **아직 없다**(`sync_audit: pending-reaudit`). 미판정을 통과로 읽어서는 안 된다 — 실패 신호의 부재는 통과의 증거가 아니다. 재판정 결과는 이 절에 이어 붙인다.
+
+**두 감사는 갈린 것이 아니라 포함 관계였다.** 1차 감사(이 세션이 띄운 것, 조화평균 88.85 · PASS-WITH-DEBT)와 2차(run 세션이 띄운 것, 0.80 · FAIL)는 **둘 다 `9681 passed` 를 관측했고 DOC-1 에 독립 수렴**했다. 차이는 사실이 아니라 **탐지량**이다 — 2차가 F3·F4 를 더 찾았다. 더 엄격한 쪽을 정본으로 채택한 이유는 그것이 관측을 더 많이 담고 있기 때문이지, 점수가 낮아서가 아니다. 1차 감사가 놓친 것은 그 감사의 한계이며 여기 기록해 둔다.
 
 ## §E.1a 이월 채무 (plan → run, 2026-08-21 리드 확정 — run에서 기록만 이어받고 plan에서는 수정하지 않음)
 

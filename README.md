@@ -248,9 +248,12 @@ follow-up specifications.
 
 1. **Parse** — columns are found by name, not by position (scrambled headers
    and a BOM are absorbed). Rejected rows are reported by kind:
-   `universe_overflow`, `addr_range_mismatch`, `zero_channels`,
-   `non_integer_field`, `duplicate_fid`, `address_overlap_in_file`. A duplicate
+   `non_integer_field`, `universe_overflow`, `address_out_of_range`,
+   `addr_range_mismatch`, `duplicate_fid`, `address_overlap_in_file`. A duplicate
    or an overlap rejects **every** row involved, not just the later one.
+   A row with `Ch` = 0 is **not** a rejection — a fixture that occupies no DMX
+   (a manually operated one, say) is counted separately as an *excluded* row
+   (`zero_channels`).
    **A FID is not an address** — it never takes part in address arithmetic.
 2. **Map** — fixture type names are **never guessed**; they are resolved
    through `resolve_fixture_type` (once per distinct type). The mode is

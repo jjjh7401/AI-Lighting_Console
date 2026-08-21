@@ -1,6 +1,6 @@
 # SPEC-COPILOT-LXSEQ-001 — 인수 기준 (acceptance)
 
-문서 상태: implemented (v0.2.1, 2026-08-21 — 판정 확정: 17건 중 **16 PASS · AC-LXSEQ-016 PASS-WITH-DEBT**(5행 중 4 PASS · 1 FAIL, 사유는 결함 D2 → 카드 t11) · FAIL 0. 근거는 progress.md §E.2 — 문서 전용: AC-016 입력 전달 현재/목표 분리 · AC-017 주 추가, AC 수 불변) · Tier M · AC **17건**(오프라인 16 + onPC 실기 1). v0.2.0: plan-audit 1회차 델타(D2·D3·D4·D6·D7·O8) + 감독 Kickoff 답 반영(AC-006 `mode_unresolved`/`mode_overrides` · AC-009 9런 · **AC-017 신설** 채팅 붙여넣기 금지). 본 문서는 spec.md의 요구를 관측 가능한 Given-When-Then 검증 기준으로 전개한다. 요구(GEARS)는 spec.md가 소유하며 여기서 되풀이하지 않는다.
+문서 상태: implemented (v0.2.1, 2026-08-21 — 판정 확정: 17건 중 **16 PASS · AC-LXSEQ-016 FAIL**(5행 중 4 PASS · 1 FAIL, 사유는 결함 D2 → 카드 t11). 따라서 §D DoD 대로 `implemented`에서 멈추고 `completed`가 아니다. _정정_: 이 줄은 처음 "PASS-WITH-DEBT · FAIL 0"으로 적혔으나 **이 문서는 그런 등급을 정의한 적이 없다** — §C AC-016 ⑤가 「미통과 시 M4는 PASS로 닫히지 않는다」고 못박으므로 실패 행이 1개면 실패한 AC는 1건이다. 근거는 progress.md §E.2 — 문서 전용: AC-016 입력 전달 현재/목표 분리 · AC-017 주 추가, AC 수 불변) · Tier M · AC **17건**(오프라인 16 + onPC 실기 1). v0.2.0: plan-audit 1회차 델타(D2·D3·D4·D6·D7·O8) + 감독 Kickoff 답 반영(AC-006 `mode_unresolved`/`mode_overrides` · AC-009 9런 · **AC-017 신설** 채팅 붙여넣기 금지). 본 문서는 spec.md의 요구를 관측 가능한 Given-When-Then 검증 기준으로 전개한다. 요구(GEARS)는 spec.md가 소유하며 여기서 되풀이하지 않는다.
 
 > **참조 규약**: 정본(spec.md · 본 문서)은 줄번호로 인용하지 않고 안정 토큰만 쓴다. `파일:줄`은 코드·입력 데이터·타 SPEC 아티팩트에만 쓴다.
 
@@ -230,7 +230,8 @@
 **Given** ①차 `apply`가 86대를 만들어 가짜 콘솔 상태가 갱신됨, **When** 같은 파일로 `preview`와 `apply`를 다시 부르면, **Then** 런 0 · 쓰기 0.
 
 - 대상 요구사항: REQ-LXSEQ-012
-- 검증 방법: `uv run pytest server/tests/test_lxseq_tool.py -q -k "idempotent"`
+- 검증 방법: `uv run pytest server/tests/test_lxseq_tool.py -q -k "second_preview or second_apply or truncating or half_patched"`
+  - _정정 (2026-08-21, sync 세션 · 감사 DOC-2)_ — 종전 선택자 `-k "idempotent"`는 **테스트를 한 건도 수집하지 못했다**(`29 deselected in 0.19s`). 이 파일의 어떤 테스트 이름에도 `idempotent`가 없다. AC-LXSEQ-011이 「수집 0건이면 게이트가 공허하므로 **FAIL로 친다**」고 못박은 바로 그 형태다. 위 선택자로 교체해 `5 passed, 24 deselected` — 수집되는 5건은 `test_a_second_preview_after_apply_plans_nothing` · `test_a_second_apply_writes_nothing_and_is_not_an_error` · `test_a_truncating_console_still_reports_already_patched` · `test_a_truncating_console_is_not_vacuously_truncated` · `test_a_half_patched_console_replans_only_the_remainder`이며, 아래 기대 결과 ①~③을 모두 덮는다. **소유 경계 표기**: `acceptance.md` 본문은 정본상 `manager-spec` 소유이나, 감독 결정으로 sync 세션이 이 한 줄을 교정했다 — 넘은 사실을 숨기지 않기 위해 여기 남긴다.
 - 기대 결과:
   - ① 2회차 `preview`: `plan.runs == []`, `skipped` 86건 전부 `already_patched`(타입 동일·주소 동일).
   - ② 2회차 `apply`: `deploy` 호출 0회, `apply.entered == True`이되 `apply.runs == []`, `summary_ko`에 "할 일 없음"류 문구, `is_error == False`.

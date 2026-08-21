@@ -45,6 +45,28 @@ def _all_present(records) -> dict[str, dict]:
     return {name: _present(name) for name in _csv_types(records)}
 
 
+class _CountingResolutions(dict):
+    """조회를 기록하는 해석표.
+
+    매퍼가 스스로 보고하는 `plan.types_requested` 는 records 에서 파생된 값이라
+    (`mapper.py` `types_requested = _distinct_types(records)`), 매퍼가 실제로 몇 번
+    조회했는지를 말해 주지 않는다 — 행마다 불러도 그 값은 8종 그대로다. 그래서
+    조회 자체를 여기서 센다.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lookups: list[str] = []
+
+    def get(self, key, default=None):
+        self.lookups.append(key)
+        return super().get(key, default)
+
+    def __getitem__(self, key):
+        self.lookups.append(key)
+        return super().__getitem__(key)
+
+
 def _unique_modes(records) -> dict[str, TypeModeRead]:
     """타입마다 폭이 유일한 모드 하나 — 모드 확정이 항상 성공하는 바탕."""
     widths: dict[str, int] = {}
@@ -169,10 +191,19 @@ def test_type_resolution_library_unreadable_skips_every_row():
 def test_type_resolution_is_requested_once_per_distinct_type():
     records = _records()
     distinct = _csv_types(records)
-    assert len(distinct) == 8  # 비공허성 — 8종이 실제로 있다
-    plan = _plan(records)
+    # 비공허성 두 줄 — 행이 타입보다 훨씬 많아야 「타입마다 한 번」이 「행마다 한 번」과
+    # 구별된다. 둘이 같은 수라면 아래 단언은 아무것도 가르지 못한다.
+    assert len(distinct) == 8
+    assert len(records) == 86
+
+    resolutions = _CountingResolutions(_all_present(records))
+    plan = _plan(records, type_resolutions=resolutions)
+
+    # 매퍼의 자기 보고(파생값)가 아니라 **실제 조회 횟수**를 잰다. 행마다 부르면 86이 된다.
+    assert len(resolutions.lookups) == 8
+    assert sorted(resolutions.lookups) == sorted(distinct)
+    # 자기 보고도 같은 값이어야 한다 — 다만 이것만으로는 위 단언을 대신하지 못한다.
     assert sorted(plan.types_requested) == sorted(distinct)
-    assert len(plan.types_requested) == 8
 
 
 # ---------------------------------------------------------------------------

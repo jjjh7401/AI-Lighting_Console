@@ -193,6 +193,32 @@ def test_reject_address_overlap_in_same_universe():
     assert len(result.records) == 84
 
 
+def test_reject_address_overlap_when_a_row_starts_inside_the_earlier_span():
+    """부분 겹침 — 시작 주소가 서로 다른데 구간이 겹친다.
+
+    위 테스트는 FID 102를 101과 **같은 시작 주소**로 옮긴다. 시작점만 비교하는
+    구현이라도 그 테스트는 초록이다. 여기서는 FID 105를 104의 구간(1.037–048)
+    **안쪽**인 40에서 시작시켜, 시작점이 다른 겹침도 잡히는지 본다.
+    """
+    rows = _rows_from_text(_load_fixture_text())
+    fieldnames = list(rows[0].keys())
+
+    # 비공허성 — 손대기 전 104·105는 붙어 있을 뿐 겹치지 않고, 시작 주소가 다르다.
+    before = {row["FID"]: row for row in rows}
+    assert before["104"]["Address"] == "37"  # 1.037–048
+    assert before["105"]["Address"] == "49"  # 1.049–060 — 인접, 겹침 없음
+    assert parse_patch_csv(_to_csv_text(rows, fieldnames)).rejected == ()
+
+    # 105를 40으로 — 104의 구간 안에서 시작하되 시작점은 다르다(37 ≠ 40).
+    overlapped = _rewrite_row(rows, "105", Address="40", AddrRange="1.040–051")
+    result = parse_patch_csv(_to_csv_text(overlapped, fieldnames))
+
+    overlap_rejections = [r for r in result.rejected if r.kind == "address_overlap_in_file"]
+    assert len(overlap_rejections) == 2
+    assert {r.fid_raw for r in overlap_rejections} == {"104", "105"}
+    assert len(result.records) == 84
+
+
 def test_zero_channels_row_is_excluded_not_rejected():
     rows = _rows_from_text(_load_fixture_text())
     fieldnames = list(rows[0].keys())
