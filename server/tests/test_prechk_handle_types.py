@@ -15,7 +15,11 @@ from server.prechk.inventory import (
     read_inventory,
     translate_fixture_type,
 )
-from server.prechk.mode_read import TypeNameRead, read_fixture_type_names
+from server.prechk.mode_read import (
+    TypeNameRead,
+    read_fixture_type_names,
+    read_type_mode_widths,
+)
 
 ROOT = "Patch/FixtureTypes"
 
@@ -377,3 +381,66 @@ def test_one_slotless_child_does_not_switch_off_the_whole_rig():
     assert named.fixture_type == "Robin Spiider"
     assert named.fixture_type_untranslated is None
     assert missing.fixture_type_untranslated == UNTRANSLATED_SLOT_UNSEEN
+
+
+# --- P5 · 모드 판독도 자식별로 격하한다 -------------------------------------
+
+
+class _ModeTree:
+    """타입 목록과 모드 목록을 함께 답하는 최소 콘솔."""
+
+    def __init__(self, type_children: list[dict]) -> None:
+        self.type_children = type_children
+
+    def query_state(self, path: str) -> dict:
+        if path.endswith("/DMXModes"):
+            return {
+                "ok": True,
+                "truncated": False,
+                "node": {"childCount": 1},
+                "children": [{"i": 1, "name": "Mode 1"}],
+            }
+        return {
+            "ok": True,
+            "truncated": False,
+            "node": {"childCount": len(self.type_children)},
+            "children": self.type_children,
+        }
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        return {"ok": True, "path": path, "property": property_name, "value": 49}
+
+
+def test_a_slotless_type_does_not_kill_another_types_mode_read():
+    """P5 — 자식 하나가 슬롯이 없으면 그 타입 모드 판독 전체를 죽이던 자리.
+
+    파장이 라벨보다 크다: 모드를 못 읽은 타입은 mode_unresolved 로 계획돼
+    **픽스처가 아예 안 패치된다.** 슬롯 미확정 타입이 라이브러리에 하나만
+    있어도 멀쩡한 타입까지 함께 죽었다.
+
+    P4(read_fixture_type_names)를 같은 규약으로 이미 고쳤는데 여기는 안
+    고쳐서 **같은 저장소 안에 형제 불일치**가 있었다 — M3 전수표가 잡았다.
+    """
+    console = _ModeTree([{"name": "슬롯 미확정 타입"}, {"i": 4, "name": "Robin Spiider"}])
+
+    answer = read_type_mode_widths(console, console, root=ROOT, type_name="Robin Spiider")
+
+    assert answer.attempted is True
+    assert answer.type_found is True
+    assert [choice.name for choice in answer.modes] == ["Mode 1"]
+
+
+def test_a_type_missing_from_a_subset_listing_is_not_declared_absent():
+    """대조군 — 버린 자식이 있으면 「목록에 없다」로 단정하지 않는다.
+
+    전수 목록에서 없는 것과 부분집합에서 안 보이는 것은 다른 사건이다.
+    """
+    whole = _ModeTree([{"i": 4, "name": "Robin Spiider"}])
+    subset = _ModeTree([{"name": "슬롯 미확정"}, {"i": 4, "name": "Robin Spiider"}])
+
+    gone = read_type_mode_widths(whole, whole, root=ROOT, type_name="Martin MAC")
+    unsure = read_type_mode_widths(subset, subset, root=ROOT, type_name="Martin MAC")
+
+    assert gone.type_found is False and "목록에 없다" in gone.detail
+    assert unsure.type_found is False
+    assert "부분집합" in unsure.detail and "단정할 수 없다" in unsure.detail

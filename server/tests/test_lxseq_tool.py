@@ -608,6 +608,60 @@ def test_the_payload_says_why_a_type_stayed_untranslated():
     assert translation["detail"]
 
 
+def test_a_failed_translation_blocks_the_occupancy_verdict():
+    """P13 — 번역이 실패했는데 계획이 서던 자리. 표에서 가장 위험한 행이다.
+
+    타입 이름을 못 얻으면 「이미 패치됨」 비교가 성립하지 않는다. 그대로
+    계획하면 이미 있는 86행이 fid_occupied 로 나가고, **그 라벨이 지시하는
+    다음 행동은 「다른 FID 로 다시 패치하라」**다 — 같은 리그를 한 벌 더 만든다.
+    이 앱에 실행 취소가 없다.
+    """
+
+    class DeadTypeTree(FakeConsole):
+        def query_state(self, path: str) -> dict:
+            if path.startswith(TYPES_ROOT):
+                return {"ok": False}
+            return super().query_state(path)
+
+    plan_payload, _execution, _console, _deploy, _runner = _run()
+    rows = _planned_fixtures(plan_payload)
+    console = DeadTypeTree(fixtures=rows, handle_types=True)
+
+    payload, execution = _call(_toolset(console), action="preview")
+
+    # 「다른 FID 로 다시 패치하라」가 나가지 않는다.
+    kinds = {row["kind"] for row in payload["plan"]["skipped"]}
+    assert "fid_occupied" not in kinds
+    assert kinds == {"console_read_incomplete"}
+    assert payload["console_read"]["complete_enough_to_judge_absence"] is False
+    assert payload["plan"]["runs"] == []
+    assert payload["plan"]["write_count_planned"] == 0
+    # 왜 막혔는지가 사유와 함께 나온다 — 침묵이 아니다.
+    assert "type_tree_unreadable" in str(payload["console_read"]["caveat"])
+    assert execution.result.is_error is False
+
+
+def test_a_readable_console_is_not_blocked_by_the_translation_gate():
+    """대조군 — 과잉으로 막지 않는다.
+
+    콘솔이 이름을 돌려주는 경로(기본값)와 핸들을 이름으로 번역해 낸 경로 둘 다
+    미번역 0건이라 이 갈래를 아예 타지 않는다. 이 대조군이 없으면 게이트가
+    모든 재실행을 막아도 초록이다.
+    """
+    for handle in (False, True):
+        console = FakeConsole(handle_types=handle)
+        deploy = FakeDeploy(console)
+        runner = FakeExec(console)
+        registry = _toolset(console, exec_port=runner, deploy=deploy)
+        _call(registry, action="apply")
+
+        payload, _ = _call(registry, action="preview")
+
+        assert payload["console_read"]["complete_enough_to_judge_absence"] is True
+        assert {row["kind"] for row in payload["plan"]["skipped"]} == {"already_patched"}
+        assert payload["console_read"]["type_translation"]["untranslated"] == {}
+
+
 # ---------------------------------------------------------------------------
 # AC-LXSEQ-014 — 닫힌 페이로드 · 한국어 · 성공 과장 금지
 # ---------------------------------------------------------------------------
