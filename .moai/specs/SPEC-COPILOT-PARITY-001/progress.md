@@ -182,3 +182,102 @@ fixture_type: ['FixtureType 1', 'FixtureType 1', 'FixtureType 1']
 6. AC 12건이 전부 통과해도 **실기 D2 가 닫혔다는 증거는 아니다**(acceptance.md §C). 오프라인이
    보증하는 것은 「핸들이 들어오는 갈래에서 코드가 이름으로 번역한다」까지이며, 「실기 콘솔이 실제로
    그 형식의 핸들을 준다」는 가정으로 남는다.
+
+
+---
+
+## §E.2 (이어서) — M2 번짐 범위 실측 (분류만 · 수정 0건)
+
+측정자: run 레인 · 트리 `t11-m1` · `WT-handle-to-name` · base `aabcdde` · 콘솔 무접촉
+
+[HARD] **이 마일스톤은 아무것도 고치지 않았다.** 어긋남을 발견해도 적기만 했다
+(plan.md M2 [HARD]). 제품 코드 변경 0건 — `git diff` 로 확인 가능.
+
+### 판정 기준 — 「호출을 봤나, 결과를 봤나」
+
+각 행마다 자문했다. **호출의 존재만 본 행은 「미측정」이다.** 이 카드에서 같은 함정이
+네 번 나왔으므로(B1 · M-3 · run 레인의 (B) 근거 · 리드의 footprint 근거), 표를 채우는
+일 자체가 그 함정에 걸리기 쉽다. **미측정이 많은 표는 부실한 표가 아니라 정직한 표다.**
+
+### 선행 측정 — 대응표를 넘기는 호출 지점은 8곳 중 1곳
+
+```
+$ grep -rn "read_inventory(" server/ --include=*.py | grep -v /tests/ | grep -v "def read_inventory"
+server/paperwork/data.py:100      read_inventory(port, policy)
+server/orchestrator/tools.py:2680 read_inventory(_InventoryPort(...))
+server/orchestrator/tools.py:2863 read_inventory(_InventoryPort(...))
+server/orchestrator/tools.py:3045 read_inventory(inventory_port)
+server/orchestrator/tools.py:3678 read_inventory(_InventoryPort(...))
+server/orchestrator/tools.py:4029 read_inventory(_InventoryPort(...))
+server/orchestrator/tools.py:4185 read_inventory(_InventoryPort(...))
+server/orchestrator/tools.py:4524 read_inventory(inventory_port, type_names=type_names)   <- 유일
+```
+**`:4524`(lxseq 핸들러) 하나만 대응표를 넘긴다.** 나머지 7곳은 번역 없이 핸들을 그대로
+하류에 보낸다. 이것이 「A-1 이 무엇을 닫았고 무엇이 열려 있는가」를 가르는 사실이며,
+인자 목록이라 추론이 아니라 구문적 사실이다.
+
+### 분류표 — C1~C13
+
+| # | 자리 | 판정 | 측정 | 근거 |
+|---|---|---|---|---|
+| C1 | `lxseq/mapper.py:325` | 어긋났다 → **닫힘** | **측정됨** | M1 통합 테스트. 번역 전 `Counter({'fid_occupied': 86})` → 후 `Counter({'already_patched': 86})` |
+| C2 | `vwx/apply.py:503` | **어긋나지 않는다** | **측정됨** | `_resolve_library_type("FixtureType 4", lib)` → `Robin Spiider` — 이름 입력과 **같은 결과**. 이 함수는 `_TYPE_DISPLAY_INDEX = ^FixtureType (\d+)$`(`apply.py:444`)로 **핸들 형태를 이미 처리한다** |
+| C3 | `vwx/diff.py:113` | **어긋난다** | **측정됨** | `fuzzy_type_equal("Source 4 LED", "FixtureType 10")` → `False` (이름이면 `True`). `diff.py:179` 가 이 대조로 `console_count` 를 정하므로 **전 타입이 `console_count=0` → 거짓 QuantityMismatch** |
+| C4 | `paperwork/data.py:108` | **어긋난다(운반)** | **측정됨** | `build_patch_sheet` 를 실제 포트로 실행 → 행에 `fixture_type='FixtureType 10'` 그대로 |
+| C5 | `paperwork/render.py:87` | **어긋난다(인쇄)** | **측정됨** | `render_patch_sheet` 실행 → `<td>` 셀 `['1','KEY 101','1','1','FixtureType 10','Mode 1']`. **사람이 읽는 서류에 핸들이 인쇄된다** |
+| C6 | `tools.py:3734` | 표시 통과로 보인다 | **미측정** | 운반자 C11 은 측정됐다(핸들 그대로). 그러나 **이 줄은 핸들러를 실행해 페이로드를 관측하지 않았다** — 딕셔너리 리터럴을 읽었을 뿐이다 |
+| C7 | `prechk/patch.py:236` | 표시 통과로 보인다 | **미측정** | 같은 형태. `to_dict()` 를 실행하지 않았다 |
+| C8 | `prechk/patch.py:714` | **무관** | **측정됨** | 널 검사뿐 — 핸들·이름 모두 `type_mode_ok=True`, `None` 만 `False` |
+| C9 | `lxseq/mapper.py:317` | 어긋났다 → **닫힘** | **측정됨** | M1 테스트가 `occupant["fixture_type"]` 이 이름임을 단언. 번역 전 실측값은 `'FixtureType 1'` |
+| C10 | `vwx/apply.py:510` | 표시는 핸들, **판정은 정상** | **측정됨** | `read_console_fixtures` 실행 → `type_display='FixtureType 10'` 이나 `type_name='Source 4 LED'`(C2 가 해석) |
+| C11 | `tools.py:3683` | **무관(판정)** | **측정됨** | 핸들 점유와 이름 점유의 `evaluate` 판정이 동일(`ok=False, hits=1`). `fixture_type` 은 충돌 판정에 참여하지 않는다 |
+| C12 | `tools.py:4034` | **무관(판정)** | **측정됨** | 같은 `evaluate` 경로. 페이로드는 `f"{universe}.{address}"` 만 낸다 |
+| C13 | `tools.py:4193` | **무관(버려짐)** | **측정됨** | `seats` 가 `(universe, address)` 만 추출 — `fixture_type` 은 **소비 지점에서 버려진다** |
+
+**집계**: 측정됨 11 · 미측정 2(C6 · C7). 어긋남 3(C3 · C4 · C5) · 닫힘 2(C1 · C9) ·
+무관 5(C2 · C8 · C10판정 · C11 · C12 · C13 중 판정축) · 표시상 핸들 노출 3(C6 · C7 · C10).
+
+### A-1 이 닫은 것과 열어 둔 것 — 측정으로 가른다
+
+| | 자리 | 근거 |
+|---|---|---|
+| **닫혔다** | C1 · C9 | lxseq 경로(`:4524`)가 유일하게 대응표를 넘긴다. M1 테스트가 관측 |
+| **열려 있다** | C3 · C4 · C5 | 각각의 `read_inventory` 가 대응표를 안 넘기고(위 grep), 핸들을 받으면 어긋남을 측정했다 |
+| **닫을 필요가 없다** | C2 · C8 · C10 · C11 · C12 · C13 | 핸들이 와도 결과가 갈리지 않음을 측정했다 |
+
+**리드의 C11~C13 관측은 참으로 확인됐다** — 「양쪽이 다 핸들이면 성립할 수도 있다」는
+가설이었고, 측정 결과 **더 강한 이유로 성립한다**: 그 경로들은 애초에 `fixture_type` 을
+판정에 쓰지 않는다(C13 은 아예 버린다). 「양쪽이 핸들이라 우연히 맞는」 것이 아니라
+**그 축을 보지 않는다.**
+
+### O-6 — D2 의 잔여로 오분류하지 않는다
+
+`lxseq/mapper.py` 는 라이브러리 해석이 present 가 아니면 `console_types[csv_type] = None`
+로 둔다(원문 확인: `console_types[csv_type] = resolution.get("resolved") or csv_type` /
+`console_types[csv_type] = None` 두 갈래). 그러면 `:325` 의 비교는 **번역 후에도**
+「이름 == None」이라 거짓이다. 이것은 **D2 와 다른 원인**이며 이 카드가 결함으로 단정하지
+않는다. C1 에서 「번역했는데도 안 뒤집힌다」가 관측되면 **먼저 이 갈래인지 확인할 것.**
+
+### 부수 관측 — 같은 정규식이 두 곳에 따로 있다 (고치지 않았다)
+
+```
+server/vwx/apply.py:444        _TYPE_DISPLAY_INDEX = re.compile(r"^FixtureType (\d+)$")
+server/prechk/inventory.py     HANDLE_TEXT         = re.compile(r"^FixtureType (\d+)$")
+```
+**바이트 동일하다.** vwx 는 이 형태를 진작 알고 있었고, prechk/lxseq 는 몰랐다 —
+§E.2 의 「가짜↔가짜」 발견과 같은 계열의 **모듈 간 지식 불균형**이다. 형식이 드리프트하면
+두 곳을 따로 고쳐야 하며 한쪽만 고치면 조용히 갈린다. **M2 는 분류 마일스톤이므로 고치지
+않았다** — 후속 재료로 남긴다.
+
+### M2 가 재지 않은 것
+
+1. **C6 · C7** — 핸들러/`to_dict()` 를 실행하지 않았다. 운반자는 측정됐으나 출력은 아니다.
+2. **콘솔 라이브 0건.** 위 전부 오프라인 측정이다.
+3. **C3 의 실제 사용자 영향** — 거짓 QuantityMismatch 가 나는 것은 측정했으나, 그 리포트를
+   조명감독이 어떻게 읽고 무엇을 하는지는 재지 않았다.
+4. **어긋남 3건(C3·C4·C5)의 수정** — 범위 밖(plan.md M2 [HARD]). 후속 카드 재료다.
+5. **`read_inventory` 나머지 5곳 순증** — M1 에서 남긴 미검증 그대로.
+6. **AC 12건이 전부 통과해도 실기 D2 가 닫혔다는 증거는 아니다**(acceptance §C).
+   오프라인이 보증하는 것은 「핸들 갈래에서 코드가 이름으로 번역한다」까지이며,
+   「실기 콘솔이 실제로 그 형식의 핸들을 준다」는 가정으로 남는다. **sync 가 이 문장을
+   지우면 「AC 전건 통과」가 「실기 결함 해소」로 읽힌다.**
