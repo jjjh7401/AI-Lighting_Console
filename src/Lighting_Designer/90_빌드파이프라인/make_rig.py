@@ -138,7 +138,7 @@ sheet("NOTE", "NOTE — 확인 필요 항목",
 # ── 출력 ───────────────────────────────────────────────────
 # 출력 위치는 이 스크립트 위치에서 유도한다. 기계마다 다른 절대경로를
 # 박아두면 그 기계 밖에서는 돌지 않는다.
-OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "02_RIG팩")
+OUT_DIR = os.environ.get("LXSEQ_RIG_OUT") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "02_RIG팩")
 STEM = "LXSEQ_RIG_01_ShowBase_r3"
 os.makedirs(OUT_DIR, exist_ok=True)
 
