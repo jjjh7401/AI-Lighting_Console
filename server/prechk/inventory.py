@@ -80,10 +80,6 @@ ABSENT_VALUE_TEXTS = frozenset({"None"})
 FID_UNRESOLVED_MARK = "미확정"
 
 
-#: The fixture-type library root. The handle a fixture property hands back is a
-#: slot INTO this tree, so the tree is the only thing that can name it.
-FIXTURE_TYPES_ROOT = "Patch/FixtureTypes"
-
 #: The console hands back an object HANDLE where a fixture type name belongs -
 #: measured live as ``FixtureType 10`` (SPEC-COPILOT-LXSEQ-001 progress.md:621),
 #: with all 86 rows of one read carrying the same form across 8 slots. Code that
@@ -106,10 +102,13 @@ HANDLE_TEXT = re.compile(r"^FixtureType (\d+)$")
 #:                      console; the rig is not at fault.
 #:   - slot absent    : the tree answered IN FULL and does not declare that
 #:                      slot. A rig fact — retrying changes nothing.
-#:   - slot unseen    : the listing was TRUNCATED and the slot was not in the
-#:                      part that arrived. Absence is NOT established — this
-#:                      repository already holds that truncation invalidates
-#:                      negative conclusions only.
+#:   - slot unseen    : the listing could not be confirmed WHOLE (truncated,
+#:                      or empty and so indistinguishable from unreadable, or
+#:                      a subset because slot-less children were dropped) and
+#:                      the slot was not in what arrived. Absence is NOT
+#:                      established — this repository already holds that an
+#:                      unconfirmed listing invalidates negative conclusions
+#:                      only. Positive pairs from it still translate.
 #:   - shape invalid  : the listing answered but enumerated nothing usable,
 #:                      so it never met the 'answered IN FULL' condition that
 #:                      makes absence a rig fact. Fix the READ, not the rig.
@@ -123,7 +122,7 @@ HANDLE_TEXT = re.compile(r"^FixtureType (\d+)$")
 UNTRANSLATED_NO_TABLE = "no_type_table"
 UNTRANSLATED_TREE_UNREADABLE = "type_tree_unreadable"
 UNTRANSLATED_SLOT_ABSENT = "slot_absent"
-UNTRANSLATED_SLOT_UNSEEN = "slot_unseen_truncated_listing"
+UNTRANSLATED_SLOT_UNSEEN = "slot_unseen_listing_unconfirmed"
 UNTRANSLATED_LISTING_SHAPE_INVALID = "listing_shape_invalid"
 
 
@@ -482,14 +481,14 @@ def _name_handle_types(
     else:
         names = type_names.by_slot()
         unavailable = UNTRANSLATED_NO_TABLE
-    # 절단된 목록에서 슬롯이 안 보인 것은 「없다」가 아니라 「못 봤다」다.
+    # 전수임을 확인 못 한 목록에서 슬롯이 안 보인 것은 「없다」가 아니라 「못 봤다」다.
     # slot_absent 는 「전수 답했고 없다」는 리그 사실이다. 목록을 믿을 수 없는
     # 두 경우(절단 · 형태 불량)는 그 계약을 만족하지 않으므로 따로 낸다.
     absent = UNTRANSLATED_SLOT_ABSENT
     if type_names is not None:
         if type_names.shape_invalid:
             absent = UNTRANSLATED_LISTING_SHAPE_INVALID
-        elif type_names.truncated:
+        elif type_names.whole_unconfirmed:
             absent = UNTRANSLATED_SLOT_UNSEEN
 
     return [

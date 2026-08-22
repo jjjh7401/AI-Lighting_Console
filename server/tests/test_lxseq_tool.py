@@ -575,6 +575,39 @@ def test_a_handle_answering_console_still_reports_already_patched():
     assert execution.result.is_error is False
 
 
+def test_the_payload_says_why_a_type_stayed_untranslated():
+    """코드리뷰 #3 — 다섯 사유가 감독에게 도달하지 않던 자리.
+
+    사유를 다섯으로 가르는 데 감사 세 라운드를 썼는데 읽는 곳이 0이었다.
+    판독이 실패하면 툴은 수정 전과 똑같이 fid_occupied 를 내보내고 신호가
+    없다 — 그 침묵이 이 카드가 고치려는 결함과 같은 모양이다.
+    """
+
+    class DeadTypeTree(FakeConsole):
+        """타입 트리만 답하지 않는 콘솔 — 픽스처 판독은 정상."""
+
+        def query_state(self, path: str) -> dict:
+            if path.startswith(TYPES_ROOT):
+                return {"ok": False}
+            return super().query_state(path)
+
+    # 먼저 정상 콘솔로 86대를 채운다 — 타입 트리가 죽으면 계획 자체가 안 서므로,
+    # 죽은 트리로는 「이미 패치된 리그를 다시 읽는」 상황을 만들 수 없다.
+    plan_payload, _execution, _console, _deploy, _runner = _run()
+    rows = _planned_fixtures(plan_payload)
+    assert len(rows) == 86
+
+    console = DeadTypeTree(fixtures=rows, handle_types=True)
+    payload, _ = _call(_toolset(console), action="preview")
+    translation = payload["console_read"]["type_translation"]
+
+    assert translation["attempted"] is False
+    assert translation["named"] == 0
+    # 무엇이 몇 건 미번역인지 수로 나온다 — 「조용히 사라짐」의 반대.
+    assert translation["untranslated"] == {"type_tree_unreadable": 86}
+    assert translation["detail"]
+
+
 # ---------------------------------------------------------------------------
 # AC-LXSEQ-014 — 닫힌 페이로드 · 한국어 · 성공 과장 금지
 # ---------------------------------------------------------------------------

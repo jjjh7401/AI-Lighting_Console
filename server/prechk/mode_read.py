@@ -96,7 +96,20 @@ class TypeNameRead:
     #: UNSEEN, and this repository already holds that truncation invalidates
     #: negative conclusions only. Without this flag a caller can only say
     #: "not in the pairs I got", which reads as a rig fact.
-    truncated: bool = False
+    #: The listing could NOT be confirmed to be the whole library. Three shapes
+    #: reach it and they are deliberately one flag, because the CONSEQUENCE is
+    #: identical: a slot missing from an unconfirmed listing is UNSEEN, never
+    #: absent.
+    #:   - the listing declared more children than it returned (truncation);
+    #:   - it returned no children at all, which is INDISTINGUISHABLE from
+    #:     children that could not be read (the sibling walk in ``footprint.py``
+    #:     documents the mechanism and forces the same verdict there — the
+    #:     responder hands back an empty table when both ``Children()`` and
+    #:     ``Count()`` fail, and ``childCount`` derives from that same empty
+    #:     read, so nothing marks it);
+    #:   - some children were dropped for want of a usable slot, so what
+    #:     arrived is a subset.
+    whole_unconfirmed: bool = False
     #: The tree answered, but its children carried no usable (slot, name) pair.
     #: Distinct from an empty library, which is a rig fact: this is a READ that
     #: cannot be trusted to have enumerated anything, so a slot missing from it
@@ -128,9 +141,17 @@ def read_fixture_type_names(reader: StateReader, *, root: str) -> TypeNameRead:
     Query count is 1 - the type listing, nothing per type.
     ``read_type_mode_widths`` cannot serve this purpose at any cost: it takes
     ``type_name`` as an argument, which is the very value this read exists to
-    produce (spec.md A.4). A truncated listing is NOT an error here - the pairs
-    that did arrive are usable, and a slot missing from them falls to the
-    untranslated path (REQ-PARITY-005) rather than to a guess.
+    produce (spec.md A.4). An unconfirmed listing is NOT an error here - the
+    pairs that did arrive are POSITIVE evidence and translate fine; only the
+    negative conclusion ("this slot does not exist") is withheld.
+
+    Children are degraded ONE BY ONE, not all-or-nothing: ``PROTOCOL.md``
+    (responder 1.2.0) makes ``i`` optional, omitted when the real pool slot
+    could not be established, and states that the server already degrades such
+    a child to a name-only entry. Dropping the whole table because one type is
+    slot-less would switch translation off for a rig that is mostly readable.
+    Dropped children do, however, make the listing a SUBSET, so the read stops
+    claiming to be whole.
     """
     try:
         payload = reader.query_state(root)
@@ -138,16 +159,49 @@ def read_fixture_type_names(reader: StateReader, *, root: str) -> TypeNameRead:
         return TypeNameRead(attempted=False, detail=root + " 조회에 응답이 없다")
     if not _payload_ok(payload):
         return TypeNameRead(attempted=False, detail=root + " 조회에 응답이 없다")
-    pairs = _named_children(payload)
-    if pairs is None:
+
+    children = payload.get("children") or []
+    pairs: list[tuple[int, str]] = []
+    dropped = 0
+    for child in children:
+        slot = child.get("i") if isinstance(child, dict) else None
+        name = child.get("name") if isinstance(child, dict) else None
+        if isinstance(slot, bool) or not isinstance(slot, int) or not isinstance(name, str):
+            dropped += 1
+            continue
+        pairs.append((slot, name))
+
+    if children and not pairs:
         return TypeNameRead(
-            attempted=True, shape_invalid=True, detail=root + " 자식에 슬롯/이름이 없다"
+            attempted=True,
+            shape_invalid=True,
+            whole_unconfirmed=True,
+            detail=root + " 자식에 쓸 수 있는 슬롯/이름이 하나도 없다",
         )
-    truncated = not _listing_is_whole(payload)
+
+    notes: list[str] = []
+    unconfirmed = False
+    if not _listing_is_whole(payload):
+        unconfirmed = True
+        notes.append("열거가 선언 총계보다 짧다")
+    if not pairs:
+        # 자식 0개 보고는 자식을 못 읽은 것과 구별되지 않는다 — 형제 순회
+        # walk_mode_widths 가 같은 페이로드에 같은 판정을 내린다(footprint.py).
+        unconfirmed = True
+        notes.append("자식이 하나도 열거되지 않았다 - 못 읽은 것과 구별되지 않는다")
+    if dropped:
+        unconfirmed = True
+        notes.append(f"슬롯 없는 자식 {dropped}건을 버렸다 - 목록이 부분집합이다")
+
     detail = ""
-    if truncated:
-        detail = root + " 열거가 절단됐다 - 목록에 없는 슬롯은 안 본 것이지 없는 것이 아니다"
-    return TypeNameRead(attempted=True, pairs=tuple(pairs), truncated=truncated, detail=detail)
+    if notes:
+        detail = root + " 전수 확인 불가: " + " · ".join(notes)
+    return TypeNameRead(
+        attempted=True,
+        pairs=tuple(pairs),
+        whole_unconfirmed=unconfirmed,
+        detail=detail,
+    )
 
 
 def read_type_mode_widths(
