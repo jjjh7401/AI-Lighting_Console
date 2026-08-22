@@ -1,0 +1,225 @@
+<title>LX-SEQ 문서 체계</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+:root{
+  --bg:#14161d; --panel:#1b1e28; --panel2:#20242f; --line:#2c3140;
+  --ink:#e6e8ef; --ink2:#9aa2b4; --ink3:#6a7284;
+  --gold:#f0b542; --spec:#8fa1c4; --rig:#9b7fe0; --song:#f0559e; --ma3:#46c48e;
+  --warn:#e86a7a; --chipbg:#262b38;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f4f4f0; --panel:#ffffff; --panel2:#f7f7f3; --line:#dcdcd4;
+    --ink:#23252c; --ink2:#5a6070; --ink3:#8a90a0;
+    --gold:#b07d14; --spec:#5a6d94; --rig:#6a4bc0; --song:#c62d7d; --ma3:#1e8f60;
+    --warn:#c03a4e; --chipbg:#ecece5;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#f4f4f0; --panel:#ffffff; --panel2:#f7f7f3; --line:#dcdcd4;
+  --ink:#23252c; --ink2:#5a6070; --ink3:#8a90a0;
+  --gold:#b07d14; --spec:#5a6d94; --rig:#6a4bc0; --song:#c62d7d; --ma3:#1e8f60;
+  --warn:#c03a4e; --chipbg:#ecece5;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:'IBM Plex Sans KR',-apple-system,'Malgun Gothic',sans-serif;
+  font-size:15px;line-height:1.6}
+.wrap{max-width:1080px;margin:0 auto;padding:48px 28px 64px}
+.mono{font-family:'IBM Plex Mono','Consolas',monospace}
+
+header h1{margin:0;font-size:30px;font-weight:700;letter-spacing:-.5px;text-wrap:balance}
+header h1 .mono{color:var(--gold)}
+.sub{color:var(--ink2);margin:8px 0 0;max-width:64ch}
+.metarow{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:'IBM Plex Mono',monospace;font-size:11.5px;background:var(--chipbg);
+  border:1px solid var(--line);border-radius:4px;padding:3px 9px;color:var(--ink2)}
+.chip b{color:var(--ink);font-weight:600}
+
+.flow{display:flex;align-items:stretch;gap:0;margin:36px 0 8px;overflow-x:auto;padding-bottom:6px}
+.stage{flex:1;min-width:170px;border:1px solid var(--line);border-radius:8px;
+  background:var(--panel);padding:14px 16px;position:relative}
+.stage+.stage{margin-left:34px}
+.stage+.stage::before{content:"→";position:absolute;left:-27px;top:50%;
+  transform:translateY(-50%);color:var(--ink3);font-size:18px}
+.stage .lyr{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:1.2px;
+  text-transform:uppercase;display:inline-block;padding:2px 7px;border-radius:3px;
+  color:var(--bg);font-weight:600;margin-bottom:8px}
+.stage h3{margin:0 0 4px;font-size:15.5px}
+.stage p{margin:0;font-size:12.5px;color:var(--ink2)}
+.s-spec .lyr{background:var(--spec)} .s-rig .lyr{background:var(--rig)}
+.s-song .lyr{background:var(--song)} .s-ma3 .lyr{background:var(--ma3)}
+.flownote{color:var(--ink3);font-size:12px;margin:0 0 40px}
+.flownote .mono{font-size:11px}
+
+section{margin-top:44px}
+section>h2{font-size:13px;letter-spacing:1.6px;text-transform:uppercase;
+  color:var(--ink3);margin:0 0 6px;font-weight:600}
+section>h2 i{font-style:normal;display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px;vertical-align:baseline}
+.laydesc{color:var(--ink2);font-size:13.5px;margin:0 0 16px;max-width:70ch}
+
+.doc{border:1px solid var(--line);border-left:3px solid var(--line);border-radius:0 8px 8px 0;
+  background:var(--panel);padding:16px 20px;margin-bottom:12px;
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 20px;align-items:start}
+.doc.spec{border-left-color:var(--spec)} .doc.rig{border-left-color:var(--rig)}
+.doc.song{border-left-color:var(--song)} .doc.ma3{border-left-color:var(--ma3)}
+.doc .fn{font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:600}
+.doc .role{grid-column:1;color:var(--ink2);font-size:13px;max-width:66ch}
+.doc .role b{color:var(--ink);font-weight:500}
+.doc .tags{grid-column:2;grid-row:1 / span 2;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.tag{font-family:'IBM Plex Mono',monospace;font-size:10.5px;border-radius:3px;
+  padding:2px 8px;border:1px solid var(--line);color:var(--ink2);white-space:nowrap}
+.tag.ok{color:var(--ma3);border-color:var(--ma3)}
+.tag.warn{color:var(--warn);border-color:var(--warn)}
+.tag.amber{color:var(--gold);border-color:var(--gold)}
+@media(max-width:640px){.doc{grid-template-columns:1fr}.doc .tags{grid-column:1;grid-row:auto;flex-direction:row;flex-wrap:wrap;align-items:flex-start}}
+
+.vstrip{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.vcard{flex:1;min-width:200px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:8px;padding:12px 16px}
+.vcard .n{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:var(--ma3)}
+.vcard .n span{font-size:13px;color:var(--ink3);font-weight:400}
+.vcard .t{font-size:12.5px;color:var(--ink2);margin-top:2px}
+
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:14px}
+th{text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--ink3);font-weight:600;padding:6px 10px;border-bottom:1px solid var(--line)}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+td:first-child{font-family:'IBM Plex Mono',monospace;white-space:nowrap;font-size:12.5px}
+.tblwrap{overflow-x:auto}
+.st{font-family:'IBM Plex Mono',monospace;font-size:11px;white-space:nowrap}
+.st.open{color:var(--warn)} .st.done{color:var(--ma3)}
+
+.next{counter-reset:step;margin:14px 0 0;padding:0;list-style:none}
+.next li{counter-increment:step;position:relative;padding:0 0 14px 40px;color:var(--ink2);font-size:14px;max-width:72ch}
+.next li::before{content:counter(step);position:absolute;left:0;top:1px;width:24px;height:24px;
+  border:1px solid var(--gold);color:var(--gold);border-radius:50%;display:flex;
+  align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:12px}
+.next li b{color:var(--ink);font-weight:600}
+
+footer{margin-top:52px;padding-top:16px;border-top:1px solid var(--line);
+  color:var(--ink3);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+</style>
+
+<div class="wrap">
+<header>
+  <h1><span class="mono">LX-SEQ</span> 문서 체계</h1>
+  <p class="sub">음악 1곡 조명연출 시퀀스 포맷 — 스펙부터 grandMA3 콘솔 반영까지, 전 문서의 역할·상태·관계를 한 장으로 정리한 인덱스.</p>
+  <div class="metarow">
+    <span class="chip">SPEC <b>v2.1</b></span>
+    <span class="chip">RIG <b>LXSEQ_RIG_01 r2</b></span>
+    <span class="chip">SONG <b>Sugar r2</b> · Maroon 5 · 03:56.0 · 120BPM</span>
+    <span class="chip">콘솔 <b>grandMA3</b></span>
+    <span class="chip">검증 <b>28/28 PASS</b></span>
+  </div>
+</header>
+
+<div class="flow">
+  <div class="stage s-spec"><span class="lyr">Layer 0</span><h3>포맷 스펙</h3><p>필드·값 규칙의 정본. 모든 문서가 이 규격을 따른다</p></div>
+  <div class="stage s-rig"><span class="lyr">Layer 1</span><h3>RIG 팩 (쇼 단위)</h3><p>장비·패치·그룹·프리셋·FX·콘솔 설정 — 곡이 바뀌어도 재사용</p></div>
+  <div class="stage s-song"><span class="lyr">Layer 2</span><h3>곡 파일 (곡 단위)</h3><p>연출 큐시트 + 실행 레이어. RIG를 <span class="mono">RIG_REF</span>로 참조</p></div>
+  <div class="stage s-ma3"><span class="lyr">Layer 3</span><h3>콘솔 반영</h3><p>MA3 명령 스크립트·매크로·런북 — 데이터에서 자동 생성</p></div>
+</div>
+<p class="flownote">아래 레이어를 고치면 위 레이어가 자동 재생성된다 (기종 교체 → 주소 재계산 → 스크립트 재발행). 정본은 항상 아래쪽 레이어.</p>
+
+<section>
+  <h2><i style="background:var(--spec)"></i>Layer 0 — 포맷 스펙</h2>
+  <div class="doc spec">
+    <div class="fn">LX-SEQ-SPEC-v2.1.md</div>
+    <div class="role">포맷 명세서 정본. <b>PART I</b> 연출 레이어(HEAD·CUE·NOTE, 14열 규격, Transition·전환밀도 규칙) · <b>PART II</b> 실행 레이어(PATCH·PRESET·CUE-EX, 트래킹 의미론, I/P/C/B 개별 타이밍, Phaser BPM 공식) · <b>§13</b> RIG 팩 규격. 개정 이력 v1.0→v2.1 포함.</div>
+    <div class="tags"><span class="tag ok">프로젝트 지식 저장됨</span><span class="tag">체크리스트 15항목</span></div>
+  </div>
+</section>
+
+<section>
+  <h2><i style="background:var(--rig)"></i>Layer 1 — RIG 팩 · <span class="mono">LXSEQ_RIG_01 r2</span></h2>
+  <p class="laydesc">실제 공연 표준 기종 반영 (S4 LED S3 Lustr X8 · MAC Aura XB ×24 · RUSH PAR 2 ×20 · MegaPointe ×8 · Spiider ×8 · CUEPIX WW2 · Atomic 3000 LED · Unique 2.1). 풋프린트는 제조사 DMX 차트 실측값.</p>
+  <div class="doc rig">
+    <div class="fn">LXSEQ_RIG_01_ShowBase_r2.xlsx <span style="color:var(--ink3)">· 9시트</span></div>
+    <div class="role">쇼 단위 콘솔 기본설정 정본 — <b>FIXTURE</b>(인벤토리 86대) · <b>PATCH</b>(픽스처 단위 주소, U1–U5 자동 계산) · <b>GROUP</b>(MA3 그룹 18) · <b>PRESET-DIM·COL / POS·BM</b>(프리셋 35종 + 현장 레코드 가이드) · <b>FX</b>(Phaser 8종) · <b>CONSOLE</b>(sACN·SpeedMaster·TC·MIB·Inhibit·이그제큐터 레이아웃)</div>
+    <div class="tags"><span class="tag ok">검증 R1–R8 PASS</span><span class="tag amber">PROPOSED — 보유/대여 확정 필요</span></div>
+  </div>
+  <div class="doc rig">
+    <div class="fn">LXSEQ_RIG_01_ShowBase_r2.patch.csv</div>
+    <div class="role">패치 기계 정본 — 86대 × FID·기종·Mode·ch·Universe.Address. 콘솔 패치 입력/대조용.</div>
+    <div class="tags"><span class="tag">총 2,244ch · U1 252 / U2 312 / U3 392 / U4 450 / U5 330</span></div>
+  </div>
+</section>
+
+<section>
+  <h2><i style="background:var(--song)"></i>Layer 2 — 곡 파일 · <span class="mono">Sugar r2</span></h2>
+  <div class="doc song">
+    <div class="fn">LXSEQ_SAMPLE_01_Sugar_r2.xlsx <span style="color:var(--ink3)">· 6시트</span></div>
+    <div class="role">곡 정본 — <b>HEAD</b>(메타·팔레트 8색·RIG_REF) · <b>CUE</b>(연출 큐 18, 사람이 읽는 정본) · <b>CUE-EX</b>(큐×그룹 89행, 프리셋 참조·개별 타이밍, 기계가 읽는 정본) · <b>NOTE</b>(확인필요 19건 추적)</div>
+    <div class="tags"><span class="tag ok">검증 1–15 PASS</span><span class="tag warn">TC_METHOD: DERIVED — 리허설 LTC 대조 필수</span></div>
+  </div>
+  <div class="doc song">
+    <div class="fn">LXSEQ_SAMPLE_01_Sugar_r2.cue-ex.csv</div>
+    <div class="role">CUE-EX 기계 정본(89행) — SequenceImporter 계열 플러그인·변환기 입력용.</div>
+    <div class="tags"><span class="tag">UTF-8 · 17열</span></div>
+  </div>
+  <div class="doc song">
+    <div class="fn">LXSEQ_SAMPLE_01_Sugar_r2.timeline.html</div>
+    <div class="role">연출가·무대감독 확인용 시각화 — 섹션 밴드·큐 색 블록·강도 곡선(3-웨이브 90/95/100)·상세 표. 자체완결 단일 HTML, A3 가로 인쇄 대응.</div>
+    <div class="tags"><span class="tag">협의·리허설 대조용</span></div>
+  </div>
+</section>
+
+<section>
+  <h2><i style="background:var(--ma3)"></i>Layer 3 — grandMA3 반영</h2>
+  <div class="doc ma3">
+    <div class="fn">LXSEQ_SAMPLE_01_Sugar_r2.ma3.txt</div>
+    <div class="role">프로그래밍 명령 스크립트 <b>452줄 · 8섹션</b> — 그룹 18 생성 → 딤머·컬러 프리셋 → POS 레코드 가이드 → Phaser 레시피 → 시퀀스 Cue 10–180(개별 타이밍 입력표 주석) → TC 이벤트 대응표. <span class="mono">[VERIFY]</span>=버전 확인, <span class="mono">[MANUAL]</span>=수동 작업 표기.</div>
+    <div class="tags"><span class="tag ok">검증 M1–M5 PASS</span><span class="tag">Store Cue 구문 = MA3 공식 도움말 기준</span></div>
+  </div>
+  <div class="doc ma3">
+    <div class="fn">LXSEQ_SAMPLE_01_Sugar_r2.macros.xml</div>
+    <div class="role">위 스크립트의 매크로 풀 임포트본(7개) — <span class="mono">gma3_library/datapools/macros</span>에 복사 후 Macro Pool에서 Import. DataVersion은 콘솔 버전에 맞게 수정.</div>
+    <div class="tags"><span class="tag amber">DataVersion 확인 후 임포트</span></div>
+  </div>
+  <div class="doc ma3">
+    <div class="fn">LXSEQ_SAMPLE_01_Sugar_r2.ma3-runbook.md</div>
+    <div class="role">콘솔 작업 런북 — 패치→그룹→프리셋→POS 레코드 세션→Phaser→시퀀스→TC→백업 8단계, 소요 예상과 [VERIFY]/[MANUAL] 목록.</div>
+    <div class="tags"><span class="tag">현장 반입 문서</span></div>
+  </div>
+</section>
+
+<section>
+  <h2><i style="background:var(--gold)"></i>검증 현황 — 28항목 자동 검증 전부 통과</h2>
+  <div class="vstrip">
+    <div class="vcard"><div class="n">15<span>/15</span></div><div class="t">곡 파일 — 연출 11 + 실행 4 (트래킹 시뮬레이션 포함)</div></div>
+    <div class="vcard"><div class="n">8<span>/8</span></div><div class="t">RIG 팩 — FID·주소충돌·512ch·풋프린트 산술 + 곡 파일 상호참조</div></div>
+    <div class="vcard"><div class="n">5<span>/5</span></div><div class="t">MA3 스크립트 — 그룹·프리셋 참조, 큐 번호, SNAP 페이드, XML</div></div>
+  </div>
+  <p class="laydesc" style="margin-top:12px">검증이 실제로 잡아낸 결함 4건: PRE 섹션 enum 누락(→v1.1 개정) · 헤이저 트래킹 방치(→Q110 관리 행 추가) · LED-W 콘솔 명령 유출(→영상팀 콜 주석) · 유니버스 초과(→U1–U5 재배치).</p>
+</section>
+
+<section>
+  <h2><i style="background:var(--warn)"></i>남은 확인 항목</h2>
+  <div class="tblwrap"><table>
+    <tr><th>대상</th><th>내용</th><th>확정 시점</th><th>상태</th></tr>
+    <tr><td>FIXTURE</td><td>제안 기종 ↔ 보유/대여 리스트 대조 (다르면 표만 수정 → 주소 자동 재계산)</td><td>장비 발주</td><td class="st open">미확정</td></tr>
+    <tr><td>TC 전구간</td><td>마디연산 도출값(DERIVED) — 음원 LTC 실측 대조 후 이벤트 확정</td><td>리허설</td><td class="st open">미확정</td></tr>
+    <tr><td>POS.01–08</td><td>포지션 프리셋 현장 레코드 (레코드 가이드 기준)</td><td>리허설</td><td class="st open">미확정</td></tr>
+    <tr><td>BLIND 각도</td><td>객석 직사 금지선 · 최대 틸트각</td><td>리허설</td><td class="st open">미확정</td></tr>
+    <tr><td>LW-02~06</td><td>LED 월 큐 5건 — 영상팀 큐시트와 상호 확정</td><td>영상팀 협의</td><td class="st open">미확정</td></tr>
+    <tr><td>콘솔 버전</td><td>[VERIFY] 3건 — 프리셋 풀 번호·XML DataVersion·SpeedMaster 구문</td><td>콘솔 확인</td><td class="st open">미확정</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2><i style="background:var(--gold)"></i>다음 단계</h2>
+  <ol class="next">
+    <li><b>장비 확정</b> — 대여사 견적과 FIXTURE 대조 → 기종·모드 확정 → <span class="mono">DATA_STATUS: CONFIRMED</span></li>
+    <li><b>콘솔 셋업</b> — GDTF 패치 → 매크로 임포트 → 런북 8단계 실행</li>
+    <li><b>리허설</b> — POS 레코드 + LTC 대조 + BLIND 각도 → <span class="mono">TC_METHOD: VERIFIED</span> 승격, 곡 파일 <b>r3 확정본</b> 발행</li>
+    <li><b>2번째 곡</b> — 같은 RIG 위에 새 곡 파일을 얹어 포맷 재사용성 실전 검증</li>
+  </ol>
+</section>
+
+<footer>
+  <span>LX-SEQ v2.1 · 음악 조명연출 시퀀스 포맷 프로젝트</span>
+  <span class="mono">2026-08-20 · 정본 우선순위: 스펙 &gt; RIG 팩 &gt; 곡 파일 &gt; 생성 산출물</span>
+</footer>
+</div>

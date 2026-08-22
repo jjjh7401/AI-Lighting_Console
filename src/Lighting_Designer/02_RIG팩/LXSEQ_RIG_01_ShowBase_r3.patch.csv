@@ -1,0 +1,87 @@
+﻿FID,Group,FixtureType,Mode,Ch,Universe,Address,AddrRange,Position
+101,KEY,ETC S4 LED S3 Lustr X8,Direct 12ch,12,1,1,1.001–012,FOH 브리지
+102,KEY,ETC S4 LED S3 Lustr X8,Direct 12ch,12,1,13,1.013–024,FOH 브리지
+103,KEY,ETC S4 LED S3 Lustr X8,Direct 12ch,12,1,25,1.025–036,FOH 브리지
+104,KEY,ETC S4 LED S3 Lustr X8,Direct 12ch,12,1,37,1.037–048,FOH 브리지
+105,KEY,ETC S4 LED S3 Lustr X8,Direct 12ch,12,1,49,1.049–060,FOH 브리지
+106,KEY,ETC S4 LED S3 Lustr X8,Direct 12ch,12,1,61,1.061–072,FOH 브리지
+111,FOH,ETC S4 LED S3 Lustr X8,Direct 12ch,12,1,73,1.073–084,FOH 트러스
+112,FOH,ETC S4 LED S3 Lustr X8,Direct 12ch,12,1,85,1.085–096,FOH 트러스
+113,FOH,ETC S4 LED S3 Lustr X8,Direct 12ch,12,1,97,1.097–108,FOH 트러스
+114,FOH,ETC S4 LED S3 Lustr X8,Direct 12ch,12,1,109,1.109–120,FOH 트러스
+115,FOH,ETC S4 LED S3 Lustr X8,Direct 12ch,12,1,121,1.121–132,FOH 트러스
+116,FOH,ETC S4 LED S3 Lustr X8,Direct 12ch,12,1,133,1.133–144,FOH 트러스
+117,FOH,ETC S4 LED S3 Lustr X8,Direct 12ch,12,1,145,1.145–156,FOH 트러스
+118,FOH,ETC S4 LED S3 Lustr X8,Direct 12ch,12,1,157,1.157–168,FOH 트러스
+601,BLIND,Elation CUEPIX Blinder WW2,4ch,4,1,169,1.169–172,다운 트러스 전면
+602,BLIND,Elation CUEPIX Blinder WW2,4ch,4,1,173,1.173–176,다운 트러스 전면
+603,BLIND,Elation CUEPIX Blinder WW2,4ch,4,1,177,1.177–180,다운 트러스 전면
+604,BLIND,Elation CUEPIX Blinder WW2,4ch,4,1,181,1.181–184,다운 트러스 전면
+605,BLIND,Elation CUEPIX Blinder WW2,4ch,4,1,185,1.185–188,다운 트러스 전면
+606,BLIND,Elation CUEPIX Blinder WW2,4ch,4,1,189,1.189–192,다운 트러스 전면
+611,STROBE,Martin Atomic 3000 LED,Extended 14ch,14,1,193,1.193–206,업 트러스
+612,STROBE,Martin Atomic 3000 LED,Extended 14ch,14,1,207,1.207–220,업 트러스
+613,STROBE,Martin Atomic 3000 LED,Extended 14ch,14,1,221,1.221–234,업 트러스
+614,STROBE,Martin Atomic 3000 LED,Extended 14ch,14,1,235,1.235–248,업 트러스
+621,HAZE,Look Unique 2.1,2ch,2,1,249,1.249–250,무대 양측 플로어
+622,HAZE,Look Unique 2.1,2ch,2,1,251,1.251–252,무대 양측 플로어
+501,MOVER-U,Robe MegaPointe,Mode 1 39ch,39,2,1,2.001–039,업 트러스
+502,MOVER-U,Robe MegaPointe,Mode 1 39ch,39,2,40,2.040–078,업 트러스
+503,MOVER-U,Robe MegaPointe,Mode 1 39ch,39,2,79,2.079–117,업 트러스
+504,MOVER-U,Robe MegaPointe,Mode 1 39ch,39,2,118,2.118–156,업 트러스
+505,MOVER-U,Robe MegaPointe,Mode 1 39ch,39,2,157,2.157–195,업 트러스
+506,MOVER-U,Robe MegaPointe,Mode 1 39ch,39,2,196,2.196–234,업 트러스
+507,MOVER-U,Robe MegaPointe,Mode 1 39ch,39,2,235,2.235–273,업 트러스
+508,MOVER-U,Robe MegaPointe,Mode 1 39ch,39,2,274,2.274–312,업 트러스
+521,MOVER-D,Robe Spiider,Mode 1 49ch,49,3,1,3.001–049,다운 트러스
+522,MOVER-D,Robe Spiider,Mode 1 49ch,49,3,50,3.050–098,다운 트러스
+523,MOVER-D,Robe Spiider,Mode 1 49ch,49,3,99,3.099–147,다운 트러스
+524,MOVER-D,Robe Spiider,Mode 1 49ch,49,3,148,3.148–196,다운 트러스
+525,MOVER-D,Robe Spiider,Mode 1 49ch,49,3,197,3.197–245,다운 트러스
+526,MOVER-D,Robe Spiider,Mode 1 49ch,49,3,246,3.246–294,다운 트러스
+527,MOVER-D,Robe Spiider,Mode 1 49ch,49,3,295,3.295–343,다운 트러스
+528,MOVER-D,Robe Spiider,Mode 1 49ch,49,3,344,3.344–392,다운 트러스
+201,BACK,Martin MAC Aura XB,Extended 25ch,25,4,1,4.001–025,업스테이지 트러스
+202,BACK,Martin MAC Aura XB,Extended 25ch,25,4,26,4.026–050,업스테이지 트러스
+203,BACK,Martin MAC Aura XB,Extended 25ch,25,4,51,4.051–075,업스테이지 트러스
+204,BACK,Martin MAC Aura XB,Extended 25ch,25,4,76,4.076–100,업스테이지 트러스
+205,BACK,Martin MAC Aura XB,Extended 25ch,25,4,101,4.101–125,업스테이지 트러스
+206,BACK,Martin MAC Aura XB,Extended 25ch,25,4,126,4.126–150,업스테이지 트러스
+207,BACK,Martin MAC Aura XB,Extended 25ch,25,4,151,4.151–175,업스테이지 트러스
+208,BACK,Martin MAC Aura XB,Extended 25ch,25,4,176,4.176–200,업스테이지 트러스
+209,BACK,Martin MAC Aura XB,Extended 25ch,25,4,201,4.201–225,업스테이지 트러스
+210,BACK,Martin MAC Aura XB,Extended 25ch,25,4,226,4.226–250,업스테이지 트러스
+211,BACK,Martin MAC Aura XB,Extended 25ch,25,4,251,4.251–275,업스테이지 트러스
+212,BACK,Martin MAC Aura XB,Extended 25ch,25,4,276,4.276–300,업스테이지 트러스
+301,SIDE-L,Martin MAC Aura XB,Extended 25ch,25,4,301,4.301–325,하수 붐 (3단×2)
+302,SIDE-L,Martin MAC Aura XB,Extended 25ch,25,4,326,4.326–350,하수 붐 (3단×2)
+303,SIDE-L,Martin MAC Aura XB,Extended 25ch,25,4,351,4.351–375,하수 붐 (3단×2)
+304,SIDE-L,Martin MAC Aura XB,Extended 25ch,25,4,376,4.376–400,하수 붐 (3단×2)
+305,SIDE-L,Martin MAC Aura XB,Extended 25ch,25,4,401,4.401–425,하수 붐 (3단×2)
+306,SIDE-L,Martin MAC Aura XB,Extended 25ch,25,4,426,4.426–450,하수 붐 (3단×2)
+311,SIDE-R,Martin MAC Aura XB,Extended 25ch,25,5,1,5.001–025,상수 붐 (3단×2)
+312,SIDE-R,Martin MAC Aura XB,Extended 25ch,25,5,26,5.026–050,상수 붐 (3단×2)
+313,SIDE-R,Martin MAC Aura XB,Extended 25ch,25,5,51,5.051–075,상수 붐 (3단×2)
+314,SIDE-R,Martin MAC Aura XB,Extended 25ch,25,5,76,5.076–100,상수 붐 (3단×2)
+315,SIDE-R,Martin MAC Aura XB,Extended 25ch,25,5,101,5.101–125,상수 붐 (3단×2)
+316,SIDE-R,Martin MAC Aura XB,Extended 25ch,25,5,126,5.126–150,상수 붐 (3단×2)
+401,WASH-U,Martin RUSH PAR 2 RGBW Z,9ch,9,5,151,5.151–159,업스테이지 플로어
+402,WASH-U,Martin RUSH PAR 2 RGBW Z,9ch,9,5,160,5.160–168,업스테이지 플로어
+403,WASH-U,Martin RUSH PAR 2 RGBW Z,9ch,9,5,169,5.169–177,업스테이지 플로어
+404,WASH-U,Martin RUSH PAR 2 RGBW Z,9ch,9,5,178,5.178–186,업스테이지 플로어
+405,WASH-U,Martin RUSH PAR 2 RGBW Z,9ch,9,5,187,5.187–195,업스테이지 플로어
+406,WASH-U,Martin RUSH PAR 2 RGBW Z,9ch,9,5,196,5.196–204,업스테이지 플로어
+407,WASH-U,Martin RUSH PAR 2 RGBW Z,9ch,9,5,205,5.205–213,업스테이지 플로어
+408,WASH-U,Martin RUSH PAR 2 RGBW Z,9ch,9,5,214,5.214–222,업스테이지 플로어
+409,WASH-U,Martin RUSH PAR 2 RGBW Z,9ch,9,5,223,5.223–231,업스테이지 플로어
+410,WASH-U,Martin RUSH PAR 2 RGBW Z,9ch,9,5,232,5.232–240,업스테이지 플로어
+421,WASH-D,Martin RUSH PAR 2 RGBW Z,9ch,9,5,241,5.241–249,다운스테이지 플로어
+422,WASH-D,Martin RUSH PAR 2 RGBW Z,9ch,9,5,250,5.250–258,다운스테이지 플로어
+423,WASH-D,Martin RUSH PAR 2 RGBW Z,9ch,9,5,259,5.259–267,다운스테이지 플로어
+424,WASH-D,Martin RUSH PAR 2 RGBW Z,9ch,9,5,268,5.268–276,다운스테이지 플로어
+425,WASH-D,Martin RUSH PAR 2 RGBW Z,9ch,9,5,277,5.277–285,다운스테이지 플로어
+426,WASH-D,Martin RUSH PAR 2 RGBW Z,9ch,9,5,286,5.286–294,다운스테이지 플로어
+427,WASH-D,Martin RUSH PAR 2 RGBW Z,9ch,9,5,295,5.295–303,다운스테이지 플로어
+428,WASH-D,Martin RUSH PAR 2 RGBW Z,9ch,9,5,304,5.304–312,다운스테이지 플로어
+429,WASH-D,Martin RUSH PAR 2 RGBW Z,9ch,9,5,313,5.313–321,다운스테이지 플로어
+430,WASH-D,Martin RUSH PAR 2 RGBW Z,9ch,9,5,322,5.322–330,다운스테이지 플로어
