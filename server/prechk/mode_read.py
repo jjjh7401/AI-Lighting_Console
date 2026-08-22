@@ -91,6 +91,12 @@ class TypeNameRead:
 
     attempted: bool
     pairs: tuple[tuple[int, str], ...] = ()
+    #: The listing came back short of the total it declared. Load-bearing for
+    #: the caller: a slot missing from a TRUNCATED listing is not absent, it is
+    #: UNSEEN, and this repository already holds that truncation invalidates
+    #: negative conclusions only. Without this flag a caller can only say
+    #: "not in the pairs I got", which reads as a rig fact.
+    truncated: bool = False
     detail: str = ""
 
     def by_slot(self) -> dict[int, str]:
@@ -128,10 +134,11 @@ def read_fixture_type_names(reader: StateReader, *, root: str) -> TypeNameRead:
     pairs = _named_children(payload)
     if pairs is None:
         return TypeNameRead(attempted=True, detail=root + " 자식에 슬롯/이름이 없다")
+    truncated = not _listing_is_whole(payload)
     detail = ""
-    if not _listing_is_whole(payload):
-        detail = root + " 열거가 절단됐다 - 목록에 없는 슬롯은 번역되지 않는다"
-    return TypeNameRead(attempted=True, pairs=tuple(pairs), detail=detail)
+    if truncated:
+        detail = root + " 열거가 절단됐다 - 목록에 없는 슬롯은 안 본 것이지 없는 것이 아니다"
+    return TypeNameRead(attempted=True, pairs=tuple(pairs), truncated=truncated, detail=detail)
 
 
 def read_type_mode_widths(

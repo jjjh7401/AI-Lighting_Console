@@ -4518,7 +4518,10 @@ def build_toolset(
         # 핸들을 돌려준다(결함 D2). 매퍼는 이름과 대조하므로, 대응표를 여기서
         # 한 번 읽어 판독 경계에 넘긴다 — read_inventory 는 스스로 읽지 않는다.
         # 표를 안 넘기면 번역이 조용히 사라지는 것이 아니라 미번역 표식이 켜진다.
-        type_names = read_fixture_type_names(state_port, root=rig_paths["fixture_types"]).by_slot()
+        # 판독 결과를 통째로 넘긴다 — .by_slot() 만 넘기면 「트리가 답하지 않았다」와
+        # 「트리가 그 슬롯을 선언하지 않는다」가 둘 다 빈 표로 도착해, 재조회하면
+        # 될 일이 리그 사실로 보고된다(감사 D-1).
+        type_names = read_fixture_type_names(state_port, root=rig_paths["fixture_types"])
         inventory_port = _InventoryPort(state_port, property_port)
         try:
             inventory = read_inventory(inventory_port, type_names=type_names)
