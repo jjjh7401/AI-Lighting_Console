@@ -204,6 +204,32 @@ def read_fixture_type_names(reader: StateReader, *, root: str) -> TypeNameRead:
     )
 
 
+def _usable_pairs(payload: dict) -> tuple[list[tuple[int, str]], int]:
+    """(usable (slot, name) pairs, how many children were dropped).
+
+    Degrades child by child, never all-or-nothing. ``PROTOCOL.md`` (responder
+    1.2.0) makes ``i`` optional — omitted when the real pool slot could not be
+    established — and states the server already degrades such a child to a
+    name-only entry. Discarding the whole listing because ONE type is slot-less
+    switches the read off for a library that is mostly readable, and downstream
+    that costs fixtures: a type whose modes cannot be read is planned as
+    ``mode_unresolved`` and never patched.
+
+    The drop count is returned rather than swallowed, because what arrived is
+    then a SUBSET and the caller must not conclude absence from it.
+    """
+    pairs: list[tuple[int, str]] = []
+    dropped = 0
+    for child in payload.get("children") or []:
+        slot = child.get("i") if isinstance(child, dict) else None
+        name = child.get("name") if isinstance(child, dict) else None
+        if isinstance(slot, bool) or not isinstance(slot, int) or not isinstance(name, str):
+            dropped += 1
+            continue
+        pairs.append((slot, name))
+    return pairs, dropped
+
+
 def read_type_mode_widths(
     reader: StateReader,
     properties: PropertyReader,
@@ -231,8 +257,8 @@ def read_type_mode_widths(
     types = read(root)
     if types is None:
         return TypeModeRead(attempted=False, detail=f"{root} 조회에 응답이 없다")
-    pairs = _named_children(types)
-    if pairs is None:
+    pairs, dropped = _usable_pairs(types)
+    if not pairs:
         return TypeModeRead(attempted=False, detail=f"{root} 자식에 슬롯/이름이 없다")
 
     exact = [(slot, name) for slot, name in pairs if name == type_name]
@@ -240,11 +266,14 @@ def read_type_mode_widths(
         folded = [(slot, name) for slot, name in pairs if name.casefold() == type_name.casefold()]
         exact = folded if len(folded) == 1 else []
     if not exact:
-        return TypeModeRead(
-            attempted=True,
-            type_found=False,
-            detail=f"'{type_name}'이(가) {root} 목록에 없다",
+        # 버린 자식이 있으면 목록은 부분집합이다 — "없다"고 단정하지 않는다.
+        absent = (
+            f"'{type_name}'이(가) {root} 목록에 없다"
+            if not dropped
+            else f"'{type_name}'을(를) {root} 목록에서 찾지 못했다 - 슬롯 없는 자식 "
+            f"{dropped}건을 버려 목록이 부분집합이라 없다고 단정할 수 없다"
         )
+        return TypeModeRead(attempted=True, type_found=False, detail=absent)
     type_slot = exact[0][0]
 
     modes_path = f"{root}/{type_slot}/{_MODES_SEGMENT}"
@@ -253,7 +282,7 @@ def read_type_mode_widths(
         return TypeModeRead(
             attempted=True, type_found=True, detail=f"{modes_path} 조회에 응답이 없다"
         )
-    mode_pairs = _named_children(modes)
+    mode_pairs, _mode_dropped = _usable_pairs(modes)
     if not mode_pairs:
         return TypeModeRead(
             attempted=True, type_found=True, detail=f"{modes_path}에서 모드를 열거하지 못했다"

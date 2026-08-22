@@ -184,6 +184,23 @@ def _judge_console_read(
     """
     if inventory is None:
         return False, "인벤토리를 읽지 않았다"
+
+    # 타입 이름을 못 얻었으면 「이미 패치됨」 비교 자체가 성립하지 않는다.
+    # 그대로 계획하면 이미 있는 행이 `fid_occupied` 로 나가고 그 라벨이 지시하는
+    # 다음 행동은 «다른 FID 로 다시 패치하라» — 같은 리그를 한 벌 더 만든다.
+    # 이 앱에 실행 취소는 없다. 판독 실패를 「자리가 비었다」로 읽지 않는다.
+    #
+    # 좁게 건다: 콘솔이 이름을 돌려주는 경로에서는 미번역이 0건이라 이 갈래가
+    # 아예 안 탄다 — 핸들이 왔는데 이름을 못 얻은 경우에만 막힌다.
+    untranslated = [fixture for fixture in inventory.fixtures if fixture.fixture_type_untranslated]
+    if untranslated:
+        reasons = sorted({str(f.fixture_type_untranslated) for f in untranslated})
+        return False, (
+            f"타입 이름을 얻지 못한 장비 {len(untranslated)}대"
+            f"({' · '.join(reasons)}) — 「이미 패치됨」 비교가 성립하지 않아"
+            " 점유를 판정할 수 없다"
+        )
+
     caveat = console_read_caveat(inventory)
     if caveat is not None and caveat["kind"] == CONSOLE_READ_INCOMPLETE:
         return False, str(caveat["reason"])
