@@ -88,6 +88,7 @@ class FakeConsole:
         fixtures: list[dict[str, object]] | None = None,
         *,
         truncate_at: int | None = None,
+        handle_types: bool = False,
     ) -> None:
         self._widths = _type_widths()
         self._slots = {name: index + 1 for index, name in enumerate(self._widths)}
@@ -97,6 +98,15 @@ class FakeConsole:
         #: 남고 `children`만 짧아진다. 절단되지 않는 가짜는 판독 게이트의 한 갈래를
         #: 통째로 가리므로(결함 D1이 실기에서야 드러난 이유) 이 변형을 둔다.
         self.truncate_at = truncate_at
+        #: 실물 콘솔의 픽스처 FixtureType 프로퍼티는 이름이 아니라
+        #: 'FixtureType <슬롯>' 형태의 객체 핸들을 돌려준다 — 결함 D2.
+        #: 라이브 관측: SPEC-COPILOT-LXSEQ-001/progress.md:621~626 (86행 전량이
+        #: 8개 슬롯에 걸쳐 같은 형식). 이름을 돌려주는 가짜는 이름-대조 갈래를
+        #: 통째로 가리므로 truncate_at 과 같은 모양의 변형을 둔다.
+        #: 기본값은 현재 동작(이름)이다 — 켜야만 핸들이 나온다.
+        #: 이 형식 문자열은 테스트에 하드코딩된 가정이다(acceptance.md 앞머리
+        #: [HARD]). 실기 형식이 다르면 번역은 미번역 경로로 떨어진다.
+        self.handle_types = handle_types
 
     # -- 계획 → 콘솔 상태(테스트가 미리 채워 둘 때 쓴다) --------------------
     @staticmethod
@@ -163,10 +173,18 @@ class FakeConsole:
         if not 0 <= index < len(self.fixtures):
             return {"ok": False}
         row = self.fixtures[index]
+        fixture_type = row["fixture_type"]
+        if self.handle_types:
+            # 실기와 같은 갈래: 픽스처 프로퍼티만 핸들이고 FixtureTypes 트리
+            # 열거(_type_tree)는 이름을 그대로 준다. 둘 다 핸들로 바꾸면 재현이
+            # 실기와 어긋난다(REQ-PARITY-003).
+            slot = self._slots.get(str(fixture_type))
+            if slot is not None:
+                fixture_type = f"FixtureType {slot}"
         value = {
             "Name": row["name"],
             "Patch": row["patch"],
-            "FixtureType": row["fixture_type"],
+            "FixtureType": fixture_type,
             "Mode": row["mode"],
             "FID": str(row["fid"]),
         }.get(property_name)
@@ -513,6 +531,48 @@ def test_a_half_patched_console_replans_only_the_remainder():
     already = [row for row in payload["plan"]["skipped"] if row["kind"] == "already_patched"]
     assert planned == 43
     assert len(already) == 43
+
+
+def test_the_handle_branch_is_off_by_default_and_leaves_the_tree_naming():
+    # AC-PARITY-001 · 003. 픽스처 프로퍼티만 핸들이고 FixtureTypes 트리 열거는
+    # 이름을 유지한다 — 실기에서도 그쪽은 이름이 나오므로, 둘 다 핸들로 바꾸면
+    # 재현이 실기와 어긋난다(과하게 맞추는 것도 어긋남이다).
+    plain = FakeConsole()
+    handled = FakeConsole(handle_types=True)
+    type_name = next(iter(plain._slots))
+    row = {"fixture_type": type_name, "mode": "m", "fid": 7, "name": "N", "patch": "1.1"}
+    plain.fixtures = [row]
+    handled.fixtures = [row]
+
+    assert plain.query_property("Patch/x/1", "FixtureType")["value"] == type_name
+    assert handled.query_property("Patch/x/1", "FixtureType")["value"] == "FixtureType 1"
+    tree_names = [child["name"] for child in handled.query_state(TYPES_ROOT)["children"]]
+    assert type_name in tree_names
+
+
+def test_a_handle_answering_console_still_reports_already_patched():
+    # 결함 D2 (M4 실기): 실물 콘솔의 픽스처 FixtureType 은 이름이 아니라
+    # "FixtureType <슬롯>" 핸들이다. 매퍼는 이름과 대조하므로 비교가 항상
+    # 어긋나 「이미 패치됨」 갈래가 실기에서 한 번도 발화하지 않았다. 번역 전
+    # 이 입력은 fid_occupied 86 을 냈다(프로브 실험 B · M1-2 가 재현).
+    # 이름을 돌려주는 가짜는 이 갈래를 영원히 가린다.
+    console = FakeConsole(handle_types=True)
+    deploy = FakeDeploy(console)
+    runner = FakeExec(console)
+    registry = _toolset(console, exec_port=runner, deploy=deploy)
+    _call(registry, action="apply")
+
+    payload, execution = _call(registry, action="preview")
+
+    assert payload["plan"]["runs"] == []
+    assert len(payload["plan"]["skipped"]) == 86
+    assert {row["kind"] for row in payload["plan"]["skipped"]} == {"already_patched"}
+    # 번역이 실제로 일어났음을 값으로 확인한다 — 라벨만 보면, 다른 이유로
+    # 같은 라벨이 나와도 통과한다.
+    occupant = payload["plan"]["skipped"][0]["occupant"]
+    assert not occupant["fixture_type"].startswith("FixtureType ")
+    assert occupant["fixture_type"] in _type_widths()
+    assert execution.result.is_error is False
 
 
 # ---------------------------------------------------------------------------

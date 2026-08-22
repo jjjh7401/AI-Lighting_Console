@@ -95,7 +95,7 @@ from server.prechk.footprint import WalkOutcome, walk_mode_widths
 from server.prechk.inventory import InventoryReadError, read_inventory
 from server.prechk.macro import MacroPolicy, MacroResult, build_response_check_macro
 from server.prechk.macro import groups_from_snapshot as read_group_pool
-from server.prechk.mode_read import read_type_mode_widths
+from server.prechk.mode_read import read_fixture_type_names, read_type_mode_widths
 from server.prechk.patch import evaluate_patch
 from server.prechk.query import PropertyRead, bulk_capable, read_properties
 from server.prechk.report import build_report as build_precheck_report
@@ -4514,9 +4514,14 @@ def build_toolset(
                 type_name=console_type,
             )
 
+        # 실기 콘솔은 픽스처의 FixtureType 으로 이름이 아니라 'FixtureType <슬롯>'
+        # 핸들을 돌려준다(결함 D2). 매퍼는 이름과 대조하므로, 대응표를 여기서
+        # 한 번 읽어 판독 경계에 넘긴다 — read_inventory 는 스스로 읽지 않는다.
+        # 표를 안 넘기면 번역이 조용히 사라지는 것이 아니라 미번역 표식이 켜진다.
+        type_names = read_fixture_type_names(state_port, root=rig_paths["fixture_types"]).by_slot()
         inventory_port = _InventoryPort(state_port, property_port)
         try:
-            inventory = read_inventory(inventory_port)
+            inventory = read_inventory(inventory_port, type_names=type_names)
         except InventoryReadError as error:
             return _error_result(call, f"fixture inventory unreadable: {error}")
         occupants = occupants_from_patch_values(

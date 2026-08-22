@@ -23,6 +23,7 @@ from server.prechk.footprint import (
     PropertyReader,
     StateReader,
     _Budget,
+    _listing_is_whole,
     _payload_ok,
 )
 
@@ -71,6 +72,66 @@ def _named_children(payload: dict) -> list[tuple[int, str]] | None:
             return None
         pairs.append((slot, name))
     return pairs
+
+
+@dataclass(frozen=True)
+class TypeNameRead:
+    """Every (slot, name) pair the fixture-type tree declares.
+
+    Distinct from :class:`TypeModeRead`, which answers "what modes does THIS
+    NAMED type have" and so takes a name as INPUT. This read takes no name, so
+    it can answer the opposite direction: the console hands back a
+    ``FixtureType <slot>`` handle where a name belongs, and only a slot-to-name
+    table can translate it (REQ-PARITY-004).
+
+    ``attempted`` separates "the tree did not answer" from "the tree answered
+    and declared nothing". Both leave ``pairs`` empty, and a caller that
+    conflates them would report a read failure as "slot absent".
+    """
+
+    attempted: bool
+    pairs: tuple[tuple[int, str], ...] = ()
+    detail: str = ""
+
+    def by_slot(self) -> dict[int, str]:
+        """Slot to name. On a duplicate SLOT the FIRST wins.
+
+        A duplicate NAME across two slots is measured reality (live: Robin
+        Spiider at slots 4 and 12) and is harmless here - both slots carry the
+        same name, so the forward direction has nothing to disambiguate. That
+        is why REQ-PARITY-007 can forbid the reverse direction without
+        blocking this one. A duplicate SLOT would be a self-contradicting tree;
+        first-wins keeps it deterministic instead of adopting the last.
+        """
+        table: dict[int, str] = {}
+        for slot, name in self.pairs:
+            table.setdefault(slot, name)
+        return table
+
+
+def read_fixture_type_names(reader: StateReader, *, root: str) -> TypeNameRead:
+    """Enumerate the fixture-type tree ONCE for every (slot, name) pair.
+
+    Query count is 1 - the type listing, nothing per type.
+    ``read_type_mode_widths`` cannot serve this purpose at any cost: it takes
+    ``type_name`` as an argument, which is the very value this read exists to
+    produce (spec.md A.4). A truncated listing is NOT an error here - the pairs
+    that did arrive are usable, and a slot missing from them falls to the
+    untranslated path (REQ-PARITY-005) rather than to a guess.
+    """
+    try:
+        payload = reader.query_state(root)
+    except Exception:
+        return TypeNameRead(attempted=False, detail=root + " 조회에 응답이 없다")
+    if not _payload_ok(payload):
+        return TypeNameRead(attempted=False, detail=root + " 조회에 응답이 없다")
+    pairs = _named_children(payload)
+    if pairs is None:
+        return TypeNameRead(attempted=True, detail=root + " 자식에 슬롯/이름이 없다")
+    detail = ""
+    if not _listing_is_whole(payload):
+        detail = root + " 열거가 절단됐다 - 목록에 없는 슬롯은 번역되지 않는다"
+    return TypeNameRead(attempted=True, pairs=tuple(pairs), detail=detail)
 
 
 def read_type_mode_widths(
