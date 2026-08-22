@@ -67,6 +67,35 @@ def test_an_unanswered_tree_is_not_reported_as_an_empty_library():
     assert answer.detail
 
 
+def test_a_refusing_tree_is_attempted_false_and_names_nothing():
+    """페이로드가 ok:false 로 거절한 갈래.
+
+    예외를 던지는 갈래(위)와 값으로 거절하는 갈래는 코드가 다르다. 둘 다
+    attempted=False 여야 한다 — 「트리가 답하지 않았다」는 같은 사건이다.
+    """
+    answer = read_fixture_type_names(_Tree({"ok": False}), root=ROOT)
+
+    assert answer.attempted is False
+    assert answer.by_slot() == {}
+    assert answer.detail
+
+
+def test_a_malformed_child_is_attempted_true_and_still_names_nothing():
+    """트리는 답했으나 자식에 슬롯/이름이 없는 갈래.
+
+    바로 위와 결과(이름 0건)는 같지만 attempted 가 다르다 — 이쪽은 트리가
+    **답했다**. 둘을 뭉치면 「응답이 없다」와 「응답이 이상하다」가 같아 보이고,
+    전자는 재시도할 자리이고 후자는 아니다.
+    """
+    answer = read_fixture_type_names(
+        _Tree({"ok": True, "children": [{"i": 1, "name": 123}]}), root=ROOT
+    )
+
+    assert answer.attempted is True
+    assert answer.by_slot() == {}
+    assert "슬롯" in answer.detail
+
+
 def test_a_truncated_listing_keeps_the_pairs_that_did_arrive():
     tree = _tree([(4, "Robin Spiider")], truncated=True)
 
