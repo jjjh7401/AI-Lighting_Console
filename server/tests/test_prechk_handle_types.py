@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from server.prechk.inventory import (
+    UNTRANSLATED_LISTING_SHAPE_INVALID,
     UNTRANSLATED_NO_TABLE,
     UNTRANSLATED_SLOT_ABSENT,
     UNTRANSLATED_SLOT_UNSEEN,
@@ -278,3 +279,44 @@ def test_a_slot_missing_from_a_truncated_listing_is_unseen_not_absent():
     assert unseen.fixture_type_untranslated == UNTRANSLATED_SLOT_UNSEEN
     # 원값은 양쪽 다 보존된다 — 표식만 검사하면 공허하다.
     assert absent.fixture_type == unseen.fixture_type == "FixtureType 4"
+
+
+def test_a_malformed_listing_is_not_reported_as_a_rig_fact():
+    """감사 N-1 — 형태 불량이 slot_absent 로 나가던 자리.
+
+    slot_absent 의 계약은 「트리가 **전수** 답했고 그 슬롯을 선언하지 않는다 —
+    리그 사실이며 재조회해도 같다」다. 자식에 슬롯/이름이 없는 응답은 그 계약의
+    「전수 답했다」를 만족하지 않는다. 지시되는 행동이 다르다 — 고칠 곳은
+    리그가 아니라 **판독 쪽**이다.
+
+    판독기의 분류(attempted=True)는 건드리지 않는다. 「응답이 없다」와
+    「응답이 이상하다」를 가른 것은 이 카드가 세운 doctrine 이고
+    fc37abc 의 테스트가 그것을 고정하고 있다 — 하류 사유만 늘린다.
+    """
+    malformed = _Tree({"ok": True, "children": [{"i": 1, "name": 123}]})
+    read = read_fixture_type_names(malformed, root=ROOT)
+
+    # 판독기 분류는 그대로 — 트리는 답했다.
+    assert read.attempted is True
+    assert read.truncated is False
+    assert read.pairs == ()
+
+    rec = read_inventory(_Rig(["FixtureType 4"]), type_names=read).fixtures[0]
+
+    assert rec.fixture_type == "FixtureType 4"
+    assert rec.fixture_type_untranslated == UNTRANSLATED_LISTING_SHAPE_INVALID
+
+
+def test_an_empty_library_is_still_a_rig_fact():
+    """대조군 — 전수 답했고 정말 비어 있으면 slot_absent 가 옳다.
+
+    위 테스트가 「형태 불량」을 잡는 것이지 「빈 목록」까지 싸잡는 것이
+    아님을 보인다. 이 대조군이 없으면 다섯째 사유가 넷째를 잡아먹어도 초록이다.
+    """
+    read = read_fixture_type_names(_tree([]), root=ROOT)
+
+    assert read.attempted is True and read.pairs == ()
+
+    rec = read_inventory(_Rig(["FixtureType 4"]), type_names=read).fixtures[0]
+
+    assert rec.fixture_type_untranslated == UNTRANSLATED_SLOT_ABSENT

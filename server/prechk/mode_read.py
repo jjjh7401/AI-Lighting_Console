@@ -97,6 +97,13 @@ class TypeNameRead:
     #: negative conclusions only. Without this flag a caller can only say
     #: "not in the pairs I got", which reads as a rig fact.
     truncated: bool = False
+    #: The tree answered, but its children carried no usable (slot, name) pair.
+    #: Distinct from an empty library, which is a rig fact: this is a READ that
+    #: cannot be trusted to have enumerated anything, so a slot missing from it
+    #: is not absent. Kept apart from ``attempted`` on purpose — "no answer" and
+    #: "an answer of the wrong shape" call for different handling, and this
+    #: module already draws that line.
+    shape_invalid: bool = False
     detail: str = ""
 
     def by_slot(self) -> dict[int, str]:
@@ -133,7 +140,9 @@ def read_fixture_type_names(reader: StateReader, *, root: str) -> TypeNameRead:
         return TypeNameRead(attempted=False, detail=root + " 조회에 응답이 없다")
     pairs = _named_children(payload)
     if pairs is None:
-        return TypeNameRead(attempted=True, detail=root + " 자식에 슬롯/이름이 없다")
+        return TypeNameRead(
+            attempted=True, shape_invalid=True, detail=root + " 자식에 슬롯/이름이 없다"
+        )
     truncated = not _listing_is_whole(payload)
     detail = ""
     if truncated:
