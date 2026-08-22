@@ -281,3 +281,83 @@ server/prechk/inventory.py     HANDLE_TEXT         = re.compile(r"^FixtureType (
    오프라인이 보증하는 것은 「핸들 갈래에서 코드가 이름으로 번역한다」까지이며,
    「실기 콘솔이 실제로 그 형식의 핸들을 준다」는 가정으로 남는다. **sync 가 이 문장을
    지우면 「AC 전건 통과」가 「실기 결함 해소」로 읽힌다.**
+
+
+---
+
+## §E.4 Sync-phase Audit-Ready Signal
+
+sync_commit_sha: pending-backfill-sync
+측정자: run 레인 (sync 단계) · 트리 `t11-m1` · `WT-handle-to-name` · base `581a1fb`
+
+**M1·M2 의 증거는 §E.2 에 있다 — 여기 옮겨 적지 않고 가리킨다.** 이 절은 sync 가
+**자기 손으로 잰 것만** 담는다.
+
+### sync 가 직접 잰 것
+
+| # | 명령 | 범위 | 출력 원문 | 판정 |
+|---|---|---|---|---|
+| S1 | `uv run pytest server/tests -q` | `server/tests` 전량 | `9703 passed, 8 skipped, 1 warning in 144.64s` | 실패 0 |
+| S2 | `git diff --stat 5c988bd..581a1fb -- console/lua server/safety server/vwx server/paperwork server/rulebook/assets ui` | 봉쇄 구역 | **빈 출력** | 0-diff |
+| S3 | `git diff --stat 5c988bd..581a1fb -- server/` | 변경 범위 | 5파일 · `+450 / -5` | 아래 표 |
+| S4 | `uv run pytest server/tests --cov=server.prechk` | `server/prechk` | `inventory.py 215 2 99%` · `mode_read.py 97 16 84%` · `TOTAL 1120 39 97%` | 아래 단서 |
+| S5 | `grep -c "SPEC-COPILOT-PARITY-001" CHANGELOG.md` (기입 전) | 중복 방지 | `0` | 중복 없음 |
+
+**기준선은 `9703`**(M1-6, §E.2). `9691` 은 M1-0 손대기 전 기준선이고 `9681`·`9682` 는
+다른 카드의 값이다 — 이 절에서 인용하지 않는다.
+
+### S3 변경 범위 — plan.md D4 대조
+
+| 파일 | D4 예상 | 실제 | 사유 |
+|---|---|---|---|
+| `server/prechk/inventory.py` | ✅ 예상됨 | 변경 | A-1 판독 경계 |
+| `server/tests/*` | ✅ 예상됨 | 변경 2 | 테스트 |
+| `server/prechk/mode_read.py` | D4 문면엔 없음 | 변경 | plan.md M1-3 이 「신설 판독」을 지시했고 §A.4 근거 4 가 `_named_children` 소재를 근거로 들었다 — **계획 의도 안, D4 문면 밖** |
+| `server/orchestrator/tools.py` | D4 문면엔 없음 | 변경 (+9/-2) | (B) 판독 공유 결정의 귀결 — 호출자가 대응표를 넘겨야 한다 |
+
+**D4 를 문면 그대로 읽으면 2파일 초과다.** 숨기지 않고 적는다: 두 파일 모두 계획·결정이
+지시한 것이나 **D4 문장 자체는 갱신되지 않았다.** sync 가 임의로 D4 를 고치지 않는다
+(`acceptance.md` 는 manager-spec 소유).
+
+### S4 커버리지 — 내 신설 코드에 미검사 갈래 2건
+
+`mode_read.py` 84% 는 모듈 전체 값이고 미검사 줄 대부분은 **기존** `read_type_mode_widths`
+(157~205)다. 그러나 **`127` · `130` 은 이번에 내가 추가한 `read_fixture_type_names` 안이다**:
+
+- `:127` — 트리 판독이 `ok: false` 로 답한 갈래
+- `:130` — 자식에 슬롯/이름이 없는(형태 불량) 갈래
+
+내 테스트는 예외 발생 갈래(`:124-125`)와 정상·절단 갈래만 덮는다. **두 갈래는 미검사다.**
+sync 배차가 「제품 코드 수정 0건 · 문서화만」이므로 **여기서 테스트를 추가하지 않았다** —
+후속 재료로 남긴다. `inventory.py` 는 99%(미검사 `264` · `486` 은 이번 변경과 무관).
+
+### 문서 정합
+
+| 산출물 | 상태 |
+|---|---|
+| `CHANGELOG.md` | `[Unreleased] > Added` 에 1건 추가. 리드가 [HARD] 로 지목한 3건 전부 포함 — 「AC 전건 통과 ≠ 실기 D2 해소」 · 어긋남 3건(특히 diff 거짓 경보를 「콘솔에 아무것도 없다로 읽힌다」까지) · 「테스트 CI 없음」 |
+| `README.md` | D2 를 「known gap remains」 → 「**offline** 로 닫힘, **콘솔 재검증 안 됨**」으로 정정하고, 아직 미번역인 두 소비자(diff 수량 대조 · 패치 시트 인쇄)를 명시 |
+| `progress.md` | §E.2(M1·M2) + 이 절 |
+
+### sync 가 재지 않은 것
+
+1. **콘솔 라이브 0건.** sync 도 onPC 에 접속하지 않았다.
+2. **`mode_read.py:127 · :130`** — 위 참조. 내 신설 코드의 미검사 갈래다.
+3. **어긋남 3건이 「표를 넘기면 함께 닫히는가」** — 원인이 하나로 보이나 **측정 안 했다**.
+4. **C6 · C7 출력** — M2 미측정 그대로.
+5. **`read_inventory` 나머지 5곳 질의 순증** — M1 미검증 그대로.
+6. **신설 판독이 정말 「얇은」지** — 감사가 남긴 항목, 재지 않았다.
+7. [HARD] **AC 전건 통과가 실기 D2 해소의 증거가 아니다**(`acceptance.md` §C).
+   오프라인이 보증하는 것은 「핸들이 들어오는 갈래에서 코드가 이름으로 번역한다」까지이며,
+   「실기 콘솔이 실제로 그 형식의 핸들을 준다」는 **가정**으로 남는다.
+
+### 후속 카드 재료 (제안만 — 큐는 건드리지 않았다)
+
+1. **어긋남 3건 수정** — `vwx/diff.py` 수량 대조 · `paperwork` 서류 2자리. 원인이 하나
+   (대응표 미공급 경로)일 가능성이 있으나 **측정되지 않았다.** 특히 diff 거짓 경보는
+   감독이 읽는 화면이라 우선순위가 높다.
+2. **정규식 이중화 통합** — `vwx/apply.py:444` 와 `prechk/inventory.py` 의
+   `^FixtureType (\d+)$` 가 바이트 동일. 형식이 드리프트하면 두 곳을 따로 고쳐야 하고
+   한쪽만 고치면 조용히 갈린다.
+3. **C6 · C7 출력 관측** · **`mode_read.py` 미검사 갈래 2건**.
+4. **실기 핸들 형식 재측정** — 오프라인 AC 로는 닫을 수 없는 유일한 축.

@@ -284,11 +284,22 @@ against the original. Today a local harness fills the argument
 file picker will fill it later.
 
 Live status: verified on grandMA3 onPC 2.4.2 with the reference rig — 12 runs,
-86 fixtures created, confirmed by a re-query independent of the tool. One known
-gap remains: on a real console `occupant.fixture_type` returns a handle string
-(`FixtureType <slot>`) rather than a name, so a re-run reports `fid_occupied`
-where `already_patched` is meant. Writes stay at zero either way; only the label
-is wrong.
+86 fixtures created, confirmed by a re-query independent of the tool.
+
+The handle/name gap is now closed **offline**. On a real console
+`occupant.fixture_type` returns a handle string (`FixtureType <slot>`) rather
+than a name, so a re-run used to report `fid_occupied` where `already_patched`
+was meant; the read boundary now translates slot-to-name before the comparison.
+**This has not been re-verified on a console** — the fix is covered by offline
+tests only, and the handle format itself is an assumption drawn from live reads
+of one rig. Writes stayed at zero either way, before and after; only the label
+was wrong.
+
+Two consumers of the same value are still **untranslated**, because they read
+the inventory without supplying the slot-to-name table: the Vectorworks diff
+counts fixtures by type string, so a handle matches no designed type and every
+type reports a console count of zero even when the rig is patched; and the
+printed patch sheet prints the handle verbatim in the fixture-type column.
 
 Implementation: `server/lxseq/` (parser + mapper) + `server/orchestrator/tools.py`
 (`import_lxseq_patch` tool). Specification:
