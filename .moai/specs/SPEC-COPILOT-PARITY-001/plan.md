@@ -1,7 +1,7 @@
 ---
 id: SPEC-COPILOT-PARITY-001
 type: plan
-version: "0.1.2"
+version: "0.1.3"
 created: 2026-08-22
 updated: 2026-08-22
 author: plan 레인 (칸반 카드 t11)
@@ -44,7 +44,19 @@ author: plan 레인 (칸반 카드 t11)
 
 [HARD] **이 판단은 M1-3을 실행 가능한 지시로 만들기 위한 것이지, 신설 판독의 인터페이스를 여기서 확정하는 것이 아니다.** 함수 이름 · 반환형 · 실패 표현은 run 레인이 정한다. 이 계획이 구속하는 것은 「기존 판독에서 얻을 수 있다」는 틀린 전제를 쓰지 않는 데까지다.
 
-**A-2가 선택되면**: M1-3·M1-4의 대상이 `server/orchestrator/tools.py`의 `occupants` 구성 직전으로 좁아진다. M1-0·M1-1·M1-2·M1-5·M1-6은 변동 없다. 신설 판독 논의도 성립하지 않는다 — 툴 경계에는 이미 트리 판독이 있기 때문이다.
+**A-2가 선택되면**: M1-3·M1-4의 대상이 `server/orchestrator/tools.py`의 `occupants` 구성 직전으로 좁아진다. M1-0·M1-1·M1-2·M1-5·M1-6은 변동 없다.
+
+**[정정 v0.1.3] A-2를 골라도 신설 판독은 필요하다.** v0.1.2는 이 자리에 「신설 판독 논의도 성립하지 않는다 — 툴 경계에는 이미 트리 판독이 있기 때문이다」라고 적었다. **틀렸다.** 툴 경계의 트리 접근 셋을 v0.1.3 세션이 전수로 열어 보니 **어느 것도 (슬롯→이름) 대응표를 주지 않는다.**
+
+| 툴 경계의 트리 접근 | 호출 지점 | 왜 대응표가 안 나오는가 |
+|---|---|---|
+| `read_type_mode_widths` | `tools.py:3891`(`patch_fixtures`) · `:4510` | 둘 다 `type_name=console_type` — **이름을 입력으로 받는 역방향**이라 얻으려는 이름을 이미 알아야 부른다 |
+| `walk_mode_widths` | `tools.py:2705`(`precheck_patch`) · `:5742`(`build_handover_pack`) | 이름을 입력으로 받지 않지만, 반환형 `WalkOutcome.footprints`의 원소가 `ModeFootprint(path, width)`뿐이다(`server/prechk/footprint.py:97-125`) — **타입 이름을 싣는 필드가 없다** |
+| `resolve_fixture_types` | `tools.py:3106`(`apply_vectorworks_patch`) | `TypeRequest(instrument_type=...)`로 **이름을 입력으로 받는다**(`server/vwx/typemap.py:1377-1383`). 이름→라이브러리 이름 해석기다 |
+
+그리고 A-2가 손댈 자리인 `resolve_patch_address`(`tools.py:3648-3837`, `occupants` 구성은 `:3683`) 범위 안에서 `fixture_types` 출현은 **0건**이다. 위 넷은 전부 **다른 함수**에 있다.
+
+[HARD] **이 정정은 B1과 같은 실패 모양이며, 그 사실을 지우지 않고 남긴다.** B1은 「추출 코드가 있다」를 「그 출력이 호출자에게 닿는다」로 읽은 것이었고, 이 문장은 「판독이 근처에 있다」를 「대응표를 얻을 수 있다」로 읽은 것이다 — **B1을 닫은 바로 그 커밋(`5c988bd`)이 다른 문단에서 같은 추론을 한 번 더 했다.** 「판독이 있는가」가 아니라 **「그 반환형에 필요한 값이 실려 나오는가」**를 묻는 것이 이 카드의 주제다.
 
 ### M2 — 번짐 범위 실측 (오프라인 · 분류만, 수정 아님)
 
